@@ -50,6 +50,7 @@
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Renderer/Extension/RenderExtensionRegistry.h"
 #include "Engine/Renderer/Frame/Capture/FrameCapture.h"
+#include "Engine/Renderer/Frame/Execute/ViewGraphResource.h"
 #include "Engine/Renderer/Frame/Extension/FrameExtensionHost.h"
 #include "Engine/Renderer/Frame/FrameRenderState.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
@@ -159,7 +160,6 @@ namespace sw
         , _screenRotation{ screenRotation }
         , _displayEncode{ displayEncode }
         , _frameGraphExecutor{ pDevice, state, psoManager, fog }
-        , _mapFramePassNameToIndex{}
         , _frameGraphContext{}
         , _pActiveView{ &state._mainView }
         , _pMainView{ &state._mainView }
@@ -168,8 +168,6 @@ namespace sw
         , _asyncComputeCmd{}
         , _pCmd{ nullptr }
         , _listPassContext{}
-        , _mapPassNameToIndex{}
-        , _mapExtensionPassIndex{}
         , _graphContext{}
         , _nanCheck{}
         , _nanCheckCommandList{}
@@ -261,7 +259,7 @@ namespace sw
     bool FramePassExecutor::submitGraph( IRHIDevice* pDevice )
     {
         // 패스 컨텍스트 슬롯은 병렬 기록 **전에** 맞춘다. 기록 중에 늘리면 워커끼리 경합한다.
-        const size_t passCount = _pipelineResource.getGraphPass().size() + 1 + _extensionHost.getPasses().size(); // XML 패스 + 공용 슬롯 + 모듈 확장 패스
+        const size_t passCount = _pipelineResource.getGraphPass().size() + _extensionHost.getPasses().size(); // XML 패스 + 모듈 확장 패스(칸 = 그래프 패스 번호)
         if ( _listPassContext.size() < passCount )
             _listPassContext.resize( passCount );
         _frameArena.reset(); // 앞 프레임의 frame_vector 는 모두 사라졌다(기록 지역 목록만 잡는다)
@@ -392,6 +390,7 @@ namespace sw
     bool FramePassExecutor::executeMainGraph( IRHIDevice* pDevice )
     {
         prepareShadowCacheLayerResource();
+        registerViewResources( _state._mainView );
         // 병렬 기록이 가능하면(백엔드 capability, TaskManager, 레벨이 나올 만큼 컴파일된 그래프) 레벨마다 여러 리스트로 기록한다.
         // 첫 프레임처럼 그래프가 아직 컴파일되지 않았으면(getExecutionOrder() 가 비어 있으면) 직렬 경로로 간다.
         const bool bCanRunParallel = _state._pTaskManager != nullptr &&
@@ -409,8 +408,7 @@ namespace sw
         IRHICommandList* pMainCmd = _state._mainView._commandList.get();
         if ( pMainCmd == nullptr )
             return false;
-        // 직렬 경로의 패스는 시드의 리스트에 기록한다(그래프가 패스에 리스트를 주지 않는다). 그래서 시드를 이 리스트로 돌린다.
-        _state._frameContext._pCmd = pMainCmd;
+        // 직렬 경로도 그래프가 패스 문맥에 이 리스트를 싣는다(`RenderGraph::execute` — 병렬과 같은 `recordPassBody`).
         pMainCmd->beginCommandList();
         const bool bOk = _state._graph.execute( _graphContext, pMainCmd );
         pMainCmd->endCommandList();
@@ -433,10 +431,10 @@ namespace sw
         applyViewPassConstants( _state._frameContext, view );
         applyViewShadowConstants( _state._frameContext, view._shadow );
         _state._frameContext._cullViewIndex = view._cullSlot;
-        _state._frameContext._pCmd          = pCmd; // 직렬 경로의 패스는 시드의 리스트에 기록한다
         resetClearedAttachments();
         _bHasExecutedDepthPrepass.store( 0 );
         prepareShadowCacheLayerResource(); // 주 시점보다 먼저 그리는 뷰도 있다 — 층은 기록 전에
+        registerViewResources( view );
 
         pCmd->beginCommandList();
         if ( _state._graph.execute( _graphContext, pCmd ) == false )
@@ -720,6 +718,19 @@ namespace sw
         return hashed_string{};
     }
 
+    void FramePassExecutor::prepareVisualizedAttachment( IRHICommandList& cmd ) const
+    {
+        // 개발 보기 `gpu.show <첨부>` — Present 가 선언하지 않은 첨부를 읽는다. 앞 레벨이 쓴 첨부라 같은 레벨의 다른 패스가 그것을 쓰지 않는다(쓰기 사슬).
+        const GPUPixelInspector* const pInspector = engine::findSubsystem<GPUPixelInspector>();
+        string                         attachment;
+        if ( isRenderingExtraView() || pInspector == nullptr || pInspector->findVisualizedAttachment( attachment ) == false )
+            return;
+        const hashed_string    name    = hashed_string::findInterned( attachment );
+        const RHITextureHandle texture = name.empty() ? 0 : findTransient( name );
+        if ( texture != 0 )
+            cmd.prepareTextureForShaderRead( texture );
+    }
+
     void FramePassExecutor::registerVisualizedAttachment( FramePassContext& context )
     {
         // 주 시점만 바꾼다 — 추가 뷰(CCTV · 렌더 텍스처)는 제 원본을 그대로 낸다. 없는 이름이면 원본을 그대로 둔다(개발 명령이 이미 이름을 알렸다).
@@ -781,7 +792,6 @@ namespace sw
     {
         const vector<RenderGraphPassDesc>& listPass = _pipelineResource.getGraphPass();
         _state._graph.clear();
-        _mapPassNameToIndex.clear();
         // Swapchain 을 쓰는 마지막 패스다. 그래프는 같은 출력의 쓰기를 선언 순서로 연결한다(쓰기 사슬). 스크린샷 캡처를 백버퍼로 복사하는 일은 그 패스 끝에서 한다.
         _pLastSwapchainWriter = nullptr;
         for ( const RenderGraphPassDesc& pass : listPass )
@@ -789,9 +799,30 @@ namespace sw
             if ( VectorUtil::contains( pass._listOutput, string( kSwapchainOutputName ) ) )
                 _pLastSwapchainWriter = &pass;
         }
+        // 패스 종류가 쓰는 엔진 자원은 그래프보다 오래 산다(뷰가 가진 텍스처 · 프레임 그래프 버퍼의 이 뷰 칸) — 수명은 그래프 전체이고 "쓰지 않고 읽는다" 경고가 없다.
+        const RenderGraphResourceAccess arrEngineResource[] = {
+            ViewGraphResource::autoExposureHistory(),
+            ViewGraphResource::autoExposureTarget(),
+            ViewGraphResource::upscaleIntermediate(),
+            ViewGraphResource::shadowCacheLayer(),
+            ViewGraphResource::postProcessChainBeforeTonemap(),
+            ViewGraphResource::postProcessChainAfterTonemap(),
+            ViewGraphResource::depthHistory(),
+            ViewGraphResource::hzb(),
+            ViewGraphResource::occlusionTiles(),
+            ViewGraphResource::cullArgs(),
+            ViewGraphResource::cullVisibleInstances(),
+            ViewGraphResource::cullLODState(),
+            ViewGraphResource::occludedOrders(),
+        };
+        for ( const RenderGraphResourceAccess& resource : arrEngineResource )
+        {
+            _state._graph.declareResource( resource._resource, RenderGraphResourceKind::Persistent );
+        }
 
         // 모듈 확장 패스(ExtensionRenderPass M3)가 끼는 자리 — 단계마다 XML 패스 목록의 정해진 첫 자리 앞이다(없으면 끝). 선언 순서가 쓰기 사슬이라 같은 자리의 모듈 패스는 선언한 순서다.
-        // 모듈 패스도 같은 그래프의 노드다 — 읽기 · 쓰기 선언이 같은 위상 정렬과 배리어 추론을 탄다.
+        // 모듈 패스도 같은 그래프의 노드다 — 읽기 · 쓰기 선언이 같은 위상 정렬과 배리어 추론을 탄다. 패스 번호(`_payload`)는 XML 패스 뒤에 이어 붙인다.
+        const uint32 passCount    = static_cast<uint32>( listPass.size() );
         const size_t anchorPre    = 0;
         size_t       anchorPost   = listPass.size();
         size_t       anchorOutput = listPass.size();
@@ -803,8 +834,7 @@ namespace sw
             if ( anchorOutput == listPass.size() && anchorInfo.hasFlag( RenderPassTraitFlag::kOutputPass ) )
                 anchorOutput = anchorIndex;
         }
-        _mapExtensionPassIndex.clear();
-        auto addExtensionPasses = [this]( ExtensionHookStage stage )
+        auto addExtensionPasses = [this, passCount]( ExtensionHookStage stage )
         {
             for ( uint32 moduleIndex = 0; moduleIndex < static_cast<uint32>( _extensionHost.getPasses().size() ); ++moduleIndex )
             {
@@ -823,9 +853,8 @@ namespace sw
                 // 깊이 첨부도 쓰기 선언이다(XML 패스와 같은 규칙 — 레벨 프롤로그가 첨부 전이를 낸다).
                 if ( modulePass._params._depthAttachment.empty() == false )
                     addAttachmentAccess( listExtensionAccess, hashed_string( modulePass._params._depthAttachment.c_str() ), RenderGraphAccess::DepthWrite );
-                _mapExtensionPassIndex[modulePass._graphName] = moduleIndex;
                 _state._graph.addPass( modulePass._graphName, std::move( listExtensionAccess ),
-                                       SW_DELEGATE_METHOD( RenderGraphPassExecuteFn, &FramePassExecutor::onGraphPassExecute, this ) );
+                                       SW_DELEGATE_METHOD( RenderGraphPassExecuteFn, &FramePassExecutor::onGraphPassExecute, this ), RHIQueueKind::Graphics, passCount + moduleIndex );
             }
         };
         auto addModulePassesAt = [&]( size_t index )
@@ -838,37 +867,41 @@ namespace sw
                 addExtensionPasses( ExtensionHookStage::PostRenderView );
         };
 
-        for ( uint32 index = 0; index < static_cast<uint32>( listPass.size() ); ++index )
+        // 컴퓨트 구현(`_implementation="Compute"`)은 네이티브 bindless 에서만 돈다 — PSO 와 실행이 같은 판정을 본다(`FramePSOManager::createPassPSOs` · `executeGenericFullscreenPass`).
+        const bool                 bNativeBindless = _pDevice != nullptr && _pDevice->supportsNativeBindlessSampling();
+        const RenderGraphPassDesc* pTonemapPass    = FrameAutoExposure::findTonemapPass( _pipelineResource );
+        for ( uint32 index = 0; index < passCount; ++index )
         {
             addModulePassesAt( index );
             const RenderGraphPassDesc& pass = listPass[index];
             const hashed_string        nameHash( pass._name.c_str() );
-            // 이름이 겹치면 앞의 것이 이긴다. 그래프도 뒤의 선언을 버린다(`RenderGraph::addPass`). 파이프라인 검사가 먼저 알린다.
-            if ( _mapPassNameToIndex.find( nameHash ) == _mapPassNameToIndex.end() )
-                _mapPassNameToIndex[nameHash] = index;
 
             // 접근 판: 입력은 셰이더 읽기, 컬러 출력은 렌더 타깃, 깊이 첨부는 깊이 쓰기다(언리얼 RDG 의 RTV · DSVWrite). 한 첨부를 읽고 쓰는 패스는 쓰기 하나다(`addAttachmentAccess`).
             // 깊이 첨부도 그래프가 아는 접근이다. 깊이를 쓰지 않는 패스(투명)도 그것을 DSV 로 바인딩하므로 "첨부" 상태가 필요하다. 입력에만 적었어도
             // 여기서 쓰기로 적는다. 그래야 레벨 프롤로그가 첨부 전이(prepareTextureForRenderTarget)를 미리 내고, 앞 패스가 SRV 로 바인딩해 둔 깊이를
             // D3D11 이 해제하며(OMSetRenderTargets 해저드), 뒤에서 깊이를 읽는 패스가 다시 읽기 전이를 받는다(언리얼 RDG 의 깊이 첨부 접근).
             // 순서는 쓰기 사슬을 따른다. 이 패스보다 **먼저 선언한** 읽는 패스는 앞 버전을 읽고 이 패스 앞에 온다.
+            // 컴퓨트로 쓰는 패스는 그 첨부를 UAV 로 선언한다 — 패스 몸통이 전이하지 않고 레벨 콜백이 RW 텍스처 상태로 옮긴다(Compute 패스는 입력도 RW 텍스처로 읽는다).
+            const bool                        bComputePass   = pass._type == RenderPassKind::Compute;
+            const bool                        bComputeOutput = bComputePass || ( pass._implementation == RenderPassExecutionMode::Compute && bNativeBindless );
             vector<RenderGraphResourceAccess> listAccess;
             for ( const string& in : pass._listInput )
             {
-                addAttachmentAccess( listAccess, hashed_string( in.c_str() ), RenderGraphAccess::ShaderRead );
+                addAttachmentAccess( listAccess, hashed_string( in.c_str() ), bComputePass ? RenderGraphAccess::UnorderedAccess : RenderGraphAccess::ShaderRead );
             }
             for ( const string& out : pass._listOutput )
             {
-                const hashed_string outName( out.c_str() );
-                addAttachmentAccess( listAccess, outName, outName == pass._resolvedDepthAttachment ? RenderGraphAccess::DepthWrite : RenderGraphAccess::RenderTarget );
+                const hashed_string     outName( out.c_str() );
+                const RenderGraphAccess colorAccess = bComputeOutput ? RenderGraphAccess::UnorderedAccess : RenderGraphAccess::RenderTarget;
+                addAttachmentAccess( listAccess, outName, outName == pass._resolvedDepthAttachment ? RenderGraphAccess::DepthWrite : colorAccess );
             }
             if ( pass._resolvedDepthAttachment.empty() == false )
                 addAttachmentAccess( listAccess, pass._resolvedDepthAttachment, RenderGraphAccess::DepthWrite );
+            appendEngineResourceAccesses( pass, &pass == pTonemapPass, listAccess );
 
-            RenderGraphPassExecuteFn execute =
-                SW_DELEGATE_METHOD( RenderGraphPassExecuteFn, &FramePassExecutor::onGraphPassExecute, this );
-
-            _state._graph.addPass( nameHash, std::move( listAccess ), std::move( execute ) );
+            // 패스 번호(`_payload`)는 이 패스의 차례다 — 실행 콜백이 이름으로 서술을 다시 찾지 않는다. 이름이 겹치면 그래프가 뒤의 선언을 버린다(파이프라인 검사가 먼저 알린다).
+            _state._graph.addPass( nameHash, std::move( listAccess ), SW_DELEGATE_METHOD( RenderGraphPassExecuteFn, &FramePassExecutor::onGraphPassExecute, this ), RHIQueueKind::Graphics,
+                                   index );
         }
 
         addModulePassesAt( listPass.size() ); // 자리를 못 찾은 단계(출력 패스가 없는 파이프라인)는 끝에 붙는다
@@ -883,6 +916,53 @@ namespace sw
         }
         rebuildTransientAliasPlan();
         return bindFramePassCallbacks();
+    }
+
+    void FramePassExecutor::appendEngineResourceAccesses( const RenderGraphPassDesc& pass, bool bTonemapPass, vector<RenderGraphResourceAccess>& inoutListAccess )
+    {
+        // 패스 종류가 스스로 쓰는 엔진 자원을 그 종류가 선언한다(XML 은 첨부만 적는다) — 패스 안 왕복(UAV ↔ 셰이더 읽기)은 쓰기로 선언한 자원만 `RenderGraphPassContext::transition` 으로 한다.
+        // 자동 노출 — 톤맵하는 패스가 지난 칸을 읽고 이번 칸에 쓴 뒤 같은 패스가 읽는다.
+        if ( bTonemapPass )
+        {
+            inoutListAccess.push_back( ViewGraphResource::autoExposureHistory() );
+            inoutListAccess.push_back( ViewGraphResource::autoExposureTarget() );
+        }
+        if ( pass._type == RenderPassKind::Present )
+        {
+            inoutListAccess.push_back( ViewGraphResource::upscaleIntermediate() ); // FSR 1 — EASU 가 그리고 같은 패스의 RCAS 가 읽는다
+        }
+        else if ( pass._type == RenderPassKind::Shadow && pass._resolvedDepthRole == static_cast<uint8>( RenderPassInputRole::LocalShadowMap ) )
+        {
+            // 점광 · 스폿 아틀라스 패스가 그림자 캐시 층을 다시 그리고(깊이) 같은 패스의 복원이 읽는다.
+            inoutListAccess.push_back( ViewGraphResource::shadowCacheLayer() );
+        }
+        else if ( pass._type == RenderPassKind::PostProcessMaterial )
+        {
+            // 같은 자리 머티리얼의 앞 결과 사본 — 출력을 복사하고(복사 대상) 다음 머티리얼이 셰이더 읽기로 읽는다. 톤맵 대신 자리는 사본이 없다.
+            if ( pass._blendableLocation == PostProcessBlendableLocation::BeforeTonemap )
+                inoutListAccess.push_back( ViewGraphResource::postProcessChainBeforeTonemap() );
+            else if ( pass._blendableLocation == PostProcessBlendableLocation::AfterTonemap )
+                inoutListAccess.push_back( ViewGraphResource::postProcessChainAfterTonemap() );
+        }
+        else if ( pass._type == RenderPassKind::ScreenSpaceReflection )
+        {
+            // hi-z trace 가 읽는 HZB 를 이번 장면 깊이로 짓는다 — 깊이 사본(렌더 타깃 → RW 텍스처) · 피라미드 · 가림 타일(UAV → 셰이더 읽기). 장면 깊이는 XML 입력이다.
+            inoutListAccess.push_back( ViewGraphResource::depthHistory() );
+            inoutListAccess.push_back( ViewGraphResource::hzb() );
+            inoutListAccess.push_back( ViewGraphResource::occlusionTiles() );
+        }
+        else if ( pass._type == RenderPassKind::LateOcclusion )
+        {
+            // 2 단계 가림의 뒤 단계 — 장면 깊이를 깊이 쓰기로 선언한다(패스 안에서 복사 동안만 셰이더 읽기로 옮기고 되돌린다 — 돌지 않는 프레임에는 전이가 없다).
+            addAttachmentAccess( inoutListAccess, attachmentNames()._sceneDepth, RenderGraphAccess::DepthWrite );
+            inoutListAccess.push_back( ViewGraphResource::depthHistory() );
+            inoutListAccess.push_back( ViewGraphResource::hzb() );
+            inoutListAccess.push_back( ViewGraphResource::occlusionTiles() );
+            inoutListAccess.push_back( ViewGraphResource::cullArgs() );
+            inoutListAccess.push_back( ViewGraphResource::cullVisibleInstances() );
+            inoutListAccess.push_back( ViewGraphResource::cullLODState() );
+            inoutListAccess.push_back( ViewGraphResource::occludedOrders() );
+        }
     }
 
     void FramePassExecutor::rebuildTransientAliasPlan()
@@ -977,7 +1057,6 @@ namespace sw
     {
         RenderGraph& frameGraph = _state._frameGraph;
         frameGraph.clear();
-        _mapFramePassNameToIndex.clear();
         _frameGraphContext.reset();
         for ( const RenderGraphResourceDesc& resource : _pipelineResource.getResources() )
         {
@@ -988,10 +1067,9 @@ namespace sw
         {
             const RenderGraphPassDesc& pass = listFramePass[index];
             const hashed_string        nameHash( pass._name.c_str() );
-            _mapFramePassNameToIndex[nameHash] = index;
-            // 접근은 XML 규칙에서 나온다(버퍼 입력 SRV · 출력 UAV · 간접 인자 · 복사 — `RenderPipelineAsset::buildFramePassAccesses`).
+            // 접근은 XML 규칙에서 나온다(버퍼 입력 SRV · 출력 UAV · 간접 인자 · 복사 — `RenderPipelineAsset::buildFramePassAccesses`). 패스 번호(`_payload`)는 `_listFramePass` 차례다.
             frameGraph.addPass( nameHash, _pipelineResource.buildFramePassAccesses( pass ),
-                                SW_DELEGATE_METHOD( RenderGraphPassExecuteFn, &FramePassExecutor::onFrameGraphPassExecute, this ), pass._queue );
+                                SW_DELEGATE_METHOD( RenderGraphPassExecuteFn, &FramePassExecutor::onFrameGraphPassExecute, this ), pass._queue, index );
         }
         // 비동기 컴퓨트 큐가 없는 백엔드(DX11 · GL · WebGPU · 큐가 하나인 Vulkan 장치)는 AsyncCompute 패스를 그래픽스 큐로 계획한다(능력 표가 정한 길).
         const bool bAsyncCompute = _state._settings._bAsyncCompute != SW_FALSE && _pDevice != nullptr && _pDevice->getCapabilities()._bAsyncCompute != SW_FALSE;
@@ -1000,7 +1078,7 @@ namespace sw
         if ( listFramePass.empty() )
             return true;
         // 등록한 자원(`FrameBufferTable`)의 전이는 레벨 콜백이 낸다. 등록하지 않은 자원은 아직 패스가 스스로 전이한다(렌더 그래프 접근 핸들 ② 의 차례).
-        frameGraph.setLevelPrologue( SW_DELEGATE_METHOD( RenderGraphLevelPrologueFn, &FramePassExecutor::onGraphLevelPrologue, this ) );
+        frameGraph.setLevelPrologue( SW_DELEGATE_METHOD( RenderGraphLevelPrologueFn, &FramePassExecutor::onFrameGraphLevelPrologue, this ) );
         if ( frameGraph.compile() == false )
         {
             SW_LOG_ERROR_ID( "FramePassExecutor.FrameGraphCompileFailed", "Frame graph (_listFramePass) could not be compiled - see the cycle report above" );
@@ -1070,20 +1148,20 @@ namespace sw
 
     void FramePassExecutor::onFrameGraphPassExecute( const RenderGraphPassContext& graphContext )
     {
+        // 패스 번호(`_payload`)는 `_listFramePass` 차례다(`bindFramePassCallbacks`). 리스트는 그래프가 늘 싣는다 — 직렬 · 큐 실행이 같은 `recordPassBody` 다.
         const vector<RenderGraphPassDesc>& listFramePass = _pipelineResource.getFramePass();
-        const auto                         iter          = _mapFramePassNameToIndex.find( graphContext._passName );
-        const bool                         bPassListed   = iter != _mapFramePassNameToIndex.end() && iter->second < listFramePass.size();
-        SW_ASSERT( bPassListed );
-        IRHICommandList* const pCmd = graphContext._pCmdList != nullptr ? graphContext._pCmdList : _pCmd;
-        if ( bPassListed == false || pCmd == nullptr )
+        const uint32                       passIndex     = graphContext._payload;
+        SW_ASSERT( passIndex < listFramePass.size() );
+        IRHICommandList* const pCmd = graphContext._pCmdList;
+        if ( passIndex >= listFramePass.size() || pCmd == nullptr )
             return;
-        const RenderGraphPassDesc& passDesc = listFramePass[iter->second];
+        const RenderGraphPassDesc& passDesc = listFramePass[passIndex];
         // 프레임 패스마다 GPU 시간(`GPU.<프레임 패스>` — gpu.timings · 감시 값 GPU.PassMs)을 고정 칸 쌍에 쓴다. 게이트는 뷰 패스와 같다(계측 스위치 · 칸 수).
         // 비동기 컴퓨트 큐 리스트(pCmd != _pCmd)는 백엔드가 큐 사이의 리셋 · 해석 순서와 시계를 대조했을 때만 잰다(`IRHITimestampProvider::isComputeQueueTimestampComparable`).
         uint32 timestampBeginSlot = GPUPassScope::kNoTimestamp;
 #if SW_PROFILE_COMPILED
         const IRHITimestampProvider* pTimestamps      = _pDevice != nullptr ? _pDevice->findTimestampProvider() : nullptr;
-        const uint32                 frameSlot        = GPUTimestampSlotLayout::findFramePassSlot( iter->second );
+        const uint32                 frameSlot        = GPUTimestampSlotLayout::findFramePassSlot( passIndex );
         const bool                   bQueueComparable = pCmd == _pCmd || ( pTimestamps != nullptr && pTimestamps->isComputeQueueTimestampComparable() );
         const bool                   bWriteGPUTime    = pTimestamps != nullptr && bQueueComparable && _state._gpuPassTimeline.isRecording() && frameSlot != constant::invalid_index::kUint32 &&
                                    ( frameSlot + 1u ) < pTimestamps->getTimestampSlotCount();
@@ -1101,6 +1179,17 @@ namespace sw
 
     void FramePassExecutor::onGraphLevelPrologue( const RenderGraphLevelContext& levelContext )
     {
+        // 뷰 그래프 — 등록 자원은 지금 뷰의 엔진 자원 표다(`registerViewResources`). 첨부는 풀에서 찾는다.
+        issueLevelBarriers( levelContext, _viewResourceTable );
+    }
+
+    void FramePassExecutor::onFrameGraphLevelPrologue( const RenderGraphLevelContext& levelContext )
+    {
+        issueLevelBarriers( levelContext, _frameBufferTable );
+    }
+
+    void FramePassExecutor::issueLevelBarriers( const RenderGraphLevelContext& levelContext, const FrameBufferTable& table )
+    {
         if ( _pDevice == nullptr || levelContext._pCmdList == nullptr )
             return;
 
@@ -1111,7 +1200,7 @@ namespace sw
         // DX12 ResourceBarrier · Vulkan vkCmdPipelineBarrier 한 번, 언리얼 RDG 의 패스 앞 전이 배치와 같은 자리). 같은 자원을 여러 패스가 읽어도, 이미 맞는 상태여도 다시 내지 않는다.
         // 꺼진 효과의 출력 이름은 원본을 가리키지만(`TransientAttachmentPool::forward`) 전이는 그 이름으로 만든 텍스처에만 낸다 — 따라가면 꺼진 패스의 "쓰기" 가
         // 같은 레벨에서 원본을 읽는 패스와 부딪힌다. 원본의 읽기 상태는 원본을 입력으로 선언한 그 효과 패스의 레벨이 이미 냈고, 뒤에서 원본을 쓰는 패스는 로드 검증이 막는다.
-        // 버퍼(프레임 그래프 — 등록한 자원만, `FrameBufferTable`)는 이름의 모든 뷰 칸을 `transitionBuffers` 한 번으로, UAV → UAV 는 UAV 배리어로 낸다.
+        // 등록 자원(프레임 그래프는 `_frameBufferTable`, 뷰 그래프는 지금 뷰의 `_viewResourceTable`)은 이름의 모든 칸을 버퍼는 `transitionBuffers` 한 번으로, UAV → UAV 는 UAV 배리어로 낸다.
         // 큐: 그래프가 그 패스의 리스트를 넘긴다 — 비동기 컴퓨트 패스의 전이는 컴퓨트 리스트에 들어간다(D3D12 는 그 큐가 받는 상태로 접는다).
         IRHICommandList&                   cmd = *levelContext._pCmdList;
         frame_vector<RHITextureTransition> listTransition{ FrameAllocator<RHITextureTransition>{ _frameArena } };
@@ -1120,7 +1209,7 @@ namespace sw
         for ( const RenderGraphBarrier& barrier : *levelContext._pListBarrier )
         {
             bool bRegistered = false;
-            for ( const FrameBufferTable::Entry& entry : _frameBufferTable.getEntries() )
+            for ( const FrameBufferTable::Entry& entry : table.getEntries() )
             {
                 if ( entry._name != barrier._resource || entry._viewable != barrier._viewable )
                     continue;
@@ -1142,7 +1231,7 @@ namespace sw
                     listTransition.push_back( RHITextureTransition{ entry._handle, *state } );
                 }
             }
-            // 등록하지 않은 버퍼는 아직 패스가 스스로 전이한다(렌더 그래프 접근 핸들 ② 의 차례 — HZB · VFX · FrameGraphExecutor 다음 나머지 프레임 패스 · ③ 뷰 패스).
+            // 등록하지 않은 버퍼는 이 프레임 · 뷰에 일하지 않는다(등록 조건이 실행 조건) — 전이를 내지 않는다.
             if ( bRegistered || barrier._viewable != RenderGraphViewableKind::Texture )
                 continue;
             // 텍스처 UAV → UAV(`_bUAVBarrier`)는 만드는 접근이 없다 — 뷰 패스는 첨부(읽기 · 렌더 타깃 · 깊이)이고 프레임 패스 텍스처 출력은 렌더 타깃이다(규칙). 생기면 RHI 텍스처 UAV 배리어를 더한다.
@@ -1190,49 +1279,50 @@ namespace sw
         if ( _pDevice == nullptr )
             return;
 
-        // 패스 로컬 상태를 새로 만든다. 주의: 멤버 _pCmd 를 저장하고 복원하는 방식은 "한 번에 한 패스만 돈다" 는
-        // 전제라 병렬 기록에서 서로를 덮어쓴다.
-        // 프레임 시드에서 복사해 뷰, 조명 등 프레임 공통값을 물려받는다.
-        // 패스 슬롯의 컨텍스트에 프레임 시드를 **대입**한다. 복사본을 새로 만들면 값 목록과 레지스트리가 프레임마다 다시
-        // 늘어난다. 슬롯 수는 submitGraph 가 기록 전에 맞춰 둔다. 이름을 찾지 못하면 마지막 슬롯을 쓴다(직렬 경로에서만 온다).
-        const size_t passCount    = _pipelineResource.getGraphPass().size();
-        const auto   passSlotIter = _mapPassNameToIndex.find( graphContext._passName );
-        // 모듈 확장 패스는 XML 패스 슬롯 **뒤**에 자기 슬롯을 갖는다(병렬 기록의 패스마다 독립 컨텍스트). 슬롯 수는 submitGraph 가 기록 전에 맞춰 둔다.
-        const auto   moduleIter  = _mapExtensionPassIndex.find( graphContext._passName );
-        const bool   bModulePass = moduleIter != _mapExtensionPassIndex.end() && moduleIter->second < _extensionHost.getPasses().size();
-        const size_t slotCount   = passCount + 1 + _extensionHost.getPasses().size();
-        const size_t passSlot    = bModulePass ? passCount + 1 + moduleIter->second
-                                               : ( ( passSlotIter != _mapPassNameToIndex.end() && passSlotIter->second < passCount ) ? passSlotIter->second : passCount );
-        if ( _listPassContext.size() <= passSlot )
-            _listPassContext.resize( slotCount );
-        // 벡터 **자체**는 병렬 기록 중 읽기만 한다(슬롯은 패스마다 다르다). 비-const 인덱싱이나 data() 는 컨테이너 레이스
+        // 패스 번호(`_payload`)는 파이프라인 패스 차례이고 그 뒤가 모듈 확장 패스다(`bindPassCallbacks`) — 이름 해시로 다시 찾지 않는다.
+        const vector<RenderGraphPassDesc>& listPass    = _pipelineResource.getGraphPass();
+        const uint32                       passCount   = static_cast<uint32>( listPass.size() );
+        const uint32                       passIndex   = graphContext._payload;
+        const bool                         bModulePass = passIndex >= passCount;
+        const uint32                       moduleIndex = bModulePass ? passIndex - passCount : 0u;
+        SW_ASSERT( bModulePass == false || moduleIndex < _extensionHost.getPasses().size() );
+        if ( bModulePass && moduleIndex >= _extensionHost.getPasses().size() )
+            return;
+        // 이번 뷰에 할 일이 없는 패스(뷰 패스 고르기 — 꺼진 효과 · 그릴 것 없는 덧그리기 · 읽는 쪽이 없는 패스)는 문맥 복사 · 상수 칸 잡기보다 먼저 돌려보낸다.
+        if ( bModulePass == false && isPassDisabledInView( passIndex ) )
+            return;
+
+        // 패스 로컬 상태를 새로 만든다. 주의: 멤버 _pCmd 를 저장하고 복원하는 방식은 "한 번에 한 패스만 돈다" 는 전제라 병렬 기록에서 서로를 덮어쓴다.
+        // 패스 슬롯(= 패스 번호)의 컨텍스트에 프레임 시드를 **대입**한다. 복사본을 새로 만들면 값 목록과 레지스트리가 프레임마다 다시 늘어난다.
+        // 슬롯 수는 submitGraph 가 기록 전에 맞춰 둔다 — 벡터 **자체**는 병렬 기록 중 읽기만 한다(슬롯은 패스마다 다르다). 비-const 인덱싱이나 data() 는 컨테이너 레이스
         // 탐지기가 벡터에 대한 쓰기로 잡아 워커 둘이 동시에 들어오면 울린다. const 로 읽고 슬롯만 고쳐 쓴다.
-        FramePassContext& passContext = const_cast<FramePassContext&>( std::as_const( _listPassContext ).data()[passSlot] );
+        SW_ASSERT( passIndex < _listPassContext.size() );
+        if ( passIndex >= _listPassContext.size() )
+            return;
+        FramePassContext& passContext = const_cast<FramePassContext&>( std::as_const( _listPassContext ).data()[passIndex] );
         passContext                   = _state._frameContext;
         passContext._passName         = graphContext._passName;
-        if ( graphContext._pCmdList != nullptr )
-            passContext._pCmd = graphContext._pCmdList;
+        passContext._pCmd             = graphContext._pCmdList; // 직렬 · 병렬 모두 그래프가 패스의 리스트를 싣는다(`recordPassBody`)
+        // 패스 몸통은 뷰 엔진 자원(`ViewGraphResource`)을 선언한 핸들로만 받고 패스 안 왕복도 그 핸들로 옮긴다 — 지금 뷰의 표를 실은 문맥을 넘긴다(몸통이 도는 동안만 산다).
+        RenderGraphPassContext viewGraphContext = graphContext;
+        viewGraphContext._pResourceTable        = &_viewResourceTable;
+        passContext._pGraphPass                 = &viewGraphContext;
         // 상수 버퍼도 패스마다 따로 잡는다. 커맨드 기록은 지연되는데 상수 쓰기는 즉시 일어나므로,
         // 하나를 공유하면 재생 시점에 마지막 패스 값만 남는다. 못 잡으면(링 고갈, 오류는 링이 남겼다) 이 패스를 그리지 않는다.
-        if ( acquirePassCb( passContext ) == false )
+        if ( passContext._pCmd == nullptr || acquirePassCb( passContext ) == false )
             return;
         if ( bModulePass )
         {
-            executeExtensionPass( passContext, _extensionHost.getPasses()[moduleIter->second] );
+            executeExtensionPass( passContext, _extensionHost.getPasses()[moduleIndex] );
             return;
         }
 
-        const vector<RenderGraphPassDesc>& listPass = _pipelineResource.getGraphPass();
         // 타입은 로드 시점에 한 번 해석해 둔 값을 쓴다. 여기서 문자열을 다시 비교하면 디스패치와
         // PSO 생성이 서로 다른 표기를 받아 줄 여지가 생긴다.
-        // 그래프의 패스는 모두 파이프라인 서술에서 만들었다(`_mapPassNameToIndex`). 서술이 없는 패스는 실행할 규칙이 없다 — 이름으로 짐작하지 않는다.
-        const auto iter        = _mapPassNameToIndex.find( graphContext._passName );
-        const bool bPassListed = iter != _mapPassNameToIndex.end() && iter->second < listPass.size();
-        SW_ASSERT( bPassListed );
-        if ( bPassListed == false )
-            return;
-        const RenderGraphPassDesc&    passDesc  = listPass[iter->second];
-        [[maybe_unused]] const size_t passIndex = iter->second;
+        const RenderGraphPassDesc& passDesc = listPass[passIndex];
+        // 개발 보기 `gpu.show <첨부>` 는 Present 가 선언 밖 첨부를 읽는 유일한 길이다 — 패스 몸통은 텍스처를 옮길 수 없어 실행기가 몸통 앞에서 이 패스의 리스트로 옮긴다(개발 전용).
+        if ( passDesc._type == RenderPassKind::Present )
+            prepareVisualizedAttachment( *graphContext._pCmdList );
 
 #if SW_PROFILE_COMPILED
         // **GPU 시간은 패스 인덱스로 고정된 슬롯 쌍에 기록한다.** 패스는 병렬로 기록될 수 있어
@@ -1241,13 +1331,11 @@ namespace sw
         // **계측에는 비용이 든다.** 타임스탬프 하나가 GPU 파이프라인에 표식을 넣고 프레임 끝에
         // resolve 와 읽기가 붙는다. 그래서 (1) Shipping 에서는 이 블록이 통째로 사라지고,
         // (2) Dev 에서도 프로파일러가 켜져 있을 때만 기록한다(`-gv_profileFrames`).
-        const uint32 timestampBegin = static_cast<uint32>( passIndex ) * 2u;
+        const uint32 timestampBegin = passIndex * 2u;
         // 패스 슬롯은 패스 번호로 고정이라 주 시점만 기록한다(추가 뷰가 같은 슬롯을 다시 쓰면 주 시점의 시간이 덮인다).
         const IRHITimestampProvider* pTimestamps   = _pDevice != nullptr ? _pDevice->findTimestampProvider() : nullptr;
-        const bool                   bWriteGPUTime = pTimestamps != nullptr && passContext._pCmd != nullptr && isRenderingExtraView() == false &&
-                                   _state._gpuPassTimeline.isRecording() &&
-                                   static_cast<uint32>( passIndex ) < GPUTimestampSlotLayout::kTimedPassCapacity &&
-                                   ( timestampBegin + 1u ) < pTimestamps->getTimestampSlotCount();
+        const bool                   bWriteGPUTime = pTimestamps != nullptr && isRenderingExtraView() == false && _state._gpuPassTimeline.isRecording() &&
+                                   passIndex < GPUTimestampSlotLayout::kTimedPassCapacity && ( timestampBegin + 1u ) < pTimestamps->getTimestampSlotCount();
         if ( bWriteGPUTime )
             passContext._pCmd->writeTimestamp( timestampBegin );
 #endif
@@ -1258,6 +1346,59 @@ namespace sw
         if ( bWriteGPUTime )
             passContext._pCmd->writeTimestamp( timestampBegin + 1u );
 #endif
+        passContext._pGraphPass = nullptr; // 문맥은 이 함수의 지역 값이다 — 몸통 밖에서 가리키지 않는다
+    }
+
+    void FramePassExecutor::registerViewResources( FrameViewTarget& view )
+    {
+        SW_ASSERT( &view == _pActiveView ); // 고르기 결과(`isPassKindEnabledInView`)는 지금 뷰의 것이다
+        _viewResourceTable.reset();
+        // 처음 접근 인자는 이 표에서 쓰지 않는다 — 뷰 그래프는 들인 자원이 없어 심지 않는다(레벨 콜백 · 패스 몸통은 이름 → 핸들만 읽는다).
+        // 자동 노출 — 이번 프레임에 재는 뷰만(`prepareAutoExposure`). 지난 칸을 읽고 이번 칸에 쓴다.
+        if ( view._bAutoExposureThisFrame == SW_TRUE && view._arrAutoExposure[0] != 0 && view._arrAutoExposure[1] != 0 )
+        {
+            const uint32 writeSlot = view._autoExposureWrite;
+            _viewResourceTable.registerTexture( ViewGraphResource::autoExposureHistory()._name, 0, view._arrAutoExposure[1u - writeSlot], RenderGraphAccess::ShaderRead );
+            _viewResourceTable.registerTexture( ViewGraphResource::autoExposureTarget()._name, 0, view._arrAutoExposure[writeSlot], RenderGraphAccess::ShaderRead );
+        }
+        // FSR 1 — 이번 프레임에 키우는 뷰만(`prepareUpscale`).
+        if ( view._bUpscaleThisFrame == SW_TRUE && view._upscaleIntermediate != 0 )
+            _viewResourceTable.registerTexture( ViewGraphResource::upscaleIntermediate()._name, 0, view._upscaleIntermediate, RenderGraphAccess::ShaderRead );
+        // 그림자 캐시 층 — 다시 그리는 프레임만(층은 모든 뷰가 같아 처음 그리는 뷰가 다시 그리고 표시를 내린다). 다시 그리지 않는 프레임은 층이 셰이더 읽기 그대로라 전이가 없다.
+        const ShadowCache& cache = _state._shadowCache;
+        if ( cache.usesCacheLayer() && cache.needsRebuild() && cache.getLayer()._texture != 0 )
+            _viewResourceTable.registerTexture( ViewGraphResource::shadowCacheLayer()._name, 0, cache.getLayer()._texture, RenderGraphAccess::ShaderRead );
+        // 후처리 머티리얼의 앞 결과 사본 — 그 자리에 이어 그리는 머티리얼이 있는 뷰만 만들었다(`FramePostProcessMaterials::prepareChain`).
+        if ( view._postProcessChainBeforeTonemap.getTexture() != 0 )
+            _viewResourceTable.registerTexture( ViewGraphResource::postProcessChainBeforeTonemap()._name, 0, view._postProcessChainBeforeTonemap.getTexture(), RenderGraphAccess::ShaderRead );
+        if ( view._postProcessChainAfterTonemap.getTexture() != 0 )
+            _viewResourceTable.registerTexture( ViewGraphResource::postProcessChainAfterTonemap()._name, 0, view._postProcessChainAfterTonemap.getTexture(), RenderGraphAccess::ShaderRead );
+        // 컴퓨트로 쓰는 첨부(UAV 로 선언) — 패스가 끝에 셰이더 읽기로 돌려 다음 컴퓨트의 UAV 전이가 배리어가 되게 한다(텍스처 UAV → UAV 배리어가 RHI 에 없다). 풀이 가진 텍스처만.
+        for ( const RenderGraphPassDesc& pass : _pipelineResource.getGraphPass() )
+        {
+            const bool bComputePass = pass._type == RenderPassKind::Compute;
+            const bool bComputeImpl = pass._implementation == RenderPassExecutionMode::Compute && _pDevice != nullptr && _pDevice->supportsNativeBindlessSampling();
+            if ( bComputePass == false && bComputeImpl == false )
+                continue;
+            const auto registerAttachment = [this, &view]( const hashed_string& attachment )
+            {
+                const RHITextureHandle texture = view._transientPool.findOwnTexture( attachment );
+                if ( texture != 0 && _viewResourceTable.findTexture( attachment, 0 ) == 0 )
+                    _viewResourceTable.registerTexture( attachment, 0, texture, RenderGraphAccess::ShaderRead );
+            };
+            for ( const RenderGraphPassDesc::ResolvedAttachment& output : pass._listResolvedColorOutput )
+            {
+                registerAttachment( output._attachment );
+            }
+            if ( bComputePass == false )
+                continue;
+            for ( const RenderGraphPassDesc::ResolvedAttachment& input : pass._listResolvedInput )
+            {
+                registerAttachment( input._attachment );
+            }
+        }
+        // 이번 장면 깊이로 HZB 를 짓는 패스(화면 공간 반사)와 2 단계 가림의 뒤 단계(주 시점)가 쓰는 깊이 사본 · HZB · 컬링 버퍼.
+        _frameGraphExecutor.registerViewGraphResources( _viewResourceTable, view, isPassKindEnabledInView( RenderPassKind::ScreenSpaceReflection ) );
     }
 
     void FramePassExecutor::setInputRoleEnabled( RenderPassInputRole role, bool bEnabled )

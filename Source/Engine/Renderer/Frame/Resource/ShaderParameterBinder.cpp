@@ -128,7 +128,7 @@ namespace sw
              *          `g_<Name>Index` 패턴이면 레지스트리에서 텍스처 · 버퍼 bindless 인덱스를 채운다. 해결에 실패해도 그 멤버는 반드시 INVALID(0xFFFFFFFF)로
              *          채운다 — 0 으로 두면 셰이더가 힙 0번을 잘못 읽는다(InstanceData::loadWorld / Bindless::sampleIndex 는 kInvalidIndex 비교로 폴백).
              */
-            static void uploadEngineConstantBuffer( IRHICommandList& cmd, const ShaderBindingLayout& layout, const FrameResourceRegistry& registry,
+            static void uploadEngineConstantBuffer( IRHIPassCommandList& cmd, const ShaderBindingLayout& layout, const FrameResourceRegistry& registry,
                                                     const PassConstantValues& values, const RHIConstantBuffer& engineCb,
                                                     const BindlessIndexCheckSite* pIndexCheck, bool bCheckIndex )
             {
@@ -184,7 +184,7 @@ namespace sw
              * @details 리플렉션이 주는 `_registerIndex` 는 백엔드마다 뜻이 다를 수 있다(세트 · 시프트 규약). 그대로 넘기면 한 CB 가 다른 CB 자리를
              *          덮어쓰거나 어느 슬롯에도 안 걸리는데, 같은 UNIFORM_BUFFER 라 검증 에러도 안 난다. 텍스처 · 구조버퍼는 3) 의 표가 맡는다.
              */
-            static void bindReservedConstantBuffers( IRHICommandList& cmd, const ShaderBindingLayout& layout, const RHIConstantBuffer& engineCb,
+            static void bindReservedConstantBuffers( IRHIPassCommandList& cmd, const ShaderBindingLayout& layout, const RHIConstantBuffer& engineCb,
                                                      RHIDescriptorIndex materialCb, const BindlessIndexCheckSite* pIndexCheck, bool bCheckIndex )
             {
                 // 이 함수는 드로우마다 불린다. 리터럴이라도 hashed_string 을 여기서 만들면 드로우마다
@@ -206,7 +206,7 @@ namespace sw
              * @brief 머티리얼 텍스처 인덱스를 검사하고, 에뮬 백엔드(DX11 · GL)면 t16..t31 에 서수대로 겁니다.
              * @details 네이티브 bindless 백엔드는 인덱스가 이미 MaterialCB 에 있어 걸 필요가 없지만, 같은 번호가 머티리얼 데이터에 들어가 있어 검사는 네 백엔드 모두 한다.
              */
-            static void bindMaterialTextures( IRHICommandList& cmd, bool bNativeBindless, const RHIDescriptorIndex* pMaterialTexSRV,
+            static void bindMaterialTextures( IRHIPassCommandList& cmd, bool bNativeBindless, const RHIDescriptorIndex* pMaterialTexSRV,
                                               const BindlessIndexCheckSite* pIndexCheck, bool bCheckIndex )
             {
                 if ( pMaterialTexSRV == nullptr )
@@ -230,7 +230,7 @@ namespace sw
              * @details 구조버퍼(인스턴스 t4, 머티리얼 데이터 t5 …)는 리플렉션이 준 슬롯에 네 백엔드가 각자의 방식으로 건다. DX12 디스크립터 테이블,
              *          Vulkan 슬롯 세트, DX11 SRV 슬롯, GL SSBO. 드로우별로 바뀌는 데이터는 이 버퍼 안의 원소라 바인딩 자체는 패스 · 배치마다 한 번이다.
              */
-            static void bindRegisteredResources( IRHICommandList& cmd, const ShaderBindingLayout& layout, const FrameResourceRegistry& registry, bool bNativeBindless,
+            static void bindRegisteredResources( IRHIPassCommandList& cmd, const ShaderBindingLayout& layout, const FrameResourceRegistry& registry, bool bNativeBindless,
                                                  const BindlessIndexCheckSite* pIndexCheck, bool bCheckIndex )
             {
                 for ( const ShaderResourceBindOp& bind : layout.getResourceBindOps() )
@@ -260,7 +260,7 @@ namespace sw
         };
     } // namespace
 
-    void ShaderParameterBinder::bindGraphics( IRHICommandList&              cmd,
+    void ShaderParameterBinder::bindGraphics( IRHIPassCommandList&          cmd,
                                               const ShaderBindingLayout&    layout,
                                               const FrameResourceRegistry&  registry,
                                               const PassConstantValues&     values,

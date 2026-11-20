@@ -28,14 +28,16 @@ namespace sw::test
     class FakeRHICommandList final : public IRHICommandList
     {
     public:
-        uint32        _creationIndex;                                                                 /**< 디바이스가 몇 번째로 만든 리스트인지(0 부터) */
-        uint32        _beginCount{ 0 };                                                               /**< `beginCommandList` 횟수 */
-        uint32        _endCount{ 0 };                                                                 /**< `endCommandList` 횟수 */
-        bool          _bOpen{ false }; /**< 열려 있는가(닫지 않고 제출하면 실제 백엔드는 실패한다) */ ///< NOLINT(sw-bool-flag): 주소(`&`)를 넘긴다
-        hashed_string _passName;                                                                      /**< 이 리스트에 기록한 패스 — 테스트의 패스 콜백이 적는다 */
-        uint32        _transitionBatchCount{ 0 };                                                     /**< `transitionBuffers` 호출 수 */
-        uint32        _transitionCount{ 0 };                                                          /**< `transitionBuffers` 로 받은 전이 수의 합 */
-        uint32        _uavBarrierCount{ 0 };                                                          /**< `uavBarrier` 호출 수 */
+        uint32                       _creationIndex;                                                                 /**< 디바이스가 몇 번째로 만든 리스트인지(0 부터) */
+        uint32                       _beginCount{ 0 };                                                               /**< `beginCommandList` 횟수 */
+        uint32                       _endCount{ 0 };                                                                 /**< `endCommandList` 횟수 */
+        bool                         _bOpen{ false }; /**< 열려 있는가(닫지 않고 제출하면 실제 백엔드는 실패한다) */ ///< NOLINT(sw-bool-flag): 주소(`&`)를 넘긴다
+        hashed_string                _passName;                                                                      /**< 이 리스트에 기록한 패스 — 테스트의 패스 콜백이 적는다 */
+        uint32                       _transitionBatchCount{ 0 };                                                     /**< `transitionBuffers` 호출 수 */
+        uint32                       _transitionCount{ 0 };                                                          /**< `transitionBuffers` 로 받은 전이 수의 합 */
+        uint32                       _uavBarrierCount{ 0 };                                                          /**< `uavBarrier` 호출 수 */
+        vector<RHITextureTransition> _listTextureTransition;                                                         /**< `transitionTextures` 로 받은 텍스처 전이(받은 순서) */
+        vector<RHIBufferTransition>  _listBufferTransition;                                                          /**< `transitionBuffer` 로 받은 단일 버퍼 전이(받은 순서) */
         /** @brief `copyBufferRegion` 한 번입니다. */
         struct BufferCopy
         {
@@ -87,11 +89,11 @@ namespace sw::test
         void prepareTextureForShaderRead( RHITextureHandle ) override {}
         void prepareTextureForRenderTarget( RHITextureHandle ) override {}
         void prepareTextureForUnorderedAccess( RHITextureHandle ) override {}
-        void transitionTextures( const RHITextureTransition*, uint32 ) override {}
+        void transitionTextures( const RHITextureTransition* pTransition, uint32 count ) override { _listTextureTransition.insert( _listTextureTransition.end(), pTransition, pTransition + count ); }
         void blitTexture( RHITextureHandle, RHITextureHandle ) override {}
         void drawIndirect( RHIBufferHandle, uint32, uint32, RHIBufferHandle, uint32 ) override {}
         void dispatchIndirect( RHIBufferHandle, uint32 ) override {}
-        void transitionBuffer( RHIBufferHandle, RHIBufferState ) override {}
+        void transitionBuffer( RHIBufferHandle buffer, RHIBufferState state ) override { _listBufferTransition.push_back( RHIBufferTransition{ buffer, state } ); }
         void transitionBuffers( const RHIBufferTransition*, uint32 count ) override
         {
             ++_transitionBatchCount;

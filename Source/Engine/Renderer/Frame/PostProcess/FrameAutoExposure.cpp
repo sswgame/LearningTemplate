@@ -23,6 +23,7 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
+#include "Engine/Renderer/Frame/Execute/ViewGraphResource.h"
 #include "Engine/Renderer/Frame/FramePassContext.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Renderer/Frame/PostProcess/TemporalMath.h"
@@ -263,7 +264,7 @@ namespace sw
         const uint32                             writeSlot       = view._autoExposureWrite;
         const uint32                             readSlot        = 1u - writeSlot;
         const RHITextureHandle                   target          = view._arrAutoExposure[writeSlot];
-        IRHICommandList&                         cmd             = *context._pCmd;
+        IRHIPassCommandList&                     cmd             = *context._pCmd;
         const bool                               bNativeBindless = _pDevice->supportsNativeBindlessSampling();
         FrameAutoExposureInternal::RootConstants constants{};
         constants._source       = bNativeBindless ? static_cast<uint32>( source._srv ) : 0u;
@@ -274,24 +275,25 @@ namespace sw
         constants._rateDown     = view._autoExposureParams._w;
         constants._sourceWidth  = view.scaleToRect( source, true );
         constants._sourceHeight = view.scaleToRect( source, false );
-        cmd.prepareTextureForShaderRead( source._texture );
-        cmd.prepareTextureForShaderRead( view._arrAutoExposure[readSlot] );
+        // 원본은 이 패스의 입력 선언이, 지난 칸 · 이번 칸은 종류의 선언(`ViewGraphResource::autoExposureHistory` · `autoExposureTarget` — 재는 뷰만 등록)이 레벨 콜백에서 옮겼다
+        // (지난 칸 셰이더 읽기, 이번 칸 RW 텍스처). 이번 칸은 같은 패스(톤맵)가 읽으므로 쓴 뒤 셰이더 읽기로 옮긴다.
+        const RenderGraphPassContext& graphPass = *context._pGraphPass;
 
         // 히스토그램 컴퓨트(네이티브 bindless) — 한 그룹이 표본을 모아 컷 · 적응까지 하고 이번 칸에 RW 로 쓴다. 풀스크린보다 표본이 16 배다.
         const RHIPipelineStateHandle histogramPSO = findHistogramPSO( view );
         if ( histogramPSO != 0 )
         {
             constants._output = static_cast<uint32>( view._arrAutoExposureUAV[writeSlot] );
-            cmd.prepareTextureForUnorderedAccess( target );
             cmd.setComputePipelineState( histogramPSO );
             cmd.setComputeRootConstants( 0, sizeof( constants ) / sizeof( uint32 ), &constants );
             cmd.dispatchCompute( 1, 1, 1 );
-            cmd.prepareTextureForShaderRead( target );
+            graphPass.transition( ViewGraphResource::autoExposureTarget(), RHITextureState::ShaderResource );
             context.resetBindingCache();
             context._resourceRegistry.registerTexture( attachmentNames()._autoExposure, target, view._arrAutoExposureSRV[writeSlot] );
             return;
         }
-        cmd.prepareTextureForRenderTarget( target );
+        // 1 px 그리기 판 — 이번 칸을 렌더 타깃으로 옮긴다(선언은 UAV — 컴퓨트 판이 기본이다).
+        graphPass.transition( ViewGraphResource::autoExposureTarget(), RHITextureState::RenderTarget );
 
         RHIRenderPassBeginInfo beginInfo{};
         beginInfo._bBindColor        = SW_TRUE;
@@ -314,7 +316,7 @@ namespace sw
         cmd.setGraphicsRootConstants( 0, sizeof( constants ) / sizeof( uint32 ), &constants );
         cmd.draw( 3, 0 );
         cmd.endRenderPass();
-        cmd.prepareTextureForShaderRead( target );
+        graphPass.transition( ViewGraphResource::autoExposureTarget(), RHITextureState::ShaderResource );
         // 측정 그리기는 PSO · 슬롯을 직접 바꿨다 — 톤맵 그리기가 바인딩 캐시를 믿고 PSO 를 건너뛰지 않게 지운다.
         context.resetBindingCache();
         context._resourceRegistry.registerTexture( attachmentNames()._autoExposure, target, view._arrAutoExposureSRV[writeSlot] );

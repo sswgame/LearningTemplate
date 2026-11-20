@@ -29,6 +29,7 @@
 namespace sw
 {
     class IRHICommandList;
+    class IRHIPassCommandList;
     class IRHIDevice;
 
     /** @brief 메시지 한 건의 심각도입니다. 로그 수준이 된다(`Info` — `SW_GPU_PRINT` · `SW_GPU_LOG`, `Warning` · `Error` — 대개 `SW_GPU_ASSERT`). */
@@ -157,9 +158,9 @@ namespace sw
          */
         void updateControl( const GPUMessageSelection& selection, uint32 logBudget );
         /** @brief 메시지가 켜진 컴퓨트 디스패치 **앞에서** 부릅니다. 버퍼를 UAV 상태로 두고 u4 에 겁니다. 꺼져 있으면 아무것도 하지 않습니다. */
-        void bindCompute( IRHICommandList& commands );
+        void bindCompute( IRHIPassCommandList& commands );
         /** @brief 메시지가 켜진 그래픽스 드로우 **앞에서**(렌더 패스를 연 뒤) 부릅니다. u4 를 그래픽스 단계에 겁니다. 꺼져 있으면 아무것도 하지 않습니다. */
-        void bindGraphics( IRHICommandList& commands );
+        void bindGraphics( IRHIPassCommandList& commands );
         /** @brief 이 프레임의 메시지 디스패치가 모두 끝난 뒤 한 번 부릅니다. 링 전체를 읽기 버퍼로 복사하는 명령을 넣습니다(프레임 번호가 요청의 tag 다). */
         void requestReadback( IRHICommandList& commands );
         /** @brief 도착한 가장 최근 사본을 읽어 새 기록을 로그로 냅니다(메시지 id 별로 묶는다). 몇 프레임 늦게 도착한다. */

@@ -66,7 +66,7 @@ namespace sw
         return pLog != nullptr && pLog->resolve( id, pOutName, capacity );
     }
 
-    uint32 GPUBreadcrumbs::beginPass( IRHICommandList& commands, string_view passName )
+    uint32 GPUBreadcrumbs::beginPass( IRHIPassCommandList& commands, string_view passName )
     {
         const uint32 id = registerPass( passName );
         if ( id == 0 )
@@ -76,7 +76,7 @@ namespace sw
         return id;
     }
 
-    void GPUBreadcrumbs::endPass( IRHICommandList& commands, uint32 id )
+    void GPUBreadcrumbs::endPass( IRHIPassCommandList& commands, uint32 id )
     {
         if ( id == 0 )
             return;
@@ -186,12 +186,12 @@ namespace sw
             pCrashHandler->setContextValue( "gpu_lost_backend", pBackendName );
     }
 
-    GPUPassScope::GPUPassScope( IRHICommandList& commands, string_view passName )
+    GPUPassScope::GPUPassScope( IRHIPassCommandList& commands, string_view passName )
         : GPUPassScope( commands, passName, kNoTimestamp )
     {
     }
 
-    GPUPassScope::GPUPassScope( IRHICommandList& commands, string_view passName, uint32 timestampBeginSlot )
+    GPUPassScope::GPUPassScope( IRHIPassCommandList& commands, string_view passName, uint32 timestampBeginSlot )
         : _commands{ commands }
         , _breadcrumbID{ 0 }
         , _timestampBeginSlot{ kNoTimestamp }

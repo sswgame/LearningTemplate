@@ -126,7 +126,7 @@ namespace sw
         _uploadedParticleCount = particleCount;
     }
 
-    uint32 VFXParticleRenderer::drawBatches( IRHICommandList& cmd, const vector<GPUParticleBatch>& listBatch, vector_reference<const GPUTransparentParticleSlot> listSlot,
+    uint32 VFXParticleRenderer::drawBatches( IRHIPassCommandList& cmd, const vector<GPUParticleBatch>& listBatch, vector_reference<const GPUTransparentParticleSlot> listSlot,
                                              bool bNativeBindless ) const
     {
         const bool bNothingToDraw = listSlot.empty() || _listBatchBase.size() != listBatch.size();

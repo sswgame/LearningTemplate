@@ -180,15 +180,16 @@ namespace sw
         if ( _parallelBarrierReportCount.load( std::memory_order_relaxed ) >= 8 )
             return;
 
-        // 진단이지 오류가 아니다. 레벨 프롤로그가 대부분을 미리 발행하지만 **전부는 아니다.**
-        // 파이프라인 XML 이 선언하지 않은 첨부(패스 콜백이 직접 거는 텍스처)는 프롤로그가 알 수 없다. 그런 것이
-        // 남아 있어도 상태 전이는 레코드의 비교 교환(RHITrackedState)이라 안전하다. 여기 뜨는 이름이 곧 "선언이 비어
-        // 있는 자원" 이므로, 파이프라인 선언을 채우면 이 줄이 사라진다.
+        // 진단이다. 병렬 구간의 배리어는 둘 중 하나다: (1) 패스가 **쓰기로 선언한** 자원의 패스 안 왕복(`RenderGraphPassContext::transition`) — 쓰기 선언은
+        // 그래프가 레벨 안 독점으로 가르므로 같은 레벨의 다른 리스트가 그 자원을 만지지 않아 맞다. (2) 렌더 패스 · 블릿이 대상 상태를 스스로 옮기는 것 · 선언이 빠진 자원 —
+        // 이것은 **안전하지 않다**: 추적 상태는 자원마다 값 하나이고 기록 시점의 비교 교환(RHITrackedState)은 "배리어를 낼 쪽 하나" 만 정한다. 같은 레벨의 리스트는 정한
+        // 순서로 실행되는데 기록 순서는 워커 경합이라, 뒤 리스트가 먼저 기록하며 전이를 가져가면 앞 리스트는 배리어 없이 먼저 실행된다(틀린 상태 — 둘의 상태가 다르면
+        // DX12 장치 제거). RHI 는 어느 쪽인지 가를 수 없어 멈추지 않고 이름을 남긴다 — 여기 뜨는 이름이 (2) 라면 그 자원을 패스 선언에 넣는다.
         if ( _parallelBarrierReportCount.fetch_add( 1, std::memory_order_relaxed ) >= 8 )
             return;
-        SW_LOG_TRACE_ID( "RHI.IssuedBarrierDuringParallel", "%# issued a barrier during parallel recording - the level prologue did not "
-                                                            "transition this resource beforehand (a pipeline declaration may be missing). "
-                                                            "Behavior is safe: state transitions are an atomic compare-exchange on the resource record.",
+        SW_LOG_TRACE_ID( "RHI.IssuedBarrierDuringParallel", "%# issued a barrier during parallel recording - safe only for a resource the pass declared as written "
+                                                            "(an in-pass round trip). For an undeclared resource it is a race: the tracked state is one value per resource, "
+                                                            "so a later list recorded first can take the transition and the earlier list runs without it. Declare the resource.",
                          pWhat );
 #endif
     }

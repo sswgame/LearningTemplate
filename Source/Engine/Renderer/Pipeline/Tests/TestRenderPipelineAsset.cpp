@@ -768,6 +768,38 @@ SW_TEST_CASE( RenderPipelineAssetTest, DecalPassWritesTheDBuffer )
     }
 }
 
+/**
+ * @brief [RenderPipelineAssetTest] 2 단계 가림의 뒤 단계(`LateOcclusion`)는 엔진 디퍼드 · 포워드 프리패스에서 깊이 프리패스 뒤 · 베이스 패스 앞의 뷰 패스이고 XML 은 자리만 적는다
+ * @details 쓰는 자원(장면 깊이 · 깊이 사본 · HZB · 컬링 버퍼)은 종류가 선언한다(`FramePassExecutor::appendEngineResourceAccesses`) — XML 입력 · 출력 · 셰이더가 비어 있어야 한다.
+ *          결함이면 뒤 단계가 깊이 프리패스 몸통 안에 숨어 선언 없이 컬링 버퍼를 옮기던 모양으로 돌아가거나, 베이스 패스 뒤에 와 더한 인스턴스가 그 프레임에 빠진다.
+ *          변이: XML 에서 패스를 지우면 찾기 단언이, 베이스 패스 뒤로 옮기면 차례 단언이 진다.
+ */
+SW_TEST_CASE( RenderPipelineAssetTest, LateOcclusionSitsBetweenDepthPrepassAndBasePass )
+{
+    SW_EXPECT_TRUE( isViewPassType( RenderPassKind::LateOcclusion ) );
+    SW_EXPECT_FALSE( isFramePassType( RenderPassKind::LateOcclusion ) );
+    const RenderPassKind arrBasePass[] = { RenderPassKind::GBuffer, RenderPassKind::ForwardOpaque };
+    const string_view    arrPath[]     = { "engine/pipeline/deferredpipeline.xml", "engine/pipeline/forwardprepasspipeline.xml" };
+    for ( size_t pipelineIndex = 0; pipelineIndex < SW_COUNT_OF( arrPath ); ++pipelineIndex )
+    {
+        RenderPipelineAsset engine;
+        SW_REQUIRE_TRUE( engine.loadFromXMLFile( AssetID{ arrPath[pipelineIndex] } ) );
+        const vector<RenderGraphPassDesc>& listPass     = engine.getGraphPass();
+        size_t                             prepassIndex = listPass.size();
+        size_t                             lateIndex    = listPass.size();
+        size_t                             baseIndex    = listPass.size();
+        for ( size_t index = 0; index < listPass.size(); ++index )
+        {
+            prepassIndex = listPass[index]._type == RenderPassKind::DepthPrepass ? index : prepassIndex;
+            lateIndex    = listPass[index]._type == RenderPassKind::LateOcclusion ? index : lateIndex;
+            baseIndex    = listPass[index]._type == arrBasePass[pipelineIndex] ? index : baseIndex;
+        }
+        SW_REQUIRE_TRUE( prepassIndex < lateIndex && lateIndex < baseIndex && baseIndex < listPass.size() );
+        const RenderGraphPassDesc& late = listPass[lateIndex];
+        SW_EXPECT_TRUE( late._listInput.empty() && late._listOutput.empty() && late._shaderPath.empty() && late._depthAttachment.empty() );
+    }
+}
+
 namespace
 {
     struct FrameGraphTestUtil

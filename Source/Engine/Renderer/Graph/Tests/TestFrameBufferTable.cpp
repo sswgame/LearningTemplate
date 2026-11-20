@@ -35,9 +35,9 @@ SW_TEST_CASE( FrameBufferTableTest, RegisteredHandlesAreFoundByNameAndSlot )
     FrameBufferTable    table;
     const hashed_string hzb( "HZB" );
     const hashed_string history( "DepthHistory" );
-    SW_REQUIRE_TRUE( table.registerBuffer( hzb, 0, makeBuffer( 11 ), RenderGraphAccess::ShaderRead ) );
-    SW_REQUIRE_TRUE( table.registerBuffer( hzb, 2, makeBuffer( 12 ), RenderGraphAccess::ShaderRead ) );
-    SW_REQUIRE_TRUE( table.registerTexture( history, 0, RHITextureHandle{ 21 }, RenderGraphAccess::UnorderedAccess ) );
+    table.registerBuffer( hzb, 0, makeBuffer( 11 ), RenderGraphAccess::ShaderRead );
+    table.registerBuffer( hzb, 2, makeBuffer( 12 ), RenderGraphAccess::ShaderRead );
+    table.registerTexture( history, 0, RHITextureHandle{ 21 }, RenderGraphAccess::UnorderedAccess );
 
     SW_EXPECT_EQUAL( RHIBufferHandle{ 11 }, table.findBuffer( hzb, 0 ) );
     SW_EXPECT_EQUAL( RHIBufferHandle{ 12 }, table.findBuffer( hzb, 2 ) );
@@ -64,11 +64,11 @@ SW_TEST_CASE( FrameBufferTableTest, DuplicateNamesAreRejected )
     SW_EXPECT_LOG( "FrameBufferTable.SlotMismatch" );
     FrameBufferTable    table;
     const hashed_string hzb( "HZB" );
-    SW_REQUIRE_TRUE( table.registerBuffer( hzb, 0, makeBuffer( 11 ), RenderGraphAccess::ShaderRead ) );
-    SW_EXPECT_FALSE( table.registerBuffer( hzb, 0, makeBuffer( 99 ), RenderGraphAccess::ShaderRead ) );
-    SW_EXPECT_FALSE( table.registerBuffer( hashed_string( "LightGrid" ), 0, makeBuffer( 0 ), RenderGraphAccess::ShaderRead ) );
-    SW_EXPECT_FALSE( table.registerBuffer( hzb, 1, makeBuffer( 13 ), RenderGraphAccess::UnorderedAccess ) );
-    SW_EXPECT_FALSE( table.registerTexture( hzb, 1, RHITextureHandle{ 14 }, RenderGraphAccess::ShaderRead ) );
+    table.registerBuffer( hzb, 0, makeBuffer( 11 ), RenderGraphAccess::ShaderRead );
+    table.registerBuffer( hzb, 0, makeBuffer( 99 ), RenderGraphAccess::ShaderRead );
+    table.registerBuffer( hashed_string( "LightGrid" ), 0, makeBuffer( 0 ), RenderGraphAccess::ShaderRead );
+    table.registerBuffer( hzb, 1, makeBuffer( 13 ), RenderGraphAccess::UnorderedAccess );
+    table.registerTexture( hzb, 1, RHITextureHandle{ 14 }, RenderGraphAccess::ShaderRead );
     SW_EXPECT_EQUAL( RHIBufferHandle{ 11 }, table.findBuffer( hzb, 0 ) );
     SW_EXPECT_EQUAL( size_t{ 1 }, table.getEntries().size() );
 }
@@ -84,8 +84,8 @@ SW_TEST_CASE( FrameBufferTableTest, PassContextHandsOutOnlyDeclaredAccesses )
     const hashed_string hzb( "HZB" );
     const hashed_string grid( "LightGrid" );
     FrameBufferTable    table;
-    SW_REQUIRE_TRUE( table.registerBuffer( hzb, 0, makeBuffer( 11 ), RenderGraphAccess::ShaderRead ) );
-    SW_REQUIRE_TRUE( table.registerBuffer( grid, 0, makeBuffer( 31 ), RenderGraphAccess::ShaderRead ) );
+    table.registerBuffer( hzb, 0, makeBuffer( 11 ), RenderGraphAccess::ShaderRead );
+    table.registerBuffer( grid, 0, makeBuffer( 31 ), RenderGraphAccess::ShaderRead );
 
     const vector<RenderGraphResourceAccess> listAccess{ RenderGraphBufferUAV{ hzb }, RenderGraphBufferSRV{ grid } };
     test::FakeRHICommandList                cmd( 0 );
@@ -107,7 +107,7 @@ SW_TEST_CASE( FrameBufferTableTest, PassContextHandsOutOnlyDeclaredAccesses )
     context.uavBarrier( RenderGraphBufferUAV{ grid } ); // SRV 로 선언한 버퍼 — 배리어가 나가지 않는다
     SW_EXPECT_EQUAL( uint32{ 1 }, cmd._uavBarrierCount );
 
-    // 표가 없는 문맥(뷰 그래프)은 선언했어도 핸들이 없다.
+    // 표가 없는 문맥은 선언했어도 핸들이 없다.
     context._pResourceTable = nullptr;
     SW_EXPECT_EQUAL( RHIBufferHandle{ 0 }, context.getBuffer( RenderGraphBufferUAV{ hzb } ) );
 }
@@ -124,10 +124,10 @@ SW_TEST_CASE( FrameBufferTableTest, StructuredRegistrationCarriesSize )
     pyramid._buffer           = RHIBufferHandle{ 31 };
     pyramid._elementSize      = 8;
     pyramid._capacityElements = 100;
-    SW_REQUIRE_TRUE( table.registerBuffer( hashed_string( "HZB" ), 0, pyramid, RenderGraphAccess::ShaderRead ) );
+    table.registerBuffer( hashed_string( "HZB" ), 0, pyramid, RenderGraphAccess::ShaderRead );
     RHIStructuredBuffer emptyBuffer{};
     emptyBuffer._buffer = RHIBufferHandle{ 32 };
-    SW_EXPECT_FALSE( table.registerBuffer( hashed_string( "Raw" ), 0, emptyBuffer, RenderGraphAccess::ShaderRead ) ); // 크기 없는 버퍼는 거절
+    table.registerBuffer( hashed_string( "Raw" ), 0, emptyBuffer, RenderGraphAccess::ShaderRead ); // 크기 없는 버퍼는 거절
     SW_REQUIRE_EQUAL( size_t{ 1 }, table.getEntries().size() );
     SW_EXPECT_EQUAL( 8u, table.getEntries()[0]._elementSize );
     SW_EXPECT_EQUAL( 100u, table.getEntries()[0]._elementCount );
@@ -146,11 +146,11 @@ SW_TEST_CASE( FrameBufferTableTest, ChangedAccessesReturnToTheirInitialAccess )
     const hashed_string state( "ParticleState" );
     const hashed_string order( "ParticleOrder" );
     FrameBufferTable    table;
-    SW_REQUIRE_TRUE( table.registerBuffer( state, 0, makeBuffer( 10 ), RenderGraphAccess::UnorderedAccess ) );
-    SW_REQUIRE_TRUE( table.registerBuffer( particles, 0, makeBuffer( 11 ), RenderGraphAccess::ShaderRead ) );
-    SW_REQUIRE_TRUE( table.registerBuffer( args, 0, makeBuffer( 12 ), RenderGraphAccess::IndirectArgs ) );
-    SW_REQUIRE_TRUE( table.registerBuffer( args, 1, makeBuffer( 13 ), RenderGraphAccess::IndirectArgs ) );
-    SW_REQUIRE_TRUE( table.registerBuffer( order, 0, makeBuffer( 14 ), RenderGraphAccess::ShaderRead ) ); // 이 그래프의 어느 패스도 선언하지 않는다
+    table.registerBuffer( state, 0, makeBuffer( 10 ), RenderGraphAccess::UnorderedAccess );
+    table.registerBuffer( particles, 0, makeBuffer( 11 ), RenderGraphAccess::ShaderRead );
+    table.registerBuffer( args, 0, makeBuffer( 12 ), RenderGraphAccess::IndirectArgs );
+    table.registerBuffer( args, 1, makeBuffer( 13 ), RenderGraphAccess::IndirectArgs );
+    table.registerBuffer( order, 0, makeBuffer( 14 ), RenderGraphAccess::ShaderRead ); // 이 그래프의 어느 패스도 선언하지 않는다
 
     RenderGraph graph;
     for ( const FrameBufferTable::Entry& entry : table.getEntries() )
@@ -170,4 +170,66 @@ SW_TEST_CASE( FrameBufferTableTest, ChangedAccessesReturnToTheirInitialAccess )
     SW_REQUIRE_EQUAL( size_t{ 2 }, listReturned.size() );
     SW_EXPECT_EQUAL( RHIBufferHandle{ 12 }, listReturned[0] );
     SW_EXPECT_EQUAL( RHIBufferHandle{ 13 }, listReturned[1] );
+}
+
+/**
+ * @brief [FrameBufferTableTest] 패스 안 전이(`transition`)는 쓰기로 선언한 등록 자원만 이 패스의 리스트에 낸다 — 선언하지 않은 이름은 오류이고 아무것도 내지 않는다
+ * @details 패스 기록 면(`IRHIPassCommandList`)에는 텍스처 전이가 없어 이 길 하나다. 읽기 접근 핸들로 부르는 코드는 컴파일되지 않는다(static_assert — 그래프가 레벨 앞에서 옮긴다).
+ *          결함이면 병렬 레벨의 워커가 선언하지 않은 자원의 추적 상태를 바꾼다(앞 리스트가 배리어 없이 먼저 실행된다 — RHI 검토 S1).
+ *          변이: 선언 검사를 빼면 선언 안 한 전이가 리스트에 들어가 개수 단언이, 버퍼 판을 텍스처로 내면 버퍼 단언이 진다.
+ */
+SW_TEST_CASE( FrameBufferTableTest, PassTransitionsOnlyDeclaredWrites )
+{
+    SW_EXPECT_LOG( "Renderer.GraphUndeclaredAccess" );
+    const hashed_string target( "AutoExposureTarget" );
+    const hashed_string hzb( "HZB" );
+    FrameBufferTable    table;
+    table.registerTexture( target, 0, RHITextureHandle{ 41 }, RenderGraphAccess::ShaderRead );
+    table.registerBuffer( hzb, 0, makeBuffer( 42 ), RenderGraphAccess::ShaderRead );
+
+    const vector<RenderGraphResourceAccess> listAccess{ RenderGraphTextureUAV{ target }, RenderGraphBufferUAV{ hzb } };
+    test::FakeRHICommandList                cmd( 0 );
+    RenderGraphPassContext                  context;
+    context._passName       = hashed_string( "Tonemap" );
+    context._pListAccess    = &listAccess;
+    context._pCmdList       = &cmd;
+    context._pResourceTable = &table;
+
+    context.transition( RenderGraphTextureUAV{ target }, RHITextureState::ShaderResource );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, cmd._listTextureTransition.size() );
+    SW_EXPECT_EQUAL( RHITextureHandle{ 41 }, cmd._listTextureTransition[0]._texture );
+    SW_EXPECT_TRUE( cmd._listTextureTransition[0]._state == RHITextureState::ShaderResource );
+
+    context.transition( RenderGraphBufferUAV{ hzb }, RHIBufferState::ShaderResource );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, cmd._listBufferTransition.size() );
+    SW_EXPECT_EQUAL( RHIBufferHandle{ 42 }, cmd._listBufferTransition[0]._buffer );
+
+    context.transition( RenderGraphTextureUAV{ hashed_string( "Undeclared" ) }, RHITextureState::ShaderResource ); // 선언하지 않았다 — 오류, 전이 없음
+    context.transition( RenderGraphRenderTarget{ target }, RHITextureState::ShaderResource );                      // 다른 접근으로 선언했다 — 오류, 전이 없음
+    SW_EXPECT_EQUAL( size_t{ 1 }, cmd._listTextureTransition.size() );
+}
+
+/**
+ * @brief [FrameBufferTableTest] `isRegistered` 는 선언했고 이번 프레임 표에 등록된 칸만 참이다 — 오류를 남기지 않는다(등록 조건이 곧 실행 조건)
+ * @details 결함이면 쉬는 프레임(볼륨 안개 · 프로브 · 마커 · 2 단계 가림)마다 "등록 없음" 오류가 남거나, 몸통이 등록 판정을 다시 하며 두 판정이 갈린다.
+ *          변이: 선언 검사를 빼면 선언하지 않은 이름이 참이 되어, 표를 보지 않으면 등록하지 않은 칸이 참이 되어 진다.
+ */
+SW_TEST_CASE( FrameBufferTableTest, IsRegisteredIsQuietAndNeedsBothDeclarationAndRegistration )
+{
+    const hashed_string orders( "OccludedOrders" );
+    const hashed_string args( "CullArgs" );
+    FrameBufferTable    table;
+    table.registerBuffer( orders, 0, makeBuffer( 51 ), RenderGraphAccess::UnorderedAccess );
+
+    const vector<RenderGraphResourceAccess> listAccess{ RenderGraphBufferUAV{ orders }, RenderGraphBufferUAV{ args } };
+    RenderGraphPassContext                  context;
+    context._passName       = hashed_string( "LateOcclusion" );
+    context._pListAccess    = &listAccess;
+    context._pResourceTable = &table;
+
+    SW_EXPECT_TRUE( context.isRegistered( RenderGraphBufferUAV{ orders } ) );
+    SW_EXPECT_FALSE( context.isRegistered( RenderGraphBufferUAV{ orders }, 1 ) );                     // 등록하지 않은 칸
+    SW_EXPECT_FALSE( context.isRegistered( RenderGraphBufferUAV{ args } ) );                          // 선언했지만 이번 프레임에 등록하지 않았다
+    SW_EXPECT_FALSE( context.isRegistered( RenderGraphBufferSRV{ orders } ) );                        // 다른 접근
+    SW_EXPECT_FALSE( context.isRegistered( RenderGraphBufferUAV{ hashed_string( "Undeclared" ) } ) ); // 선언하지 않았다
 }

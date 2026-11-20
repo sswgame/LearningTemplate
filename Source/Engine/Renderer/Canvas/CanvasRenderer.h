@@ -22,6 +22,7 @@ namespace sw
 
     class GPUMessageChannel;
     class IRHICommandList;
+    class IRHIPassCommandList;
     class IRHIDevice;
     class RenderPSOCache;
 
@@ -65,7 +66,7 @@ namespace sw
          * @param colorVisionMode 색각 보정 방식(`CanvasFrameData::_colorVisionMode`, 주 출력만 쓰고 렌더 텍스처 대상은 0)
          * @return 그린 일괄 수입니다
          */
-        uint32 drawList( IRHICommandList& cmd, const CanvasDrawList& list, uint32 quadBase, RHIPipelineStateHandle pso, uint32 targetWidth, uint32 targetHeight,
+        uint32 drawList( IRHIPassCommandList& cmd, const CanvasDrawList& list, uint32 quadBase, RHIPipelineStateHandle pso, uint32 targetWidth, uint32 targetHeight,
                          bool bNativeBindless, uint32 colorVisionMode = 0 ) const;
         /**
          * @brief 렌더 텍스처 대상(월드 공간 UI)을 지우고 그립니다. 내용 번호와 텍스처가 지난번과 같은 대상은 건너뜁니다(언리얼 위젯 컴포넌트의 다시 그리기 조건에 해당합니다).

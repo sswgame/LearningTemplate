@@ -19,6 +19,7 @@
 #include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
+#include "Engine/Renderer/Frame/Execute/ViewGraphResource.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Renderer/Frame/View/FrameViewTarget.h"
 #include "Engine/Renderer/Frame/View/HZBPyramid.h"
@@ -58,23 +59,18 @@ namespace sw
             void end() const {}
         };
 
-        /** @brief 뷰 그래프 패스 안의 배리어 — shortcut 은 `HZBOcclusion::recordInViewPass` 머리말 참고. */
+        /** @brief 뷰 그래프 패스 안의 배리어 — 앞 UAV 는 레벨 콜백이 냈고(부르는 패스가 `ViewGraphResource::hzb` · `occlusionTiles` 를 UAV 로 선언했다), 밉 사이는 선언한 UAV 핸들로 기다리고, 끝에 같은 패스가 읽는 셰이더 읽기로 옮긴다. */
         struct HZBViewPassBarriers
         {
-            IRHICommandList&       _cmd;
-            const FrameViewTarget& _target;
+            const RenderGraphPassContext& _context;
 
-            void begin() const
-            {
-                _cmd.transitionBuffer( _target._hzb._buffer, RHIBufferState::UnorderedAccess );
-                _cmd.transitionBuffer( _target._occlusionTiles._buffer, RHIBufferState::UnorderedAccess );
-            }
-            void betweenMips() const { _cmd.uavBarrier( _target._hzb._buffer ); }
+            void begin() const {}
+            void betweenMips() const { _context.uavBarrier( ViewGraphResource::hzb() ); }
             void end() const
             {
-                // 컬링(t2) · 화면 공간 반사(t11)가 읽는다. 쓰기가 끝났음을 알린다(빠지면 DX12 · Vulkan 에서 지난 피라미드를 읽는다).
-                _cmd.transitionBuffer( _target._hzb._buffer, RHIBufferState::ShaderResource );
-                _cmd.transitionBuffer( _target._occlusionTiles._buffer, RHIBufferState::ShaderResource );
+                // 컬링(t2) · 화면 공간 반사(t11)가 같은 패스 안에서 읽는다. 쓰기가 끝났음을 알린다(빠지면 DX12 · Vulkan 에서 지난 피라미드를 읽는다).
+                _context.transition( ViewGraphResource::hzb(), RHIBufferState::ShaderResource );
+                _context.transition( ViewGraphResource::occlusionTiles(), RHIBufferState::ShaderResource );
             }
         };
     } // namespace
@@ -111,8 +107,8 @@ namespace sw
         if ( target._hzb.isValid() == false || target._occlusionTiles.isValid() == false )
             return;
         // 프레임 시작의 상태는 셰이더 읽기다(지난 프레임 컬링 · 반사가 읽었다) — 아니어도 첫 사용(짓기, UAV)이 달라 전이는 늘 나간다.
-        std::ignore = table.registerBuffer( getPyramidUAV()._name, viewSlot, target._hzb, RenderGraphAccess::ShaderRead );
-        std::ignore = table.registerBuffer( getTilesUAV()._name, viewSlot, target._occlusionTiles, RenderGraphAccess::ShaderRead );
+        table.registerBuffer( getPyramidUAV()._name, viewSlot, target._hzb, RenderGraphAccess::ShaderRead );
+        table.registerBuffer( getTilesUAV()._name, viewSlot, target._occlusionTiles, RenderGraphAccess::ShaderRead );
     }
 
     bool HZBOcclusion::record( const RenderGraphPassContext& graphContext, uint32 viewSlot, IRHIDevice& device, RHIPipelineStateHandle pso, uint32 depthWidth, uint32 depthHeight,
@@ -130,14 +126,19 @@ namespace sw
         return recordPyramid( *graphContext._pCmdList, device, pso, depthWidth, depthHeight, viewProj, bWriteTiles, target, HZBGraphBarriers{ graphContext, viewSlot } );
     }
 
-    bool HZBOcclusion::recordInViewPass( IRHICommandList& cmd, IRHIDevice& device, RHIPipelineStateHandle pso, uint32 depthWidth, uint32 depthHeight, const float4x4& viewProj,
-                                         FrameViewTarget& target ) const
+    bool HZBOcclusion::recordInViewPass( const RenderGraphPassContext& graphContext, IRHIDevice& device, RHIPipelineStateHandle pso, uint32 depthWidth, uint32 depthHeight,
+                                         const float4x4& viewProj, FrameViewTarget& target ) const
     {
-        return recordPyramid( cmd, device, pso, depthWidth, depthHeight, viewProj, false, target, HZBViewPassBarriers{ cmd, target } );
+        if ( graphContext._pCmdList == nullptr )
+        {
+            target._bHZBValid = SW_FALSE;
+            return false;
+        }
+        return recordPyramid( *graphContext._pCmdList, device, pso, depthWidth, depthHeight, viewProj, false, target, HZBViewPassBarriers{ graphContext } );
     }
 
     template <typename Barriers>
-    bool HZBOcclusion::recordPyramid( IRHICommandList& cmd, IRHIDevice& device, RHIPipelineStateHandle pso, uint32 depthWidth, uint32 depthHeight, const float4x4& viewProj,
+    bool HZBOcclusion::recordPyramid( IRHIPassCommandList& cmd, IRHIDevice& device, RHIPipelineStateHandle pso, uint32 depthWidth, uint32 depthHeight, const float4x4& viewProj,
                                       bool bWriteTiles, FrameViewTarget& target, const Barriers& barriers ) const
     {
         using Internal         = HZBOcclusionInternal;
@@ -154,7 +155,7 @@ namespace sw
             return false;
         }
 
-        // 깊이 사본은 방금 RT 로 썼고 복사 풀스크린이 끝에 RW 텍스처 상태로 넘겨 두었다(`FrameGraphExecutor::copySceneDepth` — 짓는 세 자리 모두 그 복사 뒤다).
+        // 깊이 사본은 방금 RT 로 썼고 복사 풀스크린이 끝에 RW 텍스처 상태로 넘겨 두었다(`FrameGraphExecutor::recordDepthHistory` · `recordCurrentDepthHZB` — 짓는 세 자리 모두 그 복사 뒤다).
         barriers.begin();
         cmd.setComputePipelineState( pso );
         // g_HZBRW(u0) / g_OcclusionTilesRW(u1) / 깊이 사본(RW 슬롯 0 — 에뮬만). hzb_build.hlsl 레지스터와 1:1 이다.

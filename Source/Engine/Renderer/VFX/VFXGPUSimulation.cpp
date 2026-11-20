@@ -691,17 +691,17 @@ namespace sw
         for ( const Dispatch& dispatch : _listDispatch )
         {
             const EmitterState& state = *dispatch._pState;
-            std::ignore               = table.registerBuffer( VFXFrameResource::state(), state._frameSlot, state._stateBuffer, RenderGraphAccess::UnorderedAccess );
-            std::ignore               = table.registerBuffer( VFXFrameResource::particles(), state._frameSlot, state._particleBuffer, RenderGraphAccess::ShaderRead );
-            std::ignore               = table.registerBuffer( VFXFrameResource::args(), state._frameSlot, state._argsBuffer, RenderGraphAccess::IndirectArgs );
+            table.registerBuffer( VFXFrameResource::state(), state._frameSlot, state._stateBuffer, RenderGraphAccess::UnorderedAccess );
+            table.registerBuffer( VFXFrameResource::particles(), state._frameSlot, state._particleBuffer, RenderGraphAccess::ShaderRead );
+            table.registerBuffer( VFXFrameResource::args(), state._frameSlot, state._argsBuffer, RenderGraphAccess::IndirectArgs );
         }
         // 시뮬레이션하지 않고 읽기만 하는 방출기(밀린 단계가 없는 프레임의 정렬 · 메시 쓰기) — 한 방출기를 여러 정렬 일이 읽어도 한 번만 등록한다.
         const auto registerReads = [&table]( const EmitterState& state )
         {
             if ( state._bSimulated != SW_FALSE || table.findBuffer( VFXFrameResource::idleParticles(), state._frameSlot ) != 0 )
                 return;
-            std::ignore = table.registerBuffer( VFXFrameResource::idleParticles(), state._frameSlot, state._particleBuffer, RenderGraphAccess::ShaderRead );
-            std::ignore = table.registerBuffer( VFXFrameResource::idleArgs(), state._frameSlot, state._argsBuffer, RenderGraphAccess::IndirectArgs );
+            table.registerBuffer( VFXFrameResource::idleParticles(), state._frameSlot, state._particleBuffer, RenderGraphAccess::ShaderRead );
+            table.registerBuffer( VFXFrameResource::idleArgs(), state._frameSlot, state._argsBuffer, RenderGraphAccess::IndirectArgs );
         };
         for ( const SortDispatch& dispatch : _listSortDispatch )
         {
@@ -712,7 +712,7 @@ namespace sw
             registerReads( *dispatch._pState );
         }
         if ( _listSortDispatch.empty() == false )
-            std::ignore = table.registerBuffer( VFXFrameResource::order(), 0, _orderBuffer, RenderGraphAccess::ShaderRead );
+            table.registerBuffer( VFXFrameResource::order(), 0, _orderBuffer, RenderGraphAccess::ShaderRead );
     }
 
     bool VFXGPUSimulation::hasDeclaredReads( const RenderGraphPassContext& context, const EmitterState& state )
@@ -776,10 +776,10 @@ namespace sw
         const VFXDepthHistoryInput& depth = _frameInput._depth;
         cmd.setComputePipelineState( pso );
         // 깊이 히스토리 — 지난 프레임 그 뷰가 남긴 깊이를 옮긴 R32 실수 텍스처. RW 텍스처로 읽는다(에뮬 백엔드의 컴퓨트는 샘플 텍스처를 읽지 못한다).
-        // 생산자(`FrameGraphExecutor::copySceneDepth` — 입력을 채운 판정 `canCopyDepthHistory` 와 같다)가 RW 텍스처 상태로 넘겨 두었다.
+        // 생산자(`FrameGraphExecutor::recordDepthHistory` — 입력을 채운 판정 `canCopyDepthHistory` 와 같다)가 RW 텍스처 상태로 넘겨 두었다.
         const bool bBindDepth = depth._texture != 0 && depth._uav != kInvalidDescriptorIndex;
-        // 전이는 그래프 레벨 콜백이 냈다(`registerFrameResources` 가 등록한 칸). 라이트 버퍼는 쓰는 프레임에만 등록했다(`writesParticleLights`).
-        const bool bLightBufferReady = writesParticleLights() && context.getBuffer( getLightBufferUAV() ) != 0;
+        // 전이는 그래프 레벨 콜백이 냈다(`registerFrameResources` 가 등록한 칸). 라이트 버퍼는 쓰는 프레임에만 등록했다(`writesParticleLights` — 등록 조건이 곧 실행 조건).
+        const bool bLightBufferReady = context.isRegistered( getLightBufferUAV() );
         for ( const Dispatch& dispatch : _listDispatch )
         {
             const EmitterState& state = *dispatch._pState;

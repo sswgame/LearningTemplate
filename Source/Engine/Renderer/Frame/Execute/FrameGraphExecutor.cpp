@@ -25,6 +25,7 @@
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Reflection/TypeInfo.h"
+#include "Engine/Renderer/Frame/Execute/ViewGraphResource.h"
 #include "Engine/Renderer/Frame/FrameRenderState.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Renderer/Frame/PostProcess/FrameFog.h"
@@ -168,26 +169,26 @@ namespace sw
         const VFXGPUSimulation& simulation = _state._particleRenderer.getGPUSimulation();
         simulation.registerFrameResources( table );
         if ( simulation.writesParticleLights() )
-            std::ignore = table.registerBuffer( VFXGPUSimulation::getLightBufferUAV()._name, 0, _state._lightBuffer.getBuffer(), RenderGraphAccess::ShaderRead );
+            table.registerBuffer( VFXGPUSimulation::getLightBufferUAV()._name, 0, _state._lightBuffer.getBuffer(), RenderGraphAccess::ShaderRead );
         // 이번 프레임에 쓰는 패스가 있는 버퍼만 등록한다 — 쓰지 않는 프레임은 등록 접근(셰이더 읽기)에서 쉬어 쓰는 패스 앞뒤의 전이가 나지 않는다(읽는 패스는 이미 그 상태를 본다).
         if ( shouldAnimateInstances() || simulation.writesMeshInstances() )
-            std::ignore = table.registerBuffer( VFXGPUSimulation::getInstanceBufferUAV()._name, 0, _state._gpuScene.getInstanceStructuredBuffer(), RenderGraphAccess::ShaderRead );
+            table.registerBuffer( VFXGPUSimulation::getInstanceBufferUAV()._name, 0, _state._gpuScene.getInstanceStructuredBuffer(), RenderGraphAccess::ShaderRead );
         const GPUMeshMorphPool& morphPool = _state._deform._meshMorphPool;
         if ( morphPool.getMorphBuffer().isValid() && ( morphPool.isDispatchable() || morphPool.isSkinDispatchable() ) )
-            std::ignore = table.registerBuffer( FrameResource::deformVertices(), 0, morphPool.getMorphBuffer(), RenderGraphAccess::ShaderRead );
+            table.registerBuffer( FrameResource::deformVertices(), 0, morphPool.getMorphBuffer(), RenderGraphAccess::ShaderRead );
         if ( _state._lightBuffer.getGPUGridViewCount() > 0 )
-            std::ignore = table.registerBuffer( FrameResource::lightGrid(), 0, _state._lightBuffer.getGPUGridBuffer(), RenderGraphAccess::ShaderRead );
+            table.registerBuffer( FrameResource::lightGrid(), 0, _state._lightBuffer.getGPUGridBuffer(), RenderGraphAccess::ShaderRead );
         registerCullResources( table );
         // 볼륨 안개 · 실시간 프로브 · 화면 마커 — 도는 프레임에만(등록 접근: 안개 볼륨 · 프로브 · 사각형은 그리기가 읽는 셰이더 읽기, 프로브 기록은 컴퓨트만 읽고 쓴다).
         if ( _fog.isFogVolumeActive() && _fog.getFogVolumeBuffer().isValid() )
-            std::ignore = table.registerBuffer( FrameResource::fogVolume(), 0, _fog.getFogVolumeBuffer(), RenderGraphAccess::ShaderRead );
+            table.registerBuffer( FrameResource::fogVolume(), 0, _fog.getFogVolumeBuffer(), RenderGraphAccess::ShaderRead );
         if ( shouldUpdateRealtimeProbes() )
         {
-            std::ignore = table.registerBuffer( FrameResource::probeIrradiance(), 0, *_state._lightBuffer.findProbeBuffer(), RenderGraphAccess::ShaderRead );
-            std::ignore = table.registerBuffer( FrameResource::probeHistory(), 0, _state._probeUpdater.getHistoryBuffer(), RenderGraphAccess::UnorderedAccess );
+            table.registerBuffer( FrameResource::probeIrradiance(), 0, *_state._lightBuffer.findProbeBuffer(), RenderGraphAccess::ShaderRead );
+            table.registerBuffer( FrameResource::probeHistory(), 0, _state._probeUpdater.getHistoryBuffer(), RenderGraphAccess::UnorderedAccess );
         }
         if ( _state._canvasRenderer.getMarkerCount() > 0 && _state._canvasRenderer.getQuadBuffer().isValid() )
-            std::ignore = table.registerBuffer( FrameResource::canvasMarkers(), 0, _state._canvasRenderer.getQuadBuffer(), RenderGraphAccess::ShaderRead );
+            table.registerBuffer( FrameResource::canvasMarkers(), 0, _state._canvasRenderer.getQuadBuffer(), RenderGraphAccess::ShaderRead );
     }
 
     void FrameGraphExecutor::executePass( RenderPassKind type, const RenderGraphPassContext& graphContext )
@@ -249,8 +250,8 @@ namespace sw
             }
             case RenderPassKind::VolumetricFog:
             {
-                // 선언 · 등록이 없으면 그래프가 볼륨 전이를 내지 않았다 — 기록하지 않는다(오류는 문맥이 남겼다).
-                if ( _fog.isFogVolumeActive() && graphContext.getBuffer( RenderGraphBufferUAV{ FrameResource::fogVolume() } ) != 0 )
+                // 볼륨은 도는 프레임에만 등록했다(`beginFrame` — 등록 조건이 곧 실행 조건). 등록이 없으면 그래프가 볼륨 전이를 내지 않았다 — 기록하지 않는다.
+                if ( graphContext.isRegistered( RenderGraphBufferUAV{ FrameResource::fogVolume() } ) )
                     _fog.dispatchVolumetricFog( *_pCmd, _state._lightBuffer, _transparentRankPlaceholder._srv );
                 break;
             }
@@ -262,7 +263,8 @@ namespace sw
             case RenderPassKind::CanvasMarker:
             {
                 // 캔버스 업로드(기록 전)가 올린 앵커 원소를 GPU 가 덮어쓴다. 주 출력 캔버스를 그리는 패스(뷰 그래프)보다 앞이다. 전이는 그래프가 낸다(`CanvasMarkers`).
-                if ( _state._canvasRenderer.getMarkerCount() == 0 || graphContext.getBuffer( RenderGraphBufferUAV{ FrameResource::canvasMarkers() } ) == 0 )
+                // 마커가 있는 프레임에만 등록했다(`beginFrame`) — 판정을 다시 하지 않는다.
+                if ( graphContext.isRegistered( RenderGraphBufferUAV{ FrameResource::canvasMarkers() } ) == false )
                     break;
                 _state._canvasRenderer.recordMarkerProjection( *_pCmd, _psoManager.getEnginePSO( RenderPassKind::CanvasMarker ), _state._gpuScene.getInstanceBuffer(),
                                                                _state._gpuScene.getInstanceSRV(), _transparentRankPlaceholder._srv, _state._gpuMessages,
@@ -316,7 +318,8 @@ namespace sw
         // **이번 프레임에 회전하기 전의** 바운드로 판정한다. 애니메이션이 회전만 바꾸므로 지금 씬에서는
         // 결과가 같지만, 이동을 넣는 순간 한 프레임 늦은 컬링이 된다.
         // 쓰기 앞 UAV · 읽는 쪽(컬링 · 정점 셰이더) 앞 셰이더 읽기는 그래프가 낸다(`beginFrame` 이 같은 판정 `shouldAnimateInstances` 로 등록했다).
-        if ( shouldAnimateInstances() == false || graphContext.getBuffer( VFXGPUSimulation::getInstanceBufferUAV() ) == 0 )
+        // 등록은 인스턴스 칸을 쓰는 패스(애니메이션 · 메시 입자) 어느 하나가 도는 프레임이다 — 이 패스의 판정은 그중 애니메이션 몫이다.
+        if ( shouldAnimateInstances() == false || graphContext.isRegistered( VFXGPUSimulation::getInstanceBufferUAV() ) == false )
             return;
         const uint32                          instanceCount = _state._gpuScene.getInstanceSlotCount();
         FrameRendererUtil::GPUAnimationParams animationParams{};
@@ -652,13 +655,13 @@ namespace sw
         for ( const CullJob& job : _listCullJob )
         {
             const GPUCullViewResources& view = _state._gpuScene.getCullView( job._cullViewIndex );
-            std::ignore                      = table.registerBuffer( FrameResource::cullArgs(), job._cullViewIndex, view._indirectArgs, RenderGraphAccess::IndirectArgs );
-            std::ignore                      = table.registerBuffer( FrameResource::cullVisibleInstances(), job._cullViewIndex, view._visibleInstances, RenderGraphAccess::ShaderRead );
+            table.registerBuffer( FrameResource::cullArgs(), job._cullViewIndex, view._indirectArgs, RenderGraphAccess::IndirectArgs );
+            table.registerBuffer( FrameResource::cullVisibleInstances(), job._cullViewIndex, view._visibleInstances, RenderGraphAccess::ShaderRead );
             if ( _state._gpuScene.hasLODState( job._cullViewIndex ) )
-                std::ignore = table.registerBuffer( FrameResource::cullLODState(), job._cullViewIndex, view._lodState, RenderGraphAccess::UnorderedAccess );
+                table.registerBuffer( FrameResource::cullLODState(), job._cullViewIndex, view._lodState, RenderGraphAccess::UnorderedAccess );
         }
         if ( _listCullJob.empty() == false && _bOccludedOrdersReady != 0 )
-            std::ignore = table.registerBuffer( FrameResource::occludedOrders(), 0, _occludedOrders, RenderGraphAccess::UnorderedAccess );
+            table.registerBuffer( FrameResource::occludedOrders(), 0, _occludedOrders, RenderGraphAccess::UnorderedAccess );
     }
 
     void FrameGraphExecutor::dispatchCullAndSort( const RenderGraphPassContext& graphContext, uint32 instanceCount )
@@ -765,14 +768,18 @@ namespace sw
     {
         if ( canCopyDepthHistory( target ) == false )
             return;
-        copySceneDepth( target );
+        // shortcut: 깊이 히스토리 · 지난 장면 깊이는 프레임 그래프 표에 없다 — 읽는 쪽이 RW 텍스처로 읽는데 데이터 규칙의 입력은 셰이더 읽기라 선언할 접근이 없다.
+        // 프레임 패스 몸통이 전체 리스트로 앞뒤를 옮긴다(텍스처 UAV 입력 목록을 더할 때 옮긴다). 뷰 그래프 쪽(`recordCurrentDepthHZB`)은 선언한 핸들로 옮긴다.
+        _pCmd->prepareTextureForShaderRead( target._transientPool.find( attachmentNames()._sceneDepth )._texture );
+        _pCmd->prepareTextureForRenderTarget( target._depthHistory );
+        drawSceneDepthCopy( *_pCmd, target );
+        // 읽는 쪽(HZB 짓기 · GPU 입자)의 상태로 넘겨 둔다 — 함수 머리말 참고.
+        _pCmd->prepareTextureForUnorderedAccess( target._depthHistory );
     }
 
-    void FrameGraphExecutor::copySceneDepth( FrameViewTarget& target )
+    void FrameGraphExecutor::drawSceneDepthCopy( IRHIPassCommandList& cmd, const FrameViewTarget& target ) const
     {
         const TransientAttachmentPool::Attachment depth = target._transientPool.find( attachmentNames()._sceneDepth );
-        _pCmd->prepareTextureForShaderRead( depth._texture );
-        _pCmd->prepareTextureForRenderTarget( target._depthHistory );
 
         RHIRenderPassBeginInfo beginInfo{};
         beginInfo._bBindColor        = SW_TRUE;
@@ -783,22 +790,19 @@ namespace sw
         beginInfo._depthTarget       = 0;
         beginInfo._width             = depth._width;
         beginInfo._height            = depth._height;
-        _pCmd->beginRenderPass( beginInfo );
-        _pCmd->setPipelineState( _psoManager.getEnginePSO( RenderPassKind::DepthHistory ) );
+        cmd.beginRenderPass( beginInfo );
+        cmd.setPipelineState( _psoManager.getEnginePSO( RenderPassKind::DepthHistory ) );
         // 원본 깊이 — 네이티브는 bindless 번호(루트 상수), 에뮬은 SceneDepth 칸(depth_history.hlsl 이 같은 이름으로 읽는다). PSO 뒤에 건다(setPipelineState 가 슬롯 상태를 비운다).
         const bool   bNativeBindless = _pDevice->supportsNativeBindlessSampling();
         const uint32 sourceIndex     = bNativeBindless ? static_cast<uint32>( depth._srv ) : 0u;
         if ( bNativeBindless == false )
         {
             constexpr uint32 kDepthSlot = shaderslot::emulated::getSlot( "SceneDepth" );
-            _pCmd->bindShaderResource( depth._srv, kDepthSlot );
+            cmd.bindShaderResource( depth._srv, kDepthSlot );
         }
-        _pCmd->setGraphicsRootConstants( 0, 1, &sourceIndex );
-        _pCmd->draw( 3, 0 );
-        _pCmd->endRenderPass();
-        // 읽는 쪽(HZB 짓기 · GPU 입자)의 상태로 넘겨 둔다 — `recordDepthHistory` 머리말 참고.
-        // shortcut: 깊이 히스토리 · 지난 장면 깊이는 표에 없다 — 읽는 쪽이 RW 텍스처로 읽는데 데이터 규칙의 입력은 셰이더 읽기라 선언할 접근이 없다. 텍스처 UAV 입력 목록을 더할 때 옮긴다.
-        _pCmd->prepareTextureForUnorderedAccess( target._depthHistory );
+        cmd.setGraphicsRootConstants( 0, 1, &sourceIndex );
+        cmd.draw( 3, 0 );
+        cmd.endRenderPass();
     }
 
     void FrameGraphExecutor::rememberDepthHistoryViews()
@@ -1013,70 +1017,95 @@ namespace sw
         return caps._bGPUCulling != SW_FALSE && caps._bMultiDrawIndirect != SW_FALSE;
     }
 
-    bool FrameGraphExecutor::recordCurrentDepthHZB( FrameViewTarget& view )
+    bool FrameGraphExecutor::canRunLateOcclusion() const
     {
-        if ( _pCmd == nullptr || _pDevice == nullptr || canCopySceneDepth( view ) == false )
+        constexpr uint32  cullViewIndex = static_cast<uint32>( RenderViewKind::Main );
+        const RenderView& renderView    = _state._arrView[static_cast<RenderViewKind>( cullViewIndex )];
+        return _bLatePhasePending != 0 && _pDevice != nullptr && _psoManager.getEnginePSO( RenderPassKind::GPUCull ) != 0 && isCullViewReady( cullViewIndex, renderView ) &&
+               _occludedOrders._uav != kInvalidDescriptorIndex && _lateCullCb.isValid() && canCopySceneDepth( _state._mainView );
+    }
+
+    void FrameGraphExecutor::registerViewGraphResources( FrameBufferTable& table, const FrameViewTarget& view, bool bBuildsSceneDepthHZB )
+    {
+        // 뒤 단계는 주 시점에서 앞 단계가 차례를 적은 프레임에만 돈다 — 그 판정이 곧 등록이고 "뒤 단계를 기록했는가" 다(패스 몸통은 판정을 다시 하지 않는다).
+        const bool bMainView      = &view == &_state._mainView;
+        const bool bHZBReady      = view._hzb.isValid() && view._occlusionTiles.isValid() && canCopySceneDepth( view );
+        const bool bLateOcclusion = bMainView && bHZBReady && canRunLateOcclusion();
+        if ( bMainView )
+            _bLatePhaseRan = bLateOcclusion ? 1u : 0u;
+        // 이번 장면 깊이로 HZB 를 짓는 패스(뒤 단계 · 화면 공간 반사)가 쓰는 깊이 사본 · 피라미드 · 가림 타일 — 짓는 패스가 없는 뷰는 등록하지 않는다(그래프가 쓰지 않는 자원에 전이를 내지 않게).
+        // 처음 접근은 뷰 그래프가 심지 않는다(뷰 그래프는 들인 자원이 없다) — 이 표는 이름 → 핸들만 준다.
+        if ( ( bLateOcclusion || bBuildsSceneDepthHZB ) && bHZBReady )
+        {
+            table.registerTexture( ViewGraphResource::depthHistory()._name, 0, view._depthHistory, RenderGraphAccess::UnorderedAccess );
+            table.registerBuffer( ViewGraphResource::hzb()._name, 0, view._hzb, RenderGraphAccess::ShaderRead );
+            table.registerBuffer( ViewGraphResource::occlusionTiles()._name, 0, view._occlusionTiles, RenderGraphAccess::ShaderRead );
+        }
+        if ( bLateOcclusion == false )
+            return;
+        // 주 시점 컬링 슬롯(0)의 산출물과 차례 표시 — 뒤 단계가 UAV 로 더하고 그리는 쪽 상태로 돌린다. 장면 깊이는 그 패스 안에서 셰이더 읽기로 갔다가 깊이 쓰기로 돌아온다.
+        constexpr uint32            cullViewIndex = static_cast<uint32>( RenderViewKind::Main );
+        const GPUCullViewResources& cullView      = _state._gpuScene.getCullView( cullViewIndex );
+        table.registerBuffer( ViewGraphResource::cullArgs()._name, 0, cullView._indirectArgs, RenderGraphAccess::IndirectArgs );
+        table.registerBuffer( ViewGraphResource::cullVisibleInstances()._name, 0, cullView._visibleInstances, RenderGraphAccess::ShaderRead );
+        if ( _state._gpuScene.hasLODState( cullViewIndex ) )
+            table.registerBuffer( ViewGraphResource::cullLODState()._name, 0, cullView._lodState, RenderGraphAccess::UnorderedAccess );
+        table.registerBuffer( ViewGraphResource::occludedOrders()._name, 0, _occludedOrders, RenderGraphAccess::UnorderedAccess );
+        table.registerTexture( attachmentNames()._sceneDepth, 0, view._transientPool.find( attachmentNames()._sceneDepth )._texture, RenderGraphAccess::DepthWrite );
+    }
+
+    bool FrameGraphExecutor::recordCurrentDepthHZB( const RenderGraphPassContext& graphContext, FrameViewTarget& view ) const
+    {
+        // 깊이 사본 · 피라미드는 부르는 패스가 선언했고 짓는 뷰만 등록했다(`registerViewGraphResources`) — 등록이 없으면 짓지 않는다(뒤 단계는 판정 없이 돈다 — 발자국 0).
+        const bool bRegistered = graphContext.isRegistered( ViewGraphResource::depthHistory() ) && graphContext.isRegistered( ViewGraphResource::hzb() ) &&
+                                 graphContext.isRegistered( ViewGraphResource::occlusionTiles() );
+        if ( graphContext._pCmdList == nullptr || _pDevice == nullptr || bRegistered == false )
         {
             view._bHZBValid = SW_FALSE;
             return false;
         }
         // 깊이 히스토리 텍스처를 사본 자리로 다시 쓴다 — 지난 깊이는 프레임 처음 프레임 패스(입자 충돌 · 지난 HZB)가 다 읽었고, 다음 프레임 처음에 다시 채운다.
-        copySceneDepth( view );
+        // 장면 깊이는 셰이더 읽기, 사본은 렌더 타깃이다(레벨 콜백 · 부르는 패스가 옮겼다). 그린 뒤 사본을 짓기가 읽는 RW 텍스처로 옮긴다.
+        drawSceneDepthCopy( *graphContext._pCmdList, view );
+        graphContext.transition( ViewGraphResource::depthHistory(), RHITextureState::UnorderedAccess );
         // 이번 프레임 사각형만 읽는다(자동 렌더 배율 — 사각형 밖은 옛 깊이다).
         const TransientAttachmentPool::Attachment depth = view._transientPool.find( attachmentNames()._sceneDepth );
-        return _occlusion.recordInViewPass( *_pCmd, *_pDevice, _psoManager.getEnginePSO( RenderPassKind::HZBBuild ), view.scaleToRect( depth, true ), view.scaleToRect( depth, false ),
+        return _occlusion.recordInViewPass( graphContext, *_pDevice, _psoManager.getEnginePSO( RenderPassKind::HZBBuild ), view.scaleToRect( depth, true ), view.scaleToRect( depth, false ),
                                             findViewProj( view ), view );
     }
 
-    bool FrameGraphExecutor::recordSceneDepthHZB( IRHICommandList& cmd, FrameViewTarget& view )
+    bool FrameGraphExecutor::recordSceneDepthHZB( const RenderGraphPassContext& graphContext, FrameViewTarget& view ) const
     {
-        _pCmd             = &cmd;
-        const bool bBuilt = recordCurrentDepthHZB( view );
-        _pCmd             = nullptr;
-        return bBuilt;
+        return recordCurrentDepthHZB( graphContext, view );
     }
 
-    void FrameGraphExecutor::recordLateOcclusion( IRHICommandList& cmd, FrameViewTarget& view )
+    void FrameGraphExecutor::recordLateOcclusion( const RenderGraphPassContext& graphContext, FrameViewTarget& view ) const
     {
-        // 앞 단계는 주 시점 슬롯만 차례를 적는다. 그 뷰의 깊이 프리패스가 끝난 자리에서 한 번만 돈다.
-        if ( _bLatePhasePending == 0 || &view != &_state._mainView || _pDevice == nullptr )
+        // 뒤 단계를 돌리는 프레임 · 뷰에만 차례 표시를 등록했다(`registerViewGraphResources` — 주 시점, 앞 단계가 적은 프레임). 판정을 여기서 다시 하지 않는다.
+        if ( graphContext.isRegistered( ViewGraphResource::occludedOrders() ) == false || graphContext._pCmdList == nullptr )
             return;
-        _bLatePhasePending = 0;
-        _pCmd              = &cmd;
+        IRHIPassCommandList&        cmd = *graphContext._pCmdList;
+        const RenderGraphDepthWrite sceneDepth{ attachmentNames()._sceneDepth };
 
         // 1) 이번 프레임 깊이(앞 단계가 그린 것)로 HZB 를 다시 짓는다. 못 지으면 판정 없이(발자국 0) 돌아 적힌 차례를 모두 그린다 — 빠뜨리는 것보다 더 그리는 쪽이다.
-        std::ignore = recordCurrentDepthHZB( view );
-        // 복사가 장면 깊이를 셰이더 읽기로 옮겼다 — 그래프는 프리패스의 쓰기 상태로 알고 있어 다음 쓰는 패스(포워드 불투명 · G버퍼)에 전이를 내지 않을 수 있다. 깊이 대상 상태로 되돌린다.
-        const RHITextureHandle sceneDepth = view._transientPool.find( attachmentNames()._sceneDepth )._texture;
-        if ( sceneDepth != 0 )
-            cmd.prepareTextureForRenderTarget( sceneDepth );
-        constexpr uint32             cullViewIndex = static_cast<uint32>( RenderViewKind::Main );
-        const RenderView&            renderView    = _state._arrView[static_cast<RenderViewKind>( cullViewIndex )];
-        const RHIPipelineStateHandle cullPSO       = _psoManager.getEnginePSO( RenderPassKind::GPUCull );
-        const bool                   bReady        = cullPSO != 0 && isCullViewReady( cullViewIndex, renderView ) && _occludedOrders._uav != kInvalidDescriptorIndex && _lateCullCb.isValid();
-        if ( bReady == false )
-        {
-            _pCmd = nullptr;
-            return;
-        }
+        //    장면 깊이는 이 패스가 깊이 쓰기로 선언했다 — 복사 동안만 셰이더 읽기로 옮기고 끝나면 되돌려 그래프가 아는 상태(깊이 쓰기)와 맞춘다. 뒤 단계가 돌지 않는 프레임에는 전이가 없다.
+        graphContext.transition( sceneDepth, RHITextureState::ShaderResource );
+        std::ignore = recordCurrentDepthHZB( graphContext, view );
+        graphContext.transition( sceneDepth, RHITextureState::RenderTarget );
 
         // 2) 적힌 차례만 다시 판정한다. 개수는 되돌리지 않는다 — 앞 단계 개수 위에 InterlockedAdd 로 더해 같은 간접 인자가 둘을 함께 그린다. 정렬은 다시 돌지 않는다(투명은 더하지 않는다).
-        const GPUCullViewResources&      cullView = _state._gpuScene.getCullView( cullViewIndex );
-        const bool                       bLOD     = _state._gpuScene.hasLODState( cullViewIndex );
+        //    컬링 인자 · 가시 목록 · LOD 상태 · 차례 표시는 레벨 콜백이 UAV 로 옮겼다(이 패스의 선언).
+        constexpr uint32                 cullViewIndex = static_cast<uint32>( RenderViewKind::Main );
+        const RenderView&                renderView    = _state._arrView[static_cast<RenderViewKind>( cullViewIndex )];
+        const GPUCullViewResources&      cullView      = _state._gpuScene.getCullView( cullViewIndex );
+        const bool                       bLOD          = graphContext.isRegistered( ViewGraphResource::cullLODState() );
         FrameRendererUtil::GPUCullParams params{};
         fillCullParams( cullViewIndex, renderView, _lateInstanceCount, nullptr, _bLateLODReset != 0, params );
         params._arrCullPhase[0]         = FrameRendererUtil::kCullPhaseLate;
         const RHIDescriptorIndex hzbSRV = params._arrHZBControl[3] != 0u ? view._hzb._srv : _occlusion.getPlaceholderSRV();
         _lateCullCb.update( cmd, &params, sizeof( params ) );
-
-        _bufferTransitions.add( cullView._indirectArgs._buffer, RHIBufferState::UnorderedAccess );
-        _bufferTransitions.add( cullView._visibleInstances._buffer, RHIBufferState::UnorderedAccess );
-        if ( bLOD )
-            _bufferTransitions.add( cullView._lodState._buffer, RHIBufferState::UnorderedAccess );
-        _bufferTransitions.add( _occludedOrders._buffer, RHIBufferState::UnorderedAccess );
-        _bufferTransitions.flush( cmd );
         // 바인딩은 앞 단계와 같은 자리다(dispatchCullView 의 표).
-        cmd.setComputePipelineState( cullPSO );
+        cmd.setComputePipelineState( _psoManager.getEnginePSO( RenderPassKind::GPUCull ) );
         cmd.bindComputeConstantBuffer( _lateCullCb._index, 0 );
         cmd.bindComputeShaderResource( _state._gpuScene.getInstanceSRV(), 0 );
         cmd.bindComputeShaderResource( _state._gpuScene.getBatchInfoSRV(), 1 );
@@ -1089,13 +1118,10 @@ namespace sw
         cmd.bindComputeUAV( _occludedOrders._uav, 3 );
         _state._gpuMessages.bindCompute( cmd );
         cmd.dispatchThreads( _lateInstanceCount, 1, 1, FrameRendererUtil::kLinearThreadGroupSize, 1, 1 );
-        _bLatePhaseRan = 1;
 
-        // 3) 그리는 쪽이 읽는 상태로 — 뒤 패스(G버퍼 · 포워드 불투명)가 더한 개수로 그린다.
-        _bufferTransitions.add( cullView._indirectArgs._buffer, RHIBufferState::IndirectArgument );
-        _bufferTransitions.add( cullView._visibleInstances._buffer, RHIBufferState::ShaderResource );
-        _bufferTransitions.flush( cmd );
-        _pCmd = nullptr;
+        // 3) 그리는 쪽이 읽는 상태(등록 접근)로 — 뒤 패스(G버퍼 · 포워드 불투명)가 더한 개수로 그린다. LOD 상태 · 차례 표시는 등록 접근이 UAV 라 그대로 둔다.
+        graphContext.transition( ViewGraphResource::cullArgs(), RHIBufferState::IndirectArgument );
+        graphContext.transition( ViewGraphResource::cullVisibleInstances(), RHIBufferState::ShaderResource );
     }
 
     bool FrameGraphExecutor::shouldUpdateRealtimeProbes() const
@@ -1106,13 +1132,10 @@ namespace sw
 
     void FrameGraphExecutor::dispatchRealtimeProbes( const RenderGraphPassContext& graphContext )
     {
-        // 등록과 같은 판정(`shouldUpdateRealtimeProbes`)으로 먼저 거른다 — 안 도는 프레임에 핸들을 물으면 "등록 없음" 오류가 난다(2D 씬 · 프로브 없는 씬).
-        if ( _pCmd == nullptr || shouldUpdateRealtimeProbes() == false )
-            return;
-        // 두 쓰기 버퍼의 전이는 그래프가 냈다 — 선언이 없으면 기록하지 않는다(오류는 문맥이 남겼다).
-        const bool bDeclared = graphContext.getBuffer( RenderGraphBufferUAV{ FrameResource::probeIrradiance() } ) != 0 &&
-                               graphContext.getBuffer( RenderGraphBufferUAV{ FrameResource::probeHistory() } ) != 0;
-        if ( bDeclared == false )
+        // 두 쓰기 버퍼는 도는 프레임에만 등록했다(`beginFrame` 의 `shouldUpdateRealtimeProbes` — 등록 조건이 곧 실행 조건). 등록이 없으면(2D 씬 · 프로브 없는 씬) 기록하지 않는다.
+        const bool bRegistered = graphContext.isRegistered( RenderGraphBufferUAV{ FrameResource::probeIrradiance() } ) &&
+                                 graphContext.isRegistered( RenderGraphBufferUAV{ FrameResource::probeHistory() } );
+        if ( _pCmd == nullptr || bRegistered == false )
             return;
         SW_PROFILE_SCOPE( "RT.Probe.Update" );
         _state._probeUpdater.dispatch( *_pCmd, _psoManager.getEnginePSO( RenderPassKind::ProbeUpdate ), _state._lightBuffer, _transparentRankPlaceholder._srv );

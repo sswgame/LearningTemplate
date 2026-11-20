@@ -50,6 +50,7 @@
 #include "Engine/Renderer/Extension/RenderExtensionRegistry.h"
 #include "Engine/Renderer/Frame/Capture/FrameCapture.h"
 #include "Engine/Renderer/Frame/Execute/FramePassExecutor.h"
+#include "Engine/Renderer/Frame/Execute/ViewGraphResource.h"
 #include "Engine/Renderer/Frame/FrameRenderState.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Renderer/Frame/PostProcess/FrameAutoExposure.h"
@@ -240,8 +241,10 @@ namespace sw
             context._passValues.setMatrix( names._lightViewProj, _pActiveView->_shadow._lightViewProj );
             context._pCmd->endRenderPass();
             cache.markRebuilt();
+            // 층은 이 패스가 깊이 쓰기로 선언했고 다시 그리는 프레임에만 등록했다(`registerViewResources`) — 복원이 읽도록 셰이더 읽기로 옮긴다.
+            // 다시 그리지 않는 프레임은 지난번 다시 그린 뒤의 셰이더 읽기 그대로다(전이 없음).
+            context._pGraphPass->transition( ViewGraphResource::shadowCacheLayer(), RHITextureState::ShaderResource );
         }
-        context._pCmd->prepareTextureForShaderRead( layer._texture );
         return true;
     }
 
@@ -332,9 +335,8 @@ namespace sw
 
     void FramePassExecutor::registerPassTexture( FramePassContext& context, const hashed_string& canonicalName, const hashed_string& attachmentName )
     {
+        // 상태는 옮기지 않는다 — 선언한 입력은 레벨 콜백이 셰이더 읽기로 옮겼다(꺼진 효과가 가리키는 원본은 그 효과 패스의 입력 선언이 옮겼다). 패스 기록 면에는 텍스처 전이가 없다.
         const TransientAttachmentPool::Attachment attachment = findTransientAttachment( attachmentName );
-        if ( attachment._texture != 0 && context._pCmd != nullptr )
-            context._pCmd->prepareTextureForShaderRead( attachment._texture );
         context._resourceRegistry.registerTexture( canonicalName, attachment._texture, attachment._srv );
         // 원본을 비켜 읽는 효과(블룸)는 그 원본의 텍셀 크기로 비켜야 한다. 반해상도 첨부면 프레임 텍셀의 두 배다. context 는 패스마다 시드의 사본이라 다음 패스로 새지 않는다.
         const bool bSourceColorAttachment = canonicalName == attachmentNames()._sourceColor && attachment._width > 0 && attachment._height > 0;

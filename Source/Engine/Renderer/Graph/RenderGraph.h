@@ -152,15 +152,19 @@ namespace sw
      * @brief execute() 중에 패스 콜백에 넘기는 컨텍스트입니다.
      * @details 패스 몸통은 그래프 밖 자원을 **선언한 접근 핸들로만** 받는다(`getBuffer` · `getTexture` · `uavBarrier`) — 언리얼 RDG 패스 파라미터의 `FRDGBufferUAVRef`,
      *          Adria `RGPassContext::GetReadWriteBuffer` 자리다. 선언하지 않은 이름 · 접근은 오류를 남기고 무효 핸들(0)이라 손으로 묶을 길이 없다. 전이는 레벨 콜백이 냈다.
+     *          패스 안 왕복(UAV ↔ 셰이더 읽기 — 그림자 캐시 층 · 자동 노출 · 가림 컬링 인자)은 **쓰기로 선언한 자원만** `transition` 으로 한다. 쓰기 선언은 그래프가
+     *          레벨 안 독점으로 가르므로(간선) 같은 레벨의 다른 패스가 그 자원을 만지지 않는다 — 병렬 기록의 추적 상태 경합이 없다. 패스를 그래프 패스로 쪼개지 않는다
+     *          (레벨 고정 비용 ~20 µs, `RenderGraph::executeParallel`).
      */
     struct SW_API RenderGraphPassContext
     {
-        hashed_string                            _passName; ///< 실행 중인 패스 이름
+        hashed_string                            _passName;     ///< 실행 중인 패스 이름
+        uint32                                   _payload{ 0 }; ///< `RenderGraph::addPass` 가 받은 패스 번호 — 받는 쪽이 이름 해시로 다시 찾지 않는다(파이프라인 패스 순번 등)
         const vector<hashed_string>*             _pListInputs{ nullptr };
         const vector<hashed_string>*             _pListOutputs{ nullptr };
         const vector<RenderGraphResourceAccess>* _pListAccess{ nullptr };    ///< 이 패스가 선언한 접근 전부(이름으로 선언한 패스는 입력 = 셰이더 읽기, 출력 = 렌더 타깃)
         IRHICommandList*                         _pCmdList{ nullptr };       ///< (선택) 병렬 기록 때 활성 패스의 커맨드 리스트
-        const FrameBufferTable*                  _pResourceTable{ nullptr }; ///< 그래프 밖 자원의 RHI 핸들 표(프레임 그래프 — 실행기가 채운다). 없으면 핸들 요청은 모두 무효다
+        const FrameBufferTable*                  _pResourceTable{ nullptr }; ///< 그래프 밖 자원의 RHI 핸들 표(프레임 그래프는 프레임 자원 표, 뷰 그래프는 지금 뷰의 엔진 자원 표 — 실행기가 싣는다). 없으면 핸들 요청은 모두 무효다
 
         /** @brief 이 패스가 선언한 버퍼 접근 @p handle 의 뷰 칸 @p slot 버퍼입니다. 선언하지 않은 접근 · 등록하지 않은 칸은 오류를 남기고 0 입니다. */
         template <RenderGraphAccess kAccess>
@@ -179,10 +183,43 @@ namespace sw
          * @details UAV 핸들만 받는다 — SRV 로 선언한 버퍼로는 부를 수 없다(형식). 같은 상태의 연속이라 전이로는 알 수 없는 의존이다.
          */
         void uavBarrier( RenderGraphBufferUAV handle, uint32 slot = 0 ) const;
+        /**
+         * @brief 이 패스가 **쓰기로** 선언한 텍스처 @p handle(뷰 칸 @p slot)을 패스 안에서 @p state 로 옮깁니다 — 패스 안 왕복(UAV 로 쓰고 같은 패스가 셰이더 읽기로 읽는다).
+         * @details 읽기 접근 핸들로는 부를 수 없다(형식 — 읽기 선언은 그래프가 레벨 앞에서 옮긴다). 선언하지 않은 이름은 `getTexture` 와 같은 오류를 남기고 아무것도 내지 않는다.
+         *          전이는 이 패스의 리스트(`_pCmdList`)에 들어간다. 패스 기록 면(`IRHIPassCommandList`)에는 텍스처 전이가 없어 이 길 하나다.
+         */
+        template <RenderGraphAccess kAccess>
+        void transition( RenderGraphHandle<RenderGraphViewableKind::Texture, kAccess> handle, RHITextureState state, uint32 slot = 0 ) const
+        {
+            static_assert( isRenderGraphWriteAccess( kAccess ), "a pass transitions only resources it declared as written - the graph transitions read declarations" );
+            transitionTexture( handle, state, slot );
+        }
+        /** @brief 이 패스가 **쓰기로** 선언한 버퍼 @p handle(뷰 칸 @p slot)을 패스 안에서 @p state 로 옮깁니다. 규칙은 텍스처 판과 같다. */
+        template <RenderGraphAccess kAccess>
+        void transition( RenderGraphHandle<RenderGraphViewableKind::Buffer, kAccess> handle, RHIBufferState state, uint32 slot = 0 ) const
+        {
+            static_assert( isRenderGraphWriteAccess( kAccess ), "a pass transitions only resources it declared as written - the graph transitions read declarations" );
+            transitionBuffer( handle, state, slot );
+        }
+        /**
+         * @brief 이 패스가 선언한 @p handle 의 뷰 칸 @p slot 이 이번 프레임 표에 등록됐으면 true 입니다 — 오류를 남기지 않고 묻는다.
+         * @details 등록 조건이 곧 실행 조건이다: 주인이 프레임 시작에 "이번 프레임에 도는가" 를 판정해 등록하고, 패스 몸통은 그 판정을 다시 하지 않고 이것만 본다.
+         */
+        template <RenderGraphViewableKind kViewable, RenderGraphAccess kAccess>
+        [[nodiscard]] bool isRegistered( RenderGraphHandle<kViewable, kAccess> handle, uint32 slot = 0 ) const
+        {
+            return isDeclared( handle ) && findRegisteredHandle( handle, slot ) != 0;
+        }
 
     private:
+        /** @brief 이 패스가 @p access(이름 · 접근 · 종류)를 선언했으면 true 입니다. */
+        bool isDeclared( const RenderGraphResourceAccess& access ) const;
+        /** @brief 표에서 핸들을 찾습니다(선언 검사 · 오류 없음). 없으면 0 입니다. */
+        uint64 findRegisteredHandle( const RenderGraphResourceAccess& access, uint32 slot ) const;
         /** @brief 선언한 접근이면 표에서 핸들을 찾습니다. 선언하지 않았거나 표에 없으면 오류를 남기고 0 입니다. */
         uint64 findDeclaredHandle( const RenderGraphResourceAccess& access, uint32 slot ) const;
+        void   transitionTexture( const RenderGraphResourceAccess& access, RHITextureState state, uint32 slot ) const;
+        void   transitionBuffer( const RenderGraphResourceAccess& access, RHIBufferState state, uint32 slot ) const;
     };
 } // namespace sw
 
@@ -313,6 +350,7 @@ namespace sw
         vector<RenderGraphResourceAccess> _listAccess;                      ///< 선언한 접근 전부 — 전이는 이것에서 추론한다
         RenderGraphPassExecuteFn          _execute;                         ///< 컴파일된 순서대로 부르는 패스 콜백(선택)
         RHIQueueKind                      _queue{ RHIQueueKind::Graphics }; ///< 선언한 큐입니다. 비동기 컴퓨트를 지원하지 않는 그래프에서는 그래픽스로 계획한다(`setAsyncComputeSupported`)
+        uint32                            _payload{ 0 };                    ///< 받는 쪽의 패스 번호 — 패스 문맥(`RenderGraphPassContext::_payload`)으로 그대로 넘긴다
     };
 
     /**
@@ -393,9 +431,10 @@ namespace sw
          * @brief 접근 핸들로 패스를 선언합니다(`{ RenderGraphTextureSRV{ a }, RenderGraphBufferUAV{ b } }`). 쓰기 접근은 출력, 나머지는 입력이다.
          * @details 그래프가 접근에서 전이를 정한다 — 버퍼 · UAV · 간접 인자도 레벨 앞에서 한 묶음으로 나간다(패스 몸통이 손으로 내지 않는다).
          *          비동기 컴퓨트 패스가 첨부 접근(렌더 타깃 · 깊이)을 선언하면 거절한다(그 큐가 받지 않는 상태). 같은 자원을 두 번 적어도 거절한다.
+         * @param payload 받는 쪽의 패스 번호입니다. 실행 때 `RenderGraphPassContext::_payload` 로 그대로 온다 — 받는 쪽이 이름 해시로 서술을 다시 찾지 않는다.
          */
         bool addPass( hashed_string passName, vector<RenderGraphResourceAccess> listAccess, RenderGraphPassExecuteFn execute = {},
-                      RHIQueueKind queue = RHIQueueKind::Graphics );
+                      RHIQueueKind queue = RHIQueueKind::Graphics, uint32 payload = 0 );
         /**
          * @brief 그래프 밖에서 사는 자원(GPUScene 컬링 인자 · HZB · 라이트 그리드 · 입자)을 처음 접근 @p initialAccess 로 들입니다 — 언리얼 `RegisterExternalBuffer` 자리.
          * @details 실행이 프레임 시작에 그 접근을 추적 상태로 심는다 — 첫 사용이 같은 접근이면 전이가 없다. 끝 접근은 `RenderGraphExecutionContext::findAccess` 로 내보낸다.

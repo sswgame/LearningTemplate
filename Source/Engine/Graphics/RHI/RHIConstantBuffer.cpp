@@ -23,7 +23,7 @@ namespace sw
         return isValid();
     }
 
-    void RHIConstantBuffer::update( IRHICommandList& cmd, const void* pData, uint32 byteSize ) const
+    void RHIConstantBuffer::update( IRHIPassCommandList& cmd, const void* pData, uint32 byteSize ) const
     {
         const bool bNothingToUpdate = _buffer == 0 || pData == nullptr || byteSize == 0;
         if ( bNothingToUpdate )

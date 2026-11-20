@@ -715,3 +715,52 @@ SW_TEST_CASE( RenderGraphTest, AsyncComputeAccessesFoldToTheQueue )
     SW_EXPECT_FALSE( graph.addPass( hashed_string( "Twice" ), { RenderGraphBufferSRV{ particles }, RenderGraphBufferUAV{ particles } } ) );
     SW_EXPECT_EQUAL( 0u, graph.getNodeCount() );
 }
+
+/**
+ * @brief [RenderGraphTest] 직렬 `execute` 도 패스 문맥에 그 리스트와 패스 번호(`addPass` 의 payload)를 싣는다 — 병렬 · 큐 실행과 같은 문맥이다
+ * @details 결함이면 직렬 경로(추가 뷰 · 병렬 기록이 없는 백엔드)에서 `uavBarrier` · `transition` 이 리스트가 없어 조용히 아무것도 내지 않고, 받는 쪽이 이름 해시로 서술을 다시 찾는다.
+ *          변이: `execute` 가 문맥을 따로 만들며 리스트를 빠뜨리면(예전 사본) 리스트 단언이, payload 를 싣지 않으면 번호 단언이 진다.
+ */
+SW_TEST_CASE( RenderGraphTest, SerialExecuteCarriesCommandListAndPayload )
+{
+    RenderGraph              graph;
+    test::FakeRHICommandList cmd( 0 );
+    vector<uint32>           listPayload;
+    uint32                   listMismatchCount = 0;
+    const auto               record            = SW_DELEGATE_LAMBDA( RenderGraphPassExecuteFn, [&]( const RenderGraphPassContext& context )
+                             {
+        listPayload.push_back( context._payload );
+        listMismatchCount += context._pCmdList == &cmd ? 0u : 1u;
+    } );
+    SW_REQUIRE_TRUE( graph.addPass( hashed_string( "Writer" ), { RenderGraphRenderTarget{ hashed_string( "Color" ) } }, record, RHIQueueKind::Graphics, 7 ) );
+    SW_REQUIRE_TRUE( graph.addPass( hashed_string( "Reader" ), { RenderGraphTextureSRV{ hashed_string( "Color" ) } }, record, RHIQueueKind::Graphics, 3 ) );
+    SW_REQUIRE_TRUE( graph.compile() );
+    RenderGraphExecutionContext context;
+    SW_REQUIRE_TRUE( graph.execute( context, &cmd ) );
+    SW_REQUIRE_EQUAL( size_t{ 2 }, listPayload.size() );
+    SW_EXPECT_EQUAL( 7u, listPayload[0] );
+    SW_EXPECT_EQUAL( 3u, listPayload[1] );
+    SW_EXPECT_EQUAL( 0u, listMismatchCount );
+}
+
+/**
+ * @brief [RenderGraphTest] 패스 안 왕복을 쓰기로 선언한 자원(깊이 프리패스 뒤 2 단계 가림처럼 장면 깊이를 깊이 쓰기로 적는 패스)은 같은 자원의 앞 · 뒤 쓰기 사이 레벨에 놓인다
+ * @details `LateOcclusion` 이 장면 깊이를 깊이 쓰기로 선언하는 까닭 — 앞 쓰기(깊이 프리패스)와 같은 레벨에서 다른 패스가 그 깊이를 읽거나 쓰지 않고, 뒤 쓰기(G버퍼) 앞에 끝난다.
+ *          변이: 셰이더 읽기로 선언하면 읽는 패스(데칼)와 같은 레벨에 들어가 데칼 단언이 진다.
+ */
+SW_TEST_CASE( RenderGraphTest, InPassRoundTripWriteSitsBetweenWriters )
+{
+    const hashed_string depth( "SceneDepth" );
+    RenderGraph         graph;
+    SW_REQUIRE_TRUE( graph.addPass( hashed_string( "DepthPrepass" ), { RenderGraphDepthWrite{ depth } } ) );
+    SW_REQUIRE_TRUE( graph.addPass( hashed_string( "LateOcclusion" ), { RenderGraphDepthWrite{ depth }, RenderGraphBufferUAV{ hashed_string( "CullArgs" ) } } ) );
+    SW_REQUIRE_TRUE( graph.addPass( hashed_string( "Decal" ), { RenderGraphTextureSRV{ depth } } ) );
+    SW_REQUIRE_TRUE( graph.addPass( hashed_string( "GBuffer" ), { RenderGraphDepthWrite{ depth } } ) );
+    SW_REQUIRE_TRUE( graph.compile() );
+    const vector<vector<hashed_string>>& listLevel = graph.getExecutionLevels();
+    SW_REQUIRE_EQUAL( size_t{ 4 }, listLevel.size() );
+    SW_EXPECT_TRUE( listLevel[0][0] == hashed_string( "DepthPrepass" ) );
+    SW_EXPECT_TRUE( listLevel[1][0] == hashed_string( "LateOcclusion" ) );
+    SW_EXPECT_TRUE( listLevel[2][0] == hashed_string( "Decal" ) );
+    SW_EXPECT_TRUE( listLevel[3][0] == hashed_string( "GBuffer" ) );
+}
