@@ -76,7 +76,7 @@ namespace sw
         {
             Opened = 0,          ///< 열었다. 평문은 `getOpened`.
             Malformed,           ///< 본문이 헤더와 태그보다 짧다.
-            Replayed,            ///< 재전송 방지 윈도우가 거절했다.
+            Replayed,            ///< 재전송 방지 윈도우가 거절했거나 예약 번호(`kKeyConfirmPacketNumber`)다.
             AuthenticationFailed ///< 태그가 맞지 않는다(변조나 다른 키).
         };
 
@@ -87,7 +87,7 @@ namespace sw
         NetPacketSealer& operator=( const NetPacketSealer& ) = delete;
 
         /**
-         * @brief @p pPlain 을 봉인해 본문 헤더와 암호문을 @p outWriter 에 씁니다(비운 뒤 쓴다). 보내는 패킷 번호는 실패해도 하나 오릅니다.
+         * @brief @p pPlain 을 봉인해 본문 헤더와 암호문을 @p outWriter 에 씁니다(비운 뒤 쓴다). 보내는 패킷 번호는 실패해도 하나 오릅니다(예약 번호에 닿으면 오르지 않고 늘 거절 — 감겨 nonce 를 다시 쓰지 않는다).
          * @param bServer 서버면 서버에서 클라이언트로 가는 키를 쓴다.
          * @return 봉인에 실패하면 false 이고 @p outWriter 는 건드리지 않는다.
          */

@@ -169,6 +169,43 @@ SW_TEST_CASE( NetReplayWindowTest, AdvancingClearsSlotsOfOldNumbers )
     SW_EXPECT_FALSE( window.isAcceptable( 1000 ) );
 }
 
+// 번호를 1 씩 도는 루프가 `number <= packetNumber` 꼴이면 2^64-2 뒤 2^64-1 에서 number 가 0 으로 감겨 끝나지 않았다 — 상대가 정한 번호 둘로 수신 스레드가 멈춘다.
+SW_TEST_CASE( NetReplayWindowTest, AdvancingToTheLastNumberTerminatesAndKeepsTheWindow )
+{
+    static constexpr uint64 kLast = ~0ull;
+    NetReplayWindow         window;
+    window.markReceived( kLast - 2 );
+    window.markReceived( kLast - 1 );
+    SW_REQUIRE_TRUE( window.isAcceptable( kLast ) );
+    window.markReceived( kLast ); // 고치기 전에는 여기서 끝나지 않았다
+    SW_EXPECT_EQUAL( kLast, window.getHighest() );
+    SW_EXPECT_FALSE( window.isAcceptable( kLast ) );     // 중복
+    SW_EXPECT_FALSE( window.isAcceptable( kLast - 1 ) ); // 앞서 받은 번호는 그대로 표시돼 있다
+    SW_EXPECT_FALSE( window.isAcceptable( kLast - 2 ) );
+    SW_EXPECT_TRUE( window.isAcceptable( kLast - 3 ) );                             // 창 안의 처음 보는 번호
+    SW_EXPECT_FALSE( window.isAcceptable( kLast - NetReplayWindow::kWindowSize ) ); // 창 밖
+}
+
+// 창 너비 이상 뛰면 비트맵을 한 번에 비우고(O(1)), 창 안의 작은 점프는 점프만큼만 민다.
+SW_TEST_CASE( NetReplayWindowTest, HugeJumpResetsAndSmallJumpShiftsOnlyTheGap )
+{
+    NetReplayWindow window;
+    window.markReceived( 10 );
+    window.markReceived( 12 );
+    const uint64 jumpedNumber = 12 + ( 1ull << 40 );
+    window.markReceived( jumpedNumber );
+    SW_EXPECT_EQUAL( jumpedNumber, window.getHighest() );
+    SW_EXPECT_TRUE( window.isAcceptable( jumpedNumber - 1 ) );
+    SW_EXPECT_FALSE( window.isAcceptable( jumpedNumber ) );
+    SW_EXPECT_FALSE( window.isAcceptable( 12 ) ); // 창 밖 옛 번호
+
+    window.markReceived( jumpedNumber + 3 ); // 작은 점프 — 앞서 받은 jumpedNumber 는 표시가 남는다
+    SW_EXPECT_FALSE( window.isAcceptable( jumpedNumber ) );
+    SW_EXPECT_TRUE( window.isAcceptable( jumpedNumber + 1 ) );
+    SW_EXPECT_TRUE( window.isAcceptable( jumpedNumber + 2 ) );
+    SW_EXPECT_FALSE( window.isAcceptable( jumpedNumber + 3 ) );
+}
+
 SW_TEST_CASE( NetReplayWindowTest, NonceIsIvXorBigEndianPacketNumber )
 {
     uint8 arrIv[NetSecurityConstant::kAEADNonceSize];
