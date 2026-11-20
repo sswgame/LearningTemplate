@@ -7,7 +7,6 @@
   실행: App -game=Playground -scenario=game/playground/automation/scanprops.scenario.xml -unattended (체인: ctest -R Scenario.playground)
 -->
 <Scenario name="game.playground.scanprops" fixedDelta="0.0166667" timeoutFrames="300" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
-	<Launch variable="gv_firstScene" value="game/playground/maps/editortest.scene.xml"/> <!-- 그림 · 배치의 무대(팩 시작 맵은 마을이다) -->
 	<Launch variable="gv_stressTestMeshes" value="64"/>
 	<Launch variable="gv_stressTestScanProps" value="1"/>
 	<Launch variable="gv_stressTestAnimate" value="0"/>
