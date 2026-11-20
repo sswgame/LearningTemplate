@@ -9,7 +9,6 @@
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Config/GameConfig.h"
-#include "Engine/Config/GameSelection.h"
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Input/IInputCaptureQuery.h"
@@ -317,13 +316,9 @@ namespace sw
 
     void GameInstance::startFirstScene()
     {
-        // 개발 실행 인자 `-experience=<이름>` 은 첫 씬(`gv_firstScene` > 타이틀 > 시작 맵)보다 위다 — 그 Experience 의 맵으로 들어간다. 지면 씬 없이 오류로 남는다(다른 씬으로 대신하지 않는다).
-        const string& launchExperience = game::getSubsystem<const LaunchSelection>()._experience;
-        if ( launchExperience.empty() == false )
-        {
-            (void)getSubsystem<ExperienceManager>().enter( launchExperience ); // 실패는 관리자가 알린다
+        // 실행 전역 변수 `gv_firstExperience` 는 첫 씬(`gv_firstScene` > 타이틀 > 시작 맵)보다 위다 — 그 Experience 의 맵으로 들어간다. 지면 씬 없이 오류로 남는다(다른 씬으로 대신하지 않는다).
+        if ( getSubsystem<ExperienceManager>().enterFirstExperience() )
             return;
-        }
         (void)getSubsystem<GameSceneFlow>().requestFirstScene(); // 실패는 씬 흐름이 알리고, 다시 선 인스턴스는 살아 있는 씬을 쓴다
     }
 

@@ -23,6 +23,13 @@
 
 namespace sw
 {
+    /**
+     * @brief `"-gv_firstExperience=<이름>"` 인자입니다. 첫 씬(`gv_firstScene` > 타이틀 > 시작 맵) 대신 이 Experience(`<팩>/experiences/<이름>.experience.xml`)로 들어갑니다.
+     * @details 언리얼 Lyra 의 URL 옵션 `?Experience=` 자리다. 전역 변수라 시나리오 `<Launch>` 가 그대로 쓰고 체인 단계마다 되돌려진다(따로 둔 실행 인자는 단계마다 바꿀 길이 없었다).
+     *          `gv_firstScene` 처럼 배포에도 있다 — 배포본의 시나리오 · 전용 서버도 미니게임으로 바로 들어간다.
+     */
+    SW_GLOBAL_VARIABLE( sw::GlobalString, gv_firstExperience, "", "첫 씬 대신 처음 들어갈 Experience 이름 (비우면 사용 안 함)" );
+
     namespace
     {
         struct ExperienceManagerInternal
@@ -52,7 +59,7 @@ namespace sw
                     outValue.setText( "no game is running" );
                     return false;
                 }
-                const ExperienceDefinition* const pActive = pManager->findActiveDefinition();
+                const ExperienceDefinition* const pActive = pManager->isEntering() ? nullptr : pManager->findActiveDefinition();
                 outValue.setText( pActive != nullptr ? pActive->_name.c_str() : "none" );
                 return true;
             }
@@ -62,8 +69,8 @@ namespace sw
     ExperienceManager::ExperienceManager( SubsystemScope& gameScope, const GamePackConfig& packConfig )
         : _gameScope( gameScope )
         , _packConfig( packConfig )
-        , _pending{}
         , _pActive{ nullptr }
+        , _bEntering{ SW_FALSE }
     {
     }
 
@@ -71,8 +78,17 @@ namespace sw
 
     void ExperienceManager::shutdownSubsystem()
     {
-        _pending = nullopt;
         leave();
+    }
+
+    bool ExperienceManager::enterFirstExperience()
+    {
+        const string name = gv_firstExperience.get();
+        if ( name.empty() )
+            return false;
+        SW_LOG_INFO_ID( "ExperienceManager.FirstExperience", "First experience %# (gv_firstExperience)", name.c_str() );
+        (void)enter( name ); // 실패는 위에서 알렸다 — 다른 씬으로 대신하지 않는다
+        return true;
     }
 
     string ExperienceManager::makeAssetPath( const GamePackConfig& packConfig, string_view name )
@@ -82,9 +98,9 @@ namespace sw
 
     bool ExperienceManager::enter( string_view name )
     {
-        if ( _pending.has_value() )
+        if ( isEntering() )
         {
-            SW_LOG_ERROR_ID( "ExperienceManager.EnterBusy", "Experience '%#' is refused - experience '%#' is still waiting for its map", name, _pending->_name.c_str() );
+            SW_LOG_ERROR_ID( "ExperienceManager.EnterBusy", "Experience '%#' is refused - experience '%#' is still waiting for its map", name, _pActive->getDefinition()._name.c_str() );
             return false;
         }
         const string         assetPath = makeAssetPath( _packConfig, name );
@@ -107,25 +123,33 @@ namespace sw
             SW_LOG_ERROR_ID( "ExperienceManager.SubLevelUnsupported", "%#: entry=\"SubLevel\" needs the hub sub-level loader (hub migration step 2) - use SceneSwitch until then", assetPath.c_str() );
             return false;
         }
+        // 앞 것을 끄고 새 것을 켠 뒤 맵을 요청한다 — 맵의 컴포넌트가 씬 적용(`beginPlay`) 때 키트 서비스 · 카탈로그를 찾는다. 앞 맵의 컴포넌트가 아직 산 동안 칸이 비어도
+        // 두 Experience 가 섞이지는 않는다(같은 서비스를 둘이 걸면 `ExperienceScope::bindService` 가 거절한다).
+        leave();
+        if ( activate( definition ) == false )
+        {
+            SW_LOG_ERROR_ID( "ExperienceManager.NotActivated", "Experience '%#' could not be activated (see the messages above) - nothing of it stays bound", name );
+            return false;
+        }
         const string mapPath = definition._map.get();
-        _pending             = std::move( definition );
         if ( game::getSubsystem<GameSceneFlow>().requestSceneThen( mapPath, GameSceneFlow::SceneLoadedFunction::create<&ExperienceManager::onMapLoaded>( this ) ) == false )
         {
             SW_LOG_ERROR_ID( "ExperienceManager.MapRequestRefused", "Experience '%#': the map '%#' could not be requested", name, mapPath.c_str() );
-            _pending = nullopt;
-            return false; // 거절된 진입은 켜진 Experience 를 건드리지 않는다
+            leave();
+            return false;
         }
-        // 요청이 받아들여진 뒤, 맵이 바뀌기 전에 앞 Experience 를 끈다(완료 알림은 다음 프레임 이후다) — 그 서비스를 찾는 앞 맵의 컴포넌트가 아직 산 동안 칸이 비어도, 다음 Experience 와 섞이지는 않는다
-        leave();
+        _bEntering = SW_TRUE;
         return true;
     }
 
     void ExperienceManager::leave()
     {
+        _bEntering = SW_FALSE; // 기다리던 맵의 완료 알림이 와도 할 일이 없다
         if ( _pActive == nullptr )
             return;
-        SW_LOG_INFO_ID( "ExperienceManager.Left", "Experience '%#' is deactivated", _pActive->getDefinition()._name.c_str() );
-        _pActive.reset(); // 범위가 건 역순으로 거둔다
+        const uint32 leakCount = _pActive->deactivate(); // 범위가 건 역순으로 거두고 남은 것을 알린다
+        SW_LOG_INFO_ID( "ExperienceManager.Left", "Experience '%#' is deactivated (%# left behind)", _pActive->getDefinition()._name.c_str(), leakCount );
+        _pActive.reset();
     }
 
     const ExperienceDefinition* ExperienceManager::findActiveDefinition() const
@@ -135,23 +159,23 @@ namespace sw
 
     void ExperienceManager::onMapLoaded( Scene* pScene )
     {
-        if ( _pending.has_value() == false )
+        if ( isEntering() == false || _pActive == nullptr )
             return;
-        const ExperienceDefinition definition = std::move( *_pending );
-        _pending                              = nullopt;
-        if ( pScene == nullptr )
-        {
-            SW_LOG_ERROR_ID( "ExperienceManager.MapNotOpened", "Experience '%#': the map '%#' did not open (failed or replaced by a later request)", definition._name.c_str(), definition._map.c_str() );
+        _bEntering = SW_FALSE;
+        if ( pScene != nullptr )
             return;
-        }
-        if ( activate( definition ) == false )
-            SW_LOG_ERROR_ID( "ExperienceManager.NotActivated", "Experience '%#' could not be activated (see the messages above) - nothing of it stays bound", definition._name.c_str() );
+        const ExperienceDefinition& definition = _pActive->getDefinition();
+        SW_LOG_ERROR_ID( "ExperienceManager.MapNotOpened", "Experience '%#': the map '%#' did not open (failed or replaced by a later request) - the experience is deactivated", definition._name.c_str(),
+                         definition._map.c_str() );
+        leave();
     }
 
     bool ExperienceManager::activate( const ExperienceDefinition& definition )
     {
-        unique_ptr<ExperienceScope>  scope = make_unique<ExperienceScope>( _gameScope, game::getSubsystem<GlobalVariableManager>(), _packConfig, definition );
-        const ExperienceKitRegistry& kits  = game::getSubsystem<ExperienceKitRegistry>();
+        InputManager* const          pInput = game::findSubsystem<InputManager>(); // 입력 서비스가 없는 호스트(전용 서버)는 입력 레이어를 걸지 않는다
+        unique_ptr<ExperienceScope>  scope  = make_unique<ExperienceScope>( _gameScope, game::getSubsystem<GlobalVariableManager>(), _packConfig, pInput != nullptr ? &pInput->getInputMap() : nullptr,
+                                                                            definition );
+        const ExperienceKitRegistry& kits   = game::getSubsystem<ExperienceKitRegistry>();
         for ( const hashed_string& kitName : definition._listKit )
         {
             const ExperienceKitRegistration* const pKit = kits.findKit( kitName.view() ); // 검사 뒤에 키트 모듈이 내려갔을 수 있다 — 다시 찾는다
@@ -181,6 +205,7 @@ namespace sw
         IGameInstanceClientHook* const pClientHook = IGameInstanceClientHook::find();
         if ( pClientHook != nullptr && pClientHook->openExperienceUI( *scope ) == false )
             return false;
+        scope->finishActivation();
         _pActive = std::move( scope );
         SW_LOG_INFO_ID( "ExperienceManager.Activated", "Experience '%#' is active (%# kits)", definition._name.c_str(), static_cast<uint32>( definition._listKit.size() ) );
         return true;

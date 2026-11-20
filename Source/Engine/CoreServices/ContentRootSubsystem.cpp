@@ -16,7 +16,6 @@ namespace sw
         , _assetPaths{}
         , _resourceComposition{}
         , _resourceTags{ _resourceComposition }
-        , _launchSelection{}
     {
     }
 
@@ -32,7 +31,6 @@ namespace sw
         // 돌릴 게임을 고른다(Dev `-game=`) — 모듈 카탈로그 · 게임 프리셋을 읽기 전이어야 한다. 이 빌드에 없는 게임이면 서지 않는다.
         if ( GameSelection::select( _commandLine.getCommandLine() ) == false )
             return SubsystemInitResult::Failed;
-        _launchSelection.read( _commandLine.getCommandLine() );
         _crashHandler.getHandler().setContextValue( "Game", GameSelection::getName().c_str() );
         return SubsystemInitResult::Succeeded;
     }
@@ -51,6 +49,4 @@ namespace sw
     // 리소스 조건 태그(게임 코드가 `flag` · `feature` 축을 켠다)와 합성 기록 · 덮어쓰기 층(모드 세션이 층을 얹는다). 로드 워커도 읽으므로 칸으로 읽는다.
     SW_ENGINE_SERVICE( ResourceTags, GameVisible );
     SW_ENGINE_SERVICE( ResourceComposition, GameVisible );
-    // 실행 선택(`-experience=`) — 명령줄은 호스트 전용이라 게임 인스턴스가 첫 씬 대신 들어갈 Experience 를 이 칸으로 읽는다.
-    SW_ENGINE_SERVICE( LaunchSelection, GameVisible );
 } // namespace sw

@@ -262,6 +262,9 @@ namespace sw
             return *pFound;
         }
 
+        /** @brief 이 범위 자신의 칸(소유 · 빌림)에 걸린 타입 해시를 건 순서로 @p outListTypeHash 에 씁니다(자식 · 상위는 보지 않는다). Experience 해제 검사가 켜기 전후를 견준다. */
+        void collectBoundTypes( vector<uint64>& outListTypeHash ) const;
+
         /** @brief 소유한 서브시스템 목록입니다(정렬 · 초기화 · 종료는 이것으로 한다). */
         SubsystemCollection&       getCollection() { return _collection; }
         const SubsystemCollection& getCollection() const { return _collection; }

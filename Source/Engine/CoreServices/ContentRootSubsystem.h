@@ -13,7 +13,6 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Subsystem/ISubsystem.h"
 
-#include "Engine/Config/GameSelection.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Serialization/Inherit/ResourceComposition.h"
 #include "Engine/Serialization/Inherit/ResourceTags.h"
@@ -49,8 +48,6 @@ namespace sw
         ResourceTags& getResourceTags() { return _resourceTags; }
         /** @brief 이 서브시스템이 소유한 합성 기록 · 덮어쓰기 층입니다. */
         ResourceComposition& getResourceComposition() { return _resourceComposition; }
-        /** @brief 이 서브시스템이 소유한 실행 선택(`-experience=`)입니다. 코어 범위가 서비스 칸으로 건다. */
-        LaunchSelection& getLaunchSelection() { return _launchSelection; }
 
     private:
         const CommandLineSubsystem& _commandLine;
@@ -58,6 +55,5 @@ namespace sw
         AssetPaths                  _assetPaths;          ///< 경로 상태 전부 — 이 프로세스의 엔진에서 하나다
         ResourceComposition         _resourceComposition; ///< 합성 기록 · 층 목록(`_resourceTags` 가 바뀐 태그를 알린다 — 먼저 선다)
         ResourceTags                _resourceTags;        ///< 리소스 조건 태그
-        LaunchSelection             _launchSelection;     ///< 실행 인자로 고른 첫 Experience(게임 선택과 같은 기동 단계에 읽는다)
     };
 } // namespace sw

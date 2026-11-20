@@ -8,6 +8,12 @@
 
 namespace sw
 {
+    bool activateKitWithoutServices( ExperienceScope& scope )
+    {
+        (void)scope;
+        return true;
+    }
+
     ExperienceKitRegistry::ExperienceKitRegistry()
         : _mutex{}
         , _registration{ "ExperienceKitRegistry", RegistrationOrder::Insertion, true, NameCase::IgnoreCase }

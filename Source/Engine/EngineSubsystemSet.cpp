@@ -42,7 +42,6 @@ namespace sw::engine
         (void)coreScope.exposeMember( *parts._pContentRoot, parts._pContentRoot->getAssetPaths() );          // 리소스 경로 상태 — 주인은 리소스 루트 서브시스템 하나다
         (void)coreScope.exposeMember( *parts._pContentRoot, parts._pContentRoot->getResourceTags() );        // 리소스 조건 태그 — 같은 주인
         (void)coreScope.exposeMember( *parts._pContentRoot, parts._pContentRoot->getResourceComposition() ); // 합성 기록 · 덮어쓰기 층 — 같은 주인
-        (void)coreScope.exposeMember( *parts._pContentRoot, parts._pContentRoot->getLaunchSelection() );     // 실행 선택(-experience=) — 같은 주인
         (void)coreScope.exposeMember( *parts._pCrashHandler, parts._pCrashHandler->getHandler() );           // 크래시 처리기 — 주인은 크래시 서브시스템 하나다
         return parts;
     }
