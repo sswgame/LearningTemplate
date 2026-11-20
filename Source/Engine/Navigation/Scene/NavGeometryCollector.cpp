@@ -2,6 +2,7 @@
 
 #include "Engine/Navigation/Scene/NavGeometryCollector.h"
 
+#include "Core/Math/Half.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Animation/Component/SkeletalMeshComponent.h"

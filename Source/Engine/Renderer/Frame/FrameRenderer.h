@@ -46,6 +46,7 @@
 
 namespace sw
 {
+    struct RHIPipelineStateDesc;
     struct FogSettings;
     struct RenderFramePacket;
     struct RenderFramePacketDeltas;

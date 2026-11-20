@@ -34,6 +34,7 @@
 
 namespace sw
 {
+    struct RHIPipelineStateDesc;
     struct RHIMemoryBudget;
 
     class VulkanRHICommandContext;

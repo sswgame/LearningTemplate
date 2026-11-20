@@ -29,6 +29,7 @@
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Content/CookCodeFingerprint.h"
 #include "Engine/Graphics/RHI/RHIDescriptors.h"
+#include "Engine/Graphics/RHI/RHIFormatInfo.h"
 #include "Engine/Graphics/Texture/TextureFormatFamily.h"
 
 #include "sw/config/ConfigConstants.h"

@@ -2,6 +2,8 @@
 
 #include "Editor/Common/Commands/Scene/EditorReflectionProbeBakeSession.h"
 
+#include "Core/Math/Half.h"
+
 #include "Editor/Common/Commands/Scene/EditorBakeSession.h"
 #include "Editor/Common/Commands/Scene/ReflectionProbeBaker.h"
 #include "Editor/Common/Task/EditorBackgroundTask.h"

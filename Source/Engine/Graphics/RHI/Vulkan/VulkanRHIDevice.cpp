@@ -50,6 +50,7 @@
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIUtil.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Reflection/EnumName.h"
+#include "Engine/Graphics/RHI/RHIPipelineStateDesc.h"
 
 namespace sw
 {

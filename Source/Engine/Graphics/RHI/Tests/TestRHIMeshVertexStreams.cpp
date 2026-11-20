@@ -5,8 +5,11 @@
 #include "pch.h"
 
 #include "Core/Container/vector.h"
+#include "Core/Math/Half.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Graphics/Mesh/MeshVertex.h"
+#include "Engine/Graphics/RHI/RHIMeshVertexLayout.h"
 #include "Engine/Graphics/RHI/RHIMeshVertexStreams.h"
 
 using namespace sw;

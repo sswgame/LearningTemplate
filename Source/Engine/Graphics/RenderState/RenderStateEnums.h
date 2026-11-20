@@ -13,6 +13,13 @@
 namespace sw
 {
     /**
+     * @brief beginRenderPass 와 PSO 가 동시에 바인딩할 수 있는 컬러 RT 의 최대 개수입니다(MRT).
+     * @details G버퍼 판 3 이 여섯 장(알베도 · 노멀 · 머티리얼 · 속도 · 사용자 칸 · 장면 색)이라 8 이다 — DX11 · DX12 · GL(최소 8) · WebGPU(기본 한도 8)가 보장하고,
+     *          Vulkan 은 장치 한도(`maxColorAttachments`, 최소 4)를 기동 때 확인한다.
+     */
+    inline constexpr uint32 kMaxColorAttachments = 8;
+
+    /**
      * @enum BlendMode
      * @brief 배치를 불투명 목록과 반투명 목록 중 어디로 보내는지의 분류입니다. 블렌드 계수는 여기 없다(`BlendTargetState`).
      * @details 리플렉션 enum 이다. 메시 컴포넌트의 `_blendMode` PROPERTY 가 이 이름으로 저장된다. `ENUM()` 을 빼면 직렬화기가 이름을

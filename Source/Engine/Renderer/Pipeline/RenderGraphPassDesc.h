@@ -9,6 +9,7 @@
 
 #include "Engine/Foundation/Foundation.h"
 #include "Engine/Graphics/RHI/RHIDescriptors.h"
+#include "Engine/Graphics/RenderState/RenderState.h"
 #include "Engine/Graphics/View/PostProcessValues.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Renderer/Graph/RenderGraph.h"

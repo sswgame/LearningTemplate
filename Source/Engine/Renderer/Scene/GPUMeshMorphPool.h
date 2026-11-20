@@ -60,6 +60,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Animation/Scene/AnimationSkinSlot.h"
+#include "Engine/Graphics/Mesh/MeshVertex.h"
 #include "Engine/Graphics/RHI/RHIFence.h"
 #include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"

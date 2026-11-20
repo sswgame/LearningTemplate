@@ -7,6 +7,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Math/Half.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Graphics/Lighting/ReflectionProbeAsset.h"

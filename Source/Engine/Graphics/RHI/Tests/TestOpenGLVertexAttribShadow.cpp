@@ -7,6 +7,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Graphics/RHI/GL/OpenGLVertexAttribShadow.h"
+#include "Engine/Graphics/RHI/RHIMeshVertexLayout.h"
 
 using namespace sw;
 

@@ -4,6 +4,8 @@
 
 #include "Core/Log/LogOnce.h"
 
+#include "Engine/Graphics/RHI/RHIMeshVertexLayout.h"
+
 namespace sw
 {
     void RHIGeometryBindings::setVertexBuffer( uint32 slot, RHIBufferHandle buffer, uint32 stride, uint32 offset )

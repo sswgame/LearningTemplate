@@ -8,6 +8,8 @@
 
 namespace sw
 {
+    struct RHIPipelineStateDesc;
+
     /**
      * @class IRHIResourceFactory
      * @brief RHI 버퍼, 텍스처, PSO, 렌더 패스의 생성과 파괴, 그리고 bindless 등록을 담당하는 인터페이스입니다.

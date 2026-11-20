@@ -474,7 +474,6 @@
     "Source/Engine/Graphics/RHI/GL/Platform/EGLPlatformContext.cpp": {"integer": 1},
     "Source/Engine/Graphics/RHI/GL/Platform/WGLPlatformContext.cpp": {"integer": 2},
     "Source/Engine/Graphics/RHI/IRHIResourceFactory.h": {"integer": 1},
-    "Source/Engine/Graphics/RHI/RHIDescriptors.h": {"integer": 2},
     "Source/Engine/Graphics/RHI/RHIEnums.h": {"integer": 13},
     "Source/Engine/Graphics/RHI/RHIMeshVertexStreams.cpp": {"float": 1, "integer": 2},
     "Source/Engine/Graphics/RHI/Vulkan/VulkanRHICommandContext.cpp": {"integer": 1},

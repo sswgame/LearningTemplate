@@ -11,6 +11,10 @@
         { "_header": "Engine/Reflection/ReflectionInvoke.h", "_limit": 10, "_reason": "TypeInfo · FunctionInfo · EventInfo 를 참조로만 받는다 — TypeInfo.h 대신 ReflectionFwd.h" },
         { "_header": "Engine/Reflection/ReflectionMetadata.h", "_limit": 18, "_reason": "메타데이터 칸은 함수 포인터 별칭만 쓴다 — TypeInfo.h 대신 ReflectionMetadataBox.h" },
         { "_header": "Engine/Object/Component/SceneComponent.h", "_limit": 12, "_reason": "인라인 접근자는 트랜스폼 페이지만 본다 — 저장소(SceneTransformStorage.h) 대신 SceneTransformPage.h" },
-        { "_header": "Engine/Renderer/Frame/FrameRendererUtil.h", "_limit": 35, "_reason": "리플렉션 레지스트리를 쓰지 않는다 — TypeRegistry.h 포함을 지웠다. 뷰 설정만 쓴다 — RenderView.h 대신 RenderViewSettings.h" }
+        { "_header": "Engine/Renderer/Frame/FrameRendererUtil.h", "_limit": 34, "_reason": "리플렉션 레지스트리를 쓰지 않는다 — TypeRegistry.h 포함을 지웠다. 뷰 설정만 쓴다 — RenderView.h 대신 RenderViewSettings.h" },
+        { "_header": "Engine/Graphics/RHI/RHIDescriptors.h", "_limit": 9, "_reason": "메시 정점 스트림 · PSO 서술체 · 밉 배치 계산을 RHIMeshVertexLayout.h · RHIPipelineStateDesc.h · RHITextureMipLayout.h 로 떼었다(half · MeshVertex · RenderState · RHIFormatInfo 를 끌지 않는다)" },
+        { "_header": "Engine/Graphics/RHI/RHITypes.h", "_limit": 11, "_reason": "묶음 헤더 — 서술체 몫(RHIDescriptors.h)이 무거운 의존을 따로 둔다" },
+        { "_header": "Engine/Graphics/RHI/IRHIResourceFactory.h", "_limit": 12, "_reason": "PSO 서술체는 참조로만 받는다 — 전방 선언" },
+        { "_header": "Engine/Renderer/Frame/Execute/FramePassExecutor.h", "_limit": 118, "_reason": "프레임 상태 · 확장 호스트를 참조로만 든다 — FrameRenderState.h · FrameExtensionHost.h 대신 전방 선언" }
     ]
 }
