@@ -5,6 +5,7 @@
 #include "Core/Hash/HashUtil.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/Tick/TickContext.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameEventUtil.h"
 #include "GameFramework/Runtime/Foundation/Random/GameRandom.h"

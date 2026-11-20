@@ -5,6 +5,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/Tick/TickContext.h"
 #include "Engine/Visual/2D/SpriteComponent.h"
 
 #include "GameFramework/Runtime/World/Lifetime/LifeSpanUtil.h"

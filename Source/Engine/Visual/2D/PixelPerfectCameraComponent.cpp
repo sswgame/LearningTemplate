@@ -10,6 +10,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/CameraRegistry.h"
 #include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
+#include "Engine/Object/GameObject/Tick/TickContext.h"
 #include "Engine/Reflection/ReflectionValidation.h"
 #include "Engine/Visual/2D/SortingLayerNameValidation.h"
 #include "Engine/Visual/Component/MeshComponent.h"

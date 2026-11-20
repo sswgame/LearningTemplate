@@ -16,6 +16,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
 #include "Engine/Object/GameObject/Tick/StructuralChangeBuffer.h"
+#include "Engine/Object/GameObject/Tick/TickContext.h"
 #include "Engine/Profiling/FrameProfiler.h"
 
 namespace sw

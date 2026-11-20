@@ -3,6 +3,7 @@
 #include "Games/Shooter3D/ShooterEffectComponent.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/Tick/TickContext.h"
 #include "Engine/Visual/Component/MeshComponent.h"
 
 namespace sw

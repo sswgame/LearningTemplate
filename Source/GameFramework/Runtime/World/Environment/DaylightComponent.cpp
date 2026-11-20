@@ -6,6 +6,7 @@
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Tick/TickContext.h"
 #include "Engine/Visual/Component/DirectionalLightComponent.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"

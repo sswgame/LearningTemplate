@@ -6,6 +6,7 @@
 
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/Tick/TickContext.h"
 #include "Engine/Physics/Component/WheeledVehicleComponent.h"
 
 #include "GameFramework/Runtime/Character/Control/Intent/ControlIntent.h"
