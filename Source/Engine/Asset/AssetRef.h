@@ -15,11 +15,20 @@
 #pragma once
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Serialization/Serializer/AssetRefBase.h"
 
 namespace sw
 {
+    // 캐시 형식은 앞선 선언만 둔다 — 칸만 든 헤더(팬인 600 여)가 캐시 템플릿을 끌지 않게. `acquire` · `request` 를 부르는 TU 는 대상 종류의 헤더가 캐시를 선언한다.
+    template <typename AssetType>
+    class SharedAssetCache;
+    template <typename T>
+    class SharedAssetRef;
+    template <typename AssetType>
+    class SharedAssetLoadOperation;
+    template <typename TOperation>
+    class AssetHandle;
+
     /**
      * @brief `AssetRef<T>` 가 부르는 캐시입니다. 기본은 공유 캐시이고, 모양이 다른 캐시(메시 · 텍스처 · 머티리얼 · 프리팹)는 그 캐시 헤더가 특수화합니다.
      * @details GPU 수명이나 쓰는 쪽의 수정 때문에 캐시를 합치지 않은 종류가 있어(`SharedAssetCache.h` 머리말) 반환 형식이 대상마다 다르다. 쓰는 쪽은 `auto` 나 그 캐시의 형식으로 받는다.
@@ -27,8 +36,8 @@ namespace sw
     template <typename T>
     struct AssetRefCache
     {
-        static SharedAssetRef<T>    acquire( string_view path ) { return SharedAssetCache<T>::acquire( path ); }
-        static SharedAssetHandle<T> request( string_view path ) { return SharedAssetCache<T>::request( path ); }
+        static SharedAssetRef<T>                        acquire( string_view path ) { return SharedAssetCache<T>::acquire( path ); }
+        static AssetHandle<SharedAssetLoadOperation<T>> request( string_view path ) { return SharedAssetCache<T>::request( path ); }
     };
 
     /**
