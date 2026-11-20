@@ -881,8 +881,8 @@ namespace sw
                 }
             }
 
-            // 쿠킹본 타일을 구간으로 읽기 시작한다 — 메모리 쿠킹본이면 그 자리에서 결과를 채운다.
-            const auto startCookedRead = [&runtime]( NavStreamTile& tile ) -> bool
+            // 쿠킹본 타일을 구간으로 읽기 시작한다 — 메모리 쿠킹본이면 그 자리에서 결과를 채운다. IO 우선순위는 셀 읽기와 같은 값이다(그 자리 셀의 우선순위 → `toAsyncIOPriority`).
+            const auto startCookedRead = [&runtime]( NavStreamTile& tile, StreamingSourcePriority priority ) -> bool
             {
                 if ( tile._pMemoryBytes != nullptr )
                 {
@@ -892,7 +892,7 @@ namespace sw
                     return true;
                 }
                 const shared_ptr<NavStreamTile::Read> pRead = make_shared<NavStreamTile::Read>();
-                tile._readHandle                            = AssetIO::readBinaryAssetRangeAsync( AssetID{ runtime._streamPath }, tile._range._offset, tile._range._size, AsyncIOPriority::Normal,
+                tile._readHandle                            = AssetIO::readBinaryAssetRangeAsync( AssetID{ runtime._streamPath }, tile._range._offset, tile._range._size, toAsyncIOPriority( priority ),
                                                                                                   SW_DELEGATE_LAMBDA( AssetReadCompleteDelegate, [pRead]( bool bSuccess, vector<uint8>& bytes )
                                            {
                     if ( bSuccess )
@@ -909,12 +909,13 @@ namespace sw
                 return true;
             };
             // 타일의 입력이 쿠킹 때와 같으면 쿠킹본 타일을 읽고, 다르면 그 타일만 지금 기하로 다시 굽는다(이웃 타일은 쿠킹본 그대로).
-            const auto resolveTileInput = [&runtime, &startCookedRead]( NavStreamTile& tile, const AABB& region )
+            const auto resolveTileInput = [&runtime, &startCookedRead, &streaming]( NavStreamTile& tile, const AABB& region )
             {
-                tile._geometryHash = runtime._pGeometry != nullptr ? runtime._pGeometry->computeRegionHash( region ) : 0;
+                const StreamingSourcePriority priority = streaming.computePriorityAt( region.getCenter() ); // 내비메시가 있는 씬은 원점을 옮기지 않아 타일 자리가 곧 로컬 자리다
+                tile._geometryHash                     = runtime._pGeometry != nullptr ? runtime._pGeometry->computeRegionHash( region ) : 0;
                 if ( tile._cookedInputHash != 0 && tile._geometryHash == tile._cookedInputHash )
                 {
-                    tile._state = startCookedRead( tile ) ? NavStreamTile::State::Loading : NavStreamTile::State::Failed;
+                    tile._state = startCookedRead( tile, priority ) ? NavStreamTile::State::Loading : NavStreamTile::State::Failed;
                     return;
                 }
                 tile._state = NavStreamTile::State::Loaded; // 자리는 끼운 것으로 친다 — 다시 베이크 결과를 받는다

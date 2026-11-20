@@ -260,6 +260,7 @@ namespace sw
             vector<SceneDocument::SceneObjectNode> _listArrivedNode;    ///< 다른 셀에서 들어온 엔티티(떠 둔 상태) — 다음 짓기에서 내용 뒤에 붙여 같은 배치로 짓는다
             vector<uint64>                         _listObjectID;       ///< 든 오브젝트(지은 엔티티 · 옮겨 온 오브젝트, 엔티티마다 하나, 부품 제외). 내릴 때 자식까지 지운다
             uint64                                 _hlodFileID{ 0 };    ///< 이 조각의 HLOD 대리 엔티티(늘 올라 있음)의 파일 id — 0 이면 대리가 없다(`SceneDocument::StreamingCell::_hlodFileID`)
+            uint64                                 _hlodObjectID{ 0 };  ///< 풀어 둔 대리 오브젝트 id(`resolveHLODObject` 만 쓴다) — 0 이거나 그 오브젝트가 사라졌으면 파일 id 로 다시 푼다
             CellState                              _state{ CellState::Unloaded };
             uint64                                 _changeSerial{ 0 };         ///< 마지막으로 오르거나 내려간 때의 `SceneStreamingSubsystem::_changeSerial`
             bool                                   _bContentHeld{ SW_FALSE };  ///< `_listNode` 를 짓고 나서도 든다(메모리 문서의 셀 · 떠 둔 상태) — 아니면 지은 뒤 버리고 다시 올릴 때 다시 읽는다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
@@ -320,8 +321,13 @@ namespace sw
         void buildQueuedCells( bool bFinishEachFrame );
         /** @brief 조각마다 HLOD 대리를 조각이 올라 있지 않을 때만 켭니다(바뀐 것만 `GameObject::setActive`). */
         void updateHLODVisibility();
-        /** @brief 조각의 HLOD 대리 오브젝트입니다. 대리가 없거나(파일 id 0) 지금 없으면(레이어가 꺼짐) nullptr 입니다. */
-        GameObject* findHLODObject( const CellSlot& slot ) const;
+        /**
+         * @brief 조각의 HLOD 대리 오브젝트입니다 — 풀어 둔 id(`CellSlot::_hlodObjectID`)를 쓰고, 없거나 사라졌으면(레이어를 껐다 켬 · 세이브 복원) 파일 id 로 한 번 다시 풀어 듭니다.
+         * @details 대리가 없거나(파일 id 0) 레이어가 꺼져 대리가 없으면 nullptr 이고 풀지 않는다 — 파일 id 찾기는 대리가 다시 설 때만 돈다.
+         */
+        GameObject* resolveHLODObject( CellSlot& slot );
+        /** @brief 풀어 둔 대리 오브젝트입니다(풀지 않는다 — 감시 값 · 개발 명령). 아직 풀지 않았거나 사라졌으면 nullptr 입니다. */
+        const GameObject* findResolvedHLODObject( const CellSlot& slot ) const;
         /** @brief 조각이 로드 큐에 남아 있으면(오르지 않았고 실패하지 않았고 레이어가 켜졌다) true 입니다. */
         bool isSlotPending( const CellSlot& slot ) const;
         /** @brief 조각의 데이터 레이어가 모두 켜져 있으면 true 입니다. */

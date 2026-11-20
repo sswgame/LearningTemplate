@@ -465,7 +465,7 @@ namespace sw
     {
         for ( const unique_ptr<CellSlot>& pSlot : _listCell )
         {
-            GameObject* pProxy = findHLODObject( *pSlot );
+            GameObject* pProxy = resolveHLODObject( *pSlot );
             if ( pProxy == nullptr )
                 continue;
             // 올라 있지 않은 조각(내려감 · 읽는 중 · 짓는 중 · 실패)은 대리가 그린다 — 실패한 조각도 구멍보다 대리가 낫다.
@@ -475,12 +475,28 @@ namespace sw
         }
     }
 
-    GameObject* SceneStreamingSubsystem::findHLODObject( const CellSlot& slot ) const
+    GameObject* SceneStreamingSubsystem::resolveHLODObject( CellSlot& slot )
     {
         if ( slot._hlodFileID == 0 || _pScene == nullptr )
             return nullptr;
-        const uint64 objectID = _pScene->findObjectIDByFileID( slot._hlodFileID );
-        return objectID != 0 ? _pScene->getObjectManager()->findGameObjectByID( objectID ) : nullptr;
+        GameObjectManager& objects = *_pScene->getObjectManager();
+        if ( slot._hlodObjectID != 0 )
+        {
+            GameObject* pProxy = objects.findGameObjectByID( slot._hlodObjectID );
+            if ( pProxy != nullptr )
+                return pProxy;
+            slot._hlodObjectID = 0; // 사라졌다(레이어를 껐거나 매니저를 비웠다) — 다시 서면 아래에서 다시 푼다
+        }
+        // 대리는 조각의 레이어를 따른다 — 레이어가 꺼져 있으면 대리가 없으니 파일 id 를 찾지 않는다(프레임마다 헛찾기 없이).
+        if ( areSlotLayersActive( slot ) == false )
+            return nullptr;
+        slot._hlodObjectID = _pScene->findObjectIDByFileID( slot._hlodFileID );
+        return slot._hlodObjectID != 0 ? objects.findGameObjectByID( slot._hlodObjectID ) : nullptr;
+    }
+
+    const GameObject* SceneStreamingSubsystem::findResolvedHLODObject( const CellSlot& slot ) const
+    {
+        return slot._hlodObjectID != 0 && _pScene != nullptr ? _pScene->getObjectManager()->findGameObjectByID( slot._hlodObjectID ) : nullptr;
     }
 
     uint32 SceneStreamingSubsystem::getHLODCount() const
@@ -498,7 +514,7 @@ namespace sw
         uint32 count = 0;
         for ( const unique_ptr<CellSlot>& pSlot : _listCell )
         {
-            const GameObject* pProxy = findHLODObject( *pSlot );
+            const GameObject* pProxy = findResolvedHLODObject( *pSlot );
             count += pProxy != nullptr && pProxy->isActive() ? 1u : 0u;
         }
         return count;
