@@ -9,12 +9,13 @@
 # 바뀐 것이 그 단계에 영향을 주지 않을 때만 쓴다(실패한 단계부터 다시 돌린다). 끝 줄에 어디서 시작했는지 적는다.
 #
 # 단계(시간 판정이 CPU 경합에 흔들리는 일과 그렇지 않은 일을 가른다 — 시나리오는 벽시계 시한 · 프레임에 걸린 그림을 판정하므로 GPU 단계는 혼자 돈다):
-#   build       lint --all(뒤에서) ‖ Release 빌드 → 임포트 → (ASan 빌드 → (바뀐 파일 clang-tidy, 뒤에서) → 서버 빌드 ‖ 배포 프리셋 둘 빌드 · 쿠킹). 배포 빌드는 증분 빌드의 링크 꼬리에 비는 코어를 쓴다(2026-11-13: CPU 단계 11.5 분 중 9 분이 배포 빌드였다).
+#   build       lint --all(뒤에서) ‖ Release 빌드 → 임포트 → (ASan 빌드 → (바뀐 파일 clang-tidy, 뒤에서) → 서버 빌드 ‖ 배포 프리셋 둘 빌드 · 쿠킹 → shipping-check 기동 · 종료). 배포 빌드는 증분 빌드의 링크 꼬리에 비는 코어를 쓴다(2026-11-13: CPU 단계 11.5 분 중 9 분이 배포 빌드였다).
 #               Debug 는 짓지 않는다 — 단언 · 검사는 SW_DO_CHECKS 로 Release 에 있고, CPU 단위는 ASan(Release + clang-cl ASan)이 돈다(사용자 결정 2026-11-18).
 #   changed     origin/main 뒤에 들어온 · 바뀐 테스트 · 시나리오만 Release 로 먼저(test_history.py changed — DesignBacklog D4). 돈 적 없는 테스트 · 기준 파일의 실패를
 #               전체 실행 중간이 아니라 빌드 직후에 갈래 이름과 함께 낸다. 없는 골든 · 스냅숏만 쓰고(MissingBaseline) 쓴 것이 있으면 멈춘다 — 보고 커밋한 뒤 --from changed.
 #               지면 cpu · gpu-release 를 시작하지 않는다. 끝 줄 CHANGED_OK=<sha> · CHANGED_FAILED.
-#   cpu         ASan ctest -L nogpu(단위 · 셰이더 다시 굽기 · 파서 …) ‖ 서버(Release) 단위 → launch-args → shipping-check --skip-build(기동만) ‖ shader warm. 시간을 판정하지 않는 CPU 일만 겹친다.
+#   cpu         ASan ctest -L nogpu(단위 · 셰이더 다시 굽기 · 파서 …) ‖ 서버(Release) 단위 → launch-args(--from 으로 build 를 건너뛰었으면 → shipping-check 빌드 · 기동) ‖ shader warm.
+#               시간을 판정하지 않는 CPU 일만 겹친다.
 #               shader warm: 지난 Release 체인이 남긴 셰이더 요청 기록(build/Ninja-Release/Testing/ShaderRequests/*.shaderrequests — 체인 자식마다 하나)만 Release App 으로
 #               컴파일해 그 빌드 폴더의 셰이더 DDC 를 네 백엔드 모두 채운다(`App --cook-shaders -shader-request-dir=`). 셰이더 · 공용 hlsli 를 고친 묶음도 GPU 단계가 캐시 미스 컴파일을
 #               떠안지 않는다(2026-11-19: dx11 empty 체인 19 분 중 FXC 559 개 — 캐시가 차면 74 초). 기록이 없으면(첫 실행) 할 일이 없다고 찍고 끝난다. 전체 굽기는 5 만 개를 넘어 넣지 않는다.
@@ -89,7 +90,8 @@ esac
 
 # 검증한 것이 커밋 SHA 그 자체여야 한다 — 추적 파일의 고친 것 · 무시되지 않은 새 파일이 있으면 SHA 가 아닌 트리를 검증한다. 끝에는 HEAD 가 그대로이고
 # 트리가 여전히 깨끗한지 본다(빌드 · 테스트가 커밋되는 파일을 고치면 — 예: 리플렉션 생성의 AssetReferenceFields.generated.json — 거기서 진다).
-list_tree_changes() { sw_git status --porcelain --untracked-files=normal | tr -d ''; }
+list_tree_changes() { sw_git status --porcelain --untracked-files=normal | tr -d '
+'; }
 TREE_CHANGES=$(list_tree_changes)
 if [ -n "$TREE_CHANGES" ]; then
   if [ $DRY -eq 1 ]; then
@@ -224,6 +226,18 @@ job_shipping_build() {
   for P in Ninja-Shipping Ninja-Shipping-Server; do
     build_preset $P || return 1
   done
+  # 기동 · 종료 확인을 빌드 갈래 끝에서 바로 — 살아 있음 판정이라 다른 빌드와 겹쳐도 되고, 실패가 cpu 단계 끝(2026-11-21 시작 74 분 뒤)이 아니라 배포 빌드 직후에 나온다.
+  run_shipping_check --skip-build
+}
+
+# 배포 구성: 기동 · 종료(shipping_check.py). 인자는 그대로 넘긴다(--skip-build 면 지어 둔 산출물만 띄운다).
+run_shipping_check() {
+  echo "== shipping-check $(date +%T)"
+  run build/verify.shipping.log py -3 -m Scripts shipping-check "$@"
+  local RC=$?
+  [ $DRY -eq 1 ] || tail -n 8 build/verify.shipping.log
+  echo "shipping-check exit=$RC"
+  return $RC
 }
 
 job_server_tools() {
@@ -243,15 +257,9 @@ job_server_tools() {
   [ $DRY -eq 1 ] || grep -E "^(\[unit\]|ℹ (pass|fail))" build/verify.extensions.log
   [ $RC -eq 0 ] || { echo "extension tests exit=$RC"; return 1; }
 
-  # 배포 구성: 기동 · 종료. 빌드(쿠킹 포함)는 build 단계의 job_shipping_build 가 지었다. --from cpu 로 시작하면 여기서 짓는다.
-  echo "== shipping-check $(date +%T)"
-  local SHIPPING_ARGS=()
-  [ $STAGE -le 1 ] && SHIPPING_ARGS=(--skip-build)
-  run build/verify.shipping.log py -3 -m Scripts shipping-check "${SHIPPING_ARGS[@]}"
-  RC=$?
-  [ $DRY -eq 1 ] || tail -n 8 build/verify.shipping.log
-  echo "shipping-check exit=$RC"
-  return $RC
+  # 배포 빌드 · 기동은 build 단계의 job_shipping_build 가 했다. --from 으로 build 를 건너뛰었으면 여기서 짓고 띄운다.
+  [ $STAGE -le 1 ] && return 0
+  run_shipping_check
 }
 
 # 지난 Release 체인의 셰이더 요청만 컴파일해 셰이더 DDC 를 데운다(언리얼 Shader Pipeline Cache 의 미리 컴파일 자리) — 기록은 Test/Scenario/CMakeLists.txt 의 `-shader-request-log`.
