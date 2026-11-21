@@ -10,7 +10,9 @@ Scripts/dev/test_history.py
 여러 묶음 검증을 모아야 보인다 — 언리얼 Gauntlet · Horde 의 테스트 이력, 크로미움 Flakiness Dashboard 와 같은 자리를 저장소 안 sqlite 하나로 둔다.
 흔들림 지수 = 연속 두 실행의 결과가 바뀐 횟수 / (실행 수 - 1). 0 은 늘 같음, 1 은 매번 바뀜.
 
-  py -3 Scripts/dev/test_history.py ingest <보고 폴더…> [--commit <sha>]     # DB: Saved/TestHistory/history.sqlite
+  py -3 Scripts/dev/test_history.py ingest <보고 폴더…> [--commit <sha>] [--kind verify|manual|rerun] [--since <표지 파일>]   # DB: Saved/TestHistory/history.sqlite
+  py -3 Scripts/dev/test_history.py flaky                                    # 최근 검증 커밋의 흔들림 — 끝 줄 FLAKY=<수>, 문턱을 넘으면 진다
+  py -3 Scripts/dev/test_history.py stage <단계> --commit <sha> --result passed|failed|skipped --seconds <초>   # 묶음 검증 단계 시간(느려지면 경고)
   py -3 Scripts/dev/test_history.py report [--min-runs 3] [--top 30]
   py -3 Scripts/dev/test_history.py quarantine [--ctest-exclude]              # 표를 검사한다(만료 · 빠진 칸은 실패), --ctest-exclude 는 ctest -E 정규식을 찍는다
   py -3 Scripts/dev/test_history.py costs [--write]                           # 시나리오 → 초 시간표(통과한 실행의 백엔드별 p50 합). --write 는 Config/Dev/ScenarioCosts.json 을 쓴다
@@ -18,6 +20,18 @@ Scripts/dev/test_history.py
   py -3 Scripts/dev/test_history.py --self-check
 
 묶음 검증(`Scripts/dev/preflight.sh`)이 ctest 마다 보고 폴더를 ingest 하고, ctest 에 격리 표를 `-E` 로 넘긴다.
+
+**실행 종류(`runKind`).** 보고 폴더(`build/<프리셋>/Bin/Saved/Automation`)는 손으로 돌린 실행 · 다시 돌리기 도구(`scenario_bisect.py`)도 함께 쓴다 — 예전에는 다음 묶음
+검증의 ingest 가 그 보고를 그때의 sha 로 넣어, 다른 코드로 돈 실행이 같은 커밋으로 적혔다(흔들림 상한값이 부풀었다). 그래서 ingest 는 `--since <표지 파일>`(단계가 시작할 때
+만드는 `verify.ctest.<이름>.log.start`) 뒤에 시작한 보고에만 `--commit` 과 `--kind` 를 붙이고, 그 앞 보고는 sha 없이 `manual` 로 넣는다. 흔들림 판정(`flaky`)은 `verify` 만 본다.
+실행기에 표지 인자를 주는 길도 있지만 그러면 손 실행도 같은 값을 줄 수 있다 — 시각 표지는 검증 스크립트만 만든다.
+
+**흔들림 판정(`flaky`).** 최근 검증 커밋 `_flakyCommitWindow` 개에서 같은 (테스트, 백엔드, 커밋)에 통과와 실패가 함께 있는 묶음을 센다. 격리 표에 없는 것의 비율이
+`_flakyRateLimit`(`Config/Dev/Verify.json`)를 넘으면 진다 — 흔들리는 테스트는 "다시 돌리니 통과" 로 넘기지 않고 격리 + 만료로 다룬다(Google 의 흔들림 격리, 자동 재시도는
+대리물을 통과시키는 모양이라 하지 않는다). 격리 표의 `test` 는 ctest 이름이고 보고의 `name` 은 시나리오 이름이라, 흔들림 줄의 이름을 그대로 격리 표에 적어도 이 판정에서 빠진다.
+
+**느려짐 경고.** ingest 는 새로 넣은 검증 실행이 같은 (테스트, 백엔드)의 지난 통과 실행 p95 의 `_slowFactor` 배를 넘으면 경고 줄을, `stage` 는 같은 단계의 지난 통과 시간 p95 와
+견줘 경고 줄을 찍는다(판정을 바꾸지 않는다 — 시한은 실행기가 따로 끊는다). 표본이 `SLOW_MIN_SAMPLES` 보다 적으면 견주지 않는다.
 
 **시간표(`costs`).** 체인 샤드 나누기(DesignBacklog "샤드 시간 균형" T2)의 입력이다 — 언리얼 Horde · 크로미움 Swarming 처럼 지난 실행 시간으로 나눈다.
 표는 `--write` 로 갱신하고 **사람이 커밋할 때만 바뀐다**(실행마다 다시 나누면 앞 단계가 가리던 결함이 실행마다 드러났다 숨는다). 표에 없는 시나리오는 표의 중앙값이다.
@@ -57,6 +71,10 @@ from common.run_process import ProcessResult, run_process  # noqa: E402
 
 DEFAULT_DATABASE = Path("Saved") / "TestHistory" / "history.sqlite"
 QUARANTINE_PATH = Path("Config") / "Rules" / "Test" / "Quarantine.json"
+VERIFY_CONFIG_PATH = Path("Config") / "Dev" / "Verify.json"
+RUN_KINDS = ("verify", "manual", "rerun")
+STAGE_RESULTS = ("passed", "failed", "skipped")
+SLOW_MIN_SAMPLES = 3
 SCENARIO_COSTS_PATH = Path("Config") / "Dev" / "ScenarioCosts.json"
 # 건너뜀(환경이 없어 돌지 않았다)은 실패가 아니다 — 흔들림 · 실패 수에서 통과 쪽에 둔다(단위 테스트 보고의 `skipped` 와 같은 뜻).
 PASSED_RESULTS = frozenset({"Passed", "Skipped"})
@@ -70,7 +88,16 @@ CREATE TABLE IF NOT EXISTS run (
     wallMilliseconds INTEGER NOT NULL,
     startedAtUnixMs INTEGER NOT NULL,
     commitSha TEXT NOT NULL,
+    runKind TEXT NOT NULL DEFAULT '',
     PRIMARY KEY (name, backend, startedAtUnixMs)
+);
+CREATE TABLE IF NOT EXISTS stage (
+    name TEXT NOT NULL,
+    commitSha TEXT NOT NULL,
+    result TEXT NOT NULL,
+    seconds REAL NOT NULL,
+    startedAtUnixMs INTEGER NOT NULL,
+    PRIMARY KEY (name, startedAtUnixMs)
 );
 """
 
@@ -107,19 +134,92 @@ def read_reports(list_root: Iterable[Path]) -> list[dict]:
 def open_database(path: Path) -> sqlite3.Connection:
     path.parent.mkdir(parents=True, exist_ok=True)
     connection = sqlite3.connect(path)
-    connection.executescript(SCHEMA)
+    prepare_schema(connection)
     return connection
 
 
-def ingest(connection: sqlite3.Connection, list_report: Iterable[dict], commit_sha: str) -> int:
-    """보고를 쌓는다. 같은 (이름, 백엔드, 시작 시각)은 한 번만 — 같은 폴더를 두 번 넣어도 늘지 않는다. 새로 넣은 수를 돌려준다."""
+def prepare_schema(connection: sqlite3.Connection) -> None:
+    """표를 만들고, 실행 종류 칸이 없던 옛 DB 에 칸을 더한다(옛 줄은 빈 종류 — 흔들림 판정에 들지 않는다)."""
+    connection.executescript(SCHEMA)
+    if "runKind" not in {row[1] for row in connection.execute("PRAGMA table_info(run)")}:
+        connection.execute("ALTER TABLE run ADD COLUMN runKind TEXT NOT NULL DEFAULT ''")
+        connection.commit()
+
+
+def read_verify_config(project_root: Path, key: str) -> float:
+    """`Config/Dev/Verify.json` 의 수 — 없으면 멈춘다(폴백 없음)."""
+    value = json.loads((project_root / VERIFY_CONFIG_PATH).read_text(encoding="utf-8")).get(key)
+    if not isinstance(value, (int, float)) or isinstance(value, bool):
+        raise SystemExit(f"[TestHistory] {VERIFY_CONFIG_PATH} 의 {key} 가 수가 아니다")
+    return float(value)
+
+
+def ingest(connection: sqlite3.Connection, list_report: Iterable[dict], commit_sha: str, run_kind: str = "manual", since_unix_ms: int | None = None) -> int:
+    """
+    보고를 쌓는다. 같은 (이름, 백엔드, 시작 시각)은 한 번만 — 같은 폴더를 두 번 넣어도 늘지 않는다. 새로 넣은 수를 돌려준다.
+    `since_unix_ms` 가 있으면 그 앞에 시작한 보고는 이 실행의 것이 아니다 — sha 없이 `manual` 로 넣는다.
+    """
     before = connection.total_changes
-    connection.executemany(
-        "INSERT OR IGNORE INTO run VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-        [(report["name"], report.get("backend", ""), report.get("game", ""), report["result"], int(report.get("exitCode", 0)),
-          int(report.get("wallMilliseconds", 0)), int(report["startedAtUnixMs"]), commit_sha) for report in list_report])
+    rows = []
+    for report in list_report:
+        started = int(report["startedAtUnixMs"])
+        is_this_run = since_unix_ms is None or started >= since_unix_ms
+        rows.append((report["name"], report.get("backend", ""), report.get("game", ""), report["result"], int(report.get("exitCode", 0)),
+                     int(report.get("wallMilliseconds", 0)), started, commit_sha if is_this_run else "", run_kind if is_this_run else "manual"))
+    connection.executemany("INSERT OR IGNORE INTO run (name, backend, game, result, exitCode, wallMilliseconds, startedAtUnixMs, commitSha, runKind) "
+                           "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", rows)
     connection.commit()
     return connection.total_changes - before
+
+
+def find_slow_runs(connection: sqlite3.Connection, list_report: Iterable[dict], slow_factor: float) -> list[str]:
+    """보고 가운데 통과했는데 같은 (이름, 백엔드)의 앞선 통과 실행 p95 의 `slow_factor` 배를 넘은 것. ingest 전에 부른다(자기 자신을 표본에 넣지 않게)."""
+    list_warning: list[str] = []
+    for report in list_report:
+        if report["result"] != "Passed":
+            continue
+        previous = [float(row[0]) for row in connection.execute(
+            "SELECT wallMilliseconds FROM run WHERE name = ? AND backend = ? AND result = 'Passed' AND startedAtUnixMs < ?",
+            (report["name"], report.get("backend", ""), int(report["startedAtUnixMs"])))]
+        if len(previous) < SLOW_MIN_SAMPLES:
+            continue
+        p95 = compute_percentile(previous, 0.95)
+        wall = float(report.get("wallMilliseconds", 0))
+        if p95 > 0 and wall > slow_factor * p95:
+            list_warning.append(f"{report['name']} [{report.get('backend', '')}] {wall:.0f} ms — 지난 p95 {p95:.0f} ms 의 {wall / p95:.1f} 배")
+    return list_warning
+
+
+def record_stage(connection: sqlite3.Connection, name: str, commit_sha: str, result: str, seconds: float, now_unix_ms: int, slow_factor: float) -> str | None:
+    """단계 시간을 쌓고, 통과한 단계가 지난 통과 시간 p95 의 `slow_factor` 배를 넘으면 경고 글을 돌려준다."""
+    previous = [float(row[0]) for row in connection.execute("SELECT seconds FROM stage WHERE name = ? AND result = 'passed'", (name,))]
+    connection.execute("INSERT OR REPLACE INTO stage VALUES (?, ?, ?, ?, ?)", (name, commit_sha, result, seconds, now_unix_ms))
+    connection.commit()
+    if result != "passed" or len(previous) < SLOW_MIN_SAMPLES:
+        return None
+    p95 = compute_percentile(previous, 0.95)
+    return f"단계 {name} {seconds:.0f} 초 — 지난 p95 {p95:.0f} 초의 {seconds / p95:.1f} 배" if p95 > 0 and seconds > slow_factor * p95 else None
+
+
+def find_flaky(connection: sqlite3.Connection, commit_window: int, set_excluded: set[str]) -> tuple[list[tuple[str, str, str]], int]:
+    """
+    최근 검증 커밋 `commit_window` 개에서 통과와 실패가 함께 있는 (이름, 백엔드, 커밋) 목록과, 그 창의 (이름, 백엔드, 커밋) 묶음 수.
+    `set_excluded`(격리 표의 이름)는 목록에서 뺀다 — 묶음 수에는 남긴다(분모는 그 창에서 돈 것 전부).
+    """
+    list_commit = [row[0] for row in connection.execute(
+        "SELECT commitSha FROM run WHERE runKind = 'verify' AND commitSha != '' GROUP BY commitSha ORDER BY MAX(startedAtUnixMs) DESC LIMIT ?", (commit_window,))]
+    groups: dict[tuple[str, str, str], set[bool]] = {}
+    for name, backend, sha, result in connection.execute(
+            f"SELECT name, backend, commitSha, result FROM run WHERE runKind = 'verify' AND commitSha IN ({','.join('?' * len(list_commit))})", list_commit):
+        groups.setdefault((name, backend, sha), set()).add(result in PASSED_RESULTS)
+    return sorted(key for key, outcomes in groups.items() if len(outcomes) == 2 and key[0] not in set_excluded), len(groups)
+
+
+def decide_flaky(list_flaky: Sequence[tuple[str, str, str]], group_count: int, rate_limit: float, commit_window: int) -> tuple[bool, str]:
+    """(통과인가, 끝 줄 `FLAKY=<수> …`)."""
+    rate = len(list_flaky) / group_count if group_count else 0.0
+    passed = rate <= rate_limit
+    return passed, f"FLAKY={len(list_flaky)} rate={rate:.2%} limit={rate_limit:.2%} groups={group_count} commits<={commit_window}{'' if passed else ' - 격리 표에 적거나 고친다'}"
 
 
 def compute_percentile(list_value: Sequence[float], ratio: float) -> float:
@@ -775,9 +875,34 @@ def run_changed_self_check() -> None:
     assert decide_changed(rows, [], "abc") == "CHANGED_FAILED" and decide_changed(rows[:1], ["x"], "abc") == "CHANGED_FAILED", "실패 · 처음 쓴 기준 파일은 멈춘다"
 
 
+def run_history_self_check() -> None:
+    """실행 종류 · 흔들림 · 느려짐 · 단계 시간."""
+    connection = sqlite3.connect(":memory:")
+    connection.executescript(SCHEMA.replace("    runKind TEXT NOT NULL DEFAULT '',\n", ""))   # 옛 DB 모양에 칸을 더한다
+    prepare_schema(connection)
+    old = [{"name": "s", "result": "Failed", "startedAtUnixMs": 10, "backend": "dx12"}]
+    new = [{"name": "s", "result": result, "startedAtUnixMs": started, "backend": "dx12"} for result, started in (("Passed", 100), ("Failed", 101))]
+    assert ingest(connection, old + new, "c1", "verify", since_unix_ms=100) == 3
+    assert sorted(connection.execute("SELECT commitSha, runKind FROM run")) == [("", "manual"), ("c1", "verify"), ("c1", "verify")], "표지 앞의 보고는 손 실행"
+    flaky, group_count = find_flaky(connection, 20, set())
+    assert flaky == [("s", "dx12", "c1")] and group_count == 1, (flaky, group_count)
+    assert find_flaky(connection, 20, {"s"})[0] == [], "격리한 이름은 빠진다"
+    assert decide_flaky(flaky, group_count, 0.01, 20)[0] is False and decide_flaky([], 100, 0.01, 20) == (True, "FLAKY=0 rate=0.00% limit=1.00% groups=100 commits<=20")
+    assert ingest(connection, [{"name": "s", "result": "Failed", "startedAtUnixMs": 200, "backend": "dx12"}], "c2", "rerun") == 1
+    assert find_flaky(connection, 20, set())[1] == 1, "다시 돌리기는 흔들림 판정에 들지 않는다"
+    timed = [{"name": "t", "result": "Passed", "startedAtUnixMs": 300 + index, "wallMilliseconds": 100, "backend": "vk"} for index in range(3)]
+    ingest(connection, timed, "c3", "verify")
+    assert find_slow_runs(connection, [{"name": "t", "result": "Passed", "startedAtUnixMs": 400, "wallMilliseconds": 160, "backend": "vk"}], 1.5) != []
+    assert find_slow_runs(connection, [{"name": "t", "result": "Passed", "startedAtUnixMs": 400, "wallMilliseconds": 140, "backend": "vk"}], 1.5) == []
+    assert find_slow_runs(connection, [{"name": "t", "result": "Passed", "startedAtUnixMs": 302, "wallMilliseconds": 900, "backend": "vk"}], 1.5) == [], "표본이 모자라면 견주지 않는다"
+    for index in range(3):
+        assert record_stage(connection, "cpu", "c", "passed", 100.0, index, 1.5) is None, "표본이 모자라면 경고하지 않는다"
+    assert record_stage(connection, "cpu", "c", "passed", 200.0, 10, 1.5) is not None and record_stage(connection, "cpu", "c", "failed", 900.0, 11, 1.5) is None
+
+
 def run_self_check() -> None:
     connection = sqlite3.connect(":memory:")
-    connection.executescript(SCHEMA)
+    prepare_schema(connection)
     list_report = [{"name": "a", "result": result, "startedAtUnixMs": index, "wallMilliseconds": wall, "backend": "dx12"}
                   for index, (result, wall) in enumerate([("Passed", 100), ("Failed", 100), ("Passed", 300), ("Passed", 300)])]
     assert ingest(connection, list_report, "abc") == 4 and ingest(connection, list_report, "abc") == 0, "같은 보고는 한 번만"
@@ -808,6 +933,7 @@ def run_self_check() -> None:
         pass
     assert json.loads(make_scenario_costs_text(map_cost))["scenarioSeconds"] == map_cost
     run_changed_self_check()
+    run_history_self_check()
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -817,6 +943,14 @@ def main(argv: Sequence[str] | None = None) -> int:
     ingest_parser = sub.add_parser("ingest")
     ingest_parser.add_argument("roots", nargs="+", type=Path)
     ingest_parser.add_argument("--commit", default="", help="보고를 낸 커밋(비우면 빈 글)")
+    ingest_parser.add_argument("--kind", choices=RUN_KINDS, default="manual", help="실행 종류 — 묶음 검증은 verify, 다시 돌리기 도구는 rerun")
+    ingest_parser.add_argument("--since", type=Path, default=None, help="이 파일의 수정 시각 뒤에 시작한 보고만 --commit · --kind 로(그 앞은 sha 없이 manual)")
+    sub.add_parser("flaky", help="최근 검증 커밋의 흔들림 — 끝 줄 FLAKY=, 격리 표에 없는 것이 문턱을 넘으면 진다")
+    stage_parser = sub.add_parser("stage", help="묶음 검증 단계 시간을 쌓는다(느려지면 경고)")
+    stage_parser.add_argument("name")
+    stage_parser.add_argument("--commit", required=True)
+    stage_parser.add_argument("--result", choices=STAGE_RESULTS, required=True)
+    stage_parser.add_argument("--seconds", type=float, required=True)
     report_parser = sub.add_parser("report")
     report_parser.add_argument("--min-runs", type=int, default=3)
     report_parser.add_argument("--top", type=int, default=30)
@@ -842,12 +976,36 @@ def main(argv: Sequence[str] | None = None) -> int:
         return ExitCode.VIOLATION if list_problem else ExitCode.PASSED
     if arguments.command == "changed":
         return run_changed(project_root, arguments.preset, arguments.base)
-    if arguments.command not in ("ingest", "report", "costs"):
-        parser.error("ingest · report · quarantine · costs · changed 중 하나")
+    if arguments.command not in ("ingest", "report", "costs", "flaky", "stage"):
+        parser.error("ingest · report · quarantine · costs · changed · flaky · stage 중 하나")
     connection = open_database(project_root / DEFAULT_DATABASE)
     if arguments.command == "ingest":
-        added = ingest(connection, read_reports(arguments.roots), arguments.commit)
+        list_report = read_reports(arguments.roots)
+        since_unix_ms = int(arguments.since.stat().st_mtime * 1000) if arguments.since is not None else None
+        list_fresh = [report for report in list_report if since_unix_ms is None or int(report["startedAtUnixMs"]) >= since_unix_ms]
+        list_slow = find_slow_runs(connection, list_fresh, read_verify_config(project_root, "_slowFactor")) if arguments.kind == "verify" else []
+        added = ingest(connection, list_report, arguments.commit, arguments.kind, since_unix_ms)
         print(f"[TestHistory] {added} 보고를 더했다")
+        for warning in list_slow[:20]:
+            print(f"[TestHistory] 느려짐: {warning}")
+        return ExitCode.PASSED
+    if arguments.command == "flaky":
+        commit_window = int(read_verify_config(project_root, "_flakyCommitWindow"))
+        list_entry, list_problem = read_quarantine(project_root, datetime.date.today())
+        if list_problem:
+            print("\n".join(f"  - {problem}" for problem in list_problem))
+            return ExitCode.VIOLATION
+        list_flaky, group_count = find_flaky(connection, commit_window, {entry.test for entry in list_entry})
+        for name, backend, sha in list_flaky[:40]:
+            print(f"  흔들림: {name} [{backend}] {sha[:10]}")
+        passed, final = decide_flaky(list_flaky, group_count, read_verify_config(project_root, "_flakyRateLimit"), commit_window)
+        print(final)
+        return ExitCode.PASSED if passed else ExitCode.VIOLATION
+    if arguments.command == "stage":
+        warning = record_stage(connection, arguments.name, arguments.commit, arguments.result, arguments.seconds,
+                               int(datetime.datetime.now().timestamp() * 1000), read_verify_config(project_root, "_slowFactor"))
+        if warning:
+            print(f"[TestHistory] 느려짐: {warning}")
         return ExitCode.PASSED
     if arguments.command == "costs":
         map_cost = compute_scenario_costs(connection)

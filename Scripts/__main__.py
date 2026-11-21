@@ -74,7 +74,11 @@ _SUBCOMMAND: tuple[Subcommand, ...] = (
     Subcommand("web-check", "package.web_check", "Web-Shipping 묶음을 브라우저(헤드리스 Chrome · Edge)에서 두 번 띄워 기동 · WebGPU · 오류 없음 · 화면 PNG · IDBFS 영속을 본다(--game)"),
     Subcommand("server-image", "package.server_image", "리눅스 서버 패키지 + 운영 설정을 배포 tar.gz(systemd 유닛)로 묶는다 — 묶을 서버로 -check-config 를 먼저 돌린다(--image 면 컨테이너 이미지도)"),
     Subcommand("customization-release", "dev.customization_release", "꾸미기 스키마를 출시 스냅숏과 견준다 — 판 올림 단계가 빠진 바뀜은 실패(쿠킹이 먼저 돈다), --fix 는 추론할 수 있는 제거 단계를 적고, accept 는 출시 때 스냅숏을 쓴다"),
-    Subcommand("shipping-check", "dev.shipping_check", "배포 프리셋 셋(클라이언트 · 서버 · 개발 인자 거절)을 빌드하고 산출물의 기동 · 종료를 본다(통합에서 한 번)"),
+    Subcommand("shipping-check", "dev.shipping_check", "배포 프리셋 둘(클라이언트 · 서버 · 개발 인자 거절)을 빌드하고 산출물의 기동 · 종료를 본다(묶음 검증 build 단계)"),
+    Subcommand("test-history", "dev.test_history", "테스트 이력(sqlite) — ingest · report(흔들림 · p95 추세) · flaky(끝 줄 FLAKY=) · stage(단계 시간) · quarantine · costs · changed"),
+    Subcommand("scenario-bisect", "dev.scenario_bisect", "시나리오 체인의 진 단계를 혼자 → 앞 단계를 붙여 → 이분 탐색으로 다시 돈다(--rerun-failed 는 마지막 보고에서 고른다)"),
+    Subcommand("linux-scenarios", "dev.linux_scenarios", "Linux(WSL 클론) 빌드 · 체인 · 새니타이저 · 골든 입구(setup · all · build · chain · stages · rerun · sanitize · goldens …)"),
+    Subcommand("verify-record", "dev.verify_record", "묶음 검증 단계 통과 기록(skip · pass) · Windows 통과 기록(ok, build/verify.ok) · git pre-push 게이트"),
     Subcommand("destruction-net", "net.destruction_net_pair", "파괴 복제 실제 세션 확인 — 서버 · 클라이언트 두 프로세스의 구조 해시 맞대기(run · compare)"),
 )
 

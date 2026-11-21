@@ -16,7 +16,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 from common.paths import get_project_root  # noqa: E402
-from lint.rule_tables import TABLE_FOLDER, Baseline, ExceptionTable, NameBaseline, check_head, get_table_path, read_table  # noqa: E402
+from lint.rule_tables import TABLE_FOLDER, Baseline, ExceptionTable, check_head, get_table_path, read_table  # noqa: E402
 
 HEAD = {"_comment": "시험 표"}
 
@@ -83,29 +83,6 @@ class ExceptionTableTest(unittest.TestCase):
         self.assertTrue(table.allows_prefix("_paths", "Source/Editor/A.cpp"))
         self.assertFalse(table.allows_prefix("_paths", "Source/Engine/A.cpp"))
         self.assertEqual(["Source/Programs/"], [line.split("'")[1] for line in table.list_problems(whole_repo=True)])
-
-
-class NameBaselineTest(unittest.TestCase):
-    def make(self) -> NameBaseline:
-        return NameBaseline("x.json", {**HEAD, "_verb": ["drainEvents", "goneName"], "_word": []}, ("_verb", "_word"))
-
-    def test_missing_section_stops(self) -> None:
-        with self.assertRaises(ValueError):
-            NameBaseline("x.json", {**HEAD, "_verb": []}, ("_verb", "_word"))
-
-    def test_new_names_fail_and_gone_names_need_the_whole_repo(self) -> None:
-        current = {"_verb": {"drainEvents": "a.h: x"}, "_word": {"aimAtMark": "b.h: y"}}
-        self.assertEqual(["[word] b.h: y"], self.make().compare(current, whole_repo=False, lower_command="lower"))
-        problems = self.make().compare(current, whole_repo=True, lower_command="lower")
-        self.assertEqual(2, len(problems))
-        self.assertIn("[verb] 기준선의 'goneName' 가 더는 없다", problems[0] + problems[1])
-
-    def test_lower_keeps_present_names_and_dump_is_sorted(self) -> None:
-        baseline = self.make()
-        baseline.lower({"_verb": {"drainEvents": "", "newName": ""}, "_word": {"x": ""}})
-        self.assertEqual({"_verb": ["drainEvents"], "_word": []}, baseline.names)
-        baseline.replace({"_verb": ["b", "a"], "_word": []})
-        self.assertEqual({"_comment": "시험 표", "_verb": ["a", "b"], "_word": []}, json.loads(baseline.dump()))
 
 
 class BaselineTest(unittest.TestCase):

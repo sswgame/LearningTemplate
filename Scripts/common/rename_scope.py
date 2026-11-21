@@ -15,7 +15,6 @@ from lint.rule_tables import get_table_path
 
 KEEP_OLD_NAME_MARKER = "keep-old-name"
 BANNED_NAMES_PATH = get_table_path("naming-words", "BannedNames")     # 이름 이력 — `_bannedNames` 의 키가 옛 이름이다
-NAMING_BASELINE_PATH = get_table_path("naming-words", "Baseline")   # 남은 위반 이름 — `--lower-baseline` 만 줄인다(새 이름이 또 위반이면 린트가 지게)
 RENAME_PAIRS_FOLDER = "Config/Rules/Renames/"   # 병합 뒤 다시 돌릴 쌍 표(`rename-symbol --pairs <표> --reapply`) — 옛 이름이 열쇠다
 
 
@@ -24,8 +23,8 @@ def dump_naming_table(data: dict) -> str:
 
 
 def is_rename_table(relative_path: str) -> bool:
-    """옛 이름을 일부러 적는 표(이름 이력 · 이름 기준선 · 쌍 표)면 true — `rewrite_rename_target` 이 따로 다룬다."""
-    return relative_path in (BANNED_NAMES_PATH, NAMING_BASELINE_PATH) or relative_path.startswith(RENAME_PAIRS_FOLDER)
+    """옛 이름을 일부러 적는 표(이름 이력 · 쌍 표)면 true — `rewrite_rename_target` 이 따로 다룬다."""
+    return relative_path == BANNED_NAMES_PATH or relative_path.startswith(RENAME_PAIRS_FOLDER)
 
 
 def rewrite_rename_target(relative_path: str, text: str, rewrite: Callable[[str], str]) -> str:
@@ -33,7 +32,7 @@ def rewrite_rename_target(relative_path: str, text: str, rewrite: Callable[[str]
     이름 바꾸기 도구가 파일 하나(@p relative_path — 저장소 기준 posix)를 고친다. 예전에 두 도구가 따로 짰을 때 한 도구는 린트 표를 통째로 건너뛰고
     한 도구는 금지 이름 표의 키까지 바꿔, 개명마다 예외 표가 낡거나 금지 이름이 지워졌다 — 그래서 이 함수 하나로 둔다.
     """
-    if relative_path == NAMING_BASELINE_PATH or relative_path.startswith(RENAME_PAIRS_FOLDER):
+    if relative_path.startswith(RENAME_PAIRS_FOLDER):
         return text
     if relative_path == BANNED_NAMES_PATH:
         data = json.loads(text)
@@ -187,6 +186,5 @@ def check_rewrite_unmarked_lines() -> None:
     table = dump_naming_table({"_comment": "OldName", "_bannedNames": {"OldName": "OldName — x"}})
     assert json.loads(rewrite_rename_target(BANNED_NAMES_PATH, table, rename)) == {"_comment": "OldName", "_bannedNames": {"OldName": "NewName — x"}}
     assert rewrite_rename_target("Config/Rules/Lint/NamingWords.json", '{"_keep": {"OldName": "y"}}', rename) == '{"_keep": {"NewName": "y"}}'
-    assert rewrite_rename_target(NAMING_BASELINE_PATH, "OldName", rename) == "OldName"
     assert rewrite_rename_target(RENAME_PAIRS_FOLDER + "Example.json", "OldName", rename) == "OldName"
     assert rewrite_rename_target("Config/Rules/Lint/ThreadOwners.json", "OldName", rename) == "NewName"

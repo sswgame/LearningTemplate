@@ -20,7 +20,7 @@ from generate.file_digest_cache import FileDigestCache  # noqa: E402
 
 
 class FileDigestCacheTest(unittest.TestCase):
-    def test_cached_digest_matches_fresh_and_rereads_only_changed_files(self) -> None:
+    def test_cached_digest_matches_fresh_and_reads_only_changed_files(self) -> None:
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
             (root / "a.h").write_bytes(b"int a;\r\n")

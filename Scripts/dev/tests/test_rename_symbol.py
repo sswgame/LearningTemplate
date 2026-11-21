@@ -30,7 +30,7 @@ from dev import rename_symbol  # noqa: E402
 
 def run_rename(root: Path, list_argument: list[str]) -> int:
     """도구를 @p root 저장소에서 돌린다. 이름 기준선 낮추기 · clang-format 은 이 저장소의 린트라 건너뛴다."""
-    with mock.patch.object(rename_symbol, "get_project_root", return_value=root), mock.patch.object(rename_symbol, "format_changed", return_value=0),             mock.patch.object(rename_symbol, "lower_naming_baseline"):
+    with mock.patch.object(rename_symbol, "get_project_root", return_value=root), mock.patch.object(rename_symbol, "format_changed", return_value=0):
         return int(rename_symbol.main(list_argument))
 
 

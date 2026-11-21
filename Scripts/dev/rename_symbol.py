@@ -26,7 +26,6 @@ import datetime
 import io
 import json
 import re
-import subprocess
 import sys
 import tokenize
 from pathlib import Path
@@ -172,11 +171,6 @@ def find_files_named(list_file: Sequence[Path], root: Path, stem: str) -> list[P
     return [path for path in list_file if path.is_relative_to(source) and path.stem in (stem, f"Test{stem}")]
 
 
-def lower_naming_baseline(root: Path) -> None:
-    """바꾼 뒤 이름 기준선의 남은 위반을 줄인다(새 이름이 또 위반이면 린트가 진다)."""
-    subprocess.run([sys.executable, "Scripts/lint/naming_words.py", "--lower-baseline"], cwd=root, check=True)
-
-
 def format_changed(root: Path, list_path: list[Path]) -> int:
     """이름 길이가 바뀌면 clang-format 의 정렬 칸이 어긋난다 — 바꾼 C++ 파일만 다시 포맷한다."""
     from lint.format import run_clang_format_batch
@@ -268,7 +262,6 @@ def rename_all(root: Path, list_pair: Sequence[dict], options: argparse.Namespac
               + ", ".join(list_skipped[:20]) + (" …" if len(list_skipped) > 20 else ""))
     if options.dry_run:
         return ExitCode.PASSED
-    lower_naming_baseline(root)
     return format_changed(root, sorted(set_changed))
 
 

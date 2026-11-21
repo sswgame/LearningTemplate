@@ -23,30 +23,30 @@ from __future__ import annotations
 import builtins
 import collections
 import contextlib
-import dataclasses
 import functools
 import importlib
 import io
-import os
+import json
+import re
 import subprocess
 import sys
 import tempfile
-import types
+import time
 from pathlib import Path
-from typing import Callable, Sequence
+from typing import Sequence
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 
 import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
 from common.project_constants import CPP_ALL_EXTENSIONS, LINT_TARGET_REL_DIRS, NOT_OUR_DIR_NAMES, SHADER_SOURCE_EXTENSIONS  # noqa: E402
 from common.exit_code import ExitCode  # noqa: E402
-from common.git import run_git, run_git_in_hook_repository  # noqa: E402
+from common.git import outside_hook_repository, run_git, run_git_in_hook_repository  # noqa: E402
 from common.paths import get_project_root  # noqa: E402
 from lint.format import run_clang_format_batch  # noqa: E402
-from lint.lint_scope import LintScope, clear_read_cache, make_staged_scope, make_whole_scope  # noqa: E402
+from lint.lint_scope import LintScope, clear_read_cache, list_staged_with_unstaged_changes, make_staged_scope, make_whole_scope  # noqa: E402
 from lint.index_cache import CACHE_FOLDER  # noqa: E402
 from lint.module_imports import list_imported_module_files  # noqa: E402
-from lint.rules import Rule, find_orphan_tables, format_table, RULE_BY_ID, RULES  # noqa: E402
+from lint.rules import LAYER_TABLES, Rule, find_orphan_tables, format_table, RULE_BY_ID, RULES  # noqa: E402
 
 CPP_SUFFIXES = tuple(sorted(CPP_ALL_EXTENSIONS))
 SHADER_SUFFIXES = tuple(sorted(SHADER_SOURCE_EXTENSIONS))
@@ -91,21 +91,30 @@ def find_changed_rule_rows(project_root: Path) -> frozenset[str]:
     result = run_git_in_hook_repository(["show", f"HEAD:{RULES_FILE}"], cwd=project_root)
     if result.return_code != 0:
         return frozenset(rule.id for rule in RULES)   # HEAD 에 표가 없다(첫 커밋 · 새 표) — 모두 새 줄이다
-    return diff_rule_rows(result.stdout, RULES)
+    return diff_rule_rows(result.stdout, Path(__file__).with_name("rules.py").read_text(encoding="utf-8"))
 
 
-def diff_rule_rows(old_table_text: str, new_rules: Sequence[Rule]) -> frozenset[str]:
-    """옛 표 글(`rules.py` 전체)을 읽어 칸이 다르거나 새로 생긴 규칙 id."""
-    name = "lint.RulesAtHead"
-    module = types.ModuleType(name)
-    sys.modules[name] = module   # dataclass 가 모듈을 sys.modules 에서 찾는다
-    module.__file__ = str(Path(__file__).with_name("rules.py"))   # 표가 자기 자리로 다른 파일을 찾는다(HEAD 판도 같은 자리)
-    try:
-        exec(compile(old_table_text, f"HEAD:{RULES_FILE}", "exec"), module.__dict__)   # noqa: S102 — 이 저장소의 커밋된 표다
-    finally:
-        del sys.modules[name]
-    map_old = {rule.id: dataclasses.astuple(rule) for rule in module.RULES}
-    return frozenset(rule.id for rule in new_rules if map_old.get(rule.id) != dataclasses.astuple(rule))
+RULE_ROW = re.compile(r'^\s*Rule\("([^"]+)"')
+CONSTANT_ROW = re.compile(r"^([A-Z][A-Z0-9_]*)\s*=")
+
+
+def diff_rule_rows(old_table_text: str, new_table_text: str) -> frozenset[str]:
+    """
+    옛 표 글과 새 표 글(`rules.py` 전체)을 줄로 견준 바뀐 규칙 id — 옛 글에 그대로 없는 새 줄이 `Rule("id", …)` 이면 그 id, 모듈 상수 줄(`NAME = …`)이면
+    그 이름을 쓰는 규칙 줄의 id. 규칙은 한 줄에 하나, 표가 쓰는 상수는 한 줄로 둔다(rules.py). 예전에는 HEAD 판 표를 exec 해 칸을 견줬다 — 그 판이 지금
+    작업 폴더의 모듈을 import 해 이름을 바꾼 커밋에서 ImportError 로 훅이 막혔고, 커밋된 코드를 훅에서 실행했다.
+    """
+    set_old = set(old_table_text.splitlines())
+    list_row = [(match.group(1), line) for line in new_table_text.splitlines() if (match := RULE_ROW.match(line))]
+    set_changed: set[str] = set()
+    for line in new_table_text.splitlines():
+        if line in set_old:
+            continue
+        if match := RULE_ROW.match(line):
+            set_changed.add(match.group(1))
+        elif match := CONSTANT_ROW.match(line):
+            set_changed |= {rule_id for rule_id, row in list_row if re.search(rf"\b{match.group(1)}\b", row)}
+    return frozenset(set_changed)
 
 
 #: 읽기 한도를 볼 스테이지 파일의 갈래(뿌리, 접미사) — 갈래마다 저장소의 첫 파일 하나를 스테이지된 것처럼 넘긴다.
@@ -207,21 +216,16 @@ def check_read_bound(project_root: Path) -> list[str]:
 
 
 def check_merge_scope() -> list[str]:
-    """병합 중 범위(`make_staged_scope`) — 임시 저장소에서 양쪽이 고친 파일 · 한쪽만 고친 파일 · 한쪽이 지운 파일 · 새 파일을 섞어 병합하고, 손으로 푼 충돌만 남는지 본다."""
+    """
+    병합 중 범위(`make_staged_scope`) — 임시 저장소에서 양쪽이 고친 파일 · 한쪽만 고친 파일 · 한쪽이 지운 파일 · 새 파일을 섞어 병합하고, 손으로 푼 충돌만 남는지 본다.
+    커밋 훅이 넘긴 GIT_DIR · GIT_INDEX_FILE 은 `common/__init__.py` 가 떼어 두었고, 훅 입구(`make_staged_scope`)도 `outside_hook_repository` 안에서는 되돌리지 않는다
+    — 임시 저장소의 git 이 이 저장소를 건드리지 않는다.
+    """
     def git(root: Path, *list_argument: str) -> None:
         result = run_git(["-c", "user.name=lint", "-c", "user.email=lint@localhost", "-c", "core.autocrlf=false", *list_argument], cwd=root)
         if result.return_code != 0 and list_argument[0] != "merge":   # 충돌 난 병합은 0 이 아니다
             raise RuntimeError(f"git {' '.join(list_argument)}: {result.stderr.strip()}")
 
-    # 커밋 훅 안에서는 git 이 GIT_DIR · GIT_INDEX_FILE 을 넘겨 준다 — 그대로 두면 임시 저장소의 git 이 이 저장소를 건드린다(core.bare 를 켰다).
-    map_saved = {name: os.environ.pop(name) for name in list(os.environ) if name.startswith("GIT_")}
-    try:
-        return _check_merge_scope(git)
-    finally:
-        os.environ.update(map_saved)
-
-
-def _check_merge_scope(git: Callable[..., None]) -> list[str]:
     with tempfile.TemporaryDirectory() as folder:
         root = Path(folder)
         git(root, "init", "-q", "-b", "main")
@@ -242,11 +246,12 @@ def _check_merge_scope(git: Callable[..., None]) -> list[str]:
         git(root, "merge", "-q", "side")
         (root / "c.txt").write_text("c merged\n", encoding="utf-8")
         git(root, "add", "c.txt")
-        scope = make_staged_scope(root)
+        with outside_hook_repository():
+            scope = make_staged_scope(root)
     return [] if (scope.list_file, scope.list_removed) == (("c.txt",), ()) else [f"병합 범위가 손으로 푼 c.txt 하나가 아니다: {scope.list_file} · 지움 {scope.list_removed}"]
 
 
-def check_fact_store() -> list[str]:
+def check_index_cache() -> list[str]:
     """사실 저장소(`index_cache.open_facts`) — 임시 폴더에서 짓고, 한 파일 고치기 · 지우기 · 더하기 뒤 요약이 처음부터 접은 것과 같은지, 물은 사실이 맞는지,
     조각을 망가뜨리면 다시 지어 같은 답을 내는지 본다."""
     from lint.index_cache import open_facts
@@ -280,12 +285,15 @@ def check_fact_store() -> list[str]:
 
 
 def check_rule_row_diff() -> list[str]:
-    """표 줄 비교(`diff_rule_rows`) — 지금 표 글과 같으면 바뀐 줄이 없고, 한 규칙의 `blocks` 를 바꾼 글이면 그 규칙 하나다."""
+    """표 줄 비교(`diff_rule_rows`) — 같은 글이면 바뀐 줄이 없고, 한 규칙의 `blocks` 를 바꾼 글이면 그 규칙 하나, 상수 `LAYER_TABLES` 를 바꾼 글이면 그것을 쓰는 규칙들이다."""
     text = (Path(__file__).resolve().parent / "rules.py").read_text(encoding="utf-8")
     target = RULES[1]
     edited = text.replace(f'Rule("{target.id}", "{target.group}", "{target.blocks}"', f'Rule("{target.id}", "{target.group}", "{target.blocks} 바꿈"', 1)
-    list_problem = [] if diff_rule_rows(text, RULES) == frozenset() else ["지금 표와 같은 글에서 바뀐 규칙 줄이 나온다"]
-    return list_problem + ([] if edited != text and diff_rule_rows(edited, RULES) == {target.id} else [f"'{target.id}' 줄만 바꾼 표에서 그 id 하나가 나오지 않는다"])
+    constant = re.sub(r"^(LAYER_TABLES = .*)$", r"\1  # 바꿈", text, count=1, flags=re.M)
+    set_layer_user = {rule.id for rule in RULES if rule.inputs == LAYER_TABLES}
+    list_problem = [] if diff_rule_rows(text, text) == frozenset() else ["같은 표 글에서 바뀐 규칙 줄이 나온다"]
+    list_problem += [] if edited != text and diff_rule_rows(text, edited) == {target.id} else [f"'{target.id}' 줄만 바꾼 표에서 그 id 하나가 나오지 않는다"]
+    return list_problem + ([] if constant != text and set_layer_user and diff_rule_rows(text, constant) == set_layer_user else ["상수 LAYER_TABLES 를 바꾼 표에서 그것을 쓰는 규칙이 나오지 않는다"])
 
 
 def run_self_check(rule: Rule) -> str | None:
@@ -304,12 +312,39 @@ def run_self_check(rule: Rule) -> str | None:
     return None
 
 
+VERIFY_CONFIG = "Config/Dev/Verify.json"   # `_hookBudgetMilliseconds` — 커밋 훅의 규칙 하나 · 도구 정책 훅 호출 하나의 시간 예산
+
+
+def read_hook_budget_seconds(project_root: Path) -> float:
+    """시간 예산(초) — 없으면 멈춘다(폴백 없음). 판정은 바꾸지 않고 경고만 낸다(시간은 기계 · 부하마다 달라 형식으로 지킬 것이 아니다)."""
+    value = json.loads((project_root / VERIFY_CONFIG).read_text(encoding="utf-8")).get("_hookBudgetMilliseconds")
+    if not isinstance(value, (int, float)) or isinstance(value, bool):
+        raise SystemExit(f"[lint] {VERIFY_CONFIG} 의 _hookBudgetMilliseconds 가 수가 아니다")
+    return float(value) / 1000.0
+
+
+def format_rule_times(list_time: Sequence[tuple[float, str]], whole_repo: bool, budget_seconds: float) -> str | None:
+    """
+    규칙별 시간 줄(ESLint `TIMING=1` 꼴) — `--all` 은 느린 다섯과 합을 늘 찍고(재지 않고 줄일 수 없다), 커밋 훅은 예산을 넘은 규칙만 경고한다(없으면 None).
+    시간에는 그 규칙의 자체 검사가 든다.
+    """
+    ordered = sorted(list_time, reverse=True)
+    if whole_repo:
+        return f"[lint-time] 느린 규칙: {' · '.join(f'{rule_id} {seconds:.2f}s' for seconds, rule_id in ordered[:5])} (합 {sum(seconds for seconds, _ in ordered):.1f}s)"
+    list_slow = [(seconds, rule_id) for seconds, rule_id in ordered if seconds > budget_seconds]
+    if not list_slow:
+        return None
+    return f"[lint-time] 경고: 규칙 하나가 {budget_seconds * 1000:.0f} ms 를 넘었다 — {' · '.join(f'{rule_id} {seconds * 1000:.0f} ms' for seconds, rule_id in list_slow)}"
+
+
 def run_lint(project_root: Path, scope: LintScope) -> int:
     if not scope.list_file and not scope.list_removed:
         return ExitCode.PASSED
     has_errors = False
     list_whole: list[str] = []
+    list_time: list[tuple[float, str]] = []
     for rule in RULES:
+        started = time.perf_counter()
         rule_scope = select_rule_scope(rule, project_root, scope)
         if rule_scope.whole_repo and not scope.whole_repo:
             list_whole.append(rule.id)
@@ -317,6 +352,7 @@ def run_lint(project_root: Path, scope: LintScope) -> int:
         if scope.whole_repo or scope.touches(roots=rule.list_inputs()):
             failure = run_self_check(rule)
             list_problem = list_problem + ([f"자체 검사 실패 — {failure}"] if failure else [])
+        list_time.append((time.perf_counter() - started, rule.id))
         if list_problem:
             has_errors = True
             where = f" — 예외 · 기준선: {rule.describe_tables()}" if rule.describe_tables() else ""
@@ -326,7 +362,7 @@ def run_lint(project_root: Path, scope: LintScope) -> int:
 
     # 린트 코드(규칙 · 도우미 · 이 파일 · 하위 명령 표) · 린트 표 폴더가 바뀌면 커밋 훅의 모양(스테이지 비례 읽기 · 병합 범위)과 안내가 시키는 고치는 명령, 린트 표마다 읽는 규칙이 하나인지를 다시 본다 — 시간을 재지 않고 연 파일을 센다.
     if scope.whole_repo or scope.touches(roots=("Scripts/lint/", "Scripts/__main__.py", "Config/Rules/Lint/", *sorted({path for rule in RULES for path in rule.list_inputs() if path.startswith("Scripts/")}))):
-        list_shape = (check_read_bound(project_root) + check_merge_scope() + check_rule_row_diff() + check_fact_store()
+        list_shape = (check_read_bound(project_root) + check_merge_scope() + check_rule_row_diff() + check_index_cache()
                       + find_orphan_tables(project_root))
         if list_shape:
             has_errors = True
@@ -341,6 +377,9 @@ def run_lint(project_root: Path, scope: LintScope) -> int:
         has_errors = True
         print("[format] FAIL — 'py -3 -m Scripts format' 으로 고친 뒤 다시 git add 한다.")
 
+    time_line = format_rule_times(list_time, scope.whole_repo, read_hook_budget_seconds(project_root))
+    if time_line:
+        print(time_line)
     if has_errors:
         print("\n[lint] FAIL — 고친 뒤 다시 git add 하고 커밋한다.")
         return ExitCode.VIOLATION
@@ -353,7 +392,14 @@ def run_lint(project_root: Path, scope: LintScope) -> int:
 def main(argv: Sequence[str] | None = None) -> int:
     list_argument = list(sys.argv[1:] if argv is None else argv)
     if not list_argument:
-        return run_lint(get_project_root(), make_staged_scope(get_project_root()))
+        project_root = get_project_root()
+        scope = make_staged_scope(project_root)
+        list_partial = list_staged_with_unstaged_changes(project_root, scope)
+        if list_partial:
+            print(f"[lint] FAIL — 스테이지한 파일에 스테이지 안 된 변경이 더 있다(린트는 작업 폴더 글을 본다): {', '.join(list_partial)}\n"
+                  "  남은 변경도 git add 하거나 되돌린 뒤 커밋한다(git stash 는 쓰지 않는다).")
+            return ExitCode.VIOLATION
+        return run_lint(project_root, scope)
     if list_argument[0] == "--all":
         return run_lint(get_project_root(), make_whole_scope(get_project_root()))
     if list_argument[0] == "--list":

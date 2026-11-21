@@ -6,14 +6,15 @@ git 실행 파일 탐색과 git 이 알려 주는 파일 목록 — setup(vcpkg 
 
 from __future__ import annotations
 
-import functools
+import contextlib
 import os
 import shutil
 import subprocess
 import sys
 from pathlib import Path
-from typing import Sequence
+from typing import Iterator, Sequence
 
+from . import HOOK_GIT_ENVIRONMENT
 from .host_platform import is_windows_host
 from .run_process import ProcessResult, run_process
 
@@ -58,31 +59,31 @@ def ensure_git_on_path() -> str | None:
     return git_path
 
 
-@functools.cache
-def list_repository_environment_names() -> tuple[str, ...]:
-    """git 이 어느 저장소 · 인덱스를 볼지 고르는 환경 변수(`git rev-parse --local-env-vars` — git 이 서브모듈에 들어갈 때 스스로 지우는 목록)."""
-    completed = subprocess.run([resolve_git_executable() or "git", "rev-parse", "--local-env-vars"], capture_output=True, encoding="utf-8", errors="replace", check=False)
-    if completed.returncode != 0:
-        raise RuntimeError(f"git rev-parse --local-env-vars 실패: {completed.stderr.strip()}")
-    return tuple(completed.stdout.split())
+def make_hook_environment() -> dict[str, str]:
+    """커밋 훅이 넘긴 저장소 환경 변수(`common.HOOK_GIT_ENVIRONMENT` — 프로세스 시작에 떼어 둔 것)를 되돌린 환경."""
+    return {**os.environ, **HOOK_GIT_ENVIRONMENT}
 
 
-def make_isolated_environment() -> dict[str, str]:
-    """이 프로세스의 환경에서 저장소를 고르는 git 환경 변수를 뺀 것."""
-    setName = set(list_repository_environment_names())
-    return {name: value for name, value in os.environ.items() if name not in setName}
+@contextlib.contextmanager
+def outside_hook_repository() -> Iterator[None]:
+    """`run_git_in_hook_repository` 가 커밋 훅의 저장소 변수를 되돌려 쓰지 않는 구간 — 임시 저장소를 훅 입구(`make_staged_scope`)로 읽는 자체 검사가 쓴다."""
+    saved = dict(HOOK_GIT_ENVIRONMENT)
+    HOOK_GIT_ENVIRONMENT.clear()
+    try:
+        yield
+    finally:
+        HOOK_GIT_ENVIRONMENT.update(saved)
 
 
 def run_git(args: Sequence[str], *, cwd: Path | None = None) -> ProcessResult:
     """
     Git 명령어를 실행하고 결과를 반환합니다(출력은 UTF-8 — 한글 경로 · 커밋 메시지가 시스템 코드 페이지로 깨지지 않게).
 
-    저장소는 `cwd`(없으면 이 프로세스의 폴더)가 고른다 — 물려받은 `GIT_DIR` · `GIT_INDEX_FILE` · `GIT_WORK_TREE` 등은 늘 뺀다. 커밋 훅 안에서 부른
-    스크립트가 그 값을 물려받으면 다른 저장소(임시 · 클론)를 가리킨 명령이 훅의 저장소를 건드린다(임시 저장소 `git init` 이 공용 config 에 core.bare 를
-    썼다). Scripts 는 git 을 이 입구(또는 `run_git_in_hook_repository` · `run_git_bytes`)로만 부른다 — platform-chains 가 subprocess 로 직접 부르는 것을 막는다.
+    저장소는 `cwd`(없으면 이 프로세스의 폴더)가 고른다 — 물려받은 `GIT_DIR` · `GIT_INDEX_FILE` · `GIT_WORK_TREE` 등은 `common/__init__.py` 가 프로세스
+    시작에 떼어 두었다. Scripts 는 git 을 이 입구(또는 `run_git_in_hook_repository` · `run_git_bytes`)로만 부른다 — platform-chains 가 subprocess 로 직접 부르는 것을 막는다.
     """
     git_exe = resolve_git_executable() or "git"
-    return run_process([git_exe, *args], cwd=cwd, environment=make_isolated_environment())
+    return run_process([git_exe, *args], cwd=cwd)
 
 
 def run_git_or_raise(args: Sequence[str], *, cwd: Path | None = None) -> str:
@@ -93,19 +94,24 @@ def run_git_or_raise(args: Sequence[str], *, cwd: Path | None = None) -> str:
     return result.stdout
 
 
+def get_main_working_tree(project_root: Path) -> Path:
+    """메인 작업 폴더(공통 `.git` 의 부모) — 워크트리에서도 빌드 · 검증 기록(`build/`)은 이 폴더 하나에 있다."""
+    return Path(run_git_or_raise(["rev-parse", "--path-format=absolute", "--git-common-dir"], cwd=project_root).strip()).parent
+
+
 def run_git_in_hook_repository(args: Sequence[str], *, cwd: Path) -> ProcessResult:
     """
     물려받은 git 환경 변수를 **그대로 둔** git — 커밋 훅 린트가 지금 커밋하는 인덱스를 볼 때만 쓴다. `git commit -a` · `git commit <경로>` 는 임시 인덱스를
     `GIT_INDEX_FILE` 로 넘기므로, 빼면 스테이지 목록 · 블롭이 커밋 내용과 어긋난다. 훅 밖에서는 `run_git` 과 같다.
     """
     git_exe = resolve_git_executable() or "git"
-    return run_process([git_exe, *args], cwd=cwd)
+    return run_process([git_exe, *args], cwd=cwd, environment=make_hook_environment())
 
 
 def run_git_bytes(args: Sequence[str], *, cwd: Path, input_bytes: bytes, hook_repository: bool) -> tuple[int, bytes, str]:
     """표준 입력을 넘기고 바이트 출력을 받는 git(`cat-file --batch`) — (종료 코드, 출력, 오류 글). 환경은 `hook_repository` 가 고른다(위 두 입구와 같은 뜻)."""
     completed = subprocess.run([resolve_git_executable() or "git", *args], input=input_bytes, cwd=cwd, capture_output=True, check=False,
-                               env=None if hook_repository else make_isolated_environment())
+                               env=make_hook_environment() if hook_repository else None)
     return completed.returncode, completed.stdout, completed.stderr.decode("utf-8", "replace")
 
 

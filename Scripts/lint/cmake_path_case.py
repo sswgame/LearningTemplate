@@ -51,10 +51,10 @@ def check_cmake_path_case(project_root: Path, scope: LintScope) -> list[str]:
     list_cmake = [file for file in list_file if file.endswith(".cmake") or file.endswith("CMakeLists.txt")]
     facts = open_facts(project_root, "cmake-path-case", [__file__], list_cmake, lambda _, text: extract_paths(text), errors="ignore",
                       contribute=lambda file, fact: [json.dumps([file, kind, index, written]) for kind in ("root", "call") for index, written in enumerate(fact[kind])])
-    return evaluate_paths(list_file, unfold_paths(list_cmake, facts.summary))
+    return evaluate_paths(list_file, expand_paths(list_cmake, facts.summary))
 
 
-def unfold_paths(list_cmake: Sequence[str], summary: Iterable[str]) -> dict[str, dict[str, list[str]]]:
+def expand_paths(list_cmake: Sequence[str], summary: Iterable[str]) -> dict[str, dict[str, list[str]]]:
     """요약 토큰을 `extractPaths` 모양(파일 순 · 적은 차례)으로 되돌린다."""
     map_row: dict[str, list[tuple[str, int, str]]] = {}
     for token in summary:
@@ -101,7 +101,7 @@ def run_self_check() -> None:
     assert evaluate_paths(list_file, {"CMakeLists.txt": extract_paths("add_subdirectory(Source/Engine)\n")}) == [], "맞는 대소문자는 통과한다"
     fact = extract_paths("add_subdirectory(b)\nadd_subdirectory(a)\nadd_subdirectory(b)\n")
     tokens = [json.dumps(["x/CMakeLists.txt", kind, index, written]) for kind in ("root", "call") for index, written in enumerate(fact[kind])]
-    assert unfold_paths(["x/CMakeLists.txt"], reversed(tokens)) == {"x/CMakeLists.txt": fact}, "요약에서 차례 · 겹친 경로를 되돌린다"
+    assert expand_paths(["x/CMakeLists.txt"], reversed(tokens)) == {"x/CMakeLists.txt": fact}, "요약에서 차례 · 겹친 경로를 되돌린다"
 
 
 def main(argv: list[str] | None = None) -> int:

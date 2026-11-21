@@ -15,7 +15,7 @@ RULES_PATH = Path(__file__).with_name("HookRules.json")
 STRIP = re.compile(r"```.*?```|`[^`\n]*`|\[[^\]]*\]\([^)]*\)|https?://\S+|[A-Za-z]:[\\/]\S+|\S+\.(?:h|cpp|py|md|json|cmake|xml|sh)\b", re.S)
 
 
-def read_last_assistant_text(transcript_path: str) -> str:
+def read_last_reply_text(transcript_path: str) -> str:
     """기록(JSONL)에서 마지막 어시스턴트 메시지의 글 조각을 잇는다. 도구 호출만 있는 메시지는 건너뛴다."""
     lines = Path(transcript_path).read_text(encoding="utf-8", errors="replace").splitlines()
     for line in reversed(lines):
@@ -47,7 +47,7 @@ def main() -> int:
     if payload.get("stop_hook_active"):
         return 0  # 이미 한 번 막아 다시 쓰는 중이다 — 같은 턴에 두 번 막지 않는다(끝없는 되풀이 방지)
     rules = json.loads(RULES_PATH.read_text(encoding="utf-8"))["reply"]
-    problems = find_problems(read_last_assistant_text(payload.get("transcript_path", "")), rules)
+    problems = find_problems(read_last_reply_text(payload.get("transcript_path", "")), rules)
     if problems:
         print(json.dumps({"decision": "block", "reason": "마지막 답을 다시 쓴다: " + " / ".join(problems)}, ensure_ascii=False))
     return 0

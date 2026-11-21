@@ -12,15 +12,12 @@ Scripts/lint/result_types.py
 - `out-text-on-failure`: 이름은 달라도(`outReply` · `outUnknown` · `outFailureText` …) 실패 갈래에서만 쓰는 글 출력 인자 — 함수 본문의 모든 쓰기 바로 뒤가
   `return false` · `nullptr` · `nullopt` · `unexpected` 이고 그 인자를 다른 함수에 넘기지 않는 정의만 센다(넘기면 성공 쪽 쓰기를 볼 수 없어 세지 않는다).
 
-**왜 래칫인가.** 형식(`sw::expected`)은 새 함수가 옛 모양을 쓰지 못하게 막지 못한다 — `std::optional` 도 `string&` 도 언어가 준다. 그래서:
-- `Source/Core/` 는 **0** 이어야 한다(옮김이 끝났다). 예외는 `Config/Rules/Lint/ResultTypes.json` 의 `_coreExemptions`(`경로` → `종류` → 까닭)에만 둔다.
-- 그 밖은 파일마다 종류별 수를 기준선(`Config/Rules/Lint/ResultTypesBaseline.json`)에 두고, **늘면** 커밋이 멈추고 **줄면** `--ratchet` 으로 함께 낮춘다
-  (`magic_literals.py` 와 같은 모양). 올리는 길은 `--accept <파일…>` 하나(통합에서 규칙 전 코드를 합칠 때).
+**왜 린트인가.** 형식(`sw::expected`)은 새 함수가 옛 모양을 쓰지 못하게 막지 못한다 — `std::optional` 도 `string&` 도 언어가 준다. 그래서 모든 파일이
+**0** 이어야 하고, 예외는 `Config/Rules/Lint/ResultTypes.json` 의 `_exemptions`(`경로|종류` → 까닭)에만 둔다. 예전에는 Core 밖 파일마다 종류별 수를
+기준선에 두는 래칫이었다 — 옮김이 끝나 기준선이 비었으므로(2026-11-21) 기준선 · `--ratchet` · `--accept` 를 지우고 Core 와 같은 규칙 하나로 둔다.
 
     py -3 -m Scripts lint result-types                    # 폴더별 남은 수
-    py -3 -m Scripts lint result-types --check [--all]    # 래칫 검사(커밋 훅은 staged 파일)
-    py -3 -m Scripts lint result-types --ratchet          # 줄어든 파일의 기준선을 낮춘다(올리지 않는다)
-    py -3 -m Scripts lint result-types --accept <파일…>   # 그 파일의 기준선을 지금 수로(올리는 유일한 길)
+    py -3 -m Scripts lint result-types --check [--all]    # 검사(커밋 훅은 staged 파일)
     py -3 -m Scripts lint result-types --self-check
 """
 
@@ -39,12 +36,11 @@ from common.exit_code import ExitCode  # noqa: E402
 from lint.cpp_shape import find_param_list_end, BODY_OPEN, match_brace, strip_code  # noqa: E402
 from lint.format import get_modified_cpp_files  # noqa: E402
 from lint.lint_scope import LintScope, read_text  # noqa: E402
-from lint.magic_literals import is_source_file, list_source_files, read_staged_renames  # noqa: E402
-from lint.rule_tables import Baseline, ExceptionTable  # noqa: E402
+from lint.magic_literals import is_source_file, list_source_files  # noqa: E402
+from lint.rule_tables import ExceptionTable  # noqa: E402
 
 
 RULE_ID = "result-types"
-RATCHET_COMMAND = "py -3 -m Scripts lint result-types --ratchet"
 KINDS = ("std-optional", "out-error", "out-error-pointer", "out-text-on-failure")
 PATTERN = {
     "std-optional": re.compile(r"\bstd\s*::\s*(?:optional\b|nullopt\b|nullopt_t\b)"),
@@ -55,8 +51,6 @@ PATTERN = {
 OUT_TEXT_PARAM = re.compile(r"\b(?:sw\s*::\s*)?string\s*&\s*(out\w+)\s*(?=[,)])")
 REASON_NAME = re.compile(r"Error|Reason|Message")
 FAILURE_RETURN = re.compile(r"\s*return\s+(?:false\b|nullptr\b|(?:std\s*::\s*|sw\s*::\s*)?nullopt\b|(?:sw\s*::\s*)?unexpected\b)")
-# 0 이어야 하는 폴더(옮김이 끝난 곳). 그 안의 예외는 `ResultTypes.json` 의 `_coreExemptions` 데이터다.
-STRICT_PREFIX = "Source/Core/"
 ADVICE = {
     "std-optional": "`sw::optional<T>`(없음이 정상) 이나 `sw::expected<T, E>`(이유가 둘 이상)로 — docs/agents/Errors.md",
     "out-error": "`bool f( …, string& outError )` 대신 `sw::expected<T>` · `sw::expected<void>` 를 돌려준다 — docs/agents/Errors.md",
@@ -110,32 +104,24 @@ def count_files(project_root: Path, list_file: Iterable[Path]) -> dict[str, dict
     return result
 
 
-def find_problems(actual: dict[str, dict[str, int]], baseline: Baseline, list_path: Iterable[str], map_old: dict[str, str], table: ExceptionTable) -> list[str]:
-    """`listPath` 파일마다: Core 는 0(예외 `경로|종류` 말고), 그 밖은 기준선과 같아야 한다(늘면 옮기기, 줄면 기준선 낮추기)."""
-    list_problem: list[str] = []
-    set_strict = {path for path in list_path if path.startswith(STRICT_PREFIX)}
-    for path in sorted(set_strict):
-        list_problem += [f"{path}: {kind} {count} — Core 는 0 이어야 한다: {ADVICE[kind]}" for kind, count in actual.get(path, {}).items()
-                         if not table.allows("_coreExemptions", f"{path}|{kind}")]
-    list_problem += baseline.compare(actual, set(list_path) - set_strict, map_old, KINDS, ADVICE.__getitem__, RATCHET_COMMAND)
-    return list_problem + table.list_problems(whole_repo=False)   # Core 예외의 낡은 줄은 예전처럼 세지 않는다
+def find_problems(actual: dict[str, dict[str, int]], list_path: Iterable[str], table: ExceptionTable) -> list[str]:
+    """`list_path` 파일마다 0 이어야 한다(예외 `경로|종류` 말고)."""
+    list_problem = [f"{path}: {kind} {count} — 0 이어야 한다: {ADVICE[kind]}" for path in sorted(set(list_path)) for kind, count in actual.get(path, {}).items()
+                    if not table.allows("_exemptions", f"{path}|{kind}")]
+    return list_problem + table.list_problems(whole_repo=False)   # 예외의 낡은 줄은 예전처럼 세지 않는다
 
 
-def load_core_exemptions(project_root: Path) -> ExceptionTable:
-    """Core 0 규칙의 예외 `경로|종류` → 까닭(`ResultTypes.json`)."""
-    return ExceptionTable.load(project_root, RULE_ID, ("_coreExemptions",))
+def load_exemptions(project_root: Path) -> ExceptionTable:
+    """예외 `경로|종류` → 까닭(`ResultTypes.json`)."""
+    return ExceptionTable.load(project_root, RULE_ID, ("_exemptions",))
 
 
 def check_result_types(project_root: Path, scope: LintScope) -> list[str]:
-    """scope 의 C++ 파일의 래칫 검사입니다. 없는 파일의 기준선은 저장소 전체일 때만 센다."""
+    """scope 의 C++ 파일 검사입니다."""
     list_relative = [relative for relative in scope.select() if is_source_file(relative)]
-    list_problem: list[str] = []
-    if list_relative:
-        actual = count_files(project_root, [project_root / relative for relative in list_relative])
-        list_problem = find_problems(actual, Baseline.load(project_root, RULE_ID), list_relative, read_staged_renames(project_root), load_core_exemptions(project_root))
-    if scope.whole_repo:
-        list_problem += Baseline.load(project_root, RULE_ID).list_missing(set(scope.list_file))
-    return list_problem
+    if not list_relative:
+        return []
+    return find_problems(count_files(project_root, [project_root / relative for relative in list_relative]), list_relative, load_exemptions(project_root))
 
 
 def print_summary(actual: dict[str, dict[str, int]]) -> None:
@@ -178,29 +164,21 @@ def run_self_check() -> int:
     expect(count_text(both_sides) == {}, "a text output also written on success is not counted")
     expect(count_text("bool run( string& outReply ) { if ( a ) { outReply = \"no\"; return false; } return inner( outReply ); }") == {}, "a text output passed on is not counted")
     expect(count_text("bool run( string& outReply );") == {}, "a declaration is not counted")
-    baseline = Baseline("t.json", {"_comment": "테스트", "_files": {"Source/Engine/A.cpp": {"std-optional": 2}, "Source/Engine/Old.cpp": {"out-error": 1}}})
-    core_exemptions = ExceptionTable.make(RULE_ID, _coreExemptions={"Source/Core/Foundation/Expected.h|std-optional": "bridge"})
-    expect(find_problems({"Source/Engine/A.cpp": {"std-optional": 2}}, baseline, ["Source/Engine/A.cpp"], {}, core_exemptions) == [], "equal counts pass")
-    expect(len(find_problems({"Source/Engine/A.cpp": {"std-optional": 3}}, baseline, ["Source/Engine/A.cpp"], {}, core_exemptions)) == 1, "a grown count fails")
-    expect(len(find_problems({"Source/Engine/A.cpp": {"std-optional": 1}}, baseline, ["Source/Engine/A.cpp"], {}, core_exemptions)) == 1, "a shrunk count asks to lower the baseline")
-    expect(len(find_problems({"Source/Engine/New.cpp": {"out-error": 1}}, baseline, ["Source/Engine/New.cpp"], {}, core_exemptions)) == 1, "a new file starts at zero")
-    expect(len(find_problems({"Source/Engine/A.cpp": {"std-optional": 2, "out-error-pointer": 1}}, baseline, ["Source/Engine/A.cpp"], {}, core_exemptions)) == 1, "a new pointer out-error fails")
-    expect(find_problems({"Source/Engine/Moved.cpp": {"out-error": 1}}, baseline, ["Source/Engine/Moved.cpp"], {"Source/Engine/Moved.cpp": "Source/Engine/Old.cpp"}, core_exemptions) == [], "a moved file keeps its baseline")
-    expect(len(find_problems({"Source/Core/X.h": {"std-optional": 1}}, Baseline("t.json", {"_comment": "테스트", "_files": {"Source/Core/X.h": {"std-optional": 1}}}), ["Source/Core/X.h"], {}, core_exemptions)) == 1, "Core must be zero even with a baseline")
-    expect(find_problems({"Source/Core/Foundation/Expected.h": {"std-optional": 4}}, baseline, ["Source/Core/Foundation/Expected.h"], {}, core_exemptions) == [], "an exempt kind in Core passes")
-    expect(len(find_problems({"Source/Core/Foundation/Expected.h": {"out-error": 1}}, baseline, ["Source/Core/Foundation/Expected.h"], {}, core_exemptions)) == 1, "a Core exemption covers only its kind")
-    # 래칫 자체(늘면 · 줄면 · 옮긴 파일 · --ratchet)는 표 형식 테스트(Scripts/lint/tests/test_rule_tables.py)가 본다.
+    exemptions = ExceptionTable.make(RULE_ID, _exemptions={"Source/Core/Foundation/Expected.h|std-optional": "bridge"})
+    expect(find_problems({"Source/Engine/A.cpp": {}}, ["Source/Engine/A.cpp"], exemptions) == [], "zero passes")
+    expect(len(find_problems({"Source/Engine/A.cpp": {"std-optional": 1}}, ["Source/Engine/A.cpp"], exemptions)) == 1, "any count outside Core fails")
+    expect(len(find_problems({"Source/Core/X.h": {"out-error-pointer": 2}}, ["Source/Core/X.h"], exemptions)) == 1, "any count in Core fails")
+    expect(find_problems({"Source/Core/Foundation/Expected.h": {"std-optional": 4}}, ["Source/Core/Foundation/Expected.h"], exemptions) == [], "an exempt kind passes")
+    expect(len(find_problems({"Source/Core/Foundation/Expected.h": {"out-error": 1}}, ["Source/Core/Foundation/Expected.h"], exemptions)) == 1, "an exemption covers only its kind")
     print(f"[ResultTypes] self-check {'OK' if failures == 0 else 'FAIL'}")
     return ExitCode.PASSED if failures == 0 else ExitCode.VIOLATION
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="결과 형식 래칫: std::optional · string& outError · string* pOutError · 실패 때만 쓰는 글 출력 인자 모양이 Core 에 없고 그 밖에서 늘지 않게")
+    parser = argparse.ArgumentParser(description="결과 형식 검사: std::optional · string& outError · string* pOutError · 실패 때만 쓰는 글 출력 인자 모양이 어디에도 없게")
     parser.add_argument("--check", action="store_true", help="수정된 C++ 파일(작업 트리 대 HEAD)을 검사한다(--all 은 모든 파일)")
     parser.add_argument("--all", action="store_true", help="--check 와 함께: 모든 Source 파일")
-    parser.add_argument("--ratchet", action="store_true", help="줄어든 파일의 기준선을 낮추고 없어진 파일을 지운다(올리지 않는다)")
-    parser.add_argument("--accept", nargs="+", default=None, metavar="FILE", help="그 파일들의 기준선을 지금 수로 바꾼다(올리는 유일한 길 — 통합에서만)")
-    parser.add_argument("--self-check", action="store_true", help="세기 · 래칫 규칙의 자체 시험")
+    parser.add_argument("--self-check", action="store_true", help="세기 · 판정의 자체 검사")
     args = parser.parse_args(argv)
     sys.stdout.reconfigure(encoding="utf-8")
     if args.self_check:
@@ -211,23 +189,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         list_file = list_source_files(project_root) if args.all else get_modified_cpp_files(project_root)
         list_relative = [path.relative_to(project_root).as_posix() for path in list_file]
         list_source = [path for path, relative in zip(list_file, list_relative) if is_source_file(relative)]
-        baseline = Baseline.load(project_root, RULE_ID)
-        list_problem = find_problems(count_files(project_root, list_source), baseline, [relative for relative in list_relative if is_source_file(relative)], {}, load_core_exemptions(project_root))
-        if args.all:
-            list_problem += baseline.list_missing(set(list_relative))
+        list_problem = find_problems(count_files(project_root, list_source), [relative for relative in list_relative if is_source_file(relative)], load_exemptions(project_root))
         for problem in list_problem:
             print(f"  - {problem}")
         print(f"[ResultTypes] {'FAIL' if list_problem else 'OK'} ({len(list_problem)}건)")
         return ExitCode.VIOLATION if list_problem else ExitCode.PASSED
-    if args.ratchet or args.accept is not None:
-        for path in args.accept or ():
-            relative = Path(path).resolve().relative_to(project_root).as_posix()
-            if relative.startswith(STRICT_PREFIX):
-                print(f"[ResultTypes] {relative}: Core 는 기준선이 없다(0 이어야 한다) — 받지 않는다")
-                return ExitCode.VIOLATION
-        Baseline.load(project_root, RULE_ID).update(project_root, "ResultTypes", list_source_files(project_root), lambda list_file: count_files(project_root, list_file), args.accept)
-        return ExitCode.PASSED
-
     print_summary(count_files(project_root, list_source_files(project_root)))
     return ExitCode.PASSED
 

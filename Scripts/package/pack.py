@@ -42,7 +42,7 @@ import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(co
 from common.toolchain_config import ConfigError, require_config  # noqa: E402
 from common.paths import get_bin_dir, get_project_root  # noqa: E402
 from common.project_constants import DIR_RUNTIME_GAME_PRESET  # noqa: E402
-from common.run_process import run_process  # noqa: E402
+from common.run_process import run_cmake, run_process  # noqa: E402
 from common.exit_code import ExitCode  # noqa: E402
 from common.host_platform import executable_name, HOST  # noqa: E402
 
@@ -200,12 +200,12 @@ def measure_bytes(path: Path) -> int:
 def run_build(request: PackageRequest, project_root: Path) -> None:
     """Shipping 프리셋을 그 게임 · 백엔드로 구성하고 빌드한다(빌드에 리소스 팩 쿠킹이 든다)."""
     preset = MAP_TARGET_PRESET[request.target]
-    list_configure = ["cmake", "--preset", preset, f"-DSW_ACTIVE_GAME={request.game}"]
+    list_configure = ["--preset", preset, f"-DSW_ACTIVE_GAME={request.game}"]
     if request.rhi and request.target == "Client":
         list_configure.append(f"-DSW_SHIPPING_RHI_BACKEND={request.rhi}")
-    if run_process(list_configure, cwd=project_root, capture=False).return_code != 0:
+    if run_cmake(list_configure, cwd=project_root, capture=False).return_code != 0:
         raise PackageError(f"cmake --preset {preset} failed")
-    if run_process(["cmake", "--build", "--preset", preset], cwd=project_root, capture=False).return_code != 0:
+    if run_cmake(["--build", "--preset", preset], cwd=project_root, capture=False).return_code != 0:
         raise PackageError(f"cmake --build --preset {preset} failed")
 
 

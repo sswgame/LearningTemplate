@@ -1803,6 +1803,14 @@
     "rewrite_python_code": "dev.rename_symbol.rename_in_text — 지킬 구간 방식(Scripts 감사, 2026-11-21)",
     "rewrite_code": "dev.rename_symbol.rename_in_text(Scripts 감사, 2026-11-21)",
     "NAMING_PATH": "common.rename_scope.BANNED_NAMES_PATH — 이름 이력 표 경로는 한 곳(Scripts 감사, 2026-11-21)",
-    "NAMING_WORDS_PATH": "common.rename_scope.BANNED_NAMES_PATH — _bannedNames 는 NamingWordsBannedNames.json 으로 옮겼다(Scripts 감사, 2026-11-21)"
+    "NAMING_WORDS_PATH": "common.rename_scope.BANNED_NAMES_PATH — _bannedNames 는 NamingWordsBannedNames.json 으로 옮겼다(Scripts 감사, 2026-11-21)",
+    "NameBaseline": "이름 기준선 래칫은 0 에 닿아 은퇴 — 이름 하나의 예외는 NamingWords.json _keep(2026-11-21)",
+    "NAMING_BASELINE_PATH": "이름 기준선 표 폐지(2026-11-21)",
+    "lower_naming_baseline": "이름 기준선 폐지 — rename-symbol 은 바꾼 뒤 기준선을 줄이지 않는다(2026-11-21)",
+    "lower-baseline": "naming-words 의 기준선 옵션 폐지(2026-11-21)",
+    "write-baseline": "naming-words 의 기준선 옵션 폐지(2026-11-21)",
+    "check_fact_store": "check_index_cache — 사실 저장소는 index_cache 다(2026-11-21)",
+    "read_last_assistant_text": "read_last_reply_text(2026-11-21)",
+    "unfold_paths": "expand_paths(2026-11-21)"
   }
 }

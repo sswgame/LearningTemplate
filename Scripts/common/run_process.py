@@ -63,3 +63,13 @@ def run_process(command: Sequence[str | Path],
     except subprocess.TimeoutExpired as error:
         partial = error.stdout.decode("utf-8", "replace") if isinstance(error.stdout, bytes) else (error.stdout or "")
         return ProcessResult(return_code=-1, stdout=partial, stderr=f"{timeout_seconds} 초를 넘겼다", timed_out=True)
+
+
+def run_cmake(list_argument: Sequence[str | Path], *, cwd: Path, capture: bool = True) -> ProcessResult:
+    """
+    cmake 구성 · 빌드의 입구(`cmake --preset` · `cmake --build --preset`). 연결된 워크트리(`.git` 이 파일)에서는 멈춘다 — 빌드는 메인 작업 폴더
+    하나에서만 한다(공용 vcpkg · 디스크가 겹친다, 사용자 지시 2026-11-12). 작업자는 코드 → 린트 → 커밋만 하고, 컴파일 · 실행은 통합이 본 트리에서 한다.
+    """
+    if (cwd / ".git").is_file():
+        raise SystemExit(f"[Scripts] 워크트리({cwd})에서 cmake {' '.join(str(part) for part in list_argument)} 를 시작하지 않는다 — 빌드 · 구성은 메인 작업 폴더에서만")
+    return run_process(["cmake", *list_argument], cwd=cwd, capture=capture)
