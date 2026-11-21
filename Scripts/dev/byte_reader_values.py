@@ -35,7 +35,7 @@ from common.paths import get_project_root  # noqa: E402
 from lint.cpp_shape import strip_code  # noqa: E402
 
 TAG = "[byte-reader-values]"
-SKIP_PARTS = ("ThirdParty", "Generated", ".gen.")
+SKIP_PARTS = ("/ThirdParty/", "/Generated/", ".gen.")   # 폴더 마디로 본다 — 이름에 Generated 가 든 소스(GeneratedFiles.cpp)를 빼지 않는다
 CPP_SUFFIX = (".h", ".cpp", ".inl")
 RECEIVER_TYPE = "ByteReader"
 

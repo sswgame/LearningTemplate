@@ -35,7 +35,7 @@ from lint.cpp_shape import strip_code  # noqa: E402
 
 TAG = "[disk-path-args]"
 EXCLUDED_FILES = ("Source/Core/File/FileUtil.h", "Source/Core/File/FileUtil.cpp")
-SKIP_PARTS = ("ThirdParty", "Generated", ".gen.")
+SKIP_PARTS = ("/ThirdParty/", "/Generated/", ".gen.")   # 폴더 마디로 본다 — 이름에 Generated 가 든 소스(GeneratedFiles.cpp)를 빼지 않는다
 CPP_SUFFIX = (".h", ".cpp", ".inl")
 WRAPPER = "toDiskPath"
 
