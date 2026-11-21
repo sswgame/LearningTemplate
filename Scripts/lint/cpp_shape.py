@@ -36,6 +36,9 @@ C++ 모양 규칙 중 컴파일러가 보지 않는 열을 본다. 규칙 문서
 12. 델리게이트는 `SW_DELEGATE_FUNCTION` · `SW_DELEGATE_METHOD` · `SW_DELEGATE_LAMBDA` 로 붙인다(사용자 2026-11-20): 맨 `X::create<&f>()` · `X::create( 람다 )` 는
    종류마다 함수를 템플릿 인자로 주는지 생성자 인자로 주는지 달라 모양을 외워야 한다. 판정 · 바꾸기는 `dev/delegate_macros.py`(`py -3 -m Scripts delegate-macros`)와 같다.
    `Core/Delegate/` (맨 API 의 정의 · 구현 · 그 테스트)만 뺀다.
+13. `ByteReader` 는 값 읽기만(`x = reader.readPod<T>()` · `readString()` · `readCount( n )` …): 출력 인자 꼴 `reader.readPod( x )` 는 반환 `bool` 을 버리면
+   실패를 잃었고 실패 때 출력 칸이 옛 값으로 남았다(2026-11-21 형식 이전). 형식에서 지웠지만 병합으로 들어온 옛 자리를 빌드 전에 잡는다.
+   판정 · 바꾸기는 `dev/byte_reader_values.py`(`py -3 -m Scripts byte-reader-values`)와 같다.
 
 `py -3 -m Scripts lint cpp-shape [--files …|--all]` 로 돌리고, 커밋 훅(`rules.py` 표)이 staged 파일에 돌린다.
 """
@@ -636,6 +639,14 @@ def check_bare_delegate_create(raw: str, code: str, relative: str, names: frozen
 
 
 @functools.lru_cache(maxsize=1)
+def check_byte_reader_out_params(raw: str, code: str, relative: str) -> list[tuple[int, str]]:
+    """규칙 13 — 받는 쪽이 ByteReader 인 출력 인자 읽기."""
+    from dev import byte_reader_values   # 그쪽이 이 모듈의 strip_code 를 가져온다 — 순환 import 를 피해 여기서 연다
+    if byte_reader_values.is_target(relative) is False or byte_reader_values.CALL_PATTERN.search(code) is None:
+        return []
+    return [(site.line, byte_reader_values.describe_site(site, relative, True)) for site in byte_reader_values.find_sites(raw, code)]
+
+
 def load_rules(project_root: str) -> tuple[ExceptionTable, int]:
     """예외 표(`경로|타입` → 까닭 칸 셋)와 규칙 10 의 문턱 `_stateMutatorMinFunctions`. 프로세스마다 한 번 읽는다 — 파일 · 칸이 없으면 멈춘다."""
     data = read_rule_table(Path(project_root), RULE_ID)
@@ -761,6 +772,7 @@ def inspect_file(path: Path, relative: str) -> list[str]:
     list_problem += check_online_protocol_table(raw, code, relative)
     list_problem += check_net_message_table(code, relative)
     list_problem += check_bare_delegate_create(raw, code, relative)
+    list_problem += check_byte_reader_out_params(raw, code, relative)
     return [f"{relative}:{line}: {message}" for line, message in sorted(set(list_problem))]
 
 
@@ -790,7 +802,7 @@ def check_cpp_shape(project_root: Path, scope: LintScope) -> list[str]:
 
 
 def run_self_check() -> int:
-    """규칙 10(.cpp 상태 · `…Internal` 변경자) · 규칙 12(델리게이트 매크로) · strip_code 의 자체 테스트입니다."""
+    """규칙 10(.cpp 상태 · `…Internal` 변경자) · 규칙 12(델리게이트 매크로) · 규칙 13(ByteReader 값 읽기) · strip_code 의 자체 테스트입니다."""
     failures = 0
 
     def expect(condition: bool, message: str) -> None:
@@ -822,6 +834,12 @@ def run_self_check() -> int:
     expect(check_bare_delegate_create(wrapped, strip_code(wrapped), "Source/Engine/Foo.cpp", names) == [], "the macro form and a non-delegate factory pass")
     from dev import delegate_macros   # 바꾸기 도구의 변환 테스트도 린트 자체 테스트와 함께 돈다
     expect(delegate_macros.run_self_check() == 0, "delegate-macros rewrite cases")
+    out_param = "void f( ByteReader& reader )\n{\n    uint32 count = 0;\n    if ( reader.readCount( 4, count ) == false )\n        return;\n}\n"
+    expect(len(check_byte_reader_out_params(out_param, strip_code(out_param), "Source/Engine/Foo.cpp")) == 1, "a ByteReader output-parameter read is flagged")
+    value_read = "void f( ByteReader& reader, Archive& arch )\n{\n    const uint32 count = reader.readCount( 4 );\n    (void)arch.readCount( 4, n );\n}\n"
+    expect(check_byte_reader_out_params(value_read, strip_code(value_read), "Source/Engine/Foo.cpp") == [], "a value read and an Archive read pass")
+    from dev import byte_reader_values
+    expect(byte_reader_values.run_self_check() == 0, "byte-reader-values rewrite cases")
     stripped = {
         'a // c\nb': 'a     \nb', 'x /* c\nd */ y': 'x     \n     y', 's = "q\\"w";': 's = "    ";', "c = 'x'; it's": "c = ' '; it's",
         'r = R"d(a)"b\n)d";': 'r = R       \n   ;', 'fooR"x"': 'fooR" "', '#define A \\\n  B\nint q;': '           \n   \nint q;',

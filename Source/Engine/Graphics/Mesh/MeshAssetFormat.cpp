@@ -342,7 +342,9 @@ namespace sw
                 {
                     string_view material;
                     string_view node;
-                    if ( chunk.readStringView( material ) == false || chunk.readStringView( node ) == false )
+                    material = chunk.readStringView();
+                    node     = chunk.readStringView();
+                    if ( chunk.hasOverflowed() )
                         return false;
                     section._sourceMaterial = hashed_string( string( material ) );
                     section._sourceNode     = hashed_string( string( node ) );
@@ -356,7 +358,8 @@ namespace sw
                 const bool bRead = chunk.readCountedList( outListSection, sizeof( uint32 ) * 4, [&]( MeshSection& section ) -> bool
                 {
                     string_view name;
-                    if ( chunk.readStringView( name ) == false )
+                    name = chunk.readStringView();
+                    if ( chunk.hasOverflowed() )
                         return false;
                     section._name              = hashed_string( string( name ) );
                     section._firstIndex        = chunk.readUint32();
@@ -485,7 +488,8 @@ namespace sw
                 const bool bRead = chunk.readCountedList( outListTarget, sizeof( uint32 ) * 2, [&]( MeshMorphTarget& target ) -> bool
                 {
                     string_view name;
-                    if ( chunk.readStringView( name ) == false )
+                    name = chunk.readStringView();
+                    if ( chunk.hasOverflowed() )
                         return false;
                     target._name = hashed_string( string( name ) );
                     return chunk.readCountedList( target._listDelta, kMorphDeltaSize, [&]( MeshMorphDelta& delta ) -> bool
@@ -509,7 +513,8 @@ namespace sw
                 while ( reader.getRemainingByteCount() > 0 )
                 {
                     const uint8* pChunkName = nullptr;
-                    if ( reader.readView( sizeof( kArrMorphChunk ), pChunkName ) == false || reader.getRemainingByteCount() < sizeof( uint32 ) )
+                    pChunkName              = reader.readView( sizeof( kArrMorphChunk ) );
+                    if ( reader.hasOverflowed() || reader.getRemainingByteCount() < sizeof( uint32 ) )
                     {
                         SW_LOG_WARNING_ID( "MeshAssetFormat.MeshAssetTruncatedChunk", "Mesh asset has a truncated chunk header" );
                         return false;
@@ -520,9 +525,9 @@ namespace sw
                     const bool   bLOD        = Memory::compare( pChunkName, kArrLODChunk, 4 ) == 0;
                     const bool   bLODSkin    = Memory::compare( pChunkName, kArrLODSkinChunk, 4 ) == 0;
                     const uint32 chunkLength = reader.readUint32();
-                    const uint8* pChunk      = nullptr;
                     const bool   bKnownChunk = bMorph || bSection || bSource || bLOD || bLODSkin;
-                    if ( bKnownChunk == false || reader.readView( chunkLength, pChunk ) == false )
+                    const uint8* pChunk      = bKnownChunk ? reader.readView( chunkLength ) : nullptr;
+                    if ( bKnownChunk == false || reader.hasOverflowed() )
                     {
                         SW_LOG_WARNING_ID( "MeshAssetFormat.MeshAssetUnknownTruncated", "Mesh asset has an unknown or truncated chunk" );
                         return false;

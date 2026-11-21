@@ -158,7 +158,8 @@ namespace sw
 
         ByteReader   reader{ bytes.data(), bytes.size() };
         ReplayHeader header{};
-        if ( reader.readPod( header ) == false )
+        header = reader.readPod<ReplayHeader>();
+        if ( reader.hasOverflowed() )
             return false;
         const bool bBadMagic = header._arrMagic[0] != 'S' || header._arrMagic[1] != 'W' || header._arrMagic[2] != 'R' || header._arrMagic[3] != 'P';
         if ( bBadMagic )
@@ -171,7 +172,8 @@ namespace sw
             return false;
         }
         const uint8* pName = nullptr;
-        if ( reader.readView( header._nameLength, pName ) == false )
+        pName              = reader.readView( header._nameLength );
+        if ( reader.hasOverflowed() )
         {
             SW_LOG_WARNING_ID( "InputReplay.InputReplayTruncatedName", "Input replay is truncated in its name — refusing to load: %#", filePath );
             return false;
@@ -186,7 +188,8 @@ namespace sw
                       {
             frame._deltaTime  = reader.readFloat32();
             uint32 eventCount = 0;
-            return reader.readPod( eventCount ) && reader.readPodList( frame._listRawEvent, eventCount );
+            eventCount        = reader.readPod<uint32>();
+            return reader.hasOverflowed() == false && reader.readPodList( frame._listRawEvent, eventCount );
         } );
         if ( bFramesRead == false )
         {

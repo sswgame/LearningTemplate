@@ -93,7 +93,8 @@ namespace sw
             return unexpected( Error{ ErrorKind::InvalidArgument, "locres checksum mismatch" } );
 
         string_view cultureView;
-        if ( reader.readStringView( cultureView ) == false )
+        cultureView = reader.readStringView();
+        if ( reader.hasOverflowed() )
             return unexpected( Error{ ErrorKind::InvalidArgument, "locres culture is out of range" } );
         string culture( cultureView );
 

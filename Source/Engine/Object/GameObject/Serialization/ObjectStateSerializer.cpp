@@ -749,7 +749,8 @@ namespace sw
 
         ByteReader reader( pData, size );
         uint32     bodySize{ 0 };
-        if ( reader.readPod( bodySize ) == false )
+        bodySize = reader.readPod<uint32>();
+        if ( reader.hasOverflowed() )
             return 0;
 
         const size_t bodyStart = reader.getOffset();
@@ -817,7 +818,9 @@ namespace sw
 
         ByteReader reader( pData, size );
         uint32     componentCount{ 0 };
-        if ( reader.readPod( outIdentity._objectID ) == false || reader.readPod( componentCount ) == false )
+        outIdentity._objectID = reader.readPod<decltype( outIdentity._objectID )>();
+        componentCount        = reader.readPod<uint32>();
+        if ( reader.hasOverflowed() )
             return 0;
 
         // 항목 하나는 적어도 이름 길이(4)와 ID(8)와 키 길이(4)를 합친 바이트다. 남은 바이트로 담을 수 없는 개수는 망가진 데이터다.
@@ -831,7 +834,10 @@ namespace sw
         {
             string                         typeName;
             ObjectIdentity::ComponentEntry entry;
-            const bool                     bEntryRead = reader.readString( typeName ) && reader.readPod( entry._componentID ) && reader.readString( entry._stableKey );
+            typeName              = reader.readString();
+            entry._componentID    = reader.readPod<decltype( entry._componentID )>();
+            entry._stableKey      = reader.readString();
+            const bool bEntryRead = reader.hasOverflowed() == false;
             if ( bEntryRead == false )
                 return 0;
             entry._typeFqn = hashed_string( typeName.data(), static_cast<uint32>( typeName.size() ) );

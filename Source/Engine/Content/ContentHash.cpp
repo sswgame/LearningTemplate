@@ -219,7 +219,8 @@ namespace sw
         vector<LoadedEntry> listLoaded;
         const auto          readEntry = [&reader]( LoadedEntry& outLoaded )
         {
-            const bool bKey                    = reader.readString( outLoaded._key );
+            outLoaded._key                     = reader.readString();
+            const bool bKey                    = reader.hasOverflowed() == false;
             outLoaded._entry._stamp._sizeBytes = reader.readUint64();
             outLoaded._entry._stamp._writeTime = reader.readUint64();
             outLoaded._entry._hash             = reader.readUint64();

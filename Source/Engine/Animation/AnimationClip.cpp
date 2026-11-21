@@ -50,7 +50,8 @@ namespace sw
             static hashed_string readName( ByteReader& reader )
             {
                 string_view text;
-                if ( reader.readStringView( text ) == false )
+                text = reader.readStringView();
+                if ( reader.hasOverflowed() )
                     return hashed_string{};
                 if ( text.size() > kMaxStringLength )
                 {
@@ -312,7 +313,8 @@ namespace sw
         const uint32 codecValue    = reader.readUint32();
         const uint32 codecByteSize = reader.readUint32();
         const uint8* pCodecBytes   = nullptr;
-        if ( reader.readView( codecByteSize, pCodecBytes ) )
+        pCodecBytes                = reader.readView( codecByteSize );
+        if ( reader.hasOverflowed() == false )
             assignCodecBytes( pCodecBytes, codecByteSize );
         const uint32 notifyCount = reader.readUint32();
         if ( reader.canHold( notifyCount, sizeof( uint32 ) * 3 ) )

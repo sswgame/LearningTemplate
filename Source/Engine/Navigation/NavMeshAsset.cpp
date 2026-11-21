@@ -138,7 +138,10 @@ namespace sw
         uint32     magic    = 0;
         uint32     version  = 0;
         uint64     headSize = 0;
-        const bool bFixed   = reader.readPod( magic ) && reader.readPod( version ) && reader.readPod( headSize );
+        magic               = reader.readPod<uint32>();
+        version             = reader.readPod<uint32>();
+        headSize            = reader.readPod<uint64>();
+        const bool bFixed   = reader.hasOverflowed() == false;
         if ( bFixed == false || magic != NavMeshAssetInternal::kMagic || version != kVersion )
         {
             SW_LOG_ERROR_ID( "NavMeshAsset.NotNavmeshFormat", "'%#' is not a navmesh of format %#", sourceLabel, kVersion );
@@ -162,8 +165,13 @@ namespace sw
         string     backendName;
         uint32     backendVersion = 0;
         uint32     entryCount     = 0;
-        const bool bHeader        = reader.readPod( magic ) && reader.readPod( version ) && reader.readPod( headSizeField ) && reader.readString( backendName ) &&
-                             reader.readPod( backendVersion ) && reader.readPod( entryCount );
+        magic                     = reader.readPod<uint32>();
+        version                   = reader.readPod<uint32>();
+        headSizeField             = reader.readPod<uint64>();
+        backendName               = reader.readString();
+        backendVersion            = reader.readPod<uint32>();
+        entryCount                = reader.readPod<uint32>();
+        const bool bHeader        = reader.hasOverflowed() == false;
         const bool bInvalidHeader = bHeader == false || magic != NavMeshAssetInternal::kMagic || version != kVersion;
         if ( bInvalidHeader )
         {
@@ -180,9 +188,14 @@ namespace sw
         uint64     nextContentOffset = 0;
         const bool bEntriesRead      = reader.readList( _listEntry, entryCount, NavMeshAssetInternal::kMinEntryBytes, [&]( NavMeshAssetEntry& entry ) -> bool
              {
-            string     agentType;
-            uint32     tileCount = 0;
-            const bool bHead     = reader.readString( agentType ) && reader.readPod( entry._settingsHash ) && reader.readPod( entry._inputHash ) && reader.readPod( entry._bounds ) && reader.readPod( tileCount );
+            string agentType;
+            uint32 tileCount    = 0;
+            agentType           = reader.readString();
+            entry._settingsHash = reader.readPod<decltype( entry._settingsHash )>();
+            entry._inputHash    = reader.readPod<decltype( entry._inputHash )>();
+            entry._bounds       = reader.readPod<decltype( entry._bounds )>();
+            tileCount           = reader.readPod<uint32>();
+            const bool bHead    = reader.hasOverflowed() == false;
             // 경계는 통째로 읽었다 — 유한한지는 여기서 본다(`readFloat32` 의 규칙).
             const bool bFiniteBounds = entry._bounds._min.isFinite() && entry._bounds._max.isFinite();
             if ( bHead == false || bFiniteBounds == false )
@@ -194,7 +207,12 @@ namespace sw
                  {
                 NavTileRange range{};
                 uint64       inputHash = 0;
-                const bool   bTile     = reader.readPod( tile._tileX ) && reader.readPod( tile._tileZ ) && reader.readPod( range._offset ) && reader.readPod( range._size ) && reader.readPod( inputHash );
+                tile._tileX            = reader.readPod<decltype( tile._tileX )>();
+                tile._tileZ            = reader.readPod<decltype( tile._tileZ )>();
+                range._offset          = reader.readPod<decltype( range._offset )>();
+                range._size            = reader.readPod<decltype( range._size )>();
+                inputHash              = reader.readPod<uint64>();
+                const bool bTile       = reader.hasOverflowed() == false;
                 // 타일 바이트는 머리의 순서대로 빈틈없이 놓인다 — 그 밖의 구간(겹침 · 틈 · 내용 밖)은 깨진 파일이다.
                 if ( bTile == false || range._offset != nextContentOffset || range._size > contentSize - nextContentOffset )
                     return false;
@@ -242,7 +260,10 @@ namespace sw
         uint32     magic    = 0;
         uint32     version  = 0;
         uint64     headSize = 0;
-        const bool bFixed   = reader.readPod( magic ) && reader.readPod( version ) && reader.readPod( headSize );
+        magic               = reader.readPod<uint32>();
+        version             = reader.readPod<uint32>();
+        headSize            = reader.readPod<uint64>();
+        const bool bFixed   = reader.hasOverflowed() == false;
         if ( bFixed == false || magic != NavMeshAssetInternal::kMagic || version != kVersion )
         {
             SW_LOG_ERROR_ID( "NavMeshAsset.NotNavmeshFormat", "'%#' is not a navmesh of format %#", label, kVersion );

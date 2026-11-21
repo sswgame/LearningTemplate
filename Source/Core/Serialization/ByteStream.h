@@ -103,8 +103,10 @@ namespace sw
      * @class ByteReader
      * @brief 빌린 바이트를 앞에서부터 리틀 엔디언 값으로 읽습니다. 남은 바이트가 모자라면 읽지 않고 실패로 표시합니다.
      * @details **오류 관례는 하나다 — 끈적한 실패(`_bFailed`)**. 모든 읽기(값 반환 · `bool` 반환 모두)와 `markFailed` 가 같은 깃발을 세우고, 한 번 서면 내려가지 않는다.
-     *          `bool` 을 돌려주는 읽기의 반환값은 그 깃발의 거울이라 매 줄 검사하지 않아도 된다 — 형식의 끝에서 `finish()` 한 번이 모든 실패와 남은 바이트를 본다
-     *          (언리얼 `FArchive::IsError` 와 같은 자리, 못 믿는 입력에 분기가 적고 빠뜨리기 어렵다). `finish()` 는 `[[nodiscard]]` 라 끝 검사를 잊는 모양이 컴파일 경고다.
+     *          한 값 읽기는 모두 값을 돌려준다(`[[nodiscard]]`, 실패면 0 · 빈 값) — 출력 인자 `readX( T& out )` 은 없앴다: 반환 `bool` 을 버리면 실패를 잃었고
+     *          (`(void)` · 무시), 실패 때 출력 칸이 옛 값으로 남았다. 실패는 깃발 하나라 매 줄 검사하지 않아도 된다 — 형식의 끝에서 `finish()` 한 번이 모든 실패와
+     *          남은 바이트를 보고, 중간에 갈라야 하면 `hasOverflowed()` 를 본다(언리얼 `FArchive::IsError` 와 같은 자리). `finish()` 는 `[[nodiscard]]` 라 끝 검사를 잊는 모양이 컴파일 경고다.
+     *          되돌리는 도구 · 남은 옛 모양 검사는 `py -3 -m Scripts byte-reader-values`(린트 `cpp-shape` 규칙 13).
      */
     class ByteReader
     {
@@ -191,53 +193,60 @@ namespace sw
         /** @brief @p byteCount 바이트를 읽지 않고 넘깁니다. 모자라면 false 입니다. */
         [[nodiscard]] bool skipBytes( size_t byteCount ) { return byteCount == 0 || consume( byteCount ) != nullptr; }
 
-        [[nodiscard]] bool readVarUint( uint64& outValue ) { return markFailedUnless( VarIntUtil::decodeVarUint64( _pData, _byteCount, _offset, outValue ) ); }
-        [[nodiscard]] bool readVarUint( uint32& outValue ) { return markFailedUnless( VarIntUtil::decodeVarUint32( _pData, _byteCount, _offset, outValue ) ); }
-        [[nodiscard]] bool readVarInt( int64& outValue ) { return markFailedUnless( VarIntUtil::decodeVarInt64( _pData, _byteCount, _offset, outValue ) ); }
-        [[nodiscard]] bool readVarInt( int32& outValue ) { return markFailedUnless( VarIntUtil::decodeVarInt32( _pData, _byteCount, _offset, outValue ) ); }
-        /** @brief `writeString` 이 쓴 글을 읽습니다. 모자라면 false 입니다. */
-        [[nodiscard]] bool readString( string& outText )
+        /** @brief 가변 길이 정수(`writeVarUint`)를 읽습니다. 깨졌거나 모자라면 0 이고 끈적한 실패로 표시합니다. */
+        [[nodiscard]] uint64 readVarUint()
         {
-            string_view view;
-            if ( readStringView( view ) == false )
-                return false;
-            outText.assign( view.data(), view.size() );
-            return true;
+            uint64 value = 0;
+            return markFailedUnless( VarIntUtil::decodeVarUint64( _pData, _byteCount, _offset, value ) ) ? value : 0ull;
         }
-        /** @brief `writeString` 이 쓴 글을 복사 없이 봅니다(버퍼보다 오래 쓰지 않는다). 모자라면 false 입니다. */
-        [[nodiscard]] bool readStringView( string_view& outView )
+        /** @brief 32 비트를 넘지 않아야 하는 가변 길이 정수를 읽습니다. 넘거나 모자라면 0 이고 실패로 표시합니다. */
+        [[nodiscard]] uint32 readVarUint32()
+        {
+            uint32 value = 0;
+            return markFailedUnless( VarIntUtil::decodeVarUint32( _pData, _byteCount, _offset, value ) ) ? value : 0u;
+        }
+        /** @brief 지그재그 가변 길이 정수(`writeVarInt`)를 읽습니다. 깨졌거나 모자라면 0 이고 실패로 표시합니다. */
+        [[nodiscard]] int64 readVarInt()
+        {
+            int64 value = 0;
+            return markFailedUnless( VarIntUtil::decodeVarInt64( _pData, _byteCount, _offset, value ) ) ? value : int64{ 0 };
+        }
+        /** @brief 32 비트를 넘지 않아야 하는 지그재그 가변 길이 정수를 읽습니다. 넘거나 모자라면 0 이고 실패로 표시합니다. */
+        [[nodiscard]] int32 readVarInt32()
+        {
+            int32 value = 0;
+            return markFailedUnless( VarIntUtil::decodeVarInt32( _pData, _byteCount, _offset, value ) ) ? value : int32{ 0 };
+        }
+        /** @brief `writeString` 이 쓴 글을 읽습니다. 모자라면 빈 글이고 실패로 표시합니다. */
+        [[nodiscard]] string readString()
+        {
+            const string_view view = readStringView();
+            return string{ view.data(), view.size() };
+        }
+        /** @brief `writeString` 이 쓴 글을 복사 없이 봅니다(버퍼보다 오래 쓰지 않는다). 모자라면 빈 뷰이고 실패로 표시합니다. */
+        [[nodiscard]] string_view readStringView()
         {
             const uint32 size = readUint32();
-            if ( hasOverflowed() )
-                return false;
-            const uint8* pBytes = size == 0 ? nullptr : consume( size );
-            if ( size > 0 && pBytes == nullptr )
-                return false;
-            outView = size == 0 ? string_view{} : string_view{ reinterpret_cast<const utf8*>( pBytes ), size };
-            return true;
+            if ( hasOverflowed() || size == 0 )
+                return {};
+            const uint8* pBytes = consume( size );
+            return pBytes != nullptr ? string_view{ reinterpret_cast<const utf8*>( pBytes ), size } : string_view{};
         }
-        /** @brief `writeByteVector` 가 쓴 바이트를 읽습니다. 모자라면 비우고 false 입니다. */
-        [[nodiscard]] bool readByteVector( vector<uint8>& outBytes )
+        /** @brief `writeByteVector` 가 쓴 바이트를 읽습니다. 모자라면 빈 목록이고 실패로 표시합니다. */
+        [[nodiscard]] vector<uint8> readByteVector()
         {
-            outBytes.clear();
             const uint32 size = readUint32();
-            if ( hasOverflowed() )
-                return false;
-            if ( size == 0 )
-                return true;
+            if ( hasOverflowed() || size == 0 )
+                return {};
             // 남은 바이트로 먼저 본다 — 깨진 길이 하나가 4 GB 할당을 일으키지 않게 한다.
             const uint8* pBytes = consume( size );
-            if ( pBytes == nullptr )
-                return false;
-            outBytes.assign( pBytes, pBytes + size );
-            return true;
+            return pBytes != nullptr ? vector<uint8>( pBytes, pBytes + size ) : vector<uint8>{};
         }
-        /** @brief @p byteCount 바이트를 복사 없이 봅니다(버퍼보다 오래 쓰지 않는다). 모자라면 false 이고 넘침으로 표시합니다. */
-        [[nodiscard]] bool readView( size_t byteCount, const uint8*& outBytes )
-        {
-            outBytes = byteCount == 0 ? _pData : consume( byteCount );
-            return byteCount == 0 || outBytes != nullptr;
-        }
+        /**
+         * @brief @p byteCount 바이트를 복사 없이 봅니다(버퍼보다 오래 쓰지 않는다). 모자라면 nullptr 이고 실패로 표시합니다.
+         * @details 0 바이트는 지금 자리를 돌려준다(빈 버퍼면 nullptr) — 실패는 반환값이 아니라 `hasOverflowed()` 로 본다.
+         */
+        [[nodiscard]] const uint8* readView( size_t byteCount ) { return byteCount == 0 ? _pData + _offset : consume( byteCount ); }
         /**
          * @brief 원소 @p declaredCount 개(하나가 적어도 @p minElementBytes 바이트)가 남은 바이트로 담길 수 있는지 봅니다. 없으면 넘침으로 표시하고 false 입니다.
          * @details 목록 읽기가 맞지 않는 자리(맵 · 글 묶음에 넣기)의 문지기입니다. 할당은 이 답을 본 뒤에만 합니다.
@@ -247,16 +256,13 @@ namespace sw
             return markFailedUnless( hasOverflowed() == false && canHoldCount( declaredCount, minElementBytes, getRemainingByteCount() ) );
         }
         /**
-         * @brief 원소 개수(uint32)를 읽습니다. 원소 하나가 파일에서 적어도 @p minElementBytes 바이트이므로 남은 바이트로 담을 수 없는 개수면 넘침으로 표시하고 false 입니다.
-         * @details 파일이 적은 개수로 맵 · 글 묶음처럼 목록 읽기가 맞지 않는 자리를 채울 때의 입구다(`Archive::readCount` 와 한 계산). 할당은 이 답을 본 뒤에만 한다.
+         * @brief 원소 개수(uint32)를 읽습니다. 원소 하나가 파일에서 적어도 @p minElementBytes 바이트이므로 남은 바이트로 담을 수 없는 개수면 0 이고 실패로 표시합니다.
+         * @details 파일이 적은 개수로 맵 · 글 묶음처럼 목록 읽기가 맞지 않는 자리를 채울 때의 입구다(`Archive::readCount` 와 한 계산). 할당은 `hasOverflowed()` 를 본 뒤에만 한다.
          */
-        [[nodiscard]] bool readCount( size_t minElementBytes, uint32& outCount )
+        [[nodiscard]] uint32 readCount( size_t minElementBytes )
         {
             const uint32 declaredCount = readUint32();
-            if ( canHold( declaredCount, minElementBytes ) == false )
-                return false;
-            outCount = declaredCount;
-            return true;
+            return canHold( declaredCount, minElementBytes ) ? declaredCount : 0u;
         }
         /**
          * @brief 파일이 적은 개수만큼 목록을 읽습니다. 개수를 남은 바이트로 먼저 거른 뒤에 자리를 잡고, 원소마다 @p readElement 를 부릅니다.
@@ -310,12 +316,15 @@ namespace sw
             outList.resize( static_cast<size_t>( declaredCount ) );
             return readBytes( reinterpret_cast<uint8*>( outList.data() ), static_cast<size_t>( declaredCount ) * sizeof( TElement ) );
         }
-        /** @brief `writePod` 가 쓴 값을 읽습니다. 모자라면 false 이고 @p outValue 는 그대로입니다. */
+        /** @brief `writePod` 가 쓴 값을 읽습니다. 모자라면 값 초기화한 `T` 이고 실패로 표시합니다. */
         template <typename T>
-        [[nodiscard]] bool readPod( T& outValue )
+        [[nodiscard]] T readPod()
         {
             static_assert( std::is_trivially_copyable_v<T>, "readPod copies bytes - T must be trivially copyable" );
-            return readBytes( reinterpret_cast<uint8*>( &outValue ), sizeof( T ) );
+            T value{};
+            if ( const uint8* pBytes = consume( sizeof( T ) ) )
+                Memory::copy( reinterpret_cast<uint8*>( &value ), pBytes, sizeof( T ) );
+            return value;
         }
 
         /** @brief 값이 형식에 맞지 않으면(길이 상한을 넘은 글 등) 부르는 쪽이 실패로 표시합니다. 바이트 부족과 같은 끈적한 실패입니다. */
