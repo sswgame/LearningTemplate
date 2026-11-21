@@ -63,8 +63,10 @@ namespace sw
      *          3. 어빌리티는 이펙트 스펙(`makeOutgoingSpec`)을 만들어 자기 자신이나 다른 오브젝트에 적용한다(`applyGameplayEffectSpecToTarget`).
      *          4. 게임은 델리게이트(어트리뷰트, 태그, 큐, 이벤트)나 "game" 채널(`AbilityPresentationEvent`, `AbilityOwnerDiedEvent`)로 반응한다.
      *
-     *          **시간**: 컴포넌트 틱이 `advanceTime( 프레임 시간 )` 을 부른다. 턴제 게임은 틱을 끄고(`setCanEverTick( false )`) 턴마다
-     *          `advanceTime( 1 )` 을 부르면 된다. 그러면 지속 시간, 주기, 쿨다운이 턴 단위가 된다. 테스트도 이 함수로 시간을 진행한다.
+     *          **시간**: 컴포넌트 틱이 `advanceTime( 프레임 시간 )` 을 부른다. 시간으로 움직일 것(기간 · 주기 이펙트 — 쿨다운 포함, 켜진 어빌리티와 그 작업)이
+     *          없으면 주 틱을 끄고 생기면 켠다(`refreshTickEnabled` — 이펙트 · 어빌리티가 붙고 떨어지는 자리에서만 부른다). 그래서 쉬는 동안 `getTime` 은 멈춘다.
+     *          턴제 게임은 `setManualTime( true )` 로 틱을 늘 끄고 턴마다 `advanceTime( 1 )` 을 부르면 된다. 그러면 지속 시간, 주기, 쿨다운이 턴 단위가 된다.
+     *          테스트도 이 함수로 시간을 진행한다.
      *
      *          **스레드**: 컴포넌트 틱은 오브젝트마다 병렬 워커에서 돈다. 자기 상태(시간, 자기 이펙트, 자기 어빌리티)는 바로 바꾼다.
      *          **다른 오브젝트에** 이펙트를 걸거나 이벤트를 보내면(`applyGameplayEffectSpecToTarget`, `sendGameplayEventToTarget`) 틱이 끝난 직후로 미룬다.
@@ -112,12 +114,7 @@ namespace sw
          * @details 남이 건 델리게이트(HP 바 · UI 의 어트리뷰트 변화 구독)는 오브젝트와 함께 사는 것이라 그대로 둔다. 코드가 준 세트(`grantAbilitySet`)는 꺼낸 쪽이 다시 준다.
          */
         [[nodiscard]] SpawnStateReset resetToSpawnState() override;
-        /**
-         * @brief 모듈 @p moduleName 을 내리기 전에 그 모듈 타입(`getTypeInfo` 의 모듈 이름)의 어빌리티 · 어트리뷰트 세트와, 그 모듈의 실행 계산을 쓰는 이펙트를 놓습니다.
-         * @details 모듈을 다시 올리면 `_abilitySetID` 가 어빌리티를 다시 준다. 게임이 건 델리게이트는 게임이 든 구독이 게임과 함께 푼다.
-         */
-        void onModuleUnloading( string_view moduleName ) override;
-        void onTick( TickContext& context ) override;
+        void                          onTick( TickContext& context ) override;
         /**
          * @brief `ComponentStateStore` 계약입니다. 어트리뷰트 base, 걸린 이펙트(정의 id · 남은 시간 · 스택 · 계산해 둔 모디파이어), 이펙트 밖 태그를 놓습니다.
          * @details 읽기는 끝까지 맞고 세트 · 카탈로그와도 맞을 때만 한 번에 적용한다(`applySaveState`). 맞지 않으면 아무것도 바꾸지 않고 거절한다.
@@ -131,8 +128,10 @@ namespace sw
         // --------------------------------------------------------------------------
         /** @brief 시간을 @p deltaTime 만큼 진행합니다. 주기 이펙트 실행, 지속 이펙트 만료, 어빌리티와 작업의 틱을 처리합니다. 0 이하이면 아무것도 하지 않습니다. */
         void advanceTime( float32 deltaTime );
-        /** @brief 이 컴포넌트가 지금까지 진행한 시간입니다. */
+        /** @brief 이 컴포넌트가 지금까지 진행한 시간입니다. 시간으로 움직일 것이 없는 동안은 틱이 꺼져 멈춥니다. */
         float32 getTime() const { return _time; }
+        /** @brief true 면 주 틱을 늘 끄고 게임이 `advanceTime` 으로 시간을 넣습니다(턴제). false(기본)면 시간으로 움직일 것이 있을 때만 틱합니다. */
+        void setManualTime( bool bManualTime );
 
         /** @brief id 로 이펙트, 어빌리티, 세트를 찾을 카탈로그를 정합니다. nullptr 이면 게임 서비스(`game::findSubsystem<const AbilityCatalog>()`)를 씁니다. */
         void setCatalog( const AbilityCatalog* pCatalog ) { _pCatalog = pCatalog; }
@@ -423,6 +422,12 @@ namespace sw
         void refreshOngoingTagRequirements();
         /** @brief 가진 태그가 생기거나 사라질 때 부릅니다(`_ownedTagCounts` 구독). 걸린 동안의 조건을 다시 보고, 생긴 태그로 발동하는 어빌리티를 발동합니다. */
         void onOwnedTagChanged( TagID tag, int32 newCount );
+        /**
+         * @brief 모듈 @p moduleName 을 내리기 전에 그 모듈 타입(`getTypeInfo` 의 모듈 이름)의 어빌리티 · 어트리뷰트 세트와, 그 모듈의 실행 계산을 쓰는 이펙트를 놓습니다.
+         * @details 모듈 내림 알림(`TypeRegistry::subscribeModuleUnloading`, 등록된 동안 구독)이 부른다. 모듈을 다시 올리면 `_abilitySetID` 가 어빌리티를 다시 준다.
+         *          게임이 건 델리게이트는 게임이 든 구독이 게임과 함께 푼다.
+         */
+        void onModuleUnloading( string_view moduleName );
         /** @brief 적용된 이펙트를 찾습니다. 지우는 중인 것은 제외합니다. */
         ActiveGameplayEffect* findActiveEffectMutable( ActiveEffectHandle handle );
         /** @brief 같은 정의로 걸려 있는 스택 이펙트를 찾습니다. */
@@ -435,6 +440,10 @@ namespace sw
         void playCueDef( TagID cueTag, AbilityPresentationPhase phase ) const;
         /** @brief 지우라고 표시된 이펙트와 스펙을 실제로 지웁니다. 잠금이 풀렸을 때만 실행합니다. */
         void compactPendingRemovals();
+        /** @brief 시간으로 움직일 것(지우는 중이 아닌 기간 · 주기 이펙트, 켜진 어빌리티)이 있으면 true 입니다. */
+        bool needsTick() const;
+        /** @brief 주 틱을 `needsTick` 에 맞춥니다. 이펙트를 더하고 빼는 곳 · 어빌리티가 켜지고 끝나는 곳에서만 부릅니다(언리얼 GAS 의 이펙트 컨테이너가 타이머를 거는 자리). */
+        void refreshTickEnabled();
 
         // ---- 어트리뷰트 ----
         /** @brief 어트리뷰트 하나의 current 를 base 와 적용된 이펙트로 다시 집계하고, 바뀌었으면 알립니다. 상태를 적용하는 동안(`_bRestoringState`)에는 미룹니다. */
@@ -489,8 +498,9 @@ namespace sw
         ActiveEffectContainer                                                                           _activeEffects;
         AbilitySpecContainer                                                                            _abilitySpecs;
         TagCountTable                                                                                   _ownedTagCounts;
-        Subscription                                                                                    _ownedTagSubscription;    ///< `_ownedTagCounts` 의 변화를 자기가 듣는 구독(`onOwnedTagChanged`)
-        TagCountTable                                                                                   _blockedAbilityTagCounts; ///< `_blockAbilitiesWithTags` 가 막은 어빌리티 태그(알림 없이 센다)
+        Subscription                                                                                    _ownedTagSubscription;        ///< `_ownedTagCounts` 의 변화를 자기가 듣는 구독(`onOwnedTagChanged`)
+        Subscription                                                                                    _moduleUnloadingSubscription; ///< 등록된 동안 모듈 내림을 듣는 구독(`onModuleUnloading`)
+        TagCountTable                                                                                   _blockedAbilityTagCounts;     ///< `_blockAbilitiesWithTags` 가 막은 어빌리티 태그(알림 없이 센다)
         unordered_map<hashed_string, unique_ptr<MulticastDelegate<void( const AttributeChangeData& )>>> _mapAttributeChangedMulticast;
         unordered_map<uint64, unique_ptr<MulticastDelegate<void( const AbilityEventData& )>>>           _mapGameplayEventMulticast;
         MulticastDelegate<void( const AttributeChangeData& )>                                           _anyAttributeChangedMulticast;
@@ -511,6 +521,8 @@ namespace sw
         uint8                                                                                           _bHasPendingRemoval;
         uint8                                                                                           _bRefreshingOngoingTags; ///< `refreshOngoingTagRequirements` 안이다 — 그 안에서 바뀐 태그로 다시 들어가지 않는다
         uint8                                                                                           _bRestoringState;        ///< `applySaveState` 안이다 — 집계 · 태그 반응 · 피해 숫자를 미룬다
+        uint8                                                                                           _bWantsTick;             ///< 마지막으로 요청한 주 틱 — 틱 중 요청은 미뤄져 `canEverTick` 이 늦게 바뀌므로 요청 값과 견준다
+        uint8                                                                                           _bManualTime;            ///< `setManualTime` — 틱을 늘 끈다
         vector<uint8>                                                                                   _pendingStateBytes;      ///< 플레이 시작 전에 받은 상태(`restoreState`)
 
         // ---- 저장되는 설정 ----

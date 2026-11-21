@@ -11,6 +11,9 @@
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Service/MatchServerAgent.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Service/MatchmakingServer.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Service/PartyLobbyService.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Identity/AccountPresence.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Identity/AccountStatSource.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Identity/GroupChannelMembership.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerConfig.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerKit.h"
 #include "GameFramework/Runtime/Online/Service/Server/OnlineServiceHost.h"
@@ -28,7 +31,7 @@ namespace sw
          * @class MatchmakingOnlineServerKit
          * @brief 매칭 키트의 서버 조립입니다.
          */
-        class MatchmakingOnlineServerKit final : public IOnlineServerKit
+        class MatchmakingOnlineServerKit final : public OnlineServerKit<OnlineKitRequired<>, OnlineKitOptional<IAccountStatSource, IAccountPresence, IGroupChannelMembership>>
         {
         public:
             MatchmakingOnlineServerKit()
@@ -46,7 +49,7 @@ namespace sw
             {
             }
 
-            [[nodiscard]] expected<void> initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry ) override
+            [[nodiscard]] expected<void> initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, const Dependencies& ) override
             {
                 MatchmakingKitConfig kitConfig;
                 if ( expected<void> result = entry.readSettings( kitConfig ); result.has_value() == false )
@@ -77,7 +80,7 @@ namespace sw
                 { return exposeInterface<IMatchBackfillSender>( context, entry, _backfill ); } );
             }
 
-            expected<void> start( OnlineServerKitContext& context ) override
+            expected<void> start( OnlineServerKitContext& context, const Dependencies& interfaces, const UnorderedDependencies& ) override
             {
                 if ( context._pRouter == nullptr )
                     return unexpected( Error{ ErrorKind::InvalidArgument, "matchmaking needs a cache (authority leases and server lists)" } );
@@ -90,17 +93,17 @@ namespace sw
                 dependencies._serverID             = context._serverID;
                 dependencies._cancelConfirmWaitMs  = _cancelConfirmWaitMs;
                 dependencies._seatReservationTTLMs = static_cast<int64>( context._pConfig->_seatReservationSeconds ) * constant::time::kMillisecondsPerSecond;
-                dependencies._pStatSource          = context._kits.find<IAccountStatSource>(); // 실력 모드의 통계이다. 순위표 키트가 없으면 실력 모드는 기동 오류다
+                dependencies._pStatSource          = interfaces.find<IAccountStatSource>(); // 실력 모드의 통계이다. 순위표 키트가 없으면 실력 모드는 기동 오류다
                 if ( _queue.initialize( dependencies, _listMode ) == false )
                 {
                     _partyLobby.shutdown(); // 실패한 start 는 `stop` 이 보지 않으므로 세운 파티 · 로비를 여기서 내린다
                     return unexpected( Error{ ErrorKind::InvalidArgument, "matchmaking has a rated mode but the leaderboard kit (stat source) is not assembled" } );
                 }
                 if ( _bGameServer == SW_TRUE )
-                    _agent.startReading( context._pRouter );                                                                                                                // 대기열이 남긴 명단 기록을 읽는다(버스 배정은 잃을 수 있다)
-                _server.initialize( &_partyLobby, &_queue, _bGameServer == SW_TRUE ? &_agent : nullptr, context._kits.find<IAccountPresence>(), context._pMetricRegistry ); // 배정 구독 · 시한은 서버가 돈다
+                    _agent.startReading( context._pRouter );                                                                                                             // 대기열이 남긴 명단 기록을 읽는다(버스 배정은 잃을 수 있다)
+                _server.initialize( &_partyLobby, &_queue, _bGameServer == SW_TRUE ? &_agent : nullptr, interfaces.find<IAccountPresence>(), context._pMetricRegistry ); // 배정 구독 · 시한은 서버가 돈다
                 _server.setReconnectGrace( _reconnectGraceMs );
-                _server.setGroupChannels( context._kits.find<IGroupChannelMembership>() );
+                _server.setGroupChannels( interfaces.find<IGroupChannelMembership>() );
                 return {};
             }
 
@@ -124,13 +127,6 @@ namespace sw
                 _agent.shutdown();
                 _queue.shutdown();
                 _partyLobby.shutdown();
-            }
-
-            span<const utf8* const> getOptionalKits() const override
-            {
-                // 접속 상태, 실력 모드의 통계, 파티 채널 멤버
-                static constexpr const utf8* kArrKit[] = { OnlineServerKitName::kAccount, OnlineServerKitName::kLeaderboard, OnlineServerKitName::kChat };
-                return kArrKit;
             }
 
         private:

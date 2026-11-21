@@ -51,21 +51,46 @@ namespace sw
 
             const unordered_set* _pSet;
             size_t               _index;
+#if defined( SW_DO_CHECKS )
+            uint32 _generation; ///< 만들 때의 표 세대(`DenseHashTable::assertIteratorGeneration`)
+#endif
 
             iterator( const unordered_set* pSet, size_t index )
                 : _pSet{ pSet }
-                , _index{ index } {}
+                , _index{ index }
+#if defined( SW_DO_CHECKS )
+                , _generation{ pSet != nullptr ? pSet->getIteratorGeneration() : 0u }
+#endif
+            {
+            }
 
             iterator& operator++()
             {
+                assertGeneration();
                 ++_index;
                 return *this;
             }
 
             bool      operator==( const iterator& other ) const { return _index == other._index; }
             bool      operator!=( const iterator& other ) const { return _index != other._index; }
-            reference operator*() const { return std::as_const( _pSet->_listDenseData )[_index]._key; }
-            pointer   operator->() const { return &std::as_const( _pSet->_listDenseData )[_index]._key; }
+            reference operator*() const
+            {
+                assertGeneration();
+                return std::as_const( _pSet->_listDenseData )[_index]._key;
+            }
+            pointer operator->() const
+            {
+                assertGeneration();
+                return &std::as_const( _pSet->_listDenseData )[_index]._key;
+            }
+
+        private:
+            void assertGeneration() const noexcept
+            {
+#if defined( SW_DO_CHECKS )
+                _pSet->assertIteratorGeneration( _generation );
+#endif
+            }
         };
 
         using const_iterator = iterator; // 집합의 이터레이터는 언제나 const 다

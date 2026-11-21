@@ -2,6 +2,7 @@
 
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Environment/Fog/FogComponent.h"
 #include "Engine/Environment/Fog/FogSettings.h"
 #include "Engine/Environment/SceneEnvironment.h"
 #include "Engine/Environment/Sky/SkyComponent.h"
@@ -10,20 +11,6 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
 using namespace sw;
-
-namespace
-{
-    struct SceneEnvironmentTestUtil
-    {
-        /** @brief 늘 안개를 내는 시험 원천입니다(밀도로 누가 답했는지 가린다). */
-        static bool writeTestFog( const float3& /*viewPosition*/, FogSettings& outSettings )
-        {
-            outSettings          = FogSettings{};
-            outSettings._density = 0.25f;
-            return true;
-        }
-    };
-} // namespace
 
 /**
  * @brief [SceneEnvironmentTest] 렌더러가 읽는 하늘 칸이 하늘 찾기와 같은 답을 낸다 — 하늘이 없으면 false, 활성 하늘이 있으면 그 값이다(에디터 정지 중에도 묻는 칸이라 새 값)
@@ -45,22 +32,21 @@ SW_TEST_CASE( SceneEnvironmentTest, SkySlotMatchesTheComponentLookup )
 }
 
 /**
- * @brief [SceneEnvironmentTest] 안개 칸은 맡는 쪽이 하나다 — 묶인 칸에 둘째를 묶으면 거절하고, 비운 뒤 묶은 원천이 답한다
- * @details 변이: `bindFogSource` 의 이미 묶임 검사를 빼면 첫 단언(거절)이 진다.
+ * @brief [SceneEnvironmentTest] 렌더러가 읽는 안개가 안개 찾기와 같은 답을 낸다 — 안개가 없으면 false, 안개 컴포넌트가 있으면 그 값이다
+ * @details 변이: `findFog` 가 컴포넌트를 찾지 않으면 둘째 단언이 진다.
  */
-SW_TEST_CASE( SceneEnvironmentTest, SecondFogSourceIsRejectedUntilUnbound )
+SW_TEST_CASE( SceneEnvironmentTest, FogMatchesTheComponentLookup )
 {
     GameObjectManager       manager;
-    SceneEnvironment&       environment = manager.getSubsystem<SceneEnvironment>();
-    const FogSourceDelegate source      = SW_DELEGATE_FUNCTION( FogSourceDelegate, &SceneEnvironmentTestUtil::writeTestFog );
-
-    SW_EXPECT_LOG( "Environment.FogSourceAlreadyBound" );
-    SW_EXPECT_FALSE( environment.bindFogSource( source ) );
-
-    environment.unbindFogSource();
-    FogSettings settings;
+    const SceneEnvironment& environment = manager.getSubsystem<SceneEnvironment>();
+    FogSettings             settings;
     SW_EXPECT_FALSE( environment.findFog( float3{}, settings ) );
-    SW_REQUIRE_TRUE( environment.bindFogSource( source ) );
+
+    GameObject*   pObject = manager.createGameObject( hashed_string( "Fog" ) );
+    FogComponent* pFog    = pObject != nullptr ? pObject->addComponent<FogComponent>() : nullptr;
+    SW_REQUIRE_NOT_NULL( pFog );
+    pFog->setDensity( 0.25f );
+
     SW_EXPECT_TRUE( environment.findFog( float3{}, settings ) );
     SW_EXPECT_NEAR( 0.25f, settings._density, 1.0e-6f );
 }

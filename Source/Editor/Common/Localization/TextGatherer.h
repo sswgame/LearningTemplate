@@ -9,7 +9,7 @@
  *          - 수집기가 넣었던 줄(`origins` 가 있는 줄)이 이번에 나오지 않으면 지운다(removed). 손으로 넣은 줄(`origins` 없음)은 두고, 참조되면 위치를 단다.
  */
 #pragma once
-#include "Core/Container/map.h"
+#include "Core/Container/flat_map.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
@@ -119,9 +119,9 @@ namespace sw
         GatheredText& getOrAddText( string_view key, GatheredTextKind kind, string_view origin, bool& outAdded );
 
     private:
-        vector<GatheredText>    _listText;
-        map<string, size_t>     _mapTextIndex;
-        vector<TextGatherIssue> _listIssue;
-        uint32                  _fileCount;
+        vector<GatheredText>     _listText;
+        flat_map<string, size_t> _mapTextIndex;
+        vector<TextGatherIssue>  _listIssue;
+        uint32                   _fileCount;
     };
 } // namespace sw

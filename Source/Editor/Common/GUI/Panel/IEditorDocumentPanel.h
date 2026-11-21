@@ -39,6 +39,11 @@ namespace sw::editor
          */
         bool isDocumentDirty() const { return _bDocumentDirty; }
         /**
+         * @brief 마지막 편집 알림이 문서 전체 글을 만든 시간(us)입니다(감시 값 `Editor.DocumentCaptureUs`). 만든 적이 없으면 0 입니다.
+         * @details 되돌리기의 차이 저장(편집당 1 ms 초과 또는 기록 16 MB 초과 때)을 판정할 재는 장치다 — 단계는 이미 바뀐 구간만 들고 글은 한 벌만 든다.
+         */
+        uint64 getLastCaptureMicroseconds() const { return _lastCaptureMicroseconds; }
+        /**
          * @brief `saveDocument()` 를 호출하고 성공했을 때만 dirty 를 지웁니다.
          * @details 모든 저장 경로가 이 함수를 거친다. 파생 클래스가 각자 구현하면 실패해도 dirty 를 지워 편집이 조용히 사라지거나, 성공해도 계속 미저장으로 남는다.
          *          저장이 쓸 파일(`collectFilesToSave`) 중 하나라도 읽기 전용(버전 관리가 잠그지 않음)이면 `saveDocument` 를 부르지 않고 알린다 — 씬 저장 · 옮기기 · 삭제와 같은 확인(`EditorContentWrite::warnIfReadOnly`)이다.
@@ -112,6 +117,7 @@ namespace sw::editor
             : IEditorPanel{ bOpenByDefault }
             , _bDocumentDirty{ SW_FALSE }
             , _bConfirmClose{ SW_FALSE }
+            , _lastCaptureMicroseconds{ 0 }
         {
         }
 
@@ -157,7 +163,8 @@ namespace sw::editor
         void drawCloseConfirm();
 
     private:
-        uint8 _bDocumentDirty : 1;
-        uint8 _bConfirmClose  : 1; ///< 닫으려다 미저장 확인을 기다리는 중
+        uint8  _bDocumentDirty : 1;
+        uint8  _bConfirmClose  : 1;      ///< 닫으려다 미저장 확인을 기다리는 중
+        uint64 _lastCaptureMicroseconds; ///< `getLastCaptureMicroseconds` — 문서 패널 기반(`EditorDocumentPanel`)이 편집 알림의 글 만들기를 잰다
     };
 } // namespace sw::editor

@@ -11,6 +11,7 @@
 #include "Engine/Graphics/RHI/Backend/RHIBufferSizeUtil.h"
 #include "Engine/Graphics/RHI/Backend/RHIShaderRequest.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
+#include "Engine/Graphics/RHI/RHICompiledShaderStages.h"
 #include "Engine/Graphics/RHI/RHIFormatInfo.h"
 #include "Engine/Graphics/RHI/RHIMeshVertexLayout.h"
 #include "Engine/Graphics/RHI/RHIPipelineStateDesc.h"
@@ -847,7 +848,7 @@ namespace sw
 
         // 소스 복사는 전송 락 밖에서 한다(계약 1: 반환 전에 소스를 복사한다).
         VkBufferImageCopy arrRegion[constant::render::kMaxTextureMipCount]{};
-        uint64            ringOffset = span._offsetBytes;
+        uint64            ringOffset = span.getOffsetBytes();
         for ( uint32 mip = 0; mip < mipCount; ++mip )
         {
             const RHITextureMipSpan& mipSpan = arrMip[mip];
@@ -923,7 +924,7 @@ namespace sw
         const RHISubmitResult               allocateResult = _pDevice->allocateStagingSpan( ring, usedBytes + copyAlignment, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, "submitTextureRegionUpload", span );
         if ( allocateResult != RHISubmitResult::Accepted )
             return RHITransferSubmit::fromUnaccepted( allocateResult );
-        const uint64 ringOffset = alignUpToMultiple( span._offsetBytes, copyAlignment );
+        const uint64 ringOffset = alignUpToMultiple( span.getOffsetBytes(), copyAlignment );
         Memory::copy( ring.getSpanMappedBase( span ) + ringOffset, desc._pData, static_cast<size_t>( usedBytes ) );
 
         ScopedLock<mutex> transferLock{ _pDevice->_transferMutex };
@@ -993,7 +994,7 @@ namespace sw
         VulkanRHIDevice::VulkanStagingRing& ring = _pDevice->_readbackRing;
         outBytes.resize( pending._sizeBytes );
         Memory::copy( outBytes.data(), ring.getSpanMappedBase( pending._span ) + pending._dataOffsetBytes, pending._sizeBytes );
-        RHITextureTransferDriver::releaseTakenReadback( ring._allocator, pending._span );
+        RHITextureTransferDriver::releaseTakenReadback( ring._allocator, std::move( pending._span ) );
         if ( pending._depth24TexelCount != 0 )
             convertRHIDepth24ToFloat( outBytes.data(), pending._depth24TexelCount );
         return true;
@@ -1007,7 +1008,7 @@ namespace sw
         if ( _pDevice->_readbackTable.take( ticket._serial, pending ) == false )
             return; // 업로드 티켓이거나 이미 가져감 · 버림이다 — 계약상 아무 일도 하지 않는다
         // 끝나지 않은 복사는 아직 이 구간에 쓴다. 시리얼을 붙여 워터마크가 지난 뒤에 돌아오게 한다(다음 되읽기가 같은 자리를 받지 않는다).
-        RHITextureTransferDriver::releaseDiscardedReadback( _pDevice->_readbackRing._allocator, pending._span, _pDevice->_transferSerials, ticket._serial );
+        RHITextureTransferDriver::releaseDiscardedReadback( _pDevice->_readbackRing._allocator, std::move( pending._span ), _pDevice->_transferSerials, ticket._serial );
     }
 
     RHIFormat VulkanRHIResourceFactory::getTextureFormat( RHITextureHandle texture ) const
@@ -1087,7 +1088,7 @@ namespace sw
         const RHISubmitResult               allocateResult = _pDevice->allocateStagingSpan( ring, outLayout._sizeBytes + copyAlignment, VK_BUFFER_USAGE_TRANSFER_DST_BIT, "submitTextureReadback", span );
         if ( allocateResult != RHISubmitResult::Accepted )
             return RHITransferSubmit::fromUnaccepted( allocateResult );
-        const uint64 ringOffset = alignUpToMultiple( span._offsetBytes, copyAlignment );
+        const uint64 ringOffset = alignUpToMultiple( span.getOffsetBytes(), copyAlignment );
 
         ScopedLock<mutex> transferLock{ _pDevice->_transferMutex };
         VkImageLayout     layoutAfter{ VK_IMAGE_LAYOUT_UNDEFINED }; // 기록이 정하고 레코드 갱신이 읽는다
@@ -1158,11 +1159,11 @@ namespace sw
             pRecord->_lastReadbackSerial.store( serial );
 
             VulkanRHIDevice::VulkanPendingReadback pending{};
-            pending._span              = span;
+            pending._span              = std::move( span );
             pending._dataOffsetBytes   = ringOffset;
             pending._sizeBytes         = outLayout._sizeBytes;
             pending._depth24TexelCount = ( bDepth && static_cast<VkFormat>( pRecord->_format ) == VK_FORMAT_D24_UNORM_S8_UINT ) ? outLayout._width * outLayout._height : 0u;
-            _pDevice->_readbackTable.add( serial, pending );
+            _pDevice->_readbackTable.add( serial, std::move( pending ) );
         } );
     }
 
@@ -1501,7 +1502,7 @@ namespace sw
     }
 
     // 길이 유지(긴 함수 정리 기준): 파이프라인 상태 서술을 단계 순서로 채운 뒤 만드는 선형 목록이라 나누지 않는다.
-    RHIPipelineStateHandle VulkanRHIResourceFactory::createPipelineStateNative( const RHIPipelineStateDesc& desc )
+    RHIPipelineStateHandle VulkanRHIResourceFactory::createPipelineStateNative( const RHIPipelineStateDesc& desc, const RHICompiledGraphicsStages& stages )
     {
         // 와이어프레임 채우기는 디바이스 기능 fillModeNonSolid 가 있어야 한다. 없으면 솔리드로 바꾸지 않고 셰이더 모듈을 만들기 전에 거절한다(아래 래스터 상태 주석).
         const RenderState& renderState = desc._renderState;
@@ -1516,18 +1517,13 @@ namespace sw
             SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.CreatePipelineStateDepthClampNeeds", "createPipelineState: turning depth clip off needs the depthClamp device feature ('%#')", desc._vertexShaderPath );
             return 0;
         }
-        // 서술체 해석(진입점 기본값 · define · 깊이 전용 판정 · RT 수)은 RHIShaderRequest 하나가 한다. 백엔드는 받기만 한다.
-        // 백엔드가 desc 를 직접 읽으면 define(SW_FORWARD · 머티리얼 퍼뮤테이션 · SW_VIEWMODE_UNLIT)을 빠뜨려도 조용히 어긋난다.
-        const RHIGraphicsShaderRequest request         = RHIShaderRequest::resolveGraphics( desc, ShaderTargetFormat::SPIRV_Vulkan );
-        const ShaderCompileDesc&       vsDesc          = request._vertex;
-        const ShaderCompileDesc&       psDesc          = request._pixel;
-        const bool                     bHasPixelShader = request._bHasPixelShader != SW_FALSE;
-        ShaderCompileResult            vsResult{};
-        ShaderCompileResult            psResult{};
-        if ( RHIShaderRequest::compileGraphics( request, vsResult, psResult ) == false )
+        // 서술체 해석 · 컴파일 · 정점 리플렉션 · 선택 스테이지 능력 거절은 앞단(`IRHIResourceFactory::createPipelineState`)이 끝냈다. 여기서는 모듈과 파이프라인만 만든다.
+        const RHICompiledShaderStage& vsStage         = stages._vertex;
+        const RHICompiledShaderStage& psStage         = stages._pixel;
+        const bool                    bHasPixelShader = stages._bHasPixelShader != SW_FALSE;
+        if ( stages._bHasVertexShader == SW_FALSE )
         {
-            SW_LOG_WARNING_ID( "VulkanRHIResourceFactory.CreatePipelineStateShaderCompileFailed", "createPipelineState: shader compile failed (vs=%# ps=%#)",
-                               vsResult._bSuccess, psResult._bSuccess );
+            SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.CreatePipelineStateNoVertexShader", "createPipelineState: a graphics PSO needs a vertex shader" );
             return 0;
         }
 
@@ -1539,8 +1535,8 @@ namespace sw
 
         VkShaderModuleCreateInfo vsInfo{};
         vsInfo.sType    = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-        vsInfo.codeSize = vsResult._bytecode.size();
-        vsInfo.pCode    = reinterpret_cast<const uint32*>( vsResult._bytecode.data() );
+        vsInfo.codeSize = vsStage._bytecode.size();
+        vsInfo.pCode    = reinterpret_cast<const uint32*>( vsStage._bytecode.data() );
         // 모듈을 못 만들면 PSO 도 만들지 않는다(핸들 0). 결과를 보지 않으면 빈 모듈로 파이프라인을 만들려다 검증 오류 · 드라이버 크래시가 된다.
         VkShaderModule vertShaderModule{ VK_NULL_HANDLE };
         if ( vkCreateShaderModule( _pDevice->_device, &vsInfo, nullptr, &vertShaderModule ) != VK_SUCCESS || vertShaderModule == VK_NULL_HANDLE )
@@ -1554,8 +1550,8 @@ namespace sw
         {
             VkShaderModuleCreateInfo psInfo{};
             psInfo.sType    = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-            psInfo.codeSize = psResult._bytecode.size();
-            psInfo.pCode    = reinterpret_cast<const uint32*>( psResult._bytecode.data() );
+            psInfo.codeSize = psStage._bytecode.size();
+            psInfo.pCode    = reinterpret_cast<const uint32*>( psStage._bytecode.data() );
             if ( vkCreateShaderModule( _pDevice->_device, &psInfo, nullptr, &fragShaderModule ) != VK_SUCCESS || fragShaderModule == VK_NULL_HANDLE )
             {
                 vkDestroyShaderModule( _pDevice->_device, vertShaderModule, nullptr );
@@ -1570,7 +1566,7 @@ namespace sw
         vertShaderStageInfo.module = vertShaderModule;
         // 컴파일에 쓴 진입점과 같은 이름이어야 한다. "VSMain" 으로 박으면 파이프라인 XML 이 다른 진입점을 쓰는 순간
         // Vulkan 만 파이프라인 생성에 실패한다(desc 는 이 함수가 끝날 때까지 살아 있다).
-        vertShaderStageInfo.pName = vsDesc._entryPoint.c_str();
+        vertShaderStageInfo.pName = vsStage._entryPoint.c_str();
 
         VkPipelineShaderStageCreateInfo fragShaderStageInfo{};
         if ( bHasPixelShader )
@@ -1578,14 +1574,10 @@ namespace sw
             fragShaderStageInfo.sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
             fragShaderStageInfo.stage  = VK_SHADER_STAGE_FRAGMENT_BIT;
             fragShaderStageInfo.module = fragShaderModule;
-            fragShaderStageInfo.pName  = psDesc._entryPoint.c_str();
+            fragShaderStageInfo.pName  = psStage._entryPoint.c_str();
         }
 
-        // 선택 스테이지(지오메트리 · 헐 · 도메인). 진입점 글은 요청이 이 함수 끝까지 들고 있다.
-        ShaderCompileResult             gsResult{};
-        ShaderCompileResult             hsResult{};
-        ShaderCompileResult             dsResult{};
-        const bool                      bOptionalUnsupported = ( request._bHasGeometryShader != SW_FALSE && _pDevice->_bGeometryShader == 0 ) || ( request._bHasTessellation != SW_FALSE && _pDevice->_bTessellationShader == 0 );
+        // 선택 스테이지(지오메트리 · 헐 · 도메인). 진입점 글은 `stages` 가 이 함수 끝까지 들고 있다. 장치 기능이 없는 스테이지는 앞단이 기동 능력으로 이미 거절했다.
         VkPipelineShaderStageCreateInfo arrShaderStage[5]{};
         uint32                          shaderStageCount{ 0 };
         arrShaderStage[shaderStageCount++] = vertShaderStageInfo;
@@ -1603,12 +1595,12 @@ namespace sw
                 vkDestroyShaderModule( _pDevice->_device, arrOptionalModule[moduleIndex], nullptr );
             }
         };
-        const auto addOptionalStage = [&]( VkShaderStageFlagBits stage, const ShaderCompileResult& result, const ShaderCompileDesc& stageDesc )
+        const auto addOptionalStage = [&]( VkShaderStageFlagBits stage, const RHICompiledShaderStage& stageDesc )
         {
             VkShaderModuleCreateInfo moduleInfo{};
             moduleInfo.sType    = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-            moduleInfo.codeSize = result._bytecode.size();
-            moduleInfo.pCode    = reinterpret_cast<const uint32*>( result._bytecode.data() );
+            moduleInfo.codeSize = stageDesc._bytecode.size();
+            moduleInfo.pCode    = reinterpret_cast<const uint32*>( stageDesc._bytecode.data() );
             VkShaderModule shaderModule{ VK_NULL_HANDLE };
             if ( vkCreateShaderModule( _pDevice->_device, &moduleInfo, nullptr, &shaderModule ) != VK_SUCCESS )
                 return false;
@@ -1620,14 +1612,14 @@ namespace sw
             stageInfo.pName                            = stageDesc._entryPoint.c_str();
             return true;
         };
-        bool bOptionalReady = bOptionalUnsupported == false && RHIShaderRequest::compileOptionalStages( request, gsResult, hsResult, dsResult );
-        if ( bOptionalReady && request._bHasGeometryShader != SW_FALSE )
-            bOptionalReady = addOptionalStage( VK_SHADER_STAGE_GEOMETRY_BIT, gsResult, request._geometry );
-        if ( bOptionalReady && request._bHasTessellation != SW_FALSE )
-            bOptionalReady = addOptionalStage( VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT, hsResult, request._hull ) && addOptionalStage( VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT, dsResult, request._domain );
+        bool bOptionalReady = true;
+        if ( stages._bHasGeometryShader != SW_FALSE )
+            bOptionalReady = addOptionalStage( VK_SHADER_STAGE_GEOMETRY_BIT, stages._geometry );
+        if ( bOptionalReady && stages._bHasTessellation != SW_FALSE )
+            bOptionalReady = addOptionalStage( VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT, stages._hull ) && addOptionalStage( VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT, stages._domain );
         if ( bOptionalReady == false )
         {
-            SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.CreatePipelineStateOptionalStageFailed", "createPipelineState: optional stage unsupported by the device or failed to compile (%#)", desc._vertexShaderPath.c_str() );
+            SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.CreatePipelineStateOptionalStageFailed", "createPipelineState: vkCreateShaderModule failed for an optional stage (%#)", desc._vertexShaderPath.c_str() );
             destroyShaderModules();
             return 0;
         }
@@ -1638,8 +1630,8 @@ namespace sw
         // 정점 속성은 **공용 표**(메시 정점 형식의 표 — constant::render::getMeshVertexAttributes)에서 만든다. DX11 · DX12 · GL 과 같은 표다. 셰이더가 읽지 않는 속성(컴파일러가
         // 뗀 입력)은 빼고 건다 — 걸어 두면 검증 레이어가 "not consumed" 를 PSO 마다 낸다. 바인딩도 읽는 슬롯만 선언한다 — 정점 입력이 없는 셰이더는
         // 바인딩이 없어 정점 버퍼 없이 그린다. stride 는 슬롯의 원소 크기(위치 · 인스턴스 슬롯 · 형식의 속성), 인스턴스 슬롯 스트림만 인스턴스 스텝이다.
-        const uint32                    consumedMask    = RHIShaderRequest::computeConsumedVertexAttributeMask( vsResult._bytecode, ShaderTargetFormat::SPIRV_Vulkan );
-        const uint32                    vertexSlotMask  = RHIShaderRequest::toVertexSlotMask( consumedMask );
+        const uint32                    consumedMask    = stages._consumedAttributeMask;
+        const uint32                    vertexSlotMask  = stages._vertexSlotMask;
         const RHIVertexAttribute* const pAttributeTable = constant::render::getMeshVertexAttributes( desc._meshVertexFormat );
         VkVertexInputBindingDescription arrBindingDescription[constant::render::kVertexBufferSlotCount]{};
         uint32                          bindingCount{ 0 };
@@ -1671,7 +1663,7 @@ namespace sw
 
         VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
         inputAssembly.sType                  = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-        inputAssembly.topology               = request._bHasTessellation != SW_FALSE ? VK_PRIMITIVE_TOPOLOGY_PATCH_LIST : VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+        inputAssembly.topology               = stages._bHasTessellation != SW_FALSE ? VK_PRIMITIVE_TOPOLOGY_PATCH_LIST : VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
         inputAssembly.primitiveRestartEnable = VK_FALSE;
 
         VkPipelineViewportStateCreateInfo viewportState{};
@@ -1700,7 +1692,7 @@ namespace sw
         multisampling.sampleShadingEnable  = VK_FALSE;
         multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
 
-        const uint32 numRT      = request._numRenderTargets;
+        const uint32 numRT      = stages._numRenderTargets;
         const uint32 blendCount = ( numRT > kMaxColorAttachments ) ? kMaxColorAttachments : numRT;
 
         VkPipelineColorBlendAttachmentState arrColorBlendAttachment[kMaxColorAttachments]{};
@@ -1768,7 +1760,7 @@ namespace sw
         VkPipelineTessellationStateCreateInfo tessellationState{};
         tessellationState.sType              = VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO;
         tessellationState.patchControlPoints = 3;
-        pipelineInfo.pTessellationState      = request._bHasTessellation != SW_FALSE ? &tessellationState : nullptr;
+        pipelineInfo.pTessellationState      = stages._bHasTessellation != SW_FALSE ? &tessellationState : nullptr;
         pipelineInfo.pStages                 = arrShaderStage;
         pipelineInfo.pVertexInputState       = &vertexInputInfo;
         pipelineInfo.pInputAssemblyState     = &inputAssembly;
@@ -1801,21 +1793,13 @@ namespace sw
         return _pDevice->_pipelineStates.insert( record );
     }
 
-    RHIPipelineStateHandle VulkanRHIResourceFactory::createComputePipelineStateNative( string_view shaderPath, string_view entryPoint, const vector<string>& listDefine )
+    RHIPipelineStateHandle VulkanRHIResourceFactory::createComputePipelineStateNative( const RHICompiledShaderStage& computeStage, string_view label )
     {
-        const ShaderCompileDesc csDesc   = RHIShaderRequest::resolveCompute( shaderPath, entryPoint, listDefine, ShaderTargetFormat::SPIRV_Vulkan );
-        ShaderCompileResult     csResult = RHIShaderRequest::compile( csDesc );
-
-        if ( csResult._bSuccess == false )
-        {
-            SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.CreateComputePipelineStateShaderCompileFailed", "createComputePipelineState: shader compile failed '%#'", shaderPath );
-            return 0;
-        }
-
+        const string_view        shaderPath = label;
         VkShaderModuleCreateInfo csInfo{};
         csInfo.sType    = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-        csInfo.codeSize = csResult._bytecode.size();
-        csInfo.pCode    = reinterpret_cast<const uint32*>( csResult._bytecode.data() );
+        csInfo.codeSize = computeStage._bytecode.size();
+        csInfo.pCode    = reinterpret_cast<const uint32*>( computeStage._bytecode.data() );
         // 핸들을 초기화하고 결과를 검사한다. 실패를 그냥 쓰면 쓰레기 값을 파이프라인 생성과 vkDestroyShaderModule 에 넘긴다.
         VkShaderModule compShaderModule{ VK_NULL_HANDLE };
         if ( vkCreateShaderModule( _pDevice->_device, &csInfo, nullptr, &compShaderModule ) != VK_SUCCESS ||
@@ -1829,7 +1813,7 @@ namespace sw
         compShaderStageInfo.sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
         compShaderStageInfo.stage  = VK_SHADER_STAGE_COMPUTE_BIT;
         compShaderStageInfo.module = compShaderModule;
-        compShaderStageInfo.pName  = csDesc._entryPoint.c_str();
+        compShaderStageInfo.pName  = computeStage._entryPoint.c_str();
 
         VkComputePipelineCreateInfo pipelineInfo{};
         pipelineInfo.sType  = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;

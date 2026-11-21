@@ -16,6 +16,7 @@
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/Autosave.h"
 #include "GameFramework/Runtime/Gameplay/Quest/QuestCatalog.h"
+#include "GameFramework/Runtime/Gameplay/SessionState/PlayerProgressComponent.h"
 #include "GameFramework/Runtime/Gameplay/SessionState/SessionStateComponent.h"
 
 #include "Games/Velmora/VelmoraRegionCatalog.h"
@@ -35,12 +36,11 @@ namespace sw
             /** @brief 디버그 그리기의 높이(m) — 땅 위에 뜬 구 · 룸이 같은 높이다(액션 룸 시연과 같다). */
             static constexpr float32 kDrawHeight = 0.5f;
 
-            /** @brief 첫 열린 디렉터의 지금 지역 이름입니다(감시 값 `Velmora.Region`). */
+            /** @brief 디렉터(씬에 하나)의 지금 지역 이름입니다(감시 값 `Velmora.Region`). */
             [[nodiscard]] static bool readRegion( const AutomationWatchQuery& query, AutomationWatchValue& outValue, bool bRespawn )
             {
-                const VelmoraGameModeComponent* pDirector = nullptr;
-                if ( query._pManager != nullptr && query._pManager->getComponentRegistry().getAll<VelmoraGameModeComponent>().empty() == false )
-                    pDirector = query._pManager->getComponentRegistry().getAll<VelmoraGameModeComponent>()[0];
+                // 디렉터는 씬에 하나다 — 둘이면 오류로 값이 없다(등록 순서로 고르지 않는다).
+                const VelmoraGameModeComponent* pDirector = query._pManager != nullptr ? query._pManager->getComponentRegistry().findUnique<VelmoraGameModeComponent>() : nullptr;
                 if ( pDirector == nullptr )
                 {
                     outValue.setText( "no Velmora director in the scene" );
@@ -145,9 +145,11 @@ namespace sw
         }
         if ( validateRegionMonsters( *pRegions ) == false )
             return false;
-        SessionStateSettings settings;
-        settings._pQuestCatalog = pQuests;
-        if ( SessionStateComponent::openOnOwner( *this, settings ) == nullptr )
+        if ( SessionStateComponent::openOnOwner( *this, SessionStateSettings{} ) == nullptr )
+            return false;
+        PlayerProgressSettings progressSettings;
+        progressSettings._pQuestCatalog = pQuests;
+        if ( PlayerProgressComponent::openOnOwner( *this, progressSettings ) == nullptr )
             return false;
         if ( _campaign.initialize( _vitalsSettings, _startRegion.key() ) == false )
             return false;
@@ -194,13 +196,13 @@ namespace sw
             _playerPosition._y = next._y;
     }
 
-    void VelmoraGameModeComponent::updateRegion( const VelmoraRegionCatalog& regions, SessionStateComponent& state )
+    void VelmoraGameModeComponent::updateRegion( const VelmoraRegionCatalog& regions, SessionStateComponent& state, PlayerProgressComponent& progress )
     {
         const VelmoraRegionDef* const pRegion = regions.findAt( _playerPosition );
         if ( pRegion == nullptr || pRegion->_id == _currentRegion )
             return;
         _currentRegion         = pRegion->_id;
-        const bool bFirstVisit = _campaign.enterRegion( *pRegion, state.getQuestLog(), state.getFlags() );
+        const bool bFirstVisit = _campaign.enterRegion( *pRegion, progress.getQuestLog(), state.getFlags() );
         _pendingArea           = pRegion->_id;
         SW_LOG_INFO_ID( "Velmora.RegionEntered", "[Velmora] entered '%#'%#", pRegion->_name, bFirstVisit ? " for the first time" : "" );
         if ( _phase == VelmoraPhase::Explore && pRegion->hasEncounter() && VelmoraCampaign::isEncounterCleared( *pRegion, state.getFlags() ) == false )
@@ -223,7 +225,7 @@ namespace sw
         _pendingBoss = region._id;
     }
 
-    void VelmoraGameModeComponent::interactWithSite( const VelmoraRegionDef& region, SessionStateComponent& state )
+    void VelmoraGameModeComponent::interactWithSite( const VelmoraRegionDef& region, SessionStateComponent& state, PlayerProgressComponent& progress )
     {
         const float32 radiusSquared = _useRadius * _useRadius;
         const auto    isNear        = [this, radiusSquared]( const VelmoraSiteDef& site )
@@ -234,7 +236,7 @@ namespace sw
         };
         if ( isNear( region._beacon ) )
         {
-            if ( _campaign.lightBeacon( region, state.getQuestLog(), state.getFlags() ) )
+            if ( _campaign.lightBeacon( region, progress.getQuestLog(), state.getFlags() ) )
                 SW_LOG_INFO_ID( "Velmora.BeaconLit", "[Velmora] lit beacon '%#' in '%#'", region._beacon._id.c_str(), region._name );
             return;
         }
@@ -245,7 +247,7 @@ namespace sw
         }
     }
 
-    void VelmoraGameModeComponent::updateEncounter( float32 deltaTime, const VelmoraRegionCatalog& regions, SessionStateComponent& state )
+    void VelmoraGameModeComponent::updateEncounter( float32 deltaTime, const VelmoraRegionCatalog& regions, SessionStateComponent& state, PlayerProgressComponent& progress )
     {
         static const hashed_string    s_attackAction( VelmoraGameModeComponentInternal::kAttackAction );
         static const hashed_string    s_dashAction( VelmoraGameModeComponentInternal::kDashAction );
@@ -289,7 +291,7 @@ namespace sw
             SW_LOG_INFO_ID( "Velmora.HallCleared", "[Velmora] '%#': hall cleared, the boss comes in %# s", pArena->_name, _bossDelaySeconds );
             return;
         }
-        _campaign.clearEncounter( *pArena, state.getQuestLog(), state.getFlags() );
+        _campaign.clearEncounter( *pArena, progress.getQuestLog(), state.getFlags() );
         _encounterRegion = hashed_string{};
         _phase           = VelmoraPhase::Explore;
         SW_LOG_INFO_ID( "Velmora.RegionCleared", "[Velmora] '%#' cleared%#", pArena->_name, result._bBossDefeated == SW_TRUE ? " - the boss fell" : "" );
@@ -338,32 +340,33 @@ namespace sw
     {
         if ( deltaTime <= 0.0f )
             return;
-        const VelmoraRegionCatalog* const pRegions = findRegions();
-        SessionStateComponent* const      pState   = findState();
-        if ( pRegions == nullptr || pState == nullptr )
+        const VelmoraRegionCatalog* const pRegions  = findRegions();
+        SessionStateComponent* const      pState    = findState();
+        PlayerProgressComponent* const    pProgress = PlayerProgressComponent::findOnOwner( *this );
+        if ( pRegions == nullptr || pState == nullptr || pProgress == nullptr )
             return;
         static const hashed_string s_moveAction( CommonInputActions::kMove );
         static const hashed_string s_useAction( VelmoraGameModeComponentInternal::kUseAction );
 
         movePlayer( getActionVector2D( s_moveAction ), deltaTime, *pRegions );
-        updateRegion( *pRegions, *pState );
+        updateRegion( *pRegions, *pState, *pProgress );
         if ( _phase == VelmoraPhase::Explore && wasActionTriggered( s_useAction ) )
         {
             if ( const VelmoraRegionDef* const pRegion = pRegions->find( _currentRegion ) )
-                interactWithSite( *pRegion, *pState );
+                interactWithSite( *pRegion, *pState, *pProgress );
         }
         if ( _phase != VelmoraPhase::Explore )
-            updateEncounter( deltaTime, *pRegions, *pState );
+            updateEncounter( deltaTime, *pRegions, *pState, *pProgress );
 
         // 알림 그릇은 프레임마다 비운다 — 퀘스트 보상은 여기서 주고, 지갑 · 체력 알림은 읽는 화면이 아직 없어 버린다(쌓이지 않게).
         _listQuestEvent.clear();
-        pState->getQuestLog().pollEvents( _listQuestEvent );
-        const int32 completedCount = _campaign.applyQuestEvents( _listQuestEvent, pState->getWallet() );
+        pProgress->getQuestLog().pollEvents( _listQuestEvent );
+        const int32 completedCount = _campaign.applyQuestEvents( _listQuestEvent, pProgress->getWallet() );
         if ( completedCount > 0 )
-            SW_LOG_INFO_ID( "Velmora.QuestCompleted", "[Velmora] %# quest(s) completed - gold %#, hearts %#", completedCount, pState->getWallet().getBalance( Wallet::getDefaultCurrency() ),
+            SW_LOG_INFO_ID( "Velmora.QuestCompleted", "[Velmora] %# quest(s) completed - gold %#, hearts %#", completedCount, pProgress->getWallet().getBalance( Wallet::getDefaultCurrency() ),
                             _campaign.getVitals().getHeartCount() );
         _listWalletEvent.clear();
-        pState->getWallet().pollEvents( _listWalletEvent );
+        pProgress->getWallet().pollEvents( _listWalletEvent );
         _listHealthEvent.clear();
         _campaign.pollHealthEvents( _listHealthEvent );
 

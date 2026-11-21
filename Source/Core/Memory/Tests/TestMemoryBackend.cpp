@@ -55,12 +55,10 @@ namespace
         return 16 + ( blockIndex * 37 ) % 2000;
     }
 
-    void freeProducedBlock( void* pBlock, size_t blockIndex )
+    /** @brief 정렬 블록도 보통 블록과 같은 해제로 푼다(해제 길은 하나다). */
+    void freeProducedBlock( void* pBlock )
     {
-        if ( usesAlignedBlock( blockIndex ) )
-            MemoryBackend::freeAligned( pBlock );
-        else
-            MemoryBackend::free( pBlock );
+        MemoryBackend::free( pBlock );
     }
 } // namespace
 
@@ -91,7 +89,7 @@ SW_TEST_CASE( MemoryBackendTest, BlocksHonorDefaultAndRequestedAlignment )
             SW_EXPECT_TRUE_MSG( isAligned( pBlock, alignment ), "정렬 블록이 요청한 정렬에 놓이지 않았다" );
             fillPattern( pBlock, size );
             SW_EXPECT_TRUE( hasPattern( pBlock, size ) );
-            MemoryBackend::freeAligned( pBlock );
+            MemoryBackend::free( pBlock ); // 정렬 블록도 같은 해제 — 해제 길은 하나다
         }
     }
 }
@@ -147,7 +145,6 @@ SW_TEST_CASE( MemoryBackendTest, ReallocatePreservesContents )
 
     // nullptr 해제는 아무것도 하지 않는다.
     MemoryBackend::free( nullptr );
-    MemoryBackend::freeAligned( nullptr );
 }
 
 /**
@@ -194,7 +191,7 @@ SW_TEST_CASE( MemoryBackendTest, BlocksCanBeFreedOnAnotherThread )
             vector<void*>& arrBlock = arrProducedBlock[threadIndex];
             for ( size_t blockIndex = 0; blockIndex < arrBlock.size(); ++blockIndex )
             {
-                freeProducedBlock( arrBlock[blockIndex], blockIndex );
+                freeProducedBlock( arrBlock[blockIndex] );
             }
         }
     } };
@@ -207,7 +204,7 @@ SW_TEST_CASE( MemoryBackendTest, BlocksCanBeFreedOnAnotherThread )
         {
             SW_REQUIRE_NOT_NULL( arrBlock[blockIndex] );
             SW_EXPECT_TRUE( hasPattern( arrBlock[blockIndex], getProducedBlockSize( blockIndex ) ) );
-            freeProducedBlock( arrBlock[blockIndex], blockIndex );
+            freeProducedBlock( arrBlock[blockIndex] );
         }
     }
 }

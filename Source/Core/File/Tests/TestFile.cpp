@@ -9,6 +9,7 @@
 #include "Core/String/StringUtil.h"
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
+#include "Core/Testing/ScopedAssertCapture.h"
 #include "Core/Testing/TestFramework.h"
 
 #include <type_traits>
@@ -23,7 +24,7 @@
 
 namespace
 {
-    /** @brief 모든 쓰기를 거절하는 쓰기 게이트입니다(`FileUtil::setWriteFilter`). */
+    /** @brief 모든 쓰기를 거절하는 쓰기 게이트입니다(`FileUtil::bindWriteFilter`). */
     sw::expected<void> refuseEveryWrite( sw::string_view path )
     {
         return sw::unexpected( sw::Error{ sw::ErrorKind::Unsupported, "test gate refuses every write", path } );
@@ -766,12 +767,12 @@ SW_TEST_CASE( FileTest, WriteFilterRefusesEveryMutatingEntry )
     bool bRemoved  = true;
     {
         SW_EXPECT_LOG( "File.WriteRefused" ); // 게이트가 거절한 쓰기는 오류로 남는다
-        sw::FileUtil::setWriteFilter( &refuseEveryWrite );
-        bWritten  = sw::FileUtil::writeTextFile( path, "changed" );
-        bAppended = sw::FileUtil::appendTextFile( path, "more" );
-        bTrashed  = sw::FileUtil::moveToRecycleBin( sw::vector<sw::string>{ path } );
-        bRemoved  = sw::FileUtil::removeFile( path );
-        sw::FileUtil::setWriteFilter( nullptr );
+        sw::FileUtil::WriteFilterRegistration filter = sw::FileUtil::bindWriteFilter( &refuseEveryWrite );
+        bWritten                                     = sw::FileUtil::writeTextFile( path, "changed" );
+        bAppended                                    = sw::FileUtil::appendTextFile( path, "more" );
+        bTrashed                                     = sw::FileUtil::moveToRecycleBin( sw::vector<sw::string>{ path } );
+        bRemoved                                     = sw::FileUtil::removeFile( path );
+        filter.reset();
     }
 
     SW_EXPECT_FALSE( bWritten );
@@ -910,4 +911,60 @@ SW_TEST_CASE( FileTest, OpenFileSizeRewindsToTheStart )
     SW_EXPECT_EQUAL( int64{ 5 }, sw::PlatformFileUtil::getOpenFileSizeAndRewind( pFile ) );
     SW_EXPECT_EQUAL( int64{ 0 }, sw::PlatformFileUtil::tellPosition( pFile ) );
     std::fclose( pFile );
+}
+
+namespace
+{
+    /** @brief 아무것도 하지 않는 읽기 관찰자입니다(칸의 주인만 본다). */
+    class SilentReadObserverForTest final : public sw::IFileReadObserver
+    {
+    public:
+        void recordDeviceRead( size_t ) override {}
+        void recordFileOpenedForRead( sw::string_view, size_t ) override {}
+    };
+
+    /** @brief 아무것도 하지 않는 쓰기 관찰자입니다. */
+    class SilentWriteObserverForTest final : public sw::IFileWriteObserver
+    {
+    public:
+        void recordFileWritten( sw::string_view ) override {}
+    };
+
+    sw::expected<void> allowEveryWriteForTest( sw::string_view )
+    {
+        return {};
+    }
+} // namespace
+
+/**
+ * @brief 파일 읽기 · 쓰기 관찰자와 쓰기 게이트는 칸마다 하나다 — 걸린 동안 둘째 등록은 단언하고 앞 것을 덮지 않으며, 토큰이 사라지면 떨어진다(호스트의 관찰자는 범위 동안 떼어 둔다)
+ */
+SW_TEST_CASE( FileTest, SecondFileObserverOrWriteFilterBindAsserts )
+{
+    const sw::PlatformFileUtil::ReadObserverSuspension  readSuspension  = sw::PlatformFileUtil::suspendReadObserver();
+    const sw::PlatformFileUtil::WriteObserverSuspension writeSuspension = sw::PlatformFileUtil::suspendWriteObserver();
+    SilentReadObserverForTest                           firstRead;
+    SilentReadObserverForTest                           secondRead;
+    SilentWriteObserverForTest                          firstWrite;
+    SilentWriteObserverForTest                          secondWrite;
+
+    sw::test::ScopedAssertCapture capture;
+    SW_EXPECT_LOG( SW_ASSERT_LOG_ID ); // 이중 등록 단언은 이 테스트가 보려는 대상이다
+    {
+        const sw::PlatformFileUtil::ReadObserverRegistration  read   = sw::PlatformFileUtil::bindReadObserver( &firstRead );
+        const sw::PlatformFileUtil::WriteObserverRegistration write  = sw::PlatformFileUtil::bindWriteObserver( &firstWrite );
+        const sw::FileUtil::WriteFilterRegistration           filter = sw::FileUtil::bindWriteFilter( &allowEveryWriteForTest );
+        SW_EXPECT_TRUE( read.isActive() && write.isActive() && filter.isActive() );
+
+        SW_EXPECT_FALSE( sw::PlatformFileUtil::bindReadObserver( &secondRead ).isActive() );
+        SW_EXPECT_FALSE( sw::PlatformFileUtil::bindWriteObserver( &secondWrite ).isActive() );
+        SW_EXPECT_FALSE( sw::FileUtil::bindWriteFilter( &allowEveryWriteForTest ).isActive() );
+        if ( sw::test::ScopedAssertCapture::kAssertsAreActive )
+            SW_EXPECT_EQUAL( 3u, capture.getCount() );
+    }
+    // 토큰이 사라져 칸이 비었다 — 다시 걸린다(앞 등록이 남아 있으면 단언이 하나 더 센다)
+    const sw::PlatformFileUtil::ReadObserverRegistration again = sw::PlatformFileUtil::bindReadObserver( &secondRead );
+    SW_EXPECT_TRUE( again.isActive() );
+    if ( sw::test::ScopedAssertCapture::kAssertsAreActive )
+        SW_EXPECT_EQUAL( 3u, capture.getCount() );
 }

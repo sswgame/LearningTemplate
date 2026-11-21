@@ -18,7 +18,7 @@ namespace sw
      * @class BuoyancyVolumeComponent
      * @brief 물 부피입니다(언리얼 Water Body 의 부력 · 유니티 수면 부력 스크립트의 자리). 수면은 상자의 윗면이고(오브젝트의 +Y 쪽), 상자와 겹친 움직이는
      *        바디마다 잠긴 부피만큼 위로 밀고 잠긴 몫에 끌림과 흐름(`_flowVelocity`, 오브젝트 로컬)을 겁니다.
-     * @details 고정 스텝 직전(`prePhysicsStep`)에 상자와 겹치는 바디를 찾아(`overlapShape`, 트리거 제외) 바디마다 `applyBuoyancy` 를 부른다 — 잠긴 부피와 부력 중심은
+     * @details 고정 스텝 직전(`onPrePhysicsStep`)에 상자와 겹치는 바디를 찾아(`overlapShape`, 트리거 제외) 바디마다 `applyBuoyancy` 를 부른다 — 잠긴 부피와 부력 중심은
      *          바디 셰이프에서 백엔드가 정확히 구한다(Jolt). 바디가 뜨는 높이는 `_buoyancy`(유체 밀도 ÷ 바디 밀도)가 정한다. 상자는 바디를 만들지 않는다 — 다른 바디가
      *          부딪히지 않는 순수한 질의 부피다. 2D 물리에는 없다(Box2D 에 잠긴 넓이 계산이 없다).
      */
@@ -41,7 +41,9 @@ namespace sw
         void setFlowVelocity( const float3& flowVelocity ) { _flowVelocity = flowVelocity; }
 
     protected:
-        void prePhysicsStep( ScenePhysics& physics, float32 fixedDeltaTime, uint32 stepIndex, uint32 stepCount ) override;
+        /** @brief 쓰는 고정 스텝 그룹마다 메서드를 등록합니다(`registerFixedStep`). */
+        void onRegister( GameObjectManager& manager ) override;
+        void onPrePhysicsStep( const FixedStepContext& context );
 
     private:
         PROPERTY( Category = "Water", DisplayName = "Half Extents", Min = 0.01, Tooltip = "Half size of the water box; the surface is its top face", Units = m, Meta = "Shape=Box" )

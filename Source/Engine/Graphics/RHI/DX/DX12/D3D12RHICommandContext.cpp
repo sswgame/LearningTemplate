@@ -327,7 +327,7 @@ namespace sw
         for ( uint32 index = 0; index < count; ++index )
         {
             const RHITextureTransition& transition = pTransition[index];
-            if ( transition._texture == 0 )
+            if ( transition._texture == kRHIBackBufferTexture )
             {
                 // 백버퍼. 뎁스로 쓰이는 일은 없다. 스왑체인은 제 상태를 들고 따로 낸다.
                 if ( transition._state == RHITextureState::RenderTarget )
@@ -349,10 +349,10 @@ namespace sw
     // 길이 유지(긴 함수 정리 기준): 같은 포맷 복사와 셰이더 블릿의 상태 전이 순서가 곧 의미라 나누지 않는다.
     void D3D12RHICommandContext::blitTextureNative( RHITextureHandle src, RHITextureHandle dst )
     {
-        if ( _pCmdList == nullptr || ( src == 0 && dst == 0 ) )
+        if ( _pCmdList == nullptr || ( src == kRHIBackBufferTexture && dst == kRHIBackBufferTexture ) )
             return;
 
-        if ( src == 0 )
+        if ( src == kRHIBackBufferTexture )
         {
             // 백버퍼 → 텍스처(창에 나갈 그림을 읽는다). 스왑체인 상태는 스왑체인 객체만 바꾼다.
             ID3D12Resource* pBack = _pDevice->_swapChain.getCurrentBackBuffer();
@@ -393,7 +393,7 @@ namespace sw
         D3D12_RESOURCE_STATES dstStateBefore = D3D12_RESOURCE_STATE_COMMON;
         D3D12_RESOURCE_STATES dstStateAfter  = D3D12_RESOURCE_STATE_RENDER_TARGET;
 
-        if ( dst == 0 )
+        if ( dst == kRHIBackBufferTexture )
         {
             pDstResource = _pDevice->_swapChain.getCurrentBackBuffer();
             if ( pDstResource == nullptr )
@@ -433,8 +433,8 @@ namespace sw
             }
         }
 
-        // 스왑체인 백버퍼(`dst == 0`)의 상태는 스왑체인 객체만 바꾼다. 오프스크린은 추적 상태가 서브리소스마다 옮긴다(R-10 — 예전엔 한 값을 읽고 덮어썼다).
-        if ( dst == 0 )
+        // 스왑체인 백버퍼(`dst == kRHIBackBufferTexture`)의 상태는 스왑체인 객체만 바꾼다. 오프스크린은 추적 상태가 서브리소스마다 옮긴다(R-10 — 예전엔 한 값을 읽고 덮어썼다).
+        if ( dst == kRHIBackBufferTexture )
         {
             if ( dstStateBefore != D3D12_RESOURCE_STATE_COPY_DEST )
                 _pDevice->_swapChain.transitionTo( commandListForRecord(), D3D12_RESOURCE_STATE_COPY_DEST );
@@ -444,7 +444,7 @@ namespace sw
 
         commandListForRecord()->CopyResource( pDstResource, pSrcResource );
 
-        if ( dst == 0 )
+        if ( dst == kRHIBackBufferTexture )
             _pDevice->_swapChain.transitionTo( commandListForRecord(), dstStateAfter );
         else
             transitionTexture( dst, dstStateAfter );
@@ -889,7 +889,7 @@ namespace sw
         uint32                               rtCount{ 0 };
         _pState->_bActiveSwapchainRT = SW_FALSE;
 
-        const bool         bBackBuffer    = bBindColor && beginInfo._arrColorTarget[0] == 0;
+        const bool         bBackBuffer    = bBindColor && beginInfo._arrColorTarget[0] == kRHIBackBufferTexture;
         D3D12RHISwapChain& swapChain      = bBackBuffer ? _pDevice->useSwapChain( beginInfo._pSwapChain ) : _pDevice->_swapChain;
         const uint32       colorBindCount = ( beginInfo._colorTargetCount > 0 ) ? beginInfo._colorTargetCount : ( bBindColor ? 1u : 0u );
         for ( uint32 attachmentIndex = 0; attachmentIndex < colorBindCount && attachmentIndex < kMaxColorAttachments; ++attachmentIndex )
@@ -897,7 +897,7 @@ namespace sw
             const RHITextureHandle      colorHandle = beginInfo._arrColorTarget[attachmentIndex];
             D3D12_CPU_DESCRIPTOR_HANDLE rtv{};
             DXGI_FORMAT                 format{ DXGI_FORMAT_UNKNOWN };
-            if ( colorHandle == 0 )
+            if ( colorHandle == kRHIBackBufferTexture )
             {
                 if ( attachmentIndex > 0 )
                     break;
@@ -907,7 +907,7 @@ namespace sw
                 rtv                                     = swapChain.getCurrentRTV();
                 format                                  = toDXGIFormat( swapChain.getFormat() );
                 _pState->_bActiveSwapchainRT            = SW_TRUE;
-                _pState->_arrActiveColorTarget[rtCount] = 0;
+                _pState->_arrActiveColorTarget[rtCount] = kRHIBackBufferTexture;
             }
             else
             {
@@ -1038,6 +1038,19 @@ namespace sw
         if ( pResource == nullptr )
             return;
 
+        D3D12_RESOURCE_BARRIER barrier{};
+        barrier.Type          = D3D12_RESOURCE_BARRIER_TYPE_UAV;
+        barrier.UAV.pResource = pResource;
+        commandListForRecord()->ResourceBarrier( 1, &barrier );
+    }
+
+    void D3D12RHICommandContext::uavBarrierTextureNative( RHITextureHandle texture )
+    {
+        if ( _pCmdList == nullptr )
+            return;
+        ID3D12Resource* pResource = _pDevice->resolveTexture( texture );
+        if ( pResource == nullptr )
+            return;
         D3D12_RESOURCE_BARRIER barrier{};
         barrier.Type          = D3D12_RESOURCE_BARRIER_TYPE_UAV;
         barrier.UAV.pResource = pResource;

@@ -362,12 +362,6 @@ namespace sw
         return listAllGameObject;
     }
 
-    void GameObjectManager::notifyModuleUnloading( string_view moduleName )
-    {
-        forEachComponent( SceneIterationKey{}, [moduleName]( Component* pComponent )
-        { pComponent->onModuleUnloading( moduleName ); } );
-    }
-
     uint32 GameObjectManager::destroyComponentsOfModule( string_view moduleName )
     {
         if ( _structuralChangeBuffer.isFrozen() == false )
@@ -510,9 +504,9 @@ namespace sw
         return _pState->_sceneScope;
     }
 
-    void GameObjectManager::destroyGameObject( GameObject* pObj, bool bDestroyChildren )
+    void GameObjectManager::destroyGameObject( GameObject* pObj )
     {
-        _pState->_store.destroyGameObject( pObj, bDestroyChildren );
+        _pState->_store.destroyGameObject( pObj );
     }
 
     void GameObjectManager::destroyComponent( Component* pComp )
@@ -615,19 +609,19 @@ namespace sw
         return _pState->_tickScheduler.getTickRegistry();
     }
 
-    int64 GameObjectManager::getLastFrameComponentTickNanoseconds() const
+    uint32 GameObjectManager::tickFixedStepGroup( FixedStepGroup group, const FixedStepContext& context )
     {
-        return _pState->_tickScheduler.getLastFrameTickNanoseconds();
+        return _pState->_tickScheduler.tickFixedStepGroup( group, context );
+    }
+
+    FixedStepTickList& GameObjectManager::getFixedStepTickList()
+    {
+        return _pState->_tickScheduler.getFixedStepTickList();
     }
 
     void GameObjectManager::markTickStagesDirty()
     {
         _pState->_tickScheduler.getTickRegistry().markAllDirty();
-    }
-
-    uint32 GameObjectManager::getStageTransformApplyCount() const
-    {
-        return _pState->_tickScheduler.getStageTransformApplyCount();
     }
 
     void GameObjectManager::notifyTransformDirty()

@@ -122,6 +122,11 @@ namespace sw::editor
         save();
     }
 
+    bool EditorViewportOverlays::isKnownBarID( string_view barID )
+    {
+        return EditorViewportOverlaysInternal::findDesc( barID ) != nullptr;
+    }
+
     bool EditorViewportOverlays::setBarVisible( string_view barID, bool bVisible )
     {
         ensureLoaded();

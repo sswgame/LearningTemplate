@@ -177,7 +177,7 @@ namespace sw
         virtual ~D3D12RHIDevice() override;
 
         /** @brief Direct3D 12 디바이스, 커맨드 큐, DXGI 스왑체인, 힙 리소스를 초기화합니다. */
-        [[nodiscard]] bool initializeInternal( const RHISwapChainDesc& desc ) override;
+        [[nodiscard]] bool initializeInternal( const RHIDeviceDesc& deviceDesc ) override;
 
         /** @brief D3D12 자원과 펜스 동기화 객체를 해제합니다. */
         void shutdownInternal() override;
@@ -195,13 +195,17 @@ namespace sw
 
         /** @brief 이번 프레임이 Signal 할 펜스 값(`_fenceValue`)을 기준으로 해제 큐에 넣습니다. */
         void   enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate ) override;
+        void   notifyFrameCompletion( const RHIFrameCompletionDelegate& completionDelegate ) override;
         uint32 getPendingReleaseCount() const override { return _releaseQueue.getPendingReleaseCount(); }
         /** @brief `ID3D12Device5::RemoveDevice` 로 장치를 제거합니다. 이후 펜스는 끝난 값(UINT64_MAX)을 돌려주고 호출은 DXGI_ERROR_DEVICE_REMOVED 로 실패한다. */
         bool debugRemoveDevice() override;
         /** @brief 장치 손실 표시를 든 전송 시리얼입니다(`IRHIDevice::isDeviceLost` 가 읽는다). */
         const RHITransferSerials& getTransferSerials() const override { return _transferSerials; }
+        RHITransferSerials&       getTransferSerials() override { return _transferSerials; }
         uint32                    readLastBreadcrumbs( uint32* pOutID, uint32 capacity ) override;
-        uint32                    getValidationMessageCount() const override { return _validationMessageCount.load( std::memory_order_relaxed ); }
+        /** @brief DRED 자동 브레드크럼 · 페이지 폴트 할당을 로그로 남깁니다(손실 보고가 처음 한 번 부른다). */
+        void   reportDeviceFaultInternal() override;
+        uint32 getValidationMessageCount() const override { return _validationMessageCount.load( std::memory_order_relaxed ); }
 
         /** @brief 리소스 생성과 파괴 인터페이스(D3D12RHIResourceFactory)를 반환합니다. */
         IRHIResourceFactory* getResourceFactory() override;
@@ -283,7 +287,7 @@ namespace sw
         /** @brief 등록을 해제합니다. */
         void unregisterCommandList( D3D12RHICommandList* pCmdList );
 
-        /** @brief 프레임을 엽니다. 링 슬롯이 풀릴 때까지 기다리고 프레임 스트림 리스트를 엽니다. 백버퍼 클리어는 beginRenderPass(핸들 0)가 합니다. */
+        /** @brief 프레임을 엽니다. 링 슬롯이 풀릴 때까지 기다리고 프레임 스트림 리스트를 엽니다. 백버퍼 클리어는 beginRenderPass(`kRHIBackBufferTexture`)가 합니다. */
         void beginFrameInternal() override;
         void endFrameInternal( bool vsync, bool bPresent ) override;
 
@@ -530,7 +534,7 @@ namespace sw
         /**
          * @struct D3D12StagingRing
          * @brief 영속 매핑한 스테이징 버퍼 하나와 그 구간 할당기입니다. 업로드 링은 소스를 여기에 복사한 뒤 복사 리스트가 읽고, 되읽기 링은 복사 리스트가 쓴 뒤 가져가기가 읽습니다(Vulkan 과 같은 두 링).
-         * @details 구간은 시리얼을 붙여(`markSubmitted`) 워터마크가 지나면 돌아온다. 링보다 큰 한 장은 할당기가 단독 구간(`RHIStagingSpan::_bSolo`, 오프셋 0)으로 내주고,
+         * @details 구간은 시리얼을 붙여(`markSubmitted`) 워터마크가 지나면 돌아온다. 링보다 큰 한 장은 할당기가 단독 구간(`RHIStagingSpan::isSolo`, 오프셋 0)으로 내주고,
          *          그 크기의 일회성 업로드 힙 버퍼(`_solo*`)를 만들어 쓴다. 할당기가 단독 구간을 한 번에 하나만 내주므로 링마다 하나다. 할당기가 돌려받은 뒤(`hasLiveSolo` 거짓)
          *          `retireCompletedTransfers` 가 지운다. 구간 시작은 `D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT`(512)의 배수라 텍스처 복사의 배치 오프셋 규칙을 그대로 만족한다.
          */
@@ -544,10 +548,10 @@ namespace sw
             Microsoft::WRL::ComPtr<ID3D12Resource> _soloBuffer;
             uint8*                                 _pSoloMapped{ nullptr };
 
-            /** @brief @p span 을 담은 버퍼입니다(단독 구간이면 단독 버퍼). 구간 안의 오프셋은 `span._offsetBytes` 에서 센다. */
-            [[nodiscard]] ID3D12Resource* getSpanResource( const RHIStagingSpan& span ) const { return span._bSolo != SW_FALSE ? _soloBuffer.Get() : _buffer.Get(); }
-            /** @brief @p span 을 담은 버퍼의 매핑 시작 주소입니다. 구간의 바이트는 여기에 `span._offsetBytes` 이상의 오프셋을 더해 읽고 쓴다. */
-            [[nodiscard]] uint8* getSpanMappedBase( const RHIStagingSpan& span ) const { return span._bSolo != SW_FALSE ? _pSoloMapped : _pMapped; }
+            /** @brief @p span 을 담은 버퍼입니다(단독 구간이면 단독 버퍼). 구간 안의 오프셋은 `span.getOffsetBytes()` 에서 센다. */
+            [[nodiscard]] ID3D12Resource* getSpanResource( const RHIStagingSpan& span ) const { return span.isSolo() ? _soloBuffer.Get() : _buffer.Get(); }
+            /** @brief @p span 을 담은 버퍼의 매핑 시작 주소입니다. 구간의 바이트는 여기에 `span.getOffsetBytes()` 이상의 오프셋을 더해 읽고 쓴다. */
+            [[nodiscard]] uint8* getSpanMappedBase( const RHIStagingSpan& span ) const { return span.isSolo() ? _pSoloMapped : _pMapped; }
         };
         /** @brief 펜스를 기다리는 온라인 블록 묶음입니다. 리스트가 닫힐 때 상태의 블록 벡터를 통째로 옮겨 옵니다. */
         struct OnlineBlockRecycleBatch
@@ -598,8 +602,9 @@ namespace sw
         void collectTimestampsForSlot();
         /**
          * @brief 이전 프레임이 끝날 때까지 기다립니다.
+         * @return 펜스가 지난 것을 확인했으면 true — 제거된 장치 · Signal 실패 · 대기 실패는 false(해제 큐 통지를 `Abandoned` 로 보낼지 가른다).
          */
-        void waitForPreviousFrame();
+        bool waitForPreviousFrame();
         /**
          * @brief 링 슬롯이 GPU 에서 풀릴 때까지 기다린 뒤 다음 슬롯으로 진행합니다.
          */
@@ -719,10 +724,10 @@ namespace sw
         void flushPendingUploads( bool bExecuteNow );
 
         /**
-         * @brief 전송 전용 스테이징 링(`RHISwapChainDesc::_stagingRingBytes`)을 만듭니다. 용량이 0 이면 오류를 남기고 false 입니다(기본값으로 바꾸지 않는다).
+         * @brief 전송 전용 스테이징 링(`RHIDeviceDesc::_stagingRingBytes`)을 만듭니다. 용량이 0 이면 오류를 남기고 false 입니다(기본값으로 바꾸지 않는다).
          * @param desc 업로드 링 용량과 링보다 큰 한 장의 상한(`_stagingSoloMaxBytes`)을 읽습니다.
          */
-        [[nodiscard]] bool initializeTransfers( const RHISwapChainDesc& desc );
+        [[nodiscard]] bool initializeTransfers( const RHIDeviceDesc& desc );
         /** @brief 남은 전송 작업, 전송을 기다리던 해제, 가져가지 않은 읽기, 링을 놓습니다. GPU 가 쉰 뒤(종료 2단계 뒤)에 부릅니다. */
         void shutdownTransfers();
         /** @brief 업로드 힙에 @p capacityBytes 의 버퍼를 만들어 영속 매핑하고 구간 할당기를 초기화합니다. 실패하면 이유를 로그로 남기고 false 입니다. */
@@ -904,8 +909,8 @@ namespace sw
         RHISwapChainSet<D3D12RHISwapChain> _windowSwapChains;
 
         uint8                  _bBindlessRootSignature : 1; ///< 루트 시그니처(텍스처 배열 테이블 포함)를 만드는 데 성공했다. 네이티브 bindless 텍스처 샘플링이 가능하다.
-        uint8                  _bValidationLayer       : 1; ///< 디버그 레이어를 켰다(`RHISwapChainDesc::_bValidationLayer`, 배포가 아닌 구성). 장치를 만들 때 한 번 정한다
-        uint8                  _bDRED                  : 1; ///< DRED 를 켰다(`RHISwapChainDesc::_bDRED`). 장치를 만들 때 한 번 정한다 — 배포 구성의 소실 보고가 이것을 본다
+        uint8                  _bValidationLayer       : 1; ///< 디버그 레이어를 켰다(`RHIDeviceDesc::_bValidationLayer`, 배포가 아닌 구성). 장치를 만들 때 한 번 정한다
+        uint8                  _bDRED                  : 1; ///< DRED 를 켰다(`RHIDeviceDesc::_bDRED`). 장치를 만들 때 한 번 정한다 — 배포 구성의 소실 보고가 이것을 본다
         [[maybe_unused]] uint8 _reservedPassFlags      : 5;
         /// @brief 디바이스 제거(DEVICE_HUNG/REMOVED) 상태를 이미 한 번 로그로 남겼으면 true 입니다. 매
         /// 프레임 flushDebugMessages() 가 똑같은 검증 메시지 수십 줄을 끝없이 반복 출력하는 것을 막습니다.
@@ -936,7 +941,7 @@ namespace sw
         DWORD          _validationCallbackCookie; ///< `RegisterMessageCallback` 이 준 번호입니다. 0 이면 등록하지 않았다.
 
         /// @brief 디바이스 프레임 스트림(스왑체인 begin/endFrame 과 백버퍼 패스)의 기록 상태입니다.
-        /// @details RenderThread 가 백버퍼 렌더 패스(beginRenderPass 핸들 0)를 여는 정식 경로입니다. 패스별
+        /// @details RenderThread 가 백버퍼 렌더 패스(beginRenderPass `kRHIBackBufferTexture`)를 여는 정식 경로입니다. 패스별
         ///          D3D12RHICommandList 와는 다른 스트림이라는 뜻일 뿐입니다.
         D3D12RecordingState _frameStreamState;
 

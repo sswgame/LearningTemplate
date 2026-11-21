@@ -2,13 +2,15 @@
  * @file PhysicsComponent.h
  * @brief 강체 물리 컴포넌트(바디 · 관절 · 캐릭터, 2D · 3D)의 기반입니다 — 씬의 물리(`ScenePhysics`)에 등록되고, 프레임마다 정해진 순서로 불립니다.
  * @details 컴포넌트는 틱하지 않습니다(병렬 틱에서 물리 씬을 만지면 같은 그룹의 다른 오브젝트가 스케줄에 따라 다른 자리를 본다). 매니저가 틱 ·
- *          트랜스폼 적용이 끝난 뒤 게임 스레드에서 `ScenePhysics::step` 을 부르고, 그것이 등록된 컴포넌트를 단계(바디 → 관절 → 캐릭터) 순으로 돕니다:
+ *          트랜스폼 적용이 끝난 뒤 게임 스레드에서 `ScenePhysics::step` 을 부르고, 그것이 틱 시스템의 고정 스텝 그룹(`FixedStepGroup`)을 차례로 돕니다.
+ *          컴포넌트는 등록 자리(`onRegister`)에서 쓰는 그룹마다 메서드를 명시 등록하고(`registerFixedStep<&T::메서드>( manager, 그룹 )`), 고정 스텝 목록
+ *          (`FixedStepTickList`)이 단계(바디 Early → 관절 Normal → 캐릭터 Late) 순으로 메서드별 일괄 함수를 부른다(가상 호출이 아니다). 엔진 타입은 아래 이름을 쓴다:
  *
- *          1. `beginPhysicsFrame` — 시작 전이면 아무것도 하지 않고, 시작했으면 바디를 만들거나(처음) 트랜스폼의 바깥 변화(코드가 옮김 ·
+ *          1. `onPhysicsFrameBegin` — 시작 전이면 아무것도 하지 않고, 시작했으면 바디를 만들거나(처음) 트랜스폼의 바깥 변화(코드가 옮김 ·
  *             `teleportTo`)를 바디로 옮깁니다.
- *          2. 고정 스텝마다 `prePhysicsStep`(키네마틱 목표 · 캐릭터 이동) → 씬 step → 그 스텝에 깨어 있던 강체만 자세 기록(`ScenePhysics` 가
- *             백엔드의 `getMovedBodies` 를 돈다 — 정적 · 잠든 바디는 부르지 않는다) → `postPhysicsStep`.
- *          3. `endPhysicsFrame( alpha )` — 마지막 두 스텝 사이를 보간한 자세를 트랜스폼에 씁니다(유니티 Rigidbody interpolation).
+ *          2. 고정 스텝마다 `onPrePhysicsStep`(키네마틱 목표 · 캐릭터 이동) → 씬 step → 그 스텝에 깨어 있던 강체만 자세 기록(`ScenePhysics` 가
+ *             백엔드의 `getMovedBodies` 를 돈다 — 정적 · 잠든 바디는 부르지 않는다) → `onPostPhysicsStep`.
+ *          3. `onPhysicsFrameEnd`(보간 비 `FixedStepContext::getAlpha`) — 마지막 두 스텝 사이를 보간한 자세를 트랜스폼에 씁니다(유니티 Rigidbody interpolation).
  *
  *          바디는 플레이 중에만 있습니다(편집 중에는 시뮬레이션하지 않는다). 컴포넌트를 끄거나 플레이가 끝나면 백엔드 객체를 놓습니다(`releasePhysics`).
  *          핸들은 런타임 값이라 저장하지 않습니다 — 핫 리로드 · 되돌리기로 다시 만든 컴포넌트는 새 바디를 만듭니다.
@@ -23,6 +25,7 @@
 #include "Core/Math/Math.h"
 
 #include "Engine/Object/Component/SceneComponent.h"
+#include "Engine/Object/GameObject/Tick/FixedStepContext.h"
 #include "Engine/Physics/Collision/PhysicsShape.h"
 #include "Engine/Physics/PhysicsDesc.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -45,7 +48,7 @@ namespace sw
     REFLECT( Abstract, Category = "Physics", DisplayName = "Physics Component", Tooltip = "Base of rigid body, joint and character components", Meta = "Icon=Physics, IconColor=Physics" )
     class SW_API PhysicsComponent : public SceneComponent
     {
-        friend class ScenePhysics; ///< 등록 자리(`_physicsIndex`)를 적고 단계 콜백을 부른다
+        friend class ScenePhysics; ///< 등록 자리(`_physicsIndex`)를 적는다
 
     public:
         // 물리 컴포넌트가 함께 쓰는 자세 · 셰이프 도우미입니다.
@@ -99,6 +102,8 @@ namespace sw
         ScenePhysics* getScenePhysics() const { return _pScenePhysics; }
         /** @brief 이 컴포넌트의 단계입니다. */
         PhysicsComponentPhase getPhysicsPhase() const { return _phase; }
+        /** @brief 고정 스텝 그룹 안의 단계입니다(바디 Early → 관절 Normal → 캐릭터 Late — `FixedStepTickList` 의 차례). */
+        TickPhase getFixedStepPhase() const;
         /**
          * @brief 이 물체 밑의 스트리밍 셀이 올라 있지 않고 몸 아래 받쳐 줄 충돌도 없어 시뮬레이션에서 뺐으면 true 입니다. 저장하지 않는 실행 상태입니다.
          * @details 쥐고 푸는 것은 물리 서비스 한 곳이다(`ScenePhysics` 가 프레임마다 `SceneStreamingSubsystem::isFloorMissing` 을 묻는다). 쥔 동안은 시뮬레이션 밖이라(`isSimulated`)
@@ -151,18 +156,20 @@ namespace sw
         void markShapeScale( const float3& scale ) { _shapeScale = scale; }
 
         /**
-         * @brief 물리 프레임 시작 — 백엔드 객체를 만들거나 트랜스폼의 바깥 변화를 옮깁니다.
-         * @details 네 훅의 기본 구현은 아무것도 하지 않는다. 재정의 여부는 `PhysicsHooksOf<T>`(`PhysicsHookRegistry.h`)가 `&T::훅` 의 형식으로 컴파일에서 정하고,
-         *          `ScenePhysics` 는 재정의한 타입만 타입별 일괄 함수로 부른다(등록이 없는 타입만 가상 호출).
+         * @brief 메서드 @p TMethod 를 고정 스텝 그룹 @p group 에 등록합니다 — 등록 자리(`onRegister`, 기반의 `onRegister` 뒤)에서 쓰는 그룹마다 한 번 부른다.
+         * @details 서명은 `void ( T::* )( const FixedStepContext& )` 여야 컴파일된다(`FixedStepMethodClass`) — 이름은 자유이고, 등록하지 않은 메서드는 불리지 않는다.
+         *          단계는 이 컴포넌트의 것(`getFixedStepPhase`)이다. 해제(`onUnregister`)가 모든 그룹을 함께 뺀다. 프레임 틱 `registerSubTick` ·
+         *          사건 `GameObjectEvents::listen<&T::메서드>` 와 같은 모양이다(유니티 `FixedUpdate` · Godot `_physics_process` 의 자리).
          */
-        virtual void beginPhysicsFrame( ScenePhysics& physics );
-        /** @brief 고정 스텝 직전 — @p stepIndex 는 이 프레임의 몇 번째 스텝인지(0 부터), @p stepCount 는 이 프레임의 스텝 수입니다. */
-        virtual void prePhysicsStep( ScenePhysics& physics, float32 fixedDeltaTime, uint32 stepIndex, uint32 stepCount );
-        /** @brief 고정 스텝 직후 — 자세를 기록합니다. */
-        virtual void postPhysicsStep( ScenePhysics& physics );
-        /** @brief 물리 프레임 끝 — 보간 비 @p alpha 로 자세를 트랜스폼에 씁니다. */
-        virtual void endPhysicsFrame( ScenePhysics& physics, float32 alpha );
-        /** @brief 백엔드 객체(바디 · 관절 · 캐릭터)를 놓습니다. 몇 번 불려도 됩니다. */
+        template <auto TMethod>
+        void registerFixedStep( GameObjectManager& manager, FixedStepGroup group )
+        {
+            registerFixedStepFunction( manager, group, &runFixedStepBatch<TMethod> );
+        }
+        /**
+         * @brief 백엔드 객체(바디 · 관절 · 캐릭터)를 놓습니다. 몇 번 불려도 됩니다.
+         * @details 고정 스텝 훅과 달리 가상 그대로다 — 스텝마다가 아니라 해제 · 플레이 끝에 한 번 부르는 수명 훅이라 일괄 호출로 얻을 것이 없다(언리얼 `OnDestroyPhysicsState` 자리).
+         */
         virtual void releasePhysics( ScenePhysics& physics ) { (void)physics; }
         /**
          * @brief 지금 트랜스폼 자리의 3D 정적 바디(막는 것, 트리거 아님)를 서술해 @p outListBody 에 붙입니다. 시작 전(편집 중)에도 불립니다.
@@ -176,6 +183,9 @@ namespace sw
         }
 
     private:
+        /** @brief 일괄 함수 @p pFunction 을 이 컴포넌트의 그룹 @p group 으로 고정 스텝 목록에 넣습니다(`registerFixedStep`). 이미 있으면 오류를 남깁니다. */
+        void registerFixedStepFunction( GameObjectManager& manager, FixedStepGroup group, FixedStepBatchFunction pFunction );
+
         ScenePhysics*         _pScenePhysics;
         uint32                _physicsIndex;           ///< `ScenePhysics` 의 단계 목록 자리. 없으면 `kNotRegistered`
         uint32                _syncedTransformVersion; ///< 마지막으로 맞춘 월드 변경 번호(`consumeTransformChange`). 처음 0 — 칸의 번호는 받을 때 1 이상이라 첫 비교는 "바뀜"

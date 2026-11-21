@@ -136,7 +136,7 @@ namespace sw
         {
             return false;
         }
-        const CoasterLayoutDef* pLayout = layouts.find( hashed_string( def._layout ) );
+        const CoasterLayoutDef* pLayout = layouts.find( def._layout );
         if ( pLayout == nullptr )
         {
             SW_LOG_ERROR_ID( "ParkLayout.CoasterLayoutNotCoaster", "%#: <Coaster> layout '%#' is not in the coaster catalog - skipped", sourceName, def._layout.c_str() );

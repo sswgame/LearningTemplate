@@ -7,6 +7,7 @@
 #include "Core/Concurrency/thread.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Log/LogOnce.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Graphics/Debug/GPUBreadcrumbs.h"
@@ -468,8 +469,9 @@ namespace sw
     }
 
     // 길이 유지(긴 함수 정리 기준): 디바이스 · 스왑체인 · 상태 객체 생성의 순서가 곧 의미라 나누지 않는다.
-    bool D3D11RHIDevice::initializeInternal( const RHISwapChainDesc& desc )
+    bool D3D11RHIDevice::initializeInternal( const RHIDeviceDesc& deviceDesc )
     {
+        const RHISwapChainDesc& desc = deviceDesc._swapChain;
         // 이 백엔드는 Win32 전용이다 — 핸들이 Win32 표면의 것이 아니면 HWND 로 읽지 않고 오류로 멈춘다.
         void* pWindowHandle{ nullptr };
         if ( desc.tryGetWin32Handle( pWindowHandle ) == false )
@@ -482,13 +484,13 @@ namespace sw
         // D3D11 에는 자원의 할당 크기를 물을 API 가 없다. 추적기는 서술로 계산한 논리 크기다.
         getMemoryTracker().setSizeBasis( RHIMemorySizeBasis::Logical );
         // 큰 업로드는 스테이징 예산 안에서만 받는다. 0 이면 큰 업로드를 하나도 받지 못하므로 기본값으로 바꾸지 않고 초기화를 멈춘다.
-        if ( desc._stagingRingBytes == 0 )
+        if ( deviceDesc._stagingRingBytes == 0 )
         {
             SW_LOG_ERROR_ID( "D3D11.UploadStagingBudgetZero", "The upload staging budget is 0 (_rhi._stagingRingMegabytes) - Direct3D 11 does not start" );
             return false;
         }
-        _uploadStagingBudget.initialize( desc._stagingRingBytes );
-        _directUploadMaxBytes = desc._directUploadMaxBytes;
+        _uploadStagingBudget.initialize( deviceDesc._stagingRingBytes );
+        _directUploadMaxBytes = deviceDesc._directUploadMaxBytes;
 
         // DX12 와 같게 FLIP_DISCARD 를 쓴다(DXGI 의 HWND 규칙). 한 HWND 에 플립 모델 스왑체인을 한 번 만든 뒤에는,
         // 같은 창에 DISCARD/blt 체인을 만들어 Present 해도 사용자가 보는 화면이 갱신되지 않을 수 있다
@@ -516,7 +518,7 @@ namespace sw
         UINT createDeviceFlags{ 0 };
     #if defined( SW_DO_CHECKS )
         // 디버그 레이어는 배포가 아닌 구성에 컴파일돼 있고 켤지는 장치를 만들 때 정한다(EngineConfig `_rhi._validationLayer`, `-rhi-validation` — 언리얼 `-d3ddebug`).
-        if ( desc._bValidationLayer )
+        if ( deviceDesc._bValidationLayer )
             createDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
     #endif
 
@@ -530,10 +532,10 @@ namespace sw
         // 소프트웨어 어댑터(WARP) — CI 러너와 같은 래스터라이저(_rhi._bSoftwareAdapter). 하드웨어는 고성능 순서의 첫 어댑터다(RHIDxgiAdapter.h — 기본 어댑터는 하이브리드 노트북의 내장 GPU).
         Microsoft::WRL::ComPtr<IDXGIFactory1> factory;
         Microsoft::WRL::ComPtr<IDXGIAdapter1> adapter;
-        if ( desc._bSoftwareAdapter == false )
+        if ( deviceDesc._bSoftwareAdapter == false )
         {
             if ( SUCCEEDED( CreateDXGIFactory1( IID_PPV_ARGS( factory.GetAddressOf() ) ) ) )
-                adapter = findDXGIPreferredAdapter( factory.Get(), desc._bPreferMinimumPower );
+                adapter = findDXGIPreferredAdapter( factory.Get(), deviceDesc._bPreferMinimumPower );
             if ( adapter == nullptr )
             {
                 SW_LOG_ERROR_ID( "D3D11.NoHardwareAdapter", "No hardware DXGI adapter (IDXGIFactory6 high-performance enumeration found none)" );
@@ -546,7 +548,7 @@ namespace sw
         }
         markInitPhase( "adapter" );
         // 어댑터를 넘기면 드라이버 종류는 UNKNOWN 이어야 한다(D3D11CreateDevice 규칙).
-        const D3D_DRIVER_TYPE driverType = desc._bSoftwareAdapter ? D3D_DRIVER_TYPE_WARP : D3D_DRIVER_TYPE_UNKNOWN;
+        const D3D_DRIVER_TYPE driverType = deviceDesc._bSoftwareAdapter ? D3D_DRIVER_TYPE_WARP : D3D_DRIVER_TYPE_UNKNOWN;
         HRESULT               hr         = D3D11CreateDeviceAndSwapChain( adapter.Get(),
                                                                           driverType,
                                                                           nullptr,
@@ -819,11 +821,10 @@ namespace sw
 
     void D3D11RHIDevice::markDeviceLost( const utf8* pCause, HRESULT hr )
     {
-        if ( _transferSerials.markLost() )
-        {
-            SW_LOG_ERROR_ID( "D3D11.D3D11DeviceLostHr", "The D3D11 device was lost (%#, hr=0x%#) - later transfer submits are rejected and GPU waits stop", pCause, static_cast<uint32>( hr ) );
-            GPUBreadcrumbs::reportDeviceLost( "Direct3D 11", nullptr, 0 ); // GPU 쪽 표지가 없다 - CPU 가 마지막으로 기록한 패스만 싣는다
-        }
+        // 표시 · 보고는 공통 입구 하나다(`IRHIDevice::reportDeviceLost` — DX11 은 GPU 표지가 없어 CPU 가 마지막으로 기록한 패스만 싣는다). HRESULT 는 원인 글에 붙인다.
+        StringBuilder<constant::buffer::kMax128> cause;
+        cause.appendFormat( "%#, hr=0x%#", pCause, static_cast<uint32>( hr ) );
+        reportDeviceLost( cause.c_str() );
     }
 
     bool D3D11RHIDevice::isDeviceRemoved()
@@ -848,7 +849,7 @@ namespace sw
             return false;
         SW_LOG_WARNING_ID( "D3D11.MarkingD3D11DeviceLost", "Marking the D3D11 device lost on request (rhi.removeDevice) - D3D11 cannot remove a device, so this is the state after the first "
                                                            "DXGI_ERROR_DEVICE_REMOVED: later transfer submits are rejected" );
-        _transferSerials.markLost(); // 이미 잃은 장치여도 같은 상태다
+        reportDeviceLost( "rhi.removeDevice" ); // 이미 잃은 장치여도 같은 상태다
         return true;
     }
 
@@ -1060,7 +1061,7 @@ namespace sw
             return;
 
         // beginFrame 은 프레임 수명주기만 맡고 백버퍼를 바인딩하거나 클리어하지 않는다. 백버퍼를 타깃으로
-        // 삼고 클리어하는 것은 RenderThread 가 여는 명시적 beginRenderPass(핸들 0) 뿐이다.
+        // 삼고 클리어하는 것은 RenderThread 가 여는 명시적 beginRenderPass(`kRHIBackBufferTexture`) 뿐이다.
         // RTV 재취득은 FLIP_DISCARD 때문에 수명주기에 속한다.
 
         constexpr float32 kDefaultViewportX        = 0.0f;
@@ -1136,6 +1137,7 @@ namespace sw
 
     void D3D11RHIDevice::waitIdleInternal()
     {
+        bool bIdle{ false };
         if ( _immediateContext.isValid() )
         {
             const D3D11ImmediateContext::ScopedLock context = _immediateContext.lock();
@@ -1144,14 +1146,19 @@ namespace sw
             // 기다리는 동안 다른 스레드의 즉시 컨텍스트 호출도 멈춘다 — 쿼리 뒤에 새 전송이 끼면 아래 `retireAll` 이 끝나지 않은 전송을 끝났다고 본다.
             context->End( _idleQuery.Get() );
             context->Flush();
-            if ( waitForEventQuery( context, _idleQuery.Get(), D3D11RHIDeviceInternal::kIdleWaitTimeoutMilliseconds ) == false )
+            bIdle = waitForEventQuery( context, _idleQuery.Get(), D3D11RHIDeviceInternal::kIdleWaitTimeoutMilliseconds );
+            if ( bIdle == false )
                 SW_LOG_ERROR_ID( "D3D11.WaitIdleGPUDidNot", "waitIdle: the GPU did not finish within %# ms", D3D11RHIDeviceInternal::kIdleWaitTimeoutMilliseconds );
             _frameFenceRing.markAllCompleted(); // GPU 가 쉰다 — 낸 프레임이 모두 끝났다
             // 낸 전송도 모두 끝났다. 쿼리를 풀로 돌려주고 워터마크를 올린다(업로드 스테이징은 항목과 함께 놓인다).
             _transferQueue.retireAll( [this]( TransferFence& probe )
             { _listFreeTransferQuery.push_back( std::move( probe._query ) ); } );
         }
-        _releaseQueue.flushAll();
+        // 기다림을 확인했을 때만 통지가 `Completed` 다 — 시간 초과 · 잃은 장치는 끝났는지 모른다.
+        if ( bIdle && isDeviceLost() == false )
+            _releaseQueue.releaseAllCompleted();
+        else
+            _releaseQueue.abandonAll();
     }
 
     void D3D11RHIDevice::retireFrameOnGPU()
@@ -1232,6 +1239,11 @@ namespace sw
     void D3D11RHIDevice::enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate )
     {
         _releaseQueue.enqueueGPURelease( releaseDelegate, _frameFenceRing.getRecordingSerial() );
+    }
+
+    void D3D11RHIDevice::notifyFrameCompletion( const RHIFrameCompletionDelegate& completionDelegate )
+    {
+        _releaseQueue.enqueueCompletion( completionDelegate, _frameFenceRing.getRecordingSerial() );
     }
 
     unique_ptr<IRHICommandList> D3D11RHIDevice::createCommandList()

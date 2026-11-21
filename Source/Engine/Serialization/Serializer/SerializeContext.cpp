@@ -17,6 +17,7 @@
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Reflection/ReflectedAny.h"
+#include "Engine/Reflection/ReflectedValue.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/Serializer/AssetRefBase.h"
 #include "Engine/Serialization/Serializer/CatalogKey.h"
@@ -121,7 +122,7 @@ namespace sw
 
             static void writeAtomicBoolBinary( const void* pPtr, vector<uint8>& listBuf )
             {
-                const uint8 flag = static_cast<const atomic<bool>*>( pPtr )->load() ? 1 : 0;
+                const uint8 flag = static_cast<const reflected_atomic<bool>*>( pPtr )->load() ? 1 : 0;
                 listBuf.push_back( flag );
             }
 
@@ -129,7 +130,7 @@ namespace sw
             {
                 if ( offset + sizeof( uint8 ) > size )
                     return false;
-                static_cast<atomic<bool>*>( pPtr )->store( pData[offset] != 0 );
+                static_cast<reflected_atomic<bool>*>( pPtr )->store( pData[offset] != 0 );
                 offset += sizeof( uint8 );
                 return true;
             }
@@ -163,14 +164,14 @@ namespace sw
             // 불리언 글이 아니면 실패다(값은 그대로) — "ture" 가 조용히 false 가 되지 않게. 읽는 쪽이 고아 · 실패로 알린다.
             [[nodiscard]] static bool readBoolText( void* pPtr, string_view strView ) { return StringUtil::tryParseBool( strView, *static_cast<bool*>( pPtr ) ); }
 
-            static string writeAtomicBoolText( const void* pPtr ) { return static_cast<const atomic<bool>*>( pPtr )->load() ? "true" : "false"; }
+            static string writeAtomicBoolText( const void* pPtr ) { return static_cast<const reflected_atomic<bool>*>( pPtr )->load() ? "true" : "false"; }
 
             [[nodiscard]] static bool readAtomicBoolText( void* pPtr, string_view strView )
             {
                 bool bValue = false;
                 if ( StringUtil::tryParseBool( strView, bValue ) == false )
                     return false;
-                static_cast<atomic<bool>*>( pPtr )->store( bValue );
+                static_cast<reflected_atomic<bool>*>( pPtr )->store( bValue );
                 return true;
             }
 
@@ -247,7 +248,7 @@ namespace sw
             static void regBuiltinBin( SerializeContext& context, const utf8* pName )
             {
                 constexpr bool bSkippedBuiltInType = std::is_same_v<T, string> || std::is_same_v<T, hashed_string> ||
-                                                     std::is_same_v<T, atomic<bool>> || std::is_same_v<T, TagID>;
+                                                     std::is_same_v<T, reflected_atomic<bool>> || std::is_same_v<T, TagID>;
                 if constexpr ( bSkippedBuiltInType )
                     return;
                 context.registerBinaryHandler( hashed_string( pName ), SW_DELEGATE_FUNCTION( SerializeContext::BinaryWriteFn, &writeBuiltinBinary<T> ),
@@ -477,16 +478,97 @@ namespace sw
 
 namespace sw
 {
+    struct SerializeContext::BuiltinHandlerTable
+    {
+        static constexpr size_t kCount = static_cast<size_t>( ReflectBuiltinIndex::kCount );
+
+        std::array<BinaryWriteFn, kCount> _arrBinaryWriter{};
+        std::array<BinaryReadFn, kCount>  _arrBinaryReader{};
+        std::array<TextWriteFn, kCount>   _arrTextWriter{};
+        std::array<TextReadFn, kCount>    _arrTextReader{};
+
+        /** @brief 정규 이름 그대로인 내장형 자리입니다. 별칭은 받지 않는다 — 처리기는 정규 이름으로 등록하고, 등록이 레지스트리를 묻지 않게(기본 문맥은 엔진보다 먼저 만들 수 있다). */
+        static ReflectBuiltinIndex findExactIndex( const hashed_string& typeName )
+        {
+            for ( size_t index = 0; index < kCount; ++index )
+            {
+                if ( ReflectedValueUtil::getBuiltinTypeName( static_cast<ReflectBuiltinIndex>( index ) ) == typeName )
+                    return static_cast<ReflectBuiltinIndex>( index );
+            }
+            return ReflectBuiltinIndex::kNone;
+        }
+    };
+
+    SerializeContext::BuiltinHandlerTable& SerializeContext::editBuiltinHandlers()
+    {
+        if ( _pBuiltinHandlers == nullptr )
+            _pBuiltinHandlers = make_shared<BuiltinHandlerTable>();
+        else if ( _pBuiltinHandlers.use_count() > 1 )
+            _pBuiltinHandlers = make_shared<BuiltinHandlerTable>( *_pBuiltinHandlers ); // 사본과 나누던 표는 떼어 내고 쓴다
+        return *_pBuiltinHandlers;
+    }
+
     void SerializeContext::registerBinaryHandler( hashed_string typeName, BinaryWriteFn writeFn, BinaryReadFn readFn )
     {
+        // 내장형이면 색인 배열에도 둔다 — 이름 조회(맵)와 색인 조회(배열)가 같은 처리기를 돌려준다.
+        const ReflectBuiltinIndex builtinIndex = BuiltinHandlerTable::findExactIndex( typeName );
+        if ( builtinIndex != ReflectBuiltinIndex::kNone )
+        {
+            BuiltinHandlerTable& table                                  = editBuiltinHandlers();
+            table._arrBinaryWriter[static_cast<size_t>( builtinIndex )] = writeFn;
+            table._arrBinaryReader[static_cast<size_t>( builtinIndex )] = readFn;
+        }
         _mapBinaryWriter.insert_or_assign( typeName, std::move( writeFn ) );
         _mapBinaryReader.insert_or_assign( typeName, std::move( readFn ) );
     }
 
     void SerializeContext::registerTextHandler( hashed_string typeName, TextWriteFn writeFn, TextReadFn readFn )
     {
+        const ReflectBuiltinIndex builtinIndex = BuiltinHandlerTable::findExactIndex( typeName );
+        if ( builtinIndex != ReflectBuiltinIndex::kNone )
+        {
+            BuiltinHandlerTable& table                                = editBuiltinHandlers();
+            table._arrTextWriter[static_cast<size_t>( builtinIndex )] = writeFn;
+            table._arrTextReader[static_cast<size_t>( builtinIndex )] = readFn;
+        }
         _mapTextWriter.insert_or_assign( typeName, std::move( writeFn ) );
         _mapTextReader.insert_or_assign( typeName, std::move( readFn ) );
+    }
+
+    const SerializeContext::BinaryWriteFn* SerializeContext::findBinaryWriter( const ReflectBuiltinIndex builtinIndex ) const
+    {
+        if ( builtinIndex >= ReflectBuiltinIndex::kCount )
+            return nullptr;
+        if ( _pBuiltinHandlers != nullptr && _pBuiltinHandlers->_arrBinaryWriter[static_cast<size_t>( builtinIndex )].isBound() )
+            return &_pBuiltinHandlers->_arrBinaryWriter[static_cast<size_t>( builtinIndex )];
+        return ( _pHandlerFallback != nullptr ) ? _pHandlerFallback->findBinaryWriter( builtinIndex ) : nullptr;
+    }
+
+    const SerializeContext::BinaryReadFn* SerializeContext::findBinaryReader( const ReflectBuiltinIndex builtinIndex ) const
+    {
+        if ( builtinIndex >= ReflectBuiltinIndex::kCount )
+            return nullptr;
+        if ( _pBuiltinHandlers != nullptr && _pBuiltinHandlers->_arrBinaryReader[static_cast<size_t>( builtinIndex )].isBound() )
+            return &_pBuiltinHandlers->_arrBinaryReader[static_cast<size_t>( builtinIndex )];
+        return ( _pHandlerFallback != nullptr ) ? _pHandlerFallback->findBinaryReader( builtinIndex ) : nullptr;
+    }
+
+    const SerializeContext::TextWriteFn* SerializeContext::findTextWriter( const ReflectBuiltinIndex builtinIndex ) const
+    {
+        if ( builtinIndex >= ReflectBuiltinIndex::kCount )
+            return nullptr;
+        if ( _pBuiltinHandlers != nullptr && _pBuiltinHandlers->_arrTextWriter[static_cast<size_t>( builtinIndex )].isBound() )
+            return &_pBuiltinHandlers->_arrTextWriter[static_cast<size_t>( builtinIndex )];
+        return ( _pHandlerFallback != nullptr ) ? _pHandlerFallback->findTextWriter( builtinIndex ) : nullptr;
+    }
+
+    const SerializeContext::TextReadFn* SerializeContext::findTextReader( const ReflectBuiltinIndex builtinIndex ) const
+    {
+        if ( builtinIndex >= ReflectBuiltinIndex::kCount )
+            return nullptr;
+        if ( _pBuiltinHandlers != nullptr && _pBuiltinHandlers->_arrTextReader[static_cast<size_t>( builtinIndex )].isBound() )
+            return &_pBuiltinHandlers->_arrTextReader[static_cast<size_t>( builtinIndex )];
+        return ( _pHandlerFallback != nullptr ) ? _pHandlerFallback->findTextReader( builtinIndex ) : nullptr;
     }
 
     const SerializeContext::BinaryWriteFn* SerializeContext::findBinaryWriter( hashed_string typeName ) const

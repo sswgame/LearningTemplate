@@ -7,6 +7,8 @@
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/Log/LogOnce.h"
+#include "Core/Log/Logger.h"
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/TypeInfo.h"
@@ -71,7 +73,7 @@ namespace sw
         if ( pBucket == nullptr )
             return;
         vector<Entry>& listEntry = pBucket->_listEntry;
-        // 순서를 지키며 뺀다 — "활성인 첫 것" 고르기가 등록 순서로 정해진다.
+        // 순서를 지키며 뺀다 — 모두 도는 순회의 차례가 실행마다 같다.
         if ( const optional<size_t> index = VectorUtil::findIndexBy<&Entry::_pComponent>( listEntry, pComponent ) )
             listEntry.erase( listEntry.begin() + static_cast<ptrdiff_t>( *index ) );
     }
@@ -80,6 +82,13 @@ namespace sw
     {
         const Bucket* pBucket = findBucket( typeKey, channel );
         return pBucket != nullptr ? pBucket->_listEntry : getEmptyList();
+    }
+
+    void ComponentRegistry::reportDuplicateUnique( const TypeInfo* pType, const Component& first, const Component& second )
+    {
+        const string_view typeName = pType != nullptr ? string_view( pType->_fullyQualifiedName.c_str() ) : string_view( "?" );
+        SW_LOG_ERROR_ONCE_FOR_ID( "ComponentRegistry.DuplicateUnique", typeName, "the scene has more than one %# ('%#', '%#') - it is one per scene, so none is used", typeName.data(),
+                                  first.getOwnerName().c_str(), second.getOwnerName().c_str() );
     }
 
     bool ComponentRegistry::containsHandle( uint32 typeKey, uint32 channel, ComponentHandle handle ) const

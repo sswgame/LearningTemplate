@@ -39,7 +39,7 @@ SW_TEST_CASE( MemoryTest, LowLevelMemoryAllocAndAlignment )
     sw::Memory::copy( aligned64, kSamplePattern, 32 );
     SW_EXPECT_EQUAL( 0, sw::Memory::compare( aligned64, kSamplePattern, 32 ) );
 
-    sw::Memory::freeAligned( aligned64 );
+    sw::Memory::free( aligned64 ); // 정렬 블록도 해제 길은 하나다
 }
 
 /**
@@ -494,6 +494,42 @@ SW_TEST_CASE( MemoryTest, MakeUniqueHonoursOverAlignmentAndFreesWithTheSameHeap 
     SW_EXPECT_EQUAL( 0u, static_cast<uint32>( reinterpret_cast<uintptr_t>( listLine.data() ) % 64 ) );
 }
 
+namespace
+{
+    /** @brief 기본 정렬 기반 형식입니다(과정렬 파생을 기반 포인터로 지우는 테스트). */
+    struct DefaultAlignedBaseInternal
+    {
+        int32 _baseValue{ 3 };
+        virtual ~DefaultAlignedBaseInternal() = default;
+    };
+
+    /** @brief 64 바이트 정렬 파생 형식입니다. 정렬 할당으로 잡히고 기반 해제자로 풀린다. */
+    struct alignas( 64 ) OverAlignedDerivedInternal final : public DefaultAlignedBaseInternal
+    {
+        int32 _derivedValue{ 9 };
+    };
+} // namespace
+
+/**
+ * @brief [MemoryTest] 해제 길이 하나라 정렬 블록 · 과정렬 파생을 기반 포인터로 지우는 소유자도 같은 `Memory::free` 로 푼다
+ * @details 예전에는 정렬 해제 짝(`freeAligned`)이 달라 기반 해제자로의 변환을 컴파일 오류로 막았다. ASan · CRT 디버그 힙이 잘못된 해제를 잡는다.
+ */
+SW_TEST_CASE( MemoryTest, OverAlignedDerivedFreesThroughBaseOwner )
+{
+    for ( uint32 repeat = 0; repeat < 16; ++repeat )
+    {
+        sw::unique_ptr<DefaultAlignedBaseInternal> pBase = sw::make_unique<OverAlignedDerivedInternal>();
+        SW_REQUIRE_NOT_NULL( pBase.get() );
+        SW_EXPECT_EQUAL( 0u, static_cast<uint32>( reinterpret_cast<uintptr_t>( pBase.get() ) % 64 ) );
+        SW_EXPECT_EQUAL( 3, pBase->_baseValue );
+    }
+
+    void* pAligned = sw::Memory::allocateAligned( 100, 256 );
+    SW_REQUIRE_NOT_NULL( pAligned );
+    SW_EXPECT_EQUAL( 0u, static_cast<uint32>( reinterpret_cast<uintptr_t>( pAligned ) % 256 ) );
+    sw::Memory::free( pAligned );
+}
+
 /**
  * @brief [MemoryTest] `makeFixedCountArray` 는 원소를 값 초기화하고 정렬을 지키며, `make_unique<T[]>` 도 같은 경로로 잡는다
  */
@@ -533,7 +569,7 @@ SW_TEST_CASE( MemoryTest, AllocationObserverSeesOnlyBlocksAllocatedWhileAttached
     void* pBefore = sw::Memory::allocate( Record::kProbeSize );
     SW_REQUIRE_NOT_NULL( pBefore );
 
-    sw::Memory::registerAllocationObserver( &kObserver );
+    sw::Memory::AllocationObserverRegistration registration = sw::Memory::registerAllocationObserver( &kObserver );
     Record::s_pWatchedFree.store( pBefore );
     sw::Memory::free( pBefore );
     [[maybe_unused]] const uint32 freeOfUnobserved = Record::s_freeCount.load();
@@ -542,7 +578,7 @@ SW_TEST_CASE( MemoryTest, AllocationObserverSeesOnlyBlocksAllocatedWhileAttached
     SW_REQUIRE_NOT_NULL( pDuring );
     Record::s_pWatchedFree.store( pDuring );
     sw::Memory::free( pDuring );
-    sw::Memory::unregisterAllocationObserver();
+    registration.reset();
 
 #if defined( SW_SHIPPING )
     SW_EXPECT_EQUAL( 0u, Record::s_allocateCount.load() );

@@ -141,3 +141,25 @@ SW_TEST_CASE( DeterministicMathTest, ValueNoiseMatchesRecordedBits )
     SW_EXPECT_EQUAL( 0x3f0bab0fu, BitUtil::floatToBits( ValueNoise::sampleFractal( 12.625f, 3.1f, 7u, 5 ) ) );
     SW_EXPECT_EQUAL( 0x3edd02b0u, BitUtil::floatToBits( ValueNoise::sampleFractal( -5.55f, 8.125f, 123456u, 3 ) ) );
 }
+
+/**
+ * @brief [DeterministicMathTest] 헤더 인라인 벡터 연산은 부르는 TU 가 축약을 켜도(Release `-ffp-contract=on` · AVX2) FMA 로 합쳐지지 않는다
+ * @details a = 1 + 2^-12 이면 a * a 를 float 로 반올림한 값은 1 + 2^-11 이고(끝 2^-24 는 짝수 쪽으로 버려진다), 여기에 -(1 + 2^-11) 을 더하면 0 이다.
+ *          FMA 로 합치면 반올림 없는 곱을 더해 2^-24 가 남는다. 이 테스트 TU 는 결정성 표시가 없는 보통 TU 라, `VectorMath.h` 의 pragma 구간이 새거나
+ *          빠지면 FMA 가 있는 구성에서 0 이 아니게 된다.
+ */
+SW_TEST_CASE( DeterministicMathTest, InlineVectorOpsAreNotContracted )
+{
+    // volatile 로 읽어 상수 접기를 막는다 — 컴파일러가 식을 미리 계산하면 실행 명령(FMA 여부)을 보지 못한다.
+    volatile float32 sourceA = 1.0f + std::ldexp( 1.0f, -12 );
+    volatile float32 sourceC = -( 1.0f + std::ldexp( 1.0f, -11 ) );
+    const float32    a       = sourceA;
+    const float32    c       = sourceC;
+    const sw::float3 lhs{ a, 1.0f, 0.0f };
+    const sw::float3 rhs{ a, c, 0.0f };
+    SW_EXPECT_EQUAL( sw::BitUtil::floatToBits( 0.0f ), sw::BitUtil::floatToBits( lhs.dot( rhs ) ) );
+
+    const sw::float2 lhs2{ a, 1.0f };
+    const sw::float2 rhs2{ a, c };
+    SW_EXPECT_EQUAL( sw::BitUtil::floatToBits( 0.0f ), sw::BitUtil::floatToBits( lhs2.dot( rhs2 ) ) );
+}

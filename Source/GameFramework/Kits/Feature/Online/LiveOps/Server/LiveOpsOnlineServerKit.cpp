@@ -49,7 +49,7 @@ namespace sw
          * @class LiveOpsOnlineServerKit
          * @brief 라이브 운영 키트의 서버 조립입니다. 발송기는 맡긴 저장 일이 끝날 때까지(저장소를 내린 뒤) 살아 있어야 하므로 키트와 수명이 같습니다.
          */
-        class LiveOpsOnlineServerKit final : public IOnlineServerKit
+        class LiveOpsOnlineServerKit final : public OnlineServerKit<>
         {
         public:
             LiveOpsOnlineServerKit()
@@ -62,7 +62,7 @@ namespace sw
             {
             }
 
-            [[nodiscard]] expected<void> initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry ) override
+            [[nodiscard]] expected<void> initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, const Dependencies& ) override
             {
                 LiveOpsKitConfig kitConfig;
                 if ( expected<void> settings = entry.readSettings( kitConfig ); settings.has_value() == false )
@@ -91,7 +91,7 @@ namespace sw
                 return assembled;
             }
 
-            expected<void> start( OnlineServerKitContext& context ) override
+            expected<void> start( OnlineServerKitContext& context, const Dependencies&, const UnorderedDependencies& ) override
             {
                 LiveOpsDependencies dependencies;
                 dependencies._pStore        = context._pStore;

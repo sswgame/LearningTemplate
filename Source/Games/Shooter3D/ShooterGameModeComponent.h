@@ -188,7 +188,7 @@ namespace sw
         const AIDirector& getPacingDirector() const { return _director; }
         uint32            getKillCount() const { return _killCount; }
         /** @brief 효과 풀 둘이 지금까지 새로 만든 인스턴스 수입니다(재사용하면 늘지 않는다 — 감시 값). */
-        uint32 getEffectCreatedCount() const { return _effectPool.getCreatedCount() + _tracerPool.getCreatedCount(); }
+        uint64 getEffectCreatedCount() const { return _effectPool.getCreatedCount().get() + _tracerPool.getCreatedCount().get(); } ///< 감시 값만 읽는다(개발 전용 칸의 합, 배포는 0)
 
     protected:
         /** @brief 막는 상자를 모으고 페이싱 감독을 시작합니다(데이터를 읽지 못하면 적이 오지 않을 뿐 판은 시작합니다). */

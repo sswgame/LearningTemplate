@@ -155,3 +155,15 @@ SW_TEST_CASE( KillcamTest, ComponentCutsToItsCameraAndReleases )
     KillcamComponent* pBareKillcam = pBare->addComponent<KillcamComponent>();
     SW_EXPECT_FALSE( pBareKillcam->play( KillcamTestUtil::makePiercingShot() ) );
 }
+
+/** @brief [KillcamTest] 킬캠은 씬에 하나다 — 둘이면 쏘는 쪽이 기록할 곳(`findInScene`)을 등록 순서로 고르지 않고 오류와 nullptr 을 낸다 */
+SW_TEST_CASE( KillcamTest, SecondKillcamStopsTheRecorder )
+{
+    SW_EXPECT_LOG( "ComponentRegistry.DuplicateUnique" );
+    GameObjectManager manager;
+    KillcamComponent* pFirst = manager.createGameObject( hashed_string( "KillcamA" ) )->addComponent<KillcamComponent>();
+    SW_REQUIRE_NOT_NULL( pFirst );
+    SW_EXPECT_TRUE( KillcamComponent::findInScene( manager ) == pFirst );
+    SW_REQUIRE_NOT_NULL( manager.createGameObject( hashed_string( "KillcamB" ) )->addComponent<KillcamComponent>() );
+    SW_EXPECT_NULL( KillcamComponent::findInScene( manager ) );
+}

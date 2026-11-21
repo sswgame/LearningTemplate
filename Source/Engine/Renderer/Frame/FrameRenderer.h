@@ -3,6 +3,7 @@
  * @brief RenderPipeline XML 을 로드해 RenderGraph 를 만들고, 프레임을 셋업한 뒤 패스 실행(`FramePassExecutor`)에 넘겨 Shadow, Forward, Deferred, Post 패스를 그립니다.
  */
 #pragma once
+#include "Core/Concurrency/DevCounter.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
@@ -233,13 +234,13 @@ namespace sw
         FrameCapture&       getCapture() { return _capture; }
         const FrameCapture& getCapture() const { return _capture; }
         /**
-         * @brief 화면에 쓰는 대상입니다 — 0 이면 스왑체인(백버퍼) 그대로, 회전한 휴대 기기 화면이면 논리 크기 대기 텍스처(`FrameScreenRotation`), HDR 출력이면 SDR UI RT(`FrameDisplayEncode`)입니다.
+         * @brief 화면에 쓰는 대상입니다 — `kRHIBackBufferTexture` 이면 스왑체인(백버퍼) 그대로, 회전한 휴대 기기 화면이면 논리 크기 대기 텍스처(`FrameScreenRotation`), HDR 출력이면 SDR UI RT(`FrameDisplayEncode`)입니다.
          * @details 렌더 스레드의 UI 패스도 여기에 쓰고, 끝에 `recordScreenOutput` 이 스왑체인 이미지로 옮긴다. 회전(Android)과 HDR(데스크톱)은 함께 오지 않는다.
          */
         RHITextureHandle getScreenTarget() const
         {
             const RHITextureHandle rotationTarget = _screenRotation.getScreenTarget();
-            return rotationTarget != 0 ? rotationTarget : _displayEncode.getUITarget();
+            return rotationTarget != kRHIBackBufferTexture || _displayEncode.isActive() == false ? rotationTarget : _displayEncode.getUITarget();
         }
         /**
          * @brief 화면 대상을 스왑체인 이미지로 옮깁니다(프레임의 마지막 화면 쓰기 뒤 · 표시 앞) — 회전 대기 텍스처는 돌려 그리고, HDR 출력은 UI 를 합성해 인코딩한다.
@@ -305,7 +306,7 @@ namespace sw
         uint32 getPublishedViewRectHeight() const { return _publishedViewRectHeight.load(); }
         uint32 getPublishedViewPoolWidth() const { return _publishedViewPoolWidth.load(); }
         /** @brief 주 시점 풀을 다시 만든 누적 횟수입니다(자동 렌더 배율 단계는 늘리지 않아야 한다 — 감시 값 `Render.ViewTransientRebuildCount`). */
-        uint32 getPublishedViewTransientRebuildCount() const { return _publishedViewTransientRebuildCount.load(); }
+        const DevCounter& getPublishedViewTransientRebuildCount() const { return _publishedViewTransientRebuildCount; }
         /** @brief 마지막 프레임에 주 시점의 가림 타일을 지었으면 1 입니다(감시 값 `Render.OcclusionTilesBuilt`). */
         uint32 getPublishedOcclusionTilesBuilt() const { return _publishedOcclusionTilesBuilt.load(); }
         /** @brief 마지막 프레임에 2 단계 가림을 쓸 수 있었으면 1 입니다(가림 판정 켬 · 설정 · 백엔드 능력 — 감시 값 `Render.OcclusionTwoPhase`). */
@@ -552,7 +553,7 @@ namespace sw
         atomic<uint32> _publishedViewRectWidth;
         atomic<uint32> _publishedViewRectHeight;
         atomic<uint32> _publishedViewPoolWidth;
-        atomic<uint32> _publishedViewTransientRebuildCount;
+        DevCounter     _publishedViewTransientRebuildCount;
         atomic<uint8>  _publishedOcclusionTilesBuilt;
         atomic<uint8>  _publishedOcclusionTwoPhase;
         atomic<uint8>  _publishedOcclusionLatePhase;

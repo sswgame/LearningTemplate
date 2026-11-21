@@ -62,25 +62,25 @@ SW_TEST_CASE( ShaderCacheTest, CookedPolicyAnswersRepeatsFromMemory )
     const ShaderCompileDesc first  = makeDesc( "PSMain" );
     const ShaderCompileDesc second = makeDesc( "PSOther" );
     SW_REQUIRE_TRUE( cache.getOrCompile( first )._bSuccess );
-    SW_EXPECT_EQUAL( uint64( 0 ), cache.getMemoryHitCount() );
-    SW_EXPECT_EQUAL( uint64( 1 ), cache.getProviderLoadCount() );
+    SW_EXPECT_EQUAL( uint64( 0 ), cache.getMemoryHitCount().get() );
+    SW_EXPECT_EQUAL( uint64( 1 ), cache.getProviderLoadCount().get() );
 
     for ( int32 repeat = 0; repeat < 3; ++repeat )
     {
         SW_EXPECT_TRUE( cache.getOrCompile( first )._bSuccess );
     }
-    SW_EXPECT_EQUAL( uint64( 3 ), cache.getMemoryHitCount() );
-    SW_EXPECT_EQUAL( uint64( 1 ), cache.getProviderLoadCount() );
+    SW_EXPECT_EQUAL( uint64( 3 ), cache.getMemoryHitCount().get() );
+    SW_EXPECT_EQUAL( uint64( 1 ), cache.getProviderLoadCount().get() );
 
     // 다른 요청(진입점)은 다른 항목이다 — 공급자를 한 번 더 부른다.
     SW_REQUIRE_TRUE( cache.getOrCompile( second )._bSuccess );
-    SW_EXPECT_EQUAL( uint64( 3 ), cache.getMemoryHitCount() );
-    SW_EXPECT_EQUAL( uint64( 2 ), cache.getProviderLoadCount() );
+    SW_EXPECT_EQUAL( uint64( 3 ), cache.getMemoryHitCount().get() );
+    SW_EXPECT_EQUAL( uint64( 2 ), cache.getProviderLoadCount().get() );
 
     // 비우면 다시 공급자다.
     cache.clearCache();
     SW_REQUIRE_TRUE( cache.getOrCompile( first )._bSuccess );
-    SW_EXPECT_EQUAL( uint64( 3 ), cache.getProviderLoadCount() );
+    SW_EXPECT_EQUAL( uint64( 3 ), cache.getProviderLoadCount().get() );
 }
 
 namespace
@@ -203,6 +203,6 @@ SW_TEST_CASE( ShaderCacheTest, DefineOrderDoesNotSplitEntries )
 
     SW_REQUIRE_TRUE( cache.getOrCompile( forward )._bSuccess );
     SW_REQUIRE_TRUE( cache.getOrCompile( reversed )._bSuccess );
-    SW_EXPECT_EQUAL( uint64( 1 ), cache.getProviderLoadCount() );
-    SW_EXPECT_EQUAL( uint64( 1 ), cache.getMemoryHitCount() );
+    SW_EXPECT_EQUAL( uint64( 1 ), cache.getProviderLoadCount().get() );
+    SW_EXPECT_EQUAL( uint64( 1 ), cache.getMemoryHitCount().get() );
 }

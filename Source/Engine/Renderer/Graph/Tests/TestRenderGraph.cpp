@@ -22,8 +22,8 @@ namespace
         return SW_DELEGATE_LAMBDA( RenderGraphPassExecuteFn, [&callCount]( const RenderGraphPassContext& context )
         {
             callCount.fetch_add( 1 );
-            if ( context._pCmdList != nullptr )
-                static_cast<test::FakeRHICommandList*>( context._pCmdList )->_passName = context._passName;
+            if ( context.getCommandList() != nullptr )
+                static_cast<test::FakeRHICommandList*>( context.getCommandList() )->_passName = context._passName;
         } );
     }
 
@@ -714,4 +714,161 @@ SW_TEST_CASE( RenderGraphTest, AsyncComputeAccessesFoldToTheQueue )
     SW_EXPECT_LOG( "Renderer.GraphDuplicateAccess" );
     SW_EXPECT_FALSE( graph.addPass( hashed_string( "Twice" ), { RenderGraphBufferSRV{ particles }, RenderGraphBufferUAV{ particles } } ) );
     SW_EXPECT_EQUAL( 0u, graph.getNodeCount() );
+}
+
+/**
+ * @brief [RenderGraphTest] 직렬 `execute` 도 패스 문맥에 그 리스트와 패스 번호(`addPass` 의 payload)를 싣는다 — 병렬 · 큐 실행과 같은 문맥이다
+ * @details 결함이면 직렬 경로(추가 뷰 · 병렬 기록이 없는 백엔드)에서 `uavBarrier` · `transition` 이 리스트가 없어 조용히 아무것도 내지 않고, 받는 쪽이 이름 해시로 서술을 다시 찾는다.
+ *          변이: `execute` 가 문맥을 따로 만들며 리스트를 빠뜨리면(예전 사본) 리스트 단언이, payload 를 싣지 않으면 번호 단언이 진다.
+ */
+SW_TEST_CASE( RenderGraphTest, SerialExecuteCarriesCommandListAndPayload )
+{
+    RenderGraph              graph;
+    test::FakeRHICommandList cmd( 0 );
+    vector<uint32>           listPayload;
+    uint32                   listMismatchCount = 0;
+    const auto               record            = SW_DELEGATE_LAMBDA( RenderGraphPassExecuteFn, [&]( const RenderGraphPassContext& context )
+                             {
+        listPayload.push_back( context._payload );
+        listMismatchCount += context.getCommandList() == &cmd ? 0u : 1u;
+    } );
+    SW_REQUIRE_TRUE( graph.addPass( hashed_string( "Writer" ), { RenderGraphRenderTarget{ hashed_string( "Color" ) } }, record, RHIQueueKind::Graphics, 7 ) );
+    SW_REQUIRE_TRUE( graph.addPass( hashed_string( "Reader" ), { RenderGraphTextureSRV{ hashed_string( "Color" ) } }, record, RHIQueueKind::Graphics, 3 ) );
+    SW_REQUIRE_TRUE( graph.compile() );
+    RenderGraphExecutionContext context;
+    SW_REQUIRE_TRUE( graph.execute( context, &cmd ) );
+    SW_REQUIRE_EQUAL( size_t{ 2 }, listPayload.size() );
+    SW_EXPECT_EQUAL( 7u, listPayload[0] );
+    SW_EXPECT_EQUAL( 3u, listPayload[1] );
+    SW_EXPECT_EQUAL( 0u, listMismatchCount );
+}
+
+/**
+ * @brief [RenderGraphTest] 패스 안 왕복을 쓰기로 선언한 자원(깊이 프리패스 뒤 2 단계 가림처럼 장면 깊이를 깊이 쓰기로 적는 패스)은 같은 자원의 앞 · 뒤 쓰기 사이 레벨에 놓인다
+ * @details `LateOcclusion` 이 장면 깊이를 깊이 쓰기로 선언하는 까닭 — 앞 쓰기(깊이 프리패스)와 같은 레벨에서 다른 패스가 그 깊이를 읽거나 쓰지 않고, 뒤 쓰기(G버퍼) 앞에 끝난다.
+ *          변이: 셰이더 읽기로 선언하면 읽는 패스(데칼)와 같은 레벨에 들어가 데칼 단언이 진다.
+ */
+SW_TEST_CASE( RenderGraphTest, InPassRoundTripWriteSitsBetweenWriters )
+{
+    const hashed_string depth( "SceneDepth" );
+    RenderGraph         graph;
+    SW_REQUIRE_TRUE( graph.addPass( hashed_string( "DepthPrepass" ), { RenderGraphDepthWrite{ depth } } ) );
+    SW_REQUIRE_TRUE( graph.addPass( hashed_string( "LateOcclusion" ), { RenderGraphDepthWrite{ depth }, RenderGraphBufferUAV{ hashed_string( "CullArgs" ) } } ) );
+    SW_REQUIRE_TRUE( graph.addPass( hashed_string( "Decal" ), { RenderGraphTextureSRV{ depth } } ) );
+    SW_REQUIRE_TRUE( graph.addPass( hashed_string( "GBuffer" ), { RenderGraphDepthWrite{ depth } } ) );
+    SW_REQUIRE_TRUE( graph.compile() );
+    const vector<vector<hashed_string>>& listLevel = graph.getExecutionLevels();
+    SW_REQUIRE_EQUAL( size_t{ 4 }, listLevel.size() );
+    SW_EXPECT_TRUE( listLevel[0][0] == hashed_string( "DepthPrepass" ) );
+    SW_EXPECT_TRUE( listLevel[1][0] == hashed_string( "LateOcclusion" ) );
+    SW_EXPECT_TRUE( listLevel[2][0] == hashed_string( "Decal" ) );
+    SW_EXPECT_TRUE( listLevel[3][0] == hashed_string( "GBuffer" ) );
+}
+
+namespace
+{
+    /** @brief 그래프 @p graph 의 레벨 콜백이 받은 전이를 @p outListBarrier 에 모읍니다. */
+    void collectBarriers( RenderGraph& graph, vector<RenderGraphBarrier>& outListBarrier )
+    {
+        graph.setLevelPrologue( RenderGraphLevelPrologueFn( [&outListBarrier]( const RenderGraphLevelContext& levelContext )
+        {
+            if ( levelContext._pListBarrier == nullptr )
+                return;
+            outListBarrier.insert( outListBarrier.end(), levelContext._pListBarrier->begin(), levelContext._pListBarrier->end() );
+        } ) );
+    }
+
+    /** @brief @p listBarrier 에서 자원 @p resource 를 접근 @p access 로 옮기는 전이가 있으면 true 입니다. */
+    bool hasBarrier( const vector<RenderGraphBarrier>& listBarrier, hashed_string resource, RenderGraphAccess access )
+    {
+        for ( const RenderGraphBarrier& barrier : listBarrier )
+        {
+            if ( barrier._resource == resource && barrier._access == access )
+                return true;
+        }
+        return false;
+    }
+} // namespace
+
+/**
+ * @brief [RenderGraphTest] 화면 공간 반사가 꺼진 프레임에도 그 선언(HZB UAV · 깊이 사본 렌더 타깃)의 전이는 나가 끝 상태가 그 접근으로 남는다 — 다음 프레임의 소비자는 남은 상태를 믿지 않고 다시 옮긴다
+ * @details 꺼진 패스의 레벨 전이(S2)는 다음 차례다. 그동안의 안전은 "다음 소비자가 선언대로 다시 옮긴다" 에 기댄다: 프레임 그래프는 프레임마다 등록 접근을 새로 심고(HZB 셰이더 읽기,
+ *          깊이 사본 RW 텍스처) 짓기(HZB UAV)와 컴퓨트 읽기(깊이 사본 UAV 읽기)마다 전이를 낸다. 뷰 그래프 쪽도 다음 실행은 처음 사용마다 전이를 낸다.
+ *          변이: 실행 문맥이 지난 실행의 상태를 이어 가면(초기화를 빼면) 다음 프레임 짓기의 HZB UAV 전이가 사라져 진다.
+ */
+SW_TEST_CASE( RenderGraphTest, DisabledReflectionLeftoverStateIsRetransitionedByNextConsumers )
+{
+    const hashed_string hzb( "HZB" );
+    const hashed_string history( "DepthHistory" );
+    const hashed_string depth( "SceneDepth" );
+
+    // 뷰 그래프 — 뒤 단계가 짓고 셰이더 읽기로 돌린 뒤, 꺼진 반사 패스(몸통 없음)의 선언이 HZB 를 UAV, 깊이 사본을 렌더 타깃으로 옮긴다.
+    RenderGraph viewGraph;
+    SW_REQUIRE_TRUE( viewGraph.addPass( hashed_string( "DepthPrepass" ), { RenderGraphDepthWrite{ depth } } ) );
+    SW_REQUIRE_TRUE( viewGraph.addPass( hashed_string( "LateOcclusion" ), { RenderGraphDepthWrite{ depth }, RenderGraphRenderTarget{ history }, RenderGraphBufferUAV{ hzb } } ) );
+    SW_REQUIRE_TRUE( viewGraph.addPass( hashed_string( "ScreenSpaceReflection" ), { RenderGraphTextureSRV{ depth }, RenderGraphRenderTarget{ history }, RenderGraphBufferUAV{ hzb } } ) );
+    SW_REQUIRE_TRUE( viewGraph.compile() );
+    vector<RenderGraphBarrier> listViewBarrier;
+    collectBarriers( viewGraph, listViewBarrier );
+    RenderGraphExecutionContext viewContext;
+    SW_REQUIRE_TRUE( viewGraph.execute( viewContext ) );
+    SW_REQUIRE_TRUE( viewContext.findAccess( hzb ).has_value() );
+    SW_EXPECT_TRUE( *viewContext.findAccess( hzb ) == RenderGraphAccess::UnorderedAccess );  // 꺼진 반사의 선언이 남긴 끝 상태
+    SW_EXPECT_TRUE( *viewContext.findAccess( history ) == RenderGraphAccess::RenderTarget ); // 같다
+
+    // 다음 프레임의 프레임 그래프 — 등록 접근을 새로 심는다(남은 UAV · 렌더 타깃을 믿지 않는다). 깊이 사본 패스 · 짓기 · 컴퓨트 읽기가 각자 전이를 받는다.
+    RenderGraph frameGraph;
+    frameGraph.importResource( hzb, RenderGraphViewableKind::Buffer, RenderGraphAccess::ShaderRead );
+    frameGraph.importResource( history, RenderGraphViewableKind::Texture, RenderGraphAccess::UnorderedAccess );
+    SW_REQUIRE_TRUE( frameGraph.addPass( hashed_string( "DepthHistory" ), { RenderGraphRenderTarget{ history } } ) );
+    SW_REQUIRE_TRUE( frameGraph.addPass( hashed_string( "HZBBuild" ), { RenderGraphTextureUAVRead{ history }, RenderGraphBufferUAV{ hzb } } ) );
+    SW_REQUIRE_TRUE( frameGraph.addPass( hashed_string( "GPUCull" ), { RenderGraphBufferSRV{ hzb } } ) );
+    SW_REQUIRE_TRUE( frameGraph.compile() );
+    vector<RenderGraphBarrier> listFrameBarrier;
+    collectBarriers( frameGraph, listFrameBarrier );
+    RenderGraphExecutionContext frameContext;
+    SW_REQUIRE_TRUE( frameGraph.execute( frameContext ) );
+    SW_EXPECT_TRUE( hasBarrier( listFrameBarrier, history, RenderGraphAccess::RenderTarget ) );        // 사본 그리기
+    SW_EXPECT_TRUE( hasBarrier( listFrameBarrier, history, RenderGraphAccess::UnorderedAccessRead ) ); // 짓기가 RW 텍스처로 읽는다
+    SW_EXPECT_TRUE( hasBarrier( listFrameBarrier, hzb, RenderGraphAccess::UnorderedAccess ) );         // 짓기 — 남은 UAV 를 믿지 않는다
+    SW_EXPECT_TRUE( hasBarrier( listFrameBarrier, hzb, RenderGraphAccess::ShaderRead ) );              // 컬링이 읽는다
+
+    // 같은 뷰 그래프를 다시 돌려도 처음 사용마다 전이가 난다 — 지난 실행의 끝 상태(UAV)를 잇지 않는다.
+    listViewBarrier.clear();
+    SW_REQUIRE_TRUE( viewGraph.execute( viewContext ) );
+    SW_EXPECT_TRUE( hasBarrier( listViewBarrier, hzb, RenderGraphAccess::UnorderedAccess ) );
+    SW_EXPECT_TRUE( hasBarrier( listViewBarrier, history, RenderGraphAccess::RenderTarget ) );
+}
+
+/**
+ * @brief [RenderGraphTest] UAV 쓰기 뒤의 UAV 쓰기 · UAV 읽기는 상태가 그대로라도 UAV 배리어를 받고, UAV 읽기끼리는 아무것도 받지 않는다(텍스처 · 버퍼 같음)
+ * @details 컴퓨트 패스 둘이 같은 첨부를 이어 쓰거나 읽을 때 앞 쓰기를 기다리는 길이다 — 레벨 콜백이 텍스처면 `uavBarrierTexture`, 버퍼면 `uavBarrier` 를 낸다.
+ *          변이: UAV 읽기를 UAV 배리어 조건에서 빼면 둘째 단언이, UAV 읽기끼리 배리어를 내면 셋째 단언이 진다.
+ */
+SW_TEST_CASE( RenderGraphTest, UnorderedAccessReadWaitsForPriorWrite )
+{
+    const hashed_string target( "ComputeColor" );
+    RenderGraph         graph;
+    SW_REQUIRE_TRUE( graph.addPass( hashed_string( "Writer" ), { RenderGraphTextureUAV{ target } } ) );
+    SW_REQUIRE_TRUE( graph.addPass( hashed_string( "ReaderA" ), { RenderGraphTextureUAVRead{ target }, RenderGraphTextureUAV{ hashed_string( "OutA" ) } } ) );
+    SW_REQUIRE_TRUE( graph.addPass( hashed_string( "ReaderB" ), { RenderGraphTextureUAVRead{ target }, RenderGraphTextureUAV{ hashed_string( "OutB" ) } } ) );
+    SW_REQUIRE_TRUE( graph.compile() );
+    vector<RenderGraphBarrier> listBarrier;
+    collectBarriers( graph, listBarrier );
+    RenderGraphExecutionContext context;
+    SW_REQUIRE_TRUE( graph.execute( context ) );
+    uint32 uavBarrierCount = 0;
+    uint32 targetCount     = 0;
+    for ( const RenderGraphBarrier& barrier : listBarrier )
+    {
+        if ( barrier._resource != target )
+            continue;
+        ++targetCount;
+        uavBarrierCount += barrier._bUAVBarrier != 0 ? 1u : 0u;
+    }
+    SW_EXPECT_EQUAL( 2u, targetCount );     // 쓰기 앞 전이 하나 + 읽기 앞 UAV 배리어 하나(두 읽기는 한 레벨이라 한 번)
+    SW_EXPECT_EQUAL( 1u, uavBarrierCount ); // 쓰기 → 읽기
+    // 두 읽기는 같은 레벨이다(쓰기가 아니라 간선이 없다).
+    SW_REQUIRE_EQUAL( size_t{ 2 }, graph.getExecutionLevels().size() );
+    SW_EXPECT_EQUAL( size_t{ 2 }, graph.getExecutionLevels()[1].size() );
 }

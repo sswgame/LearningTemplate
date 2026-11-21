@@ -4,6 +4,7 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Format/Tests/StateBytesTestUtil.h"
 
 #include "GameFramework/Kits/Genre/Casual/Rhythm/RhythmChart.h"
 #include "GameFramework/Kits/Genre/Casual/Rhythm/RhythmPlaySession.h"
@@ -245,4 +246,35 @@ SW_TEST_CASE_F( RhythmPlayStateTest, RefusesLifeStateAndRecordsOutOfRange )
     SW_EXPECT_EQUAL( sw::RhythmPlayState::Playing, _session.getState() );
     SW_EXPECT_NEAR( 100.0f, _session.getLife(), 1.0e-5f );
     SW_EXPECT_EQUAL( size_t( 1 ), _session.getInputRecords().size() );
+}
+
+/**
+ * @brief [RhythmPlayStateTest] 결정성: 같은 누름 · 뗌 시각이면 판정 · 콤보 · 롱노트 · 입력 기록이 같은 바이트를 내고, 중간 저장에서 이어도 같다
+ */
+SW_TEST_CASE_F( RhythmPlayStateTest, PlayDeterminism )
+{
+    // 레인 둘에 탭 · 롱노트를 엇갈려 놓는다(120 BPM — 박당 0.5 초). 누름은 1 초마다 레인 0, 0.53 초 어긋나 레인 1 이다.
+    sw::RhythmChart chart;
+    SW_REQUIRE_TRUE( chart.loadFromXMLText( R"(<Chart title="Song" artist="Band" level="1" lanes="2">
+        <Bpm beat="0" bpm="120"/>
+        <Note lane="0" beat="2"/><Note lane="0" beat="4" endBeat="6"/><Note lane="0" beat="8"/><Note lane="0" beat="10"/>
+        <Note lane="1" beat="3"/><Note lane="1" beat="5"/><Note lane="1" beat="7" endBeat="9"/><Note lane="1" beat="11"/>
+    </Chart>)",
+                                            "RhythmPlayStateTest" ) );
+    const auto setup = [this, &chart]( sw::RhythmPlaySession& session ) -> bool
+    { return session.initialize( &chart, &_judge, sw::RhythmPlaySettings{} ); };
+    const auto step = []( sw::RhythmPlaySession& session, int32 stepIndex )
+    {
+        const float32 now = static_cast<float32>( stepIndex ) / 30.0f;
+        session.update( now );
+        if ( stepIndex % 30 == 0 )
+            session.press( 0, now );
+        if ( stepIndex % 30 == 25 )
+            session.release( 0, now );
+        if ( stepIndex % 30 == 16 )
+            session.press( 1, now );
+        if ( stepIndex % 30 == 10 )
+            session.release( 1, now );
+    };
+    SW_EXPECT_TRUE( sw::StateBytesTestUtil::isDeterministic<sw::RhythmPlaySession>( setup, step, 200 ) );
 }

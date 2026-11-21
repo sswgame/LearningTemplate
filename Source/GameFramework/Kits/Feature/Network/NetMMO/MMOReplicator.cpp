@@ -15,6 +15,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneStreamingSubsystem.h"
+#include "Engine/Serialization/Fixed/ReplicatedLayout.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/ConfigRangeUtil.h"
 
@@ -27,38 +28,55 @@ namespace sw
     {
         struct MMOReplicatorInternal
         {
-            static void writeEntity( BitWriter& writer, const MMOEntity& entity, bool bWithType )
+            static MMOEntityEnterHeader makeEnterHeader( const MMOEntity& entity )
             {
-                writer.writeVarUint( entity._entityID );
-                if ( bWithType )
-                {
-                    writer.writeVarUint( entity._typeID );
-                    writer.writeVarUint( entity._staticID );
-                }
-                writer.writeFloat( entity._position._x );
-                writer.writeFloat( entity._position._y );
-                writer.writeFloat( entity._position._z );
+                MMOEntityEnterHeader header;
+                header._header._entityID = entity._entityID;
+                header._header._position = entity._position;
+                header._typeID           = entity._typeID;
+                header._staticID         = entity._staticID;
+                return header;
+            }
+
+            /** @brief 엔티티 하나를 씁니다 — 머리는 칸 선언(새로 보임은 `MMOEntityEnterHeader`, 갱신은 `MMOEntityUpdateHeader`), 뒤에 상태 덩어리. 머리가 범위 밖이면 false 이고 쓰다 만 비트가 남습니다. */
+            [[nodiscard]] static bool writeEntity( BitWriter& writer, const MMOEntity& entity, bool bWithType )
+            {
+                const MMOEntityEnterHeader header   = makeEnterHeader( entity );
+                const bool                 bWritten = bWithType ? ReplicatedLayout::writeFull( header, writer ) : ReplicatedLayout::writeFull( header._header, writer );
+                if ( bWritten == false )
+                    return false;
                 writer.writeBlob( entity._listState.data(), static_cast<int32>( entity._listState.size() ) );
+                return true;
             }
 
             [[nodiscard]] static bool readEntity( BitReader& reader, MMOEntity& outEntity, bool bWithType )
             {
-                outEntity._entityID = reader.readVarUint32();
+                MMOEntityEnterHeader  header;
+                const FixedReadResult result = bWithType ? ReplicatedLayout::readFull( reader, header, nullptr ) : ReplicatedLayout::readFull( reader, header._header, nullptr );
+                if ( result != FixedReadResult::Ok )
+                    return false;
+                outEntity._entityID = header._header._entityID;
+                outEntity._position = header._header._position;
                 if ( bWithType )
                 {
-                    outEntity._typeID   = reader.readVarUint32();
-                    outEntity._staticID = reader.readVarUint();
+                    outEntity._typeID   = header._typeID;
+                    outEntity._staticID = header._staticID;
                 }
-                const bool bFinite = reader.readFiniteFloat( outEntity._position._x ) && reader.readFiniteFloat( outEntity._position._y ) &&
-                                     reader.readFiniteFloat( outEntity._position._z );
-                return bFinite && reader.readBlob( outEntity._listState, NetMMOMessage::kMaxStateBytes ) && reader.hasOverflowed() == false;
+                return reader.readBlob( outEntity._listState, NetMMOMessage::kMaxStateBytes ) && reader.hasOverflowed() == false;
             }
 
-            /** @brief 메시지에서 엔티티 하나가 쓰는 비트 수입니다. `writeEntity( …, bWithType )` 와 같으며, 새로 보임은 타입 · 정적 id 까지 쓰고 갱신은 없이 씁니다. */
-            static int32 computeEntityBits( const MMOEntity& entity, bool bWithType )
+            /**
+             * @brief 엔티티 하나를 메시지에 써 보고 예산 안이면 남깁니다. 넘거나 쓸 수 없으면 쓰기 전 길이로 되돌리고 false 입니다.
+             * @details 크기를 미리 세는 함수를 두지 않는다 — 써 본 길이가 곧 크기라 쓰기와 어긋날 수 없다(언리얼 `FBitWriterMark`).
+             */
+            [[nodiscard]] static bool tryWriteEntity( BitWriter& writer, NetSendBudget& budget, const MMOEntity& entity, bool bWithType )
             {
-                const int32 typeBits = bWithType ? BitMath::computeVarUintBits( entity._typeID ) + BitMath::computeVarUintBits( entity._staticID ) : 0;
-                return BitMath::computeVarUintBits( entity._entityID ) + typeBits + 3 * 32 + BitMath::computeBlobBits( static_cast<int32>( entity._listState.size() ) );
+                const int32 mark = writer.getBitCount();
+                writer.writeBool( true );
+                if ( writeEntity( writer, entity, bWithType ) && budget.tryReserveBits( writer.getBitCount() - mark ) )
+                    return true;
+                writer.truncate( mark );
+                return false;
             }
         };
     } // namespace
@@ -80,6 +98,8 @@ namespace sw
         , _pPolicy{ nullptr }
         , _sentUpdateCount{ 0 }
         , _oversizedEntityCount{ 0 }
+        , _outOfRangeEntityCount{ 0 }
+        , _headerScratch{}
         , _parallel{}
         , _observerScratch{}
         , _tickDeltaTime{ 0.0f }
@@ -137,6 +157,16 @@ namespace sw
                 SW_LOG_ERROR_ID( "MMOReplicator.MMOReplicatorEntityStateBytes", "MMOReplicator: entity %# has %# state bytes, more than the limit %# - ignored (a state schema defect: shrink or quantize the state; further ones are only counted)", entity._entityID,
                                  static_cast<int32>( entity._listState.size() ), NetMMOMessage::kMaxStateBytes );
             ++_oversizedEntityCount;
+            return;
+        }
+        // 머리는 보낼 때 다시 쓴다 — 여기서 받아 두면 보내는 쪽(여러 스레드)이 범위 밖 머리를 만나지 않는다.
+        _headerScratch.clear();
+        if ( ReplicatedLayout::writeFull( MMOReplicatorInternal::makeEnterHeader( entity ), _headerScratch ) == false )
+        {
+            if ( _outOfRangeEntityCount == 0 )
+                SW_LOG_ERROR_ID( "MMOReplicator.EntityHeaderOutOfRange", "MMOReplicator: entity %# at (%#, %#, %#) is outside the replicated header range - ignored (further ones are only counted)", entity._entityID,
+                                 entity._position._x, entity._position._y, entity._position._z );
+            ++_outOfRangeEntityCount;
             return;
         }
         _mapEntity[entity._entityID] = entity;
@@ -409,10 +439,8 @@ namespace sw
                 const auto entityIter = _mapEntity.find( ranked.second );
                 if ( entityIter == _mapEntity.end() )
                     continue;
-                if ( budget.tryReserveBits( 1 + MMOReplicatorInternal::computeEntityBits( entityIter->second, true ) ) == false )
-                    break; // 64 KB에 도달했으므로 나머지는 다음 틱에 보낸다
-                writer.writeBool( true );
-                MMOReplicatorInternal::writeEntity( writer, entityIter->second, true );
+                if ( MMOReplicatorInternal::tryWriteEntity( writer, budget, entityIter->second, true ) == false )
+                    break; // 64 KB에 도달했으므로 나머지는 다음 틱에 보낸다(머리 범위는 `setEntity` 가 받을 때 봤다)
                 listEnter.push_back( ranked.second );
             }
             writer.writeBool( false );
@@ -461,10 +489,8 @@ namespace sw
             if ( std::binary_search( listLeave.begin() + static_cast<ptrdiff_t>( pendingLeaveIndex ), listLeave.end(), entityID ) )
                 continue;
             const MMOEntity& entity = getEntity( entityID );
-            if ( budget.tryReserveBits( 1 + MMOReplicatorInternal::computeEntityBits( entity, false ) ) == false )
+            if ( MMOReplicatorInternal::tryWriteEntity( writer, budget, entity, false ) == false )
                 continue;
-            writer.writeBool( true );
-            MMOReplicatorInternal::writeEntity( writer, entity, false );
             listSent.push_back( entityID );
         }
         writer.writeBool( false );

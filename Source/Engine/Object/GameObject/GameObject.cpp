@@ -66,7 +66,7 @@ namespace sw
 {
     // 오브젝트는 수천 개가 풀(16 B 단위 블록)에서 나온다. 필드 크기 합을 정렬로 올린 값을 넘으면 필드 사이에 패딩이 생긴 것이다(블록이 한 단계 커진다).
     static_assert( sizeof( GameObject ) <=
-                       ( sizeof( void* ) + sizeof( uint64 ) + sizeof( hashed_string ) + sizeof( GameObjectManager* ) + sizeof( atomic<bool> ) * 4 + sizeof( uint32 ) +
+                       ( sizeof( uint64 ) + sizeof( hashed_string ) + sizeof( GameObjectManager* ) + sizeof( atomic<bool> ) * 4 + sizeof( uint32 ) +
                          sizeof( vector<Component*, InlineAllocator<Component*, 4>> ) + sizeof( atomic<Component*> ) + sizeof( unique_ptr<GameObjectEvents> ) + sizeof( TickItemList ) +
                          sizeof( uint32 ) * TickRegistry::kGroupCount + sizeof( uint32 ) + sizeof( atomic<uint8> ) + sizeof( bool ) + sizeof( uint32 ) + sizeof( bool ) + alignof( GameObject ) - 1 ) /
                            alignof( GameObject ) * alignof( GameObject ),
@@ -192,16 +192,17 @@ namespace sw
      */
     void GameObject::setName( hashed_string name )
     {
-        // 철자까지 같을 때만 할 일이 없다. `==` 는 대소문자를 무시하므로(FName) 그것으로 비교하면 `hero` → `Hero` 가 아무 일도 하지 않게 된다.
-        if ( name.isEqual( _name, NameCase::CaseSensitive ) )
-            return;
         // 틱 중이면 틱 뒤로 미룬다. 다른 워커가 이 이름을 읽고(`getName`), 이름 테이블은 매니저의 것이기 때문이다. addTag, setActive 와 같다.
+        // 지금 이름과 견주기 **전에** 미룬다 — 앞서 미룬 다른 이름(A → B → A)이 큐에 있으면 마지막 요청을 잃는다.
         if ( isComponentMutationFrozen() )
         {
             deferOnSelfStructural( Delegate<void( GameObject& )>( [name]( GameObject& self )
             { self.setName( name ); } ) );
             return;
         }
+        // 철자까지 같을 때만 할 일이 없다. `==` 는 대소문자를 무시하므로(FName) 그것으로 비교하면 `hero` → `Hero` 가 아무 일도 하지 않게 된다.
+        if ( name.isEqual( _name, NameCase::CaseSensitive ) )
+            return;
 
         const hashed_string oldName = _name;
         _name                       = name;
@@ -281,8 +282,6 @@ namespace sw
     {
         if ( pParent == nullptr )
             return false;
-        if ( getParent() == pParent )
-            return true;
 
         // 미루기 **전에** 거른다. 미룬 일은 자기 매니저로 부모를 다시 찾으므로 다른 매니저의 부모는 그때 조용히 사라지고, 순환은 그때야
         // 실패하는데 이 호출은 이미 true 를 반환한 뒤다. 붙이는 쪽의 나머지 규칙은 `SceneComponent::canAttachTo` 가 본다.
@@ -308,6 +307,9 @@ namespace sw
             } );
             return true;
         }
+        // 이미 그 부모인지는 미룬 **뒤에** 본다 — 틱 중 떼기 → 다시 붙이기에서 아직 붙어 있다고 버리면 미룬 떼기만 남는다.
+        if ( getParent() == pParent )
+            return true;
 
         SceneComponent* pChildSc = getPrimarySceneComponent();
         if ( pChildSc == nullptr )
@@ -323,7 +325,7 @@ namespace sw
 
     void GameObject::detachFromParent( AttachRule rule )
     {
-        GameObjectManager* pManager = getMutableManager();
+        GameObjectManager* pManager = _pOwnerManager; // 틱 중에도 뗀다(계층 변경 큐) — `attachToParent` 와 같이 `getMutableManager` 의 틱 단언을 지나지 않는다
         if ( pManager != nullptr && pManager->isStructuralMutationFrozen() )
         {
             const uint64 childID = _objectID;
@@ -429,7 +431,7 @@ namespace sw
     {
         outListChild.clear();
         // primary 만이 아니라 **자기 씬 컴포넌트 전부**의 자식을 본다. 소켓(primary 가 아닌 씬 컴포넌트)에 붙은 오브젝트도 자식이다
-        // (`getParent` 와 `refreshActiveInHierarchy` 도 그렇게 본다). primary 의 자식만 반환하면 `destroyGameObject( 캐릭터, true )` 가
+        // (`getParent` 와 `refreshActiveInHierarchy` 도 그렇게 본다). primary 의 자식만 반환하면 `destroyGameObject( 캐릭터 )` 가
         // 소켓에 붙은 무기를 남기고, 그 무기는 루트가 되어 계속 틱하고 그려진다.
         for ( Component* pOwnComp : _listComponent )
         {
@@ -672,7 +674,8 @@ namespace sw
         if ( pComp->isSceneComponent() && _pPrimaryScene.load( std::memory_order_relaxed ) == nullptr )
             _pPrimaryScene.store( pComp, std::memory_order_relaxed );
         // 엔진 장부(트랜스폼 계층)는 지금 넣고, 어느 레지스트리에 들어갈지(`onRegister`)는 컴포넌트가 안다 — 씬을 짓는 배치 안이면 매니저가 배치 끝까지 미룬다.
-        pComp->bindToManager( *_pOwnerManager );
+        if ( pComp->isSceneComponent() )
+            static_cast<SceneComponent*>( pComp )->bindToManager( *_pOwnerManager );
         _pOwnerManager->registerComponent( *pComp );
         // 둘째 씬 컴포넌트부터는 primary 에 붙인다. 오브젝트의 루트는 하나다(언리얼의 RootComponent). 루트로 두면 **월드 원점**에 놓여
         // 오브젝트를 옮겨도 콜라이더와 메시가 따라오지 않는다.

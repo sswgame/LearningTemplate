@@ -162,8 +162,7 @@ namespace sw
 
     KillcamComponent* KillcamComponent::findInScene( const GameObjectManager& manager )
     {
-        const ComponentRegistry::View<KillcamComponent> listKillcam = manager.getComponentRegistry().getAll<KillcamComponent>();
-        return listKillcam.empty() ? nullptr : listKillcam[0];
+        return manager.getComponentRegistry().findUnique<KillcamComponent>(); // 씬에 하나 — 둘이면 오류로 기록하지 않는다(등록 순서로 고르지 않는다)
     }
 
     void KillcamComponent::applyPose()

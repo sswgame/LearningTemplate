@@ -24,8 +24,6 @@ namespace sw
     {
         struct CodeGeneratorInternal
         {
-            static constexpr int32 kMaxNestedContainerDepth = 3;
-
             /**
              * @brief 범위 경계 하나를 float32 글(`1.5f`)로 냅니다. 등록 단위의 허용 범위와 개발 전용 단위의 슬라이더 범위가 함께 쓴다.
              * @details 접미사 f 가 없으면 `0.100000` 은 double 이라, float32 멤버에 넣을 때 정밀도 손실 경고가 **생성된 파일마다** 난다.
@@ -349,16 +347,11 @@ namespace sw
         { return typeInfo.requiresTickRegistration(); } );
         if ( bTickBatch )
             buffer.append( "#include \"Engine/Object/GameObject/Tick/TickBatchRegistry.h\"\n\n" );
-        const bool bPhysicsHooks = VectorUtil::containsIf( _header._listType, []( const ParsedTypeInfo& typeInfo )
-        { return typeInfo.requiresPhysicsHookRegistration(); } );
-        if ( bPhysicsHooks )
-            buffer.append( "#include \"Engine/Physics/Scene/PhysicsHookRegistry.h\"\n\n" );
         buffer.append( emitdirective::kGeneratedNsOpen );
         for ( size_t typeIndex = 0; typeIndex < _header._listType.size(); ++typeIndex )
         {
             emitTypeRegistrar( buffer, _header._listType[typeIndex], typeIndex );
             emitTickBatchRegistration( buffer, _header._listType[typeIndex] );
-            emitPhysicsHookRegistration( buffer, _header._listType[typeIndex] );
         }
         for ( const ParsedEnumInfo& enumInfo : _header._listEnum )
         {
@@ -368,9 +361,6 @@ namespace sw
 
         for ( const ParsedTypeInfo& typeInfo : _header._listType )
         {
-            // 숨은 중첩 형식은 이름공간 범위 특수화를 내지 않는다(접근 오류). 그 형식은 `REFLECT_BODY()` 의 `StaticType()` 으로 찾는다(`TypeRegistry::findType` 이 먼저 본다).
-            if ( typeInfo._bHidden == SW_FALSE )
-                emitReflectTypeTraits( buffer, typeInfo );
             if ( typeInfo.requiresTypeAPI() )
                 emitTypeInfoAccessors( buffer, typeInfo );
         }
@@ -434,14 +424,6 @@ namespace sw
         appendTemplate( outBuffer, EmitTemplate::FileHeader, {
                                                                  {templatekey::kSourcePath,                   _sourceFilePath},
                                                                  {    templatekey::kBanner, sw::config::kTextReflectionBanner}
-        } );
-    }
-
-    void CodeGenerator::emitReflectTypeTraits( CodeEmitBuffer& outBuffer, const ParsedTypeInfo& typeInfo ) const
-    {
-        const CodeEmitByteScope byteScope{ _emitBytes, outBuffer, CodeEmitSection::TypeTraits };
-        appendTemplate( outBuffer, EmitTemplate::ReflectTypeTraits, {
-                                                                        { templatekey::kFqn, typeInfo._fullyQualifiedName }
         } );
     }
 
@@ -543,7 +525,8 @@ namespace sw
         int32                      depth    = 1;
         if ( node != nullptr && node->_bIsContainer )
             emit.linef( "using NestC%#_0 = decltype( std::declval<%#>().%# );", propIndex, typeInfo._fullyQualifiedName, prop._memberName );
-        while ( node != nullptr && node->_bIsContainer && depth < CodeGeneratorInternal::kMaxNestedContainerDepth )
+        // 깊이 한도는 두지 않는다 — 단계마다 앞 단계의 원소 형식 별칭(`NestC<프로퍼티>_<깊이>`)을 잇는 반복이라 몇 겹이든 같다. 예전 한도(3)는 넘는 단계를 조용히 잘랐다.
+        while ( node != nullptr && node->_bIsContainer )
         {
             emit.linef( "using NestC%#_%# = typename NestC%#_%#::%#;", propIndex, depth, propIndex, depth - 1, containerElementTypeMember( prevKind ) );
             StringBuilder<constant::buffer::kMax128> wrapperType;
@@ -934,9 +917,13 @@ namespace sw
         {
             emit.linef( "info._listRemovedField.push_back( ::sw::hashed_string( \"%#\" ) );", CodeEmit::escapeCppString( removedField ) );
         }
-        emit.flagIf( typeInfo._bOverridesTick, "info._metadata.edit()._bOverridesTick" );
-        emit.flagIf( typeInfo._bOverridesSubTick, "info._metadata.edit()._bOverridesSubTick" );
-        emit.flagIf( typeInfo._bOverridesSerializeState, "info._metadata.edit()._bOverridesSerializeState" );
+        // 틱 · 상태 함수의 특성 비트는 컴파일러가 아는 사실이라 트레이트를 대입한다(엔진이 주 틱을 켜는 판정 `HasOnTickOverride_v` 와 같은 답).
+        if ( typeInfo._bComponent == SW_TRUE )
+        {
+            emit.linef( "info._metadata.edit()._bOverridesTick = ::sw::HasOnTickOverride_v<%#> ? SW_TRUE : SW_FALSE;", typeInfo._fullyQualifiedName );
+            emit.linef( "info._metadata.edit()._bOverridesSubTick = ::sw::HasOnSubTickOverride_v<%#> ? SW_TRUE : SW_FALSE;", typeInfo._fullyQualifiedName );
+        }
+        emit.linef( "info._metadata.edit()._bOverridesSerializeState = ::sw::generated::HasSerializeState<%#>::value ? SW_TRUE : SW_FALSE;", typeInfo._fullyQualifiedName );
         // 타입의 저장 판(`REFLECT( Version = … )`) — 상수 이름이면 그 이름을 그대로 쓴다(값은 컴파일러가 푼다)
         if ( typeInfo._versionName.empty() == false )
             emit.linef( "info._metadata.edit()._version = static_cast<::uint32>( %# );", typeInfo._versionName );
@@ -988,45 +975,33 @@ namespace sw
     void CodeGenerator::emitTickBatchRegistration( CodeEmitBuffer& outBuffer, const ParsedTypeInfo& typeInfo ) const
     {
         const CodeEmitByteScope byteScope{ _emitBytes, outBuffer, CodeEmitSection::TickBatch };
-        // 등록 줄 모양은 틱 런타임(5-3)이 정한 `SW_REGISTER_TICK_TYPE( 타입, 모드 )` 하나다 — 손 등록과 같은 줄. 메타데이터가 없으면 Batch.
+        // 등록 줄 모양은 틱 런타임(5-3)이 정한 `SW_REGISTER_TICK_TYPE( 타입, 모드 )` 하나다 — 손 등록과 같은 줄. 모드를 적지 않은 형식은 `makeDeclaredTickEntry` 줄이고,
+        // 틱 함수를 직접 선언했는지는 그 줄이 컴파일에서 정한다(생성기는 메서드 이름 · 인자 수를 보지 않는다).
         if ( typeInfo.requiresTickRegistration() == false )
             return;
-        const string mode = typeInfo._tickMode.empty() ? string( "Batch" ) : typeInfo._tickMode;
-        CodeEmit     emit( outBuffer );
+        CodeEmit emit( outBuffer );
         emit.push( 1 );
+        const string id = sanitizeIdentifier( typeInfo._fullyQualifiedName );
+        if ( typeInfo._tickMode.empty() )
+        {
+            emit.linef( "static constexpr utf8 kTickBatchScopeName_%#[] = \"GT.Scene.tickBatch.%#\";", id, typeInfo._name );
+            emit.linef( "static ::sw::TickBatchRegistrar s_%#_tickBatch{ ::sw::makeDeclaredTickEntry<%#, kTickBatchScopeName_%#>() };", id, typeInfo._fullyQualifiedName, id );
+            emit.line( "" );
+            return;
+        }
         // 생성 이름공간(`sw::generated`)은 `sw` 안이라 `sw` 바로 아래 타입은 짧은 이름으로 닿는다. 다른 이름공간의 타입은 매크로가 이름을 붙여 쓰지 못해(토큰 붙이기) 같은 줄을 펼쳐 쓴다.
         const string_view qualifiedName = typeInfo._fullyQualifiedName;
         const string_view swPrefix      = "sw::";
         if ( StringUtil::startsWith( qualifiedName, swPrefix ) && qualifiedName.substr( swPrefix.size() ) == string_view( typeInfo._name ) )
         {
-            emit.linef( "SW_REGISTER_TICK_TYPE( %#, %# );", typeInfo._name, mode );
+            emit.linef( "SW_REGISTER_TICK_TYPE( %#, %# );", typeInfo._name, typeInfo._tickMode );
         }
         else
         {
-            const string id = sanitizeIdentifier( typeInfo._fullyQualifiedName );
             emit.linef( "static constexpr utf8 kTickBatchScopeName_%#[] = \"GT.Scene.tickBatch.%#\";", id, typeInfo._name );
             emit.linef( "static ::sw::TickBatchRegistrar s_%#_tickBatch{ ::sw::TickBatchRegistry::Entry{ &%#::StaticType, &::sw::TickBatchOf<%#, kTickBatchScopeName_%#>::tickRange, ::sw::TickMode::%# } };",
-                        id, typeInfo._fullyQualifiedName, typeInfo._fullyQualifiedName, id, mode );
+                        id, typeInfo._fullyQualifiedName, typeInfo._fullyQualifiedName, id, typeInfo._tickMode );
         }
-        emit.line( "" );
-    }
-
-    void CodeGenerator::emitPhysicsHookRegistration( CodeEmitBuffer& outBuffer, const ParsedTypeInfo& typeInfo ) const
-    {
-        const CodeEmitByteScope byteScope{ _emitBytes, outBuffer, CodeEmitSection::PhysicsHook };
-        // 등록 줄 모양은 받는 쪽(`PhysicsHookRegistry.h`)이 정한 `SW_REGISTER_PHYSICS_HOOKS( 타입 )` 하나다. 재정의 여부는 그 줄이 컴파일에서 정한다.
-        if ( typeInfo.requiresPhysicsHookRegistration() == false )
-            return;
-        CodeEmit emit( outBuffer );
-        emit.push( 1 );
-        // 틱 등록과 같은 규칙 — `sw` 바로 아래 타입은 짧은 이름, 다른 이름공간의 타입은 매크로가 이름을 붙여 쓰지 못해 같은 줄을 펼쳐 쓴다.
-        const string_view qualifiedName = typeInfo._fullyQualifiedName;
-        const string_view swPrefix      = "sw::";
-        if ( StringUtil::startsWith( qualifiedName, swPrefix ) && qualifiedName.substr( swPrefix.size() ) == string_view( typeInfo._name ) )
-            emit.linef( "SW_REGISTER_PHYSICS_HOOKS( %# );", typeInfo._name );
-        else
-            emit.linef( "static ::sw::PhysicsHookRegistrar s_%#_physicsHooks{ ::sw::PhysicsHooksOf<%#>::makeEntry() };", sanitizeIdentifier( typeInfo._fullyQualifiedName ),
-                        typeInfo._fullyQualifiedName );
         emit.line( "" );
     }
 

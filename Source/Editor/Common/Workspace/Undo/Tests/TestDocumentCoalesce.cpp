@@ -53,7 +53,7 @@ namespace
 
         void record( sw::editor::EditorTransaction& transaction, const sw::editor::DocumentEdit& edit, sw::CommandStack& targetStack )
         {
-            transaction.recordDocumentText( edit._before, edit._after, edit._label, _owner,
+            transaction.recordDocumentText( *edit._pBefore, *edit._pAfter, edit._label, _owner,
                                             SW_DELEGATE_METHOD( sw::editor::EditorDocumentRestoreDelegate, &DocumentCoalesceTestDocument::restore, this ),
                                             SW_DELEGATE_METHOD( sw::editor::EditorDocumentCaptureDelegate, &DocumentCoalesceTestDocument::capture, this ),
                                             targetStack );

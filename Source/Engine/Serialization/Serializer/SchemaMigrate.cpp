@@ -277,7 +277,7 @@ namespace sw
             else if ( prop._typeName.isPredefinedType( PredefinedNameType::NameType_hashed_string ) )
                 sw_placement_new( pPropPtr ) hashed_string();
             else if ( prop._typeName.isPredefinedType( PredefinedNameType::NameType_atomic_bool ) )
-                sw_placement_new( pPropPtr ) atomic<bool>();
+                sw_placement_new( pPropPtr ) reflected_atomic<bool>();
             else if ( prop._typeName.isPredefinedType( PredefinedNameType::NameType_TagID ) )
                 sw_placement_new( pPropPtr ) TagID();
             else
@@ -314,7 +314,7 @@ namespace sw
             else if ( prop._typeName.isPredefinedType( PredefinedNameType::NameType_hashed_string ) )
                 std::destroy_at( static_cast<hashed_string*>( pPropPtr ) );
             else if ( prop._typeName.isPredefinedType( PredefinedNameType::NameType_atomic_bool ) )
-                std::destroy_at( static_cast<atomic<bool>*>( pPropPtr ) );
+                std::destroy_at( static_cast<reflected_atomic<bool>*>( pPropPtr ) );
             else if ( prop._typeName.isPredefinedType( PredefinedNameType::NameType_TagID ) )
                 std::destroy_at( static_cast<TagID*>( pPropPtr ) );
             else
@@ -482,10 +482,16 @@ namespace sw
             return true;
         }
         void* const pValue = prop.getRawPtr( pInstance );
-        return pValue != nullptr && parseTextValueCoerced( MutableValueAddress{ pValue }, prop._typeName, valStr, context );
+        return pValue != nullptr && parseTextValueCoerced( MutableValueAddress{ pValue }, prop._typeName, prop.findValueBinding(), valStr, context );
     }
 
     bool parseTextValueCoerced( MutableValueAddress value, hashed_string typeName, string_view valStr,
+                                const SerializeContext& context )
+    {
+        return parseTextValueCoerced( value, typeName, nullptr, valStr, context );
+    }
+
+    bool parseTextValueCoerced( MutableValueAddress value, hashed_string typeName, const ReflectValueBinding* pBinding, string_view valStr,
                                 const SerializeContext& context )
     {
         void* const pValPtr = value.get();
@@ -493,11 +499,11 @@ namespace sw
             return false;
 
         const string_view stripped = SchemaMigrateInternal::stripJSONQuotes( valStr );
-        if ( SerializerUtil::parseTextValue( value, typeName, valStr, context ) )
+        if ( SerializerUtil::parseTextValue( value, typeName, pBinding, valStr, context ) )
             return true;
         if ( stripped.data() != valStr.data() || stripped.size() != valStr.size() )
         {
-            if ( SerializerUtil::parseTextValue( value, typeName, stripped, context ) )
+            if ( SerializerUtil::parseTextValue( value, typeName, pBinding, stripped, context ) )
                 return true;
         }
 

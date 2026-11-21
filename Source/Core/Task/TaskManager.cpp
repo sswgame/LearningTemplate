@@ -30,7 +30,6 @@ namespace sw
             int32                                   _helperScratchSlot = -1; ///< 워커가 아닌 스레드가 받은 도우미 스크래치 번호(0..). 아직 없으면 -1
             uint32                                  _helperSlotOwnerID = 0;  ///< 위 번호를 준 매니저의 `_instanceID`. 매니저를 다시 만들면 옛 번호를 쓰지 않는다
             uint32                                  _parallelBodyDepth = 0;  ///< 이 스레드에서 지금 실행 중인 병렬 본문(`ParallelTaskScope`)의 겹침 깊이. 0 이면 병렬 본문 밖
-            uint32                                  _queueFullRunDepth = 0;  ///< 큐가 가득 차 넣던 자리에서 실행 중인 항목의 겹침 깊이(`waitForQueueSpace`)
             shared_ptr<TaskManager::HelperSlotPool> _pHelperSlotPool;        ///< 위 번호를 준 장부. 스레드가 끝날 때 여기로 돌려준다
 
             ThreadTaskState()                                    = default;
@@ -98,11 +97,6 @@ namespace sw
          *          2 ~ 3 겹이라 넉넉히 잡았고, 넘으면 Debug 에서 멈춰 호출 모양을 고치게 한다(스택 소진은 원인이 안 남는 크래시다).
          */
         constexpr uint32 kMaxParallelBodyDepth = 16;
-        /**
-         * @brief 큐가 가득 차 넣던 워커가 그 자리에서 실행하는 항목이 겹칠 수 있는 깊이의 상한입니다(그 항목이 다시 가득 찬 큐에 넣으면 한 겹 더 쌓인다).
-         * @details 정책 값이 아니라 스택 보호 상수다 — `kMaxParallelBodyDepth` 와 같은 근거(워커 스택은 플랫폼 기본). 넘으면 그 겹은 예전처럼 깨우고 양보해 다른 워커를 기다린다.
-         */
-        constexpr uint32 kMaxQueueFullRunDepth = 16;
 
         /**
          * @brief 병렬 그룹의 본문을 도는 동안 "지금 실행 중인 태스크" 를 비워 두는 RAII 스코프입니다. 끝나면 바깥 값을 되돌립니다.
@@ -1296,47 +1290,19 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 8) 큐와 워커 — 우선순위 큐 · 훔치기 · 깨우기 · 워커 루프
     // ------------------------------------------------------------------------------
-    template <uint32 Capacity>
-    void TaskManager::waitForQueueSpace( ConcurrentQueue<uintptr_t, Capacity>& fullQueue )
-    {
-        // 워커는 가득 찬 큐의 가장 오래된 항목을 그 자리에서 실행해 자리를 낸다(TBB · UE Tasks 관례). 깨우고 양보만 하면 워커가 하나이거나
-        // 모든 워커가 넣는 중일 때 아무도 꺼내지 않는다. 겹침 깊이는 스택 보호 상한까지만 — 넘은 겹은 아래처럼 다른 워커를 기다린다.
-        if ( t_currentWorkerIndex >= 0 && t_threadState._queueFullRunDepth < kMaxQueueFullRunDepth )
-        {
-            uintptr_t item{ 0 };
-            if ( fullQueue.dequeue( item ) && item != 0 )
-            {
-                ++t_threadState._queueFullRunDepth;
-                executeItem( item );
-                --t_threadState._queueFullRunDepth;
-                return;
-            }
-        }
-        // 워커가 아니면(또는 상한에 닿았으면) 잠든 워커를 깨워 비우게 한 뒤 양보한다. `submitWithoutWake` 로 넣던 중이면 워커가 모두 잠들어 아무도 비우지 않는다(감사 C-4).
-        wakeSleepingWorkers();
-        ThreadUtil::yield();
-    }
-
     void TaskManager::pushToNormalQueue( uintptr_t item )
     {
         // 워커는 자기 데크(LIFO 라 방금 만든 것이 캐시에 남아 있다)에, 바깥 스레드(게임 · 렌더)는 전역 큐에 넣는다.
-        // 데크가 가득 차면 전역 큐로 넘긴다.
+        // 데크가 가득 차면 전역 큐로 넘긴다. 전역 큐는 링이 차면 넘침 목록이 받아 넣는 쪽이 기다리지 않는다(`OverflowConcurrentQueue`) —
+        // 예전에는 가득 찬 큐 앞에서 워커가 그 자리 실행(겹침 상한 16)을, 바깥 스레드는 깨우고 양보하는 바쁜 대기를 했다.
         const int32 workerID = t_currentWorkerIndex;
         if ( workerID >= 0 )
         {
             WorkerSlot& localSlot = *std::as_const( _listWorkerSlot )[static_cast<uint32>( workerID )];
-            while ( localSlot._queue.push( item ) == false )
-            {
-                if ( _globalWorkerQueue.enqueue( item ) )
-                    return;
-                waitForQueueSpace( _globalWorkerQueue ); // 데크 · 전역 큐가 모두 가득 찼다
-            }
-            return;
+            if ( localSlot._queue.push( item ) )
+                return;
         }
-        while ( _globalWorkerQueue.enqueue( item ) == false )
-        {
-            waitForQueueSpace( _globalWorkerQueue );
-        }
+        _globalWorkerQueue.enqueue( item );
     }
 
     bool TaskManager::tryTakeItem( int32 workerID, const bool bTakeLowQueue, uintptr_t& outItem )
@@ -1401,17 +1367,7 @@ namespace sw
 
         if ( pNode->_affinity == TaskThreadAffinity::MainThread )
         {
-            while ( _queueMainThread.enqueue( pNode ) == false )
-            {
-                if ( isMainThread() )
-                    dispatchMainThreadTasks();
-                else
-                {
-                    // 비울 수 있는 것은 메인뿐이다 — 메인이 대기에서 잠들어 있으면 깨워야 한다(양보만 하면 메인이 이 스레드를 기다리는 동안 둘 다 멈춘다).
-                    wakeParkedMainThread();
-                    ThreadUtil::yield();
-                }
-            }
+            _queueMainThread.enqueue( pNode ); // 링이 차면 넘침 목록이 받는다 — 메인이 비우기를 기다리며 양보하지 않는다
             // 이 작업을 실행할 수 있는 것은 메인 스레드뿐이다(`dispatchMainThreadTasks`). 메인이 어느 대기에서든 잠들어 있으면 깨워야
             // 한다(아무나 하나 깨우면 엉뚱한 스레드가 깨어 메인과 태스크가 서로를 기다린다).
             wakeParkedMainThread();
@@ -1426,17 +1382,11 @@ namespace sw
         const uintptr_t item = TaskQueueItem::fromNode( pNode );
         if ( pNode->_priority == TaskPriority::High )
         {
-            while ( _globalHighQueue.enqueue( item ) == false )
-            {
-                waitForQueueSpace( _globalHighQueue );
-            }
+            _globalHighQueue.enqueue( item );
         }
         else if ( pNode->_priority == TaskPriority::Low )
         {
-            while ( _globalLowQueue.enqueue( item ) == false )
-            {
-                waitForQueueSpace( _globalLowQueue );
-            }
+            _globalLowQueue.enqueue( item );
         }
         else
         {

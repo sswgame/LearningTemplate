@@ -48,7 +48,7 @@ namespace sw
      *          템플릿은 `T` 만 다룬다.
      */
     REFLECT()
-    class SW_API GameObject
+    class SW_API GameObject final // 동작은 컴포넌트로 더한다 — 파생이 없어 가상 함수(가상 표 포인터 8 B)를 두지 않는다
     {
         friend class GameObjectManager;
         friend class GameObjectStore; ///< 만들 때 id, 소유 매니저, 목록 인덱스를 기록한다
@@ -75,16 +75,16 @@ namespace sw
         GameObject& operator=( const GameObject& ) = delete;
 
         /** @brief 런타임 TypeInfo 를 반환합니다. */
-        virtual const TypeInfo* getTypeInfo() const;
+        const TypeInfo* getTypeInfo() const;
 
         /** @brief 게임플레이가 시작될 때 한 번 초기화합니다. */
-        virtual void beginPlay();
+        void beginPlay();
 
         /** @brief 게임플레이가 끝날 때 정리합니다(스냅샷 복원 전). */
-        virtual void endPlay();
+        void endPlay();
 
         /** @brief 에디터 · 직렬화가 프로퍼티를 바꿀 때 불리는 콜백입니다. */
-        virtual void onPropertyChanged( hashed_string propertyName );
+        void onPropertyChanged( hashed_string propertyName );
 
         /** @brief 프레임이 끝날 때 안전하게 파괴되도록 미룹니다(`GameObjectManager::destroyGameObject`). */
         void destroy();
@@ -370,7 +370,7 @@ namespace sw
         T* findComponentOfType() const
         {
             static_assert( std::is_base_of_v<Component, T>, "T must derive from sw::Component" );
-            static_assert( HasOwnReflectBody_v<T> || HasReflectStaticType_v<T>,
+            static_assert( HasOwnReflectBody_v<T>,
                            "T must declare its own REFLECT_BODY() (cannot slice to a base class StaticType)" );
 
 #if defined( SW_DEBUG )
@@ -421,7 +421,7 @@ namespace sw
         void prepareSerialize( const ObjectSaveOptions& options ) const;
 
         /** @brief 게임 오브젝트를 해제합니다. */
-        virtual ~GameObject();
+        ~GameObject();
 
     private:
         /** @brief `addComponent` 가 받는 저장소 슬롯 하나입니다. 타입 항목 풀의 블록이거나(항목 포인터 있음) 힙입니다. */
@@ -520,11 +520,11 @@ namespace sw
         hashed_string      _name;          ///< 오브젝트 이름
         GameObjectManager* _pOwnerManager; ///< 소유 매니저(`GameObjectManager::createGameObject` 가 설정합니다)
         PROPERTY()
-        atomic<bool> _bActive;              ///< 자기 활성 비트
-        atomic<bool> _bIsActiveInHierarchy; ///< 계층을 반영한 활성 비트
-        atomic<bool> _bIsPendingDestroy;    ///< 삭제 예정(묘비) 표시
-        atomic<bool> _bRenderHidden;        ///< `setRenderHidden` — 저장하지 않는다
-        uint32       _managerIndex;         ///< 저장소(`GameObjectStore`)의 `_listGameObject` 안 인덱스다. 플래그 뒤의 패딩 공간을 쓰며, 끝에 두면 객체 크기가 8 B 늘어난다
+        reflected_atomic<bool> _bActive;              ///< 자기 활성 비트(리플렉션 칸이라 복사되는 원자 값)
+        atomic<bool>           _bIsActiveInHierarchy; ///< 계층을 반영한 활성 비트
+        atomic<bool>           _bIsPendingDestroy;    ///< 삭제 예정(묘비) 표시
+        atomic<bool>           _bRenderHidden;        ///< `setRenderHidden` — 저장하지 않는다
+        uint32                 _managerIndex;         ///< 저장소(`GameObjectStore`)의 `_listGameObject` 안 인덱스다. 플래그 뒤의 패딩 공간을 쓰며, 끝에 두면 객체 크기가 8 B 늘어난다
         /// @brief 이 액터가 소유한 컴포넌트입니다(= `ComponentList`, 인라인 슬롯 4개). 별칭으로 적으면 리플렉션 파서가 컨테이너로 인식하지 못합니다.
         PROPERTY()
         vector<Component*, InlineAllocator<Component*, 4>> _listComponent;
@@ -564,7 +564,7 @@ namespace sw
         // 멤버가 없는 파생 타입도 예외가 아니다. REFLECT_BODY 가 없는 파생 타입은 부모의 TypeInfo 를 물려받는다.
         // 그러면 모듈을 언로드할 때 `destroyComponentsOfModule` 이 TypeInfo 의 모듈 이름으로 대상을 고르므로 그 인스턴스를 놓친다.
         // 그 인스턴스의 vtable 은 언로드된 이미지를 가리킨 채 씬에 남는다(언리얼도 모든 UObject 클래스는 리플렉션을 갖는다).
-        static_assert( HasOwnReflectBody_v<T> || HasReflectStaticType_v<T>, "T must declare its own REFLECT_BODY()." );
+        static_assert( HasOwnReflectBody_v<T>, "T must declare its own REFLECT_BODY()." );
 
         if ( _pOwnerManager == nullptr )
         {
@@ -587,8 +587,6 @@ namespace sw
         const TypeInfo* pTypeInfo = nullptr;
         if constexpr ( HasStaticType_v<T> )
             pTypeInfo = T::StaticType();
-        else if constexpr ( HasReflectStaticType_v<T> )
-            pTypeInfo = ReflectTypeTraits<T>::StaticType();
 
         const ComponentStorage storage = allocateComponentStorage( pTypeInfo, sizeof( T ) );
         if ( storage._pMemory == nullptr )

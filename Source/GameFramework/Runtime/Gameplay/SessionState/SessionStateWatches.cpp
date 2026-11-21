@@ -1,7 +1,8 @@
 /**
  * @file SessionStateWatches.cpp
- * @brief 판 상태(`SessionStateComponent`)의 자동화 감시 값입니다. 시계 `Clock.Hour` · `Clock.Day`, 지갑 `Session.Money`, 플래그 `Session.Flag`, 퀘스트 일지 `Quest.Status` — 활성 씬의 첫 열린 판 상태를 읽습니다.
- * @details 시계를 감는 단계 `AdvanceGameTime` 은 영역을 넘는 단계라 `GameplayAutomationSteps.cpp` 에 있다. `Quest.Status` 가 여기 있는 것은 판 상태(층 2)가 퀘스트(층 1)를 보는 방향이기 때문이다.
+ * @brief 월드 상태(`SessionStateComponent`)와 플레이어 진행(`PlayerProgressComponent`)의 자동화 감시 값입니다. 시계 `Clock.Hour` · `Clock.Day`, 플래그 `Session.Flag` 는 월드 상태(씬에 하나),
+ *        지갑 `Session.Money` · 퀘스트 일지 `Quest.Status` 는 씬의 열린 플레이어 진행(하나 — 둘이면 `findOpen` 이 오류로 멈춘다)을 읽습니다.
+ * @details 시계를 감는 단계 `AdvanceGameTime` 은 영역을 넘는 단계라 `GameplayAutomationSteps.cpp` 에 있다. 감시 값 이름(`Session.Money`)은 시나리오 골든이 쓰는 이름이라 그대로 둔다.
  */
 #include "pch.h"
 
@@ -12,6 +13,7 @@
 
 #include "GameFramework/Runtime/Foundation/Condition/GameFlags.h"
 #include "GameFramework/Runtime/Gameplay/Quest/QuestLog.h"
+#include "GameFramework/Runtime/Gameplay/SessionState/PlayerProgressComponent.h"
 #include "GameFramework/Runtime/Gameplay/SessionState/SessionStateComponent.h"
 
 namespace sw
@@ -36,17 +38,17 @@ namespace sw
             return true;
         }
 
-        /** @brief 감시 값 `Session.Money` 입니다. 활성 씬의 첫 판 상태 지갑의 기본 화폐 잔액입니다. */
+        /** @brief 감시 값 `Session.Money` 입니다. 활성 씬의 플레이어 진행 지갑의 기본 화폐 잔액입니다. */
         [[nodiscard]] bool readSessionMoney( const GameObjectManager* pManager, float64& outValue )
         {
-            const SessionStateComponent* pState = SessionStateComponent::findOpen( pManager );
-            if ( pState == nullptr )
+            const PlayerProgressComponent* pProgress = PlayerProgressComponent::findOpen( pManager );
+            if ( pProgress == nullptr )
                 return false;
-            outValue = static_cast<float64>( pState->getWallet().getBalance( Wallet::getDefaultCurrency() ) );
+            outValue = static_cast<float64>( pProgress->getWallet().getBalance( Wallet::getDefaultCurrency() ) );
             return true;
         }
 
-        /** @brief 감시 값 `Session.Flag` 입니다. 첫 판 상태의 플래그(key) 값이고, 적은 적 없으면 0 입니다(규칙 신호 — 지역 · 대화 · 행동 트리의 `flag.set` · `flag.add`). */
+        /** @brief 감시 값 `Session.Flag` 입니다. 월드 상태의 플래그(key) 값이고, 적은 적 없으면 0 입니다(규칙 신호 — 지역 · 대화 · 행동 트리의 `flag.set` · `flag.add`). */
         [[nodiscard]] bool readSessionFlag( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
         {
             const SessionStateComponent* pState = SessionStateComponent::findOpen( query._pManager );
@@ -59,16 +61,16 @@ namespace sw
             return true;
         }
 
-        /** @brief 감시 값 `Quest.Status` 입니다. 첫 판 상태의 퀘스트 일지에서 퀘스트 id `target` 의 상태(`NotStarted` · `Active` · `Completed` · `Failed`)입니다. */
+        /** @brief 감시 값 `Quest.Status` 입니다. 플레이어 진행의 퀘스트 일지에서 퀘스트 id `target` 의 상태(`NotStarted` · `Active` · `Completed` · `Failed`)입니다. */
         [[nodiscard]] bool readQuestStatus( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
         {
-            const SessionStateComponent* pState = SessionStateComponent::findOpen( query._pManager );
-            if ( pState == nullptr )
+            const PlayerProgressComponent* pProgress = PlayerProgressComponent::findOpen( query._pManager );
+            if ( pProgress == nullptr )
             {
-                outValue.setText( "the active scene has no open SessionStateComponent (quest log)" );
+                outValue.setText( "the active scene has no single open PlayerProgressComponent (quest log)" );
                 return false;
             }
-            switch ( pState->getQuestLog().getStatus( hashed_string( query._target ) ) )
+            switch ( pProgress->getQuestLog().getStatus( hashed_string( query._target ) ) )
             {
                 case QuestStatus::NotStarted:
                 {
@@ -97,8 +99,8 @@ namespace sw
 
     SW_AUTOMATION_WATCH( clockHour, "Clock.Hour", "Hour of day (0..24, fractional) of the active scene's game clock (SessionStateComponent)", &readClockHour );
     SW_AUTOMATION_WATCH( clockDay, "Clock.Day", "Day counted from 0 of the active scene's game clock (SessionStateComponent)", &readClockDay );
-    SW_AUTOMATION_WATCH( sessionMoney, "Session.Money", "Default-currency balance of the active scene's shared wallet (SessionStateComponent)", &readSessionMoney );
+    SW_AUTOMATION_WATCH( sessionMoney, "Session.Money", "Default-currency balance of the active scene's player wallet (PlayerProgressComponent)", &readSessionMoney );
     SW_AUTOMATION_QUERY_WATCH( sessionFlag, "Session.Flag", "Value of the flag named by key in the active scene's shared flags (0 when never set)", &readSessionFlag, false, true );
-    SW_AUTOMATION_QUERY_WATCH( questStatus, "Quest.Status", "NotStarted, Active, Completed or Failed for quest id target in the active scene's quest log", &readQuestStatus, true,
+    SW_AUTOMATION_QUERY_WATCH( questStatus, "Quest.Status", "NotStarted, Active, Completed or Failed for quest id target in the active scene's player quest log", &readQuestStatus, true,
                                false );
 } // namespace sw

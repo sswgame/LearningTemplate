@@ -1,7 +1,7 @@
 /**
  * @file ParserDefines.h
  * @brief ReflectionParser — 어노테이션/CLI/템플릿 계약 상수
- * @details clang 인자·SDK 상대경로·lookback·컴포넌트 베이스 타입 등은
+ * @details clang 인자·SDK 상대경로·컴포넌트 베이스 타입 등은
  *          Config/Environment/parser_config.defaults.json 에서 로드합니다. 산출물 확장자 · 스탬프 · 머리 글처럼 CMake 와 함께 지키는 생성 계약은
  *          `sw::config`(Scripts/common/project_constants.py 한 곳)에 있습니다.
  *          여기에는 ReflectionMacros / 생성 코드와 맞춰야 하는 컴파일 타임 계약만 둡니다.
@@ -45,7 +45,7 @@ namespace sw
 
         /**
          * @brief 넷 역할 필드의 정규 이름입니다.
-         * @details AnnotationMeta.txt 의 `netrole.Server = Server` 는 필드 이름 자리에 **역할**을 적습니다(토큰 자체가 값).
+         * @details `FUNCTION( Server )` 는 키가 아니라 **역할** 이름을 적습니다(토큰 자체가 값).
          *          그래서 적용할 때는 이 이름의 필드에 역할 이름을 값으로 넘깁니다.
          */
         inline constexpr const utf8* kNetRoleField = "NetRole";
@@ -67,10 +67,9 @@ namespace sw
 
         /**
          * @brief 리플렉션 이벤트가 되는 필드 타입입니다 — `PROPERTY()` 가 붙은 멀티캐스트 델리게이트는 값이 아니라 이벤트로 수집합니다.
-         * @details 판정은 정규 타입 철자의 머리(`kEventTemplatePrefix`)로, 인자 이름은 소스 토큰의 템플릿 이름(`kEventTemplateLeaf`)부터 읽습니다.
+         * @details 판정은 형식의 정체(`typeidentity::kMulticastDelegate`)로, 인자 이름은 소스 토큰의 템플릿 이름(`kEventTemplateLeaf`)부터 읽습니다.
          */
-        inline constexpr const utf8* kEventTemplatePrefix = "sw::MulticastDelegate<";
-        inline constexpr const utf8* kEventTemplateLeaf   = "MulticastDelegate";
+        inline constexpr const utf8* kEventTemplateLeaf = "MulticastDelegate";
 
         /** @brief 검증 함수(`Validate = fn`)의 인자 타입 — 정규 이름(`sw::` 와 참조를 벗긴 것)입니다. */
         inline constexpr const utf8* kValidationContextTypeName = "ValidationContext";
@@ -78,6 +77,32 @@ namespace sw
         /** @brief C 고정 배열(`T _arr[N]`)이 타는 `ReflectBuiltins.xxx` CONTAINER 줄의 이름입니다 — 래퍼 줄기 · 종류 · 역할은 그 줄이 정한다(`std::array` 와 같다). */
         inline constexpr const utf8* kFixedArrayTypeName = "array";
     } // namespace annotation
+
+    /**
+     * @brief 생성기가 정체로 가르는 형식의 FQN 표입니다 — 형식 철자(`find( "AssetRef<" )`)가 아니라 clang 이 준 선언의 FQN(템플릿이면 기본 템플릿)과 견준다(`CursorReader::getTypeIdentity`).
+     * @details 철자로 가르면 별칭 · 이름공간 생략 · 템플릿 인자 안의 같은 낱말에 속는다. 인라인 이름공간(`std::__1` · `std::__cxx11`)은 FQN 에 넣지 않는다.
+     */
+    namespace typeidentity
+    {
+        inline constexpr const utf8* kAssetRef             = "sw::AssetRef";
+        inline constexpr const utf8* kCatalogKey           = "sw::CatalogKey";
+        inline constexpr const utf8* kTypedComponentHandle = "sw::TComponentHandle";
+        inline constexpr const utf8* kComponentHandle      = "sw::ComponentHandle";
+        inline constexpr const utf8* kDynamicBitset        = "sw::DynamicBitset";
+        inline constexpr const utf8* kEnumArray            = "sw::EnumArray";
+        inline constexpr const utf8* kMulticastDelegate    = "sw::MulticastDelegate";
+        /** @brief 글(문자 원소가 `char`)로 싣는 문자열 템플릿입니다(`sw::string` 은 자체 클래스, `SW_ENABLE_STL_CONTAINER` 면 `std` 별칭). */
+        inline constexpr const utf8* kArrStringTemplate[] = { "sw::basic_string", "std::basic_string" };
+        /** @brief 가변 길이 시퀀스로 싣는 템플릿입니다. */
+        inline constexpr const utf8* kArrVectorTemplate[] = { "sw::vector", "std::vector" };
+        /** @brief 고정 길이 시퀀스로 싣는 템플릿입니다. */
+        inline constexpr const utf8* kArrArrayTemplate[] = { "sw::array", "std::array" };
+        /**
+         * @brief 이름 · 경로 칸 형식입니다(글 형식 `kArrStringTemplate` 과 함께) — 다른 데이터를 가리키는 칸이라 C++ 문자열 기본값이 엔진이 정한 기본값인지 묻는다
+         *        (`PROPERTY( DefaultName )` · `Required`). 이것들의 `vector` 도 같다.
+         */
+        inline constexpr const utf8* kArrNameFieldType[] = { "sw::basic_hashed_string", "sw::DataPath", "sw::AssetID", "sw::TagID", "sw::AssetRef" };
+    } // namespace typeidentity
 
     namespace fixedlayout
     {
@@ -105,7 +130,6 @@ namespace sw
         inline constexpr const utf8* kOutput          = "--output";
         inline constexpr const utf8* kInclude         = "--include";
         inline constexpr const utf8* kBuiltins        = "--builtins";
-        inline constexpr const utf8* kAnnotationMeta  = "--annotation-meta";
         inline constexpr const utf8* kModule          = "--module";
         inline constexpr const utf8* kConfig          = "--config";
         inline constexpr const utf8* kEmitTemplates   = "--emit-templates";
@@ -152,17 +176,13 @@ namespace sw
 
         // parsing.*
         inline constexpr const utf8* kParsingComponentBaseTypes   = "component_base_types";
-        inline constexpr const utf8* kParsingPhysicsHookBaseTypes = "physics_hook_base_types";
         inline constexpr const utf8* kParsingTypeStripPrefixes    = "type_strip_prefixes";
-        inline constexpr const utf8* kParsingNameFieldTypes       = "name_field_types";
-        inline constexpr const utf8* kParsingNameFieldPrefixes    = "name_field_type_prefixes";
         inline constexpr const utf8* kParsingNameFieldSkipFolders = "name_field_skip_folders";
         inline constexpr const utf8* kEmitValueForbiddenBases     = "value_forbidden_base_types";
         inline constexpr const utf8* kEmitValueForbiddenMessage   = "value_forbidden_message";
 
         // tuning.*
-        inline constexpr const utf8* kSourceLookbackBytes = "source_lookback_bytes";
-        inline constexpr const utf8* kMaxParallelParses   = "max_parallel_parses";
+        inline constexpr const utf8* kMaxParallelParses = "max_parallel_parses";
 
         // toolchain_config.json
         inline constexpr const utf8* kLlvmPath          = sw::config::kKeyLlvmPath;

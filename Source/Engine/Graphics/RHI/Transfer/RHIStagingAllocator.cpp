@@ -7,6 +7,55 @@
 
 namespace sw
 {
+    RHIStagingSpan::RHIStagingSpan( RHIStagingAllocator& allocator, uint32 generation, uint64 offsetBytes, uint64 sizeBytes, bool bSolo )
+        : _pAllocator{ &allocator }
+        , _offsetBytes{ offsetBytes }
+        , _sizeBytes{ sizeBytes }
+        , _generation{ generation }
+        , _bSolo{ bSolo ? SW_TRUE : SW_FALSE }
+    {
+    }
+
+    RHIStagingSpan::~RHIStagingSpan()
+    {
+        if ( _pAllocator != nullptr )
+            _pAllocator->free( std::move( *this ) );
+    }
+
+    RHIStagingSpan::RHIStagingSpan( RHIStagingSpan&& other ) noexcept
+        : _pAllocator{ other._pAllocator }
+        , _offsetBytes{ other._offsetBytes }
+        , _sizeBytes{ other._sizeBytes }
+        , _generation{ other._generation }
+        , _bSolo{ other._bSolo }
+    {
+        other.release();
+    }
+
+    RHIStagingSpan& RHIStagingSpan::operator=( RHIStagingSpan&& other ) noexcept
+    {
+        if ( this == &other )
+            return *this;
+        if ( _pAllocator != nullptr )
+            _pAllocator->free( std::move( *this ) );
+        _pAllocator  = other._pAllocator;
+        _offsetBytes = other._offsetBytes;
+        _sizeBytes   = other._sizeBytes;
+        _generation  = other._generation;
+        _bSolo       = other._bSolo;
+        other.release();
+        return *this;
+    }
+
+    void RHIStagingSpan::release()
+    {
+        _pAllocator  = nullptr;
+        _offsetBytes = 0;
+        _sizeBytes   = 0;
+        _generation  = 0;
+        _bSolo       = SW_FALSE;
+    }
+
     RHIStagingAllocator::RHIStagingAllocator()
         : _mutex{}
         , _slots{}
@@ -18,6 +67,7 @@ namespace sw
         , _soloReservationMicroseconds{ 0 }
         , _soloReservedUntilMicroseconds{ 0 }
         , _liveCount{ 0 }
+        , _generation{ 1 }
     {
     }
 
@@ -37,6 +87,7 @@ namespace sw
         _soloReservationMicroseconds   = soloReservationMicroseconds;
         _soloReservedUntilMicroseconds = 0;
         _liveCount                     = 0;
+        ++_generation;
     }
 
     void RHIStagingAllocator::shutdown()
@@ -49,6 +100,7 @@ namespace sw
         _soloSerial                    = 0;
         _soloReservedUntilMicroseconds = 0;
         _liveCount                     = 0;
+        ++_generation;
     }
 
     RHIStagingAllocateResult RHIStagingAllocator::allocate( uint64 sizeBytes, uint64 completedSerial, RHIStagingSpan& outSpan )
@@ -77,7 +129,7 @@ namespace sw
             _soloSerial                    = 0;
             _soloReservedUntilMicroseconds = 0;
             ++_liveCount;
-            outSpan = RHIStagingSpan{ 0, sizeBytes, SW_TRUE };
+            outSpan = RHIStagingSpan{ *this, _generation, 0, sizeBytes, true };
             return RHIStagingAllocateResult::Allocated;
         }
 
@@ -92,33 +144,47 @@ namespace sw
             return RHIStagingAllocateResult::Full;
 
         ++_liveCount;
-        outSpan = RHIStagingSpan{ static_cast<uint64>( slot ) * _alignmentBytes, sizeBytes, SW_FALSE };
+        outSpan = RHIStagingSpan{ *this, _generation, static_cast<uint64>( slot ) * _alignmentBytes, sizeBytes, false };
         return RHIStagingAllocateResult::Allocated;
     }
 
-    void RHIStagingAllocator::markSubmitted( const RHIStagingSpan& span, uint64 serial )
+    void RHIStagingAllocator::markSubmitted( RHIStagingSpan&& span, uint64 serial )
     {
         SW_ASSERT( serial != 0 );
-        SW_ASSERT( span._sizeBytes != 0 );
+        SW_ASSERT( span._pAllocator == this && span._sizeBytes != 0 );
         ScopedLock<mutex> lock{ _mutex };
+        if ( isCurrentLocked( span ) == false )
+        {
+            span.release();
+            return;
+        }
         if ( span._bSolo != SW_FALSE )
         {
             SW_ASSERT( _soloSizeBytes == span._sizeBytes && _soloSerial == 0 );
             _soloSerial = serial;
-            return;
         }
-        _slots.freeDeferred( static_cast<uint32>( span._offsetBytes / _alignmentBytes ), toSlotCount( span._sizeBytes ), serial );
+        else
+        {
+            _slots.freeDeferred( static_cast<uint32>( span._offsetBytes / _alignmentBytes ), toSlotCount( span._sizeBytes ), serial );
+        }
+        span.release();
     }
 
-    void RHIStagingAllocator::free( const RHIStagingSpan& span )
+    void RHIStagingAllocator::free( RHIStagingSpan&& span )
     {
-        SW_ASSERT( span._sizeBytes != 0 );
+        SW_ASSERT( span._pAllocator == this && span._sizeBytes != 0 );
         ScopedLock<mutex> lock{ _mutex };
+        if ( isCurrentLocked( span ) == false )
+        {
+            span.release();
+            return;
+        }
         if ( span._bSolo != SW_FALSE )
         {
             SW_ASSERT( _soloSizeBytes == span._sizeBytes && _soloSerial == 0 );
             if ( _soloSizeBytes != 0 )
                 releaseSoloLocked();
+            span.release();
             return;
         }
         const uint32 allocatedBefore = _slots.getAllocatedCount();
@@ -126,6 +192,7 @@ namespace sw
         // SpanAllocator 가 이중 반납 · 범위 밖을 단언하고 무시한다 — 그때는 산 구간 수도 그대로 둔다.
         if ( _slots.getAllocatedCount() != allocatedBefore )
             --_liveCount;
+        span.release();
     }
 
     void RHIStagingAllocator::freeCompleted( uint64 completedSerial )
@@ -171,6 +238,11 @@ namespace sw
         const bool bSoloCompleted = _soloSerial != 0 && _soloSerial <= completedSerial;
         if ( bSoloCompleted )
             releaseSoloLocked();
+    }
+
+    bool RHIStagingAllocator::isCurrentLocked( const RHIStagingSpan& span ) const
+    {
+        return span._generation == _generation;
     }
 
     void RHIStagingAllocator::releaseSoloLocked()

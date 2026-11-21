@@ -16,6 +16,7 @@ namespace sw
         , _listEnterScratch{}
         , _listMergeScratch{}
         , _listUnpositionedIndex{}
+        , _listRelevancyChanged{}
     {
     }
 
@@ -29,18 +30,21 @@ namespace sw
         }
         _mapPosition.clear();
         _listObserver.clear();
+        _listRelevancyChanged.clear();
         return true;
     }
 
     void InterestReplicationPolicy::setEntityPosition( uint32 entityID, const float3& position )
     {
-        _mapPosition[entityID] = position;
+        if ( _mapPosition.insert_or_assign( entityID, position ).second )
+            _listRelevancyChanged.push_back( entityID ); // 모두에게 가던 자리 없는 엔티티가 공간 판단을 받기 시작한다
         _interest.setPoint( entityID, position );
     }
 
     void InterestReplicationPolicy::removeEntity( uint32 entityID )
     {
-        _mapPosition.erase( entityID );
+        if ( _mapPosition.erase( entityID ) > 0 )
+            _listRelevancyChanged.push_back( entityID ); // 자리 없는 엔티티가 되어 모두에게 간다
         _interest.removePoint( entityID );
     }
 
@@ -58,7 +62,11 @@ namespace sw
     void InterestReplicationPolicy::removeObserver( int32 connectionID )
     {
         if ( connectionID >= 0 && connectionID < static_cast<int32>( _listObserver.size() ) )
-            _listObserver[static_cast<size_t>( connectionID )] = Observer{};
+        {
+            Observer& observer = _listObserver[static_cast<size_t>( connectionID )];
+            _listRelevancyChanged.insert( _listRelevancyChanged.end(), observer._listVisible.begin(), observer._listVisible.end() ); // 이 연결에 보이던 것이 빠진다
+            observer = Observer{};
+        }
     }
 
     void InterestReplicationPolicy::updateRelevancy()
@@ -71,7 +79,10 @@ namespace sw
             const auto leaveIt = std::remove_if( observer._listVisible.begin(), observer._listVisible.end(), [this, &observer]( uint32 entityID )
             {
                 const auto positionIt = _mapPosition.find( entityID );
-                return positionIt == _mapPosition.end() || _interest.isOutsideLeaveRadius( observer._center, positionIt->second );
+                const bool bLeaving   = positionIt == _mapPosition.end() || _interest.isOutsideLeaveRadius( observer._center, positionIt->second );
+                if ( bLeaving )
+                    _listRelevancyChanged.push_back( entityID ); // 휴면이어도 깨어나 받는 쪽에서 지워진다
+                return bLeaving;
             } );
             observer._listVisible.erase( leaveIt, observer._listVisible.end() );
             // 2) 들어오는 반경 안의 엔티티를 더한다(이미 보이면 그대로) — 정렬해 합쳐 id 오름차순 · 겹침 없음을 지킨다.
@@ -82,9 +93,11 @@ namespace sw
                 _listEnterScratch.push_back( NetInterestGrid::getEntityID( key ) );
             }
             VectorUtil::sort( _listEnterScratch );
+            const auto enterEnd = std::unique( _listEnterScratch.begin(), _listEnterScratch.end() );
+            // 새로 보이는 엔티티는 깨운다 — 휴면 가구에 다가가면 보여야 한다.
+            std::set_difference( _listEnterScratch.begin(), enterEnd, observer._listVisible.begin(), observer._listVisible.end(), std::back_inserter( _listRelevancyChanged ) );
             _listMergeScratch.clear();
-            std::set_union( observer._listVisible.begin(), observer._listVisible.end(), _listEnterScratch.begin(),
-                            std::unique( _listEnterScratch.begin(), _listEnterScratch.end() ), std::back_inserter( _listMergeScratch ) );
+            std::set_union( observer._listVisible.begin(), observer._listVisible.end(), _listEnterScratch.begin(), enterEnd, std::back_inserter( _listMergeScratch ) );
             observer._listVisible.swap( _listMergeScratch );
         }
     }
@@ -148,17 +161,33 @@ namespace sw
         }
     }
 
-    void InterestReplicationPolicy::collectRelevantEntities( int32 connectionID, const vector<NetEntityState>& listWorldEntity, vector<NetRelevantEntity>& outList ) const
+    void InterestReplicationPolicy::collectWokenEntities( vector<uint32>& outListEntityID )
+    {
+        outListEntityID.insert( outListEntityID.end(), _listRelevancyChanged.begin(), _listRelevancyChanged.end() );
+        _listRelevancyChanged.clear();
+    }
+
+    void InterestReplicationPolicy::collectRelevantEntities( int32 connectionID, const vector<NetEntityState>& listWorldEntity, const vector<uint32>& listCandidate,
+                                                             vector<NetRelevantEntity>& outList ) const
     {
         outList.clear();
         const Observer* pObserver          = findObserver( connectionID );
         size_t          unpositionedCursor = 0;
+        size_t          candidateCursor    = 0;
+        // 넣는 번호는 오름차순이므로 후보 목록 쪽 자리도 앞으로만 간다.
+        auto isCandidate = [&listCandidate, &candidateCursor]( uint32 worldIndex )
+        {
+            while ( candidateCursor < listCandidate.size() && listCandidate[candidateCursor] < worldIndex )
+                ++candidateCursor;
+            return candidateCursor < listCandidate.size() && listCandidate[candidateCursor] == worldIndex;
+        };
         // 자리 없는 엔티티를 @p worldIndex 앞까지 차례로 넣는다(우선도 1 — `evaluateEntity` 와 같다).
         auto flushUnpositionedBefore = [&]( uint32 worldIndex )
         {
             while ( unpositionedCursor < _listUnpositionedIndex.size() && _listUnpositionedIndex[unpositionedCursor] < worldIndex )
             {
-                outList.push_back( NetRelevantEntity{ _listUnpositionedIndex[unpositionedCursor], 1.0f } );
+                if ( isCandidate( _listUnpositionedIndex[unpositionedCursor] ) )
+                    outList.push_back( NetRelevantEntity{ _listUnpositionedIndex[unpositionedCursor], 1.0f } );
                 ++unpositionedCursor;
             }
         };
@@ -179,7 +208,8 @@ namespace sw
                     continue; // 자리를 지운 엔티티는 자리 없는 엔티티로 든다(`prepareSnapshots`)
                 const uint32 worldIndex = static_cast<uint32>( worldIt - listWorldEntity.begin() );
                 flushUnpositionedBefore( worldIndex );
-                outList.push_back( NetRelevantEntity{ worldIndex, 1.0f / ( 1.0f + float3::getHorizontalDistance( pObserver->_center, positionIt->second ) * 0.1f ) } );
+                if ( isCandidate( worldIndex ) )
+                    outList.push_back( NetRelevantEntity{ worldIndex, 1.0f / ( 1.0f + float3::getHorizontalDistance( pObserver->_center, positionIt->second ) * 0.1f ) } );
             }
         }
         flushUnpositionedBefore( static_cast<uint32>( listWorldEntity.size() ) );

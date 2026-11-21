@@ -2,7 +2,9 @@
 #include "pch.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Log/Logger.h"
+#include "Core/Time/MonotonicClock.h"
 
 #include "Editor/Common/Commands/Asset/EditorAssetCatalog.h"
 #include "Editor/Common/Commands/Asset/EditorDocumentAutosave.h"
@@ -117,8 +119,7 @@ namespace sw::editor
 
     EditorDocumentPanel::~EditorDocumentPanel()
     {
-        *_pUndoTarget = nullptr;
-        releaseFocusedCommandStack( _pDocumentStack.get() ); // 사라질 스택을 Ctrl+Z 가 겨누지 않게
+        *_pUndoTarget = nullptr; // Ctrl+Z 의 스택은 패널 id 로 찾으므로 사라질 스택을 풀 일이 없다(`setFocusedPanel`)
     }
 
     optional<AbsolutePath> EditorDocumentPanel::getDocumentDiskPath() const
@@ -192,7 +193,7 @@ namespace sw::editor
         _pEditSpan->resetBaseline( restoredText );
         syncStackInteraction();
         if ( before != restoredText )
-            recordDocumentEdit( DocumentEdit{ before, restoredText, "Restore Autosave Copy" } );
+            recordDocumentEdit( DocumentEdit::make( before, restoredText, "Restore Autosave Copy" ) );
     }
 
     DocumentAutosaveResult EditorDocumentPanel::takeAutosaveCopy( string& outDocumentPath, string& outText )
@@ -305,7 +306,12 @@ namespace sw::editor
         // 바뀐 것이 없으면 아무것도 하지 않는다 — 매 프레임 알리는 패널이 활성 위젯(글 칸) 동안 dirty 로 표시하면 제목이 바뀌어 그 칸이 포커스를 잃는다.
         // 직렬화는 구간이 필요할 때만 한다(시작 · 끝 두 번 — 감사 E-9). 끄는 동안의 알림은 표시만 한다.
         const optional<DocumentEdit> edit = _pEditSpan->notifyEdited( label, isWidgetInteractionActive(), [this]()
-        { return captureDocumentText(); } );
+        {
+            const Stopwatch stopwatch; // 차이 저장의 판정 근거(편집당 1 ms) — 구간의 시작 · 단발 편집에서만 만든다
+            string          text     = captureDocumentText();
+            _lastCaptureMicroseconds = static_cast<uint64>( stopwatch.getElapsedNanoseconds() / constant::time::kNanosecondsPerMicrosecond );
+            return text;
+        } );
         syncStackInteraction();
         if ( edit.has_value() )
             recordDocumentEdit( *edit );
@@ -323,7 +329,7 @@ namespace sw::editor
         const string                           documentPath = _loadedAssetPath;
         const shared_ptr<EditorDocumentPanel*> pTarget      = _pUndoTarget;
         transaction.recordDocumentText(
-            edit._before, edit._after, edit._label, *_pUndoOwner,
+            *edit._pBefore, *edit._pAfter, edit._label, *_pUndoOwner,
             SW_DELEGATE_LAMBDA( EditorDocumentRestoreDelegate, [pTarget, documentPath]( string_view snapshot )
         {
             EditorDocumentPanel* pPanel = *pTarget;

@@ -50,11 +50,23 @@ namespace sw
         MinigameReturnPoint _returnPoint; ///< 이 미니게임을 덮기 전으로 돌아가는 길
     };
 
-    /** @brief 미니게임이 끝나며 넘기는 결과입니다 — 돌아올 자리를 복원한 뒤에 넘긴다(복원이 파생 인스턴스 상태까지 되감으므로 번 것은 그 뒤에 얹는다). */
+    /** @brief 결과에 실려 바탕 판으로 넘어가는 값 하나입니다(번 돈 · 얻은 물건 수 · 점수). 이름의 뜻은 결과를 받는 쪽(허브 디렉터)이 정한다. */
+    struct MinigameResultValue
+    {
+        hashed_string _name; ///< 값 이름(예: 화폐 id · 아이템 id · `score`)
+        int64         _amount{ 0 };
+    };
+
+    /**
+     * @brief 미니게임이 끝나며 넘기는 결과입니다 — 돌아올 자리를 복원한 뒤에 넘긴다(복원이 파생 인스턴스 상태까지 되감으므로 번 것은 그 뒤에 얹는다).
+     * @details 한 판 임시 상태(미니게임 지갑 · 창고 · 점수)는 디렉터가 소유하고 바탕 판(플레이어 진행 · 월드 상태)에 직접 쓰지 않는다 — 이 값 목록으로만 내보낸다
+     *          (언리얼 매치 상태가 PlayerState 를 거치지 않고 끝에 정산하는 자리, `GameModeComponent::finishMinigame`).
+     */
     struct MinigameResult
     {
-        hashed_string _minigame;   ///< 끝난 미니게임 이름
-        hashed_string _resultName; ///< 결과 이름(미니게임이 정한다 — 예: `win` · `lose`). 비었으면 결과 없이 나왔다
+        hashed_string               _minigame;   ///< 끝난 미니게임 이름
+        hashed_string               _resultName; ///< 결과 이름(미니게임이 정한다 — 예: `win` · `lose`). 비었으면 결과 없이 나왔다
+        vector<MinigameResultValue> _listValue;  ///< 바탕 판에 넘길 값(디렉터의 `collectMinigameResult`). 비었으면 넘길 것이 없다
     };
 
     /**

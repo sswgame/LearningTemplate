@@ -7,12 +7,14 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/Connection/NetConnection.h"
 #include "Core/Network/Connection/NetEndpoint.h"
+#include "Core/Network/Message/NetSendBudget.h"
 #include "Core/Serialization/BitStream.h"
 
 #include "Engine/Destruction/Fracture/FractureComponentBase.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Reflection/ReflectionCast.h"
+#include "Engine/Serialization/Fixed/ReplicatedLayout.h"
 
 namespace sw
 {
@@ -20,100 +22,88 @@ namespace sw
     {
         struct DestructionReplicationInternal
         {
-            static constexpr float32 kQuaternionResolution = 1.0f / 32767.0f;
-            static constexpr int32   kPoseMessageBudget    = 900; ///< 자세 메시지 하나를 이 크기에서 끊는다(한도 1024)
-            static constexpr uint8   kRestRepeatCount      = 5;   ///< 멈춘 자세를 비신뢰로 되풀이해 보내는 횟수(자세 주기마다 한 번)
-            static constexpr int32   kMaxPoseSample        = 32;  ///< 덩어리마다 보관하는 자세 표본 수
+            static constexpr int32 kPoseMessageBudget = 900; ///< 자세 메시지 하나를 이 크기에서 끊는다(한도 1024)
+            static constexpr uint8 kRestRepeatCount   = 5;   ///< 멈춘 자세를 비신뢰로 되풀이해 보내는 횟수(자세 주기마다 한 번)
+            static constexpr int32 kMaxPoseSample     = 32;  ///< 덩어리마다 보관하는 자세 표본 수
 
             /** @brief 프로필의 자세 간격(초)입니다. */
             static float32 computePosePeriod( const FractureComponentBase& component ) { return 1.0f / MathUtil::max( 0.1f, component.getProfile()._networkPoseRate ); }
 
-            static void writeEvent( BitWriter& writer, const DestructionDamageEvent& event )
+            static_assert( static_cast<uint8>( DestructionDamageKind::Count ) == 3, "DestructionEventNetState::_kind 의 Max 를 열거의 끝 값과 맞춘다" );
+
+            /** @brief 이벤트 하나를 씁니다 — 칸은 `DestructionEventNetState` 의 선언이다. 값이 선언 범위 밖(NaN · 무한대)이면 false 이고 쓰다 만 비트가 남습니다. */
+            [[nodiscard]] static bool writeEvent( BitWriter& writer, const DestructionDamageEvent& event )
             {
-                writer.writeBits( static_cast<uint32>( event._kind ), 2 );
-                writer.writeVarInt( event._leafHint );
-                writer.writeVarUint( event._groupID );
-                // 실수는 비트 그대로 보낸다. 받는 쪽 상태가 같아야 하고, 양자화하면 다른 리프가 깨질 수 있다.
-                writer.writeFloat( event._position._x );
-                writer.writeFloat( event._position._y );
-                writer.writeFloat( event._position._z );
-                writer.writeFloat( event._direction._x );
-                writer.writeFloat( event._direction._y );
-                writer.writeFloat( event._direction._z );
-                writer.writeFloat( event._strain );
-                writer.writeFloat( event._radius );
-                writer.writeFloat( event._impulse );
+                DestructionEventNetState state;
+                state._kind      = static_cast<uint8>( event._kind );
+                state._leafHint  = event._leafHint;
+                state._groupID   = event._groupID;
+                state._position  = event._position;
+                state._direction = event._direction;
+                state._strain    = event._strain;
+                state._radius    = event._radius;
+                state._impulse   = event._impulse;
+                return ReplicatedLayout::writeFull( state, writer );
             }
 
             [[nodiscard]] static bool readEvent( BitReader& reader, DestructionDamageEvent& outEvent )
             {
-                if ( reader.readEnum( 2, outEvent._kind ) == false )
+                DestructionEventNetState state;
+                if ( ReplicatedLayout::readFull( reader, state, nullptr ) != FixedReadResult::Ok )
                     return false;
-                outEvent._leafHint = reader.readVarInt32();
-                outEvent._groupID  = reader.readVarUint32();
-                return reader.readFiniteFloat( outEvent._position._x ) && reader.readFiniteFloat( outEvent._position._y ) &&
-                       reader.readFiniteFloat( outEvent._position._z ) && reader.readFiniteFloat( outEvent._direction._x ) &&
-                       reader.readFiniteFloat( outEvent._direction._y ) && reader.readFiniteFloat( outEvent._direction._z ) &&
-                       reader.readFiniteFloat( outEvent._strain ) && reader.readFiniteFloat( outEvent._radius ) && reader.readFiniteFloat( outEvent._impulse );
+                outEvent._kind      = static_cast<DestructionDamageKind>( state._kind );
+                outEvent._leafHint  = state._leafHint;
+                outEvent._groupID   = state._groupID;
+                outEvent._position  = state._position;
+                outEvent._direction = state._direction;
+                outEvent._strain    = state._strain;
+                outEvent._radius    = state._radius;
+                outEvent._impulse   = state._impulse;
+                return true;
             }
 
-            static void writeExactPose( BitWriter& writer, const float3& position, const quaternion& rotation )
+            /** @brief 자세를 비트 그대로 씁니다(`DestructionExactPoseNetState`). 유한하지 않으면 false 입니다. */
+            [[nodiscard]] static bool writeExactPose( BitWriter& writer, const float3& position, const quaternion& rotation )
             {
-                writer.writeFloat( position._x );
-                writer.writeFloat( position._y );
-                writer.writeFloat( position._z );
-                writer.writeFloat( rotation._x );
-                writer.writeFloat( rotation._y );
-                writer.writeFloat( rotation._z );
-                writer.writeFloat( rotation._w );
+                DestructionExactPoseNetState state;
+                state._position = position;
+                state._rotation = rotation;
+                return ReplicatedLayout::writeFull( state, writer );
             }
 
-            /** @brief 유한하지 않은 값이면 false 이고 읽기는 넘침으로 표시된다. */
             [[nodiscard]] static bool readExactPose( BitReader& reader, float3& outPosition, quaternion& outRotation )
             {
-                return reader.readFiniteFloat( outPosition._x ) && reader.readFiniteFloat( outPosition._y ) && reader.readFiniteFloat( outPosition._z ) &&
-                       reader.readFiniteFloat( outRotation._x ) && reader.readFiniteFloat( outRotation._y ) && reader.readFiniteFloat( outRotation._z ) &&
-                       reader.readFiniteFloat( outRotation._w );
-            }
-
-            /**
-             * @brief 움직이는 자세를 양자화 범위(`_positionRange`, 사원수 ±1)에 실을 수 있는가입니다.
-             * @details 범위 밖 덩어리는 움직이는 자세로 보내지 않는다(예전에는 경계로 잘려 받는 쪽에서 경계에 붙어 보였다). 멈추면 비트 그대로 보내므로 맞는 자리로 간다.
-             */
-            static bool canWriteQuantizedPose( const float3& position, const quaternion& rotation, const DestructionReplicationConfig& settings )
-            {
-                const float32 range      = settings._positionRange;
-                const float32 resolution = settings._positionResolution;
-                const bool    bPosition  = BitWriter::canWriteQuantizedFloat( position._x, -range, range, resolution ) &&
-                                       BitWriter::canWriteQuantizedFloat( position._y, -range, range, resolution ) &&
-                                       BitWriter::canWriteQuantizedFloat( position._z, -range, range, resolution );
-                const bool bRotation = BitWriter::canWriteQuantizedFloat( rotation._x, -1.0f, 1.0f, kQuaternionResolution ) &&
-                                       BitWriter::canWriteQuantizedFloat( rotation._y, -1.0f, 1.0f, kQuaternionResolution ) &&
-                                       BitWriter::canWriteQuantizedFloat( rotation._z, -1.0f, 1.0f, kQuaternionResolution ) &&
-                                       BitWriter::canWriteQuantizedFloat( rotation._w, -1.0f, 1.0f, kQuaternionResolution );
-                return bPosition && bRotation;
-            }
-
-            [[nodiscard]] static bool writeQuantizedPose( BitWriter& writer, const float3& position, const quaternion& rotation, const DestructionReplicationConfig& settings )
-            {
-                const float32 range = settings._positionRange;
-                return writer.writeQuantizedFloat3( position, float3( -range, -range, -range ), float3( range, range, range ), settings._positionResolution ) &&
-                       writer.writeQuantizedFloat( rotation._x, -1.0f, 1.0f, kQuaternionResolution ) &&
-                       writer.writeQuantizedFloat( rotation._y, -1.0f, 1.0f, kQuaternionResolution ) &&
-                       writer.writeQuantizedFloat( rotation._z, -1.0f, 1.0f, kQuaternionResolution ) &&
-                       writer.writeQuantizedFloat( rotation._w, -1.0f, 1.0f, kQuaternionResolution );
-            }
-
-            [[nodiscard]] static bool readQuantizedPose( BitReader& reader, float3& outPosition, quaternion& outRotation, const DestructionReplicationConfig& settings )
-            {
-                const float32 range = settings._positionRange;
-                const bool    bRead = reader.readQuantizedFloat3( float3( -range, -range, -range ), float3( range, range, range ), settings._positionResolution, outPosition ) &&
-                                   reader.readQuantizedFloat( -1.0f, 1.0f, kQuaternionResolution, outRotation._x ) &&
-                                   reader.readQuantizedFloat( -1.0f, 1.0f, kQuaternionResolution, outRotation._y ) &&
-                                   reader.readQuantizedFloat( -1.0f, 1.0f, kQuaternionResolution, outRotation._z ) &&
-                                   reader.readQuantizedFloat( -1.0f, 1.0f, kQuaternionResolution, outRotation._w );
-                if ( bRead == false )
+                DestructionExactPoseNetState state;
+                if ( ReplicatedLayout::readFull( reader, state, nullptr ) != FixedReadResult::Ok )
                     return false;
+                outPosition = state._position;
+                outRotation = state._rotation;
+                return true;
+            }
+
+            /** @brief 움직이는 자세를 양자화 범위에 실을 수 있는가입니다. 양자화는 범위 밖을 경계로 자르므로 쓰기 전에 거른다(NaN 도 여기서 걸린다). */
+            static bool canWriteMovingPose( const float3& position )
+            {
+                const float32 range = DestructionMovingPoseNetState::kPositionRange;
+                return MathUtil::abs( position._x ) <= range && MathUtil::abs( position._y ) <= range && MathUtil::abs( position._z ) <= range;
+            }
+
+            /** @brief 움직이는 자세를 양자화해 씁니다(`DestructionMovingPoseNetState`). 회전이 유한하지 않으면 false 입니다. */
+            [[nodiscard]] static bool writeMovingPose( BitWriter& writer, const float3& position, const quaternion& rotation )
+            {
+                DestructionMovingPoseNetState state;
+                state._position = position;
+                state._rotation = rotation;
+                return ReplicatedLayout::writeFull( state, writer );
+            }
+
+            [[nodiscard]] static bool readMovingPose( BitReader& reader, float3& outPosition, quaternion& outRotation )
+            {
+                DestructionMovingPoseNetState state;
+                if ( ReplicatedLayout::readFull( reader, state, nullptr ) != FixedReadResult::Ok )
+                    return false;
+                outPosition = state._position;
+                outRotation = state._rotation;
                 outRotation.normalize();
                 return true;
             }
@@ -284,12 +274,18 @@ namespace sw
             writer.writeVarUint( entry._netID );
             writer.writeVarUint( serverTick );
             writer.writeVarUint( index );
-            DestructionReplicationInternal::writeEvent( writer, listEvent[index] );
+            bool bWritten = DestructionReplicationInternal::writeEvent( writer, listEvent[index] );
             // 떨어진 덩어리를 맞힌 이벤트이면 맞기 직전의 그 덩어리 자세를 비트 그대로 싣는다. 신뢰 채널이 밀려 자세가 늦어도 받는 쪽이 그 위치에서 덩어리를 가를 수 있다.
             const bool bHasPose = index < listGroupPose.size() && listGroupPose[index].has_value();
             writer.writeBool( bHasPose );
-            if ( bHasPose )
-                DestructionReplicationInternal::writeExactPose( writer, listGroupPose[index]->_position, listGroupPose[index]->_rotation );
+            if ( bWritten && bHasPose )
+                bWritten = DestructionReplicationInternal::writeExactPose( writer, listGroupPose[index]->_position, listGroupPose[index]->_rotation );
+            if ( bWritten == false )
+            {
+                // 유한하지 않은 이벤트 — 보내지 않는다. 받는 쪽은 번호가 비어 해시 대조에서 어긋나고 스냅숏으로 바로잡는다.
+                SW_LOG_ERROR_ID( "DestructionReplication.EventOutOfRange", "DestructionReplication: event %# of object %# has a value outside the replicated range - not sent", index, entry._netID );
+                continue;
+            }
             (void)broadcastMessage(); // 서술자 채널(신뢰 순서 없음) — 받는 쪽이 번호로 순서를 맞춘다. 앞 이벤트를 잃어도 뒤 이벤트가 기다리지 않는다
             ++_stats._eventMessageCount;
         }
@@ -372,7 +368,7 @@ namespace sw
             else
             {
                 state._bRestSent = SW_FALSE;
-                if ( bDue && Internal::canWriteQuantizedPose( pose._center, pose._rotation, _settings ) )
+                if ( bDue && Internal::canWriteMovingPose( pose._center ) )
                 {
                     listMoving.push_back( &pose );
                 }
@@ -381,8 +377,8 @@ namespace sw
                     // 이 서버에서 처음 넘는 순간만 알린다. 넘은 덩어리는 틱마다 다시 걸리므로 매번 알리면 로그가 넘친다. 그 뒤는 `_outOfRangePoseCount` 가 센다.
                     if ( _stats._outOfRangePoseCount == 0 )
                         SW_LOG_WARNING_ID( "DestructionReplication.DestructionReplicationChunkObjectMoved", "DestructionReplication: chunk %# of object %# moved outside the position range +-%# m - its moving pose is not sent until it rests "
-                                                                                                            "(raise DestructionReplicationConfig::_positionRange)",
-                                           pose._groupID, entry._netID, _settings._positionRange );
+                                                                                                            "(raise DestructionMovingPoseNetState::kPositionRange)",
+                                           pose._groupID, entry._netID, DestructionMovingPoseNetState::kPositionRange );
                     ++_stats._outOfRangePoseCount;
                 }
             }
@@ -408,25 +404,37 @@ namespace sw
             writer.writeBool( bRest );
             writer.writeVarUint( entry._netID );
             writer.writeVarUint( serverTick );
-            // 개수는 끝에서야 알 수 있으므로 몇 개를 실을지 먼저 정한다. 예산 안에서 남은 최대 개수로 정한다(머리 — 번호 9 바이트 · 틱 · 개수 — 를 20 바이트로 잡는다).
-            const int32  perPoseBytes = bRest ? 30 : 15;
-            const size_t room         = static_cast<size_t>( MathUtil::max( 1, ( Internal::kPoseMessageBudget - 20 ) / perPoseBytes ) );
-            const size_t count        = MathUtil::min( room, listPose.size() - start );
-            writer.writeVarUint( count );
-            bool bPosesWritten = true;
-            for ( size_t index = start; index < start + count; ++index )
+            // 자세마다 이어짐 비트 · 덩어리 번호 · 자세를 써 보고 예산을 넘으면 물려 다음 메시지로 넘긴다 — 크기를 어림하지 않는다.
+            NetSendBudget budget( Internal::kPoseMessageBudget );
+            budget.reserveBits( writer.getBitCount() + 1 ); // 머리와 끝 표시
+            size_t count = 0;
+            while ( start < listPose.size() )
             {
-                const FractureGroupPose& pose = *listPose[index];
+                const FractureGroupPose& pose = *listPose[start];
+                const int32              mark = writer.getBitCount();
+                writer.writeBool( true );
                 writer.writeVarUint( pose._groupID );
                 // 질량 중심과 회전을 보낸다. 원점은 덩어리에서 멀 수 있어 회전하면 크게 움직이고, 보간이 그 움직임을 직선으로 연결하게 되기 때문이다.
-                if ( bRest )
-                    Internal::writeExactPose( writer, pose._center, pose._rotation );
-                else
-                    bPosesWritten = bPosesWritten && Internal::writeQuantizedPose( writer, pose._center, pose._rotation, _settings );
+                const bool bWritten = bRest ? Internal::writeExactPose( writer, pose._center, pose._rotation ) : Internal::writeMovingPose( writer, pose._center, pose._rotation );
+                if ( bWritten == false )
+                {
+                    writer.truncate( mark );
+                    ++_stats._outOfRangePoseCount; // 유한하지 않은 자세 — 이 덩어리만 뺀다
+                    ++start;
+                    continue;
+                }
+                if ( budget.tryReserveBits( writer.getBitCount() - mark ) == false )
+                {
+                    writer.truncate( mark );
+                    if ( count == 0 )
+                        return; // 빈 메시지에도 들지 않는 자세 — 자세 하나는 수십 바이트라 일어나지 않는다. 같은 자리를 다시 돌지 않는다
+                    break;      // 다음 메시지로 넘긴다
+                }
+                ++count;
+                ++start;
             }
-            start += count;
-            // 움직이는 자세는 위에서 범위로 걸렀다. 그래도 하나라도 쓰지 못했으면 메시지가 어긋났으므로 보내지 않는다.
-            if ( bPosesWritten == false )
+            writer.writeBool( false );
+            if ( count == 0 )
                 continue;
             (void)broadcastMessage(); // 채널은 시작에서 골랐다
             ++_stats._poseMessageCount;
@@ -676,20 +684,18 @@ namespace sw
 
     bool DestructionReplicationClient::handlePose( BitReader& reader, bool bRest )
     {
-        using Internal          = DestructionReplicationInternal;
-        const NetObjectID netID = reader.readVarUint();
-        const uint32      tick  = reader.readVarUint32();
-        uint32            count = 0;
-        // 보내는 쪽은 예산(`kPoseMessageBudget` 바이트)에서 끊고 자세 하나가 적어도 1 바이트다 — 그보다 큰 수는 깨진 것이다.
-        if ( reader.readCount( static_cast<uint32>( Internal::kPoseMessageBudget ), count ) == false )
-            return false;
+        using Internal                        = DestructionReplicationInternal;
+        const NetObjectID               netID = reader.readVarUint();
+        const uint32                    tick  = reader.readVarUint32();
         vector<pair<uint32, ChunkPose>> listPose;
-        listPose.reserve( count );
-        for ( uint32 index = 0; index < count; ++index )
+        while ( reader.hasOverflowed() == false && reader.readBool() )
         {
+            // 보내는 쪽은 예산(`kPoseMessageBudget` 바이트)에서 끊고 자세 하나가 1 바이트를 넘는다 — 그보다 많으면 깨진 것이다.
+            if ( listPose.size() >= static_cast<size_t>( Internal::kPoseMessageBudget ) )
+                return false;
             ChunkPose    pose;
             const uint32 groupID = reader.readVarUint32();
-            const bool   bRead   = bRest ? Internal::readExactPose( reader, pose._position, pose._rotation ) : Internal::readQuantizedPose( reader, pose._position, pose._rotation, _settings );
+            const bool   bRead   = bRest ? Internal::readExactPose( reader, pose._position, pose._rotation ) : Internal::readMovingPose( reader, pose._position, pose._rotation );
             if ( bRead == false || reader.hasOverflowed() )
                 return false; // 유한하지 않은 자세 · 범위 밖 칸 — 뒤 자세의 위치도 믿을 수 없다
             listPose.emplace_back( groupID, pose );

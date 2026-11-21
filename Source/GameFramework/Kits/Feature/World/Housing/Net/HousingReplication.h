@@ -5,7 +5,7 @@
  *          클라이언트는 결과를 받는다(기억에 의존한 비교) — 클라이언트 예측은 없다(건축은 틱 단위 반응이 필요 없고, 되돌림이 생기면 비용 · 받침이 함께 흔들린다).
  *          - **신뢰 경계**: 클라이언트가 보내는 것은 부지 id 해시 · 부품 id 해시 · 날 변환(조준 · 지면 투영) · 배치 id 뿐이다. 서버는 해시로 자기 부지 · 카탈로그를 찾고,
  *            스냅 · 겹침 · 받침 · 층 · 부지 범위 · 값(서버 지갑)을 자기 레이아웃으로 다시 판정한다. 스냅한 결과 · 비용 · 잔액은 받지 않는다. 날 값이 유한하지 않거나
- *            범위(`kMaxRawPosition` · `kMaxRawYaw`) 밖이면 깨진 메시지다(레이아웃의 칸 계산이 정수로 넘치지 않게). 글(부품 이름)은 받지 않는다 — 받은 글을 인턴하면 이름 표가 무한히 큰다.
+ *            범위(`HousingTransformNetState` 의 칸 선언) 밖이면 깨진 메시지다(레이아웃의 칸 계산이 정수로 넘치지 않게). 글(부품 이름)은 받지 않는다 — 받은 글을 인턴하면 이름 표가 무한히 큰다.
  *          - **주인**: 주인은 연결이 아니라 주체다(`HousingOwnerID` — 접속 인증기가 연결에 지정한 계정 `INetPeers::getConnectionPrincipal`). 다시 붙어도 같은 주인이고
  *            부지 상태와 함께 세이브에 실린다(부지 컴포넌트). 계정 없이 붙은 연결은 세션 주체(연결 번호)라 그 연결이 닫히면 주인 없음으로 돌아가고 세이브에 싣지 않는다.
  *            네트워크 없는 게임은 로컬 주체다. 주인 없는 부지는 차지 요청(`Claim`)으로 얻고(주체 하나에 부지 하나 — FFXIV 개인 집), 주인이 아닌 주체의 편집은 `NotOwner` 다.
@@ -104,11 +104,28 @@ namespace sw
         uint64 _plotHash{ 0 };
     };
 
+    /**
+     * @brief 손 본문(편집 요청 · 부지 델타)에 싣는 날 변환입니다. 칸 선언(`Replicated` · 범위)이 곧 바이트이고 범위가 신뢰 경계의 검사다(`ReplicatedLayout`).
+     * @details 예전에는 쓰기 · 읽기 짝을 손으로 맞추고 범위를 상수 둘로 따로 봤다. 범위 밖 · NaN · 무한대는 읽기가 거절한다(깨진 메시지).
+     *          레이아웃 규칙의 `HousingTransform` 과 칸이 같다 — 와이어 칸은 여기서만 정한다. 칸을 바꾸면 `Edit` · `PlotDelta` 의 본문 판을 올린다(손 본문이라 판이 스키마 해시를 따라가지 않는다).
+     */
+    REFLECT()
+    struct HousingTransformNetState
+    {
+        REFLECT_BODY();
+        PROPERTY( Replicated, Min = -100000, Max = 100000 )
+        float2 _position{ 0.0f, 0.0f }; ///< 부지 원점 기준 XZ(m)
+        PROPERTY( Replicated )
+        int32 _level{ 0 };
+        PROPERTY( Replicated, Min = -1000, Max = 1000 )
+        float32 _yaw{ 0.0f }; ///< 라디안. 레이아웃이 [0, 2π) 를 다시 본다
+    };
+
     /** @brief 하우징 키트의 메시지 표입니다. 종류 · 마스크 · 와이어 버전은 표에서 나온다(`NetMessageTable`). */
     struct NetHousingMessage
     {
         /** @brief 클라이언트 → 서버. 편집 요청 — 요청 번호(varuint) · 부지 id 해시(varuint) · 종류(3 비트) · 종류마다의 날 값. */
-        using Edit = NetMessageDef<0, NetMessageDirection::ToServer, NetChannelKind::ReliableOrdered>;
+        using Edit = NetMessageDef<0, NetMessageDirection::ToServer, NetChannelKind::ReliableOrdered, 2>; ///< 판 2: 변환을 칸 선언(`HousingTransformNetState`)으로 쓴다
         /** @brief 서버 → 요청한 클라이언트. 판정(`HousingReplyBody`). */
         using Reply = NetMessageBodyDef<1, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, HousingReplyBody>;
         /** @brief 서버 → 클라이언트. 부지 상태 조각(`HousingPlotSnapshotBody`) — 부지 전체를 메시지 하나(64 KB 상한)가 아니라 조각으로 나눠 보낸다. */
@@ -117,7 +134,7 @@ namespace sw
          * @brief 서버 → 클라이언트. 부지 델타 — 부지 id 해시 · 주인(2 비트) · 잔액(varint) · 다음 배치 id(varuint) · 사라진 id 수와 id 들(varuint) ·
          *        새로 · 바뀐 배치 수와 배치 들(id · 부품 id 해시 · 부품 판 · x · z · 층 · 요).
          */
-        using PlotDelta = NetMessageDef<3, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered>;
+        using PlotDelta = NetMessageDef<3, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, 2>; ///< 판 2: 변환을 칸 선언(`HousingTransformNetState`)으로 쓴다
         /** @brief 클라이언트 → 서버. 부지 상태를 처음부터 다시 달라는 요청(`HousingSnapshotRequestBody`). */
         using SnapshotRequest = NetMessageBodyDef<4, NetMessageDirection::ToServer, NetChannelKind::ReliableOrdered, HousingSnapshotRequestBody>;
         using Table           = NetMessageTable<NetKitMessageRange::kHousing, Edit, Reply, PlotSnapshot, PlotDelta, SnapshotRequest>;
@@ -128,11 +145,9 @@ namespace sw
         static constexpr uint8 kPlotDelta       = Table::getKindOf<PlotDelta>();
         static constexpr uint8 kSnapshotRequest = Table::getKindOf<SnapshotRequest>();
 
-        static constexpr float32 kMaxRawPosition     = 1.0e5f;                               ///< 날 자리 |x| · |z| 의 상한(m). 넘으면 깨진 메시지다
-        static constexpr float32 kMaxRawYaw          = 1.0e3f;                               ///< 날 요 |yaw| 의 상한(라디안). 넘으면 깨진 메시지다
-        static constexpr int32   kSnapshotChunkBytes = HousingNetLimit::kSnapshotChunkBytes; ///< 상태 조각 하나의 바이트(신뢰 메시지 64 KB 안 — 창을 조금씩 채운다)
-        static constexpr int32   kMaxDeltaBytes      = 16 * 1024;                            ///< 델타 메시지가 이보다 크면 조각 전송으로 보낸다
-        static constexpr int32   kMaxSnapshotBytes   = 4 * 1024 * 1024;                      ///< 부지 상태 하나의 상한(64 x 64 칸 · 8 층을 꽉 채워도 들어간다). 넘는 전체 크기는 깨진 메시지다
+        static constexpr int32 kSnapshotChunkBytes = HousingNetLimit::kSnapshotChunkBytes; ///< 상태 조각 하나의 바이트(신뢰 메시지 64 KB 안 — 창을 조금씩 채운다)
+        static constexpr int32 kMaxDeltaBytes      = 16 * 1024;                            ///< 델타 메시지가 이보다 크면 조각 전송으로 보낸다
+        static constexpr int32 kMaxSnapshotBytes   = 4 * 1024 * 1024;                      ///< 부지 상태 하나의 상한(64 x 64 칸 · 8 층을 꽉 채워도 들어간다). 넘는 전체 크기는 깨진 메시지다
     };
 
     /** @brief 편집 요청의 종류입니다. 값은 와이어 형식(`Edit` 의 3 비트)이라 바꾸면 `Edit` 의 본문 판을 올린다. */

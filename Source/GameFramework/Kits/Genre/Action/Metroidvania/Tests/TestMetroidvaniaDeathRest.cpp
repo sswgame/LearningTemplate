@@ -4,6 +4,7 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Format/Tests/StateBytesTestUtil.h"
 
 #include "GameFramework/Kits/Genre/Action/Metroidvania/MetroidvaniaCatalog.h"
 #include "GameFramework/Kits/Genre/Action/Metroidvania/MetroidvaniaDeathRestState.h"
@@ -646,4 +647,35 @@ SW_TEST_CASE( MetroidvaniaDuelistTest, StateRoundTripAndRejection )
     SW_EXPECT_NEAR( 85.0f, target.getStamina().getValue(), kDuelTolerance );
     SW_EXPECT_TRUE( target.isGuarding() );
     SW_EXPECT_TRUE( target.receiveAttack( 10.0f, 0.0f )._result == sw::MetroidvaniaDefenseResult::Parried ); // 눌러 둔 패리가 이어졌다
+}
+
+/**
+ * @brief [MetroidvaniaDuelistTest] 결정성: 공격 · 구르기 · 패리 · 막기 · 맞기 · 반격을 걸음 번호로 넣으면 두 판의 상태 바이트가 같고, 중간 세이브를 읽어 이어 돌려도 같다
+ * @details 키트의 판 상태 중 죽음 · 휴식 상태는 지갑 · 체력 · 난수를 빌려 받아 바이트 밖 상태에 기대므로, 스스로 다 갖는 맞붙기 상태로 건다.
+ */
+SW_TEST_CASE( MetroidvaniaDuelistTest, DuelistDeterminism )
+{
+    sw::MetroidvaniaCatalog catalog;
+    SW_REQUIRE_TRUE( catalog.loadFromXMLText( kDuelXML, "MetroidvaniaDuelistTest" ) );
+    const auto setup = [&catalog]( sw::MetroidvaniaDuelist& duelist )
+    { return duelist.initialize( &catalog ); };
+    const auto step = []( sw::MetroidvaniaDuelist& duelist, int32 stepIndex )
+    {
+        if ( stepIndex % 9 == 0 )
+            (void)duelist.tryAttack();
+        if ( stepIndex % 13 == 4 )
+            (void)duelist.tryDodge();
+        if ( stepIndex % 7 == 2 )
+            duelist.pressParry();
+        duelist.setGuarding( stepIndex % 20 < 8 );
+        if ( stepIndex % 5 == 3 )
+            (void)duelist.receiveAttack( 2.0f, 6.0f );
+        if ( stepIndex % 11 == 6 )
+        {
+            const sw::MetroidvaniaDuelist target;
+            (void)duelist.computeAttackDamage( 10.0f, target );
+        }
+        duelist.update( 1.0f / 32.0f );
+    };
+    SW_EXPECT_TRUE( sw::StateBytesTestUtil::isDeterministic<sw::MetroidvaniaDuelist>( setup, step, 160 ) );
 }

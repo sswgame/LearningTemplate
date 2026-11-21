@@ -3,6 +3,8 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Format/Tests/StateBytesTestUtil.h"
 
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/WesternCatalog.h"
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/WesternOutlaw.h"
@@ -61,6 +63,17 @@ namespace
             SW_REQUIRE_TRUE( _loot.loadFromXMLText( kOutlawLootXML, "WesternOutlawTestLoot" ) );
             SW_REQUIRE_TRUE( _bag.initialize( nullptr, 4 ) );
             SW_REQUIRE_TRUE( _outlaw.initialize( &_catalog, &_loot, makeRefs(), hashed_string( "frontier" ), 20.0f, AIPerceptionSettings{} ) );
+        }
+
+        /** @brief 빌려 준 판 상태(시계 · 지갑 · 평판 · 플래그 · 가방)와 무법자를 함께 싣습니다 — 결정성 테스트가 판 전체로 쓴다. */
+        SW_DECLARE_STATE_IO_IN_PLACE()
+        {
+            io.value( _clock );
+            io.value( _wallet );
+            io.value( _reputation );
+            io.value( _flags );
+            io.value( _bag );
+            io.value( _outlaw );
         }
 
         SessionStateRefs makeRefs()
@@ -251,4 +264,39 @@ SW_TEST_CASE( WesternOutlawTest, SkinningRollsTheLootTableIntoTheBag )
     SW_REQUIRE_TRUE( rig.doDeed( WesternDeedKind::Skin ) );
     SW_EXPECT_EQUAL( 1, rig._outlaw.getPeltCount() );
     SW_EXPECT_EQUAL( 2, rig._bag.getItemCount( "meat" ) );
+}
+
+/**
+ * @brief [WesternOutlawTest] 결정성: 범죄 · 목격 · 법의 시선 · 사냥 · 손질(전리품 난수) · 팔기 · 먹기 · 옷 · 현상금 · 흐르는 시계를 걸음 번호로 돌린 판은 같은 바이트를 내고, 중간에 쓰고 읽은 판도 같게 이어 돈다
+ */
+SW_TEST_CASE( WesternOutlawTest, OutlawDeterminism )
+{
+    const auto setup = []( OutlawRig& )
+    { return true; }; // 판은 `OutlawRig` 의 생성자가 같은 카탈로그 · 시계로 연다
+    const auto step = []( OutlawRig& rig, int32 stepIndex )
+    {
+        const vector<WesternWitness> listWitness{ OutlawRig::makeWitness( 10 + static_cast<uint64>( stepIndex ), stepIndex % 20 == 1 ) };
+        if ( stepIndex % 10 == 1 )
+            (void)rig.doDeed( WesternDeedKind::Crime, "theft", listWitness );
+        if ( stepIndex % 9 == 4 )
+            rig._outlaw.updateSeenByLaw( stepIndex % 18 == 4 ? float3{} : float3{ 100.0f, 0.0f, 0.0f }, { OutlawRig::makeWitness( 2, true ) } );
+        if ( stepIndex % 7 == 3 )
+            (void)rig.doDeed( WesternDeedKind::Hunt, "deer" );
+        if ( stepIndex % 7 == 5 )
+            (void)rig.doDeed( WesternDeedKind::Skin );
+        if ( stepIndex % 14 == 6 )
+            (void)rig.doDeed( WesternDeedKind::SellPelts );
+        if ( stepIndex % 11 == 8 )
+            (void)rig.doDeed( WesternDeedKind::HonorAction, "help" );
+        if ( stepIndex % 25 == 12 )
+            (void)rig.doDeed( WesternDeedKind::Eat, "jerky" );
+        if ( stepIndex == 40 )
+            (void)rig.doDeed( WesternDeedKind::ChangeClothes, "duster" );
+        if ( stepIndex % 30 == 29 )
+            (void)rig.doDeed( WesternDeedKind::PayBounty );
+        if ( stepIndex % 2 == 0 )
+            rig._clock.advanceMinutes( 45.0f ); // 시계는 `update` 사이에 흐른다 — 저장이 그 사이에 걸려도 읽은 판이 같은 시간을 받는다
+        rig._outlaw.update( 0.5f );
+    };
+    SW_EXPECT_TRUE( sw::StateBytesTestUtil::isDeterministic<OutlawRig>( setup, step, 120 ) );
 }

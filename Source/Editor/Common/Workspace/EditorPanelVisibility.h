@@ -6,7 +6,7 @@
  *          적지 않은 패널은 지금 상태 그대로 둔다(새로 생긴 패널은 등록한 기본 가시성).
  */
 #pragma once
-#include "Core/Container/map.h"
+#include "Core/Container/flat_map.h"
 #include "Core/Container/string.h"
 #include "Core/Foundation/Types.h"
 
@@ -25,7 +25,7 @@ namespace sw::editor
         REFLECT_BODY();
 
         PROPERTY()
-        map<string, bool> _mapOpen; ///< 패널 id(`EditorPanelEntry::_id`) → 열려 있는가
+        flat_map<string, bool> _mapOpen; ///< 패널 id(`EditorPanelEntry::_id`) → 열려 있는가
 
         /** @brief @p absPath 에 JSON 으로 씁니다(원자적). */
         [[nodiscard]] bool saveToFile( string_view absPath ) const;

@@ -135,6 +135,7 @@ namespace sw::editor
         vector<ProfilerScopeRow>     _listScratchRow;    ///< 테이블 행(프레임마다 다시 채운다)
         vector<float32>              _listScratchSeries; ///< 그래프 값(프레임마다 다시 채운다)
         utf8                         _arrFilter[constant::buffer::kMax128];
-        LeakWindowReport             _leakReport; ///< Memory 탭이 마지막으로 닫은 누수 창의 보고서(`_bValid` 가 false 이면 아직 없다)
+        LeakWindowReport             _leakReport;     ///< Memory 탭이 마지막으로 닫은 누수 창의 보고서(`_bValid` 가 false 이면 아직 없다)
+        ProfilerGPUMemoryViewState   _gpuMemoryState; ///< GPU Memory 탭의 값(벡터 재사용 — `ProfilerViewModel::gatherGPUMemory`)
     };
 } // namespace sw::editor

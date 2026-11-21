@@ -32,8 +32,6 @@ namespace sw
         , _listSlotName{}
         , _listPreviousCount{}
         , _frameSerial{ 0 }
-        , _reportedNanCount{ 0 }
-        , _reportedInfCount{ 0 }
         , _bScannedThisFrame{ SW_FALSE }
     {
     }
@@ -168,8 +166,6 @@ namespace sw
             _listPreviousCount[slot * 2 + 1] = words[slot * 2 + 1];
             if ( nanCount == 0 && infCount == 0 )
                 continue;
-            _reportedNanCount += nanCount;
-            _reportedInfCount += infCount;
             SW_LOG_ERROR_ID( "GPUNanCheck.NaNInfOutputFrames", "NaN/Inf in the output of %# (frames up to %#): %# NaN texels, %# Inf texels", _listSlotName[slot].c_str(), frame, nanCount, infCount );
         }
     }

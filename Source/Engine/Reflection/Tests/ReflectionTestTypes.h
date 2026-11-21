@@ -7,8 +7,8 @@
 #pragma once
 #include "Core/Container/EnumArray.h"
 #include "Core/Container/array.h"
-#include "Core/Container/map.h"
-#include "Core/Container/set.h"
+#include "Core/Container/flat_map.h"
+#include "Core/Container/flat_set.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/unordered_set.h"
@@ -500,7 +500,7 @@ namespace sw
         vector<int32> _listScore;
 
         PROPERTY()
-        map<string, int32> _mapStat;
+        flat_map<string, int32> _mapStat;
     };
 } // namespace sw
 
@@ -587,11 +587,11 @@ namespace sw
         vector<vector<int32>> _grid;
 
         PROPERTY()
-        map<string, vector<float32>> _namedRows;
+        flat_map<string, vector<float32>> _namedRows;
 
-        /** @brief 중첩 맵: map<K, map<K, V>>. */
+        /** @brief 중첩 맵: flat_map<K, flat_map<K, V>>. */
         PROPERTY()
-        map<string, map<string, int32>> _nestedMap;
+        flat_map<string, flat_map<string, int32>> _nestedMap;
 
         /** @brief 구조체 원소 시퀀스. */
         PROPERTY()
@@ -599,7 +599,7 @@ namespace sw
 
         /** @brief 맵 값이 구조체인 경우. */
         PROPERTY()
-        map<string, NestedInner> _mapInner;
+        flat_map<string, NestedInner> _mapInner;
 
         PROPERTY()
         NestedInner _inner;
@@ -688,7 +688,7 @@ namespace sw
 {
     /**
      * @brief `Abstract = true` — 단독 토큰이 아니라 대입 꼴로 적은 표본입니다.
-     * @details AnnotationMeta.txt 의 `flag` 줄이 단독 토큰과 `X = true` 를 함께 등록하지 않으면 이 꼴이 경고 한 줄 없이 버려집니다.
+     * @details 플래그 줄(`PredefinedAnnotationField.xxx` 의 uint8 멤버)은 단독 토큰과 `X = true` 를 둘 다 받아야 합니다 — 한쪽만 받으면 이 꼴이 버려집니다.
      */
     REFLECT( Abstract = true )
     struct AssignedAbstractBase
@@ -733,8 +733,8 @@ namespace sw
         PROPERTY( Transient = true )
         ReflectedAny _payload;
 
-        /** @brief 별칭도 두 꼴을 다 받아야 합니다 — 별칭 `xmlAttribute` 가 단독 토큰으로만 등록되면 이 대입 꼴이 버려집니다. */
-        PROPERTY( xmlAttribute = true )
+        /** @brief 플래그 키는 대입 꼴(`XMLAttribute = true`)도 받아야 합니다 — 단독 토큰으로만 받으면 이 꼴이 버려집니다. */
+        PROPERTY( XMLAttribute = true )
         int32 _tag{ 0 };
 
         /** @brief 플래그만 보는 RPC 표본입니다. */
@@ -949,7 +949,7 @@ namespace sw
         REFLECT_BODY();
 
         PROPERTY()
-        set<string> _uniqueTag;
+        flat_set<string> _uniqueTag;
 
         PROPERTY()
         unordered_set<int32> _uniqueID;
@@ -958,13 +958,13 @@ namespace sw
         unordered_map<int32, string> _mapIDToName;
 
         PROPERTY()
-        map<SampleStatus, int32> _mapStatusToCount;
+        flat_map<SampleStatus, int32> _mapStatusToCount;
 
         PROPERTY()
-        map<string, set<int32>> _mapGroupToID;
+        flat_map<string, flat_set<int32>> _mapGroupToID;
 
         PROPERTY()
-        vector<map<string, int32>> _listScoreTable;
+        vector<flat_map<string, int32>> _listScoreTable;
 
         PROPERTY()
         unordered_map<string, vector<vector<int32>>> _mapNameToGrid;

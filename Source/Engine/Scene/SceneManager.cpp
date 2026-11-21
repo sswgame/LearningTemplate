@@ -4,13 +4,13 @@
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/Diagnostics/ScopedTimer.h"
 #include "Core/File/AsyncFileIO.h"
 #include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Task/TaskManager.h"
-#include "Core/Time/GameTimer.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Asset/AssetFormat.h"

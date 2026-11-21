@@ -116,7 +116,13 @@ namespace sw
             SW_LOG_WARNING_ID( "ShaderCache.RuntimeShaderReflectionFailed", "Runtime shader reflection failed: '%#' (%#)", desc._source.c_str(), result._errorMessage.c_str() );
             return false;
         }
-        outReflection = ShaderReflectionData::reflect( result._bytecode, desc._targetFormat );
+        expected<ShaderReflectionData> reflected = ShaderReflectionData::reflect( result._bytecode, desc._targetFormat );
+        if ( reflected.has_value() == false )
+        {
+            SW_LOG_ERROR_ID( "ShaderCache.RuntimeShaderReflectionUnreadable", "Runtime shader reflection could not read '%#': %# (%#)", desc._source.c_str(), reflected.error().message(), reflected.error().detail() );
+            return false;
+        }
+        outReflection = std::move( *reflected );
         return true;
     }
 } // namespace sw

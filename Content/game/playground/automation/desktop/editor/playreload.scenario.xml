@@ -55,6 +55,11 @@
 	<ExpectStateHash key="playing"/>
 	<Expect watch="Reload.Count.Module" differsFrom="moduleBefore"/>
 	<Expect watch="Reload.LastMs.Module" atLeast="0.001"/>
+	<!-- 단계 나눔 — 빌드 끝 감지부터의 대기 · 새 이미지 준비 · 게임 상태 맡기기 · 교체(사람이 기다리는 시간을 어디서 쓰는지) -->
+	<Expect watch="Reload.LastWaitMs.Module" atLeast="0.001"/>
+	<Expect watch="Reload.LastPrepareMs.Module" atLeast="0.001"/>
+	<Expect watch="Reload.LastSuspendMs.Module" atLeast="0.001"/>
+	<Expect watch="Reload.LastCommitMs.Module" atLeast="0.001"/>
 	<ExpectLog id="ModuleCompiler.CompilationSucceededTarget" contains="SWGame" count="2"/> <!-- probe-next 와 끝의 되돌린 다시 짓기 -->
 
 	<!-- ③ 에셋 덮어쓰기 — 사본 파일을 바깥 편집기의 저장처럼 덮으면 감시가 알리고 캐시가 다시 읽는다 -->

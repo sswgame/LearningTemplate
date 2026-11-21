@@ -15,8 +15,8 @@
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorComponentMenu.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
+#include "Editor/Common/Widgets/PropertyGrid/InspectorPropertyUndo.h"
 #include "Editor/Panels/Inspector/IInspectorComponent.h"
-#include "Editor/Panels/Inspector/InspectorPropertyUndo.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Localization/LocText.h"
@@ -60,7 +60,7 @@ namespace sw::editor
 {
     SW_EDITOR_PANEL( InspectorPanel, InspectorPanel::kPanelID, EditorPanelCategory::Core, 200 );
     // 컴포넌트 메뉴의 Presets 하위 메뉴(나머지 항목은 `EditorSceneObjectCommands.cpp`).
-    SW_EDITOR_CONTEXT_COMMAND( ComponentPresets, "inspector.component.presets", nullptr, &InspectorPanelInternal::canShowPresets, NoScene, &InspectorPanelInternal::drawPresetsSubmenu );
+    SW_EDITOR_SUBMENU_COMMAND( ComponentPresets, "inspector.component.presets", &InspectorPanelInternal::canShowPresets, NoScene, &InspectorPanelInternal::drawPresetsSubmenu );
 
     InspectorPanel::InspectorPanel()
         : _propertyGrid{}
@@ -78,7 +78,7 @@ namespace sw::editor
 
     void InspectorPanel::drawContent()
     {
-        _viewModel.gather( _state );
+        gatherViewState( _viewModel, _state );
         _propertyGrid.setFavorites( &_viewModel.editFavorites() );
         _propertyGrid.setActionFavorites( &_viewModel.editActionFavorites() );
         EditorWidgets::pushInspectorStyle();

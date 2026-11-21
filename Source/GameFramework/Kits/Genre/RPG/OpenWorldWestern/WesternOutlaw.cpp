@@ -300,13 +300,17 @@ namespace sw
             _survival = WesternSurvival{};
             if ( io.check( _survival.initialize( _pCatalog ) ) == false )
                 return;
-            _bClockSeen = SW_FALSE;
         }
         io.value( _law ); // 법 · 생존은 제 본문(리플렉션 칸 + 손 값)으로 싣는다
         io.value( _survival );
         io.reflected( *this );
+        // 전리품 난수와 지난 `update` 의 시계도 싣는다 — 빼면 읽은 판이 다음 손질에서 다른 전리품을 굴리고, 마지막 `update` 뒤 흐른 시계 시간을 잃는다(결정성 테스트가 잡았다)
+        io.value( _random );
+        io.value( _lastClockHours );
+        SW_STATE_BITFLAG( io, _bClockSeen );
         if ( io.isWriting() || io.isOk() == false )
             return;
+        io.check( 0.0 <= _lastClockHours );
         for ( const WesternCarcass& carcass : _listCarcass )
         {
             io.check( _pCatalog->findAnimal( carcass._animalID ) != nullptr ); // 카탈로그 검사만 손으로

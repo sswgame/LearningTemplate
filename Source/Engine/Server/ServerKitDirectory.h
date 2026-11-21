@@ -2,7 +2,7 @@
  * @file ServerKitDirectory.h
  * @brief 호스트(Server)가 소유하는 서버 키트 창구입니다. 서버 서비스가 세운 키트 범위를 공개하고 거둡니다.
  * @details - 수명은 호스트 것이라 서버 서비스가 모듈 리로드 · `stopAll` 로 내려가도 게임 범위에 건 창구가 매달리지 않는다 — 내려간 동안은 범위가 비어(nullptr) 찾기가 없음을 돌려준다.
- *          - 게임 모듈은 이 형식을 모른다(`Server/` 폴더는 클라이언트 구성이 짓지 않는다). 호스트가 `IServerKitLocator`(ModuleAPI)로 감싸 게임 모듈 범위에 건다.
+ *          - 게임 모듈은 이 형식을 모른다(`Server/` 폴더는 클라이언트 구성이 짓지 않는다). 호스트가 `IServerKitLocator`(ModuleAPI)로 감싸 게임 모듈 범위에 걸고, 게임 모듈은 형식 목록 묶음(`ServerKitDependencies`)으로만 받는다.
  */
 #pragma once
 #include "Core/Foundation/Macros.h"

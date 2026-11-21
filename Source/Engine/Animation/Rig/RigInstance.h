@@ -5,6 +5,7 @@
  *          바깥 대상(다른 유닛이나 오브젝트)의 값을 프레임마다 넣는다. 그래서 오브젝트 없이 테스트할 수 있다.
  */
 #pragma once
+#include "Core/Concurrency/DevCounter.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Expected.h"
@@ -164,7 +165,7 @@ namespace sw
         /** @brief 묶은 자기 유닛 본(대상 본과 노드가 쓰는 본)을 @p inoutListBone 에 덧붙입니다. 본 LOD 가 이 본을 핵심 본으로 지킵니다. */
         void collectBoundBones( vector<uint32>& inoutListBone ) const;
         /** @brief 평가한 횟수를 반환합니다(테스트와 진단용). */
-        uint32 getEvaluationCount() const { return _evaluationCount; }
+        const DevCounter& getEvaluationCount() const { return _evaluationCount; }
 
     private:
         /** @brief 대상이 무엇에 붙는지입니다. 본 번호는 `Bone` 일 때만 뜻이 있다(예전에는 한 int 칸에 -1 · -2 를 섞었다). */
@@ -223,6 +224,6 @@ namespace sw
         const IRigCurveSource*      _pCurveSource;
         float3                      _worldGravity; ///< 마지막 준비 단계가 받은 월드 중력이다.
         float32                     _pendingDeltaSeconds;
-        uint32                      _evaluationCount;
+        DevCounter                  _evaluationCount;
     };
 } // namespace sw

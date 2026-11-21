@@ -12,6 +12,7 @@
 #include "Engine/Graphics/RHI/Backend/RHIShaderRequest.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
 #include "Engine/Graphics/RHI/GL/OpenGLRHIDevice.h"
+#include "Engine/Graphics/RHI/RHICompiledShaderStages.h"
 #include "Engine/Graphics/RHI/RHIFormatInfo.h"
 #include "Engine/Graphics/RHI/RHIPipelineStateDesc.h"
 #include "Engine/Graphics/RHI/RHITextureMipLayout.h"
@@ -288,25 +289,11 @@ namespace sw
         if ( _pDevice->_bInitialized == SW_FALSE )
             return 0;
 
-        ScopedOpenGLContext contextScope( _pDevice );
-
-        const bool bHasVertexInitialData = EnumUtil::hasFlag( desc._usage, RHIBufferUsage::Vertex ) && desc._pInitialData != nullptr && desc._sizeBytes > 0;
-        if ( bHasVertexInitialData )
-            return createVertexBuffer( desc._pInitialData, desc._sizeBytes );
-        if ( EnumUtil::hasFlag( desc._usage, RHIBufferUsage::Constant ) )
-            return createConstantBuffer( desc._sizeBytes > 0 ? desc._sizeBytes : 256u );
-        if ( EnumUtil::hasFlag( desc._usage, RHIBufferUsage::Index ) )
-            return _pDevice->createIndexBuffer( desc._pInitialData, desc._sizeBytes );
-
-        uint32 sizeBytes = desc._sizeBytes;
-        if ( sizeBytes == 0 )
-        {
-            const uint32 elemSize  = desc._elementSize > 0 ? desc._elementSize : 4u;
-            const uint32 elemCount = desc._elementCount > 0 ? desc._elementCount : 1u;
-            sizeBytes              = elemSize * elemCount;
-        }
-        if ( sizeBytes == 0 )
+        // 정점 · 인덱스 · 상수 버퍼는 각자의 생성 함수다 — 서술이 비거나 틀리면 값을 지어내지 않고 거절한다(`isValidBufferDesc`).
+        if ( isValidBufferDesc( desc, "createBuffer" ) == false )
             return 0;
+        ScopedOpenGLContext contextScope( _pDevice );
+        const uint32        sizeBytes = desc._sizeBytes;
 
         const uint32 alignedSize = MathUtil::align( sizeBytes, constant::render::kConstantBufferAlignment );
 
@@ -524,7 +511,7 @@ namespace sw
         ScopedOpenGLContext contextScope( _pDevice );
         if ( _pDevice->isGraphicsContextCurrent() == false )
         {
-            _pDevice->_stagingRing.free( staging );
+            _pDevice->_stagingRing.free( std::move( staging ) );
             SW_LOG_ERROR_ID( "OpenGLRHIResourceFactory.SubmitTextureUploadGLContextCould", "submitTextureUpload: the GL context could not be acquired; submit again later" );
             return RHITransferSubmit::busy();
         }
@@ -540,7 +527,7 @@ namespace sw
                 for ( uint32 mip = 0; mip < mipCount; ++mip )
                 {
                     const RHITextureMipSpan& span    = arrMip[mip];
-                    const void*              pPixels = ScopedStagingUnpack::toPixelOffset( staging._offsetBytes + span._offsetBytes );
+                    const void*              pPixels = ScopedStagingUnpack::toPixelOffset( staging.getOffsetBytes() + span._offsetBytes );
                     if ( bCompressed )
                     {
                         glCompressedTexSubImage2D( GL_TEXTURE_2D, static_cast<GLint>( span._mip ), 0, 0, static_cast<GLsizei>( span._width ),
@@ -560,7 +547,7 @@ namespace sw
                 for ( uint32 mip = 0; mip < mipCount; ++mip )
                 {
                     const RHITextureMipSpan& span    = arrMip[mip];
-                    const void*              pPixels = ScopedStagingUnpack::toPixelOffset( staging._offsetBytes + span._offsetBytes );
+                    const void*              pPixels = ScopedStagingUnpack::toPixelOffset( staging.getOffsetBytes() + span._offsetBytes );
                     if ( bCompressed )
                     {
                         glCompressedTextureSubImage3D( pRecord->_texture, static_cast<GLint>( span._mip ), 0, 0, static_cast<GLint>( desc._arraySlice ),
@@ -577,7 +564,7 @@ namespace sw
         }
         // 펜스가 링 구간의 회수 시점이다 — 워터마크가 이 시리얼을 지나면 구간이 돌아온다.
         const uint64 serial = _pDevice->endTransfer();
-        _pDevice->_stagingRing.markSubmitted( staging, serial );
+        _pDevice->_stagingRing.markSubmitted( std::move( staging ), serial );
         pRecord->_uploadSerials.recordWrite( serial );
         return _pDevice->_transferSerials.makeAccepted( serial );
     }
@@ -607,7 +594,7 @@ namespace sw
         ScopedOpenGLContext contextScope( _pDevice );
         if ( _pDevice->isGraphicsContextCurrent() == false )
         {
-            _pDevice->_stagingRing.free( staging );
+            _pDevice->_stagingRing.free( std::move( staging ) );
             SW_LOG_ERROR_ID( "OpenGLRHIResourceFactory.SubmitTextureRegionUploadGLContextCould", "submitTextureRegionUpload: the GL context could not be acquired; submit again later" );
             return RHITransferSubmit::busy();
         }
@@ -615,7 +602,7 @@ namespace sw
         const GLenum glType   = toGlType( pRecord->_format );
         {
             const ScopedStagingUnpack unpack( _pDevice->getStagingBuffer( staging ) );
-            const void*               pPixels = ScopedStagingUnpack::toPixelOffset( staging._offsetBytes );
+            const void*               pPixels = ScopedStagingUnpack::toPixelOffset( staging.getOffsetBytes() );
             if ( pRecord->_target == GL_TEXTURE_2D )
             {
                 glBindTexture( GL_TEXTURE_2D, pRecord->_texture );
@@ -632,7 +619,7 @@ namespace sw
             }
         }
         const uint64 serial = _pDevice->endTransfer();
-        _pDevice->_stagingRing.markSubmitted( staging, serial );
+        _pDevice->_stagingRing.markSubmitted( std::move( staging ), serial );
         pRecord->_uploadSerials.recordWrite( serial );
         return _pDevice->_transferSerials.makeAccepted( serial );
     }
@@ -662,9 +649,9 @@ namespace sw
             return false;
         }
         // 펜스가 지났으므로 GPU 가 구간에 쓴 바이트가 COHERENT 매핑에 보인다. 복사는 컨텍스트 밖에서 하고, 다 읽은 구간을 링에 돌려준다.
-        outBytes.resize( static_cast<size_t>( span._sizeBytes ) );
-        Memory::copy( outBytes.data(), _pDevice->getReadbackBytes( span ), static_cast<size_t>( span._sizeBytes ) );
-        RHITextureTransferDriver::releaseTakenReadback( _pDevice->_readbackRing, span );
+        outBytes.resize( static_cast<size_t>( span.getSizeBytes() ) );
+        Memory::copy( outBytes.data(), _pDevice->getReadbackBytes( span ), static_cast<size_t>( span.getSizeBytes() ) );
+        RHITextureTransferDriver::releaseTakenReadback( _pDevice->_readbackRing, std::move( span ) );
         return true;
     }
 
@@ -676,7 +663,7 @@ namespace sw
         if ( _pDevice->_readbackTable.take( ticket._serial, span ) == false )
             return; // 업로드 티켓이거나 이미 가져감 · 버림이다 — 계약상 아무 일도 하지 않는다
         // Pending 이면 GPU 가 아직 구간에 쓰는 중이다 — 구간은 이 티켓의 펜스가 지난 뒤에 돌아온다(Vulkan · DX12 와 같은 꼬리).
-        RHITextureTransferDriver::releaseDiscardedReadback( _pDevice->_readbackRing, span, _pDevice->_transferSerials, ticket._serial );
+        RHITextureTransferDriver::releaseDiscardedReadback( _pDevice->_readbackRing, std::move( span ), _pDevice->_transferSerials, ticket._serial );
     }
 
     RHIFormat OpenGLRHIResourceFactory::getTextureFormat( RHITextureHandle texture ) const
@@ -720,7 +707,7 @@ namespace sw
         ScopedOpenGLContext contextScope( _pDevice );
         if ( _pDevice->isGraphicsContextCurrent() == false )
         {
-            _pDevice->_readbackRing.free( readback );
+            _pDevice->_readbackRing.free( std::move( readback ) );
             SW_LOG_ERROR_ID( "OpenGLRHIResourceFactory.SubmitTextureReadbackGLContextCould", "submitTextureReadback: the GL context could not be acquired; submit again later" );
             return RHITransferSubmit::busy();
         }
@@ -728,8 +715,8 @@ namespace sw
         // 바이트는 펜스가 지난 뒤 takeTextureReadback 이 컨텍스트 밖에서 복사한다. 2D 도 DSA 3D 창(z = 0)으로 읽어 텍스처 바인딩을 건드리지 않는다.
         {
             const ScopedStagingPack pack( _pDevice->getReadbackBuffer( readback ) );
-            void*                   pPixels     = ScopedStagingPack::toPixelOffset( readback._offsetBytes );
-            const GLsizei           bufferBytes = static_cast<GLsizei>( readback._sizeBytes );
+            void*                   pPixels     = ScopedStagingPack::toPixelOffset( readback.getOffsetBytes() );
+            const GLsizei           bufferBytes = static_cast<GLsizei>( readback.getSizeBytes() );
             if ( RHIFormatUtil::isBlockCompressed( pRecord->_format ) )
             {
                 glGetCompressedTextureSubImage( pRecord->_texture, static_cast<GLint>( mip ), 0, 0, static_cast<GLint>( arraySlice ),
@@ -742,7 +729,7 @@ namespace sw
             }
         }
         const uint64 serial = _pDevice->endTransfer();
-        _pDevice->_readbackTable.add( serial, readback );
+        _pDevice->_readbackTable.add( serial, std::move( readback ) );
         return _pDevice->_transferSerials.makeAccepted( serial );
     }
 
@@ -1065,7 +1052,7 @@ namespace sw
         (void)_pDevice->_uavRegistry.release( index, RHIBindlessReuse::Immediately );
     }
 
-    RHIPipelineStateHandle OpenGLRHIResourceFactory::createPipelineStateNative( const RHIPipelineStateDesc& desc )
+    RHIPipelineStateHandle OpenGLRHIResourceFactory::createPipelineStateNative( const RHIPipelineStateDesc& desc, const RHICompiledGraphicsStages& stages )
     {
         if ( _pDevice->_bInitialized == SW_FALSE )
             return 0;
@@ -1073,14 +1060,11 @@ namespace sw
         ScopedOpenGLContext                        contextScope( _pDevice );
         OpenGLRHIDevice::OpenGLPipelineStateRecord record{};
 
-        // 디스크립터 해석(진입점 기본값, define, 깊이 전용 판정)은 RHIShaderRequest 하나가 한다. 백엔드는 받기만 한다.
-        const RHIGraphicsShaderRequest request         = RHIShaderRequest::resolveGraphics( desc, ShaderTargetFormat::SPIRV_OpenGL );
-        const ShaderCompileDesc&       vsDesc          = request._vertex;
-        const ShaderCompileDesc&       psDesc          = request._pixel;
-        const bool                     bHasPixelShader = request._bHasPixelShader != SW_FALSE;
-        ShaderCompileResult            vsResult{};
-        ShaderCompileResult            psResult{};
-        if ( RHIShaderRequest::compileGraphics( request, vsResult, psResult ) )
+        // 셰이더 컴파일 · 정점 리플렉션은 앞단(`IRHIResourceFactory::createPipelineState`)이 끝냈다. 여기서는 SPIR-V 를 특수화하고 링크만 한다.
+        const RHICompiledShaderStage& vsStage         = stages._vertex;
+        const RHICompiledShaderStage& psStage         = stages._pixel;
+        const bool                    bHasPixelShader = stages._bHasPixelShader != SW_FALSE;
+        if ( stages._bHasVertexShader != SW_FALSE )
         {
             if ( glad_glShaderBinary == nullptr || glad_glSpecializeShader == nullptr )
             {
@@ -1091,34 +1075,23 @@ namespace sw
             GLuint vertexShader = glCreateShader( GL_VERTEX_SHADER );
             GLuint pixelShader  = bHasPixelShader ? glCreateShader( GL_FRAGMENT_SHADER ) : 0;
 
-            glShaderBinary( 1, &vertexShader, GL_SHADER_BINARY_FORMAT_SPIR_V, vsResult._bytecode.data(), static_cast<GLsizei>( vsResult._bytecode.size() ) );
-            glSpecializeShader( vertexShader, vsDesc._entryPoint.c_str(), 0, nullptr, nullptr );
+            glShaderBinary( 1, &vertexShader, GL_SHADER_BINARY_FORMAT_SPIR_V, vsStage._bytecode.data(), static_cast<GLsizei>( vsStage._bytecode.size() ) );
+            glSpecializeShader( vertexShader, vsStage._entryPoint.c_str(), 0, nullptr, nullptr );
 
             if ( bHasPixelShader )
             {
-                glShaderBinary( 1, &pixelShader, GL_SHADER_BINARY_FORMAT_SPIR_V, psResult._bytecode.data(), static_cast<GLsizei>( psResult._bytecode.size() ) );
-                glSpecializeShader( pixelShader, psDesc._entryPoint.c_str(), 0, nullptr, nullptr );
+                glShaderBinary( 1, &pixelShader, GL_SHADER_BINARY_FORMAT_SPIR_V, psStage._bytecode.data(), static_cast<GLsizei>( psStage._bytecode.size() ) );
+                glSpecializeShader( pixelShader, psStage._entryPoint.c_str(), 0, nullptr, nullptr );
             }
 
             // 선택 스테이지(지오메트리 · 헐 · 도메인)는 같은 SPIR-V 경로로 프로그램에 붙인다.
-            ShaderCompileResult gsResult{};
-            ShaderCompileResult hsResult{};
-            ShaderCompileResult dsResult{};
-            if ( RHIShaderRequest::compileOptionalStages( request, gsResult, hsResult, dsResult ) == false )
-            {
-                SW_LOG_ERROR_ID( "OpenGLRHIResourceFactory.OptionalStageCompileFailed", "Optional stage compile failed (%#)", desc._vertexShaderPath.c_str() );
-                glDeleteShader( vertexShader );
-                if ( pixelShader != 0 )
-                    glDeleteShader( pixelShader );
-                return 0;
-            }
             GLuint     arrOptionalShader[3]{ 0, 0, 0 };
             uint32     optionalCount{ 0 };
             bool       bOptionalReady   = true;
-            const auto addOptionalStage = [&]( GLenum stage, const ShaderCompileResult& result, const ShaderCompileDesc& stageDesc )
+            const auto addOptionalStage = [&]( GLenum stage, const RHICompiledShaderStage& stageDesc )
             {
                 const GLuint shader = glCreateShader( stage );
-                glShaderBinary( 1, &shader, GL_SHADER_BINARY_FORMAT_SPIR_V, result._bytecode.data(), static_cast<GLsizei>( result._bytecode.size() ) );
+                glShaderBinary( 1, &shader, GL_SHADER_BINARY_FORMAT_SPIR_V, stageDesc._bytecode.data(), static_cast<GLsizei>( stageDesc._bytecode.size() ) );
                 glSpecializeShader( shader, stageDesc._entryPoint.c_str(), 0, nullptr, nullptr );
                 GLint compiled = GL_FALSE;
                 glGetShaderiv( shader, GL_COMPILE_STATUS, &compiled );
@@ -1131,12 +1104,12 @@ namespace sw
                 }
                 arrOptionalShader[optionalCount++] = shader;
             };
-            if ( request._bHasGeometryShader != SW_FALSE )
-                addOptionalStage( GL_GEOMETRY_SHADER, gsResult, request._geometry );
-            if ( request._bHasTessellation != SW_FALSE )
+            if ( stages._bHasGeometryShader != SW_FALSE )
+                addOptionalStage( GL_GEOMETRY_SHADER, stages._geometry );
+            if ( stages._bHasTessellation != SW_FALSE )
             {
-                addOptionalStage( GL_TESS_CONTROL_SHADER, hsResult, request._hull );
-                addOptionalStage( GL_TESS_EVALUATION_SHADER, dsResult, request._domain );
+                addOptionalStage( GL_TESS_CONTROL_SHADER, stages._hull );
+                addOptionalStage( GL_TESS_EVALUATION_SHADER, stages._domain );
             }
 
             GLint vsCompiled = GL_FALSE;
@@ -1160,8 +1133,7 @@ namespace sw
                 if ( linkProgram( program, linkLabel.c_str() ) )
                 {
                     record._program      = program;
-                    record._vertexLayout = RHIVertexLayout{
-                        RHIShaderRequest::toVertexSlotMask( RHIShaderRequest::computeConsumedVertexAttributeMask( vsResult._bytecode, ShaderTargetFormat::SPIRV_OpenGL ) ), desc._meshVertexFormat };
+                    record._vertexLayout = RHIVertexLayout{ stages._vertexSlotMask, desc._meshVertexFormat };
                 }
             }
             else
@@ -1190,24 +1162,19 @@ namespace sw
         if ( record._program == 0 )
             return 0;
 
-        record._topology    = request._bHasTessellation != SW_FALSE ? RHIPrimitiveTopology::PatchList3 : desc._topology;
+        record._topology    = stages._bHasTessellation != SW_FALSE ? RHIPrimitiveTopology::PatchList3 : desc._topology;
         record._renderState = desc._renderState;
 
         return _pDevice->_pipelineStates.insert( record );
     }
 
-    RHIPipelineStateHandle OpenGLRHIResourceFactory::createComputePipelineStateNative( string_view shaderPath, string_view entryPoint, const vector<string>& listDefine )
+    RHIPipelineStateHandle OpenGLRHIResourceFactory::createComputePipelineStateNative( const RHICompiledShaderStage& computeStage, string_view label )
     {
         if ( _pDevice->_bInitialized == SW_FALSE )
             return 0;
 
         ScopedOpenGLContext                        contextScope( _pDevice );
         OpenGLRHIDevice::OpenGLPipelineStateRecord record{};
-
-        const ShaderCompileDesc csDesc   = RHIShaderRequest::resolveCompute( shaderPath, entryPoint, listDefine, ShaderTargetFormat::SPIRV_OpenGL );
-        ShaderCompileResult     csResult = RHIShaderRequest::compile( csDesc );
-
-        if ( csResult._bSuccess )
         {
             if ( glad_glShaderBinary == nullptr || glad_glSpecializeShader == nullptr )
             {
@@ -1217,8 +1184,8 @@ namespace sw
 
             GLuint computeShader = glCreateShader( GL_COMPUTE_SHADER );
 
-            glShaderBinary( 1, &computeShader, GL_SHADER_BINARY_FORMAT_SPIR_V, csResult._bytecode.data(), static_cast<GLsizei>( csResult._bytecode.size() ) );
-            glSpecializeShader( computeShader, csDesc._entryPoint.c_str(), 0, nullptr, nullptr );
+            glShaderBinary( 1, &computeShader, GL_SHADER_BINARY_FORMAT_SPIR_V, computeStage._bytecode.data(), static_cast<GLsizei>( computeStage._bytecode.size() ) );
+            glSpecializeShader( computeShader, computeStage._entryPoint.c_str(), 0, nullptr, nullptr );
 
             GLint csCompiled = GL_FALSE;
             glGetShaderiv( computeShader, GL_COMPILE_STATUS, &csCompiled );
@@ -1234,7 +1201,7 @@ namespace sw
             {
                 GLchar infoLog[constant::buffer::kMax1024];
                 glGetShaderInfoLog( computeShader, sizeof( infoLog ), nullptr, infoLog );
-                SW_LOG_ERROR_ID( "OpenGLRHIResourceFactory.ComputeShaderSpecializeCompile", "Compute shader specialize/compile failed: %#", infoLog );
+                SW_LOG_ERROR_ID( "OpenGLRHIResourceFactory.ComputeShaderSpecializeCompile", "Compute shader specialize/compile failed (%#): %#", label, infoLog );
             }
             glDeleteShader( computeShader );
         }

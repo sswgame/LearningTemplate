@@ -158,14 +158,9 @@ namespace sw
         return {};
     }
 
-    void AutomationScratchWorkspace::acquireWriteFilter()
+    FileUtil::WriteFilterRegistration AutomationScratchWorkspace::acquireWriteFilter()
     {
-        FileUtil::setWriteFilter( &AutomationScratchWorkspaceInternal::allowWrite );
-    }
-
-    void AutomationScratchWorkspace::releaseWriteFilter()
-    {
-        FileUtil::setWriteFilter( nullptr );
+        return FileUtil::bindWriteFilter( &AutomationScratchWorkspaceInternal::allowWrite );
     }
 
     uint64 AutomationScratchWorkspace::getPrepareCount()

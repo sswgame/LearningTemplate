@@ -186,6 +186,22 @@ namespace sw
     };
 
     /**
+     * @brief 틱을 protected 로 재정의한 컴포넌트입니다 — 재정의 트레이트(`HasOnTickOverride_v`)와 일괄 등록(`makeDeclaredTickEntry`)이 친구 통로(`ReflectAccess`)로 본다.
+     * @details 예전 트레이트는 바깥 부분 특수화에서 `&T::onTick` 을 물어 이 모양에서 하드 오류였다.
+     */
+    REFLECT( HideInMenu )
+    class TickModeProtectedTickTestComponent : public Component
+    {
+    public:
+        REFLECT_BODY();
+
+        uint32 _tickCount = 0;
+
+    protected:
+        void onTick( TickContext& /*context*/ ) override { ++_tickCount; }
+    };
+
+    /**
      * @brief 해체될 때(`onDestroy`) 같은 매니저에 오브젝트를 하나 만드는 컴포넌트입니다(`TestObjectLifetime.cpp` — 씬을 비우는 중의 생성).
      * @details 게임 코드의 "죽을 때 파편 · 드롭을 남긴다" 와 같은 모양이다. 만든 수를 테스트가 준 칸에 센다.
      */
@@ -232,6 +248,30 @@ namespace sw
             if ( _pSibling != nullptr && _pSiblingAliveAtEnd != nullptr )
                 *_pSiblingAliveAtEnd = *_pSibling->_pAlive;
             Component::onEndPlay();
+        }
+    };
+
+    /**
+     * @brief 첫 틱에 테스트가 준 일을 한 번 하는 컴포넌트입니다(`TestDeferredSetters.cpp` — 틱 중 미뤄지는 세터).
+     * @details 틱 본문은 구조가 얼어 있으므로 세터가 틱 뒤로 미룬다. 그때 얼어 있었는지를 `_bRanFrozen` 에 적는다(테스트가 정말 틱 중에 불렀는지 본다).
+     */
+    REFLECT( HideInMenu )
+    struct DeferredSetterProbeTestComponent : public Component
+    {
+        REFLECT_BODY();
+
+        Delegate<void( Component& )> _onFirstTick; ///< 첫 틱에 한 번 부른다(부르기 전에 비운다)
+        bool                         _bRanFrozen = false;
+
+        void onTick( TickContext& /*context*/ ) override
+        {
+            if ( _onFirstTick.isBound() == false )
+                return;
+            const GameObjectManager* pManager = getOwner()->getManager();
+            _bRanFrozen                       = pManager != nullptr && pManager->isStructuralMutationFrozen();
+            Delegate<void( Component& )> func = std::move( _onFirstTick );
+            _onFirstTick                      = Delegate<void( Component& )>{};
+            func( *this );
         }
     };
 } // namespace sw

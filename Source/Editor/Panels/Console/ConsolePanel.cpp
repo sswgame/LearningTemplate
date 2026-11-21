@@ -21,7 +21,9 @@
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorFontSetup.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
+#include "Editor/Common/Input/EditorInputActionNames.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
+#include "Editor/Common/Widgets/EditorVirtualList.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
 #include "Editor/Panels/Console/Model/ConsoleViewModel.h"
@@ -173,37 +175,6 @@ namespace sw::editor
                 outValue = static_cast<float64>( pPanel->getRowCount() );
                 return true;
             }
-
-            /** @brief `log.repeat <count> <warning|info> <text...>` — 같은 줄을 여러 번 남깁니다(Output Log 접기 테스트). */
-            static bool runLogRepeat( const vector<string>& listArgument, string& outReply )
-            {
-                if ( listArgument.size() < 3 )
-                    return false;
-                int32      count{ 0 };
-                const bool bInvalidLogCount = StringUtil::parseInt( listArgument[0], count ) == false || count <= 0 || count > 1000;
-                if ( bInvalidLogCount )
-                    return false;
-                const bool bWarning = listArgument[1] == "warning";
-                if ( bWarning == false && listArgument[1] != "info" )
-                    return false;
-                string text = listArgument[2];
-                for ( size_t argumentIndex = 3; argumentIndex < listArgument.size(); ++argumentIndex )
-                {
-                    text += " ";
-                    text += listArgument[argumentIndex];
-                }
-                for ( int32 lineIndex = 0; lineIndex < count; ++lineIndex )
-                {
-                    if ( bWarning )
-                        SW_LOG_WARNING_ID( "Console.LogRepeat", "%#", text.c_str() );
-                    else
-                        SW_LOG_INFO_ID( "Console.LogRepeat", "%#", text.c_str() );
-                }
-                StringBuilder<constant::buffer::kMax256> replyBuilder;
-                replyBuilder.appendFormat( "logged %# lines", count );
-                outReply = string( replyBuilder.view() );
-                return true;
-            }
         };
     } // namespace
 } // namespace sw::editor
@@ -213,8 +184,6 @@ namespace sw::editor
     SW_EDITOR_PANEL( ConsolePanel, ConsolePanel::kPanelID, EditorPanelCategory::Core, 400 );
     SW_AUTOMATION_WATCH( editorOutputLogVisibleRows, "Editor.OutputLogVisibleRows", "Rows the Output Log drew in the last frame (after its filters and Collapse)",
                          &ConsolePanelInternal::readVisibleRows );
-    SW_DEV_COMMAND( LogRepeat, "log.repeat", "log.repeat <count> <warning|info> <text...>", "Write the same log line several times (Output Log Collapse checks)",
-                    &ConsolePanelInternal::runLogRepeat );
 
     ConsolePanel::ConsolePanel()
         : _listEntry{}
@@ -501,18 +470,17 @@ namespace sw::editor
         const bool    bListHovered = ImGui::IsWindowHovered();
         const float32 rowWidth     = ImGui::GetContentRegionAvail().x;
 
-        ImGuiListClipper clipper;
-        clipper.Begin( static_cast<int32>( _listRow.size() ) );
-        while ( clipper.Step() )
+        EditorVirtualList virtualList( static_cast<int32>( _listRow.size() ) );
+        while ( virtualList.step() )
         {
-            for ( int32 rowIndex = clipper.DisplayStart; rowIndex < clipper.DisplayEnd; ++rowIndex )
+            for ( int32 rowIndex = virtualList.getBegin(); rowIndex < virtualList.getEnd(); ++rowIndex )
             {
                 drawLogRow( rowIndex, rowWidth, lineHeight, bListHovered );
             }
         }
 
         // Ctrl+C 는 `Editor.Panel.console` 레이어의 액션이다(이 창이 포커스일 때만 켜진다).
-        const bool bCopyShortcutPressed = _selection.hasSelection() && EditorInputGUI::wasActionTriggered( "console.copySelection" );
+        const bool bCopyShortcutPressed = _selection.hasSelection() && EditorInputGUI::wasActionTriggered( editorinput::kConsoleCopySelection );
         if ( bCopyShortcutPressed )
             copySelectedRows();
 

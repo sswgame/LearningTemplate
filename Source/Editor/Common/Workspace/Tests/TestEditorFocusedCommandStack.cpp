@@ -31,17 +31,14 @@ SW_TEST_CASE( EditorFocusedCommandStackTest, FocusedPanelWinsOverTheRegisteredSt
     CommandStack documentStack{
         sw::UndoBufferLimit{ 128u, 1ull << 20 }
     };
-    CommandStack staleStack{
-        sw::UndoBufferLimit{ 128u, 1ull << 20 }
-    }; // 앞 프레임에 포커스였던 다른 문서가 걸어 둔 것
 
     const vector<EditorPanelCommandStack> listPanel{
-        EditorPanelCommandStack{Internal::kDocumentWindow, &documentStack, false},
-        EditorPanelCommandStack{   Internal::kSceneWindow,        nullptr, false},
-        EditorPanelCommandStack{ Internal::kHistoryWindow,        nullptr,  true},
+        EditorPanelCommandStack{Internal::kDocumentWindow, &documentStack, false,   "document"},
+        EditorPanelCommandStack{   Internal::kSceneWindow,        nullptr, false, "scene_view"},
+        EditorPanelCommandStack{ Internal::kHistoryWindow,        nullptr,  true,    "history"},
     };
-    SW_EXPECT_TRUE( IEditorPanelService::chooseFocusedCommandStack( Internal::kDocumentWindow, listPanel, &staleStack, &mainStack ) == &documentStack );
-    SW_EXPECT_TRUE( IEditorPanelService::chooseFocusedCommandStack( Internal::kSceneWindow, listPanel, &staleStack, &mainStack ) == &mainStack );
+    SW_EXPECT_TRUE( IEditorPanelService::chooseFocusedCommandStack( Internal::kDocumentWindow, listPanel, "other_document", &mainStack ) == &documentStack );
+    SW_EXPECT_TRUE( IEditorPanelService::chooseFocusedCommandStack( Internal::kSceneWindow, listPanel, "other_document", &mainStack ) == &mainStack );
 }
 
 /** @brief [EditorFocusedCommandStackTest] History · 메뉴 · 포커스 없음은 걸어 둔 스택(앞 포커스 패널)을 쓰고, 그것도 없으면 메인이다 */
@@ -56,11 +53,25 @@ SW_TEST_CASE( EditorFocusedCommandStackTest, NonPanelFocusKeepsTheRegisteredStac
     };
 
     const vector<EditorPanelCommandStack> listPanel{
-        EditorPanelCommandStack{Internal::kDocumentWindow, &documentStack, false},
-        EditorPanelCommandStack{ Internal::kHistoryWindow,        nullptr,  true},
+        EditorPanelCommandStack{Internal::kDocumentWindow, &documentStack, false, "document"},
+        EditorPanelCommandStack{ Internal::kHistoryWindow,        nullptr,  true,  "history"},
     };
-    SW_EXPECT_TRUE( IEditorPanelService::chooseFocusedCommandStack( Internal::kHistoryWindow, listPanel, &documentStack, &mainStack ) == &documentStack );
-    SW_EXPECT_TRUE( IEditorPanelService::chooseFocusedCommandStack( Internal::kMenuWindow, listPanel, &documentStack, &mainStack ) == &documentStack );
-    SW_EXPECT_TRUE( IEditorPanelService::chooseFocusedCommandStack( 0, listPanel, &documentStack, &mainStack ) == &documentStack );
-    SW_EXPECT_TRUE( IEditorPanelService::chooseFocusedCommandStack( Internal::kMenuWindow, listPanel, nullptr, &mainStack ) == &mainStack );
+    SW_EXPECT_TRUE( IEditorPanelService::chooseFocusedCommandStack( Internal::kHistoryWindow, listPanel, "document", &mainStack ) == &documentStack );
+    SW_EXPECT_TRUE( IEditorPanelService::chooseFocusedCommandStack( Internal::kMenuWindow, listPanel, "document", &mainStack ) == &documentStack );
+    SW_EXPECT_TRUE( IEditorPanelService::chooseFocusedCommandStack( 0, listPanel, "document", &mainStack ) == &documentStack );
+    SW_EXPECT_TRUE( IEditorPanelService::chooseFocusedCommandStack( Internal::kMenuWindow, listPanel, "", &mainStack ) == &mainStack );
+}
+
+/** @brief [EditorFocusedCommandStackTest] 앞 포커스 패널이 닫혀 목록에 없으면 메인이다 — 스택 포인터를 기억하지 않아 닫힌 문서 · 사라진 스택을 겨누지 않는다 */
+SW_TEST_CASE( EditorFocusedCommandStackTest, ClosedRememberedPanelFallsBackToMain )
+{
+    using Internal = EditorFocusedCommandStackTestInternal;
+    CommandStack mainStack{
+        sw::UndoBufferLimit{ 128u, 1ull << 20 }
+    };
+    const vector<EditorPanelCommandStack> listPanel{
+        EditorPanelCommandStack{ Internal::kHistoryWindow, nullptr, true, "history" },
+    };
+    SW_EXPECT_TRUE( IEditorPanelService::chooseFocusedCommandStack( Internal::kHistoryWindow, listPanel, "document", &mainStack ) == &mainStack );
+    SW_EXPECT_TRUE( IEditorPanelService::chooseFocusedCommandStack( Internal::kMenuWindow, listPanel, "document", &mainStack ) == &mainStack );
 }

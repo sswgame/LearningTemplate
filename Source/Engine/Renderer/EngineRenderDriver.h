@@ -63,8 +63,8 @@ namespace sw
         void                              setPresentInterval( uint32 interval ) override;
         [[nodiscard]] uint32              countPendingCaptureJobs( const GameObjectManager* pManager ) const override;
         void                              overrideDeviceLostPolicy( RHIDeviceLostPolicy policy ) override;
-        [[nodiscard]] uint32              getDeviceRecreateCount() const override { return _deviceRecreateCount; }
-        [[nodiscard]] uint32              getFailedBackendChangeCount() const override { return _failedBackendChangeCount; }
+        [[nodiscard]] const DevCounter&   getDeviceRecreateCount() const override { return _deviceRecreateCount; }
+        [[nodiscard]] const DevCounter&   getFailedBackendChangeCount() const override { return _failedBackendChangeCount; }
 
         /** @brief 마지막으로 적용한 화면 출력입니다(능력에 맞춘 값 — 주 패킷이 싣는다). 아직 적용하지 않았으면 기본값(SDR)입니다. */
         const DisplayOutputDesc& getAppliedDisplayOutput() const { return _appliedDisplayOutput; }
@@ -118,8 +118,8 @@ namespace sw
         Subscription            _mainWindowLifecycleSubscription;
         RHIDeviceLostPolicy     _deviceLostPolicy;          ///< `onStartupFinished` 가 `EngineConfig::_deviceLostPolicy` 에서 읽는다
         RHIDeviceLostPolicy     _deviceLostPolicyOverride;  ///< `overrideDeviceLostPolicy` 가 덮은 값(`None` 이면 덮지 않았다 — 설정 값을 쓴다)
-        uint32                  _deviceRecreateCount;       ///< 잃은 장치를 다시 만들어 장면을 다시 묶은 횟수
-        uint32                  _failedBackendChangeCount;  ///< 요청한 백엔드로 장치를 세우지 못한 교체 횟수(`applyPendingBackendChange` 가 `Applied` 가 아니었다)
+        DevCounter              _deviceRecreateCount;       ///< 잃은 장치를 다시 만들어 장면을 다시 묶은 횟수
+        DevCounter              _failedBackendChangeCount;  ///< 요청한 백엔드로 장치를 세우지 못한 교체 횟수(`applyPendingBackendChange` 가 `Applied` 가 아니었다)
         uint8                   _bDeviceLostHandled    : 1; ///< 분실을 한 번 처리했다(로그 · 종료 요청을 프레임마다 되풀이하지 않는다)
         uint8                   _bDisplayOutputApplied : 1; ///< 지금 장치에 화면 출력 요청을 적용했다(장치를 다시 만들면 내린다)
         DisplayOutputDesc       _displayRequest;            ///< 마지막으로 적용한 요청(능력에 맞추기 전)

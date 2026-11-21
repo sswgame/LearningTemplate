@@ -342,9 +342,9 @@ namespace
 {
     // 래퍼 형식이 정하는 모양 — 표(`ReflectBuiltins.xxx` CONTAINER 줄)의 종류 · State · Fixed 와 생성 코드가 이 값으로 대조한다.
     using VectorWrapperT = sw::VectorWrapper<sw::vector<int32>>;
-    using SetWrapperT    = sw::SetWrapper<sw::set<int32>>;
+    using SetWrapperT    = sw::SetWrapper<sw::flat_set<int32>>;
     using ArrayWrapperT  = sw::ArrayWrapper<int32[4]>;
-    using MapWrapperT    = sw::MapWrapper<sw::map<int32, int32>>;
+    using MapWrapperT    = sw::MapWrapper<sw::flat_map<int32, int32>>;
     static_assert( sw::ContainerWrapperOf<VectorWrapperT>::matchesTable( sw::ContainerKind::Sequence, true, false ) );
     static_assert( sw::ContainerWrapperOf<SetWrapperT>::matchesTable( sw::ContainerKind::Sequence, false, false ) );
     static_assert( sw::ContainerWrapperOf<ArrayWrapperT>::matchesTable( sw::ContainerKind::Sequence, true, true ) );

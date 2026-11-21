@@ -14,15 +14,15 @@ namespace sw::test
     namespace
     {
         /** @brief 설정으로 서는 조립(`OnlineRuntimeFixture`)에 테스트 로그인을 올리는 키트입니다. 설정의 `testLogin` 이 고릅니다. */
-        class TestLoginServerKit final : public IOnlineServerKit
+        class TestLoginServerKit final : public OnlineServerKit<>
         {
         public:
-            [[nodiscard]] expected<void> initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry ) override
+            [[nodiscard]] expected<void> initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, const Dependencies& ) override
             {
                 return registerServerService( context, entry, &_service );
             }
 
-            [[nodiscard]] expected<void> start( OnlineServerKitContext& context ) override
+            [[nodiscard]] expected<void> start( OnlineServerKitContext& context, const Dependencies&, const UnorderedDependencies& ) override
             {
                 (void)context;
                 return {};

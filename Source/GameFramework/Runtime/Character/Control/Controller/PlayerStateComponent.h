@@ -21,7 +21,8 @@ namespace sw
     /**
      * @class PlayerStateComponent
      * @brief 플레이어 한 명의 진행 플래그를 듭니다. 조종자(로컬 `PlayerControllerComponent` · 서버의 접속마다 세운 원격 조종자)와 같은 오브젝트에 둡니다.
-     * @details 판 상태(`SessionStateComponent`)는 세션 하나 — 멀티플레이에서 "그 플레이어만" 의 기록(도착 컷씬을 본 사람)은 플레이어마다 따로 있어야 한다.
+     * @details 월드 상태(`SessionStateComponent`)는 씬에 하나 — 멀티플레이에서 "그 플레이어만" 의 기록(도착 컷씬을 본 사람)은 플레이어마다 따로 있어야 한다.
+     *          지갑 · 가방 · 퀘스트 일지 · 평판은 같은 오브젝트의 형제 `PlayerProgressComponent`(게임플레이 층)가 든다.
      *          언리얼은 `APlayerState` 를 컨트롤러가 쥐어 폰을 바꿔 타도 남고, 유니티 · Godot 은 게임 코드가 플레이어 객체에 둔다. 여기도 조종자 오브젝트에 둬서 폰을 다시
      *          세워도(부활) 남는다. 폰에서 찾는 길은 `findForPawnObject` 하나다(폰 → 쥔 조종자 → 그 오브젝트).
      *          플래그는 PROPERTY 가 아니라 `ComponentStateStore` 계약(`serializeState` / `restoreState`)으로 게임 상태 스냅샷에 실린다(판 상태의 플래그와 같은 바이트 형식).

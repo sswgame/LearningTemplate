@@ -10,6 +10,7 @@
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Object/GameObject/Tick/TickContext.h"
 #include "Engine/Reflection/TypeInfo.h"
+#include "Engine/Reflection/TypeRegistry.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/Framework/Presentation/IDamageNumberSink.h"
@@ -71,6 +72,8 @@ namespace sw
         , _bHasPendingRemoval{ SW_FALSE }
         , _bRefreshingOngoingTags{ SW_FALSE }
         , _bRestoringState{ SW_FALSE }
+        , _bWantsTick{ SW_FALSE }
+        , _bManualTime{ SW_FALSE }
         , _pendingStateBytes{}
         , _abilitySetID{}
         , _healthAttribute{ CombatAttributes::health() } // 프레임워크 공용 어트리뷰트 세트의 이름(엔진 상수) — 다른 세트를 쓰는 데이터가 덮는다
@@ -81,6 +84,7 @@ namespace sw
         // 결정: 태그가 바뀌는 길(이펙트 · 어빌리티 · 이펙트 없이 붙인 태그)은 여럿이지만 알림은 집합 하나에서 나온다 — 걸린 동안의 조건과
         // 태그로 발동하는 어빌리티는 그 알림 하나에 건다. 소멸자의 `unregisterAllChanged` 가 함께 푼다.
         _ownedTagSubscription = _ownedTagCounts.registerChanged( TagCountTable::TagChangedDelegate::create<&AbilityComponent::onOwnedTagChanged>( this ) );
+        setCanEverTick( false ); // 쉬는 컴포넌트는 틱하지 않는다 — 이펙트 · 어빌리티가 생기면 `refreshTickEnabled` 가 켠다
     }
 
     AbilityComponent::~AbilityComponent()
@@ -94,6 +98,8 @@ namespace sw
         _abilityEndedMulticast.removeAll();
         _gameplayCueMulticast.removeAll();
         _mapAttributeChangedMulticast.clear();
+        _bManualTime = SW_TRUE; // 지우는 동안 틱 설정을 건드리지 않는다(`refreshTickEnabled` 가 아무것도 하지 않는다) — 소유 오브젝트가 해체 중일 수 있다
+        _bWantsTick  = SW_FALSE;
         clearAllAbilities();
         _activeEffects.clear();
         _listAttributeSet.clear();
@@ -177,6 +183,43 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 1) 시간, 카탈로그, 세트
     // ------------------------------------------------------------------------------
+    void AbilityComponent::setManualTime( bool bManualTime )
+    {
+        _bManualTime = bManualTime ? SW_TRUE : SW_FALSE;
+        refreshTickEnabled();
+    }
+
+    bool AbilityComponent::needsTick() const
+    {
+        const size_t effectCount = _activeEffects.size();
+        for ( size_t effectIndex = 0; effectIndex < effectCount; ++effectIndex )
+        {
+            const ActiveGameplayEffect& activeEffect = *_activeEffects[effectIndex];
+            const AbilityEffectDef&     def          = *activeEffect._spec._pDef;
+            const bool                  bTimed       = def.isPeriodic() || def._durationPolicy == EffectDurationPolicy::HasDuration;
+            if ( activeEffect._bPendingRemove == SW_FALSE && bTimed )
+                return true;
+        }
+        const size_t specCount = _abilitySpecs.size();
+        for ( size_t specIndex = 0; specIndex < specCount; ++specIndex )
+        {
+            const AbilitySpec& spec = *_abilitySpecs[specIndex];
+            if ( spec._bPendingRemove == SW_FALSE && spec._pAbility->isActive() )
+                return true;
+        }
+        return false;
+    }
+
+    void AbilityComponent::refreshTickEnabled()
+    {
+        // 결정: 쉬는 캐릭터마다 빈 틱에 워커를 쓰지 않는다(언리얼 GAS 는 기간 이펙트마다 타이머를 걸어 같은 일을 한다). 요청 값이 바뀔 때만 부른다 — 틱 중이면 미뤄진다.
+        const uint8 wantsTick = ( _bManualTime == SW_FALSE && needsTick() ) ? SW_TRUE : SW_FALSE;
+        if ( _bWantsTick == wantsTick )
+            return;
+        _bWantsTick = wantsTick;
+        setCanEverTick( wantsTick == SW_TRUE );
+    }
+
     void AbilityComponent::advanceTime( float32 deltaTime )
     {
         if ( deltaTime <= 0.0f )
@@ -430,10 +473,14 @@ namespace sw
     {
         HealthSourceComponent::onRegister( manager );
         manager.getComponentRegistry().add<AbilityComponent>( this );
+        // 모듈 내림은 이 컴포넌트만 듣는다(기반 가상 함수로 모든 컴포넌트를 훑지 않는다 — 언리얼 `FCoreUObjectDelegates` 구독 자리).
+        _moduleUnloadingSubscription = game::getSubsystem<TypeRegistry>().subscribeModuleUnloading(
+            TypeRegistry::ModuleUnloadingDelegate::create<&AbilityComponent::onModuleUnloading>( this ) );
     }
 
     void AbilityComponent::onUnregister( GameObjectManager& manager )
     {
+        _moduleUnloadingSubscription = Subscription{};
         manager.getComponentRegistry().remove<AbilityComponent>( this );
         HealthSourceComponent::onUnregister( manager );
     }

@@ -15,6 +15,7 @@
 #include "Engine/Object/GameObject/Service/SceneNetLink.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
+#include "Engine/Serialization/Fixed/ReplicatedLayout.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 
@@ -34,16 +35,10 @@ namespace sw
                 const SceneManager* const pScenes  = game::findSubsystem<SceneManager>();
                 const Scene* const        pScene   = pScenes != nullptr ? pScenes->getActiveScene() : nullptr;
                 GameObjectManager* const  pManager = pScene != nullptr ? pScene->getObjectManager() : nullptr;
-                ValeWorldComponent*       pVale    = nullptr;
-                if ( pManager != nullptr )
-                {
-                    for ( ValeWorldComponent* pFound : pManager->getComponentRegistry().getAll<ValeWorldComponent>() )
-                    {
-                        if ( pVale == nullptr )
-                            pVale = pFound;
-                    }
-                }
-                return pVale != nullptr && pVale->getClient().isActive() ? pVale : nullptr;
+                // 연결된 골짜기 클라이언트는 씬에 하나다 — 둘이면 오류로 명령을 보내지 않는다(등록 순서로 고르지 않는다).
+                return pManager != nullptr ? pManager->getComponentRegistry().findUnique<ValeWorldComponent>( []( const ValeWorldComponent& vale )
+                { return vale.getClient().isActive(); } )
+                                           : nullptr;
             }
 
             [[nodiscard]] static bool parseID( const string& text, uint32& outID )
@@ -213,12 +208,11 @@ namespace sw
                 const MMOEntity* pEntity = vale.getClient().isActive() ? vale.getClient().getView().findEntity( ValeWorld::kPlacementIDBase ) : nullptr;
                 if ( pEntity == nullptr )
                     return false;
-                BitReader    reader( pEntity->_listState.data(), static_cast<int32>( pEntity->_listState.size() ) );
-                const uint64 typeID = reader.readVarUint();
-                const int32  health = reader.readVarInt32();
-                if ( reader.hasOverflowed() || typeID != ValeEntityType::kCreature )
+                BitReader          reader( pEntity->_listState.data(), static_cast<int32>( pEntity->_listState.size() ) );
+                ValeEntityNetState state;
+                if ( ReplicatedLayout::readFull( reader, state, nullptr ) != FixedReadResult::Ok || state._typeID != ValeEntityType::kCreature )
                     return false;
-                outValue = static_cast<float64>( health );
+                outValue = static_cast<float64>( state._stateValue );
                 return true;
             }
 

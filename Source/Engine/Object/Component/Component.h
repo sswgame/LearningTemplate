@@ -407,11 +407,6 @@ namespace sw
          */
         virtual void onRegister( GameObjectManager& manager ) { (void)manager; }
         /**
-         * @brief 필요 컴포넌트 멤버(`Required<T>` — `RequiredComponent.h`)를 묶습니다. `onRegister` 바로 앞에, 등록 · 다시 등록(모듈 리로드)마다 불립니다.
-         * @return 모두 묶였으면 true 입니다. 못 찾은 것은 `Required<T>::bind` 가 오류로 남긴다. 필요 컴포넌트가 없는 형식은 재정의하지 않는다.
-         */
-        [[nodiscard]] virtual bool bindRequiredComponents() { return true; }
-        /**
          * @brief 아직 등록하지 않았으면 `onRegister` 를 부르고 "등록됨" 으로 기록합니다(게임 스레드). 직접 부르지 말고 매니저(`GameObjectManager::registerComponent`)를 거친다.
          * @details 씬을 짓는 배치(`Scene::instantiate`) 안에서는 매니저가 배치 끝까지 미룬다 — 비동기 로드는 씬을 받는 게임 스레드까지(언리얼: 로딩 스레드는
          *          직렬화만, `OnRegister` · `PostLoad` 는 게임 스레드). 훅은 늘 게임 스레드에서 돈다.
@@ -453,12 +448,8 @@ namespace sw
          *          비동기 씬 로드에서는 워커 스레드에서 불릴 수 있으므로 공유 상태는 잠금을 지원하는 API 로만 만진다.
          */
         virtual void onPostLoad() {}
-        /**
-         * @brief 모듈 @p moduleName 을 내리기 직전(그 코드가 아직 있을 때)에 불립니다. 그 모듈 **타입**(`TypeInfo` 의 모듈 이름)의 객체를 든 컴포넌트가 그것을 놓는다.
-         * @details 컴포넌트 자신이 그 모듈 타입이면 이 뒤에 지워진다(`destroyComponentsOfModule`) — 여기서 할 일은 엔진 · 키트 컴포넌트가 든 남의 모듈 객체(어빌리티 · 세트)다.
-         *          모듈 언로드는 개발 빌드만 하고 게임 스레드에서 부른다(`engine::unregisterModuleTypes`). 코드 주소로 고르지 않는다(언리얼은 클래스의 패키지로 다시 만든다).
-         */
-        virtual void onModuleUnloading( string_view moduleName ) { (void)moduleName; }
+        // 남의 모듈 타입 객체(어빌리티 · 세트)를 든 컴포넌트는 모듈 내림을 가상 함수로 받지 않는다 — 그 컴포넌트만 `onRegister` 에서
+        // `TypeRegistry::subscribeModuleUnloading` 을 구독한다(`AbilityComponent`). 모든 컴포넌트에 빈 가상 호출을 훑지 않는다.
         /**
          * @brief 씬 상태 해시(`SceneObjectHash`)에 이 컴포넌트의 시뮬레이션 상태를 접습니다. 기본은 상태 역할 칸(`PROPERTY( RuntimeState )`, 기반부터)을 리플렉션으로 접습니다.
          * @details 두 프로세스가 같은 입력으로 같은 상태가 되었는지 견주는 값이라 게임플레이를 바꾸는 상태(트랜스폼 · 속도 · 난수 상태 · 남은 시간)만 넣는다.
@@ -633,13 +624,7 @@ namespace sw
          * @details 핸들로 다시 찾으므로 그 사이에 파괴돼도 안전하다. 틱 설정(그룹, 틱 여부, 서브틱)이 `GameObject` 의 setName, addTag 와 같은 규칙을 따른다.
          */
         bool deferIfStructureFrozen( Delegate<void( Component& )> func );
-        /**
-         * @brief 붙는 순간 엔진의 장부(트랜스폼 계층 · 매니저 연결)에 넣습니다(`GameObject::attachCreatedComponent`). 미루지 않는다 — 장부는 객체 데이터다.
-         * @details 언리얼의 `AttachParent` · 상대 트랜스폼이 로드 때 채워지고 `OnRegister` 가 나중에 월드에 넣는 것과 같은 나눔이다. `SceneComponent` 만 쓰고 `final` 로 막는다.
-         */
-        virtual void bindToManager( GameObjectManager& manager ) { (void)manager; }
-        /** @brief `bindToManager` 의 짝입니다(해체 한 곳 `GameObjectStore` 가 `dispatchUnregister` 뒤에 부른다). */
-        virtual void unbindFromManager( GameObjectManager& manager ) { (void)manager; }
+        // 붙는 순간의 장부(트랜스폼 계층 · 매니저 연결)는 씬 컴포넌트만 쓴다 — 가상 함수가 아니라 `_bIsSceneComponent` 를 보고 `SceneComponent::bindToManager` 를 바로 부른다.
 
     protected:
         GameObject* _pOwner;      ///< 소유자 GameObject
@@ -670,16 +655,16 @@ namespace sw
          *          인스펙터는 컴포넌트 머리의 체크박스로 그린다.
          */
         PROPERTY( HideInInspector )
-        atomic<bool> _bActive;
-        atomic<bool> _bIsPendingDestroy; ///< 삭제 예정 표시
-        TickGroup    _tickGroup;         ///< 이 컴포넌트가 속한 TickGroup
-        uint8        _bCanEverTick      : 1;
-        uint8        _bIsSceneComponent : 1; ///< SceneComponent 생성자가 세운다
-        uint8        _bHasBegunPlay     : 1; ///< onBeginPlay 가 불렸고 onEndPlay 는 아직 불리지 않았다. `dispatchBeginPlay` 와 `dispatchEndPlay` 만 바꾼다
-        uint8        _bRegistered       : 1; ///< onRegister 가 불렸고 onUnregister 는 아직 불리지 않았다. `dispatchRegister` 와 `dispatchUnregister` 만 바꾼다
-        uint8        _bPostLoadPending  : 1; ///< 상태를 읽었고 `onPostLoad` 가 배치 끝에 온다. `markPostLoadPending` 과 `dispatchPostLoad` 만 바꾼다
-        uint8        _bStaged           : 1; ///< 나눠 짓는 셀에 들어 아직 드러나지 않았다. 저장소 잠금 아래에서 `stageGameObjects` · `releaseStagedGameObjects` 만 바꾼다
-        uint8        _reservedFlags     : 2;
+        reflected_atomic<bool> _bActive;
+        atomic<bool>           _bIsPendingDestroy; ///< 삭제 예정 표시
+        TickGroup              _tickGroup;         ///< 이 컴포넌트가 속한 TickGroup
+        uint8                  _bCanEverTick      : 1;
+        uint8                  _bIsSceneComponent : 1; ///< SceneComponent 생성자가 세운다
+        uint8                  _bHasBegunPlay     : 1; ///< onBeginPlay 가 불렸고 onEndPlay 는 아직 불리지 않았다. `dispatchBeginPlay` 와 `dispatchEndPlay` 만 바꾼다
+        uint8                  _bRegistered       : 1; ///< onRegister 가 불렸고 onUnregister 는 아직 불리지 않았다. `dispatchRegister` 와 `dispatchUnregister` 만 바꾼다
+        uint8                  _bPostLoadPending  : 1; ///< 상태를 읽었고 `onPostLoad` 가 배치 끝에 온다. `markPostLoadPending` 과 `dispatchPostLoad` 만 바꾼다
+        uint8                  _bStaged           : 1; ///< 나눠 짓는 셀에 들어 아직 드러나지 않았다. 저장소 잠금 아래에서 `stageGameObjects` · `releaseStagedGameObjects` 만 바꾼다
+        uint8                  _reservedFlags     : 2;
         /**
          * @brief `_pPoolEntry` 의 버킷 안 위치입니다. 버킷에 없으면 `kNotInPoolEntry` 입니다. 제거를 O(1) 로 하려고 둡니다.
          * @details 플래그(4 B) 뒤, `_listSubTick` 앞의 정렬 패딩에 들어간다. 앞쪽으로 옮기면 객체가 커진다. 저장소의 `_mutex` 아래에서만 바뀐다.
@@ -691,22 +676,66 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 컴포넌트의 틱 재정의를 묻는 통로의 태그입니다(`ReflectAccess<ComponentTickAccessTag>`). */
+    struct ComponentTickAccessTag;
+
     /**
-     * @brief 타입 T(또는 그 조상 중 `Component` 가 아닌 것)가 `onTick` 을 오버라이드했는지 나타냅니다. 주 틱의 기본값이 이것입니다.
-     * @details `&T::onTick` 의 타입이 `Component` 의 것이면 아무도 오버라이드하지 않은 것이다. 볼 수 없으면(보호나 비공개 오버라이드라
-     *          접근이 막히면) 오버라이드한 것으로 취급한다. 그때는 생성자의 값을 그대로 둔다.
+     * @brief 틱 재정의 판정의 통로 — `REFLECT_BODY()` 가 친구로 여는 자리라 protected · private 재정의도 본다.
+     * @details 예전 트레이트는 바깥(친구가 아닌) 부분 특수화에서 `&T::onTick` 을 물어 protected · private 재정의에서 하드 오류였다(SFINAE 가 아니라 기반 절에서 터졌다).
+     *          멤버 포인터의 클래스 형식이 `Component` 면 아무도 재정의하지 않은 것이다. 중간 기반의 private 재정의처럼 이름이 닿지 않으면 재정의한 것으로 친다(생성자의 값을 그대로 둔다).
      */
-    template <typename T, typename = void>
-    struct HasOnTickOverride : std::true_type
+    template <>
+    struct ReflectAccess<ComponentTickAccessTag>
     {
+        template <typename T>
+        static constexpr bool hasOnTickOverride() noexcept
+        {
+            return hasOnTickOverrideImpl<T>( 0 );
+        }
+        template <typename T>
+        static constexpr bool hasOnSubTickOverride() noexcept
+        {
+            return hasOnSubTickOverrideImpl<T>( 0 );
+        }
+
+    private:
+        template <typename T>
+        static constexpr auto hasOnTickOverrideImpl( int ) noexcept -> decltype( &T::onTick, bool() )
+        {
+            return std::is_same_v<decltype( &T::onTick ), void ( Component::* )( TickContext& )> == false;
+        }
+        template <typename T>
+        static constexpr bool hasOnTickOverrideImpl( ... ) noexcept
+        {
+            return true;
+        }
+        template <typename T>
+        static constexpr auto hasOnSubTickOverrideImpl( int ) noexcept -> decltype( &T::onSubTick, bool() )
+        {
+            return std::is_same_v<decltype( &T::onSubTick ), void ( Component::* )( uint32, TickContext& )> == false;
+        }
+        template <typename T>
+        static constexpr bool hasOnSubTickOverrideImpl( ... ) noexcept
+        {
+            return true;
+        }
     };
 
+    /** @brief 타입 T(또는 그 조상 중 `Component` 가 아닌 것)가 `onTick` 을 오버라이드했는지 나타냅니다. 주 틱의 기본값이 이것입니다(`ReflectAccess<ComponentTickAccessTag>`). */
     template <typename T>
-    struct HasOnTickOverride<T, std::void_t<decltype( &T::onTick )>>
-        : std::bool_constant<std::is_same_v<decltype( &T::onTick ), void ( Component::* )( TickContext& )> == false>
+    struct HasOnTickOverride : std::bool_constant<ReflectAccess<ComponentTickAccessTag>::hasOnTickOverride<T>()>
     {
     };
 
     template <typename T>
     inline constexpr bool HasOnTickOverride_v = HasOnTickOverride<T>::value;
+
+    /** @brief 타입 T(또는 그 조상 중 `Component` 가 아닌 것)가 `onSubTick` 을 오버라이드했는지 나타냅니다. 규칙은 `HasOnTickOverride` 와 같다. */
+    template <typename T>
+    struct HasOnSubTickOverride : std::bool_constant<ReflectAccess<ComponentTickAccessTag>::hasOnSubTickOverride<T>()>
+    {
+    };
+
+    template <typename T>
+    inline constexpr bool HasOnSubTickOverride_v = HasOnSubTickOverride<T>::value;
 } // namespace sw

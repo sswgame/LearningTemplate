@@ -9,6 +9,7 @@
 #include "Core/Foundation/Types.h"
 
 #include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
+#include "GameFramework/Runtime/Online/Service/OnlineServerKitName.h"
 
 namespace sw
 {
@@ -19,6 +20,8 @@ namespace sw
     class IConnectAdmission
     {
     public:
+        static constexpr const utf8* kProviderKit = OnlineServerKitName::kMatchmaking; ///< 이 인터페이스를 내는 키트다. 받는 키트의 의존 이름이 여기서 나온다(`OnlineServerKit`)
+
         IConnectAdmission()          = default;
         virtual ~IConnectAdmission() = default;
 

@@ -16,6 +16,7 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
+#include "Engine/Renderer/Frame/Execute/ViewGraphResource.h"
 #include "Engine/Renderer/Frame/FramePassContext.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Renderer/Frame/Packet/RenderFrameSettings.h"
@@ -131,9 +132,8 @@ namespace sw
         if ( source._texture == 0 )
             return false;
 
-        IRHICommandList& cmd = *context._pCmd;
-        cmd.prepareTextureForShaderRead( source._texture );
-        cmd.prepareTextureForRenderTarget( view._upscaleIntermediate );
+        // 원본은 Present 의 입력 선언이, 중간 RT 는 이 패스의 렌더 타깃 선언(`ViewGraphResource::upscaleIntermediate` — 키우는 뷰만 등록)이 레벨 콜백에서 옮겼다.
+        IRHIPassCommandList&   cmd = *context._pCmd;
         RHIRenderPassBeginInfo beginInfo{};
         beginInfo._bBindColor        = SW_TRUE;
         beginInfo._colorTargetCount  = 1;
@@ -160,7 +160,8 @@ namespace sw
         cmd.setGraphicsRootConstants( 0, sizeof( constants ) / sizeof( uint32 ), &constants );
         cmd.draw( 3, 0 );
         cmd.endRenderPass();
-        cmd.prepareTextureForShaderRead( view._upscaleIntermediate );
+        // 같은 패스의 RCAS 가 읽는다 — 쓰기로 선언한 중간 RT 를 패스 안에서 셰이더 읽기로 옮긴다.
+        context._pGraphPass->transition( ViewGraphResource::upscaleIntermediate(), RHITextureState::ShaderResource );
         // PSO · 슬롯을 직접 바꿨다 — 뒤의 그리기가 바인딩 캐시를 믿고 PSO 를 건너뛰지 않게 지운다.
         context.resetBindingCache();
         return true;
@@ -169,7 +170,7 @@ namespace sw
     void FrameUpscale::drawUpscaleRcas( FramePassContext& context, const FrameViewTarget& view, RHIFormat targetFormat ) const
     {
         const RHIPipelineStateHandle pso = _psoManager.findOutputPSO( RenderPassKind::UpscaleRcas, targetFormat ); // 셋업에 없으면 멈춘다
-        IRHICommandList&             cmd = *context._pCmd;
+        IRHIPassCommandList&         cmd = *context._pCmd;
         cmd.setPipelineState( pso );
         const bool                          bNativeBindless = _pDevice->supportsNativeBindlessSampling();
         FrameUpscaleInternal::RootConstants constants{};

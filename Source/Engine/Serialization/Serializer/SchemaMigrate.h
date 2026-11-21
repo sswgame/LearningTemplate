@@ -18,6 +18,7 @@ namespace sw
     struct TypeInfo;
 
     class SerializeContext;
+    class ReflectValueBinding;
 
     // ------------------------------------------------------------------------------
     // 1) SchemaOrphanValue: 현재 TypeInfo 에 맞는 슬롯이 없거나 적용하지 못한 기록 필드
@@ -81,7 +82,7 @@ namespace sw
     /**
      * @brief 임시 스크래치 버퍼를 만듭니다.
      * @details `$ctor` 가 있으면 객체 전체를 placement new 로 만들고 `_destroyInstance` 로 짝을 맞춰 파괴한다.
-     *          없으면 0 으로 채운 버퍼에서 멤버별로 만든다. 컨테이너, string, hashed_string, atomic<bool>, TagID 와
+     *          없으면 0 으로 채운 버퍼에서 멤버별로 만든다. 컨테이너, string, hashed_string, reflected_atomic<bool>, TagID 와
      *          `$ctor` 가 있는 중첩 REFLECT 타입만 생성하고 파괴하며, 나머지는 0 인 채로 둔다.
      */
     SW_API void* createScratchInstance( const TypeInfo& typeInfo, vector<uint8>& listStorage );
@@ -184,6 +185,9 @@ namespace sw
      * @details 쓰는 곳은 값 하나 자체의 주소입니다(`MutableValueAddress`). 프로퍼티 값에 쓰려면 `applyPropertyTextCoerced` 를 씁니다(비트필드는 값 주소가 없습니다).
      */
     [[nodiscard]] SW_API bool parseTextValueCoerced( MutableValueAddress value, hashed_string typeName, string_view valStr,
+                                                     const SerializeContext& context );
+    /** @brief `parseTextValueCoerced` 의 묶음 판입니다 — @p pBinding 은 @p typeName 에 묶은 사실(프로퍼티 · 컨테이너 원소 · 키)이고 nullptr 이면 이름으로 찾습니다. */
+    [[nodiscard]] SW_API bool parseTextValueCoerced( MutableValueAddress value, hashed_string typeName, const ReflectValueBinding* pBinding, string_view valStr,
                                                      const SerializeContext& context );
 
     /**

@@ -4,8 +4,8 @@
 #include "Core/Foundation/Types.h"
 
 #include "Editor/Common/GUI/Panel/EditorGraphDocumentPanel.h"
+#include "Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.h"
 #include "Editor/Panels/Dialogue/Model/DialogueGraphPreviewViewModel.h"
-#include "Editor/Panels/Inspector/EditorPropertyGrid.h"
 
 #include "Engine/Behavior/ActionRegistry.h"
 #include "Engine/Dialogue/DialogueGraphAsset.h"

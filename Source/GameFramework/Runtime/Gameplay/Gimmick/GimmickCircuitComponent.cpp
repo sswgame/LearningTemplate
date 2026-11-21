@@ -778,7 +778,7 @@ namespace sw
             static void writeGimmick( DebugHUDSectionWriter& writer )
             {
                 const GameObjectManager* const       pManager = GameplayDebugTarget::findActiveObjectManager();
-                const GimmickCircuitComponent* const pCircuit = pManager != nullptr ? GameplayDebugTarget::findTargetComponent<GimmickCircuitComponent>( writer.getSceneIterationKey(), *pManager ) : nullptr;
+                const GimmickCircuitComponent* const pCircuit = pManager != nullptr ? GameplayDebugTarget::findTargetOrLowestIDComponent<GimmickCircuitComponent>( writer.getSceneIterationKey(), *pManager ) : nullptr;
                 if ( pCircuit == nullptr )
                 {
                     writer.addLine( "target", "none (no gimmick circuit in the active scene)" );

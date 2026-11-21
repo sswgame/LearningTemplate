@@ -251,13 +251,15 @@ namespace sw
             }
 
             /**
-             * @brief 켜져 있는 첫 방향광(등록 순서)을 찾습니다. @p bRequireShadow 면 그림자를 드리우는 것만 봅니다.
-             * @details 활성 판정은 여기서 한다. 레지스트리는 "무엇이 있나"만 안다(PrimitiveRegistry 와 같은 규약). `Component::isActive` 가 소유 오브젝트의 계층 활성까지 본다.
+             * @brief 켜져 있는 방향광 가운데 가장 밝은 것(세기가 같으면 컴포넌트 번호가 작은 것)을 찾습니다. @p bRequireShadow 면 그림자를 드리우는 것만 봅니다.
+             * @details 해와 달처럼 방향광이 여럿일 수 있어 하나를 "씬에 하나" 로 막지 않고 기준으로 고른다 — 유니티 RenderSettings.sun 이 비었을 때 가장 밝은 방향광을 해로 보는 것과 같다.
+             *          등록 순서로 고르지 않는다(레벨을 들이는 차례가 주광을 바꾸지 않는다). 활성 판정은 여기서 한다 — `Component::isActive` 가 소유 오브젝트의 계층 활성까지 본다.
              */
-            static DirectionalLightComponent* findFirst( const GameObjectManager* pObjectManager, bool bRequireShadow )
+            static DirectionalLightComponent* findHighestIntensity( const GameObjectManager* pObjectManager, bool bRequireShadow )
             {
                 if ( pObjectManager == nullptr )
                     return nullptr;
+                DirectionalLightComponent* pBest = nullptr;
                 for ( LightComponent* pLight : pObjectManager->getComponentRegistry().getAll<LightComponent>( shaderslot::kLightTypeDirectional ) )
                 {
                     if ( pLight == nullptr || pLight->isActive() == false )
@@ -265,21 +267,24 @@ namespace sw
                     DirectionalLightComponent* pDirectional = static_cast<DirectionalLightComponent*>( pLight );
                     if ( bRequireShadow && pDirectional->castsShadow() == false )
                         continue;
-                    return pDirectional;
+                    const bool bHigher = pBest == nullptr || pDirectional->getIntensity() > pBest->getIntensity() ||
+                                         ( pDirectional->getIntensity() == pBest->getIntensity() && pDirectional->getComponentID() < pBest->getComponentID() );
+                    if ( bHigher )
+                        pBest = pDirectional;
                 }
-                return nullptr;
+                return pBest;
             }
         };
     } // namespace
 
     DirectionalLightComponent* DirectionalLightComponent::findActive( const GameObjectManager* pObjectManager )
     {
-        return DirectionalLightComponentInternal::findFirst( pObjectManager, false );
+        return DirectionalLightComponentInternal::findHighestIntensity( pObjectManager, false );
     }
 
     DirectionalLightComponent* DirectionalLightComponent::findShadowCasting( const GameObjectManager* pObjectManager )
     {
-        return DirectionalLightComponentInternal::findFirst( pObjectManager, true );
+        return DirectionalLightComponentInternal::findHighestIntensity( pObjectManager, true );
     }
 
     float4 DirectionalShadowProjection::computeShaderParams() const

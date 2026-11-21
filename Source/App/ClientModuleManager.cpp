@@ -375,14 +375,8 @@ namespace sw
         BLOCK( "에디터: 뷰포트 / EditorModule 등록" )
         {
             const ScopedMemoryTag moduleMemoryTag{ kEditorModuleMemoryTag }; // 라이브러리 로드가 모듈의 정적 등록자를 돌린다
-            holdReloadSubscription( pLiveReloadManager->setOnBeforeReload(
-                config::kTargetEditorModule, SW_DELEGATE_METHOD( ILiveReloadManager::OnBeforeReloadDelegate, &ClientModuleManager::onBeforeEditorReload, this ) ) );
-            holdReloadSubscription( pLiveReloadManager->setOnAfterReload(
-                config::kTargetEditorModule, SW_DELEGATE_METHOD( ILiveReloadManager::OnAfterReloadDelegate, &ClientModuleManager::onAfterEditorReload, this ) ) );
-            holdReloadSubscription( pLiveReloadManager->setOnReloadFault(
-                config::kTargetEditorModule, SW_DELEGATE_METHOD( ILiveReloadManager::OnReloadFaultDelegate, &ClientModuleManager::onEditorReloadFault, this ) ) );
-            holdReloadSubscription( pLiveReloadManager->setOnValidateLibrary(
-                config::kTargetEditorModule, SW_DELEGATE_METHOD( ILiveReloadManager::OnValidateLibraryDelegate, &ClientModuleManager::isEditorLibraryUsable, this ) ) );
+            // 등록이 곧 첫 로드의 "리로드 직후" 다 — 주인 창구를 먼저 걸어 그때 에디터 인스턴스가 선다.
+            holdReloadSubscription( pLiveReloadManager->setModuleClient( config::kTargetEditorModule, _editorReloadClient ) );
             // 편집기 코드가 다른 스레드에서 돌고 있으면(열린 파일 대화상자) 닫힐 때까지 리로드를 기다린다 — 변경은 버리지 않는다.
             holdReloadSubscription( pLiveReloadManager->addReloadHold( SW_DELEGATE_METHOD( ILiveReloadManager::ReloadHoldDelegate, &ClientModuleManager::isEditorReloadHeld, this ) ) );
             if ( pLiveReloadManager->registerModule( config::kTargetEditorModule ) == false )

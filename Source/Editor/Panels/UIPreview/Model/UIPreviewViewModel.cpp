@@ -237,8 +237,18 @@ namespace sw::editor
         _watchValues = UIPreviewWatchValues{};
     }
 
-    void UIPreviewViewModel::syncPreview( const UISystem& ui, UIOffscreenScreens& offscreen )
+    bool UIPreviewViewModel::isUIRunning()
     {
+        const UISystem* const pUI = findUISystem();
+        return pUI != nullptr && pUI->isInitialized();
+    }
+
+    void UIPreviewViewModel::syncPreview( UIOffscreenScreens& offscreen )
+    {
+        const UISystem* const pUI = findUISystem();
+        if ( pUI == nullptr )
+            return; // 창이 `isUIRunning` 을 먼저 본다
+        const UISystem&           ui          = *pUI;
         const UIResolutionPreset* pResolution = findSelectedResolution();
         if ( pResolution == nullptr )
         {

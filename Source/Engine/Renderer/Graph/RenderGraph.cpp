@@ -23,15 +23,16 @@ namespace sw
 {
     namespace
     {
-        /** @brief 패스 하나를 열린 리스트 @p pCmdList 에 기록합니다(열고 닫지 않는다). */
+        /** @brief 패스 하나를 열린 리스트 @p pCmdList 에 기록합니다(열고 닫지 않는다). 직렬 · 병렬 · 큐 실행이 모두 이 한 함수로 패스 문맥을 만든다. */
         void recordPassBody( RenderGraphNode& node, IRHICommandList* pCmdList )
         {
             RenderGraphPassContext passContext;
             passContext._passName     = node._name;
+            passContext._payload      = node._payload;
             passContext._pListInputs  = &node._listInput;
             passContext._pListOutputs = &node._listOutput;
             passContext._pListAccess  = &node._listAccess;
-            passContext._pCmdList     = pCmdList;
+            passContext.setCommandList( pCmdList );
             node._execute( passContext );
         }
 
@@ -267,26 +268,35 @@ namespace sw
         _pParallelScratch->_pCmdListDevice = nullptr;
     }
 
+    bool RenderGraphPassContext::isDeclared( const RenderGraphResourceAccess& access ) const
+    {
+        if ( _pListAccess == nullptr )
+            return false;
+        for ( const RenderGraphResourceAccess& declared : *_pListAccess )
+        {
+            if ( declared._resource == access._resource && declared._access == access._access && declared._viewable == access._viewable )
+                return true;
+        }
+        return false;
+    }
+
+    uint64 RenderGraphPassContext::findRegisteredHandle( const RenderGraphResourceAccess& access, uint32 slot ) const
+    {
+        if ( _pResourceTable == nullptr )
+            return 0;
+        return access._viewable == RenderGraphViewableKind::Buffer ? _pResourceTable->findBuffer( access._resource, slot ) : _pResourceTable->findTexture( access._resource, slot );
+    }
+
     uint64 RenderGraphPassContext::findDeclaredHandle( const RenderGraphResourceAccess& access, uint32 slot ) const
     {
-        bool bDeclared = false;
-        if ( _pListAccess != nullptr )
-        {
-            for ( const RenderGraphResourceAccess& declared : *_pListAccess )
-            {
-                bDeclared = bDeclared || ( declared._resource == access._resource && declared._access == access._access && declared._viewable == access._viewable );
-            }
-        }
-        if ( bDeclared == false )
+        if ( isDeclared( access ) == false )
         {
             // 선언하지 않은 접근을 주면 그래프가 그 전이를 내지 않은 자원을 묶는다 — 무효 핸들로 막는다(손으로 묶을 길이 없다).
             SW_LOG_ERROR_ONCE_ID( "Renderer.GraphUndeclaredAccess", "Render graph pass '%#' asked for '%#' with an access it did not declare - it gets no handle", _passName.c_str(),
                                   access._resource.c_str() );
             return 0;
         }
-        const uint64 handle = _pResourceTable == nullptr                          ? 0
-                            : access._viewable == RenderGraphViewableKind::Buffer ? _pResourceTable->findBuffer( access._resource, slot )
-                                                                                  : _pResourceTable->findTexture( access._resource, slot );
+        const uint64 handle = findRegisteredHandle( access, slot );
         if ( handle == 0 )
             SW_LOG_ERROR_ONCE_ID( "Renderer.GraphUnregisteredResource", "Render graph pass '%#' declared '%#' but nothing registered slot %# this frame - it gets no handle", _passName.c_str(),
                                   access._resource.c_str(), slot );
@@ -298,6 +308,34 @@ namespace sw
         const RHIBufferHandle buffer = findDeclaredHandle( handle, slot );
         if ( buffer != 0 && _pCmdList != nullptr )
             _pCmdList->uavBarrier( buffer );
+    }
+
+    IRHIPassCommandList* RenderGraphPassContext::getCommandList() const
+    {
+        return _pCmdList;
+    }
+
+    void RenderGraphPassContext::uavBarrier( RenderGraphTextureUAV handle, uint32 slot ) const
+    {
+        const RHITextureHandle texture = findDeclaredHandle( handle, slot );
+        if ( texture != 0 && _pCmdList != nullptr )
+            _pCmdList->uavBarrierTexture( texture );
+    }
+
+    void RenderGraphPassContext::transitionTexture( const RenderGraphResourceAccess& access, RHITextureState state, uint32 slot ) const
+    {
+        const RHITextureHandle texture = findDeclaredHandle( access, slot );
+        if ( texture == 0 || _pCmdList == nullptr )
+            return;
+        const RHITextureTransition transition{ texture, state };
+        _pCmdList->transitionTextures( &transition, 1 );
+    }
+
+    void RenderGraphPassContext::transitionBuffer( const RenderGraphResourceAccess& access, RHIBufferState state, uint32 slot ) const
+    {
+        const RHIBufferHandle buffer = findDeclaredHandle( access, slot );
+        if ( buffer != 0 && _pCmdList != nullptr )
+            _pCmdList->transitionBuffer( buffer, state );
     }
 
     /**
@@ -337,7 +375,7 @@ namespace sw
         return true;
     }
 
-    bool RenderGraph::addPass( hashed_string passName, vector<RenderGraphResourceAccess> listAccess, RenderGraphPassExecuteFn execute, RHIQueueKind queue )
+    bool RenderGraph::addPass( hashed_string passName, vector<RenderGraphResourceAccess> listAccess, RenderGraphPassExecuteFn execute, RHIQueueKind queue, uint32 payload )
     {
         for ( size_t index = 0; index < listAccess.size(); ++index )
         {
@@ -367,6 +405,7 @@ namespace sw
         if ( addPass( passName, std::move( listInput ), std::move( listOutput ), std::move( execute ), queue ) == false )
             return false;
         _listNode.back()._listAccess = std::move( listAccess );
+        _listNode.back()._payload    = payload;
         return true;
     }
 
@@ -645,15 +684,9 @@ namespace sw
             appendPassBarriers( context, node );
             issueBarriers( pCmdList );
 
+            // 패스 문맥은 병렬 · 큐 실행과 같은 함수가 만든다 — 직렬만 리스트를 빠뜨리던 사본(`uavBarrier` · `transition` 이 조용히 무동작)을 두지 않는다.
             if ( node._execute.isBound() )
-            {
-                RenderGraphPassContext passContext;
-                passContext._passName     = node._name;
-                passContext._pListInputs  = &node._listInput;
-                passContext._pListOutputs = &node._listOutput;
-                passContext._pListAccess  = &node._listAccess;
-                node._execute( passContext );
-            }
+                recordPassBody( node, pCmdList );
         }
 
         return true;
@@ -980,9 +1013,11 @@ namespace sw
     {
         // 같은 자원을 여러 패스가 요구하면 **한 번만** 낸다(SceneDepth 처럼 여러 패스가 읽는 자원이 레벨마다 읽기 전이를
         // 여러 번 받지 않게 한다).
-        const RenderGraphExecutionContext::TrackedAccess before    = context.transitionTo( access._resource, access._access );
-        const bool                                       bKnown    = before._state != RenderGraphResourceState::Undefined;
-        const bool                                       bUAVChain = bKnown && before._access == RenderGraphAccess::UnorderedAccess && access._access == RenderGraphAccess::UnorderedAccess;
+        const RenderGraphExecutionContext::TrackedAccess before = context.transitionTo( access._resource, access._access );
+        const bool                                       bKnown = before._state != RenderGraphResourceState::Undefined;
+        // UAV 쓰기 뒤의 UAV 읽기 · 쓰기는 상태가 그대로라도 앞 쓰기를 기다린다(UAV 배리어). UAV 읽기끼리는 기다릴 것이 없다(이미 그 상태 — 아래 같음 판정).
+        const bool bUAVAfter = access._access == RenderGraphAccess::UnorderedAccess || access._access == RenderGraphAccess::UnorderedAccessRead;
+        const bool bUAVChain = bKnown && before._access == RenderGraphAccess::UnorderedAccess && bUAVAfter;
         if ( bKnown && before._access == access._access && bUAVChain == false )
             return; // 이미 그 상태다. 낼 배리어가 없다.
 

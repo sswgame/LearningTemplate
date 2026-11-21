@@ -3,6 +3,7 @@
 #include "Engine/Physics/Component/Joint2DComponent.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/Tick/FixedStepContext.h"
 #include "Engine/Physics/Component/RigidBody2DComponent.h"
 #include "Engine/Physics/IPhysicsScene.h"
 #include "Engine/Physics/Scene/ScenePhysics.h"
@@ -77,8 +78,15 @@ namespace sw
         return nullptr;
     }
 
-    void Joint2DComponent::beginPhysicsFrame( ScenePhysics& physics )
+    void Joint2DComponent::onRegister( GameObjectManager& manager )
     {
+        PhysicsComponent::onRegister( manager );
+        registerFixedStep<&Joint2DComponent::onPhysicsFrameBegin>( manager, FixedStepGroup::FrameBegin );
+    }
+
+    void Joint2DComponent::onPhysicsFrameBegin( const FixedStepContext& context )
+    {
+        ScenePhysics& physics = context.getPhysics();
         if ( isSimulated() == false )
         {
             releasePhysics( physics );

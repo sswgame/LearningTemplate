@@ -3,6 +3,7 @@
  * @brief 같은 오브젝트의 지형(`TerrainComponent`)을 정적 물리 바디로 만듭니다. 유니티의 TerrainCollider, 언리얼 랜드스케이프의 충돌 컴포넌트에 해당합니다.
  */
 #pragma once
+#include "Core/Concurrency/DevCounter.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -63,7 +64,7 @@ namespace sw
         /** @brief 지금 청크 바디들의 삼각형 수 합입니다(테스트와 진단). */
         uint32 getCollisionTriangleCount() const { return _triangleCount; }
         /** @brief 바디를 만든(다시 만든) 청크 수의 누계입니다(테스트와 진단 — 높이 쓰기가 닿은 청크만 다시 만드는지 본다). */
-        uint32 getChunkBuildCount() const { return _chunkBuildCount; }
+        const DevCounter& getChunkBuildCount() const { return _chunkBuildCount; }
 
         const hashed_string& getLayer() const { return _layer; }
         /** @brief 충돌 레이어 이름을 바꿉니다(바디를 다시 만든다). */
@@ -73,9 +74,11 @@ namespace sw
         void setMaterial( const hashed_string& material );
 
     protected:
-        void beginPhysicsFrame( ScenePhysics& physics ) override;
+        /** @brief 쓰는 고정 스텝 그룹마다 메서드를 등록합니다(`registerFixedStep`). */
+        void onRegister( GameObjectManager& manager ) override;
+        void onPhysicsFrameBegin( const FixedStepContext& context );
         void releasePhysics( ScenePhysics& physics ) override;
-        /** @brief 청크마다 정적 바디 서술자 하나를 냅니다(`beginPhysicsFrame` 과 같은 메시 · 레이어 · 재질, 모두 구멍인 청크는 뺀다). */
+        /** @brief 청크마다 정적 바디 서술자 하나를 냅니다(`onPhysicsFrameBegin` 과 같은 메시 · 레이어 · 재질, 모두 구멍인 청크는 뺀다). */
         void appendStaticBodies3D( const ScenePhysics& physics, vector<PhysicsBodyDesc3D>& outListBody ) const override;
 
     private:
@@ -96,6 +99,6 @@ namespace sw
         vector<uint32>            _listBuiltGeneration; ///< 청크 바디를 만들 때의 청크 세대(`TerrainComponent::getChunkGenerations`)
         vector<uint32>            _listTriangleCount;   ///< 청크 바디의 삼각형 수
         uint32                    _triangleCount;
-        uint32                    _chunkBuildCount;
+        DevCounter                _chunkBuildCount;
     };
 } // namespace sw

@@ -206,7 +206,7 @@ SW_TEST_CASE( ValeWorldTest, InvalidRulesAreRefused )
     SW_EXPECT_FALSE( world.initialize( empty ) );
 }
 
-/** @brief [ValeWorldTest] 진행 바이트는 같은 값으로 돌아오고, 판이 다르거나 값이 범위 밖이면 읽지 않는다. */
+/** @brief [ValeWorldTest] 진행 바이트(칸 선언)는 같은 값으로 돌아오고, 판이 다르거나 값이 선언 범위 밖이면 쓰지도 읽지도 않는다. */
 SW_TEST_CASE( ValeWorldTest, ProfileBytesRoundTrip )
 {
     ValeProfile saved;
@@ -217,7 +217,7 @@ SW_TEST_CASE( ValeWorldTest, ProfileBytesRoundTrip )
     saved._defeatCount = 9;
     saved._position    = float3{ 8.0f, 0.0f, 6.0f };
     BitWriter writer;
-    saved.write( writer );
+    SW_REQUIRE_TRUE( saved.write( writer ) );
     const vector<uint8> bytes = writer.releaseBytes();
     ValeProfile         loaded;
     BitReader           reader( bytes.data(), static_cast<int32>( bytes.size() ) );
@@ -232,12 +232,22 @@ SW_TEST_CASE( ValeWorldTest, ProfileBytesRoundTrip )
     ValeProfile negative;
     negative._coins = -1;
     BitWriter badWriter;
-    negative.write( badWriter );
-    const vector<uint8> badBytes = badWriter.releaseBytes();
+    SW_EXPECT_FALSE( negative.write( badWriter ) ); // `Min = 0` 밖 — 저장하지 않는다
+
+    // 레벨 0(`Min = 1` 밖)을 실은 바이트 — 깨진 레코드를 읽는 경우를 만든다. 판 뒤 칸은 가변 길이 부호 정수 다섯과 실수 셋이다.
+    BitWriter corrupt;
+    corrupt.writeVarUint( ValeProfile::kFormatVersion );
+    corrupt.writeVarInt( 0 );
+    for ( int32 index = 0; index < 4; ++index )
+        corrupt.writeVarInt( 0 );
+    for ( int32 index = 0; index < 3; ++index )
+        corrupt.writeFloat( 0.0f );
+    const vector<uint8> badBytes = corrupt.releaseBytes();
     BitReader           badReader( badBytes.data(), static_cast<int32>( badBytes.size() ) );
     ValeProfile         untouched;
+    untouched._coins = 5;
     SW_EXPECT_FALSE( untouched.read( badReader ) );
-    SW_EXPECT_EQUAL( 0, untouched._coins );
+    SW_EXPECT_EQUAL( 5, untouched._coins ); // 거절하면 값을 바꾸지 않는다
 
     BitWriter otherVersion;
     otherVersion.writeVarUint( ValeProfile::kFormatVersion + 1 );

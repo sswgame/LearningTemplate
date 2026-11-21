@@ -247,12 +247,12 @@ SW_TEST_CASE_F( RigIKTest, NodeFadesOutAboveMaxLODAndBackIn )
     run( nullptr, 1.0f, farState );
     SW_EXPECT_NEAR( _instance.getNodeLODWeight( 0 ), 0.0f, 0.0f );
     SW_EXPECT_FALSE( _instance.canWritePose() );
-    const uint32 evaluationCount = _instance.getEvaluationCount();
+    const uint64 evaluationCount = _instance.getEvaluationCount().get();
     _pose.setToReference( _skeleton );
     refreshModel();
     run( nullptr, 0.05f, farState );
-    SW_EXPECT_EQUAL( evaluationCount, _instance.getEvaluationCount() ); // 꺼진 노드는 비용이 없다
-    SW_EXPECT_NEAR( position( kFootL )._y, 0.1f, 1.0e-4f );             // 포즈를 건드리지 않았다
+    SW_EXPECT_EQUAL( evaluationCount, _instance.getEvaluationCount().get() ); // 꺼진 노드는 비용이 없다
+    SW_EXPECT_NEAR( position( kFootL )._y, 0.1f, 1.0e-4f );                   // 포즈를 건드리지 않았다
 
     run( nullptr, 0.05f, nearState );
     SW_EXPECT_NEAR( _instance.getNodeLODWeight( 0 ), 0.25f, 1.0e-5f );

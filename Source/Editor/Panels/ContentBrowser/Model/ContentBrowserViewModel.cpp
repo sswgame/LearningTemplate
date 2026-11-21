@@ -20,8 +20,10 @@
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorPanelID.h"
 #include "Editor/Common/Workspace/EditorSelectionSync.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorStateStore.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/HotReload/AssetHotReload.h"
 #include "Editor/Panels/ContentBrowser/Model/ContentBrowserFileDrop.h"
@@ -31,6 +33,73 @@
 
 // ContentBrowserImportQueue
 // ContentBrowserTypeFilter
+namespace sw::editor
+{
+    namespace
+    {
+        struct ContentBrowserViewModelRequests
+        {
+            /** @brief 에셋 명령이 쌓은 요청과 창이 내건 선택입니다(에디터 범위 상태 — 명령은 Model 에 있고 창 인스턴스를 모른다). */
+            struct State
+            {
+                vector<ContentBrowserRequest> _listRequest;
+                string                        _selectedAssetAbs;
+            };
+        };
+    } // namespace
+
+    void ContentBrowserViewModel::postRequest( ContentBrowserRequestKind kind, string_view absolutePath )
+    {
+        getEditorState<ContentBrowserViewModelRequests::State>()._listRequest.push_back( ContentBrowserRequest{ kind, string{ absolutePath } } );
+        EditorContext* pContext = editor::findSubsystem<EditorContext>();
+        if ( pContext != nullptr )
+            pContext->getSubsystem<EditorWorkspace>().requestOpenPanelByID( editorpanel::kContentBrowser.getView() );
+    }
+
+    string ContentBrowserViewModel::findPublishedSelection()
+    {
+        return getEditorState<ContentBrowserViewModelRequests::State>()._selectedAssetAbs;
+    }
+
+    bool ContentBrowserViewModel::takeViewRequest( ContentBrowserRequest& outRequest )
+    {
+        vector<ContentBrowserRequest>& listRequest = getEditorState<ContentBrowserViewModelRequests::State>()._listRequest;
+        while ( listRequest.empty() == false )
+        {
+            ContentBrowserRequest request = std::move( listRequest.front() );
+            listRequest.erase( listRequest.begin() );
+            switch ( request._kind )
+            {
+                case ContentBrowserRequestKind::Reveal:
+                {
+                    openFolder( FileUtil::getDirectoryPart( request._absolutePath ) );
+                    selectAssetPath( request._absolutePath );
+                    break;
+                }
+                case ContentBrowserRequestKind::OpenFolder:
+                {
+                    openFolder( request._absolutePath );
+                    break;
+                }
+                case ContentBrowserRequestKind::Duplicate:
+                {
+                    (void)duplicateAsset( request._absolutePath ); // 실패는 copyFile 이 알린다
+                    break;
+                }
+                case ContentBrowserRequestKind::ShowReferences:
+                case ContentBrowserRequestKind::ShowDependencies:
+                case ContentBrowserRequestKind::Rename:
+                case ContentBrowserRequestKind::Delete:
+                {
+                    outRequest = std::move( request );
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+} // namespace sw::editor
+
 namespace sw::editor
 {
     ContentBrowserTypeFilter::ContentBrowserTypeFilter()
@@ -174,6 +243,9 @@ namespace sw::editor
 
     void ContentBrowserViewModel::update( bool bSearchActive )
     {
+        string& publishedSelection = getEditorState<ContentBrowserViewModelRequests::State>()._selectedAssetAbs;
+        if ( publishedSelection != _selectedAssetAbs )
+            publishedSelection = _selectedAssetAbs; // 대상 없는 에셋 명령(단축키)이 읽는다 — 명령은 창 인스턴스를 모른다
         if ( bSearchActive != _bListingRecursive )
         {
             _bListingRecursive = bSearchActive;

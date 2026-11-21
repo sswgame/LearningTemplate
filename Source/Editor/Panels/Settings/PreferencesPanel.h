@@ -7,7 +7,7 @@
 #include "Core/Foundation/Types.h"
 
 #include "Editor/Common/GUI/Panel/IEditorPanel.h"
-#include "Editor/Panels/Inspector/EditorPropertyGrid.h"
+#include "Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.h"
 #include "Editor/Panels/Settings/Model/PreferencesViewModel.h"
 
 namespace sw

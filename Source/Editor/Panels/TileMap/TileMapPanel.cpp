@@ -11,6 +11,7 @@
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
+#include "Editor/Common/Input/EditorInputActionNames.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
@@ -159,15 +160,15 @@ namespace sw::editor
         ImGui::TextDisabled( "%dx%d  %.0f%%  %s", _document.getMap()._width, _document.getMap()._height, static_cast<float64>( _canvasView.getZoom() * 100.0f ), _hoverText.c_str() );
 
         // 유니티 Tile Palette 의 단축키 — `Editor.Panel.tile_map` 레이어의 액션(이 창이 포커스이고 글을 치는 중이 아닐 때만 발화한다).
-        if ( EditorInputGUI::wasActionTriggered( "tileMap.brush" ) )
+        if ( EditorInputGUI::wasActionTriggered( editorinput::kTileMapBrush ) )
             _document.setTool( PaintTool::Brush );
-        if ( EditorInputGUI::wasActionTriggered( "tileMap.rect" ) )
+        if ( EditorInputGUI::wasActionTriggered( editorinput::kTileMapRect ) )
             _document.setTool( PaintTool::Rect );
-        if ( EditorInputGUI::wasActionTriggered( "tileMap.fill" ) )
+        if ( EditorInputGUI::wasActionTriggered( editorinput::kTileMapFill ) )
             _document.setTool( PaintTool::Fill );
-        if ( EditorInputGUI::wasActionTriggered( "tileMap.picker" ) )
+        if ( EditorInputGUI::wasActionTriggered( editorinput::kTileMapPicker ) )
             _document.setTool( PaintTool::Picker );
-        if ( EditorInputGUI::wasActionTriggered( "tileMap.line" ) )
+        if ( EditorInputGUI::wasActionTriggered( editorinput::kTileMapLine ) )
             _document.setTool( PaintTool::Line );
     }
 

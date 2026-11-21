@@ -8,6 +8,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Graphics/RHI/Backend/RHIShaderRequest.h"
+#include "Engine/Graphics/RHI/RHICompiledShaderStages.h"
 #include "Engine/Graphics/RHI/RHIMeshVertexLayout.h"
 #include "Engine/Graphics/RHI/RHIPipelineStateDesc.h"
 #include "Engine/Graphics/RHI/RHITextureMipLayout.h"
@@ -85,27 +86,22 @@ namespace sw
     }
 
     // 길이 유지(긴 함수 정리 기준): 셰이더 · 정점 입력 · 래스터 · 깊이 · 블렌드 · 생성의 순서가 곧 파이프라인 서술이라 나누지 않는다.
-    RHIPipelineStateHandle WebGPURHIResourceFactory::createPipelineStateNative( const RHIPipelineStateDesc& desc )
+    RHIPipelineStateHandle WebGPURHIResourceFactory::createPipelineStateNative( const RHIPipelineStateDesc& desc, const RHICompiledGraphicsStages& stages )
     {
         using Internal = WebGPURHIResourceFactoryInternal;
         if ( _pDevice->_bInitialized == SW_FALSE )
             return 0;
-        const RHIGraphicsShaderRequest request = RHIShaderRequest::resolveGraphics( desc, ShaderTargetFormat::WGSL_WebGPU );
-        if ( request._bHasGeometryShader != SW_FALSE || request._bHasTessellation != SW_FALSE )
+        // 컴파일 · 정점 리플렉션은 앞단이 끝냈고, 지오메트리 · 테셀레이션 요청은 앞단이 기동 능력(WebGPU 는 그 단계가 없다)으로 거절했다.
+        if ( stages._bHasVertexShader == SW_FALSE )
         {
-            // WebGPU 에는 지오메트리 · 테셀레이션 단계가 없다 — 그 패스의 PSO 는 만들지 않는다(장치 기능이 없는 Vulkan 과 같은 규칙).
-            SW_LOG_ERROR_ID( "WebGPU.OptionalStageUnsupported", "WebGPU has no geometry or tessellation stage - PSO '%#' is not created", desc._vertexShaderPath.c_str() );
+            SW_LOG_ERROR_ID( "WebGPU.PipelineNoVertexShader", "WebGPU: a graphics PSO needs a vertex shader" );
             return 0;
         }
-        ShaderCompileResult vsResult{};
-        ShaderCompileResult psResult{};
-        if ( RHIShaderRequest::compileGraphics( request, vsResult, psResult ) == false )
-            return 0;
 
         WebGPUPipelineRecord   record{};
-        const WGPUShaderModule vsModule = createShaderModule( vsResult._bytecode, desc._vertexShaderPath.c_str(), record._listBinding );
-        const bool             bPixel   = request._bHasPixelShader != SW_FALSE;
-        const WGPUShaderModule psModule = bPixel ? createShaderModule( psResult._bytecode, desc._pixelShaderPath.c_str(), record._listBinding ) : nullptr;
+        const WGPUShaderModule vsModule = createShaderModule( stages._vertex._bytecode, desc._vertexShaderPath.c_str(), record._listBinding );
+        const bool             bPixel   = stages._bHasPixelShader != SW_FALSE;
+        const WGPUShaderModule psModule = bPixel ? createShaderModule( stages._pixel._bytecode, desc._pixelShaderPath.c_str(), record._listBinding ) : nullptr;
         if ( vsModule == nullptr || ( bPixel && psModule == nullptr ) )
         {
             if ( vsModule != nullptr )
@@ -116,7 +112,7 @@ namespace sw
         }
 
         // 정점 입력: 셰이더가 읽는 속성만, 슬롯마다 한 레이아웃(슬롯 번호 = 버퍼 자리). 원소 크기는 슬롯이 정한다 — WebGPU 는 보폭이 파이프라인에 박힌다.
-        const uint32              attributeMask = RHIShaderRequest::computeConsumedVertexAttributeMask( vsResult._bytecode, ShaderTargetFormat::WGSL_WebGPU );
+        const uint32              attributeMask = stages._consumedAttributeMask;
         const RHIVertexAttribute* pAttribute    = constant::render::getMeshVertexAttributes( desc._meshVertexFormat );
         WGPUVertexAttribute       arrAttribute[constant::render::kVertexBufferSlotCount][constant::render::kVertexAttributeCount]{};
         uint32                    arrAttributeCount[constant::render::kVertexBufferSlotCount]{};
@@ -155,7 +151,7 @@ namespace sw
         pipelineDesc.label               = WebGPURHIUtil::toStringView( desc._vertexShaderPath.c_str() );
         pipelineDesc.layout              = nullptr; // 자동 레이아웃 — 셰이더가 쓰는 바인딩만 그룹 0 에 든다(`WebGPUShaderContainer::collectBindings`)
         pipelineDesc.vertex.module       = vsModule;
-        pipelineDesc.vertex.entryPoint   = WebGPURHIUtil::toStringView( request._vertex._entryPoint.c_str() );
+        pipelineDesc.vertex.entryPoint   = WebGPURHIUtil::toStringView( stages._vertex._entryPoint.c_str() );
         pipelineDesc.vertex.bufferCount  = bufferLayoutCount;
         pipelineDesc.vertex.buffers      = bufferLayoutCount > 0 ? arrBufferLayout : nullptr;
         pipelineDesc.primitive.topology  = WebGPURHIUtil::toTopology( desc._topology );
@@ -199,7 +195,7 @@ namespace sw
         WGPUFragmentState    fragment{};
         if ( bPixel )
         {
-            const uint32 targetCount = MathUtil::min( request._numRenderTargets, kMaxColorAttachments );
+            const uint32 targetCount = MathUtil::min( stages._numRenderTargets, kMaxColorAttachments );
             for ( uint32 targetIndex = 0; targetIndex < targetCount; ++targetIndex )
             {
                 const BlendTargetState& blend  = state._arrBlendTarget[targetIndex];
@@ -216,7 +212,7 @@ namespace sw
                 }
             }
             fragment.module       = psModule;
-            fragment.entryPoint   = WebGPURHIUtil::toStringView( request._pixel._entryPoint.c_str() );
+            fragment.entryPoint   = WebGPURHIUtil::toStringView( stages._pixel._entryPoint.c_str() );
             fragment.targetCount  = targetCount;
             fragment.targets      = arrTarget;
             pipelineDesc.fragment = &fragment;
@@ -234,24 +230,20 @@ namespace sw
         return _pDevice->_pipelines.insert( std::move( record ) );
     }
 
-    RHIPipelineStateHandle WebGPURHIResourceFactory::createComputePipelineStateNative( string_view shaderPath, string_view entryPoint, const vector<string>& listDefine )
+    RHIPipelineStateHandle WebGPURHIResourceFactory::createComputePipelineStateNative( const RHICompiledShaderStage& computeStage, string_view shaderPath )
     {
         if ( _pDevice->_bInitialized == SW_FALSE )
             return 0;
-        const ShaderCompileDesc   csDesc   = RHIShaderRequest::resolveCompute( shaderPath, entryPoint, listDefine, ShaderTargetFormat::WGSL_WebGPU );
-        const ShaderCompileResult csResult = RHIShaderRequest::compile( csDesc );
-        if ( csResult._bSuccess == false )
-            return 0;
         WebGPUPipelineRecord   record{};
         const string           label    = string( shaderPath );
-        const WGPUShaderModule csModule = createShaderModule( csResult._bytecode, label.c_str(), record._listBinding );
+        const WGPUShaderModule csModule = createShaderModule( computeStage._bytecode, label.c_str(), record._listBinding );
         if ( csModule == nullptr )
             return 0;
         WGPUComputePipelineDescriptor desc{};
         desc.label              = WebGPURHIUtil::toStringView( label.c_str() );
         desc.layout             = nullptr;
         desc.compute.module     = csModule;
-        desc.compute.entryPoint = WebGPURHIUtil::toStringView( csDesc._entryPoint.c_str() );
+        desc.compute.entryPoint = WebGPURHIUtil::toStringView( computeStage._entryPoint.c_str() );
         record._computePipeline = wgpuDeviceCreateComputePipeline( _pDevice->_device, &desc );
         wgpuShaderModuleRelease( csModule );
         if ( record._computePipeline == nullptr )

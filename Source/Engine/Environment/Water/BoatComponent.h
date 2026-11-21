@@ -39,7 +39,7 @@ namespace sw
     /**
      * @class BoatComponent
      * @brief 같은 오브젝트의 동적 강체(선체)에 키 · 추진 · 방향별 물 저항을 줍니다. 뜨기와 파도 피칭 · 롤링은 같은 오브젝트의 `BuoyancyComponent`(폰툰 여럿)가 맡습니다.
-     * @details 새 물리 없이 조합한다(언리얼 Water 플러그인 예제 배 · 유니티 부력 + 힘 스크립트의 자리). 물리 고정 스텝마다(`prePhysicsStep`):
+     * @details 새 물리 없이 조합한다(언리얼 Water 플러그인 예제 배 · 유니티 부력 + 힘 스크립트의 자리). 물리 고정 스텝마다(`onPrePhysicsStep`):
      *          - **물 저항:** 물에 대한 상대 속도(바디 속도 − 물 흐름 `WaterBodyComponent::computeFlowVelocity`)를 선체 축(옆 · 위 · 앞)으로 나눠 축마다 다른 계수를 곱한다
      *            — 앞은 작고 옆은 크다(용골). 잠긴 비율을 곱하고, 흐르는 물에서는 흐름을 탄다(해류에 밀린다).
      *          - **키:** 조타 각(`_rudder × _maxRudderAngle`)과 물에 대한 앞 속도에 비례한 옆 힘을 선미의 키 자리에 준다 — 속도가 없으면 돌지 않고, 뒤로 가면 반대로 돈다.
@@ -94,7 +94,9 @@ namespace sw
         static float32 computeSailForce( float32 sailArea, float32 apparentWindSpeed, float32 efficiency );
 
     protected:
-        void prePhysicsStep( ScenePhysics& physics, float32 fixedDeltaTime, uint32 stepIndex, uint32 stepCount ) override;
+        /** @brief 쓰는 고정 스텝 그룹마다 메서드를 등록합니다(`registerFixedStep`). */
+        void onRegister( GameObjectManager& manager ) override;
+        void onPrePhysicsStep( const FixedStepContext& context );
         void releasePhysics( ScenePhysics& physics ) override;
 
     private:

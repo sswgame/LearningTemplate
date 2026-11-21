@@ -1,7 +1,7 @@
 /**
  * @file SortedVectorBase.h
- * @brief 정렬 벡터 컨테이너(`map` · `set`)의 공통 몸통입니다 — 저장소 · 이진 검색 · 정렬을 지키는 삽입 · 삭제 · 범위 삽입.
- * @details `map` 과 `set` 은 원소에서 키를 읽는 법만 다르다(쌍의 `first` / 원소 자신). 그 차이를 비교자 `ValueLess` 하나로 받고 나머지를 여기 한 벌로 둔다
+ * @brief 정렬 벡터 컨테이너(`flat_map` · `flat_set`)의 공통 몸통입니다 — 저장소 · 이진 검색 · 정렬을 지키는 삽입 · 삭제 · 범위 삽입.
+ * @details `flat_map` 과 `flat_set` 은 원소에서 키를 읽는 법만 다르다(쌍의 `first` / 원소 자신). 그 차이를 비교자 `ValueLess` 하나로 받고 나머지를 여기 한 벌로 둔다
  *          (boost `flat_tree` · MSVC `_Tree` 가 map · set 을 한 몸통 위에 두는 것과 같다). 예전에는 두 헤더가 같은 300 줄을 따로 들어 한쪽만 고쳐질 수 있었다.
  *
  *          범위 삽입의 임시 버퍼는 컨테이너 자신의 할당자로 잡는다 — `std::stable_sort` · `std::inplace_merge` 는 `operator new` 로 버퍼를 잡아
@@ -16,7 +16,7 @@
 namespace sw::internal
 {
     /**
-     * @brief 쌍의 키(`first`)만 견주는 비교자입니다(`map` 의 `ValueLess`). 원소끼리, 원소와 이종 키를 양쪽 순서로 받습니다.
+     * @brief 쌍의 키(`first`)만 견주는 비교자입니다(`flat_map` 의 `ValueLess`). 원소끼리, 원소와 이종 키를 양쪽 순서로 받습니다.
      * @details 이종 키 쪽에서는 `.first` 를 읽지 않습니다(`upper_bound` 는 키를 왼쪽에 넘긴다).
      */
     template <typename Value, typename Compare>
@@ -36,9 +36,9 @@ namespace sw::internal
 {
     /**
      * @brief 키가 겹치지 않는 정렬 벡터입니다. 조회는 이진 검색이고, 삽입할 때 정렬을 유지합니다.
-     * @tparam Value     원소 형식(`set` 은 키, `map` 은 키 · 값 쌍).
+     * @tparam Value     원소 형식(`flat_set` 은 키, `flat_map` 은 키 · 값 쌍).
      * @tparam Compare   키끼리 견주는 엄격 약순서.
-     * @tparam ValueLess `Compare` 하나로 만드는 비교자 — 원소끼리, 원소와 (이종) 키를 양쪽 순서로 견준다. `set` 은 `Compare` 그대로, `map` 은 `PairKeyLess`.
+     * @tparam ValueLess `Compare` 하나로 만드는 비교자 — 원소끼리, 원소와 (이종) 키를 양쪽 순서로 견준다. `flat_set` 은 `Compare` 그대로, `flat_map` 은 `PairKeyLess`.
      */
     template <typename Value, typename Compare, typename ValueLess, typename Allocator>
     class SortedVectorBase

@@ -201,9 +201,6 @@ namespace sw
         [[nodiscard]] optional<uint32> findGroupOfBody( PhysicsBodyHandle body ) const;
         /** @brief 잎마다 지금 본 로컬 변환(오브젝트 메시 공간)입니다. */
         const vector<BoneTransform>& getPiecePoses() const { return _listPiecePose; }
-        /** @brief 지난 물리 프레임의 처리 시간(마이크로초)입니다. 사건 적용, 바디 생성, 자세 읽기, 렌더링 갱신으로 나뉩니다. */
-        float32 getLastApplyMicroseconds() const { return _lastApplyMicroseconds; }
-        float32 getLastPoseMicroseconds() const { return _lastPoseMicroseconds; }
         /** @brief 아직 짓지 않은 잎 충돌 셰이프 수입니다. 온전한 동안 프레임마다 예산만큼 줄고, 깨지면 남은 것을 그 자리에서 짓습니다. 상태를 시작하기 전이면 0 입니다. */
         uint32 getPendingLeafShapeCount() const;
 
@@ -257,10 +254,10 @@ namespace sw
         /** @brief 붙어 있는 조각의 형태가 바뀌었을 때 불립니다. 처음 쪼갰을 때, 붙은 그룹이 갈라졌을 때, 떨어졌을 때입니다. 게임 스레드의 물리 프레임 안에서 호출됩니다. */
         virtual void onAnchoredShapeChanged() {}
 
-        void beginPhysicsFrame( ScenePhysics& physics ) override;
-        void prePhysicsStep( ScenePhysics& physics, float32 fixedDeltaTime, uint32 stepIndex, uint32 stepCount ) override;
-        void postPhysicsStep( ScenePhysics& physics ) override;
-        void endPhysicsFrame( ScenePhysics& physics, float32 alpha ) override;
+        void onPhysicsFrameBegin( const FixedStepContext& context );
+        void onPrePhysicsStep( const FixedStepContext& context );
+        void onPostPhysicsStep( const FixedStepContext& context );
+        void onPhysicsFrameEnd( const FixedStepContext& context );
         void releasePhysics( ScenePhysics& physics ) override;
 
     private:
@@ -381,10 +378,8 @@ namespace sw
         quaternion                             _objectRotation;
         float3                                 _intactLinearVelocity;
         float3                                 _intactAngularVelocity;
-        float32                                _objectScale;    ///< 고른 배율(축 배율의 평균)
-        float32                                _leafShapeScale; ///< 잎 껍질 점을 만든 배율이다(0 = 아직 만들지 않았다).
-        float32                                _lastApplyMicroseconds;
-        float32                                _lastPoseMicroseconds;
+        float32                                _objectScale;        ///< 고른 배율(축 배율의 평균)
+        float32                                _leafShapeScale;     ///< 잎 껍질 점을 만든 배율이다(0 = 아직 만들지 않았다).
         float32                                _frameSimulatedTime; ///< 이번 물리 프레임에 진행한 고정 스텝 시간이다(수명과 페이드에 쓰며 결정적이다).
         uint32                                 _nextSpawnOrder;
         DebrisOwnerID                          _debrisOwner;     ///< 씬 파편 장부의 주인 번호(첫 바디를 올릴 때 받는다)

@@ -79,5 +79,5 @@ SW_TEST_CASE( NavMeshRebakeQueueTest, InvalidatedAreasAreCountedUntilCleared )
 
     rebaker.clear();
     SW_EXPECT_EQUAL( 0u, rebaker.getPendingAreaCount() );
-    SW_EXPECT_EQUAL( 0u, rebaker.getRebakedTileCount() );
+    SW_EXPECT_EQUAL( uint64{ 0 }, rebaker.getRebakedTileCount().get() );
 }

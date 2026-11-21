@@ -162,7 +162,7 @@ namespace sw
     /**
      * @class UIOwnStyle
      * @brief 위젯이 자기 필드로 그리는 겉모습과 그 필드 비트입니다(`Widget::fillOwnStyle` 의 출력).
-     * @details 값은 `set<UIStyleField::X>( value )` 로만 쓴다 — 값 대입과 비트 기록이 한 번에 일어나 "값만 쓰고 비트를 빠뜨려 전환 없이 바뀌는" 경우가 없고,
+     * @details 값은 `flat_set<UIStyleField::X>( value )` 로만 쓴다 — 값 대입과 비트 기록이 한 번에 일어나 "값만 쓰고 비트를 빠뜨려 전환 없이 바뀌는" 경우가 없고,
      *          @p value 의 형식이 그 필드의 `WidgetStyle` 멤버 형식과 정확히 같아야 컴파일된다.
      */
     class UIOwnStyle

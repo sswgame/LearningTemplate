@@ -55,14 +55,15 @@ namespace sw
         /** @brief 전체 캐시를 비웁니다. */
         void clear();
 
+        /** @brief 캐시 키입니다(셰이더 경로 · 진입점 · 형식 · 정렬한 define 을 경로 · 식별자에 올 수 없는 줄바꿈으로 잇는다). 상태를 읽지 않는다. */
+        [[nodiscard]] static hashed_string makeCacheKey( const RHIPipelineStateDesc& desc, ShaderTargetFormat targetFormat );
+
     private:
         struct CacheEntry
         {
             ShaderBindingLayout _layout;
             vector<string>      _listSourcePath; ///< 무효화 매칭용(VS/PS/CS 경로)
         };
-
-        hashed_string makeCacheKey( const RHIPipelineStateDesc& desc, ShaderTargetFormat targetFormat ) const;
 
     private:
         // unique_ptr 로 저장해 unordered_map 리해시가 일어나도 반환한 참조와 포인터가 안정적이게 한다

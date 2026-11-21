@@ -151,12 +151,12 @@ namespace sw
                 float3                 camera{};
                 float32                cameraYaw = 0.0f;
                 const GameObjectHandle player    = gameMode.getPlayer();
-                for ( const CameraDirectorComponent* pCameraDirector : manager.getComponentRegistry().getAll<CameraDirectorComponent>() )
+                // 플레이어를 따라가는 디렉터는 하나다 — 둘이면 오류로 카메라 칸이 0 이다(등록 순서로 고르지 않는다).
+                const CameraDirectorComponent* pCameraDirector = manager.getComponentRegistry().findUnique<CameraDirectorComponent>( [&player]( const CameraDirectorComponent& director )
+                { return director.isPendingDestroy() == false && director.getTarget() == player && director.getOwner() != nullptr; } );
+                const CameraComponent*         pCamera         = pCameraDirector != nullptr ? pCameraDirector->getOwner()->getComponent<CameraComponent>() : nullptr;
+                if ( pCamera != nullptr )
                 {
-                    const bool             bFollows = pCameraDirector->isPendingDestroy() == false && pCameraDirector->getTarget() == player;
-                    const CameraComponent* pCamera  = bFollows ? pCameraDirector->getOwner()->getComponent<CameraComponent>() : nullptr;
-                    if ( pCamera == nullptr )
-                        continue;
                     const float4x4 world = pCamera->getWorldMatrix();
                     camera               = world.getTranslation();
                     const float3 forward = float3::transformVector( float3{ 0.0f, 0.0f, 1.0f }, world );

@@ -166,7 +166,6 @@ function(sw_make_reflection_parser_args OUT_VAR TARGET_NAME)
 
 	list(APPEND parser_args "--output" "${ARG_OUTPUT_DIR}")
 	list(APPEND parser_args "--builtins" "${reflect_builtins}")
-	list(APPEND parser_args "--annotation-meta" "${annotation_meta}")
 	list(APPEND parser_args "--emit-templates" "${emit_templates_dir}")
 
 	list(APPEND parser_args "--module" "${ARG_MODULE}")
@@ -341,7 +340,6 @@ function(sw_add_reflection_step TARGET_NAME)
 	endif()
 
 	set(reflect_builtins "${CMAKE_SOURCE_DIR}/${SW_FILE_REFLECT_BUILTINS}")
-	set(annotation_meta "${CMAKE_SOURCE_DIR}/${SW_FILE_ANNOTATION_META}")
 	set(emit_templates_dir "${CMAKE_SOURCE_DIR}/${SW_DIR_TOOLS_REFLECTION_TEMPLATES}")
 	file(GLOB emit_tpls "${emit_templates_dir}/*${SW_EXT_REFLECTION_TEMPLATE}")
 	sw_make_reflection_parser_args(parser_args ${TARGET_NAME})
@@ -404,7 +402,7 @@ function(sw_add_reflection_step TARGET_NAME)
 		COMMAND "$<TARGET_FILE:ReflectionParser>" "@${reflect_response_file}"
 		DEPFILE "${reflect_depfile}"
 		DEPENDS ${ARG_HEADERS} "${reflect_input_list}" "${reflect_response_file}" ReflectionParser "$<TARGET_FILE:ReflectionParser>"
-		"${reflect_builtins}" "${annotation_meta}" ${emit_tpls}
+		"${reflect_builtins}" ${emit_tpls}
 		${parser_configs}
 		COMMENT "[Reflection] Running ReflectionParser for target: ${TARGET_NAME}"
 		VERBATIM
@@ -422,9 +420,9 @@ function(sw_add_reflection_step TARGET_NAME)
 
 	# ENUM(Flags) 트레이트 우산은 **조건 없이** 강제 include 한다.
 	#
-	# 주의: 여기서 `ENUM( Flags` 를 정규식으로 훑어 조건부로 붙이지 말 것. 파서는 `AnnotationMeta.txt` 의 동의어를
-	# 전부 받으므로(Flags · BitFlag · FLAG · Bitwise) 철자 하나가 다르면 우산은 만들어지는데 `/FI` 는 안 붙어
-	# "invalid operands to binary expression" 으로 깨진다 — 같은 판정을 두 곳이 따로 내리면 안 된다.
+	# 주의: 여기서 `ENUM( Flags` 를 정규식으로 훑어 조건부로 붙이지 말 것. 판정은 파서(키 표 `PredefinedAnnotationField.xxx`)가
+	# 내린다 — 같은 판정을 두 곳이 따로 내리면 철자 · 공백 하나가 다를 때 우산은 만들어지는데 `/FI` 는 안 붙어
+	# "invalid operands to binary expression" 으로 깨진다.
 	# 플래그가 없는 타깃의 우산은 사실상 빈 파일이라 붙여도 비용이 없다.
 	if(CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
 		target_compile_options(${TARGET_NAME} PUBLIC "/FI${flag_ops_header}")

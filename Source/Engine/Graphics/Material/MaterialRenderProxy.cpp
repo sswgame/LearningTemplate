@@ -41,7 +41,11 @@ namespace sw
             _uploaded.reset();
             return kInvalidDescriptorIndex;
         }
-        ConstantBufferPagePool::update( _constant, data->_bytes.data(), byteSize );
+        if ( ConstantBufferPagePool::update( _constant, data->_bytes.data(), byteSize ) == false )
+        {
+            _uploaded.reset();
+            return kInvalidDescriptorIndex;
+        }
         _uploaded = data;
         return _constant.getDescriptorIndex();
     }

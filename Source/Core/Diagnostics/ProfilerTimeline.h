@@ -60,10 +60,15 @@ namespace sw
         ProfilerTimeline( const ProfilerTimeline& )            = delete;
         ProfilerTimeline& operator=( const ProfilerTimeline& ) = delete;
 
-        /** @brief 기록을 켜거나 끕니다. 끄면 새 사건만 멈추고 남은 사건은 그대로 읽힙니다. 기록 중인 타임라인이 하나라도 있으면 네트워크 흐름(`NetFlowLog`)도 남깁니다. */
+        /** @brief 기록을 켜거나 끕니다. 끄면 새 사건만 멈추고 남은 사건은 그대로 읽힙니다. 기록 중인 타임라인이 하나라도 있으면 네트워크 흐름(`NetFlowLog`)도 남습니다. */
         void setRecording( bool bRecording );
         /** @brief 기록 중이면 true 입니다. */
         bool isRecording() const { return _bRecording.load( std::memory_order_relaxed ); }
+        /**
+         * @brief 프로세스에 기록 중인 타임라인이 하나라도 있으면 true 입니다(배포본은 늘 false). 어느 스레드에서나 읽습니다(원자 하나).
+         * @details 네트워크 흐름 링(`NetFlowLog::record`)이 이것을 보고 남길지 정한다 — 진단 층은 네트워크를 모르고, 맨 위 층인 네트워크가 진단을 읽는다.
+         */
+        static bool isAnyTimelineRecording();
 
         /** @brief 이 스레드의 사건 하나를 남깁니다(`ScopedFrameProfile` 소멸자가 부른다). 기록 중이 아니면 아무것도 하지 않습니다. */
         void recordEvent( uint32 slot, uint64 beginNanos, uint64 endNanos, uint16 depth );

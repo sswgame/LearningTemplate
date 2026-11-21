@@ -54,17 +54,23 @@ namespace sw
         };
     } // namespace
 
-    hashed_string ShaderBindingLayoutCache::makeCacheKey( const RHIPipelineStateDesc& desc, ShaderTargetFormat targetFormat ) const
+    hashed_string ShaderBindingLayoutCache::makeCacheKey( const RHIPipelineStateDesc& desc, ShaderTargetFormat targetFormat )
     {
-        StringBuilder<constant::buffer::kMax256> combined;
-        combined.appendFormat( "vs:%#|ps:%#|cs:%#|hs:%#|ds:%#|fmt:%#", desc._vertexShaderPath, desc._pixelShaderPath, desc._computeShaderPath, desc._hullEntryPoint,
-                               desc._domainEntryPoint, static_cast<uint32>( targetFormat ) );
+        // 구분자는 경로 · 식별자 · define 값에 올 수 없는 줄바꿈이다(`ShaderCache::makeCacheKey` 와 같은 규칙) — `|` 로 이으면 값 안의 `|` 가 칸 경계와 같아졌다.
+        // 진입점도 키에 든다 — 같은 파일의 다른 진입점은 다른 리플렉션이다.
+        constexpr utf8                           kSeparator = '\n';
+        StringBuilder<constant::buffer::kMax512> combined;
+        combined.append( desc._vertexShaderPath ).append( kSeparator ).append( desc._vertexEntryPoint ).append( kSeparator );
+        combined.append( desc._pixelShaderPath ).append( kSeparator ).append( desc._pixelEntryPoint ).append( kSeparator );
+        combined.append( desc._computeShaderPath ).append( kSeparator ).append( desc._computeEntryPoint ).append( kSeparator );
+        combined.append( desc._geometryEntryPoint ).append( kSeparator ).append( desc._hullEntryPoint ).append( kSeparator ).append( desc._domainEntryPoint ).append( kSeparator );
+        combined.append( static_cast<uint32>( targetFormat ) );
 
         vector<string> listSortedDefine = desc._listShaderDefine;
         VectorUtil::sort( listSortedDefine );
         for ( const string& define : listSortedDefine )
         {
-            combined.append( '|' );
+            combined.append( kSeparator );
             combined.append( define );
         }
         return hashed_string( combined.c_str() );

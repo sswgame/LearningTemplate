@@ -44,10 +44,10 @@ namespace sw
 
 // 줄마다 단언을 펼치지 않고 함수 하나(`assertRegistrationOrder`)를 부른다 — 단언은 서식 버퍼를 지역에 두고, 최적화하지 않는 Debug 는 펼친 줄마다 따로 자리를 잡아
 // 이 함수의 스택 틀이 인자 수에 비례해 자랐다(인자 여섯을 더하자 주 스레드 스택 1 MB 를 넘어 기동 전에 0xC00000FD 로 죽었다).
-#define SW_REGISTER_ARGUMENT( name, usage, defaultValue, useDefaultValue, ... )                                                                                        \
+#define SW_REGISTER_ARGUMENT( name, usage, valueSample, ... )                                                                                                          \
     assertRegistrationOrder( CommandLineArgument::name, #name );                                                                                                       \
     addArgument( policy.isUsageAccepted( CommandLineArgumentUsage::usage ) ? std::initializer_list<string_view>{ __VA_ARGS__ } : std::initializer_list<string_view>{}, \
-                 defaultValue, useDefaultValue );
+                 valueSample );
 #include "Core/Predefined/ArgumentList.xxx"
 
 #undef SW_REGISTER_ARGUMENT
@@ -61,8 +61,8 @@ namespace sw
     string CommandLineManager::makeUsageText() const
     {
         string text{ "Usage: <executable> [-argument | -argument=value] ...\n" };
-#define SW_REGISTER_ARGUMENT( name, usage, defaultValue, useDefaultValue, ... ) \
-    if ( _buildPolicy.isUsageAccepted( CommandLineArgumentUsage::usage ) )      \
+#define SW_REGISTER_ARGUMENT( name, usage, valueSample, ... )              \
+    if ( _buildPolicy.isUsageAccepted( CommandLineArgumentUsage::usage ) ) \
         appendUsageLine( text, { __VA_ARGS__ }, _listArgument[static_cast<size_t>( CommandLineArgument::name )] );
 #include "Core/Predefined/ArgumentList.xxx"
 
@@ -74,13 +74,13 @@ namespace sw
     void CommandLineManager::appendUsageLine( string& inoutText, const std::initializer_list<string_view>& listAlias, const ArgumentInfo& argument )
     {
         const utf8* pValueShape = "";
-        if ( std::holds_alternative<int32>( argument._defaultValue ) )
+        if ( std::holds_alternative<int32>( argument._valueSample ) )
             pValueShape = "=<int>";
-        else if ( std::holds_alternative<float32>( argument._defaultValue ) )
+        else if ( std::holds_alternative<float32>( argument._valueSample ) )
             pValueShape = "=<number>";
-        else if ( std::holds_alternative<string>( argument._defaultValue ) )
+        else if ( std::holds_alternative<string>( argument._valueSample ) )
             pValueShape = "=<text>";
-        else if ( std::holds_alternative<CommandLineDiskPath>( argument._defaultValue ) )
+        else if ( std::holds_alternative<CommandLineDiskPath>( argument._valueSample ) )
             pValueShape = "=<path>";
         inoutText += " ";
         for ( const string_view alias : listAlias )
@@ -350,7 +350,7 @@ namespace sw
      */
     expected<void> CommandLineManager::trySetValue( ArgumentInfo& argument, string_view newValue, const AbsolutePath& baseDirectory )
     {
-        if ( std::holds_alternative<bool>( argument._defaultValue ) )
+        if ( std::holds_alternative<bool>( argument._valueSample ) )
         {
             bool bParsed = false;
             if ( StringUtil::tryParseBool( newValue, bParsed ) == false )
@@ -358,7 +358,7 @@ namespace sw
             argument._value = bParsed;
             return {};
         }
-        if ( std::holds_alternative<int32>( argument._defaultValue ) )
+        if ( std::holds_alternative<int32>( argument._valueSample ) )
         {
             int32 parsedValue{ 0 };
             if ( StringUtil::parseInt( newValue, parsedValue ) == false )
@@ -366,7 +366,7 @@ namespace sw
             argument._value = parsedValue;
             return {};
         }
-        if ( std::holds_alternative<float32>( argument._defaultValue ) )
+        if ( std::holds_alternative<float32>( argument._valueSample ) )
         {
             float32 parsedValue{ 0.0f };
             if ( StringUtil::parseFloat( newValue, parsedValue ) == false )
@@ -374,7 +374,7 @@ namespace sw
             argument._value = parsedValue;
             return {};
         }
-        if ( std::holds_alternative<CommandLineDiskPath>( argument._defaultValue ) )
+        if ( std::holds_alternative<CommandLineDiskPath>( argument._valueSample ) )
         {
             if ( newValue.empty() )
                 return unexpected( Error{ ErrorKind::InvalidArgument, "the path is empty" } );

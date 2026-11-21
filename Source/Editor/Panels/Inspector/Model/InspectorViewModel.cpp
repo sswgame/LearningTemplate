@@ -13,6 +13,7 @@
 #include "Editor/Common/Commands/Scene/EditorSceneCommands.h"
 #include "Editor/Common/Commands/Scene/EditorSceneObjectCommands.h"
 #include "Editor/Common/Commands/Scene/EditorTransformCommands.h"
+#include "Editor/Common/Widgets/PropertyGrid/Model/InspectorObjectEdit.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -21,7 +22,6 @@
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 #include "Editor/Panels/Inspector/Model/InspectorComponentManager.h"
 #include "Editor/Panels/Inspector/Model/InspectorMultiSelection.h"
-#include "Editor/Panels/Inspector/Model/InspectorObjectEdit.h"
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Object/Component/SceneComponent.h"

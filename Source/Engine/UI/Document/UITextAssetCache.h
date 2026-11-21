@@ -3,6 +3,7 @@
  * @brief 텍스트로 읽어 파싱하는 UI 에셋(문서, 스타일 시트)을 경로별로 보관하는 캐시의 공통 구현입니다.
  */
 #pragma once
+#include "Core/Concurrency/DevCounter.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Delegate/Delegate.h"
@@ -90,7 +91,7 @@ namespace sw
         /** @brief 파일 대신 읽을 텍스트를 경로에 등록합니다. 이미 읽어 둔 그 경로의 에셋은 버립니다. */
         void registerMemoryText( string_view path, string_view text );
         /** @brief 텍스트를 읽어 파싱한 횟수입니다. */
-        uint32 getParseCount() const { return _parseCount; }
+        const DevCounter& getParseCount() const { return _parseCount; }
 
     private:
         /** @brief 읽어 둔 에셋 하나입니다(엔진 판이거나 변형). */
@@ -115,6 +116,6 @@ namespace sw
         const utf8*                   _pAssetKindName;
         const utf8*                   _pAssetLabel;
         UITextAssetParseFunction      _pParse;
-        uint32                        _parseCount;
+        DevCounter                    _parseCount;
     };
 } // namespace sw

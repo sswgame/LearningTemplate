@@ -39,7 +39,7 @@ namespace sw
             static void writeInteraction( DebugHUDSectionWriter& writer )
             {
                 const GameObjectManager* const   pManager    = GameplayDebugTarget::findActiveObjectManager();
-                const InteractorComponent* const pInteractor = pManager != nullptr ? GameplayDebugTarget::findTargetComponent<InteractorComponent>( writer.getSceneIterationKey(), *pManager ) : nullptr;
+                const InteractorComponent* const pInteractor = pManager != nullptr ? GameplayDebugTarget::findTargetOrLowestIDComponent<InteractorComponent>( writer.getSceneIterationKey(), *pManager ) : nullptr;
                 const GameObject* const          pOwner      = pInteractor != nullptr ? pInteractor->getOwner() : nullptr;
                 if ( pManager == nullptr )
                 {

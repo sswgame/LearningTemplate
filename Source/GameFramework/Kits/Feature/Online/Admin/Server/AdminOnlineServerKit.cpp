@@ -5,7 +5,11 @@
 #include "GameFramework/Kits/Feature/Online/Admin/Server/AdminKitConfig.h"
 #include "GameFramework/Kits/Feature/Online/Admin/Server/AdminService.h"
 #include "GameFramework/Kits/Feature/Online/Admin/Server/AdminStoreLogic.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Config/LiveEventControl.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Directory/ServerDirectoryControl.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Ledger/IBalanceChangedListener.h"
 #include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
+#include "GameFramework/Runtime/Online/Ledger/LedgerTypes.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerConfig.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerKit.h"
 #include "GameFramework/Runtime/Online/Service/Server/OnlineServiceHost.h"
@@ -23,7 +27,7 @@ namespace sw
          * @class AdminOnlineServerKit
          * @brief GM 키트의 서버 조립입니다.
          */
-        class AdminOnlineServerKit final : public IOnlineServerKit
+        class AdminOnlineServerKit final : public OnlineServerKit<OnlineKitRequired<>, OnlineKitOptional<IAccountDirectory, IAccountSessionControl, const ILedgerPolicy, IBalanceChangedListener, IServerDirectoryControl, const IAccountNameIndex, ILiveEventControl>>
         {
         public:
             AdminOnlineServerKit()
@@ -33,7 +37,7 @@ namespace sw
             {
             }
 
-            [[nodiscard]] expected<void> initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry ) override
+            [[nodiscard]] expected<void> initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, const Dependencies& ) override
             {
                 AdminKitConfig kitConfig;
                 if ( expected<void> result = entry.readSettings( kitConfig ); result.has_value() == false )
@@ -51,19 +55,18 @@ namespace sw
                 return {};
             }
 
-            expected<void> start( OnlineServerKitContext& context ) override
+            expected<void> start( OnlineServerKitContext& context, const Dependencies& interfaces, const UnorderedDependencies& ) override
             {
                 AdminServiceConfig settings;
-                SubsystemScope&    kits        = context._kits;
-                settings._pDirectory           = kits.find<IAccountDirectory>();
-                settings._pSessionControl      = kits.find<IAccountSessionControl>();
+                settings._pDirectory           = interfaces.find<IAccountDirectory>();
+                settings._pSessionControl      = interfaces.find<IAccountSessionControl>();
                 settings._pBus                 = context._pBus;
-                settings._pPolicy              = kits.find<const ILedgerPolicy>();
-                settings._pBalanceNotification = kits.find<IBalanceChangedListener>(); // 경제 키트(지급 · 회수 뒤 잔액 변경 알림)
+                settings._pPolicy              = interfaces.find<const ILedgerPolicy>();
+                settings._pBalanceNotification = interfaces.find<IBalanceChangedListener>(); // 경제 키트(지급 · 회수 뒤 잔액 변경 알림)
                 settings._pMetricRegistry      = context._pMetricRegistry;
-                settings._pDirectoryControl    = kits.find<IServerDirectoryControl>();
-                settings._pNameIndex           = kits.find<const IAccountNameIndex>(); // 접속하지 않은 계정도 이름으로 찾는다
-                settings._pLiveEventControl    = kits.find<ILiveEventControl>();
+                settings._pDirectoryControl    = interfaces.find<IServerDirectoryControl>();
+                settings._pNameIndex           = interfaces.find<const IAccountNameIndex>(); // 접속하지 않은 계정도 이름으로 찾는다
+                settings._pLiveEventControl    = interfaces.find<ILiveEventControl>();
                 settings._sanctionLimit        = _sanctionLimit;
                 if ( _service.initialize( context._pStore, settings ) == false )
                     return unexpected( Error{ ErrorKind::InvalidArgument, "the admin service needs a store" } );
@@ -85,13 +88,6 @@ namespace sw
                 // 맡긴 GM 명령과 첫 관리자 넣기를 회수한다 — 저장소를 종료하기 전.
                 if ( isStarted() )
                     _service.shutdown();
-            }
-
-            span<const utf8* const> getOptionalKits() const override
-            {
-                static constexpr const utf8* kArrKit[] = { OnlineServerKitName::kAccount, OnlineServerKitName::kDirectory, OnlineServerKitName::kEconomy,
-                                                           OnlineServerKitName::kLiveOps };
-                return kArrKit;
             }
 
         private:

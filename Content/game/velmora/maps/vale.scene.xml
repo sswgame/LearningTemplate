@@ -114,6 +114,7 @@
 			<GameObject _schemaVersion="0" _name="Valley" _bActive="true">
 				<_listComponent>
 					<SessionStateComponent _localID="6673597520240684436" _componentName="SessionStateComponent" _bActive="true" />
+					<PlayerProgressComponent _localID="5369660221649138481" _componentName="PlayerProgressComponent" _bActive="true" />
 					<VelmoraGameModeComponent _localID="1556202676166432652" _componentName="VelmoraGameModeComponent"
 					                          _bActive="true"
 					                          _startRegion="hearth"

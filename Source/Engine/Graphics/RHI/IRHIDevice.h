@@ -26,6 +26,7 @@ namespace sw
     struct RHIBindlessReservationQueue;
     struct RHIMemoryBudget;
 
+    class DevCounter;
     class IRenderSurface;
     class IRHICommandContext;
     class IRHICommandList;
@@ -100,19 +101,22 @@ namespace sw
 {
     /**
      * @class IRHIDevice
-     * @brief DX11, DX12, Vulkan, OpenGL 하드웨어 디바이스의 추상화입니다.
+     * @brief DX11, DX12, Vulkan, OpenGL, WebGPU 하드웨어 디바이스의 추상화입니다.
      * @details 프레임 수명주기(beginFrame/endFrame/resize), 커맨드 리스트 생성과 제출, 능력 조회, 네이티브 핸들을
      *          담당한다. 리소스 생성과 파괴는 `getResourceFactory()` 가 반환하는 `IRHIResourceFactory` 가 담당한다.
      *          기록 스트림은 두 가지다. 하나는 디바이스가 소유한 프레임 스트림(`getFrameStreamContext`)이고,
      *          다른 하나는 패스마다 만드는 커맨드 리스트(`createCommandList`)다.
      *
-     *          **완료 · 동기화 계약** — 네 백엔드가 모두 같은 약속을 지킨다. 한 백엔드만 약하면 그 백엔드에서만 되읽기가 실패하거나 자원이 일찍 풀린다.
+     *          **완료 · 동기화 계약** — 다섯 백엔드가 모두 같은 약속을 지킨다(웹 WebGPU 의 `waitIdle` 만 아래 예외). 한 백엔드만 약하면 그 백엔드에서만 되읽기가 실패하거나 자원이 일찍 풀린다.
      *          각 줄을 `RHIDeviceTest` 의 네 백엔드 테스트가 건다(괄호 안).
      *          - `waitIdle`: 앞서 제출한 **모든** GPU 작업이 끝난 뒤 돌아오고 해제 큐를 비운다. 돌아온 직후 읽기 버퍼를 콜백 없이 읽을 수 있다
      *            (`WaitIdleLeavesTheSubmittedCopyReadableOnEveryBackend`). 잃은 장치(DX12 제거, Vulkan 손실)는 끝나지 않을 일을 기다리지 않고 큐만 비운다.
-     *            구현: DX11 이벤트 쿼리(상한 10 초, 넘으면 오류), DX12 펜스, Vulkan `vkDeviceWaitIdle`, GL `glFinish`.
+     *            기다림을 확인했으면 남은 통지(`notifyFrameCompletion`)는 `Completed`, 못 기다렸으면(잃은 장치 · 시간 초과) `Abandoned` 다. 해제(`enqueueGPURelease`)는 어느 쪽이든 놓는다.
+     *            구현: DX11 이벤트 쿼리(상한 10 초, 넘으면 오류), DX12 펜스, Vulkan `vkDeviceWaitIdle`, GL `glFinish`, 네이티브 WebGPU(Dawn) 낸 프레임마다 프레임 펜스(`wgpuInstanceWaitAny`).
+     *            **웹 WebGPU 는 기다리지 않는다** — 브라우저는 DOM 이벤트 콜백 스택을 멈출 수 없다. 끝나지 않은 프레임의 통지는 `Abandoned` 로 가고, 돌아온 직후의 읽기는 웹에 없다.
      *          - `enqueueGPURelease`: 맡긴 프레임의 GPU 작업이 끝난 **뒤에만** 부른다. 프레임 수를 세어 짐작하지 않는다
-     *            (`EnqueuedGPUReleaseRunsOnlyAfterTheFrameGPUWorkIsDone`, `EnqueuedGPUReleaseRunsOnceAfterItsFrame`). 구현: DX12 · Vulkan 펜스, DX11 프레임 끝 이벤트 쿼리 링, GL 프레임 끝 `glFenceSync` 링.
+     *            (`EnqueuedGPUReleaseRunsOnlyAfterTheFrameGPUWorkIsDone`, `EnqueuedGPUReleaseRunsOnceAfterItsFrame`). 구현: DX12 · Vulkan 펜스, DX11 프레임 끝 이벤트 쿼리 링, GL 프레임 끝 `glFenceSync` 링,
+     *            WebGPU 프레임 펜스(`onSubmittedWorkDone` 퓨처). `notifyFrameCompletion` 의 `Completed` 도 같은 자리에서만 나간다.
      *          - 앞서가기 제한: GPU 가 `constant::render::kMaxFrameCountInFlight` 프레임보다 더 뒤처지지 못한다. 링이 차면 가장 오래된 프레임을 기다린다
      *            (공통 `RHIFrameFenceRing` — Vulkan · WebGPU `beginFrame` 의 칸 대기, DX11 · GL `endFrame` 의 칸 대기, DX12 `FrameResourceRing` 의 펜스 값 대기). Present 를 하지 않는 반복에도 적용된다.
      *          - `IRHIResourceFactory::readReadbackBuffer`: 기다리지 않는다. 복사를 기록한 프레임이 끝난 뒤(위 콜백)에만 부르고, 읽기 버퍼가 아닌 핸들과
@@ -170,8 +174,8 @@ namespace sw
          */
         void shutdown();
 
-        /** @brief RHI 디바이스와 스왑체인을 초기화합니다. */
-        [[nodiscard]] virtual bool initializeInternal( const RHISwapChainDesc& desc ) = 0;
+        /** @brief RHI 디바이스와 주 스왑체인을 초기화합니다(@p deviceDesc 의 `_swapChain` 이 주 스왑체인 서술). */
+        [[nodiscard]] virtual bool initializeInternal( const RHIDeviceDesc& deviceDesc ) = 0;
 
         /** @brief 종료 4단계입니다. 백엔드 자원, 스왑체인, 네이티브 디바이스를 해제합니다. GPU 대기와 커맨드 리스트 분리는 이미 끝나 있습니다. */
         virtual void shutdownInternal() = 0;
@@ -213,7 +217,7 @@ namespace sw
          */
         void flushRenderThread();
         /** @brief `waitIdle` 이 GPU 를 통째로 기다린 횟수(누적)입니다. 씬 활성화 · 에셋 핫 리로드 · 캡처가 늘리지 않는지 시나리오가 본다(감시 값 `RHI.GPUIdleWaits`). */
-        uint64 getGPUIdleWaitCount() const;
+        const DevCounter& getGPUIdleWaitCount() const;
 
         /**
          * @brief 지금 기록 중인 프레임의 GPU 작업이 끝난 뒤에 @p releaseDelegate 를 부릅니다. 프레임 밖이면 다음에 제출하는 프레임을 기준으로 합니다.
@@ -222,9 +226,16 @@ namespace sw
          *          엔진 바깥 모듈(에디터의 ImGui 렌더러)이 자기 네이티브 자원(디스크립터)을 엔진 자원과 같은 기준으로 해제할 때 쓰는 함수다.
          *          **프레임을 기록하는 스레드(렌더 스레드)에서 불러야 한다.** 펜스 값을 읽는 스레드가 그 값을 올리는 스레드여야 "이 프레임" 이 맞는다.
          *          콜백은 백엔드가 완료를 확인하는 스레드에서 불리고, `waitIdle` 과 `shutdown` 이 남은 콜백을 모두 부른다.
+         *          **놓기 전용이다** — 기다리지 못한 비우기(잃은 장치 · 시간 초과 · 종료 · 웹 `waitIdle`)에서도 불린다. "GPU 가 끝났다" 를 믿고 읽거나 다시 쓰는 일은 `notifyFrameCompletion` 으로 한다.
          */
         virtual void enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate ) = 0;
-        /** @brief 백엔드 해제 큐에서 아직 불리지 않은 해제 수입니다. `waitIdle` 과 `shutdown` 뒤에는 0 이어야 합니다(`shutdown` 이 단언한다). */
+        /**
+         * @brief 지금 기록 중인 프레임의 GPU 작업이 끝나면 @p completionDelegate 를 `Completed` 로, 끝났는지 모른 채 큐를 비우면 `Abandoned` 로 부릅니다.
+         * @details 되읽기(`AsyncBufferReadback`)와 구간 재사용 펜스(`RHIFence`)가 쓴다. 기준 프레임 · 부르는 스레드 · 렌더 스레드 제약은 `enqueueGPURelease` 와 같다.
+         *          `Completed` 는 대기를 확인한 경우(펜스 · 쿼리 · `glFinish` · `vkDeviceWaitIdle` · WebGPU 프레임 펜스)뿐이다. 언리얼 `FRHIGPUFence` 의 "끝났나" 질의와 같은 자리를 콜백으로 둔다.
+         */
+        virtual void notifyFrameCompletion( const RHIFrameCompletionDelegate& completionDelegate ) = 0;
+        /** @brief 백엔드 해제 큐에서 아직 불리지 않은 해제 · 통지 수입니다. `waitIdle` 과 `shutdown` 뒤에는 0 이어야 합니다(`shutdown` 이 단언한다). */
         virtual uint32 getPendingReleaseCount() const = 0;
         /**
          * @brief 장치 제거(TDR)를 흉내 냅니다(개발 명령 `rhi.removeDevice`). 할 수 있는 백엔드만 true 를 반환합니다(DX12 — `ID3D12Device5::RemoveDevice`, Vulkan · DX11 · GL — 제거 API 가 없어 `VK_ERROR_DEVICE_LOST` · `DXGI_ERROR_DEVICE_REMOVED` · 실패한 펜스를 처음 본 뒤의 상태로 둔다. DX11 · GL 은 전송 제출이 거절되는 것만 만들고 GPU 는 살아 있다).
@@ -239,10 +250,19 @@ namespace sw
          */
         [[nodiscard]] bool isDeviceLost() const;
         /**
+         * @brief 장치 손실을 표시하고 보고합니다 — 다섯 백엔드가 손실을 처음 본 자리(Present · 펜스 · 큐 결과 · 제거 사유 · 개발 명령)에서 부르는 한 입구다.
+         * @details 처음 표시한 호출만 보고한다: 오류 한 줄(`RHI.DeviceLost`, 원인 @p pCause), GPU 브레드크럼(`readLastBreadcrumbs` → `GPUBreadcrumbs::reportDeviceLost` — 표지가 없는 DX11 · GL · WebGPU 는
+         *          CPU 가 마지막으로 기록한 패스), 백엔드 결함 상세(`reportDeviceFaultInternal` — DX12 DRED · Vulkan `VK_EXT_device_fault`). 뒤 호출은 아무것도 하지 않는다.
+         *          예전에는 표시와 보고가 백엔드마다 따로였다(GL · WebGPU 는 브레드크럼 보고가 없었고 DX12 는 디버그 메시지 비우기에서만 보고했다). 어느 스레드에서 불러도 된다.
+         */
+        void reportDeviceLost( const utf8* pCause );
+        /**
          * @brief 장치를 잃은 뒤 GPU 가 마지막으로 닿은 브레드크럼 id 들을 읽습니다(`IRHICommandList::writeBreadcrumb` 가 남긴 값). DX12 는 [시작 칸, 끝 칸] 둘, Vulkan 은 파이프라인 단계마다 하나씩이다. 끝 표지는 `GPUBreadcrumbs::kEndMarkerBit` 을 가진다(푸는 일은 `GPUBreadcrumbs::parse`).
          * @param pOutID   id 를 받을 배열입니다. 0 이 아닌 값만 채운다.
          * @return 채운 개수입니다. GPU 표지를 쓰지 않는 백엔드(DX11 · OpenGL — `RHICapabilities::_bGPUBreadcrumbs` 가 거짓)와 표지가 없었으면 0 입니다.
          */
+        /** @brief 손실 보고(`reportDeviceLost`)가 처음 한 번 부르는 백엔드 결함 상세 훅입니다(DX12 DRED · Vulkan `VK_EXT_device_fault`). 기본은 없다. */
+        virtual void   reportDeviceFaultInternal() {}
         virtual uint32 readLastBreadcrumbs( uint32* pOutID, uint32 capacity )
         {
             (void)pOutID;
@@ -330,7 +350,7 @@ namespace sw
         /**
          * @brief 프레임 기록을 엽니다. 프레임당 정확히 한 번, 그 프레임의 어떤 기록보다 먼저 부릅니다.
          * @details **수명주기 전용**이다. 펜스 대기(GPU 백프레셔), 스왑체인 이미지 획득, 기록 시작만 하고 렌더 타깃은 바인딩하지 않는다.
-         *          백버퍼 바인딩과 클리어는 `IRHICommandList::beginRenderPass`(타깃 핸들 0)가 명시적으로 한다(`RenderThread::executeFrameBody`).
+         *          백버퍼 바인딩과 클리어는 `IRHICommandList::beginRenderPass`(타깃 `kRHIBackBufferTexture`)가 명시적으로 한다(`RenderThread::executeFrameBody`).
          *          프레임 수명주기(beginFrame, endFrame, resize)는 디바이스의 일이다. 스왑체인 쪽에 두면 디바이스의 private 상태를 건드려야 한다.
          * @note 스왑체인 자체(백버퍼, 이미지 인덱스, 동기화, present)는 `IRHISwapChain` 의 백엔드 구현이 소유합니다. 메인 창도 그 가운데 하나이고,
          *       `endFrame` 은 그 프레임에 그린 스왑체인을 모두 표시합니다(`createSwapChain`).
@@ -620,10 +640,10 @@ namespace sw
          * @brief 병렬 기록 중에 배리어가 나왔음을 **진단으로만** 남깁니다(디버그 전용, 8회까지).
          * @details 배리어는 레벨 프롤로그(`RenderGraph::setLevelPrologue`)가 단일 스레드에서 미리
          *          발행하는 것이 원칙이다. 다만 프롤로그는 그래프가 **선언한** 입출력만 알 수 있어서
-         *          선언이 빠진 자원(패스 콜백이 직접 바인딩하는 텍스처)은 놓친다. 그래서 이것은 assert 가 아니다.
-         *          깊이 첨부(`_depthAttachment`)는 `FramePassExecutor::bindPassCallbacks` 가 그래프에 선언한다.
-         *          실제 전이는 락이 보호하므로 남아 있어도 안전하다. 여기 찍히는 이름이 곧
-         *          "파이프라인 선언을 채우면 사라질 항목" 이다.
+         *          선언이 빠진 자원(패스 콜백이 직접 바인딩하는 텍스처)은 놓친다. 그래서 이것은 assert 가 아니다 — 패스가 쓰기로 선언한 자원의 패스 안 왕복
+         *          (`RenderGraphPassContext::transition`)도 여기 오는데 그것은 맞는 길이고, RHI 는 둘을 가를 수 없다.
+         *          선언이 빠진 자원의 전이는 **안전하지 않다** — 추적 상태의 비교 교환은 배리어를 낼 쪽 하나만 정하고 실행 순서를 정하지 않는다(뒤 리스트가 먼저 기록하면
+         *          앞 리스트가 배리어 없이 먼저 실행된다). 여기 찍히는 이름이 곧 "패스 선언을 채워야 할 항목" 이다.
          * @note 레지스트리 쪽(`requireRegistryMutableNow`)은 불변식이 확실해서 멈춘다.
          *       두 감시의 강도가 다른 이유가 이것이다.
          */
@@ -655,6 +675,8 @@ namespace sw
     protected:
         /** @brief 이 장치의 전송 시리얼입니다. 장치 손실 표시의 유일한 저장소라 `isDeviceLost` 가 읽는다(백엔드는 멤버 하나를 돌려준다). */
         [[nodiscard]] virtual const RHITransferSerials& getTransferSerials() const = 0;
+        /** @brief 같은 전송 시리얼의 쓰기 접근자입니다 — 손실 표시(`reportDeviceLost`)가 이 길로만 쓴다. 읽기 판과 같은 멤버를 돌려준다. */
+        [[nodiscard]] virtual RHITransferSerials& getTransferSerials() = 0;
         /** @brief 백엔드의 실제 GPU 대기와 해제 큐 비우기입니다. `waitIdle` 이 렌더 스레드를 먼저 비운 뒤, `shutdown` 이 2단계로 부릅니다. */
         virtual void waitIdleInternal() = 0;
         /**
@@ -737,6 +759,8 @@ namespace sw
         ThreadRole _renderThread;
         /// @brief SDR 이던 마지막 백버퍼 포맷입니다 — HDR 인 동안의 `getUITargetFormat` 이다(`initialize` 와 `setBackBufferColorSpace` 가 SDR 을 떠나기 전에 적는다).
         RHIFormat _sdrBackBufferFormat{ constant::render::kBackBufferFormat };
+        /// @brief 기동 끝(`initialize`)에 채운 능력입니다 — PSO 앞단이 참조로 읽는다(`IRHIResourceFactory::bindPipelineFront`). 화면 출력 칸처럼 실행 중 바뀌는 값은 `getCapabilities` 로 묻는다.
+        RHICapabilities _startupCapabilities{};
         /// @brief 타임스탬프 계측 능력입니다(findTimestampProvider 참고). 능력을 가진 백엔드가 생성자에서 자기를 적습니다.
         IRHITimestampProvider* _pTimestampProvider;
         /// @brief 컨텍스트 스레드 바인딩 능력입니다(findContextThreadBinding 참고). 능력을 가진 백엔드가 생성자에서 자기를 적습니다.

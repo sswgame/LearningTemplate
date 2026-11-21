@@ -166,7 +166,7 @@ namespace sw::editor
         drawDocumentOpenBar( "prefabwindow" );
         syncDocumentRoot();
         _viewModel.enterPendingNested( getPreviewScene(), getPreviewSelection() );
-        _viewModel.gather( getPreviewScene(), getPreviewSelection(), _viewState );
+        gatherViewState( _viewModel, getPreviewScene(), getPreviewSelection(), _viewState );
 
         if ( getLoadedAssetPath().empty() || _viewState._bIsolating == SW_FALSE )
         {

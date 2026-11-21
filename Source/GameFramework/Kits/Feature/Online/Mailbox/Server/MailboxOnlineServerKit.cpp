@@ -5,7 +5,11 @@
 #include "GameFramework/Kits/Feature/Online/Mailbox/Server/MailboxKitConfig.h"
 #include "GameFramework/Kits/Feature/Online/Mailbox/Server/MailboxService.h"
 #include "GameFramework/Kits/Feature/Online/Mailbox/Server/MailboxStoreLogic.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Identity/AccountPresence.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Ledger/IBalanceChangedListener.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Mail/ServiceMailCampaign.h"
+#include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
+#include "GameFramework/Runtime/Online/Ledger/LedgerTypes.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerConfig.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerKit.h"
 #include "GameFramework/Runtime/Online/Service/Server/OnlineServiceHost.h"
@@ -20,7 +24,7 @@ namespace sw
          * @class MailboxOnlineServerKit
          * @brief 우편함 키트의 서버 조립입니다.
          */
-        class MailboxOnlineServerKit final : public IOnlineServerKit
+        class MailboxOnlineServerKit final : public OnlineServerKit<OnlineKitRequired<>, OnlineKitOptional<const ILedgerPolicy, IAccountPresence, IBalanceChangedListener, IOfflinePushSender>>
         {
         public:
             MailboxOnlineServerKit()
@@ -30,7 +34,7 @@ namespace sw
             {
             }
 
-            [[nodiscard]] expected<void> initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry ) override
+            [[nodiscard]] expected<void> initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, const Dependencies& ) override
             {
                 MailboxKitConfig kitConfig;
                 if ( expected<void> result = entry.readSettings( kitConfig ); result.has_value() == false )
@@ -44,14 +48,14 @@ namespace sw
                 { return addTTLRule( context, entry, ServiceMailCampaign::makeClaimTTLRule( campaignTTL.getExpireAfterMs() ), campaignTTL ); } );
             }
 
-            expected<void> start( OnlineServerKitContext& context ) override
+            expected<void> start( OnlineServerKitContext& context, const Dependencies& interfaces, const UnorderedDependencies& ) override
             {
-                _settings._pPolicy              = context._kits.find<const ILedgerPolicy>(); // 경제 키트가 없으면 원장 상한만 적용된다
+                _settings._pPolicy              = interfaces.find<const ILedgerPolicy>(); // 경제 키트가 없으면 원장 상한만 적용된다
                 _settings._pMetricRegistry      = context._pMetricRegistry;
-                _settings._pPresence            = context._kits.find<IAccountPresence>();        // 계정 키트(다른 서버에 붙은 계정)
-                _settings._pBalanceNotification = context._kits.find<IBalanceChangedListener>(); // 경제 키트(수령 · 만료 반환의 잔액 변경 알림)
-                _settings._pOfflinePush         = context._kits.find<IOfflinePushSender>();      // 라이브 운영 키트(접속하지 않은 계정의 기기 푸시)
-                _settings._pScheduler           = context._pScheduler;                           // 만료 정리를 예약 작업(`mail.sweep`)으로 서버 하나만 돌린다
+                _settings._pPresence            = interfaces.find<IAccountPresence>();        // 계정 키트(다른 서버에 붙은 계정)
+                _settings._pBalanceNotification = interfaces.find<IBalanceChangedListener>(); // 경제 키트(수령 · 만료 반환의 잔액 변경 알림)
+                _settings._pOfflinePush         = interfaces.find<IOfflinePushSender>();      // 라이브 운영 키트(접속하지 않은 계정의 기기 푸시)
+                _settings._pScheduler           = context._pScheduler;                        // 만료 정리를 예약 작업(`mail.sweep`)으로 서버 하나만 돌린다
                 if ( _service.initialize( context._pStore, _settings ) == false )
                     return unexpected( Error{ ErrorKind::InvalidArgument, "the mailbox service needs a store, a sweep interval of at least a minute and a claimed-mail retention" } );
                 return {};
@@ -68,12 +72,6 @@ namespace sw
                 // 맡긴 요청 · 만료 정리 · 캠페인 읽기를 회수한다 — 저장소를 종료하기 전.
                 if ( isStarted() )
                     _service.shutdown();
-            }
-
-            span<const utf8* const> getOptionalKits() const override
-            {
-                static constexpr const utf8* kArrKit[] = { OnlineServerKitName::kAccount, OnlineServerKitName::kEconomy, OnlineServerKitName::kLiveOps };
-                return kArrKit;
             }
 
         private:

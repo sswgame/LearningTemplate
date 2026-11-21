@@ -238,21 +238,21 @@ namespace sw
     /** @brief Admin 메서드 표입니다. 번호는 열거자 순서에서 나오고, 요청 · 응답의 짝과 호출 규칙은 서술자가 정합니다. */
     struct AdminMethod : OnlineMethodTable<AdminMethodName, OnlineMethodRange::kAdmin, OnlineNoPushName>
     {
-        using LookupAccount      = Method<MethodName::LookupAccount, AdminRequest, AdminReply>;
+        using LookupAccount      = Method<MethodName::LookupAccount, AdminRequest, AdminReply, OnlineMethodFlag::ReadOnly>;
         using AdjustAsset        = Method<MethodName::AdjustAsset, AdminRequest, AdminReply, OnlineMethodFlag::RequiresIdempotencyKey>;
         using SetSanction        = Method<MethodName::SetSanction, AdminRequest, AdminReply, OnlineMethodFlag::RequiresIdempotencyKey>;
         using SendMail           = Method<MethodName::SendMail, AdminRequest, AdminReply, OnlineMethodFlag::RequiresIdempotencyKey>;
         using BulkMail           = Method<MethodName::BulkMail, AdminRequest, AdminReply, OnlineMethodFlag::RequiresIdempotencyKey>;
         using CreateCampaign     = Method<MethodName::CreateCampaign, AdminRequest, AdminReply, OnlineMethodFlag::RequiresIdempotencyKey>;
-        using ListAudit          = Method<MethodName::ListAudit, AdminRequest, AdminReply>;
+        using ListAudit          = Method<MethodName::ListAudit, AdminRequest, AdminReply, OnlineMethodFlag::ReadOnly>;
         using SetRole            = Method<MethodName::SetRole, AdminRequest, AdminReply, OnlineMethodFlag::RequiresIdempotencyKey>;
-        using ListReports        = Method<MethodName::ListReports, AdminRequest, AdminReply>;                                                  ///< 신고 목록(`_reportStatus` 가 Open 이면 열린 것, 아니면 닫힌 것)을 최근 것부터
+        using ListReports        = Method<MethodName::ListReports, AdminRequest, AdminReply, OnlineMethodFlag::ReadOnly>;                      ///< 신고 목록(`_reportStatus` 가 Open 이면 열린 것, 아니면 닫힌 것)을 최근 것부터
         using ResolveReport      = Method<MethodName::ResolveReport, AdminRequest, AdminReply, OnlineMethodFlag::RequiresIdempotencyKey>;      ///< 열린 신고 `_reportKey` 를 `_reportStatus` 로 닫는다. 메모가 처리 메모다
         using SetMaintenance     = Method<MethodName::SetMaintenance, AdminRequest, AdminReply, OnlineMethodFlag::RequiresIdempotencyKey>;     ///< 점검 창 `_scope` 를 건다(`_messageKey`, `_startMs`, `_endMs`, 허용 계정 `_listAccountID`)
         using ClearMaintenance   = Method<MethodName::ClearMaintenance, AdminRequest, AdminReply, OnlineMethodFlag::RequiresIdempotencyKey>;   ///< 점검 창 `_scope` 를 푼다
         using PostAnnouncement   = Method<MethodName::PostAnnouncement, AdminRequest, AdminReply, OnlineMethodFlag::RequiresIdempotencyKey>;   ///< 공지 `_announcementID` 를 게시한다(`_body`, `_startMs`, `_endMs`, `_priority`, `_bLiteralText`)
         using RemoveAnnouncement = Method<MethodName::RemoveAnnouncement, AdminRequest, AdminReply, OnlineMethodFlag::RequiresIdempotencyKey>; ///< 공지 `_announcementID` 를 삭제한다
-        using ListLiveEvents     = Method<MethodName::ListLiveEvents, AdminRequest, AdminReply>;                                               ///< 라이브 이벤트 정의를 JSON 글로 돌려준다(`_listLiveEvent`)
+        using ListLiveEvents     = Method<MethodName::ListLiveEvents, AdminRequest, AdminReply, OnlineMethodFlag::ReadOnly>;                   ///< 라이브 이벤트 정의를 JSON 글로 돌려준다(`_listLiveEvent`)
         using PutLiveEvent       = Method<MethodName::PutLiveEvent, AdminRequest, AdminReply, OnlineMethodFlag::RequiresIdempotencyKey>;       ///< `_eventJSON` 정의 하나를 올리거나 덮어쓴다
         using RemoveLiveEvent    = Method<MethodName::RemoveLiveEvent, AdminRequest, AdminReply, OnlineMethodFlag::RequiresIdempotencyKey>;    ///< 이벤트 `_eventID` 를 지운다
 

@@ -93,6 +93,7 @@ namespace sw
         void                     copyBufferToReadbackNative( RHIBufferHandle source, RHIBufferHandle readback, uint32 sizeBytes ) override;
         void                     copyBufferRegionNative( RHIBufferHandle destination, uint64 destinationOffset, RHIBufferHandle source, uint64 sourceOffset, uint64 sizeBytes ) override;
         void                     uavBarrierNative( RHIBufferHandle buffer ) override;
+        void                     uavBarrierTextureNative( RHITextureHandle texture ) override;
 
     private:
         /**

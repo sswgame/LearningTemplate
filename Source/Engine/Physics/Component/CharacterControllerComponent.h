@@ -80,7 +80,7 @@ namespace sw
         float32 getMoveScale() const { return _reportedMoveScale.load( std::memory_order_relaxed ); }
         /**
          * @brief 이번 게임 프레임에 받는 물리 필드(중력 배율 · 가속 · 흐름 · 저항 · 부력 · 마찰)를 얹습니다. 여러 지역이면 `PhysicsFieldSample::combine` 으로 합친다.
-         * @details 물리 프레임이 시작할 때(`beginPhysicsFrame`) 모은 값을 그 프레임의 필드로 옮기고 비운다 — 프레임마다 다시 받아야 이어지고, 스텝이 없는 프레임이 끼어도
+         * @details 물리 프레임이 시작할 때(`onPhysicsFrameBegin`) 모은 값을 그 프레임의 필드로 옮기고 비운다 — 프레임마다 다시 받아야 이어지고, 스텝이 없는 프레임이 끼어도
          *          한 프레임의 값이 두 번 쌓이지 않는다. 중립 필드면 이동은 필드가 없을 때와 같다. 아무 스레드에서 불러도 된다.
          */
         void applyPhysicsField( const PhysicsFieldSample& sample );
@@ -152,12 +152,14 @@ namespace sw
         void resetMotion() override { stopMovementImmediately(); }
         /** @brief 캐릭터는 바닥 없이 떨어진다. */
         bool needsStreamingFloor() const override { return true; }
-        void beginPhysicsFrame( ScenePhysics& physics ) override;
+        /** @brief 쓰는 고정 스텝 그룹마다 메서드를 등록합니다(`registerFixedStep`). */
+        void onRegister( GameObjectManager& manager ) override;
+        void onPhysicsFrameBegin( const FixedStepContext& context );
         /** @brief 이번 스텝의 속도를 정해 씬에 이동을 넣습니다(`ScenePhysics::queueCharacterMove` — 씬이 모든 캐릭터를 한 번에 옮긴다, 감사 S-8). */
-        void prePhysicsStep( ScenePhysics& physics, float32 fixedDeltaTime, uint32 stepIndex, uint32 stepCount ) override;
+        void onPrePhysicsStep( const FixedStepContext& context );
         /** @brief 옮긴 결과(`getCharacterState`)를 읽어 수직 속도 · 공중 관성 · 이동 방식 · 바닥 회전을 잇습니다. */
-        void postPhysicsStep( ScenePhysics& physics ) override;
-        void endPhysicsFrame( ScenePhysics& physics, float32 alpha ) override;
+        void onPostPhysicsStep( const FixedStepContext& context );
+        void onPhysicsFrameEnd( const FixedStepContext& context );
         void releasePhysics( ScenePhysics& physics ) override;
 
     private:
@@ -190,17 +192,17 @@ namespace sw
         PhysicsCharacterState3D                 _state;
         PhysicsCommandPage<CharacterCommand3D>* _pCommandPage;                 ///< 입력 칸이 든 페이지 — 이동 요청 · 대기(`PhysicsPoseStore::getCommandStore`)
         uint32                                  _commandSlot;                  ///< 입력 칸 번호(컴포넌트 수명 동안 그대로)
-        ThreadRole                              _physicsStep;                  ///< 물리 스텝 역할 — 이번 프레임 속도 · 공중 속도는 prePhysicsStep 만 만진다(잠금이 아니라 분석용 능력)
+        ThreadRole                              _physicsStep;                  ///< 물리 스텝 역할 — 이번 프레임 속도 · 공중 속도는 onPrePhysicsStep 만 만진다(잠금이 아니라 분석용 능력)
         float3 _frameRootMotionVelocity         SW_GUARDED_BY( _physicsStep ); ///< 이번 물리 프레임의 스텝마다 더할 루트 모션 속도
         float3 _frameSurfaceVelocity            SW_GUARDED_BY( _physicsStep ); ///< 이번 물리 프레임의 면 속도
         float32 _frameMoveScale                 SW_GUARDED_BY( _physicsStep ); ///< 이번 물리 프레임의 이동 계수
         atomic<float32>                         _reportedMoveScale;            ///< 진단 · 감시 값이 읽는 사본(`getMoveScale`) — 물리 스텝이 쓰고 게임 스레드가 읽는다
         float3 _airVelocity                     SW_GUARDED_BY( _physicsStep ); ///< 발사 · 떠난 바닥의 수평 속도 — 땅에 다시 닿으면 0
-        PhysicsFieldSample                      _frameField;                   ///< 이번 물리 프레임의 필드(`beginPhysicsFrame` 이 옮긴다)
+        PhysicsFieldSample                      _frameField;                   ///< 이번 물리 프레임의 필드(`onPhysicsFrameBegin` 이 옮긴다)
         float3 _walkVelocity                    SW_GUARDED_BY( _physicsStep ); ///< 지난 스텝에 실제로 낸 걷는 속도 — 접지가 낮으면(빙판) 요청 속도로 천천히 간다
         float3 _fieldVelocity                   SW_GUARDED_BY( _physicsStep ); ///< 필드의 가속 · 흐름이 쌓은 수평 속도(당김 · 해류) — 디디면 접지만큼 줄어든다
         float3 _queuedStepVelocity              SW_GUARDED_BY( _physicsStep ); ///< 이번 스텝에 넣은 이동 속도(수직 포함 — 스텝 기록용)
-        float32 _queuedStepSeconds              SW_GUARDED_BY( _physicsStep ); ///< 이번 스텝에 넣은 이동의 길이(초). 0 이면 넣지 않았다 — `postPhysicsStep` 이 읽고 비운다
+        float32 _queuedStepSeconds              SW_GUARDED_BY( _physicsStep ); ///< 이번 스텝에 넣은 이동의 길이(초). 0 이면 넣지 않았다 — `onPostPhysicsStep` 이 읽고 비운다
         CharacterMovementMode                   _movementMode;                 ///< 지난 스텝의 이동 방식
         float3                                  _previousPosition;
         float3                                  _worldScale;    ///< 트랜스폼의 월드 배율(변경 번호가 바뀔 때만 다시 읽는다)

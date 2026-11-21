@@ -1,0 +1,18 @@
+#include "pch.h"
+
+#include "Editor/Common/Widgets/PropertyGrid/Model/PropertyEditConditionExpr.h"
+
+#include "Engine/Reflection/ReflectionEditorMetadata.h"
+#include "Engine/Reflection/ReflectionMetadata.h"
+#include "Engine/Reflection/TypeInfo.h"
+
+namespace sw
+{
+    PropertyEditState PropertyEditConditionExpr::getEditState( const PropertyInfo& prop, const ObjectAddress instance )
+    {
+        const PropertyEditConditionFunction pCondition = prop._metadata->_pEditCondition;
+        if ( pCondition == nullptr || instance.get() == nullptr || pCondition( instance.get() ) )
+            return PropertyEditState::Enabled;
+        return prop._metadata->getEditor()._bEditConditionHides == SW_TRUE ? PropertyEditState::Hidden : PropertyEditState::Disabled;
+    }
+} // namespace sw

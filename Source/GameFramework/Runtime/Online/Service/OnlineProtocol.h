@@ -59,18 +59,31 @@ namespace sw
     {
     };
 
-    /** @brief 메서드 서술자의 호출 규칙입니다. 규칙은 와이어의 뜻이므로 표의 해시에 섞입니다(`OnlineProtocolTable::computeMessageHash`). */
+    /**
+     * @brief 메서드 서술자의 호출 규칙입니다. 규칙은 와이어의 뜻이므로 표의 해시에 섞입니다(`OnlineProtocolTable::computeMessageHash`).
+     * @details 메서드는 호출 종류를 **꼭 하나** 적는다 — 읽기(`ReadOnly`), 상태 변경(`RequiresIdempotencyKey`), 상태 변경이지만 본래 멱등(`Idempotent*`, 깃발 이름이 까닭).
+     *          기본값이 없어(`Method` 의 마지막 인자) 빠뜨리면 컴파일 오류이고, 둘을 적거나 종류 없이 `Anonymous` 만 적으면 `static_assert` 가 멈춘다.
+     *          "읽기라서 없음" 과 "빠뜨려서 없음" 이 형식으로 갈린다(Stripe · AWS 는 상태 변경 API 마다 멱등 토큰을 받는다).
+     */
     enum class OnlineMethodFlag : uint8
     {
-        None                   = 0,
-        RequiresIdempotencyKey = 1u << 0, ///< 상태를 바꾸므로 멱등 키가 필수이다. 클라이언트는 없으면 만들고, 서버는 없으면 `kInvalidRequest` 로 답한다
-        Anonymous              = 1u << 1, ///< 로그인 없이 부를 수 있다
+        RequiresIdempotencyKey = 1u << 0, ///< 상태를 바꾼다 — 멱등 키가 필수이다. 클라이언트는 없으면 만들고, 서버는 없으면 `kInvalidRequest` 로 답한다
+        Anonymous              = 1u << 1, ///< 로그인 없이 부를 수 있다(호출 종류가 아니다 — 종류 하나와 함께 적는다)
+        ReadOnly               = 1u << 2, ///< 읽기만 한다 — 다시 해도 상태가 그대로라 키가 없다
+        IdempotentSet          = 1u << 3, ///< 상태를 요청의 값으로 둔다(참가 · 읽음 · 준비 · 기기 등록 · 접속 상태) — 다시 해도 같은 상태라 키가 없다
+        IdempotentRemove       = 1u << 4, ///< 지우기 · 떠나기 · 내보내기 — 이미 없으면 그대로라 키가 없다
+        IdempotentIssue        = 1u << 5, ///< 세션 · 티켓 · nonce 를 새로 낸다 — 다시 하면 새 것을 받고 앞 것은 시한으로 사라진다. 응답의 비밀을 멱등 기억에 남기지 않으려고 키를 받지 않는다
     };
 
     constexpr OnlineMethodFlag operator|( OnlineMethodFlag left, OnlineMethodFlag right )
     {
         return static_cast<OnlineMethodFlag>( static_cast<uint8>( left ) | static_cast<uint8>( right ) );
     }
+
+    /** @brief 호출 종류 깃발의 묶음입니다. 메서드는 이 가운데 꼭 하나를 적는다(`OnlineMethodTable::Method`). */
+    inline constexpr uint8 kOnlineMethodCallKindMask = static_cast<uint8>( OnlineMethodFlag::RequiresIdempotencyKey ) | static_cast<uint8>( OnlineMethodFlag::ReadOnly ) |
+                                                       static_cast<uint8>( OnlineMethodFlag::IdempotentSet ) | static_cast<uint8>( OnlineMethodFlag::IdempotentRemove ) |
+                                                       static_cast<uint8>( OnlineMethodFlag::IdempotentIssue );
 
     /**
      * @brief 키트의 요청 메서드와 알림 종류의 표입니다. @p TMethodName 과 @p TPushName 은 끝 열거자 `Count` 가 있는 열거형이고, 열거자 순서가 와이어 번호입니다.
@@ -97,10 +110,11 @@ namespace sw
         static constexpr uint16 toPush( TPushName name ) { return static_cast<uint16>( kFirstPush + static_cast<uint16>( name ) ); }
 
         /**
-         * @brief 메서드 서술자입니다. 메서드와 요청 · 응답 타입의 짝, 호출 규칙을 형식 하나에 적습니다. 키트는 `using Claim = Method<MethodName::Claim, XRequest, XReply, ...>;` 로 씁니다.
+         * @brief 메서드 서술자입니다. 메서드와 요청 · 응답 타입의 짝, 호출 규칙을 형식 하나에 적습니다. 키트는 `using Claim = Method<MethodName::Claim, XRequest, XReply, OnlineMethodFlag::RequiresIdempotencyKey>;` 로 씁니다.
          * @details 번호는 지금까지처럼 열거자 순서이고, 짝은 `OnlineProtocolTable` 이 스키마 해시에 섞습니다. gRPC `rpc Claim(ClaimRequest) returns (ClaimReply)`, 언리얼 Online Services 의 `struct FOp { Params; Result; }` 자리입니다(기억에 의존).
+         *          @p Flags 는 기본값이 없다 — 호출 종류(`OnlineMethodFlag`)를 꼭 하나 적는다.
          */
-        template <TMethodName Name, typename TRequest, typename TReply, OnlineMethodFlag Flags = OnlineMethodFlag::None>
+        template <TMethodName Name, typename TRequest, typename TReply, OnlineMethodFlag Flags>
         struct Method
         {
             using Request = TRequest;
@@ -111,6 +125,10 @@ namespace sw
             static constexpr uint8  kFlagBits               = static_cast<uint8>( Flags );
             static constexpr bool   kRequiresIdempotencyKey = ( kFlagBits & static_cast<uint8>( OnlineMethodFlag::RequiresIdempotencyKey ) ) != 0;
             static constexpr bool   kAnonymous              = ( kFlagBits & static_cast<uint8>( OnlineMethodFlag::Anonymous ) ) != 0;
+            static constexpr uint8  kCallKindBits           = static_cast<uint8>( kFlagBits & kOnlineMethodCallKindMask );
+
+            static_assert( kCallKindBits != 0 && ( kCallKindBits & ( kCallKindBits - 1 ) ) == 0,
+                           "an online method states exactly one call kind: ReadOnly, RequiresIdempotencyKey, IdempotentSet, IdempotentRemove or IdempotentIssue" );
         };
 
         /** @brief 알림 서술자입니다. 알림과 본문 타입의 짝을 적습니다. 키트는 `using NewMail = Push<PushName::NewMail, XBody>;` 로 씁니다. 다른 서버로 중계하는 알림은 서버 `.cpp` 의 `OnlinePushRelayEntry` 가 이 서술자를 받습니다. */

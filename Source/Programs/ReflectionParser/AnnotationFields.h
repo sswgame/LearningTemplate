@@ -14,7 +14,6 @@
 
 namespace sw
 {
-    class AnnotationMeta;
     class CodeEmit;
 
     // ------------------------------------------------------------------------------
@@ -29,7 +28,7 @@ namespace sw
         Manual,  ///< CodeGenerator 가 직접 쓴다(템플릿 변수 · 별칭 등록 · 범위처럼 메타데이터 멤버가 아닌 자리)
     };
 
-    /** @brief 필드가 받는 값의 종류입니다. DTO 멤버 타입에서 나오며, AnnotationMeta.txt 의 kind 와 대조합니다. */
+    /** @brief 필드가 받는 값의 종류입니다. DTO 멤버 타입에서 나오며, 토큰의 꼴(단독 · `키 = 값`)을 정합니다. */
     enum class AnnotationValue : uint8
     {
         Bool,    ///< uint8 비트필드 플래그 ← flag · bool
@@ -44,7 +43,7 @@ namespace sw
     template <typename TParsed>
     struct AnnotationField
     {
-        string_view _id; ///< 정규 필드명(AnnotationMeta.txt 의 `kind.ID`)
+        string_view _id; ///< 소스에 적는 키 철자(`PredefinedAnnotationField.xxx` 의 Key)
         /** @brief 토큰 값을 대상에 넣습니다. 단독 토큰이면 값은 빈 문자열입니다(bool 로는 참). */
         void ( *_pApply )( TParsed& target, string_view value );
         /** @brief 코드젠에 쓸 값이 있는지 봅니다. Manual 이면 nullptr 입니다. */
@@ -65,14 +64,14 @@ namespace sw
     template <typename TParsed>
     struct AnnotationScope
     {
-        const ReflectAnnotationDesc*    _pDesc; ///< 매크로 · annotate 접두사 · AnnotationMeta.txt 섹션 이름
+        const ReflectAnnotationDesc*    _pDesc; ///< 매크로 · 애노테이션 접두사 · 스코프 이름
         const AnnotationField<TParsed>* _pField;
         uint32                          _fieldCount;
 
         const AnnotationField<TParsed>* begin() const noexcept { return _pField; }
         const AnnotationField<TParsed>* end() const noexcept { return _pField + _fieldCount; }
 
-        /** @brief 정규 필드명으로 줄을 찾습니다. 없으면 nullptr 입니다. */
+        /** @brief 키 철자로 줄을 찾습니다. 없으면 nullptr 입니다. */
         const AnnotationField<TParsed>* findField( const string_view id ) const noexcept
         {
             for ( const AnnotationField<TParsed>& field : *this )
@@ -122,14 +121,6 @@ namespace sw
          */
         template <typename TParsed>
         static void emitEditorMetadata( CodeEmit& emit, const TParsed& parsed, string_view prefix );
-
-        /**
-         * @brief AnnotationMeta.txt 의 바인딩과 필드 표가 서로를 빠짐없이 가리키는지 봅니다.
-         * @details 한쪽에만 있으면 그 토큰은 경고 없이 사라지거나(표에 없는 필드) 적을 수 없는 필드(철자 없는 줄)가
-         *          됩니다. 둘 다 애노테이션을 적는 자리에서는 보이지 않으므로, 파서가 시작할 때 막습니다.
-         * @return 어긋난 곳이 없으면 true
-         */
-        static bool validateBindings( const AnnotationMeta& meta );
 
         /** @brief 이벤트 필드의 PROPERTY 가 받는 필드인지 봅니다 — 표에서 Display 인 PROPERTY 줄과 이름(`Name`)입니다. */
         static bool canAcceptOnEvent( string_view propertyFieldID );

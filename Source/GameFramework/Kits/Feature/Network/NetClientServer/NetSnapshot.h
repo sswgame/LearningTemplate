@@ -65,6 +65,52 @@ namespace sw
         vector<uint8> _buffer{};
         uint32        _entityID{ 0 };
         uint32        _typeID{ 0 }; ///< 클라이언트가 어떤 오브젝트를 생성할지 정하는 프리팹 번호
+        /**
+         * @brief 상태 판 번호입니다. 서버(`ReplicationServer::endTick`)만 채우고 클라이언트 복원본은 0 입니다.
+         * @details 종류나 바이트가 지난 틱과 다르면 서버 전체에서 하나씩 오르는 새 번호를 받는다 — 같은 판이면 같은 상태이고, 엔티티를 지웠다 같은 id 로 다시 만들어도
+         *          옛 판과 겹치지 않는다. "안 바뀜" 은 바이트 비교가 아니라 이 번호 비교다(언리얼 Iris 의 상태 바뀜 표시 · 소스 엔진의 엔티티 변경 틱 자리).
+         *          64 비트라 틱마다 엔티티 수천이 바뀌어도 감기지 않는다.
+         */
+        uint64 _revision{ 0 };
+        /**
+         * @brief 마지막으로 깨어난 서버 틱입니다 — 판이 오른 틱이거나 정책이 관련 여부가 바뀌었다고 알린 틱입니다. 서버만 채웁니다.
+         * @details 이 틱에서 `ReplicationServerConfig::_dormancyTicks` 가 지나면 휴면이다(`ReplicationServer` 머리말). 판을 올리는 자리(`endTick`)가 함께 정하므로 깨우는 호출을 따로 두지 않는다.
+         */
+        uint32 _wakeTick{ 0 };
+    };
+
+    /** @brief 연결에 보낸 엔티티 하나의 기록입니다 — 바이트 없이 판만 듭니다(퀘이크 3 · 소스 엔진의 클라이언트 프레임이 엔티티 번호만 들듯). */
+    struct NetSentEntity
+    {
+        uint64 _revision{ 0 };
+        uint32 _entityID{ 0 };
+    };
+
+    /**
+     * @brief 서버가 연결 하나에 보낸 스냅샷의 기록입니다. 받는 쪽이 복원한 스냅샷과 같은 엔티티를 같은 판으로 듭니다. 받는 쪽이 확인하면 다음 델타의 기준입니다.
+     * @details 연결당 기록 메모리는 엔티티 바이트 합이 아니라 엔티티 수에 비례한다. 와이어가 바뀐 엔티티를 통째로 실으므로 기준의 바이트는 쓸 일이 없다 —
+     *          기준 바이트가 필요해지는 칸 델타(측정 뒤)에서 서버 월드의 판별 바이트 저장소를 둔다(언리얼 Iris 의 공유 상태 버퍼).
+     */
+    struct SW_KIT_API NetSentSnapshot
+    {
+        vector<NetSentEntity> _listEntity{}; ///< 엔티티 id 오름차순
+        uint32                _tick{ 0 };
+
+        const NetSentEntity* findEntity( uint32 entityID ) const;
+    };
+
+    /**
+     * @brief 서버가 연결 하나에 쓰는 델타의 재료입니다. 월드 목록을 연결마다 복사하지 않고 번호로 가리킵니다.
+     * @details 예전에는 연결마다 관련 엔티티의 상태 바이트를 스크래치 스냅샷에 복사했다.
+     */
+    struct NetDeltaSource
+    {
+        const vector<NetEntityState>& _listWorld;    ///< 이번 틱 월드(id 오름차순, `ReplicationServer::endTick`)
+        const vector<uint32>&         _listRelevant; ///< 받는 쪽이 가져야 할 엔티티의 `_listWorld` 번호(오름차순). 기준에 있고 여기 없으면 사라진 엔티티로 싣는다
+        const vector<int32>&          _listOrder;    ///< 이번에 실을 후보 — `_listRelevant` 의 인덱스이며 우선도가 높은 것이 먼저다. 없는 항목은 기준 값 그대로다
+        const NetOwnerState&          _ownerState;   ///< 받는 클라이언트가 조종하는 엔티티의 상태와 그 입력 틱
+        uint32                        _tick{ 0 };
+        uint32                        _firstMissingInputTick{ 0 };
     };
 } // namespace sw
 
@@ -91,7 +137,7 @@ namespace sw
     {
         /** @brief 엔티티 하나의 상태 바이트 상한입니다. 넘는 엔티티는 싣지 않으며, 복원한 스냅샷에도 넣지 않으므로 서버와 클라이언트의 기준이 같습니다. */
         static constexpr int32 kMaxEntityBytes = 255;
-        /** @brief `writeDelta` 의 엔티티별 결과입니다. `pOutListCurrent` 에 들어가는 값입니다. */
+        /** @brief `writeDelta` 의 엔티티별 결과입니다. `outListCurrent` 에 들어가는 값입니다. */
         static constexpr uint8 kEntityNotSent        = 0; ///< 예산에 들어가지 못했다. 받는 쪽은 기준 값을 그대로 쓴다
         static constexpr uint8 kEntityAlreadyCurrent = 1; ///< 받는 쪽 기준이 이미 지금 상태이다(확인된 것)
         static constexpr uint8 kEntityWritten        = 2; ///< 이번 메시지에 실었다. 받았는지는 확인을 봐야 안다
@@ -104,17 +150,17 @@ namespace sw
         const NetEntityState* findEntity( uint32 entityID ) const;
         void                  sortEntities();
         /**
-         * @brief @p baseline 대비 바뀐 엔티티와 사라진 엔티티를 씁니다. @p pBaseline 이 없으면 모두 씁니다.
+         * @brief 서버가 @p pBaseline 대비 판이 바뀐 엔티티와 사라진 엔티티를 씁니다. @p pBaseline 이 없으면 모두 씁니다.
          * @param writer 메시지를 쓰는 라이터입니다. 이미 쓴 비트(종류 바이트)도 예산에 포함합니다.
          * @param maxBytes 메시지 전체의 상한입니다. 이미 쓴 것, 헤더, 사라진 목록, 끝 표시를 포함하며 `NetConnection::kMaxSingleMessageSize` 로 잘립니다.
          *        넘치는 엔티티와 사라진 엔티티는 싣지 않고 @p outWritten 에 실은 것만 반영합니다.
          *        받는 쪽이 복원한 스냅샷은 기준에 실은 것을 더한 것이므로, 못 실은 것은 다음 델타가 다시 고릅니다.
          *        `kMaxEntityBytes` 를 넘는 엔티티도 싣지 않습니다.
-         * @param pListOrder 싣는 순서입니다. `_listEntity` 의 인덱스이며 우선도가 높은 것이 먼저입니다. 없으면 id 순입니다.
-         * @param pOutListCurrent 지정하면 `_listEntity` 의 항목마다 `kEntityNotSent`, `kEntityAlreadyCurrent`, `kEntityWritten` 중 하나를 채웁니다.
+         * @param outWritten 받는 쪽이 복원할 스냅샷의 기록(엔티티 · 판)입니다. 항목을 덮어써 용량을 재사용하므로 서버는 보낸 링 버퍼의 슬롯을 넘깁니다.
+         * @param outListCurrent `_listRelevant` 의 항목마다 `kEntityNotSent`, `kEntityAlreadyCurrent`, `kEntityWritten` 중 하나를 채웁니다.
          */
-        void writeDelta( BitWriter& writer, const NetSnapshot* pBaseline, int32 maxBytes, NetSnapshot& outWritten, const vector<int32>* pListOrder = nullptr,
-                         vector<uint8>* pOutListCurrent = nullptr ) const;
+        static void writeDelta( BitWriter& writer, const NetDeltaSource& source, const NetSentSnapshot* pBaseline, int32 maxBytes, NetSentSnapshot& outWritten,
+                                vector<uint8>& outListCurrent );
         /** @brief 델타를 읽어 @p pBaseline 위에 복원합니다. 메시지가 손상됐으면 false 를 반환합니다. */
         [[nodiscard]] static bool readDelta( BitReader& reader, const NetSnapshot* pBaseline, NetSnapshot& outSnapshot );
     };

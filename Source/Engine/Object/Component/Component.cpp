@@ -246,8 +246,6 @@ namespace sw
         if ( _bRegistered == SW_TRUE )
             return;
         _bRegistered = SW_TRUE;
-        // 필요 컴포넌트를 먼저 묶는다 — `onRegister` 와 그 뒤 틱이 목록을 돌며 다시 찾지 않는다. 못 묶은 것은 `Required<T>::bind` 가 오류로 남겼다.
-        (void)bindRequiredComponents();
         onRegister( manager );
     }
 
@@ -507,11 +505,12 @@ namespace sw
 
     void Component::setTickGroup( TickGroup group )
     {
-        // 같은 그룹이면 틱 항목을 다시 짓게 하지 않는다(기본 그룹을 onBeginPlay 에서 다시 세팅하는 컴포넌트가 여럿이다).
-        if ( _tickGroup == group )
-            return;
+        // 지금 값과 견주기 **전에** 미룬다(`setCanEverTick` 과 같다) — 앞서 미룬 다른 그룹(A → B → A)이 큐에 있으면 마지막 요청을 잃는다.
         if ( deferIfStructureFrozen( Delegate<void( Component& )>( [group]( Component& self )
         { self.setTickGroup( group ); } ) ) )
+            return;
+        // 같은 그룹이면 틱 항목을 다시 짓게 하지 않는다(기본 그룹을 onBeginPlay 에서 다시 세팅하는 컴포넌트가 여럿이다).
+        if ( _tickGroup == group )
             return;
         // 없는 그룹을 받아 두면 레지스트리가 조용히 버려 이 컴포넌트가 한 번도 돌지 않는다. 지금 그룹을 지킨다.
         if ( isValidTickGroup( group ) == false )
@@ -526,12 +525,13 @@ namespace sw
 
     void Component::setCanEverTick( bool bCanEverTick )
     {
-        const uint8 newValue = bCanEverTick ? SW_TRUE : SW_FALSE;
-        if ( _bCanEverTick == newValue )
-            return;
         // 틱 중이면 틱 뒤로 — 이 비트는 다른 워커가 읽는 비트(`_bIsSceneComponent` · `_bHasBegunPlay`)와 한 바이트다.
+        // 지금 값과 견주기 **전에** 미룬다: 앞서 미룬 반대 값(끄기 → 다시 켜기)이 큐에 있으면 지금 값과 같다고 버려 마지막 요청을 잃는다. 큐는 부른 순서대로 돈다.
         if ( deferIfStructureFrozen( Delegate<void( Component& )>( [bCanEverTick]( Component& self )
         { self.setCanEverTick( bCanEverTick ); } ) ) )
+            return;
+        const uint8 newValue = bCanEverTick ? SW_TRUE : SW_FALSE;
+        if ( _bCanEverTick == newValue )
             return;
         _bCanEverTick = newValue;
         if ( _pOwner != nullptr )

@@ -811,7 +811,7 @@ namespace sw
 
     void Box2DPhysicsScene::removePairJoints( PhysicsBodyHandle body )
     {
-        for ( map<pair<uint64, uint64>, b2JointId>::iterator iter = _mapPairToJoint.begin(); iter != _mapPairToJoint.end(); )
+        for ( flat_map<pair<uint64, uint64>, b2JointId>::iterator iter = _mapPairToJoint.begin(); iter != _mapPairToJoint.end(); )
         {
             if ( iter->first.first == body.packed() || iter->first.second == body.packed() )
                 iter = _mapPairToJoint.erase( iter );
@@ -1063,8 +1063,8 @@ namespace sw
         const bool        bInvalidJointBodies = pRecordA == nullptr || pRecordB == nullptr || bodyA == bodyB;
         if ( bInvalidJointBodies )
             return;
-        const pair<uint64, uint64>                           key  = Box2DPhysicsSceneInternal::makePairKey( bodyA, bodyB );
-        const map<pair<uint64, uint64>, b2JointId>::iterator iter = _mapPairToJoint.find( key );
+        const pair<uint64, uint64>                                key  = Box2DPhysicsSceneInternal::makePairKey( bodyA, bodyB );
+        const flat_map<pair<uint64, uint64>, b2JointId>::iterator iter = _mapPairToJoint.find( key );
         if ( bCollide )
         {
             if ( iter == _mapPairToJoint.end() )

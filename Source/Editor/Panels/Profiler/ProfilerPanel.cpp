@@ -23,7 +23,6 @@
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
-#include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
 #include "Engine/Profiling/FrameProfiler.h"
@@ -870,18 +869,16 @@ namespace sw::editor
 
     void ProfilerPanel::drawGPUMemoryTab()
     {
-        IRHIDevice* pDevice = ProfilerViewModel::findRHIDevice();
-        if ( pDevice == nullptr )
+        if ( ProfilerViewModel::gatherGPUMemory( _gpuMemoryState ) == false ) // 장치는 ViewModel 이 찾는다 — 이 창은 값만 본다
         {
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorProfiler", "NoRHIDevice" ) );
             return;
         }
-        const RHIMemoryTracker& tracker = pDevice->getMemoryTracker();
-        const RHIMemorySummary  summary = tracker.makeSummary();
+        const RHIMemorySummary& summary = _gpuMemoryState._summary;
 
         fixed_string<constant::buffer::kMax32> arrBytesBuf;
         ProfilerPanelInternal::formatBytes( summary._trackedBytes, arrBytesBuf );
-        ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "Size", TextArgumentList().addText( "backendName", pDevice->getBackendName() ).addText( "sizeBasis", RHIMemoryTracker::getSizeBasisName( summary._sizeBasis ) ) ).c_str() );
+        ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "Size", TextArgumentList().addText( "backendName", _gpuMemoryState._backendName.c_str() ).addText( "sizeBasis", RHIMemoryTracker::getSizeBasisName( summary._sizeBasis ) ) ).c_str() );
         ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "TrackedOfUnknownSize", TextArgumentList().addText( "bytesBuf", arrBytesBuf.c_str() ).addInteger( "unknownSizeCount", static_cast<int64>( summary._unknownSizeCount ) ) ).c_str() );
 
         if ( ImGui::CollapsingHeader( SW_LOCKEY( "EdSection", "TrackedMemoryByKind" ), ImGuiTreeNodeFlags_DefaultOpen ) )
@@ -896,9 +893,10 @@ namespace sw::editor
                 ImGui::TableHeadersRow();
 
                 // 로그 보고와 같은 순서(바이트가 큰 항목부터)와 같은 이름을 쓴다. 크기 모름은 바이트 합에 넣지 않고 따로 센다.
-                for ( const RHIMemoryKind kind : tracker.makeKindOrderByLiveBytes() )
+                for ( const ProfilerGPUMemoryRow& row : _gpuMemoryState._listRow )
                 {
-                    const RHIMemoryKindStats stats = tracker.getStats( kind );
+                    const RHIMemoryKind       kind  = row._kind;
+                    const RHIMemoryKindStats& stats = row._stats;
                     ProfilerPanelInternal::formatBytes( stats._liveBytes, arrBytesBuf );
                     ImGui::TableNextRow();
                     ImGui::TableNextColumn();

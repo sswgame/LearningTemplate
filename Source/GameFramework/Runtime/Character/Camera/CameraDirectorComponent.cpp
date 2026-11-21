@@ -29,6 +29,7 @@
 #include "Engine/Serialization/Format/Archive.h"
 
 #include "GameFramework/Runtime/Character/Camera/CameraCollisionProbe.h"
+#include "GameFramework/Runtime/Character/Camera/CameraManagerComponent.h"
 #include "GameFramework/Runtime/Character/Camera/CameraPose.h"
 #include "GameFramework/Runtime/Character/Camera/CameraSystem.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
@@ -220,6 +221,16 @@ namespace sw
         Component::onRegister( manager );
         manager.getComponentRegistry().add<CameraDirectorComponent>( this );
         (void)CameraSystem::getOrCreate( manager );
+    }
+
+    CameraDirectorComponent* CameraDirectorComponent::findViewDirector( const GameObjectManager& manager )
+    {
+        return manager.getComponentRegistry().findUnique<CameraDirectorComponent>( [&manager]( const CameraDirectorComponent& director )
+        {
+            const GameObject*      pOwner  = director.getOwner();
+            const CameraComponent* pCamera = pOwner != nullptr ? pOwner->getComponent<CameraComponent>() : nullptr;
+            return pCamera != nullptr && ( pCamera->getRole() == CameraRole::Game || CameraManagerComponent::isViewTarget( manager, pOwner->getHandle() ) );
+        } );
     }
 
     void CameraDirectorComponent::onUnregister( GameObjectManager& manager )

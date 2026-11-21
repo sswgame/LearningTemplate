@@ -38,6 +38,21 @@ namespace sw::editor
         return editor::getSubsystem<EditorContext>().getSubsystem<EditorRenderViews>().getRHIDevice();
     }
 
+    bool ProfilerViewModel::gatherGPUMemory( ProfilerGPUMemoryViewState& outState )
+    {
+        const IRHIDevice* const pDevice = findRHIDevice();
+        if ( pDevice == nullptr )
+            return false;
+        const RHIMemoryTracker& tracker = pDevice->getMemoryTracker();
+        outState._backendName           = pDevice->getBackendName();
+        outState._summary               = tracker.makeSummary();
+        outState._listRow.clear();
+        // 로그 보고와 같은 순서(바이트가 큰 항목부터)와 같은 이름을 쓴다.
+        for ( const RHIMemoryKind kind : tracker.makeKindOrderByLiveBytes() )
+            outState._listRow.push_back( ProfilerGPUMemoryRow{ kind, tracker.getStats( kind ) } );
+        return true;
+    }
+
     uint32 ProfilerViewModel::getWorkerCount()
     {
         return static_cast<uint32>( editor::getSubsystem<TaskManager>().getWorkerCount() );

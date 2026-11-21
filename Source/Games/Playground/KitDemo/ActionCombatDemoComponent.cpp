@@ -8,9 +8,12 @@
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Input/Map/CommonInputActions.h"
+#include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
+#include "GameFramework/Runtime/Character/Combat/Health/RuleHealthViewComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
+#include "GameFramework/Runtime/Foundation/Framework/Minigame/MinigameStack.h"
 #include "GameFramework/Runtime/Foundation/GameData/DepletingValue.h"
 
 namespace sw
@@ -20,10 +23,13 @@ namespace sw
         struct ActionCombatDemoComponentInternal
         {
             static constexpr uint32 kStateTag     = FourCCUtil::make( "KDAC" );
-            static constexpr uint32 kStateVersion = 2; ///< 2: 탄의 꿰뚫은 대상이 상한 없는 목록이다(탄 한 줄 길이가 바뀌었다)
+            static constexpr uint32 kStateVersion = 3; ///< 2: 탄의 꿰뚫은 대상이 상한 없는 목록이다(탄 한 줄 길이가 바뀌었다). 3: 결과 보여 주기 시간(`_resultHold`)
 
             static constexpr const utf8* kAttackAction = "KitDemo.Attack";
             static constexpr const utf8* kDashAction   = "KitDemo.Dash";
+            static constexpr const utf8* kHealValue    = "heal"; ///< 승리 결과 값 이름 — 허브 캐릭터의 보상 표(`MinigameRewardComponent`)가 같은 이름을 적는다
+            static constexpr const utf8* kWinResult    = "win";
+            static constexpr const utf8* kLoseResult   = "lose";
 
             /** @brief 축 입력이 이보다 작으면 바라보는 쪽을 바꾸지 않는다(패드 스틱의 떨림). */
             static constexpr float32 kFacingDeadZone = 0.2f;
@@ -46,12 +52,18 @@ namespace sw
         , _playerMaxHP{ 100 }
         , _playerSpeed{ 4.0f }
         , _bossDelaySeconds{ 1.0f }
+        , _playerView{}
+        , _resultHoldSeconds{ 3.0f }
+        , _victoryHeal{ 25 }
         , _room{}
         , _bossDelay{}
+        , _resultHold{}
         , _playerPosition{ 0.0f, 0.0f }
         , _facing{ FacingDir::Right }
         , _playerHP{ 100 }
         , _phase{ ActionCombatDemoPhase::Hall }
+        , _bPlayerViewMissing{ SW_FALSE }
+        , _reserved{ 0 }
     {
     }
 
@@ -91,6 +103,9 @@ namespace sw
         _playerHP       = _playerMaxHP;
         _phase          = ActionCombatDemoPhase::Hall;
         _bossDelay.clear();
+        _resultHold.clear();
+        if ( RuleHealthViewComponent* const pView = findOn<RuleHealthViewComponent>( _playerView ) )
+            pView->resetSnapshot(); // 새 판의 HP 는 앞 판에서 이어지지 않는다 — 연출 없이 다시 둔다
         return true;
     }
 
@@ -127,6 +142,7 @@ namespace sw
         {
             _room.onPlayerDefeated();
             _phase = ActionCombatDemoPhase::Defeat;
+            _resultHold.start( _resultHoldSeconds );
             SW_LOG_INFO_ID( "KitDemo.CombatDefeat", "[KitDemo] action combat: the player fell" );
             return;
         }
@@ -140,10 +156,32 @@ namespace sw
             return;
         }
         _phase = ActionCombatDemoPhase::Victory;
+        _resultHold.start( _resultHoldSeconds );
         SW_LOG_INFO_ID( "KitDemo.CombatVictory", "[KitDemo] action combat: boss defeated (%#) with %# HP left", result._bBossDefeated == SW_TRUE ? "boss" : "room", _playerHP );
     }
 
+    void ActionCombatDemoComponent::pushPlayerHealthView()
+    {
+        if ( _playerView.isValid() == false )
+            return;
+        RuleHealthViewComponent* const pView = findOn<RuleHealthViewComponent>( _playerView );
+        if ( pView == nullptr )
+        {
+            if ( _bPlayerViewMissing == SW_FALSE )
+                SW_LOG_ERROR_ID( "KitDemo.CombatPlayerViewMissing", "Action combat demo: the Player View object has no RuleHealthViewComponent - the player HP bar does not move" );
+            _bPlayerViewMissing = SW_TRUE;
+            return;
+        }
+        pView->applySnapshot( static_cast<float32>( _playerHP ), static_cast<float32>( _playerMaxHP ) );
+    }
+
     void ActionCombatDemoComponent::updateGame( float32 deltaTime )
+    {
+        stepRoom( deltaTime );
+        pushPlayerHealthView(); // 규칙 걸음 뒤 — 이 걸음의 피해가 같은 프레임에 HP 바로 간다(시간이 멈춘 프레임 · 복원 직후에도 넣는다)
+    }
+
+    void ActionCombatDemoComponent::stepRoom( float32 deltaTime )
     {
         if ( deltaTime <= 0.0f )
             return;
@@ -151,6 +189,11 @@ namespace sw
         if ( bFinished )
         {
             drawPlayer();
+            if ( _resultHold.update( deltaTime ) )
+            {
+                const bool bWon = _phase == ActionCombatDemoPhase::Victory;
+                (void)finishMinigame( hashed_string( bWon ? ActionCombatDemoComponentInternal::kWinResult : ActionCombatDemoComponentInternal::kLoseResult ) ); // 흐름이 없으면 베이스가 알린다
+            }
             return;
         }
         const ActionRoomFrameInput input = readInput( deltaTime );
@@ -186,6 +229,13 @@ namespace sw
         (void)bRespawnViews;
     }
 
+    void ActionCombatDemoComponent::collectMinigameResult( vector<MinigameResultValue>& outListValue ) const
+    {
+        if ( _phase != ActionCombatDemoPhase::Victory || _victoryHeal <= 0 )
+            return;
+        outListValue.push_back( MinigameResultValue{ hashed_string( ActionCombatDemoComponentInternal::kHealValue ), _victoryHeal } );
+    }
+
     void ActionCombatDemoComponent::serializeGameState( StateIO& io )
     {
         io.header( ActionCombatDemoComponentInternal::kStateTag, ActionCombatDemoComponentInternal::kStateVersion );
@@ -200,16 +250,19 @@ namespace sw
             restoredRoom.setLayout( layout );
         }
         io.value( io.isWriting() ? _room : restoredRoom );
-        // 자리 · HP · 단계는 상태 칸이다(`GameModeComponent::serializeState`). 손 본문은 룸 · 보스 지연(`Countdown`) · 방향(리플렉션 열거가 아니다)만.
-        Countdown bossDelay = _bossDelay;
-        FacingDir facing    = _facing;
+        // 자리 · HP · 단계는 상태 칸이다(`GameModeComponent::serializeState`). 손 본문은 룸 · 보스 지연 · 결과 보여 주기(`Countdown`) · 방향(리플렉션 열거가 아니다)만.
+        Countdown bossDelay  = _bossDelay;
+        Countdown resultHold = _resultHold;
+        FacingDir facing     = _facing;
         io.value( bossDelay );
+        io.value( resultHold );
         io.enumValue( facing, FacingDir::Up );
         io.end();
         if ( io.isWriting() || io.isOk() == false )
             return;
-        _room      = std::move( restoredRoom );
-        _bossDelay = bossDelay;
-        _facing    = facing;
+        _room       = std::move( restoredRoom );
+        _bossDelay  = bossDelay;
+        _resultHold = resultHold;
+        _facing     = facing;
     }
 } // namespace sw

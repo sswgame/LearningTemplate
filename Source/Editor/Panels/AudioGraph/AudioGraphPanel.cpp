@@ -39,12 +39,6 @@ namespace sw::editor
             static constexpr uint32 kSignalPinType = 0;
             /** @brief 캔버스가 차지하는 폭의 비율입니다(나머지는 인스펙터). */
             static constexpr float32 kCanvasWidthRatio = 0.66f;
-
-            /** @brief 창을 엽니다(명령 표의 실행 함수). */
-            static void openPanel()
-            {
-                (void)EditorPanelManager::getInEditorContext().setPanelOpen<AudioGraphPanel>( true ); // 패널은 이 파일에 등록되어 있다
-            }
         };
     } // namespace
 } // namespace sw::editor
@@ -381,5 +375,5 @@ namespace sw::editor
     }
 
     SW_EDITOR_PANEL( AudioGraphPanel, AudioGraphPanel::kPanelID, EditorPanelCategory::Tool, 2102 );
-    SW_EDITOR_COMMAND( AudioGraphOpen, "window.audioGraph", &AudioGraphPanelInternal::openPanel, nullptr, NoScene );
+    SW_EDITOR_PANEL_OPEN_COMMAND( AudioGraphOpen, "window.audioGraph", AudioGraphPanel );
 } // namespace sw::editor

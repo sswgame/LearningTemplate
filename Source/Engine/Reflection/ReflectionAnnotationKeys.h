@@ -1,8 +1,9 @@
 /**
  * @file ReflectionAnnotationKeys.h
  * @brief 리플렉션 어노테이션 인자 키를 편집기에 알리는 선언입니다.
- * @details `AnnotationMeta.txt`(키와 철자), `ReflectionUnits.h`(단위), `PredefinedContainerKind.xxx`(컨테이너 종류)를 옮긴 것이다. 만들던 생성기는 지웠다(3edb95697) —
- *          키를 더하면 이 파일도 손으로 맞춘다(IDE 의 자동 완성만 영향을 받는다).
+ * @details 키는 정본 표 `Core/Predefined/PredefinedAnnotationField.xxx`(파서가 읽는 그 표)를 펼쳐 만든다 — 손으로 맞추던 사본이 표와
+ *          어긋나 있었다(TickMode · RemovedField · RemovedType · Hidden · CatalogKeyTag 빠짐). 단위는 `ReflectionUnits.h` 의 철자, 넷 역할은
+ *          `PredefinedFunctionNetRole.xxx`, 컨테이너 종류는 `PredefinedContainerKind.xxx` 다.
  *          편집기에서만 include 됩니다(`ReflectionIntellisense.h`). 빌드와 ReflectionParser 는 이 파일을 읽지 않습니다.
  */
 #pragma once
@@ -22,399 +23,123 @@ namespace sw::reflect::attr
     };
 } // namespace sw::reflect::attr
 
+// 표 한 줄 → 스코프 하나의 키. `SW_ATTR_IN_<Scope>` 다섯을 블록마다 고른 스코프만 펼치게 다시 정의한다.
+#define REGISTER_ANNOTATION_FIELD( Scope, Key, Member, Emit )        SW_ATTR_IN_##Scope( Key )
+#define REGISTER_ANNOTATION_FIELD_FN( Scope, Key, Member, Fn, Emit ) SW_ATTR_IN_##Scope( Key )
+#define SW_ATTR_MEMBER( Key )                                        static constexpr AnnotationKey Key{};
+#define SW_ATTR_NAME( Key )                                          #Key,
+#define SW_ATTR_SKIP( Key )
+
 namespace sw::reflect::attr
 {
+#define SW_ATTR_IN_Reflect    SW_ATTR_MEMBER
+#define SW_ATTR_IN_Enum       SW_ATTR_SKIP
+#define SW_ATTR_IN_Enumerator SW_ATTR_SKIP
+#define SW_ATTR_IN_Property   SW_ATTR_SKIP
+#define SW_ATTR_IN_Function   SW_ATTR_SKIP
     /** @brief `REFLECT( … )` 의 키입니다. */
     struct ReflectKeys
     {
-        /** @brief flag.Abstract — 단독 토큰 `Abstract` 또는 `Abstract = true`. 같은 필드의 철자: Abstract, abstract. */
-        static constexpr AnnotationKey Abstract{};
-        /** @brief flag.Abstract — 단독 토큰 `abstract` 또는 `abstract = true`. 같은 필드의 철자: Abstract, abstract. */
-        static constexpr AnnotationKey abstract{};
-        /** @brief flag.Static — 단독 토큰 `Static` 또는 `Static = true`. 같은 필드의 철자: Static, static. */
-        static constexpr AnnotationKey Static{};
-        /** @brief flag.HideInMenu — 단독 토큰 `HideInMenu` 또는 `HideInMenu = true`. 같은 필드의 철자: HideInMenu, HiddenInMenu, EditorHidden. */
-        static constexpr AnnotationKey HideInMenu{};
-        /** @brief flag.HideInMenu — 단독 토큰 `HiddenInMenu` 또는 `HiddenInMenu = true`. 같은 필드의 철자: HideInMenu, HiddenInMenu, EditorHidden. */
-        static constexpr AnnotationKey HiddenInMenu{};
-        /** @brief flag.HideInMenu — 단독 토큰 `EditorHidden` 또는 `EditorHidden = true`. 같은 필드의 철자: HideInMenu, HiddenInMenu, EditorHidden. */
-        static constexpr AnnotationKey EditorHidden{};
-        /** @brief flag.NotPlaceable — 단독 토큰 `NotPlaceable` 또는 `NotPlaceable = true`. 데이터(씬 · 프리팹 · "Add Component")로 놓을 수 없는 컴포넌트 — 이름 생성 함수를 내지 않는다(언리얼 UCLASS(NotPlaceable)) */
-        static constexpr AnnotationKey NotPlaceable{};
-        /** @brief string.Alias — `Alias = "…"`. 직렬화 · 핫 리로드용 옛 타입 이름. 여러 개면 Alias="OldA, OldB" */
-        static constexpr AnnotationKey Alias{};
-        /** @brief string.Category — `Category = "…"`. */
-        static constexpr AnnotationKey Category{};
-        /** @brief string.DisplayName — `DisplayName = "…"`. */
-        static constexpr AnnotationKey DisplayName{};
-        /** @brief string.Tooltip — `Tooltip = "…"`. */
-        static constexpr AnnotationKey Tooltip{};
-        /** @brief string.Meta — `Meta = "…"`. 같은 필드의 철자: Meta, meta, CustomMeta. */
-        static constexpr AnnotationKey Meta{};
-        /** @brief string.Meta — `meta = "…"`. 같은 필드의 철자: Meta, meta, CustomMeta. */
-        static constexpr AnnotationKey meta{};
-        /** @brief string.Meta — `CustomMeta = "…"`. 같은 필드의 철자: Meta, meta, CustomMeta. */
-        static constexpr AnnotationKey CustomMeta{};
-        /** @brief string.Validate — `Validate = "…"`. 타입 검증 함수 — 같은 타입의 void fn( ValidationContext& context ) [const]. 로드 · 저장 · 인스펙터 편집 뒤에 불린다(ReflectionValidation) */
-        static constexpr AnnotationKey Validate{};
-        /** @brief count.Version — `Version = 2`. 타입의 저장 판. 옛 판은 `SW_TYPE_VERSION_PATCH` 사슬이 올린다. */
-        static constexpr AnnotationKey Version{};
+#include "Core/Predefined/PredefinedAnnotationField.xxx"
     };
-
+#undef SW_ATTR_IN_Reflect
+#define SW_ATTR_IN_Reflect SW_ATTR_NAME
     inline constexpr const utf8* kArrReflectKey[] = {
-        "Abstract",
-        "abstract",
-        "Static",
-        "static",
-        "HideInMenu",
-        "HiddenInMenu",
-        "EditorHidden",
-        "NotPlaceable",
-        "Alias",
-        "Category",
-        "DisplayName",
-        "Tooltip",
-        "Meta",
-        "meta",
-        "CustomMeta",
-        "Validate",
-        "Version",
+#include "Core/Predefined/PredefinedAnnotationField.xxx"
         nullptr,
     };
-} // namespace sw::reflect::attr
+#undef SW_ATTR_IN_Reflect
+#define SW_ATTR_IN_Reflect SW_ATTR_SKIP
 
-namespace sw::reflect::attr
-{
+#undef SW_ATTR_IN_Enum
+#define SW_ATTR_IN_Enum SW_ATTR_MEMBER
     /** @brief `ENUM( … )` 의 키입니다. */
     struct EnumKeys
     {
-        /** @brief string.Alias — `Alias = "…"`. */
-        static constexpr AnnotationKey Alias{};
-        /** @brief string.ValueAlias — `ValueAlias = "…"`. 같은 필드의 철자: ValueAlias, EnumeratorAlias. 열거자 이름 변경: ValueAlias="OldIdle:Idle, OldMoving:Moving" */
-        static constexpr AnnotationKey ValueAlias{};
-        /** @brief string.ValueAlias — `EnumeratorAlias = "…"`. 같은 필드의 철자: ValueAlias, EnumeratorAlias. 열거자 이름 변경: ValueAlias="OldIdle:Idle, OldMoving:Moving" */
-        static constexpr AnnotationKey EnumeratorAlias{};
-        /** @brief string.Removed — `Removed = "…"`. 지운 열거자를 대신 읽을 열거자: Removed="OldRunning:Moving". 선언 없이 지운 열거자를 저장된 데이터에서 읽으면 그 칸은 실패한다 */
-        static constexpr AnnotationKey Removed{};
-        /** @brief string.Meta — `Meta = "…"`. 같은 필드의 철자: Meta, meta, CustomMeta. */
-        static constexpr AnnotationKey Meta{};
-        /** @brief string.Meta — `meta = "…"`. 같은 필드의 철자: Meta, meta, CustomMeta. */
-        static constexpr AnnotationKey meta{};
-        /** @brief string.Meta — `CustomMeta = "…"`. 같은 필드의 철자: Meta, meta, CustomMeta. */
-        static constexpr AnnotationKey CustomMeta{};
-        /** @brief flag.Flags — 단독 토큰 `Flags` 또는 `Flags = true`. 같은 필드의 철자: Flags, BitFlag, FLAG, Bitwise. 비트 플래그 연산자(|, &, ^, ~)를 만든다. 직렬화용 EnumInfo::_bIsBitFlag 도 켠다. */
-        static constexpr AnnotationKey Flags{};
-        /** @brief flag.Flags — 단독 토큰 `BitFlag` 또는 `BitFlag = true`. 같은 필드의 철자: Flags, BitFlag, FLAG, Bitwise. 비트 플래그 연산자(|, &, ^, ~)를 만든다. 직렬화용 EnumInfo::_bIsBitFlag 도 켠다. */
-        static constexpr AnnotationKey BitFlag{};
-        /** @brief flag.Flags — 단독 토큰 `FLAG` 또는 `FLAG = true`. 같은 필드의 철자: Flags, BitFlag, FLAG, Bitwise. 비트 플래그 연산자(|, &, ^, ~)를 만든다. 직렬화용 EnumInfo::_bIsBitFlag 도 켠다. */
-        static constexpr AnnotationKey FLAG{};
-        /** @brief flag.Flags — 단독 토큰 `Bitwise` 또는 `Bitwise = true`. 같은 필드의 철자: Flags, BitFlag, FLAG, Bitwise. 비트 플래그 연산자(|, &, ^, ~)를 만든다. 직렬화용 EnumInfo::_bIsBitFlag 도 켠다. */
-        static constexpr AnnotationKey Bitwise{};
-        /** @brief string.Invalid — `Invalid = "…"`. 같은 필드의 철자: Invalid, InvalidValue. TypeRegistry::enumToString / enumFromString 이 쓰는 Invalid 센티널과 (배타적) Count 센티널 */
-        static constexpr AnnotationKey Invalid{};
-        /** @brief string.Invalid — `InvalidValue = "…"`. 같은 필드의 철자: Invalid, InvalidValue. TypeRegistry::enumToString / enumFromString 이 쓰는 Invalid 센티널과 (배타적) Count 센티널 */
-        static constexpr AnnotationKey InvalidValue{};
-        /** @brief string.Count — `Count = "…"`. 같은 필드의 철자: Count, CountValue. */
-        static constexpr AnnotationKey Count{};
-        /** @brief string.Count — `CountValue = "…"`. 같은 필드의 철자: Count, CountValue. */
-        static constexpr AnnotationKey CountValue{};
+#include "Core/Predefined/PredefinedAnnotationField.xxx"
     };
-
+#undef SW_ATTR_IN_Enum
+#define SW_ATTR_IN_Enum SW_ATTR_NAME
     inline constexpr const utf8* kArrEnumKey[] = {
-        "Alias",
-        "ValueAlias",
-        "EnumeratorAlias",
-        "Removed",
-        "Meta",
-        "meta",
-        "CustomMeta",
-        "Flags",
-        "BitFlag",
-        "FLAG",
-        "Bitwise",
-        "Invalid",
-        "InvalidValue",
-        "Count",
-        "CountValue",
+#include "Core/Predefined/PredefinedAnnotationField.xxx"
         nullptr,
     };
-} // namespace sw::reflect::attr
+#undef SW_ATTR_IN_Enum
+#define SW_ATTR_IN_Enum SW_ATTR_SKIP
 
-namespace sw::reflect::attr
-{
-    /** @brief `PROPERTY( … )` 의 키입니다. */
+#undef SW_ATTR_IN_Property
+#define SW_ATTR_IN_Property SW_ATTR_MEMBER
+    /** @brief `PROPERTY( … )` 의 키입니다. 단위 철자(`Units = mm`)도 멤버로 둔다 — 값 자리에서 이름으로 풀린다(단위 표는 ReflectionUnits.h 의 kArrReflectUnit). */
     struct PropertyKeys
     {
-        /** @brief flag.ReadOnly — 단독 토큰 `ReadOnly` 또는 `ReadOnly = true`. */
-        static constexpr AnnotationKey ReadOnly{};
-        /** @brief flag.XMLAttribute — 단독 토큰 `XMLAttribute` 또는 `XMLAttribute = true`. 같은 필드의 철자: XMLAttribute, xmlAttribute. */
-        static constexpr AnnotationKey XMLAttribute{};
-        /** @brief flag.XMLAttribute — 단독 토큰 `xmlAttribute` 또는 `xmlAttribute = true`. 같은 필드의 철자: XMLAttribute, xmlAttribute. */
-        static constexpr AnnotationKey xmlAttribute{};
-        /** @brief flag.AssetPath — 단독 토큰 `AssetPath` 또는 `AssetPath = true`. 같은 필드의 철자: AssetPath, assetPath. */
-        static constexpr AnnotationKey AssetPath{};
-        /** @brief flag.AssetPath — 단독 토큰 `assetPath` 또는 `assetPath = true`. 같은 필드의 철자: AssetPath, assetPath. */
-        static constexpr AnnotationKey assetPath{};
-        /** @brief flag.Transient — 단독 토큰 `Transient` 또는 `Transient = true`. 같은 필드의 철자: Transient, transient, NonSerialized, nonSerialized. */
-        static constexpr AnnotationKey Transient{};
-        /** @brief flag.Transient — 단독 토큰 `transient` 또는 `transient = true`. 같은 필드의 철자: Transient, transient, NonSerialized, nonSerialized. */
-        static constexpr AnnotationKey transient{};
-        /** @brief flag.Transient — 단독 토큰 `NonSerialized` 또는 `NonSerialized = true`. 같은 필드의 철자: Transient, transient, NonSerialized, nonSerialized. */
-        static constexpr AnnotationKey NonSerialized{};
-        /** @brief flag.Transient — 단독 토큰 `nonSerialized` 또는 `nonSerialized = true`. 같은 필드의 철자: Transient, transient, NonSerialized, nonSerialized. */
-        static constexpr AnnotationKey nonSerialized{};
-        /** @brief flag.SkipIfEmpty — 단독 토큰 `SkipIfEmpty` 또는 `SkipIfEmpty = true`. 같은 필드의 철자: SkipIfEmpty, skipIfEmpty. 값이 비어 있으면 쓸 때 생략한다(읽기에는 영향 없음) */
-        static constexpr AnnotationKey SkipIfEmpty{};
-        /** @brief flag.SkipIfEmpty — 단독 토큰 `skipIfEmpty` 또는 `skipIfEmpty = true`. 같은 필드의 철자: SkipIfEmpty, skipIfEmpty. 값이 비어 있으면 쓸 때 생략한다(읽기에는 영향 없음) */
-        static constexpr AnnotationKey skipIfEmpty{};
-        /** @brief flag.Required — 단독 토큰 `Required` 또는 `Required = true`. 같은 필드의 철자: Required, required. 데이터 파일이 이 칸을 반드시 적어야 한다(빠지면 로드 오류 — 초기값은 형식일 뿐 기본값이 아니다) */
-        static constexpr AnnotationKey Required{};
-        /** @brief flag.Required — 단독 토큰 `required` 또는 `required = true`. 같은 필드의 철자: Required, required. 데이터 파일이 이 칸을 반드시 적어야 한다(빠지면 로드 오류 — 초기값은 형식일 뿐 기본값이 아니다) */
-        static constexpr AnnotationKey required{};
-        /** @brief flag.DefaultName — 단독 토큰 `DefaultName`. 이름 · 경로 칸의 C++ 문자열 기본값이 엔진이 정한 기본값이다(없으면 그 기본값은 파서 오류) */
-        static constexpr AnnotationKey DefaultName{};
-        /** @brief flag.InheritKey — 단독 토큰 `InheritKey` 또는 `InheritKey = true`. 같은 필드의 철자: InheritKey, inheritKey. 이 칸이 목록 원소의 열쇠다(DataInheritance) */
-        static constexpr AnnotationKey InheritKey{};
-        /** @brief flag.InheritKey — 단독 토큰 `inheritKey` 또는 `inheritKey = true`. 같은 필드의 철자: InheritKey, inheritKey. 이 칸이 목록 원소의 열쇠다(DataInheritance) */
-        static constexpr AnnotationKey inheritKey{};
-        /** @brief flag.RequiredAtRoot — 단독 토큰 `RequiredAtRoot`. 같은 필드의 철자: RequiredAtRoot, requiredAtRoot. 부모가 없는 원소만 이 칸을 반드시 적는다 */
-        static constexpr AnnotationKey RequiredAtRoot{};
-        /** @brief flag.RequiredAtRoot — 단독 토큰 `requiredAtRoot`. */
-        static constexpr AnnotationKey requiredAtRoot{};
-        /** @brief flag.InheritParent — 단독 토큰 `InheritParent`. 같은 필드의 철자: InheritParent, inheritParent. 이 칸이 부모 원소를 가리킨다 */
-        static constexpr AnnotationKey InheritParent{};
-        /** @brief flag.InheritParent — 단독 토큰 `inheritParent`. */
-        static constexpr AnnotationKey inheritParent{};
-        /** @brief flag.HideInInspector — 단독 토큰 `HideInInspector` 또는 `HideInInspector = true`. 같은 필드의 철자: HideInInspector, hideInInspector, HiddenInInspector, EditorHidden. */
-        static constexpr AnnotationKey HideInInspector{};
-        /** @brief flag.HideInInspector — 단독 토큰 `hideInInspector` 또는 `hideInInspector = true`. 같은 필드의 철자: HideInInspector, hideInInspector, HiddenInInspector, EditorHidden. */
-        static constexpr AnnotationKey hideInInspector{};
-        /** @brief flag.HideInInspector — 단독 토큰 `HiddenInInspector` 또는 `HiddenInInspector = true`. 같은 필드의 철자: HideInInspector, hideInInspector, HiddenInInspector, EditorHidden. */
-        static constexpr AnnotationKey HiddenInInspector{};
-        /** @brief flag.HideInInspector — 단독 토큰 `EditorHidden` 또는 `EditorHidden = true`. 같은 필드의 철자: HideInInspector, hideInInspector, HiddenInInspector, EditorHidden. */
-        static constexpr AnnotationKey EditorHidden{};
-        /** @brief string.Alias — `Alias = "…"`. 여러 개면 Alias="hp, HitPoints" (따옴표가 필요하다. 그래야 콤마가 토큰 구분자로 읽히지 않는다) */
-        static constexpr AnnotationKey Alias{};
-        /** @brief string.Name — `Name = "…"`. 리플렉션 이름(직렬화 키)을 멤버 이름과 다르게 준다. 값이 객체 밖에 있는 프로퍼티(참조를 돌려주는 메서드에 붙인 PROPERTY)가 옛 필드 이름을 이어 쓸 때 쓴다 */
-        static constexpr AnnotationKey Name{};
-        /** @brief string.Category — `Category = "…"`. */
-        static constexpr AnnotationKey Category{};
-        /** @brief string.DisplayName — `DisplayName = "…"`. */
-        static constexpr AnnotationKey DisplayName{};
-        /** @brief string.Tooltip — `Tooltip = "…"`. */
-        static constexpr AnnotationKey Tooltip{};
-        /** @brief string.DefaultValue — `Default = "…"`. 같은 필드의 철자: Default, DefaultValue. */
-        static constexpr AnnotationKey Default{};
-        /** @brief string.DefaultValue — `DefaultValue = "…"`. 같은 필드의 철자: Default, DefaultValue. */
-        static constexpr AnnotationKey DefaultValue{};
-        /** @brief string.AssetType — `AssetType = "…"`. */
-        static constexpr AnnotationKey AssetType{};
-        /** @brief string.Meta — `Meta = "…"`. 같은 필드의 철자: Meta, meta, CustomMeta. */
-        static constexpr AnnotationKey Meta{};
-        /** @brief string.Meta — `meta = "…"`. 같은 필드의 철자: Meta, meta, CustomMeta. */
-        static constexpr AnnotationKey meta{};
-        /** @brief string.Meta — `CustomMeta = "…"`. 같은 필드의 철자: Meta, meta, CustomMeta. */
-        static constexpr AnnotationKey CustomMeta{};
-        /** @brief float.MinRange — `Min = 1.5`. 허용 범위입니다. 숫자 하나, 또는 따옴표 안에 쉼표로 나눈 숫자 · 앞선 필드 이름 목록("-_halfSize, 0, -_halfSize")을 적습니다. 수학 타입은 원소마다 적습니다. 고정 배치형(롤백 · 넷) 코덱은 이 범위를 와이어 범위로 씁니다. 정수는 범위 비트 수로 쓰고, 범위 밖 값은 쓰기 실패입니다. */
-        static constexpr AnnotationKey Min{};
-        /** @brief float.MaxRange — `Max = 1.5`. */
-        static constexpr AnnotationKey Max{};
-        /** @brief float.Step — `Step = 1.5`. 고정 배치형 코덱의 양자화 간격입니다(float32 만, Min · Max 필수). 적으면 그 필드는 손실 인코딩입니다. */
-        static constexpr AnnotationKey Step{};
-        /** @brief count.MaxCount — `MaxCount = 16`(1 이상의 정수). 문자열 · vector 의 최대 길이입니다. 고정 배치형 코덱은 이것이 없는 가변 길이 필드를 인코딩하지 않습니다. */
-        static constexpr AnnotationKey MaxCount{};
-        /** @brief float.UIMinRange — `UIMin = 1.5`. 인스펙터 슬라이더 · 드래그 범위(허용 범위 Min/Max 와 따로). 둘 다 적으면 슬라이더로 그리고, 값은 여전히 Min/Max 로 막는다 */
-        static constexpr AnnotationKey UIMin{};
-        /** @brief float.UIMaxRange — `UIMax = 1.5`. */
-        static constexpr AnnotationKey UIMax{};
-        /** @brief string.Units — `Units = "…"`. 저장된 값의 단위 — ReflectionUnits.h 의 표(mm cm m km deg rad ms s min h percent ratio m/s km/h deg/s rad/s m/s2 Hz fps g kg N). 표에 없으면 파서 오류 */
-        static constexpr AnnotationKey Units{};
-        /** @brief string.EditCondition — `EditCondition = "…"`. 다른 프로퍼티가 참일 때만 고친다: "bEnabled" · "!bLocked" · "mode == Orbit" · "mode != Off". 거짓이면 인스펙터가 막는다(EditConditionHides 면 숨긴다) */
-        static constexpr AnnotationKey EditCondition{};
-        /** @brief flag.EditConditionHides — 단독 토큰 `EditConditionHides` 또는 `EditConditionHides = true`. */
-        static constexpr AnnotationKey EditConditionHides{};
-        /** @brief flag.ColorHDR — 단독 토큰 `ColorHDR` 또는 `ColorHDR = true`. float3/float4 색을 HDR(1 을 넘는 값)로 고친다. 색 선택기이기도 하다 */
-        static constexpr AnnotationKey ColorHDR{};
-        /** @brief flag.Multiline — 단독 토큰 `Multiline` 또는 `Multiline = true`. 여러 줄 글 칸(string) */
-        static constexpr AnnotationKey Multiline{};
-        /** @brief string.FileFilter — `FileFilter = "…"`. 경로 칸이 받는 파일: "*.png;*.dds". 끌어다 놓은 경로가 맞지 않으면 받지 않는다 */
-        static constexpr AnnotationKey FileFilter{};
-        /** @brief flag.Replicated — 단독 토큰 `Replicated` 또는 `Replicated = true`. 네트워크 복제 대상(`PropertyRoleUtil::collectReplicatedProperties`). RepNotify 를 적으면 Replicated 이기도 하다 */
-        static constexpr AnnotationKey Replicated{};
-        /** @brief string.RepNotify — `RepNotify = "…"`. 받은 값으로 바꾼 뒤 부를 같은 타입의 메서드 — void fn() 또는 void fn( const T& oldValue ). 없거나 모양이 다르면 파서 오류 */
-        static constexpr AnnotationKey RepNotify{};
-        /** @brief flag.SaveGame — 단독 토큰 `SaveGame` 또는 `SaveGame = true`. 타입(기반 포함)에 하나라도 있으면 세이브(`SerializePurpose::SaveGame`)가 이것만 쓴다. 하나도 없는 타입은 전부 쓴다 */
-        static constexpr AnnotationKey SaveGame{};
-        /** @brief flag.RuntimeState — 단독 토큰 `RuntimeState` 또는 `RuntimeState = true`. 플레이 중에만 의미가 있는 상태 — 저작 저장(`SerializePurpose::Authoring`)이 쓰지 않고, 저작 파일에 있으면 로드 오류다. Transient · Required 와 함께 쓰면 파서 오류 */
-        static constexpr AnnotationKey RuntimeState{};
-        /** @brief flag.Interp — 단독 토큰 `Interp` 또는 `Interp = true`. 시퀀서 값 트랙이 섞을 수 있다 — 실수 · 정수 · float2/3/4 · quaternion 만(그 밖의 타입은 파서 오류) */
-        static constexpr AnnotationKey Interp{};
-        /** @brief string.Validate — `Validate = "…"`. 프로퍼티 검증 함수 — 같은 타입의 void fn( ValidationContext& context ) [const]. 문제는 context.addError · addWarning 으로 적는다 */
-        static constexpr AnnotationKey Validate{};
-        /** @brief 단위 — `Units = mm` (Length). 단위 표는 ReflectionUnits.h 의 kArrReflectUnit 입니다. */
+#include "Core/Predefined/PredefinedAnnotationField.xxx"
         static constexpr AnnotationKey mm{};
-        /** @brief 단위 — `Units = cm` (Length). 단위 표는 ReflectionUnits.h 의 kArrReflectUnit 입니다. */
         static constexpr AnnotationKey cm{};
-        /** @brief 단위 — `Units = m` (Length). 단위 표는 ReflectionUnits.h 의 kArrReflectUnit 입니다. */
         static constexpr AnnotationKey m{};
-        /** @brief 단위 — `Units = km` (Length). 단위 표는 ReflectionUnits.h 의 kArrReflectUnit 입니다. */
         static constexpr AnnotationKey km{};
-        /** @brief 단위 — `Units = deg` (Angle). 단위 표는 ReflectionUnits.h 의 kArrReflectUnit 입니다. */
         static constexpr AnnotationKey deg{};
-        /** @brief 단위 — `Units = rad` (Angle). 단위 표는 ReflectionUnits.h 의 kArrReflectUnit 입니다. */
         static constexpr AnnotationKey rad{};
-        /** @brief 단위 — `Units = ms` (Time). 단위 표는 ReflectionUnits.h 의 kArrReflectUnit 입니다. */
         static constexpr AnnotationKey ms{};
-        /** @brief 단위 — `Units = s` (Time). 단위 표는 ReflectionUnits.h 의 kArrReflectUnit 입니다. */
         static constexpr AnnotationKey s{};
-        /** @brief 단위 — `Units = min` (Time). 단위 표는 ReflectionUnits.h 의 kArrReflectUnit 입니다. */
         static constexpr AnnotationKey min{};
-        /** @brief 단위 — `Units = h` (Time). 단위 표는 ReflectionUnits.h 의 kArrReflectUnit 입니다. */
         static constexpr AnnotationKey h{};
-        /** @brief 단위 — `Units = percent` (Ratio). 단위 표는 ReflectionUnits.h 의 kArrReflectUnit 입니다. */
         static constexpr AnnotationKey percent{};
-        /** @brief 단위 — `Units = ratio` (Ratio). 단위 표는 ReflectionUnits.h 의 kArrReflectUnit 입니다. */
         static constexpr AnnotationKey ratio{};
-        /** @brief 단위 — `Units = Hz` (Frequency). 단위 표는 ReflectionUnits.h 의 kArrReflectUnit 입니다. */
         static constexpr AnnotationKey Hz{};
-        /** @brief 단위 — `Units = fps` (Frequency). 단위 표는 ReflectionUnits.h 의 kArrReflectUnit 입니다. */
         static constexpr AnnotationKey fps{};
-        /** @brief 단위 — `Units = g` (Mass). 단위 표는 ReflectionUnits.h 의 kArrReflectUnit 입니다. */
         static constexpr AnnotationKey g{};
-        /** @brief 단위 — `Units = kg` (Mass). 단위 표는 ReflectionUnits.h 의 kArrReflectUnit 입니다. */
         static constexpr AnnotationKey kg{};
-        /** @brief 단위 — `Units = N` (Force). 단위 표는 ReflectionUnits.h 의 kArrReflectUnit 입니다. */
         static constexpr AnnotationKey N{};
     };
-
+#undef SW_ATTR_IN_Property
+#define SW_ATTR_IN_Property SW_ATTR_NAME
     inline constexpr const utf8* kArrPropertyKey[] = {
-        "ReadOnly",
-        "XMLAttribute",
-        "xmlAttribute",
-        "AssetPath",
-        "assetPath",
-        "Transient",
-        "transient",
-        "NonSerialized",
-        "nonSerialized",
-        "SkipIfEmpty",
-        "skipIfEmpty",
-        "Required",
-        "required",
-        "InheritKey",
-        "inheritKey",
-        "RequiredAtRoot",
-        "requiredAtRoot",
-        "InheritParent",
-        "inheritParent",
-        "HideInInspector",
-        "hideInInspector",
-        "HiddenInInspector",
-        "EditorHidden",
-        "Alias",
-        "Name",
-        "Category",
-        "DisplayName",
-        "Tooltip",
-        "Default",
-        "DefaultValue",
-        "AssetType",
-        "Meta",
-        "meta",
-        "CustomMeta",
-        "Min",
-        "Max",
-        "Step",
-        "MaxCount",
-        "UIMin",
-        "UIMax",
-        "Units",
-        "EditCondition",
-        "EditConditionHides",
-        "ColorHDR",
-        "Multiline",
-        "FileFilter",
-        "Replicated",
-        "RepNotify",
-        "SaveGame",
-        "RuntimeState",
-        "Interp",
-        "Validate",
+#include "Core/Predefined/PredefinedAnnotationField.xxx"
         nullptr,
     };
-} // namespace sw::reflect::attr
+#undef SW_ATTR_IN_Property
+#define SW_ATTR_IN_Property SW_ATTR_SKIP
 
-namespace sw::reflect::attr
-{
-    /** @brief `FUNCTION( … )` 의 키입니다. */
+#undef SW_ATTR_IN_Function
+#define SW_ATTR_IN_Function SW_ATTR_MEMBER
+    /** @brief `FUNCTION( … )` 의 키와 넷 역할 이름(단독 토큰 `Server` 등)입니다. 표의 `NetRole` 줄도 멤버가 되지만 소스에는 역할 이름을 적는다. */
     struct FunctionKeys
     {
-        /** @brief netrole.Server — 단독 토큰 `Server`(넷 역할). */
-        static constexpr AnnotationKey Server{};
-        /** @brief netrole.Client — 단독 토큰 `Client`(넷 역할). */
-        static constexpr AnnotationKey Client{};
-        /** @brief netrole.Multicast — 단독 토큰 `Multicast`(넷 역할). 같은 필드의 철자: Multicast, NetMulticast. */
-        static constexpr AnnotationKey Multicast{};
-        /** @brief netrole.Multicast — 단독 토큰 `NetMulticast`(넷 역할). 같은 필드의 철자: Multicast, NetMulticast. */
-        static constexpr AnnotationKey NetMulticast{};
-        /** @brief flag.Reliable — 단독 토큰 `Reliable` 또는 `Reliable = true`. */
-        static constexpr AnnotationKey Reliable{};
-        /** @brief flag.Validate — 단독 토큰 `Validate` 또는 `Validate = true`. */
-        static constexpr AnnotationKey Validate{};
-        /** @brief count.MaxCallsPerSecond — `MaxCallsPerSecond = 5`. 원격 호출의 연결마다 · 함수마다 초당 상한(`Server` 함수만). */
-        static constexpr AnnotationKey MaxCallsPerSecond{};
-        /** @brief flag.CallInEditor — 단독 토큰 `CallInEditor` 또는 `CallInEditor = true`. 같은 필드의 철자: CallInEditor, callInEditor, ExecInEditor. */
-        static constexpr AnnotationKey CallInEditor{};
-        /** @brief flag.CallInEditor — 단독 토큰 `callInEditor` 또는 `callInEditor = true`. 같은 필드의 철자: CallInEditor, callInEditor, ExecInEditor. */
-        static constexpr AnnotationKey callInEditor{};
-        /** @brief flag.CallInEditor — 단독 토큰 `ExecInEditor` 또는 `ExecInEditor = true`. 같은 필드의 철자: CallInEditor, callInEditor, ExecInEditor. */
-        static constexpr AnnotationKey ExecInEditor{};
-        /** @brief string.EditorPreview — `EditorPreview = "…"`. 에디터 뷰포트 미리보기가 타입 이름 대신 이 값으로 메서드를 찾는다(EditorViewportPreview). 예: EditorPreview = "DialogueLine" */
-        static constexpr AnnotationKey EditorPreview{};
-        /** @brief string.Category — `Category = "…"`. */
-        static constexpr AnnotationKey Category{};
-        /** @brief string.DisplayName — `DisplayName = "…"`. */
-        static constexpr AnnotationKey DisplayName{};
-        /** @brief string.Tooltip — `Tooltip = "…"`. */
-        static constexpr AnnotationKey Tooltip{};
-        /** @brief string.Meta — `Meta = "…"`. 같은 필드의 철자: Meta, meta, CustomMeta. */
-        static constexpr AnnotationKey Meta{};
-        /** @brief string.Meta — `meta = "…"`. 같은 필드의 철자: Meta, meta, CustomMeta. */
-        static constexpr AnnotationKey meta{};
-        /** @brief string.Meta — `CustomMeta = "…"`. 같은 필드의 철자: Meta, meta, CustomMeta. */
-        static constexpr AnnotationKey CustomMeta{};
+#include "Core/Predefined/PredefinedAnnotationField.xxx"
+#define REGISTER_FUNCTION_NET_ROLE( Name ) static constexpr AnnotationKey Name{};
+#include "Core/Predefined/PredefinedFunctionNetRole.xxx"
+#undef REGISTER_FUNCTION_NET_ROLE
     };
-
+#undef SW_ATTR_IN_Function
+#define SW_ATTR_IN_Function SW_ATTR_NAME
     inline constexpr const utf8* kArrFunctionKey[] = {
-        "Server",
-        "Client",
-        "Multicast",
-        "NetMulticast",
-        "Reliable",
-        "Validate",
-        "MaxCallsPerSecond",
-        "CallInEditor",
-        "callInEditor",
-        "ExecInEditor",
-        "EditorPreview",
-        "Category",
-        "DisplayName",
-        "Tooltip",
-        "Meta",
-        "meta",
-        "CustomMeta",
+#include "Core/Predefined/PredefinedAnnotationField.xxx"
+#define REGISTER_FUNCTION_NET_ROLE( Name ) #Name,
+#include "Core/Predefined/PredefinedFunctionNetRole.xxx"
+#undef REGISTER_FUNCTION_NET_ROLE
         nullptr,
     };
+#undef SW_ATTR_IN_Function
+
+#undef SW_ATTR_IN_Reflect
+#undef SW_ATTR_IN_Enum
+#undef SW_ATTR_IN_Enumerator
+#undef SW_ATTR_IN_Property
 } // namespace sw::reflect::attr
+
+#undef REGISTER_ANNOTATION_FIELD
+#undef REGISTER_ANNOTATION_FIELD_FN
+#undef SW_ATTR_MEMBER
+#undef SW_ATTR_NAME
+#undef SW_ATTR_SKIP
 
 namespace sw::reflect::attr
 {
     /** @brief `REFLECT_CONTAINER( 종류[, 래퍼] )` 의 종류입니다. 둘째 인자는 래퍼 이름(`List` → ListWrapper)입니다. */
     struct ContainerKeys
     {
-        /** @brief 컨테이너 종류 `Sequence` */
-        static constexpr AnnotationKey Sequence{};
-        /** @brief 컨테이너 종류 `Map` */
-        static constexpr AnnotationKey Map{};
+#define REGISTER_CONTAINER_KIND( Name ) static constexpr AnnotationKey Name{};
+#include "Core/Predefined/PredefinedContainerKind.xxx"
+#undef REGISTER_CONTAINER_KIND
     };
 } // namespace sw::reflect::attr

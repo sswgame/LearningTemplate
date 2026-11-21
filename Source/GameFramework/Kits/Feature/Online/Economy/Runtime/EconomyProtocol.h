@@ -252,8 +252,8 @@ namespace sw
     /** @brief Economy 메서드 표입니다. 번호는 열거자 순서에서 나오고, 요청 · 응답의 짝과 호출 규칙은 서술자가 정합니다. */
     struct EconomyMethod : OnlineMethodTable<EconomyMethodName, OnlineMethodRange::kEconomy, EconomyPushName>
     {
-        using GetWallet        = Method<MethodName::GetWallet, OnlineNoBody, EconomyWalletReply>;
-        using GetHistory       = Method<MethodName::GetHistory, EconomyHistoryRequest, EconomyHistoryReply>;
+        using GetWallet        = Method<MethodName::GetWallet, OnlineNoBody, EconomyWalletReply, OnlineMethodFlag::ReadOnly>;
+        using GetHistory       = Method<MethodName::GetHistory, EconomyHistoryRequest, EconomyHistoryReply, OnlineMethodFlag::ReadOnly>;
         using Purchase         = Method<MethodName::Purchase, EconomyPurchaseRequest, EconomyPurchaseReply, OnlineMethodFlag::RequiresIdempotencyKey>;
         using RedeemReceipt    = Method<MethodName::RedeemReceipt, EconomyRedeemRequest, EconomyRedeemReply, OnlineMethodFlag::RequiresIdempotencyKey>;
         using WithdrawPurchase = Method<MethodName::WithdrawPurchase, EconomyWithdrawRequest, EconomyWithdrawReply, OnlineMethodFlag::RequiresIdempotencyKey>; ///< 유상 구매 청약철회이다. 기한 안에 쓰지 않은 만큼 회수한다. 분개 키가 거래 id 라 다시 보내도 한 번만 적용된다

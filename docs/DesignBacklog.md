@@ -1655,7 +1655,7 @@ struct SiblingOrderKey
 **결정.** 기록 단위는 (오브젝트 id, 컴포넌트 키, 프로퍼티 경로, 값 글)이다. 컴포넌트 키는 프리팹 오버라이드가 이미 쓰는 `타입#n`(`PrefabOverrides::writesField`), 값 글은 `PropertyGridViewModel::setPropertyText` 가 쓰는 꼴이다.
 
 ```cpp
-// Editor/Panels/Inspector/Model/PropertyEditStep.h
+// Editor/Common/Widgets/PropertyGrid/Model/PropertyEditStep.h
 struct PropertyEditTarget { ObjectID _objectID; string _componentKey; string _propertyPath; };
 /** 되돌리기 · 다시 하기가 함께 쓰는 데이터 단계 — 모델의 쓰기 길(값 쓰기 + `onPropertyChanged`)을 그대로 탄다. */
 void applyPropertyText( UndoStepContext& context, const PropertyEditTarget& target, const string& valueText );
@@ -2374,7 +2374,7 @@ ezEngine(MIT) · Adria(MIT) · VQEngine(GPL-3.0 — 설계만) · Taskflow(MIT, 
 | `Engine/Net` | 2 | FileServeContentSource._mutex(M) · GameConnectSecurity._mutex(M) |
 | `Engine/Object` | 12 | ComponentDataStore._mutex(M) · ComponentDefaults._resolvedMutex(RW) · ComponentDefaults._defaultsMutex(M) · GameObjectStore._mutex(RW) · GameObjectStore._beginPlayMutex(M) · CameraRegistry._mutex(M) · ComponentRegistry._mutex(M) · PrimitiveRegistry._mutex(M) · TagIndex._mutex(RW) · TickBatchRegistry._mutex(M) · TickRegistry._dirtyLock(S) · PrefabCache._mapCacheMutex(RW) |
 | `Engine/Observability` | 3 | DebugChannel._mutex(M) · DebugChannel._mutex(M) · MetricRegistry._mutex(M) |
-| `Engine/Physics` | 7 | Box2DWorkerPool._spinLock(S) · PhysicsMeshShapeCache._mutex(M) · JoltJobSystem._queueSpinLock(S) · JoltPhysicsScene._reportMutex(M) · PhysicsHookRegistry._mutex(M) · PhysicsPoseStore._arrCommandLock(S) · PhysicsPoseStore._arrCommandLock(S) |
+| `Engine/Physics` | 6 | Box2DWorkerPool._spinLock(S) · PhysicsMeshShapeCache._mutex(M) · JoltJobSystem._queueSpinLock(S) · JoltPhysicsScene._reportMutex(M) · PhysicsPoseStore._arrCommandLock(S) · PhysicsPoseStore._arrCommandLock(S) |
 | `Engine/Profiling` | 1 | ProfilerBackend.ProfilerBackendInternal(M) |
 | `Engine/Reflection` | 2 | ReflectionValidation._mutex(M) · TypeRegistry._mutex(RW) |
 | `Engine/Renderer` | 12 | RenderDebugRegistry._mutex(M) · RenderDebugRegistry._frameMutex(M) · RenderExtensionRegistry._runMutex(M) · RenderExtensionRegistry._mutex(M) · MaterialPSOBuilder._mutex(M) · RenderPSOCache._layoutMutex(M) · RenderPSOCache._materialPSOMutex(M) · TransientAttachmentPool._clearedMutex(M) · OcclusionTileSnapshot._mutex(M) · RenderThread._scenePendingMutex(M) · RenderThread._mutex(M) · RenderThread._queuedCommandMutex(M) |

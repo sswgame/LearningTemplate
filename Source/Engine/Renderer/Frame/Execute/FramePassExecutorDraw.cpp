@@ -50,6 +50,7 @@
 #include "Engine/Renderer/Extension/RenderExtensionRegistry.h"
 #include "Engine/Renderer/Frame/Capture/FrameCapture.h"
 #include "Engine/Renderer/Frame/Execute/FramePassExecutor.h"
+#include "Engine/Renderer/Frame/Execute/ViewGraphResource.h"
 #include "Engine/Renderer/Frame/FrameRenderState.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Renderer/Frame/PostProcess/FrameAutoExposure.h"
@@ -108,11 +109,11 @@ namespace sw
                 beginInfo._width  = target._width;
                 beginInfo._height = target._height;
             }
-            // 핸들 0은 백버퍼다. 없는 첨부를 그대로 열면 패스가 화면에 그린다. 열지 않고 알린다(패스 경로라 한 번만).
+            // 핸들 0 은 무효다(RHI 가 패스를 열지 않는다). 어느 첨부가 없는지 여기서 이름으로 알리고 패스를 건너뛴다(패스 경로라 한 번만).
             if ( beginInfo._arrColorTarget[colorTargetIndex] == 0 )
             {
                 if ( _bMissingColorTargetLogged.exchange( 1, std::memory_order_relaxed ) == 0 )
-                    SW_LOG_ERROR_ID( "FramePassExecutor.ColorTargetDoesNot", "Color target '%#' does not exist this frame - skipping the pass (handle 0 of a missing attachment is the back buffer, so opening it as is would draw to the screen). "
+                    SW_LOG_ERROR_ID( "FramePassExecutor.ColorTargetDoesNot", "Color target '%#' does not exist this frame - skipping the pass (a missing attachment has handle 0, which is invalid). "
                                                                              "Check _listOutput and _listAttachment of the pipeline.",
                                      pColorNames[colorTargetIndex].c_str() );
                 return false;
@@ -240,8 +241,10 @@ namespace sw
             context._passValues.setMatrix( names._lightViewProj, _pActiveView->_shadow._lightViewProj );
             context._pCmd->endRenderPass();
             cache.markRebuilt();
+            // 층은 이 패스가 깊이 쓰기로 선언했고 다시 그리는 프레임에만 등록했다(`registerViewResources`) — 복원이 읽도록 셰이더 읽기로 옮긴다.
+            // 다시 그리지 않는 프레임은 지난번 다시 그린 뒤의 셰이더 읽기 그대로다(전이 없음).
+            context._pGraphPass->transition( ViewGraphResource::shadowCacheLayer(), RHITextureState::ShaderResource );
         }
-        context._pCmd->prepareTextureForShaderRead( layer._texture );
         return true;
     }
 
@@ -332,9 +335,8 @@ namespace sw
 
     void FramePassExecutor::registerPassTexture( FramePassContext& context, const hashed_string& canonicalName, const hashed_string& attachmentName )
     {
+        // 상태는 옮기지 않는다 — 선언한 입력은 레벨 콜백이 셰이더 읽기로 옮겼다(꺼진 효과가 가리키는 원본은 그 효과 패스의 입력 선언이 옮겼다). 패스 기록 면에는 텍스처 전이가 없다.
         const TransientAttachmentPool::Attachment attachment = findTransientAttachment( attachmentName );
-        if ( attachment._texture != 0 && context._pCmd != nullptr )
-            context._pCmd->prepareTextureForShaderRead( attachment._texture );
         context._resourceRegistry.registerTexture( canonicalName, attachment._texture, attachment._srv );
         // 원본을 비켜 읽는 효과(블룸)는 그 원본의 텍셀 크기로 비켜야 한다. 반해상도 첨부면 프레임 텍셀의 두 배다. context 는 패스마다 시드의 사본이라 다음 패스로 새지 않는다.
         const bool bSourceColorAttachment = canonicalName == attachmentNames()._sourceColor && attachment._width > 0 && attachment._height > 0;
@@ -383,7 +385,7 @@ namespace sw
     {
         // 회전(Android)과 HDR 출력(데스크톱)은 함께 오지 않는다 — HDR 은 SDR 만 내는 Android 에 없다(RHICapabilities::_displayOutputSupport).
         const RHITextureHandle rotationTarget = _screenRotation.getScreenTarget();
-        return rotationTarget != 0 ? rotationTarget : _displayEncode.getUITarget();
+        return rotationTarget != kRHIBackBufferTexture || _displayEncode.isActive() == false ? rotationTarget : _displayEncode.getUITarget();
     }
 
     FramePassExecutor::PresentTarget FramePassExecutor::resolvePresentTarget( const bool bSceneLayer ) const
@@ -406,7 +408,7 @@ namespace sw
         const bool bCaptureFromOutput = bOwnOutput == false && _state._outputRenderTarget != 0 && _capture.isPresentActive();
 
         PresentTarget target{};
-        // 주 출력이 화면이면 화면 대상이다 — 회전한 휴대 기기 화면이면 논리 크기 대기 텍스처(끝에 FrameScreenRotation 이 스왑체인으로 돌려 옮긴다), 아니면 0(스왑체인).
+        // 주 출력이 화면이면 화면 대상이다 — 회전한 휴대 기기 화면이면 논리 크기 대기 텍스처(끝에 FrameScreenRotation 이 스왑체인으로 돌려 옮긴다), 아니면 `kRHIBackBufferTexture`(스왑체인).
         // HDR 출력이면 장면(Present)은 장면 출력 RT, 나머지(Canvas)는 UI RT 다 — 끝에 FrameDisplayEncode 가 합성 · 인코딩해 스왑체인으로 옮긴다.
         const RHITextureHandle sceneTarget = bSceneLayer ? _displayEncode.getSceneTarget() : RHITextureHandle{ 0 };
         const RHITextureHandle mainOutput  = _state._outputRenderTarget != 0 ? _state._outputRenderTarget : sceneTarget != 0 ? sceneTarget
@@ -416,7 +418,7 @@ namespace sw
         target._width                      = bOwnOutput ? activeView._outputWidth : _state._outputWidth;
         target._height                     = bOwnOutput ? activeView._outputHeight : _state._outputHeight;
         // 백버퍼는 디바이스가 채택한 포맷(Vulkan 은 서피스 협상 결과)이고, 텍스처는 그 텍스처가 기록한 포맷이다.
-        target._format             = ( target._texture == 0 ) ? _pDevice->getBackBufferFormat() : _pDevice->getResourceFactory()->getTextureFormat( target._texture );
+        target._format             = ( target._texture == kRHIBackBufferTexture ) ? _pDevice->getBackBufferFormat() : _pDevice->getResourceFactory()->getTextureFormat( target._texture );
         target._bOwnOutput         = bOwnOutput ? SW_TRUE : SW_FALSE;
         target._bCapture           = bCapture ? SW_TRUE : SW_FALSE;
         target._bCaptureToBack     = bCaptureToBack ? SW_TRUE : SW_FALSE;

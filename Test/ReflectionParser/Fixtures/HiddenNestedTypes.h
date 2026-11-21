@@ -6,8 +6,7 @@
 // EXPECT-GEN: offsetof( sw::fixture::HiddenOwner::HiddenRecord, _count )
 // EXPECT-GEN: struct Registrar<sw::fixture::HiddenOwner>
 // EXPECT-GEN: struct Registrar<sw::fixture::HiddenOwner::PublicRecord>
-// EXPECT-GEN: struct ReflectTypeTraits<sw::fixture::HiddenOwner::PublicRecord>
-// EXPECT-NOT-GEN: ReflectTypeTraits<sw::fixture::HiddenOwner::HiddenRecord>
+// EXPECT-NOT-GEN: ReflectTypeTraits
 // EXPECT-NOT-GEN: Registrar<sw::fixture::HiddenOwner::HiddenRecord>
 // EXPECT-NOT-GEN: Registrar<sw::fixture::HiddenOwner::HiddenMode>
 // EXPECT-TYPE: sw::fixture::HiddenOwner::HiddenRecord

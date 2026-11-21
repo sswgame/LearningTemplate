@@ -257,7 +257,6 @@ namespace sw
         , _readback{}
         , _frameSerial{ 0 }
         , _processedCounter{ 0 }
-        , _reportedCount{ 0 }
         , _droppedCount{ 0 }
     {
     }
@@ -335,7 +334,7 @@ namespace sw
         _buffer.upload( _pDevice, arrControl, sizeof( arrControl ), sizeof( uint32 ) * SW_GPU_MESSAGE_HEADER_SELECT_X );
     }
 
-    void GPUMessageChannel::bindCompute( IRHICommandList& commands )
+    void GPUMessageChannel::bindCompute( IRHIPassCommandList& commands )
     {
         if ( isActive() == false )
             return;
@@ -343,7 +342,7 @@ namespace sw
         commands.bindComputeUAV( _buffer._uav, SW_SLOT_GPU_MESSAGE_UAV );
     }
 
-    void GPUMessageChannel::bindGraphics( IRHICommandList& commands )
+    void GPUMessageChannel::bindGraphics( IRHIPassCommandList& commands )
     {
         if ( isActive() == false )
             return;
@@ -408,7 +407,6 @@ namespace sw
 
         for ( const GPUMessageGroup& group : listGroup )
         {
-            _reportedCount += group._count;
             const GPUMessageFormat* pFormat = GPUMessageFormat::find( group._first._id );
             if ( pFormat == nullptr )
             {

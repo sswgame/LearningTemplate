@@ -128,7 +128,7 @@ namespace sw
         return fileName.empty() == false && bSeparator == false && fileName.find( ".." ) == string_view::npos;
     }
 
-    bool LocalPlatformServices::writeKeyValueFile( const utf8* pFileName, const map<string, string>& mapValue ) const
+    bool LocalPlatformServices::writeKeyValueFile( const utf8* pFileName, const flat_map<string, string>& mapValue ) const
     {
         StringBuilder<constant::buffer::kMax1024> text;
         for ( const auto& [key, value] : mapValue )
@@ -142,7 +142,7 @@ namespace sw
         return bSaved;
     }
 
-    void LocalPlatformServices::readKeyValueFile( const utf8* pFileName, map<string, string>& outMapValue ) const
+    void LocalPlatformServices::readKeyValueFile( const utf8* pFileName, flat_map<string, string>& outMapValue ) const
     {
         string text;
         if ( FileUtil::readOptionalTextFile( FileUtil::joinPath( _folder, pFileName ), text ) != OptionalFileRead::Read )

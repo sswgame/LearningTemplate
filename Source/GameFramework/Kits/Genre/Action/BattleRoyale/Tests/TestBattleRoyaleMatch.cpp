@@ -3,6 +3,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/Tests/StateBytesTestUtil.h"
 
 #include "GameFramework/Kits/Genre/Action/BattleRoyale/BattleRoyaleCatalog.h"
 #include "GameFramework/Kits/Genre/Action/BattleRoyale/BattleRoyaleMatch.h"
@@ -609,4 +610,40 @@ SW_TEST_CASE( BattleRoyaleMatchTest, ReadRejectsBrokenBytes )
     sw::Archive whole( dropWritten.getData(), dropWritten.getSize() );
     SW_EXPECT_TRUE( target._match.readState( whole ) );
     SW_EXPECT_EQUAL( 2, target._match.getPlayerCount() );
+}
+
+/**
+ * @brief [BattleRoyaleMatchTest] 결정성: 피해 · 방어구 · 기절 · 부활 · 보급 상자를 걸음 번호로 지나면 두 판의 상태 바이트가 같고, 중간 세이브를 읽어 이어 돌려도 같다
+ */
+SW_TEST_CASE( BattleRoyaleMatchTest, MatchDeterminism )
+{
+    MatchBench bench;
+    SW_REQUIRE_TRUE( bench.loadCatalogs( kMatchXML ) );
+    const auto setup = [&bench]( sw::BattleRoyaleMatch& match )
+    {
+        if ( match.initialize( &bench._catalog, &bench._items, &bench._loot, 5, nullptr ) == false )
+            return false;
+        const int32 teamA = match.addTeam( sw::hashed_string( "A" ) );
+        const int32 teamB = match.addTeam( sw::hashed_string( "B" ) );
+        if ( match.addPlayer( teamA ) != 0 || match.addPlayer( teamA ) != 1 || match.addPlayer( teamB ) != 2 )
+            return false;
+        if ( match.findPlayerMutable( 0 )->_loadout.tryEquipArmor( sw::hashed_string( "helmet" ), 30.0f ) == false )
+            return false;
+        match.start();
+        return true;
+    };
+    const auto step = []( sw::BattleRoyaleMatch& match, int32 stepIndex )
+    {
+        const float32 offset = static_cast<float32>( stepIndex % 20 );
+        match.setPlayerPosition( 0, sw::float2{ 40.0f + offset, 50.0f } );
+        match.setPlayerPosition( 2, sw::float2{ 60.0f, 50.0f - offset } );
+        if ( stepIndex % 12 == 0 )
+            (void)match.applyDamage( 0, 2, 40.0f, stepIndex % 24 == 0 ? sw::BattleRoyaleHitZone::Head : sw::BattleRoyaleHitZone::Limb );
+        if ( stepIndex % 20 == 5 )
+            (void)match.beginRevive( 1, 0 );
+        if ( stepIndex % 25 == 10 )
+            (void)match.applyDamage( 2, 1, 20.0f, sw::BattleRoyaleHitZone::Body );
+        match.update( kMatchStep );
+    };
+    SW_EXPECT_TRUE( sw::StateBytesTestUtil::isDeterministic<sw::BattleRoyaleMatch>( setup, step, 200 ) );
 }

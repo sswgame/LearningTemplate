@@ -6,7 +6,7 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Concurrency/thread.h"
-#include "Core/Container/map.h"
+#include "Core/Container/flat_map.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/StdHeaders.h"
@@ -59,12 +59,12 @@ namespace sw
 
     private:
         // 큐 · 뮤텍스 · 감시 경로 · 넘침 표시는 IFileWatcher 가 가진다. 세 플랫폼이 똑같이 가져야 하는 것들이다.
-        sw::thread                                   _workerThread;
-        mutex                                        _watchMutex;
-        map<int32, string> _mapWatchDescriptorToPath SW_GUARDED_BY( _watchMutex ); ///< 감시 워커(이벤트 경로 풀기)와 부른 스레드(감시 더하기 · 멈추기)가 함께 본다
-        int32                                        _inotifyFd;
-        int32                                        _wakeFd;
-        atomic<bool>                                 _bIsWatching;
-        uint8                                        _bRecursive : 1;
+        sw::thread                                        _workerThread;
+        mutex                                             _watchMutex;
+        flat_map<int32, string> _mapWatchDescriptorToPath SW_GUARDED_BY( _watchMutex ); ///< 감시 워커(이벤트 경로 풀기)와 부른 스레드(감시 더하기 · 멈추기)가 함께 본다
+        int32                                             _inotifyFd;
+        int32                                             _wakeFd;
+        atomic<bool>                                      _bIsWatching;
+        uint8                                             _bRecursive : 1;
     };
 } // namespace sw

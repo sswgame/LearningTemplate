@@ -13,6 +13,7 @@
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Input/EditorPopupManager.h"
+#include "Editor/Common/Widgets/EditorVirtualList.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 
@@ -294,21 +295,26 @@ namespace sw::editor
             const QuickLauncherRowLayout layout = QuickLauncherLayoutUtil::makeRowLayout( ImGui::GetContentRegionAvail().x, getWidestBadgeWidth(),
                                                                                           ImGui::GetFrameHeight(), ImGui::GetTextLineHeight(), ImGui::GetStyle().ItemSpacing.x );
 
-            for ( int32 itemIndex = 0; itemIndex < filteredCount; ++itemIndex )
+            EditorVirtualList virtualList( filteredCount ); // 에셋 후보 전부(수천) — 보이는 줄만 그린다
+            virtualList.includeRow( _selectedIndex );       // 키로 고른 줄은 화면 밖이어도 그려 그 자리로 스크롤한다
+            while ( virtualList.step() )
             {
-                const bool bSelected = ( itemIndex == _selectedIndex );
-
-                ImGui::PushID( itemIndex );
-                if ( Internal::drawRow( *listFiltered[static_cast<size_t>( itemIndex )], bSelected, layout ) )
+                for ( int32 itemIndex = virtualList.getBegin(); itemIndex < virtualList.getEnd(); ++itemIndex )
                 {
-                    _selectedIndex = itemIndex;
-                    bClicked       = true;
+                    const bool bSelected = ( itemIndex == _selectedIndex );
+
+                    ImGui::PushID( itemIndex );
+                    if ( Internal::drawRow( *listFiltered[static_cast<size_t>( itemIndex )], bSelected, layout ) )
+                    {
+                        _selectedIndex = itemIndex;
+                        bClicked       = true;
+                    }
+
+                    if ( bSelected )
+                        ImGui::SetScrollHereY( 0.5f );
+
+                    ImGui::PopID();
                 }
-
-                if ( bSelected )
-                    ImGui::SetScrollHereY( 0.5f );
-
-                ImGui::PopID();
             }
 
             if ( filteredCount == 0 )

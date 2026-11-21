@@ -129,10 +129,10 @@ namespace sw
 
 namespace sw
 {
-    ServiceStoreRead<map<string, RemoteConfig::Entry>> RemoteConfig::readTable( IServiceStoreConnection& connection )
+    ServiceStoreRead<flat_map<string, RemoteConfig::Entry>> RemoteConfig::readTable( IServiceStoreConnection& connection )
     {
-        ServiceStoreRead<map<string, Entry>> read;
-        string                               cursor;
+        ServiceStoreRead<flat_map<string, Entry>> read;
+        string                                    cursor;
         while ( true )
         {
             vector<ServiceRecord> listRecord;
@@ -187,7 +187,7 @@ namespace sw
         _store.bindStore( &store ); // 부르는 쪽이 저장소를 넘긴다 — 같은 저장소다
         _store.submit( []( IServiceStoreConnection& connection )
         { return readTable( connection ); },
-                       [this]( ServiceStoreRead<map<string, Entry>>& read, ServiceStoreCompletion completion )
+                       [this]( ServiceStoreRead<flat_map<string, Entry>>& read, ServiceStoreCompletion completion )
         { onReloadCompleted( read._result, completion.isCancelled(), read._value ); } );
     }
 
@@ -273,7 +273,7 @@ namespace sw
         const uint64 count = reader.readVarUint();
         if ( count > static_cast<uint64>( RemoteConfigInternal::kMaxSnapshotKeys ) )
             return false;
-        map<string, Entry> mapEntry;
+        flat_map<string, Entry> mapEntry;
         for ( uint64 index = 0; index < count; ++index )
         {
             string key;
@@ -383,7 +383,7 @@ namespace sw
         _snapshotHash              = HashUtil::computeStringHash64( reinterpret_cast<const utf8*>( bytes.data() ), static_cast<size_t>( writer.getByteCount() ), false );
     }
 
-    void RemoteConfig::onReloadCompleted( ServiceStoreResult result, bool bCancelled, map<string, Entry>& inoutMapEntry )
+    void RemoteConfig::onReloadCompleted( ServiceStoreResult result, bool bCancelled, flat_map<string, Entry>& inoutMapEntry )
     {
         _lastReloadResult = result;
         if ( result != ServiceStoreResult::Ok )

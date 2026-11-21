@@ -4,6 +4,7 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Format/Tests/StateBytesTestUtil.h"
 
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSCatalog.h"
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSSelection.h"
@@ -66,6 +67,14 @@ namespace
                     _arrArmy[player].push_back( _world.spawnUnit( kMarine, player, at( 6.5f + static_cast<float32>( index % 4 ), 10.5f + static_cast<float32>( index / 4 ) ) ) );
             }
             return _arrDepot[0].isValid() && _arrDepot[1].isValid();
+        }
+
+        /** @brief 월드와 빌려 준 지갑을 함께 싣습니다 — 지갑은 월드 밖이라 월드 바이트에 없다(결정성 테스트가 판 전체로 쓴다). */
+        SW_DECLARE_STATE_IO_IN_PLACE()
+        {
+            io.value( _world );
+            io.value( _arrWallet[0] );
+            io.value( _arrWallet[1] );
         }
 
         /** @brief 정해진 시각에 명령을 내리며 @p seconds 를 진행합니다. @p startSecond 는 이 구간이 시작하는 판 시각(초)입니다. */
@@ -689,4 +698,47 @@ SW_TEST_CASE( RTSWorldTest, SelectSameTypePicksOwnUnitsOfThatKindInTheRect )
     SW_REQUIRE_EQUAL( size_t( 1 ), selection.getSelected().size() );
     SW_EXPECT_TRUE( selection.isSelected( match._arrArmy[1][0] ) );
     SW_EXPECT_FALSE( selection.isCommandable( match._world ) );
+}
+
+/**
+ * @brief [RTSWorldTest] 결정성: 같은 걸음은 같은 바이트를 내고, 쓰고 읽은 판은 끊김 없이 돈 판과 같게 이어 돈다
+ * @details 경로는 싣지 않으므로(`readState` 가 다시 구한다) 저장은 앞 절반(생산만 — 움직이는 유닛이 없다) 끝에 두고, 채취 · 건설 · 무리 공격 이동 · 전투는 뒤 절반에 돈다.
+ */
+SW_TEST_CASE( RTSWorldTest, WorldDeterminism )
+{
+    sw::RTSCatalog catalog;
+    SW_REQUIRE_TRUE( catalog.loadFromXMLText( kUnitXML, "RTSWorldTest" ) );
+    constexpr int32 kStepCount = 120; // 한 걸음은 10 틱(1/3 초) — 저장은 60 걸음(20 초)
+    constexpr int32 kSaveStep  = kStepCount / 2;
+    const auto      setup      = [&catalog]( ScriptedMatch& match )
+    { return match.setUp( catalog ); };
+    const auto step = []( ScriptedMatch& match, int32 stepIndex )
+    {
+        sw::RTSWorld& world = match._world;
+        for ( int32 player = 0; player < 2; ++player )
+        {
+            if ( stepIndex == 0 )
+            {
+                (void)world.train( match._arrDepot[player], kWorker );
+                (void)world.train( match._arrDepot[player], kMarine );
+            }
+            if ( stepIndex == kSaveStep )
+            {
+                const sw::RTSUnitID mineral = world.findNearestResource( world.findUnit( match._arrWorker[player][0] )->_position, sw::RTSResourceKind::Minerals, 20.0f );
+                for ( size_t index = 1; index < match._arrWorker[player].size(); ++index )
+                    (void)world.issueGather( match._arrWorker[player][index], mineral );
+                const sw::int2 site = player == 0 ? sw::int2{ 3, 12 } : sw::int2{ kMapSize - 5, kMapSize - 14 };
+                (void)world.issueBuild( match._arrWorker[player][0], kSupply, site );
+            }
+            if ( stepIndex > kSaveStep && stepIndex % 20 == 0 )
+                (void)world.train( match._arrDepot[player], kMarine );
+            if ( stepIndex == kSaveStep + 6 )
+                (void)world.issueGroupMove( match._arrArmy[player], sw::float3{ kMapSize * 0.5f, 0.0f, kMapSize * 0.5f }, true );
+            if ( stepIndex == kSaveStep + 30 )
+                (void)world.issueGroupMove( match._arrArmy[player], world.findUnit( match._arrDepot[1 - player] )->_position, true, true );
+        }
+        for ( int32 tick = 0; tick < 10; ++tick )
+            (void)world.update( 1.0f / 30.0f, 1.0f );
+    };
+    SW_EXPECT_TRUE( sw::StateBytesTestUtil::isDeterministic<ScriptedMatch>( setup, step, kStepCount ) );
 }

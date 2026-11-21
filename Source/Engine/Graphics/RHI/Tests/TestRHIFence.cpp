@@ -1,7 +1,7 @@
 /**
  * @file TestRHIFence.cpp
  * @brief 렌더러 쪽 펜스(`RHIFence`)가 디바이스의 GPU 완료 알림으로만 완료 값을 올리는가 — 프레임 수를 세어 짐작하지 않는다.
- * @details 가짜 디바이스(`test::FakeRHIDevice`)는 `enqueueGPURelease` 를 부르지 않고 쌓는다. 테스트가 쌓인 콜백을 불러 "GPU 가 그 프레임을 끝냈다" 를 흉내 낸다.
+ * @details 가짜 디바이스(`test::FakeRHIDevice`)는 `notifyFrameCompletion` 을 부르지 않고 쌓는다. 테스트가 쌓인 통지를 `Completed` 로 불러 "GPU 가 그 프레임을 끝냈다" 를 흉내 낸다.
  */
 #include "pch.h"
 
@@ -28,12 +28,12 @@ SW_TEST_CASE( RHIFenceTest, CompletesOnlyWhenTheDeviceReportsTheFrameDone )
         (void)fence.signal( device );
     }
     SW_EXPECT_EQUAL( static_cast<uint64>( 0 ), fence.getCompletedValue() );
-    SW_REQUIRE_EQUAL( device._listGPURelease.size(), static_cast<size_t>( 10 ) );
+    SW_REQUIRE_EQUAL( device._listFrameCompletion.size(), static_cast<size_t>( 10 ) );
 
-    device._listGPURelease[0]();
+    device._listFrameCompletion[0]( RHIFrameCompletion::Completed );
     SW_EXPECT_EQUAL( static_cast<uint64>( 1 ), fence.getCompletedValue() );
-    device._listGPURelease[2]();
-    device._listGPURelease[1](); // 늦게 온 앞 값의 알림이 완료 값을 되돌리지 않는다
+    device._listFrameCompletion[2]( RHIFrameCompletion::Completed );
+    device._listFrameCompletion[1]( RHIFrameCompletion::Completed ); // 늦게 온 앞 값의 알림이 완료 값을 되돌리지 않는다
     SW_EXPECT_EQUAL( static_cast<uint64>( 3 ), fence.getCompletedValue() );
 }
 
@@ -59,7 +59,25 @@ SW_TEST_CASE( RHIFenceTest, DeferredSpanIsReusedOnlyAfterItsFenceCompletes )
     SW_EXPECT_EQUAL( 4u, allocator.allocate( 4 ) );                            // 남은 빈 자리
     SW_EXPECT_EQUAL( SpanAllocator::kInvalidOffset, allocator.allocate( 4 ) ); // 반납한 자리는 아직 대기 중이다
 
-    device._listGPURelease[0]();
+    device._listFrameCompletion[0]( RHIFrameCompletion::Completed );
     allocator.retireDeferred( fence.getCompletedValue() );
     SW_EXPECT_EQUAL( 0u, allocator.allocate( 4 ) );
+}
+
+/**
+ * @brief [RHIFenceTest] 못 기다린 비우기(`Abandoned`)는 완료 값을 올리지 않고, 뒤 프레임의 `Completed` 가 그 값을 덮어 올린다
+ * @details 변이: 통지 결과를 보지 않고 늘 올리면(옛 한 채널 해제 콜백) 첫 단언이 진다 — 종료 · 잃은 장치 · 웹 `waitIdle` 에서 끝나지 않은 구간을 다시 내준다.
+ */
+SW_TEST_CASE( RHIFenceTest, AbandonedNotificationDoesNotCompleteTheValue )
+{
+    test::FakeRHIDevice device;
+    RHIFence            fence;
+    (void)fence.signal( device );
+    (void)fence.signal( device );
+    SW_REQUIRE_EQUAL( device._listFrameCompletion.size(), static_cast<size_t>( 2 ) );
+
+    device._listFrameCompletion[0]( RHIFrameCompletion::Abandoned );
+    SW_EXPECT_EQUAL( static_cast<uint64>( 0 ), fence.getCompletedValue() );
+    device._listFrameCompletion[1]( RHIFrameCompletion::Completed );
+    SW_EXPECT_EQUAL( static_cast<uint64>( 2 ), fence.getCompletedValue() );
 }

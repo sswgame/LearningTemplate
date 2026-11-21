@@ -275,7 +275,7 @@ namespace sw
         /** @brief 베이크하는 중 · 줄에 선 타일을 모두 지금 베이크하고 끼웁니다(게임 스레드 — 테스트 · 쿠킹). */
         void flushTileBakes();
         /** @brief 재베이크로 끼운 타일 수(누적, 진단)입니다. */
-        uint32 getRebakedTileCount() const { return _tileRebaker.getRebakedTileCount(); }
+        const DevCounter& getRebakedTileCount() const { return _tileRebaker.getRebakedTileCount(); }
         /** @brief 지금 등록된 에이전트 수입니다. */
         uint32 getAgentCount() const { return static_cast<uint32>( _listAgent.size() ); }
 

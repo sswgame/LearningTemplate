@@ -65,7 +65,7 @@ SW_TEST_CASE( ShooterEnemyPoolResetTest, DeadEnemyComesBackAsFreshSpawn )
 
     pool.release( manager, pObject->getHandle() );
     SW_REQUIRE_TRUE( pool.acquire( manager, "QuadShell" ) == pObject );
-    SW_EXPECT_EQUAL( 1u, pool.getCreatedCount() );
+    SW_EXPECT_EQUAL( uint64{ 1 }, pool.getCreatedCount().get() );
     SW_EXPECT_FALSE( pEnemy->isLaunched() );
     SW_EXPECT_FALSE( pEnemy->isDead() );
     SW_EXPECT_TRUE( pEnemy->getPhase() == ShooterEnemyPhase::Rising );

@@ -5,6 +5,7 @@
 #include "Engine/Reflection/TypeFqn.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Format/Tests/StateBytesTestUtil.h"
 
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/Tests/ThemeParkTestRules.h"
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/ThemePark.h"
@@ -114,6 +115,19 @@ namespace
         }
     };
 
+    /** @brief 결정성 테스트의 판 하나입니다. 공원과 빌려 준 지갑을 함께 싣는다 — 지갑은 공원 밖이라 공원 바이트에 없다. */
+    struct ThemeParkRun
+    {
+        sw::Wallet              _wallet{};
+        sw::ThemeParkSimulation _park{};
+
+        SW_DECLARE_STATE_IO_IN_PLACE()
+        {
+            io.value( _park );
+            io.value( _wallet );
+        }
+    };
+
     struct ThemeParkReadStateTest
     {
         sw::Wallet              _wallet{};
@@ -161,6 +175,53 @@ SW_TEST_CASE_F( ThemeParkReadStateTest, RealAndCraftedStatesRead )
 
     SW_REQUIRE_TRUE( ThemeParkFixture{}.readInto( _park ) );
     SW_EXPECT_EQUAL( size_t( 2 ), _park.getGuests().size() );
+}
+
+/**
+ * @brief [ThemeParkReadStateTest] 결정성: 놀이기구 둘에 손님 도착(난수) · 직접 입장 · 줄 · 탑승 · 가격 바꾸기 · 닫고 열기를 걸음 번호로 돌린 공원은 같은 바이트를 내고, 중간에 쓰고 읽은 공원도 같게 이어 돈다
+ */
+SW_TEST_CASE( ThemeParkSimulationTest, ParkDeterminism )
+{
+    const auto setup = []( ThemeParkRun& run )
+    {
+        const sw::ThemeParkSettings settings = sw::ThemeParkTestRules::make();
+        run._wallet.add( settings._currency, 100000 );
+        sw::SessionStateRefs refs;
+        refs._pWallet = &run._wallet;
+        return run._park.initialize( settings, refs );
+    };
+    const auto step = []( ThemeParkRun& run, int32 stepIndex )
+    {
+        sw::ThemeParkSimulation& park = run._park;
+        if ( stepIndex == 0 )
+        {
+            sw::ParkRide wheel;
+            wheel._id        = "wheel";
+            wheel._capacity  = 4;
+            wheel._cycleTime = 6.0f;
+            wheel._entrance  = sw::float3{ 10.0f, 0.0f, 0.0f };
+            sw::ParkRide coaster;
+            coaster._id         = "coaster";
+            coaster._excitement = 7.0f;
+            coaster._intensity  = 6.0f;
+            coaster._nausea     = 4.0f;
+            coaster._capacity   = 8;
+            coaster._cycleTime  = 12.0f;
+            coaster._entrance   = sw::float3{ -20.0f, 0.0f, 15.0f };
+            (void)park.buildRide( wheel, 10 );
+            (void)park.buildRide( coaster, 50 );
+        }
+        if ( stepIndex % 5 == 2 )
+            (void)park.admitGuest( 20 + stepIndex % 40, 0.0f, 3.0f + static_cast<float32>( stepIndex % 6 ), 0.5f );
+        if ( stepIndex == 50 )
+            park.setRidePrice( 1, 8 );
+        if ( stepIndex == 80 )
+            park.setRideOpen( 1, false );
+        if ( stepIndex == 130 )
+            park.setRideOpen( 1, true );
+        park.update( 0.5f );
+    };
+    SW_EXPECT_TRUE( sw::StateBytesTestUtil::isDeterministic<ThemeParkRun>( setup, step, 200 ) );
 }
 
 /**

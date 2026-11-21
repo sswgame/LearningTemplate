@@ -2,7 +2,7 @@
 
 #include "Editor/Common/Widgets/EditorComponentMenu.h"
 
-#include "Core/Container/map.h"
+#include "Core/Container/flat_map.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Log/LogOnce.h"
@@ -85,7 +85,7 @@ namespace sw::editor
             return picked;
         }
 
-        map<string, vector<pair<hashed_string, const TypeInfo*>>> mapCategorized;
+        flat_map<string, vector<pair<hashed_string, const TypeInfo*>>> mapCategorized;
         for ( const hashed_string& typeName : listType )
         {
             const TypeInfo* pTypeInfo = registry.findType( typeName );

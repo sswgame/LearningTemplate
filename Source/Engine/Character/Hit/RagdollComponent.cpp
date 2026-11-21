@@ -13,6 +13,7 @@
 #include "Engine/Character/CharacterDataCache.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectEvents.h"
+#include "Engine/Object/GameObject/Tick/FixedStepContext.h"
 #include "Engine/Physics/Asset/PhysicsAsset.h"
 #include "Engine/Physics/Component/CharacterControllerComponent.h"
 #include "Engine/Physics/IPhysicsScene.h"
@@ -185,7 +186,7 @@ namespace sw
         _bHasPhysicsPose  = false;
         _bAsleep          = false;
         _bGettingUp       = false;
-        // 떼어 낸 바디(절단)는 되돌릴 길이 없다 — 물리 에셋을 다시 읽고 다음 물리 프레임이 바디를 키네마틱으로 다시 세운다(`beginPhysicsFrame` 의 다시 짓기).
+        // 떼어 낸 바디(절단)는 되돌릴 길이 없다 — 물리 에셋을 다시 읽고 다음 물리 프레임이 바디를 키네마틱으로 다시 세운다(`onPhysicsFrameBegin` 의 다시 짓기).
         if ( _ragdoll.isEmpty() == false )
             loadAsset();
         if ( _pUnit != nullptr )
@@ -433,6 +434,9 @@ namespace sw
     void RagdollComponent::onRegister( GameObjectManager& manager )
     {
         PhysicsComponent::onRegister( manager );
+        registerFixedStep<&RagdollComponent::onPhysicsFrameBegin>( manager, FixedStepGroup::FrameBegin );
+        registerFixedStep<&RagdollComponent::onPrePhysicsStep>( manager, FixedStepGroup::PreStep );
+        registerFixedStep<&RagdollComponent::onPhysicsFrameEnd>( manager, FixedStepGroup::FrameEnd );
         _hitSubscription = GameObjectEvents::listen<&RagdollComponent::handleHit>( *this, &GameObjectEvents::_hitReceived );
     }
 
@@ -675,8 +679,9 @@ namespace sw
         return true;
     }
 
-    void RagdollComponent::beginPhysicsFrame( ScenePhysics& physics )
+    void RagdollComponent::onPhysicsFrameBegin( const FixedStepContext& context )
     {
+        ScenePhysics& physics = context.getPhysics();
         if ( isSimulated() == false )
         {
             releasePhysics( physics );
@@ -775,8 +780,12 @@ namespace sw
         _bMotorsDriven = false;
     }
 
-    void RagdollComponent::prePhysicsStep( ScenePhysics& physics, float32 fixedDeltaTime, uint32 stepIndex, uint32 stepCount )
+    void RagdollComponent::onPrePhysicsStep( const FixedStepContext& context )
     {
+        ScenePhysics&        physics          = context.getPhysics();
+        const float32        fixedDeltaTime   = context.getFixedDeltaTime();
+        const uint32         stepIndex        = context.getStepIndex();
+        const uint32         stepCount        = context.getStepCount();
         IPhysicsBodyScene3D* pScene           = physics.findScene3D();
         const bool           bNoRagdollBodies = pScene == nullptr || _ragdoll.isEmpty() || _pUnit == nullptr;
         if ( bNoRagdollBodies )
@@ -811,9 +820,9 @@ namespace sw
         }
     }
 
-    void RagdollComponent::endPhysicsFrame( ScenePhysics& physics, float32 alpha )
+    void RagdollComponent::onPhysicsFrameEnd( const FixedStepContext& context )
     {
-        (void)alpha;
+        ScenePhysics&        physics                 = context.getPhysics();
         IPhysicsBodyScene3D* pScene                  = physics.findScene3D();
         const bool           bNoRagdollBodiesToBlend = pScene == nullptr || _ragdoll.isEmpty() || _pUnit == nullptr;
         if ( bNoRagdollBodiesToBlend )

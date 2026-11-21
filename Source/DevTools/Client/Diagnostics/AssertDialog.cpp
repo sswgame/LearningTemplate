@@ -3,6 +3,7 @@
 #include "DevTools/Client/Diagnostics/AssertDialog.h"
 
 #include "Core/CommandLine/CommandLineManager.h"
+#include "Core/Foundation/AssertDialogSlot.h"
 #include "Core/Foundation/PlatformOSHeaders.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/String/StringBuilder.h"
@@ -74,6 +75,11 @@ namespace sw
                 return true;
             }
         };
+
+#if defined( SW_DO_CHECKS ) && defined( SW_PLATFORM_WINDOWS )
+        /** @brief 건 대화상자의 등록입니다. 프로세스 끝까지 쥔다(대화형 실행 한 번에 한 번 건다). 상수 초기화된다. */
+        internal::AssertDialogRegistration s_assertDialogRegistration{};
+#endif
     } // namespace
 
     SW_AUTOMATION_WATCH( appAssertDialogInstalled, "App.AssertDialogInstalled", "1 when the interactive assert dialog is installed (editor runs a person watches; never in automated runs)",
@@ -85,8 +91,9 @@ namespace sw
     void AssertDialog::installForInteractiveRun( [[maybe_unused]] const CommandLineManager& commandLine )
     {
 #if defined( SW_DO_CHECKS ) && defined( SW_PLATFORM_WINDOWS )
-        if ( AssertDialogInternal::isAutomatedRun( commandLine ) == false )
-            internal::setAssertDialog( &AssertDialogInternal::showAssertDialog );
+        // 다시 불려도(호스트 모듈을 다시 세움) 이미 건 주인이면 다시 걸지 않는다 — 대화상자 칸은 하나라 둘째 등록은 단언이다.
+        if ( s_assertDialogRegistration.isActive() == false && AssertDialogInternal::isAutomatedRun( commandLine ) == false )
+            s_assertDialogRegistration = internal::bindAssertDialog( &AssertDialogInternal::showAssertDialog );
 #endif
     }
 } // namespace sw

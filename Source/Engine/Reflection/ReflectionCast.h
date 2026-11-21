@@ -25,14 +25,6 @@ namespace sw
         bool bDerived = false;
         return TypeCastHeader::of( pType ).tryCompare( TypeCastHeader::of( pTarget ), bDerived ) ? bDerived : isTypeDerivedFromSlow( pType, pTarget );
     }
-
-    /**
-     * @brief 코드젠이 REFLECT 타입마다 특수화합니다(T::StaticType 없이 FQN 으로 조회).
-     */
-    template <typename T>
-    struct ReflectTypeTraits
-    {
-    };
 } // namespace sw
 
 namespace sw
@@ -54,24 +46,6 @@ namespace sw
 
     template <typename T>
     inline constexpr bool HasStaticType_v = HasStaticType<T>::value;
-
-    template <typename T, typename = void>
-    /// @brief ReflectTypeTraits<T>::StaticType()이 없으면 false
-    struct HasReflectStaticType : std::false_type
-    {
-    };
-} // namespace sw
-
-namespace sw
-{
-    template <typename T>
-    /// @brief ReflectTypeTraits<T>::StaticType()이 있으면 true
-    struct HasReflectStaticType<T, std::void_t<decltype( ReflectTypeTraits<T>::StaticType() )>> : std::true_type
-    {
-    };
-
-    template <typename T>
-    inline constexpr bool HasReflectStaticType_v = HasReflectStaticType<T>::value;
 
     template <typename T, typename = void>
     /// @brief T 가 기반 클래스의 것을 물려받지 않고 자기 REFLECT_BODY 를 선언했는지 검사합니다
@@ -123,7 +97,9 @@ namespace sw
     inline constexpr bool HasFindCachedTypeInfo_v = HasFindCachedTypeInfo<T>::value;
 
     /**
-     * @brief T 의 정적 TypeInfo 입니다. 코드젠의 `StaticType()` 이나 `ReflectTypeTraits` 특수화가 있으면 그것, 없으면 nullptr 입니다.
+     * @brief T 의 정적 TypeInfo 입니다. `REFLECT_BODY()` 의 `StaticType()` 이 있으면 그것, 없으면 nullptr 입니다.
+     * @details REFLECT 형식은 모두 REFLECT_BODY 가 필수라(파서가 강제) `StaticType()` 하나로 닿는다. 예전의 `ReflectTypeTraits<T>` 특수화는
+     *          .gen.cpp 안에만 있어 다른 번역 단위에서 답이 달랐다(ODR).
      * @details `castTo` 가 To 쪽을 이것으로 풉니다. 컴포넌트 목록을 도는 조회 루프는 이것을 **루프 밖에서 한 번** 구해
      *          `castTo( pSrc, pToType )` 에 넘깁니다. 캐시 조회 하나(인라인 `StaticType()`, 1 ns 안쪽)를 컴포넌트마다 치르지 않습니다.
      */
@@ -132,8 +108,6 @@ namespace sw
     {
         if constexpr ( HasStaticType_v<T> )
             return T::StaticType();
-        else if constexpr ( HasReflectStaticType_v<T> )
-            return ReflectTypeTraits<T>::StaticType();
         else
             return nullptr;
     }
@@ -154,7 +128,7 @@ namespace sw
             (void)pToType;
             return pSrc;
         }
-        else if constexpr ( HasStaticType_v<To> == false && HasReflectStaticType_v<To> == false )
+        else if constexpr ( HasStaticType_v<To> == false )
         {
             (void)pToType;
             if constexpr ( std::is_base_of_v<From, To> )

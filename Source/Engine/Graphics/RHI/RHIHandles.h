@@ -13,8 +13,16 @@ namespace sw
     /** @brief GPU 버퍼 리소스의 64비트 핸들입니다. */
     using RHIBufferHandle = uint64;
 
-    /** @brief GPU 텍스처 리소스의 64비트 핸들입니다. */
+    /** @brief GPU 텍스처 리소스의 64비트 핸들입니다. 0 은 무효다 — 텍스처를 받는 RHI 호출(렌더 패스 컬러 타깃 · 전이 · 블릿)은 0 을 오류로 알리고 버린다. */
     using RHITextureHandle = uint64;
+
+    /**
+     * @brief 스왑체인 백버퍼를 가리키는 전용 텍스처 핸들입니다 — 렌더 패스 컬러 타깃 · 전이 · 블릿이 받는다. 어느 핸들 표도 이 값을 내지 않는다(칸 번호 · 세대 모두 최댓값).
+     * @details 예전에는 0 이 "없음" 과 "백버퍼" 를 겸해, 선언하지 않은 그래프 접근 · 만들지 못한 첨부의 0 이 화면 그리기로 읽혔다. 언리얼은 뷰포트 백버퍼를
+     *          `FRHIViewport::GetBackBuffer` 의 텍스처 객체로, Godot 은 화면 프레임버퍼를 따로 받는다 — 여기서는 핸들 값 하나로 따로 둔다.
+     *          어느 스왑체인인지는 `RHIRenderPassBeginInfo::_pSwapChain` 이 정한다(nullptr 이면 메인 창).
+     */
+    inline constexpr RHITextureHandle kRHIBackBufferTexture = ~RHITextureHandle{ 0 };
 
     /**
      * @brief 상수 버퍼 페이지(`IRHIResourceFactory::createConstantBufferPage`) 안의 한 구간입니다(설계: DesignBacklog "자원 구간 할당", 감사 R-4).
@@ -43,6 +51,18 @@ namespace sw
 
     /** @brief GPU 가 다 쓴 뒤에 부르는 자원 해제 콜백입니다(`RHIReleaseQueue`, `IRHIDevice::enqueueGPURelease`). */
     using RHIResourceReleaseDelegate = Delegate<void()>;
+    /**
+     * @enum RHIFrameCompletion
+     * @brief GPU 완료 통지의 결과입니다(`IRHIDevice::notifyFrameCompletion`).
+     * @details 해제(놓기)와 통지를 한 콜백이 겸하면 기다리지 못한 비우기(종료 · 잃은 장치 · 웹 `waitIdle`)가 끝나지 않은 일을 끝났다고 알린다 — 그래서 통지는 결과를 받는다.
+     */
+    enum class RHIFrameCompletion : uint8
+    {
+        Completed, ///< GPU 가 그 프레임을 끝냈다 — 되읽기 · 구간 재사용을 해도 된다
+        Abandoned, ///< 끝났는지 모른 채 큐를 비웠다(잃은 장치 · 시간 초과 · 종료 · 웹 `waitIdle`) — 결과를 믿지 않는다
+    };
+    /** @brief GPU 가 그 프레임을 끝냈는지(또는 포기했는지) 알리는 콜백입니다(`IRHIDevice::notifyFrameCompletion`). */
+    using RHIFrameCompletionDelegate = Delegate<void( RHIFrameCompletion )>;
     /** @brief 네이티브 컨텍스트를 그것을 지키는 잠금 안에서 받는 콜백입니다(`IRHIDevice::withNativeContext`). 인자는 콜백 안에서만 씁니다. */
     using RHINativeContextVisitor = Delegate<void( void* pContext )>;
 

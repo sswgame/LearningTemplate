@@ -7,42 +7,50 @@
 #include "Core/String/StringUtil.h"
 
 #include "Programs/ReflectionParser/CursorReader.h"
+#include "Programs/ReflectionParser/ParserDefines.h"
+#include "Programs/ReflectionParser/ParserSession.h"
 
 #include <charconv>
 #include <limits>
 
 namespace sw
 {
-    bool PropertyResolver::isComponentHandleSpelling( const string& spelling )
+    string PropertyResolver::readTypedTarget( const CXType type, const string_view identity, const ParserSession& session )
     {
-        const auto isIdentifierChar = []( const utf8 c )
-        {
-            return ( c >= 'a' && c <= 'z' ) || ( c >= 'A' && c <= 'Z' ) || ( c >= '0' && c <= '9' ) || c == '_';
-        };
-        const string kToken = "ComponentHandle";
-        for ( size_t pos = spelling.find( kToken ); pos != string::npos; pos = spelling.find( kToken, pos + 1 ) )
-        {
-            size_t begin = pos;
-            if ( begin > 0 && spelling[begin - 1] == 'T' )
-                --begin; // TComponentHandle
-            const size_t end         = pos + kToken.size();
-            const bool   bWordBefore = begin == 0 || isIdentifierChar( spelling[begin - 1] ) == false;
-            const bool   bWordAfter  = end >= spelling.size() || isIdentifierChar( spelling[end] ) == false;
-            if ( bWordBefore && bWordAfter )
-                return true;
-        }
-        return false;
+        if ( CursorReader::getTypeIdentity( type ) != identity )
+            return {};
+        return session._typeNameMap.normalize( CursorReader::getTemplateArgumentSpelling( type, 0 ) );
     }
 
-    bool PropertyResolver::tryReadTemplateTarget( const string& name, const string_view templateOpen, string& outTarget )
+    CXType PropertyResolver::getSequenceElementType( const CXType valueType )
     {
-        string_view view = StringUtil::trim( name );
-        if ( StringUtil::startsWith( view, templateOpen ) == false || view.back() != '>' )
-            return false;
-        view.remove_prefix( templateOpen.size() );
-        view.remove_suffix( 1 );
-        outTarget = string{ StringUtil::trim( view ) };
-        return outTarget.empty() == false;
+        const CXType canonical = clang_getCanonicalType( valueType );
+        if ( canonical.kind == CXType_ConstantArray )
+            return clang_getArrayElementType( valueType );
+        return clang_Type_getTemplateArgumentAsType( valueType, 0 );
+    }
+
+    bool PropertyResolver::isFlatOrderedSequence( const ParsedPropertyInfo& prop )
+    {
+        // 집합(`set` · `unordered_set`)은 원소의 순서 · 해시가 있어야 컴파일되는데 핸들 · 참조 · 키에는 둘 다 없다 — 생성 단계에서 막아 C++ 오류 대신 이 오류가 뜨게 한다.
+        // 집합은 표에서 State 역할이 없는 시퀀스다(래퍼 형식과 컴파일 때 대조된다) — 철자("Set")로 가르지 않는다.
+        const ParsedContainerNode* pTree = prop._containerTree.get();
+        const bool                 bFlat = pTree != nullptr && pTree->_elementNested == nullptr;
+        return prop._bIsContainer == SW_TRUE && prop._containerKind == ContainerKind::Sequence && prop._keyTypeName.empty() && bFlat && pTree->_bInPlaceElementWrite == SW_TRUE;
+    }
+
+    void PropertyResolver::normalizeTypedValue( ParsedPropertyInfo& prop, const bool bSingleValue, const string& canonical )
+    {
+        if ( bSingleValue )
+        {
+            prop._typeName = canonical;
+            return;
+        }
+        const string typedSpelling = prop._elementTypeName;
+        replaceAllText( prop._typeName, typedSpelling, canonical );
+        prop._elementTypeName = canonical;
+        if ( prop._containerTree != nullptr )
+            prop._containerTree->_elementTypeName = canonical;
     }
 
     void PropertyResolver::replaceAllText( string& text, const string& from, const string& to )
@@ -53,112 +61,72 @@ namespace sw
         }
     }
 
-    bool PropertyResolver::resolveComponentHandleProperty( ParsedPropertyInfo& prop, const string& owner )
+    bool PropertyResolver::resolveComponentHandleProperty( ParsedPropertyInfo& prop, const CXType valueType, const ParserSession& session, const string& owner )
     {
-        bool bHolds = isComponentHandleSpelling( prop._typeName ) || isComponentHandleSpelling( prop._elementTypeName ) || isComponentHandleSpelling( prop._keyTypeName );
-        for ( const ParsedContainerNode* pNode = prop._containerTree.get(); pNode != nullptr && bHolds == false; pNode = pNode->_elementNested.get() )
-        {
-            bHolds = isComponentHandleSpelling( pNode->_elementTypeName ) || isComponentHandleSpelling( pNode->_keyTypeName );
-        }
+        const bool bHolds = CursorReader::containsTypeIdentity( valueType, typeidentity::kTypedComponentHandle ) ||
+                            CursorReader::containsTypeIdentity( valueType, typeidentity::kComponentHandle );
         if ( bHolds == false )
             return true;
 
-        string               target;
-        ParsedContainerNode* pTree         = prop._containerTree.get();
-        const bool           bSingleValue  = prop._bIsContainer == SW_FALSE && tryReadTemplateTarget( prop._typeName, "TComponentHandle<", target );
-        const bool           bFlatSequence = prop._bIsContainer == SW_TRUE && prop._containerKind == ContainerKind::Sequence && prop._keyTypeName.empty() &&
-                                   ( pTree == nullptr || pTree->_elementNested == nullptr || pTree->_elementNested->_bIsContainer == SW_FALSE );
-        // 집합(`set` · `unordered_set`)은 원소의 순서 · 해시가 있어야 컴파일되는데 핸들에는 둘 다 없다 — 생성 단계에서 막아 C++ 오류 대신 이 오류가 뜨게 한다.
-        const bool bOrderedOrHashed   = prop._containerType == "Set" || prop._containerType == "UnorderedSet";
-        const bool bSequenceOfHandles = bFlatSequence && bOrderedOrHashed == false && tryReadTemplateTarget( prop._elementTypeName, "TComponentHandle<", target );
-        if ( bSingleValue == false && bSequenceOfHandles == false )
+        const bool   bSingleValue = prop._bIsContainer == SW_FALSE;
+        const string target       = bSingleValue ? readTypedTarget( valueType, typeidentity::kTypedComponentHandle, session )
+                                                 : ( isFlatOrderedSequence( prop ) ? readTypedTarget( getSequenceElementType( valueType ), typeidentity::kTypedComponentHandle, session ) : string{} );
+        if ( target.empty() )
         {
             SW_LOG_ERROR_ID( "AstVisitor.ERRORPROPERTYHoldsComponent", "ERROR: PROPERTY() '%#' holds a component handle (%#) in a shape that cannot be saved. Use one TComponentHandle<T>, or a vector of "
                                                                        "TComponentHandle<T>. An untyped ComponentHandle, a map, a set and nested containers have no place to check the target type.",
                              owner, prop._typeName );
             return false;
         }
-
-        const string kCanonical = "ComponentHandle";
-        if ( bSingleValue )
-        {
-            prop._typeName = kCanonical;
-        }
-        else
-        {
-            const string typedSpelling = prop._elementTypeName;
-            replaceAllText( prop._typeName, typedSpelling, kCanonical );
-            prop._elementTypeName = kCanonical;
-            if ( pTree != nullptr )
-                pTree->_elementTypeName = kCanonical;
-        }
+        normalizeTypedValue( prop, bSingleValue, "ComponentHandle" );
         prop._handleTargetTypeName = target;
         return true;
     }
 
-    bool PropertyResolver::resolveAssetRefProperty( ParsedPropertyInfo& prop, const string& owner )
+    bool PropertyResolver::resolveAssetRefProperty( ParsedPropertyInfo& prop, const CXType valueType, const ParserSession& session, const string& owner )
     {
-        const bool bHolds = prop._typeName.find( "AssetRef<" ) != string::npos;
-        if ( bHolds == false )
+        if ( CursorReader::containsTypeIdentity( valueType, typeidentity::kAssetRef ) == false )
             return true;
-        string     target;
-        const bool bSingleValue = prop._bIsContainer == SW_FALSE && tryReadTemplateTarget( prop._typeName, "AssetRef<", target );
-        const bool bSequence    = prop._bIsContainer == SW_TRUE && prop._containerKind == ContainerKind::Sequence && prop._containerType != "Set" && prop._containerType != "UnorderedSet" &&
-                               tryReadTemplateTarget( prop._elementTypeName, "AssetRef<", target );
-        if ( bSingleValue == false && bSequence == false )
+        const bool   bSingleValue = prop._bIsContainer == SW_FALSE;
+        const string target       = bSingleValue ? readTypedTarget( valueType, typeidentity::kAssetRef, session )
+                                                 : ( isFlatOrderedSequence( prop ) ? readTypedTarget( getSequenceElementType( valueType ), typeidentity::kAssetRef, session ) : string{} );
+        if ( target.empty() )
         {
             SW_LOG_ERROR_ID( "AstVisitor.ERRORPROPERTYHoldsAssetRef", "ERROR: PROPERTY() '%#' holds an asset reference (%#) in a shape tools cannot rewrite. Use one AssetRef<T>, or a vector of AssetRef<T>.", owner,
                              prop._typeName );
             return false;
         }
-        const string kCanonical = "AssetRef";
-        if ( bSingleValue )
-        {
-            prop._typeName = kCanonical;
-        }
-        else
-        {
-            const string typedSpelling = prop._elementTypeName;
-            replaceAllText( prop._typeName, typedSpelling, kCanonical );
-            prop._elementTypeName = kCanonical;
-            if ( prop._containerTree != nullptr )
-                prop._containerTree->_elementTypeName = kCanonical;
-        }
+        normalizeTypedValue( prop, bSingleValue, "AssetRef" );
         prop._assetType  = target;
         prop._bAssetPath = SW_TRUE;
         return true;
     }
 
-    bool PropertyResolver::resolveCatalogKeyProperty( ParsedPropertyInfo& prop, const string& owner )
+    bool PropertyResolver::resolveCatalogKeyProperty( ParsedPropertyInfo& prop, const CXType valueType, const ParserSession& session, const string& owner )
     {
-        if ( prop._typeName.find( "CatalogKey<" ) == string::npos )
+        if ( CursorReader::containsTypeIdentity( valueType, typeidentity::kCatalogKey ) == false )
             return true;
-        string     target;
-        const bool bSingleValue = prop._bIsContainer == SW_FALSE && tryReadTemplateTarget( prop._typeName, "CatalogKey<", target );
-        const bool bSequence    = prop._bIsContainer == SW_TRUE && prop._containerKind == ContainerKind::Sequence && prop._containerType != "Set" && prop._containerType != "UnorderedSet" &&
-                               ( prop._containerTree == nullptr || prop._containerTree->_elementNested == nullptr ) && tryReadTemplateTarget( prop._elementTypeName, "CatalogKey<", target );
-        if ( bSingleValue == false && bSequence == false )
+        const bool   bSingleValue = prop._bIsContainer == SW_FALSE;
+        const CXType keyType      = bSingleValue ? valueType : ( isFlatOrderedSequence( prop ) ? getSequenceElementType( valueType ) : CXType{} );
+        const string target       = keyType.kind == CXType_Invalid ? string{} : readTypedTarget( keyType, typeidentity::kCatalogKey, session );
+        if ( target.empty() )
         {
             SW_LOG_ERROR_ID( "AstVisitor.ERRORPROPERTYHoldsCatalogKey", "ERROR: PROPERTY() '%#' holds a catalog key (%#) in a shape the cook cannot check. Use one CatalogKey<T>, or a vector of CatalogKey<T>.",
                              owner, prop._typeName );
             return false;
         }
-        const string kCanonical = "CatalogKey";
-        if ( bSingleValue )
+        normalizeTypedValue( prop, bSingleValue, "CatalogKey" );
+        // 표의 `<CatalogKey tag>` 는 이름공간 없는 형식 이름이다 — 항목 종류 선언의 이름(중첩이면 바깥 형식부터)을 선언에서 읽는다.
+        CXCursor tagDeclaration = clang_getTypeDeclaration( clang_getCanonicalType( clang_Type_getTemplateArgumentAsType( keyType, 0 ) ) );
+        string   tag            = CursorReader::getCursorSpelling( tagDeclaration );
+        for ( CXCursor parent = clang_getCursorSemanticParent( tagDeclaration ); clang_getCursorKind( parent ) != CXCursor_Namespace && clang_getCursorKind( parent ) != CXCursor_TranslationUnit;
+              parent          = clang_getCursorSemanticParent( parent ) )
         {
-            prop._typeName = kCanonical;
+            StringBuilder<constant::buffer::kMax256> nested;
+            nested.appendFormat( "%#::%#", CursorReader::getCursorSpelling( parent ), tag );
+            tag = string( nested.view() );
         }
-        else
-        {
-            const string typedSpelling = prop._elementTypeName;
-            replaceAllText( prop._typeName, typedSpelling, kCanonical );
-            prop._elementTypeName = kCanonical;
-            if ( prop._containerTree != nullptr )
-                prop._containerTree->_elementTypeName = kCanonical;
-        }
-        // 표의 `<CatalogKey tag>` 는 이름공간 없는 형식 이름이다.
-        const string_view kNamespace = "sw::";
-        prop._catalogKeyTag          = StringUtil::startsWith( target, kNamespace ) ? target.substr( kNamespace.size() ) : target;
+        prop._catalogKeyTag = std::move( tag );
         return true;
     }
 
@@ -166,11 +134,10 @@ namespace sw
     {
         for ( ParsedParameterInfo& parameter : method._listParameter )
         {
-            if ( parameter._typeName.find( "TComponentHandle" ) == string::npos )
+            if ( parameter._bHoldsTypedHandle == false )
                 continue;
-            string     target;
-            const bool bTyped = tryReadTemplateTarget( parameter._typeName, "TComponentHandle<", target );
-            if ( bTyped == false )
+            const string& target = parameter._handleTargetTypeName;
+            if ( target.empty() )
             {
                 SW_LOG_ERROR_ID( "AstVisitor.ERRORFUNCTIONArgumentHolds", "ERROR: FUNCTION '%#' argument '%#' holds component handles in a container (%#). Pass one TComponentHandle<T> per argument.", owner,
                                  parameter._name, parameter._typeName );
@@ -184,8 +151,7 @@ namespace sw
                                  owner, parameter._name, target );
                 return false;
             }
-            parameter._handleTargetTypeName = target;
-            parameter._typeName             = "ComponentHandle";
+            parameter._typeName = "ComponentHandle";
         }
         return true;
     }

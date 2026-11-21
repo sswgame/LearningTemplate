@@ -20,6 +20,7 @@
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Identity/OnlinePushRelay.h"
 #include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
+#include "GameFramework/Runtime/Online/Service/OnlineServerKitName.h"
 
 namespace sw
 {
@@ -49,6 +50,8 @@ namespace sw
         // 순수 인터페이스라 내보내지 않는다. 인라인 생성자와 소멸자를 GameFramework.dll 이 내보내지 않으므로 dllimport 로 해석되면 키트 링크가 깨진다(C-3).
 
     public:
+        static constexpr const utf8* kProviderKit = OnlineServerKitName::kAccount; ///< 이 인터페이스를 내는 키트다. 받는 키트의 의존 이름이 여기서 나온다(`OnlineServerKit`)
+
         IAccountPresence()          = default;
         virtual ~IAccountPresence() = default;
 

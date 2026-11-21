@@ -13,6 +13,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
+#include "ModuleManager/IReloadableModuleClient.h"
 #include "ModuleManager/ModuleLibraryHandle.h"
 
 namespace sw
@@ -26,12 +27,6 @@ namespace sw
     class ILiveReloadManager
     {
     public:
-        using OnBeforeReloadDelegate = Delegate<void()>;
-        using OnAfterReloadDelegate  = Delegate<void( ModuleLibraryHandle library )>;
-        /** @brief onAfterReload 안에서 하드웨어 예외가 났을 때 불립니다. 인자는 예외 코드(Windows)나 시그널 번호(리눅스)입니다. */
-        using OnReloadFaultDelegate = Delegate<void( uint32 faultCode )>;
-        /** @brief 새로 로드한 라이브러리를 받아들일지 묻습니다(prepare 때 — false 면 옛 라이브러리를 그대로 둔다). */
-        using OnValidateLibraryDelegate = Delegate<bool( ModuleLibraryHandle library )>;
         /** @brief 연쇄 교체의 첫 commit 직전에 불립니다. false 면 아무것도 바꾸지 않는다. */
         using OnBeforeCommitBatchDelegate = Delegate<bool( const vector<string>& listModuleName )>;
         using FlushWorkersDelegate        = Delegate<void()>;
@@ -47,13 +42,15 @@ namespace sw
         /** @brief 이미 로드한 모듈의 리로드 직후 콜백을 부릅니다(인스턴스 생성). */
         [[nodiscard]] virtual bool runAfterReload( string_view moduleName ) = 0;
 
-        [[nodiscard]] virtual Subscription setOnBeforeReload( string_view moduleName, OnBeforeReloadDelegate delegate )       = 0;
-        [[nodiscard]] virtual Subscription setOnAfterReload( string_view moduleName, OnAfterReloadDelegate delegate )         = 0;
-        [[nodiscard]] virtual Subscription setOnReloadFault( string_view moduleName, OnReloadFaultDelegate delegate )         = 0;
-        [[nodiscard]] virtual Subscription setOnValidateLibrary( string_view moduleName, OnValidateLibraryDelegate delegate ) = 0;
-        [[nodiscard]] virtual Subscription addOnBeforeCommitBatch( OnBeforeCommitBatchDelegate delegate )                     = 0;
-        [[nodiscard]] virtual Subscription addReloadHold( ReloadHoldDelegate delegate )                                       = 0;
-        [[nodiscard]] virtual Subscription setFlushWorkers( FlushWorkersDelegate delegate )                                   = 0;
+        /**
+         * @brief @p moduleName 의 주인 창구(리로드 직전 · 직후 · 결함 · 새 라이브러리 검사)를 겁니다. 구독이 사라지면 풀립니다.
+         * @details 모듈 하나에 주인은 하나다 — 다시 걸면 갈아 끼우고 앞 구독은 아무것도 풀지 않는다(리로드의 새 인스턴스가 옛 것보다 먼저 건다).
+         *          @p client 는 구독보다 오래 산다(호스트의 멤버 객체).
+         */
+        [[nodiscard]] virtual Subscription setModuleClient( string_view moduleName, IReloadableModuleClient& client ) = 0;
+        [[nodiscard]] virtual Subscription addOnBeforeCommitBatch( OnBeforeCommitBatchDelegate delegate )             = 0;
+        [[nodiscard]] virtual Subscription addReloadHold( ReloadHoldDelegate delegate )                               = 0;
+        [[nodiscard]] virtual Subscription setFlushWorkers( FlushWorkersDelegate delegate )                           = 0;
 
         /** @brief DLL 그래프가 섞인 상태로 보고 이후 리로드를 막습니다. */
         virtual void markGraphBroken( string_view reason ) = 0;

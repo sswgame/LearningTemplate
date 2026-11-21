@@ -2,18 +2,98 @@
 
 #include "Editor/Panels/Scene/Model/SceneViewModel.h"
 
+#include "Core/Foundation/Constants.h"
+#include "Core/String/StringBuilder.h"
+#include "Core/String/StringUtil.h"
+
 #include "Editor/Common/Workspace/EditorCamera.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorStateStore.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
+#include "Editor/Viewport/EditorViewportOverlays.h"
 
 #include "Engine/Config/GameTimeScale.h"
+#include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Renderer/Frame/FrameRenderer.h"
 
 namespace sw::editor
 {
+    namespace
+    {
+        struct SceneViewModelInternal
+        {
+            /** @brief 개발 명령이 쌓은 씬 뷰 요청입니다(에디터 범위 상태 — 창이 그릴 때 꺼낸다). */
+            struct RequestQueue
+            {
+                vector<SceneViewRequest> _listRequest;
+            };
+
+            static bool runCameraReset( const vector<string>& /*listArgument*/, string& outReply )
+            {
+                SceneViewModel::postRequest( SceneViewRequest{ SceneViewRequestKind::CameraReset } );
+                outReply = "scene view camera reset";
+                return true;
+            }
+
+            /** @brief `camera.set <x> <y> <z> <pitch> <yaw>` — 씬 뷰 카메라를 그 위치 · 방향(도)에 둡니다(언리얼 `BugReportGoto x y z pitch yaw` 와 같은 쓰임). */
+            static bool runCameraSet( const vector<string>& listArgument, string& outReply )
+            {
+                if ( listArgument.size() != 5 )
+                    return false;
+                SceneViewRequest request{ SceneViewRequestKind::CameraSet };
+                for ( uint32 index = 0; index < 5; ++index )
+                {
+                    if ( StringUtil::parseFloat( listArgument[index], request._arrPose[index] ) == false )
+                        return false;
+                }
+                SceneViewModel::postRequest( std::move( request ) );
+                outReply = "scene view camera set";
+                return true;
+            }
+
+            static bool runOverlayReset( const vector<string>& /*listArgument*/, string& outReply )
+            {
+                SceneViewModel::postRequest( SceneViewRequest{ SceneViewRequestKind::OverlayReset } );
+                outReply = "scene view overlays reset";
+                return true;
+            }
+
+            static bool runOverlayShow( const vector<string>& listArgument, string& outReply )
+            {
+                bool       bVisible{ false };
+                const bool bInvalid = listArgument.size() != 2 || readOptionalBoolArgument( listArgument, 1, bVisible ) == false || EditorViewportOverlays::isKnownBarID( listArgument[0] ) == false;
+                if ( bInvalid )
+                    return false;
+                SceneViewRequest request{ SceneViewRequestKind::OverlayShow };
+                request._barID    = listArgument[0];
+                request._bVisible = bVisible;
+                SceneViewModel::postRequest( std::move( request ) );
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "overlay %#%#", listArgument[0], ( bVisible ? " shown" : " hidden" ) );
+                outReply = string( replyBuilder.view() );
+                return true;
+            }
+        };
+    } // namespace
+
+    void SceneViewModel::postRequest( SceneViewRequest request )
+    {
+        getEditorState<SceneViewModelInternal::RequestQueue>()._listRequest.push_back( std::move( request ) );
+    }
+
+    bool SceneViewModel::takeRequest( SceneViewRequest& outRequest )
+    {
+        vector<SceneViewRequest>& listRequest = getEditorState<SceneViewModelInternal::RequestQueue>()._listRequest;
+        if ( listRequest.empty() )
+            return false;
+        outRequest = std::move( listRequest.front() );
+        listRequest.erase( listRequest.begin() );
+        return true;
+    }
+
     bool SceneViewModel::findCameraPosition( float3& outPosition )
     {
         const CameraComponent* pCamera = EditorCamera::find( editor::getActiveScene() );
@@ -61,4 +141,14 @@ namespace sw::editor
     {
         editor::getSubsystem<DebugDrawQueue>().setCategoryEnabled( category, bEnabled );
     }
+
+    // 개발 명령은 요청만 쌓고 씬 뷰 창이 그릴 때 뷰포트 클라이언트에 적용한다(카메라 · 오버레이는 View 가 든다 — 같은 프레임의 창 그리기 안에서 적용된다).
+    SW_DEV_COMMAND( OverlayReset, "overlay.reset", "overlay.reset", "Put the scene view overlay bars back where they start (and show them all)",
+                    &SceneViewModelInternal::runOverlayReset );
+    SW_DEV_COMMAND( CameraReset, "camera.reset", "camera.reset", "Put the scene view camera (pose, projection, speed) back where a new editor session starts",
+                    &SceneViewModelInternal::runCameraReset );
+    SW_DEV_COMMAND( CameraSet, "camera.set", "camera.set <x> <y> <z> <pitch> <yaw>", "Put the scene view camera at a position looking along pitch and yaw (degrees)",
+                    &SceneViewModelInternal::runCameraSet );
+    SW_DEV_COMMAND( OverlayShow, "overlay.show", "overlay.show <view|transform|display|tools> <0|1>", "Show or hide a scene view overlay bar",
+                    &SceneViewModelInternal::runOverlayShow );
 } // namespace sw::editor

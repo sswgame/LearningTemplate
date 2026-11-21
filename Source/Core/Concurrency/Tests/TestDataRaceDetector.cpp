@@ -5,9 +5,10 @@
 #include "Core/Concurrency/DataRaceDetector.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/thread.h"
-#include "Core/Container/map.h"
-#include "Core/Container/set.h"
+#include "Core/Container/flat_map.h"
+#include "Core/Container/flat_set.h"
 #include "Core/Container/string.h"
+#include "Core/Testing/ScopedAssertCapture.h"
 #include "Core/Testing/TestFramework.h"
 #include "Core/Testing/ThreadTestAccess.h"
 
@@ -41,11 +42,11 @@ SW_TEST_CASE( DataRaceDetectorTest, ConcurrentReadsAreNotARace )
  */
 SW_TEST_CASE( DataRaceDetectorTest, SameThreadReentryIsNotARace )
 {
-    set<int32> values;
+    flat_set<int32> values;
     values = { 5, 17, 42 };
     SW_EXPECT_EQUAL( size_t( 3 ), values.size() );
 
-    map<string, int32> scores;
+    flat_map<string, int32> scores;
     scores = {
         { string( "hp" ), 100 }
     };
@@ -101,4 +102,41 @@ SW_TEST_CASE( DataRaceDetectorTest, CopyStartsUnowned )
     other.join();
     original.exitWrite();
     SW_EXPECT_EQUAL( 1u, otherThreadDone.load() );
+}
+
+namespace
+{
+    /** @brief 테스트용 보고 함수입니다(불리지 않는다 — 칸의 주인만 본다). */
+    void ignoreDataRaceReportForTest( const utf8*, const void*, uint32, uint32 )
+    {
+    }
+    /** @brief 둘째 보고 함수입니다. */
+    void ignoreDataRaceReportForTestOther( const utf8*, const void*, uint32, uint32 )
+    {
+    }
+} // namespace
+
+/**
+ * @brief [DataRaceDetectorTest] 경합 보고 함수 칸은 하나다 — 엔진 보고기를 떼어 둔 범위에서 건 뒤 둘째 등록은 단언하고 덮지 않으며, 범위가 끝나면 엔진 보고기가 돌아온다
+ */
+SW_TEST_CASE( DataRaceDetectorTest, SecondReportFunctionBindAsserts )
+{
+    const sw::DataRaceReportFunction pHostReport = sw::RaceDetectContext::getReportFunction();
+    {
+        const sw::RaceDetectContext::ReportFunctionSuspension hostSuspension = sw::RaceDetectContext::suspendReportFunction();
+        SW_EXPECT_TRUE( sw::RaceDetectContext::getReportFunction() == nullptr );
+        sw::RaceDetectContext::ReportFunctionRegistration registration = sw::RaceDetectContext::bindReportFunction( &ignoreDataRaceReportForTest );
+        SW_EXPECT_TRUE( registration.isActive() );
+        {
+            sw::test::ScopedAssertCapture capture;
+            SW_EXPECT_LOG( SW_ASSERT_LOG_ID ); // 이중 등록 단언은 이 테스트가 보려는 대상이다
+            const sw::RaceDetectContext::ReportFunctionRegistration second = sw::RaceDetectContext::bindReportFunction( &ignoreDataRaceReportForTestOther );
+            SW_EXPECT_FALSE( second.isActive() );
+            if ( sw::test::ScopedAssertCapture::kAssertsAreActive )
+                SW_EXPECT_EQUAL( 1u, capture.getCount() );
+        }
+        SW_EXPECT_TRUE( sw::RaceDetectContext::getReportFunction() == &ignoreDataRaceReportForTest );
+        registration.reset();
+    }
+    SW_EXPECT_TRUE( sw::RaceDetectContext::getReportFunction() == pHostReport );
 }

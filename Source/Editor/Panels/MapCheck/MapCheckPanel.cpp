@@ -12,6 +12,7 @@
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
+#include "Editor/Common/Widgets/EditorVirtualList.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
@@ -135,7 +136,7 @@ namespace sw::editor
 
     void MapCheckPanel::drawContent()
     {
-        _viewModel.gather( _viewState );
+        gatherViewState( _viewModel, _viewState );
         drawToolbar();
 
         if ( _viewState._listRow.empty() )
@@ -162,45 +163,49 @@ namespace sw::editor
         ImGui::TableHeadersRow();
         uint32 fixRowIndex = MathUtil::kMaxUInt32; // 이번 그리기에 누른 고침 줄 — 그린 뒤에 적용한다(적용이 줄 목록을 바꾼다)
 
-        for ( uint32 rowIndex = 0; rowIndex < static_cast<uint32>( _viewState._listRow.size() ); ++rowIndex )
+        EditorVirtualList virtualList( static_cast<int32>( _viewState._listRow.size() ) ); // 검사 결과 수는 씬 크기를 따른다 — 보이는 줄만 그린다
+        while ( virtualList.step() )
         {
-            const MapCheckRow&     row   = _viewState._listRow[rowIndex];
-            const ValidationIssue& issue = row._issue;
-            ImGui::PushID( static_cast<int32>( rowIndex ) );
-            ImGui::TableNextRow();
-            ImGui::TableSetColumnIndex( 0 );
-            const bool  bError = issue._severity == ValidationSeverity::Error;
-            const Color color  = bError ? SW_THEME_COLOR( "Signal", "Error" ) : SW_THEME_COLOR( "Signal", "Warning" );
-            ImGui::TextColored( EditorColorUtil::toImVec4( color ), "%s", bError ? SW_EDITOR_ICON( "Error" ) : SW_EDITOR_ICON( "Warning" ) );
-
-            ImGui::TableSetColumnIndex( 1 );
-            if ( ImGui::Selectable( issue._sourceLabel.empty() ? "(unnamed)" : issue._sourceLabel.c_str(), row._bSelected != SW_FALSE,
-                                    ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowDoubleClick | ImGuiSelectableFlags_AllowOverlap ) ) // 줄 끝 Fix 단추가 클릭을 받는다
+            for ( uint32 rowIndex = static_cast<uint32>( virtualList.getBegin() ); rowIndex < static_cast<uint32>( virtualList.getEnd() ); ++rowIndex )
             {
-                (void)MapCheckViewModel::selectObject( issue._sourceID ); // 활성 씬에 없는 오브젝트(지운 것)면 고를 것이 없다
-                if ( EditorInputGUI::wasItemDoubleClicked() )
-                    MapCheckViewModel::focusObject( issue._sourceID );
-            }
-            EditorSelfTestMarks::recordFormat( "mapCheck.row.%#", rowIndex );
-            if ( row._bInActiveScene == SW_FALSE )
-                EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMapCheck", "NotInActiveScene" ) );
+                const MapCheckRow&     row   = _viewState._listRow[rowIndex];
+                const ValidationIssue& issue = row._issue;
+                ImGui::PushID( static_cast<int32>( rowIndex ) );
+                ImGui::TableNextRow();
+                ImGui::TableSetColumnIndex( 0 );
+                const bool  bError = issue._severity == ValidationSeverity::Error;
+                const Color color  = bError ? SW_THEME_COLOR( "Signal", "Error" ) : SW_THEME_COLOR( "Signal", "Warning" );
+                ImGui::TextColored( EditorColorUtil::toImVec4( color ), "%s", bError ? SW_EDITOR_ICON( "Error" ) : SW_EDITOR_ICON( "Warning" ) );
 
-            ImGui::TableSetColumnIndex( 2 );
-            ImGui::TextUnformatted( issue._typeName.c_str() );
-            ImGui::TableSetColumnIndex( 3 );
-            ImGui::TextUnformatted( issue._propertyName.c_str() );
-            ImGui::TableSetColumnIndex( 4 );
-            ImGui::TextUnformatted( issue._message.c_str() );
-            ImGui::TableSetColumnIndex( 5 );
-            if ( row._bFixable != SW_FALSE )
-            {
-                // 고칠 수 없는 줄은 단추를 두지 않는다(빈 칸) — 손으로 고칠 줄이다
-                if ( ImGui::SmallButton( SW_LOCKEY( "EdButton", "Fix" ) ) )
-                    fixRowIndex = rowIndex;
-                EditorWidgets::drawTooltip( issue._fix._description.c_str() );
-                EditorSelfTestMarks::recordFormat( "mapCheck.fix.%#", rowIndex );
+                ImGui::TableSetColumnIndex( 1 );
+                if ( ImGui::Selectable( issue._sourceLabel.empty() ? "(unnamed)" : issue._sourceLabel.c_str(), row._bSelected != SW_FALSE,
+                                        ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowDoubleClick | ImGuiSelectableFlags_AllowOverlap ) ) // 줄 끝 Fix 단추가 클릭을 받는다
+                {
+                    (void)MapCheckViewModel::selectObject( issue._sourceID ); // 활성 씬에 없는 오브젝트(지운 것)면 고를 것이 없다
+                    if ( EditorInputGUI::wasItemDoubleClicked() )
+                        MapCheckViewModel::focusObject( issue._sourceID );
+                }
+                EditorSelfTestMarks::recordFormat( "mapCheck.row.%#", rowIndex );
+                if ( row._bInActiveScene == SW_FALSE )
+                    EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMapCheck", "NotInActiveScene" ) );
+
+                ImGui::TableSetColumnIndex( 2 );
+                ImGui::TextUnformatted( issue._typeName.c_str() );
+                ImGui::TableSetColumnIndex( 3 );
+                ImGui::TextUnformatted( issue._propertyName.c_str() );
+                ImGui::TableSetColumnIndex( 4 );
+                ImGui::TextUnformatted( issue._message.c_str() );
+                ImGui::TableSetColumnIndex( 5 );
+                if ( row._bFixable != SW_FALSE )
+                {
+                    // 고칠 수 없는 줄은 단추를 두지 않는다(빈 칸) — 손으로 고칠 줄이다
+                    if ( ImGui::SmallButton( SW_LOCKEY( "EdButton", "Fix" ) ) )
+                        fixRowIndex = rowIndex;
+                    EditorWidgets::drawTooltip( issue._fix._description.c_str() );
+                    EditorSelfTestMarks::recordFormat( "mapCheck.fix.%#", rowIndex );
+                }
+                ImGui::PopID();
             }
-            ImGui::PopID();
         }
         ImGui::EndTable();
         if ( fixRowIndex < _viewState._listRow.size() )

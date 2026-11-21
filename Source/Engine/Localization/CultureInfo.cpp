@@ -79,7 +79,7 @@ namespace sw
              * @details 키가 범주 키워드이고 값이 CLDR 규칙 글(보기 `@integer` · `@decimal` 까지, other 는 보기만)이다. 빈 맵은 "모든 수가 other" 다.
              *          모르는 범주 · 틀린 글 · 보기 없는 규칙 · other 가 빠진 묶음 · 보기와 어긋난 규칙(CLDR 과 다르게 고친 글)이면 오류입니다.
              */
-            [[nodiscard]] static expected<void> compileRuleSet( const map<string, string>& mapRule, const utf8* pFieldName, PluralRuleSet& outRules )
+            [[nodiscard]] static expected<void> compileRuleSet( const flat_map<string, string>& mapRule, const utf8* pFieldName, PluralRuleSet& outRules )
             {
                 PluralRuleSet ruleSet;
                 bool          bHasOther = false;
@@ -125,7 +125,7 @@ namespace sw
              * @brief 합친(부모 없는) `<CultureInfo>` 원소 하나를 리플렉션으로 읽고, 규칙 글 · 숫자 체계 · 목록 개수를 확인합니다.
              * @details 필수 칸은 읽기 전에 모은다(`collectMissingRequired`) — 표 읽기는 까닭을 오류 값으로 돌려주는 API 다.
              */
-            [[nodiscard]] static expected<CultureInfo> readCulture( const XMLNode& element, const map<string, vector<string>>& mapNumberingSystem )
+            [[nodiscard]] static expected<CultureInfo> readCulture( const XMLNode& element, const flat_map<string, vector<string>>& mapNumberingSystem )
             {
                 const TypeInfo& type = *CultureInfo::StaticType();
                 const string    rawCode{ element.getAttributeText( "_code" ) };
@@ -166,7 +166,7 @@ namespace sw
              * @brief `<numberingSystems><numberingSystem id="arab" digits="٠١٢٣٤٥٦٧٨٩"/></numberingSystems>` 를 @p inoutMap 에 얹습니다(같은 id 는 바꾼다). 요소가 없으면 그대로 true 입니다.
              * @details CLDR numberingSystems.xml 의 numeric 체계 모양이다. 글자는 꼭 10 개(0 ~ 9 순서)이고, 한 글자가 여러 바이트여도 된다(UTF-8).
              */
-            [[nodiscard]] static expected<void> readNumberingSystems( const XMLNode& systems, map<string, vector<string>>& inoutMap )
+            [[nodiscard]] static expected<void> readNumberingSystems( const XMLNode& systems, flat_map<string, vector<string>>& inoutMap )
             {
                 if ( systems.isValid() == false )
                     return {};
@@ -412,7 +412,7 @@ namespace sw
             }
 
             /** @brief 합친 표 루트의 `<CultureInfo>` 를 모두 읽어 @p outMapCulture 에 둡니다. 겹친 코드는 오류입니다. */
-            [[nodiscard]] static expected<void> readCultures( const XMLNode& root, const map<string, vector<string>>& mapNumberingSystem, map<string, CultureInfo>& outMapCulture )
+            [[nodiscard]] static expected<void> readCultures( const XMLNode& root, const flat_map<string, vector<string>>& mapNumberingSystem, flat_map<string, CultureInfo>& outMapCulture )
             {
                 const utf8* const pElementName = CultureInfo::StaticType()->_name.c_str();
                 for ( XMLNode element = root.findChild( pElementName ); element.isValid(); element = element.findNextSibling( pElementName ) )
@@ -807,10 +807,10 @@ namespace sw
                                    .appendDetail( ">" ) );
 
         // 숫자 체계 · 통화를 먼저 사본에 얹는다 — 문화권이 id 로 가리키고, 어느 하나라도 틀리면 표를 바꾸지 않는다.
-        map<string, vector<string>> mapNumberingSystem = _mapNumberingSystem;
-        vector<CurrencyInfo>        listCurrency       = _pCurrencyList != nullptr ? *_pCurrencyList : vector<CurrencyInfo>{};
-        map<string, CultureInfo>    mapRead;
-        expected<void>              read = CultureInfoInternal::readNumberingSystems( root.findChild( "numberingSystems" ), mapNumberingSystem );
+        flat_map<string, vector<string>> mapNumberingSystem = _mapNumberingSystem;
+        vector<CurrencyInfo>             listCurrency       = _pCurrencyList != nullptr ? *_pCurrencyList : vector<CurrencyInfo>{};
+        flat_map<string, CultureInfo>    mapRead;
+        expected<void>                   read = CultureInfoInternal::readNumberingSystems( root.findChild( "numberingSystems" ), mapNumberingSystem );
         if ( read.has_value() )
             read = CultureInfoInternal::readCurrencies( root.findChild( "currencies" ), listCurrency );
         if ( read.has_value() )

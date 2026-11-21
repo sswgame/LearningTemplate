@@ -3,6 +3,7 @@
 #include "Core/String/StringUtil.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 #include "Engine/Graphics/Shader/Reflection/SPIRVConstants.h"
 #include "Engine/Graphics/Shader/Reflection/ShaderReflectionData.h"
 #include "Engine/Graphics/Shader/Reflection/ShaderReflectionUtil.h"
@@ -81,7 +82,9 @@ namespace
  */
 SW_TEST_CASE( ShaderReflectionSPIRVTest, ReadsConstantBufferLayout )
 {
-    const ShaderReflectionData data = ShaderReflectionUtil::reflectSPIRV( makeConstantBufferModule().toBytes() );
+    const expected<ShaderReflectionData> reflected = ShaderReflectionUtil::reflectSPIRV( makeConstantBufferModule().toBytes() );
+    SW_REQUIRE_TRUE( reflected.has_value() );
+    const ShaderReflectionData& data = *reflected;
     SW_REQUIRE_EQUAL( size_t( 1 ), data._listConstantBuffer.size() );
     const ShaderBufferInfo& buffer = data._listConstantBuffer[0];
     SW_EXPECT_EQUAL( string( "Params" ), buffer._name );
@@ -95,7 +98,7 @@ SW_TEST_CASE( ShaderReflectionSPIRVTest, ReadsConstantBufferLayout )
     SW_EXPECT_EQUAL( 64u, buffer._listVariable[1]._offset );
     SW_EXPECT_EQUAL( 0u, buffer._totalSize % 256u ); // 256 바이트로 맞춘다
     SW_REQUIRE_EQUAL( size_t( 1 ), data._listResource.size() );
-    SW_EXPECT_EQUAL( string( "ConstantBuffer" ), string( data._listResource[0]._type ) );
+    SW_EXPECT_TRUE( data._listResource[0]._kind == ShaderBindingKind::ConstantBuffer );
 }
 
 /** @brief [ShaderReflectionSPIRVTest] 길이가 모듈 끝을 넘는 명령어 · 고리 진 타입(벡터의 성분이 자기 자신)에서도 멈추지 않고 읽은 데까지 답한다 */
@@ -103,22 +106,31 @@ SW_TEST_CASE( ShaderReflectionSPIRVTest, MalformedModulesDoNotHang )
 {
     SPIRVBuilder cyclic = makeConstantBufferModule();
     cyclic.add( spirv::kOpTypeVector, { 3, 3, 2 } ); // 열 타입을 자기 성분을 가리키는 벡터로 덮는다
-    const ShaderReflectionData cyclicData = ShaderReflectionUtil::reflectSPIRV( cyclic.toBytes() );
-    SW_EXPECT_EQUAL( size_t( 1 ), cyclicData._listConstantBuffer.size() ); // 재귀가 스택을 넘기지 않는다
+    const expected<ShaderReflectionData> cyclicData = ShaderReflectionUtil::reflectSPIRV( cyclic.toBytes() );
+    SW_REQUIRE_TRUE( cyclicData.has_value() );
+    SW_EXPECT_EQUAL( size_t( 1 ), cyclicData->_listConstantBuffer.size() ); // 재귀가 스택을 넘기지 않는다
 
     SPIRVBuilder truncated = makeConstantBufferModule();
     truncated._listWord.push_back( ( 50u << 16 ) | spirv::kOpTypeStruct ); // 모듈 끝을 넘는 길이
-    const ShaderReflectionData truncatedData = ShaderReflectionUtil::reflectSPIRV( truncated.toBytes() );
-    SW_EXPECT_EQUAL( size_t( 1 ), truncatedData._listConstantBuffer.size() ); // 앞까지 읽은 표로 답한다
+    const expected<ShaderReflectionData> truncatedData = ShaderReflectionUtil::reflectSPIRV( truncated.toBytes() );
+    SW_REQUIRE_TRUE( truncatedData.has_value() );
+    SW_EXPECT_EQUAL( size_t( 1 ), truncatedData->_listConstantBuffer.size() ); // 앞까지 읽은 표로 답한다
 
-    {
-        SW_EXPECT_LOG( "ShaderReflection.NotSPIRVModule" );
-        vector<uint8> bytes = makeConstantBufferModule().toBytes();
-        bytes[0]            = 0;
-        SW_EXPECT_TRUE( ShaderReflectionUtil::reflectSPIRV( bytes )._listConstantBuffer.empty() );
-    }
-    {
-        SW_EXPECT_LOG( "ShaderReflection.SPIRVBytecodeSize" );
-        SW_EXPECT_TRUE( ShaderReflectionUtil::reflectSPIRV( vector<uint8>( 18, 0 ) )._listConstantBuffer.empty() );
-    }
+    // 읽을 수 없는 모듈은 빈 결과가 아니라 오류다 — 빈 레이아웃으로 PSO 가 서면 슬롯이 조용히 빠진다.
+    vector<uint8> badMagic = makeConstantBufferModule().toBytes();
+    badMagic[0]            = 0;
+    SW_EXPECT_FALSE( ShaderReflectionUtil::reflectSPIRV( badMagic ).has_value() );
+    SW_EXPECT_FALSE( ShaderReflectionUtil::reflectSPIRV( vector<uint8>( 18, 0 ) ).has_value() );
+}
+
+/**
+ * @brief [ShaderReflectionSPIRVTest] 빈 바이트코드 · 모르는 형식은 `reflect` 가 오류로 돌려준다
+ * @details 변이: 옛 빈 결과 반환으로 되돌리면 `has_value()` 가 참이라 진다.
+ */
+SW_TEST_CASE( ShaderReflectionSPIRVTest, ReflectFailsInsteadOfReturningEmpty )
+{
+    SW_EXPECT_FALSE( ShaderReflectionData::reflect( vector<uint8>{}, ShaderTargetFormat::SPIRV_Vulkan ).has_value() );
+    SW_EXPECT_FALSE( ShaderReflectionData::reflect( vector<uint8>( 64, 0 ), ShaderTargetFormat::WGSL_WebGPU ).has_value() );
+    SW_EXPECT_FALSE( ShaderReflectionData::reflect( vector<uint8>( 64, 0 ), ShaderTargetFormat::Count ).has_value() );
+    SW_EXPECT_TRUE( ShaderReflectionData::reflect( makeConstantBufferModule().toBytes(), ShaderTargetFormat::SPIRV_Vulkan ).has_value() );
 }

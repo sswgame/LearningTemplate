@@ -3,8 +3,9 @@
  * @brief 그래프 밖에서 사는 자원(이름 · 뷰 칸) → RHI 핸들 · 처음 접근 표입니다. 프레임 그래프의 레벨 콜백이 전이를, 패스 몸통이 핸들을 여기서 찾는다.
  * @details 언리얼 RDG 의 `RegisterExternalBuffer` 가 돌려주는 버퍼 참조, 유니티 RenderGraph `ImportBuffer` 자리다. 주인(HZB · 컬링 인자 · 라이트 그리드 · 입자)이
  *          프레임 시작에 등록하고, 패스는 선언한 접근 핸들로만 핸들을 받는다(`RenderGraphPassContext::getBuffer`). 프레임 패스 하나가 모든 뷰를 도므로 한 이름은
- *          뷰마다 칸(`slot` — 주 시점 0, 추가 뷰 1 부터)을 가진다. 등록하지 않은 이름은 그래프가 전이를 추론해도 아무것도 내지 않는다 — 아직 패스가 손으로 전이하는
- *          자원이다(옮기는 차례는 DesignBacklog "렌더 그래프 접근 핸들 ② ~ ④").
+ *          뷰마다 칸(`slot` — 주 시점 0, 추가 뷰 1 부터)을 가진다. 등록하지 않은 이름은 그래프가 전이를 추론해도 아무것도 내지 않는다 — 그 프레임에 일하지 않는 자원이다
+ *          (등록 조건이 곧 실행 조건 — 패스 몸통은 `RenderGraphPassContext::isRegistered` 로 본다). 뷰 그래프도 같은 표 한 벌을 뷰마다 다시 채워 쓴다
+ *          (`FramePassExecutor::registerViewResources` — 칸 0 이 지금 뷰, 이름은 `ViewGraphResource`).
  */
 #pragma once
 #include "Core/Container/vector.h"
@@ -44,12 +45,13 @@ namespace sw
         /**
          * @brief 구조 버퍼 @p buffer 를 크기(원소 바이트 · 용량)와 함께 이름 @p name 의 칸 @p slot 으로 등록합니다 — 핸들만 받는 판은 없다(버퍼 보기 `RenderBufferInspector` 가 늘 읽을 길이를 안다).
          * @details 거절하고 오류를 남기는 것: 핸들 0, 크기 0(원소 바이트 · 용량), 같은 이름 · 칸을 두 번, 같은 이름의 다른 칸이 다른 처음 접근이나 종류(그래프는 이름마다 상태 하나를 든다).
+         *          결과를 돌려주지 않는다 — 거절은 오류 로그가 알리고, 부르는 쪽이 할 일이 없다(등록이 없으면 패스 몸통이 `RenderGraphPassContext::isRegistered` 로 보고 건너뛴다).
          * @param initialAccess 프레임 시작에 이 버퍼가 있는 상태이자 프레임 그래프가 끝에 되돌려 둘 상태입니다(뷰 그래프 · 다음 프레임이 이 상태를 믿는다 — `forEachChangedAccess`).
          *        그래서 늘 맞다 — 그래프 밖의 다른 사용자(뷰 그래프의 그리기 · 프레임 끝 되읽기)가 바꾸면 쓰고 나서 이 상태로 되돌린다.
          */
-        [[nodiscard]] bool registerBuffer( hashed_string name, uint32 slot, const RHIStructuredBuffer& buffer, RenderGraphAccess initialAccess );
+        void registerBuffer( hashed_string name, uint32 slot, const RHIStructuredBuffer& buffer, RenderGraphAccess initialAccess );
         /** @brief 텍스처 @p texture 를 이름 @p name 의 칸 @p slot 으로 등록합니다. 거절 규칙은 `registerBuffer` 와 같다. */
-        [[nodiscard]] bool registerTexture( hashed_string name, uint32 slot, RHITextureHandle texture, RenderGraphAccess initialAccess );
+        void registerTexture( hashed_string name, uint32 slot, RHITextureHandle texture, RenderGraphAccess initialAccess );
 
         /** @brief 이름 @p name 칸 @p slot 의 버퍼입니다. 없으면 0 입니다. */
         RHIBufferHandle findBuffer( hashed_string name, uint32 slot ) const { return findHandle( name, slot, RenderGraphViewableKind::Buffer ); }
@@ -75,8 +77,8 @@ namespace sw
         }
 
     private:
-        [[nodiscard]] bool registerEntry( const Entry& entry );
-        uint64             findHandle( hashed_string name, uint32 slot, RenderGraphViewableKind viewable ) const;
+        void   registerEntry( const Entry& entry );
+        uint64 findHandle( hashed_string name, uint32 slot, RenderGraphViewableKind viewable ) const;
 
     private:
         vector<Entry> _listEntry;

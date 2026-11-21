@@ -8,8 +8,8 @@
 #   // EXPECT-META: <글>       <이름>.gen.meta.cpp(개발 전용 에디터 메타데이터 단위)에 이 글이 있다.
 #   // EXPECT-TYPE: <FQN>      ReflectedTypes.list 에 `<FQN>\t<모듈>` 줄이 있다.
 #   // EXPECT-ASSET-FIELD: <이름> <대상> <ref|path|text>  AssetReferenceFields.list 에 `<이름>\t<대상>\t<ref|path|text>` 줄이 있다.
-# 입력: TARGET_ARGS · PARSER · FIXTURE · WORK_DIR · SOURCE_ROOT · GENERATED_DIR · BUILTINS · ANNOTATION_META · TEMPLATES · CONFIG · TYPES_LIST_NAME · ASSET_FIELDS_LIST_NAME · GEN_CPP_SUFFIX · GEN_META_CPP_SUFFIX
-foreach(required TARGET_ARGS PARSER FIXTURE WORK_DIR SOURCE_ROOT GENERATED_DIR BUILTINS ANNOTATION_META TEMPLATES CONFIG TYPES_LIST_NAME ASSET_FIELDS_LIST_NAME GEN_CPP_SUFFIX GEN_META_CPP_SUFFIX)
+# 입력: TARGET_ARGS · PARSER · FIXTURE · WORK_DIR · SOURCE_ROOT · GENERATED_DIR · BUILTINS · TEMPLATES · CONFIG · TYPES_LIST_NAME · ASSET_FIELDS_LIST_NAME · GEN_CPP_SUFFIX · GEN_META_CPP_SUFFIX
+foreach(required TARGET_ARGS PARSER FIXTURE WORK_DIR SOURCE_ROOT GENERATED_DIR BUILTINS TEMPLATES CONFIG TYPES_LIST_NAME ASSET_FIELDS_LIST_NAME GEN_CPP_SUFFIX GEN_META_CPP_SUFFIX)
 	if(NOT DEFINED ${required})
 		message(FATAL_ERROR "RunParserFixture: ${required} is not given")
 	endif()
@@ -47,6 +47,16 @@ foreach(line IN LISTS list_expect_line)
 		message(FATAL_ERROR "${FIXTURE}: unknown expectation: ${line}")
 	endif()
 endforeach()
+get_filename_component(fixture_dir "${FIXTURE}" DIRECTORY)
+set(batch_header "${fixture_dir}/Batch/Companion.h")
+file(STRINGS "${FIXTURE}" list_batch_line REGEX "^// BATCH-WITH: ")
+foreach(line IN LISTS list_batch_line)
+	string(REGEX MATCH "^// BATCH-WITH: (.+)$" matched "${line}")
+	set(batch_header "${fixture_dir}/${CMAKE_MATCH_1}")
+endforeach()
+if(NOT EXISTS "${batch_header}")
+	message(FATAL_ERROR "${FIXTURE}: batch header '${batch_header}' does not exist")
+endif()
 if(NOT list_expect_error AND NOT list_expect_gen AND NOT list_expect_type)
 	message(FATAL_ERROR "${FIXTURE}: no expectation - a fixture must say what it checks")
 endif()
@@ -62,9 +72,9 @@ endforeach()
 execute_process(
 	COMMAND "${PARSER}"
 		--input "${FIXTURE}"
+		--input "${batch_header}"
 		--output "${WORK_DIR}"
 		--builtins "${BUILTINS}"
-		--annotation-meta "${ANNOTATION_META}"
 		--emit-templates "${TEMPLATES}"
 		--module "${module}"
 		--module-local

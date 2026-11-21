@@ -28,14 +28,17 @@ namespace sw::test
     class FakeRHICommandList final : public IRHICommandList
     {
     public:
-        uint32        _creationIndex;                                                                 /**< 디바이스가 몇 번째로 만든 리스트인지(0 부터) */
-        uint32        _beginCount{ 0 };                                                               /**< `beginCommandList` 횟수 */
-        uint32        _endCount{ 0 };                                                                 /**< `endCommandList` 횟수 */
-        bool          _bOpen{ false }; /**< 열려 있는가(닫지 않고 제출하면 실제 백엔드는 실패한다) */ ///< NOLINT(sw-bool-flag): 주소(`&`)를 넘긴다
-        hashed_string _passName;                                                                      /**< 이 리스트에 기록한 패스 — 테스트의 패스 콜백이 적는다 */
-        uint32        _transitionBatchCount{ 0 };                                                     /**< `transitionBuffers` 호출 수 */
-        uint32        _transitionCount{ 0 };                                                          /**< `transitionBuffers` 로 받은 전이 수의 합 */
-        uint32        _uavBarrierCount{ 0 };                                                          /**< `uavBarrier` 호출 수 */
+        uint32                       _creationIndex;                                                                 /**< 디바이스가 몇 번째로 만든 리스트인지(0 부터) */
+        uint32                       _beginCount{ 0 };                                                               /**< `beginCommandList` 횟수 */
+        uint32                       _endCount{ 0 };                                                                 /**< `endCommandList` 횟수 */
+        bool                         _bOpen{ false }; /**< 열려 있는가(닫지 않고 제출하면 실제 백엔드는 실패한다) */ ///< NOLINT(sw-bool-flag): 주소(`&`)를 넘긴다
+        hashed_string                _passName;                                                                      /**< 이 리스트에 기록한 패스 — 테스트의 패스 콜백이 적는다 */
+        uint32                       _transitionBatchCount{ 0 };                                                     /**< `transitionBuffers` 호출 수 */
+        uint32                       _transitionCount{ 0 };                                                          /**< `transitionBuffers` 로 받은 전이 수의 합 */
+        uint32                       _uavBarrierCount{ 0 };                                                          /**< `uavBarrier` 호출 수 */
+        vector<RHITextureTransition> _listTextureTransition;                                                         /**< `transitionTextures` 로 받은 텍스처 전이(받은 순서) */
+        vector<RHITextureHandle>     _listTextureUAVBarrier;                                                         /**< `uavBarrierTexture` 로 받은 텍스처(받은 순서) */
+        vector<RHIBufferTransition>  _listBufferTransition;                                                          /**< `transitionBuffer` 로 받은 단일 버퍼 전이(받은 순서) */
         /** @brief `copyBufferRegion` 한 번입니다. */
         struct BufferCopy
         {
@@ -87,11 +90,11 @@ namespace sw::test
         void prepareTextureForShaderRead( RHITextureHandle ) override {}
         void prepareTextureForRenderTarget( RHITextureHandle ) override {}
         void prepareTextureForUnorderedAccess( RHITextureHandle ) override {}
-        void transitionTextures( const RHITextureTransition*, uint32 ) override {}
+        void transitionTextures( const RHITextureTransition* pTransition, uint32 count ) override { _listTextureTransition.insert( _listTextureTransition.end(), pTransition, pTransition + count ); }
         void blitTexture( RHITextureHandle, RHITextureHandle ) override {}
         void drawIndirect( RHIBufferHandle, uint32, uint32, RHIBufferHandle, uint32 ) override {}
         void dispatchIndirect( RHIBufferHandle, uint32 ) override {}
-        void transitionBuffer( RHIBufferHandle, RHIBufferState ) override {}
+        void transitionBuffer( RHIBufferHandle buffer, RHIBufferState state ) override { _listBufferTransition.push_back( RHIBufferTransition{ buffer, state } ); }
         void transitionBuffers( const RHIBufferTransition*, uint32 count ) override
         {
             ++_transitionBatchCount;
@@ -100,6 +103,7 @@ namespace sw::test
         void copyBufferToReadback( RHIBufferHandle, RHIBufferHandle, uint32 ) override {}
         void copyBufferRegion( RHIBufferHandle destination, uint64 destinationOffset, RHIBufferHandle source, uint64 sourceOffset, uint64 sizeBytes ) override { _listBufferCopy.push_back( BufferCopy{ destination, destinationOffset, source, sourceOffset, sizeBytes } ); }
         void uavBarrier( RHIBufferHandle ) override { ++_uavBarrierCount; }
+        void uavBarrierTexture( RHITextureHandle texture ) override { _listTextureUAVBarrier.push_back( texture ); }
         void drawIndexedIndirect( RHIBufferHandle, uint32, uint32, RHIBufferHandle, uint32 ) override {}
         void beginEventMarker( const utf8* ) override {}
         void endEventMarker() override {}
@@ -124,7 +128,9 @@ namespace sw::test
         void*                              _pNativeDevice{ nullptr };                                                  /**< `getNativeDevice` 가 돌려줄 값 */
         mutable uint32                     _nativeHandleQueryCount{ 0 };                                               /**< 백엔드 훅 `queryNativeHandlesInternal` 이 불린 횟수 */
         vector<RHIResourceReleaseDelegate> _listGPURelease;                                                            /**< `enqueueGPURelease` 로 받은 콜백(받은 순서) */
+        vector<RHIFrameCompletionDelegate> _listFrameCompletion;                                                       /**< `notifyFrameCompletion` 으로 받은 통지(받은 순서) */
         uint32                             _pendingReleaseCount{ 0 };                                                  /**< `getPendingReleaseCount` 가 답할 값 — 종료 단언 테스트가 정한다 */
+        uint32                             _deviceFaultReportCount{ 0 };                                               /**< `reportDeviceFaultInternal` 이 불린 횟수 — 손실 보고가 처음 한 번만 부르는지 본다 */
         vector<RHIDescriptorIndex>         _listLiveTextureIndex;                                                      /**< `isBindlessIndexLive` 가 살아 있다고 답할 텍스처 번호 */
         vector<RHIDescriptorIndex>         _listLiveBufferIndex;                                                       /**< `isBindlessIndexLive` 가 살아 있다고 답할 버퍼 번호 */
         vector<RHIFormat>                  _listUnsupportedFormat;                                                     /**< `supportsTextureFormat` 이 거짓으로 답할 형식(나머지는 참) */
@@ -143,7 +149,7 @@ namespace sw::test
         vector<QueueEvent> _listQueueEvent;
         uint64             _asyncSubmitCount{ 0 }; /**< 지금까지 낸 비동기 제출 수(포크 번호) */
 
-        [[nodiscard]] bool   initializeInternal( const RHISwapChainDesc& ) override { return true; }
+        [[nodiscard]] bool   initializeInternal( const RHIDeviceDesc& ) override { return true; }
         void                 shutdownInternal() override { _listShutdownStep.push_back( "shutdownInternal" ); }
         void                 resizeInternal( uint32, uint32 ) override {}
         IRHISwapChain*       createSwapChainInternal( const RHISwapChainDesc& ) override { return nullptr; } // 창이 없다
@@ -206,7 +212,9 @@ namespace sw::test
 
         /** @brief 부르지 않고 쌓기만 합니다. 테스트가 "GPU 가 그 프레임을 끝냈다" 를 흉내 내어 `_listGPURelease` 를 부릅니다. */
         void   enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate ) override { _listGPURelease.push_back( releaseDelegate ); }
+        void   notifyFrameCompletion( const RHIFrameCompletionDelegate& completionDelegate ) override { _listFrameCompletion.push_back( completionDelegate ); }
         uint32 getPendingReleaseCount() const override { return _pendingReleaseCount; }
+        void   reportDeviceFaultInternal() override { ++_deviceFaultReportCount; }
         /** @brief 손실 표시만 세운다(실제 백엔드의 `debugRemoveDevice` 와 같은 상태 — 전송 거절 · `isDeviceLost`). */
         bool debugRemoveDevice() override
         {
@@ -225,6 +233,7 @@ namespace sw::test
 
     protected:
         const RHITransferSerials& getTransferSerials() const override { return _transferSerials; }
+        RHITransferSerials&       getTransferSerials() override { return _transferSerials; }
         void                      waitIdleInternal() override { _listShutdownStep.push_back( "waitIdleInternal" ); }
         void                      detachCommandRecordingInternal() override { _listShutdownStep.push_back( "detachCommandRecordingInternal" ); }
 
@@ -257,9 +266,11 @@ namespace sw::test
     class FakeRHICommandContext final : public IRHICommandContext
     {
     public:
-        uint32 _beginNativeCount{ 0 }; /**< `beginRenderPassNative` 횟수 */
-        uint32 _endNativeCount{ 0 };   /**< `endRenderPassNative` 횟수 — 기반이 열린 패스가 있을 때만 부른다 */
-        uint32 _drawNativeCount{ 0 };  /**< 나간 드로우 수(패스가 없어 버린 드로우는 세지 않는다) */
+        uint32                   _beginNativeCount{ 0 }; /**< `beginRenderPassNative` 횟수 */
+        uint32                   _endNativeCount{ 0 };   /**< `endRenderPassNative` 횟수 — 기반이 열린 패스가 있을 때만 부른다 */
+        uint32                   _drawNativeCount{ 0 };  /**< 나간 드로우 수(패스가 없어 버린 드로우는 세지 않는다) */
+        uint32                   _blitNativeCount{ 0 };  /**< 백엔드에 닿은 블릿 수 */
+        vector<RHITextureHandle> _listTransitionTexture; /**< 백엔드에 닿은 텍스처 전이의 핸들(차례대로) */
 
         /** @brief 진단을 낼 디바이스와 함께 만듭니다. */
         explicit FakeRHICommandContext( FakeRHIDevice& device )
@@ -301,14 +312,15 @@ namespace sw::test
         void setComputePipelineStateNative( RHIPipelineStateHandle ) override {}
         void dispatchComputeNative( uint32, uint32, uint32 ) override {}
         void dispatchIndirectNative( RHIBufferHandle, uint32 ) override {}
-        void prepareTextureForShaderReadNative( RHITextureHandle ) override {}
-        void prepareTextureForRenderTargetNative( RHITextureHandle ) override {}
-        void prepareTextureForUnorderedAccessNative( RHITextureHandle ) override {}
-        void blitTextureNative( RHITextureHandle, RHITextureHandle ) override {}
+        void prepareTextureForShaderReadNative( RHITextureHandle texture ) override { _listTransitionTexture.push_back( texture ); }
+        void prepareTextureForRenderTargetNative( RHITextureHandle texture ) override { _listTransitionTexture.push_back( texture ); }
+        void prepareTextureForUnorderedAccessNative( RHITextureHandle texture ) override { _listTransitionTexture.push_back( texture ); }
+        void blitTextureNative( RHITextureHandle, RHITextureHandle ) override { ++_blitNativeCount; }
         void transitionBufferNative( RHIBufferHandle, RHIBufferState ) override {}
         void copyBufferToReadbackNative( RHIBufferHandle, RHIBufferHandle, uint32 ) override {}
         void copyBufferRegionNative( RHIBufferHandle, uint64, RHIBufferHandle, uint64, uint64 ) override {}
         void uavBarrierNative( RHIBufferHandle ) override {}
+        void uavBarrierTextureNative( RHITextureHandle texture ) override { _listTransitionTexture.push_back( texture ); }
         void updateConstantBufferNative( RHIBufferHandle, const void*, uint32 ) override {}
 
     private:
@@ -324,9 +336,11 @@ namespace sw::test
     public:
         RHIBufferHandle _nextBuffer{ 1 };
         uint32          _gpuVertexBufferCount{ 0 };
-        uint32          _structuredUpdateCount{ 0 };      /**< `updateStructuredBufferRegions` 호출 수(한 조각 갱신 · 만들 때의 초기 내용도 이 길이다) */
-        uint32          _structuredCreateCount{ 0 };      /**< `createStructuredBuffer` 호출 수 */
-        uint32          _lastStructuredElementCount{ 0 }; /**< 마지막으로 만든 구조 버퍼의 원소 수 */
+        uint32          _structuredUpdateCount{ 0 };                                                                  /**< `updateStructuredBufferRegions` 호출 수(한 조각 갱신 · 만들 때의 초기 내용도 이 길이다) */
+        uint32          _structuredCreateCount{ 0 };                                                                  /**< `createStructuredBuffer` 호출 수 */
+        uint32          _lastStructuredElementCount{ 0 };                                                             /**< 마지막으로 만든 구조 버퍼의 원소 수 */
+        uint32          _readbackReadCount{ 0 };                                                                      /**< `readReadbackBuffer` 호출 수 */
+        bool            _bReadbackReadable{ true }; /**< `readReadbackBuffer` 가 돌려줄 값(내용은 건드리지 않는다) */ ///< NOLINT(sw-bool-flag): 테스트가 바꾸는 답
 
         RHIBufferHandle createVertexBuffer( const void*, uint32 ) override { return _nextBuffer++; }
         RHIBufferHandle createGPUVertexBuffer( uint32 ) override
@@ -345,8 +359,8 @@ namespace sw::test
         RHITransferStatus      pollTransfer( RHITransferTicket ) override { return RHITransferStatus::Failed; }
         bool                   takeTextureReadback( RHITransferTicket, vector<uint8>& ) override { return false; }
         void                   discardTextureReadback( RHITransferTicket ) override {}
-        RHIPipelineStateHandle createPipelineStateNative( const RHIPipelineStateDesc& ) override { return 0; }
-        RHIPipelineStateHandle createComputePipelineStateNative( string_view, string_view, const vector<string>& ) override { return 0; }
+        RHIPipelineStateHandle createPipelineStateNative( const RHIPipelineStateDesc&, const RHICompiledGraphicsStages& ) override { return 0; }
+        RHIPipelineStateHandle createComputePipelineStateNative( const RHICompiledShaderStage&, string_view ) override { return 0; }
         void                   destroyPipelineState( RHIPipelineStateHandle ) override {}
         RHIRenderPassHandle    createRenderPass( const RHIRenderPassDesc& ) override { return 0; }
         void                   destroyRenderPass( RHIRenderPassHandle ) override {}
@@ -360,8 +374,12 @@ namespace sw::test
             _lastStructuredElementCount = elementCount;
             return _nextBuffer++;
         }
-        RHIBufferHandle    createReadbackBuffer( uint32, uint32 ) override { return 0; }
-        [[nodiscard]] bool readReadbackBuffer( RHIBufferHandle, uint32, void* ) override { return false; }
+        RHIBufferHandle    createReadbackBuffer( uint32, uint32 ) override { return _nextBuffer++; }
+        [[nodiscard]] bool readReadbackBuffer( RHIBufferHandle, uint32, void* ) override
+        {
+            ++_readbackReadCount;
+            return _bReadbackReadable;
+        }
         RHITextureHandle   createTexture2D( const RHITextureDesc& ) override { return 0; }
         void               destroyTexture( RHITextureHandle ) override {}
         RHIFormat          getTextureFormat( RHITextureHandle ) const override { return RHIFormat::Unknown; }

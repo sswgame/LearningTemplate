@@ -7,6 +7,7 @@
 #include "Engine/Environment/Terrain/TerrainHeightfield.h"
 #include "Engine/Environment/Terrain/TerrainMeshBuilder.h"
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/Tick/FixedStepContext.h"
 #include "Engine/Physics/Collision/PhysicsShape.h"
 #include "Engine/Physics/IPhysicsScene.h"
 #include "Engine/Physics/PhysicsDesc.h"
@@ -98,7 +99,7 @@ namespace sw
         , _listBuiltGeneration{}
         , _listTriangleCount{}
         , _triangleCount{ 0 }
-        , _chunkBuildCount{ 0 }
+        , _chunkBuildCount{}
     {
     }
 
@@ -124,9 +125,16 @@ namespace sw
         requestRebuild();
     }
 
-    void TerrainColliderComponent::beginPhysicsFrame( ScenePhysics& physics )
+    void TerrainColliderComponent::onRegister( GameObjectManager& manager )
     {
-        SW_PROFILE_SCOPE( "GT.TerrainCollider.beginPhysicsFrame" );
+        PhysicsComponent::onRegister( manager );
+        registerFixedStep<&TerrainColliderComponent::onPhysicsFrameBegin>( manager, FixedStepGroup::FrameBegin );
+    }
+
+    void TerrainColliderComponent::onPhysicsFrameBegin( const FixedStepContext& context )
+    {
+        ScenePhysics& physics = context.getPhysics();
+        SW_PROFILE_SCOPE( "GT.TerrainCollider.onPhysicsFrameBegin" );
         if ( isSimulated() == false )
         {
             releasePhysics( physics );
@@ -170,7 +178,7 @@ namespace sw
             _triangleCount -= _listTriangleCount[chunkIndex];
             _listTriangleCount[chunkIndex]   = 0;
             _listBuiltGeneration[chunkIndex] = listGeneration[chunkIndex];
-            ++_chunkBuildCount;
+            _chunkBuildCount.add();
             // 모두 구멍인 청크는 바디가 없다(무효 핸들로 남는다).
             const bool bSolid = TerrainColliderComponent::makeChunkCollisionMesh( heightfield, layout, chunkIndex % layout._chunkCountX, chunkIndex / layout._chunkCountX,
                                                                                   desc._listShape[0] );

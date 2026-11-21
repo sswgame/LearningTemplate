@@ -10,8 +10,8 @@
 
 #include "Editor/Common/GUI/Panel/EditorDocumentPanel.h"
 #include "Editor/Common/Widgets/EditorNodeGraph.h"
+#include "Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.h"
 #include "Editor/Panels/AudioGraph/Model/AudioGraphViewModel.h"
-#include "Editor/Panels/Inspector/EditorPropertyGrid.h"
 
 namespace sw
 {

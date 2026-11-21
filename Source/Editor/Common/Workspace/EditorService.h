@@ -7,6 +7,7 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Subscription.h"
 #include "Core/Subsystem/SubsystemScope.h"
 
 #include "Editor/Common/EditorExports.h"
@@ -164,20 +165,25 @@ namespace sw::editor
     SW_EDITOR_API Scene* getFocusedScene();
     /**
      * @brief Ctrl+Z 와 Ctrl+Y 가 쓰는 스택입니다. **부르는 순간**의 키보드 포커스 창으로 고른다(`IEditorPanelService::chooseFocusedCommandStack`) — 포커스 패널의 답,
-     *        패널이 아닌 창(메뉴 · 팝업) · History 면 앞 포커스 패널이 걸어 둔 것, 없으면 엔진의 전역 `CommandStack`, 그것도 없으면 nullptr 입니다.
+     *        패널이 아닌 창(메뉴 · 팝업) · History 면 앞 포커스 패널의 지금 답, 그 패널이 열려 있지 않으면 엔진의 전역 `CommandStack`, 그것도 없으면 nullptr 입니다.
      */
     SW_EDITOR_API CommandStack* getFocusedCommandStack();
-    /** @brief 포커스된 툴 창의 Undo 스택을 등록합니다(nullptr 이면 해제합니다). 패널 관리자가 그린 뒤 포커스 창의 답으로 건다(`EditorPanelManager::updateFocusedCommandStack`). */
-    SW_EDITOR_API void setFocusedCommandStack( CommandStack* pStack );
-    /** @brief 등록된 스택이 @p pStack 이면 해제합니다(다른 창이 건 것은 그대로) — 스택이 사라지거나 그 창이 닫힐 때 부른다. */
-    SW_EDITOR_API void releaseFocusedCommandStack( const CommandStack* pStack );
+    /**
+     * @brief 앞 포커스 패널을 패널 id 로 기억합니다. 패널 관리자가 그린 뒤 포커스 창으로 건다(`EditorPanelManager::updateFocusedCommandStack`).
+     * @details 스택 포인터를 걸지 않는다 — 읽는 순간 그 id 의 열린 패널에 스택을 묻는다(`IEditorPanelService::chooseFocusedCommandStack`). 스택이 사라지거나 창이 닫혀도 풀 것이 없다.
+     */
+    SW_EDITOR_API void setFocusedPanel( string_view panelID );
     /**
      * @brief 인스펙터와 기즈모가 대상으로 삼는 선택입니다. 가장 최근에 바뀌었거나 포커스를 얻은 미리보기 창의 선택이고, 없으면 메인 선택(에디터 컨텍스트의 `EditorSelection`)입니다.
      * @details 창 포커스가 인스펙터로 옮겨 가도 유지된다. 인스펙터를 누르면 창이 포커스를 잃으므로, 스택처럼 포커스 동안만 등록하면 인스펙터가 쓸 수 없다.
      *          메인 선택이 바뀌거나 창이 닫히면 메인으로 돌아온다(`EditorSelection::notifyChanged`, `unbindPreviewScope`). 둘 다 없으면 nullptr 다.
      */
     SW_EDITOR_API EditorSelection* getFocusedSelection();
-    /** @brief 대상 선택을 등록합니다(nullptr 이면 메인 선택). 미리보기 선택만 등록하고, 메인 씬 창(씬 뷰, 계층)이 포커스를 얻으면 nullptr 로 되돌립니다. */
+    /**
+     * @brief 대상 선택을 정합니다(nullptr 이면 메인 선택). 메인 씬 창(씬 뷰, 계층)이 포커스를 얻으면 nullptr 로 되돌립니다.
+     * @details 미리보기 목록에 오른 선택(`registerPreviewSelection` 의 구독이 살아 있는 것)만 대상이 된다 — 그 구독이 풀리면(창이 닫히거나 선택이 사라지면) 대상도 메인으로 돌아온다.
+     *          맨 포인터를 손으로 풀 일이 없다.
+     */
     SW_EDITOR_API void setFocusedSelection( EditorSelection* pSelection );
 
     // ------------------------------------------------------------------------------
@@ -195,7 +201,9 @@ namespace sw::editor
     SW_EDITOR_API EditorSelection* findSelectionOf( const GameObjectManager& manager );
     /** @brief 미리보기 씬에 묶인 선택들입니다(`EditorSelection::bindPreviewScope` 가 넣고 `unbindPreviewScope` 가 뺀다). */
     SW_EDITOR_API const vector<EditorSelection*>& getPreviewSelections();
-    /** @brief 미리보기 씬에 묶인 선택을 목록에 넣거나 뺍니다. `EditorSelection` 만 부릅니다. */
-    SW_EDITOR_API void registerPreviewSelection( EditorSelection& selection );
-    SW_EDITOR_API void unregisterPreviewSelection( EditorSelection& selection );
+    /**
+     * @brief 미리보기 씬에 묶인 선택을 목록에 넣고 그 등록의 구독을 돌려줍니다. 구독이 풀리면(놓거나 선택이 사라지면) 목록에서 빠지고, 대상 선택이었으면 메인으로 돌아온다.
+     * @details `EditorSelection` 만 부르고 그 멤버로 든다 — 수명이 형식으로 묶여 빈 포인터가 목록 · 대상에 남는 길이 없다. 에디터 범위가 없으면(테스트 · 종료) 빈 구독이다.
+     */
+    [[nodiscard]] SW_EDITOR_API Subscription registerPreviewSelection( EditorSelection& selection );
 } // namespace sw::editor

@@ -4,6 +4,7 @@
  * @details 게임마다 `findProbeDirector` 와 그것을 부르는 `read*` 함수 대여섯을 손으로 적었다(다섯 게임). 찾기 규칙(첫 것 · 없으면 값 없음)을 한 곳에 둔다.
  */
 #pragma once
+#include "Core/Concurrency/DevCounter.h"
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
@@ -37,14 +38,23 @@ namespace sw
             return pComponent != nullptr && TRead( *pComponent, outValue );
         }
 
-        /** @brief 첫 @p TComponent 의 인자 없는 const 게터(수 · bool · 열거) @p TGetter 값입니다. 컴포넌트가 없으면 값이 없습니다. */
+        /** @brief 게터 값(수 · bool · 열거)을 감시 값 수로 바꿉니다. */
+        template <typename TValue>
+        static float64 toNumber( const TValue& value )
+        {
+            return static_cast<float64>( value );
+        }
+        /** @brief 개발 전용 칸(`DevCounter`)을 내는 게터는 센 수를 읽습니다. */
+        static float64 toNumber( const DevCounter& counter ) { return static_cast<float64>( counter.get() ); }
+
+        /** @brief 첫 @p TComponent 의 인자 없는 const 게터(수 · bool · 열거 · `DevCounter`) @p TGetter 값입니다. 컴포넌트가 없으면 값이 없습니다. */
         template <typename TComponent, auto TGetter>
         [[nodiscard]] static bool readGetter( SceneIterationKey key, const GameObjectManager* pManager, float64& outValue )
         {
             const TComponent* pComponent = findFirst<TComponent>( key, pManager );
             if ( pComponent == nullptr )
                 return false;
-            outValue = static_cast<float64>( ( pComponent->*TGetter )() );
+            outValue = toNumber( ( pComponent->*TGetter )() );
             return true;
         }
     };

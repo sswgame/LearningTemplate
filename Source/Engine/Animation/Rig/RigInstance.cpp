@@ -55,7 +55,7 @@ namespace sw
         , _pCurveSource{ nullptr }
         , _worldGravity{ 0.0f, -constant::physics::kDefaultGravity, 0.0f }
         , _pendingDeltaSeconds{ 0.0f }
-        , _evaluationCount{ 0 }
+        , _evaluationCount{}
     {
     }
 
@@ -467,7 +467,7 @@ namespace sw
         }
         _pose.writeTo( inoutLocalPose );
         _pendingDeltaSeconds = 0.0f;
-        ++_evaluationCount;
+        _evaluationCount.add();
     }
 
     void RigInstance::reset()

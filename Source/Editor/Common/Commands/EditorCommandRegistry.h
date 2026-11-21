@@ -420,11 +420,20 @@ namespace sw::editor
     };
 } // namespace sw::editor
 
+// MVVM View 번역 단위(에디터 View 부분 · 확장의 PANEL_VIEW_SOURCES)는 SW_EDITOR_PANEL_VIEW=1 로 짓는다. 동작이 있는 명령은 모델을 바꾸므로 View 에서 등록하지 못한다 —
+// 동작은 ViewModel(`Panels/<Panel>/Model/`)이나 `Common/Commands` 에 두고, View 는 하위 메뉴 그리기(`SW_EDITOR_SUBMENU_COMMAND`)와 창 열기(`SW_EDITOR_PANEL_OPEN_COMMAND`)만 등록한다.
+#ifndef SW_EDITOR_PANEL_VIEW
+    #define SW_EDITOR_PANEL_VIEW 0
+#endif
+#define SW_EDITOR_COMMAND_OUTSIDE_VIEW( name ) \
+    static_assert( SW_EDITOR_PANEL_VIEW == 0, "editor command " #name ": a command with an action changes the model - register it in the panel's Model/ or Common/Commands, not in an MVVM View file" )
+
 /**
  * @brief 커맨드 하나의 동작을 그 커맨드의 .cpp 에서 등록합니다. 표시 · 배치(라벨 · 아이콘 · 메뉴 · 단축키 액션 · 맥락 메뉴)는 그 모듈의 `*.commands.xml` 줄이 정한다.
  * @code SW_EDITOR_COMMAND( ParkReload, "themepark.reloadLayout", &reloadLayout, nullptr, NoScene ); @endcode
  */
 #define SW_EDITOR_COMMAND( name, pID, pfnAction, pfnEnabled, edit )                                                                   \
+    SW_EDITOR_COMMAND_OUTSIDE_VIEW( name );                                                                                           \
     SW_EDITOR_REGISTER( ::sw::editor::EditorCommandRegistration, Command_##name, { pID, 0 },                                          \
                         ::sw::editor::EditorCommandTargetUtil::getActionFor<pfnAction, ::sw::editor::EditorCommandEdit::edit>(),      \
                         ::sw::editor::EditorCommandTargetUtil::getSceneActionFor<pfnAction, ::sw::editor::EditorCommandEdit::edit>(), \
@@ -435,8 +444,18 @@ namespace sw::editor
  * @code SW_EDITOR_CONTEXT_COMMAND( ObjectRename, "scene.renameObject", &renameTarget, &isSingleTarget, NoScene, nullptr ); @endcode
  */
 #define SW_EDITOR_CONTEXT_COMMAND( name, pID, pfnAction, pfnEnabled, edit, pfnSubmenu )                                               \
+    SW_EDITOR_COMMAND_OUTSIDE_VIEW( name );                                                                                           \
     SW_EDITOR_REGISTER( ::sw::editor::EditorCommandRegistration, Command_##name, { pID, 0 },                                          \
                         ::sw::editor::EditorCommandTargetUtil::getActionFor<pfnAction, ::sw::editor::EditorCommandEdit::edit>(),      \
                         ::sw::editor::EditorCommandTargetUtil::getSceneActionFor<pfnAction, ::sw::editor::EditorCommandEdit::edit>(), \
                         ::sw::editor::EditorCommandTargetUtil::toEnabled<pfnEnabled>(), ::sw::editor::EditorCommandEdit::edit,        \
+                        ::sw::editor::EditorCommandTargetUtil::toAction<pfnSubmenu>() )
+
+/**
+ * @brief 맥락 메뉴의 하위 메뉴 항목을 등록합니다. 동작은 없고 @p pfnSubmenu 가 안을 그린다(그리기라 View 에서 등록한다 — 고른 항목은 ViewModel 명령으로 돌려준다).
+ * @code SW_EDITOR_SUBMENU_COMMAND( ObjectAddComponent, "scene.object.addComponent", &hasSingleTarget, SceneUnrecorded, &drawAddComponentSubmenu ); @endcode
+ */
+#define SW_EDITOR_SUBMENU_COMMAND( name, pID, pfnEnabled, edit, pfnSubmenu )                                                                                                                                                                                                                                    \
+    SW_EDITOR_REGISTER( ::sw::editor::EditorCommandRegistration, Command_##name, { pID, 0 }, ::sw::editor::EditorCommandTargetUtil::getActionFor<nullptr, ::sw::editor::EditorCommandEdit::edit>(), ::sw::editor::EditorCommandTargetUtil::getSceneActionFor<nullptr, ::sw::editor::EditorCommandEdit::edit>(), \
+                        ::sw::editor::EditorCommandTargetUtil::toEnabled<pfnEnabled>(), ::sw::editor::EditorCommandEdit::edit,                                                                                                                                                                                  \
                         ::sw::editor::EditorCommandTargetUtil::toAction<pfnSubmenu>() )

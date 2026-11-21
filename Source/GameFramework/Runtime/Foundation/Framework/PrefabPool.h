@@ -3,6 +3,7 @@
  * @brief 프리팹 하나의 인스턴스 풀입니다 — 돌려받은 인스턴스를 꺼 두었다가 다시 켜서 내줍니다(탄 · 손님 · 유닛처럼 자주 생기고 사라지는 것).
  */
 #pragma once
+#include "Core/Concurrency/DevCounter.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
@@ -89,8 +90,8 @@ namespace sw
         uint32 getIdleCount() const { return static_cast<uint32>( _listIdle.size() ); }
         /** @brief 지금 꺼낸 인스턴스 수입니다. 지워진 핸들도 셉니다 — 다음 `releaseBusyIf` 가 걷는다. */
         uint32 getBusyCount() const { return static_cast<uint32>( _listBusy.size() ); }
-        /** @brief 이 풀이 새로 만든 인스턴스 수입니다(재사용은 세지 않는다 — 진단 · 테스트). */
-        uint32 getCreatedCount() const { return _createdCount; }
+        /** @brief 이 풀이 새로 만든 인스턴스 수입니다(재사용은 세지 않는다 — 감시 값 · 테스트만 읽는 개발 전용 칸, 배포는 0). */
+        const DevCounter& getCreatedCount() const { return _createdCount; }
 
     private:
         /** @brief 새로 만듭니다(`_spawner` 또는 프리팹). 처음 만든 것으로 풀 계약을 확인하고, 어기면 지우고 풀을 막아 nullptr 입니다. */
@@ -106,7 +107,7 @@ namespace sw
         vector<GameObjectHandle> _listIdle; ///< 꺼 둔 인스턴스(나중에 넣은 것을 먼저 꺼낸다)
         vector<GameObjectHandle> _listBusy; ///< 꺼낸 인스턴스(오래 꺼낸 것이 앞)
         uint32                   _maxIdleCount;
-        uint32                   _createdCount;
+        DevCounter               _createdCount;
         uint8                    _bContractChecked : 1; ///< 처음 만든 인스턴스로 풀 계약을 확인했다
         uint8                    _bRefused         : 1; ///< 풀 계약을 어긴 프리팹이다 — 더 만들지 않는다
     };

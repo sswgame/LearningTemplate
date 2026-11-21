@@ -6,6 +6,7 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Config/GameConfig.h"
@@ -104,6 +105,19 @@ namespace sw
                     return false;
                 const SaveSlotCounts& counts = pInstance->getSaveSlotCounts();
                 outValue                     = static_cast<float64>( bWritten ? counts._written : counts._loaded );
+                return true;
+            }
+
+            /** @brief 감시 값 `Save.CaptureMs` · `Save.CapturePeakMs` 입니다 — 마지막 · 가장 긴 세이브 찍기의 게임 스레드 시간(밀리초). 찍은 적 없으면 0 입니다. */
+            template <bool bPeak>
+            [[nodiscard]] static bool readCaptureMilliseconds( const GameObjectManager* pManager, float64& outValue )
+            {
+                (void)pManager;
+                const GameInstance* const pInstance = GameInstance::findRunningInstance();
+                if ( pInstance == nullptr )
+                    return false;
+                const SaveSlotCounts& counts = pInstance->getSaveSlotCounts();
+                outValue                     = static_cast<float64>( bPeak ? counts._peakCaptureMicroseconds : counts._lastCaptureMicroseconds ) / static_cast<float64>( constant::time::kMicrosecondsPerMillisecond );
                 return true;
             }
         };
@@ -475,7 +489,7 @@ namespace sw
 
     bool GameInstance::loadDeclaredCharacterData()
     {
-        const map<string, string>& mapRequired = _packConfig._data._mapRequiredDataPack;
+        const flat_map<string, string>& mapRequired = _packConfig._data._mapRequiredDataPack;
         if ( mapRequired.find( ItemCatalog::kDataKind ) != mapRequired.end() )
         {
             if ( loadRequiredCatalog( _pItemCatalog ) == false )
@@ -562,9 +576,17 @@ namespace sw
             return false;
         }
         // 순서: 올린 타입의 상태를 싣고 걷기 → 파생 훅(그 밖의 상태를 싣는다) → 봉투(파생의 리플렉션 상태 포함).
+        const Stopwatch captureWatch;
         _stateSnapshot.beginCapture();
         onBeforeStateSerialize();
-        return _stateSnapshot.writeEnvelope( purpose, getStateTypeInfo(), static_cast<const GameInstance*>( this )->getStateInstance(), outBytes );
+        const bool bWritten = _stateSnapshot.writeEnvelope( purpose, getStateTypeInfo(), static_cast<const GameInstance*>( this )->getStateInstance(), outBytes );
+        if ( purpose == SerializePurpose::SaveGame )
+        {
+            _saveSlotCounts._lastCaptureMicroseconds = captureWatch.getElapsedMicroseconds();
+            if ( _saveSlotCounts._lastCaptureMicroseconds > _saveSlotCounts._peakCaptureMicroseconds )
+                _saveSlotCounts._peakCaptureMicroseconds = _saveSlotCounts._lastCaptureMicroseconds;
+        }
+        return bWritten;
     }
 
     expected<void, SnapshotRestoreFailure> GameInstance::readStateEnvelope( SerializePurpose purpose, const void* pInBuffer, uint32 size )
@@ -781,5 +803,10 @@ namespace sw
     // 활동 수 없음: 저장 잠금은 게임 상태(씬 로드 · 깨진 복원 · 컷신)가 풀어 주는 문이다 — 셀 수 있는 일의 양이 아니다.
     SW_AUTOMATION_WALL_WATCH( saveBlocked, "Save.Blocked", "1 while the running game's save gate refuses saving (scene loading, broken restore, cutscene)", &GameInstanceInternal::readSaveBlocked,
                               nullptr );
+    // 측정 문턱(Android 4 ms)을 재는 자리 — 넘기 전에는 감시 값만 둔다(`docs/DesignBacklog.md` GameFramework ②).
+    SW_AUTOMATION_WATCH( saveCaptureMs, "Save.CaptureMs", "Game-thread milliseconds of the last save-game capture by the running game (0 before the first save)",
+                         &GameInstanceInternal::readCaptureMilliseconds<false> );
+    SW_AUTOMATION_WATCH( saveCapturePeakMs, "Save.CapturePeakMs", "Longest save-game capture in game-thread milliseconds by the running game",
+                         &GameInstanceInternal::readCaptureMilliseconds<true> );
     SW_AUTOMATION_WATCH( saveLoaded, "Save.Loaded", "Game state save slots read and restored successfully by the running game", &GameInstanceInternal::readSlotCount<false> );
 } // namespace sw

@@ -50,12 +50,6 @@ namespace sw::editor
                 const bool   bTyped = 1 <= count && count <= 4;
                 return bTyped ? count - 1 : EditorNodeGraphRules::kWildcardPinType;
             }
-
-            /** @brief 창을 엽니다(명령 표의 실행 함수). */
-            static void openPanel()
-            {
-                (void)EditorPanelManager::getInEditorContext().setPanelOpen<MaterialGraphPanel>( true );
-            }
         };
     } // namespace
 } // namespace sw::editor
@@ -487,5 +481,5 @@ namespace sw::editor
     }
 
     SW_EDITOR_PANEL( MaterialGraphPanel, MaterialGraphPanel::kPanelID, EditorPanelCategory::Tool, 1301 );
-    SW_EDITOR_COMMAND( MaterialGraphOpen, "window.materialGraph", &MaterialGraphPanelInternal::openPanel, nullptr, NoScene );
+    SW_EDITOR_PANEL_OPEN_COMMAND( MaterialGraphOpen, "window.materialGraph", MaterialGraphPanel );
 } // namespace sw::editor

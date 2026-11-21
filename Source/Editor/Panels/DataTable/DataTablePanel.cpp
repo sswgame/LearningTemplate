@@ -12,6 +12,7 @@
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
+#include "Editor/Common/Widgets/EditorVirtualList.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
 #include "Editor/Common/Workspace/Play/EditorSessionPolicy.h"
@@ -359,12 +360,11 @@ namespace sw::editor
             ImGui::TableHeadersRow();
 
             // 수천 줄의 입력칸을 프레임마다 그리지 않는다. 줄 높이가 같아 보이는 줄만 그린다.
-            int32            deleteIndex = -1;
-            ImGuiListClipper clipper;
-            clipper.Begin( static_cast<int32>( listVisibleIndex.size() ) );
-            while ( clipper.Step() )
+            int32             deleteIndex = -1;
+            EditorVirtualList virtualList( static_cast<int32>( listVisibleIndex.size() ) );
+            while ( virtualList.step() )
             {
-                for ( int32 rowPosition = clipper.DisplayStart; rowPosition < clipper.DisplayEnd; ++rowPosition )
+                for ( int32 rowPosition = virtualList.getBegin(); rowPosition < virtualList.getEnd(); ++rowPosition )
                 {
                     const size_t recordIndex = listVisibleIndex[static_cast<size_t>( rowPosition )];
                     if ( drawLocalizationRow( recordIndex, cultureCount ) )

@@ -32,6 +32,7 @@ namespace sw
         void recordFileOpenedForRead( string_view filePath, size_t byteCount ) override;
 
     private:
-        atomic<int64> _emulatedDiskBusyUntilNano; ///< 디스크 흉내의 장치가 비는 시각(`MonotonicClock` 나노초) — 읽기마다 이 뒤에 제 지연을 붙인다
+        atomic<int64>                              _emulatedDiskBusyUntilNano; ///< 디스크 흉내의 장치가 비는 시각(`MonotonicClock` 나노초) — 읽기마다 이 뒤에 제 지연을 붙인다
+        PlatformFileUtil::ReadObserverRegistration _readObserverRegistration;  ///< 만들 때 건 읽기 관찰자 등록 — 소멸이 뗀다(관찰자는 하나라 둘째는 단언)
     };
 } // namespace sw

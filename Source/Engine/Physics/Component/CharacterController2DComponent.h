@@ -74,9 +74,11 @@ namespace sw
         void               setMaxSlopeAngle( float32 angle );
 
     protected:
-        void beginPhysicsFrame( ScenePhysics& physics ) override;
-        void prePhysicsStep( ScenePhysics& physics, float32 fixedDeltaTime, uint32 stepIndex, uint32 stepCount ) override;
-        void endPhysicsFrame( ScenePhysics& physics, float32 alpha ) override;
+        /** @brief 쓰는 고정 스텝 그룹마다 메서드를 등록합니다(`registerFixedStep`). */
+        void onRegister( GameObjectManager& manager ) override;
+        void onPhysicsFrameBegin( const FixedStepContext& context );
+        void onPrePhysicsStep( const FixedStepContext& context );
+        void onPhysicsFrameEnd( const FixedStepContext& context );
         void releasePhysics( ScenePhysics& physics ) override;
 
     private:

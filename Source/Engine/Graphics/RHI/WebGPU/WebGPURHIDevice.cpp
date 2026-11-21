@@ -26,7 +26,6 @@ namespace sw
             static constexpr uint64 kConstantRingBytes  = 4ull * 1024ull * 1024ull; ///< 프레임마다의 상수 링(넘치면 더 큰 링을 하나 더 만든다)
             static constexpr uint64 kConstantAlignment  = 256;                      ///< 상수 버퍼 바인딩 오프셋 정렬(기본 한도 minUniformBufferOffsetAlignment)
             static constexpr uint64 kDefaultBufferBytes = 64ull * 1024ull;          ///< 빈 슬롯에 거는 버퍼(셰이더가 읽는 최소 크기를 넘게 넉넉히)
-            static constexpr uint64 kIdleWaitTimeoutMs  = 10000;                    ///< 네이티브 `waitIdle` 의 상한(DX11 · 전송 대기와 같다)
             static constexpr uint64 kTimestampBytes     = static_cast<uint64>( constant::render::kMaxGPUTimestampSlot ) * sizeof( uint64 );
 
             /**
@@ -443,7 +442,7 @@ namespace sw
     }
 
     // 길이 유지(긴 함수 정리 기준): 어댑터 → 기능 대조 → 한도 → 장치 요청의 순서가 곧 의미라 나누지 않는다.
-    bool WebGPURHIDevice::createDeviceInternal( const RHISwapChainDesc& desc )
+    bool WebGPURHIDevice::createDeviceInternal( const RHIDeviceDesc& desc )
     {
         WGPURequestAdapterOptions adapterOptions{};
         adapterOptions.featureLevel         = WGPUFeatureLevel_Core;
@@ -860,8 +859,9 @@ namespace sw
         _timestampRing.beginFrame( ringSlot );
     }
 
-    bool WebGPURHIDevice::initializeInternal( const RHISwapChainDesc& desc )
+    bool WebGPURHIDevice::initializeInternal( const RHIDeviceDesc& deviceDesc )
     {
+        const RHISwapChainDesc&       desc                 = deviceDesc._swapChain;
         const WGPUInstanceFeatureName arrInstanceFeature[] = { WGPUInstanceFeatureName_TimedWaitAny }; // 어댑터 · 장치 요청을 기다린다(`waitForFuture`)
         WGPUInstanceDescriptor        instanceDesc{};
         instanceDesc.requiredFeatureCount = SW_COUNT_OF( arrInstanceFeature );
@@ -874,7 +874,7 @@ namespace sw
             return false;
         }
         markInitPhase( "instance" );
-        if ( createDeviceInternal( desc ) == false )
+        if ( createDeviceInternal( deviceDesc ) == false )
             return false;
         markInitPhase( "device" );
         if ( _swapChain.createSurface( _instance, _adapter, desc ) == false || _swapChain.configure( _device, desc._width, desc._height, desc._bVSync ) == false )
@@ -898,7 +898,7 @@ namespace sw
     void WebGPURHIDevice::shutdownInternal()
     {
         // GPU 는 종료 2단계(waitIdle)에서 쉬었다 — 남은 해제는 모두 비었다. 장치 객체를 놓는다.
-        _releaseQueue.flushAll();
+        _releaseQueue.abandonAll();
         _transferQueue.retireAll( []( unique_ptr<WebGPUTransferFence>& probe )
         { (void)probe; } );
         _readbackTable.clear();
@@ -1343,6 +1343,11 @@ namespace sw
         _releaseQueue.enqueueGPURelease( releaseDelegate, _frameFenceRing.getRecordingSerial() );
     }
 
+    void WebGPURHIDevice::notifyFrameCompletion( const RHIFrameCompletionDelegate& completionDelegate )
+    {
+        _releaseQueue.enqueueCompletion( completionDelegate, _frameFenceRing.getRecordingSerial() );
+    }
+
     void WebGPURHIDevice::waitIdleInternal()
     {
         if ( _queue == nullptr )
@@ -1350,31 +1355,29 @@ namespace sw
         // 열린 프레임 밖이다(렌더 스레드를 비웠다). 내지 않은 리스트가 있으면 마저 낸다.
         submitPending();
 #if defined( SW_PLATFORM_WEB )
-        // 브라우저는 GPU 를 동기로 기다릴 수 없다. WebGPU 는 GPU 가 쓰는 객체를 놓아도 구현이 끝날 때까지 살린다(명세) — 해제 큐는 그대로 비워도 된다.
-        // 되읽기는 기다리지 않는다: 끝나면 프레임 완료가 부른다(`readReadbackBuffer` 의 계약은 콜백 안이다). 시나리오의 "기다린 직후 읽기" 길은 웹에 없다.
+        // 브라우저: 기다리지 않는다(지금 동작). `waitIdle` 은 크기 변경 · 표면 놓기에서 DOM 이벤트 콜백 스택으로 올 수 있고 JSPI 는 그 스택을 멈출 수 없다 —
+        // 프레임 콜백 안인지 웹 시나리오로 확인한 뒤 `waitFrameFence` 로 바꾼다(DesignBacklog RHI ②). WebGPU 는 GPU 가 쓰는 객체를 놓아도 구현이 끝날 때까지 살린다(명세) —
+        // 해제는 놓아도 되고, 끝나지 않은 프레임의 통지만 아래에서 `Abandoned` 로 간다.
 #elif defined( SW_PLATFORM_WINDOWS ) || defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_ANDROID )
-        // Dawn: 마지막 프레임이 끝날 때까지 이벤트를 돌린다. 잃은 장치는 끝나지 않을 일을 기다리지 않는다.
-        // 상한은 벽시계 마감이다 — 돈 횟수로 세면 1 ms 잠이 타이머 해상도(Windows 약 15.6 ms)로 늘어 상한이 열 배 넘게 길어진다(GL 문맥 대기와 같은 `Deadline`).
-        // 폴링으로 둔다: 이 길은 waitIdle(기동 · 종료 · 백엔드 교체 · 창 크기)만 지나고 프레임 경로가 아니다.
-        const Deadline deadline = Deadline::afterMilliseconds( static_cast<int64>( WebGPURHIDeviceInternal::kIdleWaitTimeoutMs ) );
-        bool           bTimedOut{ false };
-        while ( isDeviceLost() == false && _frameFenceRing.isIdle() == false )
+        // Dawn: 낸 프레임을 오래된 순서로 프레임 펜스까지 기다린다 — `beginFrameInternal` 의 칸 대기와 같은 길(`wgpuInstanceWaitAny`, 잠 폴링 없음). 잃은 장치는 끝나지 않을 일을 기다리지 않는다.
+        const uint64 lastSubmitted = _frameFenceRing.getLastSubmittedSerial();
+        for ( uint64 serial = _frameFenceRing.getCompletedSerial() + 1; serial <= lastSubmitted && isDeviceLost() == false; ++serial )
         {
-            processCompletions();
-            if ( deadline.isExpired() )
+            if ( waitFrameFence( _arrFrameFence[RHIFrameFenceRing::getSlot( serial )] ) == false )
             {
-                bTimedOut = true;
+                SW_LOG_ERROR_ID( "WebGPU.WaitIdleFrameFailed", "WebGPU: waitIdle - waiting for frame %# failed", serial );
                 break;
             }
-            ThreadUtil::sleepForMilliseconds( 1 );
         }
-        if ( bTimedOut )
-            SW_LOG_ERROR_ID( "WebGPU.WaitIdleTimeout", "WebGPU: waitIdle - the GPU did not finish within %# ms", WebGPURHIDeviceInternal::kIdleWaitTimeoutMs );
 #else
     #error "Unsupported platform"
 #endif
         processCompletions();
-        _releaseQueue.flushAll();
+        // 낸 프레임이 모두 끝난 것을 확인했을 때만 통지가 `Completed` 다(웹 · 대기 실패 · 잃은 장치는 `Abandoned`).
+        if ( _frameFenceRing.isIdle() && isDeviceLost() == false )
+            _releaseQueue.releaseAllCompleted();
+        else
+            _releaseQueue.abandonAll();
     }
 
     // ------------------------------------------------------------------------------
@@ -1427,6 +1430,6 @@ namespace sw
         if ( reason == WGPUDeviceLostReason_Destroyed || pThis == nullptr )
             return;
         SW_LOG_ERROR_ID( "WebGPU.DeviceLost", "WebGPU device lost (reason %#): %#", static_cast<uint32>( reason ), WebGPURHIUtil::fromStringView( message ) );
-        (void)pThis->_transferSerials.markLost();
+        pThis->reportDeviceLost( "WGPUDeviceLostCallback" );
     }
 } // namespace sw

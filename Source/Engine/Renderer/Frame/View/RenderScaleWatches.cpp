@@ -69,7 +69,7 @@ namespace sw
             const FrameRendererSubsystem* const pSubsystem = findFrameRendererSubsystem();
             if ( pSubsystem == nullptr )
                 return false;
-            outValue = static_cast<float64>( pSubsystem->getFrameRenderer().getPublishedViewTransientRebuildCount() );
+            outValue = static_cast<float64>( pSubsystem->getFrameRenderer().getPublishedViewTransientRebuildCount().get() );
             return true;
         }
 

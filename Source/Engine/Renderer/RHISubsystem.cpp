@@ -3,6 +3,7 @@
 #include "Engine/Renderer/RHISubsystem.h"
 
 #include "Core/CommandLine/CommandLineManager.h"
+#include "Core/Concurrency/DevCounter.h"
 #include "Core/Diagnostics/CrashHandler.h"
 
 #include "Engine/Asset/AssetManager.h"
@@ -120,7 +121,7 @@ namespace sw
                 const RHI* const          pRHI       = pSubsystem != nullptr ? pSubsystem->findRHI() : nullptr;
                 if ( pRHI == nullptr || pRHI->hasDevice() == false )
                     return false;
-                outValue = static_cast<float64>( pRHI->getDevice().getGPUIdleWaitCount() );
+                outValue = static_cast<float64>( pRHI->getDevice().getGPUIdleWaitCount().get() );
                 return true;
             }
 

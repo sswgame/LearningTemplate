@@ -297,8 +297,7 @@ namespace sw
 
     void CanvasPainter::popClip()
     {
-        SW_LOG_ASSERT( _listClip.empty() == false, "popClip without pushClip" );
-        if ( _listClip.empty() == false )
+        if ( SW_ENSURE( _listClip.empty() == false, "popClip without pushClip" ) )
             _listClip.pop_back();
     }
 
@@ -310,8 +309,7 @@ namespace sw
 
     void CanvasPainter::popTransform()
     {
-        SW_LOG_ASSERT( _listTransform.empty() == false, "popTransform without pushTransform" );
-        if ( _listTransform.empty() == false )
+        if ( SW_ENSURE( _listTransform.empty() == false, "popTransform without pushTransform" ) )
             _listTransform.pop_back();
     }
 
@@ -323,8 +321,7 @@ namespace sw
 
     void CanvasPainter::popOpacity()
     {
-        SW_LOG_ASSERT( _listOpacity.empty() == false, "popOpacity without pushOpacity" );
-        if ( _listOpacity.empty() == false )
+        if ( SW_ENSURE( _listOpacity.empty() == false, "popOpacity without pushOpacity" ) )
             _listOpacity.pop_back();
     }
 

@@ -112,9 +112,9 @@ namespace
             return outRig._server->initialize( &outRig._serverRecorder, settings ) && outRig._client->initialize( &outRig._clientRecorder, settings );
         }
 
-        /** @brief @p predicate 가 설 때까지(최대 @p timeoutMilli) 두 전송을 돕니다. */
+        /** @brief @p predicate 가 설 때까지(최대 @p timeoutMilli) 두 전송을 돕니다. 시한은 멈춘 실행을 잡는 그물이라 느린 구성 · 동시 실행에도 넉넉하게 둔다. */
         template <typename TPredicate>
-        bool runUntil( TPredicate&& predicate, int64 timeoutMilli = 3000 )
+        bool runUntil( TPredicate&& predicate, int64 timeoutMilli = 10000 )
         {
             const Deadline deadline = Deadline::afterMilliseconds( timeoutMilli );
             while ( predicate() == false )

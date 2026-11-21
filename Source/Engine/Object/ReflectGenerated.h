@@ -20,3 +20,25 @@
 #include "Engine/Reflection/ReflectionValidation.h"
 #include "Engine/Serialization/Fixed/FixedFieldDesc.h"
 #include "Engine/Serialization/Fixed/FixedLayout.h"
+
+namespace sw
+{
+    class StateIO;
+} // namespace sw
+
+namespace sw::generated
+{
+    /**
+     * @brief 형식에 `serializeState( StateIO& )` 가 있는지입니다 — 생성 코드가 `TypeMetadata::_bOverridesSerializeState` 에 대입한다(생성기가 이름 · 인자 수로 내리던 판정).
+     * @details `StateIO` 는 불완전 형식으로 충분하다(참조로만 넘긴다) — 생성 단위마다 `StateIO.h` 를 끌지 않는다. 물려받은 것도 센다.
+     */
+    template <typename T, typename = void>
+    struct HasSerializeState : std::false_type
+    {
+    };
+
+    template <typename T>
+    struct HasSerializeState<T, std::void_t<decltype( std::declval<T&>().serializeState( std::declval<::sw::StateIO&>() ) )>> : std::true_type
+    {
+    };
+} // namespace sw::generated

@@ -21,7 +21,7 @@ namespace sw
          * @class ServerDirectoryOnlineServerKit
          * @brief 서버 디렉터리 키트의 서버 조립입니다.
          */
-        class ServerDirectoryOnlineServerKit final : public IOnlineServerKit
+        class ServerDirectoryOnlineServerKit final : public OnlineServerKit<>
         {
         public:
             ServerDirectoryOnlineServerKit()
@@ -31,7 +31,7 @@ namespace sw
             {
             }
 
-            [[nodiscard]] expected<void> initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry ) override
+            [[nodiscard]] expected<void> initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, const Dependencies& ) override
             {
                 ServerDirectoryKitConfig kitConfig;
                 if ( expected<void> result = entry.readSettings( kitConfig ); result.has_value() == false )
@@ -48,7 +48,7 @@ namespace sw
                 { return addTTLRule( context, entry, ServerDirectoryService::makeMaintenanceTTLRule( announcementTTL.getExpireAfterMs() ), announcementTTL ); } );
             }
 
-            expected<void> start( OnlineServerKitContext& context ) override
+            expected<void> start( OnlineServerKitContext& context, const Dependencies&, const UnorderedDependencies& ) override
             {
                 if ( context._pRouter == nullptr )
                     return unexpected( Error{ ErrorKind::InvalidArgument, "the server directory needs a cache" } );

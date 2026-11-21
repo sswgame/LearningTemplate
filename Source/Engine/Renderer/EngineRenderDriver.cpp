@@ -82,8 +82,8 @@ namespace sw
         , _mainWindowLifecycleSubscription{}
         , _deviceLostPolicy{ RHIDeviceLostPolicy::None }
         , _deviceLostPolicyOverride{ RHIDeviceLostPolicy::None }
-        , _deviceRecreateCount{ 0 }
-        , _failedBackendChangeCount{ 0 }
+        , _deviceRecreateCount{}
+        , _failedBackendChangeCount{}
         , _bDeviceLostHandled{ SW_FALSE }
         , _bDisplayOutputApplied{ SW_FALSE }
         , _displayRequest{}
@@ -418,7 +418,7 @@ namespace sw
             SW_LOG_ERROR_ID( "Engine.RecreateDeviceFailedRestoringPrevious", "recreateDevice failed; restoring previous backend %#",
                              RHI::getBackendTypeName( previous ) );
             gv_rhiBackend = previous;
-            ++_failedBackendChangeCount;
+            _failedBackendChangeCount.add();
             // 장치 없이 돌지 않는다 — 끝내는 일은 결과를 받은 모듈 관리자가 한다(`GameModuleManager::applyPendingDeviceChange`).
             if ( _pRHI->recreateDevice( previous ) == false )
             {
@@ -436,13 +436,13 @@ namespace sw
         string       rebindTiming;
         if ( rebindSceneAfterDeviceRecreate( &rebindTiming ) == false )
         {
-            ++_failedBackendChangeCount;
+            _failedBackendChangeCount.add();
             return BackendChangeResult::Failed; // 다시 만든 장치에 장면을 묶지 못했다 — 검은 화면으로 돌지 않는다(모듈 관리자가 끝낸다)
         }
         if ( bRecreateLost )
         {
-            ++_deviceRecreateCount;
-            SW_LOG_INFO_ID( "Render.DeviceRecreated", "The lost device was recreated on %# (recreate %#)", RHI::getBackendTypeName( _pRHI->getCommittedBackend() ), _deviceRecreateCount );
+            _deviceRecreateCount.add();
+            SW_LOG_INFO_ID( "Render.DeviceRecreated", "The lost device was recreated on %# (recreate %#)", RHI::getBackendTypeName( _pRHI->getCommittedBackend() ), _deviceRecreateCount.get() );
         }
         SW_LOG_INFO_ID( "Engine.BackendSwapTookMs", "Backend swap took %#ms (shut down %#ms, device %#ms, %#)", swapWatch.getElapsedMicroseconds() / 1000, shutdownMicroseconds / 1000,
                         ( recreateMicroseconds - shutdownMicroseconds ) / 1000, rebindTiming.c_str() );

@@ -42,7 +42,7 @@ namespace sw::editor
 
     void BugReportPanel::drawContent()
     {
-        _viewModel.gather( _viewState );
+        gatherViewState( _viewModel, _viewState );
 
         (void)EditorWidgets::drawTextFieldMultiline( "##bugreport_note", _note, 3, SW_LOCKEY( "EditorBugReport", "NoteHint" ) );
         EditorSelfTestMarks::record( "bugReport.note" );

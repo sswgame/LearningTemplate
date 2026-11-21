@@ -34,11 +34,44 @@ namespace sw::editor
     {
     }
 
+    void SceneViewPanel::applyRequests()
+    {
+        SceneViewRequest request;
+        while ( SceneViewModel::takeRequest( request ) )
+        {
+            switch ( request._kind )
+            {
+                case SceneViewRequestKind::CameraReset:
+                {
+                    _viewportClient.resetCameraToDefault();
+                    break;
+                }
+                case SceneViewRequestKind::CameraSet:
+                {
+                    const float32* pPose = request._arrPose;
+                    _viewportClient.setCameraPose( float3{ pPose[0], pPose[1], pPose[2] }, float3{ pPose[3], pPose[4], 0.0f } );
+                    break;
+                }
+                case SceneViewRequestKind::OverlayReset:
+                {
+                    _viewportClient.getOverlays().resetToDefault();
+                    break;
+                }
+                case SceneViewRequestKind::OverlayShow:
+                {
+                    (void)_viewportClient.getOverlays().setBarVisible( request._barID, request._bVisible ); // 명령이 바 id 를 이미 보았다
+                    break;
+                }
+            }
+        }
+    }
+
     void SceneViewPanel::drawContent()
     {
         const bool bFocused = ImGui::IsWindowFocused( ImGuiFocusedFlags_RootAndChildWindows );
         const bool bHovered = ImGui::IsWindowHovered( ImGuiHoveredFlags_RootAndChildWindows );
         // 엔진 프레임의 실제 경과(시간 배율 · 정지와 무관) — 고정 프레임 시간(`-gv_fixedFrameDelta`)으로 도는 시나리오에서 카메라 비행이 결정적이다.
+        applyRequests(); // 개발 명령(`camera.*` · `overlay.*`)이 쌓은 요청 — 이번 프레임의 카메라 갱신 앞에서
         const float32 dt = SceneViewModel::getUnscaledDeltaTime();
         _viewportClient.update( dt, bFocused, bHovered );
 
@@ -92,83 +125,4 @@ namespace sw::editor
         }
         ImGui::EndPopup();
     }
-
-    namespace
-    {
-        struct SceneViewDevCommandsInternal
-        {
-            /** @brief 씬 뷰 패널입니다(없으면 nullptr). */
-            static SceneViewPanel* findSceneViewPanel()
-            {
-                return EditorPanelManager::findPanelInEditorContext<SceneViewPanel>();
-            }
-
-            /** @brief 씬 뷰 오버레이입니다(씬 뷰 패널이 없으면 nullptr). */
-            static EditorViewportOverlays* findSceneOverlays()
-            {
-                SceneViewPanel* pPanel = findSceneViewPanel();
-                return pPanel != nullptr ? &pPanel->getViewportClient().getOverlays() : nullptr;
-            }
-
-            static bool runCameraReset( const vector<string>& /*listArgument*/, string& outReply )
-            {
-                SceneViewPanel* pPanel = findSceneViewPanel();
-                if ( pPanel == nullptr )
-                    return false;
-                pPanel->getViewportClient().resetCameraToDefault();
-                outReply = "scene view camera reset";
-                return true;
-            }
-
-            /** @brief `camera.set <x> <y> <z> <pitch> <yaw>` — 씬 뷰 카메라를 그 위치 · 방향(도)에 둡니다(언리얼 `BugReportGoto x y z pitch yaw` 와 같은 쓰임). */
-            static bool runCameraSet( const vector<string>& listArgument, string& outReply )
-            {
-                SceneViewPanel* pPanel = findSceneViewPanel();
-                if ( listArgument.size() != 5 || pPanel == nullptr )
-                    return false;
-                float32 arrValue[5]{};
-                for ( uint32 index = 0; index < 5; ++index )
-                {
-                    if ( StringUtil::parseFloat( listArgument[index], arrValue[index] ) == false )
-                        return false;
-                }
-                pPanel->getViewportClient().setCameraPose( float3{ arrValue[0], arrValue[1], arrValue[2] }, float3{ arrValue[3], arrValue[4], 0.0f } );
-                outReply = "scene view camera set";
-                return true;
-            }
-
-            static bool runOverlayReset( const vector<string>& /*listArgument*/, string& outReply )
-            {
-                EditorViewportOverlays* pOverlays = findSceneOverlays();
-                if ( pOverlays == nullptr )
-                    return false;
-                pOverlays->resetToDefault();
-                outReply = "scene view overlays reset";
-                return true;
-            }
-
-            static bool runOverlayShow( const vector<string>& listArgument, string& outReply )
-            {
-                EditorViewportOverlays* pOverlays = findSceneOverlays();
-                bool                    bVisible{ false };
-                const bool              bSetOverlayFailed = listArgument.size() != 2 || readOptionalBoolArgument( listArgument, 1, bVisible ) == false || pOverlays == nullptr ||
-                                               pOverlays->setBarVisible( listArgument[0], bVisible ) == false;
-                if ( bSetOverlayFailed )
-                    return false;
-                StringBuilder<constant::buffer::kMax256> replyBuilder;
-                replyBuilder.appendFormat( "overlay %#%#", listArgument[0], ( bVisible ? " shown" : " hidden" ) );
-                outReply = string( replyBuilder.view() );
-                return true;
-            }
-        };
-    } // namespace
-
-    SW_DEV_COMMAND( OverlayReset, "overlay.reset", "overlay.reset", "Put the scene view overlay bars back where they start (and show them all)",
-                    &SceneViewDevCommandsInternal::runOverlayReset );
-    SW_DEV_COMMAND( CameraReset, "camera.reset", "camera.reset", "Put the scene view camera (pose, projection, speed) back where a new editor session starts",
-                    &SceneViewDevCommandsInternal::runCameraReset );
-    SW_DEV_COMMAND( CameraSet, "camera.set", "camera.set <x> <y> <z> <pitch> <yaw>", "Put the scene view camera at a position looking along pitch and yaw (degrees)",
-                    &SceneViewDevCommandsInternal::runCameraSet );
-    SW_DEV_COMMAND( OverlayShow, "overlay.show", "overlay.show <view|transform|display|tools> <0|1>", "Show or hide a scene view overlay bar",
-                    &SceneViewDevCommandsInternal::runOverlayShow );
 } // namespace sw::editor

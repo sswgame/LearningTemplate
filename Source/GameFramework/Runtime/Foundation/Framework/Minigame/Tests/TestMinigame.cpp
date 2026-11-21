@@ -1,5 +1,5 @@
 // MinigameTest — 미니게임 데이터 읽기 · 참조 검사(모르는 게임 기능 · 겹친 이름 · 빠진 맵, 모르는 속성 · 원소), 칸 스택(쌓기 · 교체 · 빈 스택 나가기 · 깊이 한도 ·
-// 저장 막기 · 장치 밖 씬 이동 비우기), 결과 통로, 넷 세션의 씬 전환 거절(nogpu).
+// 저장 막기 · 장치 밖 씬 이동 비우기), 결과 통로(값 목록 · 디렉터 계약 ③), 넷 세션의 씬 전환 거절(nogpu).
 #include "pch.h"
 
 #include "Core/File/FileUtil.h"
@@ -9,6 +9,7 @@
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameFeature/GameFeatureRegistry.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/Minigame/MinigameDefinition.h"
 #include "GameFramework/Runtime/Foundation/Framework/Minigame/MinigameFlow.h"
 #include "GameFramework/Runtime/Foundation/Framework/Minigame/MinigameStack.h"
@@ -23,6 +24,29 @@ namespace
         (void)scope;
         return true;
     }
+
+    /** @brief 한 판 임시 상태(번 돈)를 쥐고 결과로만 내보내는 미니게임 디렉터입니다 — 디렉터 계약 ③ 의 시험 대역. */
+    class TestMinigameDirector final : public GameModeComponent
+    {
+    public:
+        int64 _roundMoney{ 0 }; ///< 한 판 임시 지갑 — 바탕 판에 쓰지 않는다
+
+        void collectResultForTest( vector<MinigameResultValue>& outListValue ) const { collectMinigameResult( outListValue ); }
+
+    protected:
+        void serializeGameState( StateIO& io ) override { (void)io; }
+        bool startGame() override { return true; }
+        void updateGame( float32 deltaTime ) override { (void)deltaTime; }
+        void onFlush( GameObjectManager& manager, bool bRespawnViews ) override
+        {
+            (void)manager;
+            (void)bRespawnViews;
+        }
+        void collectMinigameResult( vector<MinigameResultValue>& outListValue ) const override
+        {
+            outListValue.push_back( MinigameResultValue{ hashed_string( "gold" ), _roundMoney } );
+        }
+    };
 
     constexpr string_view kValidXML = R"(<Minigame name="arcade" map="testproject/minigame/arcade.scene.xml" entry="SceneSwitch" features="TestFeature"
         inputContexts="arcade,menu" ui="testproject/minigame/hud.ui.xml" catalogs="abilities"/>)";
@@ -219,6 +243,32 @@ SW_TEST_CASE( MinigameTest, ResultReachesSubscribers )
     subscription.reset();
     finished.broadcast( MinigameResult{ hashed_string( "fishing" ), hashed_string( "lose" ) } );
     SW_EXPECT_TRUE( listReceived.size() == 1 );
+}
+
+/** @brief [MinigameTest] 결과 값 목록: 디렉터가 쥔 한 판 임시 상태가 결과의 값으로만 실려 받는 쪽에 닿는다(디렉터 계약 ③) */
+SW_TEST_CASE( MinigameTest, ResultCarriesDirectorOwnedValues )
+{
+    TestMinigameDirector director;
+    director._roundMoney = 120;
+    vector<MinigameResultValue> listValue;
+    director.collectResultForTest( listValue );
+    MinigameFlow::FinishedDelegate finished;
+    vector<MinigameResult>         listReceived;
+    Subscription                   subscription = finished.add( Delegate<void( const MinigameResult& )>::create( [&listReceived]( const MinigameResult& result )
+    { listReceived.push_back( result ); } ) );
+    finished.broadcast( MinigameResult{ hashed_string( "fishing" ), hashed_string( "win" ), std::move( listValue ) } );
+    SW_REQUIRE_TRUE( listReceived.size() == 1 );
+    SW_REQUIRE_TRUE( listReceived[0]._listValue.size() == 1 );
+    SW_EXPECT_TRUE( listReceived[0]._listValue[0]._name == hashed_string( "gold" ) );
+    SW_EXPECT_TRUE( listReceived[0]._listValue[0]._amount == 120 );
+}
+
+/** @brief [MinigameTest] 디렉터 계약 ③: 켜진 미니게임이 없는 판(허브 · 미니게임 흐름 없음)에서 끝내기는 오류로 거절된다(조용히 무시하지 않는다) */
+SW_TEST_CASE( MinigameTest, FinishWithoutActiveMinigameIsRefused )
+{
+    TestMinigameDirector director;
+    SW_EXPECT_LOG( "GameMode.FinishWithoutMinigame" );
+    SW_EXPECT_FALSE( director.finishMinigame( hashed_string( "win" ) ) );
 }
 
 /** @brief [MinigameTest] 넷 세션이 열린 인스턴스에서 씬 전환 진입은 오류로 거절되고(폴백 없음), 하위 레벨 진입과 혼자 하는 게임의 씬 전환은 받는다 */

@@ -3,6 +3,7 @@
  * @brief 높이장 지형입니다. 청크 LOD 메시, 스플랫 레이어 머티리얼, 구멍, CPU 높이와 노멀 질의를 제공합니다.
  */
 #pragma once
+#include "Core/Concurrency/DevCounter.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
@@ -221,7 +222,7 @@ namespace sw
         /** @brief 청크 (x, z) 의 지금 메시 정점 수입니다(테스트). */
         uint32 getChunkVertexCount( uint32 chunkX, uint32 chunkZ ) const;
         /** @brief 지금까지 CPU 로 새로 만든 청크 메시 수입니다(들고 있던 메시를 꺼낸 것은 세지 않는다 — 테스트 · 측정). */
-        uint64 getChunkMeshBuildCount() const { return _chunkMeshBuildCount; }
+        const DevCounter& getChunkMeshBuildCount() const { return _chunkMeshBuildCount; }
 
         /**
          * @brief @p manager 의 지형 가운데 월드 (x, z) 를 덮는 첫 지형입니다. 없으면 nullptr 입니다.
@@ -363,11 +364,11 @@ namespace sw
         TerrainHeightfield  _heightfield;
         TerrainChunkLayout  _layout;
         vector<Chunk>       _listChunk;
-        vector<uint32>      _listWantedLOD;            ///< updateLODs 의 스크래치(청크마다 고른 LOD)
-        vector<uint32>      _listChunkGeneration;      ///< 청크마다 높이를 마지막으로 바꾼 세대(`getChunkGenerations`)
-        vector<uint32>      _listChunkSplatRevision;   ///< 청크마다 가중치를 마지막으로 바꾼 스플랫 세대(`findEditedArea`)
-        vector<uint32>      _listStaleChunk;           ///< 메시를 다시 만들 청크(쓴 순서, `rebuildStaleChunkMeshes`)
-        uint64              _chunkMeshBuildCount{ 0 }; ///< CPU 로 새로 만든 청크 메시 수(`getChunkMeshBuildCount`)
+        vector<uint32>      _listWantedLOD;          ///< updateLODs 의 스크래치(청크마다 고른 LOD)
+        vector<uint32>      _listChunkGeneration;    ///< 청크마다 높이를 마지막으로 바꾼 세대(`getChunkGenerations`)
+        vector<uint32>      _listChunkSplatRevision; ///< 청크마다 가중치를 마지막으로 바꾼 스플랫 세대(`findEditedArea`)
+        vector<uint32>      _listStaleChunk;         ///< 메시를 다시 만들 청크(쓴 순서, `rebuildStaleChunkMeshes`)
+        DevCounter          _chunkMeshBuildCount;    ///< CPU 로 새로 만든 청크 메시 수(`getChunkMeshBuildCount`)
         EnvironmentMaterial _material;
         string              _arrCPUSplatPath[SurfaceLayerWeights::kPlaneCount]; ///< 가중치로 만든 자기 스플랫 텍스처 둘(`getCPUSplatPath` - 평면 0 은 레이어 0..3, 1 은 4..7)
         PrimitiveRegistry*  _pPrimitiveRegistry;                                ///< 등록된 매니저의 레지스트리(구조 링크라 생포인터)

@@ -2,7 +2,7 @@
  * @file IPhysicsBuoyancyScene.h
  * @brief 물리 씬의 부력 쪽 인터페이스입니다(물 위에 뜨는 상자 · 배 · 떠내려가는 통). 3D 만 있습니다(차원 트레이트의 `kSupportsBuoyancy`).
  * @details 언리얼 Water 의 `BuoyancyComponent`, 유니티 수면 부력 스크립트의 자리다. 수면은 평면 하나(점 + 법선)이고, 잠긴 부피만큼 위로 밀고 잠긴 몫에 끌림을 건다
- *          (Jolt `Body::ApplyBuoyancyImpulse` — 셰이프의 잠긴 부피 · 부력 중심을 정확히 구한다). 고정 스텝마다 부른다(`BuoyancyVolumeComponent::prePhysicsStep`).
+ *          (Jolt `Body::ApplyBuoyancyImpulse` — 셰이프의 잠긴 부피 · 부력 중심을 정확히 구한다). 고정 스텝마다 부른다(`BuoyancyVolumeComponent::onPrePhysicsStep`).
  *          핸들 · 스레드 · 단위 규칙은 `IPhysicsScene.h` 머리말과 같다.
  */
 #pragma once

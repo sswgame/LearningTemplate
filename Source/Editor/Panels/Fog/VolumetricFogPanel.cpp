@@ -50,7 +50,7 @@ namespace sw::editor
     void VolumetricFogPanel::drawContent()
     {
         using Internal = VolumetricFogPanelInternal;
-        _viewModel.gather( _viewState );
+        gatherViewState( _viewModel, _viewState );
         const FogVolumeState state = _viewState._volumeState;
         // 상태는 문장으로 — 색만으로 알리지 않는다. 켜짐은 Success, 못 켬은 Warning, 고른 꺼짐은 흐린 글이다.
         ImGui::PushStyleColor( ImGuiCol_Text, EditorColorUtil::toImVec4( Internal::getSeverityColor( VolumetricFogStatus::getSeverity( state ) ) ) );

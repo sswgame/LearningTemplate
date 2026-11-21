@@ -126,10 +126,8 @@ namespace sw
         [[nodiscard]] virtual expected<void> runLoad() = 0;
         /** @brief 완료 단계가 있는 종류면 true 입니다. 기본은 없음입니다. */
         virtual bool hasCompletion() const { return false; }
-        /** @brief 완료 단계 본문입니다(정해진 스레드). 완료가 있는 종류만 덮어씁니다. */
-        [[nodiscard]] virtual expected<void> runCompletion();
         /**
-         * @brief 완료 단계의 첫 걸음입니다. 기본은 `runCompletion` 을 한 번에 실행해 `Done` 이나 오류로 끝냅니다. 제출과 확인이 갈리는 종류가 덮어씁니다.
+         * @brief 완료 단계의 첫 걸음입니다(정해진 스레드). 완료가 있는 종류(`hasCompletion`)가 덮어씁니다 — 기본은 "완료 단계가 없는 종류" 오류입니다.
          * @param bBlocking `wait()` 가 부른 경우 true 입니다 — 끝날 때까지 기다리고 `Done` 이나 오류만 돌려줍니다(`Submitted` · `Busy` 를 돌려주지 않는다). 펌프는 false 입니다.
          */
         [[nodiscard]] virtual expected<AssetCompletionStep> beginCompletion( bool bBlocking );

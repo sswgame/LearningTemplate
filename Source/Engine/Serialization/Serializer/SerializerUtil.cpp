@@ -10,6 +10,7 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
+#include "Engine/Reflection/ReflectValueBinding.h"
 #include "Engine/Reflection/ReflectedValue.h"
 #include "Engine/Reflection/ReflectionContainers.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
@@ -410,9 +411,10 @@ namespace sw
             class ContainerWriter final : public IContainerWriter
             {
             public:
-                ContainerWriter( vector<uint8>& buffer, const SerializeContext& context )
+                ContainerWriter( vector<uint8>& buffer, const SerializeContext& context, const NestedContainerInfo& shape )
                     : _listBuffer{ buffer }
                     , _context{ context }
+                    , _shape{ shape }
                     , _bAllWritten{ SW_TRUE }
                 {
                 }
@@ -423,7 +425,7 @@ namespace sw
                 void endMap() override {}
                 void beginMapEntry( const ValueAddress key, const hashed_string& keyTypeName ) override
                 {
-                    recordWritten( SerializerUtil::serializeValueBinary( key, keyTypeName, _listBuffer, _context ) );
+                    recordWritten( SerializerUtil::serializeValueBinary( key, keyTypeName, _shape.findBinding( keyTypeName ), _listBuffer, _context ) );
                 }
                 void endMapEntry() override {}
                 void beginNestedContainer( ContainerSlot ) override {}
@@ -433,12 +435,12 @@ namespace sw
                 // 값 구조체도 값 하나를 적는 경로로 적는다. 등록된 바이너리 핸들러가 구조체보다 먼저다(`serializeValueBinary` 의 순서).
                 void writeValueObject( const ValueAddress value, const hashed_string& typeName, const TypeInfo&, ContainerSlot ) override
                 {
-                    recordWritten( SerializerUtil::serializeValueBinary( value, typeName, _listBuffer, _context ) );
+                    recordWritten( SerializerUtil::serializeValueBinary( value, typeName, _shape.findBinding( typeName ), _listBuffer, _context ) );
                 }
 
                 void writeScalar( const ValueAddress value, const hashed_string& typeName, ContainerSlot ) override
                 {
-                    recordWritten( SerializerUtil::serializeValueBinary( value, typeName, _listBuffer, _context ) );
+                    recordWritten( SerializerUtil::serializeValueBinary( value, typeName, _shape.findBinding( typeName ), _listBuffer, _context ) );
                 }
 
                 /** @brief 원소 · 키 · 값을 하나도 빠짐없이 썼는가입니다. 방문자의 콜백은 결과를 돌려주지 못하므로 여기에 모읍니다. */
@@ -454,6 +456,7 @@ namespace sw
             private:
                 vector<uint8>&          _listBuffer;
                 const SerializeContext& _context;
+                NestedContainerInfo     _shape;
                 uint8                   _bAllWritten : 1;
             };
 
@@ -461,12 +464,14 @@ namespace sw
             class ContainerReader final : public IContainerReader
             {
             public:
-                ContainerReader( const uint8* pData, const size_t dataSize, size_t* pInOutOffset, const SerializeContext& context, const BinaryWireVersion wireVersion )
+                ContainerReader( const uint8* pData, const size_t dataSize, size_t* pInOutOffset, const SerializeContext& context, const BinaryWireVersion wireVersion,
+                                 const NestedContainerInfo& shape )
                     : _listOpenCount{}
                     , _pData{ pData }
                     , _dataSize{ dataSize }
                     , _pInOutOffset{ pInOutOffset }
                     , _context{ context }
+                    , _shape{ shape }
                     , _wireVersion{ wireVersion }
                 {
                 }
@@ -520,7 +525,7 @@ namespace sw
                 ContainerReadResult readValue( const MutableValueAddress value, const hashed_string& typeName ) const
                 {
                     const size_t valueStart = *_pInOutOffset;
-                    switch ( SerializerUtil::deserializeValueBinary( value, typeName, _pData, _dataSize, *_pInOutOffset, _context, _wireVersion ) )
+                    switch ( SerializerUtil::deserializeValueBinary( value, typeName, _shape.findBinding( typeName ), _pData, _dataSize, *_pInOutOffset, _context, _wireVersion ) )
                     {
                         case FieldReadResult::Read:
                             return ContainerReadResult::Read;
@@ -540,6 +545,7 @@ namespace sw
                 size_t                                     _dataSize;
                 size_t*                                    _pInOutOffset;
                 const SerializeContext&                    _context;
+                NestedContainerInfo                        _shape;
                 BinaryWireVersion                          _wireVersion;
             };
         };
@@ -569,19 +575,20 @@ namespace sw
 
     bool SerializerUtil::isNameValueType( const hashed_string& typeName )
     {
-        string_view name = typeName.view();
-        if ( StringUtil::startsWith( name, "sw::" ) )
-            name.remove_prefix( 4 );
         // 이름 · 경로 형식은 빈 글이 "없음" 이다. `string` 은 넣지 않는다 — 글 칸은 빈 값이 뜻 있는 값일 수 있다(명령 표의 "단축키 없음" 같은 고정 열).
         // 다른 데이터를 가리키는 이름은 hashed_string 으로 둔다(리플렉션 파서가 기본값을(`PROPERTY( Required )` · `DefaultName`), 이 판정이 빈 값을 막는다).
-        static constexpr string_view kArrNameType[] = { "hashed_string", "TagID", "DataPath", "AssetID", "CatalogKey", "AssetRef" };
-        for ( const string_view nameType : kArrNameType )
+        // 형식 이름은 파서가 정규화해 싣는다(`AssetRef<T>` 는 "AssetRef", `sw::` 없음) — 철자를 다듬지 않고 정규 이름(인턴된 이름)끼리 견준다.
+        static const hashed_string kArrNameType[] = { hashed_string( PredefinedNameType::NameType_hashed_string ), hashed_string( PredefinedNameType::NameType_TagID ),
+                                                      hashed_string( "DataPath" ),
+                                                      hashed_string( "AssetID" ),
+                                                      hashed_string( "CatalogKey" ),
+                                                      hashed_string( "AssetRef" ) };
+        for ( const hashed_string& nameType : kArrNameType )
         {
-            if ( name == nameType )
+            if ( typeName == nameType )
                 return true;
         }
-        // 파서는 `AssetRef<T>` 칸의 형식을 "AssetRef" 로 모은다(`AssetRefBase::kTypeName`) — 예전에는 "AssetRef<" 철자만 봐 빈 필수 참조(`_prefab=""`)를 놓쳤다.
-        return StringUtil::startsWith( name, "AssetRef<" );
+        return false;
     }
 
     bool SerializerUtil::isRequiredValueMissing( const PropertyInfo& prop, const bool bWritten, const string_view* pWrittenText, const RequiredScope scope )
@@ -643,44 +650,109 @@ namespace sw
         return context.findTextWriter( resolved ) != nullptr && context.findTextReader( resolved ) != nullptr;
     }
 
-    bool SerializerUtil::serializeValueBinary( ValueAddress value, const hashed_string& typeName,
-                                               vector<uint8>& listBuffer, const SerializeContext& context )
+    const SerializeContext::BinaryWriteFn* SerializerUtil::ValueCodecs::findBinaryWriter( const SerializeContext& context ) const
+    {
+        return _builtinIndex != ReflectBuiltinIndex::kNone ? context.findBinaryWriter( _builtinIndex ) : context.findBinaryWriter( _handlerName );
+    }
+
+    const SerializeContext::BinaryReadFn* SerializerUtil::ValueCodecs::findBinaryReader( const SerializeContext& context ) const
+    {
+        return _builtinIndex != ReflectBuiltinIndex::kNone ? context.findBinaryReader( _builtinIndex ) : context.findBinaryReader( _handlerName );
+    }
+
+    const SerializeContext::TextWriteFn* SerializerUtil::ValueCodecs::findTextWriter( const SerializeContext& context ) const
+    {
+        return _builtinIndex != ReflectBuiltinIndex::kNone ? context.findTextWriter( _builtinIndex ) : context.findTextWriter( _handlerName );
+    }
+
+    const SerializeContext::TextReadFn* SerializerUtil::ValueCodecs::findTextReader( const SerializeContext& context ) const
+    {
+        return _builtinIndex != ReflectBuiltinIndex::kNone ? context.findTextReader( _builtinIndex ) : context.findTextReader( _handlerName );
+    }
+
+    const hashed_string& SerializerUtil::ValueCodecs::getHandlerName() const
+    {
+        return _builtinIndex != ReflectBuiltinIndex::kNone ? ReflectedValueUtil::getBuiltinTypeName( _builtinIndex ) : _handlerName;
+    }
+
+    const EnumInfo* SerializerUtil::ValueCodecs::findEnum( const SerializeContext& context ) const
+    {
+        return _bByName ? context.getTypeRegistry().findEnum( _typeName ) : _pEnum;
+    }
+
+    const TypeInfo* SerializerUtil::ValueCodecs::findStructType( const SerializeContext& context ) const
+    {
+        const TypeInfo* pType = _bByName ? context.getTypeRegistry().findType( _typeName ) : _pType;
+        return pType != nullptr && pType->isPrimitive() == false ? pType : nullptr;
+    }
+
+    SerializerUtil::ValueCodecs SerializerUtil::findValueCodecs( const hashed_string& typeName, const ReflectValueBinding* pBinding, const SerializeContext& context )
+    {
+        ValueCodecs codecs;
+        codecs._typeName     = typeName;
+        codecs._builtinIndex = ReflectBuiltinIndex::kNone;
+        // 묶음이 있으면 레지스트리 사실은 세대 캐시에서, 내장형 처리기는 문맥의 색인 배열에서 — 이름 해시 조회 · 공유 잠금이 없다.
+        // 묶음은 엔진 레지스트리의 사실이라 레지스트리를 따로 준 문맥은 이름으로 찾는다.
+        if ( pBinding != nullptr && context.hasCustomTypeRegistry() == false )
+        {
+            const ReflectValueFacts facts = pBinding->resolve( typeName, context.getTypeRegistry() );
+            codecs._pEnum                 = facts._pEnum;
+            codecs._pType                 = facts._pType;
+            if ( facts._builtinIndex != ReflectBuiltinIndex::kNone )
+            {
+                codecs._builtinIndex = facts._builtinIndex;
+                return codecs;
+            }
+            // 내장형이 아닌 처리기 형식(`ReflectedAny` 등) · 별칭 — `resolveHandlerTypeName` 과 같은 규칙이되 형식은 묶음의 것을 쓴다.
+            const bool bOwnHandler  = context.findBinaryWriter( typeName ) != nullptr || context.findTextWriter( typeName ) != nullptr;
+            const bool bTypeHandler = bOwnHandler == false && facts._pType != nullptr && facts._pType->_name.empty() == false &&
+                                      ( context.findBinaryWriter( facts._pType->_name ) != nullptr || context.findTextWriter( facts._pType->_name ) != nullptr );
+            codecs._handlerName = bTypeHandler ? facts._pType->_name : typeName;
+            return codecs;
+        }
+        codecs._handlerName = SerializerUtil::resolveHandlerTypeName( typeName, context );
+        codecs._bByName     = true;
+        return codecs;
+    }
+
+    bool SerializerUtil::serializeValueBinary( ValueAddress value, const hashed_string& typeName, vector<uint8>& listBuffer, const SerializeContext& context )
+    {
+        return serializeValueBinary( value, typeName, nullptr, listBuffer, context );
+    }
+
+    bool SerializerUtil::serializeValueBinary( ValueAddress value, const hashed_string& typeName, const ReflectValueBinding* pBinding, vector<uint8>& listBuffer,
+                                               const SerializeContext& context )
     {
         const void* const                      pValuePtr = value.get();
-        const hashed_string                    resolved  = SerializerUtil::resolveHandlerTypeName( typeName, context );
-        const SerializeContext::BinaryWriteFn* pWriter   = context.findBinaryWriter( resolved );
+        const ValueCodecs                      codecs    = findValueCodecs( typeName, pBinding, context );
+        const SerializeContext::BinaryWriteFn* pWriter   = codecs.findBinaryWriter( context );
         if ( pWriter != nullptr )
         {
             ( *pWriter )( pValuePtr, listBuffer );
             return true;
         }
 
-        const EnumInfo* pEnumInfo = context.getTypeRegistry().findEnum( typeName );
-        if ( pEnumInfo != nullptr )
+        if ( const EnumInfo* pEnumInfo = codecs.findEnum( context ) )
         {
             // 값이 아니라 열거자 정체성(이름 해시)으로 싣는다. 값으로 실으면 열거자 순서가 바뀔 때 세이브와 스냅샷의 뜻이 바뀐다.
             SerializerUtilInternal::writeEnumBinary( *pEnumInfo, value, listBuffer );
             return true;
         }
 
-        const TypeInfo* pStructInfo = context.getTypeRegistry().findType( typeName );
-        if ( pStructInfo != nullptr )
+        if ( const TypeInfo* pStructInfo = codecs.findStructType( context ) )
         {
-            if ( pStructInfo->isPrimitive() == false )
-            {
-                const size_t sizePos = listBuffer.size();
-                LittleEndianUtil::appendUint32( listBuffer, 0 );
+            const size_t sizePos = listBuffer.size();
+            LittleEndianUtil::appendUint32( listBuffer, 0 );
 
-                const size_t structStart = listBuffer.size();
-                const bool   bWritten    = NestedObjectCodec::writeBinary( pValuePtr, *pStructInfo, listBuffer, context );
-                const uint32 structSize  = static_cast<uint32>( listBuffer.size() - structStart );
+            const size_t structStart = listBuffer.size();
+            const bool   bWritten    = NestedObjectCodec::writeBinary( pValuePtr, *pStructInfo, listBuffer, context );
+            const uint32 structSize  = static_cast<uint32>( listBuffer.size() - structStart );
 
-                LittleEndianUtil::writeUint32( listBuffer.data() + sizePos, structSize );
-                return bWritten;
-            }
+            LittleEndianUtil::writeUint32( listBuffer.data() + sizePos, structSize );
+            return bWritten;
         }
 
-        const SerializeContext::TextWriteFn* pTextWriter = context.findTextWriter( resolved );
+        const SerializeContext::TextWriteFn* pTextWriter = codecs.findTextWriter( context );
         if ( pTextWriter != nullptr )
         {
             string       str    = ( *pTextWriter )( pValuePtr );
@@ -696,35 +768,35 @@ namespace sw
         return false;
     }
 
-    FieldReadResult SerializerUtil::deserializeValueBinary( MutableValueAddress value, const hashed_string& typeName,
-                                                            const uint8* pData, size_t dataSize, size_t& offset,
+    FieldReadResult SerializerUtil::deserializeValueBinary( MutableValueAddress value, const hashed_string& typeName, const uint8* pData, size_t dataSize, size_t& offset,
                                                             const SerializeContext& context, BinaryWireVersion wireVersion )
     {
+        return deserializeValueBinary( value, typeName, nullptr, pData, dataSize, offset, context, wireVersion );
+    }
+
+    FieldReadResult SerializerUtil::deserializeValueBinary( MutableValueAddress value, const hashed_string& typeName, const ReflectValueBinding* pBinding, const uint8* pData,
+                                                            size_t dataSize, size_t& offset, const SerializeContext& context, BinaryWireVersion wireVersion )
+    {
         void* const                           pValuePtr = value.get();
-        const hashed_string                   resolved  = SerializerUtil::resolveHandlerTypeName( typeName, context );
-        const SerializeContext::BinaryReadFn* pReader   = context.findBinaryReader( resolved );
+        const ValueCodecs                     codecs    = findValueCodecs( typeName, pBinding, context );
+        const SerializeContext::BinaryReadFn* pReader   = codecs.findBinaryReader( context );
         if ( pReader != nullptr )
             return ContainerVisitor::makeFieldResult( ( *pReader )( pValuePtr, pData, dataSize, offset ) );
 
-        const EnumInfo* pEnumInfo = context.getTypeRegistry().findEnum( typeName );
-        if ( pEnumInfo != nullptr )
+        if ( const EnumInfo* pEnumInfo = codecs.findEnum( context ) )
             return ContainerVisitor::makeFieldResult( SerializerUtilInternal::readEnumBinary( *pEnumInfo, value, pData, dataSize, offset, wireVersion ) );
 
-        const TypeInfo* pStructInfo = context.getTypeRegistry().findType( typeName );
-        if ( pStructInfo != nullptr )
+        if ( const TypeInfo* pStructInfo = codecs.findStructType( context ) )
         {
-            if ( pStructInfo->isPrimitive() == false )
-            {
-                size_t blockStart{ 0 };
-                uint32 blockSize{ 0 };
-                if ( SerializerUtilInternal::readSizedBlock( pData, dataSize, offset, blockStart, blockSize ) == false )
-                    return FieldReadResult::FieldFailed;
-                // 구조체 안의 객체째 실패(금지된 필드)는 그대로 올린다. bool 로 접으면 부른 쪽이 이 칸만 되돌리고 orphan 으로 넘긴다.
-                return NestedObjectCodec::readBinary( pValuePtr, *pStructInfo, pData + blockStart, blockSize, context );
-            }
+            size_t blockStart{ 0 };
+            uint32 blockSize{ 0 };
+            if ( SerializerUtilInternal::readSizedBlock( pData, dataSize, offset, blockStart, blockSize ) == false )
+                return FieldReadResult::FieldFailed;
+            // 구조체 안의 객체째 실패(금지된 필드)는 그대로 올린다. bool 로 접으면 부른 쪽이 이 칸만 되돌리고 orphan 으로 넘긴다.
+            return NestedObjectCodec::readBinary( pValuePtr, *pStructInfo, pData + blockStart, blockSize, context );
         }
 
-        const SerializeContext::TextReadFn* pTextReader = context.findTextReader( resolved );
+        const SerializeContext::TextReadFn* pTextReader = codecs.findTextReader( context );
         if ( pTextReader != nullptr )
         {
             size_t blockStart{ 0 };
@@ -742,7 +814,7 @@ namespace sw
     bool SerializerUtil::serializeNestedContainerBinary( ValueAddress container, const NestedContainerInfo& nested,
                                                          vector<uint8>& listBuffer, const SerializeContext& context )
     {
-        SerializerUtilInternal::ContainerWriter writer( listBuffer, context );
+        SerializerUtilInternal::ContainerWriter writer( listBuffer, context, nested );
         ContainerVisitor::write( container, nested, writer, context );
         return writer.isAllWritten();
     }
@@ -751,23 +823,29 @@ namespace sw
                                                                       const uint8* pData, size_t dataSize, size_t& offset,
                                                                       const SerializeContext& context, BinaryWireVersion wireVersion )
     {
-        SerializerUtilInternal::ContainerReader reader( pData, dataSize, &offset, context, wireVersion );
+        SerializerUtilInternal::ContainerReader reader( pData, dataSize, &offset, context, wireVersion, nested );
         return ContainerVisitor::toFieldResult( ContainerVisitor::read( container, nested, reader, context ) );
     }
 
     void SerializerUtil::valueToText( StringBuilder<constant::buffer::kMax8192>& ss, ValueAddress value, const hashed_string& typeName,
                                       const SerializeContext& context )
     {
+        valueToText( ss, value, typeName, nullptr, context );
+    }
+
+    void SerializerUtil::valueToText( StringBuilder<constant::buffer::kMax8192>& ss, ValueAddress value, const hashed_string& typeName, const ReflectValueBinding* pBinding,
+                                      const SerializeContext& context )
+    {
         const void* const                    pValPtr     = value.get();
-        const hashed_string                  resolved    = SerializerUtil::resolveHandlerTypeName( typeName, context );
-        const SerializeContext::TextWriteFn* pTextWriter = context.findTextWriter( resolved );
+        const ValueCodecs                    codecs      = findValueCodecs( typeName, pBinding, context );
+        const SerializeContext::TextWriteFn* pTextWriter = codecs.findTextWriter( context );
         if ( pTextWriter != nullptr )
         {
             ss.append( ( *pTextWriter )( pValPtr ).c_str() );
             return;
         }
 
-        const EnumInfo* pEnumInfo = context.getTypeRegistry().findEnum( typeName );
+        const EnumInfo* pEnumInfo = codecs.findEnum( context );
         if ( pEnumInfo != nullptr )
         {
             const int64 val = pEnumInfo->readValueFromMemory( pValPtr );
@@ -778,14 +856,10 @@ namespace sw
             return;
         }
 
-        const TypeInfo* pStructInfo = context.getTypeRegistry().findType( typeName );
-        if ( pStructInfo != nullptr )
+        if ( const TypeInfo* pStructInfo = codecs.findStructType( context ) )
         {
-            if ( pStructInfo->isPrimitive() == false )
-            {
-                ss.append( NestedObjectCodec::writeJSON( pValPtr, *pStructInfo, context ) );
-                return;
-            }
+            ss.append( NestedObjectCodec::writeJSON( pValPtr, *pStructInfo, context ) );
+            return;
         }
 
         ss.append( "null" );
@@ -794,13 +868,19 @@ namespace sw
     bool SerializerUtil::parseTextValue( MutableValueAddress value, const hashed_string& typeName, string_view valStr,
                                          const SerializeContext& context )
     {
+        return parseTextValue( value, typeName, nullptr, valStr, context );
+    }
+
+    bool SerializerUtil::parseTextValue( MutableValueAddress value, const hashed_string& typeName, const ReflectValueBinding* pBinding, string_view valStr,
+                                         const SerializeContext& context )
+    {
         void* const                         pValPtr     = value.get();
-        const hashed_string                 resolved    = SerializerUtil::resolveHandlerTypeName( typeName, context );
-        const SerializeContext::TextReadFn* pTextReader = context.findTextReader( resolved );
+        const ValueCodecs                   codecs      = findValueCodecs( typeName, pBinding, context );
+        const SerializeContext::TextReadFn* pTextReader = codecs.findTextReader( context );
         if ( pTextReader != nullptr )
             return ( *pTextReader )( pValPtr, valStr );
 
-        const EnumInfo* pEnumInfo = context.getTypeRegistry().findEnum( typeName );
+        const EnumInfo* pEnumInfo = codecs.findEnum( context );
         if ( pEnumInfo != nullptr )
         {
             string_view flagsText    = valStr;
@@ -818,10 +898,8 @@ namespace sw
             return true;
         }
 
-        const TypeInfo* pStructInfo = context.getTypeRegistry().findType( typeName );
-        if ( pStructInfo != nullptr )
+        if ( const TypeInfo* pStructInfo = codecs.findStructType( context ) )
         {
-            if ( pStructInfo->isPrimitive() == false )
             {
                 string_view sv            = StringUtil::trim( valStr );
                 const bool  bQuotedStruct = sv.size() >= 2 && sv.front() == '"' && sv.back() == '"';
@@ -877,7 +955,7 @@ namespace sw
             return false;
         if ( prop._bIsContainer == SW_TRUE && prop.hasContainerWrapper() )
             return serializeNestedContainerBinary( ValueAddress{ pValue }, prop.getContainerShape(), outBytes, context );
-        return serializeValueBinary( ValueAddress{ pValue }, prop._typeName, outBytes, context );
+        return serializeValueBinary( ValueAddress{ pValue }, prop._typeName, prop.findValueBinding(), outBytes, context );
     }
 
     bool SerializerUtil::arePropertyValuesEqual( const PropertyInfo& prop, ObjectAddress instanceA, ObjectAddress instanceB, const SerializeContext& context )
@@ -903,7 +981,8 @@ namespace sw
         }
         else
         {
-            bWritten = serializeValueBinary( ValueAddress{ pA }, prop._typeName, bytesA, context ) && serializeValueBinary( ValueAddress{ pB }, prop._typeName, bytesB, context );
+            bWritten = serializeValueBinary( ValueAddress{ pA }, prop._typeName, prop.findValueBinding(), bytesA, context ) &&
+                       serializeValueBinary( ValueAddress{ pB }, prop._typeName, prop.findValueBinding(), bytesB, context );
         }
         // 바이트로 옮기지 못한 값은 같은지 알 수 없다. 같다고 하면 바뀐 값을 놓치므로 다르다고 본다.
         return bWritten && bytesA == bytesB;
@@ -948,7 +1027,7 @@ namespace sw
             return FieldReadResult::FieldFailed;
         const FieldReadResult valueResult = ( prop._bIsContainer == SW_TRUE && prop.hasContainerWrapper() )
                                               ? deserializeNestedContainerBinary( MutableValueAddress{ pValue }, prop.getContainerShape(), pPayload, payloadSize, offset, context, wireVersion )
-                                              : deserializeValueBinary( MutableValueAddress{ pValue }, prop._typeName, pPayload, payloadSize, offset, context, wireVersion );
+                                              : deserializeValueBinary( MutableValueAddress{ pValue }, prop._typeName, prop.findValueBinding(), pPayload, payloadSize, offset, context, wireVersion );
         switch ( valueResult )
         {
             case FieldReadResult::Read:
@@ -1077,6 +1156,13 @@ namespace sw
             }
         }
         return nullptr;
+    }
+
+    optional<uint32> SerializerUtil::findPropertyIndexByNameHash( PropertyListView listProp, const uint32 nameHash, const uint32 expectedIndex )
+    {
+        if ( expectedIndex < listProp.size() && listProp[expectedIndex].getNameHash() == nameHash )
+            return expectedIndex;
+        return findPropertyIndexByNameHash( listProp, nameHash );
     }
 
     optional<uint32> SerializerUtil::findPropertyIndexByNameHash( PropertyListView listProp, uint32 nameHash )

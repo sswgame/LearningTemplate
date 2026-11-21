@@ -5,6 +5,7 @@
  */
 #include "pch.h"
 
+#include "Core/Concurrency/DevCounter.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/thread.h"
 #include "Core/Delegate/Delegate.h"
@@ -272,11 +273,11 @@ SW_TEST_CASE( RHIDeferredHandleTest, DrainRenderThreadWaitsForGPUIdle )
 
     device.flushRenderThread();
     SW_EXPECT_EQUAL( size_t( 1 ), device.getDeferredHandleCount() );
-    SW_EXPECT_EQUAL( uint64( 0 ), device.getGPUIdleWaitCount() );
+    SW_EXPECT_EQUAL( uint64( 0 ), device.getGPUIdleWaitCount().get() );
     SW_EXPECT_TRUE( device._listShutdownStep.empty() ); // `waitIdleInternal` 이 불리지 않았다
 
     device.waitIdle( RHIWaitIdleReason::Tool );
-    SW_EXPECT_EQUAL( uint64( 1 ), device.getGPUIdleWaitCount() );
+    SW_EXPECT_EQUAL( uint64( 1 ), device.getGPUIdleWaitCount().get() );
     SW_EXPECT_EQUAL( size_t( 0 ), device.getDeferredHandleCount() );
     device.notifyRenderFrameRetired();
 }

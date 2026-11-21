@@ -322,7 +322,6 @@ if(TARGET ReflectionParser)
 				"-DSOURCE_ROOT=${CMAKE_SOURCE_DIR}"
 				"-DGENERATED_DIR=${CMAKE_BINARY_DIR}/generated"
 				"-DBUILTINS=${CMAKE_SOURCE_DIR}/${SW_FILE_REFLECT_BUILTINS}"
-				"-DANNOTATION_META=${CMAKE_SOURCE_DIR}/${SW_FILE_ANNOTATION_META}"
 				"-DTEMPLATES=${CMAKE_SOURCE_DIR}/${SW_DIR_TOOLS_REFLECTION_TEMPLATES}"
 				"-DCONFIG=${CMAKE_SOURCE_DIR}/${SW_DIR_CONFIG_ENV}/${SW_FILE_PARSER_DEFAULTS}"
 				"-DTYPES_LIST_NAME=${SW_FILE_REFLECTED_TYPES_LIST}"
@@ -334,7 +333,7 @@ if(TARGET ReflectionParser)
 		set_tests_properties(ReflectionParser.${parser_fixture_name} PROPERTIES LABELS nogpu TIMEOUT 120)
 	endforeach()
 	# 도구 입력 — 같은 입력 두 번이면 같은 바이트 · 시각 그대로, 명령줄만 바꾸면 다시 파싱, 설정 · 템플릿 · 철자 표 · 내장 표가 깨지면 0 이 아닌 종료(`ReflectionParser/RunParserToolInputs.cmake`).
-	foreach(parser_tool_mode IN ITEMS determinism args-changed broken-config broken-templates broken-spelling broken-builtins-interp broken-builtins-widget broken-builtins-layout broken-builtins-container)
+	foreach(parser_tool_mode IN ITEMS determinism args-changed broken-config broken-templates broken-builtins-interp broken-builtins-widget broken-builtins-layout broken-builtins-container)
 		add_test(NAME ReflectionParser.ToolInputs.${parser_tool_mode}
 			COMMAND ${CMAKE_COMMAND}
 				"-DMODE=${parser_tool_mode}"
@@ -344,7 +343,6 @@ if(TARGET ReflectionParser)
 				"-DSOURCE_ROOT=${CMAKE_SOURCE_DIR}"
 				"-DGENERATED_DIR=${CMAKE_BINARY_DIR}/generated"
 				"-DBUILTINS=${CMAKE_SOURCE_DIR}/${SW_FILE_REFLECT_BUILTINS}"
-				"-DANNOTATION_META=${CMAKE_SOURCE_DIR}/${SW_FILE_ANNOTATION_META}"
 				"-DTEMPLATES=${CMAKE_SOURCE_DIR}/${SW_DIR_TOOLS_REFLECTION_TEMPLATES}"
 				"-DCONFIG=${CMAKE_SOURCE_DIR}/${SW_DIR_CONFIG_ENV}/${SW_FILE_PARSER_DEFAULTS}"
 				"-DGEN_CPP_SUFFIX=${SW_EXT_REFLECTION_GEN_CPP}"

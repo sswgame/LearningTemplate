@@ -27,8 +27,9 @@ namespace sw::editor
         uint8          _bAvailable{ SW_FALSE }; ///< 스택이 있다
         uint8          _bCanUndo{ SW_FALSE };
         uint8          _bCanRedo{ SW_FALSE };
+        uint64         _generation{ 0 }; ///< 값이 바뀔 때마다 오른다 — History 창이 같은 세대에서 모으기를 건너뛴다(`HistoryViewModel::getGatherGeneration`)
 
-        /** @brief @p pStack(없으면 nullptr)의 지금 값을 채웁니다(벡터 · 글은 재사용한다). */
+        /** @brief @p pStack(없으면 nullptr)의 지금 값을 채웁니다(벡터 · 글은 재사용한다). 바뀐 것이 있으면 `_generation` 을 올린다. */
         void captureFrom( const CommandStack* pStack );
     };
 

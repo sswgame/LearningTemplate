@@ -71,7 +71,7 @@ namespace sw
         REFLECT_BODY();
 
         static constexpr uint32 kStateTag     = FourCCUtil::make( "WOTL" );
-        static constexpr uint32 kStateVersion = 1;
+        static constexpr uint32 kStateVersion = 2; // 2: 전리품 난수 · 지난 시계를 싣는다
 
         WesternOutlaw();
 
@@ -103,7 +103,7 @@ namespace sw
         bool                   isDisguised() const { return _law.isDisguised(); }
 
         /**
-         * @brief 법 · 생존 · 사체 · 가죽 · 넘긴 센트를 씁니다. 지갑과 평판은 판 상태가 싣는다.
+         * @brief 법 · 생존 · 사체 · 가죽 · 넘긴 센트 · 전리품 난수 · 지난 `update` 의 시계를 씁니다. 지갑 · 평판 · 시계는 판 상태가 싣는다.
          *        `writeState` 의 바이트로 바꿉니다. 깨졌거나 모르는 동물이면 그대로 두고 false 입니다.
          */
         SW_DECLARE_STATE_IO();

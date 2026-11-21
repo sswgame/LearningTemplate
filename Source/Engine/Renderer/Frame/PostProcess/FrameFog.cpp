@@ -241,7 +241,7 @@ namespace sw
         _volumeState      = FogVolumeState::Active;
     }
 
-    void FrameFog::dispatchVolumetricFog( IRHICommandList& cmd, const GPULightBuffer& lightBuffer, RHIDescriptorIndex placeholderSRV ) const
+    void FrameFog::dispatchVolumetricFog( IRHIPassCommandList& cmd, const GPULightBuffer& lightBuffer, RHIDescriptorIndex placeholderSRV ) const
     {
         if ( _bFogVolumeActive == SW_FALSE )
             return;

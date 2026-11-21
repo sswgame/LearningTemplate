@@ -4,12 +4,12 @@
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/unordered_set.h"
+#include "Core/Diagnostics/ScopedTimer.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Name/TagID.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
-#include "Core/Time/GameTimer.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Asset/AssetManager.h"
@@ -885,7 +885,7 @@ namespace sw
             GameObject* pGo = _objectManager->findGameObjectByID( objectID );
             // 자식은 같은 셀의 엔티티이거나 이 엔티티의 중첩 프리팹 부품이다 — 늘 올라 있는 오브젝트는 셀의 오브젝트에 붙지 않는다(쿠커가 검사했다).
             if ( pGo != nullptr )
-                _objectManager->destroyGameObject( pGo, true );
+                _objectManager->destroyGameObject( pGo );
         }
     }
 

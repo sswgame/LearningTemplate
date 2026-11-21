@@ -3,6 +3,7 @@
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceMeshPart.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/Concurrency/DevCounter.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/list.h"
 #include "Core/Container/unordered_map.h"
@@ -184,7 +185,7 @@ namespace sw
             unordered_map<uint64, AppearanceMeshAssemblyInternal::BakedEntry> _mapEntry SW_GUARDED_BY( _mutex );
             uint64 _cachedBytes                                                         SW_GUARDED_BY( _mutex ){ 0 }; ///< 항목 바이트의 합
             list<uint64> _listKeyByUse                                                  SW_GUARDED_BY( _mutex );      ///< 쓴 순서(앞이 가장 오래 안 씀) — 넣기 · 꺼내기가 끝으로 옮긴다(`AssetPinSet` · `AudioClipCache` 와 같은 모양)
-            uint64 _hitCount                                                            SW_GUARDED_BY( _mutex ){ 0 }; ///< `tryGet` 이 내준 횟수(감시 값)
+            DevCounter                                                                  _hitCount;                    ///< `tryGet` 이 내준 횟수(감시 값만 읽는 개발 전용 칸 — 원자라 잠금 밖에서도 된다)
 
             // ISubsystem — 세울 것이 없다(처음 구운 차림부터 채운다). 예산은 남길 때 읽는다 — 모듈 서브시스템 초기화 때는 게임 서비스가 아직 걸리지 않았을 수 있다.
             SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
@@ -204,7 +205,7 @@ namespace sw
                 _mapEntry.clear();
                 _listKeyByUse.clear();
                 _cachedBytes = 0;
-                _hitCount    = 0;
+                _hitCount.reset();
             }
 
             /** @brief @p entry 를 가장 최근에 쓴 것으로 옮깁니다(목록 끝). */
@@ -410,7 +411,7 @@ namespace sw
             pTable->eraseLocked( found ); // 원본이 다시 읽혔다 — 낡은 결과를 내주지 않고 치운다
             return false;
         }
-        ++pTable->_hitCount;
+        pTable->_hitCount.add();
         pTable->markUsedLocked( found->second );
         outListMesh = found->second._listMesh;
         return true;
@@ -467,7 +468,7 @@ namespace sw
         if ( pTable == nullptr )
             return counters;
         ScopedLock<mutex> lock{ pTable->_mutex };
-        counters._hitCount    = pTable->_hitCount;
+        counters._hitCount    = pTable->_hitCount.get();
         counters._cachedBytes = pTable->_cachedBytes;
         counters._entryCount  = static_cast<uint32>( pTable->_mapEntry.size() );
         return counters;

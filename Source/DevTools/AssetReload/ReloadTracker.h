@@ -45,6 +45,19 @@ namespace sw
     };
 
     /**
+     * @struct ModuleReloadPhases
+     * @brief 모듈 연쇄 리로드 한 번의 단계별 시간(ms)입니다. 사람이 기다리는 시간은 빌드 끝 감지부터 화면이 돌아오기까지라 대기 구간을 함께 잰다.
+     * @details 언리얼 Live Coding · Live++ 는 패치 시간을 매번 보고하고, 유니티는 도메인 리로드를 잰 뒤에야 줄였다. 어느 단계가 긴지 보이지 않으면 줄일 곳을 고를 수 없다.
+     */
+    struct ModuleReloadPhases
+    {
+        float64 _waitMs{ 0.0 };    ///< 빌드 끝 감지(이 프로세스의 빌드 끝 · 바깥 빌드 스탬프) → 연쇄 시작(디바운스 · 리로드 잡음 대기). 모르면 0
+        float64 _prepareMs{ 0.0 }; ///< 섀도 복사 · 새 라이브러리 로드 · 검사(옛 라이브러리가 아직 돈다)
+        float64 _suspendMs{ 0.0 }; ///< 배치 직전 콜백 — 게임 상태 맡기기와 게임 인스턴스 내리기
+        float64 _commitMs{ 0.0 };  ///< 옛 라이브러리 언로드 · 교체 · 리로드 직후 콜백(인스턴스 다시 세우기 · 상태 되찾기)
+    };
+
+    /**
      * @class ReloadTracker
      * @brief 리로드 결과 집계입니다(개발 도구 서브시스템). 적기는 어느 스레드에서도 되고(잠금 하나), 읽기는 복사본을 돌려준다.
      */
@@ -86,6 +99,10 @@ namespace sw
         [[nodiscard]] uint32 getFailedCount() const;
         /** @brief 그 길의 마지막 리로드 시간(ms)입니다. 적은 적이 없으면 0 입니다. */
         [[nodiscard]] float64 getLastElapsedMs( ReloadSource source ) const;
+        /** @brief 마지막 모듈 연쇄 리로드의 단계별 시간을 적습니다(`LiveReloadManager`). 감시 값 `Reload.Last<단계>Ms.Module` 이 읽는다. */
+        void recordModulePhases( const ModuleReloadPhases& phases );
+        /** @brief 마지막 모듈 연쇄 리로드의 단계별 시간입니다. 적은 적이 없으면 모두 0 입니다. */
+        [[nodiscard]] ModuleReloadPhases getLastModulePhases() const;
 
         /**
          * @brief 사람이 읽는 표를 씁니다(`reload.status`). @p bStaleOnly 면 낡은 경로만입니다.
@@ -104,6 +121,7 @@ namespace sw
         uint64 _nextSequence                  SW_GUARDED_BY( _mutex );
         uint32                                _arrAttemptCount[kReloadSourceCount] SW_GUARDED_BY( _mutex );
         float64                               _arrLastElapsedMs[kReloadSourceCount] SW_GUARDED_BY( _mutex );
+        ModuleReloadPhases _lastModulePhases  SW_GUARDED_BY( _mutex );
         uint32 _failedCount                   SW_GUARDED_BY( _mutex );
     };
 } // namespace sw

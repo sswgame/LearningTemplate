@@ -2,11 +2,12 @@
 #include "pch.h"
 
 #include "Core/Container/deque.h"
-#include "Core/Container/map.h"
+#include "Core/Container/flat_map.h"
 #include "Core/Container/pair.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Hash/HashUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Testing/ScopedAllocationCount.h"
@@ -19,7 +20,7 @@
  * @file TestContainerBench.cpp
  * @brief 컨테이너 벤치 넷입니다. 시간 문턱은 두지 않고 값을 로그(`ContainerBenchTest.*`)로 남긴다 — 판정은 통합이 설계 문턱(DesignBacklog "출하 할당기와 컨테이너 복잡도")으로 한다.
  * @details 재는 법: Release `App --test --test-run-disabled --test-filter=ContainerBenchTest.*` 5 번, 로그 값의 중앙값.
- *          할당 수는 할당 관찰자(`Memory::registerAllocationObserver`)로 이 스레드의 할당만 센다 — 배포본에는 관찰자가 없어 0 이다(Release 로 잰다).
+ *          할당 수는 스레드 할당 수(`Memory::getThreadAllocationCount`)의 앞뒤 차이로 이 스레드의 할당만 센다 — 배포본은 0 이다(Release 로 잰다).
  *          케이스는 무거워 평소 실행에서 끈다(`map` 범위 구축은 AC-2 로 붙이고 정렬 · 병합하는 O(n log n), 고치기 전은 O(n²)).
  */
 namespace sw
@@ -116,9 +117,9 @@ SW_TEST_CASE( ContainerBenchTest, MapRangeBuild, ._tags = "bench", ._disabledRea
         listPair.emplace_back( static_cast<uint32>( nextRandom( state ) ), index );
     }
 
-    const Stopwatch           buildWatch;
-    const map<uint32, uint32> mapValue( listPair.begin(), listPair.end() );
-    const int64               buildNanos = buildWatch.getElapsedNanoseconds();
+    const Stopwatch                buildWatch;
+    const flat_map<uint32, uint32> mapValue( listPair.begin(), listPair.end() );
+    const int64                    buildNanos = buildWatch.getElapsedNanoseconds();
 
     vector<pair<uint32, uint32>> sorted = listPair;
     const Stopwatch              sortWatch;
@@ -301,4 +302,124 @@ SW_TEST_CASE( ContainerBenchTest, UnorderedMapFind, ._tags = "bench", ._disabled
     SW_EXPECT_TRUE( hitCount >= kFindCount / 2 );
     SW_LOG_INFO_ID( "ContainerBenchTest.UnorderedMapFind", "unordered_map<uint64, uint64> x%#: %# finds (half hit) %# ns (%# ns per find)", kKeyCount, kFindCount, findNanos,
                     findNanos / kFindCount );
+}
+
+namespace sw
+{
+    namespace
+    {
+        /**
+         * @brief 열린 주소법 판정용 시제품입니다 — 버킷 칸에 밀집 배열 번호와 지문 8 비트를 함께 두고 선형 탐사한다(`ankerl::unordered_dense` 식, 순회는 밀집 배열 그대로).
+         * @details 제품 표(`DenseHashTable`, 버킷 → 노드 → 체인 `_next`)와 같은 밀집 배열을 두고 조회 길만 바꿨을 때의 차이를 잰다. 지우기는 시제품에 없다(조회 판정용).
+         */
+        struct LinearProbeTableInternal
+        {
+            static constexpr uint32 kEmpty = 0xFFFFFFFFu;
+
+            vector<uint64> _listKey;
+            vector<uint64> _listValue;
+            vector<uint32> _listBucketIndex; ///< 밀집 배열 번호, 빈 칸은 `kEmpty`
+            vector<uint8>  _listFingerprint; ///< 해시 위 8 비트 — 키를 견주기 전에 거른다
+            uint64         _mask{ 0 };
+
+            void build( const vector<uint64>& listKey )
+            {
+                uint64 bucketCount = 16;
+                while ( bucketCount < listKey.size() * 2 ) // 부하율 0.5 이하 — 선형 탐사의 긴 줄을 피한다
+                {
+                    bucketCount *= 2;
+                }
+                _mask = bucketCount - 1;
+                _listBucketIndex.assign( static_cast<size_t>( bucketCount ), kEmpty );
+                _listFingerprint.assign( static_cast<size_t>( bucketCount ), 0 );
+                for ( size_t index = 0; index < listKey.size(); ++index )
+                {
+                    const uint64 hash   = HashUtil::mix64( listKey[index] );
+                    uint64       bucket = hash & _mask;
+                    while ( _listBucketIndex[static_cast<size_t>( bucket )] != kEmpty )
+                    {
+                        bucket = ( bucket + 1 ) & _mask;
+                    }
+                    _listBucketIndex[static_cast<size_t>( bucket )] = static_cast<uint32>( _listKey.size() );
+                    _listFingerprint[static_cast<size_t>( bucket )] = static_cast<uint8>( hash >> 56 );
+                    _listKey.push_back( listKey[index] );
+                    _listValue.push_back( static_cast<uint64>( index ) );
+                }
+            }
+
+            bool contains( uint64 key ) const
+            {
+                const uint64 hash        = HashUtil::mix64( key );
+                const uint8  fingerprint = static_cast<uint8>( hash >> 56 );
+                uint64       bucket      = hash & _mask;
+                for ( ;; )
+                {
+                    const uint32 denseIndex = _listBucketIndex[static_cast<size_t>( bucket )];
+                    if ( denseIndex == kEmpty )
+                        return false;
+                    if ( _listFingerprint[static_cast<size_t>( bucket )] == fingerprint && _listKey[denseIndex] == key )
+                        return true;
+                    bucket = ( bucket + 1 ) & _mask;
+                }
+            }
+        };
+    } // namespace
+} // namespace sw
+
+/**
+ * @brief [ContainerBenchTest] 열린 주소법 판정 — 10 만 키에서 있는 키 · 없는 키 찾기 100 만 번씩을 제품 `unordered_map` 과 열린 주소 시제품으로 나란히 잽니다.
+ * @details 문턱(DesignBacklog "구조 · 성능 발전 방향" Core 의 측정 뒤 항목): 없는 키 20% 이상 · 있는 키 10% 이상 빠르고 순회 · 삽입이 느려지지 않을 때만 바꾼다.
+ *          성능 판정은 배포와 같은 자료 배치에서 잰다 — Release 는 검사 칸(경합 검출 · 이터레이터 세대)이 표에 들어 있어 값과 함께 구성을 적는다.
+ */
+SW_TEST_CASE( ContainerBenchTest, UnorderedMapFindVersusOpenAddressing, ._tags = "bench", ._disabledReason = "bench - Release 에서 --test-run-disabled 로 돌린다" )
+{
+    static constexpr uint32       kKeyCount  = 100000;
+    static constexpr uint32       kFindCount = 1000000;
+    uint64                        state      = 0xD1B54A32D192ED03ull;
+    vector<uint64>                listKey;
+    vector<uint64>                listMissKey;
+    unordered_map<uint64, uint64> mapValue;
+    listKey.reserve( kKeyCount );
+    listMissKey.reserve( kKeyCount );
+    mapValue.reserve( kKeyCount );
+    for ( uint32 index = 0; index < kKeyCount; ++index )
+    {
+        const uint64 key = nextRandom( state );
+        listKey.push_back( key );
+        mapValue.emplace( key, static_cast<uint64>( index ) );
+    }
+    for ( uint32 index = 0; index < kKeyCount; ++index )
+    {
+        listMissKey.push_back( nextRandom( state ) ); // 64 비트 난수라 사실상 늘 없는 키
+    }
+    LinearProbeTableInternal probe;
+    probe.build( listKey );
+
+    const auto measure = []( auto&& findOne ) -> pair<int64, uint64>
+    {
+        uint64          hitCount = 0;
+        const Stopwatch watch;
+        for ( uint32 index = 0; index < kFindCount; ++index )
+        {
+            hitCount += findOne( index ) ? 1u : 0u;
+        }
+        return { watch.getElapsedNanoseconds(), hitCount };
+    };
+    const pair<int64, uint64> chainHit  = measure( [&]( uint32 index )
+    { return mapValue.find( listKey[index % kKeyCount] ) != mapValue.end(); } );
+    const pair<int64, uint64> chainMiss = measure( [&]( uint32 index )
+    { return mapValue.find( listMissKey[index % kKeyCount] ) != mapValue.end(); } );
+    const pair<int64, uint64> openHit   = measure( [&]( uint32 index )
+    { return probe.contains( listKey[index % kKeyCount] ); } );
+    const pair<int64, uint64> openMiss  = measure( [&]( uint32 index )
+    { return probe.contains( listMissKey[index % kKeyCount] ); } );
+
+    SW_EXPECT_EQUAL( static_cast<uint64>( kFindCount ), chainHit.second );
+    SW_EXPECT_EQUAL( static_cast<uint64>( kFindCount ), openHit.second );
+    SW_EXPECT_EQUAL( chainMiss.second, openMiss.second );
+    SW_LOG_INFO_ID( "ContainerBenchTest.UnorderedMapFindVersusOpenAddressing",
+                    "x%# keys, %# finds each: chain hit %# ns / miss %# ns, open-addressing hit %# ns / miss %# ns (open/chain hit x%#, miss x%#)", kKeyCount, kFindCount,
+                    chainHit.first, chainMiss.first, openHit.first, openMiss.first,
+                    chainHit.first > 0 ? static_cast<float64>( openHit.first ) / static_cast<float64>( chainHit.first ) : 0.0,
+                    chainMiss.first > 0 ? static_cast<float64>( openMiss.first ) / static_cast<float64>( chainMiss.first ) : 0.0 );
 }

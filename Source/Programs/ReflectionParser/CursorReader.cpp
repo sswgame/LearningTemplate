@@ -54,6 +54,79 @@ namespace sw
         return string( fqn.view() );
     }
 
+    string CursorReader::getTypeIdentity( const CXType type )
+    {
+        const CXType   canonical   = clang_getCanonicalType( type );
+        const CXCursor declaration = clang_getTypeDeclaration( canonical );
+        if ( clang_Cursor_isNull( declaration ) != 0 )
+            return {};
+        const CXCursor specialized = clang_getSpecializedCursorTemplate( declaration );
+        CXCursor       current     = clang_Cursor_isNull( specialized ) == 0 ? specialized : declaration;
+        vector<string> listPart;
+        while ( clang_getCursorKind( current ) != CXCursor_TranslationUnit && clang_Cursor_isNull( current ) == 0 )
+        {
+            const bool bInlineNamespace = clang_getCursorKind( current ) == CXCursor_Namespace && clang_Cursor_isInlineNamespace( current ) != 0;
+            string     spelling         = getCursorSpelling( current );
+            if ( bInlineNamespace == false && spelling.empty() == false )
+                listPart.push_back( std::move( spelling ) );
+            current = clang_getCursorSemanticParent( current );
+        }
+        StringBuilder<constant::buffer::kMax512> identity;
+        for ( auto it = listPart.rbegin(); it != listPart.rend(); ++it )
+        {
+            if ( identity.size() > 0 )
+                identity.append( "::" );
+            identity.append( *it );
+        }
+        return string( identity.view() );
+    }
+
+    bool CursorReader::containsTypeIdentity( const CXType type, const string_view identity )
+    {
+        const CXType canonical = clang_getCanonicalType( type );
+        if ( canonical.kind == CXType_ConstantArray )
+            return containsTypeIdentity( clang_getArrayElementType( canonical ), identity );
+        if ( getTypeIdentity( canonical ) == identity )
+            return true;
+        const int32 argCount = clang_Type_getNumTemplateArguments( canonical );
+        for ( int32 argIndex = 0; argIndex < argCount; ++argIndex )
+        {
+            const CXType argType = clang_Type_getTemplateArgumentAsType( canonical, static_cast<uint32>( argIndex ) );
+            if ( argType.kind != CXType_Invalid && containsTypeIdentity( argType, identity ) )
+                return true;
+        }
+        return false;
+    }
+
+    bool CursorReader::isTextStringType( const CXType type )
+    {
+        const CXType canonical = clang_getCanonicalType( type );
+        if ( isAnyIdentity( getTypeIdentity( canonical ), typeidentity::kArrStringTemplate ) == false )
+            return false;
+        const CXTypeKind characterKind = clang_getCanonicalType( clang_Type_getTemplateArgumentAsType( canonical, 0 ) ).kind;
+        return characterKind == CXType_Char_S || characterKind == CXType_Char_U;
+    }
+
+    bool CursorReader::isNameFieldType( const CXType type )
+    {
+        const CXType canonical = clang_getCanonicalType( type );
+        const string identity  = getTypeIdentity( canonical );
+        if ( isTextStringType( canonical ) || isAnyIdentity( identity, typeidentity::kArrNameFieldType ) )
+            return true;
+        if ( isAnyIdentity( identity, typeidentity::kArrVectorTemplate ) == false )
+            return false;
+        const CXType elementType = clang_Type_getTemplateArgumentAsType( canonical, 0 );
+        return elementType.kind != CXType_Invalid && ( isTextStringType( elementType ) || isAnyIdentity( getTypeIdentity( elementType ), typeidentity::kArrNameFieldType ) );
+    }
+
+    string CursorReader::getTemplateArgumentSpelling( const CXType type, const uint32 index )
+    {
+        const CXType argType = clang_Type_getTemplateArgumentAsType( type, index );
+        if ( argType.kind == CXType_Invalid )
+            return {};
+        return takeString( clang_getTypeSpelling( argType ) );
+    }
+
     string CursorReader::makeMemberOwnerName( const string_view ownerFQN, const string_view memberName )
     {
         StringBuilder<constant::buffer::kMax1024> b;

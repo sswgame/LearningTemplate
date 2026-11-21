@@ -46,7 +46,7 @@ namespace sw
 
         /**
          * @brief @p manager 의 안개를 @p outSettings 에 구합니다. @p viewPosition(주 시점의 눈)이 어떤 물의 물속이면 그 물의 안개가 컴포넌트의 값을 덮습니다.
-         * @return 안개가 있으면(컴포넌트 또는 물속) true, 없으면 false 이고 @p outSettings 는 기본값입니다. 읽기만 합니다.
+         * @return 안개가 있으면(컴포넌트 또는 물속) true, 없거나 켜진 안개 컴포넌트가 둘 이상이면(씬에 하나 — 오류) false 이고 @p outSettings 는 기본값입니다. 읽기만 합니다.
          */
         [[nodiscard]] static bool findFog( const GameObjectManager& manager, const float3& viewPosition, FogSettings& outSettings );
 

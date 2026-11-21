@@ -128,7 +128,7 @@ namespace sw
     enum class RHITextureState : uint8
     {
         ShaderResource  = 0, ///< 샘플링(`prepareTextureForShaderRead`) — 깊이면 깊이 읽기 전용
-        RenderTarget    = 1, ///< 컬러 또는 깊이 첨부(`prepareTextureForRenderTarget`) — 핸들 0 은 스왑체인
+        RenderTarget    = 1, ///< 컬러 또는 깊이 첨부(`prepareTextureForRenderTarget`) — `kRHIBackBufferTexture` 는 스왑체인, 핸들 0 은 오류
         UnorderedAccess = 2, ///< 컴퓨트 RW 텍스처(`prepareTextureForUnorderedAccess`)
     };
 

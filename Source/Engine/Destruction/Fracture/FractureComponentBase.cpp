@@ -18,6 +18,7 @@
 #include "Engine/Object/GameObject/GameObjectEvents.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
+#include "Engine/Object/GameObject/Tick/FixedStepContext.h"
 #include "Engine/Physics/Collision/PhysicsShape.h"
 #include "Engine/Physics/Component/RigidBody2DComponent.h"
 #include "Engine/Physics/Component/RigidBodyComponent.h"
@@ -610,8 +611,6 @@ namespace sw
         , _intactAngularVelocity{}
         , _objectScale{ 1.0f }
         , _leafShapeScale{ 0.0f }
-        , _lastApplyMicroseconds{ 0.0f }
-        , _lastPoseMicroseconds{ 0.0f }
         , _frameSimulatedTime{ 0.0f }
         , _nextSpawnOrder{ 0 }
         , _debrisOwner{ DebrisOwnerID::None }
@@ -744,9 +743,10 @@ namespace sw
 
     // --- 물리 프레임 -------------------------------------------------------------------------------------------------------------
 
-    void FractureComponentBase::beginPhysicsFrame( ScenePhysics& physics )
+    void FractureComponentBase::onPhysicsFrameBegin( const FixedStepContext& context )
     {
-        _frameSimulatedTime = 0.0f;
+        ScenePhysics& physics = context.getPhysics();
+        _frameSimulatedTime   = 0.0f;
         if ( isSimulated() == false )
         {
             releasePhysics( physics );
@@ -784,11 +784,9 @@ namespace sw
             FractureComponentBaseInternal::warmLeafShapes( *_physics );
     }
 
-    void FractureComponentBase::prePhysicsStep( ScenePhysics& physics, float32 fixedDeltaTime, uint32 stepIndex, uint32 stepCount )
+    void FractureComponentBase::onPrePhysicsStep( const FixedStepContext& context )
     {
-        (void)physics;
-        (void)stepIndex;
-        (void)stepCount;
+        const float32 fixedDeltaTime = context.getFixedDeltaTime();
         if ( _physics == nullptr )
             return;
         for ( const FractureGroupRuntime& runtime : _listRuntime )
@@ -798,18 +796,18 @@ namespace sw
         }
     }
 
-    void FractureComponentBase::postPhysicsStep( ScenePhysics& physics )
+    void FractureComponentBase::onPostPhysicsStep( const FixedStepContext& context )
     {
+        ScenePhysics& physics = context.getPhysics();
         _frameSimulatedTime += physics.getStepTimer().getStep();
     }
 
-    void FractureComponentBase::endPhysicsFrame( ScenePhysics& physics, float32 alpha )
+    void FractureComponentBase::onPhysicsFrameEnd( const FixedStepContext& context )
     {
-        (void)physics;
-        (void)alpha;
+        (void)context; // 보간하지 않는다 — 조각 자세는 모은 시뮬레이션 시간으로 쓴다(`updateGroups`)
         if ( _bFractured == SW_FALSE || _physics == nullptr )
             return;
-        Stopwatch  stopwatch;
+        SW_PROFILE_SCOPE( "GT.Scene.tick.physics.fracturePose" ); // 처리 시간은 계측이 잰다(런타임 칸으로 재지 않는다)
         const bool bMoved  = updateGroups( _frameSimulatedTime );
         bool       bFading = false;
         for ( const FractureGroupRuntime& runtime : _listRuntime )
@@ -830,7 +828,6 @@ namespace sw
             if ( bStillLongEnough )
                 setBaked( true );
         }
-        _lastPoseMicroseconds = static_cast<float32>( stopwatch.getElapsedMicroseconds() );
     }
 
     void FractureComponentBase::releasePhysics( ScenePhysics& physics )
@@ -938,7 +935,7 @@ namespace sw
         vector<FracturePendingDamage> listPending;
         if ( _pendingDamage.takeAll( listPending ) == false )
             return;
-        Stopwatch                      stopwatch;
+        SW_PROFILE_SCOPE( "GT.Scene.tick.physics.fractureApply" );
         vector<DestructionDamageEvent> listEvent;
         for ( const FracturePendingDamage& pending : listPending )
         {
@@ -959,7 +956,6 @@ namespace sw
                 applyMeshEvent( physics, event );
             }
         }
-        _lastApplyMicroseconds = static_cast<float32>( stopwatch.getElapsedMicroseconds() );
     }
 
     float3 FractureComponentBase::toMeshSpace( const FractureGroupRuntime& runtime, const float3& worldPoint ) const
@@ -1869,6 +1865,10 @@ namespace sw
     void FractureComponentBase::onRegister( GameObjectManager& manager )
     {
         PhysicsComponent::onRegister( manager );
+        registerFixedStep<&FractureComponentBase::onPhysicsFrameBegin>( manager, FixedStepGroup::FrameBegin );
+        registerFixedStep<&FractureComponentBase::onPrePhysicsStep>( manager, FixedStepGroup::PreStep );
+        registerFixedStep<&FractureComponentBase::onPostPhysicsStep>( manager, FixedStepGroup::PostStep );
+        registerFixedStep<&FractureComponentBase::onPhysicsFrameEnd>( manager, FixedStepGroup::FrameEnd );
         manager.getComponentRegistry().add<FractureComponentBase>( this );
         _collisionSubscription = GameObjectEvents::listen<&FractureComponentBase::handleCollisionBegin>( *this, &GameObjectEvents::_collisionBegin );
     }

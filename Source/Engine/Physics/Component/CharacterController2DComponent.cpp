@@ -7,6 +7,7 @@
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/StateHashBuilder.h"
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/Tick/FixedStepContext.h"
 #include "Engine/Physics/IPhysicsScene.h"
 #include "Engine/Physics/Scene/PhysicsNameValidation.h"
 #include "Engine/Physics/Scene/PhysicsPoseStore.h"
@@ -91,8 +92,17 @@ namespace sw
         inoutBuilder.addUint8( isGrounded() ? 1 : 0 );
     }
 
-    void CharacterController2DComponent::beginPhysicsFrame( ScenePhysics& physics )
+    void CharacterController2DComponent::onRegister( GameObjectManager& manager )
     {
+        PhysicsComponent::onRegister( manager );
+        registerFixedStep<&CharacterController2DComponent::onPhysicsFrameBegin>( manager, FixedStepGroup::FrameBegin );
+        registerFixedStep<&CharacterController2DComponent::onPrePhysicsStep>( manager, FixedStepGroup::PreStep );
+        registerFixedStep<&CharacterController2DComponent::onPhysicsFrameEnd>( manager, FixedStepGroup::FrameEnd );
+    }
+
+    void CharacterController2DComponent::onPhysicsFrameBegin( const FixedStepContext& context )
+    {
+        ScenePhysics& physics = context.getPhysics();
         if ( isSimulated() == false )
         {
             releasePhysics( physics );
@@ -108,7 +118,7 @@ namespace sw
         const bool bTransformChanged = consumeTransformChange();
         const bool bCreate           = _character.isValid() == false;
         const bool bTeleported       = consumeTeleport();
-        // 배율은 끝 훅(`endPhysicsFrame`)이 먼저 읽었을 수 있다 — 변경 번호만이 아니라 지은 배율과의 값 비교로도 본다(3D 컨트롤러와 같다).
+        // 배율은 끝 훅(`onPhysicsFrameEnd`)이 먼저 읽었을 수 있다 — 변경 번호만이 아니라 지은 배율과의 값 비교로도 본다(3D 컨트롤러와 같다).
         const bool bUnchanged = bCreate == false && bTransformChanged == false && bTeleported == false && isShapeScaleStale( _worldScale ) == false;
         if ( bUnchanged )
             return;
@@ -154,11 +164,11 @@ namespace sw
             _verticalSpeed = 0.0f;
     }
 
-    void CharacterController2DComponent::prePhysicsStep( ScenePhysics& physics, float32 fixedDeltaTime, uint32 stepIndex, uint32 stepCount )
+    void CharacterController2DComponent::onPrePhysicsStep( const FixedStepContext& context )
     {
-        (void)stepIndex;
-        (void)stepCount;
-        IPhysicsScene2D* pScene = physics.findScene2D();
+        ScenePhysics&    physics        = context.getPhysics();
+        const float32    fixedDeltaTime = context.getFixedDeltaTime();
+        IPhysicsScene2D* pScene         = physics.findScene2D();
         if ( pScene == nullptr || _character.isValid() == false )
             return;
         float32 moveVelocity = 0.0f;
@@ -194,8 +204,10 @@ namespace sw
         }
     }
 
-    void CharacterController2DComponent::endPhysicsFrame( ScenePhysics& physics, float32 alpha )
+    void CharacterController2DComponent::onPhysicsFrameEnd( const FixedStepContext& context )
     {
+        ScenePhysics& physics = context.getPhysics();
+        const float32 alpha   = context.getAlpha();
         if ( _character.isValid() == false )
             return;
         const float2 position = float2::lerp( _previousPosition, _state._position, alpha );

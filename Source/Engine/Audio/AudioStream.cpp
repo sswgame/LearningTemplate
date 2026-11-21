@@ -146,7 +146,7 @@ namespace sw
         _listWindow.resize( static_cast<size_t>( retained + _chunkFrames ) * _channelCount );
         const uint32 decoded = _pDecoder->readFrames( _listWindow.data() + static_cast<size_t>( retained ) * _channelCount, _chunkFrames );
         _windowFrames        = retained + decoded;
-        _decodedFrameCount += decoded;
+        _decodedFrameCount.add( decoded );
         return decoded > 0;
     }
 
@@ -170,7 +170,7 @@ namespace sw
                 // 되감기: 창 밖(루프를 한 바퀴 돌았거나 위치를 옮겼다)이다.
                 if ( _pDecoder->seekToFrame( frame ) == false )
                     return false;
-                ++_seekCount;
+                _seekCount.add();
                 _windowStart  = frame;
                 _windowFrames = 0;
                 if ( refill( 0 ) == false )

@@ -57,11 +57,11 @@ SW_TEST_CASE( TerrainLODTest, ReturningLODsReuseCachedChunkMeshes )
     SW_REQUIRE_TRUE( pTerrain->updateLODs( nearPosition ) > 0 ); // 먼 청크가 거칠어진다
     SW_REQUIRE_TRUE( pTerrain->updateLODs( farPosition ) > 0 );  // 모두 가장 거칠게
     const uint32 nearCornerFarLOD  = pTerrain->getChunkLOD( 0, 0 );
-    const uint64 builtBeforeReturn = pTerrain->getChunkMeshBuildCount();
+    const uint64 builtBeforeReturn = pTerrain->getChunkMeshBuildCount().get();
 
     // 같은 자리로 돌아오면 LOD · 이웃이 처음과 같다 — 모두 들고 있던 메시다.
     SW_EXPECT_TRUE( pTerrain->updateLODs( nearPosition ) > 0 );
-    SW_EXPECT_EQUAL( builtBeforeReturn, pTerrain->getChunkMeshBuildCount() );
+    SW_EXPECT_EQUAL( builtBeforeReturn, pTerrain->getChunkMeshBuildCount().get() );
     SW_EXPECT_TRUE( pTerrain->getChunkLOD( 0, 0 ) < nearCornerFarLOD );
     SW_EXPECT_TRUE( pTerrain->getChunkVertexCount( 0, 0 ) > pTerrain->getChunkVertexCount( 3, 3 ) ); // 꺼낸 메시의 정점 수도 그 LOD 의 것이다
 
@@ -72,9 +72,9 @@ SW_TEST_CASE( TerrainLODTest, ReturningLODsReuseCachedChunkMeshes )
     listHeight[static_cast<size_t>( 5 ) * Util::kResolution + 5] = 3.0f;
     SW_REQUIRE_TRUE( pTerrain->writeHeights( listHeight, editedRect ) );
     SW_REQUIRE_EQUAL( 0u, pTerrain->getStaleChunkCount() );
-    const uint64 builtBeforeFar = pTerrain->getChunkMeshBuildCount();
+    const uint64 builtBeforeFar = pTerrain->getChunkMeshBuildCount().get();
     (void)pTerrain->updateLODs( farPosition );
-    const uint64 builtByFar = pTerrain->getChunkMeshBuildCount() - builtBeforeFar;
+    const uint64 builtByFar = pTerrain->getChunkMeshBuildCount().get() - builtBeforeFar;
     SW_EXPECT_TRUE( builtByFar > 0 && builtByFar < chunkCount );
 }
 
@@ -106,7 +106,7 @@ SW_TEST_CASE( TerrainLODTest, CrossingBench, ._tags = "bench", ._disabledReason 
 
     constexpr float32 kSpeed     = 20.0f;
     constexpr float32 kDeltaTime = 1.0f / 60.0f;
-    const uint64      builtStart = pTerrain->getChunkMeshBuildCount();
+    const uint64      builtStart = pTerrain->getChunkMeshBuildCount().get();
     uint32            changed    = 0;
     const Stopwatch   watch;
     for ( uint32 pass = 0; pass < 2; ++pass ) // 0: 가는 길, 1: 돌아오는 길
@@ -120,7 +120,7 @@ SW_TEST_CASE( TerrainLODTest, CrossingBench, ._tags = "bench", ._disabledReason 
     changed += pTerrain->updateLODs( float3{ 0.0f, 10.0f, 1024.0f } ); // 컷
     changed += pTerrain->updateLODs( float3{ 2048.0f, 10.0f, 1024.0f } );
     const int64  nanos = watch.getElapsedNanoseconds();
-    const uint64 built = pTerrain->getChunkMeshBuildCount() - builtStart;
+    const uint64 built = pTerrain->getChunkMeshBuildCount().get() - builtStart;
     SW_EXPECT_TRUE( built <= changed );
     SW_LOG_INFO_ID( "TerrainLODTest.CrossingBench", "terrain crossing: %# chunk mesh changes, %# built (rest reused), updateLODs total %# ns", changed, built, nanos );
 }

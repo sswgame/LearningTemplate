@@ -44,6 +44,9 @@ namespace sw::editor
         bool                           _bOpenByDefault{ false };  ///< 만든 직후의 가시성(`windows.json` 복원 전) — 기본 배치로 되돌릴 때 핵심 패널을 이 값으로 둔다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         uint64                         _drawNanosSum{ 0 };        ///< `-gv_editorPanelTimes` 가 모으는 그리기 시간의 합(ns)
         uint64                         _drawNanosMax{ 0 };        ///< 그중 가장 긴 한 프레임의 시간(ns)
+        uint64                         _gatherNanosSum{ 0 };      ///< 같은 프레임들의 `gather` 시간 합(ns — 그리기 합에 들어 있다, `IEditorPanel::gatherViewState`)
+        uint64                         _lastDrawNanos{ 0 };       ///< 마지막으로 잰 프레임의 그리기 시간(ns, 모으기 포함 — 감시 값 `Editor.PanelDrawUs`)
+        uint64                         _lastGatherNanos{ 0 };     ///< 마지막으로 잰 프레임의 모으기 시간(ns — 감시 값 `Editor.PanelGatherUs`)
     };
 } // namespace sw::editor
 
@@ -169,7 +172,13 @@ namespace sw::editor
          */
         void restoreCorePanelVisibility();
         void drawOpenPanels();
-        void shutdownAllPanels();
+        /** @brief 감시 대상 패널(`-gv_editorWatchPanel` 의 id)의 마지막 그리기 · 모으기 시간(ns)과 열린 패널 전체의 그리기 합입니다. 재지 않았거나 그 패널이 없으면 false 입니다. */
+        [[nodiscard]] bool findWatchedPanelTimes( uint64& outDrawNanos, uint64& outGatherNanos, uint64& outSkippedGatherCount ) const;
+        /** @brief 마지막으로 잰 프레임의 열린 패널 전체 그리기 시간(ns)입니다(감시 값 `Editor.PanelsDrawUs`). */
+        uint64 getLastPanelsDrawNanoseconds() const { return _lastPanelsDrawNanos; }
+        /** @brief 마지막으로 등록 목록을 맞출 때 패널을 만드는 데 든 시간(ns)입니다 — 닫힌 패널까지 모두 만든다(감시 값 `Editor.PanelCreateMs`, 지연 생성의 판정 근거). */
+        uint64 getLastPanelCreateNanoseconds() const { return _lastPanelCreateNanos; }
+        void   shutdownAllPanels();
         /** @brief 포커스된 도구 문서가 dirty 이면 저장하고 true 를 반환합니다. */
         [[nodiscard]] bool saveFocusedDirtyDocument();
         /** @brief 모든 dirty 도구 문서를 저장합니다. 하나라도 실패하면 false 입니다. */
@@ -195,10 +204,12 @@ namespace sw::editor
 
     private:
         vector<EditorPanelEntry> _listPanel;
-        vector<string>           _listRememberedOpenID;    ///< 지운 패널 중 열려 있던 id. 다시 등록되면 연다
-        uint32                   _syncedGeneration;        ///< 마지막으로 맞춘 등록 세대. 맞춘 적이 없으면 kNotSynced 이다
-        uint32                   _panelTimeFrameCount;     ///< 패널 시간을 모은 프레임 수
-        uint8                    _bPanelTimesReported : 1; ///< 한 번 기록했으면 더 모으지 않는다
+        vector<string>           _listRememberedOpenID;      ///< 지운 패널 중 열려 있던 id. 다시 등록되면 연다
+        uint32                   _syncedGeneration;          ///< 마지막으로 맞춘 등록 세대. 맞춘 적이 없으면 kNotSynced 이다
+        uint32                   _panelTimeFrameCount;       ///< 패널 시간을 모은 프레임 수
+        uint64                   _lastPanelsDrawNanos{ 0 };  ///< 마지막으로 잰 프레임의 열린 패널 전체 그리기 시간(ns)
+        uint64                   _lastPanelCreateNanos{ 0 }; ///< 마지막 등록 맞추기에서 패널을 만든 시간(ns)
+        uint8                    _bPanelTimesReported : 1;   ///< 한 번 기록했으면 더 모으지 않는다
     };
 } // namespace sw::editor
 
@@ -211,3 +222,24 @@ namespace sw::editor
  */
 #define SW_EDITOR_PANEL( TPanel, pID, category, order ) \
     SW_EDITOR_REGISTER( ::sw::editor::EditorPanelRegistration, Panel_##TPanel, { pID, order }, category, &::sw::editor::createEditorPanel<TPanel> )
+
+namespace sw::editor
+{
+    /** @brief 창 열기 명령의 동작입니다(`SW_EDITOR_PANEL_OPEN_COMMAND`). 모델을 바꾸지 않고 창만 연다. */
+    template <typename TPanel>
+    void openEditorPanelCommand()
+    {
+        EditorPanelManager* pPanels = EditorPanelManager::findInEditorContext();
+        if ( pPanels != nullptr )
+            (void)pPanels->setPanelOpen<TPanel>( true );
+    }
+} // namespace sw::editor
+
+/**
+ * @brief 창 @p TPanel 을 여는 명령(`window.*`)을 등록합니다. 모델을 바꾸지 않으므로 패널 등록(`SW_EDITOR_PANEL`) 옆 View 에 둔다.
+ * @code SW_EDITOR_PANEL_OPEN_COMMAND( AudioMixerOpen, "window.audioMixer", AudioMixerPanel ); @endcode
+ */
+#define SW_EDITOR_PANEL_OPEN_COMMAND( name, pID, TPanel )                                                                                   \
+    SW_EDITOR_REGISTER( ::sw::editor::EditorCommandRegistration, Command_##name, { pID, 0 },                                                \
+                        ::sw::editor::EditorCommandTargetUtil::toAction<&::sw::editor::openEditorPanelCommand<TPanel>>(), nullptr, nullptr, \
+                        ::sw::editor::EditorCommandEdit::NoScene, nullptr )

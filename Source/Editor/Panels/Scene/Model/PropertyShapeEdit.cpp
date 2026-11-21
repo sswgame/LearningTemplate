@@ -9,6 +9,8 @@
 #include "Core/Task/TaskTypes.h"
 
 #include "Editor/Common/Commands/Scene/EditorSceneCommands.h"
+#include "Editor/Common/Widgets/PropertyGrid/Model/PropertyEditConditionExpr.h"
+#include "Editor/Common/Widgets/PropertyGrid/Model/PropertyEditRequest.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -16,8 +18,6 @@
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 #include "Editor/Common/Workspace/Undo/ObjectSnapshot.h"
-#include "Editor/Panels/Inspector/Model/PropertyEditConditionExpr.h"
-#include "Editor/Panels/Inspector/Model/PropertyEditRequest.h"
 #include "Editor/Viewport/EditorViewportVisualizer.h"
 #include "Editor/Viewport/Model/EditorVisualizerDrawList.h"
 

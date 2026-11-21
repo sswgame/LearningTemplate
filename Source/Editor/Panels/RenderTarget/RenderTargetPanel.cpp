@@ -373,7 +373,7 @@ namespace sw::editor
 
     void RenderTargetPanel::drawContent()
     {
-        _viewModel.gather( _viewState );
+        gatherViewState( _viewModel, _viewState );
 
         drawToolbar();
         ImGui::Separator();

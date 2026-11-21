@@ -95,7 +95,7 @@ namespace sw
         return false;
     }
 
-    void FrameCapture::copyPresentFromOutput( IRHICommandList& cmd, RHITextureHandle output, uint32 width, uint32 height, RHIFormat format )
+    void FrameCapture::copyPresentFromOutput( IRHIPassCommandList& cmd, RHITextureHandle output, uint32 width, uint32 height, RHIFormat format )
     {
         if ( matchesOutput( width, height, format ) )
             cmd.blitTexture( output, _texture );

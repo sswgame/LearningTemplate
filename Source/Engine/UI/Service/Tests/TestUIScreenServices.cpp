@@ -1,15 +1,17 @@
 // UIScreenServicesTest — 화면 없이 도는 UI 서비스 규칙: 툴팁 자리 · 커서 · 주인 찾기, 자막의 읽는 시간 · 크기 · 줄 차례, 화면의 포커스 규칙 · 명령 표(nogpu).
 #include "pch.h"
 
+#include "Core/GlobalVariable/GlobalVariableManager.h"
+#include "Core/Testing/ScopedGlobalVariableValue.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/UI/Layout/CanvasPanel.h"
 #include "Engine/UI/Screen/UIScreen.h"
 #include "Engine/UI/Service/UISubtitleService.h"
 #include "Engine/UI/Service/UITooltipService.h"
 #include "Engine/UI/WidgetTree/Tests/UITestWidgets.h"
 #include "Engine/UI/WidgetTree/UIWidgetPath.h"
-#include "Engine/UserSettings/UserSettingsVariables.h"
 
 using namespace sw;
 
@@ -151,8 +153,10 @@ SW_TEST_CASE( UIScreenServicesTest, SubtitleConfigMustBeComplete )
 /** @brief [UIScreenServicesTest] 줄 번호로 일찍 내린다(시퀀서 자막 구간을 나갈 때) — 보이는 줄이든 기다리는 줄이든, 없는 번호는 아무 일도 없다 */
 SW_TEST_CASE( UIScreenServicesTest, SubtitleRemoveByLineID )
 {
-    const bool bSaved = gv_subtitles;
-    gv_subtitles      = false; // 화면을 열지 않고 차례만 본다
+    GlobalVariableInfo* pSubtitles = engine::getSubsystem<GlobalVariableManager>().findVariable( "gv_subtitles" );
+    SW_REQUIRE_NOT_NULL( pSubtitles );
+    const test::ScopedGlobalVariableValue subtitlesValue{ *pSubtitles, "false" }; // 화면을 열지 않고 차례만 본다 — 케이스가 어떻게 끝나도 되돌린다
+    SW_REQUIRE_TRUE( subtitlesValue.isApplied() );
     {
         UISubtitleService service;
         SW_REQUIRE_TRUE( service.configure( makeSubtitleTestConfig() ) );
@@ -175,14 +179,15 @@ SW_TEST_CASE( UIScreenServicesTest, SubtitleRemoveByLineID )
         sink.clearSubtitles();
         SW_EXPECT_EQUAL( uint32( 0 ), service.getActiveLineCount() );
     }
-    gv_subtitles = bSaved;
 }
 
 /** @brief [UIScreenServicesTest] 자막 차례: 두 줄까지 보이고 나머지는 기다린다. 기다리는 동안 시간이 흐르지 않고, 앞줄이 끝나면 먼저 온 줄이 올라온다. 꺼 두어도 시간은 흐른다 */
 SW_TEST_CASE( UIScreenServicesTest, SubtitleQueueOrder )
 {
-    const bool bSaved = gv_subtitles;
-    gv_subtitles      = false; // 화면을 열지 않고 차례만 본다
+    GlobalVariableInfo* pSubtitles = engine::getSubsystem<GlobalVariableManager>().findVariable( "gv_subtitles" );
+    SW_REQUIRE_NOT_NULL( pSubtitles );
+    const test::ScopedGlobalVariableValue subtitlesValue{ *pSubtitles, "false" }; // 화면을 열지 않고 차례만 본다 — 케이스가 어떻게 끝나도 되돌린다
+    SW_REQUIRE_TRUE( subtitlesValue.isApplied() );
     {
         const SubtitleConfig config = makeSubtitleTestConfig();
         UISubtitleService    service;
@@ -215,7 +220,6 @@ SW_TEST_CASE( UIScreenServicesTest, SubtitleQueueOrder )
         SW_EXPECT_EQUAL( uint32( 0 ), service.getActiveLineCount() );
         SW_EXPECT_EQUAL( uint32( 0 ), service.getQueuedLineCount() );
     }
-    gv_subtitles = bSaved;
 }
 
 /** @brief [UIScreenServicesTest] HUD 와 오버레이는 설정과 상관없이 포커스를 받지 않고, 시스템에 붙지 않은 화면을 닫으면 닫는 중이 된다 */

@@ -71,6 +71,8 @@ namespace sw
     class Component;
     class ComponentRegistry;
     class DebugDrawQueue;
+    class FixedStepContext;
+    class FixedStepTickList;
     class GameObject;
     class GameObjectManager;
     class GameObjectStore;
@@ -88,6 +90,7 @@ namespace sw
     struct ScenePreviewPolicy;
     struct SceneTransformWrite;
     struct TypeInfo;
+    enum class FixedStepGroup : uint8;  ///< 정의는 `Tick/FixedStepContext.h`
     enum class SceneLightPhase : uint8; ///< 정의는 `Service/ISceneService.h`(바탕 형식이 같아야 한다)
 
     /** @brief `GameObjectManager::makeTypedHandle` 의 결과입니다. */
@@ -469,8 +472,13 @@ namespace sw
         TickRegistry& getTickRegistry();
         /** @brief 틱에 참여하는 오브젝트의 레지스트리입니다. */
         const TickRegistry& getTickRegistry() const;
-        /** @brief 마지막으로 끝난 프레임의 컴포넌트 틱 시간(ns)입니다(`SceneTickScheduler::getLastFrameTickNanoseconds`). */
-        int64 getLastFrameComponentTickNanoseconds() const;
+        /**
+         * @brief 고정 스텝 그룹 @p group 을 돕니다(`SceneTickScheduler::tickFixedStepGroup`) — 물리 프레임(`ScenePhysics::step`)이 게임 스레드에서 부른다.
+         * @return 부른 구성원 수입니다.
+         */
+        uint32 tickFixedStepGroup( FixedStepGroup group, const FixedStepContext& context );
+        /** @brief 고정 스텝 그룹의 구성원 · 구간입니다(`SceneTickScheduler::getFixedStepTickList` — 컴포넌트가 등록 동안 넣고 해제에서 뺀다). 게임 스레드에서만. */
+        FixedStepTickList& getFixedStepTickList();
 
         /**
          * @brief 핸들이 가리키는 컴포넌트를 찾습니다. 삭제 예정이면 nullptr 입니다. 타입을 아는 곳은 타입 핸들(`TComponentHandle<T>`)의 찾기를 씁니다.
@@ -567,11 +575,11 @@ namespace sw
         void collectServiceParticles( ISceneParticleSink& sink ) const;
 
         /**
-         * @brief GameObject 를 지연 삭제 큐에 넣습니다.
+         * @brief GameObject 를 자식과 함께 지연 삭제 큐에 넣습니다(언리얼 `DestroyActor` 가 붙은 액터를 함께 없애는 것과 같다).
+         * @details 부모가 사라져도 남길 자식은 그 자식이 표시한다(`GameObject::setKeptWhenParentDestroyed`) — 부르는 쪽 깃발로 자식 전부를 남기는 길은 두지 않는다.
          * @param pObj 삭제할 게임 오브젝트
-         * @param bDestroyChildren 자식 오브젝트도 함께 지울지 여부
          */
-        void destroyGameObject( GameObject* pObj, bool bDestroyChildren = true );
+        void destroyGameObject( GameObject* pObj );
 
         /** @brief Component 를 지연 삭제 큐에 넣습니다. 처리 때 핸들로 다시 찾으므로, 그 사이 다른 경로가 먼저 해제해도 안전합니다. */
         void destroyComponent( Component* pComp );
@@ -616,8 +624,6 @@ namespace sw
          * @return 지운 컴포넌트 수입니다.
          */
         uint32 destroyComponentsOfModule( string_view moduleName );
-        /** @brief 씬의 모든 컴포넌트에 `Component::onModuleUnloading( moduleName )` 을 알립니다 — 남의 모듈 타입 객체를 든 컴포넌트가 먼저 놓는다(`destroyComponentsOfModule` 앞, 틱 밖). */
-        void notifyModuleUnloading( string_view moduleName );
 
         /**
          * @brief 타입 이름(짧은 이름 · FQN · 옛 이름 별칭, `이름#번호` 꼬리는 무시)으로 컴포넌트를 만들어 붙입니다. 에디터 · 직렬화 전용이고, 게임은 addComponent<T> 를 씁니다.
@@ -628,13 +634,6 @@ namespace sw
 
         /** @brief 모든 오브젝트의 틱 항목을 다음 틱 전에 다시 짓게 합니다(타입 재바인딩 · 씬 초기화). */
         void markTickStagesDirty();
-        /**
-         * @brief 틱 레지스트리가 오브젝트 항목을 다시 지은 틱의 수입니다. 진단 · 회귀 테스트용입니다.
-         * @details 틱에 참여하는 컴포넌트(`Component::hasTickJobs`)가 생기거나 없어지거나 순서가 바뀔 때만 올라야 합니다.
-         *          틱하지 않는 MeshComponent 를 붙였다 떼는 것으로는 오르지 않습니다. 다시 지을 때도 바뀐 오브젝트의 컴포넌트 몇 개만 훑습니다.
-         */
-        /** @brief 선행 조건 스테이지 경계에서 틱 중 트랜스폼 쓰기를 적용한 횟수(누적)입니다. 진단 · 회귀 테스트용입니다. */
-        uint32 getStageTransformApplyCount() const;
 
         /** @brief 이름으로 만들 수 있는 컴포넌트 타입(리플렉션 표에서 `_addComponent` 가 있는 타입)의 짧은 이름 목록입니다. 에디터의 "Add Component" 가 씁니다. */
         static vector<hashed_string> getRegisteredComponentTypeNames();

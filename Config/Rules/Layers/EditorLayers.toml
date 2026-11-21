@@ -62,6 +62,7 @@ views = [
     "Common/GUI/Panel/EditorDocumentPanel.cpp",
     "Common/GUI/Panel/EditorPreviewPanel.cpp",
     "Common/GUI/Panel/EditorPreviewViewport.cpp",
+    "Common/Widgets/PropertyGrid",
     "Common/Input/CommandPalettePopup.cpp",
     "Common/Input/EditorCommandGUI.cpp",
     "Common/Input/QuickLauncherPopup.cpp",
@@ -91,10 +92,24 @@ patterns = [
     "^Engine/Scene/",
     "^Engine/.+/Component/",
     "^Engine/Input/InputManager[.]h", # 입력 상태 · 주입은 모델이 쥔다 — View 는 값 묶음(`InputMapDeviceState` · 입력 오버레이 값)과 명령만 쓴다. 열거는 잎 헤더(`InputGlyphStyle.h` · `InputKeyboardFocus.h`)
+    "^Engine/Audio/IAudioService[.]h", # 오디오 서비스 · 엔진은 ViewModel 이 찾는다(`AudioMixerViewModel::refresh` · `AudioEventBrowserUtil::readStats`)
+    "^Engine/Audio/AudioEngine[.]h",
+    "^Engine/UI/UISystem[.]h",          # UI 시스템은 ViewModel 이 찾는다(`UIPreviewViewModel::isUIRunning`)
+    "^Engine/Graphics/RHI/IRHIDevice[.]h", # 장치는 ViewModel 이 값으로 모은다(`ProfilerViewModel::gatherGPUMemory`)
+]
+# 기본 금지 폴더 — 여기 맞는 헤더는 `[panelViewAllowedFolders]` 의 폴더 접두나 `[panelViewAllowed]` 에 없으면 View 가 include 하지 못한다(차단 목록이 아니라 허용 목록 — 검토 A 1 · B 대안 ③④).
+# 새 엔진 · 개발 도구 · 게임 프레임워크 폴더는 이 표에 오르기 전까지 View 에서 막힌다. `patterns` 는 폴더 허용보다 앞선다(허용 폴더 안의 서비스 헤더를 막는다).
+defaultBan = [
+    "^Engine/",
+    "^DevTools/",
+    "^GameFramework/",
 ]
 
 # 금지 폴더 안에 있지만 값 · 창구라 View 가 써도 되는 헤더 → 까닭. 껍데기를 놓지 않는다(그 헤더가 include 하는 금지 헤더는 껍데기가 멈춘다).
 [panelViewAllowed]
+"GameFramework/GameFrameworkExports.h" = "내보내기 매크로"
+"Engine/EngineMinimal.h" = "엔진 최소 머리(형식 · 매크로)"
+"DevTools/DevToolsAPI.h" = "내보내기 매크로"
 "Editor/Common/Commands/EditorCommandRegistry.h" = "등록된 명령을 id 로 부르는 창구 — 명령은 다음 프레임 시작에 메인 스레드가 돈다(queueCommand)"
 "Editor/Common/Commands/EditorCommandTarget.h" = "명령이 받는 대상 값(종류 · 선택 스냅숏 · id) — 포인터가 없다"
 "Editor/Common/Commands/EditorDragPayload.h" = "끌어 놓기 페이로드 값({종류, id})"
@@ -122,3 +137,46 @@ patterns = [
 "Editor/Common/Workspace/Asset/EditorAssetTypeActions.h" = "종류별 썸네일 · 열기 · 뷰포트 배치 확장 인터페이스 — Core 와 내보내기만 include 하고 씬 형식은 앞 선언이다. 콘텐츠 브라우저 View 가 카드 썸네일을 그 종류의 동작으로 그린다"
 "Editor/Common/Commands/Asset/EditorAssetMove.h" = "에셋 옮기기 · 옮기기 계획 값(EditorAssetFileCommands 에서 떼어 낸 값) — Core 만 include 한다. 콘텐츠 브라우저 확인 대화상자가 계획을 그린다"
 "Engine/Object/Component/TagSystem.h" = "태그 집합 값(TagContainer)과 질의 — Core 와 리플렉션 매크로만 include 한다. 외형 데이터 값(CharacterAppearance · ItemVisual · 장비 조건)이 들어 캐릭터 편집 창 모델 헤더를 거쳐 온다"
+
+# 기본 금지 폴더(`[panelViewBan] defaultBan`) 안에서 View 가 include 해도 되는 폴더(접두, `/` 로 끝난다) → 까닭. 값 · 정의 헤더의 폴더다 — 서비스 헤더는 `patterns` 가 따로 막는다.
+# 줄을 더하기 전에 그 폴더의 서비스 · 매니저 헤더를 `patterns` 에 올린다.
+[panelViewAllowedFolders]
+"DevTools/AssetReload/" = "리로드 결과 집계 값(ReloadTracker 의 상태 열거)을 감시 값 · 표가 읽는다"
+"DevTools/Client/" = "자동화 실행기 값(시나리오 결과 · 단계 이름)을 Test Runner 창이 그린다"
+"DevTools/Console/" = "개발 콘솔 줄 값을 Output Log 가 그린다"
+"DevTools/Material/" = "머티리얼 그래프 노드 서술(값)을 그래프 창이 그린다 — 에셋 컴파일러는 쿠킹과 공유한다(검토 B 10)"
+"DevTools/Profiling/" = "프로파일러 백엔드 이름 · 표본 값"
+"DevTools/RenderDoc/" = "캡처 상태 값"
+"Engine/Animation/" = "포즈 · 그래프 · 시퀀스 정의 값(에셋 사본)을 애니메이션 창이 그린다"
+"Engine/Asset/" = "에셋 핸들 · 경로 값과 쿠킹 기록 값"
+"Engine/Audio/" = "이벤트 · 버스 · 감쇠 정의와 엔진 상태 사본(값) — 서비스 · 엔진 헤더는 위 patterns 가 막는다"
+"Engine/Automation/" = "감시 값 등록(View 가 그린 결과를 감시 값으로 낸다 — 검토 B 2)"
+"Engine/Behavior/" = "행동 트리 정의 값"
+"Engine/Character/" = "캐릭터 외형 정의 값"
+"Engine/Config/" = "설정 표 값(리플렉션 집합체)"
+"Engine/Console/" = "개발 명령 인자 도우미(등록은 SW_DEV_COMMAND_REGISTRATION 이 막는다)"
+"Engine/Content/" = "리소스 id · 경로 값(AssetID · AssetPaths)"
+"Engine/Curve/" = "곡선 값"
+"Engine/Dialogue/" = "대화 그래프 정의 값"
+"Engine/Environment/" = "환경 설정 값"
+"Engine/Foundation/" = "핸들 · 기본 형식(GameObjectHandle · ComponentHandle · 매크로)"
+"Engine/Graphics/" = "색 · 텍스처 형식 · RHI 형식 값 — 장치(IRHIDevice)는 위 patterns 가 막는다"
+"Engine/Input/" = "키 · 입력 액션 값과 입력 맵 정의(InputManager 는 위 patterns 가 막는다)"
+"Engine/Localization/" = "현지화 글(SW_LOCKEY) · 서식"
+"Engine/Module/" = "모듈 등록 서술 값"
+"Engine/Physics/" = "충돌 모양 · 재질 정의 값"
+"Engine/Presentation/" = "화면 표시 설정 값"
+"Engine/Profiling/" = "프로파일 구간 값과 프레임 프로파일러(프로파일러 창이 아직 직접 읽는다 — 다음 걸음)"
+"Engine/Reflection/" = "리플렉션 형식 정보(프로퍼티 그리드가 행을 그린다)"
+"Engine/Renderer/" = "렌더 보기 모드 · 캡처 값"
+"Engine/Sequencer/" = "시퀀스 정의 값"
+"Engine/Serialization/" = "직렬화 형식 값(XML · 아카이브)"
+"Engine/Text/" = "글꼴 · 글 배치 값"
+"Engine/TileMap/" = "타일맵 정의 값"
+"Engine/UI/" = "UI 위젯 정의 · 테마 값 — UI 시스템(UISystem)은 위 patterns 가 막는다"
+"Engine/UserSettings/" = "사용자 설정 값"
+"Engine/VFX/" = "파티클 정의 값"
+"Engine/Window/" = "창 · DPI 값"
+"GameFramework/Kits/" = "키트 정의 값과 확장 View(PANEL_VIEW_SOURCES)"
+"GameFramework/Plugin/" = "에디터 확장 모듈 자신의 View · Model 헤더"
+"GameFramework/Runtime/" = "게임 프레임워크 정의 값(능력 · 일정 · 외형)을 확장 창이 그린다"

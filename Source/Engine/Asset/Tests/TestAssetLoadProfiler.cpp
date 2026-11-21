@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/GlobalVariable/GlobalVariableManager.h"
+#include "Core/Testing/ScopedGlobalVariableValue.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Asset/AssetLoadProfiler.h"
@@ -19,17 +20,15 @@ SW_TEST_CASE( AssetLoadProfilerTest, OtherThreadsReadTheRefreshedCopy )
     GlobalVariableManager& variables = engine::getSubsystem<GlobalVariableManager>();
     GlobalVariableInfo*    pInfo     = variables.findVariable( "gv_assetLoadProfile" );
     SW_REQUIRE_NOT_NULL( pInfo );
-    const string previous = pInfo->getValueAsString();
+    test::ScopedGlobalVariableValue profileValue{ *pInfo, "1" }; // 케이스가 어떻게 끝나도 앞 값으로 되돌린다
+    SW_REQUIRE_TRUE( profileValue.isApplied() );
 
     AssetLoadProfiler profiler;
-    SW_REQUIRE_TRUE( variables.setValueFromString( "gv_assetLoadProfile", "1" ) );
     profiler.refreshEnabled();
     SW_EXPECT_TRUE( profiler.isEnabled() );
 
-    SW_REQUIRE_TRUE( variables.setValueFromString( "gv_assetLoadProfile", "0" ) );
+    SW_REQUIRE_TRUE( profileValue.set( "0" ) );
     SW_EXPECT_TRUE( profiler.isEnabled() ); // 아직 뜨지 않았다
     profiler.refreshEnabled();
     SW_EXPECT_FALSE( profiler.isEnabled() );
-
-    SW_REQUIRE_TRUE( variables.setValueFromString( "gv_assetLoadProfile", previous ) );
 }

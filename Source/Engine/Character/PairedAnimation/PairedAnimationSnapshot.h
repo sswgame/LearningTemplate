@@ -12,14 +12,17 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 namespace sw
 {
     class PairedAnimationDef;
 
     /**
      * @enum PairedAnimationRoleStage
-     * @brief 역할 하나의 실행 단계입니다.
+     * @brief 역할 하나의 실행 단계입니다. 복제 칸(`PairedAnimationRoleSnapshot::_stage`)이라 등록 열거자 밖 값은 읽기가 거절한다.
      */
+    ENUM()
     enum class PairedAnimationRoleStage : uint8
     {
         Unbound = 0, ///< 바인딩이 없는 선택 역할
@@ -31,10 +34,16 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 역할 하나의 복제 상태입니다. 인덱스는 에셋의 역할 인덱스와 같습니다. */
+    /** @brief 역할 하나의 복제 상태입니다. 인덱스는 에셋의 역할 인덱스와 같습니다. 칸 선언(`Replicated` · 범위)이 곧 바이트다. */
+    REFLECT()
     struct PairedAnimationRoleSnapshot
     {
-        float32                  _entryAnchorTime{ 0.0f }; ///< 역할이 들어온 때의 앵커 시각입니다. `Playing` 일 때만 뜻이 있습니다.
+        REFLECT_BODY();
+
+        PROPERTY( Replicated, Min = -1000000, Max = 1000000 )
+        float32 _entryAnchorTime{ 0.0f }; ///< 역할이 들어온 때의 앵커 시각입니다. `Playing` 일 때만 뜻이 있습니다. 범위는 NaN · 무한대를 거절하는 경계다
+
+        PROPERTY( Replicated )
         PairedAnimationRoleStage _stage{ PairedAnimationRoleStage::Unbound };
     };
 } // namespace sw
@@ -45,9 +54,13 @@ namespace sw
      * @struct PairedAnimationSessionSnapshot
      * @brief 세션 상태 하나입니다. 파일 머리말 참고.
      */
+    REFLECT()
     struct SW_API PairedAnimationSessionSnapshot
     {
-        static constexpr uint32 kMagic = FourCCUtil::make( "SWPA" );
+        REFLECT_BODY();
+
+        static constexpr uint32 kMagic        = FourCCUtil::make( "SWPA" );
+        static constexpr int32  kMaxRoleCount = 64; ///< 역할 수 상한(`_listRole` 의 `MaxCount`). 깨진 바이트가 큰 수를 말해도 그만큼 잡지 않는다
 
         /** @brief 바이트를 읽은 결과입니다. `Success` 밖은 출력 스냅샷을 비웁니다. */
         enum class ReadResult : uint8
@@ -57,9 +70,13 @@ namespace sw
             Truncated,  ///< 바이트가 모자라거나, 역할 수가 남은 바이트보다 크거나, 값이 깨졌습니다(유한하지 않은 시간 · uint32 를 넘는 번호).
         };
 
-        uint32                              _sessionID{ 0 };
-        float32                             _anchorTime{ 0.0f };
-        uint32                              _nextNotifyIndex{ 0 }; ///< 에셋의 알림 목록(시각 순서)에서 아직 내지 않은 첫 알림입니다.
+        PROPERTY( Replicated )
+        uint32 _sessionID{ 0 };
+        PROPERTY( Replicated, Min = -1000000, Max = 1000000 )
+        float32 _anchorTime{ 0.0f }; ///< 범위는 NaN · 무한대를 거절하는 경계다
+        PROPERTY( Replicated )
+        uint32 _nextNotifyIndex{ 0 }; ///< 에셋의 알림 목록(시각 순서)에서 아직 내지 않은 첫 알림입니다.
+        PROPERTY( Replicated, MaxCount = PairedAnimationSessionSnapshot::kMaxRoleCount )
         vector<PairedAnimationRoleSnapshot> _listRole{};
 
         /**
@@ -71,8 +88,11 @@ namespace sw
          */
         [[nodiscard]] static PairedAnimationSessionSnapshot makeAtElapsedTime( const PairedAnimationDef& def, uint32 sessionID, float32 elapsedSeconds );
 
-        /** @brief 바이트로 씁니다(`Core/Serialization/BitStream.h`). 읽는 쪽은 `readBytes` 입니다. */
-        void writeBytes( vector<uint8>& outBytes ) const;
+        /**
+         * @brief 바이트로 씁니다 — 매직 뒤에 칸 선언(`Replicated`)이 곧 바이트다(`ReplicatedLayout`, 예전에는 쓰기 · 읽기 짝을 손으로 맞췄다). 읽는 쪽은 `readBytes` 입니다.
+         * @return 시각이 유한하지 않거나 역할 수가 `kMaxRoleCount` 를 넘으면 false 이고 @p outBytes 는 비웁니다.
+         */
+        [[nodiscard]] bool writeBytes( vector<uint8>& outBytes ) const;
         /** @brief `writeBytes` 가 쓴 바이트를 읽습니다. 값이 에셋에 맞는지는 읽지 않고, 복원(`restoreSession`)이 에셋과 함께 검사합니다. */
         [[nodiscard]] static ReadResult readBytes( const vector<uint8>& bytes, PairedAnimationSessionSnapshot& outSnapshot );
     };

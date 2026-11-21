@@ -6,10 +6,10 @@
  *          매니저의 서비스 묶음(`SceneEngineServices`)에서 받습니다. 2D 콜라이더(`BoxCollider2DComponent`)도 같은 2D 씬의 Box2D 센서 바디이고(유니티 트리거 ·
  *          Godot Area2D 처럼 물리 월드 하나), 에디터 시각화가 훑을 콜라이더 목록(`getColliders2D`)과 연속 콜라이더가 쓸어 낸 겹침(`queueSweptOverlap2D`)을 이 서비스가 듭니다.
  *
- *          프레임 하나: 누적기가 스텝 수 n 을 정한다 → 컴포넌트 `beginPhysicsFrame` → 연속 콜라이더 쓸기(`sweepContinuousColliders2D` — 모든 콜라이더가
- *          이번 자리로 옮겨진 뒤라 상대의 이동을 안다) → n 번(`prePhysicsStep` → 3D · 2D 씬 step → 그 스텝에 깨어 있던 바디의 주인 강체만
- *          자세를 읽는다(`getMovedBodies` · `bindBodyOwner` — 백엔드 일괄 읽기 `readBodyStates` 를 워커 구간으로 나눠 부른다) → `postPhysicsStep`,
- *          이벤트를 모은다) → `endPhysicsFrame( alpha )`(보간한 자세 — 루트 바디는 `queuePoseWrite` 로 모아 `applyTransformBatch` 한 번에 쓴다).
+ *          프레임 하나: 누적기가 스텝 수 n 을 정한다 → 고정 스텝 그룹 `FrameBegin`(컴포넌트 `onPhysicsFrameBegin` — 틱 스케줄러 `tickFixedStepGroup`) → 연속 콜라이더 쓸기(`sweepContinuousColliders2D` — 모든 콜라이더가
+ *          이번 자리로 옮겨진 뒤라 상대의 이동을 안다) → n 번(`onPrePhysicsStep` → 3D · 2D 씬 step → 그 스텝에 깨어 있던 바디의 주인 강체만
+ *          자세를 읽는다(`getMovedBodies` · `bindBodyOwner` — 백엔드 일괄 읽기 `readBodyStates` 를 워커 구간으로 나눠 부른다) → `onPostPhysicsStep`,
+ *          이벤트를 모은다) → `onPhysicsFrameEnd`(보간 비 `FixedStepContext::getAlpha` — 보간한 자세 — 루트 바디는 `queuePoseWrite` 로 모아 `applyTransformBatch` 한 번에 쓴다).
  *          모은 이벤트는 이 단계에서 나눠 주지 않는다 — `FlushPostPhysics` 단계의 `ScenePhysicsEvents` 가 트랜스폼을 펼친 뒤 두 오브젝트의 켜진 컴포넌트에
  *          나눠 준다(막는 접촉은 바디 쌍마다 `onCollision*`, 트리거나 겹침 전용 바디가 낀 겹침은 `PhysicsOverlapTracker` 가 오브젝트 쌍으로 모은 진입 · 이탈만 `onOverlap*` — 이탈 먼저; 언리얼 Chaos 의
  *          지연 충돌 알림 `DispatchPendingCollisionNotifies` · 유니티 `OnCollision*` 이 시뮬레이션 뒤 한 자리에서 도는 것과 같다). 이벤트의 사용자 값은 오브젝트 id 입니다 — 컴포넌트가 아닌 코드(래그돌 빌더)가
@@ -31,7 +31,6 @@
 #include "Engine/Physics/IPhysicsCharacterScene.h"
 #include "Engine/Physics/IPhysicsSceneFwd.h"
 #include "Engine/Physics/Scene/DebrisBudget.h"
-#include "Engine/Physics/Scene/PhysicsHookRegistry.h"
 #include "Engine/Physics/Scene/PhysicsOverlapTracker.h"
 
 namespace sw
@@ -265,11 +264,6 @@ namespace sw
         uint32 getComponentCount() const;
         /** @brief 단계 @p phase 에 등록된 물리 컴포넌트 목록입니다(순서 없음, 편집 중에도 있다). 에디터 시각화가 씬 전체를 훑지 않고 이것을 봅니다. */
         const vector<PhysicsComponent*>& getComponents( PhysicsComponentPhase phase ) const { return _arrListComponent[static_cast<uint32>( phase )]; }
-        /**
-         * @brief 훅을 타입별 일괄 함수(`PhysicsHookRegistry`)로 부를지입니다. 끄면 모든 컴포넌트를 가상 호출한다 — 같은 차례 · 같은 결과여야 한다(동등성 테스트 · 진단).
-         * @details `TickRegistry::setBatchPathEnabled` 와 같은 자리다. 바꾸면 다음 프레임 전에 훅 구간을 다시 짓는다.
-         */
-        void setHookBatchEnabled( bool bEnabled );
 
         /**
          * @brief 강체 컴포넌트를 자기 바디(`getBodyHandle`)의 주인으로 적습니다. 바디를 만든 직후에 부릅니다.
@@ -283,15 +277,15 @@ namespace sw
         void unbindBodyOwner( const RigidBody2DComponent& owner );
 
         /**
-         * @brief 물리 컴포넌트 @p writer 가 이번 프레임 끝 월드 자세를 트랜스폼에 쓰겠다고 넣습니다(`endPhysicsFrame` 안에서만).
+         * @brief 물리 컴포넌트 @p writer 가 이번 프레임 끝 월드 자세를 트랜스폼에 쓰겠다고 넣습니다(`onPhysicsFrameEnd` 안에서만).
          * @details 프레임 훅이 끝나면 부모 없는 쓰기를 `GameObjectManager::applyTransformBatch` 한 번으로 적용하고 펼친 뒤, 부모 있는 쓰기를 펼친 부모 위에
          *          풀어 쓰고(`PhysicsComponent::writeWorldPose`), 쓴 컴포넌트마다 변경 번호를 맞춘다(`markTransformSynced`) — 바디마다 세터 셋 · 월드 합성
          *          하나를 부르지 않고, 부모 바디가 목록에서 뒤에 있어도 자식이 지난 자리의 부모로 풀지 않는다(유니티 `TransformAccessArray` · 언리얼 Chaos 의 결과 일괄 반영).
          */
         void queuePoseWrite( PhysicsComponent& writer, const float3& position, const quaternion& rotation, const float3& scale );
         /**
-         * @brief 이번 스텝의 3D 캐릭터 이동 하나를 넣습니다(`prePhysicsStep` 안에서만). 모든 단계의 `prePhysicsStep` 뒤, 씬 step 앞에 한 번에 움직인다
-         *        (`IPhysicsCharacterScene3D::moveCharacters`, 감사 S-8) — 결과는 `postPhysicsStep` 에서 `getCharacterState` 로 읽는다.
+         * @brief 이번 스텝의 3D 캐릭터 이동 하나를 넣습니다(`onPrePhysicsStep` 안에서만). 모든 단계의 `onPrePhysicsStep` 뒤, 씬 step 앞에 한 번에 움직인다
+         *        (`IPhysicsCharacterScene3D::moveCharacters`, 감사 S-8) — 결과는 `onPostPhysicsStep` 에서 `getCharacterState` 로 읽는다.
          */
         void queueCharacterMove( PhysicsCharacterHandle character, const float3& velocity );
 
@@ -324,7 +318,7 @@ namespace sw
                           float32 impulse, bool bSelfTrigger, bool bOtherTrigger, bool bOverlap, bool bIs2D );
         /**
          * @brief 이번 프레임에 움직인 2D 콜라이더를 모으고, 그 가운데 연속 콜라이더가 지나친 것을 쓸어 냅니다(`BoxCollider2DComponent::sweepPassedBodies`).
-         * @details 모든 콜라이더의 `beginPhysicsFrame` 뒤에 돈다 — 콜라이더 하나의 `beginPhysicsFrame` 안에서 쓸면 상대가 아직 지난 자리인지 이번 자리인지가
+         * @details 모든 콜라이더의 `onPhysicsFrameBegin` 뒤에 돈다 — 콜라이더 하나의 `onPhysicsFrameBegin` 안에서 쓸면 상대가 아직 지난 자리인지 이번 자리인지가
          *          목록 순서로 갈리고, 함께 움직인 상대의 이동을 뺄 수 없다(길을 가로질러 건너간 유닛을 놓친다).
          */
         void sweepContinuousColliders2D();
@@ -352,7 +346,7 @@ namespace sw
          * @details 스트리밍은 물리보다 아래 층이라 물리가 묻는다. 셀을 스트리밍하지 않는 씬은 쥔 것이 없으면 아무것도 하지 않는다.
          */
         void updateStreamingHolds();
-        /** @brief `queueCharacterMove` 로 모은 이동을 3D 씬에 한 번에 넘기고 비웁니다(스텝마다 `prePhysicsStep` 뒤). */
+        /** @brief `queueCharacterMove` 로 모은 이동을 3D 씬에 한 번에 넘기고 비웁니다(스텝마다 `onPrePhysicsStep` 뒤). */
         void flushCharacterMoves( float32 fixedDeltaTime );
 
         /** @brief 유지 듣는 쪽 하나입니다(`registerContactStayListener`) — 켜짐 · 파괴 대기는 컴포넌트로 본다. */
@@ -374,73 +368,43 @@ namespace sw
         };
         /** @brief 받은 물리 서비스가 있고 올라와 있으면 그것, 아니면 nullptr 입니다. */
         PhysicsSystem* findInitializedPhysicsSystem() const;
-        /**
-         * @brief 훅 구간 하나입니다 — 단계 목록에서 이어진 같은 타입 컴포넌트(`_arrListFrameHook` 의 `[_start, _start + _count)`)에 일괄 함수 하나를 부른다.
-         * @details 그 타입이 훅을 재정의하지 않았으면 구간 자체가 없다. 등록이 없는 타입(생성기를 거치지 않은 테스트 타입)은 가상 호출 함수다.
-         */
-        struct FrameHookRun
-        {
-            PhysicsHookBatchFunction _pFunction{ nullptr };
-            uint32                   _start{ 0 };
-            uint32                   _count{ 0 };
-        };
-        /**
-         * @brief 훅 구간이 낡았으면(등록 · 해제 · 레지스트리 세대) 단계 목록에서 다시 짓습니다.
-         * @details 차례는 단계 목록 그대로이고 이어진 같은 타입만 한 구간으로 묶는다 — 타입으로 다시 줄 세우면 바디를 만드는 차례(Jolt 바디 id)가 바뀌어
-         *          시뮬레이션 결과가 달라진다. 언리얼 틱 그룹은 그룹 안 차례를 약속하지 않지만 여기는 골든 · 결정성을 지킨다.
-         */
-        void refreshFrameHookLists();
-        /** @brief 정확히 @p pType 의 등록 줄입니다(타입마다 한 번 찾아 기억 — 레지스트리 세대가 바뀌면 비운다). 없으면 nullptr 입니다. */
-        const PhysicsHookRegistry::Entry* findHookEntry( const TypeInfo* pType );
-        /** @brief 훅 @p slot 을 단계 @p phase 의 구간마다 부릅니다. */
-        void runFrameHook( PhysicsHookSlot slot, uint32 phase, const PhysicsHookArgs& args );
-        /** @brief 등록이 없는 타입의 훅 @p slot 을 가상 호출하는 일괄 함수입니다. */
-        static PhysicsHookBatchFunction getVirtualHook( PhysicsHookSlot slot );
 
     private:
-        GameObjectManager&              _manager;             ///< 이 서비스를 가진 매니저(이벤트의 오브젝트 id 를 푼다)
-        PhysicsSystem*                  _pPhysicsSystem;      ///< 매니저의 서비스 묶음에서 받은 물리 서비스(빌림)
-        vector<BoxCollider2DComponent*> _listCollider2D;      ///< 콜라이더가 자기 자리(`_colliderIndex`)를 든다
-        vector<BoxCollider2DComponent*> _listMovedCollider2D; ///< 이번 프레임에 움직인 콜라이더(연속 판정의 상대 운동, `sweepContinuousColliders2D` 가 다시 채운다)
-        vector<SweptOverlap2D>          _listSweptOverlap2D;  ///< 이번 프레임에 연속 콜라이더가 쓸고 지나간 겹침(`step` 이 비운다)
-        unique_ptr<IPhysicsScene3D>     _pScene3D;
-        unique_ptr<IPhysicsScene2D>     _pScene2D;
-        FixedStepTimer                  _stepTimer;
-        vector<PhysicsComponent*>       _arrListComponent[3]; ///< 단계(`PhysicsComponentPhase`)마다 하나. 컴포넌트가 자기 자리(`_physicsIndex`)를 든다
-        /// @brief 훅(`PhysicsHookSlot`)마다, 단계마다 그 훅을 부를 컴포넌트와 그 구간입니다(`refreshFrameHookLists`).
-        EnumArray<PhysicsHookSlot, vector<PhysicsComponent*>[3]>          _arrListFrameHook;
-        EnumArray<PhysicsHookSlot, vector<FrameHookRun>[3]>               _arrListFrameHookRun;
-        unordered_map<const TypeInfo*, const PhysicsHookRegistry::Entry*> _mapHookEntry;       ///< 타입 → 등록 줄 기억(`findHookEntry`, 없음도 기억한다)
-        PhysicsHookRegistry*                                              _pHookRegistry;      ///< 매니저의 서비스 묶음에서 받은 훅 표(빌림, 없으면 모두 가상 호출)
-        uint32                                                            _hookGeneration;     ///< 마지막으로 본 `PhysicsHookRegistry::getGeneration` — 바뀌면 구간을 다시 짓는다
-        vector<uint32>                                                    _listBodyPoseSlot3D; ///< 3D 바디 핸들의 칸 번호 → 강체 칸 번호(없으면 `PhysicsPoseStore::kInvalidSlot`, `bindBodyOwner`)
-        vector<uint32>                                                    _listBodyPoseSlot2D; ///< 2D 바디 핸들의 칸 번호 → 강체 칸 번호
-        vector<PhysicsContactEvent3D>                                     _listFrameEvent3D;
-        vector<PhysicsContactEvent2D>                                     _listFrameEvent2D;
-        PoseReadBuffer<PhysicsDimension3D>                                _poseRead3D;                         ///< 스텝마다 움직인 3D 바디의 자세 읽기
-        PoseReadBuffer<PhysicsDimension2D>                                _poseRead2D;                         ///< 위와 같다(2D)
-        vector<PoseWrite>                                                 _listPoseWrite;                      ///< 이번 프레임 끝 자세 쓰기(`queuePoseWrite`)
-        vector<PhysicsCharacterMove3D>                                    _listCharacterMove3D;                ///< 이번 스텝의 캐릭터 이동(`queueCharacterMove`, 재사용)
-        vector<SceneTransformWrite>                                       _listTransformWrite;                 ///< 그 가운데 부모 없는 것의 일괄 쓰기(`applyPoseWrites` 가 채운다, 재사용)
-        vector<PhysicsContactEvent3D>                                     _listDispatchEvent3D;                ///< `dispatchEvents` 가 처리하는 동안의 사본(재사용)
-        vector<PhysicsContactEvent2D>                                     _listDispatchEvent2D;                ///< 위와 같다
-        vector<SweptOverlap2D>                                            _listDispatchSwept;                  ///< 위와 같다
-        PhysicsOverlapTracker                                             _overlapTracker;                     ///< 바디 쌍 겹침 → 오브젝트 쌍 진입 · 이탈 · 유지(겹침을 나누는 유일한 길)
-        vector<PhysicsOverlapEvent>                                       _listOverlapTransition;              ///< 이번 프레임 진입 · 이탈(`dispatchEvents` 재사용)
-        vector<PhysicsOverlapEvent>                                       _listOverlapStay;                    ///< 이번 프레임 겹침 유지(올린 듣는 쪽이 있을 때만, 재사용)
-        unordered_map<uint64, vector<ContactStayListenerEntry>>           _mapStayListener;                    ///< 오브젝트 id → 유지 듣는 쪽(`registerContactStayListener`)
-        vector<ContactStayListenerEntry>                                  _listStayTarget;                     ///< 유지를 나눠 주는 동안의 듣는 쪽 사본(재사용)
-        PhysicsContactLogEntry                                            _arrContactLog[kContactLogCapacity]; ///< 시작 · 끝 접촉 고리(진단 — `collectContactLog`)
-        uint64                                                            _contactLogCount;                    ///< 기록한 누계(다음 칸은 `% kContactLogCapacity`)
-        uint64                                                            _stepCount;
-        uint32                                                            _openReadScopeCount; ///< 열린 읽기 구간 수(`openReadScope` · `closeReadScope`, 게임 스레드)
-        DebrisBudget                                                      _debrisBudget;
-        float32                                                           _fixedStepOverride; ///< 0 이면 엔진 설정의 고정 스텝(`setFixedStepOverride`)
-        uint8                                                             _bConfigured         : 1;
-        uint8                                                             _bFrameHookListStale : 1; ///< 훅 구간을 다시 지어야 한다(등록 · 해제 · `setHookBatchEnabled`)
-        uint8                                                             _bHookBatchEnabled   : 1; ///< 훅을 타입별 일괄 함수로 부른다(`setHookBatchEnabled`)
-        uint8                                                             _bFrameEventsPending : 1; ///< 마지막 `step` 의 이벤트를 아직 나눠 주지 않았다(`deliverFrameEvents`)
-        uint8                                                             _bStreamingHolds     : 1; ///< 스트리밍이 바닥 없는 바디를 쥐고 있을 수 있다(`updateStreamingHolds` — 스트리밍이 끝나면 한 번 모두 푼다)
+        GameObjectManager&                                      _manager;             ///< 이 서비스를 가진 매니저(이벤트의 오브젝트 id 를 푼다)
+        PhysicsSystem*                                          _pPhysicsSystem;      ///< 매니저의 서비스 묶음에서 받은 물리 서비스(빌림)
+        vector<BoxCollider2DComponent*>                         _listCollider2D;      ///< 콜라이더가 자기 자리(`_colliderIndex`)를 든다
+        vector<BoxCollider2DComponent*>                         _listMovedCollider2D; ///< 이번 프레임에 움직인 콜라이더(연속 판정의 상대 운동, `sweepContinuousColliders2D` 가 다시 채운다)
+        vector<SweptOverlap2D>                                  _listSweptOverlap2D;  ///< 이번 프레임에 연속 콜라이더가 쓸고 지나간 겹침(`step` 이 비운다)
+        unique_ptr<IPhysicsScene3D>                             _pScene3D;
+        unique_ptr<IPhysicsScene2D>                             _pScene2D;
+        FixedStepTimer                                          _stepTimer;
+        vector<PhysicsComponent*>                               _arrListComponent[3]; ///< 단계(`PhysicsComponentPhase`)마다 하나. 컴포넌트가 자기 자리(`_physicsIndex`)를 든다
+        vector<uint32>                                          _listBodyPoseSlot3D;  ///< 3D 바디 핸들의 칸 번호 → 강체 칸 번호(없으면 `PhysicsPoseStore::kInvalidSlot`, `bindBodyOwner`)
+        vector<uint32>                                          _listBodyPoseSlot2D;  ///< 2D 바디 핸들의 칸 번호 → 강체 칸 번호
+        vector<PhysicsContactEvent3D>                           _listFrameEvent3D;
+        vector<PhysicsContactEvent2D>                           _listFrameEvent2D;
+        PoseReadBuffer<PhysicsDimension3D>                      _poseRead3D;                         ///< 스텝마다 움직인 3D 바디의 자세 읽기
+        PoseReadBuffer<PhysicsDimension2D>                      _poseRead2D;                         ///< 위와 같다(2D)
+        vector<PoseWrite>                                       _listPoseWrite;                      ///< 이번 프레임 끝 자세 쓰기(`queuePoseWrite`)
+        vector<PhysicsCharacterMove3D>                          _listCharacterMove3D;                ///< 이번 스텝의 캐릭터 이동(`queueCharacterMove`, 재사용)
+        vector<SceneTransformWrite>                             _listTransformWrite;                 ///< 그 가운데 부모 없는 것의 일괄 쓰기(`applyPoseWrites` 가 채운다, 재사용)
+        vector<PhysicsContactEvent3D>                           _listDispatchEvent3D;                ///< `dispatchEvents` 가 처리하는 동안의 사본(재사용)
+        vector<PhysicsContactEvent2D>                           _listDispatchEvent2D;                ///< 위와 같다
+        vector<SweptOverlap2D>                                  _listDispatchSwept;                  ///< 위와 같다
+        PhysicsOverlapTracker                                   _overlapTracker;                     ///< 바디 쌍 겹침 → 오브젝트 쌍 진입 · 이탈 · 유지(겹침을 나누는 유일한 길)
+        vector<PhysicsOverlapEvent>                             _listOverlapTransition;              ///< 이번 프레임 진입 · 이탈(`dispatchEvents` 재사용)
+        vector<PhysicsOverlapEvent>                             _listOverlapStay;                    ///< 이번 프레임 겹침 유지(올린 듣는 쪽이 있을 때만, 재사용)
+        unordered_map<uint64, vector<ContactStayListenerEntry>> _mapStayListener;                    ///< 오브젝트 id → 유지 듣는 쪽(`registerContactStayListener`)
+        vector<ContactStayListenerEntry>                        _listStayTarget;                     ///< 유지를 나눠 주는 동안의 듣는 쪽 사본(재사용)
+        PhysicsContactLogEntry                                  _arrContactLog[kContactLogCapacity]; ///< 시작 · 끝 접촉 고리(진단 — `collectContactLog`)
+        uint64                                                  _contactLogCount;                    ///< 기록한 누계(다음 칸은 `% kContactLogCapacity`)
+        uint64                                                  _stepCount;
+        uint32                                                  _openReadScopeCount; ///< 열린 읽기 구간 수(`openReadScope` · `closeReadScope`, 게임 스레드)
+        DebrisBudget                                            _debrisBudget;
+        float32                                                 _fixedStepOverride; ///< 0 이면 엔진 설정의 고정 스텝(`setFixedStepOverride`)
+        uint8                                                   _bConfigured         : 1;
+        uint8                                                   _bFrameEventsPending : 1; ///< 마지막 `step` 의 이벤트를 아직 나눠 주지 않았다(`deliverFrameEvents`)
+        uint8                                                   _bStreamingHolds     : 1; ///< 스트리밍이 바닥 없는 바디를 쥐고 있을 수 있다(`updateStreamingHolds` — 스트리밍이 끝나면 한 번 모두 푼다)
     };
 
     /**

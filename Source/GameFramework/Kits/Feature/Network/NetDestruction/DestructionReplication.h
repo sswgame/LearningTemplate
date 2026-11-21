@@ -90,15 +90,85 @@ namespace sw
     };
 
     /**
+     * @brief 피해 이벤트(`NetDestructionMessage::Event`) 하나의 바이트입니다. 칸 선언(`Replicated` · 범위)이 곧 바이트다(`ReplicatedLayout`).
+     * @details 실수는 범위만 적고 양자화하지 않는다(비트 그대로) — 같은 이벤트열이 같은 상태를 만들어야 한다(`DestructionState::computeStateHash`).
+     *          범위는 NaN · 무한대를 거절하는 경계다. 예전에는 쓰기 · 읽기 짝을 손으로 맞췄다. 칸을 바꾸면 `Event` 의 본문 판을 올린다(손 본문이라 판이 스키마 해시를 따라가지 않는다).
+     */
+    REFLECT()
+    struct DestructionEventNetState
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Replicated, Min = 0, Max = 2 )
+        uint8 _kind{ 0 }; ///< `DestructionDamageKind`(Point ~ Impact). 끝 값은 cpp 의 static_assert 가 열거와 맞춘다
+
+        PROPERTY( Replicated )
+        int32 _leafHint{ DestructionDamageEvent::kNoLeafHint };
+
+        PROPERTY( Replicated )
+        uint32 _groupID{ 0 };
+
+        PROPERTY( Replicated, Min = -1000000000, Max = 1000000000 )
+        float3 _position{ 0.0f, 0.0f, 0.0f }; ///< 메시 공간
+
+        PROPERTY( Replicated, Min = -1000000000, Max = 1000000000 )
+        float3 _direction{ 0.0f, 0.0f, 0.0f };
+
+        PROPERTY( Replicated, Min = -1000000000, Max = 1000000000 )
+        float32 _strain{ 0.0f };
+
+        PROPERTY( Replicated, Min = -1000000000, Max = 1000000000 )
+        float32 _radius{ 0.0f };
+
+        PROPERTY( Replicated, Min = -1000000000, Max = 1000000000 )
+        float32 _impulse{ 0.0f };
+    };
+
+    /**
+     * @brief 덩어리 자세를 비트 그대로 싣는 바이트입니다 — 멈춤 확정 · 멈춤 반복 자세와 떨어진 덩어리를 맞힌 이벤트의 자세. 범위는 NaN · 무한대를 거절하는 경계다.
+     * @details 회전 성분은 정규화한 값이라 ±1 안이지만 반올림으로 1 을 조금 넘을 수 있어 ±2 로 둔다. 칸을 바꾸면 `Event` · `Pose` 의 본문 판을 올린다.
+     */
+    REFLECT()
+    struct DestructionExactPoseNetState
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Replicated, Min = -1000000000, Max = 1000000000 )
+        float3 _position{ 0.0f, 0.0f, 0.0f }; ///< 질량 중심(월드)
+
+        PROPERTY( Replicated, Min = -2, Max = 2 )
+        quaternion _rotation{};
+    };
+
+    /**
+     * @brief 움직이는 덩어리 자세의 바이트입니다 — 범위 + 간격(`Step`)으로 양자화한다(위치 1 mm, 회전 성분 1/32767).
+     * @details 양자화는 범위 밖 값을 경계로 자르므로, 보내는 쪽이 `kPositionRange` 로 먼저 거른다(밖이면 멈출 때까지 보내지 않는다).
+     *          `kPositionRange` 는 `_position` 의 `Min` · `Max` 와 같은 값이다 — 테스트(`DestructionNetStateTest`)가 경계 왕복으로 맞춘다. 칸을 바꾸면 `Pose` 의 본문 판을 올린다.
+     */
+    REFLECT()
+    struct DestructionMovingPoseNetState
+    {
+        REFLECT_BODY();
+
+        static constexpr float32 kPositionRange = 1024.0f; ///< 위치 범위(±미터) — `_position` 의 선언 범위
+
+        PROPERTY( Replicated, Min = -1024, Max = 1024, Step = 0.001 )
+        float3 _position{ 0.0f, 0.0f, 0.0f };
+
+        PROPERTY( Replicated, Min = -1, Max = 1, Step = 0.0000305185 )
+        quaternion _rotation{};
+    };
+
+    /**
      * @brief 파괴 키트의 메시지 표입니다. 종류 · 마스크 · 와이어 버전은 표에서 나온다(`NetMessageTable`).
-     * @details 스냅숏 · 해시 · 요청 본문은 고정 배치형(`NetMessageBodyDef`)이다. 이벤트(피해 양자화 · 있으면 덩어리 자세)와 자세(예산에 맞춘 개수 · 멈춤 여부에 따른 양자화)는
-     *          값마다 인코딩을 고르는 손 본문이다.
+     * @details 스냅숏 · 해시 · 요청 본문은 고정 배치형(`NetMessageBodyDef`)이다. 이벤트(있으면 덩어리 자세)와 자세(예산에 맞춘 개수 · 멈춤 여부에 따른 양자화)는
+     *          값마다 인코딩을 고르는 손 본문이고, 칸은 선언(`DestructionEventNetState` · `DestructionExactPoseNetState` · `DestructionMovingPoseNetState`)이다.
      */
     struct NetDestructionMessage
     {
-        using Event           = NetMessageDef<0, NetMessageDirection::ToClient, NetChannelKind::ReliableUnordered, 2>;                         ///< 판 2: 오브젝트 번호가 64 비트(`NetObjectID`). 이벤트 하나. 받는 쪽이 번호로 순서를 맞춘다
+        using Event           = NetMessageDef<0, NetMessageDirection::ToClient, NetChannelKind::ReliableUnordered, 3>;                         ///< 판 3: 칸 선언으로 쓴다(2: 번호 64 비트). 이벤트 하나. 받는 쪽이 번호로 순서를 맞춘다
         using Snapshot        = NetMessageBodyDef<1, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, DestructionSnapshotBody>; ///< 오브젝트 하나의 상태 스냅숏(64 KB 까지, 조각이 아니라 메시지 하나)
-        using Pose            = NetMessageSenderChannelDef<2, NetMessageDirection::ToClient, NetChannelKind::Unreliable, 2>;                   ///< 판 2: 번호 64 비트. 덩어리 자세. 움직이는 중에는 비신뢰, 멈추면 신뢰 순서로 보낸다(`beginMessage( channel )`)
+        using Pose            = NetMessageSenderChannelDef<2, NetMessageDirection::ToClient, NetChannelKind::Unreliable, 3>;                   ///< 판 3: 자세마다 이어짐 비트 · 칸 선언(2: 번호 64 비트). 움직이는 중에는 비신뢰, 멈추면 신뢰 순서로 보낸다(`beginMessage( channel )`)
         using Hash            = NetMessageBodyDef<3, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, DestructionHashBody>;
         using SnapshotRequest = NetMessageBodyDef<4, NetMessageDirection::ToServer, NetChannelKind::ReliableOrdered, DestructionSnapshotRequestBody>;
         using Table           = NetMessageTable<NetKitMessageRange::kDestruction, Event, Snapshot, Pose, Hash, SnapshotRequest>;
@@ -119,8 +189,6 @@ namespace sw
         float32 _tickInterval{ constant::time::kDefaultFixedStepSeconds }; ///< 서버 틱 간격. 자세의 시각 계산에 쓴다
         float32 _hashInterval{ 1.0f };                                     ///< 서버가 상태 해시를 보내는 간격(초)
         float32 _interpolationDelay{ 0.1f };                               ///< 클라이언트가 덩어리 자세를 그리는 과거 시점의 최솟값. 실제 값은 이 값과 (가장 긴 자세 간격 × `NetClock::kSampleIntervalsBehind`) 중 큰 쪽이다
-        float32 _positionResolution{ 0.001f };                             ///< 움직이는 덩어리 위치의 양자화 단위(미터)
-        float32 _positionRange{ 1024.0f };                                 ///< 위치 범위(±미터)
     };
 } // namespace sw
 
@@ -141,7 +209,7 @@ namespace sw
         uint32 _skippedEventCount{ 0 };   ///< 클라이언트가 일부러 건너뛴 이벤트 수(`skipNextEvent`)
         uint32 _staleEventCount{ 0 };     ///< 클라이언트가 버린 이벤트 수. 스냅숏이 이미 담은 앞 번호의 이벤트이다
         uint32 _sendRejectedCount{ 0 };   ///< 서버의 메시지를 연결이 거절한 횟수. 신뢰 창이 찼거나 스냅숏이 64 KB를 넘은 경우이다. 이벤트는 해시 비교와 스냅숏으로 복구하고, 스냅숏은 다음 update 에서 다시 보낸다
-        uint32 _outOfRangePoseCount{ 0 }; ///< 움직이는 자세가 양자화 범위(`_positionRange`) 밖이라 보내지 않은 횟수. 멈추면 비트 그대로 보낸다. 0 이 아니면 범위를 넓힌다
+        uint32 _outOfRangePoseCount{ 0 }; ///< 자세가 선언 범위 밖이라 보내지 않은 횟수 — 움직이는 자세는 양자화 범위(`DestructionMovingPoseNetState::kPositionRange`, 멈추면 비트 그대로 보낸다), 멈춘 자세는 유한하지 않은 값
     };
 } // namespace sw
 
@@ -210,7 +278,8 @@ namespace sw
         void               sendPoses( Entry& entry, FractureComponentBase& component, uint32 serverTick );
         /**
          * @brief 자세 목록 하나를 메시지 예산(`kPoseMessageBudget`)에서 끊어 보냅니다.
-         * @details 멈춘 자세(@p bRest)는 비트 그대로, 움직이는 자세는 양자화해서 쓴다. 하나라도 양자화하지 못한 메시지는 보내지 않는다.
+         * @details 멈춘 자세(@p bRest)는 비트 그대로, 움직이는 자세는 양자화해서 쓴다. 자세마다 써 보고 예산을 넘으면 물려 다음 메시지로 넘긴다(`BitWriter::truncate`).
+         *          쓰지 못한 자세(선언 범위 밖)는 빼고 `_outOfRangePoseCount` 에 센다.
          */
         void sendPoseList( const Entry& entry, const vector<const FractureGroupPose*>& listPose, bool bRest, bool bReliable, uint32 serverTick );
         void sendHash( const Entry& entry, const FractureComponentBase& component );

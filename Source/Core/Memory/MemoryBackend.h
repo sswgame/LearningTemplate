@@ -15,8 +15,9 @@ namespace sw
      *          이 헤더에는 어느 백엔드인지가 나오지 않습니다 — 백엔드를 바꿔도 이 헤더와 그 아래 코드는 다시 컴파일할 것이 없습니다.
      *          `SW_API` 를 붙이지 않습니다: 개발 빌드에서 Engine.dll 밖(게임 · 에디터 모듈)은 이 함수를 볼 수 없습니다.
      *
-     *          블록 종류는 둘입니다. `allocate` · `reallocate` 로 잡은 블록은 `free` 로, `allocateAligned` 로 잡은 블록은 `freeAligned` 로 풉니다.
-     *          섞어 풀면 백엔드에 따라 힙이 깨집니다(CRT 의 Windows 정렬 블록). 모든 함수는 어느 스레드에서 불러도 되고, 다른 스레드가 잡은 블록을 풀어도 됩니다.
+     *          **해제 길은 하나입니다** — `allocate` · `reallocate` · `allocateAligned` 블록을 모두 `free` 로 풉니다. 짝을 고르는 해제가 둘이면 섞어 풀 때
+     *          백엔드에 따라 힙이 깨졌다(CRT 의 Windows 정렬 블록). 그래서 CRT 백엔드는 Windows 에서 모든 블록을 정렬 힙(`_aligned_*`)에서 잡는다.
+     *          모든 함수는 어느 스레드에서 불러도 되고, 다른 스레드가 잡은 블록을 풀어도 됩니다.
      */
     struct MemoryBackend
     {
@@ -27,7 +28,7 @@ namespace sw
         [[nodiscard]] static void* allocate( size_t size ) noexcept;
 
         /**
-         * @brief @p alignment 경계에 놓인 @p size 바이트 블록을 잡습니다. 실패하면 nullptr 입니다. 풀기는 `freeAligned` 입니다.
+         * @brief @p alignment 경계에 놓인 @p size 바이트 블록을 잡습니다. 실패하면 nullptr 입니다. 풀기는 `free` 입니다.
          * @param alignment 2 의 거듭제곱이고 `sizeof( void* )` 이상이어야 합니다(`Memory::allocateAligned` 가 올려 맞춘다).
          */
         [[nodiscard]] static void* allocateAligned( size_t size, size_t alignment ) noexcept;
@@ -40,15 +41,12 @@ namespace sw
          */
         [[nodiscard]] static void* reallocate( void* pBlock, size_t newSize ) noexcept;
 
-        /** @brief `allocate` · `reallocate` 블록을 풉니다. nullptr 이면 아무것도 하지 않습니다. */
+        /** @brief `allocate` · `reallocate` · `allocateAligned` 블록을 풉니다. nullptr 이면 아무것도 하지 않습니다. */
         static void free( void* pBlock ) noexcept;
-
-        /** @brief `allocateAligned` 블록을 풉니다. nullptr 이면 아무것도 하지 않습니다. */
-        static void freeAligned( void* pBlock ) noexcept;
 
         /**
          * @brief `allocate` · `reallocate` 블록에 실제로 쓸 수 있는 바이트 수입니다(요청한 크기 이상 — 크기 등급으로 올림된 값).
-         * @details 언리얼 `FMalloc::GetAllocationSize` 자리입니다. `allocateAligned` 블록에는 쓰지 않습니다(CRT Windows 는 정렬을 알아야 잰다).
+         * @details 언리얼 `FMalloc::GetAllocationSize` 자리입니다. `allocateAligned` 블록에는 쓰지 않습니다(CRT Windows 는 기본 정렬로 잡은 블록만 잰다).
          */
         [[nodiscard]] static size_t getUsableSize( const void* pBlock ) noexcept;
     };

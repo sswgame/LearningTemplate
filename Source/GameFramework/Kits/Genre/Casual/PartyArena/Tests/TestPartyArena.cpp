@@ -6,6 +6,7 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Format/Tests/StateBytesTestUtil.h"
 
 #include "GameFramework/Kits/Genre/Casual/PartyArena/PartyItemSpawner.h"
 #include "GameFramework/Kits/Genre/Casual/PartyArena/PartyRoundSeries.h"
@@ -1045,4 +1046,37 @@ SW_TEST_CASE( PartyArenaTest, SeriesLoadsXMLAllOrNothing )
     SW_REQUIRE_EQUAL( size_t( 1 ), series.getRounds().size() ); // 덧붙지 않는다
     SW_EXPECT_TRUE( series.getRounds()[0]._id == hashed_string( "c" ) );
     SW_EXPECT_EQUAL( 9, series.getWinScore() ); // 적지 않은 칸은 그대로다
+}
+
+/**
+ * @brief [PartyArenaRulesTest] 결정성: 같은 입력이면 튕김 · 돌진 · 내려찍기 · 링 아웃 · 아이템(시드 난수)이 같은 바이트를 내고, 중간 저장에서 이어도 같다
+ */
+SW_TEST_CASE_F( PartyArenaRulesTest, ArenaDeterminism )
+{
+    _settings._pickupRadius = 1.5f;
+    const auto setup        = [this]( TrampolineArena& arena ) -> bool
+    {
+        const utf8* const pItemXML =
+            R"(<PartyItems minInterval="0.2" maxInterval="0.6" lifetime="2" height="0" maxActive="2"><Item id="spring" effect="SuperBounce" weight="2"/><Item id="anvil" effect="Heavy" duration="0.5" knockbackTaken="0.5" knockbackDealt="2"/></PartyItems>)";
+        if ( arena.getItemSpawner().loadFromXMLText( pItemXML, "PartyArenaTest" ) == false || arena.initialize( _settings, 2, 0.0f, 0, 5u ) == false )
+            return false;
+        arena.start();
+        return true;
+    };
+    const auto step = []( TrampolineArena& arena, int32 stepIndex )
+    {
+        const float32 side = ( stepIndex / 20 ) % 2 == 0 ? 1.0f : -1.0f;
+        for ( int32 player = 0; player < 2; ++player )
+        {
+            TrampolineInput input;
+            input._moveX          = player == 0 ? side : -side;
+            input._moveZ          = ( stepIndex / 13 ) % 2 == 0 ? 0.5f : -0.5f;
+            input._bJumpPressed   = stepIndex % 7 == player ? SW_TRUE : SW_FALSE;
+            input._bAttackPressed = stepIndex % 11 == 3 + player ? SW_TRUE : SW_FALSE;
+            input._bPoundPressed  = stepIndex % 29 == 13 + player ? SW_TRUE : SW_FALSE;
+            arena.setInput( player, input );
+        }
+        arena.step();
+    };
+    SW_EXPECT_TRUE( StateBytesTestUtil::isDeterministic<TrampolineArena>( setup, step, 240 ) );
 }

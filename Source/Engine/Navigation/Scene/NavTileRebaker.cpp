@@ -31,7 +31,7 @@ namespace sw
     NavTileRebaker::NavTileRebaker()
         : _listDirtyArea{}
         , _listObstacleArea{}
-        , _rebakedTileCount{ 0 }
+        , _rebakedTileCount{}
         , _dirtyLock{}
         , _bGeometryDirty{ SW_FALSE }
         , _bObstacleVolumeDirty{ SW_FALSE }
@@ -269,7 +269,7 @@ namespace sw
                 // 내린 구역의 타일은 되살리지 않는다 — 다시 올릴 때 쿠킹본 타일을 끼우고 그 자리의 장애물로 다시 베이크한다.
                 const bool bStreamedOut = pRuntime->isTileStreamedOut( int2{ job._tileX, job._tileZ } );
                 if ( bStreamedOut == false && job._bSucceeded && pRuntime->_pNavMesh->replaceTile( job._result ) )
-                    ++_rebakedTileCount;
+                    _rebakedTileCount.add();
                 else if ( bStreamedOut == false )
                     SW_LOG_WARNING_ID( "SceneNavigation.NavmeshTileFailedRebake", "Navmesh '%#' tile (%#, %#) failed to rebake", pRuntime->_agentType.c_str(), job._tileX, job._tileZ );
                 listJob[jobIndex] = std::move( listJob.back() );

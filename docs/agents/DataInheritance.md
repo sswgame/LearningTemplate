@@ -251,7 +251,7 @@ if ( ResourceComposer::compose( text, sourceName, ResourceContext::forSchema( &M
 
 저장은 부모(없으면 형식 기본값)와 같은 칸을 쓰지 않는다. 프리팹은 뺀 글을 다시 읽어 값이 같을 때만 쓰고, 다르면 모든 칸을 쓰며 경고한다(`PrefabAsset.DefaultOmitMismatch`).
 
-**코드에서 기본값을 바꾸면 그 칸을 적지 않은 모든 데이터의 값이 바뀐다.** 언리얼의 CDO 와 같다. 바꾸면 안 되는 값은 기본값을 고치지 말고 데이터에 적는다. 값이 그림 · 규칙을 바꾸면 쓰는 쪽 자료를 대조한다. 필수 칸(`PROPERTY( Required )`)은 저장이 지우지 않는다. 이름 · 경로 칸(뼈 · 소켓 · 층 · 태그 …)의 C++ 문자열 기본값은 `Required` 이거나, 엔진이 정한 기본값이면 헤더 초기값에 두고 `PROPERTY( DefaultName )` 을 단다 — 둘 다 없으면 리플렉션 파서가 멈춘다(타입 목록은 `parser_config.defaults.json` 의 `parsing.name_field_types`, 생성자 초기화 목록의 기본값은 파서가 보지 못한다).
+**코드에서 기본값을 바꾸면 그 칸을 적지 않은 모든 데이터의 값이 바뀐다.** 언리얼의 CDO 와 같다. 바꾸면 안 되는 값은 기본값을 고치지 말고 데이터에 적는다. 값이 그림 · 규칙을 바꾸면 쓰는 쪽 자료를 대조한다. 필수 칸(`PROPERTY( Required )`)은 저장이 지우지 않는다. 이름 · 경로 칸(뼈 · 소켓 · 층 · 태그 …)의 C++ 문자열 기본값은 `Required` 이거나, 엔진이 정한 기본값이면 헤더 초기값에 두고 `PROPERTY( DefaultName )` 을 단다 — 둘 다 없으면 리플렉션 파서가 멈춘다(타입은 형식 정체로 가른다 — 리플렉션 파서 `typeidentity::kArrNameFieldType`, 생성자 초기화 목록의 기본값은 파서가 보지 못한다).
 
 ## 행동 어휘와 행동 리소스 변형
 

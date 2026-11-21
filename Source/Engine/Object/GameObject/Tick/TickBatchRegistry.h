@@ -11,7 +11,8 @@
  * [규약 — 리플렉션 생성기(5-4)와 맞춘 등록 API]
  * - 등록 한 줄은 `SW_REGISTER_TICK_TYPE( 타입, 모드 )` 입니다(모드는 `TickMode` 의 `Batch` · `Task` · `Main`). 생성기가 `onTick` 을 재정의한 타입과
  *   `REFLECT( TickMode = … )` 를 단 타입마다 생성 `.cpp` 의 `namespace sw` 안에 냅니다(메타데이터가 없으면 `Batch`). 손으로 쓸 때도 같은 줄이다.
- *   `TickBatchOf<타입>` 이 `onTick` · `onSubTick` 을 한정 이름으로 부르므로 둘이 그 템플릿에 보여야 한다(공개, 또는 `REFLECT_BODY` 가 친구로 연다).
+ *   `TickBatchOf<타입>` 은 `onTick` · `onSubTick` 을 `ReflectAccess<TickAccessTag>` 로 한정 이름 호출한다(`REFLECT_BODY` 가 그 통로를 친구로 연다).
+ *   `TickMode` 를 적지 않은 형식은 생성기가 `makeDeclaredTickEntry` 줄을 내고, 직접 선언했는지는 컴파일에서 정한다.
  * - **함수는 정확한 타입만** 씁니다. 파생 타입은 기반의 함수를 물려받지 않습니다(파생의 `onTick` 을 건너뛰지 않게) — 등록이 없는 타입은 가상 호출
  *   함수(`tickBatchVirtual`)로 같은 파도를 탑니다. **모드는 물려받습니다** — 등록이 없는 파생은 가장 가까운 등록된 조상의 모드이다(Main 기반의 파생이 워커로 새지 않게).
  * - 서브틱 · 여러 항목 오브젝트도 파도로 일괄합니다(`TickRegistry` 머리말). 선행 조건을 건 항목만 모드과 무관하게 스테이지로 갑니다.
@@ -45,6 +46,7 @@
 #include "Engine/Object/GameObject/Tick/TickContext.h"
 #include "Engine/Object/GameObject/Tick/TickRegistry.h"
 #include "Engine/Profiling/FrameProfiler.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
 {
@@ -126,6 +128,59 @@ namespace sw
         return subTickID == 0 ? comp.canEverTick() : comp.isSubTickActive( subTickID );
     }
 
+    /** @brief 일괄 틱이 리플렉트 형식의 틱 함수에 닿는 통로의 태그입니다(`ReflectAccess<TickAccessTag>`). */
+    struct TickAccessTag;
+
+    /**
+     * @brief 일괄 틱의 통로 — 틱 함수를 한정 이름으로(비가상) 부르고, 형식이 틱 함수를 **직접 선언했는지** 컴파일에서 답한다.
+     * @details `REFLECT_BODY()` 가 친구로 여는 자리라 protected · private 재정의도 본다. 직접 선언 판정은 멤버 포인터의 클래스 형식으로 한다
+     *          (`&T::onTick` 이 `void ( T::* )( TickContext& )` 면 T 가 선언했다). 기반의 private 재정의처럼 이름이 닿지 않으면 직접 선언이 아니다(SFINAE).
+     */
+    template <>
+    struct ReflectAccess<TickAccessTag>
+    {
+        template <typename TComponent>
+        static void onTick( TComponent& comp, TickContext& context )
+        {
+            comp.TComponent::onTick( context );
+        }
+
+        template <typename TComponent>
+        static void onSubTick( TComponent& comp, const uint32 subTickID, TickContext& context )
+        {
+            comp.TComponent::onSubTick( subTickID, context );
+        }
+
+        /** @brief @p TComponent 가 `onTick` 이나 `onSubTick` 을 직접 선언했으면 true 입니다(물려받은 것은 세지 않는다 — 일괄 함수는 정확한 타입의 것이다). */
+        template <typename TComponent>
+        static constexpr bool hasDeclaredTick() noexcept
+        {
+            return hasDeclaredOnTick<TComponent>( 0 ) || hasDeclaredOnSubTick<TComponent>( 0 );
+        }
+
+    private:
+        template <typename TComponent>
+        static constexpr auto hasDeclaredOnTick( int ) noexcept -> decltype( &TComponent::onTick, bool() )
+        {
+            return std::is_same_v<decltype( &TComponent::onTick ), void ( TComponent::* )( TickContext& )>;
+        }
+        template <typename TComponent>
+        static constexpr bool hasDeclaredOnTick( ... ) noexcept
+        {
+            return false;
+        }
+        template <typename TComponent>
+        static constexpr auto hasDeclaredOnSubTick( int ) noexcept -> decltype( &TComponent::onSubTick, bool() )
+        {
+            return std::is_same_v<decltype( &TComponent::onSubTick ), void ( TComponent::* )( uint32, TickContext& )>;
+        }
+        template <typename TComponent>
+        static constexpr bool hasDeclaredOnSubTick( ... ) noexcept
+        {
+            return false;
+        }
+    };
+
     /**
      * @brief 타입 @p TComponent 의 일괄 틱 함수입니다. `SW_REGISTER_TICK_TYPE` 이 그 타입의 등록 TU 에서 인스턴스화합니다(`onTick` 이 인라인될 수 있게).
      * @details 원소마다 `shouldRunTickElement` 를 보고 `TComponent::onTick` / `TComponent::onSubTick` 을 한정 이름으로 부릅니다. 레지스트리가 정확한
@@ -147,9 +202,9 @@ namespace sw
                     continue;
                 TickContext context{ *element._pObject, deltaTime };
                 if ( subTickID == 0 )
-                    pComp->TComponent::onTick( context );
+                    ReflectAccess<TickAccessTag>::onTick( *pComp, context );
                 else
-                    pComp->TComponent::onSubTick( subTickID, context );
+                    ReflectAccess<TickAccessTag>::onSubTick( *pComp, subTickID, context );
             }
         }
     };
@@ -159,6 +214,21 @@ namespace sw
      * @details Debug 카운터 `GT.Scene.tick.virtualTicks` 를 센다(5-3 측정 기반 — 생성기가 덮을수록 줄어든다).
      */
     SW_API void tickBatchVirtual( TickThreadState& threadState, const TickBatchElement* pElement, uint32 count, uint32 subTickID, float32 deltaTime );
+
+    /**
+     * @brief `REFLECT( TickMode )` 를 적지 않은 컴포넌트의 등록 줄입니다 — 리플렉션 생성기가 추상이 아닌 컴포넌트마다 냅니다.
+     * @details 그 형식이 `onTick` · `onSubTick` 을 **직접 선언했을 때만** Batch 줄이 된다(컴파일 판정, `ReflectAccess<TickAccessTag>::hasDeclaredTick`). 아니면 형식이 빈 줄이라
+     *          레지스트리가 받지 않는다 — 물려받은 형식은 가까운 등록 조상의 모드를 따르고 가상 호출로 돈다(Main 기반의 파생이 Batch 로 새지 않게).
+     *          판정을 생성기가 이름 · 인자 수로 내리던 것을 컴파일러에게 넘겼다. 직접 선언하지 않은 형식은 일괄 함수를 인스턴스화하지 않는다.
+     */
+    template <typename TComponent, const utf8* TScopeName>
+    TickBatchRegistry::Entry makeDeclaredTickEntry()
+    {
+        if constexpr ( ReflectAccess<TickAccessTag>::hasDeclaredTick<TComponent>() )
+            return TickBatchRegistry::Entry{ &TComponent::StaticType, &TickBatchOf<TComponent, TScopeName>::tickRange, TickMode::Batch };
+        else
+            return TickBatchRegistry::Entry{ nullptr, nullptr, TickMode::Batch };
+    }
 } // namespace sw
 
 /**

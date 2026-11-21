@@ -82,7 +82,9 @@ namespace sw
                 listAccess.push_back( RenderGraphResourceAccess{ hashed_string( name.c_str() ), access, viewable } );
             }
         };
-        append( pass._listInput, RenderGraphAccess::ShaderRead, RenderGraphAccess::ShaderRead );
+        // 컴퓨트 종류의 텍스처 입력은 RW 텍스처로 읽는다(에뮬 백엔드의 컴퓨트는 샘플 텍스처를 읽지 못한다 — 깊이 히스토리를 읽는 HZB 짓기 · GPU 입자) — UAV 읽기다.
+        const RenderGraphAccess textureInputAccess = getRenderPassKindInfo( pass._type ).hasFlag( RenderPassTraitFlag::kCompute ) ? RenderGraphAccess::UnorderedAccessRead : RenderGraphAccess::ShaderRead;
+        append( pass._listInput, RenderGraphAccess::ShaderRead, textureInputAccess );
         append( pass._listOutput, RenderGraphAccess::UnorderedAccess, RenderGraphAccess::RenderTarget );
         append( pass._listIndirectArgs, RenderGraphAccess::IndirectArgs, RenderGraphAccess::IndirectArgs );
         append( pass._listCopySource, RenderGraphAccess::CopySource, RenderGraphAccess::CopySource );
@@ -813,7 +815,7 @@ namespace sw
 
             /**
              * @brief 3-1 · 3-2) 컬러를 그리는 패스(kDrawsDeclaredColor)는 선언한 컬러 출력에 그리고, G버퍼는 알베도 · 노멀 · 머티리얼을 한 MRT 패스로 쓴다.
-             * @details 컬러 출력이 없으면 그릴 곳이 없다(없는 첨부의 핸들 0 은 백버퍼라, 그대로 두면 화면에 그린다). G버퍼의 컬러 수가 표의 값과 다르면
+             * @details 컬러 출력이 없으면 그릴 곳이 없다(없는 첨부의 핸들 0 은 무효라 그 패스가 빠진다). G버퍼의 컬러 수가 표의 값과 다르면
              *          PSO 와 렌더 패스가 어긋나거나, 노멀이 없어 Lighting · SSAO 가 읽을 것이 없다.
              */
             static uint32 validateGeometryColorOutputs( const RenderPipelineDesc& desc, string_view sourcePath )
@@ -823,7 +825,7 @@ namespace sw
                 for ( const RenderGraphPassDesc& pass : desc._listPass )
                 {
                     // 컬러를 그리는 패스(표의 kDrawsDeclaredColor — 지오메트리 · 하늘 · 외곽선 껍질 · TAA · 일반 풀스크린)는 선언한 컬러 출력에 그린다.
-                    // 실행은 이름으로 타깃을 짐작하지 않으므로 선언이 없으면 그릴 곳이 없다(옛 짐작은 없는 첨부의 핸들 0 — 백버퍼 — 를 열었다).
+                    // 실행은 이름으로 타깃을 짐작하지 않으므로 선언이 없으면 그릴 곳이 없다(옛 짐작은 없는 첨부의 핸들 0 — 그때는 백버퍼 — 를 열었다).
                     const bool bDrawsColor = isViewPassType( pass._type ) &&
                                              getRenderPassKindInfo( pass._type ).hasFlag( RenderPassTraitFlag::kDrawsDeclaredColor );
                     if ( bDrawsColor && pass._listResolvedColorOutput.empty() )

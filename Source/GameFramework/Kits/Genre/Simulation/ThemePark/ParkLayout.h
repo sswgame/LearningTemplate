@@ -15,6 +15,7 @@
 #include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Serializer/CatalogKey.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/ThemePark.h"
@@ -22,6 +23,7 @@
 namespace sw
 {
     class CoasterLayoutCatalog;
+    struct CoasterLayoutDef;
     class XMLCatalogRoot;
     class XMLNode;
 } // namespace sw
@@ -108,7 +110,7 @@ namespace sw
         REFLECT_BODY();
 
         PROPERTY( Required )
-        string _layout{};
+        CatalogKey<CoasterLayoutDef> _layout{}; ///< 코스터 카탈로그의 레이아웃(쿠커가 `datacatalogreferences.xml` 의 줄로 대조한다)
         PROPERTY( Required )
         float32 _x{};
         PROPERTY( Required )

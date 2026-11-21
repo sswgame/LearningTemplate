@@ -6,6 +6,7 @@
  *          유니티 Audio Mixer 창의 그룹 목록과 뷰가 나뉜 것과 같다). 볼륨 · 음소거 · 솔로를 고치는 일은 엔진 명령이라 패널이 바로 부른다.
  */
 #pragma once
+#include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
@@ -29,6 +30,14 @@ namespace sw::editor
         float32 _watchedBusVolume{ -1.0f }; ///< 이름이 `gv_editorWatchBus` 인 버스의 사용자 볼륨(없으면 -1)
     };
 
+    /** @brief 믹서 창이 이번 프레임 그릴 수 있는지입니다(`AudioMixerViewModel::refresh`). */
+    enum class AudioMixerStatus : uint8
+    {
+        ServiceStopped, ///< 오디오 서비스가 돌지 않는다
+        NoMixerGraph,   ///< 믹서 그래프를 아직 게시하지 않았다(버스 없음)
+        Ready,
+    };
+
     /**
      * @class AudioMixerViewModel
      * @brief 오디오 믹서 창의 상태와 명령입니다. 파일 머리말 참고.
@@ -42,28 +51,40 @@ namespace sw::editor
         AudioMixerViewModel();
 
         /**
-         * @brief @p engine 이 게시한 버스 상태를 읽고, 피크 표시 값을 한 프레임만큼 내리고(새 피크가 크면 그 값), 감시 값을 게시합니다. 패널이 그리기마다 부릅니다.
-         * @return 버스가 하나라도 있으면 true 입니다(믹서 그래프를 아직 게시하지 않았으면 false).
+         * @brief 오디오 엔진이 게시한 버스 상태와 이벤트 이름을 읽고, 피크 표시 값을 한 프레임만큼 내리고, 감시 값을 게시합니다. 패널이 그리기마다 맨 위에서 한 번 부릅니다.
+         * @details 오디오 서비스는 여기(Model)서만 찾는다 — View 는 서비스 · 엔진에 닿지 않고 아래 명령만 부른다(MVVM 계약).
          */
-        bool                          refreshBuses( AudioEngine& engine );
+        AudioMixerStatus              refresh();
         const vector<AudioBusStatus>& getBusStatuses() const { return _listBusStatus; }
         /** @brief 버스 @p busIndex 의 피크 표시 값(dB)입니다. 소리가 없으면 `kMeterFloorDb` 보다 작다. */
         float32 getHeldPeakDecibel( uint32 busIndex ) const;
         /** @brief 피크 표시 값 @p decibel 이 미터를 채우는 비율(0..1)입니다. */
         static float32 computeMeterFill( float32 decibel );
 
-        /** @brief 엔진이나 이벤트 라이브러리 세대가 바뀌었으면 이벤트 이름을 다시 모읍니다(사전순). 고른 이벤트가 범위 밖이면 첫 이벤트로 둡니다. */
-        void                         refreshEventNames( AudioEngine& engine );
         const vector<hashed_string>& getEventNames() const { return _listEventName; }
         uint32                       getSelectedEvent() const { return _selectedEvent; }
         void                         selectEvent( uint32 eventIndex ) { _selectedEvent = eventIndex; }
-        /** @brief 고른 이벤트를 @p engine 에 한 번 보냅니다(Post Event). 이벤트가 없으면 아무것도 하지 않습니다. */
-        void postSelectedEvent( AudioEngine& engine ) const;
+        /** @brief 고른 이벤트를 한 번 보냅니다(Post Event). 이벤트가 없으면 아무것도 하지 않습니다. */
+        void postSelectedEvent() const;
+        /** @brief 클립 @p clipPath 를 한 번 재생합니다(Play Clip). 파일이 없으면 false 이고 엔진이 로그를 남긴다. */
+        bool playClip( string_view clipPath ) const;
+        /** @brief 버스 @p busIndex 의 사용자 볼륨(0..1, 옵션 메뉴 값)을 정합니다. */
+        void setBusVolume( uint32 busIndex, float32 volume ) const;
+        /** @brief 버스 @p busIndex 를 끄거나 켭니다(Mute). */
+        void setBusMuted( uint32 busIndex, bool bMuted ) const;
+        /** @brief 버스 @p busIndex 만(조상 · 자손과 함께) 듣거나 풉니다(Solo). */
+        void setBusSolo( uint32 busIndex, bool bSolo ) const;
 
         /** @brief 감시 값이 읽는 지난 프레임의 값입니다. */
         static const AudioMixerWatchValues& getWatchValues();
-        /** @brief 오디오 서비스입니다. 에디터는 오디오를 짓는 구성이라 늘 있다(전용 서버 구성만 오디오를 짓지 않는다) — 없으면 멈춘다. 패널이 작업 공간 헤더를 보지 않게 여기서 찾는다(MVVM 계약). */
+
+    private:
+        /** @brief 오디오 서비스입니다. 에디터는 오디오를 짓는 구성이라 늘 있다(전용 서버 구성만 오디오를 짓지 않는다) — 없으면 멈춘다. Model 안에서만 쓴다. */
         static AudioService& getAudioService();
+        /** @brief 버스 상태를 읽고 피크 표시 값 · 감시 값을 갱신합니다. 버스가 하나라도 있으면 true 입니다. */
+        bool refreshBuses( AudioEngine& engine );
+        /** @brief 엔진이나 이벤트 라이브러리 세대가 바뀌었으면 이벤트 이름을 다시 모읍니다(사전순). 고른 이벤트가 범위 밖이면 첫 이벤트로 둡니다. */
+        void refreshEventNames( AudioEngine& engine );
 
     private:
         vector<AudioBusStatus> _listBusStatus;

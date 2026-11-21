@@ -14,7 +14,7 @@
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
-#include "Editor/Panels/Inspector/Model/InspectorPropertyLayout.h"
+#include "Editor/Common/Widgets/PropertyGrid/Model/InspectorPropertyLayout.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Input/RawInputEvent.h"
@@ -420,7 +420,7 @@ namespace sw::editor
     {
         ImGui::SeparatorText( SW_LOCKEY( "EditorSequencer", "BindingsSection" ) );
         // 바인딩 줄 바로 앞에서 모은다 — 위 도구줄 · 타임라인이 같은 프레임에 문서를 다시 읽거나 바꿀 수 있다
-        _viewModel.gather( _document._asset, getLoadedAssetPath(), _sceneState );
+        gatherViewState( _viewModel, _document._asset, getLoadedAssetPath(), _sceneState );
         const bool bHasContext   = _sceneState._bHasContext != SW_FALSE;
         const bool bHasSelection = _sceneState._bHasSelection != SW_FALSE;
         if ( bHasContext == false )

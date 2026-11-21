@@ -14,6 +14,28 @@ namespace sw
     {
         struct ValeProfileStoreInternal
         {
+            static constexpr uint64 kFormat1 = 1; ///< 손 배치 판 — 레코드가 판을 두 번 실었다(저장소 · 진행이 따로 썼다)
+
+            /** @brief 판 1 레코드(판 · 판 · 레벨 · 경험 · 동전 · 약초 · 쓰러뜨린 수(가변 정수) · 자리(실수 셋))를 읽습니다. 옛 레코드를 잃지 않게 읽기만 둔다. */
+            [[nodiscard]] static bool decodeFormat1( const vector<uint8>& bytes, ValeProfile& outProfile )
+            {
+                BitReader reader( bytes.data(), static_cast<int32>( bytes.size() ) );
+                if ( reader.readVarUint() != kFormat1 || reader.readVarUint() != kFormat1 )
+                    return false;
+                ValeProfile loaded;
+                loaded._level        = reader.readVarInt32();
+                loaded._experience   = reader.readVarInt32();
+                loaded._coins        = reader.readVarInt32();
+                loaded._herbCount    = reader.readVarInt32();
+                loaded._defeatCount  = reader.readVarInt32();
+                const bool bPosition = reader.readFiniteFloat( loaded._position._x ) && reader.readFiniteFloat( loaded._position._y ) && reader.readFiniteFloat( loaded._position._z );
+                const bool bInRange  = loaded._level >= 1 && loaded._experience >= 0 && loaded._coins >= 0 && loaded._herbCount >= 0 && loaded._defeatCount >= 0;
+                if ( reader.hasOverflowed() || bPosition == false || bInRange == false )
+                    return false;
+                outProfile = loaded;
+                return true;
+            }
+
             static const hashed_string& getTable()
             {
                 static const hashed_string table{ ValeProfileStore::kTableName };
@@ -107,19 +129,23 @@ namespace sw
         return key;
     }
 
-    vector<uint8> ValeProfileStore::encodeRecord( const ValeProfile& profile )
+    bool ValeProfileStore::encodeRecord( const ValeProfile& profile, vector<uint8>& outBytes )
     {
-        BitWriter writer;
-        writer.writeVarUint( ValeProfile::kFormatVersion );
-        profile.write( writer );
-        return writer.releaseBytes();
+        BitWriter  writer( std::move( outBytes ) );
+        const bool bWritten = profile.write( writer );
+        outBytes            = writer.releaseBytes();
+        if ( bWritten == false )
+            outBytes.clear();
+        return bWritten;
     }
 
     bool ValeProfileStore::decodeRecord( const vector<uint8>& bytes, ValeProfile& outProfile )
     {
-        BitReader    reader( bytes.data(), static_cast<int32>( bytes.size() ) );
-        const uint64 formatVersion = reader.readVarUint();
-        return reader.hasOverflowed() == false && formatVersion == ValeProfile::kFormatVersion && outProfile.read( reader );
+        BitReader probe( bytes.data(), static_cast<int32>( bytes.size() ) );
+        if ( probe.readVarUint() == ValeProfileStoreInternal::kFormat1 )
+            return ValeProfileStoreInternal::decodeFormat1( bytes, outProfile );
+        BitReader reader( bytes.data(), static_cast<int32>( bytes.size() ) );
+        return outProfile.read( reader );
     }
 
     IServiceStore* ValeProfileStore::findStore( const utf8* pPurpose, uint64 accountID ) const
@@ -165,8 +191,14 @@ namespace sw
             SW_LOG_ERROR_ID( "LanternVale.ProfileSaveUnread", "[LanternVale] profile of account %# was not saved - it was never read, so its stored version is unknown", accountID );
             return false;
         }
+        vector<uint8> bytes;
+        if ( encodeRecord( profile, bytes ) == false )
+        {
+            SW_LOG_ERROR_ID( "LanternVale.ProfileOutOfRange", "[LanternVale] profile of account %# was not saved - a value is outside its declared range (level %#, coins %#)", accountID,
+                             profile._level, profile._coins );
+            return false;
+        }
         AccountState&        state  = iter->second;
-        vector<uint8>        bytes  = encodeRecord( profile );
         const vector<uint8>& latest = state._bQueued ? state._queuedBytes : state._bWriting ? state._writingBytes
                                                                                             : state._storedBytes;
         // 견주기는 직렬화한 바이트로 한다 — 진행에 칸이 늘어도 `write` 가 싣는 한 놓치지 않는다.

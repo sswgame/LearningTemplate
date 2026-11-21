@@ -24,7 +24,7 @@ namespace sw::editor
 
     void DataLayersPanel::drawContent()
     {
-        _viewModel.gather( _viewState );
+        gatherViewState( _viewModel, _viewState );
         if ( _viewState._content == DataLayersContent::NoActiveScene )
         {
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorDataLayers", "NoActiveScene" ) );
