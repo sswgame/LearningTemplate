@@ -95,7 +95,7 @@
 		</RenderGraphPassDesc>
 		<!-- 2 단계 가림의 뒤 단계 — 깊이 프리패스가 그린 깊이로 HZB 를 다시 짓고 앞 단계에서 가려진 차례만 다시 컬링해 G버퍼가 함께 그린다(주 시점, 앞 단계가 적은 프레임만).
 		     쓰는 자원(장면 깊이 · 깊이 사본 · HZB · 컬링 버퍼)은 종류가 선언한다 — 여기에는 자리만 적는다(깊이 프리패스 뒤 · G버퍼 앞). -->
-		<RenderGraphPassDesc _name="LateOcclusion" _type="LateOcclusion" _cullMode="None">
+		<RenderGraphPassDesc _name="LateOcclusion" _type="LateOcclusion" _cullMode="None" _bEnableDepthTest="false" _bEnableDepthWrite="false">
 			<_listInput />
 			<_listOutput />
 			<_listPermutation />

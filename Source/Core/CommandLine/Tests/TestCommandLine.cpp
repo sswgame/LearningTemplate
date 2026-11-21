@@ -393,9 +393,8 @@ SW_TEST_CASE( CommandLineTest, EnumLookupMatchesStringLookup )
 /**
  * @brief 값을 빠뜨린 비-bool 인자는 조용히 무시되지 않는다
  * @details 값 없이 적을 수 있는 것은 bool 뿐이고(`ArgumentInfo::isFlagArgument`), 나머지는 경고를 남기고 무시되므로
- *          기본값이 그대로 살아 있다. "값 없이 적어도 되는가" 를 타입과 따로 정하면 값을 빠뜨린 `-gv_benchMeshes` 가
- *          int32 자리에 **bool `true` 를 밀어 넣고**, `_bParsed` 는 켜지는데 `get_if<int32>` 가 nullptr 이라
- *          `getArgument` 가 기본값으로 돌아가지도 못하고 false 를 돌려준다 — 경고 한 줄 없이 **스위치가 아무 일도 안 한다.**
+ *          적지 않은 것으로 남는다. "값 없이 적어도 되는가" 를 타입과 따로 정하면 값을 빠뜨린 `-gv_benchMeshes` 가
+ *          int32 자리에 **bool `true` 를 밀어 넣어** 경고 한 줄 없이 **스위치가 아무 일도 안 한다.**
  */
 SW_TEST_CASE( CommandLineTest, ValuelessNonBooleanArgumentKeepsItsType )
 {
@@ -414,19 +413,18 @@ SW_TEST_CASE( CommandLineTest, ValuelessNonBooleanArgumentKeepsItsType )
     cmdManager.parse( 4, argv, makeCommandLineTestBaseDirectory() );
     SW_EXPECT_EQUAL( size_t( 3 ), cmdManager.getParseErrors().size() ); // 값 없는 비-bool 인자는 거절 이유를 남기고 무시한다
 
-    // 값이 없었으므로 **적히지 않은 것으로** 남고, 기본값이 그대로 읽힌다.
+    // 값이 없었으므로 **적히지 않은 것으로** 남는다 — 표에는 기본값이 없고(기본값은 설정이 가진다, 셋째 칸은 형식 견본) 읽기는 false 이며 값을 건드리지 않는다.
     int32 meshCount{ -1 };
-    SW_EXPECT_TRUE_MSG( cmdManager.getArgument( std::string_view( "gv_benchMeshes" ), meshCount ),
-                        "값을 빠뜨린 int 인자가 기본값조차 못 읽게 만들었습니다" );
-    SW_EXPECT_EQUAL( 200, meshCount );
+    SW_EXPECT_FALSE( cmdManager.getArgument( std::string_view( "gv_benchMeshes" ), meshCount ) );
+    SW_EXPECT_EQUAL( -1, meshCount );
 
-    sw::string sceneName;
-    SW_EXPECT_TRUE( cmdManager.getArgument( std::string_view( "gv_startupScene" ), sceneName ) );
-    SW_EXPECT_EQUAL( sw::string( "default" ), sceneName );
+    sw::string sceneName{ "untouched" };
+    SW_EXPECT_FALSE( cmdManager.getArgument( std::string_view( "gv_startupScene" ), sceneName ) );
+    SW_EXPECT_EQUAL( sw::string( "untouched" ), sceneName );
 
-    float32 radius{ 0.0f };
-    SW_EXPECT_TRUE( cmdManager.getArgument( std::string_view( "gv_lightRadius" ), radius ) );
-    SW_EXPECT_TRUE( radius > 4.4f && radius < 4.6f );
+    float32 radius{ -1.0f };
+    SW_EXPECT_FALSE( cmdManager.getArgument( std::string_view( "gv_lightRadius" ), radius ) );
+    SW_EXPECT_TRUE( radius < 0.0f );
 
     SW_EXPECT_TRUE_MSG( cmdManager.isArgumentProvided( "gv_benchMeshes" ) == false,
                         "값 없이 적은 int 인자를 '주었다' 로 셌습니다" );

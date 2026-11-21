@@ -144,7 +144,7 @@ namespace sw
         : _onLogWritten{}
         , _listOutput{}
         , _pFileOutput{ nullptr }
-        , _queue{}
+        , _pQueue{ make_unique<ConcurrentQueue<LogRecord, 4096>>() }
         , _workerThread{}
         , _cv{}
         , _mutex{}
@@ -258,7 +258,7 @@ namespace sw
         // 큐는 여러 스레드가 함께 꺼내도 되는 큐다. 작업 스레드가 동시에 꺼내도 한 줄은 한 번만 쓰인다.
         // 장치 락에서 기다리지 않는다(`writeWithoutWaiting`) — 장치 락을 쥔 채 죽은 스레드가 있으면 `write` 는 크래시를 멈춤으로 바꾼다.
         LogRecord record;
-        while ( _queue.dequeue( record ) )
+        while ( _pQueue->dequeue( record ) )
         {
             for ( uint32 index = 0; index < deviceCount; ++index )
             {
@@ -353,11 +353,11 @@ namespace sw
         constexpr int64 kIdleFlushIntervalNanos = constant::time::kNanosecondsPerSecond;
         bool            bUnflushed              = false;
         int64           lastFlushNanos          = MonotonicClock::nowNanoseconds();
-        while ( _bIsRunning.load( std::memory_order_acquire ) || _queue.empty() == false )
+        while ( _bIsRunning.load( std::memory_order_acquire ) || _pQueue->empty() == false )
         {
             LogRecord record;
             bool      bProcessedAny = false;
-            while ( _queue.dequeue( record ) )
+            while ( _pQueue->dequeue( record ) )
             {
                 bProcessedAny = true;
                 dispatchToOutputs( record );
@@ -378,7 +378,7 @@ namespace sw
                 std::atomic_thread_fence( std::memory_order_seq_cst );
                 _cv.wait_for( lock, std::chrono::milliseconds( 5 ), [this]
                 {
-                    return _bIsRunning.load( std::memory_order_relaxed ) == false || _queue.empty() == false;
+                    return _bIsRunning.load( std::memory_order_relaxed ) == false || _pQueue->empty() == false;
                 } );
                 _bWorkerSleeping.store( false, std::memory_order_relaxed );
             }
@@ -398,7 +398,7 @@ namespace sw
     void AsyncLogSink::flushQueue()
     {
         LogRecord record;
-        while ( _queue.dequeue( record ) )
+        while ( _pQueue->dequeue( record ) )
         {
             dispatchToOutputs( record );
         }
@@ -445,7 +445,7 @@ namespace sw
         // 큐가 찼으면 작업 스레드가 자리를 낼 때까지 기다린다(spdlog 의 block 정책). 이 스레드에서 바로 쓰면 큐에 먼저 들어간 줄보다 앞서 나가
         // 순서가 뒤집힌다 — 크래시 직전 줄을 읽는 사람이 원인과 결과를 거꾸로 본다. 작업 스레드는 큐에 넣지 않으므로(장치 안의 로그는 stderr) 서로 기다리지 않는다.
         // enqueue 가 실패하면 record 는 옮겨지지 않는다.
-        while ( _queue.enqueue( std::move( record ) ) == false )
+        while ( _pQueue->enqueue( std::move( record ) ) == false )
         {
             if ( _bIsRunning.load( std::memory_order_acquire ) == false )
             {

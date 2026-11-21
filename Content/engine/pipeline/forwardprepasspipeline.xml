@@ -29,7 +29,7 @@
 			<_listPermutation />
 		</RenderGraphPassDesc>
 		<!-- 2 단계 가림의 뒤 단계 — 깊이 프리패스가 그린 깊이로 HZB 를 다시 짓고 앞 단계에서 가려진 차례만 다시 컬링해 포워드 불투명이 함께 그린다(deferredpipeline.xml 과 같다). -->
-		<RenderGraphPassDesc _name="LateOcclusion" _after="DepthPrepass" _type="LateOcclusion" _cullMode="None">
+		<RenderGraphPassDesc _name="LateOcclusion" _after="DepthPrepass" _type="LateOcclusion" _cullMode="None" _bEnableDepthTest="false" _bEnableDepthWrite="false">
 			<_listInput />
 			<_listOutput />
 			<_listPermutation />

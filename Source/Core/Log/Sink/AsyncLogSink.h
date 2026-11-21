@@ -121,7 +121,7 @@ namespace sw
         LockedMulticastDelegate<void( const LogEntry& )> _onLogWritten;
         vector<unique_ptr<ILogOutput>> _listOutput       SW_GUARDED_BY( _mutex );
         FileLogOutput*                                   _pFileOutput; ///< _listOutput 이 소유한다. getLogFolderPath 용 비소유 포인터
-        ConcurrentQueue<LogRecord, 4096>                 _queue;
+        unique_ptr<ConcurrentQueue<LogRecord, 4096>>     _pQueue;      ///< 힙에 둔다 — 레코드마다 인라인 줄 칸(256 B)이 있어 4096 칸이 1 MB 를 넘는다(싱크를 스택에 두면 넘친다)
         sw::thread                                       _workerThread;
         std::condition_variable_any                      _cv;
         mutex                                            _mutex;   ///< 리스너 목록과 출력 목록을 보호한다

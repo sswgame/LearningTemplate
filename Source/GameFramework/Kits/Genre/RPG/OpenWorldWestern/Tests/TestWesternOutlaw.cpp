@@ -271,6 +271,7 @@ SW_TEST_CASE( WesternOutlawTest, SkinningRollsTheLootTableIntoTheBag )
  */
 SW_TEST_CASE( WesternOutlawTest, OutlawDeterminism )
 {
+    SW_EXPECT_LOG( "WesternOutlaw.BagFull" ); // 120 걸음 동안 사냥 · 가죽 벗기기가 되풀이돼 가방이 찬다 — 규칙대로 남긴 고기를 알리는 경고다
     const auto setup = []( OutlawRig& )
     { return true; }; // 판은 `OutlawRig` 의 생성자가 같은 카탈로그 · 시계로 연다
     const auto step = []( OutlawRig& rig, int32 stepIndex )
