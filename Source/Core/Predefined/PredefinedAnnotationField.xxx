@@ -46,6 +46,8 @@ REGISTER_ANNOTATION_FIELD( Reflect, Abstract, _bAbstract, Manual )
 REGISTER_ANNOTATION_FIELD( Reflect, Static, _bStatic, Manual )
 // 데이터로 놓을 수 없는 컴포넌트(코드의 정본 길로만 세운다 — 필수 인자가 있는 원격 조종자): 이름 생성 함수를 내지 않아 "Add Component" 메뉴 · 씬 · 프리팹 읽기가 만들지 못한다(언리얼 UCLASS(NotPlaceable))
 REGISTER_ANNOTATION_FIELD( Reflect, NotPlaceable, _bNotPlaceable, Manual )
+// 리플렉션 인터페이스(상태 없는 계약 — 순수 가상만): 컴포넌트가 `REFLECT_INTERFACE( I, _port )` 포트 멤버로 내보내고 `GameObject::findInterface<I>()` 가 찾는다(언리얼 UINTERFACE · 유니티 GetComponent<IFoo>)
+REGISTER_ANNOTATION_FIELD( Reflect, Interface, _bInterface, Manual )
 // 직렬화 · 핫 리로드용 옛 타입 이름. 여러 개면 Alias="OldA, OldB"
 REGISTER_ANNOTATION_FIELD_FN( Reflect, Alias, _listAlias, appendAlias, Manual )
 // 지운 필드 이름: RemovedField="_oldA, _oldB". 세이브는 필드를 이름의 32 비트 해시로 싣는다 — 새 필드가 지운 이름 · 그 해시를 다시 쓰면 등록이 오류로 멈춘다(언리얼 CoreRedirects 의 지운 프로퍼티 기록)

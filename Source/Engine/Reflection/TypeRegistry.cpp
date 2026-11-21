@@ -525,6 +525,32 @@ namespace sw
                 SW_LOG_ERROR_ID( "Reflection.ParentChainLoop", "Reflection parent chain loops at '%#' - returning own properties only.", pType->_fullyQualifiedName.c_str() );
         }
         reportFieldNameHashClashes( listType );
+        reportInterfaceProblems( listType );
+    }
+
+    void TypeRegistry::reportInterfaceProblems( const vector<TypeInfo*>& listType )
+    {
+        for ( const TypeInfo* pType : listType )
+        {
+            TypeInterfaceTable merged;
+            for ( const TypeInfo* pDeclaring : pType->getTypeChain() )
+            {
+                for ( const TypeInterfaceEntry& entry : pDeclaring->_ownInterfaces )
+                {
+                    if ( merged.find( entry._interfaceName ) != nullptr )
+                    {
+                        SW_LOG_ERROR_ID( "Reflection.InterfaceExportedTwice", "'%#' exports interface '%#' twice (through '%#') - findInterface cannot choose a port; keep one REFLECT_INTERFACE line in the chain",
+                                         pType->_fullyQualifiedName.c_str(), entry._interfaceName.c_str(), pDeclaring->_fullyQualifiedName.c_str() );
+                        continue;
+                    }
+                    if ( merged.add( entry._interfaceName, entry._portOffset ) == false )
+                    {
+                        SW_LOG_ERROR_ID( "Reflection.InterfaceTableFull", "'%#' exports more than %# interfaces - '%#' is not found by findInterface; raise constant::reflection::kMaxInterfaceCount",
+                                         pType->_fullyQualifiedName.c_str(), constant::reflection::kMaxInterfaceCount, entry._interfaceName.c_str() );
+                    }
+                }
+            }
+        }
     }
 
     void TypeRegistry::reportFieldNameHashClashes( const vector<TypeInfo*>& listType )

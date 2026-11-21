@@ -364,6 +364,52 @@ namespace sw
             return findComponentOfType<T>();
         }
 
+        /**
+         * @brief 리플렉션 인터페이스 I(`REFLECT( Interface )`)를 내보내는 첫 컴포넌트의 포트입니다(`REFLECT_INTERFACE`). 유니티 `GetComponent<IFoo>()` · 언리얼
+         *        `FindComponentByInterface` 와 같은 자리다.
+         * @details 컴포넌트마다 합친 인터페이스 표 몇 칸을 견준다(`Component::findInterfacePort`). 병렬 틱 규칙은 `getComponent` 와 같다(검사 구성에서 남 읽기를 멈춘다).
+         *          받은 쪽은 계약만 쓴다 — 포트에서 주인 컴포넌트로 되돌아가는 길은 두지 않는다.
+         * @return 없으면 nullptr 입니다. 삭제 예정인 컴포넌트는 건너뜁니다.
+         */
+        template <typename I>
+        I* findInterface() const
+        {
+#if defined( SW_DO_CHECKS )
+            assertParallelTickRead();
+#endif
+            static_assert( HasStaticType_v<I>, "I must be a REFLECT( Interface ) type with REFLECT_BODY()" );
+            const TypeInfo* pInterface = findStaticType<I>();
+            for ( Component* pComp : _listComponent )
+            {
+                if ( pComp == nullptr || pComp->isPendingDestroy() )
+                    continue;
+                if ( void* pPort = pComp->findInterfacePort( pInterface ) )
+                    return static_cast<I*>( pPort );
+            }
+            return nullptr;
+        }
+
+        /**
+         * @brief 리플렉션 인터페이스 I 를 내보내는 모든 컴포넌트의 포트를 컴포넌트 차례로 @p outListInterface 뒤에 더합니다. @p outListInterface 는 `push_back( I* )` 이 되는 목록입니다
+         *        (힙 없이 모으려면 `vector<I*, InlineAllocator<I*, N>>`).
+         */
+        template <typename I, typename TList>
+        void findInterfaces( TList& outListInterface ) const
+        {
+#if defined( SW_DO_CHECKS )
+            assertParallelTickRead();
+#endif
+            static_assert( HasStaticType_v<I>, "I must be a REFLECT( Interface ) type with REFLECT_BODY()" );
+            const TypeInfo* pInterface = findStaticType<I>();
+            for ( Component* pComp : _listComponent )
+            {
+                if ( pComp == nullptr || pComp->isPendingDestroy() )
+                    continue;
+                if ( void* pPort = pComp->findInterfacePort( pInterface ) )
+                    outListInterface.push_back( static_cast<I*>( pPort ) );
+            }
+        }
+
     private:
         /** @brief `getComponent` · `getTickSafeComponent` 의 공통 찾기입니다(병렬 틱 검사 없음). */
         template <typename T>

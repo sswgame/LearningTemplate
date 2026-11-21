@@ -358,6 +358,11 @@ namespace sw
         static void reportWireTypeNameClash( string_view clash );
         /** @brief @p listType 마다 상속 포함 필드 이름 · 옛 이름의 32 비트 해시가 겹치는지 보고 겹치면 오류를 남깁니다(**잠금 밖**, 상속 목록을 지은 뒤). */
         static void reportFieldNameHashClashes( const vector<TypeInfo*>& listType );
+        /**
+         * @brief 사슬(조상 포함)에서 같은 인터페이스를 두 번 내보내거나 인터페이스가 상한(`kMaxInterfaceCount`)을 넘는 형식을 오류로 알립니다(`Reflection.InterfaceExportedTwice` · `Reflection.InterfaceTableFull`).
+         * @details 상속 병합(`TypeInfo::rebuildDerivedCaches`)은 독점 잠금 안이라 앞의 것을 두고 조용히 넘는다 — 찾기가 어느 포트를 고를지 정하지 못하는 모양을 여기서 멈춘다.
+         */
+        static void reportInterfaceProblems( const vector<TypeInfo*>& listType );
 
         /** @brief 템플릿 enum 의 EnumInfo 입니다. 찾는 규칙은 `findEnumByTypeFqn` 입니다. */
         template <typename E>

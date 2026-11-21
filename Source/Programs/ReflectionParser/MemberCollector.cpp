@@ -25,6 +25,7 @@ namespace sw
         : _pType{ &type }
         , _pSession{ &session }
         , _listMethodSignature{}
+        , _listField{}
         , _baseCount{ 0 }
         , _bSkipConstructors{ SW_FALSE }
         , _bBodyFound{ SW_FALSE }
@@ -55,6 +56,115 @@ namespace sw
             _bHasError = SW_TRUE;
         if ( DeclarationValidator::validateTickMode( *_pType ) == false )
             _bHasError = SW_TRUE;
+        if ( validateInterfaces() == false )
+            _bHasError = SW_TRUE;
+    }
+
+    bool MemberCollector::validateInterfaces()
+    {
+        bool bValid = true;
+        if ( _pType->_bInterface == SW_TRUE )
+        {
+            // 상태가 붙으면 인터페이스가 아니다(`I` 붙은 상태 베이스가 다시 생기지 않게) — 생성 코드의 `static_assert` 보다 먼저 고칠 자리를 말한다.
+            if ( _listField.empty() == false )
+            {
+                SW_LOG_ERROR_ID( "AstVisitor.ERRORInterfaceHasState",
+                                 "ERROR: REFLECT( Interface ) '%#' has a data member '%#' - an interface is pure virtual functions only; move the state to the implementing component.",
+                                 _pType->_fullyQualifiedName, _listField.front().first );
+                bValid = false;
+            }
+            if ( _baseCount != 0 )
+            {
+                SW_LOG_ERROR_ID( "AstVisitor.ERRORInterfaceHasBase",
+                                 "ERROR: REFLECT( Interface ) '%#' has a base '%#' - an interface stands alone; export each interface with its own REFLECT_INTERFACE line.",
+                                 _pType->_fullyQualifiedName, _pType->_parentFQN );
+                bValid = false;
+            }
+            if ( _pType->_listInterfaceExport.empty() == false )
+            {
+                SW_LOG_ERROR_ID( "AstVisitor.ERRORInterfaceExports", "ERROR: REFLECT( Interface ) '%#' has REFLECT_INTERFACE - only components export interfaces through port members.",
+                                 _pType->_fullyQualifiedName );
+                bValid = false;
+            }
+            return bValid;
+        }
+        for ( size_t index = 0; index < _pType->_listInterfaceExport.size(); ++index )
+        {
+            ParsedInterfaceExport& entry = _pType->_listInterfaceExport[index];
+            for ( size_t earlier = 0; earlier < index; ++earlier )
+            {
+                if ( _pType->_listInterfaceExport[earlier]._interfaceSpelling == entry._interfaceSpelling )
+                {
+                    SW_LOG_ERROR_ID( "AstVisitor.ERRORInterfaceExportedTwice", "ERROR: '%#' exports interface '%#' twice - keep one REFLECT_INTERFACE line per interface.",
+                                     _pType->_fullyQualifiedName, entry._interfaceSpelling );
+                    bValid = false;
+                }
+            }
+            const pair<string, CXType>* pField = nullptr;
+            for ( const pair<string, CXType>& field : _listField )
+            {
+                if ( field.first == entry._portMember )
+                    pField = &field;
+            }
+            if ( pField == nullptr )
+            {
+                SW_LOG_ERROR_ID( "AstVisitor.ERRORInterfacePortMissing", "ERROR: REFLECT_INTERFACE( %#, %# ) in '%#' names no data member - declare the port member in the same type.",
+                                 entry._interfaceSpelling, entry._portMember, _pType->_fullyQualifiedName );
+                bValid = false;
+                continue;
+            }
+            entry._interfaceFQN = findPortInterface( pField->second, entry._interfaceSpelling );
+            if ( entry._interfaceFQN.empty() )
+            {
+                SW_LOG_ERROR_ID( "AstVisitor.ERRORInterfacePortBase", "ERROR: port '%#' of '%#' does not derive from interface '%#' - make the port type a nested 'struct ...Port final : %#'.",
+                                 entry._portMember, _pType->_fullyQualifiedName, entry._interfaceSpelling, entry._interfaceSpelling );
+                bValid = false;
+            }
+        }
+        return bValid;
+    }
+
+    namespace
+    {
+        /** @brief `findPortInterface` 의 기반 순회 상태입니다. */
+        struct PortBaseSearch
+        {
+            const string* _pSpelling;
+            string        _found;
+        };
+
+        CXChildVisitResult portBaseVisitor( CXCursor cursor, CXCursor, CXClientData data )
+        {
+            if ( clang_getCursorKind( cursor ) != CXCursor_CXXBaseSpecifier )
+                return CXChildVisit_Continue;
+            PortBaseSearch& search   = *static_cast<PortBaseSearch*>( data );
+            const CXCursor  baseDecl = CursorReader::getBaseClassDeclaration( cursor );
+            if ( clang_Cursor_isNull( baseDecl ) != 0 )
+                return CXChildVisit_Continue;
+            const string      fqn      = CursorReader::makeFullyQualifiedName( baseDecl );
+            const string_view spelling = *search._pSpelling;
+            const string_view full     = fqn;
+            // 짧은 이름(`IHealthSource`)이나 한정 이름(`sw::IHealthSource`) 둘 다 받는다 — 한정은 `::` 경계에서만 맞춘다.
+            const bool bQualifiedTail = full.size() > spelling.size() + 2 && full.substr( full.size() - spelling.size() ) == spelling &&
+                                        full.substr( full.size() - spelling.size() - 2, 2 ) == "::";
+            if ( full == spelling || bQualifiedTail )
+            {
+                search._found = fqn;
+                return CXChildVisit_Break;
+            }
+            return CXChildVisit_Continue;
+        }
+    } // namespace
+
+    string MemberCollector::findPortInterface( const CXType portType, const string& interfaceSpelling )
+    {
+        // 생성 코드는 이름공간과 무관하게 이 정규 이름을 쓴다(적은 철자는 생성 단위의 이름공간에서 다르게 풀릴 수 있다).
+        const CXCursor portDecl = clang_getTypeDeclaration( clang_getCanonicalType( portType ) );
+        if ( clang_Cursor_isNull( portDecl ) != 0 )
+            return {};
+        PortBaseSearch search{ &interfaceSpelling, {} };
+        clang_visitChildren( portDecl, portBaseVisitor, &search );
+        return search._found;
     }
 
     CXChildVisitResult MemberCollector::memberCollectVisitor( CXCursor cursor, CXCursor, CXClientData data )
@@ -68,7 +178,10 @@ namespace sw
         if ( kind == CXCursor_CXXBaseSpecifier )
             collector.collectBase( cursor );
         else if ( kind == CXCursor_FieldDecl )
+        {
+            collector._listField.emplace_back( CursorReader::getCursorSpelling( cursor ), clang_getCursorType( cursor ) );
             collector.collectField( cursor );
+        }
         else if ( bFunction )
             collector.collectFunctionMember( cursor, kind );
         else if ( bBusVersion )
@@ -469,6 +582,26 @@ namespace sw
         _listMethodSignature.push_back( std::move( signature ) );
     }
 
+    void MemberCollector::collectInterfaceExport( const CXCursor cursor )
+    {
+        const string      text  = AnnotationLookup::findAnnotateAttr( cursor, annotation::kReflectInterfacePrefix );
+        const string_view view  = text;
+        const size_t      head  = view.find( ';' );
+        const size_t      comma = view.find( ',' );
+        if ( head == string_view::npos || comma == string_view::npos || comma < head )
+        {
+            SW_LOG_ERROR_ID( "AstVisitor.ERRORInterfaceExportShape", "ERROR: REFLECT_INTERFACE in '%#' needs two arguments - REFLECT_INTERFACE( IInterface, _portMember ).",
+                             _pType->_fullyQualifiedName );
+            _bHasError = SW_TRUE;
+            return;
+        }
+        // 매크로가 `#InterfaceType "," #PortMember` 로 붙여 공백이 없다.
+        ParsedInterfaceExport entry;
+        entry._interfaceSpelling = string( view.substr( head + 1, comma - head - 1 ) );
+        entry._portMember        = string( view.substr( comma + 1 ) );
+        _pType->_listInterfaceExport.push_back( std::move( entry ) );
+    }
+
     void MemberCollector::collectFunctionMember( const CXCursor cursor, const CXCursorKind kind )
     {
         // REFLECT_BODY 마커 함수다. 리플렉트 FUNCTION 이 아니다.
@@ -476,6 +609,11 @@ namespace sw
         if ( spelling == annotation::kReflectBodyMarkerFn )
         {
             _bBodyFound = SW_TRUE;
+            return;
+        }
+        if ( string_view( spelling ).substr( 0, string_view( annotation::kReflectInterfaceMarkerFn ).size() ) == annotation::kReflectInterfaceMarkerFn )
+        {
+            collectInterfaceExport( cursor );
             return;
         }
 
