@@ -33,6 +33,11 @@ else()
 	set(devtools_lib_type SHARED)
 endif()
 
+# 배포 구성에도 타깃은 서지만(EXCLUDE_FROM_ALL — 배포에서도 지어지는 에디터 테스트가 링크한다) 테스트 · 개발 전용 소스는 다른 타깃과 같은 규칙으로 뺀다.
+if(SW_SHIPPING_BUILD)
+	sw_remove_excluded_sources(DEVTOOLS_SOURCES ${SW_DEV_ONLY_SOURCE_PATTERNS})
+endif()
+
 add_library(DevTools ${devtools_lib_type} ${DEVTOOLS_SOURCES})
 sw_apply_target_layer_guard(DevTools devtools)
 set_target_properties(DevTools PROPERTIES
