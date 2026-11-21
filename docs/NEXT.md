@@ -164,6 +164,7 @@
 - 미니게임 결과(`MinigameResult`) → 경제 · 진행 매핑(복원 뒤에). 허브가 쓰는 키트(스트리밍 오픈월드 · 하우징 · 농사 · 상점 …)를 허브 맵에 배치(흡수 단계마다), 전용 서버 허브(NetMMO), 매치형 미니게임은 매칭이 미니게임 이름으로 세션을 가르고 결과를 허브 서버에 보고. 로컬 멀티 미니게임이 생기면 `InputUser`. 미니게임 미리 읽기.
 - 키트: MMO 키트의 부하 목표와 운영 비용.
 - 상용 대비: T3 샤드 시간 균형(외부 CI 러너는 사용자 결정), U1 방아쇠 진동 · Android Vibrator(백엔드가 생길 때).
+- 받는 쪽 없는 "game" 채널 이벤트(제품 코드에 `EventDispatcher` 구독이 하나도 없다): `GimmickDamageEvent` · `DamageAppliedEvent`(컴포넌트 델리게이트만) · `PossessionChangedEvent` · `SaveGameSavedEvent` · `SaveGameLoadedEvent` · `SceneLoadRequestedEvent` · `SceneLoadCompletedEvent` · `AbilityPresentationEvent`(`registerGameplayCue` 만) · `AbilityOwnerDiedEvent` · `InteractionCompletedEvent` · `RoomClearedEvent` · `PlayerDefeatedInRoomEvent` · `ClearGateStateChangedEvent`(셋은 테스트만) · `GimmickCueEvent` · `GimmickNoiseEvent`(연출 · AI 는 직접 건다) — 받는 쪽이 하나면 직접 호출로 걷고, 여럿이면 실제 구독자(HUD · 퀘스트 · 업적)를 잇는다. 기믹 시나리오: 쇼케이스에 동적 상자 · 탈것 · 경비 AI 가 없어 발사 · 부스트 · 소리 효과를 시나리오 값으로 못 본다(단위 테스트만).
 
 ### 씬 스트리밍 (라)
 

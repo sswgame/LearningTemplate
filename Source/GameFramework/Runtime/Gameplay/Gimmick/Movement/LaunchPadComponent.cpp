@@ -34,12 +34,12 @@ namespace sw
 
     void LaunchPadComponent::launch( GameObject& target )
     {
-        ++_launchCount;
-        // 받는 쪽은 쏜 대상 하나라 이벤트를 거치지 않고 그 몸을 직접 부른다(언리얼 LaunchCharacter · AddImpulse(bVelChange) 자리).
+        // 받는 쪽은 쏜 대상 하나라 이벤트를 거치지 않고 그 몸을 직접 부른다(언리얼 LaunchCharacter · AddImpulse(bVelChange) 자리). 쏜 몸만 센다.
         // 캐릭터 컨트롤러는 쏜 속도를 그대로 받는다. 수직 속도는 덮어쓰고, 수평 속도는 다시 디딜 때까지 유지한다.
         CharacterControllerComponent* pController = target.getComponent<CharacterControllerComponent>();
         if ( pController != nullptr )
         {
+            ++_launchCount;
             pController->launch( _launchVelocity );
             return;
         }
@@ -47,6 +47,7 @@ namespace sw
         CharacterController2DComponent* pController2D = target.getComponent<CharacterController2DComponent>();
         if ( pController2D != nullptr )
         {
+            ++_launchCount;
             pController2D->jump( _launchVelocity._y );
             return;
         }
@@ -54,6 +55,7 @@ namespace sw
         RigidBodyComponent* pBody = target.getComponent<RigidBodyComponent>();
         if ( pBody != nullptr && pBody->getBodyType() == PhysicsBodyType::Dynamic )
         {
+            ++_launchCount;
             pBody->setLinearVelocity( _launchVelocity );
             pBody->wake();
             return;
@@ -61,6 +63,7 @@ namespace sw
         RigidBody2DComponent* pBody2D = target.getComponent<RigidBody2DComponent>();
         if ( pBody2D != nullptr && pBody2D->getBodyType() == PhysicsBodyType::Dynamic )
         {
+            ++_launchCount;
             pBody2D->setLinearVelocity( float2{ _launchVelocity._x, _launchVelocity._y } );
             pBody2D->wake();
         }
