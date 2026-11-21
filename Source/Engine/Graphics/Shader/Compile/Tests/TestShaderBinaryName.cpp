@@ -104,5 +104,5 @@ SW_TEST_CASE( ShaderBinaryNameTest, CacheKeyKeepsDefineBoundaries )
     SW_REQUIRE_TRUE( cache.getOrCompile( joined )._bSuccess );
     SW_REQUIRE_TRUE( cache.getOrCompile( split )._bSuccess );
     SW_EXPECT_EQUAL( uint64( 2 ), cache.getProviderLoadCount().get() );
-    SW_EXPECT_EQUAL( uint64( 0 ), cache.getMemoryHitCount() );
+    SW_EXPECT_EQUAL( uint64( 0 ), cache.getMemoryHitCount().get() );
 }
