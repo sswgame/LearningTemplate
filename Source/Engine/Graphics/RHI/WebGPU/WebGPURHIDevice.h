@@ -136,9 +136,7 @@ namespace sw
         /** @brief @p layout · @p listEntry 의 그룹입니다. 없으면 지어 넣습니다(지은 그룹은 캐시가 가진다 — 부르는 쪽은 놓지 않는다). 짓지 못하면 nullptr 입니다. */
         [[nodiscard]] WGPUBindGroup getOrCreate( WGPUDevice device, WGPUBindGroupLayout layout, const vector<WGPUBindGroupEntry>& listEntry );
         /** @brief 지은 그룹을 모두 놓습니다(프레임 시작 · 종료). 기록한 커맨드는 그룹을 구현이 끝날 때까지 살린다(명세). */
-        void   clear();
-        uint32 getCreatedCount() const { return _createdCount; }
-        uint32 getHitCount() const { return _hitCount; }
+        void clear();
 
         /** @brief 항목 목록의 해시입니다(레이아웃 포함). 장치 없이 돌아 단위 테스트가 본다. */
         [[nodiscard]] static uint64 makeKeyHash( WGPUBindGroupLayout layout, const vector<WGPUBindGroupEntry>& listEntry );

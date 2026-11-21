@@ -45,7 +45,7 @@ SW_TEST_CASE( PrefabPoolTest, ReleasedInstanceIsReusedInsteadOfCreated )
     GameObject* pAgain = pool.acquire( manager, "Shot" );
     SW_EXPECT_TRUE( pAgain == pObject );
     SW_EXPECT_TRUE( pAgain->isActiveInHierarchy() );
-    SW_EXPECT_EQUAL( 1u, pool.getCreatedCount() );
+    SW_EXPECT_EQUAL( uint64{ 1 }, pool.getCreatedCount().get() );
 }
 
 /** @brief [PrefabPoolTest] 쉬는 수가 상한이면 돌려받은 인스턴스를 지운다 */
@@ -71,7 +71,7 @@ SW_TEST_CASE( PrefabPoolTest, PrewarmFillsUpToTheLimit )
     SW_EXPECT_EQUAL( 3u, pool.prewarm( manager, 5, "Shot" ) );
     SW_EXPECT_EQUAL( 3u, pool.getIdleCount() );
     SW_REQUIRE_TRUE( pool.acquire( manager, "Shot" ) != nullptr );
-    SW_EXPECT_EQUAL( 3u, pool.getCreatedCount() );
+    SW_EXPECT_EQUAL( uint64{ 3 }, pool.getCreatedCount().get() );
 }
 
 /** @brief [PrefabPoolTest] 꺼낸 수가 한도면 가장 오래 꺼낸 것을 다시 내주고 새로 만들지 않는다 */
@@ -84,7 +84,7 @@ SW_TEST_CASE( PrefabPoolTest, RecyclingHandsBackTheOldestWhenFull )
     SW_REQUIRE_TRUE( pFirst != nullptr && pOther != nullptr && pFirst != pOther );
     SW_EXPECT_TRUE( pool.acquireRecycling( manager, 2, "Shot" ) == pFirst );
     SW_EXPECT_TRUE( pool.acquireRecycling( manager, 2, "Shot" ) == pOther );
-    SW_EXPECT_EQUAL( 2u, pool.getCreatedCount() );
+    SW_EXPECT_EQUAL( uint64{ 2 }, pool.getCreatedCount().get() );
     SW_EXPECT_EQUAL( 2u, pool.getBusyCount() );
 }
 
@@ -118,7 +118,7 @@ SW_TEST_CASE( PrefabPoolTest, ComponentWithoutSpawnStateResetRefusesThePool )
     PrefabPool        pool = PrefabPoolComponentSpawner<SceneComponent>::makePool( 4 ); // 되돌리기를 구현하지 않은 컴포넌트
     SW_EXPECT_TRUE( pool.acquire( manager, "Bare" ) == nullptr );
     SW_EXPECT_TRUE( pool.acquire( manager, "Bare" ) == nullptr );
-    SW_EXPECT_EQUAL( 0u, pool.getCreatedCount() );
+    SW_EXPECT_EQUAL( uint64{ 0 }, pool.getCreatedCount().get() );
     SW_EXPECT_EQUAL( 0u, pool.getBusyCount() );
     SW_EXPECT_EQUAL( 0u, pool.prewarm( manager, 2, "Bare" ) );
 }

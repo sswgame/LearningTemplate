@@ -49,6 +49,6 @@ SW_TEST_CASE( ArenaUnitPoolResetTest, FallenGruntAndItsAIComeBackFresh )
     SW_EXPECT_FALSE( pAbility->getOwnedTagCounts().hasMatchingTag( CombatAttributeSet::getDeadTag() ) );
     SW_EXPECT_TRUE( pAbility->findAttributeSetFor( CombatAttributes::health() ) == nullptr );
     SW_EXPECT_FALSE( pPawn->isPossessed() );
-    SW_EXPECT_EQUAL( 1u, bodyPool.getCreatedCount() );
-    SW_EXPECT_EQUAL( 1u, aiPool.getCreatedCount() );
+    SW_EXPECT_EQUAL( uint64{ 1 }, bodyPool.getCreatedCount().get() );
+    SW_EXPECT_EQUAL( uint64{ 1 }, aiPool.getCreatedCount().get() );
 }
