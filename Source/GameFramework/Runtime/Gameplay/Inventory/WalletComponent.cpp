@@ -12,7 +12,7 @@ namespace sw
     namespace
     {
         /** @brief 지갑을 모든 게임의 상태 스냅샷에 싣습니다(게임마다 올리지 않는다 — 형제 `PlayerStateComponent` 와 같다). */
-        const StatefulComponentRegistrar<WalletComponent> s_stateRegistration{ "WalletComponent" };
+        const StatefulComponentRegistrar<WalletComponent> s_walletStateRegistration{ "WalletComponent" };
     } // namespace
 
     WalletComponent::WalletComponent()

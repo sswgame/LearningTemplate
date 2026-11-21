@@ -4,6 +4,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Graphics/Material/Material.h"
@@ -353,7 +354,7 @@ namespace
         /** @brief 런타임 스위치(Detail, 끔 · 끔 키워드 없음)와 값 칸을 선언한 부모입니다. %# 는 스위치 키워드 · 색 기본값입니다. */
         static string makeParent( const utf8* pKeyword, const utf8* pColor )
         {
-            string text;
+            StringBuilder text;
             text.appendFormat( R"(<MaterialDef formatVersion="0" name="Reload" shaderPath="engine/shaders/pbr_lit.hlsl" surfaceModel="Lit" alphaMode="Opaque">
 	<_properties>
 		<item name="_color" type="Color" defaultValue="%#"/>
@@ -367,7 +368,7 @@ namespace
 </MaterialDef>
 )",
                                pColor, pKeyword );
-            return text;
+            return string( text.view() );
         }
     };
 } // namespace

@@ -20,7 +20,7 @@ SW_TEST_CASE( SceneViewOverlayLayoutStoreTest, ChangesAreSavedAndReadBack )
 {
     GlobalVariableInfo* pInfo = editor::getSubsystem<GlobalVariableManager>().findVariable( "gv_editorStateDir" );
     SW_REQUIRE_NOT_NULL( pInfo );
-    test::ScopedGlobalVariableValue stateDir{ *pInfo, test::makeScratchPath( "SceneViewOverlayLayoutStore" ) }; // 케이스가 어떻게 끝나도 앞 값으로 되돌린다
+    test::ScopedGlobalVariableValue stateDir{ *pInfo, test::makeScratchPath( "SceneViewOverlayLayoutStore" ).str() }; // 케이스가 어떻게 끝나도 앞 값으로 되돌린다
     SW_REQUIRE_TRUE( stateDir.isApplied() );
 
     {

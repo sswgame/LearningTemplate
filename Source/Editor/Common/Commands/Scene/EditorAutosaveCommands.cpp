@@ -233,7 +233,7 @@ namespace sw::editor
                         editor::getSubsystem<EditorWorkspace>().requestOpenPanelByID( editorpanel::kRecoveredScene.getView() );
                     }
                 }
-                state._bMounted = editor::getSubsystem<AssetPaths>().mountDiskDomain( EditorAutosaveCommands::kDomain, folder ); // 거절하면 이유를 로그로 남긴다(복원만 막힌다)
+                state._bMounted = editor::getSubsystem<AssetPaths>().mountDiskDomain( EditorAutosaveCommands::kDomain, folder.str() ); // 거절하면 이유를 로그로 남긴다(복원만 막힌다)
             }
 
             /** @brief 세션 폴더들의 문서 사본을 복구 후보로 모읍니다(다른 프로젝트 · 바뀐 원본은 거절 이유를 단다). 원본 해시는 씬과 같은 `EditorAutosaveCommands::computeSourceHash` 다. */

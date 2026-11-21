@@ -75,7 +75,7 @@ namespace sw::test
             AnimationClip clip;
             SW_REQUIRE_TRUE( clip.compressFrom( makeChainRawClip( makeChainSkeleton( 2u ), 31u, 30.0f, 0.5f ), *pCodec, AnimationCodecSettings{}, nullptr ) );
             StringBuilder<constant::buffer::kMax512> pathText;
-            pathText.appendFormat( "%#/%#%#", _domain.makeDiskFolder( "paired" ), pName, AnimationClip::kExtension );
+            pathText.appendFormat( "%#/%#%#", _domain.makeDiskFolder( "paired" ).str(), pName, AnimationClip::kExtension );
             const optional<AbsolutePath> path = AbsolutePath::tryMake( pathText.view() );
             SW_REQUIRE_TRUE( path.has_value() );
             SW_REQUIRE_TRUE( clip.saveToFile( *path ) );

@@ -13,7 +13,7 @@ namespace sw
     namespace
     {
         /** @brief 가방을 모든 게임의 상태 스냅샷에 싣습니다(게임마다 올리지 않는다 — 형제 `PlayerStateComponent` 와 같다). */
-        const StatefulComponentRegistrar<InventoryComponent> s_stateRegistration{ "InventoryComponent" };
+        const StatefulComponentRegistrar<InventoryComponent> s_inventoryStateRegistration{ "InventoryComponent" };
     } // namespace
 
     InventoryComponent::InventoryComponent()

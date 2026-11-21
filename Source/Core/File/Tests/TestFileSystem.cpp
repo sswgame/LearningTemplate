@@ -135,6 +135,6 @@ SW_TEST_CASE( FileSystemTest, ToDiskPathNormalizesAndEmptyFails )
     const AbsolutePath emptyPath = FileUtil::toDiskPath( "" ); // 로그 없음 - 오류 로그가 나면 케이스가 진다
     SW_EXPECT_TRUE( emptyPath.empty() );
     SW_EXPECT_FALSE( FileUtil::exists( emptyPath ) );
-    string text;
-    SW_EXPECT_TRUE( FileUtil::readOptionalTextFile( emptyPath, text ) != OptionalFileRead::Read );
+    string emptyText;
+    SW_EXPECT_TRUE( FileUtil::readOptionalTextFile( emptyPath, emptyText ) != OptionalFileRead::Read );
 }

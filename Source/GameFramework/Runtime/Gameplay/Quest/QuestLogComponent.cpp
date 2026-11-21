@@ -12,7 +12,7 @@ namespace sw
     namespace
     {
         /** @brief 퀘스트 일지를 모든 게임의 상태 스냅샷에 싣습니다(게임마다 올리지 않는다 — 형제 `PlayerStateComponent` 와 같다). */
-        const StatefulComponentRegistrar<QuestLogComponent> s_stateRegistration{ "QuestLogComponent" };
+        const StatefulComponentRegistrar<QuestLogComponent> s_questLogStateRegistration{ "QuestLogComponent" };
     } // namespace
 
     QuestLogComponent::QuestLogComponent()
