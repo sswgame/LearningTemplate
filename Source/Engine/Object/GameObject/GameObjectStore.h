@@ -220,7 +220,7 @@ namespace sw
         void dispatchPendingBeginPlay();
 
         /** @brief GameObject 를 지연 삭제 큐에 넣습니다(`GameObjectManager::destroyGameObject`). */
-        void destroyGameObject( GameObject* pObj, bool bDestroyChildren );
+        void destroyGameObject( GameObject* pObj );
         /** @brief Component 를 지연 삭제 큐에 넣습니다. 처리할 때 핸들로 다시 찾으므로, 그 사이에 다른 경로가 먼저 해제해도 안전합니다. */
         void destroyComponent( Component* pComp );
         /**

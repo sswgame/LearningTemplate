@@ -429,7 +429,7 @@ namespace sw
     {
         outListChild.clear();
         // primary 만이 아니라 **자기 씬 컴포넌트 전부**의 자식을 본다. 소켓(primary 가 아닌 씬 컴포넌트)에 붙은 오브젝트도 자식이다
-        // (`getParent` 와 `refreshActiveInHierarchy` 도 그렇게 본다). primary 의 자식만 반환하면 `destroyGameObject( 캐릭터, true )` 가
+        // (`getParent` 와 `refreshActiveInHierarchy` 도 그렇게 본다). primary 의 자식만 반환하면 `destroyGameObject( 캐릭터 )` 가
         // 소켓에 붙은 무기를 남기고, 그 무기는 루트가 되어 계속 틱하고 그려진다.
         for ( Component* pOwnComp : _listComponent )
         {

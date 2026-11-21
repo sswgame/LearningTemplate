@@ -504,9 +504,9 @@ namespace sw
         return _pState->_sceneScope;
     }
 
-    void GameObjectManager::destroyGameObject( GameObject* pObj, bool bDestroyChildren )
+    void GameObjectManager::destroyGameObject( GameObject* pObj )
     {
-        _pState->_store.destroyGameObject( pObj, bDestroyChildren );
+        _pState->_store.destroyGameObject( pObj );
     }
 
     void GameObjectManager::destroyComponent( Component* pComp )

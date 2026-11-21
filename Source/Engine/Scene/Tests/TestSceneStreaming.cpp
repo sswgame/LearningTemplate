@@ -281,7 +281,7 @@ SW_TEST_CASE( SceneStreamingTest, ReloadedCellKeepsChangedState )
     GameObject* pGone  = Util::findByFileID( scene, 2 );
     SW_REQUIRE_TRUE( pMoved != nullptr && pGone != nullptr && pMoved->getPrimarySceneComponent() != nullptr );
     pMoved->getPrimarySceneComponent()->setLocalPosition( float3{ 1.0f, 2.0f, 3.0f } );
-    objects.destroyGameObject( pGone, true );
+    objects.destroyGameObject( pGone );
 
     Util::setSource( streaming, float3{ 500.0f, 0.0f, 500.0f } );
     streaming.update( 0.0f );

@@ -567,11 +567,11 @@ namespace sw
         void collectServiceParticles( ISceneParticleSink& sink ) const;
 
         /**
-         * @brief GameObject 를 지연 삭제 큐에 넣습니다.
+         * @brief GameObject 를 자식과 함께 지연 삭제 큐에 넣습니다(언리얼 `DestroyActor` 가 붙은 액터를 함께 없애는 것과 같다).
+         * @details 부모가 사라져도 남길 자식은 그 자식이 표시한다(`GameObject::setKeptWhenParentDestroyed`) — 부르는 쪽 깃발로 자식 전부를 남기는 길은 두지 않는다.
          * @param pObj 삭제할 게임 오브젝트
-         * @param bDestroyChildren 자식 오브젝트도 함께 지울지 여부
          */
-        void destroyGameObject( GameObject* pObj, bool bDestroyChildren = true );
+        void destroyGameObject( GameObject* pObj );
 
         /** @brief Component 를 지연 삭제 큐에 넣습니다. 처리 때 핸들로 다시 찾으므로, 그 사이 다른 경로가 먼저 해제해도 안전합니다. */
         void destroyComponent( Component* pComp );

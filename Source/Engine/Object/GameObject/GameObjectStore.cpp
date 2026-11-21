@@ -412,7 +412,7 @@ namespace sw
         return pObj->findComponentByID( handle.componentID(), true );
     }
 
-    void GameObjectStore::destroyGameObject( GameObject* pObj, bool bDestroyChildren )
+    void GameObjectStore::destroyGameObject( GameObject* pObj )
     {
         if ( pObj == nullptr )
             return;
@@ -431,16 +431,11 @@ namespace sw
         notifyStructureChanged();
 
         vector<GameObject*> listChildren;
-        if ( bDestroyChildren )
-            pObj->getChildren( listChildren );
-
-        if ( bDestroyChildren )
+        pObj->getChildren( listChildren );
+        for ( GameObject* pChild : listChildren )
         {
-            for ( GameObject* pChild : listChildren )
-            {
-                if ( pChild != nullptr && pChild->isKeptWhenParentDestroyed() == false )
-                    destroyGameObject( pChild, true );
-            }
+            if ( pChild != nullptr && pChild->isKeptWhenParentDestroyed() == false )
+                destroyGameObject( pChild );
         }
 
         {
