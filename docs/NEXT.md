@@ -29,6 +29,7 @@
 - **에디터 MVVM:** w-edthread4 · w-edmvvm2 통합 빌드 확인. 남은 View 정리: `Common/GUI` 나머지(상태 표시 · 도킹 레이아웃 · 테마)를 `[panelViewBan] views` 로.
 - **preflight tidy:** tidy 를 겹친 첫 preflight 에서 캐시 적중 · changed 시나리오 영향을 실측한다.
 - **D3D11 첫 시나리오:** DXBC DDC 키가 바뀌어 첫 실행 컴파일이 늘어난다 — 정지 시한에 걸리지 않는지 본다.
+- **w-pathjoin(빌드 없이 바꿈):** `disk-path-join` 이 const 글 선언을 `AbsolutePath` 로 올리고 다른 쓰임에 `.str()` 을 끼웠다(187 파일) — 지는 TU 는 같은 이름의 멤버를 지역 형식으로 본 자리(가장 가까운 선언 판정)일 가능성이 크다. `join` 은 기준 위로 오르는 `..` 를 빈 경로로 거절한다 — 데이터 상대 경로를 잇는 자리(`settings._trashFolder` · `rule._folder` · `params._configFile` · `changedID` · `pFolder` · `pFileName`)에서 I/O 실패가 나면 그 글을 보고 고친다. 병합 뒤 충돌 파일에 `byte-reader-values` · `disk-path-args` · `disk-path-join` 을 다시 돌린다.
 
 ## 3. 알려진 실패 · 흔들림
 
@@ -114,6 +115,8 @@
 - **키트 셋 가르기(규칙 · 디렉터 · 클라이언트):** TacticsSRPG 가 본보기(규칙은 키트 루트, 디렉터 `Component/SRPGGameModeComponent`, 뷰 · 입력 · HUD 는 `Client/` 의 `GF_Client_TacticsSRPG`). Fighting · Farming · CityBuilder 는 키트 안에 섞인 곳이 없고 디렉터 · 뷰가 폐기할 게임(Playground FightingDemo · HarvestValley · MeadowVillage · FrontierTown · NileCity)에 있다 — 허브 미니게임으로 옮길 때 같은 계약으로 키트 `Component/` · `GF_Client_<X>` 에 둔다. 나머지 순서(같은 계약): ActionPlatformer · ActionCombat · BattleRoyale · MechArena · Metroidvania · CardGame · KartRacing · PartyArena · Rhythm · AsymmetricHorror · CoopScavenger · GhostHunt · SurvivalHorror · ClassicJRPG · MonsterCollector · MonsterHuntRPG · OpenWorldWestern · CreatureLife · RestaurantSim · ThemePark · RealTimeStrategy · SideScrollConquest · ActionAdventure.
 
 ### 코어 · 리플렉션
+
+- **디스크 경로 형식 남은 몫:** `toDiskPath` 감싸기 1140 곳. 다음 만드는 쪽을 `AbsolutePath` 로(`disk-path-join` 의 `PRODUCERS` 표에 더하고 `--migrate-producers`): `AssetMeta::makePath` · `DerivedDataCache::makePath` · `ScopedScratchDomain::getFolder` · `EditorPaths::resolveEditorStateFile` · `AssetPaths` 의 디스크 경로 반환. 그 뒤 `FileUtil::joinPath` 를 글 전용(id · 표시)으로 좁힌다.
 
 - **5-3 병렬 오브젝트:** PO-1 근접 카운터 `Gimmick.ProximityCandidates`(노드 수, 후보 수)를 `GimmickCircuitComponent` 틱에 두고 게임 12 개 `slice` 최고치, 서비스 구간 `GT.Scene.service.<이름>` 으로 `load/characters` · `load/housingbulk` · `load/townsfolk` · Shooter3D `benchmark` 3 번씩 → PO-2 한 단계 직렬 서비스 합 0.3 ms 이상이고 겹치지 않는 둘 이상이 각 0.1 ms 이상일 때만 서명을 나눈다(`ISceneMainService::update` / `ISceneParallelService::updateOnAnyThread( SceneJobContext& )`, 매니저는 const, 쓰기는 `deferPostTick`, 게임 스레드 전용 API 는 `const GameThreadKey&` 인자, 파도는 `FrameSystemParallelPlan`, 뒤 `GT.Scene.tick.FlushEnd` 감소 + `TestSceneStateHash` 동일). 같은 열쇠 인자를 `ISceneService` 렌더 기여 훅(`contributeLights` 등)에도 → PO-3 4 워커에서 남는 약 5 ms 직렬 몫(요청 모으기 · 결과 반영 · Jolt 공용 상태)을 구간으로 잰다.
 - **5-4 리플렉션:** W-R3 (a) 통합 빌드 `.gen.cpp` 합계(목표 4 MB 미만) · 생성 비중(8 % 미만) — 못 미치면 `ReflectionParser.EmitBytes` 에서 합계 25 % 넘는 방출 함수만 표로(`emitMethodInvoker` 는 못 바꾼다). W-R4 뒤 손 `serializeState` 본문(약 158 곳)을 키트별로 `StateIO::reflected` 로(소비자별 커밋 앞뒤 3 % 넘으면 그 커밋만 되돌림, 롤백 프레임 경로가 쓰면 타입별 칸 계획 캐시). RF-4 `ObjectStateSerializer` 상태 쓰기 · 읽기 짝과 `ComponentDefaults` 기본값 비교를 `ReflectVisit` 로. RF-7 · W-R6 밀집 타입 색인은 `TickRegistry::_mapTypeDispatch` · `GameObjectStore::_mapComponentPool` · `ComponentDefaults::_mapResolved` 조회 합이 게임 스레드 프레임의 1 %(또는 0.1 ms) 이상일 때 `TypeInfo::_typeIndex` + `TypeIndexedArray<T>`(5-3 SoA 와 함께). N1 칸별 변경 비트(`writeDelta`)는 대역폭 측정 뒤. FUNCTION: 인자 있는 메서드를 타입 위젯 · `ReflectCallResult` 오류 표시로, 그다음 반복 작업용 액션 목록.
