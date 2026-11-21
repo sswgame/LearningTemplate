@@ -13,6 +13,7 @@
 <Scenario name="game.playground.kitdemo_respawn" fixedDelta="0.0166667" timeoutFrames="3600" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<Launch variable="gv_firstMinigame" value="kitdemo_respawn"/>
 	<WaitUntil watch="KitDemo.Platformer.State" equals="1" timeoutFrames="120"/>
+	<DevCommand line="gpu.timings on"/> <!-- 프레임 프로파일러를 켠다 — GameMode.StepMs · StepPeakMs 는 프로파일러 구간을 읽는다 -->
 	<WaitUntil watch="KitDemo.Platformer.PlayerY" near="1.45" tolerance="0.05" timeoutFrames="60"/>
 	<Expect watch="KitDemo.Platformer.Respawns" equals="0"/>
 	<Expect watch="KitDemo.Platformer.RespawnPhase" equals="0"/>
@@ -62,6 +63,7 @@
 	<Record watch="Save.CapturePeakMs"/>
 	<Record watch="GameMode.StepMs"/>
 	<Record watch="GameMode.StepPeakMs"/>
+	<DevCommand line="gpu.timings off"/> <!-- 체인의 다음 단계에 계측을 남기지 않는다 -->
 	<Press slot="Key.D"/>
 	<WaitUntil watch="KitDemo.Platformer.PlayerY" atMost="0" timeoutFrames="240"/>
 	<Release slot="Key.D"/>

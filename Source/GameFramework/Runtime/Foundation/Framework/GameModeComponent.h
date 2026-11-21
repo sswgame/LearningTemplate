@@ -53,7 +53,7 @@ namespace sw
      *            걸지 않은 디렉터는 주 틱 그대로이다.
      *
      *          - **디렉터 계약 셋**(모든 미니게임 · 허브 디렉터가 같은 셋만 적는다 — 키트 규칙 객체에는 계약을 더하지 않는다):
-     *            ① 걸음 `updateGame`(틱 뒤 게임 스레드) — 베이스가 시간을 재어 감시 값 `GameMode.StepMs` · `GameMode.StepPeakMs` 로 낸다(줄 추가 없이 모든 미니게임이 값을 낸다).
+     *            ① 걸음 `updateGame`(틱 뒤 게임 스레드) — 베이스가 프로파일러 구간(`kStepScopeName`)으로 감싸 감시 값 `GameMode.StepMs` · `GameMode.StepPeakMs` 가 그 구간을 읽는다(줄 추가 없이 모든 미니게임이 값을 낸다).
      *            ② 세이브 `serializeGameState`(리플렉션 상태 칸 뒤에 잇는 손 본문 하나).
      *            ③ 결과 `finishMinigame` → `collectMinigameResult` — 한 판 임시 상태(미니게임 지갑 · 창고 · 점수)는 디렉터가 소유하고
      *            바탕 판(플레이어 진행 · 월드 상태)에 직접 쓰지 않으며 `MinigameResult` 의 값 목록으로만 내보낸다(`MinigameFlow::requestLeave`).
@@ -71,6 +71,8 @@ namespace sw
         /** @brief 디렉터의 판 상태는 병렬 틱 중 남이 읽어도 됩니다 — 규칙은 틱 뒤 게임 스레드에서만 돈다(`deferRules`). 틱이 쓰는 것은 자기 시간 누적뿐이다. */
         static constexpr bool   kTickReadSafe = true;
         static constexpr uint32 kRuleSubTick  = 0x52554C45u; ///< 규칙을 도는 서브틱 id(`_tickAfter` 를 걸었을 때만)
+        /** @brief 걸음(`updateGame`)을 감싸는 프로파일러 구간 이름입니다 — 감시 값 `GameMode.StepMs` · `GameMode.StepPeakMs` 의 재료(디렉터는 시간 칸 · 읽기 함수를 들지 않는다). */
+        static constexpr const utf8* kStepScopeName = "GT.GameMode.updateGame";
 
         GameModeComponent();
         virtual ~GameModeComponent() override;
@@ -139,11 +141,6 @@ namespace sw
          * @return 미니게임 흐름이 없거나 켜진 미니게임이 없으면 오류를 남기고 false 입니다(허브 판에서 부르면 계약 위반이다).
          */
         [[nodiscard]] bool finishMinigame( const hashed_string& resultName );
-        /** @brief 마지막 걸음(`updateGame`)의 게임 스레드 시간(마이크로초)입니다. 감시 값 `GameMode.StepMs` 가 읽는다. */
-        int64 getLastStepMicroseconds() const { return _lastStepMicroseconds; }
-        /** @brief 판을 연 뒤 가장 길었던 걸음의 시간(마이크로초)입니다. 감시 값 `GameMode.StepPeakMs` 가 읽는다. */
-        int64 getPeakStepMicroseconds() const { return _peakStepMicroseconds; }
-
         /** @brief 판이 열렸으면(`startGame` 이 성공) true 입니다. */
         bool isStarted() const { return _bStarted == SW_TRUE; }
         /** @brief 게임이 스스로 돌면 true 입니다(`_bAutoPlay`, 또는 개발 구성에서 게임의 `-gv_<게임>AutoPlay=1`). */
@@ -301,8 +298,6 @@ namespace sw
         GameSoundQueue           _soundQueue;           ///< 낼 소리. 오디오는 게임 스레드에서 다루므로 틱 뒤에 낸다
         uint32                   _compactThreshold;     ///< 이 수를 넘으면 사라진 핸들을 덜어 낸다
         float32                  _pendingRuleDeltaTime; ///< 틱이 쌓고 틱 뒤 `runPendingRules` 가 쓰는 시간
-        int64                    _lastStepMicroseconds; ///< 마지막 `updateGame` 시간(디렉터 계약 ① 의 감시 값)
-        int64                    _peakStepMicroseconds; ///< 판을 연 뒤 가장 긴 `updateGame` 시간
         uint8                    _bStarted        : 1;
         uint8                    _bViewsSpawned   : 1; ///< 지금 상태의 뷰 오브젝트가 스폰돼 있다(정리하면 다음 틱이 다시 스폰한다)
         uint8                    _bFlushScheduled : 1;
