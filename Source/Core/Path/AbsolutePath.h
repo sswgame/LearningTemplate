@@ -42,6 +42,12 @@ namespace sw
         [[nodiscard]] AbsolutePath join( string_view relative ) const;
         /** @brief 부모 폴더입니다. 끝 구분자는 무시하고, 부모가 뿌리면 뿌리(`/a` → `/`, `C:/a` → `C:/`), 뿌리 자신의 부모는 빈 경로입니다(`FileUtil::getDirectoryPart` 와 같은 규칙). */
         [[nodiscard]] AbsolutePath getParent() const;
+        /**
+         * @brief 마지막 성분 끝에 @p suffix 를 붙인 경로입니다(`a/b.png` + `.meta` → `a/b.png.meta` — 곁 파일 · 기록 파일 이름).
+         * @details 글로 꺼내 붙이고 `toDiskPath` 로 다시 올리는 왕복 대신 쓴다(할당은 결과 하나). @p suffix 가 구분자 · 널을 담거나 이 경로가 비었거나 뿌리면 빈 경로다
+         *          — 성분을 바꾸는 일은 `join` · `getParent` 가 맡는다. 언리얼 `FPaths` 의 이름 붙이기 · `std::filesystem::path::operator+=` 와 같은 자리다.
+         */
+        [[nodiscard]] AbsolutePath appendSuffix( string_view suffix ) const;
 
         /** @brief 경로 글입니다(구분자 `/`). */
         [[nodiscard]] const string& str() const { return _path; }

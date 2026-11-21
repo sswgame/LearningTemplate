@@ -133,10 +133,10 @@ namespace sw::editor
         ed::Config config{};
         if ( StringUtil::isNullOrEmpty( pSettingsFileName ) == false )
         {
-            const string settingsPath = EditorPaths::resolveEditorStateFile( pSettingsFileName );
+            const AbsolutePath settingsPath = EditorPaths::resolveEditorStateFile( pSettingsFileName );
             if ( settingsPath.empty() == false )
             {
-                _settingsPath       = settingsPath;
+                _settingsPath       = settingsPath.str();
                 config.SettingsFile = _settingsPath.c_str();
             }
         }

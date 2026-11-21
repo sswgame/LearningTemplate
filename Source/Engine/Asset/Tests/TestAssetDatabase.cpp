@@ -113,7 +113,7 @@ SW_TEST_CASE( AssetDatabaseTest, WriterGivesCopiesNewIdentityAndReplaceKeepsIt )
     string prefabText;
     string metaText;
     SW_REQUIRE_TRUE( FileUtil::readTextFile( prefabAbs, prefabText ) );
-    SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::toDiskPath( AssetMeta::makePath( soundAbs.str() ) ), metaText ) );
+    SW_REQUIRE_TRUE( FileUtil::readTextFile( AssetMeta::makePath( soundAbs ), metaText ) );
     const AssetGUIDHeader copied = AssetGUIDHeader::read( prefabText );
     SW_REQUIRE_TRUE( copied._state == AssetGUIDHeaderState::Found );
     SW_EXPECT_TRUE( *copied._guid != original );
@@ -133,7 +133,7 @@ SW_TEST_CASE( AssetDatabaseTest, WriterGivesCopiesNewIdentityAndReplaceKeepsIt )
     SW_REQUIRE_TRUE( FileUtil::readTextFile( soundAbs, soundText ) );
     SW_EXPECT_EQUAL( string( "new ogg" ), soundText );
     string metaAfter;
-    SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::toDiskPath( AssetMeta::makePath( soundAbs.str() ) ), metaAfter ) );
+    SW_REQUIRE_TRUE( FileUtil::readTextFile( AssetMeta::makePath( soundAbs ), metaAfter ) );
     SW_EXPECT_EQUAL( metaText, metaAfter );
 }
 

@@ -41,8 +41,8 @@ namespace sw::editor
         if ( pDock == nullptr )
             return false;
         // 직전 배치는 에디터 상태 폴더의 임시 레이아웃으로 둔다(이름 붙인 레이아웃 목록에 섞이지 않게).
-        const string folder = FileUtil::joinPath( EditorPaths::getEditorStateDirectory(), "Temp" );
-        if ( pDock->saveNamedLayout( kMaximizeLayoutName, folder ) == false )
+        const AbsolutePath folder = EditorPaths::getEditorStateDirectory().join( "Temp" );
+        if ( pDock->saveNamedLayout( kMaximizeLayoutName, folder.str() ) == false )
             return false;
         vector<string> listCloseID;
         for ( const EditorPanelEntry& entry : _panelManager.getPanels() )
@@ -64,8 +64,8 @@ namespace sw::editor
         EditorDockLayout* pDock = _context.findSubsystem<EditorDockLayout>(); // 선택: 셸이 도킹 배치를 알리기 전과 셸 없는 테스트 호스트에는 없다
         if ( pDock == nullptr )
             return false;
-        const string folder = FileUtil::joinPath( EditorPaths::getEditorStateDirectory(), "Temp" );
-        return pDock->requestLoadNamedLayout( kMaximizeLayoutName, folder );
+        const AbsolutePath folder = EditorPaths::getEditorStateDirectory().join( "Temp" );
+        return pDock->requestLoadNamedLayout( kMaximizeLayoutName, folder.str() );
     }
 
     bool EditorPanelService::saveFocusedDirtyDocument()

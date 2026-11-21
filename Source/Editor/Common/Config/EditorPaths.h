@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 
 namespace sw
 {
@@ -64,14 +65,14 @@ namespace sw::editor
          * @brief 에디터가 쓰는 상태 폴더 <Project>/Saved/Editor 를 반환합니다. 없으면 만듭니다. `-gv_editorStateDir=<폴더>` 를 주면 그 폴더를 씁니다.
          * @details 도킹(`imgui.ini`, `windows.json`), 이름 붙인 레이아웃, 노드 캔버스, 경로가 없는 도구 문서, 환경설정(테마 포함 `EditorPreferences.json`), gv 프리셋이
          *          여기에 있다. 사람이 고쳐서 커밋하는 `Config/` 와 나눈다. 언리얼의 `Saved/`, 유니티의 `UserSettings/` 와 같다.
-         * @return 정하지 못하면 빈 문자열입니다.
+         * @return 디스크 경로 형식입니다(I/O 에 그대로 넘기고 `join` 으로 잇는다).
          */
-        static string getEditorStateDirectory();
+        [[nodiscard]] static AbsolutePath getEditorStateDirectory();
 
         /**
          * @brief Saved/Editor 아래 상태 파일의 절대 경로를 반환합니다.
-         * @return 정하지 못하면 빈 문자열입니다.
+         * @return 디스크 경로 형식입니다. @p pFileName 이 비면 빈 경로입니다(그 경로의 I/O 는 실패한다).
          */
-        static string resolveEditorStateFile( const utf8* pFileName );
+        [[nodiscard]] static AbsolutePath resolveEditorStateFile( const utf8* pFileName );
     };
 } // namespace sw::editor

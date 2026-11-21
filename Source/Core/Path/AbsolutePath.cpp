@@ -178,4 +178,14 @@ namespace sw
         const size_t slash = _path.rfind( '/', end - 1 );
         return AbsolutePath{ _path.substr( 0, slash + 1 <= rootLength ? rootLength : slash ) };
     }
+
+    AbsolutePath AbsolutePath::appendSuffix( string_view suffix ) const
+    {
+        if ( _path.empty() || _path.back() == '/' || suffix.find_first_of( string_view( "/\\\0", 3 ) ) != string_view::npos )
+            return AbsolutePath{ string{} }; // 빈 경로 · 뿌리(끝이 구분자 — 뿌리 밖의 끝 구분자는 만들지 않는다) · 성분을 바꾸는 접미사
+        string appended;
+        appended.reserve( _path.size() + suffix.size() );
+        appended.append( _path ).append( suffix.data(), suffix.size() );
+        return AbsolutePath{ std::move( appended ) };
+    }
 } // namespace sw

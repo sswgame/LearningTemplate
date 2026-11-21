@@ -98,7 +98,7 @@ namespace sw::editor
 
     string EditorNetPlayPresetStore::getDefaultFilePath()
     {
-        return EditorPaths::resolveEditorStateFile( kFileName );
+        return EditorPaths::resolveEditorStateFile( kFileName ).str();
     }
 
     expected<void> EditorNetPlayPresetStore::validateConsistent( const EditorNetPlayPresetFile& file )

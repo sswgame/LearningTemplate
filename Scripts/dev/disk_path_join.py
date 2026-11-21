@@ -7,9 +7,11 @@ Scripts/dev/disk_path_join.py
   py -3 -m Scripts disk-path-join [경로…]          # 바꾼다(경로 없으면 Source)
   py -3 -m Scripts disk-path-join --check [경로…]  # 형식으로 바꿀 수 있는 남은 감싸기를 찍고, 있으면 실패
   py -3 -m Scripts disk-path-join --self-check     # 변환 자체 테스트
+  py -3 -m Scripts disk-path-join --migrate-producers NAME…  # 반환을 형식으로 바꾼 만드는 쪽 NAME 의 한 번의 이전(이미 형식인 만드는 쪽은 그대로)
 
-- 형식인 식: 가장 가까운 선언이 `AbsolutePath` 인 이름 · `*이름`(optional<AbsolutePath>) · `ProcessRoots` 칸 · 형식을 돌려주는 만드는 쪽(`PRODUCERS` —
-  `test::makeScratchPath` · `ScopedScratchDomain::makeDiskPath` …) · 형식 식의 `.join( … )` · `.getParent()`. 그 `.str()` 은 형식으로 되돌린다.
+- 형식인 식: 가장 가까운 선언이 `AbsolutePath` 인 이름 · `*이름`(optional<AbsolutePath>) · `ProcessRoots` 칸 · 형식을 돌려주는 만드는 쪽(`*_PRODUCERS` —
+  `test::makeScratchPath` · `ScopedScratchDomain::makeDiskPath` · `DerivedDataCache::makePath` · `EditorPaths::resolveEditorStateFile` …) · 인자가 형식인
+  `AssetMeta::makePath( 형식 )` · 형식 식의 `.join( … )` · `.getParent()`. 그 `.str()` 은 형식으로 되돌린다.
 - 바꾸는 자리: `toDiskPath( 형식 )` → `형식`, `toDiskPath( FileUtil::joinPath( 형식, 상대 ) )` → `형식.join( 상대 )`(겹친 joinPath 도),
   `toDiskPath( FileUtil::getDirectoryPart( 형식 ) )` → `형식.getParent()`. 상대가 `..` 를 담은 글 상수면 두고 알린다(`join` 은 위로 오르면 빈 경로다).
 - 함수 안의 `const string 이름 = <형식으로 만들 수 있는 식>;` 은 `const AbsolutePath 이름 = …;` 로 바꾸고, 그 블록 안의 다른 쓰임은 `이름.str()` 로 적어
@@ -46,9 +48,26 @@ WRAP_CALL = re.compile(r"(?<![\w.>])" + QUALIFIER + r"?toDiskPath\s*\(")
 JOIN_CALL = re.compile(r"\s*" + QUALIFIER + r"joinPath\s*\(")
 PARENT_CALL = re.compile(r"\s*" + QUALIFIER + r"getDirectoryPart\s*\(")
 FREE_PRODUCERS = ("makeScratchPath",)   # `test::` 의 형식을 돌려주는 자유 함수
-MEMBER_PRODUCERS = {"makeDiskPath": ("ScopedScratchDomain", "EditorScratchDomain"), "makeDiskFolder": ("ScopedScratchDomain",)}
+# 형식을 돌려주는 정적 함수(클래스 이름 → 함수 이름). 클래스 안의 한정 없는 부르기는 손으로 옮긴다.
+STATIC_PRODUCERS = {
+    "DerivedDataCache": ("makeLocalRootPath",),
+    "EditorPaths": ("getEditorStateDirectory", "resolveEditorStateFile"),
+    "EditorAutosaveCommandsInternal": ("getFolder",),
+}
+# 형식을 돌려주는 멤버 함수(함수 이름 → 그 함수를 가진 형식). 대상의 선언 형식으로 같은 이름의 다른 함수(`GridReachability::makePath` …)와 가른다.
+MEMBER_PRODUCERS = {
+    "makeDiskPath": ("ScopedScratchDomain", "EditorScratchDomain"),
+    "makeDiskFolder": ("ScopedScratchDomain",),
+    "getFolder": ("ScopedScratchDomain",),
+    "makePath": ("DerivedDataCache",),
+}
 FREE_PRODUCER_CALL = re.compile(r"(?<![\w.>])(?:(?:::\s*)?(?:sw\s*::\s*)?test\s*::\s*)?(" + "|".join(FREE_PRODUCERS) + r")\s*\(")
-MEMBER_PRODUCER_CALL = re.compile(r"\b(\w+)\s*\.\s*(" + "|".join(MEMBER_PRODUCERS) + r")\s*\(")
+STATIC_PRODUCER_CALL = re.compile(r"(?<![\w.>])(?:(?:::\s*)?(?:sw\s*::\s*)?(?:editor\s*::\s*)?)(" + "|".join(STATIC_PRODUCERS) + r")\s*::\s*(\w+)\s*\(")
+MEMBER_PRODUCER_CALL = re.compile(r"\b(\w+)\s*(?:\.|->)\s*(" + "|".join(MEMBER_PRODUCERS) + r")\s*\(")
+PRODUCER_CALLS = (FREE_PRODUCER_CALL, STATIC_PRODUCER_CALL, MEMBER_PRODUCER_CALL)   # 만드는 쪽 이름은 마지막 묶음
+ALL_PRODUCER_NAMES = frozenset((*FREE_PRODUCERS, *(name for names in STATIC_PRODUCERS.values() for name in names), *MEMBER_PRODUCERS))
+# 인자가 형식이면 형식을 돌려주는 겹치기(글 판은 리소스 id 용으로 남는다) — `AssetMeta::makePath( 형식 )`
+ARGUMENT_TYPED_CALL = re.compile(r"((?:(?:::\s*)?sw\s*::\s*)?AssetMeta\s*::\s*makePath)\s*\(")
 TYPED_MEMBERS = ("str", "c_str", "empty", "join", "getParent")   # 형식에도 있는 이름 — `.str()` 을 끼우지 않는다
 DECLARATION = re.compile(r"\bconst\s+(sw\s*::\s*)?(?:string|auto)\s*&?\s*(\w+)\s*=\s*")
 TYPE_WORD_BEFORE = re.compile(r"(?:[A-Za-z_][\w:]*(?:<[^<>;]*>)?)\s*[&*]?\s*$")
@@ -65,18 +84,35 @@ def strip_str(text: str) -> str | None:
     return match.group(1).strip() if match else None
 
 
+def is_valid_producer(code: str, match: re.Match[str], position: int) -> bool:
+    """`PRODUCER_CALLS` 의 맞춤이 형식을 돌려주는 만드는 쪽인가 — 정적은 클래스 · 함수 짝, 멤버는 대상의 선언 형식을 본다."""
+    if match.re is FREE_PRODUCER_CALL:
+        return True
+    if match.re is STATIC_PRODUCER_CALL:
+        return match.group(2) in STATIC_PRODUCERS[match.group(1)]
+    declared = find_declaration(code, match.group(1), position)
+    return declared is not None and last_name(declared[0]) in MEMBER_PRODUCERS[match.group(2)]
+
+
 def is_producer_call(code: str, text: str, position: int) -> bool:
     """`text` 가 통째로 형식을 돌려주는 만드는 쪽 부르기인가."""
-    match = FREE_PRODUCER_CALL.match(text)
-    if match is None:
-        match = MEMBER_PRODUCER_CALL.match(text)
-        if match is None:
-            return False
-        declared = find_declaration(code, match.group(1), position)
-        if declared is None or last_name(declared[0]) not in MEMBER_PRODUCERS[match.group(2)]:
-            return False
-    open_index = match.end() - 1
-    return match_paren(text, open_index) == len(text) - 1
+    for pattern in PRODUCER_CALLS:
+        match = pattern.match(text)
+        if match is not None and is_valid_producer(code, match, position):
+            return match_paren(text, match.end() - 1) == len(text) - 1
+    return False
+
+
+def convert_argument_typed_call(code: str, text: str, position: int, depth: int) -> str | None:
+    """`AssetMeta::makePath( 형식 )`(인자의 `.str()` 은 뗀다)이면 그 글, 아니면 None."""
+    match = ARGUMENT_TYPED_CALL.match(text)
+    if match is None or match_paren(text, match.end() - 1) != len(text) - 1:
+        return None
+    pieces = [text[a:b].strip() for a, b in split_top(text, match.end(), len(text) - 1, (",",))]
+    if len(pieces) != 1:
+        return None
+    base = typed_base(code, pieces[0], position, depth + 1)
+    return f"{match.group(1)}( {base} )" if base is not None else None
 
 
 def typed_base(code: str, text: str, position: int, depth: int = 0) -> str | None:
@@ -98,6 +134,9 @@ def typed_base(code: str, text: str, position: int, depth: int = 0) -> str | Non
         return text if ("optional" in declared[0]) == dereferenced else None
     if is_producer_call(code, text, position):
         return text
+    argument_typed = convert_argument_typed_call(code, text, position, depth)
+    if argument_typed is not None:
+        return argument_typed
     member = re.fullmatch(r"(.+?)\s*\.\s*(join\s*\(.*\)|getParent\s*\(\s*\))", text, re.S)
     if member is not None and typed_base(code, member.group(1), position, depth + 1) == member.group(1).strip():
         return text
@@ -305,18 +344,16 @@ def is_string_context(code: str, start: int, end: int, before: str) -> bool:
     return "FileUtil" in name and function not in IO_PATH_ARGS and function != "toDiskPath"
 
 
-def append_producer_str(raw: str, code: str, final: bool, migrate: bool) -> str:
+def append_producer_str(raw: str, code: str, final: bool, migrate: frozenset[str]) -> str:
     """형식 문맥 밖의 만드는 쪽 부르기에 `.str()` 을 붙인다(만드는 쪽의 반환 형식을 바꾼 뒤 컴파일되게).
     첫 바퀴(`final` 거짓)는 감싸기 인자 · 글 선언의 초기값을 두고(다음 바퀴가 형식으로 바꾼다), 끝 바퀴는 형식으로 바꾸지 못한 글 선언의 초기값만 본다.
-    `migrate` 는 반환 형식을 바꾸는 한 번의 이전이다 — 형식 문맥(감싸기 · 형식 선언 · I/O 인자 · 형식 멤버) 밖은 모두 붙인다. 다시 돌릴 때는 글이 틀림없는
-    자리만 붙인다(감싸기를 푼 형식 인자 — `save( 형식 )` — 를 글 자리로 잘못 보지 않게)."""
+    `migrate` 는 반환 형식을 이번에 바꾸는 만드는 쪽 이름들이다(한 번의 이전) — 형식 문맥(감싸기 · 형식 선언 · I/O 인자 · 형식 멤버) 밖은 모두 붙인다.
+    그 밖의(이미 형식인) 만드는 쪽은 글이 틀림없는 자리만 붙인다(감싸기를 푼 형식 인자 — `save( 형식 )` · 형식 칸 초기값 — 를 글 자리로 잘못 보지 않게)."""
     edits: list[int] = []
-    for pattern in (FREE_PRODUCER_CALL, MEMBER_PRODUCER_CALL):
+    for pattern in PRODUCER_CALLS:
         for match in pattern.finditer(code):
-            if pattern is MEMBER_PRODUCER_CALL:
-                declared = find_declaration(code, match.group(1), match.start())
-                if declared is None or last_name(declared[0]) not in MEMBER_PRODUCERS[match.group(2)]:
-                    continue
+            if is_valid_producer(code, match, match.start()) is False:
+                continue
             before = code[max(0, match.start() - 300):match.start()].rstrip()
             word = re.search(r"(\w+)\s*[&*]?\s*$", before)
             if word is not None and TYPE_WORD_BEFORE.search(before) and word.group(1) not in NOT_TYPE_WORDS and not before.endswith((",", "(", "=", "?", ":")):
@@ -334,7 +371,7 @@ def append_producer_str(raw: str, code: str, final: bool, migrate: bool) -> str:
             is_declaration_init = re.search(r"\bconst\s+(?:sw\s*::\s*)?(?:string|auto)\s*&?\s*\w+\s*=\s*$", before) is not None and re.match(r"\s*;", after) is not None
             if is_wrapped or (is_declaration_init is False if final else is_declaration_init):
                 continue
-            if final is False and (is_io_argument(code, match.start(), close + 1) or (migrate is False and not is_string_context(code, match.start(), close + 1, before))):
+            if final is False and (is_io_argument(code, match.start(), close + 1) or (match.group(match.re.groups) not in migrate and not is_string_context(code, match.start(), close + 1, before))):
                 continue
             edits.append(close + 1)
     for index in sorted(set(edits), reverse=True):
@@ -342,7 +379,7 @@ def append_producer_str(raw: str, code: str, final: bool, migrate: bool) -> str:
     return raw
 
 
-def rewrite_text(raw: str, migrate: bool = False) -> tuple[str, int]:
+def rewrite_text(raw: str, migrate: frozenset[str] = frozenset()) -> tuple[str, int]:
     """바꾼 글과 줄인 감싸기 수. 감싸기 · 선언을 더 바뀌지 않을 때까지 번갈아 바꾸고 끝에 만드는 쪽 부르기에 `.str()` 을 붙인다."""
     before = len(WRAP_CALL.findall(strip_code(raw)))
     raw = append_producer_str(raw, strip_code(raw), False, migrate)
@@ -409,6 +446,18 @@ SELF_CHECK_CASES: dict[str, str] = {
     # 이름공간 밖 파일의 `sw::string` 은 `sw::AbsolutePath`
     'void f()\n{\n    const sw::string root = sw::test::makeScratchPath( "a" );\n    ok = sw::FileUtil::exists( sw::FileUtil::toDiskPath( root ) );\n}\n':
         'void f()\n{\n    const sw::AbsolutePath root = sw::test::makeScratchPath( "a" );\n    ok = sw::FileUtil::exists( root );\n}\n',
+    # 정적 만드는 쪽 · 선언 형식으로 가린 멤버 만드는 쪽(같은 이름의 다른 형식은 그대로)
+    'void f( const DerivedDataCache& cache, const GridReachability& reach )\n{\n    ok = FileUtil::exists( FileUtil::toDiskPath( cache.makePath( 0, kKey ) ) );\n'
+    '    log( cache.makePath( 1, kKey ) );\n    ok = reach.makePath( cell, list );\n'
+    '    const string file = EditorPaths::resolveEditorStateFile( kName );\n    ok = FileUtil::writeTextFile( FileUtil::toDiskPath( file ), "x" );\n}\n':
+        'void f( const DerivedDataCache& cache, const GridReachability& reach )\n{\n    ok = FileUtil::exists( cache.makePath( 0, kKey ) );\n'
+        '    log( cache.makePath( 1, kKey ).str() );\n    ok = reach.makePath( cell, list );\n'
+        '    const AbsolutePath file = EditorPaths::resolveEditorStateFile( kName );\n    ok = FileUtil::writeTextFile( file, "x" );\n}\n',
+    # 인자가 형식인 `AssetMeta::makePath` 는 형식 판(글 인자는 리소스 id 판이라 그대로)
+    'void f( const AbsolutePath& source, string_view id )\n{\n    ok = FileUtil::exists( FileUtil::toDiskPath( AssetMeta::makePath( source.str() ) ) );\n'
+    '    ok = FileUtil::exists( FileUtil::toDiskPath( AssetMeta::makePath( id ) ) );\n}\n':
+        'void f( const AbsolutePath& source, string_view id )\n{\n    ok = FileUtil::exists( AssetMeta::makePath( source ) );\n'
+        '    ok = FileUtil::exists( FileUtil::toDiskPath( AssetMeta::makePath( id ) ) );\n}\n',
     # 같은 블록에서 다시 선언(가림)하면 바꾸지 않는다
     'void f()\n{\n    const string root = test::makeScratchPath( "a" );\n    { string root = "x"; use( root ); }\n}\n':
         'void f()\n{\n    const string root = test::makeScratchPath( "a" ).str();\n    { string root = "x"; use( root ); }\n}\n',
@@ -426,7 +475,7 @@ SAFE_CASES: dict[str, str] = {
 
 def run_self_check() -> int:
     failures = 0
-    for cases, migrate in ((SELF_CHECK_CASES, True), (SAFE_CASES, False)):
+    for cases, migrate in ((SELF_CHECK_CASES, ALL_PRODUCER_NAMES), (SAFE_CASES, frozenset())):
         for source, want in cases.items():
             got, _ = rewrite_text(source, migrate)
             again, _ = rewrite_text(got)
@@ -442,8 +491,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("paths", nargs="*", help="볼 경로(저장소 기준, 없으면 Source)")
     parser.add_argument("--check", action="store_true", help="바꾸지 않고 형식으로 바꿀 수 있는 남은 감싸기를 찍는다 — 있으면 실패")
     parser.add_argument("--self-check", action="store_true", help="변환 자체 테스트")
-    parser.add_argument("--migrate-producers", action="store_true",
-                        help="만드는 쪽(PRODUCERS)의 반환을 형식으로 바꾸는 한 번의 이전 — 형식 문맥 밖의 부르기에 모두 .str() 을 붙인다(다시 돌릴 때는 빼고 글이 틀림없는 자리만)")
+    parser.add_argument("--migrate-producers", nargs="*", metavar="NAME",
+                        help="반환을 형식으로 바꾼 만드는 쪽(이름을 주면 그것만, 없으면 표 전체)의 한 번의 이전 — 형식 문맥 밖의 부르기에 모두 .str() 을 붙인다(다시 돌릴 때는 빼고 글이 틀림없는 자리만)")
     args = parser.parse_args(argv)
     if args.self_check:
         return run_self_check()
@@ -454,14 +503,14 @@ def main(argv: Sequence[str] | None = None) -> int:
     for path in list_files(project_root, args.paths):
         with path.open(encoding="utf-8", newline="") as file:
             raw = file.read()
-        has_producer = FREE_PRODUCER_CALL.search(raw) is not None or MEMBER_PRODUCER_CALL.search(raw) is not None
+        has_producer = any(pattern.search(raw) is not None for pattern in PRODUCER_CALLS)
         if "toDiskPath" not in raw and not has_producer:
             continue
         relative = path.relative_to(project_root).as_posix()
         if args.check:
             list_problem += [f"{relative}:{line}: 형식 조립으로 바꿀 수 있는 감싸기 — `py -3 -m Scripts disk-path-join {relative}`" for line in find_left(raw)]
             continue
-        new_raw, done = rewrite_text(raw, args.migrate_producers)
+        new_raw, done = rewrite_text(raw, frozenset() if args.migrate_producers is None else frozenset(args.migrate_producers or ALL_PRODUCER_NAMES))
         total += done
         if new_raw != raw:
             with path.open("w", encoding="utf-8", newline="") as file:

@@ -14,6 +14,7 @@
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "Engine/Content/AssetGUID.h"
 #include "Engine/Content/AssetRegistry.h"
@@ -115,8 +116,10 @@ namespace sw
         string toXML() const;
         /** @brief @p text 를 엄격하게 읽고 GUID 를 돌려줍니다. 읽지 못하거나 GUID 가 글 표기가 아니면 @p sourceLabel 과 이유를 오류로 남기고 없음입니다. */
         [[nodiscard]] optional<AssetGUID> parseXML( string_view text, string_view sourceLabel );
-        /** @brief 원본 @p sourcePath 의 서술 경로(`<경로>.meta`)입니다. */
+        /** @brief 원본 리소스 id @p sourcePath 의 서술 id(`<id>.meta`)입니다 — 색인 키 · 오류 표시용 글. 디스크 자리는 `AbsolutePath` 판입니다. */
         static string makePath( string_view sourcePath );
+        /** @brief 원본 디스크 경로 @p sourcePath 의 서술 디스크 경로(`<경로>.meta`)입니다 — 글로 잇고 다시 올리지 않는다(`AbsolutePath::appendSuffix`). */
+        [[nodiscard]] static AbsolutePath makePath( const AbsolutePath& sourcePath ) { return sourcePath.appendSuffix( kExtension ); }
         /** @brief 원본 @p sourcePath 에 @p guid 를 주는 서술 글입니다. 임포트 예외 @p listOverride 를 함께 든다(복사 · 옮기기는 예외를 지킨다). */
         static string makeText( string_view sourcePath, const AssetGUID& guid, const vector<AssetImportOverride>& listOverride = {} );
     };

@@ -13,8 +13,8 @@ namespace
 {
     struct DerivedDataCacheFixture
     {
-        string _localRoot{ test::makeScratchPath( "DDC/Local" ).str() };
-        string _sharedRoot{ test::makeScratchPath( "DDC/Shared" ).str() };
+        AbsolutePath _localRoot{ test::makeScratchPath( "DDC/Local" ) };
+        AbsolutePath _sharedRoot{ test::makeScratchPath( "DDC/Shared" ) };
 
         /** @brief 로컬(쓰기) + 공유(@p sharedAccess) 두 층입니다. */
         DerivedDataCache makeLayered( DerivedDataAccess sharedAccess ) const
@@ -40,11 +40,11 @@ SW_TEST_CASE( DerivedDataCacheTest, SharedHitFillsLocal )
     SW_REQUIRE_TRUE( fixture.makeSharedWriter().store( kKey, "job-a", kPayload ) );
 
     const DerivedDataCache cache = fixture.makeLayered( DerivedDataAccess::ReadOnly );
-    SW_EXPECT_FALSE( FileUtil::exists( FileUtil::toDiskPath( cache.makePath( 0, kKey ) ) ) );
+    SW_EXPECT_FALSE( FileUtil::exists( cache.makePath( 0, kKey ) ) );
     vector<uint8> bytes;
     SW_REQUIRE_TRUE( cache.find( kKey, "job-a", bytes ) );
     SW_EXPECT_TRUE( bytes == kPayload );
-    SW_EXPECT_TRUE( FileUtil::exists( FileUtil::toDiskPath( cache.makePath( 0, kKey ) ) ) );
+    SW_EXPECT_TRUE( FileUtil::exists( cache.makePath( 0, kKey ) ) );
 
     // 채운 로컬 항목만으로도 히트다(공유 층이 사라져도).
     const DerivedDataCache localOnly{ vector<DerivedDataLayer>{ DerivedDataLayer{ fixture._localRoot, DerivedDataAccess::ReadWrite } } };
@@ -79,17 +79,17 @@ SW_TEST_CASE( DerivedDataCacheTest, CorruptPayloadIsAMiss )
     const DerivedDataCache        cache = fixture.makeLayered( DerivedDataAccess::ReadOnly );
     SW_REQUIRE_TRUE( cache.store( kKey, "job-a", kPayload ) );
 
-    const string  path = cache.makePath( 0, kKey );
-    vector<uint8> entry;
-    SW_REQUIRE_TRUE( FileUtil::readFile( FileUtil::toDiskPath( path ), entry ) );
+    const AbsolutePath path = cache.makePath( 0, kKey );
+    vector<uint8>      entry;
+    SW_REQUIRE_TRUE( FileUtil::readFile( path, entry ) );
     entry.back() ^= 0xff; // 본문 마지막 바이트를 뒤집는다
-    SW_REQUIRE_TRUE( FileUtil::writeFile( FileUtil::toDiskPath( path ), entry.data(), entry.size() ) );
+    SW_REQUIRE_TRUE( FileUtil::writeFile( path, entry.data(), entry.size() ) );
 
     vector<uint8> bytes;
     SW_EXPECT_FALSE( cache.find( kKey, "job-a", bytes ) );
 
     // 머리가 잘린 항목도 미스다.
-    SW_REQUIRE_TRUE( FileUtil::writeFile( FileUtil::toDiskPath( path ), entry.data(), 5 ) );
+    SW_REQUIRE_TRUE( FileUtil::writeFile( path, entry.data(), 5 ) );
     SW_EXPECT_FALSE( cache.find( kKey, "job-a", bytes ) );
 }
 
@@ -101,12 +101,12 @@ SW_TEST_CASE( DerivedDataCacheTest, ReadOnlyLayerIsNotWritten )
     const DerivedDataCacheFixture fixture;
     const DerivedDataCache        cache = fixture.makeLayered( DerivedDataAccess::ReadOnly );
     SW_REQUIRE_TRUE( cache.store( kKey, "job-a", kPayload ) );
-    SW_EXPECT_TRUE( FileUtil::exists( FileUtil::toDiskPath( cache.makePath( 0, kKey ) ) ) );
-    SW_EXPECT_FALSE( FileUtil::exists( FileUtil::toDiskPath( cache.makePath( 1, kKey ) ) ) );
+    SW_EXPECT_TRUE( FileUtil::exists( cache.makePath( 0, kKey ) ) );
+    SW_EXPECT_FALSE( FileUtil::exists( cache.makePath( 1, kKey ) ) );
 
     const DerivedDataCache writable = fixture.makeLayered( DerivedDataAccess::ReadWrite );
     SW_REQUIRE_TRUE( writable.store( kKey, "job-a", kPayload ) );
-    SW_EXPECT_TRUE( FileUtil::exists( FileUtil::toDiskPath( writable.makePath( 1, kKey ) ) ) );
+    SW_EXPECT_TRUE( FileUtil::exists( writable.makePath( 1, kKey ) ) );
 }
 
 /**
@@ -118,13 +118,13 @@ SW_TEST_CASE( DerivedDataCacheTest, ExistingSameEntryIsKept )
     const DerivedDataCacheFixture fixture;
     const DerivedDataCache        cache = fixture.makeLayered( DerivedDataAccess::ReadOnly );
     SW_REQUIRE_TRUE( cache.store( kKey, "job-a", kPayload ) );
-    const string path     = cache.makePath( 0, kKey );
-    const int64  oldTicks = FileUtil::getCurrentFileWriteTime() - 100 * FileUtil::kFileTimeTicksPerSecond; // 다시 쓰면 지금 시각으로 바뀐다
-    SW_REQUIRE_TRUE( FileUtil::setFileWriteTime( FileUtil::toDiskPath( path ), oldTicks ) );
+    const AbsolutePath path     = cache.makePath( 0, kKey );
+    const int64        oldTicks = FileUtil::getCurrentFileWriteTime() - 100 * FileUtil::kFileTimeTicksPerSecond; // 다시 쓰면 지금 시각으로 바뀐다
+    SW_REQUIRE_TRUE( FileUtil::setFileWriteTime( path, oldTicks ) );
 
     SW_REQUIRE_TRUE( cache.store( kKey, "job-a", kPayload ) );
     int64 ticks = 0;
-    SW_REQUIRE_TRUE( FileUtil::getFileWriteTime( FileUtil::toDiskPath( path ), ticks ) );
+    SW_REQUIRE_TRUE( FileUtil::getFileWriteTime( path, ticks ) );
     SW_EXPECT_EQUAL( oldTicks, ticks );
 
     const vector<uint8> changed{ 9, 9, 9 };
@@ -150,11 +150,11 @@ SW_TEST_CASE( DerivedDataCacheTest, EvictsUnusedThenOldestOverLimit )
     {
         SW_REQUIRE_TRUE( writer.store( key, "job", kPayload ) );
     }
-    SW_REQUIRE_TRUE( FileUtil::setFileWriteTime( FileUtil::toDiskPath( writer.makePath( 0, keyExpired ) ), now - 10 * kDayTicks ) );
-    SW_REQUIRE_TRUE( FileUtil::setFileWriteTime( FileUtil::toDiskPath( writer.makePath( 0, keyOld ) ), now - 3 * kDayTicks ) );
-    SW_REQUIRE_TRUE( FileUtil::setFileWriteTime( FileUtil::toDiskPath( writer.makePath( 0, keyHit ) ), now - 4 * kDayTicks ) );
+    SW_REQUIRE_TRUE( FileUtil::setFileWriteTime( writer.makePath( 0, keyExpired ), now - 10 * kDayTicks ) );
+    SW_REQUIRE_TRUE( FileUtil::setFileWriteTime( writer.makePath( 0, keyOld ), now - 3 * kDayTicks ) );
+    SW_REQUIRE_TRUE( FileUtil::setFileWriteTime( writer.makePath( 0, keyHit ), now - 4 * kDayTicks ) );
     uint64 entryBytes = 0;
-    SW_REQUIRE_TRUE( FileUtil::tryGetFileSize( FileUtil::toDiskPath( writer.makePath( 0, keyNew ) ), entryBytes ) );
+    SW_REQUIRE_TRUE( FileUtil::tryGetFileSize( writer.makePath( 0, keyNew ), entryBytes ) );
 
     // 상한은 항목 둘 — 나이로 하나(10 일), 상한으로 하나(남은 셋 중 가장 오래 안 쓴 3 일)가 지워진다. 4 일 전 항목은 찾기 히트로 지금 시각이 됐다.
     const DerivedDataCache cache{ vector<DerivedDataLayer>{
@@ -162,9 +162,9 @@ SW_TEST_CASE( DerivedDataCacheTest, EvictsUnusedThenOldestOverLimit )
     vector<uint8>          bytes;
     SW_REQUIRE_TRUE( cache.find( keyHit, "job", bytes ) );
     SW_EXPECT_EQUAL( 2u, cache.evictUnusedEntries() );
-    SW_EXPECT_FALSE( FileUtil::isRegularFile( FileUtil::toDiskPath( cache.makePath( 0, keyExpired ) ) ) );
-    SW_EXPECT_FALSE( FileUtil::isRegularFile( FileUtil::toDiskPath( cache.makePath( 0, keyOld ) ) ) );
-    SW_EXPECT_TRUE( FileUtil::isRegularFile( FileUtil::toDiskPath( cache.makePath( 0, keyHit ) ) ) );
-    SW_EXPECT_TRUE( FileUtil::isRegularFile( FileUtil::toDiskPath( cache.makePath( 0, keyNew ) ) ) );
+    SW_EXPECT_FALSE( FileUtil::isRegularFile( cache.makePath( 0, keyExpired ) ) );
+    SW_EXPECT_FALSE( FileUtil::isRegularFile( cache.makePath( 0, keyOld ) ) );
+    SW_EXPECT_TRUE( FileUtil::isRegularFile( cache.makePath( 0, keyHit ) ) );
+    SW_EXPECT_TRUE( FileUtil::isRegularFile( cache.makePath( 0, keyNew ) ) );
     SW_EXPECT_EQUAL( 0u, cache.evictUnusedEntries() );
 }

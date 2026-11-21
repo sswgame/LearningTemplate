@@ -161,6 +161,6 @@ namespace sw::editor
 
     string InspectorFavorites::getFilePath() const
     {
-        return EditorPaths::resolveEditorStateFile( _pFileName );
+        return EditorPaths::resolveEditorStateFile( _pFileName ).str();
     }
 } // namespace sw::editor

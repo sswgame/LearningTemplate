@@ -19,11 +19,11 @@ namespace sw::editor
     string EditorGlobalVariableCommands::getPresetFolderPath()
     {
         // 앱이 쓰는 상태라 팩 밖이다 — 팩 안(`data/presets/globalvars`)에 두면 쿠킹이 게임 팩에 싣는다. 팩마다 폴더를 나눈다.
-        const string stateDir = EditorPaths::getEditorStateDirectory();
+        const AbsolutePath stateDir = EditorPaths::getEditorStateDirectory();
         if ( stateDir.empty() )
             return {};
         const string packName = FileUtil::getFileNamePart( FileUtil::trimTrailingSlashes( editor::getSubsystem<const GameConfig>()._packRoot.get() ) );
-        return FileUtil::joinPath( FileUtil::joinPath( stateDir, "GlobalVariablePresets" ), packName );
+        return FileUtil::joinPath( FileUtil::joinPath( stateDir.str(), "GlobalVariablePresets" ), packName );
     }
 
     string EditorGlobalVariableCommands::getComponentPresetFolderPath()

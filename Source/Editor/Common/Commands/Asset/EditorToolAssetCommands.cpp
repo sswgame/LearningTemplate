@@ -104,7 +104,7 @@ namespace sw::editor
                     return resolveToolDocumentPath( path, use );
                 if ( desc._pDefaultFileName == nullptr )
                     return {};
-                return EditorPaths::resolveEditorStateFile( desc._pDefaultFileName );
+                return EditorPaths::resolveEditorStateFile( desc._pDefaultFileName ).str();
             }
 
             // 도구 문서는 디스크 파일이다(받은 리소스 id 를 낱개 파일로 풀었거나 `Saved/Editor` 기본 문서) — 디스크 입구로 읽는다. 저장(`writeDocument`)도 디스크다.

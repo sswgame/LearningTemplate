@@ -220,7 +220,7 @@ namespace sw::editor
 
     string ContentBrowserCollectionStore::getLocalFilePath()
     {
-        return EditorPaths::resolveEditorStateFile( kLocalFileName );
+        return EditorPaths::resolveEditorStateFile( kLocalFileName ).str();
     }
 
     string ContentBrowserCollectionStore::getSharedFilePath()
