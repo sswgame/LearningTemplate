@@ -140,7 +140,7 @@ namespace sw
             // 앞서 남긴 것도 지우지 않는다(번호를 붙인 새 이름). 새 키는 아래 쓰기가 원래 이름에 바꿔 끼운다.
             StringBuilder<constant::buffer::kMax512> setAsideBase;
             setAsideBase.appendFormat( "%#%#", _keyFilePath, kUnreadableKeySuffix );
-            outSetAsidePath       = FileUtil::reserveUniquePath( setAsideBase.view(), "", false );
+            outSetAsidePath       = FileUtil::reserveUniquePath( FileUtil::toDiskPath( setAsideBase.view() ), "", false );
             const bool bKeptAside = outSetAsidePath.empty() == false && ( bytes.empty() || FileUtil::writeFileDurable( FileUtil::toDiskPath( outSetAsidePath ), bytes.data(), bytes.size() ) );
             Memory::wipe( bytes.data(), bytes.size() ); // 다른 사용자의 키 파일일 수 있다
             if ( bKeptAside == false )

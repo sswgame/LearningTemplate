@@ -131,8 +131,9 @@ namespace sw
 
     bool FileServeContentSource::downloadFile( const string& relative, uint64 sizeBytes, const string& mirrorPath ) const
     {
-        AtomicFileWriter writer;
-        if ( FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( mirrorPath ) ) == false || writer.open( mirrorPath ).has_value() == false )
+        AtomicFileWriter   writer;
+        const AbsolutePath mirrorDiskPath = FileUtil::toDiskPath( mirrorPath );
+        if ( FileUtil::ensureParentDirectoryExists( mirrorDiskPath ) == false || writer.open( mirrorDiskPath ).has_value() == false )
             return false;
         vector<uint8> chunk;
         for ( uint64 offset = 0; offset < sizeBytes; offset += kChunkBytes )

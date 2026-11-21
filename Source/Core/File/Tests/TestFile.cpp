@@ -613,15 +613,15 @@ SW_TEST_CASE( FileTest, CheckedInReadOnlyFileIsNotRemovedOrMoved )
 
     const sw::FileUtil::CheckoutRule previousRule = sw::FileUtil::setCheckoutRule( []( sw::string_view path )
     { return path.find( "/controlled/" ) != sw::string_view::npos; } );
-    const sw::optional<sw::string>   found        = sw::FileUtil::findNotOpenForEdit( controlled.str() );
+    const sw::optional<sw::string>   found        = sw::FileUtil::findNotOpenForEdit( controlled );
     SW_EXPECT_TRUE( found.has_value() && *found == sw::FileUtil::normalizeSeparators( locked.str() ) );
     SW_EXPECT_FALSE( sw::FileUtil::removeFile( locked ) );
     SW_EXPECT_FALSE( sw::FileUtil::tryRemoveFile( locked ) );
     SW_EXPECT_FALSE( sw::FileUtil::removeDirectory( controlled ) );
     SW_EXPECT_FALSE( sw::FileUtil::renamePath( locked, controlled.join( "moved.txt" ) ) );
     SW_EXPECT_FALSE( sw::FileUtil::copyFile( loose, locked ) );
-    SW_EXPECT_FALSE( sw::FileUtil::isWriteAllowed( locked.str() ) ); // 경로를 스스로 여는 서드파티 저장(DDS · SQLite)이 쓰기 전에 묻는 입구다
-    SW_EXPECT_TRUE( sw::FileUtil::removeFile( loose ) );             // 규칙 밖의 읽기 전용(속성이 따라온 사본)은 정리가 지운다
+    SW_EXPECT_FALSE( sw::FileUtil::isWriteAllowed( locked ) ); // 경로를 스스로 여는 서드파티 저장(DDS · SQLite)이 쓰기 전에 묻는 입구다
+    SW_EXPECT_TRUE( sw::FileUtil::removeFile( loose ) );       // 규칙 밖의 읽기 전용(속성이 따라온 사본)은 정리가 지운다
     (void)sw::FileUtil::setCheckoutRule( previousRule );
 
     sw::string text;
@@ -702,11 +702,11 @@ SW_TEST_CASE( FileTest, FindPathIgnoringCaseReturnsTheDiskSpelling )
     SW_REQUIRE_TRUE( sw::FileUtil::ensureDirectoryExists( root.join( "MixedDir/Sub" ) ) );
     SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( root.join( "MixedDir/Sub/File.TXT" ), "x" ) );
 
-    const sw::string found = sw::FileUtil::findPathIgnoringCase( root.str(), "mixeddir/sub/file.txt" );
+    const sw::string found = sw::FileUtil::findPathIgnoringCase( root, "mixeddir/sub/file.txt" );
     SW_EXPECT_EQUAL( sw::FileUtil::joinPath( sw::FileUtil::normalizeSeparators( root.str() ), "MixedDir/Sub/File.TXT" ), found );
     SW_EXPECT_TRUE( sw::FileUtil::exists( sw::FileUtil::toDiskPath( found ) ) );
-    SW_EXPECT_TRUE( sw::FileUtil::findPathIgnoringCase( root.str(), "mixeddir/sub/missing.txt" ).empty() );
-    SW_EXPECT_TRUE( sw::FileUtil::findPathIgnoringCase( root.str(), "nodir/sub/file.txt" ).empty() );
+    SW_EXPECT_TRUE( sw::FileUtil::findPathIgnoringCase( root, "mixeddir/sub/missing.txt" ).empty() );
+    SW_EXPECT_TRUE( sw::FileUtil::findPathIgnoringCase( root, "nodir/sub/file.txt" ).empty() );
 }
 
 /**
@@ -722,13 +722,13 @@ SW_TEST_CASE( FileTest, MakePathIgnoringCaseKeepsExistingSpellingAndAppendsTheRe
     const sw::string base = sw::FileUtil::normalizeSeparators( root.str() );
 
     // 있는 파일: 디스크 표기로 풀려 같은 파일을 가리킨다(둘째 쓰기가 옆 파일을 만들지 않는다).
-    SW_EXPECT_EQUAL( sw::FileUtil::joinPath( base, "MixedDir/Sub/File.TXT" ), sw::FileUtil::makePathIgnoringCase( root.str(), "mixeddir/sub/file.txt" ) );
+    SW_EXPECT_EQUAL( sw::FileUtil::joinPath( base, "MixedDir/Sub/File.TXT" ), sw::FileUtil::makePathIgnoringCase( root, "mixeddir/sub/file.txt" ) );
     // 새 파일: 있는 폴더는 디스크 표기이고 파일 이름은 받은 표기다. 구분자는 `\` 도 받는다.
-    SW_EXPECT_EQUAL( sw::FileUtil::joinPath( base, "MixedDir/Sub/New.Txt" ), sw::FileUtil::makePathIgnoringCase( root.str(), "MIXEDDIR\\sub/New.Txt" ) );
+    SW_EXPECT_EQUAL( sw::FileUtil::joinPath( base, "MixedDir/Sub/New.Txt" ), sw::FileUtil::makePathIgnoringCase( root, "MIXEDDIR\\sub/New.Txt" ) );
     // 새 폴더: 없는 성분부터는 받은 표기를 그대로 잇고 그 아래는 훑지 않는다.
-    SW_EXPECT_EQUAL( sw::FileUtil::joinPath( base, "MixedDir/Fresh/Deep/x.txt" ), sw::FileUtil::makePathIgnoringCase( root.str(), "mixeddir/Fresh/Deep/x.txt" ) );
-    SW_EXPECT_EQUAL( sw::FileUtil::joinPath( base, "NoDir/a.txt" ), sw::FileUtil::makePathIgnoringCase( root.str(), "NoDir/a.txt" ) );
-    SW_EXPECT_EQUAL( base, sw::FileUtil::makePathIgnoringCase( root.str(), "" ) );
+    SW_EXPECT_EQUAL( sw::FileUtil::joinPath( base, "MixedDir/Fresh/Deep/x.txt" ), sw::FileUtil::makePathIgnoringCase( root, "mixeddir/Fresh/Deep/x.txt" ) );
+    SW_EXPECT_EQUAL( sw::FileUtil::joinPath( base, "NoDir/a.txt" ), sw::FileUtil::makePathIgnoringCase( root, "NoDir/a.txt" ) );
+    SW_EXPECT_EQUAL( base, sw::FileUtil::makePathIgnoringCase( root, "" ) );
 }
 
 /**
@@ -770,7 +770,7 @@ SW_TEST_CASE( FileTest, WriteFilterRefusesEveryMutatingEntry )
         sw::FileUtil::WriteFilterRegistration filter = sw::FileUtil::bindWriteFilter( &refuseEveryWrite );
         bWritten                                     = sw::FileUtil::writeTextFile( path, "changed" );
         bAppended                                    = sw::FileUtil::appendTextFile( path, "more" );
-        bTrashed                                     = sw::FileUtil::moveToRecycleBin( sw::vector<sw::string>{ path.str() } );
+        bTrashed                                     = sw::FileUtil::moveToRecycleBin( sw::vector<sw::AbsolutePath>{ path } );
         bRemoved                                     = sw::FileUtil::removeFile( path );
         filter.reset();
     }
@@ -797,7 +797,7 @@ SW_TEST_CASE( FileTest, LinuxTrashFollowsFreedesktop )
 
     const sw::AbsolutePath path = root.join( "my file.txt" );
     SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( path, "first" ) );
-    SW_REQUIRE_TRUE( sw::FileUtil::moveToRecycleBin( { path.str() } ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::moveToRecycleBin( { path } ) );
     SW_EXPECT_FALSE( sw::FileUtil::exists( path ) );
     sw::string text;
     SW_REQUIRE_TRUE( sw::FileUtil::readTextFile( root.join( "data/Trash/files/my file.txt" ), text ) );
@@ -809,7 +809,7 @@ SW_TEST_CASE( FileTest, LinuxTrashFollowsFreedesktop )
     SW_EXPECT_TRUE( info.find( "DeletionDate=" ) != sw::string::npos );
 
     SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( path, "second" ) );
-    SW_REQUIRE_TRUE( sw::FileUtil::moveToRecycleBin( { path.str() } ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::moveToRecycleBin( { path } ) );
     SW_REQUIRE_TRUE( sw::FileUtil::readTextFile( root.join( "data/Trash/files/my file.txt.1" ), text ) );
     SW_EXPECT_EQUAL( sw::string( "second" ), text );
     SW_REQUIRE_TRUE( sw::FileUtil::readTextFile( root.join( "data/Trash/files/my file.txt" ), text ) );
@@ -848,7 +848,7 @@ SW_TEST_CASE( FileTest, LinuxTrashUsesVolumeTrashAcrossFileSystems )
     sw::formatstring( name.data(), name.capacity(), "sw_volume_trash_%#.txt", static_cast<uint64>( ::getpid() ) );
     const sw::string path = sw::FileUtil::joinPath( "/dev/shm", name.view() );
     SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::toDiskPath( path ), "volume" ) );
-    SW_REQUIRE_TRUE( sw::FileUtil::moveToRecycleBin( { path } ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::moveToRecycleBin( { sw::FileUtil::toDiskPath( path ) } ) );
     SW_EXPECT_FALSE( sw::FileUtil::exists( sw::FileUtil::toDiskPath( path ) ) );
 
     const uint64                                    uid = static_cast<uint64>( ::getuid() );

@@ -146,11 +146,12 @@ namespace sw
         _packPath = string( packPath );
         _pCodec   = pCodec;
         _openWatch.restart();
-        _state = State::Open;
-        if ( FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( packPath ) ) == false )
+        _state                          = State::Open;
+        const AbsolutePath packDiskPath = FileUtil::toDiskPath( packPath );
+        if ( FileUtil::ensureParentDirectoryExists( packDiskPath ) == false )
             return fail( Error{ ErrorKind::ExternalFailure, "pack parent folder cannot be made", packPath } );
         // 앞 빌드 팩은 바꿔 끼우기 전까지 그대로라(임시 파일에 쓴다) 열기 뒤에 읽어도 된다.
-        const expected<void> opened = _file.open( packPath );
+        const expected<void> opened = _file.open( packDiskPath );
         if ( opened.has_value() == false )
             return fail( opened.error() );
         // 풀의 맨 앞은 마운트 도메인이다(`kPackFormatVersion` 2) - 항목이 없어도 담아 풀은 늘 있다.
@@ -492,7 +493,7 @@ namespace sw
         // 원본은 조각으로 읽고(한 벡터로 들지 않는다) 새 파일은 임시 파일에 써서 바꿔 끼운다. 모두 덧붙이기라 내용 해시를 쓰면서 센다.
         _mapPreviousSlot.clear();
         _contentHash                = ContentHash::kInitialState;
-        const expected<void> opened = _file.open( _packPath );
+        const expected<void> opened = _file.open( FileUtil::toDiskPath( _packPath ) );
         if ( opened.has_value() == false )
             return unexpected( opened.error() );
         vector<uint8> chunk;

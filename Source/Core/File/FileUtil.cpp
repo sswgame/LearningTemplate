@@ -63,7 +63,7 @@ namespace sw
             /** @brief @p path 에 체크아웃하지 않은 파일(`FileUtil::findNotOpenForEdit`)이 있으면 경로와 이유를 오류로 남기고 true 입니다 — 지우기 · 옮기기 · 덮는 복사의 입구가 부른다. */
             [[nodiscard]] static bool refuseNotOpenForEdit( string_view path, const utf8* pAction )
             {
-                const optional<string> lockedPath = FileUtil::findNotOpenForEdit( path );
+                const optional<string> lockedPath = FileUtil::findNotOpenForEdit( FileUtil::toDiskPath( path ) );
                 if ( lockedPath.has_value() == false )
                     return false;
                 SW_LOG_ERROR_ID( "File.NotOpenForEdit", "Refused to %# %# - '%#' is read-only (not checked out), check it out first", pAction, path, *lockedPath );
@@ -136,7 +136,7 @@ namespace sw
             [[nodiscard]] static bool prepareAtomicWrite( string_view fileName, string& outFilePath, string& outTempPath )
             {
                 const string filePath = FileUtil::normalizeSeparators( fileName );
-                if ( FileUtil::isWriteAllowed( filePath ) == false )
+                if ( FileUtil::isWriteAllowed( FileUtil::toDiskPath( filePath ) ) == false )
                     return false;
                 // 읽기 전용 대상은 어느 플랫폼에서도 바꿔 끼우지 않는다 — POSIX `rename` 은 대상 권한을 보지 않아 버전 관리 잠금(git LFS lockable)이 조용히 뚫리고,
                 // Windows 는 바꿔 끼우기가 져 아래 재시도(20 ms × 10)를 헛되이 잔다. 언리얼 `IFileManager::Move` 도 읽기 전용 대상은 덮지 않는다(EvenIfReadOnly 를 따로 받는다).
@@ -1008,20 +1008,58 @@ namespace sw
         return true;
     }
 
-    bool FileUtil::moveToRecycleBin( const vector<string>& listPath )
+    bool FileUtil::moveToRecycleBin( const vector<AbsolutePath>& listPath )
     {
-        for ( const string& path : listPath )
+        vector<string> listText; // 플랫폼 층(셸 · freedesktop 휴지통)은 글 목록을 받는다 — 드문 사용자 지우기라 한 번 옮겨 적는다
+        listText.reserve( listPath.size() );
+        for ( const AbsolutePath& path : listPath )
         {
             if ( exists( path ) && isWriteAllowed( path ) == false )
                 return false;
+            listText.push_back( path.str() );
         }
-        const bool bMoved = PlatformFileUtil::moveToRecycleBin( listPath );
+        const bool bMoved = PlatformFileUtil::moveToRecycleBin( listText );
         recordFileRemoved(); // 일부만 옮겼어도 옮긴 항목의 옛 경로는 낡았다
-        for ( const string& path : listPath )
+        for ( const string& path : listText )
         {
             PlatformFileUtil::recordFileWritten( path );
         }
         return bMoved;
+    }
+
+    bool FileUtil::isWriteAllowed( const AbsolutePath& path )
+    {
+        return isWriteAllowed( path.str() );
+    }
+
+    bool FileUtil::isCreateAllowed( const AbsolutePath& path )
+    {
+        return isCreateAllowed( path.str() );
+    }
+
+    optional<string> FileUtil::findNotOpenForEdit( const AbsolutePath& path )
+    {
+        return findNotOpenForEdit( path.str() );
+    }
+
+    string FileUtil::findPathIgnoringCase( const AbsolutePath& root, string_view lowerRelative )
+    {
+        return findPathIgnoringCase( root.str(), lowerRelative );
+    }
+
+    string FileUtil::makePathIgnoringCase( const AbsolutePath& root, string_view relative )
+    {
+        return makePathIgnoringCase( root.str(), relative );
+    }
+
+    bool FileUtil::makeCanonicalPath( const AbsolutePath& path, string& outResult )
+    {
+        return makeCanonicalPath( path.str(), outResult );
+    }
+
+    string FileUtil::reserveUniquePath( const AbsolutePath& basePath, string_view extension, bool bDirectory, uint32 maxAttempt, string_view numberSeparator )
+    {
+        return reserveUniquePath( basePath.str(), extension, bDirectory, maxAttempt, numberSeparator );
     }
 
     string_view FileUtil::skipUTF8Bom( string_view text )
@@ -1702,12 +1740,12 @@ namespace sw
         discard();
     }
 
-    expected<void> AtomicFileWriter::open( string_view filePath )
+    expected<void> AtomicFileWriter::open( const AbsolutePath& filePath )
     {
         if ( _pFile != nullptr )
             return unexpected( Error{ ErrorKind::InvalidArgument, "atomic file writer is already open", _filePath } );
-        if ( FileUtilInternal::beginAtomicWrite( filePath, _filePath, _tempPath ) == false )
-            return unexpected( Error{ ErrorKind::ExternalFailure, "target cannot be written", filePath } );
+        if ( FileUtilInternal::beginAtomicWrite( filePath.str(), _filePath, _tempPath ) == false )
+            return unexpected( Error{ ErrorKind::ExternalFailure, "target cannot be written", filePath.str() } );
         _pFile = PlatformFileUtil::openFile( _tempPath.c_str(), "wb" );
         if ( _pFile == nullptr )
             return unexpected( Error{ ErrorKind::ExternalFailure, "temporary file cannot be opened", _tempPath } );

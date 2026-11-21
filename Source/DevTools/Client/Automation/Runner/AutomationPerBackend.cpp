@@ -512,7 +512,7 @@ namespace sw
         // 실행마다 새 폴더다(`reserveUniquePath`) - 프로세스 id 는 Windows 가 다시 쓴다.
         StringBuilder<constant::buffer::kMax256> textBuilder3;
         textBuilder3.appendFormat( "%#/%#/per-backend-%#", makeAutomationOutputFolderPath(), scenarioStem, Process::getCurrentProcessID() );
-        const string defaultFolder = FileUtil::reserveUniquePath( textBuilder3.view(), {}, true );
+        const string defaultFolder = FileUtil::reserveUniquePath( FileUtil::toDiskPath( textBuilder3.view() ), {}, true );
 
         // 넘겨받은 인자가 창 위치를 정했으면(손으로 돌린 실행) 그것을 따른다. 칸 간격(클라이언트 크기 + 틀 두께)은 자식 창이 스스로 정한다(`GenericWindow::createMainWindow`).
         const bool bTileWindows = std::none_of( options._listPassThroughArgument.begin(), options._listPassThroughArgument.end(), []( const string& argument )

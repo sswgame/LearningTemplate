@@ -437,7 +437,7 @@ namespace sw::editor
     string EditorAssetFileCommands::makeUniquePath( string_view folderAbs, string_view stem, string_view suffix )
     {
         // 만들기가 곧 자리 잡기다(`reserveUniquePath`) — "있나 보고 고르기" 는 번호를 다 쓰면 있는 파일을 돌려줘 덮어썼다. 접미사가 빈 글이면 폴더다.
-        return FileUtil::reserveUniquePath( FileUtil::joinPath( folderAbs, stem ), suffix, suffix.empty(), EditorAssetFileCommandsInternal::kMaxUniqueSuffix, "_" );
+        return FileUtil::reserveUniquePath( FileUtil::toDiskPath( FileUtil::joinPath( folderAbs, stem ) ), suffix, suffix.empty(), EditorAssetFileCommandsInternal::kMaxUniqueSuffix, "_" );
     }
 
     uint32 EditorAssetFileCommands::replaceReference( string& inoutText, string_view oldID, string_view newID )
@@ -844,10 +844,10 @@ namespace sw::editor
             return deleteAsset( absolutePath );
 
         // 에셋과 곁의 정체성 서술(.meta)을 한 번에 보낸다 — 휴지통에서 되살리면 둘이 함께 온다.
-        const string   assetPath = FileUtil::normalizeSeparators( absolutePath );
-        const string   metaPath  = AssetMeta::makePath( assetPath );
-        vector<string> listPath{ assetPath };
-        if ( FileUtil::isRegularFile( FileUtil::toDiskPath( metaPath ) ) )
+        const string         assetPath = FileUtil::normalizeSeparators( absolutePath );
+        const AbsolutePath   metaPath  = FileUtil::toDiskPath( AssetMeta::makePath( assetPath ) );
+        vector<AbsolutePath> listPath{ FileUtil::toDiskPath( assetPath ) };
+        if ( FileUtil::isRegularFile( metaPath ) )
             listPath.push_back( metaPath );
         if ( FileUtil::moveToRecycleBin( listPath ) )
         {
@@ -934,7 +934,7 @@ namespace sw::editor
 
             // 이미 있는 애셋을 덮어쓰지 않는다. 같은 이름의 파일을 드롭해 폴더에 있던 것을 덮으면 아무 말 없이 사라지고,
             // 에디터의 임포트에는 되돌리기가 없으므로 그대로 잃는다. 빈 이름은 원자적으로 잡는다(`reserveUniquePath` - 고유 이름의 입구 하나).
-            const string destPath = FileUtil::reserveUniquePath( FileUtil::removeExtension( plainPath ), FileUtil::getExtension( plainPath ), false, 10000, "_" );
+            const string destPath = FileUtil::reserveUniquePath( FileUtil::toDiskPath( FileUtil::removeExtension( plainPath ) ), FileUtil::getExtension( plainPath ), false, 10000, "_" );
             if ( destPath.empty() || FileUtil::copyFile( FileUtil::toDiskPath( sourcePath ), FileUtil::toDiskPath( destPath ) ) == false )
             {
                 SW_LOG_ERROR_ID( "EditorAssetFileCommands.FailedImport", "Failed to import: %#", sourcePath.c_str() );

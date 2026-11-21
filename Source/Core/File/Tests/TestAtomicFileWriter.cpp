@@ -24,7 +24,7 @@ SW_TEST_CASE( AtomicFileWriterTest, AppendedChunksAndPatchedHeaderLand )
     const sw::AbsolutePath path = sw::test::makeScratchPath( "stream.bin" );
     SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( path, "old" ) );
     sw::AtomicFileWriter writer;
-    SW_REQUIRE_TRUE( writer.open( path.str() ).has_value() );
+    SW_REQUIRE_TRUE( writer.open( path ).has_value() );
     const uint8 arrHeader[4]{ 0, 0, 0, 0 };
     const uint8 arrBody[3]{ 'a', 'b', 'c' };
     SW_REQUIRE_TRUE( writer.append( arrHeader, sizeof( arrHeader ) ).has_value() );
@@ -49,7 +49,7 @@ SW_TEST_CASE( AtomicFileWriterTest, AbandonedWriteLeavesTheOriginal )
     SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( path, "original" ) );
     {
         sw::AtomicFileWriter writer;
-        SW_REQUIRE_TRUE( writer.open( path.str() ).has_value() );
+        SW_REQUIRE_TRUE( writer.open( path ).has_value() );
         const uint8 arrBody[3]{ 'x', 'y', 'z' };
         SW_REQUIRE_TRUE( writer.append( arrBody, sizeof( arrBody ) ).has_value() );
     }

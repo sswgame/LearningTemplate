@@ -160,10 +160,11 @@ namespace sw
                 };
                 if ( isSameEntry() )
                     return true;
-                const string     head = makeEntryHead( keyDescription, payloadHash );
-                AtomicFileWriter writer;
-                FileWriteResult  result = FileWriteResult::WriteFailed;
-                if ( FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( path ) ) && writer.open( path ).has_value() &&
+                const string       head = makeEntryHead( keyDescription, payloadHash );
+                AtomicFileWriter   writer;
+                FileWriteResult    result   = FileWriteResult::WriteFailed;
+                const AbsolutePath diskPath = FileUtil::toDiskPath( path );
+                if ( FileUtil::ensureParentDirectoryExists( diskPath ) && writer.open( diskPath ).has_value() &&
                      writer.append( reinterpret_cast<const uint8*>( head.data() ), head.size() ).has_value() && appendPayload( writer ) )
                     result = writer.tryCommit();
                 if ( result == FileWriteResult::Written || ( result == FileWriteResult::ReplaceFailed && isSameEntry() ) )
@@ -437,8 +438,9 @@ namespace sw
             if ( FileUtil::isRegularFile( FileUtil::toDiskPath( path ) ) == false )
                 continue;
             // 출력은 임시 파일에 흘려 쓰고 본문 해시가 맞을 때만 바꿔 끼운다 — 어긋난 항목이 출력 자리를 건드리지 않는다.
-            AtomicFileWriter writer;
-            if ( FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( outputPath ) ) == false || writer.open( outputPath ).has_value() == false )
+            AtomicFileWriter   writer;
+            const AbsolutePath outputDiskPath = FileUtil::toDiskPath( outputPath );
+            if ( FileUtil::ensureParentDirectoryExists( outputDiskPath ) == false || writer.open( outputDiskPath ).has_value() == false )
             {
                 SW_LOG_WARNING_ID( "DDC.OutputNotWritable", "DDC: cannot write '%#' from the cache - treated as a miss", outputPath );
                 return false;

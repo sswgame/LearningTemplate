@@ -46,11 +46,15 @@ IO_PATH_ARGS: dict[str, tuple[int, ...]] = {
     "removeDirectory": (0,), "renamePath": (0, 1), "writeFile": (0,), "tryWriteFile": (0,), "writeFileDurable": (0,), "readFile": (0,),
     "readTextFile": (0,), "readOptionalTextFile": (0,), "readStreamTextFile": (0,), "writeTextFile": (0,), "writeTextFileDurable": (0,),
     "appendTextFile": (0,), "forEachDirectoryEntry": (0,), "collectFiles": (0,), "collectFolders": (0,),
+    # 디스크를 보는 경로 함수 · 쓰기 게이트(2026-11-21 둘째 — 글을 받던 마지막 입구들)
+    "makeCanonicalPath": (0,), "reserveUniquePath": (0,), "isWriteAllowed": (0,), "isCreateAllowed": (0,), "findNotOpenForEdit": (0,),
+    "findPathIgnoringCase": (0,), "makePathIgnoringCase": (0,),
 }
 STRING_RETURNING = ("joinPath", "getDirectoryPart", "getFileNamePart", "normalizeSeparators", "toNativeSeparators", "trimTrailingSlashes",
                     "replaceExtension", "removeExtension", "makeWriteTempPath", "reserveUniquePath", "getTempDirectory", "getCurrentPath",
                     "getExecutablePath", "findPathIgnoringCase", "makePathIgnoringCase")
-CALL_PATTERN = re.compile(r"((?:::\s*)?(?:sw\s*::\s*)?FileUtil\s*::\s*)(" + "|".join(IO_PATH_ARGS) + r")\s*\(")
+# 앞 글자를 막는다 — `PlatformFileUtil::replaceFile` 정의 머리의 매개변수를 감싸던 자리(2026-11-21 병합 뒤 손으로 되돌렸다)
+CALL_PATTERN = re.compile(r"(?<![\w])((?:::\s*)?(?:sw\s*::\s*)?FileUtil\s*::\s*)(" + "|".join(IO_PATH_ARGS) + r")\s*\(")
 ROOT_FIELD = re.compile(r"(?:ProcessRoots\s*::\s*get\s*\(\s*\)|\broots)\s*\.\s*_(?:binary|project|content|packs|saved|derivedData|run)\s*$")   # ProcessRoots 칸(AbsolutePath)
 KNOWN_STRING = re.compile(r'^(?:u8)?"|(?:\.|->)\s*(?:str|c_str|view|data)\s*\(\s*\)\s*$|FileUtil\s*::\s*(?:' + "|".join(STRING_RETURNING) + r")\s*\(")
 
@@ -72,6 +76,8 @@ def get_declared_kind(code: str, name: str, before: int) -> str | None:
     """`before` 앞에서 가장 가까운 `name` 선언이 `AbsolutePath` 면 "value", `optional<AbsolutePath>` 면 "optional", 그 밖은 None.
     파일 전체의 이름 표로 보면 다른 함수의 같은 이름 글 변수(`string filePath`)를 형식으로 잘못 봤다 — 가장 가까운 선언 하나로 본다."""
     declared = find_declared_type(code, name, before)
+    if declared is None and name.startswith("_"):
+        declared = find_declared_type(code, name, len(code))   # 클래스 끝에 선언한 멤버(`_folder`)는 쓰는 자리보다 뒤에 있다
     if declared is None or "AbsolutePath" not in declared:
         return None
     return "optional" if "optional" in declared else "value"
@@ -86,7 +92,9 @@ def is_typed(argument: str, code: str, position: int) -> bool:
     dereferenced = text.startswith("*")
     bare = text.lstrip("*").strip()
     if re.fullmatch(r"\w+", bare) is None:
-        return False
+        # 형식 조립(`root.join( … )` · `.getParent()`)과 형식을 돌려주는 만드는 쪽(`test::makeScratchPath`) — `.str()` 은 글이다
+        from dev.disk_path_join import strip_str, typed_base   # 그쪽이 이 모듈의 표를 가져온다 — 순환 import 를 피해 여기서 연다
+        return strip_str(text) is None and typed_base(code, text, position) == text
     return get_declared_kind(code, bare, position) == ("optional" if dereferenced else "value")
 
 
@@ -184,6 +192,12 @@ def run_self_check() -> int:
         "optional<AbsolutePath> found = f();\nok = FileUtil::exists( found->str() ) && FileUtil::exists( ProcessRoots::get()._saved.str() );":
             "optional<AbsolutePath> found = f();\nok = FileUtil::exists( *found ) && FileUtil::exists( ProcessRoots::get()._saved );",
     }
+    unchanged = (
+        "void f( const AbsolutePath& root ) { ok = FileUtil::exists( root.join( \"a\" ) ) && FileUtil::isDirectory( root.join( \"a\" ).getParent() ); }",
+        "void f() { ok = FileUtil::exists( test::makeScratchPath( \"a\" ) ); }",
+        "bool PlatformFileUtil::replaceFile( const utf8* pSourcePath, const utf8* pTargetPath )\n{\n}\n",
+    )
+    cases.update({source: source for source in unchanged})
     failures = 0
     for source, want in cases.items():
         got, _ = rewrite_text(source)

@@ -428,7 +428,7 @@ namespace sw::editor
         // 원본이 가리키는 바깥 파일을 못 읽으면 흰 텍스처로 임포트하지 않고 실패한다(빠진 파일이 결과에 말없이 묻힌다).
         string imagePath = FileUtil::joinPath( FileUtil::getDirectoryPart( sourcePath ), image.uri );
         string canonicalPath;
-        if ( FileUtil::makeCanonicalPath( imagePath, canonicalPath ) ) // `../` 을 푼다 — 원본 옆이 아닌 textures_raw 의 이미지를 가리키는 glTF
+        if ( FileUtil::makeCanonicalPath( FileUtil::toDiskPath( imagePath ), canonicalPath ) ) // `../` 을 푼다 — 원본 옆이 아닌 textures_raw 의 이미지를 가리키는 glTF
             imagePath = FileUtil::normalizeSeparators( canonicalPath );
         outTexture._sourcePath = imagePath;
         if ( FileUtil::readFile( FileUtil::toDiskPath( imagePath ), outTexture._bytes ) == false )

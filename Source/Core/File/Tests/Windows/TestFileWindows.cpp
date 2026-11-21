@@ -62,6 +62,6 @@ SW_TEST_CASE( FileTest, PathQueriesBeyond4096CharactersSucceed )
     SW_EXPECT_EQUAL( dir.size(), absolutePath.size() );
 
     sw::string canonicalPath;
-    SW_REQUIRE_TRUE( sw::FileUtil::makeCanonicalPath( dir, canonicalPath ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::makeCanonicalPath( sw::FileUtil::toDiskPath( dir ), canonicalPath ) );
     SW_EXPECT_TRUE( canonicalPath.size() >= 4300 );
 }

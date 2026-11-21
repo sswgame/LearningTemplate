@@ -600,7 +600,7 @@ namespace sw
                 const uint64                           hash = HashUtil::appendBytes64( HashUtil::kFNVOffset64, inoutBytecode.data(), inoutBytecode.size() );
                 fixed_string<constant::buffer::kMax32> tintStem;
                 formatstring( tintStem.data(), tintStem.capacity(), "sw_tint_%#", hash );
-                const string spirvPath = FileUtil::reserveUniquePath( FileUtil::joinPath( FileUtil::getTempDirectory(), tintStem ), ".spv", false );
+                const string spirvPath = FileUtil::reserveUniquePath( FileUtil::toDiskPath( FileUtil::joinPath( FileUtil::getTempDirectory(), tintStem ) ), ".spv", false );
                 if ( spirvPath.empty() )
                     return unexpected( Error{ ErrorKind::ExternalFailure, "could not reserve a temporary SPIR-V file for Tint", FileUtil::getTempDirectory() } );
                 StringBuilder<constant::buffer::kMax512> wgslBuilder;
