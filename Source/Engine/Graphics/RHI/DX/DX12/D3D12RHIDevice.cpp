@@ -600,7 +600,8 @@ namespace sw
             }
 
             D3D12_DRED_PAGE_FAULT_OUTPUT pageFaultOutput{};
-            if ( SUCCEEDED( dred->GetPageFaultAllocationOutput( &pageFaultOutput ) ) )
+            // 주소 0 은 DRED 가 페이지 폴트를 기록하지 않았다는 뜻이다(요청 제거 · 폴트 아닌 TDR) — 폴트로 보고하지 않는다.
+            if ( SUCCEEDED( dred->GetPageFaultAllocationOutput( &pageFaultOutput ) ) && pageFaultOutput.PageFaultVA != 0 )
             {
                 SW_LOG_ERROR_ID( "D3D12.PageFaultVAX", "PageFault VA=0x%#", Fmt( static_cast<uint64>( pageFaultOutput.PageFaultVA ), Format( 16, Format::Padding::Zero ).hexUpper() ) );
                 // 폴트 주소를 덮는 할당을 이름으로 되짚는다 — 살아 있는 것과 최근에 해제된 것(해제 뒤 사용이면 여기 나온다).
