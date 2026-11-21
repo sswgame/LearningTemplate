@@ -11,7 +11,7 @@
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorStateStore.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
-#include "Editor/Viewport/EditorViewportOverlays.h"
+#include "Editor/Viewport/Model/SceneViewOverlayLayoutStore.h"
 
 #include "Engine/Config/GameTimeScale.h"
 #include "Engine/Console/DevCommandRegistry.h"
@@ -56,7 +56,7 @@ namespace sw::editor
 
             static bool runOverlayReset( const vector<string>& /*listArgument*/, string& outReply )
             {
-                SceneViewModel::postRequest( SceneViewRequest{ SceneViewRequestKind::OverlayReset } );
+                editor::getSubsystem<SceneViewOverlayLayoutStore>().resetToDefault();
                 outReply = "scene view overlays reset";
                 return true;
             }
@@ -64,13 +64,10 @@ namespace sw::editor
             static bool runOverlayShow( const vector<string>& listArgument, string& outReply )
             {
                 bool       bVisible{ false };
-                const bool bInvalid = listArgument.size() != 2 || readOptionalBoolArgument( listArgument, 1, bVisible ) == false || EditorViewportOverlays::isKnownBarID( listArgument[0] ) == false;
+                const bool bInvalid = listArgument.size() != 2 || readOptionalBoolArgument( listArgument, 1, bVisible ) == false || SceneViewOverlayLayoutStore::isKnownBarID( listArgument[0] ) == false;
                 if ( bInvalid )
                     return false;
-                SceneViewRequest request{ SceneViewRequestKind::OverlayShow };
-                request._barID    = listArgument[0];
-                request._bVisible = bVisible;
-                SceneViewModel::postRequest( std::move( request ) );
+                (void)editor::getSubsystem<SceneViewOverlayLayoutStore>().setBarVisible( listArgument[0], bVisible ); // 씬 뷰 바는 초기화에서 모두 등록했다
                 StringBuilder<constant::buffer::kMax256> replyBuilder;
                 replyBuilder.appendFormat( "overlay %#%#", listArgument[0], ( bVisible ? " shown" : " hidden" ) );
                 outReply = string( replyBuilder.view() );
@@ -142,9 +139,10 @@ namespace sw::editor
         editor::getSubsystem<DebugDrawQueue>().setCategoryEnabled( category, bEnabled );
     }
 
-    // 개발 명령은 요청만 쌓고 씬 뷰 창이 그릴 때 뷰포트 클라이언트에 적용한다(카메라 · 오버레이는 View 가 든다 — 같은 프레임의 창 그리기 안에서 적용된다).
+    // 오버레이 명령은 배치의 주인(`SceneViewOverlayLayoutStore`)을 바로 고친다 — 씬 뷰 창이 가려져 그리지 않아도 적용된다(언리얼 뷰포트 설정 객체와 같은 선).
     SW_DEV_COMMAND( OverlayReset, "overlay.reset", "overlay.reset", "Put the scene view overlay bars back where they start (and show them all)",
                     &SceneViewModelInternal::runOverlayReset );
+    // 카메라 명령은 요청만 쌓고 씬 뷰 창이 그릴 때 뷰포트 클라이언트에 적용한다(카메라는 View 가 든다).
     SW_DEV_COMMAND( CameraReset, "camera.reset", "camera.reset", "Put the scene view camera (pose, projection, speed) back where a new editor session starts",
                     &SceneViewModelInternal::runCameraReset );
     SW_DEV_COMMAND( CameraSet, "camera.set", "camera.set <x> <y> <z> <pitch> <yaw>", "Put the scene view camera at a position looking along pitch and yaw (degrees)",

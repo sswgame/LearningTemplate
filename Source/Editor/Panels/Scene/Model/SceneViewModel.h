@@ -4,7 +4,6 @@
  * @details 렌더 타깃은 `EditorViewSurface`, 카메라 · 오버레이는 뷰포트 클라이언트가 든다. 범주 켜기는 보기 설정이라 되돌리기에 남지 않는다. `docs/agents/EditorUI.md` MVVM 계약.
  */
 #pragma once
-#include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
@@ -23,22 +22,18 @@ namespace sw::editor
         bool          _bEnabled{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다)
     };
 
-    /** @brief 개발 명령이 씬 뷰 창에 넣는 요청의 종류입니다. 카메라 · 오버레이는 뷰포트 클라이언트(View)가 들어 창이 그릴 때 꺼내 적용한다. */
+    /** @brief 개발 명령이 씬 뷰 창에 넣는 요청의 종류입니다. 카메라는 뷰포트 클라이언트(View)가 들어 창이 그릴 때 꺼내 적용한다(오버레이 배치는 `SceneViewOverlayLayoutStore` 를 바로 고친다). */
     enum class SceneViewRequestKind : uint8
     {
         CameraReset,
         CameraSet,
-        OverlayReset,
-        OverlayShow,
     };
 
     /** @brief 씬 뷰 창 요청 하나입니다(값만). */
     struct SceneViewRequest
     {
         SceneViewRequestKind _kind{ SceneViewRequestKind::CameraReset };
-        float32              _arrPose[5]{};      ///< `CameraSet` — x · y · z · 피치 · 요(도)
-        string               _barID;             ///< `OverlayShow` — 바 id
-        bool                 _bVisible{ false }; ///< `OverlayShow` NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다)
+        float32              _arrPose[5]{}; ///< `CameraSet` — x · y · z · 피치 · 요(도)
     };
 
     /** @brief 씬 뷰 창의 ViewModel 입니다(상태 없음 — 개발 명령의 요청은 에디터 범위 상태에 쌓인다). */

@@ -42,6 +42,7 @@
 #include "Editor/EditorModuleUnloadListener.h"
 #include "Editor/Panels/Inspector/IComponentInspector.h"
 #include "Editor/Panels/Inspector/Model/InspectorComponentManager.h"
+#include "Editor/Viewport/Model/SceneViewOverlayLayoutStore.h"
 
 namespace sw::editor
 {
@@ -83,6 +84,7 @@ namespace sw::editor
         scope.emplaceSubsystem<EditorPlaySession>();
         scope.emplaceSubsystem<EditorTheme>();
         scope.emplaceSubsystem<EditorUICapture>();
+        scope.emplaceSubsystem<SceneViewOverlayLayoutStore>();      // 씬 뷰 오버레이 바 배치 — 씬 뷰 창이 그리지 않아도 명령이 고친다
         scope.emplaceSubsystem<EditorExtensionSubsystems>( scope ); // 확장이 기여한 서브시스템(SW_EDITOR_SUBSYSTEM) — 프레임 앞 syncExtensionRegistrations 가 만든다
         // 확장 모듈이 언로드되기 전에 그 모듈의 등록 줄로 만든 인스턴스를 지운다 — 훑는 매니저들에 의존하므로 그들보다 먼저 종료된다.
         scope.emplaceSubsystem<EditorModuleUnloadListener>( context );
