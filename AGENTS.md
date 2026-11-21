@@ -1,6 +1,6 @@
 # SW Engine Project Instructions
 
-> 결론: 아래 공통 규칙과 빌드 명령을 지키고, 세부 규칙은 표에서 일에 맞는 `docs/agents/` 파일 하나만 읽는다(본문은 영어 · 한국어 섞임). 린트 · 훅이 강제하는 규칙은 각 파일에 "강제" 한 줄로만 적혀 있다.
+> 결론: 아래 공통 규칙과 빌드 명령을 지키고, 세부 규칙은 표에서 일에 맞는 `docs/agents/` 파일만 읽는다(본문은 영어 · 한국어 섞임, 큰 파일은 `## ` 절만). 린트 · 훅 · 컴파일이 강제하는 규칙은 "강제" 로 표시돼 있다. 할 일 · 계획은 `docs/NEXT.md` 하나.
 
 Preserve existing project conventions unless the user explicitly requests otherwise.
 
@@ -8,22 +8,15 @@ Preserve existing project conventions unless the user explicitly requests otherw
 
 | Read it when you ... | File |
 | --- | --- |
-| name or rename anything in C++ | [NamingCpp](docs/agents/NamingCpp.md) |
-| write CMake, Python or a shader, or add a resource asset | [NamingScripts](docs/agents/NamingScripts.md) |
-| add a file, a header or an include; locks, services, ownership | [Includes](docs/agents/Includes.md) |
-| place, move or merge a file or folder | [FolderLayout](docs/agents/FolderLayout.md) |
-| write a function that can fail or return "nothing" | [Errors](docs/agents/Errors.md) |
-| add or move a constant or tuning value | [Constants](docs/agents/Constants.md) |
-| add a helper or a TU-private type | [Helpers](docs/agents/Helpers.md) |
-| write C++ bodies, parallel or async code, thread / GPU resource ownership | [CppStyle](docs/agents/CppStyle.md) |
-| write an `onTick` or per-frame work that looks at other objects or the scene | [TickPlacement](docs/agents/TickPlacement.md) |
-| make code differ between Dev and Shipping (or Client and Server) | [BuildConfigSwitch](docs/agents/BuildConfigSwitch.md) |
+| write C++: style, constants, failure values, helpers, includes and layers, services, locks, build-config switches, existing facilities, reflection, parallel code, thread / GPU ownership | [CppStyle](docs/agents/CppStyle.md) |
+| name or rename anything (C++, CMake, Python, HLSL) | [NamingCpp](docs/agents/NamingCpp.md) |
+| place, move or merge a file or folder, or add content assets | [FolderLayout](docs/agents/FolderLayout.md) |
+| write an `onTick`, per-frame work, triggers, streaming or gameplay rules | [Gameplay](docs/agents/Gameplay.md) |
+| write a data file, `_base` inheritance, an input map bundle, a new data format, paths and resource ids | [DataInheritance](docs/agents/DataInheritance.md) |
 | change an editor panel, shared widget, theme token or editor input | [EditorUI](docs/agents/EditorUI.md) |
-| write a render pipeline / pass XML or change what a pass reads | [RenderPipelineXml](docs/agents/RenderPipelineXml.md) |
-| write a data file that inherits another (`_base`), an input map bundle, or a new data format | [DataInheritance](docs/agents/DataInheritance.md) |
-| add a material graph node or change the graph compiler | [MaterialGraph](docs/agents/MaterialGraph.md) |
+| write a render pipeline / pass XML, a material or material graph node, a shader or RHI code | [Rendering](docs/agents/Rendering.md) |
 | touch Android, web (WebGPU), a capability flag or a format fallback | [Platform](docs/agents/Platform.md) |
-| are about to write a helper for a common job, call a C runtime / `std` facility, or handle paths and resource ids | [ExistingFacilities](docs/agents/ExistingFacilities.md) |
+| write a unit test, bench or scenario | [Testing](docs/agents/Testing.md) |
 
 ## Architecture rules
 
