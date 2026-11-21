@@ -2,7 +2,7 @@
 
 > 질문: Source 의 형식 이름(클래스 · 구조체 · 컴포넌트 · 열거)이 상용 엔진의 같은 일 이름과 맞는가, 인터페이스 규칙(`I` + PascalCase)을 지키는가, 기믹 · 키트를 장르로 나눈 구조가 맞는가?
 > 독자: 2 단계(전수 개명 · 이동)를 실행할 통합 담당과 작업자.
-> 결론: 바꿈 판정은 컴포넌트 이름 22 · 인터페이스 20(`I` 붙임 5 · 뗌 15) · 그 밖의 형식 · 열거 16 · 층 이동 8 · 파일 · 폴더 재배치 16 자리(기믹 10 · 키트 범용 조각 3 · 폴더 개명 2 · 콘텐츠 1)다. 리플렉션에 "컴포넌트가 내보내는 인터페이스" 표를 더하되 다중 상속 대신 포트 멤버(`exposeMember` 와 같은 모양)로 하고, `Gimmick/Genre` 는 기능 폴더로 쪼갠다. 2 단계는 아래 "실행 차례" 대로 `rename-symbol` · `move-source` 로 한다.
+> 결론: 바꿈 판정은 컴포넌트 이름 22 · 인터페이스 20(`I` 붙임 5 · 뗌 15) · 그 밖의 형식 · 열거 18 · 층 이동 8 · 파일 · 폴더 재배치 16 자리(기믹 10 · 키트 범용 조각 3 · 폴더 개명 2 · 콘텐츠 1)다. 리플렉션에 "컴포넌트가 내보내는 인터페이스" 표를 더하되 다중 상속 대신 포트 멤버(`exposeMember` 와 같은 모양)로 하고, `Gimmick/Genre` 는 기능 폴더로 쪼갠다. 2 단계는 아래 "실행 차례" 대로 `rename-symbol` · `move-source` 로 한다.
 
 조사 기준: 2026-11-21 `b17d3dcaa7`(main). 추출 스크립트는 `Source/**/*.h` 에서 `class | struct | enum` 정의를 모아(테스트 · `Source/Games` 제외) 베이스 · 순수 가상 수 · `_` 멤버 수를 셌다. 형식 9079 개(구조체 5162 · 클래스 2527 · 열거 1228), 그중 내보낸(`SW_*_API`) 클래스 1615 개는 이름을 모두 읽었고, `Component` 를 이어받은 형식 262 개 중 `Source/Games` 와 `Editor/SelfTest` 를 뺀 184 개는 아래 표에 한 줄씩 적었다. 아래 표에 없는 내보낸 클래스는 "둠"이다 — 세 엔진 중 하나 이상의 같은 일 이름과 낱말 조합이 맞거나(예: `RenderGraph` · `DerivedDataCache` · `PrefabOverrides`), 서비스 업계 이름(`LeaderboardService` · `MatchMaker` · `ReceiptValidator`)이다.
 
@@ -47,6 +47,8 @@
 ## 3. 컴포넌트 전수 대조
 
 판정 열: **바꿈**은 제안 이름으로, **둠**은 까닭이 없으면 "세 엔진 중 같은 일 이름과 맞음"이다. 엔진 칸의 `—` 는 그 엔진에 같은 일 형식이 없다는 뜻이다.
+
+바꿈 이름의 기준: (a) 기전(무엇을 하는가)을 말한다 — 게임들의 호칭이나 쓰임(늪 탈출 · 공포 연출 · 고어)이 아니다. (b) 장르 · 게임 · 콘텐츠 어휘(Horse · Scare · Gore · Escape …)를 범용 형식 이름에 남기지 않는다 — 장르 키트 안에서 그 장르에만 쓰이는 형식은 키트 접두를 쓴다. (c) 상용 엔진의 접미 · 어순(`*Component`, 수식어가 앞, 사건 반응은 `동사 + On + 사건`)을 따른다.
 
 ### Engine
 
@@ -128,7 +130,7 @@
 | `OverworldGameModeComponent` · `OverworldWalkerViewComponent` | 오버월드 판 · 주인공 모습 | — | — | — | — | 둠(`walk` 는 게임 범위 낱말) |
 | `MeleeHitboxComponent` | 근접 판정 칼날 | `UShapeComponent` 히트박스 | — | `Area3D` | — | 둠(층만) |
 | `UnitStatsComponent` | 유닛 스탯 · 피해 | Lyra `ULyraHealthComponent` | — | — | — | 둠(베이스만, 키트 밖으로 이동은 7 절) |
-| `HorseFollowAIController` | 말 따라오기 AI | `AAIController` | — | — | `HorseFollowAIControllerComponent` | 바꿈. 컴포넌트인데 `Component` 접미가 없는 유일한 형식 |
+| `HorseFollowAIController` | 주인 거리 · 따라갈 자리 · 부름 표시를 블랙보드에 올리는 AI 조종자(판단은 행동 트리) | `AAIController` + BT | — | — | `FollowOwnerAIControllerComponent` | 바꿈. 컴포넌트인데 `Component` 접미가 없는 유일한 형식이고, 코드에 말에 매인 것이 없다(감각은 주인 거리 · 자리, 이동은 폰의 이동 컴포넌트) — 동료 · 펫 · 탈것 모두 같은 일이라 "Horse" 대신 기전(주인 따라가기)을 쓴다. `whistle()` → `recall()`(휘파람은 게임 입력 이름으로 `WildWest` 에만 남는다). 쓰는 곳이 서부극 키트 하나라 자리는 키트에 둔다(둘째가 생기면 `Character/AI/`) |
 | `WesternWitnessComponent` · `WesternDeedComponent` · `WesternGameModeComponent` · `WesternHorseComponent` · `WesternHorseMountComponent` | 서부극 키트 | — | — | — | — | 둠(키트 접두) |
 | `ScheduleNPCComponent` | 하루 일정 NPC 정체 | Mass Smart Object 일정 | — | — | `NPCScheduleComponent` | 바꿈. 영어 어순(명사 수식어가 앞) |
 | `CameraDirectorComponent` | 카메라 프리셋 · 블렌드 | Camera Modifier · Gameplay Cameras | Cinemachine Brain | — | — | 둠 |
@@ -149,16 +151,16 @@
 | `GameModeBoundComponent` | 게임 모드를 핸들로 보는 바탕 | Lyra `UGameFrameworkComponent` | — | — | `GameFrameworkComponent` | 바꿈. "Bound" 는 무엇에 묶였는지 말하지 않는 조어다 |
 | `GameModeComponent` | 판 규칙 · 스폰 디렉터 | `AGameModeBase` | — | — | — | 둠 |
 | `MinigameTriggerComponent` · `AutosaveTriggerComponent` | 트리거 파생 | — | — | — | — | 둠 |
-| `TutorialHintComponent` | 들어오면 튜토리얼 힌트 | — | — | — | `TutorialHintTriggerComponent` | 바꿈. 트리거 파생 셋이 모두 `*TriggerComponent` 인데 이것만 빠졌다 |
+| `TutorialHintComponent` | 들어오면 튜토리얼 힌트 | — | — | — | `TutorialHintTriggerComponent` | 바꿈. 트리거 파생 셋이 모두 `*TriggerComponent` 인데 이것만 빠졌다. "Tutorial" 은 장르 어휘가 아니라 기전의 일부다 — 사용자 설정 `gameplay.showTutorials` 가 끄는 힌트 알림이다(Lyra 튜토리얼 프롬프트) |
 | `AbilityComponent` | 어트리뷰트 · 이펙트 · 어빌리티 | `UAbilitySystemComponent` | — | — | `AbilitySystemComponent` | 바꿈. 같은 폴더가 GAS 어휘(`AttributeSet` · `GameplayEffect` · `AbilityTask`)인데 이 이름만 줄였다 |
 | `AbilityGateComponent` | 태그를 모두 가진 것이 오면 열리는 문 | — | — | — | `TagGateComponent` | 바꿈. 능력 태그 · 열쇠 카드 · 퀘스트 태그 모두 같은 일이다(장르 어휘 제거, 5 절) |
 | `CharacterAppearanceComponent` · `CharacterBodyDynamicsComponent` · `CharacterEquipmentComponent` · `SequenceAppearanceComponent` | 외형 · 몸 · 장비 | — | — | — | — | 둠 |
 | `SurfaceExposureComponent` | 비 · 물이 몸을 적시고 씻는다 | — | — | — | `CharacterWetnessComponent` | 바꿈. "Surface Exposure" 는 어느 엔진 · 게임도 쓰지 않는 조합이다. 업계는 wetness(젖음)로 부르고 씻김은 그 결과다. `SurfaceExposureSystem` → `CharacterWetnessSystem` |
 | `DialogueRunnerComponent` | 대화 진행 | — | Yarn Spinner `DialogueRunner` | Dialogue Manager | — | 둠 |
-| `DismembermentComponent` | 치명타 부위 절단 · 조각 · 피 | Lyra 없음. 게임은 Gore 시스템(KF2 `KFGoreManager`, Gears GoreMesh) | Gore 에셋 | — | `GoreComponent` | 바꿈. 한 컴포넌트가 자르기와 피 표면을 함께 한다 — 업계는 둘을 "고어"로 묶는다. "dismember" 는 동사로 함수 이름에만 남긴다. `DismembermentResult` → `GoreCutResult`, 폴더 `Gameplay/Dismemberment` → `Gameplay/Gore` |
+| `DismembermentComponent` | 치명적 맞음이 든 스켈레탈 메시 영역(`.fit.xml` `<Region>`, 뼈 가중)을 몸에서 빼고 단면 캡을 붙이고, 조각을 자기 강체(볼록 껍질)로 띄우고, 잘린 영역에 표면 채널을 올린다 | 기본 형식 없음. 같은 일은 `USkinnedMeshComponent::HideBoneByName` + `BreakConstraint` 를 손으로 엮는다. 모양은 같은 오브젝트 메시에 붙어 일하는 `UPhysicalAnimationComponent` | — | — | `SkeletalSeveringComponent` | 바꿈. 이름은 기전(스켈레탈 메시 영역 자르기)을 말한다. 피 · 몸 · 폭력은 콘텐츠다 — 같은 컴포넌트가 로봇 팔 · 나뭇가지도 자르고, 단면에 무엇이 오르는지는 재질이 정한다. "Gore" 는 등급 · 콘텐츠 분류 말(ESRB "Blood and Gore")이라 컴포넌트 이름에 쓰지 않는다 — 고어 표시 토글이 필요하면 사용자 설정 키(`gameplay.showGore` 같은 자리)에만 쓴다. `DismembermentResult` → `SeverResult`, 폴더 `Gameplay/Dismemberment` → `Gameplay/Severing`, PROPERTY Category "Dismemberment" → "Severing", "Blood Channel" → "Severed Surface Channel"(`_bloodChannel` → `_severedSurfaceChannel`, `getBloodChannel` → `getSeveredSurfaceChannel`), 감시 값 `Dismemberment.RegionBlood` → `SkeletalSevering.RegionSurfaceValue` |
 | `GimmickCircuitComponent` | 기믹 회로 | 레벨 블루프린트 · Valve I/O | — | — | — | 둠 |
 | `GimmickSensorComponent` | 회로 센서가 읽는 겹침 · 충격 · 신호 | — | — | `Area3D` | — | 둠 |
-| `GimmickWeightComponent` | 눌림판이 재는 무게 | — | — | — | `PressurePlateWeightComponent` | 바꿈. 읽는 쪽(눌림판)을 이름에 넣는다 |
+| `GimmickWeightComponent` | 센서가 읽는 무게를 덮어씀(없으면 강체 질량, 그것도 없으면 센서 기본값) | `FBodyInstance::MassInKgOverride`(몸 쪽 덮어쓰기) | — | — | `SensorWeightOverrideComponent` | 바꿈. 하는 일은 "센서가 읽는 무게의 덮어쓰기"다 — 질량은 강체가 정본이고, 이 컴포넌트는 강체가 없는 것(캐릭터 · 2D)이나 센서에게만 다른 무게를 줄 때 쓴다. 읽는 쪽 하나(눌림판)를 이름에 넣으면 센서 노드가 늘 때 틀린 이름이 된다 |
 | `TickedPathMoverComponent` | 틱의 함수로 움직이는 바닥 | `UInterpToMovementComponent` | — | `AnimatableBody3D` + `PathFollow3D` | `InterpToMovementComponent` | 바꿈. "Ticked" 는 구현 방식이다. 하는 일은 언리얼 이름 그대로. `GimmickMoverMode` → `InterpToMovementMode` |
 | `GrabberComponent` | 강체 집기 | `UPhysicsHandleComponent` | — | — | — | 둠(언리얼 예제 이름) |
 | `InteractableComponent` · `InteractorComponent` | 상호작용 대상 · 하는 쪽 | Lyra Interaction | — | — | — | 둠 |
@@ -172,9 +174,9 @@
 | `PhysicsCarComponent` | 의도 → 바퀴 차 입력 | Chaos Vehicle Pawn | Car Controller | — | `WheeledVehicleDriveComponent` | 바꿈. 대상 컴포넌트(`WheeledVehicleComponent`) 이름을 따른다 |
 | `VehicleExitComponent` · `VehicleSeatComponent` | 내리기 · 좌석 | — | — | — | — | 둠 |
 | `WeatherDirectorComponent` · `WeatherWaveComponent` | 날씨 열기 · 파도 | — | — | — | — | 둠 |
-| `JumpEscapeReactionComponent` | 뛰면 가라앉음 스택 감소 | — | — | — | `JumpEscapeComponent` | 바꿈. 셋 다 "Reaction" 은 지역 효과의 반응이라는 폴더 문맥이다 — 이름에서 빼고 폴더(`Zone/Reaction/`)로 |
-| `ScreenReactionComponent` | 상태 태그 동안 화면 효과 | Gameplay Cue(화면) | — | — | `StatusScreenEffectComponent` | 바꿈. 업계 "status effect" + "screen effect" |
-| `VisualSinkReactionComponent` | 가라앉음 깊이만큼 외형 내림 | — | — | — | `SinkVisualOffsetComponent` | 바꿈. `SunkVisual` 은 그대로 |
+| `JumpEscapeReactionComponent` | 점프할 때마다 지정 이펙트의 스택을 줄임 | GAS `RemoveActiveGameplayEffect( StacksToRemove )` 를 부르는 쪽 | — | — | `RemoveStacksOnJumpComponent` | 바꿈. "Escape" 는 늪에서 빠져나온다는 쓰임이고 기전은 "점프 → 스택 제거"다(어느 이펙트든). 어순은 이 저장소의 `DismountOnDeathComponent`(동사 + On + 사건)를 따른다. 셋 다 "Reaction" 은 지역 효과의 반응이라는 폴더 문맥이다 — 이름에서 빼고 폴더(`Zone/Reaction/`)로 |
+| `ScreenReactionComponent` | 태그를 가진 동안 따라가는 카메라에 후처리 덧칠을 가중치로 건다 | `UPostProcessComponent` · Gameplay Cue(화면) | Volume weight | — | `TagPostProcessComponent` | 바꿈. 기전은 "태그 → 후처리 블렌드"다. "screen effect" 는 무엇을 하는지(후처리) 말하지 않고, "status" 는 이 컴포넌트가 읽는 것(태그)보다 좁다 |
+| `VisualSinkReactionComponent` | 속성(`SinkDepth`)만큼 뿌리 메시를 내리고 캡슐 키를 줄임 | 웅크림(캡슐 반높이 줄임) | — | — | `SinkOffsetComponent` | 바꿈. 가라앉음(sink)은 늪 · 모래라는 콘텐츠가 아니라 기전(깊이만큼 아래로)이다. 내리는 것이 외형만이 아니라 캡슐 키도라 "Visual" 을 뺀다. `SunkVisual` 은 그대로 |
 | `ZoneContactComponent` · `ZoneVolumeComponent` | 지역 효과 받는 쪽 · 지역 볼륨 | Physics Volume | — | `Area3D` | — | 둠(볼륨은 층만) |
 | `DaylightComponent` | 시각 → 해 방향광 | `ASunSky` | — | — | — | 둠 |
 | `PropScatterComponent` | 소품 흩뿌리기 | PCG Scatter | — | — | — | 둠 |
@@ -275,7 +277,7 @@
 | `Gimmick/Traversal/` | `CrumblePlatformComponent`(+`CrumbleState`) · `OneWayPlatformComponent` · `ClimbZoneComponent` | 서고 오르는 바닥(업계 "traversal") |
 | `Gimmick/Movement/` | `LaunchPadComponent` · `BoostPadComponent` · `ConveyorComponent` · `PushBlockComponent` · `InterpToMovementComponent`(옛 `TickedPathMoverComponent`) | 몸을 옮기거나 쏘는 것 |
 | `Gimmick/Loot/` | `ItemBoxComponent`(+`GimmickItemChoice` → `ItemBoxChoice`) · `GatheringNodeComponent` | 아이템을 주는 것(`GimmickItemEvent` 를 낸다) |
-| `Gimmick/Trigger/` | `CueTriggerComponent`(옛 `ScareTriggerComponent`) · `TagGateComponent`(옛 `AbilityGateComponent`) · `GimmickSensorComponent` · `PressurePlateWeightComponent` | 들어옴 · 조건으로 일하는 것. `CueTriggerComponent` 는 `TriggerComponent` 를 상속해 겹침 · 거리 · 판정 자리 · 안에서 생김 규칙을 다시 쓰지 않는다("Scare" 는 공포 연출이라는 쓰임일 뿐 하는 일은 연출 신호 + 소리) |
+| `Gimmick/Trigger/` | `CueTriggerComponent`(옛 `ScareTriggerComponent`) · `TagGateComponent`(옛 `AbilityGateComponent`) · `GimmickSensorComponent` · `SensorWeightOverrideComponent` | 들어옴 · 조건으로 일하는 것. `CueTriggerComponent` 는 `TriggerComponent` 를 상속해 겹침 · 거리 · 판정 자리 · 안에서 생김 규칙을 다시 쓰지 않는다("Scare" 는 공포 연출이라는 쓰임일 뿐 하는 일은 연출 신호 + 소리) |
 | `Gimmick/Combat/` | `ExplosiveBarrelComponent` · `TurretComponent`(+`TurretShotTarget` · `TurretShotWorld`) · `DestructibleComponent` · `GimmickDamageUtil` | 피해를 받거나 주는 것 |
 | `Gimmick/Element/` | `ElementStatusComponent` · `ElementGrid` · `ElementRuleCatalog` | 원소 규칙 한 벌(지금 Gimmick 뿌리와 Genre 에 흩어짐) |
 | `Gimmick/Circuit/` | `GimmickCircuit*` · `GimmickNodeRegistry` · `GimmickStateBundle` | 회로(지금 Gimmick 뿌리) |
@@ -296,7 +298,7 @@
 | `Kits/Genre/RPG/MonsterHuntRPG/SkillTree.*` | `SkillTreeCatalog` · `SkillTreeState` | `Runtime/Gameplay/Progression/` | 스킬 · 랭크 · 선행 · 배타 그룹은 장르 무관(언리얼 Lyra 없음, 업계 일반 "skill tree") |
 | `Kits/Genre/Strategy/TacticsSRPG/RunMap.*` | `RunMap` | `Runtime/Gameplay/Progression/` | 헤더가 "노드 종류는 데이터라 장르마다 바꿀 수 있다"고 적는다(슬레이 더 스파이어 · 메탈슬러그 택틱스) |
 | `Kits/Genre/Action/ActionCombat/Component/UnitStatsComponent.*` · `MeleeHitboxComponent.*` | 두 컴포넌트 | `Runtime/Character/Combat/` | 피해 입구(`takeDamage`, 언리얼 `AActor::TakeDamage` 자리)와 근접 칼날 판정은 투사체 · 몬스터 사냥 · 플랫포머 공용이다. 클라이언트 `DamageNumberComponent` 주석도 피해를 내는 곳으로 이 키트 형식을 든다 |
-| `Kits/Genre/Action/ActionPlatformer/ActionCombatSimulation.*` | `ActionCombatSimulation` | 같은 자리, 이름 `PlatformerCombatSimulation` | ActionCombat 키트와 이름이 겹쳐 다른 키트 것으로 읽힌다 |
+| `Kits/Genre/Action/ActionPlatformer/ActionCombatSimulation.*` | `ActionCombatSimulation` · `ActionCombatEvent` · `ActionCombatEventKind` | 같은 자리, 이름 `ActionPlatformerCombatSimulation` · `ActionPlatformerCombatEvent` · `ActionPlatformerCombatEventKind` | ActionCombat 키트와 이름이 겹쳐 다른 키트 것으로 읽힌다. 이 키트에서만 쓰이므로 장르 이름이 맞고, 이웃(`ActionPlatformerBody` · `ActionPlatformerCatalog`)과 같은 키트 접두를 쓴다 — 접두를 "Platformer" 로 줄이면 또 다른 키트처럼 읽힌다 |
 | `Kits/Genre/Strategy/RealTimeStrategy/RTSVision.*` | `RTSVision` | 같은 자리, 이름 `FogOfWar` | 하는 일은 업계 이름 "fog of war"(RTS · MOBA · SRPG 공용). 둘째 쓰는 키트가 생기면 Runtime 으로 |
 | `Runtime/Gameplay/Gimmick/Genre/` | 5.2 | 5.2 | |
 | `Content/common/prefabs/gimmicks/<장르>/` | 프리팹 | 5.2 | |
@@ -315,7 +317,8 @@
 | `GimmickItemChoice` | `ItemBoxChoice` | 주인을 따른다 |
 | `SurfaceExposureSystem` | `CharacterWetnessSystem` | 주인을 따른다 |
 | `SessionStateSettings` · `SessionStateInitResult` | `GameStateSettings` · `GameStateInitResult` | 주인을 따른다 |
-| `DismembermentResult` | `GoreCutResult` | 주인을 따른다 |
+| `DismembermentResult` | `SeverResult` | 주인 `SkeletalSeveringComponent` 를 따른다(함수 `severRegions` 와 같은 동사) |
+| `ActionCombatEvent` · `ActionCombatEventKind` | `ActionPlatformerCombatEvent` · `ActionPlatformerCombatEventKind` | 주인을 따른다(5.3) |
 | `FacingDir` | `FacingDirection` | 줄임말 금지(NamingCpp "No opaque abbreviations") |
 | `GenreGimmickUtil` | (없앰, 5.2) | |
 
@@ -342,7 +345,7 @@
      { "old": "ActivatorSpawnInside", "new": "TriggerSpawnInside", "why": "주인 TriggerComponent" },
      { "old": "ActivatorSpawnWindow", "new": "TriggerSpawnWindow", "why": "주인 TriggerComponent" },
      { "old": "TileMapRendererComponent", "new": "TileMapComponent", "why": "그리기 · 충돌 · 비용 — UPaperTileMapComponent · TileMapLayer" },
-     { "old": "HorseFollowAIController", "new": "HorseFollowAIControllerComponent", "why": "컴포넌트 접미" },
+     { "old": "HorseFollowAIController", "new": "FollowOwnerAIControllerComponent", "why": "컴포넌트 접미, 말 전용 아님 — 기전(주인 따라가기)" },
      { "old": "ScheduleNPCComponent", "new": "NPCScheduleComponent", "why": "영어 어순" },
      { "old": "ScheduleNPCPhase", "new": "NPCSchedulePhase", "why": "주인을 따름" },
      { "old": "CharacterPawnMovementComponent", "new": "CharacterMovementComponent", "why": "언리얼 UCharacterMovementComponent" },
@@ -354,9 +357,9 @@
      { "old": "ScareTriggerComponent", "new": "CueTriggerComponent", "why": "연출 신호 + 소리 트리거 — 장르 어휘 제거" },
      { "old": "SurfaceExposureComponent", "new": "CharacterWetnessComponent", "why": "업계 wetness" },
      { "old": "SurfaceExposureSystem", "new": "CharacterWetnessSystem", "why": "주인을 따름" },
-     { "old": "DismembermentComponent", "new": "GoreComponent", "why": "절단 + 피 = 업계 고어 시스템" },
-     { "old": "DismembermentResult", "new": "GoreCutResult", "why": "주인을 따름" },
-     { "old": "GimmickWeightComponent", "new": "PressurePlateWeightComponent", "why": "읽는 쪽을 이름에" },
+     { "old": "DismembermentComponent", "new": "SkeletalSeveringComponent", "why": "기전: 스켈레탈 메시 영역 자르기 — Gore 는 콘텐츠 등급 말" },
+     { "old": "DismembermentResult", "new": "SeverResult", "why": "주인을 따름" },
+     { "old": "GimmickWeightComponent", "new": "SensorWeightOverrideComponent", "why": "센서가 읽는 무게 덮어쓰기 — 읽는 쪽 하나에 매이지 않음" },
      { "old": "TickedPathMoverComponent", "new": "InterpToMovementComponent", "why": "언리얼 UInterpToMovementComponent" },
      { "old": "GimmickMoverMode", "new": "InterpToMovementMode", "why": "주인을 따름" },
      { "old": "GimmickItemChoice", "new": "ItemBoxChoice", "why": "주인을 따름" },
@@ -365,15 +368,17 @@
      { "old": "SessionStateSettings", "new": "GameStateSettings", "why": "주인을 따름" },
      { "old": "SessionStateInitResult", "new": "GameStateInitResult", "why": "주인을 따름" },
      { "old": "PhysicsCarComponent", "new": "WheeledVehicleDriveComponent", "why": "대상 WheeledVehicleComponent 를 따름" },
-     { "old": "JumpEscapeReactionComponent", "new": "JumpEscapeComponent", "why": "Reaction 은 폴더 문맥" },
-     { "old": "ScreenReactionComponent", "new": "StatusScreenEffectComponent", "why": "status effect + screen effect" },
-     { "old": "VisualSinkReactionComponent", "new": "SinkVisualOffsetComponent", "why": "하는 일" },
-     { "old": "ActionCombatSimulation", "new": "PlatformerCombatSimulation", "why": "ActionCombat 키트와 겹침" },
+     { "old": "JumpEscapeReactionComponent", "new": "RemoveStacksOnJumpComponent", "why": "기전: 점프 → 스택 제거, DismountOnDeath 어순" },
+     { "old": "ScreenReactionComponent", "new": "TagPostProcessComponent", "why": "기전: 태그 → 후처리 블렌드" },
+     { "old": "VisualSinkReactionComponent", "new": "SinkOffsetComponent", "why": "메시와 캡슐을 깊이만큼 내림" },
+     { "old": "ActionCombatSimulation", "new": "ActionPlatformerCombatSimulation", "why": "ActionCombat 키트와 겹침, 키트 접두" },
+     { "old": "ActionCombatEvent", "new": "ActionPlatformerCombatEvent", "why": "주인을 따름" },
+     { "old": "ActionCombatEventKind", "new": "ActionPlatformerCombatEventKind", "why": "주인을 따름" },
      { "old": "RTSVision", "new": "FogOfWar", "why": "업계 fog of war" },
      { "old": "FacingDir", "new": "FacingDirection", "why": "줄임말" }
    ]
    ```
-   폴더 `Gameplay/Dismemberment` → `Gameplay/Gore`, `Gameplay/SessionState` → `Gameplay/GameState` 는 `move-source` 로 같은 차례에.
+   폴더 `Gameplay/Dismemberment` → `Gameplay/Severing`(`Dismemberment.{h,cpp}` → `SeverResult.{h,cpp}`, `Tests/TestDismemberment.cpp` → `Tests/TestSkeletalSevering.cpp`), `Gameplay/SessionState` → `Gameplay/GameState` 는 `move-source` 로 같은 차례에. 멤버 · 함수 개명(`_bloodChannel` → `_severedSurfaceChannel`, `getBloodChannel` → `getSeveredSurfaceChannel`, `HorseFollowAIController::whistle` → `recall`)과 PROPERTY 글(Category "Dismemberment" → "Severing", "Blood Channel" → "Severed Surface Channel", 감시 값 `Dismemberment.RegionBlood` → `SkeletalSevering.RegionSurfaceValue`)은 흔한 낱말이거나 문자열이라 손으로 하고, 콘텐츠 `dismemberment.scenario.xml` · `dismemberment.scene.xml` 은 `move-asset` 으로 `severing.*` 에 옮긴다.
 4. **인터페이스 이름 표 B(상태 있는 `I` 떼기)**: `Config/Rules/Renames/TypeNamingAuditB.json` — 4.2 표의 15 쌍(`IEvent` → `EventBase` … `IOnlineClientService` → `OnlineClientService`). `IWindow` · `ISubsystem` · `IEvent` 는 쓰는 곳이 많아 표 B 를 한 커밋으로 따로 둔다. 개명 도구가 같은 줄기 파일(`IWindow.h` → `GenericWindow.h`)을 함께 옮긴다.
 5. **리플렉션 인터페이스(손)**: 4.3 설계를 Engine 리플렉션에 넣고(`REFLECT( Interface )` · `REFLECT_INTERFACE` · `TypeInfo` 표 · `GameObject::findInterface` · `ComponentRegistry` 칸) 단위 테스트를 둔다.
 6. **역할 베이스 → 인터페이스(손 + 표 C)**: `HealthSourceComponent` → `IHealthSource`, `HealthListenerComponent` → `IHealthListener`, `GameFlagsOwnerComponent` → `IGameFlagsOwner` 로 바꾸고 구현 컴포넌트에 포트 멤버를 단다(형식이 바뀌므로 이름만 바꾸는 표로는 안 된다 — 표 C 는 이름 치환만, 구조는 손). `AutomationStepContext` → `IAutomationStepContext`, `ZoneModuleProcessor` → `IZoneModuleProcessor` 는 표 C 의 단순 쌍.
@@ -382,7 +387,7 @@
 
 ### `_bannedNames` 에 오를 옛 이름
 
-표 A: `ScenePrimitive` · `ScenePrimitiveBatch` · `ActivatorVolumeComponent` · `ActivatorAuthority` · `ActivatorAuthorityRule` · `ActivatorSpawnInside` · `ActivatorSpawnWindow` · `TileMapRendererComponent` · `HorseFollowAIController` · `ScheduleNPCComponent` · `ScheduleNPCPhase` · `CharacterPawnMovementComponent` · `CharacterPawnMovement2DComponent` · `GameModeBoundComponent` · `TutorialHintComponent` · `AbilityComponent` · `AbilityGateComponent` · `ScareTriggerComponent` · `SurfaceExposureComponent` · `SurfaceExposureSystem` · `DismembermentComponent` · `DismembermentResult` · `GimmickWeightComponent` · `TickedPathMoverComponent` · `GimmickMoverMode` · `GimmickItemChoice` · `WorldItemComponent` · `SessionStateComponent` · `SessionStateSettings` · `SessionStateInitResult` · `PhysicsCarComponent` · `JumpEscapeReactionComponent` · `ScreenReactionComponent` · `VisualSinkReactionComponent` · `ActionCombatSimulation` · `RTSVision` · `FacingDir` · `GenreGimmickUtil`
+표 A: `ScenePrimitive` · `ScenePrimitiveBatch` · `ActivatorVolumeComponent` · `ActivatorAuthority` · `ActivatorAuthorityRule` · `ActivatorSpawnInside` · `ActivatorSpawnWindow` · `TileMapRendererComponent` · `HorseFollowAIController` · `ScheduleNPCComponent` · `ScheduleNPCPhase` · `CharacterPawnMovementComponent` · `CharacterPawnMovement2DComponent` · `GameModeBoundComponent` · `TutorialHintComponent` · `AbilityComponent` · `AbilityGateComponent` · `ScareTriggerComponent` · `SurfaceExposureComponent` · `SurfaceExposureSystem` · `DismembermentComponent` · `DismembermentResult` · `GimmickWeightComponent` · `TickedPathMoverComponent` · `GimmickMoverMode` · `GimmickItemChoice` · `WorldItemComponent` · `SessionStateComponent` · `SessionStateSettings` · `SessionStateInitResult` · `PhysicsCarComponent` · `JumpEscapeReactionComponent` · `ScreenReactionComponent` · `VisualSinkReactionComponent` · `ActionCombatSimulation` · `ActionCombatEvent` · `ActionCombatEventKind` · `RTSVision` · `FacingDir` · `GenreGimmickUtil`
 
 표 B: `IEvent` · `ISubsystem` · `IWindow` · `ISplashWindow` · `IEditorPanel` · `IEditorDocumentPanel` · `IEditorPopup` · `IAudioEffect` · `IFileWatcher` · `IAllocationTracker` · `IDataInheritanceSource` · `IServiceStore` · `IServiceStoreJob` · `IAccountPresence` · `IOnlineClientService`
 
@@ -391,6 +396,7 @@
 ### 통합 담당과 맞출 점
 
 - 다른 갈래가 위 옛 이름을 새로 쓰고 있으면 병합 뒤 `rename-symbol --reapply` 로 다시 돌린다. 시작 전에 열린 갈래 목록을 받는다.
-- 표 A · B 는 `--dry-run` 으로 먼저 돌려 문자열 리터럴 안이라 건너뛴 파일과 새 이름 겹침 목록을 본다. 새 이름은 2026-11-21 main 에 없는 것을 확인했다(`PrimitiveComponent` · `TriggerComponent` · `GameStateComponent` · `GameFrameworkComponent` · `CharacterMovementComponent` · `PickupComponent` · `GoreComponent` · `GenericWindow` · `EventBase` 등). 다른 갈래가 같은 이름을 새로 만들었으면 병합 뒤 겹침으로 멈춘다.
+- 표 A · B 는 `--dry-run` 으로 먼저 돌려 문자열 리터럴 안이라 건너뛴 파일과 새 이름 겹침 목록을 본다. 새 이름은 2026-11-21 main 에 없는 것을 확인했다(`PrimitiveComponent` · `TriggerComponent` · `GameStateComponent` · `GameFrameworkComponent` · `CharacterMovementComponent` · `PickupComponent` · `SkeletalSeveringComponent` · `SensorWeightOverrideComponent` · `RemoveStacksOnJumpComponent` · `TagPostProcessComponent` · `FollowOwnerAIControllerComponent` · `GenericWindow` · `EventBase` 등). 다른 갈래가 같은 이름을 새로 만들었으면 병합 뒤 겹침으로 멈춘다.
 - 4.3 은 다중 상속을 쓰지 않으므로 CppStyle 규칙 예외가 필요 없다. 다중 상속 인터페이스(언리얼 모양)를 원하면 그때 `CppShape.json` `_multipleBase` 에 "Component + 상태 없는 I" 한 줄과 이유가 필요하다 — 이 문서의 판단은 포트 멤버다.
 - 근본 원인: 낱말 표(naming-words)는 낱말마다 있는지만 봐서 "낱말은 다 업계 말인데 조합이 상용 어휘가 아닌" 이름(`ActivatorVolume` · `SurfaceExposure` · `GameModeBound`)과 "인터페이스인데 `I` 없음"(리플렉션 탓에 베이스로 만든 역할)을 막지 못했다. 앞의 것은 이 감사를 개명 단계마다 되풀이하고, 뒤의 것은 4.3 의 `REFLECT( Interface )` 가 형식으로 막는다(상태가 붙으면 컴파일 오류, 역할을 베이스로 만들 까닭이 사라짐).
+- 근본 원인(2): 첫 판정은 이름을 게임들의 호칭 · 장르 어휘로 정해(`GoreComponent` · `JumpEscape` · `HorseFollow` · `PressurePlateWeight`) 콘텐츠 · 쓰임 말이 범용 형식 이름에 남았다 → 이름은 기전(무엇을 하는가)으로 판정한다(`UDestructibleComponent` · `UPhysicalAnimationComponent` · `UInterpToMovementComponent` 모양). 장르 이름은 그 장르 키트 안에서만 쓰이는 형식에만 둔다. 같은 결함은 3 절의 "둠" 줄(이번에 다시 보지 않음)과 `Source/Games` 흡수 때의 개명에도 있을 수 있다 — 그때 3 절 머리의 기준 (a)–(c)로 본다.
