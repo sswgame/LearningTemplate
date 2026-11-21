@@ -3,10 +3,10 @@
 #include "Core/Container/vector.h"
 #include "Core/Testing/TestFramework.h"
 
-#include "Engine/Window/IWindow.h"
+#include "Engine/Window/GenericWindow.h"
 #include "Engine/Window/Tests/FakeWindow.h"
 
-// 수명 상태는 `IWindow` 의 몫이라 플랫폼 없는 창(`FakeWindow`)으로 그것만 본다.
+// 수명 상태는 `GenericWindow` 의 몫이라 플랫폼 없는 창(`FakeWindow`)으로 그것만 본다.
 
 using namespace sw;
 

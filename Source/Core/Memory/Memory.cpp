@@ -26,7 +26,7 @@ namespace sw
         uint64    _hash;        ///< 할당 시점 콜 스택의 해시
         uint64    _magic;       ///< 유효성 검증용 매직 넘버
         void*     _pRawPtr;     ///< OS 가 준 원래 할당 시작 주소(정렬 패딩 이전)
-        uint64    _trackerID;   ///< 이 블록을 센 기록기의 번호(`IAllocationTracker::getTrackerID`). 0 이면 아무도 세지 않았고 해제도 알리지 않는다
+        uint64    _trackerID;   ///< 이 블록을 센 기록기의 번호(`AllocationTracker::getTrackerID`). 0 이면 아무도 세지 않았고 해제도 알리지 않는다
     };
 
     static_assert( sizeof( AllocHeader ) == 48, "AllocHeader must stay 48 bytes (a multiple of 16)" );
@@ -38,8 +38,8 @@ namespace sw
     namespace
     {
         /** @brief 걸린 할당 기록기(`MemoryProfiler`)입니다. 할당마다 acquire 읽기 하나입니다. */
-        ObserverSlot<IAllocationTracker> s_allocationTrackerSlot{};
-        /** @brief 마지막으로 나눠 준 기록기 번호입니다(`IAllocationTracker` 생성자). 0 은 "세지 않음" 이라 1 부터 나눈다. */
+        ObserverSlot<AllocationTracker> s_allocationTrackerSlot{};
+        /** @brief 마지막으로 나눠 준 기록기 번호입니다(`AllocationTracker` 생성자). 0 은 "세지 않음" 이라 1 부터 나눈다. */
         atomic<uint64> s_nextTrackerID{ 0 };
         /** @brief 이 스레드의 현재 할당 태그입니다(`Memory::setCurrentMemoryTag`). */
         thread_local MemoryTag t_currentMemoryTag{ MemoryTag::Unknown };
@@ -70,7 +70,7 @@ namespace sw
                 RealtimeSection::recordAllocation(); // 실시간 구간(오디오 장치 콜백)의 할당을 센다 — 검사 구성의 할당은 모두 여기를 지난다
                 ++t_allocationCount;
 
-                IAllocationTracker* pTracker = s_allocationTrackerSlot.get();
+                AllocationTracker* pTracker = s_allocationTrackerSlot.get();
                 if ( pTracker != nullptr )
                 {
                     const AllocationRecord record = pTracker->recordAllocation( pUserPtr, size, pHeader->_tag );
@@ -115,7 +115,7 @@ namespace sw
                 // 센 블록을 센 기록기에만 알린다. 기록기가 떨어졌거나 다른 기록기로 바뀌었으면 알릴 곳이 없다.
                 if ( pHeader->_trackerID != 0 )
                 {
-                    IAllocationTracker* pTracker = s_allocationTrackerSlot.get();
+                    AllocationTracker* pTracker = s_allocationTrackerSlot.get();
                     if ( pTracker != nullptr && pTracker->getTrackerID() == pHeader->_trackerID )
                         pTracker->recordFree( pUserPtr, pHeader->_size, pHeader->_tag, AllocationRecord{ pHeader->_hash, true, pHeader->_windowStamp } );
                 }
@@ -294,12 +294,12 @@ namespace sw
 
 namespace sw
 {
-    IAllocationTracker::IAllocationTracker()
+    AllocationTracker::AllocationTracker()
         : _trackerID{ s_nextTrackerID.fetch_add( 1, std::memory_order_relaxed ) + 1 }
     {
     }
 
-    Memory::AllocationTrackerRegistration Memory::registerAllocationTracker( IAllocationTracker* pTracker )
+    Memory::AllocationTrackerRegistration Memory::registerAllocationTracker( AllocationTracker* pTracker )
     {
         return s_allocationTrackerSlot.tryBind( pTracker );
     }

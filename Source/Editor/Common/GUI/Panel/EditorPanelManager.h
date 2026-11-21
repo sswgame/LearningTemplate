@@ -11,7 +11,7 @@
 #include "Editor/Common/EditorExports.h"
 #include "Editor/Common/EditorExtensionRegistry.h"
 #include "Editor/Common/EditorSubsystem.h"
-#include "Editor/Common/GUI/Panel/IEditorPanel.h"
+#include "Editor/Common/GUI/Panel/EditorPanel.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -39,12 +39,12 @@ namespace sw::editor
         string                         _id;
         string                         _title;
         EditorPanelCategory            _category{ EditorPanelCategory::Core };
-        unique_ptr<IEditorPanel>       _pInstance;
+        unique_ptr<EditorPanel>        _pInstance;
         const EditorPanelRegistration* _pRegistration{ nullptr }; ///< 이 인스턴스를 만든 등록 항목. 직접 registerPanel 한 것은 nullptr 이다
         bool                           _bOpenByDefault{ false };  ///< 만든 직후의 가시성(`windows.json` 복원 전) — 기본 배치로 되돌릴 때 핵심 패널을 이 값으로 둔다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         uint64                         _drawNanosSum{ 0 };        ///< `-gv_editorPanelTimes` 가 모으는 그리기 시간의 합(ns)
         uint64                         _drawNanosMax{ 0 };        ///< 그중 가장 긴 한 프레임의 시간(ns)
-        uint64                         _gatherNanosSum{ 0 };      ///< 같은 프레임들의 `gather` 시간 합(ns — 그리기 합에 들어 있다, `IEditorPanel::gatherViewState`)
+        uint64                         _gatherNanosSum{ 0 };      ///< 같은 프레임들의 `gather` 시간 합(ns — 그리기 합에 들어 있다, `EditorPanel::gatherViewState`)
         uint64                         _lastDrawNanos{ 0 };       ///< 마지막으로 잰 프레임의 그리기 시간(ns, 모으기 포함 — 감시 값 `Editor.PanelDrawUs`)
         uint64                         _lastGatherNanos{ 0 };     ///< 마지막으로 잰 프레임의 모으기 시간(ns — 감시 값 `Editor.PanelGatherUs`)
     };
@@ -63,7 +63,7 @@ namespace sw::editor
         SW_EDITOR_EXTENSION_KIND( "panel" );
 
         EditorPanelCategory _category;
-        unique_ptr<IEditorPanel> ( *_pCreate )();
+        unique_ptr<EditorPanel> ( *_pCreate )();
     };
 } // namespace sw::editor
 
@@ -71,7 +71,7 @@ namespace sw::editor
 {
     /** @brief 등록 항목이 가리키는 패널 생성 함수입니다. */
     template <typename TPanel>
-    unique_ptr<IEditorPanel> createEditorPanel()
+    unique_ptr<EditorPanel> createEditorPanel()
     {
         return make_unique<TPanel>();
     }
@@ -101,9 +101,9 @@ namespace sw::editor
         /** @brief 지금 에디터 컨텍스트의 패널 관리자입니다. 에디터가 서 있을 때만 부른다(명령 표의 실행 함수) — 없으면 멈춘다. */
         [[nodiscard]] static EditorPanelManager& getInEditorContext();
 
-        void registerPanel( unique_ptr<IEditorPanel> pPanel,
-                            string_view              panelID,
-                            EditorPanelCategory      category = EditorPanelCategory::Core );
+        void registerPanel( unique_ptr<EditorPanel> pPanel,
+                            string_view             panelID,
+                            EditorPanelCategory     category = EditorPanelCategory::Core );
 
         const vector<EditorPanelEntry>& getPanels() const { return _listPanel; }
         /**
@@ -126,7 +126,7 @@ namespace sw::editor
             const EditorPanelManager* pPanels = findInEditorContext();
             return pPanels != nullptr ? pPanels->findPanel<TPanel>() : nullptr;
         }
-        /** @brief `findPanelInEditorContext` 와 같되 창이 열려 있을 때만 돌려줍니다(`IEditorPanel::isOpen`). 닫힌 창의 값을 감시 값으로 내지 않는 자리가 쓴다. */
+        /** @brief `findPanelInEditorContext` 와 같되 창이 열려 있을 때만 돌려줍니다(`EditorPanel::isOpen`). 닫힌 창의 값을 감시 값으로 내지 않는 자리가 쓴다. */
         template <typename TPanel>
         [[nodiscard]] static TPanel* findOpenPanelInEditorContext()
         {
@@ -140,9 +140,9 @@ namespace sw::editor
             return setPanelOpen( TPanel::kPanelID, bOpen );
         }
         /** @brief 실행 중에 들어온 id(콘솔 인자 · `-gv_` · 창 배치 파일 · 등록 목록)나 창 제목으로 찾습니다. 코드가 아는 패널은 `findPanel<T>()` 로 찾습니다. */
-        IEditorPanel* findPanelByID( string_view panelID ) const;
-        /** @brief 애셋 종류 @p kind 의 문서를 여는 패널(`IEditorPanel::getDocumentKind`)입니다. 없으면 nullptr 입니다. */
-        IEditorPanel* findDocumentPanel( const EditorAssetType& kind ) const;
+        EditorPanel* findPanelByID( string_view panelID ) const;
+        /** @brief 애셋 종류 @p kind 의 문서를 여는 패널(`EditorPanel::getDocumentKind`)입니다. 없으면 nullptr 입니다. */
+        EditorPanel* findDocumentPanel( const EditorAssetType& kind ) const;
         /** @brief id(또는 창 제목)로 열거나 닫습니다. 확장 모듈의 패널과 실행 중 id 용입니다 — 코드가 아는 패널은 `setPanelOpen<T>()` 를 씁니다. */
         bool setPanelOpen( string_view panelID, bool bOpen );
         void clear();
@@ -195,7 +195,7 @@ namespace sw::editor
         uint32 resetPanels( bool bIncludeCore );
 
         /**
-         * @brief 그린 뒤 Ctrl+Z 가 갈 스택을 포커스 창의 답(`IEditorPanel::findPanelCommandStack`)으로 겁니다. 포커스 창이 없거나 겨눈 스택을 보여 주는 창(History)이면 그대로 둔다.
+         * @brief 그린 뒤 Ctrl+Z 가 갈 스택을 포커스 창의 답(`EditorPanel::findPanelCommandStack`)으로 겁니다. 포커스 창이 없거나 겨눈 스택을 보여 주는 창(History)이면 그대로 둔다.
          *        닫힌 패널의 스택을 겨누고 있으면 메인으로 돌린다 — 닫는 길마다 풀지 않아도 된다.
          */
         void updateFocusedCommandStack();
@@ -215,7 +215,7 @@ namespace sw::editor
 
 /**
  * @brief 패널 종류를 그 패널의 .cpp 에서 등록합니다. 예: `SW_EDITOR_PANEL( HierarchyPanel, HierarchyPanel::kPanelID, EditorPanelCategory::Core, 100 );`
- * @param TPanel   기본 생성자가 있는 `IEditorPanel` 구현입니다.
+ * @param TPanel   기본 생성자가 있는 `EditorPanel` 구현입니다.
  * @param pID      가시성을 저장하는 키입니다. 패널 클래스의 `kPanelID` 를 넘긴다 — 조회(`findPanel<T>()`)가 같은 상수를 쓴다. 종류 안에서 유일해야 합니다.
  * @param category Panel 메뉴의 그룹입니다.
  * @param order    Panel 메뉴와 그리기 순서입니다. 작을수록 앞입니다.

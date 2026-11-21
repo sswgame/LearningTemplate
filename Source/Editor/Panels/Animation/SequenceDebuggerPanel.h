@@ -8,13 +8,13 @@
 #pragma once
 #include "Core/Foundation/Types.h"
 
-#include "Editor/Common/GUI/Panel/IEditorPanel.h"
+#include "Editor/Common/GUI/Panel/EditorPanel.h"
 #include "Editor/Panels/Animation/Model/SequenceDebuggerViewModel.h"
 
 namespace sw::editor
 {
     /** @brief 컷씬 디버거 창입니다(읽기 전용). */
-    class SequenceDebuggerPanel : public IEditorPanel
+    class SequenceDebuggerPanel : public EditorPanel
     {
     public:
         /** @brief 패널 id 입니다. 등록(`SW_EDITOR_PANEL`)과 조회(`EditorPanelManager::findPanel<…>` · `setPanelOpen<…>`)가 모두 이 상수에서 온다. */

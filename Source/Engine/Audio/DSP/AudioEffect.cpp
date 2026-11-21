@@ -21,11 +21,11 @@ namespace sw
          * @brief 바이쿼드 필터 하나로 이루어진 이펙트입니다. LowPass, HighPass, BandPass, Peaking, LowShelf, HighShelf 를 지원합니다. 파라미터는 frequencyHz, q, gainDb 입니다.
          * @details LowPass 의 컷오프가 `audio::kFilterOpenHz` 이상이면 거르지 않는다. 스냅샷이 "물속"에서만 내려 쓰는 필터를 평소에는 비용 없이 둘 수 있다.
          */
-        class AudioFilterEffect final : public IAudioEffect
+        class AudioFilterEffect final : public AudioEffect
         {
         public:
             AudioFilterEffect( const AudioEffectTypeInfo& typeInfo, AudioChannelLayout layout, AudioBiquadKind type )
-                : IAudioEffect{ typeInfo, layout }
+                : AudioEffect{ typeInfo, layout }
                 , _filter{}
                 , _type{ type }
                 , _bBypass{ SW_FALSE }
@@ -62,11 +62,11 @@ namespace sw
          * @details 파라미터는 thresholdDb, ratio, attackMs, releaseMs, kneeDb, makeupDb 입니다. 게인 감소(dB)는 정상 상태에서 (입력 - 임계값) × (1 - 1/비율)입니다.
          *          검출은 프레임마다 모든 채널의 절댓값 최대이고, 같은 게인을 모든 채널에 곱한다(서라운드 이미지가 흔들리지 않는다).
          */
-        class AudioCompressorEffect final : public IAudioEffect
+        class AudioCompressorEffect final : public AudioEffect
         {
         public:
             AudioCompressorEffect( const AudioEffectTypeInfo& typeInfo, AudioChannelLayout layout )
-                : IAudioEffect{ typeInfo, layout }
+                : AudioEffect{ typeInfo, layout }
                 , _attackCoefficient{ 0.0f }
                 , _releaseCoefficient{ 0.0f }
                 , _peakReductionDb{ 0.0f }
@@ -142,11 +142,11 @@ namespace sw
          * @details 파라미터는 ceilingDb, releaseMs, lookaheadMs 입니다. 필요한 게인(천장 / |x|)의 창 최솟값을 같은 길이의 상자 평균으로 다듬고, 소리는 그만큼 늦춥니다.
          *          창 안의 모든 최솟값이 그 샘플의 필요 게인 이하이므로 평균도 이하입니다(넘침 없음, 클릭 없음). 피크는 모든 채널의 최대이고 게인은 모든 채널에 같습니다.
          */
-        class AudioLimiterEffect final : public IAudioEffect
+        class AudioLimiterEffect final : public AudioEffect
         {
         public:
             AudioLimiterEffect( const AudioEffectTypeInfo& typeInfo, AudioChannelLayout layout )
-                : IAudioEffect{ typeInfo, layout }
+                : AudioEffect{ typeInfo, layout }
                 , _listDelay{}
                 , _listMinValue{}
                 , _listMinIndex{}
@@ -264,11 +264,11 @@ namespace sw
          *          젖은 채널은 LFE 를 뺀 모든 채널이다. 입력은 그 채널들의 합에 고정 게인 × 2 / (젖은 채널 수)를 곱해(스테레오에서 원본과 같다) 모노로 넣고,
          *          출력은 자기 채널의 젖은 소리 × wetMain + 다른 젖은 채널 평균 × wetCross + 입력 × dry 다(스테레오에서는 원본의 교차 혼합과 같다). LFE 는 dry 만 지난다.
          */
-        class AudioReverbEffect final : public IAudioEffect
+        class AudioReverbEffect final : public AudioEffect
         {
         public:
             AudioReverbEffect( const AudioEffectTypeInfo& typeInfo, AudioChannelLayout layout )
-                : IAudioEffect{ typeInfo, layout }
+                : AudioEffect{ typeInfo, layout }
                 , _arrComb{}
                 , _arrAllpass{}
                 , _listPreDelay{}
@@ -452,11 +452,11 @@ namespace sw
          * @brief 피드백 딜레이(에코)입니다. 파라미터는 timeMs, feedback, wet, dry, dampingHz 입니다. dampingHz 는 피드백 경로의 한 극 로우패스이며, 20 kHz 이상이면 쓰지 않습니다.
          * @details 첫 에코는 timeMs 뒤에 wet 크기로 오고, 다음 에코는 2·timeMs 뒤에 wet·feedback 크기로 온다.
          */
-        class AudioDelayEffect final : public IAudioEffect
+        class AudioDelayEffect final : public AudioEffect
         {
         public:
             AudioDelayEffect( const AudioEffectTypeInfo& typeInfo, AudioChannelLayout layout )
-                : IAudioEffect{ typeInfo, layout }
+                : AudioEffect{ typeInfo, layout }
                 , _listBuffer{}
                 , _cursor{ 0 }
                 , _delayFrames{ 1 }
@@ -526,7 +526,7 @@ namespace sw
          *          임펄스 응답은 만들 때(게임 스레드) 읽고 48 kHz 로 선형 리샘플하며, `kMaxImpulseSeconds` 보다 길면 오류다(조각 수가 곧 비용이다).
          *          파라미터는 wet, dry 입니다.
          */
-        class AudioConvolutionEffect final : public IAudioEffect
+        class AudioConvolutionEffect final : public AudioEffect
         {
         public:
             /** @brief 조각 하나의 프레임 수(블록 길이)입니다. */
@@ -537,7 +537,7 @@ namespace sw
             static constexpr float32 kMaxImpulseSeconds = 3.0f;
 
             AudioConvolutionEffect( const AudioEffectTypeInfo& typeInfo, AudioChannelLayout layout )
-                : IAudioEffect{ typeInfo, layout }
+                : AudioEffect{ typeInfo, layout }
                 , _fft{}
                 , _arrImpulseSpectrum{}
                 , _listJob{}
@@ -785,21 +785,21 @@ namespace sw
             };
 
             template <AudioBiquadKind TType>
-            static unique_ptr<IAudioEffect> createFilter( const AudioEffectTypeInfo& typeInfo, const AudioEffectDef& desc, AudioChannelLayout layout )
+            static unique_ptr<AudioEffect> createFilter( const AudioEffectTypeInfo& typeInfo, const AudioEffectDef& desc, AudioChannelLayout layout )
             {
                 (void)desc;
                 return make_unique<AudioFilterEffect>( typeInfo, layout, TType );
             }
 
             template <typename TEffect>
-            static unique_ptr<IAudioEffect> createEffect( const AudioEffectTypeInfo& typeInfo, const AudioEffectDef& desc, AudioChannelLayout layout )
+            static unique_ptr<AudioEffect> createEffect( const AudioEffectTypeInfo& typeInfo, const AudioEffectDef& desc, AudioChannelLayout layout )
             {
                 (void)desc;
                 return make_unique<TEffect>( typeInfo, layout );
             }
 
             /** @brief 컨볼루션 리버브를 만들고 데이터의 임펄스 응답을 읽습니다. 읽지 못하면 nullptr 입니다(오류는 `loadImpulse` 가 남깁니다). */
-            static unique_ptr<IAudioEffect> createConvolution( const AudioEffectTypeInfo& typeInfo, const AudioEffectDef& desc, AudioChannelLayout layout )
+            static unique_ptr<AudioEffect> createConvolution( const AudioEffectTypeInfo& typeInfo, const AudioEffectDef& desc, AudioChannelLayout layout )
             {
                 unique_ptr<AudioConvolutionEffect> pEffect = make_unique<AudioConvolutionEffect>( typeInfo, layout );
                 if ( pEffect->loadImpulse( desc._impulse ) == false )
@@ -832,7 +832,7 @@ namespace sw
 
 namespace sw
 {
-    IAudioEffect::IAudioEffect( const AudioEffectTypeInfo& typeInfo, AudioChannelLayout layout )
+    AudioEffect::AudioEffect( const AudioEffectTypeInfo& typeInfo, AudioChannelLayout layout )
         : _pTypeInfo{ &typeInfo }
         , _listParameter{}
         , _channelCount{ AudioChannelLayoutUtil::getChannelCount( layout ) }
@@ -845,7 +845,7 @@ namespace sw
         }
     }
 
-    optional<uint32> IAudioEffect::findParameterIndex( const hashed_string& name ) const
+    optional<uint32> AudioEffect::findParameterIndex( const hashed_string& name ) const
     {
         for ( uint32 parameterIndex = 0; parameterIndex < _pTypeInfo->_parameterCount; ++parameterIndex )
         {
@@ -855,7 +855,7 @@ namespace sw
         return nullopt;
     }
 
-    void IAudioEffect::setParameter( uint32 parameterIndex, float32 value )
+    void AudioEffect::setParameter( uint32 parameterIndex, float32 value )
     {
         const AudioEffectParameterInfo& info    = _pTypeInfo->_pParameter[parameterIndex];
         const float32                   clamped = MathUtil::clamp( value, info._minValue, info._maxValue );
@@ -875,7 +875,7 @@ namespace sw
         return nullptr;
     }
 
-    unique_ptr<IAudioEffect> AudioEffectRegistry::createEffect( const AudioEffectDef& desc, AudioChannelLayout layout )
+    unique_ptr<AudioEffect> AudioEffectRegistry::createEffect( const AudioEffectDef& desc, AudioChannelLayout layout )
     {
         const AudioEffectTypeInfo* pTypeInfo = findType( desc._type );
         if ( pTypeInfo == nullptr )
@@ -888,7 +888,7 @@ namespace sw
             SW_LOG_ERROR_ID( "AudioEffect.AudioEffectDoesNot", "Audio effect '%#' does not support %# output channels", desc._type.c_str(), AudioChannelLayoutUtil::getChannelCount( layout ) );
             return nullptr;
         }
-        unique_ptr<IAudioEffect> pEffect = pTypeInfo->_pCreate( *pTypeInfo, desc, layout );
+        unique_ptr<AudioEffect> pEffect = pTypeInfo->_pCreate( *pTypeInfo, desc, layout );
         if ( pEffect == nullptr )
             return nullptr;
         for ( const AudioEffectParameterDef& parameter : desc._listParameter )

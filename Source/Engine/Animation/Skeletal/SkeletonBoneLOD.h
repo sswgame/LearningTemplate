@@ -20,7 +20,7 @@
 
 namespace sw
 {
-    class IDataInheritanceSource;
+    class DataInheritanceSource;
     class Mesh;
     class Skeleton;
     class XMLNode;
@@ -70,7 +70,7 @@ namespace sw
         /** @brief XML 을 읽습니다(`_base` 는 리소스에서 부모를 읽어 펼친다). 형식이 틀리면 오류를 남기고 false 이며 내용은 비웁니다. */
         [[nodiscard]] bool loadFromXMLText( string_view xml, string_view sourceLabel );
         /** @brief XML 을 읽습니다. `_base` 의 부모는 @p source 에서 읽습니다(테스트 · 쿠커). */
-        [[nodiscard]] bool loadFromXMLText( string_view xml, string_view sourceLabel, IDataInheritanceSource& source );
+        [[nodiscard]] bool loadFromXMLText( string_view xml, string_view sourceLabel, DataInheritanceSource& source );
 
         /** @brief 내용 토큰입니다(`IdentityToken`). 읽을 때마다 새 토큰이 되므로(핫 리로드 뒤 다시 받은 객체는 새 토큰이다) 마스크를 만든 쪽이 토큰을 들고 비교해 변경을 알아챕니다. */
         const IdentityToken& getRevision() const { return _revision; }

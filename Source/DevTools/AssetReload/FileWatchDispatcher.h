@@ -14,7 +14,7 @@
 #include "Core/Path/PathKey.h"
 
 #include "DevTools/DevToolsAPI.h"
-#include "DevTools/FileWatch/IFileWatcher.h"
+#include "DevTools/FileWatch/FileWatcher.h"
 
 namespace sw
 {
@@ -26,7 +26,7 @@ namespace sw
     /**
      * @class FileWatchDispatcher
      * @brief FileWatcher 로 리소스 변경을 폴링하고, 등록된 경로 접두사와 확장자가 맞을 때만 콜백을 부릅니다.
-     * @note 감시자는 이 플랫폼의 OS 감시자 하나다(`IFileWatcher::createNative` — Windows ReadDirectoryChangesW, Linux inotify). mtime 폴링으로 대신하지 않는다.
+     * @note 감시자는 이 플랫폼의 OS 감시자 하나다(`FileWatcher::createNative` — Windows ReadDirectoryChangesW, Linux inotify). mtime 폴링으로 대신하지 않는다.
      */
     class SW_DEVTOOLS_API FileWatchDispatcher
     {
@@ -100,10 +100,10 @@ namespace sw
         bool isExtensionAllowed( const WatchEntry& entry, string_view filename ) const;
 
     private:
-        unique_ptr<IFileWatcher> _fileWatcher;
-        vector<WatchEntry>       _listWatch;
-        IDAllocator<uint64>      _watchIDAllocator;
-        uint64                   _lastPollTimestamp{ 0 }; ///< 직전 update() 가 큐를 비운 시각(파일 시계, 초)
+        unique_ptr<FileWatcher> _fileWatcher;
+        vector<WatchEntry>      _listWatch;
+        IDAllocator<uint64>     _watchIDAllocator;
+        uint64                  _lastPollTimestamp{ 0 }; ///< 직전 update() 가 큐를 비운 시각(파일 시계, 초)
         /** @brief 이 객체가 내준 구독입니다(믹스인 상속 대신 합성). 풀리면 `releaseSubscription` 이 불린다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다. */
         SubscriptionList _subscriptions{ SubscriptionList::ReleaseFunction::create<&FileWatchDispatcher::releaseSubscription>( this ) };
     };

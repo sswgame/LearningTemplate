@@ -19,7 +19,7 @@
 
 Core folders are tiers (`Config/Rules/Layers/CoreLayers.toml`, sub-folder tiers in `[subtier]`; each tier is its own object part with `#error` stubs for every higher-tier header): `Foundation` → `Concurrency` · `Math` → `Memory` → `Container` → … → `Diagnostics` → `Log/Sink` (implements the `ILogSink` port `Log` declares, so it sits on top). A file includes only its own folder or a lower tier.
 
-- A lower tier that must reach up takes an interface or a function pointer (`ILockObserver`, `IAllocationTracker`).
+- A lower tier that must reach up takes an interface or a function pointer (`ILockObserver`, `AllocationTracker`).
 - Each tier's pch holds only the `CoreMinimal.h` headers at or below it, so tiers below `Log` get **no `Logger.h`**: `SW_LOG_*`, `StringBuilder` and `FileUtil` fail to compile there. Report with `SW_LOW_LEVEL_*`.
 
 ### Target gates
@@ -61,7 +61,7 @@ Reach a service through the window of its lifetime: `getSubsystem<T>()` (must ex
   - `SW_ENGINE_SERVICE_SUBSYSTEM( T, GameVisible | HostOnly, Services | Startup, ( TypesBuiltFirst... ), factory )` — builds the subsystem and fills its slot (`SW_ENGINE_DEFAULT_FACTORY( T )` for a plain `emplaceSubsystem<T>()`).
   - `SW_ENGINE_SUBSYSTEM( T, Services | Startup, ( TypesBuiltFirst... ), factory )` — builds a subsystem without a slot (found only through scopes).
   - `SW_ENGINE_SERVICE( T, GameVisible | HostOnly )` — a slot for an object another subsystem binds (a value bundle, an object inside a subsystem); the line sits next to that `bind`.
-  - Put a type in the parentheses only when the factory looks it up (`scope.get<T>()`); the build order is a topological sort of those (ties by name), and a cycle, an unregistered type or a type from another stage stops startup. Init/shutdown order still comes from `ISubsystem::getSubsystemDependencies`.
+  - Put a type in the parentheses only when the factory looks it up (`scope.get<T>()`); the build order is a topological sort of those (ties by name), and a cycle, an unregistered type or a type from another stage stops startup. Init/shutdown order still comes from `Subsystem::getSubsystemDependencies`.
   - `engine::getSubsystem<T>()` reads the slot in O(1) and compiles only for a `Required` slot whose header is included; `engine::findSubsystem<T>()` reads an `Optional` slot, or walks the scopes for a type without a slot. A required slot left empty stops startup with the type name (`engine::bindEngineServices`). `GameVisible` slots are bound into game module scopes (`game::findSubsystem<T>()`); editor scopes get every slot.
 - No named accessors, no `static getInstance()`.
 - Tests inject mocks through scopes (`game::ScopedGameScope`, `editor::ScopedEditorScope`); the registration rules are tested with a local `engine::EngineRegistrationList` (`Engine/Foundation/Tests/TestEngineSubsystemRegistration.cpp`).

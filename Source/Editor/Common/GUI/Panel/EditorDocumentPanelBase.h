@@ -1,20 +1,20 @@
 /**
- * @file IEditorDocumentPanel.h
+ * @file EditorDocumentPanelBase.h
  * @brief 문서를 가진 에디터 패널의 기반입니다 — 미저장 비트, 저장 · 되돌리기, 닫기 확인을 여기만 가집니다.
- * @details 언리얼 `SDockTab`(패널 UI)과 `FAssetEditorToolkit`(문서) 을 나눈 자리다. 예전에는 `IEditorPanel` 이 문서 함수 여섯을 기본 구현과 함께 가져,
+ * @details 언리얼 `SDockTab`(패널 UI)과 `FAssetEditorToolkit`(문서) 을 나눈 자리다. 예전에는 `EditorPanel` 이 문서 함수 여섯을 기본 구현과 함께 가져,
  *          패널이 `markDocumentDirty` 만 부르고 `saveDocument` 를 빠뜨려도 컴파일됐다(Ctrl+S 가 조용히 실패하고 미저장이 영영 남는다).
- *          이제 문서 없는 패널은 미저장을 표시할 수 없고(`IEditorPanel` 에 없다), 문서 패널은 저장 · 되돌리기를 반드시 구현한다(순수 가상).
+ *          이제 문서 없는 패널은 미저장을 표시할 수 없고(`EditorPanel` 에 없다), 문서 패널은 저장 · 되돌리기를 반드시 구현한다(순수 가상).
  */
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Expected.h"
 
-#include "Editor/Common/GUI/Panel/IEditorPanel.h"
+#include "Editor/Common/GUI/Panel/EditorPanel.h"
 
 namespace sw::editor
 {
-    /** @brief 문서 자동 저장 사본을 꺼낸 결과입니다(`IEditorDocumentPanel::takeAutosaveCopy`). */
+    /** @brief 문서 자동 저장 사본을 꺼낸 결과입니다(`EditorDocumentPanelBase::takeAutosaveCopy`). */
     enum class DocumentAutosaveResult : uint8
     {
         Nothing,  ///< 쓸 것이 없다(깨끗하다 · 지난 사본과 같다 · 사본을 두지 않는 문서)
@@ -23,14 +23,14 @@ namespace sw::editor
     };
 
     /**
-     * @class IEditorDocumentPanel
+     * @class EditorDocumentPanelBase
      * @brief 저장할 문서를 가진 패널입니다. 파생은 `saveDocument` · `revertDocument` 를 구현하고 편집을 `markDocumentDirty` 로 알립니다.
      */
-    class SW_EDITOR_API IEditorDocumentPanel : public IEditorPanel
+    class SW_EDITOR_API EditorDocumentPanelBase : public EditorPanel
     {
     public:
-        IEditorDocumentPanel*       asDocumentPanel() final { return this; }
-        const IEditorDocumentPanel* asDocumentPanel() const final { return this; }
+        EditorDocumentPanelBase*       asDocumentPanel() final { return this; }
+        const EditorDocumentPanelBase* asDocumentPanel() const final { return this; }
 
         /**
          * @brief 저장되지 않은 편집이 있으면 true 입니다.
@@ -107,14 +107,14 @@ namespace sw::editor
         [[nodiscard]] virtual DocumentAutosaveResult takeAutosaveCopy( string& outDocumentPath, string& outText ) = 0;
 
     private:
-        friend class IEditorPanel; // 셸(`draw` · `requestClose`)이 문서 상태를 묻고 확인을 띄운다
+        friend class EditorPanel; // 셸(`draw` · `requestClose`)이 문서 상태를 묻고 확인을 띄운다
         // 문서 패널의 기반은 이 둘뿐이다 — 생성자를 둘에만 연다. 에셋 파일 하나를 고치는 패널이 직접 상속해 자체 열기 길과 문서 경로를 따로 들던 모양을 형식으로 막는다.
         friend class EditorDocumentPanel;      // 에셋 파일 하나(워크스페이스 포커스로 연다)
         friend class EditorStateDocumentPanel; // 연 문서 경로가 없는 상태 · 설정 묶음
 
         /** @brief 기본 열림 상태로 문서 패널을 만듭니다. 두 기반(`EditorDocumentPanel` · `EditorStateDocumentPanel`)만 부른다. */
-        explicit IEditorDocumentPanel( bool bOpenByDefault )
-            : IEditorPanel{ bOpenByDefault }
+        explicit EditorDocumentPanelBase( bool bOpenByDefault )
+            : EditorPanel{ bOpenByDefault }
             , _bDocumentDirty{ SW_FALSE }
             , _bConfirmClose{ SW_FALSE }
             , _lastCaptureMicroseconds{ 0 }
@@ -133,7 +133,7 @@ namespace sw::editor
          */
         virtual void syncDocumentDirty() {}
         /**
-         * @brief 패널을 그린 뒤 부릅니다(`IEditorPanel::draw`). 끌기 · 슬라이더 같은 상호작용 구간이 끝났으면 그 동안의 편집을 되돌리기 한 단계로 기록한다.
+         * @brief 패널을 그린 뒤 부릅니다(`EditorPanel::draw`). 끌기 · 슬라이더 같은 상호작용 구간이 끝났으면 그 동안의 편집을 되돌리기 한 단계로 기록한다.
          * @details 기본은 아무 일도 하지 않는다(`EditorDocumentPanel` 이 구간을 쥔다).
          */
         virtual void flushDocumentInteraction() {}

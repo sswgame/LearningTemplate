@@ -25,7 +25,7 @@ namespace sw::editor
         virtual ~DialogueGraphPanel() override = default;
 
         // ------------------------------------------------------------------------------
-        // 1) IEditorPanel: 수명 주기와 UI 렌더링
+        // 1) EditorPanel: 수명 주기와 UI 렌더링
         // ------------------------------------------------------------------------------
         void shutdown() override;
         /** @brief 대화 노드 그래프 UI 를 그립니다. */

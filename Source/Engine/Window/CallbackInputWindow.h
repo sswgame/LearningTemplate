@@ -10,7 +10,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 
-#include "Engine/Window/IWindow.h"
+#include "Engine/Window/GenericWindow.h"
 #include "Engine/Window/PlatformInputEvent.h"
 #include "Engine/Window/WindowMonitor.h"
 #include "Engine/Window/WindowTextInput.h"
@@ -18,7 +18,7 @@
 namespace sw
 {
     /** @class CallbackInputWindow @brief 콜백 입력 창의 바탕입니다. 파생은 콜백에서 `queueInput` · `applyPlatformResize` · `notifyLifecycleEvent` 를 부른다. */
-    class SW_API CallbackInputWindow : public IWindow
+    class SW_API CallbackInputWindow : public GenericWindow
     {
     public:
         CallbackInputWindow();
@@ -85,7 +85,7 @@ namespace sw
         void applyPlatformFocus( bool bFocused );
         /** @brief 콜백 창의 포커스는 `applyPlatformFocus` 로만 바꾼다 — 상태만 바꾸고 입력을 빠뜨리는 길을 형식으로 막는다. */
         void setFocusState( bool bFocused ) = delete;
-        /** @brief 표면 크기 · 배율 · 안전 여백이 바뀌었습니다. 크기가 달라졌으면 프레임 시작에 크기 콜백(스왑체인 · UI)이 불린다(`IWindow::notifyResized`) — 회전도 이 길이다. */
+        /** @brief 표면 크기 · 배율 · 안전 여백이 바뀌었습니다. 크기가 달라졌으면 프레임 시작에 크기 콜백(스왑체인 · UI)이 불린다(`GenericWindow::notifyResized`) — 회전도 이 길이다. */
         void applyPlatformResize( uint32 width, uint32 height, float32 contentScale, const float4& safeInsets );
 
     private:

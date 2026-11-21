@@ -1,5 +1,5 @@
 /**
- * @file IEditorPopup.h
+ * @file EditorPopup.h
  * @brief 모달 및 비도킹 플로팅 에디터 팝업 인터페이스 (Common/GUI 계층)
  */
 #pragma once
@@ -8,13 +8,13 @@
 namespace sw::editor
 {
     /**
-     * @class IEditorPopup
+     * @class EditorPopup
      * @brief 모달 · 플로팅 팝업 창의 추상 기반 인터페이스입니다.
      */
-    class IEditorPopup
+    class EditorPopup
     {
     public:
-        virtual ~IEditorPopup() = default;
+        virtual ~EditorPopup() = default;
 
         /** @brief 팝업의 고유 식별자(ID)를 반환합니다. */
         virtual const utf8* getPopupID() const = 0;
@@ -67,7 +67,7 @@ namespace sw::editor
         // 버튼이 그 값을 **직접** false 로 쓰므로 `close()` 를 지나가지 않고, 그래서 `onClose()` 가
         // 불리지 않는다. 열 때는 훅이 돌고 닫을 때는 돌지 않는 반쪽 수명이 된다. 팝업은
         // `open()`/`close()`/`toggle()`/`setOpen()` 으로만 상태를 바꾼다.
-        // (패널 쪽 `IEditorPanel::getOpenFlagAddress()` 은 그대로 둔다. 거기엔 닫힘 훅이 없고 열림 상태가
+        // (패널 쪽 `EditorPanel::getOpenFlagAddress()` 은 그대로 둔다. 거기엔 닫힘 훅이 없고 열림 상태가
         //  플래그 하나뿐이라 ImGui 가 직접 써도 잃는 계약이 없다.)
 
         /** @brief 팝업을 그리는 진입점입니다(열려 있으면 drawContent 를 부릅니다). */
@@ -78,7 +78,7 @@ namespace sw::editor
         }
 
     protected:
-        explicit IEditorPopup( bool bOpenByDefault = false )
+        explicit EditorPopup( bool bOpenByDefault = false )
             : _bOpen{ bOpenByDefault }
         {
         }

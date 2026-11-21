@@ -6,7 +6,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
-#include "Editor/Common/GUI/Panel/IEditorPanel.h"
+#include "Editor/Common/GUI/Panel/EditorPanel.h"
 #include "Editor/Common/Workspace/EditorPanelID.h"
 #include "Editor/Panels/Scene/Model/GameViewModel.h"
 
@@ -18,7 +18,7 @@ namespace sw::editor
      * @details 게임 카메라가 없거나 꺼져 있으면 "No camera rendering" 을 띄웁니다. 패널이 보이지 않으면 게임 뷰를 그리지 않습니다(RT 요청 0).
      *          상태와 입력 넘기기 · 디버그 드로우 명령은 `GameViewModel`(Model/, ImGui 없음)이 들고, 이 패널은 ImGui 창 상태를 읽어 넘기고 그리기만 한다.
      */
-    class GameViewPanel : public IEditorPanel
+    class GameViewPanel : public EditorPanel
     {
     public:
         /** @brief 패널 id 입니다. 등록(`SW_EDITOR_PANEL`)과 조회(`EditorPanelManager::findPanel<…>` · `setPanelOpen<…>`)가 모두 이 상수에서 온다. */
@@ -30,7 +30,7 @@ namespace sw::editor
         GameViewPanel();
 
         // ------------------------------------------------------------------------------
-        // 1) IEditorPanel — 제목/그리기
+        // 1) EditorPanel — 제목/그리기
         // ------------------------------------------------------------------------------
         /** @brief 창 제목을 반환합니다. */
         const utf8*    getPanelTitle() const override { return kPanelTitle; }

@@ -7,13 +7,13 @@
 #pragma once
 #include "Core/Foundation/Types.h"
 
-#include "Editor/Common/GUI/Panel/IEditorPanel.h"
+#include "Editor/Common/GUI/Panel/EditorPanel.h"
 #include "Editor/Panels/Animation/Model/AnimationRewindViewModel.h"
 
 namespace sw::editor
 {
     /** @brief 애니메이션 되감기 도구 창입니다. */
-    class AnimationRewindPanel : public IEditorPanel
+    class AnimationRewindPanel : public EditorPanel
     {
     public:
         /** @brief 패널 id 입니다. 등록(`SW_EDITOR_PANEL`)과 조회(`EditorPanelManager::findPanel<…>` · `setPanelOpen<…>`)가 모두 이 상수에서 온다. */

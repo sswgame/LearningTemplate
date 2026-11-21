@@ -8,13 +8,13 @@
 #include "Core/Foundation/Types.h"
 #include "Core/String/fixed_string.h"
 
-#include "Editor/Common/GUI/Panel/IEditorPanel.h"
+#include "Editor/Common/GUI/Panel/EditorPanel.h"
 #include "Editor/Panels/MapCheck/Model/MapCheckViewModel.h"
 
 namespace sw::editor
 {
     /** @brief 로드 · 저장 · 편집 때 모인 검증 결과를 보이고 그 오브젝트로 가는 도구 창입니다. */
-    class MapCheckPanel : public IEditorPanel
+    class MapCheckPanel : public EditorPanel
     {
     public:
         /** @brief 패널 id 입니다(`SW_EDITOR_PANEL`, `-gv_editorOpenPanel`, 상태줄 단추가 연다). */

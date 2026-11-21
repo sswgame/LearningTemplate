@@ -57,7 +57,7 @@ namespace sw::editor
     {
     }
 
-    bool AbilityCatalogEditModel::load( string_view text, IDataInheritanceSource* pInheritanceSource )
+    bool AbilityCatalogEditModel::load( string_view text, DataInheritanceSource* pInheritanceSource )
     {
         _document.setInheritanceSource( pInheritanceSource );
         const bool bLoaded = _document.load( text );

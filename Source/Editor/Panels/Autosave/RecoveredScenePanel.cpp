@@ -35,7 +35,7 @@ namespace sw::editor
     SW_EDITOR_PANEL( RecoveredScenePanel, RecoveredScenePanel::kPanelID, EditorPanelCategory::Tool, 2046 );
 
     RecoveredScenePanel::RecoveredScenePanel()
-        : IEditorPanel( false ) // 후보가 있을 때 자동 저장이 연다
+        : EditorPanel( false ) // 후보가 있을 때 자동 저장이 연다
         , _viewState{}
     {
     }

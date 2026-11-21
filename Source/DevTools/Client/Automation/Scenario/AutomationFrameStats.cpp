@@ -11,9 +11,9 @@
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Automation/Scenario/AutomationScenario.h"
-#include "Engine/Automation/Scenario/AutomationStepContext.h"
 #include "Engine/Automation/Scenario/AutomationStepParams.h"
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
+#include "Engine/Automation/Scenario/IAutomationStepContext.h"
 #include "Engine/Serialization/JSON/JSONWriter.h"
 
 #include <algorithm>
@@ -116,14 +116,14 @@ namespace sw
     {
         struct AutomationFrameStatsSteps
         {
-            static bool runBegin( AutomationStepContext& context, const AutomationStep& step )
+            static bool runBegin( IAutomationStepContext& context, const AutomationStep& step )
             {
                 (void)step;
                 context.getFrameStats().begin();
                 return true;
             }
 
-            static bool runEnd( AutomationStepContext& context, const AutomationStep& step )
+            static bool runEnd( IAutomationStepContext& context, const AutomationStep& step )
             {
                 FrameStatsSummary summary;
                 if ( context.getFrameStats().end( summary ) == false )

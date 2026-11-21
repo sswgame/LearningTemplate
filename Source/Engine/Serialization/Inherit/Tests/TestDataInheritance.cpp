@@ -15,12 +15,12 @@ using namespace sw;
 namespace
 {
     /** @brief 부모를 글 표에서 읽습니다. */
-    class DataInheritanceTestSource final : public IDataInheritanceSource
+    class DataInheritanceTestSource final : public DataInheritanceSource
     {
     public:
         /** @brief 깊이 상한 @p maxDepth 를 싣습니다. 기본은 설정(`EngineConfig.json`)과 같은 값입니다. */
         explicit DataInheritanceTestSource( optional<uint32> maxDepth = 8u )
-            : IDataInheritanceSource{ maxDepth }
+            : DataInheritanceSource{ maxDepth }
         {
         }
 

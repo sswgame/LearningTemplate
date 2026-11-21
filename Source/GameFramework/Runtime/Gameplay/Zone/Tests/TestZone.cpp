@@ -664,7 +664,7 @@ SW_TEST_CASE( ZoneTest, ServerModulesRunOnlyOnTheServerWorld )
     };
     for ( const auto& kind : arrKind )
     {
-        const ZoneModuleProcessor* pProcessor = ZoneModuleRegistry::find( kind.first );
+        const IZoneModuleProcessor* pProcessor = ZoneModuleRegistry::find( kind.first );
         SW_REQUIRE_NOT_NULL( pProcessor );
         SW_EXPECT_TRUE_MSG( pProcessor->getAuthority() == kind.second, kind.first );
     }

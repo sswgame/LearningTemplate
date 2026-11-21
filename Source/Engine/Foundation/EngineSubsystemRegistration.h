@@ -15,7 +15,7 @@
  *          - **만드는 순서**: 공장이 범위에서 다른 서브시스템을 찾으면(`scope.get<T>()`) 그 타입을 괄호 안에 적는다(언리얼 `Collection.InitializeDependency<T>()`).
  *            같은 단계 안에서 그 순서로 위상 정렬하고, 동점은 이름 순이다(링크 순서에 기대지 않는다). 모르는 타입 · 다른 단계 · 순환은 기동 오류다.
  *            공장이 받는 범위(`EngineSubsystemFactoryScope`)는 괄호에 없는 타입을 찾으면 멈춘다 — 적지 않은 찾기가 이름 순 동점 덕에 우연히 통과하지 않는다.
- *            초기화 · 종료 · 소멸 순서는 이것이 아니라 서브시스템이 선언한 의존(`ISubsystem::getSubsystemDependencies`)이 정한다. 두 선언은 뜻이 달라 합치지 않되
+ *            초기화 · 종료 · 소멸 순서는 이것이 아니라 서브시스템이 선언한 의존(`Subsystem::getSubsystemDependencies`)이 정한다. 두 선언은 뜻이 달라 합치지 않되
  *            어긋나지 않게 맞춘다: 먼저 만든 서브시스템을 받아 만든 서브시스템은 그것에 수명으로도 (간접으로라도) 기대야 한다(먼저 서고 늦게 내린다) —
  *            아니면 기동이 두 이름을 대며 멈춘다(`buildSubsystems`).
  *          서비스를 더하려면 헤더에 칸 선언 한 줄, 범위에 넣는 .cpp 에 등록 한 줄이다. 줄이 빠지면 그 칸을 읽는 쪽이 링크 오류이고, 필수 칸이 비면 엔진이
@@ -341,7 +341,7 @@ namespace sw::engine
     };
 
     /**
-     * @brief 등록 줄 형식 @p T 의 할당 용도입니다 — 서브시스템이면 그 형식의 `kSubsystemMemoryTag`, 인터페이스만 거는 줄(서브시스템이 아닌 창구)은 `ISubsystem` 기본값과 같은 EngineMisc 다.
+     * @brief 등록 줄 형식 @p T 의 할당 용도입니다 — 서브시스템이면 그 형식의 `kSubsystemMemoryTag`, 인터페이스만 거는 줄(서브시스템이 아닌 창구)은 `Subsystem` 기본값과 같은 EngineMisc 다.
      * @details 공장 본문이 태그를 적지 않게 등록 줄이 형식에서 읽는다(`buildSubsystems` 가 공장마다 건다). 등록 줄은 형식을 완전히 보는 .cpp 에 있다.
      */
     template <class T, class = void>

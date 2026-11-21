@@ -187,7 +187,7 @@
     "Source/Editor/Common/GUI/Panel/EditorDocumentPanel.cpp": {"float": 1},
     "Source/Editor/Common/GUI/Panel/EditorPreviewPanel.cpp": {"float": 4},
     "Source/Editor/Common/GUI/Panel/EditorPreviewViewport.cpp": {"float": 3},
-    "Source/Editor/Common/GUI/Panel/IEditorPanel.h": {"float": 2},
+    "Source/Editor/Common/GUI/Panel/EditorPanel.h": {"float": 2},
     "Source/Editor/Common/GUI/Status/EditorAssetImportStatus.cpp": {"integer": 1},
     "Source/Editor/Common/GUI/Status/EditorLightProbeBakeStatus.cpp": {"float": 1, "integer": 1},
     "Source/Editor/Common/GUI/Status/EditorNotificationView.cpp": {"float": 8},

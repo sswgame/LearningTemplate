@@ -17,8 +17,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Name/hashed_string.h"
-#include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/ServiceSlot.h"
+#include "Core/Subsystem/Subsystem.h"
 #include "Core/Time/ExponentialBackoff.h"
 
 #include "Engine/Audio/AudioChannelLayout.h"
@@ -56,7 +56,7 @@ namespace sw
      * @details 오디오 밖(엔진 루프 · 애니메이션 · 시퀀서 · 게임 코드)은 이 클래스를 모르고 창구로 부른다 — 프레임은 `IEngineAudioDriver`, 소리는 `ISoundPlayer`(멤버 `AudioSoundPlayer`),
      *          볼륨 · 음소거 · 스피커 모드는 사용자 설정 핸들러(`AudioUserSettingsHandlers`). 전용 서버는 오디오 폴더를 짓지 않아 칸이 모두 빈다.
      */
-    class SW_API AudioService final : public ISubsystem
+    class SW_API AudioService final : public Subsystem
     {
     public:
         /** @brief 엔진의 기본 믹서 그래프 경로입니다. 없거나 틀리면 `initialize` 가 실패합니다(코드 그래프로 대신하지 않습니다). */

@@ -15,12 +15,12 @@ using namespace sw;
 
 namespace
 {
-    class SkeletonBoneLODTestSource final : public IDataInheritanceSource
+    class SkeletonBoneLODTestSource final : public DataInheritanceSource
     {
     public:
         /** @brief 설정(`EngineConfig.json`)과 같은 깊이 상한을 싣습니다. */
         SkeletonBoneLODTestSource()
-            : IDataInheritanceSource{ 8u }
+            : DataInheritanceSource{ 8u }
         {
         }
 

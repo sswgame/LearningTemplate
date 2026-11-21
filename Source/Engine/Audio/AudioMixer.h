@@ -90,7 +90,7 @@ namespace sw
         bool setSendLevelDb( uint32 busIndex, uint32 targetBusIndex, float32 levelDb );
 
         /** @brief 버스의 이펙트를 이름(`AudioEffectDef::getEffectName`)으로 찾습니다. 없으면 nullptr 입니다. */
-        IAudioEffect* findEffect( uint32 busIndex, const hashed_string& effectName ) const;
+        AudioEffect* findEffect( uint32 busIndex, const hashed_string& effectName ) const;
 
         /** @brief 이 블록에서 정한 버스 페이더 게인(선형)을 반환합니다. 데이터 × 사용자 × 스냅샷 × 음소거/솔로입니다. */
         float32 computeBusGain( uint32 busIndex ) const;
@@ -134,26 +134,26 @@ namespace sw
         /** @brief 버스 하나의 실행 상태입니다. */
         struct Bus
         {
-            AudioBlockBuffer                 _input{};
-            vector<Send>                     _listSend{};
-            vector<Duck>                     _listDuck{};
-            vector<unique_ptr<IAudioEffect>> _listEffect{};
-            vector<hashed_string>            _listEffectName{};
-            hashed_string                    _name{};
-            AudioDownmix                     _downmix{};     ///< 3 채널 이상인 버스가 두 채널 버스로 갈 때의 행렬이다(두 채널 버스는 비어 있다).
-            optional<uint32>                 _parentIndex{}; ///< 부모 버스(master 는 비어 있다)
-            float32                          _volumeDb{ 0.0f };
-            float32                          _volumeOffsetDb{ 0.0f };
-            float32                          _duckDb{ 0.0f }; ///< 덕들 가운데 가장 깊은 눌림(dB, 0 이하)
-            float32                          _userVolume{ 1.0f };
-            float32                          _gain{ 0.0f }; ///< 지난 블록 끝의 페이더 게인(램프 시작점)
-            float32                          _peak{ 0.0f };
-            AudioChannelLayout               _layout{ AudioChannelLayout::Stereo }; ///< 버스 입력의 채널 구성이다(`initialize` 가 데이터와 출력으로 정한다).
-            uint8                            _bMuted      : 1;
-            uint8                            _bSolo       : 1;
-            uint8                            _bAudible    : 1; ///< 솔로 규칙에 따라 소리를 내도 되는지 나타낸다.
-            uint8                            _bFirstBlock : 1; ///< 처음 처리하는 블록이다. 게인을 램프하지 않고 바로 적용한다.
-            [[maybe_unused]] uint8           _reservedBus : 4;
+            AudioBlockBuffer                _input{};
+            vector<Send>                    _listSend{};
+            vector<Duck>                    _listDuck{};
+            vector<unique_ptr<AudioEffect>> _listEffect{};
+            vector<hashed_string>           _listEffectName{};
+            hashed_string                   _name{};
+            AudioDownmix                    _downmix{};     ///< 3 채널 이상인 버스가 두 채널 버스로 갈 때의 행렬이다(두 채널 버스는 비어 있다).
+            optional<uint32>                _parentIndex{}; ///< 부모 버스(master 는 비어 있다)
+            float32                         _volumeDb{ 0.0f };
+            float32                         _volumeOffsetDb{ 0.0f };
+            float32                         _duckDb{ 0.0f }; ///< 덕들 가운데 가장 깊은 눌림(dB, 0 이하)
+            float32                         _userVolume{ 1.0f };
+            float32                         _gain{ 0.0f }; ///< 지난 블록 끝의 페이더 게인(램프 시작점)
+            float32                         _peak{ 0.0f };
+            AudioChannelLayout              _layout{ AudioChannelLayout::Stereo }; ///< 버스 입력의 채널 구성이다(`initialize` 가 데이터와 출력으로 정한다).
+            uint8                           _bMuted      : 1;
+            uint8                           _bSolo       : 1;
+            uint8                           _bAudible    : 1; ///< 솔로 규칙에 따라 소리를 내도 되는지 나타낸다.
+            uint8                           _bFirstBlock : 1; ///< 처음 처리하는 블록이다. 게인을 램프하지 않고 바로 적용한다.
+            [[maybe_unused]] uint8          _reservedBus : 4;
 
             Bus()
                 : _bMuted{ SW_FALSE }

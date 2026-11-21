@@ -90,7 +90,7 @@ namespace sw
         int32                                       _maxScanPerSweep{ 0 };     ///< 예약 쓸기 한 회차에 훑는 레코드 상한(Config JSON `ServiceTTLConfig`). 0 이면 예약 쓸기에 올리지 못한다
         int32                                       _maxDeletePerSweep{ 0 };   ///< 예약 쓸기 한 회차에 지우는 레코드 상한(Config JSON `ServiceTTLConfig`)
 
-        // 보존 기간 쓸기입니다. 저장소 스레드(`IServiceStoreJob::run` 안)에서 씁니다. */
+        // 보존 기간 쓸기입니다. 저장소 스레드(`ServiceStoreJob::run` 안)에서 씁니다. */
         static constexpr int32 kPageSize = 64; ///< 한 트랜잭션의 쓰기 상한에 맞춘 한 쪽의 크기
 
         /**

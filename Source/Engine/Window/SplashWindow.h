@@ -8,7 +8,7 @@
 
 namespace sw
 {
-    class ISplashWindow;
+    class SplashWindowBase;
 
     /**
      * @class SplashWindow
@@ -48,6 +48,6 @@ namespace sw
         float32 getProgress() const;
 
     private:
-        unique_ptr<ISplashWindow> _pImpl;
+        unique_ptr<SplashWindowBase> _pImpl;
     };
 } // namespace sw

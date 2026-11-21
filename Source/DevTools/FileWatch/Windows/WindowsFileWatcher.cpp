@@ -38,7 +38,7 @@ namespace sw
         }
     } // namespace
 
-    unique_ptr<IFileWatcher> IFileWatcher::createNative()
+    unique_ptr<FileWatcher> FileWatcher::createNative()
     {
         return make_unique<WindowsFileWatcher>();
     }
@@ -222,7 +222,7 @@ namespace sw
         {
             const wstring wFileName( pNotify->FileName, pNotify->FileNameLength / sizeof( WCHAR ) );
             const string  fileName = StringUtil::utf16ToUTF8( wFileName.c_str() );
-            // 상한 · 넘침 표시 · 연속 중복 합치기는 IFileWatcher::pushChange 가 한다.
+            // 상한 · 넘침 표시 · 연속 중복 합치기는 FileWatcher::pushChange 가 한다.
             // 한 번 저장하면 LAST_WRITE 와 SIZE 가 잇달아 오는데 둘 다 Modified 로 합쳐지므로, 그 중복을 거르는 것도
             // 거기서 한다(세 플랫폼이 같은 규칙을 쓴다).
             pushChange( toWindowsFileWatcherAction( pNotify->Action ), _directoryPath, fileName );

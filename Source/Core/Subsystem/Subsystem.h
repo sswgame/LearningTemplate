@@ -1,5 +1,5 @@
 /**
- * @file Core/Subsystem/ISubsystem.h
+ * @file Core/Subsystem/Subsystem.h
  * @brief 서브시스템의 계약입니다. 스스로 이름 · 의존 · 도는 호스트를 선언하고 초기화 · 종료를 구현합니다.
  * @details 언리얼 `USubsystem`(`Initialize` · `Deinitialize` · `InitializeDependency` · `ShouldCreateSubsystem`)과 같은 자리입니다. 순서는 손으로 적지 않습니다 —
  *          `SubsystemCollection` 이 선언된 의존으로 위상 정렬해(동점은 이름 순) 초기화하고, 역순으로 멈춘(stop) 뒤 역순으로 종료하고, 소멸도 그 역순입니다.
@@ -56,7 +56,7 @@ namespace sw
 namespace sw
 {
     /**
-     * @class ISubsystem
+     * @class Subsystem
      * @brief 서브시스템입니다. `SubsystemCollection` 이 소유하고 의존 순서로 초기화 · 종료 · 소멸합니다.
      * @details - 이름은 다른 서브시스템의 의존 칸이 부르는 식별자입니다. 문자열 리터럴(프로세스 수명)을 돌려줍니다. 엔진 서브시스템은 클래스의
      *            `kSubsystemName` 상수로 두고 의존 칸은 그 상수를 가리킨다 — 철자가 틀리면 컴파일 오류다.
@@ -68,13 +68,13 @@ namespace sw
      *          - 소멸자는 모든 종료 뒤에 **모든** 서브시스템에(초기화하지 않았어도) 역순으로 불립니다.
      *          클래스가 따로 가진 `initialize( … )` · `shutdown()`(테스트가 자기 인스턴스로 쓰는 것)과 이름을 나눠, 컬렉션이 부르는 자리만 이 둘입니다.
      */
-    class ISubsystem
+    class Subsystem
     {
     public:
-        ISubsystem()                               = default;
-        virtual ~ISubsystem()                      = default;
-        ISubsystem( const ISubsystem& )            = delete;
-        ISubsystem& operator=( const ISubsystem& ) = delete;
+        Subsystem()                              = default;
+        virtual ~Subsystem()                     = default;
+        Subsystem( const Subsystem& )            = delete;
+        Subsystem& operator=( const Subsystem& ) = delete;
 
         /** @brief 서브시스템을 세웁니다. 위상 순서로 불리고, 그동안 `getSubsystemMemoryTag` 가 걸립니다. */
         virtual SubsystemInitResult initializeSubsystem() = 0;

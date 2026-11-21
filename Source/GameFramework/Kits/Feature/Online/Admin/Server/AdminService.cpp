@@ -28,7 +28,7 @@ namespace sw
         SW_ASSERT( _calls.isEmpty() && _localCalls.isEmpty() );
     }
 
-    bool AdminService::initialize( IServiceStore* pStore, const AdminServiceConfig& settings )
+    bool AdminService::initialize( ServiceStore* pStore, const AdminServiceConfig& settings )
     {
         if ( pStore == nullptr )
         {

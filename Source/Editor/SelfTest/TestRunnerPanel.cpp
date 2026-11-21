@@ -70,7 +70,7 @@ namespace sw::editor
     SW_EDITOR_PANEL( TestRunnerPanel, TestRunnerPanel::kPanelID, EditorPanelCategory::Tool, 2030 );
 
     TestRunnerPanel::TestRunnerPanel()
-        : IEditorPanel( false )
+        : EditorPanel( false )
         , _pJob{ make_unique<EditorExternalToolJob>() }
         , _selfTests{}
         , _unitTests{}

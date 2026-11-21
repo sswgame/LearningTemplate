@@ -71,23 +71,23 @@ namespace sw
 namespace sw
 {
     /**
-     * @class IOnlineClientService
+     * @class OnlineClientService
      * @brief 클라이언트 쪽 키트 하나(계정, 거래, 채팅 등의 클라이언트)입니다. 그 영역의 요청을 보내고 알림을 받습니다.
      */
-    class SW_GF_API IOnlineClientService
+    class SW_GF_API OnlineClientService
     {
     public:
-        IOnlineClientService() = default;
+        OnlineClientService() = default;
         /**
          * @brief 등록한 서비스 클라이언트에서 스스로 해제합니다.
          * @details 그 영역의 대기 · 보낸 요청의 응답 델리게이트를 부르지 않고 버린다(`OnlineServiceClient::unregisterClientService`).
          *          키트 클라이언트가 서비스 클라이언트보다 먼저 파괴되어도 시한 안에 온 응답이 파괴된 객체를 부르지 않는다.
          *          서비스 클라이언트가 먼저 파괴되면 그 소멸자가 이 키트에서 자기를 지워 두므로 파괴된 객체를 부르지 않는다.
          */
-        virtual ~IOnlineClientService();
+        virtual ~OnlineClientService();
 
-        IOnlineClientService( const IOnlineClientService& )            = delete;
-        IOnlineClientService& operator=( const IOnlineClientService& ) = delete;
+        OnlineClientService( const OnlineClientService& )            = delete;
+        OnlineClientService& operator=( const OnlineClientService& ) = delete;
 
         /** @brief 이 키트의 프로토콜 항목입니다. 영역은 여기서 나오고, 항목은 온라인 스키마 해시에 섞입니다. */
         virtual const OnlineProtocolEntry& getProtocol() const = 0;
@@ -205,12 +205,12 @@ namespace sw
         OnlineServiceClient& operator=( const OnlineServiceClient& ) = delete;
 
         /** @brief 키트를 등록합니다. 빌려 쓰며 초기화 전에 불러야 합니다. 영역이 겹치면 false 입니다. */
-        [[nodiscard]] bool registerClientService( IOnlineClientService* pService );
+        [[nodiscard]] bool registerClientService( OnlineClientService* pService );
         /**
          * @brief 키트를 해제하고 그 영역의 요청을 `cancelRequests` 로 버립니다. 등록하지 않은 키트면 아무것도 하지 않습니다.
          * @details 키트 기반 소멸자가 부른다. 스키마 해시는 빌드의 항목 전부에서 나오므로 언로드해도 바뀌지 않는다.
          */
-        void unregisterClientService( IOnlineClientService* pService );
+        void unregisterClientService( OnlineClientService* pService );
         /**
          * @brief 영역 @p methodRange 의 대기 요청과 보낸 요청에서 응답 델리게이트를 부르지 않고 버립니다.
          * @details 델리게이트 주인(키트 클라이언트)이 먼저 사라질 때 쓴다. 보낸 요청의 응답이 나중에 와도 버려진다.
@@ -315,11 +315,11 @@ namespace sw
         void        onNetResponse( const NetResponse& response );
         static void deliver( const OnlineResponseDelegate& onResponse, uint64 requestID, const NetResponse& response );
         void        dispatchPush( const uint8* pBody, int32 bodySize );
-        void        notifyServices( void ( IOnlineClientService::*pNotify )( OnlineServiceClient& ) );
+        void        notifyServices( void ( OnlineClientService::*pNotify )( OnlineServiceClient& ) );
 
     private:
         OnlineServiceClientConfig          _settings; ///< `initialize` 전에는 자리표시(공유 엔드포인트 값)다
-        vector<IOnlineClientService*>      _listService;
+        vector<OnlineClientService*>       _listService;
         vector<QueuedCall>                 _listQueuedCall;
         vector<QueuedCall>                 _listRetryCall;    ///< 서버가 다시 하라고 답해 백오프를 기다리는 요청이다
         vector<vector<QueuedCall>*>        _listDrainingCall; ///< `flushQueuedCalls` · `failQueuedCalls` 가 꺼내 도는 지역 목록(겹쳐 불리면 여럿)

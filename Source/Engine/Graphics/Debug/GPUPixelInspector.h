@@ -12,8 +12,8 @@
 #include "Core/Container/string.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/ServiceSlot.h"
+#include "Core/Subsystem/Subsystem.h"
 
 #include "Engine/Graphics/Debug/GPUMessage.h"
 
@@ -26,10 +26,10 @@ namespace sw
      * @class GPUPixelInspector
      * @brief 고른 픽셀 · 스레드와 첨부 값 읽기 요청입니다. 어느 스레드에서 불러도 됩니다.
      */
-    class SW_API GPUPixelInspector final : public ISubsystem
+    class SW_API GPUPixelInspector final : public Subsystem
     {
     public:
-        static constexpr MemoryTag   kSubsystemMemoryTag = MemoryTag::RenderCPU; ///< 할당 용도(`ISubsystem::getSubsystemMemoryTag`)
+        static constexpr MemoryTag   kSubsystemMemoryTag = MemoryTag::RenderCPU; ///< 할당 용도(`Subsystem::getSubsystemMemoryTag`)
         static constexpr const utf8* kSubsystemName      = "GPUPixelInspector";
 
         SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }

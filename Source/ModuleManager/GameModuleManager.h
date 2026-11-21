@@ -30,7 +30,7 @@ namespace sw
     struct ModuleResolution;
 
     class IEngineRenderDriver;
-    class IWindow;
+    class GenericWindow;
     class QuitRequest;
     class ILiveReloadManager;
     class ModuleCatalog;
@@ -243,7 +243,7 @@ namespace sw
          * @param pWindow 플랫폼 창(없으면 nullptr)
          * @param pRenderDriver 렌더러 창구(워커 비우기용, 없으면 nullptr)
          */
-        [[nodiscard]] bool initializeGame( ILiveReloadManager* pLiveReloadManager, RHI* pRHI, IWindow* pWindow, IEngineRenderDriver* pRenderDriver );
+        [[nodiscard]] bool initializeGame( ILiveReloadManager* pLiveReloadManager, RHI* pRHI, GenericWindow* pWindow, IEngineRenderDriver* pRenderDriver );
         /**
          * @brief 호스트 서비스 범위를 새로 채워 모듈의 @p bindService 에 넘기고 @p inoutServices 를 그것으로 바꿉니다. @p bindService 가 비었으면(API 표가 없다) 아무것도 하지 않습니다.
          * @details 새 범위를 넘긴 **뒤에** 앞 범위를 놓는다 — 모듈이 앞 범위를 들고 있는 동안 사라지지 않게. 게임 · 에디터 모듈이 같은 길을 쓴다(@p bGameModule 은 `fillModuleServiceScope` 와 같다).
@@ -261,8 +261,8 @@ namespace sw
          * @details 패스 병렬 기록 중에는 리소스 표를 바꿀 수 없다(`IRHIDevice::setParallelRecording`). 호스트 모듈이 그 순서를 스스로 보장하지 못하는
          *          프레임(새로 만든 에디터 인스턴스의 첫 UI 프레임)에서 부릅니다.
          */
-        void     waitRenderThreadIdle();
-        IWindow* getWindow() const { return _pWindow; }
+        void           waitRenderThreadIdle();
+        GenericWindow* getWindow() const { return _pWindow; }
 
         // 호스트 모듈(App 의 에디터)이 끼어드는 지점. 이 클래스만으로는(전용 서버) 모두 아무 일도 하지 않는다.
         /** @brief 이번 프레임에 게임 로직을 돌려야 하는지 반환합니다. 호스트 모듈이 없으면 항상 true 입니다. */
@@ -377,7 +377,7 @@ namespace sw
 
         ILiveReloadManager*  _pLiveReloadManager; // 소유하지 않는다.
         RHI*                 _pRHI;               // 소유하지 않는다.
-        IWindow*             _pWindow;            // 소유하지 않는다.
+        GenericWindow*       _pWindow;            // 소유하지 않는다.
         IEngineRenderDriver* _pRenderDriver;      // 소유하지 않는다.
         /**
          * @brief 프레임 경로(`beginFrame`)가 쓰는 엔진 서비스입니다. `initializeGame` 이 바인딩된 서비스 테이블에서 한 번 읽습니다(소유하지 않음).

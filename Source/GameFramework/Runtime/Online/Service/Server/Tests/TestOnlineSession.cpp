@@ -18,7 +18,7 @@ namespace
     constexpr int64 kNowMs = 1700000000000ll;
 
     /** @brief 등록을 보는 가짜 키트 클라이언트입니다. 테스트 로그인과 같은 프로토콜 항목을 쓴다. */
-    class SessionTestClient final : public IOnlineClientService
+    class SessionTestClient final : public OnlineClientService
     {
     public:
         OnlineServiceClient* _pBound{ nullptr };
@@ -32,7 +32,7 @@ namespace
         }
     };
 
-    class UnregisteredTestClient final : public IOnlineClientService
+    class UnregisteredTestClient final : public OnlineClientService
     {
     public:
         const OnlineProtocolEntry& getProtocol() const override { return test::getTestLoginProtocol(); }

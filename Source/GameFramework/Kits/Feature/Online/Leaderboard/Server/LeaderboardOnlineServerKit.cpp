@@ -24,7 +24,7 @@ namespace sw
          * @class LeaderboardOnlineServerKit
          * @brief 순위표 키트의 서버 조립입니다.
          */
-        class LeaderboardOnlineServerKit final : public OnlineServerKit<OnlineKitRequired<>, OnlineKitOptional<IAccountDirectory, IAccountPresence>>
+        class LeaderboardOnlineServerKit final : public OnlineServerKit<OnlineKitRequired<>, OnlineKitOptional<IAccountDirectory, AccountPresence>>
         {
         public:
             LeaderboardOnlineServerKit()
@@ -81,7 +81,7 @@ namespace sw
                     _service.shutdown(); // 실패한 start 는 `stop` · `shutdown` 이 보지 않으므로 세운 서비스를 여기서 내린다
                     return definitions;
                 }
-                _server.initialize( &_service, interfaces.find<IAccountDirectory>(), interfaces.find<IAccountPresence>(), context._pMetricRegistry );
+                _server.initialize( &_service, interfaces.find<IAccountDirectory>(), interfaces.find<AccountPresence>(), context._pMetricRegistry );
                 return {};
             }
 

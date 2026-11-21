@@ -25,8 +25,8 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/ServiceSlot.h"
+#include "Core/Subsystem/Subsystem.h"
 #include "Core/Task/TaskFuture.h"
 
 namespace sw
@@ -197,7 +197,7 @@ namespace sw
      * @class AsyncFileIO
      * @brief 비동기 파일 읽기 매니저입니다. 엔진은 하나를 서비스로 들고(`engine::getSubsystem<AsyncFileIO>()`), 테스트는 따로 만들어 씁니다.
      */
-    class SW_API AsyncFileIO : public ISubsystem
+    class SW_API AsyncFileIO : public Subsystem
     {
     public:
         /** @brief `readRange` 의 크기로 주면 @p offset 부터 파일 끝까지 읽습니다. */

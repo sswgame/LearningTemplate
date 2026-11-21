@@ -12,7 +12,7 @@
 #include "Core/Foundation/Expected.h"
 #include "Core/Memory/Memory.h"
 
-#include "Editor/Common/GUI/Panel/IEditorPanel.h"
+#include "Editor/Common/GUI/Panel/EditorPanel.h"
 #include "Editor/SelfTest/Model/EditorTestOutputParser.h"
 #include "Editor/SelfTest/Model/EditorTestSelection.h"
 
@@ -21,7 +21,7 @@ namespace sw::editor
     class EditorExternalToolJob;
 
     /** @brief 테스트 목록 · 실행 · 결과를 한 창에 보이는 에디터 도구 창입니다. */
-    class TestRunnerPanel : public IEditorPanel
+    class TestRunnerPanel : public EditorPanel
     {
     public:
         /** @brief 패널 id 입니다. 등록(`SW_EDITOR_PANEL`)과 조회(`EditorPanelManager::findPanel<…>` · `setPanelOpen<…>`)가 모두 이 상수에서 온다. */

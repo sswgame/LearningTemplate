@@ -21,7 +21,7 @@ namespace sw
 
     bool FileWatchDispatcher::initialize( string_view watchRootPath )
     {
-        _fileWatcher          = IFileWatcher::createNative();
+        _fileWatcher          = FileWatcher::createNative();
         const string rootPath = watchRootPath.empty() ? engine::getSubsystem<AssetPaths>().getRootFolderPath() : string( watchRootPath );
         // 네이티브 감시를 걸지 못하면 mtime 폴링으로 몰래 바꾸지 않고 실패로 돌려준다 — 부른 쪽이 핫 리로드를 끈 채로 둔다.
         // 루트가 없는 것은 팩만 실린 실행의 정상 상태라 경고이고, 있는 루트를 걸지 못한 것은 오류다.

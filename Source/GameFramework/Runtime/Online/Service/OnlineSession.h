@@ -30,7 +30,7 @@ namespace sw
     struct GameSettings;
 
     class IOnlineLocalServer;
-    class IServiceStore;
+    class ServiceStore;
     class IStreamTransport;
     class ITLSContext;
 
@@ -50,7 +50,7 @@ namespace sw
         OnlineSession( const OnlineSession& )            = delete;
         OnlineSession& operator=( const OnlineSession& ) = delete;
 
-        // ISubsystem - 키트 클라이언트를 만들어 묶는다. 연결은 `connect` 가 연다.
+        // Subsystem - 키트 클라이언트를 만들어 묶는다. 연결은 `connect` 가 연다.
         SubsystemInitResult initializeSubsystem() override;
         void                shutdownSubsystem() override;
         const utf8*         getSubsystemName() const override { return kSubsystemName; }
@@ -92,7 +92,7 @@ namespace sw
         }
 
         /** @brief 안에 세운 서버(`startLocalServer`)의 저장소입니다. 없으면 nullptr 입니다. 개발 명령 · 시나리오의 준비 단계가 게임 스레드에서 작업을 맡깁니다. */
-        [[nodiscard]] IServiceStore* findLocalServerStore() const;
+        [[nodiscard]] ServiceStore* findLocalServerStore() const;
 
         OnlineServiceClient& getServiceClient() { return _client; }
         OnlineClientState    getState() const { return _client.getState(); }
@@ -103,11 +103,11 @@ namespace sw
     private:
         struct ClientEntry
         {
-            unique_ptr<IOnlineClientService> _client{};
-            uint64                           _typeHash{ 0 };
+            unique_ptr<OnlineClientService> _client{};
+            uint64                          _typeHash{ 0 };
         };
 
-        [[nodiscard]] IOnlineClientService* findByType( uint64 typeHash ) const;
+        [[nodiscard]] OnlineClientService* findByType( uint64 typeHash ) const;
 
     private:
         const GameSettings&            _settings;

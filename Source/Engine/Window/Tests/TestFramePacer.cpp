@@ -4,7 +4,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Window/FramePacer.h"
-#include "Engine/Window/IWindow.h"
+#include "Engine/Window/GenericWindow.h"
 #include "Engine/Window/Tests/FakeWindow.h"
 
 using namespace sw;
@@ -99,7 +99,7 @@ SW_TEST_CASE( FramePacerTest, BackgroundDeadlineFollowsFrameRateLimit )
 }
 
 /**
- * @brief [FramePacerTest] 배경 상한 대기는 페이서가 스스로 자지 않고 창(`IWindow::waitForNextFrame`)에 맡긴다 — 웹은 메인 스레드를 재우면 브라우저가 멈춘다(감사 P-5).
+ * @brief [FramePacerTest] 배경 상한 대기는 페이서가 스스로 자지 않고 창(`GenericWindow::waitForNextFrame`)에 맡긴다 — 웹은 메인 스레드를 재우면 브라우저가 멈춘다(감사 P-5).
  *        전속 상태도 창에 "기다릴 것 없음"(마감 = 시작)을 알려, 배경에서 미뤄 둔 다음 프레임 콜백을 되돌릴 수 있게 한다. 최소화는 창 메시지를 기다린다.
  */
 SW_TEST_CASE( FramePacerTest, FrameWaitGoesThroughTheWindow )

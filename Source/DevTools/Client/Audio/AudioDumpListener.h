@@ -5,7 +5,7 @@
 #pragma once
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/Subsystem.h"
 
 namespace sw
 {
@@ -14,7 +14,7 @@ namespace sw
      * @struct AudioDumpBuffer
      * @brief 쌓은 오프라인 렌더(채널 교차)입니다. 엔진 범위 서비스라 엔진 범위와 함께 생기고 사라진다 — 리스너(정적 등록 항목)는 칸을 들지 않는다.
      */
-    class AudioDumpBuffer final : public ISubsystem
+    class AudioDumpBuffer final : public Subsystem
     {
     public:
         vector<float32> _listSample;

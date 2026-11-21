@@ -57,7 +57,7 @@ namespace sw
                 UINT            dpiY             = 0;
                 constexpr int32 kMdtEffectiveDpi = 0; // MDT_EFFECTIVE_DPI(shellscalingapi.h 를 끌어오지 않는다)
                 if ( s_pfnGetDpiForMonitor != nullptr && SUCCEEDED( s_pfnGetDpiForMonitor( hMonitor, kMdtEffectiveDpi, &dpiX, &dpiY ) ) && dpiX > 0 )
-                    monitor._contentScale = static_cast<float32>( dpiX ) / IWindow::kReferenceDPI;
+                    monitor._contentScale = static_cast<float32>( dpiX ) / GenericWindow::kReferenceDPI;
 
                 DEVMODEW mode{};
                 mode.dmSize = sizeof( mode );
@@ -92,7 +92,7 @@ namespace sw
         , _reservedWin32{ 0 }
         , _padding{ 0 }
     {
-        // 복원 위치는 기반(`IWindow`)이 가지고 절차도 기반이 맡는다. 플랫폼은 "알아서" 값만 정한다.
+        // 복원 위치는 기반(`GenericWindow`)이 가지고 절차도 기반이 맡는다. 플랫폼은 "알아서" 값만 정한다.
         clearRestorePosition();
     }
 

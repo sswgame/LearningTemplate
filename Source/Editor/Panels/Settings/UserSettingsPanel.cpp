@@ -53,7 +53,7 @@ namespace sw::editor
                          &UserSettingsPanelInternal::readPending );
 
     UserSettingsPanel::UserSettingsPanel()
-        : IEditorPanel( false ) // 필요할 때 여는 도구라 닫힌 채 시작한다
+        : EditorPanel( false ) // 필요할 때 여는 도구라 닫힌 채 시작한다
         , _selectedCategory{ 0 }
         , _lastRejectedCount{ 0 }
     {

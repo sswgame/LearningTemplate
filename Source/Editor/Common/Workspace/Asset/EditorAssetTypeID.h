@@ -1,7 +1,7 @@
 /**
  * @file EditorAssetTypeID.h
  * @brief 에디터 애셋 종류를 가리키는 값(`EditorAssetType`)과 에디터 전용 종류 id 입니다. 종류 등록 표(`EditorAssetType.h`)와 따로 둔다 —
- *        패널 기반(`IEditorPanel`)처럼 값만 드는 헤더가 등록 줄 · 확장 레지스트리 사슬을 끌어오지 않게.
+ *        패널 기반(`EditorPanel`)처럼 값만 드는 헤더가 등록 줄 · 확장 레지스트리 사슬을 끌어오지 않게.
  */
 #pragma once
 #include "Core/Container/string.h"

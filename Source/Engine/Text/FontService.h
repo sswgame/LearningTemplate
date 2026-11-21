@@ -13,8 +13,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Log/LogOnce.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/ServiceSlot.h"
+#include "Core/Subsystem/Subsystem.h"
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Foundation/EngineSubsystemHost.h"
@@ -72,10 +72,10 @@ namespace sw
      *          시스템 패밀리를 찾지 못하면 처음 한 번 경고하고 건너뛴다. 그 문자는 두부(글리프 0)로 그려진다.
      *          엔진에서는 서브시스템 `Fonts`(Client 대상)입니다 — 엔진 데이터의 글꼴 카탈로그로 서고, 쿠킹(Headless)이면 열지 않는다.
      */
-    class SW_API FontService : public ISubsystem
+    class SW_API FontService : public Subsystem
     {
     public:
-        // ISubsystem — 기동 단계 `Fonts`. 기본 가족(저장소 글꼴)을 못 열면 글자를 그릴 수 없으므로 기동 오류다.
+        // Subsystem — 기동 단계 `Fonts`. 기본 가족(저장소 글꼴)을 못 열면 글자를 그릴 수 없으므로 기동 오류다.
         /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */
         static constexpr const utf8* kSubsystemName = "Fonts";
         FontService();

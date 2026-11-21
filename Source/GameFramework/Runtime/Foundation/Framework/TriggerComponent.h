@@ -32,7 +32,7 @@ namespace sw
 
     /**
      * @struct TriggerAuthorityRule
-     * @brief 판정 자리 규칙 한 벌입니다 — 활성자 볼륨(`TriggerComponent`)과 지역 모듈(`ZoneModuleProcessor::getAuthority`)이 같이 쓴다(언리얼 `HasAuthority()` 자리).
+     * @brief 판정 자리 규칙 한 벌입니다 — 활성자 볼륨(`TriggerComponent`)과 지역 모듈(`IZoneModuleProcessor::getAuthority`)이 같이 쓴다(언리얼 `HasAuthority()` 자리).
      */
     struct SW_GF_API TriggerAuthorityRule
     {

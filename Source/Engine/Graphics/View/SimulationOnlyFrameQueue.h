@@ -11,8 +11,8 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/ServiceSlot.h"
+#include "Core/Subsystem/Subsystem.h"
 
 #include "Engine/Presentation/FrameDrawMode.h"
 
@@ -22,7 +22,7 @@ namespace sw
      * @class SimulationOnlyFrameQueue
      * @brief 그리지 않고 진행할 프레임 수 · 따라잡기 상태 · 누적 통계입니다. 게임 스레드가 요청하고 프레임마다 고르며, 렌더 스레드가 따라잡기를 알린다.
      */
-    class SW_API SimulationOnlyFrameQueue final : public ISubsystem
+    class SW_API SimulationOnlyFrameQueue final : public Subsystem
     {
     public:
         static constexpr const utf8* kSubsystemName = "SimulationOnlyFrameQueue";

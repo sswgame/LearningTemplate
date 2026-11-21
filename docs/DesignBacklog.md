@@ -44,7 +44,7 @@
 | # | 문제 | 판단 |
 |---|---|---|
 | 7 | App · Server 의 프레임 본문 두 벌 | 끝 — 겹치던 게임 걸음은 `GameModuleManager::updateGameFrame` 하나(언리얼 `FEngineLoop::Tick`). 나머지는 실행 파일마다 다른 일이다 |
-| 8 | 파일 감시 넷 | 닫음 — OS 감시기 하나(`IFileWatcher::createNative`)와 거르기 하나(`FileWatchDispatcher`)를 뿌리 폴더마다 둘 뿐이다. 셰이더는 일부러 수동 재컴파일(Ctrl+F8) |
+| 8 | 파일 감시 넷 | 닫음 — OS 감시기 하나(`FileWatcher::createNative`)와 거르기 하나(`FileWatchDispatcher`)를 뿌리 폴더마다 둘 뿐이다. 셰이더는 일부러 수동 재컴파일(Ctrl+F8) |
 | 12 | 온라인 소도우미 복사 | 닫음 — `encodeID` 는 저장 형식이, `isTransientStatus` 는 제공자마다 뜻이 다르다 |
 | 14 | Runtime 에 장르 기믹 | 닫음 — 공용 프리팹 라이브러리(`common/prefabs/gimmicks/`)를 여러 게임이 쓴다. 키트로 쪼개면 결합이 는다 |
 | 16 | 큰 패널 | 닫음 — 상태는 Model 이 들고 패널은 그리기만 한다. 탭이 독립된 상태 · 수명을 가질 때만 뗀다 |
@@ -815,7 +815,7 @@ private:
 2. **해시가 저장소 스레드에서 컴파일되지 않게.** `ILoginCrypto` 에서 `computePasswordHash` 를 떼어 `IPasswordHasher` 로 옮기고 `LoginStoreLogic` 은 그것을 받지 않는다.
 3. **연산 줄은 `TaskManager` 위의 상한 있는 줄.** 동시 실행 `_maxConcurrent`, 대기 `_maxQueued`. 자리는 이동 전용 티켓으로만 얻고 `submit` 이 티켓을 요구하므로 수락 검사를 건너뛰는 호출은 쓸 수 없다. 자리가 없으면 읽기 전에 `OnlineError::kBusy`(재시도 가능, 멱등 응답으로 기억하지 않는다).
 4. **없는 이름도 같은 길.** 읽기 단계가 설정 매개변수로 가짜 문제를 만들어 같은 줄을 지나고 커밋 단계가 `WrongCredentials` 를 낸다(지금의 `burnPasswordHash` 와 같은 비용 · 같은 시간).
-5. **저장소 대기 상한은 앞문 하나.** `OnlineServiceHost` 의 요청 진입(`OnlineServiceHost.cpp:617-628` 도배 제한 다음)에서 `IServiceStore::getPendingCount() >= _maxStorePending` 이면 `kBusy` 로 답한다(Hello · Ping 은 뺀다). 이미 받은 요청의 뒤 단계(커밋)는 거절하지 않는다 — 받은 요청은 끝난다.
+5. **저장소 대기 상한은 앞문 하나.** `OnlineServiceHost` 의 요청 진입(`OnlineServiceHost.cpp:617-628` 도배 제한 다음)에서 `ServiceStore::getPendingCount() >= _maxStorePending` 이면 `kBusy` 로 답한다(Hello · Ping 은 뺀다). 이미 받은 요청의 뒤 단계(커밋)는 거절하지 않는다 — 받은 요청은 끝난다.
 
 - 기각 — 전용 스레드 풀: 스레드 주인이 하나 늘고 `TaskManager` 와 코어를 다툰다(`ThreadCreationKey` 머리말의 까닭). 동시 실행 상한이 프레임 일을 지킨다.
 - 기각 — `ServiceStoreTracker::submit` 이 거절을 돌려주기: 키트 서비스마다의 모든 제출이 중간 단계 거절을 다뤄야 하고, 읽은 뒤 커밋이 거절되는 반쯤 한 요청이 생긴다.
@@ -1236,7 +1236,7 @@ struct SW_API ReplicatedLayout
 **판정 자리 · 지역 나타남(2026-11-20).** 문제: 바탕 `hasActivationAuthority` 의 기본이 "참" 이라 시퀀스 트리거 말고는 넷 월드마다 각자 판정했다(자동 저장은 클라이언트도 저장 요청), 새 파생도 그 결함을 그대로 얻었다. 대조: 언리얼은 오버랩이 양쪽에서 나고 게임 로직은 `HasAuthority()` 뒤 서버만, 로컬 화면 일은 `IsLocallyControlled` 로 거른다. → 바탕 생성자가 `TriggerAuthority`(Server · Local)를 필수 인자로 받는다 — 기본 생성자가 없어 파생이 고르지 않으면 컴파일되지 않는다(배치 데이터 칸이 아니다 — 볼륨 형식의 성질). Server 는 넷 링크가 클라이언트인 월드에서 판정하지 않는다.
 - 시퀀스 트리거 Server(서버가 틀고 넷 키트가 보낸다), 자동 저장 Server(저장은 권위 있는 판 상태 — 클라이언트 복제본을 저장하지 않는다, 언리얼 `USaveGame` 은 서버 · 호스트), 튜토리얼 힌트 Local(그 월드 로컬 플레이어의 화면 일 — 서버는 알림 창구가 없다). 힌트는 넷 월드에서 로컬 조종이 아닌 폰(원격 플레이어 복제 폰 · 리슨 서버의 원격 조종 폰)을 거른다(`ControlSystem::isLocallyControlled`).
 - 지역 볼륨도 나타남 칸 `_spawnInside` 를 얻는다(기본 Activate — 늪 · 독가스처럼 머무는 효과는 안에서 생겨도 걸려야 한다, 언리얼 `APhysicsVolume` 과 같다). Ignore 는 같은 판정(`TriggerSpawnWindow` — 활성자 볼륨에서 뽑아 둘이 같이 쓴다)으로 나타난 대상을 나갈 때까지 대상으로 세지 않는다(진입 · 체류 없음). `ZoneTracker::touch` 가 거르므로 표면 접촉(`ZoneContactComponent`, 기본 Activate)도 같은 길이다. 오버월드 `ZoneTracker`(타일 맵 활성 존)는 진입 사건이 없어 대상 밖이다.
-- 지역 효과의 판정 자리(2026-11-20): 모듈 처리기가 `ZoneModuleProcessor::getAuthority`(순수 가상 — 새 종류가 고르지 않으면 컴파일되지 않는다)로 고르고, 겹침 · 대상 기록은 모든 월드가 같이 하되 처리기 사건만 `ZoneTracker` 가 `TriggerAuthorityRule::hasAuthority`(활성자 볼륨과 같은 규칙 한 벌)으로 거른다. Server — `Action`(이펙트 · 피해 · 스킬 · 즉사 — 복제로 받는다) · `Blackboard`(AI) · `NavArea`(AI 길 찾기). Local — `PhysicsField`(이동 시뮬레이션, 언리얼 `APhysicsVolume` 은 서버와 조종 클라이언트가 함께 읽는다) · `SurfaceChannel` · `SurfaceStamp`(보이는 것만). 표면 접촉(`ZoneContactComponent`)도 같은 길이다.
+- 지역 효과의 판정 자리(2026-11-20): 모듈 처리기가 `IZoneModuleProcessor::getAuthority`(순수 가상 — 새 종류가 고르지 않으면 컴파일되지 않는다)로 고르고, 겹침 · 대상 기록은 모든 월드가 같이 하되 처리기 사건만 `ZoneTracker` 가 `TriggerAuthorityRule::hasAuthority`(활성자 볼륨과 같은 규칙 한 벌)으로 거른다. Server — `Action`(이펙트 · 피해 · 스킬 · 즉사 — 복제로 받는다) · `Blackboard`(AI) · `NavArea`(AI 길 찾기). Local — `PhysicsField`(이동 시뮬레이션, 언리얼 `APhysicsVolume` 은 서버와 조종 클라이언트가 함께 읽는다) · `SurfaceChannel` · `SurfaceStamp`(보이는 것만). 표면 접촉(`ZoneContactComponent`)도 같은 길이다.
 - 원격 조종자 막기(2026-11-20): `REFLECT( NotPlaceable )`(언리얼 `UCLASS(NotPlaceable)`) — 이름 생성 함수를 내지 않아 "Add Component" 메뉴에 없고, 씬 · 프리팹 읽기는 아는 타입을 만들지 못하면 오류 `ObjectStateSerializer.ComponentNotPlaceable`(원문은 `MissingComponent` 에 남긴다). `ControllerComponent::setInputPeer` 는 비공개 — 연결은 `spawnForConnection` · `transferToConnection` 으로만 정한다.
 **확인(판정 자리 · 지역 나타남).** 단위 `ZoneTest.ServerModulesRunOnlyOnTheServerWorld`, `RemoteControllerTest.DataCannotPlaceIt`, `ControlSystemTest.InputPeerFollowsThePossession`, `TriggerComponentTest.AutosaveJudgesOnlyOnTheServer`, `TutorialHintVolumeTest.ClientWorldShowsHintsOnlyForItsLocalPlayer`, `ZoneTest.SpawnInsideIgnoreWaitsForTheWalkIn` · `SpawnInsideIgnoreSkipsABodyBornInside`. 테스트 장치 `Tests/SceneNetLinkTestBinding.h`(월드에 서버 · 클라이언트 넷 링크를 올린다).
 
@@ -1720,7 +1720,7 @@ public:
 
 **문제.** 에디터가 뜬 뒤 첫 패널이 약 1 초 멈춘다 — 패널이 그리기 안에서 동기로 준비한다(후보: `ModulesPanel.cpp:32` 가 draw 에서 부르는 `ModulesViewModel::ensureLoaded`, `EditorViewportOverlays::ensureLoaded`, 참조 색인 첫 스캔, 트리 걷기). 큐브 8000 씬의 계층 · 인스펙터 비용은 잰 값이 없다.
 
-**대조.** 언리얼은 탭을 늦게 만들고(`RegisterNomadTabSpawner`) 무거운 자료는 에셋 레지스트리가 비동기로 채운 뒤 알린다(`OnFilesLoaded`). 유니티는 `EditorWindow.OnEnable` 뒤 `EditorApplication.delayCall`. Godot `EditorFileSystem` 은 스레드 스캔 + 진행 표시. → 패널은 곧바로 그리고 자료는 잡이 채운다. 창구는 이미 있다(`IEditorPanel::onPanelOpened`, `IEditorPanel.h:161`).
+**대조.** 언리얼은 탭을 늦게 만들고(`RegisterNomadTabSpawner`) 무거운 자료는 에셋 레지스트리가 비동기로 채운 뒤 알린다(`OnFilesLoaded`). 유니티는 `EditorWindow.OnEnable` 뒤 `EditorApplication.delayCall`. Godot `EditorFileSystem` 은 스레드 스캔 + 진행 표시. → 패널은 곧바로 그리고 자료는 잡이 채운다. 창구는 이미 있다(`EditorPanel::onPanelOpened`, `EditorPanel.h:161`).
 
 **결정.** 재서 문턱을 넘는 패널만 고친다. 고치는 꼴은 하나다: 동기 준비를 `onPanelOpened` 가 띄우는 잡으로 옮기고 Model 이 `isReady()` 를 내며, View 는 준비 전 한 줄만 그린다. 시간 문턱은 시나리오 판정에 넣지 않는다(흔들린다) — `ctest -L load` 처럼 혼자 도는 항목이 값을 남기고 통합이 아래 표를 채운다.
 
@@ -1799,7 +1799,7 @@ public:
 **결정.**
 1. 형식: `AssetCacheReloadFunction` 이 `ReloadResult` 를 돌려주고 `reloadAssetCache<T>` 가 멤버 결과를 `return` 한다 — `void` 를 돌려주는 캐시는 등록이 컴파일되지 않는다. 결과를 적는 곳은 `AssetHotReload::reloadCaches` 한 곳이다.
 2. 집계: `ReloadTracker` 에 길 `Module` 과 길마다 결과 수 · 실패 수 · 마지막 시간(감시 값 `Reload.Count.<길>` · `Reload.FailedCount` · `Reload.StaleCount` · `Reload.LastMs.<길>`). 모듈 결과는 `LiveReloadManager`(빌드 실패 · 연쇄 교체)가 적는다.
-3. 단계: `<RebuildModule name variant>`(빌드 트리의 판 머리를 덮고 `ModuleCompiler` 로 다시 짓기 — 추적 소스는 고치지 않는다, 판 표 `Config/Dev/ModuleRebuildVariants.json`), `<OverwriteConfig configFile from>`(쓰기 게이트가 연 `Config/Editor` 만), `<RestoreOverwrites/>`. 바꾼 파일은 `AutomationStepContext::restoreFileAtEnd` 에 맡기고 실행기가 `endRun` · 소멸자에서 되돌린다. 셰이더 · 에셋은 `<Scratch>` 사본을 `asset.overwriteScratch` 로 덮는다(원본은 게이트가 막는다).
+3. 단계: `<RebuildModule name variant>`(빌드 트리의 판 머리를 덮고 `ModuleCompiler` 로 다시 짓기 — 추적 소스는 고치지 않는다, 판 표 `Config/Dev/ModuleRebuildVariants.json`), `<OverwriteConfig configFile from>`(쓰기 게이트가 연 `Config/Editor` 만), `<RestoreOverwrites/>`. 바꾼 파일은 `IAutomationStepContext::restoreFileAtEnd` 에 맡기고 실행기가 `endRun` · 소멸자에서 되돌린다. 셰이더 · 에셋은 `<Scratch>` 사본을 `asset.overwriteScratch` 로 덮는다(원본은 게이트가 막는다).
 4. 시나리오: `game/playground/automation/desktop/editor/playreload`(편집기 · 혼자 · RUN_SERIAL — 빌드 트리 · 모듈 DLL · `Config/Editor` 를 바꾸므로 백엔드 넷 체인에 넣지 않는다), `shaderreload`(재컴파일기가 Debug 클라이언트만이라 `<SkipUnless Shader.LiveRecompile>`). 허브 게임(Playground)으로 옮겨도 같은 단계 · 감시 값을 쓴다.
 
 **PIE 를 리로드 너머로 잇는다(판단 2026-11-20).** 월드 · 씬 오브젝트 · 게임 인스턴스와 그 연결은 처음부터 호스트(엔진 `SceneManager` · App `GameModuleManager`) 것이고, 에디터 모듈이 쥔 것은 플레이 세션(`PlaySessionData` — 상태 · Step · 시작 위치 · 플래그 · 플레이 전 편집 씬의 롤백 스냅샷 · 남길 변경)뿐이다. 그래서 호스트로 통째 옮기지 않고 리로드 동안만 맡긴다: 작은 값은 `IModuleStateStore` 에 바이트로(`EditorPlaySession::carryOut` · `carryIn`, 키 `editor.playSession`), 롤백 스냅샷은 엔진 형 `ScenePlaySnapshot` 으로 묶어 씬 관리자가 맡는다(`SceneManager::holdPlaySnapshot` — 조립 기록 `Scene::AssemblySnapshot` 은 바이트로 옮기기에 크고, 엔진은 리로드하지 않아 형의 모양이 옛 이미지와 함께 바뀌지 않는다). 호스트 훅 `onBeforeSuspendModules( reason )` 은 리로드 · 백엔드 교체에 세션을 잇고(월드를 끄지 않는다 — 끄면 `endPlay` 가 돌아 상태 해시가 바뀐다) 종료에만 Stop 한다. 게임 모듈 리로드도 같은 길이라 PIE 가 멈추지 않고 게임 상태는 원래대로 `serializeState` 로 넘어간다. 편집 막기 수 · 거절 기록은 맡기지 않는다(쥔 작업이 옛 인스턴스와 사라진다). 되돌리기 기록의 보관분(플레이 동안 맡긴 편집 내역)은 이미 `EditorUndoHistory` 가 맡긴다. 대조: 언리얼 Live Coding 은 이미지를 바꾸지 않고 함수를 고쳐 PIE 가 그대로 이어지고, 유니티의 플레이 중 도메인 리로드는 상태를 직렬화해 되살린다 — 우리는 DLL 을 내리므로 유니티 모양(맡겼다 되찾기)으로 언리얼과 같은 결과(PIE 유지)를 낸다.
@@ -2355,7 +2355,7 @@ ezEngine(MIT) · Adria(MIT) · VQEngine(GPL-3.0 — 설계만) · Taskflow(MIT, 
 | `Core/Time` | 1 | BusyClock._mutex(M) |
 | `DevTools/AssetReload` | 1 | ReloadTracker._mutex(M) |
 | `DevTools/Client` | 3 | AutomationLogCapture._mutex(M) · AutomationLogPolicy._mutex(M) · ShaderRecompiler._mutex(RW) |
-| `DevTools/FileWatch` | 2 | IFileWatcher._eventMutex(M) · LinuxFileWatcher._watchMutex(M) |
+| `DevTools/FileWatch` | 2 | FileWatcher._eventMutex(M) · LinuxFileWatcher._watchMutex(M) |
 | `DevTools/ModuleReload` | 2 | LiveReloadManager._buildMutex(M) · ModuleCompiler._mutex(M) |
 | `DevTools/ServerPose` | 1 | ServerPoseOverlay._mutex(M) |
 | `Editor/Common` | 13 | DrawSnapshotHandoff._mutex(M) · EditorUICapture._resultMutex(M) · ImGuiRenderer._textureMutex(M) · EditorDrawReleaseQueue._mutex(M) · EditorCommandRegistry._requestMutex(M) · EditorBackgroundTask._mutex(M) · EditorExternalToolJob._mutex(M) · EditorRenderViews._targetStatesMutex(M) · EditorRenderViews._publishedMutex(M) · EditorStateStore._mutex(M) · EditorWorkspace._pendingSceneMutex(M) · EditorNetPlaySession._mutex(M) · EditorPlaySession._stateMutex(M) |

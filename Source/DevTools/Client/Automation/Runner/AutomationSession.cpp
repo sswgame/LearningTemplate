@@ -45,7 +45,7 @@
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
-#include "Engine/Window/IWindow.h"
+#include "Engine/Window/GenericWindow.h"
 #include "Engine/Window/MainWindowSubsystem.h"
 
 namespace sw
@@ -180,7 +180,7 @@ namespace sw
         settings._firstFrame              = 0;
         settings._bIncludeSynthetic       = true;
         settings._bStartWhenScenePlaying  = true;
-        const IWindow* pWindow            = MainWindowSubsystem::findMainWindow();
+        const GenericWindow* pWindow      = MainWindowSubsystem::findMainWindow();
         settings._clientWidth             = pWindow != nullptr ? pWindow->getWidth() : 0;
         settings._clientHeight            = pWindow != nullptr ? pWindow->getHeight() : 0;
         Scene*                   pScene   = engine::getSubsystem<SceneManager>().getActiveScene();
@@ -219,7 +219,7 @@ namespace sw
         const uint32 presentInterval = bPresentSkipped ? 0u : ( bPresents ? 1u : static_cast<uint32>( gv_scenarioPresentInterval ) );
         _pRenderDriver->setPresentInterval( presentInterval );
         // 무인 실행은 창도 띄우지 않는다(App 이 띄우지 않았다 — 언리얼 -RenderOffScreen). 내보내는 단계만 메인 창을 보이고, 다음 단계가 다시 정한다.
-        IWindow* const pWindow = MainWindowSubsystem::findMainWindow();
+        GenericWindow* const pWindow = MainWindowSubsystem::findMainWindow();
         if ( _bUnattended && pWindow != nullptr )
             pWindow->showWindow( bPresentSkipped == false );
     }
@@ -233,7 +233,7 @@ namespace sw
         }
         _reportPath    = string( reportPath );
         _workingFolder = FileUtil::getCurrentPath();
-        if ( const IWindow* const pWindow = MainWindowSubsystem::findMainWindow(); pWindow != nullptr )
+        if ( const GenericWindow* const pWindow = MainWindowSubsystem::findMainWindow(); pWindow != nullptr )
         {
             _startWindowWidth  = pWindow->getWidth();
             _startWindowHeight = pWindow->getHeight();
@@ -389,7 +389,7 @@ namespace sw
 
     void AutomationSession::restoreStartWindowSize()
     {
-        IWindow* const pWindow = MainWindowSubsystem::findMainWindow(); // 선택: 창 없는 하니스에는 없다
+        GenericWindow* const pWindow = MainWindowSubsystem::findMainWindow(); // 선택: 창 없는 하니스에는 없다
         if ( pWindow == nullptr || _startWindowWidth == 0 || ( pWindow->getWidth() == _startWindowWidth && pWindow->getHeight() == _startWindowHeight ) )
             return;
         if ( pWindow->setDisplayMode( WindowDisplayMode::Windowed, _startWindowWidth, _startWindowHeight ) == false )

@@ -61,7 +61,7 @@ namespace
     };
 
     /** @brief 찾기를 쌓아 두고 손으로 답하는 접속 상태입니다. */
-    class FakePresence final : public IAccountPresence
+    class FakePresence final : public AccountPresence
     {
     public:
         struct Find

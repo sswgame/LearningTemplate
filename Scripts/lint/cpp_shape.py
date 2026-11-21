@@ -17,7 +17,7 @@ C++ 모양 규칙 중 컴파일러가 보지 않는 열을 본다. 규칙 문서
    2026-11-05 — 파일을 합치는 일회용 스크립트가 "마지막 include 뒤" 에 헤더를 붙여 클래스 몸통 · 배열 초기값 안에 들어갔고, 다른 헤더가 먼저 끌어와
    `#pragma once` 로 비어 있어 컴파일러가 알리지 않았다.
 6. 끊긴 비트필드 묶음: 같은 접근 구역의 비트필드 사이에 다른 칸이 있으면 묶음마다 바이트를 따로 먹는다(전처리 갈래로 끊긴 것은 보지 않는다).
-7. 온라인 키트의 프로토콜 표: 키트 서버는 `OnlineProtocolService`, 키트 클라이언트는 `OnlineProtocolClient` 로 선다. 인터페이스(`IOnlineServerService` · `IOnlineClientService`)를 직접 잇는 것은 C++ 로 막을 수 없다 — 테스트의 가짜가 같은 인터페이스를 이어야 한다.
+7. 온라인 키트의 프로토콜 표: 키트 서버는 `OnlineProtocolService`, 키트 클라이언트는 `OnlineProtocolClient` 로 선다. 인터페이스 · 기반(`IOnlineServerService` · `OnlineClientService`)을 직접 잇는 것은 C++ 로 막을 수 없다 — 테스트의 가짜가 같은 인터페이스를 이어야 한다.
    예외는 없다. 계정 클라이언트의 재접속 게이트도 기반(`OnlineServiceClient::holdSessionRequests`)으로 옮겼다(2026-11-07).
 8. 게임 넷 메시지 표: 넷 키트 · 엔진 세션 · 게임의 메시지는 서술자 표(`NetMessageTable` · `NetTableHandler`, `Core/Network/Message/NetMessageTable.h`)로 선다.
    손 종류 상수(`NetKitMessageRange::kX + n`), 손 마스크(`1u << ( NetXMessage::kY - … )`), 종류 손 디스패치(`context._kind ==`)는 마스크에서 종류를 빠뜨리거나
@@ -57,7 +57,7 @@ SKIP_FOLDERS = ("ThirdParty", "Generated", ".gen.")
 BOOL_FLAG_EXEMPT = "NOLINT(sw-bool-flag)"
 ONLINE_KIT_FOLDER = "Source/GameFramework/Kits/Feature/Online/"
 ONLINE_CORE_FOLDER = "Source/GameFramework/Kits/Feature/Online/OnlineCore/"  # 프로토콜 표의 기반(OnlineProtocolService)이 사는 곳 — 기반은 인터페이스를 잇는다
-ONLINE_INTERFACE_PATTERN = re.compile(r"public\s+(IOnlineServerService|IOnlineClientService)\b")
+ONLINE_INTERFACE_PATTERN = re.compile(r"public\s+(IOnlineServerService|OnlineClientService)\b")
 ACCESS_KEYWORDS = ("public", "protected", "private")
 RULE_ID = "cpp-shape"
 EXCEPTION_SECTIONS = ("_stateMutator", "_multipleBase", "_staticOwner")

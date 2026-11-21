@@ -2,7 +2,7 @@
  * @file DevTools/AssetReload/AutomationReloadSteps.h
  * @brief 플레이 중 리로드를 일으키는 시나리오 단계입니다 — `<RebuildModule name variant>`(모듈을 다시 지어 갈아 끼움) · `<OverwriteConfig configFile from>`(설정 파일 덮어쓰기) ·
  *        `<RestoreOverwrites/>`(맡긴 파일을 지금 되돌림).
- * @details 바꾼 파일은 원본 글을 실행기에 맡기고(`AutomationStepContext::restoreFileAtEnd`) 시나리오가 어떻게 끝나든 되돌린다. 추적 소스는 고치지 않는다 — 모듈 판은
+ * @details 바꾼 파일은 원본 글을 실행기에 맡기고(`IAutomationStepContext::restoreFileAtEnd`) 시나리오가 어떻게 끝나든 되돌린다. 추적 소스는 고치지 않는다 — 모듈 판은
  *          빌드 트리의 판 머리(`<빌드>/generated/…`, CMake 가 기본 글로 만든다)를 덮는다. 설정은 쓰기 게이트가 연 폴더(`Config/Editor`)만 쓴다 — 게이트가 그 밖을 거절한다.
  *          셰이더 · 에셋은 `<Scratch>` 사본을 `asset.overwriteScratch` 로 덮는다(원본 쓰기는 게이트가 막는다).
  *          언리얼 Live Coding 자동화와 유니티 Test Framework 의 "고친 뒤 되돌림"(정리 단계) 자리다. 판 표는 데이터(`Config/Dev/ModuleRebuildVariants.json`)이고 없으면 단계가 진다.

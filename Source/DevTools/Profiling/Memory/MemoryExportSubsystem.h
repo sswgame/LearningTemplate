@@ -8,7 +8,7 @@
 #include "Core/Container/string.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/Subsystem.h"
 #include "Core/Task/TaskTypes.h"
 
 #include "DevTools/DevToolsAPI.h"
@@ -21,7 +21,7 @@ namespace sw
      * @class MemoryExportSubsystem
      * @brief 메모리 스냅숏 CSV 쓰기를 워커에 내고 그 단계를 쥡니다. 게임 스레드에서 부릅니다.
      */
-    class SW_DEVTOOLS_API MemoryExportSubsystem final : public ISubsystem
+    class SW_DEVTOOLS_API MemoryExportSubsystem final : public Subsystem
     {
     public:
         static constexpr const utf8* kSubsystemName = "MemoryExportSubsystem";

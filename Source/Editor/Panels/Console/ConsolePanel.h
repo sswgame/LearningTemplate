@@ -13,7 +13,7 @@
 
 #include "DevTools/Console/DevConsole.h"
 
-#include "Editor/Common/GUI/Panel/IEditorPanel.h"
+#include "Editor/Common/GUI/Panel/EditorPanel.h"
 #include "Editor/Panels/Console/Model/ConsoleLogRows.h"
 #include "Editor/Panels/Console/Model/EditorSourceLocation.h"
 
@@ -25,7 +25,7 @@ namespace sw
 namespace sw::editor
 {
     /** @brief Logger 출력을 그대로 보여 주는 콘솔 창입니다. */
-    class ConsolePanel : public IEditorPanel
+    class ConsolePanel : public EditorPanel
     {
     public:
         /** @brief 로그 사본의 할당 태그입니다 — 어느 스레드 · 어느 스코프에서 쓴 로그든 콘솔이 보관하는 사본은 에디터 몫이다. */
@@ -42,7 +42,7 @@ namespace sw::editor
         virtual ~ConsolePanel() override;
 
         // ------------------------------------------------------------------------------
-        // 2) IEditorPanel: 제목과 그리기
+        // 2) EditorPanel: 제목과 그리기
         // ------------------------------------------------------------------------------
         /** @brief 창 제목을 반환합니다. */
         const utf8*    getPanelTitle() const override { return "Output Log"; }

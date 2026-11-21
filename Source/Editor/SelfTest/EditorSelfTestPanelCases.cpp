@@ -505,8 +505,8 @@ namespace sw::editor
                             const EditorPanelRegistration* pRegistration = EditorExtensionRegistry<EditorPanelRegistration>::find( pPanelID );
                             if ( context.expect( pRegistration != nullptr, "a floating tool panel is not registered" ) == false )
                                 continue;
-                            const unique_ptr<IEditorPanel> pFresh = pRegistration->_pCreate();
-                            string                         what{ "a floating tool panel starts open: " };
+                            const unique_ptr<EditorPanel> pFresh = pRegistration->_pCreate();
+                            string                        what{ "a floating tool panel starts open: " };
                             what += pPanelID;
                             (void)context.expect( pFresh != nullptr && pFresh->isOpen() == false, what.c_str() );
                         }
@@ -515,8 +515,8 @@ namespace sw::editor
                     if ( probe._panelIndex >= kPanelCount )
                         return EditorSelfTestStep::Done;
 
-                    const utf8*   pPanelID = kArrFloatingToolPanelID[probe._panelIndex];
-                    IEditorPanel* pPanel   = panelManager.findPanelByID( pPanelID );
+                    const utf8*  pPanelID = kArrFloatingToolPanelID[probe._panelIndex];
+                    EditorPanel* pPanel   = panelManager.findPanelByID( pPanelID );
                     if ( pPanel == nullptr )
                     {
                         ++probe._panelIndex;

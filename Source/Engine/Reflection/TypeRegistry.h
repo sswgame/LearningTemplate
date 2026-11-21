@@ -31,7 +31,7 @@ namespace sw
     class SW_API TypeRegistry
     {
     public:
-        static constexpr MemoryTag kSubsystemMemoryTag = MemoryTag::Reflection; ///< 할당 용도(`ISubsystem::getSubsystemMemoryTag`)
+        static constexpr MemoryTag kSubsystemMemoryTag = MemoryTag::Reflection; ///< 할당 용도(`Subsystem::getSubsystemMemoryTag`)
         /** @brief `subscribeModuleUnloading` 의 알림 모양입니다. 인자는 내려가는 모듈 이름(`TypeInfo::_moduleName` 과 같은 값)입니다. */
         using ModuleUnloadingDelegate = Delegate<void( string_view moduleName )>;
         // ------------------------------------------------------------------------------

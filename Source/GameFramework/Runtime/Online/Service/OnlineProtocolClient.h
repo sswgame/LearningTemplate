@@ -41,7 +41,7 @@ namespace sw
      * @tparam TProtocol 표 `Table`, 메시지 목록 `MessageTypes`, 등록 항목 `kOnlineEntry` 를 가진 키트 프로토콜 구조체
      */
     template <typename TClient, typename TProtocol>
-    class OnlineProtocolClient : public IOnlineClientService
+    class OnlineProtocolClient : public OnlineClientService
     {
     public:
         OnlineProtocolClient()
@@ -80,7 +80,7 @@ namespace sw
             return call<TMethod>( typename TMethod::Request{}, onReply, key );
         }
 
-        // IOnlineClientService
+        // OnlineClientService
         const OnlineProtocolEntry& getProtocol() const final { return TProtocol::kOnlineEntry; }
         void                       onServicePush( uint16 kind, BitReader& body ) final
         {

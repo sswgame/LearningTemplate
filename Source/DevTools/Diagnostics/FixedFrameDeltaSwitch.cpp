@@ -8,7 +8,7 @@
 
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
-#include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/Subsystem.h"
 
 #include "Engine/Foundation/DeterministicRun.h"
 #include "Engine/Foundation/EngineServices.h"
@@ -49,7 +49,7 @@ namespace sw
      * @class FixedFrameDeltaSwitch
      * @brief 기동 때 지금 값(실행 인자)을 정책에 옮기고, 그 뒤의 변경(콘솔 · 에디터 목록)을 변경 콜백으로 받습니다.
      */
-    class FixedFrameDeltaSwitch final : public ISubsystem
+    class FixedFrameDeltaSwitch final : public Subsystem
     {
     public:
         static constexpr const utf8* kSubsystemName = "FixedFrameDeltaSwitch";

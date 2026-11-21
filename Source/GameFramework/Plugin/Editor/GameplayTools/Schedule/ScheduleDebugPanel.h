@@ -8,7 +8,7 @@
 #pragma once
 #include "Core/Foundation/Types.h"
 
-#include "Editor/Common/GUI/Panel/IEditorPanel.h"
+#include "Editor/Common/GUI/Panel/EditorPanel.h"
 
 #include "GameFramework/Plugin/Editor/GameplayTools/Schedule/Model/ScheduleDebugViewModel.h"
 
@@ -18,7 +18,7 @@ namespace sw::editor
      * @class ScheduleDebugPanel
      * @brief NPC 일정 타임라인 · 설명 창입니다.
      */
-    class ScheduleDebugPanel final : public IEditorPanel
+    class ScheduleDebugPanel final : public EditorPanel
     {
     public:
         /** @brief 패널 id 입니다. 등록(`SW_EDITOR_PANEL`)과 조회(`EditorPanelManager::findPanel<…>`)가 모두 이 상수에서 온다. */

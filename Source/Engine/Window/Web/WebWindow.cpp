@@ -40,9 +40,9 @@ namespace sw
         };
 
         const WindowPlatformFactory s_webWindowFactory{
-            []() -> unique_ptr<IWindow>
+            []() -> unique_ptr<GenericWindow>
         { return make_unique<WebWindow>(); },
-            []() -> unique_ptr<ISplashWindow>
+            []() -> unique_ptr<SplashWindowBase>
         { return nullptr; },
             []()
         { return false; } }; // 스플래시는 페이지(셸 HTML)가 그린다 — 엔진이 띄울 창이 없다

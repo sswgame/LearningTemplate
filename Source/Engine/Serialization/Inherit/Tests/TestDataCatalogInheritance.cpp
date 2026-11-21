@@ -11,12 +11,12 @@ using namespace sw;
 namespace
 {
     /** @brief 부모 파일을 글 표에서 읽습니다. */
-    class DataCatalogTestSource final : public IDataInheritanceSource
+    class DataCatalogTestSource final : public DataInheritanceSource
     {
     public:
         /** @brief 설정(`EngineConfig.json`)과 같은 깊이 상한을 싣습니다. */
         DataCatalogTestSource()
-            : IDataInheritanceSource{ 8u }
+            : DataInheritanceSource{ 8u }
         {
         }
 

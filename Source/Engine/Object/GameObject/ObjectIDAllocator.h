@@ -6,8 +6,8 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/ServiceSlot.h"
+#include "Core/Subsystem/Subsystem.h"
 
 namespace sw
 {
@@ -21,7 +21,7 @@ namespace sw
      *          엔진 코어에 하나인 자리를 엔진 범위 서비스로 둔다. id 를 직접 정해 되살릴 때는 `reserve…` 가 공간을 그 뒤로 밀어 앞으로의 발급과 겹치지 않게 한다.
      *          워커(비동기 씬 로드)에서도 발급하므로 원자값이다.
      */
-    class SW_API ObjectIDAllocator final : public ISubsystem
+    class SW_API ObjectIDAllocator final : public Subsystem
     {
     public:
         /** @brief 서브시스템 이름입니다. */
@@ -29,7 +29,7 @@ namespace sw
 
         ObjectIDAllocator();
 
-        // ISubsystem — 세울 것이 없다.
+        // Subsystem — 세울 것이 없다.
         SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
         void                shutdownSubsystem() override {}
         const utf8*         getSubsystemName() const override { return kSubsystemName; }

@@ -25,8 +25,8 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
-#include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/ServiceSlot.h"
+#include "Core/Subsystem/Subsystem.h"
 
 #include "Engine/Graphics/RHI/RHIDescriptors.h"
 
@@ -94,7 +94,7 @@ namespace sw
      * @note 매 프레임 갱신하지 않습니다. 트랜지언트는 **구성이 바뀔 때만** 다시 만들어지므로
      *       그때 한 번 공개하면 됩니다. 세대 번호로 "목록이 바뀌었나" 를 알 수 있습니다.
      */
-    class SW_API RenderTargetRegistry : public ISubsystem
+    class SW_API RenderTargetRegistry : public Subsystem
     {
     public:
         /** @brief 서브시스템 이름입니다. 초기화하거나 종료할 것이 없고, 수명만 컬렉션이 정합니다. 서비스 범위는 엔진 범위보다 먼저 생성되고 나중에 사라집니다. */

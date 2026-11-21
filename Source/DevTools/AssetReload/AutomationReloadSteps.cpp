@@ -14,9 +14,9 @@
 #include "Core/String/formatString.h"
 
 #include "Engine/Automation/Scenario/AutomationScenario.h"
-#include "Engine/Automation/Scenario/AutomationStepContext.h"
 #include "Engine/Automation/Scenario/AutomationStepParams.h"
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
+#include "Engine/Automation/Scenario/IAutomationStepContext.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
@@ -46,7 +46,7 @@ namespace sw
                 return AutomationReloadSteps::validateConfigFile( params._configFile );
             }
 
-            static bool runOverwriteConfig( AutomationStepContext& context, const AutomationStep& step )
+            static bool runOverwriteConfig( IAutomationStepContext& context, const AutomationStep& step )
             {
                 const AutomationOverwriteConfigParams params     = step.readValidatedProperties<AutomationOverwriteConfigParams>();
                 const string                          configPath = FileUtil::joinPath( FileUtil::joinPath( ProcessRoots::get()._project.str(), "Config" ), params._configFile );
@@ -81,7 +81,7 @@ namespace sw
                 return true;
             }
 
-            static bool runRestoreFiles( AutomationStepContext& context, const AutomationStep& step )
+            static bool runRestoreFiles( IAutomationStepContext& context, const AutomationStep& step )
             {
                 if ( context.restoreFilesNow() == false )
                     context.recordFailure( step, "a file overwritten by this scenario could not be restored - see Automation.RestoreFileFailed" );

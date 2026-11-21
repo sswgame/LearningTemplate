@@ -9,7 +9,7 @@
 #include "Core/Container/string.h"
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/Subsystem.h"
 
 #include "DevTools/DevToolsAPI.h"
 
@@ -21,7 +21,7 @@ namespace sw
      * @brief 사본 폴더를 끝까지 만든 횟수입니다(`AutomationScratchWorkspace::getPrepareCount` — 세대 번호). 엔진 범위 서비스라 엔진 범위와 함께 생기고 사라진다.
      * @details 시나리오 실행기는 단계마다 새로 서므로 실행기 멤버로 두면 번호가 되돌아가 에디터 울타리가 새 사본을 놓친다 — 엔진 범위가 든다(예전에는 프로세스 원자 칸).
      */
-    class AutomationScratchCounter final : public ISubsystem
+    class AutomationScratchCounter final : public Subsystem
     {
     public:
         atomic<uint64> _prepareCount{ 0 };

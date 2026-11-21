@@ -116,7 +116,7 @@ namespace sw
         /** @brief 글을 읽습니다. 부모와 하위 파일은 리소스에서 찾습니다. */
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName = {} );
         /** @brief 글을 읽습니다. 부모와 하위 파일을 @p source 에서 찾습니다(테스트 · 도구). */
-        [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName, IDataInheritanceSource& source );
+        [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName, DataInheritanceSource& source );
 
         /** @brief 읽은 트리입니다. 읽기에 실패했거나 읽기 전이면 빈 트리(`isValid` 가 false)입니다. 이 객체보다 오래 쓰려면 복사한다. */
         const BehaviorTree& getTree() const { return _tree; }
@@ -131,11 +131,11 @@ namespace sw
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         uint32             loadRoot( const XMLCatalogRoot& root, string_view sourceName );
         /** @brief 부모를 펼친 글을 읽습니다. 하위 파일은 @p source 에서 찾습니다. */
-        [[nodiscard]] bool readFlatText( string_view flatText, string_view sourceName, IDataInheritanceSource& source );
+        [[nodiscard]] bool readFlatText( string_view flatText, string_view sourceName, DataInheritanceSource& source );
 
     private:
-        BehaviorTree            _tree;
-        IDataInheritanceSource* _pSource; ///< 읽는 동안만 쓴다 — 하위 트리 파일을 찾는 곳
+        BehaviorTree           _tree;
+        DataInheritanceSource* _pSource; ///< 읽는 동안만 쓴다 — 하위 트리 파일을 찾는 곳
     };
 
     /** @brief 공유 캐시는 이 카탈로그의 .cpp 가 인스턴스화합니다. 쓰는 쪽은 사본을 읽지 않고 `SharedAssetCache<BehaviorTreeAsset>::acquire` 로 한 벌을 받습니다. */

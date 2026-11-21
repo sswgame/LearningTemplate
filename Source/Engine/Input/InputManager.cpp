@@ -15,7 +15,7 @@
 #include "Engine/Input/Devices/KeyboardDevice.h"
 #include "Engine/Input/Devices/MouseDevice.h"
 #include "Engine/Input/Map/InputMap.h"
-#include "Engine/Window/IWindow.h"
+#include "Engine/Window/GenericWindow.h"
 #include "Engine/Window/MainWindowSubsystem.h"
 #include "Engine/Window/NativeWindowEvent.h"
 #include "Engine/Window/WindowTextInput.h"
@@ -785,7 +785,7 @@ namespace sw
             return;
         _keyboardFocus = focus;
         // 글을 받는 포커스만 입력기를 켠다 - 게임이 키보드를 가진 동안 입력기가 WASD 를 조합으로 가져가지 않는다(언리얼 · SDL 도 글 칸에서만 켠다). 도구 창은 에디터가 글 칸마다 따로 알린다.
-        IWindow* const pWindow = MainWindowSubsystem::findMainWindow();
+        GenericWindow* const pWindow = MainWindowSubsystem::findMainWindow();
         if ( pWindow != nullptr )
             pWindow->requestTextInput( WindowTextInputClient::Engine, focus == InputKeyboardFocus::UI || focus == InputKeyboardFocus::DevConsole );
         // 개발 콘솔이나 텍스트 입력이 키보드를 가진 동안은 마우스도 놓는다(커서로 창 밖이나 제목 표시줄에 갈 수 있게).
@@ -984,7 +984,7 @@ namespace sw
 
     void InputManager::setTextInputArea( const WindowTextInputArea& area )
     {
-        IWindow* const pWindow = MainWindowSubsystem::findMainWindow();
+        GenericWindow* const pWindow = MainWindowSubsystem::findMainWindow();
         if ( pWindow != nullptr )
             pWindow->setTextInputArea( area );
     }

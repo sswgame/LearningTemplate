@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Window/IWindow.h"
+#include "Engine/Window/GenericWindow.h"
 
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/Math/MathUtil.h"
@@ -16,7 +16,7 @@
 
 namespace sw
 {
-    IWindow::IWindow()
+    GenericWindow::GenericWindow()
         : _arrTitle{}
         , _customHandler{}
         , _accessibilityQuery{}
@@ -53,7 +53,7 @@ namespace sw
     {
     }
 
-    void IWindow::notifyResized( const uint32 width, const uint32 height )
+    void GenericWindow::notifyResized( const uint32 width, const uint32 height )
     {
         if ( width == _width && height == _height )
             return;
@@ -64,7 +64,7 @@ namespace sw
             _bResizePending = SW_TRUE;
     }
 
-    void IWindow::applyPendingResize()
+    void GenericWindow::applyPendingResize()
     {
         if ( _bResizePending == SW_FALSE )
             return;
@@ -73,7 +73,7 @@ namespace sw
             _onResize.get()( _width, _height );
     }
 
-    void IWindow::updateModalLoop()
+    void GenericWindow::updateModalLoop()
     {
         if ( _bInModalLoopUpdate == SW_TRUE || _bRecreating == SW_TRUE || _onModalLoopUpdate.isBound() == false )
             return;
@@ -82,7 +82,7 @@ namespace sw
         _bInModalLoopUpdate = SW_FALSE;
     }
 
-    void IWindow::notifyLifecycleEvent( const WindowLifecycleEvent event )
+    void GenericWindow::notifyLifecycleEvent( const WindowLifecycleEvent event )
     {
         const bool bWasLost      = _bSurfaceLost == SW_TRUE;
         const bool bWasSuspended = _bAppSuspended == SW_TRUE;
@@ -109,7 +109,7 @@ namespace sw
             _onLifecycle.get()( event );
     }
 
-    void IWindow::advanceLifecycleTick()
+    void GenericWindow::advanceLifecycleTick()
     {
         if ( isRenderPaused() )
             _renderPausedTickCount.add();
@@ -123,20 +123,20 @@ namespace sw
         }
     }
 
-    void IWindow::simulateAppInterruption( const uint32 tickCount )
+    void GenericWindow::simulateAppInterruption( const uint32 tickCount )
     {
         _simulatedInterruptionTicks = tickCount;
         notifyLifecycleEvent( WindowLifecycleEvent::AppSuspended );
         notifyLifecycleEvent( WindowLifecycleEvent::SurfaceLost );
     }
 
-    void IWindow::waitForNextFrame( int64 frameStartNanoseconds, int64 deadlineNanoseconds )
+    void GenericWindow::waitForNextFrame( int64 frameStartNanoseconds, int64 deadlineNanoseconds )
     {
         (void)frameStartNanoseconds;
         MonotonicClock::sleepUntilNanoseconds( deadlineNanoseconds ); // 지난 마감이면 바로 돌아온다
     }
 
-    void IWindow::requestTextInput( WindowTextInputClient client, bool bWanted )
+    void GenericWindow::requestTextInput( WindowTextInputClient client, bool bWanted )
     {
         const bool  bWasWanted = isTextInputWanted();
         const uint8 clientBit  = static_cast<uint8>( 1u << static_cast<uint32>( client ) );
@@ -145,7 +145,7 @@ namespace sw
             applyTextInputWanted( isTextInputWanted() );
     }
 
-    void IWindow::setTextInputArea( const WindowTextInputArea& area )
+    void GenericWindow::setTextInputArea( const WindowTextInputArea& area )
     {
         if ( area == _textInputArea )
             return;
@@ -153,7 +153,7 @@ namespace sw
         applyTextInputArea( area );
     }
 
-    void IWindow::dispatchTextInput( WindowTextInputKind kind, string_view text )
+    void GenericWindow::dispatchTextInput( WindowTextInputKind kind, string_view text )
     {
         if ( _customHandler.isBound() == false )
             return;
@@ -167,13 +167,13 @@ namespace sw
         (void)_customHandler.get()( event ); // 글은 소비되어도 창이 달리 할 일이 없다
     }
 
-    void IWindow::dispatchFileDrop( const WindowFileDropEvent& event )
+    void GenericWindow::dispatchFileDrop( const WindowFileDropEvent& event )
     {
         if ( _onFileDrop.isBound() )
             _onFileDrop.get()( event );
     }
 
-    void IWindow::setMinimumClientSize( uint32 width, uint32 height )
+    void GenericWindow::setMinimumClientSize( uint32 width, uint32 height )
     {
         _minClientWidth  = width;
         _minClientHeight = height;
@@ -185,8 +185,8 @@ namespace sw
             (void)setDisplayMode( WindowDisplayMode::Windowed, _width < width ? width : _width, _height < height ? height : _height );
     }
 
-    void IWindow::computeTilePosition( const WindowTileSlot& slot, uint32 clientWidth, uint32 clientHeight, const WindowFrameExtents& extents, const WindowMonitorRect& workArea, int32& outX,
-                                       int32& outY )
+    void GenericWindow::computeTilePosition( const WindowTileSlot& slot, uint32 clientWidth, uint32 clientHeight, const WindowFrameExtents& extents, const WindowMonitorRect& workArea, int32& outX,
+                                             int32& outY )
     {
         SW_ASSERT( slot._columnCount > 0 && slot._index >= 0 ); // `createMainWindow` 가 막는다
         const int32 column      = slot._index % slot._columnCount;
@@ -203,7 +203,7 @@ namespace sw
         outY                = MathUtil::min( workArea._position._y + row * frameHeight, bottomY );
     }
 
-    unique_ptr<IWindow> IWindow::createMainWindow( const utf8* pTitle, uint32 width, uint32 height, const CommandLineManager& commandLine )
+    unique_ptr<GenericWindow> GenericWindow::createMainWindow( const utf8* pTitle, uint32 width, uint32 height, const CommandLineManager& commandLine )
     {
         // 위치 인자는 둘 중 하나다 — 좌표(`-WinX` · `-WinY`, 둘 다)나 바둑판 칸(`-WinTile` · `-WinTileColumns`, 둘 다). 반쪽이나 둘을 함께 주면 플랫폼 값으로 채우지 않고 멈춘다.
         const bool bHasX           = commandLine.isArgumentProvided( CommandLineArgument::WINDOW_X );
@@ -232,7 +232,7 @@ namespace sw
             return nullptr;
         }
 
-        unique_ptr<IWindow> pWindow = createPlatformWindow();
+        unique_ptr<GenericWindow> pWindow = createPlatformWindow();
         if ( pWindow == nullptr )
             return nullptr;
         const bool bPlace = pWindow->canPlaceWindow();
@@ -268,7 +268,7 @@ namespace sw
         return pWindow;
     }
 
-    void IWindow::setTitle( const utf8* pTitle )
+    void GenericWindow::setTitle( const utf8* pTitle )
     {
         if ( StringUtil::isNullOrEmpty( pTitle ) )
             return;
@@ -279,25 +279,25 @@ namespace sw
         applyTitle();
     }
 
-    bool IWindow::storeTitle( const utf8* pTitle )
+    bool GenericWindow::storeTitle( const utf8* pTitle )
     {
         const utf8* const pSource = pTitle != nullptr ? pTitle : "";
         const size_t      length  = StringUtil::strlen( pSource );
         if ( length >= kTitleCapacity )
         {
-            SW_LOG_ERROR_ID( "Window.WindowTitleBytesMust", "Window title is %# bytes - it must be shorter than %# bytes (IWindow::kTitleCapacity)", length, kTitleCapacity );
+            SW_LOG_ERROR_ID( "Window.WindowTitleBytesMust", "Window title is %# bytes - it must be shorter than %# bytes (GenericWindow::kTitleCapacity)", length, kTitleCapacity );
             return false;
         }
         std::memcpy( _arrTitle, pSource, length + 1 );
         return true;
     }
 
-    void* IWindow::tryGetWin32Handle() const
+    void* GenericWindow::tryGetWin32Handle() const
     {
         return getSurfaceKind() == NativeSurfaceKind::Win32 ? getNativeHandle() : nullptr;
     }
 
-    bool IWindow::tryGetX11Surface( X11SurfaceHandles& outHandles ) const
+    bool GenericWindow::tryGetX11Surface( X11SurfaceHandles& outHandles ) const
     {
         outHandles = X11SurfaceHandles{};
         if ( getSurfaceKind() != NativeSurfaceKind::X11 )
@@ -311,12 +311,12 @@ namespace sw
         return true;
     }
 
-    void IWindow::requestClose()
+    void GenericWindow::requestClose()
     {
         _bShouldClose = SW_TRUE;
     }
 
-    bool IWindow::tryBeginClose()
+    bool GenericWindow::tryBeginClose()
     {
         if ( _bShouldClose == SW_TRUE )
             return true;
@@ -326,9 +326,9 @@ namespace sw
         return true;
     }
 
-    IWindow::~IWindow() = default;
+    GenericWindow::~GenericWindow() = default;
 
-    bool IWindow::recreate()
+    bool GenericWindow::recreate()
     {
         if ( _arrTitle[0] == '\0' )
             return false;
@@ -367,7 +367,7 @@ namespace sw
         return bOk;
     }
 
-    unique_ptr<IWindow> IWindow::createPlatformWindow()
+    unique_ptr<GenericWindow> GenericWindow::createPlatformWindow()
     {
         const WindowPlatformFactory* const pFactory = WindowPlatform::find();
         return pFactory != nullptr ? pFactory->_pfnCreateWindow() : nullptr;

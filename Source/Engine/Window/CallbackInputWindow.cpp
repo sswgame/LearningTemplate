@@ -7,7 +7,7 @@
 namespace sw
 {
     CallbackInputWindow::CallbackInputWindow()
-        : IWindow{}
+        : GenericWindow{}
         , _listPendingInput{}
         , _listPendingText{}
         , _safeInsets{}
@@ -56,7 +56,7 @@ namespace sw
     {
         if ( hasFocus() == bFocused )
             return;
-        IWindow::setFocusState( bFocused );
+        GenericWindow::setFocusState( bFocused );
         PlatformInputEvent event{};
         event._kind = bFocused ? PlatformInputKind::FocusGained : PlatformInputKind::FocusLost;
         queueInput( event );

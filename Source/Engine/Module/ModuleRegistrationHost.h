@@ -15,7 +15,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/Subsystem.h"
 #include "Core/Subsystem/SubsystemScope.h"
 
 namespace sw
@@ -29,7 +29,7 @@ namespace sw
      * @class ModuleRegistrationHost
      * @brief 모듈 서브시스템의 자식 범위를 매달고 떼는 서브시스템이고, 모듈 서비스 범위의 부모가 될 조회 창구(`getMountedLocator` · `getHostModuleLocator`)를 가집니다. 스레드: 모듈을 올리고 내리는 스레드만 부른다.
      */
-    class SW_API ModuleRegistrationHost final : public ISubsystem
+    class SW_API ModuleRegistrationHost final : public Subsystem
     {
     public:
         /** @brief 서브시스템 이름입니다. */
@@ -61,7 +61,7 @@ namespace sw
         /** @brief 모듈 이름 → 붙인 모듈 객체 등록자(붙인 순서)입니다. 내리기 전에 떼고 지운다. */
         unordered_map<string, vector<ModuleObjectRegistrar*>>& getAttachedObjects() { return _mapAttachedObject; }
 
-        // ISubsystem — 세울 것이 없다(자식 범위는 매단 범위가 소유한다).
+        // Subsystem — 세울 것이 없다(자식 범위는 매단 범위가 소유한다).
         SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
         void                shutdownSubsystem() override {}
         const utf8*         getSubsystemName() const override { return kSubsystemName; }

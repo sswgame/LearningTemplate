@@ -66,7 +66,7 @@ namespace sw
         [[nodiscard]] bool loadModuleLibraries( uint8 targetMask, unique_ptr<GameModuleManager> moduleManager );
         /**
          * @brief 호스트 서비스 하나를 더합니다(세우지 않는다 — `startHostServices` 가 의존 순서로 세운다).
-         * @details 서비스는 호스트가 자기 폴더에 두는 `ISubsystem` 이다. 이름 · 의존은 그 형식의 `kSubsystemName` 상수가 가리키고(철자가 틀리면 컴파일 오류),
+         * @details 서비스는 호스트가 자기 폴더에 두는 `Subsystem` 이다. 이름 · 의존은 그 형식의 `kSubsystemName` 상수가 가리키고(철자가 틀리면 컴파일 오류),
          *          몸통은 호스트의 멤버를 쓴다 — 엔진이 호스트의 서비스 목록을 열거형 · 분기로 알지 않는다(언리얼 게임 인스턴스 서브시스템 자리).
          */
         template <class TService, class... TArgs>

@@ -8,7 +8,7 @@
     #include "Core/String/StringUtil.h"
 
     #include "Engine/Config/RHIBackendType.h"
-    #include "Engine/Window/IWindow.h"
+    #include "Engine/Window/GenericWindow.h"
     #include "Engine/Window/NativeWindowEvent.h"
 
     #include <imgui.h>
@@ -24,7 +24,7 @@ namespace sw::editor
         /** @brief `imgui_impl_win32` 가 `ImGuiIO::BackendPlatformName` 에 거는 이름입니다. `tryGetViewportWin32Handle` 이 활성 플랫폼 백엔드의 종류를 이 이름으로 알아본다. */
         static constexpr const utf8* kPlatformName = "imgui_impl_win32";
 
-        bool initialize( IWindow* pWindow, RHIBackend backendType ) override
+        bool initialize( GenericWindow* pWindow, RHIBackend backendType ) override
         {
             if ( pWindow == nullptr )
                 return false;
@@ -86,7 +86,7 @@ namespace sw::editor
         return make_unique<ImGuiWin32PlatformBackend>();
     }
 
-    unique_ptr<IImGuiPlatformBackend> IImGuiPlatformBackend::createPlatformBackendFor( const IWindow& window )
+    unique_ptr<IImGuiPlatformBackend> IImGuiPlatformBackend::createPlatformBackendFor( const GenericWindow& window )
     {
         (void)window; // Windows 는 창 시스템이 Win32 하나다 — 창이 Win32 가 아니면 `initialize` 가 오류로 멈춘다
         return createPlatformBackend();

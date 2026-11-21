@@ -11,8 +11,8 @@
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/ServiceSlot.h"
+#include "Core/Subsystem/Subsystem.h"
 
 #include "Engine/Input/Devices/GamepadDevice.h"
 #include "Engine/Input/Devices/KeyboardDevice.h"
@@ -73,7 +73,7 @@ namespace sw
      * @details 모듈이 단 콜백(장치 변경, 게임패드 연결, 글자 입력, 조합)은 구독(`Subscription`)이라 그 모듈의 소유자가 사라질 때 풀린다.
      *          모듈 라이브러리를 언로드하기 전에 그 범위의 콜백을 해제하고, 그 범위에 vtable 이 있는 장치를 등록에서 제거한다(`onModuleUnloading`).
      */
-    class SW_API InputManager final : public ISubsystem
+    class SW_API InputManager final : public Subsystem
     {
     public:
         using ActiveDeviceChangedDelegate = Delegate<void( InputGlyphStyle )>;

@@ -52,11 +52,11 @@ namespace sw
             }
 
             /** @brief 부모 이벤트를 이름으로 찾아 문서로 돌려줍니다. */
-            class EventSource final : public IDataInheritanceSource
+            class EventSource final : public DataInheritanceSource
             {
             public:
                 explicit EventSource( const XMLNode& eventList )
-                    : IDataInheritanceSource{ engine::getSubsystem<ResourceComposition>().findInheritanceMaxDepth() }
+                    : DataInheritanceSource{ engine::getSubsystem<ResourceComposition>().findInheritanceMaxDepth() }
                     , _eventList{ eventList }
                 {
                 }

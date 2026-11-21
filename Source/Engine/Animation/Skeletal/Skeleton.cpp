@@ -308,7 +308,7 @@ namespace sw
         return parseFlat( bComposed ? string_view( flatText ) : xml, sourceLabel );
     }
 
-    bool Skeleton::mergeVariantText( string_view text, string_view sourceName, IDataInheritanceSource& source, string& outText )
+    bool Skeleton::mergeVariantText( string_view text, string_view sourceName, DataInheritanceSource& source, string& outText )
     {
         // 사슬의 순환 · 깊이 · 없는 부모는 공통 `_base` 의 규칙이다. 층의 차이는 덮어쓰기가 아니라 쌓임(뼈 비율 곱 · 클립 규칙)이라 칸으로 합치지 않고 위 층부터 차례로 얹는다.
         vector<DataInheritanceLayer> listLayer;

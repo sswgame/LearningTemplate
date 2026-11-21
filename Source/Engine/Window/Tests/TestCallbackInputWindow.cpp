@@ -133,7 +133,7 @@ SW_TEST_CASE( CallbackInputWindowTest, TextInputRequestReachesPlatform )
 
 /**
  * @brief [CallbackInputWindowTest] 자동화의 포커스 이벤트(`sendFocusEvent`)가 웹 · Android 에서도 플랫폼 콜백과 같은 길(포커스 입력)로 간다.
- *        예전에는 `IWindow` 의 기본 구현이 조용히 false 를 돌려 콜백 창의 포커스 경로를 자동화가 볼 수 없었다.
+ *        예전에는 `GenericWindow` 의 기본 구현이 조용히 false 를 돌려 콜백 창의 포커스 경로를 자동화가 볼 수 없었다.
  */
 SW_TEST_CASE( CallbackInputWindowTest, SendFocusEventTakesTheInputPath )
 {

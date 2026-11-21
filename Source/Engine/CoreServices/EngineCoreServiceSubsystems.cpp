@@ -20,10 +20,10 @@ namespace sw
     namespace
     {
         /** @brief 엔진 코덱(LZ4 · Zstd · Zlib)의 등록 구독을 듭니다. 레지스트리 바로 뒤에 서서 먼저 내려간다. */
-        class EngineCompressionCodecs final : public ISubsystem
+        class EngineCompressionCodecs final : public Subsystem
         {
         public:
-            static constexpr MemoryTag   kSubsystemMemoryTag = MemoryTag::EngineMisc; ///< 할당 용도(`ISubsystem::getSubsystemMemoryTag`)
+            static constexpr MemoryTag   kSubsystemMemoryTag = MemoryTag::EngineMisc; ///< 할당 용도(`Subsystem::getSubsystemMemoryTag`)
             static constexpr const utf8* kSubsystemName      = "EngineCompressionCodecs";
 
             explicit EngineCompressionCodecs( CompressionCodecRegistry& registry )

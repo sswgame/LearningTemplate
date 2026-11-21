@@ -15,9 +15,9 @@
 #include "DevTools/ModuleReload/ModuleReloadDriver.h"
 
 #include "Engine/Automation/Scenario/AutomationScenario.h"
-#include "Engine/Automation/Scenario/AutomationStepContext.h"
 #include "Engine/Automation/Scenario/AutomationStepParams.h"
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
+#include "Engine/Automation/Scenario/IAutomationStepContext.h"
 #include "Engine/Foundation/EngineServices.h"
 
 namespace sw
@@ -35,7 +35,7 @@ namespace sw
             }
 
             /** @brief 판 머리를 판 글로 덮습니다(원본은 실행기에 맡긴다 — 시나리오 끝에 되돌린다). 실패하면 그 까닭입니다. */
-            static expected<void> applyVariant( AutomationStepContext& context, string_view variantName )
+            static expected<void> applyVariant( IAutomationStepContext& context, string_view variantName )
             {
                 const string variantPath = FileUtil::joinPath( ProcessRoots::get()._project.str(), AutomationReloadSteps::kVariantFile );
                 string       tableText;
@@ -58,7 +58,7 @@ namespace sw
                 return {};
             }
 
-            static bool runRebuildModule( AutomationStepContext& context, const AutomationStep& step )
+            static bool runRebuildModule( IAutomationStepContext& context, const AutomationStep& step )
             {
                 const AutomationRebuildModuleParams params  = step.readValidatedProperties<AutomationRebuildModuleParams>();
                 ModuleReloadDriver* const           pDriver = engine::findSubsystem<ModuleReloadDriver>();

@@ -16,7 +16,7 @@
 
 namespace sw
 {
-    class IWindow;
+    class GenericWindow;
 
     /**
      * @struct ModuleAPISymbols

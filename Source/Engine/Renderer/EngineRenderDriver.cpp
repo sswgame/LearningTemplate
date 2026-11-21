@@ -42,7 +42,7 @@
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Text/FontService.h"
 #include "Engine/UI/UISystem.h"
-#include "Engine/Window/IWindow.h"
+#include "Engine/Window/GenericWindow.h"
 #include "Engine/Window/MainWindowSubsystem.h"
 
 namespace sw
@@ -127,7 +127,7 @@ namespace sw
             engine::getSubsystem<QuitRequest>().request( ProcessExitCode::InitializationFailed );
         }
         // 스왑체인은 주 창 크기를 따른다 — RHI 가 섰으면 주 창도 있다(RHI 가 만들어 넘긴 창이거나 호스트가 먼저 넘긴 창).
-        IWindow* const pMainWindow = _pRHI != nullptr ? MainWindowSubsystem::findMainWindow() : nullptr;
+        GenericWindow* const pMainWindow = _pRHI != nullptr ? MainWindowSubsystem::findMainWindow() : nullptr;
         if ( pMainWindow != nullptr )
         {
             _mainWindowResizeSubscription    = pMainWindow->bindResizeCallback( SW_DELEGATE_METHOD( WindowResizeDelegate, &EngineRenderDriver::onMainWindowResize, this ) );
@@ -255,7 +255,7 @@ namespace sw
     {
         if ( event == WindowLifecycleEvent::SurfaceLost || event == WindowLifecycleEvent::AppSuspended )
             flushSubmittedPackets();
-        // 표면은 이 통보가 돌아오면 사라진다(Android) — 스왑체인 · 표면을 지금 놓고, 돌아오면 새 창으로 다시 짓는다. 멈춘 동안은 프레임을 돌지 않는다(`IWindow::isRenderPaused`).
+        // 표면은 이 통보가 돌아오면 사라진다(Android) — 스왑체인 · 표면을 지금 놓고, 돌아오면 새 창으로 다시 짓는다. 멈춘 동안은 프레임을 돌지 않는다(`GenericWindow::isRenderPaused`).
         const bool bHasDevice = _pRHI != nullptr && _pRHI->hasDevice();
         if ( bHasDevice && event == WindowLifecycleEvent::SurfaceLost )
         {

@@ -10,8 +10,8 @@
 #include "Core/Delegate/SubscriptionList.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/ServiceSlot.h"
+#include "Core/Subsystem/Subsystem.h"
 
 namespace sw
 {
@@ -32,7 +32,7 @@ namespace sw
      *          디스크에 기록하고, 두 enum 은 서로 다른 파일의 독립된 포맷이라 값이 다릅니다. 숫자를 건너다니지 않고 표 한 곳
      *          (`PackCompressionUtil::kArrCodecMapping`, Engine)에서 옮긴 뒤 조회합니다.
      */
-    class SW_API CompressionCodecRegistry : public ISubsystem
+    class SW_API CompressionCodecRegistry : public Subsystem
     {
     public:
         CompressionCodecRegistry();

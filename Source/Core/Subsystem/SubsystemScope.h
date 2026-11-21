@@ -63,7 +63,7 @@ namespace sw
          * @brief 이 범위 자신의 칸 @p typeHash 를 가진, 이 범위의 컬렉션이 소유한 서브시스템입니다. 빌려 건 칸 · 없는 칸 · 매단 자식의 칸이면 nullptr 입니다.
          * @details 엔진 서비스 칸(`ServiceSlot::_pOwner`)이 바인딩 때 한 번 묻는다 — 칸 길 조회도 범위 조회와 같은 초기화 의존 검사를 지나게 한다.
          */
-        virtual const ISubsystem* findOwnerInScope( uint64 typeHash ) const
+        virtual const Subsystem* findOwnerInScope( uint64 typeHash ) const
         {
             (void)typeHash;
             return nullptr;
@@ -171,9 +171,9 @@ namespace sw
         [[nodiscard]] bool exposeMember( TOwner& owner, TInterface& member )
         {
             using TPlain = std::remove_const_t<TInterface>;
-            static_assert( std::is_base_of_v<ISubsystem, std::remove_const_t<TOwner>>, "SubsystemScope::exposeMember needs the owning subsystem" );
-            ISubsystem* const pOwner = findOwner( getSubsystemTypeHash<std::remove_const_t<TOwner>>() );
-            SW_ASSERT( pOwner == static_cast<const ISubsystem*>( &owner ) );
+            static_assert( std::is_base_of_v<Subsystem, std::remove_const_t<TOwner>>, "SubsystemScope::exposeMember needs the owning subsystem" );
+            Subsystem* const pOwner = findOwner( getSubsystemTypeHash<std::remove_const_t<TOwner>>() );
+            SW_ASSERT( pOwner == static_cast<const Subsystem*>( &owner ) );
             if ( findOwnEntry( getSubsystemTypeHash<TPlain>() ) != nullptr || findOwnEntry( getSubsystemTypeHash<const TPlain>() ) != nullptr )
                 return false;
             return registerEntry( getSubsystemTypeHash<TInterface>(), const_cast<TPlain*>( &member ), pOwner );
@@ -284,7 +284,7 @@ namespace sw
         void*                    findInScope( uint64 typeHash ) const override;
         const ISubsystemLocator* getParentScope() const override { return _pParent; }
         void*                    findHostModuleVisibleInScope( uint64 typeHash ) const override;
-        const ISubsystem*        findOwnerInScope( uint64 typeHash ) const override { return findOwner( typeHash ); }
+        const Subsystem*         findOwnerInScope( uint64 typeHash ) const override { return findOwner( typeHash ); }
 
     private:
         /** @brief 조회 칸 하나입니다. */
@@ -292,7 +292,7 @@ namespace sw
         {
             uint64                    _typeHash;                                                 ///< 걸린 타입의 해시
             void*                     _pObject;                                                  ///< 걸린 객체(그 타입으로 바꾼 주소)
-            ISubsystem*               _pOwner;                                                   ///< 이 칸을 가진, 이 범위의 컬렉션이 소유한 서브시스템(빌려 건 칸은 nullptr). 초기화 중 조회의 의존 검사가 쓴다
+            Subsystem*                _pOwner;                                                   ///< 이 칸을 가진, 이 범위의 컬렉션이 소유한 서브시스템(빌려 건 칸은 nullptr). 초기화 중 조회의 의존 검사가 쓴다
             bool                      _bPublished{ false };                                      ///< 매단 부모 범위의 조회에도 보이면 true(`publish`) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
             SubsystemModuleVisibility _moduleVisibility{ SubsystemModuleVisibility::ScopeOnly }; ///< 모듈 서비스 범위에도 보이는지(소유한 서브시스템의 `kModuleVisibility`)
         };
@@ -307,9 +307,9 @@ namespace sw
         /** @brief 매단 자식 범위를 매단 역순으로 지웁니다(`shutdownAll` · `destroyAll` 의 첫 단계). */
         void destroyMountedScopes();
         /** @brief 칸을 더합니다. 이 범위의 칸에 같은 타입이 이미 있으면 false 입니다. */
-        [[nodiscard]] bool registerEntry( uint64 typeHash, void* pObject, ISubsystem* pOwner, SubsystemModuleVisibility moduleVisibility = SubsystemModuleVisibility::ScopeOnly );
+        [[nodiscard]] bool registerEntry( uint64 typeHash, void* pObject, Subsystem* pOwner, SubsystemModuleVisibility moduleVisibility = SubsystemModuleVisibility::ScopeOnly );
         /** @brief 칸을 공개합니다. 같은 객체로 이미 걸렸으면 표시만 더하고, 다른 객체로 걸렸으면 false 입니다. */
-        [[nodiscard]] bool publishEntry( uint64 typeHash, void* pObject, ISubsystem* pOwner );
+        [[nodiscard]] bool publishEntry( uint64 typeHash, void* pObject, Subsystem* pOwner );
         /** @brief 이 범위 자신의 칸에서만 찾습니다(자식 · 상위는 보지 않는다). */
         const Entry* findOwnEntry( uint64 typeHash ) const;
         /** @brief 공개한 칸을 이 범위와 그 자식에서 찾습니다(매단 부모가 부른다). */
@@ -317,7 +317,7 @@ namespace sw
         /** @brief 빌려 건 칸 하나를 지웁니다. */
         void unregisterBorrowed( uint64 typeHash );
         /** @brief @p typeHash 칸을 가진 소유한 서브시스템입니다. 빌려 건 칸 · 없는 칸이면 nullptr 입니다. */
-        ISubsystem* findOwner( uint64 typeHash ) const;
+        Subsystem* findOwner( uint64 typeHash ) const;
         /** @brief 찾은 칸의 객체를 돌려줍니다. 소유한 서브시스템의 칸이면 초기화 중 의존 검사에 알린다(`SubsystemCollection::recordInitializeLookup`). */
         static void* resolveEntry( const Entry& entry );
 

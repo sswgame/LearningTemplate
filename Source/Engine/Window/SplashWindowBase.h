@@ -1,5 +1,5 @@
 /**
- * @file ISplashWindow.h
+ * @file SplashWindowBase.h
  * @brief 플랫폼 독립적인 스플래시 화면 인터페이스입니다.
  */
 #pragma once
@@ -13,17 +13,17 @@
 namespace sw
 {
     /**
-     * @class ISplashWindow
+     * @class SplashWindowBase
      * @brief 플랫폼별(Windows, Linux) 스플래시 창 구현을 위한 추상 기반 클래스입니다.
      */
-    class SW_API ISplashWindow
+    class SW_API SplashWindowBase
     {
     public:
-        ISplashWindow();
-        virtual ~ISplashWindow();
+        SplashWindowBase();
+        virtual ~SplashWindowBase();
 
-        ISplashWindow( const ISplashWindow& )            = delete;
-        ISplashWindow& operator=( const ISplashWindow& ) = delete;
+        SplashWindowBase( const SplashWindowBase& )            = delete;
+        SplashWindowBase& operator=( const SplashWindowBase& ) = delete;
 
         /**
          * @brief 스플래시 창을 만들어 화면 가운데에 바로 띄웁니다.
@@ -70,8 +70,8 @@ namespace sw
         static void scaleBgraImage( const uint8* pSource, uint32 sourceWidth, uint32 sourceHeight,
                                     uint8* pOutPixel, uint32 destWidth, uint32 destHeight );
 
-        /** @brief 현재 플랫폼에 맞는 ISplashWindow 인스턴스를 만들어 반환합니다. */
-        static unique_ptr<ISplashWindow> createPlatformSplash();
+        /** @brief 현재 플랫폼에 맞는 SplashWindowBase 인스턴스를 만들어 반환합니다. */
+        static unique_ptr<SplashWindowBase> createPlatformSplash();
 
         /**
          * @brief 이 세션에서 스플래시 창을 띄울 수 있는지입니다(능력 질의). Windows 는 항상 true 이고, 리눅스는 메인 창과 같은 계층(`SW_WINDOW_BACKEND`)의 서버가 있어야 한다 —

@@ -2,7 +2,7 @@
  * @file IRenderSurface.h
  * @brief RHI 가 스왑체인을 걸 표면입니다. 창 시스템을 모르는 채로 필요한 것만 묻는 계약입니다.
  * @details 언리얼의 RHI 는 `void*` 창 핸들로 `FRHIViewport` 를 만들고, 창 시스템(Slate)은 RHI 위에 있습니다.
- *          이 저장소도 같은 방향이어야 합니다. `Graphics` 는 `Window` 를 include 하지 않고, `IWindow` 가
+ *          이 저장소도 같은 방향이어야 합니다. `Graphics` 는 `Window` 를 include 하지 않고, `GenericWindow` 가
  *          이 인터페이스를 **구현**합니다. 그래서 인터페이스는 둘 다 볼 수 있는 `Common` 에 있습니다.
  *
  *          다섯 가지가 전부입니다. 스왑체인 생성에 필요한 핸들, 디스플레이, 크기, 그리고 백엔드 교체가
@@ -26,7 +26,7 @@ namespace sw
 
     /**
      * @class IRenderSurface
-     * @brief 스왑체인이 붙을 네이티브 표면입니다. `IWindow` 가 구현하고 `RHI` 와 `IRHIDevice` 가 사용합니다.
+     * @brief 스왑체인이 붙을 네이티브 표면입니다. `GenericWindow` 가 구현하고 `RHI` 와 `IRHIDevice` 가 사용합니다.
      */
     class SW_API IRenderSurface
     {

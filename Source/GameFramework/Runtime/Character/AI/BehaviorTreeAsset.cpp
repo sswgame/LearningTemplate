@@ -100,7 +100,7 @@ namespace sw
         class BehaviorTreeReader
         {
         public:
-            BehaviorTreeReader( BehaviorTree& tree, string_view sourceName, IDataInheritanceSource& source )
+            BehaviorTreeReader( BehaviorTree& tree, string_view sourceName, DataInheritanceSource& source )
                 : _tree{ tree }
                 , _source{ source }
                 , _sourceName{ sourceName }
@@ -118,10 +118,10 @@ namespace sw
             [[nodiscard]] bool expandSubTree( const string& treePath, optional<int32> parent, uint32 depth );
 
         private:
-            BehaviorTree&           _tree;
-            IDataInheritanceSource& _source;
-            string_view             _sourceName;
-            vector<string>          _listChain; ///< 펼치는 중인 하위 트리 파일(순환 검사)
+            BehaviorTree&          _tree;
+            DataInheritanceSource& _source;
+            string_view            _sourceName;
+            vector<string>         _listChain; ///< 펼치는 중인 하위 트리 파일(순환 검사)
         };
 
         bool BehaviorTreeReader::expandSubTree( const string& treePath, optional<int32> parent, uint32 depth )
@@ -415,7 +415,7 @@ namespace sw
         return loadFromXMLText( xmlText, sourceName, source );
     }
 
-    bool BehaviorTreeAsset::loadFromXMLText( string_view xmlText, string_view sourceName, IDataInheritanceSource& source )
+    bool BehaviorTreeAsset::loadFromXMLText( string_view xmlText, string_view sourceName, DataInheritanceSource& source )
     {
         // 쿠킹본은 이미 펼쳤다 — 글 검색 한 번으로 지나간다.
         string flatText;
@@ -427,7 +427,7 @@ namespace sw
         return readFlatText( flatText, sourceName, source );
     }
 
-    bool BehaviorTreeAsset::readFlatText( string_view flatText, string_view sourceName, IDataInheritanceSource& source )
+    bool BehaviorTreeAsset::readFlatText( string_view flatText, string_view sourceName, DataInheritanceSource& source )
     {
         _pSource           = &source;
         const bool bLoaded = XMLCatalog<BehaviorTreeAsset>::loadFromXMLText( flatText, sourceName );

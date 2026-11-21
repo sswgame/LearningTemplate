@@ -76,7 +76,7 @@ namespace sw
         return GameModuleManager::loadModuleLibraries( pLiveReloadManager, catalog, resolution );
     }
 
-    bool ClientModuleManager::initialize( ILiveReloadManager* pLiveReloadManager, RHI* pRHI, IWindow* pWindow, IEngineRenderDriver* pRenderDriver, bool bEnableEditor )
+    bool ClientModuleManager::initialize( ILiveReloadManager* pLiveReloadManager, RHI* pRHI, GenericWindow* pWindow, IEngineRenderDriver* pRenderDriver, bool bEnableEditor )
     {
         _bEnableEditor = bEnableEditor ? SW_TRUE : SW_FALSE;
 

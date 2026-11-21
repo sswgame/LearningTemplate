@@ -13,7 +13,7 @@
 #include "Core/Foundation/Types.h"
 
 #include "DevTools/DevToolsAPI.h"
-#include "DevTools/FileWatch/IFileWatcher.h"
+#include "DevTools/FileWatch/FileWatcher.h"
 
 namespace sw
 {
@@ -26,7 +26,7 @@ namespace sw
      * @class LinuxFileWatcher
      * @brief Linux 전용 FileWatcher 입니다(inotify + eventfd).
      */
-    class SW_DEVTOOLS_API LinuxFileWatcher final : public IFileWatcher
+    class SW_DEVTOOLS_API LinuxFileWatcher final : public FileWatcher
     {
     public:
         /** @brief fd 와 큐가 빈 상태로 만듭니다. */
@@ -58,7 +58,7 @@ namespace sw
         void pushRelativeChange( FileWatcherAction action, string_view absoluteDirectory, string_view name );
 
     private:
-        // 큐 · 뮤텍스 · 감시 경로 · 넘침 표시는 IFileWatcher 가 가진다. 세 플랫폼이 똑같이 가져야 하는 것들이다.
+        // 큐 · 뮤텍스 · 감시 경로 · 넘침 표시는 FileWatcher 가 가진다. 세 플랫폼이 똑같이 가져야 하는 것들이다.
         sw::thread                                        _workerThread;
         mutex                                             _watchMutex;
         flat_map<int32, string> _mapWatchDescriptorToPath SW_GUARDED_BY( _watchMutex ); ///< 감시 워커(이벤트 경로 풀기)와 부른 스레드(감시 더하기 · 멈추기)가 함께 본다

@@ -8,7 +8,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/String/fixed_string.h"
 
-#include "Editor/Common/GUI/Panel/IEditorPanel.h"
+#include "Editor/Common/GUI/Panel/EditorPanel.h"
 #include "Editor/Panels/RenderTarget/Model/RenderTargetViewModel.h"
 
 namespace sw::editor
@@ -21,7 +21,7 @@ namespace sw::editor
      *          CPU 로 읽은 스냅샷으로 본다. 스냅샷은 타깃을 고를 때, Refresh 할 때, Auto 일 때 다시 읽는다.
      * @note 목록 · 스냅샷 · 텍스처 등록은 `RenderTargetViewModel` 이 맡고 이 창은 `RenderTargetViewState` 만 그린다(MVVM 계약).
      */
-    class RenderTargetPanel : public IEditorPanel
+    class RenderTargetPanel : public EditorPanel
     {
     public:
         /** @brief 패널 id 입니다. 등록(`SW_EDITOR_PANEL`)과 조회(`EditorPanelManager::findPanel<…>` · `setPanelOpen<…>`)가 모두 이 상수에서 온다. */
@@ -33,7 +33,7 @@ namespace sw::editor
         virtual ~RenderTargetPanel() override = default;
 
         // ------------------------------------------------------------------------------
-        // 1) IEditorPanel: 제목과 그리기
+        // 1) EditorPanel: 제목과 그리기
         // ------------------------------------------------------------------------------
         /** @brief 창 제목을 반환합니다. */
         const utf8* getPanelTitle() const override { return "Render Targets"; }

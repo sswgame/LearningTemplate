@@ -49,7 +49,7 @@
 namespace sw
 {
     class ILedgerPolicy;
-    class IServiceStore;
+    class ServiceStore;
 
     /** @brief 길드 요청 종류입니다. */
     enum class GuildOperation : uint8
@@ -165,7 +165,7 @@ namespace sw
     public:
         GuildService();
 
-        void initialize( IServiceStore* pStore );
+        void initialize( ServiceStore* pStore );
         void shutdown();
 
         void submit( const GuildRequest& request, uint64 requestTag );

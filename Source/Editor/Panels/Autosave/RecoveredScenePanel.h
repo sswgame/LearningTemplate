@@ -6,14 +6,14 @@
 #pragma once
 #include "Core/Foundation/Types.h"
 
-#include "Editor/Common/GUI/Panel/IEditorPanel.h"
+#include "Editor/Common/GUI/Panel/EditorPanel.h"
 #include "Editor/Common/Workspace/EditorPanelID.h"
 #include "Editor/Panels/Autosave/Model/RecoveredSceneViewModel.h"
 
 namespace sw::editor
 {
     /** @brief 씬마다 가장 새 사본 한 줄 — 씬 · 언제 · 남은 세대 · 복원할 수 없는 이유, 그리고 Restore · Discard 입니다. 그 아래 문서 패널의 사본 줄이 같은 모양으로 온다. */
-    class RecoveredScenePanel : public IEditorPanel
+    class RecoveredScenePanel : public EditorPanel
     {
     public:
         /** @brief 패널 id 입니다(`SW_EDITOR_PANEL` — 자동 저장이 같은 상수로 연다). */

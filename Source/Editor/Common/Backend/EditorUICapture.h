@@ -10,7 +10,7 @@
  *          스냅샷이 합본을 복사 → 렌더 스레드 `renderJob`(present 훅) → `finishJob`(postPresent, GPU 를 기다려 읽는다) → `findResult`.
  *          그 장의 화면은 그 프레임에만 있어 GPU 읽기는 렌더 스레드가 그 자리에서 하고, 그 뒤의 CPU 일(RGBA 로 풀기 · 행 뒤집기 · 마젠타 비율 · PNG 쓰기)은 모두 워커가 한다.
  *          `finishJob` 이 읽은 바이트를 쓸 목록에 넣고 다음 UI 프레임의 `takeJob` 이 워커에 넘긴다(워커 제출은 에디터 서비스 범위가 있는 UI 스레드에서만 된다).
- *          마젠타 비율은 워커가 낸다(`EditorUICaptureResult::_pMagentaFraction`) - 시나리오는 그 판정을 끝(`<Pass/>`)으로 미루고(`AutomationStepContext::deferExpectAtMost`)
+ *          마젠타 비율은 워커가 낸다(`EditorUICaptureResult::_pMagentaFraction`) - 시나리오는 그 판정을 끝(`<Pass/>`)으로 미루고(`IAutomationStepContext::deferExpectAtMost`)
  *          쓰기가 끝나기를 거기서만 기다린다(`isWritingFiles`, `SW_AUTOMATION_FINISH_BLOCKER`). 예전에는 풀기 · 비율을 렌더 스레드에서 해 캡처하는 프레임이 그만큼 늦었다.
  *          `-gv_screenshotEditor` 의 끝 알림(`-gv_screenshotQuit` 이 앱을 끝낸다)은 워커가 파일을 쓴 뒤 개발 도구의 장부(`StartupCaptureSubsystem`)에 직접 한다.
  *          주의: 읽기는 GPU 를 기다린다. 캡처하는 프레임만 그렇고, 요청이 없으면 아무 일도 하지 않는다.

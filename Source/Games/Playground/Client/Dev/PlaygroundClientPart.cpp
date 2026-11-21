@@ -1,7 +1,7 @@
 #include "pch.h"
 
 #include "Core/Memory/Memory.h"
-#include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/Subsystem.h"
 
 #include "Engine/Module/ModuleSubsystemRegistrar.h"
 #include "Engine/Renderer/Extension/RenderExtensionRegistry.h"

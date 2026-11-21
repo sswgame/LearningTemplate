@@ -1,5 +1,5 @@
 /**
- * @file IWindow.h
+ * @file GenericWindow.h
  * @brief 플랫폼 독립적인 창(OS 디스플레이 창) 생성과 메시지 처리 인터페이스입니다.
  */
 #pragma once
@@ -24,7 +24,7 @@ namespace sw
     class CommandLineManager;
 
     /**
-     * @brief 표면 · 앱 수명 이벤트입니다. 데스크톱은 오지 않고, 모바일 · 웹의 플랫폼 창이 냅니다(`IWindow::notifyLifecycleEvent`).
+     * @brief 표면 · 앱 수명 이벤트입니다. 데스크톱은 오지 않고, 모바일 · 웹의 플랫폼 창이 냅니다(`GenericWindow::notifyLifecycleEvent`).
      * @details Android 는 `onPause` 에서 프로세스가 산 채 표면이 사라지고 브라우저도 탭을 숨기면 프레임이 멈춘다. 언리얼 `FAppEventManager`(기억) 자리다.
      */
     enum class WindowLifecycleEvent : uint8
@@ -54,7 +54,7 @@ namespace sw
     };
 
     /**
-     * @brief 포인터를 창에 묶는 방식입니다(`IWindow::setPointerLock`).
+     * @brief 포인터를 창에 묶는 방식입니다(`GenericWindow::setPointerLock`).
      * @details `Released` 는 `None` 이라 쓰지 않는다 — 입력 관리자가 X11 헤더(`None` 매크로) 뒤에 이 헤더를 읽는다.
      */
     enum class WindowPointerLock : uint8
@@ -65,7 +65,7 @@ namespace sw
     };
 
     /**
-     * @brief 창 틀(비클라이언트 영역 — 제목 줄 · 테두리)이 클라이언트 영역 네 변 밖으로 나온 두께(물리 픽셀)입니다. `IWindow::tryGetFrameExtents` 가 채웁니다.
+     * @brief 창 틀(비클라이언트 영역 — 제목 줄 · 테두리)이 클라이언트 영역 네 변 밖으로 나온 두께(물리 픽셀)입니다. `GenericWindow::tryGetFrameExtents` 가 채웁니다.
      * @details 틀 왼쪽 위(`setFramePosition` · `-WinX` 가 놓는 점)에서 클라이언트 왼쪽 위까지가 (`_left`, `_top`)이고, 틀 전체 크기는 클라이언트 + 양쪽 두께다.
      *          SDL `SDL_GetWindowBordersSize` · GLFW `glfwGetWindowFrameSize` 와 같은 자리다.
      */
@@ -84,7 +84,7 @@ namespace sw
         int32 _columnCount{ 0 }; ///< 열 수(1 이상)
     };
 
-    /** @brief X11 창의 서버 연결과 창 ID 입니다. `IWindow::tryGetX11Surface` 가 X11 창일 때만 채웁니다. */
+    /** @brief X11 창의 서버 연결과 창 ID 입니다. `GenericWindow::tryGetX11Surface` 가 X11 창일 때만 채웁니다. */
     struct X11SurfaceHandles
     {
         void*  _pDisplay{ nullptr }; ///< X11 `Display*`
@@ -95,27 +95,27 @@ namespace sw
 namespace sw
 {
     /**
-     * @class IWindow
+     * @class GenericWindow
      * @brief 애플리케이션의 주 화면이나 보조 화면을 추상화하는 기본 인터페이스입니다.
      * @details 플랫폼별(Windows, Linux) 구체 클래스가 이 인터페이스를 상속해 구현합니다.
      *          `IRenderSurface` 를 구현하므로 RHI 는 창을 **표면으로만** 봅니다. `Graphics` 가 `Window` 를
      *          include 하지 않는 이유입니다(Engine/Window/IRenderSurface.h).
      */
-    class SW_API IWindow : public IRenderSurface
+    class SW_API GenericWindow : public IRenderSurface
     {
     public:
         /** @brief 빈 창 인터페이스로 만듭니다. */
-        IWindow();
+        GenericWindow();
         /** @brief 가상 소멸자입니다. 활성 창이면 전역 포인터도 끊습니다. */
-        ~IWindow() override;
+        ~GenericWindow() override;
         /** @brief 복사를 금지합니다. */
-        IWindow( const IWindow& ) = delete;
+        GenericWindow( const GenericWindow& ) = delete;
         /** @brief 대입을 금지합니다. */
-        IWindow& operator=( const IWindow& ) = delete;
+        GenericWindow& operator=( const GenericWindow& ) = delete;
         /** @brief 이동을 금지합니다. */
-        IWindow( IWindow&& ) = delete;
+        GenericWindow( GenericWindow&& ) = delete;
         /** @brief 이동 대입을 금지합니다. */
-        IWindow& operator=( IWindow&& ) = delete;
+        GenericWindow& operator=( GenericWindow&& ) = delete;
 
         /**
          * @brief 창을 만듭니다. Win32 와 X11 은 여기서 띄우지 않으므로 `showWindow( true )` 를 불러야 보입니다.
@@ -232,7 +232,7 @@ namespace sw
          * @details 주 창을 만드는 곳(RHI 기동 · 헤드리스 App)이 모두 이 길로 만든다 — 위치 인자를 읽는 규칙이 한 곳이다.
          * @return 인자가 틀렸거나(반쪽 좌표 · 칸과 좌표를 함께 · 열 수 없음) 창을 만들지 못하거나 틀 두께를 모르면 오류를 남기고 nullptr 입니다.
          */
-        static unique_ptr<IWindow> createMainWindow( const utf8* pTitle, uint32 width, uint32 height, const CommandLineManager& commandLine );
+        static unique_ptr<GenericWindow> createMainWindow( const utf8* pTitle, uint32 width, uint32 height, const CommandLineManager& commandLine );
         /** @brief 클라이언트 너비를 반환합니다. */
         virtual uint32 getWidth() const { return _width; }
         /** @brief 클라이언트 높이를 반환합니다. */
@@ -459,8 +459,8 @@ namespace sw
         /** @brief 닫기 쿼리를 거쳐 종료를 시도합니다. 허용되면 true 입니다. */
         [[nodiscard]] bool tryBeginClose();
 
-        /** @brief 현재 플랫폼에 맞는 IWindow 인스턴스를 만들어 반환합니다. */
-        static unique_ptr<IWindow> createPlatformWindow();
+        /** @brief 현재 플랫폼에 맞는 GenericWindow 인스턴스를 만들어 반환합니다. */
+        static unique_ptr<GenericWindow> createPlatformWindow();
 
     protected:
         /**

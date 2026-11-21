@@ -21,7 +21,7 @@ namespace sw::editor
     // 생성자
     // ------------------------------------------------------------------------------
     CommandPalettePopup::CommandPalettePopup()
-        : IEditorPopup{ false }
+        : EditorPopup{ false }
         , _listItem{}
         , _assetIndexJob{}
         , _searchBuffer{}

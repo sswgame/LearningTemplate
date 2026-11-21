@@ -93,7 +93,7 @@ namespace sw::editor
 
     // [doc:panel-draw]
     ParkLayoutPanel::ParkLayoutPanel()
-        : IEditorPanel( false )
+        : EditorPanel( false )
         , _filter{}
     {
     }

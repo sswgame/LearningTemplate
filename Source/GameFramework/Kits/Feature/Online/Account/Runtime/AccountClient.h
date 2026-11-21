@@ -95,7 +95,7 @@ namespace sw
 
         // OnlineProtocolClient 의 훅
         void onPush( AccountMethod::Revoked, const AccountRevokedPush& body );
-        // IOnlineClientService
+        // OnlineClientService
         void onClientReady( OnlineServiceClient& client ) override;
         void onClientDisconnected( OnlineServiceClient& client ) override;
 

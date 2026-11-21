@@ -194,7 +194,7 @@ namespace sw
         /**
          * @brief Win32 표면의 `HWND` 를 @p outHandle 에 `void*` 로 담고 true 입니다. 창이 없으면(핸들이 nullptr, 오프스크린) @p outHandle 이 nullptr 이고 true 입니다.
          * @details `_pWindowHandle` 은 창 시스템마다 뜻이 다른 `void*` 라서(`_surfaceKind`) DX · WGL 백엔드가 직접 `HWND` 로 읽으면 안 된다.
-         *          종류 확인을 이 함수 한 곳에 모은다 — `IWindow::tryGetWin32Handle` 의 스왑체인 서술판이다. 창이 없는 것은 정상 경로(DX12 오프스크린)라 실패로 치지 않는다.
+         *          종류 확인을 이 함수 한 곳에 모은다 — `GenericWindow::tryGetWin32Handle` 의 스왑체인 서술판이다. 창이 없는 것은 정상 경로(DX12 오프스크린)라 실패로 치지 않는다.
          * @return 핸들이 있는데 Win32 표면이 아니면 false 이고 @p outHandle 은 nullptr 입니다. 호출처는 다른 핸들로 대신하지 않고 오류로 멈춘다.
          */
         [[nodiscard]] bool tryGetWin32Handle( void*& outHandle ) const

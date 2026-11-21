@@ -50,7 +50,7 @@
 
 ## 화면 대응(모바일 · 데스크톱)
 
-- 안전 여백: 플랫폼 창이 `IWindow::getSafeAreaInsets`(물리 픽셀)를 준다 — Android 는 JNI `getRootWindowInsets`, 웹은 셸 HTML 의 CSS 변수 `--sw-safe-left/top/right/bottom`(= `env(safe-area-inset-*)`). `UIScaleSettings::makeViewport` 가 변마다 디버그 흉내(`gv_uiSafeZone`)와 큰 쪽을 고른다.
+- 안전 여백: 플랫폼 창이 `GenericWindow::getSafeAreaInsets`(물리 픽셀)를 준다 — Android 는 JNI `getRootWindowInsets`, 웹은 셸 HTML 의 CSS 변수 `--sw-safe-left/top/right/bottom`(= `env(safe-area-inset-*)`). `UIScaleSettings::makeViewport` 가 변마다 디버그 흉내(`gv_uiSafeZone`)와 큰 쪽을 고른다.
 - 크기 · 회전 · 수명: `CallbackInputWindow::applyPlatformResize` 하나로 모은다. Android `APP_CMD_TERM_WINDOW` → `SurfaceLost`(`IRHIDevice::releaseSurface`), `INIT_WINDOW` → `SurfaceRestored`(`restoreSurface`), `PAUSE` · `RESUME` · 웹 `visibilitychange` → 앱 멈춤 · 돌아옴.
 - 회전(pre-rotation): 서피스 `currentTransform` 이 90 · 180 · 270 이면 스왑체인을 그 회전으로 만들고(이미지는 기기 기본 방향, `getWidth/Height` · 백버퍼는 논리 크기), 화면에 쓰는 모든 것이 논리 크기 대기 텍스처에 쓴 뒤 출력 패스 하나(`RenderPassKind::ScreenRotation`, `FrameScreenRotation`)가 돌려 옮긴다. 데스크톱에는 이 패스가 없다(`RHICapabilities::_bSurfacePreRotation`). 거울 회전은 IDENTITY + 합성기, 스왑체인은 회전 · 크기가 정말 바뀌었을 때만 다시 만든다(`VulkanRHISwapChain::hasSurfaceChanged`).
 - 좁은 화면 · 방향: 리소스 태그 `screen.compact`(dp 너비 < `uiscale.xml` `_compactMaxWidth`) · `orientation.portrait` — UI 문서 · 스타일 시트가 읽을 때 `_when` 변형으로 다시 배치한다(캐시가 합성의 한 길을 지난다, 태그가 바뀌면 `reloadComposed`). 규칙은 `UIScaleSettings::makeScreenTags` 한 곳이다.

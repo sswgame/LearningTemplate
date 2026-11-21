@@ -1,6 +1,6 @@
 /**
  * @file SQLServiceStore.h
- * @brief `IServiceStore` 의 SQL 구현입니다. `sw_record`( tbl, rkey, bytes, version ) 테이블 하나를 쓰며, 커밋 버전은 방언의 시퀀스로 받고, 조건부 쓰기는 영향받은 행 수로 판정합니다.
+ * @brief `ServiceStore` 의 SQL 구현입니다. `sw_record`( tbl, rkey, bytes, version ) 테이블 하나를 쓰며, 커밋 버전은 방언의 시퀀스로 받고, 조건부 쓰기는 영향받은 행 수로 판정합니다.
  * @details 커밋은 쓰기 트랜잭션(SQLite 는 `BEGIN IMMEDIATE`, PostgreSQL 은 `SERIALIZABLE`) 안에서 버전 하나를 받고, 쓰기마다 다음을 실행한다.
  *          - put 조건 없음: `INSERT … ON CONFLICT ( tbl, rkey ) DO UPDATE SET bytes = excluded.bytes, version = excluded.version`
  *          - put 없어야 함: `INSERT … ON CONFLICT DO NOTHING`. 바뀐 행이 0이면 Conflict 이다. 멱등 기록의 고유 제약이 이것이다.
@@ -27,7 +27,7 @@ namespace sw
      * @class SQLServiceStore
      * @brief SQL 서비스 저장소입니다. 작업은 풀 워커에서 실행하고, 완료 콜백은 `pollCompletions` 를 부른 스레드에서 실행합니다.
      */
-    class SW_KIT_SERVER_API SQLServiceStore final : public IServiceStore
+    class SW_KIT_SERVER_API SQLServiceStore final : public ServiceStore
     {
     public:
         /** @brief 서비스 저장소 마이그레이션의 리소스 폴더입니다. */
@@ -43,7 +43,7 @@ namespace sw
          */
         [[nodiscard]] expected<void> initialize( string_view driverName, const SQLConnectionPoolConfig& settings, string_view migrationFolder, UnixMilliseconds nowMs );
 
-        void  submit( unique_ptr<IServiceStoreJob> job ) override;
+        void  submit( unique_ptr<ServiceStoreJob> job ) override;
         int32 pollCompletions() override { return _pool.pollCompletions(); }
         int32 getPendingCount() const override { return _pool.getPendingCount(); }
         void  shutdown() override { _pool.shutdown(); }

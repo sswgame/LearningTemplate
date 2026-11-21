@@ -23,7 +23,7 @@ namespace sw
 {
     struct ResourceContext;
 
-    class IDataInheritanceSource;
+    class DataInheritanceSource;
 
     struct MeshSkinBinding;
 
@@ -292,7 +292,7 @@ namespace sw
          * @brief `<SkeletonVariant>` 글의 사슬을 위 층부터 쌓아 부모 없는 평평한 `<Skeleton>` 글을 씁니다. 읽기와 팩 쿠커가 지나는 합치기입니다(`SW_DATA_INHERITANCE_MERGE`).
          * @return 사슬 오류(순환 · 깊이 · 없는 부모)이거나 층이 틀리면 오류를 남기고 false 입니다.
          */
-        [[nodiscard]] static bool mergeVariantText( string_view text, string_view sourceName, IDataInheritanceSource& source, string& outText );
+        [[nodiscard]] static bool mergeVariantText( string_view text, string_view sourceName, DataInheritanceSource& source, string& outText );
         /**
          * @brief 파일을 지금 읽어 이 객체를 채웁니다(공유 캐시를 거치지 않는 사본). 쿠킹 작업 전용이다.
          * @details 쿠킹 작업(`CookJob`)은 범위 안의 리소스 읽기를 입력으로 기록하므로 캐시가 쥔 한 벌을 쓰면 입력이 빠진다 — 그래서 사본을 읽는 이름을 따로 둔다.

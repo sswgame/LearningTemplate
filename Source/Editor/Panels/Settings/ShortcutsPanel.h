@@ -7,7 +7,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/String/fixed_string.h"
 
-#include "Editor/Common/GUI/Panel/IEditorPanel.h"
+#include "Editor/Common/GUI/Panel/EditorPanel.h"
 #include "Editor/Panels/Settings/Model/ShortcutCaptureViewModel.h"
 #include "Editor/Panels/Settings/Model/ShortcutsViewModel.h"
 
@@ -25,7 +25,7 @@ namespace sw::editor
      *          창을 닫거나 탭이 가려지면 받기를 그만둔다 — 그리지 않는 창은 조합을 받을 수 없고 멈춘 명령 실행을 풀 길도 없다.
      *          단축키가 있는 명령(입력 액션이 있는 명령)만 줄로 나온다 — 액션이 없는 명령은 `editor.input.xml` 에 액션을 더해야 단축키를 가질 수 있다.
      */
-    class ShortcutsPanel final : public IEditorPanel
+    class ShortcutsPanel final : public EditorPanel
     {
     public:
         /** @brief 패널 id 입니다. 등록(`SW_EDITOR_PANEL`)과 조회(`EditorPanelManager::findPanel<…>` · `setPanelOpen<…>`)가 모두 이 상수에서 온다. */

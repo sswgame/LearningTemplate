@@ -1,5 +1,5 @@
 /**
- * @file IFileWatcher.h
+ * @file FileWatcher.h
  * @brief 디렉터리 변경 감시 인터페이스입니다. 구현은 플랫폼별 헤더(Windows · LinuxKernel — 리눅스 · Android inotify)에 있습니다.
  * @details 이 플랫폼의 구현을 만드는 `createNative` 는 플랫폼 폴더의 .cpp 가 정의하고 CMake 가 고른다(`sw_filter_platform_sources` — `FileWatch/Windows` · `FileWatch/LinuxKernel` · `FileWatch/Web`).
  *          고르는 쪽에 플랫폼 `#if` 가 없고, 구현이 없는 플랫폼은 링크가 실패한다(mtime 폴링으로 대신하지 않는다). OS 감시가 없는 플랫폼(웹)은 그 사실을 nullptr 로 답한다.
@@ -42,7 +42,7 @@ namespace sw
 namespace sw
 {
     /**
-     * @brief `IFileWatcher::pollEvents` 의 결과입니다. 형식에 `[[nodiscard]]` 를 달아 받는 쪽이 감시가 끊긴 것을 버리지 못하게 합니다.
+     * @brief `FileWatcher::pollEvents` 의 결과입니다. 형식에 `[[nodiscard]]` 를 달아 받는 쪽이 감시가 끊긴 것을 버리지 못하게 합니다.
      * @details 감시 워커는 OS 오류(디렉터리 삭제 · 핸들 오류 · inotify 읽기 실패)로 멈출 수 있습니다. 그때 이벤트가 오지 않을 뿐이면
      *          받는 쪽은 "변경이 없다" 와 구별하지 못해 핫 리로드가 조용히 꺼집니다. 그래서 끊김을 결과에 실어 한 번 알립니다.
      */
@@ -58,25 +58,25 @@ namespace sw
     SW_DECLARE_DELEGATE( void, FileChangeDelegate, const FileChangeEvent& );
 
     // ------------------------------------------------------------------------------
-    // 2) IFileWatcher — startWatching → pollEvents(메인) → stopWatching
+    // 2) FileWatcher — startWatching → pollEvents(메인) → stopWatching
     // ------------------------------------------------------------------------------
     /**
-     * @class IFileWatcher
+     * @class FileWatcher
      * @brief 디렉터리와 파일의 변경을 감시하는 크로스 플랫폼 인터페이스입니다.
      */
-    class SW_DEVTOOLS_API IFileWatcher
+    class SW_DEVTOOLS_API FileWatcher
     {
     public:
         /** @brief 이 플랫폼의 OS 감시자(Windows ReadDirectoryChangesW · 리눅스 · Android inotify)를 만듭니다. 감시는 `startWatching` 이 시작합니다. OS 감시가 없는 플랫폼(웹)은 nullptr 입니다. 파일 머리말 참고. */
-        [[nodiscard]] static unique_ptr<IFileWatcher> createNative();
+        [[nodiscard]] static unique_ptr<FileWatcher> createNative();
 
         /** @brief 가상 소멸자입니다. 감시를 멈추고 워커 스레드를 조인하는 일은 구현 클래스가 합니다. */
-        virtual ~IFileWatcher() = default;
+        virtual ~FileWatcher() = default;
 
         /** @brief 복사를 금지합니다. */
-        IFileWatcher( const IFileWatcher& ) = delete;
+        FileWatcher( const FileWatcher& ) = delete;
         /** @brief 복사 대입을 금지합니다. */
-        IFileWatcher& operator=( const IFileWatcher& ) = delete;
+        FileWatcher& operator=( const FileWatcher& ) = delete;
 
         /**
          * @brief 디렉터리 감시를 시작합니다.
@@ -113,7 +113,7 @@ namespace sw
          */
         static constexpr size_t _s_kMaxQueuedEvent = 4096;
         /** @brief 인터페이스만 만들고 감시는 시작하지 않습니다. */
-        IFileWatcher() = default;
+        FileWatcher() = default;
 
         /**
          * @brief 변경 하나를 큐에 넣습니다. 플랫폼 워커 스레드에서 부릅니다.

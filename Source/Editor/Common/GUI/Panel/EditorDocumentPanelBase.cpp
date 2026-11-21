@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Editor/Common/GUI/Panel/IEditorDocumentPanel.h"
+#include "Editor/Common/GUI/Panel/EditorDocumentPanelBase.h"
 
 #include "Core/Container/vector.h"
 
@@ -12,7 +12,7 @@
 
 namespace sw::editor
 {
-    bool IEditorDocumentPanel::saveDocumentAndClearDirty()
+    bool EditorDocumentPanelBase::saveDocumentAndClearDirty()
     {
         if ( canSaveDocument() == false )
             return false;
@@ -31,7 +31,7 @@ namespace sw::editor
         return true;
     }
 
-    void IEditorDocumentPanel::applyCloseChoice( EditorUnsavedChoice choice )
+    void EditorDocumentPanelBase::applyCloseChoice( EditorUnsavedChoice choice )
     {
         if ( choice == EditorUnsavedChoice::None )
             return;
@@ -44,7 +44,7 @@ namespace sw::editor
             closeNow();
     }
 
-    bool IEditorDocumentPanel::beginCloseConfirmIfNeeded()
+    bool EditorDocumentPanelBase::beginCloseConfirmIfNeeded()
     {
         if ( _bDocumentDirty == false || shouldAskBeforeClose() == false )
             return false;
@@ -52,7 +52,7 @@ namespace sw::editor
         return true;
     }
 
-    void IEditorDocumentPanel::drawCloseConfirm()
+    void EditorDocumentPanelBase::drawCloseConfirm()
     {
         constexpr const utf8* kPopupID = "##UnsavedPanelClose";
         ImGui::PushID( this ); // 확인이 여러 패널에 동시에 걸릴 수 있다(최대화 · 레이아웃 불러오기)

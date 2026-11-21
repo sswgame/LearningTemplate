@@ -6,13 +6,13 @@
 #include "Core/Foundation/Constants.h"
 #include "Core/String/fixed_string.h"
 
-#include "Editor/Common/GUI/Panel/IEditorPanel.h"
+#include "Editor/Common/GUI/Panel/EditorPanel.h"
 #include "Editor/Panels/Scene/Model/HierarchyViewModel.h"
 
 namespace sw::editor
 {
     /** @brief 활성 씬의 오브젝트 아웃라이너 */
-    class HierarchyPanel : public IEditorPanel
+    class HierarchyPanel : public EditorPanel
     {
     public:
         /** @brief 패널 id 입니다. 등록(`SW_EDITOR_PANEL`)과 조회(`EditorPanelManager::findPanel<…>` · `setPanelOpen<…>`)가 모두 이 상수에서 온다. */
@@ -24,7 +24,7 @@ namespace sw::editor
         ~HierarchyPanel() override = default;
 
         // ------------------------------------------------------------------------------
-        // 1) IEditorPanel — 제목/그리기
+        // 1) EditorPanel — 제목/그리기
         // ------------------------------------------------------------------------------
         /** @brief 창 제목을 반환합니다. */
         const utf8*    getPanelTitle() const override { return kPanelTitle; }

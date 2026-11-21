@@ -16,8 +16,8 @@
 #include "Core/Delegate/SubscriptionList.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/ServiceSlot.h"
+#include "Core/Subsystem/Subsystem.h"
 
 #include "Engine/Foundation/SceneIterationKey.h"
 
@@ -108,7 +108,7 @@ namespace sw
      *          씬 해시 줄(기본) 말고 키트가 이름 붙은 줄(`registerChannel`)을 더한다 — 줄마다 같은 용량의 링이고 샘플 형식 · 비교(`findFirstDivergence`)가 같다.
      *          이름 붙은 줄은 구독이 풀려도(키트 종료) 이력을 남긴다. 같은 이름으로 다시 등록하면 그 줄을 이어 쓴다.
      */
-    class SW_API StateHashHistory final : public ISubsystem
+    class SW_API StateHashHistory final : public Subsystem
     {
     public:
         static constexpr const utf8* kSubsystemName = "StateHashHistory";

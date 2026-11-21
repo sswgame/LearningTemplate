@@ -15,7 +15,7 @@
 #include "Core/Name/NameHashIndex.h"
 #include "Core/Name/hashed_string.h"
 #include "Core/Registry/RegistrationList.h"
-#include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/Subsystem.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -191,7 +191,7 @@ namespace sw
      * @details 엔진 범위 아래 GameFramework 의 자식 범위에 선다(`SW_MODULE_SUBSYSTEM( Engine, … )` — 언리얼 `UEngineSubsystem`). 기동이 내장 종류를 채우고 그 뒤로 바꾸지 않는다.
      *          예전에는 소유자 없는 엔진 수명 값(`ScopeOwned`)을 정적 함수가 처음 부를 때 만들었다 — 이제 수명과 초기화 시점을 범위가 정한다.
      */
-    class SW_GF_API GimmickNodeRegistrySubsystem final : public ISubsystem
+    class SW_GF_API GimmickNodeRegistrySubsystem final : public Subsystem
     {
     public:
         /** @brief 서브시스템 이름입니다. */

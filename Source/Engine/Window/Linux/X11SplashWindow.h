@@ -1,12 +1,12 @@
 /**
  * @file X11SplashWindow.h
- * @brief Linux X11 기반 ISplashWindow 구현입니다.
+ * @brief Linux X11 기반 SplashWindowBase 구현입니다.
  */
 #pragma once
 #include "Core/Container/string.h"
 
-#include "Engine/Window/ISplashWindow.h"
 #include "Engine/Window/Linux/LinuxSplashThread.h"
+#include "Engine/Window/SplashWindowBase.h"
 
 namespace sw
 {
@@ -16,7 +16,7 @@ namespace sw
      * @details 자기 X 연결을 스레드 안에서 열고 닫는다 — 주 창(`X11Window`)과 연결을 나누지 않는다. 다른 스레드가 다른 연결을 동시에 쓰므로
      *          Xlib 의 스레드 초기화(`XInitThreads`)를 첫 Xlib 호출 전에 한다(libX11 1.8 부터는 라이브러리가 스스로 한다 — 그 전 판을 위한 것이다).
      */
-    class X11SplashWindow : public ISplashWindow
+    class X11SplashWindow : public SplashWindowBase
     {
     public:
         X11SplashWindow();

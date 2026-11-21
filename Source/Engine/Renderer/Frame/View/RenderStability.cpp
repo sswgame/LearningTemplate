@@ -5,8 +5,8 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/ServiceSlot.h"
+#include "Core/Subsystem/Subsystem.h"
 
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 #include "Engine/Foundation/EngineServices.h"
@@ -20,7 +20,7 @@ namespace sw
      * @brief 주 렌더러의 마지막 정착 값(렌더 스레드가 쓰고 게임 스레드가 읽는다)을 엔진 범위에서 듭니다 — 엔진을 다시 세우면 새로 선다(`FrameFogVolumeStatus` 와 같은 모양).
      * @details 렌더 정착 조건의 문턱(`ScenarioRun.json` 의 `_conditions`)도 여기 든다 — 게임 스레드가 시나리오 시작 때 쓰고(`configure*`) 조건이 읽는다. 읽기 전이면 없다(기본값이 없다).
      */
-    class RenderStabilityStatusHolder final : public ISubsystem
+    class RenderStabilityStatusHolder final : public Subsystem
     {
     public:
         static constexpr const utf8* kSubsystemName = "RenderStabilityStatus";

@@ -27,7 +27,7 @@
 
 namespace sw
 {
-    class IServiceStore;
+    class ServiceStore;
     class IStreamTransport;
     class OnlineServerRuntime;
     class OnlineServiceHost;
@@ -84,7 +84,7 @@ namespace sw
          * @brief 맡긴 일을 다 거둔 뒤 @p store 에 원장 감사(`LedgerAuditReport::computeReport`)를 맡기고 끝날 때까지 기다립니다. 저장소를 못 읽으면 오류입니다.
          * @details 저장소는 일마다 완료를 정확히 한 번 부르므로(종료 중이면 닫힌 연결로) 감사 일은 시한 없이 기다려도 끝난다. 봇이 멈춘 뒤에 부른다.
          */
-        [[nodiscard]] static expected<LedgerAuditReport> runLedgerAudit( IServiceStore& store );
+        [[nodiscard]] static expected<LedgerAuditReport> runLedgerAudit( ServiceStore& store );
         /** @brief 커밋 · 충돌 수와 감사 결과를 보고서 값으로 묶습니다. */
         static LoadBotServerStats makeServerStats( const ServiceStoreCommitStats& commitStats, const LedgerAuditReport& report );
 

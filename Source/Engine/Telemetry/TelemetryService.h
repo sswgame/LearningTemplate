@@ -15,8 +15,8 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
-#include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/ServiceSlot.h"
+#include "Core/Subsystem/Subsystem.h"
 #include "Core/Task/DedicatedWorker.h"
 #include "Core/Time/ExponentialBackoff.h"
 
@@ -146,7 +146,7 @@ namespace sw
      *          **서브시스템** `Telemetry`(Client 대상): 엔진 · 게임 스키마를 읽고 스풀 폴더(사용자 설정 파일 옆 `telemetry/`)로
      *          서며 동의를 사용자 설정에 묶습니다. 같은 동의를 쓰는 크래시 보고(`CrashReportService`)의 지난 크래시 묶기도 이 단계가 세우고 내립니다.
      */
-    class SW_API TelemetryService : public ISubsystem
+    class SW_API TelemetryService : public Subsystem
     {
     public:
         static constexpr const utf8* kConsentSettingID  = "telemetry.enabled";
@@ -156,7 +156,7 @@ namespace sw
         static constexpr const utf8* kSpoolFilePrefix   = "telemetry_";
         static constexpr const utf8* kSpoolExtension    = ".jsonl";
 
-        // ISubsystem — 기동 단계 `Telemetry`. 스키마가 틀려도 기동은 멈추지 않는다(스키마에 없는 사건은 기록되지 않을 뿐이다).
+        // Subsystem — 기동 단계 `Telemetry`. 스키마가 틀려도 기동은 멈추지 않는다(스키마에 없는 사건은 기록되지 않을 뿐이다).
         /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */
         static constexpr const utf8* kSubsystemName = "Telemetry";
 

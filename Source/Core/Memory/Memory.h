@@ -26,7 +26,7 @@ namespace sw
 namespace sw
 {
     /**
-     * @brief `IAllocationTracker::recordAllocation` 의 결과입니다. 할당기는 이 값을 블록 헤더에 적고, 해제 때 세었던 블록만 기록기에 돌려줍니다.
+     * @brief `AllocationTracker::recordAllocation` 의 결과입니다. 할당기는 이 값을 블록 헤더에 적고, 해제 때 세었던 블록만 기록기에 돌려줍니다.
      * @details 기록기는 추적을 끈 동안 · 자기 안에서 잡힌 블록을 세지 않습니다. "세었는가" 를 할당 때 정해 블록에 남겨야 해제가
      *          세지 않은 블록을 빼지 않습니다(추적을 켜기 전에 잡은 블록을 켠 뒤에 풀면 태그 바이트가 음수 쪽으로 어긋났다).
      */
@@ -51,18 +51,18 @@ namespace sw
      *          **해제는 이 기록기가 세었다고 답한 블록만 받습니다**(`AllocationRecord::_bCounted`). 블록 헤더에는 센 기록기의 번호(`getTrackerID`)가
      *          남으므로, 기록기를 교체해도 다른 기록기가 센 블록의 해제는 오지 않습니다.
      */
-    class SW_API IAllocationTracker
+    class SW_API AllocationTracker
     {
     public:
         /** @brief 프로세스 안에서 겹치지 않는 기록기 번호(0 이 아님)를 받습니다. */
-        IAllocationTracker();
+        AllocationTracker();
         /** @brief 가상 소멸자입니다. */
-        virtual ~IAllocationTracker() = default;
+        virtual ~AllocationTracker() = default;
 
         /** @brief 복사를 금지합니다. */
-        IAllocationTracker( const IAllocationTracker& ) = delete;
+        AllocationTracker( const AllocationTracker& ) = delete;
         /** @brief 복사 대입을 금지합니다. */
-        IAllocationTracker& operator=( const IAllocationTracker& ) = delete;
+        AllocationTracker& operator=( const AllocationTracker& ) = delete;
 
         /**
          * @brief 할당 하나를 기록합니다. 할당한 스레드에서 바로 불립니다.
@@ -130,7 +130,7 @@ namespace sw
         /** @brief 할당 관찰자 등록 토큰입니다. 토큰이 사라지면 관찰자를 뗍니다. */
         using AllocationObserverRegistration = ObserverSlot<const MemoryAllocationObserver>::Registration;
         /** @brief 할당 기록기 등록 토큰입니다. 토큰이 사라지면 기록기를 뗍니다. */
-        using AllocationTrackerRegistration = ObserverSlot<IAllocationTracker>::Registration;
+        using AllocationTrackerRegistration = ObserverSlot<AllocationTracker>::Registration;
 
         /**
          * @brief 할당 · 해제를 밖(외부 프로파일러)에 알리는 관찰자를 겁니다. 배포본은 블록 헤더가 없어 알리지 않습니다.
@@ -144,7 +144,7 @@ namespace sw
          * @brief 할당 기록기를 겁니다. 먼저 건 기록기가 주인이라 이미 걸려 있으면 빈 토큰입니다(`isActive()` 가 false — 엔진 기록기가 걸린 뒤 테스트의 지역 기록기).
          * @param pTracker 돌려준 토큰이 사라질 때까지 살아 있어야 합니다.
          */
-        [[nodiscard]] static AllocationTrackerRegistration registerAllocationTracker( IAllocationTracker* pTracker );
+        [[nodiscard]] static AllocationTrackerRegistration registerAllocationTracker( AllocationTracker* pTracker );
 
         /**
          * @brief 이 스레드가 지금까지 한 sw 할당 횟수입니다. 배포본은 블록 헤더 경로가 없어 늘 0 입니다.

@@ -14,7 +14,7 @@
 namespace sw
 {
     /** @brief 로컬 플레이어의 빙의가 바뀌었습니다(`PlayerControllerComponent`). 놓기만 했으면 `_pawn` 이 무효입니다. */
-    struct SW_GF_API PossessionChangedEvent final : IEvent
+    struct SW_GF_API PossessionChangedEvent final : EventBase
     {
         GameObjectHandle _controller{};   ///< 플레이어 조종자의 오브젝트
         GameObjectHandle _previousPawn{}; ///< 앞서 쥐었던 폰의 오브젝트(없으면 무효)

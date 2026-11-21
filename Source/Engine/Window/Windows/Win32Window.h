@@ -1,11 +1,11 @@
 /**
  * @file Win32Window.h
- * @brief Windows 전용(Win32 API 기반) IWindow 구현입니다.
+ * @brief Windows 전용(Win32 API 기반) GenericWindow 구현입니다.
  */
 #pragma once
 #include "Core/Foundation/Types.h"
 
-#include "Engine/Window/IWindow.h"
+#include "Engine/Window/GenericWindow.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
     #include "Engine/Foundation/EnginePlatformHeaders.h"
@@ -30,7 +30,7 @@ namespace sw
      * @class Win32Window
      * @brief Win32 HWND 창과 메시지 펌프입니다.
      */
-    class Win32Window : public IWindow
+    class Win32Window : public GenericWindow
     {
     public:
         /** @brief HWND 없이 시작합니다. */
@@ -109,7 +109,7 @@ namespace sw
         }
 
     protected:
-        /** @brief 네이티브 창 핸들(HWND)을 반환합니다. 바깥은 `IWindow::tryGetWin32Handle` 로만 읽는다(기반의 보호 구역을 다시 열지 않는다). */
+        /** @brief 네이티브 창 핸들(HWND)을 반환합니다. 바깥은 `GenericWindow::tryGetWin32Handle` 로만 읽는다(기반의 보호 구역을 다시 열지 않는다). */
         void* getNativeHandle() const override { return _hWnd; }
 
         /** @brief `GetWindowRect` 로 지금 위치를 담습니다. */

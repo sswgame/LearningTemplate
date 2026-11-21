@@ -17,7 +17,7 @@
 
 #include "DevTools/AssetReload/ReloadSource.h"
 #include "DevTools/AssetReload/ReloadTracker.h"
-#include "DevTools/FileWatch/IFileWatcher.h"
+#include "DevTools/FileWatch/FileWatcher.h"
 #include "DevTools/ModuleReload/LiveReload/ModuleCallGuard.h"
 #include "DevTools/ModuleReload/LiveReload/ModuleCompiler.h"
 #include "DevTools/ModuleReload/LiveReload/ModuleLibraryPatch.h"
@@ -100,7 +100,7 @@ namespace sw
         : _mapModule{}
         , _dependencyGraph{}
         , _listSharedModule{}
-        , _fileWatcher{ IFileWatcher::createNative() }
+        , _fileWatcher{ FileWatcher::createNative() }
         , _buildStampPath{}
         , _seenBuildToken{}
         , _buildMutex{}

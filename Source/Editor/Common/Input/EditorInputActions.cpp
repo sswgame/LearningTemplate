@@ -10,8 +10,8 @@
 
 #include "Editor/Common/Backend/ImGuiKeyForward.h"
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
+#include "Editor/Common/GUI/Panel/EditorPanel.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
-#include "Editor/Common/GUI/Panel/IEditorPanel.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorRenderViews.h"
 #include "Editor/Common/Workspace/EditorService.h"

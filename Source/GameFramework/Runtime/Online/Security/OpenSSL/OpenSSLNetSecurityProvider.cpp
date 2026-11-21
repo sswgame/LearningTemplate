@@ -6,7 +6,7 @@
 #include "Core/Encoding/HexUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/Subsystem.h"
 
 #include "Engine/Module/ModuleSubsystemRegistrar.h"
 
@@ -1092,10 +1092,10 @@ namespace sw
     /**
      * @class OpenSSLNetSecuritySubsystem
      * @brief OpenSSL 제공자를 멤버로 들고 `INetSecurityProvider` 로 공개하는 모듈 서브시스템입니다. 제공자는 상태가 없어 초기화 · 종료가 할 일이 없다.
-     * @details 제공자가 `ISubsystem` 을 함께 상속하지 않게 수명 짝만 여기 둔다 — 제공자는 서브시스템 없이도 쓰인다(테스트). 이름 해시가 함수 서명 글이라
+     * @details 제공자가 `Subsystem` 을 함께 상속하지 않게 수명 짝만 여기 둔다 — 제공자는 서브시스템 없이도 쓰인다(테스트). 이름 해시가 함수 서명 글이라
      *          익명 이름공간이 아닌 `sw` 에 둔다(`RESPEphemeralStoreDriver` 와 같다).
      */
-    class OpenSSLNetSecuritySubsystem final : public ISubsystem
+    class OpenSSLNetSecuritySubsystem final : public Subsystem
     {
     public:
         /** @brief 서브시스템 이름입니다. */

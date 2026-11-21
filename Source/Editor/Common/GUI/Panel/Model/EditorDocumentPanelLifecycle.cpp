@@ -49,7 +49,7 @@ namespace sw::editor
     }
 
     EditorDocumentPanel::EditorDocumentPanel( const EditorAssetType& kind, bool bLoadOnOpen )
-        : IEditorDocumentPanel{ false }
+        : EditorDocumentPanelBase{ false }
         , _kind{ kind }
         , _loadedAssetPath{}
         , _pendingFocusPath{}

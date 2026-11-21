@@ -6,7 +6,7 @@
 #include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/Subsystem.h"
 
 #include "Engine/Foundation/EngineSubsystemHost.h"
 #include "Engine/UI/Screen/UIScreenTypes.h"
@@ -30,14 +30,14 @@ namespace sw
      *          - 커서: 호버 경로의 잎에서 올라가 처음 만난 `Inherit` 가 아닌 모양이다. 루트까지 모두 `Inherit` 면 화살표다. 호버가 없으면 화살표다.
      *          문서의 위젯 이름: `Body`(옮기는 바탕), `Text`(글). 게임 스레드에서만 쓴다.
      */
-    class SW_API UITooltipService final : public ISubsystem
+    class SW_API UITooltipService final : public Subsystem
     {
     public:
         /** @brief 툴팁을 포인터에서 이만큼(UI 단위) 오른쪽 아래에 둡니다. */
         static constexpr float32 kPointerOffsetX = 16.0f;
         static constexpr float32 kPointerOffsetY = 20.0f;
 
-        // ISubsystem — 엔진 범위의 서브시스템이다(`engine::getSubsystem<UITooltipService>()`, 게임은 `game::getSubsystem<UITooltipService>()`). 화면 스택(`UISystem`)에 의존하고,
+        // Subsystem — 엔진 범위의 서브시스템이다(`engine::getSubsystem<UITooltipService>()`, 게임은 `game::getSubsystem<UITooltipService>()`). 화면 스택(`UISystem`)에 의존하고,
         // 기동이 UI 갱신 칸(`UISystem::onUpdateBeforeScreens`)에 걸고 종료가 줄을 비우고 푼다.
         /** @brief 서브시스템 이름입니다. */
         static constexpr const utf8* kSubsystemName = "UITooltips";

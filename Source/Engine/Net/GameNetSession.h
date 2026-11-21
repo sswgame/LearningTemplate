@@ -59,8 +59,8 @@
 #include "Core/Network/Message/NetStatsReport.h"
 #include "Core/Network/NetTypes.h"
 #include "Core/Network/Transport/NetEmulation.h"
-#include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/ServiceSlot.h"
+#include "Core/Subsystem/Subsystem.h"
 #include "Core/Task/TaskFuture.h"
 
 #include "Engine/EngineFrameHooks.h"
@@ -242,7 +242,7 @@ namespace sw
      *     session.shutdown();
      * @endcode
      */
-    class SW_API GameNetSession final : public ISubsystem
+    class SW_API GameNetSession final : public Subsystem
     {
     public:
         static constexpr const utf8* kSubsystemName = "GameNetSession";

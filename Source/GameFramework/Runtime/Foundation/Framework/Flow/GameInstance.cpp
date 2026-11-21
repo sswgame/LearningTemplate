@@ -201,7 +201,7 @@ namespace sw
         SW_LOG_ERROR_ID( "GameInstance.GameScopedServiceAlready", "Game scoped service %# is already bound to another instance - two kits share one service type", typeHash );
     }
 
-    bool GameInstance::validateEngineServices( const IWindow* pWindow )
+    bool GameInstance::validateEngineServices( const GenericWindow* pWindow )
     {
         // 네트워크 세션은 필수 엔진 서비스다(`SW_SERVICE_SLOT( GameNetSession, Required )`, 게임 노출). 없으면 세션 없이 조용히 도는 대신 아무것도 걸기 전에 멈춘다.
         if ( game::findSubsystem<GameNetSession>() == nullptr )
@@ -218,7 +218,7 @@ namespace sw
         return true;
     }
 
-    bool GameInstance::initialize( IWindow* pWindow )
+    bool GameInstance::initialize( GenericWindow* pWindow )
     {
         // 프로세스당 하나다 — 다른 인스턴스가 돌면 아무것도 걸지 않고 멈춘다(앞 인스턴스의 지금 범위 · 서비스를 덮지 않는다).
         const GameInstance* const pRunning = findRunningInstance();

@@ -6,7 +6,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Network/Transport/NetEmulation.h"
-#include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/Subsystem.h"
 
 #include "DevTools/DevToolsAPI.h"
 
@@ -22,7 +22,7 @@ namespace sw
      *          실행 중에 조건을 바꿀 수 있게 늘 감싼다. 흉내는 샤드가 소유하고(소켓보다 먼저 사라진다), 이 서브시스템은 자기가 만든 것만 알아본다.
      *          세션에 의존한다 — 세션이 열기 전에 걸리고, 세션보다 먼저 내려가며 데코레이터를 푼다.
      */
-    class SW_DEVTOOLS_API NetLineEmulationSubsystem final : public ISubsystem
+    class SW_DEVTOOLS_API NetLineEmulationSubsystem final : public Subsystem
     {
     public:
         static constexpr const utf8* kSubsystemName = "NetLineEmulation";

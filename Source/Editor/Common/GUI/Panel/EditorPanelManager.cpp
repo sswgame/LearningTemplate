@@ -9,8 +9,8 @@
 #include "Core/Time/MonotonicClock.h"
 
 #include "Editor/Common/GUI/Panel/EditorDocumentAutosaveScheduler.h"
-#include "Editor/Common/GUI/Panel/IEditorDocumentPanel.h"
-#include "Editor/Common/GUI/Panel/IEditorPanel.h"
+#include "Editor/Common/GUI/Panel/EditorDocumentPanelBase.h"
+#include "Editor/Common/GUI/Panel/EditorPanel.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorWatchSupport.h"
@@ -70,9 +70,9 @@ namespace sw::editor
         return editor::getSubsystem<EditorContext>().getSubsystem<EditorPanelManager>();
     }
 
-    void EditorPanelManager::registerPanel( unique_ptr<IEditorPanel> pPanel,
-                                            string_view              panelID,
-                                            EditorPanelCategory      category )
+    void EditorPanelManager::registerPanel( unique_ptr<EditorPanel> pPanel,
+                                            string_view             panelID,
+                                            EditorPanelCategory     category )
     {
         if ( pPanel == nullptr )
             return;
@@ -88,7 +88,7 @@ namespace sw::editor
         _listPanel.push_back( std::move( entry ) );
     }
 
-    IEditorPanel* EditorPanelManager::findPanelByID( string_view panelID ) const
+    EditorPanel* EditorPanelManager::findPanelByID( string_view panelID ) const
     {
         for ( const EditorPanelEntry& entry : _listPanel )
         {
@@ -100,7 +100,7 @@ namespace sw::editor
         return nullptr;
     }
 
-    IEditorPanel* EditorPanelManager::findDocumentPanel( const EditorAssetType& kind ) const
+    EditorPanel* EditorPanelManager::findDocumentPanel( const EditorAssetType& kind ) const
     {
         for ( const EditorPanelEntry& entry : _listPanel )
         {
@@ -112,7 +112,7 @@ namespace sw::editor
 
     bool EditorPanelManager::setPanelOpen( string_view panelID, bool bOpen )
     {
-        IEditorPanel* pPanel = findPanelByID( panelID );
+        EditorPanel* pPanel = findPanelByID( panelID );
         if ( pPanel != nullptr )
         {
             pPanel->setOpen( bOpen );
@@ -172,8 +172,8 @@ namespace sw::editor
                 pExisting->_pRegistration = nullptr; // 옮긴 항목 — 3) 에서 다시 옮기지 않게
                 continue;
             }
-            const Stopwatch          createStopwatch; // 패널 지연 생성의 판정 근거 — 닫힌 패널까지 모두 만드는 비용(감시 값 `Editor.PanelCreateMs`)
-            unique_ptr<IEditorPanel> pPanel = registration._pCreate();
+            const Stopwatch         createStopwatch; // 패널 지연 생성의 판정 근거 — 닫힌 패널까지 모두 만드는 비용(감시 값 `Editor.PanelCreateMs`)
+            unique_ptr<EditorPanel> pPanel = registration._pCreate();
             createNanos += static_cast<uint64>( createStopwatch.getElapsedNanoseconds() );
             if ( pPanel == nullptr )
                 continue;
@@ -290,7 +290,7 @@ namespace sw::editor
         // 패널 id 만 기억한다 — 닫힌 패널 · 사라진 스택은 읽는 순간의 목록에 없어 손으로 풀 것이 없다(`getFocusedCommandStack`).
         for ( const EditorPanelEntry& entry : _listPanel )
         {
-            IEditorPanel* const pPanel = entry._pInstance.get();
+            EditorPanel* const pPanel = entry._pInstance.get();
             if ( pPanel == nullptr || pPanel->isOpen() == false || pPanel->isWindowFocused() == false )
                 continue;
             if ( pPanel->shouldKeepFocusedCommandStack() == false )
@@ -348,7 +348,7 @@ namespace sw::editor
         {
             if ( entry._pInstance == nullptr || entry._pInstance->isOpen() == false )
                 continue;
-            IEditorDocumentPanel* const pDocument = entry._pInstance->asDocumentPanel();
+            EditorDocumentPanelBase* const pDocument = entry._pInstance->asDocumentPanel();
             if ( pDocument == nullptr || entry._pInstance->isWindowFocused() == false )
                 continue;
             if ( pDocument->trySaveDirtyDocument() )
@@ -362,7 +362,7 @@ namespace sw::editor
         bool bAllOk{ true };
         for ( const EditorPanelEntry& entry : _listPanel )
         {
-            IEditorDocumentPanel* const pDocument = entry._pInstance != nullptr ? entry._pInstance->asDocumentPanel() : nullptr;
+            EditorDocumentPanelBase* const pDocument = entry._pInstance != nullptr ? entry._pInstance->asDocumentPanel() : nullptr;
             if ( pDocument == nullptr || pDocument->isDocumentDirty() == false )
                 continue;
             if ( pDocument->trySaveDirtyDocument() == false )
@@ -386,7 +386,7 @@ namespace sw::editor
     {
         for ( const EditorPanelEntry& entry : _listPanel )
         {
-            IEditorDocumentPanel* const pDocument = entry._pInstance != nullptr ? entry._pInstance->asDocumentPanel() : nullptr;
+            EditorDocumentPanelBase* const pDocument = entry._pInstance != nullptr ? entry._pInstance->asDocumentPanel() : nullptr;
             if ( pDocument != nullptr )
                 pDocument->discardDirtyDocument();
         }

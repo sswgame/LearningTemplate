@@ -740,12 +740,12 @@ SW_TEST_CASE( CatalogFileSessionTest, ValidationNeedsALoadWithoutWarningsAndSays
 namespace
 {
     /** @brief 항목 상속의 다른 파일 부모를 글 표에서 읽습니다. */
-    class CatalogInheritanceTestSource final : public IDataInheritanceSource
+    class CatalogInheritanceTestSource final : public DataInheritanceSource
     {
     public:
         /** @brief 설정(`EngineConfig.json`)과 같은 깊이 상한을 싣습니다. */
         CatalogInheritanceTestSource()
-            : IDataInheritanceSource{ 8u }
+            : DataInheritanceSource{ 8u }
         {
         }
 

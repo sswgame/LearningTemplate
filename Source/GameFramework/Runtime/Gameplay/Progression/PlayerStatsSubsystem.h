@@ -46,7 +46,7 @@ namespace sw
         PlayerStatsSubsystem( const PlayerStatsSubsystem& )            = delete;
         PlayerStatsSubsystem& operator=( const PlayerStatsSubsystem& ) = delete;
 
-        // ISubsystem - 카탈로그를 적었는데 읽지 못하거나 업적이 없는 통계를 보면 실패다(통계 없이 조용히 돌지 않는다).
+        // Subsystem - 카탈로그를 적었는데 읽지 못하거나 업적이 없는 통계를 보면 실패다(통계 없이 조용히 돌지 않는다).
         SubsystemInitResult initializeSubsystem() override;
         void                shutdownSubsystem() override;
         const utf8*         getSubsystemName() const override { return kSubsystemName; }

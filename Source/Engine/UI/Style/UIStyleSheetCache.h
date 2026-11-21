@@ -8,8 +8,8 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/ServiceSlot.h"
+#include "Core/Subsystem/Subsystem.h"
 
 #include "Engine/Foundation/EngineSubsystemHost.h"
 #include "Engine/UI/Document/UITextAssetCache.h"
@@ -24,13 +24,13 @@ namespace sw
      * @details 테마(`UIThemeController`)와 화면 스택이 같이 읽으므로 화면 스택의 값 멤버가 아니다(`UIDocumentCache` 와 같은 자리).
      *          찾는 순서, 실패, 다시 읽기 규칙은 `UITextAssetCache` 를 따른다. 게임 스레드에서만 쓴다. 캐시는 값 멤버로 가진다(`UIDocumentCache` 와 같은 모양).
      */
-    class SW_API UIStyleSheetCache final : public ISubsystem
+    class SW_API UIStyleSheetCache final : public Subsystem
     {
     public:
         UIStyleSheetCache();
         ~UIStyleSheetCache() override;
 
-        // ISubsystem — 기동이 에셋 캐시 레지스트리에 올리고 종료가 내린다.
+        // Subsystem — 기동이 에셋 캐시 레지스트리에 올리고 종료가 내린다.
         /** @brief 서브시스템 이름입니다. */
         static constexpr const utf8* kSubsystemName = "UIStyleSheets";
         SubsystemInitResult          initializeSubsystem() override;

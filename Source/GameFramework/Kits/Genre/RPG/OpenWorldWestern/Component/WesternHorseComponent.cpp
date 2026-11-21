@@ -3,8 +3,8 @@
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Component/WesternHorseComponent.h"
 
 #include "Engine/Automation/Scenario/AutomationScenario.h"
-#include "Engine/Automation/Scenario/AutomationStepContext.h"
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
+#include "Engine/Automation/Scenario/IAutomationStepContext.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -206,7 +206,7 @@ namespace sw
         {
             static expected<void> validateFeedHorse( const AutomationStep& step ) { return step.hasRequiredAttributes( { "horse", "food" }, { "horse", "food" } ); }
 
-            static bool runFeedHorse( AutomationStepContext& context, const AutomationStep& step )
+            static bool runFeedHorse( IAutomationStepContext& context, const AutomationStep& step )
             {
                 const string&               horseName = *step.findAttribute( "horse" );
                 const string&               foodID    = *step.findAttribute( "food" );

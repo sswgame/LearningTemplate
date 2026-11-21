@@ -10,7 +10,7 @@
 #pragma once
 #include "Core/Foundation/Macros.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/Subsystem.h"
 
 namespace sw
 {
@@ -21,7 +21,7 @@ namespace sw
      * @class DiagnosticsSubsystem
      * @brief 진단 도구 서브시스템입니다. 진단 구성 여부는 만들 때 받는다(호스트마다 다르다 — App 은 Debug 만, 테스트 하네스는 늘).
      */
-    class SW_API DiagnosticsSubsystem final : public ISubsystem
+    class SW_API DiagnosticsSubsystem final : public Subsystem
     {
     public:
         /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */

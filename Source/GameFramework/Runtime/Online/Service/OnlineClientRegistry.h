@@ -16,7 +16,7 @@
 
 namespace sw
 {
-    class IOnlineClientService;
+    class OnlineClientService;
     class OnlineServiceClient;
 
     /** @brief 세션이 클라이언트를 만들 때 넘기는 값입니다. */
@@ -29,7 +29,7 @@ namespace sw
     /** @brief 키트 클라이언트 팩토리입니다. 등록기가 가진 정적 객체이며 이름은 노드에 있습니다. */
     struct OnlineClientFactory : ServiceFactoryNode
     {
-        using CreateFunction = unique_ptr<IOnlineClientService> ( * )( OnlineServiceClient& client, const OnlineSessionInfo& info );
+        using CreateFunction = unique_ptr<OnlineClientService> ( * )( OnlineServiceClient& client, const OnlineSessionInfo& info );
 
         CreateFunction _pCreate{ nullptr };
         uint64         _typeHash{ 0 }; ///< `OnlineSession::find<T>` 가 찾는 형식 값
@@ -77,7 +77,7 @@ namespace sw
         OnlineClientRegistrar& operator=( const OnlineClientRegistrar& ) = delete;
 
     private:
-        static unique_ptr<IOnlineClientService> create( OnlineServiceClient& client, const OnlineSessionInfo& info )
+        static unique_ptr<OnlineClientService> create( OnlineServiceClient& client, const OnlineSessionInfo& info )
         {
             (void)info;
             unique_ptr<TClient> pClient = make_unique<TClient>();

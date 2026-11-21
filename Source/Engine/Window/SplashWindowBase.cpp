@@ -1,6 +1,6 @@
 ﻿#include "pch.h"
 
-#include "Engine/Window/ISplashWindow.h"
+#include "Engine/Window/SplashWindowBase.h"
 
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
@@ -11,7 +11,7 @@
 
 namespace sw
 {
-    ISplashWindow::ISplashWindow()
+    SplashWindowBase::SplashWindowBase()
         : _status{}
         , _splashData{}
         , _listScaledPixel{}
@@ -23,21 +23,21 @@ namespace sw
     {
     }
 
-    ISplashWindow::~ISplashWindow() = default;
+    SplashWindowBase::~SplashWindowBase() = default;
 
-    unique_ptr<ISplashWindow> ISplashWindow::createPlatformSplash()
+    unique_ptr<SplashWindowBase> SplashWindowBase::createPlatformSplash()
     {
         const WindowPlatformFactory* const pFactory = WindowPlatform::find();
         return pFactory != nullptr ? pFactory->_pfnCreateSplash() : nullptr;
     }
 
-    bool ISplashWindow::isPlatformSupported()
+    bool SplashWindowBase::isPlatformSupported()
     {
         const WindowPlatformFactory* const pFactory = WindowPlatform::find();
         return pFactory != nullptr && pFactory->_pfnIsSplashSupported();
     }
 
-    void ISplashWindow::createScaledImage()
+    void SplashWindowBase::createScaledImage()
     {
         _listScaledPixel.clear();
         if ( _splashData.isValid() == false || _splashData.getPixels() == nullptr )
@@ -50,8 +50,8 @@ namespace sw
                         _listScaledPixel.data(), _width, _height );
     }
 
-    void ISplashWindow::scaleBgraImage( const uint8* pSource, uint32 sourceWidth, uint32 sourceHeight,
-                                        uint8* pOutPixel, uint32 destWidth, uint32 destHeight )
+    void SplashWindowBase::scaleBgraImage( const uint8* pSource, uint32 sourceWidth, uint32 sourceHeight,
+                                           uint8* pOutPixel, uint32 destWidth, uint32 destHeight )
     {
         if ( pSource == nullptr || pOutPixel == nullptr )
             return;
@@ -104,7 +104,7 @@ namespace sw
         }
     }
 
-    bool ISplashWindow::loadSplashImage()
+    bool SplashWindowBase::loadSplashImage()
     {
         if ( DDSLoader::loadFromAsset( AssetID{ "textures/splash.dds" }, _splashData ) == false || _splashData.isValid() == false )
             return false;
@@ -117,7 +117,7 @@ namespace sw
         const size_t requiredBytes = static_cast<size_t>( _splashData._width ) * static_cast<size_t>( _splashData._height ) * 4u;
         if ( _splashData._bCompressed != SW_FALSE || _splashData._bytes.size() < requiredBytes )
         {
-            SW_LOG_ERROR_ID( "ISplashWindow.SplashImageMustUncompressed",
+            SW_LOG_ERROR_ID( "SplashWindow.SplashImageMustUncompressed",
                              "Splash image must be uncompressed 32bpp — got %#x%#, %# bytes (need %#), compressed=%#. Skipping splash.",
                              _splashData._width, _splashData._height, _splashData._bytes.size(), requiredBytes,
                              static_cast<uint32>( _splashData._bCompressed ) );
@@ -129,7 +129,7 @@ namespace sw
         return true;
     }
 
-    void ISplashWindow::normalizeSplashToBgra()
+    void SplashWindowBase::normalizeSplashToBgra()
     {
         // **채널 순서를 여기서 한 번에 맞춘다**(모든 플랫폼). 플랫폼 창 안에서 뒤집으면 아트를 `R8G8B8A8` 로 다시 내보낼 때
         // 그 플랫폼만 맞고 나머지는 빨강과 파랑이 뒤바뀐다(지금 `splash.dds` 는 `B8G8R8A8` 이라 뒤집기가 건너뛰어진다).

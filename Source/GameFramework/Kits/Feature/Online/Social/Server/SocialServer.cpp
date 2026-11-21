@@ -27,7 +27,7 @@ namespace sw
         setReady( false );
     }
 
-    void SocialServer::initialize( SocialService* pSocialService, GuildService* pGuildService, IAccountPresence* pPresence, MetricRegistry* pMetricRegistry )
+    void SocialServer::initialize( SocialService* pSocialService, GuildService* pGuildService, AccountPresence* pPresence, MetricRegistry* pMetricRegistry )
     {
         _pSocialService = pSocialService;
         _pGuildService  = pGuildService;

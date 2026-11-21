@@ -28,7 +28,7 @@ namespace sw
 
 namespace sw
 {
-    unique_ptr<IFileWatcher> IFileWatcher::createNative()
+    unique_ptr<FileWatcher> FileWatcher::createNative()
     {
         return make_unique<LinuxFileWatcher>();
     }
@@ -327,7 +327,7 @@ namespace sw
         string       relative;
         const bool   bUnderRoot = FileUtil::tryMakePathUnderRoot( _directoryPath, absoluteFile, relative );
 
-        // 상한 · 넘침 표시 · 연속 중복 합치기는 IFileWatcher::pushChange 가 한다.
+        // 상한 · 넘침 표시 · 연속 중복 합치기는 FileWatcher::pushChange 가 한다.
         pushChange( action, _directoryPath, bUnderRoot ? string_view{ relative } : name );
     }
 } // namespace sw

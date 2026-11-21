@@ -31,7 +31,7 @@ namespace sw
          * @class MatchmakingOnlineServerKit
          * @brief 매칭 키트의 서버 조립입니다.
          */
-        class MatchmakingOnlineServerKit final : public OnlineServerKit<OnlineKitRequired<>, OnlineKitOptional<IAccountStatSource, IAccountPresence, IGroupChannelMembership>>
+        class MatchmakingOnlineServerKit final : public OnlineServerKit<OnlineKitRequired<>, OnlineKitOptional<IAccountStatSource, AccountPresence, IGroupChannelMembership>>
         {
         public:
             MatchmakingOnlineServerKit()
@@ -100,8 +100,8 @@ namespace sw
                     return unexpected( Error{ ErrorKind::InvalidArgument, "matchmaking has a rated mode but the leaderboard kit (stat source) is not assembled" } );
                 }
                 if ( _bGameServer == SW_TRUE )
-                    _agent.startReading( context._pRouter );                                                                                                             // 대기열이 남긴 명단 기록을 읽는다(버스 배정은 잃을 수 있다)
-                _server.initialize( &_partyLobby, &_queue, _bGameServer == SW_TRUE ? &_agent : nullptr, interfaces.find<IAccountPresence>(), context._pMetricRegistry ); // 배정 구독 · 시한은 서버가 돈다
+                    _agent.startReading( context._pRouter );                                                                                                            // 대기열이 남긴 명단 기록을 읽는다(버스 배정은 잃을 수 있다)
+                _server.initialize( &_partyLobby, &_queue, _bGameServer == SW_TRUE ? &_agent : nullptr, interfaces.find<AccountPresence>(), context._pMetricRegistry ); // 배정 구독 · 시한은 서버가 돈다
                 _server.setReconnectGrace( _reconnectGraceMs );
                 _server.setGroupChannels( interfaces.find<IGroupChannelMembership>() );
                 return {};

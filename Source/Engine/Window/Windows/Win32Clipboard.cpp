@@ -5,7 +5,7 @@
 
 #include "Engine/Foundation/EnginePlatformHeaders.h"
 #include "Engine/Foundation/EngineServices.h"
-#include "Engine/Window/IWindow.h"
+#include "Engine/Window/GenericWindow.h"
 #include "Engine/Window/MainWindowSubsystem.h"
 #include "Engine/Window/PlatformClipboard.h"
 
@@ -40,7 +40,7 @@ namespace sw
             /** @brief 클립보드 주인으로 둘 창입니다(활성 창). 없으면 nullptr 입니다. */
             static HWND findOwnerWindow()
             {
-                const IWindow* pWindow = MainWindowSubsystem::findMainWindow();
+                const GenericWindow* pWindow = MainWindowSubsystem::findMainWindow();
                 return pWindow != nullptr ? static_cast<HWND>( pWindow->tryGetWin32Handle() ) : nullptr;
             }
         };

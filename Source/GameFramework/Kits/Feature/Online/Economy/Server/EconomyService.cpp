@@ -93,7 +93,7 @@ namespace sw
         SW_ASSERT( _calls.isEmpty() && _localCalls.isEmpty() );
     }
 
-    bool EconomyService::initialize( IServiceStore* pStore, const EconomyServiceConfig& settings )
+    bool EconomyService::initialize( ServiceStore* pStore, const EconomyServiceConfig& settings )
     {
         const bool bMissingDependencies = pStore == nullptr || settings._pCurrencyCatalog == nullptr || settings._pOfferCatalog == nullptr;
         if ( bMissingDependencies )

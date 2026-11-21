@@ -7,7 +7,7 @@
  *            게임 조립 단계가 친구와 매칭 키트의 이벤트를 연결하며, 키트끼리는 include 하지 않는다.
  *          - 서버가 여러 대일 때는 채널에 이 서버의 멤버가 있는 동안만 `chat.channel.<id>` 를 구독한다. 말하기는 이 서버의 멤버에게 바로 전달하고 버스에도 발행한다.
  *            버스는 최대 한 번 배달하며 놓친 메시지는 기록에 있다.
- *            귓속말은 상대가 이 서버에 있으면 바로 전달하고, 아니면 접속 상태(`IAccountPresence`)로 서버를 찾아 `chat.server.<서버>` 로 보낸다.
+ *            귓속말은 상대가 이 서버에 있으면 바로 전달하고, 아니면 접속 상태(`AccountPresence`)로 서버를 찾아 `chat.server.<서버>` 로 보낸다.
  *            차단은 받는 쪽 서버가 확인해 조용히 버린다. 보낸 사람에게는 Ok 를 반환해서 차단 여부를 드러내지 않는다.
  *          - 채팅 금지는 제재 레코드를 계정의 첫 말하기에서 읽고 `_sanctionCacheMs` 동안 캐시한다. 버스 `sanction.changed` 가 오면 그 계정의 캐시를 버린다.
  *            첫 읽기 전의 말하기는 `_maxPendingSendPerMember` 개까지 대기시켰다가 읽기가 끝나면 처리한다.
@@ -50,7 +50,7 @@
 namespace sw
 {
 
-    class IServiceStore;
+    class ServiceStore;
     class ServerBus;
     class ServerBusMessage;
 
@@ -96,9 +96,9 @@ namespace sw
     /** @brief 빌려 쓰는 객체들입니다. 서비스보다 오래 살아야 합니다. */
     struct ChatServiceDependencies
     {
-        IServiceStore*           _pStore{ nullptr };     ///< 필수이다. 기록과 제재에 쓴다
+        ServiceStore*            _pStore{ nullptr };     ///< 필수이다. 기록과 제재에 쓴다
         ServerBus*               _pBus{ nullptr };       ///< 서버가 하나면 null 이다
-        IAccountPresence*        _pPresence{ nullptr };  ///< 서버가 하나면 null 이며 다른 서버로 가는 귓속말이 없다
+        AccountPresence*         _pPresence{ nullptr };  ///< 서버가 하나면 null 이며 다른 서버로 가는 귓속말이 없다
         const IAccountDirectory* _pDirectory{ nullptr }; ///< 필수이다. 표시 이름과 이 서버에 있는지를 조회한다
         const IChatPolicy*       _pPolicy{ nullptr };    ///< null 이면 차단을 쓰지 않는다
         uint64                   _serverID{ 1 };

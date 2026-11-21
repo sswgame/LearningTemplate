@@ -1,6 +1,6 @@
 # ==============================================================================
 # @file Source/GameFramework/Kits/Feature/Storage/SQLStore/Server/CMakeLists.txt
-# @brief SQL 저장 키트(서버) — 서비스 저장소(IServiceStore)의 SQL 구현 · PostgreSQL 드라이버 · 서버 설정 → 저장소
+# @brief SQL 저장 키트(서버) — 서비스 저장소(ServiceStore)의 SQL 구현 · PostgreSQL 드라이버 · 서버 설정 → 저장소
 # ==============================================================================
 
 sw_add_game_framework_kit(GF_Server_SQLStore)

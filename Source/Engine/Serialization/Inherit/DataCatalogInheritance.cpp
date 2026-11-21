@@ -123,11 +123,11 @@ namespace sw
             }
 
             /** @brief 부모 파일을 래퍼 꼴의 글로 돌려줍니다(파일 상속 단계). */
-            class WrappedFileSource final : public IDataInheritanceSource
+            class WrappedFileSource final : public DataInheritanceSource
             {
             public:
-                WrappedFileSource( const DataInheritanceSchema& schema, IDataInheritanceSource& source )
-                    : IDataInheritanceSource{ source.findMaxDepth() }
+                WrappedFileSource( const DataInheritanceSchema& schema, DataInheritanceSource& source )
+                    : DataInheritanceSource{ source.findMaxDepth() }
                     , _schema{ schema }
                     , _source{ source }
                 {
@@ -144,11 +144,11 @@ namespace sw
 
             private:
                 const DataInheritanceSchema& _schema;
-                IDataInheritanceSource&      _source;
+                DataInheritanceSource&       _source;
             };
 
             /** @brief 파일 상속을 펼쳐 @p outDoc 에 둡니다. 항목의 `_base` 는 그대로 남습니다. */
-            [[nodiscard]] static bool flattenFile( string_view text, string_view sourceName, const DataInheritanceSchema& schema, IDataInheritanceSource& source, XMLDocument& outDoc )
+            [[nodiscard]] static bool flattenFile( string_view text, string_view sourceName, const DataInheritanceSchema& schema, DataInheritanceSource& source, XMLDocument& outDoc )
             {
                 if ( outDoc.parse( text, sourceName ) == false )
                     return false;
@@ -175,7 +175,7 @@ namespace sw
             class ParentFiles
             {
             public:
-                ParentFiles( const DataInheritanceSchema& schema, IDataInheritanceSource& source )
+                ParentFiles( const DataInheritanceSchema& schema, DataInheritanceSource& source )
                     : _schema{ schema }
                     , _source{ source }
                     , _listFile{}
@@ -210,16 +210,16 @@ namespace sw
                 };
 
                 const DataInheritanceSchema& _schema;
-                IDataInheritanceSource&      _source;
+                DataInheritanceSource&       _source;
                 vector<LoadedFile>           _listFile;
             };
 
             /** @brief 항목 하나의 부모를 `<id>` 또는 `<리소스 id>#<id>` 로 찾아 래퍼 꼴의 글로 돌려줍니다. */
-            class EntrySource final : public IDataInheritanceSource
+            class EntrySource final : public DataInheritanceSource
             {
             public:
                 EntrySource( const XMLNode& fileRoot, const utf8* pKindName, const string& keyAttribute, const DataInheritanceSchema& entrySchema, ParentFiles& parentFiles )
-                    : IDataInheritanceSource{ parentFiles.findMaxDepth() }
+                    : DataInheritanceSource{ parentFiles.findMaxDepth() }
                     , _fileRoot{ fileRoot }
                     , _pKindName{ pKindName }
                     , _keyAttribute{ keyAttribute }
@@ -376,7 +376,7 @@ namespace sw
         return DataCatalogInheritanceInternal::readTable( text ) && parseSchema( text, rootName, outSchema, outbListed );
     }
 
-    bool DataCatalogInheritance::flatten( string_view text, string_view sourceName, const DataInheritanceSchema& schema, IDataInheritanceSource& source, string& outText )
+    bool DataCatalogInheritance::flatten( string_view text, string_view sourceName, const DataInheritanceSchema& schema, DataInheritanceSource& source, string& outText )
     {
         XMLDocument fileDoc;
         if ( DataCatalogInheritanceInternal::flattenFile( text, sourceName, schema, source, fileDoc ) == false )
@@ -427,7 +427,7 @@ namespace sw
         return true;
     }
 
-    bool DataCatalogInheritance::flattenIfListed( string_view text, string_view sourceName, IDataInheritanceSource& source, bool& outbFlattened, string& outText )
+    bool DataCatalogInheritance::flattenIfListed( string_view text, string_view sourceName, DataInheritanceSource& source, bool& outbFlattened, string& outText )
     {
         outbFlattened = false;
         if ( text.find( DataInheritance::kBaseAttribute ) == string_view::npos )

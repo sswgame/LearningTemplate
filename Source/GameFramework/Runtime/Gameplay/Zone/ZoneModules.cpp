@@ -70,7 +70,7 @@ namespace sw
          * @details `on="Became"` 은 조건이 `delay` 초 이어서 참이면 한 번(사구 중심 2 초 → 삼켜짐), `Lost` 는 참이던 조건이 거짓이 되거나 나갈 때 한 번(끌려감 해제)이다.
          *          표 밖의 수치 칸은 동작이 이름으로 읽는 값이다(`value=damage` 의 `damage="20 * (1 - target.FireResist)"`).
          */
-        class ZoneActionProcessor final : public ZoneModuleProcessor
+        class ZoneActionProcessor final : public IZoneModuleProcessor
         {
         public:
             const utf8*      getKindName() const override { return "Action"; }
@@ -165,7 +165,7 @@ namespace sw
          * @details 방향 종류(균일 · 중심으로 당김 · 회전 · 흐름) × 세기(위치 값의 식 — 곡선)다. 소용돌이 · 블랙홀 · 강물은 방향 종류와 식만 다르다.
          *          물체마다 뜨고 가라앉음은 바디 쪽 밀도가 정한다(유체 밀도 > 바디 밀도면 뜬다 — 나무 상자는 뜨고 돌은 가라앉는다).
          */
-        class ZonePhysicsFieldProcessor final : public ZoneModuleProcessor
+        class ZonePhysicsFieldProcessor final : public IZoneModuleProcessor
         {
         public:
             const utf8*      getKindName() const override { return "PhysicsField"; }
@@ -234,7 +234,7 @@ namespace sw
         /**
          * @brief NPC 의 판단 질의입니다 — 안에 있는 동안 대상 AI 의 블랙보드 키에 값을 두고, 나가면 지웁니다. 행동 트리 · 스케줄이 "지금 어느 지역 · 무엇을 받나" 를 이 키로 읽는다.
          */
-        class ZoneBlackboardProcessor final : public ZoneModuleProcessor
+        class ZoneBlackboardProcessor final : public IZoneModuleProcessor
         {
         public:
             const utf8*      getKindName() const override { return "Blackboard"; }
@@ -270,7 +270,7 @@ namespace sw
          * @details 영역 표시는 지역 아래 기하의 `NavMeshModifierComponent` 가 하고(베이크), 비용 · 금지는 이 모듈이 씬의 거름에 건다(`SceneNavigation::setAgentAreaCost`).
          *          대상과 상관없는 일이라 입력이 시작할 때 한 번 한다.
          */
-        class ZoneNavAreaProcessor final : public ZoneModuleProcessor
+        class ZoneNavAreaProcessor final : public IZoneModuleProcessor
         {
         public:
             const utf8*      getKindName() const override { return "NavArea"; }
@@ -304,7 +304,7 @@ namespace sw
         };
 
         /** @brief 표면 채널입니다 — 안에 있는 동안 외형의 몸 표면 채널(젖음 · 진흙 · 그을음)을 초당 `rate` 만큼 올립니다(음수면 내린다). */
-        class ZoneSurfaceChannelProcessor final : public ZoneModuleProcessor
+        class ZoneSurfaceChannelProcessor final : public IZoneModuleProcessor
         {
         public:
             const utf8*      getKindName() const override { return "SurfaceChannel"; }
@@ -341,7 +341,7 @@ namespace sw
          *          매 프레임 다시 찍는 도장은 붙잡은 도장과 같다 — 머무는 동안 메워지지 않고, 나가면 자기 속도로 메워진다(처리기는 상태를 갖지 않아 핸들을 들지 않는다).
          *          깔때기 홈은 머문 시간 × `spinSpeed` 만큼 돈다. 충돌 · 내비는 고치지 않는다(보이는 것만). 눈 · 모래 차이는 프리셋의 칸이다(눈 깊고 느리게, 모래 얕고 빠르게).
          */
-        class ZoneSurfaceStampProcessor final : public ZoneModuleProcessor
+        class ZoneSurfaceStampProcessor final : public IZoneModuleProcessor
         {
         public:
             const utf8*      getKindName() const override { return "SurfaceStamp"; }

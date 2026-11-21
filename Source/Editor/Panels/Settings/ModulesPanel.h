@@ -7,7 +7,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/String/fixed_string.h"
 
-#include "Editor/Common/GUI/Panel/IEditorPanel.h"
+#include "Editor/Common/GUI/Panel/EditorPanel.h"
 #include "Editor/Panels/Settings/Model/ModulesViewModel.h"
 
 namespace sw::editor
@@ -18,7 +18,7 @@ namespace sw::editor
      *        `Source/Games/<활성 게임>/SWGame.module.json` 의 `_listModuleOverride` 를 고칩니다. 적용은 Build(매니페스트가 구성 의존이라 ninja 가 다시 구성한다) 뒤 다시 시작입니다.
      *        상태와 명령은 `ModulesViewModel`(Model/, ImGui 없음)이 들고, 이 패널은 그리기와 검색 글 · 팝업 열기만 든다.
      */
-    class ModulesPanel final : public IEditorPanel
+    class ModulesPanel final : public EditorPanel
     {
     public:
         /** @brief 패널 id 입니다. 등록(`SW_EDITOR_PANEL`)과 조회(`EditorPanelManager::findPanel<…>` · `setPanelOpen<…>`)가 모두 이 상수에서 온다. */

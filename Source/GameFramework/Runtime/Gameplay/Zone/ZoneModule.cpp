@@ -24,7 +24,7 @@ namespace sw
             static constexpr const utf8* kTargetPrefix  = "target.";   ///< 대상 속성을 읽는 이름의 머리
 
             /** @brief 등록 목록입니다(함수 정적 — 다른 TU · DLL 의 정적 등록자가 먼저 쓴다). 워커가 읽으므로 자기 잠금을 든 목록이다. */
-            static SW_DEFINE_LOCKED_REGISTRATION_LIST( getRegistrations, const ZoneModuleProcessor, "ZoneModuleRegistry", RegistrationOrder::Insertion, true )
+            static SW_DEFINE_LOCKED_REGISTRATION_LIST( getRegistrations, const IZoneModuleProcessor, "ZoneModuleRegistry", RegistrationOrder::Insertion, true )
 
                 static const ZoneSample* findSample( const GameplayContext& context )
             {
@@ -219,17 +219,17 @@ namespace sw
 
 namespace sw
 {
-    void ZoneModuleRegistry::registerProcessor( const ZoneModuleProcessor* pProcessor )
+    void ZoneModuleRegistry::registerProcessor( const IZoneModuleProcessor* pProcessor )
     {
         (void)ZoneModuleInternal::getRegistrations().addLogged( pProcessor, "ZoneModule", pProcessor->getKindName() ); // 거절은 공용 오류 로그가 알린다
     }
 
-    void ZoneModuleRegistry::unregisterProcessor( const ZoneModuleProcessor* pProcessor )
+    void ZoneModuleRegistry::unregisterProcessor( const IZoneModuleProcessor* pProcessor )
     {
         (void)ZoneModuleInternal::getRegistrations().remove( pProcessor ); // 올라 있지 않은 줄을 빼는 것은 할 일이 없다
     }
 
-    const ZoneModuleProcessor* ZoneModuleRegistry::find( string_view kindName )
+    const IZoneModuleProcessor* ZoneModuleRegistry::find( string_view kindName )
     {
         return ZoneModuleInternal::getRegistrations().findByName( kindName );
     }
@@ -239,7 +239,7 @@ namespace sw
         return ZoneModuleInternal::getRegistrations().joinNames();
     }
 
-    ZoneModuleRegistrar::ZoneModuleRegistrar( const ZoneModuleProcessor* pProcessor )
+    ZoneModuleRegistrar::ZoneModuleRegistrar( const IZoneModuleProcessor* pProcessor )
         : _pProcessor{ pProcessor }
     {
         ZoneModuleRegistry::registerProcessor( pProcessor );

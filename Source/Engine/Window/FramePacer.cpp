@@ -6,7 +6,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Time/MonotonicClock.h"
 
-#include "Engine/Window/IWindow.h"
+#include "Engine/Window/GenericWindow.h"
 
 namespace sw
 {
@@ -59,7 +59,7 @@ namespace sw
         _state             = resolve( inputs, gv_framePacing, _editorQuietFrames );
     }
 
-    void FramePacer::endFrame( IWindow& window ) const
+    void FramePacer::endFrame( GenericWindow& window ) const
     {
         if ( _state == FramePacingState::Minimized )
             window.waitForMessages( kMinimizedWakeMilliseconds );

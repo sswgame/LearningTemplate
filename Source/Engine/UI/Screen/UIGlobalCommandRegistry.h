@@ -9,8 +9,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
 #include "Core/Registry/RegistrationList.h"
-#include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/ServiceSlot.h"
+#include "Core/Subsystem/Subsystem.h"
 
 #include "Engine/UI/Screen/UIScreenTypes.h"
 
@@ -29,7 +29,7 @@ namespace sw
      *          게임 흐름(`GameInstance`)이나 호스트(`Engine`)가 자기 처리 함수를 등록한다. 등록은 구독이라 등록한 쪽이 사라질 때 풀린다.
      *          게임 스레드에서만 쓴다.
      */
-    class SW_API UIGlobalCommandRegistry final : public ISubsystem
+    class SW_API UIGlobalCommandRegistry final : public Subsystem
     {
     public:
         static constexpr utf8 kReturnToTitle[] = "ReturnToTitle"; ///< 일시정지 메뉴의 "타이틀로" 명령입니다.
@@ -38,7 +38,7 @@ namespace sw
 
         UIGlobalCommandRegistry();
 
-        // ISubsystem — 엔진 범위의 서브시스템이다(`engine::getSubsystem<UIGlobalCommandRegistry>()`, 게임은 `game::getSubsystem<UIGlobalCommandRegistry>()`).
+        // Subsystem — 엔진 범위의 서브시스템이다(`engine::getSubsystem<UIGlobalCommandRegistry>()`, 게임은 `game::getSubsystem<UIGlobalCommandRegistry>()`).
         /** @brief 서브시스템 이름입니다. */
         static constexpr const utf8* kSubsystemName = "UIGlobalCommands";
         SubsystemInitResult          initializeSubsystem() override { return SubsystemInitResult::Succeeded; }

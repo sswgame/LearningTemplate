@@ -7,7 +7,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Time/MonotonicClock.h"
 
-#include "Engine/Window/IWindow.h"
+#include "Engine/Window/GenericWindow.h"
 #include "Engine/Window/Linux/X11InputMethod.h"
 #include "Engine/Window/Linux/X11Monitors.h"
 
@@ -42,7 +42,7 @@ namespace sw
 namespace sw
 {
     /// @brief X11 네이티브 창입니다.
-    class X11Window : public IWindow
+    class X11Window : public GenericWindow
     {
     public:
         /** @brief Display/Window 없이 시작합니다. */
@@ -54,7 +54,7 @@ namespace sw
          * @brief @p pWindow 가 X11 창이면 `X11Window*`, 아니면(nullptr · Wayland · Win32) nullptr 입니다.
          * @details 엔진은 RTTI 를 끄므로 종류(`getSurfaceKind`) 확인과 캐스트를 이 함수 한 곳에 둔다 — 다른 창 시스템의 창을 `X11Window*` 로 읽는 `static_cast` 를 바깥에 두지 않는다.
          */
-        static X11Window* tryCast( IWindow* pWindow ) { return pWindow != nullptr && pWindow->getSurfaceKind() == NativeSurfaceKind::X11 ? static_cast<X11Window*>( pWindow ) : nullptr; }
+        static X11Window* tryCast( GenericWindow* pWindow ) { return pWindow != nullptr && pWindow->getSurfaceKind() == NativeSurfaceKind::X11 ? static_cast<X11Window*>( pWindow ) : nullptr; }
 
         /** @brief X11 창을 만듭니다. 화면에 띄우는 것은 showWindow() 입니다. */
         [[nodiscard]] bool initializeWindow( const utf8* pTitle, uint32 width, uint32 height ) override;
@@ -68,7 +68,7 @@ namespace sw
         NativeSurfaceKind getSurfaceKind() const override { return NativeSurfaceKind::X11; }
 
         /** @brief X11 창을 화면에 띄우거나 숨깁니다. */
-        /** @brief 창이 보이면 입력 초점을 요청합니다(`IWindow::requestInputFocus` · 창이 뜰 때). 보이지 않으면 청하지 않고 false 입니다(BadMatch 로 프로세스가 끝난다). */
+        /** @brief 창이 보이면 입력 초점을 요청합니다(`GenericWindow::requestInputFocus` · 창이 뜰 때). 보이지 않으면 청하지 않고 false 입니다(BadMatch 로 프로세스가 끝난다). */
         [[nodiscard]] bool requestInputFocus() override;
         void               applyWindowVisibility( bool bShow ) override;
         /** @brief X11 창이 지금 화면에 보이는지(창 관리자가 매핑했는지) 반환합니다. */
@@ -133,7 +133,7 @@ namespace sw
 #endif
 
     protected:
-        // 핸들 읽기는 기반의 보호 구역이다 — 바깥은 `IWindow::tryGetX11Surface` 로만 읽는다(여기서 다시 public 으로 열지 않는다).
+        // 핸들 읽기는 기반의 보호 구역이다 — 바깥은 `GenericWindow::tryGetX11Surface` 로만 읽는다(여기서 다시 public 으로 열지 않는다).
 #if defined( SW_PLATFORM_LINUX )
         /** @brief X11 창 핸들을 반환합니다. */
         void* getNativeHandle() const override { return reinterpret_cast<void*>( _x11Window ); }

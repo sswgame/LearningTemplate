@@ -19,11 +19,11 @@ using namespace sw;
 namespace
 {
     /** @brief 부모 글을 한 벌 돌려주는 곳입니다(`DataInheritance::flatten` 의 입력). */
-    class AudioParentSource final : public IDataInheritanceSource
+    class AudioParentSource final : public DataInheritanceSource
     {
     public:
         explicit AudioParentSource( string_view text )
-            : IDataInheritanceSource{ 8u } // 설정(`EngineConfig.json`)과 같은 깊이 상한
+            : DataInheritanceSource{ 8u } // 설정(`EngineConfig.json`)과 같은 깊이 상한
             , _text{ text }
         {
         }

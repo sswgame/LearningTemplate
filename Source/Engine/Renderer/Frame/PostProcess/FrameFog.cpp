@@ -13,8 +13,8 @@
 #include "Core/Log/LogOnce.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/ServiceSlot.h"
+#include "Core/Subsystem/Subsystem.h"
 
 #include "Engine/Environment/Fog/FogSettings.h"
 #include "Engine/Foundation/EngineServices.h"
@@ -77,7 +77,7 @@ namespace sw
      * @class FrameFogVolumeStatus
      * @brief 주 렌더러의 마지막 볼륨 안개 상태(렌더 스레드가 쓰고 게임 스레드가 읽는다) — 예전 함수 정적(감춘 싱글턴)을 엔진 범위 서브시스템이 든다. 엔진을 다시 세우면 새로 선다.
      */
-    class FrameFogVolumeStatus final : public ISubsystem
+    class FrameFogVolumeStatus final : public Subsystem
     {
     public:
         static constexpr const utf8* kSubsystemName = "FrameFogVolumeStatus";

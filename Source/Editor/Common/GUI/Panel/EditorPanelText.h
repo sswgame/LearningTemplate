@@ -1,7 +1,7 @@
 /**
  * @file EditorPanelText.h
  * @brief 패널 · 팝업 창의 보이는 이름 표(`editor/panels/editor.panels.xml`)와 ImGui 창 이름입니다.
- * @details 패널의 제목(`IEditorPanel::getPanelTitle`)은 창 ID 이고 도킹 배치 · 포커스 · 테스트가 그 이름으로 창을 찾는다 — 언어와 무관하게 고정한다.
+ * @details 패널의 제목(`EditorPanel::getPanelTitle`)은 창 ID 이고 도킹 배치 · 포커스 · 테스트가 그 이름으로 창을 찾는다 — 언어와 무관하게 고정한다.
  *          보이는 이름은 이 표의 영어 원문을 지금 언어로 푼 것이고, ImGui 창 이름은 "보이는 이름###제목" 이다(언리얼 탭의 표시 이름 · 탭 ID 와 같은 나눔).
  *          창을 이름으로 찾는 곳(`FindWindowByName` · `SetWindowFocus` · `DockBuilderDockWindow`)은 `makeWindowID` 를 넘긴다 — ImGui 는 "###" 뒤만 해시한다.
  */

@@ -39,7 +39,7 @@ namespace sw::editor
     } // namespace
 
     RenderTargetPanel::RenderTargetPanel()
-        : IEditorPanel( false )
+        : EditorPanel( false )
         , _viewModel{}
         , _viewState{}
         , _probe{}

@@ -1,5 +1,5 @@
 /**
- * @file IEditorPanel.h
+ * @file EditorPanel.h
  * @brief 도킹할 수 있는 에디터 패널의 인터페이스입니다. 셸 크롬은 draw() 가, 내용은 drawContent() 가 그립니다.
  */
 #pragma once
@@ -23,7 +23,7 @@ namespace sw
 namespace sw::editor
 {
     /**
-     * @brief ViewModel 이 "건너뛰기 세대"(`uint64 getGatherGeneration() const`)를 내는지입니다 — 내는 ViewModel 은 세대가 같은 프레임에 `gather` 를 건너뛴다(`IEditorPanel::gatherViewState`).
+     * @brief ViewModel 이 "건너뛰기 세대"(`uint64 getGatherGeneration() const`)를 내는지입니다 — 내는 ViewModel 은 세대가 같은 프레임에 `gather` 를 건너뛴다(`EditorPanel::gatherViewState`).
      * @details 즉시 모드는 바뀜 알림이 없어 매 프레임 값을 다시 모은다. 유니티 `SerializedObject.UpdateIfRequiredOrScript` · 언리얼 디테일 뷰의 구조 바뀜 재구성처럼, 모델이 세대를 내면
      *          같은 세대에서 지난 프레임의 ViewState 를 그대로 그린다. 세대는 모델(스냅숏 · 스택)이 정하고, 스크롤 · 클립처럼 View 가 매 프레임 넘기는 입력이 있는 `gather` 는 내지 않는다.
      */
@@ -36,7 +36,7 @@ namespace sw::editor
     {
     };
 
-    class IEditorDocumentPanel;
+    class EditorDocumentPanelBase;
 
     /**
      * @brief 기본 도킹 배치(`EditorDockLayout::applyDefaultDockLayout`)에서 패널이 붙는 영역입니다. 패널이 스스로 밝힙니다.
@@ -55,22 +55,22 @@ namespace sw::editor
     };
 
     /**
-     * @class IEditorPanel
+     * @class EditorPanel
      * @brief 도킹 가능한 ImGui 패널입니다. 파생 클래스는 drawContent() 만 구현합니다.
      */
-    class SW_EDITOR_API IEditorPanel
+    class SW_EDITOR_API EditorPanel
     {
     public:
         // ------------------------------------------------------------------------------
         // 1) 수명 주기. GPU 리소스를 쓰는 파생 클래스는 shutdown 을 재정의한다
         // ------------------------------------------------------------------------------
         /** @brief 파생 패널이 리소스를 해제할 수 있도록 소멸을 가상으로 둡니다. */
-        virtual ~IEditorPanel()                        = default;
-        IEditorPanel( const IEditorPanel& )            = delete;
-        IEditorPanel& operator=( const IEditorPanel& ) = delete;
+        virtual ~EditorPanel()                       = default;
+        EditorPanel( const EditorPanel& )            = delete;
+        EditorPanel& operator=( const EditorPanel& ) = delete;
 
         // ------------------------------------------------------------------------------
-        // 2) IEditorPanel: 제목, 크롬, 내용
+        // 2) EditorPanel: 제목, 크롬, 내용
         //    shutdown 은 GPU 리소스가 있는 패널만 재정의한다(렌더 전 패널 훅은 두지 않는다 — 재정의가 없는데 매 프레임 가상 호출로 돌았다)
         //    처음 열림은 생성자 인자 하나가 정한다(필요할 때 여는 도구는 false)
         // ------------------------------------------------------------------------------
@@ -99,11 +99,11 @@ namespace sw::editor
         bool hasDrawnContent() const { return _bContentDrawn; }
 
         // ------------------------------------------------------------------------------
-        // 3) 문서. 문서를 가진 패널만 `IEditorDocumentPanel` 을 상속한다 — 미저장 비트 · 저장 · 되돌리기 · 닫기 확인이 거기에만 있다
+        // 3) 문서. 문서를 가진 패널만 `EditorDocumentPanelBase` 을 상속한다 — 미저장 비트 · 저장 · 되돌리기 · 닫기 확인이 거기에만 있다
         // ------------------------------------------------------------------------------
-        /** @brief 문서 패널이면 그 문서 쪽(`IEditorDocumentPanel`), 아니면 nullptr 입니다. 패널 관리자가 저장 · 종료 확인에 이것만 쓴다. */
-        virtual IEditorDocumentPanel*       asDocumentPanel() { return nullptr; }
-        virtual const IEditorDocumentPanel* asDocumentPanel() const { return nullptr; }
+        /** @brief 문서 패널이면 그 문서 쪽(`EditorDocumentPanelBase`), 아니면 nullptr 입니다. 패널 관리자가 저장 · 종료 확인에 이것만 쓴다. */
+        virtual EditorDocumentPanelBase*       asDocumentPanel() { return nullptr; }
+        virtual const EditorDocumentPanelBase* asDocumentPanel() const { return nullptr; }
         /** @brief 저장되지 않은 편집이 있으면 true 입니다(문서 없는 패널은 늘 false). */
         bool hasUnsavedDocument() const;
         /**
@@ -194,7 +194,7 @@ namespace sw::editor
         }
 
         /** @brief 기본 열림 상태로 에디터 패널을 만듭니다. */
-        explicit IEditorPanel( bool bOpenByDefault = true )
+        explicit EditorPanel( bool bOpenByDefault = true )
             : _bOpen{ bOpenByDefault }
             , _bWindowFocused{ SW_FALSE }
             , _bContentDrawn{ SW_FALSE }

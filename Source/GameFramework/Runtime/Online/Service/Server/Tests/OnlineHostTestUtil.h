@@ -79,7 +79,7 @@ namespace sw::test
     };
 
     /** @brief 클라이언트 쪽 테스트 로그인(영역만 맞추면 되는 빈 서비스). */
-    class TestLoginClientService final : public IOnlineClientService
+    class TestLoginClientService final : public OnlineClientService
     {
     public:
         const OnlineProtocolEntry& getProtocol() const override { return getTestLoginProtocol(); }
@@ -190,11 +190,11 @@ namespace sw::test
         OnlineTestClients& operator=( const OnlineTestClients& ) = delete;
 
         /** @brief 연결을 열고 @p listService 를 등록합니다(테스트 로그인 서비스는 언제나 함께). 연결 번호입니다 — 열리면 Hello 를 한다. */
-        int32 connect( uint16 port, std::initializer_list<IOnlineClientService*> listService )
+        int32 connect( uint16 port, std::initializer_list<OnlineClientService*> listService )
         {
             unique_ptr<OnlineServiceClient>& client = _listClient.emplace_back( make_unique<OnlineServiceClient>() );
             SW_EXPECT_TRUE( client->registerClientService( &_loginClientService ) );
-            for ( IOnlineClientService* pService : listService )
+            for ( OnlineClientService* pService : listService )
             {
                 SW_EXPECT_TRUE( client->registerClientService( pService ) );
             }
@@ -334,7 +334,7 @@ namespace sw::test
 
     /** @brief 키트 @p TProtocol 의 빈 클라이언트 서비스입니다(Hello 의 스키마 해시를 서버와 맞춘다). */
     template <typename TProtocol>
-    class TestProtocolClientService final : public IOnlineClientService
+    class TestProtocolClientService final : public OnlineClientService
     {
     public:
         const OnlineProtocolEntry& getProtocol() const override { return TProtocol::kOnlineEntry; }

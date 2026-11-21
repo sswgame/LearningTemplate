@@ -111,11 +111,11 @@ namespace
     using Util = VFXEffectDefTestUtil;
 
     /** @brief 부모 효과 글을 한 벌 돌려주는 곳입니다(`DataInheritance::flatten` 의 입력). */
-    class VFXParentSource final : public IDataInheritanceSource
+    class VFXParentSource final : public DataInheritanceSource
     {
     public:
         explicit VFXParentSource( string_view text )
-            : IDataInheritanceSource{ 8u } // 설정(`EngineConfig.json`)과 같은 깊이 상한
+            : DataInheritanceSource{ 8u } // 설정(`EngineConfig.json`)과 같은 깊이 상한
             , _text{ text }
         {
         }

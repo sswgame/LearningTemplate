@@ -5,7 +5,7 @@
 #pragma once
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/Subsystem.h"
 
 #include "DevTools/DevToolsAPI.h"
 #include "DevTools/Profiling/FrameStall.h"
@@ -29,7 +29,7 @@ namespace sw
      *          - 프레임 훅(`EngineFrameHooks`): 씬 틱 뒤에 HUD 를 돌리고, 프레임 끝에 셰이더 재컴파일을 돌리고(Debug) 강제 리로드 단축키를 읽고, 설정 파일 변화를 반영한다.
      *          언리얼의 개발 모듈(HotReload · DirectoryWatcher · ShaderCompiler 의 재컴파일)이 엔진 바깥에서 엔진 확장점에 붙는 모양과 같다. 게임 스레드에서만 쓴다.
      */
-    class SW_DEVTOOLS_API DevToolsHost final : public ISubsystem
+    class SW_DEVTOOLS_API DevToolsHost final : public Subsystem
     {
     public:
         /** @brief 서브시스템 이름입니다. */

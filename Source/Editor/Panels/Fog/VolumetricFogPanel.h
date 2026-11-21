@@ -8,7 +8,7 @@
 #pragma once
 #include "Core/Foundation/Types.h"
 
-#include "Editor/Common/GUI/Panel/IEditorPanel.h"
+#include "Editor/Common/GUI/Panel/EditorPanel.h"
 #include "Editor/Panels/Fog/Model/VolumetricFogViewModel.h"
 
 namespace sw::editor
@@ -17,7 +17,7 @@ namespace sw::editor
      * @class VolumetricFogPanel
      * @brief 볼륨 안개 진단 창입니다. 파일 머리말 참고.
      */
-    class VolumetricFogPanel : public IEditorPanel
+    class VolumetricFogPanel : public EditorPanel
     {
     public:
         /** @brief 패널 id 입니다. 등록(`SW_EDITOR_PANEL`)과 조회가 모두 이 상수에서 온다. */

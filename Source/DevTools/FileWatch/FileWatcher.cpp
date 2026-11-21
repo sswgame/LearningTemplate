@@ -1,18 +1,18 @@
 /**
- * @file IFileWatcher.cpp
+ * @file FileWatcher.cpp
  * @brief 플랫폼 워처(Windows · Linux)가 공유하는 큐입니다. 넣기(pushChange)와 꺼내기(pollEvents)를 맡습니다.
  * @details 플랫폼 파일에는 그 OS 만 아는 것(디렉터리 핸들 · inotify)만 남기고, "무엇을 큐에 넣고 넘침을 어떻게 알리는가" 는
  *          여기 한 곳에 모읍니다. 플랫폼 코드가 적을수록 썩을 곳이 줄어듭니다.
  */
 #include "pch.h"
 
-#include "DevTools/FileWatch/IFileWatcher.h"
+#include "DevTools/FileWatch/FileWatcher.h"
 
 #include "Core/Log/Logger.h"
 
 namespace sw
 {
-    void IFileWatcher::pushChange( FileWatcherAction action, string_view directory, string_view filename )
+    void FileWatcher::pushChange( FileWatcherAction action, string_view directory, string_view filename )
     {
         ScopedLock<mutex> lock{ _eventMutex };
 
@@ -43,14 +43,14 @@ namespace sw
         _listEventQueue.push_back( std::move( changeEvent ) );
     }
 
-    void IFileWatcher::reportWatchLost( string_view reason )
+    void FileWatcher::reportWatchLost( string_view reason )
     {
         SW_LOG_ERROR_ID( "FileWatch.WatchLost", "File watching of %# stopped: %#", _directoryPath, reason );
         ScopedLock<mutex> lock{ _eventMutex };
         _bWatchLost = true;
     }
 
-    FileWatchPollResult IFileWatcher::pollEvents( vector<FileChangeEvent>& outListEvent )
+    FileWatchPollResult FileWatcher::pollEvents( vector<FileChangeEvent>& outListEvent )
     {
         ScopedLock<mutex> lock{ _eventMutex };
 

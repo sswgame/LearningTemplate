@@ -7,7 +7,7 @@
 #include "pch.h"
 
 #include "Core/GlobalVariable/GlobalVariableManager.h"
-#include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/Subsystem.h"
 
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Foundation/EngineSubsystemHost.h"
@@ -24,7 +24,7 @@ namespace sw
      * @class DeviceLostPolicySwitch
      * @brief 기동 때 `gv_deviceLostPolicy` 가 정책이면 렌더 드라이버에 덮습니다. 덮은 값은 설정 읽기(`EngineRenderDriver::onStartupFinished`)보다 이긴다.
      */
-    class DeviceLostPolicySwitch final : public ISubsystem
+    class DeviceLostPolicySwitch final : public Subsystem
     {
     public:
         static constexpr const utf8* kSubsystemName = "DeviceLostPolicySwitch";

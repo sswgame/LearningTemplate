@@ -12,7 +12,7 @@
 #include "Engine/UI/Screen/UIGlobalCommandRegistry.h"
 #include "Engine/UI/UISystem.h"
 #include "Engine/UI/WidgetTree/Widget.h"
-#include "Engine/Window/IWindow.h"
+#include "Engine/Window/GenericWindow.h"
 #include "Engine/Window/PlatformClipboard.h"
 
 namespace sw
@@ -22,7 +22,7 @@ namespace sw
     {
     }
 
-    void UIPlatformBinding::install( IWindow* pWindow, bool bEditor )
+    void UIPlatformBinding::install( GenericWindow* pWindow, bool bEditor )
     {
         UISystem* pUI = engine::findSubsystem<UISystem>();
         if ( pUI == nullptr )

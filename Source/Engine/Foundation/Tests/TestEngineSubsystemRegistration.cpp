@@ -6,8 +6,8 @@
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/String/StringUtil.h"
-#include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/ServiceSlot.h"
+#include "Core/Subsystem/Subsystem.h"
 #include "Core/Subsystem/SubsystemScope.h"
 #include "Core/Testing/TestFramework.h"
 
@@ -47,7 +47,7 @@ namespace sw::engine_registration_test
 
     /** @brief 만드는 순서를 보는 서브시스템입니다(인자 없이 만든다). 이름은 형식의 상수이고, @p TDependencyID 가 0 이상이면 그 번호의 서브시스템에 수명으로 기댄다. */
     template <int32 TID, int32 TDependencyID = -1>
-    class OrderedSubsystem final : public ISubsystem
+    class OrderedSubsystem final : public Subsystem
     {
     public:
         static constexpr MemoryTag   kSubsystemMemoryTag = MemoryTag::EngineMisc;
@@ -77,7 +77,7 @@ namespace sw::engine_registration_test
     using Foxtrot = OrderedSubsystem<5>;    // 아무것에도 기대지 않는다
 
     /** @brief 칸을 가진 서브시스템입니다 — 칸 길(`engine::getSubsystem`) 조회가 초기화 의존 검사를 지나는지 본다. */
-    class SlotProbeSubsystem final : public ISubsystem
+    class SlotProbeSubsystem final : public Subsystem
     {
     public:
         static constexpr MemoryTag kSubsystemMemoryTag = MemoryTag::EngineMisc;
@@ -94,7 +94,7 @@ namespace sw::engine_registration_test
      * @tparam TTag 한 범위에 둘을 걸 때 타입을 가른다 — 범위는 타입마다 하나만 등록한다.
      */
     template <int32 TTag>
-    class SlotLookupSubsystem final : public ISubsystem
+    class SlotLookupSubsystem final : public Subsystem
     {
     public:
         static constexpr MemoryTag kSubsystemMemoryTag = MemoryTag::EngineMisc;

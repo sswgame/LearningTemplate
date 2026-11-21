@@ -8,8 +8,8 @@
 #include "Core/Delegate/Delegate.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Name/hashed_string.h"
-#include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/ServiceSlot.h"
+#include "Core/Subsystem/Subsystem.h"
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Foundation/EngineSubsystemHost.h"
@@ -69,13 +69,13 @@ namespace sw
      *          Godot `ThemeDB` 처럼 화면과 따로 선다). 테마가 바뀌면 `onThemeChanged` 로 알리고, 화면을 도는 일(모든 화면에 다시 적용)은 화면 목록을 가진 쪽이 한다.
      *          기동이 테마 목록(`engine/ui/uithemes.xml`, 팩 설정 `_uiThemes` 가 덮어씀)을 읽는다 — 못 읽으면 데이터 오류라 기동 실패다.
      */
-    class SW_API UIThemeController final : public ISubsystem
+    class SW_API UIThemeController final : public Subsystem
     {
     public:
         UIThemeController();
         ~UIThemeController() override;
 
-        // ISubsystem — 기동이 테마 목록을 읽어 설정의 테마를 고른다.
+        // Subsystem — 기동이 테마 목록을 읽어 설정의 테마를 고른다.
         /** @brief 서브시스템 이름입니다. */
         static constexpr const utf8* kSubsystemName = "UIThemes";
         SubsystemInitResult          initializeSubsystem() override;

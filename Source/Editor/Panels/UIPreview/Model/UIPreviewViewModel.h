@@ -75,7 +75,7 @@ namespace sw::editor
     /**
      * @class UIPreviewViewModel
      * @brief UI 미리보기의 상태와 명령입니다. 문서를 오프스크린 화면(`UIOffscreenScreens::open`)으로 짓고, 보기 설정을 걸고, 고친 값을 되돌리기 항목으로 남기고, 문서로 씁니다.
-     * @details 문서 dirty 는 패널(`IEditorPanel`)이 가진 하나다 — 모델은 바뀔 때마다 `setDirtyListener` 로 받은 함수로 알린다(값을 따로 두지 않는다).
+     * @details 문서 dirty 는 패널(`EditorPanel`)이 가진 하나다 — 모델은 바뀔 때마다 `setDirtyListener` 로 받은 함수로 알린다(값을 따로 두지 않는다).
      *          되돌리기 항목은 모델을 가리키는 길(`EditSession`)을 쥐고, 모델이 사라지면 그 길이 끊겨 옛 항목은 아무것도 하지 않는다.
      *          트리가 새로 지어질 때마다 세대(`_generation`)가 올라 옛 항목이 새 트리에 값을 쓰지 않는다. 판단(뷰포트 · 끼우기 · 슬롯 끌기 …)은 `UIPreviewLogic` 이다.
      */

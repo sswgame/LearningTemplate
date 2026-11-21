@@ -12,7 +12,7 @@
 #include "Core/Diagnostics/MemoryProfiler.h"
 #include "Core/Foundation/Constants.h"
 
-#include "Editor/Common/GUI/Panel/IEditorPanel.h"
+#include "Editor/Common/GUI/Panel/EditorPanel.h"
 #include "Editor/Panels/Profiler/Model/ProfilerCaptureViewModel.h"
 #include "Editor/Panels/Profiler/Model/ProfilerPerformanceViewModel.h"
 #include "Editor/Panels/Profiler/Model/ProfilerTimelineViewModel.h"
@@ -28,7 +28,7 @@ namespace sw::editor
     class EditorPanelManager;
 
     /** @brief 메모리와 성능 프로파일러 탭을 보여 주는 에디터 도구 창입니다. */
-    class ProfilerPanel : public IEditorPanel
+    class ProfilerPanel : public EditorPanel
     {
     public:
         /** @brief 패널 id 입니다. 등록(`SW_EDITOR_PANEL`)과 조회(`EditorPanelManager::findPanel<…>` · `setPanelOpen<…>`)가 모두 이 상수에서 온다. */
@@ -40,7 +40,7 @@ namespace sw::editor
         virtual ~ProfilerPanel() override = default;
 
         // ------------------------------------------------------------------------------
-        // 1) IEditorPanel: 제목과 그리기
+        // 1) EditorPanel: 제목과 그리기
         // ------------------------------------------------------------------------------
         /** @brief 창 제목을 반환합니다. */
         const utf8*    getPanelTitle() const override { return "Profiler"; }

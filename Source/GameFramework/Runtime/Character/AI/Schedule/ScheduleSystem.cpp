@@ -8,7 +8,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
-#include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/Subsystem.h"
 
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Module/ModuleSubsystemRegistrar.h"
@@ -116,7 +116,7 @@ namespace sw
      *          일정 시스템은 게임 컴포넌트의 값 멤버이거나 테스트의 지역 객체라 서비스 범위 없이도 선다. 그래서 생성자가 찾은 목록에 오르고 그 목록을 들어 소멸자가 빠진다
      *          (목록이 없으면 — 게임 서비스 없는 테스트 — 오르지 않는다). 예전에는 소유자 없는 엔진 수명 값(`ScopeOwned`)이 들었다. 언리얼 `UWorldSubsystem` 의 등록 목록 자리.
      */
-    class ScheduleSystemRegistry final : public ISubsystem
+    class ScheduleSystemRegistry final : public Subsystem
     {
     public:
         static constexpr const utf8* kSubsystemName = "ScheduleSystemRegistry";
@@ -124,7 +124,7 @@ namespace sw
         mutex                                     _mutex;
         vector<const ScheduleSystem*> _listSystem SW_GUARDED_BY( _mutex );
 
-        // ISubsystem — 세울 것이 없다. 일정 시스템(컴포넌트)은 GameFramework 가 내려가기 전에 사라진다.
+        // Subsystem — 세울 것이 없다. 일정 시스템(컴포넌트)은 GameFramework 가 내려가기 전에 사라진다.
         SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
         void                shutdownSubsystem() override {}
         const utf8*         getSubsystemName() const override { return kSubsystemName; }

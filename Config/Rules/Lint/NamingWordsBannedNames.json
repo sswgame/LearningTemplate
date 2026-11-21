@@ -37,7 +37,7 @@
     "findServiceSky": "SceneEnvironment::findSky(2026-11-21)",
     "findServiceFog": "SceneEnvironment::findFog(2026-11-21)",
     "findServiceSurfaceDeform": "SceneEnvironment::findSurfaceDeform(2026-11-21)",
-    "HostServiceID": "호스트 서비스 감싸개 폐지 — App · Server 가 서비스마다 자기 ISubsystem(App::GameHostService 등)을 HostLaunch::addHostService 로 더한다(2026-11-21)",
+    "HostServiceID": "호스트 서비스 감싸개 폐지 — App · Server 가 서비스마다 자기 Subsystem(App::GameHostService 등)을 HostLaunch::addHostService 로 더한다(2026-11-21)",
     "HostServiceSet": "HostLaunch::addHostService — 엔진이 호스트의 서비스 목록을 열거형 · 이름 · 분기 넷으로 알던 헤더를 지웠다(2026-11-21)",
     "HostServiceName": "각 서비스 형식의 kSubsystemName(2026-11-21)",
     "HostServiceStartDelegate": "서비스 형식의 initializeSubsystem(2026-11-21)",
@@ -1961,6 +1961,23 @@
     "ScheduleNPCDef": "NPCScheduleDef — 영어 어순(NPCScheduleComponent)(2026-11-21)",
     "ScheduleNPCView": "NPCScheduleView — 영어 어순(2026-11-21)",
     "ScheduleNPCSaveState": "NPCScheduleSaveState — 영어 어순(2026-11-21)",
-    "PhysicsCarInput": "WheeledVehicleDriveInput — 주인을 따름(2026-11-21)"
+    "PhysicsCarInput": "WheeledVehicleDriveInput — 주인을 따름(2026-11-21)",
+    "IEvent": "EventBase — 상태가 있는 베이스 — I 는 상태 없는 계약에만(4.2)(2026-11-21)",
+    "ISubsystem": "Subsystem — 상태가 있는 베이스 — I 는 상태 없는 계약에만(4.2)(2026-11-21)",
+    "IWindow": "GenericWindow — 상태가 있는 베이스 — I 는 상태 없는 계약에만(4.2)(2026-11-21)",
+    "ISplashWindow": "SplashWindowBase — 상태가 있는 베이스 — I 는 상태 없는 계약에만(4.2)(2026-11-21)",
+    "IEditorPanel": "EditorPanel — 상태가 있는 베이스 — I 는 상태 없는 계약에만(4.2)(2026-11-21)",
+    "IEditorDocumentPanel": "EditorDocumentPanelBase — 상태가 있는 베이스 — I 는 상태 없는 계약에만(4.2)(2026-11-21)",
+    "IEditorPopup": "EditorPopup — 상태가 있는 베이스 — I 는 상태 없는 계약에만(4.2)(2026-11-21)",
+    "IAudioEffect": "AudioEffect — 상태가 있는 베이스 — I 는 상태 없는 계약에만(4.2)(2026-11-21)",
+    "IFileWatcher": "FileWatcher — 상태가 있는 베이스 — I 는 상태 없는 계약에만(4.2)(2026-11-21)",
+    "IAllocationTracker": "AllocationTracker — 상태가 있는 베이스 — I 는 상태 없는 계약에만(4.2)(2026-11-21)",
+    "IDataInheritanceSource": "DataInheritanceSource — 상태가 있는 베이스 — I 는 상태 없는 계약에만(4.2)(2026-11-21)",
+    "IServiceStore": "ServiceStore — 상태가 있는 베이스 — I 는 상태 없는 계약에만(4.2)(2026-11-21)",
+    "IServiceStoreJob": "ServiceStoreJob — 상태가 있는 베이스 — I 는 상태 없는 계약에만(4.2)(2026-11-21)",
+    "IAccountPresence": "AccountPresence — 상태가 있는 베이스 — I 는 상태 없는 계약에만(4.2)(2026-11-21)",
+    "IOnlineClientService": "OnlineClientService — 상태가 있는 베이스 — I 는 상태 없는 계약에만(4.2)(2026-11-21)",
+    "AutomationStepContext": "IAutomationStepContext — 순수 가상만, 상태 없는 계약 — I 접두(4.1)(2026-11-21)",
+    "ZoneModuleProcessor": "IZoneModuleProcessor — 순수 가상 + 인라인 도우미, 상태 없는 처리기 계약 — I 접두(4.1)(2026-11-21)"
   }
 }

@@ -85,8 +85,8 @@ namespace sw
          * @brief 이번 프레임의 UI 뷰포트를 만듭니다.
          * @param physicalSize 그릴 화면의 픽셀 크기입니다.
          * @param userScale 사용자 UI 배율입니다(gv_uiScale).
-         * @param contentScale 창의 OS 배율입니다(`IWindow::getContentScale`). 설정이 켜져 있을 때만 곱합니다.
-         * @param platformSafeInsets 플랫폼이 알린 안전 여백(왼쪽, 위, 오른쪽, 아래, 물리 픽셀 — 노치 · 시스템 바, `IWindow::getSafeAreaInsets`)입니다.
+         * @param contentScale 창의 OS 배율입니다(`GenericWindow::getContentScale`). 설정이 켜져 있을 때만 곱합니다.
+         * @param platformSafeInsets 플랫폼이 알린 안전 여백(왼쪽, 위, 오른쪽, 아래, 물리 픽셀 — 노치 · 시스템 바, `GenericWindow::getSafeAreaInsets`)입니다.
          * @param safeZoneRatio 각 변을 물리 크기의 이 비율만큼 안쪽으로 미는 안전 영역 설정입니다(gv_uiSafeZone). 변마다 둘 중 큰 것이 이긴다(언리얼 `r.DebugSafeZone` 과 같은 겹침, 기억).
          */
         static UIViewport makeViewport( const UIScaleSettings& settings, const float2& physicalSize, float32 userScale, float32 contentScale, const float4& platformSafeInsets,

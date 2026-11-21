@@ -1,5 +1,5 @@
 /**
- * @file AutomationStepContext.h
+ * @file IAutomationStepContext.h
  * @brief 시나리오 단계 함수가 실행기에서 쓰는 것만 담은 좁은 문맥 인터페이스를 정의합니다.
  * @details 단계를 등록하는 쪽(UI · GameFramework · Editor · App)은 이 헤더만 봅니다. 로그 게이트 · 보고 · 종료 코드(`AutomationRunner.h`)를 끌어오지 않는다.
  *          단계가 시나리오를 끝낼 때도 종료 코드(`AutomationResult`)가 아니라 단계 쪽 말(`AutomationStepEnd` · 대기 포기의 실패 종류 `AutomationFailureKind`)로 말한다 — 어떤 코드로 번역할지는 실행기가 정한다.
@@ -45,13 +45,13 @@ namespace sw
     };
 
     /**
-     * @class AutomationStepContext
+     * @class IAutomationStepContext
      * @brief 단계 함수(`AutomationStepFunction` · `AutomationStepPrepareFunction` · `AutomationStepHoldFunction`)가 받는 문맥입니다. 게임 스레드에서만 씁니다.
      */
-    class SW_API AutomationStepContext
+    class SW_API IAutomationStepContext
     {
     public:
-        virtual ~AutomationStepContext() = default;
+        virtual ~IAutomationStepContext() = default;
 
         /** @brief 단언 실패를 적습니다(시나리오는 계속 진행하고 끝에서 실패가 됩니다). */
         virtual void recordFailure( const AutomationStep& step, string_view message ) = 0;

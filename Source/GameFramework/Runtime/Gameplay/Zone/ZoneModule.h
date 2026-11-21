@@ -31,7 +31,7 @@ namespace sw
     class AbilityCatalog;
     class GameObject;
     class GameObjectManager;
-    class ZoneModuleProcessor;
+    class IZoneModuleProcessor;
 
     /** @brief 대상 하나의 위치 값입니다(처리기 · 식이 읽는다). 볼륨 모양으로 정규화돼 같은 프리셋이 어떤 모양에도 맞습니다. */
     struct ZoneSample
@@ -96,13 +96,13 @@ namespace sw
     class SW_GF_API ZoneCompiledModule
     {
     public:
-        hashed_string              _name{};
-        hashed_string              _kind{};
-        const ZoneModuleProcessor* _pProcessor{ nullptr };
-        ConditionExpr              _condition{};
-        ZoneTargetRole             _target{ ZoneTargetRole::Occupant };
-        vector<ZoneCompiledParam>  _listParam{};
-        vector<ZoneCompiledCase>   _listCase{};
+        hashed_string               _name{};
+        hashed_string               _kind{};
+        const IZoneModuleProcessor* _pProcessor{ nullptr };
+        ConditionExpr               _condition{};
+        ZoneTargetRole              _target{ ZoneTargetRole::Occupant };
+        vector<ZoneCompiledParam>   _listParam{};
+        vector<ZoneCompiledCase>    _listCase{};
 
         /** @brief 이름의 매개변수입니다(처리기 표에 있는 이름이면 늘 있다 — 기본값으로 채웠다). */
         const ZoneCompiledParam* findParam( const hashed_string& name ) const;
@@ -173,13 +173,13 @@ namespace sw
     };
 
     /**
-     * @class ZoneModuleProcessor
+     * @class IZoneModuleProcessor
      * @brief 모듈 종류 하나의 처리기입니다. 정적 객체 하나가 `SW_ZONE_MODULE` 로 오르고, 상태는 갖지 않습니다(대상마다의 기억은 `ZoneModuleMemory`).
      */
-    class SW_GF_API ZoneModuleProcessor
+    class SW_GF_API IZoneModuleProcessor
     {
     public:
-        virtual ~ZoneModuleProcessor() = default;
+        virtual ~IZoneModuleProcessor() = default;
 
         /** @brief 데이터가 적는 종류 이름입니다(`_kind`). */
         virtual const utf8* getKindName() const = 0;
@@ -227,10 +227,10 @@ namespace sw
      */
     struct SW_GF_API ZoneModuleRegistry
     {
-        static void registerProcessor( const ZoneModuleProcessor* pProcessor );
-        static void unregisterProcessor( const ZoneModuleProcessor* pProcessor );
+        static void registerProcessor( const IZoneModuleProcessor* pProcessor );
+        static void unregisterProcessor( const IZoneModuleProcessor* pProcessor );
         /** @brief 종류 이름의 처리기입니다. 없으면 nullptr 입니다. */
-        static const ZoneModuleProcessor* find( string_view kindName );
+        static const IZoneModuleProcessor* find( string_view kindName );
         /** @brief 등록된 종류 이름을 ", " 로 이은 글입니다(모르는 종류 오류 · 편집기). */
         static string joinNames();
     };
@@ -239,18 +239,18 @@ namespace sw
     class SW_GF_API ZoneModuleRegistrar
     {
     public:
-        explicit ZoneModuleRegistrar( const ZoneModuleProcessor* pProcessor );
+        explicit ZoneModuleRegistrar( const IZoneModuleProcessor* pProcessor );
         ~ZoneModuleRegistrar();
         ZoneModuleRegistrar( const ZoneModuleRegistrar& )            = delete;
         ZoneModuleRegistrar& operator=( const ZoneModuleRegistrar& ) = delete;
 
     private:
-        const ZoneModuleProcessor* _pProcessor;
+        const IZoneModuleProcessor* _pProcessor;
     };
 } // namespace sw
 
 /**
- * @brief 처리기 @p TProcessor(기본 생성자 · `ZoneModuleProcessor` 파생)를 그 .cpp 에서 등록합니다(`namespace sw` 안, 파일 범위).
+ * @brief 처리기 @p TProcessor(기본 생성자 · `IZoneModuleProcessor` 파생)를 그 .cpp 에서 등록합니다(`namespace sw` 안, 파일 범위).
  * @param varName 파일 안에서 유일한 이름 조각
  */
 #define SW_ZONE_MODULE( varName, TProcessor )                               \

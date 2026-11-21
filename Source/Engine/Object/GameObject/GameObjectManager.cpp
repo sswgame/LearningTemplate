@@ -292,7 +292,7 @@ namespace sw
         _pState->_listSceneService.reserve( listCreated.size() );
         for ( const uint32 index : collection.getInitializeOrder() )
         {
-            const ISubsystem& subsystem = collection.getSubsystem( index );
+            const Subsystem& subsystem = collection.getSubsystem( index );
             for ( const SceneServiceEntry& entry : listCreated )
             {
                 if ( entry._pService == &subsystem )

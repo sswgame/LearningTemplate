@@ -39,7 +39,7 @@
 
 namespace sw
 {
-    class IFileWatcher;
+    class FileWatcher;
     /**
      * @brief 모듈을 섀도 경로에 복사해 로드하는 핫 리로드 매니저입니다.
      * @note 연쇄 교체는 의존 순서(위상 정렬)대로 합니다. 모든 모듈의 prepare 가 성공한 뒤에만 commit 합니다. 언로드는 위상 역순
@@ -326,7 +326,7 @@ namespace sw
         unordered_map<string, unique_ptr<ModuleRecord>>  _mapModule;        ///< 이름 집합은 `_dependencyGraph` 와 같다(`getOrCreateRecord` · `clearRecords`). 값을 `unique_ptr` 로 들어 맵이 자라도 컨텍스트 주소가 고정이다(언리얼 `TMap<FName, TUniquePtr<…>>` 와 같은 모양)
         ModuleDependencyGraph                            _dependencyGraph;  ///< 모듈 이름 → 의존 모듈 이름. 연쇄 교체 대상과 순서를 계산한다
         vector<SharedLibrary>                            _listSharedModule; ///< `loadSharedModule` 로 올린 공용 모듈(올린 순서 — 리로드 대상을 모두 내린 뒤 `shutdown` 이 거꾸로 내린다)
-        unique_ptr<IFileWatcher>                         _fileWatcher;      ///< 모듈 폴더(하위 폴더 없이)를 본다. 첫 `registerModule` 이 시작한다
+        unique_ptr<FileWatcher>                          _fileWatcher;      ///< 모듈 폴더(하위 폴더 없이)를 본다. 첫 `registerModule` 이 시작한다
         string                                           _buildStampPath;   ///< 바깥 빌드의 성공 스탬프(`Bin/Modules/` + `config::kFileModuleBuildStamp`). 감시를 시작할 때 정한다
         string                                           _seenBuildToken;   ///< 마지막으로 본 스탬프 내용(빌드마다 새 시각 글을 쓴다). 이것과 달라지면 바깥 빌드가 끝난 것이다 — 쓰기 시각이 아니라 내용으로 본다
         mutable mutex                                    _buildMutex;

@@ -21,7 +21,7 @@ namespace sw::editor
     SW_EDITOR_PANEL( StreamingCellsPanel, StreamingCellsPanel::kPanelID, EditorPanelCategory::Tool, 2042 );
 
     StreamingCellsPanel::StreamingCellsPanel()
-        : IEditorPanel( false ) // 필요할 때 여는 도구라 닫힌 채 시작한다
+        : EditorPanel( false ) // 필요할 때 여는 도구라 닫힌 채 시작한다
         , _viewModel{}
         , _viewState{}
     {

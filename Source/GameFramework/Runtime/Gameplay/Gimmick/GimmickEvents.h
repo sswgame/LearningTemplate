@@ -14,7 +14,7 @@
 namespace sw
 {
     /** @brief 기믹(위험 지대, 폭발, 포탑)이 오브젝트에 피해를 줬음을 알립니다. */
-    struct SW_GF_API GimmickDamageEvent final : IEvent
+    struct SW_GF_API GimmickDamageEvent final : EventBase
     {
         GameObjectHandle _target{};
         GameObjectHandle _source{}; ///< 피해를 낸 기믹 오브젝트

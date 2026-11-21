@@ -308,7 +308,7 @@ namespace sw
         struct AccountClientRegistration
         {
             /** @brief 계정 클라이언트는 로그인에 빌드 글 · 플랫폼을 싣는다. */
-            static unique_ptr<IOnlineClientService> create( OnlineServiceClient& client, const OnlineSessionInfo& info )
+            static unique_ptr<OnlineClientService> create( OnlineServiceClient& client, const OnlineSessionInfo& info )
             {
                 AccountClientInfo clientInfo;
                 clientInfo._build                 = info._gameBuild;

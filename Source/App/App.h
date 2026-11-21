@@ -34,7 +34,7 @@ namespace sw
     class ClientModuleManager;
     class FramePacer;
     class IRHIDevice;
-    class IWindow;
+    class GenericWindow;
     enum class WindowLifecycleEvent : uint8;
 } // namespace sw
 
@@ -146,7 +146,7 @@ namespace sw
         /** @brief 부팅 열(`_launch`)이 소유한 모듈 관리자를 만든 형식으로 보는 관찰 포인터입니다. `loadModuleLibraries` 가 채우고 호스트 서비스 `GameHostService` 가 내려가며 비운다. */
         ClientModuleManager* _pModuleManager;
         /** @brief 주 창입니다(관찰 포인터). 소유자는 엔진 범위의 `MainWindowSubsystem` 이라 엔진 종료 때 창이 파괴된다. `acquireMainWindow` 가 채운다. */
-        IWindow* _pWindow;
+        GenericWindow* _pWindow;
 
         FixedTimestep    _fixedTimestep;
         UserSettingsHost _userSettingsHost;

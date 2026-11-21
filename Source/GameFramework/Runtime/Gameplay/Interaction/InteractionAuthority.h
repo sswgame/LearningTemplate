@@ -46,7 +46,7 @@ namespace sw
 namespace sw
 {
     /** @brief 상호작용이 끝났음을 알립니다. "game" 채널로 보냅니다. */
-    struct SW_GF_API InteractionCompletedEvent final : IEvent
+    struct SW_GF_API InteractionCompletedEvent final : EventBase
     {
         InteractionRequest _request{};
         SW_DECLARE_GAMEPLAY_EVENT( InteractionCompletedEvent );

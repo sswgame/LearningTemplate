@@ -55,7 +55,7 @@ namespace sw
     {
     }
 
-    IOnlineClientService::~IOnlineClientService()
+    OnlineClientService::~OnlineClientService()
     {
         while ( _listRegisteredClient.empty() == false )
         {
@@ -66,22 +66,22 @@ namespace sw
     OnlineServiceClient::~OnlineServiceClient()
     {
         shutdown();
-        for ( IOnlineClientService* pService : _listService ) // 키트가 더 오래 살면 그 소멸자가 파괴된 이 객체를 부르지 않게 끊는다
+        for ( OnlineClientService* pService : _listService ) // 키트가 더 오래 살면 그 소멸자가 파괴된 이 객체를 부르지 않게 끊는다
         {
             VectorUtil::removeIf( pService->_listRegisteredClient, [this]( const OnlineServiceClient* pClient )
             { return pClient == this; } );
         }
     }
 
-    uint16 IOnlineClientService::getMethodRange() const
+    uint16 OnlineClientService::getMethodRange() const
     {
         return getProtocol().getMethodRange();
     }
 
-    bool OnlineServiceClient::registerClientService( IOnlineClientService* pService )
+    bool OnlineServiceClient::registerClientService( OnlineClientService* pService )
     {
         SW_ASSERT( pService != nullptr && _bInitialized == SW_FALSE );
-        for ( const IOnlineClientService* pExisting : _listService )
+        for ( const OnlineClientService* pExisting : _listService )
         {
             if ( pExisting->getMethodRange() == pService->getMethodRange() )
                 return false;
@@ -92,7 +92,7 @@ namespace sw
         return true;
     }
 
-    void OnlineServiceClient::unregisterClientService( IOnlineClientService* pService )
+    void OnlineServiceClient::unregisterClientService( OnlineClientService* pService )
     {
         VectorUtil::removeIf( pService->_listRegisteredClient, [this]( const OnlineServiceClient* pClient )
         { return pClient == this; } );
@@ -360,7 +360,7 @@ namespace sw
         _connection = StreamConnectionHandle{};
         if ( isStopped() )
             return; // 다시 연결하지 않는다
-        notifyServices( &IOnlineClientService::onClientDisconnected );
+        notifyServices( &OnlineClientService::onClientDisconnected );
         _state         = OnlineClientState::Disconnected;
         _nextConnectMs = _nowMs + _backoff.takeDelayMs( _settings._maxBackoffMs );
     }
@@ -464,7 +464,7 @@ namespace sw
             }
             _state = OnlineClientState::Ready;
             _backoff.reset();
-            notifyServices( &IOnlineClientService::onClientReady ); // 재접속 요청이 모은 요청보다 먼저 나간다
+            notifyServices( &OnlineClientService::onClientReady ); // 재접속 요청이 모은 요청보다 먼저 나간다
             flushQueuedCalls();
             return;
         }
@@ -580,7 +580,7 @@ namespace sw
             return;
         const uint16 kind  = ByteReader( pBody, static_cast<size_t>( bodySize ) ).readUint16();
         const uint16 range = OnlineMethodRange::getRangeBase( kind );
-        for ( IOnlineClientService* pService : _listService )
+        for ( OnlineClientService* pService : _listService )
         {
             if ( pService->getMethodRange() != range )
                 continue;
@@ -590,12 +590,12 @@ namespace sw
         }
     }
 
-    void OnlineServiceClient::notifyServices( void ( IOnlineClientService::*pNotify )( OnlineServiceClient& ) )
+    void OnlineServiceClient::notifyServices( void ( OnlineClientService::*pNotify )( OnlineServiceClient& ) )
     {
         // 콜백이 키트를 파괴하면 소멸자가 _listService 에서 지우므로 사본을 돈다(키트 수는 몇 개뿐).
         // 부르기 직전에 아직 등록돼 있는지 본다. 순회 중 새로 등록되는 키트는 없다 — registerClientService 는 초기화 전에만 된다.
-        const vector<IOnlineClientService*> listService = _listService;
-        for ( IOnlineClientService* pService : listService )
+        const vector<OnlineClientService*> listService = _listService;
+        for ( OnlineClientService* pService : listService )
         {
             if ( VectorUtil::contains( _listService, pService ) == false )
                 continue;

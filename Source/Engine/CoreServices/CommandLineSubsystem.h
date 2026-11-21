@@ -8,7 +8,7 @@
 #pragma once
 #include "Core/Foundation/Macros.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/Subsystem.h"
 
 namespace sw
 {
@@ -16,7 +16,7 @@ namespace sw
     class GlobalVariableManager;
 
     /** @class CommandLineSubsystem @brief 명령줄 · 전역 변수 서브시스템입니다. */
-    class SW_API CommandLineSubsystem final : public ISubsystem
+    class SW_API CommandLineSubsystem final : public Subsystem
     {
     public:
         /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */

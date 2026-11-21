@@ -232,7 +232,7 @@ namespace sw::editor
         /**
          * @brief `App` 창 @p windowIndex 번째(0 부터 — 리슨 호스트가 있으면 호스트가 0)의 창 크기 · 바둑판 칸 인자(`-W=… -H=… -WinTile=… -WinTileColumns=…`)입니다.
          * @details 창은 왼쪽 위부터 `_windowColumnCount` 개씩 한 줄에 놓고 다음 줄로 내려간다. 셀 사이는 창 틀(제목 줄 · 테두리)만큼 띄우는데, 그 두께는
-         *          자식 창이 제 틀에서 읽는다(`IWindow::createMainWindow`). 창 배치를 끈 구성이면 빈 목록이다.
+         *          자식 창이 제 틀에서 읽는다(`GenericWindow::createMainWindow`). 창 배치를 끈 구성이면 빈 목록이다.
          */
         static vector<string> makeWindowArguments( const EditorNetPlaySettings& settings, int32 windowIndex );
         /** @brief 비어 있는 UDP 포트 하나를 고릅니다. 포트를 잠깐 열었다 닫으므로 고른 뒤에 다른 프로세스가 가져갈 수 있습니다. 고르지 못하면 0 입니다. */

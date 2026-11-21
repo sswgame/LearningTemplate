@@ -3,7 +3,7 @@
  * @brief 한 파일에 항목이 여럿인 카탈로그(아이템 · 외형 · 어빌리티)의 항목 단위 상속입니다. 합치기는 `DataInheritance` 하나이고 여기는 카탈로그 모양을 그 입력으로 옮깁니다.
  * @details 항목에 `_base="<id>"`(같은 파일) · `_base="<리소스 id>#<id>"`(다른 파일)를 적고 다른 칸만 씁니다. 루트의 `_base="<리소스 id>"` 는 파일 전체를 물려받습니다.
  *          카탈로그의 자식은 래퍼 없이 같은 이름이 되풀이되고 종류도 섞인다(`<Part>` 여럿 · `<Requires>` 여럿). `DataInheritance` 는 칸마다 원소 하나를 보므로,
- *          같은 이름의 형제를 그 이름의 래퍼 하나로 묶어 넘기고 결과를 다시 풉니다. 항목 하나는 가상의 문서이고 부모는 `IDataInheritanceSource` 가 돌려주는 글이므로
+ *          같은 이름의 형제를 그 이름의 래퍼 하나로 묶어 넘기고 결과를 다시 풉니다. 항목 하나는 가상의 문서이고 부모는 `DataInheritanceSource` 가 돌려주는 글이므로
  *          순환 · 없는 부모 · 깊이 초과 · 목록 합치기 규칙이 파일 상속과 같습니다.
  *
  *          언리얼 Data Asset 은 항목마다 파일 하나이고 부모 관계가 클래스 상속이라 값만 다른 변형에도 자산이 하나씩 든다. 유니티 ScriptableObject Variant 도 자산 단위다.
@@ -47,13 +47,13 @@ namespace sw
          * @details 항목의 부모 id 는 파일 상속을 합친 결과에서 찾습니다. 다른 파일의 항목은 그 파일의 파일 상속까지 펼쳐 찾고, 그 항목의 `_base` 는 그 파일 기준입니다.
          * @return 순환 · 없는 부모 · 다른 종류의 부모 · 규칙에 없는 종류의 `_base` · 깊이 초과면 오류를 남기고 false 입니다.
          */
-        [[nodiscard]] static bool flatten( string_view text, string_view sourceName, const DataInheritanceSchema& schema, IDataInheritanceSource& source, string& outText );
+        [[nodiscard]] static bool flatten( string_view text, string_view sourceName, const DataInheritanceSchema& schema, DataInheritanceSource& source, string& outText );
 
         /**
          * @brief 표에 있는 카탈로그이고 루트나 항목이 `_base` 를 적었으면 펼칩니다. 아니면 @p outbFlattened 가 false 입니다(`_base` 없는 글은 글 검색 한 번으로 끝난다).
          * @return 펼치다 실패하면 false 입니다.
          */
-        [[nodiscard]] static bool flattenIfListed( string_view text, string_view sourceName, IDataInheritanceSource& source, bool& outbFlattened, string& outText );
+        [[nodiscard]] static bool flattenIfListed( string_view text, string_view sourceName, DataInheritanceSource& source, bool& outbFlattened, string& outText );
 
         /**
          * @brief 펼친 카탈로그 @p fullText 를 부모 @p parentFullText 와의 차이(루트 `_base` = @p baseID)로 씁니다. 파일 상속의 저장 쪽입니다(`DataInheritance::makeDelta` 의 카탈로그 판).

@@ -11,7 +11,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
-#include "Editor/Common/GUI/Panel/IEditorPanel.h"
+#include "Editor/Common/GUI/Panel/EditorPanel.h"
 #include "Editor/Panels/Multiplayer/Model/MultiplayerSessionViewModel.h"
 #include "Editor/Panels/Multiplayer/MultiplayerTab.h"
 
@@ -21,7 +21,7 @@ namespace sw::editor
      * @class MultiplayerPanel
      * @brief 대상 고르기와 탭 막대를 그립니다. 세션 갱신(`EditorNetPlaySession::update`)은 이 창이 아니라 툴바가 프레임마다 한다(창을 닫아도 로그가 모인다).
      */
-    class MultiplayerPanel final : public IEditorPanel
+    class MultiplayerPanel final : public EditorPanel
     {
     public:
         /** @brief 패널 id 입니다. 등록(`SW_EDITOR_PANEL`)과 조회(`EditorPanelManager::findPanel<…>` · `setPanelOpen<…>`)가 모두 이 상수에서 온다. */

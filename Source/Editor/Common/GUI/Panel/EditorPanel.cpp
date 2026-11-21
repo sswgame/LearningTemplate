@@ -1,9 +1,9 @@
 #include "pch.h"
 
-#include "Editor/Common/GUI/Panel/IEditorPanel.h"
+#include "Editor/Common/GUI/Panel/EditorPanel.h"
 
 #include "Editor/Common/GUI/EditorChrome.h"
-#include "Editor/Common/GUI/Panel/IEditorDocumentPanel.h"
+#include "Editor/Common/GUI/Panel/EditorDocumentPanelBase.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -15,7 +15,7 @@
 
 namespace sw::editor
 {
-    void IEditorPanel::draw()
+    void EditorPanel::draw()
     {
         _bDrawing = SW_TRUE;
         if ( _bOpenedNotified == SW_FALSE )
@@ -24,7 +24,7 @@ namespace sw::editor
             onPanelOpened();
         }
         EditorChrome::setNextPanelSize( getInitialPanelSize() );
-        IEditorDocumentPanel* const pDocument = asDocumentPanel();
+        EditorDocumentPanelBase* const pDocument = asDocumentPanel();
         if ( pDocument != nullptr )
             pDocument->syncDocumentDirty();
 
@@ -66,28 +66,28 @@ namespace sw::editor
         }
     }
 
-    bool IEditorPanel::hasUnsavedDocument() const
+    bool EditorPanel::hasUnsavedDocument() const
     {
-        const IEditorDocumentPanel* const pDocument = asDocumentPanel();
+        const EditorDocumentPanelBase* const pDocument = asDocumentPanel();
         return pDocument != nullptr && pDocument->isDocumentDirty();
     }
 
-    void IEditorPanel::requestClose()
+    void EditorPanel::requestClose()
     {
         if ( _bOpen == false )
             return;
-        IEditorDocumentPanel* const pDocument = asDocumentPanel();
+        EditorDocumentPanelBase* const pDocument = asDocumentPanel();
         if ( pDocument != nullptr && pDocument->beginCloseConfirmIfNeeded() )
             return;
         closeNow();
     }
 
-    void IEditorPanel::requestAnimationFrame()
+    void EditorPanel::requestAnimationFrame()
     {
         editor::getSubsystem<EditorContext>().getSubsystem<EditorRenderViews>().requestAnimationFrame();
     }
 
-    bool IEditorPanel::areSceneEditsAllowed()
+    bool EditorPanel::areSceneEditsAllowed()
     {
         return EditorPlaySession::getUIState().areSceneEditsAllowed();
     }

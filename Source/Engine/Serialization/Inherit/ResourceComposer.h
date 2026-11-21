@@ -58,7 +58,7 @@ namespace sw
         DataInheritance::MakeSchemaFunction _pfnMakeSchema; ///< `KnownSchema` 의 규칙
         const TypeInfo*                     _pTypeInfo;     ///< `KnownType` 의 형식
         DataInheritance::MergeFunction      _pfnMerge;      ///< `KnownMerge` 의 함수
-        IDataInheritanceSource*             _pSource;       ///< `RootName` 이 부모를 읽는 곳. 나머지는 리소스다
+        DataInheritanceSource*              _pSource;       ///< `RootName` 이 부모를 읽는 곳. 나머지는 리소스다
         AssetID                             _assetID;       ///< 리소스 id 로 읽을 때의 id(`withAsset`). 덮어쓰기 층 · 다시 읽기 기록 · 접속 대조가 쓴다. 비면 글 읽기다
         const ResourceTagSet*               _pTagOverride;  ///< 엔진 태그에서 바꿔 끼울 축(`withTagOverride`, 부르는 쪽이 합치는 동안 든다). nullptr 이면 엔진 태그 그대로다
 
@@ -81,7 +81,7 @@ namespace sw
         /** @brief 칸 규칙으로 풀리지 않는 형식의 읽기입니다(`SW_DATA_INHERITANCE_MERGE`). */
         [[nodiscard]] static ResourceContext forMerge( DataInheritance::MergeFunction pfnMerge );
         /** @brief 팩 쿠킹입니다. 부모는 @p source 로 읽고 그 읽기가 쿠킹 작업의 입력이 됩니다. */
-        [[nodiscard]] static ResourceContext forPackCook( IDataInheritanceSource& source );
+        [[nodiscard]] static ResourceContext forPackCook( DataInheritanceSource& source );
     };
 
     /**

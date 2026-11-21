@@ -8,8 +8,8 @@
 
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 
+#include "Editor/Common/GUI/Panel/EditorPanel.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
-#include "Editor/Common/GUI/Panel/IEditorPanel.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -76,13 +76,13 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief `gv_editorWatchPanel` 패널의 내용 영역 폭이 숫자 "0" 몇 칸인지입니다(`IEditorPanel::getContentColumnCount`). 값을 내지 않는 조건은 줄 수 감시 값과 같습니다. */
+            /** @brief `gv_editorWatchPanel` 패널의 내용 영역 폭이 숫자 "0" 몇 칸인지입니다(`EditorPanel::getContentColumnCount`). 값을 내지 않는 조건은 줄 수 감시 값과 같습니다. */
             [[nodiscard]] static bool readPanelContentColumns( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 EditorContext* pContext = editor::findSubsystem<EditorContext>();
                 if ( pContext == nullptr )
                     return false;
-                const IEditorPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanelByID( gv_editorWatchPanel.get() );
+                const EditorPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanelByID( gv_editorWatchPanel.get() );
                 if ( pPanel == nullptr || pPanel->hasDrawnContent() == false )
                     return false;
                 outValue = static_cast<float64>( pPanel->getContentColumnCount() );
@@ -90,7 +90,7 @@ namespace sw::editor
             }
 
             /**
-             * @brief `gv_editorWatchPanel` 패널이 마지막 그리기에서 내용 영역에 글자 줄을 몇 줄 담았는지입니다(`IEditorPanel::getContentLineCount`).
+             * @brief `gv_editorWatchPanel` 패널이 마지막 그리기에서 내용 영역에 글자 줄을 몇 줄 담았는지입니다(`EditorPanel::getContentLineCount`).
              * @details 패널이 없거나 한 번도 그려지지 않았으면(접힘 · 가려진 탭) 값을 내지 않는다 — 0 줄로 읽혀 "너무 작다" 와 섞이지 않게 한다.
              */
             [[nodiscard]] static bool readPanelContentLines( const GameObjectManager* /*pManager*/, float64& outValue )
@@ -98,7 +98,7 @@ namespace sw::editor
                 EditorContext* pContext = editor::findSubsystem<EditorContext>();
                 if ( pContext == nullptr )
                     return false;
-                const IEditorPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanelByID( gv_editorWatchPanel.get() );
+                const EditorPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanelByID( gv_editorWatchPanel.get() );
                 if ( pPanel == nullptr || pPanel->hasDrawnContent() == false )
                     return false;
                 outValue = static_cast<float64>( pPanel->getContentLineCount() );

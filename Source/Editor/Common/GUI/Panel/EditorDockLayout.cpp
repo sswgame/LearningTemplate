@@ -8,9 +8,9 @@
 #include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Config/EditorPaths.h"
+#include "Editor/Common/GUI/Panel/EditorPanel.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Panel/EditorPanelText.h"
-#include "Editor/Common/GUI/Panel/IEditorPanel.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorLayoutStore.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -516,7 +516,7 @@ namespace sw::editor
         ImGui::DockBuilderSplitNode( dockMain, ImGuiDir_Down, bottomRatio, &dockBottom, &dockMain );
         (void)dockTop;
 
-        // 패널마다 제가 밝힌 영역(`IEditorPanel::getDefaultDockSlot`)에 등록된 제목으로 붙인다. 제목을 여기 따로 적으면 패널 쪽에서 제목이 바뀔 때
+        // 패널마다 제가 밝힌 영역(`EditorPanel::getDefaultDockSlot`)에 등록된 제목으로 붙인다. 제목을 여기 따로 적으면 패널 쪽에서 제목이 바뀔 때
         // `DockBuilderDockWindow` 가 모르는 이름을 조용히 받아 그 패널이 떠 있는 창이 된다(프리팹 오버라이드 도구가 씬 뷰를 덮었다).
         // 씬 뷰와 게임 뷰는 같은 영역의 탭이다(유니티 기본). 앞 탭은 Scene(`CenterFront`)이다. 붙인 순서로는 정해지지 않는다. ImGui 는 새 탭 가운데
         // 마지막 것을 고르기 때문이다. 그래서 패널을 그린 뒤 `updateDefaultTabSelection` 이 포커스로 고른다.

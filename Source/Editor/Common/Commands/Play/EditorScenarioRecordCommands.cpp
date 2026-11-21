@@ -23,7 +23,7 @@
 #include "Engine/Config/GameTimeScale.h"
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Input/InputManager.h"
-#include "Engine/Window/IWindow.h"
+#include "Engine/Window/GenericWindow.h"
 #include "Engine/Window/MainWindowSubsystem.h"
 
 namespace sw::editor
@@ -75,7 +75,7 @@ namespace sw::editor
                 }
                 ScenarioRecordSettings settings;
                 settings._name                    = FileUtil::removeExtension( FileUtil::removeExtension( FileUtil::getFileNamePart( getState()._outputPath ) ) ); // a.scenario.xml → a
-                const IWindow* pWindow            = editor::getSubsystem<MainWindowSubsystem>().getWindow();
+                const GenericWindow* pWindow      = editor::getSubsystem<MainWindowSubsystem>().getWindow();
                 settings._clientWidth             = pWindow != nullptr ? pWindow->getWidth() : 0;
                 settings._clientHeight            = pWindow != nullptr ? pWindow->getHeight() : 0;
                 const ScenarioRecordOutput output = getState()._recorder.stop( settings );

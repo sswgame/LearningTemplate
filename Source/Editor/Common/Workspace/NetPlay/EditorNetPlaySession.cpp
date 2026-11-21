@@ -296,7 +296,7 @@ namespace sw::editor
         if ( settings._bArrangeWindows == false )
             return {};
         SW_ASSERT( settings._windowColumnCount > 0 ); // `start` 가 막는다(`isWindowLayoutValid`)
-        // 칸 간격(클라이언트 크기 + 틀 두께)은 자식 창이 제 틀로 정한다(`IWindow::createMainWindow`) — 틀은 창 스타일 · DPI · 창 관리자가 정해 에디터는 모른다.
+        // 칸 간격(클라이언트 크기 + 틀 두께)은 자식 창이 제 틀로 정한다(`GenericWindow::createMainWindow`) — 틀은 창 스타일 · DPI · 창 관리자가 정해 에디터는 모른다.
         StringBuilder<constant::buffer::kMax256> textBuilder;
         textBuilder.appendFormat( "-%#=%#", getCommandLineArgumentSpelling( CommandLineArgument::WINDOW_TILE_COLUMNS ), settings._windowColumnCount );
         StringBuilder<constant::buffer::kMax256> textBuilder2;

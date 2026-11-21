@@ -70,7 +70,7 @@ namespace sw::editor
 namespace sw::editor
 {
     AudioMixerPanel::AudioMixerPanel()
-        : IEditorPanel( false )
+        : EditorPanel( false )
         , _model{}
         , _clipPath{}
     {

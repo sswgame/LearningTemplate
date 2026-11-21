@@ -7,8 +7,8 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/ServiceSlot.h"
+#include "Core/Subsystem/Subsystem.h"
 
 #include "Engine/Object/Component/ComponentDataStore.h"
 #include "Engine/Physics/IPhysicsBodyScene.h"
@@ -218,7 +218,7 @@ namespace sw
      * @brief 강체 3D · 2D 와 캐릭터 컨트롤러 3D · 2D · 바퀴 차 입력의 칸 저장소를 든 서비스입니다(`SceneTransformStorage` 와 같은 틀 · 같은 수명 — 서비스 범위라 모든 컴포넌트보다 오래 산다).
      * @details 페이지 4096 × 칸 256 = 종류마다 약 100만 개(오브젝트 id 표의 끝과 같다).
      */
-    class SW_API PhysicsPoseStore final : public ISubsystem
+    class SW_API PhysicsPoseStore final : public Subsystem
     {
     public:
         static constexpr const utf8* kSubsystemName = "PhysicsPoseStore";
@@ -239,7 +239,7 @@ namespace sw
         PhysicsPoseStore( const PhysicsPoseStore& )            = delete;
         PhysicsPoseStore& operator=( const PhysicsPoseStore& ) = delete;
 
-        // ISubsystem — 세울 것이 없다(처음 받는 칸부터 페이지를 만든다).
+        // Subsystem — 세울 것이 없다(처음 받는 칸부터 페이지를 만든다).
         SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
         void                shutdownSubsystem() override {}
         const utf8*         getSubsystemName() const override { return kSubsystemName; }

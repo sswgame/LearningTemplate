@@ -2,7 +2,7 @@
  * @file ValeServerLink.h
  * @brief LanternVale 의 서버 쪽 망 잇기입니다 — 골짜기 규칙 · 원격 호출 · MMO 복제 · 진행 저장을 묶습니다. 서버 전용 코드라 이 폴더(`Server/`)에 둔다.
  * @details 공유 쪽(`ValeNetLink.h`)은 창구(`IValeServer` · `IValeServerFactory`)만 알고, 공장은 모듈 부분으로 공개한다(`ValeServerFactory.cpp`).
- *          진행 저장소는 전용 서버의 온라인 조립 저장소다(`ValeProfileStore` — 저장소 계약 `IServiceStore`).
+ *          진행 저장소는 전용 서버의 온라인 조립 저장소다(`ValeProfileStore` — 저장소 계약 `ServiceStore`).
  */
 #pragma once
 #include "Core/Container/unordered_map.h"

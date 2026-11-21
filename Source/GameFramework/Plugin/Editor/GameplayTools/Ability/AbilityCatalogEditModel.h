@@ -67,7 +67,7 @@ namespace sw::editor
         AbilityCatalogEditModel();
 
         /** @brief 원문을 읽습니다. 형식이 깨졌으면 false 이고 `getDocument().getError()` 에 이유가 있습니다(원문은 남는다). */
-        [[nodiscard]] bool     load( string_view text, IDataInheritanceSource* pInheritanceSource );
+        [[nodiscard]] bool     load( string_view text, DataInheritanceSource* pInheritanceSource );
         CatalogDocument&       editDocument() { return _document; }
         const CatalogDocument& getDocument() const { return _document; }
         /** @brief 원문이 바뀐 뒤(편집 · 되돌리기) 항목과 참조를 다시 만듭니다. 편집 명령은 스스로 부릅니다. */

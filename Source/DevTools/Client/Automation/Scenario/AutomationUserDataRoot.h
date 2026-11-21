@@ -18,7 +18,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/Subsystem.h"
 
 #include "DevTools/DevToolsAPI.h"
 
@@ -78,7 +78,7 @@ namespace sw
      * @details 기동 범위에 서므로 호스트 서비스(사용자 설정 · 게임 · 로컬 저장 `LocalStoreChannel`)가 뿌리를 읽기 전이다. 이 실행의 시작 때 사람의 데이터 폴더(활성 게임)를 찍어 두고,
      *          감시 값 `UserData.PlatformFolderChanged` 가 지금과 견준다.
      */
-    class SW_DEVTOOLS_API AutomationUserDataIsolation final : public ISubsystem
+    class SW_DEVTOOLS_API AutomationUserDataIsolation final : public Subsystem
     {
     public:
         static constexpr const utf8* kSubsystemName = "AutomationUserDataIsolation";

@@ -29,14 +29,14 @@
 
 namespace sw
 {
-    class IServiceStore;
+    class ServiceStore;
     class RemoteConfig;
     class ServerBus;
 
     /** @brief 빌려 쓰는 객체들입니다. 로직보다 오래 살아야 합니다. */
     struct LiveOpsDependencies
     {
-        IServiceStore*      _pStore{ nullptr };        ///< 필수
+        ServiceStore*       _pStore{ nullptr };        ///< 필수
         ServerBus*          _pBus{ nullptr };          ///< 서버가 한 대이면 null 이다. 바꾼 뒤 알리기만 하며, 받기는 바인딩이 구독한다
         const RemoteConfig* _pRemoteConfig{ nullptr }; ///< null 이면 '@' 값은 그대로 두고 긴급 스위치도 없다
     };

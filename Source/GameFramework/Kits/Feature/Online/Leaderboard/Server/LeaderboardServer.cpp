@@ -21,7 +21,7 @@ namespace sw
         setReady( false );
     }
 
-    void LeaderboardServer::initialize( LeaderboardService* pService, const IAccountDirectory* pDirectory, IAccountPresence* pPresence, MetricRegistry* pMetricRegistry )
+    void LeaderboardServer::initialize( LeaderboardService* pService, const IAccountDirectory* pDirectory, AccountPresence* pPresence, MetricRegistry* pMetricRegistry )
     {
         _pService   = pService;
         _pDirectory = pDirectory;

@@ -5,7 +5,7 @@
  */
 #pragma once
 #include "Core/Foundation/Macros.h"
-#include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/Subsystem.h"
 
 #include "Engine/Scene/ISceneRenderBinding.h"
 
@@ -18,7 +18,7 @@ namespace sw
      * @class SceneRHISubsystem
      * @brief 씬의 디바이스를 연결하는 서브시스템입니다.
      */
-    class SW_API SceneRHISubsystem final : public ISubsystem
+    class SW_API SceneRHISubsystem final : public Subsystem
     {
     public:
         /** @brief 서브시스템 이름입니다(다른 선언의 의존 항목이 이 상수를 가리킨다). */

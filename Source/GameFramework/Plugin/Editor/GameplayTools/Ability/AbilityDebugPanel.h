@@ -10,7 +10,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
-#include "Editor/Common/GUI/Panel/IEditorPanel.h"
+#include "Editor/Common/GUI/Panel/EditorPanel.h"
 
 #include "GameFramework/Plugin/Editor/GameplayTools/Ability/Model/AbilityDebugViewModel.h"
 
@@ -20,14 +20,14 @@ namespace sw::editor
      * @class AbilityDebugPanel
      * @brief 어빌리티 시스템의 런타임 상태를 보이는 도구 창입니다.
      */
-    class AbilityDebugPanel final : public IEditorPanel
+    class AbilityDebugPanel final : public EditorPanel
     {
     public:
         /** @brief 패널 id — 등록(`SW_EDITOR_PANEL`)과 조회가 같은 상수를 쓴다. */
         static constexpr const utf8* kPanelID = "ability_debugger";
 
         AbilityDebugPanel()
-            : IEditorPanel( false ) // 필요할 때 여는 도구라 닫힌 채 시작한다
+            : EditorPanel( false ) // 필요할 때 여는 도구라 닫힌 채 시작한다
         {
         }
 

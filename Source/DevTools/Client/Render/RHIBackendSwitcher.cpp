@@ -11,8 +11,8 @@
 #include "DevTools/Client/Automation/Scenario/AutomationBackendSteps.h"
 
 #include "Engine/Automation/Scenario/AutomationScenario.h"
-#include "Engine/Automation/Scenario/AutomationStepContext.h"
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
+#include "Engine/Automation/Scenario/IAutomationStepContext.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Config/RHIBackendType.h"
 #include "Engine/Console/DevCommandRegistry.h"
@@ -43,7 +43,7 @@ namespace sw
 
 #if SW_WITH_DYNAMIC_MODULES
             /** @brief 준비 함수가 시나리오가 시작할 때의 백엔드를 교체기에 적습니다(`RHIBackendSwitcher::recordStartBackend`). 교체기는 백엔드 교체 · 모듈 리로드에서 내려가지 않는 기동 단계다. */
-            [[nodiscard]] static expected<void> prepareSwapBackend( AutomationStepContext& /*runner*/, const AutomationStep& /*step*/ )
+            [[nodiscard]] static expected<void> prepareSwapBackend( IAutomationStepContext& /*runner*/, const AutomationStep& /*step*/ )
             {
                 RHIBackendSwitcher* pSwitcher = engine::findSubsystem<RHIBackendSwitcher>();
                 if ( pSwitcher == nullptr || pSwitcher->recordStartBackend() == false )
@@ -52,7 +52,7 @@ namespace sw
             }
 
             /** @brief 교체를 요청합니다. 이미 그 백엔드이고 대기 중인 교체도 없으면 아무것도 하지 않습니다. 끝은 `RHI.SwapPending` 이 0 이 되는 것으로 봅니다. */
-            static bool runSwapBackend( AutomationStepContext& runner, const AutomationStep& step )
+            static bool runSwapBackend( IAutomationStepContext& runner, const AutomationStep& step )
             {
                 RHIBackendSwitcher* pSwitcher = engine::findSubsystem<RHIBackendSwitcher>();
                 RHIBackend          committed{};

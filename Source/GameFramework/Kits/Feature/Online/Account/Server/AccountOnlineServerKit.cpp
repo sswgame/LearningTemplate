@@ -158,7 +158,7 @@ namespace sw
                     .and_then( [&]
                 { return exposeInterface<IAccountDirectory>( context, entry, _loginService ); } )
                     .and_then( [&]
-                { return exposeInterface<IAccountPresence>( context, entry, *_accountServer.getPresence() ); } )
+                { return exposeInterface<AccountPresence>( context, entry, *_accountServer.getPresence() ); } )
                     .and_then( [&]
                 { return exposeInterface<IAccountSessionControl>( context, entry, _accountServer.getSessionControl() ); } )
                     .and_then( [&]
