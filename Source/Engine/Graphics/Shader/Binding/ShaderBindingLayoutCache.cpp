@@ -99,33 +99,29 @@ namespace sw
         ShaderReflectionData                                   dsReflection{};
         vector<string>                                         listSourcePath;
 
+        // 무효화 매칭용 경로는 리플렉션 성패와 무관하게 적는다 — 셰이더가 깨진 동안 지은 빈 레이아웃도 고친 뒤의 재컴파일이 버려야 한다.
         const bool bCompute = desc._computeShaderPath.empty() == false;
         if ( bCompute )
         {
+            listSourcePath.push_back( desc._computeShaderPath );
             if ( LayoutCacheInternal::reflectStage( desc._computeShaderPath, desc._computeEntryPoint, ShaderStage::Compute,
                                                     targetFormat, listDefine, csReflection ) )
-            {
                 listStage.push_back( { ShaderStage::Compute, &csReflection } );
-                listSourcePath.push_back( desc._computeShaderPath );
-            }
         }
         else
         {
+            if ( desc._vertexShaderPath.empty() == false )
+                listSourcePath.push_back( desc._vertexShaderPath );
+            if ( desc._pixelShaderPath.empty() == false && desc._pixelShaderPath != desc._vertexShaderPath )
+                listSourcePath.push_back( desc._pixelShaderPath );
             if ( desc._vertexShaderPath.empty() == false &&
                  LayoutCacheInternal::reflectStage( desc._vertexShaderPath, desc._vertexEntryPoint, ShaderStage::Vertex,
                                                     targetFormat, listDefine, vsReflection ) )
-            {
                 listStage.push_back( { ShaderStage::Vertex, &vsReflection } );
-                listSourcePath.push_back( desc._vertexShaderPath );
-            }
             if ( desc._pixelShaderPath.empty() == false &&
                  LayoutCacheInternal::reflectStage( desc._pixelShaderPath, desc._pixelEntryPoint, ShaderStage::Pixel,
                                                     targetFormat, listDefine, psReflection ) )
-            {
                 listStage.push_back( { ShaderStage::Pixel, &psReflection } );
-                if ( desc._pixelShaderPath != desc._vertexShaderPath )
-                    listSourcePath.push_back( desc._pixelShaderPath );
-            }
             // 헐 · 도메인만 읽는 자원(변위 머티리얼의 높이 맵 · 머티리얼 버퍼 — 깊이 패스에는 픽셀 스테이지가 없다)도 묶이게 두 스테이지를 함께 본다. 소스는 정점과 같은 파일이다.
             const bool bTessellation = desc._hullEntryPoint.empty() == false && desc._domainEntryPoint.empty() == false;
             if ( bTessellation &&
@@ -147,17 +143,22 @@ namespace sw
         return it->second->_layout;
     }
 
+    bool ShaderBindingLayoutCache::matchesShaderPath( string_view sourcePath, string_view shaderPath )
+    {
+        if ( sourcePath.empty() || shaderPath.empty() )
+            return false;
+        return sourcePath.find( shaderPath ) != string_view::npos || shaderPath.find( sourcePath ) != string_view::npos;
+    }
+
     void ShaderBindingLayoutCache::invalidateByShaderPath( string_view shaderRelativePath )
     {
-        const string needle{ shaderRelativePath };
-
         ScopedLock<mutex> lock{ _mutex };
         for ( auto it = _mapEntry.begin(); it != _mapEntry.end(); )
         {
             bool bMatch = false;
             for ( const string& source : it->second->_listSourcePath )
             {
-                if ( source.find( needle ) != string::npos || needle.find( source ) != string::npos )
+                if ( matchesShaderPath( source, shaderRelativePath ) )
                 {
                     bMatch = true;
                     break;

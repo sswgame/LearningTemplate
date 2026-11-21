@@ -49,8 +49,15 @@ namespace sw
          */
         const ShaderBindingLayout& getOrBuild( const RHIPipelineStateDesc& desc, ShaderTargetFormat targetFormat );
 
-        /** @brief 주어진 셰이더 파일 경로에 의존하는 캐시 항목을 모두 지웁니다(핫 리로드). */
+        /** @brief 주어진 셰이더 파일 경로에 의존하는 캐시 항목을 모두 지웁니다(핫 리로드). 일치 규칙은 `matchesShaderPath` 입니다. */
         void invalidateByShaderPath( string_view shaderRelativePath );
+
+        /**
+         * @brief 무효화의 경로 일치 규칙입니다 — 한쪽이 다른 쪽을 품으면 같은 셰이더입니다. 둘 중 하나가 비면 거짓입니다.
+         * @details 재컴파일기가 알리는 소스 ID 와 PSO desc 의 경로는 도메인 접두가 다를 수 있다. 레이아웃을 버리는 쪽과 그 레이아웃을 쥔 PSO 를 놓는 쪽(`RenderPSOCache`)이
+         *          같은 규칙을 써야 놓지 않은 PSO 가 지운 레이아웃을 가리키지 않는다.
+         */
+        [[nodiscard]] static bool matchesShaderPath( string_view sourcePath, string_view shaderPath );
 
         /** @brief 전체 캐시를 비웁니다. */
         void clear();
