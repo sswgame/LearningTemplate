@@ -448,12 +448,8 @@ namespace sw
          *          비동기 씬 로드에서는 워커 스레드에서 불릴 수 있으므로 공유 상태는 잠금을 지원하는 API 로만 만진다.
          */
         virtual void onPostLoad() {}
-        /**
-         * @brief 모듈 @p moduleName 을 내리기 직전(그 코드가 아직 있을 때)에 불립니다. 그 모듈 **타입**(`TypeInfo` 의 모듈 이름)의 객체를 든 컴포넌트가 그것을 놓는다.
-         * @details 컴포넌트 자신이 그 모듈 타입이면 이 뒤에 지워진다(`destroyComponentsOfModule`) — 여기서 할 일은 엔진 · 키트 컴포넌트가 든 남의 모듈 객체(어빌리티 · 세트)다.
-         *          모듈 언로드는 개발 빌드만 하고 게임 스레드에서 부른다(`engine::unregisterModuleTypes`). 코드 주소로 고르지 않는다(언리얼은 클래스의 패키지로 다시 만든다).
-         */
-        virtual void onModuleUnloading( string_view moduleName ) { (void)moduleName; }
+        // 남의 모듈 타입 객체(어빌리티 · 세트)를 든 컴포넌트는 모듈 내림을 가상 함수로 받지 않는다 — 그 컴포넌트만 `onRegister` 에서
+        // `TypeRegistry::subscribeModuleUnloading` 을 구독한다(`AbilityComponent`). 모든 컴포넌트에 빈 가상 호출을 훑지 않는다.
         /**
          * @brief 씬 상태 해시(`SceneObjectHash`)에 이 컴포넌트의 시뮬레이션 상태를 접습니다. 기본은 상태 역할 칸(`PROPERTY( RuntimeState )`, 기반부터)을 리플렉션으로 접습니다.
          * @details 두 프로세스가 같은 입력으로 같은 상태가 되었는지 견주는 값이라 게임플레이를 바꾸는 상태(트랜스폼 · 속도 · 난수 상태 · 남은 시간)만 넣는다.
@@ -628,13 +624,7 @@ namespace sw
          * @details 핸들로 다시 찾으므로 그 사이에 파괴돼도 안전하다. 틱 설정(그룹, 틱 여부, 서브틱)이 `GameObject` 의 setName, addTag 와 같은 규칙을 따른다.
          */
         bool deferIfStructureFrozen( Delegate<void( Component& )> func );
-        /**
-         * @brief 붙는 순간 엔진의 장부(트랜스폼 계층 · 매니저 연결)에 넣습니다(`GameObject::attachCreatedComponent`). 미루지 않는다 — 장부는 객체 데이터다.
-         * @details 언리얼의 `AttachParent` · 상대 트랜스폼이 로드 때 채워지고 `OnRegister` 가 나중에 월드에 넣는 것과 같은 나눔이다. `SceneComponent` 만 쓰고 `final` 로 막는다.
-         */
-        virtual void bindToManager( GameObjectManager& manager ) { (void)manager; }
-        /** @brief `bindToManager` 의 짝입니다(해체 한 곳 `GameObjectStore` 가 `dispatchUnregister` 뒤에 부른다). */
-        virtual void unbindFromManager( GameObjectManager& manager ) { (void)manager; }
+        // 붙는 순간의 장부(트랜스폼 계층 · 매니저 연결)는 씬 컴포넌트만 쓴다 — 가상 함수가 아니라 `_bIsSceneComponent` 를 보고 `SceneComponent::bindToManager` 를 바로 부른다.
 
     protected:
         GameObject* _pOwner;      ///< 소유자 GameObject

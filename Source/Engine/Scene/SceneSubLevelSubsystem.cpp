@@ -217,7 +217,7 @@ namespace sw
             {
                 SW_LOG_ERROR_ID( "SceneSubLevels.AnchorNotMade", "Sub-level '%#' could not place its anchor object (its file id is taken) - it stays unloaded", subLevel._name );
                 if ( pAnchor != nullptr )
-                    _pManager->destroyGameObject( pAnchor, true );
+                    _pManager->destroyGameObject( pAnchor );
                 subLevel._state = SubLevelState::Failed;
                 return;
             }

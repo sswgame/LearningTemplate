@@ -362,12 +362,6 @@ namespace sw
         return listAllGameObject;
     }
 
-    void GameObjectManager::notifyModuleUnloading( string_view moduleName )
-    {
-        forEachComponent( SceneIterationKey{}, [moduleName]( Component* pComponent )
-        { pComponent->onModuleUnloading( moduleName ); } );
-    }
-
     uint32 GameObjectManager::destroyComponentsOfModule( string_view moduleName )
     {
         if ( _structuralChangeBuffer.isFrozen() == false )
@@ -510,9 +504,9 @@ namespace sw
         return _pState->_sceneScope;
     }
 
-    void GameObjectManager::destroyGameObject( GameObject* pObj, bool bDestroyChildren )
+    void GameObjectManager::destroyGameObject( GameObject* pObj )
     {
-        _pState->_store.destroyGameObject( pObj, bDestroyChildren );
+        _pState->_store.destroyGameObject( pObj );
     }
 
     void GameObjectManager::destroyComponent( Component* pComp )

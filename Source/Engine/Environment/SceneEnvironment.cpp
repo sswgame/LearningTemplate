@@ -2,8 +2,6 @@
 
 #include "Engine/Environment/SceneEnvironment.h"
 
-#include "Core/Log/Logger.h"
-
 #include "Engine/Environment/Fog/FogComponent.h"
 #include "Engine/Environment/Sky/SkyComponent.h"
 #include "Engine/Object/GameObject/Service/SceneServiceRegistry.h"
@@ -14,8 +12,7 @@ namespace sw
 
     SceneEnvironment::SceneEnvironment( GameObjectManager& manager )
         : _manager{ manager }
-        , _skySource{ SW_DELEGATE_METHOD( SkySourceDelegate, &SceneEnvironment::findComponentSky, this ) }
-        , _fogSource{ SW_DELEGATE_METHOD( FogSourceDelegate, &SceneEnvironment::findComponentFog, this ) }
+
         , _surfaceDeform{}
         , _bHasSurfaceDeform{ SW_FALSE }
     {
@@ -24,28 +21,6 @@ namespace sw
     void SceneEnvironment::onSceneCleared()
     {
         clearSurfaceDeform();
-    }
-
-    bool SceneEnvironment::bindSkySource( const SkySourceDelegate& source )
-    {
-        if ( _skySource.isBound() )
-        {
-            SW_LOG_ERROR_ID( "Environment.SkySourceAlreadyBound", "The sky slot of this scene is already bound - unbind it first (one owner per scene)" );
-            return false;
-        }
-        _skySource = source;
-        return true;
-    }
-
-    bool SceneEnvironment::bindFogSource( const FogSourceDelegate& source )
-    {
-        if ( _fogSource.isBound() )
-        {
-            SW_LOG_ERROR_ID( "Environment.FogSourceAlreadyBound", "The fog slot of this scene is already bound - unbind it first (one owner per scene)" );
-            return false;
-        }
-        _fogSource = source;
-        return true;
     }
 
     void SceneEnvironment::setSurfaceDeform( const SurfaceDeformBinding& binding )
@@ -62,12 +37,12 @@ namespace sw
 
     bool SceneEnvironment::findSky( SkyGradient& outGradient ) const
     {
-        return _skySource.isBound() && _skySource( outGradient );
+        return SkyComponent::findSky( _manager, outGradient );
     }
 
     bool SceneEnvironment::findFog( const float3& viewPosition, FogSettings& outSettings ) const
     {
-        return _fogSource.isBound() && _fogSource( viewPosition, outSettings );
+        return FogComponent::findFog( _manager, viewPosition, outSettings );
     }
 
     bool SceneEnvironment::findSurfaceDeform( SurfaceDeformBinding& outBinding ) const
@@ -76,13 +51,4 @@ namespace sw
         return _bHasSurfaceDeform == SW_TRUE;
     }
 
-    bool SceneEnvironment::findComponentSky( SkyGradient& outGradient ) const
-    {
-        return SkyComponent::findSky( _manager, outGradient );
-    }
-
-    bool SceneEnvironment::findComponentFog( const float3& viewPosition, FogSettings& outSettings ) const
-    {
-        return FogComponent::findFog( _manager, viewPosition, outSettings );
-    }
 } // namespace sw

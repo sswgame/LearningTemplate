@@ -48,7 +48,7 @@ namespace sw
      *          템플릿은 `T` 만 다룬다.
      */
     REFLECT()
-    class SW_API GameObject
+    class SW_API GameObject final // 동작은 컴포넌트로 더한다 — 파생이 없어 가상 함수(가상 표 포인터 8 B)를 두지 않는다
     {
         friend class GameObjectManager;
         friend class GameObjectStore; ///< 만들 때 id, 소유 매니저, 목록 인덱스를 기록한다
@@ -75,16 +75,16 @@ namespace sw
         GameObject& operator=( const GameObject& ) = delete;
 
         /** @brief 런타임 TypeInfo 를 반환합니다. */
-        virtual const TypeInfo* getTypeInfo() const;
+        const TypeInfo* getTypeInfo() const;
 
         /** @brief 게임플레이가 시작될 때 한 번 초기화합니다. */
-        virtual void beginPlay();
+        void beginPlay();
 
         /** @brief 게임플레이가 끝날 때 정리합니다(스냅샷 복원 전). */
-        virtual void endPlay();
+        void endPlay();
 
         /** @brief 에디터 · 직렬화가 프로퍼티를 바꿀 때 불리는 콜백입니다. */
-        virtual void onPropertyChanged( hashed_string propertyName );
+        void onPropertyChanged( hashed_string propertyName );
 
         /** @brief 프레임이 끝날 때 안전하게 파괴되도록 미룹니다(`GameObjectManager::destroyGameObject`). */
         void destroy();
@@ -421,7 +421,7 @@ namespace sw
         void prepareSerialize( const ObjectSaveOptions& options ) const;
 
         /** @brief 게임 오브젝트를 해제합니다. */
-        virtual ~GameObject();
+        ~GameObject();
 
     private:
         /** @brief `addComponent` 가 받는 저장소 슬롯 하나입니다. 타입 항목 풀의 블록이거나(항목 포인터 있음) 힙입니다. */

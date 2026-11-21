@@ -66,7 +66,7 @@ namespace sw
 {
     // 오브젝트는 수천 개가 풀(16 B 단위 블록)에서 나온다. 필드 크기 합을 정렬로 올린 값을 넘으면 필드 사이에 패딩이 생긴 것이다(블록이 한 단계 커진다).
     static_assert( sizeof( GameObject ) <=
-                       ( sizeof( void* ) + sizeof( uint64 ) + sizeof( hashed_string ) + sizeof( GameObjectManager* ) + sizeof( atomic<bool> ) * 4 + sizeof( uint32 ) +
+                       ( sizeof( uint64 ) + sizeof( hashed_string ) + sizeof( GameObjectManager* ) + sizeof( atomic<bool> ) * 4 + sizeof( uint32 ) +
                          sizeof( vector<Component*, InlineAllocator<Component*, 4>> ) + sizeof( atomic<Component*> ) + sizeof( unique_ptr<GameObjectEvents> ) + sizeof( TickItemList ) +
                          sizeof( uint32 ) * TickRegistry::kGroupCount + sizeof( uint32 ) + sizeof( atomic<uint8> ) + sizeof( bool ) + sizeof( uint32 ) + sizeof( bool ) + alignof( GameObject ) - 1 ) /
                            alignof( GameObject ) * alignof( GameObject ),
@@ -431,7 +431,7 @@ namespace sw
     {
         outListChild.clear();
         // primary 만이 아니라 **자기 씬 컴포넌트 전부**의 자식을 본다. 소켓(primary 가 아닌 씬 컴포넌트)에 붙은 오브젝트도 자식이다
-        // (`getParent` 와 `refreshActiveInHierarchy` 도 그렇게 본다). primary 의 자식만 반환하면 `destroyGameObject( 캐릭터, true )` 가
+        // (`getParent` 와 `refreshActiveInHierarchy` 도 그렇게 본다). primary 의 자식만 반환하면 `destroyGameObject( 캐릭터 )` 가
         // 소켓에 붙은 무기를 남기고, 그 무기는 루트가 되어 계속 틱하고 그려진다.
         for ( Component* pOwnComp : _listComponent )
         {
@@ -674,7 +674,8 @@ namespace sw
         if ( pComp->isSceneComponent() && _pPrimaryScene.load( std::memory_order_relaxed ) == nullptr )
             _pPrimaryScene.store( pComp, std::memory_order_relaxed );
         // 엔진 장부(트랜스폼 계층)는 지금 넣고, 어느 레지스트리에 들어갈지(`onRegister`)는 컴포넌트가 안다 — 씬을 짓는 배치 안이면 매니저가 배치 끝까지 미룬다.
-        pComp->bindToManager( *_pOwnerManager );
+        if ( pComp->isSceneComponent() )
+            static_cast<SceneComponent*>( pComp )->bindToManager( *_pOwnerManager );
         _pOwnerManager->registerComponent( *pComp );
         // 둘째 씬 컴포넌트부터는 primary 에 붙인다. 오브젝트의 루트는 하나다(언리얼의 RootComponent). 루트로 두면 **월드 원점**에 놓여
         // 오브젝트를 옮겨도 콜라이더와 메시가 따라오지 않는다.
