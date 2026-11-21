@@ -3,13 +3,15 @@ CMake 빌드 규칙 함수 검사 — 구성 없이 `cmake -P` 로 함수만 부
 
 - `sw_is_platform_folder_built`(cmake/Modules/Build/PlatformFolders.cmake): 플랫폼 폴더 규칙 — 플랫폼 폴더 거르기와 구성 끝 훑기가 같은 판정을 쓴다.
 - `sw_link_job_count`(cmake/Modules/Config/LinkJobPool.cmake): Ninja 링크 풀 크기 — ThinLTO 구성만 좁게 묶는다.
-- `sw_decide_module_activation`(cmake/Modules/Build/ModuleManifest.cmake): 정적 모듈 구성은 고른 RHI 백엔드 하나만 켠다.
+- `sw_decide_module_activation`(cmake/Modules/Build/ModuleManifest.cmake): 정적 모듈 구성은 고른 RHI 백엔드 하나만 켠다. 키트의 클라이언트 모듈(`GF_Client_<X>`)은
+  전용 서버 구성에서 꺼지고 공유 키트(`GF_<X>`)는 켜진다 — 실제 매니페스트의 `_listTarget` 으로 본다(키트 셋 가르기: 규칙 · 디렉터 · 클라이언트).
 
 실행: SW_CMAKE_COMMAND=<cmake 실행 파일> python -X utf8 Scripts/setup/tests/test_cmake_build_rules.py (CTest `Scripts.CmakeBuildRules` 가 환경 변수를 준다).
 """
 
 from __future__ import annotations
 
+import json
 import os
 import subprocess
 import sys
@@ -146,6 +148,52 @@ class StaticRHIActivationTest(unittest.TestCase):
     def test_dynamic_keeps_every_backend(self) -> None:
         state = module_activation(static_modules=False)
         self.assertEqual((state["RHI_Vulkan"], state["RHI_DX12"]), ("ON|", "ON|"))
+
+
+def read_manifest_targets(manifest: Path) -> list[str]:
+    return list(json.loads(manifest.read_text(encoding="utf-8"))["_listTarget"])
+
+
+def kit_pair_activation(target_type: str, shared: Path, client: Path) -> dict[str, str]:
+    """공유 키트 · 클라이언트 키트 매니페스트의 실제 대상으로 `sw_decide_module_activation` 을 돌린 켜짐 · 까닭."""
+    lines = [
+        "cmake_minimum_required(VERSION 3.24)",
+        f'include("{(PROJECT_ROOT / "cmake/Modules/Build/ModuleManifest.cmake").as_posix()}")',
+        "set(SW_STATIC_MODULES OFF)",
+        "set(SW_PLATFORM_NAME Windows)",
+        "set(SW_CONFIGURATION_NAME Dev)",
+        f"set(SW_TARGET_TYPE {target_type})",
+        "set_property(GLOBAL PROPERTY SW_MODULE_NAMES GF_Shared GF_Client_Shared)",
+    ]
+    for name, manifest in (("GF_Shared", shared), ("GF_Client_Shared", client)):
+        lines += [
+            f"set_property(GLOBAL PROPERTY SW_MODULE_{name}_KIND Kit)",
+            f"set_property(GLOBAL PROPERTY SW_MODULE_{name}_ENABLED_BY_DEFAULT ON)",
+            f"set_property(GLOBAL PROPERTY SW_MODULE_{name}_PLATFORMS Windows Linux)",
+            f"set_property(GLOBAL PROPERTY SW_MODULE_{name}_CONFIGURATIONS Dev Shipping)",
+            f"set_property(GLOBAL PROPERTY SW_MODULE_{name}_TARGETS {' '.join(read_manifest_targets(manifest))})",
+        ]
+    lines += ["sw_decide_module_activation(active)"]
+    for name in ("GF_Shared", "GF_Client_Shared"):
+        lines += [f"get_property(on GLOBAL PROPERTY SW_MODULE_{name}_ACTIVE)", f'message(NOTICE "{name}=[${{on}}]")']
+    return run_cmake_script("\n".join(lines) + "\n")
+
+
+class ClientKitModuleTest(unittest.TestCase):
+    KITS = PROJECT_ROOT / "Source/GameFramework/Kits"
+
+    def test_every_client_kit_targets_only_the_client(self) -> None:
+        list_manifest = sorted(self.KITS.rglob("GF_Client_*.module.json"))
+        self.assertTrue(list_manifest)
+        for manifest in list_manifest:
+            with self.subTest(manifest=manifest.name):
+                self.assertEqual(read_manifest_targets(manifest), ["Client"])
+
+    def test_dedicated_server_skips_the_tactics_client_module(self) -> None:
+        kit = self.KITS / "Genre/Strategy/TacticsSRPG"
+        shared, client = kit / "GF_TacticsSRPG.module.json", kit / "Client/GF_Client_TacticsSRPG.module.json"
+        self.assertEqual(kit_pair_activation("Server", shared, client), {"GF_Shared": "ON", "GF_Client_Shared": "OFF"})
+        self.assertEqual(kit_pair_activation("Client", shared, client), {"GF_Shared": "ON", "GF_Client_Shared": "ON"})
 
 
 if __name__ == "__main__":

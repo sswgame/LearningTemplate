@@ -10,7 +10,6 @@
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
-#include "GameFramework/Runtime/Foundation/Framework/GameStateRefs.h"
 #include "GameFramework/Runtime/World/Environment/WeatherSystem.h"
 #include "GameFramework/Runtime/World/Environment/WorldClock.h"
 
@@ -52,7 +51,7 @@ namespace sw
     {
     }
 
-    bool ScavengerExpedition::initialize( const ScavengerExpeditionData& data, const GameStateRefs& refs, Inventory& shipStorage, uint32 seed, int32 crewCount )
+    bool ScavengerExpedition::initialize( const ScavengerExpeditionData& data, Wallet* pWallet, WorldClock* pClock, WeatherSystem* pWeather, GameFlags* pFlags, Inventory& shipStorage, uint32 seed, int32 crewCount )
     {
         if ( crewCount < 1 || data._pCatalog == nullptr )
         {
@@ -69,10 +68,10 @@ namespace sw
         _hoursOnMoon    = 0.0f;
         _phase          = ScavengerPhase::InOrbit;
         _bDuskAnnounced = SW_FALSE;
-        _pWallet        = refs._pWallet;
-        _pClock         = refs._pClock;
-        _pWeather       = refs._pWeather;
-        _facility.setFlags( refs._pFlags );
+        _pWallet        = pWallet;
+        _pClock         = pClock;
+        _pWeather       = pWeather;
+        _facility.setFlags( pFlags );
         _facility.bindCatalog( data._pCatalog );
         _shop.initialize( data._pShopCatalog, data._pItemCatalog );
         _pShipStorage = &shipStorage;

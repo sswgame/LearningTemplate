@@ -207,7 +207,7 @@ namespace sw
         }
         _wallet.clear();
         _wallet.add( _settings._currency, _startingCash );
-        if ( _simulation.initialize( _settings, makeRefs() ) == false )
+        if ( _simulation.initialize( _settings, &_wallet ) == false )
             return false; // 까닭은 시뮬레이션이 남겼다 — 틀린 규칙으로 공원을 열지 않는다
         _listCoaster.clear();
 
@@ -311,7 +311,7 @@ namespace sw
         if ( io.isOk() == false )
             return;
         ThemeParkSimulation restoredSimulation;
-        if ( io.isReading() && io.check( restoredSimulation.initialize( _settings, makeRefs() ) ) == false )
+        if ( io.isReading() && io.check( restoredSimulation.initialize( _settings, &_wallet ) ) == false )
             return;
         ThemeParkSimulation& simulation = io.isWriting() ? _simulation : restoredSimulation;
         io.value( simulation );
@@ -377,13 +377,6 @@ namespace sw
                             static_cast<int32>( _simulation.getElapsedTime() ) );
         else
             SW_LOG_WARNING_ID( "ParkGameMode.SavedParkStateDoes", "[Park] the saved park state does not match this build - opening a new park" );
-    }
-
-    GameStateRefs ParkGameModeComponent::makeRefs()
-    {
-        GameStateRefs refs;
-        refs._pWallet = &_wallet;
-        return refs;
     }
 
     bool ParkGameModeComponent::buildCheapestRemaining()

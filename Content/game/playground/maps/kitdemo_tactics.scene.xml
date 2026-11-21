@@ -25,14 +25,14 @@
 		<entity id="2" name="Director">
 			<GameObject _schemaVersion="0" _name="Director" _bActive="true">
 				<_listComponent>
-					<TacticsSRPGDemoComponent _localID="8552409527683663359" _componentName="TacticsSRPGDemoComponent"
-					                          _bActive="true"
-					                          _catalogPath="game/playground/data/kitdemo/demo.srpg.xml"
-					                          _width="6"
-					                          _height="3"
-					                          _defaultTerrain="plain"
-					                          _seed="7"
-					                          _pilot="demo_pilot">
+					<SRPGGameModeComponent _localID="8552409527683663359" _componentName="SRPGGameModeComponent"
+					                       _bActive="true"
+					                       _catalogPath="game/playground/data/kitdemo/demo.srpg.xml"
+					                       _width="6"
+					                       _height="3"
+					                       _defaultTerrain="plain"
+					                       _seed="7"
+					                       _pilot="demo_pilot">
 						<_listPlayerUnit>
 							<item>demo_knight</item>
 						</_listPlayerUnit>
@@ -47,7 +47,12 @@
 							<item>3,1</item>
 							<item>5,1</item>
 						</_listEnemyCell>
-					</TacticsSRPGDemoComponent>
+					</SRPGGameModeComponent>
+					<SRPGCursorComponent _localID="8684156954649958172" _componentName="SRPGCursorComponent"
+					                     _bActive="true"
+					                     _moveAction="Move"
+					                     _confirmAction="KitDemo.Confirm"
+					                     _endTurnAction="KitDemo.EndTurn" />
 				</_listComponent>
 			</GameObject>
 		</entity>

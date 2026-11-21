@@ -27,7 +27,6 @@
 
 namespace sw
 {
-    struct GameStateRefs;
 
     class Archive;
     class Wallet;
@@ -164,11 +163,11 @@ namespace sw
         CitySimulation();
 
         /**
-         * @brief 빈 도시를 엽니다. 돈은 빌린 지갑(@p refs 의 지갑, 통화는 `CitySettings::_currency`)에서 나가고 들어옵니다.
+         * @brief 빈 도시를 엽니다. 돈은 빌린 지갑(@p wallet — 필수, 통화는 `CitySettings::_currency`)에서 나가고 들어옵니다.
          * @details 지갑이 없으면 알리고, 건설과 도로 놓기는 모두 돈 부족으로 거절된다. 달 결산에서 돈이 모자라면 지갑이 빚(`Wallet::charge`)을 진다.
          * @return 규칙은 카탈로그의 `<Rules>`(`CityCatalog::getRules`)이다 — 게임이 C++ 값으로 주는 길은 없다(감사 K-4). 카탈로그가 있고 크기가 1 이상이고 규칙이 범위 안이면 true 입니다. 밖이면 오류를 남기고 false 이며 상태를 바꾸지 않습니다(값을 조용히 맞추지 않는다).
          */
-        [[nodiscard]] bool initialize( const CityCatalog* pCatalog, int32 width, int32 height, const GameStateRefs& refs );
+        [[nodiscard]] bool initialize( const CityCatalog* pCatalog, int32 width, int32 height, Wallet& wallet );
         void               setTerrain( int32 x, int32 y, CityTerrain terrain );
         void               fillTerrain( int32 minX, int32 minY, int32 maxX, int32 maxY, CityTerrain terrain );
         /**

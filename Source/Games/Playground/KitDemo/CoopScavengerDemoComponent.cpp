@@ -11,7 +11,6 @@
 
 #include "GameFramework/Kits/Genre/Horror/CoopScavenger/ScavengerExpedition.h"
 #include "GameFramework/Runtime/Foundation/Condition/GameFlags.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameStateRefs.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 
 namespace sw
@@ -74,11 +73,8 @@ namespace sw
         Inventory               storage;
         ScavengerExpeditionData data;
         data._pCatalog = _pCatalog.get();
-        GameStateRefs refs;
-        refs._pWallet = &wallet;
-        refs._pFlags  = &flags;
         ScavengerExpedition expedition;
-        if ( expedition.initialize( data, refs, storage, CoopScavengerDemoComponentInternal::kSeed, CoopScavengerDemoComponentInternal::kCrewCount ) == false )
+        if ( expedition.initialize( data, &wallet, nullptr, nullptr, &flags, storage, CoopScavengerDemoComponentInternal::kSeed, CoopScavengerDemoComponentInternal::kCrewCount ) == false )
             return false;
         if ( expedition.land() != ScavengerActionResult::Ok )
             return false;

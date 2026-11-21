@@ -73,7 +73,7 @@ namespace sw
         const CityCatalog* pCatalog = game::findSubsystem<const CityCatalog>();
         if ( pCatalog == nullptr )
             return false;
-        if ( outCity.initialize( pCatalog, FrontierTownData::kLandSize, FrontierTownData::kLandSize, state.makeRefs( progress ) ) == false )
+        if ( outCity.initialize( pCatalog, FrontierTownData::kLandSize, FrontierTownData::kLandSize, progress.getWallet() ) == false )
             return false;
         // 땅은 놓기 전에 빌린다 — 이미 놓인 도로 · 건물은 땅을 얻지 않는다(CitySimulation::bindLand).
         outCity.bindLand( &state.getLand(), int2{ 0, 0 } );

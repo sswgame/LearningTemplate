@@ -31,7 +31,8 @@ SW_TEST_CASE( GameStateOpenTest, MissingStateIsRefused )
 }
 
 /**
- * @brief [GameStateOpenTest] 월드 상태는 씬에 하나다 — 같은 씬의 둘째 판 상태는 열리지 않고, 찾는 쪽(`findOpen`)은 첫 판만 본다(하위 레벨 미니게임이 바탕 씬에 판 상태를 열어도 시계 · 날씨가 갈리지 않는다)
+ * @brief [GameStateOpenTest] 월드 상태는 씬에 하나다 — 같은 씬의 둘째 판 상태는 등록에서 오류로 거절되어(`onRegister`) 레지스트리에 오르지 않고 열리지도 않으며,
+ *        찾는 쪽(`findOpen`)은 첫 판만 본다(하위 레벨 미니게임이 바탕 씬에 판 상태를 두어도 시계 · 날씨가 갈리지 않는다)
  */
 SW_TEST_CASE( GameStateOpenTest, SecondStateInSceneIsRefused )
 {
@@ -45,6 +46,13 @@ SW_TEST_CASE( GameStateOpenTest, SecondStateInSceneIsRefused )
     SW_EXPECT_TRUE( pSecond->initialize( GameStateSettings{} ) == GameStateInitResult::Refused );
     SW_EXPECT_FALSE( pSecond->isInitialized() );
     SW_EXPECT_TRUE( GameStateComponent::findOpen( &manager ) == pFirst );
+    size_t registeredCount = 0;
+    for ( const GameStateComponent* pRegistered : manager.getComponentRegistry().getAll<GameStateComponent>() )
+    {
+        SW_EXPECT_TRUE( pRegistered == pFirst );
+        ++registeredCount;
+    }
+    SW_EXPECT_EQUAL( size_t{ 1 }, registeredCount );
 }
 
 /**

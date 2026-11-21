@@ -42,7 +42,7 @@ namespace sw
         const ReputationCatalog* _pReputationCatalog{ nullptr };
         const ItemCatalog*       _pItemCatalog{ nullptr };
         PROPERTY( Min = 0 )
-        int32 _inventorySlotCount{ 0 }; ///< 플레이어 가방의 슬롯 수. 0 이면 가방이 없고 `GameStateComponent::makeRefs` 의 가방 포인터가 nullptr 이다
+        int32 _inventorySlotCount{ 0 }; ///< 플레이어 가방의 슬롯 수. 0 이면 가방이 없고 `findInventory` 의 가방 포인터가 nullptr 이다
     };
 } // namespace sw
 
@@ -94,15 +94,17 @@ namespace sw
 
         bool isInitialized() const { return _bInitialized == SW_TRUE; }
         /** @brief 새 판으로 열렸으면 true, 복원한 판이면 false 입니다. 디렉터가 시작값(시작 돈 · 첫 아이템)을 넣을지 판단할 때 묻습니다. */
-        bool                   isFreshGame() const { return _bFreshGame == SW_TRUE; }
-        Wallet&                getWallet() { return _wallet; }
-        const Wallet&          getWallet() const { return _wallet; }
-        Inventory&             getInventory() { return _inventory; }
-        const Inventory&       getInventory() const { return _inventory; }
-        QuestLog&              getQuestLog() { return _questLog; }
-        const QuestLog&        getQuestLog() const { return _questLog; }
-        ReputationState&       getReputation() { return _reputation; }
-        const ReputationState& getReputation() const { return _reputation; }
+        bool             isFreshGame() const { return _bFreshGame == SW_TRUE; }
+        Wallet&          getWallet() { return _wallet; }
+        const Wallet&    getWallet() const { return _wallet; }
+        Inventory&       getInventory() { return _inventory; }
+        const Inventory& getInventory() const { return _inventory; }
+        /** @brief 슬롯이 있으면(설정 `_inventorySlotCount` > 0) 가방이고, 아니면 nullptr 입니다 — 가방을 선택으로 빌리는 키트(`T*`)에 넘긴다. */
+        [[nodiscard]] Inventory* findInventory() { return _inventory.getSlotCount() > 0 ? &_inventory : nullptr; }
+        QuestLog&                getQuestLog() { return _questLog; }
+        const QuestLog&          getQuestLog() const { return _questLog; }
+        ReputationState&         getReputation() { return _reputation; }
+        const ReputationState&   getReputation() const { return _reputation; }
 
         /**
          * @brief 진행 조건 디버거(HUD 섹션 `progress`)의 줄을 씁니다 — 읽기만 한다. 월드 플래그(@p pWorldFlags, 없으면 건너뜀) · 지갑 · 가방(빈 칸 제외) 순이고 @p maxLines 에서 끊는다.

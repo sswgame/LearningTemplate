@@ -11,7 +11,6 @@
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/CoasterTrain.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameStateRefs.h"
 #include "GameFramework/Runtime/Foundation/GameData/ConfigRangeUtil.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Wallet.h"
 
@@ -107,7 +106,7 @@ namespace sw
     {
     }
 
-    bool ThemeParkSimulation::initialize( const ThemeParkSettings& settings, const GameStateRefs& refs )
+    bool ThemeParkSimulation::initialize( const ThemeParkSettings& settings, Wallet* pWallet )
     {
         const string rangeError = ConfigRangeUtil::describeRangeErrors( settings );
         const bool   bPairsOk   = settings._guestCashMin <= settings._guestCashMax && settings._guestMaxIntensityMin <= settings._guestMaxIntensityMax &&
@@ -118,7 +117,7 @@ namespace sw
             return false;
         }
         _settings = settings;
-        _pWallet  = refs._pWallet;
+        _pWallet  = pWallet;
         _listRide.clear();
         _listGuest.clear();
         _arrival.reset();

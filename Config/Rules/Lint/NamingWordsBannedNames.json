@@ -1956,6 +1956,7 @@
     "RTSVision": "FogOfWar — 업계 fog of war(2026-11-21)",
     "FacingDir": "FacingDirection — 줄임말(2026-11-21)",
     "SessionStateRefs": "GameStateRefs — 주인 GameStateComponent 를 따름(2026-11-21)",
+    "GameStateRefs": "없앤 상태 묶음 — 키트는 필수 상태를 참조, 선택 상태를 T* 로 받는다(2026-11-21)",
     "_bloodChannel": "_severedSurfaceChannel — 피는 콘텐츠 — 잘린 영역 표면 채널(2026-11-21)",
     "getBloodChannel": "getSeveredSurfaceChannel — 멤버를 따름(2026-11-21)",
     "ScheduleNPCDef": "NPCScheduleDef — 영어 어순(NPCScheduleComponent)(2026-11-21)",

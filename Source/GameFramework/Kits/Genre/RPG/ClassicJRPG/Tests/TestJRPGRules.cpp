@@ -13,7 +13,6 @@
 #include "GameFramework/Kits/Genre/RPG/ClassicJRPG/JRPGEncounter.h"
 #include "GameFramework/Kits/Genre/RPG/ClassicJRPG/JRPGParty.h"
 #include "GameFramework/Runtime/Character/Input/TimingJudge.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameStateRefs.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Wallet.h"
@@ -181,10 +180,7 @@ namespace
 
         void initializeParty( sw::JRPGParty& outParty )
         {
-            sw::GameStateRefs refs;
-            refs._pWallet    = &_wallet;
-            refs._pInventory = &_inventory;
-            outParty.initialize( &_catalog, &_itemCatalog, refs );
+            outParty.initialize( &_catalog, &_itemCatalog, &_inventory, &_wallet );
         }
 
         /** @brief 지금 설정으로 전투를 처음부터 엽니다(멤버는 앞서 넣어 둡니다). */
@@ -798,7 +794,7 @@ SW_TEST_CASE_F( JRPGRulesTest, InnAndChurch )
     SW_EXPECT_EQUAL( _party.getMember( 1 ).getStat( sw::JRPGStat::MaxHP ), _party.getMember( 1 )._hp );
 
     sw::JRPGParty unfunded;
-    unfunded.initialize( &_catalog, &_itemCatalog, sw::GameStateRefs{} );
+    unfunded.initialize( &_catalog, &_itemCatalog, nullptr, nullptr );
     SW_REQUIRE_TRUE( unfunded.addMember( "hero", "Hero", "hero" ) == 0 );
     SW_EXPECT_FALSE( unfunded.restAtInn( 1 ) );
     SW_EXPECT_TRUE( unfunded.restAtInn( 0 ) );
@@ -997,7 +993,7 @@ SW_TEST_CASE_F( JRPGRulesTest, PartyStateRefusals )
     _party.writeState( written );
     sw::Archive   readingLayout( written.getData(), written.getSize() );
     sw::JRPGParty otherLayout;
-    otherLayout.initialize( &_catalog, &_itemCatalog, sw::GameStateRefs{}, "Weapon" );
+    otherLayout.initialize( &_catalog, &_itemCatalog, nullptr, nullptr, "Weapon" );
     SW_EXPECT_FALSE( otherLayout.readState( readingLayout ) );
 }
 
@@ -1316,7 +1312,7 @@ SW_TEST_CASE( JRPGTest, CatalogReportsUnknownReferences )
 
     // 모르는 주문은 배우지 않는다 - 배우면 그 멤버의 세이브가 읽히지 않는다.
     sw::JRPGParty party;
-    party.initialize( &catalog, nullptr, sw::GameStateRefs{} );
+    party.initialize( &catalog, nullptr, nullptr, nullptr );
     SW_REQUIRE_TRUE( party.addMember( "hero", "Hero", "hero" ) == 0 );
     SW_EXPECT_TRUE( party.getMember( 0 )._listSpell.empty() );
 }
@@ -1350,10 +1346,7 @@ SW_TEST_CASE_F( JRPGRulesTest, BattleDeterminism )
     {
         if ( run._inventory.initialize( &_itemCatalog, 5 ) == false )
             return false;
-        sw::GameStateRefs refs;
-        refs._pWallet    = &run._wallet;
-        refs._pInventory = &run._inventory;
-        run._party.initialize( &_catalog, &_itemCatalog, refs );
+        run._party.initialize( &_catalog, &_itemCatalog, &run._inventory, &run._wallet );
         if ( run._party.addMember( "hero", "Hero", "hero" ) != 0 || run._party.addMember( "mage", "Mage", "mage" ) != 1 )
             return false;
         run._battle.initialize( &_catalog, &_judge, _settings, 7 );

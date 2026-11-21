@@ -103,7 +103,7 @@
 - **렌더 그래프 ④ 형식으로 막기:** 패스 몸통이 받는 명령 리스트를 전이 함수 없는 면(`RenderPassCommandList`)으로, `transitionBuffer` · `prepareTexture*` 는 그래프 실행기 · 프레임 끝만 쓰는 `IRHICommandList` 에. 판정: 단계마다 네 백엔드 골든 그대로, DX12 · Vulkan 검증 층 경고 없음, `RT.Graph.transitions` · 프레임 GPU 시간이 늘지 않음. 그 뒤 VFX → FrameGraphExecutor → FramePassExecutor.
 - **Renderer 차례:** ② 직렬 execute 의 `_pCmdList` 누락 · 패스 순번 payload · 꺼짐 판정을 맨 앞으로 · 등록 조건 한 자리 ③ 고르기 마스크별 컴파일 계획 캐시(상한 · 계측) + Clear 를 계획에서 + 별칭 계획 값 비교 ④ 주 시점 = 뷰 목록 0 번 ⑤ 엔진 상수 칸 번호 계획 — `RT.Bind.passCbAcquires` 를 재고 FrameCB · ViewCB(C++ · HLSL 대조는 리플렉션 오프셋), M3(칸 고갈이면 그리지 않음)은 ⑤ 전에 잰다 ⑥ (배치, 패스 종류, 뷰 모드) → PSO 표(잠금 없음) + PSO 키 값 비교 ⑦ 확장 지점 등록 때 선언 → 이름 정리 → DX11 컬링 없음을 기동 때 알리고 진단 스위치는 배포에서 막는다. GPUSceneBuilder 의 카메라 의존은 `GT.GPUScene.build.*` 를 잰 뒤.
 - **렌더러 규격(접근 핸들 · R-4 뒤):** 그래프 일시 버퍼(`graph.createBuffer`) → 뷰 히스토리, `RHITextureSlot`(텍스처 손 생성 · 뷰 등록 8 곳), 컴퓨트 패스 도우미(그룹 크기는 `[numthreads]` 리플렉션), 풀 버퍼(펜스 재사용), 되읽기 단일 면. RHI 자원 생성은 패스키로 막는다.
-- **RHI ③:** 공개 해제 길은 `releaseHandle` 하나 + 이동 전용 소유 형식 + 강타입 핸들(bindless 번호 → 핸들, `RHIHandleKind` 가 불어나지 않게 같은 묶음) + 닫힌 리스트 토큰 + 손실 보고 하나.
+- **RHI ③ 남은 몫:** 이동 전용 소유 형식, bindless 번호(`RHIDescriptorIndex`)도 강타입 핸들로, 닫힌 리스트 토큰, 손실 보고 하나, 에디터 확장 경계의 uint64 텍스처 id.
 - **RHI 5-2(측정 뒤에만):** Vulkan 동적 오프셋 · 푸시 디스크립터, WebGPU 바인드 그룹 캐시 은퇴, RHI 스레드, 복사 큐, SM6.6 바인드리스, RT · 메시 셰이더, 서브할당(Vulkan 은 `RT.Vulkan.allocationCount` 가 허브 월드에서 한도 절반을 넘을 때).
 - **L-2 상수 버퍼 기록(측정 뒤에만):** dx12 · vk, `-gv_renderGraphParallelMinWidth=2` 에서 `RT.Bind.mirrorLockWait` 합이 `RT.Graph.parallelLevel` 합의 2 % 를 넘으면 매핑 주소 · 슬롯 크기 · 미러 값을 버퍼 레코드(`_pMapped` · `_alignedSize` · `_lastWriteFrame` · `_pendingSlotMask`)로 옮겨 `_bindlessMutex` · 미러 전역 락을 없앤다(채울 목록은 리스트 기록 상태, 제출 때 한 스레드가 합침, 같은 프레임 두 번째 쓰기는 `_lastWriteFrame` 비교 교환으로 오류). RT 프레임 중앙값이 안 빨라지면 되돌린다.
 - **자원 구간 할당 ④:** Vulkan VMA · DX12 D3D12MA(MIT)로 백엔드 메모리를 덩이에서 나눈다 — 사용자 결정 뒤(R-4 `MaterialRenderProxy.cpp:48`, 확인: 머티리얼 인스턴스 5000 의 버퍼 바이트 · Vulkan 할당 수).
@@ -111,6 +111,7 @@
 - 렌더링 런타임 디버그: 그래프 밖 버퍼를 읽는 컴퓨트 PSO 의 리플렉션(`ShaderBindingSlot::_listElementMember`)을 버퍼 이름에 잇는 표.
 - 화질 남은 몫: 볼류메트릭 구름 · 비 가림 맵. 스카이 라이트 GPU 찍기는 하늘이 프레임마다 바뀌는 장면이 생길 때.
 - 시나리오: 실시간 GI 정착 조건(넣으면 GI 장면 사진 시점이 바뀐다 — 골든과 함께).
+- **키트 셋 가르기(규칙 · 디렉터 · 클라이언트):** TacticsSRPG 가 본보기(규칙은 키트 루트, 디렉터 `Component/SRPGGameModeComponent`, 뷰 · 입력 · HUD 는 `Client/` 의 `GF_Client_TacticsSRPG`). Fighting · Farming · CityBuilder 는 키트 안에 섞인 곳이 없고 디렉터 · 뷰가 폐기할 게임(Playground FightingDemo · HarvestValley · MeadowVillage · FrontierTown · NileCity)에 있다 — 허브 미니게임으로 옮길 때 같은 계약으로 키트 `Component/` · `GF_Client_<X>` 에 둔다. 나머지 순서(같은 계약): ActionPlatformer · ActionCombat · BattleRoyale · MechArena · Metroidvania · CardGame · KartRacing · PartyArena · Rhythm · AsymmetricHorror · CoopScavenger · GhostHunt · SurvivalHorror · ClassicJRPG · MonsterCollector · MonsterHuntRPG · OpenWorldWestern · CreatureLife · RestaurantSim · ThemePark · RealTimeStrategy · SideScrollConquest · ActionAdventure.
 
 ### 코어 · 리플렉션
 

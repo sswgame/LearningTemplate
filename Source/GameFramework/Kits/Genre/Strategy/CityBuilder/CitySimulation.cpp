@@ -11,7 +11,6 @@
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
-#include "GameFramework/Runtime/Foundation/Framework/GameStateRefs.h"
 #include "GameFramework/Runtime/Foundation/GameData/ConfigRangeUtil.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Wallet.h"
 
@@ -163,7 +162,7 @@ namespace sw
     {
     }
 
-    bool CitySimulation::initialize( const CityCatalog* pCatalog, int32 width, int32 height, const GameStateRefs& refs )
+    bool CitySimulation::initialize( const CityCatalog* pCatalog, int32 width, int32 height, Wallet& wallet )
     {
         if ( pCatalog == nullptr )
         {
@@ -183,9 +182,7 @@ namespace sw
             return false;
         }
         _pCatalog = pCatalog;
-        _pWallet  = refs._pWallet;
-        if ( _pWallet == nullptr )
-            SW_LOG_WARNING_ID( "CitySimulation.CitySimulationNoWalletLent", "CitySimulation: no wallet was lent - every road and building is refused" );
+        _pWallet  = &wallet;
         _settings = settings;
         _topology = GridTopology{ width, height };
         _listTile.assign( static_cast<size_t>( _topology.getCellCount() ), CityTile{} );

@@ -6,7 +6,6 @@
 
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/WesternCatalog.h"
 #include "GameFramework/Runtime/Foundation/Condition/GameFlags.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameStateRefs.h"
 
 namespace sw
 {
@@ -16,10 +15,10 @@ namespace sw
     {
     }
 
-    void WesternHonor::initialize( const WesternCatalog* pCatalog, const GameStateRefs& refs )
+    void WesternHonor::initialize( const WesternCatalog* pCatalog, ReputationState* pReputation )
     {
         _pCatalog    = pCatalog;
-        _pReputation = refs._pReputation;
+        _pReputation = pReputation;
     }
 
     int32 WesternHonor::applyAction( const hashed_string& actionID )

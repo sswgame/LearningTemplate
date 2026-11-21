@@ -10,7 +10,6 @@
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Simulation/RestaurantSim/RestaurantSimulation.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameStateRefs.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Wallet.h"
 
@@ -55,16 +54,14 @@ namespace sw
 
     bool RestaurantSimDemoComponent::runDay()
     {
-        // 지갑 · 창고는 이 하루만 빌려 준다. 평판 · 시계 · 시장은 쓰지 않는다(없으면 끈다 — `GameStateRefs`).
+        // 지갑 · 창고는 이 하루만 빌려 준다. 평판 · 시계 · 시장은 쓰지 않는다(nullptr 이면 끈다).
         Wallet    wallet;
         Inventory pantry;
         if ( pantry.initialize( nullptr, RestaurantSimDemoComponentInternal::kPantrySlots ) == false )
             return false;
-        GameStateRefs refs;
-        refs._pWallet = &wallet;
 
         RestaurantSimulation simulation;
-        simulation.initialize( _pCatalog.get(), _pRecipeCatalog.get(), nullptr, nullptr, nullptr, refs, pantry, RestaurantSettings{} );
+        simulation.initialize( _pCatalog.get(), _pRecipeCatalog.get(), nullptr, nullptr, nullptr, &wallet, nullptr, nullptr, pantry, RestaurantSettings{} );
         (void)simulation.hireStaff( hashed_string( "cook" ), StaffRole::Cook, RestaurantSimDemoComponentInternal::kDailyWage );
         (void)simulation.hireStaff( hashed_string( "server" ), StaffRole::Server, RestaurantSimDemoComponentInternal::kDailyWage );
         (void)simulation.addIngredient( hashed_string( "noodle" ), RestaurantSimDemoComponentInternal::kCustomerCount, RestaurantSimDemoComponentInternal::kIngredientUnitCost );

@@ -10,7 +10,6 @@
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
-#include "GameFramework/Runtime/Foundation/Framework/GameStateRefs.h"
 #include "GameFramework/Runtime/Foundation/GameData/StatBlock.h"
 
 namespace sw
@@ -85,15 +84,15 @@ namespace sw
     {
     }
 
-    void JRPGParty::initialize( const JRPGCatalog* pCatalog, const ItemCatalog* pItemCatalog, const GameStateRefs& refs, string_view equipLayout )
+    void JRPGParty::initialize( const JRPGCatalog* pCatalog, const ItemCatalog* pItemCatalog, Inventory* pInventory, Wallet* pWallet, string_view equipLayout )
     {
         _pCatalog     = pCatalog;
         _pItemCatalog = pItemCatalog;
         _equipLayout  = string( equipLayout );
         _listMember.clear();
         _eventBuffer.clear();
-        _pInventory = refs._pInventory;
-        _pWallet    = refs._pWallet;
+        _pInventory = pInventory;
+        _pWallet    = pWallet;
     }
 
     expected<int32> JRPGParty::addMember( const hashed_string& memberID, string_view name, const hashed_string& classID, int32 level )

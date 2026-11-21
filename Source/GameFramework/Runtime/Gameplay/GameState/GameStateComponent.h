@@ -19,7 +19,6 @@
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Foundation/Condition/GameFlags.h"
 #include "GameFramework/Runtime/Foundation/Condition/IGameFlagsOwner.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameStateRefs.h"
 #include "GameFramework/Runtime/World/Environment/WeatherMaterialWriter.h"
 #include "GameFramework/Runtime/World/Environment/WeatherSystem.h"
 #include "GameFramework/Runtime/World/Environment/WorldClock.h"
@@ -43,11 +42,11 @@ namespace sw
         REFLECT_BODY();
         PROPERTY()
         WorldClockSettings               _clock{};
-        shared_ptr<const WeatherCatalog> _pWeatherCatalog; ///< 없으면 날씨가 없고 `makeRefs` 의 날씨 포인터가 nullptr 이다. 받은 때의 판(스냅숏) — 날씨 상태가 그 판의 항목을 가리키므로 판 상태가 쥔다
+        shared_ptr<const WeatherCatalog> _pWeatherCatalog; ///< 없으면 날씨가 없고 `findWeather` 가 nullptr 이다. 받은 때의 판(스냅숏) — 날씨 상태가 그 판의 항목을 가리키므로 판 상태가 쥔다
         PROPERTY()
         uint32 _weatherSeed{ DeterministicRandom32::kDefaultSeed }; ///< 날씨 수열의 씨앗(0 은 거절된다 — 씨앗을 주지 않으면 기본 씨앗)
         PROPERTY( Min = 0 )
-        int32 _landWidth{ 0 }; ///< 공유 땅의 셀 수. 0 이면 땅이 없고 `makeRefs` 의 땅 포인터가 nullptr 이다. 격자 키트는 단독으로 쓴다
+        int32 _landWidth{ 0 }; ///< 공유 땅의 셀 수. 0 이면 땅이 없다(`LandRegistry::isInitialized` 가 false). 격자 키트는 단독으로 쓴다
         PROPERTY( Min = 0 )
         int32 _landHeight{ 0 };
         PROPERTY( Min = 0.001 )
@@ -73,7 +72,7 @@ namespace sw
 {
     /**
      * @class GameStateComponent
-     * @brief 키트 디렉터 여럿이 함께 쓰는 월드 상태(씬에 하나 — 둘째는 `initialize` 가 거절한다)입니다. 같은 오브젝트에 디렉터들과 함께 두고 **맨 앞**에 붙입니다.
+     * @brief 키트 디렉터 여럿이 함께 쓰는 월드 상태(씬에 하나 — 둘째는 `onRegister` 가 거절한다)입니다. 같은 오브젝트에 디렉터들과 함께 두고 **맨 앞**에 붙입니다.
      * @details - **순서**: 한 오브젝트의 틱은 한 워커가 붙은 순서대로 처리한다(`TickRegistry`). 이 컴포넌트(시계를 진행), 첫 디렉터, 둘째 디렉터 순서가
      *            매 틱 같고, 디렉터는 앞 디렉터가 이번 틱에 쓴 플래그를 잠금 없이 읽는다. 주의할 점이 있다. 공유 상태를 쓰는 디렉터를 **다른 오브젝트**에 두면
      *            같은 그룹에서 동시에 실행되어 데이터 경쟁이 생긴다. 그래서 찾는 함수도 `findOnOwner`(같은 오브젝트) 하나뿐이다.
@@ -99,12 +98,15 @@ namespace sw
         /**
          * @brief 판 상태를 엽니다. 첫 호출만 설정을 쓰고, 보관하고 있던 복원 바이트가 있으면 그것으로 복원합니다.
          * @return 새 판, 복원, 이미 열림, 거절 중 하나입니다. 복원하려던 바이트를 읽지 못했으면 경고를 남기고 새 판(`Fresh`)으로 엽니다.
-         *         설정이 범위 밖이거나 같은 씬에 이미 열린 판 상태가 있으면 오류를 남기고 `Refused` 이며, 열리지 않은 채로 남습니다.
+         *         설정이 범위 밖이면 오류를 남기고, 등록에서 거절된 둘째 월드 상태(`onRegister`)면 `Refused` 이며, 열리지 않은 채로 남습니다.
          * @details 월드 상태(시계 · 날씨 · 플래그 · 땅)는 씬에 하나다 — 하위 레벨 미니게임이 바탕 씬에 둘째 판 상태를 열면 어느 시계 · 날씨를 읽을지가 등록 순서에 달린다(`findOpen`).
          */
         [[nodiscard]] GameStateInitResult initialize( const GameStateSettings& settings );
 
-        /** @brief 씬의 컴포넌트 레지스트리에 오릅니다 — 판 상태를 찾는 틱(날씨 파도 · 표면 노출 · 지역)이 씬을 훑지 않는다(`findOpen`). */
+        /**
+         * @brief 씬의 컴포넌트 레지스트리에 오릅니다 — 판 상태를 찾는 틱(날씨 파도 · 표면 노출 · 지역)이 씬을 훑지 않는다(`findOpen`).
+         * @details 씬에 이미 월드 상태가 있으면 오류(`GameState.SecondInScene`)를 남기고 오르지 않으며, 이 컴포넌트는 열리지 않는다(`initialize` 가 `Refused`).
+         */
         void onRegister( GameObjectManager& manager ) override;
         /** @brief 레지스트리에서 내립니다. */
         void onUnregister( GameObjectManager& manager ) override;
@@ -140,11 +142,8 @@ namespace sw
         /** @brief 이번 틱에 시계가 넘은 경계 목록입니다. 읽기만 하며, 다음 틱 처음에 비웁니다. */
         const vector<WorldClockEvent>& getClockEvents() const { return _listClockEvent; }
 
-        /**
-         * @brief 이 월드 상태와 @p progress(플레이어 진행)를 키트에 참조로 넘겨 줄 포인터 모음입니다. 설정에서 열지 않은 것(가방 슬롯 0, 날씨 카탈로그 없음, 땅 크기 0)은 nullptr 입니다.
-         * @details 플레이어 진행을 인자로 받는다 — 키트가 빌리는 지갑 · 가방이 어느 플레이어의 것인지 부르는 쪽이 정한다.
-         */
-        GameStateRefs makeRefs( PlayerProgressComponent& progress );
+        /** @brief 날씨 카탈로그로 열었으면 날씨이고, 아니면 nullptr 입니다 — 날씨를 선택으로 빌리는 키트(`T*`)에 넘긴다. */
+        [[nodiscard]] WeatherSystem* findWeather() { return _bWeather == SW_TRUE ? &_weather : nullptr; }
 
         /** @brief @p component 와 같은 오브젝트에 있는 판 상태입니다. 없으면 nullptr 입니다. */
         static GameStateComponent* findOnOwner( const Component& component );
@@ -156,7 +155,7 @@ namespace sw
         /** @brief `openOnOwner` 의 결과를 보지 않는 버전입니다. 시작값은 `isFreshGame` 으로 봅니다. */
         [[nodiscard]] static GameStateComponent* openOnOwner( const Component& component, const GameStateSettings& settings );
         /**
-         * @brief 씬 @p pManager 의 열린 판 상태(씬에 하나 — `initialize` 가 둘째를 거절한다)입니다. 없으면 nullptr 입니다. 자동화 단계 · 감시 값 · 지역 · 날씨가 읽는다.
+         * @brief 씬 @p pManager 의 열린 판 상태(씬에 하나 — `onRegister` 가 둘째를 거절한다)입니다. 없으면 nullptr 입니다. 자동화 단계 · 감시 값 · 지역 · 날씨가 읽는다.
          * @details 씬을 훑지 않고 컴포넌트 레지스트리를 읽는다 — 잠금 없는 읽기라 병렬 틱에서도 부를 수 있고, 틱마다 불려도 할당하지 않는다.
          */
         [[nodiscard]] static GameStateComponent* findOpen( const GameObjectManager* pManager );
@@ -179,7 +178,8 @@ namespace sw
         uint8                            _bWeather     : 1; ///< 날씨 카탈로그로 열었는지 여부
         PROPERTY( Tooltip = "Open with default settings at begin play - only for scenes without a kit director (showcases, tests); a director opens it with its own settings" )
         uint8                  _bOpenAtBeginPlay : 1;
-        [[maybe_unused]] uint8 _reserved         : 4;
+        uint8                  _bRefusedInScene  : 1; ///< 같은 씬에 이미 월드 상태가 있어 등록에서 거절됐다(`onRegister`) — 레지스트리에 없고 열리지 않는다
+        [[maybe_unused]] uint8 _reserved         : 3;
 
     private:
         /** @brief 플래그 주인 계약을 주인의 `findOpenFlags` 로 넘기는 포트입니다(`REFLECT_INTERFACE`). */
