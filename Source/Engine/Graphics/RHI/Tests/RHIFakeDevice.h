@@ -334,13 +334,14 @@ namespace sw::test
     class FakeRHIBufferFactory final : public IRHIResourceFactory
     {
     public:
-        RHIBufferHandle _nextBuffer{ 1 };
-        uint32          _gpuVertexBufferCount{ 0 };
-        uint32          _structuredUpdateCount{ 0 };                                                                  /**< `updateStructuredBufferRegions` 호출 수(한 조각 갱신 · 만들 때의 초기 내용도 이 길이다) */
-        uint32          _structuredCreateCount{ 0 };                                                                  /**< `createStructuredBuffer` 호출 수 */
-        uint32          _lastStructuredElementCount{ 0 };                                                             /**< 마지막으로 만든 구조 버퍼의 원소 수 */
-        uint32          _readbackReadCount{ 0 };                                                                      /**< `readReadbackBuffer` 호출 수 */
-        bool            _bReadbackReadable{ true }; /**< `readReadbackBuffer` 가 돌려줄 값(내용은 건드리지 않는다) */ ///< NOLINT(sw-bool-flag): 테스트가 바꾸는 답
+        RHIBufferHandle                _nextBuffer{ 1 };
+        uint32                         _gpuVertexBufferCount{ 0 };
+        uint32                         _structuredUpdateCount{ 0 };                                                                  /**< `updateStructuredBufferRegions` 호출 수(한 조각 갱신 · 만들 때의 초기 내용도 이 길이다) */
+        uint32                         _structuredCreateCount{ 0 };                                                                  /**< `createStructuredBuffer` 호출 수 */
+        uint32                         _lastStructuredElementCount{ 0 };                                                             /**< 마지막으로 만든 구조 버퍼의 원소 수 */
+        uint32                         _readbackReadCount{ 0 };                                                                      /**< `readReadbackBuffer` 호출 수 */
+        bool                           _bReadbackReadable{ true }; /**< `readReadbackBuffer` 가 돌려줄 값(내용은 건드리지 않는다) */ ///< NOLINT(sw-bool-flag): 테스트가 바꾸는 답
+        vector<RHIPipelineStateHandle> _listDestroyedPipelineState;                                                                  /**< `destroyPipelineState` 로 받은 PSO(받은 순서) */
 
         RHIBufferHandle createVertexBuffer( const void*, uint32 ) override { return _nextBuffer++; }
         RHIBufferHandle createGPUVertexBuffer( uint32 ) override
@@ -361,7 +362,7 @@ namespace sw::test
         void                   discardTextureReadback( RHITransferTicket ) override {}
         RHIPipelineStateHandle createPipelineStateNative( const RHIPipelineStateDesc&, const RHICompiledGraphicsStages& ) override { return 0; }
         RHIPipelineStateHandle createComputePipelineStateNative( const RHICompiledShaderStage&, string_view ) override { return 0; }
-        void                   destroyPipelineState( RHIPipelineStateHandle ) override {}
+        void                   destroyPipelineState( RHIPipelineStateHandle pso ) override { _listDestroyedPipelineState.push_back( pso ); }
         RHIRenderPassHandle    createRenderPass( const RHIRenderPassDesc& ) override { return 0; }
         void                   destroyRenderPass( RHIRenderPassHandle ) override {}
         RHIBufferHandle        createConstantBuffer( uint32 ) override { return 0; }

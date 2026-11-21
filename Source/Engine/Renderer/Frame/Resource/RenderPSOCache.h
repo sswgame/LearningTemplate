@@ -95,8 +95,8 @@ namespace sw
          *          차이(알파 경로가 컴파일됐는가 같은)를 테스트가 여기서 확인합니다.
          */
         [[nodiscard]] bool findDesc( RHIPipelineStateHandle pso, RHIPipelineStateDesc& outDesc ) const;
-        /** @brief 셰이더 핫 리로드: 그 경로로 만든 레이아웃 캐시를 버립니다(PSO 는 부르는 쪽이 다시 만듭니다). */
-        void invalidateLayoutsByShaderPath( string_view shaderPath );
+        /** @brief 레이아웃 없이 desc 만 핸들에 적습니다 — 컴퓨트 PSO(`createComputePipelineState`)가 어느 셰이더로 만들었는지 `releasePSOsUsingShader` 가 알게 한다. 0 핸들은 무시합니다. */
+        void registerDesc( RHIPipelineStateHandle pso, const RHIPipelineStateDesc& desc );
         /** @brief 등록된 (PSO, 레이아웃) 모두를 복사해 반환합니다. 셋업에서 폴백 버퍼 stride 를 모을 때 씁니다. */
         void collectLayouts( vector<RegisteredLayout>& outListLayout ) const;
 
@@ -176,6 +176,14 @@ namespace sw
         void releaseAll( IRHIDevice* pDevice );
         /** @brief 디바이스가 이미 사라졌을 때 부릅니다. 핸들만 잊습니다. */
         void clearAll();
+        /**
+         * @brief 셰이더 핫 리로드: 그 셰이더로 만든 PSO 만 파괴하고 비웁니다(레이아웃 캐시도 그 셰이더 것만). 빈 자리는 `FramePSOManager::createPassPSOs` · 지연 생성이 다시 채웁니다.
+         * @details 언리얼 셰이더 핫 리로드처럼 바뀐 셰이더를 쓰는 PSO 만 다시 만든다 — 패스 자원(상수 버퍼 · 풀 · 그리기 캐시)은 그대로다.
+         *          엔진 패스 PSO 를 하나라도 놓으면 머티리얼 변형을 모두 놓는다: 변형 키에 패스 PSO 핸들이 들어 있어 남기면 쓰이지 않는 채로 쌓이고, `_bOwned` 가 0 인 변형은 놓은 패스 PSO 를 가리킨다.
+         *          `Failed` 변형과 실패(0)로 적힌 모듈 프로그램도 지운다 — 고친 셰이더로 다시 만들어 본다. 만드는 중(`Building`)인 변형은 빌더가 끝낼 때까지 둔다.
+         * @return 파괴한 PSO 수입니다.
+         */
+        uint32 releasePSOsUsingShader( IRHIDevice* pDevice, string_view shaderPath );
 
     private:
         /** @brief (패스 << 32 | 대상 포맷) 키입니다. */

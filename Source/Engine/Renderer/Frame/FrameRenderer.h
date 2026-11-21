@@ -225,7 +225,7 @@ namespace sw
         /** @brief GPUScene 을 반환합니다. */
         const GPUScene& getGPUScene() const { return _state._gpuScene; }
         GPUScene&       getGPUScene() { return _state._gpuScene; }
-        /** @brief 셰이더 핫 리로드를 알립니다(렌더 스레드, 프레임 기록 전 — `RenderThread::applyRecompiledShaders`). 그 셰이더들의 바인딩 레이아웃을 무효화하고 패스 PSO 를 한 번 다시 만듭니다. */
+        /** @brief 셰이더 핫 리로드를 알립니다(렌더 스레드, 프레임 기록 전 — `RenderThread::applyRecompiledShaders`). 그 셰이더를 쓰는 PSO 만 놓고 빠진 패스 PSO 를 한 번 다시 만듭니다(패스 자원은 그대로). */
         void onShaderRecompiled( const vector<string>& listShaderPath );
         /**
          * @brief 이 렌더러의 캡처 · 되읽기입니다. Present 결과 캡처(`-gv_screenshot`, 테스트의 최종 화면 비교), 트랜지언트 첨부와 임의 텍스처를 CPU 로 읽거나 파일로 씁니다.
