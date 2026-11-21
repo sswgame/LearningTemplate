@@ -55,7 +55,11 @@ namespace sw::editor
     /** @brief 글을 읽습니다. */
     [[nodiscard]] inline bool readUndoArg( Archive& archive, string& outValue )
     {
-        return archive.readString( outValue );
+        auto loadedValue = archive.readString();
+        if ( archive.isError() )
+            return false;
+        outValue = std::move( loadedValue );
+        return true;
     }
     /** @brief 목록을 씁니다(개수 + 원소). */
     template <typename T>

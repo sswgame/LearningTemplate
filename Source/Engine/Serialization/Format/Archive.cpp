@@ -159,36 +159,27 @@ namespace sw
         *this << str;
     }
 
-    bool Archive::readString( string& outStr )
+    string Archive::readString()
     {
-        *this >> outStr;
-        return isOk();
+        string text;
+        *this >> text;
+        return text;
     }
 
-    bool Archive::readStringView( string_view& outView )
+    string_view Archive::readStringView()
     {
         uint32 len{ 0 };
         ( *this ) >> len;
-        if ( _bError == SW_TRUE )
+        if ( _bError == SW_TRUE || len == 0 )
+            return {};
+        if ( _pData == nullptr || len > _dataSize - _offset )
         {
-            outView = {};
-            return false;
+            _bError = SW_TRUE;
+            return {};
         }
-
-        if ( len > 0 )
-        {
-            if ( _pData == nullptr || _offset + len > _dataSize )
-            {
-                _bError = SW_TRUE;
-                outView = {};
-                return false;
-            }
-            outView = string_view{ reinterpret_cast<const utf8*>( _pData + _offset ), len };
-            _offset += len;
-            return true;
-        }
-        outView = {};
-        return true;
+        const string_view view{ reinterpret_cast<const utf8*>( _pData + _offset ), len };
+        _offset += len;
+        return view;
     }
 
     Archive Archive::readSubArchive( uint64 byteSize )
@@ -206,19 +197,18 @@ namespace sw
         return Archive( pSubData, byteSize );
     }
 
-    bool Archive::readCount( uint32 minBytesPerElement, uint32& outCount )
+    uint32 Archive::readCount( uint32 minBytesPerElement )
     {
         uint32 count = 0;
         ( *this ) >> count;
         if ( _bError == SW_TRUE )
-            return false;
+            return 0;
         if ( ByteReader::canHoldCount( count, minBytesPerElement, getRemainingBytes() ) == false )
         {
             _bError = SW_TRUE;
-            return false;
+            return 0;
         }
-        outCount = count;
-        return true;
+        return count;
     }
 
     void Archive::writeSection( const void* pData, uint32 byteSize )
@@ -836,71 +826,75 @@ namespace sw
         _offset   = _dataSize;
     }
 
-    bool Archive::readVarUint( uint64& outValue )
+    uint64 Archive::readVarUint()
     {
-        if ( _pData == nullptr || _offset >= _dataSize )
+        uint64 value = 0;
+        if ( _bError == SW_TRUE || _pData == nullptr || _offset >= _dataSize ) // 실패는 끈적하다 — 실패 뒤의 읽기도 0 이다(`ByteReader` 와 같다)
         {
             _bError = SW_TRUE;
-            return false;
+            return 0;
         }
         size_t inoutOffset = static_cast<size_t>( _offset );
-        if ( VarIntUtil::decodeVarUint64( _pData, static_cast<size_t>( _dataSize ), inoutOffset, outValue ) == false )
+        if ( VarIntUtil::decodeVarUint64( _pData, static_cast<size_t>( _dataSize ), inoutOffset, value ) == false )
         {
             _bError = SW_TRUE;
-            return false;
+            return 0;
         }
         _offset = inoutOffset;
-        return true;
+        return value;
     }
 
-    bool Archive::readVarUint( uint32& outValue )
+    uint32 Archive::readVarUint32()
     {
         // 범위 밖을 조용히 자르지 않는다. 자르면 망가진 아카이브가 **거부되는 대신 엉뚱하게
         // 읽힌다.** readPooledString 의 `poolID >= getCount()` 검사는 0x1'0000'0000+n 이 n 으로
         // 잘린 뒤라 통과해 버린다. 되감을 오프셋이 있으므로 읽기 전 자리를 기억해 둔다.
         const uint64 startOffset = _offset;
-        uint64       val64       = 0;
-        if ( readVarUint( val64 ) == false )
-            return false;
-        if ( VarIntUtil::narrowToUint32( val64, outValue ) == false )
+        const uint64 val64       = readVarUint();
+        if ( _bError == SW_TRUE )
+            return 0;
+        uint32 value = 0;
+        if ( VarIntUtil::narrowToUint32( val64, value ) == false )
         {
             _offset = startOffset;
             _bError = SW_TRUE;
-            return false;
+            return 0;
         }
-        return true;
+        return value;
     }
 
-    bool Archive::readVarInt( int64& outValue )
+    int64 Archive::readVarInt()
     {
-        if ( _pData == nullptr || _offset >= _dataSize )
+        int64 value = 0;
+        if ( _bError == SW_TRUE || _pData == nullptr || _offset >= _dataSize ) // 실패는 끈적하다 — 실패 뒤의 읽기도 0 이다(`ByteReader` 와 같다)
         {
             _bError = SW_TRUE;
-            return false;
+            return 0;
         }
         size_t inoutOffset = static_cast<size_t>( _offset );
-        if ( VarIntUtil::decodeVarInt64( _pData, static_cast<size_t>( _dataSize ), inoutOffset, outValue ) == false )
+        if ( VarIntUtil::decodeVarInt64( _pData, static_cast<size_t>( _dataSize ), inoutOffset, value ) == false )
         {
             _bError = SW_TRUE;
-            return false;
+            return 0;
         }
         _offset = inoutOffset;
-        return true;
+        return value;
     }
 
-    bool Archive::readVarInt( int32& outValue )
+    int32 Archive::readVarInt32()
     {
         const uint64 startOffset = _offset;
-        int64        val64       = 0;
-        if ( readVarInt( val64 ) == false )
-            return false;
-        if ( VarIntUtil::narrowToInt32( val64, outValue ) == false )
+        const int64  val64       = readVarInt();
+        if ( _bError == SW_TRUE )
+            return 0;
+        int32 value = 0;
+        if ( VarIntUtil::narrowToInt32( val64, value ) == false )
         {
             _offset = startOffset;
             _bError = SW_TRUE;
-            return false;
+            return 0;
         }
-        return true;
+        return value;
     }
 
     void Archive::writePooledString( string_view str )
@@ -909,17 +903,16 @@ namespace sw
         writeVarUint( static_cast<uint64>( poolID ) );
     }
 
-    bool Archive::readPooledString( string& outStr )
+    string Archive::readPooledString()
     {
-        uint64 poolID = 0;
-        if ( readVarUint( poolID ) == false || poolID >= _stringPool.getCount() )
+        const uint64 poolID = readVarUint();
+        if ( _bError == SW_TRUE || poolID >= _stringPool.getCount() )
         {
             _bError = SW_TRUE;
-            return false;
+            return {};
         }
-        const string_view sv = _stringPool.getString( static_cast<uint32>( poolID ) );
-        outStr.assign( sv.data(), sv.size() );
-        return true;
+        const string_view text = _stringPool.getString( static_cast<uint32>( poolID ) );
+        return string{ text.data(), text.size() };
     }
 
     void Archive::saveStringPool()

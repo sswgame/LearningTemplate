@@ -84,7 +84,8 @@ namespace sw
                         return false;
                     index += step;
                     float32 value{ 0.0f };
-                    if ( reader.readFiniteFloat( value ) == false )
+                    value = reader.readFiniteFloat();
+                    if ( reader.hasOverflowed() )
                         return false;
                     outListValue[static_cast<size_t>( index )] = value;
                 }

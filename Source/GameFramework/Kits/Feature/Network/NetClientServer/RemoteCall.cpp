@@ -117,7 +117,8 @@ namespace sw
                 outCall._targetID    = body.readVarUint32();
                 outCall._functionID  = body.readUint32();
                 uint32 argumentCount = 0;
-                if ( body.readCount( static_cast<uint32>( NetRemoteCallMessage::kMaxArgumentCount ), argumentCount ) == false )
+                argumentCount        = body.readCount( static_cast<uint32>( NetRemoteCallMessage::kMaxArgumentCount ) );
+                if ( body.hasOverflowed() )
                     return false;
                 outListText.resize( static_cast<size_t>( argumentCount ) );
                 for ( string& text : outListText )

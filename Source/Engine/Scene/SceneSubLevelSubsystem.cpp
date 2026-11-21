@@ -353,7 +353,8 @@ namespace sw
             return false;
         Archive arch( pData, size );
         uint32  count{ 0 };
-        if ( arch.readCount( sizeof( uint32 ) * 3, count ) == false )
+        count = arch.readCount( sizeof( uint32 ) * 3 );
+        if ( arch.isError() )
             return false;
         outState._listSubLevel.resize( count );
         for ( SavedSubLevel& saved : outState._listSubLevel )

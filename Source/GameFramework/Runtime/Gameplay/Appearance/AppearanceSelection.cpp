@@ -274,8 +274,12 @@ namespace sw
                                 const uint32 step = reader.readBits( kLegacySliderBits );
                                 value._number._x  = pParam != nullptr ? pParam->dequantizeSlider( step ) : 0.0f;
                             }
-                            else if ( reader.readFiniteFloat( value._number._x ) == false )
-                                return false;
+                            else
+                            {
+                                value._number._x = reader.readFiniteFloat();
+                                if ( reader.hasOverflowed() )
+                                    return false;
+                            }
                             break;
                         }
                         case CustomizationKind::Color:

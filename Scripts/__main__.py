@@ -69,7 +69,7 @@ _SUBCOMMAND: tuple[Subcommand, ...] = (
     Subcommand("asset-refs", "lint.asset_references", "작업 트리의 에셋 참조가 모두 있는지 본다(커밋 전 검사 · App --check-asset-refs 와 같은 칸 목록)"),
     Subcommand("rename-symbol", "dev.rename_symbol", "식별자 이름을 코드 · 데이터 · 설정 · 문서에서 한 번에 바꾼다(Old=New 또는 --pairs 표, --reapply) — 문자열 안 · 흔한 이름 · 이미 있는 새 이름은 멈추고, 옛 이름은 금지 이름 표에 올린다"),
     Subcommand("delegate-macros", "dev.delegate_macros", "델리게이트의 맨 create(`X::create<&f>` · `X::create( 람다 )`)를 SW_DELEGATE_* 매크로로 바꾼다(--check 는 남은 자리만 찍는다) — 병합 뒤 충돌 파일에 다시 돌린다"),
-    Subcommand("byte-reader-values", "dev.byte_reader_values", "ByteReader 의 출력 인자 읽기(`readPod( x )` · `readCount( n, c )` …)를 값 반환 읽기로 바꾼다(--check 는 남은 옛 모양만 찍는다) — 병합 뒤 충돌 파일에 다시 돌린다"),
+    Subcommand("byte-reader-values", "dev.byte_reader_values", "ByteReader · Archive · BitReader 의 출력 인자 읽기(`readPod( x )` · `readCount( n, c )` …)를 값 반환 읽기로 바꾸고 실패해도 바깥 칸을 덮는 꼴을 고친다(--check 는 남은 자리만 찍는다) — 병합 뒤 충돌 파일에 다시 돌린다"),
     Subcommand("disk-path-args", "dev.disk_path_args", "FileUtil 디스크 I/O 의 문자열 경로 인자를 `FileUtil::toDiskPath( … )`(AbsolutePath) 로 감싼다(--check 는 남은 문자열 인자만 찍는다) — 병합 뒤 충돌 파일에 다시 돌린다"),
     Subcommand("android-apk", "package.android_apk", "Android 빌드(lib<이름>.so + 쿠킹한 팩)를 서명한 디버그 APK 로 묶는다(--game, --preset Android-Shipping|Android-Release, aapt2 · zipalign · apksigner — Tools/Android)"),
     Subcommand("web-package", "package.web_package", "Web-Shipping 빌드(App.js · App.wasm + 쿠킹한 팩)를 브라우저 폴더로 묶는다(--game, file_packager — Tools/emsdk), --serve 로 교차 출처 격리 헤더를 주는 로컬 서버까지"),

@@ -39,7 +39,8 @@ namespace sw
             [[nodiscard]] static bool readValue( BitReader& reader, float32 stepsPerUnit, int32 maxStep, float32& outValue )
             {
                 int32 step{ 0 };
-                if ( reader.readInt( -maxStep, maxStep, step ) == false )
+                step = reader.readInt( -maxStep, maxStep );
+                if ( reader.hasOverflowed() )
                     return false;
                 outValue = computeValue( step, stepsPerUnit );
                 return true;
@@ -69,7 +70,9 @@ namespace sw
             {
                 int32 stepX{ 0 };
                 int32 stepY{ 0 };
-                if ( reader.readInt( -kAxisMaxStep, kAxisMaxStep, stepX ) == false || reader.readInt( -kAxisMaxStep, kAxisMaxStep, stepY ) == false )
+                stepX = reader.readInt( -kAxisMaxStep, kAxisMaxStep );
+                stepY = reader.readInt( -kAxisMaxStep, kAxisMaxStep );
+                if ( reader.hasOverflowed() )
                     return false;
                 if ( isMoveStepInside( stepX, stepY ) == false )
                     return false;

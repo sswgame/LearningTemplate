@@ -272,33 +272,31 @@ namespace sw
         return static_cast<uint32>( ( word >> bitOffset ) & mask );
     }
 
-    bool BitReader::readInt( int32 minValue, int32 maxValue, int32& outValue )
+    int32 BitReader::readInt( int32 minValue, int32 maxValue )
     {
         const uint32 raw = readBits( BitMath::computeBitsRequired( minValue, maxValue ) );
         if ( hasOverflowed() )
-            return false;
+            return minValue;
         const int64 value = static_cast<int64>( minValue ) + raw;
         if ( value > maxValue )
         {
             _bOverflow = SW_TRUE; // 쓰는 쪽은 범위 밖을 쓰지 않으므로 깨진 데이터다
-            return false;
+            return minValue;
         }
-        outValue = static_cast<int32>( value );
-        return true;
+        return static_cast<int32>( value );
     }
 
-    bool BitReader::readFiniteFloat( float32& outValue )
+    float32 BitReader::readFiniteFloat()
     {
         const float32 value = readFloatBits();
         if ( hasOverflowed() )
-            return false;
+            return 0.0f;
         if ( MathUtil::isFinite( value ) == false )
         {
             _bOverflow = SW_TRUE; // 쓰는 쪽은 유한한 값만 보내므로 깨진(또는 꾸민) 데이터다
-            return false;
+            return 0.0f;
         }
-        outValue = value;
-        return true;
+        return value;
     }
 
     float32 BitReader::readFloatBits()
@@ -306,32 +304,29 @@ namespace sw
         return BitUtil::bitsToFloat( readBits( 32 ) );
     }
 
-    bool BitReader::readQuantizedFloat( float32 minValue, float32 maxValue, float32 resolution, float32& outValue )
+    float32 BitReader::readQuantizedFloat( float32 minValue, float32 maxValue, float32 resolution )
     {
         const float32 step     = BitStreamInternal::computeQuantizeStep( resolution );
         const uint32  maxIndex = BitStreamInternal::computeQuantizeMaxIndex( minValue, maxValue, step );
         const uint32  index    = readBits( BitMath::computeBitsRequired( 0, maxIndex ) );
         if ( hasOverflowed() )
-            return false;
+            return minValue;
         if ( index > maxIndex )
         {
             _bOverflow = SW_TRUE; // 쓰는 쪽은 범위 밖의 단계를 쓰지 않으므로 깨진 데이터다
-            return false;
+            return minValue;
         }
         // 마지막 단계는 간격이 범위를 나누어떨어지지 않을 때 최댓값을 조금 넘는다. 범위 안의 단계이므로 최댓값으로 둔다.
-        outValue = MathUtil::min( maxValue, minValue + static_cast<float32>( index ) * step );
-        return true;
+        return MathUtil::min( maxValue, minValue + static_cast<float32>( index ) * step );
     }
 
-    bool BitReader::readQuantizedFloat3( const float3& minValue, const float3& maxValue, float32 resolution, float3& outValue )
+    float3 BitReader::readQuantizedFloat3( const float3& minValue, const float3& maxValue, float32 resolution )
     {
-        float3     value;
-        const bool bRead = readQuantizedFloat( minValue._x, maxValue._x, resolution, value._x ) && readQuantizedFloat( minValue._y, maxValue._y, resolution, value._y ) &&
-                           readQuantizedFloat( minValue._z, maxValue._z, resolution, value._z );
-        if ( bRead == false )
-            return false;
-        outValue = value;
-        return true;
+        float3 value;
+        value._x = readQuantizedFloat( minValue._x, maxValue._x, resolution );
+        value._y = readQuantizedFloat( minValue._y, maxValue._y, resolution );
+        value._z = readQuantizedFloat( minValue._z, maxValue._z, resolution );
+        return hasOverflowed() ? minValue : value;
     }
 
     uint64 BitReader::readVarUint()
@@ -483,18 +478,17 @@ namespace sw
         return readBlobSize( maxSize, size ) && skipBytes( size );
     }
 
-    bool BitReader::readCount( uint32 maxCount, uint32& outCount )
+    uint32 BitReader::readCount( uint32 maxCount )
     {
         const uint64 count = readVarUint();
         if ( hasOverflowed() )
-            return false;
+            return 0;
         if ( count > static_cast<uint64>( maxCount ) )
         {
             _bOverflow = SW_TRUE;
-            return false;
+            return 0;
         }
-        outCount = static_cast<uint32>( count );
-        return true;
+        return static_cast<uint32>( count );
     }
 
     bool BitReader::readEnd()

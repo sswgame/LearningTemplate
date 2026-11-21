@@ -28,7 +28,10 @@ namespace sw
                 loaded._coins        = reader.readVarInt32();
                 loaded._herbCount    = reader.readVarInt32();
                 loaded._defeatCount  = reader.readVarInt32();
-                const bool bPosition = reader.readFiniteFloat( loaded._position._x ) && reader.readFiniteFloat( loaded._position._y ) && reader.readFiniteFloat( loaded._position._z );
+                loaded._position._x  = reader.readFiniteFloat();
+                loaded._position._y  = reader.readFiniteFloat();
+                loaded._position._z  = reader.readFiniteFloat();
+                const bool bPosition = reader.hasOverflowed() == false;
                 const bool bInRange  = loaded._level >= 1 && loaded._experience >= 0 && loaded._coins >= 0 && loaded._herbCount >= 0 && loaded._defeatCount >= 0;
                 if ( reader.hasOverflowed() || bPosition == false || bInRange == false )
                     return false;

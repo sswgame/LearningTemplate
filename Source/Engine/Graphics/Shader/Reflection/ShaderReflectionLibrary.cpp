@@ -82,7 +82,8 @@ namespace sw
             constexpr uint32 kMinElementBytes = sizeof( uint32 ) * 2;
 
             uint32 bufferCount{ 0 };
-            if ( archive.readCount( kMinElementBytes, bufferCount ) == false )
+            bufferCount = archive.readCount( kMinElementBytes );
+            if ( archive.isError() )
                 return false;
 
             outReflection._listConstantBuffer.resize( bufferCount );
@@ -94,7 +95,8 @@ namespace sw
                 archive >> buffer._totalSize;
 
                 uint32 variableCount{ 0 };
-                if ( archive.readCount( kMinElementBytes, variableCount ) == false )
+                variableCount = archive.readCount( kMinElementBytes );
+                if ( archive.isError() )
                     return false;
 
                 buffer._listVariable.resize( variableCount );
@@ -108,7 +110,8 @@ namespace sw
             }
 
             uint32 resourceCount{ 0 };
-            if ( archive.readCount( kMinElementBytes, resourceCount ) == false )
+            resourceCount = archive.readCount( kMinElementBytes );
+            if ( archive.isError() )
                 return false;
 
             outReflection._listResource.resize( resourceCount );
@@ -126,7 +129,8 @@ namespace sw
             }
 
             uint32 elementCount{ 0 };
-            if ( archive.readCount( kMinElementBytes, elementCount ) == false )
+            elementCount = archive.readCount( kMinElementBytes );
+            if ( archive.isError() )
                 return false;
             outReflection._listStructuredElement.resize( elementCount );
             for ( ShaderBufferInfo& element : outReflection._listStructuredElement )
@@ -136,7 +140,8 @@ namespace sw
                 archive >> element._bindPoint;
                 archive >> element._totalSize;
                 uint32 variableCount{ 0 };
-                if ( archive.readCount( kMinElementBytes, variableCount ) == false )
+                variableCount = archive.readCount( kMinElementBytes );
+                if ( archive.isError() )
                     return false;
                 element._listVariable.resize( variableCount );
                 for ( ShaderVariableInfo& variable : element._listVariable )

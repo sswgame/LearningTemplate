@@ -84,7 +84,8 @@ namespace sw
             [[nodiscard]] static bool readTextList( Archive& arch, vector<string>& outListText )
             {
                 uint32 count{ 0 };
-                if ( arch.readCount( sizeof( uint32 ), count ) == false )
+                count = arch.readCount( sizeof( uint32 ) );
+                if ( arch.isError() )
                     return false;
                 outListText.resize( count );
                 for ( string& text : outListText )
@@ -164,7 +165,8 @@ namespace sw
             [[nodiscard]] static bool readEntities( Archive& arch, vector<SceneDocument::SceneObjectNode>& outListNode, string_view absPath )
             {
                 uint32 entityCount{ 0 };
-                if ( arch.readCount( kMinBytesPerEntity, entityCount ) == false )
+                entityCount = arch.readCount( kMinBytesPerEntity );
+                if ( arch.isError() )
                 {
                     SW_LOG_ERROR_ID( "SceneDocument.BinarySceneClaimsEntities", "Binary scene claims more entities than can fit in its %# remaining bytes: %#", arch.getRemainingBytes(), absPath );
                     return false;
@@ -697,7 +699,8 @@ namespace sw
         }
 
         uint32 cellCount{ 0 };
-        if ( arch.readCount( SceneDocumentInternal::kMinBytesPerCell, cellCount ) == false )
+        cellCount = arch.readCount( SceneDocumentInternal::kMinBytesPerCell );
+        if ( arch.isError() )
         {
             SW_LOG_ERROR_ID( "SceneDocument.BinarySceneClaimsStreaming", "Binary scene claims more streaming cells than can fit in its %# remaining bytes: %#", arch.getRemainingBytes(), absPath );
             *this = {};

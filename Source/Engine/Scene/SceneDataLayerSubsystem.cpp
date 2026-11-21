@@ -239,7 +239,8 @@ namespace sw
             return false;
         Archive arch( pData, size );
         uint32  activeCount{ 0 };
-        if ( arch.readCount( sizeof( uint32 ), activeCount ) == false )
+        activeCount = arch.readCount( sizeof( uint32 ) );
+        if ( arch.isError() )
             return false;
         outState._listActiveLayer.resize( activeCount );
         for ( string& layer : outState._listActiveLayer )
@@ -247,13 +248,15 @@ namespace sw
             arch >> layer;
         }
         uint32 groupCount{ 0 };
-        if ( arch.readCount( sizeof( uint32 ) * 2 + sizeof( uint8 ), groupCount ) == false )
+        groupCount = arch.readCount( sizeof( uint32 ) * 2 + sizeof( uint8 ) );
+        if ( arch.isError() )
             return false;
         outState._listGroup.resize( groupCount );
         for ( SavedGroup& group : outState._listGroup )
         {
             uint32 layerCount{ 0 };
-            if ( arch.readCount( sizeof( uint32 ), layerCount ) == false )
+            layerCount = arch.readCount( sizeof( uint32 ) );
+            if ( arch.isError() )
                 return false;
             group._listLayer.resize( layerCount );
             for ( string& layer : group._listLayer )

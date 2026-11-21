@@ -78,7 +78,8 @@ namespace sw
     {
         initializePredefined();
         uint64 dynamicCount = 0;
-        if ( inArchive.readVarUint( dynamicCount ) == false || dynamicCount > kMaxDynamicStrings )
+        dynamicCount        = inArchive.readVarUint();
+        if ( inArchive.isError() || dynamicCount > kMaxDynamicStrings )
             return false;
 
         _listString.reserve( kPredefinedCount + static_cast<size_t>( dynamicCount ) );
@@ -87,7 +88,8 @@ namespace sw
         for ( uint64 strIndex = 0; strIndex < dynamicCount; ++strIndex )
         {
             string str;
-            if ( inArchive.readString( str ) == false )
+            str = inArchive.readString();
+            if ( inArchive.isError() )
                 return false;
             const uint32 stringID = static_cast<uint32>( _listString.size() );
             _listString.push_back( std::move( str ) );

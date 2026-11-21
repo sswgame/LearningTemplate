@@ -36,9 +36,9 @@ C++ 모양 규칙 중 컴파일러가 보지 않는 열을 본다. 규칙 문서
 12. 델리게이트는 `SW_DELEGATE_FUNCTION` · `SW_DELEGATE_METHOD` · `SW_DELEGATE_LAMBDA` 로 붙인다(사용자 2026-11-20): 맨 `X::create<&f>()` · `X::create( 람다 )` 는
    종류마다 함수를 템플릿 인자로 주는지 생성자 인자로 주는지 달라 모양을 외워야 한다. 판정 · 바꾸기는 `dev/delegate_macros.py`(`py -3 -m Scripts delegate-macros`)와 같다.
    `Core/Delegate/` (맨 API 의 정의 · 구현 · 그 테스트)만 뺀다.
-13. `ByteReader` 는 값 읽기만(`x = reader.readPod<T>()` · `readString()` · `readCount( n )` …): 출력 인자 꼴 `reader.readPod( x )` 는 반환 `bool` 을 버리면
-   실패를 잃었고 실패 때 출력 칸이 옛 값으로 남았다(2026-11-21 형식 이전). 형식에서 지웠지만 병합으로 들어온 옛 자리를 빌드 전에 잡는다.
-   판정 · 바꾸기는 `dev/byte_reader_values.py`(`py -3 -m Scripts byte-reader-values`)와 같다.
+13. `ByteReader` · `Archive` · `BitReader` 는 값 읽기만(`x = reader.readPod<T>()` · `readString()` · `readCount( n )` · `readInt( lo, hi )` …): 출력 인자 꼴
+   `reader.readPod( x )` 는 반환 `bool` 을 버리면 실패를 잃었고 실패 때 출력 칸이 옛 값으로 남았다(2026-11-21 형식 이전, `Archive` · `BitReader` 는 같은 날 둘째).
+   형식에서 지웠지만 병합으로 들어온 옛 자리를 빌드 전에 잡는다. 판정 · 바꾸기는 `dev/byte_reader_values.py`(`py -3 -m Scripts byte-reader-values`)와 같다.
 14. `FileUtil` 디스크 I/O(`exists` · `readTextFile` · `writeFile` …)는 `AbsolutePath` 만 받는다 — 문자열은 `FileUtil::toDiskPath( … )` 로 올린다(R2, 2026-11-21 형식 이전).
    리소스 id · `DataPath` · `PathKey` 에서 꺼낸 논리 경로 글이 I/O 로 새던 길이다. 문자열 판은 private 이라 컴파일 오류지만, 병합으로 들어온 옛 자리를
    빌드 전에 잡는다 — 문자열이 틀림없는 인자(글 상수 · `.str()` · `joinPath(` …)만 센다. 판정 · 바꾸기는 `dev/disk_path_args.py`(`py -3 -m Scripts disk-path-args`)와 같다.
@@ -642,7 +642,7 @@ def check_bare_delegate_create(raw: str, code: str, relative: str, names: frozen
 
 
 def check_byte_reader_out_params(raw: str, code: str, relative: str) -> list[tuple[int, str]]:
-    """규칙 13 — 받는 쪽이 ByteReader 인 출력 인자 읽기."""
+    """규칙 13 — 받는 쪽이 ByteReader · Archive · BitReader 인 출력 인자 읽기."""
     from dev import byte_reader_values   # 그쪽이 이 모듈의 strip_code 를 가져온다 — 순환 import 를 피해 여기서 연다
     if byte_reader_values.is_target(relative) is False or byte_reader_values.CALL_PATTERN.search(code) is None:
         return []
@@ -848,8 +848,12 @@ def run_self_check() -> int:
     expect(delegate_macros.run_self_check() == 0, "delegate-macros rewrite cases")
     out_param = "void f( ByteReader& reader )\n{\n    uint32 count = 0;\n    if ( reader.readCount( 4, count ) == false )\n        return;\n}\n"
     expect(len(check_byte_reader_out_params(out_param, strip_code(out_param), "Source/Engine/Foo.cpp")) == 1, "a ByteReader output-parameter read is flagged")
-    value_read = "void f( ByteReader& reader, Archive& arch )\n{\n    const uint32 count = reader.readCount( 4 );\n    (void)arch.readCount( 4, n );\n}\n"
-    expect(check_byte_reader_out_params(value_read, strip_code(value_read), "Source/Engine/Foo.cpp") == [], "a value read and an Archive read pass")
+    value_read = "void f( ByteReader& reader, Store& store )\n{\n    const uint32 count = reader.readCount( 4 );\n    (void)store.readCount( 4, n );\n}\n"
+    expect(check_byte_reader_out_params(value_read, strip_code(value_read), "Source/Engine/Foo.cpp") == [], "a value read and another type's read pass")
+    old_archive = "void f( Archive& arch, BitReader& bits )\n{\n    uint32 n = 0;\n    int32 s = 0;\n    (void)arch.readCount( 4, n );\n    (void)bits.readInt( 0, 3, s );\n}\n"
+    expect(len(check_byte_reader_out_params(old_archive, strip_code(old_archive), "Source/Engine/Foo.cpp")) == 2, "Archive and BitReader output-parameter reads are flagged")
+    new_archive = "void f( Archive& arch, BitReader& bits )\n{\n    const uint32 n = arch.readCount( 4 );\n    const int32 s = bits.readInt( 0, 3 );\n}\n"
+    expect(check_byte_reader_out_params(new_archive, strip_code(new_archive), "Source/Engine/Foo.cpp") == [], "Archive and BitReader value reads pass")
     from dev import byte_reader_values
     expect(byte_reader_values.run_self_check() == 0, "byte-reader-values rewrite cases")
     raw_path = 'void f( const string& folder )\n{\n    (void)FileUtil::exists( FileUtil::joinPath( folder, "a.txt" ) );\n}\n'

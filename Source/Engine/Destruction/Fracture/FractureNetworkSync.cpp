@@ -93,10 +93,14 @@ namespace sw
             if ( pose._bGone == SW_FALSE )
             {
                 // 유한하지 않은 값은 읽기가 넘침으로 표시한다 — 아래에서 PoseTruncated 로 거절된다.
-                const bool bFinite = reader.readFiniteFloat( pose._position._x ) && reader.readFiniteFloat( pose._position._y ) &&
-                                     reader.readFiniteFloat( pose._position._z ) && reader.readFiniteFloat( pose._rotation._x ) &&
-                                     reader.readFiniteFloat( pose._rotation._y ) && reader.readFiniteFloat( pose._rotation._z ) &&
-                                     reader.readFiniteFloat( pose._rotation._w );
+                pose._position._x  = reader.readFiniteFloat();
+                pose._position._y  = reader.readFiniteFloat();
+                pose._position._z  = reader.readFiniteFloat();
+                pose._rotation._x  = reader.readFiniteFloat();
+                pose._rotation._y  = reader.readFiniteFloat();
+                pose._rotation._z  = reader.readFiniteFloat();
+                pose._rotation._w  = reader.readFiniteFloat();
+                const bool bFinite = reader.hasOverflowed() == false;
                 if ( bFinite == false )
                     break;
             }

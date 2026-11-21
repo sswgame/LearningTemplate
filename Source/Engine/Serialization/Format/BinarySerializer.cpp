@@ -605,9 +605,10 @@ namespace sw
                                                  uint32 currentVersion, const SerializeContext& context )
     {
         ByteReader reader( pData, dataSize );
-        outVersion = reader.readPod<uint32>();
+        const auto loadedVersion = reader.readPod<uint32>();
         if ( reader.hasOverflowed() )
             return false;
+        outVersion = loadedVersion;
 
         const uint8* pBody    = pData + reader.getOffset();
         const size_t bodySize = dataSize - reader.getOffset();
@@ -637,9 +638,10 @@ namespace sw
         if ( bInvalidInput )
             return BinaryExactVersionResult::Unreadable;
         ByteReader reader( pData, dataSize );
-        outReadVersion = reader.readPod<uint32>();
+        const auto loadedReadVersion = reader.readPod<uint32>();
         if ( reader.hasOverflowed() )
             return BinaryExactVersionResult::Unreadable;
+        outReadVersion = loadedReadVersion;
         if ( outReadVersion != expectedVersion )
             return BinaryExactVersionResult::VersionMismatch;
         const size_t bodyOffset = reader.getOffset();

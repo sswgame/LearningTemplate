@@ -195,7 +195,9 @@ namespace sw
     {
         if ( isReading() )
         {
-            (void)_pArchive->readCount( minBytesPerElement, inoutCount ); // 실패는 아카이브 오류에 남는다
+            const uint32 count = _pArchive->readCount( minBytesPerElement );
+            if ( _pArchive->isOk() )
+                inoutCount = count; // 실패는 아카이브 오류에 남고 칸은 건드리지 않는다
             return;
         }
         *_pArchive << inoutCount;
@@ -280,7 +282,8 @@ namespace sw
         [[nodiscard]] bool readIDListImpl( Archive& archive, vector<TID>& outListID )
         {
             uint32 count = 0;
-            if ( archive.readCount( sizeof( TID ), count ) == false )
+            count        = archive.readCount( sizeof( TID ) );
+            if ( archive.isError() )
                 return false;
             outListID.resize( count );
             for ( TID& id : outListID )
