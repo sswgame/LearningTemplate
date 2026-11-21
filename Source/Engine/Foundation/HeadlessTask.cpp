@@ -44,8 +44,15 @@ namespace sw
         (void)HeadlessTaskInternal::getRegistrations().remove( pRegistration ); // 등록되어 있지 않은 항목을 빼는 것은 할 일이 없다
     }
 
-    HeadlessTaskResult HeadlessTaskRegistration::selectAndRun( span<const HeadlessTaskRegistration* const> listRegistration, HeadlessTaskContext& context )
+    HeadlessTaskResult HeadlessTaskRegistration::selectAndRun( span<const HeadlessTaskRegistration* const> listRegistration, HeadlessTaskContext& context, HeadlessLeakBaseline leakBaseline )
     {
+        const auto enterHeadless = [&context, leakBaseline]
+        {
+            if ( leakBaseline == HeadlessLeakBaseline::Capture )
+                context._state.enterHeadless();
+            else
+                context._state.markHeadless();
+        };
         const HeadlessTaskHost          thisHost = context._bDedicatedServer ? HeadlessTaskHost::DedicatedServer : HeadlessTaskHost::Client;
         const HeadlessTaskRegistration* pChosen  = nullptr;
         for ( const HeadlessTaskRegistration* pTask : listRegistration )
@@ -57,7 +64,7 @@ namespace sw
             {
                 SW_LOG_ERROR_ID( "Headless.HeadlessTaskWrongHost", "Headless task '%#' runs in the %#, not in this host", pTask->_pName,
                                  thisHost == HeadlessTaskHost::DedicatedServer ? "client build (App)" : "dedicated server" );
-                context._state.enterHeadless();
+                enterHeadless();
                 context._state._bFailed = SW_TRUE;
                 return HeadlessTaskResult::Rejected;
             }
@@ -66,7 +73,7 @@ namespace sw
         }
         if ( pChosen == nullptr )
             return HeadlessTaskResult::NotRequested;
-        context._state.enterHeadless();
+        enterHeadless();
         if ( pChosen->_pRun( context ) == false )
             context._state._bFailed = SW_TRUE;
         return HeadlessTaskResult::Ran;
@@ -81,6 +88,6 @@ namespace sw
         {
             listTask.push_back( registrations.getAt( index ) );
         }
-        return selectAndRun( listTask, context );
+        return selectAndRun( listTask, context, HeadlessLeakBaseline::Capture );
     }
 } // namespace sw

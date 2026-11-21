@@ -55,7 +55,7 @@ SW_TEST_CASE( HeadlessTaskTest, OnlyTheFirstRequestedTaskRuns )
     Util::reset( true, true );
     HeadlessTaskState   bothState;
     HeadlessTaskContext bothContext{ commandLine, bothState, false };
-    SW_EXPECT_TRUE( HeadlessTaskRegistration::selectAndRun( arrTask, bothContext ) == HeadlessTaskResult::Ran );
+    SW_EXPECT_TRUE( HeadlessTaskRegistration::selectAndRun( arrTask, bothContext, HeadlessLeakBaseline::Keep ) == HeadlessTaskResult::Ran );
     SW_EXPECT_EQUAL( 1u, Util::s_firstRunCount );
     SW_EXPECT_EQUAL( 0u, Util::s_secondRunCount );
     SW_EXPECT_TRUE( bothState.isHeadless() );
@@ -64,14 +64,14 @@ SW_TEST_CASE( HeadlessTaskTest, OnlyTheFirstRequestedTaskRuns )
     Util::reset( false, true );
     HeadlessTaskState   secondState;
     HeadlessTaskContext secondContext{ commandLine, secondState, false };
-    SW_EXPECT_TRUE( HeadlessTaskRegistration::selectAndRun( arrTask, secondContext ) == HeadlessTaskResult::Ran );
+    SW_EXPECT_TRUE( HeadlessTaskRegistration::selectAndRun( arrTask, secondContext, HeadlessLeakBaseline::Keep ) == HeadlessTaskResult::Ran );
     SW_EXPECT_EQUAL( 1u, Util::s_secondRunCount );
     SW_EXPECT_TRUE( secondState._bFailed );
 
     Util::reset( false, false );
     HeadlessTaskState   noneState;
     HeadlessTaskContext noneContext{ commandLine, noneState, false };
-    SW_EXPECT_TRUE( HeadlessTaskRegistration::selectAndRun( arrTask, noneContext ) == HeadlessTaskResult::NotRequested );
+    SW_EXPECT_TRUE( HeadlessTaskRegistration::selectAndRun( arrTask, noneContext, HeadlessLeakBaseline::Keep ) == HeadlessTaskResult::NotRequested );
     SW_EXPECT_FALSE( noneState.isHeadless() );
 }
 
@@ -91,7 +91,7 @@ SW_TEST_CASE( HeadlessTaskTest, WrongHostTaskRejectsTheWholeRequest )
     HeadlessTaskState   serverState;
     HeadlessTaskContext serverContext{ commandLine, serverState, true };
     SW_EXPECT_LOG( "Headless.HeadlessTaskWrongHost" );
-    SW_EXPECT_TRUE( HeadlessTaskRegistration::selectAndRun( arrTask, serverContext ) == HeadlessTaskResult::Rejected );
+    SW_EXPECT_TRUE( HeadlessTaskRegistration::selectAndRun( arrTask, serverContext, HeadlessLeakBaseline::Keep ) == HeadlessTaskResult::Rejected );
     SW_EXPECT_EQUAL( 0u, Util::s_firstRunCount );
     SW_EXPECT_EQUAL( 0u, Util::s_secondRunCount );
     SW_EXPECT_TRUE( serverState._bFailed );
@@ -100,6 +100,6 @@ SW_TEST_CASE( HeadlessTaskTest, WrongHostTaskRejectsTheWholeRequest )
     Util::reset( true, true );
     HeadlessTaskState   clientState;
     HeadlessTaskContext clientContext{ commandLine, clientState, false };
-    SW_EXPECT_TRUE( HeadlessTaskRegistration::selectAndRun( arrTask, clientContext ) == HeadlessTaskResult::Ran );
+    SW_EXPECT_TRUE( HeadlessTaskRegistration::selectAndRun( arrTask, clientContext, HeadlessLeakBaseline::Keep ) == HeadlessTaskResult::Ran );
     SW_EXPECT_EQUAL( 1u, Util::s_firstRunCount );
 }

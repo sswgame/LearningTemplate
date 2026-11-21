@@ -41,9 +41,9 @@ namespace
             (void)layout;
             return true;
         }
-        void       stopOutput() override {}
-        void       closeDevice() override {}
-        sw::uint64 getUnderrunCount() const override { return 0; }
+        void   stopOutput() override {}
+        void   closeDevice() override {}
+        uint64 getUnderrunCount() const override { return 0; }
     };
 
     /** @brief 엔진 설정 파일과 같은 다시 열기 간격 · 캐시 예산입니다(첫 1 초, 상한 30 초, 192 MB — `Config/Engine/EngineConfig.json`). */

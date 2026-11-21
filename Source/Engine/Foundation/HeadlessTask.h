@@ -36,9 +36,18 @@ namespace sw
          */
         void enterHeadless()
         {
+            // 들어가기는 한 번이다 — 고르는 길(`selectAndRun`)이 이미 들어간 뒤 작업 본문이 다시 불러도 열린 누수 창을 한 번 더 열지 않는다.
+            if ( _bHeadless == SW_TRUE )
+                return;
             MemoryProfiler::captureMemoryLeakBaseline();
-            _bHeadless = SW_TRUE;
+            markHeadless();
         }
+
+        /**
+         * @brief 누수 기준선을 잡지 않고 헤드리스로만 표시합니다 — 기준선은 프로세스 전역(`MemoryProfiler`)이라, 이미 헤드리스 작업 안에서 도는 실행(단위 테스트가 고르는 규칙을 볼 때)이
+         *        다시 잡으면 열린 누수 창을 한 번 더 연다. 실제 기동 길은 `enterHeadless` 다.
+         */
+        void markHeadless() { _bHeadless = SW_TRUE; }
 
         bool isHeadless() const { return _bHeadless; }
 
@@ -83,6 +92,13 @@ namespace sw
     /** @brief 작업 본문입니다. 성공이면 true 입니다(헤드리스 표시 · 누수 기준선은 부르기 전에 잡혔다). */
     using HeadlessTaskRunFunction = bool ( * )( HeadlessTaskContext& context );
 
+    /** @brief 헤드리스로 들어갈 때 누수 기준선을 잡을지입니다 — 기준선은 프로세스 전역이라 실제 기동 길(`runRequested`)만 잡는다. */
+    enum class HeadlessLeakBaseline : uint8
+    {
+        Capture, ///< 기동 길 — 기준선을 잡는다(`HeadlessTaskState::enterHeadless`)
+        Keep     ///< 이미 잡힌 기준선 안에서 고르는 규칙만 본다(테스트) — 표시만 한다(`markHeadless`)
+    };
+
     /** @brief `HeadlessTaskRegistration::selectAndRun` 의 결과입니다. */
     enum class HeadlessTaskResult : uint8
     {
@@ -112,7 +128,7 @@ namespace sw
          * @brief @p listRegistration 가운데 청해진 작업을 고릅니다 — 이 호스트에서 돌지 않는 것이 청해졌으면 거절, 아니면 우선순위가 가장 앞선 하나를 돌립니다.
          * @details 등록 목록과 떼어 둔 것은 테스트가 자기 줄로 고르는 규칙을 보게 하려는 것이다. 목록은 우선순위 순이어야 한다(`runRequested` 가 그 순서로 넘긴다).
          */
-        static HeadlessTaskResult selectAndRun( span<const HeadlessTaskRegistration* const> listRegistration, HeadlessTaskContext& context );
+        static HeadlessTaskResult selectAndRun( span<const HeadlessTaskRegistration* const> listRegistration, HeadlessTaskContext& context, HeadlessLeakBaseline leakBaseline );
         /** @brief 등록된 작업으로 `selectAndRun` 합니다. */
         static HeadlessTaskResult runRequested( HeadlessTaskContext& context );
     };
