@@ -20,6 +20,7 @@
 #include "Editor/Common/EditorSubsystem.h"
 #include "Editor/Common/Workspace/EditorViewTargetUtil.h"
 
+#include "Engine/Graphics/RHI/RHIHandles.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
 
 namespace sw
@@ -44,7 +45,7 @@ namespace sw::editor
         // 지금 그리는 타깃 — 엔진 렌더 텍스처(`rendertarget/editor/…`)의 로드 핸들(참조를 쥔다)과 GPU 에 올라간 뒤의 핸들. GPU 자원은 엔진이 렌더 쪽에서 만든다
         TextureHandle    _texture{};
         string           _texturePath{};
-        RHITextureHandle _renderTarget{ 0 }; ///< 0 이면 아직 그릴 타깃이 없다(호스트에 알리지도 그리지도 않는다)
+        RHITextureHandle _renderTarget{}; ///< 0 이면 아직 그릴 타깃이 없다(호스트에 알리지도 그리지도 않는다)
         void*            _pTextureID{ nullptr };
         uint32           _width{ 0 }; ///< 지금 그리는 타깃의 크기
         uint32           _height{ 0 };
@@ -68,7 +69,7 @@ namespace sw::editor
     struct EditorViewTargetState
     {
         void*            _pTextureID{ nullptr };
-        RHITextureHandle _renderTarget{ 0 };
+        RHITextureHandle _renderTarget{};
         uint32           _width{ 0 };
         uint32           _height{ 0 };
         uint32           _requestedWidth{ 0 };

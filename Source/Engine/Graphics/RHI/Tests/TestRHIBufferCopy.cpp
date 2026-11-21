@@ -12,7 +12,7 @@ using namespace sw;
 SW_TEST_CASE( RHIBufferCopyTest, CopyRegionRecordsArguments )
 {
     test::FakeRHICommandList list{ 0 };
-    list.copyBufferRegion( 7, 1200, 3, 48, 960 );
+    list.copyBufferRegion( RHIBufferHandle{ 7 }, 1200, RHIBufferHandle{ 3 }, 48, 960 );
     SW_REQUIRE_EQUAL( static_cast<size_t>( 1 ), list._listBufferCopy.size() );
     const test::FakeRHICommandList::BufferCopy& copy = list._listBufferCopy[0];
     SW_EXPECT_EQUAL( static_cast<RHIBufferHandle>( 7 ), copy._destination );

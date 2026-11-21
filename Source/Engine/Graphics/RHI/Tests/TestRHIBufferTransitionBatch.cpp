@@ -11,10 +11,10 @@ using namespace sw;
 SW_TEST_CASE( RHIBufferTransitionBatchTest, MergesSameBufferAndSkipsNull )
 {
     RHIBufferTransitionBatch batch;
-    batch.add( 7, RHIBufferState::UnorderedAccess );
+    batch.add( RHIBufferHandle{ 7 }, RHIBufferState::UnorderedAccess );
     batch.add( 0, RHIBufferState::UnorderedAccess );
-    batch.add( 9, RHIBufferState::UnorderedAccess );
-    batch.add( 7, RHIBufferState::IndirectArgument );
+    batch.add( RHIBufferHandle{ 9 }, RHIBufferState::UnorderedAccess );
+    batch.add( RHIBufferHandle{ 7 }, RHIBufferState::IndirectArgument );
 
     const vector<RHIBufferTransition>& listPending = batch.getPending();
     SW_REQUIRE_EQUAL( listPending.size(), static_cast<size_t>( 2 ) );
@@ -31,9 +31,9 @@ SW_TEST_CASE( RHIBufferTransitionBatchTest, FlushIssuesOneCall )
     batch.flush( commands );
     SW_EXPECT_EQUAL( commands._transitionBatchCount, 0u );
 
-    batch.add( 1, RHIBufferState::UnorderedAccess );
-    batch.add( 2, RHIBufferState::UnorderedAccess );
-    batch.add( 3, RHIBufferState::UnorderedAccess );
+    batch.add( RHIBufferHandle{ 1 }, RHIBufferState::UnorderedAccess );
+    batch.add( RHIBufferHandle{ 2 }, RHIBufferState::UnorderedAccess );
+    batch.add( RHIBufferHandle{ 3 }, RHIBufferState::UnorderedAccess );
     batch.flush( commands );
     SW_EXPECT_EQUAL( commands._transitionBatchCount, 1u );
     SW_EXPECT_EQUAL( commands._transitionCount, 3u );

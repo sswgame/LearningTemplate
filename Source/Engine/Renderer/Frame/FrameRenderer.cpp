@@ -824,9 +824,9 @@ namespace sw
         _passResourcesBackBufferFormat = _pDevice->getBackBufferFormat();
         _bPassResourcesReady           = SW_TRUE;
         SW_LOG_INFO_ID( "FrameRenderer.PassPSOsCBReady", "Pass PSOs/CB ready (shadow=%# forward=%# transparent=%# deferred=%# bloom=%# outline=%#)",
-                        _psoManager.getEnginePSO( RenderPassKind::Shadow ), _psoManager.getEnginePSO( RenderPassKind::ForwardOpaque ),
-                        _psoManager.getEnginePSO( RenderPassKind::Transparent ), _psoManager.getEnginePSO( RenderPassKind::Lighting ),
-                        _psoManager.getEnginePSO( RenderPassKind::Bloom ), _psoManager.getEnginePSO( RenderPassKind::Outline ) );
+                        _psoManager.getEnginePSO( RenderPassKind::Shadow ).getPacked(), _psoManager.getEnginePSO( RenderPassKind::ForwardOpaque ).getPacked(),
+                        _psoManager.getEnginePSO( RenderPassKind::Transparent ).getPacked(), _psoManager.getEnginePSO( RenderPassKind::Lighting ).getPacked(),
+                        _psoManager.getEnginePSO( RenderPassKind::Bloom ).getPacked(), _psoManager.getEnginePSO( RenderPassKind::Outline ).getPacked() );
     }
 
     void FrameRenderer::collectComputeConstantBuffers( ComputeConstantBufferRow ( &outArrRow )[_s_kComputeConstantBufferCount] )

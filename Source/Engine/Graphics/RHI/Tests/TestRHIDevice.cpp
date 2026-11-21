@@ -352,7 +352,7 @@ SW_TEST_CASE( RHINativeHandlesTest, QueryRejectsAnotherLayoutAndFillsTheMatching
     const auto       countVisit = SW_DELEGATE_LAMBDA( RHINativeContextVisitor, [&contextVisitCount]( void* /*pContext*/ )
           { ++contextVisitCount; } );
     SW_EXPECT_FALSE( device.queryNativeHandles( RHIBackend::Vulkan, otherBackend ) );
-    SW_EXPECT_TRUE( device.tryGetNativeTexturePointer( RHIBackend::DirectX11, 1u ) == nullptr );
+    SW_EXPECT_TRUE( device.tryGetNativeTexturePointer( RHIBackend::DirectX11, RHITextureHandle{ 1 } ) == nullptr );
     SW_EXPECT_FALSE( device.withNativeContext( RHIBackend::OpenGL, countVisit ) );
     SW_EXPECT_TRUE( otherBackend._pDevice == nullptr );
     SW_EXPECT_EQUAL( 0u, contextVisitCount );

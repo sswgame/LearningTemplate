@@ -221,7 +221,7 @@ namespace sw::editor
         const optional<AbsolutePath> absolutePath = AbsolutePath::tryMake( path );
         if ( absolutePath.has_value() == false || bNotDrawn )
             return 0;
-        return RenderThread::requestScreenshot( *absolutePath, renderTarget, RHIFormat::R8G8B8A8_UNORM );
+        return RenderThread::requestScreenshot( *absolutePath, RHITextureHandle{ renderTarget }, RHIFormat::R8G8B8A8_UNORM );
     }
 
     uint32 EditorPreviewViewport::requestImagePNGBytes( string_view requestName )
@@ -230,7 +230,7 @@ namespace sw::editor
         const bool   bNotDrawn    = renderTarget == 0 || _submittedFrameCount == 0;
         if ( bNotDrawn )
             return 0;
-        return RenderThread::requestScreenshotPNGBytes( requestName, renderTarget, RHIFormat::R8G8B8A8_UNORM );
+        return RenderThread::requestScreenshotPNGBytes( requestName, RHITextureHandle{ renderTarget }, RHIFormat::R8G8B8A8_UNORM );
     }
 
     bool EditorPreviewViewport::takeImagePNGBytes( uint32 ticket, vector<uint8>& outPNGBytes )

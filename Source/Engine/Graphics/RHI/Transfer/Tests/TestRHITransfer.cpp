@@ -284,17 +284,17 @@ SW_TEST_CASE( RHITransferTest, SerialsClassifyTicketsByWatermarkAndGeneration )
 
     // bindless 등록 보호: 전송한 적 없거나 첫 업로드가 끝났으면 통과하고(뒤의 구간 갱신이 남아도), 첫 업로드가 남은 텍스처는 오류와 함께 거절한다.
     RHITextureTransferSerials neverUploaded;
-    SW_EXPECT_TRUE( serials.isTextureReadyToRegister( neverUploaded, 11 ) );
+    SW_EXPECT_TRUE( serials.isTextureReadyToRegister( neverUploaded, RHITextureHandle{ 11 } ) );
     RHITextureTransferSerials updatedAfterFirst;
     updatedAfterFirst.recordWrite( first );
     updatedAfterFirst.recordWrite( second );
-    SW_EXPECT_TRUE( serials.isTextureReadyToRegister( updatedAfterFirst, 11 ) );
+    SW_EXPECT_TRUE( serials.isTextureReadyToRegister( updatedAfterFirst, RHITextureHandle{ 11 } ) );
     SW_EXPECT_EQUAL( second, updatedAfterFirst._lastSerial.load() ); // 파괴 미루기는 마지막 전송을 기다린다
     RHITextureTransferSerials firstPending;
     firstPending.recordWrite( second );
     firstPending.recordWrite( first ); // 늦게 적은 작은 시리얼은 마지막을 덮지 않는다
     SW_EXPECT_EQUAL( second, firstPending._lastSerial.load() );
-    SW_EXPECT_FALSE( serials.isTextureReadyToRegister( firstPending, 11 ) );
+    SW_EXPECT_FALSE( serials.isTextureReadyToRegister( firstPending, RHITextureHandle{ 11 } ) );
 
     serials.markLost();
     SW_EXPECT_TRUE( serials.classify( firstTicket ) == RHITransferStatus::Complete ); // 이미 끝난 일은 그대로다
@@ -378,14 +378,14 @@ SW_TEST_CASE( RHITransferTest, AndWaitHelpersRetryBusyAndPairTakeOrDiscard )
     FakeTransferFactory        uploadFactory;
     uploadFactory._busyCountBeforeAccept   = 2;
     uploadFactory._pendingCountBeforeFinal = 3;
-    SW_EXPECT_TRUE( RHITransferUtil::uploadTexture2DAndWait( uploadFactory, 1, uploadDesc ) );
+    SW_EXPECT_TRUE( RHITransferUtil::uploadTexture2DAndWait( uploadFactory, RHITextureHandle{ 1 }, uploadDesc ) );
     SW_EXPECT_EQUAL( 3u, uploadFactory._submitCount ); // Busy 두 번 + 받아들임
     SW_EXPECT_EQUAL( 4u, uploadFactory._pollCount );   // Pending 세 번 + Complete
-    SW_EXPECT_TRUE( RHITransferUtil::uploadTexture2DRegionAndWait( uploadFactory, 1, regionDesc ) );
+    SW_EXPECT_TRUE( RHITransferUtil::uploadTexture2DRegionAndWait( uploadFactory, RHITextureHandle{ 1 }, regionDesc ) );
 
     FakeTransferFactory rejectFactory;
     rejectFactory._bRejectSubmit = SW_TRUE;
-    SW_EXPECT_FALSE( RHITransferUtil::uploadTexture2DAndWait( rejectFactory, 1, uploadDesc ) );
+    SW_EXPECT_FALSE( RHITransferUtil::uploadTexture2DAndWait( rejectFactory, RHITextureHandle{ 1 }, uploadDesc ) );
     SW_EXPECT_EQUAL( 1u, rejectFactory._submitCount ); // 거절은 다시 시도하지 않는다
     SW_EXPECT_EQUAL( 0u, rejectFactory._pollCount );
 
@@ -393,14 +393,14 @@ SW_TEST_CASE( RHITransferTest, AndWaitHelpersRetryBusyAndPairTakeOrDiscard )
     RHITextureMipSpan   layout{};
     FakeTransferFactory readFactory;
     readFactory._pendingCountBeforeFinal = 1;
-    SW_EXPECT_TRUE( RHITransferUtil::readbackTexture2DAndWait( readFactory, 1, 0, 0, bytes, layout ) );
+    SW_EXPECT_TRUE( RHITransferUtil::readbackTexture2DAndWait( readFactory, RHITextureHandle{ 1 }, 0, 0, bytes, layout ) );
     SW_EXPECT_EQUAL( 1u, readFactory._takeCount );
     SW_EXPECT_EQUAL( 0u, readFactory._discardCount ); // 가져갔으니 버릴 것이 없다
     SW_EXPECT_EQUAL( size_t( 4 ), bytes.size() );
 
     FakeTransferFactory failFactory;
     failFactory._finalStatus = RHITransferStatus::Failed;
-    SW_EXPECT_FALSE( RHITransferUtil::readbackTexture2DAndWait( failFactory, 1, 0, 0, bytes, layout ) );
+    SW_EXPECT_FALSE( RHITransferUtil::readbackTexture2DAndWait( failFactory, RHITextureHandle{ 1 }, 0, 0, bytes, layout ) );
     SW_EXPECT_EQUAL( 0u, failFactory._takeCount );
     SW_EXPECT_EQUAL( 1u, failFactory._discardCount ); // 실패한 읽기는 결과를 버린다
 }
@@ -461,16 +461,16 @@ SW_TEST_CASE( RHITransferTest, BlockingHelpersAssertInsideAForbiddenScope )
     const RHITextureUploadDesc desc{};
     test::ScopedAssertCapture  assertCapture;
 
-    SW_EXPECT_TRUE( RHITransferUtil::uploadTexture2DAndWait( factory, 1, desc ) );
+    SW_EXPECT_TRUE( RHITransferUtil::uploadTexture2DAndWait( factory, RHITextureHandle{ 1 }, desc ) );
     SW_EXPECT_EQUAL( 0u, assertCapture.getCount() );
     {
         const RHITransferUtil::ScopedForbidBlockingTransfer forbid;
-        SW_EXPECT_TRUE( RHITransferUtil::uploadTexture2DAndWait( factory, 1, desc ) ); // 단언은 세어질 뿐 코드는 이어진다
+        SW_EXPECT_TRUE( RHITransferUtil::uploadTexture2DAndWait( factory, RHITextureHandle{ 1 }, desc ) ); // 단언은 세어질 뿐 코드는 이어진다
         if constexpr ( test::ScopedAssertCapture::kAssertsAreActive )
             SW_EXPECT_TRUE( assertCapture.getCount() >= 1 );
     }
     const uint32 insideScopeCount = assertCapture.getCount();
-    SW_EXPECT_TRUE( RHITransferUtil::uploadTexture2DAndWait( factory, 1, desc ) );
+    SW_EXPECT_TRUE( RHITransferUtil::uploadTexture2DAndWait( factory, RHITextureHandle{ 1 }, desc ) );
     SW_EXPECT_EQUAL( insideScopeCount, assertCapture.getCount() ); // 스코프를 벗어나면 다시 허용된다
 }
 
@@ -487,12 +487,12 @@ SW_TEST_CASE( RHITransferTest, BlockingSubmitsAssertWhileAReadbackTicketIsHeld )
         RHITransferUtil::PendingReadback pending{
             factory, RHITransferTicket{ 1, kFakeDeviceGeneration }
         };
-        SW_EXPECT_TRUE( RHITransferUtil::uploadTexture2DAndWait( factory, 1, desc ) ); // 단언은 세어질 뿐 코드는 이어진다
+        SW_EXPECT_TRUE( RHITransferUtil::uploadTexture2DAndWait( factory, RHITextureHandle{ 1 }, desc ) ); // 단언은 세어질 뿐 코드는 이어진다
         if constexpr ( test::ScopedAssertCapture::kAssertsAreActive )
             SW_EXPECT_TRUE( assertCapture.getCount() >= 1 );
     }
     const uint32 heldCount = assertCapture.getCount();
-    SW_EXPECT_TRUE( RHITransferUtil::uploadTexture2DAndWait( factory, 1, desc ) );
+    SW_EXPECT_TRUE( RHITransferUtil::uploadTexture2DAndWait( factory, RHITextureHandle{ 1 }, desc ) );
     SW_EXPECT_EQUAL( heldCount, assertCapture.getCount() ); // 놓으면 다시 허용된다
 
     RHITransferUtil::PendingReadback taken{
@@ -500,6 +500,6 @@ SW_TEST_CASE( RHITransferTest, BlockingSubmitsAssertWhileAReadbackTicketIsHeld )
     };
     vector<uint8> bytes;
     SW_EXPECT_TRUE( taken.take( bytes ) );
-    SW_EXPECT_TRUE( RHITransferUtil::uploadTexture2DAndWait( factory, 1, desc ) );
+    SW_EXPECT_TRUE( RHITransferUtil::uploadTexture2DAndWait( factory, RHITextureHandle{ 1 }, desc ) );
     SW_EXPECT_EQUAL( heldCount, assertCapture.getCount() ); // 가져간 티켓은 세지 않는다
 }

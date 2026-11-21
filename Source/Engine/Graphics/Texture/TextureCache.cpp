@@ -1595,7 +1595,7 @@ namespace sw
 
     uint64 TextureLoadOperation::getResidentIdentity() const
     {
-        return getState() == AssetLoadState::Ready && _pTexture != nullptr ? static_cast<uint64>( _pTexture->getHandle() ) : 0u;
+        return getState() == AssetLoadState::Ready && _pTexture != nullptr ? _pTexture->getHandle().getPacked() : 0u;
     }
 
     expected<void> TextureLoadOperation::runLoad()

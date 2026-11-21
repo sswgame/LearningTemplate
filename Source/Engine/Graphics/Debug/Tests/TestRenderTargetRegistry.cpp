@@ -14,27 +14,27 @@ using namespace sw;
 SW_TEST_CASE( RenderTargetRegistryTest, OnlyPublishedHandlesAreReadable )
 {
     RenderTargetRegistry registry;
-    SW_EXPECT_FALSE( registry.isPublished( 7 ) );
+    SW_EXPECT_FALSE( registry.isPublished( RHITextureHandle{ 7 } ) );
 
     vector<RenderTargetInfo> listTarget;
     RenderTargetInfo&        color = listTarget.emplace_back();
     color._name                    = "SceneColor";
-    color._texture                 = 7;
+    color._texture                 = RHITextureHandle{ 7 };
     RenderTargetInfo& depth        = listTarget.emplace_back();
     depth._name                    = "SceneDepth";
-    depth._texture                 = 9;
+    depth._texture                 = RHITextureHandle{ 9 };
     registry.publish( listTarget );
-    SW_EXPECT_TRUE( registry.isPublished( 7 ) );
-    SW_EXPECT_TRUE( registry.isPublished( 9 ) );
-    SW_EXPECT_FALSE( registry.isPublished( 8 ) );
+    SW_EXPECT_TRUE( registry.isPublished( RHITextureHandle{ 7 } ) );
+    SW_EXPECT_TRUE( registry.isPublished( RHITextureHandle{ 9 } ) );
+    SW_EXPECT_FALSE( registry.isPublished( RHITextureHandle{ 8 } ) );
 
     // 크기가 바뀐 뒤 새 핸들로 다시 공개하면 옛 핸들은 죽은 것이다.
-    listTarget[0]._texture = 11;
+    listTarget[0]._texture = RHITextureHandle{ 11 };
     registry.publish( listTarget );
-    SW_EXPECT_FALSE( registry.isPublished( 7 ) );
-    SW_EXPECT_TRUE( registry.isPublished( 11 ) );
+    SW_EXPECT_FALSE( registry.isPublished( RHITextureHandle{ 7 } ) );
+    SW_EXPECT_TRUE( registry.isPublished( RHITextureHandle{ 11 } ) );
 
     registry.clear();
-    SW_EXPECT_FALSE( registry.isPublished( 11 ) );
-    SW_EXPECT_FALSE( registry.isPublished( 9 ) );
+    SW_EXPECT_FALSE( registry.isPublished( RHITextureHandle{ 11 } ) );
+    SW_EXPECT_FALSE( registry.isPublished( RHITextureHandle{ 9 } ) );
 }
