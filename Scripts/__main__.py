@@ -50,7 +50,6 @@ _SUBCOMMAND: tuple[Subcommand, ...] = (
     Subcommand("setup", "setup.environment", "개발 환경 및 도구체인 탐색/설정"),
     Subcommand("vcpkg", "setup.vcpkg", "vcpkg 탐색 및 부트스트랩"),
     Subcommand("llvm", "setup.llvm", "LLVM/Clang 탐색 및 설정"),
-    Subcommand("browser-mcp", "setup.browser_mcp", "에이전트 브라우저 조종 MCP(Chrome DevTools MCP)를 Tools/BrowserMCP 에 고정 판으로 설치(serve 는 띄운다 — .mcp.json)"),
     Subcommand("lint", "lint.pre_commit", "린트 — 인자 없음: 커밋 훅(스테이지된 파일), --list: 규칙 표(lint/rules.py), <규칙 id> [인자…]: 규칙 하나"),
     Subcommand("api-diff", "dev.api_diff", "묶음이 새로 들인 함수 이름을 검토 목록으로 내고 갈래 사이 같은 새 이름(함수 · 멤버 · 등록 이름 · Config 키)을 찾는다(--base <묶음 시작> [브랜치 …]) — 통합 검토용"),
     Subcommand("naming-census", "dev.naming_census", "Source 의 모든 이름(형식 · 함수 · 멤버 · 상수 · 매크로 · 파일 · 폴더)을 낱말로 쪼개 종류별로 센다(--out <폴더>) — 이름 전수 대조용"),

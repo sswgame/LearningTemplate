@@ -1,76 +1,69 @@
-> 질문: 새 파일과 헤더, include 를 어떻게 두는가?
-> 독자: C++ 파일 · 헤더 · include 를 더하거나 옮기는 사람.
-> 결론: 헤더는 전방 선언을 우선하고 include 는 짝 헤더, 범위별 그룹, 플랫폼 분기 순으로 쓴다. 아래 층이 위 층을 include 하지 않는다. 소유 · 잠금 · 서비스 접근 규칙도 이 문서가 정본이다.
+# Includes
+
+> 결론: 헤더는 전방 선언을 우선하고, 아래 층은 위 층을 include 하지 않는다(빌드 `#error` 껍데기 · 린트 `layer-includes` 강제). include 순서는 clang-format, 선언 순서는 린트 `cpp-shape` 규칙 1 이 강제한다. 소유 · 잠금 · 서비스 접근 규칙도 여기가 정본이다.
 
 ## C++ structure and includes
 
 ### Headers and include order
 
-- Headers prefer forward declarations. Include only when a forward declaration is impossible; never include ThirdParty headers from a project header.
-- Class declaration order: public member variables; constructors/destructor; `initialize`/`shutdown`; `process`; getters/setters; private functions in a separate access section; private member variables last.
-- In `.cpp`: `"pch.h"` first, a blank line, then the matching header. Then project headers grouped by their first folder (`Core/`, `Engine/` …), separated by blank lines. System, OS-specific and ThirdParty headers use angle brackets in the last group. clang-format enforces this order (`.clang-format` `IncludeCategories`; `py -3 -m Scripts format`).
-- **Every project include is a full path from a root**: `Source/` (`Engine/Scene/SceneManager.h`), `Content/`, the generated folder, or `Tools/` for that tree; or a bare name in the same folder (`Foo.h`). No folder under `Source/` is on an include path, so `Scene/SceneManager.h` does not compile.
-- Includes are sorted within a group. A header other headers depend on goes first through a `SortPriority` category in `.clang-format` (`Windows.h`, `WinSock2.h`, `imgui.h`, `Jolt/Jolt.h` …), not through hand order.
-- Prefer `Core/Foundation/StdHeaders.h` and `Core/Foundation/PlatformOSHeaders.h` over scattered system/OS includes. Heavy standard headers few files use (streams, `<random>`, `<regex>`, `<future>`, `<variant>`, `<condition_variable>`, `<csignal>`, `<queue>`, `<stack>`, `<bitset>`) are included directly by the file that uses them (declare stream operators with `<iosfwd>`).
-- Platform-specific includes go in **one** `#if SW_PLATFORM_WINDOWS / #elif ... / #endif` chain after the unconditional includes; inside a branch, project headers, a blank line, then system headers.
-- Use the type aliases from `Types.h`. Prefer Core and Engine facilities over STL or system calls ([ExistingFacilities](ExistingFacilities.md)).
+- Headers prefer forward declarations (`ObjectFwd.h` · `ReflectionFwd.h`); never include ThirdParty headers from a project header. Diet headers have a fan-in ceiling (lint `header-include-limits`).
+- Class declaration order: public member variables; constructors/destructor; `initialize`/`shutdown`; `process`; getters/setters; private functions in a separate section; private member variables last (lint `cpp-shape` rule 1).
+- `.cpp`: `"pch.h"`, blank line, matching header, then groups by first folder; system, OS and ThirdParty headers in angle brackets last. clang-format enforces (`py -3 -m Scripts format`); a header others depend on goes first through `SortPriority` in `.clang-format`, not hand order.
+- Every project include is a full path from a root (`Source/`, `Content/`, the generated folder, `Tools/`) or a bare name in the same folder.
+- Prefer `Core/Foundation/StdHeaders.h` and `PlatformOSHeaders.h`. Heavy standard headers few files use (streams, `<random>`, `<regex>`, `<future>`, `<variant>`, `<condition_variable>`, `<queue>` …) are included by the file that uses them (`<iosfwd>` for stream operators).
+- Platform-specific includes go in **one** `#if SW_PLATFORM_… / #elif / #endif` chain after the unconditional includes.
+- Use the aliases from `Types.h`; prefer Core and Engine facilities over STL or system calls ([ExistingFacilities](ExistingFacilities.md)).
 
 ### Core tiers
 
-Core folders are tiers (`Config/Rules/Layers/CoreLayers.toml`, sub-folder tiers in `[subtier]`; each tier is its own object part with `#error` stubs for every higher-tier header): `Foundation` → `Concurrency` · `Math` → `Memory` → `Container` → … → `Diagnostics` → `Log/Sink` (implements the `ILogSink` port `Log` declares, so it sits on top). A file includes only its own folder or a lower tier.
+Core folders are tiers (`Config/Rules/Layers/CoreLayers.toml`): a file includes only its own folder or a lower tier. Folder roles are in [FolderLayout](FolderLayout.md) 2.
 
 - A lower tier that must reach up takes an interface or a function pointer (`ILockObserver`, `IAllocationTracker`).
-- Each tier's pch holds only the `CoreMinimal.h` headers at or below it, so tiers below `Log` get **no `Logger.h`**: `SW_LOG_*`, `StringBuilder` and `FileUtil` fail to compile there. Report with `SW_LOW_LEVEL_*`.
+- Tiers below `Log` get no `Logger.h` (`SW_LOG_*`, `StringBuilder`, `FileUtil` do not compile): report with `SW_LOW_LEVEL_*`.
 
 ### Target gates
 
-`Source/` is the include root of every target, so include direction across targets is enforced by `#error` stubs first on the include path (`Config/Rules/Layers/TargetLayers.toml`, `sw_apply_target_layer_guard`). Fix a gate error by changing the dependency, not by adding an exception.
+Include direction across targets is enforced by `#error` stubs (`Config/Rules/Layers/TargetLayers.toml`). Fix a gate error by changing the dependency, not by adding an exception.
 
-- Core sees nothing above it; Engine sees no GameFramework · Editor · host; GameFramework base sees no kit; the reflection parser sees only the Engine headers in `[allow] reflectionparser`.
-- A kit, editor extension or game sees another module's headers only if that module is in its manifest's `_listDependency` closure. Files with no owning module (`Kits/Feature/Network/NetKitMessageRange.h`) are shared.
-- **Dedicated server** (gate `serverbuild`) sees no `Engine/Renderer` · `Engine/UI` · `Engine/Audio` header, no folder named `Client` (`SW_CLIENT_ONLY_SOURCE_PATTERNS`, `[gatefolder]`), and nothing in `SW_EXCLUDED_ENGINE_FOLDERS` (configure checks the gate lists them all). Platform implementations swap by folder (`Window/Headless` · `Input/Headless` instead of `Window/Linux` · `Input/Linux`). Shared code reaches client work only through interfaces:
-  - engine loop: `IEngineRenderDriver` · `IEngineUIDriver` · `IEngineAudioDriver`; scene rendering `ISceneRenderBinding`; a render feature contributes through its scene service (`ISceneService::contributeLights` …), never named in the renderer;
-  - sound `ISoundPlayer` (`GameSound`), lip-sync voice `IVoiceDecoder`, ability cues `IAbilityCueSink`, audio user settings self-register (`SW_USER_SETTINGS_HANDLER_SET`);
-  - game code asks `IInputCaptureQuery` · `IPlayerNotificationSink` · `ISubtitleSink` · `IUILayerVisibility` · `IHUDViewModelBinder` · `IDamageNumberSink` · `IGameInstanceClientHook`, not `UISystem`; a game's client-only part is `IGameClientPart`; tooling `IShaderCookService` · `IDevToolsClientPart`.
-  - Scenes on a dedicated server skip client-only component types instead of keeping a `MissingComponent` (`Bin/ClientOnlyTypes.json`, written by the server build from the headers it does not compile and shipped in the server package).
-- **Client target** (gate `clientbuild`) builds no folder named `Server` (`SW_SERVER_ONLY_SOURCE_PATTERNS` — `GameFramework/Runtime/Online/Server`, server secrets `Engine/Config/Server`); shared code starts an in-process server only through `IOnlineLocalServerFactory`.
-- There is no client/server macro — only `build::kWithClientCode` · `kWithServerCode` (`BuildInfo.h`), whose `if constexpr` branches compile in every configuration so the gates still see them. GCC and Clang poison the old `SW_WITH_CLIENT_CODE` · `SW_WITH_SERVER_CODE`.
-- **Game code** (gates `gameframework` · `kit` · `game`) sees no `Engine/Graphics/RHI` or `Engine/Graphics/Shader` header, even transitively: it uses `LightKind`, `InstanceHighlight`, `MeshBuildVertex`, materials and meshes whose GPU parts live in render proxies (`MeshRenderData`, `MaterialRenderProxy`), and `Engine/Graphics/RenderState`. The one opened RHI header is the value enum `RHIEnums.h`. A game-visible GPU constant is its own constant checked by a `static_assert` in its `.cpp` (`CanvasBatch::kMaxTextureCount`).
+- Core sees nothing above it; Engine sees no GameFramework · Editor · host; GameFramework base sees no kit.
+- A kit, editor extension or game sees another module's headers only through its manifest's `_listDependency` closure.
+- **Dedicated server** (gate `serverbuild`) sees no `Engine/Renderer` · `Engine/UI` · `Engine/Audio`, no `Client/` folder, nothing in `SW_EXCLUDED_ENGINE_FOLDERS`. Shared code reaches client work only through interfaces (`IEngineRenderDriver` · `IEngineUIDriver` · `IEngineAudioDriver`, `ISceneRenderBinding`, `ISoundPlayer`, `IGameClientPart` …); game code asks `IInputCaptureQuery` · `IPlayerNotificationSink` · `IUILayerVisibility` …, not `UISystem`.
+- **Client target** (gate `clientbuild`) builds no `Server/` folder; shared code starts an in-process server only through `IOnlineLocalServerFactory`.
+- No client/server macro — only `build::kWithClientCode` · `kWithServerCode` with `if constexpr` ([BuildConfigSwitch](BuildConfigSwitch.md)).
+- **Game code** (gates `gameframework` · `kit` · `game`) sees no `Engine/Graphics/RHI` or `Engine/Graphics/Shader` header, even transitively; the one opened RHI header is `RHIEnums.h`. A game-visible GPU constant is its own constant checked by a `static_assert` in its `.cpp`.
 
 ### Platform, compiler, build target
 
 | Question | Ask with | Never |
 | --- | --- | --- |
-| Platform / architecture | `SW_PLATFORM_WINDOWS` · `SW_PLATFORM_LINUX` · `SW_PLATFORM_ANDROID` · `SW_PLATFORM_WEB` · `SW_PLATFORM_POSIX`, `SW_X64` · `SW_ARM64` | `_WIN32`, `__linux__` |
-| Compiler | `SW_COMPILER_CLANG` (clang-cl included) · `SW_COMPILER_MSVC` (cl.exe only) · `SW_COMPILER_GCC` | `_MSC_VER`, `__clang__` |
-| Build target | `sw::build::kWithClientCode` · `kWithServerCode` · `kTargetName` (constants — there is no client/server macro), only in `.cpp` bodies | gating reflection declarations or a header's class layout on them |
+| Platform / architecture | `SW_PLATFORM_WINDOWS` · `_LINUX` · `_ANDROID` · `_WEB` · `_POSIX`, `SW_X64` · `SW_ARM64` | `_WIN32`, `__linux__` |
+| Compiler | `SW_COMPILER_CLANG` (clang-cl included) · `SW_COMPILER_MSVC` · `SW_COMPILER_GCC` | `_MSC_VER`, `__clang__` |
+| Build target | `sw::build::kWithClientCode` · `kWithServerCode` · `kTargetName`, only in `.cpp` bodies | gating reflection declarations or class layout on them |
 
-clang-cl defines both `__clang__` and `_MSC_VER`, so "may I use an MSVC extension" is `SW_PLATFORM_WINDOWS`. A feature that splits between client and server splits into modules: shared `GF_<X>`, server-only `GF_Server_<X>`, client-only `GF_Client_<X>`.
+"May I use an MSVC extension" is `SW_PLATFORM_WINDOWS` (clang-cl defines both). A feature split between client and server splits into modules: `GF_<X>`, `GF_Server_<X>`, `GF_Client_<X>`.
 
 ### Locks and threads
 
-- Lock with `sw::mutex` / `sw::shared_mutex` / `SpinLock` and the guards in `Core/Concurrency/ScopedLock.h` (`ScopedLock`, `ScopedSharedLock`, `UniqueLock`, `ScopedLockPair`), never the `std::` ones (clang `-Wthread-safety` does not see them). Start threads with `sw::thread`.
-- Write the lock contract on the declaration, not in a comment: `SW_GUARDED_BY( _mutex )`, `SW_REQUIRES_LOCK( _mutex )`, `SW_EXCLUDES_LOCK( _mutex )` (`Core/Concurrency/ThreadSafety.h`). A "this thread only" rule is a `ThreadRole` member.
+- Lock with `sw::mutex` / `sw::shared_mutex` / `SpinLock` and the guards in `Core/Concurrency/ScopedLock.h`, never `std::` locks (`-Wthread-safety` does not see them). Start threads with `sw::thread`.
+- Lock contracts on the declaration: `SW_GUARDED_BY` · `SW_REQUIRES_LOCK` · `SW_EXCLUDES_LOCK` (`ThreadSafety.h`); "this thread only" is a `ThreadRole` member.
 - Locks are leaf locks: never log or call out while holding one.
 
 ### Services
 
-Reach a service through the window of its lifetime: `getSubsystem<T>()` (must exist, `T&`) or `findSubsystem<T>()` (may be missing, `T*`) on `engine::`, `game::`, `editor::` or the owning object.
+Reach a service through its lifetime window: `getSubsystem<T>()` (must exist, `T&`) or `findSubsystem<T>()` (may be missing, `T*`) on `engine::`, `game::`, `editor::` or the owner. No named accessors, no `static getInstance()`.
 
-- A new engine service registers itself — there is no central list. Its class body declares the slot (`SW_SERVICE_SLOT( T, Required | Optional )` or `SW_SERVICE_SLOT_CONST`, `Core/Subsystem/ServiceSlot.h`; the class is `SW_API`), and the `.cpp` that puts the object into a scope has one registration line (`Engine/Foundation/EngineSubsystemRegistration.h`):
-  - `SW_ENGINE_SERVICE_SUBSYSTEM( T, GameVisible | HostOnly, Services | Startup, ( TypesBuiltFirst... ), factory )` — builds the subsystem and fills its slot (`SW_ENGINE_DEFAULT_FACTORY( T )` for a plain `emplaceSubsystem<T>()`).
-  - `SW_ENGINE_SUBSYSTEM( T, Services | Startup, ( TypesBuiltFirst... ), factory )` — builds a subsystem without a slot (found only through scopes).
-  - `SW_ENGINE_SERVICE( T, GameVisible | HostOnly )` — a slot for an object another subsystem binds (a value bundle, an object inside a subsystem); the line sits next to that `bind`.
-  - Put a type in the parentheses only when the factory looks it up (`scope.get<T>()`); the build order is a topological sort of those (ties by name), and a cycle, an unregistered type or a type from another stage stops startup. Init/shutdown order still comes from `ISubsystem::getSubsystemDependencies`.
-  - `engine::getSubsystem<T>()` reads the slot in O(1) and compiles only for a `Required` slot whose header is included; `engine::findSubsystem<T>()` reads an `Optional` slot, or walks the scopes for a type without a slot. A required slot left empty stops startup with the type name (`engine::bindEngineServices`). `GameVisible` slots are bound into game module scopes (`game::findSubsystem<T>()`); editor scopes get every slot.
-- No named accessors, no `static getInstance()`.
-- Tests inject mocks through scopes (`game::ScopedGameScope`, `editor::ScopedEditorScope`); the registration rules are tested with a local `engine::EngineRegistrationList` (`Engine/Foundation/Tests/TestEngineSubsystemRegistration.cpp`).
-- A dynamically loaded module (GameFramework, a kit) owns its services as **module subsystems**: `SW_MODULE_SUBSYSTEM( Process | Engine, T, PublishedTypes... )` in a `.cpp`. Loading the module mounts them in a child scope named after the module (`ModuleRegistrationHost`); unloading removes the child scope. Only published types are visible from the parent scope, so a lower layer finds a higher layer's implementation by interface type (`engine::findSubsystem<INetSecurityProvider>()`) — no function slot, no function-local static provider. `Process` is the root of the scope chain (the host scope) and outlives engine and game restarts.
-- A host subsystem without a slot that the editor must find (a `DevTools` subsystem, `ConfigManager`) declares it in its class: `static constexpr SubsystemModuleVisibility kModuleVisibility = SubsystemModuleVisibility::HostModules;`. The editor module's scope reaches it through `ModuleRegistrationHost::getHostModuleLocator`; game module scopes never see it. The host keeps no hand list of what to bind into the editor scope.
+- A new engine service registers itself: the class declares its slot (`SW_SERVICE_SLOT( T, Required | Optional )`, `Core/Subsystem/ServiceSlot.h`, class `SW_API`) and the `.cpp` has one line (`Engine/Foundation/EngineSubsystemRegistration.h`):
+  - `SW_ENGINE_SERVICE_SUBSYSTEM( T, GameVisible | HostOnly, Services | Startup, ( TypesBuiltFirst... ), factory )` (`SW_ENGINE_DEFAULT_FACTORY( T )`);
+  - `SW_ENGINE_SUBSYSTEM( T, Services | Startup, ( … ), factory )` — no slot;
+  - `SW_ENGINE_SERVICE( T, GameVisible | HostOnly )` — a slot another subsystem binds, next to that `bind`.
+  - List a type in the parentheses only when the factory looks it up; a cycle or unregistered type stops startup. Init/shutdown order comes from `ISubsystem::getSubsystemDependencies`.
+- Tests inject mocks through scopes (`game::ScopedGameScope`, `editor::ScopedEditorScope`).
+- A dynamically loaded module owns its services as module subsystems: `SW_MODULE_SUBSYSTEM( Process | Engine, T, PublishedTypes... )`. A lower layer finds a higher layer's implementation by interface type — no function slot, no function-local static provider.
+- A slotless host subsystem the editor must find declares `static constexpr SubsystemModuleVisibility kModuleVisibility = SubsystemModuleVisibility::HostModules;` — no hand list.
 
 ### Memory and ownership
 
-- Construct into held memory with `sw_placement_new( pMemory ) T( ... )`, never a bare `new ( pMemory ) T( ... )`.
-- Allocate on the heap through an **owning type**: `make_unique<T>( ... )`, `vector<T>`, `make_unique<T[]>( n )`, `MemoryBlock` for a raw byte block. A bare `new` is rejected. Where ownership must leave the type system (lock-free slot table, COM refcount, C-ABI handle), write `make_unique<T>( ... ).release()`.
-- **Borrow with a pointer, keep with a handle.** A `GameObject*` / `Component*` you do not own is valid only inside the current call (at most the current frame). Anything kept across frames (members, selection lists, undo records) holds a `GameObjectHandle` / `ComponentHandle` and resolves it on each use through the owning manager (`resolveGameObject` / `resolveComponent`, `nullptr` once the target is gone). A handle resolves only through the manager (scene) that owns the object. Structural links the object model maintains itself (owner, hierarchy, registries) stay raw pointers.
-- **Saved state never points at another object by name.** A parent reference is the parent's id, resolved by `ObjectStateBatch` after every object of the batch is loaded. Any new path that loads object state goes through a batch (`ObjectLoadContext::_pBatch` + `finish()`).
+- Placement construction is `sw_placement_new( pMemory ) T( ... )`, never bare `new ( pMemory )`.
+- Heap allocation goes through an owning type (`make_unique`, `vector`, `MemoryBlock`); a bare `new` is rejected. Where ownership leaves the type system (lock-free slot, COM refcount, C-ABI handle): `make_unique<T>( ... ).release()`.
+- **Borrow with a pointer, keep with a handle.** A `GameObject*` / `Component*` you do not own is valid only inside the current call. Anything kept across frames holds a `GameObjectHandle` / `ComponentHandle` and resolves it through the owning manager each use. Structural links the object model maintains stay raw pointers.
+- **Saved state never points at another object by name**: a parent reference is the parent's id, resolved by `ObjectStateBatch`; a new object-state load path goes through a batch (`ObjectLoadContext::_pBatch` + `finish()`).

@@ -3,8 +3,8 @@
 CLAUDE.md 의 "보조 도구" 는 글로만 있어 세션마다 지켜지지 않았다(2026-11-08 사용자 지적). 에이전트의 행동은 형식으로 막을 수 없어
 정책으로 둔다: 규칙 표(`ToolPolicyRules.json` — 규칙은 데이터, 이 파일은 판정만)의 조건을 채우지 않은 호출은 거절하고 먼저 할 일을 알린다.
 
-PostToolUse 는 표지를 남긴다: `skill:<이름>`(Skill 도구), `graph`(graphify query · path · explain, mcp__graphify__ 도구),
-`context7`(이름에 context7 가 든 도구). 상태는 에이전트마다(하위 에이전트는 agent_id, 아니면 session_id) 임시 폴더의 JSON 에 둔다.
+PostToolUse 는 표지를 남긴다: `skill:<이름>`(Skill 도구), `graph`(graphify query · path · explain). 표지 `never` 는 남지 않아
+그것을 요구하는 규칙은 언제나 거절한다(금지 명령 · 손으로 고치지 않는 파일). 상태는 에이전트마다(하위 에이전트는 agent_id, 아니면 session_id) 임시 폴더의 JSON 에 둔다.
 """
 import json
 import os
@@ -49,10 +49,8 @@ class ToolPolicy:
         return "/" + "/".join(parts).replace("\\", "/").lstrip("/")
 
     def marker_for(self) -> str | None:
-        if self._tool_name.startswith("mcp__graphify__") or (self._tool_name in ("Bash", "PowerShell") and GRAPH_COMMAND.search(self.command())):
+        if self._tool_name in ("Bash", "PowerShell") and GRAPH_COMMAND.search(self.command()):
             return "graph"
-        if "context7" in self._tool_name.lower():
-            return "context7"
         if self._tool_name == "Skill":
             return "skill:" + str(self._tool_input.get("skill", "")).split(":")[-1]
         return None

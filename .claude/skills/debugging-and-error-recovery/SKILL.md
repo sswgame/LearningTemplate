@@ -72,7 +72,7 @@ Cannot reproduce on demand:
     └── Document the conditions observed and revisit when it recurs
 ```
 
-For test failures (npm shown — substitute the repository's own test command, per the test-driven-development skill's Discover the Stack First section):
+For test failures (npm shown — substitute the repository's own test command):
 ```bash
 # Run the specific failing test
 npm test -- --grep "test name"

@@ -1,5 +1,5 @@
 {
-  "_comment": "도구 정책 규칙(.claude/hooks/tool_policy.py). 각 줄: 이 도구 · 경로 · 셸 명령을 쓰기 전에 requiresAny 중 하나를 이 에이전트가 먼저 했어야 한다. 표지는 skill:<이름>(Skill 도구), graph(graphify query · path · explain 또는 mcp__graphify__), context7(이름에 context7 가 든 도구). windowMinutes 가 있으면 그 시간 안에 한 것만 센다.",
+  "_comment": "도구 정책 규칙(.claude/hooks/tool_policy.py). 각 줄: 이 도구 · 경로 · 셸 명령을 쓰기 전에 requiresAny 중 하나를 이 에이전트가 먼저 했어야 한다. 표지는 skill:<이름>(Skill 도구), graph(graphify query · path · explain). never 는 언제나 거절(금지 명령 · 손으로 고치지 않는 파일). windowMinutes 가 있으면 그 시간 안에 한 것만 센다.",
   "_rules": [
     {
       "name": "graph-before-reading-source",
@@ -16,7 +16,7 @@
         "graph"
       ],
       "windowMinutes": 60,
-      "hint": "graphify 로 범위를 먼저 좁힌다: 저장소 루트에서 `graphify explain \"<심볼>\"` · `graphify query \"<질문>\" --budget 4000`(워크트리에서는 `--graph \"$(git rev-parse --path-format=absolute --git-common-dir)/../graphify-out/graph.json\"`), 또는 mcp__graphify__query_graph · get_node · get_neighbors."
+      "hint": "graphify 로 범위를 먼저 좁힌다: 저장소 루트에서 `graphify explain \"<심볼>\"` · `graphify query \"<질문>\" --budget 4000`(워크트리에서는 `--graph \"$(git rev-parse --path-format=absolute --git-common-dir)/../graphify-out/graph.json\"`)."
     },
     {
       "name": "ponytail-before-editing-code",
@@ -63,10 +63,9 @@
       ],
       "path": "/Source/Engine/(Graphics/RHI/(Vulkan|DX11|DX12|OpenGL|WebGPU)|Platform/(Android|Web))/",
       "requiresAny": [
-        "context7",
         "skill:source-driven-development"
       ],
-      "hint": "외부 API(Vulkan · D3D · GL · WebGPU · Android · Emscripten)를 쓰는 코드를 고치기 전에 그 판의 문서를 찾는다: context7 도구, 또는 `Skill` 로 source-driven-development."
+      "hint": "외부 API(Vulkan · D3D · GL · WebGPU · Android · Emscripten)를 쓰는 코드를 고치기 전에 `Skill` 로 source-driven-development 를 부르고 그 판의 공식 문서를 찾는다."
     },
     {
       "name": "perf-skill-before-perf-work",
@@ -147,11 +146,71 @@
         "Bash",
         "PowerShell"
       ],
-      "shell": "(cmake\\s+(--build|--preset)|\\bninja\\b|\\bctest\\b)[^\\n]*\\.claude.worktrees|\\.claude.worktrees[^\\n]*(cmake\\s+(--build|--preset)|\\bninja\\b|\\bctest\\b)",
+      "shell": "(cmake\\s+(--build|--preset)|\\bninja\\b|\\bctest\\b)[^\\n]*(\\.claude.worktrees|LT-wt)|(\\.claude.worktrees|LT-wt)[^\\n]*(cmake\\s+(--build|--preset)|\\bninja\\b|\\bctest\\b)",
       "requiresAny": [
         "never"
       ],
-      "hint": "워크트리에서 빌드 · 구성 · ctest 를 돌리지 않는다 — 빌드는 본 트리에서 하나만(디스크 · 공용 vcpkg 충돌, 2026-11-12 사용자 지시). 작업자는 코드 → 린트 → 커밋만 하고 컴파일 · 실행은 통합이 본 트리 빌드에서 한다."
+      "hint": "워크트리(LT-wt · .claude/worktrees)에서 빌드 · 구성 · ctest 를 돌리지 않는다 — 빌드는 메인 작업 폴더에서 하나만(디스크 · 공용 vcpkg 충돌). 작업자는 코드 → 린트 → 커밋만 하고 컴파일 · 실행은 통합이 메인 작업 폴더 빌드에서 한다."
+    },
+    {
+      "name": "no-git-stash",
+      "tools": [
+        "Bash",
+        "PowerShell"
+      ],
+      "shell": "(?m)(^|[;&|(]\\s*)git\\s+(-C\\s+\\S+\\s+)?stash\\b",
+      "requiresAny": [
+        "never"
+      ],
+      "hint": "git stash 는 쓰지 않는다 — 스태시 목록은 모든 워크트리가 함께 써서 다른 갈래의 변경을 꺼내거나 잃는다. 커밋하거나(작업 중이면 WIP 커밋) 새 워크트리를 만든다."
+    },
+    {
+      "name": "move-with-tools",
+      "tools": [
+        "Bash",
+        "PowerShell"
+      ],
+      "shell": "\\bgit\\s+(-C\\s+\\S+\\s+)?mv\\b[^|;&\\n]*\\b(Source|Content)/",
+      "requiresAny": [
+        "never"
+      ],
+      "hint": "소스 · 에셋은 git mv 로 옮기지 않는다 — include · CMake · 에셋 경로 칸이 따라오지 않는다. 소스는 `py -3 -m Scripts move-source`, 에셋은 `py -3 -m Scripts move-asset <옛 id> <새 id>`, 이름은 `rename-symbol`."
+    },
+    {
+      "name": "no-hand-edit-generated",
+      "tools": [
+        "Edit",
+        "Write",
+        "NotebookEdit"
+      ],
+      "path": "\\.gen\\.material$|/shaders/matgraph/|/Config/Dev/AssetReferenceFields\\.generated\\.json$",
+      "requiresAny": [
+        "never"
+      ],
+      "hint": "생성물은 손으로 고치지 않는다 — 머티리얼 그래프 생성물은 그래프를 고친 뒤 `App --cook-shaders`(또는 편집기 저장), AssetReferenceFields.generated.json 은 빌드의 리플렉션 생성(Scripts/generate/asset_reference_field_list.py)이 다시 쓴다 — 칸은 구조체의 PROPERTY( AssetPath ) 로 고친다."
+    },
+    {
+      "name": "no-hand-raise-magic-baseline",
+      "tools": [
+        "Edit",
+        "Write"
+      ],
+      "path": "/Config/Rules/Lint/MagicLiteralsBaseline\\.json$",
+      "requiresAny": [
+        "never"
+      ],
+      "hint": "매직 리터럴 기준선은 손으로 고치지 않는다 — 내리는 것은 `py -3 -m Scripts lint magic-literals --ratchet`, 올리는 것은 통합에서만 `--accept <파일…>`(docs/agents/Constants.md The ratchet)."
+    },
+    {
+      "name": "no-per-folder-constants-header",
+      "tools": [
+        "Write"
+      ],
+      "path": "/Source/(?!Core/Foundation/Constants\\.h$|Engine/Reflection/ReflectionConstants\\.h$|Engine/Graphics/Shader/Reflection/SPIRVConstants\\.h$).*Constants\\.h$",
+      "requiresAny": [
+        "never"
+      ],
+      "hint": "폴더마다 `*Constants.h` 를 새로 만들지 않는다 — 한 모듈 상수는 주인 형식(`MeshAssetFormat::kExtension`)이나 그 모듈 형식 헤더의 이름공간에, 모듈 사이 계약은 층마다 하나인 파일(`Core/Foundation/Constants.h` 등)에 둔다(docs/agents/Constants.md)."
     }
   ]
 }
