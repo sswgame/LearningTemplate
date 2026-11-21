@@ -29,6 +29,7 @@
 			                       _radius="8"
 			                       _interval="0"
 			                       _bOnStep="true" />
+			<AIStimulusSourceComponent _localID="7417170765597658317" _componentName="AIStimulusSourceComponent" _bActive="true" _team="0" _bVisible="false" />
 		</_listComponent>
 	</GameObject>
 </Prefab>

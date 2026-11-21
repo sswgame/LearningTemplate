@@ -16,7 +16,7 @@ namespace sw
 {
     /**
      * @class GatheringNodeComponent
-     * @brief 채집 지점입니다(약초, 광맥, 나무). 같은 오브젝트의 상호작용(Gather)을 끝낸 쪽에 `_item` × `_count` 를 주고(`GimmickItemEvent`), `_uses` 번 쓰면
+     * @brief 채집 지점입니다(약초, 광맥, 나무). 같은 오브젝트의 상호작용(Gather)을 끝낸 쪽이 받을 가방(`IItemReceiver`)에 `_item` × `_count` 를 넣고(`GimmickUtil::giveItem`), `_uses` 번 쓰면
      *        몸과 상호작용을 끈 뒤 `_respawnDelay` 뒤에 복원합니다. 스텝 수로 세므로 결정적입니다.
      */
     REFLECT( Category = "Gimmick", DisplayName = "Gathering Node", Tooltip = "Gives items when gathered, depletes and respawns" )
@@ -30,7 +30,7 @@ namespace sw
 
         void onTick( TickContext& context ) override;
         void stepOnce();
-        /** @brief @p who 가 한 번 채집합니다. 상호작용이 부르는 것과 같은 동작입니다. 다 써서 없으면 false 입니다. */
+        /** @brief @p who 가 한 번 채집합니다. 상호작용이 부르는 것과 같은 동작입니다. 다 써서 없거나 받을 가방이 없거나 차면 false 입니다(횟수를 쓰지 않는다). 게임 스레드(틱 밖)에서 부릅니다. */
         bool gather( const GameObject& who );
 
         /** @brief 저작 값 `_uses` 만큼 다 썼으면 true 입니다. 남은 횟수를 따로 저장하지 않고 쓴 횟수(런타임)와 비교한다. 그래서 저작 값이 바뀌어도 첫 플레이가 그 값을 따른다. */

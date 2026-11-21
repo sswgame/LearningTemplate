@@ -185,4 +185,13 @@ namespace sw
         rotation._y     = _motor.getYaw();
         pRoot->setLocalRotation( rotation );
     }
+
+    bool KinematicVehicleComponent::BoostReceiverPort::receiveBoost( float32 durationSeconds )
+    {
+        KinematicVehicleComponent& owner = getPortOwner<KinematicVehicleComponent>( *this, offsetof( KinematicVehicleComponent, _boostReceiverPort ) );
+        if ( durationSeconds <= 0.0f || owner._motor.getSettings()._boost._bEnabled == false )
+            return false;
+        owner._motor.startBoost( durationSeconds );
+        return true;
+    }
 } // namespace sw

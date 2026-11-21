@@ -8,9 +8,7 @@
 #include "Engine/Object/GameObject/GameObjectEvents.h"
 #include "Engine/Object/GameObject/Tick/TickContext.h"
 
-#include "GameFramework/Runtime/Foundation/Framework/GameEventUtil.h"
 #include "GameFramework/Runtime/Foundation/Random/GameRandom.h"
-#include "GameFramework/Runtime/Gameplay/Gimmick/GimmickEvents.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/GimmickUtil.h"
 
 namespace sw
@@ -67,16 +65,16 @@ namespace sw
         // 시드와 연 횟수로 뽑는다. 같은 순서로 열면 같은 것이 나온다.
         GameRandom            random( HashUtil::hashCoord( _openCount, 0, _seed ) );
         const optional<int32> index = random.pickWeightedIndex( _listChoice, ItemBoxComponentInternal::ChoiceWeight{} );
-        ++_openCount;
         if ( index.has_value() == false )
+        {
+            ++_openCount;
             return hashed_string{};
+        }
         const ItemBoxChoice& choice = _listChoice[static_cast<size_t>( *index )];
-        GimmickItemEvent     event;
-        event._target = target.getHandle();
-        event._source = pOwner->getHandle();
-        event._item   = choice._item;
-        event._count  = choice._count;
-        GameEventUtil::send( event );
+        // 받는 쪽이 없거나 가방이 차면 열지 않는다 — 아이템을 버리지 않고, 연 횟수도 그대로라 다음에 같은 것이 나온다(경고는 giveItem 이 남긴다).
+        if ( GimmickUtil::giveItem( *pOwner, target, choice._item, choice._count ) == false )
+            return hashed_string{};
+        ++_openCount;
         if ( _respawnDelay > 0.0f )
         {
             _respawnStepsLeft = _clock.secondsToSteps( _respawnDelay, 1 );

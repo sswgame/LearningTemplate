@@ -13,6 +13,7 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Gameplay/GameState/GameStateComponent.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/IItemReceiver.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Wallet.h"
 #include "GameFramework/Runtime/Gameplay/Progression/Reputation.h"
@@ -65,6 +66,7 @@ namespace sw
     {
     public:
         REFLECT_BODY();
+        REFLECT_INTERFACE( IItemReceiver, _itemReceiverPort );
 
         static constexpr uint32 kStateTag     = FourCCUtil::make( "PPRG" );
         static constexpr uint32 kStateVersion = 1;
@@ -144,5 +146,12 @@ namespace sw
         PROPERTY( Tooltip = "Open with default settings at begin play - only for scenes without a kit director (the hub, showcases); a director opens it with its own settings" )
         uint8                  _bOpenAtBeginPlay : 1;
         [[maybe_unused]] uint8 _reserved         : 5;
+
+        /** @brief 아이템 받기 계약을 가방(`_inventory`) 하나로 넘기는 포트입니다(`REFLECT_INTERFACE`). 가방만 만진다 — 가방 컴포넌트가 따로 서면 포트째 옮긴다. */
+        struct ItemReceiverPort final : IItemReceiver
+        {
+            [[nodiscard]] ItemGrantResult receiveItem( const hashed_string& item, int32 count ) override;
+        };
+        ItemReceiverPort _itemReceiverPort;
     };
 } // namespace sw

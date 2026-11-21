@@ -364,4 +364,15 @@ namespace sw
         if ( skipped > 0 )
             writer.addLineFormat( "...", "%# more", skipped );
     }
+
+    ItemGrantResult PlayerProgressComponent::ItemReceiverPort::receiveItem( const hashed_string& item, int32 count )
+    {
+        Inventory& bag = getPortOwner<PlayerProgressComponent>( *this, offsetof( PlayerProgressComponent, _itemReceiverPort ) )._inventory;
+        if ( bag.getSlotCount() <= 0 )
+            return ItemGrantResult::NoBag;
+        if ( bag.hasRoomFor( item, count ) == false )
+            return ItemGrantResult::NoRoom;
+        (void)bag.addItem( item, count ); // 자리를 먼저 봤으므로 모두 들어간다
+        return ItemGrantResult::Granted;
+    }
 } // namespace sw

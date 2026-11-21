@@ -46,6 +46,31 @@ namespace sw
         return context;
     }
 
+    void AbilitySystemComponent::receiveHit( const HitInfo& hit )
+    {
+        // 치명 사본은 쓰러짐을 정한 체력 원천(자기 포함)이 다시 보낸 것이라 피해가 이미 들었다. 체력이 없는 주인은 맞아도 깎일 것이 없다(벽을 맞힌 것과 같다).
+        if ( hit._bFatal || getHealthReading()._bHasHealth == SW_FALSE )
+            return;
+        const float32 damage = hit._damage * hit._damageMultiplier;
+        if ( damage <= 0.0f )
+            return;
+        // 맞음마다 즉시 이펙트 정의를 만든다 — 상태 없는 값이라 카탈로그 없이 어느 주인에게나 같고, 맞음은 프레임마다 몇 번뿐이다.
+        shared_ptr<DamageExecution> pExecution = make_shared<DamageExecution>();
+        pExecution->setParameters( hashed_string( "Damage" ), 0.0f, 0.0f );
+        shared_ptr<AbilityEffectDef> pDef = make_shared<AbilityEffectDef>();
+        pDef->_id                         = hashed_string( "HitDamage" );
+        pDef->_listExecution.push_back( std::move( pExecution ) );
+
+        AbilityEffectSpec spec;
+        spec._pDef                  = std::move( pDef );
+        spec._context._instigator   = hit._pInstigator != nullptr ? hit._pInstigator->getHandle() : GameObjectHandle{};
+        spec._context._effectCauser = spec._context._instigator;
+        spec._context._sourceName   = hit._kind;
+        spec.setSetByCallerMagnitude( hashed_string( "Damage" ), damage );
+        spec.setHit( hit ); // 이 맞음으로 쓰러지면 치명 신호가 맞은 바디 · 방향을 쓴다(`notifyAttributeChanged`)
+        (void)applyGameplayEffectSpecToTarget( spec, this );
+    }
+
     AbilityEffectSpec AbilitySystemComponent::makeOutgoingSpec( const shared_ptr<const AbilityEffectDef>& pDef, int32 level ) const
     {
         AbilityEffectSpec spec;
