@@ -5,8 +5,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectEvents.h"
 
-#include "GameFramework/Runtime/Foundation/Framework/GameEventUtil.h"
-#include "GameFramework/Runtime/Gameplay/Gimmick/GimmickEvents.h"
+#include "GameFramework/Runtime/Gameplay/Vehicle/KinematicVehicleComponent.h"
 
 namespace sw
 {
@@ -27,7 +26,6 @@ namespace sw
 {
     BoostPadComponent::BoostPadComponent()
         : _duration{ 1.0f }
-        , _strength{ 1.5f }
         , _requiredTags{}
         , _boostCount{ 0 }
     {
@@ -41,13 +39,17 @@ namespace sw
 
     void BoostPadComponent::handleOverlapBegin( const OverlapInfo& overlap )
     {
-        if ( BoostPadComponentInternal::canAccept( overlap, _requiredTags ) == false )
+        if ( BoostPadComponentInternal::canAccept( overlap, _requiredTags ) )
+            boost( *overlap._pOther );
+    }
+
+    void BoostPadComponent::boost( GameObject& target )
+    {
+        // 받는 쪽은 밟은 탈것 하나라 이벤트를 거치지 않고 그 모터를 직접 부른다. 세기(최고 속도 보너스 · 밀기)는 탈것 튜닝의 부스트 모듈이 정한다(마리오 카트 대시 판).
+        KinematicVehicleComponent* pVehicle = target.getComponent<KinematicVehicleComponent>();
+        if ( pVehicle == nullptr )
             return;
         ++_boostCount;
-        GimmickBoostEvent event;
-        event._target   = overlap._pOther->getHandle();
-        event._duration = _duration;
-        event._strength = _strength;
-        GameEventUtil::send( event );
+        pVehicle->getMotor().startBoost( _duration );
     }
 } // namespace sw

@@ -16,7 +16,7 @@ namespace sw
 {
     /**
      * @class GatheringNodeComponent
-     * @brief 채집 지점입니다(약초, 광맥, 나무). 같은 오브젝트의 상호작용(Gather)을 끝낸 쪽에 `_item` × `_count` 를 주고(`GimmickItemEvent`), `_uses` 번 쓰면
+     * @brief 채집 지점입니다(약초, 광맥, 나무). 같은 오브젝트의 상호작용(Gather)을 끝낸 쪽을 쥔 플레이어의 가방에 `_item` × `_count` 를 넣고(`GimmickUtil::giveItem`), `_uses` 번 쓰면
      *        몸과 상호작용을 끈 뒤 `_respawnDelay` 뒤에 복원합니다. 스텝 수로 세므로 결정적입니다.
      */
     REFLECT( Category = "Gimmick", DisplayName = "Gathering Node", Tooltip = "Gives items when gathered, depletes and respawns" )

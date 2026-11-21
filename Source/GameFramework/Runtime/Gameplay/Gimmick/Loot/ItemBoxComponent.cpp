@@ -8,9 +8,7 @@
 #include "Engine/Object/GameObject/GameObjectEvents.h"
 #include "Engine/Object/GameObject/Tick/TickContext.h"
 
-#include "GameFramework/Runtime/Foundation/Framework/GameEventUtil.h"
 #include "GameFramework/Runtime/Foundation/Random/GameRandom.h"
-#include "GameFramework/Runtime/Gameplay/Gimmick/GimmickEvents.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/GimmickUtil.h"
 
 namespace sw
@@ -71,12 +69,7 @@ namespace sw
         if ( index.has_value() == false )
             return hashed_string{};
         const ItemBoxChoice& choice = _listChoice[static_cast<size_t>( *index )];
-        GimmickItemEvent     event;
-        event._target = target.getHandle();
-        event._source = pOwner->getHandle();
-        event._item   = choice._item;
-        event._count  = choice._count;
-        GameEventUtil::send( event );
+        GimmickUtil::giveItem( target, choice._item, choice._count );
         if ( _respawnDelay > 0.0f )
         {
             _respawnStepsLeft = _clock.secondsToSteps( _respawnDelay, 1 );

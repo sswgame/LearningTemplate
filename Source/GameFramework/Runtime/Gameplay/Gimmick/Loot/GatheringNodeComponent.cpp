@@ -6,8 +6,6 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Tick/TickContext.h"
 
-#include "GameFramework/Runtime/Foundation/Framework/GameEventUtil.h"
-#include "GameFramework/Runtime/Gameplay/Gimmick/GimmickEvents.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/GimmickUtil.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/Trigger/GimmickSensorComponent.h"
 #include "GameFramework/Runtime/Gameplay/Interaction/InteractableComponent.h"
@@ -31,12 +29,7 @@ namespace sw
         if ( pOwner == nullptr || isDepleted() )
             return false;
         ++_usesTaken;
-        GimmickItemEvent event;
-        event._target = who.getHandle();
-        event._source = pOwner->getHandle();
-        event._item   = _item;
-        event._count  = _count;
-        GameEventUtil::send( event );
+        GimmickUtil::giveItem( who, _item, _count );
         if ( isDepleted() )
         {
             _respawnStepsLeft = _respawnDelay > 0.0f ? _clock.secondsToSteps( _respawnDelay, 1 ) : 0;

@@ -7,6 +7,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameEventUtil.h"
+#include "GameFramework/Runtime/Gameplay/GameState/PlayerProgressComponent.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/GimmickEvents.h"
 #include "GameFramework/Runtime/Gameplay/Interaction/InteractableComponent.h"
 
@@ -46,6 +47,22 @@ namespace sw
             InteractableComponent* pInteractable = pObject != nullptr ? pObject->getComponent<InteractableComponent>() : nullptr;
             if ( pInteractable != nullptr )
                 pInteractable->setEnabled( bEnabled );
+        } );
+    }
+
+    void GimmickUtil::giveItem( const GameObject& target, const hashed_string& item, int32 count )
+    {
+        const GameObjectManager* pManager = target.getManager(); // 채집은 틱에서 부른다 — 가방은 조종자 오브젝트의 것이라 틱 뒤에 넣는다
+        if ( pManager == nullptr || item.empty() || count <= 0 )
+            return;
+        const GameObjectHandle handle = target.getHandle();
+        pManager->executeOrDeferPostTickOnScene( [handle, item, count]( GameObjectManager& sceneManager )
+        {
+            const GameObject*        pTarget   = sceneManager.resolveGameObject( handle );
+            PlayerProgressComponent* pProgress = pTarget != nullptr ? PlayerProgressComponent::findForPawnObject( sceneManager, *pTarget ) : nullptr;
+            Inventory*               pBag      = pProgress != nullptr ? pProgress->findInventory() : nullptr;
+            if ( pBag != nullptr )
+                (void)pBag->addItem( item, count ); // 넣은 수는 쓰지 않는다 — 가방이 차면 남는 것은 주지 않는다
         } );
     }
 
