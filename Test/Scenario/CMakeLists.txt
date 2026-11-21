@@ -230,7 +230,10 @@ endforeach()
 # 그린 화소를 판정하지 않는 시나리오(UI 로직 · 문턱 없는 캡처)는 백엔드를 돌아가며 하나에서만 돈다(`-scenario-backend-split=independent`, Debug 는 `all`) — 전부 네 번 돌면 백엔드당 약 1000 초였다.
 if(TARGET EditorModule)
 	sw_glob_source_tree(list_editor_scenario RELATIVE "${scenario_root}" "${scenario_root}/engine/automation/editor/*.scenario.xml")
-	sw_add_scenario_chain(Scenario.editor 120 SPLIT independent SCENARIOS ${list_editor_scenario} ARGS -EnableEditor)
+	# 편집기 시나리오는 모두 editortest 를 작업 씬으로 가정한다(골든 · 선택 · 게임 뷰) — 그 가정을 여기 한 곳에 적는다. 게임의 첫 씬(gv_firstScene)으로 준다:
+	# 편집기 시작 씬이 비면 게임의 첫 씬을 열고, 단계 사이 초기화도 게임의 첫 씬을 다시 연다 — 편집기 시작 씬(gv_editorStartupScene)만 주면 둘째 단계부터
+	# 팩 시작 맵(지금은 마을 maps/hub)으로 돌아갔다. 시작 맵을 바꾸자 체인 전체가 다른 씬을 봤다(2026-11-21).
+	sw_add_scenario_chain(Scenario.editor 120 SPLIT independent SCENARIOS ${list_editor_scenario} ARGS -EnableEditor -gv_firstScene=game/playground/maps/editortest.scene.xml)
 	# 저장된 상태 쌍(`statedir/<묶음>.1` · `.2`) — 끄고 다시 켜면 상태가 돌아오는지가 검사 대상이라 프로세스를 다시 띄우는 것 자체가 필요하다.
 	# 빈 상태 폴더로 .1 을, 같은 폴더로 .2 를 잇는다(언리얼이 설정 저장을 에디터 재시작으로 보는 것과 같다). 상태 폴더를 같이 쓰므로 기본 백엔드 하나다.
 	sw_glob_source_tree(list_state_dir_first RELATIVE "${scenario_root}" "${scenario_root}/engine/automation/editor/statedir/*.1.scenario.xml")
