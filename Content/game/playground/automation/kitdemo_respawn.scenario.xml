@@ -55,6 +55,7 @@
 	<WaitUntil watch="KitDemo.Platformer.PlayerY" near="1.45" tolerance="0.05" timeoutFrames="60"/>
 
 	<!-- 4) 세이브 → 한 번 더 죽어 상태를 바꾼다 → 불러오면 세이브 때(체크포인트 · 제자리 횟수 · 부활 셈)로 돌아온다 -->
+	<DevCommand line="gpu.timings on"/> <!-- Save.CaptureMs 는 프로파일러 구간을 읽는다 — 기록 앞뒤로만 켠다 -->
 	<Store watch="Save.Written" as="writtenBefore"/>
 	<DevCommand line="game.save kitdemo/respawn"/>
 	<WaitUntil watch="Save.Written" differsFrom="writtenBefore" timeoutWallSeconds="10"/>

@@ -5,6 +5,7 @@ CMake 빌드 규칙 함수 검사 — 구성 없이 `cmake -P` 로 함수만 부
 - `sw_link_job_count`(cmake/Modules/Config/LinkJobPool.cmake): Ninja 링크 풀 크기 — ThinLTO 구성만 좁게 묶는다.
 - `sw_decide_module_activation`(cmake/Modules/Build/ModuleManifest.cmake): 정적 모듈 구성은 고른 RHI 백엔드 하나만 켠다. 키트의 클라이언트 모듈(`GF_Client_<X>`)은
   전용 서버 구성에서 꺼지고 공유 키트(`GF_<X>`)는 켜진다 — 실제 매니페스트의 `_listTarget` 으로 본다(키트 셋 가르기: 규칙 · 디렉터 · 클라이언트).
+- `sw_collect_unused_kits`(같은 파일): 게임이 공유 키트 `GF_<X>` 만 의존해도 짝(`GF_Client_<X>` · `GF_Server_<X>`)은 쓰는 키트다 — 정적 구성(Shipping)이 짝을 빼던 회귀.
 
 실행: SW_CMAKE_COMMAND=<cmake 실행 파일> python -X utf8 Scripts/setup/tests/test_cmake_build_rules.py (CTest `Scripts.CmakeBuildRules` 가 환경 변수를 준다).
 """
@@ -194,6 +195,33 @@ class ClientKitModuleTest(unittest.TestCase):
         shared, client = kit / "GF_TacticsSRPG.module.json", kit / "Client/GF_Client_TacticsSRPG.module.json"
         self.assertEqual(kit_pair_activation("Server", shared, client), {"GF_Shared": "ON", "GF_Client_Shared": "OFF"})
         self.assertEqual(kit_pair_activation("Client", shared, client), {"GF_Shared": "ON", "GF_Client_Shared": "ON"})
+
+
+def unused_kits(active: list[str], dependencies: dict[str, list[str]]) -> list[str]:
+    """`active` 모듈(이름이 GF_ 로 시작하면 키트, 아니면 게임)을 세우고 `sw_collect_unused_kits` 가 돌려준 쓰지 않는 키트."""
+    lines = [
+        "cmake_minimum_required(VERSION 3.24)",
+        f'include("{(PROJECT_ROOT / "cmake/Modules/Build/ModuleManifest.cmake").as_posix()}")',
+        f"set(active {' '.join(active)})",
+    ]
+    for name in active:
+        lines.append(f"set_property(GLOBAL PROPERTY SW_MODULE_{name}_KIND {'Kit' if name.startswith('GF_') else 'Game'})")
+    for name, list_dependency in dependencies.items():
+        lines.append(f"set_property(GLOBAL PROPERTY SW_MODULE_{name}_DEPENDENCIES {' '.join(list_dependency)})")
+    lines += ["sw_collect_unused_kits(active unused)", 'message(NOTICE "unused=[${unused}]")']
+    value = run_cmake_script("\n".join(lines) + "\n")["unused"]
+    return value.split(";") if value else []
+
+
+class UsedKitPairTest(unittest.TestCase):
+    def test_shared_kit_dependency_keeps_its_pair_modules(self) -> None:
+        active = ["Game", "GF_Tactics", "GF_Client_Tactics", "GF_Server_Tactics"]
+        self.assertEqual(unused_kits(active, {"Game": ["GF_Tactics"]}), [])
+
+    def test_missing_pair_adds_nothing_and_unused_kit_keeps_its_pair_unused(self) -> None:
+        # GF_Solo 는 짝 매니페스트가 없다 — 없는 짝 이름이 결과에 끼지 않는다. GF_Idle 은 쓰지 않으니 짝도 쓰지 않는다.
+        active = ["Game", "GF_Solo", "GF_Idle", "GF_Client_Idle"]
+        self.assertEqual(unused_kits(active, {"Game": ["GF_Solo"]}), ["GF_Client_Idle", "GF_Idle"])
 
 
 if __name__ == "__main__":

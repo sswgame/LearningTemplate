@@ -6,7 +6,6 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/StringBuilder.h"
-#include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Config/GameConfig.h"
@@ -21,6 +20,7 @@
 #include "Engine/Net/NetMessageChannel.h"
 #include "Engine/Object/Component/ComponentDefaults.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
@@ -53,6 +53,10 @@ namespace sw
         {
             /** @brief 게임 상태 세이브 슬롯의 형식 버전입니다(봉투에 적힌다). 스냅샷 봉투(`GameStateSnapshot`)의 바이트 형식을 바꾸면 올린다. */
             static constexpr uint32 kSaveSlotFormatVersion = 1;
+            /** @brief 세이브 찍기(`captureSnapshot( SaveGame )`)의 프로파일러 구간 이름입니다 — 감시 값 `Save.CaptureMs` · `Save.CapturePeakMs` 의 재료(배포에는 재는 일도 칸도 없다). */
+            static constexpr const utf8* kSaveCaptureScopeName = "GT.Save.capture";
+            /** @brief `Save.CapturePeakMs` 가 읽는 백분위입니다 — p100(창 안 최대). */
+            static constexpr uint32 kPeakPercent = 100;
 
             /** @brief `game.save [슬롯]` · `game.load [슬롯]` 의 몸통입니다. 슬롯을 비우면 기본 슬롯입니다. 맡기기만 하고 끝은 감시 값 `Save.Written` · `Save.Loaded` 로 본다. */
             template <bool bSave>
@@ -108,16 +112,20 @@ namespace sw
                 return true;
             }
 
-            /** @brief 감시 값 `Save.CaptureMs` · `Save.CapturePeakMs` 입니다 — 마지막 · 가장 긴 세이브 찍기의 게임 스레드 시간(밀리초). 찍은 적 없으면 0 입니다. */
+            /**
+             * @brief 감시 값 `Save.CaptureMs` · `Save.CapturePeakMs` 입니다 — 세이브 찍기 구간의 마지막 프레임 시간 · 측정 창 p100(밀리초).
+             * @details 프로파일러가 없거나 꺼져 있으면 값이 없다(`Scene.ComponentTickMs` 와 같은 길). 마지막 프레임 값은 찍은 프레임이 지나면 0 이다.
+             */
             template <bool bPeak>
             [[nodiscard]] static bool readCaptureMilliseconds( const GameObjectManager* pManager, float64& outValue )
             {
                 (void)pManager;
-                const GameInstance* const pInstance = GameInstance::findRunningInstance();
-                if ( pInstance == nullptr )
+                FrameProfiler* const pProfiler = game::findSubsystem<FrameProfiler>();
+                if ( pProfiler == nullptr || pProfiler->isEnabled() == false )
                     return false;
-                const SaveSlotCounts& counts = pInstance->getSaveSlotCounts();
-                outValue                     = static_cast<float64>( bPeak ? counts._peakCaptureMicroseconds : counts._lastCaptureMicroseconds ) / static_cast<float64>( constant::time::kMicrosecondsPerMillisecond );
+                const uint32 slot  = pProfiler->registerScope( kSaveCaptureScopeName );
+                const uint64 nanos = bPeak ? pProfiler->getPercentileNanos( slot, kPeakPercent ) : pProfiler->getLastFrameNanos( slot );
+                outValue           = static_cast<float64>( nanos ) / static_cast<float64>( constant::time::kNanosecondsPerMillisecond );
                 return true;
             }
         };
@@ -576,17 +584,19 @@ namespace sw
             return false;
         }
         // 순서: 올린 타입의 상태를 싣고 걷기 → 파생 훅(그 밖의 상태를 싣는다) → 봉투(파생의 리플렉션 상태 포함).
-        const Stopwatch captureWatch;
-        _stateSnapshot.beginCapture();
-        onBeforeStateSerialize();
-        const bool bWritten = _stateSnapshot.writeEnvelope( purpose, getStateTypeInfo(), static_cast<const GameInstance*>( this )->getStateInstance(), outBytes );
+        const auto capture = [this, purpose, &outBytes]()
+        {
+            _stateSnapshot.beginCapture();
+            onBeforeStateSerialize();
+            return _stateSnapshot.writeEnvelope( purpose, getStateTypeInfo(), static_cast<const GameInstance*>( this )->getStateInstance(), outBytes );
+        };
         if ( purpose == SerializePurpose::SaveGame )
         {
-            _saveSlotCounts._lastCaptureMicroseconds = captureWatch.getElapsedMicroseconds();
-            if ( _saveSlotCounts._lastCaptureMicroseconds > _saveSlotCounts._peakCaptureMicroseconds )
-                _saveSlotCounts._peakCaptureMicroseconds = _saveSlotCounts._lastCaptureMicroseconds;
+            // 세이브 찍기만 잰다 — 되감기 · 미니게임 스냅샷(`Snapshot`)은 프레임마다 돌 수 있어 구간을 흐린다.
+            SW_PROFILE_SCOPE( GameInstanceInternal::kSaveCaptureScopeName );
+            return capture();
         }
-        return bWritten;
+        return capture();
     }
 
     expected<void, SnapshotRestoreFailure> GameInstance::readStateEnvelope( SerializePurpose purpose, const void* pInBuffer, uint32 size )
@@ -804,9 +814,9 @@ namespace sw
     SW_AUTOMATION_WALL_WATCH( saveBlocked, "Save.Blocked", "1 while the running game's save gate refuses saving (scene loading, broken restore, cutscene)", &GameInstanceInternal::readSaveBlocked,
                               nullptr );
     // 측정 문턱(Android 4 ms)을 재는 자리 — 넘기 전에는 감시 값만 둔다(`docs/NEXT.md` 측정 게임 프레임워크).
-    SW_AUTOMATION_WATCH( saveCaptureMs, "Save.CaptureMs", "Game-thread milliseconds of the last save-game capture by the running game (0 before the first save)",
+    SW_AUTOMATION_WATCH( saveCaptureMs, "Save.CaptureMs", "Game-thread milliseconds of the save-game capture in the last profiled frame (profiler scope GT.Save.capture; no value while the profiler is off)",
                          &GameInstanceInternal::readCaptureMilliseconds<false> );
-    SW_AUTOMATION_WATCH( saveCapturePeakMs, "Save.CapturePeakMs", "Longest save-game capture in game-thread milliseconds by the running game",
+    SW_AUTOMATION_WATCH( saveCapturePeakMs, "Save.CapturePeakMs", "Longest save-game capture in game-thread milliseconds over the profiler window (p100 of GT.Save.capture; no value while the profiler is off)",
                          &GameInstanceInternal::readCaptureMilliseconds<true> );
     SW_AUTOMATION_WATCH( saveLoaded, "Save.Loaded", "Game state save slots read and restored successfully by the running game", &GameInstanceInternal::readSlotCount<false> );
 } // namespace sw
