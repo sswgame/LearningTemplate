@@ -60,13 +60,13 @@ namespace sw::editor
         const AbsolutePath hostPath = getHostPath();
         const string&      absPath  = hostPath.str();
         // 값의 원본은 이 파일 하나다 — 없으면 대신 쓸 값이 없다(헤더는 형식만 가진다).
-        if ( FileUtil::isRegularFile( absPath ) == false )
+        if ( FileUtil::isRegularFile( FileUtil::toDiskPath( absPath ) ) == false )
         {
             SW_LOG_ERROR_ID( "EditorToolDefaults.EditorToolDefaultsMissing", "Editor tool defaults %# is missing - the editor needs this data file", absPath );
             return false;
         }
         string jsonText;
-        if ( FileUtil::readTextFile( absPath, jsonText ) == false )
+        if ( FileUtil::readTextFile( FileUtil::toDiskPath( absPath ), jsonText ) == false )
         {
             SW_LOG_ERROR_ID( "EditorToolDefaults.EditorToolDefaultsCould", "Editor tool defaults %# could not be read", absPath );
             return false;

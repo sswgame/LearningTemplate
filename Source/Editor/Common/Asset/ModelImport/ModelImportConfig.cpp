@@ -106,7 +106,7 @@ namespace sw::editor
     {
         _listRule.clear();
         string                 text;
-        const OptionalFileRead read = FileUtil::readOptionalTextFile( configPath, text );
+        const OptionalFileRead read = FileUtil::readOptionalTextFile( FileUtil::toDiskPath( configPath ), text );
         if ( read == OptionalFileRead::Missing )
             return ConfigReadResult::Missing;
         if ( read == OptionalFileRead::Failed || text.empty() )

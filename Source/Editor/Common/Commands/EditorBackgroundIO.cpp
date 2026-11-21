@@ -43,7 +43,7 @@ namespace sw::editor
         vector<string> listFile;
         // 표시용 목록이다 — 폴더가 없으면 빈 목록이 맞고, 도중에 멈춘 목록은 collectFiles 가 경로와 함께 알린 뒤 모은 데까지 보인다.
         const StopToken stopToken = readStopSignal( pState );
-        (void)FileUtil::collectFiles( input._folder, input._extension, listFile, input._bRecursive, stopToken );
+        (void)FileUtil::collectFiles( FileUtil::toDiskPath( input._folder ), input._extension, listFile, input._bRecursive, stopToken );
         if ( stopToken.isStopRequested() )
             return; // 종료가 시작돼 훑기가 멈췄다 — 짧은 목록을 싣지 않는다
 

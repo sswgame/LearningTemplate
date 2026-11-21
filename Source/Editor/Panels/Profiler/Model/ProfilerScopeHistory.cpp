@@ -221,13 +221,13 @@ namespace sw::editor
             }
             text += "\n";
         }
-        return FileUtil::writeTextFile( filePath, text );
+        return FileUtil::writeTextFile( FileUtil::toDiskPath( filePath ), text );
     }
 
     bool ProfilerScopeHistory::loadFromFile( string_view filePath )
     {
         string text;
-        if ( FileUtil::readTextFile( filePath, text ) == false )
+        if ( FileUtil::readTextFile( FileUtil::toDiskPath( filePath ), text ) == false )
             return false;
         const string_splitter listLine( text, '\n' );
         if ( listLine.getCount() < 3 || StringUtil::trim( listLine[0] ) != ProfilerScopeHistoryInternal::kCaptureHeader )

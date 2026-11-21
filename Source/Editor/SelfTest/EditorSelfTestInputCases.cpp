@@ -438,7 +438,7 @@ namespace sw::editor
                             probe._theme           = EditorThemeUtil::getActiveTheme();
                             // 파일이 없을 수 있다. Saved/Editor 는 git 이 무시하므로 새 체크아웃에는 없다. 없으면 읽지 않는다. readFile 은 없는 파일을 오류로 남기기 때문이다.
                             const string configPath = getEditorConfigPath();
-                            probe._bConfigExisted   = ( FileUtil::isRegularFile( configPath ) && FileUtil::readFile( configPath, probe._configBytes ) ) ? SW_TRUE : SW_FALSE;
+                            probe._bConfigExisted   = ( FileUtil::isRegularFile( FileUtil::toDiskPath( configPath ) ) && FileUtil::readFile( FileUtil::toDiskPath( configPath ), probe._configBytes ) ) ? SW_TRUE : SW_FALSE;
                             (void)context.expect( EditorThemeUtil::applyThemeByName( "light" ), "the light theme token set is missing" );
                             EditorMenuBar::openThemeDialog();
                             return EditorSelfTestStep::Continue;
@@ -482,10 +482,10 @@ namespace sw::editor
                     EditorMenuBar::closeThemeDialog();
                     EditorThemeUtil::applyTheme( probe._theme );
                     EditorThemeUtil::saveToConfig();
-                    if ( probe._bConfigExisted && FileUtil::writeFile( getEditorConfigPath(), probe._configBytes.data(), probe._configBytes.size() ) == false )
+                    if ( probe._bConfigExisted && FileUtil::writeFile( FileUtil::toDiskPath( getEditorConfigPath() ), probe._configBytes.data(), probe._configBytes.size() ) == false )
                         (void)context.expect( false, "could not restore the editor config file" );
                     // 원래 없던 파일은 지운다. 지우지 못하면 테스트 테마가 사용자 설정에 남으므로 위의 쓰기 실패처럼 테스트 실패로 알린다.
-                    if ( probe._bConfigExisted == false && FileUtil::removeFile( getEditorConfigPath() ) == false )
+                    if ( probe._bConfigExisted == false && FileUtil::removeFile( FileUtil::toDiskPath( getEditorConfigPath() ) ) == false )
                         (void)context.expect( false, "could not remove the editor config file the test created" );
                     EditorSelfTestInput::moveMouseAway();
                     return EditorSelfTestStep::Done;

@@ -431,7 +431,7 @@ namespace sw::editor
         if ( FileUtil::makeCanonicalPath( imagePath, canonicalPath ) ) // `../` 을 푼다 — 원본 옆이 아닌 textures_raw 의 이미지를 가리키는 glTF
             imagePath = FileUtil::normalizeSeparators( canonicalPath );
         outTexture._sourcePath = imagePath;
-        if ( FileUtil::readFile( imagePath, outTexture._bytes ) == false )
+        if ( FileUtil::readFile( FileUtil::toDiskPath( imagePath ), outTexture._bytes ) == false )
         {
             SW_LOG_ERROR_ID( "ModelImport.ImageFileMissing", "glTF '%#': cannot read its image file %#", sourcePath, imagePath.c_str() );
             return false;
@@ -683,7 +683,7 @@ namespace sw::editor
         const string slotPath = FileUtil::joinPath( FileUtil::joinPath( sideFolder, ModelImportUtil::kMaterialFolder ), fileNameBuilder.view() );
         string       text;
         XMLDocument  document;
-        if ( FileUtil::readTextFile( slotPath, text ) == false || document.parse( text ) == false )
+        if ( FileUtil::readTextFile( FileUtil::toDiskPath( slotPath ), text ) == false || document.parse( text ) == false )
             return {};
         return string( document.getRoot( "MaterialDef" ).getAttributeText( "_base" ) );
     }

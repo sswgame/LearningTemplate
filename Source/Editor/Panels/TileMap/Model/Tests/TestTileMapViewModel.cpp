@@ -657,7 +657,7 @@ SW_TEST_CASE( TileMapViewModelTest, SaveAndLoadRoundTripWithStatus )
     document.bindDocumentEditRecorder( documentRecorder );
     SW_EXPECT_TRUE( document.loadXML( path ) == ToolAssetLoadResult::Loaded );
     SW_EXPECT_FALSE( Util::isWalkable( document, 1, 1 ) );
-    (void)FileUtil::removeFile( path );
+    (void)FileUtil::removeFile( FileUtil::toDiskPath( path ) );
 }
 
 SW_TEST_CASE( TileMapViewModelTest, DescribeCellReadsTheSelectedLayer )

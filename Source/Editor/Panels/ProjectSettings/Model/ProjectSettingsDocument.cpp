@@ -268,7 +268,7 @@ namespace sw::editor
     {
         if ( _pType == nullptr || _current.isValid() == false )
             return ConfigReadResult::Invalid;
-        if ( FileUtil::isRegularFile( _path ) == false )
+        if ( FileUtil::isRegularFile( FileUtil::toDiskPath( _path ) ) == false )
         {
             resetToDefault();
             _readResult = ConfigReadResult::Missing;
@@ -276,7 +276,7 @@ namespace sw::editor
             return _readResult;
         }
         string fileText;
-        if ( FileUtil::readTextFile( _path, fileText ) == false )
+        if ( FileUtil::readTextFile( FileUtil::toDiskPath( _path ), fileText ) == false )
         {
             _readResult = ConfigReadResult::Invalid;
             return _readResult;
@@ -314,7 +314,7 @@ namespace sw::editor
         if ( _pType == nullptr || _current.isValid() == false )
             return;
         // 바탕 층은 값의 원본이 파일이다 — 기본값으로 되돌리기는 파일 값으로 되돌리기다(헤더의 형식은 값이 아니다).
-        const bool bRevertToFile = isBaseLayer() && FileUtil::isRegularFile( _path );
+        const bool bRevertToFile = isBaseLayer() && FileUtil::isRegularFile( FileUtil::toDiskPath( _path ) );
         if ( bRevertToFile )
         {
             (void)revert(); // 읽지 못하면 revert 가 상태를 Invalid 로 남기고 저장을 막는다
@@ -419,7 +419,7 @@ namespace sw::editor
     {
         // 요소는 남의 파일(팩 gamesettings.xml) 안에 산다 — 파일을 만들지 않는다.
         string fileText;
-        if ( FileUtil::readOptionalTextFile( _path, fileText ) != OptionalFileRead::Read )
+        if ( FileUtil::readOptionalTextFile( FileUtil::toDiskPath( _path ), fileText ) != OptionalFileRead::Read )
         {
             SW_LOG_WARNING_ID( "ProjectSettings.ProjectSettingsMissingElement", "Project settings: %# is missing - the <%#> element lives in that file", _path.c_str(), _elementName.c_str() );
             return false;
@@ -452,7 +452,7 @@ namespace sw::editor
             SW_LOG_WARNING_ID( "ProjectSettings.ProjectSettingsRewritingDid", "Project settings: rewriting <%#> in %# did not round-trip - not saved", _elementName.c_str(), _path.c_str() );
             return false;
         }
-        return FileUtil::writeTextFile( _path, newText );
+        return FileUtil::writeTextFile( FileUtil::toDiskPath( _path ), newText );
     }
 
     bool ProjectSettingsDocument::saveDocument()
@@ -471,7 +471,7 @@ namespace sw::editor
         if ( isElementMode() )
             bSaved = saveElement( text );
         else
-            bSaved = FileUtil::ensureParentDirectoryExists( _path ) && FileUtil::writeTextFile( _path, text );
+            bSaved = FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( _path ) ) && FileUtil::writeTextFile( FileUtil::toDiskPath( _path ), text );
         if ( bSaved == false )
         {
             SW_LOG_WARNING_ID( "ProjectSettings.ProjectSettingsCouldNot2", "Project settings could not be saved to %#", _path.c_str() );

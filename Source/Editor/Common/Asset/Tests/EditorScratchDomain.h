@@ -26,7 +26,7 @@ namespace sw::test
             : _folder{ FileUtil::normalizeSeparators( makeScratchPath( kDomain ) ) }
             , _bMounted{ SW_FALSE }
         {
-            _bMounted = FileUtil::ensureDirectoryExists( _folder ) && editor::getSubsystem<AssetPaths>().mountDiskDomain( kDomain, _folder );
+            _bMounted = FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( _folder ) ) && editor::getSubsystem<AssetPaths>().mountDiskDomain( kDomain, _folder );
             SW_EXPECT_TRUE( _bMounted );
         }
         ~EditorScratchDomain()

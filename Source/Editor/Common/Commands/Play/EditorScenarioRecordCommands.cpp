@@ -79,7 +79,7 @@ namespace sw::editor
                 settings._clientWidth             = pWindow != nullptr ? pWindow->getWidth() : 0;
                 settings._clientHeight            = pWindow != nullptr ? pWindow->getHeight() : 0;
                 const ScenarioRecordOutput output = getState()._recorder.stop( settings );
-                if ( FileUtil::ensureParentDirectoryExists( getState()._outputPath ) == false || FileUtil::writeTextFile( getState()._outputPath, output._xmlText ) == false )
+                if ( FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( getState()._outputPath ) ) == false || FileUtil::writeTextFile( FileUtil::toDiskPath( getState()._outputPath ), output._xmlText ) == false )
                 {
                     StringBuilder<constant::buffer::kMax256> replyBuilder;
                     replyBuilder.appendFormat( "could not write '%#'", getState()._outputPath );

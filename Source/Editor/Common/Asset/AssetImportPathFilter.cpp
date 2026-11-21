@@ -102,7 +102,7 @@ namespace sw::editor
         outListOverride.clear();
         const string           metaPath = AssetMeta::makePath( sourcePath );
         string                 text;
-        const OptionalFileRead read = FileUtil::readOptionalTextFile( metaPath, text );
+        const OptionalFileRead read = FileUtil::readOptionalTextFile( FileUtil::toDiskPath( metaPath ), text );
         if ( read == OptionalFileRead::Missing )
             return true;
         AssetMeta meta;

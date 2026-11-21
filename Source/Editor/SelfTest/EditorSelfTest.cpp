@@ -169,7 +169,7 @@ namespace sw::editor
                 const string reportPath = gv_editorSelfTestReport.get();
                 if ( reportPath.empty() == false )
                 {
-                    if ( FileUtil::ensureParentDirectoryExists( reportPath ) == false || FileUtil::writeTextFile( reportPath, _report ) == false )
+                    if ( FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( reportPath ) ) == false || FileUtil::writeTextFile( FileUtil::toDiskPath( reportPath ), _report ) == false )
                         SW_LOG_ERROR_ID( "EditorSelfTest.CouldNotWriteEditor", "Could not write the editor self test report to %#", reportPath.c_str() );
                 }
 

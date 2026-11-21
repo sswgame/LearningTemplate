@@ -28,7 +28,7 @@ namespace
             fixed_string<constant::buffer::kMax256> fileName;
             formatstring( fileName.data(), fileName.capacity(), "%#%#", name, EditorThemeTokens::kExtension );
             const string path = test::makeScratchPath( fileName );
-            return FileUtil::writeTextFile( path, text ) ? path : string{};
+            return FileUtil::writeTextFile( FileUtil::toDiskPath( path ), text ) ? path : string{};
         }
     };
     using Util = EditorThemeTokenBaseTestUtil;

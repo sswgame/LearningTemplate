@@ -65,17 +65,17 @@ namespace sw::editor
                     if ( folder.has_value() == false )
                         return false;
                     _folderAbs = folder->str();
-                    if ( FileUtil::removeDirectory( _folderAbs ) == false ) // 앞 실행이 남긴 폴더다
+                    if ( FileUtil::removeDirectory( FileUtil::toDiskPath( _folderAbs ) ) == false ) // 앞 실행이 남긴 폴더다
                         return false;
-                    if ( FileUtil::ensureDirectoryExists( _folderAbs ) == false )
+                    if ( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( _folderAbs ) ) == false )
                         return false;
-                    return FileUtil::writeTextFile( FileUtil::joinPath( _folderAbs, pFileName ), "editor self test" );
+                    return FileUtil::writeTextFile( FileUtil::toDiskPath( FileUtil::joinPath( _folderAbs, pFileName ) ), "editor self test" );
                 }
                 /** @brief 테스트 폴더를 지우고 상태를 비웁니다. */
                 void removeProbeFolder( EditorSelfTestContext& context )
                 {
                     if ( _folderAbs.empty() == false )
-                        (void)context.expect( FileUtil::removeDirectory( _folderAbs ), "could not remove the self test folder" );
+                        (void)context.expect( FileUtil::removeDirectory( FileUtil::toDiskPath( _folderAbs ) ), "could not remove the self test folder" );
                     *this = ContentBrowserTestState{};
                 }
                 /** @brief 다음 단계로 넘어갑니다. 기다림 한도는 새 단계의 시작부터 셉니다. */
@@ -152,7 +152,7 @@ namespace sw::editor
                                 return EditorSelfTestStep::Continue;
                             }
                             // 에디터 밖(탐색기, git)의 변경을 흉내 낸다. 패널을 건드리지 않고 파일만 쓴다.
-                            (void)context.expect( FileUtil::writeTextFile( FileUtil::joinPath( probe._folderAbs, kAddedFileName ), "editor self test" ),
+                            (void)context.expect( FileUtil::writeTextFile( FileUtil::toDiskPath( FileUtil::joinPath( probe._folderAbs, kAddedFileName ) ), "editor self test" ),
                                                   "could not write the added file" );
                             probe.enterPhase( kPhaseWaitAdded, stepIndex );
                             return EditorSelfTestStep::Continue;

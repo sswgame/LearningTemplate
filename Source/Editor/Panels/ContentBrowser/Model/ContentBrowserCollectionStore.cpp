@@ -201,16 +201,16 @@ namespace sw::editor
     void ContentBrowserCollectionStore::loadFiles( string_view localFilePath, string_view sharedFilePath )
     {
         string text;
-        if ( localFilePath.empty() == false && FileUtil::readOptionalTextFile( localFilePath, text ) == OptionalFileRead::Read )
+        if ( localFilePath.empty() == false && FileUtil::readOptionalTextFile( FileUtil::toDiskPath( localFilePath ), text ) == OptionalFileRead::Read )
             fromText( FileUtil::skipUTF8Bom( text ), false );
         text.clear();
-        if ( sharedFilePath.empty() == false && FileUtil::readOptionalTextFile( sharedFilePath, text ) == OptionalFileRead::Read )
+        if ( sharedFilePath.empty() == false && FileUtil::readOptionalTextFile( FileUtil::toDiskPath( sharedFilePath ), text ) == OptionalFileRead::Read )
             fromText( FileUtil::skipUTF8Bom( text ), true );
     }
 
     bool ContentBrowserCollectionStore::saveFile( string_view filePath, bool bShared ) const
     {
-        if ( filePath.empty() || FileUtil::ensureParentDirectoryExists( filePath ) == false || FileUtil::writeTextFile( filePath, toText( bShared ) ) == false )
+        if ( filePath.empty() || FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( filePath ) ) == false || FileUtil::writeTextFile( FileUtil::toDiskPath( filePath ), toText( bShared ) ) == false )
         {
             SW_LOG_WARNING_ID( "ContentBrowserCollectionStore.NotSaved", "Content Browser collections could not be saved to %#", string( filePath ).c_str() );
             return false;

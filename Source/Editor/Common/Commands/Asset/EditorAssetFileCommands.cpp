@@ -116,11 +116,11 @@ namespace sw::editor
             /** @brief 파일 하나를 옮깁니다(복사한 뒤 원본을 지운다). 실패하면 대상을 지워 원본만 남긴다. */
             [[nodiscard]] static bool moveFile( const string& sourceAbs, const string& destinationAbs )
             {
-                if ( FileUtil::copyFile( sourceAbs, destinationAbs ) == false )
+                if ( FileUtil::copyFile( FileUtil::toDiskPath( sourceAbs ), FileUtil::toDiskPath( destinationAbs ) ) == false )
                     return false;
-                if ( FileUtil::removeFile( sourceAbs ) )
+                if ( FileUtil::removeFile( FileUtil::toDiskPath( sourceAbs ) ) )
                     return true;
-                (void)FileUtil::tryRemoveFile( destinationAbs ); // 원본이 남았으니 사본을 회수한다 — 실패해도 원본은 그대로다
+                (void)FileUtil::tryRemoveFile( FileUtil::toDiskPath( destinationAbs ) ); // 원본이 남았으니 사본을 회수한다 — 실패해도 원본은 그대로다
                 return false;
             }
 
@@ -189,7 +189,7 @@ namespace sw::editor
                         continue;                                                                                               // 리다이렉트 표는 옛 id 를 적는 글이다 — 고칠 참조가 아니고, 줄은 prepareRedirectTables 가 더한다
                     const optional<AbsolutePath> referrerFile = editor::getSubsystem<AssetPaths>().findLooseFile( referrerID ); // 해석 하나(붙인 도메인 · 대소문자 규칙)
                     PreparedRewrite              rewrite{};
-                    if ( referrerFile.has_value() == false || FileUtil::readTextFile( referrerFile->str(), rewrite._originalText ) == false )
+                    if ( referrerFile.has_value() == false || FileUtil::readTextFile( *referrerFile, rewrite._originalText ) == false )
                     {
                         StringBuilder<constant::buffer::kMax256> failureBuilder;
                         failureBuilder.appendFormat( "could not read the referencing file '%#'", referrerID );
@@ -268,8 +268,8 @@ namespace sw::editor
                     PreparedRewrite table{};
                     table._referrerID  = listTableID[tableIndex];
                     table._referrerAbs = listTableAbs[tableIndex];
-                    table._bNewFile    = FileUtil::exists( table._referrerAbs ) == false;
-                    if ( table._bNewFile == false && FileUtil::readTextFile( table._referrerAbs, table._originalText ) == false )
+                    table._bNewFile    = FileUtil::exists( FileUtil::toDiskPath( table._referrerAbs ) ) == false;
+                    if ( table._bNewFile == false && FileUtil::readTextFile( FileUtil::toDiskPath( table._referrerAbs ), table._originalText ) == false )
                     {
                         StringBuilder<constant::buffer::kMax256> failureBuilder;
                         failureBuilder.appendFormat( "could not read the asset redirect table '%#'", table._referrerID );
@@ -308,7 +308,7 @@ namespace sw::editor
                 for ( const EditorAssetMove& move : listMove )
                 {
                     const string sidecar = AssetMeta::makePath( move._sourceAbs );
-                    if ( isSidecar( move._sourceAbs ) || FileUtil::isRegularFile( sidecar ) == false )
+                    if ( isSidecar( move._sourceAbs ) || FileUtil::isRegularFile( FileUtil::toDiskPath( sidecar ) ) == false )
                         continue;
                     if ( uniqueSource.count( FileUtil::normalizeSeparators( sidecar ) ) == 0 )
                         listResult.push_back( EditorAssetMove{ sidecar, AssetMeta::makePath( move._destinationAbs ) } );
@@ -330,7 +330,7 @@ namespace sw::editor
                     PreparedRewrite     rewrite{};
                     AssetMeta           meta;
                     optional<AssetGUID> guid;
-                    if ( FileUtil::readTextFile( move._sourceAbs, rewrite._originalText ) )
+                    if ( FileUtil::readTextFile( FileUtil::toDiskPath( move._sourceAbs ), rewrite._originalText ) )
                         guid = meta.parseXML( rewrite._originalText, inoutPlan._listOldID[moveIndex] );
                     if ( guid.has_value() == false )
                     {
@@ -469,7 +469,7 @@ namespace sw::editor
     bool EditorAssetFileCommands::createFolder( string_view parentAbs, string& outFolderAbs )
     {
         outFolderAbs = makeUniquePath( parentAbs, "new_folder", "" );
-        if ( FileUtil::ensureDirectoryExists( outFolderAbs ) )
+        if ( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( outFolderAbs ) ) )
             return true;
         SW_LOG_ERROR_ID( "EditorAssetFileCommands.CouldNotCreateFolder", "Could not create the folder '%#'", outFolderAbs );
         return false;
@@ -508,7 +508,7 @@ namespace sw::editor
             (void)replaceReference( text, assetTemplate._pNameAttribute, nameAttribute ); // 이름 속성이 없으면 템플릿 이름 그대로다
         }
         // 틀은 그 자신의 정체성(머리 GUID)을 든 에셋이다 — 새 에셋은 새 GUID 를 받는다.
-        if ( FileUtil::writeTextFile( outAssetAbs, text ) && EditorAssetFileCommandsInternal::assignNewIdentity( outAssetAbs ) )
+        if ( FileUtil::writeTextFile( FileUtil::toDiskPath( outAssetAbs ), text ) && EditorAssetFileCommandsInternal::assignNewIdentity( outAssetAbs ) )
         {
             SW_LOG_INFO_ID( "Asset.Created", "Created '%#'", editor::getSubsystem<AssetPaths>().toAssetID( outAssetAbs ) );
             return true;
@@ -524,7 +524,7 @@ namespace sw::editor
         splitAssetName( FileUtil::getFileNamePart( sourceAbs ), stem, suffix );
         outAssetAbs = makeUniquePath( FileUtil::getDirectoryPart( sourceAbs ), stem, suffix );
         // 복제는 새 에셋이다 — 베낀 머리 GUID 는 새 것으로 바꾸고, 원본이면 곁의 .meta 를 베끼지 않고 새로 쓴다(겹친 GUID 는 참조를 엉뚱한 쪽으로 푼다).
-        return FileUtil::copyFile( sourceAbs, outAssetAbs ) && EditorAssetFileCommandsInternal::assignNewIdentity( outAssetAbs );
+        return FileUtil::copyFile( FileUtil::toDiskPath( sourceAbs ), FileUtil::toDiskPath( outAssetAbs ) ) && EditorAssetFileCommandsInternal::assignNewIdentity( outAssetAbs );
     }
 
     bool EditorAssetFileCommands::planAssetMoves( const vector<EditorAssetMove>& listMove, const EditorAssetIndex& index, EditorAssetMovePlan& outPlan )
@@ -564,7 +564,7 @@ namespace sw::editor
                 outPlan._failure = string( failureBuilder.view() );
                 return false;
             }
-            if ( FileUtil::exists( normalized._destinationAbs ) || uniqueOldID.insert( oldID ).second == false )
+            if ( FileUtil::exists( FileUtil::toDiskPath( normalized._destinationAbs ) ) || uniqueOldID.insert( oldID ).second == false )
             {
                 StringBuilder<constant::buffer::kMax256> failureBuilder;
                 failureBuilder.appendFormat( "'%#' already exists or is moved twice - nothing was moved", newID );
@@ -699,7 +699,7 @@ namespace sw::editor
         for ( ; movedCount < outPlan._listMove.size(); ++movedCount )
         {
             const EditorAssetMove& move = outPlan._listMove[movedCount];
-            if ( FileUtil::ensureParentDirectoryExists( move._destinationAbs ) == false || EditorAssetFileCommandsInternal::moveFile( move._sourceAbs, move._destinationAbs ) == false )
+            if ( FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( move._destinationAbs ) ) == false || EditorAssetFileCommandsInternal::moveFile( move._sourceAbs, move._destinationAbs ) == false )
                 break;
         }
         bool bFailed = movedCount < outPlan._listMove.size();
@@ -717,7 +717,7 @@ namespace sw::editor
             for ( ; writtenCount < listRewrite.size(); ++writtenCount )
             {
                 const EditorAssetFileCommandsInternal::PreparedRewrite& rewrite = listRewrite[writtenCount];
-                if ( FileUtil::writeTextFile( rewrite._referrerAbs, rewrite._rewrittenText ) == false )
+                if ( FileUtil::writeTextFile( FileUtil::toDiskPath( rewrite._referrerAbs ), rewrite._rewrittenText ) == false )
                 {
                     bFailed = true;
                     StringBuilder<constant::buffer::kMax256> failureBuilder;
@@ -735,8 +735,8 @@ namespace sw::editor
             for ( size_t index = 0; index < writtenCount; ++index )
             {
                 const EditorAssetFileCommandsInternal::PreparedRewrite& rewrite   = listRewrite[index];
-                const bool                                              bRestored = rewrite._bNewFile ? FileUtil::removeFile( rewrite._referrerAbs )
-                                                                                                      : FileUtil::writeTextFile( rewrite._referrerAbs, rewrite._originalText );
+                const bool                                              bRestored = rewrite._bNewFile ? FileUtil::removeFile( FileUtil::toDiskPath( rewrite._referrerAbs ) )
+                                                                                                      : FileUtil::writeTextFile( FileUtil::toDiskPath( rewrite._referrerAbs ), rewrite._originalText );
                 if ( bRestored == false )
                     listStuck.push_back( rewrite._referrerID );
             }
@@ -799,15 +799,15 @@ namespace sw::editor
     {
         const string source      = FileUtil::normalizeSeparators( sourceFolderAbs );
         const string destination = FileUtil::joinPath( destinationParentAbs, FileUtil::getFileNamePart( source ) );
-        if ( FileUtil::isDirectory( source ) == false )
+        if ( FileUtil::isDirectory( FileUtil::toDiskPath( source ) ) == false )
             return unexpected( Error{ ErrorKind::NotFound, "not a folder", source } );
         // 폴더를 자기 안으로 옮기면 끝없이 깊어진다
         if ( FileUtil::isPathAtOrUnderRoot( source, destination ) )
             return unexpected( Error{ ErrorKind::InvalidArgument, "a folder cannot move into itself", FileUtil::getFileNamePart( source ) } );
-        if ( FileUtil::exists( destination ) )
+        if ( FileUtil::exists( FileUtil::toDiskPath( destination ) ) )
             return unexpected( Error{ ErrorKind::AlreadyExists, "the destination already exists - nothing was moved", destination } );
         vector<string> listFile;
-        if ( FileUtil::collectFiles( source, "", listFile, true ) == false )
+        if ( FileUtil::collectFiles( FileUtil::toDiskPath( source ), "", listFile, true ) == false )
             return unexpected( Error{ ErrorKind::ExternalFailure, "could not list the folder", source } );
         vector<EditorAssetMove> listMove;
         for ( const string& fileAbs : listFile )
@@ -847,7 +847,7 @@ namespace sw::editor
         const string   assetPath = FileUtil::normalizeSeparators( absolutePath );
         const string   metaPath  = AssetMeta::makePath( assetPath );
         vector<string> listPath{ assetPath };
-        if ( FileUtil::isRegularFile( metaPath ) )
+        if ( FileUtil::isRegularFile( FileUtil::toDiskPath( metaPath ) ) )
             listPath.push_back( metaPath );
         if ( FileUtil::moveToRecycleBin( listPath ) )
         {
@@ -863,14 +863,14 @@ namespace sw::editor
         if ( absolutePath.empty() || EditorAssetFileCommandsInternal::refuseDelete( absolutePath ) )
             return false;
         const string abs{ absolutePath };
-        if ( FileUtil::removeFile( abs ) == false )
+        if ( FileUtil::removeFile( FileUtil::toDiskPath( abs ) ) == false )
         {
             SW_LOG_ERROR_ID( "EditorAssetFileCommands.CouldNotDelete", "Could not delete '%#' - it is kept", abs );
             return false;
         }
         // .meta 는 에셋이 실제로 지워진 뒤에만 지운다 — 남은 에셋에서 정체성을 떼면 다음에 새 GUID 를 받아 가리키던 참조가 끊긴다.
         const string metaPath = AssetMeta::makePath( abs );
-        if ( FileUtil::isRegularFile( metaPath ) && FileUtil::removeFile( metaPath ) == false )
+        if ( FileUtil::isRegularFile( FileUtil::toDiskPath( metaPath ) ) && FileUtil::removeFile( FileUtil::toDiskPath( metaPath ) ) == false )
             SW_LOG_WARNING_ID( "EditorAssetFileCommands.DeletedButMetaKept", "Deleted '%#' but its .meta could not be removed - delete it too (asset-ids reports it)", abs );
         return true;
     }
@@ -895,7 +895,7 @@ namespace sw::editor
         if ( AbsolutePath::isStrictAbsolute( argument ) )
             return DevCommandRegistry::readDiskPathArgument( argument, outAbsolutePath, outReply );
         const optional<AbsolutePath> diskPath = editor::getSubsystem<AssetPaths>().findLooseFile( argument );
-        if ( diskPath.has_value() == false || FileUtil::isRegularFile( diskPath->str() ) == false )
+        if ( diskPath.has_value() == false || FileUtil::isRegularFile( *diskPath ) == false )
         {
             StringBuilder<constant::buffer::kMax256> replyBuilder;
             replyBuilder.appendFormat( "no resource '%#'", argument );
@@ -917,7 +917,7 @@ namespace sw::editor
         uint32 copied{ 0 };
         for ( const string& sourcePath : listSourcePath )
         {
-            if ( FileUtil::exists( sourcePath ) == false )
+            if ( FileUtil::exists( FileUtil::toDiskPath( sourcePath ) ) == false )
             {
                 SW_LOG_WARNING_ID( "EditorAssetFileCommands.ImportSkippedMissing", "Import skipped (missing): %#", sourcePath.c_str() );
                 continue;
@@ -935,7 +935,7 @@ namespace sw::editor
             // 이미 있는 애셋을 덮어쓰지 않는다. 같은 이름의 파일을 드롭해 폴더에 있던 것을 덮으면 아무 말 없이 사라지고,
             // 에디터의 임포트에는 되돌리기가 없으므로 그대로 잃는다. 빈 이름은 원자적으로 잡는다(`reserveUniquePath` - 고유 이름의 입구 하나).
             const string destPath = FileUtil::reserveUniquePath( FileUtil::removeExtension( plainPath ), FileUtil::getExtension( plainPath ), false, 10000, "_" );
-            if ( destPath.empty() || FileUtil::copyFile( sourcePath, destPath ) == false )
+            if ( destPath.empty() || FileUtil::copyFile( FileUtil::toDiskPath( sourcePath ), FileUtil::toDiskPath( destPath ) ) == false )
             {
                 SW_LOG_ERROR_ID( "EditorAssetFileCommands.FailedImport", "Failed to import: %#", sourcePath.c_str() );
                 continue;

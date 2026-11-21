@@ -143,7 +143,7 @@ namespace sw::editor
             return false; // 이유는 toDiskPath 가 남겼다
         string                              oldFileText;
         string                              oldBaseState;
-        const bool                          bHadFile   = FileUtil::readOptionalTextFile( filePath->str(), oldFileText ) == OptionalFileRead::Read;
+        const bool                          bHadFile   = FileUtil::readOptionalTextFile( *filePath, oldFileText ) == OptionalFileRead::Read;
         const shared_ptr<const PrefabAsset> pOldPrefab = ( bHadFile && pPrefabCache != nullptr ) ? pPrefabCache->loadPrefab( prefabPath ) : nullptr;
         if ( pOldPrefab == nullptr || PrefabOverrides::makeBaseState( *pOldPrefab, oldBaseState ) == false )
             oldBaseState.clear();
@@ -160,7 +160,7 @@ namespace sw::editor
             return false;
         }
         string newFileText;
-        (void)FileUtil::readTextFile( filePath->str(), newFileText ); // 방금 쓴 파일이다. 못 읽어도 다시 실행이 파일을 쓰지 않을 뿐이다
+        (void)FileUtil::readTextFile( *filePath, newFileText ); // 방금 쓴 파일이다. 못 읽어도 다시 실행이 파일을 쓰지 않을 뿐이다
 
         SW_LOG_INFO_ID( "Prefab.Saved", "Saved prefab changes to %#", string{ prefabPath }.c_str() );
         if ( pPrefabCache == nullptr || pContext == nullptr )

@@ -23,13 +23,13 @@ namespace sw::editor
     {
         _filePath = string( filePath );
         _file     = EditorNetPlayPresetFile{};
-        if ( FileUtil::isRegularFile( filePath ) == false )
+        if ( FileUtil::isRegularFile( FileUtil::toDiskPath( filePath ) ) == false )
             return EditorUserFileResult::Missing;
 
         // 따로 읽고 맞을 때만 들인다 — 깨진 파일의 앞부분 값이 섞이면 어느 것이 사용자가 저장한 값인지 아무도 모른다.
         string                  jsonText;
         EditorNetPlayPresetFile loaded{};
-        const bool              bRead      = FileUtil::readTextFile( filePath, jsonText ) && ConfigManager::readConfigJSON( loaded, jsonText, _filePath.c_str() );
+        const bool              bRead      = FileUtil::readTextFile( FileUtil::toDiskPath( filePath ), jsonText ) && ConfigManager::readConfigJSON( loaded, jsonText, _filePath.c_str() );
         const expected<void>    consistent = bRead ? validateConsistent( loaded ) : expected<void>( unexpected( Error{ ErrorKind::InvalidArgument, "not a preset file - see the errors above" } ) );
         if ( consistent.has_value() )
         {
@@ -141,7 +141,7 @@ namespace sw::editor
             SW_LOG_ERROR_ID( "NetPlayPresets.MultiplayerPresetsChangedBefore", "Multiplayer presets were changed before a preset file was loaded - nothing written" );
             return false;
         }
-        if ( FileUtil::ensureParentDirectoryExists( _filePath ) == false || JSONSerializer::saveToFile( _filePath, &file, *EditorNetPlayPresetFile::StaticType() ) == false )
+        if ( FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( _filePath ) ) == false || JSONSerializer::saveToFile( _filePath, &file, *EditorNetPlayPresetFile::StaticType() ) == false )
         {
             SW_LOG_ERROR_ID( "NetPlayPresets.MultiplayerPresetsCouldNot", "Multiplayer presets could not be saved to %#", _filePath );
             return false;

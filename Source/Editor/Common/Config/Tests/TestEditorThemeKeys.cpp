@@ -82,13 +82,13 @@ namespace
         ThemeKeyScan   scan;
         vector<string> listFile;
         // SW_ASSERT 안에 두면 Release 에서 식째 빠져 파일을 하나도 모으지 않는다 — 부르고 나서 결과를 단언한다.
-        const bool bCollected = FileUtil::collectFiles( FileUtil::joinPath( ProcessRoots::get()._project.str(), "Source" ), "", listFile, true );
+        const bool bCollected = FileUtil::collectFiles( FileUtil::toDiskPath( FileUtil::joinPath( ProcessRoots::get()._project.str(), "Source" ) ), "", listFile, true );
         SW_EXPECT_TRUE( bCollected );
         for ( const string& filePath : listFile )
         {
             const bool bCode = FileUtil::hasExtension( filePath, ".cpp" ) || FileUtil::hasExtension( filePath, ".h" ) || FileUtil::hasExtension( filePath, ".inl" );
             string     text;
-            if ( bCode == false || StringUtil::contains( filePath, "graphify-out" ) || FileUtil::readTextFile( filePath, text ) == false )
+            if ( bCode == false || StringUtil::contains( filePath, "graphify-out" ) || FileUtil::readTextFile( FileUtil::toDiskPath( filePath ), text ) == false )
                 continue;
             collectMacroKeys( text, "SW_THEME_COLOR_KEY", scan._setColorKey );
             collectMacroKeys( text, "SW_THEME_COLOR", scan._setColorKey );

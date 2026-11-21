@@ -183,7 +183,7 @@ namespace sw::editor
                                                     TextureImportResult* pOutResult )
         {
             // DirectXTex 가 경로를 스스로 열어 쓴다 — `FileUtil` 의 쓰기 입구를 지나지 않으므로 게이트를 직접 묻는다(커밋된 DDS 를 자동화 실행이 덮지 않게).
-            if ( FileUtil::isWriteAllowed( outputPath ) == false || FileUtil::ensureParentDirectoryExists( outputPath ) == false )
+            if ( FileUtil::isWriteAllowed( outputPath ) == false || FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( outputPath ) ) == false )
                 return false;
 
             // 엔진 `DDSLoader` 의 옛 머리(DX9 픽셀 형식) 경로는 1 채널 휘도(L8)를 모른다. R8_UNORM 은 DX10 머리로 써서 DXGI 번호(61)를 그대로 싣는다.
@@ -201,7 +201,7 @@ namespace sw::editor
             const DirectX::TexMetadata& metadata        = finalImage.GetMetadata();
             const uint32                mipCount        = static_cast<uint32>( metadata.mipLevels );
             uint64                      outputSizeBytes = 0;
-            if ( FileUtil::tryGetFileSize( outputPath, outputSizeBytes ) == false )
+            if ( FileUtil::tryGetFileSize( FileUtil::toDiskPath( outputPath ), outputSizeBytes ) == false )
                 SW_LOG_WARNING_ID( "TextureImporter.ImportedTextureButCannot", "Imported texture %# but cannot read its size", outputPath );
             if ( pOutResult != nullptr )
             {
@@ -213,7 +213,7 @@ namespace sw::editor
                 pOutResult->_bSuccess           = SW_TRUE;
             }
             uint64 sourceSizeBytes = 0;
-            (void)FileUtil::tryGetFileSize( sourcePath, sourceSizeBytes ); // 로그 한 줄의 숫자다 - 읽은 원본이라 늘 있다
+            (void)FileUtil::tryGetFileSize( FileUtil::toDiskPath( sourcePath ), sourceSizeBytes ); // 로그 한 줄의 숫자다 - 읽은 원본이라 늘 있다
             SW_LOG_INFO_ID( "TextureImporter.ImportedTextureFormatMips", "Imported texture: %# -> %# (Format: %#, Mips: %#, %# -> %# bytes)", sourcePath, outputPath,
                             static_cast<uint32>( metadata.format ), mipCount, sourceSizeBytes, outputSizeBytes );
             return true;
@@ -592,7 +592,7 @@ namespace sw::editor
             if ( pImage == nullptr || TextureBlockEncoder::encodeMip( format, pImage->pixels, static_cast<uint32>( pImage->width ), static_cast<uint32>( pImage->height ), payload ) == false )
                 return false;
         }
-        if ( FileUtil::isWriteAllowed( outputPath ) == false || FileUtil::ensureParentDirectoryExists( outputPath ) == false )
+        if ( FileUtil::isWriteAllowed( outputPath ) == false || FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( outputPath ) ) == false )
             return false;
         const uint32 width    = static_cast<uint32>( metadata.width );
         const uint32 rowBytes = ( width + 3 ) / 4 * RHIFormatUtil::getBlockInfo( format )._blockBytes;
@@ -620,7 +620,7 @@ namespace sw::editor
             pOutResult->_sourcePath = string( sourcePath );
             pOutResult->_outputPath = string( outputPath );
             pOutResult->_bSuccess   = SW_FALSE;
-            (void)FileUtil::tryGetFileSize( sourcePath, pOutResult->_sourceSizeBytes ); // 실패 보고다 - 원본이 없으면 크기 칸은 처음 값(0) 그대로
+            (void)FileUtil::tryGetFileSize( FileUtil::toDiskPath( sourcePath ), pOutResult->_sourceSizeBytes ); // 실패 보고다 - 원본이 없으면 크기 칸은 처음 값(0) 그대로
         }
 
         // `.hdr`(Radiance RGBE)은 1 을 넘는 값을 가진다. 8비트 디코더(stb)를 거치지 않고 부동소수점으로 읽어 HDR 포맷으로만 임포트한다.
@@ -779,7 +779,7 @@ namespace sw::editor
     uint64 TextureImporter::computeSourceHash( string_view sourcePath, const TextureImportRule& rule )
     {
         vector<uint8> bytes;
-        if ( FileUtil::readFile( sourcePath, bytes ) == false || bytes.empty() )
+        if ( FileUtil::readFile( FileUtil::toDiskPath( sourcePath ), bytes ) == false || bytes.empty() )
             return 0;
 
         // 규칙은 해석한 결과로 섞는다. "bc7" 과 "BC7_UNORM", BGRA 와 ARGB 처럼 같은 결과를 내는 표기는 같은 해시가 된다.
