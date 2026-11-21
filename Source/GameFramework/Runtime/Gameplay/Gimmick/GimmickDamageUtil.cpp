@@ -2,6 +2,8 @@
 
 #include "GameFramework/Runtime/Gameplay/Gimmick/GimmickDamageUtil.h"
 
+#include "Engine/Destruction/Fracture/FractureAsset.h"
+#include "Engine/Destruction/Fracture/FractureComponentBase.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
@@ -37,5 +39,12 @@ namespace sw
                 pSensor->applyDamage( event._amount );
             GameEventUtil::send( event );
         } );
+    }
+
+    void GimmickDamageUtil::breakAtCenter( FractureComponentBase& fracture, const float3& center, float32 strain, float32 impulse )
+    {
+        const FractureAsset* pAsset = fracture.findAsset();
+        const float32        radius = pAsset != nullptr ? float3::getDistance( pAsset->_boundsMin, pAsset->_boundsMax ) : 2.0f;
+        fracture.applyRadialDamageAtWorld( center, radius, strain, impulse );
     }
 } // namespace sw

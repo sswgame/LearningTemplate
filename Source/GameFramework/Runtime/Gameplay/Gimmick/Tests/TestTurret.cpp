@@ -3,7 +3,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "GameFramework/Runtime/Character/Combat/Projectile/ResolvedShot.h"
-#include "GameFramework/Runtime/Gameplay/Gimmick/Genre/ShooterGimmicks.h"
+#include "GameFramework/Runtime/Gameplay/Gimmick/Genre/TurretComponent.h"
 #include "GameFramework/Runtime/World/Query/WorldQuery.h"
 
 // TurretTest — 포탑이 탄도 계산(`Ballistics`)을 묶어 쓰는 길(`TurretComponent::computeAim`)과 쏜 탄의 세계 질의. 물리 씬 없이 설정된 중력만 읽는다(nogpu).

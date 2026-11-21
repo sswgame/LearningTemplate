@@ -7,6 +7,7 @@
 #pragma once
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Math/MathUtil.h"
 
 namespace sw
 {
@@ -63,6 +64,12 @@ namespace sw
             if ( _accumulator < 0.0f )
                 _accumulator = 0.0f;
             return stepCount;
+        }
+
+        /** @brief 초를 이 타이머의 스텝 수로 바꿉니다. 반올림하며 최소 @p minSteps 입니다(기믹의 지연 · 간격). 스텝 크기를 타이머가 쥐므로 시계와 다른 스텝으로 셀 수 없습니다. */
+        [[nodiscard]] int32 secondsToSteps( float32 seconds, int32 minSteps ) const
+        {
+            return MathUtil::max( minSteps, static_cast<int32>( MathUtil::round( seconds / _step ) ) );
         }
 
         constexpr void    reset() { _accumulator = 0.0f; }

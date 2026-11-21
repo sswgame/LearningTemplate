@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Runtime/Gameplay/Gimmick/Genre/RacingGimmicks.h"
+#include "GameFramework/Runtime/Gameplay/Gimmick/Genre/ItemBoxComponent.h"
 
 #include "Core/Hash/HashUtil.h"
 
@@ -10,13 +10,14 @@
 
 #include "GameFramework/Runtime/Foundation/Framework/GameEventUtil.h"
 #include "GameFramework/Runtime/Foundation/Random/GameRandom.h"
-#include "GameFramework/Runtime/Gameplay/Gimmick/Genre/GenreGimmickUtil.h"
+#include "GameFramework/Runtime/Gameplay/Gimmick/GimmickEvents.h"
+#include "GameFramework/Runtime/Gameplay/Gimmick/GimmickUtil.h"
 
 namespace sw
 {
     namespace
     {
-        struct RacingGimmicksInternal
+        struct ItemBoxComponentInternal
         {
             struct ChoiceWeight
             {
@@ -34,32 +35,6 @@ namespace sw
 
 namespace sw
 {
-    BoostPadComponent::BoostPadComponent()
-        : _duration{ 1.0f }
-        , _strength{ 1.5f }
-        , _requiredTags{}
-        , _boostCount{ 0 }
-    {
-    }
-
-    void BoostPadComponent::onRegister( GameObjectManager& manager )
-    {
-        Component::onRegister( manager );
-        _overlapSubscription = GameObjectEvents::listen<&BoostPadComponent::handleOverlapBegin>( *this, &GameObjectEvents::_overlapBegin );
-    }
-
-    void BoostPadComponent::handleOverlapBegin( const OverlapInfo& overlap )
-    {
-        if ( RacingGimmicksInternal::canAccept( overlap, _requiredTags ) == false )
-            return;
-        ++_boostCount;
-        GimmickBoostEvent event;
-        event._target   = overlap._pOther->getHandle();
-        event._duration = _duration;
-        event._strength = _strength;
-        GameEventUtil::send( event );
-    }
-
     ItemBoxComponent::ItemBoxComponent()
         : _listChoice{}
         , _requiredTags{}
@@ -67,7 +42,7 @@ namespace sw
         , _seed{ 1u }
         , _openCount{ 0 }
         , _respawnStepsLeft{ 0 }
-        , _clock{ GenreGimmickUtil::makeClock() }
+        , _clock{}
     {
     }
 
@@ -79,7 +54,7 @@ namespace sw
 
     void ItemBoxComponent::handleOverlapBegin( const OverlapInfo& overlap )
     {
-        if ( RacingGimmicksInternal::canAccept( overlap, _requiredTags ) )
+        if ( ItemBoxComponentInternal::canAccept( overlap, _requiredTags ) )
             (void)open( *overlap._pOther ); // 뽑힌 이름은 쓰지 않는다. 비어 있으면 열리지 않을 뿐이다
     }
 
@@ -91,7 +66,7 @@ namespace sw
             return hashed_string{};
         // 시드와 연 횟수로 뽑는다. 같은 순서로 열면 같은 것이 나온다.
         GameRandom            random( HashUtil::hashCoord( _openCount, 0, _seed ) );
-        const optional<int32> index = random.pickWeightedIndex( _listChoice, RacingGimmicksInternal::ChoiceWeight{} );
+        const optional<int32> index = random.pickWeightedIndex( _listChoice, ItemBoxComponentInternal::ChoiceWeight{} );
         ++_openCount;
         if ( index.has_value() == false )
             return hashed_string{};
@@ -104,8 +79,8 @@ namespace sw
         GameEventUtil::send( event );
         if ( _respawnDelay > 0.0f )
         {
-            _respawnStepsLeft = GenreGimmickUtil::toSteps( _respawnDelay, 1 );
-            GenreGimmickUtil::setBodyActive( *pOwner, false, this );
+            _respawnStepsLeft = _clock.secondsToSteps( _respawnDelay, 1 );
+            GimmickUtil::setBodyActive( *pOwner, false, this );
         }
         return choice._item;
     }
@@ -127,6 +102,6 @@ namespace sw
         --_respawnStepsLeft;
         GameObject* pOwner = getOwner();
         if ( _respawnStepsLeft == 0 && pOwner != nullptr )
-            GenreGimmickUtil::setBodyActive( *pOwner, true, this );
+            GimmickUtil::setBodyActive( *pOwner, true, this );
     }
 } // namespace sw

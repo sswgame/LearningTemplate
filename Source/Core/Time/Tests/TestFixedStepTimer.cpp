@@ -71,3 +71,12 @@ SW_TEST_CASE( FixedStepTimerTest, FixedStepTimerCarriesRemainderAndClampsFrames 
     }
     SW_EXPECT_TRUE( MathUtil::abs( coarseSteps - fineSteps ) <= 1 );
 }
+
+SW_TEST_CASE( FixedStepTimerTest, SecondsToStepsRoundsWithTheTimerStepAndClampsToMinimum )
+{
+    const FixedStepTimer timer( 0.1f, 0.25f );
+    SW_EXPECT_EQUAL( 3, timer.secondsToSteps( 0.26f, 1 ) ); // 2.6 → 3
+    SW_EXPECT_EQUAL( 2, timer.secondsToSteps( 0.24f, 1 ) ); // 2.4 → 2
+    SW_EXPECT_EQUAL( 1, timer.secondsToSteps( 0.0f, 1 ) );  // 최소 한 스텝
+    SW_EXPECT_EQUAL( 0, timer.secondsToSteps( 0.0f, 0 ) );
+}

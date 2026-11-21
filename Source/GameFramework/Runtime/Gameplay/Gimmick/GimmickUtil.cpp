@@ -1,23 +1,18 @@
 #include "pch.h"
 
-#include "GameFramework/Runtime/Gameplay/Gimmick/Genre/GenreGimmickUtil.h"
-
-#include "Core/Math/MathUtil.h"
+#include "GameFramework/Runtime/Gameplay/Gimmick/GimmickUtil.h"
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
+#include "GameFramework/Runtime/Foundation/Framework/GameEventUtil.h"
+#include "GameFramework/Runtime/Gameplay/Gimmick/GimmickEvents.h"
 #include "GameFramework/Runtime/Gameplay/Interaction/InteractableComponent.h"
 
 namespace sw
 {
-    int32 GenreGimmickUtil::toSteps( float32 seconds, int32 minSteps )
-    {
-        return MathUtil::max( minSteps, static_cast<int32>( MathUtil::round( seconds / constant::time::kDefaultFixedStepSeconds ) ) );
-    }
-
-    void GenreGimmickUtil::setBodyActive( GameObject& object, bool bActive, const Component* pKeep )
+    void GimmickUtil::setBodyActive( GameObject& object, bool bActive, const Component* pKeep )
     {
         const GameObjectManager* pManager = object.getManager(); // 틱에서도 부른다 — 켜고 끄기는 명령 버퍼로 틱 뒤에 한다
         if ( pManager == nullptr )
@@ -39,7 +34,7 @@ namespace sw
         } );
     }
 
-    void GenreGimmickUtil::setInteractableEnabled( GameObject& object, bool bEnabled )
+    void GimmickUtil::setInteractableEnabled( GameObject& object, bool bEnabled )
     {
         const GameObjectManager* pManager = object.getManager(); // 틱에서도 부른다 — 명령 버퍼로 틱 뒤에 한다
         if ( pManager == nullptr )
@@ -52,5 +47,15 @@ namespace sw
             if ( pInteractable != nullptr )
                 pInteractable->setEnabled( bEnabled );
         } );
+    }
+
+    void GimmickUtil::sendCue( const GameObject& source, const hashed_string& cue, const float3& position, float32 magnitude )
+    {
+        GimmickCueEvent event;
+        event._source    = source.getHandle();
+        event._cue       = cue;
+        event._position  = position;
+        event._magnitude = magnitude;
+        GameEventUtil::send( event );
     }
 } // namespace sw
