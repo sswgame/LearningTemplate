@@ -71,7 +71,8 @@ class ToolPolicyTest(unittest.TestCase):
             self.assertIn("no-polling-wait", self.pre("Bash", {"command": command})["hookSpecificOutput"]["permissionDecisionReason"])
 
     def test_build_only_in_main_tree(self):
-        for command in ("cd D:/P/.claude/worktrees/work-e10 && cmake --build --preset Ninja-Debug", "cmake --preset Ninja-Debug -S .claude/worktrees/x"):
+        for command in ("cd D:/P/.claude/worktrees/work-e10 && cmake --build --preset Ninja-Debug", "cmake --preset Ninja-Debug -S .claude/worktrees/x",
+                        "cd D:/Projects/Personal/LT-wt/agentcfg && cmake --build --preset Ninja-Release"):
             self.assertIn("one-build-in-main-tree", self.pre("Bash", {"command": command})["hookSpecificOutput"]["permissionDecisionReason"])
         for command in ("cmake --build --preset Ninja-Debug", "git -C .claude/worktrees/x log", "cd build/Ninja-Debug && ctest -R foo"):
             self.assertIsNone(self.pre("Bash", {"command": command}))
@@ -81,7 +82,30 @@ class ToolPolicyTest(unittest.TestCase):
         self.post("Skill", {"skill": "ponytail"})
         self.assertIsNotNone(self.pre("Edit", target))
         self.post("mcp__plugin_context7_context7__query-docs", {})
+        self.assertIsNotNone(self.pre("Edit", target))
+        self.post("Skill", {"skill": "source-driven-development"})
         self.assertIsNone(self.pre("Edit", target))
+
+    def test_forbidden_commands_and_generated_files(self):
+        refused = {
+            "no-git-stash": [("Bash", {"command": "git stash"}), ("Bash", {"command": "cd x && git -C D:/P stash pop"}), ("PowerShell", {"command": "git stash push -m a"})],
+            "move-with-tools": [("Bash", {"command": "git mv Source/Engine/A.h Source/Engine/B/A.h"}), ("Bash", {"command": "git mv Content/game/a.png Content/game/b.png"})],
+            "no-hand-edit-generated": [("Edit", {"file_path": "D:/P/Content/game/playground/materials/matgraph/layered_stone.gen.material"}),
+                                       ("Write", {"file_path": "D:/P/Content/shaders/matgraph/x_1a2b.hlsl"}),
+                                       ("Edit", {"file_path": r"D:\P\Config\Dev\AssetReferenceFields.generated.json"})],
+            "no-hand-raise-magic-baseline": [("Edit", {"file_path": "D:/P/Config/Rules/Lint/MagicLiteralsBaseline.json"})],
+            "no-per-folder-constants-header": [("Write", {"file_path": "D:/P/Source/Engine/Audio/AudioConstants.h"})],
+        }
+        self.post("Skill", {"skill": "ponytail"})
+        for name, calls in refused.items():
+            for tool, tool_input in calls:
+                self.assertIn(name, self.pre(tool, tool_input)["hookSpecificOutput"]["permissionDecisionReason"], (tool, tool_input))
+        for tool, tool_input in (("Bash", {"command": "git log --grep stash"}), ("Bash", {"command": "git mv docs/a.md docs/b.md"}),
+                                 ("Edit", {"file_path": "D:/P/Content/game/playground/materials/matgraph/layered_stone.matgraph.xml"}),
+                                 ("Edit", {"file_path": "D:/P/Config/Dev/AssetReferenceFields.json"}),
+                                 ("Write", {"file_path": "D:/P/Source/Core/Foundation/Constants.h"}),
+                                 ("Edit", {"file_path": "D:/P/Source/Engine/Audio/AudioConstants.h"})):
+            self.assertIsNone(self.pre(tool, tool_input), (tool, tool_input))
 
 
 if __name__ == "__main__":

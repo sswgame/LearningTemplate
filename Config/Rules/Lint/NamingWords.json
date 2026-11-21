@@ -7845,9 +7845,7 @@
   "_externalPatterns": [
     "^(PFN_|VK_|vk[A-Z]|Vk[A-Z]|GLX_|GL_|WGL_|wgl[A-Z]|gl[A-Z][a-z]|STBI?_|ImGui\\w*Flags_|ImGui_Impl|D3D\\d*_|DXGI_|emscripten_|wgpu[A-Z]|WGPU)"
   ],
-  "_externalPaths": [
-    ".claude/skills/idea-refine"
-  ],
+  "_externalPaths": [],
   "_acronyms": [
     "AABB",
     "ABI",
