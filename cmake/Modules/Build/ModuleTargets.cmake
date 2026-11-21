@@ -337,6 +337,11 @@ function(sw_add_game_framework_kit KIT_NAME)
 	sw_glob_source_tree(list_kit_source RECURSE "*.cpp" "*.c" "*.h" "*.hpp")
 	# 키트의 에디터 확장은 Plugin/Editor/<이름>/ 의 별도 모듈이다(GF_EditorPlugin_<이름>) — 키트 DLL(배포본 포함)에 섞지 않는다. 게임의 Editor/ 도 같다.
 	list(FILTER list_kit_source EXCLUDE REGEX "/Editor/")
+	# 장르 키트의 클라이언트 · 서버 몫은 키트 폴더 안 `Client/` · `Server/` 의 따로 짓는 모듈(GF_Client_<X> · GF_Server_<X>)이다 — 공유 키트 DLL 에 섞지 않는다
+	# (섞으면 전용 서버 구성이 `Client/` 소스를 짓게 되어 `sw_verify_built_sources` 가 멈춘다). 이 키트 폴더 바로 아래만 본다 — `…/Chat/Client/` 처럼
+	# 그 폴더 자체가 모듈인 키트의 소스는 빼지 않는다.
+	sw_escape_regex(kit_directory_regex "${CMAKE_CURRENT_SOURCE_DIR}")
+	list(FILTER list_kit_source EXCLUDE REGEX "^${kit_directory_regex}/(Client|Server)/")
 	sw_add_module_library(${KIT_NAME}
 		KIND kit
 		DEV_TYPE SHARED
@@ -345,7 +350,7 @@ function(sw_add_game_framework_kit KIT_NAME)
 		FOLDER "Source/GameFramework/Kits"
 		SOURCES ${list_kit_source}
 		LINK_PUBLIC GameFramework Engine sw_public_source_includes
-		REFLECTION_EXCLUDE "/Editor/"
+		REFLECTION_EXCLUDE "/Editor/|^${kit_directory_regex}/(Client|Server)/"   # 리플렉션 자동 훑기도 하위 모듈 폴더를 넘지 않는다
 	)
 	# 매니페스트의 키트 의존(`_listDependency` 가운데 Kit)을 PUBLIC 으로 링크한다 — 서버 · 클라이언트 키트(GF_Server_<X> · GF_Client_<X>)가 같은 기능의
 	# 런타임 키트(GF_<X>)와 GF_Server_OnlineCore 를 쓰는 자리. CMake 에 다시 적지 않는다(매니페스트가 원본, 에디터 확장 · 게임 모듈과 같은 방식).

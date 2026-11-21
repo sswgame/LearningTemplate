@@ -962,7 +962,7 @@
     "Source/Games/Playground/Client/Dev/UIStressTestScreen.cpp": {"float": 26},
     "Source/Games/Playground/KitDemo/ActionCombatDemoComponent.cpp": {"float": 5},
     "Source/Games/Playground/KitDemo/ActionPlatformerDemoComponent.cpp": {"float": 14},
-    "Source/Games/Playground/KitDemo/TacticsSRPGDemoComponent.cpp": {"minus-one": 6, "float": 19, "integer": 1},
+    "Source/GameFramework/Kits/Genre/Strategy/TacticsSRPG/Client/SRPGCursorComponent.cpp": {"minus-one": 1, "float": 19, "integer": 1},
     "Source/Games/Shooter3D/ShooterAutoAimControllerComponent.cpp": {"float": 1},
     "Source/Games/Shooter3D/ShooterAvatarComponent.cpp": {"float": 2},
     "Source/Games/Shooter3D/ShooterEnemyComponent.cpp": {"float": 3},
