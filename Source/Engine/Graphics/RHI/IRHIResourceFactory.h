@@ -51,14 +51,8 @@ namespace sw
          */
         void bindPipelineFront( ShaderTargetFormat shaderTargetFormat, const RHICapabilities& startupCapabilities );
 
-        /** @brief 파이프라인 상태 객체를 해제합니다. */
-        virtual void destroyPipelineState( RHIPipelineStateHandle pso ) = 0;
-
         /** @brief 렌더 패스 객체를 만듭니다. */
         [[nodiscard]] virtual RHIRenderPassHandle createRenderPass( const RHIRenderPassDesc& desc ) = 0;
-
-        /** @brief 렌더 패스 객체를 해제합니다. */
-        virtual void destroyRenderPass( RHIRenderPassHandle pass ) = 0;
 
         /** @brief 상수 버퍼를 만듭니다. */
         [[nodiscard]] virtual RHIBufferHandle createConstantBuffer( uint32 size ) = 0;
@@ -155,13 +149,10 @@ namespace sw
          */
         [[nodiscard]] virtual RHIBufferHandle createIndexBuffer( const void* pData, uint32 sizeBytes ) = 0;
 
-        /** @brief GPU 버퍼 리소스를 삭제합니다. */
-        virtual void destroyBuffer( RHIBufferHandle buffer ) = 0;
-
         /**
          * @brief GPU 에서 CPU 로 되읽을 읽기 전용 버퍼(@p elementSize x @p elementCount 바이트)를 만듭니다. 만들지 못하면 0 입니다.
          * @details 비동기 되읽기의 도착지다 — `IRHICommandList::copyBufferToReadback` 이 채우고, 그 프레임이 끝난 뒤(`IRHIDevice::notifyFrameCompletion` 의 `Completed`) `readReadbackBuffer` 로 읽는다.
-         *          원본이 구조화 버퍼면 같은 원소 크기로 만든다(DX11 은 구조화 버퍼끼리만 복사한다). 지우는 것은 `destroyBuffer` 다.
+         *          원본이 구조화 버퍼면 같은 원소 크기로 만든다(DX11 은 구조화 버퍼끼리만 복사한다). 지우는 것은 `IRHIDevice::releaseHandle` 이다.
          */
         [[nodiscard]] virtual RHIBufferHandle createReadbackBuffer( uint32 elementSize, uint32 elementCount ) = 0;
 
@@ -192,8 +183,6 @@ namespace sw
             (void)sizeBytes;
             return 0;
         }
-        /** @brief 힙 핸들을 놓습니다. 그 위에 놓인 텍스처는 각자 힙을 붙들므로(텍스처 파괴가 끝날 때까지) 텍스처보다 먼저 불러도 된다. */
-        virtual void destroyTransientHeap( RHITransientHeapHandle heap ) { (void)heap; }
         /**
          * @brief 힙 @p heap 의 @p offsetBytes 에 텍스처를 놓습니다. 서술 · 뷰 · 파괴 규칙은 `createTexture2D` 와 같다. 능력이 없으면 0 입니다.
          * @details 같은 바이트를 쓰는 다른 텍스처가 앞서 쓰였을 수 있으므로 프레임의 첫 쓰기 앞에 `IRHICommandList::beginTextureAlias` 를 부르고, 첫 쓰기는 지우기여야 한다(내용이 정해져 있지 않다).
@@ -216,9 +205,6 @@ namespace sw
             (void)texture;
             (void)pName;
         }
-
-        /** @brief GPU 텍스처 리소스를 삭제합니다. */
-        virtual void destroyTexture( RHITextureHandle texture ) = 0;
 
         /**
          * @brief 텍스처가 실제로 만들어진 RHIFormat 을 반환합니다(없는 핸들이면 Unknown).
@@ -253,7 +239,7 @@ namespace sw
         //      (렌더 스레드가 쥐고 있으면 프레임 끝에 놓을 때까지 기다린다). GL 의 비 RT 스레드 제출은 컨텍스트를 두고 RT 와 겨루므로 프레임 경로 밖(동기 `acquire`, 도구)에서만 쓴다.
         //   5. 시리얼은 **큐에 낸 순서대로 같은 락 안에서** 매긴다(`RHITransferSerials::issue`). 락 밖에서 매기면 시리얼 순서가 큐 실행 순서와 어긋나 워터마크가 끝나지 않은 제출을 덮는다.
         //      티켓에는 장치 세대가 실려 있어, 백엔드를 바꾼 뒤의 옛 티켓은 새 장치에서 `Failed` 다.
-        //   6. 전송 중인 텍스처를 `destroyTexture` 하면 백엔드가 GPU 자원 해제를 전송이 끝난 뒤로 미룬다(해제 큐). 호출자는 전송 중에도 안전하게 파괴할 수 있지만 그 티켓의 결과는 쓸 수 없다.
+        //   6. 전송 중인 텍스처를 해제(`IRHIDevice::releaseHandle`)하면 백엔드가 GPU 자원 해제를 전송이 끝난 뒤로 미룬다(해제 큐). 호출자는 전송 중에도 안전하게 파괴할 수 있지만 그 티켓의 결과는 쓸 수 없다.
         //   7. 진행: 프레임을 돌리지 않아도 `pollTransfer` 를 되풀이하면 결국 `Complete` 나 `Failed` 가 된다. 아직 GPU 에 내보내지 않은 일(DX12 의 열린 복사 리스트, GL 의 flush 안 된 명령)은
         //      제출이나 폴링이 내보낸다. 단 GL 은 컨텍스트를 기다리지 않으므로(`pollTransfer` 참고) 컨텍스트를 가진 스레드의 폴링 · 제출 · `endFrame` 이 워터마크를 올린다.
 
@@ -322,7 +308,7 @@ namespace sw
          *          `kInvalidDescriptorIndex` 를 돌려준다(소비자는 `pollTransfer` 가 `Complete` 를 돌려준 뒤에 등록한다). 뒤의 구간 갱신이 남아도 막지 않는다 — 이미 내보낸
          *          텍스처를 다른 쪽(에디터 UI)이 등록할 수 있다(`RHITextureTransferSerials`).
          *          **등록마다 새 번호다**(네 백엔드가 같다). 같은 텍스처를 여러 쪽(엔진 · 에디터 UI)이 등록해도 각자의 번호를 각자 해제한다 — 번호를 나눠 주면 한쪽의 해제가
-         *          다른 쪽이 쓰는 번호를 놓는다(Vulkan 이 그랬다, 2026-11-02 에디터 RHI 렌더러). **`destroyTexture` 는 그 텍스처의 번호를 모두 놓는다**(네 백엔드가 같다 —
+         *          다른 쪽이 쓰는 번호를 놓는다(Vulkan 이 그랬다, 2026-11-02 에디터 RHI 렌더러). **텍스처 해제(`IRHIDevice::releaseHandle`)는 그 텍스처의 번호를 모두 놓는다**(네 백엔드가 같다 —
          *          DX12 만 번호를 남겨 늦은 해제가 다시 발급된 번호를 놓았다). 텍스처 주인이 아닌 쪽은 번호를 해제하지 않고 파괴에 맡긴다.
          */
         virtual RHIDescriptorIndex registerBindlessTexture( RHITextureHandle texture ) = 0;
@@ -359,7 +345,7 @@ namespace sw
          *          안 된다. 후자는 실제로 사고가 난 적이 있다. 트랜지언트 텍스처 SRV 0, 1, 2 가 버퍼
          *          프리리스트로 들어가 살아 있는 패스 상수 버퍼 슬롯 0, 1, 2 를 빈 것으로 만들었고, 다음에
          *          등록된 인스턴스 구조 버퍼가 슬롯 2 를 차지해 Vulkan set 0 에 STORAGE 세트가 바인딩되었다.
-         *          destroyTexture 는 등록을 스스로 정리하므로 파괴 직전이라면 이 호출은 생략해도 된다.
+         *          텍스처 해제는 등록을 스스로 정리하므로 파괴 직전이라면 이 호출은 생략해도 된다.
          */
         virtual void unregisterBindlessTexture( RHIDescriptorIndex index ) = 0;
 
@@ -394,6 +380,28 @@ namespace sw
         virtual void unregisterBindlessUAV( RHIDescriptorIndex index ) = 0;
 
     protected:
+        // ------------------------------------------------------------------------------
+        // 자원 해제 — 백엔드 구현. 부르는 쪽은 `IRHIDevice::releaseHandle( 핸들 )` 하나다(종류는 핸들 형식이 고른다).
+        // 장치가 해제 시점(렌더 스레드 · 넘긴 프레임)을 정하고, 백엔드는 GPU 펜스가 지난 뒤 네이티브 객체를 놓는다(`RHIReleaseQueue`).
+        // 반환은 "산 핸들이었다" 다 — 거짓이면 이미 놓았거나 모르는 핸들이라 장치가 검사 구성에서 단언한다(같은 핸들 두 번 해제).
+        // ------------------------------------------------------------------------------
+        friend class IRHIDevice;
+
+        /** @brief GPU 버퍼 리소스를 놓습니다. 그 버퍼의 bindless 번호도 모두 놓는다. */
+        [[nodiscard]] virtual bool destroyBufferNative( RHIBufferHandle buffer ) = 0;
+        /** @brief GPU 텍스처 리소스를 놓습니다. 그 텍스처의 bindless 번호도 모두 놓는다. 전송 중이면 전송이 끝난 뒤로 미룬다(전송 계약 6). */
+        [[nodiscard]] virtual bool destroyTextureNative( RHITextureHandle texture ) = 0;
+        /** @brief 파이프라인 상태 객체를 놓습니다. */
+        [[nodiscard]] virtual bool destroyPipelineStateNative( RHIPipelineStateHandle pso ) = 0;
+        /** @brief 렌더 패스 객체를 놓습니다. */
+        [[nodiscard]] virtual bool destroyRenderPassNative( RHIRenderPassHandle pass ) = 0;
+        /** @brief 힙 핸들을 놓습니다. 그 위에 놓인 텍스처는 각자 힙을 붙들므로(텍스처 파괴가 끝날 때까지) 텍스처보다 먼저 불러도 된다. 힙이 없는 백엔드는 핸들을 내지 않는다. */
+        [[nodiscard]] virtual bool destroyTransientHeapNative( RHITransientHeapHandle heap )
+        {
+            (void)heap;
+            return false;
+        }
+
         /**
          * @brief 백엔드의 그래픽스 PSO 생성입니다 — 부르는 쪽은 `createPipelineState` 를 쓴다(컴파일 시계).
          * @param desc   렌더 상태 · RT 형식 · 정점 형식을 읽는다. 셰이더 경로는 라벨 · 로그에만 쓴다(컴파일하지 않는다).

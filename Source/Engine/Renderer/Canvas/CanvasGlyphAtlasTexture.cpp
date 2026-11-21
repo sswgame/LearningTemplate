@@ -82,7 +82,7 @@ namespace sw
             {
                 if ( page._srv != kInvalidDescriptorIndex )
                     pDevice->getResourceFactory()->unregisterBindlessTexture( page._srv );
-                pDevice->getResourceFactory()->destroyTexture( page._texture );
+                pDevice->releaseHandle( page._texture );
             }
             // 끝나지 않은 전송이 있어도 파괴할 수 있다 — 백엔드가 GPU 자원 해제를 전송 뒤로 미룬다(전송 계약 6). 티켓은 옛 장치 것이라 버린다.
             page._texture        = 0;
@@ -182,7 +182,7 @@ namespace sw
             {
                 if ( retired._srv != kInvalidDescriptorIndex )
                     factory.unregisterBindlessTexture( retired._srv );
-                factory.destroyTexture( retired._texture );
+                pDevice->releaseHandle( retired._texture );
             }
         }
         _listRetired.clear(); // 디바이스가 없으면 핸들만 잊는다(release 와 같은 규칙)

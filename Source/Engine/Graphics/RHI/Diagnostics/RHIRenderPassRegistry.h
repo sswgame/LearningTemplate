@@ -30,18 +30,22 @@ namespace sw
             record._desc   = desc;
             record._bAlive = SW_TRUE;
             _listRecord.push_back( record );
-            return _listRecord.size();
+            return RHIRenderPassHandle{ _listRecord.size() };
         }
 
-        /** @brief 핸들의 기록을 죽은 것으로 표시하고 서술자를 비웁니다. 0 이거나 등록한 적 없는 핸들이면 아무 일도 하지 않습니다. */
-        void retire( RHIRenderPassHandle handle )
+        /** @brief 핸들의 기록을 죽은 것으로 표시하고 서술자를 비웁니다. 0 · 등록한 적 없는 · 이미 놓은 핸들이면 아무 일도 하지 않고 false 입니다. */
+        [[nodiscard]] bool retire( RHIRenderPassHandle handle )
         {
             ScopedLock<mutex> lock{ _mutex };
-            if ( handle == 0 || handle > _listRecord.size() )
-                return;
-            Record& record = _listRecord[handle - 1];
+            const uint64      packed = handle.getPacked();
+            if ( packed == 0 || packed > _listRecord.size() )
+                return false;
+            Record& record = _listRecord[packed - 1];
+            if ( record._bAlive == SW_FALSE )
+                return false;
             record._bAlive = SW_FALSE;
             record._desc   = RHIRenderPassDesc{};
+            return true;
         }
 
         /** @brief 모든 기록을 지웁니다. 장치 종료에서 부릅니다. */

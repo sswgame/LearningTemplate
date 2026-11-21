@@ -42,12 +42,12 @@ namespace sw::editor
     struct EditorViewTarget
     {
         // 지금 그리는 타깃 — 엔진 렌더 텍스처(`rendertarget/editor/…`)의 로드 핸들(참조를 쥔다)과 GPU 에 올라간 뒤의 핸들. GPU 자원은 엔진이 렌더 쪽에서 만든다
-        TextureHandle _texture{};
-        string        _texturePath{};
-        uint64        _renderTarget{ 0 }; ///< 0 이면 아직 그릴 타깃이 없다(호스트에 알리지도 그리지도 않는다)
-        void*         _pTextureID{ nullptr };
-        uint32        _width{ 0 }; ///< 지금 그리는 타깃의 크기
-        uint32        _height{ 0 };
+        TextureHandle    _texture{};
+        string           _texturePath{};
+        RHITextureHandle _renderTarget{ 0 }; ///< 0 이면 아직 그릴 타깃이 없다(호스트에 알리지도 그리지도 않는다)
+        void*            _pTextureID{ nullptr };
+        uint32           _width{ 0 }; ///< 지금 그리는 타깃의 크기
+        uint32           _height{ 0 };
         // 크기를 바꾸는 중이면 새 타깃 — 준비될 때까지 지금 타깃을 계속 그리고, 준비되면 바꿔 끼운다(언리얼 `ResizeTarget` 과 같다).
         // 예전에는 옛 타깃을 먼저 버려, 그 사이 미리보기가 패킷에서 빠지고 하위 렌더러가 통째로 내려갔다가 다시 섰다.
         TextureHandle _pendingTexture{};
@@ -67,12 +67,12 @@ namespace sw::editor
      */
     struct EditorViewTargetState
     {
-        void*  _pTextureID{ nullptr };
-        uint64 _renderTarget{ 0 };
-        uint32 _width{ 0 };
-        uint32 _height{ 0 };
-        uint32 _requestedWidth{ 0 };
-        uint32 _requestedHeight{ 0 };
+        void*            _pTextureID{ nullptr };
+        RHITextureHandle _renderTarget{ 0 };
+        uint32           _width{ 0 };
+        uint32           _height{ 0 };
+        uint32           _requestedWidth{ 0 };
+        uint32           _requestedHeight{ 0 };
 
         /** @brief 타깃의 지금 값을 뜹니다. */
         static EditorViewTargetState capture( const EditorViewTarget& target )

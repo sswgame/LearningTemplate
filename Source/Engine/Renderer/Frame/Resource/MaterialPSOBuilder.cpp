@@ -109,7 +109,7 @@ namespace sw
         for ( const Result& result : listResult )
         {
             if ( result._handle != 0 && pDevice != nullptr && pDevice->getResourceFactory() != nullptr )
-                pDevice->getResourceFactory()->destroyPipelineState( result._handle );
+                pDevice->releaseHandle( result._handle );
         }
     }
 } // namespace sw

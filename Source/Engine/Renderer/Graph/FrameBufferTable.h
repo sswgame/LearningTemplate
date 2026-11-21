@@ -27,16 +27,21 @@ namespace sw
     class SW_API FrameBufferTable
     {
     public:
-        /** @brief 등록 하나입니다. 핸들은 `_viewable` 에 따라 버퍼 또는 텍스처 핸들이다(RHI 에서 둘 다 64 비트 번호). */
+        /** @brief 등록 하나입니다. 핸들은 `_viewable` 에 따라 버퍼 또는 텍스처의 packed 값이다 — 읽을 때는 종류별 접근자(`getBuffer` · `getTexture`)로만 꺼낸다. */
         struct Entry
         {
             hashed_string           _name;
             uint32                  _slot{ 0 };
-            uint64                  _handle{ 0 };
+            uint64                  _handle{ 0 }; ///< packed 값(종류는 `_viewable`)
             RenderGraphViewableKind _viewable{ RenderGraphViewableKind::Buffer };
             RenderGraphAccess       _initialAccess{ RenderGraphAccess::ShaderRead }; ///< 프레임 시작이자 끝의 접근 — 그래프가 이 접근을 심고(`RenderGraph::importResource`) 끝에 되돌린다(`forEachChangedAccess`)
             uint32                  _elementSize{ 0 };                               ///< 버퍼 원소 바이트(텍스처는 0)
             uint32                  _elementCount{ 0 };                              ///< 원소 수(버퍼 용량, 텍스처는 0)
+
+            /** @brief 버퍼 등록이면 그 버퍼, 아니면 0 입니다. */
+            RHIBufferHandle getBuffer() const { return _viewable == RenderGraphViewableKind::Buffer ? RHIBufferHandle{ _handle } : RHIBufferHandle{}; }
+            /** @brief 텍스처 등록이면 그 텍스처, 아니면 0 입니다. */
+            RHITextureHandle getTexture() const { return _viewable == RenderGraphViewableKind::Texture ? RHITextureHandle{ _handle } : RHITextureHandle{}; }
         };
 
         /** @brief 지난 프레임의 등록을 잊습니다(용량은 남긴다). 프레임 그래프를 돌리기 전에 부른다. */
@@ -54,9 +59,9 @@ namespace sw
         void registerTexture( hashed_string name, uint32 slot, RHITextureHandle texture, RenderGraphAccess initialAccess );
 
         /** @brief 이름 @p name 칸 @p slot 의 버퍼입니다. 없으면 0 입니다. */
-        RHIBufferHandle findBuffer( hashed_string name, uint32 slot ) const { return findHandle( name, slot, RenderGraphViewableKind::Buffer ); }
+        RHIBufferHandle findBuffer( hashed_string name, uint32 slot ) const { return RHIBufferHandle{ findHandle( name, slot, RenderGraphViewableKind::Buffer ) }; }
         /** @brief 이름 @p name 칸 @p slot 의 텍스처입니다. 없으면 0 입니다. */
-        RHITextureHandle findTexture( hashed_string name, uint32 slot ) const { return findHandle( name, slot, RenderGraphViewableKind::Texture ); }
+        RHITextureHandle findTexture( hashed_string name, uint32 slot ) const { return RHITextureHandle{ findHandle( name, slot, RenderGraphViewableKind::Texture ) }; }
         /** @brief 등록 전부입니다(등록 순서). 레벨 콜백이 이름의 모든 칸을 한 묶음으로 옮긴다. */
         const vector<Entry>& getEntries() const { return _listEntry; }
         /**

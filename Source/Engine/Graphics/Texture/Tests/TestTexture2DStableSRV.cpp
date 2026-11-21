@@ -46,7 +46,7 @@ namespace
         vector<Slot>               _listLive;     ///< 산 칸
         vector<RHIDescriptorIndex> _listReserved; ///< 예약했고 아직 살리지 않은 번호
         RHIDescriptorIndex         _nextIndex{ 1 };
-        RHITextureHandle           _nextTexture{ 1 };
+        uint64                     _nextTexture{ 1 }; ///< 다음에 낼 텍스처 핸들의 packed 값
         uint64                     _nextSerial{ 1 };
         RHITransferStatus          _finalStatus{ RHITransferStatus::Complete }; ///< 모든 전송의 결과
         uint32                     _unregisterCount{ 0 };
@@ -62,8 +62,7 @@ namespace
             return 0;
         }
 
-        RHITextureHandle  createTexture2D( const RHITextureDesc& ) override { return _nextTexture++; }
-        void              destroyTexture( RHITextureHandle ) override {}
+        RHITextureHandle  createTexture2D( const RHITextureDesc& ) override { return RHITextureHandle{ _nextTexture++ }; }
         RHITransferSubmit submitTextureUpload( RHITextureHandle, const RHITextureUploadDesc& ) override { return RHITransferSubmit::accepted( _nextSerial++, kFakeDeviceGeneration ); }
         RHITransferStatus pollTransfer( RHITransferTicket ) override { return _finalStatus; }
 
@@ -120,9 +119,7 @@ namespace
         void                   discardTextureReadback( RHITransferTicket ) override {}
         RHIPipelineStateHandle createPipelineStateNative( const RHIPipelineStateDesc&, const RHICompiledGraphicsStages& ) override { return 0; }
         RHIPipelineStateHandle createComputePipelineStateNative( const RHICompiledShaderStage&, string_view ) override { return 0; }
-        void                   destroyPipelineState( RHIPipelineStateHandle ) override {}
         RHIRenderPassHandle    createRenderPass( const RHIRenderPassDesc& ) override { return 0; }
-        void                   destroyRenderPass( RHIRenderPassHandle ) override {}
         RHIBufferHandle        createConstantBuffer( uint32 ) override { return 0; }
         void                   updateConstantBuffer( RHIBufferHandle, const void*, uint32 ) override {}
         RHIBufferHandle        createConstantBufferPage( uint32 ) override { return 0; }
@@ -133,7 +130,6 @@ namespace
         RHIBufferHandle        createGPUVertexBuffer( uint32 ) override { return 0; }
         void                   updateGeometryBufferRegions( RHIBufferHandle, const void*, const RHIBufferCopyRegion*, uint32 ) override {}
         RHIBufferHandle        createIndexBuffer( const void*, uint32 ) override { return 0; }
-        void                   destroyBuffer( RHIBufferHandle ) override {}
         RHIBufferHandle        createReadbackBuffer( uint32, uint32 ) override { return 0; }
         [[nodiscard]] bool     readReadbackBuffer( RHIBufferHandle, uint32, void* ) override { return false; }
         RHIFormat              getTextureFormat( RHITextureHandle ) const override { return RHIFormat::Unknown; }
@@ -144,6 +140,12 @@ namespace
         RHIDescriptorIndex     registerBindlessBufferUAV( RHIBufferHandle ) override { return kInvalidDescriptorIndex; }
         RHIDescriptorIndex     registerBindlessTextureUAV( RHITextureHandle ) override { return kInvalidDescriptorIndex; }
         void                   unregisterBindlessUAV( RHIDescriptorIndex ) override {}
+
+    protected:
+        [[nodiscard]] bool destroyBufferNative( RHIBufferHandle ) override { return true; }
+        [[nodiscard]] bool destroyTextureNative( RHITextureHandle ) override { return true; }
+        [[nodiscard]] bool destroyPipelineStateNative( RHIPipelineStateHandle ) override { return true; }
+        [[nodiscard]] bool destroyRenderPassNative( RHIRenderPassHandle ) override { return true; }
     };
 
     /** @brief 아래쪽 밉 하나를 버릴 수 있는 RGBA8 이미지(128 → 64)입니다 — 스트리밍 기반은 밉 1 만 먼저 올린다. */

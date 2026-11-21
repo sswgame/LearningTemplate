@@ -36,43 +36,48 @@ SW_TEST_CASE( RenderPSOCacheShaderReleaseTest, ReleasesOnlyPSOsOfTheChangedShade
     test::FakeRHIDevice        device;
     device._pResourceFactory = &factory;
 
+    const RHIPipelineStateHandle kForwardPSO{ 1 };
+    const RHIPipelineStateHandle kShadowPSO{ 2 };
+    const RHIPipelineStateHandle kBlurPSO{ 3 };
+    const RHIPipelineStateHandle kVariantPSO{ 4 };
+
     RenderPSOCache cache;
-    cache.registerDesc( 1, makeGraphicsDesc( "shaders/forward.hlsl" ) );
-    cache.setEnginePSO( RenderPassKind::ForwardOpaque, 1 );
-    cache.registerDesc( 2, makeGraphicsDesc( "shaders/shadow.hlsl" ) );
-    cache.setEnginePSO( RenderPassKind::Shadow, 2 );
+    cache.registerDesc( kForwardPSO, makeGraphicsDesc( "shaders/forward.hlsl" ) );
+    cache.setEnginePSO( &device, RenderPassKind::ForwardOpaque, kForwardPSO );
+    cache.registerDesc( kShadowPSO, makeGraphicsDesc( "shaders/shadow.hlsl" ) );
+    cache.setEnginePSO( &device, RenderPassKind::Shadow, kShadowPSO );
     RHIPipelineStateDesc computeDesc{};
     computeDesc._computeShaderPath = "shaders/blur_cs.hlsl";
-    cache.registerDesc( 3, computeDesc );
+    cache.registerDesc( kBlurPSO, computeDesc );
     const hashed_string computePassName{ "Blur" };
-    cache.setExtensionProgramPSO( computePassName, 3 );
+    cache.setExtensionProgramPSO( &device, computePassName, kBlurPSO );
     // 머티리얼 변형: 만든 것(4 — 그림자 셰이더) · 실패한 것 · 만드는 중인 것.
-    cache.registerDesc( 4, makeGraphicsDesc( "shaders/shadow.hlsl" ) );
-    cache.setMaterialPSO( 100, RenderPSOCache::MaterialPSOEntry::ready( 4, true ) );
+    cache.registerDesc( kVariantPSO, makeGraphicsDesc( "shaders/shadow.hlsl" ) );
+    cache.setMaterialPSO( 100, RenderPSOCache::MaterialPSOEntry::ready( kVariantPSO, true ) );
     cache.setMaterialPSO( 101, RenderPSOCache::MaterialPSOEntry::failed() );
     cache.setMaterialPSO( 102, RenderPSOCache::MaterialPSOEntry::building() );
 
     // 컴퓨트 셰이더 하나 — 그 PSO 만 놓고, 실패한 변형은 다시 만들어 보게 지운다. 패스 PSO · 만든 변형 · 만드는 중인 변형은 그대로다.
     SW_EXPECT_EQUAL( 1u, cache.releasePSOsUsingShader( &device, "engine:shaders/blur_cs.hlsl" ) );
-    SW_EXPECT_TRUE( factory._listDestroyedPipelineState == vector<RHIPipelineStateHandle>{ 3 } );
+    SW_EXPECT_TRUE( factory._listDestroyedPipelineState == vector<RHIPipelineStateHandle>{ kBlurPSO } );
     RHIPipelineStateHandle found{ 0 };
     SW_EXPECT_FALSE( cache.findExtensionProgramPSO( computePassName, found ) );
-    SW_EXPECT_EQUAL( RHIPipelineStateHandle{ 1 }, cache.findEnginePSO( RenderPassKind::ForwardOpaque ) );
-    SW_EXPECT_EQUAL( RHIPipelineStateHandle{ 2 }, cache.findEnginePSO( RenderPassKind::Shadow ) );
-    SW_EXPECT_EQUAL( RHIPipelineStateHandle{ 4 }, cache.findMaterialPSO( 100 ) );
+    SW_EXPECT_EQUAL( kForwardPSO, cache.findEnginePSO( RenderPassKind::ForwardOpaque ) );
+    SW_EXPECT_EQUAL( kShadowPSO, cache.findEnginePSO( RenderPassKind::Shadow ) );
+    SW_EXPECT_EQUAL( kVariantPSO, cache.findMaterialPSO( 100 ) );
     SW_EXPECT_TRUE( cache.findMaterialPSOState( 101 ) == RenderPSOCache::MaterialPSOState::Absent );
     SW_EXPECT_TRUE( cache.findMaterialPSOState( 102 ) == RenderPSOCache::MaterialPSOState::Building );
 
     // 포워드 셰이더 — 그 패스 PSO 를 놓고, 변형 키에 패스 PSO 핸들이 들어 있으니 만든 변형도 놓는다. 그림자 패스 PSO 는 그대로다.
     factory._listDestroyedPipelineState.clear();
     SW_EXPECT_EQUAL( 2u, cache.releasePSOsUsingShader( &device, "shaders/forward.hlsl" ) );
-    SW_EXPECT_TRUE( VectorUtil::contains( factory._listDestroyedPipelineState, RHIPipelineStateHandle{ 1 } ) );
-    SW_EXPECT_TRUE( VectorUtil::contains( factory._listDestroyedPipelineState, RHIPipelineStateHandle{ 4 } ) );
-    SW_EXPECT_EQUAL( RHIPipelineStateHandle{ 0 }, cache.findEnginePSO( RenderPassKind::ForwardOpaque ) );
-    SW_EXPECT_EQUAL( RHIPipelineStateHandle{ 2 }, cache.findEnginePSO( RenderPassKind::Shadow ) );
+    SW_EXPECT_TRUE( VectorUtil::contains( factory._listDestroyedPipelineState, kForwardPSO ) );
+    SW_EXPECT_TRUE( VectorUtil::contains( factory._listDestroyedPipelineState, kVariantPSO ) );
+    SW_EXPECT_EQUAL( RHIPipelineStateHandle{}, cache.findEnginePSO( RenderPassKind::ForwardOpaque ) );
+    SW_EXPECT_EQUAL( kShadowPSO, cache.findEnginePSO( RenderPassKind::Shadow ) );
     SW_EXPECT_TRUE( cache.findMaterialPSOState( 100 ) == RenderPSOCache::MaterialPSOState::Absent );
     SW_EXPECT_TRUE( cache.findMaterialPSOState( 102 ) == RenderPSOCache::MaterialPSOState::Building );
     RHIPipelineStateDesc desc{};
-    SW_EXPECT_FALSE( cache.findDesc( 1, desc ) );
-    SW_EXPECT_TRUE( cache.findDesc( 2, desc ) );
+    SW_EXPECT_FALSE( cache.findDesc( kForwardPSO, desc ) );
+    SW_EXPECT_TRUE( cache.findDesc( kShadowPSO, desc ) );
 }

@@ -176,12 +176,12 @@ namespace sw
         mapIDToEntry.erase( entryIt );
     }
 
-    void RHIMemoryTracker::recordTexture( uint64 textureHandle, const RHITextureDesc& desc, uint64 bytes )
+    void RHIMemoryTracker::recordTexture( RHITextureHandle textureHandle, const RHITextureDesc& desc, uint64 bytes )
     {
         const RHIMemoryKey key = RHIMemoryKey::makeTexture( textureHandle );
         recordAllocation( key, classifyTexture( desc ), bytes );
         ScopedLock<mutex> lock{ _mutex };
-        const auto        entryIt = _arrMapIDToEntry[static_cast<uint32>( RHIMemoryKeySpace::Texture )].find( textureHandle );
+        const auto        entryIt = _arrMapIDToEntry[static_cast<uint32>( RHIMemoryKeySpace::Texture )].find( key._id );
         if ( entryIt == _arrMapIDToEntry[static_cast<uint32>( RHIMemoryKeySpace::Texture )].end() )
             return; // 핸들 0 — recordAllocation 이 받지 않았다
         RHIMemoryResourceShape& shape = entryIt->second._shape;

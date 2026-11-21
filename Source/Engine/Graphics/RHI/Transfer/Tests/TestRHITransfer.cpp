@@ -69,9 +69,7 @@ namespace
 
         RHIPipelineStateHandle createPipelineStateNative( const RHIPipelineStateDesc&, const RHICompiledGraphicsStages& ) override { return 0; }
         RHIPipelineStateHandle createComputePipelineStateNative( const RHICompiledShaderStage&, string_view ) override { return 0; }
-        void                   destroyPipelineState( RHIPipelineStateHandle ) override {}
         RHIRenderPassHandle    createRenderPass( const RHIRenderPassDesc& ) override { return 0; }
-        void                   destroyRenderPass( RHIRenderPassHandle ) override {}
         RHIBufferHandle        createConstantBuffer( uint32 ) override { return 0; }
         void                   updateConstantBuffer( RHIBufferHandle, const void*, uint32 ) override {}
         RHIBufferHandle        createConstantBufferPage( uint32 ) override { return 0; }
@@ -82,11 +80,9 @@ namespace
         RHIBufferHandle        createGPUVertexBuffer( uint32 ) override { return 0; }
         void                   updateGeometryBufferRegions( RHIBufferHandle, const void*, const RHIBufferCopyRegion*, uint32 ) override {}
         RHIBufferHandle        createIndexBuffer( const void*, uint32 ) override { return 0; }
-        void                   destroyBuffer( RHIBufferHandle ) override {}
         RHIBufferHandle        createReadbackBuffer( uint32, uint32 ) override { return 0; }
         [[nodiscard]] bool     readReadbackBuffer( RHIBufferHandle, uint32, void* ) override { return false; }
         RHITextureHandle       createTexture2D( const RHITextureDesc& ) override { return 0; }
-        void                   destroyTexture( RHITextureHandle ) override {}
         RHIFormat              getTextureFormat( RHITextureHandle ) const override { return RHIFormat::Unknown; }
         RHIDescriptorIndex     registerBindlessTexture( RHITextureHandle ) override { return kInvalidDescriptorIndex; }
         bool                   rebindBindlessTexture( RHIDescriptorIndex, RHITextureHandle ) override { return false; }
@@ -100,6 +96,12 @@ namespace
         RHIDescriptorIndex     registerBindlessBufferUAV( RHIBufferHandle ) override { return kInvalidDescriptorIndex; }
         RHIDescriptorIndex     registerBindlessTextureUAV( RHITextureHandle ) override { return kInvalidDescriptorIndex; }
         void                   unregisterBindlessUAV( RHIDescriptorIndex ) override {}
+
+    protected:
+        [[nodiscard]] bool destroyBufferNative( RHIBufferHandle ) override { return true; }
+        [[nodiscard]] bool destroyTextureNative( RHITextureHandle ) override { return true; }
+        [[nodiscard]] bool destroyPipelineStateNative( RHIPipelineStateHandle ) override { return true; }
+        [[nodiscard]] bool destroyRenderPassNative( RHIRenderPassHandle ) override { return true; }
     };
 } // namespace
 

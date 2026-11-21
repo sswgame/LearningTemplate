@@ -104,7 +104,7 @@ namespace sw
             SW_LOG_ERROR_ID( "AsyncBufferReadback.FailedCreateReadbackBuffer", "Failed to create readback buffer %# (%# x %# bytes)", slot, elementSize, elementCount );
             for ( uint32 made = 0; made < slot; ++made )
             {
-                pDevice->getResourceFactory()->destroyBuffer( arrBuffer[made] );
+                pDevice->releaseHandle( arrBuffer[made] );
             }
             return false;
         }
@@ -134,7 +134,7 @@ namespace sw
         for ( const RHIBufferHandle buffer : arrBuffer )
         {
             if ( buffer != 0 && pDevice != nullptr )
-                pDevice->getResourceFactory()->destroyBuffer( buffer ); // 백엔드가 GPU 가 쓰는 동안은 지우지 않는다(지연 해제)
+                pDevice->releaseHandle( buffer ); // 백엔드가 GPU 가 쓰는 동안은 지우지 않는다(지연 해제)
         }
         _pState.reset();
         _elementSize  = 0;

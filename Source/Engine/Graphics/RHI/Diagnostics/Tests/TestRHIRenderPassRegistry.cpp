@@ -18,9 +18,10 @@ SW_TEST_CASE( RHIRenderPassRegistryTest, HandlesAreSequentialAndRetiringAnUnknow
     const sw::RHIRenderPassDesc desc{};
     SW_EXPECT_EQUAL( static_cast<sw::RHIRenderPassHandle>( 1 ), tracker.add( desc ) );
     SW_EXPECT_EQUAL( static_cast<sw::RHIRenderPassHandle>( 2 ), tracker.add( desc ) );
-    tracker.retire( 0 );
-    tracker.retire( 99 ); // 등록한 적 없는 핸들은 무시한다
-    tracker.retire( 1 );
+    SW_EXPECT_FALSE( tracker.retire( sw::RHIRenderPassHandle{} ) );
+    SW_EXPECT_FALSE( tracker.retire( sw::RHIRenderPassHandle{ 99 } ) ); // 등록한 적 없는 핸들은 무시한다
+    SW_EXPECT_TRUE( tracker.retire( sw::RHIRenderPassHandle{ 1 } ) );
+    SW_EXPECT_FALSE( tracker.retire( sw::RHIRenderPassHandle{ 1 } ) );                 // 두 번째 해제는 산 핸들이 아니다 — 장치가 이 거짓으로 단언한다
     SW_EXPECT_EQUAL( static_cast<sw::RHIRenderPassHandle>( 3 ), tracker.add( desc ) ); // 놓은 핸들은 다시 나가지 않는다
     tracker.clear();
     SW_EXPECT_EQUAL( static_cast<sw::RHIRenderPassHandle>( 1 ), tracker.add( desc ) ); // 비우면 다시 1 부터다(장치 종료 뒤 재초기화)
@@ -59,7 +60,7 @@ SW_TEST_CASE( RHIRenderPassRegistryTest, ConcurrentAddsNeverShareAHandle )
     bool bSequential = true;
     for ( size_t index = 0; index < listHandle.size(); ++index )
     {
-        bSequential = bSequential && listHandle[index] == index + 1;
+        bSequential = bSequential && listHandle[index].getPacked() == index + 1;
     }
     SW_EXPECT_TRUE( bSequential ); // 1 부터 빠짐없이, 겹침 없이 나갔다
 }

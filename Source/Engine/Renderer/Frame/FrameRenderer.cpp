@@ -1463,7 +1463,7 @@ namespace sw
             Memory::copy( view._listInstanceSlot.data() + pOrder->_tailBase, _listScratchTailSlot.data(), tailCount * sizeof( uint32 ) );
             // 지난 프레임 기록이 이 버퍼를 읽었을 수 있다 — 반환은 디바이스가 미룬다(releaseHandle).
             if ( view._instanceSlotStream != 0 )
-                _pDevice->releaseHandle( RHIHandleKind::Buffer, view._instanceSlotStream );
+                _pDevice->releaseHandle( view._instanceSlotStream );
             view._instanceSlotStream = _pDevice->getResourceFactory()->createVertexBuffer( view._listInstanceSlot.data(), instanceCount * static_cast<uint32>( sizeof( uint32 ) ) );
             if ( view._instanceSlotStream == 0 )
             {
@@ -1478,7 +1478,7 @@ namespace sw
     {
         view._transparentRank.release( _pDevice );
         if ( view._instanceSlotStream != 0 && _pDevice != nullptr )
-            _pDevice->releaseHandle( RHIHandleKind::Buffer, view._instanceSlotStream );
+            _pDevice->releaseHandle( view._instanceSlotStream );
         view._instanceSlotStream = 0;
         view._listInstanceSlot.clear();
         view._listTransparentBatchOrder.clear();

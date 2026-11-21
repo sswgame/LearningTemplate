@@ -83,11 +83,11 @@ namespace sw
         }
         // 옛 구간의 디스크립터 → 전용 버퍼 → 닫힌 페이지 차례로 잠금 밖에서 돌려준다(구간이 바뀌어 디스크립터도 새로 난다).
         if ( oldDescriptor != kInvalidDescriptorIndex )
-            device.releaseHandle( RHIHandleKind::BindlessResource, oldDescriptor );
+            device.releaseBindlessIndex( RHIBindlessIndexSpace::Buffer, oldDescriptor );
         if ( oldRange._buffer != 0 && oldSlot.isValid() == false )
-            device.releaseHandle( RHIHandleKind::Buffer, oldRange._buffer );
+            device.releaseHandle( oldRange._buffer );
         if ( closedPage != 0 )
-            device.releaseHandle( RHIHandleKind::Buffer, closedPage );
+            device.releaseHandle( closedPage );
 
         const bool bOpened = slot.isValid() ? openSlice( device, slot, bNewPage, inoutSlice ) : openDedicated( device, sizeBytes, inoutSlice );
         if ( bOpened )
@@ -115,11 +115,11 @@ namespace sw
     void ConstantBufferPagePool::releaseSlice( IRHIDevice& device, const ConstantBufferPoolSlice& slice )
     {
         if ( slice._descriptorIndex != kInvalidDescriptorIndex )
-            device.releaseHandle( RHIHandleKind::BindlessResource, slice._descriptorIndex );
+            device.releaseBindlessIndex( RHIBindlessIndexSpace::Buffer, slice._descriptorIndex );
         if ( slice._slot.isValid() )
             releaseSlot( device, slice._slot );
         else if ( slice.isValid() )
-            device.releaseHandle( RHIHandleKind::Buffer, slice._range._buffer );
+            device.releaseHandle( slice._range._buffer );
     }
 
     void ConstantBufferPagePool::releaseAllPages( IRHIDevice& device )
@@ -133,7 +133,7 @@ namespace sw
         for ( const RHIBufferHandle page : listPage )
         {
             if ( page != 0 )
-                device.releaseHandle( RHIHandleKind::Buffer, page );
+                device.releaseHandle( page );
         }
     }
 
@@ -200,7 +200,7 @@ namespace sw
         if ( index == kInvalidDescriptorIndex )
         {
             SW_LOG_ERROR_ID( "ConstantBufferPagePool.CouldNotRegisterDedicated", "Could not register a dedicated constant buffer of %# bytes", byteSize );
-            device.releaseHandle( RHIHandleKind::Buffer, buffer );
+            device.releaseHandle( buffer );
             return false;
         }
         outSlice._range           = range;
@@ -216,7 +216,7 @@ namespace sw
             closedPage = releaseSlotLocked( slot );
         }
         if ( closedPage != 0 )
-            device.releaseHandle( RHIHandleKind::Buffer, closedPage );
+            device.releaseHandle( closedPage );
     }
 
     RHIBufferHandle ConstantBufferPagePool::releaseSlotLocked( const ConstantBufferSlot& slot )

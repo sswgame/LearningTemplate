@@ -16,7 +16,7 @@ namespace sw
             SW_LOG_ERROR_ID( "FrameBufferTable.SizeMissing", "Frame resource '%#' slot %# was registered without an element size or capacity - the registration is ignored", name.c_str(), slot );
             return;
         }
-        Entry entry{ name, slot, buffer._buffer, RenderGraphViewableKind::Buffer, initialAccess };
+        Entry entry{ name, slot, buffer._buffer.getPacked(), RenderGraphViewableKind::Buffer, initialAccess };
         entry._elementSize  = buffer._elementSize;
         entry._elementCount = buffer._capacityElements;
         registerEntry( entry );
@@ -24,7 +24,7 @@ namespace sw
 
     void FrameBufferTable::registerTexture( hashed_string name, uint32 slot, RHITextureHandle texture, RenderGraphAccess initialAccess )
     {
-        registerEntry( Entry{ name, slot, texture, RenderGraphViewableKind::Texture, initialAccess } );
+        registerEntry( Entry{ name, slot, texture.getPacked(), RenderGraphViewableKind::Texture, initialAccess } );
     }
 
     void FrameBufferTable::registerEntry( const Entry& entry )

@@ -106,7 +106,7 @@ namespace sw::editor
     {
         AssetManager* const    pAssets  = editor::findSubsystem<AssetManager>();
         const Texture2D* const pTexture = pAssets != nullptr ? pAssets->getAssetCache<TextureCache>().find( CanvasFrameData::kDevOverlayTargetPath ) : nullptr;
-        return pTexture != nullptr && pTexture->isRHIValid() ? pTexture->getHandle() : 0;
+        return pTexture != nullptr && pTexture->isRHIValid() ? pTexture->getHandle().getPacked() : 0;
     }
 
     bool GameViewModel::readGameCursorShape( CursorShape& outShape )

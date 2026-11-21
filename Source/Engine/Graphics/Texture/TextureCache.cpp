@@ -88,9 +88,9 @@ namespace sw
             for ( const Item& item : listRelease )
             {
                 if ( item._resource._srv != kInvalidDescriptorIndex )
-                    pDevice->releaseHandle( RHIHandleKind::BindlessTexture, item._resource._srv );
+                    pDevice->releaseBindlessIndex( RHIBindlessIndexSpace::Texture, item._resource._srv );
                 if ( item._resource._handle != 0 )
-                    pDevice->releaseHandle( RHIHandleKind::Texture, item._resource._handle );
+                    pDevice->releaseHandle( item._resource._handle );
             }
         }
 
@@ -349,7 +349,7 @@ namespace sw
             if ( bChecker && pResource->rebindBindlessTexture( index, pMissing->getHandle() ) )
                 return true;
             SW_LOG_ERROR_ID( "TextureCache.MissingCheckerRebindFailed", "TextureCache: the bindless index %# of '%#' could not point at the missing-texture checker - releasing it", index, key.c_str() );
-            device.releaseHandle( RHIHandleKind::BindlessTexture, index );
+            device.releaseBindlessIndex( RHIBindlessIndexSpace::Texture, index );
             return false;
         }
 
@@ -1573,7 +1573,7 @@ namespace sw
         const bool               bReleaseFailed   = failedSRV != kInvalidDescriptorIndex && pFailedSRVDevice != nullptr &&
                                     pFailedSRVDevice == pCache->_pBoundDevice.load( std::memory_order_acquire );
         if ( bReleaseFailed )
-            pFailedSRVDevice->releaseHandle( RHIHandleKind::BindlessTexture, failedSRV );
+            pFailedSRVDevice->releaseBindlessIndex( RHIBindlessIndexSpace::Texture, failedSRV );
         if ( _bHoldsReference )
             pCache->releaseReference( getPath(), _pDevice.load( std::memory_order_acquire ) );
     }

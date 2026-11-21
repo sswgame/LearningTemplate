@@ -284,7 +284,7 @@ namespace sw
     {
         if ( _pResourceTable == nullptr )
             return 0;
-        return access._viewable == RenderGraphViewableKind::Buffer ? _pResourceTable->findBuffer( access._resource, slot ) : _pResourceTable->findTexture( access._resource, slot );
+        return access._viewable == RenderGraphViewableKind::Buffer ? _pResourceTable->findBuffer( access._resource, slot ).getPacked() : _pResourceTable->findTexture( access._resource, slot ).getPacked();
     }
 
     uint64 RenderGraphPassContext::findDeclaredHandle( const RenderGraphResourceAccess& access, uint32 slot ) const
@@ -305,7 +305,7 @@ namespace sw
 
     void RenderGraphPassContext::uavBarrier( RenderGraphBufferUAV handle, uint32 slot ) const
     {
-        const RHIBufferHandle buffer = findDeclaredHandle( handle, slot );
+        const RHIBufferHandle buffer{ findDeclaredHandle( handle, slot ) };
         if ( buffer != 0 && _pCmdList != nullptr )
             _pCmdList->uavBarrier( buffer );
     }
@@ -317,14 +317,14 @@ namespace sw
 
     void RenderGraphPassContext::uavBarrier( RenderGraphTextureUAV handle, uint32 slot ) const
     {
-        const RHITextureHandle texture = findDeclaredHandle( handle, slot );
+        const RHITextureHandle texture{ findDeclaredHandle( handle, slot ) };
         if ( texture != 0 && _pCmdList != nullptr )
             _pCmdList->uavBarrierTexture( texture );
     }
 
     void RenderGraphPassContext::transitionTexture( const RenderGraphResourceAccess& access, RHITextureState state, uint32 slot ) const
     {
-        const RHITextureHandle texture = findDeclaredHandle( access, slot );
+        const RHITextureHandle texture{ findDeclaredHandle( access, slot ) };
         if ( texture == 0 || _pCmdList == nullptr )
             return;
         const RHITextureTransition transition{ texture, state };
@@ -333,7 +333,7 @@ namespace sw
 
     void RenderGraphPassContext::transitionBuffer( const RenderGraphResourceAccess& access, RHIBufferState state, uint32 slot ) const
     {
-        const RHIBufferHandle buffer = findDeclaredHandle( access, slot );
+        const RHIBufferHandle buffer{ findDeclaredHandle( access, slot ) };
         if ( buffer != 0 && _pCmdList != nullptr )
             _pCmdList->transitionBuffer( buffer, state );
     }

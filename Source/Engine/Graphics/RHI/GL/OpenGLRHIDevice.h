@@ -341,12 +341,12 @@ namespace sw
             /** @brief 키의 해시를 반환합니다. */
             size_t operator()( const CompositeFboKey& key ) const
             {
-                size_t hash = static_cast<size_t>( key._depth ) * 1315423911u;
+                size_t hash = static_cast<size_t>( key._depth.getPacked() ) * 1315423911u;
                 hash ^= static_cast<size_t>( key._colorCount ) + HashUtil::kGoldenRatio32;
                 hash ^= static_cast<size_t>( key._depthSlice ) * 2654435761u;
                 for ( uint32 colorIndex = 0; colorIndex < key._colorCount; ++colorIndex )
                 {
-                    hash ^= static_cast<size_t>( key._arrColor[colorIndex] ) + HashUtil::kGoldenRatio32 + ( hash << 6 ) + ( hash >> 2 );
+                    hash ^= static_cast<size_t>( key._arrColor[colorIndex].getPacked() ) + HashUtil::kGoldenRatio32 + ( hash << 6 ) + ( hash >> 2 );
                     hash ^= static_cast<size_t>( key._arrColorSlice[colorIndex] ) * 2246822519u;
                 }
                 return hash;
@@ -536,7 +536,7 @@ namespace sw
             uint32 _glName{ 0 };
             uint32 _sizeBytes{ 0 };
         };
-        RHIHandleTable<OpenGLBufferRecord> _gpuBuffers;
+        RHIHandleTable<RHIBufferHandle, OpenGLBufferRecord> _gpuBuffers;
         /// @brief GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT 입니다. 초기화가 한 번 묻고, 상수 버퍼 구간(256 B 배수)을 담지 못하는 값이면 백엔드를 세우지 않는다(감사 R-4).
         uint32 _uniformBufferOffsetAlignment{ 0 };
         /// @brief 기록 상태입니다. GL 은 실제 상태가 하나라 리스트도 이것을 함께 씁니다(OpenGLRecordingState 참고).
@@ -548,7 +548,7 @@ namespace sw
         RHIBindlessRegistry<BindlessResourceRecord> _bufferRegistry;
         RHIBindlessRegistry<BindlessResourceRecord> _uavRegistry;
 
-        RHIHandleTable<OpenGLTextureRecord>                         _gpuTextures;
+        RHIHandleTable<RHITextureHandle, OpenGLTextureRecord>       _gpuTextures;
         unordered_map<CompositeFboKey, uint32, CompositeFboKeyHash> _mapCompositeFbo;
 
         RHIBindlessRegistry<BindlessTextureRecord> _textureRegistry;
@@ -564,8 +564,8 @@ namespace sw
 
         uint32 _arrComputeRootConstantShadow[shaderslot::kRootConstantDwords];
 
-        RHIHandleTable<OpenGLPipelineStateRecord> _pipelineStates;
-        RHIRenderPassRegistry                     _renderPassRegistry; ///< 렌더 패스 핸들 등록부. 자기 뮤텍스로 직렬화해 어느 스레드에서나 부른다.
+        RHIHandleTable<RHIPipelineStateHandle, OpenGLPipelineStateRecord> _pipelineStates;
+        RHIRenderPassRegistry                                             _renderPassRegistry; ///< 렌더 패스 핸들 등록부. 자기 뮤텍스로 직렬화해 어느 스레드에서나 부른다.
 
         RHIReleaseQueue _releaseQueue;
         /// @brief 프레임마다 끝에 내는 펜스 링입니다(`retireFrameOnGPU`). `GLsync` 는 불투명 포인터라 `void*` 로 둔다. 칸은 `RHIFrameFenceRing::getSlot` 이고, 비면 nullptr 입니다.

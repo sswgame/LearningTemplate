@@ -398,7 +398,7 @@ namespace sw
         const RHIBufferHandle handle = _gpuBuffers.insert( std::move( record ) );
         getMemoryTracker().recordAllocation( RHIMemoryKey::makeBuffer( handle ), RHIMemoryKind::Buffer, bytes );
     #if defined( SW_DO_CHECKS )
-        nameResourceForDiagnostics( pNamed, L"Buffer", handle );
+        nameResourceForDiagnostics( pNamed, L"Buffer", handle.getPacked() );
     #endif
         return handle;
     }
@@ -480,7 +480,7 @@ namespace sw
         const RHITextureHandle handle = _gpuTextures.insert( std::move( record ) );
         getMemoryTracker().recordTexture( handle, desc, bytes );
     #if defined( SW_DO_CHECKS )
-        nameResourceForDiagnostics( pNamed, L"Texture", handle );
+        nameResourceForDiagnostics( pNamed, L"Texture", handle.getPacked() );
     #endif
         return handle;
     }

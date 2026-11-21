@@ -103,20 +103,20 @@ namespace sw
         // ------------------------------------------------------------------------------
         // 2) 엔진 패스 PSO 와 출력 포맷별 PSO. Present 와 Canvas 처럼 주 출력에 그리는 패스는 대상 포맷마다 PSO 가 다르다
         // ------------------------------------------------------------------------------
-        /** @brief 패스 타입의 엔진 PSO 를 둡니다(있으면 덮어씁니다). */
-        void setEnginePSO( RenderPassKind passType, RHIPipelineStateHandle pso );
+        /** @brief 패스 타입의 엔진 PSO 를 둡니다. 다른 핸들을 덮어쓰면 옛 핸들은 @p pDevice 로 해제한다(`IRHIDevice::releaseHandle` — 쓰던 프레임 뒤로 미룬다). */
+        void setEnginePSO( IRHIDevice* pDevice, RenderPassKind passType, RHIPipelineStateHandle pso );
         /** @brief 패스 타입의 엔진 PSO 입니다. 없으면 0 입니다. */
         RHIPipelineStateHandle findEnginePSO( RenderPassKind passType ) const;
         /** @brief 엔진 PSO 모두입니다. 머티리얼 변형을 만들 때 씬 메시 패스를 고르려고 훑습니다(기록 전). */
         const unordered_map<RenderPassKind, RHIPipelineStateHandle>& getEnginePSOs() const { return _mapEnginePSO; }
 
-        /** @brief 주 출력에 그리는 패스(Present, Canvas)의 대상 포맷별 PSO 를 둡니다. 실패(0)도 기록합니다. 부르는 쪽이 폴백으로 갑니다. */
-        void setOutputPSO( RenderPassKind passType, RHIFormat targetFormat, RHIPipelineStateHandle pso );
+        /** @brief 주 출력에 그리는 패스(Present, Canvas)의 대상 포맷별 PSO 를 둡니다. 실패(0)도 기록합니다. 부르는 쪽이 폴백으로 갑니다. 덮어쓴 옛 핸들은 `setEnginePSO` 와 같이 해제한다. */
+        void setOutputPSO( IRHIDevice* pDevice, RenderPassKind passType, RHIFormat targetFormat, RHIPipelineStateHandle pso );
         /** @brief 그 패스와 대상 포맷의 PSO 가 **등록돼 있으면** true 와 함께 반환합니다(값이 0 이어도 등록된 것입니다). */
         [[nodiscard]] bool findOutputPSO( RenderPassKind passType, RHIFormat targetFormat, RHIPipelineStateHandle& outPipelineState ) const;
 
         /** @brief 모듈 확장 패스 프로그램(`ExtensionProgramDesc`) 하나의 PSO 를 프로그램 키(셰이더 · 상태 · 타깃 포맷을 이은 글)로 둡니다. 실패(0)도 기록합니다(만들기를 되풀이하지 않는다). */
-        void setExtensionProgramPSO( const hashed_string& programKey, RHIPipelineStateHandle pso );
+        void setExtensionProgramPSO( IRHIDevice* pDevice, const hashed_string& programKey, RHIPipelineStateHandle pso );
         /** @brief 모듈 프로그램의 PSO 가 **등록돼 있으면** true 와 함께 반환합니다(값이 0 이어도 등록된 것입니다). */
         [[nodiscard]] bool findExtensionProgramPSO( const hashed_string& programKey, RHIPipelineStateHandle& outPipelineState ) const;
 
@@ -186,6 +186,11 @@ namespace sw
         uint32 releasePSOsUsingShader( IRHIDevice* pDevice, string_view shaderPath );
 
     private:
+        /**
+         * @brief 덮어쓴 엔진 · 출력 · 모듈 PSO 를 놓습니다 — 옛 핸들이 0 이 아니고 새 핸들과 다르면 장치로 해제하고, 그 핸들의 레이아웃 · desc 와 그 핸들을 그대로 가리키던 머티리얼 항목을 잊는다.
+         * @details 예전에는 덮어쓰기가 옛 핸들을 잊기만 해 PSO 가 샜다(해제 경로는 `releasePSOsUsingShader` · 장치 종료뿐이었다).
+         */
+        void releaseReplacedPSO( IRHIDevice* pDevice, RHIPipelineStateHandle previous, RHIPipelineStateHandle next );
         /** @brief (패스 << 32 | 대상 포맷) 키입니다. */
         static uint64 makeOutputPSOKey( RenderPassKind passType, RHIFormat targetFormat )
         {

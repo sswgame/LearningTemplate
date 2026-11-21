@@ -140,8 +140,8 @@ namespace sw
         , _constantBufferMirror{}
         , _bufferRegistry{ kBindlessBufferCapacity }
         , _uavRegistry{ kBindlessBufferCapacity }
-        , _arrBufferReadSlot{ makeFixedCountArray<atomic<uint64>, kBindlessBufferCapacity>() }
-        , _arrUAVBufferReadSlot{ makeFixedCountArray<atomic<uint64>, kBindlessBufferCapacity>() }
+        , _arrBufferReadSlot{ makeFixedCountArray<atomic<RHIBufferHandle>, kBindlessBufferCapacity>() }
+        , _arrUAVBufferReadSlot{ makeFixedCountArray<atomic<RHIBufferHandle>, kBindlessBufferCapacity>() }
         , _arrBufferReadSlice{ makeFixedCountArray<atomic<uint64>, kBindlessBufferCapacity>() }
         , _gpuTextures{}
         , _releaseQueue{}
@@ -2977,8 +2977,7 @@ namespace sw
         const bool                bMapped = pRecord != nullptr && isVkSuccess( vkMapMemory( _device, pRecord->_memory, 0, VK_WHOLE_SIZE, 0, &pMapped ), "vkMapMemory (upload staging)" ) && pMapped != nullptr;
         if ( bMapped == false )
         {
-            if ( handle != 0 && getResourceFactory() != nullptr )
-                getResourceFactory()->destroyBuffer( handle );
+            releaseHandle( handle ); // 0 이면 무시한다
             return block;
         }
         block._buffer     = handle;

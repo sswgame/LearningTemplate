@@ -348,17 +348,18 @@ namespace sw
         return Texture2DUploadStep::Submitted;
     }
 
-    Texture2DUploadStep Texture2D::submitCreatedTexture( IRHIResourceFactory& factory, RHITextureHandle handle, const RHITextureUploadDesc& upload, bool bBlocking, string_view label,
+    Texture2DUploadStep Texture2D::submitCreatedTexture( IRHIDevice& device, RHITextureHandle handle, const RHITextureUploadDesc& upload, bool bBlocking, string_view label,
                                                          RHITransferTicket& outTicket )
     {
-        RHITransferSubmit submit{};
+        IRHIResourceFactory& factory = *device.getResourceFactory();
+        RHITransferSubmit    submit{};
         if ( bBlocking )
         {
             const bool bCompleted = RHITransferUtil::submitWhileBusy( [&]()
             { return factory.submitTextureUpload( handle, upload ); }, submit );
             if ( bCompleted == false )
             {
-                factory.destroyTexture( handle );
+                device.releaseHandle( handle );
                 return Texture2DUploadStep::Failed;
             }
         }
@@ -369,13 +370,13 @@ namespace sw
         if ( submit._result == RHISubmitResult::Busy )
         {
             // 다음 프레임에 텍스처부터 다시 만든다 — 만든 것을 쥔 채 기다리면 `Busy` 인 동안 GPU 메모리만 잡는다.
-            factory.destroyTexture( handle );
+            device.releaseHandle( handle );
             return Texture2DUploadStep::Busy;
         }
         if ( submit.isAccepted() == false )
         {
             SW_LOG_ERROR_ID( "Texture.UploadRejected", "Texture2D: submitTextureUpload was rejected for '%#'", label );
-            factory.destroyTexture( handle );
+            device.releaseHandle( handle );
             return Texture2DUploadStep::Failed;
         }
         outTicket = submit._ticket;
@@ -505,14 +506,14 @@ namespace sw
         {
             // 아래쪽 밉 그대로 남는다. 새 텍스처는 쓰지 않으므로 지운다(전송 중 파괴는 백엔드가 미룬다 — 계약 6).
             SW_LOG_ERROR_ID( "Texture.UploadIncomplete", "Texture2D: the top-mip upload of '%#' did not complete", _path.c_str() );
-            pResource->destroyTexture( upgrade._handle );
+            pDevice->releaseHandle( upgrade._handle );
             return Texture2DUploadStatus::Failed;
         }
         // 같은 번호가 새 텍스처를 가리키게 한다 — 그 번호를 쥔 머티리얼은 다시 묶지 않는다(R-6, 언리얼 `RHIUpdateTextureReference`). 못 하면 아래쪽 밉 그대로 둔다.
         if ( pResource->rebindBindlessTexture( getSRV(), upgrade._handle ) == false )
         {
             SW_LOG_ERROR_ID( "Texture.BindlessRebindFailed", "Texture2D: rebindBindlessTexture failed for '%#' - it keeps its lower mips", _path.c_str() );
-            pResource->destroyTexture( upgrade._handle );
+            pDevice->releaseHandle( upgrade._handle );
             return Texture2DUploadStatus::Failed;
         }
         outRetired._handle = _handle.exchange( upgrade._handle, std::memory_order_acq_rel );
@@ -552,7 +553,7 @@ namespace sw
         upload._pData                  = image.getPixels() + drop._skippedBytes;
         upload._sizeBytes              = static_cast<uint32>( image._bytes.size() - drop._skippedBytes );
         upload._mipLevels              = outDesc._mipLevels;
-        const Texture2DUploadStep step = submitCreatedTexture( *pResource, outHandle, upload, bBlocking, relativePath, outTicket );
+        const Texture2DUploadStep step = submitCreatedTexture( device, outHandle, upload, bBlocking, relativePath, outTicket );
         if ( step != Texture2DUploadStep::Submitted )
             outHandle = 0; // `submitCreatedTexture` 가 지웠다
         return step;
@@ -596,7 +597,7 @@ namespace sw
         upload._sizeBytes = static_cast<uint32>( listZero.size() );
         upload._mipLevels = 1;
         RHITransferTicket         ticket{};
-        const Texture2DUploadStep step = submitCreatedTexture( *pResource, handle, upload, bBlocking, name, ticket );
+        const Texture2DUploadStep step = submitCreatedTexture( *pDevice, handle, upload, bBlocking, name, ticket );
         if ( step != Texture2DUploadStep::Submitted )
             return step; // `submitCreatedTexture` 가 텍스처를 지웠다
 
@@ -697,7 +698,7 @@ namespace sw
         upload._sizeBytes = static_cast<uint32>( _cpuBytes.size() );
         upload._mipLevels = 1;
         RHITransferTicket         ticket{};
-        const Texture2DUploadStep step = submitCreatedTexture( *pResource, handle, upload, bBlocking, _path, ticket );
+        const Texture2DUploadStep step = submitCreatedTexture( *pDevice, handle, upload, bBlocking, _path, ticket );
         if ( step != Texture2DUploadStep::Submitted )
             return step;
         _handle.store( handle, std::memory_order_release );
@@ -744,7 +745,7 @@ namespace sw
     {
         // 위쪽 밉을 올리는 중이던 새 텍스처는 버린다(핫 리로드가 밉 전부를 다시 읽는다) — `releaseRHI` 와 같다.
         if ( _upgrade._handle != 0 && pDevice != nullptr )
-            pDevice->releaseHandle( RHIHandleKind::Texture, _upgrade._handle );
+            pDevice->releaseHandle( _upgrade._handle );
         _upgrade           = PendingUpgrade{};
         outRetired._handle = _handle.exchange( 0, std::memory_order_acq_rel );
         outRetired._srv    = kInvalidDescriptorIndex;
@@ -784,7 +785,7 @@ namespace sw
         {
             const RHIDescriptorIndex kept = takeKeptSRV();
             if ( kept != kInvalidDescriptorIndex )
-                pDevice->releaseHandle( RHIHandleKind::BindlessTexture, kept ); // 올리다 실패했거나 아직 올라오지 않은 텍스처가 지키던 번호(로드 중 텍스처 · 누락 체커를 가리킨다)
+                pDevice->releaseBindlessIndex( RHIBindlessIndexSpace::Texture, kept ); // 올리다 실패했거나 아직 올라오지 않은 텍스처가 지키던 번호(로드 중 텍스처 · 누락 체커를 가리킨다)
         }
         // 남의 디바이스가 죽는 통보라면 내 것이 아니다.
         const bool bForeignDeviceWarned = pDevice != nullptr && _pDevice != nullptr && _pDevice != pDevice;
@@ -795,12 +796,12 @@ namespace sw
         {
             // 마지막 소유가 게임 스레드에서 놓일 수 있다(머티리얼과 함께) — 렌더 스레드가 병렬 기록 중이면 핸들 반환을 그 프레임 뒤로 미룬다.
             if ( getSRV() != kInvalidDescriptorIndex )
-                pDevice->releaseHandle( RHIHandleKind::BindlessTexture, getSRV() );
+                pDevice->releaseBindlessIndex( RHIBindlessIndexSpace::Texture, getSRV() );
             if ( getHandle() != 0 )
-                pDevice->releaseHandle( RHIHandleKind::Texture, getHandle() );
+                pDevice->releaseHandle( getHandle() );
             // 위쪽 밉을 올리는 중이던 새 텍스처도 내린다(등록 전이라 SRV 는 없다).
             if ( _upgrade._handle != 0 )
-                pDevice->releaseHandle( RHIHandleKind::Texture, _upgrade._handle );
+                pDevice->releaseHandle( _upgrade._handle );
         }
         _handle = 0;
         _srv    = kInvalidDescriptorIndex;

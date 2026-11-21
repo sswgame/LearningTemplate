@@ -1090,8 +1090,8 @@ namespace sw
         VkDescriptorPool _descriptorPool;
         VkSampler        _arrStaticSampler[shaderslot::kStaticSamplerCount]; ///< binding_slots.hlsli 4 의 정적 샘플러 세트(set 1 immutable)
 
-        RHIHandleTable<VulkanBufferRecord> _gpuBuffers;
-        RHIConstantBufferMirror            _constantBufferMirror; ///< 한 번 쓴 상수 버퍼를 나머지 링 슬롯에도 채운다.
+        RHIHandleTable<RHIBufferHandle, VulkanBufferRecord> _gpuBuffers;
+        RHIConstantBufferMirror                             _constantBufferMirror; ///< 한 번 쓴 상수 버퍼를 나머지 링 슬롯에도 채운다.
         /// @brief 프레임 스트림 컨텍스트(백버퍼 패스, Present, 프레임 세그먼트)가 쓰는 기록 상태입니다. 리스트는
         /// 각자 자기 것을 가지므로, 여기 있는 것은 "디바이스가 직접 여는 버퍼" 전용입니다.
         VulkanRecordingState _recordingState;
@@ -1120,14 +1120,14 @@ namespace sw
          *          쓰기(등록 · 해제)는 배타 락 아래에서 하고 읽기는 락 없이 acquire 로 본다. 해제와 겹친 읽기가 옛 핸들을 받아도 핸들 표의 세대가 지운 버퍼를 가리고,
          *          버퍼 메모리는 GPU 펜스 뒤에 놓인다. 표가 늘지 않으므로 게임 스레드의 등록이 기록과 겹쳐도 읽는 쪽 참조가 매달리지 않는다.
          */
-        FixedCountArray<atomic<uint64>, kBindlessBufferCapacity> _arrBufferReadSlot;
-        FixedCountArray<atomic<uint64>, kBindlessBufferCapacity> _arrUAVBufferReadSlot;
-        FixedCountArray<atomic<uint64>, kBindlessBufferCapacity> _arrBufferReadSlice; ///< SRV/CB 번호의 페이지 구간(오프셋 << 32 | 크기, 0 이면 버퍼 전체 — 감사 R-4). 버퍼 칸보다 먼저 쓴다
+        FixedCountArray<atomic<RHIBufferHandle>, kBindlessBufferCapacity> _arrBufferReadSlot;
+        FixedCountArray<atomic<RHIBufferHandle>, kBindlessBufferCapacity> _arrUAVBufferReadSlot;
+        FixedCountArray<atomic<uint64>, kBindlessBufferCapacity>          _arrBufferReadSlice; ///< SRV/CB 번호의 페이지 구간(오프셋 << 32 | 크기, 0 이면 버퍼 전체 — 감사 R-4). 버퍼 칸보다 먼저 쓴다
 
-        RHIHandleTable<VulkanTextureRecord> _gpuTextures;
+        RHIHandleTable<RHITextureHandle, VulkanTextureRecord> _gpuTextures;
         /// @brief 트랜지언트 힙 핸들 표입니다. 생성 · 파괴는 셋업 스레드다(DX12 와 같다). 종료가 텍스처 표보다 먼저 비워 마지막 참조가 장치가 살아 있을 때 놓이게 한다.
         unordered_map<RHITransientHeapHandle, shared_ptr<VulkanHeapMemory>> _mapTransientHeap;
-        RHITransientHeapHandle                                              _nextTransientHeap{ 1 };
+        uint64                                                              _nextTransientHeap{ 1 }; ///< 다음에 낼 힙 핸들의 packed 값
         RHIReleaseQueue                                                     _releaseQueue;
         /// @brief PSO 호환 렌더 패스, 합성 프레임버퍼, desc 렌더 패스 캐시입니다. Vulkan 만 가지고 있습니다(스왑체인 RP 는 위 `_renderPass`).
         VulkanRHIRenderPassCache _renderPassCache;
@@ -1152,11 +1152,11 @@ namespace sw
         VkBuffer                                                                  _dummyUBO; ///< 셰이더가 정적으로 참조하지만 바인딩되지 않은 b# 슬롯이 가리키는 0으로 채운 256바이트
         VkDeviceMemory                                                            _dummyUBOMemory;
 
-        RHIHandleTable<VulkanPipelineStateRecord> _pipelineStates;
-        VkPipelineCache                           _pipelineCache;
-        int64                                     _pipelineCacheSaveIntervalNanoseconds{ 0 }; ///< 주기 저장 간격(`RHIDeviceDesc::_pipelineCacheSaveIntervalSeconds`)
-        int64                                     _pipelineCacheLastSaveNanoseconds{ 0 };     ///< 지난 저장(또는 읽기) 시각
-        uint64                                    _pipelineCacheLastSavedBytes{ 0 };          ///< 지난 저장(또는 읽기) 때의 캐시 크기
+        RHIHandleTable<RHIPipelineStateHandle, VulkanPipelineStateRecord> _pipelineStates;
+        VkPipelineCache                                                   _pipelineCache;
+        int64                                                             _pipelineCacheSaveIntervalNanoseconds{ 0 }; ///< 주기 저장 간격(`RHIDeviceDesc::_pipelineCacheSaveIntervalSeconds`)
+        int64                                                             _pipelineCacheLastSaveNanoseconds{ 0 };     ///< 지난 저장(또는 읽기) 시각
+        uint64                                                            _pipelineCacheLastSavedBytes{ 0 };          ///< 지난 저장(또는 읽기) 때의 캐시 크기
 
         /// @brief 살아 있는 장치 메모리 할당 수입니다(`allocateDeviceMemory` · `freeDeviceMemory`). 한도는 물리 장치를 고른 뒤 정한다.
         VulkanMemoryAccount _memoryAccount;

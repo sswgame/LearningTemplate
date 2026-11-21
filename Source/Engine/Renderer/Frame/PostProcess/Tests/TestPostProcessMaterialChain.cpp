@@ -28,10 +28,10 @@ SW_TEST_CASE( PostProcessMaterialChainTest, LaterDrawsAtTheSameLocationReadThePr
 {
     using Util                                                      = PostProcessMaterialChainTestUtil;
     const vector<FrameViewTarget::PostProcessMaterialPass> listDraw = {
-        Util::makeDraw( PostProcessBlendableLocation::BeforeTonemap, 11 ),
-        Util::makeDraw( PostProcessBlendableLocation::AfterTonemap, 12 ),
-        Util::makeDraw( PostProcessBlendableLocation::BeforeTonemap, 13 ),
-        Util::makeDraw( PostProcessBlendableLocation::BeforeTonemap, 14 ),
+        Util::makeDraw( PostProcessBlendableLocation::BeforeTonemap, RHIPipelineStateHandle{ 11 } ),
+        Util::makeDraw( PostProcessBlendableLocation::AfterTonemap, RHIPipelineStateHandle{ 12 } ),
+        Util::makeDraw( PostProcessBlendableLocation::BeforeTonemap, RHIPipelineStateHandle{ 13 } ),
+        Util::makeDraw( PostProcessBlendableLocation::BeforeTonemap, RHIPipelineStateHandle{ 14 } ),
     };
     SW_EXPECT_FALSE( FramePostProcessMaterials::isChainedDraw( listDraw, 0 ) );
     SW_EXPECT_FALSE( FramePostProcessMaterials::isChainedDraw( listDraw, 1 ) );
@@ -44,10 +44,10 @@ SW_TEST_CASE( PostProcessMaterialChainTest, SkippedDrawsAndReplacingTonemapDoNot
 {
     using Util                                                      = PostProcessMaterialChainTestUtil;
     const vector<FrameViewTarget::PostProcessMaterialPass> listDraw = {
-        Util::makeDraw( PostProcessBlendableLocation::AfterTonemap, 0 ),
-        Util::makeDraw( PostProcessBlendableLocation::AfterTonemap, 21 ),
-        Util::makeDraw( PostProcessBlendableLocation::ReplacingTonemap, 22 ),
-        Util::makeDraw( PostProcessBlendableLocation::ReplacingTonemap, 23 ),
+        Util::makeDraw( PostProcessBlendableLocation::AfterTonemap, RHIPipelineStateHandle{ 0 } ),
+        Util::makeDraw( PostProcessBlendableLocation::AfterTonemap, RHIPipelineStateHandle{ 21 } ),
+        Util::makeDraw( PostProcessBlendableLocation::ReplacingTonemap, RHIPipelineStateHandle{ 22 } ),
+        Util::makeDraw( PostProcessBlendableLocation::ReplacingTonemap, RHIPipelineStateHandle{ 23 } ),
     };
     SW_EXPECT_FALSE( FramePostProcessMaterials::isChainedDraw( listDraw, 1 ) );
     SW_EXPECT_FALSE( FramePostProcessMaterials::isChainedDraw( listDraw, 3 ) );

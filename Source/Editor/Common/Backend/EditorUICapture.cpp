@@ -343,7 +343,7 @@ namespace sw::editor
     {
         const bool bCanDestroy = _texture != 0 && pDevice != nullptr && pDevice->getResourceFactory() != nullptr;
         if ( bCanDestroy )
-            pDevice->getResourceFactory()->destroyTexture( _texture );
+            pDevice->releaseHandle( _texture );
         _texture       = 0;
         _textureWidth  = 0;
         _textureHeight = 0;
@@ -361,7 +361,7 @@ namespace sw::editor
         if ( pFactory == nullptr )
             return;
         if ( _texture != 0 )
-            pFactory->destroyTexture( _texture );
+            device.releaseHandle( _texture );
 
         // ImGui 렌더러 백엔드의 파이프라인은 백버퍼 포맷으로 만들어져 있다. 같은 포맷이어야 Vulkan 렌더 패스가 호환되고 DX12 PSO 의 RTV 포맷이 맞는다.
         RHITextureDesc desc{};

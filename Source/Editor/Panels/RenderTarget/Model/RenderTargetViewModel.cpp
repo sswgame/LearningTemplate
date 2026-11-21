@@ -313,8 +313,8 @@ namespace sw::editor
     {
         const RenderTargetInfo* pSelected = findByName( _listTarget, _selectedName );
         // 깊이 첨부는 등록하지 않는다. 색으로 샘플링할 수 없어 CPU 스냅샷(선형화한 회색)으로 본다.
-        const bool   bPreviewable = ( pSelected != nullptr ) && ( pSelected->_bDepth == SW_FALSE );
-        const uint64 texture      = bPreviewable ? pSelected->_texture : 0;
+        const bool             bPreviewable = ( pSelected != nullptr ) && ( pSelected->_bDepth == SW_FALSE );
+        const RHITextureHandle texture      = bPreviewable ? pSelected->_texture : RHITextureHandle{};
         if ( texture == _previewTexture && _pPreviewTextureID != nullptr )
             return;
 

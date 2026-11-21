@@ -32,7 +32,7 @@ namespace
     {
     public:
         vector<FactoryEvent> _listEvent;
-        RHIBufferHandle      _nextBuffer{ 100 };
+        uint64               _nextBuffer{ 100 }; ///< 다음에 낼 버퍼 핸들의 packed 값
         RHIDescriptorIndex   _nextIndex{ 1 };
         bool                 _bFailPage{ false };     ///< NOLINT(sw-bool-flag): 테스트의 실패 주입 스위치
         bool                 _bFailRegister{ false }; ///< NOLINT(sw-bool-flag): 테스트의 실패 주입 스위치
@@ -44,7 +44,7 @@ namespace
             if ( _bFailPage )
                 return 0;
             _listEvent.push_back( FactoryEvent{ 'P', size } );
-            return _nextBuffer++;
+            return RHIBufferHandle{ _nextBuffer++ };
         }
         RHIDescriptorIndex registerBindlessBufferSRV( const RHIBufferSlice& slice ) override
         {
@@ -55,7 +55,6 @@ namespace
             return _nextIndex++;
         }
         void unregisterBindlessResource( RHIDescriptorIndex index ) override { _listEvent.push_back( FactoryEvent{ 'U', index } ); }
-        void destroyBuffer( RHIBufferHandle buffer ) override { _listEvent.push_back( FactoryEvent{ 'D', buffer } ); }
         void updateConstantBuffer( const RHIBufferSlice&, const void*, uint32 size ) override { _listUpdateSize.push_back( size ); }
 
         RHIBufferHandle        createVertexBuffer( const void*, uint32 ) override { return 0; }
@@ -71,16 +70,13 @@ namespace
         void                   discardTextureReadback( RHITransferTicket ) override {}
         RHIPipelineStateHandle createPipelineStateNative( const RHIPipelineStateDesc&, const RHICompiledGraphicsStages& ) override { return 0; }
         RHIPipelineStateHandle createComputePipelineStateNative( const RHICompiledShaderStage&, string_view ) override { return 0; }
-        void                   destroyPipelineState( RHIPipelineStateHandle ) override {}
         RHIRenderPassHandle    createRenderPass( const RHIRenderPassDesc& ) override { return 0; }
-        void                   destroyRenderPass( RHIRenderPassHandle ) override {}
         RHIBufferHandle        createConstantBuffer( uint32 ) override { return 0; }
         void                   updateConstantBuffer( RHIBufferHandle, const void*, uint32 ) override {}
         RHIBufferHandle        createStructuredBuffer( uint32, uint32 ) override { return 0; }
         RHIBufferHandle        createReadbackBuffer( uint32, uint32 ) override { return 0; }
         [[nodiscard]] bool     readReadbackBuffer( RHIBufferHandle, uint32, void* ) override { return false; }
         RHITextureHandle       createTexture2D( const RHITextureDesc& ) override { return 0; }
-        void                   destroyTexture( RHITextureHandle ) override {}
         RHIFormat              getTextureFormat( RHITextureHandle ) const override { return RHIFormat::Unknown; }
         RHIDescriptorIndex     registerBindlessTexture( RHITextureHandle ) override { return kInvalidDescriptorIndex; }
         bool                   rebindBindlessTexture( RHIDescriptorIndex, RHITextureHandle ) override { return false; }
@@ -92,6 +88,16 @@ namespace
         RHIDescriptorIndex     registerBindlessBufferUAV( RHIBufferHandle ) override { return kInvalidDescriptorIndex; }
         RHIDescriptorIndex     registerBindlessTextureUAV( RHITextureHandle ) override { return kInvalidDescriptorIndex; }
         void                   unregisterBindlessUAV( RHIDescriptorIndex ) override {}
+
+    protected:
+        [[nodiscard]] bool destroyBufferNative( RHIBufferHandle buffer ) override
+        {
+            _listEvent.push_back( FactoryEvent{ 'D', buffer.getPacked() } );
+            return true;
+        }
+        [[nodiscard]] bool destroyTextureNative( RHITextureHandle ) override { return true; }
+        [[nodiscard]] bool destroyPipelineStateNative( RHIPipelineStateHandle ) override { return true; }
+        [[nodiscard]] bool destroyRenderPassNative( RHIRenderPassHandle ) override { return true; }
     };
 
     /** @brief 적힌 사건이 @p listExpected 와 같은지 봅니다. */

@@ -37,7 +37,7 @@ namespace sw
         }
         if ( _texture != 0 && _pDevice != nullptr )
         {
-            _pDevice->getResourceFactory()->destroyTexture( _texture );
+            _pDevice->releaseHandle( _texture );
             _texture = 0;
         }
     }
@@ -55,7 +55,7 @@ namespace sw
         {
             if ( _width == width && _height == height )
                 return;
-            _pDevice->getResourceFactory()->destroyTexture( _texture );
+            _pDevice->releaseHandle( _texture );
             _texture = 0;
         }
 
@@ -75,7 +75,7 @@ namespace sw
     void FrameCapture::releasePresent()
     {
         if ( _texture != 0 && _pDevice != nullptr )
-            _pDevice->getResourceFactory()->destroyTexture( _texture );
+            _pDevice->releaseHandle( _texture );
         _texture = 0;
     }
 
@@ -151,7 +151,7 @@ namespace sw
                                      outLayout._height == 0;
         if ( bReadbackFailed )
         {
-            SW_LOG_ERROR_ID( "FrameRenderer.ReadbackTextureReadbackTexture2DAndWaitFailedTexture", "readbackTexture: readbackTexture2DAndWait failed (texture %#).", texture );
+            SW_LOG_ERROR_ID( "FrameRenderer.ReadbackTextureReadbackTexture2DAndWaitFailedTexture", "readbackTexture: readbackTexture2DAndWait failed (texture %#).", texture.getPacked() );
             return false;
         }
         return true;

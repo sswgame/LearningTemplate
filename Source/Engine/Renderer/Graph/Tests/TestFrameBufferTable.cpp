@@ -165,7 +165,7 @@ SW_TEST_CASE( FrameBufferTableTest, ChangedAccessesReturnToTheirInitialAccess )
 
     vector<RHIBufferHandle> listReturned;
     table.forEachChangedAccess( context, [&listReturned]( const FrameBufferTable::Entry& entry )
-    { listReturned.push_back( entry._handle ); } );
+    { listReturned.push_back( entry.getBuffer() ); } );
     // 상태(UAV 로 시작 · 끝) · 렌더 입력(셰이더 읽기로 끝) · 순서(그래프가 보지 않았다)는 그대로, 인자는 두 칸 모두 간접 인자로 되돌린다.
     SW_REQUIRE_EQUAL( size_t{ 2 }, listReturned.size() );
     SW_EXPECT_EQUAL( RHIBufferHandle{ 12 }, listReturned[0] );

@@ -24,9 +24,9 @@ namespace sw
 
         RHIPipelineStateHandle createPipelineStateNative( const RHIPipelineStateDesc& desc, const RHICompiledGraphicsStages& stages ) override;
         RHIPipelineStateHandle createComputePipelineStateNative( const RHICompiledShaderStage& computeStage, string_view label ) override;
-        void                   destroyPipelineState( RHIPipelineStateHandle pso ) override;
+        [[nodiscard]] bool     destroyPipelineStateNative( RHIPipelineStateHandle pso ) override;
         RHIRenderPassHandle    createRenderPass( const RHIRenderPassDesc& desc ) override;
-        void                   destroyRenderPass( RHIRenderPassHandle pass ) override;
+        [[nodiscard]] bool     destroyRenderPassNative( RHIRenderPassHandle pass ) override;
 
         RHIBufferHandle               createConstantBuffer( uint32 size ) override;
         void                          updateConstantBuffer( RHIBufferHandle buffer, const void* pData, uint32 size ) override;
@@ -38,13 +38,13 @@ namespace sw
         RHIBufferHandle               createGPUVertexBuffer( uint32 sizeBytes ) override;
         void                          updateGeometryBufferRegions( RHIBufferHandle buffer, const void* pBaseSource, const RHIBufferCopyRegion* pRegions, uint32 regionCount ) override;
         RHIBufferHandle               createIndexBuffer( const void* pData, uint32 sizeBytes ) override;
-        void                          destroyBuffer( RHIBufferHandle buffer ) override;
+        [[nodiscard]] bool            destroyBufferNative( RHIBufferHandle buffer ) override;
         [[nodiscard]] RHIBufferHandle createReadbackBuffer( uint32 elementSize, uint32 elementCount ) override;
         [[nodiscard]] bool            readReadbackBuffer( RHIBufferHandle readback, uint32 sizeBytes, void* pDestination ) override;
 
-        RHITextureHandle createTexture2D( const RHITextureDesc& desc ) override;
-        void             destroyTexture( RHITextureHandle texture ) override;
-        RHIFormat        getTextureFormat( RHITextureHandle texture ) const override;
+        RHITextureHandle   createTexture2D( const RHITextureDesc& desc ) override;
+        [[nodiscard]] bool destroyTextureNative( RHITextureHandle texture ) override;
+        RHIFormat          getTextureFormat( RHITextureHandle texture ) const override;
 
         [[nodiscard]] RHITransferSubmit submitTextureUpload( RHITextureHandle texture, const RHITextureUploadDesc& desc ) override;
         [[nodiscard]] RHITransferSubmit submitTextureRegionUpload( RHITextureHandle texture, const RHITextureRegionUploadDesc& desc ) override;

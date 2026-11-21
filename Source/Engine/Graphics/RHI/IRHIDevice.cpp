@@ -36,36 +36,67 @@
 
 namespace sw
 {
-    namespace
+    /** @brief 미룬 해제 줄의 칸 종류입니다. 부르는 쪽은 핸들 형식으로 `IRHIDevice::releaseHandle` 오버로드를 고르고, 줄은 packed 값과 이 종류를 든다. */
+    enum class RHIHandleKind : uint8
     {
-        /** @brief 핸들 하나를 그 종류의 팩터리 함수로 내립니다. */
-        void releaseNow( IRHIResourceFactory& factory, RHIHandleKind kind, uint64 handle )
+        BindlessResource = 0, ///< `registerBindlessBufferSRV` 가 돌려준 인덱스이며 `unregisterBindlessResource` 로 해제한다.
+        BindlessTexture,      ///< `registerBindlessTexture` 가 돌려준 인덱스이며 `unregisterBindlessTexture` 로 해제한다.
+        Buffer,               ///< `RHIBufferHandle`
+        Texture,              ///< `RHITextureHandle`
+        PipelineState,        ///< `RHIPipelineStateHandle`
+        RenderPass,           ///< `RHIRenderPassHandle`
+        TransientHeap         ///< `RHITransientHeapHandle`
+    };
+
+    /**
+     * @brief 핸들 하나를 그 종류의 백엔드 파괴 함수로 내립니다.
+     * @details 백엔드가 "산 핸들이 아니었다" 고 하면 같은 핸들을 두 번 놓았거나(또는 다른 장치의 핸들) — 검사 구성에서 단언한다. 핸들 표의 세대가 있어 두 번째 해제가
+     *          다른 자원을 놓지는 않지만, 그 자리는 소유가 둘로 갈린 결함이다(언리얼 `FRHIResource` 의 참조 수 0 아래 해제 검사와 같은 자리).
+     *          팩터리의 파괴 함수는 보호 구역이라(친구는 장치) 장치 멤버로 둔다.
+     */
+    void IRHIDevice::releaseNow( IRHIResourceFactory& factory, RHIHandleKind kind, uint64 packed )
+    {
+        bool bLive = true;
+        switch ( kind )
         {
-            switch ( kind )
+            case RHIHandleKind::BindlessResource:
             {
-                case RHIHandleKind::BindlessResource:
-                {
-                    factory.unregisterBindlessResource( static_cast<RHIDescriptorIndex>( handle ) );
-                    return;
-                }
-                case RHIHandleKind::BindlessTexture:
-                {
-                    factory.unregisterBindlessTexture( static_cast<RHIDescriptorIndex>( handle ) );
-                    return;
-                }
-                case RHIHandleKind::Buffer:
-                {
-                    factory.destroyBuffer( static_cast<RHIBufferHandle>( handle ) );
-                    return;
-                }
-                case RHIHandleKind::Texture:
-                {
-                    factory.destroyTexture( static_cast<RHITextureHandle>( handle ) );
-                    return;
-                }
+                factory.unregisterBindlessResource( static_cast<RHIDescriptorIndex>( packed ) );
+                return;
+            }
+            case RHIHandleKind::BindlessTexture:
+            {
+                factory.unregisterBindlessTexture( static_cast<RHIDescriptorIndex>( packed ) );
+                return;
+            }
+            case RHIHandleKind::Buffer:
+            {
+                bLive = factory.destroyBufferNative( RHIBufferHandle{ packed } );
+                break;
+            }
+            case RHIHandleKind::Texture:
+            {
+                bLive = factory.destroyTextureNative( RHITextureHandle{ packed } );
+                break;
+            }
+            case RHIHandleKind::PipelineState:
+            {
+                bLive = factory.destroyPipelineStateNative( RHIPipelineStateHandle{ packed } );
+                break;
+            }
+            case RHIHandleKind::RenderPass:
+            {
+                bLive = factory.destroyRenderPassNative( RHIRenderPassHandle{ packed } );
+                break;
+            }
+            case RHIHandleKind::TransientHeap:
+            {
+                bLive = factory.destroyTransientHeapNative( RHITransientHeapHandle{ packed } );
+                break;
             }
         }
-    } // namespace
+        SW_ASSERT( bLive && "RHI handle released twice (or it belongs to another device)" );
+    }
 } // namespace sw
 
 namespace sw
@@ -75,7 +106,7 @@ namespace sw
     {
         struct Entry
         {
-            uint64        _handle{ 0 };
+            uint64        _handle{ 0 }; ///< packed 값(종류는 `_kind`) — 줄 안에서만 형식을 지운다
             RHIHandleKind _kind{ RHIHandleKind::BindlessResource };
         };
 
@@ -143,7 +174,7 @@ namespace sw
             if ( pFactory != nullptr && pFactory->activateReservedBindlessTexture( entry._index, entry._placeholder ) )
                 continue;
             // 자리 텍스처(로드 중 · 누락 체커)는 기동이 올려 둔다 — 못 살리면 결함이다. 번호는 산 칸이 아니라 해제가 놓지 못하므로 그 번호를 쥔 쪽은 빈 번호를 그린다.
-            SW_LOG_ERROR_ID( "RHI.ReservedBindlessActivateFailed", "%#: the reserved bindless index %# could not point at texture %#", getBackendName(), entry._index, entry._placeholder );
+            SW_LOG_ERROR_ID( "RHI.ReservedBindlessActivateFailed", "%#: the reserved bindless index %# could not point at texture %#", getBackendName(), entry._index, entry._placeholder.getPacked() );
         }
         queue._listScratch.clear();
     }
@@ -381,9 +412,40 @@ namespace sw
         flushDeferredHandleReleases();
     }
 
-    void IRHIDevice::releaseHandle( RHIHandleKind kind, uint64 handle )
+    void IRHIDevice::releaseHandle( RHIBufferHandle buffer )
     {
-        if ( handle == 0 && ( kind == RHIHandleKind::Buffer || kind == RHIHandleKind::Texture ) )
+        releaseHandleInternal( RHIHandleKind::Buffer, buffer.getPacked() );
+    }
+
+    void IRHIDevice::releaseHandle( RHITextureHandle texture )
+    {
+        releaseHandleInternal( RHIHandleKind::Texture, texture.getPacked() );
+    }
+
+    void IRHIDevice::releaseHandle( RHIPipelineStateHandle pso )
+    {
+        releaseHandleInternal( RHIHandleKind::PipelineState, pso.getPacked() );
+    }
+
+    void IRHIDevice::releaseHandle( RHIRenderPassHandle pass )
+    {
+        releaseHandleInternal( RHIHandleKind::RenderPass, pass.getPacked() );
+    }
+
+    void IRHIDevice::releaseHandle( RHITransientHeapHandle heap )
+    {
+        releaseHandleInternal( RHIHandleKind::TransientHeap, heap.getPacked() );
+    }
+
+    void IRHIDevice::releaseBindlessIndex( RHIBindlessIndexSpace space, RHIDescriptorIndex index )
+    {
+        releaseHandleInternal( space == RHIBindlessIndexSpace::Texture ? RHIHandleKind::BindlessTexture : RHIHandleKind::BindlessResource, index );
+    }
+
+    void IRHIDevice::releaseHandleInternal( RHIHandleKind kind, uint64 packed )
+    {
+        const bool bBindless = kind == RHIHandleKind::BindlessResource || kind == RHIHandleKind::BindlessTexture;
+        if ( packed == 0 && bBindless == false )
             return;
         // 미루는 기준은 "지금 든 프레임" 이 아니라 "이 해제 전에 만든 패킷" 이다. 게임 스레드가 짓고 아직 넘기지 않은 패킷도 옛 인덱스를 값으로 들고 있다
         // (GPUScene 배치의 머티리얼 텍스처 SRV). 그래서 다음에 넘길 프레임(넘긴 수 + 1)이 끝난 뒤에 내린다 — 렌더 스레드가 쉬고 있어도 그렇다.
@@ -393,7 +455,7 @@ namespace sw
         if ( ( bRenderThreadUp || bFrameInFlight ) && std::this_thread::get_id() != _renderThreadID.load( std::memory_order_relaxed ) )
         {
             ScopedLock<mutex> lock{ _pDeferredHandleQueue->_mutex };
-            _pDeferredHandleQueue->_listHandle.push( RHIDeferredHandleQueue::Entry{ handle, kind }, queuedFrameCount + 1 );
+            _pDeferredHandleQueue->_listHandle.push( RHIDeferredHandleQueue::Entry{ packed, kind }, queuedFrameCount + 1 );
             return;
         }
         IRHIResourceFactory* pFactory = getResourceFactory();
@@ -401,7 +463,7 @@ namespace sw
             return;
         if ( kind == RHIHandleKind::BindlessTexture )
             activateReservedBindlessTextures(); // 예약만 하고 아직 살리지 않은 번호일 수 있다 — 살려야 해제가 그 칸을 놓는다
-        releaseNow( *pFactory, kind, handle );
+        releaseNow( *pFactory, kind, packed );
     }
 
     void IRHIDevice::flushDeferredHandleReleases()
