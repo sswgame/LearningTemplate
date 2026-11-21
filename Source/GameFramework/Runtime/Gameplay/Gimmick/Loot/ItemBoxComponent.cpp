@@ -10,6 +10,7 @@
 
 #include "GameFramework/Runtime/Foundation/Random/GameRandom.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/GimmickUtil.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/IItemReceiver.h"
 
 namespace sw
 {
@@ -24,8 +25,10 @@ namespace sw
 
             static bool canAccept( const OverlapInfo& overlap, const TagContainer& requiredTags )
             {
+                // 받을 가방이 없는 몸(발판 · 통 · 탄)은 닿아도 줄 대상이 아니다 — 조용히 건너뛴다(언리얼 줍기 아이템이 폰만 받는 자리, docs/agents/Gameplay.md 지역 효과 예외).
                 return overlap._pOther != nullptr && overlap._bOtherTrigger == SW_FALSE &&
-                       ( requiredTags.getTagCount() == 0 || overlap._pOther->getTags().hasAllTags( requiredTags ) );
+                       ( requiredTags.getTagCount() == 0 || overlap._pOther->getTags().hasAllTags( requiredTags ) ) &&
+                       IItemReceiver::findForTarget( *overlap._pOther ) != nullptr;
             }
         };
     } // namespace
