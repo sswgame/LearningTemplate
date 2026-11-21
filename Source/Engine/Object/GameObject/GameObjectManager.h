@@ -469,8 +469,6 @@ namespace sw
         TickRegistry& getTickRegistry();
         /** @brief 틱에 참여하는 오브젝트의 레지스트리입니다. */
         const TickRegistry& getTickRegistry() const;
-        /** @brief 마지막으로 끝난 프레임의 컴포넌트 틱 시간(ns)입니다(`SceneTickScheduler::getLastFrameTickNanoseconds`). */
-        int64 getLastFrameComponentTickNanoseconds() const;
 
         /**
          * @brief 핸들이 가리키는 컴포넌트를 찾습니다. 삭제 예정이면 nullptr 입니다. 타입을 아는 곳은 타입 핸들(`TComponentHandle<T>`)의 찾기를 씁니다.

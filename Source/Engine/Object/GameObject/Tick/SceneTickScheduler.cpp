@@ -8,7 +8,6 @@
 
 #include "Core/Foundation/BuildInfo.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Foundation/EngineParallel.h"
 #include "Engine/Foundation/EngineServices.h"
@@ -205,8 +204,6 @@ namespace sw
         , _listStageItemTask{}
         , _stageOrderScratch{}
         , _stageTransformApplyCount{ 0 }
-        , _frameTickNanoseconds{ 0 }
-        , _lastFrameTickNanoseconds{ 0 }
         , _dispatchOrdinal{ 0 }
     {
     }
@@ -226,15 +223,9 @@ namespace sw
             // **씬 틱은 자기가 낸 일만 기다린다.** 틱의 병렬 일은 `runParallel` 이 합류까지, Task 모드는 자기 스테이지(`waitStage`)를 기다린다.
             // 주의: `TaskManager::waitAll()` 은 엔진 **전체의** 태스크 — 렌더 스레드의 패스 기록, 에셋 스트리밍, 비동기 씬 로드, 오디오 재생 — 가 빌 때까지
             // 게임 스레드를 세운다. onTick 이 낸 태스크가 틱 뒤 단계 전에 끝나야 하면 자기 스테이지를 만들어 `waitStage` 로 기다린다.
-            SW_PROFILE_SCOPE( "GT.Scene.tick.components" );
-            // 프레임의 컴포넌트 틱 몫을 잰다(감시 값 — 배포에서도 시계 두 번이다). 첫 단계가 되돌리고 마지막 단계가 게시한다.
-            if ( firstGroup == 0 )
-                _frameTickNanoseconds = 0;
-            const int64 startNanoseconds = MonotonicClock::nowNanoseconds();
+            // 두 단계가 같은 구간에 쌓여 프레임 합이 된다 — 감시 값 `Scene.ComponentTickMs` 의 재료(`kComponentTickScopeName`).
+            SW_PROFILE_SCOPE( kComponentTickScopeName );
             tickGroups( deltaTime, firstGroup, endGroup );
-            _frameTickNanoseconds += MonotonicClock::nowNanoseconds() - startNanoseconds;
-            if ( endGroup == TickRegistry::kGroupCount )
-                _lastFrameTickNanoseconds = _frameTickNanoseconds;
         }
 
         _pStructuralChangeBuffer->thaw();
