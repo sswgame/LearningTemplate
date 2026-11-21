@@ -16,7 +16,7 @@ SW_TEST_CASE( RetargetProfileEditModelTest, SetterNotifiesOnceAndReplaceDoesNot 
 {
     uint32                     count{ 0 };
     string                     lastLabel;
-    const DocumentEditRecorder recorder{ DocumentEditRecorder::RecordDelegate::create( [&count, &lastLabel]( string_view label )
+    const DocumentEditRecorder recorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, [&count, &lastLabel]( string_view label )
     {
         ++count;
         lastLabel = string{ label };
@@ -42,7 +42,7 @@ SW_TEST_CASE( RetargetProfileEditModelTest, PoseDragIsOneUndoStep )
     uint32     notifyCount{ 0 };
     const auto capture = [&model]()
     { return model.getProfile().toXML(); };
-    const DocumentEditRecorder recorder{ DocumentEditRecorder::RecordDelegate::create( [&]( string_view label )
+    const DocumentEditRecorder recorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, [&]( string_view label )
     {
         ++notifyCount;
         if ( span.notifyEdited( label, bInteracting, capture ).has_value() )

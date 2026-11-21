@@ -54,8 +54,8 @@ namespace
         {
             _first.initialize( &_store, 1 );
             _second.initialize( &_store, 2 );
-            SW_EXPECT_TRUE( _first.registerJob( definition, ScheduledJobFunction::create<&RunSink::onRun>( &_firstSink ) ) );
-            SW_EXPECT_TRUE( _second.registerJob( definition, ScheduledJobFunction::create<&RunSink::onRun>( &_secondSink ) ) );
+            SW_EXPECT_TRUE( _first.registerJob( definition, SW_DELEGATE_METHOD( ScheduledJobFunction, &RunSink::onRun, &_firstSink ) ) );
+            SW_EXPECT_TRUE( _second.registerJob( definition, SW_DELEGATE_METHOD( ScheduledJobFunction, &RunSink::onRun, &_secondSink ) ) );
         }
 
         void poll()
@@ -206,7 +206,7 @@ SW_TEST_CASE( ServiceSchedulerTest, DefinitionRules )
 
     ServiceScheduler scheduler;
     RunSink          sink;
-    SW_EXPECT_FALSE( scheduler.registerJob( bad, ScheduledJobFunction::create<&RunSink::onRun>( &sink ) ) );
+    SW_EXPECT_FALSE( scheduler.registerJob( bad, SW_DELEGATE_METHOD( ScheduledJobFunction, &RunSink::onRun, &sink ) ) );
     SW_EXPECT_FALSE( scheduler.registerJob( makeDaily(), ScheduledJobFunction{} ) );
 }
 
@@ -333,9 +333,9 @@ SW_TEST_CASE( ServiceSchedulerTest, RunRecordsExpireAndLongWindowsAreRefused )
     window._windowStartMs = kNowMs;
     window._windowEndMs   = kNowMs + 1000;
     RunSink sink;
-    SW_EXPECT_FALSE( guarded.registerJob( window, ScheduledJobFunction::create<&RunSink::onRun>( &sink ) ) );
+    SW_EXPECT_FALSE( guarded.registerJob( window, SW_DELEGATE_METHOD( ScheduledJobFunction, &RunSink::onRun, &sink ) ) );
     window._windowEndMs = kNowMs + 999;
-    SW_EXPECT_TRUE( guarded.registerJob( window, ScheduledJobFunction::create<&RunSink::onRun>( &sink ) ) );
+    SW_EXPECT_TRUE( guarded.registerJob( window, SW_DELEGATE_METHOD( ScheduledJobFunction, &RunSink::onRun, &sink ) ) );
     guarded.shutdown();
 }
 

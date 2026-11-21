@@ -235,7 +235,7 @@ namespace sw
         (void)host;
         _mapAccountToGraceEnd.erase( accountID ); // 유예 안에 이 서버로 돌아왔다
         if ( _pPartyLobby != nullptr && _pGroupChannels != nullptr )
-            _pPartyLobby->findPartyOfAccount( accountID, accountID, PartyLobbyService::PartyFoundDelegate::create<&MatchmakingServer::onPartyFound>( this ) );
+            _pPartyLobby->findPartyOfAccount( accountID, accountID, SW_DELEGATE_METHOD( PartyLobbyService::PartyFoundDelegate, &MatchmakingServer::onPartyFound, this ) );
     }
 
     void MatchmakingServer::onAccountLeft( OnlineServiceHost& host, AccountID accountID )

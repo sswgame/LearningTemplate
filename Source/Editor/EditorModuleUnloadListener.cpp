@@ -34,8 +34,8 @@ namespace sw::editor
     SubsystemInitResult EditorModuleUnloadListener::initializeSubsystem()
     {
         TypeRegistry& types              = editor::getSubsystem<TypeRegistry>();
-        _registrationRemovedSubscription = types.subscribeModuleObjectsDetached( TypeRegistry::ModuleUnloadingDelegate::create<&EditorModuleUnloadListener::onModuleObjectsDetached>( this ) );
-        _moduleUnloadingSubscription     = types.subscribeModuleUnloading( TypeRegistry::ModuleUnloadingDelegate::create<&EditorModuleUnloadListener::onModuleUnloading>( this ) );
+        _registrationRemovedSubscription = types.subscribeModuleObjectsDetached( SW_DELEGATE_METHOD( TypeRegistry::ModuleUnloadingDelegate, &EditorModuleUnloadListener::onModuleObjectsDetached, this ) );
+        _moduleUnloadingSubscription     = types.subscribeModuleUnloading( SW_DELEGATE_METHOD( TypeRegistry::ModuleUnloadingDelegate, &EditorModuleUnloadListener::onModuleUnloading, this ) );
         return SubsystemInitResult::Succeeded;
     }
 

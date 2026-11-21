@@ -31,7 +31,7 @@ namespace sw
         // 범위 밖 종류는 보내지 않고 이 호출 안에서 바로 onServerList(kInvalidRequest)로 끝난다.
         ServerListRequest request;
         request._kind = string( kind );
-        (void)_pClient->call<ServerDirectoryMethod::ListServers>( request, OnlineReplyDelegate<ServerDirectoryMethod::ListServers>::create<&ServerList::onServerList>( this ) );
+        (void)_pClient->call<ServerDirectoryMethod::ListServers>( request, SW_DELEGATE_METHOD( OnlineReplyDelegate<ServerDirectoryMethod::ListServers>, &ServerList::onServerList, this ) );
         return _state != ServerListState::Failed;
     }
 

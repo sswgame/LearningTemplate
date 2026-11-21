@@ -13,7 +13,7 @@
  * @code
  *     uint64 XClient::requestFoo( FooDelegate onFoo )
  *     {
- *         return _fooCallTable.send( *_pClient, XMethod::kFoo, body, NetRequestOptions{}, OnlineResponseDelegate::create<&XClient::onFooResponse>( this ), onFoo );
+ *         return _fooCallTable.send( *_pClient, XMethod::kFoo, body, NetRequestOptions{}, SW_DELEGATE_METHOD( OnlineResponseDelegate, &XClient::onFooResponse, this ), onFoo );
  *     }
  *     void XClient::onFooResponse( const OnlineResponse& response )
  *     {

@@ -87,7 +87,7 @@ namespace sw
 
         /**
          * @brief 람다로 델리게이트를 만듭니다.
-         * @note 자주 불리는 이벤트(예: 매 프레임 발생하는 Tick)에는 람다 대신 멤버 함수 바인딩(create<Method>)을 쓰십시오.
+         * @note 자주 불리는 이벤트(예: 매 프레임 발생하는 Tick)에는 람다 대신 멤버 함수 바인딩(SW_DELEGATE_METHOD)을 쓰십시오.
          */
         template <typename Lambda, typename = std::enable_if_t<std::is_same_v<std::decay_t<Lambda>, Delegate> == false && std::is_invocable_r_v<R, Lambda, Args...>>>
         Delegate( const Lambda& lambdaFunc ) { *this = create( lambdaFunc ); }
@@ -183,7 +183,7 @@ namespace sw
 
         /**
          * @brief 람다나 함수 객체로 델리게이트를 만듭니다.
-         * @note 매 프레임 불리는 Tick 처럼 아주 자주 불리는 콜백에는 람다 대신 멤버 함수 바인딩(create<Method>)을 쓰십시오.
+         * @note 매 프레임 불리는 Tick 처럼 아주 자주 불리는 콜백에는 람다 대신 멤버 함수 바인딩(SW_DELEGATE_METHOD)을 쓰십시오.
          */
         template <typename Lambda>
         static Delegate create( const Lambda& lambdaFunc )
@@ -617,9 +617,11 @@ namespace sw
 #define SW_DECLARE_DELEGATE( ReturnType, DelegateName, ... ) using DelegateName = sw::Delegate<ReturnType( __VA_ARGS__ )>
 /** @brief MulticastDelegate 별칭을 선언합니다. */
 #define SW_DECLARE_MULTI_CAST_DELEGATE( ReturnType, DelegateName, ... ) using DelegateName = sw::MulticastDelegate<ReturnType( __VA_ARGS__ )>
+// 델리게이트에 함수를 붙일 때는 아래 셋을 쓴다(린트 cpp-shape 가 맨 create 를 막는다 — 바꾸기는 `py -3 -m Scripts delegate-macros`).
+// `template` 은 의존 형식(`OnlineReplyDelegate<TMethod>`)에도 같은 매크로를 쓰게 한다 — C++11 부터 템플릿 밖에서도 허용된다.
 /** @brief 자유 함수를 델리게이트에 붙입니다. */
-#define SW_DELEGATE_FUNCTION( DelegateName, Func ) DelegateName::create<Func>()
+#define SW_DELEGATE_FUNCTION( DelegateName, Func ) DelegateName::template create<Func>()
 /** @brief 멤버 함수를 델리게이트에 붙입니다. */
-#define SW_DELEGATE_METHOD( DelegateName, Method, Instance ) DelegateName::create<Method>( Instance )
+#define SW_DELEGATE_METHOD( DelegateName, Method, Instance ) DelegateName::template create<Method>( Instance )
 /** @brief 람다 · 함수 객체를 델리게이트에 붙입니다. */
 #define SW_DELEGATE_LAMBDA( DelegateName, ... ) DelegateName::create( __VA_ARGS__ )

@@ -274,7 +274,7 @@ namespace sw
 
     void OnlinePresence::submitPending( const EphemeralRequest& request, PendingOperation&& pending )
     {
-        const uint64 requestID = _pHost->getEphemeralRouter()->submit( request, EphemeralStoreRouter::ReplyDelegate::create<&OnlinePresence::onCacheReply>( this ), _replyOwner );
+        const uint64 requestID = _pHost->getEphemeralRouter()->submit( request, SW_DELEGATE_METHOD( EphemeralStoreRouter::ReplyDelegate, &OnlinePresence::onCacheReply, this ), _replyOwner );
         _mapRequestToPending.emplace( requestID, std::move( pending ) );
     }
 

@@ -40,7 +40,7 @@ namespace
 // 예전에는 칸을 따로 옮겨 담아 `_atlasPixelSize` 가 빠졌다 - 에디터로 저장하면 9-슬라이스 테두리가 게임에서 사라졌다.
 SW_TEST_CASE( SpriteClipViewModelTest, UndoTextKeepsAtlasSizeAndBorders )
 {
-    const DocumentEditRecorder modelRecorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
+    const DocumentEditRecorder modelRecorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
     SpriteClipViewModel        model;
     model.bindDocumentEditRecorder( modelRecorder );
     model.editAtlasPixelSize() = float2{ 256.0f, 128.0f };
@@ -55,7 +55,7 @@ SW_TEST_CASE( SpriteClipViewModelTest, UndoTextKeepsAtlasSizeAndBorders )
     SW_REQUIRE_EQUAL( 1, readBack.getFrameCount() );
     SW_EXPECT_TRUE( readBack._listFrame[0].hasBorder() );
 
-    const DocumentEditRecorder restoredRecorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
+    const DocumentEditRecorder restoredRecorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
 
     SpriteClipViewModel restored;
 
@@ -78,7 +78,7 @@ SW_TEST_CASE( SpriteClipViewModelTest, UndoTextKeepsNotifies )
     animation._listNotify.push_back( notify );
     clip._listAnimation.push_back( animation );
 
-    const DocumentEditRecorder modelRecorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
+    const DocumentEditRecorder modelRecorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
 
     SpriteClipViewModel model;
 
@@ -91,7 +91,7 @@ SW_TEST_CASE( SpriteClipViewModelTest, UndoTextKeepsNotifies )
 // 아틀라스 없는 문서로 되돌리면 칸도 빈다 - 비었을 때 그대로 두면 앞 문서의 아틀라스가 이 문서에 저장됐다.
 SW_TEST_CASE( SpriteClipViewModelTest, ClipWithoutAtlasClearsTheField )
 {
-    const DocumentEditRecorder modelRecorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
+    const DocumentEditRecorder modelRecorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
     SpriteClipViewModel        model;
     model.bindDocumentEditRecorder( modelRecorder );
     model.editAtlasPath()  = "art/first.dds";
@@ -107,7 +107,7 @@ SW_TEST_CASE( SpriteClipViewModelTest, ClipWithoutAtlasClearsTheField )
 // 되돌리기가 고른 항목을 맨 앞으로 옮기지 않는다.
 SW_TEST_CASE( SpriteClipViewModelTest, UndoKeepsTheSelectionInRange )
 {
-    const DocumentEditRecorder modelRecorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
+    const DocumentEditRecorder modelRecorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
     SpriteClipViewModel        model;
     model.bindDocumentEditRecorder( modelRecorder );
     Util::fillFrames( model, 3 );
@@ -130,7 +130,7 @@ SW_TEST_CASE( SpriteClipViewModelTest, UndoKeepsTheSelectionInRange )
 // 없는 파일은 새 문서다 - 앞 문서의 프레임이 남으면 저장할 때 새 파일에 쓰였고 "저장 안 함" 도 편집을 버리지 못했다.
 SW_TEST_CASE( SpriteClipViewModelTest, MissingFileStartsANewClip )
 {
-    const DocumentEditRecorder modelRecorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
+    const DocumentEditRecorder modelRecorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
     SpriteClipViewModel        model;
     model.bindDocumentEditRecorder( modelRecorder );
     Util::fillFrames( model, 3 );
@@ -146,7 +146,7 @@ SW_TEST_CASE( SpriteClipViewModelTest, SaveAndLoadRoundTrip )
 {
     const string path = test::makeScratchPath( "SwSpriteClipViewModelRoundTrip.sprite.xml" );
     {
-        const DocumentEditRecorder modelRecorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
+        const DocumentEditRecorder modelRecorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
         SpriteClipViewModel        model;
         model.bindDocumentEditRecorder( modelRecorder );
         Util::fillFrames( model, 2 );
@@ -156,7 +156,7 @@ SW_TEST_CASE( SpriteClipViewModelTest, SaveAndLoadRoundTrip )
         SW_REQUIRE_TRUE( model.saveDocument( path ) );
         SW_EXPECT_FALSE( model.getStatus().empty() );
     }
-    const DocumentEditRecorder modelRecorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
+    const DocumentEditRecorder modelRecorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
     SpriteClipViewModel        model;
     model.bindDocumentEditRecorder( modelRecorder );
     SW_EXPECT_TRUE( model.loadDocument( path ) == ToolAssetLoadResult::Loaded );
@@ -173,7 +173,7 @@ SW_TEST_CASE( SpriteClipViewModelTest, SavingNeverOverwritesAnImage )
     SW_EXPECT_TRUE( SpriteClipViewModel::computeClipPath( "art/hero.sprite.xml" ) == "art/hero.sprite.xml" );
     SW_EXPECT_TRUE( SpriteClipViewModel::computeClipPath( "" ).empty() );
 
-    const DocumentEditRecorder modelRecorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
+    const DocumentEditRecorder modelRecorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
 
     SpriteClipViewModel model;
 
@@ -200,7 +200,7 @@ SW_TEST_CASE( SpriteClipViewModelTest, RemovingAFrameShiftsAnimationRanges )
     single._frameCount = 1;
     clip._listAnimation.push_back( single );
 
-    const DocumentEditRecorder modelRecorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
+    const DocumentEditRecorder modelRecorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
 
     SpriteClipViewModel model;
 
@@ -223,7 +223,7 @@ SW_TEST_CASE( SpriteClipViewModelTest, RemovingAFrameShiftsAnimationRanges )
 
 SW_TEST_CASE( SpriteClipViewModelTest, DuplicatingAFrameGrowsTheRangeItIsIn )
 {
-    const DocumentEditRecorder modelRecorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
+    const DocumentEditRecorder modelRecorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
     SpriteClipViewModel        model;
     model.bindDocumentEditRecorder( modelRecorder );
     Util::fillFrames( model, 3 );
@@ -246,7 +246,7 @@ SW_TEST_CASE( SpriteClipViewModelTest, DuplicatingAFrameGrowsTheRangeItIsIn )
 
 SW_TEST_CASE( SpriteClipViewModelTest, MovingAFrameStopsAtTheEnds )
 {
-    const DocumentEditRecorder modelRecorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
+    const DocumentEditRecorder modelRecorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
     SpriteClipViewModel        model;
     model.bindDocumentEditRecorder( modelRecorder );
     Util::fillFrames( model, 2 );
@@ -261,7 +261,7 @@ SW_TEST_CASE( SpriteClipViewModelTest, MovingAFrameStopsAtTheEnds )
 
 SW_TEST_CASE( SpriteClipViewModelTest, AddFramesFromGridCoversEveryCell )
 {
-    const DocumentEditRecorder modelRecorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
+    const DocumentEditRecorder modelRecorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
     SpriteClipViewModel        model;
     model.bindDocumentEditRecorder( modelRecorder );
     model.editSliceColumns() = 2;
@@ -276,7 +276,7 @@ SW_TEST_CASE( SpriteClipViewModelTest, AddFramesFromGridCoversEveryCell )
 
 SW_TEST_CASE( SpriteClipViewModelTest, PickingACellEditsOrAddsAFrame )
 {
-    const DocumentEditRecorder modelRecorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
+    const DocumentEditRecorder modelRecorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
     SpriteClipViewModel        model;
     model.bindDocumentEditRecorder( modelRecorder );
     model.editSliceColumns() = 2;
@@ -295,7 +295,7 @@ SW_TEST_CASE( SpriteClipViewModelTest, PickingACellEditsOrAddsAFrame )
 // 아틀라스 크기를 모르면 픽셀 테두리를 비율로 바꿀 수 없다 - 저장하면 읽기가 오류로 버린다.
 SW_TEST_CASE( SpriteClipViewModelTest, BorderNeedsAKnownAtlasSize )
 {
-    const DocumentEditRecorder modelRecorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
+    const DocumentEditRecorder modelRecorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
     SpriteClipViewModel        model;
     model.bindDocumentEditRecorder( modelRecorder );
     model.selectFrame( 0 );
@@ -321,7 +321,7 @@ SW_TEST_CASE( SpriteClipViewModelTest, BorderNeedsAKnownAtlasSize )
 // 개수로 이름을 지으면 앞 구간을 지운 뒤 남은 이름과 겹쳤다.
 SW_TEST_CASE( SpriteClipViewModelTest, NewAnimationNamesNeverCollide )
 {
-    const DocumentEditRecorder modelRecorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
+    const DocumentEditRecorder modelRecorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
     SpriteClipViewModel        model;
     model.bindDocumentEditRecorder( modelRecorder );
     SW_REQUIRE_TRUE( model.addAnimation() ); // anim0
@@ -335,7 +335,7 @@ SW_TEST_CASE( SpriteClipViewModelTest, NewAnimationNamesNeverCollide )
 
 SW_TEST_CASE( SpriteClipViewModelTest, AnimationNeedsAFrame )
 {
-    const DocumentEditRecorder modelRecorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
+    const DocumentEditRecorder modelRecorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
     SpriteClipViewModel        model;
     model.bindDocumentEditRecorder( modelRecorder );
     model.selectFrame( 0 );
@@ -347,7 +347,7 @@ SW_TEST_CASE( SpriteClipViewModelTest, AnimationNeedsAFrame )
 
 SW_TEST_CASE( SpriteClipViewModelTest, AnimationNameMustBeUniqueAndNotEmpty )
 {
-    const DocumentEditRecorder modelRecorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
+    const DocumentEditRecorder modelRecorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
     SpriteClipViewModel        model;
     model.bindDocumentEditRecorder( modelRecorder );
     SW_REQUIRE_TRUE( model.addAnimation() );
@@ -370,7 +370,7 @@ SW_TEST_CASE( SpriteClipViewModelTest, AnimationNameMustBeUniqueAndNotEmpty )
 // 손으로 친 구간을 프레임 안으로 묶는다 - 밖으로 저장하면 읽을 때마다 경고로 잘렸다.
 SW_TEST_CASE( SpriteClipViewModelTest, AnimationRangeIsClampedToTheFrames )
 {
-    const DocumentEditRecorder modelRecorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
+    const DocumentEditRecorder modelRecorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
     SpriteClipViewModel        model;
     model.bindDocumentEditRecorder( modelRecorder );
     Util::fillFrames( model, 3 );
@@ -396,7 +396,7 @@ SW_TEST_CASE( SpriteClipViewModelTest, AnimationRangeIsClampedToTheFrames )
 
 SW_TEST_CASE( SpriteClipViewModelTest, PreviewAdvancesFrameDurationsAndLoops )
 {
-    const DocumentEditRecorder modelRecorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
+    const DocumentEditRecorder modelRecorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
     SpriteClipViewModel        model;
     model.bindDocumentEditRecorder( modelRecorder );
     Util::fillFrames( model, 3 );
@@ -417,7 +417,7 @@ SW_TEST_CASE( SpriteClipViewModelTest, PreviewAdvancesFrameDurationsAndLoops )
 
 SW_TEST_CASE( SpriteClipViewModelTest, PreviewPlaysTheSelectedRangeAndStopsWithoutLoop )
 {
-    const DocumentEditRecorder modelRecorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
+    const DocumentEditRecorder modelRecorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
     SpriteClipViewModel        model;
     model.bindDocumentEditRecorder( modelRecorder );
     Util::fillFrames( model, 4 );
@@ -441,7 +441,7 @@ SW_TEST_CASE( SpriteClipViewModelTest, PreviewPlaysTheSelectedRangeAndStopsWitho
 // 시간이 없는 프레임은 애니메이터처럼 기본 프레임 속도로 머문다.
 SW_TEST_CASE( SpriteClipViewModelTest, PreviewUsesTheFrameRateForFramesWithoutDuration )
 {
-    const DocumentEditRecorder modelRecorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
+    const DocumentEditRecorder modelRecorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
     SpriteClipViewModel        model;
     model.bindDocumentEditRecorder( modelRecorder );
     Util::fillFrames( model, 2 );
@@ -453,7 +453,7 @@ SW_TEST_CASE( SpriteClipViewModelTest, PreviewUsesTheFrameRateForFramesWithoutDu
 
 SW_TEST_CASE( SpriteClipViewModelTest, PreviewWithoutFramesShowsNothing )
 {
-    const DocumentEditRecorder modelRecorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
+    const DocumentEditRecorder modelRecorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
     SpriteClipViewModel        model;
     model.bindDocumentEditRecorder( modelRecorder );
     model.selectFrame( 0 );
@@ -469,7 +469,7 @@ SW_TEST_CASE( SpriteClipViewModelTest, PreviewWithoutFramesShowsNothing )
 // 끈 사각형은 순서와 상관없이 프레임 uv 가 되고, 아틀라스 크기를 알면 모서리가 픽셀 경계에 맞는다(옆 그림이 번지지 않게).
 SW_TEST_CASE( SpriteClipViewModelTest, DraggedRegionSnapsToAtlasPixels )
 {
-    const DocumentEditRecorder modelRecorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
+    const DocumentEditRecorder modelRecorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
     SpriteClipViewModel        model;
     model.bindDocumentEditRecorder( modelRecorder );
     model.editAtlasPixelSize() = float2{ 272.0f, 256.0f };
@@ -491,7 +491,7 @@ SW_TEST_CASE( SpriteClipViewModelTest, DraggedRegionSnapsToAtlasPixels )
 // 가장자리는 맞은편을 넘지 않고, 좌우가 뒤집힌 프레임은 뒤집힘을 지킨 채 같은 그림 영역의 가장자리가 옮겨진다.
 SW_TEST_CASE( SpriteClipViewModelTest, EdgeDragKeepsFlipAndSize )
 {
-    const DocumentEditRecorder modelRecorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
+    const DocumentEditRecorder modelRecorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
     SpriteClipViewModel        model;
     model.bindDocumentEditRecorder( modelRecorder );
     model.editAtlasPixelSize() = float2{ 100.0f, 100.0f };
@@ -518,7 +518,7 @@ SW_TEST_CASE( SpriteClipViewModelTest, EditOperationNotifiesOnceWithModelName )
 {
     uint32                     count{ 0 };
     string                     lastLabel;
-    const DocumentEditRecorder recorder{ DocumentEditRecorder::RecordDelegate::create( [&count, &lastLabel]( string_view label )
+    const DocumentEditRecorder recorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, [&count, &lastLabel]( string_view label )
     {
         ++count;
         lastLabel = string{ label };

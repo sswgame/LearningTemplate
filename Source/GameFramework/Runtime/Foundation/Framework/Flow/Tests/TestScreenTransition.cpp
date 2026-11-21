@@ -30,7 +30,7 @@ namespace
         void onActionStartingAnother()
         {
             ++_actionCount;
-            _chainedAcceptedCount += _pManager->beginTransition( Delegate<void()>::create<&TransitionProbe::onChainedAction>( this ), 1.0f, 1.0f ).has_value() ? 1 : 0;
+            _chainedAcceptedCount += _pManager->beginTransition( SW_DELEGATE_METHOD( Delegate<void()>, &TransitionProbe::onChainedAction, this ), 1.0f, 1.0f ).has_value() ? 1 : 0;
         }
     };
 } // namespace
@@ -88,7 +88,7 @@ SW_TEST_CASE( ScreenTransitionTest, ActionRunsOnceAtBlack )
     probe._pManager = &manager;
     SW_EXPECT_FALSE( manager.isBusy() );
 
-    SW_REQUIRE_TRUE( manager.beginTransition( Delegate<void()>::create<&TransitionProbe::onAction>( &probe ), 1.0f, 1.0f ).has_value() );
+    SW_REQUIRE_TRUE( manager.beginTransition( SW_DELEGATE_METHOD( Delegate<void()>, &TransitionProbe::onAction, &probe ), 1.0f, 1.0f ).has_value() );
     SW_EXPECT_TRUE( manager.isBusy() );
     SW_EXPECT_TRUE( manager.getPhase() == ScreenTransitionManager::Phase::FadeOut );
     manager.update( 0.5f );
@@ -114,7 +114,7 @@ SW_TEST_CASE( ScreenTransitionTest, ActionMayStartAnotherTransition )
     ScreenTransitionManager manager;
     TransitionProbe         probe;
     probe._pManager = &manager;
-    SW_REQUIRE_TRUE( manager.beginTransition( Delegate<void()>::create<&TransitionProbe::onActionStartingAnother>( &probe ), 1.0f, 1.0f ).has_value() );
+    SW_REQUIRE_TRUE( manager.beginTransition( SW_DELEGATE_METHOD( Delegate<void()>, &TransitionProbe::onActionStartingAnother, &probe ), 1.0f, 1.0f ).has_value() );
     manager.update( 1.0f );
     SW_EXPECT_EQUAL( 1, probe._actionCount );
     SW_EXPECT_EQUAL( 1, probe._chainedAcceptedCount );
@@ -132,7 +132,7 @@ SW_TEST_CASE( ScreenTransitionTest, ResetDropsPendingAction )
     ScreenTransitionManager manager;
     TransitionProbe         probe;
     probe._pManager = &manager;
-    SW_REQUIRE_TRUE( manager.beginTransition( Delegate<void()>::create<&TransitionProbe::onAction>( &probe ), 1.0f, 1.0f ).has_value() );
+    SW_REQUIRE_TRUE( manager.beginTransition( SW_DELEGATE_METHOD( Delegate<void()>, &TransitionProbe::onAction, &probe ), 1.0f, 1.0f ).has_value() );
     manager.update( 0.5f );
     manager.reset();
     SW_EXPECT_FALSE( manager.isBusy() );
@@ -147,10 +147,10 @@ SW_TEST_CASE( ScreenTransitionTest, SecondTransitionDuringFadeOutDoesNotDropFirs
     ScreenTransitionManager manager;
     TransitionProbe         probe;
     probe._pManager = &manager;
-    SW_REQUIRE_TRUE( manager.beginTransition( Delegate<void()>::create<&TransitionProbe::onAction>( &probe ), 1.0f, 1.0f ).has_value() );
+    SW_REQUIRE_TRUE( manager.beginTransition( SW_DELEGATE_METHOD( Delegate<void()>, &TransitionProbe::onAction, &probe ), 1.0f, 1.0f ).has_value() );
     manager.update( 0.5f );
 
-    const expected<void> second = manager.beginTransition( Delegate<void()>::create<&TransitionProbe::onChainedAction>( &probe ), 1.0f, 1.0f );
+    const expected<void> second = manager.beginTransition( SW_DELEGATE_METHOD( Delegate<void()>, &TransitionProbe::onChainedAction, &probe ), 1.0f, 1.0f );
     SW_REQUIRE_FALSE( second.has_value() );
     SW_EXPECT_TRUE( second.error().kind() == ErrorKind::AlreadyExists );
 

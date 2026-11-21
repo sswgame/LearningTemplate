@@ -48,7 +48,7 @@ namespace
         {
             StreamTransportConfig transportSettings;
             transportSettings._ioThreadCount = 0;
-            SW_EXPECT_TRUE( _server.initialize( _network.createTransport(), transportSettings, HTTPServerConfig{}, HTTPRequestFunction::create<&SteamFixture::onRequest>( this ) ) );
+            SW_EXPECT_TRUE( _server.initialize( _network.createTransport(), transportSettings, HTTPServerConfig{}, SW_DELEGATE_METHOD( HTTPRequestFunction, &SteamFixture::onRequest, this ) ) );
             SW_EXPECT_TRUE( _client.initialize( _network.createTransport(), transportSettings, HTTPClientConfig{} ) );
             SteamReceiptSettings settings;
             settings._appID = "480";

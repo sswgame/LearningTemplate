@@ -235,7 +235,7 @@ SW_TEST_CASE( AdminToolSessionTest, LoginNeedsAHandlerAndCredentials )
     SW_EXPECT_FALSE( session.hasCredentialsHandler() );
 
     AdminCredentialsRecorder recorder;
-    const Subscription       subscription = session.bindCredentialsHandler( AdminToolSession::CredentialsHandler::create<&AdminCredentialsRecorder::accept>( &recorder ) );
+    const Subscription       subscription = session.bindCredentialsHandler( SW_DELEGATE_METHOD( AdminToolSession::CredentialsHandler, &AdminCredentialsRecorder::accept, &recorder ) );
     SW_EXPECT_TRUE( session.hasCredentialsHandler() );
     SW_EXPECT_FALSE( session.connectWithLogin( "nohost", "editor", "", "pw" ) );
     SW_EXPECT_FALSE( session.connectWithLogin( "nohost", "editor", "gm", "" ) );

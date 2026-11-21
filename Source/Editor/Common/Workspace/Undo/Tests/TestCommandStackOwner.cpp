@@ -19,8 +19,8 @@ namespace
     {
         sw::CommandStack::Command cmd;
         cmd._label = "owned";
-        cmd._undo  = sw::editor::UndoStep::makeTransient( sw::Delegate<void()>::create<&doNothing>(), owner, 0u );
-        cmd._redo  = sw::editor::UndoStep::makeTransient( sw::Delegate<void()>::create<&doNothing>(), owner, 0u );
+        cmd._undo  = sw::editor::UndoStep::makeTransient( SW_DELEGATE_FUNCTION( sw::Delegate<void()>, &doNothing ), owner, 0u );
+        cmd._redo  = sw::editor::UndoStep::makeTransient( SW_DELEGATE_FUNCTION( sw::Delegate<void()>, &doNothing ), owner, 0u );
         return cmd;
     }
 } // namespace

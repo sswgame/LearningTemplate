@@ -88,7 +88,7 @@ RULES: tuple[Rule, ...] = (
     Rule("folder-layout", "경계", "잡동사니 폴더 · Component 폴더", "파일 자리는 형식이 아니다", "lint.folder_layout:check_folder_layout", tables=("",)),
     Rule("platform-chains", "경계", "빠진 플랫폼을 컴파일 오류로 내지 않는 #if 사슬", "전처리 갈래는 형식이 막지 못한다", "lint.platform_chains:check_platform_chains", tables=("",)),
     # --- 모양(공통 틀이 있는데 손으로 다시 적은 것) ----------------------------------------------------------------------------
-    Rule("cpp-shape", "모양", "선언 순서 · 깃발 칸 · 익명 네임스페이스 · 주인 우선 · 기반 하나", "합법 C++ 의 배치 규칙이다", "lint.cpp_shape:check_cpp_shape", tables=("",)),
+    Rule("cpp-shape", "모양", "선언 순서 · 깃발 칸 · 익명 네임스페이스 · 주인 우선 · 기반 하나 · 델리게이트 매크로", "합법 C++ 의 배치 규칙이다", "lint.cpp_shape:check_cpp_shape", tables=("",)),
     Rule("common-shapes", "모양", "공통 기반을 두고 손으로 적은 모양(열거 이름 표 · id 를 버리는 입구 · 손으로 짝지은 writeState · readState( Archive& ) · 프레임 함수 안의 리터럴 hashed_string …)", "칸 이름 · switch 글자 · 부른 함수는 형식이 말하지 못한다", "lint.common_shapes:check_common_shapes", tables=("",)),
     Rule("mutable-statics", "모양", "주인 객체 밖의 가변 정적 저장소(감춘 싱글턴)", "함수 정적 · 이름공간 범위 변수는 합법 C++ 이다", "lint.mutable_statics:check_mutable_statics", tables=("",)),
     # --- 이름 -------------------------------------------------------------------------------------------------------------

@@ -900,7 +900,7 @@ namespace sw
             job._windowStartMs = season._endMs;
             job._windowEndMs   = season._endMs + LeaderboardServiceInternal::kSettlementWindowMs;
             job._leaseMs       = LeaderboardServiceInternal::kSettlementLeaseMs;
-            if ( _pScheduler->registerJob( job, ScheduledJobFunction::create<&LeaderboardService::onScheduledRun>( this ) ) == false )
+            if ( _pScheduler->registerJob( job, SW_DELEGATE_METHOD( ScheduledJobFunction, &LeaderboardService::onScheduledRun, this ) ) == false )
                 return false;
         }
         return true;
@@ -1285,7 +1285,7 @@ namespace sw
             return;
         }
         const uint64 requestID            = _dependencies._pRouter->submit( EphemeralRequest::makeGet( LeaderboardServiceInternal::makeReadyKey( rankKey ) ),
-                                                                            EphemeralStoreRouter::ReplyDelegate::create<&LeaderboardService::onReadyReply>( this ), _replyOwner );
+                                                                            SW_DELEGATE_METHOD( EphemeralStoreRouter::ReplyDelegate, &LeaderboardService::onReadyReply, this ), _replyOwner );
         _mapReadyRequestToRead[requestID] = read;
     }
 
@@ -1325,12 +1325,12 @@ namespace sw
         if ( read._operation == LeaderboardOperation::Top )
         {
             const uint64 requestID        = _dependencies._pRouter->submit( EphemeralRequest::makeScoreRange( rankKey, read._offset, read._count ),
-                                                                            EphemeralStoreRouter::ReplyDelegate::create<&LeaderboardService::onRangeReply>( this ), _replyOwner );
+                                                                            SW_DELEGATE_METHOD( EphemeralStoreRouter::ReplyDelegate, &LeaderboardService::onRangeReply, this ), _replyOwner );
             _mapRequestToQuery[requestID] = queryID;
             return;
         }
         const uint64 requestID        = _dependencies._pRouter->submit( EphemeralRequest::makeScoreRank( rankKey, LeaderboardServiceInternal::makeRankMember( read._accountID ) ),
-                                                                        EphemeralStoreRouter::ReplyDelegate::create<&LeaderboardService::onRankReply>( this ), _replyOwner );
+                                                                        SW_DELEGATE_METHOD( EphemeralStoreRouter::ReplyDelegate, &LeaderboardService::onRankReply, this ), _replyOwner );
         _mapRequestToQuery[requestID] = queryID;
     }
 
@@ -1403,7 +1403,7 @@ namespace sw
         const int32 count             = myIndex + radius + 1 - offset;
         query._read._offset           = offset;
         const uint64 requestID        = _dependencies._pRouter->submit( EphemeralRequest::makeScoreRange( makeRankKey( query._read._boardID, query._read._periodID ), offset, count ),
-                                                                        EphemeralStoreRouter::ReplyDelegate::create<&LeaderboardService::onRangeReply>( this ), _replyOwner );
+                                                                        SW_DELEGATE_METHOD( EphemeralStoreRouter::ReplyDelegate, &LeaderboardService::onRangeReply, this ), _replyOwner );
         _mapRequestToQuery[requestID] = queryID;
     }
 
@@ -1439,7 +1439,7 @@ namespace sw
         {
             const uint64 requestID = _dependencies._pRouter->submit(
                 EphemeralRequest::makeGet( LeaderboardServiceInternal::makeNameKey( query._listEntry[static_cast<size_t>( entryIndex )]._accountID ) ),
-                EphemeralStoreRouter::ReplyDelegate::create<&LeaderboardService::onNameReply>( this ), _replyOwner );
+                SW_DELEGATE_METHOD( EphemeralStoreRouter::ReplyDelegate, &LeaderboardService::onNameReply, this ), _replyOwner );
             _mapRequestToQuery[requestID]     = queryID;
             _mapNameRequestToIndex[requestID] = entryIndex;
             ++query._outstandingNameCount;

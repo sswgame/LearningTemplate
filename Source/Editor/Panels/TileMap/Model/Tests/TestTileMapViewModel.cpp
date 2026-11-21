@@ -120,7 +120,7 @@ SW_TEST_CASE( AtlasGridUtilTest, CellAndUVRoundTrip )
 // 끌어 칠할 때 같은 칸에 머물면 프레임마다 "고쳤다" 가 나오면 안 된다. 저장 표시와 되돌리기 기록이 그 답을 따른다.
 SW_TEST_CASE( TileMapViewModelTest, FlagBrushReportsOnlyRealChanges )
 {
-    const DocumentEditRecorder documentRecorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
+    const DocumentEditRecorder documentRecorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
     TileMapViewModel           document;
     document.bindDocumentEditRecorder( documentRecorder );
     SW_EXPECT_TRUE( Util::isWalkable( document, 1, 1 ) );
@@ -135,7 +135,7 @@ SW_TEST_CASE( TileMapViewModelTest, FlagBrushReportsOnlyRealChanges )
 
 SW_TEST_CASE( TileMapViewModelTest, VisualBrushReportsOnlyRealChanges )
 {
-    const DocumentEditRecorder documentRecorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
+    const DocumentEditRecorder documentRecorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
     TileMapViewModel           document;
     document.bindDocumentEditRecorder( documentRecorder );
     Util::selectLayer( document, TileMapViewModel::PaintLayer::Visual );
@@ -156,7 +156,7 @@ SW_TEST_CASE( TileMapViewModelTest, VisualBrushReportsOnlyRealChanges )
 // 칸은 0..255 를 받는다 - 그대로 자르면 -1 이 255, 300 이 44 가 됐다.
 SW_TEST_CASE( TileMapViewModelTest, VisualBrushClampsHeightAndAtlas )
 {
-    const DocumentEditRecorder documentRecorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
+    const DocumentEditRecorder documentRecorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
     TileMapViewModel           document;
     document.bindDocumentEditRecorder( documentRecorder );
     Util::selectLayer( document, TileMapViewModel::PaintLayer::Visual );
@@ -170,7 +170,7 @@ SW_TEST_CASE( TileMapViewModelTest, VisualBrushClampsHeightAndAtlas )
 // 스포이트로 집어 다시 칠해도 틴트가 줄어들지 않는다 - 내림이면 칠할 때마다 한 단계씩 어두워졌다.
 SW_TEST_CASE( TileMapViewModelTest, PickedTintPaintsTheSameBytes )
 {
-    const DocumentEditRecorder documentRecorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
+    const DocumentEditRecorder documentRecorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
     TileMapViewModel           document;
     document.bindDocumentEditRecorder( documentRecorder );
     Util::selectLayer( document, TileMapViewModel::PaintLayer::Visual );
@@ -184,7 +184,7 @@ SW_TEST_CASE( TileMapViewModelTest, PickedTintPaintsTheSameBytes )
 
 SW_TEST_CASE( TileMapViewModelTest, WarpPaintReplacesAndErases )
 {
-    const DocumentEditRecorder documentRecorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
+    const DocumentEditRecorder documentRecorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
     TileMapViewModel           document;
     document.bindDocumentEditRecorder( documentRecorder );
     Util::selectLayer( document, TileMapViewModel::PaintLayer::Warp );
@@ -211,7 +211,7 @@ SW_TEST_CASE( TileMapViewModelTest, WarpPaintReplacesAndErases )
 // 빈 대상은 같은 맵 워프다(스키마). 비었다고 칠하면서 지우지 않는다.
 SW_TEST_CASE( TileMapViewModelTest, WarpWithoutTargetIsASameMapWarp )
 {
-    const DocumentEditRecorder documentRecorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
+    const DocumentEditRecorder documentRecorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
     TileMapViewModel           document;
     document.bindDocumentEditRecorder( documentRecorder );
     Util::selectLayer( document, TileMapViewModel::PaintLayer::Warp );
@@ -227,7 +227,7 @@ SW_TEST_CASE( TileMapViewModelTest, WarpWithoutTargetIsASameMapWarp )
 // 다시 칠해도 파일의 짝 id 가 남는다 - 지우고 새로 만들면 양쪽 짝이 끊겼다.
 SW_TEST_CASE( TileMapViewModelTest, RepaintingAWarpKeepsItsPairID )
 {
-    const DocumentEditRecorder documentRecorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
+    const DocumentEditRecorder documentRecorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
     TileMapViewModel           document;
     document.bindDocumentEditRecorder( documentRecorder );
     TileMapXMLData data;
@@ -250,7 +250,7 @@ SW_TEST_CASE( TileMapViewModelTest, RepaintingAWarpKeepsItsPairID )
 // 빠르게 끌어도 지난 칸에서 이번 칸까지 끊기지 않는다.
 SW_TEST_CASE( TileMapViewModelTest, BrushStrokeFillsTheGapBetweenFrames )
 {
-    const DocumentEditRecorder documentRecorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
+    const DocumentEditRecorder documentRecorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
     TileMapViewModel           document;
     document.bindDocumentEditRecorder( documentRecorder );
     document.editErase() = true;
@@ -270,7 +270,7 @@ SW_TEST_CASE( TileMapViewModelTest, BrushStrokeFillsTheGapBetweenFrames )
 
 SW_TEST_CASE( TileMapViewModelTest, BrushOutsideTheMapEditsNothing )
 {
-    const DocumentEditRecorder documentRecorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
+    const DocumentEditRecorder documentRecorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
     TileMapViewModel           document;
     document.bindDocumentEditRecorder( documentRecorder );
     document.editErase() = true;
@@ -280,7 +280,7 @@ SW_TEST_CASE( TileMapViewModelTest, BrushOutsideTheMapEditsNothing )
 
 SW_TEST_CASE( TileMapViewModelTest, RectAppliesOnRelease )
 {
-    const DocumentEditRecorder documentRecorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
+    const DocumentEditRecorder documentRecorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
     TileMapViewModel           document;
     document.bindDocumentEditRecorder( documentRecorder );
     document.setTool( TileMapViewModel::PaintTool::Rect );
@@ -305,7 +305,7 @@ SW_TEST_CASE( TileMapViewModelTest, RectAppliesOnRelease )
 
 SW_TEST_CASE( TileMapViewModelTest, LineAppliesOnReleaseAndSkipsOutsideCells )
 {
-    const DocumentEditRecorder documentRecorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
+    const DocumentEditRecorder documentRecorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
     TileMapViewModel           document;
     document.bindDocumentEditRecorder( documentRecorder );
     document.setTool( TileMapViewModel::PaintTool::Line );
@@ -326,7 +326,7 @@ SW_TEST_CASE( TileMapViewModelTest, LineAppliesOnReleaseAndSkipsOutsideCells )
 // 끌던 중 도구를 바꾸면 획을 버린다 - 남겨 두면 돌아왔을 때 옛 칸에서 이어 칠했다.
 SW_TEST_CASE( TileMapViewModelTest, SwitchingToolDropsTheActiveDrag )
 {
-    const DocumentEditRecorder documentRecorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
+    const DocumentEditRecorder documentRecorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
     TileMapViewModel           document;
     document.bindDocumentEditRecorder( documentRecorder );
     document.setTool( TileMapViewModel::PaintTool::Rect );
@@ -350,7 +350,7 @@ SW_TEST_CASE( TileMapViewModelTest, SwitchingToolDropsTheActiveDrag )
 
 SW_TEST_CASE( TileMapViewModelTest, EveryPressStartsANewStroke )
 {
-    const DocumentEditRecorder documentRecorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
+    const DocumentEditRecorder documentRecorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
     TileMapViewModel           document;
     document.bindDocumentEditRecorder( documentRecorder );
     const uint32 first = document.getStrokeSerial();
@@ -364,7 +364,7 @@ SW_TEST_CASE( TileMapViewModelTest, EveryPressStartsANewStroke )
 
 SW_TEST_CASE( TileMapViewModelTest, FillChangesTheConnectedRegionOnly )
 {
-    const DocumentEditRecorder documentRecorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
+    const DocumentEditRecorder documentRecorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
     TileMapViewModel           document;
     document.bindDocumentEditRecorder( documentRecorder );
     document.editErase() = true;
@@ -393,7 +393,7 @@ SW_TEST_CASE( TileMapViewModelTest, FillChangesTheConnectedRegionOnly )
 
 SW_TEST_CASE( TileMapViewModelTest, PickerReadsTheCellAndReturnsToTheBrush )
 {
-    const DocumentEditRecorder documentRecorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
+    const DocumentEditRecorder documentRecorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
     TileMapViewModel           document;
     document.bindDocumentEditRecorder( documentRecorder );
     document.setTool( TileMapViewModel::PaintTool::Picker );
@@ -408,7 +408,7 @@ SW_TEST_CASE( TileMapViewModelTest, PickerReadsTheCellAndReturnsToTheBrush )
 // 집은 버튼을 누른 채 끌어도 놓을 때까지 칠하지 않는다.
 SW_TEST_CASE( TileMapViewModelTest, PickerHoldDoesNotPaintUntilRelease )
 {
-    const DocumentEditRecorder documentRecorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
+    const DocumentEditRecorder documentRecorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
     TileMapViewModel           document;
     document.bindDocumentEditRecorder( documentRecorder );
     document.editErase() = true;
@@ -429,7 +429,7 @@ SW_TEST_CASE( TileMapViewModelTest, PickerHoldDoesNotPaintUntilRelease )
 
 SW_TEST_CASE( TileMapViewModelTest, DataLayerPaintsAndErasesToItsDefault )
 {
-    const DocumentEditRecorder documentRecorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
+    const DocumentEditRecorder documentRecorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
     TileMapViewModel           document;
     document.bindDocumentEditRecorder( documentRecorder );
     SW_REQUIRE_TRUE( document.addDataLayer( "Depth", 7 ) );
@@ -449,7 +449,7 @@ SW_TEST_CASE( TileMapViewModelTest, DataLayerPaintsAndErasesToItsDefault )
 
 SW_TEST_CASE( TileMapViewModelTest, LayerListAndIndexAgree )
 {
-    const DocumentEditRecorder documentRecorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
+    const DocumentEditRecorder documentRecorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
     TileMapViewModel           document;
     document.bindDocumentEditRecorder( documentRecorder );
     SW_REQUIRE_TRUE( document.addDataLayer( "Depth", 0 ) );
@@ -465,7 +465,7 @@ SW_TEST_CASE( TileMapViewModelTest, LayerListAndIndexAgree )
 
 SW_TEST_CASE( TileMapViewModelTest, EdgeWarpCoversTheEdgeWithoutDuplicates )
 {
-    const DocumentEditRecorder documentRecorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
+    const DocumentEditRecorder documentRecorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
     TileMapViewModel           document;
     document.bindDocumentEditRecorder( documentRecorder );
     SW_EXPECT_FALSE( document.paintEdgeWarp( 0 ) ); // 대상이 없다
@@ -486,7 +486,7 @@ SW_TEST_CASE( TileMapViewModelTest, EdgeWarpCoversTheEdgeWithoutDuplicates )
 
 SW_TEST_CASE( TileMapViewModelTest, SnapshotRoundTripRestoresTheMap )
 {
-    const DocumentEditRecorder documentRecorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
+    const DocumentEditRecorder documentRecorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
     TileMapViewModel           document;
     document.bindDocumentEditRecorder( documentRecorder );
     document.editErase() = true;
@@ -507,7 +507,7 @@ SW_TEST_CASE( TileMapViewModelTest, SnapshotRoundTripRestoresTheMap )
 // 옛 번호로 다른 레이어를 칠하지 않는다.
 SW_TEST_CASE( TileMapViewModelTest, SnapshotWithoutTheDataLayerGoesBackToFlags )
 {
-    const DocumentEditRecorder documentRecorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
+    const DocumentEditRecorder documentRecorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
     TileMapViewModel           document;
     document.bindDocumentEditRecorder( documentRecorder );
     const string before = document.captureText();
@@ -519,7 +519,7 @@ SW_TEST_CASE( TileMapViewModelTest, SnapshotWithoutTheDataLayerGoesBackToFlags )
 SW_TEST_CASE( TileMapViewModelTest, OversizedResizeIsRefused )
 {
     SW_EXPECT_LOG( "TileMapViewModel.TileMapResizeXBeyond" );
-    const DocumentEditRecorder documentRecorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
+    const DocumentEditRecorder documentRecorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
     TileMapViewModel           document;
     document.bindDocumentEditRecorder( documentRecorder );
     document.editInputWidth()  = 100000;
@@ -538,7 +538,7 @@ SW_TEST_CASE( TileMapViewModelTest, OversizedResizeIsRefused )
 // 크기를 바꿔도 겹치는 칸 · 안에 남는 워프가 남는다(유니티 · Godot 와 같다) - 예전에는 모든 레이어를 지웠다.
 SW_TEST_CASE( TileMapViewModelTest, ResizeKeepsOverlappingCellsAndWarps )
 {
-    const DocumentEditRecorder documentRecorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
+    const DocumentEditRecorder documentRecorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
     TileMapViewModel           document;
     document.bindDocumentEditRecorder( documentRecorder );
     document.editErase() = true;
@@ -571,7 +571,7 @@ SW_TEST_CASE( TileMapViewModelTest, ResizeKeepsOverlappingCellsAndWarps )
 // 스폰이 맵 밖이면 읽기가 거절한다 - 줄인 맵은 저장도 되돌리기도 실패했다.
 SW_TEST_CASE( TileMapViewModelTest, ShrinkingKeepsTheMapReadable )
 {
-    const DocumentEditRecorder documentRecorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
+    const DocumentEditRecorder documentRecorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
     TileMapViewModel           document;
     document.bindDocumentEditRecorder( documentRecorder );
     document.editInputWidth()  = 1;
@@ -585,7 +585,7 @@ SW_TEST_CASE( TileMapViewModelTest, ShrinkingKeepsTheMapReadable )
 
 SW_TEST_CASE( TileMapViewModelTest, SpawnInputRefusesCellsOutsideTheMap )
 {
-    const DocumentEditRecorder documentRecorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
+    const DocumentEditRecorder documentRecorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
     TileMapViewModel           document;
     document.bindDocumentEditRecorder( documentRecorder );
     document.editInputSpawnX() = 8;
@@ -608,7 +608,7 @@ SW_TEST_CASE( TileMapViewModelTest, SpawnInputRefusesCellsOutsideTheMap )
 
 SW_TEST_CASE( TileMapViewModelTest, RemovingDataLayersFallsBackToFlags )
 {
-    const DocumentEditRecorder documentRecorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
+    const DocumentEditRecorder documentRecorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
     TileMapViewModel           document;
     document.bindDocumentEditRecorder( documentRecorder );
     SW_EXPECT_FALSE( document.removeSelectedDataLayer() ); // 플래그 레이어를 고른 상태다
@@ -625,7 +625,7 @@ SW_TEST_CASE( TileMapViewModelTest, RemovingDataLayersFallsBackToFlags )
 // 없는 파일은 새 문서다 - 앞 문서의 내용으로 시작하면 저장할 때 그 내용이 새 파일에 쓰였고, "저장 안 함" 도 편집을 버리지 못했다.
 SW_TEST_CASE( TileMapViewModelTest, MissingFileStartsANewMap )
 {
-    const DocumentEditRecorder documentRecorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
+    const DocumentEditRecorder documentRecorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
     TileMapViewModel           document;
     document.bindDocumentEditRecorder( documentRecorder );
     document.editInputWidth() = 12;
@@ -643,7 +643,7 @@ SW_TEST_CASE( TileMapViewModelTest, SaveAndLoadRoundTripWithStatus )
 {
     const string path = test::makeScratchPath( "SwTileMapDocumentRoundTrip.tilemap.xml" );
     {
-        const DocumentEditRecorder documentRecorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
+        const DocumentEditRecorder documentRecorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
         TileMapViewModel           document;
         document.bindDocumentEditRecorder( documentRecorder );
         document.editPath()  = path.c_str();
@@ -652,7 +652,7 @@ SW_TEST_CASE( TileMapViewModelTest, SaveAndLoadRoundTripWithStatus )
         SW_REQUIRE_TRUE( document.saveDocument() );
         SW_EXPECT_FALSE( document.getStatus().empty() );
     }
-    const DocumentEditRecorder documentRecorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
+    const DocumentEditRecorder documentRecorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
     TileMapViewModel           document;
     document.bindDocumentEditRecorder( documentRecorder );
     SW_EXPECT_TRUE( document.loadXML( path ) == ToolAssetLoadResult::Loaded );
@@ -662,7 +662,7 @@ SW_TEST_CASE( TileMapViewModelTest, SaveAndLoadRoundTripWithStatus )
 
 SW_TEST_CASE( TileMapViewModelTest, DescribeCellReadsTheSelectedLayer )
 {
-    const DocumentEditRecorder documentRecorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
+    const DocumentEditRecorder documentRecorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
     TileMapViewModel           document;
     document.bindDocumentEditRecorder( documentRecorder );
     SW_EXPECT_TRUE( document.describeCell( 99, 0 ).empty() );
@@ -716,7 +716,7 @@ SW_TEST_CASE( TileMapViewModelTest, EditOperationNotifiesOnceWithModelName )
 {
     uint32                     count{ 0 };
     string                     lastLabel;
-    const DocumentEditRecorder recorder{ DocumentEditRecorder::RecordDelegate::create( [&count, &lastLabel]( string_view label )
+    const DocumentEditRecorder recorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, [&count, &lastLabel]( string_view label )
     {
         ++count;
         lastLabel = string{ label };

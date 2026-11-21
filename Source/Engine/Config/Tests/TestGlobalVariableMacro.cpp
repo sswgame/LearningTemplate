@@ -153,7 +153,7 @@ SW_TEST_CASE( GlobalVariableMacroTest, ChangeHookIsASubscriptionAndSilentWriteSk
     if ( pInfo != nullptr )
     {
         s_testEngineEnumChangedCount  = 0;
-        sw::Subscription subscription = pInfo->bindOnValueChanged( sw::GlobalVariableChangedDelegate::create<&onTestEngineEnumChanged>() );
+        sw::Subscription subscription = pInfo->bindOnValueChanged( SW_DELEGATE_FUNCTION( sw::GlobalVariableChangedDelegate, &onTestEngineEnumChanged ) );
         SW_EXPECT_TRUE( pInfo->setValueAsInt( static_cast<int32>( sw::RHIBackend::Vulkan ) ) );
         SW_EXPECT_EQUAL( 1, s_testEngineEnumChangedCount );
         SW_EXPECT_TRUE( pInfo->setValueAsIntWithoutNotify( static_cast<int32>( sw::RHIBackend::DirectX11 ) ) );
@@ -164,7 +164,7 @@ SW_TEST_CASE( GlobalVariableMacroTest, ChangeHookIsASubscriptionAndSilentWriteSk
         SW_EXPECT_EQUAL( 1, s_testEngineEnumChangedCount ); // 풀린 구독은 부르지 않는다
 
         // 변수가 먼저 내려가면 남은 구독은 무효가 될 뿐이다.
-        subscription = pInfo->bindOnValueChanged( sw::GlobalVariableChangedDelegate::create<&onTestEngineEnumChanged>() );
+        subscription = pInfo->bindOnValueChanged( SW_DELEGATE_FUNCTION( sw::GlobalVariableChangedDelegate, &onTestEngineEnumChanged ) );
         manager.unregisterVariablesByModule( kTestEngineEnumModule );
         SW_EXPECT_FALSE( subscription.isActive() );
     }

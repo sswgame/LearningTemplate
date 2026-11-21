@@ -62,7 +62,7 @@ namespace sw
                 SW_LOG_ERROR_ID( "FixedFrameDeltaSwitch.VariableMissing", "The fixed frame delta switch found no '%#' registration", FixedFrameDeltaSwitchInternal::kVariableName );
                 return SubsystemInitResult::Failed;
             }
-            _variableSubscription = pVariable->bindOnValueChanged( GlobalVariableChangedDelegate::create<&FixedFrameDeltaSwitchInternal::onVariableChanged>() );
+            _variableSubscription = pVariable->bindOnValueChanged( SW_DELEGATE_FUNCTION( GlobalVariableChangedDelegate, &FixedFrameDeltaSwitchInternal::onVariableChanged ) );
             if ( gv_fixedFrameDelta > 0.0f )
                 FixedFrameDeltaSwitchInternal::applyToPolicy(); // 사람이 준 값만 옮긴다 — 0 이면 정책(자동화가 넣었을 수 있다)을 덮지 않는다
             return SubsystemInitResult::Succeeded;

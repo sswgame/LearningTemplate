@@ -28,7 +28,7 @@ namespace
             _listBody.emplace_back( response._pBody, response._pBody + response._bodySize );
         }
 
-        Delegate<void( const NetResponse& )> makeCallback() { return Delegate<void( const NetResponse& )>::create<&ResponseLog::onResponse>( this ); }
+        Delegate<void( const NetResponse& )> makeCallback() { return SW_DELEGATE_METHOD( Delegate<void( const NetResponse& )>, &ResponseLog::onResponse, this ); }
     };
 
     /** @brief 메서드 1 = 바로 메아리, 2 = 토큰을 들고 나중에(테스트가 respond). 처리 횟수를 센다. */
@@ -115,8 +115,8 @@ namespace
         {
             _serverSide._principalID = principalID;
             _serverSide._server.initialize( &_pair._server, serverSettings );
-            SW_EXPECT_TRUE( _serverSide._server.registerMethod( 1, NetRequestFunction::create<&EchoService::onNetRequest>( &_echo ) ) );
-            SW_EXPECT_TRUE( _serverSide._server.registerMethod( 2, NetRequestFunction::create<&EchoService::onNetRequest>( &_echo ) ) );
+            SW_EXPECT_TRUE( _serverSide._server.registerMethod( 1, SW_DELEGATE_METHOD( NetRequestFunction, &EchoService::onNetRequest, &_echo ) ) );
+            SW_EXPECT_TRUE( _serverSide._server.registerMethod( 2, SW_DELEGATE_METHOD( NetRequestFunction, &EchoService::onNetRequest, &_echo ) ) );
             _clientSide._client.initialize( &_pair._client );
             SW_EXPECT_TRUE( _pair._bReady );
             _pair.step( 2 );

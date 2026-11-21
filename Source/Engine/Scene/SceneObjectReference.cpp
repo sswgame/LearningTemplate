@@ -105,7 +105,7 @@ namespace sw
                 }
                 else if ( const IMapContainerWrapper* pMap = shape._wrapper->asMap() )
                 {
-                    pMap->forEach( pContainer, MapForEachDelegate::create( [&]( const void* pKey, const void* pValue )
+                    pMap->forEach( pContainer, SW_DELEGATE_LAMBDA( MapForEachDelegate, [&]( const void* pKey, const void* pValue )
                     {
                         collectValue( pKey, shape._keyTypeName );
                         collectElement( pValue, shape );

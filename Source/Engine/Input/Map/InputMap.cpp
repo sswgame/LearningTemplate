@@ -288,7 +288,7 @@ namespace sw
     {
         if ( action.empty() || callback.isBound() == false )
             return {};
-        return getOrCreateAction( action )._onPhase.add( PhaseCallbackDelegate::create( [phase, callback]( ActionPhase currentPhase )
+        return getOrCreateAction( action )._onPhase.add( SW_DELEGATE_LAMBDA( PhaseCallbackDelegate, [phase, callback]( ActionPhase currentPhase )
         {
             if ( currentPhase == phase )
                 callback();

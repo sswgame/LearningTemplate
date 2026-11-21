@@ -90,9 +90,9 @@ SW_TEST_CASE( GameFeatureTest, ScopeDeactivateLeavesNothing )
         GameFeatureScope scope( fixture._gameScope, fixture._variables, fixture._packConfig, &fixture._inputMap, hashed_string( "a" ), GameFeatureScope::CatalogRule::Declared, vector<hashed_string>{} );
         SW_REQUIRE_TRUE( scope.bindService( &service ) );
         SW_REQUIRE_TRUE( scope.overrideGlobalVariable( "gv_testGameFeatureVolume", "3" ) );
-        scope.addCleanup( Delegate<void()>::create( [&listOrder]()
+        scope.addCleanup( SW_DELEGATE_LAMBDA( Delegate<void()>, [&listOrder]()
         { listOrder.push_back( 1 ); } ) );
-        scope.addCleanup( Delegate<void()>::create( [&listOrder]()
+        scope.addCleanup( SW_DELEGATE_LAMBDA( Delegate<void()>, [&listOrder]()
         { listOrder.push_back( 2 ); } ) );
         SW_EXPECT_TRUE( fixture._gameScope.find<TestKitService>() == &service );
         SW_EXPECT_EQUAL( 3, fixture._volume );
@@ -197,7 +197,7 @@ SW_TEST_CASE( GameFeatureTest, LeakCheckCatchesLayersEnabledOutsideTheStack )
     InputMap&                          inputMap = fixture._inputMap;
     fixture._inputMap.setLayerEnabled( town, true ); // 되돌릴 일이 없다
     inputMap.pushLayer( menu );                      // 범위로 건 것 — pop 이 꺼진 상태로 되돌린다
-    pScope->addCleanup( Delegate<void()>::create( [&inputMap]()
+    pScope->addCleanup( SW_DELEGATE_LAMBDA( Delegate<void()>, [&inputMap]()
     { inputMap.popLayer( hashed_string( "menu" ) ); } ) );
     pScope->finishActivation();
 
@@ -217,7 +217,7 @@ SW_TEST_CASE( GameFeatureTest, LeakCheckIgnoresScopedAndPriorState )
         const unique_ptr<GameFeatureScope> pScope   = fixture.makeScope( "clean" );
         InputMap&                          inputMap = fixture._inputMap;
         inputMap.pushLayer( hashed_string( "minigame" ) );
-        pScope->addCleanup( Delegate<void()>::create( [&inputMap]()
+        pScope->addCleanup( SW_DELEGATE_LAMBDA( Delegate<void()>, [&inputMap]()
         { inputMap.popLayer( hashed_string( "minigame" ) ); } ) );
         pScope->finishActivation();
         SW_EXPECT_EQUAL( 0u, pScope->deactivate() );

@@ -55,12 +55,12 @@ namespace sw
     uint64 AccountClient::registerAccount( string_view loginName, string_view password )
     {
         return call<AccountMethod::Register>( AccountCredentialRequest{ string( loginName ), string( password ) },
-                                              OnlineReplyDelegate<AccountMethod::Register>::create<&AccountClient::onGrantReply>( this ) );
+                                              SW_DELEGATE_METHOD( OnlineReplyDelegate<AccountMethod::Register>, &AccountClient::onGrantReply, this ) );
     }
 
     uint64 AccountClient::login( string_view loginName, string_view password )
     {
-        return call<AccountMethod::Login>( AccountLoginRequest{ string( loginName ), string( password ), _clientInfo }, OnlineReplyDelegate<AccountMethod::Login>::create<&AccountClient::onGrantReply>( this ) );
+        return call<AccountMethod::Login>( AccountLoginRequest{ string( loginName ), string( password ), _clientInfo }, SW_DELEGATE_METHOD( OnlineReplyDelegate<AccountMethod::Login>, &AccountClient::onGrantReply, this ) );
     }
 
     uint64 AccountClient::guestLogin( const uint8 ( &arrDeviceSecret )[LoginConstant::kDeviceSecretSize] )
@@ -68,13 +68,13 @@ namespace sw
         AccountGuestLoginRequest request;
         Memory::copy( request._arrDeviceSecret, arrDeviceSecret, LoginConstant::kDeviceSecretSize );
         request._clientInfo = _clientInfo;
-        return call<AccountMethod::GuestLogin>( request, OnlineReplyDelegate<AccountMethod::GuestLogin>::create<&AccountClient::onGrantReply>( this ) );
+        return call<AccountMethod::GuestLogin>( request, SW_DELEGATE_METHOD( OnlineReplyDelegate<AccountMethod::GuestLogin>, &AccountClient::onGrantReply, this ) );
     }
 
     uint64 AccountClient::platformLogin( string_view provider, const vector<uint8>& ticketBytes )
     {
         return call<AccountMethod::PlatformLogin>( AccountPlatformRequest{ string( provider ), ticketBytes, _clientInfo },
-                                                   OnlineReplyDelegate<AccountMethod::PlatformLogin>::create<&AccountClient::onGrantReply>( this ) );
+                                                   SW_DELEGATE_METHOD( OnlineReplyDelegate<AccountMethod::PlatformLogin>, &AccountClient::onGrantReply, this ) );
     }
 
     uint64 AccountClient::resume()
@@ -93,49 +93,49 @@ namespace sw
 
     uint64 AccountClient::logout()
     {
-        return call<AccountMethod::Logout>( OnlineReplyDelegate<AccountMethod::Logout>::create<&AccountClient::onGrantReply>( this ) );
+        return call<AccountMethod::Logout>( SW_DELEGATE_METHOD( OnlineReplyDelegate<AccountMethod::Logout>, &AccountClient::onGrantReply, this ) );
     }
 
     uint64 AccountClient::linkCredential( string_view loginName, string_view password )
     {
         return call<AccountMethod::LinkCredential>( AccountCredentialRequest{ string( loginName ), string( password ) },
-                                                    OnlineReplyDelegate<AccountMethod::LinkCredential>::create<&AccountClient::onGrantReply>( this ) );
+                                                    SW_DELEGATE_METHOD( OnlineReplyDelegate<AccountMethod::LinkCredential>, &AccountClient::onGrantReply, this ) );
     }
 
     uint64 AccountClient::linkPlatform( string_view provider, const vector<uint8>& ticketBytes )
     {
         return call<AccountMethod::LinkPlatform>( AccountPlatformRequest{ string( provider ), ticketBytes, AccountClientInfo{} },
-                                                  OnlineReplyDelegate<AccountMethod::LinkPlatform>::create<&AccountClient::onGrantReply>( this ) );
+                                                  SW_DELEGATE_METHOD( OnlineReplyDelegate<AccountMethod::LinkPlatform>, &AccountClient::onGrantReply, this ) );
     }
 
     uint64 AccountClient::issueGameTicket( string_view serverID )
     {
-        return call<AccountMethod::IssueGameTicket>( AccountGameTicketRequest{ string( serverID ) }, OnlineReplyDelegate<AccountMethod::IssueGameTicket>::create<&AccountClient::onTicketReply>( this ) );
+        return call<AccountMethod::IssueGameTicket>( AccountGameTicketRequest{ string( serverID ) }, SW_DELEGATE_METHOD( OnlineReplyDelegate<AccountMethod::IssueGameTicket>, &AccountClient::onTicketReply, this ) );
     }
 
     uint64 AccountClient::unlinkPlatform( string_view provider )
     {
-        return call<AccountMethod::UnlinkPlatform>( AccountProviderRequest{ string( provider ) }, OnlineReplyDelegate<AccountMethod::UnlinkPlatform>::create<&AccountClient::onGrantReply>( this ) );
+        return call<AccountMethod::UnlinkPlatform>( AccountProviderRequest{ string( provider ) }, SW_DELEGATE_METHOD( OnlineReplyDelegate<AccountMethod::UnlinkPlatform>, &AccountClient::onGrantReply, this ) );
     }
 
     uint64 AccountClient::listLinks()
     {
-        return call<AccountMethod::ListLinks>( OnlineReplyDelegate<AccountMethod::ListLinks>::create<&AccountClient::onLinkReply>( this ) );
+        return call<AccountMethod::ListLinks>( SW_DELEGATE_METHOD( OnlineReplyDelegate<AccountMethod::ListLinks>, &AccountClient::onLinkReply, this ) );
     }
 
     uint64 AccountClient::requestDeletion()
     {
-        return call<AccountMethod::RequestDeletion>( OnlineReplyDelegate<AccountMethod::RequestDeletion>::create<&AccountClient::onGrantReply>( this ) );
+        return call<AccountMethod::RequestDeletion>( SW_DELEGATE_METHOD( OnlineReplyDelegate<AccountMethod::RequestDeletion>, &AccountClient::onGrantReply, this ) );
     }
 
     uint64 AccountClient::cancelDeletion()
     {
-        return call<AccountMethod::CancelDeletion>( OnlineReplyDelegate<AccountMethod::CancelDeletion>::create<&AccountClient::onGrantReply>( this ) );
+        return call<AccountMethod::CancelDeletion>( SW_DELEGATE_METHOD( OnlineReplyDelegate<AccountMethod::CancelDeletion>, &AccountClient::onGrantReply, this ) );
     }
 
     uint64 AccountClient::issueLoginNonce()
     {
-        return call<AccountMethod::IssueLoginNonce>( OnlineReplyDelegate<AccountMethod::IssueLoginNonce>::create<&AccountClient::onNonceReply>( this ) );
+        return call<AccountMethod::IssueLoginNonce>( SW_DELEGATE_METHOD( OnlineReplyDelegate<AccountMethod::IssueLoginNonce>, &AccountClient::onNonceReply, this ) );
     }
 
     int32 AccountClient::pollReplies( vector<AccountClientReply>& outListReply )
@@ -191,7 +191,7 @@ namespace sw
             _pServiceClient->holdSessionRequests(); // 모든 키트의 세션 요청(이 키트 포함)은 재접속 응답 뒤에 간다. 재접속 자신은 익명이라 바로 간다
         _bResuming        = SW_TRUE;
         _bAutomaticResume = bAutomatic ? SW_TRUE : SW_FALSE;
-        return call<AccountMethod::Resume>( AccountResumeRequest{ _token, _clientInfo }, OnlineReplyDelegate<AccountMethod::Resume>::create<&AccountClient::onGrantReply>( this ) );
+        return call<AccountMethod::Resume>( AccountResumeRequest{ _token, _clientInfo }, SW_DELEGATE_METHOD( OnlineReplyDelegate<AccountMethod::Resume>, &AccountClient::onGrantReply, this ) );
     }
 
     AccountClientReply AccountClient::makeReply( uint64 requestID, uint16 method, uint16 errorCode, const vector<uint8>& errorDetail )

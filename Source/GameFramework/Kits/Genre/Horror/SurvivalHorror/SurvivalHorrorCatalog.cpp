@@ -173,8 +173,7 @@ namespace sw
     GridInventory::ShapeDelegate SurvivalHorrorCatalog::makeShapeLookup() const
     {
         const SurvivalHorrorCatalog* pCatalog = this;
-        return GridInventory::ShapeDelegate::create(
-            [pCatalog]( const hashed_string& itemID, GridItemShape& outShape )
+        return SW_DELEGATE_LAMBDA( GridInventory::ShapeDelegate, [pCatalog]( const hashed_string& itemID, GridItemShape& outShape )
         {
             const SurvivalHorrorItemDef* pItem = pCatalog->findItem( itemID );
             if ( pItem == nullptr )

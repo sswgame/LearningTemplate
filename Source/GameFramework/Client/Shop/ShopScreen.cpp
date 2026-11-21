@@ -163,7 +163,7 @@ namespace sw
             return kInvalidUIScreenHandle;
         ShopScreen& screen = static_cast<ShopScreen&>( *pScreen );
         screen._pProvider  = &provider;
-        provider.bindScreen( Delegate<void()>::create( [pScreen = &screen]()
+        provider.bindScreen( SW_DELEGATE_LAMBDA( Delegate<void()>, [pScreen = &screen]()
         { pScreen->onProviderReleased(); } ) );
         screen.rebuild();
         return handle;
@@ -218,8 +218,8 @@ namespace sw
         desc._cancelText                = SW_LOCKEYREF( "Shop", "ConfirmCancel" );
         const UIScreenHandle shop       = getHandle();
         const uint32         offerIndex = *index;
-        const UIScreenHandle dialog     = ConfirmDialogScreen::open( *pUI, desc, ConfirmDialogScreen::ResultDelegate::create( [pUI, shop, offerIndex]( ConfirmDialogResult result )
-        { onConfirmed( *pUI, shop, offerIndex, result ); } ) );
+        const UIScreenHandle dialog     = ConfirmDialogScreen::open( *pUI, desc, SW_DELEGATE_LAMBDA( ConfirmDialogScreen::ResultDelegate, [pUI, shop, offerIndex]( ConfirmDialogResult result )
+            { onConfirmed( *pUI, shop, offerIndex, result ); } ) );
         if ( dialog != kInvalidUIScreenHandle )
         {
             _bBusy = SW_TRUE;
@@ -242,7 +242,7 @@ namespace sw
         screen.setStatus( SW_LOCKEYREF( "Shop", "Purchasing" ) );
         const ShopOffer offer = screen._listOffer[offerIndex]; // 공급자가 바로 답해(오프라인) 목록을 다시 만들어도 안전하게 복사한다
         UISystem*       pUI   = &ui;
-        screen._pProvider->beginPurchase( offer, 1, ShopPurchaseDelegate::create( [pUI, shop]( const ShopPurchaseReceipt& receipt )
+        screen._pProvider->beginPurchase( offer, 1, SW_DELEGATE_LAMBDA( ShopPurchaseDelegate, [pUI, shop]( const ShopPurchaseReceipt& receipt )
         { onPurchased( *pUI, shop, receipt ); } ) );
     }
 
@@ -293,14 +293,14 @@ namespace sw
             return;
         }
         _pProvider->collectOffers( _listOffer );
-        pOffers->setRowFactory( ListViewWidget::RowFactoryDelegate::create( []()
+        pOffers->setRowFactory( SW_DELEGATE_LAMBDA( ListViewWidget::RowFactoryDelegate, []()
         {
             unique_ptr<ButtonWidget> button = make_unique<ButtonWidget>();
             button->setCommand( hashed_string( kPickCommand ) );
             (void)button->addChild( make_unique<TextWidget>() );
             return unique_ptr<Widget>( std::move( button ) );
         } ) );
-        pOffers->setRowBinder( ListViewWidget::RowBinderDelegate::create( [this]( Widget& row, uint32 itemIndex )
+        pOffers->setRowBinder( SW_DELEGATE_LAMBDA( ListViewWidget::RowBinderDelegate, [this]( Widget& row, uint32 itemIndex )
         {
             ButtonWidget&    button = static_cast<ButtonWidget&>( row );
             const ShopOffer& offer  = _listOffer[itemIndex];

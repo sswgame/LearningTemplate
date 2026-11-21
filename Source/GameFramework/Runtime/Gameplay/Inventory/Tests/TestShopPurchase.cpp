@@ -65,7 +65,7 @@ namespace
             sw::ShopPurchaseReceipt* pReceipt = &receipt;
             int32                    calls    = 0;
             int32*                   pCalls   = &calls;
-            _provider.beginPurchase( offer, count, sw::ShopPurchaseDelegate::create( [pReceipt, pCalls]( const sw::ShopPurchaseReceipt& answer )
+            _provider.beginPurchase( offer, count, SW_DELEGATE_LAMBDA( sw::ShopPurchaseDelegate, [pReceipt, pCalls]( const sw::ShopPurchaseReceipt& answer )
             {
                 *pReceipt = answer;
                 ++*pCalls;
@@ -144,14 +144,14 @@ SW_TEST_CASE( ShopPurchaseTest, ProviderReleaseNotifiesTheBoundScreenOnce )
     int32 releasedCount = 0;
     {
         sw::unique_ptr<LocalShopFixture> pFixture = sw::make_unique<LocalShopFixture>();
-        pFixture->_provider.bindScreen( sw::Delegate<void()>::create( [&releasedCount]()
+        pFixture->_provider.bindScreen( SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [&releasedCount]()
         { ++releasedCount; } ) );
     }
     SW_EXPECT_EQUAL( releasedCount, 1 );
 
     {
         sw::unique_ptr<LocalShopFixture> pFixture = sw::make_unique<LocalShopFixture>();
-        pFixture->_provider.bindScreen( sw::Delegate<void()>::create( [&releasedCount]()
+        pFixture->_provider.bindScreen( SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [&releasedCount]()
         { ++releasedCount; } ) );
         pFixture->_provider.unbindScreen();
     }

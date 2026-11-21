@@ -39,7 +39,7 @@ namespace sw
             desc._cancelText = SW_LOCKEYREF( "UIMenu", "Cancel" );
             // 메뉴 포인터 대신 핸들을 쥔다 — 답을 받기 전에 씬이 바뀌어 메뉴가 닫혔으면 아무것도 하지 않는다.
             const UIScreenHandle menu = getHandle();
-            (void)ConfirmDialogScreen::open( *pUI, desc, ConfirmDialogScreen::ResultDelegate::create( [pUI, menu]( ConfirmDialogResult result )
+            (void)ConfirmDialogScreen::open( *pUI, desc, SW_DELEGATE_LAMBDA( ConfirmDialogScreen::ResultDelegate, [pUI, menu]( ConfirmDialogResult result )
             { onQuitConfirmed( *pUI, menu, result ); } ) );
             return true;
         }

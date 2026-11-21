@@ -155,6 +155,6 @@ namespace sw
         uint8                                              _bHasLastCameraPosition : 1; /**< `_lastCameraPosition` 이 유효한지입니다. */
         uint8                                              _bUpdateEnabled         : 1; /**< 미리보기 정책이 끄면 false 입니다(`applyPreviewPolicy`). */
         /** @brief 에미터 등록의 구독입니다(에미터는 O(1) 목록이라 `RegistrationList::addSubscribed` 가 아니다). 풀리면 `releaseEmitter` 가 불린다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다. */
-        ItemSubscriptionList<AudioEmitterComponent> _emitterSubscriptions{ ItemSubscriptionList<AudioEmitterComponent>::ReleaseFunction::create<&SceneAudio::releaseEmitter>( this ) };
+        ItemSubscriptionList<AudioEmitterComponent> _emitterSubscriptions{ SW_DELEGATE_METHOD( ItemSubscriptionList<AudioEmitterComponent>::ReleaseFunction, &SceneAudio::releaseEmitter, this ) };
     };
 } // namespace sw

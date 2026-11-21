@@ -179,9 +179,9 @@ namespace sw
     SW_SCENE_SERVICE( SceneAudio, FlushEnd, makeSceneFrameAccess( SceneDataKindSet{}, SceneDataKindSet{}, SceneDataKindSet{ SceneDataKind::Structure, SceneDataKind::Transform } ) )
 
     SceneAudio::SceneAudio( GameObjectManager& manager )
-        : _listener{ "SceneAudio.Listener", RegistrationList<AudioListenerComponent>::ReleaseFunction::create<&SceneAudio::releaseListener>( this ) }
+        : _listener{ "SceneAudio.Listener", SW_DELEGATE_METHOD( RegistrationList<AudioListenerComponent>::ReleaseFunction, &SceneAudio::releaseListener, this ) }
         , _emitter{}
-        , _zone{ "SceneAudio.ReverbZone", RegistrationList<AudioReverbZoneComponent>::ReleaseFunction::create<&SceneAudio::releaseReverbZone>( this ) }
+        , _zone{ "SceneAudio.ReverbZone", SW_DELEGATE_METHOD( RegistrationList<AudioReverbZoneComponent>::ReleaseFunction, &SceneAudio::releaseReverbZone, this ) }
         , _listEmitterSnapshot{}
         , _listEmitterMotion{}
         , _listZoneValue{}

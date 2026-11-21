@@ -162,7 +162,7 @@ namespace sw
             const bool   bSubscribed = VectorUtil::containsIf( _listOwnerSubscription, [ownerID]( const OwnerSubscription& subscription )
               { return subscription._ownerID == ownerID; } );
             if ( bSubscribed == false )
-                _listOwnerSubscription.push_back( OwnerSubscription{ ownerID, pStep->_pOwner->subscribeReleased( editor::UndoStepOwner::ReleasedDelegate::create<&CommandStack::onOwnerReleased>( this ) ) } );
+                _listOwnerSubscription.push_back( OwnerSubscription{ ownerID, pStep->_pOwner->subscribeReleased( SW_DELEGATE_METHOD( editor::UndoStepOwner::ReleasedDelegate, &CommandStack::onOwnerReleased, this ) ) } );
         }
         if ( cmd._listChild != nullptr )
         {

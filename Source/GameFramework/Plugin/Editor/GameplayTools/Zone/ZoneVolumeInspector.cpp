@@ -91,7 +91,7 @@ namespace sw::editor
             /** @brief 덮어쓰기 항목 @p name 지우기를 요청합니다(게임 단계가 되돌리기 기록과 함께 지운다 — `InspectorComponentEdit::requestComponentEdit`). */
             static void requestRevert( const EditorPropertyGridTarget& target, const hashed_string& name )
             {
-                InspectorComponentEdit::requestComponentEdit( target, InspectorComponentEdit::ComponentEditDelegate::create( [name]( Component& component, EditorTransaction& transaction )
+                InspectorComponentEdit::requestComponentEdit( target, SW_DELEGATE_LAMBDA( InspectorComponentEdit::ComponentEditDelegate, [name]( Component& component, EditorTransaction& transaction )
                 {
                     ZoneVolumeComponent& volume = static_cast<ZoneVolumeComponent&>( component ); // 이 형에 등록한 확장의 대상이다
                     InspectorObjectEdit::applyObjectEdit( transaction, volume.getOwner(), SW_LOCKEY( "EdUndo", "ZoneRevertModule" ), [&volume, &name]()
@@ -111,7 +111,7 @@ namespace sw::editor
             /** @brief 매개변수 덮어쓰기 · 되돌리기를 요청합니다(게임 단계가 되돌리기 기록과 함께 적용한다). @p edit 는 값으로 붙잡는다. */
             static void requestParamEdit( const EditorPropertyGridTarget& target, const PendingParamEdit& edit )
             {
-                InspectorComponentEdit::requestComponentEdit( target, InspectorComponentEdit::ComponentEditDelegate::create( [edit]( Component& component, EditorTransaction& transaction )
+                InspectorComponentEdit::requestComponentEdit( target, SW_DELEGATE_LAMBDA( InspectorComponentEdit::ComponentEditDelegate, [edit]( Component& component, EditorTransaction& transaction )
                 {
                     ZoneVolumeComponent& volume = static_cast<ZoneVolumeComponent&>( component ); // 이 형에 등록한 확장의 대상이다
                     const utf8*          pUndo  = edit._bRevert ? SW_LOCKEY( "EdUndo", "ZoneRevertParam" ) : SW_LOCKEY( "EdUndo", "ZoneOverrideParam" );

@@ -459,9 +459,9 @@ namespace sw
         }
         _pAutosave = make_unique<AutosaveManager>();
         if ( _pAutosave->initialize( settings, getSubsystem<GameLocalStore>(), _saveLock,
-                                     AutosaveManager::SaveDelegate::create( [this]( vector<uint8>& outBytes )
+                                     SW_DELEGATE_LAMBDA( AutosaveManager::SaveDelegate, [this]( vector<uint8>& outBytes )
         { return captureSnapshot( SerializePurpose::SaveGame, outBytes ); } ),
-                                     AutosaveManager::LoadDelegate::create( [this]( const string& slot, const vector<uint8>& bytes, const AutosaveManager::RestoreCompletedFunction& onCompleted )
+                                     SW_DELEGATE_LAMBDA( AutosaveManager::LoadDelegate, [this]( const string& slot, const vector<uint8>& bytes, const AutosaveManager::RestoreCompletedFunction& onCompleted )
         {
             applySaveSlot( slot, bytes, onCompleted ); // 슬롯 불러오기와 같은 길 — 찍은 씬으로 옮긴 뒤 적용한다(감사 G-7)
             return true;
@@ -620,7 +620,7 @@ namespace sw
             SW_LOG_ERROR_ID( "GameInstance.BrokenSceneNotReopened", "The broken scene has no source to reopen - saving stays blocked until a restore succeeds" );
             return;
         }
-        if ( getSubsystem<GameSceneFlow>().requestSceneThen( scenePath, GameSceneFlow::SceneLoadedFunction::create<&GameInstance::onBrokenSceneReopened>( this ) ) == false )
+        if ( getSubsystem<GameSceneFlow>().requestSceneThen( scenePath, SW_DELEGATE_METHOD( GameSceneFlow::SceneLoadedFunction, &GameInstance::onBrokenSceneReopened, this ) ) == false )
             SW_LOG_ERROR_ID( "GameInstance.BrokenSceneNotRequested", "The broken scene '%#' could not be requested again - saving stays blocked until a restore succeeds", scenePath.c_str() );
     }
 
@@ -685,7 +685,7 @@ namespace sw
         LocalStoreWriteOptions options{};
         options._formatVersion = GameInstanceInternal::kSaveSlotFormatVersion;
         holdSlotRequest( getSubsystem<GameLocalStore>().submitWrite( slotName, std::move( snapshotBytes ), options,
-                                                                     GameLocalStore::CompletionFunction::create<&GameInstance::onSaveSlotWritten>( this ) ) );
+                                                                     SW_DELEGATE_METHOD( GameLocalStore::CompletionFunction, &GameInstance::onSaveSlotWritten, this ) ) );
         return true;
     }
 
@@ -711,7 +711,7 @@ namespace sw
         string slotName;
         if ( resolveSaveSlot( slot, slotName ) == false )
             return false;
-        holdSlotRequest( getSubsystem<GameLocalStore>().submitRead( slotName, GameLocalStore::CompletionFunction::create<&GameInstance::onSaveSlotRead>( this ) ) );
+        holdSlotRequest( getSubsystem<GameLocalStore>().submitRead( slotName, SW_DELEGATE_METHOD( GameLocalStore::CompletionFunction, &GameInstance::onSaveSlotRead, this ) ) );
         return true;
     }
 
@@ -757,7 +757,7 @@ namespace sw
             return;
         }
         _pendingSlotRestore = PendingSlotRestore{ slot, bytes, onApplied };
-        if ( getSubsystem<GameSceneFlow>().requestSceneThen( *savedSceneID, GameSceneFlow::SceneLoadedFunction::create<&GameInstance::onSaveSceneLoaded>( this ) ) == false )
+        if ( getSubsystem<GameSceneFlow>().requestSceneThen( *savedSceneID, SW_DELEGATE_METHOD( GameSceneFlow::SceneLoadedFunction, &GameInstance::onSaveSceneLoaded, this ) ) == false )
         {
             SW_LOG_ERROR_ID( "GameInstance.SaveSceneNotRequested", "Save slot '%#' was made in scene '%#', which could not be requested - nothing is loaded", slot.c_str(), savedSceneID->c_str() );
             _pendingSlotRestore = nullopt;

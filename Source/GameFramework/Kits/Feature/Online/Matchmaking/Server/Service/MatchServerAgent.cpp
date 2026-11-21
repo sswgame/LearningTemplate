@@ -142,7 +142,7 @@ namespace sw
         }
         _nextListReadMs = _nowMs + kRecordRefreshMs;
         _listRequestID  = _pRouter->submit( EphemeralRequest::makeScoreRange( MatchQueueService::makeMatchListKey( _serverID ), 0, kMaxRecordCount ),
-                                            EphemeralStoreRouter::ReplyDelegate::create<&MatchServerAgent::onListReply>( this ), _replyOwner );
+                                            SW_DELEGATE_METHOD( EphemeralStoreRouter::ReplyDelegate, &MatchServerAgent::onListReply, this ), _replyOwner );
     }
 
     void MatchServerAgent::onListReply( const EphemeralReply& reply )
@@ -164,7 +164,7 @@ namespace sw
                 continue;
             _mapRecordToExpiresMs[member._member] = member._score;
             const uint64 requestID                = _pRouter->submit( EphemeralRequest::makeGet( MatchQueueService::makeMatchRecordKey( _serverID, member._member ) ),
-                                                                      EphemeralStoreRouter::ReplyDelegate::create<&MatchServerAgent::onRecordReply>( this ), _replyOwner );
+                                                                      SW_DELEGATE_METHOD( EphemeralStoreRouter::ReplyDelegate, &MatchServerAgent::onRecordReply, this ), _replyOwner );
             _mapRequestToRecord[requestID]        = member._member;
         }
     }

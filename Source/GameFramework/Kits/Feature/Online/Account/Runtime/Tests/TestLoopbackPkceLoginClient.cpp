@@ -78,7 +78,7 @@ namespace
             _security._bHashOk   = SW_TRUE;
             StreamTransportConfig transportSettings;
             transportSettings._ioThreadCount = 0;
-            SW_EXPECT_TRUE( _tokenServer.initialize( _network.createTransport(), transportSettings, HTTPServerConfig{}, HTTPRequestFunction::create<&PkceFixture::onTokenRequest>( this ) ) );
+            SW_EXPECT_TRUE( _tokenServer.initialize( _network.createTransport(), transportSettings, HTTPServerConfig{}, SW_DELEGATE_METHOD( HTTPRequestFunction, &PkceFixture::onTokenRequest, this ) ) );
             SW_EXPECT_TRUE( _redirectSender.initialize( _network.createTransport(), transportSettings, HTTPClientConfig{} ) );
             PkceLoginProviderConfig settings;
             settings._provider         = "google";

@@ -26,7 +26,7 @@ namespace
 
         uint64 send( uint16 method, const BitWriter& body, const DoneDelegate& onDone )
         {
-            return _callTable.send( *_pClient, method, body, NetRequestOptions{}, OnlineResponseDelegate::create<&CallTableClient::onResponse>( this ), onDone );
+            return _callTable.send( *_pClient, method, body, NetRequestOptions{}, SW_DELEGATE_METHOD( OnlineResponseDelegate, &CallTableClient::onResponse, this ), onDone );
         }
 
         void onResponse( const OnlineResponse& response )
@@ -158,7 +158,7 @@ SW_TEST_CASE( ServiceClientCallTableTest, KitDestroyedWhileFailingQueuedCallsGet
         SW_REQUIRE_TRUE_MSG( result.has_value(), result.has_value() ? std::string_view{} : result.error().message() ); // 서버가 없다 — 요청은 모인다
     }
 
-    const OnlineResponseDelegate onResponse = OnlineResponseDelegate::create<&SelfDestroyingClientService::onResponse>( kit.get() );
+    const OnlineResponseDelegate onResponse = SW_DELEGATE_METHOD( OnlineResponseDelegate, &SelfDestroyingClientService::onResponse, kit.get() );
     (void)client.sendRequest( OnlineMethodRange::kGame + 1, BitWriter{}, NetRequestOptions{}, onResponse );
     (void)client.sendRequest( OnlineMethodRange::kGame + 2, BitWriter{}, NetRequestOptions{}, onResponse );
     client.shutdown(); // 첫 실패 알림이 키트를 파괴한다
@@ -194,7 +194,7 @@ SW_TEST_CASE( ServiceClientCallTableTest, ImmediateFailureInsideSendStillReaches
     CallTableClient     tableClient;
     tableClient._pClient = &client;
     DoneRecorder recorder;
-    const uint64 requestID = tableClient.send( OnlineMethodRange::kGame + 1, BitWriter{}, DoneDelegate::create<&DoneRecorder::onDone>( &recorder ) );
+    const uint64 requestID = tableClient.send( OnlineMethodRange::kGame + 1, BitWriter{}, SW_DELEGATE_METHOD( DoneDelegate, &DoneRecorder::onDone, &recorder ) );
     SW_EXPECT_TRUE( requestID != 0 );
     SW_REQUIRE_EQUAL( recorder._listErrorCode.size(), size_t( 1 ) );
     SW_EXPECT_EQUAL( recorder._listErrorCode[0], OnlineError::kUnavailable );
@@ -216,8 +216,8 @@ SW_TEST_CASE( ServiceClientCallTableTest, ResponsesFindTheirOwnDelegateOverLoopb
     goodBody.writeVarUint( 42 );
     BitWriter badBody;
     badBody.writeVarUint( 0 ); // 계정 0 — 테스트 로그인이 거절한다
-    (void)tableClient.send( test::TestLoginService::kLoginMethod, badBody, DoneDelegate::create<&DoneRecorder::onDone>( &badRecorder ) );
-    (void)tableClient.send( test::TestLoginService::kLoginMethod, goodBody, DoneDelegate::create<&DoneRecorder::onDone>( &goodRecorder ) );
+    (void)tableClient.send( test::TestLoginService::kLoginMethod, badBody, SW_DELEGATE_METHOD( DoneDelegate, &DoneRecorder::onDone, &badRecorder ) );
+    (void)tableClient.send( test::TestLoginService::kLoginMethod, goodBody, SW_DELEGATE_METHOD( DoneDelegate, &DoneRecorder::onDone, &goodRecorder ) );
     SW_EXPECT_EQUAL( tableClient._callTable.getCount(), size_t( 2 ) );
     test::updateAll( { &rig._server }, rig._clients, 0 );
 
@@ -240,7 +240,7 @@ SW_TEST_CASE( ServiceClientCallTableTest, ForeignResponseDuringSendDoesNotTakeTh
     ForeignFirstClient                   client;
     client._pTable = &table;
     DoneRecorder recorder;
-    const uint64 requestID = table.send( client, uint16( 1 ), int32( 0 ), int32( 0 ), DoneDelegate{}, DoneDelegate::create<&DoneRecorder::onDone>( &recorder ) );
+    const uint64 requestID = table.send( client, uint16( 1 ), int32( 0 ), int32( 0 ), DoneDelegate{}, SW_DELEGATE_METHOD( DoneDelegate, &DoneRecorder::onDone, &recorder ) );
     SW_EXPECT_EQUAL( requestID, uint64( 7 ) );
     SW_REQUIRE_EQUAL( recorder._listErrorCode.size(), size_t( 1 ) );
     SW_EXPECT_EQUAL( recorder._listErrorCode[0], uint16( 7 ) );
@@ -262,7 +262,7 @@ SW_TEST_CASE( ServiceClientCallTableTest, CancelledRequestsDropTheirAnswersWitho
     DoneRecorder recorder;
     BitWriter    body;
     body.writeVarUint( 42 );
-    (void)tableClient->send( test::TestLoginService::kLoginMethod, body, DoneDelegate::create<&DoneRecorder::onDone>( &recorder ) );
+    (void)tableClient->send( test::TestLoginService::kLoginMethod, body, SW_DELEGATE_METHOD( DoneDelegate, &DoneRecorder::onDone, &recorder ) );
     rig._clients.getClient( clientIndex ).cancelRequests( OnlineMethodRange::kGame );
     tableClient.reset();
     test::updateAll( { &rig._server }, rig._clients, 0 );
@@ -305,8 +305,8 @@ SW_TEST_CASE( ServiceClientCallTableTest, UnwritableMessageEndsAsInvalidRequestI
     tooLong._assetID = string( LedgerConstant::kMaxAssetIDSize + 1, 'a' );
     SW_EXPECT_LOG( "OnlineProtocol.MessageOutOfRange" ); // 범위 밖 값은 로그를 남기고 보내지 않는다
     const uint64 requestID = tableClient._callTable.sendMessage<OnlineMessageTypes<LedgerBalance>>( client, OnlineMethodRange::kGame + 1, tooLong, NetRequestOptions{},
-                                                                                                    OnlineResponseDelegate::create<&CallTableClient::onResponse>( &tableClient ),
-                                                                                                    DoneDelegate::create<&DoneRecorder::onDone>( &recorder ) );
+                                                                                                    SW_DELEGATE_METHOD( OnlineResponseDelegate, &CallTableClient::onResponse, &tableClient ),
+                                                                                                    SW_DELEGATE_METHOD( DoneDelegate, &DoneRecorder::onDone, &recorder ) );
     SW_EXPECT_TRUE( requestID != 0 );
     SW_REQUIRE_EQUAL( recorder._listErrorCode.size(), size_t( 1 ) );
     SW_EXPECT_EQUAL( recorder._listErrorCode[0], OnlineError::kInvalidRequest );

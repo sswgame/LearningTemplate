@@ -448,7 +448,7 @@ namespace sw
             }
             return true;
         }
-        if ( requestScene( mapPath, GameSceneFlow::SceneLoadedFunction::create<&MinigameFlow::onMapLoaded>( this ) ) == false )
+        if ( requestScene( mapPath, SW_DELEGATE_METHOD( GameSceneFlow::SceneLoadedFunction, &MinigameFlow::onMapLoaded, this ) ) == false )
         {
             SW_LOG_ERROR_ID( "MinigameFlow.MapRequestRefused", "Minigame '%#': the map '%#' could not be requested", name, mapPath.c_str() );
             rollback();
@@ -491,7 +491,7 @@ namespace sw
         pTop->_definition           = std::move( definition );
         _pActive                    = std::move( pScope );
         const string mapPath        = pTop->_definition._map.get();
-        if ( requestScene( mapPath, GameSceneFlow::SceneLoadedFunction::create<&MinigameFlow::onMapLoaded>( this ) ) == false )
+        if ( requestScene( mapPath, SW_DELEGATE_METHOD( GameSceneFlow::SceneLoadedFunction, &MinigameFlow::onMapLoaded, this ) ) == false )
         {
             SW_LOG_ERROR_ID( "MinigameFlow.MapRequestRefused", "Minigame '%#': the map '%#' could not be requested", name, mapPath.c_str() );
             deactivateScope();
@@ -540,7 +540,7 @@ namespace sw
             }
         },
             frame._returnPoint );
-        if ( scenePath.empty() || requestScene( scenePath, GameSceneFlow::SceneLoadedFunction::create<&MinigameFlow::onReturnLoaded>( this ) ) == false )
+        if ( scenePath.empty() || requestScene( scenePath, SW_DELEGATE_METHOD( GameSceneFlow::SceneLoadedFunction, &MinigameFlow::onReturnLoaded, this ) ) == false )
         {
             SW_LOG_ERROR_ID( "MinigameFlow.ReturnRequestRefused", "Leaving minigame '%#' is refused - the scene to return to '%#' could not be requested (an entry with no scene to return to needs GameSettings entranceScene or startMap)",
                              result._minigame.c_str(), scenePath.c_str() );
@@ -775,7 +775,7 @@ namespace sw
             }
             inputMap.pushLayer( layer );
             // 같은 입력 맵을 끌 때 찾는다 — 입력 서비스는 엔진 수명이라 미니게임보다 오래 산다.
-            scope.addCleanup( Delegate<void()>::create( [pInput, layer]()
+            scope.addCleanup( SW_DELEGATE_LAMBDA( Delegate<void()>, [pInput, layer]()
             { pInput->getInputMap().popLayer( layer ); } ) );
         }
         return true;

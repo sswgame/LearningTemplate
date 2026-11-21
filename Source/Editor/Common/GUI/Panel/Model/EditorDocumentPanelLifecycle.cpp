@@ -56,7 +56,7 @@ namespace sw::editor
         , _lastSavedDocumentText{}
         , _assetsMovedSubscription{}
         , _pUndoTarget{ make_shared<EditorDocumentPanel*>( this ) }
-        , _pEditRecorder{ make_unique<DocumentEditRecorder>( DocumentEditRecorder::RecordDelegate::create<&EditorDocumentPanel::notifyDocumentEdited>( this ) ) }
+        , _pEditRecorder{ make_unique<DocumentEditRecorder>( SW_DELEGATE_METHOD( DocumentEditRecorder::RecordDelegate, &EditorDocumentPanel::notifyDocumentEdited, this ) ) }
         , _pEditSpan{ make_unique<DocumentEditSpan>() }
         , _pUndoOwner{ make_unique<UndoStepOwner>() }
         , _pDocumentStack{ make_unique<CommandStack>( EditorUndoHistory::readConfiguredLimit( getEditorToolDefaults() ) ) }

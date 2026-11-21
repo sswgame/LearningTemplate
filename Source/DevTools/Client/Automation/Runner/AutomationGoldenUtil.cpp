@@ -217,7 +217,7 @@ namespace sw
     {
         string                firstLine;
         const expected<int32> exitCode = Process::execute( ProcessCommand::fromSearchPath( "git", { "-C", string( ProcessRoots::get()._project.str() ), "describe", "--always", "--dirty", "--abbrev=40" } ), {},
-                                                           ProcessOutputDelegate::create( [&firstLine]( string_view line )
+                                                           SW_DELEGATE_LAMBDA( ProcessOutputDelegate, [&firstLine]( string_view line )
         {
             if ( firstLine.empty() )
                 firstLine = string( StringUtil::trim( line ) );

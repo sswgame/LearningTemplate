@@ -424,7 +424,7 @@ namespace sw::editor
         if ( pStore == nullptr )
             return;
         _presetRequest = pStore->getChannel().submitRead( CharacterEditorLocalStore::kPresetSlot,
-                                                          LocalStoreChannel::CompletionFunction::create<&CharacterEditorViewModel::onPresetsRead>( this ) );
+                                                          SW_DELEGATE_METHOD( LocalStoreChannel::CompletionFunction, &CharacterEditorViewModel::onPresetsRead, this ) );
         _status        = "Loading presets...";
     }
 
@@ -472,7 +472,7 @@ namespace sw::editor
         if ( pSavedSelection != nullptr )
             _stagedSelection = *pSavedSelection;
         _presetRequest = pStore->getChannel().submitWrite( CharacterEditorLocalStore::kPresetSlot, std::move( bytes ), LocalStoreWriteOptions{},
-                                                           LocalStoreChannel::CompletionFunction::create<&CharacterEditorViewModel::onPresetsWritten>( this ) );
+                                                           SW_DELEGATE_METHOD( LocalStoreChannel::CompletionFunction, &CharacterEditorViewModel::onPresetsWritten, this ) );
         _status        = "Saving presets...";
     }
 
@@ -522,7 +522,7 @@ namespace sw::editor
         _thumbnailPresetName = string{ presetName };
         _thumbnailSlot       = CharacterEditorLocalStore::makeThumbnailSlot( _presetStore, presetName );
         _thumbnailRequest    = pStore->getChannel().submitWrite( _thumbnailSlot, std::move( pngBytes ), LocalStoreWriteOptions{},
-                                                                 LocalStoreChannel::CompletionFunction::create<&CharacterEditorViewModel::onThumbnailWritten>( this ) );
+                                                                 SW_DELEGATE_METHOD( LocalStoreChannel::CompletionFunction, &CharacterEditorViewModel::onThumbnailWritten, this ) );
         _status              = "Saving the thumbnail...";
     }
 

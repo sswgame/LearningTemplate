@@ -64,7 +64,7 @@ namespace sw
                 ( listArg.push_back( ReflectedValue::make<std::decay_t<Args>>( args ) ), ... );
                 handler( listArg );
             };
-            return static_cast<EventType*>( pEvent )->add( Delegate<void( Args... )>::create( adapter ) );
+            return static_cast<EventType*>( pEvent )->add( SW_DELEGATE_LAMBDA( Delegate<void( Args... )>, adapter ) );
         }
 
         static bool isBound( const void* pEvent ) { return static_cast<const EventType*>( pEvent )->isBound(); }

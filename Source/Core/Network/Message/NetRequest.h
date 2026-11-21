@@ -149,7 +149,7 @@ namespace sw
      * @details 콜백은 `handleFrame`, `update`, `onConnectionClosed` 를 부른 스레드(`poll` 스레드)에서 실행됩니다. 보내지 못한 경우만 `sendRequest` 를 부른 스레드에서 실행됩니다.
      * @code
      *     const uint64 requestID = _requestClient.sendRequest( handle, LoginMethod::kLogin, body.data(), size, options,
-     *                                                           Delegate<void( const NetResponse& )>::create<&LoginClient::onLoginResponse>( this ) );
+     *                                                           SW_DELEGATE_METHOD( Delegate<void( const NetResponse& )>, &LoginClient::onLoginResponse, this ) );
      *     // 리스너에서:
      *     void onEndpointFrame( handle, kind, pBody, size ) { if ( _requestClient.handleFrame( handle, kind, pBody, size ) ) return; ... }
      *     void onEndpointClosed( handle, reason )          { _requestClient.onConnectionClosed( handle ); }

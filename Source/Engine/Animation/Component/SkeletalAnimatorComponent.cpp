@@ -301,7 +301,7 @@ namespace sw
         , _listFiredNotify{}
         , _listActivePlayable{}
         , _listRootMotionModifier{}
-        , _rootMotionModifierSubscriptions{ ItemSubscriptionList<IRootMotionModifier>::ReleaseFunction::create<&SkeletalAnimatorComponent::releaseRootMotionModifier>( this ) }
+        , _rootMotionModifierSubscriptions{ SW_DELEGATE_METHOD( ItemSubscriptionList<IRootMotionModifier>::ReleaseFunction, &SkeletalAnimatorComponent::releaseRootMotionModifier, this ) }
         , _curves{}
         , _scratchPose{}
         , _scratchTrackPose{}

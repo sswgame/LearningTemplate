@@ -146,7 +146,7 @@ namespace
                 _bReadCacheOnTick = SW_FALSE;
                 _cacheReplyOwner  = host.getEphemeralRouter()->openReplyOwner();
                 (void)host.getEphemeralRouter()->submit( EphemeralRequest::makeGet( _cacheKeyToRead ),
-                                                         EphemeralStoreRouter::ReplyDelegate::create<&FakeOnlineService::onCacheReply>( this ), _cacheReplyOwner );
+                                                         SW_DELEGATE_METHOD( EphemeralStoreRouter::ReplyDelegate, &FakeOnlineService::onCacheReply, this ), _cacheReplyOwner );
             }
         }
 
@@ -310,7 +310,7 @@ namespace
             ResponseRecord record;
             BitWriter      body;
             body.writeVarUint( value );
-            (void)client._client.sendRequest( method, body, options, OnlineResponseDelegate::create<&ResponseRecord::onResponse>( &record ) );
+            (void)client._client.sendRequest( method, body, options, SW_DELEGATE_METHOD( OnlineResponseDelegate, &ResponseRecord::onResponse, &record ) );
             for ( int32 attempt = 0; attempt < 50 && record._bAnswered == false; ++attempt )
             {
                 step( 1 );
@@ -366,7 +366,7 @@ namespace
         {
             _bAnswered = false;
             (void)_requestClient.sendRequest( _handle, method, pBody, bodySize, NetRequestOptions{},
-                                              Delegate<void( const NetResponse& )>::create<&RawClientSide::onResponse>( this ) );
+                                              SW_DELEGATE_METHOD( Delegate<void( const NetResponse& )>, &RawClientSide::onResponse, this ) );
         }
 
         /** @brief 답이 올 때까지 이 쪽과 @p rig 를 번갈아 돌립니다(최대 6 번). */
@@ -801,7 +801,7 @@ SW_TEST_CASE( OnlineServiceHostTest, OversizedBodiesAndFloodsAreRefused )
     BitWriter      bigBody;
     vector<uint8>  bytes( static_cast<size_t>( OnlineLimit::kMaxRequestBodySize ) + 1, 7 );
     bigBody.writeBytes( bytes.data(), static_cast<int32>( bytes.size() ) );
-    (void)client._client.sendRequest( Internal::kRangeA + Internal::kEcho, bigBody, NetRequestOptions{}, OnlineResponseDelegate::create<&ResponseRecord::onResponse>( &oversized ) );
+    (void)client._client.sendRequest( Internal::kRangeA + Internal::kEcho, bigBody, NetRequestOptions{}, SW_DELEGATE_METHOD( OnlineResponseDelegate, &ResponseRecord::onResponse, &oversized ) );
     rig.step( 10 );
     SW_EXPECT_EQUAL( OnlineError::kInvalidRequest, oversized._errorCode );
 
@@ -830,7 +830,7 @@ SW_TEST_CASE( OnlineServiceHostTest, LateAnswersUseTheTokenAndAnswersAfterCloseA
     // 답하기 전에 연결이 닫히면 그 답은 버려진다.
     rig._serviceA._bHoldLateAnswers = SW_TRUE;
     ResponseRecord orphan;
-    (void)client._client.sendRequest( Internal::kRangeA + Internal::kLate, BitWriter{}, NetRequestOptions{}, OnlineResponseDelegate::create<&ResponseRecord::onResponse>( &orphan ) );
+    (void)client._client.sendRequest( Internal::kRangeA + Internal::kLate, BitWriter{}, NetRequestOptions{}, SW_DELEGATE_METHOD( OnlineResponseDelegate, &ResponseRecord::onResponse, &orphan ) );
     rig.step( 6 );
     SW_REQUIRE_EQUAL( size_t( 1 ), rig._serviceA._listLateToken.size() );
     const NetRequestToken held = rig._serviceA._listLateToken[0];
@@ -1007,7 +1007,7 @@ SW_TEST_CASE( OnlineServiceHostTest, ShutdownTellsEveryServiceOnceAfterPendingCa
     const Subscription subscription    = rig._host.subscribeServerBus( "sd.changed", &rig._serviceA );
     const Subscription cacheReplyOwner = rig._host.getEphemeralRouter()->openReplyOwner();
     (void)rig._host.getEphemeralRouter()->submit( EphemeralRequest::makeGet( "never.pumped" ),
-                                                  EphemeralStoreRouter::ReplyDelegate::create<&FakeOnlineService::onCacheReply>( &rig._serviceA ), cacheReplyOwner );
+                                                  SW_DELEGATE_METHOD( EphemeralStoreRouter::ReplyDelegate, &FakeOnlineService::onCacheReply, &rig._serviceA ), cacheReplyOwner );
     rig._host.shutdown();
     SW_EXPECT_EQUAL( 1, rig._serviceA._hostShutdownCount );
     SW_EXPECT_EQUAL( 1, rig._serviceB._hostShutdownCount );
@@ -1034,7 +1034,7 @@ SW_TEST_CASE( OnlineServiceHostTest, SharedEndpointClientsEachHelloAndGetTheirOw
         BitWriter body;
         body.writeVarUint( static_cast<uint64>( 100 + index ) );
         (void)bots._arrClient[index].sendRequest( Internal::kRangeA + Internal::kLogin, body, NetRequestOptions{},
-                                                  OnlineResponseDelegate::create<&ResponseRecord::onResponse>( &arrRecord[index] ) );
+                                                  SW_DELEGATE_METHOD( OnlineResponseDelegate, &ResponseRecord::onResponse, &arrRecord[index] ) );
     }
     for ( int32 index = 0; index < 10; ++index )
     {
@@ -1066,7 +1066,7 @@ SW_TEST_CASE( OnlineServiceHostTest, TraceIDReachesTheServiceLogContextWithTheAc
         ScopedLogContext scope( caller ); // 클라이언트 쪽 문맥 — 요청 머리에 실린다
         BitWriter        body;
         body.writeVarUint( 0 );
-        (void)client._client.sendRequest( Internal::kRangeA + Internal::kSecure, body, NetRequestOptions{}, OnlineResponseDelegate::create<&ResponseRecord::onResponse>( &record ) );
+        (void)client._client.sendRequest( Internal::kRangeA + Internal::kSecure, body, NetRequestOptions{}, SW_DELEGATE_METHOD( OnlineResponseDelegate, &ResponseRecord::onResponse, &record ) );
     }
     for ( int32 attempt = 0; attempt < 50 && record._bAnswered == false; ++attempt )
     {

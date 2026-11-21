@@ -113,7 +113,7 @@ namespace sw
         const int64 ttlMs = modeIt->second._matchTimeLimitMs;
         placement._expiresMs += ttlMs;
         const uint64 requestID = _dependencies._pRouter->submit( EphemeralRequest::makeSet( makeMatchRecordKey( placement._serverID, placement._recordName ), std::move( bytes ), ttlMs ),
-                                                                 EphemeralStoreRouter::ReplyDelegate::create<&MatchQueueService::onMatchRecordReply>( this ), _replyOwner );
+                                                                 SW_DELEGATE_METHOD( EphemeralStoreRouter::ReplyDelegate, &MatchQueueService::onMatchRecordReply, this ), _replyOwner );
         if ( requestID == 0 )
         {
             failPlacement( placement ); // 맡기지 못했다(라우터가 오류 로그를 남겼다)
@@ -136,7 +136,7 @@ namespace sw
         }
         // 목록에 올라야 게임 서버가 기록을 찾는다. 목록 쓰기의 답까지 본 뒤에 Found 를 낸다
         const uint64 requestID = _dependencies._pRouter->submit( EphemeralRequest::makeScoreSet( makeMatchListKey( placement._serverID ), placement._recordName, placement._expiresMs ),
-                                                                 EphemeralStoreRouter::ReplyDelegate::create<&MatchQueueService::onMatchListReply>( this ), _replyOwner );
+                                                                 SW_DELEGATE_METHOD( EphemeralStoreRouter::ReplyDelegate, &MatchQueueService::onMatchListReply, this ), _replyOwner );
         if ( requestID == 0 )
         {
             failPlacement( placement );
@@ -347,7 +347,7 @@ namespace sw
         const EphemeralRequest request                = state._bAuthority != SW_FALSE
                                                           ? EphemeralRequest::makeCompareAndSet( makeLeaseKey( modeID ), selfValue, selfValue, MatchQueueLimit::kLeaseTTLMs )
                                                           : EphemeralRequest::makeSet( makeLeaseKey( modeID ), selfValue, MatchQueueLimit::kLeaseTTLMs, EphemeralCondition::IfAbsent );
-        state._leaseRequestID                         = _dependencies._pRouter->submit( request, EphemeralStoreRouter::ReplyDelegate::create<&MatchQueueService::onLeaseReply>( this ), _replyOwner );
+        state._leaseRequestID                         = _dependencies._pRouter->submit( request, SW_DELEGATE_METHOD( EphemeralStoreRouter::ReplyDelegate, &MatchQueueService::onLeaseReply, this ), _replyOwner );
         state._leaseAttemptMs                         = nowMs.count();
         state._bLeaseAttempted                        = SW_TRUE;
         _mapLeaseRequestToMode[state._leaseRequestID] = modeID;
@@ -413,7 +413,7 @@ namespace sw
         // 파티장이면 파티 전체를 넣는다. 파티 기록을 읽은 뒤(onPartyFound)에 처리한다
         const uint64 lookupTag      = _nextLookupTag++;
         _mapLookupToJoin[lookupTag] = join;
-        _dependencies._pPartyLobby->findPartyOfAccount( accountID, lookupTag, PartyLobbyService::PartyFoundDelegate::create<&MatchQueueService::onPartyFound>( this ) );
+        _dependencies._pPartyLobby->findPartyOfAccount( accountID, lookupTag, SW_DELEGATE_METHOD( PartyLobbyService::PartyFoundDelegate, &MatchQueueService::onPartyFound, this ) );
     }
 
     void MatchQueueService::onPartyFound( uint64 lookupTag, MatchmakingServiceResult result, const PartySnapshot& party )
@@ -950,7 +950,7 @@ namespace sw
         // 이 서버의 티켓이 없다. 다른 서버(죽었을 수 있다)가 낸 파티 티켓이 파티 기록에 남아 있으면 그것을 푼다
         const uint64 lookupTag       = _nextLookupTag++;
         _mapLookupToLeave[lookupTag] = LeaveRequest{ accountID, requestTag };
-        _dependencies._pPartyLobby->findPartyOfAccount( accountID, lookupTag, PartyLobbyService::PartyFoundDelegate::create<&MatchQueueService::onLeavePartyFound>( this ) );
+        _dependencies._pPartyLobby->findPartyOfAccount( accountID, lookupTag, SW_DELEGATE_METHOD( PartyLobbyService::PartyFoundDelegate, &MatchQueueService::onLeavePartyFound, this ) );
     }
 
     void MatchQueueService::onLeavePartyFound( uint64 lookupTag, MatchmakingServiceResult result, const PartySnapshot& party )
