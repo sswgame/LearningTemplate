@@ -23,6 +23,7 @@ Scripts/generate/content_modules.py
 from __future__ import annotations
 
 import json
+import re
 import sys
 import xml.etree.ElementTree as ElementTree
 from pathlib import Path
@@ -103,6 +104,10 @@ def collect_game_modules(game_folder: Path, manifest: dict, map_manifest_by_name
         if dependency is None:
             raise GeneratorError(f"{game_folder.name}: 의존 '{name}' 의 매니페스트가 없다")
         list_pending += [entry["_name"] for entry in dependency.get("_listDependency", [])]
+        # 키트 공유 모듈을 쓰면 서버 · 클라이언트 짝도 쓰인다 — 빌드의 같은 규칙(`ModuleManifest.cmake` 의 활성 닫힘)과 맞춘다. 짝이 없는 키트는 건너뛴다.
+        match = re.fullmatch(r"GF_(?!(?:Server|Client|EditorPlugin)_)(.+)", name)
+        if match:
+            list_pending += [pair for pair in (f"GF_Server_{match.group(1)}", f"GF_Client_{match.group(1)}") if pair in map_manifest_by_name]
     return set_reached
 
 
