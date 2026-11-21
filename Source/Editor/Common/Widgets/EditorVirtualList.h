@@ -18,7 +18,7 @@ namespace sw::editor
     /**
      * @class EditorVirtualList
      * @brief 줄 @p rowCount 개 가운데(번호는 ImGui 와 같은 int32) 이번 프레임에 보이는 구간만 돌게 합니다. `while ( list.step() ) for ( row = list.getBegin(); row < list.getEnd(); ++row )` 로 쓴다.
-     * @details 한 프레임 한 목록에 하나를 쓰고 버린다. 키보드로 고른 줄처럼 화면 밖이어도 그려야 하는 줄은 `includeRow` 로 넣는다(`SetScrollHereY` 가 그 줄에서 돈다).
+     * @details 한 프레임 한 목록에 하나를 쓰고 버린다. 키보드로 고른 줄처럼 화면 밖이어도 그려야 하는 줄은 `includeItemByIndex` 로 넣는다(`SetScrollHereY` 가 그 줄에서 돈다).
      */
     class SW_EDITOR_API EditorVirtualList final
     {
@@ -30,7 +30,7 @@ namespace sw::editor
         EditorVirtualList& operator=( const EditorVirtualList& ) = delete;
 
         /** @brief 화면 밖이어도 이 줄을 그리게 합니다(첫 `step` 전에 부른다). 범위 밖 번호는 무시한다. */
-        void includeRow( int32 rowIndex );
+        void includeItemByIndex( int32 rowIndex );
         /** @brief 다음 구간으로 갑니다. 그릴 구간이 더 없으면 false 입니다. */
         [[nodiscard]] bool step();
         /** @brief 이번 구간의 첫 줄입니다. */

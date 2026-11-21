@@ -103,7 +103,7 @@ namespace sw::editor
             if ( EditorChrome::beginSection( resultsDesc ) )
             {
                 EditorVirtualList virtualList( static_cast<int32>( listFiltered.size() ) ); // 명령 · 에셋 후보 전부 — 보이는 줄만 그린다
-                virtualList.includeRow( _selectedIndex );                                   // 키로 고른 줄은 화면 밖이어도 그린다(Enter 가 그 줄을 실행한다)
+                virtualList.includeItemByIndex( _selectedIndex );                           // 키로 고른 줄은 화면 밖이어도 그린다(Enter 가 그 줄을 실행한다)
                 while ( pExecute == nullptr && virtualList.step() )
                 {
                     for ( size_t itemIndex = static_cast<size_t>( virtualList.getBegin() ); itemIndex < static_cast<size_t>( virtualList.getEnd() ); ++itemIndex )
