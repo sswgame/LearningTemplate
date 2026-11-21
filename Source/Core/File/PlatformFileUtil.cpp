@@ -330,7 +330,7 @@ namespace sw
         return pFile;
     }
 
-    bool PlatformFileUtil::replaceFile( FileUtil::toDiskPath( const utf8* pSourcePath ), FileUtil::toDiskPath( const utf8* pTargetPath ) )
+    bool PlatformFileUtil::replaceFile( const utf8* pSourcePath, const utf8* pTargetPath )
     {
         if ( pSourcePath == nullptr || pTargetPath == nullptr )
             return false;
