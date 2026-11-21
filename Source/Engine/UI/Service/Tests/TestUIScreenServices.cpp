@@ -250,11 +250,11 @@ SW_TEST_CASE( UIScreenServicesTest, CommandSubscriptions )
     UICommandProbe      first;
     UICommandProbe      second;
     const hashed_string command( "Do" );
-    first._subscription = rig._screen.registerCommand( command, UICommandDelegate::create<&UICommandProbe::onCommand>( &first ) );
+    first._subscription = rig._screen.registerCommand( command, SW_DELEGATE_METHOD( UICommandDelegate, &UICommandProbe::onCommand, &first ) );
     rig._screen.dispatchCommand( command, *rig._pLeaf );
     SW_EXPECT_EQUAL( 1, first._count );
 
-    second._subscription = rig._screen.registerCommand( command, UICommandDelegate::create<&UICommandProbe::onCommand>( &second ) );
+    second._subscription = rig._screen.registerCommand( command, SW_DELEGATE_METHOD( UICommandDelegate, &UICommandProbe::onCommand, &second ) );
     first._subscription.reset(); // 옛 구독이다
     rig._screen.dispatchCommand( command, *rig._pLeaf );
     SW_EXPECT_EQUAL( 1, first._count );
@@ -273,7 +273,7 @@ SW_TEST_CASE( UIScreenServicesTest, CommandMayReleaseItself )
     UIScreenFixture     rig;
     UICommandProbe      probe;
     const hashed_string command( "Once" );
-    probe._subscription = rig._screen.registerCommand( command, UICommandDelegate::create<&UICommandProbe::onCommandReleasingItself>( &probe ) );
+    probe._subscription = rig._screen.registerCommand( command, SW_DELEGATE_METHOD( UICommandDelegate, &UICommandProbe::onCommandReleasingItself, &probe ) );
     rig._screen.dispatchCommand( command, *rig._pLeaf );
     SW_EXPECT_EQUAL( 1, probe._count );
     SW_EXPECT_FALSE( rig._screen.onCommand( command, *rig._pLeaf ) );

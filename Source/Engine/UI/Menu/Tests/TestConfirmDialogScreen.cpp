@@ -37,7 +37,7 @@ namespace
             desc._message    = "Message";
             desc._acceptText = "Yes";
             desc._cancelText = "No";
-            _screen.present( desc, ConfirmDialogScreen::ResultDelegate::create( [pProbe]( ConfirmDialogResult result )
+            _screen.present( desc, SW_DELEGATE_LAMBDA( ConfirmDialogScreen::ResultDelegate, [pProbe]( ConfirmDialogResult result )
             {
                 ++pProbe->_count;
                 pProbe->_last = result;

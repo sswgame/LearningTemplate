@@ -41,9 +41,9 @@ namespace sw::editor
             SW_LOG_ERROR_ID( "AdminLoginBridge.GMLoginAssemblyCould", "The GM login assembly could not attach the account client to the GM connection" );
             return SubsystemInitResult::Failed;
         }
-        _credentialsSubscription = pSession->bindCredentialsHandler( AdminToolSession::CredentialsHandler::create<&AdminLoginBridge::acceptCredentials>( this ) );
-        _loginHookSubscription   = pSession->getConnection().bindLoginHook( AdminToolConnection::LoginHook::create<&AdminLoginBridge::onReady>( this ) );
-        _frameHookSubscription   = pSession->bindFrameHook( AdminToolSession::FrameHook::create<&AdminLoginBridge::onFrame>( this ) );
+        _credentialsSubscription = pSession->bindCredentialsHandler( SW_DELEGATE_METHOD( AdminToolSession::CredentialsHandler, &AdminLoginBridge::acceptCredentials, this ) );
+        _loginHookSubscription   = pSession->getConnection().bindLoginHook( SW_DELEGATE_METHOD( AdminToolConnection::LoginHook, &AdminLoginBridge::onReady, this ) );
+        _frameHookSubscription   = pSession->bindFrameHook( SW_DELEGATE_METHOD( AdminToolSession::FrameHook, &AdminLoginBridge::onFrame, this ) );
         return SubsystemInitResult::Succeeded;
     }
 

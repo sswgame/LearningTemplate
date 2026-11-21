@@ -150,8 +150,7 @@ namespace sw::editor
             static void requestSceneEdit( EditorPropertyGridScope scope, uint64 objectID, uint64 componentID, uint32 sceneKey, vector<PropertyEditTarget>&& listOther,
                                           PropertyEditRequest&& request )
             {
-                EditorCommandRegistry::getInEditorContext().requestSceneEdit( Delegate<void( EditorTransaction& )>::create(
-                    [scope, objectID, componentID, sceneKey, listOther = std::move( listOther ), request = std::move( request )]( EditorTransaction& /*transaction*/ )
+                EditorCommandRegistry::getInEditorContext().requestSceneEdit( SW_DELEGATE_LAMBDA( Delegate<void( EditorTransaction& )>, [scope, objectID, componentID, sceneKey, listOther = std::move( listOther ), request = std::move( request )]( EditorTransaction& /*transaction*/ )
                 { applySceneEdit( scope, objectID, componentID, sceneKey, listOther, request ); } ) );
             }
 
@@ -164,8 +163,7 @@ namespace sw::editor
                                        const hashed_string& methodName, const string& label, const vector<ReflectedValue>& listArg,
                                        const shared_ptr<InspectorInvokeResult>& pResult )
             {
-                EditorCommandRegistry::getInEditorContext().requestSceneEdit( Delegate<void( EditorTransaction& )>::create(
-                    [scope, objectID, componentID, sceneKey, listOther = std::move( listOther ), methodName, label, listArg, pResult]( EditorTransaction& transaction )
+                EditorCommandRegistry::getInEditorContext().requestSceneEdit( SW_DELEGATE_LAMBDA( Delegate<void( EditorTransaction& )>, [scope, objectID, componentID, sceneKey, listOther = std::move( listOther ), methodName, label, listArg, pResult]( EditorTransaction& transaction )
                 {
                     pResult->begin( methodName.c_str() );
                     SceneTarget target;
@@ -201,8 +199,7 @@ namespace sw::editor
             /** @brief 씬 대상의 이벤트 방송 하나를 게임 단계에 넘깁니다(기록하지 않는다 — 받는 쪽이 할 일이다). 이벤트는 이름으로 그때 다시 찾는다. */
             static void requestBroadcast( EditorPropertyGridScope scope, uint64 objectID, uint64 componentID, const hashed_string& eventName )
             {
-                EditorCommandRegistry::getInEditorContext().requestSceneEdit( Delegate<void( EditorTransaction& )>::create(
-                    [scope, objectID, componentID, eventName]( EditorTransaction& /*transaction*/ )
+                EditorCommandRegistry::getInEditorContext().requestSceneEdit( SW_DELEGATE_LAMBDA( Delegate<void( EditorTransaction& )>, [scope, objectID, componentID, eventName]( EditorTransaction& /*transaction*/ )
                 {
                     SceneTarget target;
                     if ( resolveSceneTarget( scope, objectID, componentID, target ) == false )
@@ -1323,7 +1320,7 @@ namespace sw::editor
         if ( listClosed.empty() )
             return;
         // 마감도 게임 단계다 — 이번 프레임의 쓰기 요청 뒤에 서서(요청 순서) 쓰기가 적용된 다음 지금 값과 견준다. 끌기 한 번이 되돌리기 한 단계다.
-        EditorCommandRegistry::getInEditorContext().requestSceneEdit( Delegate<void( EditorTransaction& )>::create( [listClosed]( EditorTransaction& transaction )
+        EditorCommandRegistry::getInEditorContext().requestSceneEdit( SW_DELEGATE_LAMBDA( Delegate<void( EditorTransaction& )>, [listClosed]( EditorTransaction& transaction )
         {
             vector<PropertyEditSpan> listSpan = listClosed;
             PropertyEditSpan::commit( transaction, listSpan );

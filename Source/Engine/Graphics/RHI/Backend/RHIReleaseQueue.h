@@ -49,7 +49,7 @@ namespace sw
         void enqueueGPUTrackedRelease( Owned owned, RHIMemoryTracker& tracker, uint64 id, uint64 fenceValue )
         {
             RHIMemoryTracker* pTracker = &tracker;
-            enqueueGPURelease( RHIResourceReleaseDelegate::create( [owned, pTracker, id]()
+            enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [owned, pTracker, id]()
             {
                 (void)owned;
                 pTracker->recordFree( RHIMemoryKey{ id, kSpace } );
@@ -61,7 +61,7 @@ namespace sw
         template <class Owned>
         void enqueueGPUKeepAlive( Owned owned, uint64 fenceValue )
         {
-            enqueueGPURelease( RHIResourceReleaseDelegate::create( [owned]()
+            enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [owned]()
             { (void)owned; } ),
                                fenceValue );
         }

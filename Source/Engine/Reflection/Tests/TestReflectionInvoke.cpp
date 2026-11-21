@@ -169,8 +169,8 @@ SW_TEST_CASE( ReflectionInvokeTest, EventBindsBroadcastsAndUnbindsByName )
     sw::vector<sw::ReflectedValue> listReceived;
     uint32                         callCount    = 0;
     sw::Subscription               subscription = sw::ReflectionInvoke::bindEvent( *pEvent, &actor,
-                                                                                   sw::ReflectEventHandler::create( [&listReceived, &callCount]( const sw::vector<sw::ReflectedValue>& listArg )
-    {
+                                                                                   SW_DELEGATE_LAMBDA( sw::ReflectEventHandler, [&listReceived, &callCount]( const sw::vector<sw::ReflectedValue>& listArg )
+                  {
         listReceived = listArg;
         ++callCount;
     } ) );

@@ -131,7 +131,7 @@ namespace sw
             schedule._jobID       = kAuditJobID;
             schedule._kind        = ScheduleKind::Daily;
             schedule._minuteOfDay = settings._auditMinuteOfDay;
-            if ( settings._pScheduler->registerJob( schedule, ScheduledJobFunction::create<&EconomyService::onScheduledRun>( this ) ) == false )
+            if ( settings._pScheduler->registerJob( schedule, SW_DELEGATE_METHOD( ScheduledJobFunction, &EconomyService::onScheduledRun, this ) ) == false )
             {
                 SW_LOG_ERROR_ID( "EconomyService.EconomyServiceLedgerAuditJob", "EconomyService: the ledger audit job could not be scheduled (minute of day %#)", settings._auditMinuteOfDay );
                 return false;

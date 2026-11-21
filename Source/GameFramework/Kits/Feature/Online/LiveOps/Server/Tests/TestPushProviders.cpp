@@ -67,7 +67,7 @@ namespace
         {
             StreamTransportConfig transportSettings;
             transportSettings._ioThreadCount = 0;
-            SW_EXPECT_TRUE( _server.initialize( _network.createTransport(), transportSettings, HTTPServerConfig{}, HTTPRequestFunction::create<&FCMFixture::onRequest>( this ) ) );
+            SW_EXPECT_TRUE( _server.initialize( _network.createTransport(), transportSettings, HTTPServerConfig{}, SW_DELEGATE_METHOD( HTTPRequestFunction, &FCMFixture::onRequest, this ) ) );
             SW_EXPECT_TRUE( _client.initialize( _network.createTransport(), transportSettings, HTTPClientConfig{} ) );
             StringBuilder<constant::buffer::kMax64> baseURLBuilder;
             baseURLBuilder.appendFormat( "http://127.0.0.1:%#", static_cast<int32>( _server.getListenPort() ) );

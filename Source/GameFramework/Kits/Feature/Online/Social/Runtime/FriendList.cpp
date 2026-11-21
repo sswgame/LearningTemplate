@@ -62,7 +62,7 @@ namespace sw
         _bStale    = SW_FALSE;
         ++_revision; // 로딩 표시를 그리게 한다
         // 준비되지 않은 클라이언트는 이 호출 안에서 바로 onLinksReply(오류)로 끝난다.
-        (void)_pClient->call<SocialMethod::ListLinks>( OnlineReplyDelegate<SocialMethod::ListLinks>::create<&FriendList::onLinksReply>( this ) );
+        (void)_pClient->call<SocialMethod::ListLinks>( SW_DELEGATE_METHOD( OnlineReplyDelegate<SocialMethod::ListLinks>, &FriendList::onLinksReply, this ) );
         return _state != FriendListState::Failed;
     }
 
@@ -81,7 +81,7 @@ namespace sw
             return;
         }
         // 접속 상태는 서버가 관계를 읽은 뒤에야 답할 수 있어 관계 목록 다음에 묻는다.
-        (void)_pClient->call<SocialMethod::FriendPresence>( OnlineReplyDelegate<SocialMethod::FriendPresence>::create<&FriendList::onPresenceReply>( this ) );
+        (void)_pClient->call<SocialMethod::FriendPresence>( SW_DELEGATE_METHOD( OnlineReplyDelegate<SocialMethod::FriendPresence>, &FriendList::onPresenceReply, this ) );
     }
 
     void FriendList::applyLinks( const SocialLinksReply& reply )

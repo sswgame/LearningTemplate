@@ -30,7 +30,7 @@ namespace sw
         static PrefabPool makePool( uint32 maxIdleCount, ConfigureFunction pConfigure = nullptr )
         {
             PrefabPool pool{ string{}, maxIdleCount };
-            pool.setSpawner( PrefabPool::SpawnDelegate::create( [pConfigure]( GameObjectManager& manager, const utf8* pName )
+            pool.setSpawner( SW_DELEGATE_LAMBDA( PrefabPool::SpawnDelegate, [pConfigure]( GameObjectManager& manager, const utf8* pName )
             {
                 GameObject* pObject = manager.createGameObject( hashed_string( pName ) );
                 ( (void)pObject->addComponent<TComponent>(), ... );

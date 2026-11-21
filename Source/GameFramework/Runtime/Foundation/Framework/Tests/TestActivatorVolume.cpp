@@ -39,12 +39,12 @@ namespace
         {
             AutosaveSettings settings;
             settings._interval = 0.0f;
-            SW_REQUIRE_TRUE( _autosave.initialize( settings, *_pStore, _saveLock, AutosaveManager::SaveDelegate::create( []( vector<uint8>& outBytes )
+            SW_REQUIRE_TRUE( _autosave.initialize( settings, *_pStore, _saveLock, SW_DELEGATE_LAMBDA( AutosaveManager::SaveDelegate, []( vector<uint8>& outBytes )
             {
                 outBytes.push_back( 1 );
                 return true;
             } ),
-                                                   AutosaveManager::LoadDelegate::create( []( const string& slot, const vector<uint8>& bytes, const AutosaveManager::RestoreCompletedFunction& onCompleted )
+                                                   SW_DELEGATE_LAMBDA( AutosaveManager::LoadDelegate, []( const string& slot, const vector<uint8>& bytes, const AutosaveManager::RestoreCompletedFunction& onCompleted )
             {
                 (void)slot;
                 (void)bytes;

@@ -411,7 +411,7 @@ namespace sw
     {
         if ( _pRouter == nullptr )
             return;
-        const uint64 requestID = _pRouter->submit( cacheRequest, EphemeralStoreRouter::ReplyDelegate::create<&PartyLobbyService::onStepReply>( this ), _replyOwner );
+        const uint64 requestID = _pRouter->submit( cacheRequest, SW_DELEGATE_METHOD( EphemeralStoreRouter::ReplyDelegate, &PartyLobbyService::onStepReply, this ), _replyOwner );
         PendingStep& step      = _mapRequestToStep[requestID];
         step._request          = request;
         step._kind             = kind;

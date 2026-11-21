@@ -77,7 +77,7 @@ namespace sw
                 SW_LOG_WARNING_ID( "MemoryExport.Failed", "memory export: %# (%#)", result.error().message(), result.error().detail() );
         };
         TaskManager& taskManager = engine::getSubsystem<TaskManager>();
-        TaskHandle   handle      = taskManager.emplaceTask( "MemoryExportWrite", TaskDelegate::create( writeNow ) );
+        TaskHandle   handle      = taskManager.emplaceTask( "MemoryExportWrite", SW_DELEGATE_LAMBDA( TaskDelegate, writeNow ) );
         handle.setPriority( TaskPriority::Low );
         taskManager.addToStage( _writeStage, handle, "MemoryExportWrite" ); // 제출 전에 넣는다
         handle.submit();

@@ -206,7 +206,7 @@ namespace sw
         request._count                     = count;
         const weak_ptr<PurchaseState> weak = _state;
         // 멱등 키는 call 이 만든다 — 같은 구매를 다시 낼 때만 그 키를 넘긴다. 콜백은 정확히 한 번(보내지 못하면 이 안에서 바로) 온다.
-        (void)_state->_pClient->call<EconomyMethod::Purchase>( request, OnlineReplyDelegate<EconomyMethod::Purchase>::create( [weak]( const OnlineResult<EconomyPurchaseReply>& result )
+        (void)_state->_pClient->call<EconomyMethod::Purchase>( request, SW_DELEGATE_LAMBDA( OnlineReplyDelegate<EconomyMethod::Purchase>, [weak]( const OnlineResult<EconomyPurchaseReply>& result )
         { onReply( weak, result ); } ) );
     }
 
@@ -255,7 +255,7 @@ namespace sw
         if ( receipt._status == ShopPurchaseStatus::Unverified )
         {
             SW_LOG_WARNING_ID( "EconomyShop.PurchaseReplyMismatch", "Purchase reply for '%#' x%# did not match the offer - refreshing the wallet from the server", state->_offerID.c_str(), state->_count );
-            (void)state->_pClient->call<EconomyMethod::GetWallet>( OnlineReplyDelegate<EconomyMethod::GetWallet>::create( []( const OnlineResult<EconomyWalletReply>& ) {} ) ); // 스냅샷은 클라이언트 훅(onCallSucceeded)이 캐시에 넣는다
+            (void)state->_pClient->call<EconomyMethod::GetWallet>( SW_DELEGATE_LAMBDA( OnlineReplyDelegate<EconomyMethod::GetWallet>, []( const OnlineResult<EconomyWalletReply>& ) {} ) ); // 스냅샷은 클라이언트 훅(onCallSucceeded)이 캐시에 넣는다
         }
         state->_bPending = SW_FALSE;
         ++state->_finishedCount;

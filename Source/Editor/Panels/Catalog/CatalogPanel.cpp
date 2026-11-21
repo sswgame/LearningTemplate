@@ -42,7 +42,7 @@ namespace sw::editor
                 , _listWarning{}
                 , _subscription{}
             {
-                _subscription = Logger::registerGlobalListener( LogWrittenDelegate::create<&CatalogWarningCollector::onLog>( this ) );
+                _subscription = Logger::registerGlobalListener( SW_DELEGATE_METHOD( LogWrittenDelegate, &CatalogWarningCollector::onLog, this ) );
             }
 
             CatalogWarningCollector( const CatalogWarningCollector& )            = delete;

@@ -69,6 +69,7 @@ _SUBCOMMAND: tuple[Subcommand, ...] = (
     Subcommand("migrate-asset-refs", "dev.migrate_asset_refs", "AssetRef<T> 칸의 옛 경로 글을 GUID 참조(guid:<32자>)로 바꿔 쓴다 — 에셋 GUID 2 단계 전수 이전(--fix 로 쓴다)"),
     Subcommand("asset-refs", "lint.asset_references", "작업 트리의 에셋 참조가 모두 있는지 본다(커밋 전 검사 · App --check-asset-refs 와 같은 칸 목록)"),
     Subcommand("rename-symbol", "dev.rename_symbol", "식별자 이름을 코드 · 데이터 · 설정 · 문서에서 한 번에 바꾼다(Old=New 또는 --pairs 표, --reapply) — 문자열 안 · 흔한 이름 · 이미 있는 새 이름은 멈추고, 옛 이름은 금지 이름 표에 올린다"),
+    Subcommand("delegate-macros", "dev.delegate_macros", "델리게이트의 맨 create(`X::create<&f>` · `X::create( 람다 )`)를 SW_DELEGATE_* 매크로로 바꾼다(--check 는 남은 자리만 찍는다) — 병합 뒤 충돌 파일에 다시 돌린다"),
     Subcommand("android-apk", "package.android_apk", "Android 빌드(lib<이름>.so + 쿠킹한 팩)를 서명한 디버그 APK 로 묶는다(--game, --preset Android-Shipping|Android-Release, aapt2 · zipalign · apksigner — Tools/Android)"),
     Subcommand("web-package", "package.web_package", "Web-Shipping 빌드(App.js · App.wasm + 쿠킹한 팩)를 브라우저 폴더로 묶는다(--game, file_packager — Tools/emsdk), --serve 로 교차 출처 격리 헤더를 주는 로컬 서버까지"),
     Subcommand("web-check", "package.web_check", "Web-Shipping 묶음을 브라우저(헤드리스 Chrome · Edge)에서 두 번 띄워 기동 · WebGPU · 오류 없음 · 화면 PNG · IDBFS 영속을 본다(--game)"),

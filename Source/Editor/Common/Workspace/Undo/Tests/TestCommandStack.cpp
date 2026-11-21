@@ -23,8 +23,8 @@ namespace
         {
             sw::CommandStack::Command cmd;
             cmd._label = pLabel;
-            cmd._undo  = sw::editor::UndoStep::makeTransient( sw::Delegate<void()>::create<&CommandStackTestInternal::doNothing>(), owner, heldBytes );
-            cmd._redo  = sw::editor::UndoStep::makeTransient( sw::Delegate<void()>::create<&CommandStackTestInternal::doNothing>(), owner, heldBytes );
+            cmd._undo  = sw::editor::UndoStep::makeTransient( SW_DELEGATE_FUNCTION( sw::Delegate<void()>, &CommandStackTestInternal::doNothing ), owner, heldBytes );
+            cmd._redo  = sw::editor::UndoStep::makeTransient( SW_DELEGATE_FUNCTION( sw::Delegate<void()>, &CommandStackTestInternal::doNothing ), owner, heldBytes );
             return cmd;
         }
     };

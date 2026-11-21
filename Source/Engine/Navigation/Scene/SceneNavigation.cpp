@@ -74,7 +74,7 @@ namespace sw
         , _listSurface{}
         , _listObstacle{}
         , _listLink{}
-        , _listGeometrySource{ "SceneNavigation.GeometrySource", RegistrationList<INavGeometrySource>::ReleaseFunction::create<&SceneNavigation::releaseGeometrySource>( this ) }
+        , _listGeometrySource{ "SceneNavigation.GeometrySource", SW_DELEGATE_METHOD( RegistrationList<INavGeometrySource>::ReleaseFunction, &SceneNavigation::releaseGeometrySource, this ) }
         , _listFailedAgentType{}
         , _listAreaCostOverride{}
         , _tileRebaker{}

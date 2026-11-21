@@ -91,7 +91,7 @@ namespace sw
                 reportServiceConflict( getSubsystemTypeHash<T>() );
                 return false;
             }
-            addCleanup( Delegate<void()>::create( [this]()
+            addCleanup( SW_DELEGATE_LAMBDA( Delegate<void()>, [this]()
             { _gameScope.unbind<T>(); } ) );
             return true;
         }
@@ -120,7 +120,7 @@ namespace sw
             if ( bindService( pCatalog ) == false ) // const 칸이다 — 찾는 쪽은 `game::findSubsystem<const TCatalog>()`
                 return false;
             const SharedAssetRef<TCatalog>* const pFollowed = pRef.get();
-            _listFollow.push_back( Delegate<void()>::create( [this, pFollowed]()
+            _listFollow.push_back( SW_DELEGATE_LAMBDA( Delegate<void()>, [this, pFollowed]()
             {
                 const TCatalog* const pLatest = pFollowed->get();
                 if ( pLatest == nullptr || _gameScope.find<const TCatalog>() == pLatest )

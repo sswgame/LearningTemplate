@@ -181,7 +181,7 @@ namespace sw
             return SubsystemInitResult::Failed; // 까닭은 추적기가 남겼다
         _pLocalPlatform     = pLocal.get();
         _pPlatform          = std::move( pLocal );
-        _unlockSubscription = _achievements.registerUnlockListener( AchievementTracker::UnlockDelegate::create<&PlayerStatsSubsystem::onAchievementUnlocked>( this ) );
+        _unlockSubscription = _achievements.registerUnlockListener( SW_DELEGATE_METHOD( AchievementTracker::UnlockDelegate, &PlayerStatsSubsystem::onAchievementUnlocked, this ) );
         loadFromPlatform();
         SW_LOG_INFO_ID( "PlayerStatsSubsystem.Ready", "Player stats: %# stats, %# achievements (%# unlocked) on platform '%#'", static_cast<uint32>( _pCatalog->getStats().size() ),
                         static_cast<uint32>( _pCatalog->getAchievements().size() ), _achievements.getUnlockedCount(), _pPlatform->getStoreName() );

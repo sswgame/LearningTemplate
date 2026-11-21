@@ -502,7 +502,7 @@ namespace sw
                 // 수량은 대화 상자로 고른다 — 답은 화면 핸들로 찾아, 그 사이 화면이 닫혔으면 버린다.
                 const UIScreenHandle handle = getHandle();
                 const string         title  = action._kind == InventoryCommandKind::Split ? SW_LOCKEYREF( "Inventory", "SplitTitle" ) : SW_LOCKEYREF( "Inventory", "DropTitle" );
-                (void)QuantityDialogScreen::open( *pUI, title, maxCount, ( maxCount + 1 ) / 2, QuantityDialogScreen::ResultDelegate::create( [pUI, handle, action]( ConfirmDialogResult result, int32 chosen )
+                (void)QuantityDialogScreen::open( *pUI, title, maxCount, ( maxCount + 1 ) / 2, SW_DELEGATE_LAMBDA( QuantityDialogScreen::ResultDelegate, [pUI, handle, action]( ConfirmDialogResult result, int32 chosen )
                 { onQuantityChosen( *pUI, handle, action, result, chosen ); } ) );
                 return true;
             }

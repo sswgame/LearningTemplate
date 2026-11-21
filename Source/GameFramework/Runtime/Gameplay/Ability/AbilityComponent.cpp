@@ -83,7 +83,7 @@ namespace sw
     {
         // 결정: 태그가 바뀌는 길(이펙트 · 어빌리티 · 이펙트 없이 붙인 태그)은 여럿이지만 알림은 집합 하나에서 나온다 — 걸린 동안의 조건과
         // 태그로 발동하는 어빌리티는 그 알림 하나에 건다. 소멸자의 `unregisterAllChanged` 가 함께 푼다.
-        _ownedTagSubscription = _ownedTagCounts.registerChanged( TagCountTable::TagChangedDelegate::create<&AbilityComponent::onOwnedTagChanged>( this ) );
+        _ownedTagSubscription = _ownedTagCounts.registerChanged( SW_DELEGATE_METHOD( TagCountTable::TagChangedDelegate, &AbilityComponent::onOwnedTagChanged, this ) );
         setCanEverTick( false ); // 쉬는 컴포넌트는 틱하지 않는다 — 이펙트 · 어빌리티가 생기면 `refreshTickEnabled` 가 켠다
     }
 
@@ -475,7 +475,7 @@ namespace sw
         manager.getComponentRegistry().add<AbilityComponent>( this );
         // 모듈 내림은 이 컴포넌트만 듣는다(기반 가상 함수로 모든 컴포넌트를 훑지 않는다 — 언리얼 `FCoreUObjectDelegates` 구독 자리).
         _moduleUnloadingSubscription = game::getSubsystem<TypeRegistry>().subscribeModuleUnloading(
-            TypeRegistry::ModuleUnloadingDelegate::create<&AbilityComponent::onModuleUnloading>( this ) );
+            SW_DELEGATE_METHOD( TypeRegistry::ModuleUnloadingDelegate, &AbilityComponent::onModuleUnloading, this ) );
     }
 
     void AbilityComponent::onUnregister( GameObjectManager& manager )

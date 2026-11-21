@@ -366,7 +366,7 @@ namespace sw
         // 핫 리로드: 외형 데이터를 다시 읽으면(`AppearanceDatabase::reloadFromFolder`) 다시 조립한다 — 상태가 데이터 버전으로 다시 해석한다.
         AppearanceDatabase* pDatabase = game::findSubsystem<AppearanceDatabase>();
         if ( pDatabase != nullptr )
-            _reloadSubscription = pDatabase->registerReloaded( Delegate<void()>::create<&CharacterAppearanceComponent::onAppearanceDataReloaded>( this ) );
+            _reloadSubscription = pDatabase->registerReloaded( SW_DELEGATE_METHOD( Delegate<void()>, &CharacterAppearanceComponent::onAppearanceDataReloaded, this ) );
         (void)applyPendingState(); // 세이브가 실은 게임 선택 · 슬롯 덮어쓰기를 조립 전에 건다
         // 선택 입히기(`applySelection` · `previewSelection`)도 시작한 뒤 같은 틱 길로 조립한다 — 미리보기 씬도 플레이하고 틱한다(언리얼 FPreviewScene).
         if ( _presetID.empty() == false || _bSelectionSet == SW_TRUE )

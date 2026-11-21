@@ -106,7 +106,7 @@ namespace sw::editor
                 context.expect( unbound.has_value() == false && unbound.error().message().empty() == false, "without a login handler the connection must be refused" );
 
                 CredentialsRecorder recorder;
-                const Subscription  subscription = session.bindCredentialsHandler( AdminToolSession::CredentialsHandler::create<&CredentialsRecorder::accept>( &recorder ) );
+                const Subscription  subscription = session.bindCredentialsHandler( SW_DELEGATE_METHOD( AdminToolSession::CredentialsHandler, &CredentialsRecorder::accept, &recorder ) );
                 context.expect( session.hasCredentialsHandler(), "the credentials handler should be bound" );
                 context.expect( session.connectWithLogin( "nohost", "editor", "", "pw" ).has_value() == false && recorder._callCount == 0, "an empty account name must not reach the handler" );
                 context.expect( session.connectWithLogin( "nohost", "editor", "gm", "" ).has_value() == false && recorder._callCount == 0, "an empty password must not reach the handler" );

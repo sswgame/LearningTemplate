@@ -90,10 +90,10 @@ namespace
         void attach( DialogueRunnerComponent& runner )
         {
             _pRunner            = &runner;
-            _lineSubscription   = runner.bindOnDialogueLine( OnDialogueLineDelegate::create<&DialogueProbe::onLine>( this ) );
-            _choiceSubscription = runner.bindOnDialogueChoices( OnDialogueChoicesDelegate::create<&DialogueProbe::onChoices>( this ) );
-            _eventSubscription  = runner.bindOnDialogueEvent( OnDialogueEventDelegate::create<&DialogueProbe::onEvent>( this ) );
-            _finishSubscription = runner.bindOnDialogueFinished( OnDialogueFinishedDelegate::create<&DialogueProbe::onFinished>( this ) );
+            _lineSubscription   = runner.bindOnDialogueLine( SW_DELEGATE_METHOD( OnDialogueLineDelegate, &DialogueProbe::onLine, this ) );
+            _choiceSubscription = runner.bindOnDialogueChoices( SW_DELEGATE_METHOD( OnDialogueChoicesDelegate, &DialogueProbe::onChoices, this ) );
+            _eventSubscription  = runner.bindOnDialogueEvent( SW_DELEGATE_METHOD( OnDialogueEventDelegate, &DialogueProbe::onEvent, this ) );
+            _finishSubscription = runner.bindOnDialogueFinished( SW_DELEGATE_METHOD( OnDialogueFinishedDelegate, &DialogueProbe::onFinished, this ) );
         }
 
         void onLine( const string& speaker, const string& text )

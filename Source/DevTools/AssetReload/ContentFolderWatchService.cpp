@@ -47,7 +47,7 @@ namespace sw
             unique_ptr<FileWatchDispatcher> pDispatcher = make_unique<FileWatchDispatcher>();
             if ( pDispatcher->initialize( diskFolder ) == false )
                 return {}; // 감시자가 이유를 남겼다
-            watch->_listMatch.push_back( pDispatcher->registerWatch( diskFolder, listExtension, FileWatchMatchDelegate::create<&Watch::onFileChanged>( watch.get() ) ) );
+            watch->_listMatch.push_back( pDispatcher->registerWatch( diskFolder, listExtension, SW_DELEGATE_METHOD( FileWatchMatchDelegate, &Watch::onFileChanged, watch.get() ) ) );
             watch->_listDispatcher.push_back( std::move( pDispatcher ) );
         }
         watch->_id        = _watchIDAllocator.allocate();

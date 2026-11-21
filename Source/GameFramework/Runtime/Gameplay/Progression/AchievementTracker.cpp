@@ -54,7 +54,7 @@ namespace sw
         _pCatalog         = pCatalog;
         _pStats           = pStats;
         _pPlatform        = pPlatform;
-        _statSubscription = pStats->registerChangeListener( PlayerStats::ChangeDelegate::create<&AchievementTracker::onStatChanged>( this ) );
+        _statSubscription = pStats->registerChangeListener( SW_DELEGATE_METHOD( PlayerStats::ChangeDelegate, &AchievementTracker::onStatChanged, this ) );
         return true;
     }
 

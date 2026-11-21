@@ -76,7 +76,7 @@ SW_TEST_CASE( ProcessTest, ExecuteHelper )
     const sw::expected<int32> exitCode = sw::Process::execute(
         cmd,
         {},
-        sw::ProcessOutputDelegate::create( [&listLines]( sw::string_view line )
+        SW_DELEGATE_LAMBDA( sw::ProcessOutputDelegate, [&listLines]( sw::string_view line )
     {
         listLines.push_back( sw::string( line ) );
     } ) );
@@ -384,7 +384,7 @@ SW_TEST_CASE( ProcessTest, PosixChildReceivesArgumentsUnchanged )
     command._listArgument.insert( command._listArgument.end(), listArgument.begin(), listArgument.end() );
 
     sw::vector<sw::string>    listLine;
-    const sw::expected<int32> exitCode = sw::Process::execute( command, {}, sw::ProcessOutputDelegate::create( [&listLine]( sw::string_view line )
+    const sw::expected<int32> exitCode = sw::Process::execute( command, {}, SW_DELEGATE_LAMBDA( sw::ProcessOutputDelegate, [&listLine]( sw::string_view line )
     {
         listLine.push_back( sw::string( line ) );
     } ) );

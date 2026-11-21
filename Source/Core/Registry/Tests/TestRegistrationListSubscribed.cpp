@@ -17,7 +17,7 @@ namespace
     class SubscribedOwner
     {
     public:
-        RegistrationList<SubscribedItem> _list{ "Test.SubscribedItem", RegistrationList<SubscribedItem>::ReleaseFunction::create<&SubscribedOwner::releaseItem>( this ) };
+        RegistrationList<SubscribedItem> _list{ "Test.SubscribedItem", SW_DELEGATE_METHOD( RegistrationList<SubscribedItem>::ReleaseFunction, &SubscribedOwner::releaseItem, this ) };
         int32                            _releaseCount{ 0 };
         void                             releaseItem( SubscribedItem* pItem )
         {

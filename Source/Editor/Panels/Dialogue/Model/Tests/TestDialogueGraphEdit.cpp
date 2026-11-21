@@ -76,8 +76,8 @@ SW_TEST_CASE( DialogueGraphEditTest, SessionCommandNotifiesOnceWithItsName )
 {
     uint32                       count{ 0 };
     string                       lastLabel;
-    const DocumentEditRecorder   recorder{ DocumentEditRecorder::RecordDelegate::create( [&count, &lastLabel]( string_view label )
-    {
+    const DocumentEditRecorder   recorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, [&count, &lastLabel]( string_view label )
+      {
         ++count;
         lastLabel = string{ label };
     } ) };
@@ -93,8 +93,8 @@ SW_TEST_CASE( DialogueGraphEditTest, SessionCommandNotifiesOnceWithItsName )
 SW_TEST_CASE( DialogueGraphEditTest, FieldOpsWriteAndNotify )
 {
     uint32                       count{ 0 };
-    const DocumentEditRecorder   recorder{ DocumentEditRecorder::RecordDelegate::create( [&count]( string_view /*label*/ )
-    { ++count; } ) };
+    const DocumentEditRecorder   recorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, [&count]( string_view /*label*/ )
+      { ++count; } ) };
     const EditorGraphEditSession session{ recorder };
     DialogueGraphAsset           graph;
     DialogueGraphEdit::makeDefaultGraph( graph );

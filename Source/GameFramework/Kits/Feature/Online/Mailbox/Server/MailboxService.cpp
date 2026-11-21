@@ -132,7 +132,7 @@ namespace sw
             schedule._jobID      = kSweepJobID;
             schedule._kind       = ScheduleKind::Interval;
             schedule._intervalMs = settings._sweepIntervalMs;
-            if ( settings._pScheduler->registerJob( schedule, ScheduledJobFunction::create<&MailboxService::onScheduledRun>( this ) ) == false )
+            if ( settings._pScheduler->registerJob( schedule, SW_DELEGATE_METHOD( ScheduledJobFunction, &MailboxService::onScheduledRun, this ) ) == false )
             {
                 SW_LOG_ERROR_ID( "MailboxService.MailboxServiceSweepJobCould", "MailboxService: the sweep job could not be scheduled (sweepIntervalMs %# must be at least a minute)", settings._sweepIntervalMs );
                 return false;

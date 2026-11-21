@@ -93,7 +93,7 @@ namespace sw
         LocalSealContext                   _sealContext; ///< 저장소가 빌려 쓴다
         unique_ptr<ILocalStore>            _store;
         vector<PendingRequest>             _listPendingRequest;
-        SubscriptionList                   _subscriptions{ SubscriptionList::ReleaseFunction::create<&LocalStoreChannel::releaseRequest>( this ) };
+        SubscriptionList                   _subscriptions{ SW_DELEGATE_METHOD( SubscriptionList::ReleaseFunction, &LocalStoreChannel::releaseRequest, this ) };
         LocalStoreChannelList*             _pLiveList{ nullptr }; ///< 건 살아 있는 채널 목록(만들 때 찾는다 — 없으면 걸지 않았다)
         LocalStoreChannel*                 _pPrevLive{ nullptr }; ///< 살아 있는 채널 목록의 앞(`isAnyChannelBusy`)
         LocalStoreChannel*                 _pNextLive{ nullptr }; ///< 살아 있는 채널 목록의 뒤

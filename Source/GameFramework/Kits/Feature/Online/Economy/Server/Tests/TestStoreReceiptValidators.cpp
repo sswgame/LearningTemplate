@@ -108,7 +108,7 @@ namespace
         /** @param bRestoreCursor false 면 서비스가 기준 시각을 아직 넘기지 않은 제공자로 선다. */
         explicit GoogleFixture( bool bRestoreCursor = true )
         {
-            StoreTestUtil::startServer( _http, HTTPRequestFunction::create<&GoogleFixture::onRequest>( this ) );
+            StoreTestUtil::startServer( _http, SW_DELEGATE_METHOD( HTTPRequestFunction, &GoogleFixture::onRequest, this ) );
             GoogleReceiptSettings settings;
             settings._credentials._clientEmail   = "a@b";
             settings._credentials._privateKeyPem = "key";
@@ -217,7 +217,7 @@ namespace
 
         explicit AppleFixture( bool bSandboxServer = false )
         {
-            StoreTestUtil::startServer( _http, HTTPRequestFunction::create<&AppleFixture::onRequest>( this ) );
+            StoreTestUtil::startServer( _http, SW_DELEGATE_METHOD( HTTPRequestFunction, &AppleFixture::onRequest, this ) );
             AppleReceiptSettings settings;
             settings._issuerID              = "issuer";
             settings._keyID                 = "key";

@@ -22,8 +22,8 @@ namespace
         {
             sw::CommandStack::Command cmd;
             cmd._label = pLabel;
-            cmd._undo  = sw::editor::UndoStep::makeTransient( sw::Delegate<void()>::create<&HistoryViewModelTestInternal::doNothing>(), owner, 0u );
-            cmd._redo  = sw::editor::UndoStep::makeTransient( sw::Delegate<void()>::create<&HistoryViewModelTestInternal::doNothing>(), owner, 0u );
+            cmd._undo  = sw::editor::UndoStep::makeTransient( SW_DELEGATE_FUNCTION( sw::Delegate<void()>, &HistoryViewModelTestInternal::doNothing ), owner, 0u );
+            cmd._redo  = sw::editor::UndoStep::makeTransient( SW_DELEGATE_FUNCTION( sw::Delegate<void()>, &HistoryViewModelTestInternal::doNothing ), owner, 0u );
             return cmd;
         }
     };

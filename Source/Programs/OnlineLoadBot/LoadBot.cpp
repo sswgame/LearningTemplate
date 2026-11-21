@@ -433,7 +433,7 @@ namespace sw
         {
             case LoadBotAction::DirectoryStatus:
             {
-                (void)_directoryClient.call<ServerDirectoryMethod::GetStatus>( OnlineReplyDelegate<ServerDirectoryMethod::GetStatus>::create<&LoadBot::onDirectoryStatus>( this ) );
+                (void)_directoryClient.call<ServerDirectoryMethod::GetStatus>( SW_DELEGATE_METHOD( OnlineReplyDelegate<ServerDirectoryMethod::GetStatus>, &LoadBot::onDirectoryStatus, this ) );
                 return true;
             }
             case LoadBotAction::DirectoryAssign:
@@ -441,7 +441,7 @@ namespace sw
                 ServerAssignmentRequest request;
                 request._kind   = step._text.empty() ? string( LoadBotInternal::kDefaultKind ) : step._text;
                 request._region = region;
-                (void)_directoryClient.call<ServerDirectoryMethod::AssignServer>( request, OnlineReplyDelegate<ServerDirectoryMethod::AssignServer>::create<&LoadBot::onDirectoryAssignment>( this ) );
+                (void)_directoryClient.call<ServerDirectoryMethod::AssignServer>( request, SW_DELEGATE_METHOD( OnlineReplyDelegate<ServerDirectoryMethod::AssignServer>, &LoadBot::onDirectoryAssignment, this ) );
                 return true;
             }
             case LoadBotAction::ChatJoin:
@@ -506,7 +506,7 @@ namespace sw
             }
             case LoadBotAction::LiveOpsState:
             {
-                (void)_liveOpsClient.requestLiveState( region, LoadBotInternal::kLiveOpsBuild, OnlineReplyDelegate<LiveOpsMethod::GetLiveState>::create<&LoadBot::onKitReply<LiveOpsStateReply>>( this ) );
+                (void)_liveOpsClient.requestLiveState( region, LoadBotInternal::kLiveOpsBuild, SW_DELEGATE_METHOD( OnlineReplyDelegate<LiveOpsMethod::GetLiveState>, &LoadBot::onKitReply<LiveOpsStateReply>, this ) );
                 return true;
             }
             case LoadBotAction::EconomyWallet:
@@ -539,7 +539,7 @@ namespace sw
             {
                 SocialTextRequest request;
                 request._text = makeGuildName();
-                (void)_socialClient.call<SocialMethod::GuildCreate>( request, OnlineReplyDelegate<SocialMethod::GuildCreate>::create<&LoadBot::onGuildCreated>( this ) );
+                (void)_socialClient.call<SocialMethod::GuildCreate>( request, SW_DELEGATE_METHOD( OnlineReplyDelegate<SocialMethod::GuildCreate>, &LoadBot::onGuildCreated, this ) );
                 return true;
             }
             case LoadBotAction::GuildDeposit:
@@ -806,7 +806,7 @@ namespace sw
         for ( const SocialNotification& notification : _listSocialNotification )
         {
             if ( notification._kind == SocialNotificationKind::FriendRequested ) // 받은 신청은 바로 수락한다(측정하지 않는다)
-                (void)_socialClient.call<SocialMethod::RespondFriend>( SocialRespondRequest{ notification._otherID, SW_TRUE }, OnlineReplyDelegate<SocialMethod::RespondFriend>::create<&LoadBot::onFriendAccepted>( this ) );
+                (void)_socialClient.call<SocialMethod::RespondFriend>( SocialRespondRequest{ notification._otherID, SW_TRUE }, SW_DELEGATE_METHOD( OnlineReplyDelegate<SocialMethod::RespondFriend>, &LoadBot::onFriendAccepted, this ) );
         }
     }
 

@@ -263,7 +263,7 @@ namespace sw
         }
         NetRequestServerConfig requestSettings;
         _requestServer.initialize( &_endpoint, requestSettings );
-        if ( _requestServer.registerMethod( OnlineHostMethod::kHello, NetRequestFunction::create<&OnlineServiceHost::onNetRequest>( this ) ) == false || _requestServer.registerMethod( OnlineHostMethod::kPing, NetRequestFunction::create<&OnlineServiceHost::onNetRequest>( this ) ) == false )
+        if ( _requestServer.registerMethod( OnlineHostMethod::kHello, SW_DELEGATE_METHOD( NetRequestFunction, &OnlineServiceHost::onNetRequest, this ) ) == false || _requestServer.registerMethod( OnlineHostMethod::kPing, SW_DELEGATE_METHOD( NetRequestFunction, &OnlineServiceHost::onNetRequest, this ) ) == false )
         {
             releaseTransportSide();
             return unexpected( Error{ ErrorKind::AlreadyExists, "online service host methods are already registered" } );
@@ -277,7 +277,7 @@ namespace sw
             }
             for ( uint16 offset = 0; offset < OnlineMethodRange::kMethodCount; ++offset )
             {
-                (void)_requestServer.registerMethod( static_cast<uint16>( pService->getMethodRange() + offset ), NetRequestFunction::create<&OnlineServiceHost::onNetRequest>( this ) ); // registerServerService 가 겹침을 이미 봤다
+                (void)_requestServer.registerMethod( static_cast<uint16>( pService->getMethodRange() + offset ), SW_DELEGATE_METHOD( NetRequestFunction, &OnlineServiceHost::onNetRequest, this ) ); // registerServerService 가 겹침을 이미 봤다
             }
         }
         if ( _listenerTransport->initialize( &_endpoint, settings._transportSettings ) == false || _listenerTransport->listen( settings._listenAddress ) == false )
@@ -362,7 +362,7 @@ namespace sw
             }
             for ( uint16 offset = 0; offset < OnlineMethodRange::kMethodCount; ++offset )
             {
-                if ( _requestServer.registerMethod( static_cast<uint16>( range + offset ), NetRequestFunction::create<&OnlineServiceHost::onNetRequest>( this ) ) )
+                if ( _requestServer.registerMethod( static_cast<uint16>( range + offset ), SW_DELEGATE_METHOD( NetRequestFunction, &OnlineServiceHost::onNetRequest, this ) ) )
                     continue;
                 for ( uint16 undo = 0; undo < offset; ++undo )
                 {

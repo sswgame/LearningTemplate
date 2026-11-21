@@ -139,7 +139,7 @@ namespace
         SettlementSink settle( string_view boardID, uint32 seasonID )
         {
             SettlementSink sink;
-            _service.settleSeason( boardID, seasonID, UnixMilliseconds{ kSeasonEndMs }, SettlementDelegate::create<&SettlementSink::onDone>( &sink ) );
+            _service.settleSeason( boardID, seasonID, UnixMilliseconds{ kSeasonEndMs }, SW_DELEGATE_METHOD( SettlementDelegate, &SettlementSink::onDone, &sink ) );
             poll();
             return sink;
         }

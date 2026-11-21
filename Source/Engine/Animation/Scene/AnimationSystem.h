@@ -659,6 +659,6 @@ namespace sw
 
     private:
         /** @brief LOD 클라이언트 등록의 구독입니다(목록이 O(1) 순서 보존 목록이라 `RegistrationList::addSubscribed` 가 아니다). 풀리면 `releaseLODClient` 가 불린다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다. */
-        ItemSubscriptionList<IAnimationLODClient> _lodClientSubscriptions{ ItemSubscriptionList<IAnimationLODClient>::ReleaseFunction::create<&AnimationSystem::releaseLODClient>( this ) };
+        ItemSubscriptionList<IAnimationLODClient> _lodClientSubscriptions{ SW_DELEGATE_METHOD( ItemSubscriptionList<IAnimationLODClient>::ReleaseFunction, &AnimationSystem::releaseLODClient, this ) };
     };
 } // namespace sw

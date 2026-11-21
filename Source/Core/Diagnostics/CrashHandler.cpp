@@ -100,7 +100,7 @@ namespace sw
         , _pExtraTextUser{ nullptr }
         , _extraTextWriterID{ 0 }
         , _nextExtraTextWriterID{ 1 }
-        , _extraTextSubscriptions{ SubscriptionList::ReleaseFunction::create<&CrashHandler::releaseExtraTextWriter>( this ) }
+        , _extraTextSubscriptions{ SW_DELEGATE_METHOD( SubscriptionList::ReleaseFunction, &CrashHandler::releaseExtraTextWriter, this ) }
         , _pOuter{ nullptr }
         , _bInstalled{ SW_FALSE }
     {

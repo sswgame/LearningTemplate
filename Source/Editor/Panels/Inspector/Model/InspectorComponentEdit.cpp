@@ -30,7 +30,7 @@ namespace sw::editor
             template <typename TEdit>
             static void requestComponentWrite( const EditorPropertyGridTarget& target, const TEdit& edit )
             {
-                InspectorComponentEdit::requestComponentEdit( target, InspectorComponentEdit::ComponentEditDelegate::create( [edit]( Component& component, EditorTransaction& /*transaction*/ )
+                InspectorComponentEdit::requestComponentEdit( target, SW_DELEGATE_LAMBDA( InspectorComponentEdit::ComponentEditDelegate, [edit]( Component& component, EditorTransaction& /*transaction*/ )
                 { edit( component ); } ) );
             }
         };
@@ -131,7 +131,7 @@ namespace sw::editor
         const EditorPropertyGridScope scope       = target._scope;
         const uint64                  objectID    = target._objectID;
         const uint64                  componentID = target._componentID;
-        EditorCommandRegistry::getInEditorContext().requestSceneEdit( Delegate<void( EditorTransaction& )>::create( [scope, objectID, componentID, edit]( EditorTransaction& transaction )
+        EditorCommandRegistry::getInEditorContext().requestSceneEdit( SW_DELEGATE_LAMBDA( Delegate<void( EditorTransaction& )>, [scope, objectID, componentID, edit]( EditorTransaction& transaction )
         {
             GameObject* pObject    = PropertyGridViewModel::findSceneObject( scope, objectID );
             Component*  pComponent = ( pObject != nullptr && pObject->isPendingDestroy() == false ) ? pObject->findComponentByID( componentID ) : nullptr;

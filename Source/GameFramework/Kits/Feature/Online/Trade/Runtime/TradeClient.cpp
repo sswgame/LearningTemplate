@@ -110,7 +110,7 @@ namespace sw
     template <typename TMethod>
     uint64 TradeClient::send( const typename TMethod::Request& request, const NetIdempotencyKey& key )
     {
-        return call<TMethod>( request, OnlineReplyDelegate<TMethod>::template create<&TradeClient::onReply>( this ), key );
+        return call<TMethod>( request, SW_DELEGATE_METHOD( OnlineReplyDelegate<TMethod>, &TradeClient::onReply, this ), key );
     }
 
     void TradeClient::onReply( const OnlineResult<TradeReply>& result )

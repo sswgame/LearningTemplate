@@ -378,7 +378,7 @@ namespace sw
         NetRequestOptions options;
         options._timeoutSeconds = 10.0;
         (void)_pRequestClient->sendRequest( _connection, OnlineHostMethod::kHello, helloBytes.data(), static_cast<int32>( helloBytes.size() ), options,
-                                            Delegate<void( const NetResponse& )>::create<&OnlineServiceClient::onHelloResponse>( this ) );
+                                            SW_DELEGATE_METHOD( Delegate<void( const NetResponse& )>, &OnlineServiceClient::onHelloResponse, this ) );
     }
 
     void OnlineServiceClient::sendQueuedCall( QueuedCall& call )
@@ -388,7 +388,7 @@ namespace sw
         options._timeoutSeconds       = static_cast<float64>( remainingMs ) / constant::time::kMillisecondsPerSecond;
         _pSendingCall                 = &call;
         const uint64 netRequestID     = _pRequestClient->sendRequest( _connection, call._method, call._bodyBytes.data(), static_cast<int32>( call._bodyBytes.size() ),
-                                                                      options, Delegate<void( const NetResponse& )>::create<&OnlineServiceClient::onNetResponse>( this ) );
+                                                                      options, SW_DELEGATE_METHOD( Delegate<void( const NetResponse& )>, &OnlineServiceClient::onNetResponse, this ) );
         _pSendingCall                 = nullptr;
         if ( netRequestID == 0 )
             return;

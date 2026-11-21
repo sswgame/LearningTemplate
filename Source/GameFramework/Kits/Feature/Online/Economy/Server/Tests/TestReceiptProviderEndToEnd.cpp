@@ -101,7 +101,7 @@ namespace
             transportSettings._ioThreadCount = 0;
             HTTPServerConfig serverSettings;
             serverSettings._pTLSContext = _tlsContext.get();
-            SW_REQUIRE_TRUE( _server.initialize( StreamTransportFactory::createPlatformTransport(), transportSettings, serverSettings, HTTPRequestFunction::create<&FakeStoreEndpoint::onRequest>( this ) ) );
+            SW_REQUIRE_TRUE( _server.initialize( StreamTransportFactory::createPlatformTransport(), transportSettings, serverSettings, SW_DELEGATE_METHOD( HTTPRequestFunction, &FakeStoreEndpoint::onRequest, this ) ) );
         }
 
         string makeBaseURL()

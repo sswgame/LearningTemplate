@@ -122,7 +122,7 @@ namespace
         PartyFoundSink find( AccountID accountID )
         {
             PartyFoundSink sink;
-            _service.findPartyOfAccount( accountID, 9, PartyLobbyService::PartyFoundDelegate::create<&PartyFoundSink::onFound>( &sink ) );
+            _service.findPartyOfAccount( accountID, 9, SW_DELEGATE_METHOD( PartyLobbyService::PartyFoundDelegate, &PartyFoundSink::onFound, &sink ) );
             poll();
             return sink;
         }
@@ -175,7 +175,7 @@ SW_TEST_CASE( PartyLobbyServiceTest, RefusesBadMaxPartySize )
     SW_EXPECT_FALSE( service.initialize( &rig._router, 2, PartyLobbyLimit::kMaxPartySize + 1 ) );
 
     PartyFoundSink sink; // 시작하지 못한 서비스는 찾기에 Unavailable 로 답한다
-    service.findPartyOfAccount( kAlice, 9, PartyLobbyService::PartyFoundDelegate::create<&PartyFoundSink::onFound>( &sink ) );
+    service.findPartyOfAccount( kAlice, 9, SW_DELEGATE_METHOD( PartyLobbyService::PartyFoundDelegate, &PartyFoundSink::onFound, &sink ) );
     SW_EXPECT_EQUAL( 1, sink._count );
     SW_EXPECT_TRUE( sink._result.hasError( OnlineError::kUnavailable ) );
 }

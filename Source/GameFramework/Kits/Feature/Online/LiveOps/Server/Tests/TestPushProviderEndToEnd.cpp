@@ -242,7 +242,7 @@ namespace
         {
             StreamTransportConfig transportSettings;
             transportSettings._ioThreadCount = 0;
-            SW_REQUIRE_TRUE( _server.initialize( StreamTransportFactory::createPlatformTransport(), transportSettings, HTTPServerConfig{}, HTTPRequestFunction::create<&FakeFCMEndpoint::onRequest>( this ) ) );
+            SW_REQUIRE_TRUE( _server.initialize( StreamTransportFactory::createPlatformTransport(), transportSettings, HTTPServerConfig{}, SW_DELEGATE_METHOD( HTTPRequestFunction, &FakeFCMEndpoint::onRequest, this ) ) );
         }
 
         string makeBaseURL()

@@ -251,7 +251,7 @@ namespace sw::editor
              */
             static void requestLoadPreset( uint64 componentID, const string& presetPath )
             {
-                EditorCommandRegistry::getInEditorContext().requestSceneEdit( Delegate<void( EditorTransaction& )>::create( [componentID, presetPath]( EditorTransaction& transaction )
+                EditorCommandRegistry::getInEditorContext().requestSceneEdit( SW_DELEGATE_LAMBDA( Delegate<void( EditorTransaction& )>, [componentID, presetPath]( EditorTransaction& transaction )
                 {
                     if ( EditorPlaySession::refuseSceneEdit( "Load Component Preset" ) ) // 창이 열린 동안 플레이 · 베이크가 시작됐을 수 있다
                         return;
@@ -264,7 +264,7 @@ namespace sw::editor
             /** @brief 프리셋 저장 창의 결과(UI 프레임)를 게임 단계로 넘깁니다 — 컴포넌트 값을 읽는 일도 씬을 쥔 쪽이 한다. 씬을 바꾸지 않아 거래는 빈 채로 닫힌다. */
             static void requestSavePreset( uint64 componentID, const string& presetPath )
             {
-                EditorCommandRegistry::getInEditorContext().requestSceneEdit( Delegate<void( EditorTransaction& )>::create( [componentID, presetPath]( EditorTransaction& /*transaction*/ )
+                EditorCommandRegistry::getInEditorContext().requestSceneEdit( SW_DELEGATE_LAMBDA( Delegate<void( EditorTransaction& )>, [componentID, presetPath]( EditorTransaction& /*transaction*/ )
                 {
                     const Component* pComp = findPresetComponent( componentID );
                     if ( pComp != nullptr && EditorTransformCommands::saveComponentPresetTo( pComp, presetPath ) == false )
@@ -288,7 +288,7 @@ namespace sw::editor
                 params._listFilterExtension = { ".preset.xml", ".xml" };
                 params._initialDirectory    = EditorGlobalVariableCommands::getComponentPresetFolderPath();
                 const uint64 componentID    = pComp->getComponentID();
-                FileDialog::open( params, FileDialogDelegate::create( [componentID]( const vector<string>& listPath )
+                FileDialog::open( params, SW_DELEGATE_LAMBDA( FileDialogDelegate, [componentID]( const vector<string>& listPath )
                 {
                     if ( listPath.empty() == false )
                         requestLoadPreset( componentID, listPath[0] );
@@ -311,7 +311,7 @@ namespace sw::editor
                 params._listFilterExtension = { ".preset.xml" };
                 params._initialDirectory    = EditorGlobalVariableCommands::getComponentPresetFolderPath();
                 const uint64 componentID    = pComp->getComponentID();
-                FileDialog::open( params, FileDialogDelegate::create( [componentID]( const vector<string>& listPath )
+                FileDialog::open( params, SW_DELEGATE_LAMBDA( FileDialogDelegate, [componentID]( const vector<string>& listPath )
                 {
                     if ( listPath.empty() == false )
                         requestSavePreset( componentID, listPath[0] );

@@ -72,7 +72,7 @@ namespace sw
         schedule._jobID       = kJobID;
         schedule._kind        = ScheduleKind::Daily;
         schedule._minuteOfDay = minuteOfDay;
-        if ( _pScheduler->registerJob( schedule, ScheduledJobFunction::create<&ServiceTTLMonitor::onScheduledRun>( this ) ) == false )
+        if ( _pScheduler->registerJob( schedule, SW_DELEGATE_METHOD( ScheduledJobFunction, &ServiceTTLMonitor::onScheduledRun, this ) ) == false )
         {
             SW_LOG_ERROR_ID( "ServiceTTLMonitor.ServiceTTLMonitorSweepJobCould", "ServiceTTLMonitor: the sweep job could not be scheduled (minute of day %#)", minuteOfDay );
             return false;

@@ -229,7 +229,7 @@ namespace
         RawResponseSink sendRaw( int32 index, uint16 method, const BitWriter& body, const NetRequestOptions& options = NetRequestOptions{} )
         {
             RawResponseSink sink;
-            (void)getClient( index ).sendRequest( method, body, options, OnlineResponseDelegate::create<&RawResponseSink::onResponse>( &sink ) );
+            (void)getClient( index ).sendRequest( method, body, options, SW_DELEGATE_METHOD( OnlineResponseDelegate, &RawResponseSink::onResponse, &sink ) );
             poll();
             SW_EXPECT_EQUAL( 1, sink._count );
             return sink;
