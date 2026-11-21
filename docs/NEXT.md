@@ -8,8 +8,7 @@
 
 ## 0. 인계(2026-11-21 — 다음 세션은 여기부터)
 
-- **통합 중:** main 에 w-devmetrics · w-chores · w-gimmickdamage(w-gimmickevents 포함) · w-kitsplit2 · w-material · w-zonefix · w-playerstate · w-pathproducers(w-pathjoin 포함)를 합친다. 합친 뒤 충돌 파일에 `py -3 -m Scripts byte-reader-values` · `disk-path-args` · `disk-path-join` 을 다시 돌리고, Release · Shipping · Server · ASan 빌드 → 갈래 테스트 · 시나리오만 dx12 로 → preflight `--no-linux` → push.
-- **갈래마다 볼 테스트 · 시나리오:** `kitdemo_respawn` · `minigamememory` · `triggercontract` · `kitdemo_actioncombat` · `kitdemo_actionplatformer` · `kitdemo_tactics` · `meleeduel` · TestCombatAttributeSet · TestMaterialInstance · 존 · 트리거 겹침 · 시퀀스 트리거 테스트 · wildwest `arrival*` · `cellcutscene` · 에디터 `netsequence` · PlayerStateComponentsTest · LootGrantTest · 세이브 시나리오 전부(ComponentStateStore 판 3) · meadowvillage · harvestvalley · frontiertown · velmora · wildwest · playground 허브. `AssetReferenceFields.generated.json` 은 빌드 산출로 커밋.
+- 갈래 여덟 통합 · push 끝(`d237c123bf`). Linux 검증은 아직 — 여러 묶음 뒤 `linux-verify` 로 한 번.
 
 ## 1. 다음 순서
 
