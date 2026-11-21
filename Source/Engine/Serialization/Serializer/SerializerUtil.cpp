@@ -140,10 +140,11 @@ namespace sw
             {
                 if ( inoutOffset > dataSize )
                     return false;
-                ByteReader reader( pData + inoutOffset, dataSize - inoutOffset );
-                outValue = reader.readUint32();
+                ByteReader   reader( pData + inoutOffset, dataSize - inoutOffset );
+                const uint32 value = reader.readUint32(); // 실패하면 출력을 건드리지 않는다
                 if ( reader.hasOverflowed() )
                     return false;
+                outValue = value;
                 inoutOffset += sizeof( uint32 );
                 return true;
             }
@@ -153,10 +154,11 @@ namespace sw
             {
                 if ( inoutOffset > dataSize )
                     return false;
-                ByteReader reader( pData + inoutOffset, dataSize - inoutOffset );
-                outValue = reader.readInt64();
+                ByteReader  reader( pData + inoutOffset, dataSize - inoutOffset );
+                const int64 value = reader.readInt64(); // 실패하면 출력을 건드리지 않는다
                 if ( reader.hasOverflowed() )
                     return false;
+                outValue = value;
                 inoutOffset += sizeof( int64 );
                 return true;
             }

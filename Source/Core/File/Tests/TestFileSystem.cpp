@@ -126,7 +126,7 @@ SW_TEST_CASE( FileSystemTest, ToDiskPathNormalizesAndEmptyFails )
     SW_REQUIRE_FALSE( diskPath.empty() );
     SW_EXPECT_EQUAL( FileUtil::normalizeSeparators( file ), diskPath.str() );
 #if defined( SW_PLATFORM_WINDOWS )
-    SW_EXPECT_EQUAL( string( "C:/a/b" ), FileUtil::toDiskPath( "C:\a\b" ).str() );
+    SW_EXPECT_EQUAL( string( "C:/a/b" ), FileUtil::toDiskPath( "C:\\a\\b" ).str() );
 #endif
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( diskPath, "abc" ) );
     SW_EXPECT_TRUE( FileUtil::isRegularFile( diskPath ) );

@@ -95,10 +95,11 @@ namespace sw
                 ByteReader reader{ pData, size };
                 if ( reader.skipBytes( offset ) == false )
                     return false;
-                *static_cast<string*>( pPtr ) = reader.readString();
+                string text = reader.readString(); // 실패하면 칸을 건드리지 않는다 — 읽은 뒤에만 옮긴다
                 if ( reader.hasOverflowed() )
                     return false;
-                offset = reader.getOffset();
+                *static_cast<string*>( pPtr ) = std::move( text );
+                offset                        = reader.getOffset();
                 return true;
             }
 
