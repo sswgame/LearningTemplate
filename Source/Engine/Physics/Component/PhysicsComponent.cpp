@@ -33,9 +33,19 @@ namespace sw
         , _phase{ phase }
         , _bRebuildPending{ false }
         , _bStreamingHeld{ false }
+        , _bBodyCreated{ false }
         , _bTeleportPending{ false }
         , _spatialEntry{}
     {
+    }
+
+    void PhysicsComponent::markBodyCreated()
+    {
+        const GameObject* pOwner = getOwner();
+        if ( _bBodyCreated || _pScenePhysics == nullptr || pOwner == nullptr )
+            return;
+        _bBodyCreated = true;
+        _pScenePhysics->markObjectSpawned( pOwner->getObjectID() );
     }
 
     const SpatialGridLayerDesc& PhysicsComponent::getCharacterSpatialLayer()
@@ -55,6 +65,7 @@ namespace sw
         SceneComponent::onRegister( manager );
         _pScenePhysics = &manager.getSubsystem<sw::ScenePhysics>();
         _pScenePhysics->registerComponent( this );
+        _bBodyCreated = false;
         // 3D 캐릭터 · 강체는 지역 같은 공간 질의의 후보다 — 씬을 훑지 않게 등록 동안 공간 색인에 올린다(점, 반 크기 0).
         const SpatialGridLayerDesc* pLayer = castTo<CharacterControllerComponent>( this ) != nullptr ? &getCharacterSpatialLayer()
                                            : castTo<RigidBodyComponent>( this ) != nullptr           ? &getBodySpatialLayer()

@@ -5,6 +5,9 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Physics/Collision/PhysicsShape.h"
+#include "Engine/Physics/Component/RigidBodyComponent.h"
+#include "Engine/Physics/Scene/ScenePhysics.h"
 #include "Engine/Sequencer/SequenceAsset.h"
 #include "Engine/Sequencer/SequencePlayerComponent.h"
 
@@ -184,4 +187,76 @@ SW_TEST_CASE( SequenceTriggerProgressTest, SpawnInsideIgnoreSkipsAnActivatorBorn
     pNewRoot->setWorldPosition( float3{ 1.0f, 0.0f, 0.0f } );
     rig.tickFrames( 1 );
     SW_EXPECT_TRUE( rig._pTrigger->hasFired() );
+}
+
+/**
+ * @brief [SequenceTriggerProgressTest] Ignore 는 트리거 콜라이더 안에서 생긴 몸(스폰 · 부활)에 틀지 않는다 — 첫 물리 스텝까지 스텝 없는 프레임이 수십 끼어도(높은 프레임률)
+ * @details 겹침 길은 프레임 수 창이 아니라 물리의 "안에서 생김" 표시(`OverlapInfo::_bOtherSpawnedInside`)를 본다. 변이: `isOverlapSpawnEntry` 가 표시를 보지 않으면 첫 단언이 진다(예전 8 프레임 창도 졌다).
+ */
+SW_TEST_CASE( SequenceTriggerProgressTest, SpawnInsideIgnoreSkipsABodyBornInsideTheCollider )
+{
+    constexpr float32 kFrame = 1.0f / 60.0f;
+    GameObjectManager manager;
+    GameObject*       pDirector = manager.createGameObject( hashed_string( "Director" ) );
+    SW_REQUIRE_NOT_NULL( pDirector );
+    SequencePlayerComponent* pPlayer = pDirector->addComponent<SequencePlayerComponent>();
+    SW_REQUIRE_NOT_NULL( pPlayer );
+    pPlayer->setSequence( SequenceAsset{} );
+    pPlayer->setAutoPlay( false );
+
+    GameObject* pVolumeObject = manager.createGameObject( hashed_string( "TownArrival" ) );
+    SW_REQUIRE_NOT_NULL( pVolumeObject );
+    RigidBodyComponent* pTriggerBody = pVolumeObject->addComponent<RigidBodyComponent>();
+    SW_REQUIRE_NOT_NULL( pTriggerBody );
+    PhysicsShapeDesc3D triggerBox;
+    triggerBox._type        = PhysicsShapeType3D::Box;
+    triggerBox._halfExtents = float3{ 2.0f, 2.0f, 2.0f };
+    pTriggerBody->setShape( triggerBox );
+    pTriggerBody->setBodyType( PhysicsBodyType::Static );
+    pTriggerBody->setTrigger( true );
+    pTriggerBody->setLayer( hashed_string( "Trigger" ) );
+    SequenceTriggerComponent* pTrigger = pVolumeObject->addComponent<SequenceTriggerComponent>();
+    SW_REQUIRE_NOT_NULL( pTrigger );
+    pTrigger->setSequence( pDirector->getHandle() );
+    pTrigger->setSpawnInside( TriggerSpawnInside::Ignore );
+    manager.beginPlay();
+    for ( uint32 frame = 0; frame < 3; ++frame )
+    {
+        manager.update( kFrame );
+    }
+
+    GameObject* pRider = manager.createGameObject( hashed_string( "RespawnedRider" ) );
+    SW_REQUIRE_NOT_NULL( pRider );
+    RigidBodyComponent* pRiderBody = pRider->addComponent<RigidBodyComponent>();
+    SW_REQUIRE_NOT_NULL( pRiderBody );
+    PhysicsShapeDesc3D riderBox;
+    riderBox._type        = PhysicsShapeType3D::Box;
+    riderBox._halfExtents = float3{ 0.25f, 0.25f, 0.25f };
+    pRiderBody->setShape( riderBox );
+    pRiderBody->setBodyType( PhysicsBodyType::Dynamic );
+    pRiderBody->setGravityFactor( 0.0f );
+    const ScenePhysics& physics    = manager.getSubsystem<ScenePhysics>();
+    const uint64        stepStart  = physics.getStepCount();
+    uint32              frameCount = 0;
+    while ( physics.getStepCount() == stepStart && frameCount < 1000 )
+    {
+        manager.update( kFrame / 64.0f ); // 고정 스텝보다 훨씬 짧은 프레임
+        ++frameCount;
+    }
+    SW_REQUIRE_TRUE( frameCount > static_cast<uint32>( TriggerSpawnWindow::kFrames ) );
+    manager.update( kFrame );
+    SW_REQUIRE_EQUAL( 1u, physics.getOverlapTracker().getOverlapCount( pRider->getObjectID() ) ); // 진입은 왔다
+    SW_EXPECT_FALSE( pTrigger->hasFired() );
+
+    pRiderBody->setLocalPosition( float3{ 10.0f, 0.0f, 0.0f } );
+    for ( uint32 frame = 0; frame < 3; ++frame )
+    {
+        manager.update( kFrame );
+    }
+    pRiderBody->setLocalPosition( float3{ 0.0f, 0.0f, 0.0f } );
+    for ( uint32 frame = 0; frame < 3; ++frame )
+    {
+        manager.update( kFrame );
+    }
+    SW_EXPECT_TRUE( pTrigger->hasFired() );
 }

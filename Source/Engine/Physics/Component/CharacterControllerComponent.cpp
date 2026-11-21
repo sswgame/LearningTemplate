@@ -346,6 +346,8 @@ namespace sw
             desc._layer         = physics.resolveLayer( _layer );
             desc._bInnerBody    = _bInnerBody;
             _character          = pScene->createCharacter( desc );
+            if ( _character.isValid() )
+                markBodyCreated();
             markShapeScale( _worldScale );
             _state            = PhysicsCharacterState3D{};
             _verticalSpeed    = 0.0f;

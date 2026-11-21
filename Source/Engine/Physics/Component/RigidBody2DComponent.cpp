@@ -235,6 +235,8 @@ namespace sw
         desc._bAllowTypeChange      = true;
         const uint32 index          = getPoseIndex();
         _pPosePage->_arrBody[index] = scene.createBody( desc );
+        if ( _pPosePage->_arrBody[index].isValid() )
+            markBodyCreated();
         _pPosePage->resetPose( index, position, angle );
         _appliedBodyType         = _bodyType;
         _kinematicStartPosition  = position;

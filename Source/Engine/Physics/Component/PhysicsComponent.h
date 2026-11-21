@@ -154,6 +154,12 @@ namespace sw
         bool isShapeScaleStale( const float3& worldScale ) const;
         /** @brief 백엔드 셰이프를 @p scale 로 지었다고 적습니다(바디 · 캐릭터를 만든 직후). */
         void markShapeScale( const float3& scale ) { _shapeScale = scale; }
+        /**
+         * @brief 백엔드 바디 · 캐릭터를 만든 직후 부릅니다. 등록 뒤 처음이면 이 오브젝트가 물리에 막 나타났다고 물리에 알린다(`ScenePhysics::markObjectSpawned`).
+         * @details 그 바디의 첫 스텝 겹침 진입이 "안에서 생김"(`OverlapInfo::_bOtherSpawnedInside`)이 된다. 다시 켜짐 · 다시 짓기 · 스트리밍 쥠 풀림은 같은 등록의 둘째 바디라 알리지 않는다
+         *          — 트리거 계약의 나타남(스폰 · 로그인 · 불러오기 · 셀 오름)만 남는다.
+         */
+        void markBodyCreated();
 
         /**
          * @brief 메서드 @p TMethod 를 고정 스텝 그룹 @p group 에 등록합니다 — 등록 자리(`onRegister`, 기반의 `onRegister` 뒤)에서 쓰는 그룹마다 한 번 부른다.
@@ -193,6 +199,7 @@ namespace sw
         PhysicsComponentPhase _phase;
         bool                  _bRebuildPending;  ///< 게임 스레드에서만 읽고 쓴다(속성 변경 → 다음 물리 프레임)
         bool                  _bStreamingHeld;   ///< 물리 서비스만 쓴다(`ScenePhysics::updateStreamingHolds`, 게임 스레드 — 단계 훅보다 앞)
+        bool                  _bBodyCreated;     ///< 등록 뒤 백엔드 객체를 한 번이라도 만들었다(`markBodyCreated` — 첫 바디만 나타남이다)
         atomic<bool>          _bTeleportPending; ///< 틱 중 다른 워커가 세울 수 있어 원자값이다
         SlotHandle            _spatialEntry;     ///< 씬 공간 색인 항목(3D 캐릭터 · 강체만, 등록 ~ 해제)
     };

@@ -23,6 +23,7 @@ namespace sw
 
         uint32        _beginCount{ 0 };
         uint32        _endCount{ 0 };
+        uint32        _spawnedInsideBeginCount{ 0 };  ///< 그 가운데 상대가 안에서 생긴 진입 수(`OverlapInfo::_bOtherSpawnedInside`)
         uint32        _collisionBeginCount{ 0 };      ///< 막는 접촉 시작 수(바디 쌍마다 — 충격 단위)
         vector<uint8> _listOrder{};                   ///< 'B' · 'E' 와 상대 오브젝트 id 의 낮은 바이트가 번갈아 든다
         bool          _bDestroyOtherOnBegin{ false }; ///< NOLINT(sw-bool-flag): 테스트 칸 — 비트필드는 기본값을 둘 수 없다
@@ -43,6 +44,7 @@ namespace sw
             if ( overlap._bOtherTrigger == SW_TRUE )
                 return;
             ++_beginCount;
+            _spawnedInsideBeginCount += overlap._bOtherSpawnedInside == SW_TRUE ? 1u : 0u;
             record( 'B', overlap );
             if ( _bDestroyOtherOnBegin && overlap._pOther != nullptr && overlap._pOther->getMutableManager() != nullptr )
                 overlap._pOther->getMutableManager()->destroyGameObject( overlap._pOther );

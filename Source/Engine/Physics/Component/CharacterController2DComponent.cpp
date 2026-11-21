@@ -150,6 +150,8 @@ namespace sw
             desc._maxSlopeAngle = _maxSlopeAngle.radians();
             desc._layer         = physics.resolveLayer( _layer );
             _character          = pScene->createCharacter( desc );
+            if ( _character.isValid() )
+                markBodyCreated();
             markShapeScale( _worldScale );
             _state            = PhysicsCharacterState2D{};
             _verticalSpeed    = 0.0f;

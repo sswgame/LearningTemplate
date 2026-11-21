@@ -207,11 +207,13 @@ namespace sw
         desc._bOverlapOnly  = true;  // 막는 콜라이더도 센서다 — 키네마틱끼리는 접촉이 없어서 센서여야 겹침이 난다
         desc._bAllowSleep   = false; // 잠든 키네마틱은 옮겨도 깨어날 일이 없다 — 센서 판정에서 빠지지 않게 깨워 둔다
         _body               = pScene->createBody( desc );
-        _bodyCenter         = center;
-        _bodyHalfExtent     = halfExtents;
-        _bodyLayerName      = _layer;
-        _bodyLayer          = desc._layer;
-        _bBodyTrigger       = _bTrigger;
+        if ( _body.isValid() )
+            markBodyCreated();
+        _bodyCenter     = center;
+        _bodyHalfExtent = halfExtents;
+        _bodyLayerName  = _layer;
+        _bodyLayer      = desc._layer;
+        _bBodyTrigger   = _bTrigger;
     }
 
     void BoxCollider2DComponent::onPhysicsFrameBegin( const FixedStepContext& context )

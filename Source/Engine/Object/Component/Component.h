@@ -231,18 +231,20 @@ namespace sw
      */
     struct OverlapInfo
     {
-        GameObject*            _pOther{ nullptr };   ///< 상대 오브젝트. 끝 이벤트에서 상대가 이미 사라졌으면 nullptr
-        PhysicsBodyHandle      _selfBody{};          ///< 이 오브젝트 쪽 바디다(트리거 · 2D 콜라이더의 센서). 히트 존이나 래그돌 뼈를 구분한다
-        PhysicsBodyHandle      _otherBody{};         ///< 강체 물리의 트리거면 상대 쪽 바디
-        float32                _hitFraction{ 1.0f }; ///< 이번 물리 step 안에서 닿은 시점(0..1)이다. 연속 바디가 쓸려 가며 닿은 시작 이벤트만 1 보다 작다
-        uint8                  _bSelfTrigger  : 1;   ///< 이 오브젝트 쪽 콜라이더가 트리거인지
-        uint8                  _bOtherTrigger : 1;   ///< 상대 쪽 콜라이더가 트리거인지
-        [[maybe_unused]] uint8 _reserved      : 6;
+        GameObject*            _pOther{ nullptr };       ///< 상대 오브젝트. 끝 이벤트에서 상대가 이미 사라졌으면 nullptr
+        PhysicsBodyHandle      _selfBody{};              ///< 이 오브젝트 쪽 바디다(트리거 · 2D 콜라이더의 센서). 히트 존이나 래그돌 뼈를 구분한다
+        PhysicsBodyHandle      _otherBody{};             ///< 강체 물리의 트리거면 상대 쪽 바디
+        float32                _hitFraction{ 1.0f };     ///< 이번 물리 step 안에서 닿은 시점(0..1)이다. 연속 바디가 쓸려 가며 닿은 시작 이벤트만 1 보다 작다
+        uint8                  _bSelfTrigger        : 1; ///< 이 오브젝트 쪽 콜라이더가 트리거인지
+        uint8                  _bOtherTrigger       : 1; ///< 상대 쪽 콜라이더가 트리거인지
+        uint8                  _bOtherSpawnedInside : 1; ///< 시작 이벤트가 상대의 첫 바디가 든 첫 물리 스텝에서 왔다 — 상대가 이 겹침 안에서 생겼다(스폰 · 로그인 · 불러오기 · 셀 오름). 다시 켜짐 · 바디 다시 짓기 · 순간 이동은 아니다
+        [[maybe_unused]] uint8 _reserved            : 5;
 
         /** @brief 상대가 없고 막는 콜라이더끼리 겹친 상태로 만듭니다. */
         OverlapInfo() noexcept
             : _bSelfTrigger{ SW_FALSE }
             , _bOtherTrigger{ SW_FALSE }
+            , _bOtherSpawnedInside{ SW_FALSE }
             , _reserved{ 0 } {}
     };
 } // namespace sw
