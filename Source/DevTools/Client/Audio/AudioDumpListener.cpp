@@ -64,7 +64,7 @@ namespace sw
                 AudioWAVEncoder::encodeFloat32( listSample.data(), static_cast<uint32>( listSample.size() / channelCount ), channelCount,
                                                 AudioChannelLayoutUtil::getChannelMask( layout ), audio::kSampleRate, bytes );
                 listSample.clear();
-                if ( FileUtil::writeFile( path, bytes.data(), bytes.size() ) == false )
+                if ( FileUtil::writeFile( FileUtil::toDiskPath( path ), bytes.data(), bytes.size() ) == false )
                 {
                     SW_LOG_ERROR_ID( "AudioService.CouldNotWriteAudio", "Could not write the audio dump '%#'", path );
                     return;

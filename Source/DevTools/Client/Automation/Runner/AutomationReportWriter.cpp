@@ -170,8 +170,8 @@ namespace sw
         json += '\n';
         const string directory = FileUtil::getDirectoryPart( _reportPath );
         if ( directory.empty() == false )
-            (void)FileUtil::ensureDirectoryExists( directory ); // 실패하면 아래 쓰기가 실패로 알린다
-        if ( FileUtil::writeTextFile( _reportPath, json ) == false )
+            (void)FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( directory ) ); // 실패하면 아래 쓰기가 실패로 알린다
+        if ( FileUtil::writeTextFile( FileUtil::toDiskPath( _reportPath ), json ) == false )
             SW_LOG_WARNING_ID( "Automation.CouldNotWriteReport", "[Scenario] could not write the report %#", _reportPath.c_str() );
     }
 } // namespace sw

@@ -35,7 +35,7 @@ namespace sw
     SubsystemInitResult ConfigReloadSubsystem::initializeSubsystem()
     {
         const string configFolder = FileUtil::joinPath( ProcessRoots::get()._project.str(), config::kDirConfig );
-        if ( FileUtil::isDirectory( configFolder ) == false )
+        if ( FileUtil::isDirectory( FileUtil::toDiskPath( configFolder ) ) == false )
         {
             SW_LOG_INFO_ID( "ConfigReload.ConfigReloadOffNo", "Config reload is off - no config folder at %#", configFolder.c_str() );
             return SubsystemInitResult::Succeeded;

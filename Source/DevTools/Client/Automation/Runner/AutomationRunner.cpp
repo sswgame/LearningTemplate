@@ -386,7 +386,7 @@ namespace sw
         bool bAllWritten = true;
         for ( auto it = _listFileRestore.rbegin(); it != _listFileRestore.rend(); ++it )
         {
-            if ( FileUtil::writeTextFile( it->first, it->second ) == false )
+            if ( FileUtil::writeTextFile( FileUtil::toDiskPath( it->first ), it->second ) == false )
             {
                 SW_LOG_ERROR_ID( "Automation.RestoreFileFailed", "[Scenario] could not restore %# - restore it by hand (git checkout or rebuild)", it->first.c_str() );
                 bAllWritten = false;
@@ -861,8 +861,8 @@ namespace sw
         // 행에서는 보고 폴더를 만들 수 없다(할당 · 잠금 없이 쓴다) — 미리 만들어 둔다.
         const string reportDirectory = FileUtil::getDirectoryPart( _reportWriter.getReportPath() );
         if ( reportDirectory.empty() == false )
-            (void)FileUtil::ensureDirectoryExists( reportDirectory ); // 못 만들면 행 보고만 못 쓴다 — 정상 종료의 보고는 자기 쓰기가 알린다
-        _hangWatchdog.publish( _hangPayload );                        // 감시가 뜨기 전에 한 번 채운다
+            (void)FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( reportDirectory ) ); // 못 만들면 행 보고만 못 쓴다 — 정상 종료의 보고는 자기 쓰기가 알린다
+        _hangWatchdog.publish( _hangPayload );                                                // 감시가 뜨기 전에 한 번 채운다
         AutomationHangWatchdog::Settings settings;
         settings._startSeconds                   = _run._wallStartSeconds;
         settings._pExcludedBusy                  = _run._pCompileBusy;

@@ -154,7 +154,7 @@ SW_TEST_CASE( AutomationImageMetricTest, LoadPpmFromFile )
     vector<uint8> listByte;
     AutomationImage::encodePpm( Util::makeImage( 1, 1, 9 ), listByte );
     const string path = test::makeScratchPath( "image.ppm" );
-    SW_REQUIRE_TRUE( FileUtil::writeFile( path, listByte.data(), listByte.size() ) );
+    SW_REQUIRE_TRUE( FileUtil::writeFile( FileUtil::toDiskPath( path ), listByte.data(), listByte.size() ) );
 
     const expected<AutomationImage> image = AutomationImage::loadPpm( path );
     SW_REQUIRE_TRUE( image.has_value() );

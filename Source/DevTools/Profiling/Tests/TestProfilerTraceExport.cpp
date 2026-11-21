@@ -472,7 +472,7 @@ SW_TEST_CASE( ProfilerTraceExportTest, ExitCaptureSavesWithoutAnyFrame )
     pProfiler->getTimeline().setRecording( false ); // 네트워크 흐름 기록자를 돌려 놓는다
 
     sw::string json;
-    SW_REQUIRE_TRUE( sw::FileUtil::readTextFile( path, json ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::readTextFile( sw::FileUtil::toDiskPath( path ), json ) );
     const sw::expected<sw::ProfilerLoadedTrace> parsed = sw::ProfilerTraceExport::parseTraceJSON( json );
     SW_REQUIRE_TRUE( parsed.has_value() );
     SW_EXPECT_EQUAL( sw::string( "Client1" ), parsed->_meta._processName );
