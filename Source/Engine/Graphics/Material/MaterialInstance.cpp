@@ -176,6 +176,7 @@ namespace sw
         , _cachedPermutationHash{ 0 }
         , _previousPermutationHash{ 0 }
         , _parentPermutationHash{ 0 }
+        , _parentLoadGeneration{ 0 }
         , _bDefinesDirty{ SW_TRUE }
         , _instReserved{ 0 }
         , _renderResourceHook{ make_unique<RHIRenderResourceHook<MaterialInstance>>( *this ) }
@@ -351,6 +352,8 @@ namespace sw
 
     void MaterialInstance::assignFloats( hashed_string name, ValueKind kind, const float32* pValue, uint32 count )
     {
+        if ( rejectStaticValue( name ) )
+            return;
         ValueOverride* pOverride = findValueOverride( name );
         if ( pOverride == nullptr )
         {
@@ -511,7 +514,25 @@ namespace sw
         markRenderDirty();
     }
 
-    void MaterialInstance::setParameter( hashed_string name, string_view value )
+    bool MaterialInstance::rejectStaticValue( hashed_string name ) const
+    {
+        if ( MaterialInstanceInternal::isKeywordValueProperty( _pParentMaterial, name ) == false )
+            return false;
+        SW_LOG_ERROR_ID( "MaterialInstance.StaticValueRejected",
+                         "Material instance '%#': '%#' emits a shader keyword - a runtime value would make an uncooked permutation, so set it in a .materialinstance asset or use a runtime switch (enableKeyword)",
+                         _desc._name, name.c_str() );
+        return true;
+    }
+
+    bool MaterialInstance::setParameter( hashed_string name, string_view value )
+    {
+        if ( rejectStaticValue( name ) )
+            return false;
+        assignText( name, value );
+        return true;
+    }
+
+    void MaterialInstance::assignText( hashed_string name, string_view value )
     {
         ValueOverride* pOverride = findValueOverride( name );
         if ( pOverride == nullptr )
@@ -525,12 +546,7 @@ namespace sw
         }
         pOverride->_kind = ValueKind::Text;
         pOverride->_text = value;
-        if ( MaterialInstanceInternal::isKeywordValueProperty( _pParentMaterial, name ) )
-        {
-            _bDefinesDirty = SW_TRUE; // 키워드 칸 값은 define 이다 — 퍼뮤테이션이 바뀐다
-            MaterialPermutation::recordPermutationChange( this );
-        }
-        markRenderDirty();
+        markRenderDirty(); // 키워드 칸 값(define)은 에셋 읽기만 쓰고, 읽기 끝에서 정의 캐시를 더럽힌다(`loadFromXML`)
     }
 
     void MaterialInstance::setScalarParameter( hashed_string name, float32 value )
@@ -724,10 +740,13 @@ namespace sw
 
     void MaterialInstance::refreshCachedDefines() const
     {
-        uint64 currentParentHash = _pParentMaterial != nullptr ? _pParentMaterial->getPermutationHash() : 0;
-        if ( _parentPermutationHash != currentParentHash )
+        // 부모 해시만 보면 부모를 다시 읽어 덮은 칸의 뜻(스위치 키워드 이름 · 키워드 칸 선언)만 바뀐 경우를 놓친다 — 읽기 세대도 함께 본다.
+        const uint64 currentParentHash           = _pParentMaterial != nullptr ? _pParentMaterial->getPermutationHash() : 0;
+        const uint32 currentParentLoadGeneration = _pParentMaterial != nullptr ? _pParentMaterial->getLoadGeneration() : 0;
+        if ( _parentPermutationHash != currentParentHash || _parentLoadGeneration != currentParentLoadGeneration )
         {
             _parentPermutationHash = currentParentHash;
+            _parentLoadGeneration  = currentParentLoadGeneration;
             _bDefinesDirty         = SW_TRUE;
         }
 
@@ -913,7 +932,7 @@ namespace sw
             if ( overrideItem._assetPath.empty() == false )
                 setTextureParameter( hashed_string( overrideItem._name.c_str() ), overrideItem._assetPath );
             else
-                setParameter( hashed_string( overrideItem._name.c_str() ), overrideItem._value );
+                assignText( hashed_string( overrideItem._name.c_str() ), overrideItem._value ); // 에셋의 키워드 칸 값은 쿠커가 굽는다 — 런타임 거절(`setParameter`)을 거치지 않는다
         }
         for ( const MaterialInstanceDef::KeywordOverride& keywordItem : _desc._listKeyword )
         {

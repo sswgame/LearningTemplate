@@ -92,6 +92,7 @@ namespace sw
         , _renderDataGeneration{ 0 }
         , _elementStride{ 0 }
         , _bufferGeneration{}
+        , _loadGeneration{ 0 }
         , _shaderLayoutCacheGeneration{ 0 }
         , _shaderLayoutBackend{}
         , _pRHIDevice{ nullptr }
@@ -1332,6 +1333,7 @@ namespace sw
         }
 
         _bDefinesDirty = SW_TRUE;
+        ++_loadGeneration; // 인스턴스의 정의 캐시가 다시 만든다 — 부모 해시가 같아도 덮은 칸의 뜻이 바뀌었을 수 있다
         // 다시 읽기(에디터 미리보기 · 머티리얼 패널)는 같은 객체를 제자리에서 바꾼다 — 셰이더 · define 이 달라졌을 수 있다. 주인을 적어 장면 빌더가 이 머티리얼을 쓰는 칸만 다시 모은다.
         MaterialPermutation::recordPermutationChange( this );
         applyDescToRuntime();

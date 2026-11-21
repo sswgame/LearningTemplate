@@ -268,6 +268,12 @@ namespace sw
          * @details 인스턴스는 부모 바이트의 복사본을 가지고 있어, 이 값이 바뀌면 다시 복사한다(`MaterialInstance::getRenderBinding`). 렌더 사본도 이 값으로 낡았는지 본다.
          */
         uint32 getBufferGeneration() const { return _bufferGeneration.get(); }
+        /**
+         * @brief 정의(XML)를 다시 읽을 때마다 오르는 세대입니다(`loadComposed` — 에셋 다시 읽기 · 에디터 미리보기). 0 은 아직 읽지 않음이다.
+         * @details 인스턴스의 정의 캐시가 이 값으로 낡았는지 본다(`MaterialInstance::refreshCachedDefines`). 부모 퍼뮤테이션 해시만 보면 부모 자신의 define 은 같고
+         *          인스턴스가 덮은 칸의 뜻만 바뀐 다시 읽기(덮은 스위치의 키워드 이름 · 키워드 칸 선언)를 놓친다 — 언리얼 MaterialInstance 가 부모 변경 때 다시 캐시하는 자리.
+         */
+        uint32 getLoadGeneration() const { return _loadGeneration; }
         /** @brief 이름으로 프로퍼티를 찾습니다. */
         const MaterialProperty* findProperty( hashed_string name ) const;
         /** @brief 이름으로 프로퍼티를 찾습니다. */
@@ -396,6 +402,7 @@ namespace sw
         uint32                               _renderDataGeneration;                                               /**< `_renderData` 를 만들 때의 `_bufferGeneration`. */
         uint32                               _elementStride;                                                      /**< g_SwMaterials 원소 stride(리플렉션). 0이면 구조 버퍼 머티리얼이 아니다. */
         MaterialRenderVersion                _bufferGeneration;                                                   /**< 렌더 값(바이트, stride, 텍스처 슬롯)이 바뀔 때마다 오른다(`bump` — 전역 번호도 오른다, `MaterialRenderVersion`). 인스턴스 복사본과 렌더 사본이 낡았는지 확인한다. */
+        uint32                               _loadGeneration;                                                     /**< `getLoadGeneration` */
         uint32                               _shaderLayoutCacheGeneration;                                        /**< 레이아웃을 맞출 때의 ShaderReflectionLibrary 캐시 세대 */
         RHIBackend                           _shaderLayoutBackend;                                                /**< 레이아웃을 맞춘 백엔드. `_bShaderLayoutSynced` 일 때만 의미가 있다. */
         IRHIDevice*                          _pRHIDevice;

@@ -581,7 +581,7 @@ namespace sw
         {
             shared_ptr<MaterialInstance> instance = MaterialInstance::create( pMesh->getMaterial() );
             instance->setTextureParameter( hashed_string( "_albedoMap" ), getRenderTargetPath() );
-            instance->setParameter( hashed_string( "_premultipliedTexture" ), "1" );
+            (void)instance->setParameter( hashed_string( "_premultipliedTexture" ), "1" ); // 셰이더 값 칸이다(키워드 아님) — sprite2d.material 이 선언한다
             pMesh->setMaterialInstance( std::move( instance ) );
         }
         _worldQuad = pQuad->getHandle();
