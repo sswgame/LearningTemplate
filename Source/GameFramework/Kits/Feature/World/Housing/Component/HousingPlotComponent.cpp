@@ -25,7 +25,7 @@
 
 #include "GameFramework/Kits/Feature/World/Housing/Net/HousingNetSessionComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/ComponentStateStore.h"
-#include "GameFramework/Runtime/Gameplay/SessionState/SessionStateComponent.h"
+#include "GameFramework/Runtime/Gameplay/GameState/GameStateComponent.h"
 
 namespace sw
 {
@@ -466,9 +466,9 @@ namespace sw
         _replicatedOwner     = HousingPlotOwner::None;
         _layout.initialize( _settings, *_pCatalog );
         _layout.bindWallet( &_wallet );
-        // 판 상태(같은 오브젝트의 SessionStateComponent)가 있으면 그 공유 땅에서 부지를 차지한다 — 밭 · 도시 · 전장 키트와 한 맵의 칸을 나눈다.
+        // 판 상태(같은 오브젝트의 GameStateComponent)가 있으면 그 공유 땅에서 부지를 차지한다 — 밭 · 도시 · 전장 키트와 한 맵의 칸을 나눈다.
         // 판 상태가 없는 씬은 단독 부지다(땅이 없는 게임 — 선택 연동이지 빠진 필수 값이 아니다).
-        SessionStateComponent* pState = SessionStateComponent::findOnOwner( *this );
+        GameStateComponent* pState = GameStateComponent::findOnOwner( *this );
         if ( pState != nullptr && pState->isInitialized() == false )
         {
             SW_LOG_ERROR_ID( "HousingPlot.SessionStateNotOpen", "Housing plot '%#': the session state on this object is not open yet - put the plot after it so the plot can claim the shared land",

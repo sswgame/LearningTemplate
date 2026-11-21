@@ -17,18 +17,18 @@
 namespace sw
 {
     /**
-     * @class AbilityGateComponent
+     * @class TagGateComponent
      * @brief 막는 몸(콜라이더와 그래픽)을 가진 문입니다. `_requiredTags`(Ability.DoubleJump, Ability.Bomb)를 모두 가진 것이 `_openRadius` 안에 오면 몸을 끕니다.
      *        `_bStaysOpen` 이 켜져 있으면 한 번 열린 뒤 그대로 유지하고(진행 저장은 PROPERTY `_bOpen`), 아니면 떠날 때 닫힙니다. 2D 는 `_bPlanar` 로 Z 를 뺀 거리를 씁니다.
      */
     REFLECT( Category = "Gimmick", DisplayName = "Ability Gate", Tooltip = "Opens for objects carrying the required ability tags" )
-    class SW_GF_API AbilityGateComponent : public Component
+    class SW_GF_API TagGateComponent : public Component
     {
     public:
         REFLECT_BODY();
 
-        AbilityGateComponent();
-        virtual ~AbilityGateComponent() override = default;
+        TagGateComponent();
+        virtual ~TagGateComponent() override = default;
 
         void onBeginPlay() override;
         void onTick( TickContext& context ) override;

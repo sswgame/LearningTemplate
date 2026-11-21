@@ -588,7 +588,7 @@ SW_TEST_CASE( GimmickCircuitDefTest, SetParamReplacesAndFindReads )
     SW_EXPECT_TRUE( node.findParam( hashed_string( "B" ) ) == nullptr );
 }
 
-/** @brief [GimmickCircuitTest] 내장 Mover 의 mode 는 열거자 이름(`GimmickMoverMode`, 철자 그대로)만 받는다 */
+/** @brief [GimmickCircuitTest] 내장 Mover 의 mode 는 열거자 이름(`InterpToMovementMode`, 철자 그대로)만 받는다 */
 SW_TEST_CASE( GimmickCircuitTest, BuiltinMoverModeReadsEnumeratorNames )
 {
     GimmickNodeRegistry registry;

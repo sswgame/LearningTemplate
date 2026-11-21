@@ -76,9 +76,9 @@ namespace
             io.value( _outlaw );
         }
 
-        SessionStateRefs makeRefs()
+        GameStateRefs makeRefs()
         {
-            SessionStateRefs refs;
+            GameStateRefs refs;
             refs._pWallet     = &_wallet;
             refs._pReputation = &_reputation;
             refs._pClock      = &_clock;

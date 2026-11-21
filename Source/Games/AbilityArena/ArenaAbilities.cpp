@@ -9,7 +9,7 @@
 #include "GameFramework/Runtime/Character/Combat/Projectile/ProjectileDef.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityCatalog.h"
-#include "GameFramework/Runtime/Gameplay/Ability/AbilityComponent.h"
+#include "GameFramework/Runtime/Gameplay/Ability/AbilitySystemComponent.h"
 
 #include "Games/AbilityArena/ArenaGameModeComponent.h"
 #include "Games/AbilityArena/ArenaUnitComponent.h"
@@ -25,7 +25,7 @@ namespace sw
             return;
         }
 
-        AbilityComponent*             pAbilitySystem = getAbilitySystem();
+        AbilitySystemComponent*       pAbilitySystem = getAbilitySystem();
         const ArenaGameModeComponent* pGameMode      = pAbilitySystem != nullptr ? ArenaGameModeComponent::findForUnit( *pAbilitySystem ) : nullptr;
         // 사거리 · 피해는 어빌리티 데이터(`<Param>`)가 반드시 적는다.
         const optional<float32> range  = getParameter( "range" );
@@ -75,7 +75,7 @@ namespace sw
             return;
         }
 
-        AbilityComponent*             pAbilitySystem = getAbilitySystem();
+        AbilitySystemComponent*       pAbilitySystem = getAbilitySystem();
         const ArenaGameModeComponent* pGameMode      = pAbilitySystem != nullptr ? ArenaGameModeComponent::findForUnit( *pAbilitySystem ) : nullptr;
         const GameObject*             pOwner         = pAbilitySystem != nullptr ? pAbilitySystem->getOwner() : nullptr;
         const ArenaUnitComponent*     pUnit          = pOwner != nullptr ? pOwner->getComponent<ArenaUnitComponent>() : nullptr;

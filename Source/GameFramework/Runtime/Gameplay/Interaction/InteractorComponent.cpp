@@ -17,7 +17,7 @@
 #include "Engine/Object/GameObject/Service/SceneSpatialGrid.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
-#include "GameFramework/Runtime/Gameplay/Ability/AbilityComponent.h"
+#include "GameFramework/Runtime/Gameplay/Ability/AbilitySystemComponent.h"
 #include "GameFramework/Runtime/Gameplay/Interaction/InteractableComponent.h"
 #include "GameFramework/Runtime/Gameplay/Interaction/InteractionAuthority.h"
 
@@ -29,16 +29,16 @@ namespace sw
         {
             /**
              * @brief 상호작용 정의가 이름 붙인 이펙트를 하는 쪽에 겁니다(건 길 @p sourceName). 이름이 비면 아무것도 하지 않습니다.
-             * @details 하는 쪽에 AbilityComponent 가 없는데 정의가 이펙트를 적었으면 데이터와 개체가 맞지 않는 것이라 오류다(대신 아무 일도 없는 것으로 넘기지 않는다).
+             * @details 하는 쪽에 AbilitySystemComponent 가 없는데 정의가 이펙트를 적었으면 데이터와 개체가 맞지 않는 것이라 오류다(대신 아무 일도 없는 것으로 넘기지 않는다).
              */
             static void applyInteractionEffect( GameObject& owner, const InteractionDef& def, const hashed_string& effectID, const hashed_string& sourceName )
             {
                 if ( effectID.size() == 0 )
                     return;
-                AbilityComponent* const pAbility = owner.getComponent<AbilityComponent>();
+                AbilitySystemComponent* const pAbility = owner.getComponent<AbilitySystemComponent>();
                 if ( pAbility == nullptr )
                 {
-                    SW_LOG_ERROR_ID( "Interactor.EffectWithoutAbilityComponent", "interaction '%#' applies effect '%#' but the interactor '%#' has no AbilityComponent", def._id.c_str(),
+                    SW_LOG_ERROR_ID( "Interactor.EffectWithoutAbilityComponent", "interaction '%#' applies effect '%#' but the interactor '%#' has no AbilitySystemComponent", def._id.c_str(),
                                      effectID.c_str(), owner.getName().c_str() );
                     return;
                 }
@@ -62,7 +62,7 @@ namespace sw
             {
                 if ( def._startEffect.size() == 0 || def._bEndStartEffect == SW_FALSE )
                     return;
-                if ( AbilityComponent* const pAbility = owner.getComponent<AbilityComponent>() )
+                if ( AbilitySystemComponent* const pAbility = owner.getComponent<AbilitySystemComponent>() )
                     (void)pAbility->removeActiveEffectsFromSource( makeSourceName( def, "" ) );
             }
 

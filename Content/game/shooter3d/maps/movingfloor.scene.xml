@@ -1,6 +1,6 @@
 <?asset guid="b25610acb6e53a214d9ad8455ea22718"?>
 <Scene formatVersion="3" name="MovingFloor">
-	<!-- 왕복 발판 무대(automation/movingfloor) — 틱 함수 바닥(TickedPathMover) 위의 캐릭터를 물리가 실어 나른다. 아레나(arena)는 골든이 있어 그대로 두고 따로 세웠다. 넷 정렬은 ShooterNetPawnComponent 가 맡는다. -->
+	<!-- 왕복 발판 무대(automation/movingfloor) — 틱 함수 바닥(InterpToMovement) 위의 캐릭터를 물리가 실어 나른다. 아레나(arena)는 골든이 있어 그대로 두고 따로 세웠다. 넷 정렬은 ShooterNetPawnComponent 가 맡는다. -->
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
 	</SceneSettings>
@@ -59,11 +59,11 @@
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
-					<TickedPathMoverComponent _localID="1626856420196830213" _segmentSeconds="2" _tickSeconds="0.0166667" _bPingPong="true">
+					<InterpToMovementComponent _localID="1626856420196830213" _segmentSeconds="2" _tickSeconds="0.0166667" _bPingPong="true">
 						<_listWaypoint>
 							<item>6,0,0</item>
 						</_listWaypoint>
-					</TickedPathMoverComponent>
+					</InterpToMovementComponent>
 				</_listComponent>
 			</GameObject>
 		</entity>

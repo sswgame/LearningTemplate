@@ -434,28 +434,28 @@ namespace sw
         };
     }
 
-    AABB ActionRoom::playerAttackBox( float32 x, float32 y, FacingDir facing ) const
+    AABB ActionRoom::playerAttackBox( float32 x, float32 y, FacingDirection facing ) const
     {
         float32 ox{ 0.0f };
         float32 oy{ 0.0f };
         switch ( facing )
         {
-            case FacingDir::Up:
+            case FacingDirection::Up:
             {
                 oy = -0.85f;
                 break;
             }
-            case FacingDir::Down:
+            case FacingDirection::Down:
             {
                 oy = 0.85f;
                 break;
             }
-            case FacingDir::Left:
+            case FacingDirection::Left:
             {
                 ox = -0.85f;
                 break;
             }
-            case FacingDir::Right:
+            case FacingDirection::Right:
             {
                 ox = 0.85f;
                 break;

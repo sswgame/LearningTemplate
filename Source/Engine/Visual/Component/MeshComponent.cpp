@@ -56,13 +56,13 @@ namespace sw
         , _bStatic{ SW_FALSE }
         , _reserved{ 0 }
     {
-        // 월드가 바뀌면 트랜스폼 칸의 프리미티브 번호로 렌더 더티가 찍힌다(`ScenePrimitive::setPrimitiveIndex`). 훅은 받지 않는다.
+        // 월드가 바뀌면 트랜스폼 칸의 프리미티브 번호로 렌더 더티가 찍힌다(`PrimitiveComponent::setPrimitiveIndex`). 훅은 받지 않는다.
         setWorldTransformNotify( false );
     }
 
     void MeshComponent::onBeginPlay()
     {
-        ScenePrimitive::onBeginPlay();
+        PrimitiveComponent::onBeginPlay();
         resolveRenderAssets();
     }
 
@@ -178,7 +178,7 @@ namespace sw
 
     void MeshComponent::onTeleported( TeleportType type )
     {
-        ScenePrimitive::onTeleported( type );
+        PrimitiveComponent::onTeleported( type );
         // 화면 속도의 기록을 버린다 — 열쇠가 바뀌어 렌더 쪽이 지난 행렬을 찾지 못한다. 트랜스폼만 바뀐 프레임은 후보를 다시 채우지 않으므로 렌더 상태 더티로 열쇠를 다시 읽게 한다.
         _motionTeleportSerial.fetch_add( 1u, std::memory_order_relaxed );
         markRenderStateDirty();
@@ -384,7 +384,7 @@ namespace sw
 
     void MeshComponent::onRegister( GameObjectManager& manager )
     {
-        ScenePrimitive::onRegister( manager );
+        PrimitiveComponent::onRegister( manager );
         _pPrimitiveRegistry = &manager.getPrimitiveRegistry();
         _pPrimitiveRegistry->add( this );
         // 등록 전에 받은 메시가 LOD 를 가졌으면 이제부터 LOD 고르기가 본다.
@@ -411,7 +411,7 @@ namespace sw
             _acquiredMaterialPath = hashed_string{};
         }
         _requestedMaterialPath = hashed_string{};
-        ScenePrimitive::onUnregister( manager );
+        PrimitiveComponent::onUnregister( manager );
     }
 
     void MeshComponent::markRenderStateDirty()
@@ -425,7 +425,7 @@ namespace sw
         // 트랜스폼 PROPERTY 는 여기서 markTransformDirty 로 이어지고, 그 결과 월드 행렬이 다시
         // 계산될 때 트랜스폼 칸의 프리미티브 번호로 렌더 더티가 찍힌다. 그래서 여기서는 렌더 관련
         // PROPERTY 만 보면 된다. 어느 쪽이든 빠지는 경로가 없다.
-        ScenePrimitive::onPropertyChanged( propertyName );
+        PrimitiveComponent::onPropertyChanged( propertyName );
         static const hashed_string s_materialPathName( "_materialPath" );
         static const hashed_string s_meshIDName( "_meshID" );
         static const hashed_string s_sectionName( "_sectionName" );

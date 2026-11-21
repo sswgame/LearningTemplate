@@ -9,7 +9,7 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Runtime/Foundation/Framework/GameModeBoundComponent.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameFrameworkComponent.h"
 
 namespace sw
 {
@@ -18,7 +18,7 @@ namespace sw
      * @brief `TickGroup::PostUpdate` 에서 디렉터의 열차를 읽기만 하고 자기 오브젝트의 메시에만 씁니다. 루프에서는 롤까지 따라 뒤집힙니다.
      */
     REFLECT( Category = "ThemePark", DisplayName = "Coaster Car View", Tooltip = "Places one car of a coaster train the park game mode runs" )
-    class CoasterCarComponent : public GameModeBoundComponent
+    class CoasterCarComponent : public GameFrameworkComponent
     {
     public:
         REFLECT_BODY();

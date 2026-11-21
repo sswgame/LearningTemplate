@@ -21,7 +21,7 @@
 
 namespace sw
 {
-    class AbilityComponent;
+    class AbilitySystemComponent;
     class AbilityTask;
     class GameObject;
 
@@ -68,7 +68,7 @@ namespace sw
      * @class Ability
      * @brief 어빌리티 하나입니다. 부여된 스펙마다 인스턴스 하나를 컴포넌트가 보관합니다(언리얼의 `InstancedPerActor` 에 해당).
      * @details 흐름은 언리얼과 같다.
-     *          1. `AbilityComponent::tryActivateAbility` 가 조건(태그, 쿨다운, 비용, `canActivateAbility`)을 검사하고 `activateAbility` 를 부른다.
+     *          1. `AbilitySystemComponent::tryActivateAbility` 가 조건(태그, 쿨다운, 비용, `canActivateAbility`)을 검사하고 `activateAbility` 를 부른다.
      *          2. 구현은 `commitAbility()` 로 비용과 쿨다운을 적용하고(실패하면 `endAbility()`), 일을 한다. 바로 끝나면 즉시 `endAbility()` 를 부른다.
      *             시간이 걸리면 작업(`waitDelay`, `waitGameplayEvent`)이나 `onTickAbility` 로 기다렸다가 끝낸다.
      *          3. 끝나면(`endAbility`, `cancelAbility`) 작업을 모두 정리하고 `onEndAbility( bWasCancelled )` 를 부른다.
@@ -82,7 +82,7 @@ namespace sw
     REFLECT( Abstract )
     class SW_GF_API Ability
     {
-        friend class AbilityComponent;
+        friend class AbilitySystemComponent;
 
     public:
         REFLECT_BODY();
@@ -146,7 +146,7 @@ namespace sw
         hashed_string getNameParameter( const hashed_string& name ) const;
 
         /** @brief 이 어빌리티를 보유한 컴포넌트입니다. 부여하기 전이면 nullptr 입니다. */
-        AbilityComponent* getAbilitySystem() const { return _pAbilitySystem; }
+        AbilitySystemComponent* getAbilitySystem() const { return _pAbilitySystem; }
         /** @brief 이 어빌리티를 보유한 오브젝트입니다(언리얼의 Avatar 에 해당). */
         GameObject* getAvatar() const;
         /** @brief 부여된 스펙의 핸들입니다. */
@@ -169,9 +169,9 @@ namespace sw
         AbilityEffectSpec makeOutgoingSpec( const hashed_string& effectID ) const;
         /** @brief 주인에게 스펙을 겁니다. */
         ActiveEffectHandle applyEffectSpecToOwner( const AbilityEffectSpec& spec );
-        /** @brief 대상에게 스펙을 겁니다. 틱 중이면 틱 직후로 미룹니다(`AbilityComponent::applyGameplayEffectSpecToTarget` 과 같음). */
-        ActiveEffectHandle applyEffectSpecToTarget( const AbilityEffectSpec& spec, const AbilityComponent* pTarget );
-        /** @brief 오브젝트 @p target 에 스펙을 겁니다 — 대상 컴포넌트를 틱 안에서 찾지 않는다(`AbilityComponent::applyGameplayEffectSpecToTarget( spec, GameObjectHandle )`). */
+        /** @brief 대상에게 스펙을 겁니다. 틱 중이면 틱 직후로 미룹니다(`AbilitySystemComponent::applyGameplayEffectSpecToTarget` 과 같음). */
+        ActiveEffectHandle applyEffectSpecToTarget( const AbilityEffectSpec& spec, const AbilitySystemComponent* pTarget );
+        /** @brief 오브젝트 @p target 에 스펙을 겁니다 — 대상 컴포넌트를 틱 안에서 찾지 않는다(`AbilitySystemComponent::applyGameplayEffectSpecToTarget( spec, GameObjectHandle )`). */
         void applyEffectSpecToTarget( const AbilityEffectSpec& spec, GameObjectHandle target );
 
         // --------------------------------------------------------------------------
@@ -191,7 +191,7 @@ namespace sw
 
     private:
         /** @brief 컴포넌트가 부여할 때 기록합니다. */
-        void bindToAbilitySystem( AbilityComponent* pAbilitySystem, AbilitySpecHandle specHandle, int32 level );
+        void bindToAbilitySystem( AbilitySystemComponent* pAbilitySystem, AbilitySpecHandle specHandle, int32 level );
         /** @brief 컴포넌트가 발동을 확정한 뒤 부릅니다. 상태를 갱신하고 `activateAbility` 를 부릅니다. */
         void beginActivation( const AbilityEventData* pTriggerEvent );
         /** @brief 어빌리티를 끝냅니다. 작업을 정리하고, 컴포넌트에 알린 뒤 `onEndAbility` 를 부릅니다. */
@@ -208,7 +208,7 @@ namespace sw
         AbilityConfig                   _config;
         AbilityEventData                _triggerEventData;
         vector<unique_ptr<AbilityTask>> _listTask;
-        AbilityComponent*               _pAbilitySystem;
+        AbilitySystemComponent*         _pAbilitySystem;
         AbilitySpecHandle               _specHandle;
         int32                           _level;
         uint32                          _activationSerial; ///< 발동마다 늘어난다. 콜백 안에서 끝나고 다시 시작했는지 구분하는 데 쓴다

@@ -7,7 +7,7 @@
 
 #include "GameFramework/Runtime/Character/Control/Intent/ControlIntent.h"
 #include "GameFramework/Runtime/Gameplay/Vehicle/KinematicVehicleComponent.h"
-#include "GameFramework/Runtime/Gameplay/Vehicle/PhysicsCarComponent.h"
+#include "GameFramework/Runtime/Gameplay/Vehicle/WheeledVehicleDriveComponent.h"
 
 // VehicleInputTest — 의도(가고 싶은 월드 방향)를 페달 · 조향으로 바꾸는 규칙(물리 차 · 키네마틱 차(바디 없는 차))과 바퀴 차 서술자. 물리 씬 없이 돈다(nogpu). 실제 주행은 시나리오 game.playground.vehicles 가 본다.
 
@@ -28,20 +28,20 @@ namespace
 } // namespace
 
 /** @brief [VehicleInputTest] 물리 차: 앞은 페달, 옆은 조향이다 */
-SW_TEST_CASE( VehicleInputTest, PhysicsCarTurnsWorldMoveIntoPedalAndSteering )
+SW_TEST_CASE( VehicleInputTest, WheeledVehicleDriveTurnsWorldMoveIntoPedalAndSteering )
 {
-    const PhysicsCarInput input = PhysicsCarComponent::toCarInput( Util::makeMove( 0.6f, 0.8f ), float3{ 0.0f, 0.0f, 1.0f }, 0.0f, 0.5f, sw::nullopt );
+    const WheeledVehicleDriveInput input = WheeledVehicleDriveComponent::toCarInput( Util::makeMove( 0.6f, 0.8f ), float3{ 0.0f, 0.0f, 1.0f }, 0.0f, 0.5f, sw::nullopt );
     SW_EXPECT_TRUE( MathUtil::abs( input._forward - 0.8f ) < 1.0e-4f );
     SW_EXPECT_TRUE( MathUtil::abs( input._right - 0.6f ) < 1.0e-4f );
     SW_EXPECT_EQUAL( 0.0f, input._brake );
 }
 
 /** @brief [VehicleInputTest] 물리 차: 앞으로 가는 중에 뒤를 원하면 브레이크, 거의 멈췄으면 후진이다 */
-SW_TEST_CASE( VehicleInputTest, PhysicsCarBrakesBeforeReversing )
+SW_TEST_CASE( VehicleInputTest, WheeledVehicleDriveBrakesBeforeReversing )
 {
-    const ControlIntent   back    = Util::makeMove( 0.0f, -1.0f );
-    const PhysicsCarInput moving  = PhysicsCarComponent::toCarInput( back, float3{ 0.0f, 0.0f, 1.0f }, 5.0f, 0.5f, sw::nullopt );
-    const PhysicsCarInput stopped = PhysicsCarComponent::toCarInput( back, float3{ 0.0f, 0.0f, 1.0f }, 0.1f, 0.5f, sw::nullopt );
+    const ControlIntent            back    = Util::makeMove( 0.0f, -1.0f );
+    const WheeledVehicleDriveInput moving  = WheeledVehicleDriveComponent::toCarInput( back, float3{ 0.0f, 0.0f, 1.0f }, 5.0f, 0.5f, sw::nullopt );
+    const WheeledVehicleDriveInput stopped = WheeledVehicleDriveComponent::toCarInput( back, float3{ 0.0f, 0.0f, 1.0f }, 0.1f, 0.5f, sw::nullopt );
     SW_EXPECT_EQUAL( 1.0f, moving._brake );
     SW_EXPECT_EQUAL( 0.0f, moving._forward );
     SW_EXPECT_EQUAL( 0.0f, stopped._brake );
@@ -49,9 +49,9 @@ SW_TEST_CASE( VehicleInputTest, PhysicsCarBrakesBeforeReversing )
 }
 
 /** @brief [VehicleInputTest] 물리 차: 차가 옆을 보면 같은 월드 방향이 조향이 된다 */
-SW_TEST_CASE( VehicleInputTest, PhysicsCarProjectsOnTheCarHeading )
+SW_TEST_CASE( VehicleInputTest, WheeledVehicleDriveProjectsOnTheCarHeading )
 {
-    const PhysicsCarInput input = PhysicsCarComponent::toCarInput( Util::makeMove( 0.0f, 1.0f ), float3{ 1.0f, 0.0f, 0.0f }, 0.0f, 0.5f, sw::nullopt );
+    const WheeledVehicleDriveInput input = WheeledVehicleDriveComponent::toCarInput( Util::makeMove( 0.0f, 1.0f ), float3{ 1.0f, 0.0f, 0.0f }, 0.0f, 0.5f, sw::nullopt );
     SW_EXPECT_TRUE( MathUtil::abs( input._forward ) < 1.0e-4f );
     SW_EXPECT_TRUE( MathUtil::abs( input._right + 1.0f ) < 1.0e-4f ); // +X 를 보는 차에 +Z 는 왼쪽이다
 }

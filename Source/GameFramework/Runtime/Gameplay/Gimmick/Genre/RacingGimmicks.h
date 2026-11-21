@@ -19,7 +19,7 @@ namespace sw
 {
     /** @brief 아이템 상자의 후보 하나입니다. */
     REFLECT()
-    struct SW_GF_API GimmickItemChoice
+    struct SW_GF_API ItemBoxChoice
     {
         REFLECT_BODY();
 
@@ -87,7 +87,7 @@ namespace sw
         void stepOnce();
         /** @brief @p target 에게 엽니다. 겹침이 부릅니다. 비어 있어서(숨은 동안) 아이템을 줄 수 없으면 아무 일도 없이 무효 이름을 반환합니다. */
         hashed_string open( GameObject& target );
-        void          setChoices( const vector<GimmickItemChoice>& listChoice ) { _listChoice = listChoice; }
+        void          setChoices( const vector<ItemBoxChoice>& listChoice ) { _listChoice = listChoice; }
 
         bool  isAvailable() const { return _respawnStepsLeft <= 0; }
         int32 getOpenCount() const { return _openCount; }
@@ -98,7 +98,7 @@ namespace sw
 
         Subscription _overlapSubscription; ///< 겹침 진입 구독(`handleOverlapBegin`)
         PROPERTY( Category = "Item Box", DisplayName = "Choices" )
-        vector<GimmickItemChoice> _listChoice;
+        vector<ItemBoxChoice> _listChoice;
         PROPERTY( Category = "Item Box", DisplayName = "Required Tags" )
         TagContainer _requiredTags;
         PROPERTY( Category = "Item Box", DisplayName = "Respawn Delay", Min = 0.0, Units = s )

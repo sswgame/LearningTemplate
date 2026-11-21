@@ -1,7 +1,7 @@
 /**
  * @file WeatherMaterialWriter.h
  * @brief 날씨 값을 머티리얼 파라미터 묶음(`*.matparams.xml`)에 씁니다 — 비가 오면 땅이 젖고 웅덩이가 차고 빗방울 링이 돕니다.
- * @details 날씨(`WeatherSystem` — GameFramework)는 판 상태(`SessionStateComponent`)가 소유하고, 지면 머티리얼(Engine)은 파라미터 묶음(`engine/materials/weather.matparams.xml` 의
+ * @details 날씨(`WeatherSystem` — GameFramework)는 판 상태(`GameStateComponent`)가 소유하고, 지면 머티리얼(Engine)은 파라미터 묶음(`engine/materials/weather.matparams.xml` 의
  *          Weather · Rain)을 읽는다. Engine 은 날씨를 읽을 수 없어(층 방향) 판 상태가 이 쓰개를 들고 틱마다 민다 — 장면마다 컴포넌트를 놓지 않는다. 날씨를 연 판 상태면
  *          (디렉터 컴포넌트든 키트 게임 모드든) 늘 이어진다. 어느 칸에 어느 날씨 값을 쓰는지는 날씨 카탈로그의 데이터다(`WeatherCatalog::getMaterialBindings` —
  *          언리얼에서 날씨 에셋이 자기 MPC 와 칸을 정하는 방식). 바인딩이 없는 카탈로그(강수가 없는 날씨)는 아무것도 쓰지 않는다.

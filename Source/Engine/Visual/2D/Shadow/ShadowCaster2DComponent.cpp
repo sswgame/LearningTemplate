@@ -10,7 +10,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
-#include "Engine/TileMap/Component/TileMapRendererComponent.h"
+#include "Engine/TileMap/Component/TileMapComponent.h"
 
 namespace sw
 {
@@ -41,7 +41,7 @@ namespace sw
             return;
         if ( _bUseTileMap )
         {
-            const TileMapRendererComponent* pTiles = pOwner->getComponent<TileMapRendererComponent>();
+            const TileMapComponent* pTiles = pOwner->getComponent<TileMapComponent>();
             if ( pTiles != nullptr )
             {
                 pTiles->computeWorldOutline( outListSegment, outListOutward );

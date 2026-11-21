@@ -1,6 +1,6 @@
 <?asset guid="90cbb4f05fdded45420b9d292fbd21b4"?>
-<Prefab formatVersion="1" name="ScareTrigger">
-	<GameObject _schemaVersion="0" _name="ScareTrigger" _bActive="true">
+<Prefab formatVersion="1" name="CueTrigger">
+	<GameObject _schemaVersion="0" _name="CueTrigger" _bActive="true">
 		<_listComponent>
 			<BoxCollider2DComponent _localID="17134987369502387536" _componentName="BoxCollider2DComponent"
 			                        _bActive="true"
@@ -15,7 +15,7 @@
 			                        _layer="Default"
 			                        _bContinuous="false"
 			                        _bTrigger="true" />
-			<ScareTriggerComponent _localID="13286275202855313659" _componentName="ScareTriggerComponent"
+			<CueTriggerComponent _localID="13286275202855313659" _componentName="CueTriggerComponent"
 			                       _bActive="true"
 			                       _cue="Scare"
 			                       _sound=""
@@ -26,7 +26,7 @@
 						<item>Player</item>
 					</_listTag>
 				</_requiredTags>
-			</ScareTriggerComponent>
+			</CueTriggerComponent>
 		</_listComponent>
 	</GameObject>
 </Prefab>

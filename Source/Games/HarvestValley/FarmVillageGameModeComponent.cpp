@@ -17,9 +17,9 @@
 #include "Engine/Serialization/Format/StateIO.h"
 #include "Engine/Serialization/Serializer/SerializeContext.h"
 
-#include "GameFramework/Runtime/Character/AI/Schedule/ScheduleNPCComponent.h"
+#include "GameFramework/Runtime/Character/AI/Schedule/NPCScheduleComponent.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterAppearanceComponent.h"
-#include "GameFramework/Runtime/Gameplay/SessionState/SessionStateComponent.h"
+#include "GameFramework/Runtime/Gameplay/GameState/GameStateComponent.h"
 
 #include "Games/HarvestValley/FarmVillagerComponent.h"
 
@@ -119,10 +119,10 @@ namespace sw
 
     bool FarmVillageGameModeComponent::startGame()
     {
-        const SessionStateComponent* pState = SessionStateComponent::findOnOwner( *this );
+        const GameStateComponent* pState = GameStateComponent::findOnOwner( *this );
         if ( pState == nullptr || pState->isInitialized() == false )
         {
-            SW_LOG_ERROR_ID( "FarmVillageGameMode.NoOpenSessionStateComponentObject", "[Village] no open SessionStateComponent on this object (put the village game mode after the farm game mode) - the villagers stay home" );
+            SW_LOG_ERROR_ID( "FarmVillageGameMode.NoOpenSessionStateComponentObject", "[Village] no open GameStateComponent on this object (put the village game mode after the farm game mode) - the villagers stay home" );
             return false;
         }
         if ( acquireRequired( _scheduleDataPath, _pCatalog ) == false )
@@ -197,7 +197,7 @@ namespace sw
     void FarmVillageGameModeComponent::updateGame( float32 deltaTime )
     {
         (void)deltaTime;
-        const SessionStateComponent* pState = SessionStateComponent::findOnOwner( *this );
+        const GameStateComponent* pState = GameStateComponent::findOnOwner( *this );
         if ( pState == nullptr )
             return;
         // 일정의 날씨는 판 상태 날씨의 id 다(farm.weather.xml 의 sunny · rain — 일정 달력 villagers.schedules.xml 의 weathers 와 같은 이름).
@@ -208,7 +208,7 @@ namespace sw
         const float32 minutesPerSecond = static_cast<float32>( kScheduleMinutesPerDay ) / MathUtil::max( clock.getSettings()._secondsPerDay, 1.0f ) * clock.getTimeScale();
         for ( int32 npcIndex = 0; npcIndex < _schedule.getNPCCount(); ++npcIndex )
         {
-            const ScheduleNPCDef* pDef                      = _pCatalog->findNPC( _schedule.getNPCID( npcIndex ) );
+            const NPCScheduleDef* pDef                      = _pCatalog->findNPC( _schedule.getNPCID( npcIndex ) );
             _listPosition[static_cast<size_t>( npcIndex )]  = _schedule.getNPCView( npcIndex )._location._position;
             _listBodySpeed[static_cast<size_t>( npcIndex )] = pDef != nullptr ? pDef->_unitsPerMinute * minutesPerSecond * _bodyCatchUpScale : 0.0f;
         }
@@ -228,9 +228,9 @@ namespace sw
             if ( pVillager == nullptr )
                 continue;
             // 일정 NPC 정체는 이름이 아니라 칸으로 잇는다(디버그 HUD · 상호작용 끼어들기가 읽는다).
-            ScheduleNPCComponent* pNPC = pVillager->getComponent<ScheduleNPCComponent>();
+            NPCScheduleComponent* pNPC = pVillager->getComponent<NPCScheduleComponent>();
             if ( pNPC == nullptr )
-                pNPC = pVillager->addComponent<ScheduleNPCComponent>();
+                pNPC = pVillager->addComponent<NPCScheduleComponent>();
             if ( pNPC != nullptr )
                 pNPC->setNPCID( _schedule.getNPCID( npcIndex ) );
             FarmVillagerComponent* pView = pVillager->getComponent<FarmVillagerComponent>();

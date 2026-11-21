@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="09240464dab6a318d55a75c045afab6e"?>
-<!-- 표면 상호작용 무대(maps/surfaceinteraction)의 날씨 — wetness 는 SurfaceExposureComponent 가 비의 세기로 읽는다(_precipitationValue).
+<!-- 표면 상호작용 무대(maps/surfaceinteraction)의 날씨 — wetness 는 CharacterWetnessComponent 가 비의 세기로 읽는다(_precipitationValue).
      시나리오가 cheat.weather 로 바꾸므로 맑음만 고를 무게를 갖고, 비 · 눈은 무게 0 이다(저절로 오지 않는다). -->
 <!-- 비 · 눈은 지면 머티리얼 묶음에도 간다 — Weather.x 젖음 · Weather.z 눈 · Rain.x 빗방울 링(판 상태가 쓴다, WeatherMaterialWriter). -->
 <WeatherCatalog transition="5" materialCollection="engine/materials/weather.matparams.xml">

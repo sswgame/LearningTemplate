@@ -14,7 +14,7 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Runtime/Foundation/Framework/GameModeBoundComponent.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameFrameworkComponent.h"
 
 namespace sw
 {
@@ -25,7 +25,7 @@ namespace sw
      *          유닛이 죽거나 안개에 가려지면 디렉터가 오브젝트를 지웁니다.
      */
     REFLECT( Category = "RealTimeStrategy", DisplayName = "Skirmish Unit View", Tooltip = "Follows one unit of the skirmish game mode match" )
-    class SkirmishUnitComponent : public GameModeBoundComponent
+    class SkirmishUnitComponent : public GameFrameworkComponent
     {
     public:
         REFLECT_BODY();

@@ -26,7 +26,7 @@ namespace sw
 {
     enum class GhostSearchMode : uint8;
 
-    struct SessionStateRefs;
+    struct GameStateRefs;
 
     class Archive;
     class AreaGraph;
@@ -122,7 +122,7 @@ namespace sw
          * @brief 새 판을 엽니다. 플래그, 플레이어 가방(열쇠), 지갑(동전)은 @p refs 에서 빌립니다. 가방이 없으면 열쇠가 필요한 문은 열리지 않습니다.
          * @return 카탈로그가 없거나 시드가 0 이면 오류를 남기고 false 이며 그대로입니다(`GhostEncounter::initialize`).
          */
-        [[nodiscard]] bool initialize( const GhostCatalog* pCatalog, const LootCatalog* pLoot, AreaGraph* pAreaGraph, const SessionStateRefs& refs, uint32 seed );
+        [[nodiscard]] bool initialize( const GhostCatalog* pCatalog, const LootCatalog* pLoot, AreaGraph* pAreaGraph, const GameStateRefs& refs, uint32 seed );
 
         /** @brief 방에 들어갑니다. 불이 꺼진 방이면 그 방의 유령이 숨은 채로 나옵니다. 나온 유령 수를 반환하고, 없는 방이면 -1 입니다. */
         int32 enterRoom( const hashed_string& roomID );

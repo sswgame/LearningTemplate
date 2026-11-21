@@ -113,8 +113,8 @@ namespace sw
     {
         if ( _pBatch != nullptr && _pPrimitiveRegistry != nullptr )
         {
-            ScenePrimitiveBatch* const arrBatch[] = { _pBatch.get() };
-            _pPrimitiveRegistry->removeInstanceBatches( vector_reference<ScenePrimitiveBatch* const>( arrBatch, 1 ) );
+            PrimitiveBatch* const arrBatch[] = { _pBatch.get() };
+            _pPrimitiveRegistry->removeInstanceBatches( vector_reference<PrimitiveBatch* const>( arrBatch, 1 ) );
         }
         _pBatch.reset();
         if ( _acquiredMaterialPath.empty() == false && engine::areEngineServicesBound() )

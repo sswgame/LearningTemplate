@@ -1,9 +1,9 @@
 /**
  * @file WeatherDirectorComponent.h
- * @brief 키트 디렉터 없이 씬에 날씨를 여는 컴포넌트입니다. 같은 오브젝트의 판 상태(`SessionStateComponent`)를 날씨 카탈로그로 엽니다.
+ * @brief 키트 디렉터 없이 씬에 날씨를 여는 컴포넌트입니다. 같은 오브젝트의 판 상태(`GameStateComponent`)를 날씨 카탈로그로 엽니다.
  * @details 날씨는 판 상태 하나가 소유한다(`WeatherSystem` — 세이브 · 시계 배율 · 계절이 거기 있다). 키트 게임은 디렉터가 판 상태를 열며 카탈로그를 넘기고,
  *          디렉터가 없는 씬(시연 · 표면 상호작용 무대)은 이 컴포넌트가 같은 일을 한다 — 날씨를 소유하는 둘째 객체를 만들지 않는다.
- *          판 상태 다음, 같은 오브젝트에 붙인다(`SessionStateComponent` 의 "여는 쪽" 규칙). 날씨 값은 `SurfaceExposureComponent`(비 → 젖음) · 게임 규칙이 읽는다.
+ *          판 상태 다음, 같은 오브젝트에 붙인다(`GameStateComponent` 의 "여는 쪽" 규칙). 날씨 값은 `CharacterWetnessComponent`(비 → 젖음) · 게임 규칙이 읽는다.
  */
 #pragma once
 #include "Core/Foundation/Types.h"

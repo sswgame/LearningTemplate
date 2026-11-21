@@ -9,7 +9,7 @@
 #include "GameFramework/Client/Marker/HealthBarComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/PrefabPool.h"
 #include "GameFramework/Runtime/Foundation/Framework/Tests/PrefabPoolComponentSpawner.h"
-#include "GameFramework/Runtime/Gameplay/Ability/AbilityComponent.h"
+#include "GameFramework/Runtime/Gameplay/Ability/AbilitySystemComponent.h"
 #include "GameFramework/Runtime/Gameplay/Ability/CombatAttributeSet.h"
 
 using namespace sw;
@@ -46,12 +46,12 @@ SW_TEST_CASE( HealthBarSpawnStateResetTest, ReacquiredBodyShowsItsCurrentHealth 
 {
     SW_EXPECT_LOG( "HealthBarComponent.HPBarNoWidgetComponent" ); // 마커 없이 계산만 본다
     GameObjectManager manager;
-    PrefabPool        pool = PrefabPoolComponentSpawner<AbilityComponent, HealthBarComponent>::makePool( 2 );
+    PrefabPool        pool = PrefabPoolComponentSpawner<AbilitySystemComponent, HealthBarComponent>::makePool( 2 );
     manager.beginPlay();
     GameObject* pObject = pool.acquire( manager, "Grunt" );
     SW_REQUIRE_NOT_NULL( pObject );
-    AbilityComponent*   pAbility = pObject->getComponent<AbilityComponent>();
-    HealthBarComponent* pBar     = pObject->getComponent<HealthBarComponent>();
+    AbilitySystemComponent* pAbility = pObject->getComponent<AbilitySystemComponent>();
+    HealthBarComponent*     pBar     = pObject->getComponent<HealthBarComponent>();
     SW_REQUIRE_TRUE( pAbility != nullptr && pBar != nullptr );
     manager.update( 1.0f / 60.0f );
     SW_REQUIRE_TRUE( pBar->hasBegunPlay() );

@@ -13,7 +13,7 @@
 #include "GameFramework/Kits/Genre/Horror/CoopScavenger/ScavengerFacility.h"
 #include "GameFramework/Kits/Genre/Horror/CoopScavenger/ScavengerQuota.h"
 #include "GameFramework/Runtime/Foundation/Condition/GameFlags.h"
-#include "GameFramework/Runtime/Foundation/Framework/SessionStateRefs.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameStateRefs.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Wallet.h"
 
@@ -137,7 +137,7 @@ namespace
         {
             sw::ScavengerExpeditionData data;
             data._pCatalog = &catalog;
-            sw::SessionStateRefs refs;
+            sw::GameStateRefs refs;
             refs._pWallet = &_wallet;
             refs._pFlags  = &_flags;
             return expedition.initialize( data, refs, _storage, seed, 2 );
@@ -641,7 +641,7 @@ SW_TEST_CASE_F( ScavengerExpeditionTest, InitializeRefusesBadInput )
     SW_EXPECT_LOG( "ScavengerExpedition.ScavengerExpeditionRefusedCrewCountNeeds" );
     sw::ScavengerExpeditionData data;
     data._pCatalog = &_catalog;
-    sw::SessionStateRefs    refs;
+    sw::GameStateRefs       refs;
     sw::ScavengerExpedition expedition;
     SW_EXPECT_FALSE( expedition.initialize( data, refs, _storage, 1, 0 ) );
     SW_EXPECT_FALSE( expedition.initialize( data, refs, _storage, 1, -3 ) );
@@ -943,7 +943,7 @@ SW_TEST_CASE_F( ScavengerExpeditionTest, StateRoundTripsWhileLanded )
     sw::ScavengerExpeditionData data;
     data._pCatalog = &_catalog;
     sw::ScavengerExpedition solo;
-    SW_REQUIRE_TRUE( solo.initialize( data, sw::SessionStateRefs{}, _storage, 1, 1 ) );
+    SW_REQUIRE_TRUE( solo.initialize( data, sw::GameStateRefs{}, _storage, 1, 1 ) );
     sw::Archive readingAgain( written.getData(), written.getSize() );
     SW_EXPECT_FALSE( solo.readState( readingAgain ) );
 }
@@ -1038,7 +1038,7 @@ SW_TEST_CASE_F( ScavengerExpeditionTest, ExpeditionDeterminism )
     {
         sw::ScavengerExpeditionData data;
         data._pCatalog = &_catalog;
-        sw::SessionStateRefs refs;
+        sw::GameStateRefs refs;
         refs._pWallet = &run._wallet;
         refs._pFlags  = &run._flags;
         return run._expedition.initialize( data, refs, run._storage, 11, 2 );

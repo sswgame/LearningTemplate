@@ -5,7 +5,7 @@
 #include "Engine/Reflection/EnumName.h"
 
 #include "GameFramework/Runtime/Gameplay/Ability/Ability.h"
-#include "GameFramework/Runtime/Gameplay/Ability/AbilityComponent.h"
+#include "GameFramework/Runtime/Gameplay/Ability/AbilitySystemComponent.h"
 
 namespace sw::editor
 {
@@ -19,7 +19,7 @@ namespace sw::editor
         _time = 0.0f;
     }
 
-    void AbilityDebugSnapshot::collect( const AbilityComponent& abilitySystem, AbilityDebugSnapshot& outSnapshot )
+    void AbilityDebugSnapshot::collect( const AbilitySystemComponent& abilitySystem, AbilityDebugSnapshot& outSnapshot )
     {
         outSnapshot.clear();
         outSnapshot._time = abilitySystem.getTime();

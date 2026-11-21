@@ -7,7 +7,7 @@
 
 #include "GameFramework/Runtime/Foundation/Condition/GameConditions.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityCatalog.h"
-#include "GameFramework/Runtime/Gameplay/Ability/AbilityComponent.h"
+#include "GameFramework/Runtime/Gameplay/Ability/AbilitySystemComponent.h"
 
 namespace sw
 {
@@ -16,10 +16,10 @@ namespace sw
         struct AbilityActionsInternal
         {
             /** @brief 대상의 어빌리티 컴포넌트입니다. 대상 칸이 없거나 컴포넌트가 없으면 nullptr 입니다(동작은 실패다). */
-            static AbilityComponent* findTargetAbility( const ActionContext& context )
+            static AbilitySystemComponent* findTargetAbility( const ActionContext& context )
             {
                 GameObject* const pTarget = context._world.find<ActionTargetSlot>();
-                return pTarget != nullptr ? pTarget->getComponent<AbilityComponent>() : nullptr;
+                return pTarget != nullptr ? pTarget->getComponent<AbilitySystemComponent>() : nullptr;
             }
 
             /** @brief 이 호출의 출처 이름입니다(없으면 비어 있다 — 어빌리티 · 코드가 건 것과 같다). */
@@ -31,7 +31,7 @@ namespace sw
 
             static ActionResult runApplyEffect( ActionContext& context, const AbilityEffectActionParams& params )
             {
-                AbilityComponent* const pAbility = findTargetAbility( context );
+                AbilitySystemComponent* const pAbility = findTargetAbility( context );
                 if ( pAbility == nullptr )
                     return ActionResult::Failed;
                 AbilityEffectSpec spec = pAbility->makeOutgoingSpecByID( params._effect, params._level );
@@ -61,7 +61,7 @@ namespace sw
 
             static ActionResult runRemoveEffect( ActionContext& context, const AbilityEffectRemoveParams& params )
             {
-                AbilityComponent* const pAbility = findTargetAbility( context );
+                AbilitySystemComponent* const pAbility = findTargetAbility( context );
                 if ( pAbility == nullptr )
                     return ActionResult::Failed;
                 if ( params._effect.empty() )
@@ -77,7 +77,7 @@ namespace sw
 
             static ActionResult runRemoveStacks( ActionContext& context, const AbilityStackRemoveParams& params )
             {
-                AbilityComponent* const pAbility = findTargetAbility( context );
+                AbilitySystemComponent* const pAbility = findTargetAbility( context );
                 if ( pAbility == nullptr )
                     return ActionResult::Failed;
                 const ActiveEffectHandle handle = pAbility->findActiveEffectByID( params._effect );
@@ -88,7 +88,7 @@ namespace sw
 
             static ActionResult runGrant( ActionContext& context, const AbilityGrantParams& params )
             {
-                AbilityComponent* const pAbility = findTargetAbility( context );
+                AbilitySystemComponent* const pAbility = findTargetAbility( context );
                 if ( pAbility == nullptr )
                     return ActionResult::Failed;
                 if ( pAbility->findAbilitySpecHandle( params._ability ).isValid() )
@@ -98,7 +98,7 @@ namespace sw
 
             static ActionResult runActivate( ActionContext& context, const AbilityGrantParams& params )
             {
-                AbilityComponent* const pAbility = findTargetAbility( context );
+                AbilitySystemComponent* const pAbility = findTargetAbility( context );
                 if ( pAbility == nullptr )
                     return ActionResult::Failed;
                 AbilitySpecHandle handle = pAbility->findAbilitySpecHandle( params._ability );
@@ -109,7 +109,7 @@ namespace sw
 
             static ActionResult runKill( ActionContext& context, const HealthKillParams& params )
             {
-                AbilityComponent* const pAbility = findTargetAbility( context );
+                AbilitySystemComponent* const pAbility = findTargetAbility( context );
                 if ( pAbility == nullptr )
                     return ActionResult::Failed;
                 return pAbility->applyFatalDamage( params._bIgnoreInvulnerable != SW_FALSE ) ? ActionResult::Succeeded : ActionResult::Failed;

@@ -449,7 +449,7 @@ namespace sw
          */
         virtual void onPostLoad() {}
         // 남의 모듈 타입 객체(어빌리티 · 세트)를 든 컴포넌트는 모듈 내림을 가상 함수로 받지 않는다 — 그 컴포넌트만 `onRegister` 에서
-        // `TypeRegistry::subscribeModuleUnloading` 을 구독한다(`AbilityComponent`). 모든 컴포넌트에 빈 가상 호출을 훑지 않는다.
+        // `TypeRegistry::subscribeModuleUnloading` 을 구독한다(`AbilitySystemComponent`). 모든 컴포넌트에 빈 가상 호출을 훑지 않는다.
         /**
          * @brief 씬 상태 해시(`SceneObjectHash`)에 이 컴포넌트의 시뮬레이션 상태를 접습니다. 기본은 상태 역할 칸(`PROPERTY( RuntimeState )`, 기반부터)을 리플렉션으로 접습니다.
          * @details 두 프로세스가 같은 입력으로 같은 상태가 되었는지 견주는 값이라 게임플레이를 바꾸는 상태(트랜스폼 · 속도 · 난수 상태 · 남은 시간)만 넣는다.

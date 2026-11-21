@@ -12,8 +12,8 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Runtime/Character/Control/Pawn/CharacterPawnMovementComponent.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameModeBoundComponent.h"
+#include "GameFramework/Runtime/Character/Control/Pawn/CharacterMovementComponent.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameFrameworkComponent.h"
 
 namespace sw
 {
@@ -29,7 +29,7 @@ namespace sw
 
 namespace sw
 {
-    class AbilityComponent;
+    class AbilitySystemComponent;
     class ArenaGameModeComponent;
     class MeshComponent;
     class PawnComponent;
@@ -44,7 +44,7 @@ namespace sw
      *          자기 오브젝트에만 씁니다. 디렉터는 핸들로 들고 매 프레임 풉니다. 어빌리티가 디렉터를 찾는 길도 이 핸들입니다(`ArenaGameModeComponent::findForUnit`).
      */
     REFLECT( Category = "AbilityArena", DisplayName = "Arena Unit", Tooltip = "Pawn side of an arena unit: moves and presses ability inputs from the control intent" )
-    class ArenaUnitComponent : public GameModeBoundComponent
+    class ArenaUnitComponent : public GameFrameworkComponent
     {
     public:
         REFLECT_BODY();
@@ -83,7 +83,7 @@ namespace sw
 
     private:
         /** @brief 폰 버튼의 발동 · 뗌을 어빌리티 입력 번호의 눌림 · 뗌으로 넘깁니다. */
-        void pressAbilityButtons( const PawnComponent& pawn, AbilityComponent& abilitySystem );
+        void pressAbilityButtons( const PawnComponent& pawn, AbilitySystemComponent& abilitySystem );
         /** @brief 다른 적과 겹친 만큼의 절반을 자기 쪽으로 밀어냅니다(상대도 같은 일을 한다 — 물리 없이, 유닛 수가 적다). */
         void separateFromEnemies( const ArenaGameModeComponent& gameMode, float3& inoutPosition ) const;
         /** @brief 쓰러진 뒤 — 납작해지다가 디렉터가 걷는다. */

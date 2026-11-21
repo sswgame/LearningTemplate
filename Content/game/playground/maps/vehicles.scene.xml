@@ -142,7 +142,7 @@
 						</_listButton>
 						<_listAnalog />
 					</PawnComponent>
-					<PhysicsCarComponent _localID="10375049317764023544" _handBrakeButton="HandBrake" _reverseSpeed="0.5" />
+					<WheeledVehicleDriveComponent _localID="10375049317764023544" _handBrakeButton="HandBrake" _reverseSpeed="0.5" />
 				</_listComponent>
 			</GameObject>
 		</entity>

@@ -12,7 +12,7 @@
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Simulation/CreatureLife/CreatureLifeCatalog.h"
-#include "GameFramework/Runtime/Foundation/Framework/SessionStateRefs.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameStateRefs.h"
 #include "GameFramework/Runtime/Foundation/Random/GameRandom.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Runtime/Gameplay/Progression/Reputation.h"
@@ -89,7 +89,7 @@ namespace sw
     {
     }
 
-    bool CreatureTown::initialize( const CreatureLifeCatalog* pCatalog, const SessionStateRefs& refs, int32 width, int32 height )
+    bool CreatureTown::initialize( const CreatureLifeCatalog* pCatalog, const GameStateRefs& refs, int32 width, int32 height )
     {
         if ( pCatalog == nullptr )
         {

@@ -3,7 +3,7 @@
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityTask.h"
 
 #include "GameFramework/Runtime/Gameplay/Ability/Ability.h"
-#include "GameFramework/Runtime/Gameplay/Ability/AbilityComponent.h"
+#include "GameFramework/Runtime/Gameplay/Ability/AbilitySystemComponent.h"
 
 namespace sw
 {
@@ -81,15 +81,15 @@ namespace sw
 
     void AbilityTaskWaitEvent::onActivate()
     {
-        Ability*          pAbility       = getAbility();
-        AbilityComponent* pAbilitySystem = pAbility != nullptr ? pAbility->getAbilitySystem() : nullptr;
+        Ability*                pAbility       = getAbility();
+        AbilitySystemComponent* pAbilitySystem = pAbility != nullptr ? pAbility->getAbilitySystem() : nullptr;
         if ( pAbilitySystem == nullptr )
         {
             endTask();
             return;
         }
         _subscription = pAbilitySystem->registerGameplayEvent(
-            _eventTag, SW_DELEGATE_METHOD( AbilityComponent::AbilityEventDelegate, &AbilityTaskWaitEvent::handleEvent, this ) );
+            _eventTag, SW_DELEGATE_METHOD( AbilitySystemComponent::AbilityEventDelegate, &AbilityTaskWaitEvent::handleEvent, this ) );
     }
 
     void AbilityTaskWaitEvent::onDestroy( bool bAbilityEnded )

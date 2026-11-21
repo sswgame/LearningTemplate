@@ -45,7 +45,7 @@ namespace sw
         PROPERTY()
         hashed_string _group{}; ///< 같은 그룹에서는 하나만 배운다(갈림길, 전문화)
         PROPERTY()
-        hashed_string _ability{}; ///< 랭크 1 부터 주는 어빌리티 id. 게임이 `AbilityComponent` 에 부여한다
+        hashed_string _ability{}; ///< 랭크 1 부터 주는 어빌리티 id. 게임이 `AbilitySystemComponent` 에 부여한다
         PROPERTY()
         string                   _name{};            ///< 적지 않으면 id
         vector<SkillRequirement> _listRequirement{}; ///< `requires="basic:2,stance"` 는 손으로 푼다

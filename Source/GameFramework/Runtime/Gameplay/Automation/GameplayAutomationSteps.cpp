@@ -1,7 +1,7 @@
 /**
  * @file GameplayAutomationSteps.cpp
  * @brief 자동화 시나리오의 영역을 넘는 게임 로직 단계입니다. 등록은 이 .cpp 의 정적 등록자가 합니다(Shipping 은 GameFramework 를 통째로 링크한다 — `sw_link_whole_archive`).
- * @details - 게임 시간: `AdvanceGameTime`(minutes · hours · toHour) — 활성 씬의 판 상태(`SessionStateComponent`) 시계를 감는다.
+ * @details - 게임 시간: `AdvanceGameTime`(minutes · hours · toHour) — 활성 씬의 판 상태(`GameStateComponent`) 시계를 감는다.
  *          - 빙의 · 탑승: 단계 `Mount` · `Dismount`(`VehicleSeatComponent`). 빙의 단계 `Possess` 는 조종 층(`ControlAutomationSteps`)에 있다.
  *          - 오브젝트 대상(`rider` · `vehicle`)은 `AutomationTarget` 규칙으로 고른다 — 같은 이름이 여럿이면 `Name[N]`.
  *          감시 값은 각 영역 폴더의 자기 .cpp 가 등록한다: `Clock.*` · `Session.Money`(`SessionStateProbes.cpp`), `Quest.Status`(`QuestProbes.cpp`), `Schedule.*`(`ScheduleProbes.cpp`),
@@ -23,7 +23,7 @@
 
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Runtime/Gameplay/Automation/GameplayAutomationParams.h"
-#include "GameFramework/Runtime/Gameplay/SessionState/SessionStateComponent.h"
+#include "GameFramework/Runtime/Gameplay/GameState/GameStateComponent.h"
 #include "GameFramework/Runtime/Gameplay/Vehicle/VehicleSeatComponent.h"
 #include "GameFramework/Runtime/World/Environment/WorldClock.h"
 
@@ -52,11 +52,11 @@ namespace sw
              */
             static bool runAdvanceGameTime( AutomationStepContext& runner, const AutomationStep& step )
             {
-                const AdvanceGameTimeParams  params = step.readValidatedProperties<AdvanceGameTimeParams>();
-                SessionStateComponent* const pState = SessionStateComponent::findOpen( runner.findActiveObjectManager() ); // 씬에 하나다
+                const AdvanceGameTimeParams params = step.readValidatedProperties<AdvanceGameTimeParams>();
+                GameStateComponent* const   pState = GameStateComponent::findOpen( runner.findActiveObjectManager() ); // 씬에 하나다
                 if ( pState == nullptr )
                 {
-                    runner.recordFailure( step, "the active scene has no open SessionStateComponent (game clock)" );
+                    runner.recordFailure( step, "the active scene has no open GameStateComponent (game clock)" );
                     return true;
                 }
                 WorldClock& clock = pState->getClock();

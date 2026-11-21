@@ -185,8 +185,8 @@ namespace sw
         pManager->executeOrDeferPostTickOnScene( [unit]( GameObjectManager& sceneManager )
         {
             sceneManager.getCameraRegistry().setPixelSnapUnit( unit );
-            // 레지스트리는 코어 기반만 알고, 들어오는 타입은 메시 계열뿐이다(`ScenePrimitive.h` 의 불변식).
-            for ( ScenePrimitive* pPrimitive : sceneManager.getPrimitiveRegistry().getAll() )
+            // 레지스트리는 코어 기반만 알고, 들어오는 타입은 메시 계열뿐이다(`PrimitiveComponent.h` 의 불변식).
+            for ( PrimitiveComponent* pPrimitive : sceneManager.getPrimitiveRegistry().getAll() )
             {
                 if ( pPrimitive != nullptr )
                     static_cast<MeshComponent*>( pPrimitive )->setPixelSnapUnit( unit );

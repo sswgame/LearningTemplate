@@ -20,7 +20,7 @@ namespace sw
         {
             struct ChoiceWeight
             {
-                float32 operator()( const GimmickItemChoice& choice ) const { return choice._weight; }
+                float32 operator()( const ItemBoxChoice& choice ) const { return choice._weight; }
             };
 
             static bool canAccept( const OverlapInfo& overlap, const TagContainer& requiredTags )
@@ -95,8 +95,8 @@ namespace sw
         ++_openCount;
         if ( index.has_value() == false )
             return hashed_string{};
-        const GimmickItemChoice& choice = _listChoice[static_cast<size_t>( *index )];
-        GimmickItemEvent         event;
+        const ItemBoxChoice& choice = _listChoice[static_cast<size_t>( *index )];
+        GimmickItemEvent     event;
         event._target = target.getHandle();
         event._source = pOwner->getHandle();
         event._item   = choice._item;

@@ -6,7 +6,7 @@
 
 #include "Engine/Object/GameObject/GameObject.h"
 
-#include "GameFramework/Runtime/Gameplay/Ability/AbilityComponent.h"
+#include "GameFramework/Runtime/Gameplay/Ability/AbilitySystemComponent.h"
 
 namespace sw
 {
@@ -28,8 +28,8 @@ namespace sw
 
     MovementConstraint MovementConstraint::read( const GameObject& owner )
     {
-        MovementConstraint            constraint;
-        const AbilityComponent* const pAbility = owner.getComponent<AbilityComponent>();
+        MovementConstraint                  constraint;
+        const AbilitySystemComponent* const pAbility = owner.getComponent<AbilitySystemComponent>();
         if ( pAbility == nullptr )
             return constraint;
         const TagCountTable& tags = pAbility->getOwnedTagCounts();

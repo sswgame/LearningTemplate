@@ -22,7 +22,7 @@
 
 namespace sw
 {
-    class AbilityComponent;
+    class AbilitySystemComponent;
     class IGameplayEffectExecution;
     class StateIO;
 
@@ -160,12 +160,12 @@ namespace sw
         RemovedUnloaded     ///< 실행 계산을 담은 모듈을 내렸다
     };
 
-    /** @brief 이펙트 기록 한 줄입니다. 컴포넌트가 고정 용량 고리로 든다(`AbilityComponent::collectEffectLog`). */
+    /** @brief 이펙트 기록 한 줄입니다. 컴포넌트가 고정 용량 고리로 든다(`AbilitySystemComponent::collectEffectLog`). */
     struct AbilityEffectLogEntry
     {
         hashed_string        _effectID{};   ///< 이펙트 정의 id
         hashed_string        _sourceName{}; ///< 건 길(`AbilityEffectContext::_sourceName`, 비면 어빌리티 · 코드)
-        float32              _time{ 0.0f }; ///< 컴포넌트 시간(`AbilityComponent::getTime`)
+        float32              _time{ 0.0f }; ///< 컴포넌트 시간(`AbilitySystemComponent::getTime`)
         AbilityEffectLogKind _kind{ AbilityEffectLogKind::Applied };
     };
 } // namespace sw
@@ -174,7 +174,7 @@ namespace sw
 {
     /**
      * @brief 이펙트를 **한 번 적용하는** 데이터입니다. 정의, 레벨, 컨텍스트, 코드가 넣은 수, 쏜 쪽 어트리뷰트 스냅샷을 담습니다.
-     * @details `AbilityComponent::makeOutgoingSpec` 이 만든다. 이때 쏜 쪽 어트리뷰트를 통째로 저장해 두므로(`_mapSourceAttribute`),
+     * @details `AbilitySystemComponent::makeOutgoingSpec` 이 만든다. 이때 쏜 쪽 어트리뷰트를 통째로 저장해 두므로(`_mapSourceAttribute`),
      *          투사체가 날아가는 동안 쏜 쪽이 죽거나 사라져도 피해 공식은 쏜 순간의 공격력을 쓴다(언리얼의 Source 캡처와 스냅샷에 해당).
      *          값 타입이므로 복사해서 여러 대상에 적용해도 된다.
      */
@@ -215,9 +215,9 @@ namespace sw
     /** @brief 실행 계산이 읽는 입력입니다. 스펙(쏜 쪽 스냅샷 포함)과 맞는 쪽 컴포넌트가 들어 있습니다. */
     struct AbilityEffectExecutionParams
     {
-        const AbilityEffectSpec* _pSpec{ nullptr };
-        const AbilityComponent*  _pTarget{ nullptr };
-        int32                    _stackCount{ 1 };
+        const AbilityEffectSpec*      _pSpec{ nullptr };
+        const AbilitySystemComponent* _pTarget{ nullptr };
+        int32                         _stackCount{ 1 };
     };
 } // namespace sw
 
@@ -289,7 +289,7 @@ namespace sw
     // 5) 활성 이펙트. 대상에 걸려 있는 지속 이펙트나 무한 이펙트 하나입니다(언리얼의 `FActiveGameplayEffect` 에 해당)
     // ------------------------------------------------------------------------------
     /**
-     * @brief 대상에 걸려 있는 이펙트 하나입니다. `AbilityComponent` 가 보관하고 시간을 진행합니다.
+     * @brief 대상에 걸려 있는 이펙트 하나입니다. `AbilitySystemComponent` 가 보관하고 시간을 진행합니다.
      * @details 지속 모디파이어는 적용된 순간 크기를 계산해 `_listEvaluatedModifier` 에 저장한다(스냅샷). 현재값은 이 목록에 스택 수를 곱해 집계한다.
      */
     struct ActiveGameplayEffect

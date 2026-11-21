@@ -24,7 +24,7 @@
 
 namespace sw
 {
-    struct SessionStateRefs;
+    struct GameStateRefs;
 
     class Archive;
     class AreaGraph;
@@ -105,7 +105,7 @@ namespace sw
          *          격자 가방은 여기서 카탈로그의 모양과 규칙의 크기로 다시 연다. 이 함수를 호출하기 전에는 다른 함수를 호출하지 않는다.
          *          카탈로그가 없거나(대신 쓸 기본 규칙은 없다), 그래프에 없는 시작 방이거나, 정신력 · 배터리 게이지 · 격자 크기 설정이 범위 밖이면 오류를 남기고 false 를 반환하며 세션은 그대로이다.
          */
-        [[nodiscard]] bool initialize( const SurvivalHorrorCatalog* pCatalog, AreaGraph* pAreaGraph, const hashed_string& startArea, const SessionStateRefs& refs, GridInventory& inventory,
+        [[nodiscard]] bool initialize( const SurvivalHorrorCatalog* pCatalog, AreaGraph* pAreaGraph, const hashed_string& startArea, const GameStateRefs& refs, GridInventory& inventory,
                                        Inventory& itemBox );
 
         /** @brief 시간을 진행합니다. 손전등 배터리, 어둠에서의 정신력 감소, 밝은 곳에서의 회복을 처리합니다. */

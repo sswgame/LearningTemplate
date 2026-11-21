@@ -1,7 +1,7 @@
 /**
  * @file GameFlagsOwnerComponent.h
  * @brief 씬의 월드 플래그(`GameFlags`)를 가진 컴포넌트의 베이스입니다. 아래 층(볼륨 · 캐릭터)이 판 상태 형식을 모른 채 열린 플래그를 찾습니다.
- * @details 판 상태(`SessionStateComponent`)는 게임플레이 층(맨 위)이라 바닥 층의 활성자 볼륨이 include 할 수 없다. 플래그 어휘는 바닥(Foundation/Condition)에 있으므로
+ * @details 판 상태(`GameStateComponent`)는 게임플레이 층(맨 위)이라 바닥 층의 활성자 볼륨이 include 할 수 없다. 플래그 어휘는 바닥(Foundation/Condition)에 있으므로
  *          "플래그를 가진 것" 도 여기에 두고 위 층이 잇는다 — 언리얼에서 게임 코드가 인터페이스(`UInterface`)로 저장 객체를 찾는 자리를 컴포넌트 레지스트리 칸으로 둔다.
  */
 #pragma once

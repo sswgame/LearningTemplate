@@ -10,7 +10,7 @@ namespace sw
 {
     PlayerLocomotion::PlayerLocomotion()
         : _state{ LocomotionState::Idle }
-        , _facing{ FacingDir::Down }
+        , _facing{ FacingDirection::Down }
         , _stateTimer{}
     {
     }
@@ -55,13 +55,13 @@ namespace sw
     void PlayerLocomotion::setFacingFromDelta( int32 dx, int32 dy )
     {
         if ( dy < 0 )
-            _facing = FacingDir::Up;
+            _facing = FacingDirection::Up;
         else if ( dy > 0 )
-            _facing = FacingDir::Down;
+            _facing = FacingDirection::Down;
         else if ( dx < 0 )
-            _facing = FacingDir::Left;
+            _facing = FacingDirection::Left;
         else if ( dx > 0 )
-            _facing = FacingDir::Right;
+            _facing = FacingDirection::Right;
     }
 
     bool PlayerLocomotion::canAcceptMoveInput() const
@@ -72,7 +72,7 @@ namespace sw
     void PlayerLocomotion::serializeState( StateIO& io )
     {
         io.reflected( *this ); // 상태(열거자 밖은 거절)
-        io.enumValue( _facing, FacingDir::Up );
+        io.enumValue( _facing, FacingDirection::Up );
         io.value( _stateTimer );                                               // 리플렉션 밖 값 — 남은 시간(`Countdown`)은 손 코덱이다
         io.check( _state == LocomotionState::Idle || _stateTimer.isActive() ); // 남은 시간 없는 걸음은 깨어날 길이 없다
     }

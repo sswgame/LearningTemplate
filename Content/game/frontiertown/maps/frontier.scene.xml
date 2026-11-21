@@ -56,7 +56,7 @@
 		<entity id="3" name="TownState">
 			<GameObject _schemaVersion="0" _name="TownState" _bActive="true">
 				<_listComponent>
-					<SessionStateComponent _localID="6673597520240684436" _componentName="SessionStateComponent" _bActive="true" />
+					<GameStateComponent _localID="6673597520240684436" _componentName="GameStateComponent" _bActive="true" />
 					<PlayerProgressComponent _localID="4858843171092172793" _componentName="PlayerProgressComponent" _bActive="true" />
 					<FrontierCityGameModeComponent _localID="3335784716462595506" _componentName="FrontierCityGameModeComponent"
 					                               _bActive="true"

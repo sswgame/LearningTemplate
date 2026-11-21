@@ -595,7 +595,7 @@ namespace sw
 
     bool GimmickNodeRegistry::initializeMover( GimmickNodeContext& context )
     {
-        GimmickMoverMode mode{ GimmickMoverMode::Once };
+        InterpToMovementMode mode{ InterpToMovementMode::Once };
         if ( game::getSubsystem<TypeRegistry>().enumFromString( string_view( context.getText( 1 ) ), mode ) == false )
             return GimmickNodeRegistryInternal::failParam( context, "mode must be Once, Loop or PingPong" );
         context._pIntState[3] = static_cast<int32>( mode );
@@ -627,11 +627,11 @@ namespace sw
             pState[1] = 1;
             pState[2] = 0;
         }
-        const bool             bEnabled = bCanMove && context.isInputHigh( 0, context.getNumber( 4 ) != 0.0f );
-        const bool             bReverse = context.isInput( 1 );
-        const GimmickMoverMode mode     = static_cast<GimmickMoverMode>( pState[3] );
-        bool                   bMoving  = false;
-        bool                   bArrive  = false;
+        const bool                 bEnabled = bCanMove && context.isInputHigh( 0, context.getNumber( 4 ) != 0.0f );
+        const bool                 bReverse = context.isInput( 1 );
+        const InterpToMovementMode mode     = static_cast<InterpToMovementMode>( pState[3] );
+        bool                       bMoving  = false;
+        bool                       bArrive  = false;
         if ( bEnabled && pState[2] > 0 )
         {
             --pState[2];
@@ -641,7 +641,7 @@ namespace sw
             const int32 pauseSteps = context.toSteps( context.getNumber( 3 ), 0 );
             switch ( mode )
             {
-                case GimmickMoverMode::Once:
+                case InterpToMovementMode::Once:
                 {
                     const int32 target = bReverse ? 0 : totalSteps;
                     if ( pState[0] != target )
@@ -652,7 +652,7 @@ namespace sw
                     }
                     break;
                 }
-                case GimmickMoverMode::Loop:
+                case InterpToMovementMode::Loop:
                 {
                     const int32 direction = bReverse ? -1 : 1;
                     if ( direction > 0 && pState[0] >= totalSteps )
@@ -666,7 +666,7 @@ namespace sw
                         pState[2] = pauseSteps;
                     break;
                 }
-                case GimmickMoverMode::PingPong:
+                case InterpToMovementMode::PingPong:
                 {
                     pState[0] += pState[1];
                     bMoving = true;

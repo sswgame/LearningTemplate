@@ -1249,13 +1249,13 @@ namespace sw
 
     void ShooterPlayerComponent::onRegister( GameObjectManager& manager )
     {
-        GameModeBoundComponent::onRegister( manager );
+        GameFrameworkComponent::onRegister( manager );
         manager.getComponentRegistry().add<ShooterPlayerComponent>( this );
     }
 
     void ShooterPlayerComponent::onUnregister( GameObjectManager& manager )
     {
         manager.getComponentRegistry().remove<ShooterPlayerComponent>( this );
-        GameModeBoundComponent::onUnregister( manager );
+        GameFrameworkComponent::onUnregister( manager );
     }
 } // namespace sw

@@ -46,7 +46,7 @@ namespace sw
 
 namespace sw
 {
-    ScareTriggerComponent::ScareTriggerComponent()
+    CueTriggerComponent::CueTriggerComponent()
         : _cue{}
         , _sound{}
         , _requiredTags{}
@@ -58,13 +58,13 @@ namespace sw
         _requiredTags.addTag( TagID::request( "Player" ) );
     }
 
-    void ScareTriggerComponent::onRegister( GameObjectManager& manager )
+    void CueTriggerComponent::onRegister( GameObjectManager& manager )
     {
         Component::onRegister( manager );
-        _overlapSubscription = GameObjectEvents::listen<&ScareTriggerComponent::handleOverlapBegin>( *this, &GameObjectEvents::_overlapBegin );
+        _overlapSubscription = GameObjectEvents::listen<&CueTriggerComponent::handleOverlapBegin>( *this, &GameObjectEvents::_overlapBegin );
     }
 
-    void ScareTriggerComponent::handleOverlapBegin( const OverlapInfo& overlap )
+    void CueTriggerComponent::handleOverlapBegin( const OverlapInfo& overlap )
     {
         const bool  bTagged     = overlap._pOther != nullptr && ( _requiredTags.getTagCount() == 0 || overlap._pOther->getTags().hasAllTags( _requiredTags ) );
         const bool  bReady      = ( _bOnce == false || _fireCount == 0 ) && _cooldownLeft <= 0.0f;
@@ -85,7 +85,7 @@ namespace sw
             (void)GameSound::play( _sound.id() );
     }
 
-    void ScareTriggerComponent::onTick( TickContext& context )
+    void CueTriggerComponent::onTick( TickContext& context )
     {
         Component::onTick( context );
         if ( _cooldownLeft > 0.0f )

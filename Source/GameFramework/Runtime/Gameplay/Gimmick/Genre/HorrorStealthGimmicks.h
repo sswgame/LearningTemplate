@@ -24,17 +24,17 @@ namespace sw
     class GameObjectManager;
 
     /**
-     * @class ScareTriggerComponent
+     * @class CueTriggerComponent
      * @brief 태그(보통 `Player`)를 가진 것이 처음 들어오면 연출 신호(`GimmickCueEvent`, `_cue`)와 소리를 냅니다. `_bOnce` 가 꺼져 있으면 `_cooldown` 뒤에 다시 작동합니다.
      */
     REFLECT( Category = "Gimmick", DisplayName = "Scare Trigger", Tooltip = "Fires a scripted scare cue and sound when a tagged object enters" )
-    class SW_GF_API ScareTriggerComponent : public Component
+    class SW_GF_API CueTriggerComponent : public Component
     {
     public:
         REFLECT_BODY();
 
-        ScareTriggerComponent();
-        virtual ~ScareTriggerComponent() override = default;
+        CueTriggerComponent();
+        virtual ~CueTriggerComponent() override = default;
 
         /** @brief 겹침 진입 사건을 구독합니다. */
         void  onRegister( GameObjectManager& manager ) override;

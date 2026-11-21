@@ -35,7 +35,7 @@ Each meaning of `-1` has one form (Unreal `INDEX_NONE` · `TOptional`):
 | Meaning | Form |
 | --- | --- |
 | No index / not found / no subject / not known yet | `constant::invalid_index::kInt32` (`kInt64` · `kUint32` … by the slot's type) or a domain name defined from it (`kNoTeam = constant::invalid_index::kInt32`). A value never stored or sent is `sw::optional` instead ([Errors](Errors.md)) |
-| Unlimited, endless, "all", "use the default" | A named constant on the owning type, plus a predicate when code branches on it (`ShopStockDef::kUnlimitedStock` + `hasFiniteStock`, `AbilityComponent::kAllStacks`) — not `invalid_index` |
+| Unlimited, endless, "all", "use the default" | A named constant on the owning type, plus a predicate when code branches on it (`ShopStockDef::kUnlimitedStock` + `hasFiniteStock`, `AbilitySystemComponent::kAllStacks`) — not `invalid_index` |
 | Sign, direction, delta, `-1..1` ranges | Arithmetic — stays `-1` |
 | External API or protocol value (POSIX descriptors, OpenSSL `-1`, RESP null) | Stays literal at the call |
 

@@ -1,7 +1,7 @@
 /**
  * @file FarmVillageGameModeComponent.h
  * @brief HarvestValley 마을 사람의 하루 일정을 돌리는 디렉터입니다. 일정 데이터(`data/villagers.schedules.xml`)를 GameFramework `ScheduleSystem` 으로 돌리고 마을 사람마다 몸(프리팹)을 스폰합니다.
- * @details 농장 디렉터와 같은 오브젝트의 **뒤**에 붙입니다. 판 상태(`SessionStateComponent`)의 시계를 잠금 없이 읽으려면 같은 오브젝트여야 하고, 농장 디렉터가 판 상태를 연 뒤에 시작해야 한다.
+ * @details 농장 디렉터와 같은 오브젝트의 **뒤**에 붙입니다. 판 상태(`GameStateComponent`)의 시계를 잠금 없이 읽으려면 같은 오브젝트여야 하고, 농장 디렉터가 판 상태를 연 뒤에 시작해야 한다.
  *          상태 바이트에는 머리 다음에 일정 시스템의 저장 상태(`ScheduleSaveState` — 시각 · 끼어들기 · 끼어든 자리 · 호감도 · 약속 결과 · 예약)를 리플렉션 바이너리로 싣는다.
  *          계획 자체는 싣지 않는다 — 그 상태로 다시 세우면 같은 계획이 나온다. 복원은 일정이 서 있으면 바로, 아직이면 `startGame` 이 일정을 세운 직후에 건다.
  *          판이 이 코드의 판과 정확히 같을 때만 읽고 다른 판은 거절한다(첫 출시 전이라 옛 판 리더를 두지 않는다).

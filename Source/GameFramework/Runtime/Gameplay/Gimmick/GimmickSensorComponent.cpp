@@ -29,7 +29,7 @@ namespace sw
 
 namespace sw
 {
-    GimmickWeightComponent::GimmickWeightComponent()
+    SensorWeightOverrideComponent::SensorWeightOverrideComponent()
         : _weight{ 1.0f }
     {
     }
@@ -119,9 +119,9 @@ namespace sw
             if ( pOccupant == nullptr )
                 continue;
             // 데이터에 적힌 무게를 먼저 쓰고, 없으면 강체의 질량(바디가 있으면 바디의 값)을 쓰고, 그것도 없으면 센서의 기본 무게를 쓴다.
-            const GimmickWeightComponent* pWeight = pOccupant->getComponent<GimmickWeightComponent>();
-            const RigidBodyComponent*     pBody3D = pOccupant->getComponent<RigidBodyComponent>();
-            const RigidBody2DComponent*   pBody2D = pOccupant->getComponent<RigidBody2DComponent>();
+            const SensorWeightOverrideComponent* pWeight = pOccupant->getComponent<SensorWeightOverrideComponent>();
+            const RigidBodyComponent*            pBody3D = pOccupant->getComponent<RigidBodyComponent>();
+            const RigidBody2DComponent*          pBody2D = pOccupant->getComponent<RigidBody2DComponent>();
             if ( pWeight != nullptr )
                 total += pWeight->getWeight();
             else if ( pBody3D != nullptr )
@@ -201,7 +201,7 @@ namespace sw
     {
         struct GimmickSensorWatchesInternal
         {
-            /** @brief 감시 값 `Gimmick.OccupantWeight` 입니다. 대상 센서에 겹친 것들의 무게 합(kg — `GimmickWeightComponent`, 강체 질량, 기본 무게 순)입니다. 눌림판이 읽는 값과 같다. */
+            /** @brief 감시 값 `Gimmick.OccupantWeight` 입니다. 대상 센서에 겹친 것들의 무게 합(kg — `SensorWeightOverrideComponent`, 강체 질량, 기본 무게 순)입니다. 눌림판이 읽는 값과 같다. */
             [[nodiscard]] static bool readOccupantWeight( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
                 const GimmickSensorComponent* pSensor = query.findTargetComponent<GimmickSensorComponent>( "gimmick sensor", outValue );

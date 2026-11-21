@@ -43,7 +43,7 @@ namespace sw
         , _halfExtents{ 2.0f, 1.0f, 2.0f }
         , _pullCenterOffset{}
         , _listFlowPoint{}
-        , _spawnInside{ ActivatorSpawnInside::Activate }
+        , _spawnInside{ TriggerSpawnInside::Activate }
         , _lifetime{ 0.0f }
         , _growthRate{ 0.0f }
         , _maxGrowth{ 0.0f }
@@ -158,7 +158,7 @@ namespace sw
         return outProfile.applyOverrides( _listModuleOverride, sourceName );
     }
 
-    void ZoneVolumeComponent::setSpawnInside( ActivatorSpawnInside spawnInside )
+    void ZoneVolumeComponent::setSpawnInside( TriggerSpawnInside spawnInside )
     {
         _spawnInside = spawnInside;
         _tracker.setSpawnInside( spawnInside );

@@ -20,7 +20,7 @@ namespace sw
      * @class BoatHelmComponent
      * @brief 배(동적 선체, `BuoyancyComponent`, `BoatComponent`, 폰, 조타륜 운전석)에 붙습니다. 의도는 물리 차 · 말과 같은 "가고 싶은 월드 방향" 이고,
      *        선수 방향으로 투영해서 앞 성분은 추진(노 · 엔진 · 돛을 편 정도), 옆 성분은 키로 씁니다(`ControlIntent::computeLocalMove`).
-     * @details PrePhysics 틱에서 조타 입력을 넣어 두면 이번 물리 프레임에 반영된다(`PhysicsCarComponent` 와 같은 자리). 운전석이 비면 폰을 쥔 조종자가 없어
+     * @details PrePhysics 틱에서 조타 입력을 넣어 두면 이번 물리 프레임에 반영된다(`WheeledVehicleDriveComponent` 와 같은 자리). 운전석이 비면 폰을 쥔 조종자가 없어
      *          의도가 0 이라 배는 키를 가운데로 두고 노를 멈춘다(돛은 접힌다).
      */
     REFLECT( Category = "Vehicle", DisplayName = "Boat Helm", Tooltip = "Control intent -> boat helm input: throttle (oars, engine, sail) and rudder" )

@@ -12,8 +12,8 @@
 
 #include "GameFramework/Kits/Genre/Simulation/CreatureLife/CreatureLifeCatalog.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
-#include "GameFramework/Runtime/Gameplay/SessionState/PlayerProgressComponent.h"
-#include "GameFramework/Runtime/Gameplay/SessionState/SessionStateComponent.h"
+#include "GameFramework/Runtime/Gameplay/GameState/GameStateComponent.h"
+#include "GameFramework/Runtime/Gameplay/GameState/PlayerProgressComponent.h"
 
 #include "Games/MeadowVillage/MeadowVillageData.h"
 
@@ -69,7 +69,7 @@ namespace sw
 
     void MeadowTownGameModeComponent::serializeGameState( StateIO& io )
     {
-        SessionStateComponent*   pState    = io.isReading() ? SessionStateComponent::findOnOwner( *this ) : nullptr;
+        GameStateComponent*      pState    = io.isReading() ? GameStateComponent::findOnOwner( *this ) : nullptr;
         PlayerProgressComponent* pProgress = io.isReading() ? PlayerProgressComponent::findOnOwner( *this ) : nullptr;
         if ( io.check( pState != nullptr && pProgress != nullptr ) == false )
             return;
@@ -93,7 +93,7 @@ namespace sw
     bool MeadowTownGameModeComponent::startGame()
     {
         // 밭 디렉터가 이미 열었으면 아무것도 하지 않는다. 범위 밖 설정은 판 상태가 오류를 남겼다.
-        SessionStateComponent*   pState    = SessionStateComponent::openOnOwner( *this, MeadowVillageData::makeStateSettings() );
+        GameStateComponent*      pState    = GameStateComponent::openOnOwner( *this, MeadowVillageData::makeStateSettings() );
         PlayerProgressComponent* pProgress = pState != nullptr ? PlayerProgressComponent::openOnOwner( *this, MeadowVillageData::makeProgressSettings() ) : nullptr;
         if ( pProgress == nullptr )
             return false;
@@ -111,7 +111,7 @@ namespace sw
     void MeadowTownGameModeComponent::updateGame( float32 deltaTime )
     {
         (void)deltaTime;
-        SessionStateComponent*   pState    = SessionStateComponent::findOnOwner( *this );
+        GameStateComponent*      pState    = GameStateComponent::findOnOwner( *this );
         PlayerProgressComponent* pProgress = PlayerProgressComponent::findOnOwner( *this );
         if ( pState == nullptr || pProgress == nullptr )
             return;
@@ -171,7 +171,7 @@ namespace sw
         _listView.clear();
     }
 
-    bool MeadowTownGameModeComponent::initializeTown( CreatureTown& outTown, SessionStateComponent& state, PlayerProgressComponent& progress )
+    bool MeadowTownGameModeComponent::initializeTown( CreatureTown& outTown, GameStateComponent& state, PlayerProgressComponent& progress )
     {
         const CreatureLifeCatalog* pCatalog = game::findSubsystem<const CreatureLifeCatalog>();
         if ( pCatalog == nullptr )

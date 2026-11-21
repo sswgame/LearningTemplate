@@ -1,6 +1,6 @@
 <?asset guid="772f4b6e6778e48befff7ce2c4c0b1ec"?>
-<Prefab formatVersion="1" name="ScareTrigger3D">
-	<GameObject _schemaVersion="0" _name="ScareTrigger3D" _bActive="true">
+<Prefab formatVersion="1" name="CueTrigger3D">
+	<GameObject _schemaVersion="0" _name="CueTrigger3D" _bActive="true">
 		<_listComponent>
 			<RigidBodyComponent _localID="7198733165449302788" _componentName="RigidBodyComponent"
 			                    _bActive="true"
@@ -34,7 +34,7 @@
 					</PhysicsShapeDesc3D>
 				</_listShape>
 			</RigidBodyComponent>
-			<ScareTriggerComponent _localID="13286275202855313659" _componentName="ScareTriggerComponent"
+			<CueTriggerComponent _localID="13286275202855313659" _componentName="CueTriggerComponent"
 			                       _bActive="true"
 			                       _cue="Scare"
 			                       _sound=""
@@ -45,7 +45,7 @@
 						<item>Player</item>
 					</_listTag>
 				</_requiredTags>
-			</ScareTriggerComponent>
+			</CueTriggerComponent>
 		</_listComponent>
 	</GameObject>
 </Prefab>

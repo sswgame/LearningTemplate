@@ -17,7 +17,7 @@
 
 namespace sw
 {
-    AbilityGateComponent::AbilityGateComponent()
+    TagGateComponent::TagGateComponent()
         : _requiredTags{}
         , _openRadius{ 2.0f }
         , _bStaysOpen{ true }
@@ -28,7 +28,7 @@ namespace sw
     {
     }
 
-    void AbilityGateComponent::onBeginPlay()
+    void TagGateComponent::onBeginPlay()
     {
         Component::onBeginPlay();
         // 세이브나 핫 리로드로 열린 채 돌아왔으면 몸을 꺼 둔다.
@@ -37,7 +37,7 @@ namespace sw
             GenreGimmickUtil::setBodyActive( *pOwner, false, this );
     }
 
-    void AbilityGateComponent::onTick( TickContext& context )
+    void TagGateComponent::onTick( TickContext& context )
     {
         Component::onTick( context );
         const int32 stepCount = _clock.consume( context.getDeltaTime() );
@@ -47,7 +47,7 @@ namespace sw
         }
     }
 
-    void AbilityGateComponent::stepOnce()
+    void TagGateComponent::stepOnce()
     {
         GameObject*              pOwner           = getOwner();
         const GameObjectManager* pManager         = pOwner != nullptr ? pOwner->getManager() : nullptr;

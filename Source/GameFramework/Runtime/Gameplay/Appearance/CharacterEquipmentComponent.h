@@ -70,7 +70,7 @@ namespace sw
 
         /**
          * @brief 가방 · 장비 명령 하나를 검사하고 적용합니다(인벤토리 화면 · 패드 · 서버가 받은 요청 모두 이 길). 장비가 바뀌면 외형을 다시 빌려 줍니다.
-         * @details 버리기가 꺼낸 조각은 @p outListDropped 뒤에 붙는다 — 월드에 놓는 일(`WorldItemComponent::spawn`)은 부르는 쪽이다. 시작 전이면 `InvalidSlot` 입니다.
+         * @details 버리기가 꺼낸 조각은 @p outListDropped 뒤에 붙는다 — 월드에 놓는 일(`PickupComponent::spawn`)은 부르는 쪽이다. 시작 전이면 `InvalidSlot` 입니다.
          */
         [[nodiscard]] InventoryCommandResult applyCommand( const InventoryCommand& command, vector<InventorySlot>& outListDropped );
 

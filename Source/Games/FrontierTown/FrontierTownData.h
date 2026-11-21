@@ -7,8 +7,8 @@
 
 #include "Engine/Input/Map/CommonInputActions.h"
 
-#include "GameFramework/Runtime/Gameplay/SessionState/PlayerProgressComponent.h"
-#include "GameFramework/Runtime/Gameplay/SessionState/SessionStateComponent.h"
+#include "GameFramework/Runtime/Gameplay/GameState/GameStateComponent.h"
+#include "GameFramework/Runtime/Gameplay/GameState/PlayerProgressComponent.h"
 
 namespace sw
 {
@@ -22,9 +22,9 @@ namespace sw
         static constexpr const utf8* kFastForwardAction = CommonInputActions::kFastForward; ///< 누르는 동안 빨리 감기
         static constexpr int32       kLandSize          = 32;
 
-        static SessionStateSettings makeStateSettings()
+        static GameStateSettings makeStateSettings()
         {
-            SessionStateSettings settings;
+            GameStateSettings settings;
             settings._clock._secondsPerDay = 24.0f;
             settings._clock._startHour     = 6.0f;
             settings._landWidth            = kLandSize;

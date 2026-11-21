@@ -22,7 +22,7 @@
 
 	<!-- ② 창 열기 — NPC 목록 -->
 	<DevCommand line="panel.focus npc_schedule"/>
-	<WaitUntil watch="Editor.ScheduleNPCCount" atLeast="2" timeoutFrames="60"/>
+	<WaitUntil watch="Editor.NPCScheduleCount" atLeast="2" timeoutFrames="60"/>
 
 	<!-- ③ pierre 고르기 — 타임라인 · 설명. EditorClick 은 레이블이 그려질 때까지 스스로 기다린다. -->
 	<EditorClick mark="schedule.npc.pierre"/>

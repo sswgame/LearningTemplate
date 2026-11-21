@@ -47,7 +47,7 @@
 					                _localScale="1,1,1"
 					                _attachOwner="None"
 					                _attachComponent="None" />
-					<TileMapRendererComponent _localID="10766413655964845934" _tileMapPath="game/playground/pixeltown/maps/town.tilemap.xml"
+					<TileMapComponent _localID="10766413655964845934" _tileMapPath="game/playground/pixeltown/maps/town.tilemap.xml"
 					                          _materialPath="engine/materials/sprite2dpixel.material"
 					                          _sortingLayer="Default"
 					                          _orderInLayer="-20"
@@ -64,7 +64,7 @@
 					                _localScale="1,1,1"
 					                _attachOwner="None"
 					                _attachComponent="None" />
-					<TileMapRendererComponent _localID="10766413655964845934" _tileMapPath="game/playground/pixeltown/maps/townprops.tilemap.xml"
+					<TileMapComponent _localID="10766413655964845934" _tileMapPath="game/playground/pixeltown/maps/townprops.tilemap.xml"
 					                          _materialPath="engine/materials/sprite2dpixel.material"
 					                          _sortingLayer="Default"
 					                          _orderInLayer="-10"

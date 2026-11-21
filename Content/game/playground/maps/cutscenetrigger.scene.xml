@@ -47,7 +47,7 @@
 						<_listButton />
 						<_listAnalog />
 					</PawnComponent>
-					<CharacterPawnMovementComponent _localID="14594004469458933705" _sprintButton="None" _jumpButton="None" _walkSpeed="3.5" _sprintSpeed="3.5" _acceleration="30" _deceleration="40" _jumpSpeed="5" _turnRate="12" _facingMode="MoveDirection" />
+					<CharacterMovementComponent _localID="14594004469458933705" _sprintButton="None" _jumpButton="None" _walkSpeed="3.5" _sprintSpeed="3.5" _acceleration="30" _deceleration="40" _jumpSpeed="5" _turnRate="12" _facingMode="MoveDirection" />
 					<TagComponent _localID="5249839963692551013">
 						<_tags>
 							<_listTag>

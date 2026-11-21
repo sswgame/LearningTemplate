@@ -8,8 +8,8 @@
 #include "Engine/Object/GameObject/GameObject.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameEventUtil.h"
-#include "GameFramework/Runtime/Gameplay/Ability/AbilityComponent.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityEvents.h"
+#include "GameFramework/Runtime/Gameplay/Ability/AbilitySystemComponent.h"
 
 namespace sw
 {
@@ -136,13 +136,13 @@ namespace sw
     {
         AttributeSet::postAttributeChange( name, oldValue, newValue );
 
-        // 쓰러짐은 체력의 전이 한 곳에서 낸다 — 어느 길로 0 이 되든 래그돌 신호(`AbilityComponent`)와 사망 처리가 함께 난다.
+        // 쓰러짐은 체력의 전이 한 곳에서 낸다 — 어느 길로 0 이 되든 래그돌 신호(`AbilitySystemComponent`)와 사망 처리가 함께 난다.
         const bool bOutOfHealth = name == CombatAttributes::health() && oldValue > 0.0f && newValue <= 0.0f && _bApplyingDamage == 0;
         if ( bOutOfHealth && getOwningAbilitySystem() != nullptr )
             handleOutOfHealth( getOwningAbilitySystem()->getExecutingInstigator() );
 
         // 최대치가 줄면(버프가 해제되면) 현재치도 따라서 줄인다. 최대치가 늘 때는 그대로 둔다. 최대 체력 버프로 체력이 차오르지 않는다(언리얼 Lyra 와 같음).
-        AbilityComponent* pAbilitySystem = getOwningAbilitySystem();
+        AbilitySystemComponent* pAbilitySystem = getOwningAbilitySystem();
         if ( pAbilitySystem == nullptr || newValue >= oldValue )
             return;
 
@@ -176,7 +176,7 @@ namespace sw
 
     void CombatAttributeSet::clampCombatValue( const hashed_string& name, float32& inoutValue ) const
     {
-        const AbilityComponent* pAbilitySystem = getOwningAbilitySystem();
+        const AbilitySystemComponent* pAbilitySystem = getOwningAbilitySystem();
         if ( name == CombatAttributes::health() )
         {
             const float32 maxValue = pAbilitySystem != nullptr ? CombatAttributeSetInternal::readOwnCurrent( *this, CombatAttributes::maxHealth() ) : inoutValue;
@@ -197,7 +197,7 @@ namespace sw
 
     void CombatAttributeSet::applyIncomingDamage( const AttributeModCallbackData& data )
     {
-        AbilityComponent* pAbilitySystem = getOwningAbilitySystem();
+        AbilitySystemComponent* pAbilitySystem = getOwningAbilitySystem();
         if ( pAbilitySystem == nullptr )
             return;
 
@@ -231,7 +231,7 @@ namespace sw
     void CombatAttributeSet::applyIncomingHealing( const AttributeModCallbackData& data )
     {
         (void)data;
-        AbilityComponent* pAbilitySystem = getOwningAbilitySystem();
+        AbilitySystemComponent* pAbilitySystem = getOwningAbilitySystem();
         if ( pAbilitySystem == nullptr )
             return;
 
@@ -246,7 +246,7 @@ namespace sw
 
     void CombatAttributeSet::handleOutOfHealth( GameObjectHandle instigator )
     {
-        AbilityComponent* pAbilitySystem = getOwningAbilitySystem();
+        AbilitySystemComponent* pAbilitySystem = getOwningAbilitySystem();
         if ( pAbilitySystem == nullptr || pAbilitySystem->getOwnedTagCounts().hasMatchingTag( getDeadTag() ) )
             return;
 

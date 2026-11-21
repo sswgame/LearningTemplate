@@ -16,8 +16,8 @@
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Registry/PrimitiveComponent.h"
 #include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
-#include "Engine/Object/GameObject/Registry/ScenePrimitive.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Renderer/Debug/OcclusionDebugStats.h"
 #include "Engine/Renderer/Debug/RenderDebugRegistry.h"
@@ -64,7 +64,7 @@ namespace sw
                 if ( pManager == nullptr )
                     return;
                 vector<float4> listSphere;
-                for ( const ScenePrimitive* pPrimitive : pManager->getPrimitiveRegistry().getAll() )
+                for ( const PrimitiveComponent* pPrimitive : pManager->getPrimitiveRegistry().getAll() )
                 {
                     float3  center{};
                     float32 radius = 0.0f;

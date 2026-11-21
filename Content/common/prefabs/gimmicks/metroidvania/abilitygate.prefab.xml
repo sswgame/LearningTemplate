@@ -1,6 +1,6 @@
 <?asset guid="4934873703b4f8855512463026858fa7"?>
-<Prefab formatVersion="1" name="AbilityGate">
-	<GameObject _schemaVersion="0" _name="AbilityGate" _bActive="true">
+<Prefab formatVersion="1" name="TagGate">
+	<GameObject _schemaVersion="0" _name="TagGate" _bActive="true">
 		<_listComponent>
 			<BoxCollider2DComponent _localID="17134987369502387536" _componentName="BoxCollider2DComponent"
 			                        _bActive="true"
@@ -28,7 +28,7 @@
 			               _boundsRadius="0.866"
 			               _gpuSpinSeed="0"
 			               _bVisible="true" />
-			<AbilityGateComponent _localID="13974666249240162694" _componentName="AbilityGateComponent"
+			<TagGateComponent _localID="13974666249240162694" _componentName="TagGateComponent"
 			                      _bActive="true"
 			                      _openRadius="2"
 			                      _bStaysOpen="true"
@@ -38,7 +38,7 @@
 						<item>Ability.Bomb</item>
 					</_listTag>
 				</_requiredTags>
-			</AbilityGateComponent>
+			</TagGateComponent>
 		</_listComponent>
 	</GameObject>
 </Prefab>

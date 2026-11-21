@@ -11,7 +11,7 @@
 
 #include "GameFramework/Runtime/Character/Control/Intent/ControlIntent.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
-#include "GameFramework/Runtime/Gameplay/Ability/AbilityComponent.h"
+#include "GameFramework/Runtime/Gameplay/Ability/AbilitySystemComponent.h"
 #include "GameFramework/Runtime/Gameplay/Ability/CombatAttributeSet.h"
 #include "GameFramework/Runtime/Gameplay/Ability/MovementConstraint.h"
 
@@ -74,11 +74,11 @@ namespace sw
     void ArenaUnitComponent::onTick( TickContext& context )
     {
         Component::onTick( context );
-        GameObject*          pOwner             = getOwner();
-        MeshComponent*       pMesh              = pOwner != nullptr ? pOwner->getComponent<MeshComponent>() : nullptr;
-        AbilityComponent*    pAbilitySystem     = pOwner != nullptr ? pOwner->getComponent<AbilityComponent>() : nullptr;
-        const PawnComponent* pPawn              = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
-        const bool           bMissingComponents = pMesh == nullptr || pAbilitySystem == nullptr || pPawn == nullptr || context.getDeltaTime() <= 0.0f;
+        GameObject*             pOwner             = getOwner();
+        MeshComponent*          pMesh              = pOwner != nullptr ? pOwner->getComponent<MeshComponent>() : nullptr;
+        AbilitySystemComponent* pAbilitySystem     = pOwner != nullptr ? pOwner->getComponent<AbilitySystemComponent>() : nullptr;
+        const PawnComponent*    pPawn              = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
+        const bool              bMissingComponents = pMesh == nullptr || pAbilitySystem == nullptr || pPawn == nullptr || context.getDeltaTime() <= 0.0f;
         if ( bMissingComponents )
             return;
         const ArenaGameModeComponent* pGameMode = findGameMode<ArenaGameModeComponent>();
@@ -120,7 +120,7 @@ namespace sw
         pMesh->setLocalRotation( float3{ 0.0f, MathUtil::atan2( _facing._x, _facing._z ), 0.0f } );
     }
 
-    void ArenaUnitComponent::pressAbilityButtons( const PawnComponent& pawn, AbilityComponent& abilitySystem )
+    void ArenaUnitComponent::pressAbilityButtons( const PawnComponent& pawn, AbilitySystemComponent& abilitySystem )
     {
         if ( _bButtonsResolved == SW_FALSE )
         {

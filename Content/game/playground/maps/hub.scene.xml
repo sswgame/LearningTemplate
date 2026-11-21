@@ -52,7 +52,7 @@
 						<_listAnalog />
 					</PawnComponent>
 					<AIStimulusSourceComponent _localID="7318405526120394117" _team="0" _bVisible="true" />
-					<CharacterPawnMovementComponent _localID="14594004469458933705" _sprintButton="None" _jumpButton="None" _walkSpeed="3.5" _sprintSpeed="3.5" _acceleration="30" _deceleration="40" _jumpSpeed="5" _turnRate="12" _facingMode="MoveDirection" />
+					<CharacterMovementComponent _localID="14594004469458933705" _sprintButton="None" _jumpButton="None" _walkSpeed="3.5" _sprintSpeed="3.5" _acceleration="30" _deceleration="40" _jumpSpeed="5" _turnRate="12" _facingMode="MoveDirection" />
 					<TagComponent _localID="5249839963692551013">
 						<_tags>
 							<_listTag>
@@ -60,7 +60,7 @@
 							</_listTag>
 						</_tags>
 					</TagComponent>
-					<AbilityComponent _localID="2238906797121419031" _abilitySetID="HubResident" _healthAttribute="Health" _maxHealthAttribute="MaxHealth" _damageNumberOffset="0,1.9,0" _bShowDamageNumbers="false" />
+					<AbilitySystemComponent _localID="2238906797121419031" _abilitySetID="HubResident" _healthAttribute="Health" _maxHealthAttribute="MaxHealth" _damageNumberOffset="0,1.9,0" _bShowDamageNumbers="false" />
 					<WidgetComponent _localID="11339505928329980331" _documentPath="" _space="Screen" _drawSize="64,8" _pivot="0.5,1" _worldSize="1,0.5" _screenOffset="0,0"
 					                 _worldOffset="0,2.1,0" _maxDistance="0" _referenceDistance="10" _bClampToScreenEdge="false" _bScaleWithDistance="false" />
 					<HealthBarComponent _localID="13661083042096604780" _hpRatio="1" _remainRatio="1" _targetRatio="1" _lerpSpeed="5" _fillColor="0.25,0.85,0.3,1"

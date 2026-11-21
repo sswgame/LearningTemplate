@@ -18,7 +18,7 @@
 	<Expect watch="Equipment.BagUsedSlots" target="Player" equals="1"/>
 	<Expect watch="Equipment.ItemCount" target="Player" key="potion_health" equals="3"/>
 	<Expect watch="Object.Exists" target="PotionPile" equals="0"/>
-	<ExpectLog id="WorldItem.PickedUp" count="1"/>
+	<ExpectLog id="Pickup.PickedUp" count="1"/>
 
 	<!-- ⑵ 패드만으로 나누기: 첫 입력은 기본 포커스(Slot0), X 는 동작 메뉴, 메뉴 순서 Use · Equip · Split -->
 	<DevCommand line="demo.inventory InventoryDemo"/>
@@ -72,12 +72,12 @@
 	<Tap slot="Gamepad.DPadDown" hold="1"/>
 	<WaitUntil watch="UI.FocusedWidget" is="Accept" timeoutFrames="10"/>
 	<Tap slot="Gamepad.A" hold="1"/>
-	<WaitUntil watch="Object.Exists" target="WorldItem" equals="1" timeoutFrames="30"/>
+	<WaitUntil watch="Object.Exists" target="Pickup" equals="1" timeoutFrames="30"/>
 	<Expect watch="Equipment.BagCount" target="Player" key="1" equals="1"/>
-	<DevCommand line="item.pickup Player WorldItem"/>
+	<DevCommand line="item.pickup Player Pickup"/>
 	<Expect watch="Equipment.BagCount" target="Player" key="1" equals="3"/>
-	<Expect watch="Object.Exists" target="WorldItem" equals="0"/>
-	<ExpectLog id="WorldItem.PickedUp" count="2"/>
+	<Expect watch="Object.Exists" target="Pickup" equals="0"/>
+	<ExpectLog id="Pickup.PickedUp" count="2"/>
 	<Tap slot="Gamepad.B" hold="1"/>
 	<WaitUntil watch="UI.ActiveScreen" is="none" timeoutFrames="30"/>
 
@@ -106,7 +106,7 @@
 	<DevCommand line="equipment.give Player boots_low"/>
 	<Expect watch="Equipment.BagUsedSlots" target="Player" equals="4"/>
 	<DevCommand line="item.pickup Player CapeDrop"/>
-	<ExpectLog id="WorldItem.PickUpRefused" count="1"/>
+	<ExpectLog id="Pickup.PickUpRefused" count="1"/>
 	<Expect watch="Object.Exists" target="CapeDrop" equals="1"/>
 	<Expect watch="Equipment.ItemCount" target="Player" key="cape_rogue" equals="0"/>
 

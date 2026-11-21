@@ -1,0 +1,77 @@
+#include "pch.h"
+
+#include "Core/Testing/TestFramework.h"
+
+#include "Engine/Animation/Component/SkeletalMeshComponent.h"
+#include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
+
+#include "GameFramework/Runtime/Gameplay/Severing/SeverResult.h"
+#include "GameFramework/Runtime/Gameplay/Severing/SkeletalSeveringComponent.h"
+
+using namespace sw;
+
+namespace
+{
+    struct SkeletalSeveringTestUtil
+    {
+        /** @brief 띠 하나입니다 — 정점 0 ~ 3 은 영역 0, 4 · 5 는 영역 1 입니다. 삼각형 넷 중 마지막만 영역 1 의 정점이 둘입니다. */
+        static AppearanceGeometry makeStrip()
+        {
+            AppearanceGeometry geometry;
+            for ( uint32 row = 0; row < 3; ++row )
+            {
+                for ( uint32 column = 0; column < 2; ++column )
+                {
+                    geometry._listPosition.push_back( float3{ static_cast<float32>( column ), static_cast<float32>( row ), 0.0f } );
+                    geometry._listNormal.push_back( float3{ 0.0f, 0.0f, -1.0f } );
+                    geometry._listUV.push_back( float2{ 0.0f, 0.0f } );
+                }
+            }
+            geometry._listIndex = { 0, 1, 2, 1, 3, 2, 2, 3, 4, 3, 5, 4 };
+            return geometry;
+        }
+    };
+} // namespace
+
+/** @brief [SkeletalSeveringTest] 정점 둘 이상이 잘라 낼 영역이면 그 삼각형이 떨어진 조각이고, 나머지는 남은 몸이다 */
+SW_TEST_CASE( SkeletalSeveringTest, TriangleWithTwoSeveredVerticesGoesWithThePiece )
+{
+    const AppearanceGeometry strip         = SkeletalSeveringTestUtil::makeStrip();
+    const uint16             arrRegion[6]  = { 0, 0, 0, 0, 1, 1 };
+    const uint16             severedRegion = 1;
+    SeverResult              result;
+    SW_REQUIRE_TRUE( SeverResult::severRegions( strip, vector_reference<const uint16>{ arrRegion, 6 }, vector_reference<const uint16>{ &severedRegion, 1 }, result ) );
+    SW_REQUIRE_EQUAL( size_t{ 4 }, result._listTriangleSevered.size() );
+    SW_EXPECT_TRUE( result._listTriangleSevered[0] == SW_FALSE );
+    SW_EXPECT_TRUE( result._listTriangleSevered[1] == SW_FALSE );
+    SW_EXPECT_TRUE( result._listTriangleSevered[2] == SW_FALSE );
+    SW_EXPECT_TRUE( result._listTriangleSevered[3] == SW_TRUE );
+}
+
+/** @brief [SkeletalSeveringTest] 잘라 낼 영역의 삼각형이 없으면 false 이고 남은 몸이 원본이다 */
+SW_TEST_CASE( SkeletalSeveringTest, NothingToSeverReturnsFalse )
+{
+    const AppearanceGeometry strip         = SkeletalSeveringTestUtil::makeStrip();
+    const uint16             arrRegion[6]  = { 0, 0, 0, 0, 1, 1 };
+    const uint16             severedRegion = 7;
+    SeverResult              result;
+    SW_EXPECT_FALSE( SeverResult::severRegions( strip, vector_reference<const uint16>{ arrRegion, 6 }, vector_reference<const uint16>{ &severedRegion, 1 }, result ) );
+    SW_EXPECT_EQUAL( strip._listIndex.size(), result._remaining._listIndex.size() );
+}
+
+/** @brief [SkeletalSeveringTest] 자른 적이 없는 몸(갓 스폰)은 되돌려도 몸 메시 · 잘린 영역 · 조각이 그대로다 — 풀이 처음 만든 인스턴스로 계약을 확인할 때 아무것도 바꾸지 않는다 */
+SW_TEST_CASE( SkeletalSeveringTest, IntactBodyIsUnchangedBySpawnStateReset )
+{
+    GameObjectManager          manager;
+    GameObject*                pObject = manager.createGameObject( hashed_string( "Skeleton" ) );
+    SkeletalMeshComponent*     pUnit   = pObject->addComponent<SkeletalMeshComponent>();
+    SkeletalSeveringComponent* pCut    = pObject->addComponent<SkeletalSeveringComponent>();
+    SW_REQUIRE_TRUE( pUnit != nullptr && pCut != nullptr );
+    const Mesh* pBody = pUnit->getMesh().get();
+
+    SW_EXPECT_TRUE( pCut->resetToSpawnState() == SpawnStateReset::Reset );
+    SW_EXPECT_TRUE( pUnit->getMesh().get() == pBody );
+    SW_EXPECT_TRUE( pCut->getSeveredRegions().empty() );
+    SW_EXPECT_TRUE( pCut->getPieces().empty() );
+}

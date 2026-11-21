@@ -25,7 +25,7 @@
 		<entity id="3" name="Session">
 			<GameObject _schemaVersion="0" _name="Session" _bActive="true">
 				<_listComponent>
-					<SessionStateComponent _localID="6673597520240684436" _bOpenAtBeginPlay="true" />
+					<GameStateComponent _localID="6673597520240684436" _bOpenAtBeginPlay="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -401,14 +401,14 @@
 					<CharacterControllerComponent _localID="1851894784675401076" _localPosition="0,0.05,-6" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _radius="0.3" _halfHeight="0.6" _stepHeight="0.3" _maxSlopeAngle="45" _gravityScale="1" _mass="70" _layer="Character" />
 					<MeshComponent _localID="163493842152903304" _localPosition="0,0.9,0" _localRotation="0,0,0" _localScale="0.6,1.8,0.6" _attachOwner="None" _attachComponent="#19b3407eb1f9cd74" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="1.2" />
 					<MeshComponent _localID="163494941664531515" _localPosition="0,1.95,0" _localRotation="0,0,0" _localScale="0.5,0.2,0.5" _attachOwner="None" _attachComponent="#19b3407eb1f9cd74" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="0.4" />
-					<AbilityComponent _localID="2238906797121419031" _abilitySetID="ZoneWalker" _healthAttribute="Health" _maxHealthAttribute="MaxHealth" _damageNumberOffset="0,2,0" _bShowDamageNumbers="false" />
+					<AbilitySystemComponent _localID="2238906797121419031" _abilitySetID="ZoneWalker" _healthAttribute="Health" _maxHealthAttribute="MaxHealth" _damageNumberOffset="0,2,0" _bShowDamageNumbers="false" />
 					<GroundSurfaceComponent _localID="15610695408950179667" _probeLength="0.6" />
 					<ZoneContactComponent _localID="15473475357700291463" _probeLength="0.6" _bodyHeight="1.8" _touchDistance="0.15" />
-					<VisualSinkReactionComponent _localID="12540341874576279047" _attribute="SinkDepth" _scale="1" />
-					<JumpEscapeReactionComponent _localID="5849550536987586871" _effect="GE_Sink" _stacksPerJump="3" _blockedTag="State.Engulfed" />
-					<ScreenReactionComponent _localID="2155262817840300902" _tag="State.Poisoned" _fadeInTime="0.25" _fadeOutTime="0.5">
+					<SinkOffsetComponent _localID="12540341874576279047" _attribute="SinkDepth" _scale="1" />
+					<RemoveStacksOnJumpComponent _localID="5849550536987586871" _effect="GE_Sink" _stacksPerJump="3" _blockedTag="State.Engulfed" />
+					<TagPostProcessComponent _localID="2155262817840300902" _tag="State.Poisoned" _fadeInTime="0.25" _fadeOutTime="0.5">
 						<_postProcess _exposureCompensation="-0.5" _vignetteIntensity="0.6" _saturation="0.4" _contrast="0.8" />
-					</ScreenReactionComponent>
+					</TagPostProcessComponent>
 					<TagComponent _localID="5249839963692551013">
 						<_tags>
 							<_listTag>
@@ -425,7 +425,7 @@
 					<CharacterControllerComponent _localID="1851894784675401076" _localPosition="4,0.05,-6" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _radius="0.3" _halfHeight="0.6" _stepHeight="0.3" _maxSlopeAngle="45" _gravityScale="1" _mass="70" _layer="Character" />
 					<MeshComponent _localID="163493842152903304" _localPosition="0,0.9,0" _localRotation="0,0,0" _localScale="0.6,1.8,0.6" _attachOwner="None" _attachComponent="#19b3407eb1f9cd74" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="1.2" />
 					<MeshComponent _localID="163494941664531515" _localPosition="0,1.95,0" _localRotation="0,0,0" _localScale="0.5,0.2,0.5" _attachOwner="None" _attachComponent="#19b3407eb1f9cd74" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="0.4" />
-					<AbilityComponent _localID="2238906797121419031" _abilitySetID="ZoneWalker" _healthAttribute="Health" _maxHealthAttribute="MaxHealth" _damageNumberOffset="0,2,0" _bShowDamageNumbers="false" />
+					<AbilitySystemComponent _localID="2238906797121419031" _abilitySetID="ZoneWalker" _healthAttribute="Health" _maxHealthAttribute="MaxHealth" _damageNumberOffset="0,2,0" _bShowDamageNumbers="false" />
 					<GroundSurfaceComponent _localID="15610695408950179667" _probeLength="0.6" />
 					<ZoneContactComponent _localID="15473475357700291463" _probeLength="0.6" _bodyHeight="1.8" _touchDistance="0.15" />
 					<AIControllerComponent _localID="2105598286593932629" _turnRate="6" _arriveDistance="0.5" />
@@ -445,7 +445,7 @@
 					<CharacterControllerComponent _localID="1851894784675401076" _localPosition="8,0.05,-6" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _radius="0.3" _halfHeight="0.6" _stepHeight="0.3" _maxSlopeAngle="45" _gravityScale="1" _mass="70" _layer="Character" />
 					<MeshComponent _localID="163493842152903304" _localPosition="0,0.9,0" _localRotation="0,0,0" _localScale="0.6,1.8,0.6" _attachOwner="None" _attachComponent="#19b3407eb1f9cd74" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="1.2" />
 					<MeshComponent _localID="163494941664531515" _localPosition="0,1.95,0" _localRotation="0,0,0" _localScale="0.5,0.2,0.5" _attachOwner="None" _attachComponent="#19b3407eb1f9cd74" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="0.4" />
-					<AbilityComponent _localID="2238906797121419031" _abilitySetID="ZoneWalker" _healthAttribute="Health" _maxHealthAttribute="MaxHealth" _damageNumberOffset="0,2,0" _bShowDamageNumbers="false" />
+					<AbilitySystemComponent _localID="2238906797121419031" _abilitySetID="ZoneWalker" _healthAttribute="Health" _maxHealthAttribute="MaxHealth" _damageNumberOffset="0,2,0" _bShowDamageNumbers="false" />
 					<GroundSurfaceComponent _localID="15610695408950179667" _probeLength="0.6" />
 					<ZoneContactComponent _localID="15473475357700291463" _probeLength="0.6" _bodyHeight="1.8" _touchDistance="0.15" />
 					<TagComponent _localID="5249839963692551013">
@@ -464,7 +464,7 @@
 					<CharacterControllerComponent _localID="1851894784675401076" _localPosition="12,0.05,-6" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _radius="0.3" _halfHeight="0.6" _stepHeight="0.3" _maxSlopeAngle="45" _gravityScale="1" _mass="70" _layer="Character" />
 					<MeshComponent _localID="163493842152903304" _localPosition="0,0.9,0" _localRotation="0,0,0" _localScale="0.6,1.8,0.6" _attachOwner="None" _attachComponent="#19b3407eb1f9cd74" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="1.2" />
 					<MeshComponent _localID="163494941664531515" _localPosition="0,1.95,0" _localRotation="0,0,0" _localScale="0.5,0.2,0.5" _attachOwner="None" _attachComponent="#19b3407eb1f9cd74" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="0.4" />
-					<AbilityComponent _localID="2238906797121419031" _abilitySetID="FireSpirit" _healthAttribute="Health" _maxHealthAttribute="MaxHealth" _damageNumberOffset="0,2,0" _bShowDamageNumbers="false" />
+					<AbilitySystemComponent _localID="2238906797121419031" _abilitySetID="FireSpirit" _healthAttribute="Health" _maxHealthAttribute="MaxHealth" _damageNumberOffset="0,2,0" _bShowDamageNumbers="false" />
 					<GroundSurfaceComponent _localID="15610695408950179667" _probeLength="0.6" />
 					<ZoneContactComponent _localID="15473475357700291463" _probeLength="0.6" _bodyHeight="1.8" _touchDistance="0.15" />
 					<TagComponent _localID="5249839963692551013">

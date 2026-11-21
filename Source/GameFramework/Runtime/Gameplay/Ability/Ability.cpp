@@ -16,7 +16,7 @@
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityCatalog.h"
-#include "GameFramework/Runtime/Gameplay/Ability/AbilityComponent.h"
+#include "GameFramework/Runtime/Gameplay/Ability/AbilitySystemComponent.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityTask.h"
 
 namespace sw
@@ -165,7 +165,7 @@ namespace sw
         return _pAbilitySystem->applyGameplayEffectSpecToSelf( spec );
     }
 
-    ActiveEffectHandle Ability::applyEffectSpecToTarget( const AbilityEffectSpec& spec, const AbilityComponent* pTarget )
+    ActiveEffectHandle Ability::applyEffectSpecToTarget( const AbilityEffectSpec& spec, const AbilitySystemComponent* pTarget )
     {
         if ( _pAbilitySystem == nullptr )
             return ActiveEffectHandle{};
@@ -217,7 +217,7 @@ namespace sw
         return activeCount;
     }
 
-    void Ability::bindToAbilitySystem( AbilityComponent* pAbilitySystem, AbilitySpecHandle specHandle, int32 level )
+    void Ability::bindToAbilitySystem( AbilitySystemComponent* pAbilitySystem, AbilitySpecHandle specHandle, int32 level )
     {
         _pAbilitySystem = pAbilitySystem;
         _specHandle     = specHandle;
@@ -323,8 +323,8 @@ namespace sw
             return;
         }
 
-        AbilityComponent*   pAbilitySystem = getAbilitySystem();
-        const hashed_string selfEffect     = getNameParameter( "selfEffect" );
+        AbilitySystemComponent* pAbilitySystem = getAbilitySystem();
+        const hashed_string     selfEffect     = getNameParameter( "selfEffect" );
         if ( pAbilitySystem != nullptr && selfEffect.empty() == false )
             (void)applyEffectSpecToOwner( makeOutgoingSpec( selfEffect ) ); // 대상 태그에 막혀도 어빌리티는 끝난다
 
@@ -342,7 +342,7 @@ namespace sw
             if ( pManager != nullptr && targetHandle.isValid() )
                 applyEffectSpecToTarget( makeOutgoingSpec( targetEffect ), targetHandle );
             else
-                SW_LOG_TRACE_ID( "Ability.ApplyEffectsTriggerEventNo", "ApplyEffects '%#': the trigger event has no target with an AbilityComponent", getConfig()._id.c_str() );
+                SW_LOG_TRACE_ID( "Ability.ApplyEffectsTriggerEventNo", "ApplyEffects '%#': the trigger event has no target with an AbilitySystemComponent", getConfig()._id.c_str() );
         }
         endAbility();
     }
@@ -352,19 +352,19 @@ namespace sw
         struct AbilityDevCommandsInternal
         {
             /** @brief 활성 씬의 어빌리티 시스템을 모읍니다. 씬이 없거나 하나도 없으면 그 까닭(문장이 명령 답이다)입니다. */
-            [[nodiscard]] static expected<vector<AbilityComponent*>> collectAbilitySystems()
+            [[nodiscard]] static expected<vector<AbilitySystemComponent*>> collectAbilitySystems()
             {
                 SceneManager* const pSceneManager = game::findSubsystem<SceneManager>();
                 GameObjectManager*  pManager      = pSceneManager != nullptr ? pSceneManager->findActiveObjectManager() : nullptr;
                 if ( pManager == nullptr )
                     return unexpected( Error{ ErrorKind::NotFound, "cheat: no active scene" } );
-                vector<AbilityComponent*> listComponent;
-                for ( AbilityComponent* pComponent : pManager->getComponentRegistry().getAll<AbilityComponent>() )
+                vector<AbilitySystemComponent*> listComponent;
+                for ( AbilitySystemComponent* pComponent : pManager->getComponentRegistry().getAll<AbilitySystemComponent>() )
                 {
                     listComponent.push_back( pComponent );
                 }
                 if ( listComponent.empty() )
-                    return unexpected( Error{ ErrorKind::NotFound, "cheat: no AbilityComponent in the active scene" } );
+                    return unexpected( Error{ ErrorKind::NotFound, "cheat: no AbilitySystemComponent in the active scene" } );
                 return listComponent;
             }
 
@@ -373,15 +373,15 @@ namespace sw
             {
                 if ( listArgument.empty() == false )
                     return false;
-                expected<vector<AbilityComponent*>> collected = collectAbilitySystems();
+                expected<vector<AbilitySystemComponent*>> collected = collectAbilitySystems();
                 if ( collected.has_value() == false )
                 {
                     outReply = string( collected.error().message() );
                     return true;
                 }
-                const vector<AbilityComponent*> listComponent = std::move( *collected );
-                int32                           healedCount   = 0;
-                for ( AbilityComponent* pComponent : listComponent )
+                const vector<AbilitySystemComponent*> listComponent = std::move( *collected );
+                int32                                 healedCount   = 0;
+                for ( AbilitySystemComponent* pComponent : listComponent )
                 {
                     const hashed_string&    health    = pComponent->getHealthAttribute();
                     const optional<float32> maxHealth = pComponent->getAttributeValue( pComponent->getMaxHealthAttribute() );
@@ -402,16 +402,16 @@ namespace sw
                 float32 value = 0.0f;
                 if ( listArgument.size() != 2 || StringUtil::parseFloat( listArgument[1], value ) == false )
                     return false;
-                expected<vector<AbilityComponent*>> collected = collectAbilitySystems();
+                expected<vector<AbilitySystemComponent*>> collected = collectAbilitySystems();
                 if ( collected.has_value() == false )
                 {
                     outReply = string( collected.error().message() );
                     return true;
                 }
-                const vector<AbilityComponent*> listComponent = std::move( *collected );
-                const hashed_string             name( listArgument[0] );
-                int32                           changedCount = 0;
-                for ( AbilityComponent* pComponent : listComponent )
+                const vector<AbilitySystemComponent*> listComponent = std::move( *collected );
+                const hashed_string                   name( listArgument[0] );
+                int32                                 changedCount = 0;
+                for ( AbilitySystemComponent* pComponent : listComponent )
                 {
                     if ( pComponent->setAttributeBaseValue( name, value ) )
                         ++changedCount;
@@ -430,7 +430,7 @@ namespace sw
             }
 
             /** @brief @p pComponent 의 주인이 플레이어 조종자(`PlayerControllerComponent`)가 쥔 폰이면 true 입니다. */
-            static bool isPlayerControlled( const GameObjectManager& manager, const AbilityComponent& component )
+            static bool isPlayerControlled( const GameObjectManager& manager, const AbilitySystemComponent& component )
             {
                 const GameObject*    pOwner = component.getOwner();
                 const PawnComponent* pPawn  = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
@@ -443,7 +443,7 @@ namespace sw
 
             /**
              * @brief `cheat.god [on|off]` — 플레이어가 쥔 폰의 어빌리티 시스템에 무적 태그를 붙이거나 뗍니다. 인자가 없으면 뒤집습니다.
-             * @details 무적은 태그(`AbilityComponent::getInvulnerableTag`) 하나이고 이펙트 없이 붙인다 — 체력 base 가 내려가지 않는다.
+             * @details 무적은 태그(`AbilitySystemComponent::getInvulnerableTag`) 하나이고 이펙트 없이 붙인다 — 체력 base 가 내려가지 않는다.
              *          대상은 플레이어 조종 폰뿐이다(다른 치트처럼 모든 시스템에 걸면 적도 죽지 않는다).
              */
             static bool runGod( const vector<string>& listArgument, string& outReply )
@@ -452,20 +452,20 @@ namespace sw
                 bool       bArgumentOn{ false };
                 if ( listArgument.size() > 1 || readOptionalBoolArgument( listArgument, 0, bArgumentOn ) == false )
                     return false;
-                expected<vector<AbilityComponent*>> collected = collectAbilitySystems();
+                expected<vector<AbilitySystemComponent*>> collected = collectAbilitySystems();
                 if ( collected.has_value() == false )
                 {
                     outReply = string( collected.error().message() );
                     return true;
                 }
-                const vector<AbilityComponent*> listComponent = std::move( *collected );
-                SceneManager* const             pSceneManager = game::findSubsystem<SceneManager>();
-                const GameObjectManager*        pManager      = pSceneManager != nullptr ? pSceneManager->findActiveObjectManager() : nullptr;
+                const vector<AbilitySystemComponent*> listComponent = std::move( *collected );
+                SceneManager* const                   pSceneManager = game::findSubsystem<SceneManager>();
+                const GameObjectManager*              pManager      = pSceneManager != nullptr ? pSceneManager->findActiveObjectManager() : nullptr;
                 // 무적 태그의 하위 태그로 붙인다 — 무적 판정(`hasMatchingTag`)은 하위를 함께 보고, 치트의 몫은 이펙트가 준 무적과 따로 센다.
                 const TagID tag         = "State.Invulnerable.Cheat"_tag;
                 int32       playerCount = 0;
                 int32       godCount    = 0;
-                for ( AbilityComponent* pComponent : listComponent )
+                for ( AbilitySystemComponent* pComponent : listComponent )
                 {
                     if ( isPlayerControlled( *pManager, *pComponent ) == false )
                         continue;
@@ -495,16 +495,16 @@ namespace sw
             {
                 if ( listArgument.empty() == false )
                     return false;
-                expected<vector<AbilityComponent*>> collected = collectAbilitySystems();
+                expected<vector<AbilitySystemComponent*>> collected = collectAbilitySystems();
                 if ( collected.has_value() == false )
                 {
                     outReply = string( collected.error().message() );
                     return true;
                 }
-                const vector<AbilityComponent*> listComponent = std::move( *collected );
-                int32                           removedCount  = 0;
-                vector<AbilitySpecHandle>       listHandle;
-                for ( AbilityComponent* pComponent : listComponent )
+                const vector<AbilitySystemComponent*> listComponent = std::move( *collected );
+                int32                                 removedCount  = 0;
+                vector<AbilitySpecHandle>             listHandle;
+                for ( AbilitySystemComponent* pComponent : listComponent )
                 {
                     TagContainer cooldownTags;
                     listHandle.clear();

@@ -59,7 +59,7 @@ namespace sw
         , _bossDelay{}
         , _resultHold{}
         , _playerPosition{ 0.0f, 0.0f }
-        , _facing{ FacingDir::Right }
+        , _facing{ FacingDirection::Right }
         , _playerHP{ 100 }
         , _phase{ ActionCombatDemoPhase::Hall }
         , _bPlayerViewMissing{ SW_FALSE }
@@ -99,7 +99,7 @@ namespace sw
         _room.setLayout( layout );
         _room.beginHall(); // 종이 카탈로그에 없으면 룸이 오류를 남기고 그 적을 세우지 않는다 — 시나리오의 첫 Alive 판정이 진다
         _playerPosition = float2{ 0.0f, 0.0f };
-        _facing         = FacingDir::Right;
+        _facing         = FacingDirection::Right;
         _playerHP       = _playerMaxHP;
         _phase          = ActionCombatDemoPhase::Hall;
         _bossDelay.clear();
@@ -124,9 +124,9 @@ namespace sw
         _playerPosition._x += move._x * _playerSpeed * deltaTime;
         _playerPosition._y += move._y * _playerSpeed * deltaTime;
         if ( move._x > ActionCombatDemoComponentInternal::kFacingDeadZone )
-            _facing = FacingDir::Right;
+            _facing = FacingDirection::Right;
         else if ( move._x < -ActionCombatDemoComponentInternal::kFacingDeadZone )
-            _facing = FacingDir::Left;
+            _facing = FacingDirection::Left;
 
         ActionRoomFrameInput input;
         input._playerPos      = _playerPosition;
@@ -251,12 +251,12 @@ namespace sw
         }
         io.value( io.isWriting() ? _room : restoredRoom );
         // 자리 · HP · 단계는 상태 칸이다(`GameModeComponent::serializeState`). 손 본문은 룸 · 보스 지연 · 결과 보여 주기(`Countdown`) · 방향(리플렉션 열거가 아니다)만.
-        Countdown bossDelay  = _bossDelay;
-        Countdown resultHold = _resultHold;
-        FacingDir facing     = _facing;
+        Countdown       bossDelay  = _bossDelay;
+        Countdown       resultHold = _resultHold;
+        FacingDirection facing     = _facing;
         io.value( bossDelay );
         io.value( resultHold );
-        io.enumValue( facing, FacingDir::Up );
+        io.enumValue( facing, FacingDirection::Up );
         io.end();
         if ( io.isWriting() || io.isOk() == false )
             return;

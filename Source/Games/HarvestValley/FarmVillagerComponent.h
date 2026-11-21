@@ -12,7 +12,7 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Runtime/Character/Navigation/NavAgent.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameModeBoundComponent.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameFrameworkComponent.h"
 
 namespace sw
 {
@@ -24,7 +24,7 @@ namespace sw
      *          걷는 상태는 뷰의 것이라 저장하지 않는다 — 복원하면 일정상 위치에 놓인다.
      */
     REFLECT( Category = "Farming", DisplayName = "Farm Villager View", Tooltip = "Walks one villager's body after its scheduled position on the village nav grid" )
-    class FarmVillagerComponent : public GameModeBoundComponent
+    class FarmVillagerComponent : public GameFrameworkComponent
     {
     public:
         REFLECT_BODY();

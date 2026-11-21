@@ -26,7 +26,7 @@
 
 namespace sw
 {
-    enum class ActivatorAuthority : uint8; // 판정 자리(`ActivatorVolumeComponent.h`) — 처리기가 고른다
+    enum class TriggerAuthority : uint8; // 판정 자리(`TriggerComponent.h`) — 처리기가 고른다
 
     class AbilityCatalog;
     class GameObject;
@@ -186,11 +186,11 @@ namespace sw
         /** @brief 매개변수 표입니다. */
         virtual void collectParamSpecs( vector<ZoneParamSpec>& outListSpec ) const = 0;
         /**
-         * @brief 이 종류의 효과를 어느 월드가 판정하는지입니다(`ActivatorAuthority`). 순수 가상이라 새 종류가 고르지 않으면 컴파일되지 않는다(기본값이 없다 — "월드마다 판정" 을 모르고 물려받지 않게).
+         * @brief 이 종류의 효과를 어느 월드가 판정하는지입니다(`TriggerAuthority`). 순수 가상이라 새 종류가 고르지 않으면 컴파일되지 않는다(기본값이 없다 — "월드마다 판정" 을 모르고 물려받지 않게).
          * @details 겹침 · 대상 기록은 모든 월드가 같이 하고, 처리기 사건(시작 · 진입 · 체류 · 이탈)만 이 값으로 거른다(`ZoneTracker`) — 언리얼은 오버랩이 양쪽에서 나고 게임 로직이 `HasAuthority()` 뒤에서 돈다.
          *          게임 상태를 바꾸는 효과(피해 · 버프 · 이펙트 · AI 판단 · 내비 비용)는 Server, 월드마다 같이 도는 보이는 일 · 이동 시뮬레이션(표면 겉모습 · 물리 필드)은 Local 이다.
          */
-        virtual ActivatorAuthority getAuthority() const = 0;
+        virtual TriggerAuthority getAuthority() const = 0;
         /** @brief 표 밖의 수치 칸을 동작 값으로 받으면 true 입니다(할 일 모듈). 아니면 모르는 이름은 오류다. */
         virtual bool supportsActionParams() const { return false; }
         /** @brief 경우 목록을 받으면 true 입니다. */

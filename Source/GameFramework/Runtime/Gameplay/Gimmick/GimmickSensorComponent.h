@@ -21,17 +21,17 @@
 namespace sw
 {
     /**
-     * @class GimmickWeightComponent
+     * @class SensorWeightOverrideComponent
      * @brief 눌림판이 측정하는 무게입니다. 데이터로 덮어쓸 때 씁니다. 없으면 강체(`RigidBodyComponent`, `RigidBody2DComponent`)의 질량을 쓰고, 그것도 없으면 센서의 기본 무게를 씁니다.
      */
     REFLECT( Category = "Gimmick", DisplayName = "Gimmick Weight", Tooltip = "Weight a pressure plate measures for this object" )
-    class SW_GF_API GimmickWeightComponent : public Component
+    class SW_GF_API SensorWeightOverrideComponent : public Component
     {
     public:
         REFLECT_BODY();
 
-        GimmickWeightComponent();
-        virtual ~GimmickWeightComponent() override = default;
+        SensorWeightOverrideComponent();
+        virtual ~SensorWeightOverrideComponent() override = default;
 
         float32 getWeight() const { return _weight; }
         void    setWeight( float32 weight ) { _weight = weight; }
@@ -89,7 +89,7 @@ namespace sw
         void removeOccupant( GameObjectHandle handle );
 
         int32 getOccupantCount() const { return static_cast<int32>( _listOccupant.size() ); }
-        /** @brief 겹친 것들의 무게 합입니다. `GimmickWeightComponent`, 강체 질량, 기본 무게 순으로 찾아서 씁니다. 사라진 것은 세지 않습니다. */
+        /** @brief 겹친 것들의 무게 합입니다. `SensorWeightOverrideComponent`, 강체 질량, 기본 무게 순으로 찾아서 씁니다. 사라진 것은 세지 않습니다. */
         float32                         computeOccupantWeight() const;
         const vector<GameObjectHandle>& getOccupants() const { return _listOccupant; }
 
@@ -126,7 +126,7 @@ namespace sw
         TagContainer _requiredTags;
         PROPERTY( Category = "Sensor", DisplayName = "Occupants", Tooltip = "Objects overlapping now (runtime)" )
         vector<GameObjectHandle> _listOccupant;
-        PROPERTY( Category = "Sensor", DisplayName = "Default Weight", Min = 0.0, Tooltip = "Weight of an occupant without a GimmickWeightComponent", Units = kg )
+        PROPERTY( Category = "Sensor", DisplayName = "Default Weight", Min = 0.0, Tooltip = "Weight of an occupant without a SensorWeightOverrideComponent", Units = kg )
         float32 _defaultWeight;
         PROPERTY( Category = "Sensor", DisplayName = "Count Triggers", Tooltip = "Also count the other object's trigger colliders" )
         bool _bCountTriggers;

@@ -28,9 +28,9 @@
 #include "GameFramework/Kits/Genre/Strategy/CityBuilder/CitySimulation.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameSpeedControl.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameStateRefs.h"
 #include "GameFramework/Runtime/Foundation/Framework/Presentation/RuleViewCatalog.h"
 #include "GameFramework/Runtime/Foundation/Framework/Presentation/SimulationViewSync.h"
-#include "GameFramework/Runtime/Foundation/Framework/SessionStateRefs.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/MaterialTintCache.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Wallet.h"
 #include "GameFramework/Runtime/World/Environment/WorldClock.h"
@@ -129,7 +129,7 @@ namespace sw
         const utf8* getToolName() const;
         bool        isAutoPlanOn() const;
         /** @brief 도시가 빌려 쓸 공유 상태(디렉터가 보관하는 금고)를 반환합니다. */
-        SessionStateRefs makeRefs();
+        GameStateRefs makeRefs();
         /** @brief 땅 모양 · 자동 계획 PROPERTY 를 플래너에 넘길 설정으로 모읍니다. */
         NileCityLayout makeCityLayout() const;
 

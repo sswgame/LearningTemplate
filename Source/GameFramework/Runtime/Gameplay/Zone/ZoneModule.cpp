@@ -10,7 +10,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityActions.h"
-#include "GameFramework/Runtime/Gameplay/Ability/AbilityComponent.h"
+#include "GameFramework/Runtime/Gameplay/Ability/AbilitySystemComponent.h"
 
 #include <cmath>
 
@@ -75,7 +75,7 @@ namespace sw
                 const bool        bTarget = StringUtil::startsWith( name, kTargetPrefix );
                 if ( pSample == nullptr || pSample->_pTarget == nullptr || bTarget == false )
                     return std::nan( "" );
-                const AbilityComponent* pAbility = pSample->_pTarget->getComponent<AbilityComponent>();
+                const AbilitySystemComponent* pAbility = pSample->_pTarget->getComponent<AbilitySystemComponent>();
                 if ( pAbility == nullptr )
                     return std::nan( "" );
                 const optional<float32> value = pAbility->getAttributeValue( hashed_string( name.substr( string_view( kTargetPrefix ).size() ) ) );

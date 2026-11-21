@@ -10,9 +10,9 @@
 
 #include "GameFramework/Runtime/Character/AI/Blackboard.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
+#include "GameFramework/Runtime/Gameplay/GameState/GameStateComponent.h"
+#include "GameFramework/Runtime/Gameplay/GameState/PlayerProgressComponent.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
-#include "GameFramework/Runtime/Gameplay/SessionState/PlayerProgressComponent.h"
-#include "GameFramework/Runtime/Gameplay/SessionState/SessionStateComponent.h"
 #include "GameFramework/Runtime/World/Environment/WorldClock.h"
 
 #include "Games/HarvestValley/FarmGameModeComponent.h"
@@ -162,7 +162,7 @@ namespace sw
         const GameObject*              pPawnOwner = pawn.getOwner();
         const GameObjectManager*       pManager   = pPawnOwner != nullptr ? pPawnOwner->getManager() : nullptr;
         const FarmGameModeComponent*   pGameMode  = pManager != nullptr ? GameModeComponent::resolve<FarmGameModeComponent>( *pManager, _gameMode ) : nullptr;
-        const SessionStateComponent*   pState     = pGameMode != nullptr ? SessionStateComponent::findOnOwner( *pGameMode ) : nullptr;
+        const GameStateComponent*      pState     = pGameMode != nullptr ? GameStateComponent::findOnOwner( *pGameMode ) : nullptr;
         const PlayerProgressComponent* pProgress  = pGameMode != nullptr ? PlayerProgressComponent::findOnOwner( *pGameMode ) : nullptr;
         const bool                     bReady     = pState != nullptr && pProgress != nullptr && pGameMode->isStarted();
         blackboard.setBool( "FarmReady", bReady );

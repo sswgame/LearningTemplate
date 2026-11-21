@@ -86,14 +86,14 @@ namespace sw
 
     void SpriteInstanceBatch::shutdownAll( GameObjectManager& manager, vector<unique_ptr<SpriteInstanceBatch>>& listBatch )
     {
-        vector<ScenePrimitiveBatch*> listPrimitive;
+        vector<PrimitiveBatch*> listPrimitive;
         listPrimitive.reserve( listBatch.size() );
         for ( const unique_ptr<SpriteInstanceBatch>& pBatch : listBatch )
         {
             if ( pBatch != nullptr && pBatch->_batch != nullptr )
                 listPrimitive.push_back( pBatch->_batch.get() );
         }
-        manager.getPrimitiveRegistry().removeInstanceBatches( vector_reference<ScenePrimitiveBatch* const>( listPrimitive.data(), listPrimitive.size() ) );
+        manager.getPrimitiveRegistry().removeInstanceBatches( vector_reference<PrimitiveBatch* const>( listPrimitive.data(), listPrimitive.size() ) );
         for ( const unique_ptr<SpriteInstanceBatch>& pBatch : listBatch )
         {
             if ( pBatch != nullptr )

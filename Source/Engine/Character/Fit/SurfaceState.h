@@ -162,7 +162,7 @@ namespace sw
         void clear();
         /**
          * @brief 물이 씻습니다. 씻김 빠르기(`_washPerSecond`)가 있는 채널만 @p deltaSeconds × @p submersion(0..1, 잠긴 비율)만큼 영역 값과 마스크를 더 내립니다.
-         * @details 씻김이 0 인 채널(젖음 · 상처 · 찢김)은 건드리지 않는다 — 물에 들어갔다고 모든 표시를 지우지 않는다. 젖음을 올리는 일은 부르는 쪽(`SurfaceExposureComponent`)이다.
+         * @details 씻김이 0 인 채널(젖음 · 상처 · 찢김)은 건드리지 않는다 — 물에 들어갔다고 모든 표시를 지우지 않는다. 젖음을 올리는 일은 부르는 쪽(`CharacterWetnessComponent`)이다.
          */
         void applyWater( float32 deltaSeconds, float32 submersion );
         /** @brief 채널의 모든 영역 가운데 가장 큰 값입니다(머티리얼 스칼라 `_surface<채널>` 과 같은 값). 모르는 채널이면 0 입니다. */

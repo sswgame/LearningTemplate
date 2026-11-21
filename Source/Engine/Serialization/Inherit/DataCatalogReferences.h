@@ -21,7 +21,7 @@
  *         <Reference owner="Fighter/Move" attribute="frames" defaultAttribute="id" target="Move" file="moves"/> <!-- 루트의 moves 가 가리키는 다른 파일 -->
  *       </Catalog>
  *       <CatalogKey tag="AbilitySetDef" catalog="AbilityCatalog" entry="AbilitySet"/> <!-- 항목 종류 → 카탈로그 루트 · 원소 -->
- *       <Field owner="AbilityComponent" field="_abilitySetID" tag="AbilitySetDef"/>  <!-- `CatalogKey<AbilitySetDef>` 칸 -->
+ *       <Field owner="AbilitySystemComponent" field="_abilitySetID" tag="AbilitySetDef"/>  <!-- `CatalogKey<AbilitySetDef>` 칸 -->
  *     </DataCatalogReferenceTable>
  * @endcode
  *          `<CatalogKey>` · `<Field>` 는 카탈로그 밖(씬 · 프리팹의 컴포넌트 · 구조체 칸 `CatalogKey<Tag>`)에서 항목을 가리키는 칸이다. 쿠커는 쿠킹하는 팩들의

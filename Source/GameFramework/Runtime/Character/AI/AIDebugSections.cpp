@@ -16,7 +16,7 @@
 
 #include "GameFramework/Runtime/Character/AI/BehaviorTree.h"
 #include "GameFramework/Runtime/Character/AI/Blackboard.h"
-#include "GameFramework/Runtime/Character/AI/Schedule/ScheduleNPCComponent.h"
+#include "GameFramework/Runtime/Character/AI/Schedule/NPCScheduleComponent.h"
 #include "GameFramework/Runtime/Character/AI/Schedule/ScheduleSystem.h"
 #include "GameFramework/Runtime/Character/Control/Controller/AIControllerComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameplayDebugTarget.h"
@@ -27,7 +27,7 @@ namespace sw
     {
         struct AIDebugSectionsInternal
         {
-            /** @brief 일정 절 — 대상 오브젝트의 NPC(`ScheduleNPCComponent` 의 id), 없으면 첫 일정의 첫 NPC 의 `explainNPC` 를 줄마다 적는다. 적은 줄 수를 돌려준다. */
+            /** @brief 일정 절 — 대상 오브젝트의 NPC(`NPCScheduleComponent` 의 id), 없으면 첫 일정의 첫 NPC 의 `explainNPC` 를 줄마다 적는다. 적은 줄 수를 돌려준다. */
             static uint32 writeSchedule( DebugHUDSectionWriter& writer, uint32 maxLines )
             {
                 vector<const ScheduleSystem*> listSystem;
@@ -40,7 +40,7 @@ namespace sw
                 {
                     if ( pSystem == nullptr || pSystem->getNPCCount() == 0 )
                         continue;
-                    const optional<int32> namedIndex = pTarget != nullptr ? ScheduleNPCComponent::findNPCIndex( *pSystem, *pTarget ) : optional<int32>{};
+                    const optional<int32> namedIndex = pTarget != nullptr ? NPCScheduleComponent::findNPCIndex( *pSystem, *pTarget ) : optional<int32>{};
                     if ( namedIndex.has_value() )
                     {
                         pFound   = pSystem;

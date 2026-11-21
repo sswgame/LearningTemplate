@@ -165,7 +165,7 @@ namespace sw
          * @details 내장 Mover 만 쓰므로 private 중첩이다 — 이름 표는 리플렉션(`ENUM`)이 내고, 등록기는 위 `REFLECT_BODY()` friend 로 닿는다. 짧은 이름은 레지스트리 전역에서 하나여야 해서 `Gimmick` 을 붙인다.
          */
         ENUM()
-        enum class GimmickMoverMode : int32
+        enum class InterpToMovementMode : int32
         {
             Once = 0,
             Loop,

@@ -30,7 +30,7 @@
 #include "GameFramework/Runtime/Foundation/GameData/StatBlock.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterEquipmentComponent.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
-#include "GameFramework/Runtime/Gameplay/Inventory/WorldItemComponent.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/PickupComponent.h"
 
 #include <algorithm>
 
@@ -299,7 +299,7 @@ namespace sw
             place._z += InventoryScreenInternal::kDropForward;
             for ( const InventorySlot& dropped : listDropped )
             {
-                (void)WorldItemComponent::spawn( *pManager, dropped, place );
+                (void)PickupComponent::spawn( *pManager, dropped, place );
             }
         }
         setStatus( InventoryScreenInternal::getResultKey( _lastResult ) );

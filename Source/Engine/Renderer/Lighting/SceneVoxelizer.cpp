@@ -63,9 +63,9 @@ namespace sw
             }
 
             /** @brief 칸 하나가 지금 격자에 칠할 가리개면 그 월드 상자를, 아니면(빈 칸 · 가리개 아님 · 격자 밖) 빈 상자를 돌려줍니다. */
-            static AABB findOccluderBox( const ScenePrimitive* pPrimitive, Material* pSceneDefault, const AABB& gridBounds )
+            static AABB findOccluderBox( const PrimitiveComponent* pPrimitive, Material* pSceneDefault, const AABB& gridBounds )
             {
-                // 레지스트리의 실제 타입은 메시 컴포넌트 계열뿐이다(ScenePrimitive.h 의 불변식).
+                // 레지스트리의 실제 타입은 메시 컴포넌트 계열뿐이다(PrimitiveComponent.h 의 불변식).
                 const MeshComponent* pMesh = static_cast<const MeshComponent*>( pPrimitive );
                 if ( pMesh == nullptr || isOccluder( *pMesh, pSceneDefault ) == false )
                     return AABB::empty();
@@ -116,9 +116,9 @@ namespace sw
         SceneVoxelGrid grid = SceneVoxelGrid::make( bounds, cellSize );
         if ( grid.isEmpty() )
             return grid;
-        const AABB                      gridBounds    = grid.getBounds();
-        const SceneVoxelGrid::CellRange fullRange     = grid.getFullRange();
-        const vector<ScenePrimitive*>&  listPrimitive = primitives.getAll();
+        const AABB                         gridBounds    = grid.getBounds();
+        const SceneVoxelGrid::CellRange    fullRange     = grid.getFullRange();
+        const vector<PrimitiveComponent*>& listPrimitive = primitives.getAll();
         // 칸마다 칠한 상자를 남긴다 — 나중에 그 칸만 다시 칠할 때(`updateGrid`) 사라진 메시가 덮던 곳을 안다.
         grid._listSourceBox.assign( listPrimitive.size(), AABB::empty() );
         for ( size_t slot = 0; slot < listPrimitive.size(); ++slot )
@@ -137,8 +137,8 @@ namespace sw
         using Internal = SceneVoxelizerInternal;
         if ( inoutGrid.isEmpty() )
             return false;
-        const AABB                     gridBounds    = inoutGrid.getBounds();
-        const vector<ScenePrimitive*>& listPrimitive = primitives.getAll();
+        const AABB                         gridBounds    = inoutGrid.getBounds();
+        const vector<PrimitiveComponent*>& listPrimitive = primitives.getAll();
         // 메시 칸 영역이 늘었으면 상자 목록도 늘린다(늘린 칸은 아직 칠하지 않았다).
         if ( inoutGrid._listSourceBox.size() < listPrimitive.size() )
             inoutGrid._listSourceBox.resize( listPrimitive.size(), AABB::empty() );

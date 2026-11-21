@@ -3,7 +3,7 @@
 <!--
   AbilityArena 에디터 시나리오 — 어빌리티 디버거 창(ability_debugger). 어빌리티 세트(체력 · 공격력 어트리뷰트, 화염구 등)는 이 게임의 카탈로그가 주므로
   엔진 에디터 체인(Playground)에서는 대상이 없다.
-  ① 창을 열고 플레이를 시작한다. ② 대상 콤보를 펼쳐 ArenaPlayer 를 고르면 그 AbilityComponent 의 어트리뷰트와 어빌리티 줄이 뜬다(언리얼 showdebug abilitysystem).
+  ① 창을 열고 플레이를 시작한다. ② 대상 콤보를 펼쳐 ArenaPlayer 를 고르면 그 AbilitySystemComponent 의 어트리뷰트와 어빌리티 줄이 뜬다(언리얼 showdebug abilitysystem).
   ③ 플레이를 멈춘다. 에디터 단계를 쓰므로 게임 체인이 줍지 않게 하위 폴더 editor/ 에 둔다.
   감시 값: Editor.AbilityDebugAttributeCount · Editor.AbilityDebugAbilityCount(창이 지난 그리기에서 모은 대상의 상태) · Editor.PlayState.
   실행: App -EnableEditor -game=AbilityArena -scenario=game/abilityarena/automation/editor/abilitydebugger.scenario.xml -unattended

@@ -16,7 +16,7 @@
 #include "Engine/Physics/Collision/PhysicsShape.h"
 #include "Engine/Physics/IPhysicsScene.h"
 #include "Engine/Physics/Scene/ScenePhysics.h"
-#include "Engine/TileMap/Component/TileMapRendererComponent.h"
+#include "Engine/TileMap/Component/TileMapComponent.h"
 #include "Engine/TileMap/TileMapXML.h"
 #include "Engine/TileMap/TileSetAsset.h"
 
@@ -39,11 +39,11 @@ namespace
          */
         struct Rig
         {
-            GameObjectManager         _manager;
-            GameObject*               _pMap{ nullptr };
-            SceneComponent*           _pRoot{ nullptr };
-            TileMapRendererComponent* _pTiles{ nullptr };
-            IPhysicsScene2D*          _pScene{ nullptr }; ///< 준비가 끝났으면 바디가 든 2D 물리 씬
+            GameObjectManager _manager;
+            GameObject*       _pMap{ nullptr };
+            SceneComponent*   _pRoot{ nullptr };
+            TileMapComponent* _pTiles{ nullptr };
+            IPhysicsScene2D*  _pScene{ nullptr }; ///< 준비가 끝났으면 바디가 든 2D 물리 씬
 
             Rig( int32 width, int32 height, const vector<int32>& listWallRow )
             {
@@ -63,7 +63,7 @@ namespace
                 if ( _pMap == nullptr )
                     return;
                 _pRoot  = _pMap->addComponent<SceneComponent>();
-                _pTiles = _pMap->addComponent<TileMapRendererComponent>();
+                _pTiles = _pMap->addComponent<TileMapComponent>();
                 if ( _pRoot == nullptr || _pTiles == nullptr )
                     return;
                 _pTiles->setTileMapData( map, std::move( pTileSet ) );

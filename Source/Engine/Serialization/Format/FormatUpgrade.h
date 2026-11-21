@@ -96,7 +96,7 @@ namespace sw
 
 /**
  * @brief 상태 표 @p kindName(네 글자 글, 예 `"CLOK"` — 형식의 `kStateTag` 와 같은 글)의 판 @p fromVersion → @p toVersion 단계 @p pFunction(`StateUpgradeFunction`)을 등록합니다.
- *        `StateIO::header` 와 `StateIO::readExpectedSection` · 표로 갈라 읽는 구간(`SessionStateComponent`)이 옛 판을 이 사슬로 올린다. 규칙은 `SW_ASSET_FORMAT_UPGRADE` 와 같다.
+ *        `StateIO::header` 와 `StateIO::readExpectedSection` · 표로 갈라 읽는 구간(`GameStateComponent`)이 옛 판을 이 사슬로 올린다. 규칙은 `SW_ASSET_FORMAT_UPGRADE` 와 같다.
  *        언리얼 `FCustomVersion` 의 판 분기 · 유니티 `FormerlySerializedAs` 자리를 등록된 순수 함수 사슬로 둔다.
  */
 #define SW_STATE_FORMAT_UPGRADE( id, kindName, fromVersion, toVersion, pFunction )                                                                                  \

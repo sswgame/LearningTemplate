@@ -49,7 +49,7 @@ namespace sw
     {
     }
 
-    bool WesternOutlaw::initialize( const WesternCatalog* pCatalog, const LootCatalog* pLoot, const SessionStateRefs& refs, const hashed_string& regionID, float32 regionBaseTemperature,
+    bool WesternOutlaw::initialize( const WesternCatalog* pCatalog, const LootCatalog* pLoot, const GameStateRefs& refs, const hashed_string& regionID, float32 regionBaseTemperature,
                                     const AIPerceptionSettings& sight )
     {
         const bool bMissingState = pCatalog == nullptr || refs._pWallet == nullptr || refs._pReputation == nullptr || refs._pClock == nullptr;
