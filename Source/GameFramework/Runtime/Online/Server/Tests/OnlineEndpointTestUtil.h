@@ -54,7 +54,7 @@ namespace sw::test
     /** @brief 케이스 폴더에 글 파일 하나를 쓰고 절대 경로를 돌려줍니다(제공자 파일 · 신뢰 PEM). */
     [[nodiscard]] inline string writeScratchText( string_view name, string_view text )
     {
-        string path = FileUtil::normalizeSeparators( makeScratchPath( name ) );
+        string path = FileUtil::normalizeSeparators( makeScratchPath( name ).str() );
         SW_EXPECT_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( path ), text ) );
         return path;
     }

@@ -27,10 +27,10 @@ SW_TEST_CASE( FileUtilBomTest, SkipsTheUTF8BomInViewsBytesAndTextFiles )
     SW_EXPECT_EQUAL( 'H', static_cast<utf8>( pBytes[0] ) );
 
     // 3) 파일 I/O 자동 BOM 제거 검증
-    const sw::string bomFilePath = test::makeScratchPath( "test_bom.txt" );
-    SW_EXPECT_TRUE( sw::FileUtil::writeFile( sw::FileUtil::toDiskPath( bomFilePath ), reinterpret_cast<const uint8*>( pWithBom ), sw::StringUtil::strlen( pWithBom ) ) );
+    const sw::AbsolutePath bomFilePath = test::makeScratchPath( "test_bom.txt" );
+    SW_EXPECT_TRUE( sw::FileUtil::writeFile( bomFilePath, reinterpret_cast<const uint8*>( pWithBom ), sw::StringUtil::strlen( pWithBom ) ) );
 
     sw::string readText;
-    SW_EXPECT_TRUE( sw::FileUtil::readTextFile( sw::FileUtil::toDiskPath( bomFilePath ), readText ) );
+    SW_EXPECT_TRUE( sw::FileUtil::readTextFile( bomFilePath, readText ) );
     SW_EXPECT_EQUAL( sw::string_view( "Hello UTF-8 BOM!" ), sw::string_view( readText.c_str() ) );
 }

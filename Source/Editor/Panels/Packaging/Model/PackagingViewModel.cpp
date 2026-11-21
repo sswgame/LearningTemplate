@@ -108,7 +108,7 @@ namespace sw::editor
         _listGame.clear();
         _gameIndex = 0;
         vector<string> listFile;
-        (void)FileUtil::collectFiles( FileUtil::toDiskPath( FileUtil::joinPath( ProcessRoots::get()._project.str(), "Config/Game" ) ), "", listFile, false ); // 폴더가 없으면 게임이 없다
+        (void)FileUtil::collectFiles( ProcessRoots::get()._project.join( "Config/Game" ), "", listFile, false ); // 폴더가 없으면 게임이 없다
         const string& packRoot = editor::getSubsystem<const GameConfig>()._packRoot.get();
         for ( const string& filePath : listFile )
         {
@@ -127,9 +127,9 @@ namespace sw::editor
 
     ProcessCommand PackagingViewModel::makeCommand() const
     {
-        const string    projectRoot  = ProcessRoots::get()._project.str();
-        ProcessCommand  command      = EditorExternalToolJob::makePythonScriptCommand( FileUtil::joinPath( projectRoot, kScriptRelativePath ) );
-        vector<string>& listArgument = command._listArgument;
+        const AbsolutePath projectRoot  = ProcessRoots::get()._project;
+        ProcessCommand     command      = EditorExternalToolJob::makePythonScriptCommand( FileUtil::joinPath( projectRoot.str(), kScriptRelativePath ) );
+        vector<string>&    listArgument = command._listArgument;
         listArgument.insert( listArgument.end(), { "--target", kArrTarget[_targetIndex] } );
         if ( _gameIndex < _listGame.size() )
             listArgument.insert( listArgument.end(), { "--game", _listGame[_gameIndex] } );

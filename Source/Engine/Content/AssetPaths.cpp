@@ -558,8 +558,8 @@ namespace sw
         clearPathCache();
 
         // 루트는 실행 파일 위치로 한 번 정한 것이다(`ProcessRoots`) - 작업 폴더에서 위로 찾지 않는다(작업 폴더를 바꾸고 띄우면 다른 저장소를 열었다).
-        const string& rootPath = ProcessRoots::get()._project.str();
-        SW_LOG_INFO_ID( "AssetPaths.RootFolder", "RootFolder : %#", rootPath );
+        const AbsolutePath rootPath = ProcessRoots::get()._project;
+        SW_LOG_INFO_ID( "AssetPaths.RootFolder", "RootFolder : %#", rootPath.str() );
         // Content/ 최상위 루트. 모든 도메인은 이 아래에서 이름으로 푼다.
         // 패키지에는 `Content` 가 없다(팩만) - 그때 느슨한 리소스 루트는 비어 있다.
         const string resourceRootFolderPath = FileUtil::isDirectory( ProcessRoots::get()._content ) ? ProcessRoots::get()._content.str() : string{};
@@ -642,7 +642,7 @@ namespace sw
             string mountedKey;
             if ( found.empty() && AssetPathsInternal::findMountedDiskDomain( state, lowerFile, mountedRoot, mountedKey ) )
             {
-                const string hit = FileUtil::findPathIgnoringCase( mountedRoot, mountedKey );
+                const string hit = FileUtil::findPathIgnoringCase( FileUtil::toDiskPath( mountedRoot ), mountedKey );
                 if ( hit.empty() == false && FileUtil::exists( FileUtil::toDiskPath( hit ) ) )
                     found = FileUtil::normalizeSeparators( hit );
             }
@@ -764,7 +764,7 @@ namespace sw
             string     mountedRoot;
             string     mountedKey;
             const bool bMixedCaseDomain = AssetPathsInternal::kCaseSensitiveFileSystem && AssetPathsInternal::findMountedDiskDomain( *_pState, id, mountedRoot, mountedKey );
-            result                      = bMixedCaseDomain ? FileUtil::makePathIgnoringCase( mountedRoot, id.substr( id.find( '/' ) + 1 ) ) : FileUtil::joinPath( domainRoot, keyUnderRoot );
+            result                      = bMixedCaseDomain ? FileUtil::makePathIgnoringCase( FileUtil::toDiskPath( mountedRoot ), id.substr( id.find( '/' ) + 1 ) ) : FileUtil::joinPath( domainRoot, keyUnderRoot );
         }
         optional<AbsolutePath> absPath = AbsolutePath::tryMake( result );
         if ( absPath.has_value() == false )

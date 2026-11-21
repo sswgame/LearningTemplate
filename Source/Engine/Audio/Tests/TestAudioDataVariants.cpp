@@ -200,7 +200,7 @@ SW_TEST_CASE( AudioDataVariantTest, PresetWithMissingParentIsNotSaved )
 SW_TEST_CASE( AudioDataVariantTest, MusicVariantMergesSegmentsByName )
 {
     const test::ScopedScratchDomain domain;
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( domain.makeDiskPath( "base.music.xml" ) ), R"(<AudioMusicDef _bus="music" _startSegment="Explore">
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "base.music.xml" ), R"(<AudioMusicDef _bus="music" _startSegment="Explore">
         <_listSegment>
             <AudioMusicSegmentDef _name="Explore" _bars="8"><_listLayer><AudioMusicLayerDef _path="explore.ogg" /></_listLayer></AudioMusicSegmentDef>
             <AudioMusicSegmentDef _name="Combat" _bars="4"><_listLayer><AudioMusicLayerDef _path="combat.ogg" /></_listLayer></AudioMusicSegmentDef>
@@ -232,7 +232,7 @@ SW_TEST_CASE( AudioDataVariantTest, GraphVariantSavesOnlyItsDifference )
         return;
     }
     const test::ScopedScratchDomain domain;
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( domain.makeDiskPath( "base.audiograph.xml" ) ),
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "base.audiograph.xml" ),
                                               R"(<AudioGraphDef _output="Osc" _durationSeconds="1"><_listNode><AudioGraphNodeDef _name="Osc" _type="Sine" /></_listNode></AudioGraphDef>)" ) );
     const string                             baseID = test::ScopedScratchDomain::makeID( "base.audiograph.xml" ).str();
     AudioGraphDef                            graph;
@@ -243,7 +243,7 @@ SW_TEST_CASE( AudioDataVariantTest, GraphVariantSavesOnlyItsDifference )
     SW_EXPECT_EQUAL( baseID, graph._baseID );
     graph._durationSeconds = 3.0f;
 
-    const optional<AbsolutePath> childPath = AbsolutePath::tryMake( domain.makeDiskPath( "child.audiograph.xml" ) );
+    const optional<AbsolutePath> childPath = AbsolutePath::tryMake( domain.makeDiskPath( "child.audiograph.xml" ).str() );
     SW_REQUIRE_TRUE( childPath.has_value() );
     SW_REQUIRE_TRUE( graph.saveToAsset( *childPath ) );
     string saved;

@@ -49,12 +49,12 @@ namespace sw
             static bool runOverwriteConfig( IAutomationStepContext& context, const AutomationStep& step )
             {
                 const AutomationOverwriteConfigParams params     = step.readValidatedProperties<AutomationOverwriteConfigParams>();
-                const string                          configPath = FileUtil::joinPath( FileUtil::joinPath( ProcessRoots::get()._project.str(), "Config" ), params._configFile );
+                const AbsolutePath                    configPath = ProcessRoots::get()._project.join( "Config" ).join( params._configFile );
                 string                                original;
-                if ( FileUtil::readTextFile( FileUtil::toDiskPath( configPath ), original ) == false )
+                if ( FileUtil::readTextFile( configPath, original ) == false )
                 {
                     fixed_string<constant::buffer::kMax2048> message;
-                    formatstring( message.data(), message.capacity(), "no config file '%#' to overwrite", configPath );
+                    formatstring( message.data(), message.capacity(), "no config file '%#' to overwrite", configPath.str() );
                     context.recordFailure( step, message.view() );
                     return true;
                 }
@@ -70,12 +70,12 @@ namespace sw
                         return true;
                     }
                 }
-                context.restoreFileAtEnd( configPath, std::move( original ) );
+                context.restoreFileAtEnd( configPath.str(), std::move( original ) );
                 // 쓰기 게이트가 허락한 폴더(`Config/Editor`)만 써진다 — 그 밖은 게이트가 까닭을 남기고 쓰기가 진다.
-                if ( FileUtil::writeTextFile( FileUtil::toDiskPath( configPath ), text ) == false )
+                if ( FileUtil::writeTextFile( configPath, text ) == false )
                 {
                     fixed_string<constant::buffer::kMax2048> message;
-                    formatstring( message.data(), message.capacity(), "could not write '%#' (the automation write gate opens only Config/Editor)", configPath );
+                    formatstring( message.data(), message.capacity(), "could not write '%#' (the automation write gate opens only Config/Editor)", configPath.str() );
                     context.recordFailure( step, message.view() );
                 }
                 return true;

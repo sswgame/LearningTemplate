@@ -11,35 +11,66 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 /**
- * @brief [ArchiveTest] 개수는 남은 바이트로 담을 수 있을 때만 읽히고, 실패하면 결과를 건드리지 않고 오류를 남긴다
+ * @brief [ArchiveTest] 개수는 남은 바이트로 담을 수 있을 때만 읽히고, 실패하면 0 을 돌려주고 오류를 남긴다
  */
 SW_TEST_CASE( ArchiveTest, ReadCountRefusesCountsThatDoNotFit )
 {
     sw::Archive writer;
     writer << uint32{ 2 } << uint32{ 10 } << uint32{ 20 };
     {
-        sw::Archive reader( writer.getData(), writer.getSize() );
-        uint32      count = 0;
-        SW_EXPECT_TRUE( reader.readCount( sizeof( uint32 ), count ) );
+        sw::Archive  reader( writer.getData(), writer.getSize() );
+        const uint32 count = reader.readCount( sizeof( uint32 ) );
         SW_EXPECT_EQUAL( 2u, count );
         SW_EXPECT_TRUE( reader.isOk() );
     }
     {
         // 남은 바이트는 8 이다 — 원소가 5 바이트면 2 개를 담을 수 없다.
         sw::Archive reader( writer.getData(), writer.getSize() );
-        uint32      count = 77;
-        SW_EXPECT_FALSE( reader.readCount( 5, count ) );
-        SW_EXPECT_EQUAL( 77u, count ); // 실패하면 건드리지 않는다
+        SW_EXPECT_EQUAL( 0u, reader.readCount( 5 ) ); // 실패하면 0 이다 — 위조된 개수가 할당으로 가지 않는다
         SW_EXPECT_TRUE( reader.isError() );
     }
     {
         sw::Archive crafted;
         crafted << 0xFFFFFFFFu << uint32{ 1 };
         sw::Archive reader( crafted.getData(), crafted.getSize() );
-        uint32      count = 0;
-        SW_EXPECT_FALSE( reader.readCount( 8, count ) );
+        SW_EXPECT_EQUAL( 0u, reader.readCount( 8 ) );
+        SW_EXPECT_TRUE( reader.isError() );
+    }
+}
+
+/**
+ * @brief [ArchiveTest] 잘린 아카이브의 값 읽기는 빈 값 · 0 을 돌려주고 실패가 끈적하게 남으며, 읽은 뒤에만 옮기는 자리(`StateIO::count`)는 대상을 건드리지 않는다
+ */
+SW_TEST_CASE( ArchiveTest, TruncatedValueReadsLeaveTargetsUntouched )
+{
+    sw::Archive writer;
+    writer << uint32{ 10 };
+    writer.writeBytes( "abc", 3 ); // 길이는 10 이라 적었지만 3 바이트뿐이다
+    {
+        sw::Archive reader( writer.getData(), writer.getSize() );
+        SW_EXPECT_TRUE( reader.readString().empty() );
+        SW_EXPECT_TRUE( reader.isError() );
+        SW_EXPECT_EQUAL( 0ull, reader.readVarUint() ); // 실패 뒤의 읽기도 0 이다
+        SW_EXPECT_TRUE( reader.isError() );
+    }
+    {
+        sw::Archive reader( writer.getData(), 2 ); // 개수(uint32)마저 잘렸다
+        sw::StateIO io( reader );
+        uint32      count = 77;
+        io.count( sizeof( uint32 ), count );
+        SW_EXPECT_EQUAL( 77u, count );
+        SW_EXPECT_TRUE( reader.isError() );
+    }
+    {
+        sw::Archive pooled;
+        pooled.saveStringPool();
+        pooled.writeVarUint( 5000 ); // 풀에 없는 번호
+        sw::Archive reader( pooled.getData(), pooled.getSize() );
+        SW_REQUIRE_TRUE( reader.loadStringPool() );
+        SW_EXPECT_TRUE( reader.readPooledString().empty() );
         SW_EXPECT_TRUE( reader.isError() );
     }
 }
@@ -213,17 +244,17 @@ SW_TEST_CASE( ArchiveTest, ArchiveMathTypesStreaming )
  */
 SW_TEST_CASE( ArchiveTest, ArchiveFileIORoundTrip )
 {
-    const sw::string tempFilePath = sw::test::makeScratchPath( "test_archive_io.bin" );
+    const sw::AbsolutePath tempFilePath = sw::test::makeScratchPath( "test_archive_io.bin" );
 
     sw::Archive writeArch;
     writeArch << 0x12345678u;
     writeArch << sw::string( "TempArchiveFilePayload" );
     writeArch << -999.5f;
 
-    SW_REQUIRE_TRUE( writeArch.saveToFile( tempFilePath ) );
-    SW_EXPECT_TRUE( sw::FileUtil::exists( sw::FileUtil::toDiskPath( tempFilePath ) ) );
+    SW_REQUIRE_TRUE( writeArch.saveToFile( tempFilePath.str() ) );
+    SW_EXPECT_TRUE( sw::FileUtil::exists( tempFilePath ) );
 
-    sw::Archive readArch( tempFilePath, true );
+    sw::Archive readArch( tempFilePath.str(), true );
     SW_EXPECT_TRUE( readArch.isReadMode() );
     SW_EXPECT_TRUE( readArch.getSize() > 0 );
 
@@ -440,15 +471,16 @@ SW_TEST_CASE( ArchiveTest, VarIntAndZigZagBoundaryEncoding )
     sw::Archive readArch( writeArch.getData(), writeArch.getSize() );
 
     uint64 outU0 = 99, outU1 = 99, outU127 = 99, outU128 = 99, outU16383 = 99, outU16384 = 99, outU32Max = 99, outU64Large = 99, outU64Max = 99;
-    SW_EXPECT_TRUE( readArch.readVarUint( outU0 ) );
-    SW_EXPECT_TRUE( readArch.readVarUint( outU1 ) );
-    SW_EXPECT_TRUE( readArch.readVarUint( outU127 ) );
-    SW_EXPECT_TRUE( readArch.readVarUint( outU128 ) );
-    SW_EXPECT_TRUE( readArch.readVarUint( outU16383 ) );
-    SW_EXPECT_TRUE( readArch.readVarUint( outU16384 ) );
-    SW_EXPECT_TRUE( readArch.readVarUint( outU32Max ) );
-    SW_EXPECT_TRUE( readArch.readVarUint( outU64Large ) );
-    SW_EXPECT_TRUE( readArch.readVarUint( outU64Max ) );
+    outU0       = readArch.readVarUint();
+    outU1       = readArch.readVarUint();
+    outU127     = readArch.readVarUint();
+    outU128     = readArch.readVarUint();
+    outU16383   = readArch.readVarUint();
+    outU16384   = readArch.readVarUint();
+    outU32Max   = readArch.readVarUint();
+    outU64Large = readArch.readVarUint();
+    outU64Max   = readArch.readVarUint();
+    SW_EXPECT_FALSE( readArch.isError() );
 
     SW_EXPECT_EQUAL( u0, outU0 );
     SW_EXPECT_EQUAL( u1, outU1 );
@@ -461,15 +493,16 @@ SW_TEST_CASE( ArchiveTest, VarIntAndZigZagBoundaryEncoding )
     SW_EXPECT_EQUAL( u64Max, outU64Max );
 
     int64 outI0 = 99, outINeg1 = 99, outINeg2 = 99, outI63 = 99, outINeg64 = 99, outINeg128 = 99, outINeg32768 = 99, outINeg2Billion = 99, outINegLarge = 99;
-    SW_EXPECT_TRUE( readArch.readVarInt( outI0 ) );
-    SW_EXPECT_TRUE( readArch.readVarInt( outINeg1 ) );
-    SW_EXPECT_TRUE( readArch.readVarInt( outINeg2 ) );
-    SW_EXPECT_TRUE( readArch.readVarInt( outI63 ) );
-    SW_EXPECT_TRUE( readArch.readVarInt( outINeg64 ) );
-    SW_EXPECT_TRUE( readArch.readVarInt( outINeg128 ) );
-    SW_EXPECT_TRUE( readArch.readVarInt( outINeg32768 ) );
-    SW_EXPECT_TRUE( readArch.readVarInt( outINeg2Billion ) );
-    SW_EXPECT_TRUE( readArch.readVarInt( outINegLarge ) );
+    outI0           = readArch.readVarInt();
+    outINeg1        = readArch.readVarInt();
+    outINeg2        = readArch.readVarInt();
+    outI63          = readArch.readVarInt();
+    outINeg64       = readArch.readVarInt();
+    outINeg128      = readArch.readVarInt();
+    outINeg32768    = readArch.readVarInt();
+    outINeg2Billion = readArch.readVarInt();
+    outINegLarge    = readArch.readVarInt();
+    SW_EXPECT_FALSE( readArch.isError() );
 
     SW_EXPECT_EQUAL( i0, outI0 );
     SW_EXPECT_EQUAL( iNeg1, outINeg1 );
@@ -550,10 +583,10 @@ SW_TEST_CASE( ArchiveTest, PooledStringsReadBackThroughASavedPool )
     sw::Archive readArch( writeArch.getData(), writeArch.getSize() );
     SW_REQUIRE_TRUE( readArch.loadStringPool() );
     SW_EXPECT_EQUAL( size_t{ 2 }, readArch.getStringPool().getDynamicCount() );
-    sw::string first;
-    sw::string second;
-    sw::string third;
-    SW_REQUIRE_TRUE( readArch.readPooledString( first ) && readArch.readPooledString( second ) && readArch.readPooledString( third ) );
+    const sw::string first  = readArch.readPooledString();
+    const sw::string second = readArch.readPooledString();
+    const sw::string third  = readArch.readPooledString();
+    SW_REQUIRE_FALSE( readArch.isError() );
     SW_EXPECT_EQUAL( sw::string( "knight" ), first );
     SW_EXPECT_EQUAL( sw::string( "rogue" ), second );
     SW_EXPECT_EQUAL( sw::string( "knight" ), third );

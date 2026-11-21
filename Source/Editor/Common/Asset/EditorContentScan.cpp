@@ -22,8 +22,8 @@ namespace sw::editor
              */
             static bool isLeftoverScratch( string_view path )
             {
-                static const string s_leftoverFolder = FileUtil::joinPath( ProcessRoots::get()._content.str(), AssetPaths::kScratchDomain );
-                return FileUtil::isPathAtOrUnderRoot( s_leftoverFolder, path );
+                static const AbsolutePath s_leftoverFolder = ProcessRoots::get()._content.join( AssetPaths::kScratchDomain );
+                return FileUtil::isPathAtOrUnderRoot( s_leftoverFolder.str(), path );
             }
         };
     } // namespace

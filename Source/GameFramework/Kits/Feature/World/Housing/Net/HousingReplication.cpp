@@ -171,7 +171,8 @@ namespace sw
         edit._connectionID = context._connectionID;
         edit._requestID    = body.readVarUint32();
         edit._plotHash     = body.readVarUint();
-        if ( body.readEnum( Internal::kOpBits, edit._op ) == false )
+        edit._op           = body.readEnum<decltype( edit._op )>( Internal::kOpBits );
+        if ( body.hasOverflowed() )
             return NetHandleResult::Malformed;
         switch ( edit._op )
         {
@@ -719,18 +720,21 @@ namespace sw
         PendingOp op;
         op._kind     = OpKind::Delta;
         op._plotHash = body.readVarUint();
-        if ( body.readEnum( Internal::kOwnerBits, op._owner ) == false )
+        op._owner    = body.readEnum<decltype( op._owner )>( Internal::kOwnerBits );
+        if ( body.hasOverflowed() )
             return NetHandleResult::Malformed;
         op._funds           = body.readVarInt();
         op._nextPlacementID = body.readVarUint32();
         uint32 removedCount = 0;
-        if ( body.readCount( Internal::kMaxDeltaEntries, removedCount ) == false )
+        removedCount        = body.readCount( Internal::kMaxDeltaEntries );
+        if ( body.hasOverflowed() )
             return NetHandleResult::Malformed;
         op._listRemovedID.reserve( removedCount );
         for ( uint32 index = 0; index < removedCount && body.hasOverflowed() == false; ++index )
             op._listRemovedID.push_back( body.readVarUint32() );
         uint32 upsertCount = 0;
-        if ( body.readCount( Internal::kMaxDeltaEntries, upsertCount ) == false )
+        upsertCount        = body.readCount( Internal::kMaxDeltaEntries );
+        if ( body.hasOverflowed() )
             return NetHandleResult::Malformed;
         op._listUpsert.reserve( upsertCount );
         for ( uint32 index = 0; index < upsertCount; ++index )

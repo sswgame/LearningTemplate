@@ -144,26 +144,28 @@ namespace sw
         [[nodiscard]] bool readBool() { return readBits( 1 ) != 0; }
         /**
          * @brief `writeInt` 로 쓴 정수를 읽습니다.
-         * @return 비트가 모자라거나 읽은 단계가 범위를 넘으면 false 이고 @p outValue 는 그대로입니다. 범위를 넘은 단계도 깨진 데이터로 보고 `hasOverflowed` 를 세웁니다.
+         * @return 비트가 모자라거나 읽은 단계가 범위를 넘으면 @p minValue 이고 `hasOverflowed` 가 섭니다(범위를 넘은 단계도 깨진 데이터다).
+         * @details 한 값 읽기는 모두 값을 돌려준다 — 출력 인자 꼴은 반환 `bool` 을 버리면 실패를 잃었고 실패 때 출력 칸이 옛 값으로 남았다(`ByteReader` 와 같은 규칙).
+         *          실패는 끈적한 `hasOverflowed()` 하나로 본다. 되돌리는 도구 · 남은 옛 모양 검사는 `py -3 -m Scripts byte-reader-values`(린트 `cpp-shape` 규칙 13).
          */
-        [[nodiscard]] bool readInt( int32 minValue, int32 maxValue, int32& outValue );
-        uint32             readUint32() { return readBits( 32 ); }
+        [[nodiscard]] int32 readInt( int32 minValue, int32 maxValue );
+        uint32              readUint32() { return readBits( 32 ); }
         /**
          * @brief `writeFloat` 로 쓴 값을 읽습니다. 받은 데이터의 실수는 이것으로 읽습니다.
-         * @return 비트가 모자라거나 값이 NaN · 무한대면 false 이고 @p outValue 는 그대로입니다. 유한하지 않은 값도 깨진 데이터로 보고 `hasOverflowed` 를 세웁니다
+         * @return 비트가 모자라거나 값이 NaN · 무한대면 0 이고 `hasOverflowed` 가 섭니다. 유한하지 않은 값도 깨진 데이터다
          *         (NaN 은 비교가 모두 거짓이라 `x > 0` 같은 뒤의 검사를 빠져나가 상태에 퍼진다).
          */
-        [[nodiscard]] bool readFiniteFloat( float32& outValue );
+        [[nodiscard]] float32 readFiniteFloat();
         /**
          * @brief `writeFloat` 로 쓴 32 비트를 검사 없이 그대로 읽습니다(NaN · 무한대 포함). 비트가 모자라면 0 이고 `hasOverflowed` 가 섭니다.
          * @details 쓴 비트와 같은 비트가 필요한 곳(범위 없는 `FixedLayout` 필드, 범위를 따로 보는 `FixedCodecUtil::readBoundedFloat32`)만 씁니다.
          */
         [[nodiscard]] float32 readFloatBits();
-        /** @brief `writeQuantizedFloat` 로 쓴 값을 읽습니다. 실패 규칙은 `readInt` 와 같습니다. */
-        [[nodiscard]] bool readQuantizedFloat( float32 minValue, float32 maxValue, float32 resolution, float32& outValue );
-        /** @brief `writeQuantizedFloat3` 로 쓴 값을 x, y, z 순서로 읽습니다. 한 축이라도 실패하면 false 이고 @p outValue 는 그대로입니다. */
-        [[nodiscard]] bool readQuantizedFloat3( const float3& minValue, const float3& maxValue, float32 resolution, float3& outValue );
-        uint64             readVarUint();
+        /** @brief `writeQuantizedFloat` 로 쓴 값을 읽습니다. 실패하면 @p minValue 이고 `hasOverflowed` 가 섭니다(`readInt` 와 같은 규칙). */
+        [[nodiscard]] float32 readQuantizedFloat( float32 minValue, float32 maxValue, float32 resolution );
+        /** @brief `writeQuantizedFloat3` 로 쓴 값을 x, y, z 순서로 읽습니다. 한 축이라도 실패하면 @p minValue 이고 `hasOverflowed` 가 섭니다. */
+        [[nodiscard]] float3 readQuantizedFloat3( const float3& minValue, const float3& maxValue, float32 resolution );
+        uint64               readVarUint();
         /**
          * @brief `writeVarUint` 로 쓴 uint32 를 읽습니다. 값이 uint32 를 넘으면 잘라 읽지 않고 0 을 돌려주며 `hasOverflowed` 를 세웁니다.
          * @details `static_cast<uint32>( readVarUint() )` 는 2^32 + 5 를 5 로 받아들인다 — 쓰는 쪽은 uint32 만 쓰므로 넘친 값은 깨진 데이터다.
@@ -189,25 +191,24 @@ namespace sw
         [[nodiscard]] bool skipBlob( int32 maxSize );
         void               alignToByte();
         /**
-         * @brief 열거형 @p E 를 @p bitCount 비트로 읽습니다. `E::Count` 이상이면 false 이고 `hasOverflowed` 를 세웁니다(등록 밖 값은 깨진 데이터다).
-         * @details 손으로 쓰는 넷 본문이 `static_cast<E>( readBits( n ) )` 로 범위 밖 열거자를 들이던 자리입니다. @p outValue 는 성공했을 때만 바뀝니다.
+         * @brief 열거형 @p E 를 @p bitCount 비트로 읽습니다. `E::Count` 이상이거나 비트가 모자라면 0 번 열거자이고 `hasOverflowed` 가 섭니다(등록 밖 값은 깨진 데이터다).
+         * @details 손으로 쓰는 넷 본문이 `static_cast<E>( readBits( n ) )` 로 범위 밖 열거자를 들이던 자리입니다.
          */
         template <typename E>
-        [[nodiscard]] bool readEnum( int32 bitCount, E& outValue )
+        [[nodiscard]] E readEnum( int32 bitCount )
         {
             const uint32 raw = readBits( bitCount );
             if ( hasOverflowed() )
-                return false;
+                return E{};
             if ( raw >= static_cast<uint32>( E::Count ) )
             {
                 _bOverflow = SW_TRUE;
-                return false;
+                return E{};
             }
-            outValue = static_cast<E>( raw );
-            return true;
+            return static_cast<E>( raw );
         }
-        /** @brief `writeVarUint` 로 쓴 개수를 읽습니다. @p maxCount 를 넘으면 false 이고 `hasOverflowed` 를 세웁니다(받은 수를 믿고 잡지 않는다). */
-        [[nodiscard]] bool readCount( uint32 maxCount, uint32& outCount );
+        /** @brief `writeVarUint` 로 쓴 개수를 읽습니다. @p maxCount 를 넘으면 0 이고 `hasOverflowed` 가 섭니다(받은 수를 믿고 잡지 않는다). */
+        [[nodiscard]] uint32 readCount( uint32 maxCount );
         /**
          * @brief 본문을 다 읽었는지 봅니다. 넘쳤거나, 8 비트 이상 남았거나, 마지막 채움 비트가 0 이 아니면 false 이고 `hasOverflowed` 를 세웁니다.
          * @details 고정 배치형 본문의 남는 비트 규칙(`FixedReadResult::TrailingData`)과 같다 — 손 본문도 끝에서 부른다.

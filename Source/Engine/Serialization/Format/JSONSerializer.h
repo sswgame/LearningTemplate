@@ -92,8 +92,8 @@ namespace sw
         [[nodiscard]] static expected<string> serializeVersioned( uint32 version, const void* pInstance, const TypeInfo& typeInfo,
                                                                   const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring ) );
 
-        /** @brief 버전을 읽고 soft 역직렬화합니다. 판이 @p currentVersion 과 다르면 이관하지 않고 false 입니다(정확 일치). */
-        [[nodiscard]] static bool deserializeVersioned( uint32& outVersion, void* pInstance, const TypeInfo& typeInfo, string_view jsonStr,
+        /** @brief 버전을 읽고 soft 역직렬화합니다. 판이 @p currentVersion 과 다르면 이관하지 않고 false 입니다(정확 일치). 읽은 판은 돌려주지 않는다(성공이면 @p currentVersion). */
+        [[nodiscard]] static bool deserializeVersioned( void* pInstance, const TypeInfo& typeInfo, string_view jsonStr,
                                                         uint32                  currentVersion = 0,
                                                         const SerializeContext& context        = SerializeContext::getDefault( SerializePurpose::Authoring ) );
     };

@@ -33,6 +33,22 @@ namespace sw
          */
         [[nodiscard]] static optional<AbsolutePath> tryResolve( string_view text, const AbsolutePath& baseDirectory );
 
+        /**
+         * @brief 이 경로 아래 @p relative 를 이은 경로입니다(언리얼 `FPaths::Combine` · `operator/` 자리) — 글로 잇고 다시 `toDiskPath` 로 올리는 왕복이 없다.
+         * @details 구분자는 `/` 로 맞추고 이 경로의 끝 구분자 · @p relative 의 앞뒤 구분자 · 빈 구간 · `.` 구간은 버린다. `..` 구간은 이은 부분 안에서만 풀고,
+         *          이 경로 위로 올라가면(상위 탈출) 빈 경로다 — 그 값을 받은 I/O 는 실패한다(폴백 없음). 결과는 포함 판정이 밖으로 보는 `..` 를 담지 않는다.
+         *          빈 경로에 이으면 빈 경로, @p relative 가 비면 이 경로(끝 구분자를 뗀)다. 할당은 결과 하나다.
+         */
+        [[nodiscard]] AbsolutePath join( string_view relative ) const;
+        /** @brief 부모 폴더입니다. 끝 구분자는 무시하고, 부모가 뿌리면 뿌리(`/a` → `/`, `C:/a` → `C:/`), 뿌리 자신의 부모는 빈 경로입니다(`FileUtil::getDirectoryPart` 와 같은 규칙). */
+        [[nodiscard]] AbsolutePath getParent() const;
+        /**
+         * @brief 마지막 성분 끝에 @p suffix 를 붙인 경로입니다(`a/b.png` + `.meta` → `a/b.png.meta` — 곁 파일 · 기록 파일 이름).
+         * @details 글로 꺼내 붙이고 `toDiskPath` 로 다시 올리는 왕복 대신 쓴다(할당은 결과 하나). @p suffix 가 구분자 · 널을 담거나 이 경로가 비었거나 끝이 구분자면(뿌리 · 폴더 표기) 빈 경로다
+         *          — 성분을 바꾸는 일은 `join` · `getParent` 가 맡는다. 언리얼 `FPaths` 의 이름 붙이기 · `std::filesystem::path::operator+=` 와 같은 자리다.
+         */
+        [[nodiscard]] AbsolutePath appendSuffix( string_view suffix ) const;
+
         /** @brief 경로 글입니다(구분자 `/`). */
         [[nodiscard]] const string& str() const { return _path; }
         [[nodiscard]] const utf8*   c_str() const { return _path.c_str(); }

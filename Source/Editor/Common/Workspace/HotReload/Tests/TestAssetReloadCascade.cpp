@@ -98,8 +98,8 @@ SW_TEST_CASE( AssetReloadCascadeTest, ParentChangeReloadsLoadedChildWithNewValue
     const sw::test::EditorScratchDomain domain;
     const sw::string                    parentID = sw::test::EditorScratchDomain::makeID( "parent.material" );
     const sw::string                    childID  = sw::test::EditorScratchDomain::makeID( "child.material" );
-    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::toDiskPath( domain.makeDiskPath( "parent.material" ) ), makeMaterialText( "Parent", {}, "0.5" ) ) );
-    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::toDiskPath( domain.makeDiskPath( "child.material" ) ), makeMaterialText( "Child", parentID, nullptr ) ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( domain.makeDiskPath( "parent.material" ), makeMaterialText( "Parent", {}, "0.5" ) ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( domain.makeDiskPath( "child.material" ), makeMaterialText( "Child", parentID, nullptr ) ) );
 
     sw::shared_ptr<sw::Material> child = sw::Material::create();
     SW_REQUIRE_TRUE( child->loadFromAsset( sw::AssetID{ childID } ) );
@@ -109,7 +109,7 @@ SW_TEST_CASE( AssetReloadCascadeTest, ParentChangeReloadsLoadedChildWithNewValue
     buildIndex( index, {
                            { childID.c_str(), parentID.c_str() }
     } );
-    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::toDiskPath( domain.makeDiskPath( "parent.material" ) ), makeMaterialText( "Parent", {}, "0.9" ) ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( domain.makeDiskPath( "parent.material" ), makeMaterialText( "Parent", {}, "0.9" ) ) );
     SW_EXPECT_EQUAL( sw::string( "0.5" ), readRoughness( *child ) ); // 다시 읽기 전에는 옛 부모 값이다
 
     sw::vector<sw::string> listOrder;

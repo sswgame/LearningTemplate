@@ -16,24 +16,24 @@ using namespace sw::editor;
  */
 SW_TEST_CASE( VFXPreviewViewModelTest, ContentHashDetectsASave )
 {
-    const string path = test::makeScratchPath( "fire.vfx.xml" );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( path ), "<VFXEffectDef />" ) );
+    const AbsolutePath path = test::makeScratchPath( "fire.vfx.xml" );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( path, "<VFXEffectDef />" ) );
     uint64 hash = 0;
-    SW_EXPECT_TRUE( VFXPreviewViewModel::updateContentHash( path, hash ) );
-    SW_EXPECT_FALSE( VFXPreviewViewModel::updateContentHash( path, hash ) );
+    SW_EXPECT_TRUE( VFXPreviewViewModel::updateContentHash( path.str(), hash ) );
+    SW_EXPECT_FALSE( VFXPreviewViewModel::updateContentHash( path.str(), hash ) );
 
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( path ), "<VFXEffectDef _note=\"saved by the catalog editor\" />" ) );
-    SW_EXPECT_TRUE( VFXPreviewViewModel::updateContentHash( path, hash ) );
-    SW_EXPECT_FALSE( VFXPreviewViewModel::updateContentHash( path, hash ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( path, "<VFXEffectDef _note=\"saved by the catalog editor\" />" ) );
+    SW_EXPECT_TRUE( VFXPreviewViewModel::updateContentHash( path.str(), hash ) );
+    SW_EXPECT_FALSE( VFXPreviewViewModel::updateContentHash( path.str(), hash ) );
 
     // 같은 크기 — 같은 틱이면 (크기, 쓰기 시각) 도장이 같다.
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( path ), "<VFXEffectDef _note=\"saved by the catalog editoR\" />" ) );
-    SW_EXPECT_TRUE( VFXPreviewViewModel::updateContentHash( path, hash ) );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( path ), "<VFXEffectDef _note=\"saved by the catalog editoR\" />" ) );
-    SW_EXPECT_FALSE( VFXPreviewViewModel::updateContentHash( path, hash ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( path, "<VFXEffectDef _note=\"saved by the catalog editoR\" />" ) );
+    SW_EXPECT_TRUE( VFXPreviewViewModel::updateContentHash( path.str(), hash ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( path, "<VFXEffectDef _note=\"saved by the catalog editoR\" />" ) );
+    SW_EXPECT_FALSE( VFXPreviewViewModel::updateContentHash( path.str(), hash ) );
 
     // 없는 파일의 해시는 0(못 읽음)이다 — 스트림 해시(ContentHash::computeFileStream)는 크기를 조용히 물어 로그 없이 NotFound 값을 돌려준다.
-    SW_EXPECT_FALSE( VFXPreviewViewModel::updateContentHash( test::makeScratchPath( "missing.vfx.xml" ), hash ) );
+    SW_EXPECT_FALSE( VFXPreviewViewModel::updateContentHash( test::makeScratchPath( "missing.vfx.xml" ).str(), hash ) );
 }
 
 /** @brief [VFXPreviewViewModelTest] 격리는 토글이다 — 한 방출기만 켜고, 같은 방출기를 다시 누르거나 음수면 모두 켠다 */

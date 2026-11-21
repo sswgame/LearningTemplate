@@ -54,14 +54,14 @@ namespace sw
              *          @p sink 가 false 면 Unreadable 로 멈춘다. @p outPayloadHash 는 머리에 적힌 본문 해시다. 로그를 남기지 않는다.
              */
             template <typename SinkFn>
-            [[nodiscard]] static DerivedDataEntryState scanEntry( string_view path, string_view keyDescription, SinkFn&& sink, uint64& outPayloadHash )
+            [[nodiscard]] static DerivedDataEntryState scanEntry( const AbsolutePath& path, string_view keyDescription, SinkFn&& sink, uint64& outPayloadHash )
             {
                 outPayloadHash = 0;
-                if ( FileUtil::isRegularFile( FileUtil::toDiskPath( path ) ) == false )
+                if ( FileUtil::isRegularFile( path ) == false )
                     return DerivedDataEntryState::Missing;
                 const size_t  headSize = kEntryHeaderSize + keyDescription.size();
                 vector<uint8> chunk;
-                if ( FileUtil::readFile( FileUtil::toDiskPath( path ), chunk, 0, headSize ) == false )
+                if ( FileUtil::readFile( path, chunk, 0, headSize ) == false )
                     return DerivedDataEntryState::Unreadable;
                 const string_view text{ reinterpret_cast<const char*>( chunk.data() ), chunk.size() };
                 const string_view header          = DerivedDataCache::kEntryHeader;
@@ -80,7 +80,7 @@ namespace sw
                 uint64 state = ContentHash::kInitialState;
                 for ( uint64 offset = headSize;; )
                 {
-                    if ( FileUtil::readFile( FileUtil::toDiskPath( path ), chunk, offset, ContentHash::kStreamChunkBytes ) == false )
+                    if ( FileUtil::readFile( path, chunk, offset, ContentHash::kStreamChunkBytes ) == false )
                         return DerivedDataEntryState::Unreadable;
                     state = ContentHash::appendBytes( state, chunk.data(), chunk.size() );
                     if ( chunk.empty() == false && sink( chunk.data(), chunk.size() ) == false )
@@ -93,7 +93,7 @@ namespace sw
             }
 
             /** @brief 찾기에서 본 항목 상태를 알립니다 — 없으면 조용히, 그 밖의 미스는 이유를 남깁니다. Valid 면 true 입니다. */
-            [[nodiscard]] static bool reportEntry( const string& path, DerivedDataEntryState state )
+            [[nodiscard]] static bool reportEntry( const AbsolutePath& path, DerivedDataEntryState state )
             {
                 switch ( state )
                 {
@@ -102,30 +102,30 @@ namespace sw
                     case DerivedDataEntryState::Missing:
                         return false;
                     case DerivedDataEntryState::Unreadable:
-                        SW_LOG_WARNING_ID( "DDC.EntryUnreadable", "DDC entry '%#' cannot be read - treated as a miss", path );
+                        SW_LOG_WARNING_ID( "DDC.EntryUnreadable", "DDC entry '%#' cannot be read - treated as a miss", path.str() );
                         return false;
                     case DerivedDataEntryState::InvalidFormat:
                         // 옛 형식 항목(형식을 올린 뒤 한 번)이 대부분이라 정보 로그다 — 다시 구우면 새 형식으로 덮인다.
-                        SW_LOG_INFO_ID( "DDC.EntryInvalid", "DDC entry '%#' is not a '%#' entry - treated as a miss", path, DerivedDataCache::kEntryHeader );
+                        SW_LOG_INFO_ID( "DDC.EntryInvalid", "DDC entry '%#' is not a '%#' entry - treated as a miss", path.str(), DerivedDataCache::kEntryHeader );
                         return false;
                     case DerivedDataEntryState::KeyCollision:
-                        SW_LOG_WARNING_ID( "DDC.KeyCollision", "DDC entry '%#' was written for another job with the same key - treated as a miss", path );
+                        SW_LOG_WARNING_ID( "DDC.KeyCollision", "DDC entry '%#' was written for another job with the same key - treated as a miss", path.str() );
                         return false;
                     case DerivedDataEntryState::PayloadCorrupt:
-                        SW_LOG_WARNING_ID( "DDC.PayloadCorrupt", "DDC entry '%#' does not match its payload hash - treated as a miss", path );
+                        SW_LOG_WARNING_ID( "DDC.PayloadCorrupt", "DDC entry '%#' does not match its payload hash - treated as a miss", path.str() );
                         return false;
                 }
                 return false;
             }
 
             /** @brief 히트한 항목의 쓰기 시각을 지금으로 올립니다(정리의 "마지막 사용" — 언리얼 파일 DDC 의 touch). 하루 안에 올린 항목은 건너뛴다(히트마다 메타데이터를 쓰지 않게). */
-            static void touchEntry( const DerivedDataLayer& layer, const string& path )
+            static void touchEntry( const DerivedDataLayer& layer, const AbsolutePath& path )
             {
                 constexpr int64 kTouchIntervalTicks = constant::time::kSecondsPerDay * FileUtil::kFileTimeTicksPerSecond;
                 const int64     now                 = FileUtil::getCurrentFileWriteTime();
                 int64           writeTicks          = 0;
-                if ( layer._evictionPolicy.has_value() && FileUtil::getFileWriteTime( FileUtil::toDiskPath( path ), writeTicks ) && now - writeTicks > kTouchIntervalTicks )
-                    (void)FileUtil::setFileWriteTime( FileUtil::toDiskPath( path ), now ); // 실패는 setFileWriteTime 이 알린다 — 히트를 무르지 않는다(다음 정리에 일찍 지워질 뿐)
+                if ( layer._evictionPolicy.has_value() && FileUtil::getFileWriteTime( path, writeTicks ) && now - writeTicks > kTouchIntervalTicks )
+                    (void)FileUtil::setFileWriteTime( path, now ); // 실패는 setFileWriteTime 이 알린다 — 히트를 무르지 않는다(다음 정리에 일찍 지워질 뿐)
             }
 
             /** @brief 파일 @p sourcePath 를 조각으로 @p writer 끝에 붙입니다(한 벡터로 들지 않는다). */
@@ -149,7 +149,7 @@ namespace sw
              *          같은 항목인지는 본문까지 본다 — 결정적이지 않은 생산자의 새 바이트는 덮어써야 기록과 맞는다.
              */
             template <typename AppendPayloadFn>
-            [[nodiscard]] static bool writeEntry( const string& path, string_view keyDescription, uint64 payloadHash, AppendPayloadFn&& appendPayload )
+            [[nodiscard]] static bool writeEntry( const AbsolutePath& path, string_view keyDescription, uint64 payloadHash, AppendPayloadFn&& appendPayload )
             {
                 const auto isSameEntry = [&]()
                 {
@@ -163,12 +163,12 @@ namespace sw
                 const string     head = makeEntryHead( keyDescription, payloadHash );
                 AtomicFileWriter writer;
                 FileWriteResult  result = FileWriteResult::WriteFailed;
-                if ( FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( path ) ) && writer.open( path ).has_value() &&
+                if ( FileUtil::ensureParentDirectoryExists( path ) && writer.open( path ).has_value() &&
                      writer.append( reinterpret_cast<const uint8*>( head.data() ), head.size() ).has_value() && appendPayload( writer ) )
                     result = writer.tryCommit();
                 if ( result == FileWriteResult::Written || ( result == FileWriteResult::ReplaceFailed && isSameEntry() ) )
                     return true;
-                SW_LOG_WARNING_ID( "DDC.EntryNotWritten", "DDC entry '%#' could not be written (%#) - the next run cooks or imports it again", path,
+                SW_LOG_WARNING_ID( "DDC.EntryNotWritten", "DDC entry '%#' could not be written (%#) - the next run cooks or imports it again", path.str(),
                                    result == FileWriteResult::ReplaceFailed ? "replace lost to a different entry" : "refused or write failed" );
                 return false;
             }
@@ -297,20 +297,20 @@ namespace sw
     {
     }
 
-    string DerivedDataCache::makeLocalRootPath()
+    AbsolutePath DerivedDataCache::makeLocalRootPath()
     {
-        return FileUtil::joinPath( ProcessRoots::get()._derivedData.str(), "DDC" );
+        return ProcessRoots::get()._derivedData.join( "DDC" );
     }
 
     expected<DerivedDataCache> DerivedDataCache::loadFromConfig()
     {
-        const string path = FileUtil::joinPath( ProcessRoots::get()._project.str(), kConfigFile );
-        JSONDocument document;
-        if ( document.loadFromFile( path ) == false )
-            return unexpected( Error{ ErrorKind::NotFound, "the DDC layer config could not be read", path } );
+        const AbsolutePath path = ProcessRoots::get()._project.join( kConfigFile );
+        JSONDocument       document;
+        if ( document.loadFromFile( path.str() ) == false )
+            return unexpected( Error{ ErrorKind::NotFound, "the DDC layer config could not be read", path.str() } );
         const JSONValue layers = document.getRoot().get( "_listLayer" );
         if ( layers.isArray() == false || layers.size() == 0 )
-            return unexpected( Error{ ErrorKind::InvalidArgument, "the DDC layer config needs a non-empty _listLayer array", path } );
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the DDC layer config needs a non-empty _listLayer array", path.str() } );
         vector<DerivedDataLayer> listLayer;
         for ( size_t index = 0; index < layers.size(); ++index )
         {
@@ -322,26 +322,27 @@ namespace sw
             const bool             bAccessKnown = access.has_value() && ( *access == "ReadOnly" || *access == "ReadWrite" );
             // 폴더와 환경 변수 중 정확히 하나 — 둘 다 적으면 어느 쪽이 이기는지가 숨은 규칙이 된다.
             if ( name.has_value() == false || root.has_value() == false || environment.has_value() == false || bAccessKnown == false || root->empty() == environment->empty() )
-                return unexpected( Error{ ErrorKind::InvalidArgument, "a DDC layer needs _name, _access (ReadOnly or ReadWrite) and exactly one of _root or _rootEnvironment", path } );
-            DerivedDataLayer layer;
-            layer._access = *access == "ReadWrite" ? DerivedDataAccess::ReadWrite : DerivedDataAccess::ReadOnly;
-            if ( layer._access == DerivedDataAccess::ReadWrite )
+                return unexpected( Error{ ErrorKind::InvalidArgument, "a DDC layer needs _name, _access (ReadOnly or ReadWrite) and exactly one of _root or _rootEnvironment", path.str() } );
+            const DerivedDataAccess             layerAccess = *access == "ReadWrite" ? DerivedDataAccess::ReadWrite : DerivedDataAccess::ReadOnly;
+            optional<DerivedDataEvictionPolicy> evictionPolicy;
+            if ( layerAccess == DerivedDataAccess::ReadWrite )
             {
                 // 쓰는 층은 정리 규칙이 필수다 — 없으면 쿠킹 팩 항목이 코드 지문마다 쌓여 디스크를 채운다(2026-11-19 로컬 111 GB).
                 const optional<uint32> ageDays = entry.readRequired<uint32>( "_unusedFileAgeDays" );
                 const optional<uint32> maxGB   = entry.readRequired<uint32>( "_maxSizeGB" );
                 if ( ageDays.has_value() == false || maxGB.has_value() == false || *ageDays == 0 || *maxGB == 0 )
-                    return unexpected( Error{ ErrorKind::InvalidArgument, "a ReadWrite DDC layer needs _unusedFileAgeDays and _maxSizeGB of at least 1", path } );
-                layer._evictionPolicy = DerivedDataEvictionPolicy{ *ageDays, uint64{ *maxGB } * constant::memory::kBytesPerGigabyte };
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "a ReadWrite DDC layer needs _unusedFileAgeDays and _maxSizeGB of at least 1", path.str() } );
+                evictionPolicy = DerivedDataEvictionPolicy{ *ageDays, uint64{ *maxGB } * constant::memory::kBytesPerGigabyte };
             }
-            if ( root->empty() == false )
-                layer._rootPath = FileUtil::joinPath( ProcessRoots::get()._derivedData.str(), *root );
-            else if ( ProcessEnvironment::tryReadNonEmpty( *environment, layer._rootPath ) == false )
+            string environmentRoot;
+            if ( root->empty() && ProcessEnvironment::tryReadNonEmpty( *environment, environmentRoot ) == false )
             {
                 SW_LOG_INFO_ID( "DDC.SharedLayerOff", "DDC layer '%#' is off - environment variable %# is not set", *name, *environment );
                 continue;
             }
-            listLayer.push_back( std::move( layer ) );
+            // 환경 변수는 머신마다 다른 절대 경로다 — 상대 글이면 toDiskPath 가 오류를 남기고 빈 경로라 그 층의 I/O 가 실패한다(폴백 없음).
+            AbsolutePath rootPath = root->empty() ? FileUtil::toDiskPath( environmentRoot ) : ProcessRoots::get()._derivedData.join( *root );
+            listLayer.push_back( DerivedDataLayer{ std::move( rootPath ), layerAccess, std::move( evictionPolicy ) } );
         }
         return DerivedDataCache{ std::move( listLayer ) };
     }
@@ -358,11 +359,11 @@ namespace sw
         const int64 now          = FileUtil::getCurrentFileWriteTime();
         for ( const DerivedDataLayer& layer : _listLayer )
         {
-            if ( layer._evictionPolicy.has_value() == false || FileUtil::isDirectory( FileUtil::toDiskPath( layer._rootPath ) ) == false )
+            if ( layer._evictionPolicy.has_value() == false || FileUtil::isDirectory( layer._rootPath ) == false )
                 continue;
             vector<Entry> listEntry;
             uint64        totalBytes = 0;
-            const bool    bScanned   = FileUtil::forEachDirectoryEntry( FileUtil::toDiskPath( layer._rootPath ), true, [&]( const DirectoryEntry& entry )
+            const bool    bScanned   = FileUtil::forEachDirectoryEntry( layer._rootPath, true, [&]( const DirectoryEntry& entry )
                  {
                 FileStamp stamp;
                 if ( entry._bDirectory == false && FileUtil::getFileStamp( FileUtil::toDiskPath( entry._path ), stamp ) )
@@ -392,24 +393,24 @@ namespace sw
                 ++removed;
             }
             if ( removed > 0 )
-                SW_LOG_INFO_ID( "DDC.EntriesEvicted", "DDC '%#': removed %# entries (%# MB) unused for %# days or over the %# GB limit - %# MB kept", layer._rootPath, removed,
+                SW_LOG_INFO_ID( "DDC.EntriesEvicted", "DDC '%#': removed %# entries (%# MB) unused for %# days or over the %# GB limit - %# MB kept", layer._rootPath.str(), removed,
                                 freedBytes / constant::memory::kBytesPerMegabyte, layer._evictionPolicy->_unusedFileAgeDays, layer._evictionPolicy->_maxSizeBytes / constant::memory::kBytesPerGigabyte, totalBytes / constant::memory::kBytesPerMegabyte );
             removedTotal += removed;
         }
         return removedTotal;
     }
 
-    string DerivedDataCache::makePath( size_t layerIndex, uint64 key ) const
+    AbsolutePath DerivedDataCache::makePath( size_t layerIndex, uint64 key ) const
     {
         const string hex = CookRecordInternal::toHex( key );
-        return FileUtil::joinPath( FileUtil::joinPath( _listLayer[layerIndex]._rootPath, hex.substr( 0, 2 ) ), hex );
+        return _listLayer[layerIndex]._rootPath.join( string_view( hex ).substr( 0, 2 ) ).join( hex );
     }
 
     bool DerivedDataCache::find( uint64 key, string_view keyDescription, vector<uint8>& outBytes ) const
     {
         for ( size_t layerIndex = 0; layerIndex < _listLayer.size(); ++layerIndex )
         {
-            const string path = makePath( layerIndex, key );
+            const AbsolutePath path = makePath( layerIndex, key );
             if ( CookRecordInternal::reportEntry( path, validateEntry( path, keyDescription, outBytes ) ) == false )
                 continue;
             CookRecordInternal::touchEntry( _listLayer[layerIndex], path );
@@ -421,7 +422,7 @@ namespace sw
                                      CookRecordInternal::writeEntry( makePath( fillIndex, key ), keyDescription, payloadHash, [&]( AtomicFileWriter& writer )
                 { return writer.append( outBytes.data(), outBytes.size() ).has_value(); } );
                 if ( bFilled == false )
-                    SW_LOG_WARNING_ID( "DDC.FillFailed", "DDC: could not fill '%#' from a later layer", makePath( fillIndex, key ) );
+                    SW_LOG_WARNING_ID( "DDC.FillFailed", "DDC: could not fill '%#' from a later layer", makePath( fillIndex, key ).str() );
             }
             return true;
         }
@@ -433,12 +434,13 @@ namespace sw
     {
         for ( size_t layerIndex = 0; layerIndex < _listLayer.size(); ++layerIndex )
         {
-            const string path = makePath( layerIndex, key );
-            if ( FileUtil::isRegularFile( FileUtil::toDiskPath( path ) ) == false )
+            const AbsolutePath path = makePath( layerIndex, key );
+            if ( FileUtil::isRegularFile( path ) == false )
                 continue;
             // 출력은 임시 파일에 흘려 쓰고 본문 해시가 맞을 때만 바꿔 끼운다 — 어긋난 항목이 출력 자리를 건드리지 않는다.
-            AtomicFileWriter writer;
-            if ( FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( outputPath ) ) == false || writer.open( outputPath ).has_value() == false )
+            AtomicFileWriter   writer;
+            const AbsolutePath outputDiskPath = FileUtil::toDiskPath( outputPath );
+            if ( FileUtil::ensureParentDirectoryExists( outputDiskPath ) == false || writer.open( outputDiskPath ).has_value() == false )
             {
                 SW_LOG_WARNING_ID( "DDC.OutputNotWritable", "DDC: cannot write '%#' from the cache - treated as a miss", outputPath );
                 return false;
@@ -458,7 +460,7 @@ namespace sw
                                      CookRecordInternal::writeEntry( makePath( fillIndex, key ), keyDescription, payloadHash, [&]( AtomicFileWriter& fillWriter )
                 { return CookRecordInternal::appendFile( fillWriter, outputPath ); } );
                 if ( bFilled == false )
-                    SW_LOG_WARNING_ID( "DDC.FillFailed", "DDC: could not fill '%#' from a later layer", makePath( fillIndex, key ) );
+                    SW_LOG_WARNING_ID( "DDC.FillFailed", "DDC: could not fill '%#' from a later layer", makePath( fillIndex, key ).str() );
             }
             return true;
         }
@@ -500,7 +502,7 @@ namespace sw
         return bAllWritten;
     }
 
-    DerivedDataEntryState DerivedDataCache::validateEntry( string_view path, string_view keyDescription, vector<uint8>& outBytes )
+    DerivedDataEntryState DerivedDataCache::validateEntry( const AbsolutePath& path, string_view keyDescription, vector<uint8>& outBytes )
     {
         outBytes.clear();
         uint64                      payloadHash = 0;

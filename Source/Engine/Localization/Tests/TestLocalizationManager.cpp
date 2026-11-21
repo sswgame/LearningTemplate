@@ -112,7 +112,7 @@ SW_TEST_CASE( LocalizationManagerTest, NonSingletonIndependence )
 SW_TEST_CASE( LocalizationManagerTest, ProjectCultureChainSkipsStaleAndReviewTranslations )
 {
     const ScopedScratchDomain domain;
-    const sw::string          projectPath = Internal::writeSampleProject( domain.getFolder() );
+    const sw::string          projectPath = Internal::writeSampleProject( domain.getFolder().str() );
 
     sw::LocalizationManager loc;
     SW_REQUIRE_TRUE( LocalizationTestUtil::loadEngineCultures( loc ) );
@@ -149,7 +149,7 @@ SW_TEST_CASE( LocalizationManagerTest, MissingKeysAreReportedOnce )
 
     const ScopedScratchDomain domain;
     sw::LocalizationManager   loc;
-    SW_REQUIRE_TRUE( loc.mountProject( ScopedScratchDomain::toID( Internal::writeSampleProject( domain.getFolder() ) ), sw::LocalizationScope::Game ) );
+    SW_REQUIRE_TRUE( loc.mountProject( ScopedScratchDomain::toID( Internal::writeSampleProject( domain.getFolder().str() ) ), sw::LocalizationScope::Game ) );
     SW_EXPECT_LOG( "Localization.MissingKey" );
     SW_EXPECT_EQUAL( sw::string( "ui.unknown" ), Internal::text( loc.getString( sw::hashed_string( "ui.unknown" ) ) ) );
     SW_EXPECT_EQUAL( sw::string( "ui.unknown" ), Internal::text( loc.getString( sw::hashed_string( "ui.unknown" ) ) ) );
@@ -189,8 +189,8 @@ SW_TEST_CASE( LocalizationManagerTest, UnknownPropertiesInTablesAreLoadErrors )
 SW_TEST_CASE( LocalizationManagerTest, ReloadChangedFilePicksUpNewTextAndKeepsOldOnError )
 {
     const ScopedScratchDomain domain;
-    const sw::string          folder      = domain.getFolder();
-    const sw::string          projectPath = Internal::writeSampleProject( folder );
+    const sw::AbsolutePath    folder      = domain.getFolder();
+    const sw::string          projectPath = Internal::writeSampleProject( folder.str() );
 
     sw::LocalizationManager loc;
     SW_REQUIRE_TRUE( loc.mountProject( ScopedScratchDomain::toID( projectPath ), sw::LocalizationScope::Game ) );
@@ -203,8 +203,8 @@ SW_TEST_CASE( LocalizationManagerTest, ReloadChangedFilePicksUpNewTextAndKeepsOl
     { ++notifiedCount; } );
     const uint32           revisionBefore = loc.getTextRevision();
 
-    LocalizationTestUtil::writeTranslation( folder, "ko", R"("ui.title": { "text": "수수께끼 섬" })" );
-    const sw::AssetID changedID = ScopedScratchDomain::toID( sw::FileUtil::joinPath( folder, "ko.translation.xml" ) );
+    LocalizationTestUtil::writeTranslation( folder.str(), "ko", R"("ui.title": { "text": "수수께끼 섬" })" );
+    const sw::AssetID changedID = ScopedScratchDomain::toID( sw::FileUtil::joinPath( folder.str(), "ko.translation.xml" ) );
     SW_EXPECT_TRUE( loc.isProjectFile( changedID.view() ) );
     SW_EXPECT_TRUE( loc.reloadChangedFile( changedID.view() ) == sw::ReloadResult::Reloaded );
     SW_EXPECT_EQUAL( sw::string( "수수께끼 섬" ), Internal::text( loc.getString( sw::hashed_string( "ui.title" ) ) ) );
@@ -213,7 +213,7 @@ SW_TEST_CASE( LocalizationManagerTest, ReloadChangedFilePicksUpNewTextAndKeepsOl
     SW_EXPECT_EQUAL( uint32( 1 ), notifiedCount );
 
     // 깨진 파일 — 다시 읽지 않고 예전 글을 지킨다.
-    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::toDiskPath( sw::FileUtil::joinPath( folder, "ko.translation.xml" ) ), "<TranslationTable culture=\"ko\"><entries>" ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( folder.join( "ko.translation.xml" ), "<TranslationTable culture=\"ko\"><entries>" ) );
     SW_EXPECT_LOG( "Xml.ParseError" );
     SW_EXPECT_LOG( "Localization.TranslationNotLoaded" );
     SW_EXPECT_LOG( "Localization.ReloadFailed" );
@@ -230,17 +230,17 @@ SW_TEST_CASE( LocalizationManagerTest, ReloadChangedFilePicksUpNewTextAndKeepsOl
 SW_TEST_CASE( LocalizationManagerTest, UnmountingGameProjectsKeepsEngineStrings )
 {
     const ScopedScratchDomain domain;
-    const sw::string          engineFolder = domain.makeDiskPath( "engine" );
-    const sw::string          gameFolder   = domain.makeDiskPath( "game" );
-    const sw::string          enginePath   = sw::FileUtil::joinPath( engineFolder, "engine.locproject.xml" );
-    SW_REQUIRE_TRUE( sw::FileUtil::ensureDirectoryExists( sw::FileUtil::toDiskPath( engineFolder ) ) );
-    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::toDiskPath( enginePath ), R"(<LocalizationProject name="engineTest" sourceCulture="en"><stringTables><item>e.strings.xml</item></stringTables></LocalizationProject>)" ) );
-    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::toDiskPath( sw::FileUtil::joinPath( engineFolder, "e.strings.xml" ) ), R"(<SourceStringTable culture="en"><entries><entry key="e.key" source="Engine" /></entries></SourceStringTable>)" ) );
-    LocalizationTestUtil::writeSourceTable( gameFolder, "en", R"("g.key": { "source": "Game" })" );
+    const sw::AbsolutePath    engineFolder = domain.makeDiskPath( "engine" );
+    const sw::AbsolutePath    gameFolder   = domain.makeDiskPath( "game" );
+    const sw::AbsolutePath    enginePath   = engineFolder.join( "engine.locproject.xml" );
+    SW_REQUIRE_TRUE( sw::FileUtil::ensureDirectoryExists( engineFolder ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( enginePath, R"(<LocalizationProject name="engineTest" sourceCulture="en"><stringTables><item>e.strings.xml</item></stringTables></LocalizationProject>)" ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( engineFolder.join( "e.strings.xml" ), R"(<SourceStringTable culture="en"><entries><entry key="e.key" source="Engine" /></entries></SourceStringTable>)" ) );
+    LocalizationTestUtil::writeSourceTable( gameFolder.str(), "en", R"("g.key": { "source": "Game" })" );
 
     sw::LocalizationManager loc;
-    SW_REQUIRE_TRUE( loc.mountProject( ScopedScratchDomain::toID( enginePath ), sw::LocalizationScope::Engine ) );
-    SW_REQUIRE_TRUE( loc.mountProject( ScopedScratchDomain::toID( LocalizationTestUtil::writeProject( gameFolder, "en", "[]" ) ), sw::LocalizationScope::Game ) );
+    SW_REQUIRE_TRUE( loc.mountProject( ScopedScratchDomain::toID( enginePath.str() ), sw::LocalizationScope::Engine ) );
+    SW_REQUIRE_TRUE( loc.mountProject( ScopedScratchDomain::toID( LocalizationTestUtil::writeProject( gameFolder.str(), "en", "[]" ) ), sw::LocalizationScope::Game ) );
     SW_EXPECT_EQUAL( sw::string( "Game" ), Internal::text( loc.getString( sw::hashed_string( "g.key" ) ) ) );
 
     loc.unmountProjects( sw::LocalizationScope::Game );
@@ -290,7 +290,7 @@ SW_TEST_CASE( LocalizationManagerTest, LanguageChangedCallbackNotification )
  */
 SW_TEST_CASE_F( LocalizationManagerEngineTest, InitializeMountsTheGameProject )
 {
-    const sw::string projectPath = Internal::writeSampleProject( _domain.getFolder() );
+    const sw::string projectPath = Internal::writeSampleProject( _domain.getFolder().str() );
 
     SW_REQUIRE_TRUE( _loc.initialize( ScopedScratchDomain::toID( projectPath ), "ko_KR", "en_US" ) );
     SW_EXPECT_EQUAL( sw::string( "ko_kr" ), _loc.getCurrentLanguage() );
@@ -367,11 +367,11 @@ SW_TEST_CASE( LocalizationManagerTest, LanguageCodeIsReturnedByValue )
 SW_TEST_CASE( LocalizationManagerTest, LanguageCodeSpellingsNameOneLanguage )
 {
     const ScopedScratchDomain domain;
-    const sw::string          folder      = domain.getFolder();
-    const sw::string          projectPath = LocalizationTestUtil::writeProject( folder, "en_us", R"([ "ja-JP", "KO_kr" ])" );
-    LocalizationTestUtil::writeSourceTable( folder, "en_us", R"("UI_PLAY": { "source": "Play" }, "UI_ONLY_EN": { "source": "English" })" );
-    LocalizationTestUtil::writeTranslation( folder, "ja_jp", R"("UI_PLAY": { "text": "プレイ" })" );
-    LocalizationTestUtil::writeTranslation( folder, "ko_kr", R"("UI_PLAY": { "text": "플레이" })" );
+    const sw::AbsolutePath    folder      = domain.getFolder();
+    const sw::string          projectPath = LocalizationTestUtil::writeProject( folder.str(), "en_us", R"([ "ja-JP", "KO_kr" ])" );
+    LocalizationTestUtil::writeSourceTable( folder.str(), "en_us", R"("UI_PLAY": { "source": "Play" }, "UI_ONLY_EN": { "source": "English" })" );
+    LocalizationTestUtil::writeTranslation( folder.str(), "ja_jp", R"("UI_PLAY": { "text": "プレイ" })" );
+    LocalizationTestUtil::writeTranslation( folder.str(), "ko_kr", R"("UI_PLAY": { "text": "플레이" })" );
 
     sw::LocalizationManager loc;
     SW_REQUIRE_TRUE( loc.initialize( ScopedScratchDomain::toID( projectPath ), "ko_KR", "en_US" ) );
@@ -422,7 +422,7 @@ SW_TEST_CASE( LocalizationManagerTest, CopyStateGivesAnIndependentManagerWithIts
     const ScopedScratchDomain domain;
     sw::LocalizationManager   original;
     SW_REQUIRE_TRUE( LocalizationTestUtil::loadEngineCultures( original ) );
-    SW_REQUIRE_TRUE( original.mountProject( ScopedScratchDomain::toID( Internal::writeSampleProject( domain.getFolder() ) ), sw::LocalizationScope::Game ) );
+    SW_REQUIRE_TRUE( original.mountProject( ScopedScratchDomain::toID( Internal::writeSampleProject( domain.getFolder().str() ) ), sw::LocalizationScope::Game ) );
     SW_REQUIRE_TRUE( original.setCurrentLanguage( "ko" ) );
     const uint32 originalRevision = original.getTextRevision();
 

@@ -30,11 +30,11 @@ namespace
         /** @brief 케이스 폴더 아래 @p name 폴더를 만들어 이 처리기의 보고 폴더로 정하고 그 경로를 돌려줍니다(못 만들면 빈 글). */
         string useReportFolder( string_view name )
         {
-            const string folder = test::makeScratchPath( name );
-            if ( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( folder ) ) == false )
+            const AbsolutePath folder = test::makeScratchPath( name );
+            if ( FileUtil::ensureDirectoryExists( folder ) == false )
                 return {};
-            _handler.setReportFolder( folder );
-            return folder;
+            _handler.setReportFolder( folder.str() );
+            return folder.str();
         }
 
         /** @brief 세션 ID 로 만들어지는 보고 파일 하나를 읽습니다. */

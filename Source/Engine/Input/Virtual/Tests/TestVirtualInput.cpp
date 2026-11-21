@@ -190,16 +190,16 @@ SW_TEST_CASE( InputReplayTest, FrameLimitStopsRecording )
 /** @brief [InputReplayTest] 파일: 이름 · 시간 · 이벤트가 되돌아온다 */
 SW_TEST_CASE( InputReplayTest, FileRoundTrips )
 {
-    const string path = test::makeScratchPath( "roundtrip.swreplay" );
-    InputReplay  replay;
+    const AbsolutePath path = test::makeScratchPath( "roundtrip.swreplay" );
+    InputReplay        replay;
     replay.startRecording( "demo" );
     replay.recordFrame( 0.25f, { RawInputEvent::makeKeyDown( Key::A ), RawInputEvent::makeMouseMove( 3, 4 ) } );
     replay.recordFrame( 0.5f, {} );
     replay.stopRecording();
-    SW_REQUIRE_TRUE( replay.saveToFile( *AbsolutePath::tryMake( path ) ) );
+    SW_REQUIRE_TRUE( replay.saveToFile( *AbsolutePath::tryMake( path.str() ) ) );
 
     InputReplay loaded;
-    SW_REQUIRE_TRUE( loaded.loadFromFile( path ) );
+    SW_REQUIRE_TRUE( loaded.loadFromFile( path.str() ) );
     SW_EXPECT_EQUAL( string( "demo" ), loaded.getReplayName() );
     SW_REQUIRE_EQUAL( uint32( 2 ), loaded.getFrameCount() );
     SW_EXPECT_NEAR( 0.25f, loaded.getFrames()[0]._deltaTime, 1.0e-5f );
@@ -214,24 +214,24 @@ SW_TEST_CASE( InputReplayTest, FileRoundTrips )
  */
 SW_TEST_CASE( InputReplayTest, SaveLoadSaveKeepsBytes )
 {
-    const string firstPath  = test::makeScratchPath( "first.swreplay" );
-    const string secondPath = test::makeScratchPath( "second.swreplay" );
-    InputReplay  replay;
+    const AbsolutePath firstPath  = test::makeScratchPath( "first.swreplay" );
+    const AbsolutePath secondPath = test::makeScratchPath( "second.swreplay" );
+    InputReplay        replay;
     replay.startRecording( "roundtrip" );
     replay.recordFrame( 0.016f, { RawInputEvent::makeKeyDown( Key::Space ), RawInputEvent::makeMouseMove( -7, 12 ) } );
     replay.recordFrame( 0.033f, {} );
     replay.recordFrame( 0.5f, { RawInputEvent::makeKeyDown( Key::A ) } );
     replay.stopRecording();
-    SW_REQUIRE_TRUE( replay.saveToFile( *AbsolutePath::tryMake( firstPath ) ) );
+    SW_REQUIRE_TRUE( replay.saveToFile( *AbsolutePath::tryMake( firstPath.str() ) ) );
 
     InputReplay loaded;
-    SW_REQUIRE_TRUE( loaded.loadFromFile( firstPath ) );
-    SW_REQUIRE_TRUE( loaded.saveToFile( *AbsolutePath::tryMake( secondPath ) ) );
+    SW_REQUIRE_TRUE( loaded.loadFromFile( firstPath.str() ) );
+    SW_REQUIRE_TRUE( loaded.saveToFile( *AbsolutePath::tryMake( secondPath.str() ) ) );
 
     vector<uint8> firstBytes;
     vector<uint8> secondBytes;
-    SW_REQUIRE_TRUE( FileUtil::readFile( FileUtil::toDiskPath( firstPath ), firstBytes ) );
-    SW_REQUIRE_TRUE( FileUtil::readFile( FileUtil::toDiskPath( secondPath ), secondBytes ) );
+    SW_REQUIRE_TRUE( FileUtil::readFile( firstPath, firstBytes ) );
+    SW_REQUIRE_TRUE( FileUtil::readFile( secondPath, secondBytes ) );
     SW_EXPECT_TRUE( firstBytes.empty() == false );
     SW_EXPECT_TRUE( firstBytes == secondBytes );
 }
@@ -243,24 +243,24 @@ SW_TEST_CASE( InputReplayTest, BrokenFilesAreRefused )
     SW_EXPECT_LOG( "InputReplay.InputReplayVersionNot" );
     SW_EXPECT_LOG( "InputReplay.InputReplayTruncatedName" );
     SW_EXPECT_LOG( "InputReplay.InputReplayTruncatedFrame" );
-    const string path = test::makeScratchPath( "broken.swreplay" );
-    InputReplay  replay;
+    const AbsolutePath path = test::makeScratchPath( "broken.swreplay" );
+    InputReplay        replay;
     replay.startRecording( "kept" );
     replay.recordFrame( 0.25f, { RawInputEvent::makeKeyDown( Key::A ) } );
     replay.stopRecording();
-    SW_REQUIRE_TRUE( replay.saveToFile( *AbsolutePath::tryMake( path ) ) );
+    SW_REQUIRE_TRUE( replay.saveToFile( *AbsolutePath::tryMake( path.str() ) ) );
     vector<uint8> good;
-    SW_REQUIRE_TRUE( FileUtil::readFile( FileUtil::toDiskPath( path ), good ) );
+    SW_REQUIRE_TRUE( FileUtil::readFile( path, good ) );
 
     const auto refuses = [&]( const vector<uint8>& bytes )
     {
-        SW_REQUIRE_TRUE( FileUtil::writeFile( FileUtil::toDiskPath( path ), bytes.data(), bytes.size() ) );
-        SW_EXPECT_FALSE( replay.loadFromFile( path ) );
+        SW_REQUIRE_TRUE( FileUtil::writeFile( path, bytes.data(), bytes.size() ) );
+        SW_EXPECT_FALSE( replay.loadFromFile( path.str() ) );
         SW_EXPECT_EQUAL( string( "kept" ), replay.getReplayName() );
         SW_EXPECT_EQUAL( uint32( 1 ), replay.getFrameCount() );
     };
 
-    SW_EXPECT_FALSE( replay.loadFromFile( test::makeScratchPath( "nothing.swreplay" ) ) );
+    SW_EXPECT_FALSE( replay.loadFromFile( test::makeScratchPath( "nothing.swreplay" ).str() ) );
     refuses( vector<uint8>( good.begin(), good.begin() + 3 ) ); // 머리말이 없다
 
     vector<uint8> badMagic = good;

@@ -17,10 +17,10 @@ namespace
     /** @brief 글 하나를 쓴 케이스 사본 파일의 경로입니다. */
     string makeLockTarget( const utf8* pName, const utf8* pText )
     {
-        const string path = test::makeScratchPath( pName );
-        (void)FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( path ) );
-        (void)FileUtil::writeTextFile( FileUtil::toDiskPath( path ), pText );
-        return path;
+        const AbsolutePath path = test::makeScratchPath( pName );
+        (void)FileUtil::ensureParentDirectoryExists( path );
+        (void)FileUtil::writeTextFile( path, pText );
+        return path.str();
     }
 } // namespace
 

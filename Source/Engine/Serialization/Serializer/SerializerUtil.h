@@ -79,16 +79,16 @@ namespace sw
     /**
      * @brief `deserializeVersioned` 의 **공통 절차**입니다. 세 포맷이 함께 씁니다.
      *
-     * @param outVersion `SchemaVersionSource::Stream` 이면 이미 읽어 온 버전을 넣어 들어옵니다.
-     *                   `Payload` 면 0 으로 들어와 이 함수가 채웁니다.
+     * @param streamVersion `SchemaVersionSource::Stream` 이면 본문 앞에서 이미 읽은 판입니다. `Payload` 면 쓰지 않습니다(판은 soft 읽기가 본문에서 낸다).
+     * @return 판이 @p currentVersion 과 같고 읽었으면 true 입니다. 읽은 판은 돌려주지 않는다 — 성공이면 @p currentVersion 이고, 다른 판의 거절은 `Schema.VersionMismatch` 로그가 판을 적는다.
      * @param softDeserialize (대상, 타입, orphan 수집함, 버전 출력)을 받아 성공 여부를 반환합니다.
      *                        `Stream` 포맷은 버전 출력을 건드리지 않습니다.
      * @details 처리 순서는 다음과 같다. 현재 타입으로 soft 역직렬화하고, 버전을 확정한 다음 `finishVersionedRead` 를 부른다.
      *          판이 현재 판과 다르면 이관하지 않고 실패한다.
      */
-    SW_API bool runVersionedDeserialize( uint32& outVersion, MutableObjectAddress instance, const TypeInfo& typeInfo,
-                                         uint32 currentVersion, SchemaVersionSource versionSource, SchemaOrphanPolicy orphanPolicy,
-                                         const SoftDeserializeFn& softDeserialize );
+    [[nodiscard]] SW_API bool runVersionedDeserialize( uint32 streamVersion, MutableObjectAddress instance, const TypeInfo& typeInfo,
+                                                       uint32 currentVersion, SchemaVersionSource versionSource, SchemaOrphanPolicy orphanPolicy,
+                                                       const SoftDeserializeFn& softDeserialize );
 
     /** @brief 필수 판정의 범위입니다 — 원소가 부모를 가리키면(`PROPERTY( InheritParent )` 칸이 적힘) `RequiredAtRoot` 칸은 물려받은 값이다. */
     enum class RequiredScope : uint8

@@ -86,7 +86,7 @@ namespace
             nodes.append( makeNode( "OutColor", "GraphOutput", "Value=Color.RGB", "Name=BaseColor" ) );
             nodes.append( makeNode( "OutRough", "GraphOutput", "Value=Half.Out", "Name=Roughness" ) );
             nodes.append( extraNodes );
-            if ( FileUtil::writeTextFile( FileUtil::toDiskPath( domain.makeDiskPath( fileName ) ), wrapGraph( nodes ) ) == false )
+            if ( FileUtil::writeTextFile( domain.makeDiskPath( fileName ), wrapGraph( nodes ) ) == false )
                 return {};
             return test::ScopedScratchDomain::makeID( fileName ).str();
         }
@@ -336,7 +336,7 @@ SW_TEST_CASE( MaterialGraphCompilerTest, SubgraphIsInlined )
     string                          subNodes   = MaterialGraphTestUtil::makeNode( "In", "GraphInput", {}, "Name=Scale,Type=float" );
     subNodes.append( MaterialGraphTestUtil::makeNode( "Twice", "Multiply", "A=In.Out", "B=2" ) );
     subNodes.append( MaterialGraphTestUtil::makeNode( "Result", "GraphOutput", "Value=Twice.Out", "Name=Doubled" ) );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( domain.makeDiskPath( "sub.matgraph.xml" ) ), MaterialGraphTestUtil::wrapGraph( subNodes ) ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "sub.matgraph.xml" ), MaterialGraphTestUtil::wrapGraph( subNodes ) ) );
 
     MaterialGraphDef graph;
     string           nodes = MaterialGraphTestUtil::makeNode( "Two", "Constant", {}, "Value=2" );
@@ -362,7 +362,7 @@ SW_TEST_CASE( MaterialGraphCompilerTest, SubgraphIsInlined )
     MaterialGraphDef selfGraph;
     SW_REQUIRE_TRUE( selfGraph.loadFromXMLText( MaterialGraphTestUtil::wrapGraph( selfNodes ), "self" ) );
     selfGraph._listNode[0]._assetPath = subgraphID;
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( domain.makeDiskPath( "sub.matgraph.xml" ) ), selfGraph.saveToXMLText() ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "sub.matgraph.xml" ), selfGraph.saveToXMLText() ) );
     MaterialGraphCompileResult cycleResult;
     SW_EXPECT_FALSE( MaterialGraphCompileResult::compile( graph, MaterialGraphTestUtil::kSource, cycleResult ) );
     SW_EXPECT_TRUE( MaterialGraphTestUtil::hasIssue( cycleResult, "SubgraphCycle", "Sub/Self" ) );
@@ -374,7 +374,7 @@ SW_TEST_CASE( MaterialGraphCompilerTest, BaseGraphIsInherited )
     const test::ScopedScratchDomain domain;
     string                          parentNodes = MaterialGraphTestUtil::makeNode( "Tint", "ColorParameter", {}, "Parameter=_tint,Default=1 1 1 1" );
     parentNodes.append( MaterialGraphTestUtil::makeNode( "Out", "Output", "BaseColor=Tint.RGB" ) );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( domain.makeDiskPath( "parent.matgraph.xml" ) ), MaterialGraphTestUtil::wrapGraph( parentNodes ) ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "parent.matgraph.xml" ), MaterialGraphTestUtil::wrapGraph( parentNodes ) ) );
 
     string child{ "<MaterialGraphDef _base=\"" };
     child.append( test::ScopedScratchDomain::makeID( "parent.matgraph.xml" ).str() );

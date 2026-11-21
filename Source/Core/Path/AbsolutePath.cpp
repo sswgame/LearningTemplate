@@ -126,4 +126,66 @@ namespace sw
             return nullopt;
         return AbsolutePath{ std::move( collapsed ) };
     }
+
+    AbsolutePath AbsolutePath::join( string_view relative ) const
+    {
+        if ( _path.empty() || relative.find( '\0' ) != string_view::npos )
+            return AbsolutePath{ string{} };
+        const size_t rootLength = getRootLength( _path );
+        string       joined     = _path;
+        while ( joined.size() > rootLength && joined.back() == '/' )
+        {
+            joined.pop_back();
+        }
+        const size_t floorLength = joined.size(); // `..` 는 이 길이 밑으로 내려가지 못한다(상위 탈출)
+        joined.reserve( joined.size() + 1 + relative.size() );
+        size_t start = 0;
+        while ( start <= relative.size() )
+        {
+            size_t end                  = relative.find_first_of( "/\\", start );
+            end                         = end == string_view::npos ? relative.size() : end;
+            const string_view component = relative.substr( start, end - start );
+            start                       = end + 1;
+            if ( component.empty() || component == "." )
+                continue;
+            if ( component == ".." )
+            {
+                if ( joined.size() <= floorLength )
+                    return AbsolutePath{ string{} };
+                const size_t slash = joined.rfind( '/' );
+                joined.resize( slash < floorLength ? floorLength : slash );
+                continue;
+            }
+            if ( joined.back() != '/' )
+                joined.push_back( '/' );
+            joined.append( component.data(), component.size() );
+        }
+        return AbsolutePath{ std::move( joined ) };
+    }
+
+    AbsolutePath AbsolutePath::getParent() const
+    {
+        if ( _path.empty() )
+            return AbsolutePath{ string{} };
+        const size_t rootLength = getRootLength( _path );
+        size_t       end        = _path.size();
+        while ( end > rootLength && _path[end - 1] == '/' )
+        {
+            --end;
+        }
+        if ( end <= rootLength )
+            return AbsolutePath{ string{} }; // 뿌리의 부모는 없다
+        const size_t slash = _path.rfind( '/', end - 1 );
+        return AbsolutePath{ _path.substr( 0, slash + 1 <= rootLength ? rootLength : slash ) };
+    }
+
+    AbsolutePath AbsolutePath::appendSuffix( string_view suffix ) const
+    {
+        if ( _path.empty() || _path.back() == '/' || suffix.find_first_of( string_view( "/\\\0", 3 ) ) != string_view::npos )
+            return AbsolutePath{ string{} }; // 빈 경로 · 끝이 구분자(뿌리 · 폴더 표기 — 이름이 없다) · 성분을 바꾸는 접미사
+        string appended;
+        appended.reserve( _path.size() + suffix.size() );
+        appended.append( _path ).append( suffix.data(), suffix.size() );
+        return AbsolutePath{ std::move( appended ) };
+    }
 } // namespace sw

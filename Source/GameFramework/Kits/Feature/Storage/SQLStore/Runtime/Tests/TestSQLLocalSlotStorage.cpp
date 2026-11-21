@@ -22,7 +22,7 @@ namespace
     struct SQLiteLocalFixture
     {
         test::LocalStoreTestKey         _key{};
-        string                          _path{ test::makeScratchPath( SQLLocalSlotStorage::kDatabaseFileName ) };
+        string                          _path{ test::makeScratchPath( SQLLocalSlotStorage::kDatabaseFileName ).str() };
         unique_ptr<SQLLocalSlotStorage> _directStorage{};
         unique_ptr<ThreadedLocalStore>  _store{};
 
@@ -127,12 +127,12 @@ SW_TEST_CASE( SQLLocalSlotStorageTest, HostileSlotNameStaysData )
 /** @brief 없는 폴더는 바닥이 만들고, 다시 열면 데이터가 남고 마이그레이션은 다시 돌지 않는다. */
 SW_TEST_CASE( SQLLocalSlotStorageTest, FileDatabaseSurvivesReopening )
 {
-    const string path = FileUtil::joinPath( test::makeScratchPath( "nested" ), SQLLocalSlotStorage::kDatabaseFileName );
+    const AbsolutePath path = test::makeScratchPath( "nested" ).join( SQLLocalSlotStorage::kDatabaseFileName );
     {
-        unique_ptr<SQLLocalSlotStorage> storage = SQLiteLocalFixture::open( path );
+        unique_ptr<SQLLocalSlotStorage> storage = SQLiteLocalFixture::open( path.str() );
         SW_REQUIRE_TRUE( storage->writeSlot( "kept", SQLLocalSlotStorageTestUtil::makeBytes( "v" ) ) == LocalStoreResult::Ok );
     }
-    unique_ptr<SQLLocalSlotStorage> storage = SQLiteLocalFixture::open( path );
+    unique_ptr<SQLLocalSlotStorage> storage = SQLiteLocalFixture::open( path.str() );
     vector<uint8>                   bytes;
     SW_REQUIRE_TRUE( storage->readSlot( "kept", bytes ) == LocalStoreResult::Ok );
     SW_EXPECT_TRUE( bytes == SQLLocalSlotStorageTestUtil::makeBytes( "v" ) );

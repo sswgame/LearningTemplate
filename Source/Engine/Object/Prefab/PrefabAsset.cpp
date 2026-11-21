@@ -905,7 +905,8 @@ namespace sw
         constexpr uint32 kMinBytesPerNode = sizeof( uint32 ) * 6 + sizeof( int32 );
         uint32           nodeCount{ 0 };
         arch >> _name >> _stateData;
-        if ( arch.isError() || arch.readCount( kMinBytesPerNode, nodeCount ) == false )
+        nodeCount = arch.readCount( kMinBytesPerNode );
+        if ( arch.isError() )
         {
             SW_LOG_ERROR_ID( "PrefabAsset.BinaryPrefabStreamCorrupted", "Binary prefab stream corrupted in %#", absPath );
             return false;

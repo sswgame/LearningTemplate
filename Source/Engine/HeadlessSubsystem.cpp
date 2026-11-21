@@ -173,11 +173,11 @@ namespace sw
             {
                 const string shaderFolder = string( ShaderCooker::getSubfolderForFormat( resolveShaderTarget( commandLine ) ) );
 
-                PackConfig   packConfig;
-                const string packConfigPath = FileUtil::joinPath( ProcessRoots::get()._project.str(), PackConfig::kConfigPath );
-                if ( ConfigManager::readConfigFile( packConfig, packConfigPath ) != ConfigReadResult::Loaded )
+                PackConfig         packConfig;
+                const AbsolutePath packConfigPath = ProcessRoots::get()._project.join( PackConfig::kConfigPath );
+                if ( ConfigManager::readConfigFile( packConfig, packConfigPath.str() ) != ConfigReadResult::Loaded )
                 {
-                    SW_LOG_ERROR_ID( "Headless.PackConfigMissingInvalid", "Pack config '%#' is missing or invalid", packConfigPath );
+                    SW_LOG_ERROR_ID( "Headless.PackConfigMissingInvalid", "Pack config '%#' is missing or invalid", packConfigPath.str() );
                     return false;
                 }
 
@@ -241,11 +241,11 @@ namespace sw
                         return false;
                     }
                 }
-                PackConfig   packConfig;
-                const string packConfigPath = FileUtil::joinPath( ProcessRoots::get()._project.str(), PackConfig::kConfigPath );
-                if ( ConfigManager::readConfigFile( packConfig, packConfigPath ) != ConfigReadResult::Loaded )
+                PackConfig         packConfig;
+                const AbsolutePath packConfigPath = ProcessRoots::get()._project.join( PackConfig::kConfigPath );
+                if ( ConfigManager::readConfigFile( packConfig, packConfigPath.str() ) != ConfigReadResult::Loaded )
                 {
-                    SW_LOG_ERROR_ID( "Headless.PackConfigMissingInvalid", "Pack config '%#' is missing or invalid", packConfigPath );
+                    SW_LOG_ERROR_ID( "Headless.PackConfigMissingInvalid", "Pack config '%#' is missing or invalid", packConfigPath.str() );
                     return false;
                 }
                 params._writerDesc._compression      = packConfig._compression._codec;

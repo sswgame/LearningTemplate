@@ -21,10 +21,10 @@ SW_TEST_CASE( TestRunnerTest, FilterIncludesAndExcludes )
 
 SW_TEST_CASE( TestRunnerTest, ScratchPathIsUniquePerCase )
 {
-    const string path = test::makeScratchPath( "probe.txt" );
-    SW_EXPECT_TRUE( StringUtil::endsWith( path, "probe.txt" ) );
-    SW_EXPECT_TRUE( path.find( "TestRunnerTest.ScratchPathIsUniquePerCase" ) != string::npos );
-    SW_EXPECT_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( path ), "scratch" ) );
+    const AbsolutePath path = test::makeScratchPath( "probe.txt" );
+    SW_EXPECT_TRUE( StringUtil::endsWith( path.str(), "probe.txt" ) );
+    SW_EXPECT_TRUE( path.str().find( "TestRunnerTest.ScratchPathIsUniquePerCase" ) != string::npos );
+    SW_EXPECT_TRUE( FileUtil::writeTextFile( path, "scratch" ) );
 }
 
 SW_TEST_CASE( TestRunnerTest, SnapshotComparesWithTheCommittedFile )
@@ -96,7 +96,7 @@ namespace
 
         string _path;
         ScratchFileFixture()
-            : _path{ test::makeScratchPath( "fixture.txt" ) }
+            : _path{ test::makeScratchPath( "fixture.txt" ).str() }
         {
             (void)FileUtil::writeTextFile( FileUtil::toDiskPath( _path ), "ready" );
         }

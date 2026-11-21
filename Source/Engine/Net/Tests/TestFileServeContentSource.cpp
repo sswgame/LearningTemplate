@@ -124,16 +124,16 @@ SW_TEST_CASE( FileServeContentSourceTest, MirrorsInChunksAndReusesFreshStamp )
     FakeFileServeClient client;
     const vector<uint8> pattern                         = makePattern( FileServeContentSource::kChunkBytes * 2 + FileServeContentSource::kChunkBytes / 2 );
     client._mapFile["game.pack"]                        = FakeFileServeClient::File{ pattern, 7 };
-    const string                             mountRoot  = test::makeScratchPath( "FileServe/Packs" );
-    const string                             mirrorRoot = test::makeScratchPath( "FileServe/Mirror" );
+    const AbsolutePath                       mountRoot  = test::makeScratchPath( "FileServe/Packs" );
+    const AbsolutePath                       mirrorRoot = test::makeScratchPath( "FileServe/Mirror" );
     StringBuilder<constant::buffer::kMax512> packPathBuilder;
-    packPathBuilder.appendFormat( "%#/game.pack", mountRoot );
+    packPathBuilder.appendFormat( "%#/game.pack", mountRoot.str() );
     const string packPath( packPathBuilder.view() );
 
     {
-        const FileServeContentSource source{ client, FakeFileServeClient::kBase, mountRoot, mirrorRoot };
+        const FileServeContentSource source{ client, FakeFileServeClient::kBase, mountRoot.str(), mirrorRoot.str() };
         SW_EXPECT_TRUE( source.isFile( packPath ) );
-        SW_EXPECT_TRUE( source.isFolder( mountRoot ) );
+        SW_EXPECT_TRUE( source.isFolder( mountRoot.str() ) );
         vector<uint8> bytes;
         SW_REQUIRE_TRUE( source.readFile( packPath, bytes ) );
         SW_EXPECT_TRUE( bytes == pattern );
@@ -142,14 +142,14 @@ SW_TEST_CASE( FileServeContentSourceTest, MirrorsInChunksAndReusesFreshStamp )
         SW_EXPECT_EQUAL( 3u, source.getReceivedChunkCount() );
     }
     {
-        const FileServeContentSource source{ client, FakeFileServeClient::kBase, mountRoot, mirrorRoot };
+        const FileServeContentSource source{ client, FakeFileServeClient::kBase, mountRoot.str(), mirrorRoot.str() };
         vector<uint8>                bytes;
         SW_REQUIRE_TRUE( source.readFile( packPath, bytes ) );
         SW_EXPECT_EQUAL( 0u, source.getReceivedChunkCount() );
     }
     client._mapFile["game.pack"]._modifiedNanos = 8;
     {
-        const FileServeContentSource source{ client, FakeFileServeClient::kBase, mountRoot, mirrorRoot };
+        const FileServeContentSource source{ client, FakeFileServeClient::kBase, mountRoot.str(), mirrorRoot.str() };
         vector<uint8>                bytes;
         SW_REQUIRE_TRUE( source.readFile( packPath, bytes ) );
         SW_EXPECT_EQUAL( 3u, source.getReceivedChunkCount() );
@@ -164,32 +164,32 @@ SW_TEST_CASE( FileServeContentSourceTest, RefusesPathsOutsideTheMountAndEscaping
 {
     FakeFileServeClient client;
     client._mapFile["a.pack"]          = FakeFileServeClient::File{ makePattern( 16 ), 1 };
-    const string                 mount = test::makeScratchPath( "FileServe/Packs" );
-    const FileServeContentSource source{ client, FakeFileServeClient::kBase, mount, test::makeScratchPath( "FileServe/Mirror" ) };
+    const AbsolutePath           mount = test::makeScratchPath( "FileServe/Packs" );
+    const FileServeContentSource source{ client, FakeFileServeClient::kBase, mount.str(), test::makeScratchPath( "FileServe/Mirror" ).str() };
 
-    SW_EXPECT_FALSE( source.isFile( test::makeScratchPath( "Elsewhere/a.pack" ) ) );
+    SW_EXPECT_FALSE( source.isFile( test::makeScratchPath( "Elsewhere/a.pack" ).str() ) );
     StringBuilder<constant::buffer::kMax512> outsidePath;
-    outsidePath.appendFormat( "%#x/a.pack", mount );
+    outsidePath.appendFormat( "%#x/a.pack", mount.str() );
     SW_EXPECT_FALSE( source.open( outsidePath.view() ).isValid() ); // `<root>x` 는 다른 폴더다
     outsidePath.clear();
-    outsidePath.appendFormat( "%#/../escape.pack", mount );
+    outsidePath.appendFormat( "%#/../escape.pack", mount.str() );
     SW_EXPECT_FALSE( source.open( outsidePath.view() ).isValid() ); // `..` 성분은 거울 밖이다
     outsidePath.clear();
-    outsidePath.appendFormat( "%#/sub/../a.pack", mount );
+    outsidePath.appendFormat( "%#/sub/../a.pack", mount.str() );
     SW_EXPECT_FALSE( source.isFile( outsidePath.view() ) );
     SW_EXPECT_EQUAL( 0u, client._requestCount );
 
     vector<string> listPath;
-    SW_REQUIRE_TRUE( source.collectFiles( mount, listPath ) );
+    SW_REQUIRE_TRUE( source.collectFiles( mount.str(), listPath ) );
     SW_REQUIRE_EQUAL( size_t{ 1 }, listPath.size() );
     StringBuilder<constant::buffer::kMax512> expectedPath;
-    expectedPath.appendFormat( "%#/a.pack", FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( mount ) ) );
+    expectedPath.appendFormat( "%#/a.pack", FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( mount.str() ) ) );
     SW_EXPECT_TRUE( string_view( listPath[0] ) == expectedPath.view() );
 
     client._listExtraName.push_back( "../escape.pack" );
     listPath.clear();
     SW_EXPECT_LOG( "FileServe.BadListName" );
-    SW_EXPECT_FALSE( source.collectFiles( mount, listPath ) );
+    SW_EXPECT_FALSE( source.collectFiles( mount.str(), listPath ) );
     SW_EXPECT_TRUE( listPath.empty() );
 }
 

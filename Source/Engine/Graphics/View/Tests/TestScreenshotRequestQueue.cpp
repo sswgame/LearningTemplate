@@ -14,7 +14,7 @@ namespace
     /** @brief 케이스 폴더 아래 사진 경로입니다(케이스 폴더는 늘 절대 경로다). */
     AbsolutePath makeShotPath( string_view name )
     {
-        return *AbsolutePath::tryMake( test::makeScratchPath( name ) );
+        return *AbsolutePath::tryMake( test::makeScratchPath( name ).str() );
     }
 } // namespace
 

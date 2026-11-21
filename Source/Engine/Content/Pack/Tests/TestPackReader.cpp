@@ -99,7 +99,7 @@ namespace
         string _path;
 
         PackTestFile()
-            : _path{ test::makeScratchPath( "SwPackReaderTest.pack" ) }
+            : _path{ test::makeScratchPath( "SwPackReaderTest.pack" ).str() }
         {
         }
         ~PackTestFile() { (void)FileUtil::removeFile( FileUtil::toDiskPath( _path ) ); }
@@ -234,7 +234,7 @@ SW_TEST_CASE( PackReaderTest, MissingFileIsAnError )
 {
     SW_EXPECT_LOG( "PackReader.FailedOpenResourcePack" );
     PackReader reader;
-    SW_EXPECT_FALSE( reader.open( test::makeScratchPath( "SwNoSuchPack.pack" ) ) );
+    SW_EXPECT_FALSE( reader.open( test::makeScratchPath( "SwNoSuchPack.pack" ).str() ) );
     SW_EXPECT_FALSE( reader.open( "" ) );
     SW_EXPECT_FALSE( reader.isOpen() );
 }
@@ -438,9 +438,9 @@ SW_TEST_CASE( PackReaderTest, UnsortedIndexIsRefused )
 // 범위 읽기는 걸친 블록만 읽어 풀고, 결과는 통째 읽기에서 같은 범위를 자른 것과 같다. 항목 밖 범위는 오류다.
 SW_TEST_CASE( PackReaderTest, RangeReadEqualsTheSameSliceOfAWholeRead )
 {
-    const string  packPath  = test::makeScratchPath( "SwPackReaderRange.pack" );
-    const uint32  blockSize = PackTestUtil::kBlockSize;
-    vector<uint8> content( 4 * blockSize + 777 );
+    const AbsolutePath packPath  = test::makeScratchPath( "SwPackReaderRange.pack" );
+    const uint32       blockSize = PackTestUtil::kBlockSize;
+    vector<uint8>      content( 4 * blockSize + 777 );
     for ( size_t index = 0; index < content.size(); ++index )
     {
         content[index] = static_cast<uint8>( index < content.size() / 2 ? ( index * 31 ) ^ ( index >> 9 ) : index / 4096 );
@@ -448,10 +448,10 @@ SW_TEST_CASE( PackReaderTest, RangeReadEqualsTheSameSliceOfAWholeRead )
     vector<std::pair<string, vector<uint8>>> listEntry;
     listEntry.emplace_back( "textures/mips.dds", content );
     listEntry.emplace_back( "small.txt", vector<uint8>{ 'h', 'i' } );
-    SW_REQUIRE_TRUE( PackTestUtil::writePack( packPath, PackTestUtil::makeDesc( "game/test", PackCompressionKind::Zlib ), listEntry ) );
+    SW_REQUIRE_TRUE( PackTestUtil::writePack( packPath.str(), PackTestUtil::makeDesc( "game/test", PackCompressionKind::Zlib ), listEntry ) );
 
     PackReader reader;
-    SW_REQUIRE_TRUE( reader.open( packPath ) );
+    SW_REQUIRE_TRUE( reader.open( packPath.str() ) );
     const uint64  pathHash = HashUtil::computeStringHash64( string_view( "textures/mips.dds" ) );
     vector<uint8> whole;
     SW_REQUIRE_TRUE( reader.readFile( pathHash, whole ) );
@@ -482,7 +482,7 @@ SW_TEST_CASE( PackReaderTest, RangeReadEqualsTheSameSliceOfAWholeRead )
     SW_EXPECT_FALSE( reader.readRange( pathHash, uint64{ size } + 1, 0, outside ) );
     SW_EXPECT_FALSE( reader.readRange( HashUtil::computeStringHash64( string_view( "nope.dds" ) ), 0, 1, outside ) );
     reader.close();
-    SW_EXPECT_TRUE( FileUtil::removeFile( FileUtil::toDiskPath( packPath ) ) );
+    SW_EXPECT_TRUE( FileUtil::removeFile( packPath ) );
 }
 
 // 블록 하나가 망가지면 그 블록에 걸친 읽기만 거절한다 — 다른 블록의 범위 읽기는 된다.
@@ -517,9 +517,9 @@ SW_TEST_CASE( PackReaderTest, CorruptBlockIsRefused )
 // `Stored` 항목은 팩 코덱과 상관없이 블록의 저장 바이트가 원본이다 — 범위 읽기가 풀기 없이 같은 구간을 준다. 같은 팩의 `Blocks` 항목은 그대로 풀린다.
 SW_TEST_CASE( PackReaderTest, StoredEntryRangeReadReturnsTheSameSpan )
 {
-    const string  packPath  = test::makeScratchPath( "SwPackReaderStored.pack" );
-    const uint32  blockSize = PackTestUtil::kBlockSize;
-    vector<uint8> stored( 2 * blockSize + 321 );
+    const AbsolutePath packPath  = test::makeScratchPath( "SwPackReaderStored.pack" );
+    const uint32       blockSize = PackTestUtil::kBlockSize;
+    vector<uint8>      stored( 2 * blockSize + 321 );
     for ( size_t index = 0; index < stored.size(); ++index )
     {
         stored[index] = static_cast<uint8>( ( index * 131 ) ^ ( index >> 7 ) );
@@ -529,7 +529,7 @@ SW_TEST_CASE( PackReaderTest, StoredEntryRangeReadReturnsTheSameSpan )
     const string        compressedPath = "data/level.xml";
     const bool          bStoredFirst   = PackStreamWriter::makePathHash( storedPath ) < PackStreamWriter::makePathHash( compressedPath );
     PackStreamWriter    writer;
-    SW_REQUIRE_TRUE( writer.open( packPath, PackTestUtil::makeDesc( "game/test", PackCompressionKind::Zlib ) ).has_value() );
+    SW_REQUIRE_TRUE( writer.open( packPath.str(), PackTestUtil::makeDesc( "game/test", PackCompressionKind::Zlib ) ).has_value() );
     for ( uint32 order = 0; order < 2; ++order )
     {
         const bool bStored = ( order == 0 ) == bStoredFirst;
@@ -538,7 +538,7 @@ SW_TEST_CASE( PackReaderTest, StoredEntryRangeReadReturnsTheSameSpan )
     SW_REQUIRE_TRUE( writer.close().has_value() );
 
     PackReader reader;
-    SW_REQUIRE_TRUE( reader.open( packPath ) );
+    SW_REQUIRE_TRUE( reader.open( packPath.str() ) );
     PackFileEntry entry;
     SW_REQUIRE_TRUE( reader.getFileEntry( storedPath, entry ) );
     SW_EXPECT_TRUE( entry._storage == PackEntryStorage::Stored );
@@ -565,7 +565,7 @@ SW_TEST_CASE( PackReaderTest, StoredEntryRangeReadReturnsTheSameSpan )
     SW_REQUIRE_TRUE( reader.readFile( compressedPath, whole ) );
     SW_EXPECT_TRUE( whole == compressed );
     reader.close();
-    SW_EXPECT_TRUE( FileUtil::removeFile( FileUtil::toDiskPath( packPath ) ) );
+    SW_EXPECT_TRUE( FileUtil::removeFile( packPath ) );
 }
 
 // 저장 방식은 디스크 값이다 — 모르는 값의 항목이 있는 팩은 열지 않는다.

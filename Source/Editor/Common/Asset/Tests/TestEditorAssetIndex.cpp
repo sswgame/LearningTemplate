@@ -56,24 +56,24 @@ namespace
  */
 SW_TEST_CASE( EditorAssetIndexTest, AddedFileRefreshesIncrementally )
 {
-    using Internal    = EditorAssetIndexTestInternal;
-    const string root = sw::test::makeScratchPath( "added" );
-    Internal::write( root, "game/a/scene.scene.xml", "<Scene>\n  <Sprite _texture=\"game/a/later.png\"/>\n  <Sprite _texture=\"game/a/now.png\"/>\n</Scene>\n" );
-    Internal::write( root, "game/a/now.png", "png" );
-    EditorAssetIndex index = Internal::scan( root );
+    using Internal          = EditorAssetIndexTestInternal;
+    const AbsolutePath root = sw::test::makeScratchPath( "added" );
+    Internal::write( root.str(), "game/a/scene.scene.xml", "<Scene>\n  <Sprite _texture=\"game/a/later.png\"/>\n  <Sprite _texture=\"game/a/now.png\"/>\n</Scene>\n" );
+    Internal::write( root.str(), "game/a/now.png", "png" );
+    EditorAssetIndex index = Internal::scan( root.str() );
     SW_EXPECT_EQUAL( size_t{ 1 }, Internal::findReferrerIDs( index, "game/a/now.png" ).size() );
     SW_EXPECT_TRUE( Internal::findReferrerIDs( index, "game/a/later.png" ).empty() ); // 아직 없는 파일
 
-    Internal::write( root, "game/a/later.png", "png" );
-    index.applyChanges( root, { "game/a/later.png" } );
+    Internal::write( root.str(), "game/a/later.png", "png" );
+    index.applyChanges( root.str(), { "game/a/later.png" } );
     SW_EXPECT_TRUE( index.containsFile( "game/a/later.png" ) );
     const vector<string> listReferrer = Internal::findReferrerIDs( index, "game/a/later.png" );
     SW_REQUIRE_EQUAL( size_t{ 1 }, listReferrer.size() );
     SW_EXPECT_EQUAL( string( "game/a/scene.scene.xml" ), listReferrer[0] );
 
     // 참조자를 고치면 그 파일의 줄만 바뀐다.
-    Internal::write( root, "game/a/scene.scene.xml", "<Scene>\n  <Sprite _texture=\"game/a/later.png\"/>\n</Scene>\n" );
-    index.applyChanges( root, { "game/a/scene.scene.xml" } );
+    Internal::write( root.str(), "game/a/scene.scene.xml", "<Scene>\n  <Sprite _texture=\"game/a/later.png\"/>\n</Scene>\n" );
+    index.applyChanges( root.str(), { "game/a/scene.scene.xml" } );
     SW_EXPECT_TRUE( Internal::findReferrerIDs( index, "game/a/now.png" ).empty() );
     vector<EditorAssetReference> listDependency;
     index.findDependencies( "game/a/scene.scene.xml", listDependency );
@@ -87,34 +87,34 @@ SW_TEST_CASE( EditorAssetIndexTest, AddedFileRefreshesIncrementally )
  */
 SW_TEST_CASE( EditorAssetIndexTest, RemovedFileDropsItsReferences )
 {
-    using Internal       = EditorAssetIndexTestInternal;
-    const string    root = sw::test::makeScratchPath( "removed" );
-    const AssetGUID guid = AssetGUID::create();
-    Internal::write( root, "game/a/target.png", "png" );
-    Internal::write( root, "game/a/referrer.prefab.xml", AssetGUIDHeader::write( "<Prefab>\n  <Sprite _texture=\"game/a/target.png\"/>\n</Prefab>\n", guid ) );
-    Internal::write( root, "game/b/one.png", "png" );
-    Internal::write( root, "game/b/two.png", "png" );
-    EditorAssetIndex index = Internal::scan( root );
+    using Internal          = EditorAssetIndexTestInternal;
+    const AbsolutePath root = sw::test::makeScratchPath( "removed" );
+    const AssetGUID    guid = AssetGUID::create();
+    Internal::write( root.str(), "game/a/target.png", "png" );
+    Internal::write( root.str(), "game/a/referrer.prefab.xml", AssetGUIDHeader::write( "<Prefab>\n  <Sprite _texture=\"game/a/target.png\"/>\n</Prefab>\n", guid ) );
+    Internal::write( root.str(), "game/b/one.png", "png" );
+    Internal::write( root.str(), "game/b/two.png", "png" );
+    EditorAssetIndex index = Internal::scan( root.str() );
     SW_EXPECT_EQUAL( 1u, index.countReferrerFiles( "game/a/target.png" ) );
     SW_REQUIRE_TRUE( index.findPath( guid ).has_value() );
 
-    Internal::remove( root, "game/a/referrer.prefab.xml" );
-    index.applyChanges( root, { "game/a/referrer.prefab.xml" } );
+    Internal::remove( root.str(), "game/a/referrer.prefab.xml" );
+    index.applyChanges( root.str(), { "game/a/referrer.prefab.xml" } );
     SW_EXPECT_FALSE( index.containsFile( "game/a/referrer.prefab.xml" ) );
     SW_EXPECT_EQUAL( 0u, index.countReferrerFiles( "game/a/target.png" ) );
     SW_EXPECT_FALSE( index.findPath( guid ).has_value() );
 
     // 사라진 대상은 참조자가 글에 적어 두어도 묻지 않는다(대상 없음).
-    Internal::write( root, "game/a/referrer.prefab.xml", "<Prefab>\n  <Sprite _texture=\"game/a/target.png\"/>\n</Prefab>\n" );
-    Internal::remove( root, "game/a/target.png" );
-    index.applyChanges( root, { "game/a/referrer.prefab.xml", "game/a/target.png" } );
+    Internal::write( root.str(), "game/a/referrer.prefab.xml", "<Prefab>\n  <Sprite _texture=\"game/a/target.png\"/>\n</Prefab>\n" );
+    Internal::remove( root.str(), "game/a/target.png" );
+    index.applyChanges( root.str(), { "game/a/referrer.prefab.xml", "game/a/target.png" } );
     SW_EXPECT_TRUE( Internal::findReferrerIDs( index, "game/a/target.png" ).empty() );
     vector<EditorAssetReference> listDependency;
     index.findDependencies( "game/a/referrer.prefab.xml", listDependency );
     SW_EXPECT_TRUE( listDependency.empty() );
 
-    SW_REQUIRE_TRUE( FileUtil::removeDirectory( FileUtil::toDiskPath( FileUtil::joinPath( root, "game/b" ) ) ) );
-    index.applyChanges( root, { "game/b" } );
+    SW_REQUIRE_TRUE( FileUtil::removeDirectory( root.join( "game/b" ) ) );
+    index.applyChanges( root.str(), { "game/b" } );
     SW_EXPECT_FALSE( index.containsFile( "game/b/one.png" ) );
     SW_EXPECT_FALSE( index.containsFile( "game/b/two.png" ) );
     SW_EXPECT_TRUE( index.containsFile( "game/a/referrer.prefab.xml" ) );
@@ -125,29 +125,29 @@ SW_TEST_CASE( EditorAssetIndexTest, RemovedFileDropsItsReferences )
  */
 SW_TEST_CASE( EditorAssetIndexTest, MoveKeepsReferrers )
 {
-    using Internal             = EditorAssetIndexTestInternal;
-    const string    root       = sw::test::makeScratchPath( "moved" );
-    const AssetGUID prefabGUID = AssetGUID::create();
-    const AssetGUID soundGUID  = AssetGUID::create();
-    const string    prefabText = AssetGUIDHeader::write( "<Prefab/>\n", prefabGUID );
-    Internal::write( root, "game/a/hero.prefab.xml", prefabText );
-    Internal::write( root, "game/a/hit.ogg", "ogg" );
-    Internal::write( root, "game/a/hit.ogg.meta", AssetMeta::makeText( "game/a/hit.ogg", soundGUID ) );
+    using Internal                = EditorAssetIndexTestInternal;
+    const AbsolutePath root       = sw::test::makeScratchPath( "moved" );
+    const AssetGUID    prefabGUID = AssetGUID::create();
+    const AssetGUID    soundGUID  = AssetGUID::create();
+    const string       prefabText = AssetGUIDHeader::write( "<Prefab/>\n", prefabGUID );
+    Internal::write( root.str(), "game/a/hero.prefab.xml", prefabText );
+    Internal::write( root.str(), "game/a/hit.ogg", "ogg" );
+    Internal::write( root.str(), "game/a/hit.ogg.meta", AssetMeta::makeText( "game/a/hit.ogg", soundGUID ) );
     StringBuilder<constant::buffer::kMax256> sceneText;
     sceneText.appendFormat( "<Scene>\n  <Spawn _prefab=\"%#\"/>\n  <Sound _clip=\"%#\"/>\n</Scene>\n", AssetRegistry::makeReferenceText( prefabGUID ), AssetRegistry::makeReferenceText( soundGUID ) );
-    Internal::write( root, "game/a/level.scene.xml", sceneText.view() );
-    EditorAssetIndex index = Internal::scan( root );
+    Internal::write( root.str(), "game/a/level.scene.xml", sceneText.view() );
+    EditorAssetIndex index = Internal::scan( root.str() );
     SW_EXPECT_EQUAL( 1u, index.countReferrerFiles( "game/a/hero.prefab.xml" ) );
     SW_EXPECT_EQUAL( 1u, index.countReferrerFiles( "game/a/hit.ogg" ) );
 
-    Internal::write( root, "game/b/hero.prefab.xml", prefabText );
-    Internal::remove( root, "game/a/hero.prefab.xml" );
-    Internal::write( root, "game/b/hit.ogg", "ogg" );
-    Internal::write( root, "game/b/hit.ogg.meta", AssetMeta::makeText( "game/b/hit.ogg", soundGUID ) );
-    Internal::remove( root, "game/a/hit.ogg" );
-    Internal::remove( root, "game/a/hit.ogg.meta" );
+    Internal::write( root.str(), "game/b/hero.prefab.xml", prefabText );
+    Internal::remove( root.str(), "game/a/hero.prefab.xml" );
+    Internal::write( root.str(), "game/b/hit.ogg", "ogg" );
+    Internal::write( root.str(), "game/b/hit.ogg.meta", AssetMeta::makeText( "game/b/hit.ogg", soundGUID ) );
+    Internal::remove( root.str(), "game/a/hit.ogg" );
+    Internal::remove( root.str(), "game/a/hit.ogg.meta" );
     // 새 자리가 먼저 와도 옛 자리를 빼는 일이 새 줄을 지우지 않는다.
-    index.applyChanges( root, { "game/b/hero.prefab.xml", "game/a/hero.prefab.xml", "game/b/hit.ogg", "game/b/hit.ogg.meta", "game/a/hit.ogg", "game/a/hit.ogg.meta" } );
+    index.applyChanges( root.str(), { "game/b/hero.prefab.xml", "game/a/hero.prefab.xml", "game/b/hit.ogg", "game/b/hit.ogg.meta", "game/a/hit.ogg", "game/a/hit.ogg.meta" } );
 
     SW_EXPECT_EQUAL( string( "game/b/hero.prefab.xml" ), index.findPath( prefabGUID ).value_or( string{} ) );
     SW_EXPECT_EQUAL( string( "game/b/hit.ogg" ), index.findPath( soundGUID ).value_or( string{} ) );
@@ -184,13 +184,13 @@ SW_TEST_CASE( EditorAssetIndexTest, ScratchCopiesAreReferenceDomains )
  */
 SW_TEST_CASE( EditorAssetIndexTest, DisplayPathKeepsDiskSpelling )
 {
-    using Internal    = EditorAssetIndexTestInternal;
-    const string root = sw::test::makeScratchPath( "spelling" );
-    Internal::write( root, "game/a/HeroIcon.png", "png" );
-    Internal::write( root, "game/a/HeroIcon.png.meta", AssetMeta::makeText( "game/a/HeroIcon.png", AssetGUID::create() ) );
-    EditorAssetIndex index = Internal::scan( root );
-    Internal::write( root, "game/a/LaterIcon.png", "png" );
-    index.applyChanges( root, { "game/a/LaterIcon.png" } );
+    using Internal          = EditorAssetIndexTestInternal;
+    const AbsolutePath root = sw::test::makeScratchPath( "spelling" );
+    Internal::write( root.str(), "game/a/HeroIcon.png", "png" );
+    Internal::write( root.str(), "game/a/HeroIcon.png.meta", AssetMeta::makeText( "game/a/HeroIcon.png", AssetGUID::create() ) );
+    EditorAssetIndex index = Internal::scan( root.str() );
+    Internal::write( root.str(), "game/a/LaterIcon.png", "png" );
+    index.applyChanges( root.str(), { "game/a/LaterIcon.png" } );
 
     SW_EXPECT_TRUE( index.containsFile( "game/a/heroicon.png" ) );
     SW_EXPECT_FALSE( index.containsFile( "game/a/heroicon.png.meta" ) );

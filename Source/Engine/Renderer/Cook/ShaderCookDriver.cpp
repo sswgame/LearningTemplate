@@ -522,11 +522,11 @@ namespace sw
 
     expected<vector<ShaderCookSampleAxis>> ShaderCookDriver::loadSampleRule()
     {
-        const string path = FileUtil::joinPath( ProcessRoots::get()._project.str(), kSampleRuleFile );
-        string       text;
-        if ( FileUtil::readTextFile( FileUtil::toDiskPath( path ), text ) == false )
-            return unexpected( Error{ ErrorKind::NotFound, "could not read the shader cook sample rule", path } );
-        return parseSampleRule( text, path );
+        const AbsolutePath path = ProcessRoots::get()._project.join( kSampleRuleFile );
+        string             text;
+        if ( FileUtil::readTextFile( path, text ) == false )
+            return unexpected( Error{ ErrorKind::NotFound, "could not read the shader cook sample rule", path.str() } );
+        return parseSampleRule( text, path.str() );
     }
 
     vector<ShaderCookRequest> ShaderCookDriver::selectSample( const vector<ShaderCookRequest>& listRequest, const vector<ShaderCookSampleAxis>& listAxis )

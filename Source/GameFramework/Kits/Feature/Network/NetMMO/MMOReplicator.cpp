@@ -774,7 +774,8 @@ namespace sw
         BitReader& reader = body;
         uint32     count  = 0;
         // 보내는 쪽은 조각나지 않는 크기(`kMaxSingleMessageSize`)로 쪼개고 id 하나가 적어도 1 바이트다 — 그보다 큰 수는 깨진 것이다.
-        if ( reader.readCount( static_cast<uint32>( NetConnection::kMaxSingleMessageSize ), count ) == false )
+        count = reader.readCount( static_cast<uint32>( NetConnection::kMaxSingleMessageSize ) );
+        if ( reader.hasOverflowed() )
             return NetHandleResult::Malformed;
         vector<uint32> listLeft;
         listLeft.reserve( count );

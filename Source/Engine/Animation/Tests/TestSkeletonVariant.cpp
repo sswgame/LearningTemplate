@@ -308,7 +308,7 @@ SW_TEST_CASE( SkeletonVariantTest, ChainStacksThroughCommonBase )
     const string                    idBase = test::ScopedScratchDomain::makeID( "chain_base.skeleton.xml" ).str();
     const string                    idMid  = test::ScopedScratchDomain::makeID( "chain_mid.skeleton.xml" ).str();
     const string                    idLoop = test::ScopedScratchDomain::makeID( "chain_loop.skeleton.xml" ).str();
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( domain.makeDiskPath( "chain_base.skeleton.xml" ) ), Util::makeBase().toXML() ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "chain_base.skeleton.xml" ), Util::makeBase().toXML() ) );
 
     const auto writeScaled = [&]( const utf8* pFile, const string& baseID )
     {
@@ -318,7 +318,7 @@ SW_TEST_CASE( SkeletonVariantTest, ChainStacksThroughCommonBase )
         boneOverride._translationScale = 2.0f;
         variant._base                  = baseID;
         variant._listBoneOverride.push_back( boneOverride );
-        return FileUtil::writeTextFile( FileUtil::toDiskPath( domain.makeDiskPath( pFile ) ), variant.toXML() );
+        return FileUtil::writeTextFile( domain.makeDiskPath( pFile ), variant.toXML() );
     };
     SW_REQUIRE_TRUE( writeScaled( "chain_mid.skeleton.xml", idBase ) );
     SW_REQUIRE_TRUE( writeScaled( "chain_leaf.skeleton.xml", idMid ) );
@@ -347,7 +347,7 @@ SW_TEST_CASE( SkeletonVariantTest, CookFlattensToAPlainSkeleton )
     using Util = SkeletonVariantTestUtil;
     const test::ScopedScratchDomain domain;
     const string                    idBase = test::ScopedScratchDomain::makeID( "cook_base.skeleton.xml" ).str();
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( domain.makeDiskPath( "cook_base.skeleton.xml" ) ), Util::makeBase().toXML() ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "cook_base.skeleton.xml" ), Util::makeBase().toXML() ) );
 
     SkeletonVariant      variant{};
     SkeletonBoneOverride boneOverride{};

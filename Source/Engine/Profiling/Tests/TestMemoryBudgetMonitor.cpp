@@ -65,9 +65,9 @@ SW_TEST_CASE( MemoryBudgetMonitorTest, RejectsUnknownKey )
  */
 SW_TEST_CASE( MemoryBudgetMonitorTest, RepositoryBudgetFileIsValid )
 {
-    const string path = FileUtil::joinPath( ProcessRoots::get()._project.str(), MemoryBudgetMonitor::kBudgetFile );
-    string       text;
-    SW_REQUIRE_TRUE_MSG( FileUtil::readTextFile( FileUtil::toDiskPath( path ), text ), path );
+    const AbsolutePath path = ProcessRoots::get()._project.join( MemoryBudgetMonitor::kBudgetFile );
+    string             text;
+    SW_REQUIRE_TRUE_MSG( FileUtil::readTextFile( path, text ), path.str() );
 
     MemoryProfiler profiler;
     SW_EXPECT_TRUE( MemoryBudgetMonitor::applyBudgetJSON( text, profiler ).has_value() );

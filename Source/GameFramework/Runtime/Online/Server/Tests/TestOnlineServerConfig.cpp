@@ -179,9 +179,9 @@ SW_TEST_CASE( OnlineServerConfigTest, KitRegistryRejectsDuplicateName )
  */
 SW_TEST_CASE( OnlineServerConfigTest, RepositoryOnlineConfigsResolve )
 {
-    const sw::string       directory = sw::FileUtil::joinPath( sw::ProcessRoots::get()._project.str(), "Config/Server/Online" );
+    const sw::AbsolutePath directory = sw::ProcessRoots::get()._project.join( "Config/Server/Online" );
     sw::vector<sw::string> listFile;
-    SW_REQUIRE_TRUE( sw::FileUtil::collectFiles( sw::FileUtil::toDiskPath( directory ), ".json", listFile, false ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::collectFiles( directory, ".json", listFile, false ) );
     int32 pairCount = 0;
     for ( const sw::string& filePath : listFile )
     {

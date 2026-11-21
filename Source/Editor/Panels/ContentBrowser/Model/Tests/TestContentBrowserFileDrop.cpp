@@ -19,7 +19,7 @@ namespace
         static string makeAbsolute( string_view fileName ) // joinPath 는 `..` 를 접을 수 있어 글로 잇는다
         {
             StringBuilder<constant::buffer::kMax512> pathBuilder;
-            pathBuilder.appendFormat( "%#/%#", test::makeScratchPath( "filedrop" ), fileName );
+            pathBuilder.appendFormat( "%#/%#", test::makeScratchPath( "filedrop" ).str(), fileName );
             return FileUtil::normalizeSeparators( pathBuilder.view() );
         }
 

@@ -180,9 +180,9 @@ SW_TEST_CASE( ResourceSaveConditionTest, LayeredResourceIsNotSavedOverTheOrigina
     const ScopedScratchDomain domain;
     const XSaveTagScope       scope;
     const vector<string>      listPreviousLayer = engine::getSubsystem<ResourceComposition>().getLayers();
-    (void)domain.makeDiskFolder( "layers/night/testproject" );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( domain.makeDiskPath( "layers/night/testproject/doc.xml" ) ), R"(<Doc a="layer" />)" ) );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( domain.makeDiskPath( "doc.xml" ) ), R"(<Doc a="base" />)" ) );
+    (void)domain.makeDiskFolder( "layers/night/testproject" ).str();
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "layers/night/testproject/doc.xml" ), R"(<Doc a="layer" />)" ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "doc.xml" ), R"(<Doc a="base" />)" ) );
     SW_REQUIRE_TRUE( engine::getSubsystem<ResourceComposition>().setLayers( { ScopedScratchDomain::makeID( "layers/night" ).str() } ) );
 
     const AssetID id = ScopedScratchDomain::makeID( "doc.xml" );
@@ -192,9 +192,9 @@ SW_TEST_CASE( ResourceSaveConditionTest, LayeredResourceIsNotSavedOverTheOrigina
     { return DataInheritanceSchema{ "Doc" }; } ).withAsset( id ),
                                                 flatText, bComposed ) );
     SW_EXPECT_LOG( "ResourceLayer.SaveWouldBake" );
-    SW_EXPECT_FALSE( ResourceComposer::saveText( domain.makeDiskPath( "doc.xml" ), ResourceSaveText::makeComplete( flatText ) ) );
+    SW_EXPECT_FALSE( ResourceComposer::saveText( domain.makeDiskPath( "doc.xml" ).str(), ResourceSaveText::makeComplete( flatText ) ) );
     string onDisk;
-    SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::toDiskPath( domain.makeDiskPath( "doc.xml" ) ), onDisk ) );
+    SW_REQUIRE_TRUE( FileUtil::readTextFile( domain.makeDiskPath( "doc.xml" ), onDisk ) );
     SW_EXPECT_TRUE( onDisk.find( "base" ) != string::npos );
 
     SW_REQUIRE_TRUE( engine::getSubsystem<ResourceComposition>().setLayers( listPreviousLayer ) );
@@ -206,23 +206,23 @@ SW_TEST_CASE( ResourceSaveConditionTest, LayeredResourceIsNotSavedOverTheOrigina
 SW_TEST_CASE( ResourceSaveDeltaTest, WritesTheDeltaOnlyWhenItReadsBack )
 {
     const ScopedScratchDomain   domain;
-    const string                path = domain.makeDiskPath( "new/folder/child.xml" );
+    const AbsolutePath          path = domain.makeDiskPath( "new/folder/child.xml" );
     const DataInheritanceSchema schema{ "Doc" };
     constexpr string_view       kParent = R"(<Doc a="1" b="2" />)";
     constexpr string_view       kFull   = R"(<Doc a="1" b="3" />)";
 
-    SW_REQUIRE_TRUE( ResourceComposer::saveDelta( path, kFull, kParent, schema, "parent.xml", [kFull]( const string& )
+    SW_REQUIRE_TRUE( ResourceComposer::saveDelta( path.str(), kFull, kParent, schema, "parent.xml", [kFull]( const string& )
     { return string{ kFull }; } ) );
     string written;
-    SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::toDiskPath( path ), written ) );
+    SW_REQUIRE_TRUE( FileUtil::readTextFile( path, written ) );
     SW_EXPECT_TRUE( written.find( "_base" ) != string::npos );
     SW_EXPECT_TRUE( written.find( "a=" ) == string::npos ); // 부모와 같은 칸은 적지 않는다
 
     SW_EXPECT_LOG( "ResourceSave.DeltaNotSaved" );
-    SW_EXPECT_FALSE( ResourceComposer::saveDelta( path, R"(<Doc a="1" />)", kParent, schema, "parent.xml", []( const string& )
+    SW_EXPECT_FALSE( ResourceComposer::saveDelta( path.str(), R"(<Doc a="1" />)", kParent, schema, "parent.xml", []( const string& )
     { return string{ "different" }; } ) );
     string kept;
-    SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::toDiskPath( path ), kept ) );
+    SW_REQUIRE_TRUE( FileUtil::readTextFile( path, kept ) );
     SW_EXPECT_EQUAL( written, kept );
 }
 

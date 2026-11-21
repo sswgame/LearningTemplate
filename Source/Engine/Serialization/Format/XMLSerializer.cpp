@@ -1126,13 +1126,13 @@ namespace sw
         XMLSerializerInternal::writeXMLProperties( ObjectAddress{ pInstance }, typeInfo, backend, context );
     }
 
-    bool XMLSerializer::deserializeVersioned( uint32& outVersion, void* pInstance, const TypeInfo& typeInfo,
+    bool XMLSerializer::deserializeVersioned( void* pInstance, const TypeInfo& typeInfo,
                                               string_view xmlStr, uint32 currentVersion, const SerializeContext& context )
     {
         // 절차는 JSON · XML · Binary 가 공통이다(`runVersionedDeserialize`). 여기서 정하는 것은 두 가지뿐이다.
         // **버전이 어디서 오는가**(본문 안의 `_schemaVersion`)와 **orphan 만 있을 때의 정책**이다.
         return runVersionedDeserialize(
-            outVersion, MutableObjectAddress{ pInstance }, typeInfo, currentVersion,
+            0, MutableObjectAddress{ pInstance }, typeInfo, currentVersion,
             SchemaVersionSource::Payload, SchemaOrphanPolicy::Ignore,
             SW_DELEGATE_LAMBDA( SoftDeserializeFn,
                                 [&]( const MutableObjectAddress target, const TypeInfo& targetType, vector<SchemaOrphanValue>& listOrphan, uint32& outSoftVersion ) -> bool

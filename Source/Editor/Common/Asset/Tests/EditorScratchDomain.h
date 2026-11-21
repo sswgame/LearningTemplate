@@ -23,10 +23,10 @@ namespace sw::test
         static constexpr const utf8* kDomain = "editortestdomain";
 
         EditorScratchDomain()
-            : _folder{ FileUtil::normalizeSeparators( makeScratchPath( kDomain ) ) }
+            : _folder{ makeScratchPath( kDomain ) }
             , _bMounted{ SW_FALSE }
         {
-            _bMounted = FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( _folder ) ) && editor::getSubsystem<AssetPaths>().mountDiskDomain( kDomain, _folder );
+            _bMounted = FileUtil::ensureDirectoryExists( _folder ) && editor::getSubsystem<AssetPaths>().mountDiskDomain( kDomain, _folder.str() );
             SW_EXPECT_TRUE( _bMounted );
         }
         ~EditorScratchDomain()
@@ -37,8 +37,8 @@ namespace sw::test
         EditorScratchDomain( const EditorScratchDomain& )            = delete;
         EditorScratchDomain& operator=( const EditorScratchDomain& ) = delete;
 
-        /** @brief 도메인 폴더 아래 @p relativePath 의 디스크 경로입니다. */
-        [[nodiscard]] string makeDiskPath( string_view relativePath ) const { return FileUtil::joinPath( _folder, relativePath ); }
+        /** @brief 도메인 폴더 아래 @p relativePath 의 디스크 경로입니다(`AbsolutePath::join` — I/O 에 그대로 넘긴다, 글이 필요하면 `.str()`). */
+        [[nodiscard]] AbsolutePath makeDiskPath( string_view relativePath ) const { return _folder.join( relativePath ); }
         /** @brief 도메인 폴더 아래 @p relativePath 의 리소스 id 입니다. */
         [[nodiscard]] static string makeID( string_view relativePath )
         {
@@ -48,7 +48,7 @@ namespace sw::test
         }
 
     private:
-        string _folder;
-        uint8  _bMounted : 1;
+        AbsolutePath _folder;
+        uint8        _bMounted : 1;
     };
 } // namespace sw::test

@@ -361,8 +361,8 @@ SW_TEST_CASE_F( ReceiptEndToEndTest, MissingSecretStopsAssembly )
 SW_TEST_CASE( ReceiptKitAssemblyTest, KitOptionsSelectTheProviders )
 {
     test::ScopedScratchDomain domain;
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( domain.makeDiskPath( "e2e.currencies.xml" ) ), R"(<CurrencyCatalog><Currency id="cur.gold"/></CurrencyCatalog>)" ) );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( domain.makeDiskPath( "e2e.offers.xml" ) ), R"(<OfferCatalog><Offer id="pack"><Price currency="cur.gold" amount="1"/><Grant asset="item.hat" amount="1"/></Offer></OfferCatalog>)" ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "e2e.currencies.xml" ), R"(<CurrencyCatalog><Currency id="cur.gold"/></CurrencyCatalog>)" ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "e2e.offers.xml" ), R"(<OfferCatalog><Offer id="pack"><Price currency="cur.gold" amount="1"/><Grant asset="item.hat" amount="1"/></Offer></OfferCatalog>)" ) );
 
     FakeStoreEndpoint endpoint;
     endpoint.start();

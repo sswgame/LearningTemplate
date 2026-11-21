@@ -40,7 +40,7 @@ namespace
         string                    _folderID{};
 
         MigrationFolderFixture()
-            : _diskFolder{ _domain.makeDiskFolder( "sql" ) }
+            : _diskFolder{ _domain.makeDiskFolder( "sql" ).str() }
         {
             StringBuilder<constant::buffer::kMax128> folderID;
             folderID.appendFormat( "%#/sql", test::ScopedScratchDomain::kDomain );

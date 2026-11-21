@@ -38,7 +38,7 @@ namespace
         /** @brief 부모 파일을 쓰고 @p pChildBody 를 그 자식으로 읽습니다. */
         static bool parseChild( sw::AnimationGraphAsset& outGraph, const sw::test::ScopedScratchDomain& domain, const utf8* pChildBody )
         {
-            SW_EXPECT_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::toDiskPath( domain.makeDiskPath( "base.animgraph.xml" ) ), sw::string{ kBaseGraph } ) );
+            SW_EXPECT_TRUE( sw::FileUtil::writeTextFile( domain.makeDiskPath( "base.animgraph.xml" ), sw::string{ kBaseGraph } ) );
             const sw::string                                 baseID = sw::test::ScopedScratchDomain::makeID( "base.animgraph.xml" ).str();
             sw::StringBuilder<sw::constant::buffer::kMax256> xml;
             xml.appendFormat( "<AnimationGraphAsset _base=\"%#\">%#</AnimationGraphAsset>", baseID, pChildBody );
@@ -188,23 +188,23 @@ SW_TEST_CASE( AnimationGraphAssetTest, SaveWritesOnlyTheDifference )
     sw::AnimationGraphAsset             graph;
     SW_REQUIRE_TRUE( AnimationGraphTestUtil::parseChild( graph, domain, "<links><link id=\"1\" blend=\"0.4\"/></links>" ) );
 
-    const sw::string                     childPath = domain.makeDiskPath( "child.animgraph.xml" );
-    const sw::optional<sw::AbsolutePath> absPath   = sw::FileUtil::requireAbsolutePath( childPath );
+    const sw::AbsolutePath               childPath = domain.makeDiskPath( "child.animgraph.xml" );
+    const sw::optional<sw::AbsolutePath> absPath   = sw::FileUtil::requireAbsolutePath( childPath.str() );
     SW_REQUIRE_TRUE( absPath.has_value() );
     SW_REQUIRE_TRUE( graph.saveToFile( *absPath ) );
     sw::string written;
-    SW_REQUIRE_TRUE( sw::FileUtil::readTextFile( sw::FileUtil::toDiskPath( childPath ), written ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::readTextFile( childPath, written ) );
     SW_EXPECT_TRUE( written.find( "_base=" ) != sw::string::npos );
     SW_EXPECT_TRUE( written.find( "Breathe" ) == sw::string::npos ); // 물려받은 칸은 쓰지 않는다
 
     sw::AnimationGraphAsset reread;
-    SW_REQUIRE_TRUE( reread.loadFromDiskFile( childPath ) );
+    SW_REQUIRE_TRUE( reread.loadFromDiskFile( childPath.str() ) );
     SW_EXPECT_EQUAL( graph.toXML(), reread.toXML() );
 
     graph._listLink[0]._blendSeconds = -1.0f; // 형식 기본값은 쓰지 않으므로 부모의 0.2 를 덮을 수 없다
     SW_EXPECT_LOG( "ResourceSave.DeltaNotSaved" );
     SW_EXPECT_FALSE( graph.saveToFile( *absPath ) ); // 부모 없는 한 벌로 끊지 않는다
-    SW_REQUIRE_TRUE( sw::FileUtil::readTextFile( sw::FileUtil::toDiskPath( childPath ), written ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::readTextFile( childPath, written ) );
     SW_EXPECT_TRUE( written.find( "_base=" ) != sw::string::npos ); // 앞 저장이 그대로 남는다
 }
 

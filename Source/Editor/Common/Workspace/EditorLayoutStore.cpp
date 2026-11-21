@@ -40,10 +40,10 @@ namespace sw::editor
 
     string EditorLayoutStore::getDefaultFolder()
     {
-        const string stateDirectory = EditorPaths::getEditorStateDirectory();
+        const AbsolutePath stateDirectory = EditorPaths::getEditorStateDirectory();
         if ( stateDirectory.empty() )
             return {};
-        return FileUtil::joinPath( stateDirectory, kFolderName );
+        return FileUtil::joinPath( stateDirectory.str(), kFolderName );
     }
 
     string EditorLayoutStore::makeImguiINIPath( string_view folder, string_view name )

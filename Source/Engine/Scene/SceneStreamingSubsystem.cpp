@@ -977,7 +977,8 @@ namespace sw
             return false;
         Archive arch( pData, size );
         uint32  cellCount{ 0 };
-        if ( arch.readCount( SceneStreamingSaveInternal::kMinBytesPerCell, cellCount ) == false )
+        cellCount = arch.readCount( SceneStreamingSaveInternal::kMinBytesPerCell );
+        if ( arch.isError() )
             return false;
         outState._listCell.reserve( cellCount );
         for ( uint32 cellIndex = 0; cellIndex < cellCount; ++cellIndex )
@@ -985,7 +986,8 @@ namespace sw
             SavedCell saved{};
             arch >> saved._cell._x >> saved._cell._z;
             uint32 layerCount{ 0 };
-            if ( arch.readCount( sizeof( uint32 ), layerCount ) == false )
+            layerCount = arch.readCount( sizeof( uint32 ) );
+            if ( arch.isError() )
                 return false;
             saved._listDataLayer.resize( layerCount );
             for ( string& layer : saved._listDataLayer )

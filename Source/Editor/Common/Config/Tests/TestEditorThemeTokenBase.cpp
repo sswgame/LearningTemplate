@@ -27,8 +27,8 @@ namespace
         {
             fixed_string<constant::buffer::kMax256> fileName;
             formatstring( fileName.data(), fileName.capacity(), "%#%#", name, EditorThemeTokens::kExtension );
-            const string path = test::makeScratchPath( fileName );
-            return FileUtil::writeTextFile( FileUtil::toDiskPath( path ), text ) ? path : string{};
+            const AbsolutePath path = test::makeScratchPath( fileName );
+            return FileUtil::writeTextFile( path, text ) ? path.str() : string{};
         }
     };
     using Util = EditorThemeTokenBaseTestUtil;
@@ -57,7 +57,7 @@ SW_TEST_CASE( EditorThemeTokenBaseTest, ChildOverridesOnlyWrittenKeys )
     SW_EXPECT_NEAR( 14.0f, *pFontSize, 0.0f );
 
     // 키 묶음은 부모와 같다 — 벌끼리의 키 대조가 그대로 돈다.
-    const expected<EditorThemeConfig> parentConfig = EditorThemeTokens::loadThemeFile( test::makeScratchPath( "parentset.tokens.json" ) );
+    const expected<EditorThemeConfig> parentConfig = EditorThemeTokens::loadThemeFile( test::makeScratchPath( "parentset.tokens.json" ).str() );
     SW_REQUIRE_TRUE( parentConfig.has_value() );
     string mismatchKey;
     SW_EXPECT_FALSE( EditorThemeTokens::findKeyMismatch( *parentConfig, config, mismatchKey ) );

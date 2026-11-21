@@ -50,10 +50,10 @@ namespace
 SW_TEST_CASE_F( LocalizationReloadCacheTest, HotReloadGoesThroughTheAssetCacheRegistry )
 {
     using sw::test::LocalizationTestUtil;
-    const sw::string folder = _domain.getFolder();
-    LocalizationTestUtil::writeSourceTable( folder, "en", R"("ui.title": { "source": "Mystery Island" })" );
-    LocalizationTestUtil::writeTranslation( folder, "ko", R"("ui.title": { "text": "신비의 섬" })" );
-    const sw::string projectPath = LocalizationTestUtil::writeProject( folder, "en", R"([ "ko" ])" );
+    const sw::AbsolutePath folder = _domain.getFolder();
+    LocalizationTestUtil::writeSourceTable( folder.str(), "en", R"("ui.title": { "source": "Mystery Island" })" );
+    LocalizationTestUtil::writeTranslation( folder.str(), "ko", R"("ui.title": { "text": "신비의 섬" })" );
+    const sw::string projectPath = LocalizationTestUtil::writeProject( folder.str(), "en", R"([ "ko" ])" );
     SW_REQUIRE_TRUE( _loc.mountProject( sw::test::ScopedScratchDomain::toID( projectPath ), sw::LocalizationScope::Game ) );
     SW_REQUIRE_TRUE( _loc.setCurrentLanguage( "ko" ) );
     SW_EXPECT_EQUAL( sw::string( "신비의 섬" ), lookup( _loc, "ui.title" ) );
@@ -64,9 +64,9 @@ SW_TEST_CASE_F( LocalizationReloadCacheTest, HotReloadGoesThroughTheAssetCacheRe
     const sw::AssetCacheReloadFunction pfnReload = assets.findReloadFunction( pCache );
     SW_REQUIRE_TRUE( pfnReload != nullptr );
 
-    const sw::AssetID translationID = sw::test::ScopedScratchDomain::toID( sw::FileUtil::joinPath( folder, "ko.translation.xml" ) );
+    const sw::AssetID translationID = sw::test::ScopedScratchDomain::toID( sw::FileUtil::joinPath( folder.str(), "ko.translation.xml" ) );
     SW_EXPECT_TRUE( pCache->isCached( translationID.view() ) );
-    LocalizationTestUtil::writeTranslation( folder, "ko", R"("ui.title": { "text": "수수께끼 섬" })" );
+    LocalizationTestUtil::writeTranslation( folder.str(), "ko", R"("ui.title": { "text": "수수께끼 섬" })" );
     SW_EXPECT_TRUE( pfnReload( *pCache, translationID ) == sw::ReloadResult::Reloaded );
     SW_EXPECT_EQUAL( sw::string( "수수께끼 섬" ), lookup( _loc, "ui.title" ) );
 

@@ -46,12 +46,12 @@ SW_TEST_CASE( MountedDiskDomainTest, WritePathKeepsTheDiskSpellingOfExistingFold
 {
     const ScopedScratchDomain                domain;
     const AssetPaths&                        paths     = engine::getSubsystem<AssetPaths>();
-    const string                             directory = domain.getFolder();
+    const AbsolutePath                       directory = domain.getFolder();
     StringBuilder<constant::buffer::kMax512> automationFolder;
-    automationFolder.appendFormat( "%#/Saved/Automation", directory );
+    automationFolder.appendFormat( "%#/Saved/Automation", directory.str() );
     SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( automationFolder.view() ) ) );
     StringBuilder<constant::buffer::kMax512> diskFileBuilder;
-    diskFileBuilder.appendFormat( "%#/Saved/Automation/Out.txt", directory );
+    diskFileBuilder.appendFormat( "%#/Saved/Automation/Out.txt", directory.str() );
     const string diskFile = string( diskFileBuilder.view() );
     const string diskID   = ScopedScratchDomain::toID( diskFile ).str();
     SW_REQUIRE_TRUE( diskID.empty() == false );
@@ -62,14 +62,14 @@ SW_TEST_CASE( MountedDiskDomainTest, WritePathKeepsTheDiskSpellingOfExistingFold
     SW_REQUIRE_TRUE( writePath.has_value() );
     // 기대 경로는 대소문자를 구분하는 표기로 적는다 — isSameDiskPath 는 Linux 에서 정확히 같아야, Windows 에서는 같은 파일이면 참이다.
     StringBuilder<constant::buffer::kMax512> expectedWritePath;
-    expectedWritePath.appendFormat( "%#/Saved/Automation/out.txt", directory );
+    expectedWritePath.appendFormat( "%#/Saved/Automation/out.txt", directory.str() );
     SW_EXPECT_TRUE( FileUtil::isSameDiskPath( expectedWritePath.view(), writePath->str() ) );
 
     // 없는 폴더부터는 id 의 표기를 쓴다 — 리소스 id 는 소문자로 접히므로(`normalizeAssetID`) 새 성분은 소문자다. Windows 는 대소문자를 가리지 않아 같은 폴더다.
     const optional<AbsolutePath> freshPath = paths.toDiskPath( ScopedScratchDomain::makeID( "Saved/Fresh/Deep/New.txt" ).str() );
     SW_REQUIRE_TRUE( freshPath.has_value() );
     StringBuilder<constant::buffer::kMax512> expectedFreshPath;
-    expectedFreshPath.appendFormat( "%#/Saved/fresh/deep/new.txt", directory );
+    expectedFreshPath.appendFormat( "%#/Saved/fresh/deep/new.txt", directory.str() );
     SW_EXPECT_TRUE( FileUtil::isSameDiskPath( expectedFreshPath.view(), freshPath->str() ) );
 
     // 쓴 뒤에는 같은 id 를 대소문자만 다르게 물어도 같은 파일이다(둘째 쓰기가 옆 폴더를 만들지 않는다).
@@ -86,20 +86,20 @@ SW_TEST_CASE( MountedDiskDomainTest, WritePathKeepsTheDiskSpellingOfExistingFold
 SW_TEST_CASE( MountedDiskDomainTest, PathCacheDropsAnswersWhenThisProcessCreatesOrRemovesFiles )
 {
     const ScopedScratchDomain domain;
-    const string              filePath   = domain.makeDiskPath( "Late.txt" );
-    const string              folderPath = domain.makeDiskPath( "LateFolder" );
+    const AbsolutePath        filePath   = domain.makeDiskPath( "Late.txt" );
+    const AbsolutePath        folderPath = domain.makeDiskPath( "LateFolder" );
     const string              fileID     = ScopedScratchDomain::makeID( "late.txt" ).str();
     const string              folderID   = ScopedScratchDomain::makeID( "latefolder" ).str();
 
     SW_EXPECT_FALSE( findLoose( fileID ).has_value() ); // "없음" 을 기억한다
     SW_EXPECT_FALSE( findLoose( folderID ).has_value() );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( filePath ), "late" ) );
-    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( folderPath ) ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( filePath, "late" ) );
+    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( folderPath ) );
     SW_EXPECT_TRUE( findLoose( fileID ).has_value() );
     SW_EXPECT_TRUE( findLoose( folderID ).has_value() );
 
-    SW_REQUIRE_TRUE( FileUtil::removeFile( FileUtil::toDiskPath( filePath ) ) ); // "있음" 을 기억한 칸이 낡는다
-    SW_REQUIRE_TRUE( FileUtil::removeDirectory( FileUtil::toDiskPath( folderPath ) ) );
+    SW_REQUIRE_TRUE( FileUtil::removeFile( filePath ) ); // "있음" 을 기억한 칸이 낡는다
+    SW_REQUIRE_TRUE( FileUtil::removeDirectory( folderPath ) );
     SW_EXPECT_FALSE( findLoose( fileID ).has_value() );
     SW_EXPECT_FALSE( findLoose( folderID ).has_value() );
 }
@@ -117,10 +117,10 @@ SW_TEST_CASE( MountedDiskDomainTest, ResourceEntryRefusesOSPathsInEveryContentSo
     const ScopedContentSource contentSource{ *pPacks };
     AssetPaths&               paths = engine::getSubsystem<AssetPaths>();
 
-    const string insideRoot  = FileUtil::joinPath( paths.getRootFolderPath(), "game/playground/maps/editortest.scene.xml" );
-    const string outsideRoot = domain.makeDiskPath( "outside.txt" );
+    const string       insideRoot  = FileUtil::joinPath( paths.getRootFolderPath(), "game/playground/maps/editortest.scene.xml" );
+    const AbsolutePath outsideRoot = domain.makeDiskPath( "outside.txt" );
     SW_REQUIRE_TRUE( FileUtil::exists( FileUtil::toDiskPath( insideRoot ) ) );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( outsideRoot ), "OUTSIDE" ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( outsideRoot, "OUTSIDE" ) );
     const AssetID outsideID = ScopedScratchDomain::makeID( "outside.txt" );
 
     SW_EXPECT_LOG( "AssetIO.OSPathRejected" );
@@ -129,8 +129,8 @@ SW_TEST_CASE( MountedDiskDomainTest, ResourceEntryRefusesOSPathsInEveryContentSo
     {
         contentSource._packs.setContentSource( source );
         SW_EXPECT_FALSE( AssetIO::readTextAsset( AssetID{ insideRoot }, content ) );
-        SW_EXPECT_FALSE( AssetIO::readTextAsset( AssetID{ outsideRoot }, content ) );
-        SW_EXPECT_FALSE( AssetIO::hasAsset( AssetID{ outsideRoot } ) );
+        SW_EXPECT_FALSE( AssetIO::readTextAsset( AssetID{ outsideRoot.str() }, content ) );
+        SW_EXPECT_FALSE( AssetIO::hasAsset( AssetID{ outsideRoot.str() } ) );
         // 붙인 디스크 도메인은 쿠킹본 정책에서도 디스크에서 읽는다.
         content.clear();
         SW_EXPECT_TRUE( AssetIO::readTextAsset( outsideID, content ) );
@@ -138,7 +138,7 @@ SW_TEST_CASE( MountedDiskDomainTest, ResourceEntryRefusesOSPathsInEveryContentSo
         SW_EXPECT_TRUE( AssetIO::hasAsset( outsideID ) );
     }
     content.clear();
-    SW_EXPECT_TRUE( AssetIO::readTextFile( outsideRoot, content ) );
+    SW_EXPECT_TRUE( AssetIO::readTextFile( outsideRoot.str(), content ) );
     SW_EXPECT_EQUAL( string( "OUTSIDE" ), content );
 
     // 리소스 루트 안 폴더는 붙일 수 없다 — 팩 전용 규칙을 지나 낱개 에셋을 읽는 길이 된다.
@@ -152,22 +152,22 @@ SW_TEST_CASE( MountedDiskDomainTest, ResourceEntryRefusesOSPathsInEveryContentSo
  */
 SW_TEST_CASE( MountedDiskDomainTest, UnmountedDomainNoLongerResolves )
 {
-    AssetPaths&  paths  = engine::getSubsystem<AssetPaths>();
-    const string first  = sw::test::makeScratchPath( "first" );
-    const string second = sw::test::makeScratchPath( "second" );
-    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( first ) ) && FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( second ) ) );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( FileUtil::joinPath( first, "a.txt" ) ), "A" ) );
+    AssetPaths&        paths  = engine::getSubsystem<AssetPaths>();
+    const AbsolutePath first  = sw::test::makeScratchPath( "first" );
+    const AbsolutePath second = sw::test::makeScratchPath( "second" );
+    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( first ) && FileUtil::ensureDirectoryExists( second ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( first.join( "a.txt" ), "A" ) );
 
-    SW_REQUIRE_TRUE( paths.mountDiskDomain( "unmounttest", first ) );
+    SW_REQUIRE_TRUE( paths.mountDiskDomain( "unmounttest", first.str() ) );
     SW_EXPECT_TRUE( findLoose( "unmounttest/a.txt" ).has_value() );
     SW_EXPECT_LOG( "AssetPaths.MountConflict" );
-    SW_EXPECT_FALSE( paths.mountDiskDomain( "unmounttest", second ) );
+    SW_EXPECT_FALSE( paths.mountDiskDomain( "unmounttest", second.str() ) );
 
     SW_REQUIRE_TRUE( paths.unmountDiskDomain( "unmounttest" ) );
     SW_EXPECT_FALSE( paths.isMountedDiskDomainID( "unmounttest/a.txt" ) );
     SW_EXPECT_FALSE( findLoose( "unmounttest/a.txt" ).has_value() );
 
-    SW_REQUIRE_TRUE( paths.mountDiskDomain( "unmounttest", second ) );
+    SW_REQUIRE_TRUE( paths.mountDiskDomain( "unmounttest", second.str() ) );
     SW_EXPECT_TRUE( paths.unmountDiskDomain( "unmounttest" ) );
 
     SW_EXPECT_LOG( "AssetPaths.DomainNotMounted" );

@@ -11,6 +11,7 @@
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "Engine/Content/CookJob.h"
 
@@ -84,7 +85,7 @@ namespace sw
     /** @struct DerivedDataLayer @brief DDC 층 하나(폴더 루트와 쓰기 권한, 정리 규칙)입니다. */
     struct DerivedDataLayer
     {
-        string                              _rootPath;
+        AbsolutePath                        _rootPath; ///< 디스크 폴더(형식 — 항목 경로를 글로 잇고 다시 올리지 않는다)
         DerivedDataAccess                   _access{ DerivedDataAccess::ReadOnly };
         optional<DerivedDataEvictionPolicy> _evictionPolicy{}; ///< 없으면 이 프로세스가 지우지 않는다(읽기 전용 층 · 테스트 층)
     };
@@ -111,7 +112,7 @@ namespace sw
         explicit DerivedDataCache( vector<DerivedDataLayer> listLayer );
 
         /** @brief 로컬 DDC 루트(`<프로젝트>/Saved/DDC`)입니다. */
-        static string makeLocalRootPath();
+        static AbsolutePath makeLocalRootPath();
         /**
          * @brief `Config/Dev/DerivedData.json` 의 층 목록으로 만듭니다. 파일이 없거나 칸이 틀리면 오류입니다(폴백 없음).
          * @details 층은 `_root`(파생 데이터 루트 `<프로젝트>/Saved` 기준 폴더)나 `_rootEnvironment`(머신마다 다른 절대 경로를 담은 환경 변수) 중 하나를 쓴다.
@@ -141,9 +142,9 @@ namespace sw
          */
         uint32 evictUnusedEntries() const;
         /** @brief 항목 파일 @p path 를 검증합니다. Valid 면 @p outBytes 에 본문을 담습니다. 로그를 남기지 않습니다. */
-        [[nodiscard]] static DerivedDataEntryState validateEntry( string_view path, string_view keyDescription, vector<uint8>& outBytes );
+        [[nodiscard]] static DerivedDataEntryState validateEntry( const AbsolutePath& path, string_view keyDescription, vector<uint8>& outBytes );
         /** @brief 층 @p layerIndex 의 키 파일 경로입니다. */
-        string                          makePath( size_t layerIndex, uint64 key ) const;
+        [[nodiscard]] AbsolutePath      makePath( size_t layerIndex, uint64 key ) const;
         const vector<DerivedDataLayer>& getLayers() const { return _listLayer; }
 
     private:

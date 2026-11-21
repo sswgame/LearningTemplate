@@ -235,7 +235,7 @@ SW_TEST_CASE( DialogueGraphTest, XMLRoundTripAndLoadFromFileAgree )
     SW_EXPECT_EQUAL( 2u, static_cast<uint32>( parsed._listNode[1]._listChoice.size() ) );
     SW_EXPECT_TRUE( parsed.findChoiceNextNodeID( 2, 0 ) == 3 );
 
-    const optional<AbsolutePath> filePath = AbsolutePath::tryMake( test::makeScratchPath( "graph.dialogue.xml" ) );
+    const optional<AbsolutePath> filePath = AbsolutePath::tryMake( test::makeScratchPath( "graph.dialogue.xml" ).str() );
     SW_REQUIRE_TRUE( filePath.has_value() );
     SW_EXPECT_TRUE( source.saveToFile( *filePath ) );
 

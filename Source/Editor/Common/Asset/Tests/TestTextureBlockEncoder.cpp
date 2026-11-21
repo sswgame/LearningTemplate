@@ -209,10 +209,10 @@ SW_TEST_CASE( TextureBlockEncoderTest, CookedVariantLoadsWithTheFamilyFormat )
     bytes[16] = 32;
     bytes[17] = 8;
 
-    const string root       = test::makeScratchPath( "TextureVariantCook" );
-    const string sourcePath = FileUtil::joinPath( root, "textures_raw/odd.tga" );
-    const string outputPath = FileUtil::joinPath( root, "textures/odd.astc.dds" );
-    SW_REQUIRE_TRUE( FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( sourcePath ) ) && FileUtil::writeFile( FileUtil::toDiskPath( sourcePath ), bytes.data(), bytes.size() ) );
+    const AbsolutePath root       = test::makeScratchPath( "TextureVariantCook" );
+    const AbsolutePath sourcePath = root.join( "textures_raw/odd.tga" );
+    const AbsolutePath outputPath = root.join( "textures/odd.astc.dds" );
+    SW_REQUIRE_TRUE( FileUtil::ensureParentDirectoryExists( sourcePath ) && FileUtil::writeFile( sourcePath, bytes.data(), bytes.size() ) );
 
     TextureFormatFamily family;
     family._name   = "ASTC";
@@ -222,9 +222,9 @@ SW_TEST_CASE( TextureBlockEncoderTest, CookedVariantLoadsWithTheFamilyFormat )
     family._mask   = RHIFormat::ASTC_4x4_UNORM;
     family._hdr    = RHIFormat::R16G16B16A16_FLOAT;
 
-    SW_REQUIRE_TRUE( TextureImporter::cookTextureVariant( sourcePath, outputPath, TextureImportRule{}, family ) ); // 기본 규칙은 BC7 · 밉 — 용도는 색
+    SW_REQUIRE_TRUE( TextureImporter::cookTextureVariant( sourcePath.str(), outputPath.str(), TextureImportRule{}, family ) ); // 기본 규칙은 BC7 · 밉 — 용도는 색
     vector<uint8> output;
-    SW_REQUIRE_TRUE( FileUtil::readFile( FileUtil::toDiskPath( outputPath ), output ) );
+    SW_REQUIRE_TRUE( FileUtil::readFile( outputPath, output ) );
     DDSImageData image;
     SW_REQUIRE_TRUE( DDSLoader::loadFromMemory( output.data(), output.size(), image ) );
     SW_EXPECT_TRUE( Texture2D::toRHIFormatFromDXGI( image._dxgiFormat ) == RHIFormat::ASTC_4x4_UNORM );
@@ -234,13 +234,13 @@ SW_TEST_CASE( TextureBlockEncoderTest, CookedVariantLoadsWithTheFamilyFormat )
 
     TextureImportRule rawRule;
     rawRule._format = TextureImportFormat::R8G8B8A8;
-    SW_REQUIRE_TRUE( TextureImporter::cookTextureVariant( sourcePath, outputPath, rawRule, family ) );
+    SW_REQUIRE_TRUE( TextureImporter::cookTextureVariant( sourcePath.str(), outputPath.str(), rawRule, family ) );
     output.clear();
-    SW_REQUIRE_TRUE( FileUtil::readFile( FileUtil::toDiskPath( outputPath ), output ) );
+    SW_REQUIRE_TRUE( FileUtil::readFile( outputPath, output ) );
     SW_REQUIRE_TRUE( DDSLoader::loadFromMemory( output.data(), output.size(), image ) );
     SW_EXPECT_TRUE( Texture2D::toRHIFormatFromDXGI( image._dxgiFormat ) == RHIFormat::R8G8B8A8_UNORM );
 
     SW_EXPECT_TRUE( TextureImportFormatUtil::getUsage( TextureImportFormat::BC5 ) == TextureFormatUsage::Normal );
     SW_EXPECT_TRUE( TextureImportFormatUtil::getUsage( TextureImportFormat::BC6H ) == TextureFormatUsage::HDR );
-    SW_EXPECT_TRUE( FileUtil::removeDirectory( FileUtil::toDiskPath( root ) ) );
+    SW_EXPECT_TRUE( FileUtil::removeDirectory( root ) );
 }

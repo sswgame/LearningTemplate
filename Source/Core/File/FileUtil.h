@@ -142,10 +142,13 @@ namespace sw
          *          리소스 id · 맵 키용(늘 소문자)이라 디스크 경로의 포함 판정에 쓰지 않는다 — 두 결과는 다른 형식이라 섞이지 않는다.
          */
         [[nodiscard]] static ComparableDiskPath makeComparableDiskPath( string_view path );
-        /** @brief 절대 경로를 만듭니다. */
+        /**
+         * @brief 절대 경로를 만듭니다(상대면 지금 작업 폴더 기준).
+         * @details 상대 글을 절대로 올리는 입구라 받는 쪽은 글이다(형식으로 받을 수 없다). 기준 폴더를 부르는 쪽이 정할 수 있으면 `AbsolutePath::tryResolve` 를 쓴다.
+         */
         [[nodiscard]] static bool makeAbsolutePath( string_view path, string& outResult );
         /** @brief 비교 · 맵 키가 아니라 **실제** 경로를 만듭니다(링크 · `.` · `..` · 8.3 짧은 이름을 풀어서). 경로가 없으면 false 입니다. 구분자는 `/` 입니다. */
-        [[nodiscard]] static bool makeCanonicalPath( string_view path, string& outResult );
+        [[nodiscard]] static bool makeCanonicalPath( const AbsolutePath& path, string& outResult );
         /** @brief 경로가 절대 경로인지 확인합니다. */
         static bool isAbsolutePath( string_view path );
         /**
@@ -215,7 +218,7 @@ namespace sw
          *          "있나 보고 만들기" 는 그 사이에 같은 이름을 고른 다른 프로세스 · 스레드와 겹친다 — 여기서는 만들기가 실패한 쪽이 다음 번호로 간다.
          *          부모 폴더는 만든다. @p maxAttempt 개를 다 써도 못 잡거나 쓰기 게이트가 막으면 이유를 남기고 빈 글입니다.
          */
-        [[nodiscard]] static string reserveUniquePath( string_view basePath, string_view extension, bool bDirectory, uint32 maxAttempt = 1000, string_view numberSeparator = "-" );
+        [[nodiscard]] static string reserveUniquePath( const AbsolutePath& basePath, string_view extension, bool bDirectory, uint32 maxAttempt = 1000, string_view numberSeparator = "-" );
         /** @brief 경로에 **항목(파일 또는 디렉터리)** 이 있는지 반환합니다. 디렉터리인지는 `isDirectory` 로 묻습니다. */
         static bool exists( const AbsolutePath& path );
         /** @brief 경로에 디렉터리가 있는지 반환합니다. */
@@ -312,12 +315,12 @@ namespace sw
          * @brief 게이트가 @p path 를 바꾸는 것을 허락하는지, 체크아웃하지 않은 파일이 아닌지(`findNotOpenForEdit`, 폴더면 그 아래), 새 자리면 이름 규칙(`setCreateRule`)에 맞는지 봅니다. 거절하면 경로와 이유를 오류로 남기고 false 입니다.
          *        둘 다 없으면 true. 파일을 바꾸는 모든 입구가 부릅니다.
          */
-        [[nodiscard]] static bool isWriteAllowed( string_view path );
+        [[nodiscard]] static bool isWriteAllowed( const AbsolutePath& path );
         /**
          * @brief @p path 가 아직 없으면 이름 규칙(`setCreateRule`)에 맞는지 봅니다(있으면 true). 거절하면 경로와 이유를 오류로 남기고 false 입니다.
          * @details `isWriteAllowed` 와 폴더를 만드는 `ensureDirectoryExists` 가 부른다 — 파일이든 폴더든 새로 생기는 이름은 같은 규칙을 지난다.
          */
-        [[nodiscard]] static bool isCreateAllowed( string_view path );
+        [[nodiscard]] static bool isCreateAllowed( const AbsolutePath& path );
         /**
          * @brief 이 자리의 읽기 전용 파일이 "체크아웃하지 않음"(버전 관리 잠금 — git LFS lockable 은 잠그기 전까지 읽기 전용)을 뜻하면 true 를 돌려주는 규칙입니다.
          * @details 버전 관리 트리(리소스 트리)를 아는 엔진의 `AssetPaths` 가 건다(Core 는 그 뿌리를 모른다 — `setCreateRule` 과 같은 자리). 규칙 밖의 읽기 전용(복사로 속성이 따라온 사본 ·
@@ -333,7 +336,7 @@ namespace sw
          *          POSIX 는 폴더 권한만으로 읽기 전용 파일을 지우고 옮기며, Windows 지우기(`removeEntry`)는 정리를 위해 속성을 풀고 지워 잠금이 뚫렸다.
          *          유니티 `AssetDatabase.IsOpenForEdit` 의 반대 질의이고, 언리얼 `IFileManager::Delete` 가 `EvenReadOnly` 없이 읽기 전용을 지우지 않는 자리다.
          */
-        [[nodiscard]] static optional<string> findNotOpenForEdit( string_view path );
+        [[nodiscard]] static optional<string> findNotOpenForEdit( const AbsolutePath& path );
         /** @brief 파일을 복사합니다(대상이 있으면 덮어씁니다). 실패하면 로그를 남기고 false 입니다. */
         [[nodiscard]] static bool copyFile( const AbsolutePath& source, const AbsolutePath& destination );
         /** @brief 파일을 삭제합니다. 없었거나 삭제했으면 true 이고, 지우지 못했으면 경로와 이유를 알리고 false 입니다. */
@@ -367,7 +370,7 @@ namespace sw
          * @brief 파일 · 폴더들을 OS 휴지통으로 한 번에 옮깁니다(사용자가 복원할 수 있는 삭제). 쓰기 게이트가 거절하는 경로가 하나라도 있으면 아무것도 옮기지 않고 false 입니다.
          * @details 휴지통을 쓸 수 없는 곳(Linux 에서 홈을 모를 때)은 아무것도 건드리지 않고 false 입니다(`PlatformFileUtil::hasRecycleBin` 으로 먼저 묻는다). 일부만 옮겼어도 `getRemovalEpoch` 이 오릅니다.
          */
-        [[nodiscard]] static bool moveToRecycleBin( const vector<string>& listPath );
+        [[nodiscard]] static bool moveToRecycleBin( const vector<AbsolutePath>& listPath );
         /** @brief 시스템 임시 디렉터리 경로를 반환합니다. */
         static string getTempDirectory();
         /**
@@ -440,7 +443,7 @@ namespace sw
          * @param lowerRelative 소문자 · `/` 구분 상대 키(`..` 없음)
          * @return `root` 로 시작하는 `/` 구분 경로, 못 찾으면 빈 문자열
          */
-        [[nodiscard]] static string findPathIgnoringCase( string_view root, string_view lowerRelative );
+        [[nodiscard]] static string findPathIgnoringCase( const AbsolutePath& root, string_view lowerRelative );
         /**
          * @brief **쓰기용**입니다. @p relative 를 @p root 아래의 경로로 잇되, 이미 디스크에 있는 성분은 그 표기를 쓰고 없는 성분부터는 @p relative 의 표기를 그대로 씁니다.
          * @details 대소문자를 구분하는 파일 시스템에서 소문자 id 를 그대로 이으면 대소문자만 다른 새 폴더가 생긴다(`Saved/Automation` 이 있는데 `saved/automation` 을 만든다).
@@ -450,7 +453,7 @@ namespace sw
          * @param relative `/` 또는 `\` 구분 상대 경로(대소문자 무관, `..` 없음)
          * @return `root` 로 시작하는 `/` 구분 경로. 성분이 모두 없어도 `root` 아래에 이어 붙인 경로다.
          */
-        [[nodiscard]] static string makePathIgnoringCase( string_view root, string_view relative );
+        [[nodiscard]] static string makePathIgnoringCase( const AbsolutePath& root, string_view relative );
         /**
          * @brief 디렉터리에서 확장자 필터에 맞는 파일을 모읍니다.
          * @details 실제 파일 시스템을 훑어 얻은 경로라 **대소문자를 그대로 돌려줍니다**(구분자만 `/` 로 바꿉니다). 그대로 열 수
@@ -498,6 +501,13 @@ namespace sw
         [[nodiscard]] static bool             appendTextFile( string_view fileName, string_view text );
         [[nodiscard]] static bool             collectFiles( string_view directory, string_view filterExtension, vector<string>& outListFilePath, bool bRecursive, const StopToken& stopToken = {} );
         [[nodiscard]] static bool             collectFolders( string_view directory, vector<string>& outListFolder, bool bRecursive );
+        [[nodiscard]] static bool             makeCanonicalPath( string_view path, string& outResult );
+        [[nodiscard]] static string           reserveUniquePath( string_view basePath, string_view extension, bool bDirectory, uint32 maxAttempt, string_view numberSeparator );
+        [[nodiscard]] static bool             isWriteAllowed( string_view path );
+        [[nodiscard]] static bool             isCreateAllowed( string_view path );
+        [[nodiscard]] static optional<string> findNotOpenForEdit( string_view path );
+        [[nodiscard]] static string           findPathIgnoringCase( string_view root, string_view lowerRelative );
+        [[nodiscard]] static string           makePathIgnoringCase( string_view root, string_view relative );
         template <typename Func>
         [[nodiscard]] static bool forEachDirectoryEntry( string_view directory, bool bRecursive, Func&& func )
         {
@@ -530,7 +540,7 @@ namespace sw
         AtomicFileWriter& operator=( const AtomicFileWriter& ) = delete;
 
         /** @brief @p filePath 옆의 임시 파일을 엽니다. 이미 열려 있거나 쓸 수 없는 대상이면 오류입니다. */
-        [[nodiscard]] expected<void> open( string_view filePath );
+        [[nodiscard]] expected<void> open( const AbsolutePath& filePath );
         /** @brief 끝에 @p size 바이트를 덧붙입니다. */
         [[nodiscard]] expected<void> append( const uint8* pData, size_t size );
         /**

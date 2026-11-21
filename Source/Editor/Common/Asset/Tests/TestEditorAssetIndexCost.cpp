@@ -77,12 +77,12 @@ SW_TEST_CASE( EditorAssetIndexTest, ScanCostBySize, ._tags = "bench", ._disabled
     {
         StringBuilder<constant::buffer::kMax64> folderName;
         folderName.appendFormat( "tree%#", fileCount );
-        const string root = sw::test::makeScratchPath( folderName.view() );
-        SW_REQUIRE_TRUE( Internal::writeTree( root, fileCount ) );
+        const AbsolutePath root = sw::test::makeScratchPath( folderName.view() );
+        SW_REQUIRE_TRUE( Internal::writeTree( root.str(), fileCount ) );
 
         EditorAssetIndexData data{};
         const int64          scanStart = MonotonicClock::nowNanoseconds();
-        EditorAssetIndex::scan( root, {}, data, nullptr );
+        EditorAssetIndex::scan( root.str(), {}, data, nullptr );
         const int64 scanNanoseconds = MonotonicClock::nowNanoseconds() - scanStart;
         SW_EXPECT_EQUAL( fileCount, data._scannedFileCount );
         SW_EXPECT_EQUAL( static_cast<size_t>( fileCount ), data._mapReferrer.size() ); // 파일마다 넷이 가리킨다
@@ -96,9 +96,9 @@ SW_TEST_CASE( EditorAssetIndexTest, ScanCostBySize, ._tags = "bench", ._disabled
         {
             string changedText = Internal::makeText( fileCount / 2, fileCount );
             changedText.append( repeat + 1, ' ' );
-            SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( FileUtil::joinPath( root, changedID ) ), changedText ) );
+            SW_REQUIRE_TRUE( FileUtil::writeTextFile( root.join( changedID ), changedText ) );
             const int64 refreshStart = MonotonicClock::nowNanoseconds();
-            index.applyChanges( root, { changedID } );
+            index.applyChanges( root.str(), { changedID } );
             refreshNanoseconds += MonotonicClock::nowNanoseconds() - refreshStart;
         }
         refreshNanoseconds /= kRefreshRepeatCount;

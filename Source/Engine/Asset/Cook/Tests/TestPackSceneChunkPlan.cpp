@@ -221,7 +221,7 @@ SW_TEST_CASE( PackSceneChunkPlanTest, ManifestRoundTripsAndNamesScenePacks )
  */
 SW_TEST_CASE( PackSceneChunkPlanTest, CookingAnotherGameKeepsTheChunkManifest )
 {
-    const string root = test::makeScratchPath( "PackChunkManifests" );
+    const AbsolutePath root = test::makeScratchPath( "PackChunkManifests" );
 
     PackChunkManifest cookA;
     cookA._listChunk.push_back( PackChunkFiles{ "common.shared", { "common.shared.0.pack" } } );
@@ -230,16 +230,16 @@ SW_TEST_CASE( PackSceneChunkPlanTest, CookingAnotherGameKeepsTheChunkManifest )
         "game/a/maps/one.scene.xml",
         { "common.shared", "game_a.scene_a_one" }
     } );
-    SW_REQUIRE_TRUE( PackCooker::writeChunkManifests( root, { "engine", "common", "game/a" }, cookA ) );
+    SW_REQUIRE_TRUE( PackCooker::writeChunkManifests( root.str(), { "engine", "common", "game/a" }, cookA ) );
 
     PackChunkManifest cookB;
     cookB._listChunk.push_back( PackChunkFiles{ "game_b.scene_b_two", { "game_b.scene_b_two.0.pack" } } );
     cookB._listScene.push_back( PackSceneEntry{ "game/b/maps/two.scene.xml", { "game_b.scene_b_two" } } );
-    SW_REQUIRE_TRUE( PackCooker::writeChunkManifests( root, { "engine", "common", "game/b" }, cookB ) );
+    SW_REQUIRE_TRUE( PackCooker::writeChunkManifests( root.str(), { "engine", "common", "game/b" }, cookB ) );
 
     // A 의 목록은 그대로다. 공용 · 엔진은 마지막 쿠킹(B)의 것이다(팩 파일과 같은 단위).
     string textA;
-    SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::toDiskPath( FileUtil::joinPath( root, "packchunks.game_a.xml" ) ), textA ) );
+    SW_REQUIRE_TRUE( FileUtil::readTextFile( root.join( "packchunks.game_a.xml" ), textA ) );
     PackChunkManifest readA;
     SW_REQUIRE_TRUE( PackChunkManifest::parse( textA, "a", readA ) );
     SW_REQUIRE_EQUAL( size_t{ 1 }, readA._listScene.size() );
@@ -247,7 +247,7 @@ SW_TEST_CASE( PackSceneChunkPlanTest, CookingAnotherGameKeepsTheChunkManifest )
 
     PackChunkManifest merged;
     vector<string>    listFile;
-    SW_REQUIRE_TRUE( FileUtil::collectFiles( FileUtil::toDiskPath( root ), "", listFile, false ) );
+    SW_REQUIRE_TRUE( FileUtil::collectFiles( root, "", listFile, false ) );
     uint32 manifestCount = 0;
     for ( const string& path : listFile )
     {
@@ -265,5 +265,5 @@ SW_TEST_CASE( PackSceneChunkPlanTest, CookingAnotherGameKeepsTheChunkManifest )
     vector<string> listPack;
     SW_EXPECT_TRUE( merged.appendScenePackFiles( "game/b/maps/two.scene.xml", listPack ) );
     SW_EXPECT_TRUE( listPack == ( vector<string>{ "game_b.scene_b_two.0.pack" } ) );
-    SW_EXPECT_TRUE( FileUtil::removeDirectory( FileUtil::toDiskPath( root ) ) );
+    SW_EXPECT_TRUE( FileUtil::removeDirectory( root ) );
 }

@@ -51,9 +51,12 @@ namespace sw
             [[nodiscard]] static bool readCommand( Archive& archive, CommandStack::Command& outCmd )
             {
                 uint32 childCount{ 0 };
-                if ( archive.readString( outCmd._label ) == false )
+                auto   loadedLabel = archive.readString();
+                if ( archive.isError() )
                     return false;
-                if ( archive.readCount( kMinCommandBytes, childCount ) == false )
+                outCmd._label = std::move( loadedLabel );
+                childCount    = archive.readCount( kMinCommandBytes );
+                if ( archive.isError() )
                     return false;
                 if ( childCount > 0 )
                 {
@@ -95,7 +98,8 @@ namespace sw
             {
                 uint32 count{ 0 };
                 uint32 index{ 0 };
-                if ( archive.readCount( kMinCommandBytes, count ) == false )
+                count = archive.readCount( kMinCommandBytes );
+                if ( archive.isError() )
                     return false;
                 archive >> index;
                 if ( archive.isOk() == false || index > count )

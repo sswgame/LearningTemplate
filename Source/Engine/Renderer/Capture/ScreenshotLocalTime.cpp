@@ -26,7 +26,7 @@ namespace sw
     {
         // 같은 초의 두 번째 사진(같은 프로세스든 다른 프로세스든)이 앞 사진을 덮지 않게 이름을 먼저 잡는다(`-2` …).
         const string path = makeDefaultPath( getLocalTimeNow() );
-        return FileUtil::reserveUniquePath( FileUtil::removeExtension( path ), FileUtil::getExtension( path ), false );
+        return FileUtil::reserveUniquePath( FileUtil::toDiskPath( FileUtil::removeExtension( path ) ), FileUtil::getExtension( path ), false );
     }
 
     ScreenshotLocalTime ScreenshotLocalTime::getLocalTimeNow()

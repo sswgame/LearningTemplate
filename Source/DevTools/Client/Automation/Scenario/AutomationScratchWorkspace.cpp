@@ -39,8 +39,8 @@ namespace sw
             static expected<void> allowWrite( string_view path )
             {
                 // 지킬 원본(`Content`)이 없는 구성(패키지 - 팩만)에는 막을 것이 없다.
-                const string& rootPath = ProcessRoots::get()._content.str();
-                if ( FileUtil::isDirectory( FileUtil::toDiskPath( rootPath ) ) == false )
+                const AbsolutePath rootPath = ProcessRoots::get()._content;
+                if ( FileUtil::isDirectory( rootPath ) == false )
                     return {};
                 // 상대 경로는 어디를 가리키는지 정할 수 없다 - 통과시키지 않는다(예전에는 절대로 바꾸지 못하면 열어 줬다).
                 if ( AbsolutePath::isStrictAbsolute( path ) == false )
@@ -51,23 +51,23 @@ namespace sw
                 if ( wrapped.view().find( "/../" ) != string_view::npos )
                     return unexpected( Error{ ErrorKind::InvalidArgument, "the path has a '..' segment - a scenario writes to a resolved path", path } );
                 // 포함 판정은 OS 대소문자 규칙이다(`isPathAtOrUnderRoot`). 사본(작업 도메인)은 실행 뿌리 아래라 리소스 루트 밖이다 — 아래 "루트 밖은 연다" 가 연다.
-                const string& projectRoot = ProcessRoots::get()._project.str();
+                const AbsolutePath projectRoot = ProcessRoots::get()._project;
 
                 // 프로젝트 루트의 추적 폴더 — 허용 목록에 든 하위 폴더만 연다.
                 for ( const string_view folder : kTrackedFolders )
                 {
-                    if ( FileUtil::isPathAtOrUnderRoot( FileUtil::joinPath( projectRoot, folder ), path ) == false )
+                    if ( FileUtil::isPathAtOrUnderRoot( FileUtil::joinPath( projectRoot.str(), folder ), path ) == false )
                         continue;
                     const bool bAllowed = std::any_of( std::begin( kAllowedConfigWrites ), std::end( kAllowedConfigWrites ), [&]( string_view allowed )
                     {
-                        return FileUtil::isPathAtOrUnderRoot( FileUtil::joinPath( projectRoot, allowed ), path );
+                        return FileUtil::isPathAtOrUnderRoot( FileUtil::joinPath( projectRoot.str(), allowed ), path );
                     } );
                     if ( bAllowed )
                         return {};
                     return unexpected( Error{ ErrorKind::Unsupported, "an automation run may not write this tracked folder (only Config/Editor is open); run on a <Scratch> copy or write under Saved/", folder } );
                 }
 
-                if ( FileUtil::isPathUnderRoot( rootPath, path ) == false )
+                if ( FileUtil::isPathUnderRoot( rootPath.str(), path ) == false )
                     return {};
                 const string target = FileUtil::makeComparableDiskPath( path ).str(); // 폴더 이름 판정용 글(OS 규칙으로 접었다)
                 // 골든 기록 실행(`-scenario-update-golden` · `-scenario-record-missing-golden`)만 시나리오 옆 `golden/`(자동화 폴더 아래 어느 깊이든 — `engine/automation/editor/golden/`)에 쓴다.

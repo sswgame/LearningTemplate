@@ -142,11 +142,11 @@ namespace sw
 
     expected<MemorySnapshotPolicy> MemorySnapshotPolicy::load()
     {
-        const string path = FileUtil::joinPath( ProcessRoots::get()._project.str(), kPolicyFile );
-        string       text;
-        if ( FileUtil::readTextFile( FileUtil::toDiskPath( path ), text ) == false )
-            return unexpected( Error{ ErrorKind::NotFound, "could not read the memory snapshot policy", path } );
-        return parse( text, path );
+        const AbsolutePath path = ProcessRoots::get()._project.join( kPolicyFile );
+        string             text;
+        if ( FileUtil::readTextFile( path, text ) == false )
+            return unexpected( Error{ ErrorKind::NotFound, "could not read the memory snapshot policy", path.str() } );
+        return parse( text, path.str() );
     }
 
     string MemorySnapshotExport::formatMegabytes( uint64 bytes )
@@ -264,7 +264,7 @@ namespace sw
     string MemorySnapshotExport::reserveFolder( string_view root )
     {
         // 같은 초에 다른 프로세스(병렬 실행)가 같은 이름을 고를 수 있다 — 만들기가 곧 자리 잡기다.
-        return FileUtil::reserveUniquePath( FileUtil::joinPath( root, MemorySnapshot::makeTimeLabel() ), {}, true, MemorySnapshotExportInternal::kMaxSameSecondSuffix );
+        return FileUtil::reserveUniquePath( FileUtil::toDiskPath( FileUtil::joinPath( root, MemorySnapshot::makeTimeLabel() ) ), {}, true, MemorySnapshotExportInternal::kMaxSameSecondSuffix );
     }
 
     string MemorySnapshotExport::findLatestFolder( string_view root )

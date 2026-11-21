@@ -37,9 +37,9 @@ namespace
     /** @brief 케이스 폴더에 @p text 를 담은 파일을 쓰고 그 절대 경로를 돌려줍니다. */
     sw::optional<sw::AbsolutePath> writeScratch( sw::string_view fileName, sw::string_view text )
     {
-        const sw::string path = sw::test::makeScratchPath( fileName );
-        SW_EXPECT_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::toDiskPath( path ), text ) );
-        return sw::AbsolutePath::tryMake( path );
+        const sw::AbsolutePath path = sw::test::makeScratchPath( fileName );
+        SW_EXPECT_TRUE( sw::FileUtil::writeTextFile( path, text ) );
+        return sw::AbsolutePath::tryMake( path.str() );
     }
 
     sw::expected<void> readProviders( const sw::optional<sw::AbsolutePath>& providersFile, const sw::optional<sw::AbsolutePath>& trustFile,
@@ -132,7 +132,7 @@ SW_TEST_CASE( OnlineProviderFileTest, MissingProvidersFileIsRejected )
 {
     SW_EXPECT_LOG( "File.NotFound" );
 
-    const sw::optional<sw::AbsolutePath> providersFile = sw::AbsolutePath::tryMake( sw::test::makeScratchPath( "absent.json" ) );
+    const sw::optional<sw::AbsolutePath> providersFile = sw::AbsolutePath::tryMake( sw::test::makeScratchPath( "absent.json" ).str() );
     SW_REQUIRE_TRUE( providersFile.has_value() );
     sw::vector<FakeProviderConfig> listConfig;
     const sw::string               error = describe( readProviders( providersFile, sw::nullopt, listConfig ) );

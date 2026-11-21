@@ -189,11 +189,11 @@ namespace sw
                 string _description; ///< 키 서술(사람이 읽는 글 — 항목 머리에 그대로 적힌다)
                 uint64 _key{ 0 };
 
-                DerivedDataCache makeCache() const { return DerivedDataCache{ vector<DerivedDataLayer>{ DerivedDataLayer{ _directory, DerivedDataAccess::ReadWrite } } }; }
+                DerivedDataCache makeCache() const { return DerivedDataCache{ vector<DerivedDataLayer>{ DerivedDataLayer{ FileUtil::toDiskPath( _directory ), DerivedDataAccess::ReadWrite } } }; }
                 /** @brief 의존 기록(연 헤더와 내용 해시) 파일 — 항목 옆이다. */
                 string makeRecordPath() const
                 {
-                    string path = makeCache().makePath( 0, _key );
+                    string path = makeCache().makePath( 0, _key ).str();
                     path += ShaderCookStamp::kIncludeRecordSuffix;
                     return path;
                 }
@@ -312,7 +312,7 @@ namespace sw
                 const DerivedDataCache cache = slot.makeCache();
                 if ( cache.store( slot._key, slot._description, result._bytecode ) == false )
                 {
-                    SW_LOG_WARNING_ID( "ShaderCompiler.CouldNotWriteShader", "Could not write the shader cache '%#'", cache.makePath( 0, slot._key ) );
+                    SW_LOG_WARNING_ID( "ShaderCompiler.CouldNotWriteShader", "Could not write the shader cache '%#'", cache.makePath( 0, slot._key ).str() );
                     return;
                 }
                 const string recordPath = slot.makeRecordPath();
@@ -600,7 +600,7 @@ namespace sw
                 const uint64                           hash = HashUtil::appendBytes64( HashUtil::kFNVOffset64, inoutBytecode.data(), inoutBytecode.size() );
                 fixed_string<constant::buffer::kMax32> tintStem;
                 formatstring( tintStem.data(), tintStem.capacity(), "sw_tint_%#", hash );
-                const string spirvPath = FileUtil::reserveUniquePath( FileUtil::joinPath( FileUtil::getTempDirectory(), tintStem ), ".spv", false );
+                const string spirvPath = FileUtil::reserveUniquePath( FileUtil::toDiskPath( FileUtil::joinPath( FileUtil::getTempDirectory(), tintStem ) ), ".spv", false );
                 if ( spirvPath.empty() )
                     return unexpected( Error{ ErrorKind::ExternalFailure, "could not reserve a temporary SPIR-V file for Tint", FileUtil::getTempDirectory() } );
                 StringBuilder<constant::buffer::kMax512> wgslBuilder;

@@ -114,22 +114,22 @@ SW_TEST_CHILD_ROLE( CrashInjectionTest, ChildCrashesAsRequested )
  */
 SW_TEST_CASE_EACH( CrashInjectionTest, EveryCrashKindLeavesAReport, kArrCrashCase, ._tags = "slow", ._timeoutSeconds = 180.0f )
 {
-    const string folder = test::makeScratchPath( param._pName );
-    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( folder ) ) );
+    const AbsolutePath folder = test::makeScratchPath( param._pName );
+    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( folder ) );
 
     const test::ChildRunResult child =
-        test::runChildRole( "CrashInjectionTest.ChildCrashesAsRequested", makeCrashChildArgument( param._kind, folder ), kCrashChildTimeoutSeconds );
+        test::runChildRole( "CrashInjectionTest.ChildCrashesAsRequested", makeCrashChildArgument( param._kind, folder.str() ), kCrashChildTimeoutSeconds );
     SW_REQUIRE_TRUE_MSG( child._bLaunched && child._bTimedOut == false, param._pName );
     StringBuilder<constant::buffer::kMax1024> message;
     message.appendFormat( "%# - last output:%#", param._pName, child.getOutputTail() );
     SW_EXPECT_TRUE_MSG( ( child._exitCode.has_value() && *child._exitCode != 0 ), message.view() );
-    expectCrashFiles( folder, param._pName );
+    expectCrashFiles( folder.str(), param._pName );
     #if defined( SW_PLATFORM_WINDOWS )
     // 접근 위반의 자세한 이유(쓰기 · 대상 주소 · 모듈)는 필터가 아닌 보고 스레드가 만든다 — 그 길이 끊기지 않았는지 본다.
     if ( param._kind == CrashInjectionKind::AccessViolation )
     {
         string stackText;
-        SW_EXPECT_TRUE( FileUtil::readTextFile( FileUtil::toDiskPath( findReportFile( folder, "stack.txt" ) ), stackText ) );
+        SW_EXPECT_TRUE( FileUtil::readTextFile( FileUtil::toDiskPath( findReportFile( folder.str(), "stack.txt" ) ), stackText ) );
         SW_EXPECT_TRUE_MSG( stackText.find( " - write of 0x" ) != string::npos, stackText );
     }
     #endif
@@ -142,17 +142,17 @@ SW_TEST_CASE_EACH( CrashInjectionTest, EveryCrashKindLeavesAReport, kArrCrashCas
  */
 SW_TEST_CASE( CrashInjectionTest, StuckReportStillEndsAndKeepsTheStackFile, ._tags = "slow", ._timeoutSeconds = 180.0f )
 {
-    const string folder = test::makeScratchPath( "stuck" );
-    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( folder ) ) );
+    const AbsolutePath folder = test::makeScratchPath( "stuck" );
+    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( folder ) );
 
     const test::ChildRunResult child =
-        test::runChildRole( "CrashInjectionTest.ChildCrashesAsRequested", makeCrashChildArgument( CrashInjectionKind::StderrHeld, folder, kStuckReportDeadlineSeconds ), kCrashChildTimeoutSeconds );
+        test::runChildRole( "CrashInjectionTest.ChildCrashesAsRequested", makeCrashChildArgument( CrashInjectionKind::StderrHeld, folder.str(), kStuckReportDeadlineSeconds ), kCrashChildTimeoutSeconds );
     SW_REQUIRE_TRUE( child._bLaunched && child._bTimedOut == false );
     SW_EXPECT_TRUE( ( child._exitCode.has_value() && *child._exitCode != 0 ) );
     StringBuilder<constant::buffer::kMax1024> message;
     message.appendFormat( "no line saying the report hit its deadline - last output:%#", child.getOutputTail() );
     SW_EXPECT_TRUE_MSG( child._output.find( "made no progress before its deadline" ) != string::npos, message.view() );
-    expectCrashFiles( folder, "stuck" );
+    expectCrashFiles( folder.str(), "stuck" );
 }
 
     #if defined( SW_DO_CHECKS )
@@ -162,11 +162,11 @@ SW_TEST_CASE( CrashInjectionTest, StuckReportStillEndsAndKeepsTheStackFile, ._ta
  */
 SW_TEST_CASE( CrashInjectionTest, FailedAssertNamesItsExpressionBeforeStopping, ._tags = "slow", ._timeoutSeconds = 180.0f )
 {
-    const string folder = test::makeScratchPath( "assert" );
-    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( folder ) ) );
+    const AbsolutePath folder = test::makeScratchPath( "assert" );
+    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( folder ) );
 
     const test::ChildRunResult child =
-        test::runChildRole( "CrashInjectionTest.ChildCrashesAsRequested", makeCrashChildArgument( CrashInjectionKind::AssertFailure, folder ), kCrashChildTimeoutSeconds );
+        test::runChildRole( "CrashInjectionTest.ChildCrashesAsRequested", makeCrashChildArgument( CrashInjectionKind::AssertFailure, folder.str() ), kCrashChildTimeoutSeconds );
     SW_REQUIRE_TRUE( child._bLaunched && child._bTimedOut == false );
     SW_EXPECT_TRUE( ( child._exitCode.has_value() && *child._exitCode != 0 ) );
     const bool                                bNamesExpression = child._output.find( "[SW_ASSERT] bProbeHolds" ) != string::npos;
@@ -174,7 +174,7 @@ SW_TEST_CASE( CrashInjectionTest, FailedAssertNamesItsExpressionBeforeStopping, 
     StringBuilder<constant::buffer::kMax1024> message;
     message.appendFormat( "the assert did not name its expression and place - last output:%#", child.getOutputTail() );
     SW_EXPECT_TRUE_MSG( bNamesExpression && bNamesPlace, message.view() );
-    SW_EXPECT_FALSE( findReportFile( folder, "stack.txt" ).empty() );
+    SW_EXPECT_FALSE( findReportFile( folder.str(), "stack.txt" ).empty() );
 }
     #endif
 #endif

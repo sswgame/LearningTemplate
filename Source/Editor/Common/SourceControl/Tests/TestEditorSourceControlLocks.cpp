@@ -15,7 +15,7 @@ using namespace sw::editor;
  */
 SW_TEST_CASE( EditorSourceControlLocksTest, FindsTheLockOfARepositoryFile )
 {
-    const string        root = FileUtil::normalizeSeparators( test::makeScratchPath( "repo" ) );
+    const string        root = FileUtil::normalizeSeparators( test::makeScratchPath( "repo" ).str() );
     EditorSourceControl sourceControl{ root };
     sourceControl.setLocks( {
         SourceControlLock{ "Content/hero.prefab.xml", "alice", "7" }
@@ -32,7 +32,7 @@ SW_TEST_CASE( EditorSourceControlLocksTest, FindsTheLockOfARepositoryFile )
     const string otherPath = FileUtil::joinPath( root, "Content/other.prefab.xml" );
     SW_EXPECT_NULL( sourceControl.findLock( otherPath ) );
     SW_EXPECT_TRUE( sourceControl.describeStatus( otherPath, false ).empty() );
-    SW_EXPECT_NULL( sourceControl.findLock( FileUtil::normalizeSeparators( test::makeScratchPath( "elsewhere/hero.prefab.xml" ) ) ) );
+    SW_EXPECT_NULL( sourceControl.findLock( FileUtil::normalizeSeparators( test::makeScratchPath( "elsewhere/hero.prefab.xml" ).str() ) ) );
 }
 
 /**
@@ -40,7 +40,7 @@ SW_TEST_CASE( EditorSourceControlLocksTest, FindsTheLockOfARepositoryFile )
  */
 SW_TEST_CASE( EditorSourceControlLocksTest, ChangingTheProviderDropsTheLocks )
 {
-    const string        root = FileUtil::normalizeSeparators( test::makeScratchPath( "repo" ) );
+    const string        root = FileUtil::normalizeSeparators( test::makeScratchPath( "repo" ).str() );
     EditorSourceControl sourceControl{ root };
     sourceControl.setLocks( {
         SourceControlLock{ "Content/hero.prefab.xml", "alice", "7" }

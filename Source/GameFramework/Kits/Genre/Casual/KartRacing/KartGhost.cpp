@@ -81,7 +81,9 @@ namespace sw
     {
         int32 throttle{ 0 };
         int32 steer{ 0 };
-        if ( reader.readInt( -127, 127, throttle ) == false || reader.readInt( -127, 127, steer ) == false )
+        throttle = reader.readInt( -127, 127 );
+        steer    = reader.readInt( -127, 127 );
+        if ( reader.hasOverflowed() )
             return false;
         const uint8 buttons = static_cast<uint8>( reader.readBits( KartGhostInternal::kButtonBits ) );
         if ( reader.hasOverflowed() )
@@ -139,9 +141,13 @@ namespace sw
         float32 step{ 0.0f };
         float32 finishTime{ 0.0f };
         // NaN 간격은 아래 `step <= 0` 을 빠져나간다 — 유한한 값만 받는다.
-        const bool bFinite = reader.readFiniteFloat( startPosition._x ) && reader.readFiniteFloat( startPosition._y ) &&
-                             reader.readFiniteFloat( startPosition._z ) && reader.readFiniteFloat( startYaw ) && reader.readFiniteFloat( step ) &&
-                             reader.readFiniteFloat( finishTime );
+        startPosition._x   = reader.readFiniteFloat();
+        startPosition._y   = reader.readFiniteFloat();
+        startPosition._z   = reader.readFiniteFloat();
+        startYaw           = reader.readFiniteFloat();
+        step               = reader.readFiniteFloat();
+        finishTime         = reader.readFiniteFloat();
+        const bool bFinite = reader.hasOverflowed() == false;
         if ( bFinite == false )
             return false;
         const uint64 frameCount        = reader.readVarUint();

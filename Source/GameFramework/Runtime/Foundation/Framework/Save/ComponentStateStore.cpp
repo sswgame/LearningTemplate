@@ -137,7 +137,8 @@ namespace sw
         if ( archive.isError() || version != kVersion )
             return false;
         // 파일이 말한 개수를 그대로 잡지 않는다 — 깨진 값 하나가 수십 기가를 요구한다.
-        if ( archive.readCount( ComponentStateStoreInternal::kMinEntryBytes, count ) == false )
+        count = archive.readCount( ComponentStateStoreInternal::kMinEntryBytes );
+        if ( archive.isError() )
             return false;
         _listEntry.reserve( count );
         for ( uint32 index = 0; index < count; ++index )

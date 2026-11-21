@@ -309,7 +309,7 @@ namespace sw
             return unexpected( Error{ ErrorKind::InvalidArgument, "sqlite connection needs a database file path" } );
         const string path( connection );
         // SQLite 가 경로를 스스로 열어 만들고 쓴다 — `FileUtil` 의 쓰기 입구를 지나지 않으므로 게이트를 직접 묻는다(메모리 DB 는 파일이 아니다).
-        if ( string_view( path ) != SQLiteDriverInternal::kMemoryDatabase && FileUtil::isWriteAllowed( path ) == false )
+        if ( string_view( path ) != SQLiteDriverInternal::kMemoryDatabase && FileUtil::isWriteAllowed( FileUtil::toDiskPath( path ) ) == false )
             return unexpected( Error{ ErrorKind::InvalidArgument, "the sqlite open was refused by the file write gate", path } );
         sqlite3*    pDatabase = nullptr;
         const int32 flags     = SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_NOMUTEX; // 연결은 한 스레드만 쓴다

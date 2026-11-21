@@ -498,7 +498,7 @@ SW_TEST_CASE( AIDirectorProfileTest, SharedCacheGivesOneObjectAndReloadDetaches 
 {
     const test::ScopedScratchDomain domain;
     const string                    id = test::ScopedScratchDomain::makeID( "arena.director.xml" ).str();
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( domain.makeDiskPath( "arena.director.xml" ) ), DirectorRig::kProfileXML ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "arena.director.xml" ), DirectorRig::kProfileXML ) );
 
     const shared_ptr<const AIDirectorProfile> pHeld  = SharedAssetCache<AIDirectorProfile>::acquire( id ).snapshot();
     const shared_ptr<const AIDirectorProfile> pAgain = SharedAssetCache<AIDirectorProfile>::acquire( id ).snapshot();
@@ -512,7 +512,7 @@ SW_TEST_CASE( AIDirectorProfileTest, SharedCacheGivesOneObjectAndReloadDetaches 
     const size_t at      = changed.find( "<Phase id=\"Peak\" spawnScale=\"2\">" );
     SW_REQUIRE_TRUE( at != string::npos );
     changed.replace( at, string_view( "<Phase id=\"Peak\" spawnScale=\"2\">" ).size(), "<Phase id=\"Peak\" spawnScale=\"3\">" );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( domain.makeDiskPath( "arena.director.xml" ) ), changed ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "arena.director.xml" ), changed ) );
     SW_REQUIRE_TRUE( SharedAssetCache<AIDirectorProfile>::reloadShared( id ) );
     SW_EXPECT_NEAR( 2.0f, pHeld->getPhases()[static_cast<size_t>( *peak )]._spawnScale, 0.0001f ); // 쥔 쪽은 옛 객체 그대로(Detach)
 

@@ -42,14 +42,16 @@ SW_TEST_CASE( BitStreamTest, BitStreamPacksRangesFloatsVarIntsAndDetectsOverflow
 
     BitReader reader( writer.getBytes().data(), writer.getByteCount() );
     SW_EXPECT_TRUE( reader.readBool() );
-    int32   readValue{ 0 };
     float32 readQuantized{ 0.0f };
-    SW_EXPECT_TRUE( reader.readInt( 0, 100, readValue ) && readValue == 73 );
-    SW_EXPECT_TRUE( reader.readInt( -10, 10, readValue ) && readValue == -5 );
-    SW_EXPECT_TRUE( reader.readQuantizedFloat( -100.0f, 100.0f, 0.01f, readQuantized ) );
+    SW_EXPECT_EQUAL( 73, reader.readInt( 0, 100 ) );
+    SW_EXPECT_EQUAL( -5, reader.readInt( -10, 10 ) );
+    SW_EXPECT_FALSE( reader.hasOverflowed() );
+    readQuantized = reader.readQuantizedFloat( -100.0f, 100.0f, 0.01f );
+    SW_EXPECT_FALSE( reader.hasOverflowed() );
     SW_EXPECT_NEAR( 12.345f, readQuantized, 0.006f );
     float32 readFloatValue{ 0.0f };
-    SW_EXPECT_TRUE( reader.readFiniteFloat( readFloatValue ) );
+    readFloatValue = reader.readFiniteFloat();
+    SW_EXPECT_FALSE( reader.hasOverflowed() );
     SW_EXPECT_NEAR( 3.25f, readFloatValue, 1.0e-6f );
     SW_EXPECT_EQUAL( 300, static_cast<int32>( reader.readVarUint() ) );
     SW_EXPECT_EQUAL( -70000, static_cast<int32>( reader.readVarInt() ) );
@@ -81,8 +83,8 @@ SW_TEST_CASE( BitStreamTest, BitReaderRejectsNonFiniteFloatsAndTruncatedVarUint3
         writer.writeFloat( nonFinite );
         BitReader finite( writer.getBytes().data(), writer.getByteCount() );
         float32   value{ 7.0f };
-        SW_EXPECT_FALSE( finite.readFiniteFloat( value ) );
-        SW_EXPECT_EQUAL( 7.0f, value ); // 실패하면 그대로다
+        value = finite.readFiniteFloat();
+        SW_EXPECT_EQUAL( 0.0f, value ); // 실패하면 0 이다 — 유한하지 않은 값이 새지 않는다
         SW_EXPECT_TRUE( finite.hasOverflowed() );
 
         BitReader bits( writer.getBytes().data(), writer.getByteCount() );
@@ -94,7 +96,8 @@ SW_TEST_CASE( BitStreamTest, BitReaderRejectsNonFiniteFloatsAndTruncatedVarUint3
     const uint8 arrShort[2] = { 0, 0 };
     BitReader   shortReader( arrShort, 2 );
     float32     shortValue{ 0.0f };
-    SW_EXPECT_FALSE( shortReader.readFiniteFloat( shortValue ) );
+    shortValue = shortReader.readFiniteFloat();
+    SW_EXPECT_TRUE( shortReader.hasOverflowed() );
 
     // 10번째 묶음에 64 비트를 넘는 비트가 켜진 가변 정수 — 예전에는 시프트로 버려 UINT64_MAX 로 받았다.
     BitWriter tooWideWriter;
@@ -174,16 +177,16 @@ SW_TEST_CASE( BitStreamTest, BitStreamRangedValuesFailInsteadOfClamping )
     rawWriter.writeBits( 0x7FFF, 15 );
     BitReader reader( rawWriter.getBytes().data(), rawWriter.getByteCount() );
     int32     readValue{ 42 };
-    SW_EXPECT_FALSE( reader.readInt( 0, 100, readValue ) );
-    SW_EXPECT_EQUAL( 42, readValue );
+    readValue = reader.readInt( 0, 100 );
+    SW_EXPECT_EQUAL( 0, readValue ); // 실패하면 범위의 최솟값이다
     SW_EXPECT_TRUE( reader.hasOverflowed() );
 
     // 0..20 을 0.001 간격이면 칸은 0..20000 이고 15 비트다. 32767 칸은 범위 밖이다.
     BitReader quantizedReader( rawWriter.getBytes().data(), rawWriter.getByteCount() );
     SW_EXPECT_EQUAL( 127u, quantizedReader.readBits( 7 ) );
     float32 readQuantized{ 0.5f };
-    SW_EXPECT_FALSE( quantizedReader.readQuantizedFloat( 0.0f, 20.0f, 0.001f, readQuantized ) );
-    SW_EXPECT_EQUAL( 0.5f, readQuantized );
+    readQuantized = quantizedReader.readQuantizedFloat( 0.0f, 20.0f, 0.001f );
+    SW_EXPECT_EQUAL( 0.0f, readQuantized ); // 실패하면 범위의 최솟값이다
     SW_EXPECT_TRUE( quantizedReader.hasOverflowed() );
 }
 
@@ -410,10 +413,11 @@ SW_TEST_CASE( BitStreamTest, HandBodyReadHelpersRejectOutOfRangeAndTrailingBits 
     writer.writeBits( 3, 2 ); // Count — 등록 밖
     BitReader         enumReader( writer.getBytes().data(), writer.getByteCount() );
     BitStreamTestKind kind = BitStreamTestKind::First;
-    SW_EXPECT_TRUE( enumReader.readEnum( 2, kind ) );
+    kind                   = enumReader.readEnum<BitStreamTestKind>( 2 );
+    SW_EXPECT_FALSE( enumReader.hasOverflowed() );
     SW_EXPECT_TRUE( kind == BitStreamTestKind::Third );
-    SW_EXPECT_FALSE( enumReader.readEnum( 2, kind ) );
-    SW_EXPECT_TRUE( kind == BitStreamTestKind::Third ); // 실패하면 바꾸지 않는다
+    kind = enumReader.readEnum<BitStreamTestKind>( 2 );
+    SW_EXPECT_TRUE( kind == BitStreamTestKind::First ); // 실패하면 0 번 열거자다 — 등록 밖 값이 새지 않는다
     SW_EXPECT_TRUE( enumReader.hasOverflowed() );
 
     writer.clear();
@@ -421,9 +425,10 @@ SW_TEST_CASE( BitStreamTest, HandBodyReadHelpersRejectOutOfRangeAndTrailingBits 
     writer.writeVarUint( 9 );
     BitReader countReader( writer.getBytes().data(), writer.getByteCount() );
     uint32    count = 0;
-    SW_EXPECT_TRUE( countReader.readCount( 8, count ) );
+    count           = countReader.readCount( 8 );
+    SW_EXPECT_FALSE( countReader.hasOverflowed() );
     SW_EXPECT_EQUAL( 8u, count );
-    SW_EXPECT_FALSE( countReader.readCount( 8, count ) );
+    SW_EXPECT_EQUAL( 0u, countReader.readCount( 8 ) );
     SW_EXPECT_TRUE( countReader.hasOverflowed() );
 
     // 다 읽었으면 참, 한 바이트가 남거나 채움 비트가 0 이 아니면 거짓이다.

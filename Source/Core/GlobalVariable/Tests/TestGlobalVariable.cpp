@@ -47,7 +47,7 @@ namespace
     /** @brief 명령줄의 디스크 경로 인자 기준 폴더입니다 — 이 케이스 폴더(경로 인자는 쓰지 않지만 `parse` 가 받는다). */
     sw::AbsolutePath makeGlobalVariableTestBaseDirectory()
     {
-        const sw::optional<sw::AbsolutePath> baseDirectory = sw::AbsolutePath::tryMake( sw::test::makeScratchPath( "base" ) );
+        const sw::optional<sw::AbsolutePath> baseDirectory = sw::AbsolutePath::tryMake( sw::test::makeScratchPath( "base" ).str() );
         SW_ASSERT( baseDirectory.has_value() );
         return *baseDirectory;
     }

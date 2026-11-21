@@ -100,12 +100,11 @@ SW_TEST_CASE( StateIOTest, ExpectedSectionRejectsOtherVersionOrTag )
     sw::Archive otherTag( written.getData(), written.getSize() );
     SW_EXPECT_FALSE( sw::StateIO::readExpectedSection( otherTag, kTag + 1, 2, body ) );
 
-    sw::Archive any( written.getData(), written.getSize() );
-    uint32      tag     = 0;
-    uint32      version = 0;
-    SW_REQUIRE_TRUE( sw::StateIO::readSection( any, tag, version, body ) );
-    SW_EXPECT_EQUAL( kTag, tag );
-    SW_EXPECT_EQUAL( 2u, version );
+    sw::Archive                              any( written.getData(), written.getSize() );
+    const sw::optional<sw::StateIO::Section> section = sw::StateIO::readSection( any );
+    SW_REQUIRE_TRUE( section.has_value() );
+    SW_EXPECT_EQUAL( kTag, section->_tag );
+    SW_EXPECT_EQUAL( 2u, section->_version );
 }
 
 /**

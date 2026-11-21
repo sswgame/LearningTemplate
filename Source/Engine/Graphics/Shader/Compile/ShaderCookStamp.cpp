@@ -272,14 +272,14 @@ namespace sw
             {
                 outListRoot.clear();
                 string ownCanonical;
-                if ( FileUtil::makeCanonicalPath( shadersDir, ownCanonical ) == false )
+                if ( FileUtil::makeCanonicalPath( FileUtil::toDiskPath( shadersDir ), ownCanonical ) == false )
                     return false;
                 const ComparableDiskPath ownComparable = FileUtil::makeComparableDiskPath( ownCanonical );
                 outListRoot.push_back( HeaderRoot{ ownComparable, string{} } );
                 for ( const ShaderIncludeRootDomain& rootDomain : resolver.getRootDomains() )
                 {
                     string canonical;
-                    if ( FileUtil::makeCanonicalPath( rootDomain._shadersFolder.str(), canonical ) == false )
+                    if ( FileUtil::makeCanonicalPath( rootDomain._shadersFolder, canonical ) == false )
                         return false;
                     const ComparableDiskPath comparableDir = FileUtil::makeComparableDiskPath( canonical );
                     if ( comparableDir != ownComparable )
@@ -297,7 +297,7 @@ namespace sw
             static string makeHeaderKey( const vector<HeaderRoot>& listRoot, string_view absHeader )
             {
                 string resolved;
-                if ( FileUtil::makeCanonicalPath( absHeader, resolved ) == false )
+                if ( FileUtil::makeCanonicalPath( FileUtil::toDiskPath( absHeader ), resolved ) == false )
                     return string{};
                 const string             canonical  = FileUtil::normalizeSeparators( resolved );     // 구분자를 맞춘다 — 키는 OS 가 달라도 같은 글이어야 한다
                 const ComparableDiskPath comparable = FileUtil::makeComparableDiskPath( canonical ); // 길이는 `canonical` 과 같다(대소문자만 접는다)
@@ -563,7 +563,7 @@ namespace sw
                     existing = parent;
                 }
                 string canonical;
-                if ( existing.empty() || FileUtil::makeCanonicalPath( existing, canonical ) == false )
+                if ( existing.empty() || FileUtil::makeCanonicalPath( FileUtil::toDiskPath( existing ), canonical ) == false )
                     return string{};
                 string resolved = FileUtil::normalizeSeparators( canonical );
                 for ( size_t index = listTail.size(); index > 0; --index )

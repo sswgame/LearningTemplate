@@ -269,7 +269,7 @@ namespace sw::editor
 
     string EditorPreferencesStore::getDefaultFilePath()
     {
-        return EditorPaths::resolveEditorStateFile( kFileName );
+        return EditorPaths::resolveEditorStateFile( kFileName ).str();
     }
 
     EditorUserFileResult EditorPreferencesStore::open()

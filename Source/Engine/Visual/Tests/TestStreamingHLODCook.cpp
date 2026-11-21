@@ -47,7 +47,7 @@ namespace
                 scene.append( entity );
             }
             scene.append( "</entities></Scene>" );
-            SW_EXPECT_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( domain.makeDiskPath( "hlod.scene.xml" ) ), scene.view() ) );
+            SW_EXPECT_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "hlod.scene.xml" ), scene.view() ) );
         }
 
         static const SceneDocument::StreamingCell* findCell( const SceneDocument& doc, int32 x )
@@ -69,7 +69,7 @@ SW_TEST_CASE( StreamingHLODCookTest, SplitBuildsProxyPerFragmentWithStaticMeshes
     const test::ScopedScratchDomain domain;
     Util::writeScene( domain );
     SceneDocument doc{};
-    SW_REQUIRE_TRUE( doc.loadXMLFromDiskFile( domain.makeDiskPath( "hlod.scene.xml" ) ) );
+    SW_REQUIRE_TRUE( doc.loadXMLFromDiskFile( domain.makeDiskPath( "hlod.scene.xml" ).str() ) );
     SW_REQUIRE_TRUE( SceneCooker::splitStreamingCells( SceneEngineServices::makeFromBoundEngine(), doc, "hlod.scene.xml" ) );
 
     SW_REQUIRE_EQUAL( size_t{ 3 }, doc._listStreamingCell.size() );
@@ -100,7 +100,7 @@ SW_TEST_CASE( StreamingHLODCookTest, ProxyInstancesUseWorldPlacement )
     const test::ScopedScratchDomain domain;
     Util::writeScene( domain );
     SceneDocument doc{};
-    SW_REQUIRE_TRUE( doc.loadXMLFromDiskFile( domain.makeDiskPath( "hlod.scene.xml" ) ) );
+    SW_REQUIRE_TRUE( doc.loadXMLFromDiskFile( domain.makeDiskPath( "hlod.scene.xml" ).str() ) );
     SW_REQUIRE_TRUE( SceneCooker::splitStreamingCells( SceneEngineServices::makeFromBoundEngine(), doc, "hlod.scene.xml" ) );
 
     Scene scene{ "HLODCook" };

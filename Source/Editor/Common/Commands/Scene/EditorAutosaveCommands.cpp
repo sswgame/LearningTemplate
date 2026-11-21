@@ -75,8 +75,8 @@ namespace sw::editor
 
             static State& getState() { return getEditorState<State>(); }
 
-            /** @brief `<에디터 상태 폴더>/Autosave` 입니다. 상태 폴더를 정하지 못하면 빈 글입니다. */
-            static string getFolder() { return EditorPaths::resolveEditorStateFile( kFolderName ); }
+            /** @brief `<에디터 상태 폴더>/Autosave` 의 디스크 경로입니다. */
+            static AbsolutePath getFolder() { return EditorPaths::resolveEditorStateFile( kFolderName ); }
 
             /**
              * @brief 세션을 정합니다 — 같은 프로세스의 앞선 인스턴스(모듈 리로드 · 백엔드 교체)가 맡긴 id 가 있으면 그것을 잇고, 없으면 지금 시각으로 새로 만든다.
@@ -157,7 +157,7 @@ namespace sw::editor
                 vector<string> listSlot;
                 for ( const string& sessionFolder : listSessionFolder )
                     (void)FileUtil::collectFolders( FileUtil::toDiskPath( sessionFolder ), listSlot, false ); // 붙여 모은다. 없는 폴더(그새 지운 세션)는 사본이 없다
-                const string projectRoot = ProcessRoots::get()._project.str();
+                const AbsolutePath projectRoot = ProcessRoots::get()._project;
                 for ( const string& slotFolder : listSlot )
                 {
                     vector<uint32> listGeneration;
@@ -181,7 +181,7 @@ namespace sw::editor
                     (void)StringUtil::parseUint64( EditorAutosaveCommands::findMetaValue( metaText, "sourceHash" ), entry._sourceContentHash ); // 없으면(옛 메타) 0 — 아래에서 바뀐 원본으로 거절한다
                     // 다른 프로젝트 · 바뀐 원본에는 적용하지 않는다 — 사본이 오래된 원본 위에 덮여 남의 일을 지우지 않게.
                     // 바뀜은 내용 해시로 본다 — 쓰기 시각은 체크아웃 · 복사가 내용과 따로 바꾸고, 같은 틱의 다시 쓰기는 시각이 같다.
-                    if ( FileUtil::isSameDiskPath( entry._projectRoot, projectRoot ) == false )
+                    if ( FileUtil::isSameDiskPath( entry._projectRoot, projectRoot.str() ) == false )
                         entry._refusal = "it was written for another project";
                     else if ( entry._sourceID.empty() == false ) // 새 씬(원본 없음)은 견줄 원본이 없다 — 프로젝트만 본다
                     {
@@ -201,10 +201,10 @@ namespace sw::editor
              */
             static void beginSession()
             {
-                State& state         = getState();
-                state._bSessionBegun = true;
-                const string folder  = getFolder();
-                if ( folder.empty() || FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( folder ) ) == false )
+                State& state              = getState();
+                state._bSessionBegun      = true;
+                const AbsolutePath folder = getFolder();
+                if ( folder.empty() || FileUtil::ensureDirectoryExists( folder ) == false )
                 {
                     SW_LOG_ERROR_ID( "EditorAutosaveCommands.NoFolder", "Autosave: the editor state folder is unknown or cannot be created - autosave is off for this session" );
                     return;
@@ -212,12 +212,12 @@ namespace sw::editor
                 bool                        bResumed = false;
                 const EditorAutosaveSession session  = takeOrMakeSession( bResumed );
                 vector<string>              listRecoveredFolder;
-                if ( session.open( folder, listRecoveredFolder ) == false )
+                if ( session.open( folder.str(), listRecoveredFolder ) == false )
                 {
-                    SW_LOG_ERROR_ID( "EditorAutosaveCommands.SessionNotOpened", "Autosave: could not write the session folder or lock under '%#' - autosave is off for this session", folder );
+                    SW_LOG_ERROR_ID( "EditorAutosaveCommands.SessionNotOpened", "Autosave: could not write the session folder or lock under '%#' - autosave is off for this session", folder.str() );
                     return;
                 }
-                state._sessionFolder = session.makeFolder( folder );
+                state._sessionFolder = session.makeFolder( folder.str() );
                 if ( bResumed )
                     SW_LOG_INFO_ID( "EditorAutosaveCommands.SessionResumed", "Autosave: resumed session '%#' after a module reload", FileUtil::getFileNamePart( state._sessionFolder ) );
                 if ( listRecoveredFolder.empty() == false )
@@ -479,11 +479,11 @@ namespace sw::editor
     void EditorAutosaveCommands::endSession( const EditorAutosaveSessionEnd reason )
     {
         // 에디터 상태 저장소는 이미 내려갔다(에디터 컨텍스트가 먼저 내려간다) — 상태를 읽지 않고 잠금의 pid 로 자기 폴더를 찾는다.
-        const string folder = EditorAutosaveCommandsInternal::getFolder();
+        const AbsolutePath folder = EditorAutosaveCommandsInternal::getFolder();
         // 리로드 · 교체는 세션 id 를 맡김 칸에 맡겨 두었다(beginSession) — 다음 인스턴스가 같은 폴더에 이어 쓴다. 편집기 종료만 지운다:
         // 저장하지 않은 일은 종료 확인에서 사용자가 이미 골랐다(언리얼 FPackageAutoSaver 도 정상 종료 뒤에는 복원 파일을 묻지 않는다).
         if ( reason == EditorAutosaveSessionEnd::EditorExit && folder.empty() == false )
-            EditorAutosaveSession::removeOwned( folder, Process::getCurrentProcessID() );
+            EditorAutosaveSession::removeOwned( folder.str(), Process::getCurrentProcessID() );
         AssetPaths*                            pAssetPaths = editor::findSubsystem<AssetPaths>();
         fixed_string<constant::buffer::kMax64> sessionID;
         formatstring( sessionID.data(), sessionID.capacity(), "%#/session", kDomain );
@@ -539,7 +539,7 @@ namespace sw::editor
     {
         // 모든 세션 폴더(이 세션 것 포함)를 비정상 종료가 남긴 것처럼 읽는다 — 개발 명령 `autosave.rescan` 의 시나리오용
         vector<string> listSessionFolder;
-        (void)FileUtil::collectFolders( FileUtil::toDiskPath( EditorAutosaveCommandsInternal::getFolder() ), listSessionFolder, false ); // 폴더가 없으면 후보도 없다
+        (void)FileUtil::collectFolders( EditorAutosaveCommandsInternal::getFolder(), listSessionFolder, false ); // 폴더가 없으면 후보도 없다
         EditorAutosaveCommandsInternal::State& state = EditorAutosaveCommandsInternal::getState();
         EditorAutosaveCommandsInternal::scanRecoverable( listSessionFolder, state._listRecoverable );
         EditorAutosaveCommandsInternal::scanRecoverableDocuments( listSessionFolder, state._listRecoverableDocument );

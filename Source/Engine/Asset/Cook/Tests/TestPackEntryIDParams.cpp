@@ -126,9 +126,9 @@ SW_TEST_CASE( PackEntryIDPropertiesTest, EveryFieldHoldingAnEntryIDIsListed )
     PackConfig config;
     SW_REQUIRE_TRUE( ConfigManager::readConfigFile( config, FileUtil::joinPath( ProcessRoots::get()._project.str(), PackConfig::kConfigPath ) ) == ConfigReadResult::Loaded );
     // 쿠커와 같이 모든 게임 프리셋의 규칙을 엔진 규칙 뒤에 합친다 — 게임만 쓰는 칸(`_listVillagerPreset`)은 그 게임 설정에 있다.
-    const string   gameConfigFolder = FileUtil::joinPath( ProcessRoots::get()._project.str(), GameConfig::kConfigFolder );
-    vector<string> listGameConfig;
-    SW_REQUIRE_TRUE( FileUtil::collectFiles( FileUtil::toDiskPath( gameConfigFolder ), ".json", listGameConfig, false ) );
+    const AbsolutePath gameConfigFolder = ProcessRoots::get()._project.join( GameConfig::kConfigFolder );
+    vector<string>     listGameConfig;
+    SW_REQUIRE_TRUE( FileUtil::collectFiles( gameConfigFolder, ".json", listGameConfig, false ) );
     for ( const string& gameConfigPath : listGameConfig )
     {
         GameConfig gameConfig;
@@ -138,7 +138,7 @@ SW_TEST_CASE( PackEntryIDPropertiesTest, EveryFieldHoldingAnEntryIDIsListed )
     const PackCookRules& rules = config._cookRules;
 
     string exemptionText;
-    SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::toDiskPath( FileUtil::joinPath( ProcessRoots::get()._project.str(), Util::kExemptionPath ) ), exemptionText ) );
+    SW_REQUIRE_TRUE( FileUtil::readTextFile( ProcessRoots::get()._project.join( Util::kExemptionPath ), exemptionText ) );
     JSONDocument exemptionDoc;
     SW_REQUIRE_TRUE( exemptionDoc.parse( exemptionText, Util::kExemptionPath ) );
     const JSONValue listExempt = exemptionDoc.getRoot().get( "listExempt" );

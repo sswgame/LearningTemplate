@@ -601,11 +601,11 @@ namespace sw
         return serializeKeepingUnknown( pInstance, typeInfo, listUnknown, outListBuffer, context );
     }
 
-    bool BinarySerializer::deserializeVersioned( uint32& outVersion, void* pInstance, const TypeInfo& typeInfo, const uint8* pData, size_t dataSize,
+    bool BinarySerializer::deserializeVersioned( void* pInstance, const TypeInfo& typeInfo, const uint8* pData, size_t dataSize,
                                                  uint32 currentVersion, const SerializeContext& context )
     {
         ByteReader reader( pData, dataSize );
-        outVersion = reader.readPod<uint32>();
+        const auto loadedVersion = reader.readPod<uint32>();
         if ( reader.hasOverflowed() )
             return false;
 
@@ -620,7 +620,7 @@ namespace sw
         const bool               bIgnoreOrphan = context.shouldSkipUnknownProperties() && context.shouldSkipUnreadableProperties();
         const SchemaOrphanPolicy orphanPolicy  = bIgnoreOrphan ? SchemaOrphanPolicy::Ignore : SchemaOrphanPolicy::Reject;
         return runVersionedDeserialize(
-            outVersion, MutableObjectAddress{ pInstance }, typeInfo, currentVersion,
+            loadedVersion, MutableObjectAddress{ pInstance }, typeInfo, currentVersion,
             SchemaVersionSource::Stream, orphanPolicy,
             SW_DELEGATE_LAMBDA( SoftDeserializeFn,
                                 [&]( const MutableObjectAddress target, const TypeInfo& targetType, vector<SchemaOrphanValue>& listOrphan, uint32& ) -> bool
@@ -637,9 +637,10 @@ namespace sw
         if ( bInvalidInput )
             return BinaryExactVersionResult::Unreadable;
         ByteReader reader( pData, dataSize );
-        outReadVersion = reader.readPod<uint32>();
+        const auto loadedReadVersion = reader.readPod<uint32>();
         if ( reader.hasOverflowed() )
             return BinaryExactVersionResult::Unreadable;
+        outReadVersion = loadedReadVersion;
         if ( outReadVersion != expectedVersion )
             return BinaryExactVersionResult::VersionMismatch;
         const size_t bodyOffset = reader.getOffset();
@@ -698,13 +699,13 @@ namespace sw
         return BinarySerializerInternal::writeBufferToArchive( bWritten, buffer, outArchive );
     }
 
-    bool BinarySerializer::deserializeVersioned( uint32& outVersion, void* pInstance, const TypeInfo& typeInfo, Archive& inArchive,
+    bool BinarySerializer::deserializeVersioned( void* pInstance, const TypeInfo& typeInfo, Archive& inArchive,
                                                  uint32 currentVersion, const SerializeContext& context )
     {
         return BinarySerializerInternal::deserializeArchiveStream( inArchive, &BinarySerializerInternal::measureVersionedStream,
                                                                    [&]( const uint8* pData, size_t dataSize )
         {
-            return deserializeVersioned( outVersion, pInstance, typeInfo, pData, dataSize, currentVersion, context );
+            return deserializeVersioned( pInstance, typeInfo, pData, dataSize, currentVersion, context );
         } );
     }
 

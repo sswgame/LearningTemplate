@@ -157,8 +157,9 @@ namespace sw
                 return true;
             case AssetIdentityKind::Header:
             {
-                string text;
-                if ( FileUtil::readTextFile( FileUtil::toDiskPath( absPath ), text ) && FileUtil::writeTextFile( FileUtil::toDiskPath( absPath ), AssetGUIDHeader::write( text, guid ) ) )
+                const AbsolutePath diskPath = FileUtil::toDiskPath( absPath );
+                string             text;
+                if ( FileUtil::readTextFile( diskPath, text ) && FileUtil::writeTextFile( diskPath, AssetGUIDHeader::write( text, guid ) ) )
                 {
                     AssetRegistry::record( guid, assetID ); // 실행 중 색인도 안다 — 이 에셋을 가리키는 참조가 다음 기동 전에도 GUID 로 쓰인다
                     return true;
@@ -168,11 +169,11 @@ namespace sw
             case AssetIdentityKind::Source:
             {
                 // 베낀 서술의 임포트 예외는 지킨다(유니티 Duplicate 와 같다) — 복사본은 새 에셋이지만 같은 임포트 설정이다. 읽지 못한 서술은 오류를 남기고 예외 없이 새로 쓴다(복사본의 정체성이 먼저다).
-                AssetMeta  copied;
-                string     copiedText;
-                const bool bCopied = FileUtil::isRegularFile( FileUtil::toDiskPath( AssetMeta::makePath( absPath ) ) ) && FileUtil::readTextFile( FileUtil::toDiskPath( AssetMeta::makePath( absPath ) ), copiedText ) &&
-                                     copied.parseXML( copiedText, AssetMeta::makePath( assetID ) ).has_value();
-                if ( FileUtil::writeTextFile( FileUtil::toDiskPath( AssetMeta::makePath( absPath ) ), AssetMeta::makeText( assetID, guid, bCopied ? copied._listImportOverride : vector<AssetImportOverride>{} ) ) )
+                const AbsolutePath metaPath = AssetMeta::makePath( FileUtil::toDiskPath( absPath ) );
+                AssetMeta          copied;
+                string             copiedText;
+                const bool         bCopied = FileUtil::isRegularFile( metaPath ) && FileUtil::readTextFile( metaPath, copiedText ) && copied.parseXML( copiedText, AssetMeta::makePath( assetID ) ).has_value();
+                if ( FileUtil::writeTextFile( metaPath, AssetMeta::makeText( assetID, guid, bCopied ? copied._listImportOverride : vector<AssetImportOverride>{} ) ) )
                 {
                     AssetRegistry::record( guid, assetID );
                     return true;
@@ -208,7 +209,7 @@ namespace sw
             SW_LOG_ERROR_ID( "AssetIdentity.ReplaceWriteFailed", "Could not write '%#' - nothing was replaced", targetID );
             return false;
         }
-        if ( kind == AssetIdentityKind::Source && FileUtil::isRegularFile( FileUtil::toDiskPath( AssetMeta::makePath( targetAbs ) ) ) == false )
+        if ( kind == AssetIdentityKind::Source && FileUtil::isRegularFile( AssetMeta::makePath( FileUtil::toDiskPath( targetAbs ) ) ) == false )
         {
             SW_LOG_ERROR_ID( "AssetIdentity.ReplaceNoIdentity", "'%#' has no asset GUID to keep - run py -3 -m Scripts asset-ids --fix first, nothing was replaced", targetID );
             return false;
@@ -381,7 +382,10 @@ namespace sw
         string                  text;
         if ( kind == AssetIdentityKind::Header && FileUtil::readTextFile( FileUtil::toDiskPath( absPath ), text ) )
             return AssetGUIDHeader::read( text )._guid;
-        if ( kind == AssetIdentityKind::Source && FileUtil::isRegularFile( FileUtil::toDiskPath( AssetMeta::makePath( absPath ) ) ) && FileUtil::readTextFile( FileUtil::toDiskPath( AssetMeta::makePath( absPath ) ), text ) )
+        if ( kind != AssetIdentityKind::Source )
+            return nullopt;
+        const AbsolutePath metaPath = AssetMeta::makePath( FileUtil::toDiskPath( absPath ) );
+        if ( FileUtil::isRegularFile( metaPath ) && FileUtil::readTextFile( metaPath, text ) )
         {
             AssetMeta meta;
             return meta.parseXML( text, AssetMeta::makePath( assetID ) );

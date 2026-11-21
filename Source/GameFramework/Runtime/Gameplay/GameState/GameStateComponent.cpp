@@ -45,13 +45,13 @@ namespace sw
                 uint32                                 droppedCount = 0;
                 for ( uint32 sectionIndex = 0; sectionIndex < sectionCount; ++sectionIndex )
                 {
-                    StateSectionTableUtil::Section section;
-                    if ( StateIO::readSection( inOldBody, section._tag, section._version, section._body ) == false )
+                    optional<StateSectionTableUtil::Section> section = StateIO::readSection( inOldBody );
+                    if ( section.has_value() == false )
                         return false;
-                    if ( isPlayerSection( section._tag ) )
+                    if ( isPlayerSection( section->_tag ) )
                         ++droppedCount;
                     else
-                        listKept.push_back( section );
+                        listKept.push_back( std::move( *section ) );
                 }
                 if ( droppedCount > 0 )
                     SW_LOG_WARNING_ID( "GameState.PlayerSectionsDropped", "GameState: an old save (version 1) held %# player section(s) (wallet, quest log, reputation, inventory) - they are not carried to the player components",

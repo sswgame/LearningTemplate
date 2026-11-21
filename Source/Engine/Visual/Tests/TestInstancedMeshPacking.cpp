@@ -51,12 +51,12 @@ namespace
                                             { makeMesh( "1", "Rock1", "1,0,0", "true" ), makeMesh( "2", "Rock2", "2,0,0", "true" ), makeMesh( "3", "Lamp", "3,0,0", "false" ),
                                               makeMesh( "4", "Base", "4,0,0", "true" ),
                                               makeMesh( "5", "Lid", "0,1,0", "true", "_attachOwner=\"Base\" _attachOwnerID=\"4\" _attachComponent=\"#0000000000000001\"" ) } );
-            SW_EXPECT_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( domain.makeDiskPath( "props.scene.xml" ) ), inner ) );
+            SW_EXPECT_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "props.scene.xml" ), inner ) );
             StringBuilder<constant::buffer::kMax1024> anchor;
             anchor.appendFormat( "<entity id=\"1\" name=\"Village\" scene=\"%#\"><GameObject _schemaVersion=\"0\" _name=\"Village\" _bActive=\"true\"><_listComponent><SceneComponent _localPosition=\"10,0,0\" "
                                  "/></_listComponent></GameObject></entity>",
                                  test::ScopedScratchDomain::makeID( "props.scene.xml" ).str() );
-            SW_EXPECT_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( domain.makeDiskPath( "outer.scene.xml" ) ), makeScene( "Outer", "", { anchor.view() } ) ) );
+            SW_EXPECT_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "outer.scene.xml" ), makeScene( "Outer", "", { anchor.view() } ) ) );
         }
 
         static bool hasNode( const SceneDocument& doc, string_view name )
@@ -78,7 +78,7 @@ SW_TEST_CASE( InstancedMeshPackingTest, PackedAnchorMergesStaticMeshMembers )
     const test::ScopedScratchDomain domain;
     Util::writeScenes( domain );
     SceneDocument doc{};
-    SW_REQUIRE_TRUE( doc.loadXMLFromDiskFile( domain.makeDiskPath( "outer.scene.xml" ) ) );
+    SW_REQUIRE_TRUE( doc.loadXMLFromDiskFile( domain.makeDiskPath( "outer.scene.xml" ).str() ) );
     SW_REQUIRE_TRUE( doc._listSceneObjectNode.empty() == false );
     SW_EXPECT_TRUE( doc._listSceneObjectNode[0]._instancePacking == SceneInstancePacking::StaticMeshes ); // 내부 씬의 설정이 앵커에 실렸다
     SW_REQUIRE_EQUAL( size_t{ 6 }, doc._listSceneObjectNode.size() );
@@ -114,7 +114,7 @@ SW_TEST_CASE( InstancedMeshPackingTest, UnpackedSourceKeepsMemberEntities )
     const test::ScopedScratchDomain domain;
     Util::writeScenes( domain );
     SceneDocument doc{};
-    SW_REQUIRE_TRUE( doc.loadXMLFromDiskFile( domain.makeDiskPath( "outer.scene.xml" ) ) );
+    SW_REQUIRE_TRUE( doc.loadXMLFromDiskFile( domain.makeDiskPath( "outer.scene.xml" ).str() ) );
     Scene scene{ "Outer" };
     SW_REQUIRE_TRUE( scene.instantiate( doc ) );
     SW_EXPECT_TRUE( scene.getObjectManager()->findGameObjectByName( hashed_string( "Village/Rock1" ) ) != nullptr );

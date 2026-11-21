@@ -21,7 +21,7 @@ using namespace sw::editor;
 SW_TEST_CASE( BehaviorTreeEditModelTest, VariantSavesOnlyItsDifference )
 {
     const test::ScopedScratchDomain domain;
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( domain.makeDiskPath( "base.bt.xml" ) ), R"XML(<BehaviorTree>
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "base.bt.xml" ), R"XML(<BehaviorTree>
   <Selector id="root" name="Root">
     <Sequence id="idle">
       <Condition id="calm" test="!flag(alarm)"/>

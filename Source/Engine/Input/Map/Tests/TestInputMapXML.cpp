@@ -43,10 +43,10 @@ SW_TEST_CASE( InputMapXMLTest, UserBindingsRoundTripEveryKind )
 {
     sw::InputMap map;
     fillEveryBindingKind( map );
-    const sw::string first = saveText( map, sw::test::makeScratchPath( "first.xml" ) );
+    const sw::string first = saveText( map, sw::test::makeScratchPath( "first.xml" ).str() );
 
     sw::InputMap reread;
-    SW_REQUIRE_TRUE( sw::InputRemapSerializer::load( reread, sw::test::makeScratchPath( "first.xml" ) ) );
+    SW_REQUIRE_TRUE( sw::InputRemapSerializer::load( reread, sw::test::makeScratchPath( "first.xml" ).str() ) );
     SW_EXPECT_EQUAL( map.getBindingCount( sw::hashed_string( "Look" ) ), reread.getBindingCount( sw::hashed_string( "Look" ) ) );
     const sw::ActionBinding* pLook = reread.getBinding( sw::hashed_string( "Look" ), 0 );
     SW_REQUIRE_TRUE( pLook != nullptr );
@@ -54,7 +54,7 @@ SW_TEST_CASE( InputMapXMLTest, UserBindingsRoundTripEveryKind )
     const sw::ActionBinding* pSave = reread.getBinding( sw::hashed_string( "Save" ), 0 );
     SW_REQUIRE_TRUE( pSave != nullptr );
     SW_EXPECT_TRUE( pSave->_kind == sw::BindingKind::Shortcut && pSave->_modifierMask == static_cast<uint8>( sw::ModifierKey::Ctrl | sw::ModifierKey::Shift ) );
-    SW_EXPECT_EQUAL( first, saveText( reread, sw::test::makeScratchPath( "second.xml" ) ) );
+    SW_EXPECT_EQUAL( first, saveText( reread, sw::test::makeScratchPath( "second.xml" ).str() ) );
 }
 
 /**
@@ -66,15 +66,15 @@ SW_TEST_CASE( InputMapXMLTest, RejectsUnknownNamesAndProperties )
     SW_EXPECT_LOG( "XMLFields.UnknownField" );
     SW_EXPECT_LOG( "Xml.UnknownElement" );
     SW_EXPECT_LOG( "InputRemapSerializer.UserBindingsInvalidAttribute" );
-    const sw::string brokenBinds   = sw::test::makeScratchPath( "brokenbinds.xml" );
-    const sw::string brokenElement = sw::test::makeScratchPath( "brokenelement.xml" );
-    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::toDiskPath( brokenBinds ), "<UserBindings><action name=\"Jump\">"
-                                                                                           "<bind source=\"Key\" code=\"NoSuchKey\" layer=\"Gameplay\"/>"
-                                                                                           "<bind source=\"Key\" code=\"Space\" colour=\"red\"/>"
-                                                                                           "</action></UserBindings>" ) );
-    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::toDiskPath( brokenElement ), "<UserBindings><action name=\"Jump\"><wiggle/></action></UserBindings>" ) );
+    const sw::AbsolutePath brokenBinds   = sw::test::makeScratchPath( "brokenbinds.xml" );
+    const sw::AbsolutePath brokenElement = sw::test::makeScratchPath( "brokenelement.xml" );
+    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( brokenBinds, "<UserBindings><action name=\"Jump\">"
+                                                               "<bind source=\"Key\" code=\"NoSuchKey\" layer=\"Gameplay\"/>"
+                                                               "<bind source=\"Key\" code=\"Space\" colour=\"red\"/>"
+                                                               "</action></UserBindings>" ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( brokenElement, "<UserBindings><action name=\"Jump\"><wiggle/></action></UserBindings>" ) );
     sw::InputMap map;
-    SW_EXPECT_FALSE( sw::InputRemapSerializer::load( map, brokenBinds ) );
-    SW_EXPECT_FALSE( sw::InputRemapSerializer::load( map, brokenElement ) ); // 모르는 원소가 있는 액션은 통째로 읽지 않는다
+    SW_EXPECT_FALSE( sw::InputRemapSerializer::load( map, brokenBinds.str() ) );
+    SW_EXPECT_FALSE( sw::InputRemapSerializer::load( map, brokenElement.str() ) ); // 모르는 원소가 있는 액션은 통째로 읽지 않는다
     SW_EXPECT_EQUAL( uint32{ 0 }, map.getBindingCount( sw::hashed_string( "Jump" ) ) );
 }

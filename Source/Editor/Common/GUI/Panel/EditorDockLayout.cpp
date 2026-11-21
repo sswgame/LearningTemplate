@@ -237,17 +237,17 @@ namespace sw::editor
         _imguiINIPath.clear();
         _panelVisibilityPath.clear();
 
-        const string imguiPath   = EditorPaths::resolveEditorStateFile( EditorPaths::kImguiINIFileName );
-        const string windowsPath = EditorPaths::resolveEditorStateFile( EditorPaths::kPanelVisibilityFileName );
+        const AbsolutePath imguiPath   = EditorPaths::resolveEditorStateFile( EditorPaths::kImguiINIFileName );
+        const AbsolutePath windowsPath = EditorPaths::resolveEditorStateFile( EditorPaths::kPanelVisibilityFileName );
         if ( imguiPath.empty() || windowsPath.empty() )
         {
             SW_LOG_WARNING_ID( "EditorDockLayout.FailedResolveSavedEditor", "Failed to resolve Saved/Editor - layout will not persist." );
             return;
         }
 
-        _imguiINIPath        = imguiPath;
-        _panelVisibilityPath = windowsPath;
-        SW_LOG_TRACE_ID( "EditorDockLayout.LayoutPersistenceDir", "Layout persistence dir: %#", FileUtil::getDirectoryPart( imguiPath ).c_str() );
+        _imguiINIPath        = imguiPath.str();
+        _panelVisibilityPath = windowsPath.str();
+        SW_LOG_TRACE_ID( "EditorDockLayout.LayoutPersistenceDir", "Layout persistence dir: %#", imguiPath.getParent().c_str() );
     }
 
     void EditorDockLayout::applyINIFilename() const

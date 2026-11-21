@@ -34,7 +34,10 @@ namespace sw::editor
         archive >> version;
         // 항목 하나는 적어도 글 셋의 길이 · id · 뿌리 표시다.
         constexpr uint32 kMinEntryBytes = sizeof( uint32 ) * 3 + sizeof( uint64 ) + sizeof( uint8 );
-        if ( archive.isOk() == false || version != ObjectCopyBufferInternal::kVersion || archive.readCount( kMinEntryBytes, count ) == false )
+        if ( archive.isOk() == false || version != ObjectCopyBufferInternal::kVersion )
+            return SubsystemInitResult::Succeeded;
+        count = archive.readCount( kMinEntryBytes );
+        if ( archive.isError() )
             return SubsystemInitResult::Succeeded;
         vector<ObjectCopyEntry> listEntry( count );
         for ( ObjectCopyEntry& entry : listEntry )

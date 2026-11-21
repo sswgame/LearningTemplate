@@ -67,7 +67,7 @@ namespace sw
         SW_ASSERT( fixedAbsPath.empty() == false || FileUtil::isPathAtOrUnderRoot( ProcessRoots::get()._content.str(), logFolderPath ) == false );
         if ( fixedAbsPath.empty() == false )
         {
-            if ( const optional<string> lockedPath = FileUtil::findNotOpenForEdit( fixedAbsPath ); lockedPath.has_value() )
+            if ( const optional<string> lockedPath = FileUtil::findNotOpenForEdit( FileUtil::toDiskPath( fixedAbsPath ) ); lockedPath.has_value() )
             {
                 SW_LOG_ERROR_ID( "FileLogOutput.LogFileNotOpenForEdit", "The log file '%#' is a checked-in read-only file - not written", *lockedPath );
                 return false;

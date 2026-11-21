@@ -303,7 +303,7 @@ namespace sw::editor
 
     string EditorShortcutMap::getUserBindingsPath()
     {
-        return EditorPaths::resolveEditorStateFile( kUserBindingsFileName );
+        return EditorPaths::resolveEditorStateFile( kUserBindingsFileName ).str();
     }
 
     void EditorShortcutMap::saveUserBindings() const

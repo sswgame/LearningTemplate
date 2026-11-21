@@ -28,7 +28,7 @@ namespace TerrainLODTestUtil
         asset._listHeight.assign( static_cast<size_t>( kResolution ) * kResolution, uint16{ 0 } );
         vector<uint8> bytes;
         asset.saveToMemory( bytes );
-        SW_EXPECT_TRUE( FileUtil::writeFile( FileUtil::toDiskPath( domain.makeDiskPath( "lod.heightfield" ) ), bytes.data(), static_cast<uint64>( bytes.size() ) ) );
+        SW_EXPECT_TRUE( FileUtil::writeFile( domain.makeDiskPath( "lod.heightfield" ), bytes.data(), static_cast<uint64>( bytes.size() ) ) );
         return test::ScopedScratchDomain::makeID( "lod.heightfield" ).str();
     }
 } // namespace TerrainLODTestUtil
@@ -92,7 +92,7 @@ SW_TEST_CASE( TerrainLODTest, CrossingBench, ._tags = "bench", ._disabledReason 
     asset._listHeight.assign( static_cast<size_t>( kResolution ) * kResolution, uint16{ 0 } );
     vector<uint8> bytes;
     asset.saveToMemory( bytes );
-    SW_REQUIRE_TRUE( FileUtil::writeFile( FileUtil::toDiskPath( domain.makeDiskPath( "bench.heightfield" ) ), bytes.data(), static_cast<uint64>( bytes.size() ) ) );
+    SW_REQUIRE_TRUE( FileUtil::writeFile( domain.makeDiskPath( "bench.heightfield" ), bytes.data(), static_cast<uint64>( bytes.size() ) ) );
 
     GameObjectManager manager;
     GameObject*       pObject = manager.createGameObject( hashed_string( "Terrain" ) );

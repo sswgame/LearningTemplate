@@ -58,10 +58,10 @@ namespace
  */
 SW_TEST_CASE( ModelImportPBRTest, ReadsFirstTexturedMaterialWithResolvedImagePaths )
 {
-    const string root = test::makeScratchPath( "ModelImportPbr" );
-    ParsedGltf   parsed;
-    string       sourcePath;
-    SW_REQUIRE_TRUE( parseScanLikeGltf( root, false, parsed, sourcePath ) );
+    const AbsolutePath root = test::makeScratchPath( "ModelImportPbr" );
+    ParsedGltf         parsed;
+    string             sourcePath;
+    SW_REQUIRE_TRUE( parseScanLikeGltf( root.str(), false, parsed, sourcePath ) );
 
     ModelImportResult result;
     SW_REQUIRE_TRUE( ModelImportMaterial::readPBRMaterial( *parsed._pData, sourcePath, result ) );
@@ -82,7 +82,7 @@ SW_TEST_CASE( ModelImportPBRTest, ReadsFirstTexturedMaterialWithResolvedImagePat
     SW_EXPECT_NEAR( 0.75f, pbr._normalScale, 1e-6f );
     SW_EXPECT_NEAR( 0.0f, pbr._occlusionStrength, 1e-6f );
 
-    SW_EXPECT_TRUE( FileUtil::removeDirectory( FileUtil::toDiskPath( root ) ) );
+    SW_EXPECT_TRUE( FileUtil::removeDirectory( root ) );
 }
 
 /**
@@ -90,16 +90,16 @@ SW_TEST_CASE( ModelImportPBRTest, ReadsFirstTexturedMaterialWithResolvedImagePat
  */
 SW_TEST_CASE( ModelImportPBRTest, OcclusionPackedInORMKeepsStrength )
 {
-    const string root = test::makeScratchPath( "ModelImportPbrAO" );
-    ParsedGltf   parsed;
-    string       sourcePath;
-    SW_REQUIRE_TRUE( parseScanLikeGltf( root, true, parsed, sourcePath ) );
+    const AbsolutePath root = test::makeScratchPath( "ModelImportPbrAO" );
+    ParsedGltf         parsed;
+    string             sourcePath;
+    SW_REQUIRE_TRUE( parseScanLikeGltf( root.str(), true, parsed, sourcePath ) );
 
     ModelImportResult result;
     SW_REQUIRE_TRUE( ModelImportMaterial::readPBRMaterial( *parsed._pData, sourcePath, result ) );
     SW_EXPECT_NEAR( 0.5f, result._pbrMaterial._occlusionStrength, 1e-6f );
 
-    SW_EXPECT_TRUE( FileUtil::removeDirectory( FileUtil::toDiskPath( root ) ) );
+    SW_EXPECT_TRUE( FileUtil::removeDirectory( root ) );
 }
 
 /**
@@ -107,16 +107,16 @@ SW_TEST_CASE( ModelImportPBRTest, OcclusionPackedInORMKeepsStrength )
  */
 SW_TEST_CASE( ModelImportPBRTest, MissingImageFileFails )
 {
-    const string root = test::makeScratchPath( "ModelImportPbrMissing" );
-    ParsedGltf   parsed;
-    string       sourcePath;
-    SW_REQUIRE_TRUE( parseScanLikeGltf( root, false, parsed, sourcePath ) );
-    SW_REQUIRE_TRUE( FileUtil::removeFile( FileUtil::toDiskPath( FileUtil::joinPath( root, "textures_raw/scan/crate_nor_gl_2k.jpg" ) ) ) );
+    const AbsolutePath root = test::makeScratchPath( "ModelImportPbrMissing" );
+    ParsedGltf         parsed;
+    string             sourcePath;
+    SW_REQUIRE_TRUE( parseScanLikeGltf( root.str(), false, parsed, sourcePath ) );
+    SW_REQUIRE_TRUE( FileUtil::removeFile( root.join( "textures_raw/scan/crate_nor_gl_2k.jpg" ) ) );
 
     ModelImportResult result;
     SW_EXPECT_LOG( "File.NotFound" );
     SW_EXPECT_LOG( "ModelImport.ImageFileMissing" );
     SW_EXPECT_FALSE( ModelImportMaterial::readPBRMaterial( *parsed._pData, sourcePath, result ) );
 
-    SW_EXPECT_TRUE( FileUtil::removeDirectory( FileUtil::toDiskPath( root ) ) );
+    SW_EXPECT_TRUE( FileUtil::removeDirectory( root ) );
 }

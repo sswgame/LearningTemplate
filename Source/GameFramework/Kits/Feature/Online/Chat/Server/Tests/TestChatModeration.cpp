@@ -110,19 +110,19 @@ SW_TEST_CASE( ChatModerationTest, WordFilterMasksOrRejectsNormalizedMatches )
 /** @brief [ChatModerationTest] 건너뛸 글자 파일은 `U+XXXX` 줄만 받는다 — 틀린 줄 · 없는 파일은 읽지 않는다(목록은 빈다) */
 SW_TEST_CASE( ChatModerationTest, IgnoredCharacterFileRejectsBadLines )
 {
-    const string folder = test::makeScratchPath( "ChatIgnored" );
-    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( folder ) ) );
-    const string path = FileUtil::joinPath( folder, "ignored.txt" );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( path ), "# comment\nU+002E\n.\n" ) );
+    const AbsolutePath folder = test::makeScratchPath( "ChatIgnored" );
+    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( folder ) );
+    const AbsolutePath path = folder.join( "ignored.txt" );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( path, "# comment\nU+002E\n.\n" ) );
     ChatTextNormalizer normalizer;
     SW_EXPECT_LOG( "ChatTextNormalizer.BadLine" );
-    SW_EXPECT_FALSE( normalizer.loadFromFile( path ) );
+    SW_EXPECT_FALSE( normalizer.loadFromFile( path.str() ) );
     SW_EXPECT_EQUAL( uint32( '.' ), normalizer.normalize( '.' ) ); // 실패한 읽기는 아무것도 건너뛰지 않는다
     SW_EXPECT_LOG( "File.NotFound" );
     SW_EXPECT_LOG( "ChatTextNormalizer.CannotRead" );
-    SW_EXPECT_FALSE( normalizer.loadFromFile( FileUtil::joinPath( folder, "missing.txt" ) ) );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( path ), "U+002E\n" ) );
-    SW_REQUIRE_TRUE( normalizer.loadFromFile( path ) );
+    SW_EXPECT_FALSE( normalizer.loadFromFile( FileUtil::joinPath( folder.str(), "missing.txt" ) ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( path, "U+002E\n" ) );
+    SW_REQUIRE_TRUE( normalizer.loadFromFile( path.str() ) );
     SW_EXPECT_EQUAL( uint32( 0 ), normalizer.normalize( '.' ) );
     SW_EXPECT_EQUAL( uint32( 'a' ), normalizer.normalize( 'A' ) );
 }

@@ -18,9 +18,9 @@ using namespace sw::editor;
  */
 SW_TEST_CASE( ProjectSettingsJSONDocumentTest, EveryConfigFileRoundTrips )
 {
-    const string   configFolder = FileUtil::joinPath( ProcessRoots::get()._project.str(), ProjectSettingsEntry::kTableFolder );
-    vector<string> listPath;
-    SW_REQUIRE_TRUE( FileUtil::collectFiles( FileUtil::toDiskPath( configFolder ), ".json", listPath, true ) );
+    const AbsolutePath configFolder = ProcessRoots::get()._project.join( ProjectSettingsEntry::kTableFolder );
+    vector<string>     listPath;
+    SW_REQUIRE_TRUE( FileUtil::collectFiles( configFolder, ".json", listPath, true ) );
     SW_REQUIRE_TRUE( listPath.size() > 30u );
     for ( const string& path : listPath )
     {
@@ -166,12 +166,12 @@ SW_TEST_CASE( ProjectSettingsJSONDocumentTest, InvalidJSONDoesNotOpen )
  */
 SW_TEST_CASE( ProjectSettingsEntryTest, TablesSkipTypedFiles )
 {
-    const string                 projectRoot = ProcessRoots::get()._project.str();
+    const AbsolutePath           projectRoot = ProcessRoots::get()._project;
     vector<ProjectSettingsEntry> listTyped( 1 );
-    listTyped[0]._absolutePath = FileUtil::normalizeSeparators( FileUtil::joinPath( projectRoot, "Config/Engine/EngineConfig.json" ) );
+    listTyped[0]._absolutePath = FileUtil::normalizeSeparators( FileUtil::joinPath( projectRoot.str(), "Config/Engine/EngineConfig.json" ) );
     listTyped[0]._typeName     = "EngineConfig";
     vector<ProjectSettingsEntry> listTable;
-    SW_REQUIRE_TRUE( ProjectSettingsEntry::collectTables( projectRoot, listTyped, listTable ) );
+    SW_REQUIRE_TRUE( ProjectSettingsEntry::collectTables( projectRoot.str(), listTyped, listTable ) );
     bool bNamingWords = false;
     for ( const ProjectSettingsEntry& table : listTable )
     {
@@ -187,13 +187,13 @@ SW_TEST_CASE( ProjectSettingsEntryTest, TablesSkipTypedFiles )
  */
 SW_TEST_CASE( ProjectSettingsEntryTest, OtherGamePresetsAreTyped )
 {
-    const string                 projectRoot = ProcessRoots::get()._project.str();
+    const AbsolutePath           projectRoot = ProcessRoots::get()._project;
     vector<ProjectSettingsEntry> listTyped( 1 );
     listTyped[0]._page         = "GameConfig";
     listTyped[0]._typeName     = "GameConfig";
     listTyped[0]._relativePath = "Config/Game/Playground.json";
-    listTyped[0]._absolutePath = FileUtil::normalizeSeparators( FileUtil::joinPath( projectRoot, listTyped[0]._relativePath ) );
-    ProjectSettingsEntry::addOtherGamePresets( projectRoot, listTyped );
+    listTyped[0]._absolutePath = FileUtil::normalizeSeparators( FileUtil::joinPath( projectRoot.str(), listTyped[0]._relativePath ) );
+    ProjectSettingsEntry::addOtherGamePresets( projectRoot.str(), listTyped );
     SW_EXPECT_EQUAL( listTyped[0]._gameName, string( "Playground" ) );
     const ProjectSettingsEntry* pShooter = nullptr;
     for ( const ProjectSettingsEntry& entry : listTyped )
@@ -204,7 +204,7 @@ SW_TEST_CASE( ProjectSettingsEntryTest, OtherGamePresetsAreTyped )
     SW_EXPECT_EQUAL( pShooter->_relativePath, string( "Config/Game/Shooter3D.json" ) );
 
     vector<ProjectSettingsEntry> listTable;
-    SW_REQUIRE_TRUE( ProjectSettingsEntry::collectTables( projectRoot, listTyped, listTable ) );
+    SW_REQUIRE_TRUE( ProjectSettingsEntry::collectTables( projectRoot.str(), listTyped, listTable ) );
     for ( const ProjectSettingsEntry& table : listTable )
         SW_EXPECT_FALSE( StringUtil::startsWith( table._relativePath, "Config/Game/" ) );
 }

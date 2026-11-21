@@ -313,7 +313,7 @@ namespace sw
         baseName.appendFormat( "%04d%02d%02d-%02d%02d%02d", localTime._year, localTime._month, localTime._day, localTime._hour, localTime._minute,
                                localTime._second );
         // 같은 초에 다른 프로세스(병렬 실행)가 같은 이름을 고를 수 있다 — 만들기가 곧 자리 잡기다.
-        return FileUtil::reserveUniquePath( FileUtil::joinPath( root, baseName.c_str() ), {}, true, BugReportInternal::kMaxSameSecondSuffix );
+        return FileUtil::reserveUniquePath( FileUtil::toDiskPath( FileUtil::joinPath( root, baseName.c_str() ) ), {}, true, BugReportInternal::kMaxSameSecondSuffix );
     }
 
     string BugReport::findLatestDirectory( string_view root )

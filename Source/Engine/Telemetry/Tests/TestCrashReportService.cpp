@@ -20,8 +20,8 @@ namespace
 
         CrashReportServiceTest()
             : _service{}
-            , _crashFolder{ test::makeScratchPath( "crash" ) }
-            , _reportsFolder{ test::makeScratchPath( "reports" ) }
+            , _crashFolder{ test::makeScratchPath( "crash" ).str() }
+            , _reportsFolder{ test::makeScratchPath( "reports" ).str() }
         {
             (void)FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( _crashFolder ) );
             _service.initialize( _crashFolder, _reportsFolder, "current" );

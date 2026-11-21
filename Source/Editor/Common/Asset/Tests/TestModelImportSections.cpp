@@ -53,9 +53,9 @@ namespace
  */
 SW_TEST_CASE( ModelImportSectionsTest, TexturedMultiMaterialGltfSplitsIntoSections )
 {
-    const string root = test::makeScratchPath( "ModelImportSections" );
-    string       sourcePath;
-    SW_REQUIRE_TRUE( writeTwoMaterialGltf( root, true, sourcePath ) );
+    const AbsolutePath root = test::makeScratchPath( "ModelImportSections" );
+    string             sourcePath;
+    SW_REQUIRE_TRUE( writeTwoMaterialGltf( root.str(), true, sourcePath ) );
 
     ModelImportResult result;
     SW_REQUIRE_TRUE( ModelImporter::readModelAsset( sourcePath, ModelImportRule{}, result ) );
@@ -78,7 +78,7 @@ SW_TEST_CASE( ModelImportSectionsTest, TexturedMultiMaterialGltfSplitsIntoSectio
     SW_EXPECT_EQUAL( string( "Wood" ), result._listSection[0]._sourceMaterial );
     SW_EXPECT_TRUE( result._mesh._listSection[1]._sourceMaterial == hashed_string( "Stone" ) );
 
-    SW_EXPECT_TRUE( FileUtil::removeDirectory( FileUtil::toDiskPath( root ) ) );
+    SW_EXPECT_TRUE( FileUtil::removeDirectory( root ) );
 }
 
 /**
@@ -118,9 +118,9 @@ SW_TEST_CASE( ModelImportSectionsTest, ReimportKeepsSectionNamesByRawNames )
  */
 SW_TEST_CASE( ModelImportSectionsTest, UntexturedMultiMaterialGltfStaysOneMesh )
 {
-    const string root = test::makeScratchPath( "ModelImportSectionsFlat" );
-    string       sourcePath;
-    SW_REQUIRE_TRUE( writeTwoMaterialGltf( root, false, sourcePath ) );
+    const AbsolutePath root = test::makeScratchPath( "ModelImportSectionsFlat" );
+    string             sourcePath;
+    SW_REQUIRE_TRUE( writeTwoMaterialGltf( root.str(), false, sourcePath ) );
 
     ModelImportResult result;
     SW_REQUIRE_TRUE( ModelImporter::readModelAsset( sourcePath, ModelImportRule{}, result ) );
@@ -129,5 +129,5 @@ SW_TEST_CASE( ModelImportSectionsTest, UntexturedMultiMaterialGltfStaysOneMesh )
     SW_EXPECT_TRUE( result._mesh._listSection.empty() );
     SW_EXPECT_EQUAL( size_t{ 6 }, result._mesh._listVertex.size() );
 
-    SW_EXPECT_TRUE( FileUtil::removeDirectory( FileUtil::toDiskPath( root ) ) );
+    SW_EXPECT_TRUE( FileUtil::removeDirectory( root ) );
 }

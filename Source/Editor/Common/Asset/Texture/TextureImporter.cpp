@@ -183,7 +183,7 @@ namespace sw::editor
                                                     TextureImportResult* pOutResult )
         {
             // DirectXTex 가 경로를 스스로 열어 쓴다 — `FileUtil` 의 쓰기 입구를 지나지 않으므로 게이트를 직접 묻는다(커밋된 DDS 를 자동화 실행이 덮지 않게).
-            if ( FileUtil::isWriteAllowed( outputPath ) == false || FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( outputPath ) ) == false )
+            if ( FileUtil::isWriteAllowed( FileUtil::toDiskPath( outputPath ) ) == false || FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( outputPath ) ) == false )
                 return false;
 
             // 엔진 `DDSLoader` 의 옛 머리(DX9 픽셀 형식) 경로는 1 채널 휘도(L8)를 모른다. R8_UNORM 은 DX10 머리로 써서 DXGI 번호(61)를 그대로 싣는다.
@@ -592,7 +592,7 @@ namespace sw::editor
             if ( pImage == nullptr || TextureBlockEncoder::encodeMip( format, pImage->pixels, static_cast<uint32>( pImage->width ), static_cast<uint32>( pImage->height ), payload ) == false )
                 return false;
         }
-        if ( FileUtil::isWriteAllowed( outputPath ) == false || FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( outputPath ) ) == false )
+        if ( FileUtil::isWriteAllowed( FileUtil::toDiskPath( outputPath ) ) == false || FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( outputPath ) ) == false )
             return false;
         const uint32 width    = static_cast<uint32>( metadata.width );
         const uint32 rowBytes = ( width + 3 ) / 4 * RHIFormatUtil::getBlockInfo( format )._blockBytes;

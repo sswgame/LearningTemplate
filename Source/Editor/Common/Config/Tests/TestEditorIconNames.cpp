@@ -49,7 +49,7 @@ namespace
     {
         unordered_set<string> setName;
         vector<string>        listFile;
-        const bool            bCollected = FileUtil::collectFiles( FileUtil::toDiskPath( FileUtil::joinPath( ProcessRoots::get()._project.str(), "Source" ) ), "", listFile, true );
+        const bool            bCollected = FileUtil::collectFiles( ProcessRoots::get()._project.join( "Source" ), "", listFile, true );
         SW_EXPECT_TRUE( bCollected );
         for ( const string& filePath : listFile )
         {

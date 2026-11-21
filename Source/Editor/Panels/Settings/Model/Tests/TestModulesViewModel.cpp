@@ -27,7 +27,7 @@ namespace
         ModulesViewModel _model;
 
         ModulesViewModelTest()
-            : _folder{ test::makeScratchPath( "Modules" ) }
+            : _folder{ test::makeScratchPath( "Modules" ).str() }
             , _model{}
         {
             SW_EXPECT_TRUE( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( _folder ) ) );
@@ -145,25 +145,25 @@ SW_TEST_CASE_F( ModulesViewModelTest, ToggleThatBreaksTheGraphDoesNotAsk )
 
 SW_TEST_CASE_F( ModulesViewModelTest, ApplyWritesOnlyNonDefaultOverrides )
 {
-    const string path = test::makeScratchPath( "Project.module.json" );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( path ), makeManifestText( "Project", "Game", "" ) ) );
+    const AbsolutePath path = test::makeScratchPath( "Project.module.json" );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( path, makeManifestText( "Project", "Game", "" ) ) );
 
     SW_REQUIRE_TRUE( _model.requestToggle( "GF_Child", false ) );
-    _model.applyPendingTo( path );
+    _model.applyPendingTo( path.str() );
     SW_EXPECT_FALSE( _model.hasPending() );
     SW_EXPECT_TRUE( _model.hasChangedSinceStart() );
 
     string         text;
     ModuleManifest manifest;
-    SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::toDiskPath( path ), text ) );
+    SW_REQUIRE_TRUE( FileUtil::readTextFile( path, text ) );
     SW_REQUIRE_TRUE( ModuleCatalog::parseManifest( text, {}, manifest ).has_value() );
     SW_REQUIRE_EQUAL( size_t{ 1 }, manifest._listModuleOverride.size() );
     SW_EXPECT_TRUE( manifest._listModuleOverride[0]._name == "GF_Child" );
     SW_EXPECT_FALSE( manifest._listModuleOverride[0]._bEnabled );
 
     SW_REQUIRE_TRUE( _model.requestToggle( "GF_Child", true ) ); // 기본과 같아지면 줄을 지운다
-    _model.applyPendingTo( path );
-    SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::toDiskPath( path ), text ) );
+    _model.applyPendingTo( path.str() );
+    SW_REQUIRE_TRUE( FileUtil::readTextFile( path, text ) );
     SW_REQUIRE_TRUE( ModuleCatalog::parseManifest( text, {}, manifest ).has_value() );
     SW_EXPECT_TRUE( manifest._listModuleOverride.empty() );
 }
@@ -173,7 +173,7 @@ SW_TEST_CASE_F( ModulesViewModelTest, ApplyToUnreadableManifestLeavesNoChangeMar
     SW_EXPECT_LOG( "File.NotFound" );
     SW_EXPECT_LOG( "ModulesPanel.ModulesProjectManifestCould" );
     SW_REQUIRE_TRUE( _model.requestToggle( "GF_Child", false ) );
-    _model.applyPendingTo( test::makeScratchPath( "Missing.module.json" ) );
+    _model.applyPendingTo( test::makeScratchPath( "Missing.module.json" ).str() );
     SW_EXPECT_FALSE( _model.hasPending() ); // 성공 여부와 관계없이 미리보기를 닫는다
     SW_EXPECT_FALSE( _model.hasChangedSinceStart() );
 }
@@ -184,7 +184,7 @@ SW_TEST_CASE_F( ModulesViewModelTest, FailedReloadDropsTheOldResolution )
     SW_EXPECT_LOG( "ModulesPanel.ModulesCatalogCouldNot" );
     SW_EXPECT_TRUE( _model.getResolution().isActive( "GF_Base" ) );
 
-    _model.reloadFrom( test::makeScratchPath( "NoSuchFolder" ) );
+    _model.reloadFrom( test::makeScratchPath( "NoSuchFolder" ).str() );
 
     SW_EXPECT_FALSE( _model.getLoadError().empty() );
     SW_EXPECT_FALSE( _model.getResolution().isActive( "GF_Base" ) );
@@ -195,10 +195,10 @@ SW_TEST_CASE_F( ModulesViewModelTest, FailedReloadDropsTheOldResolution )
 // 결함: "읽었는가" 를 매니페스트 수로 가려, 빈 폴더는 그리기마다 폴더를 다시 읽었다.
 SW_TEST_CASE( ModulesViewModelLoadTest, EmptyFolderIsNotReadAgain )
 {
-    const string folder = test::makeScratchPath( "Empty" );
-    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( folder ) ) );
+    const AbsolutePath folder = test::makeScratchPath( "Empty" );
+    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( folder ) );
     ModulesViewModel model;
-    model.reloadFrom( folder );
+    model.reloadFrom( folder.str() );
     SW_EXPECT_TRUE( model.getLoadError().empty() );
 
     model.ensureLoaded(); // 다시 읽으면 실행 파일 옆의 진짜 카탈로그를 읽는다

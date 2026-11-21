@@ -31,16 +31,15 @@ namespace sw::editor
             static constexpr string_view kRunStateFolder = "editor";
 
             /**
-             * @brief 자동화 실행(`-unattended` · `-scenario` — `CommandLineManager::isAutomatedRun`)의 상태 폴더(`<실행 뿌리>/editor`)입니다. 자동화 실행이 아니거나 `-gv_editorStateDir` 를 주었으면 빈 문자열입니다.
-             * @details 시나리오가 닫은 패널 · 바꾼 설정이 사용자의 Saved/Editor 에 남아 다음 실행(사람 · 다른 시나리오)이 그 상태로 시작했다.
-             *          실행 뿌리(`ProcessRoots::_run`)가 실행마다 새 폴더라 비우지 않고, 동시에 도는 App 끼리 겹치지 않는다(예전 `editor_p<pid>` 와 형제 거두기를 대신한다).
-             *          리로드 · 백엔드 교체로 다시 선 인스턴스는 같은 폴더를 이어 쓴다(자동 저장 세션 폴더 · 레이아웃).
+             * @brief 상태 폴더 @p folder 를 만들고 돌려줍니다. 경로를 묻는 함수라 폴더를 못 만들어도 경로는 돌려준다 — 이유는 ensure 가 남기고, 이 폴더에 쓰는 쪽이 쓰기 실패로 다시 알린다.
+             * @details 자동화 실행(`-unattended` · `-scenario` — `CommandLineManager::isAutomatedRun`)은 실행 뿌리 아래 `editor` 를 쓴다. 시나리오가 닫은 패널 · 바꾼 설정이
+             *          사용자의 Saved/Editor 에 남아 다음 실행(사람 · 다른 시나리오)이 그 상태로 시작했다. 실행 뿌리(`ProcessRoots::_run`)가 실행마다 새 폴더라 비우지 않고,
+             *          동시에 도는 App 끼리 겹치지 않는다. 리로드 · 백엔드 교체로 다시 선 인스턴스는 같은 폴더를 이어 쓴다(자동 저장 세션 폴더 · 레이아웃).
              */
-            static string getAutomationStateDirectory()
+            static AbsolutePath ensureStateDirectory( AbsolutePath folder )
             {
-                if ( gv_editorStateDir.get().empty() == false || editor::getSubsystem<CommandLineManager>().isAutomatedRun() == false )
-                    return {};
-                return FileUtil::joinPath( ProcessRoots::get()._run.str(), kRunStateFolder );
+                (void)FileUtil::ensureDirectoryExists( folder );
+                return folder;
             }
         };
     } // namespace
@@ -59,32 +58,24 @@ namespace sw::editor
         return findContentFolder( FileUtil::joinPath( editor::getSubsystem<const GameConfig>()._packRoot.get(), constant::path::kMapsFolder ) );
     }
 
-    string EditorPaths::getEditorStateDirectory()
+    AbsolutePath EditorPaths::getEditorStateDirectory()
     {
         // 자동화 실행은 빈 폴더를 쓴다 — 사용자의 레이아웃 · 테마 · 최근 씬과 무관하게 시작하고, 사용자 상태에 쓰지 않는다.
         // `gv_editorStateDir` 는 디스크 경로 변수라 값을 받을 때 이미 절대로 풀었다(R5) — 여기서 다시 풀지 않는다.
-        string stateDir = gv_editorStateDir.get();
-        if ( stateDir.empty() )
-            stateDir = EditorPathsInternal::getAutomationStateDirectory();
-        if ( stateDir.empty() )
-        {
-            stateDir = FileUtil::joinPath( ProcessRoots::get()._project.str(), config::kDirSavedEditor );
-        }
-        // 경로를 묻는 함수라 폴더를 못 만들어도 경로는 돌려준다 — 이유는 ensure 가 남기고, 이 폴더에 쓰는 쪽이 쓰기 실패로 다시 알린다.
-        (void)FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( stateDir ) );
-        return stateDir;
+        const string& variableDir = gv_editorStateDir.get();
+        if ( variableDir.empty() == false )
+            return EditorPathsInternal::ensureStateDirectory( FileUtil::toDiskPath( variableDir ) );
+        const ProcessRoots& roots = ProcessRoots::get();
+        return EditorPathsInternal::ensureStateDirectory( editor::getSubsystem<CommandLineManager>().isAutomatedRun() ? roots._run.join( EditorPathsInternal::kRunStateFolder )
+                                                                                                                      : roots._project.join( config::kDirSavedEditor ) );
     }
 
-    string EditorPaths::resolveEditorStateFile( const utf8* pFileName )
+    AbsolutePath EditorPaths::resolveEditorStateFile( const utf8* pFileName )
     {
+        // 이름이 없으면 빈 경로다(그 경로의 I/O 는 없는 파일처럼 실패한다 — `FileUtil::toDiskPath` 의 빈 글과 같다).
         if ( StringUtil::isNullOrEmpty( pFileName ) )
-            return {};
-
-        const string stateDir = getEditorStateDirectory();
-        if ( stateDir.empty() )
-            return {};
-
-        return FileUtil::joinPath( stateDir, pFileName );
+            return FileUtil::toDiskPath( {} );
+        return getEditorStateDirectory().join( pFileName );
     }
 
     const AssetPaths& EditorPaths::getAssetPaths()

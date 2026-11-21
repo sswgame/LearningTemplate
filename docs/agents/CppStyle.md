@@ -140,7 +140,7 @@
 - Files only through `FileUtil` (`[[nodiscard]]`, writes pass `isWriteAllowed`) and `AsyncFileIO`; disk I/O takes `const AbsolutePath&` (린트 `cpp-shape` 규칙 14 강제, `py -3 -m Scripts disk-path-args`). Path rules: [DataInheritance](DataInheritance.md) "경로 · 리소스 신원".
 - Environment `ProcessEnvironment::tryRead`, child process `Process::execute`, shared library `ModuleLibraryUtil::loadLibraryAt`. Never `getenv` · `system` · `dlopen` · Python `subprocess`.
 - Text `StringUtil` · `HexUtil` · `Base64Util` · `hashed_string`; never `atoi` · `sscanf` · hand split loops.
-- Binary `ByteReader` returns values (린트 `byte-reader-values` 강제); never a hand cursor or `.resize( countFromFile )`.
+- Binary `ByteReader` · `Archive` · `BitReader` return values, no output parameter (린트 `byte-reader-values` 강제); a target outside the function gets a local moved in only after the failure check. Never a hand cursor or `.resize( countFromFile )`.
 - Diagnostics: `SW_PROFILE_*` per frame, `DevCounter` cumulative — never a counter field + getter on a runtime class.
 - Callbacks `Delegate` · `MulticastDelegate`, events `EventDispatcher`, background work `TaskManager`, threads `sw::thread`. Never `std::function` · `std::async`.
 - Containers `Core/Container/`; handles `SlotHandleTable` · `GameObjectHandle`; identity `IdentityToken::make`; memory `MemoryBlock` · `LinearAllocator` · `PoolAllocator`. Never `std::` containers · `malloc` · raw `new`.

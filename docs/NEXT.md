@@ -33,6 +33,8 @@
 - **에디터 View:** `Common/GUI` 나머지(상태 표시 · 도킹 레이아웃 · 테마)를 `[panelViewBan] views` 로.
 - **preflight tidy:** 첫 겹쳐 돌기에서 캐시 적중 · changed 시나리오 영향을 잰다.
 - **D3D11 첫 시나리오:** DXBC DDC 키가 바뀌어 첫 컴파일이 는다 — 정지 시한에 안 걸리는지.
+- **경로 형식(w-pathjoin · w-pathproducers, 빌드 없이 바꿈):** 지는 TU 는 스크립트가 멤버를 지역으로 본 자리 · DDC 층을 칸별로 채우던 자리일 가능성이 크다. `join` 은 기준 위로 오르는 `..` 를 빈 경로로 거절, 공유 DDC 환경 변수가 상대 글이면 `File.RelativePath` 오류 — I/O 실패가 나면 그 글을 고친다. 판 읽기 옛 꼴(`deserializeVersioned( version, … )` · `readSection( a, tag, version, body )`)은 손으로 옮긴다.
+- **디스크 경로 형식 남은 몫:** `toDiskPath` 감싸기 1062 곳. `AssetPaths` 루트 칸 넷 · `AssetIdentityRules` 의 `string_view absPath` 셋은 받는 쪽(`importAll*` · `registerWatch` · `collectFiles`)을 `AbsolutePath` 로 먼저(`disk-path-args`), 그다음 `disk-path-join --migrate-producers <이름>`. 그 뒤 `FileUtil::joinPath` 를 글 전용으로 좁힌다. 출력 인자 읽기 남은 몫: `BinarySerializer::deserializeExactVersion( …, uint32& outReadVersion )`.
 
 ## 3. 알려진 실패 · 흔들림
 

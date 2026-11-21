@@ -12,7 +12,7 @@ namespace
     /** @brief 디스크 경로 인자의 상대 경로 기준 폴더입니다 — 이 케이스 폴더. */
     sw::AbsolutePath makeCommandLineTestBaseDirectory()
     {
-        const sw::optional<sw::AbsolutePath> baseDirectory = sw::AbsolutePath::tryMake( sw::test::makeScratchPath( "base" ) );
+        const sw::optional<sw::AbsolutePath> baseDirectory = sw::AbsolutePath::tryMake( sw::test::makeScratchPath( "base" ).str() );
         SW_ASSERT( baseDirectory.has_value() );
         return *baseDirectory;
     }

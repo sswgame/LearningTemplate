@@ -175,22 +175,31 @@ namespace sw
     {
         int32 phaseIndex{ 0 };
         int32 stage{ 0 };
-        if ( reader.readInt( 0, BattleRoyaleZoneInternal::kMaxPhaseBits, phaseIndex ) == false || reader.readInt( 0, 2, stage ) == false )
+        phaseIndex = reader.readInt( 0, BattleRoyaleZoneInternal::kMaxPhaseBits );
+        stage      = reader.readInt( 0, 2 );
+        if ( reader.hasOverflowed() )
             return false;
-        float32    stageRemaining{ 0.0f };
-        float32    centerX{ 0.0f };
-        float32    centerY{ 0.0f };
-        float32    radius{ 0.0f };
-        float32    fromX{ 0.0f };
-        float32    fromY{ 0.0f };
-        float32    fromRadius{ 0.0f };
-        float32    nextX{ 0.0f };
-        float32    nextY{ 0.0f };
-        float32    nextRadius{ 0.0f };
-        const bool bFinite = reader.readFiniteFloat( stageRemaining ) && reader.readFiniteFloat( centerX ) && reader.readFiniteFloat( centerY ) &&
-                             reader.readFiniteFloat( radius ) && reader.readFiniteFloat( fromX ) && reader.readFiniteFloat( fromY ) &&
-                             reader.readFiniteFloat( fromRadius ) && reader.readFiniteFloat( nextX ) && reader.readFiniteFloat( nextY ) &&
-                             reader.readFiniteFloat( nextRadius );
+        float32 stageRemaining{ 0.0f };
+        float32 centerX{ 0.0f };
+        float32 centerY{ 0.0f };
+        float32 radius{ 0.0f };
+        float32 fromX{ 0.0f };
+        float32 fromY{ 0.0f };
+        float32 fromRadius{ 0.0f };
+        float32 nextX{ 0.0f };
+        float32 nextY{ 0.0f };
+        float32 nextRadius{ 0.0f };
+        stageRemaining     = reader.readFiniteFloat();
+        centerX            = reader.readFiniteFloat();
+        centerY            = reader.readFiniteFloat();
+        radius             = reader.readFiniteFloat();
+        fromX              = reader.readFiniteFloat();
+        fromY              = reader.readFiniteFloat();
+        fromRadius         = reader.readFiniteFloat();
+        nextX              = reader.readFiniteFloat();
+        nextY              = reader.readFiniteFloat();
+        nextRadius         = reader.readFiniteFloat();
+        const bool bFinite = reader.hasOverflowed() == false;
         if ( bFinite == false )
             return false;
         // 음수 남은 시간은 `update` 의 시간을 늘리고, 음수 반지름은 모두를 원 밖으로 만든다. 마지막이 아닌 단계는 그 단계의 정의가 있어야 한다.

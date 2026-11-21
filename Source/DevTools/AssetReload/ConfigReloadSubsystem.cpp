@@ -34,20 +34,20 @@ namespace sw
 
     SubsystemInitResult ConfigReloadSubsystem::initializeSubsystem()
     {
-        const string configFolder = FileUtil::joinPath( ProcessRoots::get()._project.str(), config::kDirConfig );
-        if ( FileUtil::isDirectory( FileUtil::toDiskPath( configFolder ) ) == false )
+        const AbsolutePath configFolder = ProcessRoots::get()._project.join( config::kDirConfig );
+        if ( FileUtil::isDirectory( configFolder ) == false )
         {
             SW_LOG_INFO_ID( "ConfigReload.ConfigReloadOffNo", "Config reload is off - no config folder at %#", configFolder.c_str() );
             return SubsystemInitResult::Succeeded;
         }
         _pFileWatchDispatcher = make_unique<FileWatchDispatcher>();
-        if ( _pFileWatchDispatcher->initialize( configFolder ) == false )
+        if ( _pFileWatchDispatcher->initialize( configFolder.str() ) == false )
         {
             _pFileWatchDispatcher.reset(); // 개발 도구 하나 때문에 기동을 멈추지 않는다 — 감시기가 이유를 남겼다
             return SubsystemInitResult::Succeeded;
         }
         const FileWatchMatchDelegate onChanged{ SW_DELEGATE_METHOD( FileWatchMatchDelegate, &ConfigReloadSubsystem::onConfigFileChanged, this ) };
-        _configWatch = _pFileWatchDispatcher->registerWatch( configFolder, { ".json" }, onChanged );
+        _configWatch = _pFileWatchDispatcher->registerWatch( configFolder.str(), { ".json" }, onChanged );
         return SubsystemInitResult::Succeeded;
     }
 

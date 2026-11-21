@@ -195,7 +195,9 @@ namespace sw
     {
         if ( isReading() )
         {
-            (void)_pArchive->readCount( minBytesPerElement, inoutCount ); // 실패는 아카이브 오류에 남는다
+            const uint32 count = _pArchive->readCount( minBytesPerElement );
+            if ( _pArchive->isOk() )
+                inoutCount = count; // 실패는 아카이브 오류에 남고 칸은 건드리지 않는다
             return;
         }
         *_pArchive << inoutCount;
@@ -222,30 +224,31 @@ namespace sw
         outArchive.writeSection( body.getData(), static_cast<uint32>( body.getSize() ) );
     }
 
-    bool StateIO::readSection( Archive& archive, uint32& outTag, uint32& outVersion, Archive& outBody )
+    optional<StateIO::Section> StateIO::readSection( Archive& archive )
     {
-        uint32 tag      = 0;
-        uint32 version  = 0;
-        uint32 bodySize = 0;
-        archive >> tag;
-        archive >> version;
+        Section section;
+        uint32  bodySize = 0;
+        archive >> section._tag;
+        archive >> section._version;
         archive >> bodySize;
         if ( archive.isError() || archive.hasBytesAvailable( bodySize ) == false )
         {
             archive.setError();
-            return false;
+            return nullopt;
         }
-        outBody    = archive.readSubArchive( bodySize );
-        outTag     = tag;
-        outVersion = version;
-        return outBody.isOk();
+        section._body = archive.readSubArchive( bodySize );
+        if ( section._body.isOk() == false )
+            return nullopt;
+        return section;
     }
 
     bool StateIO::readExpectedSection( Archive& archive, uint32 tag, uint32 version, Archive& outBody )
     {
-        uint32 readTag     = 0;
-        uint32 readVersion = 0;
-        return readSection( archive, readTag, readVersion, outBody ) && readTag == tag && upgradeSectionBody( tag, readVersion, version, outBody );
+        optional<Section> section = readSection( archive );
+        if ( section.has_value() == false || section->_tag != tag )
+            return false;
+        outBody = std::move( section->_body );
+        return upgradeSectionBody( tag, section->_version, version, outBody );
     }
 
     void StateIO::writeName( Archive& outArchive, const hashed_string& name )
@@ -280,7 +283,8 @@ namespace sw
         [[nodiscard]] bool readIDListImpl( Archive& archive, vector<TID>& outListID )
         {
             uint32 count = 0;
-            if ( archive.readCount( sizeof( TID ), count ) == false )
+            count        = archive.readCount( sizeof( TID ) );
+            if ( archive.isError() )
                 return false;
             outListID.resize( count );
             for ( TID& id : outListID )

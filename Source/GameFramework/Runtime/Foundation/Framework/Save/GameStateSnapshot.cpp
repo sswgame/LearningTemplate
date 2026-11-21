@@ -73,7 +73,13 @@ namespace sw
                     return false;
                 }
                 arch >> outHeader._processToken;
-                return arch.readString( outHeader._sceneID ) && arch.readString( outHeader._contentText ) && arch.isError() == false;
+                auto loadedSceneID     = arch.readString();
+                auto loadedContentText = arch.readString();
+                if ( arch.isError() )
+                    return false;
+                outHeader._sceneID     = std::move( loadedSceneID );
+                outHeader._contentText = std::move( loadedContentText );
+                return arch.isError() == false;
             }
 
             /**
@@ -161,7 +167,8 @@ namespace sw
             {
                 Archive arch( bytes.data(), bytes.size() );
                 uint32  fileIDCount{ 0 };
-                if ( arch.readCount( sizeof( uint64 ) * 2, fileIDCount ) == false )
+                fileIDCount = arch.readCount( sizeof( uint64 ) * 2 );
+                if ( arch.isError() )
                     return false;
                 outPart._listFileID.resize( fileIDCount );
                 for ( Scene::SavedFileID& entry : outPart._listFileID )

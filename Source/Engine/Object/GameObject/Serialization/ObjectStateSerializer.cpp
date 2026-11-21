@@ -642,8 +642,7 @@ namespace sw
         const SerializeContext                    serializeContext = ObjectStateSerializerInternal::makeGameObjectContext(
             pGameObject, context.getPurpose(), SW_DELEGATE_FUNCTION( SerializeContext::TextWriteFn, &ObjectStateSerializerInternal::ReferenceWriter::writeRuntimeComponentText ),
             &mapKeyText );
-        uint32     version{ 0 };
-        const bool bLoaded = deserializeState( version, serializeContext );
+        const bool bLoaded = deserializeState( serializeContext );
         if ( bLoaded )
         {
             // 상태에 적힌 이름이다. 매니저가 유일하게 바꾸기(`finishLoad`) 전에 잡는다. 같은 배치의 이름만 남은 참조가 이 이름으로 찾는다.
@@ -694,9 +693,9 @@ namespace sw
         if ( ObjectStateSerializerInternal::reportMissingRequiredOnLoad<TSerializer>( *pTypeInfo, text ) == false )
             return false;
 
-        return loadStateInPlace( pGameObject, context, [&]( uint32& outVersion, const SerializeContext& serializeContext )
+        return loadStateInPlace( pGameObject, context, [&]( const SerializeContext& serializeContext )
         {
-            return TSerializer::deserializeVersioned( outVersion, pGameObject, *pTypeInfo, text, kObjectReflectedSchemaVersion, serializeContext );
+            return TSerializer::deserializeVersioned( pGameObject, *pTypeInfo, text, kObjectReflectedSchemaVersion, serializeContext );
         } );
     }
 
@@ -757,9 +756,9 @@ namespace sw
         if ( bodyStart + bodySize > size )
             return 0;
 
-        const bool bLoaded = loadStateInPlace( pGameObject, context, [&]( uint32& outVersion, const SerializeContext& serializeContext )
+        const bool bLoaded = loadStateInPlace( pGameObject, context, [&]( const SerializeContext& serializeContext )
         {
-            return BinarySerializer::deserializeVersioned( outVersion, pGameObject, *pTypeInfo, pData + bodyStart, bodySize,
+            return BinarySerializer::deserializeVersioned( pGameObject, *pTypeInfo, pData + bodyStart, bodySize,
                                                            kObjectReflectedSchemaVersion, serializeContext );
         } );
         return bLoaded ? bodyStart + bodySize : 0;
@@ -818,10 +817,11 @@ namespace sw
 
         ByteReader reader( pData, size );
         uint32     componentCount{ 0 };
-        outIdentity._objectID = reader.readPod<decltype( outIdentity._objectID )>();
-        componentCount        = reader.readPod<uint32>();
+        const auto loadedObjectID = reader.readPod<decltype( outIdentity._objectID )>();
+        componentCount            = reader.readPod<uint32>();
         if ( reader.hasOverflowed() )
             return 0;
+        outIdentity._objectID = loadedObjectID;
 
         // 항목 하나는 적어도 이름 길이(4)와 ID(8)와 키 길이(4)를 합친 바이트다. 남은 바이트로 담을 수 없는 개수는 망가진 데이터다.
         // 그대로 `reserve` 하면 그 한 줄이 먼저 터진다(`GameStateSnapshot::deserializeSceneObjects` 가 같은 이유로 같은 계산을 한다).

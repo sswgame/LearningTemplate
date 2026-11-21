@@ -119,9 +119,9 @@ namespace
 
         FakeStoreFixture()
         {
-            const string folder = _domain.makeDiskFolder( "sql" );
-            SW_EXPECT_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( FileUtil::joinPath( folder, SQLMigrationRunner::kListFileName ) ), "<SQLMigrationList><Migration _name=\"0001_fake\" _compatibility=\"Backward\" /></SQLMigrationList>" ) );
-            SW_EXPECT_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( FileUtil::joinPath( folder, "0001_fake.sql" ) ), "CREATE FAKE" ) );
+            const AbsolutePath folder = _domain.makeDiskFolder( "sql" );
+            SW_EXPECT_TRUE( FileUtil::writeTextFile( folder.join( SQLMigrationRunner::kListFileName ), "<SQLMigrationList><Migration _name=\"0001_fake\" _compatibility=\"Backward\" /></SQLMigrationList>" ) );
+            SW_EXPECT_TRUE( FileUtil::writeTextFile( folder.join( "0001_fake.sql" ), "CREATE FAKE" ) );
             _driver.addRows( test::FakeSQLDriver::kNextCommitVersion, { vector<SQLValue>{ SQLValue::makeInt64( 77 ) } }, 1 );
             SQLConnectionPoolConfig settings;
             settings._connection  = "fake";
@@ -145,7 +145,7 @@ namespace
         SQLiteStoreFixture()
         {
             SQLConnectionPoolConfig settings;
-            settings._connection         = test::makeScratchPath( "store.db" );
+            settings._connection         = test::makeScratchPath( "store.db" ).str();
             settings._workerCount        = 2;
             const expected<void> started = _store.initialize( "sqlite", settings, SQLServiceStore::kMigrationFolder, UnixMilliseconds{ 1 } );
             SW_EXPECT_TRUE_MSG( started.has_value(), describeError( started ) );
@@ -712,7 +712,7 @@ SW_TEST_CASE( SQLServiceStoreTest, JobAfterShutdownIsCancelled )
 SW_TEST_CASE( SQLServiceStoreTest, InitializeFailuresAreStartupErrors )
 {
     SQLConnectionPoolConfig settings;
-    settings._connection  = test::makeScratchPath( "init.db" );
+    settings._connection  = test::makeScratchPath( "init.db" ).str();
     settings._workerCount = 1;
     string error;
     {
@@ -746,9 +746,9 @@ SW_TEST_CASE( SQLServiceStoreTest, InitializeFailuresAreStartupErrors )
 SW_TEST_CASE( SQLServiceStoreTest, FailedMigrationStopsTheStartup )
 {
     test::ScopedScratchDomain domain;
-    const string              folder = domain.makeDiskFolder( "sql" );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( FileUtil::joinPath( folder, SQLMigrationRunner::kListFileName ) ), "<SQLMigrationList><Migration _name=\"0001_fake\" _compatibility=\"Backward\" /></SQLMigrationList>" ) );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( FileUtil::joinPath( folder, "0001_fake.sql" ) ), "CREATE FAKE" ) );
+    const AbsolutePath        folder = domain.makeDiskFolder( "sql" );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( folder.join( SQLMigrationRunner::kListFileName ), "<SQLMigrationList><Migration _name=\"0001_fake\" _compatibility=\"Backward\" /></SQLMigrationList>" ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( folder.join( "0001_fake.sql" ), "CREATE FAKE" ) );
     test::FakeSQLDriver         driver;
     const SQLDriverRegistration registration{ driver };
     driver.addResult( "CREATE FAKE", SQLResult::Error );
@@ -785,6 +785,6 @@ SW_TEST_CASE( SQLServiceStoreTest, StoreDriverSubsystemMakesStores )
     SW_EXPECT_FALSE( error.empty() );
     SW_EXPECT_TRUE( error.find( "no_such_driver" ) != string::npos );
 
-    expected<unique_ptr<ServiceStore>> sqlite = pDriver->createServiceStore( "sqlite", test::makeScratchPath( "factory.db" ), "", 1, UnixMilliseconds{ 1 } );
+    expected<unique_ptr<ServiceStore>> sqlite = pDriver->createServiceStore( "sqlite", test::makeScratchPath( "factory.db" ).str(), "", 1, UnixMilliseconds{ 1 } );
     SW_EXPECT_TRUE_MSG( sqlite.has_value() && *sqlite != nullptr, describeError( sqlite ) );
 }

@@ -22,7 +22,12 @@ namespace sw
 
     class SerializeContext;
 
-    /// @brief 바이너리 아카이브를 읽고 씁니다. 리플렉션 직렬화는 선택입니다.
+    /**
+     * @brief 바이너리 아카이브를 읽고 씁니다. 리플렉션 직렬화는 선택입니다.
+     * @details 한 값 읽기(`readString` · `readCount` · `readVarUint` …)는 값을 돌려준다(`[[nodiscard]]`, 실패면 0 · 빈 값) — 출력 인자 꼴은 반환 `bool` 을 버리면 실패를
+     *          잃었고 실패 때 출력 칸이 옛 값으로 남았다. 실패는 끈적한 `isError()` 하나로 본다(`ByteReader::hasOverflowed` · 언리얼 `FArchive::IsError` 와 같은 자리).
+     *          되돌리는 도구 · 남은 옛 모양 검사는 `py -3 -m Scripts byte-reader-values`(린트 `cpp-shape` 규칙 13).
+     */
     class SW_API Archive
     {
     public:
@@ -95,10 +100,10 @@ namespace sw
 
         /** @brief 문자열을 길이 접두사와 함께 기록합니다. */
         void writeString( string_view str );
-        /** @brief 길이 접두사가 붙은 문자열을 읽어 옵니다. */
-        [[nodiscard]] bool readString( string& outStr );
-        /** @brief 길이 접두사가 붙은 문자열을 복사 없이 뷰로 읽어 옵니다(읽기 모드 전용). */
-        [[nodiscard]] bool readStringView( string_view& outView );
+        /** @brief 길이 접두사가 붙은 문자열을 읽어 옵니다. 실패면 빈 글이고 `isError()` 가 섭니다. */
+        [[nodiscard]] string readString();
+        /** @brief 길이 접두사가 붙은 문자열을 복사 없이 뷰로 읽어 옵니다(읽기 모드 전용). 실패면 빈 뷰이고 `isError()` 가 섭니다. */
+        [[nodiscard]] string_view readStringView();
 
         /** @brief 현재 버퍼 데이터의 CRC32 체크섬을 계산합니다. */
         uint32 computeChecksum() const;
@@ -124,10 +129,11 @@ namespace sw
         bool hasBytesAvailable( uint64 byteSize ) const { return ( _pData != nullptr && byteSize <= _dataSize - _offset ); }
 
         /**
-         * @brief 원소 개수(uint32)를 읽습니다. 원소마다 적어도 @p minBytesPerElement 바이트를 쓰므로, 남은 바이트로 담을 수 없는 개수면 오류를 남기고 false 입니다.
+         * @brief 원소 개수(uint32)를 읽습니다. 원소마다 적어도 @p minBytesPerElement 바이트를 쓰므로, 남은 바이트로 담을 수 없는 개수면 오류를 남기고 0 입니다.
          * @details 파일 · 세이브가 적은 개수는 이 함수로 읽은 뒤에만 할당한다 — 깨진 개수 하나가 `reserve` 로 수십 기가를 요구하지 않게 한다(`ByteReader::canHoldCount` 와 한 계산).
+         *          할당은 `isError()` 를 본 뒤에만 한다.
          */
-        [[nodiscard]] bool readCount( uint32 minBytesPerElement, uint32& outCount );
+        [[nodiscard]] uint32 readCount( uint32 minBytesPerElement );
         /**
          * @brief 실수 @p count 개를 읽습니다. 유한하지 않은 값이 있으면 0 으로 두고 오류를 남깁니다 — `BitReader::readFiniteFloat` 와 같은 규칙이다.
          * @details 아카이브는 세이브와 스냅숏을 읽는다. 쓰는 쪽은 유한한 값만 쓰므로 NaN · 무한대는 깨졌거나 꾸민 데이터다. NaN 체력은 죽지 않는 적이 되고 NaN 시간은 비교가 늘 거짓이다.
@@ -269,9 +275,11 @@ namespace sw
         // ------------------------------------------------------------------------------
         /** @brief 버전 헤더를 붙여 객체를 직렬화합니다. */
         [[nodiscard]] bool serializeVersionedObject( uint32 version, const void* pInstance, const TypeInfo& typeInfo );
-        /** @brief 버전 헤더가 @p currentVersion 과 정확히 같을 때만 객체를 역직렬화합니다(이관하지 않는다). */
-        [[nodiscard]] bool deserializeVersionedObject( uint32& outVersion, void* pInstance, const TypeInfo& typeInfo,
-                                                       uint32 currentVersion = 0 );
+        /**
+         * @brief 버전 헤더가 @p currentVersion 과 정확히 같을 때만 객체를 역직렬화합니다(이관하지 않는다).
+         * @details 읽은 판을 출력 인자로 돌려주지 않는다 — 성공이면 @p currentVersion 이고, 다른 판은 읽기 전에 거절해 @p pInstance 를 건드리지 않는다(`Schema.VersionMismatch` 로그가 판을 적는다).
+         */
+        [[nodiscard]] bool deserializeVersionedObject( void* pInstance, const TypeInfo& typeInfo, uint32 currentVersion = 0 );
 
         template <typename T>
         [[nodiscard]] bool serializeVersionedObject( uint32 version, const T& instance )
@@ -280,9 +288,9 @@ namespace sw
         }
 
         template <typename T>
-        [[nodiscard]] bool deserializeVersionedObject( uint32& outVersion, T& instance, uint32 currentVersion = 0 )
+        [[nodiscard]] bool deserializeVersionedObject( T& instance, uint32 currentVersion = 0 )
         {
-            return deserializeVersionedObject( outVersion, &instance, *T::StaticType(), currentVersion );
+            return deserializeVersionedObject( &instance, *T::StaticType(), currentVersion );
         }
 
         // ------------------------------------------------------------------------------
@@ -341,23 +349,22 @@ namespace sw
         /** @brief 64비트 부호 있는 정수를 ZigZag + LEB128 가변 길이 정수로 기록합니다. */
         void writeVarInt( int64 value );
 
-        /** @brief LEB128 인코딩된 64비트 부호 없는 정수를 읽습니다. */
-
-        [[nodiscard]] bool readVarUint( uint64& outValue );
-        /** @brief LEB128 인코딩된 32비트 부호 없는 정수를 읽습니다. */
-        [[nodiscard]] bool readVarUint( uint32& outValue );
+        /** @brief LEB128 인코딩된 64비트 부호 없는 정수를 읽습니다. 실패면 0 이고 `isError()` 가 섭니다(아래 셋도 같다). */
+        [[nodiscard]] uint64 readVarUint();
+        /** @brief LEB128 인코딩된 32비트 부호 없는 정수를 읽습니다. uint32 를 넘으면 잘라 읽지 않고 실패입니다. */
+        [[nodiscard]] uint32 readVarUint32();
         /** @brief ZigZag + LEB128 인코딩된 64비트 부호 있는 정수를 읽습니다. */
-        [[nodiscard]] bool readVarInt( int64& outValue );
-        /** @brief ZigZag + LEB128 인코딩된 32비트 부호 있는 정수를 읽습니다. */
-        [[nodiscard]] bool readVarInt( int32& outValue );
+        [[nodiscard]] int64 readVarInt();
+        /** @brief ZigZag + LEB128 인코딩된 32비트 부호 있는 정수를 읽습니다. int32 범위 밖이면 실패입니다. */
+        [[nodiscard]] int32 readVarInt32();
 
         // ------------------------------------------------------------------------------
         // 7) 문자열 풀링 (StringPool / Interning)
         // ------------------------------------------------------------------------------
         /** @brief 문자열을 풀에 등록하고 풀 인덱스(VarUInt)를 기록합니다. */
         void writePooledString( string_view str );
-        /** @brief 풀 인덱스를 읽어 그 문자열을 반환합니다. */
-        [[nodiscard]] bool readPooledString( string& outStr );
+        /** @brief 풀 인덱스를 읽어 그 문자열을 반환합니다. 실패면 빈 글이고 `isError()` 가 섭니다. */
+        [[nodiscard]] string readPooledString();
 
         /** @brief 아카이브에 내장된 StringPool 을 반환합니다. */
         StringPool&       getStringPool() { return _stringPool; }

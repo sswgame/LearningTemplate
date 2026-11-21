@@ -40,7 +40,7 @@ namespace
     struct FileLocalFixture
     {
         test::LocalStoreSealParts      _seal{};
-        string                         _root{ test::makeScratchPath( "local_store_file" ) };
+        string                         _root{ test::makeScratchPath( "local_store_file" ).str() };
         FileLocalSlotStorage           _directStorage{ _root }; ///< 같은 폴더의 두 번째 바닥 — 저장소가 쉬는 동안 봉투를 직접 본다
         unique_ptr<ThreadedLocalStore> _store{};
 
@@ -98,23 +98,23 @@ SW_TEST_CASE( LocalStoreMemoryTest, SlotNameRules )
 /** @brief [LocalStoreFileTest] 슬롯은 뿌리 아래 `<슬롯>.swls` 파일이고, 다시 열 때 꺼진 쓰기가 남긴 임시 파일은 지우고 알린다 */
 SW_TEST_CASE( LocalStoreFileTest, SlotIsAFileUnderTheRootAndLeftoverTempFilesAreRemoved )
 {
-    const string root = test::makeScratchPath( "local_store_layout" );
+    const AbsolutePath root = test::makeScratchPath( "local_store_layout" );
     {
-        FileLocalSlotStorage storage{ root };
+        FileLocalSlotStorage storage{ root.str() };
         const vector<uint8>  envelopeBytes{ 1, 2, 3 };
         SW_REQUIRE_TRUE( storage.writeSlot( "save/slot0", envelopeBytes ) == LocalStoreResult::Ok );
-        SW_EXPECT_TRUE( FileUtil::isRegularFile( FileUtil::toDiskPath( FileUtil::joinPath( root, "save/slot0.swls" ) ) ) );
+        SW_EXPECT_TRUE( FileUtil::isRegularFile( root.join( "save/slot0.swls" ) ) );
     }
-    const string leftover = FileUtil::joinPath( root, "save/slot0.swls.tmp2147483644_0" ); // 꺼진 쓰기의 찌꺼기(있을 수 없는 pid — 죽은 쓰는 쪽)
-    SW_REQUIRE_TRUE( FileUtil::writeFile( FileUtil::toDiskPath( leftover ), reinterpret_cast<const uint8*>( "x" ), 1 ) );
+    const AbsolutePath leftover = root.join( "save/slot0.swls.tmp2147483644_0" ); // 꺼진 쓰기의 찌꺼기(있을 수 없는 pid — 죽은 쓰는 쪽)
+    SW_REQUIRE_TRUE( FileUtil::writeFile( leftover, reinterpret_cast<const uint8*>( "x" ), 1 ) );
     // 살아 있는 프로세스(이 프로세스)의 임시 파일은 다른 인스턴스가 쓰는 중인 것이다 — 남긴다(병렬 백엔드 실행이 서로의 쓰기를 지우던 결함)
     StringBuilder<constant::file::kMaxPathSize> inFlightBuilder;
-    inFlightBuilder.append( FileUtil::joinPath( root, "save/slot0.swls.tmp" ).c_str() ).append( static_cast<uint64>( Process::getCurrentProcessID() ) ).append( "_0" );
+    inFlightBuilder.append( FileUtil::joinPath( root.str(), "save/slot0.swls.tmp" ).c_str() ).append( static_cast<uint64>( Process::getCurrentProcessID() ) ).append( "_0" );
     const string inFlight{ inFlightBuilder.c_str() };
     SW_REQUIRE_TRUE( FileUtil::writeFile( FileUtil::toDiskPath( inFlight ), reinterpret_cast<const uint8*>( "y" ), 1 ) );
     SW_EXPECT_LOG( "LocalStore.LeftoverTempRemoved" );
-    FileLocalSlotStorage restarted{ root };
-    SW_EXPECT_FALSE( FileUtil::exists( FileUtil::toDiskPath( leftover ) ) );
+    FileLocalSlotStorage restarted{ root.str() };
+    SW_EXPECT_FALSE( FileUtil::exists( leftover ) );
     SW_EXPECT_TRUE( FileUtil::exists( FileUtil::toDiskPath( inFlight ) ) );
     SW_REQUIRE_TRUE( FileUtil::removeFile( FileUtil::toDiskPath( inFlight ) ) );
     vector<LocalSlotInfo> listSlotInfo;
@@ -129,14 +129,14 @@ SW_TEST_CASE( LocalStoreFileTest, FactoryBuildsFileAndMemoryAndRefusesUnknownBac
 {
     test::LocalStoreSealParts    seal;
     const LocalSealContext       context  = seal.makeSealContext();
-    const string                 root     = test::makeScratchPath( "local_store_factory" );
-    const optional<AbsolutePath> rootPath = AbsolutePath::tryMake( root );
+    const AbsolutePath           root     = test::makeScratchPath( "local_store_factory" );
+    const optional<AbsolutePath> rootPath = AbsolutePath::tryMake( root.str() );
     SW_REQUIRE_TRUE( rootPath.has_value() );
     LocalStoreConfig                  settings{ LocalStoreBackend::kFileBackendName, LocalStoreLocation::absolute( *rootPath ) };
     expected<unique_ptr<ILocalStore>> fileStore = LocalStoreBackend::createLocalStore( "UnitGame", settings, context );
     SW_REQUIRE_TRUE_MSG( fileStore.has_value(), fileStore.has_value() ? string_view{} : fileStore.error().message() );
     SW_EXPECT_TRUE( test::LocalStoreContract::write( **fileStore, "cfg/a", test::LocalStoreContract::makeText( "1" ) ) == LocalStoreResult::Ok );
-    SW_EXPECT_TRUE( FileUtil::isRegularFile( FileUtil::toDiskPath( FileUtil::joinPath( root, "cfg/a.swls" ) ) ) );
+    SW_EXPECT_TRUE( FileUtil::isRegularFile( root.join( "cfg/a.swls" ) ) );
 
     LocalStoreConfig                  memorySettings{ LocalStoreBackend::kMemoryBackendName, LocalStoreLocation::memory() };
     expected<unique_ptr<ILocalStore>> memoryStore = LocalStoreBackend::createLocalStore( "UnitGame", memorySettings, context );
@@ -165,24 +165,24 @@ namespace
     void expectUnreadableKeyFileIsReplaced( string_view caseName, const string& keyBytes )
     {
         OpenSSLNetSecurityProvider provider;
-        const string               keyPath = FileUtil::joinPath( test::makeScratchPath( caseName ), LocalDeviceKeyProvider::kKeyFileName );
-        SW_REQUIRE_TRUE( FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( keyPath ) ) );
-        SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( keyPath ), keyBytes ) );
+        const AbsolutePath         keyPath = test::makeScratchPath( caseName ).join( LocalDeviceKeyProvider::kKeyFileName );
+        SW_REQUIRE_TRUE( FileUtil::ensureParentDirectoryExists( keyPath ) );
+        SW_REQUIRE_TRUE( FileUtil::writeTextFile( keyPath, keyBytes ) );
 
         uint8 arrKey[ILocalStoreKeyProvider::kKeySize]{};
         {
-            LocalDeviceKeyProvider keyProvider{ keyPath, &provider };
+            LocalDeviceKeyProvider keyProvider{ keyPath.str(), &provider };
             SW_EXPECT_LOG( "LocalDeviceKeyProvider.UnreadableKeyReplaced" );
             SW_REQUIRE_TRUE( keyProvider.getSealKey( arrKey ) ); // 예전에는 IOError 로 멈춰 사용자가 파일을 지울 때까지 저장 · 읽기가 막혔다
         }
         StringBuilder<constant::buffer::kMax512> setAsidePath;
-        setAsidePath.appendFormat( "%#%#", keyPath, LocalDeviceKeyProvider::kUnreadableKeySuffix );
+        setAsidePath.appendFormat( "%#%#", keyPath.str(), LocalDeviceKeyProvider::kUnreadableKeySuffix );
         string keptBytes;
         SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::toDiskPath( setAsidePath.view() ), keptBytes ) );
         SW_EXPECT_TRUE( keptBytes == keyBytes ); // 지우지 않는다 — 다른 사용자의 파일이었으면 되돌려 놓을 수 있다
 
         uint8                  arrReloadedKey[ILocalStoreKeyProvider::kKeySize]{};
-        LocalDeviceKeyProvider restarted{ keyPath, &provider };
+        LocalDeviceKeyProvider restarted{ keyPath.str(), &provider };
         SW_REQUIRE_TRUE( restarted.getSealKey( arrReloadedKey ) );
         SW_EXPECT_TRUE( std::memcmp( arrKey, arrReloadedKey, sizeof( arrKey ) ) == 0 );
     }

@@ -45,9 +45,9 @@ namespace
 
         [[nodiscard]] static bool load( RenderPipelineAsset& asset, const string& xml )
         {
-            const string path = test::makeScratchPath( "pipeline.xml" );
-            SW_EXPECT_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( path ), xml ) );
-            return asset.loadFromDiskFile( path );
+            const AbsolutePath path = test::makeScratchPath( "pipeline.xml" );
+            SW_EXPECT_TRUE( FileUtil::writeTextFile( path, xml ) );
+            return asset.loadFromDiskFile( path.str() );
         }
 
         /** @brief 메시 패스의 렌더 상태 표기 @p state 로 읽습니다. */
@@ -356,9 +356,9 @@ SW_TEST_CASE( RenderPipelineAssetTest, CookedFlatTextReadsLikeTheSource )
 
         RenderPipelineAsset cooked;
         RenderPipelineAsset merged;
-        const string        flatPath = test::makeScratchPath( "flat.xml" );
-        SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( flatPath ), flatText ) );
-        SW_REQUIRE_TRUE( cooked.loadFromDiskFile( flatPath ) );
+        const AbsolutePath  flatPath = test::makeScratchPath( "flat.xml" );
+        SW_REQUIRE_TRUE( FileUtil::writeTextFile( flatPath, flatText ) );
+        SW_REQUIRE_TRUE( cooked.loadFromDiskFile( flatPath.str() ) );
         SW_REQUIRE_TRUE( merged.loadFromXMLFile( AssetID{ pID } ) );
         SW_EXPECT_EQUAL( XMLSerializer::serialize( &merged.getDesc(), typeInfo ), XMLSerializer::serialize( &cooked.getDesc(), typeInfo ) );
     }
@@ -372,25 +372,25 @@ SW_TEST_CASE( RenderPipelineAssetTest, SavedChildRoundTrips )
     SW_REQUIRE_TRUE( ReflectedXMLFile::loadDesc( AssetID{ "engine/pipeline/forwardtoonpipeline.xml" }, source ) );
     source._listPass[0]._cullMode = CullMode::Front;
 
-    const string                 childPath = test::makeScratchPath( "child.xml" );
-    const optional<AbsolutePath> childFile = FileUtil::requireAbsolutePath( childPath );
+    const AbsolutePath           childPath = test::makeScratchPath( "child.xml" );
+    const optional<AbsolutePath> childFile = FileUtil::requireAbsolutePath( childPath.str() );
     SW_REQUIRE_TRUE( childFile.has_value() );
     SW_REQUIRE_TRUE( ReflectedXMLFile::saveDescAsChild( *childFile, source, AssetID{ "engine/pipeline/forwardpipeline.xml" } ) );
     string childText;
-    SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::toDiskPath( childPath ), childText ) );
+    SW_REQUIRE_TRUE( FileUtil::readTextFile( childPath, childText ) );
     SW_EXPECT_EQUAL( string( "engine/pipeline/forwardpipeline.xml" ), DataInheritance::findBasePath( childText ) );
     SW_EXPECT_TRUE( childText.find( "Canvas" ) == string::npos ); // 같은 패스는 적지 않는다
 
     RenderPipelineDesc rereadChild;
-    SW_REQUIRE_TRUE( ReflectedXMLFile::loadDescFromDiskFile( childPath, rereadChild ) );
+    SW_REQUIRE_TRUE( ReflectedXMLFile::loadDescFromDiskFile( childPath.str(), rereadChild ) );
     SW_EXPECT_EQUAL( XMLSerializer::serialize( &source, typeInfo ), XMLSerializer::serialize( &rereadChild, typeInfo ) );
 
-    const string                 fullPath = test::makeScratchPath( "full.xml" );
-    const optional<AbsolutePath> fullFile = FileUtil::requireAbsolutePath( fullPath );
+    const AbsolutePath           fullPath = test::makeScratchPath( "full.xml" );
+    const optional<AbsolutePath> fullFile = FileUtil::requireAbsolutePath( fullPath.str() );
     SW_REQUIRE_TRUE( fullFile.has_value() );
     SW_REQUIRE_TRUE( ReflectedXMLFile::saveDesc( *fullFile, source ) );
     RenderPipelineDesc rereadFull;
-    SW_REQUIRE_TRUE( ReflectedXMLFile::loadDescFromDiskFile( fullPath, rereadFull ) );
+    SW_REQUIRE_TRUE( ReflectedXMLFile::loadDescFromDiskFile( fullPath.str(), rereadFull ) );
     SW_EXPECT_EQUAL( XMLSerializer::serialize( &source, typeInfo ), XMLSerializer::serialize( &rereadFull, typeInfo ) );
 }
 
