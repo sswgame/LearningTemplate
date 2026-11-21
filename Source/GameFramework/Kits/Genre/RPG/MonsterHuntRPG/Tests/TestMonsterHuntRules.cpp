@@ -16,11 +16,11 @@
 #include "GameFramework/Kits/Genre/RPG/MonsterHuntRPG/MonsterHuntCombat.h"
 #include "GameFramework/Kits/Genre/RPG/MonsterHuntRPG/MonsterHuntContract.h"
 #include "GameFramework/Kits/Genre/RPG/MonsterHuntRPG/MonsterHuntMutagens.h"
-#include "GameFramework/Kits/Genre/RPG/MonsterHuntRPG/SkillTree.h"
 #include "GameFramework/Runtime/Character/Combat/Damage/ElementChart.h"
 #include "GameFramework/Runtime/Foundation/GameData/StatBlock.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
+#include "GameFramework/Runtime/Gameplay/Progression/SkillTree.h"
 #include "GameFramework/Runtime/Gameplay/Quest/QuestCatalog.h"
 #include "GameFramework/Runtime/Gameplay/Quest/QuestLog.h"
 

@@ -36,7 +36,7 @@ namespace sw
 {
     /** @brief 스킬 하나입니다. */
     REFLECT()
-    struct SW_KIT_API SkillDef
+    struct SW_GF_API SkillDef
     {
         REFLECT_BODY();
 
@@ -62,7 +62,7 @@ namespace sw
 
     /** @brief 스킬 트리 머리(`<Tree id>`)의 칸입니다. */
     REFLECT()
-    struct SW_KIT_API SkillTreeHeadParams
+    struct SW_GF_API SkillTreeHeadParams
     {
         REFLECT_BODY();
 
@@ -74,7 +74,7 @@ namespace sw
 namespace sw
 {
     /** @brief 트리 하나입니다. */
-    struct SW_KIT_API SkillTreeDef
+    struct SW_GF_API SkillTreeDef
     {
         hashed_string    _id{};
         vector<SkillDef> _listSkill{};
@@ -92,7 +92,7 @@ namespace sw
      * @brief `<SkillTreeCatalog><Tree id="combat"><Skill id="power" maxRank="3" cost="1" level="2" spent="0" requires="basic:1,stance"
      *        group="" ability="PowerStrike"><Stats attack="5"/></Skill></Tree></SkillTreeCatalog>` 를 읽습니다(`<Stats>` 는 랭크 하나에 해당하는 양).
      */
-    class SW_KIT_API SkillTreeCatalog : public GameCatalog<SkillTreeDef, XMLCatalog<SkillTreeCatalog>>
+    class SW_GF_API SkillTreeCatalog : public GameCatalog<SkillTreeDef, XMLCatalog<SkillTreeCatalog>>
     {
         friend class XMLCatalog<SkillTreeCatalog>;
 
@@ -111,7 +111,7 @@ namespace sw
     };
 
     /** @brief 공유 캐시는 이 카탈로그의 .cpp 가 인스턴스화합니다. 쓰는 쪽은 사본을 읽지 않고 `SharedAssetCache<SkillTreeCatalog>::acquire` 로 한 벌을 받습니다. */
-    SW_DECLARE_SHARED_ASSET_CACHE( SW_KIT_API_EXTERN_TEMPLATE, SkillTreeCatalog );
+    SW_DECLARE_SHARED_ASSET_CACHE( SW_GF_API_EXTERN_TEMPLATE, SkillTreeCatalog );
 } // namespace sw
 
 namespace sw
@@ -135,7 +135,7 @@ namespace sw
      * @class SkillTreeState
      * @brief 캐릭터 하나가 트리 하나에서 가진 랭크와 남은 점수입니다. 트리 정의는 소유하지 않고 참조만 합니다.
      */
-    class SW_KIT_API SkillTreeState
+    class SW_GF_API SkillTreeState
     {
     public:
         SkillTreeState();
