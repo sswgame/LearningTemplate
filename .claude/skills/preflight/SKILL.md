@@ -18,6 +18,7 @@ description: "이 저장소의 묶음 끝 전체 검증과 push 절차: Windows 
    - Debug 를 짓지 않는다 — 단언 · 검사는 `SW_DO_CHECKS` 로 Release 에 있다(사용자 결정 2026-11-18). Debug 프리셋은 사람이 디버거로 볼 때만 쓴다.
    - 단계 기록: 단계가 통과한 sha 뒤 바뀐 파일이 모두 `Config/Dev/Verify.json` 의 `_nonInputPaths`(문서 · 스킬) 안이면 그 단계는 건너뛴다. 목록에는 확실한 것만 더한다(잘못 넣으면 검증 안 된 단계를 건너뛴다). 드라이버 · 도구처럼 git 밖 입력을 바꿨으면 `build/verify.stages.json` 을 지우고 돌린다.
    - `lint --all` 이 지면(낡은 예외 · 기준선 줄은 여기서 처음 걸린다) 표를 고쳐 커밋하고 다시 돌린다. clang-tidy 경고는 집계만 찍히니 읽고 고칠 것은 고친다.
+   - clang-tidy 는 ASan 빌드 직후 뒤에서 띄워 changed · cpu 와 겹쳐 돌고 gpu-release 앞에서 합류한다 — 지면 gpu-release 는 돌고 끝(WINDOWS_OK 앞)에서 진다. 통과 기록이 단계와 따로(`tidy`)라 `--from` 으로 다시 돌려도 tidy 가 통과한 sha 가 아니면 다시 돈다(통과한 TU 는 `Saved/TidyCache` 에서 바로 나온다).
    - `changed` 표의 줄마다 실패 종류 · 까닭 · 그 파일을 더한 갈래가 있으니 그 갈래 몫으로 고친다(`전제` 는 시나리오의 가정이 틀렸다, `백엔드 <이름>` 은 그 백엔드만). `MissingBaseline` 은 없던 골든 · 스냅숏을 처음 쓴 것이다 — 그림 · 글을 보고 맞으면 커밋하고 `--from changed` 로 기록 없이 통과시킨다(`-scenario-update-golden` · `--update-snapshots` 로 다시 뜨지 않는다 — 진 기준 파일까지 덮어 회귀를 가린다).
    - 격리 표(`Config/Rules/Test/Quarantine.json`)의 만료가 지났으면 처음에 진다 — 고쳐서 빼거나 사유 · 새 만료를 적는다. 끝 줄 `FLAKY=` 가 지면(격리 표 밖 흔들림이 문턱을 넘었다) 다시 돌려 넘기지 않는다: `py -3 -m Scripts test-history report` 의 줄을 근거로 고치거나 격리 표에 적는다. 느려짐 경고 줄은 판정을 바꾸지 않지만 원인을 본다.
    - 한 단계가 지면 고친 뒤 처음부터 돌리지 않는다: 고친 것이 앞 단계에 영향을 주지 않으면 `--from changed|cpu|gpu-release|linux` 로 그 단계부터 돌린다.

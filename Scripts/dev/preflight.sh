@@ -13,7 +13,8 @@
 # 지난 p95 보다 느리면 경고한다. Windows 끝에 흔들림 판정(test_history.py flaky — 끝 줄 FLAKY=)이 격리 표 밖 흔들림이 문턱을 넘으면 진다.
 #
 # 단계(시간 판정이 CPU 경합에 흔들리는 일과 그렇지 않은 일을 가른다 — 시나리오는 벽시계 시한 · 프레임에 걸린 그림을 판정하므로 GPU 단계는 혼자 돈다):
-#   build       lint --all(뒤에서) ‖ Release 빌드 → 임포트 → (ASan 빌드 → (바뀐 파일 clang-tidy, 뒤에서) → 서버 빌드 ‖ 배포 프리셋 둘 빌드 · 쿠킹 → shipping-check 기동 · 종료). 배포 빌드는 증분 빌드의 링크 꼬리에 비는 코어를 쓴다(2026-11-13: CPU 단계 11.5 분 중 9 분이 배포 빌드였다).
+#   build       lint --all(뒤에서) ‖ Release 빌드 → 임포트 → (ASan 빌드 → 서버 빌드 ‖ 배포 프리셋 둘 빌드 · 쿠킹 → shipping-check 기동 · 종료). 배포 빌드는 증분 빌드의 링크 꼬리에 비는 코어를 쓴다(2026-11-13: CPU 단계 11.5 분 중 9 분이 배포 빌드였다).
+#               ASan 빌드가 끝나면 tidy 를 뒤에서 띄운다(아래 tidy).
 #               Debug 는 짓지 않는다 — 단언 · 검사는 SW_DO_CHECKS 로 Release 에 있고, CPU 단위는 ASan(Release + clang-cl ASan)이 돈다(사용자 결정 2026-11-18).
 #   changed     origin/main 뒤에 들어온 · 바뀐 테스트 · 시나리오만 Release 로 먼저(test_history.py changed — DesignBacklog D4). 돈 적 없는 테스트 · 기준 파일의 실패를
 #               전체 실행 중간이 아니라 빌드 직후에 갈래 이름과 함께 낸다. 없는 골든 · 스냅숏만 쓰고(MissingBaseline) 쓴 것이 있으면 멈춘다 — 보고 커밋한 뒤 --from changed.
@@ -25,6 +26,11 @@
 #               떠안지 않는다(2026-11-19: dx11 empty 체인 19 분 중 FXC 559 개 — 캐시가 차면 74 초). 기록이 없으면(첫 실행) 할 일이 없다고 찍고 끝난다. 전체 굽기는 5 만 개를 넘어 넣지 않는다.
 #   gpu-release Release ctest 전체 — 시나리오 그림 · 골든 · 기록 대조의 정본(모든 게임 · 네 백엔드). 체인이 다음 묶음의 shader warm 이 읽을 요청 기록을 남긴다.
 #               체인(부하 측정 제외)은 그래픽 API 검증 층(-rhi-validation) · 교착 탐지(-deadlock-detection) · bindless 죽은 번호 검사를 켠다 — 검증 층 오류 · 경고는 로그 게이트에서 진다.
+#   tidy        바뀐 파일 clang-tidy(Scripts/lint/clang_tidy.py --changed origin/main — ASan 컴파일 DB, 통과한 TU 는 포함 닫힘 해시로 캐시). 단계가 아니라 갈래다:
+#               ASan 빌드 직후 뒤에서 띄워 서버 · 배포 빌드, changed, cpu 와 겹쳐 돌고(2026-11-21: 746 TU 2055 초를 build 단계 끝에서 기다렸다),
+#               gpu-release 앞에서 합류한다 — GPU 단계는 혼자 돈다. clang-tidy 는 낮은 우선순위라 겹친 테스트가 CPU 를 먼저 받는다(테스트는 부하와 무관해야 한다).
+#               지면 gpu-release 는 그대로 돌고 끝(WINDOWS_OK 앞)에서 진다. 단계 기록은 이름 tidy 로 따로 두고 --from changed|cpu|gpu-release 로도
+#               건너뛰지 않는다(기록이 이 sha 를 덮을 때만 건너뛴다) — tidy 가 진 뒤 --from 으로 다시 돌려도 WINDOWS_OK 가 tidy 없이 나오지 않는다.
 #   ctest 는 격리 표(Config/Rules/Test/Quarantine.json)를 -E 로 빼고 돈다(만료가 지났으면 처음에 진다). 슬롯 수는 Config/Dev/Verify.json 의 _ctestJobs.
 #   (없앤 gpu-debug: Debug 로 같은 체인을 한 번 더 돌던 단계 14.6 분 — 단언 · 검사가 SW_DO_CHECKS 로 Release 에도 들어 Release 체인이 지난다. Core/Foundation/Macros.h 4-1)
 # 예전(2026-11-13 측정 53 분)은 단계가 모두 차례였고, 같은 체인을 두 구성에서 네 백엔드로 다 돌았고, 셰이더 다시 굽기가 두 구성에서 혼자(RUN_SERIAL) 돌았고, Debug 단위를 ctest 밖에서 한 번 더 돌았다.
@@ -36,6 +42,10 @@ DRY=0
 NO_LINUX=0
 SELF_CHECK=0
 RECORD=()
+# clang-tidy 갈래의 pid · 진 결과(start_tidy · join_tidy) — windows_failed 가 처음부터 읽는다.
+TIDY_PID=""
+TIDY_FAILED=0
+TIDY_STARTED=$SECONDS
 # ctest 슬롯 수는 설정 값이다(Config/Dev/Verify.json — 없으면 멈춘다).
 CTEST_JOBS=$(py -3 -c "import json,sys; print(json.load(open('Config/Dev/Verify.json', encoding='utf-8'))['_ctestJobs'])") || { echo "Config/Dev/Verify.json 의 _ctestJobs 를 읽지 못했다"; exit 2; }
 CTEST_JOBS=${CTEST_JOBS//$'\r'/}
@@ -113,19 +123,24 @@ fi
 CURRENT_STAGE=""
 STAGE_STARTED=$SECONDS
 begin_stage() { CURRENT_STAGE=$1; STAGE_STARTED=$SECONDS; }
-record_stage_time() {   # <이름> <passed|failed|skipped>
+record_stage_time() {   # <이름> <passed|failed|skipped> [시작 시각 — 없으면 begin_stage 의 것]
   [ $DRY -eq 1 ] && return 0
   [ "$BASHPID" = "$$" ] || return 0
-  py -3 -m Scripts test-history stage "$1" --commit "$SHA" --result "$2" --seconds $((SECONDS - STAGE_STARTED)) || echo "단계 시간을 쌓지 못했다($1)"
+  py -3 -m Scripts test-history stage "$1" --commit "$SHA" --result "$2" --seconds $((SECONDS - ${3:-$STAGE_STARTED})) || echo "단계 시간을 쌓지 못했다($1)"
 }
 
 windows_failed() {
   [ -n "$CURRENT_STAGE" ] && record_stage_time "$CURRENT_STAGE" failed
-  echo "WINDOWS_FAILED ($1) - Linux 를 돌리지 않는다 sha=$SHA"
-  # 겹쳐 돌던 갈래(배포 빌드 · 쿠킹 등)를 끝까지 기다린다 — 두고 나가면 다음 실행과 같은 빌드 폴더를 다퉈 구성이
-  # "failed recompaction: Permission denied" 로 진다(2026-11-17). 갈래 안(서브셸)에서 부르면 남의 pid 라 wait 가 바로 돌아온다.
-  for PID in "${LANE_PIDS[@]}"; do wait "$PID" 2>/dev/null; done
+  echo "WINDOWS_FAILED ($1)$([ $TIDY_FAILED -eq 0 ] || echo ' + clang-tidy') - Linux 를 돌리지 않는다 sha=$SHA"
+  wait_background
   exit 1
+}
+
+# 겹쳐 돌던 갈래(배포 빌드 · 쿠킹 · clang-tidy 등)를 끝까지 기다린다 — 두고 나가면 다음 실행과 같은 빌드 폴더를 다퉈 구성이
+# "failed recompaction: Permission denied" 로 진다(2026-11-17). clang-tidy 는 끝까지 돌면 통과한 TU 가 캐시에 남아 다음 실행이 빠르다.
+# 갈래 안(서브셸)에서 부르면 남의 pid 라 wait 가 바로 돌아온다.
+wait_background() {
+  for PID in "${LANE_PIDS[@]}" $TIDY_PID; do wait "$PID" 2>/dev/null; done
 }
 
 # 명령 하나를 돌린다 — 첫 인자는 출력 파일(빈 글이면 화면). --dry-run 이면 찍기만 하고 통과로 친다.
@@ -138,15 +153,31 @@ run() {
   if [ -n "$OUT" ]; then "$@" > "$OUT" 2>&1; else "$@"; fi
 }
 
+# ninja 1.12 의 재압축(DepsLog · BuildLog Recompact — cmake 구성 끝의 `ninja -t recompact`, 빌드 시작의 자동 재압축)은 새 파일 <이름>.recompact 를 다 쓰고 닫은 뒤
+# 옛 파일을 지우고 이름을 바꾼다. 그 사이 바깥 프로세스(백신 검사)가 새 파일을 잡으면 이름 바꾸기가 "failed recompaction: Permission denied" 로 져
+# 옛 파일만 사라지고, 다음 구성 · 빌드가 빈 기록으로 시작해 전체 재빌드가 난다(2026-11-21 ASan — 05:24 의 .ninja_deps.recompact 가 남아 있었다).
+# 그 꼴(옛 것 없음 + .recompact 있음)이면 ninja 가 하려던 이름 바꾸기를 마저 한다 — .recompact 는 옛 것을 지우기 전에 이미 닫힌 완성본이다.
+restore_build_logs() {
+  [ $DRY -eq 1 ] && return 0
+  local F
+  for F in build/$1/.ninja_deps build/$1/.ninja_log; do
+    if [ ! -e "$F" ] && [ -f "$F.recompact" ]; then
+      mv "$F.recompact" "$F" && echo "$F: 지다 만 ninja 재압축을 마저 끝냈다(.recompact → 제자리)" || windows_failed "$F.recompact 이름 바꾸기"
+    fi
+  done
+}
+
 build_preset() {
   local P=$1
   local LOGS=build/$P/Testing/Logs
   [ $DRY -eq 1 ] || mkdir -p $LOGS   # --dry-run 은 빌드 폴더를 만들지 않는다(워크트리에서 명령 순서만 볼 때)
   echo "== $P build $(date +%T)"
-  # ninja 가 .ninja_deps 를 다시 쓸 때 바깥 프로세스(백신 검사)가 파일을 잡으면 "failed recompaction: Permission denied" 로 진다 — 이 문구일 때만 한 번 더 구성한다.
+  restore_build_logs $P
+  # 재압축이 바깥 프로세스에 막혀 지면(restore_build_logs) — 이 문구일 때만 기록을 제자리에 돌린 뒤 한 번 더 구성한다. 돌리지 않고 다시 구성하면 빈 기록으로 전체 재빌드다.
   run $LOGS/verify.configure.log cmake --preset $P ||
-    { grep -aq "failed recompaction: Permission denied" $LOGS/verify.configure.log && run $LOGS/verify.configure.log cmake --preset $P; } ||
+    { grep -aq "failed recompaction: Permission denied" $LOGS/verify.configure.log && restore_build_logs $P && run $LOGS/verify.configure.log cmake --preset $P; } ||
     windows_failed "$P configure"
+  restore_build_logs $P
   if ! run $LOGS/verify.build.log cmake --build --preset $P -- -k 0; then
     grep -E "error|FAILED" $LOGS/verify.build.log | head -30
     windows_failed "$P build"
@@ -217,17 +248,41 @@ run_changed() {
   [ $DRY -eq 1 ] || grep -v "^\[Changed\] run " build/verify.changed.log | tr -d '\r'
   [ $RC -eq 0 ] && return 0
   echo "CHANGED_FAILED sha=$SHA - build/verify.changed.log (cpu · gpu-release 를 시작하지 않는다)"
+  wait_background
   exit 1
 }
 
 job_tidy() {
   # 정적 분석: 이 묶음이 바꾼 파일(origin/main 기준)만 — 방금 지은 ASan 의 컴파일 DB 를 쓴다(유니티를 끈 구성이라 원본 TU 가 DB 에 있다, clang_tidy.py 기본 프리셋). 오류로 오르는 검사는 .clang-tidy 의 WarningsAsErrors.
+  # 빌드 폴더에는 이 로그만 쓴다(결과 캐시는 Saved/TidyCache).
   echo "== tidy $(date +%T)"
   run build/Ninja-Release-ASan/Testing/Logs/verify.tidy.log py -3 -m Scripts tidy --changed origin/main
   local RC=$?
   [ $DRY -eq 1 ] || tail -n 25 build/Ninja-Release-ASan/Testing/Logs/verify.tidy.log
   echo "tidy exit=$RC"
   return $RC
+}
+
+# clang-tidy 갈래(머리말 tidy) — ASan 빌드 뒤 띄우고 gpu-release 앞에서 join_tidy 로 합류한다. 진 결과는 TIDY_FAILED 로 들고 있다가 끝에서 진다.
+start_tidy() {
+  TIDY_STARTED=$SECONDS
+  if [ $DRY -eq 1 ]; then echo "[dry] -- 갈래 clang-tidy (뒤에서 — changed · cpu 와 겹치고 gpu-release 앞에서 합류)"; job_tidy; return; fi
+  job_tidy &
+  TIDY_PID=$!
+}
+join_tidy() {
+  [ $RUN_TIDY -eq 1 ] || return 0
+  echo "== clang-tidy 합류 $(date +%T)"
+  local RC=0
+  if [ -n "$TIDY_PID" ]; then wait "$TIDY_PID"; RC=$?; TIDY_PID=""; fi
+  if [ $RC -eq 0 ]; then
+    record_stage_time tidy passed $TIDY_STARTED
+    [ $DRY -eq 1 ] || py -3 -m Scripts verify-record pass tidy "$SHA" || windows_failed "tidy 통과 기록"
+  else
+    record_stage_time tidy failed $TIDY_STARTED
+    TIDY_FAILED=1
+    echo "clang-tidy 가 졌다(build/Ninja-Release-ASan/Testing/Logs/verify.tidy.log) - gpu-release 는 돌고 끝에서 진다"
+  fi
 }
 
 job_sanitizer_cpu() {
@@ -322,8 +377,9 @@ check_tree_at_end() {
 }
 
 [ $DRY -eq 1 ] || mkdir -p build
-RUN_BUILD=0; RUN_CHANGED=0; RUN_CPU=0; RUN_GPU=0; RUN_LINUX=0
+RUN_BUILD=0; RUN_TIDY=0; RUN_CHANGED=0; RUN_CPU=0; RUN_GPU=0; RUN_LINUX=0
 should_run_stage 1 build && RUN_BUILD=1
+should_run_stage 4 tidy && RUN_TIDY=1   # --from 으로는 건너뛰지 않는다(머리말 tidy) — Windows 를 통째로 건너뛰는 --from linux 만 뺀다
 should_run_stage 2 changed && RUN_CHANGED=1
 should_run_stage 3 cpu && RUN_CPU=1
 should_run_stage 4 gpu-release && RUN_GPU=1
@@ -338,7 +394,7 @@ if [ $RUN_BUILD -eq 1 ]; then
   run_ctest Ninja-Release import -L import || windows_failed "Ninja-Release import"
   start_job "shipping build" job_shipping_build
   build_preset Ninja-Release-ASan
-  start_job "clang-tidy" job_tidy
+  [ $RUN_TIDY -eq 0 ] || start_tidy
   build_preset Ninja-Release-Server
   wait_jobs
   stage_passed build
@@ -346,7 +402,10 @@ else
   # build 를 건너뛰어도(--from · 단계 기록) 뒤 단계가 돌릴 프리셋은 증분 빌드한다 — 짓지 않으면 고친 커밋 대신 옛 바이너리가 돌아 고친 테스트가 다시 진다
   # (2026-11-13 --from cpu 의 Release 단위). 바뀐 것이 없으면 몇 초다. 배포 프리셋은 --from 의 cpu 단계 shipping-check 가 직접 짓는다.
   [ $((RUN_CHANGED + RUN_CPU + RUN_GPU)) -gt 0 ] && build_preset Ninja-Release
-  [ $RUN_CPU -eq 1 ] && { build_preset Ninja-Release-ASan; build_preset Ninja-Release-Server; }
+  # tidy 도 ASan 컴파일 DB · 생성 헤더를 읽는다 — cpu 를 건너뛰어도 tidy 가 돌면 ASan 을 증분 빌드한다.
+  [ $((RUN_CPU + RUN_TIDY)) -gt 0 ] && build_preset Ninja-Release-ASan
+  [ $RUN_TIDY -eq 0 ] || start_tidy
+  [ $RUN_CPU -eq 1 ] && build_preset Ninja-Release-Server
   # 임포트는 build 단계가 했다 — 거기서 돌지 않았으면 첫 테스트 단계 앞에서 한다(changed 는 ctest 고정 단계 없이 App 을 바로 띄운다).
   [ $((RUN_CHANGED + RUN_CPU)) -gt 0 ] && { run_ctest Ninja-Release import -L import || windows_failed "Ninja-Release import"; }
   wait_jobs   # lint --all
@@ -367,11 +426,15 @@ if [ $RUN_CPU -eq 1 ]; then
   stage_passed cpu
 fi
 
+# GPU 단계는 시간 · 그림을 판정한다 — clang-tidy 와 겹치지 않게 여기서 합류한다.
+join_tidy
+
 if [ $RUN_GPU -eq 1 ]; then
   begin_stage gpu-release
   run_ctest Ninja-Release all || windows_failed "Ninja-Release ctest"
   stage_passed gpu-release
 fi
+[ $TIDY_FAILED -eq 0 ] || windows_failed "clang-tidy - build/Ninja-Release-ASan/Testing/Logs/verify.tidy.log"
 
 # 흔들림 판정 — 최근 검증 커밋에서 같은 커밋에 통과 · 실패가 함께 있는 (테스트, 백엔드)가 격리 표 밖에서 문턱(Verify.json)을 넘으면 진다. 끝 줄 FLAKY=.
 echo "== flaky $(date +%T)"
