@@ -318,8 +318,8 @@ SW_TEST_CASE( CommandLineTest, UnprovidedFlagIsNotReadable )
 
 /**
  * @brief "실제로 적혔는가" 와 "값을 읽을 수 있는가" 는 다르다
- * @details `getArgument` 는 기본값을 가진 인자라면 **안 적어도 true** 를 돌려준다. 그래서 그것만으로는
- *          "설정 파일 기본값보다 커맨드라인이 우선" 을 판단할 수 없다. 이것으로 판단하면 설정 파일의 기본 백엔드가
+ * @details 명령줄 표에는 기본값이 없다(기본값은 설정이 가진다, 셋째 칸은 형식 견본) — 안 적은 인자는 읽기가 false 이고 값을 건드리지 않는다.
+ *          "설정 파일 기본값보다 커맨드라인이 우선" 은 `isArgumentProvided` 로 판단한다. 다르게 판단하면 설정 파일의 기본 백엔드가
  *          `-gv_rhiBackend` 를 조용히 덮어, **네 백엔드를 검증했다고 믿은 것이 전부 한 백엔드**가 된다.
  */
 SW_TEST_CASE( CommandLineTest, ProvidedIsNotTheSameAsReadable )
@@ -335,13 +335,13 @@ SW_TEST_CASE( CommandLineTest, ProvidedIsNotTheSameAsReadable )
     };
     cmdManager.parse( 2, argv, makeCommandLineTestBaseDirectory() );
 
-    // 둘 다 읽히지만(기본값이 있으므로), 적힌 것은 하나뿐이다.
+    // 적은 것만 읽히고, 안 적은 것은 값을 건드리지 않는다.
     int32 given{ 0 };
-    int32 omitted{ 0 };
+    int32 omitted{ -1 };
     SW_EXPECT_TRUE( cmdManager.getArgument( std::string_view( "given_value" ), given ) );
-    SW_EXPECT_TRUE( cmdManager.getArgument( std::string_view( "omitted_value" ), omitted ) );
+    SW_EXPECT_FALSE( cmdManager.getArgument( std::string_view( "omitted_value" ), omitted ) );
     SW_EXPECT_EQUAL( 3, given );
-    SW_EXPECT_EQUAL( 7, omitted );
+    SW_EXPECT_EQUAL( -1, omitted );
 
     SW_EXPECT_TRUE_MSG( cmdManager.isArgumentProvided( "given_value" ), "적은 인자를 안 적었다고 한다" );
     SW_EXPECT_TRUE_MSG( cmdManager.isArgumentProvided( "omitted_value" ) == false,
