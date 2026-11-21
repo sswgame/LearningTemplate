@@ -56,7 +56,7 @@ SW_TEST_CASE( AutomationReloadStepsTest, VariantTableReadsOnlyWellFormedVariants
 SW_TEST_CASE( AutomationReloadStepsTest, ShippedVariantTableHasTheScenarioVariants )
 {
     string text;
-    SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::toDiskPath( FileUtil::joinPath( ProcessRoots::get()._project.str(), AutomationReloadSteps::kVariantFile ) ), text ) );
+    SW_REQUIRE_TRUE( FileUtil::readTextFile( ProcessRoots::get()._project.join( AutomationReloadSteps::kVariantFile ), text ) );
     const expected<ModuleRebuildVariant> next   = AutomationReloadSteps::parseVariant( text, AutomationReloadSteps::kVariantFile, "probe-next" );
     const expected<ModuleRebuildVariant> broken = AutomationReloadSteps::parseVariant( text, AutomationReloadSteps::kVariantFile, "probe-broken" );
     SW_REQUIRE_TRUE( next.has_value() );

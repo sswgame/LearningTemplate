@@ -37,11 +37,11 @@ namespace sw
             /** @brief 판 머리를 판 글로 덮습니다(원본은 실행기에 맡긴다 — 시나리오 끝에 되돌린다). 실패하면 그 까닭입니다. */
             static expected<void> applyVariant( IAutomationStepContext& context, string_view variantName )
             {
-                const string variantPath = FileUtil::joinPath( ProcessRoots::get()._project.str(), AutomationReloadSteps::kVariantFile );
-                string       tableText;
-                if ( FileUtil::readTextFile( FileUtil::toDiskPath( variantPath ), tableText ) == false )
-                    return unexpected( Error{ ErrorKind::NotFound, "the module rebuild variant table could not be read", variantPath } );
-                const expected<ModuleRebuildVariant> variant = AutomationReloadSteps::parseVariant( tableText, variantPath, variantName );
+                const AbsolutePath variantPath = ProcessRoots::get()._project.join( AutomationReloadSteps::kVariantFile );
+                string             tableText;
+                if ( FileUtil::readTextFile( variantPath, tableText ) == false )
+                    return unexpected( Error{ ErrorKind::NotFound, "the module rebuild variant table could not be read", variantPath.str() } );
+                const expected<ModuleRebuildVariant> variant = AutomationReloadSteps::parseVariant( tableText, variantPath.str(), variantName );
                 if ( variant.has_value() == false )
                     return unexpected( variant.error() );
                 const string buildDir = findBuildDirectory();

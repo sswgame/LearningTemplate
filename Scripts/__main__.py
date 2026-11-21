@@ -71,6 +71,7 @@ _SUBCOMMAND: tuple[Subcommand, ...] = (
     Subcommand("delegate-macros", "dev.delegate_macros", "델리게이트의 맨 create(`X::create<&f>` · `X::create( 람다 )`)를 SW_DELEGATE_* 매크로로 바꾼다(--check 는 남은 자리만 찍는다) — 병합 뒤 충돌 파일에 다시 돌린다"),
     Subcommand("byte-reader-values", "dev.byte_reader_values", "ByteReader · Archive · BitReader 의 출력 인자 읽기(`readPod( x )` · `readCount( n, c )` …)를 값 반환 읽기로 바꾸고 실패해도 바깥 칸을 덮는 꼴을 고친다(--check 는 남은 자리만 찍는다) — 병합 뒤 충돌 파일에 다시 돌린다"),
     Subcommand("disk-path-args", "dev.disk_path_args", "FileUtil 디스크 I/O 의 문자열 경로 인자를 `FileUtil::toDiskPath( … )`(AbsolutePath) 로 감싼다(--check 는 남은 문자열 인자만 찍는다) — 병합 뒤 충돌 파일에 다시 돌린다"),
+    Subcommand("disk-path-join", "dev.disk_path_join", "toDiskPath( joinPath( 형식, … ) ) 왕복을 AbsolutePath 조립(join · getParent)으로 바꾸고 형식이 된 글 선언을 형식으로 올린다(--check 는 남은 자리만 찍는다) — 병합 뒤 충돌 파일에 다시 돌린다"),
     Subcommand("android-apk", "package.android_apk", "Android 빌드(lib<이름>.so + 쿠킹한 팩)를 서명한 디버그 APK 로 묶는다(--game, --preset Android-Shipping|Android-Release, aapt2 · zipalign · apksigner — Tools/Android)"),
     Subcommand("web-package", "package.web_package", "Web-Shipping 빌드(App.js · App.wasm + 쿠킹한 팩)를 브라우저 폴더로 묶는다(--game, file_packager — Tools/emsdk), --serve 로 교차 출처 격리 헤더를 주는 로컬 서버까지"),
     Subcommand("web-check", "package.web_check", "Web-Shipping 묶음을 브라우저(헤드리스 Chrome · Edge)에서 두 번 띄워 기동 · WebGPU · 오류 없음 · 화면 PNG · IDBFS 영속을 본다(--game)"),

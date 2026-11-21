@@ -261,11 +261,11 @@ SW_TEST_CASE( ProcessTest, ChildInheritsOnlyItsOwnPipe )
  */
 SW_TEST_CASE( ProcessTest, DetachedLaunchReturnsWithoutWaiting )
 {
-    const sw::string markerPath  = sw::test::makeScratchPath( "detached_marker.txt" );
-    const sw::string releasePath = sw::test::makeScratchPath( "detached_release.txt" );
+    const sw::AbsolutePath markerPath  = sw::test::makeScratchPath( "detached_marker.txt" );
+    const sw::AbsolutePath releasePath = sw::test::makeScratchPath( "detached_release.txt" );
     // 셸 줄에 경로를 넣지 않는다 — 작업 폴더를 표식의 폴더로 두고 파일 이름만 쓴다(셸 인용을 이 테스트가 떠안지 않게).
     sw::ProcessOptions options;
-    options._workingDirectory = sw::FileUtil::getDirectoryPart( markerPath );
+    options._workingDirectory = sw::FileUtil::getDirectoryPart( markerPath.str() );
     // 놓아 주기를 1 초 간격으로 10 번 본다(케이스 시한 30 초 안) — 그 안에 오지 않으면 timeout(분리 실행이 기다렸다는 뜻).
 #if defined( SW_PLATFORM_WINDOWS )
     const sw::ProcessCommand command = sw::ProcessCommand::fromSearchPath(
@@ -279,14 +279,14 @@ SW_TEST_CASE( ProcessTest, DetachedLaunchReturnsWithoutWaiting )
 
     const sw::optional<sw::DetachedProcessID> detached = sw::Process::launchDetached( command, options );
     SW_REQUIRE_TRUE( detached.has_value() );
-    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::toDiskPath( releasePath ), "go" ) ); // 돌아온 뒤에만 닿는 줄 — 기다렸다면 자식은 이미 timeout 을 썼다
+    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( releasePath, "go" ) ); // 돌아온 뒤에만 닿는 줄 — 기다렸다면 자식은 이미 timeout 을 썼다
 
     // 명령이 끝에 남기는 표식 — 다 쓸 때까지 기다린다(케이스 폴더는 케이스가 끝나면 지워지므로 쓰는 중이면 안 된다).
     sw::string text;
     const bool bFinished = sw::test::waitUntil( [&markerPath, &text]()
     {
         // 표식이 생기기 전에는 읽지 않는다 — 없는 파일을 읽으면 읽는 쪽이 Error 를 남기고, 기다리는 동안 그 줄이 쌓인다.
-        return sw::FileUtil::exists( sw::FileUtil::toDiskPath( markerPath ) ) && sw::FileUtil::readTextFile( sw::FileUtil::toDiskPath( markerPath ), text ) && text.find( '\n' ) != sw::string::npos;
+        return sw::FileUtil::exists( markerPath ) && sw::FileUtil::readTextFile( markerPath, text ) && text.find( '\n' ) != sw::string::npos;
     }, 20.0 );
     SW_EXPECT_TRUE_MSG( bFinished, "분리 실행한 명령이 표식을 남기지 않았다 — 띄우지 못했거나 돌지 않았다" );
     SW_EXPECT_TRUE_MSG( text.find( "done" ) != sw::string::npos, "분리 실행이 명령이 끝나기를 기다렸다 — 자식이 놓아 주기를 받지 못하고 timeout 을 썼다" );

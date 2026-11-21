@@ -33,16 +33,16 @@ namespace sw
 
     expected<AutomationRunPolicy> AutomationRunPolicy::load()
     {
-        const string path = FileUtil::joinPath( ProcessRoots::get()._project.str(), kPolicyFile );
-        string       text;
-        if ( FileUtil::readTextFile( FileUtil::toDiskPath( path ), text ) == false )
-            return unexpected( Error{ ErrorKind::NotFound, "could not read the scenario run policy", path } );
-        expected<AutomationRunPolicy> policy = parse( text, path );
+        const AbsolutePath path = ProcessRoots::get()._project.join( kPolicyFile );
+        string             text;
+        if ( FileUtil::readTextFile( path, text ) == false )
+            return unexpected( Error{ ErrorKind::NotFound, "could not read the scenario run policy", path.str() } );
+        expected<AutomationRunPolicy> policy = parse( text, path.str() );
         if ( policy.has_value() == false )
             return policy;
         JSONDocument document;
-        if ( document.parse( text, path ) == false ) // 위 `parse` 가 이미 읽었다 — 조건 칸을 넘기려고 한 번 더 연다
-            return unexpected( Error{ ErrorKind::InvalidArgument, "the scenario run policy is not JSON", path } );
+        if ( document.parse( text, path.str() ) == false ) // 위 `parse` 가 이미 읽었다 — 조건 칸을 넘기려고 한 번 더 연다
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the scenario run policy is not JSON", path.str() } );
         if ( expected<void> configured = AutomationStepRegistry::configureConditions( document.getRoot().get( "_conditions" ) ); configured.has_value() == false )
             return unexpected( configured.error() );
         return policy;

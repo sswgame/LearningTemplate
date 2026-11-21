@@ -70,10 +70,9 @@ namespace sw
         }
         else
         {
-            const string packDirectory = FileUtil::joinPath( config::kDirBinGames, name );
-            const string libraryPath   = FileUtil::joinPath( FileUtil::joinPath( ProcessRoots::get()._binary.str(), packDirectory ),
-                                                             ModuleLibraryUtil::formatSharedLibraryName( config::kTargetGameModule ) );
-            if ( FileUtil::exists( FileUtil::toDiskPath( libraryPath ) ) == false )
+            const string       packDirectory = FileUtil::joinPath( config::kDirBinGames, name );
+            const AbsolutePath libraryPath   = ProcessRoots::get()._binary.join( packDirectory ).join( ModuleLibraryUtil::formatSharedLibraryName( config::kTargetGameModule ) );
+            if ( FileUtil::exists( libraryPath ) == false )
             {
                 SW_LOG_ERROR_ID( "GameSelection.GameNotBuiltBuild", "Game '%#' is not built in this build (%# is missing) - add it to SW_GAMES or use its preset", name.c_str(), libraryPath.c_str() );
                 return false;

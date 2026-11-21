@@ -13,7 +13,7 @@ namespace
     void parseCommandLine( sw::CommandLineManager& outCommandLine, const utf8* pArgument )
     {
         outCommandLine.initialize();
-        const sw::optional<sw::AbsolutePath> baseDirectory = sw::AbsolutePath::tryMake( sw::test::makeScratchPath( "base" ) );
+        const sw::optional<sw::AbsolutePath> baseDirectory = sw::AbsolutePath::tryMake( sw::test::makeScratchPath( "base" ).str() );
         SW_ASSERT( baseDirectory.has_value() );
         utf8* argv[] = { const_cast<utf8*>( "TestApp.exe" ), const_cast<utf8*>( pArgument ) };
         outCommandLine.parse( pArgument != nullptr ? 2 : 1, argv, *baseDirectory );

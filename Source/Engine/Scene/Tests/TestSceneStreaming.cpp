@@ -306,7 +306,7 @@ SW_TEST_CASE( SceneStreamingTest, UnloadWhileReadingCancelsWithoutLeak )
     constexpr const utf8*           kFileName = "streamcancel.scene.bin";
     const ScopedFreeRunningPolicy   policy;
     const test::ScopedScratchDomain domain;
-    const optional<AbsolutePath>    binPath = FileUtil::requireAbsolutePath( domain.makeDiskPath( kFileName ) );
+    const optional<AbsolutePath>    binPath = FileUtil::requireAbsolutePath( domain.makeDiskPath( kFileName ).str() );
     SW_REQUIRE_TRUE( binPath.has_value() );
     SW_REQUIRE_TRUE( Util::makeDocument( Util::kWholeBudgetMicroseconds ).saveBinary( *binPath ) );
 
@@ -461,7 +461,7 @@ SW_TEST_CASE( SceneStreamingTest, NewFileIDSkipsUnreadCellEntities )
     constexpr const utf8*           kFileName = "streammaxid.scene.bin";
     const ScopedFreeRunningPolicy   policy;
     const test::ScopedScratchDomain domain;
-    const optional<AbsolutePath>    binPath = FileUtil::requireAbsolutePath( domain.makeDiskPath( kFileName ) );
+    const optional<AbsolutePath>    binPath = FileUtil::requireAbsolutePath( domain.makeDiskPath( kFileName ).str() );
     SW_REQUIRE_TRUE( binPath.has_value() );
     SW_REQUIRE_TRUE( Util::makeDocument( Util::kWholeBudgetMicroseconds ).saveBinary( *binPath ) );
 

@@ -106,7 +106,7 @@ SW_TEST_CASE( SharedAssetCacheTest, ModuleCacheSharesAndReloadReachesHolders )
     using Util = SharedAssetCacheTestUtil;
     const test::ScopedScratchDomain domain;
     const string                    id = test::ScopedScratchDomain::makeID( "table.txt" ).str();
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( domain.makeDiskPath( "table.txt" ) ), "first" ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "table.txt" ), "first" ) );
     {
         const Util::ScopedModuleCache scope;
         AssetCacheBase* const         pCache = engine::getSubsystem<AssetManager>().findAssetCache( Util::Cache::kAssetKindName );
@@ -120,7 +120,7 @@ SW_TEST_CASE( SharedAssetCacheTest, ModuleCacheSharesAndReloadReachesHolders )
         SW_EXPECT_TRUE( pCache->isCached( id ) );
 
         // 파일을 고치고 핫 리로드가 부르는 길(레지스트리의 리로드 함수)로 다시 읽는다.
-        SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( domain.makeDiskPath( "table.txt" ) ), "second" ) );
+        SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "table.txt" ), "second" ) );
         AssetReloadWatch<SharedAssetCacheTestAsset> watch;
         watch.markSeen();
         const uint32 reloadsBefore = watch.getSeenCount();
@@ -149,7 +149,7 @@ SW_TEST_CASE( SharedAssetCacheTest, ModuleUnloadDropsEntriesAndReloadStartsFresh
     using Util = SharedAssetCacheTestUtil;
     const test::ScopedScratchDomain domain;
     const string                    id = test::ScopedScratchDomain::makeID( "module.txt" ).str();
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( domain.makeDiskPath( "module.txt" ) ), "first" ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "module.txt" ), "first" ) );
 
     shared_ptr<const SharedAssetCacheTestAsset> held;
     SharedAssetRef<SharedAssetCacheTestAsset>   ref;
@@ -167,7 +167,7 @@ SW_TEST_CASE( SharedAssetCacheTest, ModuleUnloadDropsEntriesAndReloadStartsFresh
     SW_EXPECT_EQUAL( string( "first" ), held->_text );
     SW_EXPECT_EQUAL( string( "first" ), ref->_text );
 
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( domain.makeDiskPath( "module.txt" ) ), "second" ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "module.txt" ), "second" ) );
     {
         const Util::ScopedModuleCache reloaded;
         AssetCacheBase* const         pCache = engine::getSubsystem<AssetManager>().findAssetCache( Util::Cache::kAssetKindName );
@@ -193,8 +193,8 @@ SW_TEST_CASE( SharedAssetCacheTest, ModuleUnloadLeavesOtherModuleCacheIntact )
     const test::ScopedScratchDomain domain;
     const string                    id      = test::ScopedScratchDomain::makeID( "mine.txt" ).str();
     const string                    otherID = test::ScopedScratchDomain::makeID( "other.txt" ).str();
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( domain.makeDiskPath( "mine.txt" ) ), "first" ) );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( domain.makeDiskPath( "other.txt" ) ), "other" ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "mine.txt" ), "first" ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "other.txt" ), "other" ) );
 
     AssetManager&                                          assetManager = engine::getSubsystem<AssetManager>();
     const Util::ScopedOtherModuleCache                     otherModule;
@@ -217,7 +217,7 @@ SW_TEST_CASE( SharedAssetCacheTest, ModuleUnloadLeavesOtherModuleCacheIntact )
     SW_EXPECT_TRUE( assetManager.findReloadFunction( pOtherCache ) != nullptr ); // 핫 리로드 칸도 남는다
     SW_EXPECT_TRUE( Util::OtherCache::acquire( otherID ).snapshot().get() == otherHeld.get() );
 
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( domain.makeDiskPath( "mine.txt" ) ), "second" ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "mine.txt" ), "second" ) );
     {
         const Util::ScopedModuleCache reloaded;
         AssetCacheBase* const         pCache = assetManager.findAssetCache( Util::Cache::kAssetKindName );
@@ -239,7 +239,7 @@ SW_TEST_CASE( SharedAssetCacheTest, ReloadWatchReportsEachReloadOnce )
     using Util = SharedAssetCacheTestUtil;
     const test::ScopedScratchDomain domain;
     const string                    id = test::ScopedScratchDomain::makeID( "watched.txt" ).str();
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( domain.makeDiskPath( "watched.txt" ) ), "first" ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "watched.txt" ), "first" ) );
     const Util::ScopedModuleCache                     scope;
     const shared_ptr<const SharedAssetCacheTestAsset> held = Util::Cache::acquire( id ).snapshot();
     SW_REQUIRE_TRUE( held != nullptr );
@@ -266,7 +266,7 @@ SW_TEST_CASE( SharedAssetCacheTest, RedirectedAndCanonicalIdsShareOneEntry )
     const test::ScopedScratchDomain domain;
     const string                    oldID = test::ScopedScratchDomain::makeID( "old.txt" ).str();
     const string                    newID = test::ScopedScratchDomain::makeID( "new.txt" ).str();
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( domain.makeDiskPath( "new.txt" ) ), "moved" ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "new.txt" ), "moved" ) );
     StringBuilder<constant::buffer::kMax512> redirectXML;
     redirectXML.appendFormat( "<Redirects><Redirect from=\"%#\" to=\"%#\"/></Redirects>", oldID, newID );
     SW_REQUIRE_TRUE( AssetRedirect::loadFromXMLTexts( vector<string>{ string( redirectXML.view() ) }, vector<string>{ "test/redirects.xml" } ) );

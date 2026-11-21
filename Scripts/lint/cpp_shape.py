@@ -862,6 +862,8 @@ def run_self_check() -> int:
     expect(check_disk_path_strings(typed_path, strip_code(typed_path), "Source/Engine/Foo.cpp") == [], "an AbsolutePath and a toDiskPath argument pass")
     from dev import disk_path_args
     expect(disk_path_args.run_self_check() == 0, "disk-path-args rewrite cases")
+    from dev import disk_path_join
+    expect(disk_path_join.run_self_check() == 0, "disk-path-join rewrite cases")
     stripped = {
         'a // c\nb': 'a     \nb', 'x /* c\nd */ y': 'x     \n     y', 's = "q\\"w";': 's = "    ";', "c = 'x'; it's": "c = ' '; it's",
         'r = R"d(a)"b\n)d";': 'r = R       \n   ;', 'fooR"x"': 'fooR" "', '#define A \\\n  B\nint q;': '           \n   \nint q;',

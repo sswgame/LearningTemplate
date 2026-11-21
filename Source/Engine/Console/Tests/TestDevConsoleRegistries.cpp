@@ -96,7 +96,7 @@ SW_TEST_CASE( DevConsoleRegistryTest, PathAndBoolArguments )
 {
     string absolutePath;
     string reply;
-    SW_EXPECT_TRUE( DevCommandRegistry::readDiskPathArgument( test::makeScratchPath( "a.txt" ), absolutePath, reply ) );
+    SW_EXPECT_TRUE( DevCommandRegistry::readDiskPathArgument( test::makeScratchPath( "a.txt" ).str(), absolutePath, reply ) );
     SW_EXPECT_FALSE( absolutePath.empty() );
     SW_EXPECT_FALSE( DevCommandRegistry::readDiskPathArgument( "relative/a.txt", absolutePath, reply ) );
     SW_EXPECT_TRUE( reply.find( "relative/a.txt" ) != string::npos );

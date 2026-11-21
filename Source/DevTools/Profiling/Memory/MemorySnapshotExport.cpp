@@ -142,11 +142,11 @@ namespace sw
 
     expected<MemorySnapshotPolicy> MemorySnapshotPolicy::load()
     {
-        const string path = FileUtil::joinPath( ProcessRoots::get()._project.str(), kPolicyFile );
-        string       text;
-        if ( FileUtil::readTextFile( FileUtil::toDiskPath( path ), text ) == false )
-            return unexpected( Error{ ErrorKind::NotFound, "could not read the memory snapshot policy", path } );
-        return parse( text, path );
+        const AbsolutePath path = ProcessRoots::get()._project.join( kPolicyFile );
+        string             text;
+        if ( FileUtil::readTextFile( path, text ) == false )
+            return unexpected( Error{ ErrorKind::NotFound, "could not read the memory snapshot policy", path.str() } );
+        return parse( text, path.str() );
     }
 
     string MemorySnapshotExport::formatMegabytes( uint64 bytes )

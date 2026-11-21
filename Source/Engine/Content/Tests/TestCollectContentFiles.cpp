@@ -11,14 +11,14 @@ using namespace sw;
 
 SW_TEST_CASE( CollectContentFilesTest, LeavesTheScratchDomainOut )
 {
-    const string root = test::makeScratchPath( "Content" );
-    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( FileUtil::joinPath( root, "game/playground/maps" ) ) ) );
-    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( FileUtil::joinPath( root, AssetPaths::kScratchDomain ) ) ) );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( FileUtil::joinPath( root, "game/playground/maps/a.scene.xml" ) ), "<Scene/>" ) );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( FileUtil::joinPath( FileUtil::joinPath( root, AssetPaths::kScratchDomain ), "left.scene.xml" ) ), "<broken" ) );
+    const AbsolutePath root = test::makeScratchPath( "Content" );
+    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( root.join( "game/playground/maps" ) ) );
+    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( root.join( AssetPaths::kScratchDomain ) ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( root.join( "game/playground/maps/a.scene.xml" ), "<Scene/>" ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( root.join( AssetPaths::kScratchDomain ).join( "left.scene.xml" ), "<broken" ) );
 
     vector<string> listFile;
-    SW_REQUIRE_TRUE( AssetPaths::collectContentFiles( root, ".xml", listFile ) );
+    SW_REQUIRE_TRUE( AssetPaths::collectContentFiles( root.str(), ".xml", listFile ) );
     SW_REQUIRE_EQUAL( size_t( 1 ), listFile.size() );
     SW_EXPECT_TRUE( StringUtil::endsWith( FileUtil::normalizeSeparators( listFile[0] ), "game/playground/maps/a.scene.xml" ) );
 }
@@ -42,16 +42,16 @@ SW_TEST_CASE( CollectContentFilesTest, DomainlessFolderListsEveryDomain )
 SW_TEST_CASE( CollectContentFilesTest, GamePackDomainsAreListedByName )
 {
     // 게임 팩 나열 하나 — 이름 순 `game/<팩>`, game/ 이 없으면 빈 목록(실패가 아니다).
-    const string root = test::makeScratchPath( "Content" );
-    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( FileUtil::joinPath( root, "game/zeta" ) ) ) );
-    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( FileUtil::joinPath( root, "game/alpha" ) ) ) );
+    const AbsolutePath root = test::makeScratchPath( "Content" );
+    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( root.join( "game/zeta" ) ) );
+    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( root.join( "game/alpha" ) ) );
     vector<string> listDomain;
-    SW_REQUIRE_TRUE( AssetPaths::collectGamePackDomains( root, listDomain ) );
+    SW_REQUIRE_TRUE( AssetPaths::collectGamePackDomains( root.str(), listDomain ) );
     SW_REQUIRE_EQUAL( size_t( 2 ), listDomain.size() );
     SW_EXPECT_EQUAL( string( "game/alpha" ), listDomain[0] );
     SW_EXPECT_EQUAL( string( "game/zeta" ), listDomain[1] );
 
     vector<string> listNone;
-    SW_EXPECT_TRUE( AssetPaths::collectGamePackDomains( FileUtil::joinPath( root, "game/alpha" ), listNone ) );
+    SW_EXPECT_TRUE( AssetPaths::collectGamePackDomains( FileUtil::joinPath( root.str(), "game/alpha" ), listNone ) );
     SW_EXPECT_TRUE( listNone.empty() );
 }

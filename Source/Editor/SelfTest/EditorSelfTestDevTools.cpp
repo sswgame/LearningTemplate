@@ -286,7 +286,7 @@ namespace sw::editor
                 // 프로세스마다 따로 — 백엔드별 실행이 나란히 돌 때 같은 파일을 덮어쓰면 방금 저장한 레이아웃을 다른 실행의 것으로 읽는다.
                 fixed_string<constant::buffer::kMax64> folderName;
                 formatstring( folderName.data(), folderName.capacity(), "Test/editor_selftest_layouts_%#", Process::getCurrentProcessID() );
-                const string folder = FileUtil::joinPath( ProcessRoots::get()._saved.str(), folderName );
+                const AbsolutePath folder = ProcessRoots::get()._saved.join( folderName );
 
                 const uint32 stepIndex = context.getStepIndex();
                 if ( stepIndex == 0 )
@@ -296,14 +296,14 @@ namespace sw::editor
                 }
                 if ( stepIndex == 1 )
                 {
-                    if ( context.expect( pDock->saveNamedLayout( kLayoutName, folder ), "could not save the named layout" ) == false )
+                    if ( context.expect( pDock->saveNamedLayout( kLayoutName, folder.str() ), "could not save the named layout" ) == false )
                         return EditorSelfTestStep::Done;
                     string iniText;
-                    (void)FileUtil::readTextFile( FileUtil::toDiskPath( EditorLayoutStore::makeImguiINIPath( folder, kLayoutName ) ), iniText ); // 없으면 아래 단언이 알린다
+                    (void)FileUtil::readTextFile( FileUtil::toDiskPath( EditorLayoutStore::makeImguiINIPath( folder.str(), kLayoutName ) ), iniText ); // 없으면 아래 단언이 알린다
                     (void)context.expect( iniText.find( "[Docking]" ) != string::npos && iniText.find( "[Window][Hierarchy]" ) != string::npos,
                                           "the saved layout has no docking section or no hierarchy window" );
                     (void)editorContext.getSubsystem<EditorPanelManager>().setPanelOpen( kPanelID, false );
-                    (void)context.expect( pDock->requestLoadNamedLayout( kLayoutName, folder ), "could not load the named layout" );
+                    (void)context.expect( pDock->requestLoadNamedLayout( kLayoutName, folder.str() ), "could not load the named layout" );
                     return EditorSelfTestStep::WaitStable; // 다음 프레임 시작에 적용되고 그 프레임에 창이 다시 만들어진다 — 정지(도크 적용 끝)까지
                 }
 
@@ -312,7 +312,7 @@ namespace sw::editor
                 const ImGuiWindow* pHierarchy = ImGui::FindWindowByName( EditorPanelText::makeWindowID( HierarchyPanel::kPanelTitle ).c_str() );
                 (void)context.expect( pHierarchy != nullptr && pHierarchy->DockId != 0, "the hierarchy is no longer docked after loading the layout" );
                 (void)editorContext.getSubsystem<EditorPanelManager>().setPanelOpen( kPanelID, false );
-                (void)EditorLayoutStore::remove( folder, kLayoutName ); // 임시 폴더이므로 남아도 다음 실행이 덮어쓴다
+                (void)EditorLayoutStore::remove( folder.str(), kLayoutName ); // 임시 폴더이므로 남아도 다음 실행이 덮어쓴다
                 return EditorSelfTestStep::Done;
             }
 

@@ -802,9 +802,9 @@ namespace sw
 
     string ProfilerTraceExport::findLatestTraceFile()
     {
-        vector<string> listFile;
-        const string   folder = FileUtil::joinPath( ProcessRoots::get()._saved.str(), "Traces" );
-        if ( FileUtil::collectFiles( FileUtil::toDiskPath( folder ), ".json", listFile, false ) == false )
+        vector<string>     listFile;
+        const AbsolutePath folder = ProcessRoots::get()._saved.join( "Traces" );
+        if ( FileUtil::collectFiles( folder, ".json", listFile, false ) == false )
             return {};
         string latest;
         int64  latestStamp = -1;

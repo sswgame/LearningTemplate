@@ -26,7 +26,7 @@ namespace
         string _source;
 
         StampFixture()
-            : _root{ FileUtil::normalizeSeparators( test::makeScratchPath( "stamp" ) ) }
+            : _root{ FileUtil::normalizeSeparators( test::makeScratchPath( "stamp" ).str() ) }
             , _ownShaders{ FileUtil::joinPath( _root, "game/shaders" ) }
             , _engineShaders{ FileUtil::joinPath( _root, "engine/shaders" ) }
             , _commonShaders{ FileUtil::joinPath( _root, "common/shaders" ) }

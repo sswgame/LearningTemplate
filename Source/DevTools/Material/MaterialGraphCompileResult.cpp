@@ -206,10 +206,10 @@ namespace sw
             /** @brief 층 상한을 읽습니다. 파일 · 칸이 없거나 0 이면 그 까닭입니다(폴백 없음). */
             [[nodiscard]] static expected<LayerLimits> loadLayerLimits()
             {
-                const string path = FileUtil::joinPath( ProcessRoots::get()._project.str(), kLayerLimitsPath );
-                string       text;
-                JSONDocument doc;
-                if ( FileUtil::readTextFile( FileUtil::toDiskPath( path ), text ) == false || doc.parse( text, kLayerLimitsPath ) == false )
+                const AbsolutePath path = ProcessRoots::get()._project.join( kLayerLimitsPath );
+                string             text;
+                JSONDocument       doc;
+                if ( FileUtil::readTextFile( path, text ) == false || doc.parse( text, kLayerLimitsPath ) == false )
                     return unexpected( Error{ ErrorKind::NotFound, "the layer limits file cannot be read", kLayerLimitsPath } );
                 const optional<uint32> maxLayerCount       = doc.getRoot().get( "_maxLayerCount" ).read<uint32>();
                 const optional<uint32> maxMaskChannelCount = doc.getRoot().get( "_maxMaskChannelCount" ).read<uint32>();

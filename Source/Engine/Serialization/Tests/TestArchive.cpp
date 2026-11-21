@@ -244,17 +244,17 @@ SW_TEST_CASE( ArchiveTest, ArchiveMathTypesStreaming )
  */
 SW_TEST_CASE( ArchiveTest, ArchiveFileIORoundTrip )
 {
-    const sw::string tempFilePath = sw::test::makeScratchPath( "test_archive_io.bin" );
+    const sw::AbsolutePath tempFilePath = sw::test::makeScratchPath( "test_archive_io.bin" );
 
     sw::Archive writeArch;
     writeArch << 0x12345678u;
     writeArch << sw::string( "TempArchiveFilePayload" );
     writeArch << -999.5f;
 
-    SW_REQUIRE_TRUE( writeArch.saveToFile( tempFilePath ) );
-    SW_EXPECT_TRUE( sw::FileUtil::exists( sw::FileUtil::toDiskPath( tempFilePath ) ) );
+    SW_REQUIRE_TRUE( writeArch.saveToFile( tempFilePath.str() ) );
+    SW_EXPECT_TRUE( sw::FileUtil::exists( tempFilePath ) );
 
-    sw::Archive readArch( tempFilePath, true );
+    sw::Archive readArch( tempFilePath.str(), true );
     SW_EXPECT_TRUE( readArch.isReadMode() );
     SW_EXPECT_TRUE( readArch.getSize() > 0 );
 

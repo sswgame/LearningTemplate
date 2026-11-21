@@ -21,11 +21,11 @@ using namespace sw;
  */
 SW_TEST_CASE( TestFrameworkTest, ScratchPathIsStableWithinACaseAndDistinctPerName )
 {
-    const string path = test::makeScratchPath( "sample.wav" );
-    SW_EXPECT_TRUE( StringUtil::endsWith( path, "sample.wav" ) );
-    SW_EXPECT_EQUAL( path, test::makeScratchPath( "sample.wav" ) );
-    SW_EXPECT_TRUE( path != test::makeScratchPath( "other.wav" ) );
-    SW_EXPECT_TRUE( FileUtil::isDirectory( FileUtil::toDiskPath( FileUtil::getDirectoryPart( path ) ) ) ); // 폴더는 처음 부를 때 선다
+    const AbsolutePath path = test::makeScratchPath( "sample.wav" );
+    SW_EXPECT_TRUE( StringUtil::endsWith( path.str(), "sample.wav" ) );
+    SW_EXPECT_EQUAL( path.str(), test::makeScratchPath( "sample.wav" ).str() );
+    SW_EXPECT_TRUE( path.str() != test::makeScratchPath( "other.wav" ).str() );
+    SW_EXPECT_TRUE( FileUtil::isDirectory( path.getParent() ) ); // 폴더는 처음 부를 때 선다
 }
 
 #if defined( SW_DO_CHECKS )

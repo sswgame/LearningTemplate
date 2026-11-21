@@ -137,7 +137,7 @@ SW_TEST_CASE( WorldOriginTest, SubLevelPlacementIsAbsolute )
     const string                    inner = "<Scene formatVersion=\"3\" name=\"Shop\"><SceneSettings _bStreaming=\"false\" _unloadMargin=\"0\" _maxCellLoadsPerFrame=\"0\" _addToWorldBudgetMicroseconds=\"0\">"
                                             "<_cellGrid _cellSize=\"0\" _loadingRadius=\"0\" /></SceneSettings><entities><entity id=\"1\" name=\"Box\"><GameObject _schemaVersion=\"0\" _name=\"Box\" "
                                             "_bActive=\"true\"><_listComponent><SceneComponent _localPosition=\"0,1,0\" /></_listComponent></GameObject></entity></entities></Scene>";
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( domain.makeDiskPath( "shop.scene.xml" ) ), inner ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "shop.scene.xml" ), inner ) );
     Scene scene{ "Origin" };
     SW_REQUIRE_TRUE( scene.instantiate( Util::makeDocument() ) );
     GameObjectManager& objects = *scene.getObjectManager();

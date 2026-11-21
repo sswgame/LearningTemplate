@@ -173,7 +173,7 @@ SW_TEST_CASE( TileSetTest, SharedCacheGivesOneObjectAndReloadDetaches )
 {
     const sw::test::ScopedScratchDomain domain;
     const sw::string                    id = sw::test::ScopedScratchDomain::makeID( "ground.tileset.xml" ).str();
-    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::toDiskPath( domain.makeDiskPath( "ground.tileset.xml" ) ), kTileSetXML ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( domain.makeDiskPath( "ground.tileset.xml" ), kTileSetXML ) );
 
     const sw::shared_ptr<const sw::TileSetAsset> pHeld  = sw::SharedAssetCache<sw::TileSetAsset>::acquire( id ).snapshot();
     const sw::shared_ptr<const sw::TileSetAsset> pAgain = sw::SharedAssetCache<sw::TileSetAsset>::acquire( id ).snapshot();
@@ -185,7 +185,7 @@ SW_TEST_CASE( TileSetTest, SharedCacheGivesOneObjectAndReloadDetaches )
     const size_t at      = changed.find( "tileSize=\"1\"" );
     SW_REQUIRE_TRUE( at != sw::string::npos );
     changed.replace( at, sw::string_view( "tileSize=\"1\"" ).size(), "tileSize=\"2\"" );
-    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::toDiskPath( domain.makeDiskPath( "ground.tileset.xml" ) ), changed ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( domain.makeDiskPath( "ground.tileset.xml" ), changed ) );
     SW_REQUIRE_TRUE( sw::SharedAssetCache<sw::TileSetAsset>::reloadShared( id ) );
     SW_EXPECT_NEAR( 1.0f, pHeld->getTileSize(), 0.0001f ); // 쥔 쪽은 옛 객체 그대로(Detach)
 

@@ -123,15 +123,15 @@ SW_TEST_CASE( LiveReloadLogicTest, ShadowCopyNames )
     SW_EXPECT_EQUAL( string( "SWGame_3" ), ShadowCopyName::make( "SWGame", 3 ) );
     SW_EXPECT_TRUE( FileUtil::isPathUnderRoot( ProcessRoots::get()._run.str(), ShadowCopyName::getDirectory() ) );
 
-    const string directory = test::makeScratchPath( "ShadowCopies" );
-    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( FileUtil::joinPath( directory, "SWGame_1" ) ) ) );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( FileUtil::joinPath( directory, "SWGame_1/SWGame.g1.dll" ) ), "copy" ) );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( FileUtil::joinPath( directory, "SWGame_2.so" ) ), "copy" ) );
-    SW_EXPECT_EQUAL( 2u, ShadowCopyName::removeCopies( directory ) );
+    const AbsolutePath directory = test::makeScratchPath( "ShadowCopies" );
+    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( directory.join( "SWGame_1" ) ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( directory.join( "SWGame_1/SWGame.g1.dll" ), "copy" ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( directory.join( "SWGame_2.so" ), "copy" ) );
+    SW_EXPECT_EQUAL( 2u, ShadowCopyName::removeCopies( directory.str() ) );
     vector<string> listLeft;
-    SW_EXPECT_TRUE( FileUtil::collectFiles( FileUtil::toDiskPath( directory ), "", listLeft, true ) );
+    SW_EXPECT_TRUE( FileUtil::collectFiles( directory, "", listLeft, true ) );
     SW_EXPECT_TRUE( listLeft.empty() );
-    SW_EXPECT_EQUAL( 0u, ShadowCopyName::removeCopies( FileUtil::joinPath( directory, "Missing" ) ) );
+    SW_EXPECT_EQUAL( 0u, ShadowCopyName::removeCopies( FileUtil::joinPath( directory.str(), "Missing" ) ) );
 }
 
 namespace
@@ -154,9 +154,9 @@ namespace
         /** @brief 내려갈 때 지워지는지 볼 섀도 복사본 자리의 파일을 만듭니다. */
         static string makeShadowFile( string_view name )
         {
-            const string path = test::makeScratchPath( name );
-            SW_EXPECT_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( path ), "shadow" ) );
-            return path;
+            const AbsolutePath path = test::makeScratchPath( name );
+            SW_EXPECT_TRUE( FileUtil::writeTextFile( path, "shadow" ) );
+            return path.str();
         }
     };
 } // namespace
@@ -213,12 +213,12 @@ SW_TEST_CASE( LiveReloadLogicTest, DeferredUnloadWithoutKeepingAnyBatch )
 SW_TEST_CASE( LiveReloadLogicTest, ShadowCopyRefusesUnstampedFile )
 {
     SW_EXPECT_LOG( "LiveReloadManager.ModuleBuiltAgainstDifferent" );
-    const string original = test::makeScratchPath( "NotAModule.bin" );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( original ), "no stamp in here" ) );
+    const AbsolutePath original = test::makeScratchPath( "NotAModule.bin" );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( original, "no stamp in here" ) );
 
     ShadowCopyParams params{};
     params._moduleName         = "NotAModule";
-    params._originalModulePath = original;
+    params._originalModulePath = original.str();
     ShadowLibraryNameState name{};
     name._current = "current";
     name._loaded  = "loaded";
@@ -229,14 +229,14 @@ SW_TEST_CASE( LiveReloadLogicTest, ShadowCopyRefusesUnstampedFile )
     SW_EXPECT_EQUAL( string( "current" ), name._current );
 
     vector<uint8> bytes;
-    SW_REQUIRE_TRUE( ModuleShadowCopy::readModuleFile( original, bytes ) );
+    SW_REQUIRE_TRUE( ModuleShadowCopy::readModuleFile( original.str(), bytes ) );
     SW_EXPECT_EQUAL( size_t( 16 ), bytes.size() );
-    SW_EXPECT_FALSE( ModuleShadowCopy::shouldRejectDelayImports( "NotAModule", original, bytes ) ); // PE 가 아니면 지연 import 표도 없다
+    SW_EXPECT_FALSE( ModuleShadowCopy::shouldRejectDelayImports( "NotAModule", original.str(), bytes ) ); // PE 가 아니면 지연 import 표도 없다
 
     ModuleShadowCopy::removeArtifacts( {} );
-    SW_EXPECT_TRUE( FileUtil::exists( FileUtil::toDiskPath( original ) ) );
-    ModuleShadowCopy::removeArtifacts( original );
-    SW_EXPECT_FALSE( FileUtil::exists( FileUtil::toDiskPath( original ) ) );
+    SW_EXPECT_TRUE( FileUtil::exists( original ) );
+    ModuleShadowCopy::removeArtifacts( original.str() );
+    SW_EXPECT_FALSE( FileUtil::exists( original ) );
 }
 
 /** @brief [LiveReloadLogicTest] 게임 모듈 이름은 지금 고른 게임의 빌드 대상(SWGame_<게임>)으로 바뀌고, 그 밖의 대상은 그대로다 — 모듈 이름 그대로는 ninja 에 없는 대상이었다 */

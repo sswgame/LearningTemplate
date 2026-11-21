@@ -54,7 +54,7 @@ namespace
 
         static void write( const test::ScopedScratchDomain& domain, const utf8* pFile, const string& text )
         {
-            SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( domain.makeDiskPath( pFile ) ), text ) );
+            SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( pFile ), text ) );
         }
 
         static string instanceAttribute( const utf8* pFile )
@@ -93,7 +93,7 @@ SW_TEST_CASE( SceneAssemblyTest, InstancesDoNotShareIdsAndLinkInsideThemselves )
     Util::write( domain, "outer.scene.xml", Util::makeScene( "Outer", { Util::makeEntity( "1", "Left", "-5,0,0", attribute.c_str() ), Util::makeEntity( "2", "Right", "5,0,0", attribute.c_str() ) } ) );
 
     SceneDocument doc{};
-    SW_REQUIRE_TRUE( doc.loadXMLFromDiskFile( domain.makeDiskPath( "outer.scene.xml" ) ) );
+    SW_REQUIRE_TRUE( doc.loadXMLFromDiskFile( domain.makeDiskPath( "outer.scene.xml" ).str() ) );
     SW_REQUIRE_EQUAL( size_t{ 6 }, doc._listSceneObjectNode.size() ); // 앵커 둘 + 멤버 둘씩
     const SceneDocument::SceneObjectNode* pLeftBox  = Util::findNode( doc, "Left/Box" );
     const SceneDocument::SceneObjectNode* pRightBox = Util::findNode( doc, "Right/Box" );
@@ -129,7 +129,7 @@ SW_TEST_CASE( SceneAssemblyTest, PartOverridesApplyAndSaveAsDifference )
                                                                "<PrefabOverrides><Part path=\"1\"><PrefabOverrides><Override key=\"#0000000000000001\"><SceneComponent _localPosition=\"7,7,7\" /></Override></PrefabOverrides></Part></PrefabOverrides>" ) } ) );
 
     SceneDocument doc{};
-    SW_REQUIRE_TRUE( doc.loadXMLFromDiskFile( domain.makeDiskPath( "outer.scene.xml" ) ) );
+    SW_REQUIRE_TRUE( doc.loadXMLFromDiskFile( domain.makeDiskPath( "outer.scene.xml" ).str() ) );
     Scene scene{ "Outer" };
     SW_REQUIRE_TRUE( scene.instantiate( doc ) );
     const GameObject* pBox = scene.getObjectManager()->findGameObjectByName( hashed_string( "House/Box" ) );
@@ -139,15 +139,15 @@ SW_TEST_CASE( SceneAssemblyTest, PartOverridesApplyAndSaveAsDifference )
     SceneDocument written{};
     SW_REQUIRE_TRUE( scene.serializeToDocument( written ) );
     SW_REQUIRE_EQUAL( size_t{ 1 }, written._listSceneObjectNode.size() ); // 멤버는 엔티티로 적지 않는다
-    const string savedPath = domain.makeDiskPath( "saved.scene.xml" );
-    SW_REQUIRE_TRUE( written.saveToFile( Util::makeAbsolute( savedPath ) ) );
+    const AbsolutePath savedPath = domain.makeDiskPath( "saved.scene.xml" );
+    SW_REQUIRE_TRUE( written.saveToFile( Util::makeAbsolute( savedPath.str() ) ) );
     string savedText;
-    SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::toDiskPath( savedPath ), savedText ) );
+    SW_REQUIRE_TRUE( FileUtil::readTextFile( savedPath, savedText ) );
     SW_EXPECT_TRUE( savedText.find( "<Part path=\"1\"" ) != string::npos );
     SW_EXPECT_TRUE( savedText.find( "path=\"2\"" ) == string::npos ); // 고치지 않은 Lid 는 적지 않는다(부착 · 이름은 차이가 아니다)
 
     SceneDocument reread{};
-    SW_REQUIRE_TRUE( reread.loadXMLFromDiskFile( savedPath ) );
+    SW_REQUIRE_TRUE( reread.loadXMLFromDiskFile( savedPath.str() ) );
     Scene sceneAgain{ "Saved" };
     SW_REQUIRE_TRUE( sceneAgain.instantiate( reread ) );
     const GameObject* pBoxAgain = sceneAgain.getObjectManager()->findGameObjectByName( hashed_string( "House/Box" ) );
@@ -179,7 +179,7 @@ SW_TEST_CASE( SceneAssemblyTest, AnchorWithoutStateIsAnError )
     Util::write( domain, "outer.scene.xml", Util::makeScene( "Outer", { text.view() } ) );
     SW_EXPECT_LOG( "SceneDocument.InstanceAnchorShape" );
     SceneDocument doc{};
-    SW_EXPECT_TRUE( doc.loadXMLFromDiskFile( domain.makeDiskPath( "outer.scene.xml" ) ) == false );
+    SW_EXPECT_TRUE( doc.loadXMLFromDiskFile( domain.makeDiskPath( "outer.scene.xml" ).str() ) == false );
 }
 
 /** @brief [SceneAssemblyTest] 씬 상속: 부모 위에 차이를 얹고, 저장은 차이로 남으며 다시 읽으면 같다 */
@@ -212,16 +212,16 @@ SW_TEST_CASE( SceneAssemblyTest, BaseSceneMergesAndSavesAsDelta )
     SW_REQUIRE_TRUE( parentScene.instantiate( parentSource ) );
     SceneDocument parent{};
     SW_REQUIRE_TRUE( parentScene.serializeToDocument( parent ) );
-    const string savedPath = domain.makeDiskPath( "saved.scene.xml" );
-    SW_REQUIRE_TRUE( written.saveXMLDelta( Util::makeAbsolute( savedPath ), parent ) );
+    const AbsolutePath savedPath = domain.makeDiskPath( "saved.scene.xml" );
+    SW_REQUIRE_TRUE( written.saveXMLDelta( Util::makeAbsolute( savedPath.str() ), parent ) );
 
     string savedText;
-    SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::toDiskPath( savedPath ), savedText ) );
+    SW_REQUIRE_TRUE( FileUtil::readTextFile( savedPath, savedText ) );
     SW_EXPECT_TRUE( savedText.find( "_base=" ) != string::npos );
     SW_EXPECT_TRUE( savedText.find( "name=\"Keep\"" ) == string::npos ); // 부모와 같은 엔티티는 적지 않는다
 
     SceneDocument reread{};
-    SW_REQUIRE_TRUE( reread.loadXMLFromDiskFile( savedPath ) );
+    SW_REQUIRE_TRUE( reread.loadXMLFromDiskFile( savedPath.str() ) );
     SW_EXPECT_TRUE( Util::findNode( reread, "Keep" ) != nullptr );
     SW_EXPECT_TRUE( Util::findNode( reread, "Gone" ) == nullptr );
     SW_EXPECT_TRUE( Util::findNode( reread, "New" ) != nullptr );
@@ -235,7 +235,7 @@ SW_TEST_CASE( SceneAssemblyTest, DataLayerLoadsOnlyWhenActive )
                  Util::makeScene( "Layered", { Util::makeEntity( "1", "Always", "0,0,0" ), Util::makeEntity( "2", "Snow", "1,0,0", "layers=\"Winter\"" ), Util::makeEntity( "3", "NightSnow", "2,0,0", "layers=\"Winter,Night\"" ) },
                                   "<_listDataLayer><SceneDataLayerDef _name=\"Winter\" _bInitiallyActive=\"false\" /><SceneDataLayerDef _name=\"Night\" _bInitiallyActive=\"true\" /></_listDataLayer>" ) );
     SceneDocument doc{};
-    SW_REQUIRE_TRUE( doc.loadXMLFromDiskFile( domain.makeDiskPath( "layer.scene.xml" ) ) );
+    SW_REQUIRE_TRUE( doc.loadXMLFromDiskFile( domain.makeDiskPath( "layer.scene.xml" ).str() ) );
 
     Scene scene{ "Layered" };
     SW_REQUIRE_TRUE( scene.instantiate( doc ) );
@@ -268,10 +268,10 @@ SW_TEST_CASE( SceneAssemblyTest, UndeclaredLayerIsAnError )
     Util::write( domain, "bad.scene.xml", Util::makeScene( "Bad", { Util::makeEntity( "1", "Snow", "0,0,0", "layers=\"Winter\"" ) } ) );
     SW_EXPECT_LOG( "SceneDocument.DataLayerNotDeclared" );
     SceneDocument doc{};
-    SW_EXPECT_TRUE( doc.loadXMLFromDiskFile( domain.makeDiskPath( "bad.scene.xml" ) ) == false );
+    SW_EXPECT_TRUE( doc.loadXMLFromDiskFile( domain.makeDiskPath( "bad.scene.xml" ).str() ) == false );
 
     Util::write( domain, "good.scene.xml", Util::makeScene( "Good", { Util::makeEntity( "1", "Plain", "0,0,0" ) } ) );
-    SW_REQUIRE_TRUE( doc.loadXMLFromDiskFile( domain.makeDiskPath( "good.scene.xml" ) ) );
+    SW_REQUIRE_TRUE( doc.loadXMLFromDiskFile( domain.makeDiskPath( "good.scene.xml" ).str() ) );
     Scene scene{ "Good" };
     SW_REQUIRE_TRUE( scene.instantiate( doc ) );
     SW_EXPECT_LOG( "SceneDataLayers.LayerNotDeclared" );
@@ -288,9 +288,9 @@ SW_TEST_CASE( SceneAssemblyTest, BinaryKeepsExpandedResult )
     const string attribute( attributeBuilder.view() );
     Util::write( domain, "outer.scene.xml", Util::makeScene( "Outer", { Util::makeEntity( "1", "House", "0,0,0", attribute.c_str() ) }, "<_listDataLayer><SceneDataLayerDef _name=\"Winter\" _bInitiallyActive=\"true\" /></_listDataLayer>" ) );
     SceneDocument doc{};
-    SW_REQUIRE_TRUE( doc.loadXMLFromDiskFile( domain.makeDiskPath( "outer.scene.xml" ) ) );
+    SW_REQUIRE_TRUE( doc.loadXMLFromDiskFile( domain.makeDiskPath( "outer.scene.xml" ).str() ) );
     doc.stripAuthoringInstanceData();
-    SW_REQUIRE_TRUE( doc.saveBinary( Util::makeAbsolute( domain.makeDiskPath( "outer.scene.bin" ) ) ) );
+    SW_REQUIRE_TRUE( doc.saveBinary( Util::makeAbsolute( domain.makeDiskPath( "outer.scene.bin" ).str() ) ) );
 
     SceneDocument cooked{};
     SW_REQUIRE_TRUE( cooked.loadBinary( test::ScopedScratchDomain::makeID( "outer.scene.bin" ) ) );
@@ -341,7 +341,7 @@ SW_TEST_CASE( SceneAssemblyTest, DataLayerKeepsStateWhenTurnedOffAndOn )
                  Util::makeScene( "LayerState", { Util::makeEntity( "1", "Always", "0,0,0" ), Util::makeEntity( "2", "Snow", "1,0,0", "layers=\"Winter\"" ) },
                                   "<_listDataLayer><SceneDataLayerDef _name=\"Winter\" _bInitiallyActive=\"true\" /></_listDataLayer>" ) );
     SceneDocument doc{};
-    SW_REQUIRE_TRUE( doc.loadXMLFromDiskFile( domain.makeDiskPath( "layerstate.scene.xml" ) ) );
+    SW_REQUIRE_TRUE( doc.loadXMLFromDiskFile( domain.makeDiskPath( "layerstate.scene.xml" ).str() ) );
     Scene scene{ "LayerState" };
     SW_REQUIRE_TRUE( scene.instantiate( doc ) );
     GameObjectManager&       objects = *scene.getObjectManager();
@@ -385,7 +385,7 @@ SW_TEST_CASE( SceneAssemblyTest, DataLayerSaveStateRestoresOverAClearedManager )
                  Util::makeScene( "LayerSave", { Util::makeEntity( "1", "Always", "0,0,0" ), Util::makeEntity( "2", "Snow", "1,0,0", "layers=\"Winter\"" ) },
                                   "<_listDataLayer><SceneDataLayerDef _name=\"Winter\" _bInitiallyActive=\"true\" /></_listDataLayer>" ) );
     SceneDocument doc{};
-    SW_REQUIRE_TRUE( doc.loadXMLFromDiskFile( domain.makeDiskPath( "layersave.scene.xml" ) ) );
+    SW_REQUIRE_TRUE( doc.loadXMLFromDiskFile( domain.makeDiskPath( "layersave.scene.xml" ).str() ) );
     Scene scene{ "LayerSave" };
     SW_REQUIRE_TRUE( scene.instantiate( doc ) );
     GameObjectManager&       objects = *scene.getObjectManager();

@@ -558,8 +558,8 @@ namespace sw
         clearPathCache();
 
         // 루트는 실행 파일 위치로 한 번 정한 것이다(`ProcessRoots`) - 작업 폴더에서 위로 찾지 않는다(작업 폴더를 바꾸고 띄우면 다른 저장소를 열었다).
-        const string& rootPath = ProcessRoots::get()._project.str();
-        SW_LOG_INFO_ID( "AssetPaths.RootFolder", "RootFolder : %#", rootPath );
+        const AbsolutePath rootPath = ProcessRoots::get()._project;
+        SW_LOG_INFO_ID( "AssetPaths.RootFolder", "RootFolder : %#", rootPath.str() );
         // Content/ 최상위 루트. 모든 도메인은 이 아래에서 이름으로 푼다.
         // 패키지에는 `Content` 가 없다(팩만) - 그때 느슨한 리소스 루트는 비어 있다.
         const string resourceRootFolderPath = FileUtil::isDirectory( ProcessRoots::get()._content ) ? ProcessRoots::get()._content.str() : string{};

@@ -284,7 +284,7 @@ SW_TEST_CASE( ChatServiceTest, InitializeNeedsDependenciesAndFiles )
     dependencies._pDirectory        = &directory;
     ChatServiceConfig settings      = makeChatSettings();
     settings._ignoredCharactersPath = FileUtil::joinPath( ProcessRoots::get()._project.str(), "Config/Server/chat_ignored_characters.txt" );
-    settings._bannedWordsPath       = test::makeScratchPath( "missing_banned.txt" );
+    settings._bannedWordsPath       = test::makeScratchPath( "missing_banned.txt" ).str();
     SW_EXPECT_FALSE( service.initialize( dependencies, settings ) );
 
     settings._bannedWordsPath.clear();
@@ -426,15 +426,15 @@ SW_TEST_CASE( ChatServiceTest, PendingSendsAreBoundedAndFinished )
 /** @brief [ChatServiceTest] 도배 · 반복은 기다릴 시간과 함께 거절하고, 금칙어는 가려서 나간다. 거절 방식이면 Rejected 다 */
 SW_TEST_CASE( ChatServiceTest, SpamAndFilterApplyToSends )
 {
-    const string bannedPath = test::makeScratchPath( "banned.txt" );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( bannedPath ), "badword\n" ) );
+    const AbsolutePath bannedPath = test::makeScratchPath( "banned.txt" );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( bannedPath, "badword\n" ) );
 
     MemoryServiceDatabase database;
     ChatServiceConfig     settings   = makeChatSettings();
     settings._spam._burstCount       = 3;
     settings._spam._refillIntervalMs = 1000;
     settings._spam._maxRepeatCount   = 1;
-    settings._bannedWordsPath        = bannedPath;
+    settings._bannedWordsPath        = bannedPath.str();
     ChatFixture rig( database, nullptr, kServerA, settings );
     SW_EXPECT_TRUE( rig.join( kAlice ) == ChatResult::Ok );
 

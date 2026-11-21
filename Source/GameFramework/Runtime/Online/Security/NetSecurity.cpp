@@ -32,19 +32,19 @@ namespace sw
 
             [[nodiscard]] static expected<void> ensureDevCertificate( INetSecurityProvider& provider, string& outCertificateFile, string& outPrivateKeyFile )
             {
-                const string folder = FileUtil::joinPath( ProcessRoots::get()._derivedData.str(), NetSecurity::kDevCertificateFolder );
-                outCertificateFile  = FileUtil::joinPath( folder, NetSecurity::kDevCertificateBundleFile );
-                outPrivateKeyFile   = outCertificateFile;
+                const AbsolutePath folder = ProcessRoots::get()._derivedData.join( NetSecurity::kDevCertificateFolder );
+                outCertificateFile        = FileUtil::joinPath( folder.str(), NetSecurity::kDevCertificateBundleFile );
+                outPrivateKeyFile         = outCertificateFile;
                 if ( FileUtil::isRegularFile( FileUtil::toDiskPath( outCertificateFile ) ) )
                     return {};
                 string     certificatePem;
                 string     privateKeyPem;
-                const bool bMade = FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( folder ) ) &&
+                const bool bMade = FileUtil::ensureDirectoryExists( folder ) &&
                                    provider.createSelfSignedCertificate( "localhost", kDevCertificateValidDays, certificatePem, privateKeyPem );
                 certificatePem += privateKeyPem; // 한 번의 원자적 쓰기 — 늘 한 쌍
                 const bool bCreated = bMade && FileUtil::writeTextFile( FileUtil::toDiskPath( outCertificateFile ), certificatePem );
                 if ( bCreated == false )
-                    return unexpected( Error{ ErrorKind::ExternalFailure, "cannot create the development certificate", folder } );
+                    return unexpected( Error{ ErrorKind::ExternalFailure, "cannot create the development certificate", folder.str() } );
                 SW_LOG_INFO_ID( "NetSecurity.CreatedDevelopmentTLSCertificate", "Created a development TLS certificate: %#", outCertificateFile.c_str() );
                 return {};
             }

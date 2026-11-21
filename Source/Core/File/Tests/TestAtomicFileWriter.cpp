@@ -21,10 +21,10 @@ namespace
 /** @brief [AtomicFileWriterTest] 이어 쓴 조각과 나중에 덮은 머리가 바꿔 끼운 파일에 그대로 있다. */
 SW_TEST_CASE( AtomicFileWriterTest, AppendedChunksAndPatchedHeaderLand )
 {
-    const sw::string path = sw::test::makeScratchPath( "stream.bin" );
-    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::toDiskPath( path ), "old" ) );
+    const sw::AbsolutePath path = sw::test::makeScratchPath( "stream.bin" );
+    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( path, "old" ) );
     sw::AtomicFileWriter writer;
-    SW_REQUIRE_TRUE( writer.open( path ).has_value() );
+    SW_REQUIRE_TRUE( writer.open( path.str() ).has_value() );
     const uint8 arrHeader[4]{ 0, 0, 0, 0 };
     const uint8 arrBody[3]{ 'a', 'b', 'c' };
     SW_REQUIRE_TRUE( writer.append( arrHeader, sizeof( arrHeader ) ).has_value() );
@@ -37,24 +37,24 @@ SW_TEST_CASE( AtomicFileWriterTest, AppendedChunksAndPatchedHeaderLand )
     SW_REQUIRE_TRUE( writer.commit().has_value() );
 
     sw::string text;
-    SW_REQUIRE_TRUE( sw::FileUtil::readTextFile( sw::FileUtil::toDiskPath( path ), text ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::readTextFile( path, text ) );
     SW_EXPECT_TRUE( text == "HEADabcabc" );
-    SW_EXPECT_EQUAL( countFiles( sw::FileUtil::getDirectoryPart( path ) ), size_t{ 1 } );
+    SW_EXPECT_EQUAL( countFiles( sw::FileUtil::getDirectoryPart( path.str() ) ), size_t{ 1 } );
 }
 
 /** @brief [AtomicFileWriterTest] commit 없이 끝난 쓰기는 원본을 건드리지 않고 임시 파일을 지운다. */
 SW_TEST_CASE( AtomicFileWriterTest, AbandonedWriteLeavesTheOriginal )
 {
-    const sw::string path = sw::test::makeScratchPath( "keep.bin" );
-    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::toDiskPath( path ), "original" ) );
+    const sw::AbsolutePath path = sw::test::makeScratchPath( "keep.bin" );
+    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( path, "original" ) );
     {
         sw::AtomicFileWriter writer;
-        SW_REQUIRE_TRUE( writer.open( path ).has_value() );
+        SW_REQUIRE_TRUE( writer.open( path.str() ).has_value() );
         const uint8 arrBody[3]{ 'x', 'y', 'z' };
         SW_REQUIRE_TRUE( writer.append( arrBody, sizeof( arrBody ) ).has_value() );
     }
     sw::string text;
-    SW_REQUIRE_TRUE( sw::FileUtil::readTextFile( sw::FileUtil::toDiskPath( path ), text ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::readTextFile( path, text ) );
     SW_EXPECT_TRUE( text == "original" );
-    SW_EXPECT_EQUAL( countFiles( sw::FileUtil::getDirectoryPart( path ) ), size_t{ 1 } );
+    SW_EXPECT_EQUAL( countFiles( sw::FileUtil::getDirectoryPart( path.str() ) ), size_t{ 1 } );
 }

@@ -119,7 +119,7 @@ SW_TEST_CASE( PreloadSetTest, PinnedAssetIsReadOnce )
     const test::ScopedScratchDomain domain;
     vector<uint8>                   bytes;
     MeshAssetFormat::makeBytes( makeTriangle(), bytes );
-    SW_REQUIRE_TRUE( FileUtil::writeFile( FileUtil::toDiskPath( domain.makeDiskPath( kFileName ) ), bytes.data(), bytes.size() ) );
+    SW_REQUIRE_TRUE( FileUtil::writeFile( domain.makeDiskPath( kFileName ), bytes.data(), bytes.size() ) );
     const string path = test::ScopedScratchDomain::makeID( kFileName ).str();
 
     const CountingContentFileSource counter{ ContentFileSource::getCurrent(), kFileName };

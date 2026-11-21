@@ -193,11 +193,11 @@ namespace sw
         {
             StringBuilder<constant::buffer::kMax256> manifestName;
             manifestName.appendFormat( "%#%#", movedModule, ModuleCatalog::kManifestExtension );
-            const string selectedPath = FileUtil::joinPath( FileUtil::joinPath( ProcessRoots::get()._binary.str(), movedDirectory ), manifestName.view() );
-            bool         bFound       = false;
+            const AbsolutePath selectedPath = ProcessRoots::get()._binary.join( movedDirectory ).join( manifestName.view() );
+            bool               bFound       = false;
             for ( ModuleManifest& project : listGamePackProject )
             {
-                if ( FileUtil::isSameDiskPath( project._sourcePath, selectedPath ) == false ) // 디스크 경로다(OS 규칙 — 접은 키는 리눅스에서 대소문자를 잃는다)
+                if ( FileUtil::isSameDiskPath( project._sourcePath, selectedPath.str() ) == false ) // 디스크 경로다(OS 규칙 — 접은 키는 리눅스에서 대소문자를 잃는다)
                     continue;
                 std::swap( project, listManifest[*projectIndex] );
                 bFound = true;

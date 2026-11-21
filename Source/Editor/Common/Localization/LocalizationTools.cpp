@@ -680,12 +680,12 @@ namespace sw
             return false;
         }
 
-        const string repositoryRoot = ProcessRoots::get()._project.str();
-        bool         bSucceeded{ true };
+        const AbsolutePath repositoryRoot = ProcessRoots::get()._project;
+        bool               bSucceeded{ true };
         for ( const string& projectPath : listProjectPath )
         {
             LocalizationGatherResult result;
-            if ( gatherProject( projectPath, repositoryRoot, bCheckOnly == false, result ) == false )
+            if ( gatherProject( projectPath, repositoryRoot.str(), bCheckOnly == false, result ) == false )
             {
                 bSucceeded = false;
                 continue;

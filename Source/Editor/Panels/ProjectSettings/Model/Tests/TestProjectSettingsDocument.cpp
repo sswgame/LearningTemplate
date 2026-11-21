@@ -33,11 +33,11 @@ namespace
 
         static OverriddenProject makeProject( string_view caseName )
         {
-            const string      root = FileUtil::normalizeSeparators( test::makeScratchPath( caseName ) );
+            const string      root = FileUtil::normalizeSeparators( test::makeScratchPath( caseName ).str() );
             OverriddenProject project;
             project._basePath     = FileUtil::joinPath( root, "Config/Engine/EngineConfig.json" );
             project._overridePath = FileUtil::joinPath( root, PlatformConfigOverride::makeEngineConfigPath( "Test" ) );
-            SW_EXPECT_TRUE( FileUtil::readTextFile( FileUtil::toDiskPath( FileUtil::joinPath( ProcessRoots::get()._project.str(), "Config/Engine/EngineConfig.json" ) ), project._baseText ) );
+            SW_EXPECT_TRUE( FileUtil::readTextFile( ProcessRoots::get()._project.join( "Config/Engine/EngineConfig.json" ), project._baseText ) );
             SW_EXPECT_TRUE( FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( project._basePath ) ) && FileUtil::writeTextFile( FileUtil::toDiskPath( project._basePath ), project._baseText ) );
             SW_EXPECT_TRUE( FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( project._overridePath ) ) && FileUtil::writeTextFile( FileUtil::toDiskPath( project._overridePath ), kOverrideText ) );
             return project;

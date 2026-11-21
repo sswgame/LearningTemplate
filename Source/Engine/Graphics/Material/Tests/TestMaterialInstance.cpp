@@ -205,8 +205,8 @@ namespace
         /** @brief @p text 를 케이스 폴더의 파일로 쓰고 @p instance 로 읽습니다. */
         static bool loadInstance( MaterialInstance& instance, const utf8* pFileName, const utf8* text )
         {
-            const string path = FileUtil::joinPath( test::makeScratchPath( "materialinstance" ), pFileName );
-            return FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( path ) ) && FileUtil::writeTextFile( FileUtil::toDiskPath( path ), string( text ) ) && instance.loadFromDiskFile( path );
+            const AbsolutePath path = test::makeScratchPath( "materialinstance" ).join( pFileName );
+            return FileUtil::ensureParentDirectoryExists( path ) && FileUtil::writeTextFile( path, string( text ) ) && instance.loadFromDiskFile( path.str() );
         }
     };
 } // namespace

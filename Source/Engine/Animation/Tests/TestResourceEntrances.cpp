@@ -79,7 +79,7 @@ namespace
 
         static void write( const ScopedScratchDomain& domain, const utf8* pFile, string_view text )
         {
-            SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( domain.makeDiskPath( pFile ) ), text ) );
+            SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( pFile ), text ) );
         }
 
         static string makeMaterial( const utf8* pName, const string& inner )
@@ -208,7 +208,7 @@ SW_TEST_CASE( ResourceEntranceTest, LayerOverHandFormatUsesItsRule )
 {
     const ScopedScratchDomain domain;
     const XEntranceScope      scope;
-    (void)domain.makeDiskFolder( "layers/night/testproject" );
+    (void)domain.makeDiskFolder( "layers/night/testproject" ).str();
 
     Util::write( domain, "b.material", Util::makeMaterial( "Base", "" ) );
     Util::write( domain, "layers/night/testproject/b.material", R"(<MaterialDef name="FromLayer" />)" );
@@ -249,25 +249,25 @@ SW_TEST_CASE( ResourceEntranceTest, FormatSaveKeepsConditionsInTheFile )
     const ScopedScratchDomain domain;
     const XEntranceScope      scope;
     SW_REQUIRE_TRUE( engine::getSubsystem<ResourceTags>().setAxisValue( "quality", "low" ) );
-    const string path = domain.makeDiskPath( "a.retarget.xml" );
-    const string text = R"(<RetargetProfile height_ratio="2"><_when _if="region.us" height_ratio="3" /><root source="root" target="root" /><pelvis source="pelvis" target="hips" />)"
-                        R"(<chains><item name="LeftArm"><source><item>a</item></source><target><item>b</item></target></item></chains></RetargetProfile>)";
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( path ), text ) );
+    const AbsolutePath path = domain.makeDiskPath( "a.retarget.xml" );
+    const string       text = R"(<RetargetProfile height_ratio="2"><_when _if="region.us" height_ratio="3" /><root source="root" target="root" /><pelvis source="pelvis" target="hips" />)"
+                              R"(<chains><item name="LeftArm"><source><item>a</item></source><target><item>b</item></target></item></chains></RetargetProfile>)";
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( path, text ) );
 
     RetargetProfile profile;
-    SW_REQUIRE_TRUE( profile.loadFromXMLText( text, path ) );
-    const optional<AbsolutePath> absPath = AbsolutePath::tryMake( path );
+    SW_REQUIRE_TRUE( profile.loadFromXMLText( text, path.str() ) );
+    const optional<AbsolutePath> absPath = AbsolutePath::tryMake( path.str() );
     SW_REQUIRE_TRUE( absPath.has_value() );
     SW_REQUIRE_TRUE( profile.saveToFile( *absPath ) );
 
     string saved;
-    SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::toDiskPath( path ), saved ) );
+    SW_REQUIRE_TRUE( FileUtil::readTextFile( path, saved ) );
     XMLDocument doc;
     SW_REQUIRE_TRUE( doc.parse( saved ) );
     SW_EXPECT_EQUAL( string( "2" ), string( doc.getRoot().getAttributeText( "height_ratio" ) ) );
     SW_EXPECT_TRUE( doc.getRoot().findChild( DataInheritance::kWhenElement ).isValid() );
 
     RetargetProfile reread;
-    SW_REQUIRE_TRUE( reread.loadFromXMLText( saved, path ) );
+    SW_REQUIRE_TRUE( reread.loadFromXMLText( saved, path.str() ) );
     SW_EXPECT_EQUAL( profile.toXML(), reread.toXML() );
 }

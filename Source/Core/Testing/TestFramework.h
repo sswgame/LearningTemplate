@@ -29,6 +29,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Path/AbsolutePath.h"
 #include "Core/String/formatString.h"
 
 #include <iterator>
@@ -151,8 +152,10 @@ namespace sw::test
     /**
      * @brief 이 케이스만 쓰는 빈 폴더 아래의 절대 경로입니다(`<작업 폴더>/Saved/Test/<프로세스>/<케이스>/<회차>/<name>`).
      * @details 폴더는 처음 부를 때 만든다. 테스트는 이 밖(Bin · 소스 트리 · 고정 이름 임시 경로)에 쓰지 않는다 — 나란히 도는 프로세스 · 반복 회차가 부딪치지 않게.
+     *          디스크 경로 형식이라 I/O 에 그대로 넘기고 `join` 으로 잇는다(글로 잇고 `toDiskPath` 로 다시 올리는 왕복이 없다). 글이 필요하면 `.str()`.
+     *          @p name 이 `..` 로 케이스 폴더 위에 오르면 빈 경로다(`AbsolutePath::join`).
      */
-    SW_API string makeScratchPath( string_view name );
+    SW_API AbsolutePath makeScratchPath( string_view name );
     /**
      * @brief @p actual 을 케이스 파일 옆 `Snapshots/<케이스>.<name>.txt` 와 비교합니다(줄 끝은 LF 로 맞춘다).
      * @details 스냅숏이 없거나 다르면 실패이고, `--update-snapshots` 로 돌면 파일을 쓰고 통과한다(쓴 것을 보고에 적는다). 손으로 옮겨 적는 기대값을 대신한다.

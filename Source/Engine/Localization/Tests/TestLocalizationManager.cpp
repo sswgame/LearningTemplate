@@ -230,17 +230,17 @@ SW_TEST_CASE( LocalizationManagerTest, ReloadChangedFilePicksUpNewTextAndKeepsOl
 SW_TEST_CASE( LocalizationManagerTest, UnmountingGameProjectsKeepsEngineStrings )
 {
     const ScopedScratchDomain domain;
-    const sw::string          engineFolder = domain.makeDiskPath( "engine" );
-    const sw::string          gameFolder   = domain.makeDiskPath( "game" );
-    const sw::string          enginePath   = sw::FileUtil::joinPath( engineFolder, "engine.locproject.xml" );
-    SW_REQUIRE_TRUE( sw::FileUtil::ensureDirectoryExists( sw::FileUtil::toDiskPath( engineFolder ) ) );
-    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::toDiskPath( enginePath ), R"(<LocalizationProject name="engineTest" sourceCulture="en"><stringTables><item>e.strings.xml</item></stringTables></LocalizationProject>)" ) );
-    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::toDiskPath( sw::FileUtil::joinPath( engineFolder, "e.strings.xml" ) ), R"(<SourceStringTable culture="en"><entries><entry key="e.key" source="Engine" /></entries></SourceStringTable>)" ) );
-    LocalizationTestUtil::writeSourceTable( gameFolder, "en", R"("g.key": { "source": "Game" })" );
+    const sw::AbsolutePath    engineFolder = domain.makeDiskPath( "engine" );
+    const sw::AbsolutePath    gameFolder   = domain.makeDiskPath( "game" );
+    const sw::AbsolutePath    enginePath   = engineFolder.join( "engine.locproject.xml" );
+    SW_REQUIRE_TRUE( sw::FileUtil::ensureDirectoryExists( engineFolder ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( enginePath, R"(<LocalizationProject name="engineTest" sourceCulture="en"><stringTables><item>e.strings.xml</item></stringTables></LocalizationProject>)" ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( engineFolder.join( "e.strings.xml" ), R"(<SourceStringTable culture="en"><entries><entry key="e.key" source="Engine" /></entries></SourceStringTable>)" ) );
+    LocalizationTestUtil::writeSourceTable( gameFolder.str(), "en", R"("g.key": { "source": "Game" })" );
 
     sw::LocalizationManager loc;
-    SW_REQUIRE_TRUE( loc.mountProject( ScopedScratchDomain::toID( enginePath ), sw::LocalizationScope::Engine ) );
-    SW_REQUIRE_TRUE( loc.mountProject( ScopedScratchDomain::toID( LocalizationTestUtil::writeProject( gameFolder, "en", "[]" ) ), sw::LocalizationScope::Game ) );
+    SW_REQUIRE_TRUE( loc.mountProject( ScopedScratchDomain::toID( enginePath.str() ), sw::LocalizationScope::Engine ) );
+    SW_REQUIRE_TRUE( loc.mountProject( ScopedScratchDomain::toID( LocalizationTestUtil::writeProject( gameFolder.str(), "en", "[]" ) ), sw::LocalizationScope::Game ) );
     SW_EXPECT_EQUAL( sw::string( "Game" ), Internal::text( loc.getString( sw::hashed_string( "g.key" ) ) ) );
 
     loc.unmountProjects( sw::LocalizationScope::Game );

@@ -31,7 +31,7 @@ namespace
 
         TelemetryServiceTest()
             : _service{}
-            , _folder{ test::makeScratchPath( "telemetry" ) }
+            , _folder{ test::makeScratchPath( "telemetry" ).str() }
             , _leftoverFile{}
         {
             (void)FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( _folder ) );

@@ -71,7 +71,7 @@ SW_TEST_CASE( AnimationNotifyTableTest, FootContactRejectsHeightOrder )
 SW_TEST_CASE( AnimationNotifyTableTest, ChildTableMergesByKeys )
 {
     const test::ScopedScratchDomain domain;
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( domain.makeDiskPath( "base.notifies.xml" ) ), R"(<AnimationNotifies>
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "base.notifies.xml" ), R"(<AnimationNotifies>
         <Notify name="FootL" handler="Footstep" socket="foot_l"/>
         <Notify name="FootR" handler="Footstep" socket="foot_r"/>
         <FootContact notify="FootL" bone="foot.l" contact_height="0.05" release_height="0.12" max_vertical_speed="0.6"/>
@@ -93,7 +93,7 @@ SW_TEST_CASE( AnimationNotifyTableTest, ChildTableMergesByKeys )
 SW_TEST_CASE( AnimationNotifyTableTest, ChildSocketSetMergesByName )
 {
     const test::ScopedScratchDomain domain;
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( domain.makeDiskPath( "base.sockets.xml" ) ), R"(<SocketSet>
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "base.sockets.xml" ), R"(<SocketSet>
         <Socket name="Eyes" parent="head" translation="0 1 0" kind="Attach"/>
         <Socket name="Chest" parent="spine" kind="Attach"/>
     </SocketSet>)" ) );
@@ -117,7 +117,7 @@ SW_TEST_CASE( AnimationNotifyTableTest, ChildSocketSetMergesByName )
 SW_TEST_CASE( AnimationNotifyTableTest, ChildSocketSetSavesOnlyItsDifference )
 {
     const test::ScopedScratchDomain domain;
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( domain.makeDiskPath( "base.sockets.xml" ) ), R"(<SocketSet>
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "base.sockets.xml" ), R"(<SocketSet>
         <Socket name="Eyes" parent="head" translation="0 1 0" kind="Attach"/>
         <Socket name="Chest" parent="spine" kind="Attach"/>
     </SocketSet>)" ) );
@@ -133,7 +133,7 @@ SW_TEST_CASE( AnimationNotifyTableTest, ChildSocketSetSavesOnlyItsDifference )
     eyes._translation = float3{ 0.0f, 2.0f, 0.0f };
     sockets.addSocket( eyes );
 
-    const optional<AbsolutePath> childPath = AbsolutePath::tryMake( domain.makeDiskPath( "child.sockets.xml" ) );
+    const optional<AbsolutePath> childPath = AbsolutePath::tryMake( domain.makeDiskPath( "child.sockets.xml" ).str() );
     SW_REQUIRE_TRUE( childPath.has_value() );
     SW_REQUIRE_TRUE( sockets.saveToFile( *childPath, kinds ) );
     string saved;

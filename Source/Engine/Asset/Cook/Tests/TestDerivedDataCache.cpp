@@ -13,8 +13,8 @@ namespace
 {
     struct DerivedDataCacheFixture
     {
-        string _localRoot{ test::makeScratchPath( "DDC/Local" ) };
-        string _sharedRoot{ test::makeScratchPath( "DDC/Shared" ) };
+        string _localRoot{ test::makeScratchPath( "DDC/Local" ).str() };
+        string _sharedRoot{ test::makeScratchPath( "DDC/Shared" ).str() };
 
         /** @brief 로컬(쓰기) + 공유(@p sharedAccess) 두 층입니다. */
         DerivedDataCache makeLayered( DerivedDataAccess sharedAccess ) const

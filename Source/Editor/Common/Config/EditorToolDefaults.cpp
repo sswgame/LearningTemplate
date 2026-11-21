@@ -58,17 +58,17 @@ namespace sw::editor
     bool EditorToolDefaults::loadFromHost()
     {
         const AbsolutePath hostPath = getHostPath();
-        const string&      absPath  = hostPath.str();
+        const AbsolutePath absPath  = hostPath;
         // 값의 원본은 이 파일 하나다 — 없으면 대신 쓸 값이 없다(헤더는 형식만 가진다).
-        if ( FileUtil::isRegularFile( FileUtil::toDiskPath( absPath ) ) == false )
+        if ( FileUtil::isRegularFile( absPath ) == false )
         {
-            SW_LOG_ERROR_ID( "EditorToolDefaults.EditorToolDefaultsMissing", "Editor tool defaults %# is missing - the editor needs this data file", absPath );
+            SW_LOG_ERROR_ID( "EditorToolDefaults.EditorToolDefaultsMissing", "Editor tool defaults %# is missing - the editor needs this data file", absPath.str() );
             return false;
         }
         string jsonText;
-        if ( FileUtil::readTextFile( FileUtil::toDiskPath( absPath ), jsonText ) == false )
+        if ( FileUtil::readTextFile( absPath, jsonText ) == false )
         {
-            SW_LOG_ERROR_ID( "EditorToolDefaults.EditorToolDefaultsCould", "Editor tool defaults %# could not be read", absPath );
+            SW_LOG_ERROR_ID( "EditorToolDefaults.EditorToolDefaultsCould", "Editor tool defaults %# could not be read", absPath.str() );
             return false;
         }
 
@@ -79,7 +79,7 @@ namespace sw::editor
         if ( bRead == false || bComplete == false )
             return false;
         *this = std::move( loaded );
-        SW_LOG_INFO_ID( "EditorToolDefaults.Loaded", "Loaded from %#", absPath );
+        SW_LOG_INFO_ID( "EditorToolDefaults.Loaded", "Loaded from %#", absPath.str() );
         return true;
     }
 } // namespace sw::editor

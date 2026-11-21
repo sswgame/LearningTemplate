@@ -68,9 +68,9 @@ namespace
     /** @brief 같은 원본(`pack/things_raw/a.src`)을 둔 새 체크아웃 폴더입니다(결과 · 스탬프 없음). */
     string makeCheckout( string_view name )
     {
-        const string root = test::makeScratchPath( name );
-        (void)writeText( FileUtil::joinPath( root, "pack/things_raw/a.src" ), "a" );
-        return root;
+        const AbsolutePath root = test::makeScratchPath( name );
+        (void)writeText( FileUtil::joinPath( root.str(), "pack/things_raw/a.src" ), "a" );
+        return root.str();
     }
 } // namespace
 
@@ -80,23 +80,23 @@ namespace
  */
 SW_TEST_CASE( AssetImportStampTest, RemovingASourceRemovesItsResult )
 {
-    const string root = test::makeScratchPath( "AssetImportStampOrphan" );
-    SW_REQUIRE_TRUE( writeText( FileUtil::joinPath( root, "pack/things_raw/gone.src" ), "a" ) );
-    SW_REQUIRE_TRUE( writeText( FileUtil::joinPath( root, "pack/things_raw/kept.src" ), "b" ) );
+    const AbsolutePath root = test::makeScratchPath( "AssetImportStampOrphan" );
+    SW_REQUIRE_TRUE( writeText( FileUtil::joinPath( root.str(), "pack/things_raw/gone.src" ), "a" ) );
+    SW_REQUIRE_TRUE( writeText( FileUtil::joinPath( root.str(), "pack/things_raw/kept.src" ), "b" ) );
     const FakeThingImporter importer;
-    const DerivedDataCache  cache{ vector<DerivedDataLayer>{ DerivedDataLayer{ test::makeScratchPath( "ImportDDC" ), DerivedDataAccess::ReadWrite } } }; // 프로젝트 DDC 에 쓰지 않는다
-    SW_REQUIRE_TRUE( AssetImportStampUtil::importAll( root, importer, AssetImportMode::ImportStale, nullptr, cache ).isClean() );
-    SW_REQUIRE_TRUE( FileUtil::exists( FileUtil::toDiskPath( FileUtil::joinPath( root, "pack/things/gone.out" ) ) ) );
-    SW_REQUIRE_TRUE( FileUtil::exists( FileUtil::toDiskPath( FileUtil::joinPath( root, "pack/things/gone/side.txt" ) ) ) );
+    const DerivedDataCache  cache{ vector<DerivedDataLayer>{ DerivedDataLayer{ test::makeScratchPath( "ImportDDC" ).str(), DerivedDataAccess::ReadWrite } } }; // 프로젝트 DDC 에 쓰지 않는다
+    SW_REQUIRE_TRUE( AssetImportStampUtil::importAll( root.str(), importer, AssetImportMode::ImportStale, nullptr, cache ).isClean() );
+    SW_REQUIRE_TRUE( FileUtil::exists( root.join( "pack/things/gone.out" ) ) );
+    SW_REQUIRE_TRUE( FileUtil::exists( root.join( "pack/things/gone/side.txt" ) ) );
 
-    SW_REQUIRE_TRUE( FileUtil::removeFile( FileUtil::toDiskPath( FileUtil::joinPath( root, "pack/things_raw/gone.src" ) ) ) );
-    SW_EXPECT_TRUE( AssetImportStampUtil::importAll( root, importer, AssetImportMode::ImportStale, nullptr, cache ).isClean() );
-    SW_EXPECT_FALSE( FileUtil::exists( FileUtil::toDiskPath( FileUtil::joinPath( root, "pack/things/gone.out" ) ) ) );
-    SW_EXPECT_FALSE( FileUtil::exists( FileUtil::toDiskPath( FileUtil::joinPath( root, "pack/things/gone" ) ) ) );
-    SW_EXPECT_TRUE( FileUtil::exists( FileUtil::toDiskPath( FileUtil::joinPath( root, "pack/things/kept.out" ) ) ) );
-    SW_EXPECT_TRUE( AssetImportStampUtil::importAll( root, importer, AssetImportMode::CheckOnly, nullptr, cache ).isClean() );
+    SW_REQUIRE_TRUE( FileUtil::removeFile( root.join( "pack/things_raw/gone.src" ) ) );
+    SW_EXPECT_TRUE( AssetImportStampUtil::importAll( root.str(), importer, AssetImportMode::ImportStale, nullptr, cache ).isClean() );
+    SW_EXPECT_FALSE( FileUtil::exists( root.join( "pack/things/gone.out" ) ) );
+    SW_EXPECT_FALSE( FileUtil::exists( root.join( "pack/things/gone" ) ) );
+    SW_EXPECT_TRUE( FileUtil::exists( root.join( "pack/things/kept.out" ) ) );
+    SW_EXPECT_TRUE( AssetImportStampUtil::importAll( root.str(), importer, AssetImportMode::CheckOnly, nullptr, cache ).isClean() );
 
-    SW_EXPECT_TRUE( FileUtil::removeDirectory( FileUtil::toDiskPath( root ) ) );
+    SW_EXPECT_TRUE( FileUtil::removeDirectory( root ) );
 }
 
 /**
@@ -104,7 +104,7 @@ SW_TEST_CASE( AssetImportStampTest, RemovingASourceRemovesItsResult )
  */
 SW_TEST_CASE( AssetImportStampTest, StaleSourceIsServedFromCache )
 {
-    const DerivedDataCache  cache{ vector<DerivedDataLayer>{ DerivedDataLayer{ test::makeScratchPath( "ImportDDC" ), DerivedDataAccess::ReadWrite } } };
+    const DerivedDataCache  cache{ vector<DerivedDataLayer>{ DerivedDataLayer{ test::makeScratchPath( "ImportDDC" ).str(), DerivedDataAccess::ReadWrite } } };
     const string            firstRoot = makeCheckout( "ImportCacheFirst" );
     const FakeThingImporter first;
     SW_REQUIRE_TRUE( AssetImportStampUtil::importAll( firstRoot, first, AssetImportMode::ImportStale, nullptr, cache ).isClean() );
@@ -128,7 +128,7 @@ SW_TEST_CASE( AssetImportStampTest, StaleSourceIsServedFromCache )
  */
 SW_TEST_CASE( AssetImportStampTest, DifferentSettingsMiss )
 {
-    const DerivedDataCache  cache{ vector<DerivedDataLayer>{ DerivedDataLayer{ test::makeScratchPath( "ImportDDC" ), DerivedDataAccess::ReadWrite } } };
+    const DerivedDataCache  cache{ vector<DerivedDataLayer>{ DerivedDataLayer{ test::makeScratchPath( "ImportDDC" ).str(), DerivedDataAccess::ReadWrite } } };
     const FakeThingImporter first( "fast" );
     SW_REQUIRE_TRUE( AssetImportStampUtil::importAll( makeCheckout( "ImportSettingsFirst" ), first, AssetImportMode::ImportStale, nullptr, cache ).isClean() );
 

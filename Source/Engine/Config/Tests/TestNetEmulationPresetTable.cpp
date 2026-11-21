@@ -61,10 +61,10 @@ namespace
  */
 SW_TEST_CASE_EACH( NetEmulationPresetTableTest, BrokenTableIsRejectedAtLoad, kArrBrokenPresetTable )
 {
-    const string path = test::makeScratchPath( "broken.presets.xml" );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( path ), param._pXML ) );
+    const AbsolutePath path = test::makeScratchPath( "broken.presets.xml" );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( path, param._pXML ) );
     SW_EXPECT_LOG( param._pExpectedID );
     NetEmulationPresetTable table;
-    SW_EXPECT_FALSE_MSG( table.loadFromDiskFile( path ), param._pXML );
+    SW_EXPECT_FALSE_MSG( table.loadFromDiskFile( path.str() ), param._pXML );
     SW_EXPECT_TRUE( table._listPreset.empty() );
 }

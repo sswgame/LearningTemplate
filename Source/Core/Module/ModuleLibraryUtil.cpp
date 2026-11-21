@@ -137,8 +137,8 @@ namespace sw
         const ModuleSubdirectory& moved = s_moduleSubdirectory;
         if ( moved._arrDirectory[0] != '\0' )
         {
-            const string movedDirectory = FileUtil::joinPath( ProcessRoots::get()._binary.str(), moved._arrDirectory );
-            if ( FileUtil::isSameDiskPath( FileUtil::getDirectoryPart( libraryPath ), movedDirectory ) )
+            const AbsolutePath movedDirectory = ProcessRoots::get()._binary.join( moved._arrDirectory );
+            if ( FileUtil::isSameDiskPath( FileUtil::getDirectoryPart( libraryPath ), movedDirectory.str() ) )
                 symbolDirectory = FileUtil::joinPath( symbolDirectory, moved._arrDirectory );
         }
         string found = FileUtil::joinPath( symbolDirectory, fileName );
@@ -187,9 +187,9 @@ namespace sw
         string modulePath = FileUtil::joinPath( getModuleDirectory(), fileName );
         if ( FileUtil::exists( FileUtil::toDiskPath( modulePath ) ) == false )
         {
-            const string binaryPath = FileUtil::joinPath( ProcessRoots::get()._binary.str(), fileName );
-            if ( FileUtil::exists( FileUtil::toDiskPath( binaryPath ) ) )
-                modulePath = binaryPath;
+            const AbsolutePath binaryPath = ProcessRoots::get()._binary.join( fileName );
+            if ( FileUtil::exists( binaryPath ) )
+                modulePath = binaryPath.str();
         }
         return modulePath;
     }

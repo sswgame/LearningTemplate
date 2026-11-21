@@ -58,9 +58,9 @@ namespace
 SW_TEST_CASE( ParkLayoutTest, SharedCacheHoldsTheSamePackCoasterLayouts )
 {
     const test::ScopedScratchDomain domain;
-    (void)domain.makeDiskFolder( "park/data" );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( domain.makeDiskPath( "park/data/coasters.xml" ) ), Util::kCoasters ) );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( domain.makeDiskPath( "park/data/rides.xml" ) ), Util::makeLayout( "5" ) ) );
+    (void)domain.makeDiskFolder( "park/data" ).str();
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "park/data/coasters.xml" ), Util::kCoasters ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "park/data/rides.xml" ), Util::makeLayout( "5" ) ) );
     const string layoutID  = test::ScopedScratchDomain::makeID( "park/data/rides.xml" ).str();
     const string coasterID = test::ScopedScratchDomain::makeID( "park/data/coasters.xml" ).str();
 
@@ -74,7 +74,7 @@ SW_TEST_CASE( ParkLayoutTest, SharedCacheHoldsTheSamePackCoasterLayouts )
     SW_REQUIRE_TRUE( pHeld->getCoasterLayouts() != nullptr );
     SW_EXPECT_TRUE( pHeld->getCoasterLayouts().get() == SharedAssetCache<CoasterLayoutCatalog>::acquire( coasterID ).snapshot().get() );
 
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( domain.makeDiskPath( "park/data/rides.xml" ) ), Util::makeLayout( "9" ) ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "park/data/rides.xml" ), Util::makeLayout( "9" ) ) );
     SW_REQUIRE_TRUE( SharedAssetCache<ParkLayout>::reloadShared( layoutID ) );
     SW_EXPECT_EQUAL( 5, pHeld->getEntryFee() ); // 쥔 객체는 바뀌지 않는다(A-7)
     const shared_ptr<const ParkLayout> pFresh = SharedAssetCache<ParkLayout>::acquire( layoutID ).snapshot();

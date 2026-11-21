@@ -114,8 +114,8 @@ SW_TEST_CASE( ShaderRequestLogTest, RejectsWrongHeaderOrBadLineWithoutPartialAdd
  */
 SW_TEST_CASE( ShaderRequestLogTest, ReadFolderMergesChildFiles )
 {
-    const string                     folder  = sw::test::makeScratchPath( "ShaderRequests" );
-    const expected<ShaderRequestLog> missing = ShaderRequestLog::readFolder( FileUtil::joinPath( folder, "none" ) );
+    const AbsolutePath               folder  = sw::test::makeScratchPath( "ShaderRequests" );
+    const expected<ShaderRequestLog> missing = ShaderRequestLog::readFolder( FileUtil::joinPath( folder.str(), "none" ) );
     SW_REQUIRE_TRUE( missing.has_value() );
     SW_EXPECT_EQUAL( size_t( 0 ), missing->size() );
 
@@ -124,12 +124,12 @@ SW_TEST_CASE( ShaderRequestLogTest, ReadFolderMergesChildFiles )
     ShaderRequestLog vkChild;
     (void)vkChild.add( makeRequestDesc( "engine/shaders/decal.hlsl", ShaderTargetFormat::SPIRV_Vulkan ) );
     (void)vkChild.add( makeRequestDesc( "engine/shaders/decal.hlsl", ShaderTargetFormat::DXBC_D3D11 ) ); // 백엔드를 바꾼 자식 — 다른 자식과 겹친다
-    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( folder ) ) );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( FileUtil::joinPath( folder, "Scenario.playground.dx11.shaderrequests" ) ), dx11Child.makeText() ) );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( FileUtil::joinPath( folder, "Scenario.playground.vk.shaderrequests" ) ), vkChild.makeText() ) );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( FileUtil::joinPath( folder, "notes.txt" ) ), "not a request log" ) );
+    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( folder ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( folder.join( "Scenario.playground.dx11.shaderrequests" ), dx11Child.makeText() ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( folder.join( "Scenario.playground.vk.shaderrequests" ), vkChild.makeText() ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( folder.join( "notes.txt" ), "not a request log" ) );
 
-    const expected<ShaderRequestLog> merged = ShaderRequestLog::readFolder( folder );
+    const expected<ShaderRequestLog> merged = ShaderRequestLog::readFolder( folder.str() );
     SW_REQUIRE_TRUE( merged.has_value() );
     SW_EXPECT_EQUAL( size_t( 2 ), merged->size() );
 }

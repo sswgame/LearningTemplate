@@ -77,25 +77,25 @@ SW_TEST_CASE( ConfigManagerTest, ConfigTableIsKeyedByType )
  */
 SW_TEST_CASE( ConfigManagerTest, MissingRequiredFileFails )
 {
-    const string missingPath = test::makeScratchPath( "config_that_does_not_exist.json" ); // 케이스 폴더는 비어 있다 — 만들지 않는다
+    const AbsolutePath missingPath = test::makeScratchPath( "config_that_does_not_exist.json" ); // 케이스 폴더는 비어 있다 — 만들지 않는다
 
     // 1) 필수 설정은 파일이 없으면 nullptr 이다. 값이 파일에만 있는 EngineConfig 도, 헤더에 기본값이 있는 GameConfig 도 같다.
     SW_EXPECT_LOG( "Config.RequiredMissing" );
     {
         ConfigManager manager;
-        SW_EXPECT_NULL( manager.loadHostConfig<EngineConfig>( ConfigSource::disk( missingPath ) ) );
+        SW_EXPECT_NULL( manager.loadHostConfig<EngineConfig>( ConfigSource::disk( missingPath.str() ) ) );
         SW_EXPECT_NULL( manager.getConfig<EngineConfig>() );
     }
     {
         ConfigManager manager;
-        SW_EXPECT_NULL( manager.loadHostConfig<GameConfig>( ConfigSource::disk( missingPath ) ) );
+        SW_EXPECT_NULL( manager.loadHostConfig<GameConfig>( ConfigSource::disk( missingPath.str() ) ) );
         SW_EXPECT_NULL( manager.getConfig<GameConfig>() );
     }
 
     // 2) 선택 설정은 없음을 돌려주고 아무것도 등록하지 않는다(로그도 없다).
     {
         ConfigManager manager;
-        SW_EXPECT_TRUE( manager.loadOptionalConfig<GameConfig>( ConfigSource::disk( missingPath ) ) == ConfigReadResult::Missing );
+        SW_EXPECT_TRUE( manager.loadOptionalConfig<GameConfig>( ConfigSource::disk( missingPath.str() ) ) == ConfigReadResult::Missing );
         SW_EXPECT_NULL( manager.getConfig<GameConfig>() );
     }
 
@@ -125,11 +125,11 @@ SW_TEST_CASE( ConfigManagerTest, MissingRequiredFileFails )
  */
 SW_TEST_CASE( ConfigManagerTest, ReloadConfigFileUpdatesInPlaceAndNotifies )
 {
-    const string path = test::makeScratchPath( "ReloadEngineConfig.json" );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( path ), makeEngineConfigJSON( 800, 600 ) ) );
+    const AbsolutePath path = test::makeScratchPath( "ReloadEngineConfig.json" );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( path, makeEngineConfigJSON( 800, 600 ) ) );
 
     ConfigManager manager;
-    SW_REQUIRE_TRUE( manager.loadConfig<EngineConfig>( path ) );
+    SW_REQUIRE_TRUE( manager.loadConfig<EngineConfig>( path.str() ) );
     const EngineConfig* pBefore = manager.getConfig<EngineConfig>();
     SW_REQUIRE_NOT_NULL( pBefore );
     SW_EXPECT_EQUAL( 1u, manager.getReloadableCount() );
@@ -142,21 +142,21 @@ SW_TEST_CASE( ConfigManagerTest, ReloadConfigFileUpdatesInPlaceAndNotifies )
         notifiedType = typeName;
     } ) );
 
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( path ), makeEngineConfigJSON( 1024, 768 ) ) );
-    SW_EXPECT_TRUE( manager.reloadConfigFile( path ) == ReloadResult::Reloaded );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( path, makeEngineConfigJSON( 1024, 768 ) ) );
+    SW_EXPECT_TRUE( manager.reloadConfigFile( path.str() ) == ReloadResult::Reloaded );
     SW_EXPECT_TRUE_MSG( manager.getConfig<EngineConfig>() == pBefore, "the reload replaced the config object (a kept pointer dangles)" );
     SW_EXPECT_EQUAL( 1024u, pBefore->_window._width );
     SW_EXPECT_EQUAL( 1u, notifyCount );
     SW_EXPECT_TRUE( notifiedType == EngineConfig::StaticType()->_fullyQualifiedName );
 
     // 모르는 경로는 아무것도 하지 않는다.
-    SW_EXPECT_TRUE( manager.reloadConfigFile( test::makeScratchPath( "Other.json" ) ) == ReloadResult::NotTracked );
+    SW_EXPECT_TRUE( manager.reloadConfigFile( test::makeScratchPath( "Other.json" ).str() ) == ReloadResult::NotTracked );
     // 깨진 JSON 은 이전 값을 지킨다.
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( path ), "{ \"_window\": { \"_width\": " ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( path, "{ \"_window\": { \"_width\": " ) );
     SW_EXPECT_LOG( "JSON.ParseError" );
     SW_EXPECT_LOG( "Config.NotJSONObject" );
     SW_EXPECT_LOG( "Config.ReloadInvalid" );
-    SW_EXPECT_TRUE( manager.reloadConfigFile( path ) == ReloadResult::Failed );
+    SW_EXPECT_TRUE( manager.reloadConfigFile( path.str() ) == ReloadResult::Failed );
     SW_EXPECT_EQUAL( 1024u, pBefore->_window._width );
     SW_EXPECT_EQUAL( 1u, notifyCount );
 }
@@ -188,14 +188,14 @@ SW_TEST_CASE_EACH( ConfigManagerTest, InvalidFileStopsAndNamesTheKey, kArrInvali
     JSONDocument document;
     SW_REQUIRE_TRUE( openEngineConfigDocument( document ) );
     document.getRoot().set( param._pKey ).setFloat( param._value );
-    const string           path = test::makeScratchPath( "InvalidEngineConfig.json" );
+    const AbsolutePath     path = test::makeScratchPath( "InvalidEngineConfig.json" );
     const expected<string> text = document.dump();
     SW_REQUIRE_TRUE( text.has_value() );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( path ), *text ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( path, *text ) );
 
     SW_EXPECT_LOG( param._pExpectedID );
     ConfigManager manager;
-    SW_EXPECT_TRUE_MSG( manager.loadHostConfig<EngineConfig>( ConfigSource::disk( path ) ) == nullptr, param._pKey );
+    SW_EXPECT_TRUE_MSG( manager.loadHostConfig<EngineConfig>( ConfigSource::disk( path.str() ) ) == nullptr, param._pKey );
     SW_EXPECT_NULL( manager.getConfig<EngineConfig>() );
 }
 
@@ -245,28 +245,28 @@ SW_TEST_CASE( ConfigManagerTest, PlatformOverrideMergesObjectsAndReplacesValues 
  */
 SW_TEST_CASE( ConfigManagerTest, PlatformOverrideFileLayersOnTheBase )
 {
-    const string basePath     = test::makeScratchPath( "LayeredEngineConfig.json" );
-    const string overridePath = test::makeScratchPath( "LayeredEngineConfig.Platform.json" );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( basePath ), makeEngineConfigJSON( 800, 600 ) ) );
+    const AbsolutePath basePath     = test::makeScratchPath( "LayeredEngineConfig.json" );
+    const AbsolutePath overridePath = test::makeScratchPath( "LayeredEngineConfig.Platform.json" );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( basePath, makeEngineConfigJSON( 800, 600 ) ) );
 
     // 1) 덮어쓰기 파일이 없으면 바탕만 읽는다(선택 층).
     {
         ConfigManager manager;
-        SW_REQUIRE_TRUE( manager.loadConfigFile<EngineConfig>( basePath, overridePath ) == ConfigReadResult::Loaded );
+        SW_REQUIRE_TRUE( manager.loadConfigFile<EngineConfig>( basePath.str(), overridePath.str() ) == ConfigReadResult::Loaded );
         SW_EXPECT_EQUAL( 800u, manager.getConfig<EngineConfig>()->_window._width );
     }
 
     // 2) 덮어쓰기는 적은 키만 바꾸고, 덮어쓰기 파일이 바뀌면 다시 읽는다.
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( overridePath ), R"({ "_window": { "_width": 1280 } })" ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( overridePath, R"({ "_window": { "_width": 1280 } })" ) );
     {
         ConfigManager manager;
-        SW_REQUIRE_TRUE( manager.loadHostConfig<EngineConfig>( ConfigSource::disk( basePath, overridePath ) ) != nullptr );
+        SW_REQUIRE_TRUE( manager.loadHostConfig<EngineConfig>( ConfigSource::disk( basePath.str(), overridePath.str() ) ) != nullptr );
         const EngineConfig* pConfig = manager.getConfig<EngineConfig>();
         SW_EXPECT_EQUAL( 1280u, pConfig->_window._width );
         SW_EXPECT_EQUAL( 600u, pConfig->_window._height );
 
-        SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( overridePath ), R"({ "_window": { "_width": 1920 } })" ) );
-        SW_EXPECT_TRUE( manager.reloadConfigFile( overridePath ) == ReloadResult::Reloaded );
+        SW_REQUIRE_TRUE( FileUtil::writeTextFile( overridePath, R"({ "_window": { "_width": 1920 } })" ) );
+        SW_EXPECT_TRUE( manager.reloadConfigFile( overridePath.str() ) == ReloadResult::Reloaded );
         SW_EXPECT_TRUE( manager.getConfig<EngineConfig>() == pConfig );
         SW_EXPECT_EQUAL( 1920u, pConfig->_window._width );
     }
@@ -282,18 +282,18 @@ SW_TEST_CASE( ConfigManagerTest, PlatformOverrideFileLayersOnTheBase )
     }
 
     // 4) 덮어쓰기의 모르는 키는 바탕과 같은 엄격 읽기에서 진다 — 기본값으로 떨어지지 않는다.
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( overridePath ), R"({ "_windw": { "_width": 1280 } })" ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( overridePath, R"({ "_windw": { "_width": 1280 } })" ) );
     SW_EXPECT_LOG( "Config.KeyUnknown" );
     {
         ConfigManager manager;
-        SW_EXPECT_NULL( manager.loadHostConfig<EngineConfig>( ConfigSource::disk( basePath, overridePath ) ) );
+        SW_EXPECT_NULL( manager.loadHostConfig<EngineConfig>( ConfigSource::disk( basePath.str(), overridePath.str() ) ) );
     }
 
     // 5) 구조체 칸 안의 모르는 키도 모르는 키 하나로 끝난다 — 읽지 못한 `_render` 를 읽기 전 값(새 객체의 0, 범위 밖)으로 되돌리는 길이 범위 검사로 덧나지 않는다.
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( overridePath ), R"({ "_render": { "_shadowCullSlots": 4 } })" ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( overridePath, R"({ "_render": { "_shadowCullSlots": 4 } })" ) );
     {
         ConfigManager manager;
-        SW_EXPECT_NULL( manager.loadHostConfig<EngineConfig>( ConfigSource::disk( basePath, overridePath ) ) );
+        SW_EXPECT_NULL( manager.loadHostConfig<EngineConfig>( ConfigSource::disk( basePath.str(), overridePath.str() ) ) );
     }
 }
 
@@ -304,21 +304,21 @@ SW_TEST_CASE( ConfigManagerTest, PlatformOverrideFileLayersOnTheBase )
  */
 SW_TEST_CASE( ConfigManagerTest, RenderQualityTierLayersAfterPlatform )
 {
-    const string basePath     = test::makeScratchPath( "QualityEngineConfig.json" );
-    const string overridePath = test::makeScratchPath( "QualityEngineConfig.Platform.json" );
-    const string qualityPath  = test::makeScratchPath( "QualityRenderQuality.json" );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( basePath ), makeEngineConfigJSON( 800, 600 ) ) );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( overridePath ), R"({ "_window": { "_width": 1280 }, "_render": { "_shadowLocalCullSlotLimit": 10, "_maxExtraViewCount": 5 } })" ) );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( qualityPath ), R"({ "low": { "_shadowLocalCullSlotLimit": 4, "_textureStreaming": { "_poolMegabytes": 256 } }, "high": {} })" ) );
+    const AbsolutePath basePath     = test::makeScratchPath( "QualityEngineConfig.json" );
+    const AbsolutePath overridePath = test::makeScratchPath( "QualityEngineConfig.Platform.json" );
+    const AbsolutePath qualityPath  = test::makeScratchPath( "QualityRenderQuality.json" );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( basePath, makeEngineConfigJSON( 800, 600 ) ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( overridePath, R"({ "_window": { "_width": 1280 }, "_render": { "_shadowLocalCullSlotLimit": 10, "_maxExtraViewCount": 5 } })" ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( qualityPath, R"({ "low": { "_shadowLocalCullSlotLimit": 4, "_textureStreaming": { "_poolMegabytes": 256 } }, "high": {} })" ) );
 
     ConfigManager baseOnly;
-    SW_REQUIRE_TRUE( baseOnly.loadConfigFile<EngineConfig>( basePath ) == ConfigReadResult::Loaded );
+    SW_REQUIRE_TRUE( baseOnly.loadConfigFile<EngineConfig>( basePath.str() ) == ConfigReadResult::Loaded );
     const RenderConfig& baseRender = baseOnly.getConfig<EngineConfig>()->_render;
 
     // 1) 단계가 플랫폼 위에 선다 — 같은 키는 단계가, 단계가 적지 않은 키는 플랫폼이, 둘 다 적지 않은 키는 바탕이 남는다.
     {
         ConfigManager       manager;
-        const EngineConfig* pConfig = manager.loadHostConfig<EngineConfig>( ConfigSource::disk( basePath, overridePath ).withRenderQuality( qualityPath, "low" ) );
+        const EngineConfig* pConfig = manager.loadHostConfig<EngineConfig>( ConfigSource::disk( basePath.str(), overridePath.str() ).withRenderQuality( qualityPath.str(), "low" ) );
         SW_REQUIRE_NOT_NULL( pConfig );
         SW_EXPECT_EQUAL( 4u, pConfig->_render._shadowLocalCullSlotLimit );
         SW_EXPECT_EQUAL( 5u, pConfig->_render._maxExtraViewCount );
@@ -331,13 +331,13 @@ SW_TEST_CASE( ConfigManagerTest, RenderQualityTierLayersAfterPlatform )
         manager.forEachFileSource( [&]( const hashed_string&, string_view resolvedPath )
         {
             ++sourceCount;
-            SW_EXPECT_TRUE( FileUtil::isSameDiskPath( resolvedPath, basePath ) );
+            SW_EXPECT_TRUE( FileUtil::isSameDiskPath( resolvedPath, basePath.str() ) );
         } );
         SW_EXPECT_EQUAL( 1u, sourceCount );
 
         // 2) 단계 표가 바뀌면 제자리에서 다시 읽는다.
-        SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( qualityPath ), R"({ "low": { "_shadowLocalCullSlotLimit": 2 }, "high": {} })" ) );
-        SW_EXPECT_TRUE( manager.reloadConfigFile( qualityPath ) == ReloadResult::Reloaded );
+        SW_REQUIRE_TRUE( FileUtil::writeTextFile( qualityPath, R"({ "low": { "_shadowLocalCullSlotLimit": 2 }, "high": {} })" ) );
+        SW_EXPECT_TRUE( manager.reloadConfigFile( qualityPath.str() ) == ReloadResult::Reloaded );
         SW_EXPECT_TRUE( manager.getConfig<EngineConfig>() == pConfig );
         SW_EXPECT_EQUAL( 2u, pConfig->_render._shadowLocalCullSlotLimit );
     }
@@ -346,13 +346,13 @@ SW_TEST_CASE( ConfigManagerTest, RenderQualityTierLayersAfterPlatform )
     for ( const utf8* pTier : { "", "high" } )
     {
         ConfigManager       manager;
-        const EngineConfig* pConfig = manager.loadHostConfig<EngineConfig>( ConfigSource::disk( basePath, overridePath ).withRenderQuality( qualityPath, pTier ) );
+        const EngineConfig* pConfig = manager.loadHostConfig<EngineConfig>( ConfigSource::disk( basePath.str(), overridePath.str() ).withRenderQuality( qualityPath.str(), pTier ) );
         SW_REQUIRE_NOT_NULL( pConfig );
         SW_EXPECT_EQUAL( 10u, pConfig->_render._shadowLocalCullSlotLimit );
     }
     {
         ConfigManager       manager;
-        const EngineConfig* pConfig = manager.loadHostConfig<EngineConfig>( ConfigSource::disk( basePath ).withRenderQuality( qualityPath, "" ) );
+        const EngineConfig* pConfig = manager.loadHostConfig<EngineConfig>( ConfigSource::disk( basePath.str() ).withRenderQuality( qualityPath.str(), "" ) );
         SW_REQUIRE_NOT_NULL( pConfig );
         SW_EXPECT_EQUAL( baseRender._shadowLocalCullSlotLimit, pConfig->_render._shadowLocalCullSlotLimit );
         SW_EXPECT_EQUAL( baseRender._maxExtraViewCount, pConfig->_render._maxExtraViewCount );
@@ -376,40 +376,40 @@ SW_TEST_CASE( ConfigManagerTest, RenderQualityTierLayersAfterPlatform )
  */
 SW_TEST_CASE( ConfigManagerTest, RenderQualityRejectsUnknownTierAndKey )
 {
-    const string basePath    = test::makeScratchPath( "QualityRejectEngineConfig.json" );
-    const string qualityPath = test::makeScratchPath( "QualityRejectRenderQuality.json" );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( basePath ), makeEngineConfigJSON( 800, 600 ) ) );
+    const AbsolutePath basePath    = test::makeScratchPath( "QualityRejectEngineConfig.json" );
+    const AbsolutePath qualityPath = test::makeScratchPath( "QualityRejectRenderQuality.json" );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( basePath, makeEngineConfigJSON( 800, 600 ) ) );
 
     // 1) 표가 없다.
     SW_EXPECT_LOG( "Config.RenderQualityMissing" );
     {
         ConfigManager manager;
-        SW_EXPECT_NULL( manager.loadHostConfig<EngineConfig>( ConfigSource::disk( basePath ).withRenderQuality( qualityPath, "low" ) ) );
+        SW_EXPECT_NULL( manager.loadHostConfig<EngineConfig>( ConfigSource::disk( basePath.str() ).withRenderQuality( qualityPath.str(), "low" ) ) );
     }
 
     // 2) 없는 단계 이름.
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( qualityPath ), R"({ "low": {}, "high": {} })" ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( qualityPath, R"({ "low": {}, "high": {} })" ) );
     SW_EXPECT_LOG( "Config.RenderQualityUnknownTier" );
     {
         ConfigManager manager;
-        SW_EXPECT_NULL( manager.loadHostConfig<EngineConfig>( ConfigSource::disk( basePath ).withRenderQuality( qualityPath, "nope" ) ) );
+        SW_EXPECT_NULL( manager.loadHostConfig<EngineConfig>( ConfigSource::disk( basePath.str() ).withRenderQuality( qualityPath.str(), "nope" ) ) );
     }
 
     // 3) 단계의 모르는 키, 그리고 `_render` 밖 칸(단계는 `_render` 안쪽이라 `_window` 는 RenderConfig 의 모르는 키다).
     SW_EXPECT_LOG( "Config.KeyUnknown" );
     for ( const utf8* pTiers : { R"({ "low": { "_shadowCullSlots": 4 } })", R"({ "low": { "_window": { "_width": 1 } } })" } )
     {
-        SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( qualityPath ), pTiers ) );
+        SW_REQUIRE_TRUE( FileUtil::writeTextFile( qualityPath, pTiers ) );
         ConfigManager manager;
-        SW_EXPECT_NULL( manager.loadHostConfig<EngineConfig>( ConfigSource::disk( basePath ).withRenderQuality( qualityPath, "low" ) ) );
+        SW_EXPECT_NULL( manager.loadHostConfig<EngineConfig>( ConfigSource::disk( basePath.str() ).withRenderQuality( qualityPath.str(), "low" ) ) );
     }
 
     // 4) 단계가 객체가 아니다.
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( qualityPath ), R"({ "low": 1 })" ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( qualityPath, R"({ "low": 1 })" ) );
     SW_EXPECT_LOG( "Config.RenderQualityTierNotObject" );
     {
         ConfigManager manager;
-        SW_EXPECT_NULL( manager.loadHostConfig<EngineConfig>( ConfigSource::disk( basePath ).withRenderQuality( qualityPath, "low" ) ) );
+        SW_EXPECT_NULL( manager.loadHostConfig<EngineConfig>( ConfigSource::disk( basePath.str() ).withRenderQuality( qualityPath.str(), "low" ) ) );
     }
 }
 
@@ -451,16 +451,16 @@ SW_TEST_CASE( ConfigManagerTest, CommittedRenderQualityTiersLoad )
  */
 SW_TEST_CASE( ConfigManagerTest, RenderQualityAppliesInPlace )
 {
-    const string basePath    = test::makeScratchPath( "QualityApplyEngineConfig.json" );
-    const string qualityPath = test::makeScratchPath( "QualityApplyRenderQuality.json" );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( basePath ), makeEngineConfigJSON( 800, 600 ) ) );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( qualityPath ), R"({ "low": { "_shadowLocalCullSlotLimit": 4 }, "high": {} })" ) );
+    const AbsolutePath basePath    = test::makeScratchPath( "QualityApplyEngineConfig.json" );
+    const AbsolutePath qualityPath = test::makeScratchPath( "QualityApplyRenderQuality.json" );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( basePath, makeEngineConfigJSON( 800, 600 ) ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( qualityPath, R"({ "low": { "_shadowLocalCullSlotLimit": 4 }, "high": {} })" ) );
 
     ConfigManager manager;
     SW_EXPECT_LOG( "ConfigManager.RenderQualityBeforeLoad" );
     SW_EXPECT_FALSE( manager.applyRenderQuality( "low" ) ); // 읽은 출처가 없으면 다시 읽을 수 없다
 
-    const EngineConfig* pConfig = manager.loadEngineConfig( ConfigSource::disk( basePath ).withRenderQuality( qualityPath, "high" ) );
+    const EngineConfig* pConfig = manager.loadEngineConfig( ConfigSource::disk( basePath.str() ).withRenderQuality( qualityPath.str(), "high" ) );
     SW_REQUIRE_NOT_NULL( pConfig );
     const uint32       baseLimit          = pConfig->_render._shadowLocalCullSlotLimit;
     uint32             notifyCount        = 0;
@@ -483,8 +483,8 @@ SW_TEST_CASE( ConfigManagerTest, RenderQualityAppliesInPlace )
     SW_EXPECT_EQUAL( 1u, notifyCount );
 
     // 3) 바탕 파일을 다시 읽어도 고른 단계(low)가 위에 선다.
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( basePath ), makeEngineConfigJSON( 1024, 600 ) ) );
-    SW_EXPECT_TRUE( manager.reloadConfigFile( basePath ) == ReloadResult::Reloaded );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( basePath, makeEngineConfigJSON( 1024, 600 ) ) );
+    SW_EXPECT_TRUE( manager.reloadConfigFile( basePath.str() ) == ReloadResult::Reloaded );
     SW_EXPECT_EQUAL( 1024u, pConfig->_window._width );
     SW_EXPECT_EQUAL( 4u, pConfig->_render._shadowLocalCullSlotLimit );
 
@@ -499,10 +499,10 @@ SW_TEST_CASE( ConfigManagerTest, RenderQualityAppliesInPlace )
  */
 SW_TEST_CASE( ConfigManagerTest, InPlaceWriteWaitsForWriteFence )
 {
-    const string basePath    = test::makeScratchPath( "FenceEngineConfig.json" );
-    const string qualityPath = test::makeScratchPath( "FenceRenderQuality.json" );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( basePath ), makeEngineConfigJSON( 800, 600 ) ) );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( qualityPath ), R"({ "low": { "_shadowLocalCullSlotLimit": 4 }, "high": {} })" ) );
+    const AbsolutePath basePath    = test::makeScratchPath( "FenceEngineConfig.json" );
+    const AbsolutePath qualityPath = test::makeScratchPath( "FenceRenderQuality.json" );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( basePath, makeEngineConfigJSON( 800, 600 ) ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( qualityPath, R"({ "low": { "_shadowLocalCullSlotLimit": 4 }, "high": {} })" ) );
 
     ConfigManager manager;
     uint32        fenceCount   = 0;
@@ -517,7 +517,7 @@ SW_TEST_CASE( ConfigManagerTest, InPlaceWriteWaitsForWriteFence )
     } ) );
 
     // 1) 첫 읽기는 덮지 않는다.
-    const EngineConfig* pConfig = manager.loadEngineConfig( ConfigSource::disk( basePath ).withRenderQuality( qualityPath, "high" ) );
+    const EngineConfig* pConfig = manager.loadEngineConfig( ConfigSource::disk( basePath.str() ).withRenderQuality( qualityPath.str(), "high" ) );
     SW_REQUIRE_NOT_NULL( pConfig );
     SW_EXPECT_EQUAL( 0u, fenceCount );
     const uint32 baseLimit = pConfig->_render._shadowLocalCullSlotLimit;
@@ -534,8 +534,8 @@ SW_TEST_CASE( ConfigManagerTest, InPlaceWriteWaitsForWriteFence )
     SW_EXPECT_EQUAL( 1u, fenceCount );
 
     // 4) 파일 다시 읽기도 같은 울타리를 지난다.
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( basePath ), makeEngineConfigJSON( 1024, 600 ) ) );
-    SW_EXPECT_TRUE( manager.reloadConfigFile( basePath ) == ReloadResult::Reloaded );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( basePath, makeEngineConfigJSON( 1024, 600 ) ) );
+    SW_EXPECT_TRUE( manager.reloadConfigFile( basePath.str() ) == ReloadResult::Reloaded );
     SW_EXPECT_EQUAL( 2u, fenceCount );
     SW_EXPECT_EQUAL( 800u, widthAtFence );
     SW_EXPECT_EQUAL( 1024u, pConfig->_window._width );

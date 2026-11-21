@@ -632,8 +632,8 @@ SW_TEST_CASE( TileMapViewModelTest, MissingFileStartsANewMap )
     SW_REQUIRE_TRUE( document.applyInputSize() );
     SW_REQUIRE_TRUE( document.addDataLayer( "Depth", 0 ) );
 
-    const string missingPath = test::makeScratchPath( "SwTileMapDocumentMissing.tilemap.xml" );
-    SW_EXPECT_TRUE( document.loadXML( missingPath ) == ToolAssetLoadResult::Missing );
+    const AbsolutePath missingPath = test::makeScratchPath( "SwTileMapDocumentMissing.tilemap.xml" );
+    SW_EXPECT_TRUE( document.loadXML( missingPath.str() ) == ToolAssetLoadResult::Missing );
     SW_EXPECT_EQUAL( TileMapViewModel::kNewMapSide, document.getMap()._width );
     SW_EXPECT_TRUE( document.getMap()._listDataLayer.empty() );
     SW_EXPECT_TRUE( document.getPaintLayer() == TileMapViewModel::PaintLayer::Flag );
@@ -641,7 +641,7 @@ SW_TEST_CASE( TileMapViewModelTest, MissingFileStartsANewMap )
 
 SW_TEST_CASE( TileMapViewModelTest, SaveAndLoadRoundTripWithStatus )
 {
-    const string path = test::makeScratchPath( "SwTileMapDocumentRoundTrip.tilemap.xml" );
+    const AbsolutePath path = test::makeScratchPath( "SwTileMapDocumentRoundTrip.tilemap.xml" );
     {
         const DocumentEditRecorder documentRecorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
         TileMapViewModel           document;
@@ -655,9 +655,9 @@ SW_TEST_CASE( TileMapViewModelTest, SaveAndLoadRoundTripWithStatus )
     const DocumentEditRecorder documentRecorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
     TileMapViewModel           document;
     document.bindDocumentEditRecorder( documentRecorder );
-    SW_EXPECT_TRUE( document.loadXML( path ) == ToolAssetLoadResult::Loaded );
+    SW_EXPECT_TRUE( document.loadXML( path.str() ) == ToolAssetLoadResult::Loaded );
     SW_EXPECT_FALSE( Util::isWalkable( document, 1, 1 ) );
-    (void)FileUtil::removeFile( FileUtil::toDiskPath( path ) );
+    (void)FileUtil::removeFile( path );
 }
 
 SW_TEST_CASE( TileMapViewModelTest, DescribeCellReadsTheSelectedLayer )

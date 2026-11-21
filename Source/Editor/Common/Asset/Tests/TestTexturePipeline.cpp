@@ -24,7 +24,7 @@ using namespace sw::editor;
 SW_TEST_CASE( EditorTexturePipelineTest, DDSFormatFileMatchesTheImportTable )
 {
     string text;
-    SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::toDiskPath( FileUtil::joinPath( ProcessRoots::get()._project.str(), "Config/Editor/DdsFormats.json" ) ), text ) );
+    SW_REQUIRE_TRUE( FileUtil::readTextFile( ProcessRoots::get()._project.join( "Config/Editor/DdsFormats.json" ), text ) );
     JSONDocument document;
     SW_REQUIRE_TRUE( document.parse( text, "DdsFormats.json" ) );
     const JSONValue formats = document.getRoot().get( "dxgi_formats" );
@@ -86,21 +86,21 @@ SW_TEST_CASE( EditorTexturePipelineTest, BlockCompressedImportAlignsTheTopLevelT
     {
         bytes[index] = 0;
     }
-    bytes[2]                = 2;
-    bytes[12]               = static_cast<uint8>( kWidth );
-    bytes[14]               = static_cast<uint8>( kHeight );
-    bytes[16]               = 32;
-    bytes[17]               = 8; // 알파 8 비트
-    const string root       = test::makeScratchPath( "TextureBlockAlign" );
-    const string sourcePath = FileUtil::joinPath( root, "textures_raw/odd.tga" );
-    const string outputPath = FileUtil::joinPath( root, "textures/odd.dds" );
-    SW_REQUIRE_TRUE( FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( sourcePath ) ) && FileUtil::writeFile( FileUtil::toDiskPath( sourcePath ), bytes.data(), bytes.size() ) );
-    SW_REQUIRE_TRUE( FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( outputPath ) ) );
+    bytes[2]                      = 2;
+    bytes[12]                     = static_cast<uint8>( kWidth );
+    bytes[14]                     = static_cast<uint8>( kHeight );
+    bytes[16]                     = 32;
+    bytes[17]                     = 8; // 알파 8 비트
+    const AbsolutePath root       = test::makeScratchPath( "TextureBlockAlign" );
+    const AbsolutePath sourcePath = root.join( "textures_raw/odd.tga" );
+    const AbsolutePath outputPath = root.join( "textures/odd.dds" );
+    SW_REQUIRE_TRUE( FileUtil::ensureParentDirectoryExists( sourcePath ) && FileUtil::writeFile( sourcePath, bytes.data(), bytes.size() ) );
+    SW_REQUIRE_TRUE( FileUtil::ensureParentDirectoryExists( outputPath ) );
 
     TextureImportResult result{};
-    SW_REQUIRE_TRUE( TextureImporter::importTexture( sourcePath, outputPath, TextureImportRule{}, &result ) ); // 기본 규칙은 BC7 · 밉
+    SW_REQUIRE_TRUE( TextureImporter::importTexture( sourcePath.str(), outputPath.str(), TextureImportRule{}, &result ) ); // 기본 규칙은 BC7 · 밉
     SW_EXPECT_EQUAL( 8u, result._width );
     SW_EXPECT_EQUAL( 8u, result._height );
 
-    SW_EXPECT_TRUE( FileUtil::removeDirectory( FileUtil::toDiskPath( root ) ) );
+    SW_EXPECT_TRUE( FileUtil::removeDirectory( root ) );
 }

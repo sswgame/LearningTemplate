@@ -304,13 +304,13 @@ namespace sw
 
     expected<DerivedDataCache> DerivedDataCache::loadFromConfig()
     {
-        const string path = FileUtil::joinPath( ProcessRoots::get()._project.str(), kConfigFile );
-        JSONDocument document;
-        if ( document.loadFromFile( path ) == false )
-            return unexpected( Error{ ErrorKind::NotFound, "the DDC layer config could not be read", path } );
+        const AbsolutePath path = ProcessRoots::get()._project.join( kConfigFile );
+        JSONDocument       document;
+        if ( document.loadFromFile( path.str() ) == false )
+            return unexpected( Error{ ErrorKind::NotFound, "the DDC layer config could not be read", path.str() } );
         const JSONValue layers = document.getRoot().get( "_listLayer" );
         if ( layers.isArray() == false || layers.size() == 0 )
-            return unexpected( Error{ ErrorKind::InvalidArgument, "the DDC layer config needs a non-empty _listLayer array", path } );
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the DDC layer config needs a non-empty _listLayer array", path.str() } );
         vector<DerivedDataLayer> listLayer;
         for ( size_t index = 0; index < layers.size(); ++index )
         {
@@ -322,7 +322,7 @@ namespace sw
             const bool             bAccessKnown = access.has_value() && ( *access == "ReadOnly" || *access == "ReadWrite" );
             // 폴더와 환경 변수 중 정확히 하나 — 둘 다 적으면 어느 쪽이 이기는지가 숨은 규칙이 된다.
             if ( name.has_value() == false || root.has_value() == false || environment.has_value() == false || bAccessKnown == false || root->empty() == environment->empty() )
-                return unexpected( Error{ ErrorKind::InvalidArgument, "a DDC layer needs _name, _access (ReadOnly or ReadWrite) and exactly one of _root or _rootEnvironment", path } );
+                return unexpected( Error{ ErrorKind::InvalidArgument, "a DDC layer needs _name, _access (ReadOnly or ReadWrite) and exactly one of _root or _rootEnvironment", path.str() } );
             DerivedDataLayer layer;
             layer._access = *access == "ReadWrite" ? DerivedDataAccess::ReadWrite : DerivedDataAccess::ReadOnly;
             if ( layer._access == DerivedDataAccess::ReadWrite )
@@ -331,7 +331,7 @@ namespace sw
                 const optional<uint32> ageDays = entry.readRequired<uint32>( "_unusedFileAgeDays" );
                 const optional<uint32> maxGB   = entry.readRequired<uint32>( "_maxSizeGB" );
                 if ( ageDays.has_value() == false || maxGB.has_value() == false || *ageDays == 0 || *maxGB == 0 )
-                    return unexpected( Error{ ErrorKind::InvalidArgument, "a ReadWrite DDC layer needs _unusedFileAgeDays and _maxSizeGB of at least 1", path } );
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "a ReadWrite DDC layer needs _unusedFileAgeDays and _maxSizeGB of at least 1", path.str() } );
                 layer._evictionPolicy = DerivedDataEvictionPolicy{ *ageDays, uint64{ *maxGB } * constant::memory::kBytesPerGigabyte };
             }
             if ( root->empty() == false )

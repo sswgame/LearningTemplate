@@ -68,9 +68,9 @@ namespace sw::editor
             /** @brief 검사 전체입니다. 반환은 문제 수이고, 칸 목록 · 트리를 읽지 못하면 음수입니다. */
             static int32 validateAssetReferences()
             {
-                const string&        projectRoot = ProcessRoots::get()._project.str();
+                const AbsolutePath   projectRoot = ProcessRoots::get()._project;
                 AssetReferenceFields params;
-                if ( params.load( projectRoot ) == false )
+                if ( params.load( projectRoot.str() ) == false )
                     return -1;
                 uint32 problemCount = validateReflectedProperties( params );
 
@@ -109,7 +109,7 @@ namespace sw::editor
                 for ( const string& cmakeFile : params.getCMakeFiles() )
                 {
                     string text;
-                    if ( FileUtil::readTextFile( FileUtil::toDiskPath( FileUtil::joinPath( projectRoot, cmakeFile ) ), text ) == false )
+                    if ( FileUtil::readTextFile( projectRoot.join( cmakeFile ), text ) == false )
                         return -1; // 칸 목록이 적은 파일이 없으면 목록이 틀린 것이다
                     problemCount += validateFile( params, assets, cmakeFile, text, AssetReferenceSyntax::CMake );
                     ++scannedCount;

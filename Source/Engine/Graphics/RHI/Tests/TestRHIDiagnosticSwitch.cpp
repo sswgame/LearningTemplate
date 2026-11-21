@@ -14,7 +14,7 @@ namespace
     /** @brief @p pArgument 하나(없으면 nullptr)를 받은 명령줄 표를 @p outCommandLine 에 채웁니다. */
     void parseDiagnosticCommandLine( CommandLineManager& outCommandLine, const utf8* pArgument )
     {
-        const optional<AbsolutePath> baseDirectory = AbsolutePath::tryMake( test::makeScratchPath( "base" ) );
+        const optional<AbsolutePath> baseDirectory = AbsolutePath::tryMake( test::makeScratchPath( "base" ).str() );
         SW_ASSERT( baseDirectory.has_value() );
         outCommandLine.initialize();
         utf8* argv[] = { const_cast<utf8*>( "TestApp.exe" ), const_cast<utf8*>( pArgument ) };

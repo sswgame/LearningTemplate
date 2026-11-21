@@ -32,14 +32,14 @@ namespace sw::test
         static constexpr const utf8* kDomain = "testproject";
 
         ScopedScratchDomain()
-            : _folder{ FileUtil::normalizeSeparators( makeScratchPath( kDomain ) ) }
+            : _folder{ makeScratchPath( kDomain ) }
             , _bMounted{ SW_FALSE }
         {
-            _bMounted = FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( _folder ) ) && engine::getSubsystem<AssetPaths>().mountDiskDomain( kDomain, _folder );
+            _bMounted = FileUtil::ensureDirectoryExists( _folder ) && engine::getSubsystem<AssetPaths>().mountDiskDomain( kDomain, _folder.str() );
             if ( _bMounted == false )
             {
                 fixed_string<constant::buffer::kMax512> text;
-                formatstring( text.data(), text.capacity(), "could not mount the scratch domain at %#", _folder );
+                formatstring( text.data(), text.capacity(), "could not mount the scratch domain at %#", _folder.str() );
                 reportFailure( __FILE__, __LINE__, text );
             }
         }
@@ -52,17 +52,17 @@ namespace sw::test
         ScopedScratchDomain& operator=( const ScopedScratchDomain& ) = delete;
 
         /** @brief 도메인 폴더(디스크 절대 경로)입니다. */
-        [[nodiscard]] const string& getFolder() const { return _folder; }
-        /** @brief 도메인 폴더 아래 @p relativePath 의 디스크 경로입니다. */
-        [[nodiscard]] string makeDiskPath( string_view relativePath ) const { return FileUtil::joinPath( _folder, relativePath ); }
+        [[nodiscard]] const string& getFolder() const { return _folder.str(); }
+        /** @brief 도메인 폴더 아래 @p relativePath 의 디스크 경로입니다(`AbsolutePath::join` — I/O 에 그대로 넘긴다, 글이 필요하면 `.str()`). */
+        [[nodiscard]] AbsolutePath makeDiskPath( string_view relativePath ) const { return _folder.join( relativePath ); }
         /** @brief 도메인 폴더 아래 @p relativePath 폴더를 만들고 그 디스크 경로를 돌려줍니다(못 만들면 케이스 실패). */
-        [[nodiscard]] string makeDiskFolder( string_view relativePath ) const
+        [[nodiscard]] AbsolutePath makeDiskFolder( string_view relativePath ) const
         {
-            const string folder = makeDiskPath( relativePath );
-            if ( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( folder ) ) == false )
+            const AbsolutePath folder = makeDiskPath( relativePath );
+            if ( FileUtil::ensureDirectoryExists( folder ) == false )
             {
                 fixed_string<constant::buffer::kMax512> text;
-                formatstring( text.data(), text.capacity(), "could not create %#", folder );
+                formatstring( text.data(), text.capacity(), "could not create %#", folder.str() );
                 reportFailure( __FILE__, __LINE__, text );
             }
             return folder;
@@ -90,7 +90,7 @@ namespace sw::test
         }
 
     private:
-        string _folder;
-        uint8  _bMounted : 1;
+        AbsolutePath _folder;
+        uint8        _bMounted : 1;
     };
 } // namespace sw::test

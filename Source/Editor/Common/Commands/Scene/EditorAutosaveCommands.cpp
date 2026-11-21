@@ -157,7 +157,7 @@ namespace sw::editor
                 vector<string> listSlot;
                 for ( const string& sessionFolder : listSessionFolder )
                     (void)FileUtil::collectFolders( FileUtil::toDiskPath( sessionFolder ), listSlot, false ); // 붙여 모은다. 없는 폴더(그새 지운 세션)는 사본이 없다
-                const string projectRoot = ProcessRoots::get()._project.str();
+                const AbsolutePath projectRoot = ProcessRoots::get()._project;
                 for ( const string& slotFolder : listSlot )
                 {
                     vector<uint32> listGeneration;
@@ -181,7 +181,7 @@ namespace sw::editor
                     (void)StringUtil::parseUint64( EditorAutosaveCommands::findMetaValue( metaText, "sourceHash" ), entry._sourceContentHash ); // 없으면(옛 메타) 0 — 아래에서 바뀐 원본으로 거절한다
                     // 다른 프로젝트 · 바뀐 원본에는 적용하지 않는다 — 사본이 오래된 원본 위에 덮여 남의 일을 지우지 않게.
                     // 바뀜은 내용 해시로 본다 — 쓰기 시각은 체크아웃 · 복사가 내용과 따로 바꾸고, 같은 틱의 다시 쓰기는 시각이 같다.
-                    if ( FileUtil::isSameDiskPath( entry._projectRoot, projectRoot ) == false )
+                    if ( FileUtil::isSameDiskPath( entry._projectRoot, projectRoot.str() ) == false )
                         entry._refusal = "it was written for another project";
                     else if ( entry._sourceID.empty() == false ) // 새 씬(원본 없음)은 견줄 원본이 없다 — 프로젝트만 본다
                     {

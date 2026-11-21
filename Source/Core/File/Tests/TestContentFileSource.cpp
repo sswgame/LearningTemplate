@@ -131,11 +131,11 @@ SW_TEST_CASE( ContentFileSourceTest, RangeMatchesWholeRead )
     const MemoryContentFileSource memory = Util::makeSource();
     Util::expectRangeMatchesWholeRead( io, memory, "/packs/a.pack", 3, 5 );
 
-    const string        diskPath = test::makeScratchPath( "ContentFileSourceTest.range.bin" );
+    const AbsolutePath  diskPath = test::makeScratchPath( "ContentFileSourceTest.range.bin" );
     const vector<uint8> bytes    = Util::toBytes( "header|mip0mip0mip0|mip1|m2" );
-    SW_REQUIRE_TRUE( FileUtil::writeFile( FileUtil::toDiskPath( diskPath ), bytes.data(), bytes.size() ) );
+    SW_REQUIRE_TRUE( FileUtil::writeFile( diskPath, bytes.data(), bytes.size() ) );
     const DiskContentFileSource disk;
-    Util::expectRangeMatchesWholeRead( io, disk, diskPath, 7, 12 );
+    Util::expectRangeMatchesWholeRead( io, disk, diskPath.str(), 7, 12 );
 
     io.shutdown();
 }

@@ -60,7 +60,7 @@ SW_TEST_CASE( UserSettingsScalabilityTest, MissingBundledSettingFollowsSavedPres
 SW_TEST_CASE( UserSettingsScalabilityTest, RenderQualityOptionNamesAreTierNames )
 {
     string schemaText;
-    SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::toDiskPath( FileUtil::joinPath( ProcessRoots::get()._project.str(), "Content/engine/settings/engine.settings.xml" ) ), schemaText ) );
+    SW_REQUIRE_TRUE( FileUtil::readTextFile( ProcessRoots::get()._project.join( "Content/engine/settings/engine.settings.xml" ), schemaText ) );
     UserSettingsSchema schema;
     SW_REQUIRE_TRUE( schema.loadFromXMLText( schemaText, "engine.settings.xml" ) );
     const UserSettingDef* pSetting = schema.findSetting( hashed_string( "graphics.renderQuality" ) );

@@ -81,11 +81,11 @@ namespace sw
 
     expected<AutomationGoldenPolicy> AutomationGoldenUtil::loadPolicy()
     {
-        const string path = FileUtil::joinPath( ProcessRoots::get()._project.str(), kPolicyFile );
-        string       text;
-        if ( FileUtil::readTextFile( FileUtil::toDiskPath( path ), text ) == false )
-            return unexpected( Error{ ErrorKind::NotFound, "could not read the golden policy", path } );
-        return parsePolicy( text, path );
+        const AbsolutePath path = ProcessRoots::get()._project.join( kPolicyFile );
+        string             text;
+        if ( FileUtil::readTextFile( path, text ) == false )
+            return unexpected( Error{ ErrorKind::NotFound, "could not read the golden policy", path.str() } );
+        return parsePolicy( text, path.str() );
     }
 
     GoldenResult AutomationGoldenUtil::evaluate( const AutomationImageDifference& difference, const AutomationGoldenLimits& limits, float64 nearLimitRatio )

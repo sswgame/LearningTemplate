@@ -384,7 +384,7 @@ SW_TEST_CASE( ModuleCatalogTest, EditorExtensionChainFollowsWhateverTheOrder )
 SW_TEST_CASE( ModuleCatalogTest, MissingFolderIsAnError )
 {
     ModuleCatalog catalog;
-    const string  error = Util::describe( catalog.loadDirectory( test::makeScratchPath( "SwNoSuchModuleFolder" ) ) );
+    const string  error = Util::describe( catalog.loadDirectory( test::makeScratchPath( "SwNoSuchModuleFolder" ).str() ) );
     SW_EXPECT_TRUE( error.find( "does not exist" ) != string::npos );
 }
 

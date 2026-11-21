@@ -143,17 +143,17 @@ using namespace sw;
  */
 SW_TEST_CASE( PackScaleTest, Index300k, ._tags = "bench", ._disabledReason = "bench - Release 에서 --test-run-disabled 로 돌린다", ._timeoutSeconds = 900 )
 {
-    using Internal          = PackScaleInternal;
-    const string   packPath = test::makeScratchPath( "index300k.pack" );
-    vector<uint64> listHash;
-    SW_REQUIRE_TRUE( Internal::writeIndexPack( packPath, listHash ) );
+    using Internal              = PackScaleInternal;
+    const AbsolutePath packPath = test::makeScratchPath( "index300k.pack" );
+    vector<uint64>     listHash;
+    SW_REQUIRE_TRUE( Internal::writeIndexPack( packPath.str(), listHash ) );
 
     vector<int64> listMountNanos;
     for ( uint32 repeat = 0; repeat < Internal::kMountRepeatCount; ++repeat )
     {
         PackReader      reader;
         const Stopwatch watch;
-        SW_REQUIRE_TRUE( reader.open( packPath ) );
+        SW_REQUIRE_TRUE( reader.open( packPath.str() ) );
         listMountNanos.push_back( watch.getElapsedNanoseconds() );
     }
     VectorUtil::sort( listMountNanos );
@@ -161,7 +161,7 @@ SW_TEST_CASE( PackScaleTest, Index300k, ._tags = "bench", ._disabledReason = "be
 
     const uint64 liveBefore = Internal::readLiveBytes();
     PackReader   reader;
-    SW_REQUIRE_TRUE( reader.open( packPath ) );
+    SW_REQUIRE_TRUE( reader.open( packPath.str() ) );
     const uint64 liveAfter = Internal::readLiveBytes();
     SW_EXPECT_EQUAL( reader.getFileCount(), Internal::kIndexEntryCount );
 
@@ -189,7 +189,7 @@ SW_TEST_CASE( PackScaleTest, Index300k, ._tags = "bench", ._disabledReason = "be
                     liveAfter );
     SW_LOG_INFO_ID( "Pack.Scale.lookupNs", "Pack.Scale.lookupNs %# (%# hasFile, %# hits)", lookupNanos / Internal::kLookupCount, Internal::kLookupCount, hitCount );
     reader.close();
-    SW_EXPECT_TRUE( FileUtil::removeFile( FileUtil::toDiskPath( packPath ) ) );
+    SW_EXPECT_TRUE( FileUtil::removeFile( packPath ) );
 }
 
 /**
@@ -199,12 +199,12 @@ SW_TEST_CASE( PackScaleTest, Index300k, ._tags = "bench", ._disabledReason = "be
 SW_TEST_CASE( PackScaleTest, Patch1g, ._tags = "bench", ._disabledReason = "bench - Release 에서 --test-run-disabled 로 돌린다", ._timeoutSeconds = 900 )
 {
     using Internal                        = PackScaleInternal;
-    const string                packPath  = test::makeScratchPath( "patch1g.pack" );
+    const AbsolutePath          packPath  = test::makeScratchPath( "patch1g.pack" );
     INetSecurityProvider* const pProvider = engine::findSubsystem<INetSecurityProvider>();
     PackWriterDesc              desc      = PackTestUtil::makeDesc( "" );
     desc._pDigestProvider                 = pProvider;
     vector<uint64>                  listHash;
-    const optional<PackWriteResult> written = Internal::writeEntries( packPath, desc, vector<size_t>( Internal::kPatchEntryCount, Internal::kPatchEntryBytes ), listHash );
+    const optional<PackWriteResult> written = Internal::writeEntries( packPath.str(), desc, vector<size_t>( Internal::kPatchEntryCount, Internal::kPatchEntryBytes ), listHash );
     SW_REQUIRE_TRUE( written.has_value() );
 
     const Stopwatch watch;
@@ -212,11 +212,11 @@ SW_TEST_CASE( PackScaleTest, Patch1g, ._tags = "bench", ._disabledReason = "benc
     if ( pProvider != nullptr )
     {
         const PackIndexTrust trust{ pProvider, *written->_indexDigest };
-        SW_REQUIRE_TRUE( reader.open( packPath, &trust ) );
+        SW_REQUIRE_TRUE( reader.open( packPath.str(), &trust ) );
     }
     else
     {
-        SW_REQUIRE_TRUE( reader.open( packPath ) );
+        SW_REQUIRE_TRUE( reader.open( packPath.str() ) );
     }
     const int64 verifyNanos = watch.getElapsedNanoseconds();
 
@@ -224,5 +224,5 @@ SW_TEST_CASE( PackScaleTest, Patch1g, ._tags = "bench", ._disabledReason = "benc
     SW_LOG_INFO_ID( "Pack.Scale.patchVerifyMs", "Pack.Scale.patchVerifyMs %# (%# B pack, index %# B%#)", verifyNanos / 1000000, written->_fileSize, written->_fileSize - written->_indexOffset,
                     pProvider != nullptr ? " + SHA-256" : ", no security provider - opened without a digest" );
     reader.close();
-    SW_EXPECT_TRUE( FileUtil::removeFile( FileUtil::toDiskPath( packPath ) ) );
+    SW_EXPECT_TRUE( FileUtil::removeFile( packPath ) );
 }

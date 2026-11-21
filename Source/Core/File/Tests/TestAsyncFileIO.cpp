@@ -43,7 +43,7 @@ namespace
         {
             bytes[offset] = expectedByteAt( offset );
         }
-        sw::string path = sw::test::makeScratchPath( pName );
+        sw::string path = sw::test::makeScratchPath( pName ).str();
         if ( sw::FileUtil::writeFile( sw::FileUtil::toDiskPath( path ), bytes.data(), bytes.size() ) == false )
             path.clear();
         return path;
@@ -174,8 +174,8 @@ SW_TEST_CASE( AsyncFileIOTest, ReadsWholeFileAndPartialRange )
  */
 SW_TEST_CASE( AsyncFileIOTest, MissingFileAndRangePastEndFail )
 {
-    const sw::string path    = writeTestFile( "short.bin", 4096 );
-    const sw::string missing = sw::test::makeScratchPath( "does_not_exist.bin" );
+    const sw::string       path    = writeTestFile( "short.bin", 4096 );
+    const sw::AbsolutePath missing = sw::test::makeScratchPath( "does_not_exist.bin" );
     SW_REQUIRE_FALSE( path.empty() );
 
     for ( const sw::AsyncIOBackendKind kind : kArrBackendKind )
@@ -187,7 +187,7 @@ SW_TEST_CASE( AsyncFileIOTest, MissingFileAndRangePastEndFail )
 
         sw::atomic<uint32>  callbackCount{ 0 };
         sw::AsyncReadResult missingResult{};
-        sw::AsyncReadHandle missingRead  = io.readFile( missing, sw::AsyncIOPriority::Normal, SW_DELEGATE_LAMBDA( sw::AsyncReadCompleteDelegate, [&]( sw::AsyncReadResult& result )
+        sw::AsyncReadHandle missingRead  = io.readFile( missing.str(), sw::AsyncIOPriority::Normal, SW_DELEGATE_LAMBDA( sw::AsyncReadCompleteDelegate, [&]( sw::AsyncReadResult& result )
          {
             missingResult = std::move( result );
             callbackCount.fetch_add( 1 );

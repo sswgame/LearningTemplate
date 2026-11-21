@@ -36,7 +36,7 @@ SW_TEST_CASE( PhysicsAssetTest, ChildSavesOnlyItsDifference )
     PhysicsAsset                    base;
     base._listBody.push_back( PhysicsAssetTestUtil::makeBody( "pelvis", 10.0f ) );
     base._listBody.push_back( PhysicsAssetTestUtil::makeBody( "spine", 6.0f ) );
-    const optional<AbsolutePath> basePath = AbsolutePath::tryMake( domain.makeDiskPath( "base.physics.xml" ) );
+    const optional<AbsolutePath> basePath = AbsolutePath::tryMake( domain.makeDiskPath( "base.physics.xml" ).str() );
     SW_REQUIRE_TRUE( basePath.has_value() );
     SW_REQUIRE_TRUE( base.saveToFile( *basePath ) );
     const string baseID = test::ScopedScratchDomain::makeID( "base.physics.xml" ).str();
@@ -49,7 +49,7 @@ SW_TEST_CASE( PhysicsAssetTest, ChildSavesOnlyItsDifference )
     SW_EXPECT_EQUAL( baseID, child._baseID );
     child._listBody[1]._mass = 4.0f;
 
-    const optional<AbsolutePath> childPath = AbsolutePath::tryMake( domain.makeDiskPath( "child.physics.xml" ) );
+    const optional<AbsolutePath> childPath = AbsolutePath::tryMake( domain.makeDiskPath( "child.physics.xml" ).str() );
     SW_REQUIRE_TRUE( childPath.has_value() );
     SW_REQUIRE_TRUE( child.saveToFile( *childPath ) );
     string saved;

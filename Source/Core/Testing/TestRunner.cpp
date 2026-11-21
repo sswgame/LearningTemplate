@@ -473,7 +473,7 @@ namespace sw::test
         return TestRunnerInternal::isExpectedByActiveCase( pLogID );
     }
 
-    string makeScratchPath( string_view name )
+    AbsolutePath makeScratchPath( string_view name )
     {
         TestRunnerInternal::CaseState& state = TestRunnerInternal::getState();
         string                         folder;
@@ -482,13 +482,14 @@ namespace sw::test
             folder = state._scratchFolder;
         }
         SW_ASSERT( folder.empty() == false && "makeScratchPath is only valid inside a running test case" );
-        if ( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( folder ) ) == false )
+        const AbsolutePath folderPath = FileUtil::toDiskPath( folder );
+        if ( FileUtil::ensureDirectoryExists( folderPath ) == false )
         {
             StringBuilder<constant::buffer::kMax1024> message;
             message.appendFormat( "could not create the scratch folder %#", folder );
             reportFailure( __FILE__, __LINE__, message.view() );
         }
-        return FileUtil::joinPath( folder, name );
+        return folderPath.join( name );
     }
 
     bool checkSnapshot( string_view name, string_view actual, const utf8* pFile, int32 line )
@@ -595,7 +596,7 @@ namespace sw::test
         StringBuilder<constant::buffer::kMax256> logFileName;
         logFileName.appendFormat( "%#.child.log", TestRunnerInternal::toFileName( roleName ) );
         StringBuilder<constant::buffer::kMax1024> logFileArgument;
-        logFileArgument.appendFormat( "-log-file=%#", makeScratchPath( logFileName.view() ) );
+        logFileArgument.appendFormat( "-log-file=%#", makeScratchPath( logFileName.view() ).str() );
         vector<string> listArgument{ "-test", string( roleArgument.view() ), "-unattended", string( logFileArgument.view() ) };
         if ( argument.empty() == false )
         {
@@ -673,7 +674,7 @@ namespace sw::test
         StringBuilder<constant::buffer::kMax256> logFileName;
         logFileName.appendFormat( "%#.isolated.log", toFileName( testCase._pName ) );
         StringBuilder<constant::buffer::kMax1024> logFileArgument;
-        logFileArgument.appendFormat( "-log-file=%#", makeScratchPath( logFileName.view() ) );
+        logFileArgument.appendFormat( "-log-file=%#", makeScratchPath( logFileName.view() ).str() );
         vector<string> listArgument{ "-test", string( caseArgument.view() ), "-unattended", string( logFileArgument.view() ) };
         // 스냅숏 기록 범위를 자식에 넘긴다 — 넘기지 않으면 격리 케이스의 스냅숏은 기록 실행에서도 쓰이지 않고 진다.
         SnapshotWriteMode recording = SnapshotWriteMode::Off;

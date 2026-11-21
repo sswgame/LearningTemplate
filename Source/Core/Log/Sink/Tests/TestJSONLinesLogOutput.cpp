@@ -92,7 +92,7 @@ SW_TEST_CASE( JSONLinesLogOutputTest, LineHasThePropertiesThatArePresent )
 
 SW_TEST_CASE( JSONLinesLogOutputTest, SinkBuildsJSONOnlyWhenAStructuredOutputIsAttached )
 {
-    AsyncLogSink logger( test::makeScratchPath( "sink.log" ) ); // 기본 파일 장치도 케이스 폴더에 쓴다
+    AsyncLogSink logger( test::makeScratchPath( "sink.log" ).str() ); // 기본 파일 장치도 케이스 폴더에 쓴다
     logger.initialize();
     unique_ptr<PlainCaptureOutput> plain  = make_unique<PlainCaptureOutput>();
     PlainCaptureOutput*            pPlain = plain.get();

@@ -31,7 +31,7 @@ namespace
         };
 
         explicit FakeBundleReader( const utf8* pScratchName )
-            : _bundlePath{ test::makeScratchPath( pScratchName ) }
+            : _bundlePath{ test::makeScratchPath( pScratchName ).str() }
             , _listEntry{}
         {
         }

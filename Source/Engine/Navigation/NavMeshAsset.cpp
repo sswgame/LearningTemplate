@@ -284,8 +284,8 @@ namespace sw
     {
         vector<uint8> bytes;
         writeBytes( bytes );
-        const string directory = FileUtil::getDirectoryPart( absPath.str() );
-        if ( directory.empty() == false && FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( directory ) ) == false )
+        const AbsolutePath directory = absPath.getParent();
+        if ( directory.empty() == false && FileUtil::ensureDirectoryExists( directory ) == false )
             return false;
         return FileUtil::writeFile( absPath, bytes.data(), bytes.size() );
     }

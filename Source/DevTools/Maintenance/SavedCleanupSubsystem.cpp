@@ -77,11 +77,11 @@ namespace sw
 
     bool SavedCleanupSubsystem::readSettings( RetentionSettings& outSettings )
     {
-        const string path = FileUtil::joinPath( ProcessRoots::get()._project.str(), SavedCleanupSubsystemInternal::kConfigFile );
-        string       text;
-        if ( FileUtil::readTextFile( FileUtil::toDiskPath( path ), text ) == false )
+        const AbsolutePath path = ProcessRoots::get()._project.join( SavedCleanupSubsystemInternal::kConfigFile );
+        string             text;
+        if ( FileUtil::readTextFile( path, text ) == false )
         {
-            SW_LOG_ERROR_ID( "SavedCleanup.ConfigUnreadable", "Saved retention rules %# could not be read - nothing is removed", path );
+            SW_LOG_ERROR_ID( "SavedCleanup.ConfigUnreadable", "Saved retention rules %# could not be read - nothing is removed", path.str() );
             return false;
         }
         // 빠진 칸 · 모르는 키 · 틀린 값은 직렬화기가 칸 이름과 함께 알린다. 빈 글은 스키마로 막지 못해 여기서 본다.
@@ -90,7 +90,7 @@ namespace sw
         { return rule._folder.empty(); } );
         if ( bRead == false || bEmpty )
         {
-            SW_LOG_ERROR_ID( "SavedCleanup.ConfigInvalid", "Saved retention rules %# need _minAgeSeconds, a non-empty _trashFolder and a _listRule array of non-empty _folder, _keepCount, _bPerChild, _listSkipChild - nothing is removed", path );
+            SW_LOG_ERROR_ID( "SavedCleanup.ConfigInvalid", "Saved retention rules %# need _minAgeSeconds, a non-empty _trashFolder and a _listRule array of non-empty _folder, _keepCount, _bPerChild, _listSkipChild - nothing is removed", path.str() );
             return false;
         }
         return true;
@@ -101,28 +101,28 @@ namespace sw
         RetentionSettings settings;
         if ( readSettings( settings ) == false )
             return;
-        const string                           saved     = ProcessRoots::get()._saved.str();
-        const string                           trashRoot = FileUtil::joinPath( saved, settings._trashFolder );
+        const AbsolutePath                     saved     = ProcessRoots::get()._saved;
+        const AbsolutePath                     trashRoot = saved.join( settings._trashFolder );
         fixed_string<constant::buffer::kMax64> trashName;
         formatstring( trashName.data(), trashName.capacity(), "%#-%#", Process::getCurrentProcessID(), MonotonicClock::nowNanoseconds() );
-        const string trash       = FileUtil::joinPath( trashRoot, trashName.view() );
-        const int64  nowTicks    = FileUtil::getCurrentFileWriteTime();
-        const int64  minAgeTicks = settings._minAgeSeconds * FileUtil::kFileTimeTicksPerSecond;
-        uint32       moved       = 0;
+        const AbsolutePath trash       = trashRoot.join( trashName.view() );
+        const int64        nowTicks    = FileUtil::getCurrentFileWriteTime();
+        const int64        minAgeTicks = settings._minAgeSeconds * FileUtil::kFileTimeTicksPerSecond;
+        uint32             moved       = 0;
         for ( const RetentionRule& rule : settings._listRule )
         {
-            const string folder = FileUtil::joinPath( saved, rule._folder );
-            if ( FileUtil::isDirectory( FileUtil::toDiskPath( folder ) ) == false )
+            const AbsolutePath folder = saved.join( rule._folder );
+            if ( FileUtil::isDirectory( folder ) == false )
                 continue;
             if ( rule._bPerChild == false )
             {
-                SavedCleanupSubsystemInternal::moveOld( folder, rule._keepCount, minAgeTicks, nowTicks, trash, moved, stopToken );
+                SavedCleanupSubsystemInternal::moveOld( folder.str(), rule._keepCount, minAgeTicks, nowTicks, trash.str(), moved, stopToken );
                 continue;
             }
-            for ( const SavedCleanupSubsystemInternal::Entry& child : SavedCleanupSubsystemInternal::listNewestFirst( folder ) )
+            for ( const SavedCleanupSubsystemInternal::Entry& child : SavedCleanupSubsystemInternal::listNewestFirst( folder.str() ) )
             {
                 if ( child._bDirectory && VectorUtil::contains( rule._listSkipChild, FileUtil::getFileNamePart( child._path ) ) == false )
-                    SavedCleanupSubsystemInternal::moveOld( child._path, rule._keepCount, minAgeTicks, nowTicks, trash, moved, stopToken );
+                    SavedCleanupSubsystemInternal::moveOld( child._path, rule._keepCount, minAgeTicks, nowTicks, trash.str(), moved, stopToken );
             }
         }
         if ( moved > 0 )
@@ -133,7 +133,7 @@ namespace sw
         fixed_string<constant::buffer::kMax64> claimPrefix;
         formatstring( claimPrefix.data(), claimPrefix.capacity(), "%#%#-%#-", SavedCleanupSubsystemInternal::kClaimPrefix, Process::getCurrentProcessID(), MonotonicClock::nowNanoseconds() );
         uint32 claimCount = 0;
-        for ( const SavedCleanupSubsystemInternal::Entry& pile : SavedCleanupSubsystemInternal::listNewestFirst( trashRoot ) )
+        for ( const SavedCleanupSubsystemInternal::Entry& pile : SavedCleanupSubsystemInternal::listNewestFirst( trashRoot.str() ) )
         {
             if ( stopToken.isStopRequested() )
                 return;
@@ -142,10 +142,10 @@ namespace sw
                 continue;
             fixed_string<constant::buffer::kMax128> claimedName;
             formatstring( claimedName.data(), claimedName.capacity(), "%#%#", claimPrefix.view(), claimCount++ );
-            const string claimedPath = FileUtil::joinPath( trashRoot, claimedName.view() );
-            if ( FileUtil::renamePath( FileUtil::toDiskPath( pile._path ), FileUtil::toDiskPath( claimedPath ) ) == false )
+            const AbsolutePath claimedPath = trashRoot.join( claimedName.view() );
+            if ( FileUtil::renamePath( FileUtil::toDiskPath( pile._path ), claimedPath ) == false )
                 continue; // 다른 프로세스가 먼저 차지했다(또는 아직 채우는 중이다) — 그쪽이 지운다
-            (void)FileUtil::removeDirectory( FileUtil::toDiskPath( claimedPath ) );
+            (void)FileUtil::removeDirectory( claimedPath );
         }
     }
 

@@ -135,8 +135,8 @@ SW_TEST_CASE( SpriteClipViewModelTest, MissingFileStartsANewClip )
     model.bindDocumentEditRecorder( modelRecorder );
     Util::fillFrames( model, 3 );
     SW_REQUIRE_TRUE( model.addAnimation() );
-    const string missingPath = test::makeScratchPath( "SwSpriteClipViewModelMissing.sprite.xml" );
-    SW_EXPECT_TRUE( model.loadDocument( missingPath ) == ToolAssetLoadResult::Missing );
+    const AbsolutePath missingPath = test::makeScratchPath( "SwSpriteClipViewModelMissing.sprite.xml" );
+    SW_EXPECT_TRUE( model.loadDocument( missingPath.str() ) == ToolAssetLoadResult::Missing );
     SW_EXPECT_EQUAL( size_t{ 1 }, model.getFrames().size() );
     SW_EXPECT_TRUE( model.getAnimations().empty() );
     SW_EXPECT_EQUAL( -1, model.getSelectedAnimation() );
@@ -144,7 +144,7 @@ SW_TEST_CASE( SpriteClipViewModelTest, MissingFileStartsANewClip )
 
 SW_TEST_CASE( SpriteClipViewModelTest, SaveAndLoadRoundTrip )
 {
-    const string path = test::makeScratchPath( "SwSpriteClipViewModelRoundTrip.sprite.xml" );
+    const AbsolutePath path = test::makeScratchPath( "SwSpriteClipViewModelRoundTrip.sprite.xml" );
     {
         const DocumentEditRecorder modelRecorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
         SpriteClipViewModel        model;
@@ -153,17 +153,17 @@ SW_TEST_CASE( SpriteClipViewModelTest, SaveAndLoadRoundTrip )
         SW_REQUIRE_TRUE( model.addAnimation() );
         model.editAtlasPixelSize() = float2{ 64.0f, 64.0f };
         SW_REQUIRE_TRUE( model.commitAtlasPixelSize() );
-        SW_REQUIRE_TRUE( model.saveDocument( path ) );
+        SW_REQUIRE_TRUE( model.saveDocument( path.str() ) );
         SW_EXPECT_FALSE( model.getStatus().empty() );
     }
     const DocumentEditRecorder modelRecorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
     SpriteClipViewModel        model;
     model.bindDocumentEditRecorder( modelRecorder );
-    SW_EXPECT_TRUE( model.loadDocument( path ) == ToolAssetLoadResult::Loaded );
+    SW_EXPECT_TRUE( model.loadDocument( path.str() ) == ToolAssetLoadResult::Loaded );
     SW_EXPECT_EQUAL( size_t{ 2 }, model.getFrames().size() );
     SW_EXPECT_EQUAL( 0, model.getSelectedAnimation() );
     SW_EXPECT_NEAR( 64.0f, model.editAtlasPixelSize()._x, 1e-3f );
-    (void)FileUtil::removeFile( FileUtil::toDiskPath( path ) );
+    (void)FileUtil::removeFile( path );
 }
 
 // 포커스한 이미지로 연 문서의 경로는 이미지다 - 그대로 저장하면 이미지를 클립 글로 덮어썼다.

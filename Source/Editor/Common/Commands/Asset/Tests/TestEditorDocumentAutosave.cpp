@@ -32,14 +32,14 @@ namespace
 SW_TEST_CASE( EditorDocumentAutosaveTest, WrittenCopyIsRecoverableUntilSaved )
 {
     using Internal                             = EditorDocumentAutosaveTestInternal;
-    const sw::string             sessionFolder = sw::test::makeScratchPath( "DocumentAutosave" );
-    const sw::string             projectRoot   = sw::test::makeScratchPath( "Project" );
-    const auto                   entry         = Internal::makeEntry( projectRoot );
-    const sw::vector<sw::string> listSession{ sessionFolder };
-    SW_REQUIRE_TRUE( entry.write( sessionFolder ) );
+    const sw::AbsolutePath       sessionFolder = sw::test::makeScratchPath( "DocumentAutosave" );
+    const sw::AbsolutePath       projectRoot   = sw::test::makeScratchPath( "Project" );
+    const auto                   entry         = Internal::makeEntry( projectRoot.str() );
+    const sw::vector<sw::string> listSession{ sessionFolder.str() };
+    SW_REQUIRE_TRUE( entry.write( sessionFolder.str() ) );
 
     sw::vector<sw::editor::EditorDocumentAutosaveEntry> listEntry;
-    sw::editor::EditorDocumentAutosaveEntry::scan( listSession, projectRoot, &Internal::computeKeptSourceHash, listEntry );
+    sw::editor::EditorDocumentAutosaveEntry::scan( listSession, projectRoot.str(), &Internal::computeKeptSourceHash, listEntry );
     SW_REQUIRE_EQUAL( size_t{ 1 }, listEntry.size() );
     SW_EXPECT_TRUE( listEntry[0]._documentPath == entry._documentPath );
     SW_EXPECT_TRUE( listEntry[0]._refusal.empty() );
@@ -47,8 +47,8 @@ SW_TEST_CASE( EditorDocumentAutosaveTest, WrittenCopyIsRecoverableUntilSaved )
     SW_REQUIRE_TRUE( listEntry[0].readText( text ) );
     SW_EXPECT_TRUE( text == entry._text );
 
-    sw::editor::EditorDocumentAutosaveEntry::remove( sessionFolder, entry._documentPath );
-    sw::editor::EditorDocumentAutosaveEntry::scan( listSession, projectRoot, &Internal::computeKeptSourceHash, listEntry );
+    sw::editor::EditorDocumentAutosaveEntry::remove( sessionFolder.str(), entry._documentPath );
+    sw::editor::EditorDocumentAutosaveEntry::scan( listSession, projectRoot.str(), &Internal::computeKeptSourceHash, listEntry );
     SW_EXPECT_EQUAL( size_t{ 0 }, listEntry.size() ); // 저장한 원본이 사본보다 새것이다 — 다음 기동이 묻지 않는다
 }
 
@@ -56,17 +56,17 @@ SW_TEST_CASE( EditorDocumentAutosaveTest, WrittenCopyIsRecoverableUntilSaved )
 SW_TEST_CASE( EditorDocumentAutosaveTest, ForeignProjectAndChangedSourceAreRefused )
 {
     using Internal                             = EditorDocumentAutosaveTestInternal;
-    const sw::string             sessionFolder = sw::test::makeScratchPath( "DocumentAutosave" );
-    const sw::string             projectRoot   = sw::test::makeScratchPath( "Project" );
-    const sw::vector<sw::string> listSession{ sessionFolder };
-    SW_REQUIRE_TRUE( Internal::makeEntry( projectRoot ).write( sessionFolder ) );
+    const sw::AbsolutePath       sessionFolder = sw::test::makeScratchPath( "DocumentAutosave" );
+    const sw::AbsolutePath       projectRoot   = sw::test::makeScratchPath( "Project" );
+    const sw::vector<sw::string> listSession{ sessionFolder.str() };
+    SW_REQUIRE_TRUE( Internal::makeEntry( projectRoot.str() ).write( sessionFolder.str() ) );
 
     sw::vector<sw::editor::EditorDocumentAutosaveEntry> listEntry;
-    sw::editor::EditorDocumentAutosaveEntry::scan( listSession, projectRoot, &Internal::computeEditedSourceHash, listEntry );
+    sw::editor::EditorDocumentAutosaveEntry::scan( listSession, projectRoot.str(), &Internal::computeEditedSourceHash, listEntry );
     SW_REQUIRE_EQUAL( size_t{ 1 }, listEntry.size() );
     SW_EXPECT_FALSE( listEntry[0]._refusal.empty() );
 
-    sw::editor::EditorDocumentAutosaveEntry::scan( listSession, sw::test::makeScratchPath( "OtherProject" ), &Internal::computeKeptSourceHash, listEntry );
+    sw::editor::EditorDocumentAutosaveEntry::scan( listSession, sw::test::makeScratchPath( "OtherProject" ).str(), &Internal::computeKeptSourceHash, listEntry );
     SW_REQUIRE_EQUAL( size_t{ 1 }, listEntry.size() );
     SW_EXPECT_FALSE( listEntry[0]._refusal.empty() );
 }

@@ -129,7 +129,7 @@ namespace
             LowLevelReportTestInternal::_s_received = {};
             LowLevelReportTestInternal::_s_bHandled = bHandled;
 
-            const string capturePath                = test::makeScratchPath( "stderr.txt" );
+            const string capturePath                = test::makeScratchPath( "stderr.txt" ).str();
             LowLevelReportTestInternal::_s_pCapture = std::fopen( capturePath.c_str(), "w+b" );
             if ( LowLevelReportTestInternal::_s_pCapture == nullptr )
                 return;
