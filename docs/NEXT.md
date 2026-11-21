@@ -74,6 +74,7 @@
 - **시나리오:** 실시간 GI 정착 조건(넣으면 GI 장면 사진 시점이 바뀐다 — 골든과 함께).
 - **데이터 · 카탈로그:** 매직 리터럴 기준선이 큰 파일의 튜닝 값과 게임 모드 상태 `switch` 를 PROPERTY · 규칙 카탈로그로, `sw::expected` Core 밖 이전. `FighterCatalog` 엄격도와 `ActionPlatformerCatalog` 전이 검사를 참조 표로 옮길지 정하기, 잘못된 참조가 쿠킹 · 시작을 통과하는 회귀 테스트.
 - **키트:** MMO 키트의 부하 목표와 운영 비용.
+- **키트 셋 가르기(규칙 · 디렉터 · 클라이언트):** TacticsSRPG 가 본보기(규칙은 키트 루트, 디렉터 `Component/SRPGGameModeComponent`, 뷰 · 입력 · HUD 는 `Client/` 의 `GF_Client_TacticsSRPG`). Fighting · Farming · CityBuilder 는 키트 안에 섞인 곳이 없고 디렉터 · 뷰가 폐기할 게임(Playground FightingDemo · HarvestValley · MeadowVillage · FrontierTown · NileCity)에 있다 — 허브 미니게임으로 옮길 때 같은 계약으로 키트 `Component/` · `GF_Client_<X>` 에 둔다. 나머지 순서(같은 계약): ActionPlatformer · ActionCombat · BattleRoyale · MechArena · Metroidvania · CardGame · KartRacing · PartyArena · Rhythm · AsymmetricHorror · CoopScavenger · GhostHunt · SurvivalHorror · ClassicJRPG · MonsterCollector · MonsterHuntRPG · OpenWorldWestern · CreatureLife · RestaurantSim · ThemePark · RealTimeStrategy · SideScrollConquest · ActionAdventure.
 - **상용 대비:** T3 샤드 시간 균형(외부 CI 러너는 사용자 결정), U1 방아쇠 진동 · Android Vibrator(백엔드가 생길 때).
 
 ### 에셋 정체성(GUID) 2 · 3 단계 — DesignBacklog "에셋 정체성" 절
