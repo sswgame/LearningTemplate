@@ -69,7 +69,7 @@ namespace sw
                 const expected<string> rootPath = NetSecurity::resolveProjectPath( config._rootCertificateFile );
                 if ( rootPath.has_value() == false )
                     return unexpected( rootPath.error() );
-                if ( FileUtil::readTextFile( *rootPath, settings._trustedRootsPem ) == false || settings._trustedRootsPem.empty() )
+                if ( FileUtil::readTextFile( FileUtil::toDiskPath( *rootPath ), settings._trustedRootsPem ) == false || settings._trustedRootsPem.empty() )
                     return unexpected( Error{ ErrorKind::NotFound, "cannot read the apple root certificate file", *rootPath } );
                 settings._issuerID  = config._issuerID;
                 settings._keyID     = config._keyID;

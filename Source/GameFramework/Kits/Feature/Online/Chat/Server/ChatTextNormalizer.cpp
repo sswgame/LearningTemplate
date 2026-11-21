@@ -15,7 +15,7 @@ namespace sw
     {
         _listIgnored.clear();
         string content;
-        if ( FileUtil::readTextFile( path, content ) == false )
+        if ( FileUtil::readTextFile( FileUtil::toDiskPath( path ), content ) == false )
         {
             SW_LOG_ERROR_ID( "ChatTextNormalizer.CannotRead", "Chat ignored-character file '%#' could not be read", path );
             return false;

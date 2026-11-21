@@ -120,8 +120,8 @@ namespace
         FakeStoreFixture()
         {
             const string folder = _domain.makeDiskFolder( "sql" );
-            SW_EXPECT_TRUE( FileUtil::writeTextFile( FileUtil::joinPath( folder, SQLMigrationRunner::kListFileName ), "<SQLMigrationList><Migration _name=\"0001_fake\" _compatibility=\"Backward\" /></SQLMigrationList>" ) );
-            SW_EXPECT_TRUE( FileUtil::writeTextFile( FileUtil::joinPath( folder, "0001_fake.sql" ), "CREATE FAKE" ) );
+            SW_EXPECT_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( FileUtil::joinPath( folder, SQLMigrationRunner::kListFileName ) ), "<SQLMigrationList><Migration _name=\"0001_fake\" _compatibility=\"Backward\" /></SQLMigrationList>" ) );
+            SW_EXPECT_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( FileUtil::joinPath( folder, "0001_fake.sql" ) ), "CREATE FAKE" ) );
             _driver.addRows( test::FakeSQLDriver::kNextCommitVersion, { vector<SQLValue>{ SQLValue::makeInt64( 77 ) } }, 1 );
             SQLConnectionPoolConfig settings;
             settings._connection  = "fake";
@@ -747,8 +747,8 @@ SW_TEST_CASE( SQLServiceStoreTest, FailedMigrationStopsTheStartup )
 {
     test::ScopedScratchDomain domain;
     const string              folder = domain.makeDiskFolder( "sql" );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::joinPath( folder, SQLMigrationRunner::kListFileName ), "<SQLMigrationList><Migration _name=\"0001_fake\" _compatibility=\"Backward\" /></SQLMigrationList>" ) );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::joinPath( folder, "0001_fake.sql" ), "CREATE FAKE" ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( FileUtil::joinPath( folder, SQLMigrationRunner::kListFileName ) ), "<SQLMigrationList><Migration _name=\"0001_fake\" _compatibility=\"Backward\" /></SQLMigrationList>" ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( FileUtil::joinPath( folder, "0001_fake.sql" ) ), "CREATE FAKE" ) );
     test::FakeSQLDriver         driver;
     const SQLDriverRegistration registration{ driver };
     driver.addResult( "CREATE FAKE", SQLResult::Error );

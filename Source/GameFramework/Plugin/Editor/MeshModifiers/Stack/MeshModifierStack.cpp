@@ -514,13 +514,13 @@ namespace sw::editor
                              absPath.str() );
             return false;
         }
-        return FileUtil::writeFile( absPath.str(), reinterpret_cast<const uint8*>( text->data() ), text->size() );
+        return FileUtil::writeFile( absPath, reinterpret_cast<const uint8*>( text->data() ), text->size() );
     }
 
     bool MeshModifierStack::loadFromFile( string_view absolutePath )
     {
         string text;
-        if ( FileUtil::readTextFile( absolutePath, text ) == false )
+        if ( FileUtil::readTextFile( FileUtil::toDiskPath( absolutePath ), text ) == false )
             return false;
         return readJSONText( text );
     }

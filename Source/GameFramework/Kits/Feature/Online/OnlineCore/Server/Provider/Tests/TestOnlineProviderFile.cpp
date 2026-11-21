@@ -38,7 +38,7 @@ namespace
     sw::optional<sw::AbsolutePath> writeScratch( sw::string_view fileName, sw::string_view text )
     {
         const sw::string path = sw::test::makeScratchPath( fileName );
-        SW_EXPECT_TRUE( sw::FileUtil::writeTextFile( path, text ) );
+        SW_EXPECT_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::toDiskPath( path ), text ) );
         return sw::AbsolutePath::tryMake( path );
     }
 

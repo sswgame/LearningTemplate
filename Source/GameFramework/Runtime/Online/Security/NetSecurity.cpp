@@ -20,7 +20,7 @@ namespace sw
         {
             [[nodiscard]] static expected<void> readPem( const string& fileName, string& outText )
             {
-                if ( FileUtil::readTextFile( fileName, outText ) )
+                if ( FileUtil::readTextFile( FileUtil::toDiskPath( fileName ), outText ) )
                     return {};
                 return unexpected( Error{ ErrorKind::NotFound, "cannot read the PEM file", fileName } );
             }
@@ -35,14 +35,14 @@ namespace sw
                 const string folder = FileUtil::joinPath( ProcessRoots::get()._derivedData.str(), NetSecurity::kDevCertificateFolder );
                 outCertificateFile  = FileUtil::joinPath( folder, NetSecurity::kDevCertificateBundleFile );
                 outPrivateKeyFile   = outCertificateFile;
-                if ( FileUtil::isRegularFile( outCertificateFile ) )
+                if ( FileUtil::isRegularFile( FileUtil::toDiskPath( outCertificateFile ) ) )
                     return {};
                 string     certificatePem;
                 string     privateKeyPem;
-                const bool bMade = FileUtil::ensureDirectoryExists( folder ) &&
+                const bool bMade = FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( folder ) ) &&
                                    provider.createSelfSignedCertificate( "localhost", kDevCertificateValidDays, certificatePem, privateKeyPem );
                 certificatePem += privateKeyPem; // 한 번의 원자적 쓰기 — 늘 한 쌍
-                const bool bCreated = bMade && FileUtil::writeTextFile( outCertificateFile, certificatePem );
+                const bool bCreated = bMade && FileUtil::writeTextFile( FileUtil::toDiskPath( outCertificateFile ), certificatePem );
                 if ( bCreated == false )
                     return unexpected( Error{ ErrorKind::ExternalFailure, "cannot create the development certificate", folder } );
                 SW_LOG_INFO_ID( "NetSecurity.CreatedDevelopmentTLSCertificate", "Created a development TLS certificate: %#", outCertificateFile.c_str() );
