@@ -853,7 +853,7 @@ namespace sw
         const CookJobDesc desc           = makeCookJobDesc( registry );
         const CookJobDesc preloadDesc    = makePreloadCookJobDesc();
 
-        // 병렬 씬 쿠킹 판단(DesignBacklog "비동기 · 병렬"): 다시 구운 씬의 시간 합과 가장 느린 씬. 합이 쿠킹 전체를 지배할 때만 캐시 격리 · 결과 병합을 설계한다.
+        // 병렬 씬 쿠킹 판단(docs/NEXT.md 측정 씬 쿠킹): 다시 구운 씬의 시간 합과 가장 느린 씬. 합이 쿠킹 전체를 지배할 때만 캐시 격리 · 결과 병합을 설계한다.
         CookStats stats;
         int64     cookedNanoseconds  = 0;
         int64     slowestNanoseconds = 0;

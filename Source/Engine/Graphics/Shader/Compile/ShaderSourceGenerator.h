@@ -2,7 +2,7 @@
  * @file Engine/Graphics/Shader/Compile/ShaderSourceGenerator.h
  * @brief 쿠킹 전에 셰이더 소스를 만드는 생성기의 창구입니다(머티리얼 그래프 컴파일러 등). 개발 코드가 정적 등록하고, 셰이더 쿠커는 이 창구만 부른다.
  * @details 엔진이 개발 코드(그래프 컴파일러)를 직접 부르지 않게 하는 자리다 — 유니티 Shader Graph 가 `ScriptedImporter` 로 임포트 파이프라인에 스스로 붙는 모양(설계
- *          `docs/DesignBacklog.md` "머티리얼 그래프 컴파일러를 DevTools 로"). 개발 구성에서 등록이 0 이면 쿠킹 실패다 — 낡은 생성물로 굽지 않는다. 배포 구성은 생성기가 없다(굽기 전 생성물이 이미 맞다).
+ *          `docs/agents/Rendering.md` "머티리얼 그래프"). 개발 구성에서 등록이 0 이면 쿠킹 실패다 — 낡은 생성물로 굽지 않는다. 배포 구성은 생성기가 없다(굽기 전 생성물이 이미 맞다).
  */
 #pragma once
 #include "Core/Container/string.h"

@@ -5,7 +5,7 @@
  *          무엇을 했는지는 판 상태의 깃발에 이름으로 남긴다(`velmora.visited.<지역>` · `velmora.beacon.<지역>` · `velmora.cleared.<지역>`) — 확장 팩 지역이 빠진 판을 불러도
  *          모르는 이름은 그대로 남고 다시 켜면 이어진다(세이브 승계). 퀘스트에는 일어난 일만 알린다(`Enter` 지역 · `Light` 봉화 · `Clear` 지역 · `Defeat` 보스 종).
  *          보상은 퀘스트 단계 보상의 값 이름이 정한다 — `gold`(지갑의 기본 통화) · `heart`(하트 그릇). 모르는 이름은 경고한다(데이터 오타가 보상을 조용히 지우지 않게).
- *          장르 이름을 딴 키트로 빼지 않았다: `docs/DesignBacklog.md` "오픈월드 액션 RPG 키트" 1 — 두 번째 사용처에서 같은 계약이 확인될 때 나눈다.
+ *          장르 이름을 딴 키트로 빼지 않았다: `docs/NEXT.md` "지킬 결정" — 두 번째 사용처에서 같은 계약이 확인될 때 나눈다.
  */
 #pragma once
 #include "Core/Container/vector.h"

@@ -824,7 +824,7 @@ namespace sw
         }
         if ( total == 0 )
             return;
-        // 한 줄에 구역마다 `이름=바이트(백분율)` — 표로 바꿀 후보는 합계의 25 % 를 넘는 구역이다(docs/DesignBacklog.md W-R3 (a)). 이번 실행이 다시 만든 헤더만 센다.
+        // 한 줄에 구역마다 `이름=바이트(백분율)` — 표로 바꿀 후보는 합계의 25 % 를 넘는 구역이다(docs/NEXT.md 5-4 W-R3 (a)). 이번 실행이 다시 만든 헤더만 센다.
         StringBuilder<constant::buffer::kMax1024> text;
         for ( size_t section = 0; section < _arrEmitBytes.size(); ++section )
         {

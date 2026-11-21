@@ -561,7 +561,7 @@ namespace sw
             SW_LOG_WARNING_ID( "SceneManager.SceneSaveNoActive", "Scene save: no active scene" );
             return false;
         }
-        // 단계별 시간(비동기 저장 판단 — DesignBacklog "비동기 · 병렬"): 스냅숏(`serialize`)은 게임 스레드에 남고, 그 뒤 `base` · `write` 는 독립 값(`SceneDocument`)만 읽어 워커로 옮길 수 있는 몫이다.
+        // 단계별 시간(비동기 저장 판단 — docs/NEXT.md 측정 씬 저장): 스냅숏(`serialize`)은 게임 스레드에 남고, 그 뒤 `base` · `write` 는 독립 값(`SceneDocument`)만 읽어 워커로 옮길 수 있는 몫이다.
         SceneDocument doc{};
         {
             ScopedTimer serializeTimer{ "Scene.save.serialize" };

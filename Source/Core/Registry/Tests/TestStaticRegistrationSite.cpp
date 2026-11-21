@@ -53,7 +53,7 @@ SW_TEST_CHILD_ROLE( StaticRegistrationTest, DuplicateRegistrarChild )
 
 /**
  * @brief [StaticRegistrationTest] 겹친 정적 등록은 두 자리를 함께 찍은 줄로 남는다 — 시작 단계(`TestRunner::run` · 시나리오 단계)가 이 줄이 있으면 로드 오류로 멈춘다
- * @details 예전에는 오류 로그 한 줄만 남고 뒤의 등록이 조용히 빠졌다 — 두 갈래가 같은 감시 값을 더한 것이 전체 검증 중간에야 드러났다(DesignBacklog 실패 9).
+ * @details 예전에는 오류 로그 한 줄만 남고 뒤의 등록이 조용히 빠졌다 — 두 갈래가 같은 감시 값을 더한 것이 전체 검증 중간에야 드러났다.
  */
 SW_TEST_CASE( StaticRegistrationTest, DuplicateStaticRegistrationIsALoadErrorWithBothSites, ._tags = "slow", ._timeoutSeconds = 180.0f )
 {

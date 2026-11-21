@@ -2,7 +2,7 @@
  * @file SceneTransformPage.h
  * @brief 씬 컴포넌트 트랜스폼 값 페이지(`SceneTransformPage`)입니다. 컴포넌트가 자기 페이지 포인터로 값을 바로 읽는 인라인 접근자가 이 정의만 봅니다.
  * @details 저장소(`SceneTransformStorage.h` — 서브시스템 · 슬롯 표 · 데이터 저장소)와 나눠, `SceneComponent.h` 를 포함하는 TU 가 저장소 사슬을 읽지 않게 한다
- *          (DesignBacklog "헤더 팬인 다이어트" ⑤).
+ *          (헤더 팬인 다이어트).
  */
 #pragma once
 #include "Core/Foundation/Constants.h"

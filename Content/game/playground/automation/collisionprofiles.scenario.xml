@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="f5e96fbb75164edf8d022b13a2b350be"?>
 <!--
-  충돌 채널 · 응답 · 프로필(DesignBacklog "충돌 채널 · 응답 · 프리셋") — 무대 maps/collisionprofiles.
+  충돌 채널 · 응답 · 프로필 — 무대 maps/collisionprofiles.
   ① 투사체(Bolt, 프로필 Projectile)를 켜면 날아가 트리거(Gate, Trigger)는 겹침만 내며 지나가고(Physics.OverlapCount 1 → 0), Pawn(Guard, Character)에 막혀 선다.
   ② 눈(Eye)에서 +X 로 쏜 Camera 트레이스는 Pawn(Watcher)을 무시하고 벽(Wall)에 맞고(7.5 m), Visibility 트레이스는 Watcher 에 맞는다(2.5 m).
   값으로 판정한다(골든 없음). 실행: App -scenario=game/playground/automation/collisionprofiles.scenario.xml -unattended

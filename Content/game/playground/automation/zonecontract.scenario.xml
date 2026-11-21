@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="c033d15f37174c98a044c950ad326d8c"?>
 <!--
-  트리거 계약 — 지역 볼륨의 진입 · 이탈(DesignBacklog "트리거 Enter · Stay · Exit 계약"). 무대 maps/zoneshowcase 의 Swamp(늪, 볼륨 겹침 입력)와 Walker.
+  트리거 계약 — 지역 볼륨의 진입 · 이탈(docs/agents/Gameplay.md "트리거 · 물리"). 무대 maps/zoneshowcase 의 Swamp(늪, 볼륨 겹침 입력)와 Walker.
   볼륨을 끄면 안의 대상이 나가 이탈 할 일(이 출처 이펙트 지우기)이 돌고, 다시 켜면 진입한다. 대상을 끄면 나가고 켜면 든다. 안에서 파괴해도 오류가 없다.
   값으로 판정한다(골든 없음). 실행: App -scenario=game/playground/automation/zonecontract.scenario.xml -unattended
 -->

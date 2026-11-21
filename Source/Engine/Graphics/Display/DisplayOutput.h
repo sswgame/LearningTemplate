@@ -1,6 +1,6 @@
 /**
  * @file DisplayOutput.h
- * @brief 화면 출력 장치 한 값(`DisplayOutputDesc` — SDR · HDR10 · scRGB, 종이 흰색 · 최대 휘도)과 능력에 맞춰 고르는 함수입니다(설계: DesignBacklog "HDR 디스플레이 출력").
+ * @brief 화면 출력 장치 한 값(`DisplayOutputDesc` — SDR · HDR10 · scRGB, 종이 흰색 · 최대 휘도)과 능력에 맞춰 고르는 함수입니다.
  * @details 언리얼 `r.HDR.Display.OutputDevice` · `r.HDR.UI.Level`, 유니티 `HDROutputSettings`, Godot 4.5 HDR 출력 설정과 같은 자리다. 스왑체인 포맷 · 색 공간 · 셰이더 인코딩은
  *          모두 이 값 하나에서 정한다(따로 받지 않아 맞지 않는 짝을 만들 수 없다). 능력 밖 요청은 정보 로그 한 줄과 SDR 이다 — 능력 표가 정한 길이지 실패의 대체가 아니다.
  */

@@ -183,7 +183,7 @@ namespace sw
         /**
          * @brief Box2D 사용자 거름(`b2World_SetCustomFilterCallback`)입니다 — 두 막는 셰이프의 응답이 겹침(Overlap)이면 접촉을 만들지 않는다(밀어내지 않는다).
          * @details 마스크는 겹침 쌍도 남긴다 — 센서(트리거)가 그 상대를 봐야 하므로 마스크에서 빼지 않는다. Box2D 는 막는 셰이프끼리 겹침 이벤트를 내지 못한다(센서만 낸다):
-         *          2D 에서 겹침 이벤트를 받으려면 한쪽이 트리거여야 한다(유니티 2D 와 같다, DesignBacklog "충돌 채널 · 응답 · 프리셋").
+         *          2D 에서 겹침 이벤트를 받으려면 한쪽이 트리거여야 한다(유니티 2D 와 같다).
          */
         static bool       filterShapePair( b2ShapeId shapeA, b2ShapeId shapeB, void* pContext );
         void              applyFilter( const BodyRecord& record );

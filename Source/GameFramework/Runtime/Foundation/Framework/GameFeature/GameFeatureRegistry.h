@@ -5,7 +5,7 @@
  *          언리얼 Game Features 의 액션(`UGameFeatureAction::OnGameFeatureActivating` · `OnGameFeatureDeactivating`)과 같은 자리다. 다른 점: 끄기 함수가 없다 —
  *          켜기 함수는 `GameFeatureScope` 만 받고, 범위에 건 것(서비스 · 전역 변수 · 되돌릴 일)은 범위가 역순으로 거둔다. 그래서 키트가 끄기를 빠뜨려 등록이 다음 미니게임으로
  *          새는 모양을 쓸 수 없다. 켜는 쪽은 둘이다 — 게임 인스턴스(gamesettings `gameFeatures`, 게임 범위)와 미니게임(`MinigameDefinition` 의 `features`, `MinigameFlow`).
- *          런타임 모듈 로드 · 언로드는 기각(정적 구성 불가, 미니게임마다 언로드 절차 — `docs/DesignBacklog.md` "게임 기능 · 미니게임").
+ *          런타임 모듈 로드 · 언로드는 기각(정적 구성 불가, 미니게임마다 언로드 절차 — `docs/agents/Gameplay.md` "게임 기능 · 미니게임").
  *          등록부는 GameFramework 의 모듈 서브시스템(엔진 범위)이고, 키트의 등록자는 모듈을 올릴 때 붙고 내리기 전에 떨어진다(`ModuleEntryRegistrar` — 개발 명령과 같은 길).
  */
 #pragma once

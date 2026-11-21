@@ -1,7 +1,7 @@
 /**
  * @file AndroidInputView.h
  * @brief Java 입력 뷰(`SWInputView` — `Window/Android/Java`)의 C++ 짝입니다. 입력기의 `InputConnection` 호출을 받아 조합 · 확정 글과 지우기 키로 옮기고 게임 스레드로 넘깁니다.
- * @details 설계: DesignBacklog "Android IME 조합"(감사 P-4). 호출은 Java UI 스레드에서 JNI 로 오고(뷰의 잠금 안 — 하나씩), 옮기는 규칙은 `AndroidInputConnectionState` 다.
+ * @details 감사 P-4. 호출은 Java UI 스레드에서 JNI 로 오고(뷰의 잠금 안 — 하나씩), 옮기는 규칙은 `AndroidInputConnectionState` 다.
  *          나온 동작은 잠금 안 목록에 모으고 파이프에 한 바이트를 써서 게임 스레드의 ALooper 를 깨운다 — 창은 그 ALooper 를 비울 때 목록을 받아
  *          `CallbackInputWindow::queueTextInput` · 키 입력으로 낸다(창 스레드 계약 그대로). 언리얼 GameActivity 의 가상 키보드 입력 뷰 · Godot `GodotEditText` 자리다.
  *          Java 클래스는 앱의 dex 에 있어 액티비티의 클래스 로더로 찾는다(붙인 네이티브 스레드의 `FindClass` 는 시스템 로더라 찾지 못한다).

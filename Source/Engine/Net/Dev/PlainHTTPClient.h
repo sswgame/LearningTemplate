@@ -1,7 +1,7 @@
 /**
  * @file PlainHTTPClient.h
  * @brief 개발 전용 평문 HTTP/1.1 GET 클라이언트입니다(TLS 없음). 장치가 PC 의 팩 폴더를 받는 Fileserve 전송(`FileServeContentSource`)이 쓴다.
- * @details 설계: DesignBacklog "Fileserve" 결정 3. 콘텐츠 소스는 엔진이 첫 팩을 읽기 전(`android_main`)에 걸어야 하는데 실제 HTTP 클라이언트(GameFramework `BlockingHTTPClient`)는
+ * @details 콘텐츠 소스는 엔진이 첫 팩을 읽기 전(`android_main`)에 걸어야 하는데 실제 HTTP 클라이언트(GameFramework `BlockingHTTPClient`)는
  *          그때 없다 — 그래서 엔진 층에 막는 GET 하나만 하는 작은 클라이언트를 둔다(`PlatformSocketUtil` 의 TCP 연산 위). 요청마다 연결 하나(`Connection: close`)라 상태가 없고
  *          여러 스레드가 함께 불러도 된다. 리다이렉트 · 압축 · 1xx · keep-alive 는 하지 않는다.
  *          시한은 잇기 · 보내기 · 받기를 덮지만 호스트 이름 해석(`getaddrinfo` — OS 해석기 시한)은 덮지 않는다 — `-fileserve` 에는 IP 리터럴(`adb reverse` 면 127.0.0.1)을 준다.

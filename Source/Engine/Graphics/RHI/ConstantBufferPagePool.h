@@ -1,6 +1,6 @@
 /**
  * @file ConstantBufferPagePool.h
- * @brief 작은 상수 버퍼(머티리얼 인스턴스)를 디바이스의 64 KiB 페이지 구간에 모읍니다(설계: DesignBacklog "자원 구간 할당" ③, 감사 R-4).
+ * @brief 작은 상수 버퍼(머티리얼 인스턴스)를 디바이스의 64 KiB 페이지 구간에 모읍니다(감사 R-4).
  * @details 등급 칸 고르기는 `ConstantBufferSlotAllocator`, 이 클래스는 페이지 번호마다 RHI 버퍼(`createConstantBufferPage`)와 구간마다 디스크립터
  *          (`registerBindlessBufferSRV( RHIBufferSlice )`)를 갖는다. 비행 중 프레임 복제는 페이지가 갖는다(백엔드가 구간을 그 프레임 칸에 쓴다).
  *          가장 큰 등급(4096 B)보다 큰 요청은 전용 버퍼 하나다(칸 없음). 언리얼 `FD3D12PoolAllocator` · 유니티 SRP Batcher 의 영속 버퍼 오프셋 자리다.

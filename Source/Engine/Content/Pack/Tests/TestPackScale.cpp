@@ -21,7 +21,7 @@
 
 /**
  * @file TestPackScale.cpp
- * @brief 팩 규모 벤치입니다. 시간 문턱은 두지 않고 값을 로그(`Pack.Scale.*`)로 남긴다 — 판정은 통합이 설계 문턱(DesignBacklog "팩 규모")으로 한다.
+ * @brief 팩 규모 벤치입니다. 시간 문턱은 두지 않고 값을 로그(`Pack.Scale.*`)로 남긴다 — 판정은 통합이 docs/NEXT.md 측정 "팩 규모" 의 문턱으로 한다.
  * @details 재는 법: Release `App --test --test-run-disabled --test-filter=PackScaleTest.*` 를 따뜻한 캐시로 5 번, 값마다 중앙값.
  *          합성 팩은 스크래치 폴더에 짓는다(`index300k` 약 190 MB, `patch1g` 1 GiB). 케이스가 무거워 평소 실행에서 끈다.
  *          - `index300k`: 30 만 × 256 ~ 1024 B, 세 단계 폴더(20 × 20 × 20) · 경로 49 자.

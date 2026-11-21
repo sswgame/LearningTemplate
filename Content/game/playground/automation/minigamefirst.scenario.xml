@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="3f6c1e0b9a7d4e28b5c4a1d2e8f07b63"?>
 <!--
-  첫 진입이 미니게임일 때 나가기 — 돌아올 자리가 없으므로 gamesettings 입구 씬(시작 맵 — 마을 maps/hub)으로 간다(docs/DesignBacklog.md "게임 기능 · 미니게임").
+  첫 진입이 미니게임일 때 나가기 — 돌아올 자리가 없으므로 gamesettings 입구 씬(시작 맵 — 마을 maps/hub)으로 간다(docs/agents/Gameplay.md "게임 기능 · 미니게임").
   실행 전역 변수 gv_firstMinigame 로 바로 들어가는 장르 키트 시나리오들이 나갈 때 기대는 길이다.
   실행: App -scenario=game/playground/automation/minigamefirst.scenario.xml -unattended (체인: ctest -R Scenario.playground)
 -->

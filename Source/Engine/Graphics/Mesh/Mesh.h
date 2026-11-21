@@ -198,7 +198,7 @@ namespace sw
      * @enum MeshCPUAccess
      * @brief 메시의 CPU 정점을 GPU 업로드 뒤에도 쥐는가입니다(감사 R-15 — 언리얼 `bAllowCPUAccess` 자리).
      * @details 지금은 모든 메시가 `Keep` 이다. `ReleaseAfterUpload` 를 켜는 일(업로드 뒤 놓기 · 장치 교체 때 `.mesh` 다시 읽기)은 정점 풀 · 모프 · GI 복셀화가
-     *          GPU 원본을 쓰게 된 뒤다(DesignBacklog R-15 후속). CPU 정점을 읽는 길은 `MeshCPUView` 하나라, 놓기를 켤 때 고칠 자리가 그것을 부르는 곳으로 모인다.
+     *          GPU 원본을 쓰게 된 뒤다(docs/NEXT.md R-15 후속). CPU 정점을 읽는 길은 `MeshCPUView` 하나라, 놓기를 켤 때 고칠 자리가 그것을 부르는 곳으로 모인다.
      */
     enum class MeshCPUAccess : uint8
     {
@@ -276,7 +276,7 @@ namespace sw
          * @brief 스킨 없는 모프 메시(블렌드 셰이프만 있는 소품 · 얼굴)를 본 하나에 가중치 1 로 묶은 스킨 원본을 돌려줍니다(정점 · 구간 · LOD · 모프 타깃 복사).
          * @details 모프 가중치는 GPU 스키닝 컴퓨트가 스키닝 앞에 건다. 스킨이 없으면 그 길에 들지 못하므로 고정 본 하나를 준다(임포트가 몸에 합칠 때와 같은 규칙).
          *          `SkeletalMeshComponent` 가 이런 메시를 받으면 이 함수로 원본을 바꿔 그린다 — 스켈레톤이 없으면 암묵 스켈레톤(본 하나)이다.
-         *          같은 원본(내용 번호)의 유닛은 한 벌을 나눈다 — 스킨 결과는 칸마다라 원본은 하나면 되고, 유닛마다 사본이면 정점 풀 · 배치가 유닛마다 갈린다(DesignBacklog "메시 구조" 스킨 인스턴스).
+         *          같은 원본(내용 번호)의 유닛은 한 벌을 나눈다 — 스킨 결과는 칸마다라 원본은 하나면 되고, 유닛마다 사본이면 정점 풀 · 배치가 유닛마다 갈린다(docs/agents/Rendering.md 메시).
          *          약한 참조라 그리는 유닛이 없으면 사라지고, 핫 리로드한 원본은 내용 번호가 바뀌어 새 것을 받는다. 어느 스레드에서 불러도 된다.
          */
         static shared_ptr<Mesh> acquireRigidSkinSource( const Mesh& source );

@@ -18,7 +18,7 @@
 
 /**
  * @file TestContainerBench.cpp
- * @brief 컨테이너 벤치 넷입니다. 시간 문턱은 두지 않고 값을 로그(`ContainerBenchTest.*`)로 남긴다 — 판정은 통합이 설계 문턱(DesignBacklog "출하 할당기와 컨테이너 복잡도")으로 한다.
+ * @brief 컨테이너 벤치 넷입니다. 시간 문턱은 두지 않고 값을 로그(`ContainerBenchTest.*`)로 남긴다 — 판정은 통합이 docs/NEXT.md 측정 "컨테이너" 의 문턱으로 한다.
  * @details 재는 법: Release `App --test --test-run-disabled --test-filter=ContainerBenchTest.*` 5 번, 로그 값의 중앙값.
  *          할당 수는 스레드 할당 수(`Memory::getThreadAllocationCount`)의 앞뒤 차이로 이 스레드의 할당만 센다 — 배포본은 0 이다(Release 로 잰다).
  *          케이스는 무거워 평소 실행에서 끈다(`map` 범위 구축은 AC-2 로 붙이고 정렬 · 병합하는 O(n log n), 고치기 전은 O(n²)).
@@ -368,7 +368,7 @@ namespace sw
 
 /**
  * @brief [ContainerBenchTest] 열린 주소법 판정 — 10 만 키에서 있는 키 · 없는 키 찾기 100 만 번씩을 제품 `unordered_map` 과 열린 주소 시제품으로 나란히 잽니다.
- * @details 문턱(DesignBacklog "구조 · 성능 발전 방향" Core 의 측정 뒤 항목): 없는 키 20% 이상 · 있는 키 10% 이상 빠르고 순회 · 삽입이 느려지지 않을 때만 바꾼다.
+ * @details 문턱(docs/NEXT.md 측정 "컨테이너"): 없는 키 20% 이상 · 있는 키 10% 이상 빠르고 순회 · 삽입이 느려지지 않을 때만 바꾼다.
  *          성능 판정은 배포와 같은 자료 배치에서 잰다 — Release 는 검사 칸(경합 검출 · 이터레이터 세대)이 표에 들어 있어 값과 함께 구성을 적는다.
  */
 SW_TEST_CASE( ContainerBenchTest, UnorderedMapFindVersusOpenAddressing, ._tags = "bench", ._disabledReason = "bench - Release 에서 --test-run-disabled 로 돌린다" )

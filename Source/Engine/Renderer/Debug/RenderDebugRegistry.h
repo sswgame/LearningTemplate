@@ -5,7 +5,6 @@
  *          그래프 밖 버퍼 읽기(`FrameBufferTable` 등록분 — `RenderBufferInspector` 가 렌더 쪽에서 읽는다). `RenderTargetRegistry` 와 같은 꼴이다: 값만 복사해 넘기고
  *          공개 번호(`get…Serial`)로 다시 읽을지 안다. 렌더러는 호스트(`FrameRendererHost::_pRenderDebug`)로만 이것을 받아 화면 밖 렌더러는 기록하지 않는다.
  *          렌더러 쪽 훅은 배포 구성(`SW_SHIPPING`)에서 빠진다 — 그때 이 객체는 아무도 채우지 않는다.
- *          설계: DesignBacklog "렌더링 런타임 디버그(설계 2026-11-20)".
  */
 #pragma once
 #include "Core/Concurrency/atomic.h"

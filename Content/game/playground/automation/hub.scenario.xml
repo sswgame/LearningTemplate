@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="ec76a0b6bdbc4d04a124e01a21784c70"?>
 <!--
-  마을 → 미니게임 둘 들어갔다 나오기 → 마을 상태 그대로(docs/DesignBacklog.md "게임 기능 · 미니게임"). 무대 maps/hub(팩 시작 맵).
+  마을 → 미니게임 둘 들어갔다 나오기 → 마을 상태 그대로(docs/agents/Gameplay.md "게임 기능 · 미니게임"). 무대 maps/hub(팩 시작 맵).
   ① 마을: -gv_firstScene 가 마을 맵을 연다. 게임 범위 기능(gamesettings gameFeatures)은 기동 때 이미 켜졌다 — 미니게임은 없다.
   ② 하위 레벨: CardTableGate(MinigameTriggerComponent)에 들어가면 minigames/cardtable 이 켜지고 maps/hub_cardtable 이 마을 씬에 더해진다(씬은 그대로).
      minigame.leave 가 하위 레벨을 빼고 끈다. 안에 머물러도 다시 들어가지 않는다.

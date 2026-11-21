@@ -118,7 +118,7 @@ namespace sw::editor
     /**
      * @struct EditorUIFrameOutput
      * @brief UI 프레임이 쓰고 게임 스레드가 읽는 값 묶음입니다 — 그린 뷰와 그 자리, 미리보기 뷰의 눈, 게임 뷰 초점 · 마우스 올림, UI 쪽 다시 그릴 까닭.
-     * @details 에디터 UI 스레드 분리의 UI → 게임 방향 계약이다(`docs/DesignBacklog.md` "에디터 UI 스레드 분리 검토" 3). UI 는 프레임 동안 자기 묶음에만 쓰고,
+     * @details 에디터 UI 스레드 분리의 UI → 게임 방향 계약이다. UI 는 프레임 동안 자기 묶음에만 쓰고,
      *          프레임 끝(`EditorRenderViews::publishUIFrame`)에 통째로 복사해 넘긴다. 게임 스레드는 넘긴 사본만 읽는다(`getPublishedUIFrame`) — 다음 UI 프레임이 쓰는 중인 값을 보지 않는다.
      *          게임 → UI 방향은 View 가 받는 ViewState 스냅샷이고, UI → 게임의 의도는 명령(`EditorUICommandQueue`)이다. 세 길 모두 값만 건너간다(언리얼 Slate 가 게임 스레드와 주고받는 모양).
      *          포인터 · 핸들 없이 고정 크기 값만 들어 복사가 할당하지 않는다.

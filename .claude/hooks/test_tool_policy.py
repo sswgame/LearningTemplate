@@ -45,7 +45,7 @@ class ToolPolicyTest(unittest.TestCase):
 
     def test_hook_call_latency_is_reported(self):
         """호출 하나의 지연(빈 입력 20 번의 p95)을 찍고 예산(Config/Dev/Verify.json 의 _hookBudgetMilliseconds)을 넘으면 경고한다 — 기계 · 부하마다 달라
-        판정은 바꾸지 않는다. 넘으면 `py -3 -I -S`(site 를 읽지 않는다)와 PostToolUse 매처 좁히기를 본다(docs/DesignBacklog.md 구조 · 성능 발전 방향 Scripts ⑥)."""
+        판정은 바꾸지 않는다. 넘으면 `py -3 -I -S`(site 를 읽지 않는다)와 PostToolUse 매처 좁히기를 본다(docs/NEXT.md 측정 Scripts)."""
         here = os.path.dirname(os.path.abspath(__file__))
         with open(os.path.join(here, "..", "..", "Config", "Dev", "Verify.json"), encoding="utf-8") as stream:
             budget = json.load(stream)["_hookBudgetMilliseconds"]

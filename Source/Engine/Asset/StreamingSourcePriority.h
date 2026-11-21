@@ -2,7 +2,7 @@
  * @file StreamingSourcePriority.h
  * @brief 스트리밍 우선순위 형식입니다 — 셀 로드(`SceneStreamingSubsystem`)와 텍스처 밉 스트리밍(`TextureCache`)이 같은 값으로 차례를 정합니다.
  * @details 정하는 곳은 스트리밍 소스(`StreamingSource`, `Engine/Scene/StreamingCellGrid.h`)다. 텍스처 캐시(그래픽 층 4)가 씬(5)을 모르므로 형식은 둘이 함께 보는 에셋 층에 둔다
- *          (에셋 스트리밍 큐 `AssetStreamingQueue` 곁). 이름은 `getEnumName` 으로 읽는다. 설계는 `docs/DesignBacklog.md` "씬 스트리밍 (라) HLOD · 우선순위 공유 · 로드 큐 디버그".
+ *          (에셋 스트리밍 큐 `AssetStreamingQueue` 곁). 이름은 `getEnumName` 으로 읽는다. 남은 일은 `docs/NEXT.md` "씬 스트리밍 (라)".
  */
 #pragma once
 #include "Core/Foundation/Macros.h"

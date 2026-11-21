@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="b625642fc0a84b5da61466ce2cdbb573"?>
 <!--
-  편집기 부하 시나리오 — 큐브 8000 씬의 계층 · 선택 비용(DesignBacklog "에디터 첫 패널 · Hierarchy 8000 측정 계획"). 씬은 커밋하지 않고 빈 씬에서 명령으로 짓는다.
+  편집기 부하 시나리오 — 큐브 8000 씬의 계층 · 선택 비용(docs/NEXT.md 측정 E1). 씬은 커밋하지 않고 빈 씬에서 명령으로 짓는다.
   ① 루트 8000: 큐브 하나를 만들고 복제(scene.duplicate 는 사본을 고른다)와 MeshComponent 전체 고르기(select.type)로 늘린다 — 1 → 5 → 25 → 125 → ×2 여섯 번 = 8000.
   ② 20×20×20 트리: 루트(NavMeshModifierComponent 표지) 아래 마디(TagComponent 표지) 아래 잎(큐브)을 만들고 잎 · 마디 · 루트를 차례로 19 번씩 복제한다(복제는 하위를 함께 옮긴다).
      표지 컴포넌트는 층마다 select.type 으로 그 층만 고르려는 것이다(편집기에서는 아무 일도 하지 않는다).

@@ -5,7 +5,7 @@
  *          개발 겹치기 · 렌더 스레드 UI)는 UI RT 에 쓴다 — 그들은 모두 `FrameRenderer::getScreenTarget` 한 자리를 보므로 패스마다 HDR 변형이 없다(회전 출력 `FrameScreenRotation` 과 같은 꼴).
  *          끝의 `recordToSwapchain` 이 UI 합성(`RenderPassKind::DisplayCompositeUI`)과 인코딩(`DisplayEncodeHDR10` · `DisplayEncodeScRGB`)을 기록한다. SDR 은 두 RT · 두 패스 모두 없다(비용 0,
  *          그래프 · 골든 그대로). 언리얼 HDR 출력(장면과 UI 를 따로 그려 `r.HDR.UI.CompositeMode` 로 합성) · Godot 4.5 HDR 출력과 같은 자리다.
- *          설계: DesignBacklog "HDR 디스플레이 출력" 5 절(파이프라인 XML 대신 회전 출력과 같은 그래프 밖 출력으로 둔 까닭은 그 절의 기록).
+ *          파이프라인 XML 대신 회전 출력과 같은 그래프 밖 출력이다.
  */
 #pragma once
 #include "Core/Foundation/Macros.h"

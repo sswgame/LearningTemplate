@@ -43,7 +43,7 @@ namespace sw
 
     /**
      * @brief 이 인스턴스에서 끝난 게임 상태 세이브 슬롯 쓰기 · 읽기(복원까지) 중 성공한 수와 마지막 세이브 찍기 시간입니다. 감시 값 `Save.Written` · `Save.Loaded` · `Save.CaptureMs` 가 읽는다.
-     * @details 찍기는 게임 스레드에서 돈다 — 문턱(Android 4 ms, `docs/DesignBacklog.md` GameFramework ②)을 넘는지 재는 자리다. 문턱을 넘기 전에는 바뀐 컴포넌트만 다시 찍는 판 번호 방식을 넣지 않는다.
+     * @details 찍기는 게임 스레드에서 돈다 — 문턱(Android 4 ms, `docs/NEXT.md` 측정 게임 프레임워크)을 넘는지 재는 자리다. 문턱을 넘기 전에는 바뀐 컴포넌트만 다시 찍는 판 번호 방식을 넣지 않는다.
      */
     struct SaveSlotCounts
     {

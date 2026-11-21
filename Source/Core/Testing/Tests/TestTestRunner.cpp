@@ -149,7 +149,7 @@ SW_TEST_CASE( TestRunnerTest, SkippedCaseIsReportedApartFromPassAndFail, ._tags 
 
 /**
  * @brief [TestRunnerTest] 거르개는 쉼표로 가른다 — 콜론 · 세미콜론 · 공백이 든 거르개는 인자 오류다(맞는 케이스 없음과 다른 길)
- * @details GoogleTest 의 콜론 문법을 쓴 거르개가 아무 케이스에도 맞지 않아 `NO TESTS` 로만 졌다(DesignBacklog 실패 8).
+ * @details GoogleTest 의 콜론 문법을 쓴 거르개가 아무 케이스에도 맞지 않아 `NO TESTS` 로만 졌다.
  */
 SW_TEST_CASE( TestRunnerTest, FilterGrammarRejectsOtherSeparators )
 {

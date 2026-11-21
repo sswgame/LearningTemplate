@@ -214,7 +214,7 @@ namespace sw
         IAutomationStepState& setHeldStepState( const AutomationStep& step, unique_ptr<IAutomationStepState> state ) override;
         /**
          * @brief 대기(`<WaitUntil>` · 사진 정착 · `<WaitRenderStable/>` · 에디터 입력 대상 · `<EditorWaitStable/>`)가 시한 · 정지 시한에 걸렸다 — 실패를 적고 시나리오를 끝냅니다(포기는 그 시나리오의 끝이다).
-         * @details 예전에는 실패를 적고 다음 단계로 가서 뒤의 대기가 모두 다시 시한까지 기다렸다(DesignBacklog 실패 1 — 사진마다 수천 프레임).
+         * @details 예전에는 실패를 적고 다음 단계로 가서 뒤의 대기가 모두 다시 시한까지 기다렸다(사진마다 수천 프레임).
          * @param repeatKey 반복 실패 차단의 열쇠(`<단계 종류> <감시 값 · 조건 이름>` — `AutomationRunResult::withRepeatKey`)
          */
         void giveUpWait( const AutomationStep& step, AutomationFailureKind kind, string_view reason, string_view repeatKey ) override;

@@ -22,7 +22,7 @@ namespace sw
      *          그 단계에서 다시 참이 되는 프레임이 0). 멈추면 나머지는 돌리지 않고, 프로세스의 결과는 처음으로 통과하지 못한 단계의 결과다.
      *          `CloseWindow` 로 끝나는 단계는 마지막이어야 한다(창이 닫히면 루프가 끝난다). 게임 스레드에서만 쓴다.
      *          `keepGoing` 이어도 같은 대기 실패(종류 + 반복 열쇠 `AutomationRunResult::getRepeatKey`)가 `repeatedFailureLimit` 번 나오면 멈춘다(`RepeatedFailure`) — 같은 대기가 단계마다
-     *          시한까지 기다리며 지던 체인(DesignBacklog 실패 1 — Playground 체인 74 분)의 상한이 한도 × 정지 시한이 된다. 남은 단계는 돌지 않은 것으로 남고 `--from-stage` 로 잇는다.
+     *          시한까지 기다리며 지던 체인(Playground 체인 74 분)의 상한이 한도 × 정지 시한이 된다. 남은 단계는 돌지 않은 것으로 남고 `--from-stage` 로 잇는다.
      */
     class SW_DEVTOOLS_API AutomationScenarioChain
     {

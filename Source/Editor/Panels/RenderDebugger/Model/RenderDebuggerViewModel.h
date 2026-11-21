@@ -3,7 +3,7 @@
  * @brief 렌더 디버거 창의 ViewModel — 프레임 디버거(이벤트 목록 · 멈춤 지점 · 바인딩), 렌더 그래프 그림(사본 · 배치 · 패스 GPU 시간), 버퍼 보기(목록 · 읽기 · 표 배치),
  *        가림 · 스트리밍(타일 요약 · 스트리밍 카운터)을 모읍니다. ImGui 를 모릅니다(`docs/agents/EditorUI.md` MVVM 계약).
  * @details 값은 `RenderDebugRegistry` 의 공개 번호가 바뀔 때만 다시 복사한다. 원천(우편함 · 프로파일러 · 가림 사본)은 `RenderDebuggerSources` 로 받아 단위 테스트가 가짜 원천을 넘긴다.
- *          언리얼 RDG Insights · 유니티 Frame Debugger 와 Rendering Debugger 를 한 창의 탭으로 모은 자리다. 설계: DesignBacklog "렌더링 런타임 디버그(설계 2026-11-20)".
+ *          언리얼 RDG Insights · 유니티 Frame Debugger 와 Rendering Debugger 를 한 창의 탭으로 모은 자리다.
  */
 #pragma once
 #include "Core/Container/string.h"

@@ -1356,7 +1356,7 @@ namespace sw
         submitPending();
 #if defined( SW_PLATFORM_WEB )
         // 브라우저: 기다리지 않는다(지금 동작). `waitIdle` 은 크기 변경 · 표면 놓기에서 DOM 이벤트 콜백 스택으로 올 수 있고 JSPI 는 그 스택을 멈출 수 없다 —
-        // 프레임 콜백 안인지 웹 시나리오로 확인한 뒤 `waitFrameFence` 로 바꾼다(DesignBacklog RHI ②). WebGPU 는 GPU 가 쓰는 객체를 놓아도 구현이 끝날 때까지 살린다(명세) —
+        // 프레임 콜백 안인지 웹 시나리오로 확인한 뒤 `waitFrameFence` 로 바꾼다(docs/NEXT.md 웹 실행). WebGPU 는 GPU 가 쓰는 객체를 놓아도 구현이 끝날 때까지 살린다(명세) —
         // 해제는 놓아도 되고, 끝나지 않은 프레임의 통지만 아래에서 `Abandoned` 로 간다.
 #elif defined( SW_PLATFORM_WINDOWS ) || defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_ANDROID )
         // Dawn: 낸 프레임을 오래된 순서로 프레임 펜스까지 기다린다 — `beginFrameInternal` 의 칸 대기와 같은 길(`wgpuInstanceWaitAny`, 잠 폴링 없음). 잃은 장치는 끝나지 않을 일을 기다리지 않는다.

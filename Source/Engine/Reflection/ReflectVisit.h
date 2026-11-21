@@ -3,7 +3,7 @@
  * @brief 리플렉션 칸을 도는 한 곳(`ReflectPropertyVisitor`)입니다 — 방문 순서(기반부터) · 역할 거르기 · 구조체 값과 시퀀스 원소로 내려가기를 여기 두고, 소비자(상태 해시 · 검증 · 직렬화 …)는 방문자만 씁니다.
  * @details 언리얼 `TFieldIterator<FProperty>` · `FPropertyValueIterator`(구조체 · 컨테이너 재귀), 유니티 `SerializedProperty.Next( enterChildren )` ·
  *          Unity.Properties `PropertyVisitor` 자리다. 칸마다 가상 호출이 들지 않게 방문자는 템플릿 인자로 받아 인라인한다(`ReflectedValueVisitor` 와 같은 모양) —
- *          가상 `IPropertyVisitor` 는 기각했다(docs/DesignBacklog.md 리플렉션 남은 몫 W-R4).
+ *          가상 `IPropertyVisitor` 는 기각했다.
  *          - 방문 순서는 `TypeInfo::getPropertiesWithBase` 그대로다(기반부터, 파생이 같은 이름을 제자리에서 덮는다). `_bWithBase` 를 끄면 최상위 타입이 선언한 칸만이다.
  *          - 객체 주소가 nullptr 이면 스키마만 걷는다 — 칸은 알리고 `_pValue` 는 nullptr, 내려가지 않는다(문서 · 인스펙터 배치 · 기본값 풀이처럼 인스턴스 없이 칸을 보는 소비자).
  *          - 비트필드는 값 주소가 없다 — `_pValue` 가 nullptr 이고 방문자는 `_property.getValue<bool>( _pObject )` 로 읽는다(같은 바이트의 다른 비트를 덮지 않는다).

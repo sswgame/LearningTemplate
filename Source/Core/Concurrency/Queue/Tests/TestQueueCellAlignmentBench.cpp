@@ -2,7 +2,7 @@
  * @file TestQueueCellAlignmentBench.cpp
  * @brief 큐 칸 캐시 줄 정렬 판정용 벤치입니다. `ConcurrentQueue` 의 칸은 `alignas( 64 )` 라 8 바이트 항목 하나가 64 바이트를 쓴다 — 칸 정렬을 뺀 같은 링과
  *        처리량 · 칸 크기를 나란히 잰다. 시간 문턱은 두지 않고 값을 로그(`QueueCellBenchTest.*`)로 남긴다.
- * @details 판정(DesignBacklog "구조 · 성능 발전 방향" Core 의 측정 뒤 항목): 정렬을 뺀 판의 처리량이 3% 넘게 떨어지지 않으면 칸 정렬을 뺀다
+ * @details 판정(docs/NEXT.md 측정 "큐 칸 정렬"): 정렬을 뺀 판의 처리량이 3% 넘게 떨어지지 않으면 칸 정렬을 뺀다
  *          (Vyukov 원본 · folly `MPMCQueue` 는 칸마다 정렬하지 않고 머리 · 꼬리 위치만 떼어 놓는다 — 이 링도 그렇다).
  *          재는 법: Release(배포와 같은 자료 배치에 가깝게 — 검사 구성의 차이는 함께 적는다) `App --test --test-run-disabled --test-filter=QueueCellBenchTest.*` 5 번, 중앙값.
  *          제품 큐를 고치지 않으려고 같은 알고리즘(시퀀스 번호 링)을 칸 정렬만 바꿀 수 있게 여기 다시 적었다 — 판정 뒤 `ConcurrentQueueInternal::Cell` 한 줄을 바꾼다.
