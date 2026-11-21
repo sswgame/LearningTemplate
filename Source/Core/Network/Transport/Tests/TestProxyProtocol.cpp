@@ -101,7 +101,7 @@ namespace
         template <typename TPredicate>
         bool runUntil( TPredicate&& predicate )
         {
-            const Deadline deadline = Deadline::afterMilliseconds( 3000 );
+            const Deadline deadline = Deadline::afterMilliseconds( 10000 ); // 멈춘 실행을 잡는 그물 — 판정은 조건이다(느린 구성 · 동시 실행에도 넉넉하게)
             while ( predicate() == false )
             {
                 if ( deadline.isExpired() )

@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/GlobalVariable/GlobalVariableManager.h"
+#include "Core/Testing/ScopedGlobalVariableValue.h"
 #include "Core/Testing/TestFramework.h"
 #include "Core/Testing/ThreadTestAccess.h"
 
@@ -21,15 +22,15 @@ SW_TEST_CASE( RenderFrameSettingsTest, ConsoleChangeReachesTheNextPacketOnly )
     GlobalVariableManager& variables = engine::getSubsystem<GlobalVariableManager>();
     GlobalVariableInfo*    pInfo     = variables.findVariable( "gv_drawMerge" );
     SW_REQUIRE_NOT_NULL( pInfo );
-    const string previous = pInfo->getValueAsString();
-    SW_REQUIRE_TRUE( variables.setValueFromString( "gv_drawMerge", "true" ) );
+    test::ScopedGlobalVariableValue drawMergeValue{ *pInfo, "true" }; // 케이스가 어떻게 끝나도 앞 값으로 되돌린다
+    SW_REQUIRE_TRUE( drawMergeValue.isApplied() );
 
     RenderFramePacket framePacket;
     framePacket._settings = RenderFrameSettings::capture(); // 이 프레임의 패킷(렌더 스레드가 그린다)
     SW_EXPECT_EQUAL( uint8{ SW_TRUE }, framePacket._settings._bDrawMerge );
 
     // 콘솔이 렌더 스레드가 그리는 도중에 바꾼다 — 그리는 프레임의 사본은 그대로다(패스 · 기록 워커가 모두 같은 값을 본다).
-    SW_REQUIRE_TRUE( variables.setValueFromString( "gv_drawMerge", "false" ) );
+    SW_REQUIRE_TRUE( drawMergeValue.set( "false" ) );
     SW_EXPECT_EQUAL( uint8{ SW_TRUE }, framePacket._settings._bDrawMerge );
     uint8  seenOnRecordWorker = SW_FALSE;
     thread recordWorker( ThreadTestAccess::getKey(), [&framePacket, &seenOnRecordWorker]()
@@ -43,8 +44,6 @@ SW_TEST_CASE( RenderFrameSettingsTest, ConsoleChangeReachesTheNextPacketOnly )
     RenderFramePacket nextPacket;
     nextPacket._settings = RenderFrameSettings::capture();
     SW_EXPECT_EQUAL( uint8{ SW_FALSE }, nextPacket._settings._bDrawMerge );
-
-    SW_REQUIRE_TRUE( variables.setValueFromString( "gv_drawMerge", previous ) );
 }
 
 /**
@@ -52,25 +51,23 @@ SW_TEST_CASE( RenderFrameSettingsTest, ConsoleChangeReachesTheNextPacketOnly )
  */
 SW_TEST_CASE( RenderFrameSettingsTest, CaptureClampsToUsableRanges )
 {
-    GlobalVariableManager& variables       = engine::getSubsystem<GlobalVariableManager>();
-    constexpr size_t       kCount          = 3;
-    const utf8* const      arrName[kCount] = { "gv_shadowMapResolution", "gv_renderGraphParallelMinWidth", "gv_upscalerSharpness" };
-    string                 arrPrevious[kCount];
-    for ( size_t index = 0; index < kCount; ++index )
-    {
-        GlobalVariableInfo* pInfo = variables.findVariable( arrName[index] );
-        SW_REQUIRE_NOT_NULL( pInfo );
-        arrPrevious[index] = pInfo->getValueAsString();
-    }
-    SW_REQUIRE_TRUE( variables.setValueFromString( "gv_shadowMapResolution", "0" ) );
-    SW_REQUIRE_TRUE( variables.setValueFromString( "gv_renderGraphParallelMinWidth", "1" ) );
-    SW_REQUIRE_TRUE( variables.setValueFromString( "gv_upscalerSharpness", "-1" ) );
+    GlobalVariableManager& variables         = engine::getSubsystem<GlobalVariableManager>();
+    GlobalVariableInfo*    pShadowMap        = variables.findVariable( "gv_shadowMapResolution" );
+    GlobalVariableInfo*    pParallelMinWidth = variables.findVariable( "gv_renderGraphParallelMinWidth" );
+    GlobalVariableInfo*    pSharpness        = variables.findVariable( "gv_upscalerSharpness" );
+    SW_REQUIRE_NOT_NULL( pShadowMap );
+    SW_REQUIRE_NOT_NULL( pParallelMinWidth );
+    SW_REQUIRE_NOT_NULL( pSharpness );
+    // 케이스가 어떻게 끝나도 세 값을 앞 값으로 되돌린다.
+    const test::ScopedGlobalVariableValue shadowMapValue{ *pShadowMap, "0" };
+    const test::ScopedGlobalVariableValue parallelMinWidthValue{ *pParallelMinWidth, "1" };
+    const test::ScopedGlobalVariableValue sharpnessValue{ *pSharpness, "-1" };
+    SW_REQUIRE_TRUE( shadowMapValue.isApplied() );
+    SW_REQUIRE_TRUE( parallelMinWidthValue.isApplied() );
+    SW_REQUIRE_TRUE( sharpnessValue.isApplied() );
 
     const RenderFrameSettings settings = RenderFrameSettings::capture();
     SW_EXPECT_EQUAL( 1u, settings._shadowMapResolution );
     SW_EXPECT_EQUAL( 2u, settings._renderGraphParallelMinWidth );
     SW_EXPECT_NEAR( 0.0f, settings._upscalerSharpness, 1.0e-6f );
-
-    for ( size_t index = 0; index < kCount; ++index )
-        SW_REQUIRE_TRUE( variables.setValueFromString( arrName[index], arrPrevious[index] ) );
 }

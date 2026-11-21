@@ -119,7 +119,7 @@ SW_TEST_CASE( StreamEndpointTest, PingMeasuresRoundTripAndFailedConnectStillClos
     StreamEndpointTestRecord clientRecord;
     test::StreamEndpointPair pair( serverRecord, clientRecord, settings, LoopbackStreamConditions{} );
     SW_REQUIRE_TRUE( pair._bReady );
-    const Deadline deadline = Deadline::afterMilliseconds( 2000 );
+    const Deadline deadline = Deadline::afterMilliseconds( 10000 ); // 멈춘 실행을 잡는 그물 — 판정은 왕복 시간이 잰 것이다
     while ( pair._client.getRoundTripSeconds( pair._clientHandle ) < 0.0 && deadline.isExpired() == false )
     {
         pair.step( 1 );

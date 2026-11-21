@@ -20,14 +20,19 @@ SW_TEST_CASE( MonotonicClockTest, ClockStopwatchAndDeadlineFollowRealTime )
     SW_EXPECT_TRUE( second >= first );
     SW_EXPECT_TRUE( sw::MonotonicClock::getCountsPerSecond() > 0 );
 
+    // 아직 지나지 않은 기한은 부하로 선점돼도 지나지 않을 만큼 먼 것으로 본다 — 20 ms 기한을 곧바로 "아직" 이라 단언하면 그 사이 선점이 20 ms 를 넘을 때 진다.
+    const sw::Deadline farDeadline = sw::Deadline::afterMilliseconds( 600'000 );
+    SW_EXPECT_FALSE( farDeadline.isExpired() );
+    SW_EXPECT_TRUE( farDeadline.getRemainingMilliseconds() > 0 && farDeadline.getRemainingMilliseconds() <= 600'000 );
+
+    // 지난 쪽은 하한만 본다 — 잠은 적어도 30 ms 이고, 부하는 경과를 늘리기만 한다.
     const sw::Stopwatch stopwatch;
     const sw::Deadline  deadline = sw::Deadline::afterMilliseconds( 20 );
-    SW_EXPECT_FALSE( deadline.isExpired() );
-    SW_EXPECT_TRUE( deadline.getRemainingMilliseconds() <= 20 );
-
     sw::ThreadUtil::sleepForMilliseconds( 30 );
-    SW_EXPECT_TRUE( stopwatch.getElapsedMilliseconds() >= 25 );
-    SW_EXPECT_TRUE( stopwatch.getElapsedMicroseconds() >= stopwatch.getElapsedMilliseconds() * 1000 );
+    const int64 elapsedMilli = stopwatch.getElapsedMilliseconds(); // 밀리초를 먼저 읽는다 — 뒤에 읽은 마이크로초는 그보다 작을 수 없다
+    const int64 elapsedMicro = stopwatch.getElapsedMicroseconds();
+    SW_EXPECT_TRUE( elapsedMilli >= 25 );
+    SW_EXPECT_TRUE( elapsedMicro >= elapsedMilli * 1000 );
     SW_EXPECT_TRUE( deadline.isExpired() );
     SW_EXPECT_EQUAL( int64( 0 ), deadline.getRemainingMilliseconds() );
 }
@@ -49,19 +54,25 @@ SW_TEST_CASE( MonotonicClockTest, CountConversionDoesNotOverflowAfterLongUptime 
 }
 
 /**
- * @brief [MonotonicClockTest] GameTimer 와 MonotonicClock 이 같은 카운터를 읽는다 — 같은 구간을 측정하면 거의 같은 값이다
+ * @brief [MonotonicClockTest] GameTimer 와 MonotonicClock 이 같은 카운터를 읽는다 — 타이머 구간은 안쪽 스톱워치 구간을 덮고 바깥쪽 구간 안에 든다
+ * @details 두 값의 차이를 허용 오차로 보면 두 읽기 사이의 선점(부하)에서 진다. 대신 바깥 스톱워치는 `resetTimer` 앞에서 시작해 `updateTimer` 뒤에 읽고,
+ *          안쪽 스톱워치는 `resetTimer` 뒤에서 시작해 `updateTimer` 앞에서 읽는다 — 같은 카운터면 안쪽 ≤ 타이머 ≤ 바깥이 선점과 무관하게 선다.
  */
 SW_TEST_CASE( MonotonicClockTest, GameTimerUsesTheSameCounter )
 {
-    sw::GameTimer timer;
+    constexpr int64     kFloatToleranceNanos = 10'000; // 델타가 float32 초라 깎인다 — 선점으로 구간이 10 초까지 늘어도 1 us 안쪽이다
+    sw::GameTimer       timer;
+    const sw::Stopwatch outer;
     timer.resetTimer();
-    const sw::Stopwatch stopwatch;
+    const sw::Stopwatch inner;
     sw::ThreadUtil::sleepForMilliseconds( 20 );
+    const int64 innerNanos = inner.getElapsedNanoseconds();
     timer.updateTimer();
-    const float64 timerMilli     = static_cast<float64>( timer.getDeltaTime() ) * 1000.0;
-    const float64 stopwatchMilli = static_cast<float64>( stopwatch.getElapsedMicroseconds() ) / 1000.0;
-    SW_EXPECT_TRUE( timerMilli >= 15.0 );
-    SW_EXPECT_NEAR( stopwatchMilli, timerMilli, 5.0 );
+    const int64 outerNanos = outer.getElapsedNanoseconds();
+    const int64 timerNanos = static_cast<int64>( static_cast<float64>( timer.getDeltaTime() ) * static_cast<float64>( sw::constant::time::kNanosecondsPerSecond ) );
+    SW_EXPECT_TRUE( innerNanos >= 15 * sw::constant::time::kNanosecondsPerMillisecond );
+    SW_EXPECT_TRUE( innerNanos <= timerNanos + kFloatToleranceNanos );
+    SW_EXPECT_TRUE( timerNanos <= outerNanos + kFloatToleranceNanos );
 }
 
 /**
@@ -75,5 +86,6 @@ SW_TEST_CASE( MonotonicClockTest, SleepUntilDoesNotWakeBeforeTheDeadline )
     SW_EXPECT_TRUE( sw::MonotonicClock::nowNanoseconds() >= deadline );
     const int64 pastStart = sw::MonotonicClock::nowNanoseconds();
     sw::MonotonicClock::sleepUntilNanoseconds( pastStart - 1000000 );
-    SW_EXPECT_TRUE( sw::MonotonicClock::nowNanoseconds() - pastStart < 50 * 1000000 ); // 바로 돌아왔다(넉넉한 상한 — 느린 기계)
+    // 지난 마감에 잠들지 않았다 — 상한은 멈춤(음수 길이를 큰 수로 읽어 영영 잔다)을 가르는 그물이라 부하의 선점(수십 ms)보다 넉넉히 둔다.
+    SW_EXPECT_TRUE( sw::MonotonicClock::nowNanoseconds() - pastStart < 5 * sw::constant::time::kNanosecondsPerSecond );
 }

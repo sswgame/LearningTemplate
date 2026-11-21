@@ -99,6 +99,7 @@ SW_TEST_CASE( VectorTest, SmallVectorStorageTransition )
  */
 SW_TEST_CASE( VectorTest, ValueLifetimeAndMutation )
 {
+    const int32 liveCountBefore = TrackedValue::s_liveCount; // 정적 칸 — 앞 케이스가 남긴 값에 기대지 않고 이 케이스의 몫만 본다
     {
         sw::vector<TrackedValue> listValues{};
         listValues.emplace_back( 10 );
@@ -113,7 +114,7 @@ SW_TEST_CASE( VectorTest, ValueLifetimeAndMutation )
         SW_EXPECT_EQUAL( 30, movedValues[1]._value );
     }
 
-    SW_EXPECT_EQUAL( 0, TrackedValue::s_liveCount );
+    SW_EXPECT_EQUAL( liveCountBefore, TrackedValue::s_liveCount );
 }
 
 /**

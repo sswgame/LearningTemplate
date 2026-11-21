@@ -108,6 +108,38 @@ namespace
         gFakeClockNanos += gFakeClockStepNanos;
         return gFakeClockNanos;
     }
+
+    /** @brief 프로파일 훅으로 열린 구간 종류의 표지입니다(비트 = `TaskProfileZoneKind`) — 훅은 함수 포인터라 캡처가 없어 파일 정적 칸으로 받는다. */
+    sw::atomic<uint32> s_startedZoneKindMask{ 0 };
+
+    sw::TaskProfileZone markZoneStarted( const utf8*, sw::TaskProfileZoneKind kind )
+    {
+        s_startedZoneKindMask.fetch_or( 1u << static_cast<uint32>( kind ), std::memory_order_acq_rel );
+        return {}; // 구간을 열지 않는다 — 닫는 쪽이 불리지 않는다
+    }
+
+    void ignoreZoneEnd( const sw::TaskProfileZone& )
+    {
+    }
+
+    /** @brief 구간 표지를 남기는 훅입니다. 케이스는 표지를 비운 뒤 `TaskManager::bindProfileHook` 으로 걸고, 시간 대신 이 사건으로 순서를 맞춘다. */
+    const sw::TaskProfileHook kZoneStartProbe{ &markZoneStarted, &ignoreZoneEnd };
+
+    /** @brief @p kind 구간이 한 번이라도 열렸으면 true 입니다. */
+    bool isZoneStarted( sw::TaskProfileZoneKind kind )
+    {
+        return ( s_startedZoneKindMask.load( std::memory_order_acquire ) & ( 1u << static_cast<uint32>( kind ) ) ) != 0;
+    }
+
+    /** @brief @p kind 구간이 열릴 때까지 이 스레드를 붙듭니다. 시한은 멈춘 실행을 잡는 그물일 뿐이고, 판정은 부르는 쪽이 `isZoneStarted` 로 한다. */
+    void holdUntilZoneStarted( sw::TaskProfileZoneKind kind )
+    {
+        const sw::Deadline deadline = sw::Deadline::afterMilliseconds( kWaitTimeoutMs );
+        while ( isZoneStarted( kind ) == false && deadline.isExpired() == false )
+        {
+            sw::ThreadUtil::yield();
+        }
+    }
 } // namespace
 
 /**
@@ -700,12 +732,18 @@ SW_TEST_CASE( TaskManagerTest, MainThreadTaskWakesParkedMainThread )
 
     sw::atomic<bool>    bMainTaskRan{ false };
     sw::atomic<bool>    bMainTaskRanOnMain{ false };
-    sw::TaskStageHandle stage = manager.createStage();
+    sw::TaskStageHandle stage = manager.createStage( "ParkedMainStage" ); // 이름이 있어야 대기 구간 훅이 불린다
+
+    s_startedZoneKindMask.store( 0, std::memory_order_relaxed );
+    const sw::Subscription probe = sw::TaskManager::bindProfileHook( &kZoneStartProbe );
 
     sw::TaskHandle worker = manager.emplaceTask( "LateMainSpawner", SW_DELEGATE_LAMBDA( sw::TaskDelegate, [&manager, &stage, &bMainTaskRan, &bMainTaskRanOnMain]()
     {
-        // 메인이 스핀(수 us)을 지나 잠들 때까지 기다린 뒤에 메인 작업을 만든다.
-        sw::ThreadUtil::sleepForMilliseconds( 20 );
+        // 메인이 스테이지 대기에 들어간 뒤에(사건 — 대기 구간 훅) 메인 작업을 만든다. 예전에는 20 ms 를 자며 메인이 이미 기다린다고 가정해, 부하에서 메인이
+        // 늦으면 대기 전에 넣은 쉬운 길만 돌았다. 대기에 든 뒤 스핀(수 us)을 지나 잠들었는지는 사건으로 볼 수 없어 짧은 잠을 더한다 — 옳은 구현은 잠의 길이와
+        // 무관하게 통과하고, 잠은 잠든 길을 덮을 확률만 높인다.
+        holdUntilZoneStarted( sw::TaskProfileZoneKind::WaitStage );
+        sw::ThreadUtil::sleepForMilliseconds( 5 );
         sw::TaskHandle mainTask = manager.emplaceTask( "LateMain",
                                                        SW_DELEGATE_LAMBDA( sw::TaskDelegate, [&manager, &bMainTaskRan, &bMainTaskRanOnMain]()
         {
@@ -721,6 +759,7 @@ SW_TEST_CASE( TaskManagerTest, MainThreadTaskWakesParkedMainThread )
 
     manager.waitStage( stage );
 
+    SW_EXPECT_TRUE( isZoneStarted( sw::TaskProfileZoneKind::WaitStage ) );
     SW_EXPECT_TRUE( bMainTaskRan.load( std::memory_order_acquire ) );
     SW_EXPECT_TRUE( bMainTaskRanOnMain.load( std::memory_order_acquire ) );
 
@@ -780,7 +819,8 @@ SW_TEST_CASE( TaskManagerTest, RunParallelInsideWorkerTaskCoversEveryIndex )
  * @details 합류가 기다리는 것은 자기 티켓(Normal 줄)과 다른 스레드가 돌고 있는 청크뿐이다. 그 사이 Low 태스크(에셋 파싱 · 파일 완료, 수 ms)를 집으면
  *          그 태스크가 끝날 때까지 합류가 늦어진다 — 로딩 중 게임 스레드의 병렬 틱이 그만큼 는다.
  *          Low 태스크는 워커의 첫 청크 안에서 넣는다. 먼저 넣으면 깨어난 워커가 그것부터 집어 티켓을 가져갈 워커가 없다(호출 스레드가 자기 티켓을 다 가져가
- *          합류가 바로 끝나 재현되지 않는다). 워커 청크는 10 ms 를 붙들어, 호출 스레드가 자기 청크를 끝내고 기다리는 동안 Low 줄에 일이 있게 한다.
+ *          합류가 바로 끝나 재현되지 않는다). Low 를 넣은 청크는 호출 스레드가 합류 대기에 들 때까지(대기 구간 훅) 끝나지 않고 그 뒤 10 ms 를 더 붙들어,
+ *          부하와 무관하게 호출 스레드가 기다리는 동안 Low 줄에 일이 있게 한다.
  */
 SW_TEST_CASE( TaskManagerTest, RunParallelJoinDoesNotHelpLowPriorityTasks )
 {
@@ -791,11 +831,13 @@ SW_TEST_CASE( TaskManagerTest, RunParallelJoinDoesNotHelpLowPriorityTasks )
     sw::TaskManager manager;
     SW_REQUIRE_TRUE( manager.initialize( 2 ) );
 
-    sw::atomic<uint32> lowOnJoiningThreadCount{ 0 };
-    sw::atomic<bool>   bJoining{ false };
+    sw::atomic<uint32>     lowOnJoiningThreadCount{ 0 };
+    sw::atomic<bool>       bJoining{ false };
+    const sw::Subscription probe = sw::TaskManager::bindProfileHook( &kZoneStartProbe );
     for ( uint32 round = 0; round < kRoundCount; ++round )
     {
         sw::atomic<bool> bLowSubmitted{ false };
+        s_startedZoneKindMask.store( 0, std::memory_order_relaxed );
         bJoining.store( true, std::memory_order_release );
         manager.runParallel( kChunkCount, 1, SW_DELEGATE_LAMBDA( sw::ParallelBlockDelegate, [&manager, &bLowSubmitted, &bJoining, &lowOnJoiningThreadCount]( uint32, uint32 )
         {
@@ -817,6 +859,8 @@ SW_TEST_CASE( TaskManagerTest, RunParallelJoinDoesNotHelpLowPriorityTasks )
                     low.setPriority( sw::TaskPriority::Low );
                     low.submit();
                 }
+                // 호출 스레드가 합류 대기에 들 때까지(사건 — 대기 구간 훅) 이 청크를 붙든다. 그 뒤 잠은 대기 중인 호출 스레드 앞에 Low 일을 놓아 두는 창이다.
+                holdUntilZoneStarted( sw::TaskProfileZoneKind::WaitJoin );
             }
             sw::ThreadUtil::sleepForMilliseconds( 10 );
         } ) );
@@ -1832,23 +1876,6 @@ SW_TEST_CASE( TaskManagerTest, RunParallelReduceMatchesTheSerialBlockOrderBitFor
     }
 }
 
-namespace
-{
-    /** @brief 합류 대기 구간이 열렸다는 표지입니다 — 프로파일 훅은 함수 포인터라 캡처가 없어 파일 정적 칸으로 받는다. */
-    sw::atomic<int32> s_joinWaitStarted{ 0 };
-
-    sw::TaskProfileZone markJoinWaitStarted( const utf8*, sw::TaskProfileZoneKind kind )
-    {
-        if ( kind == sw::TaskProfileZoneKind::WaitJoin )
-            s_joinWaitStarted.store( 1, std::memory_order_release );
-        return {}; // 구간을 열지 않는다 — 닫는 쪽이 불리지 않는다
-    }
-
-    void ignoreZoneEnd( const sw::TaskProfileZone& )
-    {
-    }
-} // namespace
-
 /**
  * @brief 호출 스레드가 제 청크를 다 돌고 남의 청크를 기다리면 합류 대기가 한 번 세지고, 읽으면 횟수 · 시간이 0 으로 돌아간다
  * @details 순서는 시간이 아니라 사건으로 맞춘다: 첫 워커 청크는 합류 대기 구간이 열릴 때(프로파일 훅 `WaitJoin`)까지 끝나지 않고, 호출 스레드의 청크는
@@ -1861,28 +1888,22 @@ SW_TEST_CASE( TaskManagerTest, JoinWaitIsCountedAndTakeResetsTheStats )
     SW_REQUIRE_TRUE( manager.initialize( kWorkerCount ) );
     (void)manager.takeWaitStats();
 
-    static const sw::TaskProfileHook kJoinWaitProbe{ &markJoinWaitStarted, &ignoreZoneEnd };
-    s_joinWaitStarted.store( 0, std::memory_order_relaxed );
-    const sw::Subscription probe = sw::TaskManager::bindProfileHook( &kJoinWaitProbe );
+    s_startedZoneKindMask.store( 0, std::memory_order_relaxed );
+    const sw::Subscription probe = sw::TaskManager::bindProfileHook( &kZoneStartProbe );
 
     sw::atomic<int32>     workerChunkCount{ 0 };
     const std::thread::id callerID = std::this_thread::get_id();
     manager.runParallel( 64, 1, SW_DELEGATE_LAMBDA( sw::ParallelBlockDelegate, [&workerChunkCount, callerID]( uint32, uint32 )
     {
-        const sw::Deadline deadline = sw::Deadline::afterMilliseconds( kWaitTimeoutMs );
         if ( std::this_thread::get_id() != callerID )
         {
             // 첫 워커 청크는 호출 스레드가 합류 대기에 들어갈 때까지 붙든다.
             if ( workerChunkCount.fetch_add( 1, std::memory_order_acq_rel ) == 0 )
-            {
-                while ( s_joinWaitStarted.load( std::memory_order_acquire ) == 0 && deadline.isExpired() == false )
-                {
-                    sw::ThreadUtil::yield();
-                }
-            }
+                holdUntilZoneStarted( sw::TaskProfileZoneKind::WaitJoin );
             return;
         }
         // 호출 스레드 청크는 워커가 청크 하나를 잡을 때까지 붙든다 — 호출 스레드가 모든 청크를 혼자 돌면 기다릴 남의 청크가 없다.
+        const sw::Deadline deadline = sw::Deadline::afterMilliseconds( kWaitTimeoutMs );
         while ( workerChunkCount.load( std::memory_order_acquire ) == 0 && deadline.isExpired() == false )
         {
             sw::ThreadUtil::yield();
@@ -1891,7 +1912,7 @@ SW_TEST_CASE( TaskManagerTest, JoinWaitIsCountedAndTakeResetsTheStats )
 
     const sw::TaskManager::WaitStats stats = manager.takeWaitStats();
     SW_EXPECT_TRUE( workerChunkCount.load() > 0 );
-    SW_EXPECT_EQUAL( int32{ 1 }, s_joinWaitStarted.load() );
+    SW_EXPECT_TRUE( isZoneStarted( sw::TaskProfileZoneKind::WaitJoin ) );
     SW_EXPECT_EQUAL( uint64{ 1 }, stats._joinWaitCount );
     // 대기 시간의 크기는 단언하지 않는다 — 표지가 켜진 뒤 워커가 곧 끝나면 대기가 시계 한 눈금보다 짧을 수 있다(사건으로 보장할 수 없는 값). 읽으면 0 으로 돌아가는지만 본다.
     const sw::TaskManager::WaitStats statsAfterTake = manager.takeWaitStats();
