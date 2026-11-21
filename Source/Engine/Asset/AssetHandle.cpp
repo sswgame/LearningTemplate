@@ -120,15 +120,9 @@ namespace sw
         } ) );
     }
 
-    expected<void> AssetLoadOperation::runCompletion()
-    {
-        return unexpected( Error{ ErrorKind::Unsupported, "the asset kind has no completion step", _pKindName }.appendDetail( " " ).appendDetail( _path ) );
-    }
-
     expected<AssetCompletionStep> AssetLoadOperation::beginCompletion( bool /*bBlocking*/ )
     {
-        return runCompletion().transform( []()
-        { return AssetCompletionStep::Done; } );
+        return unexpected( Error{ ErrorKind::Unsupported, "the asset kind has no completion step", _pKindName }.appendDetail( " " ).appendDetail( _path ) );
     }
 
     expected<AssetCompletionStep> AssetLoadOperation::pollCompletion( bool /*bBlocking*/ )

@@ -1,6 +1,7 @@
 {
   "_comment": "전수 개명한 옛 이름 → 새 이름 · 까닭(Scripts/lint/naming_words.py 의 naming-words 규칙이 되살린 옛 이름을 막는다). 언리얼 CoreRedirects 의 옛 이름 → 새 이름 자리이되 고쳐 주지 않고 막는다. 개명 도구(py -3 -m Scripts rename-symbol)가 줄을 더한다 — 키(옛 이름)는 개명 도구가 바꾸지 않는다.",
   "_bannedNames": {
+    "runCompletion": "AssetLoadOperation::beginCompletion — 재정의 없는 가상이 기본 beginCompletion 의 오류만 냈다. 완료가 있는 종류는 beginCompletion 을 덮어쓴다(2026-11-21)",
     "notifyModuleUnloading": "지움 — 남의 모듈 객체를 든 컴포넌트(AbilityComponent)가 onRegister 에서 TypeRegistry::subscribeModuleUnloading 을 구독한다. 재정의 하나뿐인 Component 가상을 걷었다(2026-11-21)",
     "findComponentFog": "SceneEnvironment::findFog(2026-11-21)",
     "findComponentSky": "SceneEnvironment::findSky(2026-11-21)",
