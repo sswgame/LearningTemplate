@@ -20,7 +20,10 @@
   - `w-pathjoin` — `AbsolutePath::join` · `getParent`, 감싸기 1741 → 1140, 문자열 디스크 함수 형식화, Archive · BitReader 값 반환, byte-reader-values 의 대상 덮기 꼴 수정(+3 곳). 합친 뒤 충돌 파일에 `py -3 -m Scripts byte-reader-values` · `disk-path-args` · `disk-path-join` 을 다시 돌린다. 데이터의 상대 경로가 기준 위로 오르면 `join` 이 빈 경로를 준다 — 실행 중 I/O 실패를 본다.
   - 차례 권장: devmetrics → chores → gimmickevents → kitsplit2 → pathjoin(가장 넓다, 마지막에 스크립트 재실행).
 - **다음 갈래(정함):** `PlayerProgressComponent`(지갑 · 가방 · 퀘스트 일지 · 평판 묶음 — 이름이 뜻과 다르다)를 `InventoryComponent` · `WalletComponent` · `QuestLogComponent` · `ReputationComponent` 로 나누고 `IItemReceiver` 포트를 `InventoryComponent` 로 옮긴다(w-gimmickevents 뒤).
-- **판단 대기(구조):** "game" 채널 `EventDispatcher` 를 제품 코드가 구독하지 않는다 — 받는 쪽 없는 이벤트 13 종(GimmickDamage · PossessionChanged · SaveGameSaved/Loaded · SceneLoadRequested/Completed · AbilityOwnerDied · InteractionCompleted · DamageApplied · AbilityPresentation · RoomCleared · PlayerDefeatedInRoom · ClearGateStateChanged). 버스를 쓸지, 걷고 받는 쪽 인터페이스(포트)로 갈지 정한다.
+- **이벤트 버스(정함 — 규칙은 `docs/agents/Gameplay.md` "시스템 사이 알림"):** 버스는 선택적 일대다 전역 알림으로 남기고(Lyra GameplayMessage), 필수 효과는 받는 쪽 인터페이스로 옮긴다. 받는 쪽 없는 13 종 처리:
+  - **결함 — 필수 효과가 버스에만 있다:** `GimmickDamageEvent` — 기믹 피해가 `GimmickSensorComponent` 에만 들고 캐릭터 체력에 닿지 않는다(가시 · 불이 플레이어를 다치게 하지 못함). 기믹 피해를 엔진 맞음 길(`HitInfo` · 받는 쪽 체력 인터페이스, 언리얼 ApplyDamage → TakeDamage)로 보내고 이벤트는 알림으로만 남긴다.
+  - **버스 유지 + 받는 쪽 붙이기(쓰일 때):** SaveGameSaved/Loaded(UI 토스트), SceneLoadRequested/Completed(로딩 화면), InteractionCompleted · AbilityOwnerDied(퀘스트 진행 — QuestLog 가 구독), RoomCleared · PlayerDefeatedInRoom · ClearGateStateChanged(HUD · 점수), PossessionChanged(카메라 · HUD).
+  - **유지(델리게이트와 함께):** DamageApplied · AbilityPresentation — 같은 오브젝트는 델리게이트, 전역 구독자(킬 피드 · 데미지 숫자)는 버스.
 - **그 밖:** 남은 경로 만드는 쪽(`AssetMeta::makePath` · DDC `makePath` · `AssetPaths` 디스크 반환)과 `Archive::deserializeVersionedObject( uint32& outVersion … )`. `ActionRoom::drawDebug` 를 클라이언트로. Linux 검증은 여러 묶음 push 뒤 한 번(`linux-verify`).
 
 ## 진행 중(통합 때 지운다)
