@@ -42,7 +42,7 @@ namespace sw
         , _pRetireQueue{ make_unique<SpscQueue<RetiredObjects, kRetireQueueCapacity>>() }
         , _applyingCommand{}
         , _realtimeViolations{}
-        , _retireOverflowCount{ 0 }
+        , _retireOverflowCount{}
         , _mapGameLibrary{}
         , _pGameMixerDesc{ nullptr }
         , _libraryMutex{}
@@ -751,7 +751,7 @@ namespace sw
             return;
         RetiredObjects retired{ std::move( command._pMixer ), std::move( command._pLibrary ), std::move( command._pMusic ) };
         if ( _pRetireQueue->push( std::move( retired ) ) == false )
-            _retireOverflowCount.fetch_add( 1, std::memory_order_relaxed ); // 큐가 찼다 — 이 스레드가 놓는다(감시 값)
+            _retireOverflowCount.add(); // 큐가 찼다 — 이 스레드가 놓는다(감시 값)
     }
 
     void AudioEngine::render( float32* pOutput, uint32 frameCount )

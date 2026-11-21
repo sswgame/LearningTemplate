@@ -15,12 +15,12 @@ namespace sw
         struct RealtimeSectionInternal
         {
             /** @brief 칸 @p counter 를 올리고, 단언 깃발이 켜져 있으면 멈춥니다. 단언 길이 다시 할당 · 잠금을 해도 세지 않게 구간을 먼저 뗀다. */
-            static void note( atomic<uint64> RealtimeViolationCounters::* pCounter )
+            static void note( DevCounter RealtimeViolationCounters::* pCounter )
             {
                 RealtimeViolationCounters* const pCounters = t_pRealtimeCounters;
                 if ( pCounters == nullptr )
                     return;
-                ( pCounters->*pCounter ).fetch_add( 1, std::memory_order_relaxed );
+                ( pCounters->*pCounter ).add();
                 if ( pCounters->_bAssertOnViolation.load( std::memory_order_relaxed ) )
                 {
                     t_pRealtimeCounters = nullptr;

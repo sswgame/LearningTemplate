@@ -1,7 +1,7 @@
 // DevCounterTest — 개발 구성 전용 누적 카운터가 더하고 되돌린다(배포는 빈 형식이라 테스트가 지어지지 않는다).
 #include "pch.h"
 
-#include "Core/Diagnostics/DevCounter.h"
+#include "Core/Concurrency/DevCounter.h"
 #include "Core/Testing/TestFramework.h"
 
 using namespace sw;

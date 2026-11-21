@@ -76,5 +76,5 @@ SW_TEST_CASE( AudioCommandQueueTest, AppliedCommandObjectsAreReleasedOnTheGameTh
     SW_EXPECT_EQUAL( 3, static_cast<int32>( pMusic.use_count() ) );
     engine.flushCommands();
     SW_EXPECT_EQUAL( 2, static_cast<int32>( pMusic.use_count() ) );
-    SW_EXPECT_EQUAL( 0u, static_cast<uint32>( engine.getRetireOverflowCount() ) );
+    SW_EXPECT_EQUAL( 0u, static_cast<uint32>( engine.getRetireOverflowCount().get() ) );
 }

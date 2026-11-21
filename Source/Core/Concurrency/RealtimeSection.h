@@ -8,6 +8,7 @@
  *          언리얼 Audio Mixer · Wwise · FMOD 가 오디오 스레드에서 할당 · 잠금을 하지 않는 규칙을 실행 중에 확인하는 자리다.
  */
 #pragma once
+#include "Core/Concurrency/DevCounter.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -17,10 +18,10 @@ namespace sw
     /** @brief 실시간 구간에서 일어난 위반 수입니다. 구간의 주인이 들고, 아무 스레드나 읽습니다. */
     struct RealtimeViolationCounters
     {
-        atomic<uint64> _allocationCount{ 0 };        ///< 구간 안 힙 할당 수
-        atomic<uint64> _freeCount{ 0 };              ///< 구간 안 힙 해제 수(마지막 `shared_ptr` 를 놓는 것도 여기 든다)
-        atomic<uint64> _lockCount{ 0 };              ///< 구간 안 `sw::mutex` · `sw::shared_mutex` 획득 수
-        atomic<bool>   _bAssertOnViolation{ false }; ///< 켜면 첫 위반에서 단언한다
+        DevCounter   _allocationCount;             ///< 구간 안 힙 할당 수(개발 전용 칸 — 배포는 세지 않고 칸도 없다)
+        DevCounter   _freeCount;                   ///< 구간 안 힙 해제 수(마지막 `shared_ptr` 를 놓는 것도 여기 든다)
+        DevCounter   _lockCount;                   ///< 구간 안 `sw::mutex` · `sw::shared_mutex` 획득 수
+        atomic<bool> _bAssertOnViolation{ false }; ///< 켜면 첫 위반에서 단언한다
     };
 
     /**

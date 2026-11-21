@@ -8,9 +8,9 @@
  *          언리얼의 Actor Pool · 유니티의 `ObjectPool<T>` 에 해당한다.
  */
 #pragma once
+#include "Core/Concurrency/DevCounter.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
-#include "Core/Diagnostics/DevCounter.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"

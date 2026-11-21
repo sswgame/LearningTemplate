@@ -258,8 +258,8 @@ namespace sw
          * @details 단언 깃발(`_bAssertOnViolation`)을 켜면 첫 위반에서 멈춘다. 지금 믹스 경로(이벤트 표 · 라이브러리 교체)가 아직 할당하므로 기본은 세기만 한다.
          */
         RealtimeViolationCounters& getRealtimeViolations() { return _realtimeViolations; }
-        /** @brief 반납 큐가 차서 오디오 스레드가 직접 놓은 명령 수입니다(감시 값). 0 이 아니면 큐 크기(`kRetireQueueCapacity`)를 키운다. */
-        uint64 getRetireOverflowCount() const { return _retireOverflowCount.load( std::memory_order_relaxed ); }
+        /** @brief 반납 큐가 차서 오디오 스레드가 직접 놓은 명령 수입니다(감시 값 — 개발 전용 칸, 배포는 0). 0 이 아니면 큐 크기(`kRetireQueueCapacity`)를 키운다. */
+        const DevCounter& getRetireOverflowCount() const { return _retireOverflowCount; }
 
     private:
         /** @brief 명령 종류입니다. */
@@ -479,7 +479,7 @@ namespace sw
         ThreadRole                                                  _audioThread;                   ///< 오디오 스레드 역할 — 꺼내 온 명령은 믹스를 도는 스레드만 만진다(잠금이 아니라 분석용 능력)
         Command _applyingCommand                                    SW_GUARDED_BY( _audioThread );  /**< 오디오 스레드가 꺼내 적용 중인 명령입니다(칸 하나 — 꺼낼 때 할당하지 않는다). */
         RealtimeViolationCounters                                   _realtimeViolations;            /**< `render` 구간의 할당 · 해제 · 잠금 수입니다(검사 구성). */
-        atomic<uint64>                                              _retireOverflowCount;           /**< 반납 큐가 차서 오디오 스레드가 놓은 명령 수입니다. */
+        DevCounter                                                  _retireOverflowCount;           /**< 반납 큐가 차서 오디오 스레드가 놓은 명령 수입니다. */
         LibraryMap _mapGameLibrary                                  SW_GUARDED_BY( _libraryMutex ); /**< 게임 스레드가 아는 라이브러리입니다. */
         shared_ptr<const AudioMixerDef> _pGameMixerDesc             SW_GUARDED_BY( _libraryMutex ); /**< 게임 스레드가 아는 그래프입니다. 이름으로 대조합니다. */
         mutable mutex                                               _libraryMutex;                  /**< `_mapGameLibrary` 와 `_pGameMixerDesc` 를 지킵니다. 이벤트는 병렬 틱에서도 재생합니다. */
