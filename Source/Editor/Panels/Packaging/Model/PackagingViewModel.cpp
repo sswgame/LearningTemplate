@@ -108,7 +108,7 @@ namespace sw::editor
         _listGame.clear();
         _gameIndex = 0;
         vector<string> listFile;
-        (void)FileUtil::collectFiles( FileUtil::joinPath( ProcessRoots::get()._project.str(), "Config/Game" ), "", listFile, false ); // 폴더가 없으면 게임이 없다
+        (void)FileUtil::collectFiles( FileUtil::toDiskPath( FileUtil::joinPath( ProcessRoots::get()._project.str(), "Config/Game" ) ), "", listFile, false ); // 폴더가 없으면 게임이 없다
         const string& packRoot = editor::getSubsystem<const GameConfig>()._packRoot.get();
         for ( const string& filePath : listFile )
         {
@@ -117,7 +117,7 @@ namespace sw::editor
             string                                  text;
             fixed_string<constant::buffer::kMax256> quotedRoot;
             formatstring( quotedRoot.data(), quotedRoot.capacity(), "\"%#\"", packRoot );
-            const bool bGameUsesPackRoot = FileUtil::readTextFile( filePath, text ) && packRoot.empty() == false && StringUtil::contains( text, quotedRoot, true );
+            const bool bGameUsesPackRoot = FileUtil::readTextFile( FileUtil::toDiskPath( filePath ), text ) && packRoot.empty() == false && StringUtil::contains( text, quotedRoot, true );
             if ( bGameUsesPackRoot )
                 _gameIndex = static_cast<uint32>( _listGame.size() );
             _listGame.push_back( FileUtil::removeExtension( FileUtil::getFileNamePart( filePath ) ) );

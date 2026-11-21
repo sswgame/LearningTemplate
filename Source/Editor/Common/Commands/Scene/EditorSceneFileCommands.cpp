@@ -31,7 +31,7 @@
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDocument.h"
 #include "Engine/Scene/SceneManager.h"
-#include "Engine/Window/IWindow.h"
+#include "Engine/Window/GenericWindow.h"
 #include "Engine/Window/MainWindowSubsystem.h"
 
 namespace sw::editor
@@ -86,7 +86,7 @@ namespace sw::editor
                 else if ( action == EditorPendingSceneAction::Quit )
                 {
                     // 선택(②): 창 호스트는 헤드리스 실행에 없다. 닫을 창이 없으면 종료 요청도 할 일이 없다.
-                    IWindow* pWindow = MainWindowSubsystem::findMainWindow();
+                    GenericWindow* pWindow = MainWindowSubsystem::findMainWindow();
                     if ( pWindow != nullptr )
                         pWindow->requestClose();
                 }
@@ -239,7 +239,7 @@ namespace sw::editor
     void EditorSceneFileCommands::requestExit()
     {
         // 선택(②): 창 호스트는 헤드리스 실행에 없다. 닫을 창이 없으면 할 일이 없다.
-        IWindow* pWindow = MainWindowSubsystem::findMainWindow();
+        GenericWindow* pWindow = MainWindowSubsystem::findMainWindow();
         if ( pWindow != nullptr )
             (void)pWindow->tryBeginClose(); // 닫기를 거절해도(저장 확인 중) 여기서 할 일이 없다
     }
@@ -314,8 +314,8 @@ namespace sw::editor
                 string absolutePath;
                 if ( listArgument.size() != 1 || DevCommandRegistry::readDiskPathArgument( listArgument[0], absolutePath, outReply ) == false )
                     return false;
-                (void)FileUtil::ensureDirectoryExists( FileUtil::getDirectoryPart( absolutePath ) );    // 못 만들면 ensure 가 폴더와 이유를 남기고 뒤따르는 쓰기가 실패로 답한다
-                const optional<AbsolutePath> scenePath = FileUtil::requireAbsolutePath( absolutePath ); // readDiskPathArgument 가 절대만 받았다
+                (void)FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( FileUtil::getDirectoryPart( absolutePath ) ) ); // 못 만들면 ensure 가 폴더와 이유를 남기고 뒤따르는 쓰기가 실패로 답한다
+                const optional<AbsolutePath> scenePath = FileUtil::requireAbsolutePath( absolutePath );                      // readDiskPathArgument 가 절대만 받았다
                 if ( scenePath.has_value() == false || EditorSceneFileCommands::saveActiveSceneAs( *scenePath ) == false )
                 {
                     StringBuilder<constant::buffer::kMax256> replyBuilder;

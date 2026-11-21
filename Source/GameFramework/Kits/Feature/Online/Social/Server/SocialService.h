@@ -39,14 +39,14 @@ namespace sw
 
     class EphemeralStoreRouter;
     class IAccountNameIndex;
-    class IServiceStore;
+    class ServiceStore;
     class ServerBus;
     class ServerBusMessage;
 
     /** @brief 빌려 쓰는 객체들입니다. */
     struct SocialServiceDependencies
     {
-        IServiceStore*           _pStore{ nullptr };     ///< 필수이다
+        ServiceStore*            _pStore{ nullptr };     ///< 필수이다
         EphemeralStoreRouter*    _pRouter{ nullptr };    ///< 접속 상태에 쓴다. null 이면 이 서버의 계정만 다룬다
         ServerBus*               _pBus{ nullptr };       ///< null 이면 서버가 한 대이다
         const IAccountNameIndex* _pNameIndex{ nullptr }; ///< 이름으로 친구 신청할 때 쓴다. null 이면 NotFound 로 끝낸다

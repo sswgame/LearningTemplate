@@ -8,7 +8,7 @@
  */
 #pragma once
 #include "Core/Foundation/Types.h"
-#include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/Subsystem.h"
 
 namespace sw
 {
@@ -18,7 +18,7 @@ namespace sw
      * @details 서비스 범위(`FrameProfiler`)가 먼저 서므로 초기화 때 프로파일러가 있고, 종료 때도 아직 있다(기동 단계가 서비스보다 먼저 내려간다).
      *          Tracy 는 기동 단계부터 기록한다 — 서비스 범위의 초기화 구간은 타임라인에 없다.
      */
-    class ProfilerLaunchSubsystem final : public ISubsystem
+    class ProfilerLaunchSubsystem final : public Subsystem
     {
     public:
         static constexpr const utf8* kSubsystemName = "ProfilerLaunchSubsystem";

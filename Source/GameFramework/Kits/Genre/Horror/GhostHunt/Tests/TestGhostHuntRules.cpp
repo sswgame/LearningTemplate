@@ -11,7 +11,7 @@
 #include "GameFramework/Kits/Genre/Horror/GhostHunt/GhostEncounter.h"
 #include "GameFramework/Kits/Genre/Horror/GhostHunt/GhostMansion.h"
 #include "GameFramework/Runtime/Foundation/Condition/GameFlags.h"
-#include "GameFramework/Runtime/Foundation/Framework/SessionStateRefs.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameStateRefs.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemStackList.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/LootTable.h"
@@ -181,7 +181,7 @@ namespace
 
         bool open( GhostMansion& outMansion, uint32 seed )
         {
-            SessionStateRefs refs;
+            GameStateRefs refs;
             refs._pFlags     = &_flags;
             refs._pInventory = &_bag;
             refs._pWallet    = &_wallet;
@@ -769,7 +769,7 @@ SW_TEST_CASE( GhostHuntRulesTest, MansionRefusesNoCatalog )
 {
     SW_EXPECT_LOG( "GhostEncounter.RefusedInitialize" );
     GhostMansion mansion;
-    SW_EXPECT_FALSE( mansion.initialize( nullptr, nullptr, nullptr, SessionStateRefs{}, 1u ) );
+    SW_EXPECT_FALSE( mansion.initialize( nullptr, nullptr, nullptr, GameStateRefs{}, 1u ) );
     SW_EXPECT_EQUAL( -1, mansion.enterRoom( "foyer" ) );
 }
 

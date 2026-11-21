@@ -191,7 +191,7 @@ namespace sw::editor
     bool BonePoseEditModel::loadFromFile( string_view absolutePath )
     {
         string text;
-        if ( FileUtil::readTextFile( absolutePath, text ) == false )
+        if ( FileUtil::readTextFile( FileUtil::toDiskPath( absolutePath ), text ) == false )
         {
             SW_LOG_ERROR_ID( "BonePoseEditModel.ReferencePoseFileCould", "Reference pose file could not be read: %#", string( absolutePath ).c_str() );
             return false;

@@ -20,21 +20,21 @@ namespace sw
 
     void SplineComponent::onBeginPlay()
     {
-        Component::onBeginPlay();
+        SceneComponent::onBeginPlay();
         rebuildLocalPath();
         bakeWorldPath();
     }
 
     void SplineComponent::onPostLoad()
     {
-        Component::onPostLoad();
+        SceneComponent::onPostLoad();
         rebuildLocalPath();
         bakeWorldPath();
     }
 
     void SplineComponent::onPropertyChanged( hashed_string propertyName )
     {
-        Component::onPropertyChanged( propertyName );
+        SceneComponent::onPropertyChanged( propertyName );
         rebuildLocalPath();
         bakeWorldPath();
     }
@@ -58,7 +58,7 @@ namespace sw
     {
         ++_pathRevision;
         const GameObject*     pOwner = getOwner();
-        const SceneComponent* pScene = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
+        const SceneComponent* pScene = pOwner != nullptr ? this : nullptr;
         if ( pScene == nullptr )
         {
             if ( _worldPath.initialize( _listControlPoint, _type, _bClosed, _samplesPerSegment ) == false )

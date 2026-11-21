@@ -1,8 +1,8 @@
 /**
  * @file WindowTextInput.h
  * @brief 플랫폼 공통 입력기(IME) 인터페이스의 값입니다 - 창이 내는 조합 · 확정 글(`WindowTextInputEvent`)과, 입력기 프로토콜의 모양을 맞추는 버퍼 둘입니다.
- * @details 모양은 창 시스템마다 같다. 받는 쪽이 글을 원하는지 알리고(`IWindow::requestTextInput`, Win32 `ImmAssociateContextEx` · X11 `XSetICFocus` · Wayland `zwp_text_input_v3.enable` ·
- *          모바일이면 화면 키보드 올리기) 후보 창 자리를 알리면(`IWindow::setTextInputArea`), 창이 조합 중 글과 확정 글을 낸다. SDL `SDL_StartTextInput` · 언리얼 `ITextInputMethodSystem` · Godot `window_set_ime_active` 와 같은 자리다.
+ * @details 모양은 창 시스템마다 같다. 받는 쪽이 글을 원하는지 알리고(`GenericWindow::requestTextInput`, Win32 `ImmAssociateContextEx` · X11 `XSetICFocus` · Wayland `zwp_text_input_v3.enable` ·
+ *          모바일이면 화면 키보드 올리기) 후보 창 자리를 알리면(`GenericWindow::setTextInputArea`), 창이 조합 중 글과 확정 글을 낸다. SDL `SDL_StartTextInput` · 언리얼 `ITextInputMethodSystem` · Godot `window_set_ime_active` 와 같은 자리다.
  *          OS 헤더가 없어 조합 → 확정 흐름을 단위 테스트가 가짜 입력기로 돌린다.
  */
 #pragma once
@@ -27,7 +27,7 @@ namespace sw
         string_view         _text{};
     };
 
-    /** @brief 입력기를 원하는 쪽입니다(`IWindow::requestTextInput`). 둘이 따로 켜고 끄므로 한쪽이 끄는 일이 다른 쪽을 끄지 않는다. */
+    /** @brief 입력기를 원하는 쪽입니다(`GenericWindow::requestTextInput`). 둘이 따로 켜고 끄므로 한쪽이 끄는 일이 다른 쪽을 끄지 않는다. */
     enum class WindowTextInputClient : uint8
     {
         Engine = 0, ///< 런타임 UI 글자 입력 · 개발 콘솔(`InputManager::setKeyboardFocus`)

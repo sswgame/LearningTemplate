@@ -43,7 +43,7 @@ namespace sw
             }
 
             /** @brief 진행 하나를 읽는 일입니다. */
-            class ReadJob final : public IServiceStoreJob
+            class ReadJob final : public ServiceStoreJob
             {
             public:
                 ReadJob( shared_ptr<ValeProfileStore::Inbox> pInbox, uint64 accountID )
@@ -70,7 +70,7 @@ namespace sw
             };
 
             /** @brief 진행 하나를 판 조건으로 쓰는 일입니다. 결과는 여기서 로그로 남긴다 — 링크가 먼저 내려가도 저장 여부가 남는다. */
-            class WriteJob final : public IServiceStoreJob
+            class WriteJob final : public ServiceStoreJob
             {
             public:
                 WriteJob( shared_ptr<ValeProfileStore::Inbox> pInbox, uint64 accountID, vector<uint8> bytes, uint64 expectedVersion )
@@ -148,9 +148,9 @@ namespace sw
         return outProfile.read( reader );
     }
 
-    IServiceStore* ValeProfileStore::findStore( const utf8* pPurpose, uint64 accountID ) const
+    ServiceStore* ValeProfileStore::findStore( const utf8* pPurpose, uint64 accountID ) const
     {
-        IServiceStore* const pStore = _source.isBound() ? _source() : nullptr;
+        ServiceStore* const pStore = _source.isBound() ? _source() : nullptr;
         if ( pStore == nullptr )
             SW_LOG_ERROR_ID( "LanternVale.ProfileStoreMissing", "[LanternVale] no profile store for the %# of account %# - the dedicated server's online services (store) are not running", pPurpose,
                              accountID );
@@ -172,7 +172,7 @@ namespace sw
     void ValeProfileStore::submitRead( uint64 accountID )
     {
         ++_pendingJobCount;
-        IServiceStore* const pStore = findStore( "read", accountID );
+        ServiceStore* const pStore = findStore( "read", accountID );
         if ( pStore == nullptr )
         {
             Completion failed;
@@ -222,7 +222,7 @@ namespace sw
         state._bWriting     = SW_TRUE;
         state._writingBytes = bytes;
         ++_pendingJobCount;
-        IServiceStore* const pStore = findStore( "save", accountID );
+        ServiceStore* const pStore = findStore( "save", accountID );
         if ( pStore == nullptr )
         {
             Completion failed;

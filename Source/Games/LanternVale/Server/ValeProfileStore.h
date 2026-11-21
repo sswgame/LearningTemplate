@@ -1,6 +1,6 @@
 /**
  * @file ValeProfileStore.h
- * @brief 서버가 계정마다 진행(`ValeProfile`)을 쓰고 읽는 자리입니다 — 저장소 계약(`IServiceStore`) 위에 계정 id 하나가 레코드 하나(`vale_profile` 표, 키 `a<16자 id>`)입니다.
+ * @brief 서버가 계정마다 진행(`ValeProfile`)을 쓰고 읽는 자리입니다 — 저장소 계약(`ServiceStore`) 위에 계정 id 하나가 레코드 하나(`vale_profile` 표, 키 `a<16자 id>`)입니다.
  * @details - 저장소는 전용 서버의 온라인 조립 저장소다. 맡길 때마다 찾는다(`ValeServiceStoreSource` — 조립은 리로드 · 종료마다 다시 서므로 들고 있지 않는다).
  *            서버 여럿이 같은 DB 를 쓰면 같은 레코드를 본다 — 쓰기는 읽었거나 마지막으로 쓴 판(`ServiceRecord::_version`)을 조건으로 걸어, 다른 서버가 그새 쓴 진행을 덮지 않는다.
  *          - 계정마다 쓰기는 하나씩만 맡긴다. 쓰는 중에 또 저장하면 가장 새 바이트만 들고 있다가 앞 쓰기가 끝나면 그 판으로 맡긴다(쓰기 합치기). 같은 계정의 읽기는
@@ -25,7 +25,7 @@
 namespace sw
 {
     /** @brief 진행 저장소를 찾는 곳입니다. 지금 저장소가 없으면(조립이 서 있지 않다) nullptr 을 돌려준다. */
-    using ValeServiceStoreSource = Delegate<IServiceStore*()>;
+    using ValeServiceStoreSource = Delegate<ServiceStore*()>;
 
     /** @brief 끝난 읽기 하나입니다. */
     struct ValeProfileLoad
@@ -127,9 +127,9 @@ namespace sw
         };
 
         /** @brief 지금 저장소입니다. 없으면 오류를 남기고 nullptr 입니다. */
-        IServiceStore* findStore( const utf8* pPurpose, uint64 accountID ) const;
-        void           submitRead( uint64 accountID );
-        void           submitWrite( uint64 accountID, AccountState& state, vector<uint8> bytes );
+        ServiceStore* findStore( const utf8* pPurpose, uint64 accountID ) const;
+        void          submitRead( uint64 accountID );
+        void          submitWrite( uint64 accountID, AccountState& state, vector<uint8> bytes );
         /** @brief 쓰기가 남지 않은 계정의 기다리던 읽기 · 지우기를 처리합니다. 계정을 지웠으면 true 입니다. */
         bool settleAccount( uint64 accountID, AccountState& state );
 

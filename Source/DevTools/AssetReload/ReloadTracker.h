@@ -12,7 +12,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/Subsystem.h"
 
 #include "DevTools/DevToolsAPI.h"
 
@@ -61,7 +61,7 @@ namespace sw
      * @class ReloadTracker
      * @brief 리로드 결과 집계입니다(개발 도구 서브시스템). 적기는 어느 스레드에서도 되고(잠금 하나), 읽기는 복사본을 돌려준다.
      */
-    class SW_DEVTOOLS_API ReloadTracker final : public ISubsystem
+    class SW_DEVTOOLS_API ReloadTracker final : public Subsystem
     {
     public:
         static constexpr const utf8*               kSubsystemName    = "ReloadTracker";

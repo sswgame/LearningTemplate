@@ -8,7 +8,7 @@
 #include "Engine/Graphics/RHI/RHIWaitIdleReason.h"
 #include "Engine/Presentation/IEngineRenderDriver.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
-#include "Engine/Window/IWindow.h"
+#include "Engine/Window/GenericWindow.h"
 
 namespace sw
 {
@@ -20,7 +20,7 @@ namespace sw
     {
     }
 
-    void UserSettingsHost::initialize( IEngineRenderDriver* pRenderDriver, IWindow* pWindow )
+    void UserSettingsHost::initialize( IEngineRenderDriver* pRenderDriver, GenericWindow* pWindow )
     {
         _pRenderDriver = pRenderDriver;
         _pWindow       = pWindow;
@@ -63,7 +63,7 @@ namespace sw
             SW_LOG_INFO_ID( "UserSettingsHost.VSync", "VSync %#", request._bVSync ? "on" : "off" );
         }
 
-        // 창 크기가 바뀌면 창이 대기 크기를 적고, 다음 프레임 시작의 `IWindow::applyPendingResize` 에서 Engine::onMainWindowResize 가 스왑체인을 맞춘다.
+        // 창 크기가 바뀌면 창이 대기 크기를 적고, 다음 프레임 시작의 `GenericWindow::applyPendingResize` 에서 Engine::onMainWindowResize 가 스왑체인을 맞춘다.
         if ( _pWindow != nullptr )
         {
             const bool bSameMode = _pWindow->getDisplayMode() == request._mode;

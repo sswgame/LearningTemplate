@@ -27,8 +27,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/ServiceSlot.h"
+#include "Core/Subsystem/Subsystem.h"
 
 #include "Engine/Profiling/FrameProfileReport.h"
 #include "Engine/Profiling/ProfileScopeID.h"
@@ -71,7 +71,7 @@ namespace sw
      *          소유는 `Engine` 이고 조회는 `engine::getSubsystem<FrameProfiler>()` 입니다(함수 지역 static 싱글턴은 수명이 아무에게도
      *          속하지 않아 종료 순서를 정할 수 없습니다).
      */
-    class SW_API FrameProfiler : public ISubsystem
+    class SW_API FrameProfiler : public Subsystem
     {
     public:
         /** @brief 서브시스템 이름입니다. 초기화 · 종료할 것이 없고 수명(서비스 범위 — 엔진 범위보다 먼저 서고 나중에 사라진다)만 컬렉션이 정한다. */

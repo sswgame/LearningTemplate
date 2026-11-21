@@ -179,10 +179,12 @@ namespace sw
         clear();
         const bool bRead = reader.readCountedList( _listCluster, sizeof( NavCluster ), [&reader]( NavCluster& cluster ) -> bool
         {
-            return reader.readPod( cluster );
+            cluster = reader.readPod<NavCluster>();
+            return reader.hasOverflowed() == false;
         } ) && reader.readCountedList( _listEdge, sizeof( NavClusterEdge ), [&reader]( NavClusterEdge& edge ) -> bool
         {
-            return reader.readPod( edge );
+            edge = reader.readPod<NavClusterEdge>();
+            return reader.hasOverflowed() == false;
         } );
         if ( bRead == false || isWellFormed() == false )
         {

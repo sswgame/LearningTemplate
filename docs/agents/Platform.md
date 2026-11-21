@@ -12,7 +12,7 @@
 - 웹 장치는 만든 스레드에서만 쓴다 — `_bParallelCommandRecording` · `_bThreadSafeResourceCreation` 거짓, 렌더 스레드를 띄우지 않는다(`gv_useRenderThread` 기본값은 플랫폼 사슬로).
 - 네트워크는 IPv6 를 지원한다: 서버 `_listenAddress="::"` 는 이중 스택, 클라이언트는 서버 주소의 군으로 연다, 이름은 A 먼저 없으면 AAAA(`PlatformSocketUtil::resolveAddress`).
 - Android 팩은 APK `assets/Packs` 에 **압축하지 않고** 담는다(fd + 구간으로 읽는다 — 압축된 파일은 오류). GameActivity 로 바꾸지 않는다(액티비티 수명 · 글루 전체가 바뀐다).
-- 크기 · 회전 · 수명 이벤트는 `CallbackInputWindow::applyPlatformResize` 한 곳으로 모은다. 안전 여백은 `IWindow::getSafeAreaInsets`, 화면 태그(`screen.compact` · `orientation.portrait`) 규칙은 `UIScaleSettings::makeScreenTags` 한 곳(UI 문서도 리소스 글 한 길로 읽어야 `_when` 이 풀린다).
+- 크기 · 회전 · 수명 이벤트는 `CallbackInputWindow::applyPlatformResize` 한 곳으로 모은다. 안전 여백은 `GenericWindow::getSafeAreaInsets`, 화면 태그(`screen.compact` · `orientation.portrait`) 규칙은 `UIScaleSettings::makeScreenTags` 한 곳(UI 문서도 리소스 글 한 길로 읽어야 `_when` 이 풀린다).
 - pre-rotation 은 출력 패스 하나(`RenderPassKind::ScreenRotation`)만 돌린다 — 다른 패스는 논리 크기로 그린다. 스왑체인은 회전 · 크기가 정말 바뀌었을 때만 다시 만든다. 터치 대상은 `_minTouchTargetSize`(48)까지 넓혀 고른다(`UIEventRouter::hitTestTouch`).
 - 교차 빌드 쿠킹은 호스트 개발 빌드(`SW_HOST_BUILD_DIR`, 기본 `build/Ninja-Release`)의 App 이 `<교차 빌드>/Bin/Packs` 에 굽는다.
 - 셰이더 쿠커는 Tint 를 라이브러리로 링크하지 않고 `dawn[tint-tools]` 실행 파일만 쓴다(`sw_copy_tint_tool`). SDK 판은 `search_paths.defaults.json` · `vcpkg.json` 이 정본이다(`platform_sdk.py web` · `android`).

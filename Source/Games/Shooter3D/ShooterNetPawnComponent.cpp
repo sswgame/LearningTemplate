@@ -98,7 +98,7 @@ namespace sw
             }
 
             /**
-             * @brief 씬에 서버 틱 @p serverTick 을 알린다 — 틱 함수 바닥(`TickedPathMoverComponent`)이 자기 서브틱에서 그 자리를 읽는다(바닥을 돌지 않는다).
+             * @brief 씬에 서버 틱 @p serverTick 을 알린다 — 틱 함수 바닥(`InterpToMovementComponent`)이 자기 서브틱에서 그 자리를 읽는다(바닥을 돌지 않는다).
              *        조종 시스템이 없는 씬이면 바닥도 움직이지 않으므로 알릴 곳이 없다.
              */
             static void publishServerTick( const GameObject* pOwner, int64 serverTick )

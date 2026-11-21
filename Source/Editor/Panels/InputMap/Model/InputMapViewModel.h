@@ -3,7 +3,7 @@
  * @brief Input Map Editor 의 모델 — 편집하는 InputMap · 리플레이, 경로, 고른 액션, 키 다시 잡기, 충돌, 실시간 그래프 표본, 녹화 · 재생 명령. ImGui 를 모릅니다.
  * @details 패널(`InputMapPanel`)은 그리기와 입력칸만 들고, 상태와 명령은 이것이 든다 — 인스펙터 · 프로파일러 `Model/` 과 같은 선이다(언리얼 Enhanced Input 편집기가
  *          `UInputMappingContext` 에셋을 편집 대상으로 두고 화면이 그것을 고치는 것과 같다). 바인딩 한 칸 고치기(트리거 · 시간 · Negate)는 엔진 `InputMap` 의 API 가 곧 명령이라
- *          `editInputMap` 으로 넘기고, 문서 dirty 는 패널(`IEditorPanel`)이 든다 — 명령은 바꿨으면 편집 알림 창구(`DocumentEditRecorder`)로 알리고 true 를 반환한다.
+ *          `editInputMap` 으로 넘기고, 문서 dirty 는 패널(`EditorPanel`)이 든다 — 명령은 바꿨으면 편집 알림 창구(`DocumentEditRecorder`)로 알리고 true 를 반환한다.
  */
 #pragma once
 #include "Core/Container/string.h"

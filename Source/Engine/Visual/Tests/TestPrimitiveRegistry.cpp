@@ -74,7 +74,7 @@ SW_TEST_CASE( PrimitiveRegistryTest, BulkBatchRemovalMatchesOneByOneRemoval )
     const uint32 entryTotal = bulkRegistry.getSlotCount();
     SW_EXPECT_TRUE( 5000u < entryTotal );
 
-    vector<ScenePrimitiveBatch*> listBulkRemoved;
+    vector<PrimitiveBatch*> listBulkRemoved;
     for ( uint32 batchIndex = kBatchCount; batchIndex > 0; --batchIndex )
     {
         if ( TestPrimitiveRegistryInternal::isRemoved( batchIndex - 1 ) )
@@ -139,7 +139,7 @@ SW_TEST_CASE( PrimitiveRegistryTest, MeshSlotsStayFixedAndFreedSlotIsReused )
     vector<uint32>     listSlot;
     for ( const MeshComponent* pMesh : listMesh )
     {
-        SW_REQUIRE_TRUE( pMesh->getPrimitiveIndex() != ScenePrimitive::kInvalidPrimitiveIndex );
+        SW_REQUIRE_TRUE( pMesh->getPrimitiveIndex() != PrimitiveComponent::kInvalidPrimitiveIndex );
         listSlot.push_back( pMesh->getPrimitiveIndex() );
     }
     const uint64 layoutBefore = registry.getLayoutGeneration();
@@ -211,9 +211,9 @@ namespace
     /** @brief 칸 하나의 내용(어느 배치의 몇 번 항목인지, 빈 칸이면 널)입니다 — GPUScene 후보의 대역이다. */
     struct SlotContent
     {
-        const ScenePrimitiveBatch* _pBatch{ nullptr };
-        uint32                     _index{ 0 };
-        bool                       operator==( const SlotContent& other ) const { return _pBatch == other._pBatch && _index == other._index; }
+        const PrimitiveBatch* _pBatch{ nullptr };
+        uint32                _index{ 0 };
+        bool                  operator==( const SlotContent& other ) const { return _pBatch == other._pBatch && _index == other._index; }
     };
 
     /** @brief 레지스트리를 칸마다 처음부터 읽은 표입니다(전체 수집의 대역). */
@@ -349,7 +349,7 @@ SW_TEST_CASE( PrimitiveRegistryTest, WaiterRemovedDuringWalkDoesNotDropAnother )
 /**
  * @brief [PrimitiveRegistryTest] 새 레지스트리의 세대는 앞 레지스트리의 어느 세대와도 같지 않다
  * @details 세대가 레지스트리마다 1 에서 시작하던 때, 장면을 바꿔 새로 만든 레지스트리의 칸 배치 세대가 지난 장면 것과 같아 GPUScene 빌더가 부분 수집을 했고
- *          지난 장면의 메시가 다음 장면에 그려졌다(dismemberment → distortion 체인). 지난 세대를 기억한 쪽은 새 레지스트리의 변경 기록도 거슬러 가지 못한다.
+ *          지난 장면의 메시가 다음 장면에 그려졌다(severing → distortion 체인). 지난 세대를 기억한 쪽은 새 레지스트리의 변경 기록도 거슬러 가지 못한다.
  */
 SW_TEST_CASE( PrimitiveRegistryTest, NewRegistryNeverRepeatsAnOldGeneration )
 {

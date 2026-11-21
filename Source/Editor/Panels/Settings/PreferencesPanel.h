@@ -6,7 +6,7 @@
 #pragma once
 #include "Core/Foundation/Types.h"
 
-#include "Editor/Common/GUI/Panel/IEditorPanel.h"
+#include "Editor/Common/GUI/Panel/EditorPanel.h"
 #include "Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.h"
 #include "Editor/Panels/Settings/Model/PreferencesViewModel.h"
 
@@ -22,7 +22,7 @@ namespace sw::editor
      * @brief 언리얼 Editor Preferences · 유니티 Preferences · Godot Editor Settings 에 해당합니다. 왼쪽은 섹션 목록, 오른쪽은 고른 섹션의 그리드입니다.
      * @details 검색어는 모든 섹션을 훑어 맞는 프로퍼티가 있는 섹션만 목록에 남깁니다. 저장 단추는 없습니다 — 값이 바뀌면 첫 편집 0.5 초 뒤에 저장합니다(창을 닫아도).
      */
-    class PreferencesPanel final : public IEditorPanel
+    class PreferencesPanel final : public EditorPanel
     {
     public:
         /** @brief 패널 id 입니다. 등록(`SW_EDITOR_PANEL`)과 조회(`EditorPanelManager::findPanel<…>` · `setPanelOpen<…>`)가 모두 이 상수에서 온다. */

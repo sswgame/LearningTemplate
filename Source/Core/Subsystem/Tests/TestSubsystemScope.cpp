@@ -19,9 +19,9 @@ namespace
 
     /**
      * @brief 서브시스템 자체를 드러내는 조회 대상 인터페이스입니다(`expose` · `publish`).
-     * @details 서브시스템 인터페이스라 `ISubsystem` 을 기반으로 둔다(`IEditorPanelService` 와 같은 모양) — 구현이 `ISubsystem` 과 함께 다중 상속하지 않는다.
+     * @details 서브시스템 인터페이스라 `Subsystem` 을 기반으로 둔다(`IEditorPanelService` 와 같은 모양) — 구현이 `Subsystem` 과 함께 다중 상속하지 않는다.
      */
-    class IScopeProbeSubsystem : public ISubsystem
+    class IScopeProbeSubsystem : public Subsystem
     {
     public:
         virtual int32 getValue() const = 0;
@@ -50,7 +50,7 @@ namespace
     };
 
     /** @brief 인터페이스를 상속하지 않고 멤버로 든 서브시스템입니다(`publishPart`). */
-    class ScopePartOwnerSubsystem final : public ISubsystem
+    class ScopePartOwnerSubsystem final : public Subsystem
     {
     public:
         /** @brief 멤버로 드는 인터페이스 구현입니다. */
@@ -76,7 +76,7 @@ namespace
     };
 
     /** @brief 값 묶음을 멤버로 들고 그것을 범위에 거는 서브시스템입니다(설정 · 타입 표를 든 서브시스템 자리 — `exposeMember`). */
-    class ScopeCatalogOwnerSubsystem final : public ISubsystem
+    class ScopeCatalogOwnerSubsystem final : public Subsystem
     {
     public:
         SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
@@ -93,7 +93,7 @@ namespace
      * @tparam TTag 한 범위에 둘을 걸 때 타입을 가른다 — 범위는 타입마다 하나만 등록한다.
      */
     template <int32 TTag, class TTarget = ScopeProbeSubsystem>
-    class ScopeLookupSubsystem final : public ISubsystem
+    class ScopeLookupSubsystem final : public Subsystem
     {
     public:
         ScopeLookupSubsystem( const SubsystemScope& scope, const utf8* pName, vector<const utf8*> listDependency, bool* pShutDown )
@@ -120,7 +120,7 @@ namespace
     };
 
     /** @brief 의존만 잇는 빈 서브시스템입니다(간접 의존을 본다). */
-    class ScopeRelaySubsystem final : public ISubsystem
+    class ScopeRelaySubsystem final : public Subsystem
     {
     public:
         SubsystemInitResult     initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
@@ -347,7 +347,7 @@ SW_TEST_CASE( SubsystemScopeTest, PublishedPartFollowsItsOwner )
 namespace
 {
     /** @brief 호스트 모듈(에디터)에 보인다고 스스로 선언한 서브시스템입니다(`kModuleVisibility`). */
-    class HostModuleProbeSubsystem final : public ISubsystem
+    class HostModuleProbeSubsystem final : public Subsystem
     {
     public:
         static constexpr SubsystemModuleVisibility kModuleVisibility = SubsystemModuleVisibility::HostModules;

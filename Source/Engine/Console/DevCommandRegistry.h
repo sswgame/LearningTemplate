@@ -12,8 +12,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Registry/RegistrationList.h"
 #include "Core/String/StringUtil.h"
-#include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/ServiceSlot.h"
+#include "Core/Subsystem/Subsystem.h"
 
 #include "Engine/Foundation/SceneIterationKey.h"
 #include "Engine/Module/ModuleEntryRegistrar.h"
@@ -61,10 +61,10 @@ namespace sw
      *          등록 · 해제는 이미지 로더 스레드(정적 초기화)에서, 조회는 콘솔(게임 스레드)에서 오므로 등록 목록은 잠금 하나로 지킨다.
      *          명령 본문은 잠금 밖에서 부른다(찾은 등록 줄은 그 모듈이 내려가기 전까지 산다). 프레임마다 도는 경로가 아니다.
      */
-    class SW_API DevCommandRegistry final : public ISubsystem
+    class SW_API DevCommandRegistry final : public Subsystem
     {
     public:
-        static constexpr MemoryTag   kSubsystemMemoryTag = MemoryTag::EngineMisc; ///< 할당 용도(`ISubsystem::getSubsystemMemoryTag`)
+        static constexpr MemoryTag   kSubsystemMemoryTag = MemoryTag::EngineMisc; ///< 할당 용도(`Subsystem::getSubsystemMemoryTag`)
         static constexpr const utf8* kSubsystemName      = "DevCommandRegistry";
 
         DevCommandRegistry();

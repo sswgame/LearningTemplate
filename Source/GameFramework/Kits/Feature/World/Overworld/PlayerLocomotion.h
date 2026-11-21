@@ -10,14 +10,14 @@
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Runtime/Foundation/Grid/FacingDir.h"
+#include "GameFramework/Runtime/Foundation/Grid/FacingDirection.h"
 
 namespace sw
 {
     class Archive;
 
     // ------------------------------------------------------------------------------
-    // 1) LocomotionState. 타일 스텝 이동 FSM 의 상태이다(FacingDir 은 Utility/FacingDir.h)
+    // 1) LocomotionState. 타일 스텝 이동 FSM 의 상태이다(FacingDirection 은 Utility/FacingDirection.h)
     // ------------------------------------------------------------------------------
     /** @brief 타일 스텝 이동 상태입니다. */
     ENUM()
@@ -60,9 +60,9 @@ namespace sw
         /** @brief 현재 이동 상태를 반환합니다. */
         LocomotionState getState() const { return _state; }
         /** @brief 바라보는 방향을 반환합니다. */
-        FacingDir getFacing() const { return _facing; }
+        FacingDirection getFacing() const { return _facing; }
         /** @brief 바라보는 방향을 설정합니다. */
-        void setFacing( FacingDir dir ) { _facing = dir; }
+        void setFacing( FacingDirection dir ) { _facing = dir; }
         /** @brief 이동 델타로부터 바라보는 방향을 설정합니다. */
         void setFacingFromDelta( int32 dx, int32 dy );
         /** @brief 이동 입력을 받을 수 있는지 반환합니다. */
@@ -76,7 +76,7 @@ namespace sw
     private:
         PROPERTY( RuntimeState )
         LocomotionState _state;
-        FacingDir       _facing;     ///< 키트들이 나눠 쓰는 열거(리플렉션 등록 없음)라 손 본문이 싣는다
+        FacingDirection _facing;     ///< 키트들이 나눠 쓰는 열거(리플렉션 등록 없음)라 손 본문이 싣는다
         Countdown       _stateTimer; ///< Walk 와 Interact 의 남은 시간(초)
     };
 

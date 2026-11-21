@@ -15,7 +15,7 @@
 namespace sw
 {
     SequenceTriggerComponent::SequenceTriggerComponent()
-        : ActivatorVolumeComponent( ActivatorAuthority::Server ) // 서버가 틀고 넷 키트(`GF_NetSequence`)가 `_audience` 대로 보낸다
+        : TriggerComponent( TriggerAuthority::Server ) // 서버가 틀고 넷 키트(`GF_NetSequence`)가 `_audience` 대로 보낸다
         , _sequence{}
         , _audience{ SequenceTriggerAudience::Everyone }
         , _lastActivator{}
@@ -25,19 +25,19 @@ namespace sw
 
     void SequenceTriggerComponent::onRegister( GameObjectManager& manager )
     {
-        ActivatorVolumeComponent::onRegister( manager );
+        TriggerComponent::onRegister( manager );
         manager.getComponentRegistry().add<SequenceTriggerComponent>( this );
     }
 
     void SequenceTriggerComponent::onUnregister( GameObjectManager& manager )
     {
         manager.getComponentRegistry().remove<SequenceTriggerComponent>( this );
-        ActivatorVolumeComponent::onUnregister( manager );
+        TriggerComponent::onUnregister( manager );
     }
 
     void SequenceTriggerComponent::onBeginPlay()
     {
-        ActivatorVolumeComponent::onBeginPlay();
+        TriggerComponent::onBeginPlay();
         // 트리거가 트는 디렉터는 스스로 틀지 않아야 한다(언리얼 Level Sequence 의 bAutoPlay 끔 + Trigger Box 와 같은 짝) — 둘 다 켜면 데이터 모순이다.
         const GameObject*              pOwner    = getOwner();
         const GameObjectManager*       pManager  = pOwner != nullptr ? pOwner->getManager() : nullptr;
@@ -77,7 +77,7 @@ namespace sw
     GameFlags* SequenceTriggerComponent::findProgressFlags( const GameObject* pActivator ) const
     {
         if ( _audience == SequenceTriggerAudience::Everyone )
-            return ActivatorVolumeComponent::findProgressFlags( pActivator );
+            return TriggerComponent::findProgressFlags( pActivator );
         if ( pActivator == nullptr )
             return nullptr; // 활성자 없이 묻는 것(`hasFired`) — 플레이어별 기록은 고를 플레이어가 없다
         const GameObject*     pOwner   = getOwner();

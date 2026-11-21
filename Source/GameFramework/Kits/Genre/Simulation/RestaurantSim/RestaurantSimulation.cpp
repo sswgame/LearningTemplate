@@ -12,7 +12,7 @@
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Simulation/RestaurantSim/RestaurantCatalog.h"
-#include "GameFramework/Runtime/Foundation/Framework/SessionStateRefs.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameStateRefs.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
 #include "GameFramework/Runtime/Gameplay/Progression/Reputation.h"
@@ -93,7 +93,7 @@ namespace sw
 
     void RestaurantSimulation::initialize( const RestaurantCatalog* pCatalog, const RecipeCatalog* pRecipeCatalog, const ItemCatalog* pItemCatalog,
                                            const ShopCatalog* pShopCatalog, const ExperienceCurve* pStaffCurve,
-                                           const SessionStateRefs& refs, Inventory& pantry, const RestaurantSettings& settings )
+                                           const GameStateRefs& refs, Inventory& pantry, const RestaurantSettings& settings )
     {
         _pCatalog       = pCatalog;
         _pRecipeCatalog = pRecipeCatalog;

@@ -73,7 +73,7 @@ namespace
     const OnlineProtocolEntry kVictimProtocol{ "ServiceClientCallTableTest.Victim", test::TestEmptyMethodTable<OnlineMethodRange::kGame + 2 * OnlineMethodRange::kSize>{}, OnlineMessageTypes<>{} };
 
     /** @brief 수명 순서만 보는 빈 키트(테스트 로그인과 같은 영역). */
-    class LifetimeClientService final : public IOnlineClientService
+    class LifetimeClientService final : public OnlineClientService
     {
     public:
         const OnlineProtocolEntry& getProtocol() const override { return test::getTestLoginProtocol(); }
@@ -85,7 +85,7 @@ namespace
     };
 
     /** @brief 첫 응답에서 자기 주인(@p _pOwner)이 자신을 파괴하게 하는 키트입니다. 응답 수는 키트 밖 @p _pResponseCount 에 센다. */
-    class SelfDestroyingClientService final : public IOnlineClientService
+    class SelfDestroyingClientService final : public OnlineClientService
     {
     public:
         unique_ptr<SelfDestroyingClientService>* _pOwner{ nullptr };
@@ -107,7 +107,7 @@ namespace
     };
 
     /** @brief Ready 알림에서 다른 키트(@p _pVictim)를 파괴하는 키트입니다. */
-    class DestroyOtherOnReadyClientService final : public IOnlineClientService
+    class DestroyOtherOnReadyClientService final : public OnlineClientService
     {
     public:
         unique_ptr<DestroyOtherOnReadyClientService>* _pVictim{ nullptr };

@@ -31,7 +31,7 @@ namespace
 
         static bool writePack( const string& folder, const vector<std::pair<string, string>>& listEntry )
         {
-            return FileUtil::ensureDirectoryExists( folder ) && PackTestUtil::writeTextPack( FileUtil::joinPath( folder, "game.pack" ), "game", listEntry );
+            return FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( folder ) ) && PackTestUtil::writeTextPack( FileUtil::joinPath( folder, "game.pack" ), "game", listEntry );
         }
 
         static string read( const PackManager& packs, string_view path )
@@ -67,9 +67,9 @@ SW_TEST_CHILD_ROLE( PackPatchCommandLineTest, WriteInputs )
     string       privateKeyPem;
     NetPublicKey publicKey;
     SW_REQUIRE_TRUE( pProvider->createSigningKeyPair( NetSignatureAlgorithm::EcdsaP256Sha256, privateKeyPem, publicKey ) );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::joinPath( root, Util::kKeyFileName ), privateKeyPem ) );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::joinPath( root, Util::kPublicKeyXFileName ), HexUtil::encodeBytes( publicKey._x.data(), publicKey._x.size() ) ) );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::joinPath( root, Util::kPublicKeyYFileName ), HexUtil::encodeBytes( publicKey._y.data(), publicKey._y.size() ) ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( FileUtil::joinPath( root, Util::kKeyFileName ) ), privateKeyPem ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( FileUtil::joinPath( root, Util::kPublicKeyXFileName ) ), HexUtil::encodeBytes( publicKey._x.data(), publicKey._x.size() ) ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( FileUtil::joinPath( root, Util::kPublicKeyYFileName ) ), HexUtil::encodeBytes( publicKey._y.data(), publicKey._y.size() ) ) );
 }
 
 /** @brief [PackPatchCommandLineTest] `-make-patch` 의 산출 — 서명된 패치를 이전 빌드 폴더에 얹어 마운트하면 새 빌드의 내용이 보이고, 새 빌드 기록(2)이 다음 패치의 기준이 된다 */
@@ -83,7 +83,7 @@ SW_TEST_CHILD_ROLE( PackPatchCommandLineTest, CheckPatch )
     const string outFolder    = FileUtil::joinPath( root, Util::kOutFolder );
     const string manifestName = PackPatchBuilder::makeManifestFileName( Util::kNewBuild );
     string       manifestText;
-    SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::joinPath( outFolder, manifestName ), manifestText ) );
+    SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::toDiskPath( FileUtil::joinPath( outFolder, manifestName ) ), manifestText ) );
     PackPatchManifest manifest;
     SW_REQUIRE_TRUE( PackPatchManifest::parse( manifestText, manifestName, manifest ) );
     SW_EXPECT_EQUAL( string( "1" ), manifest._fromBuild );
@@ -92,8 +92,8 @@ SW_TEST_CHILD_ROLE( PackPatchCommandLineTest, CheckPatch )
 
     string xHex;
     string yHex;
-    SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::joinPath( root, Util::kPublicKeyXFileName ), xHex ) );
-    SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::joinPath( root, Util::kPublicKeyYFileName ), yHex ) );
+    SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::toDiskPath( FileUtil::joinPath( root, Util::kPublicKeyXFileName ) ), xHex ) );
+    SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::toDiskPath( FileUtil::joinPath( root, Util::kPublicKeyYFileName ) ), yHex ) );
     PackPatchTrust trust{};
     trust._pProvider            = pProvider;
     trust._publicKey._algorithm = NetSignatureAlgorithm::EcdsaP256Sha256;
@@ -101,8 +101,8 @@ SW_TEST_CHILD_ROLE( PackPatchCommandLineTest, CheckPatch )
 
     // 런타임 적용 길 그대로 — 패치 팩 · 목록을 설치된 빌드(1) 폴더에 두고 폴더를 훑는다. 서명이 틀리면 마운트가 진다.
     const string oldFolder = FileUtil::joinPath( root, Util::kOldFolder );
-    SW_REQUIRE_TRUE( FileUtil::copyFile( FileUtil::joinPath( outFolder, manifest._packFileName ), FileUtil::joinPath( oldFolder, manifest._packFileName ) ) );
-    SW_REQUIRE_TRUE( FileUtil::copyFile( FileUtil::joinPath( outFolder, manifestName ), FileUtil::joinPath( oldFolder, manifestName ) ) );
+    SW_REQUIRE_TRUE( FileUtil::copyFile( FileUtil::toDiskPath( FileUtil::joinPath( outFolder, manifest._packFileName ) ), FileUtil::toDiskPath( FileUtil::joinPath( oldFolder, manifest._packFileName ) ) ) );
+    SW_REQUIRE_TRUE( FileUtil::copyFile( FileUtil::toDiskPath( FileUtil::joinPath( outFolder, manifestName ) ), FileUtil::toDiskPath( FileUtil::joinPath( oldFolder, manifestName ) ) ) );
     PackManager packs;
     SW_REQUIRE_TRUE( packs.setPatchTrust( trust ) );
     SW_REQUIRE_TRUE( packs.scanAndMountPacks( oldFolder ) );
@@ -114,7 +114,7 @@ SW_TEST_CHILD_ROLE( PackPatchCommandLineTest, CheckPatch )
     string                                  recordText;
     fixed_string<constant::buffer::kMax128> recordFileName;
     formatstring( recordFileName.data(), recordFileName.capacity(), "%#%#", Util::kNewBuild, PackBuildRecord::kExtension );
-    SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::joinPath( outFolder, recordFileName ), recordText ) );
+    SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::toDiskPath( FileUtil::joinPath( outFolder, recordFileName ) ), recordText ) );
     PackBuildRecord record;
     SW_REQUIRE_TRUE( PackBuildRecord::parse( recordText, "record", record ) );
     SW_EXPECT_EQUAL( string( Util::kNewBuild ), record._build );

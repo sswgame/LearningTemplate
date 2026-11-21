@@ -17,7 +17,7 @@
 namespace sw::editor
 {
     MultiplayerPanel::MultiplayerPanel()
-        : IEditorPanel( false )
+        : EditorPanel( false )
         , _viewModel{}
         , _viewState{}
         , _listTab{}

@@ -23,8 +23,8 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/String/fixed_string.h"
-#include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/ServiceSlot.h"
+#include "Core/Subsystem/Subsystem.h"
 
 namespace sw
 {
@@ -139,10 +139,10 @@ namespace sw
      * @details 서비스 범위의 서브시스템이다(`EngineSubsystemSet` — 렌더 타깃 목록과 같은 자리). 예전에는 파일 정적이라 엔진을 다시 세워도 이전 실행의 소실 보고 표시가 남았다.
      *          `GPUBreadcrumbs` 창구만 부른다. 언리얼 `FGPUBreadcrumbs`(RHI 가 갖는 브레드크럼 상태)와 같은 자리.
      */
-    class SW_API GPUBreadcrumbLog final : public ISubsystem
+    class SW_API GPUBreadcrumbLog final : public Subsystem
     {
     public:
-        static constexpr MemoryTag   kSubsystemMemoryTag = MemoryTag::RenderCPU; ///< 할당 용도(`ISubsystem::getSubsystemMemoryTag`)
+        static constexpr MemoryTag   kSubsystemMemoryTag = MemoryTag::RenderCPU; ///< 할당 용도(`Subsystem::getSubsystemMemoryTag`)
         static constexpr const utf8* kSubsystemName      = "GPUBreadcrumbLog";
 
         SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }

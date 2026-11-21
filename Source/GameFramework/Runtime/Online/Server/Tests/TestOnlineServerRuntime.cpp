@@ -208,7 +208,7 @@ namespace
 
     /**
      * @brief 의존 이름이 형식 목록에서만 나오는지 보는 키트입니다(조립에 올리지 않는다).
-     * @details 선언하지 않은 형식을 꺼내면(`interfaces.find<IAccountPresence>()`) `static_assert` 로 컴파일이 멈추므로 실행 테스트로는 재지 않는다.
+     * @details 선언하지 않은 형식을 꺼내면(`interfaces.find<AccountPresence>()`) `static_assert` 로 컴파일이 멈추므로 실행 테스트로는 재지 않는다.
      */
     class TypeListTestKit final
         : public OnlineServerKit<OnlineKitRequired<ITestDirectory, IAccountDirectory>, OnlineKitOptional<const IAccountBlockList, IOfflinePushSender>, OnlineKitUnordered<const ILedgerPolicy>>

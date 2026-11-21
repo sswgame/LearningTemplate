@@ -5,7 +5,7 @@
  *          말하고 목록(`SubsystemCollection::initializeAll`)이 호스트 종류로 거른다. 어디서나 도는 것은 `SubsystemHostMask::All` 이다.
  */
 #pragma once
-#include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/Subsystem.h"
 
 namespace sw
 {

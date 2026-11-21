@@ -38,8 +38,8 @@ namespace
         /** @brief 부모 `base.prefab.xml` 과 자식 `child.prefab.xml` 을 씁니다. */
         static void writePair( const test::ScopedScratchDomain& domain, const utf8* pOverrides = kMoveRoot )
         {
-            SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "base.prefab.xml" ), makeBase( "1,2,3" ) ) );
-            SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "child.prefab.xml" ), makeVariant( test::ScopedScratchDomain::makeID( "base.prefab.xml" ).str(), pOverrides ) ) );
+            SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( domain.makeDiskPath( "base.prefab.xml" ) ), makeBase( "1,2,3" ) ) );
+            SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( domain.makeDiskPath( "child.prefab.xml" ) ), makeVariant( test::ScopedScratchDomain::makeID( "base.prefab.xml" ).str(), pOverrides ) ) );
         }
 
         /** @brief 칸 하나를 상태 글에서 읽습니다. */
@@ -103,7 +103,7 @@ SW_TEST_CASE( PrefabVariantTest, SaveKeepsVariantAndRoundTrips )
     SW_REQUIRE_TRUE( asset.saveToFile( Util::makeAbsolute( savedPath ) ) );
 
     string savedText;
-    SW_REQUIRE_TRUE( FileUtil::readTextFile( savedPath, savedText ) );
+    SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::toDiskPath( savedPath ), savedText ) );
     SW_EXPECT_EQUAL( asset.getBasePath(), PrefabAsset::readBasePathFromSource( savedText ) );
     SW_EXPECT_TRUE( savedText.find( "<GameObject" ) == string::npos );
     SW_EXPECT_TRUE( savedText.find( "_localScale" ) == string::npos ); // 부모와 같은 칸은 쓰지 않는다
@@ -121,14 +121,14 @@ SW_TEST_CASE( PrefabVariantTest, SaveKeepsVariantAndRoundTrips )
 SW_TEST_CASE( PrefabVariantTest, SaveOmitsDefaultValues )
 {
     const test::ScopedScratchDomain domain;
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "base.prefab.xml" ), Util::makeBase( "1,2,3" ) ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( domain.makeDiskPath( "base.prefab.xml" ) ), Util::makeBase( "1,2,3" ) ) );
     PrefabAsset asset;
     SW_REQUIRE_TRUE( asset.loadFromDiskFile( domain.makeDiskPath( "base.prefab.xml" ) ) );
     const string savedPath = domain.makeDiskPath( "saved.prefab.xml" );
     SW_REQUIRE_TRUE( asset.saveToFile( Util::makeAbsolute( savedPath ) ) );
 
     string savedText;
-    SW_REQUIRE_TRUE( FileUtil::readTextFile( savedPath, savedText ) );
+    SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::toDiskPath( savedPath ), savedText ) );
     SW_EXPECT_TRUE( savedText.find( "_localPosition=\"1,2,3\"" ) != string::npos );
     SW_EXPECT_TRUE( savedText.find( "_bActive" ) == string::npos ); // 기본값(켜짐)이다
 
@@ -148,15 +148,15 @@ SW_TEST_CASE( PrefabVariantTest, BadVariantsFailToLoad )
     const string                    idA = test::ScopedScratchDomain::makeID( "a.prefab.xml" ).str();
     const string                    idB = test::ScopedScratchDomain::makeID( "b.prefab.xml" ).str();
     {
-        SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "orphan.prefab.xml" ), Util::makeVariant( test::ScopedScratchDomain::makeID( "missing.prefab.xml" ).str(), "" ) ) );
+        SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( domain.makeDiskPath( "orphan.prefab.xml" ) ), Util::makeVariant( test::ScopedScratchDomain::makeID( "missing.prefab.xml" ).str(), "" ) ) );
         PrefabAsset asset;
         SW_EXPECT_LOG( "PrefabAsset.PrefabNotLoaded" );
         SW_EXPECT_LOG( "DataInheritance.BaseNotFound" );
         SW_EXPECT_FALSE( asset.loadFromDiskFile( domain.makeDiskPath( "orphan.prefab.xml" ) ) );
     }
     {
-        SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "a.prefab.xml" ), Util::makeVariant( idB, "" ) ) );
-        SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "b.prefab.xml" ), Util::makeVariant( idA, "" ) ) );
+        SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( domain.makeDiskPath( "a.prefab.xml" ) ), Util::makeVariant( idB, "" ) ) );
+        SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( domain.makeDiskPath( "b.prefab.xml" ) ), Util::makeVariant( idA, "" ) ) );
         PrefabAsset asset;
         SW_EXPECT_LOG( "DataInheritance.Cycle" );
         SW_EXPECT_FALSE( asset.loadFromDiskFile( domain.makeDiskPath( "a.prefab.xml" ) ) );
@@ -168,7 +168,7 @@ SW_TEST_CASE( PrefabVariantTest, BadVariantsFailToLoad )
         SW_EXPECT_FALSE( asset.loadFromDiskFile( domain.makeDiskPath( "child.prefab.xml" ) ) );
     }
     {
-        SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "both.prefab.xml" ), Util::makeVariant( test::ScopedScratchDomain::makeID( "base.prefab.xml" ).str(), "<GameObject _schemaVersion=\"0\" _name=\"X\" />" ) ) );
+        SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( domain.makeDiskPath( "both.prefab.xml" ) ), Util::makeVariant( test::ScopedScratchDomain::makeID( "base.prefab.xml" ).str(), "<GameObject _schemaVersion=\"0\" _name=\"X\" />" ) ) );
         PrefabAsset asset;
         SW_EXPECT_LOG( "PrefabAsset.VariantHasBody" );
         SW_EXPECT_FALSE( asset.loadFromDiskFile( domain.makeDiskPath( "both.prefab.xml" ) ) );
@@ -187,7 +187,7 @@ SW_TEST_CASE( PrefabVariantTest, ReloadOfBaseReachesCachedVariant )
 
     const string edited = "<Prefab formatVersion=\"0\" name=\"Base\"><GameObject _schemaVersion=\"0\" _name=\"Base\" _bActive=\"true\"><_listComponent>"
                           "<SceneComponent _componentName=\"Root\" _localID=\"1\" _bActive=\"true\" _localScale=\"5,5,5\" _localPosition=\"1,2,3\" /></_listComponent></GameObject></Prefab>";
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "base.prefab.xml" ), edited ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( domain.makeDiskPath( "base.prefab.xml" ) ), edited ) );
     SW_EXPECT_TRUE( cache.reload( baseID ) != ReloadResult::Failed ); // 부모가 캐시에 없을 수도 있다(변형이 합쳐 읽었다) — 실패만 아니면 된다
 
     const shared_ptr<const PrefabAsset> pChild = cache.loadPrefab( childID.view() );
@@ -215,15 +215,15 @@ SW_TEST_CASE( PrefabVariantTest, NestedInstancesAreInherited )
     const test::ScopedScratchDomain domain;
     const string                    partID = test::ScopedScratchDomain::makeID( "part.prefab.xml" ).str();
     const string                    baseID = test::ScopedScratchDomain::makeID( "nestedbase.prefab.xml" ).str();
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "part.prefab.xml" ), Util::makeBase( "0,0,0" ) ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( domain.makeDiskPath( "part.prefab.xml" ) ), Util::makeBase( "0,0,0" ) ) );
     string                                   baseText = Util::makeBase( "1,2,3" );
     StringBuilder<constant::buffer::kMax256> inheritedNode;
     inheritedNode.appendFormat( "<PrefabInstance name=\"Inherited\" prefab=\"%#\" localID=\"#0000000000000001\" />", partID );
     baseText.insert( baseText.rfind( "</Prefab>" ), inheritedNode.c_str(), inheritedNode.size() );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "nestedbase.prefab.xml" ), baseText ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( domain.makeDiskPath( "nestedbase.prefab.xml" ) ), baseText ) );
     StringBuilder<constant::buffer::kMax256> ownNode;
     ownNode.appendFormat( "<PrefabInstance name=\"Own\" prefab=\"%#\" localID=\"#0000000000000002\" />", partID );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "child.prefab.xml" ), Util::makeVariant( baseID, ownNode.view() ) ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( domain.makeDiskPath( "child.prefab.xml" ) ), Util::makeVariant( baseID, ownNode.view() ) ) );
 
     PrefabAsset asset;
     SW_REQUIRE_TRUE( asset.loadFromDiskFile( domain.makeDiskPath( "child.prefab.xml" ) ) );
@@ -234,7 +234,7 @@ SW_TEST_CASE( PrefabVariantTest, NestedInstancesAreInherited )
     const string savedPath = domain.makeDiskPath( "saved.prefab.xml" );
     SW_REQUIRE_TRUE( asset.saveToFile( Util::makeAbsolute( savedPath ) ) );
     string savedText;
-    SW_REQUIRE_TRUE( FileUtil::readTextFile( savedPath, savedText ) );
+    SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::toDiskPath( savedPath ), savedText ) );
     SW_EXPECT_TRUE( savedText.find( "Inherited" ) == string::npos );
     SW_EXPECT_TRUE( savedText.find( "Own" ) != string::npos );
 }

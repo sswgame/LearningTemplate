@@ -29,7 +29,7 @@ namespace sw
          * @endcode
          */
         template <typename TIsIdle, typename TPoll>
-        static void flushUntilIdle( IServiceStore* pStore, TIsIdle&& isIdle, TPoll&& onPoll )
+        static void flushUntilIdle( ServiceStore* pStore, TIsIdle&& isIdle, TPoll&& onPoll )
         {
             if ( pStore == nullptr )
                 return;
@@ -68,7 +68,7 @@ namespace sw
 
         /** @brief 저장소 완료만 회수하는 `flushUntilIdle` 입니다. */
         template <typename TIsIdle>
-        static void flushUntilIdle( IServiceStore* pStore, TIsIdle&& isIdle )
+        static void flushUntilIdle( ServiceStore* pStore, TIsIdle&& isIdle )
         {
             flushUntilIdle( pStore, isIdle, []() {} );
         }

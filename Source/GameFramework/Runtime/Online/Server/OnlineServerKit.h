@@ -46,7 +46,7 @@ namespace sw
     class IEphemeralStore;
     class IOnlineServerKit;
     class IOnlineServerService;
-    class IServiceStore;
+    class ServiceStore;
     class MetricRegistry;
     class OnlineServiceHost;
     class RemoteConfig;
@@ -73,7 +73,7 @@ namespace sw
 
         // 런타임이 채운다.
         OnlineServiceHost*        _pHost{ nullptr };
-        IServiceStore*            _pStore{ nullptr };
+        ServiceStore*             _pStore{ nullptr };
         IEphemeralStore*          _pCache{ nullptr };
         ServerBus*                _pBus{ nullptr };    ///< 버스의 타입 있는 앞이다. 발행은 주제 정의(`ServerBusTopic`)로만 한다
         EphemeralStoreRouter*     _pRouter{ nullptr }; ///< 호스트를 띄운 뒤(`start`)부터 있다
@@ -110,7 +110,7 @@ namespace sw
     /**
      * @class IOnlineServerKit
      * @brief 키트 하나의 서버 조립입니다. 모든 함수는 서비스 스레드(서버 루프)에서 불립니다. 키트는 이것을 직접 상속하지 못하고 `OnlineServerKit<…>` 을 상속합니다.
-     * @details - `initialize` 가 실패하면 그 안에서 만든 것을 스스로 되돌립니다 — `stop` · `shutdown` 을 받지 않습니다(`ISubsystem` 과 같은 계약).
+     * @details - `initialize` 가 실패하면 그 안에서 만든 것을 스스로 되돌립니다 — `stop` · `shutdown` 을 받지 않습니다(`Subsystem` 과 같은 계약).
      *          - `initialize` 에 성공한 키트는 다른 키트나 호스트가 실패해도 `stop` · `shutdown` 을 받습니다. `start` 를 받지 못했거나 실패했으면 `isStarted()` 가
      *            false 이므로 `start` 에서 세운 것을 되돌리는 줄만 그것을 봅니다. `start` 가 실패하면 그 안에서 반쯤 세운 것은 `start` 가 되돌립니다.
      */

@@ -10,7 +10,7 @@
 
 namespace sw
 {
-    class IWindow;
+    class GenericWindow;
 
     // ------------------------------------------------------------------------------
     // 1) IGame — SWGame MODULE 이 구현하는 수명주기
@@ -31,7 +31,7 @@ namespace sw
         IGame& operator=( const IGame& ) = delete;
 
         /** @brief 윈도우 · RHI 로 게임 상태를 초기화합니다. */
-        [[nodiscard]] virtual bool initialize( IWindow* pWindow ) = 0;
+        [[nodiscard]] virtual bool initialize( GenericWindow* pWindow ) = 0;
         /** @brief 게임 리소스를 해제합니다. */
         virtual void shutdown() = 0;
         /** @brief 한 프레임 게임 로직을 갱신합니다. */

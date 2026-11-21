@@ -11,7 +11,7 @@
 #include "GameFramework/Kits/Genre/Casual/CardGame/Matgo/HwatuDeck.h"
 #include "GameFramework/Kits/Genre/Casual/CardGame/Matgo/MatgoGame.h"
 #include "GameFramework/Kits/Genre/Casual/CardGame/Poker/PokerTable.h"
-#include "GameFramework/Kits/Genre/Casual/CardGame/Uno/UnoGame.h"
+#include "GameFramework/Kits/Genre/Casual/CardGame/SheddingCard/SheddingCardGame.h"
 
 // CardGameReadStateTest — 카드 게임 상태 바이트의 신뢰 경계: 더미의 빈 카드 · 겹친 번호, 더미 사이의 복제 카드, 덱에 없는 카드, 음수 · 범위 밖 값을 거절하고 상태를 그대로 둔다.
 // 꾸민 바이트는 `writeState` 의 형식을 그대로 손으로 적는다(리플렉션 머리는 정상 `writeState` 바이트에서 가져온다 — 손으로 짜면 다른 이유로 거절되어 거짓 통과한다).
@@ -84,8 +84,8 @@ namespace
         }
     };
 
-    /** @brief `UnoGame::writeState` 의 2 인 판을 꾸밉니다. */
-    struct UnoFixture
+    /** @brief `SheddingCardGame::writeState` 의 2 인 판을 꾸밉니다. */
+    struct SheddingCardFixture
     {
         sw::CardPile _hand0{};
         sw::CardPile _hand1{};
@@ -94,18 +94,18 @@ namespace
         int32        _currentPlayer{ 0 };
         int32        _direction{ 1 };
         int32        _pendingDraw{ 0 };
-        int32        _unoTarget{ -1 };
+        int32        _lastCardTarget{ -1 };
         int32        _winner{ -1 };
         uint8        _color{ 0 };
 
-        bool readInto( sw::UnoGame& inoutGame ) const
+        bool readInto( sw::SheddingCardGame& inoutGame ) const
         {
             sw::Archive written;
             CardGameReadStateTestUtil::writeHeader( written, inoutGame );
             written << _currentPlayer;
             written << _direction;
             written << _pendingDraw;
-            written << _unoTarget;
+            written << _lastCardTarget;
             written << _winner;
             written << static_cast<int64>( _color ); // 리플렉션 열거는 int64 로 놓인다
             written << static_cast<uint32>( 2 );
@@ -395,52 +395,52 @@ SW_TEST_CASE( CardGameReadStateTest, KlondikeRefusesImpossibleBoards )
 }
 
 /**
- * @brief [CardGameReadStateTest] 우노: 실제 판은 왕복한다. 더미 사이의 복제 카드, 덱에 없는 카드(색이 범위 밖), 음수 · 터무니없는 벌칙, 손패가 남은 승자를 거절하고 판을 둔다
+ * @brief [CardGameReadStateTest] 셰딩 카드 게임: 실제 판은 왕복한다. 더미 사이의 복제 카드, 덱에 없는 카드(색이 범위 밖), 음수 · 터무니없는 벌칙, 손패가 남은 승자를 거절하고 판을 둔다
  */
-SW_TEST_CASE( CardGameReadStateTest, UnoRefusesImpossibleTables )
+SW_TEST_CASE( CardGameReadStateTest, SheddingCardRefusesImpossibleTables )
 {
-    sw::UnoSettings settings;
+    sw::SheddingCardSettings settings;
     settings._playerCount = 2;
-    sw::UnoGame game;
+    sw::SheddingCardGame game;
     SW_REQUIRE_TRUE( game.initialize( settings, 21u ) );
     sw::Archive written;
     game.writeState( written );
-    sw::UnoGame restored;
+    sw::SheddingCardGame restored;
     SW_REQUIRE_TRUE( restored.initialize( settings, 22u ) );
     SW_REQUIRE_TRUE( CardGameReadStateTestUtil::readInto( restored, written ) );
     SW_EXPECT_TRUE( restored.getHand( 0 ).getCards() == game.getHand( 0 ).getCards() );
 
     sw::CardPile deck;
-    sw::UnoGame::makeDeck( deck );
-    UnoFixture valid;
+    sw::SheddingCardGame::makeDeck( deck );
+    SheddingCardFixture valid;
     valid._hand0.push( deck.getAt( 1 ) );
     valid._hand1.push( deck.getAt( 2 ) );
     valid._discardPile.push( deck.getAt( 3 ) );
     SW_REQUIRE_TRUE( valid.readInto( restored ) );
     SW_EXPECT_EQUAL( 1, restored.getHand( 0 ).getCount() );
 
-    UnoFixture clone = valid;
+    SheddingCardFixture clone = valid;
     clone._hand1.push( deck.getAt( 1 ) );
     SW_EXPECT_FALSE( clone.readInto( restored ) );
 
-    UnoFixture badColor = valid;
+    SheddingCardFixture badColor = valid;
     badColor._hand1.push( sw::Card{ 4, 200, 1 } );
     SW_EXPECT_FALSE( badColor.readInto( restored ) );
 
-    UnoFixture outOfDeck = valid;
+    SheddingCardFixture outOfDeck = valid;
     outOfDeck._hand1.push( sw::Card{ 108, 0, 1 } );
     SW_EXPECT_FALSE( outOfDeck.readInto( restored ) );
 
-    UnoFixture pendingNegative   = valid;
-    pendingNegative._pendingDraw = -1;
+    SheddingCardFixture pendingNegative = valid;
+    pendingNegative._pendingDraw        = -1;
     SW_EXPECT_FALSE( pendingNegative.readInto( restored ) );
 
-    UnoFixture pendingHuge   = valid;
-    pendingHuge._pendingDraw = 0x7FFFFFFF;
+    SheddingCardFixture pendingHuge = valid;
+    pendingHuge._pendingDraw        = 0x7FFFFFFF;
     SW_EXPECT_FALSE( pendingHuge.readInto( restored ) );
 
-    UnoFixture winnerWithCards = valid;
-    winnerWithCards._winner    = 0;
+    SheddingCardFixture winnerWithCards = valid;
+    winnerWithCards._winner             = 0;
     SW_EXPECT_FALSE( winnerWithCards.readInto( restored ) );
 
     SW_EXPECT_EQUAL( 1, restored.getHand( 0 ).getCount() );

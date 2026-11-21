@@ -24,8 +24,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/ServiceSlot.h"
+#include "Core/Subsystem/Subsystem.h"
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Graphics/Mesh/IMeshDerivedCache.h"
@@ -85,7 +85,7 @@ namespace sw
      *          **읽지 못한 경로는 영원히 믿지 않는다.** 기억한 때의 `FileUtil::getCreationEpoch` 가 지금과 같은 동안만 믿고, 바뀌었으면 다시 읽어 본다.
      *          언리얼 `UBodySetup` 의 쿠킹된 충돌 데이터를 물리 쪽이 갖는 자리.
      */
-    class SW_API PhysicsMeshShapeTable final : public ISubsystem
+    class SW_API PhysicsMeshShapeTable final : public Subsystem
     {
     public:
         /** @brief 서브시스템 이름입니다. */
@@ -93,7 +93,7 @@ namespace sw
 
         ~PhysicsMeshShapeTable() override;
 
-        // ISubsystem — 세울 것이 없다(처음 요청한 경로부터 채운다).
+        // Subsystem — 세울 것이 없다(처음 요청한 경로부터 채운다).
         SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
         void                shutdownSubsystem() override {}
         const utf8*         getSubsystemName() const override { return kSubsystemName; }

@@ -44,7 +44,7 @@ namespace sw
         if ( expected<void> result = SQLMigrationRunner::loadMigrations( kMigrationFolder, driver.getName(), listMigration ); result.has_value() == false )
             return result;
         if ( databasePath != kMemoryDatabasePath )
-            (void)FileUtil::ensureParentDirectoryExists( databasePath ); // 못 만들면 ensure 가 알리고 바로 뒤 openConnection 이 오류로 답한다
+            (void)FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( databasePath ) ); // 못 만들면 ensure 가 알리고 바로 뒤 openConnection 이 오류로 답한다
         expected<unique_ptr<ISQLConnection>> connection = driver.openConnection( databasePath, "" );
         if ( connection.has_value() == false )
             return unexpected( connection.error() );

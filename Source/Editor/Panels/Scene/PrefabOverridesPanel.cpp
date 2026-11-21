@@ -82,7 +82,7 @@ namespace sw::editor
 
         ImGui::Separator();
 
-        const bool bEditsAllowed = IEditorPanel::areSceneEditsAllowed();
+        const bool bEditsAllowed = EditorPanel::areSceneEditsAllowed();
         if ( bEditsAllowed == false )
         {
             ImGui::TextDisabled( "%s", SW_LOCKEY( "EditorScene", "SceneEditsLocked" ) );

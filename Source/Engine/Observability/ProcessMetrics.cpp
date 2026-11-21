@@ -67,7 +67,7 @@ namespace sw
 #elif defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_ANDROID )
         // statm 의 둘째 값이 상주 페이지 수다. 최대값은 getrusage 의 ru_maxrss(KiB)다.
         string statmText;
-        if ( FileUtil::readStreamTextFile( "/proc/self/statm", statmText, constant::buffer::kMax256 ) == false )
+        if ( FileUtil::readStreamTextFile( FileUtil::toDiskPath( "/proc/self/statm" ), statmText, constant::buffer::kMax256 ) == false )
             return false;
         const string_view line{ statmText };
         const size_t      firstSpace = line.find( ' ' );

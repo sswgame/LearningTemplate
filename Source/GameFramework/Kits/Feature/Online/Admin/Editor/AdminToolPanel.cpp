@@ -36,7 +36,7 @@ namespace sw::editor
 namespace sw::editor
 {
     AdminToolPanel::AdminToolPanel()
-        : IEditorPanel( false )
+        : EditorPanel( false )
         , _gmAddressText{}
         , _loginNameText{}
         , _arrPassword{}

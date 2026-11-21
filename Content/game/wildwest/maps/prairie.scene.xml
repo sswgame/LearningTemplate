@@ -256,7 +256,7 @@
 						</_listButton>
 						<_listAnalog />
 					</PawnComponent>
-					<CharacterPawnMovementComponent _localID="14594004469458933705" _componentName="CharacterPawnMovementComponent"
+					<CharacterMovementComponent _localID="14594004469458933705" _componentName="CharacterMovementComponent"
 					                                _bActive="true"
 					                                _sprintButton="None"
 					                                _jumpButton="None"
@@ -506,7 +506,7 @@
 		<entity id="7" name="BessieAI">
 			<GameObject _schemaVersion="0" _name="BessieAI" _bActive="true" _bAlwaysLoaded="true">
 				<_listComponent>
-					<HorseFollowAIController _localID="5534389168816619034" _componentName="HorseFollowAIController"
+					<FollowOwnerAIControllerComponent _localID="5534389168816619034" _componentName="FollowOwnerAIControllerComponent"
 					                         _bActive="true"
 					                         _possessAtStart="5"
 					                         _turnRate="6"
@@ -519,7 +519,7 @@
 		<entity id="8" name="ShadowAI">
 			<GameObject _schemaVersion="0" _name="ShadowAI" _bActive="true" _bAlwaysLoaded="true">
 				<_listComponent>
-					<HorseFollowAIController _localID="5534389168816619034" _componentName="HorseFollowAIController"
+					<FollowOwnerAIControllerComponent _localID="5534389168816619034" _componentName="FollowOwnerAIControllerComponent"
 					                         _bActive="true"
 					                         _possessAtStart="6"
 					                         _turnRate="6"
@@ -532,7 +532,7 @@
 		<entity id="9" name="Ranch">
 			<GameObject _schemaVersion="0" _name="Ranch" _bActive="true" _bAlwaysLoaded="true">
 				<_listComponent>
-					<SessionStateComponent _localID="6673597520240684436" _componentName="SessionStateComponent" _bActive="true" />
+					<GameStateComponent _localID="6673597520240684436" _componentName="GameStateComponent" _bActive="true" />
 					<PlayerProgressComponent _localID="5291973908594363156" _componentName="PlayerProgressComponent" _bActive="true" />
 					<WildWestGameModeComponent _localID="17445800879317630793" _componentName="WildWestGameModeComponent"
 					                           _bActive="true"

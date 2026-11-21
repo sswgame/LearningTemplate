@@ -149,7 +149,7 @@ namespace sw
 
                     // **파일 시간이 아니라 내용 해시로 판정한다.** `git pull` 은 소스의 mtime 을 체크아웃 시각으로 덮어써
                     // "산출물이 더 새것" 이 거꾸로 나올 수 있다. 낡은 바이너리는 한 백엔드만 다른 이미지를 내 백엔드 버그처럼 보인다.
-                    const bool bUpToDate = ( _bForceAll == false ) && FileUtil::exists( task._outPath ) &&
+                    const bool bUpToDate = ( _bForceAll == false ) && FileUtil::exists( FileUtil::toDiskPath( task._outPath ) ) &&
                                            ShaderCookStamp::isCookedOutputCurrent( _pState->_resolver->getIncludeResolver(), task._outDir, task._normPath, task._shadersDir, _pState->_stampCache,
                                                                                    &outResult._listIncludedFile );
                     if ( bUpToDate == false )
@@ -171,7 +171,7 @@ namespace sw
                     // 최신 바이너리의 리플렉션을 이전 매니페스트에서 가져오지 않는다.
                     const Stopwatch reflectWatch;
                     vector<uint8>   bytecode;
-                    const bool      bOutputRead = FileUtil::exists( task._outPath ) && FileUtil::readFile( task._outPath, bytecode ); // 컴파일이 실패하면 출력이 없다 - 아래 분기가 그 오류를 센다
+                    const bool      bOutputRead = FileUtil::exists( FileUtil::toDiskPath( task._outPath ) ) && FileUtil::readFile( FileUtil::toDiskPath( task._outPath ), bytecode ); // 컴파일이 실패하면 출력이 없다 - 아래 분기가 그 오류를 센다
                     if ( bOutputRead && bytecode.empty() == false )
                     {
                         expected<ShaderReflectionData> reflected = ShaderReflectionData::reflect( bytecode, task._format );
@@ -295,7 +295,7 @@ namespace sw
                 for ( const string& outDir : uniqueBinFolder )
                 {
                     // 못 만들면 ensure 가 폴더와 이유를 남기고, 그 폴더의 작업은 쓰기 실패로 결과(`outListResult`)에 남는다.
-                    (void)FileUtil::ensureDirectoryExists( outDir );
+                    (void)FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( outDir ) );
                 }
 
                 CookJob job{};
@@ -417,7 +417,7 @@ namespace sw
         if ( scope == ShaderCookScope::Sample )
         {
             vector<string> listExisting;
-            (void)FileUtil::collectFiles( cookedDir, "", listExisting, true ); // 폴더가 없으면 빈 목록이다
+            (void)FileUtil::collectFiles( FileUtil::toDiskPath( cookedDir ), "", listExisting, true ); // 폴더가 없으면 빈 목록이다
             const expected<vector<ShaderCookSampleAxis>> rule = loadSampleRule();
             if ( cookedDir.empty() || listExisting.empty() == false || rule.has_value() == false )
             {
@@ -438,7 +438,7 @@ namespace sw
 
         // 루트를 주지 않으면 찾아 둔 리소스 루트다. 그것도 없으면 쿠킹하지 못한다(작업 폴더 기준 "Resource" 로 짐작하지 않는다).
         const string rootDir = resourceRoot.empty() ? engine::getSubsystem<AssetPaths>().getRootFolderPath() : string( resourceRoot );
-        if ( rootDir.empty() || FileUtil::isDirectory( rootDir ) == false )
+        if ( rootDir.empty() || FileUtil::isDirectory( FileUtil::toDiskPath( rootDir ) ) == false )
         {
             SW_LOG_ERROR_ID( "ShaderCooker.ContentRootDirectoryDoes", "Content root directory does not exist: '%#'", rootDir.c_str() );
             ShaderCookSummary nothingCooked{};
@@ -524,7 +524,7 @@ namespace sw
     {
         const string path = FileUtil::joinPath( ProcessRoots::get()._project.str(), kSampleRuleFile );
         string       text;
-        if ( FileUtil::readTextFile( path, text ) == false )
+        if ( FileUtil::readTextFile( FileUtil::toDiskPath( path ), text ) == false )
             return unexpected( Error{ ErrorKind::NotFound, "could not read the shader cook sample rule", path } );
         return parseSampleRule( text, path );
     }

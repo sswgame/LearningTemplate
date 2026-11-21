@@ -6,8 +6,8 @@
 #include "Core/Container/string.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/ServiceSlot.h"
+#include "Core/Subsystem/Subsystem.h"
 
 namespace sw
 {
@@ -32,12 +32,12 @@ namespace sw
      *          연결이 있으면 읽기와 쓰기 모두 운영체제 쪽만 본다(다른 프로그램에서 복사한 글이 오고, 그쪽이 비었으면 비었다). 게임 창 호스트(`App`)가
      *          `PlatformClipboard` 를 끼운다.
      */
-    class SW_API UIClipboardService final : public ISubsystem
+    class SW_API UIClipboardService final : public Subsystem
     {
     public:
         UIClipboardService();
 
-        // ISubsystem — 엔진 범위의 서브시스템이다(`engine::getSubsystem<UIClipboardService>()`, 게임은 `game::getSubsystem<UIClipboardService>()`).
+        // Subsystem — 엔진 범위의 서브시스템이다(`engine::getSubsystem<UIClipboardService>()`, 게임은 `game::getSubsystem<UIClipboardService>()`).
         /** @brief 서브시스템 이름입니다. */
         static constexpr const utf8* kSubsystemName = "UIClipboard";
         SubsystemInitResult          initializeSubsystem() override { return SubsystemInitResult::Succeeded; }

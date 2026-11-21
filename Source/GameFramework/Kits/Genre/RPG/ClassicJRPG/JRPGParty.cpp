@@ -10,7 +10,7 @@
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
-#include "GameFramework/Runtime/Foundation/Framework/SessionStateRefs.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameStateRefs.h"
 #include "GameFramework/Runtime/Foundation/GameData/StatBlock.h"
 
 namespace sw
@@ -85,7 +85,7 @@ namespace sw
     {
     }
 
-    void JRPGParty::initialize( const JRPGCatalog* pCatalog, const ItemCatalog* pItemCatalog, const SessionStateRefs& refs, string_view equipLayout )
+    void JRPGParty::initialize( const JRPGCatalog* pCatalog, const ItemCatalog* pItemCatalog, const GameStateRefs& refs, string_view equipLayout )
     {
         _pCatalog     = pCatalog;
         _pItemCatalog = pItemCatalog;

@@ -378,7 +378,7 @@ namespace sw
             // 시각을 **읽기 전에** 측정한다. 읽은 뒤에 저장한 편집은 이 값과 달라 다음 실행이 다시 파싱한다(`writeStamp` 설명).
             const uint64 inputWriteTime = GeneratedFileUtil::getWriteTime( inputFile );
             string       content;
-            if ( FileUtil::readTextFile( inputFile, content ) == false )
+            if ( FileUtil::readTextFile( FileUtil::toDiskPath( inputFile ), content ) == false )
             {
                 SW_LOG_ERROR_ID( "ReflectionPipeline.FailedReadInput", "Failed to read input: %#", inputFile );
                 ++errorCount;
@@ -608,7 +608,7 @@ namespace sw
             // 대소문자만 바뀐 폴더 이름(`GUI` → `GUI`)은 같은 파일이다 — Windows 에서는 옛 철자로도 exists 가 참이다.
             const string& recordedSource = existingStamp._sourcePath;
             const bool    bOtherOwner    = recordedSource.empty() == false && FileUtil::isSameDiskPath( recordedSource, inputFile ) == false &&
-                                     FileUtil::exists( recordedSource );
+                                     FileUtil::exists( FileUtil::toDiskPath( recordedSource ) );
             if ( bOtherOwner )
             {
                 SW_LOG_ERROR_ID( "ReflectionPipeline.GeneratedFileNameCollision", "Generated file name collision: '%#' and '%#' both generate '%#'. "

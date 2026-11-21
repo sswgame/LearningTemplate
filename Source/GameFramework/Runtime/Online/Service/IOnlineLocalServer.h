@@ -16,7 +16,7 @@
 namespace sw
 {
     class IClock;
-    class IServiceStore;
+    class ServiceStore;
 
     /** @class IOnlineLocalServer @brief 세션이 드는 프로세스 안 서버 하나입니다. 지우면 서버가 내려갑니다. 게임 스레드에서 부릅니다. */
     class IOnlineLocalServer
@@ -29,7 +29,7 @@ namespace sw
         /** @brief 호스트 · 예약 작업 · 키트를 돌립니다. @p nowMs 는 서비스 시각입니다. */
         virtual void update( UnixMilliseconds nowMs ) = 0;
         /** @brief 서버의 저장소입니다. 개발 명령 · 시나리오의 준비 단계가 게임 스레드에서 작업을 맡깁니다. */
-        [[nodiscard]] virtual IServiceStore* findStore() const = 0;
+        [[nodiscard]] virtual ServiceStore* findStore() const = 0;
     };
 
     /** @class IOnlineLocalServerFactory @brief 프로세스 안 서버를 만드는 쪽입니다(서버 코드의 모듈 부분 — 클라이언트 구성에는 없다). */

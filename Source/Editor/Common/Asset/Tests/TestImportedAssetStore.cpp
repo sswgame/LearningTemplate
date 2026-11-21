@@ -102,9 +102,9 @@ SW_TEST_CASE( ImportedAssetStoreTest, WriteIfAbsentSharesAndRefusesOtherBytes )
     SW_EXPECT_LOG( "ImportedAssetStore.ContentMismatch" );
     SW_EXPECT_FALSE( ImportedAssetStore::writeIfAbsent( path, other.data(), other.size() ) );
     string text;
-    SW_REQUIRE_TRUE( FileUtil::readTextFile( path, text ) );
+    SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::toDiskPath( path ), text ) );
     SW_EXPECT_EQUAL( bytes, text );
-    SW_EXPECT_TRUE( FileUtil::removeDirectory( root ) );
+    SW_EXPECT_TRUE( FileUtil::removeDirectory( FileUtil::toDiskPath( root ) ) );
 }
 
 /**
@@ -152,13 +152,13 @@ SW_TEST_CASE( ImportedAssetStoreTest, SlotRoundTripsAndInstanceValuesDoNotMix )
 {
     using Util = ImportedAssetStoreTestUtil;
     const test::EditorScratchDomain domain;
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "template.material" ), Util::kTemplate ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( domain.makeDiskPath( "template.material" ) ), Util::kTemplate ) );
     const string                            templateID = test::EditorScratchDomain::makeID( "template.material" );
     ModelImportMaterial::SharedMaterialText shared;
     SW_REQUIRE_TRUE( ModelImportMaterial::makeSharedMaterialText( Util::makeFull( "slot_a", "0.5", "common/textures/a.dds" ), Util::kTemplate, templateID, shared ) );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "shared.material" ), shared._text ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( domain.makeDiskPath( "shared.material" ) ), shared._text ) );
     const string sharedID = test::EditorScratchDomain::makeID( "shared.material" );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "slot_a.material" ), ModelImportMaterial::makeSlotMaterialText( "slot_a", sharedID ) ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( domain.makeDiskPath( "slot_a.material" ) ), ModelImportMaterial::makeSlotMaterialText( "slot_a", sharedID ) ) );
 
     shared_ptr<Material> material = Material::create();
     SW_REQUIRE_TRUE( material->loadFromAsset( AssetID{ test::EditorScratchDomain::makeID( "slot_a.material" ) } ) );
@@ -206,9 +206,9 @@ SW_TEST_CASE( ImportedAssetStoreTest, ReferencesAreFoundAndMixedIntoTheHash )
     SW_REQUIRE_TRUE( ImportedAssetStore::writeIfAbsent( two, content.data(), content.size() ) );
     const uint64 before = ImportedAssetStore::mixReferencedFiles( mesh, text, 1 );
     SW_EXPECT_EQUAL( before, ImportedAssetStore::mixReferencedFiles( mesh, text, 1 ) );
-    SW_REQUIRE_TRUE( FileUtil::removeFile( two ) );
+    SW_REQUIRE_TRUE( FileUtil::removeFile( FileUtil::toDiskPath( two ) ) );
     SW_EXPECT_TRUE( before != ImportedAssetStore::mixReferencedFiles( mesh, text, 1 ) );
-    SW_EXPECT_TRUE( FileUtil::removeDirectory( root ) );
+    SW_EXPECT_TRUE( FileUtil::removeDirectory( FileUtil::toDiskPath( root ) ) );
 }
 
 /**
@@ -223,15 +223,15 @@ SW_TEST_CASE( ImportedAssetStoreTest, RemovesOnlyUnreferencedFiles )
     SW_REQUIRE_TRUE( ImportedAssetStore::writeIfAbsent( kept, content.data(), content.size() ) );
     SW_REQUIRE_TRUE( ImportedAssetStore::writeIfAbsent( stale, content.data(), content.size() ) );
     const string setPath = FileUtil::joinPath( root, "common/models/knight/knight.animset.xml" );
-    SW_REQUIRE_TRUE( FileUtil::ensureParentDirectoryExists( setPath ) );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( setPath, R"(<AnimationSet formatVersion="0"><clip name="a" path="common/models/_shared/clips/aaaa.animclip"/></AnimationSet>)" ) );
+    SW_REQUIRE_TRUE( FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( setPath ) ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( setPath ), R"(<AnimationSet formatVersion="0"><clip name="a" path="common/models/_shared/clips/aaaa.animclip"/></AnimationSet>)" ) );
 
     vector<string> listProblem;
     SW_EXPECT_EQUAL( uint32{ 1 }, ImportedAssetStore::removeUnreferenced( root, listProblem ) );
     SW_EXPECT_TRUE( listProblem.empty() );
-    SW_EXPECT_TRUE( FileUtil::exists( kept ) );
-    SW_EXPECT_FALSE( FileUtil::exists( stale ) );
-    SW_EXPECT_TRUE( FileUtil::removeDirectory( root ) );
+    SW_EXPECT_TRUE( FileUtil::exists( FileUtil::toDiskPath( kept ) ) );
+    SW_EXPECT_FALSE( FileUtil::exists( FileUtil::toDiskPath( stale ) ) );
+    SW_EXPECT_TRUE( FileUtil::removeDirectory( FileUtil::toDiskPath( root ) ) );
 }
 
 /**
@@ -274,7 +274,7 @@ SW_TEST_CASE( ImportedAssetStoreTest, ImportedTextGetsStableDistinctIdentity )
     const auto                      readGUID   = []( const string& path ) -> optional<AssetGUID>
     {
         string text;
-        if ( FileUtil::readTextFile( path, text ) == false )
+        if ( FileUtil::readTextFile( FileUtil::toDiskPath( path ), text ) == false )
             return nullopt;
         const AssetGUIDHeader header = AssetGUIDHeader::read( text );
         return header._state == AssetGUIDHeaderState::Found ? header._guid : nullopt;

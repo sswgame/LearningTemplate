@@ -78,9 +78,9 @@ namespace
     }
 
     /** @brief 진행 저장소를 찾는 곳입니다 — 테스트는 늘 같은 메모리 저장소를 돌려준다(전용 서버는 온라인 조립 저장소를 맡길 때마다 찾는다). */
-    ValeServiceStoreSource makeStoreSource( IServiceStore& store )
+    ValeServiceStoreSource makeStoreSource( ServiceStore& store )
     {
-        return SW_DELEGATE_LAMBDA( ValeServiceStoreSource, [&store]() -> IServiceStore*
+        return SW_DELEGATE_LAMBDA( ValeServiceStoreSource, [&store]() -> ServiceStore*
         { return &store; } );
     }
 

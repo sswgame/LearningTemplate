@@ -97,7 +97,7 @@ namespace sw
         SW_ASSERT( _calls.isEmpty() );
     }
 
-    bool MailboxService::initialize( IServiceStore* pStore, const MailboxServiceConfig& settings )
+    bool MailboxService::initialize( ServiceStore* pStore, const MailboxServiceConfig& settings )
     {
         if ( pStore == nullptr )
         {

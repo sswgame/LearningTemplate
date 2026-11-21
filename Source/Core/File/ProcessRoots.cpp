@@ -31,7 +31,7 @@ namespace sw
                 string folder = startFolder;
                 while ( folder.empty() == false )
                 {
-                    if ( FileUtil::isDirectory( FileUtil::joinPath( folder, constant::path::kContentFolder ) ) )
+                    if ( FileUtil::isDirectory( FileUtil::toDiskPath( FileUtil::joinPath( folder, constant::path::kContentFolder ) ) ) )
                         return folder;
                     const string parent = FileUtil::getDirectoryPart( folder );
                     if ( parent.empty() || parent == folder )
@@ -83,7 +83,7 @@ namespace sw
                     project = binary;
 #endif
                 // 패키지(배포 스테이징)는 `Content` 없이 실행 파일 옆에 `Packs` 만 둔다 - 그때 프로젝트 루트는 바이너리 폴더다. 둘 다 없으면 리소스를 찾을 곳이 없다.
-                if ( project.empty() && FileUtil::isDirectory( FileUtil::joinPath( binary, constant::path::kPacksFolder ) ) )
+                if ( project.empty() && FileUtil::isDirectory( FileUtil::toDiskPath( FileUtil::joinPath( binary, constant::path::kPacksFolder ) ) ) )
                     project = binary;
                 if ( project.empty() )
                     SW_FATAL( "ProcessRoots: no '%#' folder above the binaries '%#' and no '%#' beside them", constant::path::kContentFolder, binary, constant::path::kPacksFolder );

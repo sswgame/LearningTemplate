@@ -46,14 +46,14 @@ namespace sw
             content.clear();
         }
 
-        if ( FileUtil::isDirectory( absDir ) == false )
+        if ( FileUtil::isDirectory( FileUtil::toDiskPath( absDir ) ) == false )
         {
             SW_LOG_ERROR_ID( "EmitTemplateStore.NotDirectory", "Not a directory: %#", absDir );
             return false;
         }
 
         vector<string> listFile;
-        if ( FileUtil::collectFiles( absDir, extension, listFile, false ) == false )
+        if ( FileUtil::collectFiles( FileUtil::toDiskPath( absDir ), extension, listFile, false ) == false )
         {
             // 일부 템플릿만 읽으면 빠진 템플릿의 출력이 조용히 비어 나온다 — 읽지 않는다(경로는 collectFiles 가 알린다).
             SW_LOG_ERROR_ID( "EmitTemplateStore.EmitTemplatesUnderCould", "Emit templates under '%#' could not all be listed", absDir );
@@ -65,7 +65,7 @@ namespace sw
         {
             // 하나라도 못 읽으면 그 템플릿의 출력이 조용히 빈다 - 읽지 않는다.
             string content;
-            if ( FileUtil::readTextFile( filePath, content ) == false )
+            if ( FileUtil::readTextFile( FileUtil::toDiskPath( filePath ), content ) == false )
             {
                 SW_LOG_ERROR_ID( "EmitTemplateStore.EmitTemplateCouldNot", "Emit template '%#' could not be read", filePath );
                 return false;

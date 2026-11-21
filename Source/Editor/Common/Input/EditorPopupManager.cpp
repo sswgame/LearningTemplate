@@ -4,7 +4,7 @@
 
 #include "Core/Algorithm/VectorUtil.h"
 
-#include "Editor/Common/GUI/IEditorPopup.h"
+#include "Editor/Common/GUI/EditorPopup.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
@@ -15,7 +15,7 @@ namespace sw::editor
         return editor::getSubsystem<EditorContext>().getSubsystem<EditorPopupManager>();
     }
 
-    void EditorPopupManager::registerPopup( unique_ptr<IEditorPopup> pPopup )
+    void EditorPopupManager::registerPopup( unique_ptr<EditorPopup> pPopup )
     {
         if ( pPopup == nullptr )
             return;
@@ -36,7 +36,7 @@ namespace sw::editor
         _listPopup.push_back( std::move( entry ) );
     }
 
-    IEditorPopup* EditorPopupManager::findPopup( string_view id )
+    EditorPopup* EditorPopupManager::findPopup( string_view id )
     {
         syncWithRegistry();
 
@@ -50,21 +50,21 @@ namespace sw::editor
 
     void EditorPopupManager::openPopup( string_view id )
     {
-        IEditorPopup* pPopup = findPopup( id );
+        EditorPopup* pPopup = findPopup( id );
         if ( pPopup != nullptr )
             pPopup->open();
     }
 
     void EditorPopupManager::closePopup( string_view id )
     {
-        IEditorPopup* pPopup = findPopup( id );
+        EditorPopup* pPopup = findPopup( id );
         if ( pPopup != nullptr )
             pPopup->close();
     }
 
     void EditorPopupManager::togglePopup( string_view id )
     {
-        IEditorPopup* pPopup = findPopup( id );
+        EditorPopup* pPopup = findPopup( id );
         if ( pPopup != nullptr )
             pPopup->toggle();
     }

@@ -131,12 +131,12 @@ namespace sw
         (void)deltaTime;
         SW_PROFILE_SCOPE( "GT.MeshLOD.select" );
         // GPU 컬링이 인스턴스마다 단계를 고르는 프레임은 그것이 고르는 컴포넌트의 단계를 건드리지 않는다(고정 단계 · 대기 뷰가 생기면 빌더가 다음 빌드에 CPU 로 돌려 놓는다).
-        const bool                            bGPUPicks    = _bGPUSelectionActive == SW_TRUE && needsCPUSelection() == false;
-        const unordered_set<ScenePrimitive*>& setPrimitive = _manager.getPrimitiveRegistry().getLODPrimitives();
+        const bool                                bGPUPicks    = _bGPUSelectionActive == SW_TRUE && needsCPUSelection() == false;
+        const unordered_set<PrimitiveComponent*>& setPrimitive = _manager.getPrimitiveRegistry().getLODPrimitives();
         _listPrimitive.assign( setPrimitive.begin(), setPrimitive.end() );
-        const vector<ScenePrimitive*>& listPrimitive = _listPrimitive;
-        const int32                    forcedLOD     = _forcedLOD;
-        const uint32                   count         = static_cast<uint32>( listPrimitive.size() );
+        const vector<PrimitiveComponent*>& listPrimitive = _listPrimitive;
+        const int32                        forcedLOD     = _forcedLOD;
+        const uint32                       count         = static_cast<uint32>( listPrimitive.size() );
         // 고르기(화면 크기 · 판정)는 컴포넌트마다 독립이라 워커로 나누고, 적용(`setLODIndex`)은 이 스레드가 목록 순서로 한다(언리얼 ParallelFor + 게임 스레드 반영).
         // 스레드 안전: 본문은 뷰 · 고정 단계(이 객체, 병렬 동안 바뀌지 않는다) · 컴포넌트의 메시 · 월드 캐시를 읽고 자기 칸 `_listPickedLOD[index]` 에만 쓴다.
         // 적용을 본문에 두지 않는 까닭 — `setLODIndex` 는 오너의 구간 컴포넌트 단계를 함께 쓰므로 한 오너의 주 메시 둘이 같은 구간을 다툰다.
@@ -155,7 +155,7 @@ namespace sw
 
     uint32 MeshLODSystem::pickLOD( const MeshComponent& component, int32 forcedLOD, bool bGPUPicks ) const
     {
-        // 레지스트리에 들어오는 것은 메시 계열뿐이다(`ScenePrimitive.h` 의 불변식). LOD 목록에는 메시가 단계 여럿일 때만 든다(`MeshComponent::onMeshAssigned`).
+        // 레지스트리에 들어오는 것은 메시 계열뿐이다(`PrimitiveComponent.h` 의 불변식). LOD 목록에는 메시가 단계 여럿일 때만 든다(`MeshComponent::onMeshAssigned`).
         const Mesh* pMesh = component.getRawMesh();
         // 구간 컴포넌트는 따르는 주 메시의 단계를 받는다(`MeshComponent::setLODIndex`) — 따로 고르면 경계에서 단계가 갈린다.
         if ( pMesh == nullptr || castTo<MeshSectionComponent>( &component ) != nullptr )

@@ -14,8 +14,8 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Name/hashed_string.h"
 #include "Core/Registry/RegistrationList.h"
-#include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/ServiceSlot.h"
+#include "Core/Subsystem/Subsystem.h"
 
 #include "Engine/Animation/AnimationPlayback.h"
 #include "Engine/Animation/Graph/AnimationGraphAsset.h"
@@ -279,10 +279,10 @@ namespace sw
      * @details 리그 노드(`RigNodeRegistry`)와 같은 틀 — 새 블렌드(모션 매칭 등)를 더할 때 열거 · 로더 · 생성 switch 를 고치지 않고 등록 한 줄을 더한다.
      *          엔진 노드(BlendPoses · Mirror · Montage)는 만들 때 등록되고, 게임 · 키트는 `registerType` 으로 더한다(언리얼 애님 노드가 형식 등록으로 모이는 것, 유니티 Playable 형식과 같은 자리).
      */
-    class SW_API AnimationPoseNodeRegistry final : public ISubsystem
+    class SW_API AnimationPoseNodeRegistry final : public Subsystem
     {
     public:
-        static constexpr MemoryTag   kSubsystemMemoryTag = MemoryTag::Animation; ///< 할당 용도(`ISubsystem::getSubsystemMemoryTag`)
+        static constexpr MemoryTag   kSubsystemMemoryTag = MemoryTag::Animation; ///< 할당 용도(`Subsystem::getSubsystemMemoryTag`)
         static constexpr const utf8* kSubsystemName      = "AnimationPoseNodeRegistry";
 
         /** @brief 엔진 노드가 든 표를 만듭니다. */

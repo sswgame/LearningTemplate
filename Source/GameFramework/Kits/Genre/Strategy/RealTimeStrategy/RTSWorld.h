@@ -23,9 +23,9 @@
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/FogOfWar.h"
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSCatalog.h"
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSUnitBuckets.h"
-#include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSVision.h"
 #include "GameFramework/Runtime/Character/Navigation/FlowField.h"
 #include "GameFramework/Runtime/Character/Navigation/FlowFieldCache.h"
 #include "GameFramework/Runtime/Character/Navigation/GridPathSolver.h"
@@ -391,7 +391,7 @@ namespace sw
         vector<RTSPlayer>                _listPlayer;
         EventBuffer<RTSEvent>            _eventBuffer;
         vector<uint8>                    _listTerrainBlocked;
-        RTSVision                        _vision;  ///< 팀 시야(안개)와 다시 칠하기 타이머
+        FogOfWar                         _vision;  ///< 팀 시야(안개)와 다시 칠하기 타이머
         RTSUnitBuckets                   _buckets; ///< 이웃 탐색 버킷(버킷 하나는 `_settings._bucketSize` 셀)
         vector<float3>                   _listNeighborScratch;
         vector<RTSUnitID>                _listQueryScratch;

@@ -64,7 +64,7 @@ namespace sw::editor
     {
         outListName.clear();
         vector<string> listFile;
-        if ( FileUtil::isDirectory( folder ) == false || FileUtil::collectFiles( folder, ".ini", listFile, false ) == false )
+        if ( FileUtil::isDirectory( FileUtil::toDiskPath( folder ) ) == false || FileUtil::collectFiles( FileUtil::toDiskPath( folder ), ".ini", listFile, false ) == false )
             return;
         const string_view suffix{ kImguiSuffix };
         for ( const string& filePath : listFile )
@@ -79,9 +79,9 @@ namespace sw::editor
 
     bool EditorLayoutStore::save( string_view folder, string_view name, string_view imguiINIText, const EditorPanelVisibility& panelVisibility )
     {
-        if ( FileUtil::ensureDirectoryExists( folder ) == false )
+        if ( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( folder ) ) == false )
             return false;
-        if ( FileUtil::writeTextFile( makeImguiINIPath( folder, name ), string( imguiINIText ) ) == false )
+        if ( FileUtil::writeTextFile( FileUtil::toDiskPath( makeImguiINIPath( folder, name ) ), string( imguiINIText ) ) == false )
             return false;
         return panelVisibility.saveToFile( makeVisibilityPath( folder, name ) );
     }
@@ -90,7 +90,7 @@ namespace sw::editor
     {
         outPanelVisibility._mapOpen.clear();
         const string imguiPath = makeImguiINIPath( folder, name );
-        if ( FileUtil::readOptionalTextFile( imguiPath, outImguiINIText ) != OptionalFileRead::Read )
+        if ( FileUtil::readOptionalTextFile( FileUtil::toDiskPath( imguiPath ), outImguiINIText ) != OptionalFileRead::Read )
             return false;
         const string visibilityPath = makeVisibilityPath( folder, name );
         if ( outPanelVisibility.loadFromFile( visibilityPath ) == ConfigReadResult::Invalid )
@@ -103,8 +103,8 @@ namespace sw::editor
 
     bool EditorLayoutStore::remove( string_view folder, string_view name )
     {
-        const bool bImguiRemoved      = FileUtil::removeFile( makeImguiINIPath( folder, name ) );
-        const bool bVisibilityRemoved = FileUtil::removeFile( makeVisibilityPath( folder, name ) );
+        const bool bImguiRemoved      = FileUtil::removeFile( FileUtil::toDiskPath( makeImguiINIPath( folder, name ) ) );
+        const bool bVisibilityRemoved = FileUtil::removeFile( FileUtil::toDiskPath( makeVisibilityPath( folder, name ) ) );
         return bImguiRemoved && bVisibilityRemoved;
     }
 } // namespace sw::editor

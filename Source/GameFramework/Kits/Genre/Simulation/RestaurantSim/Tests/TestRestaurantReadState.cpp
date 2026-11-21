@@ -10,7 +10,7 @@
 #include "GameFramework/Kits/Genre/Simulation/RestaurantSim/IngredientStock.h"
 #include "GameFramework/Kits/Genre/Simulation/RestaurantSim/RestaurantCatalog.h"
 #include "GameFramework/Kits/Genre/Simulation/RestaurantSim/RestaurantSimulation.h"
-#include "GameFramework/Runtime/Foundation/Framework/SessionStateRefs.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameStateRefs.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Crafting.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
@@ -220,7 +220,7 @@ namespace
         RestaurantReadStateTest()
         {
             SW_REQUIRE_TRUE( _catalog.loadFromXMLText( kCatalogXML, "RestaurantReadStateTest" ) );
-            _simulation.initialize( &_catalog, nullptr, nullptr, nullptr, nullptr, sw::SessionStateRefs{}, _pantry, sw::RestaurantSettings{} );
+            _simulation.initialize( &_catalog, nullptr, nullptr, nullptr, nullptr, sw::GameStateRefs{}, _pantry, sw::RestaurantSettings{} );
         }
 
         bool read( const RestaurantFixture& fixture )
@@ -267,7 +267,7 @@ SW_TEST_CASE_F( RestaurantReadStateTest, RestaurantDeterminism )
     const auto setup = [this, &recipes]( RestaurantRun& run )
     {
         run._wallet.add( sw::Wallet::getDefaultCurrency(), 1000 );
-        sw::SessionStateRefs refs;
+        sw::GameStateRefs refs;
         refs._pWallet = &run._wallet;
         run._simulation.initialize( &_catalog, &recipes, nullptr, nullptr, nullptr, refs, run._pantry, sw::RestaurantSettings{} );
         return true;

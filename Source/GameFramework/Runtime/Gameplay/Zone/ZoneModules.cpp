@@ -4,7 +4,7 @@
  *        표면 도장(`SurfaceStamp` — 변형 층의 파묻힘 테두리 · 깔때기 · 끌린 자국).
  * @details 처리기는 서로를 모른다. 가라앉음 · 감속 · 화상 · 버프 · 스킬 · 즉사 · 이동 · 규칙 신호는 모두 `Action` 의 동작 어휘(이펙트가 정본 — 스택 · 속성 · 태그)이고,
  *          무중력 · 부력 · 해류 · 당김 · 소용돌이 · 빙판은 `PhysicsField` 의 값이다. 외형 내리기 · 점프 탈출은 대상 쪽 반응 컴포넌트가 속성 · 태그만 읽어 한다
- *          (`VisualSinkReactionComponent` · `JumpEscapeReactionComponent` · `ScreenReactionComponent`). 새 효과는 처리기 하나를 더한다.
+ *          (`SinkOffsetComponent` · `RemoveStacksOnJumpComponent` · `TagPostProcessComponent`). 새 효과는 처리기 하나를 더한다.
  */
 #include "pch.h"
 
@@ -24,7 +24,7 @@
 #include "Engine/Physics/PhysicsField.h"
 
 #include "GameFramework/Runtime/Character/AI/Blackboard.h"
-#include "GameFramework/Runtime/Foundation/Framework/ActivatorVolumeComponent.h"
+#include "GameFramework/Runtime/Foundation/Framework/TriggerComponent.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterAppearanceComponent.h"
 #include "GameFramework/Runtime/Gameplay/Zone/ZoneModule.h"
 
@@ -70,12 +70,12 @@ namespace sw
          * @details `on="Became"` 은 조건이 `delay` 초 이어서 참이면 한 번(사구 중심 2 초 → 삼켜짐), `Lost` 는 참이던 조건이 거짓이 되거나 나갈 때 한 번(끌려감 해제)이다.
          *          표 밖의 수치 칸은 동작이 이름으로 읽는 값이다(`value=damage` 의 `damage="20 * (1 - target.FireResist)"`).
          */
-        class ZoneActionProcessor final : public ZoneModuleProcessor
+        class ZoneActionProcessor final : public IZoneModuleProcessor
         {
         public:
-            const utf8*        getKindName() const override { return "Action"; }
-            ActivatorAuthority getAuthority() const override { return ActivatorAuthority::Server; } // 이펙트 · 피해 · 스킬 · 즉사 · 규칙 신호는 게임 상태다 — 서버가 걸고 복제로 보낸다(클라이언트가 따로 걸면 두 번 걸린다)
-            void               collectParamSpecs( vector<ZoneParamSpec>& outListSpec ) const override
+            const utf8*      getKindName() const override { return "Action"; }
+            TriggerAuthority getAuthority() const override { return TriggerAuthority::Server; } // 이펙트 · 피해 · 스킬 · 즉사 · 규칙 신호는 게임 상태다 — 서버가 걸고 복제로 보낸다(클라이언트가 따로 걸면 두 번 걸린다)
+            void             collectParamSpecs( vector<ZoneParamSpec>& outListSpec ) const override
             {
                 outListSpec.push_back( ZoneParamSpec{ "on", ZoneParamKind::Text, "Enter" } );
                 outListSpec.push_back( ZoneParamSpec{ "interval", ZoneParamKind::Number, "0" } );
@@ -165,12 +165,12 @@ namespace sw
          * @details 방향 종류(균일 · 중심으로 당김 · 회전 · 흐름) × 세기(위치 값의 식 — 곡선)다. 소용돌이 · 블랙홀 · 강물은 방향 종류와 식만 다르다.
          *          물체마다 뜨고 가라앉음은 바디 쪽 밀도가 정한다(유체 밀도 > 바디 밀도면 뜬다 — 나무 상자는 뜨고 돌은 가라앉는다).
          */
-        class ZonePhysicsFieldProcessor final : public ZoneModuleProcessor
+        class ZonePhysicsFieldProcessor final : public IZoneModuleProcessor
         {
         public:
-            const utf8*        getKindName() const override { return "PhysicsField"; }
-            ActivatorAuthority getAuthority() const override { return ActivatorAuthority::Local; } // 이동 시뮬레이션이다 — 바디를 모는 월드마다 같은 힘을 받는다(언리얼 `APhysicsVolume` 은 서버와 조종 클라이언트의 이동 컴포넌트가 함께 읽는다)
-            void               collectParamSpecs( vector<ZoneParamSpec>& outListSpec ) const override
+            const utf8*      getKindName() const override { return "PhysicsField"; }
+            TriggerAuthority getAuthority() const override { return TriggerAuthority::Local; } // 이동 시뮬레이션이다 — 바디를 모는 월드마다 같은 힘을 받는다(언리얼 `APhysicsVolume` 은 서버와 조종 클라이언트의 이동 컴포넌트가 함께 읽는다)
+            void             collectParamSpecs( vector<ZoneParamSpec>& outListSpec ) const override
             {
                 outListSpec.push_back( ZoneParamSpec{ "direction", ZoneParamKind::Text, "Uniform" } );
                 outListSpec.push_back( ZoneParamSpec{ "axis", ZoneParamKind::Vector, "0,0,0" } );
@@ -234,12 +234,12 @@ namespace sw
         /**
          * @brief NPC 의 판단 질의입니다 — 안에 있는 동안 대상 AI 의 블랙보드 키에 값을 두고, 나가면 지웁니다. 행동 트리 · 스케줄이 "지금 어느 지역 · 무엇을 받나" 를 이 키로 읽는다.
          */
-        class ZoneBlackboardProcessor final : public ZoneModuleProcessor
+        class ZoneBlackboardProcessor final : public IZoneModuleProcessor
         {
         public:
-            const utf8*        getKindName() const override { return "Blackboard"; }
-            ActivatorAuthority getAuthority() const override { return ActivatorAuthority::Server; } // AI 판단은 서버가 돈다(클라이언트에는 AI 가 돌지 않는다)
-            void               collectParamSpecs( vector<ZoneParamSpec>& outListSpec ) const override
+            const utf8*      getKindName() const override { return "Blackboard"; }
+            TriggerAuthority getAuthority() const override { return TriggerAuthority::Server; } // AI 판단은 서버가 돈다(클라이언트에는 AI 가 돌지 않는다)
+            void             collectParamSpecs( vector<ZoneParamSpec>& outListSpec ) const override
             {
                 outListSpec.push_back( ZoneParamSpec{ "key", ZoneParamKind::Text, nullptr } );
                 outListSpec.push_back( ZoneParamSpec{ "value", ZoneParamKind::Number, "1" } );
@@ -270,12 +270,12 @@ namespace sw
          * @details 영역 표시는 지역 아래 기하의 `NavMeshModifierComponent` 가 하고(베이크), 비용 · 금지는 이 모듈이 씬의 거름에 건다(`SceneNavigation::setAgentAreaCost`).
          *          대상과 상관없는 일이라 입력이 시작할 때 한 번 한다.
          */
-        class ZoneNavAreaProcessor final : public ZoneModuleProcessor
+        class ZoneNavAreaProcessor final : public IZoneModuleProcessor
         {
         public:
-            const utf8*        getKindName() const override { return "NavArea"; }
-            ActivatorAuthority getAuthority() const override { return ActivatorAuthority::Server; } // 길 찾기는 서버의 AI 가 쓴다
-            void               collectParamSpecs( vector<ZoneParamSpec>& outListSpec ) const override
+            const utf8*      getKindName() const override { return "NavArea"; }
+            TriggerAuthority getAuthority() const override { return TriggerAuthority::Server; } // 길 찾기는 서버의 AI 가 쓴다
+            void             collectParamSpecs( vector<ZoneParamSpec>& outListSpec ) const override
             {
                 outListSpec.push_back( ZoneParamSpec{ "area", ZoneParamKind::Text, nullptr } );
                 outListSpec.push_back( ZoneParamSpec{ "agents", ZoneParamKind::Text, "" } );
@@ -304,12 +304,12 @@ namespace sw
         };
 
         /** @brief 표면 채널입니다 — 안에 있는 동안 외형의 몸 표면 채널(젖음 · 진흙 · 그을음)을 초당 `rate` 만큼 올립니다(음수면 내린다). */
-        class ZoneSurfaceChannelProcessor final : public ZoneModuleProcessor
+        class ZoneSurfaceChannelProcessor final : public IZoneModuleProcessor
         {
         public:
-            const utf8*        getKindName() const override { return "SurfaceChannel"; }
-            ActivatorAuthority getAuthority() const override { return ActivatorAuthority::Local; } // 젖음 · 진흙은 겉모습이다 — 월드마다 제 화면에 그린다(복제하지 않는다)
-            void               collectParamSpecs( vector<ZoneParamSpec>& outListSpec ) const override
+            const utf8*      getKindName() const override { return "SurfaceChannel"; }
+            TriggerAuthority getAuthority() const override { return TriggerAuthority::Local; } // 젖음 · 진흙은 겉모습이다 — 월드마다 제 화면에 그린다(복제하지 않는다)
+            void             collectParamSpecs( vector<ZoneParamSpec>& outListSpec ) const override
             {
                 outListSpec.push_back( ZoneParamSpec{ "channel", ZoneParamKind::Text, nullptr } );
                 outListSpec.push_back( ZoneParamSpec{ "rate", ZoneParamKind::Number, nullptr } );
@@ -341,12 +341,12 @@ namespace sw
          *          매 프레임 다시 찍는 도장은 붙잡은 도장과 같다 — 머무는 동안 메워지지 않고, 나가면 자기 속도로 메워진다(처리기는 상태를 갖지 않아 핸들을 들지 않는다).
          *          깔때기 홈은 머문 시간 × `spinSpeed` 만큼 돈다. 충돌 · 내비는 고치지 않는다(보이는 것만). 눈 · 모래 차이는 프리셋의 칸이다(눈 깊고 느리게, 모래 얕고 빠르게).
          */
-        class ZoneSurfaceStampProcessor final : public ZoneModuleProcessor
+        class ZoneSurfaceStampProcessor final : public IZoneModuleProcessor
         {
         public:
-            const utf8*        getKindName() const override { return "SurfaceStamp"; }
-            ActivatorAuthority getAuthority() const override { return ActivatorAuthority::Local; } // 보이는 것만 고친다(충돌 · 내비 아님) — 월드마다 제 화면에 찍는다
-            void               collectParamSpecs( vector<ZoneParamSpec>& outListSpec ) const override
+            const utf8*      getKindName() const override { return "SurfaceStamp"; }
+            TriggerAuthority getAuthority() const override { return TriggerAuthority::Local; } // 보이는 것만 고친다(충돌 · 내비 아님) — 월드마다 제 화면에 찍는다
+            void             collectParamSpecs( vector<ZoneParamSpec>& outListSpec ) const override
             {
                 outListSpec.push_back( ZoneParamSpec{ "shape", ZoneParamKind::Text, "Print" } );
                 outListSpec.push_back( ZoneParamSpec{ "size", ZoneParamKind::Vector, nullptr } );

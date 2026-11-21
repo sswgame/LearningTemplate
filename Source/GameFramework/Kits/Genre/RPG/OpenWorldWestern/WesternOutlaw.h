@@ -18,7 +18,7 @@
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/WesternHonor.h"
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/WesternLaw.h"
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/WesternSurvival.h"
-#include "GameFramework/Runtime/Foundation/Framework/SessionStateRefs.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameStateRefs.h"
 #include "GameFramework/Runtime/Foundation/Random/GameRandom.h"
 
 namespace sw
@@ -59,7 +59,7 @@ namespace sw
 {
     /**
      * @class WesternOutlaw
-     * @brief 게임 디렉터가 하나 가지는 보통 클래스입니다(세이브는 디렉터가 `writeState` 로 싣는다). 지갑 · 평판 · 시계 · 날씨 · 플래그는 빌려 씁니다(`SessionStateRefs`).
+     * @brief 게임 디렉터가 하나 가지는 보통 클래스입니다(세이브는 디렉터가 `writeState` 로 싣는다). 지갑 · 평판 · 시계 · 날씨 · 플래그는 빌려 씁니다(`GameStateRefs`).
      * @details 시간은 빌린 시계로 잰다 — `update` 가 지난번 뒤로 흐른 게임 시간과 넘은 날을 구해 생존 · 사체 · 현상금에 넘긴다. 잠과 빨리 감기(`AdvanceGameTime`)도 같은 길로 닿는다.
      *          돈의 단위는 카탈로그의 통화 하나다. 가죽 값(`WesternCarcass`)은 센트이므로 팔 때 달러로 내리고 남은 센트는 다음 판매로 넘긴다. 명예 단계의 할인 비율은 파는 값에 웃돈으로 얹는다.
      *          레드 데드 리뎀션 2 의 명예 · 현상금 · 코어 흐름을 따랐다(기억에 의존한 비교).
@@ -77,11 +77,11 @@ namespace sw
 
         /**
          * @brief 지역 @p regionID 에서 시작합니다. @p regionBaseTemperature 는 날씨 값을 더하기 전의 기온(섭씨)이고 @p sight 는 목격자의 시야입니다.
-         * @param pLoot 손질한 사체의 전리품 테이블(동물의 `loot`)을 굴릴 카탈로그입니다. 굴린 것은 빌린 가방(`SessionStateRefs::_pInventory`)에 든다.
+         * @param pLoot 손질한 사체의 전리품 테이블(동물의 `loot`)을 굴릴 카탈로그입니다. 굴린 것은 빌린 가방(`GameStateRefs::_pInventory`)에 든다.
          *              전리품 테이블을 적은 동물이 없는 판은 nullptr 이어도 된다 — 적은 동물이 있는데 없으면 손질할 때 오류다.
          * @return 카탈로그 · 지갑 · 평판 · 시계가 없거나, 지역이 카탈로그에 없거나, 생존 수치를 열지 못하면 오류를 남기고 false 입니다(시작하지 않는다).
          */
-        [[nodiscard]] bool initialize( const WesternCatalog* pCatalog, const LootCatalog* pLoot, const SessionStateRefs& refs, const hashed_string& regionID, float32 regionBaseTemperature,
+        [[nodiscard]] bool initialize( const WesternCatalog* pCatalog, const LootCatalog* pLoot, const GameStateRefs& refs, const hashed_string& regionID, float32 regionBaseTemperature,
                                        const AIPerceptionSettings& sight );
         /** @brief 실제 @p deltaTime 초와 빌린 시계가 지난번 뒤로 흐른 만큼 흘립니다. 대사 플래그를 맞춥니다. */
         void update( float32 deltaTime );
@@ -126,7 +126,7 @@ namespace sw
         vector<WesternCarcass> _listCarcass;
         PROPERTY( RuntimeState )
         vector<WesternPelt>   _listPelt;
-        SessionStateRefs      _refs;
+        GameStateRefs         _refs;
         hashed_string         _regionID;
         const WesternCatalog* _pCatalog;
         const LootCatalog*    _pLoot;          ///< 빌린 전리품 카탈로그(없으면 nullptr)

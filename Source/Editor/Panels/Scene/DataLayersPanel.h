@@ -5,13 +5,13 @@
 #pragma once
 #include "Core/Foundation/Types.h"
 
-#include "Editor/Common/GUI/Panel/IEditorPanel.h"
+#include "Editor/Common/GUI/Panel/EditorPanel.h"
 #include "Editor/Panels/Scene/Model/DataLayersViewModel.h"
 
 namespace sw::editor
 {
     /** @brief 데이터 레이어 도구 창입니다. */
-    class DataLayersPanel : public IEditorPanel
+    class DataLayersPanel : public EditorPanel
     {
     public:
         /** @brief 패널 id 입니다(`SW_EDITOR_PANEL`, `-gv_editorOpenPanel`). */

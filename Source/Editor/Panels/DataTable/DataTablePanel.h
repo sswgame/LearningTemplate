@@ -34,7 +34,7 @@ namespace sw::editor
         virtual ~DataTablePanel() override = default;
 
         // ------------------------------------------------------------------------------
-        // 1) IEditorPanel — 제목/그리기
+        // 1) EditorPanel — 제목/그리기
         // ------------------------------------------------------------------------------
         /** @brief 창 제목을 반환합니다. */
         const utf8* getPanelTitle() const override { return "Data Table Editor"; }

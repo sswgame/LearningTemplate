@@ -25,7 +25,7 @@
 
 namespace sw
 {
-    struct SessionStateRefs;
+    struct GameStateRefs;
 
     class Archive;
     class Inventory;
@@ -143,7 +143,7 @@ namespace sw
         JRPGParty();
 
         /** @brief 새 파티를 엽니다. 파티 가방과 지갑은 @p refs 에서 빌립니다. 가방이 없으면 아이템이 필요한 전직이, 지갑이 없으면 골드 보상, 여관, 교회가 막힙니다. */
-        void initialize( const JRPGCatalog* pCatalog, const ItemCatalog* pItemCatalog, const SessionStateRefs& refs,
+        void initialize( const JRPGCatalog* pCatalog, const ItemCatalog* pItemCatalog, const GameStateRefs& refs,
                          string_view equipLayout = "Weapon,Armor,Shield,Helmet,Accessory" );
         /** @brief 멤버를 추가합니다(직업의 레벨 1 능력치에서 @p level 까지 성장시킵니다). 멤버 인덱스를 반환하고, 추가하지 못하면(빈 id, 겹친 id, 모르는 직업, 정원) 이유를 돌려줍니다. */
         [[nodiscard]] expected<int32> addMember( const hashed_string& memberID, string_view name, const hashed_string& classID, int32 level = 1 );

@@ -6,7 +6,7 @@
 
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/WesternCatalog.h"
 #include "GameFramework/Runtime/Foundation/Condition/GameFlags.h"
-#include "GameFramework/Runtime/Foundation/Framework/SessionStateRefs.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameStateRefs.h"
 
 namespace sw
 {
@@ -16,7 +16,7 @@ namespace sw
     {
     }
 
-    void WesternHonor::initialize( const WesternCatalog* pCatalog, const SessionStateRefs& refs )
+    void WesternHonor::initialize( const WesternCatalog* pCatalog, const GameStateRefs& refs )
     {
         _pCatalog    = pCatalog;
         _pReputation = refs._pReputation;

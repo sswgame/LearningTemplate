@@ -154,11 +154,11 @@ namespace sw
     {
         string     existingContent;
         const bool bContentUnchanged =
-            FileUtil::readOptionalTextFile( path, existingContent ) == OptionalFileRead::Read && existingContent.empty() == false && string_view( existingContent ) == content;
+            FileUtil::readOptionalTextFile( FileUtil::toDiskPath( path ), existingContent ) == OptionalFileRead::Read && existingContent.empty() == false && string_view( existingContent ) == content;
         if ( bContentUnchanged )
             return true;
 
-        if ( FileUtil::ensureParentDirectoryExists( path ) == false || FileUtil::writeTextFile( path, content ) == false )
+        if ( FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( path ) ) == false || FileUtil::writeTextFile( FileUtil::toDiskPath( path ), content ) == false )
         {
             SW_LOG_ERROR_ID( "GeneratedFiles.FailedWrite", "Failed to write %#", path );
             return false;
@@ -190,7 +190,7 @@ namespace sw
         {
             stampText.appendFormat( "%# %# %#\n", GeneratedFilesInternal::kStampDependencyKey, dependency._writeTime, dependency._path );
         }
-        if ( FileUtil::writeTextFile( stampPath, stampText.view() ) == false )
+        if ( FileUtil::writeTextFile( FileUtil::toDiskPath( stampPath ), stampText.view() ) == false )
         {
             SW_LOG_ERROR_ID( "GeneratedFiles.FailedWrite", "Failed to write %#", stampPath );
             return false;
@@ -202,7 +202,7 @@ namespace sw
     {
         // `getFileTimestamp` 는 초 단위라 생성 직후 같은 초에 고친 편집을 "최신" 으로 본다. 파일끼리 선후만 비교하므로 플랫폼 단위 그대로의 `getFileStamp` 시각을 쓴다.
         FileStamp stamp;
-        if ( path.empty() || FileUtil::getFileStamp( path, stamp ) == false )
+        if ( path.empty() || FileUtil::getFileStamp( FileUtil::toDiskPath( path ), stamp ) == false )
             return 0;
         return stamp._writeTime;
     }
@@ -211,7 +211,7 @@ namespace sw
     {
         outStamp = GeneratedStamp{};
         string stampText;
-        if ( FileUtil::readOptionalTextFile( stampPath, stampText ) != OptionalFileRead::Read )
+        if ( FileUtil::readOptionalTextFile( FileUtil::toDiskPath( stampPath ), stampText ) != OptionalFileRead::Read )
             return false;
         return GeneratedFilesInternal::parseStamp( stampText, outStamp );
     }
@@ -219,7 +219,7 @@ namespace sw
     uint64 GeneratedFileUtil::markRunStart( const string& outputDir )
     {
         const string markerPath = FileUtil::joinPath( outputDir, GeneratedFilesInternal::kRunMarkerName );
-        if ( FileUtil::writeTextFile( markerPath, "ReflectionParser run marker - its write time is the start of the last run\n" ) == false )
+        if ( FileUtil::writeTextFile( FileUtil::toDiskPath( markerPath ), "ReflectionParser run marker - its write time is the start of the last run\n" ) == false )
             return 0;
         return GeneratedFileUtil::getWriteTime( markerPath );
     }
@@ -260,8 +260,8 @@ namespace sw
         {
             listToolFile.push_back( configFile );
         }
-        const bool bTemplateDir = options._emitTemplatesDir.empty() == false && FileUtil::isDirectory( options._emitTemplatesDir );
-        const bool bListFailed  = bTemplateDir && FileUtil::collectFiles( options._emitTemplatesDir, sw::config::kExtReflectionTemplate, listToolFile, false ) == false;
+        const bool bTemplateDir = options._emitTemplatesDir.empty() == false && FileUtil::isDirectory( FileUtil::toDiskPath( options._emitTemplatesDir ) );
+        const bool bListFailed  = bTemplateDir && FileUtil::collectFiles( FileUtil::toDiskPath( options._emitTemplatesDir ), sw::config::kExtReflectionTemplate, listToolFile, false ) == false;
 
         for ( const string& toolFile : listToolFile )
         {
@@ -277,8 +277,8 @@ namespace sw
     bool IncrementalCheck::isUpToDate( const string& inputFile, const GeneratedPaths& paths ) const
     {
         const uint64 stampTime     = GeneratedFileUtil::getWriteTime( paths._stampPath );
-        const bool   bStampMissing = stampTime == 0 || FileUtil::exists( paths._cppPath ) == false || FileUtil::exists( paths._headerPath ) == false ||
-                                   FileUtil::exists( paths._editorMetadataPath ) == false;
+        const bool   bStampMissing = stampTime == 0 || FileUtil::exists( FileUtil::toDiskPath( paths._cppPath ) ) == false || FileUtil::exists( FileUtil::toDiskPath( paths._headerPath ) ) == false ||
+                                   FileUtil::exists( FileUtil::toDiskPath( paths._editorMetadataPath ) ) == false;
         if ( bStampMissing )
             return false;
 

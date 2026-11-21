@@ -49,7 +49,7 @@ namespace
 
         static bool writeText( const string& path, string_view text )
         {
-            return FileUtil::ensureDirectoryExists( FileUtil::getDirectoryPart( path ) ) && FileUtil::writeTextFile( path, text );
+            return FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( FileUtil::getDirectoryPart( path ) ) ) && FileUtil::writeTextFile( FileUtil::toDiskPath( path ), text );
         }
 
         /** @brief 설치 폴더에 매니페스트를 씁니다(덮어쓰기는 기본 리소스 하나). */
@@ -133,7 +133,7 @@ SW_TEST_CASE( ModSessionTest, PackedModMatchesItsSourceHash )
         sourceHash = session.getDigest()._configHash;
     }
     SW_REQUIRE_TRUE( ModPackBuilder::buildFromFolder( source, FileUtil::joinPath( modDir, ModPackBuilder::kPackFileName ), Internal::makeSettings() ) );
-    SW_REQUIRE_TRUE( FileUtil::removeDirectory( source ) );
+    SW_REQUIRE_TRUE( FileUtil::removeDirectory( FileUtil::toDiskPath( source ) ) );
 
     ModAllowList allowList;
     {
@@ -218,9 +218,9 @@ SW_TEST_CASE( ModSessionTest, RejectsUntrustedFolders )
 
     // 매니페스트 id 와 폴더 이름이 다르다(다른 모드를 흉내 낸다).
     SW_REQUIRE_TRUE( Internal::writeManifest( installFolder, "real" ) );
-    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( FileUtil::joinPath( installFolder, "fake" ) ) );
-    SW_REQUIRE_TRUE( FileUtil::copyFile( FileUtil::joinPath( FileUtil::joinPath( installFolder, "real" ), ModManifest::kFileName ),
-                                         FileUtil::joinPath( FileUtil::joinPath( installFolder, "fake" ), ModManifest::kFileName ) ) );
+    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( FileUtil::joinPath( installFolder, "fake" ) ) ) );
+    SW_REQUIRE_TRUE( FileUtil::copyFile( FileUtil::toDiskPath( FileUtil::joinPath( FileUtil::joinPath( installFolder, "real" ), ModManifest::kFileName ) ),
+                                         FileUtil::toDiskPath( FileUtil::joinPath( FileUtil::joinPath( installFolder, "fake" ), ModManifest::kFileName ) ) ) );
     SW_EXPECT_LOG( "ModSession.IDMismatch" );
     SW_EXPECT_FALSE( tryApply( { "fake" } ) );
 
@@ -362,5 +362,5 @@ SW_TEST_CASE( ModSessionTest, ModPackStoresTexturesUncompressed )
     SW_EXPECT_TRUE( texture._storage == PackEntryStorage::Stored );
     SW_EXPECT_TRUE( data._storage == PackEntryStorage::Blocks );
     reader.close();
-    SW_EXPECT_TRUE( FileUtil::removeDirectory( root ) );
+    SW_EXPECT_TRUE( FileUtil::removeDirectory( FileUtil::toDiskPath( root ) ) );
 }

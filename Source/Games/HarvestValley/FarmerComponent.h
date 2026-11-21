@@ -8,7 +8,7 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Runtime/Foundation/Framework/GameModeBoundComponent.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameFrameworkComponent.h"
 
 namespace sw
 {
@@ -28,7 +28,7 @@ namespace sw
      * @brief `TickGroup::PostUpdate` 에서 디렉터를 읽기만 하고 자기 오브젝트의 메시에만 씁니다. 디렉터는 핸들(씬의 PROPERTY)로 들고 매 프레임 풉니다.
      */
     REFLECT( Category = "Farming", DisplayName = "Farmer View", Tooltip = "Follows the farm game mode farmer or the tile the farmer faces" )
-    class FarmerComponent : public GameModeBoundComponent
+    class FarmerComponent : public GameFrameworkComponent
     {
     public:
         REFLECT_BODY();

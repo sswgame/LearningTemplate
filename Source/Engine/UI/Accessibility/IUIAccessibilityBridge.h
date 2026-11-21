@@ -40,7 +40,7 @@ namespace sw
 
 namespace sw
 {
-    class IWindow;
+    class GenericWindow;
     class UISystem;
 
     /**
@@ -55,7 +55,7 @@ namespace sw
          *        등록된 브리지가 없어 nullptr 입니다. 둘 이상 오르면 빌드 구성의 결함이라 멈춘다.
          * @details nullptr 은 "이 플랫폼에는 스크린 리더 연결이 없다" 는 뜻이다 — 호스트는 그대로 두고 진행한다(UI 시스템은 브리지 없이도 동작한다).
          */
-        [[nodiscard]] static unique_ptr<IUIAccessibilityBridge> createForWindow( UISystem& ui, IWindow& window );
+        [[nodiscard]] static unique_ptr<IUIAccessibilityBridge> createForWindow( UISystem& ui, GenericWindow& window );
     };
 
     /**
@@ -65,7 +65,7 @@ namespace sw
      */
     struct SW_API UIAccessibilityBridgeRegistrar
     {
-        using CreateFunction = unique_ptr<IUIAccessibilityBridge> ( * )( UISystem& ui, IWindow& window );
+        using CreateFunction = unique_ptr<IUIAccessibilityBridge> ( * )( UISystem& ui, GenericWindow& window );
 
         const utf8*                           _pName;
         CreateFunction                        _pCreate;

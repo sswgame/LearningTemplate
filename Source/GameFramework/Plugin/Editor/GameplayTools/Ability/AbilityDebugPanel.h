@@ -1,6 +1,6 @@
 /**
  * @file AbilityDebugPanel.h
- * @brief 어빌리티 런타임 상태 창입니다. 고른 오브젝트의 `AbilityComponent` 가 지금 가진 어트리뷰트 · 걸린 이펙트 · 태그 개수 · 어빌리티 쿨다운을 읽기 전용으로 보입니다.
+ * @brief 어빌리티 런타임 상태 창입니다. 고른 오브젝트의 `AbilitySystemComponent` 가 지금 가진 어트리뷰트 · 걸린 이펙트 · 태그 개수 · 어빌리티 쿨다운을 읽기 전용으로 보입니다.
  * @details 언리얼 gameplay debugger 의 Ability 카테고리, `showdebug abilitysystem` 의 자리다. 런타임 상태는 저장하지 않으므로 플레이 중에만 값이 있고,
  *          멈춰 있으면 빈 상태 힌트를 보인다. 대상은 선택한 오브젝트에 컴포넌트가 있으면 그것이고, 없으면 활성 씬의 컴포넌트 목록에서 고른 것이다.
  *          대상 고르기 · 상태 모으기는 `AbilityDebugViewModel`(Model/, ImGui 없음)이, 행 만들기는 `AbilityDebugSnapshot` 이 맡는다.
@@ -10,7 +10,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
-#include "Editor/Common/GUI/Panel/IEditorPanel.h"
+#include "Editor/Common/GUI/Panel/EditorPanel.h"
 
 #include "GameFramework/Plugin/Editor/GameplayTools/Ability/Model/AbilityDebugViewModel.h"
 
@@ -20,14 +20,14 @@ namespace sw::editor
      * @class AbilityDebugPanel
      * @brief 어빌리티 시스템의 런타임 상태를 보이는 도구 창입니다.
      */
-    class AbilityDebugPanel final : public IEditorPanel
+    class AbilityDebugPanel final : public EditorPanel
     {
     public:
         /** @brief 패널 id — 등록(`SW_EDITOR_PANEL`)과 조회가 같은 상수를 쓴다. */
         static constexpr const utf8* kPanelID = "ability_debugger";
 
         AbilityDebugPanel()
-            : IEditorPanel( false ) // 필요할 때 여는 도구라 닫힌 채 시작한다
+            : EditorPanel( false ) // 필요할 때 여는 도구라 닫힌 채 시작한다
         {
         }
 

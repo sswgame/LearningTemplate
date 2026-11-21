@@ -38,6 +38,33 @@ namespace sw
         return pType != nullptr ? pType->_fullyQualifiedName.getHash() : 0u;
     }
 
+    void ComponentRegistry::addInterfaces( Component& component )
+    {
+        const TypeInfo* pType = component.findCachedTypeInfo();
+        if ( pType == nullptr )
+            return;
+        for ( const TypeInterfaceEntry& entry : pType->getInterfacesWithBase() )
+        {
+            addEntry( entry._interfaceName.getHash(), 0, &component );
+        }
+    }
+
+    void ComponentRegistry::removeInterfaces( const Component& component )
+    {
+        const TypeInfo* pType = component.findCachedTypeInfo();
+        if ( pType == nullptr )
+            return;
+        for ( const TypeInterfaceEntry& entry : pType->getInterfacesWithBase() )
+        {
+            removeEntry( entry._interfaceName.getHash(), 0, &component );
+        }
+    }
+
+    void* ComponentRegistry::findPort( const Entry& entry, const TypeInfo* pInterface )
+    {
+        return entry._pComponent != nullptr ? entry._pComponent->findInterfacePort( pInterface ) : nullptr;
+    }
+
     ComponentRegistry::Bucket* ComponentRegistry::findBucket( uint32 typeKey, uint32 channel ) const
     {
         for ( const unique_ptr<Bucket>& bucket : _listBucket )

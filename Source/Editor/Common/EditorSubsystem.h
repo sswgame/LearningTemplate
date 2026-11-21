@@ -8,7 +8,7 @@
 #pragma once
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/MemoryTag.h"
-#include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/Subsystem.h"
 
 #include "Engine/Foundation/EngineSubsystemHost.h"
 
@@ -18,7 +18,7 @@ namespace sw::editor
      * @class EditorSubsystem
      * @brief 에디터 하위 객체(`EditorContext` 가 소유)의 서브시스템 기반입니다. 이름(`getSubsystemName`)만 반드시 적습니다.
      */
-    class EditorSubsystem : public ISubsystem
+    class EditorSubsystem : public Subsystem
     {
     public:
         SubsystemInitResult        initializeSubsystem() override { return SubsystemInitResult::Succeeded; }

@@ -14,7 +14,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/MemoryTag.h"
 #include "Core/Registry/RegistrationList.h"
-#include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/Subsystem.h"
 
 #include "Engine/Module/ModuleEntryRegistrar.h"
 
@@ -42,7 +42,7 @@ namespace sw
      * @brief 올라온 키트가 등록한 게임 기능 켜기 함수의 목록입니다(엔진 범위 — GameFramework 의 모듈 서브시스템). 같은 이름의 둘째 등록은 거절합니다.
      * @details 등록은 모듈을 올리고 내리는 스레드에서, 조회는 게임 스레드에서 오므로 잠금 하나로 지킨다. 찾은 줄은 그 키트 모듈이 내려가기 전까지 산다.
      */
-    class SW_GF_API GameFeatureRegistry final : public ISubsystem
+    class SW_GF_API GameFeatureRegistry final : public Subsystem
     {
     public:
         static constexpr MemoryTag   kSubsystemMemoryTag = MemoryTag::Game;

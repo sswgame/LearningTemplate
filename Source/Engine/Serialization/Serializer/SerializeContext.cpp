@@ -95,7 +95,8 @@ namespace sw
                 ByteReader reader{ pData, size };
                 if ( reader.skipBytes( offset ) == false )
                     return false;
-                if ( reader.readString( *static_cast<string*>( pPtr ) ) == false )
+                *static_cast<string*>( pPtr ) = reader.readString();
+                if ( reader.hasOverflowed() )
                     return false;
                 offset = reader.getOffset();
                 return true;
@@ -113,7 +114,8 @@ namespace sw
                 if ( reader.skipBytes( offset ) == false )
                     return false;
                 string_view text;
-                if ( reader.readStringView( text ) == false )
+                text = reader.readStringView();
+                if ( reader.hasOverflowed() )
                     return false;
                 *static_cast<hashed_string*>( pPtr ) = hashed_string( text.data(), static_cast<uint32>( text.size() ) );
                 offset                               = reader.getOffset();
@@ -149,7 +151,8 @@ namespace sw
                 if ( reader.skipBytes( offset ) == false )
                     return false;
                 string_view text;
-                if ( reader.readStringView( text ) == false )
+                text = reader.readStringView();
+                if ( reader.hasOverflowed() )
                     return false;
                 if ( text.empty() )
                     *static_cast<TagID*>( pPtr ) = TagID{};

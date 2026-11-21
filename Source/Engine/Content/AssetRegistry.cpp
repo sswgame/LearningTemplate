@@ -6,8 +6,8 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/String/StringUtil.h"
-#include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/ServiceSlot.h"
+#include "Core/Subsystem/Subsystem.h"
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
@@ -42,7 +42,7 @@ namespace sw
      * @brief 프로세스의 색인입니다(엔진 서비스 서브시스템 — `AssetRedirectTable` 과 같은 자리). `AssetRegistry` 의 정적 창구가 이것을 쓴다.
      * @details 기동 · 마운트 때 한 번 바꾸고 모든 참조 읽기가 묻는다 — 읽기가 많아 공유 잠금이다.
      */
-    class AssetRegistryTable final : public ISubsystem
+    class AssetRegistryTable final : public Subsystem
     {
     public:
         static constexpr const utf8* kSubsystemName = "AssetRegistryTable";

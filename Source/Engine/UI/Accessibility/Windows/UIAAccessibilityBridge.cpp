@@ -9,7 +9,7 @@
 #include "Engine/UI/Accessibility/UIAccessibilityService.h"
 #include "Engine/UI/Accessibility/UIAccessibilitySnapshot.h"
 #include "Engine/UI/UISystem.h"
-#include "Engine/Window/IWindow.h"
+#include "Engine/Window/GenericWindow.h"
 
 #include <objbase.h> // WIN32_LEAN_AND_MEAN 이면 `interface` 매크로가 없다 — UIAutomation.h 가 쓴다
 #include <UIAutomation.h>
@@ -49,7 +49,7 @@ namespace sw
             struct Core
             {
                 UISystem*               _pUI{ nullptr };
-                IWindow*                _pWindow{ nullptr };
+                GenericWindow*          _pWindow{ nullptr };
                 UIAccessibilitySnapshot _snapshot{};
                 bool                    _bSnapshotValid{ SW_FALSE }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
                 LONG                    _refCount{ 1 };
@@ -585,7 +585,7 @@ namespace sw
             class Bridge final : public IUIAccessibilityBridge
             {
             public:
-                Bridge( UISystem& ui, IWindow& window )
+                Bridge( UISystem& ui, GenericWindow& window )
                     : _pCore{ make_unique<Core>().release() } // 참조 수로 사는 객체다 — 마지막 `release()` 가 `sw_delete` 로 푼다
                     , _getObjectSubscription{}
                 {
@@ -697,7 +697,7 @@ namespace sw
         return 0;
     }
 
-    unique_ptr<IUIAccessibilityBridge> UIAAccessibility::createBridge( UISystem& ui, IWindow& window )
+    unique_ptr<IUIAccessibilityBridge> UIAAccessibility::createBridge( UISystem& ui, GenericWindow& window )
     {
         return make_unique<UIAAccessibilityBridgeInternal::Bridge>( ui, window );
     }

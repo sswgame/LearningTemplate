@@ -9,8 +9,8 @@
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityCatalog.h"
-#include "GameFramework/Runtime/Gameplay/Ability/AbilityComponent.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityEffect.h"
+#include "GameFramework/Runtime/Gameplay/Ability/AbilitySystemComponent.h"
 #include "GameFramework/Runtime/Gameplay/Ability/CombatAttributeSet.h"
 #include "GameFramework/Runtime/Gameplay/Ability/TagCountTable.h"
 
@@ -21,10 +21,10 @@ namespace
     /** @brief 같은 카탈로그를 쓰는 전투 어트리뷰트 오브젝트 둘(저장하는 쪽 · 받는 쪽)입니다. */
     struct AbilitySaveFixture
     {
-        GameObjectManager _manager;
-        AbilityCatalog    _catalog;
-        AbilityComponent* _pSource{ nullptr };
-        AbilityComponent* _pTarget{ nullptr };
+        GameObjectManager       _manager;
+        AbilityCatalog          _catalog;
+        AbilitySystemComponent* _pSource{ nullptr };
+        AbilitySystemComponent* _pTarget{ nullptr };
 
         AbilitySaveFixture()
         {
@@ -32,9 +32,9 @@ namespace
             _pTarget = makeHero( "Target" );
         }
 
-        AbilityComponent* makeHero( const utf8* pName )
+        AbilitySystemComponent* makeHero( const utf8* pName )
         {
-            AbilityComponent* pAbilities = _manager.createGameObject( hashed_string( pName ) )->addComponent<AbilityComponent>();
+            AbilitySystemComponent* pAbilities = _manager.createGameObject( hashed_string( pName ) )->addComponent<AbilitySystemComponent>();
             pAbilities->setCatalog( &_catalog );
             (void)pAbilities->addAttributeSet<CombatAttributeSet>();
             return pAbilities;
@@ -70,8 +70,8 @@ namespace
             return StateIO::readInPlace( *_pTarget, reading );
         }
 
-        static float32 base( const AbilityComponent& abilities, const hashed_string& name ) { return abilities.getAttributeBaseValue( name ).value_or( -9999.0f ); }
-        static float32 current( const AbilityComponent& abilities, const hashed_string& name ) { return abilities.getAttributeValue( name ).value_or( -9999.0f ); }
+        static float32 base( const AbilitySystemComponent& abilities, const hashed_string& name ) { return abilities.getAttributeBaseValue( name ).value_or( -9999.0f ); }
+        static float32 current( const AbilitySystemComponent& abilities, const hashed_string& name ) { return abilities.getAttributeValue( name ).value_or( -9999.0f ); }
     };
     using Rig = AbilitySaveFixture;
 } // namespace
@@ -145,7 +145,7 @@ SW_TEST_CASE( AbilitySystemTest, SaveRejectsTruncatedOrUnknownStateWithoutChange
     AbilityCatalog emptyCatalog;
     rig._pTarget->setCatalog( &emptyCatalog );
     Archive reading( written.getData(), written.getSize() );
-    SW_EXPECT_LOG( "AbilityComponent.SavedEffectUnknown" );
+    SW_EXPECT_LOG( "AbilitySystemComponent.SavedEffectUnknown" );
     SW_EXPECT_FALSE( StateIO::readInPlace( *rig._pTarget, reading ) );
     rig._pTarget->setCatalog( &rig._catalog ); // 지역 카탈로그를 가리킨 채 남기지 않는다
     SW_EXPECT_NEAR( 100.0f, Rig::base( *rig._pTarget, CombatAttributes::health() ), 1.0e-4f );

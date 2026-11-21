@@ -4,7 +4,7 @@
  */
 #include "pch.h"
 
-#include "Editor/Panels/Inspector/IInspectorComponent.h"
+#include "Editor/Panels/Inspector/IComponentInspector.h"
 #include "Editor/Panels/Inspector/Model/InspectorComponentEdit.h"
 #include "Editor/Panels/Inspector/Model/InspectorComponentManager.h"
 
@@ -17,7 +17,7 @@ namespace sw::editor
     namespace
     {
         /** @brief SpriteComponent 전용 프리뷰 및 애셋 슬롯 */
-        class SpriteComponentInspector final : public IInspectorComponent
+        class SpriteComponentInspector final : public IComponentInspector
         {
         public:
             void drawFooter( const EditorPropertyGridTarget& /*target*/ ) override

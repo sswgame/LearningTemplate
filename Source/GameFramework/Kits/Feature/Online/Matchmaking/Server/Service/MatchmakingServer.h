@@ -2,7 +2,7 @@
  * @file MatchmakingServer.h
  * @brief 매칭 서비스의 스트림 바인딩입니다. 프로토콜 표(`OnlineProtocolService`, 영역 `kMatchmaking`)로 섭니다.
  * @details 파티와 로비 요청은 `PartyLobbyService` 에, 대기열 요청은 `MatchQueueService` 에 호출 번호를 요청 태그로 삼아 맡긴다.
- *          완료는 응답(본문의 첫 값이 결과)으로, 알림은 멤버에게 보낸다. 이 프로세스에 접속하지 않은 멤버에게는 접속 상태 관리자(`IAccountPresence`)로 넘긴다.
+ *          완료는 응답(본문의 첫 값이 결과)으로, 알림은 멤버에게 보낸다. 이 프로세스에 접속하지 않은 멤버에게는 접속 상태 관리자(`AccountPresence`)로 넘긴다.
  *          - 서비스 틱은 대기열 틱과 게임 서버 에이전트 틱을 부른 뒤, 완료, 알림, 로비 시작(배정으로 이어짐), 깨진 파티 티켓(대기열에서 뺌), 버스 주제 변경(구독으로 이어짐)을 처리한다.
  *          - 버스 구독은 첫 서비스 틱부터 하며 이때는 호스트가 버스를 받은 뒤이다. 계정이 떠나면 대기열에서는 바로 빼고, 파티와 이 서버가 들여보낸 로비에서는
  *            재접속 유예(`setReconnectGrace`, 기본 60초)가 지난 뒤에 뺀다. 유예 안에 이 서버로 돌아오면 취소하고, 시한에 접속 상태로 물어 다른 서버에 붙어 있으면 남긴다.
@@ -29,7 +29,7 @@
 namespace sw
 {
 
-    class IAccountPresence;
+    class AccountPresence;
     class IGroupChannelMembership;
     class MatchServerAgent;
     class MetricRegistry;
@@ -44,7 +44,7 @@ namespace sw
         MatchmakingServer();
 
         /** @brief 넘긴 객체는 빌려 씁니다. @p pAgent 는 게임 서버일 때만, @p pPresence 는 서버가 여러 대일 때만 넘기고 없으면 nullptr 입니다. */
-        void initialize( PartyLobbyService* pPartyLobby, MatchQueueService* pQueue, MatchServerAgent* pAgent, IAccountPresence* pPresence, MetricRegistry* pMetricRegistry = nullptr );
+        void initialize( PartyLobbyService* pPartyLobby, MatchQueueService* pQueue, MatchServerAgent* pAgent, AccountPresence* pPresence, MetricRegistry* pMetricRegistry = nullptr );
         /** @brief 버스 구독을 해제하고 유예 중인 계정을 파티와 로비에서 뺍니다. 로직은 호출하는 쪽이 종료합니다. */
         void shutdown();
         /** @brief 떠난 계정을 파티와 로비에 남겨 둘 시간입니다. 0 이면 바로 뺍니다. */
@@ -91,7 +91,7 @@ namespace sw
         void onPartyFound( uint64 lookupTag, MatchmakingServiceResult result, const PartySnapshot& party );
         /** @brief 이 서버 계정 @p recipientID 가 받은 파티 스냅숏으로 파티 채널 멤버를 맞춥니다. 멤버가 비었으면 빠진 것이다. */
         void syncPartyChannel( AccountID recipientID, const PartySnapshot& party );
-        /** @brief 알림 @p kind 를 이 서버의 계정에게 B 로 보내고, 없으면 다른 서버로 중계합니다(`IAccountPresence::sendRemotePush`). 정의는 `.cpp` 에만 있습니다. */
+        /** @brief 알림 @p kind 를 이 서버의 계정에게 B 로 보내고, 없으면 다른 서버로 중계합니다(`AccountPresence::sendRemotePush`). 정의는 `.cpp` 에만 있습니다. */
         template <typename TBody>
         void push( OnlineServiceHost& host, AccountID accountID, uint16 kind, const TBody& message );
 

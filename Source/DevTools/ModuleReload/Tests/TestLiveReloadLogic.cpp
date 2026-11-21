@@ -124,12 +124,12 @@ SW_TEST_CASE( LiveReloadLogicTest, ShadowCopyNames )
     SW_EXPECT_TRUE( FileUtil::isPathUnderRoot( ProcessRoots::get()._run.str(), ShadowCopyName::getDirectory() ) );
 
     const string directory = test::makeScratchPath( "ShadowCopies" );
-    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( FileUtil::joinPath( directory, "SWGame_1" ) ) );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::joinPath( directory, "SWGame_1/SWGame.g1.dll" ), "copy" ) );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::joinPath( directory, "SWGame_2.so" ), "copy" ) );
+    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( FileUtil::joinPath( directory, "SWGame_1" ) ) ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( FileUtil::joinPath( directory, "SWGame_1/SWGame.g1.dll" ) ), "copy" ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( FileUtil::joinPath( directory, "SWGame_2.so" ) ), "copy" ) );
     SW_EXPECT_EQUAL( 2u, ShadowCopyName::removeCopies( directory ) );
     vector<string> listLeft;
-    SW_EXPECT_TRUE( FileUtil::collectFiles( directory, "", listLeft, true ) );
+    SW_EXPECT_TRUE( FileUtil::collectFiles( FileUtil::toDiskPath( directory ), "", listLeft, true ) );
     SW_EXPECT_TRUE( listLeft.empty() );
     SW_EXPECT_EQUAL( 0u, ShadowCopyName::removeCopies( FileUtil::joinPath( directory, "Missing" ) ) );
 }
@@ -155,7 +155,7 @@ namespace
         static string makeShadowFile( string_view name )
         {
             const string path = test::makeScratchPath( name );
-            SW_EXPECT_TRUE( FileUtil::writeTextFile( path, "shadow" ) );
+            SW_EXPECT_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( path ), "shadow" ) );
             return path;
         }
     };
@@ -180,23 +180,23 @@ SW_TEST_CASE( LiveReloadLogicTest, DeferredUnloadKeepsRecentBatches )
     queue.beginBatch();
     queue.deferUnload( "B", DeferredUnloadTestUtil::openSystemLibrary(), b );
     SW_EXPECT_EQUAL( 3u, queue.getLibraryCount() );
-    SW_EXPECT_TRUE( FileUtil::exists( a1 ) );
+    SW_EXPECT_TRUE( FileUtil::exists( FileUtil::toDiskPath( a1 ) ) );
 
     queue.beginBatch();
     queue.deferUnload( "C", DeferredUnloadTestUtil::openSystemLibrary(), c ); // 배치 A 가 최근 둘 밖으로 나간다
     SW_EXPECT_EQUAL( 2u, queue.getLibraryCount() );
-    SW_EXPECT_FALSE( FileUtil::exists( a1 ) );
-    SW_EXPECT_FALSE( FileUtil::exists( a2 ) );
-    SW_EXPECT_TRUE( FileUtil::exists( b ) );
+    SW_EXPECT_FALSE( FileUtil::exists( FileUtil::toDiskPath( a1 ) ) );
+    SW_EXPECT_FALSE( FileUtil::exists( FileUtil::toDiskPath( a2 ) ) );
+    SW_EXPECT_TRUE( FileUtil::exists( FileUtil::toDiskPath( b ) ) );
 
     queue.unloadOldestBatch();
     SW_EXPECT_EQUAL( 1u, queue.getLibraryCount() );
-    SW_EXPECT_FALSE( FileUtil::exists( b ) );
-    SW_EXPECT_TRUE( FileUtil::exists( c ) );
+    SW_EXPECT_FALSE( FileUtil::exists( FileUtil::toDiskPath( b ) ) );
+    SW_EXPECT_TRUE( FileUtil::exists( FileUtil::toDiskPath( c ) ) );
 
     queue.unloadAll();
     SW_EXPECT_EQUAL( 0u, queue.getLibraryCount() );
-    SW_EXPECT_FALSE( FileUtil::exists( c ) );
+    SW_EXPECT_FALSE( FileUtil::exists( FileUtil::toDiskPath( c ) ) );
 }
 
 /** @brief [LiveReloadLogicTest] 언로드 큐: 상한이 0 이면 넣자마자 내려간다(비운 목록의 끝을 읽지 않는다) */
@@ -206,7 +206,7 @@ SW_TEST_CASE( LiveReloadLogicTest, DeferredUnloadWithoutKeepingAnyBatch )
     const string               path = DeferredUnloadTestUtil::makeShadowFile( "now" );
     queue.deferUnload( "Now", DeferredUnloadTestUtil::openSystemLibrary(), path );
     SW_EXPECT_EQUAL( 0u, queue.getLibraryCount() );
-    SW_EXPECT_FALSE( FileUtil::exists( path ) );
+    SW_EXPECT_FALSE( FileUtil::exists( FileUtil::toDiskPath( path ) ) );
 }
 
 /** @brief [LiveReloadLogicTest] 섀도 복사본: 엔진 ABI 스탬프가 없는 파일은 복사본을 만들지 않고 이름 상태도 그대로다. 복사본 지우기는 빈 경로에 아무 일도 하지 않는다 */
@@ -214,7 +214,7 @@ SW_TEST_CASE( LiveReloadLogicTest, ShadowCopyRefusesUnstampedFile )
 {
     SW_EXPECT_LOG( "LiveReloadManager.ModuleBuiltAgainstDifferent" );
     const string original = test::makeScratchPath( "NotAModule.bin" );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( original, "no stamp in here" ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( original ), "no stamp in here" ) );
 
     ShadowCopyParams params{};
     params._moduleName         = "NotAModule";
@@ -234,9 +234,9 @@ SW_TEST_CASE( LiveReloadLogicTest, ShadowCopyRefusesUnstampedFile )
     SW_EXPECT_FALSE( ModuleShadowCopy::shouldRejectDelayImports( "NotAModule", original, bytes ) ); // PE 가 아니면 지연 import 표도 없다
 
     ModuleShadowCopy::removeArtifacts( {} );
-    SW_EXPECT_TRUE( FileUtil::exists( original ) );
+    SW_EXPECT_TRUE( FileUtil::exists( FileUtil::toDiskPath( original ) ) );
     ModuleShadowCopy::removeArtifacts( original );
-    SW_EXPECT_FALSE( FileUtil::exists( original ) );
+    SW_EXPECT_FALSE( FileUtil::exists( FileUtil::toDiskPath( original ) ) );
 }
 
 /** @brief [LiveReloadLogicTest] 게임 모듈 이름은 지금 고른 게임의 빌드 대상(SWGame_<게임>)으로 바뀌고, 그 밖의 대상은 그대로다 — 모듈 이름 그대로는 ninja 에 없는 대상이었다 */

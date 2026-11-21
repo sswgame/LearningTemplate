@@ -11,7 +11,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/formatString.h"
-#include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/Subsystem.h"
 
 #include "Engine/Automation/Scenario/AutomationStageReset.h"
 #include "Engine/Character/Fit/BodyShape.h"
@@ -176,7 +176,7 @@ namespace sw
          *          예전에는 소유자 없는 엔진 수명 값(`ScopeOwned`)이었다. 게임 서비스가 없는 실행(테스트의 손수 만든 컴포넌트)에는 표가 없어 매번 굽는다.
          *          언리얼 `UEngineSubsystem` 이 메시 머지 결과를 나누는 자리.
          */
-        class AppearanceBakedMeshTable final : public ISubsystem
+        class AppearanceBakedMeshTable final : public Subsystem
         {
         public:
             static constexpr const utf8* kSubsystemName = "AppearanceBakedMeshTable";
@@ -187,7 +187,7 @@ namespace sw
             list<uint64> _listKeyByUse                                                  SW_GUARDED_BY( _mutex );      ///< 쓴 순서(앞이 가장 오래 안 씀) — 넣기 · 꺼내기가 끝으로 옮긴다(`AssetPinSet` · `AudioClipCache` 와 같은 모양)
             DevCounter                                                                  _hitCount;                    ///< `tryGet` 이 내준 횟수(감시 값만 읽는 개발 전용 칸 — 원자라 잠금 밖에서도 된다)
 
-            // ISubsystem — 세울 것이 없다(처음 구운 차림부터 채운다). 예산은 남길 때 읽는다 — 모듈 서브시스템 초기화 때는 게임 서비스가 아직 걸리지 않았을 수 있다.
+            // Subsystem — 세울 것이 없다(처음 구운 차림부터 채운다). 예산은 남길 때 읽는다 — 모듈 서브시스템 초기화 때는 게임 서비스가 아직 걸리지 않았을 수 있다.
             SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
             void                shutdownSubsystem() override
             {

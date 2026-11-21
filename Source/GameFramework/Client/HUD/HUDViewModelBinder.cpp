@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/Subsystem.h"
 
 #include "Engine/Module/ModuleSubsystemRegistrar.h"
 #include "Engine/Object/GameObject/GameObject.h"

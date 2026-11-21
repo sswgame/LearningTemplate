@@ -191,7 +191,7 @@ namespace sw::editor
             {
                 ProfilerTraceMergeInput mergeInput;
                 mergeInput._label     = source._label;
-                const bool bTraceRead = source._tracePath.empty() == false && FileUtil::readOptionalTextFile( source._tracePath, mergeInput._json ) == OptionalFileRead::Read; // 자식이 죽어 파일이 없으면 아래 경고 하나로 알린다
+                const bool bTraceRead = source._tracePath.empty() == false && FileUtil::readOptionalTextFile( FileUtil::toDiskPath( source._tracePath ), mergeInput._json ) == OptionalFileRead::Read; // 자식이 죽어 파일이 없으면 아래 경고 하나로 알린다
                 if ( bTraceRead )
                     listInput.push_back( std::move( mergeInput ) );
                 else
@@ -207,7 +207,7 @@ namespace sw::editor
                 return mergedPath;
             }
             mergedPath = FileUtil::joinPath( input._traceDirectory, EditorNetPlaySession::kMergedTraceFileName );
-            if ( FileUtil::writeTextFile( mergedPath, json ) == false )
+            if ( FileUtil::writeTextFile( FileUtil::toDiskPath( mergedPath ), json ) == false )
             {
                 SW_LOG_WARNING_ID( "NetPlay.MergedTraceCouldNot", "Merged trace could not be written to %#", mergedPath );
                 mergedPath.clear();
@@ -296,7 +296,7 @@ namespace sw::editor
         if ( settings._bArrangeWindows == false )
             return {};
         SW_ASSERT( settings._windowColumnCount > 0 ); // `start` 가 막는다(`isWindowLayoutValid`)
-        // 칸 간격(클라이언트 크기 + 틀 두께)은 자식 창이 제 틀로 정한다(`IWindow::createMainWindow`) — 틀은 창 스타일 · DPI · 창 관리자가 정해 에디터는 모른다.
+        // 칸 간격(클라이언트 크기 + 틀 두께)은 자식 창이 제 틀로 정한다(`GenericWindow::createMainWindow`) — 틀은 창 스타일 · DPI · 창 관리자가 정해 에디터는 모른다.
         StringBuilder<constant::buffer::kMax256> textBuilder;
         textBuilder.appendFormat( "-%#=%#", getCommandLineArgumentSpelling( CommandLineArgument::WINDOW_TILE_COLUMNS ), settings._windowColumnCount );
         StringBuilder<constant::buffer::kMax256> textBuilder2;
@@ -399,7 +399,7 @@ namespace sw::editor
         ProcessOptions       options;
         options._bPipeStandardInput = true; // `quit` 과 `pause` 를 보내는 채널
         options._bEndWithParent     = true; // 에디터가 죽으면 서버 · 클라이언트도 끝난다 — 고아가 포트를 쥐고 남지 않게(감사 E-15, 언리얼 PIE 별도 프로세스와 같다)
-        if ( FileUtil::exists( executablePath ) == false || pChild->_process.launch( command, options ) == false )
+        if ( FileUtil::exists( FileUtil::toDiskPath( executablePath ) ) == false || pChild->_process.launch( command, options ) == false )
         {
             SW_LOG_ERROR_ID( "NetPlay.CouldNotLaunch", "Could not launch %#: %#", label, command.toCommandLine() );
             return false;
@@ -480,7 +480,7 @@ namespace sw::editor
             }
             else
                 _traceDirectory = settings._traceDirectory;
-            if ( FileUtil::ensureDirectoryExists( _traceDirectory ) == false )
+            if ( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( _traceDirectory ) ) == false )
             {
                 SW_LOG_ERROR_ID( "NetPlay.TraceFolderCouldNot", "Trace folder %# could not be created - the multiplayer session was not started", _traceDirectory );
                 _traceDirectory.clear();

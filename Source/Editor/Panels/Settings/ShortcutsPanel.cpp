@@ -40,7 +40,7 @@ namespace sw::editor
 namespace sw::editor
 {
     ShortcutsPanel::ShortcutsPanel()
-        : IEditorPanel( false )
+        : EditorPanel( false )
         , _filter{}
         , _capture{}
         , _viewModel{}

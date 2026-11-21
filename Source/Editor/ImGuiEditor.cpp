@@ -76,7 +76,7 @@
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Window/IWindow.h"
+#include "Engine/Window/GenericWindow.h"
 #include "Engine/Window/MainWindowSubsystem.h"
 #include "Engine/Window/NativeWindowEvent.h"
 
@@ -161,7 +161,7 @@ namespace sw::editor
         {
             /** @brief ImGui 백엔드의 보조 창 띄우기(`Platform_ShowWindow`)와 메인 창입니다 — `showPlatformWindow` 가 감싼다. */
             static inline void ( *s_pfnShowPlatformWindow )( ImGuiViewport* ) = nullptr;
-            static inline const IWindow* s_pMainWindow                        = nullptr;
+            static inline const GenericWindow* s_pMainWindow                  = nullptr;
 
             /**
              * @brief 메인 창이 숨어 있으면(무인 실행 — 언리얼 -RenderOffScreen, `AutomationSession::applyPresentPolicy`) 보조 창(메인 밖으로 나간 툴팁 · 팝업 · 떼어 낸 패널)도
@@ -313,7 +313,7 @@ namespace sw::editor
 namespace sw::editor
 {
     /** @brief 에디터 기동 단계 `EditorData` 입니다(`ImGuiEditor::initializeEditorData`). */
-    class ImGuiEditor::EditorDataSubsystem final : public ISubsystem
+    class ImGuiEditor::EditorDataSubsystem final : public Subsystem
     {
     public:
         static constexpr const utf8* kSubsystemName = "EditorData";
@@ -334,7 +334,7 @@ namespace sw::editor
     };
 
     /** @brief 에디터 기동 단계 `ImGuiContext` 입니다(`ImGuiEditor::initializeImGuiContext`). */
-    class ImGuiEditor::ImGuiContextSubsystem final : public ISubsystem
+    class ImGuiEditor::ImGuiContextSubsystem final : public Subsystem
     {
     public:
         static constexpr const utf8* kSubsystemName = "ImGuiContext";
@@ -360,7 +360,7 @@ namespace sw::editor
     };
 
     /** @brief 에디터 기동 단계 `PlatformBackend` 입니다(`ImGuiEditor::initializePlatformBackend`). */
-    class ImGuiEditor::PlatformBackendSubsystem final : public ISubsystem
+    class ImGuiEditor::PlatformBackendSubsystem final : public Subsystem
     {
     public:
         static constexpr const utf8* kSubsystemName = "PlatformBackend";
@@ -386,7 +386,7 @@ namespace sw::editor
     };
 
     /** @brief 에디터 기동 단계 `RendererBackend` 입니다(`ImGuiEditor::initializeRendererBackend`). */
-    class ImGuiEditor::RendererBackendSubsystem final : public ISubsystem
+    class ImGuiEditor::RendererBackendSubsystem final : public Subsystem
     {
     public:
         static constexpr const utf8* kSubsystemName = "RendererBackend";
@@ -412,7 +412,7 @@ namespace sw::editor
     };
 
     /** @brief 에디터 기동 단계 `EditorContext` 입니다(`ImGuiEditor::initializeEditorContext`). */
-    class ImGuiEditor::EditorContextSubsystem final : public ISubsystem
+    class ImGuiEditor::EditorContextSubsystem final : public Subsystem
     {
     public:
         static constexpr const utf8* kSubsystemName = "EditorContext";
@@ -438,7 +438,7 @@ namespace sw::editor
     };
 
     /** @brief 에디터 기동 단계 `WindowCloseQuery` 입니다(`ImGuiEditor::initializeWindowCloseQuery`). */
-    class ImGuiEditor::WindowCloseQuerySubsystem final : public ISubsystem
+    class ImGuiEditor::WindowCloseQuerySubsystem final : public Subsystem
     {
     public:
         static constexpr const utf8* kSubsystemName = "WindowCloseQuery";
@@ -526,7 +526,7 @@ namespace sw::editor
         ImGuiEditor::shutdown();
     }
 
-    bool ImGuiEditor::initialize( IWindow* pWindow, IRHIDevice* pRHIDevice )
+    bool ImGuiEditor::initialize( GenericWindow* pWindow, IRHIDevice* pRHIDevice )
     {
         SW_LOG_TRACE_ID( "ImGuiEditor.InitializeStart", "Initialize start." );
         if ( _bInitialized != SW_FALSE )
@@ -770,7 +770,7 @@ namespace sw::editor
     {
         // 선택 조회(②): 종료 경로 - 창이 이미 닫혔으면 되돌릴 제목도 없다.
         MainWindowSubsystem* pWindowHost   = editor::findSubsystem<MainWindowSubsystem>();
-        IWindow*             pActiveWindow = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
+        GenericWindow*       pActiveWindow = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
         if ( pActiveWindow == nullptr )
             return;
         // 에디터를 종료하면 창 제목은 팩 설정 그대로 돌아간다. 창 제목의 출처는 팩 설정(`<Engine _windowTitle>`) 하나뿐이다.

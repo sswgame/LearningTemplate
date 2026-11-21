@@ -30,7 +30,7 @@ namespace
             : _folder{ test::makeScratchPath( "Modules" ) }
             , _model{}
         {
-            SW_EXPECT_TRUE( FileUtil::ensureDirectoryExists( _folder ) );
+            SW_EXPECT_TRUE( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( _folder ) ) );
             fixed_string<constant::buffer::kMax128> excludeHere;
             formatstring( excludeHere.data(), excludeHere.capacity(), R"(, "_listExcludedPlatform": [ "%#" ])", build::kPlatformName );
             writeManifest( config::kTargetGameModule, "Game", "" );
@@ -55,7 +55,7 @@ namespace
             fixed_string<constant::buffer::kMax256> fileName;
             formatstring( fileName.data(), fileName.capacity(), "%#%#", pName, ModuleCatalog::kManifestExtension );
             const string path = FileUtil::joinPath( _folder, fileName );
-            SW_EXPECT_TRUE( FileUtil::writeTextFile( path, makeManifestText( pName, pKind, pExtra ) ) );
+            SW_EXPECT_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( path ), makeManifestText( pName, pKind, pExtra ) ) );
         }
     };
 } // namespace
@@ -146,7 +146,7 @@ SW_TEST_CASE_F( ModulesViewModelTest, ToggleThatBreaksTheGraphDoesNotAsk )
 SW_TEST_CASE_F( ModulesViewModelTest, ApplyWritesOnlyNonDefaultOverrides )
 {
     const string path = test::makeScratchPath( "Project.module.json" );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( path, makeManifestText( "Project", "Game", "" ) ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( path ), makeManifestText( "Project", "Game", "" ) ) );
 
     SW_REQUIRE_TRUE( _model.requestToggle( "GF_Child", false ) );
     _model.applyPendingTo( path );
@@ -155,7 +155,7 @@ SW_TEST_CASE_F( ModulesViewModelTest, ApplyWritesOnlyNonDefaultOverrides )
 
     string         text;
     ModuleManifest manifest;
-    SW_REQUIRE_TRUE( FileUtil::readTextFile( path, text ) );
+    SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::toDiskPath( path ), text ) );
     SW_REQUIRE_TRUE( ModuleCatalog::parseManifest( text, {}, manifest ).has_value() );
     SW_REQUIRE_EQUAL( size_t{ 1 }, manifest._listModuleOverride.size() );
     SW_EXPECT_TRUE( manifest._listModuleOverride[0]._name == "GF_Child" );
@@ -163,7 +163,7 @@ SW_TEST_CASE_F( ModulesViewModelTest, ApplyWritesOnlyNonDefaultOverrides )
 
     SW_REQUIRE_TRUE( _model.requestToggle( "GF_Child", true ) ); // 기본과 같아지면 줄을 지운다
     _model.applyPendingTo( path );
-    SW_REQUIRE_TRUE( FileUtil::readTextFile( path, text ) );
+    SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::toDiskPath( path ), text ) );
     SW_REQUIRE_TRUE( ModuleCatalog::parseManifest( text, {}, manifest ).has_value() );
     SW_EXPECT_TRUE( manifest._listModuleOverride.empty() );
 }
@@ -196,7 +196,7 @@ SW_TEST_CASE_F( ModulesViewModelTest, FailedReloadDropsTheOldResolution )
 SW_TEST_CASE( ModulesViewModelLoadTest, EmptyFolderIsNotReadAgain )
 {
     const string folder = test::makeScratchPath( "Empty" );
-    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( folder ) );
+    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( folder ) ) );
     ModulesViewModel model;
     model.reloadFrom( folder );
     SW_EXPECT_TRUE( model.getLoadError().empty() );

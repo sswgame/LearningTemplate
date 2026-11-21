@@ -145,7 +145,7 @@ namespace sw
             {
                 outListSource.clear();
                 vector<string> listOwn;
-                if ( FileUtil::isDirectory( shadersDir ) && FileUtil::collectFiles( shadersDir, ".hlsl", listOwn, true ) == false )
+                if ( FileUtil::isDirectory( FileUtil::toDiskPath( shadersDir ) ) && FileUtil::collectFiles( FileUtil::toDiskPath( shadersDir ), ".hlsl", listOwn, true ) == false )
                     return false;
                 for ( const string& sourcePath : listOwn )
                 {
@@ -221,7 +221,7 @@ namespace sw
                 const string stampPath = FileUtil::joinPath( binDirectory, "cook.stamp" );
                 string       text;
                 // 첫 쿠킹에는 스탬프가 없다 — 없음은 "모두 낡음" 이지 오류가 아니므로 읽기 전에 묻는다(`readTextFile` 은 없는 파일을 오류로 남긴다).
-                if ( FileUtil::readOptionalTextFile( stampPath, text ) == OptionalFileRead::Read )
+                if ( FileUtil::readOptionalTextFile( FileUtil::toDiskPath( stampPath ), text ) == OptionalFileRead::Read )
                     info = parseCookStamp( text );
 
                 // 도구 지문이 다르면(컴파일러 · 옵션이 바뀌었으면) 소스가 같아도 모두 낡았다. 빈 결과와 같게 다룬다.
@@ -342,7 +342,7 @@ namespace sw
             [[nodiscard]] static bool findShadowedInDir( const ShaderIncludeResolver& resolver, const string& shadersDir, vector<string>& outListProblem )
             {
                 vector<string> listOwn;
-                if ( FileUtil::isDirectory( shadersDir ) && FileUtil::collectFiles( shadersDir, ".hlsli", listOwn, true ) == false )
+                if ( FileUtil::isDirectory( FileUtil::toDiskPath( shadersDir ) ) && FileUtil::collectFiles( FileUtil::toDiskPath( shadersDir ), ".hlsli", listOwn, true ) == false )
                 {
                     appendProblem( outListProblem, "%#: the headers could not all be listed - shadowing is not known", shadersDir );
                     return false;
@@ -363,7 +363,7 @@ namespace sw
                     if ( StringUtil::toLower( rootDir.c_str() ) == ownDirLower )
                         continue;
                     vector<string> listRootHeader;
-                    if ( FileUtil::collectFiles( rootDir, ".hlsli", listRootHeader, true ) == false )
+                    if ( FileUtil::collectFiles( FileUtil::toDiskPath( rootDir ), ".hlsli", listRootHeader, true ) == false )
                     {
                         appendProblem( outListProblem, "%#: the headers could not all be listed - shadowing is not known", rootDir );
                         bClean = false;
@@ -458,7 +458,7 @@ namespace sw
                     for ( const string& header : includedIter->second )
                     {
                         // 컴파일이 방금 읽은 파일이거나 찾아봤지만 없던 앞자리 후보다. 키로 못 바꾸거나 읽지 못하면 그 변경(가림 포함)을 영영 못 잡으므로 조용히 빼지 않고 멈춘다.
-                        const bool   bAbsent    = FileUtil::exists( header ) == false;
+                        const bool   bAbsent    = FileUtil::exists( FileUtil::toDiskPath( header ) ) == false;
                         const string headerKey  = bAbsent ? makeAbsentHeaderKey( listHeaderRoot, header ) : makeHeaderKey( listHeaderRoot, header );
                         const uint64 headerHash = bAbsent ? kAbsentHash : ContentHash::computeFile( header );
                         if ( headerKey.empty() || ( bAbsent == false && headerHash == kAbsentHash ) )
@@ -487,7 +487,7 @@ namespace sw
                 }
 
                 const string stampPath = FileUtil::joinPath( rhiDir, "cook.stamp" );
-                if ( FileUtil::writeTextFile( stampPath, text ) == false )
+                if ( FileUtil::writeTextFile( FileUtil::toDiskPath( stampPath ), text ) == false )
                 {
                     SW_LOG_ERROR_ID( "ShaderCooker.FailedWriteCookStamp5", "Failed to write the cook stamp: %#", stampPath.c_str() );
                     return false;
@@ -504,7 +504,7 @@ namespace sw
             static bool isDependencyCurrent( const string& path, uint64 recordedHash )
             {
                 if ( recordedHash == kAbsentHash )
-                    return FileUtil::exists( path ) == false;
+                    return FileUtil::exists( FileUtil::toDiskPath( path ) ) == false;
                 return ContentHash::computeFile( path ) == recordedHash;
             }
 
@@ -551,7 +551,7 @@ namespace sw
             {
                 string         existing = foldDotSegments( FileUtil::normalizeSeparators( absPath ) );
                 vector<string> listTail;
-                while ( existing.empty() == false && FileUtil::exists( existing ) == false )
+                while ( existing.empty() == false && FileUtil::exists( FileUtil::toDiskPath( existing ) ) == false )
                 {
                     const string name = FileUtil::getFileNamePart( existing );
                     if ( name.empty() )
@@ -664,7 +664,7 @@ namespace sw
             {
                 vector<string> listBinary;
                 vector<string> listFile;
-                if ( FileUtil::collectFiles( binDir, "", listFile, false ) == false ) // 방금 본 폴더다 — 실패는 도중에 멈춘 목록뿐이다
+                if ( FileUtil::collectFiles( FileUtil::toDiskPath( binDir ), "", listFile, false ) == false ) // 방금 본 폴더다 — 실패는 도중에 멈춘 목록뿐이다
                 {
                     appendProblem( outListProblem, "%#: '%#' binaries could not all be listed", label, shaderFolder );
                     return;
@@ -682,7 +682,7 @@ namespace sw
                 // 매니페스트를 한 번 풀어 키로 찾는다 — 예전에는 바이너리마다 매니페스트 바이트 전체에서 이름을 찾아(바이너리 수 × 매니페스트 크기) dx12 19382 개 · 78 MB 에 147 초였다(2026-11-13).
                 const string                      manifestPath = FileUtil::joinPath( binDir, ShaderReflectionLibrary::getManifestFileName() );
                 ShaderReflectionLibrary::EntryMap mapManifest;
-                if ( FileUtil::isRegularFile( manifestPath ) == false )
+                if ( FileUtil::isRegularFile( FileUtil::toDiskPath( manifestPath ) ) == false )
                 {
                     appendProblem( outListProblem, "%#: '%#' has no reflection manifest", label, shaderFolder );
                     return;
@@ -730,13 +730,13 @@ namespace sw
                 const string label( labelBuilder.view() );
                 // 쿠킹본은 소스 트리가 아니라 쿠킹 스테이징의 같은 상대 자리에 있다 — 쿠커 출력(`ShaderCookDriver`) · 런타임 읽기와 같은 규칙(`ShaderBinaryLocation`) 하나다.
                 const string binDir = FileUtil::joinPath( cookedDir, ShaderBinaryLocation::makeForDomain( domain, format )._binDirectory );
-                if ( FileUtil::isDirectory( binDir ) == false )
+                if ( FileUtil::isDirectory( FileUtil::toDiskPath( binDir ) ) == false )
                 {
                     appendProblem( outListProblem, "%#: no '%#' binary folder (never cooked)", label, shaderFolder );
                     return;
                 }
                 string text;
-                if ( FileUtil::readTextFile( FileUtil::joinPath( binDir, "cook.stamp" ), text ) == false )
+                if ( FileUtil::readTextFile( FileUtil::toDiskPath( FileUtil::joinPath( binDir, "cook.stamp" ) ), text ) == false )
                 {
                     appendProblem( outListProblem, "%#: '%#' has no cook.stamp (the cooker writes it)", label, shaderFolder );
                     return;
@@ -786,13 +786,13 @@ namespace sw
     {
         outRemovedCount = 0;
         vector<string> listFile;
-        (void)FileUtil::collectFiles( binDirectory, "", listFile, false ); // 폴더가 없으면 지울 것도 없다
+        (void)FileUtil::collectFiles( FileUtil::toDiskPath( binDirectory ), "", listFile, false ); // 폴더가 없으면 지울 것도 없다
         bool bAllRemoved = true;
         for ( const string& filePath : listFile )
         {
             if ( ShaderCookStampInternal::isShaderBinaryFile( filePath ) == false || uniqueKeepFileName.find( FileUtil::getFileNamePart( filePath ) ) != uniqueKeepFileName.end() )
                 continue;
-            if ( FileUtil::removeFile( filePath ) )
+            if ( FileUtil::removeFile( FileUtil::toDiskPath( filePath ) ) )
             {
                 ++outRemovedCount;
                 SW_LOG_INFO_ID( "ShaderCooker.RemovedShaderBinaryNo", "Removed a shader binary no cook request makes: %#", filePath );
@@ -822,7 +822,7 @@ namespace sw
         uint64 combined = 0;
         for ( const string& header : listIncludedFile )
         {
-            const bool   bAbsent    = FileUtil::exists( header ) == false;
+            const bool   bAbsent    = FileUtil::exists( FileUtil::toDiskPath( header ) ) == false;
             const uint64 headerHash = bAbsent ? ShaderCookStampInternal::kAbsentHash : ContentHash::computeFile( header );
             if ( bAbsent == false && headerHash == ShaderCookStampInternal::kAbsentHash )
                 return 0; // 있는데 읽지 못하는 헤더가 있으면 같은 지문이 나올 수 없다 — 부르는 쪽이 낡음으로 본다
@@ -841,7 +841,7 @@ namespace sw
         text += '\n';
         for ( const string& header : listIncludedFile )
         {
-            const bool   bAbsent    = FileUtil::exists( header ) == false; // 없던 앞자리 후보 — "없어야 한다" 로 적는다
+            const bool   bAbsent    = FileUtil::exists( FileUtil::toDiskPath( header ) ) == false; // 없던 앞자리 후보 — "없어야 한다" 로 적는다
             const uint64 headerHash = bAbsent ? ShaderCookStampInternal::kAbsentHash : ContentHash::computeFile( header );
             if ( bAbsent == false && headerHash == ShaderCookStampInternal::kAbsentHash )
             {
@@ -853,7 +853,7 @@ namespace sw
             text += header;
             text += '\n';
         }
-        return FileUtil::writeTextFile( recordPath, text );
+        return FileUtil::writeTextFile( FileUtil::toDiskPath( recordPath ), text );
     }
 
     bool ShaderCookStamp::readIncludeRecord( string_view recordPath, vector<string>& outListIncludedFile, uint64& outBytecodeHash )
@@ -862,7 +862,7 @@ namespace sw
         outBytecodeHash = 0;
         string text;
         // 기록이 없는 것은 정상 상태다(처음 · 다른 프로세스가 쓰는 중) — "없음" 으로 다시 컴파일한다.
-        if ( FileUtil::readOptionalTextFile( recordPath, text ) != OptionalFileRead::Read || StringUtil::startsWith( text, ShaderCookStampInternal::kIncludeRecordHeader ) == false )
+        if ( FileUtil::readOptionalTextFile( FileUtil::toDiskPath( recordPath ), text ) != OptionalFileRead::Read || StringUtil::startsWith( text, ShaderCookStampInternal::kIncludeRecordHeader ) == false )
             return false;
         const size_t hashBegin = ShaderCookStampInternal::kIncludeRecordHeader.size();
         if ( text.size() < hashBegin + 16 )

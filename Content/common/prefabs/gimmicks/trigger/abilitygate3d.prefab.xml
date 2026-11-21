@@ -1,0 +1,63 @@
+<?asset guid="1ff9de310e857c77af197f8d8261aebf"?>
+<Prefab formatVersion="1" name="TagGate3D">
+	<GameObject _schemaVersion="0" _name="TagGate3D" _bActive="true">
+		<_listComponent>
+			<RigidBodyComponent _localID="7198733165449302788" _componentName="RigidBodyComponent"
+			                    _bActive="true"
+			                    _localPosition="0,0,0"
+			                    _localRotation="0,0,0"
+			                    _localScale="1,1,1"
+			                    _attachOwner="None"
+			                    _attachOwnerID="0"
+			                    _attachComponent="None"
+			                    _bodyType="Static"
+			                    _layer="Default"
+			                    _material="None"
+			                    _mass="0"
+			                    _linearDamping="0.05"
+			                    _angularDamping="0.05"
+			                    _gravityFactor="1"
+			                    _bTrigger="false"
+			                    _bContinuous="false"
+			                    _bLockRotation="false"
+			                    _bInterpolate="true">
+				<_listShape>
+					<PhysicsShapeDesc3D _type="Box"
+					                    _halfExtents="0.5,1.5,0.5"
+					                    _radius="0.5"
+					                    _halfHeight="0.5"
+					                    _localPosition="0,0,0"
+					                    _localRotation="0,0,0"
+					                    _material="None">
+						<_listPoint />
+						<_listIndex />
+					</PhysicsShapeDesc3D>
+				</_listShape>
+			</RigidBodyComponent>
+			<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
+			               _bActive="true"
+			               _localPosition="0,0,0"
+			               _localRotation="0,0,0"
+			               _localScale="1,3,1"
+			               _attachOwner="None"
+			               _attachOwnerID="0"
+			               _attachComponent="#63e709ac676dd304"
+			               _meshID="Cube"
+			               _materialPath="engine/materials/defaultmaterial.material"
+			               _boundsRadius="0.866"
+			               _gpuSpinSeed="0"
+			               _bVisible="true" />
+			<TagGateComponent _localID="13974666249240162694" _componentName="TagGateComponent"
+			                      _bActive="true"
+			                      _openRadius="2"
+			                      _bStaysOpen="true"
+			                      _bPlanar="true">
+				<_requiredTags>
+					<_listTag>
+						<item>Ability.Bomb</item>
+					</_listTag>
+				</_requiredTags>
+			</TagGateComponent>
+		</_listComponent>
+	</GameObject>
+</Prefab>

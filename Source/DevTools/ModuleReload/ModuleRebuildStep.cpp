@@ -15,9 +15,9 @@
 #include "DevTools/ModuleReload/ModuleReloadDriver.h"
 
 #include "Engine/Automation/Scenario/AutomationScenario.h"
-#include "Engine/Automation/Scenario/AutomationStepContext.h"
 #include "Engine/Automation/Scenario/AutomationStepParams.h"
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
+#include "Engine/Automation/Scenario/IAutomationStepContext.h"
 #include "Engine/Foundation/EngineServices.h"
 
 namespace sw
@@ -30,16 +30,16 @@ namespace sw
             static string findBuildDirectory()
             {
                 const string parentDir  = FileUtil::getDirectoryPart( FileUtil::trimTrailingSlashes( ProcessRoots::get()._binary.str() ) );
-                const bool   bBuildTree = FileUtil::isRegularFile( FileUtil::joinPath( parentDir, "build.ninja" ) ) || FileUtil::isRegularFile( FileUtil::joinPath( parentDir, "CMakeCache.txt" ) );
+                const bool   bBuildTree = FileUtil::isRegularFile( FileUtil::toDiskPath( FileUtil::joinPath( parentDir, "build.ninja" ) ) ) || FileUtil::isRegularFile( FileUtil::toDiskPath( FileUtil::joinPath( parentDir, "CMakeCache.txt" ) ) );
                 return bBuildTree ? parentDir : string{};
             }
 
             /** @brief 판 머리를 판 글로 덮습니다(원본은 실행기에 맡긴다 — 시나리오 끝에 되돌린다). 실패하면 그 까닭입니다. */
-            static expected<void> applyVariant( AutomationStepContext& context, string_view variantName )
+            static expected<void> applyVariant( IAutomationStepContext& context, string_view variantName )
             {
                 const string variantPath = FileUtil::joinPath( ProcessRoots::get()._project.str(), AutomationReloadSteps::kVariantFile );
                 string       tableText;
-                if ( FileUtil::readTextFile( variantPath, tableText ) == false )
+                if ( FileUtil::readTextFile( FileUtil::toDiskPath( variantPath ), tableText ) == false )
                     return unexpected( Error{ ErrorKind::NotFound, "the module rebuild variant table could not be read", variantPath } );
                 const expected<ModuleRebuildVariant> variant = AutomationReloadSteps::parseVariant( tableText, variantPath, variantName );
                 if ( variant.has_value() == false )
@@ -50,15 +50,15 @@ namespace sw
                 // 판 머리는 CMake 가 기본 글로 만든다(추적 소스를 고치지 않으려고 빌드 트리에 둔다) — 없으면 판을 받는 소스가 없는 빌드다. 지어낸 자리에 쓰지 않는다.
                 const string headerPath = FileUtil::joinPath( FileUtil::joinPath( buildDir, "generated" ), variant->_header );
                 string       original;
-                if ( FileUtil::isRegularFile( headerPath ) == false || FileUtil::readTextFile( headerPath, original ) == false )
+                if ( FileUtil::isRegularFile( FileUtil::toDiskPath( headerPath ) ) == false || FileUtil::readTextFile( FileUtil::toDiskPath( headerPath ), original ) == false )
                     return unexpected( Error{ ErrorKind::NotFound, "the variant header is not in the build tree (does CMake generate it for this module?)", headerPath } );
                 context.restoreFileAtEnd( headerPath, std::move( original ) );
-                if ( FileUtil::writeTextFile( headerPath, variant->_text ) == false )
+                if ( FileUtil::writeTextFile( FileUtil::toDiskPath( headerPath ), variant->_text ) == false )
                     return unexpected( Error{ ErrorKind::ExternalFailure, "could not write the variant header", headerPath } );
                 return {};
             }
 
-            static bool runRebuildModule( AutomationStepContext& context, const AutomationStep& step )
+            static bool runRebuildModule( IAutomationStepContext& context, const AutomationStep& step )
             {
                 const AutomationRebuildModuleParams params  = step.readValidatedProperties<AutomationRebuildModuleParams>();
                 ModuleReloadDriver* const           pDriver = engine::findSubsystem<ModuleReloadDriver>();

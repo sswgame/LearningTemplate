@@ -1,0 +1,11 @@
+<?asset guid="71bab12868aa71f12b692901833399fc"?>
+<Prefab formatVersion="1" _base="common/prefabs/gimmicks/traversal/ladder.prefab.xml" name="Rope">
+	<PrefabOverrides>
+		<Override key="#edcbb43a3dfead50">
+			<BoxCollider2DComponent _offsetScale="0.5,6" />
+		</Override>
+		<Override key="#88f2dfc66597fcc0">
+			<ClimbZoneComponent _bSwing="true" />
+		</Override>
+	</PrefabOverrides>
+</Prefab>

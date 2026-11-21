@@ -11,7 +11,7 @@
 #include "Core/Delegate/Delegate.h"
 #include "Core/Delegate/DelegateSlot.h"
 #include "Core/Foundation/Macros.h"
-#include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/Subsystem.h"
 
 #include "Engine/Foundation/HostSubsystemNames.h"
 #include "Engine/Module/HostInterfaces.h"

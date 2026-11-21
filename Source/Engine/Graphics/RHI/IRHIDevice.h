@@ -484,7 +484,7 @@ namespace sw
          * @details 비가상 함수다. 버전 대조와 종류 확인은 Engine 이 이 한 곳에서 하고, 백엔드는 `queryNativeHandlesInternal` 만 채운다.
          *          핸들은 백엔드마다 뜻이 다른 `void*` 라서(`_pDevice` 는 `ID3D11Device*` · `ID3D12Device*` · `VkDevice` · GL 표시 장치) 종류를 확인하지 않고
          *          캐스트하면 다른 백엔드의 값을 읽는다. 그래서 핸들만 꺼내는 길(`getNativeDevice` 등)은 보호 구역에만 두고 바깥은 이 함수로만 읽는다
-         *          — `IWindow::tryGetWin32Handle` 의 디바이스판이다. @p expectedBackend 는 호출처가 캐스트할 타입의 백엔드 상수로 적는다(`getBackendType()` 을 넘기지 않는다).
+         *          — `GenericWindow::tryGetWin32Handle` 의 디바이스판이다. @p expectedBackend 는 호출처가 캐스트할 타입의 백엔드 상수로 적는다(`getBackendType()` 을 넘기지 않는다).
          * @return `inoutHandles` 의 `_version` 과 `_byteSize` 가 이 엔진의 `kRHINativeHandlesVersion`, `sizeof( RHINativeHandles )` 와 다르면(따로 빌드한 모듈이
          *         다른 버전의 구조체를 보낸 경우), 백엔드가 @p expectedBackend 가 아니면, 백엔드가 디바이스를 내놓지 못하면 아무것도 쓰지 않고 false 다.
          */

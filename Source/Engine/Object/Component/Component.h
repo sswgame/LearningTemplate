@@ -289,7 +289,7 @@ namespace sw
         float32           _impulse{ 0.0f };          ///< 맞은 바디에 줄 충격량 크기(뉴턴초)
         optional<uint32>  _bodyIndex{};              ///< 래그돌이나 히트박스의 바디 번호(물리 에셋 순서). 없으면 비어 있다
         bool              _bIs2D{ false };           ///< 2D 물리 씬에서 맞았으면 true NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool              _bFatal{ false };          ///< 이 타격으로 죽는다는 판정이다(절단과 래그돌 전환의 신호). 체력을 가진 쪽이 쓰러짐을 정하면 치명 사본을 다시 보낸다(게임 프레임워크 `HealthSourceComponent::deliverFatalHit`) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool              _bFatal{ false };          ///< 이 타격으로 죽는다는 판정이다(절단과 래그돌 전환의 신호). 체력을 가진 쪽이 쓰러짐을 정하면 치명 사본을 다시 보낸다(게임 프레임워크 `IHealthSource::deliverFatalHit`) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw
 
@@ -449,7 +449,7 @@ namespace sw
          */
         virtual void onPostLoad() {}
         // 남의 모듈 타입 객체(어빌리티 · 세트)를 든 컴포넌트는 모듈 내림을 가상 함수로 받지 않는다 — 그 컴포넌트만 `onRegister` 에서
-        // `TypeRegistry::subscribeModuleUnloading` 을 구독한다(`AbilityComponent`). 모든 컴포넌트에 빈 가상 호출을 훑지 않는다.
+        // `TypeRegistry::subscribeModuleUnloading` 을 구독한다(`AbilitySystemComponent`). 모든 컴포넌트에 빈 가상 호출을 훑지 않는다.
         /**
          * @brief 씬 상태 해시(`SceneObjectHash`)에 이 컴포넌트의 시뮬레이션 상태를 접습니다. 기본은 상태 역할 칸(`PROPERTY( RuntimeState )`, 기반부터)을 리플렉션으로 접습니다.
          * @details 두 프로세스가 같은 입력으로 같은 상태가 되었는지 견주는 값이라 게임플레이를 바꾸는 상태(트랜스폼 · 속도 · 난수 상태 · 남은 시간)만 넣는다.
@@ -563,6 +563,12 @@ namespace sw
          *          인라인이다 — 살아 있음은 `TypeInfo` 의 머리(`TypeCastHeader`)라 `TypeInfo.h` 없이 읽는다.
          */
         const TypeInfo* findCachedTypeInfo() const { return _pTypeInfo != nullptr && TypeCastHeader::of( _pTypeInfo ).isAlive() ? _pTypeInfo : getTypeInfo(); }
+        /**
+         * @brief 이 컴포넌트가 (형식 사슬로) 내보내는 리플렉션 인터페이스 @p pInterface 의 포트 주소입니다(`REFLECT_INTERFACE`). 내보내지 않으면 nullptr 입니다.
+         * @details 형식의 합친 인터페이스 표(`TypeInfo::getInterfacesWithBase`)에서 오프셋 하나를 찾는다 — 사슬 걷기가 없다. 형식이 있는 찾기는
+         *          `GameObject::findInterface<I>()` · `ComponentRegistry::getAllInterfaces<I>()` 다(이 함수는 그 둘의 바탕이라 형식을 지운 `void*`).
+         */
+        void* findInterfacePort( const TypeInfo* pInterface ) const;
         /** @brief 소유자 GameObject 를 반환합니다. */
         GameObject* getOwner() const { return _pOwner; }
         /** @brief 소유자 GameObject 의 이름입니다. 소유자가 없으면 빈 이름입니다 — 로그 · 진단이 "어느 오브젝트" 를 적을 때 씁니다. */

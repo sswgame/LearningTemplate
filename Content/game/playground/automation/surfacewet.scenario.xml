@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="96ffc072a9970763b0120c49ef21a97e"?>
 <!--
-  날씨 · 침수 → 젖음, 물 → 씻김(SurfaceExposureComponent) — 무대 maps/surfaceinteraction(Walker 는 SkeletonWarrior, 표면 채널 engine/character/default.surfacechannels.xml).
+  날씨 · 침수 → 젖음, 물 → 씻김(CharacterWetnessComponent) — 무대 maps/surfaceinteraction(Walker 는 SkeletonWarrior, 표면 채널 engine/character/default.surfacechannels.xml).
   ① 맑음: 젖음 0. ② 비(cheat.weather rain): 열린 하늘에서 비 노출 1, 젖음이 오른다(0.2/s − 마름 0.05/s). ③ 지붕 아래(-5,0): 비 노출 0. ④ 맑음: 마른다(감쇠).
   ⑤ 얕은 물(바닥 -0.3 m): 잠긴 비율 0.3/1.8 ≈ 0.17. ⑥ 깊은 물(바닥 -1.5 m): 0.83 — 젖음이 빨리 오르고 흙(washPerSecond 0.25)은 씻기며 상처(씻김 0)는 남는다. ⑦ 물 밖: 비율 0.
   값으로 판정한다(골든 없음). 실행: App -scenario=game/playground/automation/surfacewet.scenario.xml -unattended (체인: ctest -R Scenario.playground)

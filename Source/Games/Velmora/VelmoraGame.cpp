@@ -18,8 +18,8 @@
 #include "GameFramework/Kits/Genre/Action/ActionCombat/MonsterCatalog.h"
 #include "GameFramework/Runtime/Foundation/Framework/Flow/GameInstance.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
+#include "GameFramework/Runtime/Gameplay/GameState/GameStateComponent.h"
 #include "GameFramework/Runtime/Gameplay/Quest/QuestCatalog.h"
-#include "GameFramework/Runtime/Gameplay/SessionState/SessionStateComponent.h"
 
 #include "Games/Velmora/VelmoraGameModeComponent.h"
 #include "Games/Velmora/VelmoraRegionCatalog.h"
@@ -61,7 +61,7 @@ namespace sw
     {
         // 판 상태(퀘스트 일지 · 깃발 · 지갑)는 판 상태 컴포넌트가, 몸 · 자리 · 일어설 지역은 디렉터가 싣는다.
         getStateSnapshot().registerGameMode<VelmoraGameModeComponent>();
-        getStateSnapshot().registerStatefulComponent<SessionStateComponent>();
+        getStateSnapshot().registerStatefulComponent<GameStateComponent>();
     }
 
     VelmoraGame::~VelmoraGame() = default;

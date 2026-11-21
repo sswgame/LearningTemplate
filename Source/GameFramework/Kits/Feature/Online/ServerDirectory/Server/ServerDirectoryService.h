@@ -34,7 +34,7 @@
 namespace sw
 {
     class EphemeralStoreRouter;
-    class IServiceStore;
+    class ServiceStore;
     class ServerBus;
 
     /** @brief 서버 디렉터리 설정입니다. */
@@ -53,7 +53,7 @@ namespace sw
     /** @brief 빌려 쓰는 객체들입니다. 로직보다 오래 살아야 합니다. */
     struct ServerDirectoryDependencies
     {
-        IServiceStore*        _pStore{ nullptr };  ///< 필수
+        ServiceStore*         _pStore{ nullptr };  ///< 필수
         EphemeralStoreRouter* _pRouter{ nullptr }; ///< 필수이다. 서버 목록에 쓴다
         ServerBus*            _pBus{ nullptr };    ///< 서버가 한 대이면 null 이다. 바꾼 뒤 알리기만 하며 받기는 바인딩이 구독한다
     };

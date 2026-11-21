@@ -5,8 +5,8 @@
  */
 #include "pch.h"
 
+#include "Editor/Common/GUI/Panel/EditorDocumentPanelBase.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
-#include "Editor/Common/GUI/Panel/IEditorDocumentPanel.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorWatchSupport.h"
@@ -23,7 +23,7 @@ namespace sw::editor
             EditorContext* pContext = getWatchContext( __func__ );
             if ( pContext == nullptr )
                 return false;
-            const IEditorPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanelByID( gv_editorWatchPanel.get() );
+            const EditorPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanelByID( gv_editorWatchPanel.get() );
             if ( pPanel == nullptr )
                 return false;
             outValue = pPanel->isOpen() ? 1.0 : 0.0;
@@ -36,7 +36,7 @@ namespace sw::editor
             EditorContext* pContext = getWatchContext( __func__ );
             if ( pContext == nullptr )
                 return false;
-            const IEditorPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanelByID( gv_editorWatchPanel.get() );
+            const EditorPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanelByID( gv_editorWatchPanel.get() );
             if ( pPanel == nullptr )
                 return false;
             outValue = pPanel->hasUnsavedDocument() ? 1.0 : 0.0;
@@ -49,8 +49,8 @@ namespace sw::editor
             EditorContext* pContext = getWatchContext( __func__ );
             if ( pContext == nullptr )
                 return false;
-            const IEditorPanel*         pPanel    = pContext->getSubsystem<EditorPanelManager>().findPanelByID( gv_editorWatchPanel.get() );
-            const IEditorDocumentPanel* pDocument = pPanel != nullptr ? pPanel->asDocumentPanel() : nullptr;
+            const EditorPanel*             pPanel    = pContext->getSubsystem<EditorPanelManager>().findPanelByID( gv_editorWatchPanel.get() );
+            const EditorDocumentPanelBase* pDocument = pPanel != nullptr ? pPanel->asDocumentPanel() : nullptr;
             if ( pDocument == nullptr )
                 return false;
             outValue = static_cast<float64>( pDocument->getLastCaptureMicroseconds() );

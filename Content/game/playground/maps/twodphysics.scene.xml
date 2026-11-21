@@ -115,7 +115,7 @@
 						</_listButton>
 						<_listAnalog />
 					</PawnComponent>
-					<CharacterPawnMovement2DComponent _localID="4029798149376496327" _jumpButton="Jump" _walkSpeed="5" _acceleration="40" _deceleration="50" _jumpSpeed="7" />
+					<CharacterMovement2DComponent _localID="4029798149376496327" _jumpButton="Jump" _walkSpeed="5" _acceleration="40" _deceleration="50" _jumpSpeed="7" />
 				</_listComponent>
 			</GameObject>
 		</entity>

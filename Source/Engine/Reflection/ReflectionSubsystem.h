@@ -8,7 +8,7 @@
 #pragma once
 #include "Core/Foundation/Macros.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/Subsystem.h"
 
 namespace sw
 {
@@ -18,7 +18,7 @@ namespace sw
      * @class ReflectionSubsystem
      * @brief 타입 등록기를 모아 타입 표를 채우는 서브시스템입니다. 설정 · 에셋 · 씬 객체가 이 뒤에 서서 먼저 소멸한다.
      */
-    class SW_API ReflectionSubsystem : public ISubsystem
+    class SW_API ReflectionSubsystem : public Subsystem
     {
     public:
         /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */

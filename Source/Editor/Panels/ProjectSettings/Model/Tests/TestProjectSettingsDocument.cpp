@@ -37,16 +37,16 @@ namespace
             OverriddenProject project;
             project._basePath     = FileUtil::joinPath( root, "Config/Engine/EngineConfig.json" );
             project._overridePath = FileUtil::joinPath( root, PlatformConfigOverride::makeEngineConfigPath( "Test" ) );
-            SW_EXPECT_TRUE( FileUtil::readTextFile( FileUtil::joinPath( ProcessRoots::get()._project.str(), "Config/Engine/EngineConfig.json" ), project._baseText ) );
-            SW_EXPECT_TRUE( FileUtil::ensureParentDirectoryExists( project._basePath ) && FileUtil::writeTextFile( project._basePath, project._baseText ) );
-            SW_EXPECT_TRUE( FileUtil::ensureParentDirectoryExists( project._overridePath ) && FileUtil::writeTextFile( project._overridePath, kOverrideText ) );
+            SW_EXPECT_TRUE( FileUtil::readTextFile( FileUtil::toDiskPath( FileUtil::joinPath( ProcessRoots::get()._project.str(), "Config/Engine/EngineConfig.json" ) ), project._baseText ) );
+            SW_EXPECT_TRUE( FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( project._basePath ) ) && FileUtil::writeTextFile( FileUtil::toDiskPath( project._basePath ), project._baseText ) );
+            SW_EXPECT_TRUE( FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( project._overridePath ) ) && FileUtil::writeTextFile( FileUtil::toDiskPath( project._overridePath ), kOverrideText ) );
             return project;
         }
 
         static EngineConfig readEngineConfig( const string& path )
         {
             string text;
-            SW_EXPECT_TRUE( FileUtil::readTextFile( path, text ) );
+            SW_EXPECT_TRUE( FileUtil::readTextFile( FileUtil::toDiskPath( path ), text ) );
             EngineConfig config;
             SW_EXPECT_TRUE( ConfigManager::readConfigJSON( config, text, path.c_str() ) );
             return config;
@@ -85,7 +85,7 @@ SW_TEST_CASE( ProjectSettingsDocumentTest, SavingTheBaseDoesNotLeakThePlatformOv
     SW_EXPECT_EQUAL( editedDepth, baseAfter._dataInheritanceMaxDepth );
     SW_EXPECT_EQUAL( baseStep, baseAfter._maxFixedStepPerFrame );
     string overrideAfter;
-    SW_REQUIRE_TRUE( FileUtil::readTextFile( project._overridePath, overrideAfter ) );
+    SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::toDiskPath( project._overridePath ), overrideAfter ) );
     SW_EXPECT_EQUAL( string( Util::kOverrideText ), overrideAfter );
 }
 
@@ -106,9 +106,9 @@ SW_TEST_CASE( ProjectSettingsDocumentTest, SavingTheOverrideLeavesTheBaseUntouch
     SW_REQUIRE_TRUE( table.saveDocument() );
 
     string overrideAfter;
-    SW_REQUIRE_TRUE( FileUtil::readTextFile( project._overridePath, overrideAfter ) );
+    SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::toDiskPath( project._overridePath ), overrideAfter ) );
     SW_EXPECT_EQUAL( string( "{\n    \"_maxFixedStepPerFrame\": 3\n}\n" ), overrideAfter );
     string baseAfter;
-    SW_REQUIRE_TRUE( FileUtil::readTextFile( project._basePath, baseAfter ) );
+    SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::toDiskPath( project._basePath ), baseAfter ) );
     SW_EXPECT_TRUE( baseAfter == project._baseText );
 }

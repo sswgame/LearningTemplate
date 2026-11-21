@@ -5,7 +5,7 @@
 #include "Core/Log/Logger.h"
 
 #include "DevTools/AssetReload/FileWatchDispatcher.h"
-#include "DevTools/FileWatch/IFileWatcher.h"
+#include "DevTools/FileWatch/FileWatcher.h"
 
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Foundation/EngineServices.h"

@@ -36,9 +36,9 @@ namespace sw
 
         [[nodiscard]] expected<void> initialize( OnlineServerRuntimeConfig settings, UnixMilliseconds nowMs ) { return _runtime.initialize( std::move( settings ), nowMs ); }
 
-        uint16         getListenPort() const override { return _runtime.getListenPort(); }
-        void           update( UnixMilliseconds nowMs ) override { _runtime.update( nowMs ); }
-        IServiceStore* findStore() const override { return _runtime.getContext()._pStore; }
+        uint16        getListenPort() const override { return _runtime.getListenPort(); }
+        void          update( UnixMilliseconds nowMs ) override { _runtime.update( nowMs ); }
+        ServiceStore* findStore() const override { return _runtime.getContext()._pStore; }
 
     private:
         OnlineServerRuntime _runtime;

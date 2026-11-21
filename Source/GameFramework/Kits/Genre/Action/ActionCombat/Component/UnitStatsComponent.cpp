@@ -104,7 +104,7 @@ namespace sw
         _defense              = defense;
         _moveSpeed            = moveSpeed;
         _maxInvincibilityTime = maxInvincibilityTime;
-        notifyHealthChanged( true );
+        IHealthSource::notifyHealthChanged( _healthSourcePort, getOwner(), true );
     }
 
     void UnitStatsComponent::setStats( const MonsterStatsDef& monsterStats )
@@ -116,7 +116,7 @@ namespace sw
     {
         Component::onBeginPlay();
         setTickGroup( TickGroup::DuringPhysics );
-        notifyHealthChanged( true );
+        IHealthSource::notifyHealthChanged( _healthSourcePort, getOwner(), true );
     }
 
     void UnitStatsComponent::onTick( TickContext& context )
@@ -142,12 +142,12 @@ namespace sw
         }
         // 맞음 정보가 없는 피해(투사체 · 게임 코드)로 쓰러져도 치명 신호를 낸다 — 바디가 없어 래그돌은 충격량 없이 넘어가고 절단은 자르지 않는다.
         if ( applyTakeDamage( amount, instigator ) )
-            deliverFatalHit( HitInfo{} );
+            IHealthSource::deliverFatalHit( getOwner(), HitInfo{} );
     }
 
     void UnitStatsComponent::onRegister( GameObjectManager& manager )
     {
-        HealthSourceComponent::onRegister( manager );
+        Component::onRegister( manager );
         _hitSubscription = GameObjectEvents::listen<&UnitStatsComponent::receiveHit>( *this, &GameObjectEvents::_hitReceived );
     }
 
@@ -165,7 +165,7 @@ namespace sw
         const int32 amount = static_cast<int32>( MathUtil::round( hit._damage * hit._damageMultiplier ) );
         // 이 맞음으로 쓰러졌으면 래그돌 · 절단에 치명 신호를 낸다.
         if ( applyTakeDamage( amount, hit._pInstigator != nullptr ? hit._pInstigator->getHandle() : GameObjectHandle{} ) )
-            deliverFatalHit( hit );
+            IHealthSource::deliverFatalHit( getOwner(), hit );
     }
 
     void UnitStatsComponent::heal( int32 amount )
@@ -217,7 +217,7 @@ namespace sw
         _damageAppliedMulticast.broadcast( event );
         GameEventUtil::send( event );
 
-        notifyHealthChanged( false );
+        IHealthSource::notifyHealthChanged( _healthSourcePort, getOwner(), false );
         if ( _bShowDamageNumbers )
             spawnDamageNumber( actualDamage );
         return _bIsDead;
@@ -231,7 +231,7 @@ namespace sw
         _hp += amount;
         if ( _hp > _maxHP )
             _hp = _maxHP;
-        notifyHealthChanged( false );
+        IHealthSource::notifyHealthChanged( _healthSourcePort, getOwner(), false );
     }
 
     HealthReading UnitStatsComponent::getHealthReading() const
@@ -277,4 +277,9 @@ namespace sw
     } // namespace
 
     SW_AUTOMATION_QUERY_WATCH( unitStatsHP, "UnitStats.HP", "Current HP of the target's UnitStatsComponent", &UnitStatsWatchesInternal::readHP, true, false );
+
+    HealthReading UnitStatsComponent::HealthSourcePort::getHealthReading() const
+    {
+        return getPortOwner<const UnitStatsComponent>( *this, offsetof( UnitStatsComponent, _healthSourcePort ) ).getHealthReading();
+    }
 } // namespace sw

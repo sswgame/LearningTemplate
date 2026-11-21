@@ -9,7 +9,7 @@
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/Commands/EditorBackgroundIO.h"
-#include "Editor/Common/GUI/IEditorPopup.h"
+#include "Editor/Common/GUI/EditorPopup.h"
 #include "Editor/Common/Input/EditorSearchItem.h"
 
 namespace sw::editor
@@ -20,7 +20,7 @@ namespace sw::editor
      * @details 항목은 Command Palette 와 같은 검색 제공자(`EditorSearchItem`)가 모은다 — 두 팝업은 진입점과 제공자 순서만 다르다.
      *          에셋 색인이 오기 전에는 명령 · 창을 섞지 않는다(파일 이름을 치고 바로 누른 Enter 가 색인을 기다린다).
      */
-    class QuickLauncherPopup : public IEditorPopup
+    class QuickLauncherPopup : public EditorPopup
     {
     public:
         /** @brief 팝업 매니저에서 이 팝업을 찾는 id 입니다. */

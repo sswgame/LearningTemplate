@@ -7,7 +7,7 @@
 #include "Core/Container/string.h"
 #include "Core/Foundation/Types.h"
 
-#include "Editor/Common/GUI/Panel/IEditorPanel.h"
+#include "Editor/Common/GUI/Panel/EditorPanel.h"
 
 #include "GameFramework/Kits/Feature/Online/Admin/Runtime/AdminProtocol.h"
 
@@ -17,7 +17,7 @@ namespace sw::editor
      * @class AdminToolPanel
      * @brief GM 도구 패널입니다. 입력 칸의 값만 들고 있고 결과는 세션에서 읽어 그립니다.
      */
-    class AdminToolPanel final : public IEditorPanel
+    class AdminToolPanel final : public EditorPanel
     {
     public:
         /** @brief 패널 id 입니다. 등록(`SW_EDITOR_PANEL`)과 열기(`EditorPanelManager::setPanelOpen<…>`)가 모두 이 상수에서 온다. */

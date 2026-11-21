@@ -23,8 +23,8 @@ namespace sw::editor
      */
     struct EditorPanelCommandStack
     {
-        uint32        _windowID{ 0 };              ///< 패널 창의 ImGui 창 id(`IEditorPanel::getWindowID`)
-        CommandStack* _pStack{ nullptr };          ///< 그 창이 답한 스택(`IEditorPanel::findPanelCommandStack`). nullptr 이면 메인 스택
+        uint32        _windowID{ 0 };              ///< 패널 창의 ImGui 창 id(`EditorPanel::getWindowID`)
+        CommandStack* _pStack{ nullptr };          ///< 그 창이 답한 스택(`EditorPanel::findPanelCommandStack`). nullptr 이면 메인 스택
         bool          _bKeepFocusedStack{ false }; ///< NOLINT(sw-bool-flag): 집합체다 — 이 창은 겨눈 스택을 바꾸지 않는다(History, `shouldKeepFocusedCommandStack`)
         string_view   _panelID{};                  ///< 패널 등록 id(패널 매니저의 항목 글 — 이 목록을 쓰는 동안 산다). 앞 포커스 패널을 이 id 로 찾는다
     };

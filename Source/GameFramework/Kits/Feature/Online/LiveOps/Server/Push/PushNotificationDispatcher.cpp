@@ -218,7 +218,7 @@ namespace sw
     {
     }
 
-    void PushNotificationDispatcher::initialize( IServiceStore* pStore, const PushDispatcherConfig& settings )
+    void PushNotificationDispatcher::initialize( ServiceStore* pStore, const PushDispatcherConfig& settings )
     {
         SW_ASSERT( pStore != nullptr );
         _store.bindStore( pStore );

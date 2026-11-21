@@ -109,6 +109,73 @@ namespace sw
         {
             removeEntry( computeTypeKey( T::StaticType() ), channel, pComponent );
         }
+        /**
+         * @brief 한 인터페이스 칸의 목록을 `I*`(각 컴포넌트의 포트)로 보는 창입니다. 등록 · 해제가 일어나면 버립니다.
+         * @details 칸에는 컴포넌트가 들고, 항목마다 그 컴포넌트의 인터페이스 표에서 포트를 찾는다(`Component::findInterfacePort`).
+         */
+        template <typename I>
+        class InterfaceView
+        {
+        public:
+            /** @brief 항목을 `I*` 로 내는 반복자입니다. */
+            class Iterator
+            {
+            public:
+                Iterator( const Entry* pEntry, const TypeInfo* pInterface )
+                    : _pEntry{ pEntry }
+                    , _pInterface{ pInterface }
+                {
+                }
+                I*        operator*() const { return static_cast<I*>( findPort( *_pEntry, _pInterface ) ); }
+                Iterator& operator++()
+                {
+                    ++_pEntry;
+                    return *this;
+                }
+                bool operator==( const Iterator& other ) const { return _pEntry == other._pEntry; }
+                bool operator!=( const Iterator& other ) const { return _pEntry != other._pEntry; }
+
+            private:
+                const Entry*    _pEntry;
+                const TypeInfo* _pInterface;
+            };
+
+            InterfaceView( const vector<Entry>& listEntry, const TypeInfo* pInterface )
+                : _pListEntry{ &listEntry }
+                , _pInterface{ pInterface }
+            {
+            }
+            Iterator begin() const { return Iterator( _pListEntry->data(), _pInterface ); }
+            Iterator end() const { return Iterator( _pListEntry->data() + _pListEntry->size(), _pInterface ); }
+            size_t   size() const { return _pListEntry->size(); }
+            bool     empty() const { return _pListEntry->empty(); }
+            /** @brief 등록 순서로 @p index 번째의 포트입니다. */
+            I* operator[]( size_t index ) const { return static_cast<I*>( findPort( ( *_pListEntry )[index], _pInterface ) ); }
+            /** @brief 등록 순서로 @p index 번째 항목의 컴포넌트입니다(로그 · 핸들용 — 계약은 `I*` 로 쓴다). */
+            const Component* getComponent( size_t index ) const { return ( *_pListEntry )[index]._pComponent; }
+
+        private:
+            const vector<Entry>* _pListEntry;
+            const TypeInfo*      _pInterface;
+        };
+
+        /**
+         * @brief @p component 의 형식이 내보내는 인터페이스(`REFLECT_INTERFACE`, 조상 포함)마다 그 인터페이스 칸(0)에 올립니다. `Component::dispatchRegister` 가 부른다.
+         * @details 언리얼 `UInterface` 로 찾는 쪽이 객체를 훑는 대신 등록받은 목록을 쓰는 자리다 — 인터페이스로 찾는 씬 전체 조회(`getAllInterfaces`)가 씬을 훑지 않는다.
+         */
+        void addInterfaces( Component& component );
+        /** @brief `addInterfaces` 의 반대입니다. 멱등입니다. `Component::dispatchUnregister` 가 부른다. */
+        void removeInterfaces( const Component& component );
+        /** @brief 항목 컴포넌트의 인터페이스 @p pInterface 포트입니다(`Component::findInterfacePort` — 이 헤더는 `Component` 를 전방 선언만 한다). */
+        static void* findPort( const Entry& entry, const TypeInfo* pInterface );
+        /** @brief 인터페이스 I 를 내보내는 컴포넌트들의 포트(등록 순서)입니다. 없으면 빈 창입니다. */
+        template <typename I>
+        InterfaceView<I> getAllInterfaces() const
+        {
+            const TypeInfo* pInterface = I::StaticType();
+            return InterfaceView<I>( findEntries( computeTypeKey( pInterface ), 0 ), pInterface );
+        }
+
         /** @brief 타입 T 의 칸 @p channel 에 등록된 것(등록 순서)입니다. 없으면 빈 창입니다. */
         template <typename T>
         View<T> getAll( uint32 channel = 0 ) const

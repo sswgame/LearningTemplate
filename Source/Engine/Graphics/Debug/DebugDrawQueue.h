@@ -11,8 +11,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Name/hashed_string.h"
-#include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/ServiceSlot.h"
+#include "Core/Subsystem/Subsystem.h"
 
 namespace sw
 {
@@ -68,7 +68,7 @@ namespace sw
      *          - 넣기는 어느 스레드에서 해도 됩니다(병렬 onTick). `endFrame` 과 `getVisible*` 는 게임 스레드에서만 부릅니다.
      *          - 2D 는 Z 가 같은 평면의 도형입니다. 반 크기 중 0 인 축이 있는 상자는 사각형 하나(선 넷)로 펼칩니다.
      */
-    class SW_API DebugDrawQueue : public ISubsystem
+    class SW_API DebugDrawQueue : public Subsystem
     {
     public:
         /** @brief 서브시스템 이름입니다. 초기화하거나 종료할 것이 없고, 수명만 컬렉션이 정합니다. 서비스 범위는 엔진 범위보다 먼저 생성되고 나중에 사라집니다. */

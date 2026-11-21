@@ -28,7 +28,7 @@ namespace sw
 {
     enum class ServiceStoreResult : uint8;
 
-    class IServiceStore;
+    class ServiceStore;
 
     /** @brief 발송기 설정입니다. */
     struct PushDispatcherConfig
@@ -79,7 +79,7 @@ namespace sw
         PushNotificationDispatcher& operator=( const PushNotificationDispatcher& ) = delete;
 
         /** @brief @p pStore 는 빌려 씁니다. 맡긴 작업은 저장소의 `shutdown` 과 `pollCompletions` 가 회수하므로 이 객체는 그때까지 살아 있어야 합니다. */
-        void initialize( IServiceStore* pStore, const PushDispatcherConfig& settings );
+        void initialize( ServiceStore* pStore, const PushDispatcherConfig& settings );
         /** @brief 제공자를 등록합니다. 빌려 쓰는 포인터이며 같은 id 가 있으면 false 를 반환합니다. */
         [[nodiscard]] bool registerProvider( IPushNotificationProvider* pProvider );
 

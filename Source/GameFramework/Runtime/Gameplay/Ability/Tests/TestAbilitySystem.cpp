@@ -7,8 +7,8 @@
 
 #include "GameFramework/Runtime/Gameplay/Ability/Ability.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityCatalog.h"
-#include "GameFramework/Runtime/Gameplay/Ability/AbilityComponent.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityEffect.h"
+#include "GameFramework/Runtime/Gameplay/Ability/AbilitySystemComponent.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AttributeSet.h"
 #include "GameFramework/Runtime/Gameplay/Ability/MovementConstraint.h"
 #include "GameFramework/Runtime/Gameplay/Ability/TagCountTable.h"
@@ -73,9 +73,9 @@ namespace
     /** @brief 어트리뷰트 세트를 붙인 오브젝트 하나입니다. */
     struct AbilityFixture
     {
-        GameObjectManager _manager;
-        AbilityComponent* _pAbilities{ nullptr };
-        AttributeSet*     _pSet{ nullptr };
+        GameObjectManager       _manager;
+        AbilitySystemComponent* _pAbilities{ nullptr };
+        AttributeSet*           _pSet{ nullptr };
 
         static inline const hashed_string kHealth{ "Health" };
         static inline const hashed_string kMaxHealth{ "MaxHealth" };
@@ -84,7 +84,7 @@ namespace
 
         AbilityFixture()
         {
-            _pAbilities                   = _manager.createGameObject( hashed_string( "Hero" ) )->addComponent<AbilityComponent>();
+            _pAbilities                   = _manager.createGameObject( hashed_string( "Hero" ) )->addComponent<AbilitySystemComponent>();
             unique_ptr<AttributeSet> pSet = make_unique<AttributeSet>();
             pSet->defineAttribute( kHealth, 100.0f );
             pSet->defineAttribute( kMaxHealth, 100.0f );
@@ -98,7 +98,7 @@ namespace
 
         ActiveEffectHandle apply( const shared_ptr<AbilityEffectDef>& pDef, int32 level = 1 ) { return _pAbilities->applyGameplayEffectSpecToSelf( _pAbilities->makeOutgoingSpec( pDef, level ) ); }
 
-        ProbeAbility& give( const AbilityConfig& config = {}, int32 inputID = AbilityComponent::kNoInputID )
+        ProbeAbility& give( const AbilityConfig& config = {}, int32 inputID = AbilitySystemComponent::kNoInputID )
         {
             unique_ptr<ProbeAbility> pAbility = make_unique<ProbeAbility>();
             ProbeAbility&            ability  = *pAbility;
@@ -159,7 +159,7 @@ SW_TEST_CASE( AbilityAttributeTest, BaseChangesReachCurrentAndListeners )
     float32      seenOld      = 0.0f;
     float32      seenNew      = 0.0f;
     uint32       count        = 0;
-    Subscription subscription = rig._pAbilities->registerAttributeChanged( Rig::kMana, SW_DELEGATE_LAMBDA( AbilityComponent::AttributeChangedDelegate, [&]( const AttributeChangeData& data )
+    Subscription subscription = rig._pAbilities->registerAttributeChanged( Rig::kMana, SW_DELEGATE_LAMBDA( AbilitySystemComponent::AttributeChangedDelegate, [&]( const AttributeChangeData& data )
     {
         seenOld = data._oldValue;
         seenNew = data._newValue;
@@ -228,7 +228,7 @@ SW_TEST_CASE( AbilityEffectTest, InstantEffectsWriteTheBase )
 
 SW_TEST_CASE( AbilityEffectTest, MissingAttributeIsWarnedAndSkipped )
 {
-    SW_EXPECT_LOG( "AbilityComponent.EffectModifiesWhichObject" );
+    SW_EXPECT_LOG( "AbilitySystemComponent.EffectModifiesWhichObject" );
     Rig  rig;
     auto pDef = Rig::makeEffect( EffectDurationPolicy::Instant );
     Rig::addModifier( *pDef, hashed_string( "Nope" ), AttributeModOp::Add, 1.0f );
@@ -263,7 +263,7 @@ SW_TEST_CASE( AbilityEffectTest, MagnitudeComesFromAttributesAndCallers )
 
 SW_TEST_CASE( AbilityEffectTest, UnsetCallerMagnitudeIsWarnedAsZero )
 {
-    SW_EXPECT_LOG( "AbilityComponent.EffectSetByCallerNotSet" );
+    SW_EXPECT_LOG( "AbilitySystemComponent.EffectSetByCallerNotSet" );
     Rig                   rig;
     auto                  pDef = Rig::makeEffect( EffectDurationPolicy::Instant );
     AbilityEffectModifier byCaller;
@@ -451,12 +451,12 @@ SW_TEST_CASE( AbilityEffectTest, EffectLogKeepsSourceAndRemovalCause )
     SW_EXPECT_TRUE( listLog[0]._sourceName == hashed_string( "volume:Swamp" ) );
     SW_EXPECT_TRUE( listLog[1]._kind == AbilityEffectLogKind::RemovedExplicitly );
 
-    for ( uint32 index = 0; index < AbilityComponent::kEffectLogCapacity; ++index )
+    for ( uint32 index = 0; index < AbilitySystemComponent::kEffectLogCapacity; ++index )
     {
         (void)rig.apply( Rig::makeEffect( EffectDurationPolicy::Infinite ) );
     }
     rig._pAbilities->collectEffectLog( listLog );
-    SW_EXPECT_EQUAL( size_t( AbilityComponent::kEffectLogCapacity ), listLog.size() );
+    SW_EXPECT_EQUAL( size_t( AbilitySystemComponent::kEffectLogCapacity ), listLog.size() );
     SW_EXPECT_TRUE( listLog[0]._kind == AbilityEffectLogKind::Applied );
 }
 
@@ -545,7 +545,7 @@ SW_TEST_CASE( AbilityEffectTest, InvulnerabilityBlocksHealthLossAndItsCue )
     Rig          rig;
     const TagID  cue          = "Test.Cue.Hit"_tag;
     uint32       cues         = 0;
-    Subscription subscription = rig._pAbilities->registerGameplayCue( SW_DELEGATE_LAMBDA( AbilityComponent::AbilityPresentationDelegate, [&]( const AbilityPresentationEvent& )
+    Subscription subscription = rig._pAbilities->registerGameplayCue( SW_DELEGATE_LAMBDA( AbilitySystemComponent::AbilityPresentationDelegate, [&]( const AbilityPresentationEvent& )
     { ++cues; } ) );
     auto         pHit         = Rig::makeEffect( EffectDurationPolicy::Instant );
     pHit->_cueTags            = Util::makeTags( { cue } );
@@ -553,7 +553,7 @@ SW_TEST_CASE( AbilityEffectTest, InvulnerabilityBlocksHealthLossAndItsCue )
     (void)rig.apply( pHit );
     SW_EXPECT_EQUAL( 1u, cues );
 
-    rig._pAbilities->getOwnedTagCounts().updateCount( AbilityComponent::getInvulnerableTag(), 1 );
+    rig._pAbilities->getOwnedTagCounts().updateCount( AbilitySystemComponent::getInvulnerableTag(), 1 );
     SW_EXPECT_TRUE( rig._pAbilities->isInvulnerable() );
     (void)rig.apply( pHit );
     SW_EXPECT_EQUAL( 90.0f, rig.base( Rig::kHealth ) );
@@ -569,7 +569,7 @@ SW_TEST_CASE( AbilityEffectTest, CuesFollowThePhases )
 {
     Rig                              rig;
     vector<AbilityPresentationPhase> listPhase;
-    Subscription                     subscription = rig._pAbilities->registerGameplayCue( SW_DELEGATE_LAMBDA( AbilityComponent::AbilityPresentationDelegate, [&]( const AbilityPresentationEvent& event )
+    Subscription                     subscription = rig._pAbilities->registerGameplayCue( SW_DELEGATE_LAMBDA( AbilitySystemComponent::AbilityPresentationDelegate, [&]( const AbilityPresentationEvent& event )
                         { listPhase.push_back( event._phase ); } ) );
     auto                             pDef         = Rig::makeEffect( EffectDurationPolicy::Infinite );
     pDef->_cueTags                                = Util::makeTags( { "Test.Cue.Aura"_tag } );
@@ -639,7 +639,7 @@ SW_TEST_CASE( AbilityTest, ClearingARunningAbilityCancelsIt )
 {
     Rig                     rig;
     uint32                  endedLater   = 0;
-    Subscription            subscription = rig._pAbilities->registerAbilityEnded( SW_DELEGATE_LAMBDA( AbilityComponent::AbilityEndedDelegate, [&]( const Ability&, bool bCancelled )
+    Subscription            subscription = rig._pAbilities->registerAbilityEnded( SW_DELEGATE_LAMBDA( AbilitySystemComponent::AbilityEndedDelegate, [&]( const Ability&, bool bCancelled )
                { endedLater += bCancelled ? 1u : 0u; } ) );
     ProbeAbility&           ability      = rig.give();
     const AbilitySpecHandle handle       = ability.getSpecHandle();
@@ -747,7 +747,7 @@ SW_TEST_CASE( AbilityTest, InputPressActivatesAndReleaseIsDelivered )
     ProbeAbility& ability = rig.give( AbilityConfig{}, 3 );
     rig._pAbilities->abilityInputPressed( 9 );
     SW_EXPECT_EQUAL( 0u, ability._activatedCount );
-    rig._pAbilities->abilityInputPressed( AbilityComponent::kNoInputID );
+    rig._pAbilities->abilityInputPressed( AbilitySystemComponent::kNoInputID );
     rig._pAbilities->abilityInputPressed( 3 );
     SW_EXPECT_EQUAL( 1u, ability._activatedCount );
     SW_EXPECT_TRUE( ability.isInputPressed() );
@@ -778,9 +778,9 @@ SW_TEST_CASE( AbilityTest, EventSubscribersHearDescendants )
     Rig          rig;
     uint32       parent              = 0;
     uint32       sibling             = 0;
-    Subscription parentSubscription  = rig._pAbilities->registerGameplayEvent( "Test.Event.Hit"_tag, SW_DELEGATE_LAMBDA( AbilityComponent::AbilityEventDelegate, [&]( const AbilityEventData& )
+    Subscription parentSubscription  = rig._pAbilities->registerGameplayEvent( "Test.Event.Hit"_tag, SW_DELEGATE_LAMBDA( AbilitySystemComponent::AbilityEventDelegate, [&]( const AbilityEventData& )
      { ++parent; } ) );
-    Subscription siblingSubscription = rig._pAbilities->registerGameplayEvent( "Test.Event.Heal"_tag, SW_DELEGATE_LAMBDA( AbilityComponent::AbilityEventDelegate, [&]( const AbilityEventData& )
+    Subscription siblingSubscription = rig._pAbilities->registerGameplayEvent( "Test.Event.Heal"_tag, SW_DELEGATE_LAMBDA( AbilitySystemComponent::AbilityEventDelegate, [&]( const AbilityEventData& )
     { ++sibling; } ) );
     (void)rig._pAbilities->handleGameplayEvent( "Test.Event.Hit.Fire"_tag, AbilityEventData{} );
     SW_EXPECT_EQUAL( 1u, parent );
@@ -822,13 +822,13 @@ SW_TEST_CASE( AbilityTest, ActivateByTagAndCancelAll )
 SW_TEST_CASE( AbilityTest, RemovalDuringCallbacksIsDeferred )
 {
     Rig                     rig;
-    AbilityComponent*       pAbilities   = rig._pAbilities;
+    AbilitySystemComponent* pAbilities   = rig._pAbilities;
     uint32                  ends         = 0;
     ProbeAbility&           first        = rig.give();
     ProbeAbility&           second       = rig.give();
     const AbilitySpecHandle firstHandle  = first.getSpecHandle();
     const AbilitySpecHandle secondHandle = second.getSpecHandle();
-    Subscription            subscription = pAbilities->registerAbilityEnded( SW_DELEGATE_LAMBDA( AbilityComponent::AbilityEndedDelegate, [&, pAbilities, secondHandle]( const Ability&, bool )
+    Subscription            subscription = pAbilities->registerAbilityEnded( SW_DELEGATE_LAMBDA( AbilitySystemComponent::AbilityEndedDelegate, [&, pAbilities, secondHandle]( const Ability&, bool )
                {
         ++ends;
         (void)pAbilities->clearAbility( secondHandle );

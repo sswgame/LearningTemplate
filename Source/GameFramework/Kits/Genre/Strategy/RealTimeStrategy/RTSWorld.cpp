@@ -162,7 +162,7 @@ namespace sw
                 return true;
             }
 
-            /** @brief 읽은 플레이어 하나를 봅니다. 팀은 시야 표(`RTSVision::reveal`)를 바로 찌르는 번호입니다. */
+            /** @brief 읽은 플레이어 하나를 봅니다. 팀은 시야 표(`FogOfWar::reveal`)를 바로 찌르는 번호입니다. */
             [[nodiscard]] static bool isPlayerValid( const RTSPlayer& player, int32 teamCount )
             {
                 const bool bTeamValid = 0 <= player._team && player._team < teamCount;
@@ -1897,12 +1897,12 @@ namespace sw
             Internal::serializePlayer( io, player );
         }
         // 시야는 사본에 읽는다 — 뒤가 깨졌으면 상태를 그대로 둬야 한다.
-        RTSVision restoredVision;
+        FogOfWar restoredVision;
         if ( io.isReading() )
         {
             restoredVision = _vision;
         }
-        RTSVision& vision = io.isWriting() ? _vision : restoredVision;
+        FogOfWar& vision = io.isWriting() ? _vision : restoredVision;
         io.value( vision );
         FixedStepTimer stepTimer   = _stepTimer;
         float32        time        = _time;

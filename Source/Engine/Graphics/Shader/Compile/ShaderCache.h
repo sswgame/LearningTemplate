@@ -12,8 +12,8 @@
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Macros.h"
-#include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/ServiceSlot.h"
+#include "Core/Subsystem/Subsystem.h"
 #include "Core/Time/BusyClock.h"
 
 #include "Engine/Asset/AssetHandle.h"
@@ -78,7 +78,7 @@ namespace sw
      * @brief 컴파일 결과 디스크 캐시 매니저입니다.
      * @details 엔진에서는 서브시스템 `ShaderCache`(모든 호스트)입니다. 서버는 빈 캐시만 만듭니다(씬 쿠킹의 Headless 가 의존합니다).
      */
-    class SW_API ShaderCache : public ISubsystem
+    class SW_API ShaderCache : public Subsystem
     {
     public:
         /** @brief 서브시스템 이름입니다(다른 선언의 의존 항목이 이 상수를 가리킵니다). */
@@ -103,7 +103,7 @@ namespace sw
         /** @brief 셰이더 캐시를 정리하고 종료합니다. 리플렉션 매니페스트 캐시(`ShaderReflectionLibrary`)도 비웁니다. */
         void shutdown();
 
-        // ISubsystem: 기동 단계 `ShaderCache`.
+        // Subsystem: 기동 단계 `ShaderCache`.
         SubsystemInitResult initializeSubsystem() override { return initialize() ? SubsystemInitResult::Succeeded : SubsystemInitResult::Failed; }
         void                shutdownSubsystem() override { shutdown(); }
 

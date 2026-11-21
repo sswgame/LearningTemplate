@@ -1,7 +1,7 @@
 /**
  * @file Ledger.h
  * @brief 원장을 정의합니다. 테이블 여섯(`ledger_balance`, `ledger_journal`, `ledger_history`, `ledger_carry`, `ledger_tombstone`, `ledger_deletion_queue`) 위의 복식 이동입니다.
- * @details 모두 저장소 스레드(`IServiceStoreJob::run`)에서 도는 동기 함수이다.
+ * @details 모두 저장소 스레드(`ServiceStoreJob::run`)에서 도는 동기 함수이다.
  *          PlayFab Economy v2 의 거래 기록이나 Nakama 의 wallet_ledger(단식)와 달리 복식이며 분개 키로 멱등하다. 회계의 차변과 대변이 같다.
  *
  *          - 잔액: 계정과 맡김마다 (보유자, 자산) 레코드 하나를 둔다(키 `<보유자 키>/<자산>`). 0 이 되면 지운다. 발행과 소각에는 잔액이 없다.

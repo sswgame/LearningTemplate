@@ -100,7 +100,7 @@ namespace
 SW_TEST_CASE_EACH( SurfaceKindTest, BrokenTableIsRejectedAtLoad, kArrBrokenSurfaceKindTable )
 {
     const string path = test::makeScratchPath( "broken.surfacekinds.xml" );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( path, param._pXML ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( path ), param._pXML ) );
     SW_EXPECT_LOG( param._pExpectedID );
     SurfaceKindTable table;
     SW_EXPECT_FALSE_MSG( table.loadFromDiskFile( path ), param._pXML );

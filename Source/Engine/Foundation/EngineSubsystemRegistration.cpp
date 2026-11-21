@@ -4,7 +4,7 @@
 
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
-#include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/Subsystem.h"
 #include "Core/Subsystem/SubsystemCollection.h"
 
 namespace sw::engine
@@ -26,7 +26,7 @@ namespace sw::engine
             }
 
             /** @brief @p pScope 부터 상위로 올라가며 @p typeHash 를 처음 찾은 범위의 소유 서브시스템입니다(`locate` 와 같은 범위 — 빌려 건 칸이면 nullptr). */
-            static const ISubsystem* locateOwner( const ISubsystemLocator* pScope, uint64 typeHash )
+            static const Subsystem* locateOwner( const ISubsystemLocator* pScope, uint64 typeHash )
             {
                 for ( ; pScope != nullptr; pScope = pScope->getParentScope() )
                 {
@@ -253,10 +253,10 @@ namespace sw::engine
         vector<vector<uint32>> listEdge( subsystemCount );
         for ( uint32 index = 0; index < subsystemCount; ++index )
         {
-            const ISubsystem& subsystem = collection.getSubsystem( index );
+            const Subsystem& subsystem = collection.getSubsystem( index );
             for ( uint32 other = 0; other < subsystemCount; ++other )
             {
-                const ISubsystem& candidate = collection.getSubsystem( other );
+                const Subsystem& candidate = collection.getSubsystem( other );
                 for ( const utf8* const pName : subsystem.getSubsystemDependencies() )
                 {
                     if ( string_view{ pName } == candidate.getSubsystemName() )

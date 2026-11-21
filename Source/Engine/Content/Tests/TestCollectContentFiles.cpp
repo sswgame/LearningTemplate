@@ -12,10 +12,10 @@ using namespace sw;
 SW_TEST_CASE( CollectContentFilesTest, LeavesTheScratchDomainOut )
 {
     const string root = test::makeScratchPath( "Content" );
-    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( FileUtil::joinPath( root, "game/playground/maps" ) ) );
-    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( FileUtil::joinPath( root, AssetPaths::kScratchDomain ) ) );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::joinPath( root, "game/playground/maps/a.scene.xml" ), "<Scene/>" ) );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::joinPath( FileUtil::joinPath( root, AssetPaths::kScratchDomain ), "left.scene.xml" ), "<broken" ) );
+    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( FileUtil::joinPath( root, "game/playground/maps" ) ) ) );
+    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( FileUtil::joinPath( root, AssetPaths::kScratchDomain ) ) ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( FileUtil::joinPath( root, "game/playground/maps/a.scene.xml" ) ), "<Scene/>" ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( FileUtil::joinPath( FileUtil::joinPath( root, AssetPaths::kScratchDomain ), "left.scene.xml" ) ), "<broken" ) );
 
     vector<string> listFile;
     SW_REQUIRE_TRUE( AssetPaths::collectContentFiles( root, ".xml", listFile ) );
@@ -43,8 +43,8 @@ SW_TEST_CASE( CollectContentFilesTest, GamePackDomainsAreListedByName )
 {
     // 게임 팩 나열 하나 — 이름 순 `game/<팩>`, game/ 이 없으면 빈 목록(실패가 아니다).
     const string root = test::makeScratchPath( "Content" );
-    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( FileUtil::joinPath( root, "game/zeta" ) ) );
-    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( FileUtil::joinPath( root, "game/alpha" ) ) );
+    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( FileUtil::joinPath( root, "game/zeta" ) ) ) );
+    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( FileUtil::joinPath( root, "game/alpha" ) ) ) );
     vector<string> listDomain;
     SW_REQUIRE_TRUE( AssetPaths::collectGamePackDomains( root, listDomain ) );
     SW_REQUIRE_EQUAL( size_t( 2 ), listDomain.size() );

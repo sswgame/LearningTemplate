@@ -1,7 +1,7 @@
 /**
  * @file WaylandWindow.h
  * @brief Linux Wayland 네이티브 창입니다(xdg-shell 최상위 창 · wl_seat 키보드 · 포인터). `SW_ENABLE_WAYLAND` 로 지은 리눅스 클라이언트에서만 실제로 돈다.
- * @details 고르는 것은 `IWindow::createPlatformWindow` 다 — 환경 변수 `SW_WINDOW_BACKEND=wayland` 이고 `WAYLAND_DISPLAY` 가 있을 때만 이 창이고, 아니면 X11 창이다
+ * @details 고르는 것은 `GenericWindow::createPlatformWindow` 다 — 환경 변수 `SW_WINDOW_BACKEND=wayland` 이고 `WAYLAND_DISPLAY` 가 있을 때만 이 창이고, 아니면 X11 창이다
  *          (XWayland 가 있는 데스크톱에서는 X11 이 지금까지의 길이라 기본을 바꾸지 않는다). 확인은 CI 리눅스 잡의 headless 컴포지터(weston)에서만 한다.
  *          라이브러리 헤더(wayland-client · xkbcommon · 생성된 xdg-shell)는 .cpp 에만 있다. 입력은 `WaylandInputEvent` 로 모아 `NativeWindowEvent::kMessageWayland` 로 넘긴다.
  *
@@ -12,12 +12,12 @@
 #include "Core/Container/string.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Window/IWindow.h"
+#include "Engine/Window/GenericWindow.h"
 
 namespace sw
 {
     /** @class WaylandWindow @brief 파일 머리말 참고. */
-    class WaylandWindow : public IWindow
+    class WaylandWindow : public GenericWindow
     {
     public:
         WaylandWindow();
@@ -27,7 +27,7 @@ namespace sw
          * @brief @p pWindow 가 Wayland 창이면 `WaylandWindow*`, 아니면(nullptr · X11 · Win32) nullptr 입니다.
          * @details 엔진은 RTTI 를 끄므로 종류(`getSurfaceKind`) 확인과 캐스트를 이 함수 한 곳에 둔다(`X11Window::tryCast` 와 같은 모양) — 다른 창 시스템의 창을 `WaylandWindow*` 로 읽는 `static_cast` 를 바깥에 두지 않는다.
          */
-        static WaylandWindow* tryCast( IWindow* pWindow ) { return pWindow != nullptr && pWindow->getSurfaceKind() == NativeSurfaceKind::Wayland ? static_cast<WaylandWindow*>( pWindow ) : nullptr; }
+        static WaylandWindow* tryCast( GenericWindow* pWindow ) { return pWindow != nullptr && pWindow->getSurfaceKind() == NativeSurfaceKind::Wayland ? static_cast<WaylandWindow*>( pWindow ) : nullptr; }
 
         /** @brief 컴포지터에 붙어 최상위 창을 만듭니다. 컴포지터가 없거나 xdg-shell · 합성기가 없으면 오류를 남기고 false 입니다. */
         [[nodiscard]] bool initializeWindow( const utf8* pTitle, uint32 width, uint32 height ) override;

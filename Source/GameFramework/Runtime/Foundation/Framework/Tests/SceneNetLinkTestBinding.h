@@ -1,7 +1,7 @@
 /**
  * @file SceneNetLinkTestBinding.h
  * @brief 단위 테스트가 월드 하나를 서버 · 클라이언트 넷 월드로 만드는 장치입니다 — 아무 데도 보내지 않는 창구와 빈 라우터를 씬 넷 링크(`SceneNetLink`)에 올립니다(nogpu, 연결 없음).
- * @details 판정 자리(`ActivatorAuthority`)처럼 링크의 역할만 읽는 코드를 볼 때 쓴다. 메시지를 주고받는 테스트는 하니스(`NetSimWorld`)를 쓴다.
+ * @details 판정 자리(`TriggerAuthority`)처럼 링크의 역할만 읽는 코드를 볼 때 쓴다. 메시지를 주고받는 테스트는 하니스(`NetSimWorld`)를 쓴다.
  */
 #pragma once
 #include "Core/Network/Connection/NetEndpoint.h"

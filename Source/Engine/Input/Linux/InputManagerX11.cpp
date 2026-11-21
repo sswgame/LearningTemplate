@@ -16,7 +16,7 @@
     #include "Engine/Input/Linux/LinuxGamepadDevice.h"
     #include "Engine/Input/Map/InputKeyTable.h"
     #include "Engine/Input/RawInputEvent.h"
-    #include "Engine/Window/IWindow.h"
+    #include "Engine/Window/GenericWindow.h"
     #include "Engine/Window/Linux/Wayland/WaylandInputEvent.h"
     #include "Engine/Window/NativeWindowEvent.h"
     #include "Engine/Window/WindowTextInput.h"
@@ -41,11 +41,11 @@ namespace sw
 
             /**
              * @brief X11 창이면 서버 연결과 창 ID 를 담고 true 입니다. X11 호출(`XQueryPointer` 등)은 이 함수로 얻은 값으로만 한다.
-             * @details Wayland 창의 `getNativeDisplay` 는 wl_display* 라 `Display*` 로 읽으면 죽는다(`IWindow::tryGetX11Surface`). X11 창이 아니거나 연결이 아직 없으면 false 이고 출력은 비어 있다.
+             * @details Wayland 창의 `getNativeDisplay` 는 wl_display* 라 `Display*` 로 읽으면 죽는다(`GenericWindow::tryGetX11Surface`). X11 창이 아니거나 연결이 아직 없으면 false 이고 출력은 비어 있다.
              *          이 입력 관리자는 창 종류를 가르지 않는다 — X11 서버 호출(보조 폴링 · 가운데 되돌리기 · 포인터 잡기 · AccessX 억제)은 이 함수가 true 일 때만 하고, false 인 창(Wayland)에는
-             *          그 동작이 해당 없음이라 건너뛰는 것이 정상이다. 창이 스스로 하는 동작(커서 모양 · 커서 숨기기 — 두 창 모두, 포인터 묶기 — Wayland)은 `IWindow` 의 질의로 가르고 안 되면 한 번 오류로 알린다.
+             *          그 동작이 해당 없음이라 건너뛰는 것이 정상이다. 창이 스스로 하는 동작(커서 모양 · 커서 숨기기 — 두 창 모두, 포인터 묶기 — Wayland)은 `GenericWindow` 의 질의로 가르고 안 되면 한 번 오류로 알린다.
              */
-            [[nodiscard]] static bool tryGetX11( const IWindow* pWindow, Display*& pOutDisplay, Window& outWindow )
+            [[nodiscard]] static bool tryGetX11( const GenericWindow* pWindow, Display*& pOutDisplay, Window& outWindow )
             {
                 pOutDisplay = nullptr;
                 outWindow   = 0;
@@ -171,7 +171,7 @@ namespace sw
         // 키보드는 X11 이벤트(KeyPress/KeyRelease)로 빠짐없이 들어오므로 폴링 폴백이 필요 없다
         // (Win32 의 GetAsyncKeyState 폴백은 메시지 유실을 메우기 위한 것이고, X11 에는 같은 문제가 없다).
         // 마우스는 창 밖에서 버튼을 뗀 경우처럼 이벤트를 놓칠 수 있는 경로가 있어 위치와 버튼을 보조로 폴링한다.
-        IWindow* pWindow = MainWindowSubsystem::findMainWindow();
+        GenericWindow* pWindow = MainWindowSubsystem::findMainWindow();
         if ( pWindow == nullptr || _pMouse == nullptr )
             return;
         // 포인터가 창 안에 있고 포커스도 있으면 MotionNotify/ButtonRelease 가 빠짐없이 들어오므로
@@ -380,7 +380,7 @@ namespace sw
 
     void InputManager::setCursorVisiblePlatform( bool bVisible )
     {
-        IWindow* pWindow = MainWindowSubsystem::findMainWindow();
+        GenericWindow* pWindow = MainWindowSubsystem::findMainWindow();
         if ( pWindow == nullptr )
             return;
         // 창이 스스로 커서를 숨긴다(X11 투명 커서 · Wayland `wl_pointer.set_cursor`). 못 하면 커서가 그대로 보이므로 한 번 오류로 알린다.
@@ -390,7 +390,7 @@ namespace sw
 
     void InputManager::applyCursorShapePlatform()
     {
-        IWindow* pWindow = MainWindowSubsystem::findMainWindow();
+        GenericWindow* pWindow = MainWindowSubsystem::findMainWindow();
         if ( pWindow == nullptr )
             return;
         // 창이 스스로 모양을 바꾼다(X11 글꼴 커서 · Wayland `wp_cursor_shape_manager_v1`). 컴포지터에 그 확장이 없으면 못 바꾸고, 기본 화살표를 청한 것이면 이미 그 모양이라 알릴 일이 없다.
@@ -406,7 +406,7 @@ namespace sw
         if ( _pMouse == nullptr )
             return;
 
-        IWindow* pWindow = MainWindowSubsystem::findMainWindow();
+        GenericWindow* pWindow = MainWindowSubsystem::findMainWindow();
         if ( pWindow == nullptr )
             return;
         Display* pDisplay  = nullptr;
@@ -450,7 +450,7 @@ namespace sw
         if ( bCannotRecenter )
             return;
 
-        IWindow* pWindow = MainWindowSubsystem::findMainWindow();
+        GenericWindow* pWindow = MainWindowSubsystem::findMainWindow();
         if ( pWindow == nullptr )
             return;
         Display* pDisplay  = nullptr;
@@ -473,7 +473,7 @@ namespace sw
 
     void InputManager::releaseMouseLockMode()
     {
-        IWindow* pWindow = MainWindowSubsystem::findMainWindow();
+        GenericWindow* pWindow = MainWindowSubsystem::findMainWindow();
         if ( pWindow == nullptr )
             return;
         Display* pDisplay  = nullptr;
@@ -500,8 +500,8 @@ namespace sw
         // 이름은 Windows API 시절 이름을 그대로 쓰지만(공용 InputManager.h 의 공개 API), 여기서는 X11
         // AccessX(XKB StickyKeys/SlowKeys/BounceKeys)를 억제한다. 게임 도중 방향키를 연타하다
         // AccessX 팝업이 뜨는 것을 막기 위해서다.
-        IWindow*   pWindow           = MainWindowSubsystem::findMainWindow();
-        const bool bNothingToDisable = pWindow == nullptr || _bAccessibilityShortcutsDisabled == SW_TRUE;
+        GenericWindow* pWindow           = MainWindowSubsystem::findMainWindow();
+        const bool     bNothingToDisable = pWindow == nullptr || _bAccessibilityShortcutsDisabled == SW_TRUE;
         if ( bNothingToDisable )
             return;
 
@@ -530,8 +530,8 @@ namespace sw
         // 이 함수는 InputManager::shutdown 이 부르는 유일한 플랫폼 훅이다. 입력기 · 커서는 창이 소유하고 창과 함께 내리므로 여기서는 포커스 기록만 지운다.
         _bNativeWindowFocused = SW_FALSE;
 
-        IWindow*   pWindow           = MainWindowSubsystem::findMainWindow();
-        const bool bNothingToRestore = pWindow == nullptr || _bAccessibilityShortcutsDisabled == SW_FALSE;
+        GenericWindow* pWindow           = MainWindowSubsystem::findMainWindow();
+        const bool     bNothingToRestore = pWindow == nullptr || _bAccessibilityShortcutsDisabled == SW_FALSE;
         if ( bNothingToRestore )
             return;
 

@@ -53,7 +53,7 @@ namespace sw
             _bLoadAttempted                          = SW_TRUE;
             const string                 modulePath  = ModuleLibraryUtil::findModuleLibraryPath( sw::config::kTargetEditorModule );
             const optional<AbsolutePath> libraryPath = AbsolutePath::tryMake( modulePath );
-            const ModuleLibraryHandle    library{ libraryPath.has_value() && FileUtil::exists( modulePath ) ? ModuleLibraryUtil::loadLibraryAt( *libraryPath ) : nullptr };
+            const ModuleLibraryHandle    library{ libraryPath.has_value() && FileUtil::exists( FileUtil::toDiskPath( modulePath ) ) ? ModuleLibraryUtil::loadLibraryAt( *libraryPath ) : nullptr };
             if ( library.isValid() == false )
             {
                 SW_LOG_ERROR_ID( "EditorModuleHeadlessTasks.NeedsEditorModuleBin", "%# needs the editor module in Bin/Modules: %#", pPurpose, modulePath.c_str() );

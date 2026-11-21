@@ -72,6 +72,18 @@ Never loop `releaseRHI` / `clearRHI` / `initRHI` from outside: `IRHIDevice` broa
 - Name a graphics type as a game programmer would in Unreal or Unity. `Slot` is only a shader binding slot or a position in a ring; a type owning a buffer is named after the buffer. No bookkeeping metaphors (`Ledger`): `…Tracker`, `…Registry`, `…Allocator`.
 - `Scene` owns one scene's data; `GameObjectManager` manages its objects' lifetime; `GameObjectStore` is the storage.
 
+### 컴포넌트 이름
+
+| 규칙 | 상용 엔진 근거 |
+| --- | --- |
+| `Component` 파생은 이름이 `…Component` 로 끝나고, 컴포넌트가 아닌 형식은 `Component` 로 끝나지 않는다 — **린트가 강제**(`naming-words` 의 component 판정, `ComponentHandle` 처럼 `Component` 로 시작하는 이름은 해당 없음) | 언리얼 `U…Component` · Godot 노드도 형식 이름이 층을 말한다 |
+| 어순은 `[수식어][기전]Component` — 영어 어순(명사 수식어가 앞), 이름은 하는 일(기전)을 말한다(`NPCScheduleComponent` · `InterpToMovementComponent`) | 언리얼 `UCharacterMovementComponent` · `UInterpToMovementComponent` |
+| 사건 반응은 `<동사>On<사건>Component`(`DismountOnDeathComponent` · `RemoveStacksOnJumpComponent`) | 유니티 `OnTriggerEnter` · 언리얼 `OnComponentHit` 의 사건 이름 |
+| 범용 층(Engine · GameFramework Runtime)의 형식 이름에 장르 · 게임 · 콘텐츠 어휘(Horse · Scare · Gore · Escape)를 쓰지 않는다. 장르 키트 안에서만 쓰는 형식은 키트 접두(`ActionPlatformer…`) | 언리얼 `UDestructibleComponent` · `UPhysicalAnimationComponent` 는 쓰임이 아니라 기전 이름이다 |
+| 컴포넌트 이름에 `Manager` · `System` 을 쓰지 않는다 — 여러 오브젝트를 도는 일은 씬 서브시스템 · 프레임 시스템의 몫이다 | 언리얼 `UWorldSubsystem` · 유니티 ECS `System` 은 컴포넌트가 아니다 |
+| 층 이름(`SceneComponent` · `PrimitiveComponent` · `PhysicsComponent`)은 그 층의 기반만 가진다 — 트랜스폼 · 모양을 쓰면 `SceneComponent`, 아니면 `Component` 를 잇는다 | 언리얼 `USceneComponent` · `UPrimitiveComponent` 층, Godot `Node3D` |
+| 상태 없는 역할 계약은 리플렉션 인터페이스(`REFLECT( Interface )`, 이름 `I…` — **린트가 강제**)로 두고 컴포넌트가 포트 멤버로 내보낸다(`REFLECT_INTERFACE`) | 유니티 `GetComponent<IFoo>()` · 언리얼 `UINTERFACE` |
+
 ### Function names
 
 Use a banned verb only when it is the domain's own term (`UUID::generate`, `SurfaceBVH::build`).
@@ -148,7 +160,7 @@ Use a banned verb only when it is the domain's own term (`UUID::generate`, `Surf
 | 업계 공용어는 그대로(Cook · Pawn · Possess). 한 엔진 · 게임 고유 이름 · 브랜드는 내용으로(`BugReport`) | 이름은 내용으로 |
 | Pack(`.pack`) · Watch(자동화 감시 값 — Probe 는 라이트 · 리플렉션 프로브, 카메라 충돌 프로브, 운영 상태 프로브만. 확인용 컴포넌트는 `…TestComponent`, 자체 테스트 상태는 `…TestState`) · Scene(씬 컨테이너 — World 는 월드 공간 뜻만) | 같은 단어 한 뜻 |
 | Module 은 동적으로 올리는 코드 단위만(모듈 문맥의 Image → Library). 렌더러 확장점은 `RenderExtension` | 언리얼 SceneViewExtension |
-| Host = 엔진을 돌리는 프로세스와 그 쪽(`HostService`, 짝 `EngineServices`). 네트워크 끝점 `NetEndpoint*`, 에디터 패널 진입점 `IEditorPanelService`, 온라인 키트 `IOnlineServerService` · `IOnlineClientService` | 같은 단어 한 뜻 |
+| Host = 엔진을 돌리는 프로세스와 그 쪽(`HostService`, 짝 `EngineServices`). 네트워크 끝점 `NetEndpoint*`, 에디터 패널 진입점 `IEditorPanelService`, 온라인 키트 `IOnlineServerService` · `OnlineClientService` | 같은 단어 한 뜻 |
 | Runtime = 모든 호스트에서 도는 것(키트 `Runtime/`). 모듈 C-ABI 계약은 `Source/ModuleAPI` | 언리얼 모듈 형식 |
 | Automation = 시나리오 자동 테스트(`Engine/Automation`, 실행기 `DevTools/Client/Automation`). "UI Automation" 은 Windows UIA 만 | 언리얼 Automation System |
 | 대상을 인자로 받는 상태 없는 정적 함수 묶음은 도메인 이름 그대로 | 언리얼 FPaths |

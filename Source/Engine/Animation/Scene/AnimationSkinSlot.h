@@ -14,8 +14,8 @@
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/ServiceSlot.h"
+#include "Core/Subsystem/Subsystem.h"
 
 namespace sw
 {
@@ -36,7 +36,7 @@ namespace sw
      * @class AnimationSkinSlotRegistry
      * @brief 칸 번호 목록입니다(엔진 서비스 범위가 소유한다 — 컴포넌트 기본값 객체보다 오래 산다). 놓은 번호를 먼저 다시 준다.
      */
-    class SW_API AnimationSkinSlotRegistry final : public ISubsystem
+    class SW_API AnimationSkinSlotRegistry final : public Subsystem
     {
     public:
         SpinLock                       _spinLock;
@@ -44,7 +44,7 @@ namespace sw
         vector<uint32> _listGeneration SW_GUARDED_BY( _spinLock ){}; ///< 칸 번호 → 세대(놓을 때 올린다)
         uint32 _nextSlot               SW_GUARDED_BY( _spinLock ){ 0 };
 
-        static constexpr MemoryTag   kSubsystemMemoryTag = MemoryTag::Animation; ///< 할당 용도(`ISubsystem::getSubsystemMemoryTag`)
+        static constexpr MemoryTag   kSubsystemMemoryTag = MemoryTag::Animation; ///< 할당 용도(`Subsystem::getSubsystemMemoryTag`)
         static constexpr const utf8* kSubsystemName      = "AnimationSkinSlotRegistry";
 
         SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }

@@ -48,7 +48,7 @@ namespace sw
         setReady( false );
     }
 
-    void MatchmakingServer::initialize( PartyLobbyService* pPartyLobby, MatchQueueService* pQueue, MatchServerAgent* pAgent, IAccountPresence* pPresence, MetricRegistry* pMetricRegistry )
+    void MatchmakingServer::initialize( PartyLobbyService* pPartyLobby, MatchQueueService* pQueue, MatchServerAgent* pAgent, AccountPresence* pPresence, MetricRegistry* pMetricRegistry )
     {
         _pPartyLobby = pPartyLobby;
         _pQueue      = pQueue;

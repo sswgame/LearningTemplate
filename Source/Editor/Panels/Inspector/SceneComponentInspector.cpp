@@ -6,7 +6,7 @@
 
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Widgets/PropertyGrid/Model/InspectorPropertyLayout.h"
-#include "Editor/Panels/Inspector/IInspectorComponent.h"
+#include "Editor/Panels/Inspector/IComponentInspector.h"
 #include "Editor/Panels/Inspector/Model/InspectorComponentEdit.h"
 #include "Editor/Panels/Inspector/Model/InspectorComponentManager.h"
 
@@ -20,7 +20,7 @@ namespace sw::editor
     namespace
     {
         /** @brief SceneComponent 와 그 하위 타입 전부의 트랜스폼 및 기즈모 컨트롤 */
-        class SceneComponentInspector final : public IInspectorComponent
+        class SceneComponentInspector final : public IComponentInspector
         {
         public:
             void drawSection( const EditorPropertyGridTarget& target ) override

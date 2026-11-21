@@ -77,7 +77,7 @@ namespace sw::editor
                               &PackagingPanelInternal::readPackagingLiveLineCount, &PackagingPanelInternal::readPackagingActivity );
 
     PackagingPanel::PackagingPanel()
-        : IEditorPanel( false ) // 필요할 때 여는 도구라 닫힌 채 시작한다
+        : EditorPanel( false ) // 필요할 때 여는 도구라 닫힌 채 시작한다
         , _model{}
     {
     }

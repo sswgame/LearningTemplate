@@ -11,7 +11,7 @@
 #include "Engine/UI/Widgets/SliderWidget.h"
 #include "Engine/UI/World/WidgetComponent.h"
 
-#include "GameFramework/Runtime/Character/Combat/Health/HealthSourceComponent.h"
+#include "GameFramework/Runtime/Character/Combat/Health/IHealthSource.h"
 
 namespace sw
 {
@@ -59,8 +59,8 @@ namespace sw
 
     float32 HealthBarComponent::readStartRatio() const
     {
-        const GameObject*            pOwner  = getOwner();
-        const HealthSourceComponent* pSource = pOwner != nullptr ? pOwner->getComponent<HealthSourceComponent>() : nullptr;
+        const GameObject*    pOwner  = getOwner();
+        const IHealthSource* pSource = pOwner != nullptr ? pOwner->findInterface<IHealthSource>() : nullptr;
         if ( pSource != nullptr && pSource->getHealthReading()._bHasHealth == SW_TRUE )
             return pSource->getHealthRatio();
         return _spawnRatio;
@@ -240,5 +240,10 @@ namespace sw
         pFill->setPercent( fillEnd );
         pFill->setFillColor( _fillColor );
         pFill->setBackgroundColor( float4{} );
+    }
+
+    void HealthBarComponent::HealthListenerPort::onHealthChanged( const HealthChangedEvent& event )
+    {
+        getPortOwner<HealthBarComponent>( *this, offsetof( HealthBarComponent, _healthListenerPort ) ).onHealthChanged( event );
     }
 } // namespace sw

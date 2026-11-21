@@ -65,7 +65,7 @@ namespace sw::test
                     (void)listNode.appendChild( "item", string_view{ list.at( index ).asString() } );
                 }
             }
-            if ( FileUtil::ensureDirectoryExists( folder ) == false || FileUtil::writeTextFile( projectPath, document.saveToString() ) == false )
+            if ( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( folder ) ) == false || FileUtil::writeTextFile( FileUtil::toDiskPath( projectPath ), document.saveToString() ) == false )
             {
                 fixed_string<constant::buffer::kMax512> message;
                 formatstring( message.data(), message.capacity(), "could not write %#", projectPath );
@@ -145,7 +145,7 @@ namespace sw::test
         static void save( const TTable& table, const string& path )
         {
             const optional<AbsolutePath> absPath = AbsolutePath::tryMake( path );
-            const bool                   bSaved  = absPath.has_value() && FileUtil::ensureParentDirectoryExists( path ) && table.saveToFile( *absPath );
+            const bool                   bSaved  = absPath.has_value() && FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( path ) ) && table.saveToFile( *absPath );
             if ( bSaved == false )
             {
                 fixed_string<constant::buffer::kMax512> message;

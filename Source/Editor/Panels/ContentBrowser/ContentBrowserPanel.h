@@ -9,7 +9,7 @@
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/GUI/EditorThumbnailCache.h"
-#include "Editor/Common/GUI/Panel/IEditorPanel.h"
+#include "Editor/Common/GUI/Panel/EditorPanel.h"
 #include "Editor/Common/Workspace/EditorPanelID.h"
 #include "Editor/Panels/ContentBrowser/Model/ContentBrowserCollectionStore.h"
 #include "Editor/Panels/ContentBrowser/Model/ContentBrowserViewModel.h"
@@ -31,7 +31,7 @@ namespace sw::editor
      * @details 창은 그리기(뷰)만 한다. 루트 · 목록 · 이력 · 선택 · 파일 관리 · 참조 역색인은 모델(`ContentBrowserViewModel`)이 가지고, 아래 공개 함수는 모델로 넘긴다.
      *          창이 가진 것은 화면 상태뿐이다(입력란 글, 타일 크기, 보기 모드, 팝업을 열 표시, 썸네일 캐시).
      */
-    class ContentBrowserPanel : public IEditorPanel
+    class ContentBrowserPanel : public EditorPanel
     {
     public:
         /** @brief 패널 id 입니다. 등록(`SW_EDITOR_PANEL`)과 조회(`EditorPanelManager::findPanel<…>` · `setPanelOpen<…>`)가 모두 이 상수에서 온다. */
@@ -43,7 +43,7 @@ namespace sw::editor
         ContentBrowserPanel() noexcept;
 
         // ------------------------------------------------------------------------------
-        // 1) IEditorPanel: 제목과 그리기
+        // 1) EditorPanel: 제목과 그리기
         // ------------------------------------------------------------------------------
         /** @brief 창 제목을 반환합니다. */
         const utf8*    getPanelTitle() const override { return kPanelTitle; }

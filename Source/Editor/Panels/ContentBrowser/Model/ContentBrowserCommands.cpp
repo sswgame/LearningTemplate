@@ -53,7 +53,7 @@ namespace sw::editor
             static bool hasFileTarget( const EditorCommandTarget& target )
             {
                 const string path = findTargetPath( target );
-                return path.empty() == false && FileUtil::isDirectory( path ) == false;
+                return path.empty() == false && FileUtil::isDirectory( FileUtil::toDiskPath( path ) ) == false;
             }
 
             static bool hasTextAssetTarget( const EditorCommandTarget& target )
@@ -117,7 +117,7 @@ namespace sw::editor
                     return false;
                 const optional<AbsolutePath> folderPath = EditorPaths::getAssetPaths().findLooseFile( FileUtil::normalizePath( listArgument[0] ).str() );
                 const string                 folderAbs  = folderPath.has_value() ? folderPath->str() : string{};
-                if ( FileUtil::isDirectory( folderAbs ) == false )
+                if ( FileUtil::isDirectory( FileUtil::toDiskPath( folderAbs ) ) == false )
                     return false;
                 ContentBrowserViewModel::postRequest( ContentBrowserRequestKind::OpenFolder, folderAbs );
                 StringBuilder<constant::buffer::kMax256> replyBuilder;

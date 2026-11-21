@@ -21,7 +21,7 @@ namespace sw::editor
     /**
      * @brief Game TileMap XML 의 Visual, Warp, Tile, 플래그 레이어를 페인트합니다.
      * @details Tile 레이어는 타일셋(`.tileset.xml`)의 브러시(일반 타일, 규칙 타일)를 칠한다. 셀에는 브러시만 기록하고, 화면에 보일 아틀라스 셀은 규칙이
-     *          고른 값을 셀 위에 숫자로 보여 준다. 이웃을 칠하면 그 숫자가 따라 바뀐다(런타임 `TileMapRendererComponent` 와 같은 `resolveVisual`).
+     *          고른 값을 셀 위에 숫자로 보여 준다. 이웃을 칠하면 그 숫자가 따라 바뀐다(런타임 `TileMapComponent` 와 같은 `resolveVisual`).
      *          상태와 명령은 `TileMapViewModel`(Model/, ImGui 없음)가 들고, 이 패널은 그리기 · 캔버스 보기(확대 · 이동) · 입력 읽기와 되돌리기 기록만 한다.
      */
     class TileMapPanel : public EditorDocumentPanel
@@ -34,7 +34,7 @@ namespace sw::editor
         TileMapPanel();
 
         // ------------------------------------------------------------------------------
-        // 1) IEditorPanel: 제목과 그리기
+        // 1) EditorPanel: 제목과 그리기
         // ------------------------------------------------------------------------------
         /** @brief 타일맵 페인트 UI 를 그립니다. */
         void drawDocumentContent() override;

@@ -22,13 +22,13 @@ namespace
     {
         const string modelFolder   = FileUtil::joinPath( root, "models_raw" );
         const string textureFolder = FileUtil::joinPath( root, "textures_raw/pair" );
-        if ( FileUtil::ensureDirectoryExists( modelFolder ) == false || FileUtil::ensureDirectoryExists( textureFolder ) == false )
+        if ( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( modelFolder ) ) == false || FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( textureFolder ) ) == false )
             return false;
-        if ( FileUtil::writeTextFile( FileUtil::joinPath( textureFolder, "wood.png" ), "wood" ) == false )
+        if ( FileUtil::writeTextFile( FileUtil::toDiskPath( FileUtil::joinPath( textureFolder, "wood.png" ) ), "wood" ) == false )
             return false;
         // 위치 6 개(삼각형 둘) — 바닥면의 두 삼각형이다.
         const float32 arrPosition[18]{ 0, 0, 0, 1, 0, 0, 0, 0, 1, 1, 0, 0, 1, 0, 1, 0, 0, 1 };
-        if ( FileUtil::writeFile( FileUtil::joinPath( modelFolder, "pair.bin" ), reinterpret_cast<const uint8*>( arrPosition ), sizeof( arrPosition ) ) == false )
+        if ( FileUtil::writeFile( FileUtil::toDiskPath( FileUtil::joinPath( modelFolder, "pair.bin" ) ), reinterpret_cast<const uint8*>( arrPosition ), sizeof( arrPosition ) ) == false )
             return false;
         const string                              texture = bTextured ? R"(, "pbrMetallicRoughness": { "baseColorTexture": { "index": 0 }, "metallicFactor": 0 })" : "";
         StringBuilder<constant::buffer::kMax2048> json;
@@ -43,7 +43,7 @@ namespace
             "meshes": [ { "primitives": [ { "attributes": { "POSITION": 0 }, "material": 0 }, { "attributes": { "POSITION": 1 }, "material": 1 } ] } ] })",
                            texture );
         outSourcePath = FileUtil::joinPath( modelFolder, "pair.gltf" );
-        return FileUtil::writeTextFile( outSourcePath, json.view() );
+        return FileUtil::writeTextFile( FileUtil::toDiskPath( outSourcePath ), json.view() );
     }
 } // namespace
 
@@ -78,7 +78,7 @@ SW_TEST_CASE( ModelImportSectionsTest, TexturedMultiMaterialGltfSplitsIntoSectio
     SW_EXPECT_EQUAL( string( "Wood" ), result._listSection[0]._sourceMaterial );
     SW_EXPECT_TRUE( result._mesh._listSection[1]._sourceMaterial == hashed_string( "Stone" ) );
 
-    SW_EXPECT_TRUE( FileUtil::removeDirectory( root ) );
+    SW_EXPECT_TRUE( FileUtil::removeDirectory( FileUtil::toDiskPath( root ) ) );
 }
 
 /**
@@ -129,5 +129,5 @@ SW_TEST_CASE( ModelImportSectionsTest, UntexturedMultiMaterialGltfStaysOneMesh )
     SW_EXPECT_TRUE( result._mesh._listSection.empty() );
     SW_EXPECT_EQUAL( size_t{ 6 }, result._mesh._listVertex.size() );
 
-    SW_EXPECT_TRUE( FileUtil::removeDirectory( root ) );
+    SW_EXPECT_TRUE( FileUtil::removeDirectory( FileUtil::toDiskPath( root ) ) );
 }

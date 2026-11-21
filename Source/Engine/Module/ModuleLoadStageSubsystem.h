@@ -6,7 +6,7 @@
  */
 #pragma once
 #include "Core/Foundation/Macros.h"
-#include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/Subsystem.h"
 #include "Core/Subsystem/SubsystemScope.h"
 
 namespace sw
@@ -15,7 +15,7 @@ namespace sw
      * @class ModuleLoadStageSubsystem
      * @brief 타입 공급자 모듈을 올려 타입 등록을 끝내는 서브시스템입니다.
      */
-    class SW_API ModuleLoadStageSubsystem final : public ISubsystem
+    class SW_API ModuleLoadStageSubsystem final : public Subsystem
     {
     public:
         /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */
@@ -47,7 +47,7 @@ namespace sw
      * @class ModuleUnloadStageSubsystem
      * @brief 종료에서 모듈 DLL 내리기 훅을 부르는 서브시스템입니다.
      */
-    class SW_API ModuleUnloadStageSubsystem final : public ISubsystem
+    class SW_API ModuleUnloadStageSubsystem final : public Subsystem
     {
     public:
         /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */

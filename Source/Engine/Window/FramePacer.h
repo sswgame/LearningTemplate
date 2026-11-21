@@ -16,7 +16,7 @@
 
 namespace sw
 {
-    class IWindow;
+    class GenericWindow;
 
     /** @brief 이번 프레임을 어떤 빠르기로 도는지입니다. 감시 값 `Engine.FramePacingState` 가 이 번호를 그대로 낸다(번호를 바꾸면 시나리오도 고친다). */
     enum class FramePacingState : uint8
@@ -47,8 +47,8 @@ namespace sw
     {
         bool _bAutomationRun{ false }; ///< `-scenario`(녹화 포함) 실행이다(프로파일 실행 `-gv_profileFrames` 는 개발 도구가 `gv_framePacing=FullSpeed` 로 고른다). NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         bool _bListenHost{ false };    ///< 이 프로세스의 넷 세션이 서버다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool _bMinimized{ false };     ///< `IWindow::isMinimized` NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool _bFocused{ false };       ///< `IWindow::hasFocus` NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool _bMinimized{ false };     ///< `GenericWindow::isMinimized` NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool _bFocused{ false };       ///< `GenericWindow::hasFocus` NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         bool _bEditorQuiet{ false };   ///< 에디터가 이번 프레임에 다시 그릴 까닭이 없다(`ModuleFrameState::_bEditorQuiet`). 에디터가 없으면 false. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw
@@ -85,8 +85,8 @@ namespace sw
         void markFrameStart();
         /** @brief 프레임 입력(에디터 UI 갱신 뒤)이 모이면 부릅니다. 조용한 프레임 수를 세고 `gv_framePacing` 과 함께 상태를 정합니다. */
         void beginFrame( const FramePacingInputs& inputs );
-        /** @brief 프레임 끝에 부릅니다. 최소화 · 에디터 유휴면 @p window 의 메시지를 기다리고, 그 밖은 @p window 가 다음 프레임을 미룬다(`IWindow::waitForNextFrame` — 배경이면 상한 주기, 전속이면 미루지 않는다). */
-        void endFrame( IWindow& window ) const;
+        /** @brief 프레임 끝에 부릅니다. 최소화 · 에디터 유휴면 @p window 의 메시지를 기다리고, 그 밖은 @p window 가 다음 프레임을 미룬다(`GenericWindow::waitForNextFrame` — 배경이면 상한 주기, 전속이면 미루지 않는다). */
+        void endFrame( GenericWindow& window ) const;
 
         /** @brief 이번 프레임의 상태입니다(`beginFrame` 이 정했다). */
         FramePacingState getState() const { return _state; }

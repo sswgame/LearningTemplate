@@ -6,7 +6,7 @@
 
 #include "GameFramework/Kits/Genre/Simulation/CreatureLife/CreatureLifeCatalog.h"
 #include "GameFramework/Kits/Genre/Simulation/CreatureLife/CreatureTown.h"
-#include "GameFramework/Runtime/Foundation/Framework/SessionStateRefs.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameStateRefs.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
 
@@ -45,7 +45,7 @@ namespace
         CreatureTownRulesTest()
         {
             SW_REQUIRE_TRUE( _catalog.loadFromXMLText( kRulesCatalogXML, "CreatureTownRulesTest" ) );
-            SW_REQUIRE_TRUE( _town.initialize( &_catalog, sw::SessionStateRefs{}, kRulesTownSize, kRulesTownSize ) );
+            SW_REQUIRE_TRUE( _town.initialize( &_catalog, sw::GameStateRefs{}, kRulesTownSize, kRulesTownSize ) );
         }
 
         void attractSprout()
@@ -135,7 +135,7 @@ SW_TEST_CASE_F( CreatureTownRulesTest, GiftTakesOneItemOncePerDay )
 SW_TEST_CASE_F( CreatureTownRulesTest, TownDeterminism )
 {
     const auto setup = [this]( sw::CreatureTown& town )
-    { return town.initialize( &_catalog, sw::SessionStateRefs{}, kRulesTownSize, kRulesTownSize ); };
+    { return town.initialize( &_catalog, sw::GameStateRefs{}, kRulesTownSize, kRulesTownSize ); };
     const auto step = []( sw::CreatureTown& town, int32 stepIndex )
     {
         const int32 hour = stepIndex % 24;

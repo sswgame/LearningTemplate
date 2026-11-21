@@ -9,7 +9,7 @@
 #include "Core/Container/string.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/Subsystem.h"
 
 #include "Engine/EngineFrameHooks.h"
 #include "Engine/Profiling/FrameProfileReport.h"
@@ -26,7 +26,7 @@ namespace sw
      *          넣은 목표(`gv_profileSeconds`)는 그 프레임 끝에 측정을 연다. 목표를 채우면 보고하고 종료 코드(통과)를 낸다.
      * @note `FrameProfiler` 의 프레임 마감(`endFrame`)은 여기서 부르지 않습니다. 프레임 경계는 엔진 루프의 일이고 이 타입은 판정만 합니다. 루프가 먼저 마감한 뒤 훅이 부릅니다.
      */
-    class FrameProfileSession final : public ISubsystem
+    class FrameProfileSession final : public Subsystem
     {
     public:
         static constexpr const utf8* kSubsystemName = "FrameProfileSession";

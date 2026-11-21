@@ -17,12 +17,12 @@ SW_TEST_CASE( ServerConfigTest, RepositoryServerConfigsLoad )
 {
     const sw::string       serverDirectory = sw::FileUtil::joinPath( sw::ProcessRoots::get()._project.str(), "Config/Server" );
     sw::vector<sw::string> listFile;
-    SW_REQUIRE_TRUE( sw::FileUtil::collectFiles( serverDirectory, ".json", listFile, false ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::collectFiles( sw::FileUtil::toDiskPath( serverDirectory ), ".json", listFile, false ) );
     SW_REQUIRE_TRUE_MSG( listFile.empty() == false, serverDirectory.c_str() );
     for ( const sw::string& filePath : listFile )
     {
         sw::string text;
-        SW_REQUIRE_TRUE( sw::FileUtil::readTextFile( filePath, text ) );
+        SW_REQUIRE_TRUE( sw::FileUtil::readTextFile( sw::FileUtil::toDiskPath( filePath ), text ) );
         sw::ConfigManager manager;
         SW_EXPECT_TRUE_MSG( manager.loadConfigFromJSON<sw::ServerConfig>( text, filePath.c_str() ), filePath.c_str() );
         const sw::ServerConfig* pConfig = manager.getConfig<sw::ServerConfig>();

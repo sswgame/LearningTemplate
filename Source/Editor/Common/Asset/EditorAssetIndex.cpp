@@ -145,7 +145,7 @@ namespace sw::editor
             static string makeKey( string_view displayPath ) { return FileUtil::normalizePath( displayPath ).str(); }
 
             /** @brief 원본 @p absPath 곁의 `.meta` 를 읽습니다. 없거나 읽지 못하면 false 입니다(정체성 없음 — 결함 알림은 `asset-ids` · `AssetDatabase` 가 한다). */
-            static bool readMetaText( string_view absPath, string& outText ) { return FileUtil::readOptionalTextFile( AssetMeta::makePath( absPath ), outText ) == OptionalFileRead::Read; }
+            static bool readMetaText( string_view absPath, string& outText ) { return FileUtil::readOptionalTextFile( FileUtil::toDiskPath( AssetMeta::makePath( absPath ) ), outText ) == OptionalFileRead::Read; }
 
             static bool lessByReferrerLine( const EditorAssetReference& left, const EditorAssetReference& right )
             {
@@ -186,10 +186,10 @@ namespace sw::editor
                         return; // 결과는 불완전하니 부른 쪽이 신호를 다시 읽고 버린다
                     const string& displayPath = *_ppDisplayPath[index];
                     const string  absPath     = makeDiskPath( _resourceRoot, displayPath );
-                    (void)FileUtil::getFileStamp( absPath, outRead._fileStamp ); // 목록 뒤에 사라진 파일은 시각이 비어 다음 바뀜에서 다시 읽는다
+                    (void)FileUtil::getFileStamp( FileUtil::toDiskPath( absPath ), outRead._fileStamp ); // 목록 뒤에 사라진 파일은 시각이 비어 다음 바뀜에서 다시 읽는다
                     // 목록을 모은 뒤 지워진 파일(에디터가 옮기는 중)은 읽지 않는다 — readTextFile 은 없는 파일을 오류로 남긴다.
                     if ( EditorAssetIndex::isTextAsset( displayPath ) )
-                        outRead._bText = FileUtil::readOptionalTextFile( absPath, outRead._text ) == OptionalFileRead::Read ? SW_TRUE : SW_FALSE;
+                        outRead._bText = FileUtil::readOptionalTextFile( FileUtil::toDiskPath( absPath ), outRead._text ) == OptionalFileRead::Read ? SW_TRUE : SW_FALSE;
                     else
                         outRead._bMeta = readMetaText( absPath, outRead._metaText ) ? SW_TRUE : SW_FALSE;
                 }
@@ -327,7 +327,7 @@ namespace sw::editor
         const string assetID = EditorAssetIndexInternal::makeKey( displayPath );
         const string absPath = EditorAssetIndexInternal::makeDiskPath( resourceRoot, displayPath );
         FileStamp    stamp{};
-        if ( FileUtil::getFileStamp( absPath, stamp ) == false )
+        if ( FileUtil::getFileStamp( FileUtil::toDiskPath( absPath ), stamp ) == false )
         {
             removeEntry( inoutData, assetID );
             return;
@@ -338,7 +338,7 @@ namespace sw::editor
         string text;
         if ( isTextAsset( assetID ) )
         {
-            const bool bRead = FileUtil::readOptionalTextFile( absPath, text ) == OptionalFileRead::Read;
+            const bool bRead = FileUtil::readOptionalTextFile( FileUtil::toDiskPath( absPath ), text ) == OptionalFileRead::Read;
             insertEntry( inoutData, displayPath, stamp, bRead ? &text : nullptr, nullptr ); // 읽지 못한 글은 참조가 없는 것과 같다
             return;
         }
@@ -412,7 +412,7 @@ namespace sw::editor
             const string displayPath = FileUtil::normalizeSeparators( changed );
             const string assetID     = EditorAssetIndexInternal::makeKey( displayPath );
             const string absPath     = EditorAssetIndexInternal::makeDiskPath( resourceRoot, displayPath );
-            if ( FileUtil::isDirectory( absPath ) )
+            if ( FileUtil::isDirectory( FileUtil::toDiskPath( absPath ) ) )
             {
                 // 폴더가 생겼다(옮겨 왔다) — 그 아래 파일을 하나씩 넣는다. `.meta` 는 전체 훑기와 같은 규칙으로 빠진다(EditorContentScan).
                 vector<string> listFile;
@@ -434,7 +434,7 @@ namespace sw::editor
                     refreshFromDisk( _data, resourceRoot, sourceDisplayPath, true );
                 continue;
             }
-            if ( _data._mapEntry.contains( assetID ) || FileUtil::isRegularFile( absPath ) )
+            if ( _data._mapEntry.contains( assetID ) || FileUtil::isRegularFile( FileUtil::toDiskPath( absPath ) ) )
             {
                 refreshFromDisk( _data, resourceRoot, displayPath, false );
                 continue;

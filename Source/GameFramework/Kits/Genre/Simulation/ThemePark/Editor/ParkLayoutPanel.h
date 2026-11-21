@@ -6,7 +6,7 @@
 #include "Core/Foundation/Constants.h"
 #include "Core/String/fixed_string.h"
 
-#include "Editor/Common/GUI/Panel/IEditorPanel.h"
+#include "Editor/Common/GUI/Panel/EditorPanel.h"
 
 namespace sw::editor
 {
@@ -15,7 +15,7 @@ namespace sw::editor
      * @brief ThemePark 키트의 에디터 확장 패널입니다. 키트 데이터를 읽기만 하므로 어느 게임으로 띄워도 동작합니다. 판단은 모델(`ParkLayoutViewModel`)이고 이 패널은 그리기만 합니다.
      */
     // [doc:panel-class]
-    class ParkLayoutPanel final : public IEditorPanel
+    class ParkLayoutPanel final : public EditorPanel
     {
     public:
         /** @brief 패널 id 입니다. 등록(`SW_EDITOR_PANEL`)과 열기(`EditorPanelManager::setPanelOpen<…>`)가 모두 이 상수에서 온다. */

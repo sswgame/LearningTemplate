@@ -28,7 +28,7 @@
 namespace sw
 {
     struct CoasterRideStats;
-    struct SessionStateRefs;
+    struct GameStateRefs;
 
     class Archive;
     class Wallet;
@@ -306,7 +306,7 @@ namespace sw
          * @details 건설은 `trySpend`, 입장료와 탈것 요금은 `add`, 운영비는 `charge`(빚이 될 수 있다)로 처리한다. 지갑이 없으면 건설은 모두 거절하고 수입은 버린다.
          * @return 설정이 범위 밖이거나 하한이 상한보다 크면 false 이고 공원을 열지 않는다(오류 로그).
          */
-        [[nodiscard]] bool initialize( const ThemeParkSettings& settings, const SessionStateRefs& refs );
+        [[nodiscard]] bool initialize( const ThemeParkSettings& settings, const GameStateRefs& refs );
         /** @brief 시간을 진행합니다. 큰 시간은 0.25초씩 나눠 처리합니다. */
         void update( float32 deltaTime );
 

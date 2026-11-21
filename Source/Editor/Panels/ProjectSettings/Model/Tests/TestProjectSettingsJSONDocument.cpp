@@ -20,12 +20,12 @@ SW_TEST_CASE( ProjectSettingsJSONDocumentTest, EveryConfigFileRoundTrips )
 {
     const string   configFolder = FileUtil::joinPath( ProcessRoots::get()._project.str(), ProjectSettingsEntry::kTableFolder );
     vector<string> listPath;
-    SW_REQUIRE_TRUE( FileUtil::collectFiles( configFolder, ".json", listPath, true ) );
+    SW_REQUIRE_TRUE( FileUtil::collectFiles( FileUtil::toDiskPath( configFolder ), ".json", listPath, true ) );
     SW_REQUIRE_TRUE( listPath.size() > 30u );
     for ( const string& path : listPath )
     {
         string text;
-        SW_REQUIRE_TRUE( FileUtil::readTextFile( path, text ) );
+        SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::toDiskPath( path ), text ) );
         ProjectSettingsJSONDocument document;
         SW_EXPECT_TRUE_MSG( document.openText( path, text ).has_value(), path.c_str() );
         fixed_string<constant::buffer::kMax512> message;

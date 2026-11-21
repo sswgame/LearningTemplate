@@ -25,8 +25,8 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Name/hashed_string.h"
 #include "Core/Registry/RegistrationList.h"
-#include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/ServiceSlot.h"
+#include "Core/Subsystem/Subsystem.h"
 
 #include "Engine/Animation/AnimationPlayback.h"
 #include "Engine/Animation/Notify/AnimationFootContact.h"
@@ -225,10 +225,10 @@ namespace sw
      * @brief 이름에서 처리기로 가는 테이블입니다(엔진 서비스 범위가 소유한다). 만들 때 엔진 내장 처리기(PlaySound, SpawnPrefab, Footstep, HitWindow, CameraShake, AbilityEvent,
      *        MotionWarp)를 가지고 있습니다. 추가한 처리기는 엔진이 끝날 때까지 살아 있으므로, 핫 리로드되는 모듈의 처리기는 추가하지 말고 이벤트(`AbilityEvent`)로 받으세요.
      */
-    class SW_API AnimationNotifyHandlerRegistry final : public ISubsystem
+    class SW_API AnimationNotifyHandlerRegistry final : public Subsystem
     {
     public:
-        static constexpr MemoryTag   kSubsystemMemoryTag = MemoryTag::Animation; ///< 할당 용도(`ISubsystem::getSubsystemMemoryTag`)
+        static constexpr MemoryTag   kSubsystemMemoryTag = MemoryTag::Animation; ///< 할당 용도(`Subsystem::getSubsystemMemoryTag`)
         static constexpr const utf8* kSubsystemName      = "AnimationNotifyHandlerRegistry";
 
         /** @brief 내장 처리기가 든 표를 만듭니다. */

@@ -358,7 +358,7 @@ SW_TEST_CASE( DestructionProfileTest, SharedCacheGivesOneObjectAndReloadDetaches
 {
     const test::ScopedScratchDomain domain;
     const string                    id = test::ScopedScratchDomain::makeID( "concrete.destruction.xml" ).str();
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "concrete.destruction.xml" ), R"(<DestructionProfile density="3"/>)" ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( domain.makeDiskPath( "concrete.destruction.xml" ) ), R"(<DestructionProfile density="3"/>)" ) );
 
     const shared_ptr<const DestructionProfile> pHeld  = SharedAssetCache<DestructionProfile>::acquire( id ).snapshot();
     const shared_ptr<const DestructionProfile> pAgain = SharedAssetCache<DestructionProfile>::acquire( id ).snapshot();
@@ -366,7 +366,7 @@ SW_TEST_CASE( DestructionProfileTest, SharedCacheGivesOneObjectAndReloadDetaches
     SW_EXPECT_TRUE( pHeld.get() == pAgain.get() );
     SW_EXPECT_NEAR( 3.0f, pHeld->_density, 0.0001f );
 
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "concrete.destruction.xml" ), R"(<DestructionProfile density="5"/>)" ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( domain.makeDiskPath( "concrete.destruction.xml" ) ), R"(<DestructionProfile density="5"/>)" ) );
     AssetReloadWatch<DestructionProfile> watch;
     watch.markSeen();
     const uint32 reloadsBefore = watch.getSeenCount();

@@ -6,7 +6,7 @@
 #pragma once
 #include "Core/Foundation/Macros.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/Subsystem.h"
 
 namespace sw
 {
@@ -21,7 +21,7 @@ namespace sw
      * @details 읽지 못하면 기동을 멈춘다(대신 쓸 값이 없다). 창 · 사용자 설정 · 텔레메트리 · UI · 렌더러가 이 뒤에 선다(각자 의존으로 적는다).
      *          호스트는 소유한 값을 범위에 `exposeMember` 로 걸어 서비스 표(`engine::getSubsystem<PackEngineSettings>()`)가 찾게 한다.
      */
-    class SW_API PackEngineSettingsSubsystem : public ISubsystem
+    class SW_API PackEngineSettingsSubsystem : public Subsystem
     {
     public:
         /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */

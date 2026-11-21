@@ -38,7 +38,7 @@ namespace sw::editor
             /** @brief 프리팹 파일 글을 쓰고 캐시를 다시 읽습니다(되돌리기 데이터 단계 — "Write Prefab"). */
             static void writePrefabFile( string prefabPath, string filePath, string text )
             {
-                if ( FileUtil::writeTextFile( filePath, text ) == false )
+                if ( FileUtil::writeTextFile( FileUtil::toDiskPath( filePath ), text ) == false )
                     SW_LOG_ERROR_ID( "EditorInspectorCommands.CouldNotWriteBack", "Could not write '%#' back", filePath.c_str() );
                 // 이 단계는 에셋 관리자가 있을 때만 기록된다(`applyToPrefab`) - 여기서는 필수다.
                 (void)editor::getSubsystem<AssetManager>().getAssetCache<PrefabCache>().reload( AssetID{ prefabPath } ); // 못 읽으면 캐시가 오류를 남기고 이전 판을 지킨다
@@ -143,7 +143,7 @@ namespace sw::editor
             return false; // 이유는 toDiskPath 가 남겼다
         string                              oldFileText;
         string                              oldBaseState;
-        const bool                          bHadFile   = FileUtil::readOptionalTextFile( filePath->str(), oldFileText ) == OptionalFileRead::Read;
+        const bool                          bHadFile   = FileUtil::readOptionalTextFile( *filePath, oldFileText ) == OptionalFileRead::Read;
         const shared_ptr<const PrefabAsset> pOldPrefab = ( bHadFile && pPrefabCache != nullptr ) ? pPrefabCache->loadPrefab( prefabPath ) : nullptr;
         if ( pOldPrefab == nullptr || PrefabOverrides::makeBaseState( *pOldPrefab, oldBaseState ) == false )
             oldBaseState.clear();
@@ -160,7 +160,7 @@ namespace sw::editor
             return false;
         }
         string newFileText;
-        (void)FileUtil::readTextFile( filePath->str(), newFileText ); // 방금 쓴 파일이다. 못 읽어도 다시 실행이 파일을 쓰지 않을 뿐이다
+        (void)FileUtil::readTextFile( *filePath, newFileText ); // 방금 쓴 파일이다. 못 읽어도 다시 실행이 파일을 쓰지 않을 뿐이다
 
         SW_LOG_INFO_ID( "Prefab.Saved", "Saved prefab changes to %#", string{ prefabPath }.c_str() );
         if ( pPrefabCache == nullptr || pContext == nullptr )

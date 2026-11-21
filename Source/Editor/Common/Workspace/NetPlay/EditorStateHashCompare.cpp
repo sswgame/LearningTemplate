@@ -243,7 +243,7 @@ namespace sw::editor
         if ( isSourceIndexValid( sourceIndex ) == false )
             return false;
         string text;
-        if ( FileUtil::readTextFile( path, text ) == false )
+        if ( FileUtil::readTextFile( FileUtil::toDiskPath( path ), text ) == false )
         {
             StringBuilder<constant::buffer::kMax256> errorBuilder;
             errorBuilder.appendFormat( "could not read %#", path );
@@ -259,11 +259,11 @@ namespace sw::editor
         if ( bValid == false )
             return false;
         const string directory = FileUtil::getDirectoryPart( path );
-        if ( directory.empty() == false && FileUtil::ensureDirectoryExists( directory ) == false )
+        if ( directory.empty() == false && FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( directory ) ) == false )
             return false;
         string text;
         StateHashHistory::writeReport( _arrSource[sourceIndex]._listSample, text );
-        return FileUtil::writeTextFile( path, text );
+        return FileUtil::writeTextFile( FileUtil::toDiskPath( path ), text );
     }
 
     void EditorStateHashCompare::clearSource( int32 sourceIndex )

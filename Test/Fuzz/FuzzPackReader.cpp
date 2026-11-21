@@ -23,7 +23,7 @@ namespace
 extern "C" int LLVMFuzzerTestOneInput( const uint8_t* pData, size_t size )
 {
     const sw::string& path = getInputPath();
-    if ( sw::FileUtil::ensureParentDirectoryExists( path ) == false || sw::FileUtil::writeFile( path, pData, size ) == false )
+    if ( sw::FileUtil::ensureParentDirectoryExists( sw::FileUtil::toDiskPath( path ) ) == false || sw::FileUtil::writeFile( sw::FileUtil::toDiskPath( path ), pData, size ) == false )
         std::abort(); // 입력을 못 쓰면 퍼징이 아무것도 보지 않는다 — 조용히 넘어가지 않는다
     sw::PackReader reader;
     if ( reader.open( path ) == false )

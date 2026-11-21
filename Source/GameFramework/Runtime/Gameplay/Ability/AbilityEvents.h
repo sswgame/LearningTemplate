@@ -3,7 +3,7 @@
  * @brief 어빌리티 시스템의 이벤트 페이로드와 "game" 채널 이벤트입니다.
  *
  * @details 알림은 두 경로로 나가며, 언리얼 GAS 와 같다.
- *          - **게임플레이 이벤트**(`AbilityEventData`): 태그 하나와 페이로드로 이루어진다. `AbilityComponent::handleGameplayEvent` 로 한 오브젝트에
+ *          - **게임플레이 이벤트**(`AbilityEventData`): 태그 하나와 페이로드로 이루어진다. `AbilitySystemComponent::handleGameplayEvent` 로 한 오브젝트에
  *            보내면, 그 태그를 트리거로 둔 어빌리티가 발동하고 `AbilityTaskWaitEvent` 가 깨어난다(언리얼의 `SendGameplayEventToActor` 에 해당).
  *          - **게임플레이 큐**(`AbilityPresentationEvent`): 이펙트가 내는 "보여 줄 것"(피격 섬광, 오라, 소리)이다. 게임 상태를 바꾸지 않는 연출 전용이다.
  *            컴포넌트 델리게이트(`registerGameplayCue`)와 "game" 채널, 두 경로로 나간다(`GameEventUtil::send`).
@@ -52,7 +52,7 @@ namespace sw
      * @details 즉시 실행이나 주기 실행이면 `Executed` 이고, 지속 이펙트가 걸리면 `Added`, 해제되면 `Removed` 이다. 크기는 실행에서는 그 이펙트가 바꾼
      *          양(피해이면 음수)이고, 지속에서는 스택 수이다. 연출 전용이므로 이 이벤트로 게임 상태를 바꾸지 않는다.
      */
-    struct SW_GF_API AbilityPresentationEvent final : IEvent
+    struct SW_GF_API AbilityPresentationEvent final : EventBase
     {
         TagID                    _cueTag;     ///< 큐 태그("AbilityPresentation.Hit.Fire")
         GameObjectHandle         _target;     ///< 큐가 발생한 오브젝트(이펙트를 받은 쪽)
@@ -79,7 +79,7 @@ namespace sw
      * @details `CombatAttributeSet` 이 체력이 0 에 닿는 순간 낸다. 같은 순간에 주인에게 `State.Dead` 태그가 붙고 `Event.Death` 게임플레이 이벤트가 전달된다.
      *          컴포넌트 안의 반응은 그 이벤트로 받고, 바깥(룸, HUD, 점수)은 이 채널 이벤트로 받는다.
      */
-    struct SW_GF_API AbilityOwnerDiedEvent final : IEvent
+    struct SW_GF_API AbilityOwnerDiedEvent final : EventBase
     {
         GameObjectHandle _target;     ///< 쓰러진 오브젝트
         GameObjectHandle _instigator; ///< 마지막으로 피해를 준 쪽(알 수 없으면 무효 핸들)

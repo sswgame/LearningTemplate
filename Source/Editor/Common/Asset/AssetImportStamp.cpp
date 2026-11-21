@@ -72,7 +72,7 @@ namespace sw::editor
             {
                 outMapEntry.clear();
                 string text;
-                if ( FileUtil::readOptionalTextFile( stampPath, text ) != OptionalFileRead::Read )
+                if ( FileUtil::readOptionalTextFile( FileUtil::toDiskPath( stampPath ), text ) != OptionalFileRead::Read )
                     return;
 
                 bool bHeaderSeen = false;
@@ -137,19 +137,19 @@ namespace sw::editor
             /** @brief 스탬프를 씁니다. 내용이 같으면 쓰지 않습니다 — 맞는 트리에서 임포트를 돌려도 작업 트리가 더러워지지 않습니다. */
             static void writeStampIfChanged( const string& stampPath, string_view header, const flat_map<string, StampEntry>& mapCurrent, AssetImportSummary& inoutSummary )
             {
-                const bool bStampExists = FileUtil::exists( stampPath );
+                const bool bStampExists = FileUtil::exists( FileUtil::toDiskPath( stampPath ) );
                 if ( mapCurrent.empty() && bStampExists == false )
                     return;
                 const string stampText = makeStampText( header, mapCurrent );
                 string       existingText;
-                if ( bStampExists && FileUtil::readTextFile( stampPath, existingText ) )
+                if ( bStampExists && FileUtil::readTextFile( FileUtil::toDiskPath( stampPath ), existingText ) )
                 {
                     // 체크아웃이 줄 끝을 CRLF 로 바꿔 둘 수 있으므로 CR 은 빼고 비교한다.
                     VectorUtil::removeValue( existingText, '\r' );
                     if ( existingText == stampText )
                         return;
                 }
-                if ( FileUtil::writeTextFile( stampPath, stampText ) == false )
+                if ( FileUtil::writeTextFile( FileUtil::toDiskPath( stampPath ), stampText ) == false )
                 {
                     StringBuilder<constant::buffer::kMax512> problemBuilder;
                     problemBuilder.appendFormat( "스탬프를 쓰지 못했습니다: %#", stampPath );
@@ -226,7 +226,7 @@ namespace sw::editor
                 for ( const string& path : listPath )
                 {
                     vector<uint8> bytes;
-                    if ( FileUtil::readFile( path, bytes ) == false )
+                    if ( FileUtil::readFile( FileUtil::toDiskPath( path ), bytes ) == false )
                         return false;
                     string head( string_view( path ).substr( base.size() ) );
                     head.push_back( '\n' );
@@ -278,7 +278,7 @@ namespace sw::editor
                 importer.collectImportedFiles( file._importedPath, listOld );
                 for ( const string& oldPath : listOld )
                 {
-                    if ( isSharedStorePath( oldPath ) == false && FileUtil::removeFile( oldPath ) == false )
+                    if ( isSharedStorePath( oldPath ) == false && FileUtil::removeFile( FileUtil::toDiskPath( oldPath ) ) == false )
                         return false;
                 }
                 const string base = makeCacheNameBase( importer, file );
@@ -290,7 +290,7 @@ namespace sw::editor
                     const uint8* pBytes = payload.data() + entry._offset;
                     const bool   bWritten =
                         isSharedStorePath( path ) ? ImportedAssetStore::writeIfAbsent( path, pBytes, entry._size )
-                                                    : FileUtil::ensureParentDirectoryExists( path ) && FileUtil::writeFile( path, pBytes, entry._size );
+                                                    : FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( path ) ) && FileUtil::writeFile( FileUtil::toDiskPath( path ), pBytes, entry._size );
                     if ( bWritten == false )
                         return false;
                 }
@@ -615,7 +615,7 @@ namespace sw::editor
                     if ( mapCurrent.find( relativePath ) != mapCurrent.end() )
                         continue;
                     const string sourcePath = FileUtil::joinPath( rawFolder, relativePath );
-                    if ( FileUtil::exists( sourcePath ) )
+                    if ( FileUtil::exists( FileUtil::toDiskPath( sourcePath ) ) )
                         continue; // 원본은 있다 — 위에서 어긋남 · 실패로 이미 보고했다
                     if ( mode == AssetImportMode::CheckOnly )
                     {
@@ -654,7 +654,7 @@ namespace sw::editor
                 const string footprint = makeFootprintKey( importedPath );
                 if ( footprint.empty() )
                     return;
-                if ( FileUtil::removeFile( importedPath ) == false )
+                if ( FileUtil::removeFile( FileUtil::toDiskPath( importedPath ) ) == false )
                 {
                     StringBuilder<constant::buffer::kMax512> problemBuilder;
                     problemBuilder.appendFormat( "%#: 원본이 사라진 결과를 지우지 못했습니다", importedPath );
@@ -662,7 +662,7 @@ namespace sw::editor
                 }
                 const string sideFolder = FileUtil::removeExtension( importedPath );
                 const bool   bShared    = uniqueLiveAncestor.contains( footprint );
-                if ( bShared == false && FileUtil::isDirectory( sideFolder ) && FileUtil::removeDirectory( sideFolder ) == false )
+                if ( bShared == false && FileUtil::isDirectory( FileUtil::toDiskPath( sideFolder ) ) && FileUtil::removeDirectory( FileUtil::toDiskPath( sideFolder ) ) == false )
                 {
                     StringBuilder<constant::buffer::kMax512> problemBuilder;
                     problemBuilder.appendFormat( "%#: 원본이 사라진 결과의 옆 폴더를 지우지 못했습니다", sideFolder );
@@ -731,7 +731,7 @@ namespace sw::editor
 
     void IRawAssetImporter::collectImportedFiles( string_view importedPath, vector<string>& outListPath ) const
     {
-        if ( FileUtil::isRegularFile( importedPath ) )
+        if ( FileUtil::isRegularFile( FileUtil::toDiskPath( importedPath ) ) )
             outListPath.push_back( string( importedPath ) );
     }
 
@@ -792,7 +792,7 @@ namespace sw::editor
     uint64 AssetImportStampUtil::computeFileHash( string_view path )
     {
         vector<uint8> bytes;
-        const bool    bUnreadableFile = FileUtil::exists( path ) == false || FileUtil::readFile( path, bytes ) == false || bytes.empty();
+        const bool    bUnreadableFile = FileUtil::exists( FileUtil::toDiskPath( path ) ) == false || FileUtil::readFile( FileUtil::toDiskPath( path ), bytes ) == false || bytes.empty();
         if ( bUnreadableFile )
             return 0;
         return HashUtil::computeStringHash64( reinterpret_cast<const utf8*>( bytes.data() ), bytes.size(), false );

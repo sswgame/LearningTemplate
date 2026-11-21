@@ -76,7 +76,7 @@ namespace sw
         shutdown();
     }
 
-    bool GameModuleManager::initializeGame( ILiveReloadManager* pLiveReloadManager, RHI* pRHI, IWindow* pWindow, IEngineRenderDriver* pRenderDriver )
+    bool GameModuleManager::initializeGame( ILiveReloadManager* pLiveReloadManager, RHI* pRHI, GenericWindow* pWindow, IEngineRenderDriver* pRenderDriver )
     {
         _pLiveReloadManager = pLiveReloadManager;
         _pRHI               = pRHI;

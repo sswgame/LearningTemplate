@@ -20,7 +20,7 @@
 namespace sw::editor
 {
     ModulesPanel::ModulesPanel()
-        : IEditorPanel( false )
+        : EditorPanel( false )
         , _model{}
         , _bOpenPreview{ SW_FALSE }
         , _filter{}

@@ -15,7 +15,7 @@
 #include "Engine/Input/RawInputEvent.h"
 #include "Engine/Input/Windows/Win32RawMouse.h"
 #include "Engine/Input/Windows/XInputGamepadDevice.h"
-#include "Engine/Window/IWindow.h"
+#include "Engine/Window/GenericWindow.h"
 #include "Engine/Window/MainWindowSubsystem.h"
 #include "Engine/Window/NativeWindowEvent.h"
 
@@ -136,7 +136,7 @@ namespace sw
          */
         [[nodiscard]] bool readIMECompositionInternal( LPARAM lParam, string& outUTF8 )
         {
-            IWindow* pWindow = MainWindowSubsystem::findMainWindow();
+            GenericWindow* pWindow = MainWindowSubsystem::findMainWindow();
             if ( pWindow == nullptr )
                 return false;
             HWND pHwnd = static_cast<HWND>( pWindow->tryGetWin32Handle() );
@@ -197,7 +197,7 @@ namespace sw
         /** @brief 활성 창이 마우스를 붙잡게 합니다(창 밖으로 끌어도 뗌이 도착한다). */
         void captureMouseOnActiveWindowInternal()
         {
-            IWindow* pWindow = MainWindowSubsystem::findMainWindow();
+            GenericWindow* pWindow = MainWindowSubsystem::findMainWindow();
             if ( pWindow == nullptr )
                 return;
             HWND pHwnd = static_cast<HWND>( pWindow->tryGetWin32Handle() );
@@ -463,7 +463,7 @@ namespace sw
             POINT cursorPoint{};
             if ( GetCursorPos( &cursorPoint ) )
             {
-                IWindow* pWindow = MainWindowSubsystem::findMainWindow();
+                GenericWindow* pWindow = MainWindowSubsystem::findMainWindow();
                 if ( pWindow != nullptr )
                 {
                     HWND pHwnd = static_cast<HWND>( pWindow->tryGetWin32Handle() );
@@ -488,8 +488,8 @@ namespace sw
 
     void InputManager::applyCursorShapePlatform()
     {
-        IWindow* pWindow = MainWindowSubsystem::findMainWindow();
-        HWND     pHwnd   = pWindow != nullptr ? static_cast<HWND>( pWindow->tryGetWin32Handle() ) : nullptr;
+        GenericWindow* pWindow = MainWindowSubsystem::findMainWindow();
+        HWND           pHwnd   = pWindow != nullptr ? static_cast<HWND>( pWindow->tryGetWin32Handle() ) : nullptr;
         if ( pHwnd == nullptr )
             return;
         const LPCWSTR pCursorName = getWin32CursorNameInternal( _cursorShape );
@@ -504,7 +504,7 @@ namespace sw
         if ( _pMouse == nullptr )
             return;
 
-        IWindow* pWindow = MainWindowSubsystem::findMainWindow();
+        GenericWindow* pWindow = MainWindowSubsystem::findMainWindow();
         if ( pWindow == nullptr )
             return;
 
@@ -533,7 +533,7 @@ namespace sw
         if ( _pMouse == nullptr || _pMouse->getLockMode() != MouseLockMode::LockedInCenter )
             return;
 
-        IWindow* pWindow = MainWindowSubsystem::findMainWindow();
+        GenericWindow* pWindow = MainWindowSubsystem::findMainWindow();
         if ( pWindow == nullptr )
             return;
         HWND pHwnd = static_cast<HWND>( pWindow->tryGetWin32Handle() );
@@ -567,8 +567,8 @@ namespace sw
 
     bool InputManager::isWindowFocusedPlatform() const
     {
-        IWindow* pWindow = MainWindowSubsystem::findMainWindow();
-        HWND     pHwnd   = pWindow != nullptr ? static_cast<HWND>( pWindow->tryGetWin32Handle() ) : nullptr;
+        GenericWindow* pWindow = MainWindowSubsystem::findMainWindow();
+        HWND           pHwnd   = pWindow != nullptr ? static_cast<HWND>( pWindow->tryGetWin32Handle() ) : nullptr;
         if ( pHwnd == nullptr )
             return _bWindowFocused == SW_TRUE;
         return GetForegroundWindow() == pHwnd;

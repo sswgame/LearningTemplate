@@ -41,7 +41,7 @@ namespace
 
     /** @brief 이름 · 의존 · 대상을 받아 불린 순서를 적는 서브시스템입니다. 소멸자도 적는다(소멸 순서를 본다). 할당 태그는 형식이 안다(@p TTag). */
     template <MemoryTag TTag = MemoryTag::EngineMisc>
-    class RecordingSubsystemT final : public ISubsystem
+    class RecordingSubsystemT final : public Subsystem
     {
     public:
         static constexpr MemoryTag kSubsystemMemoryTag = TTag;
@@ -360,7 +360,7 @@ SW_TEST_CASE( SubsystemCollectionTest, DependentsRestartWithTheSameBodies )
     SubsystemCollection collection;
     addRendererShapedGraph( collection, recorder );
     SW_REQUIRE_TRUE( collection.initializeAll( kTestClient ) );
-    const ISubsystem* pDevice = nullptr;
+    const Subsystem* pDevice = nullptr;
     for ( uint32 index = 0; index < collection.getSubsystemCount(); ++index )
     {
         if ( string_view{ collection.getSubsystem( index ).getSubsystemName() } == "Device" )
@@ -396,7 +396,7 @@ SW_TEST_CASE( SubsystemCollectionTest, FailedRestartLeavesTheRestStopped )
     SubsystemCollection collection;
     addRendererShapedGraph( collection, recorder );
     SW_REQUIRE_TRUE( collection.initializeAll( kTestClient ) );
-    const ISubsystem* pDevice = nullptr;
+    const Subsystem* pDevice = nullptr;
     for ( uint32 index = 0; index < collection.getSubsystemCount(); ++index )
     {
         if ( string_view{ collection.getSubsystem( index ).getSubsystemName() } == "Device" )

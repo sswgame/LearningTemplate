@@ -10,8 +10,8 @@
 
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSCatalog.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
-#include "GameFramework/Runtime/Gameplay/SessionState/PlayerProgressComponent.h"
-#include "GameFramework/Runtime/Gameplay/SessionState/SessionStateComponent.h"
+#include "GameFramework/Runtime/Gameplay/GameState/GameStateComponent.h"
+#include "GameFramework/Runtime/Gameplay/GameState/PlayerProgressComponent.h"
 
 #include "Games/FrontierTown/FrontierTownData.h"
 
@@ -49,7 +49,7 @@ namespace sw
 
     void FrontierSkirmishGameModeComponent::serializeGameState( StateIO& io )
     {
-        SessionStateComponent*   pState    = io.isReading() ? SessionStateComponent::findOnOwner( *this ) : nullptr;
+        GameStateComponent*      pState    = io.isReading() ? GameStateComponent::findOnOwner( *this ) : nullptr;
         PlayerProgressComponent* pProgress = io.isReading() ? PlayerProgressComponent::findOnOwner( *this ) : nullptr;
         if ( io.check( pState != nullptr && pProgress != nullptr ) == false )
             return;
@@ -73,7 +73,7 @@ namespace sw
         _bViewsDirty = SW_TRUE;
     }
 
-    bool FrontierSkirmishGameModeComponent::initializeWorld( RTSWorld& outWorld, SessionStateComponent& state, PlayerProgressComponent& progress )
+    bool FrontierSkirmishGameModeComponent::initializeWorld( RTSWorld& outWorld, GameStateComponent& state, PlayerProgressComponent& progress )
     {
         const RTSCatalog* pCatalog = game::findSubsystem<const RTSCatalog>();
         if ( pCatalog == nullptr )
@@ -88,7 +88,7 @@ namespace sw
     bool FrontierSkirmishGameModeComponent::startGame()
     {
         // 도시 디렉터가 먼저 열었으면 아무것도 하지 않는다 — 같은 설정이라 어느 쪽이 먼저 열어도 같은 판이다.
-        SessionStateComponent*   pState    = SessionStateComponent::openOnOwner( *this, FrontierTownData::makeStateSettings() );
+        GameStateComponent*      pState    = GameStateComponent::openOnOwner( *this, FrontierTownData::makeStateSettings() );
         PlayerProgressComponent* pProgress = pState != nullptr ? PlayerProgressComponent::openOnOwner( *this, FrontierTownData::makeProgressSettings() ) : nullptr;
         if ( pProgress == nullptr )
             return false;

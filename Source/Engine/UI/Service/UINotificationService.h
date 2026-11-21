@@ -9,8 +9,8 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
-#include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/ServiceSlot.h"
+#include "Core/Subsystem/Subsystem.h"
 
 #include "Engine/Foundation/EngineSubsystemHost.h"
 #include "Engine/Presentation/IPlayerNotificationSink.h"
@@ -61,7 +61,7 @@ namespace sw
      *          **들어오기 · 나가기.** 항목 위젯은 불투명도 0 으로 붙고 `kFadeSeconds` 동안 1 로 올라온다. 시간이 다 되면 보이는 목록(자리 계산, `getVisibleCount`)에서는 바로 빠지고
      *          위젯은 같은 시간 동안 0 으로 사라진 뒤 지운다(화면은 사라지는 항목까지 없어져야 닫는다). 움직임 줄이기(`gv_uiReduceMotion`)이면 페이드 없이 바로 붙고 바로 지운다.
      */
-    class SW_API UINotificationService final : public ISubsystem
+    class SW_API UINotificationService final : public Subsystem
     {
     public:
         // 화면 · 항목 문서는 엔진 기본 에셋 표가 기준이다(`UISystem::getEngineDocuments` 의 `_notifications` · `_notificationEntry`).
@@ -70,7 +70,7 @@ namespace sw
 
         UINotificationService();
 
-        // ISubsystem — 엔진 범위의 서브시스템이다(`engine::getSubsystem<UINotificationService>()`, 게임은 `game::getSubsystem<UINotificationService>()`). 화면 스택(`UISystem`)에 의존하고,
+        // Subsystem — 엔진 범위의 서브시스템이다(`engine::getSubsystem<UINotificationService>()`, 게임은 `game::getSubsystem<UINotificationService>()`). 화면 스택(`UISystem`)에 의존하고,
         // 기동이 UI 갱신 칸(`UISystem::onUpdateAfterScreens`)에 걸고 종료가 줄을 비우고 푼다.
         /** @brief 서브시스템 이름입니다. */
         static constexpr const utf8* kSubsystemName = "UINotifications";

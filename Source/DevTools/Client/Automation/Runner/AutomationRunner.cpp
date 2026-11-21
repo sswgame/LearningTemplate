@@ -49,7 +49,7 @@
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
-#include "Engine/Window/IWindow.h"
+#include "Engine/Window/GenericWindow.h"
 #include "Engine/Window/MainWindowSubsystem.h"
 
 // AutomationStepTimeline
@@ -386,7 +386,7 @@ namespace sw
         bool bAllWritten = true;
         for ( auto it = _listFileRestore.rbegin(); it != _listFileRestore.rend(); ++it )
         {
-            if ( FileUtil::writeTextFile( it->first, it->second ) == false )
+            if ( FileUtil::writeTextFile( FileUtil::toDiskPath( it->first ), it->second ) == false )
             {
                 SW_LOG_ERROR_ID( "Automation.RestoreFileFailed", "[Scenario] could not restore %# - restore it by hand (git checkout or rebuild)", it->first.c_str() );
                 bAllWritten = false;
@@ -476,7 +476,7 @@ namespace sw
             input.attachVirtualInput( &_inputScript, _scenario.getInputMode() );
             // 배타 시나리오는 무인 실행이다. 사람이 같은 PC 에서 마우스를 움직여도 에디터 UI 까지 결과가 바뀌지 않게 장치 이벤트를 창 메시지 단계에서 버린다.
             input.setOSDeviceInputBlocked( _scenario.getInputMode() == VirtualInputMode::Exclusive );
-            if ( IWindow* const pWindow = MainWindowSubsystem::findMainWindow(); pWindow != nullptr )
+            if ( GenericWindow* const pWindow = MainWindowSubsystem::findMainWindow(); pWindow != nullptr )
                 (void)pWindow->requestInputFocus(); // 청하지 않는 창 시스템(Windows · Wayland · 웹)은 OS 가 초점을 맡는다
             SW_LOG_INFO_ID( "Automation.StartedAfterFrame", "[Scenario] %# started after %# frame(s)", _scenario.getName().c_str(), _run._waitFrameCount );
             updateCrashContext( "started" );
@@ -861,8 +861,8 @@ namespace sw
         // 행에서는 보고 폴더를 만들 수 없다(할당 · 잠금 없이 쓴다) — 미리 만들어 둔다.
         const string reportDirectory = FileUtil::getDirectoryPart( _reportWriter.getReportPath() );
         if ( reportDirectory.empty() == false )
-            (void)FileUtil::ensureDirectoryExists( reportDirectory ); // 못 만들면 행 보고만 못 쓴다 — 정상 종료의 보고는 자기 쓰기가 알린다
-        _hangWatchdog.publish( _hangPayload );                        // 감시가 뜨기 전에 한 번 채운다
+            (void)FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( reportDirectory ) ); // 못 만들면 행 보고만 못 쓴다 — 정상 종료의 보고는 자기 쓰기가 알린다
+        _hangWatchdog.publish( _hangPayload );                                                // 감시가 뜨기 전에 한 번 채운다
         AutomationHangWatchdog::Settings settings;
         settings._startSeconds                   = _run._wallStartSeconds;
         settings._pExcludedBusy                  = _run._pCompileBusy;

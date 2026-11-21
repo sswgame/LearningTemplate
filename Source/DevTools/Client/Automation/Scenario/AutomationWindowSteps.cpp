@@ -4,7 +4,7 @@
  *        화면에 합성된 창 내용을 PNG 로 찍습니다(`CaptureWindow`). 전경은 단계가 아니라 시나리오 루트 속성(`requireForeground`)이고 실행기가 이 파일의
  *        `AutomationWindowUtil::bringToForeground` 로 가져온다.
  * @details 사람의 마우스나 포그라운드와 무관하게 같은 창 처리기를 탄다(바깥 스크립트의 `SendInput` 은 포그라운드 창에만 간다). 포커스 메시지(`KillFocus` · `SetFocus`)는
- *          창의 `IWindow::sendFocusEvent` 로 보내 Windows 와 X11 에서 돈다. 나머지는 Windows 에만 구현이 있고, 구현이 없는 플랫폼(포커스도 Wayland 는 없다)에서는 같은 이름의 단계가
+ *          창의 `GenericWindow::sendFocusEvent` 로 보내 Windows 와 X11 에서 돈다. 나머지는 Windows 에만 구현이 있고, 구현이 없는 플랫폼(포커스도 Wayland 는 없다)에서는 같은 이름의 단계가
  *          시나리오를 건너뜀(13)으로 끝낸다. 이 기계에서 볼 수 없는 것을 초록으로 두지 않기 위해서다.
  *          등록은 이 .cpp 의 정적 등록자가 한다(Shipping 은 Engine 을 통째로 링크한다 — `sw_link_whole_archive`).
  */
@@ -20,11 +20,11 @@
 
 #include "Engine/Asset/Image/ImageFileWriter.h"
 #include "Engine/Automation/Scenario/AutomationScenario.h"
-#include "Engine/Automation/Scenario/AutomationStepContext.h"
 #include "Engine/Automation/Scenario/AutomationStepParams.h"
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
+#include "Engine/Automation/Scenario/IAutomationStepContext.h"
 #include "Engine/Foundation/EngineServices.h"
-#include "Engine/Window/IWindow.h"
+#include "Engine/Window/GenericWindow.h"
 #include "Engine/Window/MainWindowSubsystem.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
@@ -71,9 +71,9 @@ namespace sw
             }
 
             /** @brief 앱 멈춤을 흉내 냅니다. 메인 루프가 `ticks` 틱 동안 프레임을 돌지 않고 돌아온다(플랫폼 수명 이벤트와 같은 길). */
-            static bool runAppSuspend( AutomationStepContext& runner, const AutomationStep& step )
+            static bool runAppSuspend( IAutomationStepContext& runner, const AutomationStep& step )
             {
-                IWindow* pWindow = MainWindowSubsystem::findMainWindow();
+                GenericWindow* pWindow = MainWindowSubsystem::findMainWindow();
                 if ( pWindow == nullptr )
                     runner.recordFailure( step, "there is no window to suspend" );
                 else
@@ -82,9 +82,9 @@ namespace sw
             }
 
             /** @brief 자기 창에 포커스 이벤트를 보냅니다. 창 시스템이 보낼 길이 없으면(Wayland) 시나리오를 건너뜀으로 끝냅니다. */
-            static bool runFocusMessage( AutomationStepContext& runner, const AutomationStep& step, bool bFocused )
+            static bool runFocusMessage( IAutomationStepContext& runner, const AutomationStep& step, bool bFocused )
             {
-                IWindow* pWindow = MainWindowSubsystem::findMainWindow();
+                GenericWindow* pWindow = MainWindowSubsystem::findMainWindow();
                 if ( pWindow == nullptr )
                     runner.recordFailure( step, "there is no window to send a message to" );
                 else if ( pWindow->sendFocusEvent( bFocused ) == false )
@@ -99,7 +99,7 @@ namespace sw
 #if defined( SW_PLATFORM_WINDOWS )
             static HWND findWindowHandle()
             {
-                IWindow* pWindow = MainWindowSubsystem::findMainWindow();
+                GenericWindow* pWindow = MainWindowSubsystem::findMainWindow();
                 return pWindow != nullptr ? static_cast<HWND>( pWindow->tryGetWin32Handle() ) : nullptr;
             }
 
@@ -126,7 +126,7 @@ namespace sw
                 return GetForegroundWindow() == hwnd;
             }
 
-            static bool runMessage( AutomationStepContext& runner, const AutomationStep& step )
+            static bool runMessage( IAutomationStepContext& runner, const AutomationStep& step )
             {
                 const HWND hwnd = findWindowHandle();
                 if ( hwnd == nullptr )
@@ -172,7 +172,7 @@ namespace sw
              *          UIPI(더 높은 무결성 창이 전경)에 막히면 SendInput 문서대로 돌려주는 값 · GetLastError 어느 쪽도 그것을 알리지 않는다 — 그때는 원시 보고가 오지 않아
              *          시나리오의 `<WaitUntil watch="Input.RawMouseEvents">` 가 시한으로 진다(건너뜀으로 바꿀 근거가 없다).
              */
-            static bool runSendInput( AutomationStepContext& runner, const AutomationStep& step )
+            static bool runSendInput( IAutomationStepContext& runner, const AutomationStep& step )
             {
                 const AutomationSendInputParams params = step.readValidatedProperties<AutomationSendInputParams>();
                 const HWND                      hwnd   = findWindowHandle();
@@ -202,7 +202,7 @@ namespace sw
                 return true;
             }
 
-            static bool runClip( AutomationStepContext& runner, const AutomationStep& step )
+            static bool runClip( IAutomationStepContext& runner, const AutomationStep& step )
             {
                 const HWND hwnd = findWindowHandle();
                 RECT       clip{};
@@ -271,7 +271,7 @@ namespace sw
              *          DWM 이 합성한 화면을 읽으므로 네 백엔드 모두 같은 경로다. 주의: 창이 가려져 있으면 **가린 다른 창이 찍힌다**(사용자의 다른 프로그램 화면이
              *          파일로 남는다). 그래서 창이 전경이 아니면 찍지 않고 경고만 남긴다. 화면을 보려는 시나리오는 루트에 `requireForeground="true"` 를 둔다.
              */
-            static bool runCapture( AutomationStepContext& runner, const AutomationStep& step )
+            static bool runCapture( IAutomationStepContext& runner, const AutomationStep& step )
             {
                 const HWND hwnd = findWindowHandle();
                 RECT       clientRect{};
@@ -376,7 +376,7 @@ namespace sw
                     }
                 }
                 const string path = runner.resolveOutputPath( step.readValidatedProperties<AutomationFileStepParams>()._file );
-                if ( FileUtil::ensureParentDirectoryExists( path ) == false ||
+                if ( FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( path ) ) == false ||
                      ImageFileWriter::writePNGRGBA8( path, bytes, static_cast<uint32>( width ), static_cast<uint32>( height ) ) == false )
                 {
                     StringBuilder<constant::buffer::kMax1024> reason;
@@ -389,23 +389,23 @@ namespace sw
             }
 #elif defined( SW_PLATFORM_POSIX )
             /** @brief 포커스 밖의 창 메시지 · 커서 클립 · 화면 찍기를 볼 구현이 없는 플랫폼입니다. 시나리오를 건너뜀으로 끝냅니다. */
-            static bool runUnsupported( AutomationStepContext& runner, const AutomationStep& step )
+            static bool runUnsupported( IAutomationStepContext& runner, const AutomationStep& step )
             {
                 StringBuilder<constant::buffer::kMax256> reason;
                 reason.appendFormat( "%#: this window step is implemented for Windows only", step.describe() );
                 runner.endScenario( AutomationStepEnd::Skip, reason.view() );
                 return true;
             }
-            static bool runMessage( AutomationStepContext& runner, const AutomationStep& step )
+            static bool runMessage( IAutomationStepContext& runner, const AutomationStep& step )
             {
                 const AutomationWindowMessage message = step.readValidatedProperties<AutomationWindowMessageParams>()._message;
                 if ( message == AutomationWindowMessage::KillFocus || message == AutomationWindowMessage::SetFocus )
                     return runFocusMessage( runner, step, message == AutomationWindowMessage::SetFocus );
                 return runUnsupported( runner, step );
             }
-            static bool runSendInput( AutomationStepContext& runner, const AutomationStep& step ) { return runUnsupported( runner, step ); }
-            static bool runClip( AutomationStepContext& runner, const AutomationStep& step ) { return runUnsupported( runner, step ); }
-            static bool runCapture( AutomationStepContext& runner, const AutomationStep& step ) { return runUnsupported( runner, step ); }
+            static bool runSendInput( IAutomationStepContext& runner, const AutomationStep& step ) { return runUnsupported( runner, step ); }
+            static bool runClip( IAutomationStepContext& runner, const AutomationStep& step ) { return runUnsupported( runner, step ); }
+            static bool runCapture( IAutomationStepContext& runner, const AutomationStep& step ) { return runUnsupported( runner, step ); }
 #else
     #error "Unsupported platform"
 #endif

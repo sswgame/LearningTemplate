@@ -1,7 +1,7 @@
 /**
  * @file ServiceStoreTracker.h
  * @brief 저장 왕복 하나를 람다 둘(저장소 스레드의 일 · 맡긴 스레드의 완료)로 맡기고, 맡긴 일 수를 세는 서비스 쪽 앞입니다.
- * @details 저장 왕복마다 `IServiceStoreJob` 을 상속한 클래스(입력 멤버 복사 · `run` · `complete`, 약 30 줄)를 적던 것을 람다 둘로 줄인다.
+ * @details 저장 왕복마다 `ServiceStoreJob` 을 상속한 클래스(입력 멤버 복사 · `run` · `complete`, 약 30 줄)를 적던 것을 람다 둘로 줄인다.
  *          UE 의 `AsyncTask` + 게임 스레드 완료, C# `Task.ContinueWith` 와 같은 모양이다.
  *          - 일 람다는 저장소 스레드에서 연결(`IServiceStoreConnection&`)을 받아 돌고, 값으로 잡은 입력만 쓴다(서비스 멤버를 만지지 않는다). 돌려준 값이 완료로 간다.
  *          - 완료 람다는 맡긴 스레드의 `pollCompletions` 에서 `( 결과&, ServiceStoreCompletion )` 또는 `( 결과& )` 로 불린다. 일이 값을 돌려주지 않으면 `( ServiceStoreCompletion )` 또는 `()` 다.
@@ -54,14 +54,14 @@ namespace sw
      * @brief 람다 둘로 선 저장 왕복입니다. `ServiceStoreTracker::submit` 만 만듭니다.
      */
     template <typename TRun, typename TComplete>
-    class ServiceStoreFunctionJob final : public IServiceStoreJob
+    class ServiceStoreFunctionJob final : public ServiceStoreJob
     {
     public:
         using RunResult = std::invoke_result_t<TRun&, IServiceStoreConnection&>;
         using Result    = std::conditional_t<std::is_void_v<RunResult>, ServiceStoreNoResult, RunResult>;
 
         ServiceStoreFunctionJob( ServiceStoreTracker& tracker, ServiceStoreJobKind kind, TRun run, TComplete complete )
-            : IServiceStoreJob{ kind }
+            : ServiceStoreJob{ kind }
             , _run{ std::move( run ) }
             , _complete{ std::move( complete ) }
             , _result{}
@@ -108,9 +108,9 @@ namespace sw
         ServiceStoreTracker& operator=( const ServiceStoreTracker& ) = delete;
 
         /** @brief 맡길 저장소를 정합니다. 내릴 때는 null 을 줍니다. */
-        void           bindStore( IServiceStore* pStore ) { _pStore = pStore; }
-        IServiceStore* getStore() const { return _pStore; }
-        bool           hasStore() const { return _pStore != nullptr; }
+        void          bindStore( ServiceStore* pStore ) { _pStore = pStore; }
+        ServiceStore* getStore() const { return _pStore; }
+        bool          hasStore() const { return _pStore != nullptr; }
 
         /**
          * @brief @p run 을 저장소 스레드에 맡기고, 끝나면 @p complete 를 이 스레드에서 부릅니다. 저장소가 없으면 조립 실수이므로 어서션을 냅니다(호출부가 `hasStore` 로 먼저 가른다).
@@ -171,8 +171,8 @@ namespace sw
         }
 
     private:
-        IServiceStore* _pStore;
-        int32          _openCount;
+        ServiceStore* _pStore;
+        int32         _openCount;
     };
 } // namespace sw
 

@@ -10,7 +10,7 @@
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Horror/SurvivalHorror/SurvivalHorrorSession.h"
-#include "GameFramework/Runtime/Foundation/Framework/SessionStateRefs.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameStateRefs.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/GridInventory.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 
@@ -54,7 +54,7 @@ namespace sw
         SurvivalHorrorSession session;
         if ( itemBox.initialize( nullptr, SurvivalHorrorDemoComponentInternal::kItemBoxSlots ) == false )
             return false;
-        if ( session.initialize( _pCatalog.get(), nullptr, hashed_string{}, SessionStateRefs{}, grid, itemBox ) == false )
+        if ( session.initialize( _pCatalog.get(), nullptr, hashed_string{}, GameStateRefs{}, grid, itemBox ) == false )
         {
             SW_LOG_ERROR_ID( "KitDemo.SurvivalHorrorOpenFailed", "Survival horror demo: the session refused the catalog rules - the session does not open" );
             return false;

@@ -1,7 +1,7 @@
 #pragma once
 #include "Core/Foundation/Types.h"
 
-#include "Editor/Common/GUI/Panel/IEditorPanel.h"
+#include "Editor/Common/GUI/Panel/EditorPanel.h"
 #include "Editor/Panels/Scene/Model/PrefabOverridesViewModel.h"
 
 namespace sw::editor
@@ -10,7 +10,7 @@ namespace sw::editor
      * @brief 프리팹 인스턴스의 오버라이드를 살펴보고 되돌리거나 적용하며, 중첩 프리팹을 보여 주는 도구입니다.
      * @details 상태와 명령은 `PrefabOverridesViewModel`(Model/, ImGui 없음)이 들고, 이 패널은 그리기와 프리팹 창 열기만 한다.
      */
-    class PrefabOverridesPanel : public IEditorPanel
+    class PrefabOverridesPanel : public EditorPanel
     {
     public:
         /** @brief 패널 id 입니다. 등록(`SW_EDITOR_PANEL`)과 조회(`EditorPanelManager::findPanel<…>` · `setPanelOpen<…>`)가 모두 이 상수에서 온다. */

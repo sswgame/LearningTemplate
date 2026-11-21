@@ -73,7 +73,7 @@ namespace sw
             [[nodiscard]] static bool readRows( const string_view absPath, vector<BuiltinRow>& outListRow )
             {
                 string text;
-                if ( FileUtil::readTextFile( absPath, text ) == false )
+                if ( FileUtil::readTextFile( FileUtil::toDiskPath( absPath ), text ) == false )
                 {
                     SW_LOG_ERROR_ID( "ReflectBuiltinsLoader.FailedReadBuiltins", "Failed to read builtins: %#", absPath );
                     return false;

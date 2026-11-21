@@ -117,7 +117,7 @@ namespace sw
 
     void SpriteAnimatorComponent::onBeginPlay()
     {
-        SceneComponent::onBeginPlay();
+        Component::onBeginPlay();
         setTickGroup( TickGroup::PostPhysics );
 
         tryLoadAnimationGraph();
@@ -146,7 +146,7 @@ namespace sw
 
     void SpriteAnimatorComponent::onRegister( GameObjectManager& manager )
     {
-        SceneComponent::onRegister( manager );
+        Component::onRegister( manager );
         _pAnimationSystem  = &manager.getSubsystem<AnimationSystem>();
         _lodRegistration   = _pAnimationSystem->registerLODClient( &_lodClient );
         const uint64 mixed = getHandle().componentID() * HashUtil::kGoldenRatio64;
@@ -157,7 +157,7 @@ namespace sw
     {
         _lodRegistration.reset();
         _pAnimationSystem = nullptr;
-        SceneComponent::onUnregister( manager );
+        Component::onUnregister( manager );
     }
 
     void SpriteAnimatorComponent::onTick( TickContext& context )
@@ -218,7 +218,7 @@ namespace sw
 
     void SpriteAnimatorComponent::onPropertyChanged( hashed_string propertyName )
     {
-        SceneComponent::onPropertyChanged( propertyName );
+        Component::onPropertyChanged( propertyName );
         static const hashed_string s_graphPathName( "_animationGraphPath" );
         if ( propertyName != s_graphPathName )
             return;

@@ -40,11 +40,11 @@ namespace sw::editor
                     return;
                 for ( const auto& [path, savedText] : state._mapTextByPath )
                 {
-                    if ( FileUtil::isRegularFile( path ) )
-                        (void)FileUtil::setWritable( path, true ); // 못 풀면 setWritable 이 경로와 이유를 남긴다
+                    if ( FileUtil::isRegularFile( FileUtil::toDiskPath( path ) ) )
+                        (void)FileUtil::setWritable( FileUtil::toDiskPath( path ), true ); // 못 풀면 setWritable 이 경로와 이유를 남긴다
                 }
                 state._mapTextByPath.clear();
-                (void)FileUtil::removeFile( getLedgerPath() ); // 못 지우면 removeFile 이 알린다 — 다음 releaseStaleLocks 가 이미 쓰기 가능한 파일을 다시 풀 뿐이다
+                (void)FileUtil::removeFile( FileUtil::toDiskPath( getLedgerPath() ) ); // 못 지우면 removeFile 이 알린다 — 다음 releaseStaleLocks 가 이미 쓰기 가능한 파일을 다시 풀 뿐이다
             }
 
             static LockState& getState() { return getEditorState<LockState>(); }
@@ -62,19 +62,19 @@ namespace sw::editor
         for ( const string& path : listPath )
             ledger.appendFormat( "%#\n", path );
         const string ledgerPath = Internal::getLedgerPath();
-        if ( FileUtil::ensureParentDirectoryExists( ledgerPath ) == false || FileUtil::writeTextFile( ledgerPath, ledger.view() ) == false )
+        if ( FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( ledgerPath ) ) == false || FileUtil::writeTextFile( FileUtil::toDiskPath( ledgerPath ), ledger.view() ) == false )
             return unexpected( Error{ ErrorKind::ExternalFailure, "could not write the lock ledger", ledgerPath } );
         for ( const string& path : listPath )
         {
             string     text;
-            const bool bExists = FileUtil::isRegularFile( path );
-            if ( bExists && FileUtil::readTextFile( path, text ) == false )
+            const bool bExists = FileUtil::isRegularFile( FileUtil::toDiskPath( path ) );
+            if ( bExists && FileUtil::readTextFile( FileUtil::toDiskPath( path ), text ) == false )
             {
                 Internal::releaseAll( state );
                 return unexpected( Error{ ErrorKind::ExternalFailure, "could not read a file to lock", path } );
             }
             state._mapTextByPath.insert_or_assign( path, bExists ? optional<string>{ std::move( text ) } : nullopt );
-            if ( bExists && FileUtil::setWritable( path, false ) == false )
+            if ( bExists && FileUtil::setWritable( FileUtil::toDiskPath( path ), false ) == false )
             {
                 Internal::releaseAll( state );
                 return unexpected( Error{ ErrorKind::ExternalFailure, "could not make a file read-only", path } );
@@ -90,11 +90,11 @@ namespace sw::editor
         optional<string>     changedPath;
         for ( const auto& [path, savedText] : state._mapTextByPath )
         {
-            const bool bExists = FileUtil::isRegularFile( path );
+            const bool bExists = FileUtil::isRegularFile( FileUtil::toDiskPath( path ) );
             if ( bExists )
-                (void)FileUtil::setWritable( path, true ); // 견주기보다 먼저 푼다
+                (void)FileUtil::setWritable( FileUtil::toDiskPath( path ), true ); // 견주기보다 먼저 푼다
             string     text;
-            const bool bSame = savedText.has_value() ? ( bExists && FileUtil::readTextFile( path, text ) && text == *savedText ) : bExists == false;
+            const bool bSame = savedText.has_value() ? ( bExists && FileUtil::readTextFile( FileUtil::toDiskPath( path ), text ) && text == *savedText ) : bExists == false;
             if ( bSame == false && changedPath.has_value() == false )
                 changedPath = path;
         }
@@ -106,7 +106,7 @@ namespace sw::editor
     {
         const string ledgerPath = EditorSaveFileLockInternal::getLedgerPath();
         string       ledger;
-        if ( FileUtil::readOptionalTextFile( ledgerPath, ledger ) != OptionalFileRead::Read )
+        if ( FileUtil::readOptionalTextFile( FileUtil::toDiskPath( ledgerPath ), ledger ) != OptionalFileRead::Read )
             return; // 장부가 없다(없음은 로그 없이 빈 값, 못 읽은 것은 읽기가 알렸다)
         size_t lineStart = 0;
         while ( lineStart < ledger.size() )
@@ -115,12 +115,12 @@ namespace sw::editor
             if ( lineEnd == string::npos )
                 lineEnd = ledger.size();
             const string path = ledger.substr( lineStart, lineEnd - lineStart );
-            if ( path.empty() == false && FileUtil::isRegularFile( path ) )
-                (void)FileUtil::setWritable( path, true );
+            if ( path.empty() == false && FileUtil::isRegularFile( FileUtil::toDiskPath( path ) ) )
+                (void)FileUtil::setWritable( FileUtil::toDiskPath( path ), true );
             lineStart = lineEnd + 1;
         }
         SW_LOG_INFO_ID( "EditorSaveFileLock.RestoredLeftovers", "Made the files of a lock ledger left by an earlier run writable again (%#)", ledgerPath );
-        (void)FileUtil::removeFile( ledgerPath );
+        (void)FileUtil::removeFile( FileUtil::toDiskPath( ledgerPath ) );
     }
 
     uint32 EditorSaveFileLock::getLockedCount()

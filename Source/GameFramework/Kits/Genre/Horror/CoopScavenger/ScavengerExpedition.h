@@ -28,7 +28,7 @@
 namespace sw
 {
     struct ScavengerMoonDef;
-    struct SessionStateRefs;
+    struct GameStateRefs;
 
     class Archive;
     class Inventory;
@@ -147,7 +147,7 @@ namespace sw
          *        터미널에서 산 물건은 빌린 우주선 창고(@p shipStorage)에 들어가며, 창고는 원정보다 오래 살아야 합니다.
          *        카탈로그가 없거나 @p crewCount 가 1 보다 작거나 승무원 체력 설정이 범위 밖이면 오류를 남기고 false 를 반환합니다(승무원 수를 1 로 올려 대신 시작하지 않는다).
          */
-        [[nodiscard]] bool initialize( const ScavengerExpeditionData& data, const SessionStateRefs& refs, Inventory& shipStorage, uint32 seed, int32 crewCount );
+        [[nodiscard]] bool initialize( const ScavengerExpeditionData& data, const GameStateRefs& refs, Inventory& shipStorage, uint32 seed, int32 crewCount );
 
         /** @brief 궤도에서 위성으로 이동합니다(비용을 냅니다). 이미 그 위성이면 공짜입니다. */
         ScavengerActionResult routeTo( const hashed_string& moonID );

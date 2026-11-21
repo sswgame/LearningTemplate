@@ -68,7 +68,7 @@ namespace sw
     class Mesh;
     class PrimitiveRegistry;
     class Scene;
-    class ScenePrimitive;
+    class PrimitiveComponent;
     class MeshInstanceBatch;
     struct GPUSceneBuilderParticleSink;
     struct VFXGPUEmitterRequest;
@@ -171,7 +171,7 @@ namespace sw
         /** @brief 칸 순 인스턴스 목록을 반환합니다(원소 번호 = 후보 번호, 실리지 않은 칸은 구멍). */
         const vector<GPUInstance>& getInstances() const { return _snapshot.getInstances(); }
         /**
-         * @brief 렌더 프리미티브 번호(`ScenePrimitive::getPrimitiveIndex`)가 지금 스냅샷에서 차지한 **불투명** 인스턴스 칸을 돌려줍니다. 없으면 비어 있습니다.
+         * @brief 렌더 프리미티브 번호(`PrimitiveComponent::getPrimitiveIndex`)가 지금 스냅샷에서 차지한 **불투명** 인스턴스 칸을 돌려줍니다. 없으면 비어 있습니다.
          * @details 화면 마커 투영 컴퓨트가 GPUScene 인스턴스 변환을 읽는 대응입니다(`CanvasMarkerRecord::_instanceSlot`). 이번 프레임 수집(`populateFromScene`) 뒤 · 다음 수집 전에만 쓴다.
          *          프리미티브 → 후보 → 인스턴스 칸의 두 표를 따라가고, 역표(`_listInstanceSrcIndex`)가 같은 후보를 가리키는지 되짚어 어긋난 표(수집 중 · 걸러짐)를 거른다.
          *          투명 꼬리는 프레임마다 다시 정렬되어 칸이 흔들리므로 풀지 않는다(그 마커는 월드 점을 쓴다).
@@ -206,7 +206,7 @@ namespace sw
         {
             Scene*                                _pScene{ nullptr };
             const PrimitiveRegistry*              _pPrimitives{ nullptr };
-            const vector<ScenePrimitive*>*        _pListPrimitive{ nullptr };
+            const vector<PrimitiveComponent*>*    _pListPrimitive{ nullptr };
             const vector<PrimitiveInstanceEntry>* _pListInstanceEntry{ nullptr };
             uint32                                _meshCount{ 0 }; ///< 슬롯 공간에서 메시 컴포넌트 수(그 뒤가 인스턴스 배치 항목)
             uint32                                _slotCount{ 0 };
@@ -703,7 +703,7 @@ namespace sw
          * @details **전체 수집과 부분 수집이 이 함수를 함께 쓴다.** 채우는 규칙이 두 곳으로 갈리면
          *          부분 갱신만 낡은 필드를 남기는데, 그 화면은 대부분의 프레임에서 멀쩡해 보인다.
          */
-        CandidateFillResult fillCandidateFromPrimitive( ScenePrimitive* pPrimitive, Scene* pScene, DrawCandidate& candidate );
+        CandidateFillResult fillCandidateFromPrimitive( PrimitiveComponent* pPrimitive, Scene* pScene, DrawCandidate& candidate );
         /** @brief 인스턴스 배치의 항목 하나를 후보로 채웁니다. 메시 컴포넌트 버전과 규칙이 같고, 소유권은 배치에 있습니다. */
         CandidateFillResult fillCandidateFromInstanceEntry( const PrimitiveInstanceEntry& entry, Scene* pScene, DrawCandidate& candidate );
         /**

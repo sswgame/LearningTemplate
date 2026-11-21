@@ -10,13 +10,13 @@
 #include "Core/Foundation/Types.h"
 #include "Core/String/fixed_string.h"
 
-#include "Editor/Common/GUI/Panel/IEditorPanel.h"
+#include "Editor/Common/GUI/Panel/EditorPanel.h"
 #include "Editor/Panels/Memory/Model/MemoryViewModel.h"
 
 namespace sw::editor
 {
     /** @brief 메모리 스냅숏 · 비교 · CSV 내보내기 도구 창입니다. */
-    class MemoryPanel : public IEditorPanel
+    class MemoryPanel : public EditorPanel
     {
     public:
         /** @brief 패널 id 입니다(`SW_EDITOR_PANEL`, `-gv_editorOpenPanel`, `panel.focus memory`). */

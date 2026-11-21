@@ -206,7 +206,7 @@
 	<Setting id="gameplay.headBob" category="gameplay" type="Bool" default="true" target="gv:gv_cameraHeadBob" text="settings.gameplay.headBob"/>
 	<!-- 고른 카메라 시점 — 순환 키(카메라 디렉터의 _cycleAction)가 쓰고 다음 실행의 시작 시점이 된다. 값은 그 게임 카메라 카탈로그의 프리셋 id, 비면 장면의 시작 프리셋. -->
 	<Setting id="gameplay.cameraPreset" category="gameplay" type="String" default="" apply="Immediate" target="gv:gv_cameraPreset" text="settings.gameplay.cameraPreset"/>
-	<!-- 튜토리얼 힌트(TutorialHintComponent)를 띄울지 — 게임 변수 대상이 없다, 힌트 볼륨이 getBoolValue 로 읽는다. -->
+	<!-- 튜토리얼 힌트(TutorialHintTriggerComponent)를 띄울지 — 게임 변수 대상이 없다, 힌트 볼륨이 getBoolValue 로 읽는다. -->
 	<Setting id="gameplay.showTutorials" category="gameplay" type="Bool" default="true" text="settings.gameplay.showTutorials"/>
 
 	<!-- 접근성 -->

@@ -452,10 +452,10 @@ namespace sw
 
     expected<void> ModuleCatalog::loadDirectory( string_view directoryPath )
     {
-        if ( FileUtil::isDirectory( directoryPath ) == false )
+        if ( FileUtil::isDirectory( FileUtil::toDiskPath( directoryPath ) ) == false )
             return unexpected( Error{ ErrorKind::NotFound, "the module catalog folder does not exist", directoryPath } );
         vector<string> listFile;
-        if ( FileUtil::collectFiles( directoryPath, ".json", listFile, false ) == false )
+        if ( FileUtil::collectFiles( FileUtil::toDiskPath( directoryPath ), ".json", listFile, false ) == false )
             return unexpected( Error{ ErrorKind::ExternalFailure, "the module catalog folder cannot be listed", directoryPath } );
         VectorUtil::sort( listFile );
         for ( const string& filePath : listFile )
@@ -463,7 +463,7 @@ namespace sw
             if ( StringUtil::endsWith( filePath, kManifestExtension, true ) == false )
                 continue;
             string text;
-            if ( FileUtil::readTextFile( filePath, text ) == false )
+            if ( FileUtil::readTextFile( FileUtil::toDiskPath( filePath ), text ) == false )
                 return unexpected( Error{ ErrorKind::ExternalFailure, "a module manifest cannot be read", filePath } );
             ModuleManifest manifest;
             if ( expected<void> parsed = parseManifest( text, filePath, manifest ); parsed.has_value() == false )

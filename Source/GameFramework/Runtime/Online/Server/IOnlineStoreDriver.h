@@ -19,7 +19,7 @@
 namespace sw
 {
     class IEphemeralStore;
-    class IServiceStore;
+    class ServiceStore;
 
     /** @brief 서버 설정의 `memory` 드라이버 이름입니다(저장소 · 캐시 공통). */
     inline constexpr const utf8* kMemoryStoreDriverName = "memory";
@@ -34,8 +34,8 @@ namespace sw
         virtual ~IServiceStoreDriver() = default;
 
         /** @brief 저장소를 만들고 초기화합니다. 실패하면 까닭입니다(대상에 비밀을 담지 않는다). @p secret 은 쓰고 나면 부른 쪽이 비웁니다. */
-        virtual expected<unique_ptr<IServiceStore>> createServiceStore( string_view driverName, string_view connection, string_view secret, int32 workerCount,
-                                                                        UnixMilliseconds nowMs ) = 0;
+        virtual expected<unique_ptr<ServiceStore>> createServiceStore( string_view driverName, string_view connection, string_view secret, int32 workerCount,
+                                                                       UnixMilliseconds nowMs ) = 0;
     };
 
     /**

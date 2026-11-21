@@ -9,7 +9,7 @@
 
 #include "GameFramework/Kits/Genre/Strategy/CityBuilder/CityCatalog.h"
 #include "GameFramework/Kits/Genre/Strategy/CityBuilder/CitySimulation.h"
-#include "GameFramework/Runtime/Foundation/Framework/SessionStateRefs.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameStateRefs.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Wallet.h"
 
 // CityReadStateTest — 도시 상태 바이트의 신뢰 경계: 타일 · 건물 · 일꾼이 서로 맞지 않는 값과 범위 밖 값을 거절하고 도시를 그대로 둔다.
@@ -174,7 +174,7 @@ namespace
 
         bool open( sw::CitySimulation& outCity )
         {
-            sw::SessionStateRefs refs;
+            sw::GameStateRefs refs;
             refs._pWallet = &_wallet;
             return outCity.initialize( &_catalog, kCitySize, kCitySize, refs );
         }
@@ -216,7 +216,7 @@ SW_TEST_CASE_F( CityReadStateTest, CityDeterminism )
     const auto      setup = [this]( CityRun& run )
     {
         run._wallet.add( _catalog.getRules()._currency, 1000 );
-        sw::SessionStateRefs refs;
+        sw::GameStateRefs refs;
         refs._pWallet = &run._wallet;
         return run._city.initialize( &_catalog, kSize, kSize, refs );
     };
@@ -476,8 +476,8 @@ SW_TEST_CASE( CityCatalogTest, CatalogWithoutRulesIsRefused )
     SW_EXPECT_LOG( "CityCatalog.RulesMissing" );
     sw::CityCatalog bare;
     SW_EXPECT_FALSE( bare.loadFromXMLText( R"(<CityCatalog roadCost="1"><Building id="hut" name="Hut" kind="House" size="1" cost="1"/><HouseLevel name="Hut" population="5"/></CityCatalog>)", "CityCatalogTest" ) );
-    sw::CitySimulation   city;
-    sw::SessionStateRefs refs;
+    sw::CitySimulation city;
+    sw::GameStateRefs  refs;
     SW_EXPECT_LOG( "CitySimulation.CitySimulationNeedsCatalog" );
     SW_EXPECT_FALSE( city.initialize( nullptr, 4, 4, refs ) );
 }

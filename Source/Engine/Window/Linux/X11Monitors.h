@@ -1,6 +1,6 @@
 /**
  * @file X11Monitors.h
- * @brief X 서버의 모니터 목록을 읽습니다(RandR · `_NET_WORKAREA`). 헤더에 X11 타입을 두지 않아 어느 플랫폼의 `IWindow.cpp` 에서도 읽힌다.
+ * @brief X 서버의 모니터 목록을 읽습니다(RandR · `_NET_WORKAREA`). 헤더에 X11 타입을 두지 않아 어느 플랫폼의 `GenericWindow.cpp` 에서도 읽힌다.
  * @details **libXrandr 은 링크하지 않고 올려 쓴다**(`libasound` · GLFW · SDL 과 같다) - X 서버 없이 도는 기계에도 깔린 게임이 동적 링커 단계에서 서지 않게 한다.
  *          헤더만 빌드에 필요하다(libxrandr-dev, `cmake/Toolchain/Platform/Linux.cmake` 가 확인한다).
  *
@@ -16,7 +16,7 @@ namespace sw
 {
     struct WindowMonitor;
 
-    /** @class X11Monitors @brief 연결 하나의 모니터 질의입니다. 값을 들고 있지 않는다 - 부르는 쪽이 세대(`IWindow::getMonitorGeneration`)로 다시 읽을 때를 안다. */
+    /** @class X11Monitors @brief 연결 하나의 모니터 질의입니다. 값을 들고 있지 않는다 - 부르는 쪽이 세대(`GenericWindow::getMonitorGeneration`)로 다시 읽을 때를 안다. */
     class X11Monitors
     {
     public:

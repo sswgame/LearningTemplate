@@ -61,7 +61,7 @@ namespace sw
             if ( path.empty() )
                 continue;
             vector<uint8> bytes;
-            if ( FileUtil::readFile( path, bytes ) == false )
+            if ( FileUtil::readFile( FileUtil::toDiskPath( path ), bytes ) == false )
                 continue;
             const FontFaceID face = _pRasterizer->loadFace( std::move( bytes ), 0, fileName );
             if ( face != kInvalidFontFaceID )

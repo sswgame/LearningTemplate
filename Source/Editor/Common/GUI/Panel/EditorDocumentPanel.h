@@ -13,7 +13,7 @@
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/EditorExports.h"
-#include "Editor/Common/GUI/Panel/IEditorDocumentPanel.h"
+#include "Editor/Common/GUI/Panel/EditorDocumentPanelBase.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 
 namespace sw
@@ -32,14 +32,14 @@ namespace sw::editor
     /**
      * @class EditorDocumentPanel
      * @brief 워크스페이스 포커스 경로가 지정한 애셋 종류와 맞으면 문서를 바꿉니다.
-     * @details 닫기 확인(Save / Don't Save / Cancel)은 `IEditorPanel::requestClose` 가 문서 패널이 아닌 패널과 함께 한다. 저장하지 않고 닫으면
+     * @details 닫기 확인(Save / Don't Save / Cancel)은 `EditorPanel::requestClose` 가 문서 패널이 아닌 패널과 함께 한다. 저장하지 않고 닫으면
      *          `revertDocument` 로 편집을 버린다(기본은 `reloadDocument`).
      *          파일 하나를 문서로 고치는 패널은 모두 이 기반으로 연다(언리얼 `FAssetEditorToolkit` 의 자리) — 콘텐츠 브라우저 · 패널 안 목록 · 경로 칸 · 시나리오(`asset.openScratch`)가
      *          같은 길(워크스페이스 포커스 → `canAcceptDocumentPath` → `loadDocument`)로 열고, 저장 왕복 시나리오(`panel.saveDocument` · `panel.reloadDocument`)가 사본 문서를 다룬다.
      *          자체 열기 길을 둔 패널(카탈로그 · 입력 맵 · 오디오 이벤트 · UI Preview · 어빌리티 카탈로그 · 데이터 테이블)은 시나리오가 사본을 가리킬 수 없어 이 기반으로 옮겼다.
-     *          연 문서 경로가 없는 문서 패널(전역 변수 · 프로젝트 설정 · 메시 모디파이어)은 `EditorStateDocumentPanel` 이고, `IEditorDocumentPanel` 은 이 둘만 상속할 수 있다.
+     *          연 문서 경로가 없는 문서 패널(전역 변수 · 프로젝트 설정 · 메시 모디파이어)은 `EditorStateDocumentPanel` 이고, `EditorDocumentPanelBase` 은 이 둘만 상속할 수 있다.
      */
-    class SW_EDITOR_API EditorDocumentPanel : public IEditorDocumentPanel
+    class SW_EDITOR_API EditorDocumentPanel : public EditorDocumentPanelBase
     {
     public:
         const utf8*     getPanelTitle() const override;
@@ -133,7 +133,7 @@ namespace sw::editor
 
         /**
          * @brief 현재 문서를 디스크에 저장합니다. 성공하면 true 입니다.
-         * @details 기반(IEditorPanel)에는 "문서 없음" 기본 구현이 있지만, 문서 패널은 반드시 구현해야 하므로 여기서 다시 순수
+         * @details 기반(EditorPanel)에는 "문서 없음" 기본 구현이 있지만, 문서 패널은 반드시 구현해야 하므로 여기서 다시 순수
          *          가상으로 선언한다. 구현을 잊으면 컴파일이 실패한다.
          */
         [[nodiscard]] bool saveDocument() override = 0;

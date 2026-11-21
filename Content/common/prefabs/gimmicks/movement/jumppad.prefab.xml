@@ -1,0 +1,14 @@
+<?asset guid="5bf7a42b8c87f365f06a3edf4311a15c"?>
+<Prefab formatVersion="1" _base="common/prefabs/gimmicks/movement/spring.prefab.xml" name="JumpPad">
+	<PrefabOverrides>
+		<Override key="#edcbb43a3dfead50">
+			<BoxCollider2DComponent _offsetScale="2,0.5" />
+		</Override>
+		<Override key="#0244d8c8807cd288">
+			<MeshComponent _localScale="2,0.2,2" />
+		</Override>
+		<Override key="#9db080fc534fcdd9">
+			<LaunchPadComponent _launchVelocity="0,18,6" />
+		</Override>
+	</PrefabOverrides>
+</Prefab>

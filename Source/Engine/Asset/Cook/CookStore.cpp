@@ -50,24 +50,24 @@ namespace sw
         }
         // 출력 파일이 이미 기록의 바이트면 다시 쓰지 않는다 — 무변경 재쿠킹이 파일(큰 팩)을 건드리지 않는다.
         // 해시는 내용 해시 캐시로 구한다 — 도장(크기 · 시각)이 지난번과 같으면 큰 팩을 다시 읽지 않는다.
-        const bool bOutputCurrent = FileUtil::isRegularFile( outputPath ) && hashOutputFile( outputPath ) == record._outputHash;
+        const bool bOutputCurrent = FileUtil::isRegularFile( FileUtil::toDiskPath( outputPath ) ) && hashOutputFile( outputPath ) == record._outputHash;
         if ( bOutputCurrent )
             return true;
         // DDC 의 출력을 출력 옆 임시 파일로 흘려 쓰고(DDC 가 본문 해시를 본다), 그 해시가 기록과 같을 때만 출력과 바꿔 끼운다 — 다르면 출력 자리를 건드리지 않는다(메모리로 들지도 않는다).
         const string tempPath = FileUtil::makeWriteTempPath( outputPath );
         if ( _derivedDataCache.find( record._key, CookJob::makeKeyDescription( desc, record._listInput ), tempPath ) == false )
         {
-            (void)FileUtil::tryRemoveFile( tempPath );
+            (void)FileUtil::tryRemoveFile( FileUtil::toDiskPath( tempPath ) );
             SW_LOG_INFO_ID( "CookStore.CookFreshRecordBut", "Cook: '%#' has a fresh record but no DDC entry (or it could not be copied) - cooked again", outputID );
             return false;
         }
         if ( hashOutputFile( tempPath ) != record._outputHash )
         {
-            (void)FileUtil::tryRemoveFile( tempPath );
+            (void)FileUtil::tryRemoveFile( FileUtil::toDiskPath( tempPath ) );
             SW_LOG_WARNING_ID( "CookStore.CookDDCEntryDoes", "Cook: the DDC entry of '%#' does not match its record - cooked again", outputID );
             return false;
         }
-        if ( FileUtil::replaceFile( tempPath, outputPath ) == false )
+        if ( FileUtil::replaceFile( FileUtil::toDiskPath( tempPath ), FileUtil::toDiskPath( outputPath ) ) == false )
         {
             SW_LOG_WARNING_ID( "CookStore.CookCouldNotWrite", "Cook: could not write '%#' from the DDC - cooked again", outputPath );
             return false;
@@ -154,7 +154,7 @@ namespace sw
         const string          recordRoot    = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( _recordRootPath ) );
         vector<string>        listRecord;
         // 기록 폴더가 아직 없으면 지울 옛 출력도 없다. 도중에 멈춘 목록이면 지울 것을 빠뜨리므로 실패로 센다(경로는 collectFiles 가 알린다).
-        if ( FileUtil::isDirectory( recordRoot ) && FileUtil::collectFiles( recordRoot, kRecordSuffix, listRecord, true ) == false )
+        if ( FileUtil::isDirectory( FileUtil::toDiskPath( recordRoot ) ) && FileUtil::collectFiles( FileUtil::toDiskPath( recordRoot ), kRecordSuffix, listRecord, true ) == false )
             ++outFailedCount;
         uint32 removedCount = 0;
         for ( const string& recordPath : listRecord )
@@ -166,9 +166,9 @@ namespace sw
             if ( _setRequestedID.contains( outputID ) )
                 continue;
             const string outputPath = FileUtil::joinPath( cookedDir, outputID );
-            if ( FileUtil::isRegularFile( outputPath ) == false ) // 팩 기록처럼 쿠킹 폴더에 출력이 없는 것은 이 정리의 몫이 아니다
+            if ( FileUtil::isRegularFile( FileUtil::toDiskPath( outputPath ) ) == false ) // 팩 기록처럼 쿠킹 폴더에 출력이 없는 것은 이 정리의 몫이 아니다
                 continue;
-            if ( FileUtil::removeFile( outputPath ) )
+            if ( FileUtil::removeFile( FileUtil::toDiskPath( outputPath ) ) )
             {
                 SW_LOG_INFO_ID( "CookStore.CookRemovedNoCooker", "Cook: removed '%#' - no cooker requested it this run (its source is gone or is no longer cooked)", outputID );
                 ++removedCount;

@@ -9,7 +9,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 
 #include "GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphBridge.h"
-#include "GameFramework/Runtime/Gameplay/Gimmick/GimmickCircuitComponent.h"
+#include "GameFramework/Runtime/Gameplay/Gimmick/Circuit/GimmickCircuitComponent.h"
 
 namespace sw::editor
 {

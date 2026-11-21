@@ -267,7 +267,7 @@ namespace sw
             {
                 string execDir       = ProcessRoots::get()._binary.str();
                 bool   bLayerPathSet = true;
-                if ( FileUtil::exists( FileUtil::joinPath( execDir, "VkLayer_khronos_validation.json" ) ) )
+                if ( FileUtil::exists( FileUtil::toDiskPath( FileUtil::joinPath( execDir, "VkLayer_khronos_validation.json" ) ) ) )
                 {
                     bLayerPathSet = ProcessEnvironment::trySet( "VK_ADD_LAYER_PATH", execDir ) && ProcessEnvironment::trySet( "VK_LAYER_PATH", execDir );
                 }
@@ -2022,8 +2022,8 @@ namespace sw
         vector<uint8> listCacheData;
         const string  cachePath = getVulkanPipelineCachePath( _physicalDevice );
         // 못 읽으면 빈 캐시로 시작한다 — 파이프라인을 다시 만들 뿐이다.
-        if ( FileUtil::exists( cachePath ) )
-            (void)FileUtil::readFile( cachePath, listCacheData ); // 못 읽으면 빈 캐시로 시작한다(위 설명)
+        if ( FileUtil::exists( FileUtil::toDiskPath( cachePath ) ) )
+            (void)FileUtil::readFile( FileUtil::toDiskPath( cachePath ), listCacheData ); // 못 읽으면 빈 캐시로 시작한다(위 설명)
 
         VkPipelineCacheCreateInfo createInfo{};
         createInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
@@ -2089,12 +2089,12 @@ namespace sw
                 const string cachePath = getVulkanPipelineCachePath( _physicalDevice );
                 // 새 파이프라인이 없던 실행은 같은 바이트다 — 다시 쓰지 않는다. 드라이버가 같은 내용에 다른 바이트를 내면 지금처럼 쓴다.
                 vector<uint8> listSavedData;
-                const bool    bUnchanged = FileUtil::exists( cachePath ) && FileUtil::readFile( cachePath, listSavedData ) && listSavedData.size() == dataSize &&
+                const bool    bUnchanged = FileUtil::exists( FileUtil::toDiskPath( cachePath ) ) && FileUtil::readFile( FileUtil::toDiskPath( cachePath ), listSavedData ) && listSavedData.size() == dataSize &&
                                         Memory::compare( listSavedData.data(), listCacheData.data(), dataSize ) == 0;
                 if ( bUnchanged )
                     SW_LOG_INFO_ID( "Vulkan.PipelineCacheUnchanged", "Pipeline cache unchanged (%# bytes) - not saved.", static_cast<uint32>( dataSize ) );
-                else if ( FileUtil::ensureParentDirectoryExists( cachePath ) &&
-                          FileUtil::writeFile( cachePath, listCacheData.data(), static_cast<uint64>( listCacheData.size() ) ) )
+                else if ( FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( cachePath ) ) &&
+                          FileUtil::writeFile( FileUtil::toDiskPath( cachePath ), listCacheData.data(), static_cast<uint64>( listCacheData.size() ) ) )
                     SW_LOG_INFO_ID( "Vulkan.SavedPipelineCacheBytes", "Saved pipeline cache (%# bytes).", static_cast<uint32>( dataSize ) );
                 else
                     SW_LOG_WARNING_ID( "Vulkan.CouldNotSavePipeline", "Could not save the pipeline cache - the next run builds pipelines from scratch" );

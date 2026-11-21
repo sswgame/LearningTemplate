@@ -21,7 +21,7 @@ using namespace sw::editor;
 SW_TEST_CASE( RigFileRewriteTest, VariantWritesOverrideRows )
 {
     const test::ScopedScratchDomain domain;
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "base.rig.xml" ), R"(<RigAsset><targets><item name="Grip" bone="hand.r" /></targets><nodes>
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( domain.makeDiskPath( "base.rig.xml" ) ), R"(<RigAsset><targets><item name="Grip" bone="hand.r" /></targets><nodes>
         <item type="TwoBoneIK" name="Arm" weight="0.5" root="upperarm.l" mid="lowerarm.l" end="hand.l" target="Grip" />
         <item type="Position" name="Follow" bone="weapon" target="Grip" />
     </nodes></RigAsset>)" ) );

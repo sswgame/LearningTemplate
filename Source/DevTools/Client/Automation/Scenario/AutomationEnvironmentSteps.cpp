@@ -12,12 +12,12 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Automation/Scenario/AutomationScenario.h"
-#include "Engine/Automation/Scenario/AutomationStepContext.h"
 #include "Engine/Automation/Scenario/AutomationStepParams.h"
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
+#include "Engine/Automation/Scenario/IAutomationStepContext.h"
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Foundation/EngineServices.h"
-#include "Engine/Window/IWindow.h"
+#include "Engine/Window/GenericWindow.h"
 #include "Engine/Window/MainWindowSubsystem.h"
 
 namespace sw
@@ -46,7 +46,7 @@ namespace sw
 #endif
             }
 
-            static bool runDevCommand( AutomationStepContext& runner, const AutomationStep& step )
+            static bool runDevCommand( IAutomationStepContext& runner, const AutomationStep& step )
             {
 #if !defined( SW_SHIPPING )
                 vector<string> listToken;
@@ -77,9 +77,9 @@ namespace sw
             }
 
             /** @brief 창을 최소화하거나(@p bMinimized) 되돌립니다. 최소화 중에도 시나리오 프레임은 돈다(자동화 실행의 페이싱이 최소화보다 앞선다 — `FramePacer`). */
-            static bool setMinimized( AutomationStepContext& runner, const AutomationStep& step, bool bMinimized )
+            static bool setMinimized( IAutomationStepContext& runner, const AutomationStep& step, bool bMinimized )
             {
-                IWindow* pWindow = MainWindowSubsystem::findMainWindow();
+                GenericWindow* pWindow = MainWindowSubsystem::findMainWindow();
                 if ( pWindow != nullptr && pWindow->canMinimize() == false )
                 {
                     StringBuilder<constant::buffer::kMax256> reason;
@@ -91,15 +91,15 @@ namespace sw
                     runner.recordFailure( step, "this platform could not minimize or restore the window" );
                 return true;
             }
-            static bool runMinimize( AutomationStepContext& runner, const AutomationStep& step ) { return setMinimized( runner, step, true ); }
-            static bool runRestore( AutomationStepContext& runner, const AutomationStep& step ) { return setMinimized( runner, step, false ); }
+            static bool runMinimize( IAutomationStepContext& runner, const AutomationStep& step ) { return setMinimized( runner, step, true ); }
+            static bool runRestore( IAutomationStepContext& runner, const AutomationStep& step ) { return setMinimized( runner, step, false ); }
 
             /** @brief 창을 창 모드의 그 클라이언트 크기로 바꿉니다. 창의 최소 크기보다 작으면 창이 최소 크기에서 멈춘다(그것을 보는 단언은 뒤 단계가 한다). */
-            static bool runResize( AutomationStepContext& runner, const AutomationStep& step )
+            static bool runResize( IAutomationStepContext& runner, const AutomationStep& step )
             {
                 const AutomationResizeWindowParams params      = step.readValidatedProperties<AutomationResizeWindowParams>();
                 MainWindowSubsystem*               pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
-                IWindow*                           pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
+                GenericWindow*                     pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
                 if ( pWindow == nullptr || pWindow->setDisplayMode( WindowDisplayMode::Windowed, params._width, params._height ) == false )
                 {
                     runner.recordFailure( step, "this platform could not resize the window" );

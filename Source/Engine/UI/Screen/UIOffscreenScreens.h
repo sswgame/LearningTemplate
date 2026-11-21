@@ -10,8 +10,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Name/hashed_string.h"
-#include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/ServiceSlot.h"
+#include "Core/Subsystem/Subsystem.h"
 
 #include "Engine/Foundation/EngineSubsystemHost.h"
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
@@ -55,13 +55,13 @@ namespace sw
      *          문서 · 스타일 시트 다시 읽기와 테마 바뀜은 그 서비스의 알림을 직접 받아 자기 화면만 다시 맞춘다.
      *          프레임 처리는 UI 갱신의 그리기 뒤 칸(`UISystem::onUpdateAfterPaint`)에서 돈다 — 화면 그리기를 막은 동안에도 미리보기는 계속 그린다.
      */
-    class SW_API UIOffscreenScreens final : public ISubsystem
+    class SW_API UIOffscreenScreens final : public Subsystem
     {
     public:
         UIOffscreenScreens();
         ~UIOffscreenScreens() override;
 
-        // ISubsystem — 화면 스택(문서 생성 · 컨텍스트) · 테마 · 두 캐시(다시 읽기 알림)에 의존한다. 종료는 화면을 모두 지운다.
+        // Subsystem — 화면 스택(문서 생성 · 컨텍스트) · 테마 · 두 캐시(다시 읽기 알림)에 의존한다. 종료는 화면을 모두 지운다.
         /** @brief 서브시스템 이름입니다. */
         static constexpr const utf8* kSubsystemName = "UIOffscreenScreens";
         SubsystemInitResult          initializeSubsystem() override;

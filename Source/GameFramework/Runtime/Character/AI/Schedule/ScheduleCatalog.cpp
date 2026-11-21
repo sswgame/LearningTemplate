@@ -124,7 +124,7 @@ namespace sw
         return _pActivityRegistry != nullptr ? *_pActivityRegistry : ScheduleActivityRegistry::getBuiltin();
     }
 
-    bool ScheduleCatalog::isNPCOfArchetype( const ScheduleNPCDef& npc, const hashed_string& archetypeID ) const
+    bool ScheduleCatalog::isNPCOfArchetype( const NPCScheduleDef& npc, const hashed_string& archetypeID ) const
     {
         hashed_string current = npc._archetype;
         // 순환은 읽을 때 끊었지만 묶음 수만큼만 걷는다.
@@ -284,7 +284,7 @@ namespace sw
 
     bool ScheduleCatalog::loadNPC( const XMLNode& node, string_view sourceName, const utf8* pID )
     {
-        ScheduleNPCDef npc;
+        NPCScheduleDef npc;
         if ( XMLFields::readProperties( node, npc, sourceName ) == false ) // 속도 >= 0.01 은 PROPERTY 가 본다
         {
             SW_LOG_ERROR_ID( "ScheduleCatalog.NpcInvalidFieldsSkipped", "%#: npc '%#' has invalid fields - skipped", sourceName, pID );
@@ -508,7 +508,7 @@ namespace sw
         vector<vector<hashed_string>> listAttendeePerAppointment( _appointmentCatalog.getCount() );
         for ( size_t npcIndex = 0; npcIndex < _npcCatalog.getCount(); ++npcIndex )
         {
-            ScheduleNPCDef        npc = _npcCatalog.getAt( npcIndex );
+            NPCScheduleDef        npc = _npcCatalog.getAt( npcIndex );
             vector<hashed_string> listRoutineID;
             for ( const ScheduleRoutineDef& routine : npc._listRoutine )
             {

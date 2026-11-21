@@ -43,6 +43,11 @@ namespace sw::constant::reflection
      */
     inline constexpr uint32 kMaxParentChainDepth = 32;
     /**
+     * @brief 형식 하나가 (조상 포함) 내보내는 리플렉션 인터페이스(`REFLECT_INTERFACE`)의 상한입니다.
+     * @details 찾기는 표를 선형으로 본다 — 상한이 작아야 컴포넌트마다 몇 칸 비교로 끝난다(언리얼 `UClass::Interfaces` 도 보통 한두 칸이다).
+     */
+    inline constexpr uint32 kMaxInterfaceCount = 4;
+    /**
      * @brief 조상 표의 칸 수입니다. 이 깊이까지의 타입은 상속 검사가 O(1) 입니다.
      * @details HotSpot 의 primary supers display 와 같은 방식입니다. 타입마다 루트부터 자기까지의 이름을
      *          깊이 순서로 적어 두면 "T 가 U 의 자손인가" 는 `표[U 의 깊이] == U 의 이름` 한 번입니다. 이보다

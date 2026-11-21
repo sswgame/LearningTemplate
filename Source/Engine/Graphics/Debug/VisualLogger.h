@@ -19,8 +19,8 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/Name/hashed_string.h"
 #include "Core/Path/AbsolutePath.h"
-#include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/ServiceSlot.h"
+#include "Core/Subsystem/Subsystem.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -60,7 +60,7 @@ namespace sw
      * @class VisualLogger
      * @brief 엔진 서브시스템 하나가 프레임별 기록을 쥡니다. 파일 머리말 참고.
      */
-    class SW_API VisualLogger : public ISubsystem
+    class SW_API VisualLogger : public Subsystem
     {
     public:
         static constexpr const utf8* kSubsystemName = "VisualLogger";

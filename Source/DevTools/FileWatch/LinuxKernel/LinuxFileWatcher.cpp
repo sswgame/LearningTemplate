@@ -28,7 +28,7 @@ namespace sw
 
 namespace sw
 {
-    unique_ptr<IFileWatcher> IFileWatcher::createNative()
+    unique_ptr<FileWatcher> FileWatcher::createNative()
     {
         return make_unique<LinuxFileWatcher>();
     }
@@ -58,7 +58,7 @@ namespace sw
         }
         stopWatching(); // 워커가 오류로 끝났으면 남은 fd · 스레드를 거둔다
 
-        if ( FileUtil::isDirectory( directoryPath ) == false )
+        if ( FileUtil::isDirectory( FileUtil::toDiskPath( directoryPath ) ) == false )
         {
             SW_LOG_ERROR_ID( "LinuxFileWatcher.DirectoryDoesNotExist", "Directory does not exist: %#", string{ directoryPath }.c_str() );
             return false;
@@ -276,7 +276,7 @@ namespace sw
             return false;
 
         uint32 failedCount{ 0 };
-        (void)FileUtil::forEachDirectoryEntry( directoryPath, true, [this, &failedCount]( const DirectoryEntry& entry )
+        (void)FileUtil::forEachDirectoryEntry( FileUtil::toDiskPath( directoryPath ), true, [this, &failedCount]( const DirectoryEntry& entry )
         {
             if ( entry._bDirectory && addWatchDirectory( entry._path ) == false )
                 ++failedCount;
@@ -327,7 +327,7 @@ namespace sw
         string       relative;
         const bool   bUnderRoot = FileUtil::tryMakePathUnderRoot( _directoryPath, absoluteFile, relative );
 
-        // 상한 · 넘침 표시 · 연속 중복 합치기는 IFileWatcher::pushChange 가 한다.
+        // 상한 · 넘침 표시 · 연속 중복 합치기는 FileWatcher::pushChange 가 한다.
         pushChange( action, _directoryPath, bUnderRoot ? string_view{ relative } : name );
     }
 } // namespace sw

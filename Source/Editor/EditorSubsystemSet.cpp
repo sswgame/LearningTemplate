@@ -40,7 +40,7 @@
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 #include "Editor/Common/Workspace/Undo/EditorUndoHistory.h"
 #include "Editor/EditorModuleUnloadListener.h"
-#include "Editor/Panels/Inspector/IInspectorComponent.h"
+#include "Editor/Panels/Inspector/IComponentInspector.h"
 #include "Editor/Panels/Inspector/Model/InspectorComponentManager.h"
 
 namespace sw::editor

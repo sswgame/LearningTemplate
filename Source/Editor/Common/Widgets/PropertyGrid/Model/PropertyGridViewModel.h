@@ -262,7 +262,7 @@ namespace sw::editor
         /** @brief View: 행 @p rowID 를 그리는 동안 활성 위젯을 그렸습니다(끄는 중 · 치는 중) — 그 행(깊이 0 조상)의 구간이 이어진다. */
         void touchRow( uint32 rowID );
         /**
-         * @brief View: 확장 영역(컴포넌트에 바로 쓰는 `IInspectorComponent`) — @p scope 씬 오브젝트 @p objectID 의 컴포넌트 @p componentID 영역의 위젯이 활성이면(@p bActive)
+         * @brief View: 확장 영역(컴포넌트에 바로 쓰는 `IComponentInspector`) — @p scope 씬 오브젝트 @p objectID 의 컴포넌트 @p componentID 영역의 위젯이 활성이면(@p bActive)
          *        구간을 잇고, 처음 활성인 프레임에는 그 컴포넌트 프로퍼티 전부를 찍어 엽니다(@p label 은 되돌리기 이름의 머리). 플레이 중이거나 대상이 없으면 아무것도 하지 않는다.
          */
         void trackComponentRegion( EditorPropertyGridScope scope, uint64 objectID, uint64 componentID, bool bActive, string_view label );

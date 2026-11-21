@@ -7,8 +7,8 @@
 #pragma once
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/ServiceSlot.h"
+#include "Core/Subsystem/Subsystem.h"
 
 #include "sw/config/ProcessExitCodes.gen.h"
 
@@ -18,7 +18,7 @@ namespace sw
      * @class QuitRequest
      * @brief 종료 요청과 그 코드입니다. 파일 머리말 참고. 게임 스레드에서 걸고 읽는다.
      */
-    class SW_API QuitRequest final : public ISubsystem
+    class SW_API QuitRequest final : public Subsystem
     {
     public:
         static constexpr const utf8* kSubsystemName = "QuitRequest";

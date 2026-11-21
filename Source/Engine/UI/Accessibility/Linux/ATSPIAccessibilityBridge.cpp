@@ -17,7 +17,7 @@
     #include "Engine/UI/Accessibility/UIAccessibilityService.h"
     #include "Engine/UI/Accessibility/UIAccessibilitySnapshot.h"
     #include "Engine/UI/UISystem.h"
-    #include "Engine/Window/IWindow.h"
+    #include "Engine/Window/GenericWindow.h"
 
     #include <X11/Xlib.h>
     #include <dbus/dbus.h>
@@ -153,7 +153,7 @@ namespace sw
         class Bridge final : public IUIAccessibilityBridge
         {
         public:
-            Bridge( UISystem& ui, IWindow& window )
+            Bridge( UISystem& ui, GenericWindow& window )
                 : _ui{ ui }
                 , _window{ window }
                 , _bReaderOn{ SW_FALSE }
@@ -837,7 +837,7 @@ namespace sw
 
         private:
             UISystem&               _ui;
-            IWindow&                _window;
+            GenericWindow&          _window;
             DBusConnection*         _pSession{ nullptr }; ///< 세션 버스(접근성 버스 주소와 스크린 리더 켜짐 신호를 받는다)
             DBusConnection*         _pBus{ nullptr };     ///< 접근성 버스(객체를 내보내는 연결)
             string                  _busName{};           ///< 접근성 버스에서의 이 앱 고유 이름
@@ -847,7 +847,7 @@ namespace sw
         };
     } // namespace
 
-    unique_ptr<IUIAccessibilityBridge> ATSPIAccessibility::createBridge( UISystem& ui, IWindow& window )
+    unique_ptr<IUIAccessibilityBridge> ATSPIAccessibility::createBridge( UISystem& ui, GenericWindow& window )
     {
         unique_ptr<Bridge> pBridge = make_unique<Bridge>( ui, window );
         if ( pBridge->connect() == false )

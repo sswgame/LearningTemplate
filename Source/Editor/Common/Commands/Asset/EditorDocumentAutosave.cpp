@@ -32,17 +32,17 @@ namespace sw::editor
     bool EditorDocumentAutosaveEntry::write( string_view sessionFolder ) const
     {
         using Internal = EditorDocumentAutosaveInternal;
-        if ( _documentPath.empty() || FileUtil::ensureDirectoryExists( Internal::makeFolder( sessionFolder ) ) == false )
+        if ( _documentPath.empty() || FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( Internal::makeFolder( sessionFolder ) ) ) == false )
             return false;
         const string textPath = Internal::makePath( sessionFolder, _documentPath, Internal::kTextSuffix );
-        if ( FileUtil::writeTextFile( textPath, _text ) == false )
+        if ( FileUtil::writeTextFile( FileUtil::toDiskPath( textPath ), _text ) == false )
             return false;
         StringBuilder<constant::buffer::kMax512> metaBuilder;
         metaBuilder.appendFormat( "document=%#\nproject=%#\nsourceHash=%#\nsaved=%#\n", _documentPath, _projectRoot, _sourceContentHash,
                                   FileUtil::getCurrentFileWriteTime() );
-        if ( FileUtil::writeTextFile( Internal::makePath( sessionFolder, _documentPath, Internal::kMetaSuffix ), metaBuilder.view() ) == false )
+        if ( FileUtil::writeTextFile( FileUtil::toDiskPath( Internal::makePath( sessionFolder, _documentPath, Internal::kMetaSuffix ) ), metaBuilder.view() ) == false )
         {
-            (void)FileUtil::tryRemoveFile( textPath ); // 메타 없는 사본은 어디 것인지 모른다
+            (void)FileUtil::tryRemoveFile( FileUtil::toDiskPath( textPath ) ); // 메타 없는 사본은 어디 것인지 모른다
             return false;
         }
         return true;
@@ -56,8 +56,8 @@ namespace sw::editor
         for ( const utf8* pSuffix : { Internal::kTextSuffix, Internal::kMetaSuffix } )
         {
             const string path = Internal::makePath( sessionFolder, documentPath, pSuffix );
-            if ( FileUtil::exists( path ) )
-                (void)FileUtil::tryRemoveFile( path );
+            if ( FileUtil::exists( FileUtil::toDiskPath( path ) ) )
+                (void)FileUtil::tryRemoveFile( FileUtil::toDiskPath( path ) );
         }
     }
 
@@ -69,14 +69,14 @@ namespace sw::editor
         for ( const string& sessionFolder : listSessionFolder )
         {
             vector<string> listFile;
-            if ( FileUtil::collectFiles( Internal::makeFolder( sessionFolder ), "", listFile, false ) == false )
+            if ( FileUtil::collectFiles( FileUtil::toDiskPath( Internal::makeFolder( sessionFolder ) ), "", listFile, false ) == false )
                 continue; // 문서 사본이 없는 세션이다
             for ( const string& file : listFile )
             {
                 if ( StringUtil::endsWith( file, Internal::kMetaSuffix ) == false )
                     continue;
                 string metaText;
-                if ( FileUtil::readTextFile( file, metaText ) == false )
+                if ( FileUtil::readTextFile( FileUtil::toDiskPath( file ), metaText ) == false )
                     continue;
                 EditorDocumentAutosaveEntry entry{};
                 entry._documentPath = EditorAutosaveCommands::findMetaValue( metaText, "document" );
@@ -86,7 +86,7 @@ namespace sw::editor
                 StringBuilder<constant::buffer::kMax512> textPathBuilder;
                 textPathBuilder.appendFormat( "%#%#", string_view( file ).substr( 0, file.size() - string_view( Internal::kMetaSuffix ).size() ), Internal::kTextSuffix );
                 entry._textAbs = string( textPathBuilder.view() );
-                if ( entry._documentPath.empty() || FileUtil::exists( entry._textAbs ) == false )
+                if ( entry._documentPath.empty() || FileUtil::exists( FileUtil::toDiskPath( entry._textAbs ) ) == false )
                     continue; // 짝이 없는 메타 — 복구할 글이 없다
                 // 다른 프로젝트 · 바뀐 원본에는 적용하지 않는다(씬 자동 저장과 같은 규칙) — 사본이 남의 일을 덮지 않게.
                 if ( FileUtil::isSameDiskPath( entry._projectRoot, projectRoot ) == false )
@@ -100,7 +100,7 @@ namespace sw::editor
 
     bool EditorDocumentAutosaveEntry::readText( string& outText ) const
     {
-        return FileUtil::readTextFile( _textAbs, outText );
+        return FileUtil::readTextFile( FileUtil::toDiskPath( _textAbs ), outText );
     }
 
     void EditorDocumentAutosaveWriteJob::request( EditorDocumentAutosaveBatch batch )

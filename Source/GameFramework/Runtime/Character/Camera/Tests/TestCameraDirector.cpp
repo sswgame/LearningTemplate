@@ -1,4 +1,4 @@
-// CameraDirectorTest — 디렉터의 후처리 덧칠(출처마다 하나, 가중치로 섞음, 0 이면 뺌). 지역의 화면 반응(ScreenReactionComponent)이 이 길을 쓴다(nogpu).
+// CameraDirectorTest — 디렉터의 후처리 덧칠(출처마다 하나, 가중치로 섞음, 0 이면 뺌). 지역의 화면 반응(TagPostProcessComponent)이 이 길을 쓴다(nogpu).
 #include "pch.h"
 
 #include "Core/Testing/TestFramework.h"

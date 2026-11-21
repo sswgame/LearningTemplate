@@ -14,9 +14,9 @@
 #include "DevTools/Diagnostics/DevSceneIterationAccess.h"
 
 #include "Engine/Automation/Scenario/AutomationScenario.h"
-#include "Engine/Automation/Scenario/AutomationStepContext.h"
 #include "Engine/Automation/Scenario/AutomationStepParams.h"
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
+#include "Engine/Automation/Scenario/IAutomationStepContext.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Scene/SceneObjectHash.h"
 
@@ -26,7 +26,7 @@ namespace sw
     {
         struct AutomationStateHashStepsInternal
         {
-            static bool runRecordStateHash( AutomationStepContext& context, const AutomationStep& step )
+            static bool runRecordStateHash( IAutomationStepContext& context, const AutomationStep& step )
             {
                 const AutomationStateHashStepParams params   = step.readValidatedProperties<AutomationStateHashStepParams>();
                 const GameObjectManager*            pManager = context.findActiveObjectManager();
@@ -43,7 +43,7 @@ namespace sw
                 return true;
             }
 
-            static bool runExpectStateHash( AutomationStepContext& context, const AutomationStep& step )
+            static bool runExpectStateHash( IAutomationStepContext& context, const AutomationStep& step )
             {
                 const AutomationStateHashStepParams params   = step.readValidatedProperties<AutomationStateHashStepParams>();
                 const GameObjectManager*            pManager = context.findActiveObjectManager();

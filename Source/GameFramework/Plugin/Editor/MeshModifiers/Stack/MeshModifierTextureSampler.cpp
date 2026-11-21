@@ -70,7 +70,7 @@ namespace sw::editor
                 pTexture->_lastCheckMilliseconds.store( getNowMilliseconds(), std::memory_order_relaxed );
 
                 vector<uint8> bytes;
-                const bool    bLoaded = pTexture->_resolvedPath.empty() == false && FileUtil::readFile( pTexture->_resolvedPath, bytes );
+                const bool    bLoaded = pTexture->_resolvedPath.empty() == false && FileUtil::readFile( FileUtil::toDiskPath( pTexture->_resolvedPath ), bytes );
                 // 읽은 바이트 자체의 해시다 — 시각을 먼저 보고 읽으면 그 사이의 저장이 옛 시각에 새 내용으로 붙어 다시 읽기를 놓쳤다. 빈 파일도 해시를 두어 같은 실패를 되풀이하지 않는다.
                 pTexture->_contentHash = bLoaded ? ContentHash::computeBytes( bytes ) : 0;
                 const bool bRead       = bLoaded && bytes.empty() == false && bytes.size() <= static_cast<size_t>( MathUtil::kMaxInt32 );

@@ -14,8 +14,8 @@
 #include "GameFramework/Runtime/Character/Control/Controller/AIControllerComponent.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Runtime/Foundation/Condition/GameFlags.h"
-#include "GameFramework/Runtime/Gameplay/Ability/AbilityComponent.h"
-#include "GameFramework/Runtime/Gameplay/SessionState/SessionStateComponent.h"
+#include "GameFramework/Runtime/Gameplay/Ability/AbilitySystemComponent.h"
+#include "GameFramework/Runtime/Gameplay/GameState/GameStateComponent.h"
 #include "GameFramework/Runtime/Gameplay/Vehicle/VehicleSeatComponent.h"
 #include "GameFramework/Runtime/Gameplay/Zone/ZoneOccupantIndex.h"
 
@@ -31,7 +31,7 @@ namespace sw
             static TagContainer collectTargetTags( const GameObject& target )
             {
                 TagContainer tags = target.getTags();
-                if ( const AbilityComponent* pAbility = target.getComponent<AbilityComponent>() )
+                if ( const AbilitySystemComponent* pAbility = target.getComponent<AbilitySystemComponent>() )
                 {
                     for ( const TagID tag : pAbility->getOwnedTagCounts().getTags().getTags() )
                     {
@@ -67,7 +67,7 @@ namespace sw
         , _arrLog{}
         , _logCount{ 0 }
         , _stamp{ 0 }
-        , _spawnInside{ ActivatorSpawnInside::Activate }
+        , _spawnInside{ TriggerSpawnInside::Activate }
     {
     }
 
@@ -84,7 +84,7 @@ namespace sw
         const GameObjectManager* pManager = target.getManager();
         bool                     bHeld    = std::find( _listSpawnHeld.begin(), _listSpawnHeld.end(), handle ) != _listSpawnHeld.end();
         // 이미 대상인 것(걸어 들어와 안에 있다)은 빼지 않는다 — 새로 안에 든 것만 나타남인지 본다.
-        bHeld = bHeld || ( findOccupancy( handle ) == nullptr && pManager != nullptr && _spawnWindow.isSpawnEntry( *pManager, target, ActivatorSpawnWindow::EntryPath::Sampled ) ); // 지역은 프레임마다 재는 표본(touch)이다 — 물리 겹침 사건이 아니다
+        bHeld = bHeld || ( findOccupancy( handle ) == nullptr && pManager != nullptr && _spawnWindow.isSpawnEntry( *pManager, target, TriggerSpawnWindow::EntryPath::Sampled ) ); // 지역은 프레임마다 재는 표본(touch)이다 — 물리 겹침 사건이 아니다
         if ( bHeld )
             _listSpawnHeldNext.push_back( handle );
         return bHeld;
@@ -97,7 +97,7 @@ namespace sw
 
     void ZoneTracker::touch( const GameObject& target, const ZoneSample& sample )
     {
-        if ( _spawnInside == ActivatorSpawnInside::Ignore && holdSpawnedInside( target ) )
+        if ( _spawnInside == TriggerSpawnInside::Ignore && holdSpawnedInside( target ) )
             return;
         const GameObjectHandle handle = target.getHandle();
         for ( OccupantRecord& occupancy : _listOccupancy )
@@ -123,7 +123,7 @@ namespace sw
         // 나타남으로 빠진 대상 중 이번에 알리지 않은 것(나갔다)은 풀린다 — 다시 들어오면 진입이다.
         _listSpawnHeld.swap( _listSpawnHeldNext );
         _listSpawnHeldNext.clear();
-        if ( _spawnInside == ActivatorSpawnInside::Ignore )
+        if ( _spawnInside == TriggerSpawnInside::Ignore )
             _spawnWindow.advance( manager );
         // 알리지 않은 대상은 나갔다. 사라진 대상(파괴 · 씬 전환)도 나간 것으로 친다 — 대상이 없으면 처리기는 부르지 않고 기록만 버린다.
         for ( size_t index = _listOccupancy.size(); index > 0; --index )
@@ -162,7 +162,7 @@ namespace sw
     {
         for ( const ZoneCompiledModule& module : profile.getModules() )
         {
-            if ( ActivatorAuthorityRule::hasAuthority( module._pProcessor->getAuthority(), manager ) )
+            if ( TriggerAuthorityRule::hasAuthority( module._pProcessor->getAuthority(), manager ) )
                 module._pProcessor->onSourceBegin( manager, module );
         }
     }
@@ -201,8 +201,8 @@ namespace sw
         GameObject* const pOccupant = manager.resolveGameObject( occupancy._target );
         if ( pOccupant == nullptr || pOccupant->isPendingDestroy() )
             return;
-        SessionStateComponent* const pSession = SessionStateComponent::findOpen( &manager );
-        GameFlags* const             pFlags   = pSession != nullptr ? &pSession->getFlags() : nullptr;
+        GameStateComponent* const pSession = GameStateComponent::findOpen( &manager );
+        GameFlags* const          pFlags   = pSession != nullptr ? &pSession->getFlags() : nullptr;
 
         const vector<ZoneCompiledModule>& listModule = profile.getModules();
         vector<GameObject*>               listTarget;
@@ -211,7 +211,7 @@ namespace sw
             const ZoneCompiledModule& module = listModule[moduleIndex];
             if ( pOccupant->isPendingDestroy() )
                 return; // 앞 모듈의 할 일이 지웠다(재로 바뀜 · 파괴) — 남은 모듈은 할 대상이 없다
-            if ( ActivatorAuthorityRule::hasAuthority( module._pProcessor->getAuthority(), manager ) == false )
+            if ( TriggerAuthorityRule::hasAuthority( module._pProcessor->getAuthority(), manager ) == false )
                 continue; // 이 월드가 판정하지 않는 효과(클라이언트의 Server 모듈) — 대상 기록은 같이 두고 결과는 복제로 받는다
             listTarget.clear();
             resolveRoleTargets( manager, module, *pOccupant, listTarget );

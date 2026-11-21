@@ -45,7 +45,7 @@ namespace sw
          */
         [[nodiscard]] bool loadFromXML( string_view assetRelativePath );
         /**
-         * @brief 이미 읽은 맵 데이터와 그 타일셋으로 채웁니다. 씬의 `TileMapRendererComponent` 가 읽은 것을 그대로 받아, 그리는 맵과 걷는 맵이 한 데이터가 되게 합니다.
+         * @brief 이미 읽은 맵 데이터와 그 타일셋으로 채웁니다. 씬의 `TileMapComponent` 가 읽은 것을 그대로 받아, 그리는 맵과 걷는 맵이 한 데이터가 되게 합니다.
          * @return 타일셋에 없는 브러시를 칠한 맵이면 false 입니다.
          */
         [[nodiscard]] bool assign( const TileMapXMLData& data, const TileSetAsset& tileSet );

@@ -14,8 +14,8 @@
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Automation/Scenario/AutomationScenario.h"
-#include "Engine/Automation/Scenario/AutomationStepContext.h"
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
+#include "Engine/Automation/Scenario/IAutomationStepContext.h"
 
 namespace sw::editor
 {
@@ -48,14 +48,14 @@ namespace sw::editor
             }
 
             /** @brief 입력 큐가 에디터 컨텍스트에 있으므로 에디터가 없는 실행은 오류로 멈춘다. */
-            [[nodiscard]] static expected<void> prepare( AutomationStepContext& /*runner*/, const AutomationStep& /*step*/ )
+            [[nodiscard]] static expected<void> prepare( IAutomationStepContext& /*runner*/, const AutomationStep& /*step*/ )
             {
                 if ( EditorSelfTestMarks::setEnabled( true ) )
                     return {};
                 return unexpected( Error{ ErrorKind::Unsupported, "needs the editor (no editor context to queue the wheel - run with -EnableEditor)" } );
             }
 
-            static bool run( AutomationStepContext& runner, const AutomationStep& step )
+            static bool run( IAutomationStepContext& runner, const AutomationStep& step )
             {
                 const expected<float64> notches = readNotches( step );
                 if ( notches.has_value() == false )

@@ -14,7 +14,7 @@
 namespace sw
 {
     X11SplashWindow::X11SplashWindow()
-        : ISplashWindow{}
+        : SplashWindowBase{}
         , _splashThread{}
     {
     }

@@ -69,7 +69,7 @@ namespace sw
 
         /**
          * @brief 기본 백엔드로 디바이스를 초기화합니다.
-         * @param pSurface 스왑체인을 붙일 표면(보통 활성 `IWindow`)입니다. RHI 는 창 시스템을 모르므로 부르는 쪽이 넘깁니다.
+         * @param pSurface 스왑체인을 붙일 표면(보통 활성 `GenericWindow`)입니다. RHI 는 창 시스템을 모르므로 부르는 쪽이 넘깁니다.
          *                 백엔드 교체(`recreateDevice`)도 같은 표면을 다시 씁니다.
          */
         [[nodiscard]] bool initialize( IRenderSurface* pSurface );

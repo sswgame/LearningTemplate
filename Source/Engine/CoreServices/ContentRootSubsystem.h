@@ -11,7 +11,7 @@
  */
 #pragma once
 #include "Core/Foundation/Macros.h"
-#include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/Subsystem.h"
 
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Serialization/Inherit/ResourceComposition.h"
@@ -23,7 +23,7 @@ namespace sw
     class CrashHandlerSubsystem;
 
     /** @class ContentRootSubsystem @brief 리소스 루트 · 게임 선택 서브시스템입니다. */
-    class SW_API ContentRootSubsystem final : public ISubsystem
+    class SW_API ContentRootSubsystem final : public Subsystem
     {
     public:
         /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */

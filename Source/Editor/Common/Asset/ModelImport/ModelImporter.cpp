@@ -490,7 +490,7 @@ namespace sw::editor
              */
             [[nodiscard]] static bool parseGltf( string_view sourcePath, vector<uint8>& inoutBytes, GltfData& outData )
             {
-                if ( FileUtil::readFile( sourcePath, inoutBytes ) == false || inoutBytes.empty() )
+                if ( FileUtil::readFile( FileUtil::toDiskPath( sourcePath ), inoutBytes ) == false || inoutBytes.empty() )
                 {
                     SW_LOG_ERROR_ID( "ModelImporter.FailedReadGlTF", "Failed to read glTF '%#'", sourcePath );
                     return false;
@@ -592,7 +592,7 @@ namespace sw::editor
                 const string fracturePath = FractureAsset::makePathForMesh( outputPath );
                 if ( rule._bFracture != SW_TRUE )
                 {
-                    if ( FileUtil::exists( fracturePath ) && FileUtil::removeFile( fracturePath ) == false )
+                    if ( FileUtil::exists( FileUtil::toDiskPath( fracturePath ) ) && FileUtil::removeFile( FileUtil::toDiskPath( fracturePath ) ) == false )
                     {
                         SW_LOG_ERROR_ID( "ModelImporter.FailedRemoveStaleFracture", "Failed to remove stale fracture asset %#", fracturePath.c_str() );
                         return false;
@@ -673,9 +673,9 @@ namespace sw::editor
 
                 // 잠그지 않는다: 이름이 내용 지문이라 워커 둘이 같은 파일을 써도 같은 글이고, `writeTextFile` 은 저마다의 임시 파일에 쓴 뒤 바꿔 끼운다.
                 string existing;
-                if ( FileUtil::exists( outSharedPath ) && FileUtil::readTextFile( outSharedPath, existing ) && existing == *text )
+                if ( FileUtil::exists( FileUtil::toDiskPath( outSharedPath ) ) && FileUtil::readTextFile( FileUtil::toDiskPath( outSharedPath ), existing ) && existing == *text )
                     return true;
-                if ( FileUtil::ensureParentDirectoryExists( outSharedPath ) == false || FileUtil::writeTextFile( outSharedPath, *text ) == false )
+                if ( FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( outSharedPath ) ) == false || FileUtil::writeTextFile( FileUtil::toDiskPath( outSharedPath ), *text ) == false )
                 {
                     SW_LOG_ERROR_ID( "ModelImporter.FailedWriteSkeleton", "Failed to write skeleton %#", outSharedPath.c_str() );
                     return false;
@@ -890,7 +890,7 @@ namespace sw::editor
         // 다시 임포트면 앞 `.mesh` 의 구간 이름을 날 이름으로 이어받는다 — 외형 데이터가 짚는 구간 이름이 원본 머티리얼 추가 · 이름 바꿈으로 밀리지 않게.
         vector<uint8> listPreviousByte;
         MeshAssetData previous{};
-        const bool    bHasPrevious = result._listSection.empty() == false && FileUtil::exists( outputPath ) && FileUtil::readFile( outputPath, listPreviousByte ) &&
+        const bool    bHasPrevious = result._listSection.empty() == false && FileUtil::exists( FileUtil::toDiskPath( outputPath ) ) && FileUtil::readFile( FileUtil::toDiskPath( outputPath ), listPreviousByte ) &&
                                   MeshAssetFormat::readFromBytes( listPreviousByte.data(), listPreviousByte.size(), previous );
         if ( bHasPrevious && ModelImportMaterial::keepPreviousSectionNames( result._listSection, previous._listSection ) > 0 )
         {
@@ -900,7 +900,7 @@ namespace sw::editor
 
         // 옆 폴더는 임포트할 때마다 새로 쓴다. 규칙에서 빠진 클립과 사라진 부착 메시가 이전 파일로 남지 않게 하기 위해서다.
         const string sideFolder = makeImportedSideFolder( outputPath );
-        if ( FileUtil::removeDirectory( sideFolder ) == false )
+        if ( FileUtil::removeDirectory( FileUtil::toDiskPath( sideFolder ) ) == false )
         {
             SW_LOG_ERROR_ID( "ModelImporter.FailedClearImportedModel", "Failed to clear the imported model folder %#", sideFolder.c_str() );
             return false;
@@ -1047,7 +1047,7 @@ namespace sw::editor
                 }
                 if ( mode == AssetImportMode::CheckOnly )
                 {
-                    if ( FileUtil::exists( outFile->str() ) == false )
+                    if ( FileUtil::exists( *outFile ) == false )
                     {
                         StringBuilder<constant::buffer::kMax512> problemBuilder;
                         problemBuilder.appendFormat( "retarget bake: '%#' is not baked - run App --import-models", entry._clipPath );
@@ -1055,7 +1055,7 @@ namespace sw::editor
                     }
                     continue;
                 }
-                const bool bBaked = FileUtil::ensureDirectoryExists( FileUtil::getDirectoryPart( outFile->str() ) ) &&
+                const bool bBaked = FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( FileUtil::getDirectoryPart( outFile->str() ) ) ) &&
                                     PoseRetargeter::bakeClipFile( AssetID{ entry._retargetProfile }, AssetID{ entry._retargetSourceClip }, outFile->str() );
                 if ( bBaked == false )
                 {
@@ -1088,7 +1088,7 @@ namespace sw::editor
     uint64 ModelImporter::computeSourceHash( string_view sourcePath, const ModelImportRule& rule )
     {
         vector<uint8> bytes;
-        if ( FileUtil::readFile( sourcePath, bytes ) == false || bytes.empty() )
+        if ( FileUtil::readFile( FileUtil::toDiskPath( sourcePath ), bytes ) == false || bytes.empty() )
             return 0;
 
         StringBuilder<constant::buffer::kMax64> versionText;
@@ -1134,7 +1134,7 @@ namespace sw::editor
         // 부가 데이터(클립 반복, 알림, 커브)를 고쳐도 다시 임포트해야 한다.
         vector<uint8> clipDataBytes;
         const string  clipDataPath = makeClipDataPath( sourcePath );
-        const bool    bHasClipData = FileUtil::exists( clipDataPath ) && FileUtil::readFile( clipDataPath, clipDataBytes ) && clipDataBytes.empty() == false;
+        const bool    bHasClipData = FileUtil::exists( FileUtil::toDiskPath( clipDataPath ) ) && FileUtil::readFile( FileUtil::toDiskPath( clipDataPath ), clipDataBytes ) && clipDataBytes.empty() == false;
         if ( bHasClipData )
             hash = HashUtil::computeStringHash64( reinterpret_cast<const utf8*>( clipDataBytes.data() ), clipDataBytes.size(), false, hash );
 
@@ -1157,7 +1157,7 @@ namespace sw::editor
                 continue;
             vector<uint8> bufferBytes;
             const string  bufferPath  = FileUtil::joinPath( directory, pUri );
-            const bool    bBufferRead = FileUtil::exists( bufferPath ) && FileUtil::readFile( bufferPath, bufferBytes ); // 해시는 있는 버퍼만 섞는다(없는 버퍼는 임포트가 오류로 알린다)
+            const bool    bBufferRead = FileUtil::exists( FileUtil::toDiskPath( bufferPath ) ) && FileUtil::readFile( FileUtil::toDiskPath( bufferPath ), bufferBytes ); // 해시는 있는 버퍼만 섞는다(없는 버퍼는 임포트가 오류로 알린다)
             if ( bBufferRead && bufferBytes.empty() == false )
                 hash = HashUtil::computeStringHash64( reinterpret_cast<const utf8*>( bufferBytes.data() ), bufferBytes.size(), false, hash );
         }
@@ -1167,29 +1167,29 @@ namespace sw::editor
 
     void ModelImporter::collectImportedFiles( string_view importedMeshPath, vector<string>& outListPath )
     {
-        if ( FileUtil::isRegularFile( importedMeshPath ) == false )
+        if ( FileUtil::isRegularFile( FileUtil::toDiskPath( importedMeshPath ) ) == false )
             return;
         outListPath.push_back( string( importedMeshPath ) );
         const string fracturePath = FractureAsset::makePathForMesh( importedMeshPath );
-        if ( FileUtil::isRegularFile( fracturePath ) )
+        if ( FileUtil::isRegularFile( FileUtil::toDiskPath( fracturePath ) ) )
             outListPath.push_back( fracturePath );
         const string sideFolder = FileUtil::normalizeSeparators( makeImportedSideFolder( importedMeshPath ) );
-        if ( FileUtil::isDirectory( sideFolder ) == false )
+        if ( FileUtil::isDirectory( FileUtil::toDiskPath( sideFolder ) ) == false )
             return;
         vector<string> listFile;
-        (void)FileUtil::collectFiles( sideFolder, "", listFile, true ); // 도중에 멈춘 목록은 빠진 파일이 DDC 히트 뒤에 없을 뿐이다 — 해시가 달라 다음 대조가 다시 임포트한다
+        (void)FileUtil::collectFiles( FileUtil::toDiskPath( sideFolder ), "", listFile, true ); // 도중에 멈춘 목록은 빠진 파일이 DDC 히트 뒤에 없을 뿐이다 — 해시가 달라 다음 대조가 다시 임포트한다
         unordered_set<string> uniqueShared;
         for ( const string& file : listFile )
         {
             outListPath.push_back( FileUtil::normalizeSeparators( file ) );
             string text;
-            if ( ImportedAssetStore::isReferrer( file ) && FileUtil::readTextFile( file, text ) )
+            if ( ImportedAssetStore::isReferrer( file ) && FileUtil::readTextFile( FileUtil::toDiskPath( file ), text ) )
             {
                 vector<string> listShared;
                 ImportedAssetStore::collectReferencedFiles( importedMeshPath, text, listShared );
                 for ( string& shared : listShared )
                 {
-                    if ( FileUtil::isRegularFile( shared ) && uniqueShared.insert( shared ).second )
+                    if ( FileUtil::isRegularFile( FileUtil::toDiskPath( shared ) ) && uniqueShared.insert( shared ).second )
                         outListPath.push_back( std::move( shared ) );
                 }
             }
@@ -1203,17 +1203,17 @@ namespace sw::editor
             return 0;
         // 옆의 `.fracture` 도 결과다. 지워지거나 바뀌면 어긋남이다.
         const string fracturePath = FractureAsset::makePathForMesh( importedMeshPath );
-        if ( FileUtil::exists( fracturePath ) )
+        if ( FileUtil::exists( FileUtil::toDiskPath( fracturePath ) ) )
         {
             const uint64 fractureHash = AssetImportStampUtil::computeFileHash( fracturePath );
             hash                      = HashUtil::computeStringHash64( reinterpret_cast<const utf8*>( &fractureHash ), sizeof( fractureHash ), false, hash );
         }
         // 옆 폴더의 파일을 이름 순서로 섞는다. 이름도 섞으므로 파일이 사라지거나 바뀌면 다른 값이 된다.
         const string sideFolder = FileUtil::normalizeSeparators( makeImportedSideFolder( importedMeshPath ) );
-        if ( FileUtil::isDirectory( sideFolder ) == false )
+        if ( FileUtil::isDirectory( FileUtil::toDiskPath( sideFolder ) ) == false )
             return hash;
         vector<string> listFile;
-        (void)FileUtil::collectFiles( sideFolder, "", listFile, true ); // 폴더는 위에서 확인했다 — 도중에 멈춘 목록은 collectFiles 가 알리고 해시가 달라져 다시 임포트한다
+        (void)FileUtil::collectFiles( FileUtil::toDiskPath( sideFolder ), "", listFile, true ); // 폴더는 위에서 확인했다 — 도중에 멈춘 목록은 collectFiles 가 알리고 해시가 달라져 다시 임포트한다
         for ( string& file : listFile )
         {
             file = FileUtil::normalizeSeparators( file );
@@ -1229,7 +1229,7 @@ namespace sw::editor
             hash                  = HashUtil::computeStringHash64( reinterpret_cast<const utf8*>( &fileHash ), sizeof( fileHash ), false, hash );
             // 옆 폴더 파일이 가리키는 공유 파일도 결과다 — 지우거나 손대면 어긋남이다.
             string text;
-            if ( ImportedAssetStore::isReferrer( file ) && FileUtil::readTextFile( file, text ) )
+            if ( ImportedAssetStore::isReferrer( file ) && FileUtil::readTextFile( FileUtil::toDiskPath( file ), text ) )
                 hash = ImportedAssetStore::mixReferencedFiles( importedMeshPath, text, hash );
         }
         return hash;

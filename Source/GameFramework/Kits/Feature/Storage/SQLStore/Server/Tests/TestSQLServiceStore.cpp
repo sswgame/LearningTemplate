@@ -43,7 +43,7 @@ namespace
 
     /** @brief 저장소 일 하나를 함수 하나로 감쌉니다. */
     template <typename FunctionType>
-    class ServiceStoreTestJob final : public IServiceStoreJob
+    class ServiceStoreTestJob final : public ServiceStoreJob
     {
     public:
         ServiceStoreTestJob( FunctionType function, int32& outCompleteCount, int32& outCancelledCount )
@@ -73,7 +73,7 @@ namespace
 
         /** @brief 일을 맡기고 끝날 때까지 거둡니다(시한 10 초). 저장소 스레드에서 도는 @p function 이 쓴 값은 잠금을 지나 보입니다. */
         template <typename FunctionType>
-        [[nodiscard]] static bool run( IServiceStore& store, FunctionType function )
+        [[nodiscard]] static bool run( ServiceStore& store, FunctionType function )
         {
             int32 completeCount  = 0;
             int32 cancelledCount = 0;
@@ -87,7 +87,7 @@ namespace
         }
 
         /** @brief @p store 에서 트랜잭션 하나를 커밋합니다. */
-        static ServiceStoreResult commit( IServiceStore& store, const ServiceTransaction& transaction, ServiceCommitInfo* pOutInfo = nullptr )
+        static ServiceStoreResult commit( ServiceStore& store, const ServiceTransaction& transaction, ServiceCommitInfo* pOutInfo = nullptr )
         {
             ServiceStoreResult result = ServiceStoreResult::Invalid;
             const bool         bDone  = run( store, [&]( IServiceStoreConnection& connection )
@@ -96,7 +96,7 @@ namespace
             return result;
         }
 
-        static ServiceStoreResult read( IServiceStore& store, string_view key, ServiceRecord& outRecord )
+        static ServiceStoreResult read( ServiceStore& store, string_view key, ServiceRecord& outRecord )
         {
             ServiceStoreResult result = ServiceStoreResult::Invalid;
             const bool         bDone  = run( store, [&]( IServiceStoreConnection& connection )
@@ -120,8 +120,8 @@ namespace
         FakeStoreFixture()
         {
             const string folder = _domain.makeDiskFolder( "sql" );
-            SW_EXPECT_TRUE( FileUtil::writeTextFile( FileUtil::joinPath( folder, SQLMigrationRunner::kListFileName ), "<SQLMigrationList><Migration _name=\"0001_fake\" _compatibility=\"Backward\" /></SQLMigrationList>" ) );
-            SW_EXPECT_TRUE( FileUtil::writeTextFile( FileUtil::joinPath( folder, "0001_fake.sql" ), "CREATE FAKE" ) );
+            SW_EXPECT_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( FileUtil::joinPath( folder, SQLMigrationRunner::kListFileName ) ), "<SQLMigrationList><Migration _name=\"0001_fake\" _compatibility=\"Backward\" /></SQLMigrationList>" ) );
+            SW_EXPECT_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( FileUtil::joinPath( folder, "0001_fake.sql" ) ), "CREATE FAKE" ) );
             _driver.addRows( test::FakeSQLDriver::kNextCommitVersion, { vector<SQLValue>{ SQLValue::makeInt64( 77 ) } }, 1 );
             SQLConnectionPoolConfig settings;
             settings._connection  = "fake";
@@ -684,7 +684,7 @@ SW_TEST_CASE( SQLServiceStoreTest, ReadFailuresAreUnavailable )
     }
 }
 
-/** @brief 종료 뒤 맡긴 일은 닫힌 연결로 돌고 완료를 받으며 취소로 표시된다(`IServiceStoreJob` 의 약속). */
+/** @brief 종료 뒤 맡긴 일은 닫힌 연결로 돌고 완료를 받으며 취소로 표시된다(`ServiceStoreJob` 의 약속). */
 SW_TEST_CASE( SQLServiceStoreTest, JobAfterShutdownIsCancelled )
 {
     FakeStoreFixture fixture;
@@ -747,8 +747,8 @@ SW_TEST_CASE( SQLServiceStoreTest, FailedMigrationStopsTheStartup )
 {
     test::ScopedScratchDomain domain;
     const string              folder = domain.makeDiskFolder( "sql" );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::joinPath( folder, SQLMigrationRunner::kListFileName ), "<SQLMigrationList><Migration _name=\"0001_fake\" _compatibility=\"Backward\" /></SQLMigrationList>" ) );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::joinPath( folder, "0001_fake.sql" ), "CREATE FAKE" ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( FileUtil::joinPath( folder, SQLMigrationRunner::kListFileName ) ), "<SQLMigrationList><Migration _name=\"0001_fake\" _compatibility=\"Backward\" /></SQLMigrationList>" ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( FileUtil::joinPath( folder, "0001_fake.sql" ) ), "CREATE FAKE" ) );
     test::FakeSQLDriver         driver;
     const SQLDriverRegistration registration{ driver };
     driver.addResult( "CREATE FAKE", SQLResult::Error );
@@ -770,10 +770,10 @@ SW_TEST_CASE( SQLServiceStoreTest, StoreDriverSubsystemMakesStores )
 {
     IServiceStoreDriver* pDriver = game::findSubsystem<IServiceStoreDriver>();
     SW_REQUIRE_NOT_NULL( pDriver );
-    string                    error;
-    unique_ptr<IServiceStore> first = pDriver->createServiceStore( "memory", "", "", 1, UnixMilliseconds{ 1 } ).value_or( nullptr );
+    string                   error;
+    unique_ptr<ServiceStore> first = pDriver->createServiceStore( "memory", "", "", 1, UnixMilliseconds{ 1 } ).value_or( nullptr );
     SW_REQUIRE_NOT_NULL( first );
-    unique_ptr<IServiceStore> second = pDriver->createServiceStore( "memory", "", "", 1, UnixMilliseconds{ 1 } ).value_or( nullptr );
+    unique_ptr<ServiceStore> second = pDriver->createServiceStore( "memory", "", "", 1, UnixMilliseconds{ 1 } ).value_or( nullptr );
     SW_REQUIRE_NOT_NULL( second );
     ServiceTransaction transaction;
     transaction.put( kTable, "factorytestshared", SQLServiceStoreTestUtil::makeBytes( "1" ) );
@@ -785,6 +785,6 @@ SW_TEST_CASE( SQLServiceStoreTest, StoreDriverSubsystemMakesStores )
     SW_EXPECT_FALSE( error.empty() );
     SW_EXPECT_TRUE( error.find( "no_such_driver" ) != string::npos );
 
-    expected<unique_ptr<IServiceStore>> sqlite = pDriver->createServiceStore( "sqlite", test::makeScratchPath( "factory.db" ), "", 1, UnixMilliseconds{ 1 } );
+    expected<unique_ptr<ServiceStore>> sqlite = pDriver->createServiceStore( "sqlite", test::makeScratchPath( "factory.db" ), "", 1, UnixMilliseconds{ 1 } );
     SW_EXPECT_TRUE_MSG( sqlite.has_value() && *sqlite != nullptr, describeError( sqlite ) );
 }

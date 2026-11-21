@@ -15,8 +15,8 @@
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Kits/Genre/Strategy/TacticsSRPG/RunMap.h"
 #include "GameFramework/Runtime/Gameplay/Progression/LevelProgress.h"
+#include "GameFramework/Runtime/Gameplay/Progression/RunMap.h"
 
 namespace sw
 {

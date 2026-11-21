@@ -130,11 +130,11 @@ namespace sw
         PROPERTY( Required )
         DataPath _navMeshSettings; ///< 내비메시 설정 표(`SceneNavigation`, `NavMeshSettings`)
         PROPERTY( Required )
-        DataPath _defaultDestructionProfile; ///< 파괴 프로필(`FractureComponentBase` — 프로필 칸이 비면 쓴다)
+        DataPath _defaultDestructionProfile; ///< 파괴 프로필(`FractureBaseComponent` — 프로필 칸이 비면 쓴다)
 
         // 컴포넌트 기본 머티리얼 — 컴포넌트의 머티리얼 칸이 비면 이것을 쓴다(칸에 적으면 그것)
         PROPERTY( Required )
-        DataPath _tileMapMaterial; ///< 타일맵 렌더러(`TileMapRendererComponent`) — 픽셀 아트 스프라이트 머티리얼
+        DataPath _tileMapMaterial; ///< 타일맵 렌더러(`TileMapComponent`) — 픽셀 아트 스프라이트 머티리얼
         PROPERTY( Required )
         DataPath _foliageMaterial; ///< 풀 · 나무 층(`FoliageComponent`)
         PROPERTY( Required )

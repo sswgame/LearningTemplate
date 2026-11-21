@@ -24,7 +24,7 @@ SW_TEST_CASE( TestRunnerTest, ScratchPathIsUniquePerCase )
     const string path = test::makeScratchPath( "probe.txt" );
     SW_EXPECT_TRUE( StringUtil::endsWith( path, "probe.txt" ) );
     SW_EXPECT_TRUE( path.find( "TestRunnerTest.ScratchPathIsUniquePerCase" ) != string::npos );
-    SW_EXPECT_TRUE( FileUtil::writeTextFile( path, "scratch" ) );
+    SW_EXPECT_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( path ), "scratch" ) );
 }
 
 SW_TEST_CASE( TestRunnerTest, SnapshotComparesWithTheCommittedFile )
@@ -98,7 +98,7 @@ namespace
         ScratchFileFixture()
             : _path{ test::makeScratchPath( "fixture.txt" ) }
         {
-            (void)FileUtil::writeTextFile( _path, "ready" );
+            (void)FileUtil::writeTextFile( FileUtil::toDiskPath( _path ), "ready" );
         }
     };
 
@@ -108,7 +108,7 @@ namespace
 SW_TEST_CASE_F( ScratchFileFixture, BodySeesWhatTheConstructorPrepared )
 {
     string text;
-    SW_REQUIRE_TRUE( FileUtil::readTextFile( _path, text ) );
+    SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::toDiskPath( _path ), text ) );
     SW_EXPECT_EQUAL( string( "ready" ), text );
 }
 
@@ -196,7 +196,7 @@ SW_TEST_CASE( TestRunnerTest, FailedRunEndsWithTheResultLineAndTheFailureKind, .
     const size_t reportEnd  = child._output.find_first_of( "\r\n", reportAt );
     const string reportPath = child._output.substr( reportAt + 13, reportEnd == string::npos ? string::npos : reportEnd - reportAt - 13 );
     string       report;
-    SW_REQUIRE_TRUE_MSG( FileUtil::readTextFile( reportPath, report ), reportPath );
+    SW_REQUIRE_TRUE_MSG( FileUtil::readTextFile( FileUtil::toDiskPath( reportPath ), report ), reportPath );
     SW_EXPECT_TRUE_MSG( StringUtil::contains( report, "\"failureKind\": \"UndeclaredLog\"" ), report );
     SW_EXPECT_TRUE_MSG( StringUtil::contains( report, "\"UndeclaredLog\": 1" ), report );
     // 끝 줄 — 실행기가 마지막으로 찍는 줄이다.

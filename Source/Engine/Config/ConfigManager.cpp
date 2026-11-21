@@ -270,13 +270,13 @@ namespace sw
                                                      const string& qualityTier, string& outJSON, string& outLabel )
     {
         outLabel                    = resolvedPath;
-        const OptionalFileRead read = FileUtil::readOptionalTextFile( resolvedPath, outJSON );
+        const OptionalFileRead read = FileUtil::readOptionalTextFile( FileUtil::toDiskPath( resolvedPath ), outJSON );
         if ( read != OptionalFileRead::Read )
             return read;
         if ( resolvedOverridePath.empty() == false )
         {
             string                 overrideJSON;
-            const OptionalFileRead overrideRead = FileUtil::readOptionalTextFile( resolvedOverridePath, overrideJSON );
+            const OptionalFileRead overrideRead = FileUtil::readOptionalTextFile( FileUtil::toDiskPath( resolvedOverridePath ), overrideJSON );
             if ( overrideRead == OptionalFileRead::Failed )
                 return OptionalFileRead::Failed;          // 이유는 읽기가 오류로 남겼다
             if ( overrideRead == OptionalFileRead::Read ) // 덮어쓰기 층은 선택이다 — 없으면 바탕만
@@ -293,7 +293,7 @@ namespace sw
             return OptionalFileRead::Read;
         // 단계를 골랐으면 표는 필수다 — 없는 표를 "단계 없음" 으로 읽으면 고른 단계가 조용히 무시된다.
         string                 tiersJSON;
-        const OptionalFileRead tiersRead = FileUtil::readOptionalTextFile( resolvedQualityPath, tiersJSON );
+        const OptionalFileRead tiersRead = FileUtil::readOptionalTextFile( FileUtil::toDiskPath( resolvedQualityPath ), tiersJSON );
         if ( tiersRead == OptionalFileRead::Missing )
             SW_LOG_ERROR_ID( "Config.RenderQualityMissing", "Render quality tier '%#' was chosen but the tier table %# is missing", qualityTier.c_str(), resolvedQualityPath.c_str() );
         if ( tiersRead != OptionalFileRead::Read )

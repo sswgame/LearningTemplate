@@ -82,6 +82,15 @@ namespace sw
         void collectMethod( CXCursor cursor, const string& functionSpelling );
         /** @brief 메서드의 이름 · 인자 타입을 적어 둡니다. FUNCTION 이 없어도 — `RepNotify` 처럼 애노테이션이 이름으로 가리킬 수 있다. */
         void recordMethodSignature( CXCursor cursor, const string& name );
+        /** @brief `REFLECT_INTERFACE` 표식 함수의 애노테이션(`REFLECT_INTERFACE;I,_port`)을 내보내기 한 줄로 모읍니다. */
+        void collectInterfaceExport( CXCursor cursor );
+        /**
+         * @brief 인터페이스 선언(`REFLECT( Interface )`)과 내보내기 줄(`REFLECT_INTERFACE`)을 봅니다. 인터페이스는 데이터 멤버 · 기반 · 내보내기가 없어야 하고,
+         *        내보내기는 같은 인터페이스를 두 번 적지 않으며 포트 멤버의 형식이 그 인터페이스를 이어야 합니다(포트 기반에서 정규 이름을 찾는다).
+         */
+        [[nodiscard]] bool validateInterfaces();
+        /** @brief 포트 형식 @p portType 의 기반 가운데 @p interfaceSpelling 으로 끝나는 것의 정규 이름입니다. 없으면 빈 글입니다. */
+        static string findPortInterface( CXType portType, const string& interfaceSpelling );
         /** @brief 함수 꼴 멤버 하나 — 마커 · 생성자 · 메서드로 나눕니다. */
         void collectFunctionMember( CXCursor cursor, CXCursorKind kind );
         /**
@@ -98,6 +107,7 @@ namespace sw
         ParsedTypeInfo*               _pType;
         const ParserSession*          _pSession;
         vector<ParsedMethodSignature> _listMethodSignature; ///< FUNCTION 여부와 무관하게 이 타입이 선언한 메서드(애노테이션이 이름으로 가리킬 때 대조)
+        vector<pair<string, CXType>>  _listField;           ///< PROPERTY 여부와 무관하게 이 타입이 선언한 데이터 멤버(이름, 형식) — 인터페이스 상태 검사 · 포트 형식 찾기
         uint32                        _baseCount;
         uint8                         _bSkipConstructors : 1; ///< Abstract / Static 타입은 생성할 수 없다(Unreal UCLASS(Abstract))
         uint8                         _bBodyFound        : 1;

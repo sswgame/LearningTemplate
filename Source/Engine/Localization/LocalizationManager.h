@@ -18,8 +18,8 @@
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
-#include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/ServiceSlot.h"
+#include "Core/Subsystem/Subsystem.h"
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/ContentSource.h"
@@ -63,7 +63,7 @@ namespace sw
      *          의사 문화권(`qps_ploc`, `qps_plocm`, 문화권 테이블의 `pseudo`)은 원문을 변환해 만든 테이블이고 Dev 빌드에서만 고를 수 있습니다.
      *          조회가 돌려주는 `const utf8*` 는 이 관리자가 든 추가 전용 저장소(`LocalizedTextArena`)에 있어 다시 읽기와 언어 변경 뒤에도 유효합니다.
      */
-    class SW_API LocalizationManager : public ISubsystem
+    class SW_API LocalizationManager : public Subsystem
     {
         friend struct LocalizationManagerTestAccess;
 

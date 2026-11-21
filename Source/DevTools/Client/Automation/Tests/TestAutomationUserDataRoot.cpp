@@ -152,16 +152,16 @@ SW_TEST_CASE( AutomationUserDataRootTest, SessionRejectsRootOutsideTheAutomation
 SW_TEST_CASE( AutomationUserDataRootTest, FolderStampChangesWhenAFileIsAdded )
 {
     const sw::string folder = sw::FileUtil::joinPath( sw::AutomationUserDataRoot::getBaseFolder(), "unit_test_stamp" );
-    (void)sw::FileUtil::removeDirectory( folder );
+    (void)sw::FileUtil::removeDirectory( sw::FileUtil::toDiskPath( folder ) );
     const sw::UserDataFolderStamp missing = sw::UserDataFolderStamp::take( folder );
     SW_EXPECT_FALSE( missing._bExists );
 
-    SW_REQUIRE_TRUE( sw::FileUtil::ensureDirectoryExists( folder ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::ensureDirectoryExists( sw::FileUtil::toDiskPath( folder ) ) );
     const sw::UserDataFolderStamp empty = sw::UserDataFolderStamp::take( folder );
     SW_EXPECT_TRUE( empty != missing );
     SW_EXPECT_TRUE( sw::UserDataFolderStamp::take( folder ) == empty );
 
-    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::joinPath( folder, "save.dat" ), "x" ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::toDiskPath( sw::FileUtil::joinPath( folder, "save.dat" ) ), "x" ) );
     SW_EXPECT_TRUE( sw::UserDataFolderStamp::take( folder ) != empty );
-    (void)sw::FileUtil::removeDirectory( folder );
+    (void)sw::FileUtil::removeDirectory( sw::FileUtil::toDiskPath( folder ) );
 }

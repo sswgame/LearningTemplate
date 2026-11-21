@@ -243,7 +243,7 @@ namespace sw
             return false;
 
         const string outPath = FileUtil::joinPath( absDirectory, getManifestFileName() );
-        if ( FileUtil::ensureDirectoryExists( absDirectory ) == false || FileUtil::writeFile( outPath, bytes.data(), bytes.size() ) == false )
+        if ( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( absDirectory ) ) == false || FileUtil::writeFile( FileUtil::toDiskPath( outPath ), bytes.data(), bytes.size() ) == false )
         {
             SW_LOG_ERROR_ID( "ShaderReflectionLibrary.FailedWriteReflectionManifest", "Failed to write the reflection manifest: %#", outPath.c_str() );
             return false;
@@ -270,7 +270,7 @@ namespace sw
         const ScopedMemoryTag memoryScope{ kMemoryTag };
         outMapEntry.clear();
         vector<uint8> bytes;
-        if ( FileUtil::readFile( absManifestPath, bytes ) == false )
+        if ( FileUtil::readFile( FileUtil::toDiskPath( absManifestPath ), bytes ) == false )
             return false;
         return parseManifestInternal( bytes, absManifestPath, outMapEntry );
     }

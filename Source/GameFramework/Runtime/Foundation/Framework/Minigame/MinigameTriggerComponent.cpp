@@ -12,7 +12,7 @@
 namespace sw
 {
     MinigameTriggerComponent::MinigameTriggerComponent()
-        : ActivatorVolumeComponent( ActivatorAuthority::Server ) // 들어가기는 게임 상태를 바꾼다 — 서버(와 혼자 하는 게임)만 판정한다
+        : TriggerComponent( TriggerAuthority::Server ) // 들어가기는 게임 상태를 바꾼다 — 서버(와 혼자 하는 게임)만 판정한다
         , _minigame{}
     {
     }

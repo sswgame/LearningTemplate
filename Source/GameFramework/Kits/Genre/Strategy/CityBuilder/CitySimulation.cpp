@@ -11,7 +11,7 @@
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
-#include "GameFramework/Runtime/Foundation/Framework/SessionStateRefs.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameStateRefs.h"
 #include "GameFramework/Runtime/Foundation/GameData/ConfigRangeUtil.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Wallet.h"
 
@@ -163,7 +163,7 @@ namespace sw
     {
     }
 
-    bool CitySimulation::initialize( const CityCatalog* pCatalog, int32 width, int32 height, const SessionStateRefs& refs )
+    bool CitySimulation::initialize( const CityCatalog* pCatalog, int32 width, int32 height, const GameStateRefs& refs )
     {
         if ( pCatalog == nullptr )
         {

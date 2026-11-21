@@ -126,7 +126,7 @@ namespace sw
                 return absPath.has_value() ? ContentHash::computeFile( absPath->str() ) : 0;
             }
             case CookInputKind::DiskFile:
-                return FileUtil::isRegularFile( _source ) ? ContentHash::computeFile( _source ) : 0;
+                return FileUtil::isRegularFile( FileUtil::toDiskPath( _source ) ) ? ContentHash::computeFile( _source ) : 0;
             case CookInputKind::Listing:
                 return CookJob::computeListingHash( _source, _extension );
         }
@@ -186,7 +186,7 @@ namespace sw
     {
         outListFile.clear();
         // 폴더가 없으면 빈 목록이 맞다(목록 해시 0 으로 기록된다). 도중에 멈춘 부분 목록은 구울 것을 빠뜨리므로 실패다(`FileUtil::collectFiles` 가 경로를 알린다).
-        if ( FileUtil::isDirectory( folderPath ) && FileUtil::collectFiles( folderPath, extension, outListFile, true ) == false )
+        if ( FileUtil::isDirectory( FileUtil::toDiskPath( folderPath ) ) && FileUtil::collectFiles( FileUtil::toDiskPath( folderPath ), extension, outListFile, true ) == false )
             return false;
         VectorUtil::sort( outListFile );
         CookJob* pJob = CookJobInternal::_t_pCurrent;
@@ -205,11 +205,11 @@ namespace sw
 
     uint64 CookJob::computeListingHash( string_view folderPath, string_view extension )
     {
-        if ( FileUtil::isDirectory( folderPath ) == false )
+        if ( FileUtil::isDirectory( FileUtil::toDiskPath( folderPath ) ) == false )
             return 0;
         vector<string> listFile;
         // 도중에 멈춘 목록의 해시는 믿을 수 없다 — "폴더 없음"(0)으로 돌려 기록과 어긋나게 해 다음 검사가 다시 굽게 한다(경로는 `FileUtil::collectFiles` 가 알린다).
-        if ( FileUtil::collectFiles( folderPath, extension, listFile, true ) == false )
+        if ( FileUtil::collectFiles( FileUtil::toDiskPath( folderPath ), extension, listFile, true ) == false )
             return 0;
         const string   root = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( folderPath ) );
         vector<string> listRelative;

@@ -8,7 +8,7 @@
 
 #include "Core/Log/Logger.h"
 #include "Core/Registry/RegistrationList.h"
-#include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/Subsystem.h"
 #include "Core/Subsystem/SubsystemScope.h"
 
 #include "Engine/Module/ModuleSubsystemRegistrar.h"
@@ -20,7 +20,7 @@ namespace sw::editor
     namespace
     {
         /** @brief 지금 올라 있는 모디파이어 등록의 목록을 듭니다. 등록자는 이 서브시스템이 선 뒤에 붙는다(`engine::registerModuleTypes`). */
-        class MeshModifierRegistrations final : public ISubsystem
+        class MeshModifierRegistrations final : public Subsystem
         {
         public:
             RegistrationList<MeshModifierRegistration> _listRegistration;

@@ -11,7 +11,7 @@
 #include "Core/Container/string.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/StringUtil.h"
-#include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/Subsystem.h"
 #include "Core/Time/TimePoint.h"
 
 #include "Engine/Module/ModuleSubsystemRegistrar.h"
@@ -29,7 +29,7 @@ namespace sw
      *          주소로 들므로 키트가 내려가기(자식 범위가 걷히기) 전에 소멸해야 한다(서버 조립이 그렇게 한다 — 저장소 코드도 이 키트에 있다).
      *          `IServiceStoreDriver` 는 상속하지 않는다 — 서브시스템이 가진 어댑터 멤버가 구현하고, 등록이 그 멤버를 공개한다(`getPublishedPart`).
      */
-    class SQLServiceStoreDriver final : public ISubsystem
+    class SQLServiceStoreDriver final : public Subsystem
     {
     public:
         static constexpr const utf8* kSubsystemName = "SQLServiceStoreDriver";
@@ -40,7 +40,7 @@ namespace sw
         {
         }
 
-        // ISubsystem — 세울 것이 없다(드라이버 레지스트리는 드라이버 `.cpp` 의 등록 객체가 올린다).
+        // Subsystem — 세울 것이 없다(드라이버 레지스트리는 드라이버 `.cpp` 의 등록 객체가 올린다).
         SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
         void                shutdownSubsystem() override {}
         const utf8*         getSubsystemName() const override { return kSubsystemName; }
@@ -50,10 +50,10 @@ namespace sw
          * @param secret 비밀번호(`ServerSecret::read` 로 읽은 것)입니다. 쓰고 나면 호출한 쪽이 비웁니다.
          * @param nowMs 마이그레이션 기록에 남길 벽시계 시각입니다.
          */
-        expected<unique_ptr<IServiceStore>> createServiceStore( string_view driverName, string_view connection, string_view secret, int32 workerCount, UnixMilliseconds nowMs )
+        expected<unique_ptr<ServiceStore>> createServiceStore( string_view driverName, string_view connection, string_view secret, int32 workerCount, UnixMilliseconds nowMs )
         {
             if ( driverName == kMemoryStoreDriverName )
-                return unique_ptr<IServiceStore>( make_unique<MemoryServiceStore>( &_memoryDatabase ) );
+                return unique_ptr<ServiceStore>( make_unique<MemoryServiceStore>( &_memoryDatabase ) );
             SQLConnectionPoolConfig settings;
             settings._connection                = string( connection );
             settings._secret                    = string( secret );
@@ -63,7 +63,7 @@ namespace sw
             StringUtil::wipeSecret( settings._secret ); // 재접속에 쓰는 사본은 풀이 살아 있는 동안 지닌다
             if ( started.has_value() == false )
                 return unexpected( started.error() );
-            return unique_ptr<IServiceStore>( std::move( store ) );
+            return unique_ptr<ServiceStore>( std::move( store ) );
         }
 
         /** @brief 공개할 저장소 드라이버입니다(`ModuleSubsystemRegistration` 이 `IServiceStoreDriver` 로 공개한다). 이 서브시스템과 수명이 같습니다. */
@@ -79,7 +79,7 @@ namespace sw
             {
             }
 
-            expected<unique_ptr<IServiceStore>> createServiceStore( string_view driverName, string_view connection, string_view secret, int32 workerCount, UnixMilliseconds nowMs ) override
+            expected<unique_ptr<ServiceStore>> createServiceStore( string_view driverName, string_view connection, string_view secret, int32 workerCount, UnixMilliseconds nowMs ) override
             {
                 return _owner.createServiceStore( driverName, connection, secret, workerCount, nowMs );
             }

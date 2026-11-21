@@ -47,7 +47,7 @@ namespace sw
      *          - **스폰한 오브젝트**: `spawnPrefab` 이 핸들을 보관하고, `despawnViews` 가 모두 정리한다(상태 저장 전과 플레이 끝). 스스로 사라지는 오브젝트의 핸들은 플러시가 가끔 정리한다.
      *            풀 정책(`PrefabPoolPolicy`, 데이터)을 받은 스폰은 프리팹 경로마다 풀 하나에서 꺼내고 `releaseSpawned` 로 돌려받는다(Lyra · Boss Room 의 풀).
      *          - **자동 플레이**: PROPERTY `_bAutoPlay` 로 켠다. 개발 구성에서는 게임이 `Dev/` 에서 `SW_GAME_AUTOPLAY` 로 등록한 전역 변수도 켠다(런타임 칸 `IGameAutoplayQuery` 로 읽는다 — 배포본에는 없다).
-     *          - **다른 오브젝트 디렉터 뒤에 돌리기**: 키트 디렉터 사이의 순서는 보통 한 오브젝트에 붙인 순서이다(`SessionStateComponent`).
+     *          - **다른 오브젝트 디렉터 뒤에 돌리기**: 키트 디렉터 사이의 순서는 보통 한 오브젝트에 붙인 순서이다(`GameStateComponent`).
      *            씬을 나눠 디렉터를 다른 오브젝트에 두면 PROPERTY `_tickAfter` 로 그 오브젝트의 첫 디렉터 뒤에 규칙을 돌린다.
      *            주 틱은 선행 조건을 받지 못하므로 그때만 규칙을 서브틱(`kRuleSubTick`)으로 옮기고, 그 디렉터의 규칙 틱(`getRuleTickHandle`)을 선행 조건으로 등록한다.
      *            걸지 않은 디렉터는 주 틱 그대로이다.

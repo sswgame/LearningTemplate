@@ -10,7 +10,7 @@
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/Subsystem.h"
 
 #include "Engine/Graphics/Display/DisplayOutput.h"
 #include "Engine/Graphics/RHI/RHIInitResult.h"
@@ -130,7 +130,7 @@ namespace sw
      * @class EngineRenderDriverSubsystem
      * @brief `EngineRenderDriver` 를 멤버로 들고 기동 범위의 수명 짝을 맡는 서브시스템입니다. 기동이 그 멤버를 `IEngineRenderDriver` 로 건다(`SubsystemScope::exposeMember`).
      */
-    class EngineRenderDriverSubsystem final : public ISubsystem
+    class EngineRenderDriverSubsystem final : public Subsystem
     {
     public:
         static constexpr const utf8* kSubsystemName      = "EngineRenderDriver";

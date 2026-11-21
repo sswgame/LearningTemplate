@@ -2,10 +2,10 @@
 
 #include "Core/Testing/TestFramework.h"
 
-#include "Engine/Window/IWindow.h"
+#include "Engine/Window/GenericWindow.h"
 #include "Engine/Window/WindowMonitor.h"
 
-// WindowTileTest — 창 바둑판 칸의 자리(`IWindow::computeTilePosition`): 원점은 작업 영역, 칸 간격은 클라이언트 크기 + 창 틀 양쪽 두께, 모자라면 작업 영역 안으로(nogpu).
+// WindowTileTest — 창 바둑판 칸의 자리(`GenericWindow::computeTilePosition`): 원점은 작업 영역, 칸 간격은 클라이언트 크기 + 창 틀 양쪽 두께, 모자라면 작업 영역 안으로(nogpu).
 
 using namespace sw;
 
@@ -31,15 +31,15 @@ SW_TEST_CASE( WindowTileTest, StrideIsClientPlusBothFrameSides )
     int32 x         = -1;
     int32 y         = -1;
 
-    IWindow::computeTilePosition( WindowTileSlot{ 0, 2 }, 640, 360, extents, kWideWorkArea, x, y );
+    GenericWindow::computeTilePosition( WindowTileSlot{ 0, 2 }, 640, 360, extents, kWideWorkArea, x, y );
     SW_EXPECT_EQUAL( 0, x );
     SW_EXPECT_EQUAL( 0, y );
 
-    IWindow::computeTilePosition( WindowTileSlot{ 1, 2 }, 640, 360, extents, kWideWorkArea, x, y );
+    GenericWindow::computeTilePosition( WindowTileSlot{ 1, 2 }, 640, 360, extents, kWideWorkArea, x, y );
     SW_EXPECT_EQUAL( 640 + 7 + 9, x );
     SW_EXPECT_EQUAL( 0, y );
 
-    IWindow::computeTilePosition( WindowTileSlot{ 3, 2 }, 640, 360, extents, kWideWorkArea, x, y );
+    GenericWindow::computeTilePosition( WindowTileSlot{ 3, 2 }, 640, 360, extents, kWideWorkArea, x, y );
     SW_EXPECT_EQUAL( 640 + 7 + 9, x );
     SW_EXPECT_EQUAL( 360 + 31 + 8, y );
 }
@@ -51,7 +51,7 @@ SW_TEST_CASE( WindowTileTest, NoFrameAndSingleColumn )
 {
     int32 x = -1;
     int32 y = -1;
-    IWindow::computeTilePosition( WindowTileSlot{ 2, 1 }, 800, 600, WindowFrameExtents{}, kWideWorkArea, x, y );
+    GenericWindow::computeTilePosition( WindowTileSlot{ 2, 1 }, 800, 600, WindowFrameExtents{}, kWideWorkArea, x, y );
     SW_EXPECT_EQUAL( 0, x );
     SW_EXPECT_EQUAL( 1200, y );
 }
@@ -69,11 +69,11 @@ SW_TEST_CASE( WindowTileTest, SmallMonitorKeepsEveryTileInsideTheWorkArea )
     int32 x = -1;
     int32 y = -1;
 
-    IWindow::computeTilePosition( WindowTileSlot{ 0, 2 }, 1280, 720, WindowFrameExtents{}, workArea, x, y );
+    GenericWindow::computeTilePosition( WindowTileSlot{ 0, 2 }, 1280, 720, WindowFrameExtents{}, workArea, x, y );
     SW_EXPECT_EQUAL( 60, x );
     SW_EXPECT_EQUAL( 0, y );
 
-    IWindow::computeTilePosition( WindowTileSlot{ 3, 2 }, 1280, 720, WindowFrameExtents{}, workArea, x, y );
+    GenericWindow::computeTilePosition( WindowTileSlot{ 3, 2 }, 1280, 720, WindowFrameExtents{}, workArea, x, y );
     SW_EXPECT_EQUAL( 60 + ( 1860 - 1280 ), x ); // 오른쪽 끝이 작업 영역 오른쪽 끝
     SW_EXPECT_EQUAL( 1040 - 720, y );           // 아래끝이 작업 표시줄 위
 }

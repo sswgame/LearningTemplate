@@ -11,9 +11,9 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Automation/Scenario/AutomationScenario.h"
-#include "Engine/Automation/Scenario/AutomationStepContext.h"
 #include "Engine/Automation/Scenario/AutomationStepParams.h"
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
+#include "Engine/Automation/Scenario/IAutomationStepContext.h"
 #include "Engine/Input/IInputDevice.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
@@ -63,7 +63,7 @@ namespace sw
             }
 
             /** @brief 길이를 프레임으로 냅니다 — 적은 쪽(초는 시나리오 고정 프레임 시간으로 바꾼다), 둘 다 없으면 @p defaultFrames 입니다. */
-            static uint32 resolveDuration( const AutomationStepContext& runner, uint32 frames, float32 seconds, uint32 defaultFrames )
+            static uint32 resolveDuration( const IAutomationStepContext& runner, uint32 frames, float32 seconds, uint32 defaultFrames )
             {
                 if ( seconds != kAutomationNoSeconds )
                     return runner.convertSecondsToFrames( seconds );
@@ -91,7 +91,7 @@ namespace sw
              * @brief 액션의 바인딩 중 @p pAccept 가 받고 @p device 에 맞는 첫 것을 찾습니다(바인딩 순서 — 입력 맵 파일의 순서). 액션이 없거나 받을 바인딩이 없으면 그 이유입니다(값은 nullptr 이 아니다).
              * @details 바인딩은 시작 프레임의 맵에서 찾는다. 게임이 맵을 다시 읽어도 단계가 이미 낸 이벤트는 그대로다.
              */
-            static expected<const ActionBinding*> findBinding( AutomationStepContext& runner, const string& name, AutomationActionDevice deviceChoice, bool ( *pAccept )( const ActionBinding& ),
+            static expected<const ActionBinding*> findBinding( IAutomationStepContext& runner, const string& name, AutomationActionDevice deviceChoice, bool ( *pAccept )( const ActionBinding& ),
                                                                const utf8* pWhat )
             {
                 const InputManager* pInput = runner.getInputManager();
@@ -127,7 +127,7 @@ namespace sw
                 return bComposite || binding._kind == BindingKind::GamepadStick2D || binding._kind == BindingKind::MouseDelta2D;
             }
 
-            [[nodiscard]] static expected<void> prepareAction( AutomationStepContext& runner, const AutomationStep& step )
+            [[nodiscard]] static expected<void> prepareAction( IAutomationStepContext& runner, const AutomationStep& step )
             {
                 const AutomationActionParams         params  = step.readValidatedProperties<AutomationActionParams>();
                 const expected<const ActionBinding*> binding = findBinding( runner, params._name, params._device, &isButtonBinding, "single button" );
@@ -151,7 +151,7 @@ namespace sw
                 return {};
             }
 
-            [[nodiscard]] static expected<void> preparePressOrRelease( AutomationStepContext& runner, const AutomationStep& step )
+            [[nodiscard]] static expected<void> preparePressOrRelease( IAutomationStepContext& runner, const AutomationStep& step )
             {
                 const AutomationActionButtonParams   params  = step.readValidatedProperties<AutomationActionButtonParams>();
                 const expected<const ActionBinding*> binding = findBinding( runner, params._name, params._device, &isButtonBinding, "single button" );
@@ -181,7 +181,7 @@ namespace sw
              * @brief 축 값을 @p frames 동안 냅니다. 스틱은 그 값 그대로, 합성 축은 부호의 방향 키(크기는 1), 마우스 이동은 프레임마다 그 픽셀만큼입니다.
              * @details 합성 축 값의 크기가 1 이 아니어도 키는 켜고 끄는 것뿐이다 — 아날로그 크기가 필요하면 `device="Gamepad"` 로 스틱을 고른다.
              */
-            [[nodiscard]] static expected<void> prepareAxis( AutomationStepContext& runner, const AutomationStep& step )
+            [[nodiscard]] static expected<void> prepareAxis( IAutomationStepContext& runner, const AutomationStep& step )
             {
                 const AutomationActionAxisParams     params  = step.readValidatedProperties<AutomationActionAxisParams>();
                 const expected<const ActionBinding*> binding = findBinding( runner, params._name, params._device, &isAxisBinding, "axis" );

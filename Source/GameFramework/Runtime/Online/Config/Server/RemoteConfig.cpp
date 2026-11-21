@@ -182,7 +182,7 @@ namespace sw
 
     RemoteConfig::~RemoteConfig() = default;
 
-    void RemoteConfig::requestReload( IServiceStore& store )
+    void RemoteConfig::requestReload( ServiceStore& store )
     {
         _store.bindStore( &store ); // 부르는 쪽이 저장소를 넘긴다 — 같은 저장소다
         _store.submit( []( IServiceStoreConnection& connection )
@@ -191,7 +191,7 @@ namespace sw
         { onReloadCompleted( read._result, completion.isCancelled(), read._value ); } );
     }
 
-    void RemoteConfig::submitSet( IServiceStore& store, string_view key, const RemoteConfigValue& value, const ServiceAuditEntry& audit )
+    void RemoteConfig::submitSet( ServiceStore& store, string_view key, const RemoteConfigValue& value, const ServiceAuditEntry& audit )
     {
         const bool bRejectedChange = isValidKey( key ) == false || RemoteConfigInternal::isValidValue( value ) == false || ServiceAuditLog::isValidEntry( audit ) == false;
         if ( bRejectedChange )

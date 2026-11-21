@@ -48,7 +48,7 @@ namespace sw::editor
 namespace sw::editor
 {
     ScheduleDebugPanel::ScheduleDebugPanel()
-        : IEditorPanel( false ) // 필요할 때 여는 도구라 닫힌 채 시작한다
+        : EditorPanel( false ) // 필요할 때 여는 도구라 닫힌 채 시작한다
         , _model{}
         , _state{}
     {
@@ -73,7 +73,7 @@ namespace sw::editor
                 _model.selectSystem( systemIndex ); // 다음 프레임부터 그 시스템을 보인다
         }
 
-        if ( ImGui::BeginChild( "##ScheduleNPCList", EditorChrome::measureTextExtent( EditorTextExtent::ofText( 27.0f, 0.0f ) ), ImGuiChildFlags_Borders | ImGuiChildFlags_ResizeX ) )
+        if ( ImGui::BeginChild( "##NPCScheduleList", EditorChrome::measureTextExtent( EditorTextExtent::ofText( 27.0f, 0.0f ) ), ImGuiChildFlags_Borders | ImGuiChildFlags_ResizeX ) )
             drawNPCList();
         ImGui::EndChild();
         ImGui::SameLine();
@@ -177,7 +177,7 @@ namespace sw::editor
 
     SW_EDITOR_PANEL( ScheduleDebugPanel, ScheduleDebugPanel::kPanelID, EditorPanelCategory::Custom, 9310 );
 
-    SW_AUTOMATION_WATCH( editorScheduleNPCCount, "Editor.ScheduleNPCCount", "NPCs of the schedule system the NPC Schedule window shows",
+    SW_AUTOMATION_WATCH( editorNPCScheduleCount, "Editor.NPCScheduleCount", "NPCs of the schedule system the NPC Schedule window shows",
                          &ScheduleDebugPanelInternal::readNPCCount );
     SW_AUTOMATION_WATCH( editorScheduleTimelineRowCount, "Editor.ScheduleTimelineRowCount", "Rows of today's timeline for the NPC picked in the NPC Schedule window",
                          &ScheduleDebugPanelInternal::readTimelineRowCount );

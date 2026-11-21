@@ -18,8 +18,8 @@ namespace
     string makeLockTarget( const utf8* pName, const utf8* pText )
     {
         const string path = test::makeScratchPath( pName );
-        (void)FileUtil::ensureParentDirectoryExists( path );
-        (void)FileUtil::writeTextFile( path, pText );
+        (void)FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( path ) );
+        (void)FileUtil::writeTextFile( FileUtil::toDiskPath( path ), pText );
         return path;
     }
 } // namespace
@@ -34,11 +34,11 @@ SW_TEST_CASE( EditorSaveFileLockTest, LockIsReleasedWhenTheStateGoes )
 
     const string path = makeLockTarget( "engineconfig.xml", "kept" );
     SW_REQUIRE_TRUE( EditorSaveFileLock::lock( { path } ).has_value() );
-    SW_EXPECT_TRUE( FileUtil::isReadOnlyFile( path ) );
+    SW_EXPECT_TRUE( FileUtil::isReadOnlyFile( FileUtil::toDiskPath( path ) ) );
     SW_EXPECT_EQUAL( EditorSaveFileLock::getLockedCount(), 1u );
 
     store.resetAll(); // 시나리오가 끊긴 뒤 다음 단계 · 종료가 하는 일
-    SW_EXPECT_FALSE( FileUtil::isReadOnlyFile( path ) );
+    SW_EXPECT_FALSE( FileUtil::isReadOnlyFile( FileUtil::toDiskPath( path ) ) );
     SW_EXPECT_EQUAL( EditorSaveFileLock::getLockedCount(), 0u );
 }
 
@@ -53,13 +53,13 @@ SW_TEST_CASE( EditorSaveFileLockTest, UnlockReportsAChangedFile )
     const string kept    = makeLockTarget( "kept.xml", "kept" );
     const string changed = makeLockTarget( "changed.xml", "before" );
     SW_REQUIRE_TRUE( EditorSaveFileLock::lock( { kept, changed } ).has_value() );
-    SW_REQUIRE_TRUE( FileUtil::setWritable( changed, true ) );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( changed, "after" ) );
+    SW_REQUIRE_TRUE( FileUtil::setWritable( FileUtil::toDiskPath( changed ), true ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( changed ), "after" ) );
 
     const optional<string> changedPath = EditorSaveFileLock::unlock();
     SW_REQUIRE_TRUE( changedPath.has_value() );
     SW_EXPECT_EQUAL( *changedPath, changed );
-    SW_EXPECT_FALSE( FileUtil::isReadOnlyFile( kept ) );
+    SW_EXPECT_FALSE( FileUtil::isReadOnlyFile( FileUtil::toDiskPath( kept ) ) );
     SW_EXPECT_EQUAL( EditorSaveFileLock::getLockedCount(), 0u );
 }
 
@@ -74,6 +74,6 @@ SW_TEST_CASE( EditorSaveFileLockTest, LedgerLeftoversAreRestored )
     const string path = makeLockTarget( "leftover.xml", "kept" );
     SW_REQUIRE_TRUE( EditorSaveFileLock::lock( { path } ).has_value() );
     EditorSaveFileLock::releaseStaleLocks(); // 같은 장부를 다음 실행이 읽은 것과 같다
-    SW_EXPECT_FALSE( FileUtil::isReadOnlyFile( path ) );
+    SW_EXPECT_FALSE( FileUtil::isReadOnlyFile( FileUtil::toDiskPath( path ) ) );
     SW_EXPECT_FALSE( EditorSaveFileLock::unlock().has_value() );
 }

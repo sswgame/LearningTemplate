@@ -30,7 +30,7 @@ namespace sw
         const GameObject* pOwner = getOwner();
         if ( pOwner != nullptr && ControlSystem::find( manager ) != nullptr )
             VehicleSeatComponent::releaseGoneOccupant( manager, pOwner->getHandle() );
-        HealthListenerComponent::onUnregister( manager );
+        Component::onUnregister( manager );
     }
 
     void DismountOnDeathComponent::forceDismount()
@@ -39,5 +39,10 @@ namespace sw
         PawnComponent* pPawn  = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
         if ( pPawn != nullptr )
             (void)VehicleSeatComponent::dismount( *pPawn, true );
+    }
+
+    void DismountOnDeathComponent::HealthListenerPort::onHealthChanged( const HealthChangedEvent& event )
+    {
+        getPortOwner<DismountOnDeathComponent>( *this, offsetof( DismountOnDeathComponent, _healthListenerPort ) ).onHealthChanged( event );
     }
 } // namespace sw

@@ -279,7 +279,7 @@ SW_TEST_CASE( InputMapBundleTest, EveryGamePackBundleLoads )
 {
     const string   presetFolder = FileUtil::joinPath( ProcessRoots::get()._project.str(), "Config/Game" );
     vector<string> listPreset;
-    SW_REQUIRE_TRUE( FileUtil::collectFiles( presetFolder, ".json", listPreset, false ) );
+    SW_REQUIRE_TRUE( FileUtil::collectFiles( FileUtil::toDiskPath( presetFolder ), ".json", listPreset, false ) );
     SW_REQUIRE_TRUE( listPreset.empty() == false );
     for ( const string& presetPath : listPreset )
     {

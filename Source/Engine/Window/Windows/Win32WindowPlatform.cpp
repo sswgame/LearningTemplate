@@ -9,9 +9,9 @@ namespace sw
     namespace
     {
         const WindowPlatformFactory s_win32WindowFactory{
-            []() -> unique_ptr<IWindow>
+            []() -> unique_ptr<GenericWindow>
         { return make_unique<Win32Window>(); },
-            []() -> unique_ptr<ISplashWindow>
+            []() -> unique_ptr<SplashWindowBase>
         { return make_unique<Win32SplashWindow>(); },
             []()
         { return true; } };

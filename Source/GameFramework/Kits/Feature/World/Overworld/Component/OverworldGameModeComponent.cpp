@@ -12,7 +12,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
-#include "Engine/TileMap/Component/TileMapRendererComponent.h"
+#include "Engine/TileMap/Component/TileMapComponent.h"
 
 #include "GameFramework/Runtime/Character/Control/Intent/ControlIntent.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
@@ -70,7 +70,7 @@ namespace sw
         GameObjectManager* pManager = getObjectManager();
         if ( pManager == nullptr )
             return false;
-        const TileMapRendererComponent* pGround = findLayer( _ground, "ground" );
+        const TileMapComponent* pGround = findLayer( _ground, "ground" );
         if ( pGround == nullptr )
             return false;
         if ( _tileMap.assign( pGround->getTileMap(), pGround->getTileSet() ) == false )
@@ -80,7 +80,7 @@ namespace sw
         }
         if ( _props.isValid() )
         {
-            const TileMapRendererComponent* pProps = findLayer( _props, "props" );
+            const TileMapComponent* pProps = findLayer( _props, "props" );
             if ( pProps == nullptr || _tileMap.addSolidLayer( pProps->getTileMap(), pProps->getTileSet() ) == false )
                 return false;
         }
@@ -124,14 +124,14 @@ namespace sw
         return true;
     }
 
-    const TileMapRendererComponent* OverworldGameModeComponent::findLayer( GameObjectHandle layer, const utf8* pRole ) const
+    const TileMapComponent* OverworldGameModeComponent::findLayer( GameObjectHandle layer, const utf8* pRole ) const
     {
-        const GameObjectManager*        pManager  = getObjectManager();
-        const GameObject*               pObject   = pManager != nullptr ? pManager->resolveGameObject( layer ) : nullptr;
-        const TileMapRendererComponent* pRenderer = pObject != nullptr ? pObject->getComponent<TileMapRendererComponent>() : nullptr;
+        const GameObjectManager* pManager  = getObjectManager();
+        const GameObject*        pObject   = pManager != nullptr ? pManager->resolveGameObject( layer ) : nullptr;
+        const TileMapComponent*  pRenderer = pObject != nullptr ? pObject->getComponent<TileMapComponent>() : nullptr;
         if ( pRenderer == nullptr || pRenderer->getTileMap()._width <= 0 )
         {
-            SW_LOG_ERROR_ID( "OverworldGameMode.LayerObjectNoLoaded", "[Overworld] the %# layer object has no loaded TileMapRendererComponent", pRole );
+            SW_LOG_ERROR_ID( "OverworldGameMode.LayerObjectNoLoaded", "[Overworld] the %# layer object has no loaded TileMapComponent", pRole );
             return nullptr;
         }
         return pRenderer;
@@ -171,7 +171,7 @@ namespace sw
 
     float3 OverworldGameModeComponent::computeTileCenter( int32 x, int32 y ) const
     {
-        // 렌더러와 같은 배치 — 열은 +X, 행은 -Y 로 자란다(`TileMapRendererComponent`).
+        // 렌더러와 같은 배치 — 열은 +X, 행은 -Y 로 자란다(`TileMapComponent`).
         return float3{ _mapOrigin._x + ( static_cast<float32>( x ) + 0.5f ) * _tileSize, _mapOrigin._y - ( static_cast<float32>( y ) + 0.5f ) * _tileSize, _mapOrigin._z };
     }
 

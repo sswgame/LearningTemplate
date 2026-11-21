@@ -240,7 +240,7 @@ namespace sw::editor
     {
         // 읽지 못하면 아무 파일도 열지 않는다 — 앞 파일의 글을 그대로 들고 열면, 저장할 때 **앞 파일의 내용을 이 파일에** 쓴다.
         string text;
-        if ( FileUtil::readTextFile( absolutePath, text ) == false )
+        if ( FileUtil::readTextFile( FileUtil::toDiskPath( absolutePath ), text ) == false )
         {
             SW_LOG_ERROR_ID( "DataTablePanel.CouldNotReadGame", "Could not read game data table '%#' - it is not opened", string( absolutePath ).c_str() );
             _gameDataPath.clear();
@@ -273,7 +273,7 @@ namespace sw::editor
         }
         if ( EditorContentWrite::warnIfReadOnly( _gameDataPath, EditorContentWriteKind::Save ) ) // Save File 단추는 패널 저장을 지나지 않는다 — 같은 확인을 여기서도
             return false;
-        if ( FileUtil::writeTextFile( _gameDataPath, _selectedGameDataRawText ) == false )
+        if ( FileUtil::writeTextFile( FileUtil::toDiskPath( _gameDataPath ), _selectedGameDataRawText ) == false )
         {
             SW_LOG_ERROR_ID( "DataTablePanel.CouldNotWriteGame", "Could not write game data table '%#'", _gameDataPath.c_str() );
             return false;

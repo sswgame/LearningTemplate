@@ -8,12 +8,12 @@
 
 namespace sw
 {
-    IEvent::IEvent()
+    EventBase::EventBase()
         : _next{ nullptr }
     {
     }
 
-    IEvent::~IEvent()
+    EventBase::~EventBase()
     {
     }
 
@@ -67,11 +67,11 @@ namespace sw
         // `processEvents` 는 브로드캐스트 뒤에, `clear()` 와 소멸자도 이 일을 한다.
         for ( auto& [channel, list] : _mapChannelQueue )
         {
-            IEvent* pCurrent = list->_pHead.exchange( nullptr, std::memory_order_relaxed );
+            EventBase* pCurrent = list->_pHead.exchange( nullptr, std::memory_order_relaxed );
             while ( pCurrent != nullptr )
             {
-                IEvent* pNext = pCurrent->_next.load( std::memory_order_relaxed );
-                pCurrent->~IEvent();
+                EventBase* pNext = pCurrent->_next.load( std::memory_order_relaxed );
+                pCurrent->~EventBase();
                 pCurrent = pNext;
             }
         }
@@ -81,7 +81,7 @@ namespace sw
     {
         bindBusThread();
         assertBusThread();
-        vector<pair<hashed_string, IEvent*>> activeChannels;
+        vector<pair<hashed_string, EventBase*>> activeChannels;
         BLOCK( "Swap Event Queues" )
         {
             ScopedLock<SpinLock> lock{ _queueSpinLock };
@@ -95,7 +95,7 @@ namespace sw
 
             for ( auto& [channel, list] : _mapChannelQueue )
             {
-                IEvent* pHead = list->_pHead.exchange( nullptr, std::memory_order_relaxed );
+                EventBase* pHead = list->_pHead.exchange( nullptr, std::memory_order_relaxed );
                 if ( pHead != nullptr )
                     activeChannels.emplace_back( channel, pHead );
             }
@@ -108,18 +108,18 @@ namespace sw
         {
             for ( auto& [channel, pHead] : activeChannels )
             {
-                IEvent* pCurr = pHead;
-                IEvent* pPrev{ nullptr };
+                EventBase* pCurr = pHead;
+                EventBase* pPrev{ nullptr };
                 while ( pCurr != nullptr )
                 {
-                    IEvent* pNext = pCurr->_next.load( std::memory_order_relaxed );
+                    EventBase* pNext = pCurr->_next.load( std::memory_order_relaxed );
                     pCurr->_next.store( pPrev, std::memory_order_relaxed );
                     pPrev = pCurr;
                     pCurr = pNext;
                 }
                 pHead = pPrev;
 
-                for ( IEvent* pEvent = pHead; pEvent != nullptr; )
+                for ( EventBase* pEvent = pHead; pEvent != nullptr; )
                 {
                     shared_ptr<ChannelMulticast> pMulticast;
                     {
@@ -133,15 +133,15 @@ namespace sw
                     if ( pMulticast != nullptr )
                         pMulticast->broadcast( *pEvent );
 
-                    IEvent* pNextEvent = pEvent->_next.load( std::memory_order_relaxed );
-                    pEvent->~IEvent();
+                    EventBase* pNextEvent = pEvent->_next.load( std::memory_order_relaxed );
+                    pEvent->~EventBase();
                     pEvent = pNextEvent;
                 }
             }
         }
     }
 
-    Subscription EventDispatcher::subscribeErased( hashed_string channel, EventTypeID type, Delegate<void( const IEvent& )> delegate )
+    Subscription EventDispatcher::subscribeErased( hashed_string channel, EventTypeID type, Delegate<void( const EventBase& )> delegate )
     {
         assertBusThread();
         // `add` 를 잠금 안에서 한다 — 잠금이 맵 조회까지만 걸리면 같은 이벤트를 두 스레드가 동시에 구독할 때 멀티캐스트의 벡터가 경쟁한다.
@@ -149,7 +149,7 @@ namespace sw
         return getOrCreateChannelUnlocked( channel, type )->add( std::move( delegate ) );
     }
 
-    void EventDispatcher::publishErased( hashed_string channel, EventTypeID type, const IEvent& eventRef )
+    void EventDispatcher::publishErased( hashed_string channel, EventTypeID type, const EventBase& eventRef )
     {
         assertBusThread();
         shared_ptr<ChannelMulticast> pMulticast;

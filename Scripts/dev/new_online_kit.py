@@ -225,7 +225,7 @@ sw_add_game_framework_kit(GF_Server_{name})
 
 namespace sw
 {{
-    class IServiceStore;
+    class ServiceStore;
     class MetricRegistry;
 
     /** @class {name}Service @brief {name} 요청 처리기입니다. */
@@ -233,7 +233,7 @@ namespace sw
     {{
     public:
         /** @brief 저장소를 잇고 지표를 등록합니다. 저장소가 없으면 false 입니다. */
-        [[nodiscard]] bool initialize( IServiceStore* pStore, MetricRegistry* pMetricRegistry );
+        [[nodiscard]] bool initialize( ServiceStore* pStore, MetricRegistry* pMetricRegistry );
         /** @brief 맡긴 일이 끝날 때까지 기다린 뒤 남은 호출을 버립니다. 저장소를 종료하기 전에 부릅니다. */
         void shutdown();
 
@@ -248,7 +248,7 @@ namespace sw
 
 namespace sw
 {{
-    bool {name}Service::initialize( IServiceStore* pStore, MetricRegistry* pMetricRegistry )
+    bool {name}Service::initialize( ServiceStore* pStore, MetricRegistry* pMetricRegistry )
     {{
         if ( pStore == nullptr )
         {{

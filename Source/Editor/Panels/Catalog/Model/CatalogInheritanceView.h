@@ -25,7 +25,7 @@ namespace sw::editor
         CatalogInheritanceView();
 
         /** @brief 부모 파일을 읽는 곳입니다. 없으면 보기가 꺼져 있습니다. 소유하지 않습니다. */
-        void setSource( IDataInheritanceSource* pSource ) { _pSource = pSource; }
+        void setSource( DataInheritanceSource* pSource ) { _pSource = pSource; }
         /** @brief 원문이 바뀔 때마다 다시 펼칩니다. 규칙 표(`DataCatalogInheritance::kTableAssetID`)에 없는 루트이면 꺼집니다. */
         void rebuild( string_view text, const CatalogXMLText& parsed );
 
@@ -67,12 +67,12 @@ namespace sw::editor
         void addParentFile( string_view assetID );
 
     private:
-        DataInheritanceSchema   _schema;
-        XMLDocument             _flatDoc;        ///< 지금 원문을 펼친 문서
-        vector<ParentFile>      _listParentFile; ///< 다른 파일의 부모를 펼친 문서
-        string                  _rootBase;       ///< 루트의 `_base`
-        string                  _error;
-        IDataInheritanceSource* _pSource;
-        uint8                   _bActive : 1;
+        DataInheritanceSchema  _schema;
+        XMLDocument            _flatDoc;        ///< 지금 원문을 펼친 문서
+        vector<ParentFile>     _listParentFile; ///< 다른 파일의 부모를 펼친 문서
+        string                 _rootBase;       ///< 루트의 `_base`
+        string                 _error;
+        DataInheritanceSource* _pSource;
+        uint8                  _bActive : 1;
     };
 } // namespace sw::editor

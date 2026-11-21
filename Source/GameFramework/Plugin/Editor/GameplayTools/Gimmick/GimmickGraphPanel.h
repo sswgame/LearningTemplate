@@ -13,7 +13,7 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/Name/hashed_string.h"
 
-#include "Editor/Common/GUI/Panel/IEditorPanel.h"
+#include "Editor/Common/GUI/Panel/EditorPanel.h"
 #include "Editor/Common/Widgets/EditorNodeGraph.h"
 
 #include "Engine/Foundation/GameObjectHandle.h"
@@ -27,7 +27,7 @@ namespace sw::editor
      * @class GimmickGraphPanel
      * @brief 선택한 오브젝트의 기믹 회로를 그래프로 편집하는 창입니다.
      */
-    class GimmickGraphPanel final : public IEditorPanel
+    class GimmickGraphPanel final : public EditorPanel
     {
     public:
         /** @brief 패널 id 입니다. 등록(`SW_EDITOR_PANEL`)과 열기(`EditorPanelManager::setPanelOpen<…>`)가 모두 이 상수에서 온다. */

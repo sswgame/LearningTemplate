@@ -34,7 +34,7 @@ namespace sw
             return unexpected( error );
         }
         string jsonText;
-        if ( FileUtil::readTextFile( providersFile->str(), jsonText ) == false )
+        if ( FileUtil::readTextFile( *providersFile, jsonText ) == false )
             return unexpected( Internal::makeFileError( "cannot read the providers file", pProvidersOption, *providersFile ) );
         if ( outDocument.tryParse( jsonText ) == false )
             return unexpected( Internal::makeFileError( "the providers file is not JSON", pProvidersOption, *providersFile ) );

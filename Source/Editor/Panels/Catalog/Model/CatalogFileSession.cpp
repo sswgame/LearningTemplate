@@ -17,7 +17,7 @@ namespace sw::editor
     {
     }
 
-    void CatalogFileSession::open( string_view assetID, string_view kindLabel, string_view text, IDataInheritanceSource* pInheritanceSource )
+    void CatalogFileSession::open( string_view assetID, string_view kindLabel, string_view text, DataInheritanceSource* pInheritanceSource )
     {
         _assetID   = string( assetID );
         _kindLabel = string( kindLabel );

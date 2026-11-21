@@ -28,7 +28,7 @@ namespace sw::editor
             /** @brief 디스크의 글을 쓰는 되돌리기 절차 하나입니다(되돌리기 · 다시 하기가 그 글을 다시 쓴다 — 파일 감시가 리그를 다시 읽는다). */
             static void writeRigText( const string& writePath, const string& text )
             {
-                if ( FileUtil::writeTextFile( writePath, text ) == false )
+                if ( FileUtil::writeTextFile( FileUtil::toDiskPath( writePath ), text ) == false )
                     SW_LOG_ERROR_ID( "RigDebugPanel.RigFileCouldNot", "Rig file '%#' could not be written", writePath.c_str() );
             }
 
@@ -144,7 +144,7 @@ namespace sw::editor
         const string_view            rigPath  = modifier.getRigPath();
         const optional<AbsolutePath> readPath = EditorPaths::getAssetPaths().findLooseFile( rigPath );
         string                       text;
-        if ( readPath.has_value() == false || FileUtil::readTextFile( readPath->str(), text ) == false )
+        if ( readPath.has_value() == false || FileUtil::readTextFile( *readPath, text ) == false )
             return string( "The rig file could not be read" );
         string rewritten;
         if ( rewriteSettings( text, rigPath, params, rewritten ) == false )
@@ -153,7 +153,7 @@ namespace sw::editor
         if ( rigFile.has_value() == false )
             return string( "The rig file could not be written" );
         const string& writePath = rigFile->str();
-        if ( FileUtil::writeTextFile( writePath, rewritten ) == false )
+        if ( FileUtil::writeTextFile( FileUtil::toDiskPath( writePath ), rewritten ) == false )
             return string( "The rig file could not be written" );
         if ( pUndoLabel != nullptr )
         {

@@ -7,7 +7,7 @@
 #pragma once
 #include "Core/Foundation/Macros.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/Subsystem.h"
 
 namespace sw
 {
@@ -17,7 +17,7 @@ namespace sw
      * @class EngineDefaultAssetsSubsystem
      * @brief 엔진 데이터와 엔진 문화권 · 문자열을 올리는 서브시스템입니다.
      */
-    class SW_API EngineDefaultAssetsSubsystem : public ISubsystem
+    class SW_API EngineDefaultAssetsSubsystem : public Subsystem
     {
     public:
         /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */

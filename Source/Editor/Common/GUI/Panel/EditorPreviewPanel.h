@@ -41,7 +41,7 @@ namespace sw::editor
      *            이 창의 스택에 남는다. `EditorTransaction` 이 오브젝트가 있는 씬으로 스택을 고르기 때문이다.
      *          - 창 스택이 늘거나 줄면 기반 클래스가 문서를 dirty 로 표시한다(`syncDocumentDirty`, 닫기 확인보다 먼저 돈다). 그래서 파생 창이
      *            미리보기 씬 편집을 따로 알릴 필요가 없다. 저장에 성공하면 `acknowledgePreviewEdits`, 문서를 다시 만들면 `resetDocumentHistory` 를
-     *            부른다. 닫기 확인은 `IEditorPanel::requestClose` 가 한다.
+     *            부른다. 닫기 확인은 `EditorPanel::requestClose` 가 한다.
      *          - 창을 **닫거나**(`onPanelClosed`) 종료할 때(`shutdown`) 기반 클래스가 씬, 렌더 타깃, 초점, 창 스택을 한 곳(`releasePreview`)에서 놓는다.
      *            다시 열면 첫 `beginPreviewFrame` 이 씬을 새로 만들고 `populatePreviewScene` 을 다시 부른다 — 파생 창은 거기서 앞 씬을 가리키던
      *            핸들 · "놓았다" 표시를 모두 비운다(objectID 는 씬의 매니저마다 따로 세므로 낡은 핸들이 새 씬의 다른 오브젝트로 풀릴 수 있다).

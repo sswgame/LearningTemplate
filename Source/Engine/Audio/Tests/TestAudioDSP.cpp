@@ -18,7 +18,7 @@ namespace
     struct AudioDSPTestInternal
     {
         /** @brief 교차 스테레오 @p pInterleaved 의 @p frameCount 프레임(한 블록 이하)을 이펙트에 통과시킵니다. */
-        static void processEffect( sw::IAudioEffect& effect, float32* pInterleaved, uint32 frameCount )
+        static void processEffect( sw::AudioEffect& effect, float32* pInterleaved, uint32 frameCount )
         {
             constexpr uint32     kChannelCount = sw::audio::kStereoChannelCount;
             sw::AudioBlockBuffer buffer;
@@ -78,11 +78,11 @@ namespace
         }
 
         /** @brief 이름의 이펙트를 만들고 파라미터를 이름으로 겁니다. */
-        static sw::unique_ptr<sw::IAudioEffect> createEffect( const utf8* pType, std::initializer_list<std::pair<const utf8*, float32>> listParameter )
+        static sw::unique_ptr<sw::AudioEffect> createEffect( const utf8* pType, std::initializer_list<std::pair<const utf8*, float32>> listParameter )
         {
             sw::AudioEffectDef desc;
-            desc._type                               = sw::hashed_string( pType );
-            sw::unique_ptr<sw::IAudioEffect> pEffect = sw::AudioEffectRegistry::createEffect( desc, sw::AudioChannelLayout::Stereo );
+            desc._type                              = sw::hashed_string( pType );
+            sw::unique_ptr<sw::AudioEffect> pEffect = sw::AudioEffectRegistry::createEffect( desc, sw::AudioChannelLayout::Stereo );
             if ( pEffect == nullptr )
                 return pEffect;
             for ( const std::pair<const utf8*, float32>& parameter : listParameter )
@@ -113,7 +113,7 @@ namespace
         }
 
         /** @brief 사인을 이펙트에 통과시켜 정상 상태(앞 0.1 초를 버린 4800 프레임)의 그 주파수 이득(dB)입니다. */
-        static float32 measureGainDb( sw::IAudioEffect& effect, float32 frequencyHz )
+        static float32 measureGainDb( sw::AudioEffect& effect, float32 frequencyHz )
         {
             effect.reset();
             constexpr uint32    kFrameCount = 9600;
@@ -127,7 +127,7 @@ namespace
         }
 
         /** @brief 버퍼 전체를 블록으로 나눠 처리합니다. */
-        static void processAll( sw::IAudioEffect& effect, sw::vector<float32>& inoutListSample )
+        static void processAll( sw::AudioEffect& effect, sw::vector<float32>& inoutListSample )
         {
             const uint32 frameCount = static_cast<uint32>( inoutListSample.size() / 2 );
             for ( uint32 offset = 0; offset < frameCount; offset += sw::audio::kBlockFrameCount )
@@ -154,9 +154,9 @@ namespace
  */
 SW_TEST_CASE( AudioDSPTest, BiquadFrequencyResponseAtPoints )
 {
-    sw::unique_ptr<sw::IAudioEffect> pLowPass = AudioDSPTestInternal::createEffect( "LowPass", {
-                                                                                                   {"frequencyHz",     1000.0f},
-                                                                                                   {          "q", 0.70710678f}
+    sw::unique_ptr<sw::AudioEffect> pLowPass = AudioDSPTestInternal::createEffect( "LowPass", {
+                                                                                                  {"frequencyHz",     1000.0f},
+                                                                                                  {          "q", 0.70710678f}
     } );
     SW_REQUIRE_TRUE( pLowPass != nullptr );
     SW_EXPECT_NEAR( 0.0f, AudioDSPTestInternal::measureGainDb( *pLowPass, 100.0f ), 0.1f );
@@ -166,9 +166,9 @@ SW_TEST_CASE( AudioDSPTest, BiquadFrequencyResponseAtPoints )
     const sw::AudioBiquadCoefficients lowPassCoefficients = sw::AudioBiquadCoefficients::make( sw::AudioBiquadKind::LowPass, 1000.0f, 0.70710678f, 0.0f, 48000.0f );
     SW_EXPECT_NEAR( sw::AudioMath::linearToDb( lowPassCoefficients.computeMagnitude( 10000.0f, 48000.0f ) ), lowPassAt10k, 0.2f );
 
-    sw::unique_ptr<sw::IAudioEffect> pHighPass = AudioDSPTestInternal::createEffect( "HighPass", {
-                                                                                                     {"frequencyHz",     1000.0f},
-                                                                                                     {          "q", 0.70710678f}
+    sw::unique_ptr<sw::AudioEffect> pHighPass = AudioDSPTestInternal::createEffect( "HighPass", {
+                                                                                                    {"frequencyHz",     1000.0f},
+                                                                                                    {          "q", 0.70710678f}
     } );
     SW_REQUIRE_TRUE( pHighPass != nullptr );
     const float32 highPassAt100 = AudioDSPTestInternal::measureGainDb( *pHighPass, 100.0f );
@@ -176,10 +176,10 @@ SW_TEST_CASE( AudioDSPTest, BiquadFrequencyResponseAtPoints )
     SW_EXPECT_NEAR( -3.01f, AudioDSPTestInternal::measureGainDb( *pHighPass, 1000.0f ), 0.1f );
     SW_EXPECT_NEAR( 0.0f, AudioDSPTestInternal::measureGainDb( *pHighPass, 10000.0f ), 0.1f );
 
-    sw::unique_ptr<sw::IAudioEffect> pPeaking = AudioDSPTestInternal::createEffect( "Peaking", {
-                                                                                                   {"frequencyHz", 1000.0f},
-                                                                                                   {          "q",    1.0f},
-                                                                                                   {     "gainDb",    6.0f}
+    sw::unique_ptr<sw::AudioEffect> pPeaking = AudioDSPTestInternal::createEffect( "Peaking", {
+                                                                                                  {"frequencyHz", 1000.0f},
+                                                                                                  {          "q",    1.0f},
+                                                                                                  {     "gainDb",    6.0f}
     } );
     SW_REQUIRE_TRUE( pPeaking != nullptr );
     SW_EXPECT_NEAR( 6.0f, AudioDSPTestInternal::measureGainDb( *pPeaking, 1000.0f ), 0.1f );
@@ -187,8 +187,8 @@ SW_TEST_CASE( AudioDSPTest, BiquadFrequencyResponseAtPoints )
     SW_EXPECT_NEAR( 0.0f, AudioDSPTestInternal::measureGainDb( *pPeaking, 10000.0f ), 0.3f );
 
     // 로우패스를 활짝 열면(20 kHz) 신호를 건드리지 않는다 — 스냅샷이 평소엔 이 상태로 둔다.
-    sw::unique_ptr<sw::IAudioEffect> pOpen = AudioDSPTestInternal::createEffect( "LowPass", {
-                                                                                                { "frequencyHz", 20000.0f }
+    sw::unique_ptr<sw::AudioEffect> pOpen = AudioDSPTestInternal::createEffect( "LowPass", {
+                                                                                               { "frequencyHz", 20000.0f }
     } );
     SW_EXPECT_NEAR( 0.0f, AudioDSPTestInternal::measureGainDb( *pOpen, 10000.0f ), 1e-3f );
 }
@@ -199,7 +199,7 @@ SW_TEST_CASE( AudioDSPTest, BiquadFrequencyResponseAtPoints )
  */
 SW_TEST_CASE( AudioDSPTest, CompressorGainReduction )
 {
-    sw::unique_ptr<sw::IAudioEffect> pCompressor = AudioDSPTestInternal::createEffect(
+    sw::unique_ptr<sw::AudioEffect> pCompressor = AudioDSPTestInternal::createEffect(
         "Compressor", {
                           {"thresholdDb", -24.0f},
                           {      "ratio",   4.0f},
@@ -235,10 +235,10 @@ SW_TEST_CASE( AudioDSPTest, CompressorGainReduction )
  */
 SW_TEST_CASE( AudioDSPTest, LimiterHoldsTheCeiling )
 {
-    sw::unique_ptr<sw::IAudioEffect> pLimiter = AudioDSPTestInternal::createEffect( "Limiter", {
-                                                                                                   {  "ceilingDb", -1.0f},
-                                                                                                   {"lookaheadMs",  2.0f},
-                                                                                                   {  "releaseMs", 50.0f}
+    sw::unique_ptr<sw::AudioEffect> pLimiter = AudioDSPTestInternal::createEffect( "Limiter", {
+                                                                                                  {  "ceilingDb", -1.0f},
+                                                                                                  {"lookaheadMs",  2.0f},
+                                                                                                  {  "releaseMs", 50.0f}
     } );
     SW_REQUIRE_TRUE( pLimiter != nullptr );
     const float32 ceiling = sw::AudioMath::dbToLinear( -1.0f );
@@ -270,10 +270,10 @@ SW_TEST_CASE( AudioDSPTest, ReverbTailGrowsWithRoomSize )
     const float32 arrRoomSize[2] = { 0.3f, 0.9f };
     for ( uint32 caseIndex = 0; caseIndex < 2; ++caseIndex )
     {
-        sw::unique_ptr<sw::IAudioEffect> pReverb = AudioDSPTestInternal::createEffect( "Reverb", {
-                                                                                                     {"roomSize", arrRoomSize[caseIndex]},
-                                                                                                     {     "wet",                   1.0f},
-                                                                                                     {     "dry",                   0.0f}
+        sw::unique_ptr<sw::AudioEffect> pReverb = AudioDSPTestInternal::createEffect( "Reverb", {
+                                                                                                    {"roomSize", arrRoomSize[caseIndex]},
+                                                                                                    {     "wet",                   1.0f},
+                                                                                                    {     "dry",                   0.0f}
         } );
         SW_REQUIRE_TRUE( pReverb != nullptr );
         sw::vector<float32> listSample = AudioDSPTestInternal::makeImpulse( 72000 );
@@ -286,12 +286,12 @@ SW_TEST_CASE( AudioDSPTest, ReverbTailGrowsWithRoomSize )
     // 1 초 뒤의 꼬리: 큰 방이 훨씬 남는다.
     SW_EXPECT_TRUE( arrLateRms[1] > arrLateRms[0] * 10.0f );
 
-    sw::unique_ptr<sw::IAudioEffect> pDryOnly = AudioDSPTestInternal::createEffect( "Reverb", {
-                                                                                                  {"wet", 0.0f},
-                                                                                                  {"dry", 1.0f}
+    sw::unique_ptr<sw::AudioEffect> pDryOnly = AudioDSPTestInternal::createEffect( "Reverb", {
+                                                                                                 {"wet", 0.0f},
+                                                                                                 {"dry", 1.0f}
     } );
-    sw::vector<float32>              listSine = AudioDSPTestInternal::makeStereoSine( 440.0f, 0.3f, 4800 );
-    const sw::vector<float32>        listCopy = listSine;
+    sw::vector<float32>             listSine = AudioDSPTestInternal::makeStereoSine( 440.0f, 0.3f, 4800 );
+    const sw::vector<float32>       listCopy = listSine;
     AudioDSPTestInternal::processAll( *pDryOnly, listSine );
     SW_EXPECT_TRUE( listSine == listCopy );
 }
@@ -301,11 +301,11 @@ SW_TEST_CASE( AudioDSPTest, ReverbTailGrowsWithRoomSize )
  */
 SW_TEST_CASE( AudioDSPTest, DelayEchoLandsAtTheDelayTime )
 {
-    sw::unique_ptr<sw::IAudioEffect> pDelay = AudioDSPTestInternal::createEffect( "Delay", {
-                                                                                               {  "timeMs", 100.0f},
-                                                                                               {"feedback",   0.5f},
-                                                                                               {     "wet",   0.5f},
-                                                                                               {     "dry",   1.0f}
+    sw::unique_ptr<sw::AudioEffect> pDelay = AudioDSPTestInternal::createEffect( "Delay", {
+                                                                                              {  "timeMs", 100.0f},
+                                                                                              {"feedback",   0.5f},
+                                                                                              {     "wet",   0.5f},
+                                                                                              {     "dry",   1.0f}
     } );
     SW_REQUIRE_TRUE( pDelay != nullptr );
     sw::vector<float32> listSample = AudioDSPTestInternal::makeImpulse( 14400 );

@@ -10,7 +10,7 @@
 #include "Core/Network/Message/NetSendBudget.h"
 #include "Core/Serialization/BitStream.h"
 
-#include "Engine/Destruction/Fracture/FractureComponentBase.h"
+#include "Engine/Destruction/Fracture/FractureBaseComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Reflection/ReflectionCast.h"
@@ -27,7 +27,7 @@ namespace sw
             static constexpr int32 kMaxPoseSample     = 32;  ///< 덩어리마다 보관하는 자세 표본 수
 
             /** @brief 프로필의 자세 간격(초)입니다. */
-            static float32 computePosePeriod( const FractureComponentBase& component ) { return 1.0f / MathUtil::max( 0.1f, component.getProfile()._networkPoseRate ); }
+            static float32 computePosePeriod( const FractureBaseComponent& component ) { return 1.0f / MathUtil::max( 0.1f, component.getProfile()._networkPoseRate ); }
 
             static_assert( static_cast<uint8>( DestructionDamageKind::Count ) == 3, "DestructionEventNetState::_kind 의 Max 를 열거의 끝 값과 맞춘다" );
 
@@ -108,7 +108,7 @@ namespace sw
                 return true;
             }
 
-            static FractureComponentBase* resolveFracture( GameObjectManager* pManager, TComponentHandle<FractureComponentBase> handle )
+            static FractureBaseComponent* resolveFracture( GameObjectManager* pManager, TComponentHandle<FractureBaseComponent> handle )
             {
                 if ( pManager == nullptr )
                     return nullptr;
@@ -143,7 +143,7 @@ namespace sw
         _hashTime = 0.0f;
     }
 
-    void DestructionReplicationServer::registerObject( NetObjectID netID, FractureComponentBase& component )
+    void DestructionReplicationServer::registerObject( NetObjectID netID, FractureBaseComponent& component )
     {
         component.setAuthority( true );
         Entry* pEntry = findEntry( netID );
@@ -154,7 +154,7 @@ namespace sw
         }
         *pEntry                 = Entry{};
         pEntry->_netID          = netID;
-        pEntry->_component      = TComponentHandle<FractureComponentBase>{ &component };
+        pEntry->_component      = TComponentHandle<FractureBaseComponent>{ &component };
         pEntry->_sentEventCount = static_cast<uint32>( component.getEventLog()._listEvent.size() );
     }
 
@@ -163,7 +163,7 @@ namespace sw
         return VectorUtil::findBy<&Entry::_netID>( _listEntry, netID );
     }
 
-    FractureComponentBase* DestructionReplicationServer::resolve( const Entry& entry ) const
+    FractureBaseComponent* DestructionReplicationServer::resolve( const Entry& entry ) const
     {
         return DestructionReplicationInternal::resolveFracture( _pManager, entry._component );
     }
@@ -229,7 +229,7 @@ namespace sw
             return;
         for ( Entry& entry : _listEntry )
         {
-            FractureComponentBase* pComponent = resolve( entry );
+            FractureBaseComponent* pComponent = resolve( entry );
             if ( pComponent != nullptr )
                 sendEvents( entry, *pComponent, serverTick );
         }
@@ -240,13 +240,13 @@ namespace sw
         for ( const Request& request : listRequest )
         {
             Entry*                 pEntry     = findEntry( request._netID );
-            FractureComponentBase* pComponent = pEntry != nullptr ? resolve( *pEntry ) : nullptr;
+            FractureBaseComponent* pComponent = pEntry != nullptr ? resolve( *pEntry ) : nullptr;
             if ( pComponent != nullptr && sendSnapshot( *pEntry, *pComponent, request._connectionID ) == false )
                 _listRequest.push_back( request ); // 신뢰 창이 찼으므로 다음 틱에 다시 보낸다. 연결이 닫히면 onConnectionClosed 가 지운다
         }
         for ( Entry& entry : _listEntry )
         {
-            FractureComponentBase* pComponent = resolve( entry );
+            FractureBaseComponent* pComponent = resolve( entry );
             if ( pComponent != nullptr )
                 sendPoses( entry, *pComponent, serverTick );
         }
@@ -256,14 +256,14 @@ namespace sw
             _hashTime = 0.0f;
             for ( const Entry& entry : _listEntry )
             {
-                const FractureComponentBase* pComponent = resolve( entry );
+                const FractureBaseComponent* pComponent = resolve( entry );
                 if ( pComponent != nullptr )
                     sendHash( entry, *pComponent );
             }
         }
     }
 
-    void DestructionReplicationServer::sendEvents( Entry& entry, FractureComponentBase& component, uint32 serverTick )
+    void DestructionReplicationServer::sendEvents( Entry& entry, FractureBaseComponent& component, uint32 serverTick )
     {
         // 서버는 스냅숏을 받지 않으므로 기록의 인덱스가 곧 상태의 이벤트 번호이다.
         const vector<DestructionDamageEvent>&      listEvent     = component.getEventLog()._listEvent;
@@ -292,7 +292,7 @@ namespace sw
         entry._sentEventCount = static_cast<uint32>( listEvent.size() );
     }
 
-    bool DestructionReplicationServer::sendSnapshot( Entry& entry, FractureComponentBase& component, int32 connectionID )
+    bool DestructionReplicationServer::sendSnapshot( Entry& entry, FractureBaseComponent& component, int32 connectionID )
     {
         const uint32 eventCount = component.getState().getEventCount();
         if ( component.isStateReady() == false || eventCount == 0 )
@@ -322,7 +322,7 @@ namespace sw
         return true;
     }
 
-    void DestructionReplicationServer::sendPoses( Entry& entry, FractureComponentBase& component, uint32 serverTick )
+    void DestructionReplicationServer::sendPoses( Entry& entry, FractureBaseComponent& component, uint32 serverTick )
     {
         using Internal = DestructionReplicationInternal;
         if ( component.isStateReady() == false || component.isFractured() == false )
@@ -442,7 +442,7 @@ namespace sw
         }
     }
 
-    void DestructionReplicationServer::sendHash( const Entry& entry, const FractureComponentBase& component )
+    void DestructionReplicationServer::sendHash( const Entry& entry, const FractureBaseComponent& component )
     {
         const uint32 eventCount = component.getState().getEventCount();
         // 쌓였지만 아직 적용하지 않은 피해가 있어도 된다. (이벤트 수, 해시)는 그 순간의 상태 그대로이고, 쌓인 피해는 뒤 번호로 보낸다.
@@ -486,7 +486,7 @@ namespace sw
         _clock.initialize( clockSettings );
     }
 
-    void DestructionReplicationClient::registerObject( NetObjectID netID, FractureComponentBase& component )
+    void DestructionReplicationClient::registerObject( NetObjectID netID, FractureBaseComponent& component )
     {
         component.setAuthority( false );
         Entry* pEntry = findEntry( netID );
@@ -497,7 +497,7 @@ namespace sw
         }
         *pEntry            = Entry{};
         pEntry->_netID     = netID;
-        pEntry->_component = TComponentHandle<FractureComponentBase>{ &component };
+        pEntry->_component = TComponentHandle<FractureBaseComponent>{ &component };
         _clock.setSampleInterval( MathUtil::max( _clock.getSampleInterval(), DestructionReplicationInternal::computePosePeriod( component ) ) );
     }
 
@@ -513,7 +513,7 @@ namespace sw
         return VectorUtil::findBy<&Entry::_netID>( _listEntry, netID );
     }
 
-    FractureComponentBase* DestructionReplicationClient::resolve( const Entry& entry ) const
+    FractureBaseComponent* DestructionReplicationClient::resolve( const Entry& entry ) const
     {
         return DestructionReplicationInternal::resolveFracture( _pManager, entry._component );
     }
@@ -610,7 +610,7 @@ namespace sw
             bufferEvent( entry, received );
             return;
         }
-        FractureComponentBase* pComponent = resolve( entry );
+        FractureBaseComponent* pComponent = resolve( entry );
         if ( entry._skipCount > 0 )
         {
             --entry._skipCount;
@@ -650,7 +650,7 @@ namespace sw
         entry._listFutureEvent.push_back( received );
     }
 
-    void DestructionReplicationClient::applyToComponent( FractureComponentBase& component, const BufferedEvent& buffered )
+    void DestructionReplicationClient::applyToComponent( FractureBaseComponent& component, const BufferedEvent& buffered )
     {
         if ( buffered._bHasPose == SW_TRUE )
             component.applyDamage( buffered._event, buffered._groupPose );
@@ -662,7 +662,7 @@ namespace sw
     {
         const uint32 eventCount = body._eventCount;
 
-        FractureComponentBase* pComponent = resolve( entry );
+        FractureBaseComponent* pComponent = resolve( entry );
         if ( pComponent != nullptr )
             pComponent->applyNetworkSnapshot( body._bytes.data(), body._bytes.size() );
         ++_stats._snapshotAppliedCount;
@@ -736,7 +736,7 @@ namespace sw
         _clock.advance( deltaTime );
         for ( Entry& entry : _listEntry )
         {
-            FractureComponentBase* pComponent = resolve( entry );
+            FractureBaseComponent* pComponent = resolve( entry );
             if ( pComponent == nullptr )
                 continue;
             compareHashes( entry, *pComponent );
@@ -744,7 +744,7 @@ namespace sw
         }
     }
 
-    void DestructionReplicationClient::compareHashes( Entry& entry, FractureComponentBase& component )
+    void DestructionReplicationClient::compareHashes( Entry& entry, FractureBaseComponent& component )
     {
         if ( entry._bAwaitingSnapshot == SW_TRUE || component.isStateReady() == false )
             return;
@@ -799,7 +799,7 @@ namespace sw
             _stats._sentBytes += static_cast<uint64>( _writer.getByteCount() );
     }
 
-    void DestructionReplicationClient::driveChunks( Entry& entry, FractureComponentBase& component )
+    void DestructionReplicationClient::driveChunks( Entry& entry, FractureBaseComponent& component )
     {
         const float64 renderTick = _clock.getRenderTick();
         if ( renderTick < 0.0 )

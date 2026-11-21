@@ -5,18 +5,18 @@
 #include "Engine/Window/PlatformClipboard.h"
 
 #if defined( SW_PLATFORM_LINUX )
-    #include "Engine/Window/IWindow.h"
+    #include "Engine/Window/GenericWindow.h"
 
 namespace sw
 {
     namespace
     {
         /**
-         * @brief 클립보드를 잇는 활성 창입니다. 창 종류를 가르지 않고 창의 능력 질의(`IWindow::supportsClipboard`)로만 고른다. 창이 없거나 잇지 못하면 nullptr 입니다.
+         * @brief 클립보드를 잇는 활성 창입니다. 창 종류를 가르지 않고 창의 능력 질의(`GenericWindow::supportsClipboard`)로만 고른다. 창이 없거나 잇지 못하면 nullptr 입니다.
          */
-        IWindow* findClipboardWindow()
+        GenericWindow* findClipboardWindow()
         {
-            IWindow* const pWindow = MainWindowSubsystem::findMainWindow();
+            GenericWindow* const pWindow = MainWindowSubsystem::findMainWindow();
             return pWindow != nullptr && pWindow->supportsClipboard() ? pWindow : nullptr;
         }
     } // namespace
@@ -30,13 +30,13 @@ namespace sw
 
     bool PlatformClipboard::readText( string& outText )
     {
-        IWindow* const pWindow = findClipboardWindow();
+        GenericWindow* const pWindow = findClipboardWindow();
         return pWindow != nullptr && pWindow->readClipboardText( outText );
     }
 
     bool PlatformClipboard::writeText( string_view text )
     {
-        IWindow* const pWindow = findClipboardWindow();
+        GenericWindow* const pWindow = findClipboardWindow();
         if ( pWindow == nullptr )
         {
             SW_LOG_WARNING_ID( "PlatformClipboard.ClipboardWriteNeedsActive", "Clipboard write needs an active window that supports the clipboard (X11, or Wayland with a data device) to own the selection (none) - not written" );

@@ -11,7 +11,7 @@
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/PrefabPool.h"
 #include "GameFramework/Runtime/Foundation/Framework/Tests/PrefabPoolComponentSpawner.h"
-#include "GameFramework/Runtime/Gameplay/Ability/AbilityComponent.h"
+#include "GameFramework/Runtime/Gameplay/Ability/AbilitySystemComponent.h"
 #include "GameFramework/Runtime/Gameplay/Ability/CombatAttributeSet.h"
 
 #include "Games/AbilityArena/ArenaEnemyAIComponent.h"
@@ -23,14 +23,14 @@ using namespace sw;
 SW_TEST_CASE( ArenaUnitPoolResetTest, FallenGruntAndItsAIComeBackFresh )
 {
     GameObjectManager manager;
-    PrefabPool        bodyPool = PrefabPoolComponentSpawner<MeshComponent, AbilityComponent, PawnComponent, ArenaUnitComponent>::makePool( 4 ); // 졸개 몸
-    PrefabPool        aiPool   = PrefabPoolComponentSpawner<ArenaEnemyAIComponent>::makePool( 4 );                                              // 졸개 AI 조종자
+    PrefabPool        bodyPool = PrefabPoolComponentSpawner<MeshComponent, AbilitySystemComponent, PawnComponent, ArenaUnitComponent>::makePool( 4 ); // 졸개 몸
+    PrefabPool        aiPool   = PrefabPoolComponentSpawner<ArenaEnemyAIComponent>::makePool( 4 );                                                    // 졸개 AI 조종자
     GameObject*       pBody    = bodyPool.acquire( manager, "ArenaGrunt" );
     GameObject*       pAIBody  = aiPool.acquire( manager, "ArenaGruntAI" );
     SW_REQUIRE_TRUE( pBody != nullptr && pAIBody != nullptr ); // 처음 만든 인스턴스로 풀 계약을 확인했다
-    AbilityComponent*      pAbility = pBody->getComponent<AbilityComponent>();
-    PawnComponent*         pPawn    = pBody->getComponent<PawnComponent>();
-    ArenaEnemyAIComponent* pAI      = pAIBody->getComponent<ArenaEnemyAIComponent>();
+    AbilitySystemComponent* pAbility = pBody->getComponent<AbilitySystemComponent>();
+    PawnComponent*          pPawn    = pBody->getComponent<PawnComponent>();
+    ArenaEnemyAIComponent*  pAI      = pAIBody->getComponent<ArenaEnemyAIComponent>();
     SW_REQUIRE_TRUE( pAbility != nullptr && pPawn != nullptr && pAI != nullptr );
 
     // 디렉터가 세트를 주고 AI 가 쥔 뒤 쓰러졌다.

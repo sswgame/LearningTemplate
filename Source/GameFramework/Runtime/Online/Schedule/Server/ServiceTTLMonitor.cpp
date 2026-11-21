@@ -53,7 +53,7 @@ namespace sw
         shutdown();
     }
 
-    bool ServiceTTLMonitor::initialize( IServiceStore* pStore, ServiceScheduler* pScheduler, vector<ServiceTTLRule> listRule, int32 minuteOfDay )
+    bool ServiceTTLMonitor::initialize( ServiceStore* pStore, ServiceScheduler* pScheduler, vector<ServiceTTLRule> listRule, int32 minuteOfDay )
     {
         if ( listRule.empty() )
             return true;

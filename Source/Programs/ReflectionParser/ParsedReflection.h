@@ -435,32 +435,44 @@ namespace sw
 
 namespace sw
 {
+    /** @brief `REFLECT_INTERFACE( I, _port )` 한 줄입니다 — 컴포넌트가 포트 멤버로 내보내는 리플렉션 인터페이스. */
+    struct ParsedInterfaceExport
+    {
+        string _interfaceSpelling; ///< 소스에 적은 인터페이스 이름(`IHealthSource`)
+        string _interfaceFQN;      ///< 포트 형식의 기반에서 찾은 정규 이름(`sw::IHealthSource`). 못 찾으면 비고 검증이 멈춘다
+        string _portMember;        ///< 포트 멤버 이름(`_healthSourcePort`)
+    };
+} // namespace sw
+
+namespace sw
+{
     /** @brief REFLECT 가 붙은 클래스·구조체 */
     struct ParsedTypeInfo
     {
-        string                       _name;
-        string                       _fullyQualifiedName;
-        string                       _parentFQN;
-        string                       _category;
-        string                       _displayName;
-        string                       _tooltip;
-        vector<string>               _listAlias;
-        vector<string>               _listRemovedField; ///< `REFLECT( RemovedField = "_oldA, _oldB" )` — 지운 필드 이름(세이브의 해시 공간에 남는다)
-        vector<string>               _listRemovedType;  ///< `REFLECT( RemovedType = "sw::OldThing" )` — 지운 타입 이름(바이너리 태그의 타입 해시 공간에 남는다)
-        string                       _validate;         ///< `REFLECT( Validate = fn )` — 같은 타입의 `void fn( ValidationContext& )`
-        string                       _tickMode;         ///< `REFLECT( TickMode = Batch|Task|Main )` 의 글. 비면 Batch(`DeclarationValidator::validateTickMode` 가 철자를 본다)
-        string                       _versionName;      ///< `REFLECT( Version = kName )` 의 상수 이름. 숫자로 적었으면 비고 `_version` 이 찬다(생성 코드가 이름을 그대로 쓴다)
-        vector<pair<string, string>> _listCustomMeta;
-        vector<ParsedPropertyInfo>   _listProperty;
-        vector<ParsedFunctionInfo>   _listMethod;
-        vector<ParsedEventInfo>      _listEvent;
-        uint32                       _version;   ///< `REFLECT( Version = N )` — 타입의 저장 판. 0 이면 적지 않았다(엔진은 1 로 본다, `TypeMetadata::getVersion`)
-        uint32                       _baseCount; ///< 기반 클래스 수입니다. 둘 이상이면 `collectBase` 가 생성 오류로 멈추므로 코드젠에는 0 이나 1 만 옵니다
-        uint8                        _bAbstract         : 1;
-        uint8                        _bStatic           : 1;
-        uint8                        _bReflectBody      : 1;
-        uint8                        _bComponentFactory : 1;
-        uint8                        _bHideInMenu       : 1;
+        string                        _name;
+        string                        _fullyQualifiedName;
+        string                        _parentFQN;
+        string                        _category;
+        string                        _displayName;
+        string                        _tooltip;
+        vector<string>                _listAlias;
+        vector<string>                _listRemovedField; ///< `REFLECT( RemovedField = "_oldA, _oldB" )` — 지운 필드 이름(세이브의 해시 공간에 남는다)
+        vector<string>                _listRemovedType;  ///< `REFLECT( RemovedType = "sw::OldThing" )` — 지운 타입 이름(바이너리 태그의 타입 해시 공간에 남는다)
+        string                        _validate;         ///< `REFLECT( Validate = fn )` — 같은 타입의 `void fn( ValidationContext& )`
+        string                        _tickMode;         ///< `REFLECT( TickMode = Batch|Task|Main )` 의 글. 비면 Batch(`DeclarationValidator::validateTickMode` 가 철자를 본다)
+        string                        _versionName;      ///< `REFLECT( Version = kName )` 의 상수 이름. 숫자로 적었으면 비고 `_version` 이 찬다(생성 코드가 이름을 그대로 쓴다)
+        vector<pair<string, string>>  _listCustomMeta;
+        vector<ParsedPropertyInfo>    _listProperty;
+        vector<ParsedFunctionInfo>    _listMethod;
+        vector<ParsedEventInfo>       _listEvent;
+        vector<ParsedInterfaceExport> _listInterfaceExport; ///< `REFLECT_INTERFACE` 줄들(선언 차례)
+        uint32                        _version;             ///< `REFLECT( Version = N )` — 타입의 저장 판. 0 이면 적지 않았다(엔진은 1 로 본다, `TypeMetadata::getVersion`)
+        uint32                        _baseCount;           ///< 기반 클래스 수입니다. 둘 이상이면 `collectBase` 가 생성 오류로 멈추므로 코드젠에는 0 이나 1 만 옵니다
+        uint8                         _bAbstract         : 1;
+        uint8                         _bStatic           : 1;
+        uint8                         _bReflectBody      : 1;
+        uint8                         _bComponentFactory : 1;
+        uint8                         _bHideInMenu       : 1;
         /** @brief `REFLECT( NotPlaceable )` — 이름 생성 함수(팩토리)를 내지 않는다. 데이터(씬 · 프리팹 · "Add Component")로 놓지 못하고 코드의 `addComponent<T>()` 로만 선다. */
         uint8 _bNotPlaceable : 1;
         /** @brief 첫 기반 클래스에 `REFLECT()` 가 있습니다. 없으면 기반의 필드는 프로퍼티가 아니므로 고정 배치형 코덱도 기반을 건너뜁니다. */
@@ -468,8 +480,10 @@ namespace sw
         /** @brief `Component` 파생입니다(추상 포함). 틱 모드 등록(`requiresTickRegistration`)과 `TickMode` 검사가 본다. */
         uint8 _bComponent : 1;
         /** @brief 바깥 형식 사슬에 public 이 아닌 고리가 있습니다(private · protected 중첩). 생성 코드는 이름공간 범위에서 이 이름을 쓰지 않는다(`CodeGenerator::makeRegistrarKey`). */
-        uint8                  _bHidden        : 1;
-        [[maybe_unused]] uint8 _reservedTraits : 4;
+        uint8 _bHidden : 1;
+        /** @brief `REFLECT( Interface )` — 상태 없는 계약. 데이터 멤버 · 기반이 있으면 생성 오류, 생성 코드는 `static_assert` 로 크기(vptr 하나)를 지킨다. */
+        uint8                  _bInterface     : 1;
+        [[maybe_unused]] uint8 _reservedTraits : 3;
 
         ParsedTypeInfo() noexcept
             : _name{}
@@ -488,6 +502,7 @@ namespace sw
             , _listProperty{}
             , _listMethod{}
             , _listEvent{}
+            , _listInterfaceExport{}
             , _version{ 0 }
             , _baseCount{ 0 }
             , _bAbstract{ SW_FALSE }
@@ -499,6 +514,7 @@ namespace sw
             , _bParentReflected{ SW_FALSE }
             , _bComponent{ SW_FALSE }
             , _bHidden{ SW_FALSE }
+            , _bInterface{ SW_FALSE }
             , _reservedTraits{ 0 }
         {
         }

@@ -54,7 +54,7 @@ namespace sw
         return loadFromXMLText( xml, sourceLabel, source );
     }
 
-    bool SkeletonBoneLOD::loadFromXMLText( string_view xml, string_view sourceLabel, IDataInheritanceSource& source )
+    bool SkeletonBoneLOD::loadFromXMLText( string_view xml, string_view sourceLabel, DataInheritanceSource& source )
     {
         _listLevel.clear();
         _listCoreBone.clear();

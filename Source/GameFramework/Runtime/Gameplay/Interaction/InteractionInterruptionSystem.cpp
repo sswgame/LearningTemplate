@@ -8,7 +8,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 
-#include "GameFramework/Runtime/Character/AI/Schedule/ScheduleNPCComponent.h"
+#include "GameFramework/Runtime/Character/AI/Schedule/NPCScheduleComponent.h"
 #include "GameFramework/Runtime/Character/AI/Schedule/ScheduleSystem.h"
 #include "GameFramework/Runtime/Gameplay/Interaction/InteractionCatalog.h"
 #include "GameFramework/Runtime/Gameplay/Interaction/InteractorComponent.h"
@@ -50,7 +50,7 @@ namespace sw
             return nullopt;
         if ( _pResolver != nullptr )
             return _pResolver( *_pSchedule, target );
-        return ScheduleNPCComponent::findNPCIndex( *_pSchedule, target );
+        return NPCScheduleComponent::findNPCIndex( *_pSchedule, target );
     }
 
     void InteractionInterruptionSystem::update( GameObjectManager& manager )

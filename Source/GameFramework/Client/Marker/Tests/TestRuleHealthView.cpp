@@ -50,8 +50,8 @@ SW_TEST_CASE( RuleHealthViewTest, SnapshotDrivesHealthBar )
     rig._pView->applySnapshot( 80.0f, 100.0f );
     SW_EXPECT_TRUE( rig._pView->hasSnapshot() );
     SW_EXPECT_NEAR( 0.8f, rig._pBar->getTargetRatio(), 1.0e-6f );
-    SW_EXPECT_NEAR( 0.8f, rig._pBar->getHPRatio(), 1.0e-6f ); // Reset — 흔적 없이 바로 그 길이
-    SW_EXPECT_NEAR( 0.8f, rig._pView->getHealthRatio(), 1.0e-6f );
+    SW_EXPECT_NEAR( 0.8f, rig._pBar->getHPRatio(), 1.0e-6f );                                                  // Reset — 흔적 없이 바로 그 길이
+    SW_EXPECT_NEAR( 0.8f, rig._pView->getOwner()->findInterface<IHealthSource>()->getHealthRatio(), 1.0e-6f ); // 체력 원천은 인터페이스로 찾힌다
 
     rig._pView->applySnapshot( 30.0f, 100.0f );
     SW_EXPECT_NEAR( 0.3f, rig._pBar->getTargetRatio(), 1.0e-6f );

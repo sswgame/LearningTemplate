@@ -29,7 +29,7 @@ Stop at the first yes.
 ## 트리거 · 물리
 
 - 겹침은 오브젝트 쌍(`PhysicsOverlapTracker`), 막는 접촉은 바디 쌍. 한 프레임에 끝 먼저 → 시작. 셀 · 하위 레벨 오름은 "안에서 생성" 진입, 내림 · 파괴 · 비활성은 이탈.
-- 활성자 볼륨 파생은 `ActivatorAuthority`(Server · Local)를, 지역 모듈 처리기는 `getAuthority` 를 반드시 고른다.
+- 활성자 볼륨 파생은 `TriggerAuthority`(Server · Local)를, 지역 모듈 처리기는 `getAuthority` 를 반드시 고른다.
 - 지역 효과(용암 · 늪 · 독가스 …)는 모듈 한 줄(`SW_ZONE_MODULE`)로 더한다 — 영역마다 컴포넌트를 늘리지 않는다. 모듈은 서로를 모르고, 반응 컴포넌트는 태그 · 속성만 읽는다.
 - 표면 변형 층은 CPU 높이 격자다(도장이 프레임당 수백 개면 컴퓨트로). 충돌 · 내비 · 높이장은 바꾸지 않는다.
 - 탈것 · 관성의 바깥 힘은 `InertiaSettings::computeAlongAcceleration` 한 벌을 함께 쓴다. 배는 새 물리 없이 조합한다.

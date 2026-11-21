@@ -6,7 +6,7 @@
 #include "Core/Network/Transport/IStreamTransport.h"
 #include "Core/Network/Transport/PlatformSocketUtil.h"
 #include "Core/String/StringUtil.h"
-#include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/Subsystem.h"
 #include "Core/Time/Clock.h"
 
 #include "Engine/Module/ModuleSubsystemRegistrar.h"
@@ -73,7 +73,7 @@ namespace sw
      *          주소로 들므로 키트가 내려가기(자식 범위가 걷히기) 전에 소멸해야 한다(서버 조립이 그렇게 한다 — 저장소 코드도 이 키트에 있다).
      *          `IEphemeralStoreDriver` 는 상속하지 않는다 — 서브시스템이 가진 어댑터 멤버가 구현하고, 등록이 그 멤버를 공개한다(`getPublishedPart`).
      */
-    class RESPEphemeralStoreDriver final : public ISubsystem
+    class RESPEphemeralStoreDriver final : public Subsystem
     {
     public:
         static constexpr const utf8* kSubsystemName = "RespEphemeralStoreDriver";
@@ -85,7 +85,7 @@ namespace sw
         {
         }
 
-        // ISubsystem — 세울 것이 없다.
+        // Subsystem — 세울 것이 없다.
         SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
         void                shutdownSubsystem() override {}
         const utf8*         getSubsystemName() const override { return kSubsystemName; }

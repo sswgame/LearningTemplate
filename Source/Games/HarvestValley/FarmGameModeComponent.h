@@ -112,7 +112,7 @@ namespace sw
         FarmGameModeComponent();
         virtual ~FarmGameModeComponent() override;
 
-        /** @brief 농장 상태(밭, 출하함 구간, 농부, 날씨)를 씁니다. 달력은 월드 상태(`SessionStateComponent`), 가방 · 돈은 플레이어 진행(`PlayerProgressComponent`)이 싣습니다. `ComponentStateStore::capture` 가 부릅니다. */
+        /** @brief 농장 상태(밭, 출하함 구간, 농부, 날씨)를 씁니다. 달력은 월드 상태(`GameStateComponent`), 가방 · 돈은 플레이어 진행(`PlayerProgressComponent`)이 싣습니다. `ComponentStateStore::capture` 가 부릅니다. */
         void serializeGameState( StateIO& io ) override;
 
         // ---- 뷰가 읽는 것(PostUpdate. 디렉터가 쓰지 않는 그룹) ----
@@ -249,7 +249,7 @@ namespace sw
         float32 _reach;
         PROPERTY( Category = "Farmer", DisplayName = "Near Distance", Tooltip = "Distance that counts as standing next to the shipping bin or the shop", Min = 0.0, Units = m )
         float32 _nearDistance;
-        /** @brief 판 상태 날씨의 카탈로그입니다(`SessionStateComponent` 의 `WeatherSystem` — 계절 가중치 · 하루 길이). 비는 그 날씨의 `wetness` 로 정한다. */
+        /** @brief 판 상태 날씨의 카탈로그입니다(`GameStateComponent` 의 `WeatherSystem` — 계절 가중치 · 하루 길이). 비는 그 날씨의 `wetness` 로 정한다. */
         PROPERTY( Category = "Weather", DisplayName = "Weather", Tooltip = "Weather catalog of the shared session state (season weights, a day long); rain is its wetness" )
         AssetRef<WeatherCatalog> _weatherPath;
         PROPERTY( Category = "Camera", DisplayName = "Camera Follow", Tooltip = "How far the camera focus moves from the field centre towards the farmer", Min = 0.0, Max = 1.0, Units = ratio )

@@ -39,8 +39,8 @@ namespace sw::editor
     /** @brief 다중 선택의 공통 컴포넌트입니다. 명령 헤더의 형식이라 ViewModel 헤더에 두지 않는다. */
     struct InspectorViewModel::MultiEdit
     {
-        vector<GameObject*>              _listObject; ///< 이번 gather 의 선택(주 선택이 앞)
-        vector<EditorMultiEditComponent> _listCommon; ///< 공통 컴포넌트(gather 마다 다시 모은다)
+        vector<GameObject*>          _listObject; ///< 이번 gather 의 선택(주 선택이 앞)
+        vector<EditorMultiEditGroup> _listCommon; ///< 공통 컴포넌트(gather 마다 다시 모은다)
     };
 
     namespace
@@ -213,8 +213,8 @@ namespace sw::editor
             const InspectorMultiSelection::ActiveState activeState = InspectorMultiSelection::readActiveState( listObject );
             outState._bActive                                      = activeState._bActive ? SW_TRUE : SW_FALSE;
             outState._bActiveMixed                                 = activeState._bMixed ? SW_TRUE : SW_FALSE;
-            EditorMultiEditComponent::collectCommonComponents( listObject, _pMultiEdit->_listCommon );
-            for ( const EditorMultiEditComponent& common : _pMultiEdit->_listCommon )
+            EditorMultiEditGroup::collectCommonComponents( listObject, _pMultiEdit->_listCommon );
+            for ( const EditorMultiEditGroup& common : _pMultiEdit->_listCommon )
             {
                 const Component*       pComponent = common._listComponent[0];
                 InspectorComponentCard card;
@@ -514,9 +514,9 @@ namespace sw::editor
         return InspectorViewModelInternal::findTargetComponent( target ) != nullptr;
     }
 
-    const vector<IInspectorComponent*>& InspectorViewModel::getInspectorsForType( const hashed_string& typeName )
+    const vector<IComponentInspector*>& InspectorViewModel::getInspectorsForType( const hashed_string& typeName )
     {
-        static const vector<IInspectorComponent*> kEmpty{};
+        static const vector<IComponentInspector*> kEmpty{};
         const TypeInfo*                           pType = editor::getSubsystem<TypeRegistry>().findType( typeName );
         if ( pType == nullptr )
             return kEmpty;

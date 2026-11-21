@@ -13,7 +13,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/CameraRegistry.h"
-#include "Engine/Object/GameObject/Registry/ScenePrimitive.h"
+#include "Engine/Object/GameObject/Registry/PrimitiveComponent.h"
 #include "Engine/Reflection/PropertyRoleUtil.h"
 
 /**
@@ -263,14 +263,14 @@ namespace sw
     {
         float3  center{};
         float32 radius = 0.0f;
-        return ScenePrimitive::computeObjectRenderBounds( object, center, radius ) && view.isSphereInFrustum( center, radius );
+        return PrimitiveComponent::computeObjectRenderBounds( object, center, radius ) && view.isSphereInFrustum( center, radius );
     }
 
     float32 CameraComponent::computeObjectScreenSize( const SceneViewQuery& view, const GameObject& object )
     {
         float3  center{};
         float32 radius = 0.0f;
-        return ScenePrimitive::computeObjectRenderBounds( object, center, radius ) ? view.computeScreenSize( center, radius ) : 0.0f;
+        return PrimitiveComponent::computeObjectRenderBounds( object, center, radius ) ? view.computeScreenSize( center, radius ) : 0.0f;
     }
 
 } // namespace sw

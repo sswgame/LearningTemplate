@@ -54,7 +54,7 @@ namespace
 
         static void write( const test::ScopedScratchDomain& domain, const utf8* pFile, const string& text )
         {
-            SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( pFile ), text ) );
+            SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( domain.makeDiskPath( pFile ) ), text ) );
         }
 
         static string instanceAttribute( const utf8* pFile )
@@ -142,7 +142,7 @@ SW_TEST_CASE( SceneAssemblyTest, PartOverridesApplyAndSaveAsDifference )
     const string savedPath = domain.makeDiskPath( "saved.scene.xml" );
     SW_REQUIRE_TRUE( written.saveToFile( Util::makeAbsolute( savedPath ) ) );
     string savedText;
-    SW_REQUIRE_TRUE( FileUtil::readTextFile( savedPath, savedText ) );
+    SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::toDiskPath( savedPath ), savedText ) );
     SW_EXPECT_TRUE( savedText.find( "<Part path=\"1\"" ) != string::npos );
     SW_EXPECT_TRUE( savedText.find( "path=\"2\"" ) == string::npos ); // 고치지 않은 Lid 는 적지 않는다(부착 · 이름은 차이가 아니다)
 
@@ -216,7 +216,7 @@ SW_TEST_CASE( SceneAssemblyTest, BaseSceneMergesAndSavesAsDelta )
     SW_REQUIRE_TRUE( written.saveXMLDelta( Util::makeAbsolute( savedPath ), parent ) );
 
     string savedText;
-    SW_REQUIRE_TRUE( FileUtil::readTextFile( savedPath, savedText ) );
+    SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::toDiskPath( savedPath ), savedText ) );
     SW_EXPECT_TRUE( savedText.find( "_base=" ) != string::npos );
     SW_EXPECT_TRUE( savedText.find( "name=\"Keep\"" ) == string::npos ); // 부모와 같은 엔티티는 적지 않는다
 

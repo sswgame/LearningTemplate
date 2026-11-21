@@ -11,7 +11,7 @@
 
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Component/WesternHorseComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/Flow/GameInstance.h"
-#include "GameFramework/Runtime/Gameplay/SessionState/SessionStateComponent.h"
+#include "GameFramework/Runtime/Gameplay/GameState/GameStateComponent.h"
 
 #include "Games/WildWest/WildWestGameModeComponent.h"
 
@@ -34,7 +34,7 @@ namespace sw
     {
         // 플레이어의 삶(명예 · 법 · 생존 · 사냥)은 디렉터가, 지갑 · 평판 · 시계 · 날씨는 판 상태가, 말 상태(스태미나 · 유대)는 말 컴포넌트가 싣는다.
         getStateSnapshot().registerGameMode<WildWestGameModeComponent>();
-        getStateSnapshot().registerStatefulComponent<SessionStateComponent>();
+        getStateSnapshot().registerStatefulComponent<GameStateComponent>();
         getStateSnapshot().registerStatefulComponent<WesternHorseComponent>();
     }
 

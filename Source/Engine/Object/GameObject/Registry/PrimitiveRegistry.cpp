@@ -6,13 +6,13 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Object/Component/SceneTransformStorage.h"
-#include "Engine/Object/GameObject/Registry/ScenePrimitive.h"
+#include "Engine/Object/GameObject/Registry/PrimitiveComponent.h"
 
 #include <algorithm>
 
 namespace sw
 {
-    void PrimitiveRegistry::add( ScenePrimitive* pComp )
+    void PrimitiveRegistry::add( PrimitiveComponent* pComp )
     {
         if ( pComp == nullptr )
             return;
@@ -21,7 +21,7 @@ namespace sw
         // 슬롯이 정말 이 레지스트리에서 자기를 가리키고 있을 때만 "이미 등록됨"이다. 인덱스는 컴포넌트가 들고 있어서, 목록이 다른 것을
         // 가리키는데 그대로 믿으면 조용히 미등록으로 남는다(컴포넌트 이동은 막혀 있지만 인덱스를 그대로 믿지 않는다).
         const uint32 existing           = pComp->getPrimitiveIndex();
-        const bool   bAlreadyRegistered = existing != ScenePrimitive::kInvalidPrimitiveIndex && existing < _listPrimitive.size() &&
+        const bool   bAlreadyRegistered = existing != PrimitiveComponent::kInvalidPrimitiveIndex && existing < _listPrimitive.size() &&
                                         _listPrimitive[existing] == pComp;
         if ( bAlreadyRegistered )
             return;
@@ -123,7 +123,7 @@ namespace sw
         _dirtyFlagCapacity     = capacity;
     }
 
-    void PrimitiveRegistry::remove( ScenePrimitive* pComp )
+    void PrimitiveRegistry::remove( PrimitiveComponent* pComp )
     {
         if ( pComp == nullptr )
             return;
@@ -135,7 +135,7 @@ namespace sw
         const uint32 slot = pComp->getPrimitiveIndex();
         // 슬롯이 정말 이 레지스트리의 것인지 확인한다. 인덱스는 컴포넌트가 들고 있어서, 다른 레지스트리가
         // 실수로 불리면 남의 목록을 그럴듯한 인덱스로 훼손할 수 있다.
-        const bool bSlotNotOwned = slot == ScenePrimitive::kInvalidPrimitiveIndex || slot >= _listPrimitive.size() ||
+        const bool bSlotNotOwned = slot == PrimitiveComponent::kInvalidPrimitiveIndex || slot >= _listPrimitive.size() ||
                                    _listPrimitive[slot] != pComp;
         if ( bSlotNotOwned )
             return;
@@ -150,7 +150,7 @@ namespace sw
             (void)takeWordBit( _arrTransformDirtyWord.get(), slot );
             markWordBit( _arrDirtyWord.get(), slot );
         }
-        pComp->setPrimitiveIndex( ScenePrimitive::kInvalidPrimitiveIndex );
+        pComp->setPrimitiveIndex( PrimitiveComponent::kInvalidPrimitiveIndex );
         --_liveSlotCount;
         recordMeshSetChange( slot );
     }
@@ -192,14 +192,14 @@ namespace sw
         }
     }
 
-    void PrimitiveRegistry::addLODPrimitive( ScenePrimitive* pPrimitive )
+    void PrimitiveRegistry::addLODPrimitive( PrimitiveComponent* pPrimitive )
     {
         SW_ASSERT( pPrimitive != nullptr );
         ScopedLock<mutex> lock{ _mutex };
         (void)_setLODPrimitive.insert( pPrimitive ); // 이미 걸려 있으면 무시한다
     }
 
-    void PrimitiveRegistry::removeLODPrimitive( ScenePrimitive* pPrimitive )
+    void PrimitiveRegistry::removeLODPrimitive( PrimitiveComponent* pPrimitive )
     {
         ScopedLock<mutex> lock{ _mutex };
         (void)_setLODPrimitive.erase( pPrimitive ); // 걸려 있지 않았으면 할 일이 없다
@@ -233,13 +233,13 @@ namespace sw
         _bWalkingAssetWaiters = SW_FALSE;
     }
 
-    void PrimitiveRegistry::markDirty( ScenePrimitive* pComp )
+    void PrimitiveRegistry::markDirty( PrimitiveComponent* pComp )
     {
         if ( pComp == nullptr )
             return;
-        const vector<ScenePrimitive*>& listPrimitive     = std::as_const( _listPrimitive );
-        const uint32                   slot              = pComp->getPrimitiveIndex();
-        const bool                     bInvalidDirtySlot = slot == ScenePrimitive::kInvalidPrimitiveIndex || slot >= listPrimitive.size() || listPrimitive[slot] != pComp;
+        const vector<PrimitiveComponent*>& listPrimitive     = std::as_const( _listPrimitive );
+        const uint32                       slot              = pComp->getPrimitiveIndex();
+        const bool                         bInvalidDirtySlot = slot == PrimitiveComponent::kInvalidPrimitiveIndex || slot >= listPrimitive.size() || listPrimitive[slot] != pComp;
         if ( bInvalidDirtySlot )
             return;
         markSlotDirty( slot );
@@ -289,21 +289,21 @@ namespace sw
 
     PrimitiveRegistry::~PrimitiveRegistry()
     {
-        for ( ScenePrimitiveBatch* pBatch : _listInstanceBatch )
+        for ( PrimitiveBatch* pBatch : _listInstanceBatch )
         {
             if ( pBatch != nullptr && pBatch->_pRegistry == this )
                 pBatch->_pRegistry = nullptr;
         }
     }
 
-    void PrimitiveRegistry::addInstanceBatch( ScenePrimitiveBatch* pBatch )
+    void PrimitiveRegistry::addInstanceBatch( PrimitiveBatch* pBatch )
     {
         if ( pBatch == nullptr )
             return;
         ScopedLock<mutex> lock{ _mutex };
         if ( pBatch->_pRegistry == this )
             return;
-        SW_LOG_ASSERT( pBatch->_pRegistry == nullptr, "ScenePrimitiveBatch is already registered to another registry" );
+        SW_LOG_ASSERT( pBatch->_pRegistry == nullptr, "PrimitiveBatch is already registered to another registry" );
         pBatch->_pRegistry  = this;
         const uint32 count  = pBatch->getCount();
         const uint32 first  = allocateEntrySpan( count );
@@ -373,20 +373,20 @@ namespace sw
         }
     }
 
-    void PrimitiveRegistry::removeInstanceBatch( ScenePrimitiveBatch* pBatch )
+    void PrimitiveRegistry::removeInstanceBatch( PrimitiveBatch* pBatch )
     {
-        removeInstanceBatches( vector_reference<ScenePrimitiveBatch* const>( &pBatch, 1 ) );
+        removeInstanceBatches( vector_reference<PrimitiveBatch* const>( &pBatch, 1 ) );
     }
 
-    void PrimitiveRegistry::removeInstanceBatches( vector_reference<ScenePrimitiveBatch* const> listBatch )
+    void PrimitiveRegistry::removeInstanceBatches( vector_reference<PrimitiveBatch* const> listBatch )
     {
         if ( listBatch.empty() )
             return;
         ScopedLock<mutex> lock{ _mutex };
         // 이 레지스트리에 든 배치만 모은다(널 · 다른 레지스트리 · 미등록 · 두 번 넘긴 배치는 건너뛴다). 모으면서 `_pRegistry` 를 비워 "빠질 배치" 표시로 쓴다.
-        vector<ScenePrimitiveBatch*> listRemoved;
+        vector<PrimitiveBatch*> listRemoved;
         listRemoved.reserve( listBatch.size() );
-        for ( ScenePrimitiveBatch* pBatch : listBatch )
+        for ( PrimitiveBatch* pBatch : listBatch )
         {
             if ( pBatch == nullptr || pBatch->_pRegistry != this )
                 continue;
@@ -399,7 +399,7 @@ namespace sw
         // 배치마다 항목 구간을 비우고 그 칸들을 더티로 올린 뒤 빈 구간 목록에 돌려준다. 남은 배치는 옮기지 않는다 — 옮기면 그 뒤 항목 전부의 칸 번호가 바뀐다.
         const uint32 entryTotal = static_cast<uint32>( _listInstanceEntry.size() );
         const uint32 meshRegion = static_cast<uint32>( _listPrimitive.size() );
-        for ( ScenePrimitiveBatch* pBatch : listRemoved )
+        for ( PrimitiveBatch* pBatch : listRemoved )
         {
             const uint32 first           = pBatch->_firstEntry;
             const uint32 count           = pBatch->getCount();
@@ -420,7 +420,7 @@ namespace sw
 
         // 빠진 배치를 목록에서 뺀다(남은 배치의 순서는 그대로). 빠질 배치는 위에서 `_pRegistry` 를 비워 표시했다.
         size_t keepCount = 0;
-        for ( ScenePrimitiveBatch* pOther : _listInstanceBatch )
+        for ( PrimitiveBatch* pOther : _listInstanceBatch )
         {
             if ( pOther == nullptr || pOther->_pRegistry != this )
                 continue;
@@ -430,7 +430,7 @@ namespace sw
         _setGeneration.fetch_add( 1, std::memory_order_relaxed );
     }
 
-    void PrimitiveRegistry::markInstanceDirty( ScenePrimitiveBatch* pBatch, uint32 index )
+    void PrimitiveRegistry::markInstanceDirty( PrimitiveBatch* pBatch, uint32 index )
     {
         const bool bInvalidInstanceDirty = pBatch == nullptr || pBatch->_pRegistry != this || index >= pBatch->getCount();
         if ( bInvalidInstanceDirty )

@@ -154,6 +154,14 @@ namespace sw
          */
         [[nodiscard]] static optional<AbsolutePath> requireAbsolutePath( string_view path );
         /**
+         * @brief 문자열에서 디스크 경로(`AbsolutePath`)를 만드는 명시적 입구입니다 — 디스크 I/O(`exists` · `readTextFile` · `writeFile` …)는 이 형식만 받는다(R2).
+         * @details 리소스 id · `DataPath` · `PathKey` 같은 논리 경로를 글로 꺼내 I/O 에 넘기는 자리가 눈에 보이게 한다(예전에는 `string_view` 라 무엇이든 들어갔다).
+         *          엄격한 절대 경로면 구분자를 `/` 로 맞춘 값이다. 상대 · `C:foo` · `\foo` 는 OS 경계와 같은 오류(`File.RelativePath`)를 남기고 빈 경로 — 그 값을 받은 I/O 는 실패한다(폴백 없음).
+         *          빈 글은 오류 없이 빈 경로다(없는 파일처럼 실패한다 — 예전 빈 글 인자와 같다). 실패를 갈라야 하면 `requireAbsolutePath`(빈 값을 돌려준다)를 쓴다.
+         *          바꾸기 도구 · 남은 문자열 인자 검사는 `py -3 -m Scripts disk-path-args`(린트 `cpp-shape` 규칙 14).
+         */
+        [[nodiscard]] static AbsolutePath toDiskPath( string_view text );
+        /**
          * @brief 비교 · 맵 키용으로 경로를 접습니다(`\` 를 `/` 로 바꾸고 소문자로).
          * @details 결과는 `PathKey` 라 어떤 글로도 암시적으로 바뀌지 않는다 — 디스크 판정(`isPathAtOrUnderRoot` · `isSameDiskPath` …)에 그대로 넘어가지 않는다(리눅스에서 대소문자를 잃는다).
          *          키 · id 로 꺼낼 때는 `str()` · `view()` 를 적는다. Linux 의 파일 I/O 에는 쓰지 않는다(파일을 열 때는 normalizeSeparators 나 실제 파일 시스템 경로).
@@ -194,13 +202,13 @@ namespace sw
          * @brief 대상 파일이 들어갈 상위 디렉터리가 있게 합니다(없으면 재귀적으로 만듭니다). 폴더 부분이 없는 이름이면 할 일이 없어 true 입니다.
          * @return 디렉터리가 있으면 true. 만들지 못했으면 경로와 이유를 알리고 false 입니다.
          */
-        [[nodiscard]] static bool ensureParentDirectoryExists( string_view filePath );
+        [[nodiscard]] static bool ensureParentDirectoryExists( const AbsolutePath& filePath );
         /**
          * @brief 디렉터리가 있게 합니다(필요하면 상위 디렉터리도).
          * @details 만들지 못하면 여기서 알린다 — 말없이 넘어가면 뒤따르는 쓰기가 "열 수 없다" 로만 실패해 어느 폴더가 왜 막혔는지 모른다.
          * @return 디렉터리가 있으면 true. 만들지 못했으면 경로와 이유를 알리고 false 입니다.
          */
-        [[nodiscard]] static bool ensureDirectoryExists( string_view directoryPath );
+        [[nodiscard]] static bool ensureDirectoryExists( const AbsolutePath& directoryPath );
         /**
          * @brief `<basePath><extension>` 이 없으면 그것을, 있으면 `<basePath><numberSeparator>2<extension>` · `3` … 가운데 처음 빈 이름을 **원자적으로 만들어** 자리를 잡고 그 경로를 돌려줍니다.
          * @details @p bDirectory 면 빈 폴더를, 아니면 빈 파일을 만든다(파일은 부른 쪽이 나중에 내용을 덮어쓴다 — `writeFile` 의 바꿔치기).
@@ -209,25 +217,25 @@ namespace sw
          */
         [[nodiscard]] static string reserveUniquePath( string_view basePath, string_view extension, bool bDirectory, uint32 maxAttempt = 1000, string_view numberSeparator = "-" );
         /** @brief 경로에 **항목(파일 또는 디렉터리)** 이 있는지 반환합니다. 디렉터리인지는 `isDirectory` 로 묻습니다. */
-        static bool exists( string_view path );
+        static bool exists( const AbsolutePath& path );
         /** @brief 경로에 디렉터리가 있는지 반환합니다. */
-        static bool isDirectory( string_view path );
+        static bool isDirectory( const AbsolutePath& path );
         /**
          * @brief 경로에 **일반 파일**이 있는지 반환합니다(디렉터리 · 없는 경로는 false, 링크는 가리키는 쪽 기준).
          * @details 후보 경로 여럿 중 처음 있는 것을 골라 파일로 읽는 곳(설정 · 리소스 낱개 · 셰이더 include · 폰트 찾기)이 씁니다 — 같은 이름의 폴더가
          *          있으면 `exists` 는 그것을 골라 다음 후보로 넘어가지 못합니다.
          */
-        static bool isRegularFile( string_view path );
+        static bool isRegularFile( const AbsolutePath& path );
         /**
          * @brief 파일이 있고 쓰기가 막혀 있으면(읽기 전용 속성 · 소유자 쓰기 권한 없음) true 입니다. 없는 파일은 false 입니다.
          * @details 버전 관리의 잠금(git LFS lockable 파일은 잠그기 전까지 읽기 전용이다)을 에디터가 보여 주는 데 씁니다.
          */
-        static bool isReadOnlyFile( string_view fileName );
+        static bool isReadOnlyFile( const AbsolutePath& fileName );
         /**
          * @brief 쓰기 권한을 바꿉니다. false 면 모든 쓰기 권한을 제거하고(Windows 는 읽기 전용 속성), true 면 소유자 쓰기를 더합니다. 디렉터리에도 됩니다.
          * @return 바꾸지 못했으면 경로와 이유를 알리고 false 입니다.
          */
-        [[nodiscard]] static bool setWritable( string_view path, bool bWritable );
+        [[nodiscard]] static bool setWritable( const AbsolutePath& path, bool bWritable );
         /** @brief 현재 작업 디렉터리를 반환합니다. */
         static string getCurrentPath();
         /** @brief 현재 작업 디렉터리를 바꿉니다. 바꾸지 못하면 false 입니다(경고를 남긴다). 프로세스 전체에 걸리므로 시나리오 체인처럼 "처음 폴더로 되돌린다" 가 필요한 곳에서만 씁니다. */
@@ -236,7 +244,7 @@ namespace sw
         static string getExecutablePath();
 
         /** @brief 파일의 수정 시각(초 - `getCurrentFileTimestamp` 와 같은 시계)을 @p outSeconds 에 담습니다. 없거나 읽을 수 없으면 false 입니다(0 을 시각으로 돌려주지 않는다). */
-        [[nodiscard]] static bool tryGetFileTimestamp( string_view fileName, uint64& outSeconds );
+        [[nodiscard]] static bool tryGetFileTimestamp( const AbsolutePath& fileName, uint64& outSeconds );
         /**
          * @brief 지금 시각을 `tryGetFileTimestamp` 와 **같은 시계 · 같은 단위**로 반환합니다.
          * @details 파일 시각은 파일 시계(Windows 1601 년 기준)로 나옵니다. `system_clock` 과 기준점이 다를 수 있어 그쪽의 `now()`
@@ -246,19 +254,19 @@ namespace sw
         /** @brief `getFileWriteTime` · `setFileWriteTime` 의 눈금입니다(100 ns). 1 초가 이만큼입니다. */
         static constexpr int64 kFileTimeTicksPerSecond = 10'000'000;
         /** @brief 마지막 쓰기 시각을 파일 시계의 100 ns 눈금으로 얻습니다. 없거나 읽지 못하면 false 입니다. 같은 기계 · 같은 플랫폼 안에서만 비교합니다. */
-        [[nodiscard]] static bool getFileWriteTime( string_view path, int64& outTicks );
+        [[nodiscard]] static bool getFileWriteTime( const AbsolutePath& path, int64& outTicks );
         /** @brief 마지막 쓰기 시각을 바꿉니다(`getFileWriteTime` 과 같은 눈금). 바꾸지 못했으면 경로와 이유를 알리고 false 입니다. */
-        [[nodiscard]] static bool setFileWriteTime( string_view path, int64 ticks );
+        [[nodiscard]] static bool setFileWriteTime( const AbsolutePath& path, int64 ticks );
         /** @brief 지금 시각을 `getFileWriteTime` 과 같은 시계 · 눈금으로 반환합니다. */
         static int64 getCurrentFileWriteTime();
         /** @brief 파일 크기를 @p outSize 에 담습니다. 없거나 파일이 아니면(폴더) false 입니다(0 을 크기로 돌려주지 않는다 - 빈 파일과 구별된다). */
-        [[nodiscard]] static bool tryGetFileSize( string_view fileName, uint64& outSize );
+        [[nodiscard]] static bool tryGetFileSize( const AbsolutePath& fileName, uint64& outSize );
         /**
          * @brief 파일의 크기와 마지막 쓰기 시각을 **한 번의 조회**로 얻습니다. 파일이 없거나 읽을 수 없으면 false 입니다.
          * @details 파일 내용에서 뽑은 값(해시 등)을 캐시해 두고 "그 뒤로 파일이 바뀌었나" 만 확인할 때 씁니다. 파일을 여는 것보다
          *          쌉니다(이 PC 에서 열기는 ~200 us, 이 조회는 ~75 us 입니다. 둘 다 필터 드라이버를 거칩니다).
          */
-        [[nodiscard]] static bool getFileStamp( string_view fileName, FileStamp& outStamp );
+        [[nodiscard]] static bool getFileStamp( const AbsolutePath& fileName, FileStamp& outStamp );
         /**
          * @brief 이 프로세스가 파일 · 폴더를 만들었거나 바꿔 끼운 횟수입니다(`writeFile` · `writeTextFile` · `copyFile` 이 성공할 때, `ensureDirectoryExists` 가 폴더를 만들 때마다 오릅니다).
          * @details "없는 파일" 을 기억하는 캐시(`AssetPaths`)가 이 값이 바뀌면 기억을 버립니다 — 파일이 생겼는데 옛 "없음" 을 돌려주지 않게. 이 값을 보는 쪽은
@@ -327,9 +335,9 @@ namespace sw
          */
         [[nodiscard]] static optional<string> findNotOpenForEdit( string_view path );
         /** @brief 파일을 복사합니다(대상이 있으면 덮어씁니다). 실패하면 로그를 남기고 false 입니다. */
-        [[nodiscard]] static bool copyFile( string_view source, string_view destination );
+        [[nodiscard]] static bool copyFile( const AbsolutePath& source, const AbsolutePath& destination );
         /** @brief 파일을 삭제합니다. 없었거나 삭제했으면 true 이고, 지우지 못했으면 경로와 이유를 알리고 false 입니다. */
-        [[nodiscard]] static bool removeFile( string_view path );
+        [[nodiscard]] static bool removeFile( const AbsolutePath& path );
         /**
          * @brief @p path 가 원자적 쓰기(`writeFile`)의 임시 파일이고 그것을 쓴 프로세스가 죽었으면 true 입니다(중단된 쓰기의 잔재 — 지워도 된다).
          * @details 이름 규칙(`<원본>.tmp<pid>_<번호>`)의 주인이 여기라 판정도 여기서 한다. 쓴 프로세스가 살아 있으면(다른 인스턴스가 같은 폴더에 쓰는 중) false —
@@ -342,19 +350,19 @@ namespace sw
          * @brief 다 쓴 임시 파일 @p tempPath(`makeWriteTempPath`)를 @p targetPath 와 원자적으로 바꿔 끼웁니다 — `writeFile` 의 뒤 절반(쓰기 게이트 · 읽기 전용 거절 · 재시도 · 쓰기 기록)과 같다.
          * @return 바꾸지 못하면 임시 파일을 지우고 false 입니다. 대상은 그대로다.
          */
-        [[nodiscard]] static bool replaceFile( string_view tempPath, string_view targetPath );
+        [[nodiscard]] static bool replaceFile( const AbsolutePath& tempPath, const AbsolutePath& targetPath );
         /**
          * @brief 파일 삭제를 시도만 합니다 — 지우지 못해도 알리지 않습니다. 없었거나 삭제했으면 true 입니다.
          * @details 실패가 예상된 정리에만 씁니다(아직 매핑된 모듈 DLL 의 그림자 사본 — 다음 시작 · 종료의 정리가 지운다). 그 밖은 `removeFile`.
          */
-        [[nodiscard]] static bool tryRemoveFile( string_view path );
+        [[nodiscard]] static bool tryRemoveFile( const AbsolutePath& path );
         /** @brief 디렉터리를 재귀적으로 삭제합니다. 없었거나 삭제했으면 true 입니다. */
-        [[nodiscard]] static bool removeDirectory( string_view path );
+        [[nodiscard]] static bool removeDirectory( const AbsolutePath& path );
         /**
          * @brief 파일이나 폴더를 @p to 로 옮깁니다(같은 볼륨이면 이름만 바꿔 곧바로 끝난다). @p to 가 이미 있으면 실패입니다.
          * @details 큰 폴더를 지울 때 먼저 버릴 자리로 옮기고 지우기는 뒤에서 하는 데 쓴다 — 옮기기는 원자적이라 반쯤 지운 폴더를 다른 쪽이 보지 않는다.
          */
-        [[nodiscard]] static bool renamePath( string_view from, string_view to );
+        [[nodiscard]] static bool renamePath( const AbsolutePath& from, const AbsolutePath& to );
         /**
          * @brief 파일 · 폴더들을 OS 휴지통으로 한 번에 옮깁니다(사용자가 복원할 수 있는 삭제). 쓰기 게이트가 거절하는 경로가 하나라도 있으면 아무것도 옮기지 않고 false 입니다.
          * @details 휴지통을 쓸 수 없는 곳(Linux 에서 홈을 모를 때)은 아무것도 건드리지 않고 false 입니다(`PlatformFileUtil::hasRecycleBin` 으로 먼저 묻는다). 일부만 옮겼어도 `getRemovalEpoch` 이 오릅니다.
@@ -366,45 +374,45 @@ namespace sw
          * @brief 바이너리 데이터를 파일에 씁니다. **원자적입니다**: 같은 폴더의 임시 파일에 다 쓰고 결과를 확인한 뒤 원본과 바꿔 끼웁니다.
          * @details 실패하면(디스크 가득 · 잠김 · 도중 종료) false 이고 원본은 그대로 남습니다. 반쯤 쓴 파일이 남지 않습니다.
          */
-        [[nodiscard]] static bool writeFile( string_view fileName, const uint8* pData, uint64 size );
+        [[nodiscard]] static bool writeFile( const AbsolutePath& fileName, const uint8* pData, uint64 size );
         /**
          * @brief `writeFile` 과 같은 원자적 쓰기인데 실패를 로그 없이 결과로 돌려줍니다(쓰기 게이트의 거절만 그쪽이 남긴다).
          * @details 같은 자리를 여러 쓰는 쪽이 다투는 것이 정상인 캐시(DDC — 같은 내용의 항목)가 쓴다. 교체에 진 것은 오류가 아니라 그 자리를 다시 볼 일이다.
          */
-        [[nodiscard]] static FileWriteResult tryWriteFile( string_view fileName, const uint8* pData, uint64 size );
+        [[nodiscard]] static FileWriteResult tryWriteFile( const AbsolutePath& fileName, const uint8* pData, uint64 size );
         /**
          * @brief `writeFile` 과 같고, 바꿔 끼우기 전에 내용을 · 뒤에 폴더 항목을 저장 장치까지 내립니다(`FileSyncMode::Durable`).
          * @details 다시 만들 수 없는 사용자 데이터(세이브 슬롯 · 장치 키 · 사용자 설정)만 이것으로 쓴다 — 파일마다 fsync 비용(수 ms)이 든다.
          */
-        [[nodiscard]] static bool writeFileDurable( string_view fileName, const uint8* pData, uint64 size );
+        [[nodiscard]] static bool writeFileDurable( const AbsolutePath& fileName, const uint8* pData, uint64 size );
         /**
          * @brief 파일의 [offset, offset + maxReadCount) 를 outBytes 에 담습니다.
          * @details 측정한 크기만큼 읽지 못하면(읽기 오류 · 읽는 도중 파일이 줄어듦) false 입니다. 인자는 64비트라 4 GB 이상의 파일도 다룹니다.
          */
-        [[nodiscard]] static bool readFile( string_view fileName, vector<uint8>& outBytes, uint64 offset = 0, uint64 maxReadCount = MathUtil::kMaxUInt64 );
+        [[nodiscard]] static bool readFile( const AbsolutePath& fileName, vector<uint8>& outBytes, uint64 offset = 0, uint64 maxReadCount = MathUtil::kMaxUInt64 );
         /** @brief 파일 전체를 UTF-8 텍스트로 읽습니다(UTF-8 BOM 은 자동으로 뗍니다). 잘린 읽기는 false 입니다. 없는 파일은 오류 로그를 남긴다 - 없을 수 있는 파일은 `readOptionalTextFile`. */
-        [[nodiscard]] static bool readTextFile( string_view fileName, string& outText );
+        [[nodiscard]] static bool readTextFile( const AbsolutePath& fileName, string& outText );
         /**
          * @brief 없을 수 있는 파일(캐시 옆 기록 · 지난 실행의 산출물)을 UTF-8 텍스트로 읽습니다. 없으면 `Missing` 이고 로그를 남기지 않습니다. 있는데 못 읽으면 `Failed`(로그)입니다.
          * @details "있는지 묻고 읽기" 는 둘 사이에 지워지면(다시 쓰기 전에 지우는 캐시) 오류 로그가 난다 - 읽기 한 번이 답한다(R7 확인과 실행은 같은 해석).
          */
-        [[nodiscard]] static OptionalFileRead readOptionalTextFile( string_view fileName, string& outText );
+        [[nodiscard]] static OptionalFileRead readOptionalTextFile( const AbsolutePath& fileName, string& outText );
         /**
          * @brief 크기를 알리지 않는 파일(리눅스 `/proc` · `/sys` 의 의사 파일)을 끝까지 읽습니다. @p maxBytes 를 넘으면 false 입니다.
          * @details `readTextFile` 은 먼저 잰 크기만큼 읽으므로 크기를 0 으로 알리는 의사 파일은 빈 글이 됩니다. 의사 파일은 이것으로 읽고 `fopen` 을 직접 부르지 않습니다.
          */
-        [[nodiscard]] static bool readStreamTextFile( string_view fileName, string& outText, uint64 maxBytes );
+        [[nodiscard]] static bool readStreamTextFile( const AbsolutePath& fileName, string& outText, uint64 maxBytes );
         /** @brief UTF-8 텍스트를 파일로 씁니다. `writeFile` 과 같이 원자적이고, 쓰기 · 닫기 결과를 확인합니다. */
-        [[nodiscard]] static bool writeTextFile( string_view fileName, string_view text );
+        [[nodiscard]] static bool writeTextFile( const AbsolutePath& fileName, string_view text );
         /** @brief `writeTextFile` 의 `FileSyncMode::Durable` 판입니다(`writeFileDurable` 의 설명). */
-        [[nodiscard]] static bool writeTextFileDurable( string_view fileName, string_view text );
+        [[nodiscard]] static bool writeTextFileDurable( const AbsolutePath& fileName, string_view text );
         /**
          * @brief 크래시 보고 파일(@p pPath)을 통째로 씁니다. **할당 · 로그 · stdio · 쓰기 문이 없습니다** - 힙이 깨진 크래시 지점(시그널 처리기 포함)에서도 부를 수 있다.
          * @details 원자적이지 않다(임시 파일이 없다). 크래시 경로 밖에서는 `writeFile` 을 쓴다.
          */
         [[nodiscard]] static bool writeCrashFile( const utf8* pPath, const void* pData, size_t size );
         /** @brief UTF-8 텍스트를 파일 끝에 덧붙입니다(없으면 만듭니다). 쓰기 · 닫기 결과를 확인합니다. 원자적이지 않아(덧붙이다 끊기면 마지막 줄이 잘릴 수 있다) 스풀 · 기록 파일에만 씁니다. */
-        [[nodiscard]] static bool appendTextFile( string_view fileName, string_view text );
+        [[nodiscard]] static bool appendTextFile( const AbsolutePath& fileName, string_view text );
         /** @brief 문자열이 UTF-8 BOM(0xEF, 0xBB, 0xBF)으로 시작하면 그것을 건너뛴 string_view 를 반환합니다. */
         static string_view skipUTF8Bom( string_view text );
         /** @brief 버퍼가 UTF-8 BOM(0xEF, 0xBB, 0xBF)으로 시작하면 포인터와 크기를 3바이트 건너뛰도록 고칩니다. */
@@ -416,15 +424,12 @@ namespace sw
          *          순서는 플랫폼과 무관하다 — 폴더마다 이름의 바이트 순이고, 폴더를 만나면 그 안을 먼저 걷는다(부모가 자식보다 앞). OS 순서(NTFS 이름 순, ext4 해시 순)는 쓰지 않는다.
          * @return 디렉터리를 열지 못했거나 순회가 도중에 멈췄으면 false 입니다(콜백이 멈춘 것은 실패가 아닙니다).
          */
-        [[nodiscard]] static bool forEachDirectoryEntry( string_view directory, bool bRecursive, DirectoryEntryVisitFn visit, void* pContext );
+        [[nodiscard]] static bool forEachDirectoryEntry( const AbsolutePath& directory, bool bRecursive, DirectoryEntryVisitFn visit, void* pContext );
         /** @brief 람다 · 함수 객체를 받는 판입니다. 할당하지 않습니다(함수 객체의 주소를 문맥으로 넘긴다). `func` 는 `bool( const DirectoryEntry& )` 입니다. */
         template <typename Func>
-        [[nodiscard]] static bool forEachDirectoryEntry( string_view directory, bool bRecursive, Func&& func )
+        [[nodiscard]] static bool forEachDirectoryEntry( const AbsolutePath& directory, bool bRecursive, Func&& func )
         {
-            using FuncType = std::remove_reference_t<Func>;
-            return forEachDirectoryEntry( directory, bRecursive, []( void* pContext, const DirectoryEntry& entry ) -> bool
-            { return ( *static_cast<FuncType*>( pContext ) )( entry ); },
-                                          const_cast<void*>( static_cast<const void*>( std::addressof( func ) ) ) );
+            return forEachDirectoryEntry( string_view{ directory.str() }, bRecursive, static_cast<Func&&>( func ) );
         }
         /**
          * @brief 소문자 키(`normalizePath` 한 상대 경로)의 실제 디스크 표기를 찾습니다.
@@ -455,9 +460,52 @@ namespace sw
          *         false(목록은 모은 데까지 — 부분 목록을 전부로 믿으면 지울 것 · 구울 것을 빠뜨린다)입니다.
          * @param stopToken 협조 중단 신호입니다(`StopSource::getToken`). 올라가면 알리지 않고 멈추고 false 를 돌려줍니다 — 부른 쪽이 신호를 다시 읽고 목록을 버린다. 기본값(묶이지 않은 토큰)이면 끝까지 훑는다.
          */
-        [[nodiscard]] static bool collectFiles( string_view directory, string_view filterExtension, vector<string>& outListFilePath, bool bRecursive, const StopToken& stopToken = {} );
+        [[nodiscard]] static bool collectFiles( const AbsolutePath& directory, string_view filterExtension, vector<string>& outListFilePath, bool bRecursive, const StopToken& stopToken = {} );
         /** @brief 디렉터리 아래의 폴더를 모읍니다(경로 규칙 · 반환은 collectFiles 와 같습니다). */
-        [[nodiscard]] static bool collectFolders( string_view directory, vector<string>& outListFolder, bool bRecursive );
+        [[nodiscard]] static bool collectFolders( const AbsolutePath& directory, vector<string>& outListFolder, bool bRecursive );
+
+    private:
+        // 디스크 I/O 의 문자열 경로 판 — 구현은 이것이고 위의 `const AbsolutePath&` 판이 넘긴다. 바깥 호출이 문자열을 넘기면 형식 판이 아니라 이것이 골라져
+        // 접근 오류가 난다(논리 경로 글이 I/O 에 들어가지 못한다). 문자열은 `toDiskPath` 로 올린다.
+        [[nodiscard]] static bool             forEachDirectoryEntry( string_view directory, bool bRecursive, DirectoryEntryVisitFn visit, void* pContext );
+        [[nodiscard]] static bool             ensureParentDirectoryExists( string_view filePath );
+        [[nodiscard]] static bool             ensureDirectoryExists( string_view directoryPath );
+        static bool                           exists( string_view path );
+        static bool                           isDirectory( string_view path );
+        static bool                           isRegularFile( string_view path );
+        static bool                           isReadOnlyFile( string_view fileName );
+        [[nodiscard]] static bool             setWritable( string_view path, bool bWritable );
+        [[nodiscard]] static bool             tryGetFileTimestamp( string_view fileName, uint64& outSeconds );
+        [[nodiscard]] static bool             getFileWriteTime( string_view path, int64& outTicks );
+        [[nodiscard]] static bool             setFileWriteTime( string_view path, int64 ticks );
+        [[nodiscard]] static bool             tryGetFileSize( string_view fileName, uint64& outSize );
+        [[nodiscard]] static bool             getFileStamp( string_view fileName, FileStamp& outStamp );
+        [[nodiscard]] static bool             copyFile( string_view source, string_view destination );
+        [[nodiscard]] static bool             removeFile( string_view path );
+        [[nodiscard]] static bool             replaceFile( string_view tempPath, string_view targetPath );
+        [[nodiscard]] static bool             tryRemoveFile( string_view path );
+        [[nodiscard]] static bool             removeDirectory( string_view path );
+        [[nodiscard]] static bool             renamePath( string_view from, string_view to );
+        [[nodiscard]] static bool             writeFile( string_view fileName, const uint8* pData, uint64 size );
+        [[nodiscard]] static FileWriteResult  tryWriteFile( string_view fileName, const uint8* pData, uint64 size );
+        [[nodiscard]] static bool             writeFileDurable( string_view fileName, const uint8* pData, uint64 size );
+        [[nodiscard]] static bool             readFile( string_view fileName, vector<uint8>& outBytes, uint64 offset = 0, uint64 maxReadCount = MathUtil::kMaxUInt64 );
+        [[nodiscard]] static bool             readTextFile( string_view fileName, string& outText );
+        [[nodiscard]] static OptionalFileRead readOptionalTextFile( string_view fileName, string& outText );
+        [[nodiscard]] static bool             readStreamTextFile( string_view fileName, string& outText, uint64 maxBytes );
+        [[nodiscard]] static bool             writeTextFile( string_view fileName, string_view text );
+        [[nodiscard]] static bool             writeTextFileDurable( string_view fileName, string_view text );
+        [[nodiscard]] static bool             appendTextFile( string_view fileName, string_view text );
+        [[nodiscard]] static bool             collectFiles( string_view directory, string_view filterExtension, vector<string>& outListFilePath, bool bRecursive, const StopToken& stopToken = {} );
+        [[nodiscard]] static bool             collectFolders( string_view directory, vector<string>& outListFolder, bool bRecursive );
+        template <typename Func>
+        [[nodiscard]] static bool forEachDirectoryEntry( string_view directory, bool bRecursive, Func&& func )
+        {
+            using FuncType = std::remove_reference_t<Func>;
+            return forEachDirectoryEntry( directory, bRecursive, []( void* pContext, const DirectoryEntry& entry ) -> bool
+            { return ( *static_cast<FuncType*>( pContext ) )( entry ); },
+                                          const_cast<void*>( static_cast<const void*>( std::addressof( func ) ) ) );
+        }
 
     private:
         /** @brief 글 @p path 가 @p component 자체이거나 `component/` 로 시작하는지 봅니다 — 형식 있는 `startsWithPathComponent` 둘이 함께 쓴다. */

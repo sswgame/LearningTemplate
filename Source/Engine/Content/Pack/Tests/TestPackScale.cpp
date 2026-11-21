@@ -189,7 +189,7 @@ SW_TEST_CASE( PackScaleTest, Index300k, ._tags = "bench", ._disabledReason = "be
                     liveAfter );
     SW_LOG_INFO_ID( "Pack.Scale.lookupNs", "Pack.Scale.lookupNs %# (%# hasFile, %# hits)", lookupNanos / Internal::kLookupCount, Internal::kLookupCount, hitCount );
     reader.close();
-    SW_EXPECT_TRUE( FileUtil::removeFile( packPath ) );
+    SW_EXPECT_TRUE( FileUtil::removeFile( FileUtil::toDiskPath( packPath ) ) );
 }
 
 /**
@@ -224,5 +224,5 @@ SW_TEST_CASE( PackScaleTest, Patch1g, ._tags = "bench", ._disabledReason = "benc
     SW_LOG_INFO_ID( "Pack.Scale.patchVerifyMs", "Pack.Scale.patchVerifyMs %# (%# B pack, index %# B%#)", verifyNanos / 1000000, written->_fileSize, written->_fileSize - written->_indexOffset,
                     pProvider != nullptr ? " + SHA-256" : ", no security provider - opened without a digest" );
     reader.close();
-    SW_EXPECT_TRUE( FileUtil::removeFile( packPath ) );
+    SW_EXPECT_TRUE( FileUtil::removeFile( FileUtil::toDiskPath( packPath ) ) );
 }

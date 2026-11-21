@@ -21,7 +21,7 @@
 	<DevCommand line="asset.removeImportFolder scratch/import/editor.flowimport"/>
 	<!-- ① 임포트 -->
 	<EditorWaitStable/>
-	<DevCommand line="asset.import common/prefabs/gimmicks/horror/flickerlight.prefab.xml scratch/import/editor.flowimport"/>
+	<DevCommand line="asset.import common/prefabs/gimmicks/environment/flickerlight.prefab.xml scratch/import/editor.flowimport"/>
 	<!-- ② 가져온 리소스 id 로 스폰 -->
 	<EditorWaitStable/>
 	<DevCommand line="prefab.spawn scratch/import/editor.flowimport/flickerlight.prefab.xml"/>

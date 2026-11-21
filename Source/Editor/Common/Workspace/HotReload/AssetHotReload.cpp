@@ -127,7 +127,7 @@ namespace sw::editor
                 return FileUtil::joinPath( editor::getSubsystem<AssetPaths>().getRootFolderPath(), treePath );
             }
 
-            /** @brief 감시 사건의 트리 표기(`makeTreePath`)입니다. 사건의 `_directory` 는 감시 루트(리소스 루트 · 작업 도메인 폴더)이고 `_filename` 은 그 아래 상대 경로다(`IFileWatcher::pushChange`). */
+            /** @brief 감시 사건의 트리 표기(`makeTreePath`)입니다. 사건의 `_directory` 는 감시 루트(리소스 루트 · 작업 도메인 폴더)이고 `_filename` 은 그 아래 상대 경로다(`FileWatcher::pushChange`). */
             static string makeEventPath( const FileChangeEvent& changeEvent ) { return makeTreePath( FileUtil::joinPath( changeEvent._directory, changeEvent._filename ) ); }
 
             /** @brief 울타리 표지 파일의 절대 경로입니다. */
@@ -256,7 +256,7 @@ namespace sw::editor
         // 작업 도메인(시나리오 사본 · 가져오기 · 미리보기)은 리소스 루트 밖, 실행 뿌리 아래다 — 디스패처 하나는 루트 하나만 보므로 따로 건다. 감시하려면 폴더가 있어야 한다.
         const string& scratchFolder = AssetPaths::getScratchFolderPath();
         _pScratchWatchDispatcher    = make_unique<FileWatchDispatcher>();
-        if ( FileUtil::ensureDirectoryExists( scratchFolder ) && _pScratchWatchDispatcher->initialize( scratchFolder ) )
+        if ( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( scratchFolder ) ) && _pScratchWatchDispatcher->initialize( scratchFolder ) )
         {
             _scratchResourceWatch = _pScratchWatchDispatcher->registerWatch( scratchFolder, listExtension, fileWatchDelegate );
             _scratchContentWatch  = _pScratchWatchDispatcher->registerWatch( scratchFolder, {}, treeWatchDelegate );
@@ -380,7 +380,7 @@ namespace sw::editor
         const bool   bSidecar = StringUtil::endsWith( assetID, AssetMeta::kExtension );
         const string targetID = bSidecar ? assetID.substr( 0, assetID.size() - AssetMeta::kExtension.size() ) : assetID;
         const string absPath  = AssetHotReloadInternal::makeDiskPath( targetID );
-        if ( FileUtil::isRegularFile( absPath ) == false )
+        if ( FileUtil::isRegularFile( FileUtil::toDiskPath( absPath ) ) == false )
             return;
         const optional<AssetGUID> guid = _pIdentityRules->readIdentity( absPath, targetID );
         if ( guid.has_value() )
@@ -418,7 +418,7 @@ namespace sw::editor
             // 사본을 새로 만들었다 — 감시 트리에 표지를 쓰고 그 사건이 오기를 기다린다.
             _fenceArmedCount = prepareCount;
             _bFenceSeen      = SW_FALSE;
-            if ( FileUtil::writeTextFile( markerPath, "fence" ) == false )
+            if ( FileUtil::writeTextFile( FileUtil::toDiskPath( markerPath ), "fence" ) == false )
             {
                 SW_LOG_ERROR_ID( "AssetHotReload.CouldNotWriteFence", "[ContentWatchFence] could not write the fence marker %# - the content index may be read before the file watch reports the scratch copy", markerPath );
                 _fencePrepareCount = prepareCount;
@@ -444,7 +444,7 @@ namespace sw::editor
             SW_LOG_ERROR_ID( "AssetHotReload.AssetImportDidNot", "[ContentWatchFence] the asset import did not finish within %# ms - the scenario starts anyway", Internal::kFenceImportTimeoutMilliseconds );
         }
         _fenceImportDeadlineNanoseconds = 0;
-        (void)FileUtil::removeFile( markerPath ); // 표지는 한 번 쓰고 지운다 — 못 지워도 다음 울타리가 덮어쓴다
+        (void)FileUtil::removeFile( FileUtil::toDiskPath( markerPath ) ); // 표지는 한 번 쓰고 지운다 — 못 지워도 다음 울타리가 덮어쓴다
         _bFenceWaiting     = SW_FALSE;
         _fencePrepareCount = _fenceArmedCount;
         return false;
@@ -492,7 +492,7 @@ namespace sw::editor
     {
         // 사건을 꺼낸 때 파일이 이미 없으면(이름을 바꾸고 지운 사본 폴더의 늦은 "바뀜" 사건) 다시 읽을 내용이 없다 — 지운 사건이다.
         // 캐시의 다시 읽기는 파일을 디스크에서 읽어 `File.NotFound` 를 남겼다(시나리오 `assetmanage` 다음 단계에서 났다).
-        if ( FileUtil::exists( AssetHotReloadInternal::makeDiskPath( relativePath ) ) == false )
+        if ( FileUtil::exists( FileUtil::toDiskPath( AssetHotReloadInternal::makeDiskPath( relativePath ) ) ) == false )
         {
             SW_LOG_INFO_ID( "AssetHotReload.ChangedFileGone", "Hot reload skipped %# - the file was removed before its change was handled", relativePath.c_str() );
             return;

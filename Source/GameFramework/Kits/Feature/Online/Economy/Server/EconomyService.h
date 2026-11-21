@@ -2,7 +2,7 @@
  * @file EconomyService.h
  * @brief 경제 서비스(서버)입니다. 지갑, 내역, 구매, 영수증 지급 요청을 저장소 작업으로 맡기고 완료에서 응답합니다. 서비스 스레드 하나에서 씁니다.
  * @details - 프로토콜 표(`OnlineProtocolService`)로 선다. 요청이 들어오는 경로는 둘이다. 호스트(`handleCall`)는 호스트가 인증, 도배 제한, 스키마 해시 비교를 이미 마친 요청을 넘긴다. `submitCall` 은 같은 프로세스의 서버 코드와 테스트가 쓴다. 둘 다 같은 작업으로 이어진다.
- *          - 저장소 완료는 호스트(`OnlineServiceHost::update`)가 서비스 틱 전에 회수한다. 호스트 없이 쓰면 호출하는 쪽이 `IServiceStore::pollCompletions` 를 부른 뒤 `tick` 을 부른다.
+ *          - 저장소 완료는 호스트(`OnlineServiceHost::update`)가 서비스 틱 전에 회수한다. 호스트 없이 쓰면 호출하는 쪽이 `ServiceStore::pollCompletions` 를 부른 뒤 `tick` 을 부른다.
  *          - 구매에는 멱등 키가 필수이다. 분개 키는 `acct.<계정>/<키>` 이다. 영수증은 레지스트리에 맡기고, `tick` 이 결과를 회수해 지급 작업을 맡긴다.
  *          - 원격 설정 `feature.shop_enabled`(기본값은 켬)가 꺼지면 구매와 지급은 `kFeatureDisabled` 로 끝나고 조회는 된다. Shipping 빌드는 개발 전용 영수증 제공자를 거절한다.
  *          - 환불 알림은 `update` 가 레지스트리에서 거두어 회수 작업(`EconomyStoreLogic::revokeRefund`)을 맡긴다. 응답이 없고 결과는 지표 `economy_refund_total{result}` 이다.
@@ -53,8 +53,8 @@ namespace sw
 
     class CurrencyCatalog;
     class IAccountExternalLinks;
-    class IAccountPresence;
-    class IServiceStore;
+    class AccountPresence;
+    class ServiceStore;
     class MetricRegistry;
     class OfferCatalog;
     class ReceiptValidatorRegistry;
@@ -74,7 +74,7 @@ namespace sw
         int64                        _deliveryAlarmMarginMs{ constant::time::kSecondsPerDay * constant::time::kMillisecondsPerSecond };         ///< 지급 알림의 기한이 이만큼 안으로 오면 오류 로그를 남긴다(사람이 볼 시간)
         int32                        _deliveryScanMaxCount{ 200 };                                                                              ///< 한 번에 읽는 지급 알림 수이다. 평소에는 비어 있고 끝난 것은 지워지므로 뒤쪽도 차례가 온다
         int32                        _auditMinuteOfDay{ 4 * 60 + 30 };                                                                          ///< 보존 검사 시각(UTC 분)이다. 테이블 전체를 읽으므로 한가한 시간에 둔다
-        IAccountPresence*            _pPresence{ nullptr };                                                                                     ///< 다른 서버에 붙은 계정에 잔액 변경 알림을 중계한다. 서버가 하나면 null 이다
+        AccountPresence*             _pPresence{ nullptr };                                                                                     ///< 다른 서버에 붙은 계정에 잔액 변경 알림을 중계한다. 서버가 하나면 null 이다
         const IAccountExternalLinks* _pExternalLinks{ nullptr };                                                                                ///< 영수증 구매자를 외부 로그인으로 묶는 제공자(`ReceiptBuyerBinding::LinkedLogin`)가 있으면 필수다. 없으면 기동 실패다
         uint8                        _bAcceptSandboxReceipts{ SW_FALSE };
         EconomyRefundRecoveryMode    _refundRecovery{ EconomyRefundRecoveryMode::Count }; ///< 지급 뒤 온 환불의 회수 정책(키트 설정 `_refundRecovery`). 정하지 않으면 기동 실패다
@@ -187,7 +187,7 @@ namespace sw
         EconomyService& operator=( const EconomyService& ) = delete;
 
         /** @brief 카탈로그나 저장소가 없거나 Shipping 에 개발 전용 영수증 제공자가 있으면 false 를 반환합니다. 호스트에 등록하는 일은 호출하는 쪽이 합니다(`host.registerServerService( &service )`). */
-        [[nodiscard]] bool initialize( IServiceStore* pStore, const EconomyServiceConfig& settings );
+        [[nodiscard]] bool initialize( ServiceStore* pStore, const EconomyServiceConfig& settings );
         void               shutdown();
 
         /** @brief 요청 하나를 맡깁니다. 서비스 스레드에서 부릅니다. @p onReply 는 정확히 한 번 불리며, 규칙 위반 거절은 바로, 나머지는 저장소 완료에서 불립니다. */

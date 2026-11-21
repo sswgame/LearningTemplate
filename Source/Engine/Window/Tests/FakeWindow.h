@@ -1,19 +1,19 @@
 /**
  * @file FakeWindow.h
- * @brief 창 테스트가 쓰는 플랫폼 없는 창입니다. `IWindow` 의 순수 가상 함수에 모두 "하지 않는다" 로 답한다 — 테스트는 보려는 함수만 다시 재정의한다.
- * @details 테스트 폴더에만 있다(배포 구성은 짓지 않는다). 가짜마다 같은 답을 따로 적으면 `IWindow` 에 순수 가상이 늘 때마다 가짜 셋을 고쳐야 했다.
+ * @brief 창 테스트가 쓰는 플랫폼 없는 창입니다. `GenericWindow` 의 순수 가상 함수에 모두 "하지 않는다" 로 답한다 — 테스트는 보려는 함수만 다시 재정의한다.
+ * @details 테스트 폴더에만 있다(배포 구성은 짓지 않는다). 가짜마다 같은 답을 따로 적으면 `GenericWindow` 에 순수 가상이 늘 때마다 가짜 셋을 고쳐야 했다.
  */
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
-#include "Engine/Window/IWindow.h"
+#include "Engine/Window/GenericWindow.h"
 #include "Engine/Window/WindowMonitor.h"
 
 namespace sw
 {
     /** @class FakeWindow @brief 파일 머리말 참고. 표면 종류는 생성 인자다. */
-    class FakeWindow : public IWindow
+    class FakeWindow : public GenericWindow
     {
     public:
         /** @brief 가짜 창은 끌어 놓기를 받지 않는다 — 테스트는 사건 값(`WindowFileDropEvent`)을 받는 쪽에 바로 넘긴다. */
@@ -21,7 +21,7 @@ namespace sw
 
     public:
         explicit FakeWindow( NativeSurfaceKind surfaceKind = NativeSurfaceKind::Win32 )
-            : IWindow{}
+            : GenericWindow{}
             , _surfaceKind{ surfaceKind }
         {
         }

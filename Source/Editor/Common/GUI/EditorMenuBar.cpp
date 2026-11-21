@@ -8,9 +8,9 @@
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
 #include "Editor/Common/GUI/Model/EditorMenuBarViewModel.h"
 #include "Editor/Common/GUI/Panel/EditorDockLayout.h"
+#include "Editor/Common/GUI/Panel/EditorPanel.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Panel/EditorPanelText.h"
-#include "Editor/Common/GUI/Panel/IEditorPanel.h"
 #include "Editor/Common/GUI/Status/EditorStatusBar.h"
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
@@ -254,14 +254,14 @@ namespace sw::editor
         if ( EditorMenuBarViewModel::consumeOpenPanel( request ) == false )
             return;
         const EditorPanelManager& panelManager = EditorPanelManager::getInEditorContext();
-        IEditorPanel*             pPanel       = request._documentKind.isUnknown() == false ? panelManager.findDocumentPanel( request._documentKind ) : panelManager.findPanelByID( request._panelID );
+        EditorPanel*              pPanel       = request._documentKind.isUnknown() == false ? panelManager.findDocumentPanel( request._documentKind ) : panelManager.findPanelByID( request._panelID );
         if ( pPanel == nullptr )
         {
             SW_LOG_ERROR_ID( "Editor.OpenPanelRequestFound", "Open panel request found no panel (id '%#', document kind '%#')", request._panelID.c_str(), request._documentKind.getID() );
             return;
         }
         pPanel->setOpen( true );
-        ImGui::SetWindowFocus( EditorPanelText::makeWindowID( pPanel->getPanelTitle() ).c_str() ); // 창 이름은 인스턴스의 제목이다(`IEditorPanel::draw`)
+        ImGui::SetWindowFocus( EditorPanelText::makeWindowID( pPanel->getPanelTitle() ).c_str() ); // 창 이름은 인스턴스의 제목이다(`EditorPanel::draw`)
         if ( request._bFloat == false )
             return;
         // 도킹을 풀고 메인 창 오른쪽 밖으로 옮긴다 — 메인 뷰포트 밖의 창은 ImGui 가 제 OS 창으로 띄운다(렌더러가 RHI 스왑체인을 단다). 패널은 앞 프레임에 그려져 있어야 한다.

@@ -70,7 +70,7 @@
 					                _localScale="1,1,1"
 					                _attachOwner="None"
 					                _attachComponent="None" />
-					<TileMapRendererComponent _localID="10766413655964845934" _tileMapPath="game/playground/maps/twod.tilemap.xml"
+					<TileMapComponent _localID="10766413655964845934" _tileMapPath="game/playground/maps/twod.tilemap.xml"
 					                          _materialPath="engine/materials/sprite2dlit.material"
 					                          _sortingLayer="Default"
 					                          _orderInLayer="0"

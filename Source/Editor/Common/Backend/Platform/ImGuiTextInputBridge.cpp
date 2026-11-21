@@ -4,7 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Window/IWindow.h"
+#include "Engine/Window/GenericWindow.h"
 #include "Engine/Window/NativeWindowEvent.h"
 #include "Engine/Window/WindowTextInput.h"
 
@@ -34,7 +34,7 @@ namespace sw::editor
     {
     }
 
-    void ImGuiTextInputBridge::initialize( IWindow& window )
+    void ImGuiTextInputBridge::initialize( GenericWindow& window )
     {
         _pWindow                       = &window;
         ImGuiPlatformIO& platform      = ImGui::GetPlatformIO();

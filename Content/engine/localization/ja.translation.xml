@@ -71,14 +71,14 @@
 		       text="適用・拒否・削除されたエフェクトはまだありません。"
 		       sourceHash="249a7225f66cf71f" />
 		<entry key="EdAbilityDebug.HintNoTarget"
-		       text="AbilityComponent を持つオブジェクトを選択するか、上で選んでください。"
+		       text="AbilitySystemComponent を持つオブジェクトを選択するか、上で選んでください。"
 		       sourceHash="ec7db3b86d2e4de6" />
 		<entry key="EdAbilityDebug.HintPlayOnly"
 		       text="実行中のアビリティ状態はプレイ中にのみ存在します。プレイを押して確認してください。"
 		       sourceHash="7adebb387e539a62" />
 		<entry key="EdAbilityDebug.Infinite" text="無限" sourceHash="0c024c0024360a2d" />
 		<entry key="EdAbilityDebug.NoComponentsInScene"
-		       text="アクティブなシーンに AbilityComponent がありません"
+		       text="アクティブなシーンに AbilitySystemComponent がありません"
 		       sourceHash="94fabdb6d46085e9" />
 		<entry key="EdAbilityDebug.PickTarget" text="アビリティシステムを選択..." sourceHash="0f5befa1ba0a7140" />
 		<entry key="EdAbilityDebug.SectionAbilities" text="付与されたアビリティ" sourceHash="59c749c8cdb544fa" />

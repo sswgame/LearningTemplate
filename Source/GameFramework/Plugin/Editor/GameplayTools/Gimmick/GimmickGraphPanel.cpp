@@ -74,7 +74,7 @@ namespace sw::editor
 namespace sw::editor
 {
     GimmickGraphPanel::GimmickGraphPanel()
-        : IEditorPanel( false )
+        : EditorPanel( false )
         , _model{ game::getSubsystem<GimmickNodeRegistrySubsystem>().getRegistry() }
         , _nodeGraph{}
         , _listIssue{}

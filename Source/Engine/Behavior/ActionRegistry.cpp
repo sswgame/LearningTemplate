@@ -7,8 +7,8 @@
 #include "Core/Log/Logger.h"
 #include "Core/Registry/RegistrationList.h"
 #include "Core/String/StringUtil.h"
-#include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/ServiceSlot.h"
+#include "Core/Subsystem/Subsystem.h"
 
 #include "Engine/Console/DebugHUDRegistry.h"
 #include "Engine/Console/DevCommandRegistry.h"
@@ -266,7 +266,7 @@ namespace sw
      * @class ActionTraceState
      * @brief 범용 Action 추적의 고리 버퍼 · 켜짐 — 예전 함수 정적(감춘 싱글턴)을 엔진 범위 서브시스템이 든다. 엔진을 다시 세우면 새로 선다.
      */
-    class ActionTraceState final : public ISubsystem
+    class ActionTraceState final : public Subsystem
     {
     public:
         static constexpr const utf8* kSubsystemName = "ActionTraceState";

@@ -37,7 +37,7 @@ namespace sw
              * @param kind 스냅샷 읽기면 @p run 의 모든 읽기가 한 시점이다(원장 감사)
              */
             template <typename TRun, typename TComplete>
-            static void runStoreJob( IServiceStore& store, ServiceStoreJobKind kind, TRun&& run, TComplete&& complete )
+            static void runStoreJob( ServiceStore& store, ServiceStoreJobKind kind, TRun&& run, TComplete&& complete )
             {
                 ServiceStoreTracker tracker;
                 tracker.bindStore( &store );
@@ -53,7 +53,7 @@ namespace sw
             }
 
             /** @brief 전체 우편 하나를 넣습니다. id 는 시작 시각이라 실행마다 새 캠페인이다(남는 저장소에서도 봇마다 한 번씩 받는다). */
-            [[nodiscard]] static expected<void> seedCampaign( IServiceStore& store, UnixMilliseconds startMs )
+            [[nodiscard]] static expected<void> seedCampaign( ServiceStore& store, UnixMilliseconds startMs )
             {
                 ServiceMailCampaign campaign;
                 campaign._campaignID              = static_cast<uint64>( startMs.count() );
@@ -179,7 +179,7 @@ namespace sw
 
     expected<LedgerAuditReport> LoadBotLocalServer::readLedgerAudit()
     {
-        IServiceStore* const pStore = _runtime->isInitialized() ? _runtime->getContext()._pStore : nullptr;
+        ServiceStore* const pStore = _runtime->isInitialized() ? _runtime->getContext()._pStore : nullptr;
         if ( pStore == nullptr )
             return unexpected( Error{ ErrorKind::InvalidArgument, "the local server is not running - nothing to audit" } );
         return runLedgerAudit( *pStore );
@@ -187,11 +187,11 @@ namespace sw
 
     const ServiceStoreCommitStats* LoadBotLocalServer::findCommitStats() const
     {
-        const IServiceStore* const pStore = _runtime->isInitialized() ? _runtime->getContext()._pStore : nullptr;
+        const ServiceStore* const pStore = _runtime->isInitialized() ? _runtime->getContext()._pStore : nullptr;
         return pStore != nullptr ? &pStore->getCommitStats() : nullptr;
     }
 
-    expected<LedgerAuditReport> LoadBotLocalServer::runLedgerAudit( IServiceStore& store )
+    expected<LedgerAuditReport> LoadBotLocalServer::runLedgerAudit( ServiceStore& store )
     {
         // 봇이 멈춘 뒤 남은 일(정산 · 수령의 완료)을 먼저 거둔다 — 그 완료가 새 일을 맡기면 그것도 거둔다(시한은 저장소 종료 대기와 같다)
         ServiceStoreUtil::flushUntilIdle( &store, [&store]()

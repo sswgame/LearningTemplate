@@ -54,7 +54,7 @@ namespace sw::editor
     bool SocketEditModel::loadFromFile( string_view absolutePath )
     {
         string text;
-        if ( FileUtil::readTextFile( absolutePath, text ) == false )
+        if ( FileUtil::readTextFile( FileUtil::toDiskPath( absolutePath ), text ) == false )
         {
             SW_LOG_WARNING_ID( "SocketEditModel.SocketFileCouldNot", "Socket file could not be read: %#", string( absolutePath ).c_str() );
             return false;

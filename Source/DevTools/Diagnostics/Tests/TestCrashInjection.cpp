@@ -33,7 +33,7 @@ namespace
     string findReportFile( const string& folder, string_view suffix )
     {
         vector<string> listFile;
-        if ( FileUtil::collectFiles( folder, "", listFile, false ) == false )
+        if ( FileUtil::collectFiles( FileUtil::toDiskPath( folder ), "", listFile, false ) == false )
             return {};
         for ( const string& filePath : listFile )
         {
@@ -58,11 +58,11 @@ namespace
     {
         const string stackPath = findReportFile( folder, "stack.txt" );
         string       stackText;
-        SW_EXPECT_TRUE_MSG( stackPath.empty() == false && FileUtil::readTextFile( stackPath, stackText ) && stackText.find( "CRASH" ) != string::npos, pWhat );
+        SW_EXPECT_TRUE_MSG( stackPath.empty() == false && FileUtil::readTextFile( FileUtil::toDiskPath( stackPath ), stackText ) && stackText.find( "CRASH" ) != string::npos, pWhat );
     #if defined( SW_PLATFORM_WINDOWS )
         const string dumpPath = findReportFile( folder, ".dmp" );
         uint64       dumpSize = 0;
-        SW_EXPECT_TRUE_MSG( dumpPath.empty() == false && FileUtil::tryGetFileSize( dumpPath, dumpSize ) && dumpSize > 0, pWhat );
+        SW_EXPECT_TRUE_MSG( dumpPath.empty() == false && FileUtil::tryGetFileSize( FileUtil::toDiskPath( dumpPath ), dumpSize ) && dumpSize > 0, pWhat );
     #endif
     }
 
@@ -115,7 +115,7 @@ SW_TEST_CHILD_ROLE( CrashInjectionTest, ChildCrashesAsRequested )
 SW_TEST_CASE_EACH( CrashInjectionTest, EveryCrashKindLeavesAReport, kArrCrashCase, ._tags = "slow", ._timeoutSeconds = 180.0f )
 {
     const string folder = test::makeScratchPath( param._pName );
-    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( folder ) );
+    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( folder ) ) );
 
     const test::ChildRunResult child =
         test::runChildRole( "CrashInjectionTest.ChildCrashesAsRequested", makeCrashChildArgument( param._kind, folder ), kCrashChildTimeoutSeconds );
@@ -129,7 +129,7 @@ SW_TEST_CASE_EACH( CrashInjectionTest, EveryCrashKindLeavesAReport, kArrCrashCas
     if ( param._kind == CrashInjectionKind::AccessViolation )
     {
         string stackText;
-        SW_EXPECT_TRUE( FileUtil::readTextFile( findReportFile( folder, "stack.txt" ), stackText ) );
+        SW_EXPECT_TRUE( FileUtil::readTextFile( FileUtil::toDiskPath( findReportFile( folder, "stack.txt" ) ), stackText ) );
         SW_EXPECT_TRUE_MSG( stackText.find( " - write of 0x" ) != string::npos, stackText );
     }
     #endif
@@ -143,7 +143,7 @@ SW_TEST_CASE_EACH( CrashInjectionTest, EveryCrashKindLeavesAReport, kArrCrashCas
 SW_TEST_CASE( CrashInjectionTest, StuckReportStillEndsAndKeepsTheStackFile, ._tags = "slow", ._timeoutSeconds = 180.0f )
 {
     const string folder = test::makeScratchPath( "stuck" );
-    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( folder ) );
+    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( folder ) ) );
 
     const test::ChildRunResult child =
         test::runChildRole( "CrashInjectionTest.ChildCrashesAsRequested", makeCrashChildArgument( CrashInjectionKind::StderrHeld, folder, kStuckReportDeadlineSeconds ), kCrashChildTimeoutSeconds );
@@ -163,7 +163,7 @@ SW_TEST_CASE( CrashInjectionTest, StuckReportStillEndsAndKeepsTheStackFile, ._ta
 SW_TEST_CASE( CrashInjectionTest, FailedAssertNamesItsExpressionBeforeStopping, ._tags = "slow", ._timeoutSeconds = 180.0f )
 {
     const string folder = test::makeScratchPath( "assert" );
-    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( folder ) );
+    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( folder ) ) );
 
     const test::ChildRunResult child =
         test::runChildRole( "CrashInjectionTest.ChildCrashesAsRequested", makeCrashChildArgument( CrashInjectionKind::AssertFailure, folder ), kCrashChildTimeoutSeconds );

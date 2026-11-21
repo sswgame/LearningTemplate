@@ -30,7 +30,7 @@ namespace sw
         return UIAccessibilityBridgeFactoryInternal::getRegistrarChain().getHead();
     }
 
-    unique_ptr<IUIAccessibilityBridge> UIAccessibilityBridgeFactory::createForWindow( UISystem& ui, IWindow& window )
+    unique_ptr<IUIAccessibilityBridge> UIAccessibilityBridgeFactory::createForWindow( UISystem& ui, GenericWindow& window )
     {
         // 등록된 브리지가 없는 구성(AT-SPI 를 짓지 않은 리눅스 · 전용 서버)은 스크린 리더 연결이 없다 — 계약상의 nullptr 이다.
         const UIAccessibilityBridgeRegistrar* pRegistrar = UIAccessibilityBridgeRegistrar::getHead();

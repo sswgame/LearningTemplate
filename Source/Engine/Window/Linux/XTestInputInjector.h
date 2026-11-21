@@ -11,8 +11,8 @@
 #include "Core/Container/string.h"
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/ServiceSlot.h"
+#include "Core/Subsystem/Subsystem.h"
 
 namespace sw
 {
@@ -20,7 +20,7 @@ namespace sw
      * @class XTestInputInjector
      * @brief XTest 확장으로 X 서버에 입력을 주입합니다. 좌표는 루트 창(화면) 기준입니다.
      */
-    class SW_API XTestInputInjector final : public ISubsystem
+    class SW_API XTestInputInjector final : public Subsystem
     {
     public:
         /** @brief 서브시스템 이름입니다 — 엔진 범위 서비스 하나(개발 명령 `input.xtest` 가 찾는다). */

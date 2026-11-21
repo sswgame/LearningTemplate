@@ -141,7 +141,7 @@ namespace sw::editor
         if ( filePath.empty() )
             return false;
         string text;
-        if ( FileUtil::readOptionalTextFile( filePath, text ) != OptionalFileRead::Read )
+        if ( FileUtil::readOptionalTextFile( FileUtil::toDiskPath( filePath ), text ) != OptionalFileRead::Read )
             return false; // 없으면 처음이다, 못 읽었으면 readOptionalTextFile 이 오류로 남겼다
         fromText( FileUtil::skipUTF8Bom( text ) );
         return true;
@@ -151,7 +151,7 @@ namespace sw::editor
     {
         if ( filePath.empty() )
             return false;
-        if ( FileUtil::ensureParentDirectoryExists( filePath ) == false || FileUtil::writeTextFile( filePath, toText() ) == false )
+        if ( FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( filePath ) ) == false || FileUtil::writeTextFile( FileUtil::toDiskPath( filePath ), toText() ) == false )
         {
             SW_LOG_WARNING_ID( "InspectorFavorites.InspectorFavoritesCouldNot", "Inspector favorites could not be saved to %#", string( filePath ).c_str() );
             return false;

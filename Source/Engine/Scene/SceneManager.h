@@ -10,8 +10,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
 #include "Core/Path/AbsolutePath.h"
-#include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/ServiceSlot.h"
+#include "Core/Subsystem/Subsystem.h"
 #include "Core/Task/TaskFuture.h"
 #include "Core/Task/TaskTypes.h"
 
@@ -81,7 +81,7 @@ namespace sw
      * @class SceneManager
      * @brief 로드된 씬들을 관리하고 활성 씬을 추적합니다.
      */
-    class SW_API SceneManager : public ISubsystem
+    class SW_API SceneManager : public Subsystem
     {
     public:
         /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */

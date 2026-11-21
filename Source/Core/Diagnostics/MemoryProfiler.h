@@ -330,7 +330,7 @@ namespace sw
     // 1) MemoryProfiler — 할당 추적 · 콜 스택 집계(엔진 인스턴스)
     //    누수 검사(아래 2)와는 별개다. CRT/LSan 은 프로세스 전역이다
     // ------------------------------------------------------------------------------
-    class SW_API MemoryProfiler final : public IAllocationTracker
+    class SW_API MemoryProfiler final : public AllocationTracker
     {
     public:
         /** @brief 태그 표시 이름을 반환합니다. */

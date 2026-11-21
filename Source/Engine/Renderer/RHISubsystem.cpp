@@ -20,7 +20,7 @@
 #include "Engine/Graphics/Texture/TextureCache.h"
 #include "Engine/UserSettings/UserSettingsEngineHandlers.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
-#include "Engine/Window/IWindow.h"
+#include "Engine/Window/GenericWindow.h"
 #include "Engine/Window/MainWindowSubsystem.h"
 
 namespace sw
@@ -65,7 +65,7 @@ namespace sw
             commandLine.getArgument( CommandLineArgument::HEIGHT, windowHeight );
 
             // 창 제목은 팩 설정(`<Engine _windowTitle>`)이다 — 이 단계는 그 설정을 읽은 뒤에 선다(의존).
-            unique_ptr<IWindow> defaultWindow = IWindow::createMainWindow( engine::getSubsystem<PackEngineSettings>()._windowTitle.c_str(), windowWidth, windowHeight, commandLine );
+            unique_ptr<GenericWindow> defaultWindow = GenericWindow::createMainWindow( engine::getSubsystem<PackEngineSettings>()._windowTitle.c_str(), windowWidth, windowHeight, commandLine );
             if ( defaultWindow != nullptr )
             {
                 // 전체 화면은 스왑체인을 만들기 전에 고른다. 스왑체인이 처음부터 모니터 크기다.

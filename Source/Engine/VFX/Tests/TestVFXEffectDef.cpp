@@ -106,16 +106,16 @@ namespace
         static constexpr string_view kValidAttributes = "_name=\"Sparks\" _texturePath=\"game/vfx/spark.dds\" _blendMode=\"Additive\" _maxParticles=\"64\" _duration=\"1\" _spawnRate=\"40\" "
                                                         "_lifetimeMin=\"0.4\" _lifetimeMax=\"0.8\" _velocityMin=\"-1, 2, -1\" _velocityMax=\"1, 4, 1\" _gravity=\"0, -9.8, 0\"";
 
-        [[nodiscard]] static bool writeScratchFile( const string& path, string_view text ) { return FileUtil::writeFile( path, reinterpret_cast<const uint8*>( text.data() ), text.size() ); }
+        [[nodiscard]] static bool writeScratchFile( const string& path, string_view text ) { return FileUtil::writeFile( FileUtil::toDiskPath( path ), reinterpret_cast<const uint8*>( text.data() ), text.size() ); }
     };
     using Util = VFXEffectDefTestUtil;
 
     /** @brief 부모 효과 글을 한 벌 돌려주는 곳입니다(`DataInheritance::flatten` 의 입력). */
-    class VFXParentSource final : public IDataInheritanceSource
+    class VFXParentSource final : public DataInheritanceSource
     {
     public:
         explicit VFXParentSource( string_view text )
-            : IDataInheritanceSource{ 8u } // 설정(`EngineConfig.json`)과 같은 깊이 상한
+            : DataInheritanceSource{ 8u } // 설정(`EngineConfig.json`)과 같은 깊이 상한
             , _text{ text }
         {
         }
@@ -593,7 +593,7 @@ SW_TEST_CASE( VFXEffectDefTest, SharedCacheGivesOneObjectAndReloadDetaches )
 {
     const test::ScopedScratchDomain domain;
     const string                    id = test::ScopedScratchDomain::makeID( "sparks.vfx.xml" ).str();
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "sparks.vfx.xml" ), Util::makeEffectXML( Util::kValidAttributes ) ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( domain.makeDiskPath( "sparks.vfx.xml" ) ), Util::makeEffectXML( Util::kValidAttributes ) ) );
 
     const shared_ptr<const VFXEffectDef> pHeld  = SharedAssetCache<VFXEffectDef>::acquire( id ).snapshot();
     const shared_ptr<const VFXEffectDef> pAgain = SharedAssetCache<VFXEffectDef>::acquire( id ).snapshot();
@@ -606,7 +606,7 @@ SW_TEST_CASE( VFXEffectDefTest, SharedCacheGivesOneObjectAndReloadDetaches )
     const size_t at      = changed.find( "_maxParticles=\"64\"" );
     SW_REQUIRE_TRUE( at != string::npos );
     changed.replace( at, string_view( "_maxParticles=\"64\"" ).size(), "_maxParticles=\"128\"" );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "sparks.vfx.xml" ), changed ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( domain.makeDiskPath( "sparks.vfx.xml" ) ), changed ) );
     SW_REQUIRE_TRUE( SharedAssetCache<VFXEffectDef>::reloadShared( id ) );
     SW_EXPECT_EQUAL( 64u, pHeld->_listEmitter[0]._maxParticles ); // 쥔 쪽은 옛 객체 그대로(Detach)
 

@@ -11,7 +11,7 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameModeBoundComponent.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameFrameworkComponent.h"
 
 namespace sw
 {
@@ -24,7 +24,7 @@ namespace sw
      *          화면 위쪽(월드 Y 가 큰) 캐릭터가 뒤에 그려지도록 Z = 발 Y × `_depthPerUnitY` 로 둔다(유니티 Custom Axis (0, 1, 0) 와 같은 결과).
      */
     REFLECT( Category = "Overworld", DisplayName = "Overworld Walker View", Tooltip = "Follows the overworld game mode hero and picks the walk or idle animation for its facing" )
-    class SW_KIT_API OverworldWalkerViewComponent : public GameModeBoundComponent
+    class SW_KIT_API OverworldWalkerViewComponent : public GameFrameworkComponent
     {
     public:
         REFLECT_BODY();

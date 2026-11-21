@@ -5,7 +5,7 @@
  *          돌 프레임 단계를 올리고, 매니저는 생성자에서 표를 훑어 서비스를 만들고 소유합니다 — 의존은 기능 → 코어 한 방향입니다.
  *          언리얼 `UWorldSubsystem`(모듈이 타입을 올리고 월드가 인스턴스를 만든다, `GetSubsystem<T>()`)과 같은 모양입니다.
  *
- *          서비스는 서브시스템(`ISubsystem`)이고 매니저의 **씬 범위**(`SubsystemScope`)가 소유한다 — 엔진 범위가 부모라 씬 범위에서 엔진 서비스도 찾는다.
+ *          서비스는 서브시스템(`Subsystem`)이고 매니저의 **씬 범위**(`SubsystemScope`)가 소유한다 — 엔진 범위가 부모라 씬 범위에서 엔진 서비스도 찾는다.
  *          - **순서**: 서비스가 선언한 의존(`getSubsystemDependencies`)으로 위상 정렬한 순서로 세우고(초기화), 같은 단계의 갱신도 그 순서로 돈다.
  *            매니저가 소멸하면 역순으로 내리고 지운다.
  *          - **갱신**: 매니저가 등록 줄의 단계(`SceneFrameStepList.xxx` 의 한 줄)에서 `update` 를 부릅니다(게임 스레드). 등록 줄은 `update` 가 읽고 쓰는 씬 데이터
@@ -26,7 +26,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/Subsystem.h"
 
 namespace sw
 {
@@ -51,7 +51,7 @@ namespace sw
      * @class ISceneService
      * @brief 씬마다 하나 있는 기능 서비스입니다. 매니저가 만들고 소유합니다(파일 머리말 참고).
      */
-    class SW_API ISceneService : public ISubsystem
+    class SW_API ISceneService : public Subsystem
     {
     public:
         ~ISceneService() override = default;

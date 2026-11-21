@@ -218,15 +218,15 @@ namespace sw
 
         // 바꾼 것이 없으면 파일을 두지 않는다 — 기본 키로 되돌린 플레이어에게 낡은 파일이 남지 않게 한다.
         if ( changedCount == 0 )
-            return FileUtil::exists( filePath ) == false || FileUtil::removeFile( filePath );
-        if ( FileUtil::ensureParentDirectoryExists( filePath ) == false )
+            return FileUtil::exists( FileUtil::toDiskPath( filePath ) ) == false || FileUtil::removeFile( FileUtil::toDiskPath( filePath ) );
+        if ( FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( filePath ) ) == false )
             return false;
         return doc.saveCompleteToFile( filePath );
     }
 
     bool DebugKeyActions::loadUserBindings( InputMap& map, string_view filePath )
     {
-        if ( filePath.empty() || FileUtil::exists( filePath ) == false )
+        if ( filePath.empty() || FileUtil::exists( FileUtil::toDiskPath( filePath ) ) == false )
             return true;
 
         // 플레이어 파일(`saveUserBindings` 가 디스크에 쓴 것)이라 디스크 입구로 읽는다.

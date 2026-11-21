@@ -11,7 +11,7 @@
 namespace sw
 {
     MeshInstanceBatch::MeshInstanceBatch( shared_ptr<Mesh> mesh, Material* pMaterial, shared_ptr<MaterialInstance> instance, uint32 count, MeshInstanceWriter writer )
-        : ScenePrimitiveBatch{ count }
+        : PrimitiveBatch{ count }
         , _listEntry{ count }
         , _mesh{ std::move( mesh ) }
         , _pMaterial{ pMaterial }
@@ -35,7 +35,7 @@ namespace sw
 
     MeshInstanceBatch::~MeshInstanceBatch()
     {
-        // 항목 목록이 사라지기 전에 레지스트리에서 뺀다(`ScenePrimitiveBatch::unregisterBatch`).
+        // 항목 목록이 사라지기 전에 레지스트리에서 뺀다(`PrimitiveBatch::unregisterBatch`).
         unregisterBatch();
     }
 

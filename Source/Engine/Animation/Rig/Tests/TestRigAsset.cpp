@@ -139,7 +139,7 @@ SW_TEST_CASE( RigAssetTest, RetargetRejectsNonPositiveHeightRatio )
 SW_TEST_CASE( RigAssetTest, ChildMergesNodesByName )
 {
     const test::ScopedScratchDomain domain;
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "base.rig.xml" ), R"(<RigAsset><targets><item name="Grip" bone="hand.r" /></targets><nodes>
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( domain.makeDiskPath( "base.rig.xml" ) ), R"(<RigAsset><targets><item name="Grip" bone="hand.r" /></targets><nodes>
         <item type="TwoBoneIK" name="Arm" weight="0.5" root="upperarm.l" mid="lowerarm.l" end="hand.l" target="Grip" />
         <item type="Position" name="Follow" bone="weapon" target="Grip" />
         <item type="Position" name="Extra" bone="extra" target="Grip" />
@@ -163,7 +163,7 @@ SW_TEST_CASE( RigAssetTest, ChildMergesNodesByName )
 SW_TEST_CASE( RigAssetTest, RetargetChildMergesByKeys )
 {
     const test::ScopedScratchDomain domain;
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "base.retarget.xml" ), R"(<RetargetProfile>
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( domain.makeDiskPath( "base.retarget.xml" ) ), R"(<RetargetProfile>
         <root source="root" target="root" /><pelvis source="pelvis" target="hips" />
         <chains>
             <item name="LeftArm"><source><item>a</item></source><target><item>b</item></target></item>
@@ -191,7 +191,7 @@ SW_TEST_CASE( RigAssetTest, RetargetChildMergesByKeys )
 SW_TEST_CASE( RigAssetTest, RetargetChildSavesOnlyItsDifference )
 {
     const test::ScopedScratchDomain domain;
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "base.retarget.xml" ), R"(<RetargetProfile>
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( domain.makeDiskPath( "base.retarget.xml" ) ), R"(<RetargetProfile>
         <root source="root" target="root" /><pelvis source="pelvis" target="hips" />
         <chains>
             <item name="LeftArm"><source><item>a</item></source><target><item>b</item></target></item>
@@ -210,7 +210,7 @@ SW_TEST_CASE( RigAssetTest, RetargetChildSavesOnlyItsDifference )
     SW_REQUIRE_TRUE( childPath.has_value() );
     SW_REQUIRE_TRUE( profile.saveToFile( *childPath ) );
     string saved;
-    SW_REQUIRE_TRUE( FileUtil::readTextFile( childPath->str(), saved ) );
+    SW_REQUIRE_TRUE( FileUtil::readTextFile( *childPath, saved ) );
     SW_EXPECT_TRUE( saved.find( baseID ) != string::npos );
     SW_EXPECT_TRUE( saved.find( "head_b" ) != string::npos );
     SW_EXPECT_TRUE( saved.find( "LeftArm" ) == string::npos ); // 물려받은 사슬은 적지 않는다

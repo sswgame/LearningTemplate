@@ -14,7 +14,7 @@
 namespace sw
 {
     Fracture2DComponent::Fracture2DComponent()
-        : FractureComponentBase()
+        : FractureBaseComponent()
         , _listBorder{}
         , _listLevelCount{}
         , _size{ 2.0f, 2.0f }
@@ -64,7 +64,7 @@ namespace sw
 
     void Fracture2DComponent::onBeginPlay()
     {
-        FractureComponentBase::onBeginPlay();
+        FractureBaseComponent::onBeginPlay();
         ensureFracture();
         GameObject* pOwner = getOwner();
         if ( pOwner == nullptr || _asset2D == nullptr )

@@ -15,7 +15,7 @@
 			               _boundsRadius="0.866"
 			               _gpuSpinSeed="0"
 			               _bVisible="true" />
-			<AbilityComponent _localID="2238906797121419031" _componentName="AbilityComponent"
+			<AbilitySystemComponent _localID="2238906797121419031" _componentName="AbilitySystemComponent"
 			                        _bActive="true"
 			                        _abilitySetID=""
 			                        _healthAttribute="Health"

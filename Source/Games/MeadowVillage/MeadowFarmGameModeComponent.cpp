@@ -11,8 +11,8 @@
 
 #include "GameFramework/Kits/Genre/Simulation/Farming/CropCatalog.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
-#include "GameFramework/Runtime/Gameplay/SessionState/PlayerProgressComponent.h"
-#include "GameFramework/Runtime/Gameplay/SessionState/SessionStateComponent.h"
+#include "GameFramework/Runtime/Gameplay/GameState/GameStateComponent.h"
+#include "GameFramework/Runtime/Gameplay/GameState/PlayerProgressComponent.h"
 
 #include "Games/MeadowVillage/MeadowVillageData.h"
 
@@ -94,14 +94,14 @@ namespace sw
             return false;
         }
         // 이 오브젝트의 첫 디렉터가 판을 연다. 시작 돈은 새 판일 때만(복원한 판 위에 덧쌓이지 않게).
-        SessionStateComponent* pState = SessionStateComponent::openOnOwner( *this, MeadowVillageData::makeStateSettings() );
+        GameStateComponent* pState = GameStateComponent::openOnOwner( *this, MeadowVillageData::makeStateSettings() );
         if ( pState == nullptr )
             return false;
-        SessionStateInitResult   initResult = SessionStateInitResult::Refused;
+        GameStateInitResult      initResult = GameStateInitResult::Refused;
         PlayerProgressComponent* pProgress  = PlayerProgressComponent::openOnOwner( *this, MeadowVillageData::makeProgressSettings(), initResult );
         if ( pProgress == nullptr )
             return false;
-        if ( initResult == SessionStateInitResult::Fresh )
+        if ( initResult == GameStateInitResult::Fresh )
             pProgress->getWallet().add( Wallet::getDefaultCurrency(), _startingGold );
         _field.initialize( kFieldWidth, kFieldHeight, pCrops );
         const hashed_string season = pState->getClock().getSeasonName();
@@ -124,7 +124,7 @@ namespace sw
     void MeadowFarmGameModeComponent::updateGame( float32 deltaTime )
     {
         (void)deltaTime;
-        SessionStateComponent*   pState    = SessionStateComponent::findOnOwner( *this );
+        GameStateComponent*      pState    = GameStateComponent::findOnOwner( *this );
         PlayerProgressComponent* pProgress = PlayerProgressComponent::findOnOwner( *this );
         if ( pState == nullptr || pProgress == nullptr )
             return;
@@ -139,7 +139,7 @@ namespace sw
         }
     }
 
-    void MeadowFarmGameModeComponent::startNextDay( SessionStateComponent& state, PlayerProgressComponent& progress )
+    void MeadowFarmGameModeComponent::startNextDay( GameStateComponent& state, PlayerProgressComponent& progress )
     {
         const hashed_string season = state.getClock().getSeasonName(); // 계절은 공유 시계의 데이터
         _field.advanceDay( season, false );

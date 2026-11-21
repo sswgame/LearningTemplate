@@ -9,7 +9,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/String/fixed_string.h"
 
-#include "Editor/Common/GUI/Panel/IEditorPanel.h"
+#include "Editor/Common/GUI/Panel/EditorPanel.h"
 #include "Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.h"
 #include "Editor/Panels/Inspector/Model/InspectorViewModel.h"
 
@@ -18,7 +18,7 @@ namespace sw::editor
     struct EditorCommandTarget;
 
     /** @brief 아웃라이너에서 현재 선택한 것을 살펴보고 편집하는 패널입니다. */
-    class InspectorPanel : public IEditorPanel
+    class InspectorPanel : public EditorPanel
     {
     public:
         /** @brief 패널 id 입니다. 등록(`SW_EDITOR_PANEL`)과 조회(`EditorPanelManager::findPanel<…>` · `setPanelOpen<…>`)가 모두 이 상수에서 온다. */
@@ -30,7 +30,7 @@ namespace sw::editor
         ~InspectorPanel() override = default;
 
         // ------------------------------------------------------------------------------
-        // 1) IEditorPanel: 제목과 그리기
+        // 1) EditorPanel: 제목과 그리기
         // ------------------------------------------------------------------------------
         /** @brief 패널 제목을 반환합니다. */
         const utf8*    getPanelTitle() const override { return kPanelTitle; }

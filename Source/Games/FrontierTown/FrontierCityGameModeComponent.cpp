@@ -12,8 +12,8 @@
 #include "GameFramework/Kits/Genre/Strategy/CityBuilder/CityCatalog.h"
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSWorld.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
-#include "GameFramework/Runtime/Gameplay/SessionState/PlayerProgressComponent.h"
-#include "GameFramework/Runtime/Gameplay/SessionState/SessionStateComponent.h"
+#include "GameFramework/Runtime/Gameplay/GameState/GameStateComponent.h"
+#include "GameFramework/Runtime/Gameplay/GameState/PlayerProgressComponent.h"
 
 #include "Games/FrontierTown/FrontierTownData.h"
 
@@ -48,7 +48,7 @@ namespace sw
 
     void FrontierCityGameModeComponent::serializeGameState( StateIO& io )
     {
-        SessionStateComponent*   pState    = io.isReading() ? SessionStateComponent::findOnOwner( *this ) : nullptr;
+        GameStateComponent*      pState    = io.isReading() ? GameStateComponent::findOnOwner( *this ) : nullptr;
         PlayerProgressComponent* pProgress = io.isReading() ? PlayerProgressComponent::findOnOwner( *this ) : nullptr;
         if ( io.check( pState != nullptr && pProgress != nullptr ) == false )
             return;
@@ -68,7 +68,7 @@ namespace sw
         _bViewsDirty = SW_TRUE;
     }
 
-    bool FrontierCityGameModeComponent::initializeCity( CitySimulation& outCity, SessionStateComponent& state, PlayerProgressComponent& progress )
+    bool FrontierCityGameModeComponent::initializeCity( CitySimulation& outCity, GameStateComponent& state, PlayerProgressComponent& progress )
     {
         const CityCatalog* pCatalog = game::findSubsystem<const CityCatalog>();
         if ( pCatalog == nullptr )
@@ -83,14 +83,14 @@ namespace sw
     bool FrontierCityGameModeComponent::startGame()
     {
         // 이 오브젝트의 첫 디렉터가 판을 연다. 시작 돈은 새 판일 때만(복원한 판 위에 덧쌓이지 않게).
-        SessionStateComponent* pState = SessionStateComponent::openOnOwner( *this, FrontierTownData::makeStateSettings() );
+        GameStateComponent* pState = GameStateComponent::openOnOwner( *this, FrontierTownData::makeStateSettings() );
         if ( pState == nullptr )
             return false;
-        SessionStateInitResult   initResult = SessionStateInitResult::Refused;
+        GameStateInitResult      initResult = GameStateInitResult::Refused;
         PlayerProgressComponent* pProgress  = PlayerProgressComponent::openOnOwner( *this, FrontierTownData::makeProgressSettings(), initResult );
         if ( pProgress == nullptr )
             return false;
-        if ( initResult == SessionStateInitResult::Fresh )
+        if ( initResult == GameStateInitResult::Fresh )
         {
             // 광물 통화는 RTS 규칙 자산(유닛 카탈로그의 <Rules>)의 것이다 — C++ 기본값을 짐작하지 않는다(감사 K-4)
             const RTSCatalog* pUnits = game::findSubsystem<const RTSCatalog>();
@@ -138,7 +138,7 @@ namespace sw
 
     void FrontierCityGameModeComponent::updateGame( float32 deltaTime )
     {
-        SessionStateComponent* pState = SessionStateComponent::findOnOwner( *this );
+        GameStateComponent* pState = GameStateComponent::findOnOwner( *this );
         if ( pState == nullptr )
             return;
         // 첫 틱에 놓는다 — RTS 는 시작할 때 땅을 칠했으므로 땅 리비전으로 다시 칠해야 보인다(RTSWorld::bindLand).

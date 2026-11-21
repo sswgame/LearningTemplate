@@ -12,7 +12,7 @@
 #include "Core/Diagnostics/CacheStats.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/Subsystem.h"
 
 #include "Engine/Asset/Cache/BuiltInAssetCache.h"
 #include "Engine/Asset/Cache/SharedAssetCache.h"
@@ -226,7 +226,7 @@ namespace sw
      * @details 직접 쓰지 말고 `SW_MODULE_SHARED_ASSET_CACHE` 를 쓴다. 언리얼 `UEngineSubsystem` 이 데이터 레지스트리를 갖는 자리다(기억에 의존).
      */
     template <typename AssetType>
-    class SharedAssetCacheSubsystem : public ISubsystem
+    class SharedAssetCacheSubsystem : public Subsystem
     {
     public:
         SharedAssetCacheSubsystem()

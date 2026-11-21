@@ -179,7 +179,7 @@ namespace
     };
 
     /** @brief 클라이언트 쪽 가짜 키트 — 알림을 적는다. */
-    class FakeClientService final : public IOnlineClientService
+    class FakeClientService final : public OnlineClientService
     {
     public:
         vector<uint16>             _listPushKind{};

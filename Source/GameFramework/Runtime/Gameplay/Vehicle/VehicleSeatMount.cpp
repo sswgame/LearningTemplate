@@ -15,7 +15,7 @@
 #include "Engine/Physics/Scene/ScenePhysics.h"
 
 #include "GameFramework/Runtime/Character/Control/Controller/ControllerComponent.h"
-#include "GameFramework/Runtime/Character/Control/Pawn/CharacterPawnMovementComponent.h"
+#include "GameFramework/Runtime/Character/Control/Pawn/CharacterMovementComponent.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterAppearanceComponent.h"
 #include "GameFramework/Runtime/Gameplay/Vehicle/DismountOnDeathComponent.h"
@@ -51,7 +51,7 @@ namespace sw
             /** @brief 탑승자의 걷기를 멈추거나 켭니다. 폰 이동과 캐릭터 컨트롤러가 대상이며, 꺼 두면 물리 캡슐이 사라져서 탈것과 부딪치지 않습니다. */
             static void setRiderMovementSuspended( GameObject& rider, bool bSuspended )
             {
-                CharacterPawnMovementComponent* pMovement = rider.getComponent<CharacterPawnMovementComponent>();
+                CharacterMovementComponent* pMovement = rider.getComponent<CharacterMovementComponent>();
                 if ( pMovement != nullptr )
                     pMovement->setSuspended( bSuspended );
                 CharacterControllerComponent* pController = rider.getComponent<CharacterControllerComponent>();

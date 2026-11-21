@@ -9,8 +9,8 @@
 #include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/ServiceSlot.h"
+#include "Core/Subsystem/Subsystem.h"
 
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Foundation/EngineSubsystemHost.h"
@@ -62,10 +62,10 @@ namespace sw
      *          텍스트는 이미 현지화한 것을 받는다(대화 러너와 음성 이벤트가 해석한다). 길이가 늘어나는 언어(의사 문화권 qps-ploc)는 문서의 최대 폭에서 접힌다.
      *          게임 스레드에서만 쓴다.
      */
-    class SW_API UISubtitleService final : public ISubsystem
+    class SW_API UISubtitleService final : public Subsystem
     {
     public:
-        // ISubsystem — 엔진 범위의 서브시스템이다(`engine::getSubsystem<UISubtitleService>()`, 게임은 `game::getSubsystem<UISubtitleService>()`). 화면 스택(`UISystem`)에 의존하고,
+        // Subsystem — 엔진 범위의 서브시스템이다(`engine::getSubsystem<UISubtitleService>()`, 게임은 `game::getSubsystem<UISubtitleService>()`). 화면 스택(`UISystem`)에 의존하고,
         // 기동이 UI 갱신 칸(`UISystem::onUpdateBeforeScreens`)에 걸고 종료가 줄을 비우고 푼다.
         /** @brief 서브시스템 이름입니다. */
         static constexpr const utf8* kSubsystemName = "UISubtitles";

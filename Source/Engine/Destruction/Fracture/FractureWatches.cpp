@@ -6,7 +6,7 @@
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Automation/Watch/AutomationWatchComponent.h"
-#include "Engine/Destruction/Fracture/FractureComponentBase.h"
+#include "Engine/Destruction/Fracture/FractureBaseComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 
 namespace sw
@@ -16,14 +16,14 @@ namespace sw
         struct FractureWatchesInternal
         {
             /** @brief 질의 대상의 파괴 컴포넌트입니다. 없으면 까닭을 적고 nullptr 입니다. */
-            static const FractureComponentBase* findTargetFracture( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
+            static const FractureBaseComponent* findTargetFracture( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
-                return query.findTargetComponent<FractureComponentBase>( "Fracture", outValue );
+                return query.findTargetComponent<FractureBaseComponent>( "Fracture", outValue );
             }
 
             [[nodiscard]] static bool readFractured( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
-                const FractureComponentBase* pFracture = findTargetFracture( query, outValue );
+                const FractureBaseComponent* pFracture = findTargetFracture( query, outValue );
                 if ( pFracture == nullptr )
                     return false;
                 outValue.setNumber( pFracture->isFractured() ? 1.0 : 0.0 );
@@ -32,7 +32,7 @@ namespace sw
 
             [[nodiscard]] static bool readDynamicBodies( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
-                const FractureComponentBase* pFracture = findTargetFracture( query, outValue );
+                const FractureBaseComponent* pFracture = findTargetFracture( query, outValue );
                 if ( pFracture == nullptr )
                     return false;
                 outValue.setNumber( static_cast<float64>( pFracture->getDynamicBodyCount() ) );

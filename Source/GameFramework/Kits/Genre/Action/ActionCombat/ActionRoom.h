@@ -20,14 +20,14 @@
 #include "GameFramework/Kits/Genre/Action/ActionCombat/MonsterCatalog.h"
 #include "GameFramework/Runtime/Character/Combat/Projectile/ProjectileSimulation.h"
 #include "GameFramework/Runtime/Character/Combat/Projectile/ResolvedShot.h"
-#include "GameFramework/Runtime/Foundation/Grid/FacingDir.h"
+#include "GameFramework/Runtime/Foundation/Grid/FacingDirection.h"
 
 namespace sw
 {
     class Archive;
 
     // ------------------------------------------------------------------------------
-    // 1) 룸 종류와 프레임 입출력(FacingDir 은 Utility/FacingDir.h)
+    // 1) 룸 종류와 프레임 입출력(FacingDirection 은 Utility/FacingDirection.h)
     // ------------------------------------------------------------------------------
     /** @brief 액션 룸 전투 종류입니다. */
     ENUM()
@@ -45,7 +45,7 @@ namespace sw
     struct ActionRoomFrameInput
     {
         float2                 _playerPos{ 0.0f, 0.0f };
-        FacingDir              _facing = FacingDir::Right;
+        FacingDirection        _facing = FacingDirection::Right;
         uint8                  _bAttackPressed : 1;
         uint8                  _bDashPressed   : 1;
         [[maybe_unused]] uint8 _reserved       : 6;
@@ -279,7 +279,7 @@ namespace sw
         /** @brief 플레이어 피격 박스를 반환합니다. */
         AABB playerHurtBox( float32 x, float32 y ) const;
         /** @brief 플레이어 공격 박스를 반환합니다. */
-        AABB playerAttackBox( float32 x, float32 y, FacingDir facing ) const;
+        AABB playerAttackBox( float32 x, float32 y, FacingDirection facing ) const;
 
     private:
         ActionRoomSite     _site;

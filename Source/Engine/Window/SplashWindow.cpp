@@ -4,7 +4,7 @@
 
 #include "Core/Foundation/BuildInfo.h"
 
-#include "Engine/Window/ISplashWindow.h"
+#include "Engine/Window/SplashWindowBase.h"
 
 namespace sw
 {
@@ -26,12 +26,12 @@ namespace sw
             return false;
 
         // 스플래시가 없는 세션은 폴백 없이 스플래시 없이 기동하는 것이 정상 경로이지만 조용히 지나가지 않고 한 번 알린다.
-        if ( ISplashWindow::isPlatformSupported() == false )
+        if ( SplashWindowBase::isPlatformSupported() == false )
         {
             SW_LOG_INFO_ID( "SplashWindow.SplashWindowSessionCannot", "Splash window: this session cannot show one (Linux needs the display server of the chosen window backend - DISPLAY for x11, WAYLAND_DISPLAY for wayland) - starting without it" );
             return false;
         }
-        _pImpl = ISplashWindow::createPlatformSplash();
+        _pImpl = SplashWindowBase::createPlatformSplash();
         if ( _pImpl == nullptr )
             return false;
 

@@ -70,7 +70,7 @@ SW_TEST_CASE( PackWriterTest, StreamedPackReadsBackEveryEntry )
         SW_EXPECT_TRUE( bytes == entry.second );
     }
     reader.close();
-    SW_EXPECT_TRUE( FileUtil::removeFile( packPath ) );
+    SW_EXPECT_TRUE( FileUtil::removeFile( FileUtil::toDiskPath( packPath ) ) );
 }
 
 // 순서가 틀리거나 같은 경로(대소문자 무시 해시)를 두 번 담으면 오류이고, 그 쓰기는 끝난다 — 대상 파일은 생기지 않는다.
@@ -90,7 +90,7 @@ SW_TEST_CASE( PackWriterTest, OutOfOrderAppendIsAnError )
     SW_EXPECT_TRUE( refused.error().kind() == ErrorKind::InvalidArgument );
     SW_EXPECT_FALSE( outOfOrder.append( "z.txt", PackEntryStorage::Blocks, vector<uint8>{} ).has_value() ); // 한 번 실패한 쓰기는 끝났다
     SW_EXPECT_FALSE( outOfOrder.close().has_value() );
-    SW_EXPECT_FALSE( FileUtil::exists( packPath ) );
+    SW_EXPECT_FALSE( FileUtil::exists( FileUtil::toDiskPath( packPath ) ) );
 
     PackStreamWriter twice;
     SW_REQUIRE_TRUE( twice.open( packPath, PackTestUtil::makeDesc( "game/test" ) ).has_value() );
@@ -99,7 +99,7 @@ SW_TEST_CASE( PackWriterTest, OutOfOrderAppendIsAnError )
     SW_REQUIRE_FALSE( duplicate.has_value() );
     SW_EXPECT_TRUE( duplicate.error().kind() == ErrorKind::AlreadyExists );
     SW_EXPECT_FALSE( twice.close().has_value() );
-    SW_EXPECT_FALSE( FileUtil::exists( packPath ) );
+    SW_EXPECT_FALSE( FileUtil::exists( FileUtil::toDiskPath( packPath ) ) );
 
     // 블록 크기 · 창은 기본값이 없다 — 비워 두면 열지 않는다.
     PackWriterDesc   noBlockSize = PackTestUtil::makeDesc( "game/test" );
@@ -125,12 +125,12 @@ SW_TEST_CASE( PackWriterTest, WriteResultHashEqualsHashOfTheFile )
     SW_REQUIRE_TRUE( result.has_value() );
 
     vector<uint8> fileBytes;
-    SW_REQUIRE_TRUE( FileUtil::readFile( packPath, fileBytes ) );
+    SW_REQUIRE_TRUE( FileUtil::readFile( FileUtil::toDiskPath( packPath ), fileBytes ) );
     SW_EXPECT_EQUAL( ContentHash::computeBytes( fileBytes ), result->_contentHash );
     SW_EXPECT_EQUAL( static_cast<uint64>( fileBytes.size() ), result->_fileSize );
     SW_EXPECT_TRUE( result->_indexOffset < result->_fileSize );
     SW_EXPECT_EQUAL( static_cast<uint32>( listEntry.size() ), result->_stats._entryCount );
-    SW_EXPECT_TRUE( FileUtil::removeFile( packPath ) );
+    SW_EXPECT_TRUE( FileUtil::removeFile( FileUtil::toDiskPath( packPath ) ) );
 }
 
 // 슬롯 배치는 앞 빌드의 자리를 지키고, 이번 빌드의 빈 자리가 한도를 넘으면 그 빌드에서 바로 촘촘히 다시 놓는다(한 빌드 늦게 걸러지지 않는다).
@@ -182,7 +182,7 @@ SW_TEST_CASE( PackWriterTest, SlotLayoutRepacksWhenThisBuildLeavesTooManyHoles )
     SW_REQUIRE_TRUE( readOffset( keptPath, keptOffset ) );
     SW_EXPECT_EQUAL( firstOffset, keptOffset );
     vector<uint8> fileBytes;
-    SW_REQUIRE_TRUE( FileUtil::readFile( packPath, fileBytes ) );
+    SW_REQUIRE_TRUE( FileUtil::readFile( FileUtil::toDiskPath( packPath ), fileBytes ) );
     SW_EXPECT_EQUAL( ContentHash::computeBytes( fileBytes ), kept->_contentHash );
 
     // 셋을 지우면 이번 빌드의 빈 자리가 한도를 넘는다 — 그 자리에서 촘촘히 다시 놓아 남은 항목이 맨 앞(0)에 온다.
@@ -191,7 +191,7 @@ SW_TEST_CASE( PackWriterTest, SlotLayoutRepacksWhenThisBuildLeavesTooManyHoles )
     uint64 denseOffset = 1;
     SW_REQUIRE_TRUE( readOffset( keptPath, denseOffset ) );
     SW_EXPECT_EQUAL( uint64{ 0 }, denseOffset );
-    SW_REQUIRE_TRUE( FileUtil::readFile( packPath, fileBytes ) );
+    SW_REQUIRE_TRUE( FileUtil::readFile( FileUtil::toDiskPath( packPath ), fileBytes ) );
     SW_EXPECT_EQUAL( ContentHash::computeBytes( fileBytes ), dense->_contentHash );
     PackReader reader;
     SW_REQUIRE_TRUE( reader.open( packPath ) );
@@ -199,5 +199,5 @@ SW_TEST_CASE( PackWriterTest, SlotLayoutRepacksWhenThisBuildLeavesTooManyHoles )
     SW_REQUIRE_TRUE( reader.readFile( keptPath, bytes ) );
     SW_EXPECT_TRUE( bytes == vector<uint8>( 3 * kPackSectorAlignment, uint8{ 3 } ) );
     reader.close();
-    SW_EXPECT_TRUE( FileUtil::removeFile( packPath ) );
+    SW_EXPECT_TRUE( FileUtil::removeFile( FileUtil::toDiskPath( packPath ) ) );
 }

@@ -9,8 +9,6 @@
 ## 진행 중(통합 때 지운다)
 
 - RHI 정리(w-rhiclean).
-- FileUtil 경로 형식 · ByteReader(w-iotypes).
-- 형식 개명(w-naming).
 
 ## 1. 다음 순서
 
@@ -121,6 +119,7 @@
 - 리플렉션 적용 후보: `ScreenshotStabilityMode` 열거형 칸(데이터 철자 `stability="assets"` 113 · `"none"` 33, 61 파일을 일괄 다시 쓸지 정한 뒤), `RigCopyTransformNode::Mode`(노드 클래스를 헤더로 옮길 때), DevTools 손 이름 표(`ReloadSource` · `MemoryDiffStatus`)와 `AutomationRunnerParams.h` 의 낡은 "DevTools 는 코드젠을 하지 않는다" 주석 — `ENUM()` 으로 옮길지 팬인 점수와 견준다. 각 형식 `Radians` 남은 몫(벡터 각 `float2` 경사 띠 · `float3` 오일러)은 회전 형식을 정할 때.
 - **이름:** `naming-words` 밖 멤버 · 지역 · 매개변수 형태(`_camelCase` · `out…` · 단수 컨테이너)를 단계적으로 자동 검사에 잇는다.
 - **App 종료 코드(낮음):** `Config/Engine/ProcessExitCodes.json` 스키마에 플랫폼 종료 코드 범위 · 예약 코드 · 자동화 결과 매핑 누락 검사와 생성기 테스트.
+- 형식 개명 남은 몫: `HousingPlotComponent`(GameMode 의 상태 바이트 세이브 · 비우기 수명을 쓴다 — 프리팹 스폰만으로 바꿀 수 없다), `UnitStatsComponent` 를 Runtime 으로 옮기려면 키트 형식(`ActionCombatEvents` · `MonsterCatalog`) 의존을 먼저 끊는다, `CueTriggerComponent` 의 `TriggerComponent` 상속을 정리한다. `Source/Games` 흡수 때 컴포넌트 이름을 기전으로 다시 짓는다([NamingCpp](agents/NamingCpp.md) "컴포넌트 이름").
 - `FrameViewports` 가 서버 · 쿠커 타깃에 불필요한 의존을 끄는지 include 그래프로 보고, 위반이 재현되면 뷰 계약을 나눈다.
 - 원점 이동 뒤 AI 인지의 마지막 본 자리(`AIPerceivedTarget::_lastKnownPosition`)가 옛 원점 기준인 것을 고친다.
 

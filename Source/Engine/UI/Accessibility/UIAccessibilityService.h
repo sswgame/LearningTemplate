@@ -8,8 +8,8 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/ServiceSlot.h"
+#include "Core/Subsystem/Subsystem.h"
 
 #include "Engine/Foundation/EngineSubsystemHost.h"
 #include "Engine/UI/Accessibility/IUIAccessibilityBridge.h"
@@ -32,13 +32,13 @@ namespace sw
      *          (`UISystem::onUpdateBeforeLayout`)에서 포커스가 옮겨 갔는지 본다. 스크린 리더가 붙어 있을 때만 일한다 — 붙지 않았으면 포커스 알림 · 트리 뽑기 · 알림 전달 모두
      *          아무것도 하지 않는다. 게임 스레드에서만 쓴다.
      */
-    class SW_API UIAccessibilityService final : public ISubsystem
+    class SW_API UIAccessibilityService final : public Subsystem
     {
     public:
         UIAccessibilityService();
         ~UIAccessibilityService() override;
 
-        // ISubsystem — 화면 스택에 의존한다. 종료는 브리지를 놓는다(창이 먼저 사라지는 호스트는 그 전에 `setBridge( nullptr )` 를 부른다).
+        // Subsystem — 화면 스택에 의존한다. 종료는 브리지를 놓는다(창이 먼저 사라지는 호스트는 그 전에 `setBridge( nullptr )` 를 부른다).
         /** @brief 서브시스템 이름입니다. */
         static constexpr const utf8* kSubsystemName = "UIAccessibility";
         SubsystemInitResult          initializeSubsystem() override;

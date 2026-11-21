@@ -15,18 +15,18 @@ namespace sw
 {
     struct AutomationStep;
 
-    class AutomationStepContext;
+    class IAutomationStepContext;
     class InputManager;
 
     /** @brief 단계 하나를 실행합니다. 단언 실패는 `context.recordFailure`, 실행할 수 없으면 false(읽기 오류로 끝난다). 게임 스레드입니다. */
-    using AutomationStepFunction = bool ( * )( AutomationStepContext& context, const AutomationStep& step );
+    using AutomationStepFunction = bool ( * )( IAutomationStepContext& context, const AutomationStep& step );
     /** @brief 시작 전에 단계의 속성을 검사합니다. 틀렸으면 그 이유(위치는 부르는 쪽이 `AutomationStep::describeError` 로 붙인다)입니다. */
     using AutomationStepValidateFunction = expected<void> ( * )( const AutomationStep& step );
     /**
      * @brief 검사를 통과한 단계를 시작할 때 실행기에 준비합니다(입력 단계는 가상 입력 원천으로 옮기고, 같은 프레임의 다른 단계와의 관계를 봅니다). 틀렸으면 그 이유입니다.
      * @details 검사(`_pValidate`)와 같은 때(시작 조건이 참인 프레임) 단계마다 한 번 돈다.
      */
-    using AutomationStepPrepareFunction = expected<void> ( * )( AutomationStepContext& context, const AutomationStep& step );
+    using AutomationStepPrepareFunction = expected<void> ( * )( IAutomationStepContext& context, const AutomationStep& step );
 
     /** @brief 씬 틱 뒤 단계 차례에서 그 단계를 어떻게 할지입니다. */
     enum class AutomationStepHold : uint8
@@ -36,7 +36,7 @@ namespace sw
         Skip, ///< 돌리지 않고 넘깁니다(실패는 묻는 함수가 적습니다).
     };
     /** @brief 씬 틱 뒤 단계 차례에 지금 돌릴지 묻습니다(조건 기다리기 · 스크린샷 기다리기). */
-    using AutomationStepHoldFunction = AutomationStepHold ( * )( AutomationStepContext& context, const AutomationStep& step, InputManager& input );
+    using AutomationStepHoldFunction = AutomationStepHold ( * )( IAutomationStepContext& context, const AutomationStep& step, InputManager& input );
 
     /**
      * @struct AutomationStepOptions

@@ -4,7 +4,7 @@
  * @details 속도: 속성 `MoveSpeedScale`(이펙트의 Multiply 모디파이어가 곱한다, 속성이 없는 개체는 배율 1 — 이펙트가 걸릴 속성이 없다는 뜻이다).
  *          이동 차단: 태그 `State.MoveBlocked`(자식 `State.MoveBlocked.Rooted` · `.Stunned` 도 같다 — 계층 일치). 점프 차단: `State.JumpBlocked`.
  *          여러 이펙트가 겹쳐도 태그는 개수(`TagCountTable`)로, 속성은 모디파이어 집계로 합성되므로 하나가 풀려도 다른 것의 제약은 남는다 — 효과의 소유 수명이 곧 제약의 수명이다.
- *          언리얼 GAS 의 `MovementSpeed` 속성 + 차단 태그(CharacterMovement 의 `GetMaxSpeed` 가 읽음)와 같은 나눔이다. 공용 이동기(`CharacterPawnMovementComponent` · 2D)가
+ *          언리얼 GAS 의 `MovementSpeed` 속성 + 차단 태그(CharacterMovement 의 `GetMaxSpeed` 가 읽음)와 같은 나눔이다. 공용 이동기(`CharacterMovementComponent` · 2D)가
  *          이것을 읽고, 이동을 직접 짜는 키트(AbilityArena 처럼 `MoveSpeed` 를 읽는 것)는 같은 함수를 부르면 같은 뜻이 된다.
  */
 #pragma once
@@ -31,7 +31,7 @@ namespace sw
         static TagID getJumpBlockedTag();
         /** @brief 속도 배율 속성 이름 `MoveSpeedScale` 입니다. */
         static const hashed_string& getSpeedScaleAttribute();
-        /** @brief @p owner 의 AbilityComponent 에서 지금 제약을 읽습니다. 컴포넌트가 없으면 제약이 없습니다(걸릴 이펙트가 없다). */
+        /** @brief @p owner 의 AbilitySystemComponent 에서 지금 제약을 읽습니다. 컴포넌트가 없으면 제약이 없습니다(걸릴 이펙트가 없다). */
         [[nodiscard]] static MovementConstraint read( const GameObject& owner );
     };
 } // namespace sw

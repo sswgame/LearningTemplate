@@ -55,7 +55,7 @@ namespace sw
          * @class SocialOnlineServerKit
          * @brief 친구 키트의 서버 조립입니다.
          */
-        class SocialOnlineServerKit final : public OnlineServerKit<OnlineKitRequired<>, OnlineKitOptional<const IAccountNameIndex, const ILedgerPolicy, IAccountPresence>, OnlineKitUnordered<IGroupChannelMembership>>
+        class SocialOnlineServerKit final : public OnlineServerKit<OnlineKitRequired<>, OnlineKitOptional<const IAccountNameIndex, const ILedgerPolicy, AccountPresence>, OnlineKitUnordered<IGroupChannelMembership>>
         {
         public:
             SocialOnlineServerKit()
@@ -103,7 +103,7 @@ namespace sw
                 _pGroupChannels = unordered.find<IGroupChannelMembership>();
                 if ( _pGroupChannels != nullptr )
                     _guildEventSubscription = _guildService.bindEventDelegate( SW_DELEGATE_METHOD( GuildEventDelegate, &SocialOnlineServerKit::onGuildEvent, this ) );
-                _socialServer.initialize( &_socialService, &_guildService, interfaces.find<IAccountPresence>(), context._pMetricRegistry );
+                _socialServer.initialize( &_socialService, &_guildService, interfaces.find<AccountPresence>(), context._pMetricRegistry );
                 return {};
             }
 

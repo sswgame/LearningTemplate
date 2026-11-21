@@ -22,7 +22,7 @@
 namespace sw
 {
     class PlayerProgressComponent;
-    class SessionStateComponent;
+    class GameStateComponent;
 
     /**
      * @class FrontierSkirmishGameModeComponent
@@ -56,7 +56,7 @@ namespace sw
 
     private:
         /** @brief 빈 월드를 열고 공유 땅과 지갑을 겁니다(시작과 복원이 같은 설정으로 연다). 카탈로그가 없으면 false 입니다. */
-        [[nodiscard]] static bool initializeWorld( RTSWorld& outWorld, SessionStateComponent& state, PlayerProgressComponent& progress );
+        [[nodiscard]] static bool initializeWorld( RTSWorld& outWorld, GameStateComponent& state, PlayerProgressComponent& progress );
         /** @brief 둘째 틱의 명령 — 병영 짓기와 첫 순찰 이동입니다. 거절되면 이유를 남긴다(데이터 오류). */
         void issueOpeningOrders();
         /** @brief 해병이 멈췄으면 순찰의 다른 끝으로 보냅니다. */

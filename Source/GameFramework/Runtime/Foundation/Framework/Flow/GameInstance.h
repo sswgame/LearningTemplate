@@ -83,7 +83,7 @@ namespace sw
          *          `onInitialize` 에 들어갔으면 `onShutdown`). 호스트의 모듈 절차는 실패한 인스턴스에 `shutdown` 을 부르지 않으므로(`ModuleInstanceUtil::createInstance`)
          *          되감기는 인스턴스의 일이다. 이미 다른 인스턴스가 돌면(프로세스당 하나) 아무것도 걸지 않고 false 다.
          */
-        [[nodiscard]] bool initialize( IWindow* pWindow ) final;
+        [[nodiscard]] bool initialize( GenericWindow* pWindow ) final;
         /**
          * @brief onShutdown 뒤에 `GameSettings` 서비스를 풀고 윈도우 · RHI 포인터를 끊습니다.
          * @details 세운 만큼만 내리고 두 번 불러도 된다 — 실패한 `initialize` 의 되감기와 호스트의 종료가 같은 함수다. 종료 저장은 다 선 인스턴스만 맡긴다.
@@ -356,7 +356,7 @@ namespace sw
          * @details 네트워크 세션은 모든 호스트의 필수 서비스다. UI · 사용자 설정은 Client 호스트 서비스라 창이 있는 호스트(클라이언트)에서는 필수이고,
          *          창이 없는 호스트(전용 서버 · 테스트)에서만 없다. 필수 서비스가 없으면 오류를 남기고 false 입니다(인스턴스가 서지 않는다).
          */
-        [[nodiscard]] static bool validateEngineServices( const IWindow* pWindow );
+        [[nodiscard]] static bool validateEngineServices( const GenericWindow* pWindow );
         /**
          * @brief `GameSettings` 의 다국어 · 입력 맵 칸을 적용합니다. 파일을 못 읽은 것은 알리고 넘어갑니다(게임은 뜬다).
          * @return 입력 맵을 적었는데 입력 서비스(`InputManager`)가 없으면 오류를 남기고 false 입니다 — 호스트의 결함이라 조용히 건너뛰지 않는다.
@@ -392,7 +392,7 @@ namespace sw
 
     protected:
         GamePackConfig _packConfig; ///< 팩 루트와 gamesettings
-        IWindow*       _pWindow;    ///< 호스트 윈도우 (App 이 소유)
+        GenericWindow* _pWindow;    ///< 호스트 윈도우 (App 이 소유)
 
     private:
         GameStateSnapshot                 _stateSnapshot;       ///< 상태 스냅샷 봉투와 그 봉투에 오른 컴포넌트 타입

@@ -41,7 +41,7 @@ namespace sw::editor
     SW_EDITOR_PANEL( VolumetricFogPanel, VolumetricFogPanel::kPanelID, EditorPanelCategory::Tool, 910 );
 
     VolumetricFogPanel::VolumetricFogPanel()
-        : IEditorPanel( false )
+        : EditorPanel( false )
         , _viewModel{}
         , _viewState{}
     {

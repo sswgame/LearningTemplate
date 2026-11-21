@@ -20,14 +20,14 @@ namespace sw::editor
         if ( absolutePath.empty() )
             return nullopt;
         const string path = FileUtil::normalizeSeparators( absolutePath );
-        if ( FileUtil::isDirectory( path ) == false )
-            return FileUtil::isReadOnlyFile( path ) ? optional<string>{ path } : nullopt; // 없는 파일(새로 만들 자리)은 막지 않는다
+        if ( FileUtil::isDirectory( FileUtil::toDiskPath( path ) ) == false )
+            return FileUtil::isReadOnlyFile( FileUtil::toDiskPath( path ) ) ? optional<string>{ path } : nullopt; // 없는 파일(새로 만들 자리)은 막지 않는다
         vector<string> listFile;
-        if ( FileUtil::collectFiles( path, "", listFile, true ) == false )
+        if ( FileUtil::collectFiles( FileUtil::toDiskPath( path ), "", listFile, true ) == false )
             return nullopt; // 목록을 못 읽은 폴더는 옮기기 · 지우기 자체가 이유를 남기고 진다
         for ( const string& filePath : listFile )
         {
-            if ( FileUtil::isReadOnlyFile( filePath ) )
+            if ( FileUtil::isReadOnlyFile( FileUtil::toDiskPath( filePath ) ) )
                 return FileUtil::normalizeSeparators( filePath );
         }
         return nullopt;

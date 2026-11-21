@@ -3,7 +3,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Testing/TestFramework.h"
 
-#include "GameFramework/Runtime/Character/Control/Pawn/CharacterPawnMovement2DComponent.h"
+#include "GameFramework/Runtime/Character/Control/Pawn/CharacterMovement2DComponent.h"
 
 // PawnMovement2DTest — 의도에서 수평 속도로 가는 규칙(가감속 · 끝 맞춤). 실제 2D 물리 위의 걷기 · 점프는 시나리오 game.playground.twodphysics 가 본다(nogpu).
 
@@ -20,7 +20,7 @@ namespace
 
         static float32 step( float32 current, float32 moveRight )
         {
-            return CharacterPawnMovement2DComponent::computeVelocity( current, moveRight, kWalk, kAcceleration, kDeceleration, kDelta );
+            return CharacterMovement2DComponent::computeVelocity( current, moveRight, kWalk, kAcceleration, kDeceleration, kDelta );
         }
     };
     using Util = PawnMovement2DTestUtil;

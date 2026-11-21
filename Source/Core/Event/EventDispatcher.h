@@ -14,8 +14,8 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Memory/MemoryBlock.h"
 #include "Core/Name/hashed_string.h"
-#include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/ServiceSlot.h"
+#include "Core/Subsystem/Subsystem.h"
 
 #include <thread>
 
@@ -51,7 +51,7 @@ namespace sw
      *       안에서의 안전성이 깨집니다. 잠금을 재귀로 바꿔 broadcast 전체를 감싸는 방법은, 임의의 콜백이 도는 내내 다른
      *       스레드를 세워 둡니다. 제대로 열려면 reader-writer 방식으로 다시 설계해야 합니다.
      */
-    class SW_API EventDispatcher final : public ISubsystem
+    class SW_API EventDispatcher final : public Subsystem
     {
     public:
         /** @brief 서브시스템 이름입니다. 초기화 · 종료할 것이 없고 수명(서비스 범위 — 엔진 범위보다 먼저 서고 나중에 사라진다)만 컬렉션이 정한다. */
@@ -79,7 +79,7 @@ namespace sw
         template <typename T>
         [[nodiscard]] Subscription subscribe( hashed_string channel, const Delegate<void( const T& )>& delegate )
         {
-            return subscribeErased( channel, T::kType, SW_DELEGATE_LAMBDA( Delegate<void( const IEvent& )>, [delegate]( const IEvent& eventRef )
+            return subscribeErased( channel, T::kType, SW_DELEGATE_LAMBDA( Delegate<void( const EventBase& )>, [delegate]( const EventBase& eventRef )
             { delegate( static_cast<const T&>( eventRef ) ); } ) );
         }
 
@@ -142,7 +142,7 @@ namespace sw
             }
 
             ChannelEventList* pList    = iter->second.get();
-            IEvent*           pOldHead = pList->_pHead.load( std::memory_order_relaxed );
+            EventBase*        pOldHead = pList->_pHead.load( std::memory_order_relaxed );
             pQueuedEvent->_next.store( pOldHead, std::memory_order_relaxed );
             pList->_pHead.store( pQueuedEvent, std::memory_order_release );
         }
@@ -174,7 +174,7 @@ namespace sw
             size_t               count = 0;
             for ( const auto& [channel, list] : _mapChannelQueue )
             {
-                IEvent* pCurr = list->_pHead.load( std::memory_order_relaxed );
+                EventBase* pCurr = list->_pHead.load( std::memory_order_relaxed );
                 while ( pCurr != nullptr )
                 {
                     count++;
@@ -222,16 +222,16 @@ namespace sw
         /** @brief 채널 하나의 lock-free 이벤트 연결 리스트 헤드입니다. */
         struct ChannelEventList
         {
-            atomic<IEvent*> _pHead{ nullptr };
+            atomic<EventBase*> _pHead{ nullptr };
         };
 
         /** @brief 채널 하나 — 타입을 지운 멀티캐스트입니다. 이 형의 코드는 `EventDispatcher.cpp`(Core)에서만 인스턴스화된다. */
-        using ChannelMulticast = MulticastDelegate<void( const IEvent& )>;
+        using ChannelMulticast = MulticastDelegate<void( const EventBase& )>;
 
         /** @brief 타입을 지운 구독입니다(`subscribe` 의 본체). */
-        Subscription subscribeErased( hashed_string channel, EventTypeID type, Delegate<void( const IEvent& )> delegate );
+        Subscription subscribeErased( hashed_string channel, EventTypeID type, Delegate<void( const EventBase& )> delegate );
         /** @brief 타입을 지운 즉시 발행입니다(`publish` 의 본체). */
-        void publishErased( hashed_string channel, EventTypeID type, const IEvent& eventRef );
+        void publishErased( hashed_string channel, EventTypeID type, const EventBase& eventRef );
         /** @brief 채널 + 타입의 멀티캐스트를 찾거나 만듭니다. `_busSpinLock` 을 **잡은 채로** 부르십시오. */
         shared_ptr<ChannelMulticast> getOrCreateChannelUnlocked( hashed_string channel, EventTypeID type ) SW_REQUIRES_LOCK( _busSpinLock );
 

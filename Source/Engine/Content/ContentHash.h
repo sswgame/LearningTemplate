@@ -20,8 +20,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Path/AbsolutePath.h"
-#include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/ServiceSlot.h"
+#include "Core/Subsystem/Subsystem.h"
 
 namespace sw
 {
@@ -74,7 +74,7 @@ namespace sw
      *          (git 색인 · 언리얼 `FFileHashCache` 자리). 저장 시각의 시간 창 안에 고쳐진 도장은 싣지 않는다(위 시간 창을 파일로 넓힌 것 — 저장 뒤 같은 틱에
      *          바깥 도구가 같은 크기로 다시 쓰면 도장으로 알 길이 없다). 파일이 없거나 판이 다르면 빈 캐시다 — 캐시라 폴백이 아니다.
      */
-    class SW_API ContentHashCache final : public ISubsystem
+    class SW_API ContentHashCache final : public Subsystem
     {
     public:
         /** @brief 서브시스템 이름입니다. */
@@ -82,7 +82,7 @@ namespace sw
 
         ContentHashCache();
 
-        // ISubsystem — 파일 계층에 쓰기 관찰자로 붙는다(항목은 처음 묻는 파일부터 채운다).
+        // Subsystem — 파일 계층에 쓰기 관찰자로 붙는다(항목은 처음 묻는 파일부터 채운다).
         SubsystemInitResult initializeSubsystem() override;
         void                shutdownSubsystem() override;
         const utf8*         getSubsystemName() const override { return kSubsystemName; }

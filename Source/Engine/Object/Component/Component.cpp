@@ -9,7 +9,9 @@
 #include "Engine/Foundation/StateHashBuilder.h"
 #include "Engine/Object/Component/ComponentDefaults.h"
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
+#include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Reflection/ReflectVisit.h"
 #include "Engine/Reflection/ReflectedValue.h"
 
@@ -246,6 +248,8 @@ namespace sw
         if ( _bRegistered == SW_TRUE )
             return;
         _bRegistered = SW_TRUE;
+        // 내보낸 인터페이스(`REFLECT_INTERFACE`)는 레지스트리의 인터페이스 칸에 저절로 오른다 — 컴포넌트가 손으로 `add` 하던 자리를 형식의 표가 대신한다.
+        manager.getComponentRegistry().addInterfaces( *this );
         onRegister( manager );
     }
 
@@ -261,6 +265,19 @@ namespace sw
             return;
         _bRegistered = SW_FALSE;
         onUnregister( manager );
+        manager.getComponentRegistry().removeInterfaces( *this );
+    }
+
+    void* Component::findInterfacePort( const TypeInfo* pInterface ) const
+    {
+        const TypeInfo* pType = findCachedTypeInfo();
+        if ( pType == nullptr || pInterface == nullptr )
+            return nullptr;
+        const TypeInterfaceEntry* pEntry = pType->getInterfacesWithBase().find( pInterface->_fullyQualifiedName );
+        if ( pEntry == nullptr )
+            return nullptr;
+        // 리플렉트 형식은 기반 하나라 `this` 가 가장 파생된 형식의 시작이다(`castTo` 와 같은 전제) — 오프셋은 그 시작에서 잰 값이다.
+        return const_cast<uint8*>( reinterpret_cast<const uint8*>( this ) ) + pEntry->_portOffset;
     }
 
     void Component::dispatchBeginPlay()

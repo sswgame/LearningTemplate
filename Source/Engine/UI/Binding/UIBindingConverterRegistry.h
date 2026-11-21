@@ -9,8 +9,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
 #include "Core/Registry/RegistrationList.h"
-#include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/ServiceSlot.h"
+#include "Core/Subsystem/Subsystem.h"
 
 #include "Engine/UI/Binding/UIBindingValue.h"
 
@@ -38,10 +38,10 @@ namespace sw
      * @details 게임과 키트가 자기 변환기를 추가하고 돌려받은 구독을 든다 — 구독이 사라지면(모듈의 객체와 함께) 거두고, 엔진 기본을 덮었던 이름이면 기본으로 돌아간다.
      *          게임 스레드에서만 쓴다.
      */
-    class SW_API UIBindingConverterRegistry final : public ISubsystem
+    class SW_API UIBindingConverterRegistry final : public Subsystem
     {
     public:
-        // ISubsystem — 엔진 범위의 서브시스템이다(`engine::getSubsystem<UIBindingConverterRegistry>()`, 게임은 `game::getSubsystem<UIBindingConverterRegistry>()`).
+        // Subsystem — 엔진 범위의 서브시스템이다(`engine::getSubsystem<UIBindingConverterRegistry>()`, 게임은 `game::getSubsystem<UIBindingConverterRegistry>()`).
         /** @brief 서브시스템 이름입니다. */
         static constexpr const utf8* kSubsystemName = "UIBindingConverters";
         UIBindingConverterRegistry();

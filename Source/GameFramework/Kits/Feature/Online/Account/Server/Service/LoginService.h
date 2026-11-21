@@ -1,7 +1,7 @@
 /**
  * @file LoginService.h
  * @brief 로그인 서비스입니다. 가입, 로그인, 게스트 로그인, 외부 로그인, 재접속, 검증, 로그아웃, 중복 로그인, 연동, 탈퇴, 게임 접속 티켓 발급을 처리합니다. 전송은 모르며 스트림 바인딩은 `AccountServer` 가 맡습니다.
- * @details - 상태는 모두 저장소(`IServiceStore`)에 있다. 이 객체가 메모리에 가지는 것은 "이 프로세스에 접속해 있는 계정", 시도 버킷, 외부 확인 대기뿐이다.
+ * @details - 상태는 모두 저장소(`ServiceStore`)에 있다. 이 객체가 메모리에 가지는 것은 "이 프로세스에 접속해 있는 계정", 시도 버킷, 외부 확인 대기뿐이다.
  *            그래서 서버를 다시 시작해도 세션과 계정은 그대로이고 클라이언트는 토큰으로 돌아온다(`resumeSession`).
  *          - 요청은 저장소에 작업으로 맡기고(해시와 저장은 저장소 워커에서 실행) 결과는 `takeCompletions` 로 요청 태그와 함께 회수한다. 서비스 스레드는 DB 를 기다리지 않는다.
  *            저장소의 `pollCompletions` 는 이 서비스의 스레드에서 부른다. 외부 로그인은 제공자 확인(`IPlatformLoginProvider`)을 거친 뒤 작업을 맡기며, `tick` 이 그 결과를 회수한다.
@@ -48,7 +48,7 @@ namespace sw
     struct LoginStoreResult;
 
     class EphemeralStoreRouter;
-    class IServiceStore;
+    class ServiceStore;
     class LoginSecretVault;
     class RemoteConfig;
     class TaskManager;
@@ -108,7 +108,7 @@ namespace sw
          * @details 비밀번호 해시는 저장소 워커가 아니라 @p pTaskManager 위의 상한 있는 줄(`PasswordHashQueue`, `_maxConcurrentPasswordHashes` · `_maxQueuedPasswordHashes`)에서 돈다.
          *          작업 풀이 없거나 상한이 1 미만이면 오류입니다(기동 실패 — 저장소 워커로 대신하지 않는다).
          */
-        [[nodiscard]] expected<void> initialize( IServiceStore* pStore, ILoginCrypto* pCrypto, IPasswordHasher* pHasher, TaskManager* pTaskManager, const LoginServiceConfig& settings,
+        [[nodiscard]] expected<void> initialize( ServiceStore* pStore, ILoginCrypto* pCrypto, IPasswordHasher* pHasher, TaskManager* pTaskManager, const LoginServiceConfig& settings,
                                                  const uint8 ( &arrTicketMasterKey )[LoginTicketAuthority::kMasterKeySize] );
         void                         shutdown();
 

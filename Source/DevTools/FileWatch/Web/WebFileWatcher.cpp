@@ -6,11 +6,11 @@
  */
 #include "pch.h"
 
-#include "DevTools/FileWatch/IFileWatcher.h"
+#include "DevTools/FileWatch/FileWatcher.h"
 
 namespace sw
 {
-    unique_ptr<IFileWatcher> IFileWatcher::createNative()
+    unique_ptr<FileWatcher> FileWatcher::createNative()
     {
         return nullptr;
     }

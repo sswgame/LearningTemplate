@@ -17,12 +17,12 @@ using namespace sw;
 namespace
 {
     /** @brief 부모를 글 표에서 읽습니다. */
-    class ResourceComposerTestSource final : public IDataInheritanceSource
+    class ResourceComposerTestSource final : public DataInheritanceSource
     {
     public:
         /** @brief 설정(`EngineConfig.json`)과 같은 깊이 상한을 싣습니다. */
         ResourceComposerTestSource()
-            : IDataInheritanceSource{ 8u }
+            : DataInheritanceSource{ 8u }
         {
         }
 

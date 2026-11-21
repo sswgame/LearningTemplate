@@ -197,15 +197,15 @@ namespace sw
     UserDataFolderStamp UserDataFolderStamp::take( string_view folder )
     {
         UserDataFolderStamp stamp;
-        stamp._bExists = FileUtil::isDirectory( folder );
+        stamp._bExists = FileUtil::isDirectory( FileUtil::toDiskPath( folder ) );
         if ( stamp._bExists == false )
             return stamp;
-        (void)FileUtil::getFileWriteTime( folder, stamp._latestWriteTicks ); // 못 읽으면 0 — 항목 시각이 채운다
-        (void)FileUtil::forEachDirectoryEntry( folder, true, [&stamp]( const DirectoryEntry& entry )
+        (void)FileUtil::getFileWriteTime( FileUtil::toDiskPath( folder ), stamp._latestWriteTicks ); // 못 읽으면 0 — 항목 시각이 채운다
+        (void)FileUtil::forEachDirectoryEntry( FileUtil::toDiskPath( folder ), true, [&stamp]( const DirectoryEntry& entry )
         {
             ++stamp._entryCount;
             int64 ticks = 0;
-            if ( FileUtil::getFileWriteTime( entry._path, ticks ) && ticks > stamp._latestWriteTicks )
+            if ( FileUtil::getFileWriteTime( FileUtil::toDiskPath( entry._path ), ticks ) && ticks > stamp._latestWriteTicks )
                 stamp._latestWriteTicks = ticks;
             return true;
         } ); // 훑다 멈추면 그때까지의 수 — 다음에 찍을 때 달라져 바뀐 것으로 보인다(거짓 통과가 아니다)

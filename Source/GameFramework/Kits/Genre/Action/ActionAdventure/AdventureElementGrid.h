@@ -23,8 +23,8 @@
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Runtime/Gameplay/Gimmick/ElementGrid.h"
-#include "GameFramework/Runtime/Gameplay/Gimmick/ElementRuleCatalog.h"
+#include "GameFramework/Runtime/Gameplay/Gimmick/Element/ElementGrid.h"
+#include "GameFramework/Runtime/Gameplay/Gimmick/Element/ElementRuleCatalog.h"
 
 namespace sw
 {

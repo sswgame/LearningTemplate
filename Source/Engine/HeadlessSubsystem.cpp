@@ -235,7 +235,7 @@ namespace sw
                         SW_LOG_ERROR_ID( "Headless.PatchSignKeyGiven", "-patch-sign-key was given but no INetSecurityProvider is published (GameFramework is not loaded) - no patch is written" );
                         return false;
                     }
-                    if ( FileUtil::readTextFile( signKeyPath, params._signer._privateKeyPem ) == false || params._signer._privateKeyPem.empty() )
+                    if ( FileUtil::readTextFile( FileUtil::toDiskPath( signKeyPath ), params._signer._privateKeyPem ) == false || params._signer._privateKeyPem.empty() )
                     {
                         SW_LOG_ERROR_ID( "Headless.PatchSignKeyFile", "-patch-sign-key file '%#' could not be read or is empty - no patch is written", signKeyPath );
                         return false;

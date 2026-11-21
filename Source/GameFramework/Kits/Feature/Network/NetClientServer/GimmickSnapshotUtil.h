@@ -15,7 +15,7 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Network/NetClientServer/NetSnapshot.h"
-#include "GameFramework/Runtime/Gameplay/Gimmick/GimmickStateBundle.h"
+#include "GameFramework/Runtime/Gameplay/Gimmick/Circuit/GimmickStateBundle.h"
 
 namespace sw
 {

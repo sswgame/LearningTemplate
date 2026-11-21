@@ -38,8 +38,8 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Registry/RegistrationList.h"
-#include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/ServiceSlot.h"
+#include "Core/Subsystem/Subsystem.h"
 
 #include "Engine/Module/ModuleEntryRegistrar.h"
 #include "Engine/Object/GameObject/Tick/StructuralChangeBuffer.h"
@@ -58,7 +58,7 @@ namespace sw
      * @details 씬은 생성 때 받은 서비스 묶음의 칸(`SceneEngineServices::_pTickBatchRegistry`)으로 읽는다 — 칸이 비면(엔진 없는 테스트 매니저) 일괄 경로가 없다.
      * @note 조회(`findFunction`)는 게임 스레드에서 틱 밖(`TickRegistry::refresh`)에만 합니다. 등록 · 해제는 모듈을 올리고 내리는 스레드에서 옵니다.
      */
-    class SW_API TickBatchRegistry final : public ISubsystem
+    class SW_API TickBatchRegistry final : public Subsystem
     {
     public:
         /** @brief 서브시스템 이름입니다. */
@@ -79,7 +79,7 @@ namespace sw
             TickMode           _mode;        ///< 그 타입이 선언한 모드
         };
 
-        // ISubsystem — 세울 것이 없다(줄은 모듈을 올리는 길이 붙인다).
+        // Subsystem — 세울 것이 없다(줄은 모듈을 올리는 길이 붙인다).
         SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
         void                shutdownSubsystem() override {}
         const utf8*         getSubsystemName() const override { return kSubsystemName; }

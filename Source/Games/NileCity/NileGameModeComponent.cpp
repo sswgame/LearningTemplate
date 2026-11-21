@@ -326,9 +326,9 @@ namespace sw
         }
     }
 
-    SessionStateRefs NileGameModeComponent::makeRefs()
+    GameStateRefs NileGameModeComponent::makeRefs()
     {
-        SessionStateRefs refs;
+        GameStateRefs refs;
         refs._pWallet = &_wallet;
         return refs;
     }

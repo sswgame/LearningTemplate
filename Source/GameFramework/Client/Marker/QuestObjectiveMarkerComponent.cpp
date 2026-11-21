@@ -5,8 +5,8 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
+#include "GameFramework/Runtime/Gameplay/GameState/PlayerProgressComponent.h"
 #include "GameFramework/Runtime/Gameplay/Quest/QuestLog.h"
-#include "GameFramework/Runtime/Gameplay/SessionState/PlayerProgressComponent.h"
 
 namespace sw
 {

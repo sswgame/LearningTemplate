@@ -378,7 +378,7 @@ namespace sw
         [[nodiscard]] static bool readHeader( Archive& archive, uint32 tag, uint32 version );
         /**
          * @brief 구간 하나를 씁니다. 표, 버전, 본문 길이(uint32), 본문 순입니다. 읽는 쪽은 모르는 표를 길이로 건너뜁니다.
-         * @details 상태 하나에 키트와 기반 상태 여럿을 실을 때 쓴다(`SessionStateComponent`, 키트 여럿을 든 디렉터).
+         * @details 상태 하나에 키트와 기반 상태 여럿을 실을 때 쓴다(`GameStateComponent`, 키트 여럿을 든 디렉터).
          *          한 구간의 형식이 바뀌어도 다른 구간은 그대로 읽히고, 빠진 구간은 읽는 쪽이 새 판으로 둔다.
          *          @p body 는 쓰기 모드로 다 쓴 아카이브이다.
          */
@@ -391,7 +391,7 @@ namespace sw
         /**
          * @brief 표가 @p tag 이고 버전이 @p version 인 구간 하나를 읽어 본문을 @p outBody 로 자릅니다. 다른 표이거나 올릴 수 없는 판이면 false 입니다.
          * @details 자리가 정해진 구간(디렉터가 든 키트 상태)은 이것으로 읽는다 — 표와 버전을 부르는 쪽이 따로 견주면 하나를 빼먹는다(버전을 안 봐 옛 판을 새 판으로 읽었다).
-         *          옛 판 구간은 `upgradeSectionBody` 로 올린 본문(@p outBody 가 소유)을 돌려준다. 표로 갈라 읽는 쪽(`SessionStateComponent`)만 `readSection` 을 쓴다.
+         *          옛 판 구간은 `upgradeSectionBody` 로 올린 본문(@p outBody 가 소유)을 돌려준다. 표로 갈라 읽는 쪽(`GameStateComponent`)만 `readSection` 을 쓴다.
          */
         [[nodiscard]] static bool readExpectedSection( Archive& archive, uint32 tag, uint32 version, Archive& outBody );
         /**

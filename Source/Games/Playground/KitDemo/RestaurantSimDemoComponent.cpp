@@ -10,7 +10,7 @@
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Simulation/RestaurantSim/RestaurantSimulation.h"
-#include "GameFramework/Runtime/Foundation/Framework/SessionStateRefs.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameStateRefs.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Wallet.h"
 
@@ -55,12 +55,12 @@ namespace sw
 
     bool RestaurantSimDemoComponent::runDay()
     {
-        // 지갑 · 창고는 이 하루만 빌려 준다. 평판 · 시계 · 시장은 쓰지 않는다(없으면 끈다 — `SessionStateRefs`).
+        // 지갑 · 창고는 이 하루만 빌려 준다. 평판 · 시계 · 시장은 쓰지 않는다(없으면 끈다 — `GameStateRefs`).
         Wallet    wallet;
         Inventory pantry;
         if ( pantry.initialize( nullptr, RestaurantSimDemoComponentInternal::kPantrySlots ) == false )
             return false;
-        SessionStateRefs refs;
+        GameStateRefs refs;
         refs._pWallet = &wallet;
 
         RestaurantSimulation simulation;

@@ -14,7 +14,7 @@
 #include "Engine/Reflection/EnumName.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameplayDebugTarget.h"
-#include "GameFramework/Runtime/Gameplay/Ability/AbilityComponent.h"
+#include "GameFramework/Runtime/Gameplay/Ability/AbilitySystemComponent.h"
 
 namespace sw
 {
@@ -26,8 +26,8 @@ namespace sw
 
             static void writeAbility( DebugHUDSectionWriter& writer )
             {
-                const GameObjectManager* const pManager = GameplayDebugTarget::findActiveObjectManager();
-                const AbilityComponent* const  pAbility = pManager != nullptr ? GameplayDebugTarget::findTargetOrLowestIDComponent<AbilityComponent>( writer.getSceneIterationKey(), *pManager ) : nullptr;
+                const GameObjectManager* const      pManager = GameplayDebugTarget::findActiveObjectManager();
+                const AbilitySystemComponent* const pAbility = pManager != nullptr ? GameplayDebugTarget::findTargetOrLowestIDComponent<AbilitySystemComponent>( writer.getSceneIterationKey(), *pManager ) : nullptr;
                 if ( pAbility == nullptr )
                 {
                     writer.addLine( "target", "none (no ability component in the active scene)" );
@@ -78,13 +78,13 @@ namespace sw
         /** @brief 시험 조작(읽기 전용 디버거와 나눈다) — 이펙트를 대상에 건다. 건 길은 `devcommand` 로 적혀 디버거가 구별한다. */
         struct AbilityTestCommandsInternal
         {
-            /** @brief `ability.apply <이펙트 id>` — `debug.target` 의 AbilityComponent(없으면 첫 것)에 건다. 거부되면 까닭이 디버거 기록에 남는다. */
+            /** @brief `ability.apply <이펙트 id>` — `debug.target` 의 AbilitySystemComponent(없으면 첫 것)에 건다. 거부되면 까닭이 디버거 기록에 남는다. */
             static bool runApply( SceneIterationKey key, const vector<string>& listArgument, string& outReply )
             {
                 if ( listArgument.size() != 1 )
                     return false;
                 const GameObjectManager* const pManager = GameplayDebugTarget::findActiveObjectManager();
-                AbilityComponent* const        pAbility = pManager != nullptr ? GameplayDebugTarget::findTargetOrLowestIDComponent<AbilityComponent>( key, *pManager ) : nullptr;
+                AbilitySystemComponent* const  pAbility = pManager != nullptr ? GameplayDebugTarget::findTargetOrLowestIDComponent<AbilitySystemComponent>( key, *pManager ) : nullptr;
                 if ( pAbility == nullptr )
                 {
                     outReply = "ability.apply: no ability component in the active scene";

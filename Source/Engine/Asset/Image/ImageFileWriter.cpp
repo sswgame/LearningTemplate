@@ -95,7 +95,7 @@ namespace sw
         LittleEndianUtil::appendUint32( bytes, 1 ); // 배열 크기
         LittleEndianUtil::appendUint32( bytes, 0 ); // misc2
         bytes.insert( bytes.end(), payload.begin(), payload.end() );
-        if ( FileUtil::writeFile( path, bytes.data(), bytes.size() ) == false )
+        if ( FileUtil::writeFile( FileUtil::toDiskPath( path ), bytes.data(), bytes.size() ) == false )
         {
             SW_LOG_ERROR_ID( "ImageFileWriter.FailedWriteDDS", "Failed to write DDS '%#'", string( path ).c_str() );
             return false;
@@ -154,7 +154,7 @@ namespace sw
         encodePNGRGBA8( rgbaBytes, width, height, bytes );
         if ( bytes.empty() )
             return false;
-        if ( FileUtil::writeFile( path, bytes.data(), bytes.size() ) == false )
+        if ( FileUtil::writeFile( FileUtil::toDiskPath( path ), bytes.data(), bytes.size() ) == false )
         {
             SW_LOG_ERROR_ID( "ImageFileWriter.FailedWritePNG", "Failed to write PNG '%#'", string( path ).c_str() );
             return false;

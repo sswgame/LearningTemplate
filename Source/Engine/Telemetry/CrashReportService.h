@@ -12,8 +12,8 @@
 #include "Core/Delegate/Delegate.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/ServiceSlot.h"
+#include "Core/Subsystem/Subsystem.h"
 
 namespace sw
 {
@@ -69,7 +69,7 @@ namespace sw
      *          **동의**를 바꾸면 이미 있는 묶음에도 적용합니다: `local` 로 바꾸면 기다리던 · 보낼 줄의 묶음이 기계 안으로 돌아오고(철회), `send` 로 바꾸면
      *          답을 기다리던 묶음이 보낼 줄에 섭니다(이미 `local` 로 모인 묶음은 소급해 보내지 않는다).
      */
-    class SW_API CrashReportService : public ISubsystem
+    class SW_API CrashReportService : public Subsystem
     {
     public:
         /** @brief 서브시스템 이름입니다. 초기화 · 종료할 것이 없고 수명(서비스 범위 — 엔진 범위보다 먼저 서고 나중에 사라진다)만 컬렉션이 정한다. */

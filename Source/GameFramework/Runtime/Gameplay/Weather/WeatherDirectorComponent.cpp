@@ -8,7 +8,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
-#include "GameFramework/Runtime/Gameplay/SessionState/SessionStateComponent.h"
+#include "GameFramework/Runtime/Gameplay/GameState/GameStateComponent.h"
 #include "GameFramework/Runtime/Gameplay/Weather/DecalRainWashSystem.h"
 #include "GameFramework/Runtime/World/Environment/WeatherSystem.h"
 
@@ -36,10 +36,10 @@ namespace sw
             SW_LOG_ERROR_ID( "WeatherDirector.CatalogMissing", "'%#': weather catalog '%#' could not be read - the scene has no weather", pOwnerName, _weatherDataPath.path().c_str() );
             return;
         }
-        SessionStateSettings settings{};
-        settings._pWeatherCatalog     = _pCatalog.snapshot();
-        settings._weatherSeed         = _seed;
-        SessionStateComponent* pState = SessionStateComponent::openOnOwner( *this, settings );
+        GameStateSettings settings{};
+        settings._pWeatherCatalog  = _pCatalog.snapshot();
+        settings._weatherSeed      = _seed;
+        GameStateComponent* pState = GameStateComponent::openOnOwner( *this, settings );
         if ( pState != nullptr )
         {
             if ( GameObjectManager* const pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr; pManager != nullptr )

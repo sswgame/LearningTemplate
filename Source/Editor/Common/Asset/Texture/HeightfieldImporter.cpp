@@ -109,7 +109,7 @@ namespace sw::editor
             [[nodiscard]] static bool readSplatImage( string_view path, RawImageData& outImage )
             {
                 vector<uint8> bytes;
-                if ( FileUtil::readFile( path, bytes ) == false || bytes.empty() )
+                if ( FileUtil::readFile( FileUtil::toDiskPath( path ), bytes ) == false || bytes.empty() )
                 {
                     SW_LOG_ERROR_ID( "HeightfieldImporter.FailedReadSplatSource", "Failed to read splat source '%#'", path );
                     return false;
@@ -129,13 +129,13 @@ namespace sw::editor
             [[nodiscard]] static bool readHoles( string_view sourcePath, HeightfieldAsset& inoutData )
             {
                 const string holePath = makeHolePath( sourcePath );
-                if ( FileUtil::exists( holePath ) == false )
+                if ( FileUtil::exists( FileUtil::toDiskPath( holePath ) ) == false )
                     return true;
                 vector<uint8>  bytes;
                 vector<uint16> listSample;
                 int32          width{ 0 };
                 int32          height{ 0 };
-                if ( FileUtil::readFile( holePath, bytes ) == false )
+                if ( FileUtil::readFile( FileUtil::toDiskPath( holePath ), bytes ) == false )
                 {
                     SW_LOG_ERROR_ID( "HeightfieldImporter.HeightfieldHoleMaskCould", "Heightfield hole mask '%#' could not be opened", holePath.c_str() );
                     return false;
@@ -212,7 +212,7 @@ namespace sw::editor
                     if ( HeightfieldImporter::readLayerWeights( sourcePath, data ) == false )
                         return false;
                     const optional<AbsolutePath> importedFile = FileUtil::requireAbsolutePath( importedPath );
-                    return importedFile.has_value() && FileUtil::ensureParentDirectoryExists( importedPath ) && data.saveToFile( *importedFile );
+                    return importedFile.has_value() && FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( importedPath ) ) && data.saveToFile( *importedFile );
                 }
                 return HeightfieldImporter::importHeightfield( sourcePath, importedPath );
             }
@@ -260,7 +260,7 @@ namespace sw::editor
             return false;
         RawImageData highImage;
         const string highPath = Internal::makeHighSplatPath( sourcePath );
-        const bool   bHasHigh = FileUtil::exists( highPath );
+        const bool   bHasHigh = FileUtil::exists( FileUtil::toDiskPath( highPath ) );
         if ( bHasHigh )
         {
             if ( Internal::readSplatImage( highPath, highImage ) == false )
@@ -337,7 +337,7 @@ namespace sw::editor
     {
         using Internal = HeightfieldImporterInternal;
         vector<uint8> bytes;
-        if ( FileUtil::readFile( sourcePath, bytes ) == false || bytes.empty() )
+        if ( FileUtil::readFile( FileUtil::toDiskPath( sourcePath ), bytes ) == false || bytes.empty() )
             return 0;
         StringBuilder<constant::buffer::kMax64> versionText;
         uint64                                  hash = HashUtil::computeStringHash64( reinterpret_cast<const utf8*>( bytes.data() ), bytes.size(), false );
@@ -348,7 +348,7 @@ namespace sw::editor
             // 옆에 둔 레이어 4..7 파일(`x_splat1.png`)도 원본이다. 그것만 고쳐도 어긋난 것으로 판정해야 한다.
             vector<uint8> highBytes;
             const string  highPath  = Internal::makeHighSplatPath( sourcePath );
-            const bool    bHighRead = FileUtil::exists( highPath ) && FileUtil::readFile( highPath, highBytes ); // 곁 파일은 선택이라 없는 것이 정상이다 - 읽기 오류로 알리지 않는다
+            const bool    bHighRead = FileUtil::exists( FileUtil::toDiskPath( highPath ) ) && FileUtil::readFile( FileUtil::toDiskPath( highPath ), highBytes ); // 곁 파일은 선택이라 없는 것이 정상이다 - 읽기 오류로 알리지 않는다
             if ( bHighRead && highBytes.empty() == false )
                 hash = HashUtil::computeStringHash64( reinterpret_cast<const utf8*>( highBytes.data() ), highBytes.size(), false, hash );
             return hash;
@@ -358,7 +358,7 @@ namespace sw::editor
         // 옆에 둔 구멍 마스크도 원본이다. 그것만 고쳐도 어긋난 것으로 판정해야 한다.
         vector<uint8> holeBytes;
         const string  holePath  = Internal::makeHolePath( sourcePath );
-        const bool    bHoleRead = FileUtil::exists( holePath ) && FileUtil::readFile( holePath, holeBytes ); // 구멍 마스크도 선택이라 없는 것이 정상이다
+        const bool    bHoleRead = FileUtil::exists( FileUtil::toDiskPath( holePath ) ) && FileUtil::readFile( FileUtil::toDiskPath( holePath ), holeBytes ); // 구멍 마스크도 선택이라 없는 것이 정상이다
         if ( bHoleRead && holeBytes.empty() == false )
             hash = HashUtil::computeStringHash64( reinterpret_cast<const utf8*>( holeBytes.data() ), holeBytes.size(), false, hash );
         return hash;
@@ -369,7 +369,7 @@ namespace sw::editor
         using Internal = HeightfieldImporterInternal;
         outData        = HeightfieldAsset{};
         vector<uint8> bytes;
-        if ( FileUtil::readFile( sourcePath, bytes ) == false || bytes.empty() )
+        if ( FileUtil::readFile( FileUtil::toDiskPath( sourcePath ), bytes ) == false || bytes.empty() )
         {
             SW_LOG_ERROR_ID( "HeightfieldImporter.FailedReadHeightfieldSource", "Failed to read heightfield source '%#'", sourcePath );
             return false;
@@ -406,7 +406,7 @@ namespace sw::editor
         HeightfieldAsset data;
         if ( readHeightfield( sourcePath, data ) == false )
             return false;
-        if ( FileUtil::ensureParentDirectoryExists( outputPath ) == false )
+        if ( FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( outputPath ) ) == false )
         {
             SW_LOG_ERROR_ID( "HeightfieldImporter.CannotCreateFolder", "Cannot create the folder for '%#'", outputPath );
             return false;
