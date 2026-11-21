@@ -36,11 +36,17 @@ namespace sw
         _watermarkFrame    = manager.getUpdateCount();
     }
 
-    bool TriggerSpawnWindow::isSpawnEntry( const GameObjectManager& manager, const GameObject& activator, EntryPath path ) const
+    bool TriggerSpawnWindow::isOverlapSpawnEntry( const GameObjectManager& manager, const OverlapInfo& overlap ) const
     {
-        // 볼륨 쪽: 나타났을 때 이미 안에 있던 것만 — 그 길의 첫 판정에서 온 진입이다(프레임 수로 재지 않는다).
-        const bool bVolumeAppeared = path == EntryPath::Overlap ? manager.getSubsystem<ScenePhysics>().getStepCount() <= _appearedStep + 1
-                                                                : manager.getUpdateCount() <= _appearedFrame + 1;
+        // 볼륨 쪽: 나타난 뒤 첫 물리 스텝의 진입. 활성자 쪽: 물리가 상대 첫 바디의 첫 스텝 진입을 표시했다 — 둘 다 스텝으로 재고 프레임 수를 가정하지 않는다.
+        const bool bVolumeAppeared = manager.getSubsystem<ScenePhysics>().getStepCount() <= _appearedStep + 1;
+        return bVolumeAppeared || overlap._bOtherSpawnedInside == SW_TRUE;
+    }
+
+    bool TriggerSpawnWindow::isSampledSpawnEntry( const GameObjectManager& manager, const GameObject& activator ) const
+    {
+        // 볼륨 쪽: 나타났을 때 이미 안에 있던 것만 — 첫 표본 프레임에서 온 진입이다.
+        const bool bVolumeAppeared = manager.getUpdateCount() <= _appearedFrame + 1;
         const bool bActivatorNew   = activator.getObjectID() >= _watermarkPrevious;
         return bVolumeAppeared || bActivatorNew;
     }
@@ -76,7 +82,7 @@ namespace sw
         }
         const GameObjectManager& manager = context.getManager();
         if ( _spawnInside == TriggerSpawnInside::Ignore )
-            _spawnWindow.advance( manager );                                              // 겹침 진입의 나타남 판정(`isSpawnEntry`)도 이 창을 읽는다
+            _spawnWindow.advance( manager );                                              // 거리 판정의 나타남 창(`isSampledSpawnEntry`)
         const bool bSpentHere        = _bOnce && _progressFlag.empty() && _fireCount > 0; // 플래그로 적는 볼륨은 활성자마다 다를 수 있어(플레이어별 기록) 계속 잰다
         const bool bNothingToMeasure = _radius <= 0.0f || bSpentHere;
         if ( bNothingToMeasure )
@@ -93,8 +99,8 @@ namespace sw
         const bool bInside  = float3::getDistance( pSelf->getWorldPosition(), pOther->getWorldPosition() ) <= _radius;
         const bool bEntered = bInside && _bActivatorInside == false;
         _bActivatorInside   = bInside;
-        // 나타남의 진입을 받지 않는 볼륨은 안에 있는 것으로만 적는다 — 나갔다 다시 들어올 때 들어온 것이다. 판정은 겹침 길과 같은 규칙이다(`isSpawnEntry`).
-        const bool bSpawnIgnored = bEntered && _spawnInside == TriggerSpawnInside::Ignore && isSpawnEntry( *pActivator, TriggerSpawnWindow::EntryPath::Sampled );
+        // 나타남의 진입을 받지 않는 볼륨은 안에 있는 것으로만 적는다 — 나갔다 다시 들어올 때 들어온 것이다.
+        const bool bSpawnIgnored = bEntered && _spawnInside == TriggerSpawnInside::Ignore && _spawnWindow.isSampledSpawnEntry( manager, *pActivator );
         if ( bEntered == false || bSpawnIgnored )
             return;
         context.deferPostTickOnComponent( *this, []( TriggerComponent& volume, GameObjectManager& deferredManager )
@@ -115,7 +121,8 @@ namespace sw
         if ( _radius > 0.0f && overlap._pOther->getHandle() == _activator )
             return;
         // 나타남의 진입을 받지 않는 볼륨 — 이 쌍의 다음 진입은 이탈 뒤에만 오므로(트리거 계약) 따로 기억할 것이 없다.
-        if ( _spawnInside == TriggerSpawnInside::Ignore && isSpawnEntry( *overlap._pOther, TriggerSpawnWindow::EntryPath::Overlap ) )
+        const GameObjectManager* pManager = getOwner() != nullptr ? getOwner()->getManager() : nullptr;
+        if ( _spawnInside == TriggerSpawnInside::Ignore && pManager != nullptr && _spawnWindow.isOverlapSpawnEntry( *pManager, overlap ) )
             return;
         (void)activate( overlap._pOther );
     }
@@ -177,12 +184,6 @@ namespace sw
         _activatorTag     = activatorTag;
         _fireCount        = 0;
         _bActivatorInside = false;
-    }
-
-    bool TriggerComponent::isSpawnEntry( const GameObject& activator, TriggerSpawnWindow::EntryPath path ) const
-    {
-        const GameObjectManager* pManager = getOwner() != nullptr ? getOwner()->getManager() : nullptr;
-        return pManager != nullptr && _spawnWindow.isSpawnEntry( *pManager, activator, path );
     }
 
     bool TriggerAuthorityRule::hasAuthority( TriggerAuthority authority, const GameObjectManager& manager )

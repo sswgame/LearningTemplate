@@ -286,6 +286,8 @@ namespace sw
     {
         const uint32 index          = getPoseIndex();
         _pPosePage->_arrBody[index] = scene.createBody( makeBodyDesc( physics, position, rotation, scale ) );
+        if ( _pPosePage->_arrBody[index].isValid() )
+            markBodyCreated();
         _pPosePage->resetPose( index, position, rotation );
         _appliedBodyType         = _bodyType;
         _kinematicStartPosition  = position;

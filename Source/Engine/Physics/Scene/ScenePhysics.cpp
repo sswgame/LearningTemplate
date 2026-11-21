@@ -96,6 +96,7 @@ namespace sw
         , _listDispatchEvent2D{}
         , _listDispatchSwept{}
         , _overlapTracker{}
+        , _listSpawnedObject{}
         , _listOverlapTransition{}
         , _listOverlapStay{}
         , _mapStayListener{}
@@ -177,6 +178,7 @@ namespace sw
         _listFrameEvent2D.clear();
         _listSweptOverlap2D.clear();
         _overlapTracker.clear(); // 씬과 함께 모든 겹침이 사라진다 — 이탈 없이 잊는다(받을 오브젝트도 함께 내려간다)
+        _listSpawnedObject.clear();
         _listMovedCollider2D.clear();
         _listPoseWrite.clear();
         _listCharacterMove3D.clear();
@@ -673,6 +675,9 @@ namespace sw
             return;
         _bFrameEventsPending = SW_FALSE;
         dispatchEvents( _manager );
+        // 첫 스텝을 지난 오브젝트의 나타남 표시는 이 나눠 주기로 끝났다 — 스텝이 없던 프레임(높은 프레임률)은 표시를 그대로 둔다.
+        VectorUtil::removeIf( _listSpawnedObject, [this]( const SpawnedObject& spawned )
+        { return spawned._stepCount < _stepCount; } );
         // 처리가 옮긴 트랜스폼을 PostPhysics 틱 전에 펼친다 — 병렬 틱은 더티 월드를 합성하지 않는다.
         if ( _manager.hasDirtySceneTransforms() )
             _manager.flushSceneTransforms();
@@ -749,9 +754,9 @@ namespace sw
                 continue;
             }
             deliverEvent( manager, event._userDataA, event._userDataB, event._bodyA, event._bodyB, event._point, event._normal, event._impulse, event._phase,
-                          bTriggerA, bTriggerB, false, false, 1.0f );
+                          bTriggerA, bTriggerB, false, false, 1.0f, false );
             deliverEvent( manager, event._userDataB, event._userDataA, event._bodyB, event._bodyA, event._point, -event._normal, event._impulse, event._phase,
-                          bTriggerB, bTriggerA, false, false, 1.0f );
+                          bTriggerB, bTriggerA, false, false, 1.0f, false );
         }
         // 쓸고 지나간 겹침이 먼저다 — 이번 프레임 길 위에서 닿았으므로 지금 자리의 겹침(센서 시작)보다 이르다. 지나쳤으므로 시작과 끝을 함께 센다
         // (그 사이 센서가 같은 쌍의 시작을 내면 쌍은 안에 남아 진입만 난다).
@@ -775,9 +780,9 @@ namespace sw
                 continue;
             }
             deliverEvent( manager, event._userDataA, event._userDataB, event._bodyA, event._bodyB, point, normal, event._impulse, event._phase, bTriggerA, bTriggerB, false,
-                          true, 1.0f );
+                          true, 1.0f, false );
             deliverEvent( manager, event._userDataB, event._userDataA, event._bodyB, event._bodyA, point, -normal, event._impulse, event._phase, bTriggerB, bTriggerA, false,
-                          true, 1.0f );
+                          true, 1.0f, false );
         }
 
         // 겹침 진입 · 이탈(이탈 먼저) → 유지. 처리가 오브젝트를 지우거나 만들어도 결과 목록은 멤버 사본이라 흔들리지 않는다(새 겹침은 다음 프레임 알림이 된다).
@@ -785,11 +790,13 @@ namespace sw
         const auto deliverOverlap = [this, &manager]( const PhysicsOverlapEvent& event )
         {
             const float3 zero{};
+            // 진입이 상대 첫 바디의 첫 스텝에서 왔으면 "안에서 생김" 이다(`markObjectSpawned`) — 받는 쪽이 프레임 수 창 없이 나타남을 가린다.
+            const bool bBegin = event._phase == PhysicsContactPhase::Begin;
             deliverEvent( manager, event._objectA, event._objectB, event._bodyA, event._bodyB, zero, zero, 0.0f, event._phase, event._bTriggerA, event._bTriggerB, true,
-                          event._bIs2D, event._hitFraction );
+                          event._bIs2D, event._hitFraction, bBegin && isSpawnedThisFrame( event._objectB ) );
             if ( event._objectA != event._objectB ) // 자기 몸과 자기 트리거의 겹침은 한 번만 받는다
                 deliverEvent( manager, event._objectB, event._objectA, event._bodyB, event._bodyA, zero, zero, 0.0f, event._phase, event._bTriggerB, event._bTriggerA,
-                              true, event._bIs2D, event._hitFraction );
+                              true, event._bIs2D, event._hitFraction, bBegin && isSpawnedThisFrame( event._objectA ) );
         };
         for ( const PhysicsOverlapEvent& event : _listOverlapTransition )
         {
@@ -799,6 +806,23 @@ namespace sw
         {
             deliverOverlap( event );
         }
+    }
+
+    void ScenePhysics::markObjectSpawned( uint64 objectID )
+    {
+        _listSpawnedObject.push_back( SpawnedObject{ objectID, _stepCount } );
+    }
+
+    bool ScenePhysics::isSpawnedThisFrame( uint64 objectID ) const
+    {
+        // 표시는 첫 스텝을 지난 나눠 주기에서 지운다(`deliverFrameEvents`) — 남아 있고 그 뒤 스텝이 돌았으면 이번 프레임의 스텝이 첫 스텝이다.
+        // shortcut: 한 프레임에 스텝이 여럿이면 첫 스텝 뒤 스텝(같은 프레임)에 걸어 들어온 진입도 나타남으로 친다 — 진입에 스텝 번호를 실을 일이 생기면 쌍마다 첫 시작 스텝을 든다.
+        for ( const SpawnedObject& spawned : _listSpawnedObject )
+        {
+            if ( spawned._objectID == objectID && spawned._stepCount < _stepCount )
+                return true;
+        }
+        return false;
     }
 
     void ScenePhysics::collectContactLog( vector<PhysicsContactLogEntry>& outListEntry ) const
@@ -813,7 +837,7 @@ namespace sw
 
     void ScenePhysics::deliverEvent( GameObjectManager& manager, uint64 selfUserData, uint64 otherUserData, PhysicsBodyHandle selfBody, PhysicsBodyHandle otherBody,
                                      const float3& point, const float3& normal, float32 impulse, PhysicsContactPhase phase, bool bSelfTrigger, bool bOtherTrigger,
-                                     bool bOverlap, bool bIs2D, float32 hitFraction )
+                                     bool bOverlap, bool bIs2D, float32 hitFraction, bool bOtherSpawnedInside )
     {
         GameObject* pSelf = selfUserData != 0 ? manager.findGameObjectByID( selfUserData ) : nullptr;
         if ( pSelf == nullptr || pSelf->isActiveInHierarchy() == false )
@@ -829,12 +853,13 @@ namespace sw
         if ( bOverlap )
         {
             OverlapInfo overlap;
-            overlap._pOther        = pOther;
-            overlap._selfBody      = selfBody;
-            overlap._otherBody     = otherBody;
-            overlap._hitFraction   = hitFraction;
-            overlap._bSelfTrigger  = bSelfTrigger ? SW_TRUE : SW_FALSE;
-            overlap._bOtherTrigger = bOtherTrigger ? SW_TRUE : SW_FALSE;
+            overlap._pOther              = pOther;
+            overlap._selfBody            = selfBody;
+            overlap._otherBody           = otherBody;
+            overlap._hitFraction         = hitFraction;
+            overlap._bSelfTrigger        = bSelfTrigger ? SW_TRUE : SW_FALSE;
+            overlap._bOtherTrigger       = bOtherTrigger ? SW_TRUE : SW_FALSE;
+            overlap._bOtherSpawnedInside = bOtherSpawnedInside ? SW_TRUE : SW_FALSE;
             GameObjectEvents::broadcast( *pSelf, bBegin ? &GameObjectEvents::_overlapBegin : &GameObjectEvents::_overlapEnd, overlap );
             return;
         }

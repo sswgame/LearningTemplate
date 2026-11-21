@@ -123,6 +123,60 @@ SW_TEST_CASE( TriggerOverlapContractTest, SpawnInsideAndDestroyInside3D )
     SW_EXPECT_EQUAL( 0u, physics.getOverlapTracker().getOverlapCount( pRecorder->getOwner()->getObjectID() ) );
 }
 
+/**
+ * @brief [TriggerOverlapContractTest] 3D: 안에서 생긴 대상의 진입은 "안에서 생김" 표시를 단다 — 스텝 없는 프레임(높은 프레임률)이 수십 끼어도. 다시 켜짐 · 순간 이동 · 걸어 듦은 달지 않는다
+ * @details 나타남을 거르는 볼륨(`TriggerSpawnInside::Ignore`)이 프레임 수 창 대신 이 표시를 본다. 변이: `markBodyCreated` 를 빼면 첫 단언이, 첫 바디만 거르는 검사를 빼면 다시 켜짐 단언이 진다.
+ */
+SW_TEST_CASE( TriggerOverlapContractTest, SpawnedInsideMarkSurvivesFramesWithoutSteps3D )
+{
+    using Internal = TestTriggerOverlapContractInternal;
+    GameObjectManager             manager;
+    OverlapRecorderTestComponent* pRecorder = Internal::addTrigger3D( manager );
+    SW_REQUIRE_NOT_NULL( pRecorder );
+    manager.beginPlay();
+    Internal::run( manager, 3 );
+
+    GameObject*         pHero      = Internal::addVisitor3D( manager, "Hero", float3{ 0.0f, 0.0f, 0.0f } );
+    const ScenePhysics& physics    = manager.getSubsystem<ScenePhysics>();
+    const uint64        stepStart  = physics.getStepCount();
+    uint32              frameCount = 0;
+    // 프레임이 고정 스텝보다 훨씬 짧다 — 첫 스텝까지 수십 프레임이 지난다(예전 8 프레임 창은 여기서 걸어 든 것으로 쳤다).
+    while ( physics.getStepCount() == stepStart && frameCount < 1000 )
+    {
+        manager.update( Internal::kFrame / 64.0f );
+        ++frameCount;
+    }
+    SW_REQUIRE_TRUE( frameCount > 8 );
+    Internal::run( manager, 2 );
+    SW_EXPECT_EQUAL( 1u, pRecorder->_beginCount );
+    SW_EXPECT_EQUAL( 1u, pRecorder->_spawnedInsideBeginCount );
+
+    pHero->setActive( false ); // 다시 켜짐 — 바디를 다시 짓지만 첫 바디가 아니다
+    Internal::run( manager, 3 );
+    pHero->setActive( true );
+    Internal::run( manager, 3 );
+    SW_EXPECT_EQUAL( 2u, pRecorder->_beginCount );
+    SW_EXPECT_EQUAL( 1u, pRecorder->_spawnedInsideBeginCount );
+
+    RigidBodyComponent* pBody = pHero->getComponent<RigidBodyComponent>();
+    SW_REQUIRE_NOT_NULL( pBody );
+    pBody->setLocalPosition( float3{ 10.0f, 0.0f, 0.0f } );
+    Internal::run( manager, 3 );
+    pBody->setLocalPosition( float3{ 0.0f, 0.0f, 0.0f } ); // 순간 이동으로 안에 든다
+    Internal::run( manager, 3 );
+    SW_EXPECT_EQUAL( 3u, pRecorder->_beginCount );
+    SW_EXPECT_EQUAL( 1u, pRecorder->_spawnedInsideBeginCount );
+
+    GameObject* pWalker = Internal::addVisitor3D( manager, "Walker", float3{ 10.0f, 0.0f, 0.0f } ); // 밖에서 생겨 나중에 든다
+    Internal::run( manager, 3 );
+    RigidBodyComponent* pWalkerBody = pWalker->getComponent<RigidBodyComponent>();
+    SW_REQUIRE_NOT_NULL( pWalkerBody );
+    pWalkerBody->setLocalPosition( float3{ 0.5f, 0.0f, 0.0f } );
+    Internal::run( manager, 3 );
+    SW_EXPECT_EQUAL( 4u, pRecorder->_beginCount );
+    SW_EXPECT_EQUAL( 1u, pRecorder->_spawnedInsideBeginCount );
+}
+
 /** @brief [TriggerOverlapContractTest] 3D: 대상을 끄면 이탈, 다시 켜면 진입. 트리거를 끄면 안의 대상이 이탈, 다시 켜면 진입 — 한 번씩 */
 SW_TEST_CASE( TriggerOverlapContractTest, DeactivateAndToggleTrigger3D )
 {

@@ -303,6 +303,23 @@ namespace sw
         const DebrisBudget& getDebrisBudget() const { return _debrisBudget; }
 
     private:
+        friend class PhysicsComponent; ///< 첫 바디를 알린다(`markObjectSpawned`) — 나타남 표시는 바디를 만드는 쪽만 적는다
+
+        /** @brief 첫 바디가 생긴 오브젝트 하나입니다(`markObjectSpawned`). */
+        struct SpawnedObject
+        {
+            uint64 _objectID{ 0 };
+            uint64 _stepCount{ 0 }; ///< 첫 바디가 생길 때의 스텝 번호 — 그 바디가 든 첫 스텝은 이 다음이다
+        };
+
+        /**
+         * @brief 오브젝트 @p objectID 의 첫 바디(등록 뒤 처음 만든 바디 · 캐릭터)가 막 생겼다고 적습니다(`PhysicsComponent::markBodyCreated`).
+         * @details 그 바디가 든 첫 스텝의 겹침 진입은 "안에서 생김" 이다(`OverlapInfo::_bOtherSpawnedInside`). 프레임 수가 아니라 스텝으로 재므로 스텝이 없는 프레임(높은 프레임률)이
+         *          몇이 끼어도 표시가 남는다. 다시 켜짐 · 다시 짓기 · 스트리밍 쥠 풀림은 첫 바디가 아니라 적지 않는다.
+         */
+        void markObjectSpawned( uint64 objectID );
+        /** @brief 오브젝트 @p objectID 의 첫 바디가 이번 프레임의 스텝에서 처음 시뮬레이션에 들었으면 true 입니다(나눠 주는 동안 — `dispatchEvents`). */
+        bool isSpawnedThisFrame( uint64 objectID ) const;
         /** @brief 열린 읽기 구간이 없음을 확인하고(검사 구성 단언) 씬을 고쳐도 된다는 증표를 만듭니다 — 스텝이 이것을 받는다. */
         WorkerReadFence<ScenePhysics> makeWriteFence() const;
         /** @brief 3D · 2D 월드를 고정 스텝 하나만큼 돌립니다. 읽는 워커가 없다는 증표가 있어야 부를 수 있다. */
@@ -312,7 +329,7 @@ namespace sw
         /** @brief 이벤트 하나를 한 쪽(@p selfUserData)에서 본 것으로 그 오브젝트의 컴포넌트에 줍니다. */
         void deliverEvent( GameObjectManager& manager, uint64 selfUserData, uint64 otherUserData, PhysicsBodyHandle selfBody, PhysicsBodyHandle otherBody,
                            const float3& point, const float3& normal, float32 impulse, PhysicsContactPhase phase, bool bSelfTrigger, bool bOtherTrigger,
-                           bool bOverlap, bool bIs2D, float32 hitFraction );
+                           bool bOverlap, bool bIs2D, float32 hitFraction, bool bOtherSpawnedInside );
         /** @brief 유지 하나를 그 오브젝트에 올린 듣는 쪽(`registerContactStayListener`)에만 줍니다. 오브젝트가 켜졌는지는 부른 쪽이 봤다. */
         void deliverStay( uint64 selfUserData, GameObject* pOther, PhysicsBodyHandle selfBody, PhysicsBodyHandle otherBody, const float3& point, const float3& normal,
                           float32 impulse, bool bSelfTrigger, bool bOtherTrigger, bool bOverlap, bool bIs2D );
@@ -392,6 +409,7 @@ namespace sw
         vector<PhysicsContactEvent2D>                           _listDispatchEvent2D;                ///< 위와 같다
         vector<SweptOverlap2D>                                  _listDispatchSwept;                  ///< 위와 같다
         PhysicsOverlapTracker                                   _overlapTracker;                     ///< 바디 쌍 겹침 → 오브젝트 쌍 진입 · 이탈 · 유지(겹침을 나누는 유일한 길)
+        vector<SpawnedObject>                                   _listSpawnedObject;                  ///< 첫 바디가 생겨 아직 첫 스텝의 나눠 주기를 지나지 않은 오브젝트(`markObjectSpawned`)
         vector<PhysicsOverlapEvent>                             _listOverlapTransition;              ///< 이번 프레임 진입 · 이탈(`dispatchEvents` 재사용)
         vector<PhysicsOverlapEvent>                             _listOverlapStay;                    ///< 이번 프레임 겹침 유지(올린 듣는 쪽이 있을 때만, 재사용)
         unordered_map<uint64, vector<ContactStayListenerEntry>> _mapStayListener;                    ///< 오브젝트 id → 유지 듣는 쪽(`registerContactStayListener`)
