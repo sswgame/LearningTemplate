@@ -1,7 +1,7 @@
 /**
  * @file MaterialGraphNodeRegistry.h
  * @brief 머티리얼 그래프 노드 종류의 등록표입니다. 새 노드는 `SW_MATERIAL_GRAPH_NODE` 한 줄이고(`MaterialGraphNodes.cpp`), 컴파일러와 편집기 메뉴가 이 표를 읽습니다.
- * @details 글은 짧은 기호로 적는다(문법은 `docs/agents/MaterialGraph.md`). 등록은 정적 초기화에서 글 조각(`string_view`)만 나눠 힙을 쓰지 않는다.
+ * @details 글은 짧은 기호로 적는다(문법은 `docs/agents/Rendering.md "머티리얼 그래프"`). 등록은 정적 초기화에서 글 조각(`string_view`)만 나눠 힙을 쓰지 않는다.
  *          **등록은 엔진 안에만 둔다.** 팩 쿠킹은 게임 모듈을 올리기 전에 돌아(`HeadlessSubsystem::runCookTask`) 키트 · 게임의 등록을 보지 못한다 — 게임 전용 재사용은 하위 그래프로 한다.
  */
 #pragma once
@@ -35,7 +35,7 @@ namespace sw
         Subgraph,    ///< 하위 그래프를 펼쳐 넣는다. 핀은 그 그래프의 `GraphInput` · `GraphOutput` 이다
         GraphInput,  ///< 하위 그래프의 입력 핀 선언(설정 `Name` · `Type`)
         GraphOutput, ///< 하위 그래프의 출력 핀 선언(설정 `Name`, 입력 `Value`)
-        Layer,       ///< 머티리얼 층 — 층 그래프(`_assetPath`)를 펼쳐 출력 위에 마스크로 얹는다. 머티리얼 그래프에만 둔다(`docs/agents/MaterialGraph.md` 의 층)
+        Layer,       ///< 머티리얼 층 — 층 그래프(`_assetPath`)를 펼쳐 출력 위에 마스크로 얹는다. 머티리얼 그래프에만 둔다(`docs/agents/Rendering.md "머티리얼 그래프"` 의 층)
     };
 
     /** @brief 입력 핀 선언 하나입니다. `Name:type`, 필수면 `!`, 기본이 있으면 `=수치` 또는 `=HLSL 식`. */

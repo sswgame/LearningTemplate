@@ -2,7 +2,7 @@
  * @file DevCommandRegistry.h
  * @brief 개발 명령(치트, 디버그 명령) 레지스트리와 `SW_DEV_COMMAND` 를 정의합니다.
  * @details 선언과 인자 도우미(`readDiskPathArgument` …)는 모든 구성에 있다 — 기능 파일의 명령 본문이 모든 구성에서 컴파일되게. 배포 구성은 `SW_DEV_COMMAND` 가
- *          등록하지 않아 레지스트리가 비어 있고, 본문은 부르는 곳이 없어 실행 파일에서 빠진다(`docs/agents/BuildConfigSwitch.md`).
+ *          등록하지 않아 레지스트리가 비어 있고, 본문은 부르는 곳이 없어 실행 파일에서 빠진다(`docs/agents/CppStyle.md "Build configuration switches"`).
  */
 #pragma once
 #include "Core/Concurrency/mutex.h"
@@ -118,7 +118,7 @@ namespace sw
 /**
  * @brief 개발 명령을 기능의 `.cpp` 에서 등록합니다(언리얼 `FAutoConsoleCommand` 처럼 기능 옆에 둔다).
  *        배포 구성은 등록하지 않고 본문 함수를 `[[maybe_unused]]` 상수로만 붙잡는다 — 본문은 모든 구성에서 컴파일되고(썩지 않는다) 부르는 곳이 없어 배포 실행 파일에서 빠진다.
- *        파일 이름으로 배포에서 빼지 않는다(`docs/agents/BuildConfigSwitch.md`).
+ *        파일 이름으로 배포에서 빼지 않는다(`docs/agents/CppStyle.md "Build configuration switches"`).
  * @param varName 파일 안에서 유일한 이름 조각(변수 이름용)
  * @param pName   콘솔에 치는 이름(리터럴)
  * @param pUsage  사용법 한 줄

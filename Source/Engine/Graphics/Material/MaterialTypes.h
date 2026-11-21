@@ -236,7 +236,7 @@ namespace sw
         uint8                    _bTwoSidedLighting{ SW_FALSE };             ///< 뒷면에서 노멀을 뒤집습니다(`MATERIAL_TWO_SIDED`). `cullMode="None"` 과 함께 적습니다
         string                   _blendPreset;                               ///< 블렌드 프리셋 이름입니다. 저장용 — 값은 `_renderStateOverride` 에 풀려 있다
         vector<BlendTargetState> _listBlendTarget;                           ///< 렌더 타깃마다의 블렌드입니다. 저장용 — 값은 `_renderStateOverride` 에 풀려 있다
-        RenderStateOverride      _renderStateOverride;                       ///< 패스의 렌더 상태 위에 덮는 칸입니다(표: `docs/agents/RenderPipelineXml.md`)
+        RenderStateOverride      _renderStateOverride;                       ///< 패스의 렌더 상태 위에 덮는 칸입니다(표: `docs/agents/Rendering.md`)
         vector<MaterialProperty> _listProperty;
         MaterialPermutationDef   _permutations;
         /** @brief 부모 머티리얼(`.material` 루트의 `_base`)입니다. 비어 있지 않으면 위 칸은 부모를 펼친 값이고, 저장은 부모와 다른 칸만 적는다(`MaterialXML::makeParentDelta`). */

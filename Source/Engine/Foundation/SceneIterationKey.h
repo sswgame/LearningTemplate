@@ -3,7 +3,7 @@
  * @brief 씬 전체 순회(`GameObjectManager::forEachGameObject` · `forEachComponent` · `forEachComponentOfType` · `getAllGameObjects`)를 여는 열쇠입니다.
  * @details 컴포넌트 틱은 오브젝트 단위로 워커에 나뉘어 돈다. 틱 하나가 씬 전체를 돌면 그 일이 한 워커에 몰리고(같은 타입 N 개면 N × 씬 크기), 공유 잠금 아래에서
  *          순서 없이 돈다. 그래서 순회는 열쇠를 받고, 열쇠는 아래 주인만 만든다 — 컴포넌트 코드에는 열쇠를 얻는 길이 없어 틱에서 씬을 도는 코드는 컴파일되지 않는다
- *          (예전 린트 `tick-scene-walk` 자리). 틱이 쓸 것은 `docs/agents/TickPlacement.md` — 찾기는 `ComponentRegistry`, 이름은 `findGameObjectsByBaseName`,
+ *          (예전 린트 `tick-scene-walk` 자리). 틱이 쓸 것은 `docs/agents/Gameplay.md` — 찾기는 `ComponentRegistry`, 이름은 `findGameObjectsByBaseName`,
  *          자리는 씬 공간 색인(`SceneSpatialGrid`), 씬 전체 집계는 프레임 시스템이다.
  *          - **틀이 인자로 넘긴다:** 감시 값(`SW_AUTOMATION_SCENE_WATCH`), 개발 명령(`SW_DEV_SCENE_COMMAND`), 디버그 HUD 섹션(`DebugHUDSectionWriter::getSceneIterationKey` — 글쓴이를 만드는 HUD 틀은 개발 도구 · 에디터 공급자나 `hud.print` 명령의 열쇠를 쓴다),
  *            저장(`StatefulComponentRegistrar` 의 캡처 · 복원 함수)이 받는다 — 그 틀만 열쇠를 만든다.

@@ -3,7 +3,7 @@
  * @brief 호스트(App · Server)의 개발 계층 창구 `IHostDevLayer` 입니다 — 개발 도구 연결(`DevToolsHost` · 프레임 훅 · 개발 콘솔)과 모듈 핫 리로드를 한 묶음으로 듭니다.
  * @details 구현(`DevTools/Host/HostDevLayer.cpp` — 핫 리로드 구동기 · 개발 도구 연결)은 DevTools.dll 에만 있고 배포는 DevTools 를 짓지 않는다. ModuleManager 는
  *          DevTools 를 보지 않으므로(의존은 DevTools → ModuleManager) 호스트(App · Server)가 `if constexpr ( build::kShipping == false )` 한 곳에서 `makeHostDevLayer` 로 만들어
- *          부팅 열(`HostLaunch::initializeHostScope`)에 넘긴다. 배포에서는 포인터가 비어 있다 — 버려지는 갈래라 배포 링크에 `makeHostDevLayer` 의 정의가 없어도 된다. 빈 구현 파일을 두지 않는다(`docs/agents/BuildConfigSwitch.md`). 언리얼이 Developer 모듈을 배포 타깃에 링크하지 않는 것과 같은 자리다.
+ *          부팅 열(`HostLaunch::initializeHostScope`)에 넘긴다. 배포에서는 포인터가 비어 있다 — 버려지는 갈래라 배포 링크에 `makeHostDevLayer` 의 정의가 없어도 된다. 빈 구현 파일을 두지 않는다(`docs/agents/CppStyle.md "Build configuration switches"`). 언리얼이 Developer 모듈을 배포 타깃에 링크하지 않는 것과 같은 자리다.
  */
 #pragma once
 #include "Core/Container/string.h"

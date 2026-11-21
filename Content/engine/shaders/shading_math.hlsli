@@ -5,7 +5,7 @@
  * (두 벌로 두면 테스트가 셰이더가 아닌 사본을 잰다). 그래서 이 파일은 두 언어가 함께 받는 모양만 쓴다:
  *   - 인자와 반환은 스칼라 `float` 뿐(벡터 · `out` 이 없다 — 벡터 식은 부르는 쪽이 채널마다 부른다).
  *   - 내장 함수는 `sqrt` · `pow` · `cos` · `exp2` · `log2` · `abs` · `floor` · `frac` · `saturate` · `lerp` · `max` · `min` · `clamp` 만(C++ 쪽은 ShadingMath.h 가 같은 이름을 둔다).
- *   - 공유 헤더 함수는 구조체 멤버다(NamingScripts HLSL). 바깥 정의의 `static` 은 C++ 에서 `inline` 이어야 하므로 `SW_SHADING_MATH_DEFINITION` 이 고른다.
+ *   - 공유 헤더 함수는 구조체 멤버다(NamingCpp.md HLSL). 바깥 정의의 `static` 은 C++ 에서 `inline` 이어야 하므로 `SW_SHADING_MATH_DEFINITION` 이 고른다.
  * 단위: 엔진의 확산 항은 π 로 나누지 않는다(lighting.hlsli) — 분포 함수는 `…TimesPi`(D·π)로 낸다.
  * 비교(기억에 의존): 언리얼 BRDF.ush 의 D_GGX · Vis_SmithJointApprox · D_Charlie · Vis_Ashikhmin(우리는 Neubelt) · F_Schlick, 박막은 Belcour · Barla 2017 의
  * 에어리 식을 파장 셋(R 650 · G 532 · B 450 nm)에서 잰 값싼 판이다.

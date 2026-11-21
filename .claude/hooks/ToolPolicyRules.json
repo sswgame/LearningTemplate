@@ -199,7 +199,7 @@
       "requiresAny": [
         "never"
       ],
-      "hint": "매직 리터럴 기준선은 손으로 고치지 않는다 — 내리는 것은 `py -3 -m Scripts lint magic-literals --ratchet`, 올리는 것은 통합에서만 `--accept <파일…>`(docs/agents/Constants.md The ratchet)."
+      "hint": "매직 리터럴 기준선은 손으로 고치지 않는다 — 내리는 것은 `py -3 -m Scripts lint magic-literals --ratchet`, 올리는 것은 통합에서만 `--accept <파일…>`(docs/agents/CppStyle.md Constants The ratchet)."
     },
     {
       "name": "no-per-folder-constants-header",
@@ -210,7 +210,7 @@
       "requiresAny": [
         "never"
       ],
-      "hint": "폴더마다 `*Constants.h` 를 새로 만들지 않는다 — 한 모듈 상수는 주인 형식(`MeshAssetFormat::kExtension`)이나 그 모듈 형식 헤더의 이름공간에, 모듈 사이 계약은 층마다 하나인 파일(`Core/Foundation/Constants.h` 등)에 둔다(docs/agents/Constants.md)."
+      "hint": "폴더마다 `*Constants.h` 를 새로 만들지 않는다 — 한 모듈 상수는 주인 형식(`MeshAssetFormat::kExtension`)이나 그 모듈 형식 헤더의 이름공간에, 모듈 사이 계약은 층마다 하나인 파일(`Core/Foundation/Constants.h` 등)에 둔다(docs/agents/CppStyle.md Constants)."
     }
   ]
 }

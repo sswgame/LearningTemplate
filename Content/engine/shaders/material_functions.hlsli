@@ -78,7 +78,7 @@ struct MaterialPattern
     float  _edgeDistance; ///< 칸 가장자리까지의 거리(무늬 단위) — 홈의 둥근 어깨(높이)
 };
 
-/** @brief 머티리얼 함수 묶음(전부 static). 선언은 여기, 정의는 아래(FXC 는 이름공간이 없다 — NamingScripts HLSL 절). */
+/** @brief 머티리얼 함수 묶음(전부 static). 선언은 여기, 정의는 아래(FXC 는 이름공간이 없다 — NamingCpp.md HLSL 절). */
 struct SurfaceFunction
 {
     // 해시 · 노이즈

@@ -72,7 +72,7 @@ namespace sw
             EngineFrameExit onFrameEnd() override
             {
                 // 대화형 에디터 실행의 단언 대화상자는 첫 프레임 끝에 한 번 건다 — 모든 모듈(자동 실행을 알리는 에디터 자체 테스트 변수가 에디터 모듈에 있다)이 오른 뒤다.
-                // 예전에는 App 이 개발 폴더(`App/Dev`)를 거쳐 걸었다 — 개발 기능이 스스로 붙는다(docs/agents/BuildConfigSwitch.md 셋째 줄).
+                // 예전에는 App 이 개발 폴더(`App/Dev`)를 거쳐 걸었다 — 개발 기능이 스스로 붙는다(docs/agents/CppStyle.md "Build configuration switches" 셋째 줄).
                 if ( _bAssertDialogChecked == SW_FALSE )
                 {
                     _bAssertDialogChecked                 = SW_TRUE;

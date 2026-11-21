@@ -4,7 +4,7 @@
 Scripts/lint/result_types.py
 
 결과 형식 래칫. 값 또는 실패 이유는 `sw::expected<T, E>` 한 벌(`Core/Foundation/Expected.h`, "없음이 정상" 은 `sw::optional<T>`)로 돌려준다 —
-규칙은 `docs/agents/Errors.md`. 이 검사는 옛 모양 넷을 센다:
+규칙은 `docs/agents/CppStyle.md Errors`. 이 검사는 옛 모양 넷을 센다:
 
 - `std-optional`: `std::optional` · `std::nullopt` 직접 사용(주석 · 문자열 · 전처리 줄은 세지 않는다).
 - `out-error`: `string& outError` · `string& outReason`(`sw::string&` · `outErrorText` 처럼 이름이 이어져도) 출력 인자 모양.
@@ -52,10 +52,10 @@ OUT_TEXT_PARAM = re.compile(r"\b(?:sw\s*::\s*)?string\s*&\s*(out\w+)\s*(?=[,)])"
 REASON_NAME = re.compile(r"Error|Reason|Message")
 FAILURE_RETURN = re.compile(r"\s*return\s+(?:false\b|nullptr\b|(?:std\s*::\s*|sw\s*::\s*)?nullopt\b|(?:sw\s*::\s*)?unexpected\b)")
 ADVICE = {
-    "std-optional": "`sw::optional<T>`(없음이 정상) 이나 `sw::expected<T, E>`(이유가 둘 이상)로 — docs/agents/Errors.md",
-    "out-error": "`bool f( …, string& outError )` 대신 `sw::expected<T>` · `sw::expected<void>` 를 돌려준다 — docs/agents/Errors.md",
-    "out-error-pointer": "`bool f( …, string* pOutError = nullptr )` 도 같은 결함이다 — `sw::expected<T>` 를 돌려주고 부르는 쪽이 버릴지 정한다(docs/agents/Errors.md)",
-    "out-text-on-failure": "실패 때만 쓰는 글 출력 인자는 이유다 — `sw::expected<T>`(또는 `expected<T, DomainError>`)의 오류로 돌려준다(docs/agents/Errors.md)",
+    "std-optional": "`sw::optional<T>`(없음이 정상) 이나 `sw::expected<T, E>`(이유가 둘 이상)로 — docs/agents/CppStyle.md Errors",
+    "out-error": "`bool f( …, string& outError )` 대신 `sw::expected<T>` · `sw::expected<void>` 를 돌려준다 — docs/agents/CppStyle.md Errors",
+    "out-error-pointer": "`bool f( …, string* pOutError = nullptr )` 도 같은 결함이다 — `sw::expected<T>` 를 돌려주고 부르는 쪽이 버릴지 정한다(docs/agents/CppStyle.md Errors)",
+    "out-text-on-failure": "실패 때만 쓰는 글 출력 인자는 이유다 — `sw::expected<T>`(또는 `expected<T, DomainError>`)의 오류로 돌려준다(docs/agents/CppStyle.md Errors)",
 }
 
 

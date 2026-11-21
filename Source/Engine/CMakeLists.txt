@@ -88,7 +88,7 @@ if(SW_SHIPPING_BUILD)
 	sw_remove_excluded_sources(ENGINE_SOURCES ${SW_DEV_ONLY_SOURCE_PATTERNS})
 endif()
 
-# 개발 · 배포 차이가 값뿐인 곳은 `build::kShipping`(Core/Foundation/BuildInfo.h)을 읽는다 — 규칙은 docs/agents/BuildConfigSwitch.md.
+# 개발 · 배포 차이가 값뿐인 곳은 `build::kShipping`(Core/Foundation/BuildInfo.h)을 읽는다 — 규칙은 docs/agents/CppStyle.md "Build configuration switches".
 
 # ------------------------------------------------------------------------------
 # 1-1) 층 — 파일마다 층(Config/Rules/Layers/EngineLayers.toml → configure 가 EngineLayers.cmake 로)을 정하고, 층의 .cpp 는 아래 11) 의
@@ -298,7 +298,7 @@ endif()
 # 유니티가 꺼져 있어 CI 에서만 터진다.
 #
 # "익명 네임스페이스가 합쳐져 이름이 부딪친다" 는 **이름 규칙으로 막혀 있다**. 익명 네임스페이스의 도우미는
-# 클래스가 아니라 **TU 이름**을 딴다(`ShaderCookStampInternal` 등, docs/agents/Helpers.md). 이름 규칙이 그것을 정한다.
+# 클래스가 아니라 **TU 이름**을 딴다(`ShaderCookStampInternal` 등, docs/agents/CppStyle.md "Helpers"). 이름 규칙이 그것을 정한다.
 #
 # 다시 넣고 싶어지면 먼저 `SW_ENABLE_UNITY_BUILD` 를 켠 빌드로 **무엇이 실제로 부딪치는지** 보고, 목록이 아니라 그 이름을 고칠 것.
 #
