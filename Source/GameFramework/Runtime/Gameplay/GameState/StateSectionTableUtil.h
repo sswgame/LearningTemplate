@@ -21,13 +21,8 @@ namespace sw
     {
         static constexpr uint32 kMinSectionBytes = 12; ///< 구간마다 태그, 버전, 길이(uint32 셋) 이상
 
-        /** @brief 읽은 구간 하나입니다. 본문은 읽은 바이트를 가리키는 뷰입니다. */
-        struct Section
-        {
-            Archive _body{};
-            uint32  _tag{ 0 };
-            uint32  _version{ 0 };
-        };
+        /** @brief 읽은 구간 하나입니다(`StateIO::readSection`). 본문은 읽은 바이트를 가리키는 뷰입니다. */
+        using Section = StateIO::Section;
 
         /** @brief 상태 하나를 그 타입의 태그와 버전으로 구간 하나에 씁니다. */
         template <typename TState>
@@ -90,11 +85,13 @@ namespace sw
                 return false;
             // 구조를 끝까지 먼저 읽는다. 구조가 깨졌으면 아무것도 바꾸지 않는다.
             vector<Section> listSection;
-            listSection.resize( savedCount );
-            for ( Section& section : listSection )
+            listSection.reserve( savedCount );
+            for ( uint32 sectionIndex = 0; sectionIndex < savedCount; ++sectionIndex )
             {
-                if ( io.check( StateIO::readSection( archive, section._tag, section._version, section._body ) ) == false )
+                optional<Section> section = StateIO::readSection( archive );
+                if ( io.check( section.has_value() ) == false )
                     return false;
+                listSection.push_back( std::move( *section ) );
             }
             if ( io.check( archive.getRemainingBytes() == 0 ) == false )
                 return false;
@@ -124,13 +121,13 @@ namespace sw
             // 되돌린다 — 방금 떠 둔 구간이라 반드시 읽힌다.
             for ( uint32 sectionIndex = 0; sectionIndex < sectionCount && backup.getRemainingBytes() > 0; ++sectionIndex )
             {
-                Section section;
-                if ( StateIO::readSection( backup, section._tag, section._version, section._body ) == false )
+                const optional<Section> section = StateIO::readSection( backup );
+                if ( section.has_value() == false )
                     break;
                 forEachSection( [&section]( auto& state, const utf8* pName )
                 {
-                    if ( section._tag == std::decay_t<decltype( state )>::kStateTag )
-                        (void)applyStateSection( section, state, pName ); // 같은 판으로 떠 둔 것이다
+                    if ( section->_tag == std::decay_t<decltype( state )>::kStateTag )
+                        (void)applyStateSection( *section, state, pName ); // 같은 판으로 떠 둔 것이다
                 } );
             }
             SW_LOG_ERROR_ID( "GameState.LoadRejected", "GameState: a section of the save could not be read - the save is not loaded (%# is unchanged)", pOwnerName );

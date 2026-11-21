@@ -9,6 +9,7 @@
 #include "Engine/Reflection/ReflectedValue.h"
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Reflection/TypeRegistry.h"
+#include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
 #include "Engine/Serialization/Format/JSONSerializer.h"
 #include "Engine/Serialization/Serializer/ContainerVisitor.h"
@@ -285,18 +286,15 @@ SW_TEST_CASE( SchemaMigrateTest, OrphanPolicyDropsWithAWarningOrRejects )
 SW_TEST_CASE( SchemaMigrateTest, JSONReadSkipsUnknownKeysAndWrongTypesAndRejectsAnotherVersion )
 {
     SerializerSample sample;
-    sample._ratio  = 0.5f;
-    uint32 version = 0;
+    sample._ratio = 0.5f;
     SW_EXPECT_LOG( "Schema.FieldsDropped" );
-    SW_REQUIRE_TRUE( JSONSerializer::deserializeVersioned( version, &sample, getSampleType(), R"({"_schemaVersion":3,"_count":12,"_unknownKey":1,"_ratio":"abc"})", 3 ) );
-    SW_EXPECT_EQUAL( uint32( 3 ), version );
+    SW_REQUIRE_TRUE( JSONSerializer::deserializeVersioned( &sample, getSampleType(), R"({"_schemaVersion":3,"_count":12,"_unknownKey":1,"_ratio":"abc"})", 3 ) );
     SW_EXPECT_EQUAL( 12, sample._count );
     SW_EXPECT_NEAR( 0.5f, sample._ratio, 1e-6 ); // 읽지 못한 칸은 읽기 전 값
 
     SerializerSample old;
     SW_EXPECT_LOG( "Schema.VersionMismatch" );
-    SW_EXPECT_FALSE( JSONSerializer::deserializeVersioned( version, &old, getSampleType(), R"({"_schemaVersion":2,"_count":12})", 3 ) );
-    SW_EXPECT_EQUAL( uint32( 2 ), version );
+    SW_EXPECT_FALSE( JSONSerializer::deserializeVersioned( &old, getSampleType(), R"({"_schemaVersion":2,"_count":12})", 3 ) );
 }
 
 /** @brief [SchemaMigrateTest] 바이너리 읽기는 같은 빌드의 산출물만 받는다 — 판이 다르면 거절하고, 같으면 왕복한다 */
@@ -308,15 +306,38 @@ SW_TEST_CASE( SchemaMigrateTest, BinaryVersionedReadAcceptsOnlyTheSameVersion )
     vector<uint8> bytes;
     SW_REQUIRE_TRUE( BinarySerializer::serializeVersioned( 5, &source, getSampleType(), bytes, getContext() ) );
     SerializerSample target;
-    uint32           version = 0;
-    SW_REQUIRE_TRUE( BinarySerializer::deserializeVersioned( version, &target, getSampleType(), bytes.data(), bytes.size(), 5 ) );
+    SW_REQUIRE_TRUE( BinarySerializer::deserializeVersioned( &target, getSampleType(), bytes.data(), bytes.size(), 5 ) );
     SW_EXPECT_EQUAL( 33, target._count );
     SW_EXPECT_EQUAL( string( "bin" ), target._name );
 
     SerializerSample other;
     SW_EXPECT_LOG( "Schema.VersionMismatch" );
-    SW_EXPECT_FALSE( BinarySerializer::deserializeVersioned( version, &other, getSampleType(), bytes.data(), bytes.size(), 6 ) );
+    SW_EXPECT_FALSE( BinarySerializer::deserializeVersioned( &other, getSampleType(), bytes.data(), bytes.size(), 6 ) );
     SW_EXPECT_EQUAL( 0, other._count );
+}
+
+/** @brief [SchemaMigrateTest] 아카이브의 판 읽기는 판이 다르면 대상을 건드리지 않는다 — 읽은 판을 출력 인자로 받지 않고, 거절은 본문을 읽기 전이다 */
+SW_TEST_CASE( SchemaMigrateTest, ArchiveVersionedReadLeavesTheTargetOnVersionMismatch )
+{
+    SerializerSample source;
+    source._count = 33;
+    source._name  = "bin";
+    Archive written;
+    SW_REQUIRE_TRUE( written.serializeVersionedObject( 5, &source, getSampleType() ) );
+
+    SerializerSample target;
+    target._count = 7;
+    target._name  = "kept";
+    Archive mismatched( written.getData(), written.getSize() );
+    SW_EXPECT_LOG( "Schema.VersionMismatch" );
+    SW_EXPECT_FALSE( mismatched.deserializeVersionedObject( &target, getSampleType(), 6 ) );
+    SW_EXPECT_EQUAL( 7, target._count );
+    SW_EXPECT_EQUAL( string( "kept" ), target._name );
+
+    Archive matched( written.getData(), written.getSize() );
+    SW_REQUIRE_TRUE( matched.deserializeVersionedObject( &target, getSampleType(), 5 ) );
+    SW_EXPECT_EQUAL( 33, target._count );
+    SW_EXPECT_EQUAL( string( "bin" ), target._name );
 }
 
 /** @brief [SchemaMigrateTest] 값으로만 옮기는 쌍: 기록 타입을 아는 스칼라 → 다른 스칼라 · 글, 다른 enum → 이름. 같은 타입 · 모르는 기록 타입 · 글 → 수는 아니다 */

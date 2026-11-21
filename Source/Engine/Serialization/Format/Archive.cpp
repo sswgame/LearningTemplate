@@ -680,8 +680,7 @@ namespace sw
         return true;
     }
 
-    bool Archive::deserializeVersionedObject( uint32& outVersion, void* pInstance, const TypeInfo& typeInfo,
-                                              uint32 currentVersion )
+    bool Archive::deserializeVersionedObject( void* pInstance, const TypeInfo& typeInfo, uint32 currentVersion )
     {
         if ( pInstance == nullptr )
         {
@@ -693,7 +692,7 @@ namespace sw
         if ( readSection( versionedBytes ) == false || versionedBytes.empty() )
             return false;
 
-        return BinarySerializer::deserializeVersioned( outVersion, pInstance, typeInfo,
+        return BinarySerializer::deserializeVersioned( pInstance, typeInfo,
                                                        versionedBytes.data(), versionedBytes.size(),
                                                        currentVersion );
     }

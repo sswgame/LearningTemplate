@@ -117,13 +117,14 @@ namespace sw
         /**
          * @brief 버전 헤더를 읽고 soft 역직렬화합니다. 판이 @p currentVersion 과 정확히 같을 때만 받습니다(이관하지 않는다).
          * @return 버전이 다르거나 orphan 이 있으면(`SchemaOrphanPolicy::Reject`) false 입니다.
+         * @note 읽은 판을 출력 인자로 돌려주지 않는다 — 성공이면 @p currentVersion 이고, 다른 판의 거절은 `Schema.VersionMismatch` 로그가 판을 적는다(실패한 읽기가 바깥 칸을 덮지 않는다).
          */
-        [[nodiscard]] static bool deserializeVersioned( uint32& outVersion, void* pInstance, const TypeInfo& typeInfo, const uint8* pData, size_t dataSize,
+        [[nodiscard]] static bool deserializeVersioned( void* pInstance, const TypeInfo& typeInfo, const uint8* pData, size_t dataSize,
                                                         uint32                  currentVersion = 0,
                                                         const SerializeContext& context        = SerializeContext::getDefault( SerializePurpose::Authoring ) );
 
         /** @brief Archive 에서 버전 바이너리를 역직렬화합니다. */
-        [[nodiscard]] static bool deserializeVersioned( uint32& outVersion, void* pInstance, const TypeInfo& typeInfo, Archive& inArchive,
+        [[nodiscard]] static bool deserializeVersioned( void* pInstance, const TypeInfo& typeInfo, Archive& inArchive,
                                                         uint32                  currentVersion = 0,
                                                         const SerializeContext& context        = SerializeContext::getDefault( SerializePurpose::Authoring ) );
 

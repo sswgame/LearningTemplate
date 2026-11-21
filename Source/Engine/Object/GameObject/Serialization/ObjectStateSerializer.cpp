@@ -642,8 +642,7 @@ namespace sw
         const SerializeContext                    serializeContext = ObjectStateSerializerInternal::makeGameObjectContext(
             pGameObject, context.getPurpose(), SW_DELEGATE_FUNCTION( SerializeContext::TextWriteFn, &ObjectStateSerializerInternal::ReferenceWriter::writeRuntimeComponentText ),
             &mapKeyText );
-        uint32     version{ 0 };
-        const bool bLoaded = deserializeState( version, serializeContext );
+        const bool bLoaded = deserializeState( serializeContext );
         if ( bLoaded )
         {
             // 상태에 적힌 이름이다. 매니저가 유일하게 바꾸기(`finishLoad`) 전에 잡는다. 같은 배치의 이름만 남은 참조가 이 이름으로 찾는다.
@@ -694,9 +693,9 @@ namespace sw
         if ( ObjectStateSerializerInternal::reportMissingRequiredOnLoad<TSerializer>( *pTypeInfo, text ) == false )
             return false;
 
-        return loadStateInPlace( pGameObject, context, [&]( uint32& outVersion, const SerializeContext& serializeContext )
+        return loadStateInPlace( pGameObject, context, [&]( const SerializeContext& serializeContext )
         {
-            return TSerializer::deserializeVersioned( outVersion, pGameObject, *pTypeInfo, text, kObjectReflectedSchemaVersion, serializeContext );
+            return TSerializer::deserializeVersioned( pGameObject, *pTypeInfo, text, kObjectReflectedSchemaVersion, serializeContext );
         } );
     }
 
@@ -757,9 +756,9 @@ namespace sw
         if ( bodyStart + bodySize > size )
             return 0;
 
-        const bool bLoaded = loadStateInPlace( pGameObject, context, [&]( uint32& outVersion, const SerializeContext& serializeContext )
+        const bool bLoaded = loadStateInPlace( pGameObject, context, [&]( const SerializeContext& serializeContext )
         {
-            return BinarySerializer::deserializeVersioned( outVersion, pGameObject, *pTypeInfo, pData + bodyStart, bodySize,
+            return BinarySerializer::deserializeVersioned( pGameObject, *pTypeInfo, pData + bodyStart, bodySize,
                                                            kObjectReflectedSchemaVersion, serializeContext );
         } );
         return bLoaded ? bodyStart + bodySize : 0;

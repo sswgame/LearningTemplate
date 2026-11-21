@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Name/hashed_string.h"
@@ -76,6 +77,14 @@ namespace sw
     class SW_API StateIO final
     {
     public:
+        /** @brief `readSection` 이 읽은 구간 하나입니다. 본문은 읽은 바이트를 가리키는 읽기 전용 보기입니다. */
+        struct Section
+        {
+            Archive _body{};
+            uint32  _tag{ 0 };
+            uint32  _version{ 0 };
+        };
+
         /** @brief 방향은 @p archive 의 모드가 정합니다(`Archive::isReadMode`). */
         explicit StateIO( Archive& archive )
             : _pArchive( &archive )
@@ -384,10 +393,10 @@ namespace sw
          */
         static void writeSection( Archive& outArchive, uint32 tag, uint32 version, const Archive& body );
         /**
-         * @brief `writeSection` 이 쓴 구간 하나의 머리를 읽고 본문을 @p outBody 로 자릅니다. @p outBody 는 읽기 전용 보기이며 @p archive 의 바이트를 가리킵니다.
-         * @return 머리가 잘렸거나 길이가 남은 바이트를 넘으면 false 이며, @p archive 에 오류를 남긴다.
+         * @brief `writeSection` 이 쓴 구간 하나의 머리를 읽고 본문을 자릅니다. 본문은 읽기 전용 보기이며 @p archive 의 바이트를 가리킵니다.
+         * @return 머리가 잘렸거나 길이가 남은 바이트를 넘으면 없음이며, @p archive 에 오류를 남긴다. 값으로 돌려줘 실패한 읽기가 부르는 쪽의 칸을 덮지 않는다.
          */
-        [[nodiscard]] static bool readSection( Archive& archive, uint32& outTag, uint32& outVersion, Archive& outBody );
+        [[nodiscard]] static optional<Section> readSection( Archive& archive );
         /**
          * @brief 표가 @p tag 이고 버전이 @p version 인 구간 하나를 읽어 본문을 @p outBody 로 자릅니다. 다른 표이거나 올릴 수 없는 판이면 false 입니다.
          * @details 자리가 정해진 구간(디렉터가 든 키트 상태)은 이것으로 읽는다 — 표와 버전을 부르는 쪽이 따로 견주면 하나를 빼먹는다(버전을 안 봐 옛 판을 새 판으로 읽었다).

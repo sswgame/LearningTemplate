@@ -1173,8 +1173,7 @@ namespace sw
             return;
         }
         // 세이브에 없는 필드(정의 포인터, 설정)는 사본에서 이어진다. 선언된 `Min` · `Max` 는 읽기 공통 끝이 두 캐릭터 배열 · 고리 버퍼 원소까지 본다(`SerializerUtil::isWithinDeclaredRanges`).
-        uint32 version = 0;
-        if ( io.check( BinarySerializer::deserializeVersioned( version, this, *StaticType(), io.getArchive(), kStateVersion ) ) == false )
+        if ( io.check( BinarySerializer::deserializeVersioned( this, *StaticType(), io.getArchive(), kStateVersion ) ) == false )
             return;
         // 롤백 읽기와 같은 검증(이 타입과 값으로 든 고리 버퍼 · 라운드 시리즈의 `Validate`)을 돌린다.
         ValidationContext context;

@@ -22,7 +22,7 @@
 
 namespace sw
 {
-    bool runVersionedDeserialize( uint32& outVersion, const MutableObjectAddress instance, const TypeInfo& typeInfo,
+    bool runVersionedDeserialize( const uint32 streamVersion, const MutableObjectAddress instance, const TypeInfo& typeInfo,
                                   uint32 currentVersion, SchemaVersionSource versionSource, SchemaOrphanPolicy orphanPolicy,
                                   const SoftDeserializeFn& softDeserialize )
     {
@@ -30,21 +30,18 @@ namespace sw
             return false;
 
         vector<SchemaOrphanValue> listOrphan;
-        if ( versionSource == SchemaVersionSource::Payload )
-            outVersion = 0;
+        const bool                bStreamVersion = versionSource == SchemaVersionSource::Stream;
         // 스트림 판은 본문 앞에서 이미 안다 — 다른 판이면 본문을 읽기 전에 거절해 대상 객체를 건드리지 않는다(읽고 나서 거절하면 거절한 값이 객체에 남았다).
         // 언리얼이 패키지 요약의 버전을 보고 로드를 거절하는 것과 같은 자리다. 본문 안 판(JSON · XML)은 본문과 함께 읽혀 이 앞검사가 없다.
-        if ( versionSource == SchemaVersionSource::Stream && outVersion != currentVersion )
-            return finishVersionedRead( outVersion, currentVersion, typeInfo, listOrphan, orphanPolicy );
+        if ( bStreamVersion && streamVersion != currentVersion )
+            return finishVersionedRead( streamVersion, currentVersion, typeInfo, listOrphan, orphanPolicy );
 
         uint32 softVersion{ 0 };
         if ( softDeserialize( instance, typeInfo, listOrphan, softVersion ) == false )
             return false;
-        if ( versionSource == SchemaVersionSource::Payload )
-            outVersion = softVersion;
 
         // 포맷마다 갈리는 한 줄은 orphan 정책이다. 텍스트는 orphan 을 버리고 통과시키고, 바이너리는 거절한다(`SchemaOrphanPolicy` 의 계약).
-        return finishVersionedRead( outVersion, currentVersion, typeInfo, listOrphan, orphanPolicy );
+        return finishVersionedRead( bStreamVersion ? streamVersion : softVersion, currentVersion, typeInfo, listOrphan, orphanPolicy );
     }
 
     namespace

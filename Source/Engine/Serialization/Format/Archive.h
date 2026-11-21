@@ -275,9 +275,11 @@ namespace sw
         // ------------------------------------------------------------------------------
         /** @brief 버전 헤더를 붙여 객체를 직렬화합니다. */
         [[nodiscard]] bool serializeVersionedObject( uint32 version, const void* pInstance, const TypeInfo& typeInfo );
-        /** @brief 버전 헤더가 @p currentVersion 과 정확히 같을 때만 객체를 역직렬화합니다(이관하지 않는다). */
-        [[nodiscard]] bool deserializeVersionedObject( uint32& outVersion, void* pInstance, const TypeInfo& typeInfo,
-                                                       uint32 currentVersion = 0 );
+        /**
+         * @brief 버전 헤더가 @p currentVersion 과 정확히 같을 때만 객체를 역직렬화합니다(이관하지 않는다).
+         * @details 읽은 판을 출력 인자로 돌려주지 않는다 — 성공이면 @p currentVersion 이고, 다른 판은 읽기 전에 거절해 @p pInstance 를 건드리지 않는다(`Schema.VersionMismatch` 로그가 판을 적는다).
+         */
+        [[nodiscard]] bool deserializeVersionedObject( void* pInstance, const TypeInfo& typeInfo, uint32 currentVersion = 0 );
 
         template <typename T>
         [[nodiscard]] bool serializeVersionedObject( uint32 version, const T& instance )
@@ -286,9 +288,9 @@ namespace sw
         }
 
         template <typename T>
-        [[nodiscard]] bool deserializeVersionedObject( uint32& outVersion, T& instance, uint32 currentVersion = 0 )
+        [[nodiscard]] bool deserializeVersionedObject( T& instance, uint32 currentVersion = 0 )
         {
-            return deserializeVersionedObject( outVersion, &instance, *T::StaticType(), currentVersion );
+            return deserializeVersionedObject( &instance, *T::StaticType(), currentVersion );
         }
 
         // ------------------------------------------------------------------------------
