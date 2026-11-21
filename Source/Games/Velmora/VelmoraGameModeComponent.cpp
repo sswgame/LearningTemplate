@@ -16,8 +16,10 @@
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/Autosave.h"
 #include "GameFramework/Runtime/Gameplay/GameState/GameStateComponent.h"
-#include "GameFramework/Runtime/Gameplay/GameState/PlayerProgressComponent.h"
+#include "GameFramework/Runtime/Gameplay/GameState/PlayerComponentUtil.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/WalletComponent.h"
 #include "GameFramework/Runtime/Gameplay/Quest/QuestCatalog.h"
+#include "GameFramework/Runtime/Gameplay/Quest/QuestLogComponent.h"
 
 #include "Games/Velmora/VelmoraRegionCatalog.h"
 
@@ -147,9 +149,7 @@ namespace sw
             return false;
         if ( GameStateComponent::openOnOwner( *this, GameStateSettings{} ) == nullptr )
             return false;
-        PlayerProgressSettings progressSettings;
-        progressSettings._pQuestCatalog = pQuests;
-        if ( PlayerProgressComponent::openOnOwner( *this, progressSettings ) == nullptr )
+        if ( PlayerComponentUtil::openOnOwner<QuestLogComponent>( *this, pQuests ) == nullptr || PlayerComponentUtil::requireOnOwner<WalletComponent>( *this ) == nullptr )
             return false;
         if ( _campaign.initialize( _vitalsSettings, _startRegion.key() ) == false )
             return false;
@@ -196,13 +196,13 @@ namespace sw
             _playerPosition._y = next._y;
     }
 
-    void VelmoraGameModeComponent::updateRegion( const VelmoraRegionCatalog& regions, GameStateComponent& state, PlayerProgressComponent& progress )
+    void VelmoraGameModeComponent::updateRegion( const VelmoraRegionCatalog& regions, GameStateComponent& state, QuestLog& questLog )
     {
         const VelmoraRegionDef* const pRegion = regions.findAt( _playerPosition );
         if ( pRegion == nullptr || pRegion->_id == _currentRegion )
             return;
         _currentRegion         = pRegion->_id;
-        const bool bFirstVisit = _campaign.enterRegion( *pRegion, progress.getQuestLog(), state.getFlags() );
+        const bool bFirstVisit = _campaign.enterRegion( *pRegion, questLog, state.getFlags() );
         _pendingArea           = pRegion->_id;
         SW_LOG_INFO_ID( "Velmora.RegionEntered", "[Velmora] entered '%#'%#", pRegion->_name, bFirstVisit ? " for the first time" : "" );
         if ( _phase == VelmoraPhase::Explore && pRegion->hasEncounter() && VelmoraCampaign::isEncounterCleared( *pRegion, state.getFlags() ) == false )
@@ -225,7 +225,7 @@ namespace sw
         _pendingBoss = region._id;
     }
 
-    void VelmoraGameModeComponent::interactWithSite( const VelmoraRegionDef& region, GameStateComponent& state, PlayerProgressComponent& progress )
+    void VelmoraGameModeComponent::interactWithSite( const VelmoraRegionDef& region, GameStateComponent& state, QuestLog& questLog )
     {
         const float32 radiusSquared = _useRadius * _useRadius;
         const auto    isNear        = [this, radiusSquared]( const VelmoraSiteDef& site )
@@ -236,7 +236,7 @@ namespace sw
         };
         if ( isNear( region._beacon ) )
         {
-            if ( _campaign.lightBeacon( region, progress.getQuestLog(), state.getFlags() ) )
+            if ( _campaign.lightBeacon( region, questLog, state.getFlags() ) )
                 SW_LOG_INFO_ID( "Velmora.BeaconLit", "[Velmora] lit beacon '%#' in '%#'", region._beacon._id.c_str(), region._name );
             return;
         }
@@ -247,7 +247,7 @@ namespace sw
         }
     }
 
-    void VelmoraGameModeComponent::updateEncounter( float32 deltaTime, const VelmoraRegionCatalog& regions, GameStateComponent& state, PlayerProgressComponent& progress )
+    void VelmoraGameModeComponent::updateEncounter( float32 deltaTime, const VelmoraRegionCatalog& regions, GameStateComponent& state, QuestLog& questLog )
     {
         static const hashed_string    s_attackAction( VelmoraGameModeComponentInternal::kAttackAction );
         static const hashed_string    s_dashAction( VelmoraGameModeComponentInternal::kDashAction );
@@ -291,7 +291,7 @@ namespace sw
             SW_LOG_INFO_ID( "Velmora.HallCleared", "[Velmora] '%#': hall cleared, the boss comes in %# s", pArena->_name, _bossDelaySeconds );
             return;
         }
-        _campaign.clearEncounter( *pArena, progress.getQuestLog(), state.getFlags() );
+        _campaign.clearEncounter( *pArena, questLog, state.getFlags() );
         _encounterRegion = hashed_string{};
         _phase           = VelmoraPhase::Explore;
         SW_LOG_INFO_ID( "Velmora.RegionCleared", "[Velmora] '%#' cleared%#", pArena->_name, result._bBossDefeated == SW_TRUE ? " - the boss fell" : "" );
@@ -342,31 +342,32 @@ namespace sw
             return;
         const VelmoraRegionCatalog* const pRegions  = findRegions();
         GameStateComponent* const         pState    = findState();
-        PlayerProgressComponent* const    pProgress = PlayerProgressComponent::findOnOwner( *this );
-        if ( pRegions == nullptr || pState == nullptr || pProgress == nullptr )
+        QuestLogComponent* const          pQuestLog = PlayerComponentUtil::findOnOwner<QuestLogComponent>( *this );
+        WalletComponent* const            pWallet   = PlayerComponentUtil::findOnOwner<WalletComponent>( *this );
+        if ( pRegions == nullptr || pState == nullptr || pQuestLog == nullptr || pWallet == nullptr )
             return;
         static const hashed_string s_moveAction( CommonInputActions::kMove );
         static const hashed_string s_useAction( VelmoraGameModeComponentInternal::kUseAction );
 
         movePlayer( getActionVector2D( s_moveAction ), deltaTime, *pRegions );
-        updateRegion( *pRegions, *pState, *pProgress );
+        updateRegion( *pRegions, *pState, pQuestLog->getQuestLog() );
         if ( _phase == VelmoraPhase::Explore && wasActionTriggered( s_useAction ) )
         {
             if ( const VelmoraRegionDef* const pRegion = pRegions->find( _currentRegion ) )
-                interactWithSite( *pRegion, *pState, *pProgress );
+                interactWithSite( *pRegion, *pState, pQuestLog->getQuestLog() );
         }
         if ( _phase != VelmoraPhase::Explore )
-            updateEncounter( deltaTime, *pRegions, *pState, *pProgress );
+            updateEncounter( deltaTime, *pRegions, *pState, pQuestLog->getQuestLog() );
 
         // 알림 그릇은 프레임마다 비운다 — 퀘스트 보상은 여기서 주고, 지갑 · 체력 알림은 읽는 화면이 아직 없어 버린다(쌓이지 않게).
         _listQuestEvent.clear();
-        pProgress->getQuestLog().pollEvents( _listQuestEvent );
-        const int32 completedCount = _campaign.applyQuestEvents( _listQuestEvent, pProgress->getWallet() );
+        pQuestLog->getQuestLog().pollEvents( _listQuestEvent );
+        const int32 completedCount = _campaign.applyQuestEvents( _listQuestEvent, pWallet->getWallet() );
         if ( completedCount > 0 )
-            SW_LOG_INFO_ID( "Velmora.QuestCompleted", "[Velmora] %# quest(s) completed - gold %#, hearts %#", completedCount, pProgress->getWallet().getBalance( Wallet::getDefaultCurrency() ),
+            SW_LOG_INFO_ID( "Velmora.QuestCompleted", "[Velmora] %# quest(s) completed - gold %#, hearts %#", completedCount, pWallet->getWallet().getBalance( Wallet::getDefaultCurrency() ),
                             _campaign.getVitals().getHeartCount() );
         _listWalletEvent.clear();
-        pProgress->getWallet().pollEvents( _listWalletEvent );
+        pWallet->getWallet().pollEvents( _listWalletEvent );
         _listHealthEvent.clear();
         _campaign.pollHealthEvents( _listHealthEvent );
 

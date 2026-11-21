@@ -16,7 +16,6 @@
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/GameData/ConfigRangeUtil.h"
-#include "GameFramework/Runtime/Gameplay/GameState/PlayerProgressComponent.h"
 #include "GameFramework/Runtime/Gameplay/GameState/StateSectionTableUtil.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Wallet.h"
@@ -31,12 +30,12 @@ namespace sw
         {
             static constexpr uint32 kSectionCount = 4;
 
-            /** @brief 판 1 의 플레이어 구간(지갑 · 일지 · 평판 · 가방)이면 true 입니다 — 판 2 부터 `PlayerProgressComponent` 가 싣는다. */
+            /** @brief 판 1 의 플레이어 구간(지갑 · 일지 · 평판 · 가방)이면 true 입니다 — 판 2 부터 플레이어 상태 컴포넌트(`WalletComponent` 등)가 싣는다. */
             static bool isPlayerSection( uint32 tag ) { return tag == Wallet::kStateTag || tag == QuestLog::kStateTag || tag == ReputationState::kStateTag || tag == Inventory::kStateTag; }
 
             /**
              * @brief 판 1 → 2: 플레이어 구간을 버리고 월드 구간(플래그 · 시계 · 날씨 · 땅)만 옮깁니다. 구간 본문은 그대로입니다.
-             * @details 플레이어 구간은 다른 컴포넌트(`PlayerProgressComponent`)의 상태라 이 컴포넌트의 바이트에서 옮겨 줄 수 없다 — 버린 것을 경고로 알린다.
+             * @details 플레이어 구간은 다른 컴포넌트(플레이어 상태 컴포넌트)의 상태라 이 컴포넌트의 바이트에서 옮겨 줄 수 없다 — 버린 것을 경고로 알린다.
              */
             [[nodiscard]] static bool upgradeStateFrom1( Archive& inOldBody, Archive& outNewBody )
             {
@@ -55,7 +54,7 @@ namespace sw
                         listKept.push_back( section );
                 }
                 if ( droppedCount > 0 )
-                    SW_LOG_WARNING_ID( "GameState.PlayerSectionsDropped", "GameState: an old save (version 1) held %# player section(s) (wallet, quest log, reputation, inventory) - they are not carried to the player progress",
+                    SW_LOG_WARNING_ID( "GameState.PlayerSectionsDropped", "GameState: an old save (version 1) held %# player section(s) (wallet, quest log, reputation, inventory) - they are not carried to the player components",
                                        droppedCount );
                 outNewBody << static_cast<uint32>( listKept.size() );
                 for ( const StateSectionTableUtil::Section& section : listKept )
@@ -108,7 +107,7 @@ namespace sw
 
     SW_STATE_FORMAT_UPGRADE( sessionState1To2, "GTST", 1, 2, &GameStateComponentInternal::upgradeStateFrom1 );
 
-    // 지갑 · 가방 명령(`cheat.money` · `cheat.give`)은 플레이어 진행(`PlayerProgressComponent.cpp`)에 있다.
+    // 지갑 · 가방 명령(`cheat.money` · `cheat.give`)은 플레이어 상태 개발 도구(`PlayerStateDevTools.cpp`)에 있다.
     SW_DEV_COMMAND( CheatWeather, "cheat.weather", "cheat.weather <weatherID> [duration]", "Switch the session state's weather now, without the transition (duration in game seconds; none picks from the definition)",
                     &GameStateDevCommandsInternal::runWeather );
 } // namespace sw
@@ -123,9 +122,7 @@ namespace sw
         , _weatherMaterial{}
         , _land{}
         , _listClockEvent{}
-        , _pendingStateBytes{}
-        , _bInitialized{ SW_FALSE }
-        , _bFreshGame{ SW_FALSE }
+        , _restore{}
         , _bWeather{ SW_FALSE }
         , _bOpenAtBeginPlay{ SW_FALSE }
         , _bRefusedInScene{ SW_FALSE }
@@ -137,7 +134,7 @@ namespace sw
 
     GameStateInitResult GameStateComponent::initialize( const GameStateSettings& settings )
     {
-        if ( _bInitialized == SW_TRUE )
+        if ( _restore.isOpen() )
             return GameStateInitResult::AlreadyInitialized;
         // 값을 범위 안으로 맞춰 열지 않는다. 시계 설정 안까지 보며, 상태를 바꾸기 전에 본다.
         const string rangeError = ConfigRangeUtil::describeRangeErrors( settings );
@@ -158,14 +155,7 @@ namespace sw
         _weatherMaterial.open( _pWeatherCatalog.get() ); // 강수를 칸으로 적은 카탈로그면 지면 머티리얼이 날씨를 따른다(없으면 열지 않는다)
         _land.initialize( settings._landWidth, settings._landHeight, settings._landCellSize, settings._landOrigin );
         _listClockEvent.clear();
-        _bInitialized = SW_TRUE;
-        _bFreshGame   = SW_TRUE;
-        if ( _pendingStateBytes.empty() )
-            return GameStateInitResult::Fresh;
-        if ( applyPendingState() == false )
-            return GameStateInitResult::Fresh;
-        _bFreshGame = SW_FALSE;
-        return GameStateInitResult::Restored;
+        return _restore.open( *this );
     }
 
     void GameStateComponent::onRegister( GameObjectManager& manager )
@@ -208,10 +198,10 @@ namespace sw
     {
         Component::onTick( context );
         _listClockEvent.clear();
-        if ( _bInitialized == SW_FALSE )
+        if ( _restore.isOpen() == false )
             return;
         _clock.update( context.getDeltaTime() );
-        _clock.pollEvents( _listClockEvent ); // 날이 넘어가면 플레이어 진행이 이 알림을 읽고 평판을 식힌다(`PlayerProgressComponent::onTick`)
+        _clock.pollEvents( _listClockEvent ); // 날이 넘어가면 평판 컴포넌트가 이 알림을 읽고 평판을 식힌다(`ReputationComponent::onTick`)
         if ( _bWeather == SW_TRUE && _clock.isPaused() == false )
             (void)_weather.update( context.getDeltaTime() * _clock.getTimeScale() * 86400.0f / _clock.getSettings()._secondsPerDay, _clock.getSeasonName() );
         // 묶음은 게임 스레드만 고친다 — 쓰기는 틱 뒤에 한다.
@@ -236,27 +226,14 @@ namespace sw
             visit( _weather, "weather" );
             visit( _land, "land" );
         };
-        if ( io.isWriting() )
-        {
-            Archive& archive = io.getArchive();
-            // 열리기 전(복원한 직후의 두 번째 캡처)이면 받은 바이트가 곧 상태이다. 빈 판을 쓰면 세이브를 잃는다.
-            if ( _bInitialized == SW_FALSE && _pendingStateBytes.empty() == false )
-            {
-                archive.writeBytes( _pendingStateBytes.data(), _pendingStateBytes.size() );
-                return;
-            }
-            StateSectionTableUtil::write( archive, kStateTag, kStateVersion, GameStateComponentInternal::kSectionCount, forEachSection );
-            return;
-        }
-        if ( StateSectionTableUtil::read( io, kStateTag, kStateVersion, GameStateComponentInternal::kSectionCount, forEachSection, "the session state" ) )
+        const bool bRead = _restore.serializeSections( io, kStateTag, kStateVersion, GameStateComponentInternal::kSectionCount, forEachSection, "the session state" );
+        if ( io.isReading() && bRead )
             _listClockEvent.clear();
     }
 
     void GameStateComponent::restoreState( vector<uint8>&& bytes )
     {
-        _pendingStateBytes = std::move( bytes );
-        if ( _bInitialized == SW_TRUE && applyPendingState() )
-            _bFreshGame = SW_FALSE;
+        _restore.receive( *this, std::move( bytes ) );
     }
 
     GameStateComponent* GameStateComponent::openOnOwner( const Component& component, const GameStateSettings& settings, GameStateInitResult& outResult )
@@ -294,16 +271,6 @@ namespace sw
                 return pState; // 씬에 하나다(`onRegister` 가 둘째를 거절한다)
         }
         return nullptr;
-    }
-
-    bool GameStateComponent::applyPendingState()
-    {
-        Archive    archive( _pendingStateBytes.data(), _pendingStateBytes.size() );
-        const bool bRestored = readState( archive );
-        _pendingStateBytes.clear();
-        if ( bRestored == false )
-            SW_LOG_ERROR_ID( "GameState.SavedSharedState", "GameState: the saved shared state could not be read - the game state starts fresh" );
-        return bRestored;
     }
 
     GameFlags* GameStateComponent::GameFlagsOwnerPort::findOpenFlags()

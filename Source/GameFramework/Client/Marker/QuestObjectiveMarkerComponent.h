@@ -22,7 +22,7 @@ namespace sw
      * @brief 퀘스트 목표 하나(카탈로그 `<Objective kind target>`)의 월드 자리에 놓는 목표 마커입니다(언리얼 게임들의 퀘스트 목표 액터, 유니티 퀘스트 에셋의 목표 위치 자리).
      * @details 일지가 목표를 세는 열쇠는 `notify( kind, target )` 의 두 이름이므로 이 컴포넌트도 그 둘과 퀘스트 id 를 가진다. 셋 중 하나라도 비면 시작할 때 오류를 남기고 숨는다.
      *          보일지는 `QuestLog::isObjectiveOpen` 이 정하고, 묻는 때는 UI 갱신(`WidgetComponent::shouldShowMarker`, 병렬 틱 밖)이다 — 디렉터가 틱에서 일지를 쓰기 때문이다.
-     *          일지는 씬의 플레이어 진행(`PlayerProgressComponent`)에 있다. 열린 것이 없거나 둘 이상이면(어느 플레이어의 일지인지 모른다) 오류를 한 번 남기고 숨는다.
+     *          일지는 씬의 플레이어 퀘스트 일지(`QuestLogComponent`)에 있다. 열린 것이 없거나 둘 이상이면(어느 플레이어의 일지인지 모른다) 오류를 한 번 남기고 숨는다.
      *          퀘스트와 무관한 웨이포인트는 기반 `ObjectiveMarkerComponent` 를 쓴다(늘 보인다).
      */
     REFLECT( Category = "Gameplay", DisplayName = "Quest Objective Marker", Tooltip = "Objective marker shown while one quest objective (kind and target as in the quest catalog) is open" )

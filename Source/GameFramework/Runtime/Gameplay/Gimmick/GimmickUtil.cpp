@@ -59,11 +59,10 @@ namespace sw
     {
         if ( item.empty() || count <= 0 )
             return false;
-        IItemReceiver* const  pReceiver = IItemReceiver::findForTarget( target );
-        const ItemGrantResult result    = pReceiver != nullptr ? pReceiver->receiveItem( item, count ) : ItemGrantResult::NoBag;
-        if ( result == ItemGrantResult::Granted )
+        IItemReceiver* const pReceiver = IItemReceiver::findForTarget( target );
+        if ( pReceiver != nullptr && pReceiver->receiveItem( item, count ) == ItemGrantResult::Granted )
             return true;
-        const utf8* pWhy = pReceiver == nullptr ? "no item receiver on it or its controller" : ( result == ItemGrantResult::NoBag ? "it has no bag" : "its bag is full" );
+        const utf8* pWhy = pReceiver == nullptr ? "no bag on it or its controller" : "its bag is full"; // 가방 없음은 받는 쪽(가방 컴포넌트)이 없는 것이다
         SW_LOG_WARNING_ID( "GimmickUtil.ItemNotGranted", "'%#' could not give %# x '%#' to '%#' (%#) - the item stays", giver.getName().c_str(), count, item.c_str(), target.getName().c_str(), pWhy );
         return false;
     }

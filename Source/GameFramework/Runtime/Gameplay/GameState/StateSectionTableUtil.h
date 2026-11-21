@@ -1,6 +1,6 @@
 /**
  * @file StateSectionTableUtil.h
- * @brief 상태 여럿을 구간 표(`StateIO::writeSection` 구간 하나씩)로 싣고 읽는 틀입니다. 월드 상태(`GameStateComponent`)와 플레이어 진행(`PlayerProgressComponent`)이 같은 틀을 쓴다.
+ * @brief 상태 여럿을 구간 표(`StateIO::writeSection` 구간 하나씩)로 싣고 읽는 틀입니다. 월드 상태(`GameStateComponent`)와 플레이어 상태 컴포넌트(`DeferredStateRestore::serialize`)가 같은 틀을 쓴다.
  * @details 알 수 없는 구간은 건너뛰고, 빠진 구간은 새 판으로 둔다. 구간 하나라도 읽지 못하면 로드 전체가 실패하고 상태는 읽기 전 그대로다(전부 아니면 없음).
  */
 #pragma once

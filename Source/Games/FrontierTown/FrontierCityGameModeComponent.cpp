@@ -13,7 +13,8 @@
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSWorld.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Gameplay/GameState/GameStateComponent.h"
-#include "GameFramework/Runtime/Gameplay/GameState/PlayerProgressComponent.h"
+#include "GameFramework/Runtime/Gameplay/GameState/PlayerComponentUtil.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/WalletComponent.h"
 
 #include "Games/FrontierTown/FrontierTownData.h"
 
@@ -48,15 +49,15 @@ namespace sw
 
     void FrontierCityGameModeComponent::serializeGameState( StateIO& io )
     {
-        GameStateComponent*      pState    = io.isReading() ? GameStateComponent::findOnOwner( *this ) : nullptr;
-        PlayerProgressComponent* pProgress = io.isReading() ? PlayerProgressComponent::findOnOwner( *this ) : nullptr;
-        if ( io.check( pState != nullptr && pProgress != nullptr ) == false )
+        GameStateComponent* pState  = io.isReading() ? GameStateComponent::findOnOwner( *this ) : nullptr;
+        WalletComponent*    pWallet = io.isReading() ? PlayerComponentUtil::findOnOwner<WalletComponent>( *this ) : nullptr;
+        if ( io.check( pState != nullptr && pWallet != nullptr ) == false )
             return;
         io.header( kStateTag, kStateVersion ); // 배치를 마쳤는지는 상태 칸이다(`GameModeComponent::serializeState`)
         if ( io.isOk() == false )
             return;
         CitySimulation restoredCity;
-        if ( io.isReading() && io.check( initializeCity( restoredCity, *pState, *pProgress ) ) == false )
+        if ( io.isReading() && io.check( initializeCity( restoredCity, *pState, *pWallet ) ) == false )
             return;
         CitySimulation& city = io.isWriting() ? _city : restoredCity;
         io.section( CitySimulation::kStateTag, CitySimulation::kStateVersion, [&city]( StateIO& bodyIO )
@@ -68,12 +69,12 @@ namespace sw
         _bViewsDirty = SW_TRUE;
     }
 
-    bool FrontierCityGameModeComponent::initializeCity( CitySimulation& outCity, GameStateComponent& state, PlayerProgressComponent& progress )
+    bool FrontierCityGameModeComponent::initializeCity( CitySimulation& outCity, GameStateComponent& state, WalletComponent& wallet )
     {
         const CityCatalog* pCatalog = game::findSubsystem<const CityCatalog>();
         if ( pCatalog == nullptr )
             return false;
-        if ( outCity.initialize( pCatalog, FrontierTownData::kLandSize, FrontierTownData::kLandSize, progress.getWallet() ) == false )
+        if ( outCity.initialize( pCatalog, FrontierTownData::kLandSize, FrontierTownData::kLandSize, wallet.getWallet() ) == false )
             return false;
         // 땅은 놓기 전에 빌린다 — 이미 놓인 도로 · 건물은 땅을 얻지 않는다(CitySimulation::bindLand).
         outCity.bindLand( &state.getLand(), int2{ 0, 0 } );
@@ -86,11 +87,10 @@ namespace sw
         GameStateComponent* pState = GameStateComponent::openOnOwner( *this, FrontierTownData::makeStateSettings() );
         if ( pState == nullptr )
             return false;
-        GameStateInitResult      initResult = GameStateInitResult::Refused;
-        PlayerProgressComponent* pProgress  = PlayerProgressComponent::openOnOwner( *this, FrontierTownData::makeProgressSettings(), initResult );
-        if ( pProgress == nullptr )
+        WalletComponent* pWallet = PlayerComponentUtil::requireOnOwner<WalletComponent>( *this );
+        if ( pWallet == nullptr )
             return false;
-        if ( initResult == GameStateInitResult::Fresh )
+        if ( pWallet->isFreshGame() )
         {
             // 광물 통화는 RTS 규칙 자산(유닛 카탈로그의 <Rules>)의 것이다 — C++ 기본값을 짐작하지 않는다(감사 K-4)
             const RTSCatalog* pUnits = game::findSubsystem<const RTSCatalog>();
@@ -105,10 +105,10 @@ namespace sw
                 SW_LOG_ERROR_ID( "FrontierCity.CityCatalogMissing", "[Frontier] the city catalog is not loaded - the starting money has no currency" );
                 return false;
             }
-            pProgress->getWallet().add( pCity->getRules()._currency, _startingDeben );
-            pProgress->getWallet().add( pUnits->getRules()._mineralCurrency, _startingMinerals );
+            pWallet->getWallet().add( pCity->getRules()._currency, _startingDeben );
+            pWallet->getWallet().add( pUnits->getRules()._mineralCurrency, _startingMinerals );
         }
-        if ( initializeCity( _city, *pState, *pProgress ) == false )
+        if ( initializeCity( _city, *pState, *pWallet ) == false )
         {
             SW_LOG_ERROR_ID( "FrontierCity.CityCannotStartCity", "[Frontier] the city cannot start - the city catalog is not loaded" );
             return false;

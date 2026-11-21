@@ -4,9 +4,11 @@
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 
-#include "GameFramework/Runtime/Gameplay/GameState/PlayerProgressComponent.h"
+#include "GameFramework/Runtime/Gameplay/GameState/PlayerComponentUtil.h"
 #include "GameFramework/Runtime/Gameplay/Quest/QuestLog.h"
+#include "GameFramework/Runtime/Gameplay/Quest/QuestLogComponent.h"
 
 namespace sw
 {
@@ -52,15 +54,15 @@ namespace sw
         if ( pQuestLog != nullptr )
             return isObjectiveOpen( *pQuestLog );
         if ( _bQuestLogMissingReported == SW_FALSE )
-            SW_LOG_ERROR_ID( "QuestObjectiveMarkerComponent.QuestObjectiveMarkerNeeds2", "Quest objective marker '%#' needs exactly one open player progress (quest log) in the scene - hidden", getLabel().c_str() );
+            SW_LOG_ERROR_ID( "QuestObjectiveMarkerComponent.QuestObjectiveMarkerNeeds2", "Quest objective marker '%#' needs exactly one open player quest log (QuestLogComponent) in the scene - hidden", getLabel().c_str() );
         _bQuestLogMissingReported = SW_TRUE;
         return false;
     }
 
     const QuestLog* QuestObjectiveMarkerComponent::findPlayerQuestLog() const
     {
-        const GameObject*              pOwner    = getOwner();
-        const PlayerProgressComponent* pProgress = PlayerProgressComponent::findOpen( pOwner != nullptr ? pOwner->getManager() : nullptr ); // 둘 이상이면 오류로 nullptr
-        return pProgress != nullptr ? &pProgress->getQuestLog() : nullptr;
+        const GameObject*        pOwner    = getOwner();
+        const QuestLogComponent* pQuestLog = PlayerComponentUtil::findOpen<QuestLogComponent>( pOwner != nullptr ? pOwner->getManager() : nullptr ); // 둘 이상이면 오류로 nullptr
+        return pQuestLog != nullptr ? &pQuestLog->getQuestLog() : nullptr;
     }
 } // namespace sw

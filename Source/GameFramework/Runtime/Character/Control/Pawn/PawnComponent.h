@@ -25,6 +25,8 @@ namespace sw
 {
     class PrefabAsset;
     class ControllerComponent;
+    class GameObject;
+    class GameObjectManager;
 
     /** @brief 조종자 없이 플레이를 시작한 폰을 누가 쥘지 정합니다. */
     ENUM()
@@ -78,6 +80,11 @@ namespace sw
         /** @brief 지금 쥔 조종자 컴포넌트입니다. 없으면 무효 핸들입니다. */
         const TComponentHandle<ControllerComponent>& getController() const { return _controller; }
         bool                                         isPossessed() const { return _controller.isValid(); }
+        /**
+         * @brief @p pawnObject 의 폰을 쥔 조종자의 오브젝트입니다. 폰이나 조종자가 없으면 nullptr 입니다.
+         * @details 조종자 쪽 상태(플레이어 상태 · 가방 · 지갑)를 폰에서 찾는 길은 이것 하나다(언리얼 `APawn::GetController` → 그 `PlayerState`).
+         */
+        [[nodiscard]] static GameObject* findControllerObject( const GameObjectManager& manager, const GameObject& pawnObject );
         /** @brief 조종 회전에 더할 것(반동, 피격 흔들림)을 쌓습니다. 조종자가 다음 틱의 조종 회전에 넣습니다. 틱 안에서 여러 컴포넌트가 불러도 됩니다(원자적 합). */
         void addControlRotationOffset( float32 deltaYaw, float32 deltaPitch );
         /**

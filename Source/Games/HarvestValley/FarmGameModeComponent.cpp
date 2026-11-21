@@ -27,9 +27,11 @@
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/Grid/GridTopology.h"
 #include "GameFramework/Runtime/Gameplay/GameState/GameStateComponent.h"
-#include "GameFramework/Runtime/Gameplay/GameState/PlayerProgressComponent.h"
+#include "GameFramework/Runtime/Gameplay/GameState/PlayerComponentUtil.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/InventoryComponent.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/WalletComponent.h"
 #include "GameFramework/Runtime/World/Environment/WorldClock.h"
 
 #include "Games/HarvestValley/FarmAutoFarmerAIComponent.h"
@@ -353,14 +355,13 @@ namespace sw
         GameStateComponent* pState     = GameStateComponent::openOnOwner( *this, settings );
         if ( pState == nullptr )
             return false; // 범위 밖(하루 길이 · 계절 날 수 등)은 판 상태가 오류를 남겼다
-        PlayerProgressSettings progressSettings;
-        progressSettings._pItemCatalog       = &_itemCatalog;
-        progressSettings._inventorySlotCount = kBagSlotCount;
-        GameStateInitResult      initResult  = GameStateInitResult::Refused;
-        PlayerProgressComponent* pProgress   = PlayerProgressComponent::openOnOwner( *this, progressSettings, initResult );
-        if ( pProgress == nullptr )
+        InventorySettings bagSettings;
+        bagSettings._pItemCatalog   = &_itemCatalog;
+        bagSettings._slotCount      = kBagSlotCount;
+        InventoryComponent* pBag    = PlayerComponentUtil::openOnOwner<InventoryComponent>( *this, bagSettings );
+        WalletComponent*    pWallet = PlayerComponentUtil::requireOnOwner<WalletComponent>( *this );
+        if ( pBag == nullptr || pWallet == nullptr )
             return false;
-        const bool bFresh = initResult == GameStateInitResult::Fresh;
         _field.initialize( kFieldWidth, kFieldHeight, _pCropCatalog.get() );
         _shipment = FarmShippingBin{};
         _listSeed.clear();
@@ -369,11 +370,10 @@ namespace sw
             _listSeed.push_back( crop._seedItem );
         }
         // 시작 돈과 씨앗은 새 판에만 준다. 복원한 판에 덧쌓이지 않게 하기 위해서다.
-        if ( bFresh )
-        {
-            pProgress->getWallet().add( _shipment.getCurrency(), _startingGold );
-            (void)pProgress->getInventory().addItem( _pCropCatalog->getCrops().front()._seedItem, _startingSeedCount );
-        }
+        if ( pWallet->isFreshGame() )
+            pWallet->getWallet().add( _shipment.getCurrency(), _startingGold );
+        if ( pBag->isFreshGame() )
+            (void)pBag->getInventory().addItem( _pCropCatalog->getCrops().front()._seedItem, _startingSeedCount );
         _dayStarted     = pState->getClock().getDay();
         _hourOfDay      = pState->getClock().getHour();
         _playerPosition = _playerStart;
@@ -603,9 +603,9 @@ namespace sw
             return;
         }
 
-        GameStateComponent*      pState    = GameStateComponent::findOnOwner( *this );
-        PlayerProgressComponent* pProgress = PlayerProgressComponent::findOnOwner( *this );
-        FarmActionResult         result    = FarmActionResult::Done;
+        GameStateComponent* pState = GameStateComponent::findOnOwner( *this );
+        InventoryComponent* pBag   = PlayerComponentUtil::findOnOwner<InventoryComponent>( *this );
+        FarmActionResult    result = FarmActionResult::Done;
         switch ( _tool )
         {
             case FarmTool::Hoe:
@@ -621,13 +621,13 @@ namespace sw
             case FarmTool::Seeds:
             {
                 const hashed_string& seed = getSelectedSeed();
-                if ( pState == nullptr || pProgress == nullptr || pProgress->getInventory().getItemCount( seed ) <= 0 )
+                if ( pState == nullptr || pBag == nullptr || pBag->getInventory().getItemCount( seed ) <= 0 )
                 {
                     SW_LOG_INFO_ID( "FarmGameMode.NoLeftBuyMore", "[Farm] no %# left - buy more at the shop (B)", seed.c_str() );
                     return;
                 }
                 result = _field.plant( x, y, seed, pState->getClock().getSeasonName() );
-                if ( result == FarmActionResult::Done && pProgress->getInventory().consumeItem( seed, 1 ) == false )
+                if ( result == FarmActionResult::Done && pBag->getInventory().consumeItem( seed, 1 ) == false )
                     SW_LOG_WARNING_ID( "FarmGameMode.PlantedWithoutSeedBag", "[Farm] planted without a seed in the bag" );
                 if ( result == FarmActionResult::Done )
                     getSoundQueue().queueEvent( Internal::kEventPlant );
@@ -641,7 +641,7 @@ namespace sw
                 if ( result == FarmActionResult::Done && count > 0 )
                 {
                     // 가방이 차면 덜 들어간다(남은 것은 밭에서 사라진다). 실제로 넣은 수를 적는다.
-                    const int32 added = pProgress != nullptr ? pProgress->getInventory().addItem( produce, count ) : 0;
+                    const int32 added = pBag != nullptr ? pBag->getInventory().addItem( produce, count ) : 0;
                     SW_LOG_INFO_ID( "FarmGameMode.HarvestedXBag", "[Farm] harvested %# x%# (%# into the bag)", produce.c_str(), count, added );
                     getSoundQueue().queueEvent( Internal::kEventHarvest );
                 }
@@ -665,10 +665,10 @@ namespace sw
             SW_LOG_INFO_ID( "FarmGameMode.StandNextShippingBin", "[Farm] stand next to the shipping bin to ship" );
             return 0;
         }
-        PlayerProgressComponent* pProgress = PlayerProgressComponent::findOnOwner( *this );
-        if ( pProgress == nullptr )
+        InventoryComponent* pBag = PlayerComponentUtil::findOnOwner<InventoryComponent>( *this );
+        if ( pBag == nullptr )
             return 0;
-        Inventory& bag     = pProgress->getInventory();
+        Inventory& bag     = pBag->getInventory();
         int32      shipped = 0;
         for ( const CropDef& crop : _pCropCatalog->getCrops() )
         {
@@ -694,11 +694,12 @@ namespace sw
         const CropDef* pCrop = _pCropCatalog->findCropBySeed( getSelectedSeed() );
         if ( pCrop == nullptr )
             return false;
-        PlayerProgressComponent* pProgress = PlayerProgressComponent::findOnOwner( *this );
-        if ( pProgress == nullptr )
+        InventoryComponent* pBag    = PlayerComponentUtil::findOnOwner<InventoryComponent>( *this );
+        WalletComponent*    pWallet = PlayerComponentUtil::findOnOwner<WalletComponent>( *this );
+        if ( pBag == nullptr || pWallet == nullptr )
             return false;
-        Inventory& bag    = pProgress->getInventory();
-        Wallet&    wallet = pProgress->getWallet();
+        Inventory& bag    = pBag->getInventory();
+        Wallet&    wallet = pWallet->getWallet();
         if ( bag.hasRoomFor( pCrop->_seedItem, 1 ) == false )
         {
             SW_LOG_INFO_ID( "FarmGameMode.BagFullNoRoom", "[Farm] the bag is full - no room for %#", pCrop->_seedItem.c_str() );
@@ -716,12 +717,12 @@ namespace sw
 
     void FarmGameModeComponent::endDay( bool bPassedOut )
     {
-        GameStateComponent*      pState    = GameStateComponent::findOnOwner( *this );
-        PlayerProgressComponent* pProgress = PlayerProgressComponent::findOnOwner( *this );
-        if ( pState == nullptr || pProgress == nullptr )
+        GameStateComponent* pState  = GameStateComponent::findOnOwner( *this );
+        WalletComponent*    pWallet = PlayerComponentUtil::findOnOwner<WalletComponent>( *this );
+        if ( pState == nullptr || pWallet == nullptr )
             return;
         WorldClock&                  clock        = pState->getClock();
-        [[maybe_unused]] const int64 earned       = _shipment.settleShipping( *_pCropCatalog, pProgress->getWallet() );
+        [[maybe_unused]] const int64 earned       = _shipment.settleShipping( *_pCropCatalog, pWallet->getWallet() );
         const hashed_string          seasonBefore = clock.getSeasonName();
         const float32                hoursBefore  = static_cast<float32>( clock.getDay() ) * 24.0f + clock.getHour();
         clock.advanceToHour( _wakeHour ); // 수면. 다음 날 아침이 된다.
@@ -738,7 +739,7 @@ namespace sw
         _playerPosition = _playerStart;
         _facing         = float3{ 0.0f, 0.0f, 1.0f };
         SW_LOG_INFO_ID( "FarmGameMode.GoodMorningYearShipped", "[Farm] good morning - %# %#, year %# · shipped for %#G · gold %#G · %#%#", clock.getSeasonName().c_str(), clock.getDayOfSeason() + 1,
-                        clock.getYear(), earned, pProgress->getWallet().getBalance( _shipment.getCurrency() ), bRaining ? "rain" : "sunny",
+                        clock.getYear(), earned, pWallet->getWallet().getBalance( _shipment.getCurrency() ), bRaining ? "rain" : "sunny",
                         bSeasonChange ? " · a new season - out-of-season crops withered" : "" );
         _lastLoggedHour = -1;
     }
@@ -751,10 +752,10 @@ namespace sw
         _selectedSeedIndex = ( ( _selectedSeedIndex + offset ) % count + count ) % count;
         if ( isAutoPlayOn() )
             return; // 자동 농부는 씨앗을 하나씩 넘겨 가며 고른다. 그 줄은 로그에 남기지 않는다.
-        [[maybe_unused]] const CropDef*                 pCrop     = _pCropCatalog->findCropBySeed( getSelectedSeed() );
-        [[maybe_unused]] const GameStateComponent*      pState    = GameStateComponent::findOnOwner( *this );
-        [[maybe_unused]] const PlayerProgressComponent* pProgress = PlayerProgressComponent::findOnOwner( *this );
-        SW_LOG_INFO_ID( "FarmGameMode.SeedG", "[Farm] seed: %# (have %#, %#G)%#", getSelectedSeed().c_str(), pProgress != nullptr ? pProgress->getInventory().getItemCount( getSelectedSeed() ) : 0,
+        [[maybe_unused]] const CropDef*            pCrop  = _pCropCatalog->findCropBySeed( getSelectedSeed() );
+        [[maybe_unused]] const GameStateComponent* pState = GameStateComponent::findOnOwner( *this );
+        [[maybe_unused]] const InventoryComponent* pBag   = PlayerComponentUtil::findOnOwner<InventoryComponent>( *this );
+        SW_LOG_INFO_ID( "FarmGameMode.SeedG", "[Farm] seed: %# (have %#, %#G)%#", getSelectedSeed().c_str(), pBag != nullptr ? pBag->getInventory().getItemCount( getSelectedSeed() ) : 0,
                         pCrop != nullptr ? pCrop->_seedPrice : 0, pCrop != nullptr && pState != nullptr && pCrop->canGrowIn( pState->getClock().getSeasonName() ) ? "" : " - not this season" );
     }
 
@@ -770,9 +771,10 @@ namespace sw
 
     void FarmGameModeComponent::logStatus( bool bForce )
     {
-        const GameStateComponent*      pState    = GameStateComponent::findOnOwner( *this );
-        const PlayerProgressComponent* pProgress = PlayerProgressComponent::findOnOwner( *this );
-        if ( pState == nullptr || pProgress == nullptr )
+        const GameStateComponent* pState  = GameStateComponent::findOnOwner( *this );
+        const InventoryComponent* pBag    = PlayerComponentUtil::findOnOwner<InventoryComponent>( *this );
+        const WalletComponent*    pWallet = PlayerComponentUtil::findOnOwner<WalletComponent>( *this );
+        if ( pState == nullptr || pBag == nullptr || pWallet == nullptr )
             return;
         const WorldClock& clock = pState->getClock();
         const int32       hour  = clock.getHourInt();
@@ -781,8 +783,8 @@ namespace sw
         _lastLoggedHour                       = hour;
         [[maybe_unused]] const CropDef* pCrop = _pCropCatalog->findCropBySeed( getSelectedSeed() );
         SW_LOG_INFO_ID( "FarmGameMode.YGoldGStamina", "[Farm] %# %# Y%# %#:%# · gold %#G · stamina %#/%# · tool %# · seed %# x%# · crops %# (ready %#)", clock.getSeasonName().c_str(),
-                        clock.getDayOfSeason() + 1, clock.getYear(), hour, clock.getMinute(), pProgress->getWallet().getBalance( _shipment.getCurrency() ), _stamina, _maxStamina,
-                        getEnumName( _tool ), pCrop != nullptr ? pCrop->_name.c_str() : "-", pProgress->getInventory().getItemCount( getSelectedSeed() ),
+                        clock.getDayOfSeason() + 1, clock.getYear(), hour, clock.getMinute(), pWallet->getWallet().getBalance( _shipment.getCurrency() ), _stamina, _maxStamina,
+                        getEnumName( _tool ), pCrop != nullptr ? pCrop->_name.c_str() : "-", pBag->getInventory().getItemCount( getSelectedSeed() ),
                         _field.getCropCount(), _field.getReadyCount() );
     }
 
