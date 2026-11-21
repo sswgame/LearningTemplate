@@ -297,7 +297,7 @@ namespace sw
         bool bValid = true;
 
         vector<hashed_string> listFlag;
-        StringUtil::forEachToken( child.getAttributeText( "flags" ), ", ;", [&listFlag]( string_view token )
+        StringUtil::forEachToken( child.getAttributeText( "flags" ), XMLReadUtil::kListSeparators, [&listFlag]( string_view token )
         { listFlag.push_back( hashed_string( token ) ); } );
         const optional<int32> material = addMaterial( hashed_string( child.getAttributeText( "id" ) ), listFlag );
         if ( material.has_value() == false )
