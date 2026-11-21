@@ -71,13 +71,13 @@ namespace sw
     expected<uint64> ContentHash::computeFileStream( string_view absPath, uint64* pOutByteCount )
     {
         uint64 fileSize = 0;
-        if ( FileUtil::tryGetFileSize( absPath, fileSize ) == false )
+        if ( FileUtil::tryGetFileSize( FileUtil::toDiskPath( absPath ), fileSize ) == false )
             return unexpected( Error{ ErrorKind::NotFound, "file cannot be sized for its content hash", absPath } );
         uint64        state = kInitialState;
         vector<uint8> chunk;
         for ( uint64 offset = 0; offset < fileSize; offset += kStreamChunkBytes )
         {
-            if ( FileUtil::readFile( absPath, chunk, offset, kStreamChunkBytes ) == false || chunk.empty() )
+            if ( FileUtil::readFile( FileUtil::toDiskPath( absPath ), chunk, offset, kStreamChunkBytes ) == false || chunk.empty() )
                 return unexpected( Error{ ErrorKind::ExternalFailure, "file cannot be read for its content hash", absPath } );
             state = appendBytes( state, chunk.data(), chunk.size() );
             if ( pOutByteCount != nullptr )
@@ -146,7 +146,7 @@ namespace sw
     {
         const string key = makeKey( absPath );
         FileStamp    stamp{};
-        const bool   bStamped   = FileUtil::getFileStamp( absPath, stamp );
+        const bool   bStamped   = FileUtil::getFileStamp( FileUtil::toDiskPath( absPath ), stamp );
         uint64       serialSeen = 0;
         bool         bHadEntry  = false;
         if ( bStamped )
@@ -179,7 +179,7 @@ namespace sw
     {
         const string      key = makeKey( filePath );
         FileStamp         stamp{};
-        const bool        bFile = FileUtil::getFileStamp( filePath, stamp );
+        const bool        bFile = FileUtil::getFileStamp( FileUtil::toDiskPath( filePath ), stamp );
         ScopedLock<mutex> lock{ _mutex };
         ++_writeSerial;
         if ( bFile )
@@ -200,9 +200,9 @@ namespace sw
             _cachePath = cachePath.str();
         }
         vector<uint8> bytes;
-        if ( FileUtil::isRegularFile( cachePath.str() ) == false )
+        if ( FileUtil::isRegularFile( cachePath ) == false )
             return {};
-        if ( FileUtil::readFile( cachePath.str(), bytes ) == false )
+        if ( FileUtil::readFile( cachePath, bytes ) == false )
             return unexpected( Error{ ErrorKind::ExternalFailure, "content hash cache cannot be read", cachePath.str() } );
         ByteReader   reader{ bytes.data(), bytes.size() };
         const uint32 magic   = reader.readUint32();

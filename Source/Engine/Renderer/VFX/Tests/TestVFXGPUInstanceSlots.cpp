@@ -23,7 +23,7 @@ namespace
             const string projectRoot = FileUtil::normalizeSeparators( ProcessRoots::get()._project.str() );
             string       text;
             if ( projectRoot.empty() == false )
-                std::ignore = FileUtil::readTextFile( FileUtil::joinPath( FileUtil::joinPath( projectRoot, "Content/engine/shaders" ), pFileName ), text );
+                std::ignore = FileUtil::readTextFile( FileUtil::toDiskPath( FileUtil::joinPath( FileUtil::joinPath( projectRoot, "Content/engine/shaders" ), pFileName ) ), text );
             return text;
         }
 

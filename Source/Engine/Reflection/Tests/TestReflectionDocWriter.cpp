@@ -24,14 +24,14 @@ SW_TEST_CASE( ReflectionDocWriterTest, WritesModulePagesAndIndexDeterministicall
     SW_EXPECT_EQUAL( fileCount, sw::ReflectionDocWriter::writeMarkdown( registry, secondDir ) );
 
     sw::string index;
-    SW_REQUIRE_TRUE( sw::FileUtil::readTextFile( sw::FileUtil::joinPath( firstDir, "index.md" ), index ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::readTextFile( sw::FileUtil::toDiskPath( sw::FileUtil::joinPath( firstDir, "index.md" ) ), index ) );
     SW_EXPECT_TRUE_MSG( index.find( "[`sw::InvokeDemoActor`](Engine.md#sw-invokedemoactor)" ) != sw::string::npos, index.c_str() );
 
     const sw::TypeInfo* pType = sw::InvokeDemoActor::StaticType();
     SW_REQUIRE_NOT_NULL( pType );
     const sw::string pageName = sw::ReflectionDocWriter::makeModuleFileName( pType->_moduleName );
     sw::string       page;
-    SW_REQUIRE_TRUE( sw::FileUtil::readTextFile( sw::FileUtil::joinPath( firstDir, pageName ), page ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::readTextFile( sw::FileUtil::toDiskPath( sw::FileUtil::joinPath( firstDir, pageName ) ), page ) );
     SW_EXPECT_TRUE( page.find( "## sw::InvokeDemoActor" ) != sw::string::npos );
     SW_EXPECT_TRUE( page.find( "- `int32 heal(int32 amount, float32 multiplier = 1.5f)`" ) != sw::string::npos );
     SW_EXPECT_TRUE( page.find( "- `_onHpChanged(int32 newHp, string reason)`" ) != sw::string::npos );
@@ -41,6 +41,6 @@ SW_TEST_CASE( ReflectionDocWriterTest, WritesModulePagesAndIndexDeterministicall
     SW_EXPECT_TRUE( page.find( "| `Attacking` | 2 |" ) != sw::string::npos );
 
     sw::string secondPage;
-    SW_REQUIRE_TRUE( sw::FileUtil::readTextFile( sw::FileUtil::joinPath( secondDir, pageName ), secondPage ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::readTextFile( sw::FileUtil::toDiskPath( sw::FileUtil::joinPath( secondDir, pageName ) ), secondPage ) );
     SW_EXPECT_TRUE( page == secondPage );
 }

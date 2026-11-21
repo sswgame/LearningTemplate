@@ -94,7 +94,7 @@ namespace sw
                     --*write._pInFlight;
                     return;
                 }
-                (void)FileUtil::ensureParentDirectoryExists( write._path ); // 실패하면 아래 쓰기가 경로와 함께 알린다
+                (void)FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( write._path ) ); // 실패하면 아래 쓰기가 경로와 함께 알린다
                 const bool bWritten = RenderTargetImageFile::writeImageFile( write._bytes, write._layout, write._format, write._path );
                 if ( write._kind == ScreenshotWriteKind::Packet )
                 {

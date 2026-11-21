@@ -285,9 +285,9 @@ namespace sw
         vector<uint8> bytes;
         writeBytes( bytes );
         const string directory = FileUtil::getDirectoryPart( absPath.str() );
-        if ( directory.empty() == false && FileUtil::ensureDirectoryExists( directory ) == false )
+        if ( directory.empty() == false && FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( directory ) ) == false )
             return false;
-        return FileUtil::writeFile( absPath.str(), bytes.data(), bytes.size() );
+        return FileUtil::writeFile( absPath, bytes.data(), bytes.size() );
     }
 
     const NavMeshAssetEntry* NavMeshAsset::findEntry( const hashed_string& agentType ) const

@@ -64,7 +64,7 @@ namespace
 
         static string writeShop( const test::ScopedScratchDomain& domain )
         {
-            SW_EXPECT_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "shop.scene.xml" ), makeShopScene() ) );
+            SW_EXPECT_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( domain.makeDiskPath( "shop.scene.xml" ) ), makeShopScene() ) );
             return test::ScopedScratchDomain::makeID( "shop.scene.xml" ).str();
         }
 
@@ -232,8 +232,8 @@ SW_TEST_CASE( SceneSubLevelTest, SaveStateRestoresOverAClearedManager )
 
     objects.clear();
     scene.rebindRestoredFileIDs( {} );
-    SW_EXPECT_EQUAL( 0u, subLevels.getSubLevelCount() );                                             // 비우면 버린다 — 세이브가 다시 세운다
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "shop.scene.xml" ), "broken" ) ); // 복원은 문서를 다시 읽지 않는다
+    SW_EXPECT_EQUAL( 0u, subLevels.getSubLevelCount() );                                                                     // 비우면 버린다 — 세이브가 다시 세운다
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( domain.makeDiskPath( "shop.scene.xml" ) ), "broken" ) ); // 복원은 문서를 다시 읽지 않는다
     subLevels.applySaveState( scene, std::move( state ) );
     subLevels.update( 0.0f );
     objects.mergePendingAdds();

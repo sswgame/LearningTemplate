@@ -246,7 +246,7 @@ namespace sw
             {
                 const string file = step.readValidatedProperties<AutomationFileStepParams>()._file;
                 const string path = FileUtil::isAbsolutePath( file ) ? file : FileUtil::joinPath( runner.getOutputDirectory(), file );
-                if ( FileUtil::ensureParentDirectoryExists( path ) == false || FileUtil::writeTextFile( path, engine::getSubsystem<UISystem>().makeLayoutDump() ) == false )
+                if ( FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( path ) ) == false || FileUtil::writeTextFile( FileUtil::toDiskPath( path ), engine::getSubsystem<UISystem>().makeLayoutDump() ) == false )
                 {
                     fixed_string<constant::buffer::kMax512> message;
                     formatstring( message.data(), message.capacity(), "could not write %#", path );

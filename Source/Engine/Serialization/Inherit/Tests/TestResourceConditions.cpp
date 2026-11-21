@@ -292,7 +292,7 @@ SW_TEST_CASE( ResourceLayerTest, LayerFileLiesOverTheResource )
     // 층 파일 id 는 `<뿌리>/<id>` 다 — 도메인 폴더 안에서는 `layers/night/testproject/data/doc.xml`.
     SW_REQUIRE_EQUAL( ScopedScratchDomain::makeID( "layers/night/testproject/data/doc.xml" ).str(), ResourceLayers::makeLayerAssetID( root, id.view() ) );
     (void)domain.makeDiskFolder( "layers/night/testproject/data" );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "layers/night/testproject/data/doc.xml" ),
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( domain.makeDiskPath( "layers/night/testproject/data/doc.xml" ) ),
                                               R"(<Doc a="layer"><_when _if="quality.low" b="low" /><Items><Item name="added" v="9" /></Items></Doc>)" ) );
     constexpr const utf8* kText = R"(<Doc a="base" b="base"><Items><Item name="x" v="1" /></Items></Doc>)";
 
@@ -360,8 +360,8 @@ SW_TEST_CASE( ResourceRemapTest, ReadsTheFirstMatchingTarget )
     const AssetID             logo   = ScopedScratchDomain::makeID( "ui/logo.txt" );
     const AssetID             logoKo = ScopedScratchDomain::makeID( "ui/logo_ko.txt" );
     (void)domain.makeDiskFolder( "ui" );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "ui/logo.txt" ), "base" ) );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "ui/logo_ko.txt" ), "korean" ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( domain.makeDiskPath( "ui/logo.txt" ) ), "base" ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( domain.makeDiskPath( "ui/logo_ko.txt" ) ), "korean" ) );
     StringBuilder<constant::buffer::kMax512> table;
     table.appendFormat( "<ResourceRemap>"
                         "<Remap id=\"%#\" when=\"locale.ja\" to=\"%#.ja\" />"

@@ -206,7 +206,7 @@ namespace
         static bool loadInstance( MaterialInstance& instance, const utf8* pFileName, const utf8* text )
         {
             const string path = FileUtil::joinPath( test::makeScratchPath( "materialinstance" ), pFileName );
-            return FileUtil::ensureParentDirectoryExists( path ) && FileUtil::writeTextFile( path, string( text ) ) && instance.loadFromDiskFile( path );
+            return FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( path ) ) && FileUtil::writeTextFile( FileUtil::toDiskPath( path ), string( text ) ) && instance.loadFromDiskFile( path );
         }
     };
 } // namespace

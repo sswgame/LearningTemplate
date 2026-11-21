@@ -209,10 +209,10 @@ namespace sw
             static void removeLegacyCacheFiles( const string& cacheDir )
             {
                 const string marker = FileUtil::joinPath( cacheDir, kLayoutMarkerName );
-                if ( FileUtil::exists( marker ) )
+                if ( FileUtil::exists( FileUtil::toDiskPath( marker ) ) )
                     return;
                 vector<string> listLegacy;
-                (void)FileUtil::forEachDirectoryEntry( cacheDir, false, [&listLegacy]( const DirectoryEntry& entry )
+                (void)FileUtil::forEachDirectoryEntry( FileUtil::toDiskPath( cacheDir ), false, [&listLegacy]( const DirectoryEntry& entry )
                 {
                     if ( entry._bDirectory == false && ( StringUtil::endsWith( entry._path, ".bin" ) || StringUtil::endsWith( entry._path, ".bin.deps" ) ) )
                         listLegacy.push_back( string( entry._path ) );
@@ -220,11 +220,11 @@ namespace sw
                 } ); // 폴더가 없으면 지울 것이 없다
                 for ( const string& path : listLegacy )
                 {
-                    (void)FileUtil::tryRemoveFile( path ); // 다른 프로세스가 먼저 지웠을 수 있다
+                    (void)FileUtil::tryRemoveFile( FileUtil::toDiskPath( path ) ); // 다른 프로세스가 먼저 지웠을 수 있다
                 }
                 const string_view markerText{ "SWDDC 1\n" };
-                if ( FileUtil::ensureParentDirectoryExists( marker ) )
-                    (void)FileUtil::tryWriteFile( marker, reinterpret_cast<const uint8*>( markerText.data() ), markerText.size() ); // 못 쓰면 다음 실행이 다시 훑는다
+                if ( FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( marker ) ) )
+                    (void)FileUtil::tryWriteFile( FileUtil::toDiskPath( marker ), reinterpret_cast<const uint8*>( markerText.data() ), markerText.size() ); // 못 쓰면 다음 실행이 다시 훑는다
             }
 
             static ShaderCacheSlot computeCacheSlot( const ShaderCompileDesc& desc, const ShaderCompileInput& input )
@@ -237,7 +237,7 @@ namespace sw
 
                 // 못 읽으면 내용 없이(해시 0) 적는다 — 컴파일도 같은 파일을 읽다 실패하므로 그 캐시 자리는 쓰이지 않는다.
                 vector<uint8> sourceBytes;
-                (void)FileUtil::readFile( input._source.str(), sourceBytes ); // 못 읽으면 내용 없이 적는다(위 설명)
+                (void)FileUtil::readFile( FileUtil::toDiskPath( input._source.str() ), sourceBytes ); // 못 읽으면 내용 없이 적는다(위 설명)
 
                 string& text = slot._description;
                 text.append( "source=" ).append( desc._source.str() ).append( "\nentry=" ).append( desc._entryPoint );
@@ -553,7 +553,7 @@ namespace sw
     #endif
                 const string                 tintText = FileUtil::joinPath( FileUtil::getDirectoryPart( FileUtil::getExecutablePath() ), kTintName );
                 const optional<AbsolutePath> tintPath = AbsolutePath::tryMake( tintText );
-                if ( tintPath.has_value() == false || FileUtil::isRegularFile( tintText ) == false )
+                if ( tintPath.has_value() == false || FileUtil::isRegularFile( FileUtil::toDiskPath( tintText ) ) == false )
                     return unexpected( Error{ ErrorKind::NotFound, "Tint (SPIR-V -> WGSL) is not next to the executable - the WebGPU shader target needs it (docs/agents/Platform.md)", tintText } );
                 // 이름은 부를 때마다 새로 잡는다 — 같은 바이트(같은 해시)를 병렬 작업 둘이 같은 이름으로 쓰면 먼저 끝난 쪽이 지운 파일을 다른 쪽이 못 열었다
                 // ("Failed to open sw_tint_<해시>.spv"). 만들기가 곧 자리 잡기(`reserveUniquePath`)라 두 작업이 같은 이름을 갖지 않는다.
@@ -566,7 +566,7 @@ namespace sw
                 StringBuilder<constant::buffer::kMax512> wgslBuilder;
                 wgslBuilder.appendFormat( "%#.wgsl", FileUtil::removeExtension( spirvPath ) );
                 const string wgslPath( wgslBuilder.view() ); // 잡은 이름에서 나온다 — 다른 작업과 겹치지 않는다
-                if ( FileUtil::writeFile( spirvPath, inoutBytecode.data(), inoutBytecode.size() ) == false )
+                if ( FileUtil::writeFile( FileUtil::toDiskPath( spirvPath ), inoutBytecode.data(), inoutBytecode.size() ) == false )
                     return unexpected( Error{ ErrorKind::ExternalFailure, "could not write the SPIR-V for Tint", spirvPath } );
                 string                toolOutput;
                 const auto            onOutput = SW_DELEGATE_LAMBDA( ProcessOutputDelegate, [&toolOutput]( string_view line )
@@ -576,9 +576,9 @@ namespace sw
                 } );
                 const expected<int32> exitCode = Process::execute( ProcessCommand::at( *tintPath, { "--format", "wgsl", "--allow-non-uniform-derivatives", "true", "-o", wgslPath, spirvPath } ), {}, onOutput );
                 vector<uint8>         wgslBytes;
-                const bool            bRead = exitCode.has_value() && *exitCode == 0 && FileUtil::readFile( wgslPath, wgslBytes );
-                (void)FileUtil::removeFile( spirvPath );
-                (void)FileUtil::removeFile( wgslPath );
+                const bool            bRead = exitCode.has_value() && *exitCode == 0 && FileUtil::readFile( FileUtil::toDiskPath( wgslPath ), wgslBytes );
+                (void)FileUtil::removeFile( FileUtil::toDiskPath( spirvPath ) );
+                (void)FileUtil::removeFile( FileUtil::toDiskPath( wgslPath ) );
                 if ( exitCode.has_value() == false )
                     return unexpected( exitCode.error() );
                 if ( bRead == false )
@@ -682,7 +682,7 @@ namespace sw
                 // 소스는 엔진 파일 입구로 읽는다(DXC `LoadFile` 은 자기 파일 API 다). 실패 로그는 readFile 이 남긴다.
                 const wstring wPath = StringUtil::utf8ToUTF16( input._source.c_str() );
                 vector<uint8> sourceBytes;
-                if ( FileUtil::readFile( input._source.str(), sourceBytes ) == false )
+                if ( FileUtil::readFile( FileUtil::toDiskPath( input._source.str() ), sourceBytes ) == false )
                     return DxcResult::NoOutput;
 
                 wstring wEntryPoint = StringUtil::utf8ToUTF16( desc._entryPoint.c_str() );

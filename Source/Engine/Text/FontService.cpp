@@ -379,7 +379,7 @@ namespace sw
         }
         else
         {
-            bRead = FileUtil::readFile( path, bytes );
+            bRead = FileUtil::readFile( FileUtil::toDiskPath( path ), bytes );
         }
         FontFaceID face = kInvalidFontFaceID;
         if ( bRead )

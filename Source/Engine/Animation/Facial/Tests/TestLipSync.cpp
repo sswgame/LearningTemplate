@@ -200,7 +200,7 @@ SW_TEST_CASE( LipSyncTest, TrackRoundTripsThroughXMLAndAFile )
     SW_REQUIRE_TRUE( path.has_value() );
     SW_REQUIRE_TRUE( track.saveToFile( *path ) );
     string text;
-    SW_REQUIRE_TRUE( FileUtil::readTextFile( path->str(), text ) );
+    SW_REQUIRE_TRUE( FileUtil::readTextFile( *path, text ) );
     SW_EXPECT_TRUE( parsed.loadFromXMLText( text, "test" ) );
     SW_EXPECT_EQUAL( parsed.getFrameCount(), 2u );
 }

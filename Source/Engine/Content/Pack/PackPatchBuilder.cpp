@@ -35,13 +35,13 @@ namespace sw
             {
                 outListPackPath.clear();
                 outListSource.clear();
-                if ( packsDirectory.empty() || FileUtil::isDirectory( packsDirectory ) == false )
+                if ( packsDirectory.empty() || FileUtil::isDirectory( FileUtil::toDiskPath( packsDirectory ) ) == false )
                 {
                     SW_LOG_ERROR_ID( "PackPatchBuilder.PackFolderDoesNot", "Pack folder '%#' does not exist", packsDirectory );
                     return false;
                 }
                 vector<string> listFile;
-                if ( FileUtil::collectFiles( packsDirectory, "", listFile, false ) == false )
+                if ( FileUtil::collectFiles( FileUtil::toDiskPath( packsDirectory ), "", listFile, false ) == false )
                 {
                     SW_LOG_ERROR_ID( "PackPatchBuilder.PackFolderCouldNot", "Pack folder '%#' could not be listed completely", packsDirectory );
                     return false;
@@ -132,7 +132,7 @@ namespace sw
                     return false;
                 }
                 string previousText;
-                if ( FileUtil::readTextFile( params._previousRecordPath, previousText ) == false )
+                if ( FileUtil::readTextFile( FileUtil::toDiskPath( params._previousRecordPath ), previousText ) == false )
                 {
                     SW_LOG_ERROR_ID( "PackPatchBuilder.PreviousBuildRecordCould", "Previous build record '%#' could not be read", params._previousRecordPath );
                     return false;
@@ -270,7 +270,7 @@ namespace sw
         record._build = string( build );
         if ( collectBuildEntries( packsDirectory, record._listEntry ) == false )
             return false;
-        if ( FileUtil::ensureDirectoryExists( FileUtil::getDirectoryPart( recordPath ) ) == false || FileUtil::writeTextFile( recordPath, PackBuildRecord::makeText( record ) ) == false )
+        if ( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( FileUtil::getDirectoryPart( recordPath ) ) ) == false || FileUtil::writeTextFile( FileUtil::toDiskPath( recordPath ), PackBuildRecord::makeText( record ) ) == false )
         {
             SW_LOG_ERROR_ID( "PackPatchBuilder.BuildRecordCouldNot", "Build record '%#' could not be written", recordPath );
             return false;
@@ -283,7 +283,7 @@ namespace sw
     {
         PackBuildRecord record;
         record._patching = PackPatching::None;
-        if ( FileUtil::ensureDirectoryExists( FileUtil::getDirectoryPart( recordPath ) ) == false || FileUtil::writeTextFile( recordPath, PackBuildRecord::makeText( record ) ) == false )
+        if ( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( FileUtil::getDirectoryPart( recordPath ) ) ) == false || FileUtil::writeTextFile( FileUtil::toDiskPath( recordPath ), PackBuildRecord::makeText( record ) ) == false )
         {
             SW_LOG_ERROR_ID( "PackPatchBuilder.BuildRecordCouldNot", "Build record '%#' could not be written", recordPath );
             return false;
@@ -339,8 +339,8 @@ namespace sw
             if ( PackPatchManifest::sign( *params._signer._pProvider, params._signer._privateKeyPem, *writeResult._indexDigest, manifest ) == false )
                 return false;
         }
-        const bool bWritten = FileUtil::writeTextFile( manifestPath, PackPatchManifest::makeText( manifest ) ) &&
-                              FileUtil::writeTextFile( recordPath, PackBuildRecord::makeText( current ) );
+        const bool bWritten = FileUtil::writeTextFile( FileUtil::toDiskPath( manifestPath ), PackPatchManifest::makeText( manifest ) ) &&
+                              FileUtil::writeTextFile( FileUtil::toDiskPath( recordPath ), PackBuildRecord::makeText( current ) );
         if ( bWritten == false )
         {
             SW_LOG_ERROR_ID( "PackPatchBuilder.PatchFilesCouldNot", "Patch files could not be written to '%#'", params._outputDirectory );

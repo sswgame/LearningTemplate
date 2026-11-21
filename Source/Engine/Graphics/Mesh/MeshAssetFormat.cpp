@@ -750,9 +750,9 @@ namespace sw
     {
         vector<uint8> bytes;
         makeBytes( data, bytes );
-        if ( FileUtil::ensureParentDirectoryExists( absPath.str() ) == false )
+        if ( FileUtil::ensureParentDirectoryExists( absPath ) == false )
             return false;
-        return FileUtil::writeFile( absPath.str(), bytes.data(), bytes.size() );
+        return FileUtil::writeFile( absPath, bytes.data(), bytes.size() );
     }
 
     bool MeshAssetFormat::loadFromAsset( const AssetID& assetID, MeshAssetData& outData )

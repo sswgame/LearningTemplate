@@ -104,16 +104,16 @@ SW_TEST_CASE( AssetDatabaseTest, WriterGivesCopiesNewIdentityAndReplaceKeepsIt )
     const string             newTextAbs = sw::test::makeScratchPath( "incoming.xml" );
     const string             newBytes   = sw::test::makeScratchPath( "incoming.ogg" );
     const AssetGUID          original   = AssetGUID::create();
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( prefabAbs, AssetDatabaseTestUtil::makeHeaderText( original ) ) ); // 베낀 글 — 원본의 머리를 든다
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( soundAbs, "ogg" ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( prefabAbs ), AssetDatabaseTestUtil::makeHeaderText( original ) ) ); // 베낀 글 — 원본의 머리를 든다
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( soundAbs ), "ogg" ) );
 
     // 복사본은 새 에셋이다 — 머리는 새 GUID, 원본에는 새 .meta
     SW_REQUIRE_TRUE( rules.assignNewIdentity( prefabAbs, "a/copy.prefab.xml" ) );
     SW_REQUIRE_TRUE( rules.assignNewIdentity( soundAbs, "a/copy.ogg" ) );
     string prefabText;
     string metaText;
-    SW_REQUIRE_TRUE( FileUtil::readTextFile( prefabAbs, prefabText ) );
-    SW_REQUIRE_TRUE( FileUtil::readTextFile( AssetMeta::makePath( soundAbs ), metaText ) );
+    SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::toDiskPath( prefabAbs ), prefabText ) );
+    SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::toDiskPath( AssetMeta::makePath( soundAbs ) ), metaText ) );
     const AssetGUIDHeader copied = AssetGUIDHeader::read( prefabText );
     SW_REQUIRE_TRUE( copied._state == AssetGUIDHeaderState::Found );
     SW_EXPECT_TRUE( *copied._guid != original );
@@ -122,18 +122,18 @@ SW_TEST_CASE( AssetDatabaseTest, WriterGivesCopiesNewIdentityAndReplaceKeepsIt )
     SW_REQUIRE_TRUE( soundGUID.has_value() );
 
     // 내용 바꾸기는 GUID 를 지킨다 — 새 글에 머리가 없어도, 원본은 .meta 를 건드리지 않는다
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( newTextAbs, "<Prefab formatVersion=\"0\" name=\"New\"/>\n" ) );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( newBytes, "new ogg" ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( newTextAbs ), "<Prefab formatVersion=\"0\" name=\"New\"/>\n" ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( newBytes ), "new ogg" ) );
     SW_REQUIRE_TRUE( rules.replaceContentKeepingIdentity( prefabAbs, "a/copy.prefab.xml", newTextAbs ) );
     SW_REQUIRE_TRUE( rules.replaceContentKeepingIdentity( soundAbs, "a/copy.ogg", newBytes ) );
-    SW_REQUIRE_TRUE( FileUtil::readTextFile( prefabAbs, prefabText ) );
+    SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::toDiskPath( prefabAbs ), prefabText ) );
     SW_EXPECT_TRUE( *AssetGUIDHeader::read( prefabText )._guid == *copied._guid );
     SW_EXPECT_TRUE( StringUtil::contains( prefabText, "name=\"New\"" ) );
     string soundText;
-    SW_REQUIRE_TRUE( FileUtil::readTextFile( soundAbs, soundText ) );
+    SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::toDiskPath( soundAbs ), soundText ) );
     SW_EXPECT_EQUAL( string( "new ogg" ), soundText );
     string metaAfter;
-    SW_REQUIRE_TRUE( FileUtil::readTextFile( AssetMeta::makePath( soundAbs ), metaAfter ) );
+    SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::toDiskPath( AssetMeta::makePath( soundAbs ) ), metaAfter ) );
     SW_EXPECT_EQUAL( metaText, metaAfter );
 }
 

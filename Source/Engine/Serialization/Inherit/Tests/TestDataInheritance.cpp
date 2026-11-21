@@ -439,13 +439,13 @@ SW_TEST_CASE( DataInheritanceTest, CollectChildrenFindsDirectChildren )
     const test::ScopedScratchDomain domain;
     const string                    idBase = test::ScopedScratchDomain::makeID( "base.xml" ).str();
     const string                    idMid  = test::ScopedScratchDomain::makeID( "mid.xml" ).str();
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "base.xml" ), "<Doc />" ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( domain.makeDiskPath( "base.xml" ) ), "<Doc />" ) );
     StringBuilder<constant::buffer::kMax256> body;
     body.appendFormat( "<Doc _base=\"%#\" />", idBase );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "mid.xml" ), body.view() ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( domain.makeDiskPath( "mid.xml" ) ), body.view() ) );
     body.clear();
     body.appendFormat( "<Doc _base=\"%#\" />", idMid );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "leaf.xml" ), body.view() ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( domain.makeDiskPath( "leaf.xml" ) ), body.view() ) );
 
     vector<string> listChild;
     SW_REQUIRE_TRUE( DataInheritance::collectChildren( domain.getFolder(), idBase, { ".xml" }, listChild ) );

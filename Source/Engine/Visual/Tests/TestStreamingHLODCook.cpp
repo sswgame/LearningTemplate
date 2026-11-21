@@ -47,7 +47,7 @@ namespace
                 scene.append( entity );
             }
             scene.append( "</entities></Scene>" );
-            SW_EXPECT_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "hlod.scene.xml" ), scene.view() ) );
+            SW_EXPECT_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( domain.makeDiskPath( "hlod.scene.xml" ) ), scene.view() ) );
         }
 
         static const SceneDocument::StreamingCell* findCell( const SceneDocument& doc, int32 x )

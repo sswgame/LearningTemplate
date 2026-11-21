@@ -64,7 +64,7 @@ SW_TEST_CASE( CookRecordStalenessTest, EachInputKindGoesStaleWhenItsSourceChange
     // 리소스: 리소스 id 로 읽은 파일의 내용이 바뀌면 낡는다.
     {
         const string diskPath = domain.makeDiskPath( "resource.txt" );
-        SW_REQUIRE_TRUE( FileUtil::writeTextFile( diskPath, "one" ) );
+        SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( diskPath ), "one" ) );
         CookRecord record;
         {
             CookJob job( Internal::makeDesc() );
@@ -73,7 +73,7 @@ SW_TEST_CASE( CookRecordStalenessTest, EachInputKindGoesStaleWhenItsSourceChange
             record = Internal::roundTrip( job, recordPath );
         }
         Internal::expectFreshSingleInput( record, CookInputKind::Resource );
-        SW_REQUIRE_TRUE( FileUtil::writeTextFile( diskPath, "two" ) );
+        SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( diskPath ), "two" ) );
         Internal::expectStale( record, CookInputKind::Resource );
     }
 
@@ -81,7 +81,7 @@ SW_TEST_CASE( CookRecordStalenessTest, EachInputKindGoesStaleWhenItsSourceChange
     {
         const string folder   = test::makeScratchPath( "Disk" );
         const string diskPath = FileUtil::joinPath( folder, "disk.bin" );
-        SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( folder ) && FileUtil::writeTextFile( diskPath, "one" ) );
+        SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( folder ) ) && FileUtil::writeTextFile( FileUtil::toDiskPath( diskPath ), "one" ) );
         CookRecord record;
         {
             CookJob       job( Internal::makeDesc() );
@@ -90,14 +90,14 @@ SW_TEST_CASE( CookRecordStalenessTest, EachInputKindGoesStaleWhenItsSourceChange
             record = Internal::roundTrip( job, recordPath );
         }
         Internal::expectFreshSingleInput( record, CookInputKind::DiskFile );
-        SW_REQUIRE_TRUE( FileUtil::writeTextFile( diskPath, "two" ) );
+        SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( diskPath ), "two" ) );
         Internal::expectStale( record, CookInputKind::DiskFile );
     }
 
     // 목록: 읽은 파일은 그대로여도 같은 확장자의 파일이 하나 더 생기면 낡는다(폴더를 훑어 정한 출력).
     {
         const string folder = test::makeScratchPath( "Listing" );
-        SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( folder ) && FileUtil::writeTextFile( FileUtil::joinPath( folder, "a.entry" ), "a" ) );
+        SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( folder ) ) && FileUtil::writeTextFile( FileUtil::toDiskPath( FileUtil::joinPath( folder, "a.entry" ) ), "a" ) );
         CookRecord record;
         {
             CookJob        job( Internal::makeDesc() );
@@ -106,9 +106,9 @@ SW_TEST_CASE( CookRecordStalenessTest, EachInputKindGoesStaleWhenItsSourceChange
             record = Internal::roundTrip( job, recordPath );
         }
         Internal::expectFreshSingleInput( record, CookInputKind::Listing );
-        SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::joinPath( folder, "other.txt" ), "x" ) ); // 다른 확장자는 목록이 아니다
+        SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( FileUtil::joinPath( folder, "other.txt" ) ), "x" ) ); // 다른 확장자는 목록이 아니다
         SW_EXPECT_TRUE( record.isFresh( Internal::makeDesc() ) );
-        SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::joinPath( folder, "b.entry" ), "b" ) );
+        SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( FileUtil::joinPath( folder, "b.entry" ) ), "b" ) );
         Internal::expectStale( record, CookInputKind::Listing );
     }
 
@@ -122,7 +122,7 @@ SW_TEST_CASE( CookRecordStalenessTest, EachInputKindGoesStaleWhenItsSourceChange
         }
         Internal::expectFreshSingleInput( record, CookInputKind::Resource );
         SW_EXPECT_EQUAL( uint64( 0 ), record._listInput[0]._contentHash );
-        SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "late.txt" ), "late" ) );
+        SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( domain.makeDiskPath( "late.txt" ) ), "late" ) );
         Internal::expectStale( record, CookInputKind::Resource );
     }
 }

@@ -35,7 +35,7 @@ namespace sw::test
             : _folder{ FileUtil::normalizeSeparators( makeScratchPath( kDomain ) ) }
             , _bMounted{ SW_FALSE }
         {
-            _bMounted = FileUtil::ensureDirectoryExists( _folder ) && engine::getSubsystem<AssetPaths>().mountDiskDomain( kDomain, _folder );
+            _bMounted = FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( _folder ) ) && engine::getSubsystem<AssetPaths>().mountDiskDomain( kDomain, _folder );
             if ( _bMounted == false )
             {
                 fixed_string<constant::buffer::kMax512> text;
@@ -59,7 +59,7 @@ namespace sw::test
         [[nodiscard]] string makeDiskFolder( string_view relativePath ) const
         {
             const string folder = makeDiskPath( relativePath );
-            if ( FileUtil::ensureDirectoryExists( folder ) == false )
+            if ( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( folder ) ) == false )
             {
                 fixed_string<constant::buffer::kMax512> text;
                 formatstring( text.data(), text.capacity(), "could not create %#", folder );

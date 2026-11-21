@@ -269,7 +269,7 @@ namespace sw
             {
                 vector<string> listXMLFile;
                 // 폴더가 없으면 요청이 없다. 도중에 멈춘 목록은 셰이더를 빠뜨린 채 쿠킹하므로 실패다(경로는 collectContentFiles 가 알린다 — 작업 도메인 `scratch` 는 콘텐츠가 아니라 뺀다).
-                if ( FileUtil::isDirectory( rootDir ) && AssetPaths::collectContentFiles( rootDir, ".xml", listXMLFile ) == false )
+                if ( FileUtil::isDirectory( FileUtil::toDiskPath( rootDir ) ) && AssetPaths::collectContentFiles( rootDir, ".xml", listXMLFile ) == false )
                     return false;
                 for ( const string& xmlPath : listXMLFile )
                 {
@@ -443,7 +443,7 @@ namespace sw
             {
                 vector<string> listMaterialFile;
                 // 폴더가 없으면 요청이 없다. 도중에 멈춘 목록은 머티리얼 변형을 빠뜨린 채 쿠킹하므로 실패다(경로는 collectContentFiles 가 알린다 — 작업 도메인 `scratch` 는 콘텐츠가 아니라 뺀다).
-                if ( FileUtil::isDirectory( rootDir ) && AssetPaths::collectContentFiles( rootDir, ".material", listMaterialFile ) == false )
+                if ( FileUtil::isDirectory( FileUtil::toDiskPath( rootDir ) ) && AssetPaths::collectContentFiles( rootDir, ".material", listMaterialFile ) == false )
                     return false;
                 for ( const string& matPath : listMaterialFile )
                 {
@@ -504,7 +504,7 @@ namespace sw
             [[nodiscard]] static bool collectMaterialInstanceRequests( string_view rootDir, vector<MaterialVariantInfo>& outListMaterialVariant, RequestList& outListRequest )
             {
                 vector<string> listInstanceFile;
-                if ( FileUtil::isDirectory( rootDir ) && AssetPaths::collectContentFiles( rootDir, MaterialInstance::kExtension, listInstanceFile ) == false )
+                if ( FileUtil::isDirectory( FileUtil::toDiskPath( rootDir ) ) && AssetPaths::collectContentFiles( rootDir, MaterialInstance::kExtension, listInstanceFile ) == false )
                     return false;
                 bool bAllRead = true;
                 for ( const string& instancePath : listInstanceFile )

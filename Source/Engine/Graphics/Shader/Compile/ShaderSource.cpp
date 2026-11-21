@@ -88,16 +88,16 @@ namespace sw
 
     bool ShaderIncludeResolver::isAbsentCandidate( string_view candidatePath )
     {
-        return FileUtil::isAbsolutePath( candidatePath ) && FileUtil::exists( candidatePath ) == false;
+        return FileUtil::isAbsolutePath( candidatePath ) && FileUtil::exists( FileUtil::toDiskPath( candidatePath ) ) == false;
     }
 
     optional<AbsolutePath> ShaderIncludeResolver::readInclude( string_view candidatePath, vector<uint8>& outBytes ) const
     {
         outBytes.clear();
         const optional<AbsolutePath> candidate = AbsolutePath::tryMake( candidatePath );
-        if ( candidate.has_value() == false || FileUtil::isRegularFile( candidate->str() ) == false )
+        if ( candidate.has_value() == false || FileUtil::isRegularFile( *candidate ) == false )
             return nullopt;
-        if ( FileUtil::readFile( candidate->str(), outBytes ) == false ) // 실패 로그는 readFile 이 남긴다
+        if ( FileUtil::readFile( *candidate, outBytes ) == false ) // 실패 로그는 readFile 이 남긴다
             return nullopt;
         return candidate;
     }
@@ -117,7 +117,7 @@ namespace sw
         for ( string& domain : listDomain )
         {
             const optional<AbsolutePath> folder = assetPaths.toDiskPath( FileUtil::joinPath( domain, constant::path::kShaderFolder ) );
-            if ( folder.has_value() == false || FileUtil::isDirectory( folder->str() ) == false )
+            if ( folder.has_value() == false || FileUtil::isDirectory( *folder ) == false )
             {
                 SW_LOG_ERROR_ID( "ShaderSource.ShaderIncludeRootNo", "Shader include root '%#/%#' has no folder on disk - the engine headers cannot be found", domain, constant::path::kShaderFolder );
                 return nullopt;
@@ -133,7 +133,7 @@ namespace sw
         if ( shadersFolderID.has_value() == false )
             return unexpected( Error{ ErrorKind::InvalidArgument, "Shader source id has no domain 'shaders' folder", source.str() } );
         const optional<AbsolutePath> sourceFile = _pAssetPaths->findLooseFile( source.str() );
-        if ( sourceFile.has_value() == false || FileUtil::isRegularFile( sourceFile->str() ) == false )
+        if ( sourceFile.has_value() == false || FileUtil::isRegularFile( *sourceFile ) == false )
             return unexpected( Error{ ErrorKind::NotFound, "Shader source file not found", source.str() } );
         const optional<AbsolutePath> shadersFolder = _pAssetPaths->toDiskPath( *shadersFolderID );
         const bool                   bInsideFolder = shadersFolder.has_value() &&
@@ -158,6 +158,6 @@ namespace sw
     optional<AbsolutePath> ShaderSourceResolver::findDomainShadersFolder( string_view domain ) const
     {
         const optional<AbsolutePath> folder = _pAssetPaths->toDiskPath( FileUtil::joinPath( domain, constant::path::kShaderFolder ) );
-        return folder.has_value() && FileUtil::isDirectory( folder->str() ) ? folder : nullopt;
+        return folder.has_value() && FileUtil::isDirectory( *folder ) ? folder : nullopt;
     }
 } // namespace sw

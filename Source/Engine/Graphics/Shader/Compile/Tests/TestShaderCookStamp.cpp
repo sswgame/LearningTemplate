@@ -37,9 +37,9 @@ namespace
 
         [[nodiscard]] bool create() const
         {
-            return FileUtil::ensureDirectoryExists( _ownShaders ) && FileUtil::ensureDirectoryExists( _engineShaders ) && FileUtil::ensureDirectoryExists( _commonShaders ) &&
-                   FileUtil::ensureDirectoryExists( _binDir ) && FileUtil::writeTextFile( _source, "#include \"x.hlsli\"\n" ) &&
-                   FileUtil::writeTextFile( FileUtil::joinPath( _commonShaders, "x.hlsli" ), "float4 x() { return 1; }\n" );
+            return FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( _ownShaders ) ) && FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( _engineShaders ) ) && FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( _commonShaders ) ) &&
+                   FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( _binDir ) ) && FileUtil::writeTextFile( FileUtil::toDiskPath( _source ), "#include \"x.hlsli\"\n" ) &&
+                   FileUtil::writeTextFile( FileUtil::toDiskPath( FileUtil::joinPath( _commonShaders, "x.hlsli" ) ), "float4 x() { return 1; }\n" );
         }
 
         [[nodiscard]] optional<ShaderIncludeResolver> makeResolver() const
@@ -86,19 +86,19 @@ SW_TEST_CASE( ShaderCookStampTest, AbsentCandidateThatAppearsMakesTheCookStale )
 
     // engine 에 같은 이름이 생겼다 — 다음 컴파일은 그것을 연다(가림). 소스와 연 헤더는 그대로다.
     const string engineHeader = FileUtil::joinPath( fixture._engineShaders, "x.hlsli" );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( engineHeader, "float4 x() { return 2; }\n" ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( engineHeader ), "float4 x() { return 2; }\n" ) );
     {
         ShaderCookStampCache cache{ kTestEnginePolicy };
         SW_EXPECT_FALSE( ShaderCookStamp::isCookedOutputCurrent( *resolver, fixture._binDir, fixture._source, fixture._ownShaders, cache ) );
     }
-    SW_REQUIRE_TRUE( FileUtil::removeFile( engineHeader ) );
+    SW_REQUIRE_TRUE( FileUtil::removeFile( FileUtil::toDiskPath( engineHeader ) ) );
     {
         ShaderCookStampCache cache{ kTestEnginePolicy };
         SW_EXPECT_TRUE( ShaderCookStamp::isCookedOutputCurrent( *resolver, fixture._binDir, fixture._source, fixture._ownShaders, cache ) );
     }
 
     // 연 헤더의 내용이 바뀌면 낡음이다(예전과 같다).
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::joinPath( fixture._commonShaders, "x.hlsli" ), "float4 x() { return 3; }\n" ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( FileUtil::joinPath( fixture._commonShaders, "x.hlsli" ) ), "float4 x() { return 3; }\n" ) );
     {
         ShaderCookStampCache cache{ kTestEnginePolicy };
         SW_EXPECT_FALSE( ShaderCookStamp::isCookedOutputCurrent( *resolver, fixture._binDir, fixture._source, fixture._ownShaders, cache ) );
@@ -121,7 +121,7 @@ SW_TEST_CASE( ShaderCookStampTest, IncludeRecordKeepsAbsentCandidates )
 
     const uint64 before = ShaderCookStamp::computeSourceFingerprint( fixture._source, fixture.makeDependencies(), kTestEnginePolicy );
     SW_EXPECT_TRUE( before != 0 );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::joinPath( fixture._ownShaders, "x.hlsli" ), "float4 x() { return 4; }\n" ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( FileUtil::joinPath( fixture._ownShaders, "x.hlsli" ) ), "float4 x() { return 4; }\n" ) );
     SW_EXPECT_FALSE( ShaderCookStamp::readIncludeRecord( recordPath, listDependency, bytecodeHash ) );
     ShaderCookStamp::invalidateSharedHeaderCache();
     SW_EXPECT_TRUE( ShaderCookStamp::computeSourceFingerprint( fixture._source, fixture.makeDependencies(), kTestEnginePolicy ) != before );

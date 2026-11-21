@@ -46,7 +46,7 @@ namespace
         [[nodiscard]] static bool load( RenderPipelineAsset& asset, const string& xml )
         {
             const string path = test::makeScratchPath( "pipeline.xml" );
-            SW_EXPECT_TRUE( FileUtil::writeTextFile( path, xml ) );
+            SW_EXPECT_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( path ), xml ) );
             return asset.loadFromDiskFile( path );
         }
 
@@ -357,7 +357,7 @@ SW_TEST_CASE( RenderPipelineAssetTest, CookedFlatTextReadsLikeTheSource )
         RenderPipelineAsset cooked;
         RenderPipelineAsset merged;
         const string        flatPath = test::makeScratchPath( "flat.xml" );
-        SW_REQUIRE_TRUE( FileUtil::writeTextFile( flatPath, flatText ) );
+        SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( flatPath ), flatText ) );
         SW_REQUIRE_TRUE( cooked.loadFromDiskFile( flatPath ) );
         SW_REQUIRE_TRUE( merged.loadFromXMLFile( AssetID{ pID } ) );
         SW_EXPECT_EQUAL( XMLSerializer::serialize( &merged.getDesc(), typeInfo ), XMLSerializer::serialize( &cooked.getDesc(), typeInfo ) );
@@ -377,7 +377,7 @@ SW_TEST_CASE( RenderPipelineAssetTest, SavedChildRoundTrips )
     SW_REQUIRE_TRUE( childFile.has_value() );
     SW_REQUIRE_TRUE( ReflectedXMLFile::saveDescAsChild( *childFile, source, AssetID{ "engine/pipeline/forwardpipeline.xml" } ) );
     string childText;
-    SW_REQUIRE_TRUE( FileUtil::readTextFile( childPath, childText ) );
+    SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::toDiskPath( childPath ), childText ) );
     SW_EXPECT_EQUAL( string( "engine/pipeline/forwardpipeline.xml" ), DataInheritance::findBasePath( childText ) );
     SW_EXPECT_TRUE( childText.find( "Canvas" ) == string::npos ); // 같은 패스는 적지 않는다
 

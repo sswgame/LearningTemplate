@@ -163,12 +163,12 @@ namespace sw
                 if ( root.empty() || domainName.empty() )
                     return {};
                 const string domainDir = FileUtil::joinPath( root, domainName );
-                if ( FileUtil::isDirectory( domainDir ) == false )
+                if ( FileUtil::isDirectory( FileUtil::toDiskPath( domainDir ) ) == false )
                     return {};
                 if ( subFolder.empty() )
                     return FileUtil::normalizeSeparators( domainDir );
                 const string targetDir = FileUtil::joinPath( domainDir, subFolder );
-                return FileUtil::isDirectory( targetDir ) ? FileUtil::normalizeSeparators( targetDir ) : string{};
+                return FileUtil::isDirectory( FileUtil::toDiskPath( targetDir ) ) ? FileUtil::normalizeSeparators( targetDir ) : string{};
             }
 
             /** @brief @p root 와 우선순위 @p listPriority 로 검색 루트 목록을 짓습니다(디스크를 본다 — 잠금 밖에서 부른다). */
@@ -193,7 +193,7 @@ namespace sw
                         // 게임 프리셋을 읽기 전(기동의 리소스 루트 단계 - 서비스 표가 서기 전이거나 아직 읽지 않았다)에는 활성 팩이 아직 없다 - 그때는 game/ 아래 팩만 순서에 넣는다.
                         const GameConfig* pGameConfig = engine::findSubsystem<GameConfig>();
                         const string      activePack  = pGameConfig != nullptr && pGameConfig->_packRoot.isSet() ? findDomainFolderUnder( root, pGameConfig->_packRoot.get(), {} ) : string();
-                        if ( activePack.empty() == false && FileUtil::isDirectory( activePack ) )
+                        if ( activePack.empty() == false && FileUtil::isDirectory( FileUtil::toDiskPath( activePack ) ) )
                             appendFolder( FileUtil::normalizeSeparators( activePack ) );
                         const string gameDir = findDomainFolderUnder( root, constant::path::kGamePack, {} );
                         if ( gameDir.empty() == false )
@@ -402,17 +402,17 @@ namespace sw
                     {
                         outRoot         = FileUtil::joinPath( FileUtil::joinPath( resourceRoot, constant::path::kGamePack ), rest );
                         outKeyUnderRoot = {};
-                        return FileUtil::isDirectory( outRoot );
+                        return FileUtil::isDirectory( FileUtil::toDiskPath( outRoot ) );
                     }
                     outRoot         = FileUtil::joinPath( FileUtil::joinPath( resourceRoot, constant::path::kGamePack ), rest.substr( 0, slash ) );
                     outKeyUnderRoot = rest.substr( slash + 1 );
-                    return FileUtil::isDirectory( outRoot );
+                    return FileUtil::isDirectory( FileUtil::toDiskPath( outRoot ) );
                 }
 
                 // 2. 그 밖의 도메인(<domain>/<key>)을 이름으로 푼다(engine, common, editor, dlc, mods 등). 도메인 이름만이면(`engine`) 그 도메인 루트다(빈 키) -
                 //    `game` 은 팩 이름까지가 도메인이라 이름만으로는 도메인이 아니다.
                 const bool bBareDomain = lowerRel.find( '/' ) == string_view::npos && lowerRel.find( ':' ) == string_view::npos && lowerRel != constant::path::kGamePack;
-                if ( bBareDomain && FileUtil::isDirectory( FileUtil::joinPath( resourceRoot, lowerRel ) ) )
+                if ( bBareDomain && FileUtil::isDirectory( FileUtil::toDiskPath( FileUtil::joinPath( resourceRoot, lowerRel ) ) ) )
                 {
                     outRoot         = FileUtil::joinPath( resourceRoot, lowerRel );
                     outKeyUnderRoot = {};
@@ -425,7 +425,7 @@ namespace sw
                     if ( domain.find( ':' ) == string_view::npos )
                     {
                         const string candidateDomainDir = FileUtil::joinPath( resourceRoot, domain );
-                        if ( FileUtil::isDirectory( candidateDomainDir ) )
+                        if ( FileUtil::isDirectory( FileUtil::toDiskPath( candidateDomainDir ) ) )
                         {
                             outRoot         = candidateDomainDir;
                             outKeyUnderRoot = string( lowerRel.substr( firstSlash + 1 ) );
@@ -451,7 +451,7 @@ namespace sw
                 // 빈 키는 도메인 루트 자신이다(`game/shooter3d` 처럼 팩 폴더를 가리키는 id — `mapGlobalIDToRoot` 가 빈 키로 돌려준다).
                 const string base         = relFolder.empty() ? string( root ) : FileUtil::joinPath( root, relFolder );
                 const string absolutePath = relFile.empty() ? base : FileUtil::joinPath( base, relFile );
-                if ( FileUtil::exists( absolutePath ) )
+                if ( FileUtil::exists( FileUtil::toDiskPath( absolutePath ) ) )
                     return FileUtil::normalizeSeparators( absolutePath );
                 return {};
             }
@@ -562,7 +562,7 @@ namespace sw
         SW_LOG_INFO_ID( "AssetPaths.RootFolder", "RootFolder : %#", rootPath );
         // Content/ 최상위 루트. 모든 도메인은 이 아래에서 이름으로 푼다.
         // 패키지에는 `Content` 가 없다(팩만) - 그때 느슨한 리소스 루트는 비어 있다.
-        const string resourceRootFolderPath = FileUtil::isDirectory( ProcessRoots::get()._content.str() ) ? ProcessRoots::get()._content.str() : string{};
+        const string resourceRootFolderPath = FileUtil::isDirectory( ProcessRoots::get()._content ) ? ProcessRoots::get()._content.str() : string{};
 
         vector<string> listSearchPriority = AssetPathsInternal::getTable( *_pState )._listSearchPriority;
         if ( listSearchPriority.empty() )
@@ -643,7 +643,7 @@ namespace sw
             if ( found.empty() && AssetPathsInternal::findMountedDiskDomain( state, lowerFile, mountedRoot, mountedKey ) )
             {
                 const string hit = FileUtil::findPathIgnoringCase( mountedRoot, mountedKey );
-                if ( hit.empty() == false && FileUtil::exists( hit ) )
+                if ( hit.empty() == false && FileUtil::exists( FileUtil::toDiskPath( hit ) ) )
                     found = FileUtil::normalizeSeparators( hit );
             }
 #endif
@@ -678,7 +678,7 @@ namespace sw
         {
             // 도메인이 정해진 id 는 폴더가 하나다 — 대소문자 처리까지 하는 `findLooseFile` 로 푼다.
             const optional<AbsolutePath> found = findLooseFile( folderID );
-            if ( found.has_value() && FileUtil::isDirectory( found->str() ) )
+            if ( found.has_value() && FileUtil::isDirectory( *found ) )
                 outListFolder.push_back( found->str() );
             return;
         }
@@ -782,7 +782,7 @@ namespace sw
             return false;
         }
         const string folder = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( diskFolder ) );
-        if ( FileUtil::isAbsolutePath( folder ) == false || FileUtil::isDirectory( folder ) == false )
+        if ( FileUtil::isAbsolutePath( folder ) == false || FileUtil::isDirectory( FileUtil::toDiskPath( folder ) ) == false )
         {
             SW_LOG_ERROR_ID( "AssetPaths.MountFolderMissing", "Cannot mount disk domain '%#' - '%#' is not an existing absolute folder", domainName, diskFolder );
             return false;
@@ -982,10 +982,10 @@ namespace sw
     bool AssetPaths::collectGamePackDomains( string_view contentRoot, vector<string>& outListDomain )
     {
         const string gameRoot = FileUtil::joinPath( contentRoot, constant::path::kGamePack );
-        if ( FileUtil::isDirectory( gameRoot ) == false )
+        if ( FileUtil::isDirectory( FileUtil::toDiskPath( gameRoot ) ) == false )
             return true;
         vector<string> listPackFolder;
-        if ( FileUtil::collectFolders( gameRoot, listPackFolder, false ) == false )
+        if ( FileUtil::collectFolders( FileUtil::toDiskPath( gameRoot ), listPackFolder, false ) == false )
         {
             SW_LOG_ERROR_ID( "AssetPaths.GamePackFoldersUnder", "Game pack folders under '%#' could not all be listed - the packs left out are not seen", gameRoot );
             return false;
@@ -1000,7 +1000,7 @@ namespace sw
 
     bool AssetPaths::collectContentFiles( string_view contentRoot, string_view extension, vector<string>& outListFile )
     {
-        if ( FileUtil::collectFiles( contentRoot, extension, outListFile, true ) == false )
+        if ( FileUtil::collectFiles( FileUtil::toDiskPath( contentRoot ), extension, outListFile, true ) == false )
             return false;
         StringBuilder<constant::buffer::kMax512> scratchPrefixBuilder;
         scratchPrefixBuilder.appendFormat( "%#/%#/", FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( contentRoot ) ), kScratchDomain );

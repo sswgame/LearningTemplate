@@ -175,15 +175,15 @@ namespace sw
     expected<ShaderRequestLog> ShaderRequestLog::readFolder( string_view folder )
     {
         ShaderRequestLog requestLog;
-        if ( FileUtil::isDirectory( folder ) == false )
+        if ( FileUtil::isDirectory( FileUtil::toDiskPath( folder ) ) == false )
             return requestLog; // 기록한 실행이 아직 없다
         vector<string> listFile;
-        if ( FileUtil::collectFiles( folder, kFileExtension, listFile, false ) == false )
+        if ( FileUtil::collectFiles( FileUtil::toDiskPath( folder ), kFileExtension, listFile, false ) == false )
             return unexpected( Error{ ErrorKind::ExternalFailure, "could not list the shader request logs", folder } );
         for ( const string& path : listFile )
         {
             string text;
-            if ( FileUtil::readTextFile( path, text ) == false )
+            if ( FileUtil::readTextFile( FileUtil::toDiskPath( path ), text ) == false )
                 return unexpected( Error{ ErrorKind::ExternalFailure, "could not read a shader request log", path } );
             expected<void> merged = requestLog.mergeText( text );
             if ( merged.has_value() == false )

@@ -864,18 +864,18 @@ namespace sw
                 return false;
             }
         }
-        if ( FileUtil::ensureParentDirectoryExists( absPath ) == false )
+        if ( FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( absPath ) ) == false )
             return false;
         string sourceText;
-        if ( FileUtil::isRegularFile( absPath ) == false || FileUtil::readTextFile( absPath, sourceText ) == false )
-            return FileUtil::writeTextFile( absPath, text.getText() );
+        if ( FileUtil::isRegularFile( FileUtil::toDiskPath( absPath ) ) == false || FileUtil::readTextFile( FileUtil::toDiskPath( absPath ), sourceText ) == false )
+            return FileUtil::writeTextFile( FileUtil::toDiskPath( absPath ), text.getText() );
         string               restoredText;
         const ResourceTags&  engineTags = engine::getSubsystem<ResourceTags>();
         const ResourceTagSet tags       = pTagOverride != nullptr ? engineTags.captureWith( *pTagOverride ) : engineTags.capture();
         if ( restoreConditions( text, sourceText, absPath, tags, restoredText ) == false )
             return false;
         // 정체성 머리(`<?asset guid?>`)는 문서 밖의 처리 지시라 다시 쓴 글에 없다 — 있던 파일의 것을 옮겨 쓴다(고쳐 저장해도 GUID 는 그대로).
-        return FileUtil::writeTextFile( absPath, AssetGUIDHeader::carryOver( sourceText, restoredText ) );
+        return FileUtil::writeTextFile( FileUtil::toDiskPath( absPath ), AssetGUIDHeader::carryOver( sourceText, restoredText ) );
     }
 
     expected<void> ResourceComposer::validateDeltaReadsBack( const string& deltaText, const string_view fullText, const string_view baseID, const ResourceRereadFunction& reread )

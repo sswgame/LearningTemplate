@@ -190,7 +190,7 @@ namespace sw
 
     bool AssetIO::readTextFile( string_view filePath, string& outText )
     {
-        if ( FileUtil::readTextFile( filePath, outText ) == false )
+        if ( FileUtil::readTextFile( FileUtil::toDiskPath( filePath ), outText ) == false )
         {
             CookJob::allowMissingDiskRead( filePath );
             return false;
@@ -200,7 +200,7 @@ namespace sw
 
     bool AssetIO::readBinaryFile( string_view filePath, vector<uint8>& outBytes )
     {
-        if ( FileUtil::readFile( filePath, outBytes ) == false )
+        if ( FileUtil::readFile( FileUtil::toDiskPath( filePath ), outBytes ) == false )
         {
             CookJob::allowMissingDiskRead( filePath );
             return false;

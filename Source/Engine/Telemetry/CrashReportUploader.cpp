@@ -74,7 +74,7 @@ namespace sw
         for ( const string& path : bundle._listFilePath )
         {
             vector<uint8> bytes;
-            if ( FileUtil::readFile( path, bytes ) == false )
+            if ( FileUtil::readFile( FileUtil::toDiskPath( path ), bytes ) == false )
                 continue;
             const string fileName = FileUtil::getFileNamePart( path );
             Internal::appendPartHeader( request._body, Internal::makeFieldName( fileName ), fileName, "application/octet-stream" );

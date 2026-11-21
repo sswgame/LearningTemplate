@@ -158,7 +158,7 @@ namespace sw
             case AssetIdentityKind::Header:
             {
                 string text;
-                if ( FileUtil::readTextFile( absPath, text ) && FileUtil::writeTextFile( absPath, AssetGUIDHeader::write( text, guid ) ) )
+                if ( FileUtil::readTextFile( FileUtil::toDiskPath( absPath ), text ) && FileUtil::writeTextFile( FileUtil::toDiskPath( absPath ), AssetGUIDHeader::write( text, guid ) ) )
                 {
                     AssetRegistry::record( guid, assetID ); // 실행 중 색인도 안다 — 이 에셋을 가리키는 참조가 다음 기동 전에도 GUID 로 쓰인다
                     return true;
@@ -170,9 +170,9 @@ namespace sw
                 // 베낀 서술의 임포트 예외는 지킨다(유니티 Duplicate 와 같다) — 복사본은 새 에셋이지만 같은 임포트 설정이다. 읽지 못한 서술은 오류를 남기고 예외 없이 새로 쓴다(복사본의 정체성이 먼저다).
                 AssetMeta  copied;
                 string     copiedText;
-                const bool bCopied = FileUtil::isRegularFile( AssetMeta::makePath( absPath ) ) && FileUtil::readTextFile( AssetMeta::makePath( absPath ), copiedText ) &&
+                const bool bCopied = FileUtil::isRegularFile( FileUtil::toDiskPath( AssetMeta::makePath( absPath ) ) ) && FileUtil::readTextFile( FileUtil::toDiskPath( AssetMeta::makePath( absPath ) ), copiedText ) &&
                                      copied.parseXML( copiedText, AssetMeta::makePath( assetID ) ).has_value();
-                if ( FileUtil::writeTextFile( AssetMeta::makePath( absPath ), AssetMeta::makeText( assetID, guid, bCopied ? copied._listImportOverride : vector<AssetImportOverride>{} ) ) )
+                if ( FileUtil::writeTextFile( FileUtil::toDiskPath( AssetMeta::makePath( absPath ) ), AssetMeta::makeText( assetID, guid, bCopied ? copied._listImportOverride : vector<AssetImportOverride>{} ) ) )
                 {
                     AssetRegistry::record( guid, assetID );
                     return true;
@@ -191,7 +191,7 @@ namespace sw
         {
             string oldText;
             string newText;
-            if ( FileUtil::readTextFile( targetAbs, oldText ) == false || FileUtil::readTextFile( newContentAbs, newText ) == false )
+            if ( FileUtil::readTextFile( FileUtil::toDiskPath( targetAbs ), oldText ) == false || FileUtil::readTextFile( FileUtil::toDiskPath( newContentAbs ), newText ) == false )
             {
                 SW_LOG_ERROR_ID( "AssetIdentity.ReplaceUnreadable", "Could not read '%#' or the new content '%#' - nothing was replaced", targetID, string( newContentAbs ) );
                 return false;
@@ -203,12 +203,12 @@ namespace sw
                 return false;
             }
             // 쓰기는 임시 파일을 바꿔 끼운다(`writeTextFile`) — 지면 옛 글이 그대로다.
-            if ( FileUtil::writeTextFile( targetAbs, AssetGUIDHeader::write( newText, *header._guid ) ) )
+            if ( FileUtil::writeTextFile( FileUtil::toDiskPath( targetAbs ), AssetGUIDHeader::write( newText, *header._guid ) ) )
                 return true;
             SW_LOG_ERROR_ID( "AssetIdentity.ReplaceWriteFailed", "Could not write '%#' - nothing was replaced", targetID );
             return false;
         }
-        if ( kind == AssetIdentityKind::Source && FileUtil::isRegularFile( AssetMeta::makePath( targetAbs ) ) == false )
+        if ( kind == AssetIdentityKind::Source && FileUtil::isRegularFile( FileUtil::toDiskPath( AssetMeta::makePath( targetAbs ) ) ) == false )
         {
             SW_LOG_ERROR_ID( "AssetIdentity.ReplaceNoIdentity", "'%#' has no asset GUID to keep - run py -3 -m Scripts asset-ids --fix first, nothing was replaced", targetID );
             return false;
@@ -217,19 +217,19 @@ namespace sw
         StringBuilder<constant::buffer::kMax512> backupBuilder;
         backupBuilder.appendFormat( "%#.replacing", targetAbs );
         const string backupAbs( backupBuilder.view() );
-        if ( FileUtil::copyFile( targetAbs, backupAbs ) == false )
+        if ( FileUtil::copyFile( FileUtil::toDiskPath( targetAbs ), FileUtil::toDiskPath( backupAbs ) ) == false )
         {
             SW_LOG_ERROR_ID( "AssetIdentity.ReplaceWriteFailed", "Could not write '%#' - nothing was replaced", targetID );
             return false;
         }
-        if ( FileUtil::copyFile( newContentAbs, targetAbs ) )
+        if ( FileUtil::copyFile( FileUtil::toDiskPath( newContentAbs ), FileUtil::toDiskPath( targetAbs ) ) )
         {
-            (void)FileUtil::tryRemoveFile( backupAbs ); // 남아도 다음 바꾸기가 덮는다
+            (void)FileUtil::tryRemoveFile( FileUtil::toDiskPath( backupAbs ) ); // 남아도 다음 바꾸기가 덮는다
             return true;
         }
-        if ( FileUtil::copyFile( backupAbs, targetAbs ) )
+        if ( FileUtil::copyFile( FileUtil::toDiskPath( backupAbs ), FileUtil::toDiskPath( targetAbs ) ) )
         {
-            (void)FileUtil::tryRemoveFile( backupAbs );
+            (void)FileUtil::tryRemoveFile( FileUtil::toDiskPath( backupAbs ) );
             SW_LOG_ERROR_ID( "AssetIdentity.ReplaceWriteFailed", "Could not write '%#' - nothing was replaced", targetID );
             return false;
         }
@@ -335,7 +335,7 @@ namespace sw
     {
         const string   root = FileUtil::normalizeSeparators( contentRoot );
         vector<string> listAbs;
-        if ( FileUtil::collectFiles( root, "", listAbs, true ) == false )
+        if ( FileUtil::collectFiles( FileUtil::toDiskPath( root ), "", listAbs, true ) == false )
         {
             outListIssue.push_back( AssetIdentityIssue{ AssetIdentityIssueKind::Unreadable, root, {} } );
             return AssetDatabase{};
@@ -365,7 +365,7 @@ namespace sw
                 continue; // 임포트 산출물(커밋하지 않는 캐시)은 원본의 정체성을 쓴다
             AssetIdentityFile file{ assetID, {} };
             const bool        bCarriesIdentity = kind == AssetIdentityKind::Header || kind == AssetIdentityKind::Sidecar;
-            if ( bCarriesIdentity && FileUtil::readTextFile( FileUtil::joinPath( root, assetID ), file._text ) == false )
+            if ( bCarriesIdentity && FileUtil::readTextFile( FileUtil::toDiskPath( FileUtil::joinPath( root, assetID ) ), file._text ) == false )
             {
                 outListIssue.push_back( AssetIdentityIssue{ AssetIdentityIssueKind::Unreadable, assetID, {} } );
                 continue;
@@ -379,9 +379,9 @@ namespace sw
     {
         const AssetIdentityKind kind = classify( assetID );
         string                  text;
-        if ( kind == AssetIdentityKind::Header && FileUtil::readTextFile( absPath, text ) )
+        if ( kind == AssetIdentityKind::Header && FileUtil::readTextFile( FileUtil::toDiskPath( absPath ), text ) )
             return AssetGUIDHeader::read( text )._guid;
-        if ( kind == AssetIdentityKind::Source && FileUtil::isRegularFile( AssetMeta::makePath( absPath ) ) && FileUtil::readTextFile( AssetMeta::makePath( absPath ), text ) )
+        if ( kind == AssetIdentityKind::Source && FileUtil::isRegularFile( FileUtil::toDiskPath( AssetMeta::makePath( absPath ) ) ) && FileUtil::readTextFile( FileUtil::toDiskPath( AssetMeta::makePath( absPath ) ), text ) )
         {
             AssetMeta meta;
             return meta.parseXML( text, AssetMeta::makePath( assetID ) );

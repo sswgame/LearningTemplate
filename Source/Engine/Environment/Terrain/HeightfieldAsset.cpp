@@ -109,7 +109,7 @@ namespace sw
         }
         vector<uint8> bytes;
         saveToMemory( bytes );
-        return FileUtil::writeFile( absPath.str(), bytes.data(), bytes.size() );
+        return FileUtil::writeFile( absPath, bytes.data(), bytes.size() );
     }
 } // namespace sw
 

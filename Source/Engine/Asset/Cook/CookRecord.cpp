@@ -57,11 +57,11 @@ namespace sw
             [[nodiscard]] static DerivedDataEntryState scanEntry( string_view path, string_view keyDescription, SinkFn&& sink, uint64& outPayloadHash )
             {
                 outPayloadHash = 0;
-                if ( FileUtil::isRegularFile( path ) == false )
+                if ( FileUtil::isRegularFile( FileUtil::toDiskPath( path ) ) == false )
                     return DerivedDataEntryState::Missing;
                 const size_t  headSize = kEntryHeaderSize + keyDescription.size();
                 vector<uint8> chunk;
-                if ( FileUtil::readFile( path, chunk, 0, headSize ) == false )
+                if ( FileUtil::readFile( FileUtil::toDiskPath( path ), chunk, 0, headSize ) == false )
                     return DerivedDataEntryState::Unreadable;
                 const string_view text{ reinterpret_cast<const char*>( chunk.data() ), chunk.size() };
                 const string_view header          = DerivedDataCache::kEntryHeader;
@@ -80,7 +80,7 @@ namespace sw
                 uint64 state = ContentHash::kInitialState;
                 for ( uint64 offset = headSize;; )
                 {
-                    if ( FileUtil::readFile( path, chunk, offset, ContentHash::kStreamChunkBytes ) == false )
+                    if ( FileUtil::readFile( FileUtil::toDiskPath( path ), chunk, offset, ContentHash::kStreamChunkBytes ) == false )
                         return DerivedDataEntryState::Unreadable;
                     state = ContentHash::appendBytes( state, chunk.data(), chunk.size() );
                     if ( chunk.empty() == false && sink( chunk.data(), chunk.size() ) == false )
@@ -124,8 +124,8 @@ namespace sw
                 constexpr int64 kTouchIntervalTicks = constant::time::kSecondsPerDay * FileUtil::kFileTimeTicksPerSecond;
                 const int64     now                 = FileUtil::getCurrentFileWriteTime();
                 int64           writeTicks          = 0;
-                if ( layer._evictionPolicy.has_value() && FileUtil::getFileWriteTime( path, writeTicks ) && now - writeTicks > kTouchIntervalTicks )
-                    (void)FileUtil::setFileWriteTime( path, now ); // 실패는 setFileWriteTime 이 알린다 — 히트를 무르지 않는다(다음 정리에 일찍 지워질 뿐)
+                if ( layer._evictionPolicy.has_value() && FileUtil::getFileWriteTime( FileUtil::toDiskPath( path ), writeTicks ) && now - writeTicks > kTouchIntervalTicks )
+                    (void)FileUtil::setFileWriteTime( FileUtil::toDiskPath( path ), now ); // 실패는 setFileWriteTime 이 알린다 — 히트를 무르지 않는다(다음 정리에 일찍 지워질 뿐)
             }
 
             /** @brief 파일 @p sourcePath 를 조각으로 @p writer 끝에 붙입니다(한 벡터로 들지 않는다). */
@@ -134,7 +134,7 @@ namespace sw
                 vector<uint8> chunk;
                 for ( uint64 offset = 0;; )
                 {
-                    if ( FileUtil::readFile( sourcePath, chunk, offset, ContentHash::kStreamChunkBytes ) == false || writer.append( chunk.data(), chunk.size() ).has_value() == false )
+                    if ( FileUtil::readFile( FileUtil::toDiskPath( sourcePath ), chunk, offset, ContentHash::kStreamChunkBytes ) == false || writer.append( chunk.data(), chunk.size() ).has_value() == false )
                         return false;
                     offset += chunk.size();
                     if ( chunk.size() < ContentHash::kStreamChunkBytes )
@@ -163,7 +163,7 @@ namespace sw
                 const string     head = makeEntryHead( keyDescription, payloadHash );
                 AtomicFileWriter writer;
                 FileWriteResult  result = FileWriteResult::WriteFailed;
-                if ( FileUtil::ensureParentDirectoryExists( path ) && writer.open( path ).has_value() &&
+                if ( FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( path ) ) && writer.open( path ).has_value() &&
                      writer.append( reinterpret_cast<const uint8*>( head.data() ), head.size() ).has_value() && appendPayload( writer ) )
                     result = writer.tryCommit();
                 if ( result == FileWriteResult::Written || ( result == FileWriteResult::ReplaceFailed && isSameEntry() ) )
@@ -200,14 +200,14 @@ namespace sw
             text.append( input._source );
         }
         text.append( "\n" );
-        return FileUtil::ensureParentDirectoryExists( absPath ) && FileUtil::writeTextFile( absPath, text );
+        return FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( absPath ) ) && FileUtil::writeTextFile( FileUtil::toDiskPath( absPath ), text );
     }
 
     bool CookRecord::read( string_view absPath, CookRecord& outRecord )
     {
         outRecord = CookRecord{};
         string                 text;
-        const OptionalFileRead read = FileUtil::readOptionalTextFile( absPath, text );
+        const OptionalFileRead read = FileUtil::readOptionalTextFile( FileUtil::toDiskPath( absPath ), text );
         if ( read == OptionalFileRead::Missing )
             return false;
         if ( read == OptionalFileRead::Failed )
@@ -358,14 +358,14 @@ namespace sw
         const int64 now          = FileUtil::getCurrentFileWriteTime();
         for ( const DerivedDataLayer& layer : _listLayer )
         {
-            if ( layer._evictionPolicy.has_value() == false || FileUtil::isDirectory( layer._rootPath ) == false )
+            if ( layer._evictionPolicy.has_value() == false || FileUtil::isDirectory( FileUtil::toDiskPath( layer._rootPath ) ) == false )
                 continue;
             vector<Entry> listEntry;
             uint64        totalBytes = 0;
-            const bool    bScanned   = FileUtil::forEachDirectoryEntry( layer._rootPath, true, [&]( const DirectoryEntry& entry )
+            const bool    bScanned   = FileUtil::forEachDirectoryEntry( FileUtil::toDiskPath( layer._rootPath ), true, [&]( const DirectoryEntry& entry )
                  {
                 FileStamp stamp;
-                if ( entry._bDirectory == false && FileUtil::getFileStamp( entry._path, stamp ) )
+                if ( entry._bDirectory == false && FileUtil::getFileStamp( FileUtil::toDiskPath( entry._path ), stamp ) )
                 {
                     listEntry.push_back( Entry{ string( entry._path ), stamp._sizeBytes, stamp._writeTime } );
                     totalBytes += stamp._sizeBytes;
@@ -385,7 +385,7 @@ namespace sw
             {
                 if ( static_cast<int64>( entry._writeTime ) >= cutoff && totalBytes <= layer._evictionPolicy->_maxSizeBytes )
                     break;
-                if ( FileUtil::tryRemoveFile( entry._path ) == false )
+                if ( FileUtil::tryRemoveFile( FileUtil::toDiskPath( entry._path ) ) == false )
                     continue; // 다른 프로세스가 읽는 중 — 다음 정리가 지운다
                 totalBytes -= entry._sizeBytes;
                 freedBytes += entry._sizeBytes;
@@ -434,11 +434,11 @@ namespace sw
         for ( size_t layerIndex = 0; layerIndex < _listLayer.size(); ++layerIndex )
         {
             const string path = makePath( layerIndex, key );
-            if ( FileUtil::isRegularFile( path ) == false )
+            if ( FileUtil::isRegularFile( FileUtil::toDiskPath( path ) ) == false )
                 continue;
             // 출력은 임시 파일에 흘려 쓰고 본문 해시가 맞을 때만 바꿔 끼운다 — 어긋난 항목이 출력 자리를 건드리지 않는다.
             AtomicFileWriter writer;
-            if ( FileUtil::ensureParentDirectoryExists( outputPath ) == false || writer.open( outputPath ).has_value() == false )
+            if ( FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( outputPath ) ) == false || writer.open( outputPath ).has_value() == false )
             {
                 SW_LOG_WARNING_ID( "DDC.OutputNotWritable", "DDC: cannot write '%#' from the cache - treated as a miss", outputPath );
                 return false;

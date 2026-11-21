@@ -147,13 +147,13 @@ namespace sw
             }
         }
 
-        return FileUtil::ensureParentDirectoryExists( absPath.str() ) && FileUtil::writeFile( absPath.str(), bytes.data(), bytes.size() );
+        return FileUtil::ensureParentDirectoryExists( absPath ) && FileUtil::writeFile( absPath, bytes.data(), bytes.size() );
     }
 
     bool InputReplay::loadFromFile( string_view filePath )
     {
         vector<uint8> bytes;
-        if ( FileUtil::readFile( filePath, bytes ) == false )
+        if ( FileUtil::readFile( FileUtil::toDiskPath( filePath ), bytes ) == false )
             return false;
 
         ByteReader   reader{ bytes.data(), bytes.size() };

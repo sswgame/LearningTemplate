@@ -42,7 +42,7 @@ namespace
                 return false;
             sw::string             text;
             sw::vector<sw::string> listEchoKey;
-            if ( sw::FileUtil::readTextFile( absolutePath, text ) == false || sw::ConfigManager::collectDefaultEchoKeys<T>( text, listEchoKey ) == false )
+            if ( sw::FileUtil::readTextFile( sw::FileUtil::toDiskPath( absolutePath ), text ) == false || sw::ConfigManager::collectDefaultEchoKeys<T>( text, listEchoKey ) == false )
                 return false;
             for ( const sw::string& key : listEchoKey )
             {
@@ -97,7 +97,7 @@ namespace
             if ( sw::ConfigManager::readConfigFile( config, absolutePath ) != sw::ConfigReadResult::Loaded )
                 return false;
             sw::string text;
-            if ( sw::FileUtil::readTextFile( absolutePath, text ) == false )
+            if ( sw::FileUtil::readTextFile( sw::FileUtil::toDiskPath( absolutePath ), text ) == false )
                 return false;
             sw::JSONDocument fileDocument;
             sw::JSONDocument shapeDocument;
@@ -119,7 +119,7 @@ namespace
         [[nodiscard]] static bool loadMemoryBudget( const sw::string& absolutePath )
         {
             sw::string text;
-            if ( sw::FileUtil::readTextFile( absolutePath, text ) == false )
+            if ( sw::FileUtil::readTextFile( sw::FileUtil::toDiskPath( absolutePath ), text ) == false )
                 return false;
             sw::MemoryProfiler profiler;
             const bool         bApplied = sw::MemoryBudgetMonitor::applyBudgetJSON( text, profiler ).has_value();
@@ -135,7 +135,7 @@ namespace
         {
             sw::string       text;
             sw::JSONDocument tiers;
-            if ( sw::FileUtil::readTextFile( absolutePath, text ) == false || tiers.parse( text ) == false || tiers.getRoot().isObject() == false )
+            if ( sw::FileUtil::readTextFile( sw::FileUtil::toDiskPath( absolutePath ), text ) == false || tiers.parse( text ) == false || tiers.getRoot().isObject() == false )
                 return false;
             const sw::string enginePath = sw::FileUtil::joinPath( sw::FileUtil::getDirectoryPart( absolutePath ), "EngineConfig.json" );
             bool             bAllRead   = tiers.getRoot().getMemberNames().empty() == false;
@@ -199,7 +199,7 @@ SW_TEST_CASE( ConfigFileSchemaTest, EveryConfigFileLoadsStrictly )
     const sw::string configRoot = sw::FileUtil::joinPath( projectRoot, "Config" );
 
     sw::vector<sw::string> listFilePath;
-    SW_REQUIRE_TRUE( sw::FileUtil::collectFiles( configRoot, "", listFilePath, true ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::collectFiles( sw::FileUtil::toDiskPath( configRoot ), "", listFilePath, true ) );
 
     uint32 loadedCount{ 0 };
     for ( const sw::string& filePath : listFilePath )

@@ -213,7 +213,7 @@ SW_TEST_CASE( LocalizationManagerTest, ReloadChangedFilePicksUpNewTextAndKeepsOl
     SW_EXPECT_EQUAL( uint32( 1 ), notifiedCount );
 
     // 깨진 파일 — 다시 읽지 않고 예전 글을 지킨다.
-    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::joinPath( folder, "ko.translation.xml" ), "<TranslationTable culture=\"ko\"><entries>" ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::toDiskPath( sw::FileUtil::joinPath( folder, "ko.translation.xml" ) ), "<TranslationTable culture=\"ko\"><entries>" ) );
     SW_EXPECT_LOG( "Xml.ParseError" );
     SW_EXPECT_LOG( "Localization.TranslationNotLoaded" );
     SW_EXPECT_LOG( "Localization.ReloadFailed" );
@@ -233,9 +233,9 @@ SW_TEST_CASE( LocalizationManagerTest, UnmountingGameProjectsKeepsEngineStrings 
     const sw::string          engineFolder = domain.makeDiskPath( "engine" );
     const sw::string          gameFolder   = domain.makeDiskPath( "game" );
     const sw::string          enginePath   = sw::FileUtil::joinPath( engineFolder, "engine.locproject.xml" );
-    SW_REQUIRE_TRUE( sw::FileUtil::ensureDirectoryExists( engineFolder ) );
-    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( enginePath, R"(<LocalizationProject name="engineTest" sourceCulture="en"><stringTables><item>e.strings.xml</item></stringTables></LocalizationProject>)" ) );
-    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::joinPath( engineFolder, "e.strings.xml" ), R"(<SourceStringTable culture="en"><entries><entry key="e.key" source="Engine" /></entries></SourceStringTable>)" ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::ensureDirectoryExists( sw::FileUtil::toDiskPath( engineFolder ) ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::toDiskPath( enginePath ), R"(<LocalizationProject name="engineTest" sourceCulture="en"><stringTables><item>e.strings.xml</item></stringTables></LocalizationProject>)" ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::toDiskPath( sw::FileUtil::joinPath( engineFolder, "e.strings.xml" ) ), R"(<SourceStringTable culture="en"><entries><entry key="e.key" source="Engine" /></entries></SourceStringTable>)" ) );
     LocalizationTestUtil::writeSourceTable( gameFolder, "en", R"("g.key": { "source": "Game" })" );
 
     sw::LocalizationManager loc;

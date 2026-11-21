@@ -99,7 +99,7 @@ namespace sw
     bool Archive::saveToFile( string_view fileName ) const
     {
         if ( _bytes.empty() == false )
-            return FileUtil::writeFile( fileName, _bytes.data(), _bytes.size() );
+            return FileUtil::writeFile( FileUtil::toDiskPath( fileName ), _bytes.data(), _bytes.size() );
         return false;
     }
 
