@@ -21,21 +21,21 @@ namespace sw
             {
                 if ( pManager == nullptr )
                     return false;
-                outValue = static_cast<float64>( pManager->getSubsystem<SocketPartPool>().getTakeHitCount() );
+                outValue = static_cast<float64>( pManager->getSubsystem<SocketPartPool>().getTakeHitCount().get() );
                 return true;
             }
             [[nodiscard]] static bool readTakeMissCount( const GameObjectManager* pManager, float64& outValue )
             {
                 if ( pManager == nullptr )
                     return false;
-                outValue = static_cast<float64>( pManager->getSubsystem<SocketPartPool>().getTakeMissCount() );
+                outValue = static_cast<float64>( pManager->getSubsystem<SocketPartPool>().getTakeMissCount().get() );
                 return true;
             }
             [[nodiscard]] static bool readStoredCount( const GameObjectManager* pManager, float64& outValue )
             {
                 if ( pManager == nullptr )
                     return false;
-                outValue = static_cast<float64>( pManager->getSubsystem<SocketPartPool>().getStoredCount() );
+                outValue = static_cast<float64>( pManager->getSubsystem<SocketPartPool>().getStoredCount().get() );
                 return true;
             }
         };

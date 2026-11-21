@@ -620,11 +620,6 @@ namespace sw
         _pState->_tickScheduler.getTickRegistry().markAllDirty();
     }
 
-    uint32 GameObjectManager::getStageTransformApplyCount() const
-    {
-        return _pState->_tickScheduler.getStageTransformApplyCount();
-    }
-
     void GameObjectManager::notifyTransformDirty()
     {
         _pState->_transformHierarchy.notifyDirty();

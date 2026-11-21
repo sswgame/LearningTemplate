@@ -203,7 +203,6 @@ namespace sw
         , _listEntryTask{}
         , _listStageItemTask{}
         , _stageOrderScratch{}
-        , _stageTransformApplyCount{ 0 }
         , _dispatchOrdinal{ 0 }
     {
     }
@@ -495,8 +494,7 @@ namespace sw
         // 붙이기 전 월드에서 로컬을 다시 구한다). 구조 변경은 단계 끝에서만 돌므로, 그때부터는 쓰기도 단계 끝까지 둔다.
         if ( _pStructuralChangeBuffer->hasDeferredHierarchyChange() )
             return;
-        SW_PROFILE_SCOPE( "GT.Scene.tick.stageTransforms" );
-        ++_stageTransformApplyCount;
+        SW_PROFILE_SCOPE( "GT.Scene.tick.stageTransforms" ); // 적용 횟수는 이 구간의 호출 수다(런타임 칸으로 세지 않는다)
         // 스테이지 사이엔 워커가 돌지 않는다 — 틱 뒤 적용과 같은 길(대기 칸 → 쓰기 큐 → 잎 루트 합성 · 더티 루트)에 플러시까지 해서
         // 다음 스테이지가 로컬 · 월드 값을 모두 읽게 한다. 동결은 그대로다(구조 변경 · 스폰은 여전히 단계 끝).
         _pHierarchy->applyTickWrites( *_pManager, *_pPrimitiveRegistry );

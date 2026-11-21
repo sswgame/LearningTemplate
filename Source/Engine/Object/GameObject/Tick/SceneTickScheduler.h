@@ -58,9 +58,6 @@ namespace sw
         /** @brief 틱에 참여하는 오브젝트의 레지스트리입니다. */
         const TickRegistry& getTickRegistry() const { return _tickRegistry; }
 
-        /** @brief 선행 조건 스테이지 경계에서 틱 중 트랜스폼 쓰기를 적용한 횟수(누적)입니다. 진단 · 회귀 테스트용입니다. */
-        uint32 getStageTransformApplyCount() const { return _stageTransformApplyCount; }
-
     private:
         /** @brief Task 모드 오브젝트 하나를 도는 태스크입니다(`tickGroupModes` 가 그룹마다 띄운다). 원소 주소를 태스크가 들므로 목록은 띄우기 전에 크기를 정한다. */
         struct EntryTask
@@ -119,11 +116,10 @@ namespace sw
         PrimitiveRegistry*       _pPrimitiveRegistry;
         StructuralChangeBuffer*  _pStructuralChangeBuffer;
         TickRegistry             _tickRegistry;
-        vector<uint32>           _listBatchStart;           ///< 한 일괄 디스패치(파도 · 스테이지)에서 일괄 목록마다 시작 번호(끝에 전체 수). 할당을 재사용한다
-        vector<EntryTask>        _listEntryTask;            ///< 한 그룹의 Task 모드 태스크(할당을 재사용한다)
-        vector<StageItemTask>    _listStageItemTask;        ///< 간선 있는 스테이지 하나의 항목 태스크(할당을 재사용한다)
-        StageOrderScratch        _stageOrderScratch;        ///< 간선 있는 스테이지 하나의 위상 정렬 임시 배열(할당을 재사용한다)
-        uint32                   _stageTransformApplyCount; ///< 스테이지 경계 적용 횟수(진단)
-        uint32                   _dispatchOrdinal;          ///< 디스패치마다 오르는 순번(`TickThreadState::_dispatchOrdinal` — 같은 오브젝트가 디스패치마다 다른 스레드에서 쓴 건의 선후). 되감지 않는다
+        vector<uint32>           _listBatchStart;    ///< 한 일괄 디스패치(파도 · 스테이지)에서 일괄 목록마다 시작 번호(끝에 전체 수). 할당을 재사용한다
+        vector<EntryTask>        _listEntryTask;     ///< 한 그룹의 Task 모드 태스크(할당을 재사용한다)
+        vector<StageItemTask>    _listStageItemTask; ///< 간선 있는 스테이지 하나의 항목 태스크(할당을 재사용한다)
+        StageOrderScratch        _stageOrderScratch; ///< 간선 있는 스테이지 하나의 위상 정렬 임시 배열(할당을 재사용한다)
+        uint32                   _dispatchOrdinal;   ///< 디스패치마다 오르는 순번(`TickThreadState::_dispatchOrdinal` — 같은 오브젝트가 디스패치마다 다른 스레드에서 쓴 건의 선후). 되감지 않는다
     };
 } // namespace sw

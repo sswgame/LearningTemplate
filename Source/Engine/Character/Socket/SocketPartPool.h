@@ -10,6 +10,7 @@
 #pragma once
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Diagnostics/DevCounter.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
@@ -56,17 +57,17 @@ namespace sw
 
         /**
          * @brief 이 씬에서 `takePart` 가 쉬는 부품을 내준 수 / 내주지 못한 수 / `storePart` 가 받은 수입니다(누적). 풀의 효과를 재는 값입니다 —
-         *        시간은 프로파일 구간 `GT.Appearance.syncParts`(부품 스폰이 든다)로 읽습니다.
+         *        시간은 프로파일 구간 `GT.Appearance.syncParts`(부품 스폰이 든다)로 읽습니다. 감시 값 · 테스트만 읽어 개발 전용 칸(`DevCounter` — 배포는 늘 0)이다.
          */
-        uint32 getTakeHitCount() const { return _takeHitCount; }
-        uint32 getTakeMissCount() const { return _takeMissCount; }
-        uint32 getStoredCount() const { return _storedCount; }
+        const DevCounter& getTakeHitCount() const { return _takeHitCount; }
+        const DevCounter& getTakeMissCount() const { return _takeMissCount; }
+        const DevCounter& getStoredCount() const { return _storedCount; }
 
     private:
         GameObjectManager*                                     _pManager;
         unordered_map<hashed_string, vector<GameObjectHandle>> _mapResting; ///< 에셋 경로마다 쉬는 부품이다
-        uint32                                                 _takeHitCount;
-        uint32                                                 _takeMissCount;
-        uint32                                                 _storedCount;
+        DevCounter                                             _takeHitCount;
+        DevCounter                                             _takeMissCount;
+        DevCounter                                             _storedCount;
     };
 } // namespace sw
