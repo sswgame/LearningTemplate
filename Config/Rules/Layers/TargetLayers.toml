@@ -71,4 +71,5 @@ reflectionparser = [
 gameframework = ["Engine/Graphics/RHI/RHIEnums.h"]
 kit = ["Engine/Graphics/RHI/RHIEnums.h"]
 game = ["Engine/Graphics/RHI/RHIEnums.h"]
-editorextension = ["Engine/Graphics/RHI/RHIEnums.h"]
+# 에디터 뷰 상태(`EditorRenderViews`)가 렌더 타깃 핸들을 든다 — 종류별 값 형식만 담은 헤더라 연다(RHIEnums 와 같은 까닭).
+editorextension = ["Engine/Graphics/RHI/RHIEnums.h", "Engine/Graphics/RHI/RHIHandles.h"]
