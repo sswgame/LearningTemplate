@@ -42,7 +42,7 @@ namespace sw
             static constexpr const utf8* kLocalID = "_localID";
 
             /** @brief 컴포넌트 원소 하나와 그 키(지역 id 키 `#<16진>`, `ComponentStableKey`)입니다. */
-            struct KeyedComponent
+            struct KeyedComponentNode
             {
                 XMLNode _node;
                 string  _key;
@@ -80,7 +80,7 @@ namespace sw
              * @brief 컴포넌트 목록 원소의 컴포넌트마다 키를 붙여 모읍니다. 키는 `ComponentStableKey` 와 같은 규칙입니다 — 적힌 지역 id(`_localID`), 없으면
              *        이름(`_componentName`, 없거나 비었으면 원소 이름(타입))과 같은 이름 가운데 순번에서 정한 id(`ComponentStableKey::resolveLocalIDs`).
              */
-            static void collectComponents( const XMLNode& listNode, vector<KeyedComponent>& outListComponent )
+            static void collectComponents( const XMLNode& listNode, vector<KeyedComponentNode>& outListComponent )
             {
                 outListComponent.clear();
                 if ( listNode.isValid() == false )
@@ -98,7 +98,7 @@ namespace sw
                     if ( StringUtil::isNullOrEmpty( pStored ) == false && StringUtil::parseUint64( pStored, storedID ) == false )
                         storedID = 0; // 읽지 못한 id 는 적히지 않은 것과 같다 — 상태 읽기도 그 칸을 거절한다
                     listSlot.push_back( ComponentLocalIDSlot{ baseName, storedID, 0 } );
-                    outListComponent.push_back( KeyedComponent{ child, string{}, false } );
+                    outListComponent.push_back( KeyedComponentNode{ child, string{}, false } );
                 }
                 ComponentStableKey::resolveLocalIDs( listSlot );
                 for ( size_t index = 0; index < listSlot.size(); ++index )
@@ -108,9 +108,9 @@ namespace sw
             }
 
             /** @brief 키 · 원소 이름(타입)이 같은 컴포넌트입니다. 없으면 nullptr 입니다. */
-            static KeyedComponent* findComponent( vector<KeyedComponent>& listComponent, string_view key, const utf8* pTypeName )
+            static KeyedComponentNode* findComponent( vector<KeyedComponentNode>& listComponent, string_view key, const utf8* pTypeName )
             {
-                return VectorUtil::findIf( listComponent, [&]( KeyedComponent& component )
+                return VectorUtil::findIf( listComponent, [&]( KeyedComponentNode& component )
                 { return component.isKey( key ) && StringUtil::equals( component._node.getName(), pTypeName, false ); } );
             }
 
@@ -218,7 +218,7 @@ namespace sw
 
                 void write( XMLNode outRoot, const XMLNode& baseList ) const
                 {
-                    vector<KeyedComponent> listBase;
+                    vector<KeyedComponentNode> listBase;
                     collectComponents( baseList, listBase );
                     XMLNode outList = outRoot.appendChild( kComponentList );
                     reportLegacyKeys();
@@ -233,7 +233,7 @@ namespace sw
 
                     // 더한 컴포넌트는 앞에 있던 물려받은 컴포넌트(지운 것 포함) 뒤에 그 자리대로 넣는다 — 순서가 바뀌면 같은 타입의 `타입#n` 키가 바뀐다.
                     appendAddedAfter( outList, nullptr );
-                    for ( KeyedComponent& component : listBase )
+                    for ( KeyedComponentNode& component : listBase )
                     {
                         const bool bRemoved = VectorUtil::containsIf( listRemovedKey, [&component]( const string& removedKey )
                         { return component.isKey( removedKey ); } );
@@ -248,7 +248,7 @@ namespace sw
                 }
 
                 /** @brief 프리팹 컴포넌트 하나를 씁니다 — 덮어쓴 것이 있으면 얹어서. */
-                void appendBaseComponent( XMLNode outList, KeyedComponent& component ) const
+                void appendBaseComponent( XMLNode outList, KeyedComponentNode& component ) const
                 {
                     const XMLNode partial = findOverride( component );
                     if ( partial.isValid() == false )
@@ -263,7 +263,7 @@ namespace sw
                 }
 
                 /** @brief `after` 가 @p pAnchorKey 인 더한 컴포넌트를 문서 순서대로 씁니다. @p pAnchorKey 가 nullptr 이면 `after` 가 없는 것(맨 앞)입니다. */
-                void appendAddedAfter( XMLNode outList, const KeyedComponent* pAnchor ) const
+                void appendAddedAfter( XMLNode outList, const KeyedComponentNode* pAnchor ) const
                 {
                     for ( XMLNode entry = _overrideRoot.findChild( kAdd ); entry.isValid(); entry = entry.findNextSibling( kAdd ) )
                     {
@@ -279,7 +279,7 @@ namespace sw
                 }
 
                 /** @brief 앞의 물려받은 컴포넌트가 프리팹에서 사라진 더한 컴포넌트를 끝에 씁니다 — 버리지 않는다(다음 저장이 지금 자리로 다시 적는다). */
-                void appendAddedWithLostAnchor( XMLNode outList, const vector<KeyedComponent>& listBase ) const
+                void appendAddedWithLostAnchor( XMLNode outList, const vector<KeyedComponentNode>& listBase ) const
                 {
                     for ( XMLNode entry = _overrideRoot.findChild( kAdd ); entry.isValid(); entry = entry.findNextSibling( kAdd ) )
                     {
@@ -287,7 +287,7 @@ namespace sw
                         if ( StringUtil::isNullOrEmpty( pAfter ) )
                             continue;
                         bool bFound = false;
-                        for ( const KeyedComponent& component : listBase )
+                        for ( const KeyedComponentNode& component : listBase )
                         {
                             bFound = bFound || component.isKey( pAfter );
                         }
@@ -300,7 +300,7 @@ namespace sw
                 }
 
                 /** @brief 이 컴포넌트를 가리키는 `<Override>` 의 컴포넌트 원소입니다. 원소 이름(타입)이 다르면 무효 노드입니다. */
-                XMLNode findOverride( const KeyedComponent& component ) const
+                XMLNode findOverride( const KeyedComponentNode& component ) const
                 {
                     for ( XMLNode entry = _overrideRoot.findChild( kOverride ); entry.isValid(); entry = entry.findNextSibling( kOverride ) )
                     {
@@ -336,13 +336,13 @@ namespace sw
                     reportEntries( kAdd, kAfter );
                 }
 
-                void warnDroppedEntries( const vector<KeyedComponent>& listBase, const vector<string>& listRemovedKey ) const
+                void warnDroppedEntries( const vector<KeyedComponentNode>& listBase, const vector<string>& listRemovedKey ) const
                 {
                     for ( XMLNode entry = _overrideRoot.findChild( kOverride ); entry.isValid(); entry = entry.findNextSibling( kOverride ) )
                     {
                         const utf8* pKey     = entry.findAttribute( kKey );
                         bool        bMatched = false;
-                        for ( const KeyedComponent& component : listBase )
+                        for ( const KeyedComponentNode& component : listBase )
                         {
                             bMatched = bMatched || ( pKey != nullptr && component.isKey( pKey ) && component._bUsed );
                         }
@@ -353,7 +353,7 @@ namespace sw
                     for ( const string& removedKey : listRemovedKey )
                     {
                         bool bMatched = false;
-                        for ( const KeyedComponent& component : listBase )
+                        for ( const KeyedComponentNode& component : listBase )
                         {
                             bMatched = bMatched || component.isKey( removedKey );
                         }
@@ -435,15 +435,15 @@ namespace sw
             bAny = true;
         }
 
-        vector<PrefabOverridesInternal::KeyedComponent> listInstance;
-        vector<PrefabOverridesInternal::KeyedComponent> listBase;
+        vector<PrefabOverridesInternal::KeyedComponentNode> listInstance;
+        vector<PrefabOverridesInternal::KeyedComponentNode> listBase;
         PrefabOverridesInternal::collectComponents( PrefabOverridesInternal::findChildElement( instanceRoot, PrefabOverridesInternal::kComponentList ), listInstance );
         PrefabOverridesInternal::collectComponents( PrefabOverridesInternal::findChildElement( baseRoot, PrefabOverridesInternal::kComponentList ), listBase );
 
         // 짝: 키와 타입(원소 이름)이 같은 것. 짝이 없는 프리팹 컴포넌트는 지운 것, 짝이 없는 인스턴스 컴포넌트는 더한 것이다.
-        for ( PrefabOverridesInternal::KeyedComponent& instanceComponent : listInstance )
+        for ( PrefabOverridesInternal::KeyedComponentNode& instanceComponent : listInstance )
         {
-            PrefabOverridesInternal::KeyedComponent* pBaseComponent =
+            PrefabOverridesInternal::KeyedComponentNode* pBaseComponent =
                 PrefabOverridesInternal::findComponent( listBase, instanceComponent._key, instanceComponent._node.getName() );
             if ( pBaseComponent != nullptr )
             {
@@ -451,18 +451,18 @@ namespace sw
                 instanceComponent._bUsed = true;
             }
         }
-        for ( const PrefabOverridesInternal::KeyedComponent& baseComponent : listBase )
+        for ( const PrefabOverridesInternal::KeyedComponentNode& baseComponent : listBase )
         {
             if ( baseComponent._bUsed )
                 continue;
             outRoot.appendChild( PrefabOverridesInternal::kRemove ).appendAttribute( PrefabOverridesInternal::kKey, baseComponent._key );
             bAny = true;
         }
-        for ( const PrefabOverridesInternal::KeyedComponent& instanceComponent : listInstance )
+        for ( const PrefabOverridesInternal::KeyedComponentNode& instanceComponent : listInstance )
         {
             if ( instanceComponent._bUsed == false )
                 continue;
-            PrefabOverridesInternal::KeyedComponent* pBaseComponent =
+            PrefabOverridesInternal::KeyedComponentNode* pBaseComponent =
                 PrefabOverridesInternal::findComponent( listBase, instanceComponent._key, instanceComponent._node.getName() );
             PrefabOverridesInternal::collectDifferences( instanceComponent._node, pBaseComponent->_node, false, listAttribute, listChild );
             if ( listAttribute.empty() && listChild.empty() )
@@ -474,7 +474,7 @@ namespace sw
         }
         // 더한 컴포넌트는 바로 앞의 물려받은 컴포넌트 키를 `after` 로 적는다(`makeInstanceState` 가 그 뒤에 넣는다). 앞에 물려받은 것이 없으면 적지 않는다(맨 앞).
         const string* pLastInheritedKey = nullptr;
-        for ( const PrefabOverridesInternal::KeyedComponent& instanceComponent : listInstance )
+        for ( const PrefabOverridesInternal::KeyedComponentNode& instanceComponent : listInstance )
         {
             if ( instanceComponent._bUsed )
             {
@@ -542,11 +542,11 @@ namespace sw
             SW_LOG_ERROR_ID( "PrefabOverrides.VariantNotParsed", "'%#': its <%#> or its base state could not be parsed", sourceName, kRootName );
             return false;
         }
-        vector<PrefabOverridesInternal::KeyedComponent> listBase;
+        vector<PrefabOverridesInternal::KeyedComponentNode> listBase;
         PrefabOverridesInternal::collectComponents( PrefabOverridesInternal::findChildElement( baseDoc.getRoot(), PrefabOverridesInternal::kComponentList ), listBase );
         const auto hasKey = [&listBase]( const utf8* pKey )
         {
-            return pKey != nullptr && VectorUtil::containsIf( listBase, [pKey]( const PrefabOverridesInternal::KeyedComponent& component )
+            return pKey != nullptr && VectorUtil::containsIf( listBase, [pKey]( const PrefabOverridesInternal::KeyedComponentNode& component )
             { return component.isKey( pKey ); } );
         };
         const XMLNode overrideRoot = overrideDoc.getRoot( kRootName );

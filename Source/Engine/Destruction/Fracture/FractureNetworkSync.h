@@ -1,7 +1,7 @@
 /**
  * @file FractureNetworkSync.h
  * @brief 파괴 컴포넌트가 네트워크와 주고받는 것을 맡습니다. 받는 쪽의 최근 상태 해시, `driveGroup` 이 쌓은 자세 목표, 스냅샷 바이트 형식입니다.
- * @details 그룹 바디와 렌더링을 고치는 일은 `FractureComponentBase` 가 한다. 이 클래스는 물리와 렌더링을 모르므로 엔진 없이 테스트할 수 있다.
+ * @details 그룹 바디와 렌더링을 고치는 일은 `FractureBaseComponent` 가 한다. 이 클래스는 물리와 렌더링을 모르므로 엔진 없이 테스트할 수 있다.
  *          자세 목표는 어느 스레드에서든 쌓고, 게임 스레드의 물리 프레임이 한 번에 꺼내 간다(잠금 아래).
  *          구조 상태(`DestructionState`)와 사건 기록은 건드리지 않는다. 결정성은 사건 순서가 정하고, 이 클래스는 그 순서를 바꾸지 않는다.
  */
@@ -37,7 +37,7 @@ namespace sw
 {
     /**
      * @class FractureNetworkSync
-     * @brief `FractureComponentBase` 의 값 멤버입니다. 컴포넌트가 직접(비가상으로) 부릅니다.
+     * @brief `FractureBaseComponent` 의 값 멤버입니다. 컴포넌트가 직접(비가상으로) 부릅니다.
      */
     class SW_API FractureNetworkSync
     {

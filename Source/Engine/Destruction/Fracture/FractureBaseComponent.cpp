@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Destruction/Fracture/FractureComponentBase.h"
+#include "Engine/Destruction/Fracture/FractureBaseComponent.h"
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
@@ -581,7 +581,7 @@ namespace sw
 
 namespace sw
 {
-    FractureComponentBase::FractureComponentBase()
+    FractureBaseComponent::FractureBaseComponent()
         : PhysicsComponent( PhysicsComponentPhase::Body )
         , _profilePath{}
         , _interiorMaterialPath{}
@@ -623,18 +623,18 @@ namespace sw
     {
     }
 
-    FractureComponentBase::~FractureComponentBase()
+    FractureBaseComponent::~FractureBaseComponent()
     {
         releaseAllBodies();
     }
 
-    void FractureComponentBase::onBeginPlay()
+    void FractureBaseComponent::onBeginPlay()
     {
         PhysicsComponent::onBeginPlay();
         _eventLog._seed = _seed;
     }
 
-    bool FractureComponentBase::readObjectPose( float3& outPosition, quaternion& outRotation, float32& outScale ) const
+    bool FractureBaseComponent::readObjectPose( float3& outPosition, quaternion& outRotation, float32& outScale ) const
     {
         const GameObject*     pOwner = getOwner();
         const SceneComponent* pScene = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
@@ -651,7 +651,7 @@ namespace sw
 
     // --- 피해 받기 -------------------------------------------------------------------------------------------------------------
 
-    void FractureComponentBase::applyDamage( const DestructionDamageEvent& event )
+    void FractureBaseComponent::applyDamage( const DestructionDamageEvent& event )
     {
         FracturePendingDamage pending;
         pending._kind  = FracturePendingDamage::Kind::Mesh;
@@ -659,7 +659,7 @@ namespace sw
         _pendingDamage.push( pending );
     }
 
-    void FractureComponentBase::applyPointDamageAtWorld( const float3& worldPoint, const float3& worldDirection, float32 strain, float32 impulse, PhysicsBodyHandle hitBody )
+    void FractureBaseComponent::applyPointDamageAtWorld( const float3& worldPoint, const float3& worldDirection, float32 strain, float32 impulse, PhysicsBodyHandle hitBody )
     {
         FracturePendingDamage pending;
         pending._kind           = FracturePendingDamage::Kind::WorldPoint;
@@ -672,7 +672,7 @@ namespace sw
         _pendingDamage.push( pending );
     }
 
-    void FractureComponentBase::applyDamage( const DestructionDamageEvent& event, const FractureGroupPose& groupPose )
+    void FractureBaseComponent::applyDamage( const DestructionDamageEvent& event, const FractureGroupPose& groupPose )
     {
         FracturePendingDamage pending;
         pending._kind          = FracturePendingDamage::Kind::Mesh;
@@ -682,7 +682,7 @@ namespace sw
         _pendingDamage.push( pending );
     }
 
-    void FractureComponentBase::applyRadialDamageAtWorld( const float3& worldCenter, float32 radius, float32 strain, float32 impulse )
+    void FractureBaseComponent::applyRadialDamageAtWorld( const float3& worldCenter, float32 radius, float32 strain, float32 impulse )
     {
         FracturePendingDamage pending;
         pending._kind           = FracturePendingDamage::Kind::WorldRadial;
@@ -694,7 +694,7 @@ namespace sw
         _pendingDamage.push( pending );
     }
 
-    bool FractureComponentBase::applyRaycastDamage( GameObjectManager& manager, const float3& origin, const float3& direction, float32 maxDistance, float32 strain,
+    bool FractureBaseComponent::applyRaycastDamage( GameObjectManager& manager, const float3& origin, const float3& direction, float32 maxDistance, float32 strain,
                                                     float32 impulse, float3* pOutPoint )
     {
         IPhysicsScene3D* pScene = manager.getSubsystem<sw::ScenePhysics>().findScene3D();
@@ -704,7 +704,7 @@ namespace sw
         if ( pScene->raycast( origin, direction.normalize(), maxDistance, PhysicsQueryFilter{}, hit ) == false )
             return false;
         GameObject*            pObject   = manager.findGameObjectByID( hit._userData );
-        FractureComponentBase* pFracture = pObject != nullptr ? pObject->getComponent<FractureComponentBase>() : nullptr;
+        FractureBaseComponent* pFracture = pObject != nullptr ? pObject->getComponent<FractureBaseComponent>() : nullptr;
         if ( pFracture == nullptr )
             return false;
         if ( pOutPoint != nullptr )
@@ -713,7 +713,7 @@ namespace sw
         return true;
     }
 
-    void FractureComponentBase::handleCollisionBegin( const CollisionInfo& collision )
+    void FractureBaseComponent::handleCollisionBegin( const CollisionInfo& collision )
     {
         const bool bIgnoreCollision = _bAuthority == false || _bStateReady == SW_FALSE || collision._impulse <= getProfile()._minImpulse;
         if ( bIgnoreCollision )
@@ -743,7 +743,7 @@ namespace sw
 
     // --- 물리 프레임 -------------------------------------------------------------------------------------------------------------
 
-    void FractureComponentBase::onPhysicsFrameBegin( const FixedStepContext& context )
+    void FractureBaseComponent::onPhysicsFrameBegin( const FixedStepContext& context )
     {
         ScenePhysics& physics = context.getPhysics();
         _frameSimulatedTime   = 0.0f;
@@ -784,7 +784,7 @@ namespace sw
             FractureComponentBaseInternal::warmLeafShapes( *_physics );
     }
 
-    void FractureComponentBase::onPrePhysicsStep( const FixedStepContext& context )
+    void FractureBaseComponent::onPrePhysicsStep( const FixedStepContext& context )
     {
         const float32 fixedDeltaTime = context.getFixedDeltaTime();
         if ( _physics == nullptr )
@@ -796,13 +796,13 @@ namespace sw
         }
     }
 
-    void FractureComponentBase::onPostPhysicsStep( const FixedStepContext& context )
+    void FractureBaseComponent::onPostPhysicsStep( const FixedStepContext& context )
     {
         ScenePhysics& physics = context.getPhysics();
         _frameSimulatedTime += physics.getStepTimer().getStep();
     }
 
-    void FractureComponentBase::onPhysicsFrameEnd( const FixedStepContext& context )
+    void FractureBaseComponent::onPhysicsFrameEnd( const FixedStepContext& context )
     {
         (void)context; // 보간하지 않는다 — 조각 자세는 모은 시뮬레이션 시간으로 쓴다(`updateGroups`)
         if ( _bFractured == SW_FALSE || _physics == nullptr )
@@ -830,13 +830,13 @@ namespace sw
         }
     }
 
-    void FractureComponentBase::releasePhysics( ScenePhysics& physics )
+    void FractureBaseComponent::releasePhysics( ScenePhysics& physics )
     {
         (void)physics;
         releaseAllBodies();
     }
 
-    void FractureComponentBase::releaseAllBodies()
+    void FractureBaseComponent::releaseAllBodies()
     {
         if ( _physics == nullptr )
             return;
@@ -873,7 +873,7 @@ namespace sw
 
     // --- 상태 -------------------------------------------------------------------------------------------------------------------
 
-    bool FractureComponentBase::initializeState()
+    bool FractureBaseComponent::initializeState()
     {
         SW_PROFILE_SCOPE( "GT.Scene.tick.physics.fractureState" );
         _profileReload.markSeen(); // 데이터를 받지 못해도 세대를 적는다 — 세대가 바뀔 때까지 다시 묻지 않는다
@@ -913,7 +913,7 @@ namespace sw
         return true;
     }
 
-    void FractureComponentBase::computeAnchors( const float3& position, const quaternion& rotation, float32 scale, vector<uint8>& outListAnchor ) const
+    void FractureBaseComponent::computeAnchors( const float3& position, const quaternion& rotation, float32 scale, vector<uint8>& outListAnchor ) const
     {
         const FractureAsset& asset = *_asset;
         // World 모드의 "정적 월드에 닿았나" 는 물리 질의라 여기서 잎마다 묻는다. 판정은 FractureAnchorUtil 이 모은다.
@@ -930,7 +930,7 @@ namespace sw
         FractureAnchorUtil::computeAnchors( asset, _anchorMode, _anchorTolerance, scale, _listAnchorVolume, listWorldContact, outListAnchor );
     }
 
-    void FractureComponentBase::processPendingEvents( ScenePhysics& physics )
+    void FractureBaseComponent::processPendingEvents( ScenePhysics& physics )
     {
         vector<FracturePendingDamage> listPending;
         if ( _pendingDamage.takeAll( listPending ) == false )
@@ -958,12 +958,12 @@ namespace sw
         }
     }
 
-    float3 FractureComponentBase::toMeshSpace( const FractureGroupRuntime& runtime, const float3& worldPoint ) const
+    float3 FractureBaseComponent::toMeshSpace( const FractureGroupRuntime& runtime, const float3& worldPoint ) const
     {
         return float3::transform( worldPoint - runtime._position, FractureComponentBaseInternal::invert( runtime._rotation ) ) / _objectScale;
     }
 
-    void FractureComponentBase::convertWorldDamage( const FracturePendingDamage& pending, vector<DestructionDamageEvent>& outListEvent ) const
+    void FractureBaseComponent::convertWorldDamage( const FracturePendingDamage& pending, vector<DestructionDamageEvent>& outListEvent ) const
     {
         if ( _bFractured == SW_FALSE )
         {
@@ -1037,7 +1037,7 @@ namespace sw
         }
     }
 
-    optional<FractureGroupPose> FractureComponentBase::makeEventGroupPose( const FractureGroupRuntime* pHit )
+    optional<FractureGroupPose> FractureBaseComponent::makeEventGroupPose( const FractureGroupRuntime* pHit )
     {
         if ( pHit == nullptr || pHit->_bAnchored != SW_FALSE )
             return nullopt;
@@ -1049,7 +1049,7 @@ namespace sw
         return pose;
     }
 
-    void FractureComponentBase::applyMeshEvent( ScenePhysics& physics, const DestructionDamageEvent& event, const FractureGroupPose* pGroupPose )
+    void FractureBaseComponent::applyMeshEvent( ScenePhysics& physics, const DestructionDamageEvent& event, const FractureGroupPose* pGroupPose )
     {
         // 맞은 떨어진 그룹: 보낸 쪽 자세가 왔으면 그 위치로 옮기고, 적용 직전 자세를 사건 기록 옆에 적는다(보낼 때 함께 간다).
         FractureGroupRuntime* pHit = event._groupID != 0 ? findRuntime( event._groupID ) : nullptr;
@@ -1087,7 +1087,7 @@ namespace sw
 
     // --- 쪼갠 상태 -----------------------------------------------------------------------------------------------------------------
 
-    void FractureComponentBase::prepareLeafPoints( float32 scale )
+    void FractureBaseComponent::prepareLeafPoints( float32 scale )
     {
         const bool bNothingToRebuildLeafPoints = _physics == nullptr || _asset == nullptr || scale == _leafShapeScale;
         if ( bNothingToRebuildLeafPoints )
@@ -1096,12 +1096,12 @@ namespace sw
         _leafShapeScale = scale;
     }
 
-    uint32 FractureComponentBase::getPendingLeafShapeCount() const
+    uint32 FractureBaseComponent::getPendingLeafShapeCount() const
     {
         return _physics != nullptr ? _physics->getPendingLeafShapeCount() : 0;
     }
 
-    void FractureComponentBase::activate( ScenePhysics& physics )
+    void FractureBaseComponent::activate( ScenePhysics& physics )
     {
         (void)physics;
         GameObject* pOwner = getOwner();
@@ -1155,7 +1155,7 @@ namespace sw
         _bPoseDirty = SW_TRUE;
     }
 
-    void FractureComponentBase::removeGroupRuntimes( const DestructionChange& change, vector<PhysicsBodyHandle>& outListDestroy, vector<FractureGroupRuntime>& outListRemoved )
+    void FractureBaseComponent::removeGroupRuntimes( const DestructionChange& change, vector<PhysicsBodyHandle>& outListDestroy, vector<FractureGroupRuntime>& outListRemoved )
     {
         for ( const uint32 groupID : change._listRemovedGroup )
         {
@@ -1174,7 +1174,7 @@ namespace sw
         }
     }
 
-    float3 FractureComponentBase::computeImpactVelocity( const DestructionGroup& group, const FractureGroupRuntime& runtime, const DestructionDamageEvent& event, DestructionRandom& random ) const
+    float3 FractureBaseComponent::computeImpactVelocity( const DestructionGroup& group, const FractureGroupRuntime& runtime, const DestructionDamageEvent& event, DestructionRandom& random ) const
     {
         float3        center{};
         const float32 groupMass = _state.computeGroupMass( group, center ); // 질량과 중심은 한 번 훑어 함께 나온다
@@ -1191,7 +1191,7 @@ namespace sw
         return float3::transform( push, runtime._rotation ) * ( event._impulse * falloff / MathUtil::max( mass, 1.0f ) );
     }
 
-    void FractureComponentBase::createGroupRuntime( const DestructionGroup& group, bool bFirst, const vector<FractureGroupRuntime>& listRemoved, const DestructionDamageEvent* pEvent,
+    void FractureBaseComponent::createGroupRuntime( const DestructionGroup& group, bool bFirst, const vector<FractureGroupRuntime>& listRemoved, const DestructionDamageEvent* pEvent,
                                                     DestructionRandom& random )
     {
         FractureGroupRuntime runtime;
@@ -1229,7 +1229,7 @@ namespace sw
         _listRuntime.push_back( runtime );
     }
 
-    void FractureComponentBase::applyGroupChange( ScenePhysics& physics, const DestructionChange& change, const DestructionDamageEvent* pEvent, uint32 eventIndex )
+    void FractureBaseComponent::applyGroupChange( ScenePhysics& physics, const DestructionChange& change, const DestructionDamageEvent* pEvent, uint32 eventIndex )
     {
         (void)physics;
         vector<PhysicsBodyHandle>    listDestroy;
@@ -1281,7 +1281,7 @@ namespace sw
             onAnchoredShapeChanged();
     }
 
-    bool FractureComponentBase::isLeafInAnchoredGroup( uint32 leaf ) const
+    bool FractureBaseComponent::isLeafInAnchoredGroup( uint32 leaf ) const
     {
         const bool bNoFracturedLeaf = _bFractured == SW_FALSE || _asset == nullptr || leaf >= _asset->getPieceCount();
         if ( bNoFracturedLeaf )
@@ -1290,12 +1290,12 @@ namespace sw
         return pGroup != nullptr && pGroup->_bAnchored == SW_TRUE;
     }
 
-    float4x4 FractureComponentBase::makeFracturedObjectMatrix() const
+    float4x4 FractureBaseComponent::makeFracturedObjectMatrix() const
     {
         return float4x4::makeTrs( _objectPosition, _objectRotation, float3{ _objectScale, _objectScale, _objectScale } );
     }
 
-    void FractureComponentBase::spawnGroup( FractureGroupRuntime& inoutRuntime, const DestructionGroup& group, const float3& linearVelocity, const float3& angularVelocity )
+    void FractureBaseComponent::spawnGroup( FractureGroupRuntime& inoutRuntime, const DestructionGroup& group, const float3& linearVelocity, const float3& angularVelocity )
     {
         const float32  cube = uses2DPhysics() ? _objectScale * _objectScale : _objectScale * _objectScale * _objectScale;
         vector<uint32> listLeaf;
@@ -1322,7 +1322,7 @@ namespace sw
             addDebrisBody( inoutRuntime._groupID, bChunk );
     }
 
-    void FractureComponentBase::syncStaticBodies( vector<PhysicsBodyHandle>& inoutListDestroy )
+    void FractureBaseComponent::syncStaticBodies( vector<PhysicsBodyHandle>& inoutListDestroy )
     {
         vector<uint32> listCreate;
         for ( uint32 leaf = 0; leaf < static_cast<uint32>( _listLeafStaticBody.size() ); ++leaf )
@@ -1350,7 +1350,7 @@ namespace sw
         }
     }
 
-    void FractureComponentBase::rebuildLeafRuntimeMap()
+    void FractureBaseComponent::rebuildLeafRuntimeMap()
     {
         _listRuntimeOfLeaf.assign( _asset->getPieceCount(), 0xFFFFFFFFu );
         for ( uint32 index = 0; index < static_cast<uint32>( _listRuntime.size() ); ++index )
@@ -1369,7 +1369,7 @@ namespace sw
         }
     }
 
-    bool FractureComponentBase::updateGroups( float32 deltaTime )
+    bool FractureBaseComponent::updateGroups( float32 deltaTime )
     {
         vector<PhysicsBodyHandle> listDestroy;
         uint32                    liveBodyCount = 0;
@@ -1380,7 +1380,7 @@ namespace sw
         return bMoved;
     }
 
-    bool FractureComponentBase::advanceGroups( float32 deltaTime, vector<PhysicsBodyHandle>& outListDestroy, uint32& outLiveBodyCount )
+    bool FractureBaseComponent::advanceGroups( float32 deltaTime, vector<PhysicsBodyHandle>& outListDestroy, uint32& outLiveBodyCount )
     {
         using Internal = FractureComponentBaseInternal;
         bool bMoved    = false;
@@ -1438,7 +1438,7 @@ namespace sw
         return bMoved;
     }
 
-    bool FractureComponentBase::evictOverBudget( vector<PhysicsBodyHandle>& outListDestroy, uint32 liveBodyCount )
+    bool FractureBaseComponent::evictOverBudget( vector<PhysicsBodyHandle>& outListDestroy, uint32 liveBodyCount )
     {
         bool bMoved = false;
         // 씬 예산: 장부가 씬 전체에서 고른(프레임 끝 훅 앞 — `ScenePhysics`) 이 오브젝트 몫을 지운다. 먼저 틱한 오브젝트가 남의 몫까지 치르지 않는다(감사 S-11).
@@ -1500,7 +1500,7 @@ namespace sw
         return bMoved;
     }
 
-    void FractureComponentBase::writePiecePoses()
+    void FractureBaseComponent::writePiecePoses()
     {
         const quaternion inverseObject = FractureComponentBaseInternal::invert( _objectRotation );
         float32          maxOffset     = 0.0f;
@@ -1522,7 +1522,7 @@ namespace sw
         _renderUnits.writePoses( *pOwner, *_asset, _listPiecePose, maxOffset );
     }
 
-    void FractureComponentBase::setBaked( bool bBaked )
+    void FractureBaseComponent::setBaked( bool bBaked )
     {
         GameObject* pOwner = getOwner();
         if ( pOwner == nullptr || _asset == nullptr )
@@ -1532,7 +1532,7 @@ namespace sw
 
     // --- 질의 -------------------------------------------------------------------------------------------------------------------
 
-    optional<uint32> FractureComponentBase::findGroupOfBody( PhysicsBodyHandle body ) const
+    optional<uint32> FractureBaseComponent::findGroupOfBody( PhysicsBodyHandle body ) const
     {
         if ( body.isValid() == false )
             return nullopt;
@@ -1549,17 +1549,17 @@ namespace sw
         return nullopt;
     }
 
-    FractureGroupRuntime* FractureComponentBase::findRuntime( uint32 groupID )
+    FractureGroupRuntime* FractureBaseComponent::findRuntime( uint32 groupID )
     {
         return FractureComponentBaseInternal::findSortedRuntime( _listRuntime, groupID );
     }
 
-    const FractureGroupRuntime* FractureComponentBase::findRuntime( uint32 groupID ) const
+    const FractureGroupRuntime* FractureBaseComponent::findRuntime( uint32 groupID ) const
     {
         return FractureComponentBaseInternal::findSortedRuntime( _listRuntime, groupID );
     }
 
-    uint32 FractureComponentBase::getDynamicBodyCount() const
+    uint32 FractureBaseComponent::getDynamicBodyCount() const
     {
         uint32 count = 0;
         for ( const FractureGroupRuntime& runtime : _listRuntime )
@@ -1569,7 +1569,7 @@ namespace sw
         return count;
     }
 
-    uint32 FractureComponentBase::getStaticBodyCount() const
+    uint32 FractureBaseComponent::getStaticBodyCount() const
     {
         uint32 count = 0;
         for ( const PhysicsBodyHandle& body : _listLeafStaticBody )
@@ -1579,7 +1579,7 @@ namespace sw
         return count;
     }
 
-    uint32 FractureComponentBase::getDebrisGroupCount() const
+    uint32 FractureBaseComponent::getDebrisGroupCount() const
     {
         uint32 count = 0;
         for ( const FractureGroupRuntime& runtime : _listRuntime )
@@ -1589,14 +1589,14 @@ namespace sw
         return count;
     }
 
-    MeshComponent* FractureComponentBase::resolveIntactMesh() const
+    MeshComponent* FractureBaseComponent::resolveIntactMesh() const
     {
         const GameObject*  pOwner   = getOwner();
         GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         return ( pManager != nullptr && _intactMesh.isValid() ) ? pManager->resolveComponent( _intactMesh ) : nullptr;
     }
 
-    bool FractureComponentBase::isReachedBy( const float3& worldCenter, float32 radius ) const
+    bool FractureBaseComponent::isReachedBy( const float3& worldCenter, float32 radius ) const
     {
         float3     position{};
         quaternion rotation{};
@@ -1616,7 +1616,7 @@ namespace sw
 {
     // --- 네트워크 ---------------------------------------------------------------------------------------------------------------
 
-    void FractureComponentBase::addDebrisBody( uint32 groupID, bool bLarge )
+    void FractureBaseComponent::addDebrisBody( uint32 groupID, bool bLarge )
     {
         ScenePhysics* pScene = getScenePhysics();
         if ( pScene == nullptr )
@@ -1626,14 +1626,14 @@ namespace sw
         pScene->getDebrisBudget().addBody( _debrisOwner, groupID, bLarge );
     }
 
-    void FractureComponentBase::removeDebrisBody( uint32 groupID )
+    void FractureBaseComponent::removeDebrisBody( uint32 groupID )
     {
         ScenePhysics* pScene = getScenePhysics();
         if ( pScene != nullptr && _debrisOwner != DebrisOwnerID::None )
             pScene->getDebrisBudget().removeBody( _debrisOwner, groupID );
     }
 
-    void FractureComponentBase::recordRecentStateHash()
+    void FractureBaseComponent::recordRecentStateHash()
     {
         // 권한 쪽은 기록하지 않는다(해시 계산도 하지 않는다).
         if ( _bAuthority )
@@ -1641,17 +1641,17 @@ namespace sw
         _networkSync.recordStateHash( _state.getEventCount(), _state.computeStateHash() );
     }
 
-    bool FractureComponentBase::findRecentStateHash( uint32 eventCount, uint64& outHash ) const
+    bool FractureBaseComponent::findRecentStateHash( uint32 eventCount, uint64& outHash ) const
     {
         return _networkSync.findStateHash( eventCount, outHash );
     }
 
-    bool FractureComponentBase::hasPendingDamage() const
+    bool FractureBaseComponent::hasPendingDamage() const
     {
         return _pendingDamage.isEmpty() == false;
     }
 
-    void FractureComponentBase::collectGroupPoses( vector<FractureGroupPose>& outListPose ) const
+    void FractureBaseComponent::collectGroupPoses( vector<FractureGroupPose>& outListPose ) const
     {
         outListPose.clear();
         for ( const FractureGroupRuntime& runtime : _listRuntime )
@@ -1680,7 +1680,7 @@ namespace sw
         }
     }
 
-    void FractureComponentBase::makeNetworkSnapshot( vector<uint8>& outBytes ) const
+    void FractureBaseComponent::makeNetworkSnapshot( vector<uint8>& outBytes ) const
     {
         vector<uint8> stateBytes;
         _state.writeSnapshot( stateBytes );
@@ -1689,7 +1689,7 @@ namespace sw
         FractureNetworkSync::writeSnapshot( stateBytes, listPose, outBytes );
     }
 
-    void FractureComponentBase::applyNetworkSnapshot( const uint8* pData, size_t size )
+    void FractureBaseComponent::applyNetworkSnapshot( const uint8* pData, size_t size )
     {
         if ( pData == nullptr || size == 0 )
             return;
@@ -1699,7 +1699,7 @@ namespace sw
         _pendingDamage.push( std::move( pending ) );
     }
 
-    void FractureComponentBase::driveGroup( uint32 groupID, const float3& worldCenter, const quaternion& rotation )
+    void FractureBaseComponent::driveGroup( uint32 groupID, const float3& worldCenter, const quaternion& rotation )
     {
         FractureGroupPose target;
         target._groupID  = groupID;
@@ -1708,7 +1708,7 @@ namespace sw
         _networkSync.queueDriveTarget( target );
     }
 
-    void FractureComponentBase::applyDriveTargets()
+    void FractureBaseComponent::applyDriveTargets()
     {
         vector<FractureGroupPose> listDrive;
         _networkSync.takeDriveTargets( listDrive );
@@ -1741,7 +1741,7 @@ namespace sw
         }
     }
 
-    void FractureComponentBase::applySnapshotNow( ScenePhysics& physics, const vector<uint8>& bytes )
+    void FractureBaseComponent::applySnapshotNow( ScenePhysics& physics, const vector<uint8>& bytes )
     {
         const utf8*                                   pOwnerName = getOwner() != nullptr ? getOwner()->getName().c_str() : "?";
         vector<uint8>                                 stateBytes;
@@ -1847,35 +1847,35 @@ namespace sw
 
 namespace sw
 {
-    void FractureComponentBase::validateStaticLayer( ValidationContext& context ) const
+    void FractureBaseComponent::validateStaticLayer( ValidationContext& context ) const
     {
         PhysicsNameValidation::validateLayer( context, "_staticLayer", _staticLayer );
     }
 
-    void FractureComponentBase::validateChunkLayer( ValidationContext& context ) const
+    void FractureBaseComponent::validateChunkLayer( ValidationContext& context ) const
     {
         PhysicsNameValidation::validateLayer( context, "_chunkLayer", _chunkLayer );
     }
 
-    void FractureComponentBase::validateDebrisLayer( ValidationContext& context ) const
+    void FractureBaseComponent::validateDebrisLayer( ValidationContext& context ) const
     {
         PhysicsNameValidation::validateLayer( context, "_debrisLayer", _debrisLayer );
     }
 
-    void FractureComponentBase::onRegister( GameObjectManager& manager )
+    void FractureBaseComponent::onRegister( GameObjectManager& manager )
     {
         PhysicsComponent::onRegister( manager );
-        registerFixedStep<&FractureComponentBase::onPhysicsFrameBegin>( manager, FixedStepGroup::FrameBegin );
-        registerFixedStep<&FractureComponentBase::onPrePhysicsStep>( manager, FixedStepGroup::PreStep );
-        registerFixedStep<&FractureComponentBase::onPostPhysicsStep>( manager, FixedStepGroup::PostStep );
-        registerFixedStep<&FractureComponentBase::onPhysicsFrameEnd>( manager, FixedStepGroup::FrameEnd );
-        manager.getComponentRegistry().add<FractureComponentBase>( this );
-        _collisionSubscription = GameObjectEvents::listen<&FractureComponentBase::handleCollisionBegin>( *this, &GameObjectEvents::_collisionBegin );
+        registerFixedStep<&FractureBaseComponent::onPhysicsFrameBegin>( manager, FixedStepGroup::FrameBegin );
+        registerFixedStep<&FractureBaseComponent::onPrePhysicsStep>( manager, FixedStepGroup::PreStep );
+        registerFixedStep<&FractureBaseComponent::onPostPhysicsStep>( manager, FixedStepGroup::PostStep );
+        registerFixedStep<&FractureBaseComponent::onPhysicsFrameEnd>( manager, FixedStepGroup::FrameEnd );
+        manager.getComponentRegistry().add<FractureBaseComponent>( this );
+        _collisionSubscription = GameObjectEvents::listen<&FractureBaseComponent::handleCollisionBegin>( *this, &GameObjectEvents::_collisionBegin );
     }
 
-    void FractureComponentBase::onUnregister( GameObjectManager& manager )
+    void FractureBaseComponent::onUnregister( GameObjectManager& manager )
     {
-        manager.getComponentRegistry().remove<FractureComponentBase>( this );
+        manager.getComponentRegistry().remove<FractureBaseComponent>( this );
         PhysicsComponent::onUnregister( manager );
     }
 } // namespace sw

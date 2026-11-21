@@ -4,7 +4,7 @@
 
 #include "Core/Container/vector.h"
 
-#include "Engine/Destruction/Fracture/FractureComponentBase.h"
+#include "Engine/Destruction/Fracture/FractureBaseComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -73,7 +73,7 @@ namespace sw
         const float3             center   = pScene != nullptr ? pScene->getWorldPosition() : float3{};
         GimmickUtil::sendCue( owner, hashed_string( "Explosion" ), center, _damage );
         // 파괴 컴포넌트가 있으면 몸을 끄지 않는다. 조각으로 부서져 날아가며, 조각의 그래픽과 바디가 그 몸이다.
-        FractureComponentBase* pSelfFracture = owner.getComponent<FractureComponentBase>();
+        FractureBaseComponent* pSelfFracture = owner.getComponent<FractureBaseComponent>();
         if ( pSelfFracture != nullptr && pSelfFracture->hasFractureData() )
             GimmickDamageUtil::breakAtCenter( *pSelfFracture, center, _fractureStrain * 2.0f, _blastImpulse );
         else
@@ -94,14 +94,14 @@ namespace sw
         struct BlastTarget
         {
             GameObject*            _pObject;
-            FractureComponentBase* _pFracture; ///< 경계가 반경에 닿은 파괴 컴포넌트(없으면 nullptr)
+            FractureBaseComponent* _pFracture; ///< 경계가 반경에 닿은 파괴 컴포넌트(없으면 nullptr)
             float32                _distance;
         };
         GameObject* const   pSource = getOwner();
         const uint64        selfID  = pSource != nullptr ? pSource->getObjectID() : 0;
         const float32       radius  = _radius;
         vector<BlastTarget> listTarget;
-        const auto          consider = [selfID, radius, &center, &listTarget]( GameObject* pObject, FractureComponentBase* pFracture )
+        const auto          consider = [selfID, radius, &center, &listTarget]( GameObject* pObject, FractureBaseComponent* pFracture )
         {
             const SceneComponent* pOther = pObject != nullptr ? pObject->getPrimarySceneComponent() : nullptr;
             if ( pOther == nullptr || pObject->getObjectID() == selfID )
@@ -117,12 +117,12 @@ namespace sw
                 listTarget.push_back( BlastTarget{ pObject, bReached ? pFracture : nullptr, distance } );
         };
         const ComponentRegistry& registry = manager.getComponentRegistry();
-        for ( FractureComponentBase* pFracture : registry.getAll<FractureComponentBase>() )
+        for ( FractureBaseComponent* pFracture : registry.getAll<FractureBaseComponent>() )
             consider( pFracture->getOwner(), pFracture );
         for ( GimmickSensorComponent* pSensor : registry.getAll<GimmickSensorComponent>() )
         {
             GameObject* const pObject = pSensor->getOwner();
-            consider( pObject, pObject != nullptr ? pObject->getComponent<FractureComponentBase>() : nullptr );
+            consider( pObject, pObject != nullptr ? pObject->getComponent<FractureBaseComponent>() : nullptr );
         }
         for ( const BlastTarget& target : listTarget )
         {

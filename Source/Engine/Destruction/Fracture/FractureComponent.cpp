@@ -22,7 +22,7 @@ namespace sw
 namespace sw
 {
     FractureComponent::FractureComponent()
-        : FractureComponentBase()
+        : FractureBaseComponent()
         , _fracturePath{}
         , _navGeometrySource{ *this }
         , _pSceneNavigation{ nullptr }
@@ -33,7 +33,7 @@ namespace sw
 
     void FractureComponent::onRegister( GameObjectManager& manager )
     {
-        FractureComponentBase::onRegister( manager );
+        FractureBaseComponent::onRegister( manager );
         _pSceneNavigation        = &manager.getSubsystem<SceneNavigation>();
         _navGeometryRegistration = _pSceneNavigation->registerGeometrySource( &_navGeometrySource );
     }
@@ -42,7 +42,7 @@ namespace sw
     {
         _navGeometryRegistration.reset();
         _pSceneNavigation = nullptr;
-        FractureComponentBase::onUnregister( manager );
+        FractureBaseComponent::onUnregister( manager );
     }
 
     void FractureComponent::onAnchoredShapeChanged()

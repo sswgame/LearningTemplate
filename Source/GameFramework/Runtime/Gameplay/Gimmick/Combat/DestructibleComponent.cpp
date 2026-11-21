@@ -2,7 +2,7 @@
 
 #include "GameFramework/Runtime/Gameplay/Gimmick/Combat/DestructibleComponent.h"
 
-#include "Engine/Destruction/Fracture/FractureComponentBase.h"
+#include "Engine/Destruction/Fracture/FractureBaseComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/Tick/TickContext.h"
@@ -41,7 +41,7 @@ namespace sw
             return;
         _damageTaken += pSensor->consumeDamage();
         const int32            stageCount = static_cast<int32>( _listStageThreshold.size() );
-        FractureComponentBase* pFracture  = pOwner->getComponent<FractureComponentBase>();
+        FractureBaseComponent* pFracture  = pOwner->getComponent<FractureBaseComponent>();
         const bool             bFracture  = pFracture != nullptr && pFracture->hasFractureData();
         while ( _stage < stageCount && _damageTaken >= _listStageThreshold[static_cast<size_t>( _stage )] )
         {

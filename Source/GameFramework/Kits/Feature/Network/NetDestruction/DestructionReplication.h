@@ -18,7 +18,7 @@
  *            덩어리(기준 이상)는 서버가 자세를 `<Network poseRate>` 빈도로 비신뢰 전송하고, 받는 쪽이 틱으로 순서를 맞춘다.
  *            클라이언트는 보간 지연만큼 과거 시점을 그려 그 바디를 키네마틱으로 옮긴다. 멈추면 마지막 자세를 비트 그대로 신뢰 채널로 한 번 확정한다.
  *            파편(기준 미만)은 클라이언트가 각자 시뮬레이션하는 장식이다. Debris 레이어(`physicssettings.xml`)라서 캐릭터와 부딪히지 않는다.
- *          - **늦은 참가.** 연결되면 이벤트가 하나라도 있는 오브젝트마다 스냅숏을 보낸다(`FractureComponentBase::makeNetworkSnapshot`).
+ *          - **늦은 참가.** 연결되면 이벤트가 하나라도 있는 오브젝트마다 스냅숏을 보낸다(`FractureBaseComponent::makeNetworkSnapshot`).
  *            스냅숏에는 끊긴 노드, 연결, 앵커 비트, 0이 아닌 변형, 그룹, 떨어진 그룹의 자세가 들어간다.
  *            신뢰 순서 메시지 하나로 보내며 Core 가 64 KB까지 조각으로 나눠 전송한다. 이를 넘으면 오류를 로그로 남긴다. 신뢰 창이 차 있으면 다음 `update` 에서 다시 보낸다.
  *          - **불일치 복구.** 서버가 주기적으로 (이벤트 수, 해시)를 보내고, 클라이언트는 같은 이벤트 수에서 해시를 비교한다. 다르면 스냅숏을 요청해 바로잡는다.
@@ -40,7 +40,7 @@
 #include "Core/Network/Replication/NetClock.h"
 
 #include "Engine/Destruction/DestructionDamage.h"
-#include "Engine/Destruction/Fracture/FractureComponentBase.h"
+#include "Engine/Destruction/Fracture/FractureBaseComponent.h"
 #include "Engine/Foundation/ComponentHandle.h"
 #include "Engine/Foundation/NetObjectID.h"
 #include "Engine/Net/NetMessageBody.h"
@@ -64,7 +64,7 @@ namespace sw
         PROPERTY()
         uint32 _eventCount{ 0 }; ///< 스냅숏이 담은 이벤트 수 — 다음 이벤트 번호다
         PROPERTY( MaxCount = NetConnection::kMaxReliableMessageSize, Min = 0, Max = 255 )
-        vector<uint8> _bytes{}; ///< `FractureComponentBase::makeNetworkSnapshot`
+        vector<uint8> _bytes{}; ///< `FractureBaseComponent::makeNetworkSnapshot`
     };
 
     /** @brief (이벤트 수, 상태 해시)(서버 → 클라이언트) 본문입니다. */
@@ -232,7 +232,7 @@ namespace sw
 
         void initialize( INetPeers* pHost, GameObjectManager* pManager, const DestructionReplicationConfig& settings );
         /** @brief 파괴 오브젝트를 번호로 등록합니다. 서버 쪽은 권한을 켜며, 같은 번호가 이미 있으면 교체합니다. */
-        void registerObject( NetObjectID netID, FractureComponentBase& component );
+        void registerObject( NetObjectID netID, FractureBaseComponent& component );
         /** @brief 월드 틱 뒤에 부릅니다. 새 이벤트, 스냅숏, 자세, 해시 순서로 보냅니다. */
         void update( uint32 serverTick );
 
@@ -256,7 +256,7 @@ namespace sw
         struct Entry
         {
             vector<ChunkSendState>                  _listChunk{};
-            TComponentHandle<FractureComponentBase> _component{};
+            TComponentHandle<FractureBaseComponent> _component{};
             NetObjectID                             _netID{ 0 };
             uint32                                  _sentEventCount{ 0 };
             float32                                 _poseTime{ 0.0f };
@@ -268,21 +268,21 @@ namespace sw
             NetObjectID _netID{ 0 };
         };
 
-        FractureComponentBase* resolve( const Entry& entry ) const;
+        FractureBaseComponent* resolve( const Entry& entry ) const;
         /** @brief 스냅숏 요청을 줄에 넣습니다. 같은 (연결, netID) 가 이미 있으면 넣지 않는다. */
         void   queueRequest( int32 connectionID, NetObjectID netID );
         Entry* findEntry( NetObjectID netID );
-        void   sendEvents( Entry& entry, FractureComponentBase& component, uint32 serverTick );
+        void   sendEvents( Entry& entry, FractureBaseComponent& component, uint32 serverTick );
         /** @brief 스냅숏 메시지 하나를 보냅니다. 신뢰 창이 찼으면 false 를 반환하고, 호출한 쪽이 요청을 다음 `update` 로 미룹니다. */
-        [[nodiscard]] bool sendSnapshot( Entry& entry, FractureComponentBase& component, int32 connectionID );
-        void               sendPoses( Entry& entry, FractureComponentBase& component, uint32 serverTick );
+        [[nodiscard]] bool sendSnapshot( Entry& entry, FractureBaseComponent& component, int32 connectionID );
+        void               sendPoses( Entry& entry, FractureBaseComponent& component, uint32 serverTick );
         /**
          * @brief 자세 목록 하나를 메시지 예산(`kPoseMessageBudget`)에서 끊어 보냅니다.
          * @details 멈춘 자세(@p bRest)는 비트 그대로, 움직이는 자세는 양자화해서 쓴다. 자세마다 써 보고 예산을 넘으면 물려 다음 메시지로 넘긴다(`BitWriter::truncate`).
          *          쓰지 못한 자세(선언 범위 밖)는 빼고 `_outOfRangePoseCount` 에 센다.
          */
         void sendPoseList( const Entry& entry, const vector<const FractureGroupPose*>& listPose, bool bRest, bool bReliable, uint32 serverTick );
-        void sendHash( const Entry& entry, const FractureComponentBase& component );
+        void sendHash( const Entry& entry, const FractureBaseComponent& component );
         /** @brief 쓴 메시지를 서술자에 묶인 채널(시작에서 정했다)로 모두에게 보내고 셉니다. */
         int32 broadcastMessage();
         /** @brief 보낸 수 @p sentCount 를 통계에 더합니다. 신뢰 창이 찬 연결은 거절로 센다. */
@@ -319,7 +319,7 @@ namespace sw
 
         void initialize( INetPeers* pHost, GameObjectManager* pManager, const DestructionReplicationConfig& settings );
         /** @brief 파괴 오브젝트를 번호로 등록합니다. 권한을 끄므로 충돌이 이벤트를 만들지 않습니다. */
-        void registerObject( NetObjectID netID, FractureComponentBase& component );
+        void registerObject( NetObjectID netID, FractureBaseComponent& component );
         /** @brief 월드 틱 앞에 부릅니다. 지난 틱에 적용된 상태로 해시를 비교하고, 렌더 틱을 진행해 덩어리 자세를 보간합니다. */
         void update( float32 deltaTime );
         /** @brief 테스트용 결함 주입입니다. 그 오브젝트의 다음 이벤트 하나를 적용하지 않고 건너뛰며, 해시 불일치에서 스냅숏 복구까지의 흐름을 확인할 때 씁니다. */
@@ -368,27 +368,27 @@ namespace sw
             vector<BufferedEvent>                   _listFutureEvent{}; ///< 번호가 앞서 도착한 이벤트와 스냅숏을 기다리는 동안 도착한 이벤트. 번호 순서로 이어서 적용한다
             vector<HashCheck>                       _listHashCheck{};
             vector<ChunkTrack>                      _listChunk{};
-            TComponentHandle<FractureComponentBase> _component{};
+            TComponentHandle<FractureBaseComponent> _component{};
             NetObjectID                             _netID{ 0 };
             uint32                                  _nextEventIndex{ 0 };
             uint32                                  _skipCount{ 0 };
             uint8                                   _bAwaitingSnapshot{ SW_FALSE };
         };
 
-        FractureComponentBase* resolve( const Entry& entry ) const;
+        FractureBaseComponent* resolve( const Entry& entry ) const;
         Entry*                 findEntry( NetObjectID netID );
         /** @brief 오브젝트 id 를 읽어 그 항목을 찾습니다. 깨졌으면 Malformed, 이 클라이언트에 없으면 Handled(소비하고 버린다)를 @p outEarly 에 두고 nullptr 입니다. */
         Entry* readEntry( BitReader& reader, NetHandleResult& outEarly );
         void   handleEvent( Entry& entry, const BufferedEvent& received );
         /** @brief 번호가 앞선 이벤트를 쌓아 둡니다. 같은 번호는 한 번만 보관합니다. */
         static void bufferEvent( Entry& entry, const BufferedEvent& received );
-        static void applyToComponent( FractureComponentBase& component, const BufferedEvent& buffered );
+        static void applyToComponent( FractureBaseComponent& component, const BufferedEvent& buffered );
         /** @brief 스냅숏 하나를 적용합니다. */
         void handleSnapshot( Entry& entry, const DestructionSnapshotBody& body );
         /** @brief 자세 메시지 본문을 끝까지 읽고 남는 비트가 없을 때만 적용합니다. 깨졌으면 아무것도 적용하지 않고 false 입니다. */
         [[nodiscard]] bool handlePose( BitReader& reader, bool bRest );
-        void               compareHashes( Entry& entry, FractureComponentBase& component );
-        void               driveChunks( Entry& entry, FractureComponentBase& component );
+        void               compareHashes( Entry& entry, FractureBaseComponent& component );
+        void               driveChunks( Entry& entry, FractureBaseComponent& component );
         void               requestSnapshot( Entry& entry );
 
     private:

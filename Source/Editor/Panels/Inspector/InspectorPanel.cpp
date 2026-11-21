@@ -16,7 +16,7 @@
 #include "Editor/Common/Widgets/EditorComponentMenu.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Widgets/PropertyGrid/InspectorPropertyUndo.h"
-#include "Editor/Panels/Inspector/IInspectorComponent.h"
+#include "Editor/Panels/Inspector/IComponentInspector.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Localization/LocText.h"
@@ -595,14 +595,14 @@ namespace sw::editor
 
         // 확장은 이 타입과 그 기반 타입들에 등록된 것 전부다(기반에서 파생 순서). 각자 자기 영역을 그리고 직접 그린 리플렉션 프로퍼티만 감춘다. 나머지 리플렉션
         // 프로퍼티는 상속한 것까지 아래에서 그린다(언리얼 Details 의 `IDetailCustomization` 과 `HideProperty`). 확장은 대상을 값(씬 · 오브젝트 · 컴포넌트 id)으로 받는다.
-        const vector<IInspectorComponent*>& listInspector   = InspectorViewModel::getInspectorsForType( card._typeName );
+        const vector<IComponentInspector*>& listInspector   = InspectorViewModel::getInspectorsForType( card._typeName );
         const EditorPropertyGridTarget      componentTarget = EditorPropertyGridTarget::makeSceneTarget( EditorPropertyGridScope::MainScene, _state._objectID, card._componentID );
         vector<hashed_string>               listDrawnName;
-        for ( IInspectorComponent* pInspector : listInspector )
+        for ( IComponentInspector* pInspector : listInspector )
         {
             pInspector->drawHeader( componentTarget );
         }
-        for ( IInspectorComponent* pInspector : listInspector )
+        for ( IComponentInspector* pInspector : listInspector )
         {
             // 확장 영역도 프로퍼티 위젯과 같은 규칙으로 되돌리기와 dirty 에 남긴다. 영역을 하나로 묶어 위젯 하나처럼 추적하므로
             // 영역이 위젯마다 추적하지 않아도 된다. 확장은 컴포넌트에 바로 쓰므로 처음 활성인 프레임에 그 컴포넌트의 값 글을 찍는다.
@@ -617,7 +617,7 @@ namespace sw::editor
         ImGui::SeparatorText( SW_LOCKEY( "EdSection", "Methods" ) );
         _propertyGrid.drawMethodsAndEvents( componentTarget, true );
 
-        for ( IInspectorComponent* pInspector : listInspector )
+        for ( IComponentInspector* pInspector : listInspector )
         {
             pInspector->drawFooter( componentTarget );
         }

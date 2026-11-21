@@ -1,7 +1,7 @@
 /**
  * @file Fracture2DComponent.h
  * @brief 2D 파괴 컴포넌트입니다. 다각형(또는 상자) 형태를 시작할 때 시드로 쪼개(`PolygonFractureUtil`) Box2D 바디와 스킨드 조각 메시로 부숩니다.
- *        구조, 피해, 런타임은 3D 와 같은 `FractureComponentBase` 를 쓰고, 다른 것은 데이터의 출처(쪼개기)와 물리 씬(2D)뿐입니다.
+ *        구조, 피해, 런타임은 3D 와 같은 `FractureBaseComponent` 를 쓰고, 다른 것은 데이터의 출처(쪼개기)와 물리 씬(2D)뿐입니다.
  * @details 오브젝트는 루트 `RigidBody2DComponent`(온전할 때의 충돌)와 이 컴포넌트로 구성한다.
  *          오브젝트에 그릴 메시가 없으면, 쉬는 조각을 베이크한 평평한 메시를 `MeshComponent` 로 추가해 온전한 모습으로 쓴다.
  *          같은 시드와 형태면 모든 기계에서 같은 조각이 나오므로 시드와 사건만 보낸다.
@@ -12,14 +12,14 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
-#include "Engine/Destruction/Fracture/FractureComponentBase.h"
+#include "Engine/Destruction/Fracture/FractureBaseComponent.h"
 #include "Engine/Destruction/Fracture/FractureSettings.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
 {
     REFLECT( Category = "Physics", DisplayName = "Fracture 2D", Tooltip = "Destructible 2D shape: polygon Voronoi-fractured at start, Box2D pieces", Meta = "Icon=Fracture" )
-    class SW_API Fracture2DComponent : public FractureComponentBase
+    class SW_API Fracture2DComponent : public FractureBaseComponent
     {
     public:
         REFLECT_BODY();

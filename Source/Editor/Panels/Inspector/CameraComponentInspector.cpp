@@ -5,7 +5,7 @@
 #include "pch.h"
 
 #include "Editor/Common/Widgets/EditorWidgets.h"
-#include "Editor/Panels/Inspector/IInspectorComponent.h"
+#include "Editor/Panels/Inspector/IComponentInspector.h"
 #include "Editor/Panels/Inspector/Model/InspectorComponentEdit.h"
 #include "Editor/Panels/Inspector/Model/InspectorComponentManager.h"
 
@@ -18,7 +18,7 @@ namespace sw::editor
     namespace
     {
         /** @brief CameraComponent 의 투영 컨트롤(트랜스폼은 SceneComponent 단계가 그린다) */
-        class CameraComponentInspector final : public IInspectorComponent
+        class CameraComponentInspector final : public IComponentInspector
         {
         public:
             void collectDrawnProperties( vector<hashed_string>& outListName ) const override

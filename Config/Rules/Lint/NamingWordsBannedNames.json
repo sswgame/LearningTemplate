@@ -1839,7 +1839,7 @@
     "makeLegacyKey": "ComponentStableKey::makeKey — 옛 순번 키(이름#n)는 받지 않는다(감사 A-2 이전 끝)(Scripts 감사, 2026-11-21)",
     "makeLegacyPartKey": "PrefabInstanceNode::makePartKey — 옛 인덱스 부품 키는 받지 않는다(Scripts 감사, 2026-11-21)",
     "remapLegacyPartPaths": "없앴다 — 옛 인덱스 부품 경로는 오류(Prefab.NestedPartPathNotKeyed)(Scripts 감사, 2026-11-21)",
-    "_legacyKey": "PrefabOverrides KeyedComponent::_key — 지역 id 키 하나(Scripts 감사, 2026-11-21)",
+    "_legacyKey": "PrefabOverrides KeyedComponentNode::_key — 지역 id 키 하나(Scripts 감사, 2026-11-21)",
     "makeLegacyText": "ComponentStableKeyInternal::makeOccurrenceText — id 를 적지 않은 컴포넌트의 id 를 섞는 글(Scripts 감사, 2026-11-21)",
     "kLegacyKeyDigitReserve": "없앴다 — 순번 글은 StringBuilder 로 만든다(Scripts 감사, 2026-11-21)",
     "rewrite_outside_strings": "dev.rename_symbol.rename_in_text — 지킬 구간 방식(Scripts 감사, 2026-11-21)",
@@ -1995,6 +1995,9 @@
     "_unoPenalty": "_lastCardPenalty — 상표 회피 — 마지막 한 장 선언(last card call)(2026-11-21)",
     "HealthSourceComponent": "IHealthSource — 역할 베이스 → 리플렉션 인터페이스(포트 멤버, TypeNamingAudit 4.3)(2026-11-21)",
     "HealthListenerComponent": "IHealthListener — 역할 베이스 → 리플렉션 인터페이스(포트 멤버, TypeNamingAudit 4.3)(2026-11-21)",
-    "GameFlagsOwnerComponent": "IGameFlagsOwner — 역할 베이스 → 리플렉션 인터페이스(포트 멤버, TypeNamingAudit 4.3)(2026-11-21)"
+    "GameFlagsOwnerComponent": "IGameFlagsOwner — 역할 베이스 → 리플렉션 인터페이스(포트 멤버, TypeNamingAudit 4.3)(2026-11-21)",
+    "IInspectorComponent": "IComponentInspector — 컴포넌트가 아닌 인스펙터 계약 — Component 끝말은 컴포넌트만(naming-words component 규칙)(2026-11-21)",
+    "FractureComponentBase": "FractureBaseComponent — PhysicsComponent 파생 — 컴포넌트 이름은 Component 로 끝난다(2026-11-21)",
+    "EditorMultiEditComponent": "EditorMultiEditGroup — 다중 편집의 같은 형식 컴포넌트 묶음 — 컴포넌트가 아니다(2026-11-21)"
   }
 }

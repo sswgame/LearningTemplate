@@ -26,7 +26,7 @@ namespace
     }
 
     /** @brief 한 판 임시 상태(번 돈)를 쥐고 결과로만 내보내는 미니게임 디렉터입니다 — 디렉터 계약 ③ 의 시험 대역. */
-    class TestMinigameDirector final : public GameModeComponent
+    class MinigameDirectorTestComponent final : public GameModeComponent
     {
     public:
         int64 _roundMoney{ 0 }; ///< 한 판 임시 지갑 — 바탕 판에 쓰지 않는다
@@ -248,7 +248,7 @@ SW_TEST_CASE( MinigameTest, ResultReachesSubscribers )
 /** @brief [MinigameTest] 결과 값 목록: 디렉터가 쥔 한 판 임시 상태가 결과의 값으로만 실려 받는 쪽에 닿는다(디렉터 계약 ③) */
 SW_TEST_CASE( MinigameTest, ResultCarriesDirectorOwnedValues )
 {
-    TestMinigameDirector director;
+    MinigameDirectorTestComponent director;
     director._roundMoney = 120;
     vector<MinigameResultValue> listValue;
     director.collectResultForTest( listValue );
@@ -266,7 +266,7 @@ SW_TEST_CASE( MinigameTest, ResultCarriesDirectorOwnedValues )
 /** @brief [MinigameTest] 디렉터 계약 ③: 켜진 미니게임이 없는 판(허브 · 미니게임 흐름 없음)에서 끝내기는 오류로 거절된다(조용히 무시하지 않는다) */
 SW_TEST_CASE( MinigameTest, FinishWithoutActiveMinigameIsRefused )
 {
-    TestMinigameDirector director;
+    MinigameDirectorTestComponent director;
     SW_EXPECT_LOG( "GameMode.FinishWithoutMinigame" );
     SW_EXPECT_FALSE( director.finishMinigame( hashed_string( "win" ) ) );
 }

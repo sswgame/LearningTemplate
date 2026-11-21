@@ -164,21 +164,21 @@ SW_TEST_CASE( InspectorMultiSelectionTest, UnsharedCountIgnoresSecondComponentOf
     sw::GameObject*       pSecond = Internal::spawn( manager, "Second", true );
     SW_REQUIRE_NOT_NULL( pFirst );
     SW_REQUIRE_NOT_NULL( pSecond );
-    const sw::vector<sw::GameObject*>                listObject{ pFirst, pSecond };
-    sw::vector<sw::editor::EditorMultiEditComponent> listCommon;
+    const sw::vector<sw::GameObject*>            listObject{ pFirst, pSecond };
+    sw::vector<sw::editor::EditorMultiEditGroup> listCommon;
 
     // 둘 다 같은 타입을 둘씩 가졌다 — 공통 하나, 공통 아닌 것 없음
     SW_REQUIRE_NOT_NULL( pFirst->addComponent<sw::TagComponent>() );
     SW_REQUIRE_NOT_NULL( pFirst->addComponent<sw::TagComponent>() );
     SW_REQUIRE_NOT_NULL( pSecond->addComponent<sw::TagComponent>() );
     SW_REQUIRE_NOT_NULL( pSecond->addComponent<sw::TagComponent>() );
-    sw::editor::EditorMultiEditComponent::collectCommonComponents( listObject, listCommon );
+    sw::editor::EditorMultiEditGroup::collectCommonComponents( listObject, listCommon );
     SW_REQUIRE_EQUAL( listCommon.size(), size_t{ 1 } );
     SW_EXPECT_EQUAL( Multi::countUnsharedComponents( *pFirst, listCommon ), size_t{ 0 } );
 
     // 주 선택에만 있는 타입은 센다. 주 선택에 없는 타입은 세지 않는다
     SW_REQUIRE_NOT_NULL( pFirst->addComponent<sw::CameraComponent>() );
-    sw::editor::EditorMultiEditComponent::collectCommonComponents( listObject, listCommon );
+    sw::editor::EditorMultiEditGroup::collectCommonComponents( listObject, listCommon );
     SW_REQUIRE_EQUAL( listCommon.size(), size_t{ 1 } );
     SW_EXPECT_EQUAL( Multi::countUnsharedComponents( *pFirst, listCommon ), size_t{ 1 } );
     SW_EXPECT_EQUAL( Multi::countUnsharedComponents( *pSecond, listCommon ), size_t{ 0 } );

@@ -17,7 +17,7 @@ namespace sw
     /**
      * @class DestructibleComponent
      * @brief 부서지는 엄폐물입니다. 받은 피해가 `_listStageThreshold` 를 넘을 때마다 단계가 오르고("Stage" 연출과 회로 신호), 마지막 임계값을 넘으면 몸을 끕니다.
-     * @details 같은 오브젝트의 센서 신호에 단계(0..)를 넣어 회로가 읽게 한다. 오브젝트에 파괴 컴포넌트(`FractureComponentBase`)가 있으면 단계가 오를 때마다
+     * @details 같은 오브젝트의 센서 신호에 단계(0..)를 넣어 회로가 읽게 한다. 오브젝트에 파괴 컴포넌트(`FractureBaseComponent`)가 있으면 단계가 오를 때마다
      *          중심에 변형(`_stageStrain` × 단계 비율)을 주어 조각을 깎아 내고, 마지막 단계에서는 몸을 끄는 대신 `_shatterStrain` 으로 통째로 부순다.
      *          파쇄 데이터가 없으면 몸을 끈다(`GimmickCueEvent` "Destroyed").
      */

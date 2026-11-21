@@ -14,7 +14,7 @@
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Widgets/PropertyGrid/Model/InspectorObjectEdit.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
-#include "Editor/Panels/Inspector/IInspectorComponent.h"
+#include "Editor/Panels/Inspector/IComponentInspector.h"
 #include "Editor/Panels/Inspector/Model/InspectorComponentEdit.h"
 #include "Editor/Panels/Inspector/Model/InspectorComponentManager.h"
 
@@ -178,7 +178,7 @@ namespace sw::editor
         };
 
         /** @brief 지역 볼륨의 물려받은 · 바꾼 모듈 구역입니다(파일 머리말 참고). */
-        class ZoneVolumeInspector final : public IInspectorComponent
+        class ZoneVolumeInspector final : public IComponentInspector
         {
         public:
             void drawSection( const EditorPropertyGridTarget& target ) override

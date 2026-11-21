@@ -1,7 +1,7 @@
 /**
  * @file InspectorMultiSelection.h
  * @brief 인스펙터가 여러 오브젝트를 고른 상태에서 화면 없이 정하는 일입니다(ImGui 없음). 그리기는 `InspectorPanel::drawMultiSelection` 입니다.
- * @details 공통 컴포넌트 모으기와 프로퍼티 입히기는 `EditorMultiEditComponent` 가 맡고, 여기는 그 위의 활성 칸 · 공통 아닌 컴포넌트 수 · 혼합 판정입니다.
+ * @details 공통 컴포넌트 모으기와 프로퍼티 입히기는 `EditorMultiEditGroup` 가 맡고, 여기는 그 위의 활성 칸 · 공통 아닌 컴포넌트 수 · 혼합 판정입니다.
  */
 #pragma once
 #include "Core/Container/vector.h"
@@ -17,7 +17,7 @@ namespace sw
 
 namespace sw::editor
 {
-    struct EditorMultiEditComponent;
+    struct EditorMultiEditGroup;
 
     /** @brief 다중 선택 판단 묶음입니다. @p listObject 는 선택 순서이고 첫 원소가 주 선택이며 널이 없습니다(`EditorSelection::getSelectedObjects`). */
     struct InspectorMultiSelection
@@ -37,7 +37,7 @@ namespace sw::editor
          * @brief 주 선택의 컴포넌트 중 공통 목록(@p listCommon)에 타입이 없는 것의 수입니다.
          * @details 공통 타입의 두 번째 컴포넌트는 세지 않는다 — "모든 오브젝트에 있지 않은 컴포넌트" 를 보이는 수라서, 같은 타입이 둘이어도 그 타입은 모두에게 있다.
          */
-        static size_t countUnsharedComponents( const GameObject& primary, const vector<EditorMultiEditComponent>& listCommon );
+        static size_t countUnsharedComponents( const GameObject& primary, const vector<EditorMultiEditGroup>& listCommon );
         /** @brief 프로퍼티 @p prop 의 값이 @p listComponent 사이에서 다르면 true 입니다. */
         static bool hasMixedValues( const PropertyInfo& prop, const vector<Component*>& listComponent );
     };

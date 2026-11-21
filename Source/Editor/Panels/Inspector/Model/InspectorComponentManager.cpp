@@ -3,7 +3,7 @@
 #include "Editor/Panels/Inspector/Model/InspectorComponentManager.h"
 
 #include "Editor/Common/Widgets/PropertyGrid/Model/InspectorPropertyLayout.h"
-#include "Editor/Panels/Inspector/IInspectorComponent.h"
+#include "Editor/Panels/Inspector/IComponentInspector.h"
 
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Reflection/TypeRegistry.h"
@@ -20,7 +20,7 @@ namespace sw::editor
 
     InspectorComponentManager::~InspectorComponentManager() = default;
 
-    void InspectorComponentManager::registerType( string_view typeName, unique_ptr<IInspectorComponent> pInspector )
+    void InspectorComponentManager::registerType( string_view typeName, unique_ptr<IComponentInspector> pInspector )
     {
         const hashed_string name( typeName );
         resetTypeCache( _cacheTypeGeneration ); // 확장 목록이 바뀐다 — 타입별 목록이 옛 확장을 가리키지 않게 버린다
@@ -39,7 +39,7 @@ namespace sw::editor
         _listEntry.push_back( std::move( entry ) );
     }
 
-    IInspectorComponent* InspectorComponentManager::find( string_view typeName ) const
+    IComponentInspector* InspectorComponentManager::find( string_view typeName ) const
     {
         const hashed_string name( typeName );
         for ( const InspectorComponentEntry& entry : _listEntry )
@@ -50,7 +50,7 @@ namespace sw::editor
         return nullptr;
     }
 
-    const vector<IInspectorComponent*>& InspectorComponentManager::getInspectorsForType( const TypeInfo& type )
+    const vector<IComponentInspector*>& InspectorComponentManager::getInspectorsForType( const TypeInfo& type )
     {
         // 모듈 리로드는 TypeInfo 주소를 바꾼다 — 레지스트리 세대가 바뀌면 타입별 목록을 버린다. 확장 목록이 바뀌면 `resetTypeCache` 가 버린다.
         const uint32 typeGeneration = TypeRegistry::getGeneration();
@@ -60,12 +60,12 @@ namespace sw::editor
         if ( iter != _mapTypeInspector.end() )
             return iter->second;
 
-        vector<IInspectorComponent*> listInspector;
+        vector<IComponentInspector*> listInspector;
         vector<const TypeInfo*>      listType;
         InspectorPropertyLayout::collectTypeChain( type, listType );
         for ( const TypeInfo* pType : listType )
         {
-            IInspectorComponent* pInspector = find( pType->_name.c_str() );
+            IComponentInspector* pInspector = find( pType->_name.c_str() );
             if ( pInspector != nullptr )
                 listInspector.push_back( pInspector );
         }

@@ -11,7 +11,7 @@
 
 namespace sw
 {
-    class FractureComponentBase;
+    class FractureBaseComponent;
     class GameObject;
 
     /** @struct GimmickDamageUtil */
@@ -24,6 +24,6 @@ namespace sw
          */
         static void applyDamage( const GameObject& target, const GameObject* pSource, const hashed_string& kind, float32 amount );
         /** @brief 파괴 컴포넌트를 그 경계 구 크기의 폭발로 중심에서 깹니다. 조각을 깎아 내거나 통째로 부술 때 씁니다(폭발 드럼통 · 부서지는 엄폐물). */
-        static void breakAtCenter( FractureComponentBase& fracture, const float3& center, float32 strain, float32 impulse );
+        static void breakAtCenter( FractureBaseComponent& fracture, const float3& center, float32 strain, float32 impulse );
     };
 } // namespace sw

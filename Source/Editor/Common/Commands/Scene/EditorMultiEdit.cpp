@@ -9,7 +9,7 @@
 
 namespace sw::editor
 {
-    void EditorMultiEditComponent::collectCommonComponents( const vector<GameObject*>& listObject, vector<EditorMultiEditComponent>& outListCommon )
+    void EditorMultiEditGroup::collectCommonComponents( const vector<GameObject*>& listObject, vector<EditorMultiEditGroup>& outListCommon )
     {
         outListCommon.clear();
         if ( listObject.empty() || listObject[0] == nullptr )
@@ -20,13 +20,13 @@ namespace sw::editor
                 continue;
             const TypeInfo* pType          = pPrimary->getTypeInfo();
             bool            bDuplicateType = false;
-            for ( const EditorMultiEditComponent& common : outListCommon )
+            for ( const EditorMultiEditGroup& common : outListCommon )
             {
                 bDuplicateType = bDuplicateType || common._pType == pType;
             }
             if ( bDuplicateType )
                 continue; // 같은 타입이 둘이면 첫 것만 — 짝을 고를 근거가 없다
-            EditorMultiEditComponent common{};
+            EditorMultiEditGroup common{};
             common._pType = pType;
             for ( GameObject* pObject : listObject )
             {
@@ -49,7 +49,7 @@ namespace sw::editor
         }
     }
 
-    bool EditorMultiEditComponent::hasMixedValues( const PropertyInfo& prop, const vector<ObjectAddress>& listInstance )
+    bool EditorMultiEditGroup::hasMixedValues( const PropertyInfo& prop, const vector<ObjectAddress>& listInstance )
     {
         if ( listInstance.size() < 2 )
             return false;

@@ -3,7 +3,7 @@
 #include "GameFramework/Runtime/Gameplay/Gimmick/Combat/GimmickDamageUtil.h"
 
 #include "Engine/Destruction/Fracture/FractureAsset.h"
-#include "Engine/Destruction/Fracture/FractureComponentBase.h"
+#include "Engine/Destruction/Fracture/FractureBaseComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
@@ -41,7 +41,7 @@ namespace sw
         } );
     }
 
-    void GimmickDamageUtil::breakAtCenter( FractureComponentBase& fracture, const float3& center, float32 strain, float32 impulse )
+    void GimmickDamageUtil::breakAtCenter( FractureBaseComponent& fracture, const float3& center, float32 strain, float32 impulse )
     {
         const FractureAsset* pAsset = fracture.findAsset();
         const float32        radius = pAsset != nullptr ? float3::getDistance( pAsset->_boundsMin, pAsset->_boundsMax ) : 2.0f;

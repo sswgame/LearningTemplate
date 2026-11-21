@@ -1,5 +1,5 @@
 /**
- * @file IInspectorComponent.h
+ * @file IComponentInspector.h
  * @brief 컴포넌트 타입별 인스펙터 UI 확장
  */
 #pragma once
@@ -20,13 +20,13 @@ namespace sw::editor
      *          대상은 값(`EditorPropertyGridTarget` — 씬 · 오브젝트 id · 컴포넌트 id)으로 받는다. 컴포넌트 포인터는 받지 않는다 — 값은 edit model(`InspectorComponentEdit`)이
      *          그 대상을 풀어 모으고 넣는다(`docs/agents/EditorUI.md` MVVM, UI 스레드 분리의 선결).
      */
-    class SW_EDITOR_API IInspectorComponent
+    class SW_EDITOR_API IComponentInspector
     {
     public:
-        IInspectorComponent()                                        = default;
-        virtual ~IInspectorComponent()                               = default;
-        IInspectorComponent( const IInspectorComponent& )            = delete;
-        IInspectorComponent& operator=( const IInspectorComponent& ) = delete;
+        IComponentInspector()                                        = default;
+        virtual ~IComponentInspector()                               = default;
+        IComponentInspector( const IComponentInspector& )            = delete;
+        IComponentInspector& operator=( const IComponentInspector& ) = delete;
 
         /** @brief 컴포넌트 헤더에 UI 를 더합니다. */
         virtual void drawHeader( const EditorPropertyGridTarget& /*target*/ ) {}

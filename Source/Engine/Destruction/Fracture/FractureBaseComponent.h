@@ -1,5 +1,5 @@
 /**
- * @file FractureComponentBase.h
+ * @file FractureBaseComponent.h
  * @brief 쪼갠 조각을 런타임에 다루는 컴포넌트의 공통 기반입니다. 3D `FractureComponent` 와 2D `Fracture2DComponent` 가 상속하며, 구조 상태(`DestructionState`)를 보관하고 피해 사건을 받아 바디와 렌더링을 바꿉니다.
  * @details **온전할 때는 오브젝트의 메시 하나가 그리기 하나다.** 이 컴포넌트는 그리지도 않고 바디도 갖지 않는다. 충돌은 오브젝트의 `RigidBodyComponent` 가 맡는다.
  *          처음 떨어진 조각이 생기면(그룹이 갈라지면) **쪼갠 상태로 바뀐다.** 오브젝트의 메시를 숨기고 강체 컴포넌트를 끈 뒤,
@@ -138,13 +138,13 @@ namespace sw
 namespace sw
 {
     REFLECT( Abstract, Category = "Physics", DisplayName = "Fracture Base", Tooltip = "Base of the 3D and 2D destructible components" )
-    class SW_API FractureComponentBase : public PhysicsComponent
+    class SW_API FractureBaseComponent : public PhysicsComponent
     {
     public:
         REFLECT_BODY();
 
-        FractureComponentBase();
-        ~FractureComponentBase() override;
+        FractureBaseComponent();
+        ~FractureBaseComponent() override;
 
         void onRegister( GameObjectManager& manager ) override;
         void onUnregister( GameObjectManager& manager ) override;
