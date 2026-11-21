@@ -13,7 +13,8 @@ namespace
     struct EditorAssetImportPlanTestInternal
     {
         static bool importA( const AssetPaths& /*assetPaths*/, string_view /*relativePath*/ ) { return true; }
-        static bool importB( const AssetPaths& /*assetPaths*/, string_view /*relativePath*/ ) { return true; }
+        // 본문이 importA 와 달라야 한다 — 같으면 Release 링커가 두 함수를 하나로 접어(ICF) 주소가 같아지고, 계획이 "다른 임포터" 를 가르지 못한다.
+        static bool importB( const AssetPaths& /*assetPaths*/, string_view relativePath ) { return relativePath.empty() == false; }
 
         static EditorAssetImportItem make( const utf8* pPath, bool ( *pfnImport )( const AssetPaths&, string_view ), AssetImportThread thread )
         {
