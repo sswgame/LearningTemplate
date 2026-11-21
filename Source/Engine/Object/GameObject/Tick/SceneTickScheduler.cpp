@@ -15,8 +15,10 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/SceneTransformHierarchy.h"
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
 #include "Engine/Object/GameObject/Tick/StructuralChangeBuffer.h"
+#include "Engine/Object/GameObject/Tick/TickBatchRegistry.h"
 #include "Engine/Object/GameObject/Tick/TickContext.h"
 #include "Engine/Profiling/FrameProfiler.h"
 
@@ -200,6 +202,7 @@ namespace sw
         , _pPrimitiveRegistry{ &primitiveRegistry }
         , _pStructuralChangeBuffer{ &structuralChangeBuffer }
         , _tickRegistry{}
+        , _fixedStepTickList{}
         , _listBatchStart{}
         , _listEntryTask{}
         , _listStageItemTask{}
@@ -238,6 +241,19 @@ namespace sw
         }
 
         _pStructuralChangeBuffer->thaw();
+    }
+
+    uint32 SceneTickScheduler::tickFixedStepGroup( FixedStepGroup group, const FixedStepContext& context )
+    {
+        static_assert( kEnumCount<FixedStepGroup> == 4, "fixed step scope names follow FixedStepGroup" );
+        static const ProfileScopeID kArrGroupScopeID[kEnumCount<FixedStepGroup>] = {
+            FrameProfiler::registerEngineScopeSite( "GT.Scene.fixedStep.FrameBegin", __func__, __FILE__, __LINE__ ),
+            FrameProfiler::registerEngineScopeSite( "GT.Scene.fixedStep.PreStep", __func__, __FILE__, __LINE__ ),
+            FrameProfiler::registerEngineScopeSite( "GT.Scene.fixedStep.PostStep", __func__, __FILE__, __LINE__ ),
+            FrameProfiler::registerEngineScopeSite( "GT.Scene.fixedStep.FrameEnd", __func__, __FILE__, __LINE__ ),
+        };
+        const ScopedFrameProfile groupScope{ kArrGroupScopeID[static_cast<uint32>( group )] };
+        return _fixedStepTickList.run( group, context, _pManager->getSceneEngineServices()._pTickBatchRegistry );
     }
 
     void SceneTickScheduler::tickGroups( float32 deltaTime, uint32 firstGroup, uint32 endGroup )

@@ -615,6 +615,16 @@ namespace sw
         return _pState->_tickScheduler.getTickRegistry();
     }
 
+    uint32 GameObjectManager::tickFixedStepGroup( FixedStepGroup group, const FixedStepContext& context )
+    {
+        return _pState->_tickScheduler.tickFixedStepGroup( group, context );
+    }
+
+    FixedStepTickList& GameObjectManager::getFixedStepTickList()
+    {
+        return _pState->_tickScheduler.getFixedStepTickList();
+    }
+
     int64 GameObjectManager::getLastFrameComponentTickNanoseconds() const
     {
         return _pState->_tickScheduler.getLastFrameTickNanoseconds();

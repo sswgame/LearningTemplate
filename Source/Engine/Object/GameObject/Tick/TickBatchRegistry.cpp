@@ -38,6 +38,43 @@ namespace sw
             _generation.fetch_add( 1, std::memory_order_acq_rel );
     }
 
+    bool TickBatchRegistry::registerEntry( FixedStepEntry& entry )
+    {
+        if ( entry._pStaticType == nullptr )
+            return false;
+        {
+            ScopedLock<mutex> lock{ _mutex };
+            (void)_listFixedStepEntry.addLogged( &entry, "Fixed step entry" ); // 같은 줄을 다시 올리면 `AlreadyPresent` 라 할 일이 없다
+        }
+        _generation.fetch_add( 1, std::memory_order_acq_rel );
+        return true;
+    }
+
+    void TickBatchRegistry::unregisterEntry( FixedStepEntry& entry )
+    {
+        bool bRemoved = false;
+        {
+            ScopedLock<mutex> lock{ _mutex };
+            bRemoved = _listFixedStepEntry.remove( &entry );
+        }
+        if ( bRemoved )
+            _generation.fetch_add( 1, std::memory_order_acq_rel );
+    }
+
+    const TickBatchRegistry::FixedStepEntry* TickBatchRegistry::findFixedStepEntry( const TypeInfo* pType )
+    {
+        ScopedLock<mutex>              lock{ _mutex };
+        const vector<FixedStepEntry*>& listEntry = _listFixedStepEntry.getItems();
+        for ( size_t index = listEntry.size(); index > 0; --index )
+        {
+            // 주소가 아니라 지금의 `StaticType` 과 비교한다 — 모듈을 다시 올리면 타입 정보가 새로 만들어질 수 있다.
+            const FixedStepEntry* const pEntry = listEntry[index - 1];
+            if ( pEntry->_pStaticType() == pType )
+                return pEntry;
+        }
+        return nullptr;
+    }
+
     TickTypeDispatch TickBatchRegistry::findDispatch( const TypeInfo* pType )
     {
         TickTypeDispatch      dispatch{};
