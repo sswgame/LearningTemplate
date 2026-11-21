@@ -1185,6 +1185,173 @@ namespace sw
         return AbsolutePath::tryMake( path );
     }
 
+    AbsolutePath FileUtil::toDiskPath( string_view text )
+    {
+        // 빈 글은 그대로 빈 경로 - `canAcceptPathInput` 이 상대 경로에 `File.RelativePath` 를 남긴다(OS 경계와 같은 오류 하나).
+        if ( text.empty() == false && PlatformFileUtil::canAcceptPathInput( text ) )
+        {
+            optional<AbsolutePath> path = AbsolutePath::tryMake( text );
+            if ( path.has_value() )
+                return std::move( *path );
+        }
+        return AbsolutePath{ string{} };
+    }
+
+    bool FileUtil::ensureParentDirectoryExists( const AbsolutePath& filePath )
+    {
+        return ensureParentDirectoryExists( filePath.str() );
+    }
+
+    bool FileUtil::ensureDirectoryExists( const AbsolutePath& directoryPath )
+    {
+        return ensureDirectoryExists( directoryPath.str() );
+    }
+
+    bool FileUtil::exists( const AbsolutePath& path )
+    {
+        return exists( path.str() );
+    }
+
+    bool FileUtil::isDirectory( const AbsolutePath& path )
+    {
+        return isDirectory( path.str() );
+    }
+
+    bool FileUtil::isRegularFile( const AbsolutePath& path )
+    {
+        return isRegularFile( path.str() );
+    }
+
+    bool FileUtil::isReadOnlyFile( const AbsolutePath& fileName )
+    {
+        return isReadOnlyFile( fileName.str() );
+    }
+
+    bool FileUtil::setWritable( const AbsolutePath& path, bool bWritable )
+    {
+        return setWritable( path.str(), bWritable );
+    }
+
+    bool FileUtil::tryGetFileTimestamp( const AbsolutePath& fileName, uint64& outSeconds )
+    {
+        return tryGetFileTimestamp( fileName.str(), outSeconds );
+    }
+
+    bool FileUtil::getFileWriteTime( const AbsolutePath& path, int64& outTicks )
+    {
+        return getFileWriteTime( path.str(), outTicks );
+    }
+
+    bool FileUtil::setFileWriteTime( const AbsolutePath& path, int64 ticks )
+    {
+        return setFileWriteTime( path.str(), ticks );
+    }
+
+    bool FileUtil::tryGetFileSize( const AbsolutePath& fileName, uint64& outSize )
+    {
+        return tryGetFileSize( fileName.str(), outSize );
+    }
+
+    bool FileUtil::getFileStamp( const AbsolutePath& fileName, FileStamp& outStamp )
+    {
+        return getFileStamp( fileName.str(), outStamp );
+    }
+
+    bool FileUtil::copyFile( const AbsolutePath& source, const AbsolutePath& destination )
+    {
+        return copyFile( source.str(), destination.str() );
+    }
+
+    bool FileUtil::removeFile( const AbsolutePath& path )
+    {
+        return removeFile( path.str() );
+    }
+
+    bool FileUtil::replaceFile( const AbsolutePath& tempPath, const AbsolutePath& targetPath )
+    {
+        return replaceFile( tempPath.str(), targetPath.str() );
+    }
+
+    bool FileUtil::tryRemoveFile( const AbsolutePath& path )
+    {
+        return tryRemoveFile( path.str() );
+    }
+
+    bool FileUtil::removeDirectory( const AbsolutePath& path )
+    {
+        return removeDirectory( path.str() );
+    }
+
+    bool FileUtil::renamePath( const AbsolutePath& from, const AbsolutePath& to )
+    {
+        return renamePath( from.str(), to.str() );
+    }
+
+    bool FileUtil::writeFile( const AbsolutePath& fileName, const uint8* pData, uint64 size )
+    {
+        return writeFile( fileName.str(), pData, size );
+    }
+
+    FileWriteResult FileUtil::tryWriteFile( const AbsolutePath& fileName, const uint8* pData, uint64 size )
+    {
+        return tryWriteFile( fileName.str(), pData, size );
+    }
+
+    bool FileUtil::writeFileDurable( const AbsolutePath& fileName, const uint8* pData, uint64 size )
+    {
+        return writeFileDurable( fileName.str(), pData, size );
+    }
+
+    bool FileUtil::readFile( const AbsolutePath& fileName, vector<uint8>& outBytes, uint64 offset, uint64 maxReadCount )
+    {
+        return readFile( fileName.str(), outBytes, offset, maxReadCount );
+    }
+
+    bool FileUtil::readTextFile( const AbsolutePath& fileName, string& outText )
+    {
+        return readTextFile( fileName.str(), outText );
+    }
+
+    OptionalFileRead FileUtil::readOptionalTextFile( const AbsolutePath& fileName, string& outText )
+    {
+        return readOptionalTextFile( fileName.str(), outText );
+    }
+
+    bool FileUtil::readStreamTextFile( const AbsolutePath& fileName, string& outText, uint64 maxBytes )
+    {
+        return readStreamTextFile( fileName.str(), outText, maxBytes );
+    }
+
+    bool FileUtil::writeTextFile( const AbsolutePath& fileName, string_view text )
+    {
+        return writeTextFile( fileName.str(), text );
+    }
+
+    bool FileUtil::writeTextFileDurable( const AbsolutePath& fileName, string_view text )
+    {
+        return writeTextFileDurable( fileName.str(), text );
+    }
+
+    bool FileUtil::appendTextFile( const AbsolutePath& fileName, string_view text )
+    {
+        return appendTextFile( fileName.str(), text );
+    }
+
+    bool FileUtil::forEachDirectoryEntry( const AbsolutePath& directory, bool bRecursive, DirectoryEntryVisitFn visit, void* pContext )
+    {
+        return forEachDirectoryEntry( directory.str(), bRecursive, visit, pContext );
+    }
+
+    bool FileUtil::collectFiles( const AbsolutePath& directory, string_view filterExtension, vector<string>& outListFilePath, bool bRecursive, const StopToken& stopToken )
+    {
+        return collectFiles( directory.str(), filterExtension, outListFilePath, bRecursive, stopToken );
+    }
+
+    bool FileUtil::collectFolders( const AbsolutePath& directory, vector<string>& outListFolder, bool bRecursive )
+    {
+        return collectFolders( directory.str(), outListFolder, bRecursive );
+    }
+
     bool FileUtil::makeAbsolutePath( string_view path, string& outResult )
     {
         return PlatformFileSystem::makeAbsolute( path, outResult );
