@@ -2,6 +2,7 @@
 
 #include "Core/Concurrency/mutex.h"
 
+#include "Core/Concurrency/RealtimeSection.h"
 #include "Core/Concurrency/atomic.h"
 
 namespace sw
@@ -80,6 +81,8 @@ namespace sw
     void mutex::changeHeldLockDepth( int32 delta )
     {
         t_heldLockDepth = static_cast<uint32>( static_cast<int32>( t_heldLockDepth ) + delta );
+        if ( delta > 0 )
+            RealtimeSection::recordLock(); // 실시간 구간(오디오 장치 콜백)의 잠금을 센다 — 획득마다 여기를 지난다
     }
 #endif
 } // namespace sw

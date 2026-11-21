@@ -7,6 +7,7 @@
 
 #include "Engine/Animation/Scene/AnimationSystem.h"
 #include "Engine/Config/EngineConfig.h"
+#include "Engine/Environment/SceneEnvironment.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/2D/Render2DSettings.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
@@ -105,7 +106,8 @@ namespace sw
 
         // 하늘도 씬이 갖는다. 없으면 스카이 패스가 그리지 않는다(배경은 SceneColor 클리어 색).
         const GameObjectManager* pActiveObjects = activeScene.getObjectManager();
-        packet._bHasSky                         = ( pActiveObjects != nullptr && pActiveObjects->findServiceSky( packet._sky ) ) ? SW_TRUE : SW_FALSE;
+        const SceneEnvironment*  pEnvironment   = pActiveObjects != nullptr ? &pActiveObjects->getSubsystem<SceneEnvironment>() : nullptr;
+        packet._bHasSky                         = ( pEnvironment != nullptr && pEnvironment->findSky( packet._sky ) ) ? SW_TRUE : SW_FALSE;
         // 스카이 라이트 — 하늘을 거칠기 단계마다 거른 환경광이다. 하늘이 바뀐 프레임에만 다시 거르고(`SkyLightCache`), 하늘이 없으면 없다(그 씬의 환경광은 앰비언트 색이다).
         const SkyLightData* const pSkyLight = _skyLight.update( packet._bHasSky != SW_FALSE ? &packet._sky : nullptr, engine::getSubsystem<EngineConfig>()._render._skyLight );
 
@@ -117,7 +119,7 @@ namespace sw
         collectLensFlares( packet, activeScene );
         collectDecals( packet, activeScene );
         // 표면 변형 층도 씬이 갖는다 — 없으면 빈 값이라 셰이더가 정점을 옮기지 않는다.
-        if ( pActiveObjects == nullptr || pActiveObjects->findServiceSurfaceDeform( packet._surfaceDeform ) == false )
+        if ( pEnvironment == nullptr || pEnvironment->findSurfaceDeform( packet._surfaceDeform ) == false )
             packet._surfaceDeform = SurfaceDeformBinding{};
         return lights;
     }
@@ -183,9 +185,9 @@ namespace sw
 
     void RenderPacketSceneCollector::applyMainCamera( RenderFramePacket& packet, Scene& activeScene, CameraComponent& camera )
     {
-        // 안개도 씬이 갖는다. 카메라가 물속이면 물의 안개가 컴포넌트의 값을 덮는다(`SceneEnvironmentProvider`).
+        // 안개도 씬이 갖는다. 카메라가 물속이면 물의 안개가 컴포넌트의 값을 덮는다(환경 칸 `SceneEnvironment` 의 기본 원천).
         const GameObjectManager* pActiveObjects = activeScene.getObjectManager();
-        packet._bHasFog                         = ( pActiveObjects != nullptr && pActiveObjects->findServiceFog( camera.getCameraPosition(), packet._fog ) ) ? SW_TRUE : SW_FALSE;
+        packet._bHasFog                         = ( pActiveObjects != nullptr && pActiveObjects->getSubsystem<SceneEnvironment>().findFog( camera.getCameraPosition(), packet._fog ) ) ? SW_TRUE : SW_FALSE;
         // 투명 정렬의 깊이 — 직교 카메라는 시선 축(같은 Z 의 스프라이트가 카메라를 따라 앞뒤가 바뀌지 않게), 원근은 거리(render2d.xml).
         _gpuSceneBuilder->setTransparentSortAxis( engine::getSubsystem<Render2DSettings>().computeTransparentSortAxis( camera.isOrthographic(), camera.getCameraForward() ) );
     }
@@ -243,7 +245,7 @@ namespace sw
         // 주 화면과 같은 단계다(`RenderPacketBuilder::populateScene`). 안개는 카메라 컴포넌트가 아니라 시점 위치로 고른다.
         const RenderPacketKeyLights lights   = collectLights( outPacket, scene );
         const GameObjectManager*    pObjects = scene.getObjectManager();
-        outPacket._bHasFog                   = ( pObjects != nullptr && pObjects->findServiceFog( outPacket._cameraPos, outPacket._fog ) ) ? SW_TRUE : SW_FALSE;
+        outPacket._bHasFog                   = ( pObjects != nullptr && pObjects->getSubsystem<SceneEnvironment>().findFog( outPacket._cameraPos, outPacket._fog ) ) ? SW_TRUE : SW_FALSE;
         populateShadows( outPacket, lights );
         updateLODViews( outPacket, scene );
         _gpuSceneBuilder->setGPUInstanceLODEnabled( false );

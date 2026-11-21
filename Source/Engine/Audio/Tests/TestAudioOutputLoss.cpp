@@ -1,29 +1,36 @@
-// AudioServiceTest — 장치 출력을 잃으면 서비스가 오프라인 렌더로 넘기고 백오프 간격으로 기본 장치를 다시 연다(감사 P0-13). 가짜 백엔드 — 장치 스레드 없음.
+// AudioServiceTest — 장치 출력을 잃으면 서비스가 오프라인 렌더로 넘기고 백오프 간격으로 기본 장치를 다시 연다(감사 P0-13). 가짜 출력 장치 — 장치 스레드 없음.
 #include "pch.h"
 
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Audio/AudioChannelLayout.h"
 #include "Engine/Audio/AudioEngine.h"
-#include "Engine/Audio/IAudioService.h"
+#include "Engine/Audio/AudioService.h"
 #include "Engine/Config/EngineConfig.h"
 
 namespace
 {
-    /** @brief 장치가 있는지 테스트가 정하는 백엔드입니다. 스트림은 열린 척만 한다(엔진을 당기지 않는다). */
-    class FakeOutputBackend final : public sw::IAudioService
+    /**
+     * @brief 장치가 있는지 테스트가 정하는 출력 장치입니다. 스트림은 열린 척만 한다(엔진을 당기지 않는다).
+     * @details 서비스가 장치를 만들어 들어(합성) 테스트는 손잡이를 정적 칸으로 쥔다 — 케이스마다 `reset`.
+     */
+    class FakeOutputDevice final : public sw::IAudioOutputDevice
     {
     public:
-        int32 _openCount{ 0 };
-        bool  _bDeviceAvailable{ true }; // NOLINT(sw-bool-flag): 테스트 고정 장치의 손잡이다
+        static inline int32 s_openCount        = 0;
+        static inline bool  s_bDeviceAvailable = true;
 
-        ~FakeOutputBackend() override { shutdown(); }
+        static void reset()
+        {
+            s_openCount        = 0;
+            s_bDeviceAvailable = true;
+        }
+        static sw::unique_ptr<sw::IAudioOutputDevice> create( sw::AudioService& /*service*/ ) { return sw::make_unique<FakeOutputDevice>(); }
 
-    protected:
         bool openDevice( sw::AudioOutputDevice& outDevice ) override
         {
-            ++_openCount;
-            if ( _bDeviceAvailable == false )
+            ++s_openCount;
+            if ( s_bDeviceAvailable == false )
                 return false;
             outDevice._channelCount = 2;
             outDevice._channelMask  = sw::AudioChannelLayoutUtil::getChannelMask( sw::AudioChannelLayout::Stereo );
@@ -34,6 +41,9 @@ namespace
             (void)layout;
             return true;
         }
+        void       stopOutput() override {}
+        void       closeDevice() override {}
+        sw::uint64 getUnderrunCount() const override { return 0; }
     };
 
     /** @brief 엔진 설정 파일과 같은 다시 열기 간격 · 캐시 예산입니다(첫 1 초, 상한 30 초, 192 MB — `Config/Engine/EngineConfig.json`). */
@@ -54,22 +64,23 @@ namespace
  */
 SW_TEST_CASE( AudioServiceTest, OutputLossFallsBackToOfflineRender )
 {
-    FakeOutputBackend service;
+    FakeOutputDevice::reset();
+    sw::AudioService service{ &FakeOutputDevice::create };
     SW_REQUIRE_TRUE( service.initialize( makeOutputConfig() ) );
     SW_REQUIRE_TRUE( service.isOutputOpen() );
 
-    service._bDeviceAvailable = false;
+    FakeOutputDevice::s_bDeviceAvailable = false;
 
-    const int32  openCountBeforeLoss = service._openCount;
+    const int32  openCountBeforeLoss = FakeOutputDevice::s_openCount;
     const uint64 framesBeforeLoss    = service.getEngine().getStats()._renderedFrameCount;
     SW_EXPECT_LOG( "AudioService.OutputLost" );
     service.notifyOutputLost(); // 장치 스레드가 알린다
     service.update( 0.1f );     // 닫고 오프라인으로
     SW_EXPECT_FALSE( service.isOutputOpen() );
     int32 offlineTickCount = 1;
-    for ( int32 tick = 0; tick < 12 && service._openCount == openCountBeforeLoss; ++tick, ++offlineTickCount )
+    for ( int32 tick = 0; tick < 12 && FakeOutputDevice::s_openCount == openCountBeforeLoss; ++tick, ++offlineTickCount )
         service.update( 0.1f ); // 첫 다시 열기는 [0, 첫 지연(1 초)] 안에 해 본다(지터 — 장치가 아직 없다)
-    SW_EXPECT_TRUE( service._openCount > openCountBeforeLoss );
+    SW_EXPECT_TRUE( FakeOutputDevice::s_openCount > openCountBeforeLoss );
     SW_EXPECT_FALSE( service.isOutputOpen() );
 
     // 오프라인 렌더는 흐른 시간만큼이다 — 넘으면 시계가 빨리 흐르고(옛 ALSA), 블록 하나보다 모자라면 렌더가 멈춘 것이다(옛 XAudio2).
@@ -78,7 +89,7 @@ SW_TEST_CASE( AudioServiceTest, OutputLossFallsBackToOfflineRender )
     SW_EXPECT_TRUE( renderedFrames <= elapsedFrames );
     SW_EXPECT_TRUE( renderedFrames + sw::audio::kBlockFrameCount > elapsedFrames );
 
-    service._bDeviceAvailable = true; // 헤드폰을 다시 꽂았다
+    FakeOutputDevice::s_bDeviceAvailable = true; // 헤드폰을 다시 꽂았다
     for ( int32 tick = 0; tick < 40 && service.isOutputOpen() == false; ++tick )
         service.update( 0.1f ); // 백오프(1 · 2 초 …) 안에 다시 연다
     SW_EXPECT_TRUE( service.isOutputOpen() );
@@ -87,12 +98,13 @@ SW_TEST_CASE( AudioServiceTest, OutputLossFallsBackToOfflineRender )
 /** @brief [AudioServiceTest] 다시 열기 상한이 첫 간격보다 작으면 초기화가 실패한다 — 코드 기본값으로 대신하지 않는다. */
 SW_TEST_CASE( AudioServiceTest, InvalidReopenDelayFailsInitialize )
 {
-    FakeOutputBackend service;
-    sw::AudioConfig   config = makeOutputConfig();
+    FakeOutputDevice::reset();
+    sw::AudioService service{ &FakeOutputDevice::create };
+    sw::AudioConfig  config  = makeOutputConfig();
     config._reopenMaxDelayMs = config._reopenFirstDelayMs - 1;
     SW_EXPECT_LOG( "AudioService.InvalidReopenDelay" );
     SW_EXPECT_FALSE( service.initialize( config ) );
-    SW_EXPECT_EQUAL( 0, service._openCount );
+    SW_EXPECT_EQUAL( 0, FakeOutputDevice::s_openCount );
 }
 
 /**
@@ -101,18 +113,19 @@ SW_TEST_CASE( AudioServiceTest, InvalidReopenDelayFailsInitialize )
  */
 SW_TEST_CASE( AudioServiceTest, SuspendClosesOutputUntilResume )
 {
-    FakeOutputBackend service;
+    FakeOutputDevice::reset();
+    sw::AudioService service{ &FakeOutputDevice::create };
     SW_REQUIRE_TRUE( service.initialize( makeOutputConfig() ) );
     SW_REQUIRE_TRUE( service.isOutputOpen() );
 
     service.suspendOutput();
     SW_EXPECT_TRUE( service.isOutputSuspended() );
     SW_EXPECT_FALSE( service.isOutputOpen() );
-    const int32  openCount = service._openCount;
+    const int32  openCount = FakeOutputDevice::s_openCount;
     const uint64 frames    = service.getEngine().getStats()._renderedFrameCount;
     for ( int32 tick = 0; tick < 30; ++tick )
         service.update( 0.1f );
-    SW_EXPECT_EQUAL( openCount, service._openCount );
+    SW_EXPECT_EQUAL( openCount, FakeOutputDevice::s_openCount );
     SW_EXPECT_EQUAL( frames, service.getEngine().getStats()._renderedFrameCount );
 
     service.resumeOutput();

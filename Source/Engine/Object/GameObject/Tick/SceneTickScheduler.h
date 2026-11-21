@@ -51,6 +51,11 @@ namespace sw
         /** @brief 틱에 참여하는 오브젝트의 레지스트리입니다. */
         const TickRegistry& getTickRegistry() const { return _tickRegistry; }
 
+        /**
+         * @brief 마지막으로 끝난 프레임의 컴포넌트 틱(두 단계의 그룹 디스패치 합) 시간(ns)입니다. 감시 값 `Scene.ComponentTickShare` 의 재료입니다.
+         * @details 틱 주기 등급(N 프레임마다 틱)을 들일지 판정하는 재는 장치다 — 허브 부하에서 프레임의 10% 를 넘을 때만 한다(DesignBacklog Engine 발전 방향 ⑤).
+         */
+        int64 getLastFrameTickNanoseconds() const { return _lastFrameTickNanoseconds; }
         /** @brief 선행 조건 스테이지 경계에서 틱 중 트랜스폼 쓰기를 적용한 횟수(누적)입니다. 진단 · 회귀 테스트용입니다. */
         uint32 getStageTransformApplyCount() const { return _stageTransformApplyCount; }
 
@@ -117,6 +122,8 @@ namespace sw
         vector<StageItemTask>    _listStageItemTask;        ///< 간선 있는 스테이지 하나의 항목 태스크(할당을 재사용한다)
         StageOrderScratch        _stageOrderScratch;        ///< 간선 있는 스테이지 하나의 위상 정렬 임시 배열(할당을 재사용한다)
         uint32                   _stageTransformApplyCount; ///< 스테이지 경계 적용 횟수(진단)
+        int64                    _frameTickNanoseconds;     ///< 이번 프레임에 지금까지 잰 그룹 디스패치 시간(첫 단계가 0 으로 되돌린다)
+        int64                    _lastFrameTickNanoseconds; ///< 마지막 단계까지 끝난 프레임의 그룹 디스패치 시간(`getLastFrameTickNanoseconds`)
         uint32                   _dispatchOrdinal;          ///< 디스패치마다 오르는 순번(`TickThreadState::_dispatchOrdinal` — 같은 오브젝트가 디스패치마다 다른 스레드에서 쓴 건의 선후). 되감지 않는다
     };
 } // namespace sw

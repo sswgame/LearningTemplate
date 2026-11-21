@@ -484,7 +484,6 @@
     "Source/Engine/Graphics/Shader/Reflection/ShaderReflectionDx.cpp": {"integer": 3},
     "Source/Engine/Graphics/Shader/Reflection/ShaderReflectionSPIRV.cpp": {"integer": 12},
     "Source/Engine/Graphics/Texture/Texture2D.cpp": {"integer": 20},
-    "Source/Engine/HeadlessSubsystem.cpp": {"minus-one": 1},
     "Source/Engine/Input/Devices/GamepadDevice.cpp": {"integer": 12},
     "Source/Engine/Input/Devices/KeyboardDevice.cpp": {"integer": 8},
     "Source/Engine/Input/Devices/MouseDevice.cpp": {"integer": 4},

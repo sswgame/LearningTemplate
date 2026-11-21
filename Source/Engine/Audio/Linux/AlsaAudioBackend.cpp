@@ -8,6 +8,7 @@
 #include "Core/Module/ModuleLibraryUtil.h"
 
 #include "Engine/Audio/AudioEngine.h"
+#include "Engine/Audio/AudioService.h"
 
 namespace sw
 {
@@ -73,6 +74,7 @@ namespace sw
         void*                                                            _pLibrary;            /**< `libasound.so.2` 핸들입니다. */
         void*                                                            _pPCM;                /**< 열린 재생 장치입니다. */
         uint32                                                           _channelCount;        /**< 스트림의 채널 수입니다. */
+        atomic<uint64>                                                   _underrunCount;       /**< 쓰기 실패를 복원한 수입니다(스트림 스레드가 쓰고 게임 스레드가 읽는다). */
 
         AlsaAudioBackendImpl()
             : _pfnOpen{ nullptr }
@@ -92,6 +94,7 @@ namespace sw
             , _pLibrary{ nullptr }
             , _pPCM{ nullptr }
             , _channelCount{ 0 }
+            , _underrunCount{ 0 }
         {
         }
 
@@ -118,14 +121,15 @@ namespace sw
         }
     };
 
-    AlsaAudioBackend::AlsaAudioBackend()
-        : _impl{ make_unique<AlsaAudioBackendImpl>() }
+    AlsaAudioBackend::AlsaAudioBackend( AudioService& service )
+        : _service{ service }
+        , _impl{ make_unique<AlsaAudioBackendImpl>() }
     {
     }
 
     AlsaAudioBackend::~AlsaAudioBackend()
     {
-        shutdown();
+        // 서비스가 소멸자에서 출력 · 장치를 먼저 내린다(`AudioService::~AudioService`) — 여기서는 남은 것을 놓기만 한다.
     }
 
     bool AlsaAudioBackend::openDevice( AudioOutputDevice& outDevice )
@@ -195,7 +199,7 @@ namespace sw
         const bool bReorder = channelCount > audio::kStereoChannelCount;
         while ( stopToken.isStopRequested() == false )
         {
-            getEngine().render( _impl->_listRender.data(), Internal::kWriteFrameCount );
+            _service.getEngine().render( _impl->_listRender.data(), Internal::kWriteFrameCount );
             const float32* pWrite = _impl->_listRender.data();
             if ( bReorder )
             {
@@ -211,9 +215,10 @@ namespace sw
                     // 언더런 · 일시정지 복귀는 복원하고 이어 쓴다. 복원하지 못하면 장치를 잃은 것이다 — 알리고 스레드를 끝낸다(예전에는 쉬지 않고 다시 렌더 · 쓰기를 돌았다).
                     if ( _impl->_pfnRecover( _impl->_pPCM, static_cast<int32>( result ), 1 ) < 0 )
                     {
-                        notifyOutputLost();
+                        _service.notifyOutputLost();
                         return;
                     }
+                    _impl->_underrunCount.fetch_add( 1, std::memory_order_relaxed );
                     continue;
                 }
                 written += static_cast<uint32>( result );
@@ -257,5 +262,10 @@ namespace sw
         }
     }
 
-    SW_REGISTER_AUDIO_BACKEND( AlsaAudioBackend ); // 리눅스 클라이언트의 장치 백엔드(`IAudioService::create` 가 등록표에서 고른다)
+    uint64 AlsaAudioBackend::getUnderrunCount() const
+    {
+        return _impl->_underrunCount.load( std::memory_order_relaxed );
+    }
+
+    SW_REGISTER_AUDIO_BACKEND( AlsaAudioBackend ); // 리눅스 클라이언트의 장치 백엔드(`AudioService::create` 가 등록표에서 고른다)
 } // namespace sw

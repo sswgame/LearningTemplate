@@ -33,12 +33,9 @@ namespace sw
     class DebugDrawQueue;
     class GameObjectManager;
     class ISceneParticleSink;
-    struct FogSettings;
     struct GPULight;
     struct ScenePreviewPolicy;
     struct SceneServiceRegistration;
-    struct SkyGradient;
-    struct SurfaceDeformBinding;
 
     /**
      * @brief 기능이 씬 라이트 목록에 원소를 붙이는 자리입니다(`GameObjectManager::collectServiceLights`). 값의 순서가 목록의 순서입니다 — 상한을 넘으면 뒤에서부터 잘리므로 순서가 곧 뜻입니다.
@@ -97,25 +94,7 @@ namespace sw
         }
         /** @brief 이번 프레임의 입자 그리기를 냅니다. */
         virtual void contributeParticles( ISceneParticleSink& sink ) const { (void)sink; }
-        /** @brief 이 씬의 하늘을 맡으면 값을 쓰고 true 입니다. */
-        [[nodiscard]] virtual bool contributeSky( SkyGradient& outGradient ) const
-        {
-            (void)outGradient;
-            return false;
-        }
-        /** @brief @p viewPosition 에서 보는 안개를 맡으면 값을 쓰고 true 입니다. */
-        [[nodiscard]] virtual bool contributeFog( const float3& viewPosition, FogSettings& outSettings ) const
-        {
-            (void)viewPosition;
-            (void)outSettings;
-            return false;
-        }
-        /** @brief 이 씬의 표면 변형 층을 맡고 텍스처가 있으면 값을 쓰고 true 입니다. */
-        [[nodiscard]] virtual bool contributeSurfaceDeform( SurfaceDeformBinding& outBinding ) const
-        {
-            (void)outBinding;
-            return false;
-        }
+        // 씬에 하나뿐인 환경 상태(하늘 · 안개 · 표면 변형)는 여기 없다 — 환경 층의 칸 하나가 든다(`SceneEnvironment`, 먼저 맡은 서비스가 이기던 순회를 지웠다).
 
         /** @brief 씬 서비스는 만들 때(매니저의 생성자) 선다 — 따로 세울 것이 없으면 그대로 둔다. */
         SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }

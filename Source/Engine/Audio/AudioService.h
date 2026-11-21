@@ -1,6 +1,6 @@
 /**
- * @file IAudioService.h
- * @brief 오디오 서비스입니다. 엔진(`AudioEngine`: 믹서 그래프, 보이스, 이벤트, 음악)을 하나 가지고 있고, 플랫폼 백엔드는 출력 장치만 맡습니다.
+ * @file AudioService.h
+ * @brief 오디오 서비스입니다. 엔진(`AudioEngine`: 믹서 그래프, 보이스, 이벤트, 음악)과 출력 장치(`IAudioOutputDevice`, 합성)를 하나씩 가집니다.
  *
  * @note **볼륨과 음소거는 이 서비스가 관리합니다.** 값 범위(0~1 클램프)와 "음소거는 master 버스에만 건다"는 규칙은 여기에만 적습니다.
  *       값은 같은 이름의 믹서 버스 사용자 볼륨으로 엔진에 전달됩니다.
@@ -24,26 +24,21 @@
 #include "Engine/Audio/AudioChannelLayout.h"
 #include "Engine/Audio/AudioSoundPlayer.h"
 #include "Engine/Audio/AudioTypes.h"
+#include "Engine/Audio/IAudioOutputDevice.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Presentation/IEngineAudioDriver.h"
 
 namespace sw
 {
-    /** @brief 백엔드가 연 출력 장치의 형식입니다. 채널 수 0 은 "장치 없음"입니다. */
-    struct AudioOutputDevice
-    {
-        uint32 _channelCount{ 0 }; ///< 장치의 채널 수다.
-        uint32 _channelMask{ 0 };  ///< 장치의 WAV 채널 마스크다(`AudioChannelLayoutUtil::kSpeaker*`).
-    };
-} // namespace sw
-
-namespace sw
-{
     class AudioEngine;
+    class AudioService;
     struct AudioConfig;
 
+    /** @brief 서비스 @p service 를 당길 출력 장치를 만듭니다(`AudioBackendRegistrar` — 장치는 만들 때 받은 서비스로 엔진을 당기고 유실을 알린다). */
+    using AudioOutputDeviceCreateFunction = unique_ptr<IAudioOutputDevice> ( * )( AudioService& service );
+
     /**
-     * @brief 이름을 붙인 볼륨 버스입니다. 세 버스(`master`, `music`, `sfx`)는 기존 볼륨 필드로 가고, 나머지 이름은 `IAudioService` 의 테이블에 남습니다.
+     * @brief 이름을 붙인 볼륨 버스입니다. 세 버스(`master`, `music`, `sfx`)는 기존 볼륨 필드로 가고, 나머지 이름은 `AudioService` 의 테이블에 남습니다.
      * @details 어느 이름이든 같은 이름의 믹서 버스 사용자 볼륨에도 반영된다(`AudioEngine::setBusUserVolume`). 그래프에 없는 이름은 값만 남는다.
      */
     struct AudioBusVolume
@@ -56,12 +51,12 @@ namespace sw
 namespace sw
 {
     /**
-     * @class IAudioService
-     * @brief 오디오 재생과 관리를 위한 서비스입니다. 백엔드(XAudio2, Null)는 출력 장치를 열고 닫는 일만 재정의합니다.
+     * @class AudioService
+     * @brief 오디오 재생과 관리를 위한 서비스입니다. 플랫폼 장치(XAudio2 · ALSA · AAudio · AudioWorklet)는 멤버 `IAudioOutputDevice` 이고, 장치가 없으면(전용 서버 · 테스트) 그 칸이 빈다.
      * @details 오디오 밖(엔진 루프 · 애니메이션 · 시퀀서 · 게임 코드)은 이 클래스를 모르고 창구로 부른다 — 프레임은 `IEngineAudioDriver`, 소리는 `ISoundPlayer`(멤버 `AudioSoundPlayer`),
      *          볼륨 · 음소거 · 스피커 모드는 사용자 설정 핸들러(`AudioUserSettingsHandlers`). 전용 서버는 오디오 폴더를 짓지 않아 칸이 모두 빈다.
      */
-    class SW_API IAudioService : public ISubsystem
+    class SW_API AudioService final : public ISubsystem
     {
     public:
         /** @brief 엔진의 기본 믹서 그래프 경로입니다. 없거나 틀리면 `initialize` 가 실패합니다(코드 그래프로 대신하지 않습니다). */
@@ -71,17 +66,19 @@ namespace sw
          * @brief 이 빌드가 담은 플랫폼 장치 백엔드(`AudioBackendRegistrar` 로 오른 것 — Windows XAudio2 · 리눅스 ALSA · Android AAudio · 웹 AudioWorklet)를 만듭니다.
          * @details 등록된 백엔드가 없거나 둘 이상이면 기동을 멈춘다(장치 없는 오디오로 몰래 바꾸지 않는다). 장치를 열지 않을 쪽(전용 서버 · 테스트)은 `createNull` 을 부른다.
          */
-        static unique_ptr<IAudioService> create();
+        static unique_ptr<AudioService> create();
         /** @brief 장치를 열지 않는 오디오 시스템입니다(전용 서버, 테스트). 소리 요청은 받아서 버리고, 믹서와 음량 상태는 그대로 유지합니다. */
-        static unique_ptr<IAudioService> createNull();
+        static unique_ptr<AudioService> createNull();
 
-        IAudioService();
-        ~IAudioService() override;
+        /** @brief @p pCreateDevice 로 출력 장치를 만들어 듭니다. nullptr 이면 장치 없이 선다(`update` 가 오프라인으로 렌더한다). */
+        explicit AudioService( AudioOutputDeviceCreateFunction pCreateDevice );
+        /** @brief 출력 장치를 닫고 엔진을 내립니다(장치는 그 뒤에 사라진다). */
+        ~AudioService() override;
 
-        IAudioService( const IAudioService& )            = delete;
-        IAudioService& operator=( const IAudioService& ) = delete;
-        IAudioService( IAudioService&& )                 = delete;
-        IAudioService& operator=( IAudioService&& )      = delete;
+        AudioService( const AudioService& )            = delete;
+        AudioService& operator=( const AudioService& ) = delete;
+        AudioService( AudioService&& )                 = delete;
+        AudioService& operator=( AudioService&& )      = delete;
 
         /**
          * @brief 출력 장치를 열고, 스피커 모드로 레이아웃을 정해 엔진을 만들고(기본 믹서 그래프), 장치가 엔진을 당기게 합니다.
@@ -107,6 +104,8 @@ namespace sw
         bool isInitialized() const { return _bInitialized; }
         /** @brief 출력 장치가 엔진을 당기고 있는지입니다. false 면 `update` 가 렌더합니다. */
         bool isOutputOpen() const { return _bOutputOpen; }
+        /** @brief 지금 스트림의 언더런 수입니다(`IAudioOutputDevice::getUnderrunCount`). 출력이 닫혀 있으면 0 입니다. */
+        uint64 getOutputUnderrunCount() const { return _bOutputOpen && _pOutputDevice != nullptr ? _pOutputDevice->getUnderrunCount() : 0u; }
         /**
          * @brief (아무 스레드 — 장치 콜백 · 스트림 스레드) 장치 출력이 죽었다고 알립니다. 다음 `update` 가 스트림을 닫고 오프라인 렌더로 넘긴 뒤 백오프 간격으로 다시 엽니다.
          * @details 예전에는 백엔드마다 유실을 따로 다뤘다 — ALSA 는 복원에 지면 쉬지 않고 다시 써 코어 하나를 쓰고 오디오 시계가 실시간보다 빨리 흘렀고, XAudio2 는 유실을 몰라
@@ -232,28 +231,20 @@ namespace sw
         /** @brief 버스 볼륨입니다. 설정한 적 없는 버스는 1 입니다. */
         float32 getBusVolume( const hashed_string& bus ) const;
 
-    protected:
-        /**
-         * @brief 출력 장치를 열고 그 형식(채널 수 · 마스크)을 @p outDevice 에 적습니다. 아직 엔진을 당기지 않습니다.
-         * @return 장치가 없으면 false 를 반환합니다(그때는 `update` 가 렌더합니다). 실패하면 잡은 것을 스스로 놓습니다.
-         */
-        [[nodiscard]] virtual bool openDevice( AudioOutputDevice& outDevice )
-        {
-            (void)outDevice;
-            return false;
-        }
-        /** @brief 열린 장치에 @p layout 형식의 스트림을 열고, 장치 스레드에서 엔진의 `render` 를 부르기 시작합니다. 실패하면 false 입니다. */
-        [[nodiscard]] virtual bool startOutput( AudioChannelLayout layout )
-        {
-            (void)layout;
-            return false;
-        }
-        /** @brief 스트림을 닫습니다. 돌아온 뒤에는 장치 스레드가 `render` 를 부르지 않습니다(장치는 열려 있습니다). */
-        virtual void stopOutput() {}
-        /** @brief 장치를 닫습니다(`stopOutput` 뒤에 부릅니다). */
-        virtual void closeDevice() {}
-
     private:
+        // 장치 창구 — 장치가 없으면(전용 서버 · 테스트) 열리지 않고 아무것도 하지 않는다.
+        [[nodiscard]] bool openDevice( AudioOutputDevice& outDevice ) { return _pOutputDevice != nullptr && _pOutputDevice->openDevice( outDevice ); }
+        [[nodiscard]] bool startOutput( AudioChannelLayout layout ) { return _pOutputDevice != nullptr && _pOutputDevice->startOutput( layout ); }
+        void               stopOutput()
+        {
+            if ( _pOutputDevice != nullptr )
+                _pOutputDevice->stopOutput();
+        }
+        void closeDevice()
+        {
+            if ( _pOutputDevice != nullptr )
+                _pOutputDevice->closeDevice();
+        }
         /** @brief 죽은 출력을 닫고 오프라인으로 넘깁니다(게임 스레드, `update`). */
         void closeLostOutput();
         /** @brief 스트림 · 장치를 닫고 렌더를 게임 스레드로 돌립니다(`closeLostOutput` · `suspendOutput` 의 공통 몸체). */
@@ -268,7 +259,7 @@ namespace sw
         class EngineAudioDriver final : public IEngineAudioDriver
         {
         public:
-            explicit EngineAudioDriver( IAudioService& owner )
+            explicit EngineAudioDriver( AudioService& owner )
                 : _owner{ owner }
             {
             }
@@ -276,35 +267,37 @@ namespace sw
             void update( float32 unscaledDeltaSeconds ) override { _owner.update( unscaledDeltaSeconds ); }
 
         private:
-            IAudioService& _owner;
+            AudioService& _owner;
         };
 
     private:
-        unique_ptr<AudioEngine> _pEngine;              /**< 오디오 엔진입니다. */
-        AudioSoundPlayer        _soundPlayer;          /**< 소리 창구입니다(`ISoundPlayer`). */
-        EngineAudioDriver       _engineAudioDriver;    /**< 프레임 창구입니다(`IEngineAudioDriver`). */
-        vector<AudioBusVolume>  _listBusVolume;        /**< 세 기본 버스 밖의 버스 볼륨입니다. */
-        vector<float32>         _listOfflineBlock;     /**< 장치가 없을 때 렌더하는 버퍼입니다. */
-        string                  _musicPath;            /**< 마지막으로 요청된 배경음악 경로입니다. */
-        string                  _mixerPath;            /**< 마지막으로 읽은 믹서 그래프 경로입니다. */
-        AudioPlayingID          _musicPlayingID;       /**< 배경음악 재생 id 입니다. */
-        float64                 _offlineFrameDebt;     /**< 장치가 없을 때 아직 렌더하지 않은 프레임(소수)입니다. */
-        float64                 _reopenSecondsLeft;    /**< 장치를 다시 열어 볼 때까지 남은 시간(초)입니다(`retryOpenOutput`). */
-        ExponentialBackoff      _reopenBackoff;        /**< 장치 다시 열기의 간격입니다 — 성공하면 처음부터. `initialize` 가 설정의 첫 간격으로 만든다. */
-        int64                   _reopenMaxDelayMs;     /**< 장치 다시 열기 간격의 상한(ms)입니다(`EngineConfig::_audio`). */
-        atomic<bool>            _bOutputLost;          /**< 장치 출력이 죽었다는 알림입니다(`notifyOutputLost` — 아무 스레드). */
-        AudioOutputDevice       _device;               /**< 열린 장치의 형식입니다(장치가 없으면 채널 수 0). */
-        float32                 _masterVolume;         /**< 마스터 볼륨 [0,1] 입니다. */
-        float32                 _musicVolume;          /**< 배경음악 볼륨 [0,1] 입니다. */
-        float32                 _sfxVolume;            /**< 효과음 볼륨 [0,1] 입니다. */
-        AudioSpeakerMode        _speakerMode;          /**< 사용자가 고른 스피커 모드입니다. */
-        uint8                   _bMuted           : 1; /**< 음소거 상태입니다. */
-        uint8                   _bDeviceOpen      : 1; /**< 장치를 열었는지입니다. */
-        uint8                   _bOutputOpen      : 1; /**< 장치가 엔진을 당기고 있는지입니다. */
-        uint8                   _bInitialized     : 1; /**< initialize 가 끝났는지입니다. */
-        uint8                   _bOutputSuspended : 1; /**< 앱 멈춤으로 출력을 닫아 두었는지입니다(`suspendOutput`). */
+        unique_ptr<AudioEngine> _pEngine; /**< 오디오 엔진입니다. */
+        /** @brief 출력 장치입니다(없으면 nullptr). 엔진 뒤에 선언해 먼저 사라진다 — 장치 스레드가 사라진 엔진을 당기지 않는다. */
+        unique_ptr<IAudioOutputDevice> _pOutputDevice;
+        AudioSoundPlayer               _soundPlayer;          /**< 소리 창구입니다(`ISoundPlayer`). */
+        EngineAudioDriver              _engineAudioDriver;    /**< 프레임 창구입니다(`IEngineAudioDriver`). */
+        vector<AudioBusVolume>         _listBusVolume;        /**< 세 기본 버스 밖의 버스 볼륨입니다. */
+        vector<float32>                _listOfflineBlock;     /**< 장치가 없을 때 렌더하는 버퍼입니다. */
+        string                         _musicPath;            /**< 마지막으로 요청된 배경음악 경로입니다. */
+        string                         _mixerPath;            /**< 마지막으로 읽은 믹서 그래프 경로입니다. */
+        AudioPlayingID                 _musicPlayingID;       /**< 배경음악 재생 id 입니다. */
+        float64                        _offlineFrameDebt;     /**< 장치가 없을 때 아직 렌더하지 않은 프레임(소수)입니다. */
+        float64                        _reopenSecondsLeft;    /**< 장치를 다시 열어 볼 때까지 남은 시간(초)입니다(`retryOpenOutput`). */
+        ExponentialBackoff             _reopenBackoff;        /**< 장치 다시 열기의 간격입니다 — 성공하면 처음부터. `initialize` 가 설정의 첫 간격으로 만든다. */
+        int64                          _reopenMaxDelayMs;     /**< 장치 다시 열기 간격의 상한(ms)입니다(`EngineConfig::_audio`). */
+        atomic<bool>                   _bOutputLost;          /**< 장치 출력이 죽었다는 알림입니다(`notifyOutputLost` — 아무 스레드). */
+        AudioOutputDevice              _device;               /**< 열린 장치의 형식입니다(장치가 없으면 채널 수 0). */
+        float32                        _masterVolume;         /**< 마스터 볼륨 [0,1] 입니다. */
+        float32                        _musicVolume;          /**< 배경음악 볼륨 [0,1] 입니다. */
+        float32                        _sfxVolume;            /**< 효과음 볼륨 [0,1] 입니다. */
+        AudioSpeakerMode               _speakerMode;          /**< 사용자가 고른 스피커 모드입니다. */
+        uint8                          _bMuted           : 1; /**< 음소거 상태입니다. */
+        uint8                          _bDeviceOpen      : 1; /**< 장치를 열었는지입니다. */
+        uint8                          _bOutputOpen      : 1; /**< 장치가 엔진을 당기고 있는지입니다. */
+        uint8                          _bInitialized     : 1; /**< initialize 가 끝났는지입니다. */
+        uint8                          _bOutputSuspended : 1; /**< 앱 멈춤으로 출력을 닫아 두었는지입니다(`suspendOutput`). */
 
-        SW_SERVICE_SLOT( IAudioService, Optional );
+        SW_SERVICE_SLOT( AudioService, Optional );
     };
 } // namespace sw
 
@@ -313,31 +306,29 @@ namespace sw
     /**
      * @struct AudioBackendRegistrar
      * @brief 플랫폼 장치 백엔드가 스스로 오르는 정적 등록자입니다(`SW_REGISTER_AUDIO_BACKEND` — RHI 백엔드의 `RHIStaticBackendRegistrar` 와 같은 모양).
-     * @details 플랫폼 백엔드 파일(`Audio/Windows/` · `Audio/Linux/` · `Audio/Android/`)이 그 플랫폼 클라이언트 빌드에서만 등록자를 둔다 — 고르는 쪽(`IAudioService::create`)에는 `#if` 가 없다.
+     * @details 플랫폼 백엔드 파일(`Audio/Windows/` · `Audio/Linux/` · `Audio/Android/`)이 그 플랫폼 클라이언트 빌드에서만 등록자를 둔다 — 고르는 쪽(`AudioService::create`)에는 `#if` 가 없다.
      *          정적 초기화 때 머리에 이어 붙는다(배포의 정적 링크는 Engine 을 통째로 넣는다 — `cmake/Modules/Build/ExecutableTargets.cmake`).
      */
     struct SW_API AudioBackendRegistrar
     {
-        using CreateFunction = unique_ptr<IAudioService> ( * )();
+        const utf8*                     _pName;
+        AudioOutputDeviceCreateFunction _pCreate;
+        const AudioBackendRegistrar*    _pNext;
 
-        const utf8*                  _pName;
-        CreateFunction               _pCreate;
-        const AudioBackendRegistrar* _pNext;
-
-        AudioBackendRegistrar( const utf8* pName, CreateFunction pCreate );
+        AudioBackendRegistrar( const utf8* pName, AudioOutputDeviceCreateFunction pCreate );
         /** @brief 이어 붙은 등록자 목록의 머리입니다. */
         static const AudioBackendRegistrar* getHead();
-        /** @brief 백엔드 @p TBackend 를 만드는 함수입니다(`SW_REGISTER_AUDIO_BACKEND` 가 넘긴다). */
+        /** @brief 장치 @p TBackend 를 만드는 함수입니다(`SW_REGISTER_AUDIO_BACKEND` 가 넘긴다). */
         template <typename TBackend>
-        static unique_ptr<IAudioService> createBackend()
+        static unique_ptr<IAudioOutputDevice> createBackend( AudioService& service )
         {
-            return make_unique<TBackend>();
+            return make_unique<TBackend>( service );
         }
     };
 } // namespace sw
 
 /**
- * @brief 오디오 장치 백엔드 @p Type(`IAudioService` 파생, 기본 생성자)을 등록합니다. 그 백엔드의 `.cpp` 의 `namespace sw` 안, 익명 네임스페이스 밖에서 한 번 씁니다.
+ * @brief 오디오 출력 장치 @p Type(`IAudioOutputDevice` 파생, `AudioService&` 하나를 받는 생성자)을 등록합니다. 그 백엔드의 `.cpp` 의 `namespace sw` 안, 익명 네임스페이스 밖에서 한 번 씁니다.
  */
 #define SW_REGISTER_AUDIO_BACKEND( Type )                           \
     const ::sw::AudioBackendRegistrar s_audioBackendRegistrar##Type \

@@ -11,6 +11,7 @@
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Environment/EnvironmentUtil.h"
+#include "Engine/Environment/SceneEnvironment.h"
 #include "Engine/Environment/Surface/SurfaceKind.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -188,10 +189,17 @@ namespace sw
             _grid.applyStamp( held._def, held._point._x, held._point._z, held._yaw, 0.0f, held._def._spinSpeed * held._age );
         } );
         uploadTexture();
+        // 텍스처 · 창이 바뀌는 곳은 이 함수뿐이다 — 끝에서 환경 칸에 값을 쓴다(렌더 패킷이 읽는다). 텍스처가 아직 없으면 층이 없다.
+        SceneEnvironment& environment = _pManager->getSubsystem<SceneEnvironment>();
+        if ( _texture.isValid() )
+            environment.setSurfaceDeform( SurfaceDeformBinding{ _texture, makeShaderParams() } );
+        else
+            environment.clearSurfaceDeform();
     }
 
     void SurfaceDeformSystem::onSceneCleared()
     {
+        _pManager->getSubsystem<SceneEnvironment>().clearSurfaceDeform(); // 놓을 텍스처를 칸이 쥐고 있지 않게 먼저 비운다
         releaseTexture();
         _grid = SurfaceDeformGrid{};
         _persistentStampTable.clear();
@@ -199,13 +207,10 @@ namespace sw
         _stampCount = 0;
     }
 
-    bool SurfaceDeformSystem::contributeSurfaceDeform( SurfaceDeformBinding& outBinding ) const
+    span<const utf8* const> SurfaceDeformSystem::getSubsystemDependencies() const
     {
-        if ( _texture.isValid() == false )
-            return false;
-        outBinding._texture = _texture;
-        outBinding._params  = makeShaderParams();
-        return true;
+        static constexpr const utf8* kArrDependency[] = { SceneEnvironment::kSubsystemName };
+        return kArrDependency;
     }
 
     void SurfaceDeformSystem::stamp( const SurfaceStampDef& def, const float3& point, float32 yaw )

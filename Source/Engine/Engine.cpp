@@ -486,9 +486,10 @@ namespace sw
         }
     }
 
-    void Engine::updateScenes( float32 deltaTime, const FrameViewports& views, uint32 vpWidth, uint32 vpHeight, bool bTickScene )
+    void Engine::updateScenes( float32 deltaTime, const FrameViewports& views, uint32 vpWidth, uint32 vpHeight, SceneTick sceneTick )
     {
         const ViewportTarget& mainOutput = views.getMainOutput();
+        const bool            bTickScene = sceneTick == SceneTick::Run;
         _sceneDeltaSeconds               = bTickScene ? deltaTime : 0.0f;
         BLOCK( "Scene update" )
         {
@@ -542,7 +543,7 @@ namespace sw
         _pUIDriver->updateFrame( frame );
     }
 
-    void Engine::update( float32 deltaTime, const FrameViewports& views, const ViewCameraProviderDelegate& sceneViewCameraProvider, bool bTickScene )
+    void Engine::update( float32 deltaTime, const FrameViewports& views, const ViewCameraProviderDelegate& sceneViewCameraProvider, SceneTick sceneTick )
     {
         // 주 출력 — 게임 뷰가 있으면 그것(게임 카메라 · 화면 UI · 화면 사각형 뷰), 씬 뷰만 있으면 씬 뷰, 둘 다 없으면 백버퍼다.
         const ViewportTarget& mainOutput = views.getMainOutput();
@@ -567,7 +568,7 @@ namespace sw
 
         // 프레임 순서가 곧 의미다: 서비스 → 씬 틱 → 디버그 그리기 → 관찰자 → 런타임 UI → 렌더 패킷.
         updateFrameServices();
-        updateScenes( deltaTime, views, vpWidth, vpHeight, bTickScene );
+        updateScenes( deltaTime, views, vpWidth, vpHeight, sceneTick );
 
         // 물리 · 내비 디버그 선 — 씬 틱이 이번 프레임의 바디 · 경로를 정한 **뒤**, 관찰자 · UI · 패킷 **앞**이다(이번 프레임에 넣은 선이 endFrame 에서 확정된다).
         if ( _pSceneManager != nullptr )

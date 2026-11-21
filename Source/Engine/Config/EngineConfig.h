@@ -97,7 +97,7 @@ namespace sw
 {
     /**
      * @struct AudioConfig
-     * @brief 오디오 서비스(`IAudioService::initialize`)가 읽는 설정입니다 — 출력 장치 다시 열기 간격과 클립 캐시 예산.
+     * @brief 오디오 서비스(`AudioService::initialize`)가 읽는 설정입니다 — 출력 장치 다시 열기 간격과 클립 캐시 예산.
      * @details 다시 열기는 장치를 잃었거나 없이 시작했을 때 기본 장치를 다시 열어 보는 백오프다(지터를 섞어 두 배씩 상한까지). 헤드폰을 다시 꽂으면 곧 붙고(첫 간격),
      *          장치가 없는 기계는 상한마다 한 번만 본다. 언리얼 AudioMixer 의 장치 스왑 재시도 · 유니티 `OnAudioConfigurationChanged` 자리다.
      */

@@ -17,7 +17,6 @@
 #include "Core/Time/FixedTimestep.h"
 
 #include "Engine/Engine.h"
-#include "Engine/HostServiceSet.h"
 #include "Engine/UI/UIPlatformBinding.h"
 #include "Engine/UserSettings/UserSettingsHost.h"
 
@@ -94,13 +93,11 @@ namespace sw
          * @details 헤드리스 작업(씬 쿠킹)도 이 단계를 지나므로 쿠킹이 게임과 키트 컴포넌트를 제 타입으로 쿠킹합니다. 인스턴스는 `startModules` 가 만듭니다.
          */
         [[nodiscard]] bool loadModuleLibraries();
-        /**
-         * @brief 호스트 서비스 하나를 세웁니다(`kArrClientHostService` — 순서는 `HostService` 의 의존 선언이 정한다).
-         * @details `Game` 은 ClientModuleManager 로 게임과 에디터 인스턴스를 만든다(모듈 라이브러리는 `loadModuleLibraries` 가 이미 로드했다).
-         */
-        [[nodiscard]] bool startHostService( HostServiceID id );
-        /** @brief `startHostService` 가 세운 서비스 하나를 내립니다. 호스트 서비스 집합이 역순으로 부릅니다. */
-        void stopHostService( HostServiceID id );
+        // 호스트 서비스 — 이름 · 의존 · 몸통을 한 형식에 둔다(`App.cpp`). 중첩 형식이라 App 의 멤버를 쓴다. `initialize` 가 `HostLaunch::addHostService` 로 더한다.
+        class GameHostService;
+        class UserSettingsHostService;
+        class RuntimeUIHooksHostService;
+        class DevConsoleHostService;
         /** @brief 창 콜백 · 개발 도구의 프레임 시작 훅을 연결합니다(호스트 서비스가 선 뒤). */
         void bindHostCallbacks();
         /** @brief 에디터 렌더 훅 셋(준비 · 그리기 · Present 뒤)을 렌더 스레드에 걸거나(@p bBind) 뗍니다. 게임 호스트 서비스가 매니저를 세운 뒤 걸고 지우기 전에 뗀다. */
@@ -146,14 +143,14 @@ namespace sw
          * @details 엔진이 선 뒤 `startAutomation` 이 찾고, 엔진 종료 전에 놓는다(실행기는 엔진 범위와 함께 내려간다).
          */
         IAutomationRuntime* _pAutomation;
-        /** @brief 부팅 열(`_launch`)이 소유한 모듈 관리자를 만든 형식으로 보는 관찰 포인터입니다. `loadModuleLibraries` 가 채우고 호스트 서비스 `Game` 이 내려가며 비운다. */
+        /** @brief 부팅 열(`_launch`)이 소유한 모듈 관리자를 만든 형식으로 보는 관찰 포인터입니다. `loadModuleLibraries` 가 채우고 호스트 서비스 `GameHostService` 가 내려가며 비운다. */
         ClientModuleManager* _pModuleManager;
         /** @brief 주 창입니다(관찰 포인터). 소유자는 엔진 범위의 `MainWindowSubsystem` 이라 엔진 종료 때 창이 파괴된다. `acquireMainWindow` 가 채운다. */
         IWindow* _pWindow;
 
         FixedTimestep    _fixedTimestep;
         UserSettingsHost _userSettingsHost;
-        /** @brief 런타임 UI 의 호스트 훅(클립보드 · 스크린 리더 · 끝내기)입니다. 호스트 서비스 `RuntimeUIHooks` 가 세우고 내린다. */
+        /** @brief 런타임 UI 의 호스트 훅(클립보드 · 스크린 리더 · 끝내기)입니다. 호스트 서비스 `RuntimeUIHooksHostService` 가 세우고 내린다. */
         UIPlatformBinding _uiPlatformBinding;
 
         // 프레임마다 다시 만들 이유가 없는 델리게이트다. bindHostCallbacks 에서 한 번 묶는다.

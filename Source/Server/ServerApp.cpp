@@ -93,6 +93,237 @@ namespace sw
         };
     } // namespace
 
+    /** @brief 지표 · 상태 레지스트리 · 운영 HTTP · 프로세스 지표입니다. 맨 먼저 서고 맨 나중에 내려간다. */
+    class ServerApp::ObservabilityHostService final : public ISubsystem
+    {
+    public:
+        static constexpr const utf8* kSubsystemName = "Observability";
+
+        explicit ObservabilityHostService( ServerApp& server )
+            : _server{ server }
+        {
+        }
+
+        SubsystemInitResult initializeSubsystem() override
+        {
+            return ( _server._observability.initialize( *_server._pServerConfig, _server._startNanoseconds ) ) ? SubsystemInitResult::Succeeded : SubsystemInitResult::Failed;
+        }
+        void shutdownSubsystem() override
+        {
+            // 운영 엔드포인트는 게임을 내리는 동안에도 비우는 중(/readyz 503)을 알리다가 마지막에 닫는다. 로그를 남기므로 엔진(로거)보다 먼저 닫는다.
+            _server._observability.shutdown();
+        }
+        const utf8* getSubsystemName() const override { return kSubsystemName; }
+
+    private:
+        ServerApp& _server;
+    };
+
+    /** @brief 지난 실행의 크래시를 묶어 지표로 냅니다(남은 묶음 수를 지표로 내므로 관측 뒤). */
+    class ServerApp::CrashReportsHostService final : public ISubsystem
+    {
+    public:
+        static constexpr const utf8* kSubsystemName = "CrashReports";
+
+        explicit CrashReportsHostService( ServerApp& server )
+            : _server{ server }
+        {
+        }
+
+        SubsystemInitResult initializeSubsystem() override
+        {
+            return ( _server.collectPreviousCrashes() ) ? SubsystemInitResult::Succeeded : SubsystemInitResult::Failed;
+        }
+        void shutdownSubsystem() override
+        {
+            engine::getSubsystem<CrashReportService>().shutdown(); // 묶을 폴더가 없어 초기화하지 않았어도 된다
+        }
+        const utf8*             getSubsystemName() const override { return kSubsystemName; }
+        span<const utf8* const> getSubsystemDependencies() const override
+        {
+            static constexpr const utf8* kArrDependency[] = { ObservabilityHostService::kSubsystemName };
+            return kArrDependency;
+        }
+
+    private:
+        ServerApp& _server;
+    };
+
+    /** @brief 서버 문맥을 호스트 범위에 빌려 겁니다 — 문맥이 지표 · 상태 레지스트리를 빌려주므로 관측 뒤, 게임 · 키트가 기동하며 찾으므로 게임 앞. */
+    class ServerApp::ServiceContextHostService final : public ISubsystem
+    {
+    public:
+        static constexpr const utf8* kSubsystemName = "ServiceContext";
+
+        explicit ServiceContextHostService( ServerApp& server )
+            : _server{ server }
+        {
+        }
+
+        SubsystemInitResult initializeSubsystem() override
+        {
+            ServerApp& server                              = _server;
+            server._serverServiceContext._serverConfigPath = server._serverConfigPath;
+            server._serverServiceContext._pServerConfig    = server._pServerConfig;
+            server._serverServiceContext._pMetricRegistry  = server._observability.getMetricRegistry();
+            server._serverServiceContext._pHealthRegistry  = server._observability.getHealthRegistry();
+            server._serverServiceContext._pKitDirectory    = &server._kitDirectory;
+            // 게임 쪽(네트워크 세션)에는 공유 형식인 설정과 지표 레지스트리만 건다 — 서버 서비스 문맥은 `Engine/Server/` 형식이라 클라이언트와 함께 짓는 코드가 알면 안 된다.
+            engine::getSubsystem<GameNetSession>().bindMetricRegistry( server._observability.getMetricRegistry() ); // 게임 포트 지표(감사 N-7) — 게임이 포트를 열 때 샤드마다 올린다
+            // 키트 창구는 게임 모듈 범위에도 걸린다(`GameModuleManager::fillModuleServiceScope`) — 게임 서버 코드가 백필 같은 키트 인터페이스를 찾는다.
+            // 설정은 `engine::findSubsystem<const ServerConfig>()` 로 찾는다.
+            return ( server._launch.getHostScope().bind( server._pServerConfig ) && server._launch.getHostScope().bind<IServerKitLocator>( &server._kitLocator ) ) ? SubsystemInitResult::Succeeded : SubsystemInitResult::Failed;
+        }
+        void shutdownSubsystem() override
+        {
+            _server._launch.getHostScope().unbind<const ServerConfig>(); // 게임과 모듈이 내려간 뒤 — 레지스트리를 지우기 전
+            _server._launch.getHostScope().unbind<IServerKitLocator>();
+            // 세션은 엔진 종료에 닫힌다(관측보다 늦다) — 지운 레지스트리에 쓰지 않게 여기서 푼다.
+            engine::getSubsystem<GameNetSession>().bindMetricRegistry( nullptr );
+        }
+        const utf8*             getSubsystemName() const override { return kSubsystemName; }
+        span<const utf8* const> getSubsystemDependencies() const override
+        {
+            static constexpr const utf8* kArrDependency[] = { ObservabilityHostService::kSubsystemName };
+            return kArrDependency;
+        }
+
+    private:
+        ServerApp& _server;
+    };
+
+    /** @brief 게임 인스턴스 — 모듈 호스트입니다(창과 디바이스는 없다). 게임과 키트가 기동하며 서버 지표 · 상태 레지스트리에 자기 것을 올리고 게임 포트를 열므로 서버 문맥 뒤. */
+    class ServerApp::GameHostService final : public ISubsystem
+    {
+    public:
+        static constexpr const utf8* kSubsystemName = "Game";
+
+        explicit GameHostService( ServerApp& server )
+            : _server{ server }
+        {
+        }
+
+        SubsystemInitResult initializeSubsystem() override
+        {
+            const bool bStarted = _server._launch.getModuleManager()->initializeDedicatedServer( _server._launch.getLiveReloadManager() );
+            if ( bStarted == false )
+                SW_LOG_ERROR_ID( "Server.GameModuleCouldNot", "The game module could not be started on the dedicated server" );
+            return bStarted ? SubsystemInitResult::Succeeded : SubsystemInitResult::Failed;
+        }
+        void shutdownSubsystem() override
+        {
+            _server._launch.getModuleManager()->shutdown();
+            _server._launch.releaseModuleManager();
+        }
+        const utf8*             getSubsystemName() const override { return kSubsystemName; }
+        span<const utf8* const> getSubsystemDependencies() const override
+        {
+            static constexpr const utf8* kArrDependency[] = { ServiceContextHostService::kSubsystemName };
+            return kArrDependency;
+        }
+
+    private:
+        ServerApp& _server;
+    };
+
+    /** @brief 표준 입력 명령 채널입니다. */
+    class ServerApp::StandardInputHostService final : public ISubsystem
+    {
+    public:
+        static constexpr const utf8* kSubsystemName = "StandardInput";
+
+        explicit StandardInputHostService( ServerApp& server )
+            : _server{ server }
+        {
+        }
+
+        SubsystemInitResult initializeSubsystem() override
+        {
+            if ( _server._pServerConfig->_bConsoleInput )
+                _server._console.start();
+            return SubsystemInitResult::Succeeded;
+        }
+        void shutdownSubsystem() override
+        {
+            _server._console.stop(); // 읽기 스레드를 멈추고, 줄 버퍼도 엔진 종료의 누수 보고 전에 해제한다
+        }
+        const utf8* getSubsystemName() const override { return kSubsystemName; }
+
+    private:
+        ServerApp& _server;
+    };
+
+    /** @brief 개발 콘솔(명령 처리기)입니다. 명령이 게임이 올린 개발 명령 · 변수를 부른다 — 게임 뒤에 서고 게임보다 먼저 내려간다. */
+    class ServerApp::DevConsoleHostService final : public ISubsystem
+    {
+    public:
+        static constexpr const utf8* kSubsystemName = "DevConsole";
+
+        explicit DevConsoleHostService( ServerApp& server )
+            : _server{ server }
+        {
+        }
+
+        SubsystemInitResult initializeSubsystem() override
+        {
+            if ( _server._pDebugControl != nullptr )
+                _server._pDebugControl->startConsole();
+            return SubsystemInitResult::Succeeded;
+        }
+        void shutdownSubsystem() override
+        {
+            if ( _server._pDebugControl != nullptr )
+                _server._pDebugControl->stopConsole();
+        }
+        const utf8*             getSubsystemName() const override { return kSubsystemName; }
+        span<const utf8* const> getSubsystemDependencies() const override
+        {
+            static constexpr const utf8* kArrDependency[] = { GameHostService::kSubsystemName };
+            return kArrDependency;
+        }
+
+    private:
+        ServerApp& _server;
+    };
+
+    /** @brief 원격 개발 명령 채널(개발 구성)과 관리 채널입니다. 원격 줄을 개발 콘솔로 돌리므로 콘솔 뒤. */
+    class ServerApp::DebugChannelHostService final : public ISubsystem
+    {
+    public:
+        static constexpr const utf8* kSubsystemName = "DebugChannel";
+
+        explicit DebugChannelHostService( ServerApp& server )
+            : _server{ server }
+        {
+        }
+
+        SubsystemInitResult initializeSubsystem() override
+        {
+            ServerApp& server = _server;
+            if ( server._pDebugControl != nullptr && server._pDebugControl->startChannel() == false )
+                return SubsystemInitResult::Failed;
+            // 관리 채널은 Shipping 도 여는 길이다(기본 꺼짐, 켜면 토큰 필수). 상태는 서버 루프가 답한다.
+            const bool bStarted = server._adminChannel.start( *server._pServerConfig, *server._observability.getHealthRegistry(), SW_DELEGATE_LAMBDA( ServerAdminStatusDelegate, [pServer = &server]()
+            { return ServerAdminStatus{ pServer->_tickCount, pServer->getServiceConnectionCount(), pServer->_bDraining == SW_TRUE }; } ) );
+            return bStarted ? SubsystemInitResult::Succeeded : SubsystemInitResult::Failed;
+        }
+        void shutdownSubsystem() override
+        {
+            if ( _server._pDebugControl != nullptr )
+                _server._pDebugControl->stopChannel();
+            _server._adminChannel.stop();
+        }
+        const utf8*             getSubsystemName() const override { return kSubsystemName; }
+        span<const utf8* const> getSubsystemDependencies() const override
+        {
+            static constexpr const utf8* kArrDependency[] = { DevConsoleHostService::kSubsystemName };
+            return kArrDependency;
+        }
+
+    private:
+        ServerApp& _server;
+    };
+
     ServerApp::ServerApp()
         : _launch{}
         , _pDebugControl{ nullptr }
@@ -169,10 +400,16 @@ namespace sw
         if ( bConfigValid == false || _bConfigCheckOnly == SW_TRUE )
             return bConfigValid; // 검사만이면 여기서 끝난다(서비스 · 포트를 열지 않는다)
         _tickNanoseconds = constant::time::kNanosecondsPerSecond / static_cast<int64>( _pServerConfig->_tickRateHz );
-        // 호스트 서비스(관측 · 크래시 묶음 · 서버 문맥 · 게임 · 개발 콘솔 · 디버그 채널 · 표준 입력)을 의존 순서로 세운다. App 과 같은 표(`HostService`)이고,
+        // 호스트 서비스(관측 · 크래시 묶음 · 서버 문맥 · 게임 · 개발 콘솔 · 디버그 채널 · 표준 입력)를 의존 순서로 세운다. 순서는 각 서비스 형식의 의존 선언이 정하고,
         // 내리는 것은 `shutdown` 의 역순 한 줄이다.
-        if ( _launch.startHostServices( kArrServerHostService, SW_DELEGATE_METHOD( HostServiceStartDelegate, &ServerApp::startHostService, this ),
-                                        SW_DELEGATE_METHOD( HostServiceStopDelegate, &ServerApp::stopHostService, this ) ) == false )
+        _launch.addHostService<ObservabilityHostService>( *this );
+        _launch.addHostService<CrashReportsHostService>( *this );
+        _launch.addHostService<ServiceContextHostService>( *this );
+        _launch.addHostService<GameHostService>( *this );
+        _launch.addHostService<StandardInputHostService>( *this );
+        _launch.addHostService<DevConsoleHostService>( *this );
+        _launch.addHostService<DebugChannelHostService>( *this );
+        if ( _launch.startHostServices() == false )
             return false;
         // 서버 서비스는 호스트 서비스가 아니다 — 모듈 리로드마다 멈췄다 다시 서는 수명이다. 게임 뒤에 시작해 서비스가 게임이 정한 상태를 보게 하고,
         // `shutdown` 이 호스트 서비스보다 먼저 멈춘다.
@@ -292,123 +529,6 @@ namespace sw
         }
         SW_LOG_INFO_ID( "Server.CheckConfigResult", "Server config check: %#", bValid ? "ok" : "invalid" );
         return bValid;
-    }
-
-    bool ServerApp::startHostService( HostServiceID id )
-    {
-        switch ( id )
-        {
-            case HostServiceID::Observability:
-            {
-                return _observability.initialize( *_pServerConfig, _startNanoseconds );
-            }
-            case HostServiceID::CrashReports:
-            {
-                return collectPreviousCrashes();
-            }
-            case HostServiceID::ServiceContext:
-            {
-                // 게임 인스턴스를 만들기 전에 건다(의존 선언) — 게임과 키트가 기동하며 서버 지표 · 상태 레지스트리에 자기 것을 올리고 게임 포트를 연다.
-                _serverServiceContext._serverConfigPath = _serverConfigPath;
-                _serverServiceContext._pServerConfig    = _pServerConfig;
-                _serverServiceContext._pMetricRegistry  = _observability.getMetricRegistry();
-                _serverServiceContext._pHealthRegistry  = _observability.getHealthRegistry();
-                _serverServiceContext._pKitDirectory    = &_kitDirectory;
-                // 게임 쪽(네트워크 세션)에는 공유 형식인 설정과 지표 레지스트리만 건다 — 서버 서비스 문맥은 `Engine/Server/` 형식이라 클라이언트와 함께 짓는 코드가 알면 안 된다.
-                engine::getSubsystem<GameNetSession>().bindMetricRegistry( _observability.getMetricRegistry() ); // 게임 포트 지표(감사 N-7) — 게임이 포트를 열 때 샤드마다 올린다
-                // 키트 창구는 게임 모듈 범위에도 걸린다(`GameModuleManager::fillModuleServiceScope`) — 게임 서버 코드가 백필 같은 키트 인터페이스를 찾는다
-                return _launch.getHostScope().bind( _pServerConfig ) && _launch.getHostScope().bind<IServerKitLocator>( &_kitLocator ); // `engine::findSubsystem<const ServerConfig>()` 로 찾는다
-            }
-            case HostServiceID::Game:
-            {
-                const bool bStarted = _launch.getModuleManager()->initializeDedicatedServer( _launch.getLiveReloadManager() );
-                if ( bStarted == false )
-                    SW_LOG_ERROR_ID( "Server.GameModuleCouldNot", "The game module could not be started on the dedicated server" );
-                return bStarted;
-            }
-            case HostServiceID::StandardInput:
-            {
-                if ( _pServerConfig->_bConsoleInput )
-                    _console.start();
-                return true;
-            }
-            case HostServiceID::DevConsole:
-            {
-                if ( _pDebugControl != nullptr )
-                    _pDebugControl->startConsole();
-                return true;
-            }
-            case HostServiceID::DebugChannel:
-            {
-                if ( _pDebugControl != nullptr && _pDebugControl->startChannel() == false )
-                    return false;
-                // 관리 채널은 Shipping 도 여는 길이다(기본 꺼짐, 켜면 토큰 필수). 상태는 서버 루프가 답한다.
-                return _adminChannel.start( *_pServerConfig, *_observability.getHealthRegistry(), SW_DELEGATE_LAMBDA( ServerAdminStatusDelegate, [this]()
-                { return ServerAdminStatus{ _tickCount, getServiceConnectionCount(), _bDraining == SW_TRUE }; } ) );
-            }
-            case HostServiceID::UserSettings:
-            case HostServiceID::RuntimeUIHooks:
-            {
-                break;
-            }
-        }
-        SW_LOG_ERROR_ID( "Server.HostServiceNotDedicated", "Host service %# is not a dedicated server service", HostService::getName( id ) );
-        return false;
-    }
-
-    void ServerApp::stopHostService( HostServiceID id )
-    {
-        switch ( id )
-        {
-            case HostServiceID::Observability:
-            {
-                // 운영 엔드포인트는 게임을 내리는 동안에도 비우는 중(/readyz 503)을 알리다가 마지막에 닫는다. 로그를 남기므로 엔진(로거)보다 먼저 닫는다.
-                _observability.shutdown();
-                return;
-            }
-            case HostServiceID::CrashReports:
-            {
-                engine::getSubsystem<CrashReportService>().shutdown(); // 묶을 폴더가 없어 초기화하지 않았어도 된다
-                return;
-            }
-            case HostServiceID::ServiceContext:
-            {
-                _launch.getHostScope().unbind<const ServerConfig>(); // 게임과 모듈이 내려간 뒤 — 레지스트리를 지우기 전
-                _launch.getHostScope().unbind<IServerKitLocator>();
-                // 세션은 엔진 종료에 닫힌다(관측보다 늦다) — 지운 레지스트리에 쓰지 않게 여기서 푼다.
-                engine::getSubsystem<GameNetSession>().bindMetricRegistry( nullptr );
-                return;
-            }
-            case HostServiceID::Game:
-            {
-                _launch.getModuleManager()->shutdown();
-                _launch.releaseModuleManager();
-                return;
-            }
-            case HostServiceID::StandardInput:
-            {
-                _console.stop(); // 읽기 스레드를 멈추고, 줄 버퍼도 엔진 종료의 누수 보고 전에 해제한다
-                return;
-            }
-            case HostServiceID::DevConsole:
-            {
-                if ( _pDebugControl != nullptr )
-                    _pDebugControl->stopConsole();
-                return;
-            }
-            case HostServiceID::DebugChannel:
-            {
-                if ( _pDebugControl != nullptr )
-                    _pDebugControl->stopChannel();
-                _adminChannel.stop();
-                return;
-            }
-            case HostServiceID::UserSettings:
-            case HostServiceID::RuntimeUIHooks:
-            {
-                return;
-            }
-        }
     }
 
     bool ServerApp::startServerServices()
@@ -603,7 +723,7 @@ namespace sw
                 SW_LOG_ERROR_ID( "Server.ServerServicesCouldNot", "Server services could not be restarted after the module reload - fix the error and reload again" );
         }
         const ModuleFrameState& frameState = _launch.getModuleManager()->getFrameState();
-        _launch.getEngine().update( deltaSeconds, FrameViewports{}, ViewCameraProviderDelegate{}, frameState._bTickScene == SW_TRUE );
+        _launch.getEngine().update( deltaSeconds, FrameViewports{}, ViewCameraProviderDelegate{}, frameState._bTickScene == SW_TRUE ? SceneTick::Run : SceneTick::Pause );
         _launch.getEngine().endFrame();
     }
 
@@ -650,7 +770,7 @@ namespace sw
         }
         _reloadStopsServices.reset();
         // 호스트 서비스를 선 순서의 역순으로 내린다 — 표준 입력 · 디버그 채널 · 개발 콘솔, 게임(엔진보다 먼저), 서버 문맥, 크래시 묶음, 마지막에 관측.
-        // 순서는 `HostService` 의 의존 선언이 정한다(App 과 같은 표).
+        // 순서는 각 서비스 형식의 의존 선언이 정한다.
         _launch.stopHostServices();
         // 호스트 서비스가 모두 내려갔다 — 기동 뒤에 잡은 호스트 값(설정 경로 · 서버 문맥)을 엔진 종료(누수 보고)보다 먼저 놓는다.
         _serverServiceContext = ServerServiceContext{};

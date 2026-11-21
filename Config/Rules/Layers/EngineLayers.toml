@@ -93,7 +93,6 @@ Module = 11
 "EngineSubsystemSet.cpp" = 11
 "HeadlessSubsystem.h" = 11
 "HeadlessSubsystem.cpp" = 11
-"HostServiceSet.h" = 11
 
 # 층 안 순환이 아직 남은 층 — "층" = "까닭 · 끊을 곳". 적지 않은 층(6 위 전부와 4)은 린트 `layer-cycles` 가 검사한다. 끊으면 줄을 지운다.
 [sameTierCycle]

@@ -246,6 +246,8 @@ namespace sw
         if ( _bRegistered == SW_TRUE )
             return;
         _bRegistered = SW_TRUE;
+        // 필요 컴포넌트를 먼저 묶는다 — `onRegister` 와 그 뒤 틱이 목록을 돌며 다시 찾지 않는다. 못 묶은 것은 `Required<T>::bind` 가 오류로 남겼다.
+        (void)bindRequiredComponents();
         onRegister( manager );
     }
 

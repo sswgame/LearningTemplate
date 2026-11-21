@@ -9,6 +9,7 @@
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Foundation/EngineParallel.h"
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/WorkerReadFence.h"
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -106,6 +107,7 @@ namespace sw
         , _arrContactLog{}
         , _contactLogCount{ 0 }
         , _stepCount{ 0 }
+        , _openReadScopeCount{ 0 }
         , _debrisBudget{}
         , _fixedStepOverride{ 0.0f }
         , _bConfigured{ SW_FALSE }
@@ -676,6 +678,68 @@ namespace sw
         return count;
     }
 
+    PhysicsReadScope::PhysicsReadScope( ScenePhysics& owner, const IPhysicsQueryScene3D* pQuery3D, const IPhysicsQueryScene2D* pQuery2D )
+        : _pOwner{ &owner }
+        , _pQuery3D{ pQuery3D }
+        , _pQuery2D{ pQuery2D }
+    {
+    }
+
+    PhysicsReadScope::PhysicsReadScope( PhysicsReadScope&& other ) noexcept
+        : _pOwner{ other._pOwner }
+        , _pQuery3D{ other._pQuery3D }
+        , _pQuery2D{ other._pQuery2D }
+    {
+        other._pOwner   = nullptr;
+        other._pQuery3D = nullptr;
+        other._pQuery2D = nullptr;
+    }
+
+    PhysicsReadScope::~PhysicsReadScope()
+    {
+        SW_ASSERT( _pOwner == nullptr ); // 워커를 기다린 뒤 `ScenePhysics::closeReadScope` 로 닫는다 — 버리면 스텝이 영영 막힌다
+    }
+
+    PhysicsReadScope ScenePhysics::openReadScope()
+    {
+        ++_openReadScopeCount;
+        return PhysicsReadScope{ *this, _pScene3D.get(), _pScene2D.get() };
+    }
+
+    WorkerReadFence<ScenePhysics> ScenePhysics::closeReadScope( PhysicsReadScope&& scope )
+    {
+        const bool bOwned = scope._pOwner == this && _openReadScopeCount > 0;
+        SW_ASSERT( bOwned ); // 다른 씬의 표이거나 이미 닫았다
+        if ( bOwned )
+            --_openReadScopeCount;
+        scope._pOwner   = nullptr;
+        scope._pQuery3D = nullptr;
+        scope._pQuery2D = nullptr;
+        return WorkerReadFence<ScenePhysics>{};
+    }
+
+    WorkerReadFence<ScenePhysics> ScenePhysics::makeWriteFence() const
+    {
+        SW_ASSERT( _openReadScopeCount == 0 ); // 워커가 질의 창으로 읽는 동안 스텝을 돌리려 했다 — 구간을 먼저 닫는다
+        return WorkerReadFence<ScenePhysics>{};
+    }
+
+    void ScenePhysics::stepWorlds( const WorkerReadFence<ScenePhysics>& /*fence*/, float32 fixedStep )
+    {
+        if ( _pScene3D != nullptr )
+        {
+            _pScene3D->step( fixedStep );
+            const vector<PhysicsContactEvent3D>& listEvent = _pScene3D->getContactEvents();
+            _listFrameEvent3D.insert( _listFrameEvent3D.end(), listEvent.begin(), listEvent.end() );
+        }
+        if ( _pScene2D != nullptr )
+        {
+            _pScene2D->step( fixedStep );
+            const vector<PhysicsContactEvent2D>& listEvent = _pScene2D->getContactEvents();
+            _listFrameEvent2D.insert( _listFrameEvent2D.end(), listEvent.begin(), listEvent.end() );
+        }
+    }
+
     void ScenePhysics::step( float32 deltaTime )
     {
         _listFrameEvent3D.clear();
@@ -710,18 +774,7 @@ namespace sw
                 runFrameHook( PhysicsHookSlot::PreStep, phase, args );
             }
             flushCharacterMoves( fixedStep ); // 캐릭터는 바디 · 관절이 이번 스텝 목표를 정한 뒤, 월드 스텝 앞에 움직인다(예전 차례 그대로)
-            if ( _pScene3D != nullptr )
-            {
-                _pScene3D->step( fixedStep );
-                const vector<PhysicsContactEvent3D>& listEvent = _pScene3D->getContactEvents();
-                _listFrameEvent3D.insert( _listFrameEvent3D.end(), listEvent.begin(), listEvent.end() );
-            }
-            if ( _pScene2D != nullptr )
-            {
-                _pScene2D->step( fixedStep );
-                const vector<PhysicsContactEvent2D>& listEvent = _pScene2D->getContactEvents();
-                _listFrameEvent2D.insert( _listFrameEvent2D.end(), listEvent.begin(), listEvent.end() );
-            }
+            stepWorlds( makeWriteFence(), fixedStep );
             ++_stepCount;
             // 자세는 이 스텝에 깨어 있던 바디의 주인만 읽는다 — 정적 · 잠든 바디마다 백엔드 세 번(자세 · 두 속도)을 부르지 않는다.
             if ( _pScene3D != nullptr )

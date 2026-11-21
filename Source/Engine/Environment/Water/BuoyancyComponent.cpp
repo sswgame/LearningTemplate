@@ -41,6 +41,7 @@ namespace sw
         , _waterDensity{ PhysicsMaterialDef::kWaterDensity }
         , _linearDrag{ 200.0f }
         , _submergedPontoonCount{ 0 }
+        , _rigidBody{}
     {
     }
 
@@ -52,7 +53,7 @@ namespace sw
         if ( isSimulated() == false )
             return;
         IPhysicsBodyScene3D*      pScene    = physics.findScene3D();
-        const RigidBodyComponent* pRigid    = getOwner()->getComponent<RigidBodyComponent>();
+        const RigidBodyComponent* pRigid    = _rigidBody.find();
         const GameObjectManager*  pManager  = getOwner()->getManager();
         const bool                bHasInput = pScene != nullptr && pRigid != nullptr && pManager != nullptr;
         if ( bHasInput == false || pRigid->getBodyType() != PhysicsBodyType::Dynamic )

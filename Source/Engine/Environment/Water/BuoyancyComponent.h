@@ -8,7 +8,9 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
+#include "Engine/Object/Component/RequiredComponent.h"
 #include "Engine/Physics/Component/PhysicsComponent.h"
+#include "Engine/Physics/Component/RigidBodyComponent.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
@@ -66,8 +68,10 @@ namespace sw
         bool isInWater() const { return _submergedPontoonCount > 0; }
 
     protected:
-        void prePhysicsStep( ScenePhysics& physics, float32 fixedDeltaTime, uint32 stepIndex, uint32 stepCount ) override;
-        void releasePhysics( ScenePhysics& physics ) override;
+        /** @brief 폰툰이 힘을 거는 강체를 묶습니다 — 같은 오브젝트에 `RigidBodyComponent` 가 없으면 등록이 오류다(물리 단계마다 찾지 않는다). */
+        [[nodiscard]] bool bindRequiredComponents() override { return _rigidBody.bind( *this ); }
+        void               prePhysicsStep( ScenePhysics& physics, float32 fixedDeltaTime, uint32 stepIndex, uint32 stepCount ) override;
+        void               releasePhysics( ScenePhysics& physics ) override;
 
     private:
         PROPERTY( Category = "Buoyancy", DisplayName = "Pontoons", Tooltip = "Spheres that sample the water surface (body local)" )
@@ -78,5 +82,7 @@ namespace sw
         float32 _linearDrag;
 
         uint32 _submergedPontoonCount;
+        /** @brief 힘을 거는 강체입니다(필요 컴포넌트 — `bindRequiredComponents`). */
+        Required<RigidBodyComponent> _rigidBody;
     };
 } // namespace sw

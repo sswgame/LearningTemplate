@@ -15,7 +15,7 @@
 
 #include "Engine/Asset/PackEngineSettingsSubsystem.h"
 #include "Engine/Audio/AudioEngine.h"
-#include "Engine/Audio/IAudioService.h"
+#include "Engine/Audio/AudioService.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/GameTimeScale.h"
 #include "Engine/Config/PackEngineSettings.h"
@@ -1000,9 +1000,9 @@ namespace sw
         UIViewport viewport     = computeViewport( float2{ static_cast<float32>( frame._width ), static_cast<float32>( frame._height ) }, frame._contentScale, frame._safeInsets );
         viewport._pointerOrigin = frame._pointerOrigin; // 백버퍼면 빈 출력이라 0 이다
         // 음성 이벤트의 자막 — 오디오 스레드가 시작한 클립의 자막 키를 쌓아 두고, 가져가는 곳은 여기 하나다.
-        IAudioService* const pAudio      = engine::findSubsystem<IAudioService>();
-        const bool           bAudioReady = pAudio != nullptr && pAudio->isInitialized();
-        UISubtitleService&   subtitles   = engine::getSubsystem<UISubtitleService>();
+        AudioService* const pAudio      = engine::findSubsystem<AudioService>();
+        const bool          bAudioReady = pAudio != nullptr && pAudio->isInitialized();
+        UISubtitleService&  subtitles   = engine::getSubsystem<UISubtitleService>();
         if ( bAudioReady )
         {
             vector<AudioSubtitleCue> listCue;

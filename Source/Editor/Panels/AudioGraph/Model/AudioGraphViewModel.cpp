@@ -12,7 +12,7 @@
 #include "Editor/Panels/AudioGraph/Model/AudioGraphEditUtil.h"
 
 #include "Engine/Audio/AudioEngine.h"
-#include "Engine/Audio/IAudioService.h"
+#include "Engine/Audio/AudioService.h"
 
 namespace sw::editor
 {
@@ -74,14 +74,14 @@ namespace sw::editor
 
     bool AudioGraphViewModel::isPreviewAudioReady()
     {
-        return editor::getSubsystem<IAudioService>().isInitialized(); // 에디터는 오디오를 짓는 구성이라 서비스는 늘 있다(전용 서버 구성만 오디오를 짓지 않는다)
+        return editor::getSubsystem<AudioService>().isInitialized(); // 에디터는 오디오를 짓는 구성이라 서비스는 늘 있다(전용 서버 구성만 오디오를 짓지 않는다)
     }
 
     void AudioGraphViewModel::playPreview( const hashed_string& path )
     {
         if ( isPreviewAudioReady() == false )
             return;
-        AudioEngine& engine = editor::getSubsystem<IAudioService>().getEngine();
+        AudioEngine& engine = editor::getSubsystem<AudioService>().getEngine();
         if ( _previewID != 0 )
             engine.stop( _previewID, 0.0f );
         _previewID = engine.playClip( path, hashed_string( AudioBusNames::kUI ), AudioClipPlayParams{} );
@@ -91,13 +91,13 @@ namespace sw::editor
     {
         if ( _previewID == 0 || isPreviewAudioReady() == false )
             return;
-        editor::getSubsystem<IAudioService>().getEngine().stop( _previewID, 0.05f );
+        editor::getSubsystem<AudioService>().getEngine().stop( _previewID, 0.05f );
         _previewID = 0;
     }
 
     void AudioGraphViewModel::refreshPreview()
     {
-        if ( _previewID != 0 && isPreviewAudioReady() && editor::getSubsystem<IAudioService>().getEngine().isPlaying( _previewID ) == false )
+        if ( _previewID != 0 && isPreviewAudioReady() && editor::getSubsystem<AudioService>().getEngine().isPlaying( _previewID ) == false )
             _previewID = 0;
     }
 

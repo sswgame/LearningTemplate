@@ -6,7 +6,7 @@
  *          감시 값 `Module.*` 도 따라온다), 표준 입력 명령 채널(`StandardInputCommands` — 종료 낱말 `quit` · `stop`)입니다.
  *
  *          기동 순서는 다음과 같다. 호스트 범위(모듈 라이브러리 창구 · 종료 신호 처리기), 엔진(`EngineHostRole::DedicatedServer`, 기동 테이블의 Client 단계를 건너뛴다), 서버 설정,
- *          호스트 서비스(`HostService` 의 의존 선언 순서 — 관측, 크래시 묶음, 서버 문맥, 게임 인스턴스(창과 디바이스는 nullptr), 개발 콘솔, 디버그 채널, 표준 입력), 서버 서비스,
+ *          호스트 서비스(각 서비스 형식의 의존 선언 순서 — 관측, 크래시 묶음, 서버 문맥, 게임 인스턴스(창과 디바이스는 nullptr), 개발 콘솔, 디버그 채널, 표준 입력), 서버 서비스,
  *          "Dedicated server ready" 로그, 고정 틱 루프, 종료 요청, 서버 서비스 멈춤, 호스트 서비스 역순 종료, "Dedicated server shutdown complete" 로그, 엔진 종료, 호스트 범위 종료다.
  *          한 틱은 게임 고정 스텝 하나이며, 델타는 항상 `1 / _tickRateHz` 다. 그래서 서버 시뮬레이션이 실제 시계의 흔들림을 받지 않는다.
  *          다음 틱 마감까지 잠을 자고, 밀리면 `_maxCatchUpTicks` 까지 잠 없이 몰아서 돌고 그 이상은 버린다(경고를 남긴다).
@@ -27,7 +27,6 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Console/StandardInputCommands.h"
-#include "Engine/HostServiceSet.h"
 #include "Engine/Server/ServerAdminChannel.h"
 #include "Engine/Server/ServerObservability.h"
 #include "Engine/Server/ServerServiceRegistry.h"
@@ -97,10 +96,14 @@ namespace sw
          * @details 운영 포트 바인드 · 토큰, 관리 채널 토큰, 크래시 보고 동의. 배포 전에 CI · 이미지 빌드(`Scripts/package/server_image.py`)가 돌린다(언리얼 `-run=` 커맨드릿 · 서버 `-validate` 자리).
          */
         [[nodiscard]] static bool validateServerConfig( const ServerConfig& config );
-        /** @brief 호스트 서비스 하나를 세웁니다(`kArrServerHostService` — 순서는 `HostService` 의 의존 선언이 정한다). */
-        [[nodiscard]] bool startHostService( HostServiceID id );
-        /** @brief `startHostService` 가 세운 서비스 하나를 내립니다. 호스트 서비스 집합이 역순으로 부릅니다. */
-        void stopHostService( HostServiceID id );
+        // 호스트 서비스 — 이름 · 의존 · 몸통을 한 형식에 둔다(`ServerApp.cpp`). 중첩 형식이라 ServerApp 의 멤버를 쓴다. `initialize` 가 `HostLaunch::addHostService` 로 더한다.
+        class ObservabilityHostService;
+        class CrashReportsHostService;
+        class ServiceContextHostService;
+        class GameHostService;
+        class StandardInputHostService;
+        class DevConsoleHostService;
+        class DebugChannelHostService;
         /** @brief 서버 서비스 연결 수입니다(서비스가 없으면 0). 관측 · 드레인 · 상태가 읽는다. */
         [[nodiscard]] int32 getServiceConnectionCount() const;
         /** @brief 레지스트리에 올라온 서버 서비스(온라인 서비스 호스트 등)를 시작합니다. 하나라도 실패하면 false 입니다(기동 실패). */
