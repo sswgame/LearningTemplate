@@ -30,6 +30,9 @@ Scripts/lint/naming_words.py
   파이썬 이름의 PEP 8 꼴(모듈 · 함수 snake_case, 클래스 PascalCase, 상수 UPPER_CASE — docs/agents/NamingCpp.md)도 여기서 막는다.
   CMake 함수는 `sw_snake_case` 꼴만 받는다(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test). CMake 함수 꼴은 cmake 밖
   (Source · Test · ThirdParty 감싸기 · 뿌리 CMakeLists, vcpkg 포트 제외)의 정의도 본다. 전수 집계는 `py -3 -m Scripts naming-census`.
+- timing — 배포에 컴파일되는 헤더(`Source/Core` · `Engine` · `GameFramework` 의 `DevTools` · `Editor` · `Tests` · `Dev` 밖)에 `get…(Nanoseconds|Microseconds|Milliseconds)`
+  꼴 접근자를 선언하면 실패한다 — 감시 값 재료로 프레임마다 시계를 읽어 칸에 쌓고 공개 접근자로 읽는 모양이 배포에 남았다(2026-11-21 `GameModeComponent::getLastStepMicroseconds`).
+  시간은 프로파일러 구간(`SW_PROFILE_SCOPE`)으로 재고 감시 값이 그 구간을 읽는다. 시계 형식 자체 · 계산한 예산처럼 측정이 아닌 이름은 `_timingAccessorKeep` 에 까닭과 함께.
 - 이름 하나씩의 예외는 `_keep`, 전수 개명한 옛 이름은 이름 이력 표(`Config/Rules/Lint/NamingWordsBannedNames.json` 의 `_bannedNames`, C++ 는 주석 · 문자열 밖 코드, 스크립트는 선언 · 파일 · CLI 명령 이름을 본다).
 
 verb · term · predicate · lookup · word · kind 의 위반은 모두 실패다. 예전에는 이름 기준선(남은 위반 이름 목록, 줄기만 하는 래칫)을 두었으나 영역별 이전이
@@ -57,8 +60,8 @@ from lint.rule_tables import ExceptionTable, get_table_path, read_rule_table  # 
 
 RULE_ID = "naming-words"
 CONFIG_PATH = get_table_path(RULE_ID)   # 안내 글이 가리키는 낱말 표
-NAME_RULES = ("verb", "term", "predicate", "lookup", "word", "kind", "component", "interface")   # 이름마다 한 줄씩 모으는 판정(같은 이름은 처음 자리 하나만)
-KEEP_SECTIONS = ("_keep", "_acronymKeep")   # 이름 하나씩의 예외 — 까닭은 형식이 보고, 낡은 줄은 예전처럼 세지 않는다
+NAME_RULES = ("verb", "term", "predicate", "lookup", "word", "kind", "component", "interface", "timing")   # 이름마다 한 줄씩 모으는 판정(같은 이름은 처음 자리 하나만)
+KEEP_SECTIONS = ("_keep", "_acronymKeep", "_timingAccessorKeep")   # 이름 하나씩의 예외 — 까닭은 형식이 보고, 낡은 줄은 예전처럼 세지 않는다
 EXTENSIONS = (".h", ".cpp", ".inl")
 COMMENT = re.compile(r"//[^\n]*|/\*.*?\*/", re.S)
 STRING = re.compile(r'R"\((?:.|\n)*?\)"|"(?:[^"\\\n]|\\.)*"')
@@ -102,6 +105,9 @@ MACRO_NAME = re.compile(r"[A-Z0-9_]+")
 #: 기반 목록이 있는 형식 정의(`class X : public Y {`) — 전방 선언(`class X;`)은 `{` 가 없어 빠진다. 기반 목록은 둘째 무리(없으면 None)
 TYPE_DEFINITION = re.compile(r"\b(?:class|struct)\s+(?:(?:SW_\w+|alignas\s*\([^)]*\)|\[\[[^\]]*\]\])\s+)*([A-Za-z_]\w*)\s*(?:final\s*)?(?::(?!:)\s*([^{;()]*))?\{")
 REFLECT_INTERFACE_TYPE = re.compile(r"\bREFLECT\(\s*Interface\b[^)]*\)\s*(?:class|struct)\s+(?:SW_\w+\s+)*([A-Za-z_]\w*)")
+TIMING_ACCESSOR = re.compile(r"(?<![\w.>:])(get[A-Z]\w*(?:Nanoseconds|Microseconds|Milliseconds))\s*\(")   # 선언 자리만 — `x.get…(` · `p->get…(` · `A::get…(` 부르기는 뺀다
+SHIPPING_HEADER_ROOTS = ("Source/Core/", "Source/Engine/", "Source/GameFramework/")
+SHIPPING_HEADER_SKIP_PARTS = ("/DevTools/", "/Editor/", "/Tests/", "/Dev/")   # 배포에서 빠지는 모듈 · 폴더(`SW_DEV_ONLY_SOURCE_PATTERNS`)
 COMPONENT_SUFFIX = "Component"
 LETTERS = re.compile(r"[A-Za-z]+")
 PARAMETER_PREFIXES = ("out", "inout", "outb", "inoutb", "arr", "list", "map", "set")
@@ -262,6 +268,11 @@ def find_banned_names(code: str, banned_names: dict, map_first_run: dict[str, st
     return [match.group(1) for match in compile_banned_names(list_candidate).finditer(code)] if list_candidate else []
 
 
+def is_shipping_header(path: str) -> bool:
+    """배포 구성이 짓는 엔진 층 헤더인가 — timing 판정의 범위."""
+    return path.endswith((".h", ".inl")) and path.startswith(SHIPPING_HEADER_ROOTS) and not any(part in path for part in SHIPPING_HEADER_SKIP_PARTS)
+
+
 def classify_names(list_code: Iterable[tuple[str, str]], table: dict) -> tuple[list[str], dict[str, dict[str, str]]]:
     """(기준선 없는 문제 목록, 규칙 → {이름: 경로 · 안내}) — 기준선 규칙의 위반은 이름으로 모아 기준선과 견준다. @p list_code 는 (경로, `strip_code` 한 글)."""
     banned_verbs = table["_banned"]
@@ -270,6 +281,7 @@ def classify_names(list_code: Iterable[tuple[str, str]], table: dict) -> tuple[l
     predicate_words = set(table.get("_predicateWords", []))
     lookup_words = set(table.get("_lookupWords", []))
     keep = table["_keep"]
+    timing_keep = table.get("_timingAccessorKeep", {})
     banned_names = table.get("_bannedNames", {})
     map_first_run = {name: (match.group(0) if (match := WORD_RUN.match(name)) else None) for name in banned_names}
     map_term: dict[str, str | None] = {}   # 이름 → 금지 명사 — 같은 식별자가 파일마다 수백 번 나와 `_keepTerms` 지우기를 이름마다 한 번만 한다
@@ -309,6 +321,12 @@ def classify_names(list_code: Iterable[tuple[str, str]], table: dict) -> tuple[l
             name = match.group(1)
             if re.fullmatch(r"I[A-Z]\w*", name) is None:
                 record("interface", name, path, f"REFLECT( Interface ) 형식 '{name}' 는 I + 대문자로 시작한다 — 상태 없는 계약의 이름 규칙(NamingCpp 인터페이스)")
+        if is_shipping_header(path):
+            for match in TIMING_ACCESSOR.finditer(code):
+                name = match.group(1)
+                if name not in timing_keep:
+                    record("timing", name, path, f"배포 헤더의 시간 접근자 '{name}' — 감시 값 재료면 프로파일러 구간(SW_PROFILE_SCOPE)으로 재고 감시 값이 구간을 읽는다"
+                                                 f"(SceneTickScheduler::kComponentTickScopeName). 측정이 아니면 {CONFIG_PATH} 의 _timingAccessorKeep 에 까닭과 함께")
         for match in BOOL_FUNCTION.finditer(code):
             name = match.group(1)
             words = split_words(name, function=True)
@@ -446,6 +464,12 @@ def run_self_check() -> None:
     _, shape_found = classify_names([("a.h", shape_code)], table)
     assert set(shape_found["component"]) == {"BarMover", "BazComponent"}, shape_found   # 양성: 접미 없는 컴포넌트 · 컴포넌트가 아닌 Component 끝말. 음성: FooComponent · ComponentHandle · 기반 Component · 전방 선언
     assert set(shape_found["interface"]) == {"Bad"}, shape_found   # 양성: I 없는 인터페이스. 음성: IGood
+    timing_table = dict(table, _timingAccessorKeep={"getElapsedMicroseconds": "시계 형식"})
+    timing_code = strip_code("int64 getLastStepMicroseconds() const { return watch.getElapsedMicroseconds(); } int64 getElapsedMicroseconds() const; uint64 Foo::getPeakNanoseconds();")
+    _, timing_found = classify_names([("Source/GameFramework/a.h", timing_code)], timing_table)
+    assert set(timing_found["timing"]) == {"getLastStepMicroseconds"}, timing_found   # 양성: 배포 헤더의 선언. 음성: 부르기 · 예외 표 · `A::` 정의
+    for path in ("Source/Editor/a.h", "Source/Engine/Tests/a.h", "Source/DevTools/a.h", "Source/Engine/a.cpp"):
+        assert classify_names([(path, timing_code)], timing_table)[1]["timing"] == {}, path   # 음성: 배포에 없는 모듈 · 테스트 · .cpp
     assert find_first_base("public sw::Map<Key, Value>, private Other") == "Map" and find_first_base(None) == ""
     name_problems = list_name_problems(found_by_rule)
     assert len(name_problems) == 6 and name_problems[0].startswith("[verb] a.h: ") and any("materialGroupFor" in line for line in name_problems), name_problems
