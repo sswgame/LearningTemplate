@@ -20,8 +20,8 @@ SW_TEST_CASE( RealtimeSectionTest, CountsHeapAndLocksOnlyInsideTheSection )
         unique_ptr<int32> pOutside = make_unique<int32>( 1 );
         ScopedLock<mutex> outsideLock{ lockForTest };
     }
-    SW_EXPECT_EQUAL( 0u, static_cast<uint32>( counters._allocationCount.load() ) );
-    SW_EXPECT_EQUAL( 0u, static_cast<uint32>( counters._lockCount.load() ) );
+    SW_EXPECT_EQUAL( 0u, static_cast<uint32>( counters._allocationCount.get() ) );
+    SW_EXPECT_EQUAL( 0u, static_cast<uint32>( counters._lockCount.get() ) );
 
     {
         const RealtimeSection section{ counters };
@@ -30,13 +30,13 @@ SW_TEST_CASE( RealtimeSectionTest, CountsHeapAndLocksOnlyInsideTheSection )
         }
         ScopedLock<mutex> insideLock{ lockForTest };
     }
-    SW_EXPECT_TRUE( counters._allocationCount.load() >= 1u );
-    SW_EXPECT_TRUE( counters._freeCount.load() >= 1u );
-    SW_EXPECT_EQUAL( 1u, static_cast<uint32>( counters._lockCount.load() ) );
+    SW_EXPECT_TRUE( counters._allocationCount.get() >= 1u );
+    SW_EXPECT_TRUE( counters._freeCount.get() >= 1u );
+    SW_EXPECT_EQUAL( 1u, static_cast<uint32>( counters._lockCount.get() ) );
 
-    const uint64 allocationsAfter = counters._allocationCount.load();
+    const uint64 allocationsAfter = counters._allocationCount.get();
     {
         unique_ptr<int32> pAfter = make_unique<int32>( 3 );
     }
-    SW_EXPECT_EQUAL( static_cast<uint32>( allocationsAfter ), static_cast<uint32>( counters._allocationCount.load() ) );
+    SW_EXPECT_EQUAL( static_cast<uint32>( allocationsAfter ), static_cast<uint32>( counters._allocationCount.get() ) );
 }

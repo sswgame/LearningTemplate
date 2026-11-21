@@ -165,8 +165,8 @@ namespace sw
         , _selectedTool{ 0 }
         , _monthCount{ 0 }
         , _evolvedCount{ 0 }
-        , _buildCount{ 0 }
-        , _demolishCount{ 0 }
+        , _buildCount{}
+        , _demolishCount{}
         , _bCursorValid{ SW_FALSE }
         , _bAutoPlanToggle{ SW_FALSE }
         , _reserved{ 0 }
@@ -281,10 +281,10 @@ namespace sw
             return false; // 자동 계획을 읽지 못했다 — 이유는 플래너가 남겼다
 
         _listEvent.clear();
-        _monthCount    = 0;
-        _evolvedCount  = 0;
-        _buildCount    = 0;
-        _demolishCount = 0;
+        _monthCount   = 0;
+        _evolvedCount = 0;
+        _buildCount.reset();
+        _demolishCount.reset();
         _listTool.clear();
         _listTool.push_back( nullptr );
         for ( const CityBuildingDef& def : _pCatalog->getBuildings() )
@@ -720,7 +720,7 @@ namespace sw
             placeSelected();
         if ( inputMap.wasActionTriggered( hashed_string( "Nile.Demolish" ) ) && _city.demolish( _cursorTile._x, _cursorTile._y ) )
         {
-            ++_demolishCount;
+            _demolishCount.add();
             SW_LOG_INFO_ID( "Nile.Demolished", "[Nile] demolished (%#, %#)", _cursorTile._x, _cursorTile._y );
         }
     }
@@ -755,7 +755,7 @@ namespace sw
             // 도로는 끌어서 깐다. 이미 도로인 타일은 조용히 넘어간다.
             const CityPlaceResult result = _city.placeRoad( _cursorTile._x, _cursorTile._y );
             if ( result == CityPlaceResult::Ok )
-                ++_buildCount;
+                _buildCount.add();
             if ( result == CityPlaceResult::NotEnoughMoney || result == CityPlaceResult::BadTerrain )
                 SW_LOG_INFO_ID( "NileGameMode.CannotLayRoad", "[Nile] cannot lay road at (%#, %#): %#", _cursorTile._x, _cursorTile._y, getEnumName( result ) );
             return;
@@ -763,7 +763,7 @@ namespace sw
         const CityPlaceResult result = _city.placeBuilding( pDef->_id, _cursorTile._x, _cursorTile._y );
         if ( result == CityPlaceResult::Ok )
         {
-            ++_buildCount;
+            _buildCount.add();
             SW_LOG_INFO_ID( "NileGameMode.BuiltLeft", "[Nile] built %# at (%#, %#) - $%# left", pDef->_name.c_str(), _cursorTile._x, _cursorTile._y, _wallet.getBalance( _city.getCurrency() ) );
             getSoundQueue().queueEvent( NileGameModeComponentInternal::kEventBuilt );
         }

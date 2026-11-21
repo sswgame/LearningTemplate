@@ -14,6 +14,7 @@ Search here before writing a helper for a common job. If the job is missing, sea
 | Command-line output (help text, lists) | `Core/Process/StandardOutput.h` `StandardOutput::write` | `fputs( …, stdout )` · `std::cout` |
 | Assert | `Core/Foundation/Macros.h` `SW_ASSERT`; with a message and a log line in every build: `Core/Log/Logger.h` `SW_LOG_ASSERT` | `assert` |
 | Current time, elapsed time, wait deadline | `Core/Time/MonotonicClock.h` `MonotonicClock::nowNanoseconds` · `Stopwatch` · `Deadline::afterMilliseconds` · `sleepUntilNanoseconds` | `std::chrono::steady_clock` · `high_resolution_clock` · `system_clock` |
+| Count or time something only tests · watches · profiling read (diagnostic counter, per-frame cost) | Per-frame time or count: `Engine/Profiling/FrameProfiler.h` `SW_PROFILE_SCOPE` · `SW_PROFILE_COUNT`, a watch reads the slot (`FrameProfiler::getLastFrameNanos`, `SceneTickScheduler::kComponentTickScopeName`). Cumulative count across frames: `Core/Concurrency/DevCounter.h` `DevCounter` (empty in Shipping, accessor returns `const DevCounter&`) | `uint32` / `atomic` counter field or a clock-reading member plus a getter on a runtime class |
 | UTC time, local calendar | `Core/Time/WallClock.h` (services take `nowMs` as a parameter) | `system_clock` · `localtime` · `gmtime` |
 | Frame delta | `Core/Time/GameTimer.h` · `Core/Time/FixedTimestep.h` | own delta bookkeeping |
 | Random value (engine) | `Core/Math/MathUtil.h` `MathUtil::getRandom<T>` · `getRandomRange` · `getRandomBits64` | `rand` · `srand` · `std::mt19937` · `std::random_device` |

@@ -115,7 +115,7 @@ namespace sw
                 if ( pService == nullptr )
                     return false;
                 const RealtimeViolationCounters& counters = pService->getEngine().getRealtimeViolations();
-                outValue                                  = static_cast<float64>( counters._allocationCount.load( std::memory_order_relaxed ) + counters._freeCount.load( std::memory_order_relaxed ) );
+                outValue                                  = static_cast<float64>( counters._allocationCount.get() + counters._freeCount.get() );
                 return true;
             }
 
@@ -125,7 +125,7 @@ namespace sw
                 AudioService* pService = pManager != nullptr ? pManager->getSubsystem<SceneAudio>().findAudioService() : nullptr;
                 if ( pService == nullptr )
                     return false;
-                outValue = static_cast<float64>( pService->getEngine().getRealtimeViolations()._lockCount.load( std::memory_order_relaxed ) );
+                outValue = static_cast<float64>( pService->getEngine().getRealtimeViolations()._lockCount.get() );
                 return true;
             }
 
@@ -135,7 +135,7 @@ namespace sw
                 const AudioService* pService = pManager != nullptr ? pManager->getSubsystem<SceneAudio>().findAudioService() : nullptr;
                 if ( pService == nullptr )
                     return false;
-                outValue = static_cast<float64>( pService->getEngine().getRetireOverflowCount() );
+                outValue = static_cast<float64>( pService->getEngine().getRetireOverflowCount().get() );
                 return true;
             }
 

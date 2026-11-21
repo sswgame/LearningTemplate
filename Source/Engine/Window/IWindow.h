@@ -3,6 +3,7 @@
  * @brief 플랫폼 독립적인 창(OS 디스플레이 창) 생성과 메시지 처리 인터페이스입니다.
  */
 #pragma once
+#include "Core/Concurrency/DevCounter.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
@@ -167,7 +168,7 @@ namespace sw
         /** @brief 표면이 없거나 앱이 멈춰 프레임을 돌면 안 되는 때입니다. 최소화와 다르다 — 최소화는 프레임을 돌되 늦춘다(`FramePacer`). */
         [[nodiscard]] bool isRenderPaused() const { return _bSurfaceLost == SW_TRUE || _bAppSuspended == SW_TRUE; }
         /** @brief `isRenderPaused` 인 채 지난 메인 루프 틱의 누적입니다(`advanceLifecycleTick`). */
-        [[nodiscard]] uint32 getRenderPausedTickCount() const { return _renderPausedTickCount; }
+        [[nodiscard]] const DevCounter& getRenderPausedTickCount() const { return _renderPausedTickCount; }
         /**
          * @brief 플랫폼 창이 수명 이벤트를 받으면 부릅니다. 상태가 실제로 바뀔 때만 구독자에게 알립니다(같은 이벤트가 겹쳐 와도 한 번).
          * @details 창 스레드(메인 스레드)에서 부른다. `SurfaceLost` 는 구독자가 돌아온 뒤에 표면이 사라진다.
@@ -567,13 +568,13 @@ namespace sw
         uint8                  _arrReserved[5];
         WindowTextInputArea    _textInputArea; /**< 마지막 `setTextInputArea` 의 값. */
         /** @brief 다시 만들 때 놓을 위치입니다. 플랫폼 생성자가 자기 "알아서" 값으로 채웁니다. */
-        int32  _restoreX;
-        int32  _restoreY;
-        uint32 _minClientWidth;             /**< 사용자가 줄일 수 있는 가장 작은 클라이언트 가로(물리 픽셀)입니다. 0 이면 제한이 없습니다. */
-        uint32 _minClientHeight;            /**< 위와 같습니다(세로). */
-        uint32 _monitorGeneration;          /**< `getMonitorGeneration` 의 값입니다. */
-        uint32 _renderPausedTickCount;      /**< `getRenderPausedTickCount` 의 값입니다. */
-        uint32 _simulatedInterruptionTicks; /**< 흉내 낸 멈춤의 남은 틱입니다(`simulateAppInterruption`). 0 이면 흉내 내지 않습니다. */
+        int32      _restoreX;
+        int32      _restoreY;
+        uint32     _minClientWidth;             /**< 사용자가 줄일 수 있는 가장 작은 클라이언트 가로(물리 픽셀)입니다. 0 이면 제한이 없습니다. */
+        uint32     _minClientHeight;            /**< 위와 같습니다(세로). */
+        uint32     _monitorGeneration;          /**< `getMonitorGeneration` 의 값입니다. */
+        DevCounter _renderPausedTickCount;      /**< `getRenderPausedTickCount` 의 값입니다. */
+        uint32     _simulatedInterruptionTicks; /**< 흉내 낸 멈춤의 남은 틱입니다(`simulateAppInterruption`). 0 이면 흉내 내지 않습니다. */
 
     private:
         // 크기 콜백 칸은 기반만 만진다 — 플랫폼이 메시지 처리 안에서 바로 부르는 길(감사 P-2)을 형식으로 막는다. 플랫폼은 `notifyResized` 만 부른다.

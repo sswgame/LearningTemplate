@@ -90,7 +90,7 @@ namespace sw
         , _pSettings{ nullptr }
         , _settingsSubscription{}
         , _seenSerial{ 0 }
-        , _writeCount{ 0 }
+        , _writeCount{}
         , _polledCount{ 0 }
         , _bBound{ SW_FALSE }
         , _bApplying{ SW_FALSE }
@@ -516,7 +516,7 @@ namespace sw
         const bool bChanged = UIBindingValue::writeValue( binding._target, pWidget, value );
         if ( bChanged )
         {
-            ++_writeCount;
+            _writeCount.add();
             pWidget->onBoundPropertyChanged( binding._target.getRootProperty() );
         }
         _bApplying = SW_FALSE;

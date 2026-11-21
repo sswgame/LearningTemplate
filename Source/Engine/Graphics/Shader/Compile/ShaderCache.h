@@ -4,6 +4,7 @@
  * @note AssetManager 가 아닙니다. 셰이더 바이트코드는 RHI와 컴파일러의 수명을 따르며 팩 에셋 인스턴스와 분리합니다.
  */
 #pragma once
+#include "Core/Concurrency/DevCounter.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
@@ -164,9 +165,9 @@ namespace sw
          */
         [[nodiscard]] optional<ShaderEnginePolicy> findEnginePolicy() const;
         /** @brief 메모리 캐시가 맞아 공급자를 부르지 않은 로드 수입니다(초기화마다 0 부터). 쿠킹본 정책은 지문이 상수라 같은 요청의 둘째 로드부터 맞아야 한다. */
-        [[nodiscard]] uint64 getMemoryHitCount() const { return _memoryHitCount.load(); }
+        [[nodiscard]] const DevCounter& getMemoryHitCount() const { return _memoryHitCount; }
         /** @brief 공급자(팩 · 컴파일)까지 간 로드 수입니다(초기화마다 0 부터). */
-        [[nodiscard]] uint64 getProviderLoadCount() const { return _providerLoadCount.load(); }
+        [[nodiscard]] const DevCounter& getProviderLoadCount() const { return _providerLoadCount; }
         /**
          * @brief 컴파일(셰이더 공급자 로드 — 팩 읽기 · 컴파일, 그리고 RHI 의 파이프라인 생성 — 드라이버 링크 · 특수화)이 하나라도 진행 중이던 벽시계 시간입니다(겹친 일은 한 번).
          * @details 자동화의 모든 벽시계 시한(전체 · `WaitUntil timeoutWallSeconds`)과 행 감시가 이만큼을 뺀다 — 빈 캐시의 첫 실행이 컴파일하는 동안 시한에 지지 않게.
@@ -208,8 +209,8 @@ namespace sw
         ShaderRequestLog _requestLog                                     SW_GUARDED_BY( _mutexCache ); ///< 이 실행이 공급자까지 간 요청(백엔드 교체로 메모리 캐시를 비워도 남는다) — `_requestLogPath` 가 있을 때만 모은다
         string                                                           _requestLogPath;              ///< `-shader-request-log` 의 파일. 비면 기록하지 않는다. 기동(`initialize`)에서만 쓰고 로드 워커는 읽기만 한다
         Subscription                                                     _configReloadedSubscription;  ///< 설정 다시 읽기 알림 구독(`onConfigReloaded`)
-        atomic<uint64>                                                   _memoryHitCount;              ///< `getMemoryHitCount` — 로드 워커가 함께 센다
-        atomic<uint64>                                                   _providerLoadCount;           ///< `getProviderLoadCount` — 로드 워커가 함께 센다
+        DevCounter                                                       _memoryHitCount;              ///< `getMemoryHitCount` — 로드 워커가 함께 센다
+        DevCounter                                                       _providerLoadCount;           ///< `getProviderLoadCount` — 로드 워커가 함께 센다
         BusyClock                                                        _compileBusy;                 ///< `getCompileBusyClock` — 로드 워커 · PSO 워커가 함께 센다
         uint8                                                            _bLiveDebugCodegen;           ///< `isLiveDebugCodegen` — 기동에서만 쓴다(그때는 로드가 없다)
 

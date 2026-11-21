@@ -615,19 +615,9 @@ namespace sw
         return _pState->_tickScheduler.getTickRegistry();
     }
 
-    int64 GameObjectManager::getLastFrameComponentTickNanoseconds() const
-    {
-        return _pState->_tickScheduler.getLastFrameTickNanoseconds();
-    }
-
     void GameObjectManager::markTickStagesDirty()
     {
         _pState->_tickScheduler.getTickRegistry().markAllDirty();
-    }
-
-    uint32 GameObjectManager::getStageTransformApplyCount() const
-    {
-        return _pState->_tickScheduler.getStageTransformApplyCount();
     }
 
     void GameObjectManager::notifyTransformDirty()

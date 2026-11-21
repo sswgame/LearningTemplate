@@ -3,6 +3,7 @@
  * @brief 화면 하나의 바인딩 집합입니다. 문서의 바인딩 식을 해석해 위젯 필드와 소스(뷰모델 필드)를 연결하고, 바뀐 것만 씁니다.
  */
 #pragma once
+#include "Core/Concurrency/DevCounter.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
@@ -87,7 +88,7 @@ namespace sw
         /** @brief 마지막으로 연결할 때의 오류입니다(파일, 줄, 식, 이유이며 영어). */
         const vector<string>& getErrors() const { return _listError; }
         /** @brief 위젯 필드에 실제로 쓴 횟수입니다(같은 값이면 세지 않으며, 테스트와 진단에 씁니다). */
-        uint32 getWriteCount() const { return _writeCount; }
+        const DevCounter& getWriteCount() const { return _writeCount; }
         /** @brief 이번 `update` 가 비교한 폴링 바인딩 수입니다(프로파일 카운터 UI.PollBindings). */
         uint32 getPolledCount() const { return _polledCount; }
 
@@ -139,7 +140,7 @@ namespace sw
         UserSettingsManager*  _pSettings;             ///< 변경 통보를 등록한 설정 서비스입니다(설정 바인딩이 없으면 nullptr).
         Subscription          _settingsSubscription;  ///< 그 통보의 구독입니다.
         uint64                _seenSerial;            ///< 마지막 `update` 가 본 뷰모델 알림 번호입니다.
-        uint32                _writeCount;
+        DevCounter            _writeCount;
         uint32                _polledCount;
         uint8                 _bBound           : 1; ///< 식을 해석해 연결했는지 나타냅니다(뷰모델이나 식이 바뀌면 다시 연결합니다).
         uint8                 _bApplying        : 1; ///< 위젯 필드에 쓰는 중인지 나타냅니다. 그 사이의 사용자 입력 알림은 되쓰지 않습니다.

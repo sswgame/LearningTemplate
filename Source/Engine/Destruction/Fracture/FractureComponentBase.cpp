@@ -610,8 +610,6 @@ namespace sw
         , _intactAngularVelocity{}
         , _objectScale{ 1.0f }
         , _leafShapeScale{ 0.0f }
-        , _lastApplyMicroseconds{ 0.0f }
-        , _lastPoseMicroseconds{ 0.0f }
         , _frameSimulatedTime{ 0.0f }
         , _nextSpawnOrder{ 0 }
         , _debrisOwner{ DebrisOwnerID::None }
@@ -809,7 +807,7 @@ namespace sw
         (void)alpha;
         if ( _bFractured == SW_FALSE || _physics == nullptr )
             return;
-        Stopwatch  stopwatch;
+        SW_PROFILE_SCOPE( "GT.Scene.tick.physics.fracturePose" ); // 처리 시간은 계측이 잰다(런타임 칸으로 재지 않는다)
         const bool bMoved  = updateGroups( _frameSimulatedTime );
         bool       bFading = false;
         for ( const FractureGroupRuntime& runtime : _listRuntime )
@@ -830,7 +828,6 @@ namespace sw
             if ( bStillLongEnough )
                 setBaked( true );
         }
-        _lastPoseMicroseconds = static_cast<float32>( stopwatch.getElapsedMicroseconds() );
     }
 
     void FractureComponentBase::releasePhysics( ScenePhysics& physics )
@@ -938,7 +935,7 @@ namespace sw
         vector<FracturePendingDamage> listPending;
         if ( _pendingDamage.takeAll( listPending ) == false )
             return;
-        Stopwatch                      stopwatch;
+        SW_PROFILE_SCOPE( "GT.Scene.tick.physics.fractureApply" );
         vector<DestructionDamageEvent> listEvent;
         for ( const FracturePendingDamage& pending : listPending )
         {
@@ -959,7 +956,6 @@ namespace sw
                 applyMeshEvent( physics, event );
             }
         }
-        _lastApplyMicroseconds = static_cast<float32>( stopwatch.getElapsedMicroseconds() );
     }
 
     float3 FractureComponentBase::toMeshSpace( const FractureGroupRuntime& runtime, const float3& worldPoint ) const

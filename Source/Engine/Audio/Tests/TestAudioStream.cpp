@@ -392,29 +392,29 @@ SW_TEST_CASE( AudioStreamTest, WindowAppendsRetainsAndSeeks )
 
     SW_REQUIRE_TRUE( window.readFrame( 0, left, right ) ); // 첫 읽기는 되감기 하나로 창을 연다
     SW_EXPECT_NEAR( 0.0f, left, 0.0f );
-    SW_EXPECT_EQUAL( 1u, window.getSeekCount() );
-    SW_EXPECT_EQUAL( 4ull, window.getDecodedFrameCount() );
+    SW_EXPECT_EQUAL( uint64{ 1 }, window.getSeekCount().get() );
+    SW_EXPECT_EQUAL( uint64{ 4 }, window.getDecodedFrameCount().get() );
 
     SW_REQUIRE_TRUE( window.readFrame( 3, left, right ) ); // 창 안: 더 풀지 않는다
     SW_EXPECT_NEAR( 3.0f, left, 0.0f );
-    SW_EXPECT_EQUAL( 4ull, window.getDecodedFrameCount() );
+    SW_EXPECT_EQUAL( uint64{ 4 }, window.getDecodedFrameCount().get() );
 
     SW_REQUIRE_TRUE( window.readFrame( 4, left, right ) ); // 창 바로 뒤: 이어 푼다
     SW_EXPECT_NEAR( 4.0f, left, 0.0f );
-    SW_EXPECT_EQUAL( 1u, window.getSeekCount() );
-    SW_EXPECT_EQUAL( 8ull, window.getDecodedFrameCount() );
+    SW_EXPECT_EQUAL( uint64{ 1 }, window.getSeekCount().get() );
+    SW_EXPECT_EQUAL( uint64{ 8 }, window.getDecodedFrameCount().get() );
 
     SW_REQUIRE_TRUE( window.readFrame( 2, left, right ) ); // 남긴 `kRetainFrames` 프레임: 되감지 않는다
     SW_EXPECT_NEAR( 2.0f, left, 0.0f );
-    SW_EXPECT_EQUAL( 1u, window.getSeekCount() );
+    SW_EXPECT_EQUAL( uint64{ 1 }, window.getSeekCount().get() );
 
     SW_REQUIRE_TRUE( window.readFrame( 1, left, right ) ); // 그 앞: 되감는다
     SW_EXPECT_NEAR( 1.0f, left, 0.0f );
-    SW_EXPECT_EQUAL( 2u, window.getSeekCount() );
+    SW_EXPECT_EQUAL( uint64{ 2 }, window.getSeekCount().get() );
 
     SW_REQUIRE_TRUE( window.readFrame( 50, left, right ) ); // 창에서 먼 뒤: 되감는다
     SW_EXPECT_NEAR( 50.0f, left, 0.0f );
-    SW_EXPECT_EQUAL( 3u, window.getSeekCount() );
+    SW_EXPECT_EQUAL( uint64{ 3 }, window.getSeekCount().get() );
 }
 
 /** @brief [AudioStreamTest] 끝을 넘은 읽기는 false 와 0 이고, 창은 남아 마지막 프레임을 다시 읽을 수 있다(보간이 그 자리를 다시 읽는다) */
@@ -455,8 +455,8 @@ SW_TEST_CASE( AudioStreamTest, WindowSeekExactlyToTheEndReadsNothing )
     float32 right{ 9.0f };
     SW_EXPECT_FALSE( window.readFrame( 6, left, right ) );
     SW_EXPECT_NEAR( 0.0f, left, 0.0f );
-    SW_EXPECT_EQUAL( 1u, window.getSeekCount() );
-    SW_EXPECT_EQUAL( 0ull, window.getDecodedFrameCount() );
+    SW_EXPECT_EQUAL( uint64{ 1 }, window.getSeekCount().get() );
+    SW_EXPECT_EQUAL( uint64{ 0 }, window.getDecodedFrameCount().get() );
     SW_EXPECT_TRUE( window.readFrame( 0, left, right ) ); // 빈 창에서 다시 연다
 }
 

@@ -82,7 +82,7 @@ namespace sw
         , _publishedViewRectWidth{ 0 }
         , _publishedViewRectHeight{ 0 }
         , _publishedViewPoolWidth{ 0 }
-        , _publishedViewTransientRebuildCount{ 0 }
+        , _publishedViewTransientRebuildCount{}
         , _publishedOcclusionTilesBuilt{ 0 }
         , _publishedOcclusionTwoPhase{ 0 }
         , _publishedOcclusionLatePhase{ 0 }
@@ -999,7 +999,7 @@ namespace sw
         {
             publishRenderTargets();
             reportRenderTargetMemory();
-            _publishedViewTransientRebuildCount.store( _publishedViewTransientRebuildCount.load() + 1u );
+            _publishedViewTransientRebuildCount.add();
         }
         // 자동 렌더 배율은 풀이 아니라 사각형만 줄인다(정수 업스케일은 풀 전체가 화면 픽셀과 짝이라 늘 1).
         _state._mainView.updateViewRect( settings._upscaleZoom > 0 ? 1.0f : settings._rectScale );

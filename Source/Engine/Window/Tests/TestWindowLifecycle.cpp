@@ -45,7 +45,7 @@ SW_TEST_CASE( WindowLifecycleTest, SimulatedInterruptionEndsAfterItsTicks )
 {
     FakeWindow window;
     window.advanceLifecycleTick();
-    SW_EXPECT_EQUAL( 0u, window.getRenderPausedTickCount() );
+    SW_EXPECT_EQUAL( uint64{ 0 }, window.getRenderPausedTickCount().get() );
 
     window.simulateAppInterruption( 3 );
     SW_EXPECT_TRUE( window.isRenderPaused() );
@@ -54,10 +54,10 @@ SW_TEST_CASE( WindowLifecycleTest, SimulatedInterruptionEndsAfterItsTicks )
     SW_EXPECT_TRUE( window.isRenderPaused() );
     window.advanceLifecycleTick(); // 이 틱은 멈춘 채 세고 끝에 돌아온다 — 메인 루프는 이 틱에 프레임을 돈다
     SW_EXPECT_FALSE( window.isRenderPaused() );
-    SW_EXPECT_EQUAL( 3u, window.getRenderPausedTickCount() );
+    SW_EXPECT_EQUAL( uint64{ 3 }, window.getRenderPausedTickCount().get() );
 
     window.advanceLifecycleTick();
-    SW_EXPECT_EQUAL( 3u, window.getRenderPausedTickCount() );
+    SW_EXPECT_EQUAL( uint64{ 3 }, window.getRenderPausedTickCount().get() );
 }
 
 /** @brief [WindowLifecycleTest] 구독자(입력 · 오디오)는 렌더러 처리기보다 먼저 받는다 — 앱이 멈추면 소리 · 입력이 먼저 서고 표면은 렌더러가 마지막에 놓는다(감사 P-6). */

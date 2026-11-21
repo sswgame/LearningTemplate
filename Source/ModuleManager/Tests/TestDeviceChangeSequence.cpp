@@ -82,15 +82,16 @@ namespace
             _bPending = SW_FALSE;
             return _result;
         }
-        void   discardViewTargets() override {}
-        void   setScenarioCaptureEnabled( bool /*bEnabled*/ ) override {}
-        void   setPresentInterval( uint32 /*interval*/ ) override {}
-        uint32 countPendingCaptureJobs( const GameObjectManager* /*pManager*/ ) const override { return 0; }
-        void   overrideDeviceLostPolicy( RHIDeviceLostPolicy /*policy*/ ) override {}
-        uint32 getDeviceRecreateCount() const override { return 0; }
-        uint32 getFailedBackendChangeCount() const override { return 0; }
+        void              discardViewTargets() override {}
+        void              setScenarioCaptureEnabled( bool /*bEnabled*/ ) override {}
+        void              setPresentInterval( uint32 /*interval*/ ) override {}
+        uint32            countPendingCaptureJobs( const GameObjectManager* /*pManager*/ ) const override { return 0; }
+        void              overrideDeviceLostPolicy( RHIDeviceLostPolicy /*policy*/ ) override {}
+        const DevCounter& getDeviceRecreateCount() const override { return _unusedCounter; }
+        const DevCounter& getFailedBackendChangeCount() const override { return _unusedCounter; }
 
     private:
+        DevCounter                _unusedCounter; ///< 이 대역은 장치를 다시 만들지 않는다 — 늘 0 인 칸
         vector<const utf8*>&      _events;
         const BackendChangeResult _result;
         uint8                     _bPending : 1;

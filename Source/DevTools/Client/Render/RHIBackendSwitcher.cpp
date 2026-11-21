@@ -161,7 +161,7 @@ namespace sw
                 const IEngineRenderDriver* pRenderDriver = engine::findSubsystem<IEngineRenderDriver>();
                 if ( pRenderDriver == nullptr )
                     return false;
-                outValue = static_cast<float64>( pRenderDriver->getFailedBackendChangeCount() );
+                outValue = static_cast<float64>( pRenderDriver->getFailedBackendChangeCount().get() );
                 return true;
             }
 
@@ -170,7 +170,7 @@ namespace sw
                 const IEngineRenderDriver* pRenderDriver = engine::findSubsystem<IEngineRenderDriver>();
                 if ( pRenderDriver == nullptr )
                     return false;
-                outValue = static_cast<float64>( pRenderDriver->getDeviceRecreateCount() );
+                outValue = static_cast<float64>( pRenderDriver->getDeviceRecreateCount().get() );
                 return true;
             }
         };

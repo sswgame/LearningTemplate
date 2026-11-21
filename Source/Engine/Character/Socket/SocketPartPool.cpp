@@ -14,9 +14,9 @@ namespace sw
     SocketPartPool::SocketPartPool( GameObjectManager& manager )
         : _pManager{ &manager }
         , _mapResting{}
-        , _takeHitCount{ 0 }
-        , _takeMissCount{ 0 }
-        , _storedCount{ 0 }
+        , _takeHitCount{}
+        , _takeMissCount{}
+        , _storedCount{}
     {
     }
 
@@ -43,11 +43,11 @@ namespace sw
                 if ( pObject == nullptr || pObject->isPendingDestroy() )
                     continue; // 쉬는 동안 누가 지웠다
                 pObject->setActive( true );
-                ++_takeHitCount;
+                _takeHitCount.add();
                 return pObject;
             }
         }
-        ++_takeMissCount;
+        _takeMissCount.add();
         return nullptr;
     }
 
@@ -62,7 +62,7 @@ namespace sw
             return false; // 물리로 떨어졌거나 되돌아가는 중이다 — 쉬게 할 수 없다
         object.setActive( false );
         _mapResting[assetPath].push_back( object.getHandle() );
-        ++_storedCount;
+        _storedCount.add();
         return true;
     }
 

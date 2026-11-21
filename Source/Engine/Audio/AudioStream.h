@@ -11,6 +11,7 @@
  *          - 3 채널 이상은 프레임을 읽을 때 명시 다운믹스(`AudioDownmix`)로 스테레오로 줄인다. 행렬은 소스를 만들 때 한 번 정한다(WAV 는 채널 마스크, Vorbis 는 명세의 순서).
  */
 #pragma once
+#include "Core/Concurrency/DevCounter.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
@@ -139,9 +140,9 @@ namespace sw
         [[nodiscard]] bool readFrame( uint32 frame, float32& outLeft, float32& outRight );
 
         /** @brief 지금까지 되감은 횟수입니다(진단 · 테스트). */
-        uint32 getSeekCount() const { return _seekCount; }
+        const DevCounter& getSeekCount() const { return _seekCount; }
         /** @brief 지금까지 푼 프레임 수입니다(진단 · 테스트). */
-        uint64 getDecodedFrameCount() const { return _decodedFrameCount; }
+        const DevCounter& getDecodedFrameCount() const { return _decodedFrameCount; }
 
     private:
         /** @brief 창 뒤에 한 덩어리를 더 풉니다. @p retainFrames 만큼은 창 앞에서 남겨 옮깁니다. 하나도 못 풀면 false 입니다. */
@@ -151,10 +152,10 @@ namespace sw
         shared_ptr<IAudioStreamDecoder> _pDecoder{};
         vector<float32>                 _listWindow{}; ///< 푼 프레임(채널 교차)입니다. 첫 프레임이 `_windowStart` 입니다.
         AudioDownmix                    _downmix{};    ///< 소스의 다운믹스 행렬 복사본입니다(3 채널 이상).
-        uint64                          _decodedFrameCount{ 0 };
+        DevCounter                      _decodedFrameCount;
         uint32                          _windowStart{ 0 };
         uint32                          _windowFrames{ 0 };
-        uint32                          _seekCount{ 0 };
+        DevCounter                      _seekCount;
         uint32                          _chunkFrames{ kChunkFrames }; ///< 한 번에 푸는 프레임 수다(파일 스트림은 `kChunkFrames`, 소리 그래프는 블록 길이).
         uint16                          _channelCount{ 0 };
     };

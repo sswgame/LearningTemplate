@@ -485,7 +485,7 @@ SW_TEST_CASE( ControlSystemTest, PooledPawnDropsItsAIAndIsPossessedAgainWhenReus
     SW_REQUIRE_TRUE( pool.acquire( manager, "Guard" ) == pObject );
     manager.update( 1.0f / 60.0f );
     SW_EXPECT_TRUE( pPawn->isPossessed() );
-    SW_EXPECT_EQUAL( 1u, pool.getCreatedCount() );
+    SW_EXPECT_EQUAL( uint64{ 1 }, pool.getCreatedCount().get() );
 }
 
 // 폰도 조종자도 없으면 시스템이 프레임에서 빠진다.

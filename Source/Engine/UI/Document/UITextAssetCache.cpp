@@ -19,7 +19,7 @@ namespace sw
         , _pAssetKindName{ pAssetKindName }
         , _pAssetLabel{ pAssetLabel }
         , _pParse{ pParse }
-        , _parseCount{ 0 }
+        , _parseCount{}
     {
     }
 
@@ -38,7 +38,7 @@ namespace sw
 
     expected<shared_ptr<const void>> UITextAssetCache::parseText( string_view text, string_view path, const ResourceTagSet& tagOverride )
     {
-        ++_parseCount;
+        _parseCount.add();
         // 리소스 id 로 읽는다 — 조건(`_when`) · 덮어쓰기 층 · 다시 읽기 기록이 이 경로를 쓴다. 변형은 바꿔 끼운 태그로 합치고 기록하지 않는다.
         return _pParse( text, path, ResourceContext::forDocument().withAsset( AssetID{ path } ).withTagOverride( tagOverride ) );
     }

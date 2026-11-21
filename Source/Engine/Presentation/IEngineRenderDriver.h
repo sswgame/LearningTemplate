@@ -6,6 +6,7 @@
  *          렌더 스레드를 직접 다뤄야 하는 클라이언트 전용 호스트(App)만 `findRenderThread` 를 쓴다. 그래픽 형식(뷰 요청 · RHI 열거형)은 앞 선언 · 참조로만 받는다 — 층 2 는 Graphics(4)를 읽지 못한다.
  */
 #pragma once
+#include "Core/Concurrency/DevCounter.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
@@ -86,9 +87,9 @@ namespace sw
          * @details 기동 순서와 상관없이 이긴다 — 설정 읽기(`onStartupFinished`)는 덮은 값을 지우지 않는다. `None` 은 받지 않는다(덮지 않음은 부르지 않는 것이다).
          */
         virtual void overrideDeviceLostPolicy( RHIDeviceLostPolicy policy ) = 0;
-        /** @brief 잃은 장치를 다시 만들어 장면을 다시 묶은 횟수입니다(`RHIDeviceLostPolicy::Recreate`). 감시 값 `Render.DeviceRecreateCount`. */
-        [[nodiscard]] virtual uint32 getDeviceRecreateCount() const = 0;
+        /** @brief 잃은 장치를 다시 만들어 장면을 다시 묶은 횟수입니다(`RHIDeviceLostPolicy::Recreate`). 감시 값 `Render.DeviceRecreateCount` 만 읽는 개발 전용 칸(배포는 0)이다. */
+        [[nodiscard]] virtual const DevCounter& getDeviceRecreateCount() const = 0;
         /** @brief 요청한 백엔드로 장치를 만들지 못한 교체 횟수입니다(되돌렸든 못 했든 — `BackendChangeResult::Applied` 가 아닌 것). 감시 값 `RHI.SwapFailedCount`. */
-        [[nodiscard]] virtual uint32 getFailedBackendChangeCount() const = 0;
+        [[nodiscard]] virtual const DevCounter& getFailedBackendChangeCount() const = 0;
     };
 } // namespace sw

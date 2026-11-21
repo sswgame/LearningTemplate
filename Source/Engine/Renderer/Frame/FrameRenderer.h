@@ -3,6 +3,7 @@
  * @brief RenderPipeline XML 을 로드해 RenderGraph 를 만들고, 프레임을 셋업한 뒤 패스 실행(`FramePassExecutor`)에 넘겨 Shadow, Forward, Deferred, Post 패스를 그립니다.
  */
 #pragma once
+#include "Core/Concurrency/DevCounter.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
@@ -305,7 +306,7 @@ namespace sw
         uint32 getPublishedViewRectHeight() const { return _publishedViewRectHeight.load(); }
         uint32 getPublishedViewPoolWidth() const { return _publishedViewPoolWidth.load(); }
         /** @brief 주 시점 풀을 다시 만든 누적 횟수입니다(자동 렌더 배율 단계는 늘리지 않아야 한다 — 감시 값 `Render.ViewTransientRebuildCount`). */
-        uint32 getPublishedViewTransientRebuildCount() const { return _publishedViewTransientRebuildCount.load(); }
+        const DevCounter& getPublishedViewTransientRebuildCount() const { return _publishedViewTransientRebuildCount; }
         /** @brief 마지막 프레임에 주 시점의 가림 타일을 지었으면 1 입니다(감시 값 `Render.OcclusionTilesBuilt`). */
         uint32 getPublishedOcclusionTilesBuilt() const { return _publishedOcclusionTilesBuilt.load(); }
         /** @brief 마지막 프레임에 2 단계 가림을 쓸 수 있었으면 1 입니다(가림 판정 켬 · 설정 · 백엔드 능력 — 감시 값 `Render.OcclusionTwoPhase`). */
@@ -552,7 +553,7 @@ namespace sw
         atomic<uint32> _publishedViewRectWidth;
         atomic<uint32> _publishedViewRectHeight;
         atomic<uint32> _publishedViewPoolWidth;
-        atomic<uint32> _publishedViewTransientRebuildCount;
+        DevCounter     _publishedViewTransientRebuildCount;
         atomic<uint8>  _publishedOcclusionTilesBuilt;
         atomic<uint8>  _publishedOcclusionTwoPhase;
         atomic<uint8>  _publishedOcclusionLatePhase;

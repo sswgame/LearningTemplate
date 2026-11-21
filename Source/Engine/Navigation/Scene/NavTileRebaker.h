@@ -5,6 +5,7 @@
  *          `invalidateArea` 만 아무 스레드에서 부르고(스핀 잠금), 나머지는 게임 스레드에서 부릅니다.
  */
 #pragma once
+#include "Core/Concurrency/DevCounter.h"
 #include "Core/Concurrency/SpinLock.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Constants.h"
@@ -46,7 +47,7 @@ namespace sw
         /** @brief 아직 타일로 바꾸지 않은 알린 영역 수입니다. */
         uint32 getPendingAreaCount() const;
         /** @brief 재베이크로 끼운 타일 수(누적, 진단)입니다. */
-        uint32 getRebakedTileCount() const { return _rebakedTileCount; }
+        const DevCounter& getRebakedTileCount() const { return _rebakedTileCount; }
 
         /**
          * @brief 장애물마다 생기거나 사라졌거나 @p moveThreshold 넘게 움직였거나 돌았으면 내비메시에 알립니다.
@@ -84,7 +85,7 @@ namespace sw
     private:
         vector<AABB>     _listDirtyArea;    ///< `_dirtyLock` 아래
         vector<AABB>     _listObstacleArea; ///< 장애물이 바꾼 자리(게임 스레드만 — 다시 베이크 종류에만 닿는다)
-        uint32           _rebakedTileCount;
+        DevCounter       _rebakedTileCount;
         mutable SpinLock _dirtyLock;                ///< `invalidateArea` 가 아무 스레드에서 온다
         uint8            _bGeometryDirty       : 1; ///< `_dirtyLock` 아래
         uint8            _bObstacleVolumeDirty : 1;

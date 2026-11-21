@@ -23,7 +23,7 @@ namespace sw
         , _listIdle{}
         , _listBusy{}
         , _maxIdleCount{ maxIdleCount }
-        , _createdCount{ 0 }
+        , _createdCount{}
         , _bContractChecked{ SW_FALSE }
         , _bRefused{ SW_FALSE }
     {
@@ -91,7 +91,7 @@ namespace sw
             }
             _bContractChecked = SW_TRUE;
         }
-        ++_createdCount;
+        _createdCount.add();
         return pObject;
     }
 

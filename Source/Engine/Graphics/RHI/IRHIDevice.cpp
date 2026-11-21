@@ -3,6 +3,7 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 
 #include "Core/CommandLine/CommandLineManager.h"
+#include "Core/Concurrency/DevCounter.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/vector.h"
@@ -82,14 +83,14 @@ namespace sw
         RHIRetireList<Entry> _listHandle;        ///< `_mutex` 아래. 키 = 렌더 스레드에 넘긴 프레임 번호(1부터) — 이 프레임이 끝나야 내린다
         atomic<uint64>       _queuedFrameCount;  ///< 렌더 스레드에 넘긴 프레임 수(누적)
         atomic<uint64>       _retiredFrameCount; ///< 렌더 스레드가 끝낸 프레임 수(누적, 넘긴 수를 넘지 않는다)
-        atomic<uint64>       _gpuIdleWaitCount;  ///< `waitIdle` 이 GPU 를 통째로 기다린 횟수(누적, `getGPUIdleWaitCount`)
+        DevCounter           _gpuIdleWaitCount;  ///< `waitIdle` 이 GPU 를 통째로 기다린 횟수(누적, `getGPUIdleWaitCount`)
 
         RHIDeferredHandleQueue()
             : _mutex{}
             , _listHandle{}
             , _queuedFrameCount{ 0 }
             , _retiredFrameCount{ 0 }
-            , _gpuIdleWaitCount{ 0 }
+            , _gpuIdleWaitCount{}
         {
         }
     };
@@ -232,7 +233,7 @@ namespace sw
         flushRenderThread();
         // 렌더 스레드가 받은 일을 다 끝냈다 — 그 사이 미룬 핸들을 지금 내린다(GPU 대기 전에 넣어야 같은 대기가 해제 큐까지 비운다).
         flushDeferredHandleReleases();
-        _pDeferredHandleQueue->_gpuIdleWaitCount.fetch_add( 1, std::memory_order_relaxed );
+        _pDeferredHandleQueue->_gpuIdleWaitCount.add();
         waitIdleInternal();
     }
 
@@ -265,9 +266,9 @@ namespace sw
         return pInfo->_shaderTarget;
     }
 
-    uint64 IRHIDevice::getGPUIdleWaitCount() const
+    const DevCounter& IRHIDevice::getGPUIdleWaitCount() const
     {
-        return _pDeferredHandleQueue->_gpuIdleWaitCount.load( std::memory_order_relaxed );
+        return _pDeferredHandleQueue->_gpuIdleWaitCount;
     }
 
     bool IRHIDevice::isDeviceLost() const

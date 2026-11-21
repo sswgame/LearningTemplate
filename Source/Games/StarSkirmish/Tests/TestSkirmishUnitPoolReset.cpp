@@ -34,5 +34,5 @@ SW_TEST_CASE( SkirmishUnitPoolResetTest, ReleasedViewComesBackUnassigned )
     SW_EXPECT_EQUAL( freshUnit.isValid(), pView->getUnitID().isValid() );
     SW_EXPECT_FALSE( pView->isPlaced() );
     SW_EXPECT_NEAR( -1.0f, pView->measureViewLag(), 1.0e-6f );
-    SW_EXPECT_EQUAL( 1u, pool.getCreatedCount() );
+    SW_EXPECT_EQUAL( uint64{ 1 }, pool.getCreatedCount().get() );
 }

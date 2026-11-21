@@ -90,7 +90,7 @@ namespace sw
                 const IWindow* pWindow = MainWindowSubsystem::findMainWindow();
                 if ( pWindow == nullptr )
                     return false;
-                outValue = static_cast<float64>( pWindow->getRenderPausedTickCount() );
+                outValue = static_cast<float64>( pWindow->getRenderPausedTickCount().get() );
                 return true;
             }
 
