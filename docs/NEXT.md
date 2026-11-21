@@ -10,7 +10,6 @@
 
 - **통합 중:** main 에 w-devmetrics · w-chores · w-gimmickdamage(w-gimmickevents 포함) · w-kitsplit2 · w-material · w-zonefix · w-playerstate · w-pathproducers(w-pathjoin 포함)를 합친다. 합친 뒤 충돌 파일에 `py -3 -m Scripts byte-reader-values` · `disk-path-args` · `disk-path-join` 을 다시 돌리고, Release · Shipping · Server · ASan 빌드 → 갈래 테스트 · 시나리오만 dx12 로 → preflight `--no-linux` → push.
 - **갈래마다 볼 테스트 · 시나리오:** `kitdemo_respawn` · `minigamememory` · `triggercontract` · `kitdemo_actioncombat` · `kitdemo_actionplatformer` · `kitdemo_tactics` · `meleeduel` · TestCombatAttributeSet · TestMaterialInstance · 존 · 트리거 겹침 · 시퀀스 트리거 테스트 · wildwest `arrival*` · `cellcutscene` · 에디터 `netsequence` · PlayerStateComponentsTest · LootGrantTest · 세이브 시나리오 전부(ComponentStateStore 판 3) · meadowvillage · harvestvalley · frontiertown · velmora · wildwest · playground 허브. `AssetReferenceFields.generated.json` 은 빌드 산출로 커밋.
-- **합칠 때 문서:** Gameplay.md 알림 규칙에 "받는 쪽 없는 지역 · 점유자 피해는 조용히 지나간다(언리얼 ApplyRadialDamage)" 예외를 더한다.
 
 ## 1. 다음 순서
 

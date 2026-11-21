@@ -48,7 +48,7 @@ Stop at the first yes.
 
 ## 시스템 사이 알림 — 세 길 중 하나
 
-- **필수 일대일 효과**(주는 쪽이 결과를 알아야 하는 것 — 부스트 · 아이템 지급 · 피해)는 받는 쪽 리플렉션 인터페이스(`REFLECT( Interface )` + 포트 멤버, `findInterface<I>()`)로 부른다. 받는 쪽이 없거나 거절하면 결과로 돌려주고 경고한다(조용히 사라지지 않는다). 언리얼 `IAbilitySystemInterface` · `TakeDamage`, 유니티 `GetComponent<IDamageable>()` 자리.
+- **필수 일대일 효과**(주는 쪽이 결과를 알아야 하는 것 — 부스트 · 아이템 지급 · 피해)는 받는 쪽 리플렉션 인터페이스(`REFLECT( Interface )` + 포트 멤버, `findInterface<I>()`)로 부른다. 받는 쪽이 없거나 거절하면 결과로 돌려주고 경고한다(조용히 사라지지 않는다). 언리얼 `IAbilitySystemInterface` · `TakeDamage`, 유니티 `GetComponent<IDamageable>()` 자리. 예외: 반경 · 점유자 전체에 거는 지역 피해(폭발 · 용암)는 받는 쪽 없는 대상을 조용히 건너뛴다(언리얼 `ApplyRadialDamage`) — 경고는 지정한 한 대상에만.
 - **같은 오브젝트 · 아는 상대의 알림**은 컴포넌트 델리게이트(`MulticastDelegate`, `SW_DELEGATE_*`). Godot 시그널 · 언리얼 컴포넌트 델리게이트 자리.
 - **선택적 일대다 전역 알림**(보내는 쪽이 받는 쪽을 모르고, 받는 쪽이 없어도 정상 — 세이브 완료 · 씬 로드 · 상호작용 완료 · 방 클리어 · 쓰러짐 → UI · 퀘스트 · 점수)은 "game" 채널 이벤트 버스(`GameEventUtil::send`). Lyra `UGameplayMessageSubsystem` 자리. 효과가 필수인 일을 버스에만 실으면 안 된다 — 받는 쪽이 없을 때 효과가 빠진다(2026-11-21 기믹 발사 · 부스트 · 아이템이 그랬다).
 
