@@ -1,9 +1,11 @@
-// CombatAttributeSetTest — 전투 어트리뷰트 규칙: 범위 자르기, 최대치가 줄 때 현재치 따라 줄이기, 메타 피해 · 회복 옮기기, 피격 · 쓰러짐 이벤트와 한 번만 죽기.
+// CombatAttributeSetTest — 전투 어트리뷰트 규칙: 범위 자르기, 최대치가 줄 때 현재치 따라 줄이기, 메타 피해 · 회복 옮기기, 피격 · 쓰러짐 이벤트와 한 번만 죽기, 맞음 사건이 피해 이펙트로 드는 길.
 #include "pch.h"
 
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Character/Hit/CharacterHit.h"
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectEvents.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
 #include "GameFramework/Runtime/Gameplay/Ability/Ability.h"
@@ -321,4 +323,60 @@ SW_TEST_CASE( CombatAttributeSetTest, DirectHealthModifierToZeroRaisesDeath )
         SW_EXPECT_TRUE( rig.isDead() );
         SW_EXPECT_EQUAL( size_t( 1 ), rig._listEventTag.size() );
     }
+}
+
+/**
+ * @brief [CombatAttributeSetTest] 맞음 사건(무기 · 근접 · 기믹이 보내는 `CharacterRayHit::deliverHit` 길)이 피해 이펙트로 체력을 깎는다 — 피해 × 히트 존 배율, 방어 감쇠
+ * @details 결함: 어빌리티 시스템이 체력 원천이면서 맞음 사건을 듣지 않아, 어빌리티 체력 캐릭터(허브 플레이어)는 무기 · 기믹에 다치지 않았다.
+ */
+SW_TEST_CASE( CombatAttributeSetTest, HitEventDamagesThroughTheDamageEffect )
+{
+    CombatFixture rig;
+    GameObject*   pAttacker = rig._manager.createGameObject( hashed_string( "Attacker" ) );
+    HitInfo       hit;
+    hit._pInstigator      = pAttacker;
+    hit._kind             = hashed_string( "Hazard" );
+    hit._damage           = 10.0f;
+    hit._damageMultiplier = 2.0f;
+    CharacterRayHit::deliverHit( *rig._pAbilities->getOwner(), hit );
+    SW_EXPECT_EQUAL( 80.0f, rig.current( CombatAttributes::health() ) );
+    SW_EXPECT_EQUAL( 0.0f, rig.base( CombatAttributes::incomingDamage() ) );
+    SW_EXPECT_EQUAL( 20.0f, rig._lastHitMagnitude );
+    SW_EXPECT_TRUE( rig._lastHitInstigator == pAttacker->getHandle() );
+
+    SW_EXPECT_TRUE( rig._pAbilities->setAttributeBaseValue( CombatAttributes::armor(), 100.0f ) ); // 피해 공식은 어빌리티 피해와 같다 — 방어 100 이면 절반
+    CharacterRayHit::deliverHit( *rig._pAbilities->getOwner(), hit );
+    SW_EXPECT_EQUAL( 70.0f, rig.current( CombatAttributes::health() ) );
+}
+
+/**
+ * @brief [CombatAttributeSetTest] 맞음으로 쓰러지면 치명 표시를 단 사본(`deliverFatalHit`)이 같은 오브젝트에 한 번 다시 온다 — 사본은 다시 깎지 않는다
+ */
+SW_TEST_CASE( CombatAttributeSetTest, LethalHitDiesAndSendsOneFatalCopy )
+{
+    CombatFixture      rig;
+    GameObject*        pOwner     = rig._pAbilities->getOwner();
+    uint32             fatalCount = 0;
+    float3             fatalDirection{};
+    const Subscription fatalSubscription = pOwner->getOrCreateEvents()._hitReceived.add( [&fatalCount, &fatalDirection]( const HitInfo& received )
+    {
+        if ( received._bFatal == false )
+            return;
+        ++fatalCount;
+        fatalDirection = received._direction;
+    } );
+    HitInfo            hit;
+    hit._damage    = 500.0f;
+    hit._direction = float3{ 1.0f, 0.0f, 0.0f };
+    CharacterRayHit::deliverHit( *pOwner, hit );
+    SW_EXPECT_EQUAL( 0.0f, rig.current( CombatAttributes::health() ) );
+    SW_EXPECT_TRUE( rig.isDead() );
+    SW_EXPECT_EQUAL( 1u, fatalCount );
+    SW_EXPECT_EQUAL( 1.0f, fatalDirection._x ); // 치명 신호는 맞힌 자리를 싣는다(래그돌 충격 방향)
+    SW_REQUIRE_EQUAL( size_t( 2 ), rig._listEventTag.size() );
+    SW_EXPECT_TRUE( rig._listEventTag[1] == CombatAttributeSet::getDeathEventTag() );
+
+    CharacterRayHit::deliverHit( *pOwner, hit ); // 쓰러진 뒤의 맞음 — 다시 죽지 않고 치명 사본도 없다
+    SW_EXPECT_EQUAL( 1u, fatalCount );
+    SW_EXPECT_EQUAL( size_t( 2 ), rig._listEventTag.size() );
 }
