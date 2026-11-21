@@ -241,6 +241,7 @@ namespace sw
         , _lastResult{}
         , _sceneLoadRequested{}
         , _leakCount{ 0 }
+        , _pendingRestoredResult{}
         , _restoreCount{ 0 }
         , _leaveAssetCacheBytes{ 0 }
         , _leaveHeapBytes{ 0 }
@@ -264,8 +265,9 @@ namespace sw
     {
         _sceneLoadRequested.reset();
         _pendingEnter.clear();
-        _pendingPlacement = nullopt;
-        _pendingLeave     = nullopt;
+        _pendingPlacement      = nullopt;
+        _pendingLeave          = nullopt;
+        _pendingRestoredResult = nullopt;
         _pReturning.reset();
         deactivateScope(); // 게임 범위 기능은 게임 인스턴스가 이 뒤에 끈다(미니게임의 해제 검사는 그것이 켜진 채로 찍었다)
         _stack.clear();
@@ -578,6 +580,13 @@ namespace sw
 
     void MinigameFlow::update()
     {
+        // 되살린 씬의 결과를 먼저 알린다 — 앞 프레임에 되살린 오브젝트가 상태를 받고 시작한 뒤라 보상이 복원에 덮이지 않는다.
+        if ( _pendingRestoredResult.has_value() )
+        {
+            MinigameResult restored = std::move( *_pendingRestoredResult );
+            _pendingRestoredResult  = nullopt;
+            deliverResult( restored );
+        }
         // 다시 읽힌 카탈로그를 먼저 건다 — 이 프레임의 진입 · 컴포넌트가 새 판을 찾는다.
         if ( _pActive != nullptr )
             _pActive->rebindReloadedCatalogs();
@@ -726,6 +735,9 @@ namespace sw
             }
             ++_restoreCount;
             SW_LOG_INFO_ID( "MinigameFlow.Restored", "Returned to '%#' - the captured scene is restored", pSuspended->_scenePath.c_str() );
+            // 복원은 오브젝트를 되살리고 상태 적용 · 시작은 그 뒤 단계다 — 지금 알리면 보상이 복원 값에 덮인다(언리얼 레벨 전환 뒤 BeginPlay 이후의 결과 전달과 같은 자리).
+            _pendingRestoredResult = std::move( pReturn->_result );
+            return;
         }
         // 복원이 파생 인스턴스 상태까지 되감았다 — 미니게임에서 번 것은 그 위에 얹는다.
         deliverResult( pReturn->_result );
