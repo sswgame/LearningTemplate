@@ -11,7 +11,7 @@ The frame order lives in one table, `Engine/Object/GameObject/Tick/SceneFrameSte
 | `FrameSystems` | `ISceneMainFrameSystem::runMain` on the game thread, `ISceneParallelFrameSystem::runOnAnyThread` on worker threads | structure is not frozen; may create objects |
 | `TickPrePhysics` | PrePhysics · DuringPhysics component ticks, **one object per worker** (`SceneTickScheduler`) | last frame's physics |
 | `ApplyPrePhysics` | deferred structural changes → in-tick transform writes → **post-tick queue** (`executeOrDeferPostTick*`) | game thread, serial |
-| `Physics` | rigid bodies, overlaps | |
+| `Physics` | rigid bodies, overlaps; physics components' fixed-step groups (`FixedStepGroup`: `FrameBegin` → `PreStep` · `PostStep` per fixed step, 0..N a frame → `FrameEnd`), game thread, per-type non-virtual batches (`SceneTickScheduler::tickFixedStepGroup`) | |
 | `TickPostPhysics` | PostPhysics · PostUpdate ticks, one object per worker | this frame's physics and everything `ApplyPrePhysics` wrote |
 | `ApplyPostPhysics` | the same drain for the late groups | |
 

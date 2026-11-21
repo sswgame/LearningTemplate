@@ -35,7 +35,6 @@ namespace sw
     class FixedStepContext;
     class GameObjectManager;
     class ScenePhysics;
-    enum class TickPhase : uint8;
 
     /** @brief 물리 컴포넌트가 도는 단계입니다. 관절은 바디가 있어야 만들 수 있어 그 뒤입니다. */
     enum class PhysicsComponentPhase : uint8
