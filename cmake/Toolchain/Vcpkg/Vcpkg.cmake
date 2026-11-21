@@ -174,6 +174,48 @@ function(sw_vcpkg_plan_manifest_install src_dir OUT_REMOVE OUT_BUILD)
     set(${OUT_BUILD} "${build}" PARENT_SCOPE)
 endfunction()
 
+# ------------------------------------------------------------------------------
+# 2) sw_vcpkg_write_manifest_stamp — project() 이후 현재 해시를 스탬프에 기록
+# 다음 configure의 install gate가 스탬프와 비교해 재설치를 건너뜀
+# 경로: ${VCPKG_INSTALLED_DIR}/.sw_vcpkg_manifest_sha_<triplet>
+# ------------------------------------------------------------------------------
+function(sw_vcpkg_write_manifest_stamp)
+    if(NOT SW_USE_VCPKG)
+        return()
+    endif()
+
+    # 게이트가 정한 값을 캐시에 남기지 않는다 — 다음 구성이 캐시 값을 사용자 말로 읽는다(파일 머리 참고).
+    unset(VCPKG_MANIFEST_INSTALL CACHE)
+    set(SW_VCPKG_GATE_REV 2 CACHE INTERNAL "vcpkg 게이트 판 — 캐시의 VCPKG_MANIFEST_INSTALL 이 사용자 말인지 가른다")
+
+    if(NOT DEFINED VCPKG_INSTALLED_DIR OR NOT DEFINED VCPKG_TARGET_TRIPLET)
+        return()
+    endif()
+
+    # 읽기 전용 구성 · 설치를 거절한 configure(다른 워크트리가 쓰는 포트를 지우게 되는 옛 매니페스트)는 스탬프를 자기 해시로 덮지 않는다.
+    get_property(stamp_held GLOBAL PROPERTY SW_VCPKG_STAMP_HELD)
+
+    if(stamp_held)
+        return()
+    endif()
+
+    set(vcpkg_tree "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}")
+
+    if(NOT EXISTS "${vcpkg_tree}")
+        return()
+    endif()
+
+    sw_vcpkg_compute_manifest_hash(manifest_hash)
+
+    if(manifest_hash STREQUAL "")
+        return()
+    endif()
+
+    set(stamp "${VCPKG_INSTALLED_DIR}/.sw_vcpkg_manifest_sha_${VCPKG_TARGET_TRIPLET}") # triplet 마다 — 한 폴더에 triplet 이 여럿이면 한쪽 스탬프가 다른 쪽 설치를 가렸다
+    file(WRITE "${stamp}" "${manifest_hash}")
+    message(STATUS "[vcpkg] Manifest stamp updated (${VCPKG_TARGET_TRIPLET})")
+endfunction()
+
 set(stamp_match FALSE)
 
 if(tree_ready AND EXISTS "${stamp}" AND NOT manifest_hash STREQUAL "")
