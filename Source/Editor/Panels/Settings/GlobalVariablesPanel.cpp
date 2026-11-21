@@ -15,6 +15,7 @@
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
+#include "Editor/Common/Widgets/EditorVirtualList.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
 #include "Editor/Common/Workspace/Play/EditorSessionPolicy.h"
@@ -208,7 +209,7 @@ namespace sw::editor
 
     void GlobalVariablesPanel::revertDocument()
     {
-        GlobalVariablesViewModel::getVariableManager().resetAllToDefault();
+        GlobalVariablesViewModel::resetAllToDefault();
     }
 
     void GlobalVariablesPanel::markSessionDirty()
@@ -218,16 +219,14 @@ namespace sw::editor
 
     void GlobalVariablesPanel::drawContent()
     {
-        GlobalVariableManager& gvm = GlobalVariablesViewModel::getVariableManager();
-
-        drawVariableToolbar( gvm );
+        drawVariableToolbar(); // 관리자는 ViewModel 이 찾는다 — 이 창은 변수 줄 값과 명령만 본다
 
         // 2) 변수 목록 — 등록 세대나 검색 글이 바뀐 프레임에만 다시 짓는다.
-        const vector<GlobalVariableInfo*>& listFiltered = _model.refreshVariableList( gvm, _searchFilter.c_str() );
+        const vector<GlobalVariableInfo*>& listFiltered = _model.refreshVariableList( _searchFilter.c_str() );
 
         EditorWidgets::drawCountLabel( static_cast<uint32>( listFiltered.size() ), _model.getTotalVariableCount(), SW_LOCKEY( "EdWidget", "Variables" ) );
 
-        drawPinnedSection( gvm );
+        drawPinnedSection();
 
         // 필터에 걸러져서 0건인 것과 애초에 없는 것은 다르게 안내한다.
         if ( listFiltered.empty() )
@@ -243,7 +242,7 @@ namespace sw::editor
         drawVariableTable( listFiltered );
     }
 
-    void GlobalVariablesPanel::drawVariableToolbar( GlobalVariableManager& gvm )
+    void GlobalVariablesPanel::drawVariableToolbar()
     {
         // 1) 상단 툴바. 검색, 모듈 그룹화, 기본값 리셋, 프리셋 메뉴가 있다
         if ( EditorChrome::beginToolbar( "##GvToolbar" ) )
@@ -257,7 +256,7 @@ namespace sw::editor
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "ResetAll" ) ) );
             if ( ImGui::Button( SW_LOCKEY( "EdText", "ResetAll" ) ) )
             {
-                gvm.resetAllToDefault();
+                GlobalVariablesViewModel::resetAllToDefault();
                 markSessionDirty();
             }
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSettings", "ResetAllVariables" ) );
@@ -317,7 +316,7 @@ namespace sw::editor
         ImGui::EndPopup();
     }
 
-    void GlobalVariablesPanel::drawPinnedSection( GlobalVariableManager& gvm )
+    void GlobalVariablesPanel::drawPinnedSection()
     {
         // 3) 핀으로 고정한 즐겨찾기 변수 섹션
         if ( _model.getPinnedVariables().empty() == false )
@@ -330,7 +329,7 @@ namespace sw::editor
                 {
                     for ( const string& pinnedName : _model.getPinnedVariables() )
                     {
-                        GlobalVariableInfo* pInfo = gvm.findVariable( pinnedName );
+                        GlobalVariableInfo* pInfo = GlobalVariablesViewModel::findVariable( pinnedName );
                         if ( pInfo != nullptr )
                         {
                             fixed_string<constant::buffer::kMax256> pinnedID;
@@ -382,11 +381,16 @@ namespace sw::editor
                     formatstring( tableID.data(), tableID.capacity(), "GvTable_%#", currentModule );
                     if ( GlobalVariablesPanelInternal::beginVariableTable( tableID.c_str(), GlobalVariablesPanelInternal::kGroupedTableFlags, 0.0f ) )
                     {
-                        for ( size_t rowIndex = varIndex; rowIndex < rangeEnd; ++rowIndex )
+                        EditorVirtualList virtualList( static_cast<int32>( rangeEnd - varIndex ) ); // 모듈 하나의 변수 줄 — 보이는 줄만 그린다
+                        while ( virtualList.step() )
                         {
-                            ImGui::PushID( listFiltered[rowIndex]->_name.c_str() );
-                            drawVariableRow( *listFiltered[rowIndex], true );
-                            ImGui::PopID();
+                            for ( int32 rowOffset = virtualList.getBegin(); rowOffset < virtualList.getEnd(); ++rowOffset )
+                            {
+                                GlobalVariableInfo& info = *listFiltered[varIndex + static_cast<size_t>( rowOffset )];
+                                ImGui::PushID( info._name.c_str() );
+                                drawVariableRow( info, true );
+                                ImGui::PopID();
+                            }
                         }
                         ImGui::EndTable();
                     }
@@ -399,11 +403,16 @@ namespace sw::editor
         {
             if ( GlobalVariablesPanelInternal::beginVariableTable( "GlobalVarsTable", kGlobalVarTableFlags, -1.0f ) )
             {
-                for ( GlobalVariableInfo* pInfo : listFiltered )
+                EditorVirtualList virtualList( static_cast<int32>( listFiltered.size() ) ); // 등록된 전역 변수 전부 — 보이는 줄만 그린다
+                while ( virtualList.step() )
                 {
-                    ImGui::PushID( pInfo->_name.c_str() );
-                    drawVariableRow( *pInfo, true );
-                    ImGui::PopID();
+                    for ( int32 rowIndex = virtualList.getBegin(); rowIndex < virtualList.getEnd(); ++rowIndex )
+                    {
+                        GlobalVariableInfo& info = *listFiltered[static_cast<size_t>( rowIndex )];
+                        ImGui::PushID( info._name.c_str() );
+                        drawVariableRow( info, true );
+                        ImGui::PopID();
+                    }
                 }
                 ImGui::EndTable();
             }

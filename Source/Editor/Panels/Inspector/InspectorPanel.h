@@ -10,7 +10,7 @@
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/GUI/Panel/IEditorPanel.h"
-#include "Editor/Panels/Inspector/EditorPropertyGrid.h"
+#include "Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.h"
 #include "Editor/Panels/Inspector/Model/InspectorViewModel.h"
 
 namespace sw::editor

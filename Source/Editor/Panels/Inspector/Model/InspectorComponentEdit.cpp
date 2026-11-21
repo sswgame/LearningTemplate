@@ -6,11 +6,11 @@
 #include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
+#include "Editor/Common/Widgets/PropertyGrid/Model/PropertyGridViewModel.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetTypeID.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
-#include "Editor/Panels/Inspector/Model/PropertyGridViewModel.h"
 
 #include "Engine/Animation/Sprite/SpriteClipAsset.h"
 #include "Engine/Object/Component/CameraComponent.h"

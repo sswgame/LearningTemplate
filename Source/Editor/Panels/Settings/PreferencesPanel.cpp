@@ -18,20 +18,6 @@
 
 namespace sw::editor
 {
-    namespace
-    {
-        struct PreferencesPanelInternal
-        {
-            static void openPanel()
-            {
-                (void)EditorPanelManager::getInEditorContext().setPanelOpen<PreferencesPanel>( true ); // 패널은 이 파일에 등록되어 있다
-            }
-        };
-    } // namespace
-} // namespace sw::editor
-
-namespace sw::editor
-{
     PreferencesPanel::PreferencesPanel()
         : IEditorPanel( false )
         , _grid{}
@@ -117,5 +103,5 @@ namespace sw::editor
     }
 
     SW_EDITOR_PANEL( PreferencesPanel, PreferencesPanel::kPanelID, EditorPanelCategory::Tool, 2000 );
-    SW_EDITOR_COMMAND( EditorPreferences, "editor.preferences", &PreferencesPanelInternal::openPanel, nullptr, NoScene );
+    SW_EDITOR_PANEL_OPEN_COMMAND( EditorPreferences, "editor.preferences", PreferencesPanel );
 } // namespace sw::editor

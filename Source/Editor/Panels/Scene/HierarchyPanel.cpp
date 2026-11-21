@@ -14,6 +14,7 @@
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
+#include "Editor/Common/Input/EditorInputActionNames.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorComponentMenu.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
@@ -37,25 +38,9 @@ namespace sw::editor
             static constexpr const utf8* kPrefabAssetExtension = ".prefab.xml";
 
             // 이 창만의 액션(행 목록을 아는 것). 키는 `editor.input.xml` 의 `Editor.Panel.hierarchy` 레이어가 정한다.
-            static constexpr string_view kActionSelectAll      = "hierarchy.selectAll";
-            static constexpr string_view kActionSelectPrevious = "hierarchy.selectPrevious";
-            static constexpr string_view kActionSelectNext     = "hierarchy.selectNext";
-
-            // 씬 명령은 레지스트리가 연 거래 구간을 받는다(`EditorSceneCommandActionFn`) — 형만 앞으로 선언된 채 넘긴다(View 는 거래 헤더를 보지 않는다).
-            static void runMoveUp( EditorTransaction& /*transaction*/ )
-            {
-                HierarchyCommands::moveSelectionStep( false );
-            }
-
-            static void runMoveDown( EditorTransaction& /*transaction*/ )
-            {
-                HierarchyCommands::moveSelectionStep( true );
-            }
-
-            static void runCreateFolder( EditorTransaction& /*transaction*/ )
-            {
-                HierarchyCommands::createFolder();
-            }
+            static constexpr string_view kActionSelectAll      = editorinput::kHierarchySelectAll;
+            static constexpr string_view kActionSelectPrevious = editorinput::kHierarchySelectPrevious;
+            static constexpr string_view kActionSelectNext     = editorinput::kHierarchySelectNext;
 
             /** @brief 끌어 놓을 위치를 행 위에 그립니다 — 앞 · 뒤는 선, 자식으로 넣기는 행 테두리입니다. */
             static void drawDropIndicator( HierarchyDropZone zone, const ImVec2& rowMin, const ImVec2& rowMax )
@@ -200,13 +185,9 @@ namespace sw::editor
 namespace sw::editor
 {
     SW_EDITOR_PANEL( HierarchyPanel, HierarchyPanel::kPanelID, EditorPanelCategory::Core, 100 );
-    SW_EDITOR_COMMAND( SceneMoveSiblingUp, "scene.moveSiblingUp", &HierarchyPanelInternal::runMoveUp, nullptr, Scene );
-    SW_EDITOR_COMMAND( SceneMoveSiblingDown, "scene.moveSiblingDown", &HierarchyPanelInternal::runMoveDown, nullptr, Scene );
-    SW_EDITOR_COMMAND( SceneCreateFolder, "scene.createFolder", &HierarchyPanelInternal::runCreateFolder, nullptr, Scene );
-    // 계층 창이 그리는 오브젝트 메뉴 항목(하위 메뉴 · 이름 바꾸기) — 같은 종류(GameObject)의 메뉴라 씬 뷰에서 열어도 나온다(R5).
-    SW_EDITOR_CONTEXT_COMMAND( ObjectRename, "scene.object.rename", &HierarchyCommands::requestRename, &HierarchyCommands::hasSingleTargetObject, SceneUnrecorded, nullptr );                            // 이름 칸을 연다 — 확정할 때 기록한다
-    SW_EDITOR_CONTEXT_COMMAND( ObjectAddComponent, "scene.object.addComponent", nullptr, &HierarchyCommands::hasSingleTargetObject, SceneUnrecorded, &HierarchyPanelInternal::drawAddComponentSubmenu ); // 하위 메뉴 — 고른 항목이 기록한다
-    SW_EDITOR_CONTEXT_COMMAND( ObjectSelectAllWith, "scene.object.selectAllWith", nullptr, &HierarchyCommands::hasSingleTargetObject, NoScene, &HierarchyPanelInternal::drawSelectSameSubmenu );
+    // 계층 창이 그리는 오브젝트 메뉴의 하위 메뉴 — 같은 종류(GameObject)의 메뉴라 씬 뷰에서 열어도 나온다(R5). 동작 명령(형제 순서 · 폴더 · 이름 바꾸기)은 `Model/HierarchyViewModel.cpp` 에 있다.
+    SW_EDITOR_SUBMENU_COMMAND( ObjectAddComponent, "scene.object.addComponent", &HierarchyCommands::hasSingleTargetObject, SceneUnrecorded, &HierarchyPanelInternal::drawAddComponentSubmenu ); // 하위 메뉴 — 고른 항목이 기록한다
+    SW_EDITOR_SUBMENU_COMMAND( ObjectSelectAllWith, "scene.object.selectAllWith", &HierarchyCommands::hasSingleTargetObject, NoScene, &HierarchyPanelInternal::drawSelectSameSubmenu );
 
     HierarchyPanel::HierarchyPanel()
         : _state{}
@@ -244,7 +225,7 @@ namespace sw::editor
             window._scrollY            = ImGui::GetScrollY();
             window._viewHeight         = ImGui::GetWindowHeight();
             window._bSkipOffscreenRows = _bSkipOffscreenRows;
-            HierarchyViewModel::get().gather( _filterBuffer.view(), window, _state );
+            gatherViewState( HierarchyViewModel::get(), _filterBuffer.view(), window, _state );
             if ( _state._bRenameStarted != 0 )
             {
                 _renameBuffer      = _state._renameStartText.view();

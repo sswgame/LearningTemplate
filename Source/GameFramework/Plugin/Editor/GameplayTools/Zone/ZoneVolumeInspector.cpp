@@ -12,11 +12,11 @@
 #include "Core/String/formatString.h"
 
 #include "Editor/Common/Widgets/EditorWidgets.h"
+#include "Editor/Common/Widgets/PropertyGrid/Model/InspectorObjectEdit.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Panels/Inspector/IInspectorComponent.h"
 #include "Editor/Panels/Inspector/Model/InspectorComponentEdit.h"
 #include "Editor/Panels/Inspector/Model/InspectorComponentManager.h"
-#include "Editor/Panels/Inspector/Model/InspectorObjectEdit.h"
 
 #include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Localization/LocText.h"

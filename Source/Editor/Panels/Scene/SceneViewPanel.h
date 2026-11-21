@@ -46,6 +46,8 @@ namespace sw::editor
     private:
         /** @brief 디버그 드로우 카테고리를 켜고 끄는 팝업을 그립니다. */
         void drawDebugCategoryPopup();
+        /** @brief 개발 명령이 쌓은 요청(`SceneViewModel::takeRequest`)을 뷰포트 클라이언트에 적용합니다. */
+        void applyRequests();
 
     private:
         EditorViewportClient              _viewportClient;

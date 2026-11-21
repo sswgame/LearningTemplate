@@ -35,11 +35,6 @@ namespace sw::editor
     {
         struct ProjectSettingsPanelInternal
         {
-            static void openPanel()
-            {
-                (void)EditorPanelManager::getInEditorContext().setPanelOpen<ProjectSettingsPanel>( true ); // 패널은 이 파일에 등록되어 있다
-            }
-
             [[nodiscard]] static bool readPageCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 outValue = static_cast<float64>( ProjectSettingsPanel::getPageCount() );
@@ -354,7 +349,7 @@ namespace sw::editor
     }
 
     SW_EDITOR_PANEL( ProjectSettingsPanel, ProjectSettingsPanel::kPanelID, EditorPanelCategory::Tool, 2010 );
-    SW_EDITOR_COMMAND( ProjectSettingsOpen, "editor.projectSettings", &ProjectSettingsPanelInternal::openPanel, nullptr, NoScene );
+    SW_EDITOR_PANEL_OPEN_COMMAND( ProjectSettingsOpen, "editor.projectSettings", ProjectSettingsPanel );
 
     SW_AUTOMATION_WATCH( editorProjectSettingsPageCount, "Editor.ProjectSettingsPageCount", "Settings files the Project Settings window lists",
                          &ProjectSettingsPanelInternal::readPageCount );

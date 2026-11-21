@@ -153,6 +153,22 @@ namespace sw
         [[nodiscard]] bool registerEditorModule( ILiveReloadManager* pLiveReloadManager );
 
     private:
+        /** @brief 에디터 모듈의 주인 창구입니다. 리로드 단계를 이 호스트의 에디터 콜백으로 잇는다(다중 상속 대신 멤버 객체). */
+        class EditorReloadClient final : public IReloadableModuleClient
+        {
+        public:
+            explicit EditorReloadClient( ClientModuleManager& owner )
+                : _owner( owner ) {}
+            void               onBeforeReload() override { _owner.onBeforeEditorReload(); }
+            void               onAfterReload( ModuleLibraryHandle library ) override { _owner.onAfterEditorReload( library ); }
+            void               onReloadFault( uint32 faultCode ) override { _owner.onEditorReloadFault( faultCode ); }
+            [[nodiscard]] bool isLibraryUsable( ModuleLibraryHandle library ) override { return _owner.isEditorLibraryUsable( library ); }
+
+        private:
+            ClientModuleManager& _owner;
+        };
+
+        EditorReloadClient            _editorReloadClient{ *this };
         EditorAPI                     _editorAPI;
         EditorHandle                  _editor;
         unique_ptr<SubsystemScope>    _editorServices;      ///< 에디터 모듈에 넘긴 호스트 서비스 범위(`rebindModuleService` 가 새로 만든다)

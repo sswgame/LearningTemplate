@@ -30,25 +30,29 @@ namespace sw::editor
 
     void EditorUndoHistorySnapshot::captureFrom( const CommandStack* pStack )
     {
-        _bAvailable = pStack != nullptr ? SW_TRUE : SW_FALSE;
-        if ( pStack == nullptr )
-        {
-            _listLabel.clear();
-            _currentIndex = 0;
-            _bCanUndo     = SW_FALSE;
-            _bCanRedo     = SW_FALSE;
-            return;
-        }
-        const size_t count = pStack->getCommandCount();
+        // 같은 값이면 쓰지 않는다 — 게임 단계마다 부르므로 바뀐 프레임에만 세대가 오르고 글을 복사한다.
+        const uint8  bAvailable   = pStack != nullptr ? SW_TRUE : SW_FALSE;
+        const size_t count        = pStack != nullptr ? pStack->getCommandCount() : 0;
+        const size_t currentIndex = pStack != nullptr ? pStack->getCurrentIndex() : 0;
+        const uint8  bCanUndo     = pStack != nullptr && pStack->canUndo() ? SW_TRUE : SW_FALSE;
+        const uint8  bCanRedo     = pStack != nullptr && pStack->canRedo() ? SW_TRUE : SW_FALSE;
+        bool         bChanged     = bAvailable != _bAvailable || count != _listLabel.size() || currentIndex != _currentIndex || bCanUndo != _bCanUndo || bCanRedo != _bCanRedo;
         _listLabel.resize( count );
         for ( size_t index = 0; index < count; ++index )
         {
-            const string& label = pStack->getCommand( index )._label;
-            _listLabel[index]   = label.empty() == false ? label : string( "Command" );
+            const string&     label = pStack->getCommand( index )._label;
+            const string_view shown = label.empty() == false ? string_view( label ) : string_view( "Command" );
+            if ( _listLabel[index] == shown )
+                continue;
+            _listLabel[index] = string{ shown };
+            bChanged          = true;
         }
-        _currentIndex = pStack->getCurrentIndex();
-        _bCanUndo     = pStack->canUndo() ? SW_TRUE : SW_FALSE;
-        _bCanRedo     = pStack->canRedo() ? SW_TRUE : SW_FALSE;
+        _bAvailable   = bAvailable;
+        _currentIndex = currentIndex;
+        _bCanUndo     = bCanUndo;
+        _bCanRedo     = bCanRedo;
+        if ( bChanged )
+            ++_generation;
     }
 
     void EditorUndoHistory::publishSnapshot()

@@ -16,7 +16,6 @@ namespace sw
 {
     struct GlobalVariableInfo;
 
-    class GlobalVariableManager;
 } // namespace sw
 
 namespace sw::editor
@@ -41,11 +40,11 @@ namespace sw::editor
         /** @brief 전역 변수 UI를 그립니다. */
         void drawContent() override;
         /** @brief 검색·그룹화·리셋·프리셋 툴바를 그립니다. */
-        void drawVariableToolbar( GlobalVariableManager& gvm );
+        void drawVariableToolbar();
         /** @brief "Presets..." 단추의 팝업입니다. 이름을 붙여 저장하고, 저장한 프리셋 목록에서 불러옵니다. */
         void drawPresetsPopup();
         /** @brief 핀 고정된 즐겨찾기 변수 섹션을 그립니다. */
-        void drawPinnedSection( GlobalVariableManager& gvm );
+        void drawPinnedSection();
         /** @brief 모듈별 그룹 또는 평면 모드로 변수 테이블을 그립니다. */
         void drawVariableTable( const vector<GlobalVariableInfo*>& listFiltered );
         /** @brief 기본 창 크기를 반환합니다. */

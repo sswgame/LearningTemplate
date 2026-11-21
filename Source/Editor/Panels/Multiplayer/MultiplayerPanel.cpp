@@ -70,7 +70,7 @@ namespace sw::editor
 
     void MultiplayerPanel::drawContent()
     {
-        _viewModel.gather( _viewState );
+        gatherViewState( _viewModel, _viewState );
         syncTabs();
         MultiplayerTabContext context;
         context._pSession           = &_viewModel;

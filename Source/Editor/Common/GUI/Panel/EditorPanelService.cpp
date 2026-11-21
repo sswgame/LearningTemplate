@@ -108,7 +108,7 @@ namespace sw::editor
             IEditorPanel* const pPanel = entry._pInstance.get();
             if ( pPanel == nullptr || pPanel->isOpen() == false )
                 continue;
-            outList.push_back( EditorPanelCommandStack{ pPanel->getWindowID(), pPanel->findPanelCommandStack(), pPanel->shouldKeepFocusedCommandStack() } );
+            outList.push_back( EditorPanelCommandStack{ pPanel->getWindowID(), pPanel->findPanelCommandStack(), pPanel->shouldKeepFocusedCommandStack(), entry._id } );
         }
     }
 } // namespace sw::editor

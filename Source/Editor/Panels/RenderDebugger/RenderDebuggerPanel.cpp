@@ -9,6 +9,7 @@
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorNodeGraphID.h"
+#include "Editor/Common/Widgets/EditorVirtualList.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
@@ -370,12 +371,11 @@ namespace sw::editor
                 ImGui::TableSetupColumn( string( header.view() ).c_str() );
             }
             ImGui::TableHeadersRow();
-            vector<string>   listCell;
-            ImGuiListClipper clipper;
-            clipper.Begin( static_cast<int32>( rowCount ) );
-            while ( clipper.Step() )
+            vector<string>    listCell;
+            EditorVirtualList virtualList( static_cast<int32>( rowCount ) );
+            while ( virtualList.step() )
             {
-                for ( int32 row = clipper.DisplayStart; row < clipper.DisplayEnd; ++row )
+                for ( int32 row = virtualList.getBegin(); row < virtualList.getEnd(); ++row )
                 {
                     if ( layout.formatRow( state._bufferContent._byte, static_cast<uint32>( row ), listCell ) == false )
                         continue;

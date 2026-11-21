@@ -2,8 +2,8 @@
 
 #include "Editor/Panels/Inspector/Model/InspectorComponentManager.h"
 
+#include "Editor/Common/Widgets/PropertyGrid/Model/InspectorPropertyLayout.h"
 #include "Editor/Panels/Inspector/IInspectorComponent.h"
-#include "Editor/Panels/Inspector/Model/InspectorPropertyLayout.h"
 
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Reflection/TypeRegistry.h"

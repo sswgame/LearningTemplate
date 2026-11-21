@@ -12,6 +12,7 @@
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
+#include "Editor/Common/Input/EditorInputActionNames.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Viewport/EditorViewportCamera.h"
 #include "Editor/Viewport/EditorViewportProjection.h"
@@ -290,7 +291,7 @@ namespace sw::editor
         if ( bInvalidRulerInputs )
             return;
 
-        if ( EditorInputGUI::isActionDown( "viewport.rulerHold" ) == false && bShowRuler == false )
+        if ( EditorInputGUI::isActionDown( editorinput::kViewportRulerHold ) == false && bShowRuler == false )
         {
             _bRulerActive = SW_FALSE;
             return;

@@ -20,6 +20,8 @@
 #include "Editor/Common/Input/EditorInputActions.h"
 #include "Editor/Common/Input/EditorPopupManager.h"
 #include "Editor/Common/SourceControl/EditorSourceControl.h"
+#include "Editor/Common/Widgets/PropertyGrid/IInspectorProperty.h"
+#include "Editor/Common/Widgets/PropertyGrid/PropertyDrawerRegistry.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorDefaultObjects.h"
 #include "Editor/Common/Workspace/EditorExtensionSubsystems.h"
@@ -39,8 +41,6 @@
 #include "Editor/Common/Workspace/Undo/EditorUndoHistory.h"
 #include "Editor/EditorModuleUnloadListener.h"
 #include "Editor/Panels/Inspector/IInspectorComponent.h"
-#include "Editor/Panels/Inspector/IInspectorProperty.h"
-#include "Editor/Panels/Inspector/InspectorPropertyManager.h"
 #include "Editor/Panels/Inspector/Model/InspectorComponentManager.h"
 
 namespace sw::editor
@@ -75,7 +75,7 @@ namespace sw::editor
         scope.emplaceSubsystem<EditorToolDefaultsReload>(); // `Config/` 감시는 엔진(ConfigReloadSubsystem)이 한다 — 편집기는 도구 기본값 처리기만 건다
         scope.emplaceSubsystem<EditorSourceControl>( ProcessRoots::get()._project.str() );
         scope.emplaceSubsystem<InspectorComponentManager>();
-        scope.emplaceSubsystem<InspectorPropertyManager>();
+        scope.emplaceSubsystem<PropertyDrawerRegistry>();
         scope.emplaceSubsystem<EditorDefaultObjects>();
         scope.emplaceSubsystem<EditorNetPlaySession>();
         scope.emplaceSubsystem<EditorRenderViews>();
@@ -94,7 +94,7 @@ namespace sw::editor
         context.getSubsystem<EditorPanelManager>().syncWithRegistry();
         context.getSubsystem<EditorPopupManager>().syncWithRegistry();
         context.getSubsystem<InspectorComponentManager>().syncWithRegistry();
-        context.getSubsystem<InspectorPropertyManager>().syncWithRegistry();
+        context.getSubsystem<PropertyDrawerRegistry>().syncWithRegistry();
         EditorCommandGUI::syncWithRegistry();
     }
 } // namespace sw::editor

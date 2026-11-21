@@ -66,8 +66,12 @@ namespace sw::editor
         /** @brief 다음 `pollPresetFiles` 가 목록을 다시 훑게 합니다. 지금 훑는 중이면 그 결과를 받은 뒤 한 번 더 훑는다. */
         void                  markPresetListStale() { _bPresetListDirty = SW_TRUE; }
         const vector<string>& getPresetFiles() const { return _listPresetFile; }
-        /** @brief 에디터 범위의 전역 변수 관리자입니다(값은 창이 바로 고친다 — 머리말). View 가 서비스 창구(`EditorService.h`)를 보지 않게 여기서 찾는다. 없으면 멈춘다. */
-        static GlobalVariableManager& getVariableManager();
+        /** @brief 등록된 전역 변수를 모두 기본값으로 되돌립니다(Reset All · 문서 되돌리기). */
+        static void resetAllToDefault();
+        /** @brief 이름 @p name 의 전역 변수입니다. 없으면 nullptr 입니다(고정한 변수 줄 — 값은 창이 바로 고친다, 머리말). */
+        [[nodiscard]] static GlobalVariableInfo* findVariable( string_view name );
+        /** @brief 에디터 범위의 관리자에서 `refreshVariableList( gvm, filterText )` 를 부릅니다. 관리자는 Model 안에서만 찾는다(MVVM 계약). */
+        const vector<GlobalVariableInfo*>& refreshVariableList( string_view filterText );
         /** @brief 지금 값을 세션 문서로 저장합니다(`EditorGlobalVariableCommands::saveSessionPreset`). 못 쓰면 false 이고 로그에 남는다. */
         [[nodiscard]] static bool saveSessionPreset();
         /** @brief `saveSessionPreset` 가 쓸 세션 문서(디스크 경로)를 @p outListPath 에 더합니다(`EditorGlobalVariableCommands::getSessionPresetPath`). */
@@ -78,6 +82,10 @@ namespace sw::editor
         static const utf8* findEnumName( const string& enumType, int32 value );
         /** @brief 프리셋 파일 경로 @p presetFile 의 표시 이름(파일 이름에서 `.gvpreset.xml` 을 뗀 것)입니다. */
         static string makePresetDisplayName( string_view presetFile );
+
+    private:
+        /** @brief 에디터 범위의 전역 변수 관리자입니다. 없으면 멈춘다. Model 안에서만 쓴다. */
+        static GlobalVariableManager& getVariableManager();
 
     private:
         unordered_set<string> _uniquePinnedVar;

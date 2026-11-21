@@ -97,6 +97,25 @@ namespace sw::editor
         string _absolutePath;
     };
 
+    /** @brief 에셋 명령(`Model/ContentBrowserCommands.cpp`)이 창에 넣는 요청의 종류입니다. 팝업 · 이름 칸은 창(View)이 연다. */
+    enum class ContentBrowserRequestKind : uint8
+    {
+        Reveal,           ///< 그 에셋의 폴더를 열고 고른다(Browse to Asset)
+        OpenFolder,       ///< 그 폴더를 연다(`content.open`)
+        ShowReferences,   ///< 참조 찾기 결과 창
+        ShowDependencies, ///< 의존 결과 창
+        Rename,           ///< 이름 칸을 연다
+        Duplicate,        ///< 복제한다
+        Delete,           ///< 지우기 확인 대화상자
+    };
+
+    /** @brief 콘텐츠 브라우저 요청 하나입니다(값만). */
+    struct ContentBrowserRequest
+    {
+        ContentBrowserRequestKind _kind{ ContentBrowserRequestKind::Reveal };
+        string                    _absolutePath;
+    };
+
     /**
      * @class ContentBrowserViewModel
      * @brief 콘텐츠 브라우저 창(`ContentBrowserPanel`)의 모델입니다. 창은 이것을 들고 그리기만 하고, 디스크 · 선택 · 색인을 바꾸는 일은 모두 여기를 지납니다.
@@ -125,6 +144,10 @@ namespace sw::editor
         [[nodiscard]] static string getGamePackRoot();
         /** @brief 참조 역색인이 마지막 `Content/` 변경을 반영했으면 @p outCurrent 가 true 입니다. 에디터 컨텍스트가 없으면 false 를 돌려줍니다(감시 값). */
         [[nodiscard]] static bool readReferenceIndexCurrent( bool& outCurrent );
+        /** @brief 에셋 명령의 요청을 쌓고 창 열기를 요청합니다(창이 닫혀 있으면 다음 프레임에 열려 꺼낸다 — 언리얼 Sync to Content Browser). */
+        static void postRequest( ContentBrowserRequestKind kind, string_view absolutePath );
+        /** @brief 창의 지금 선택(절대 경로)입니다 — 대상 없이 부른 명령(단축키)이 쓴다. 창이 한 번도 그려지지 않았으면 비어 있다. */
+        [[nodiscard]] static string findPublishedSelection();
 
         // ------------------------------------------------------------------------------
         // 1) 프레임 — 창이 내용을 그리기 전에 한 번 부른다
@@ -134,6 +157,11 @@ namespace sw::editor
          * @param bSearchActive 검색어가 있으면 하위 폴더의 파일까지 본다(언리얼과 유니티의 프로젝트 검색과 같다).
          */
         void update( bool bSearchActive );
+        /**
+         * @brief 쌓인 요청을 꺼냅니다. 모델만 바꾸는 요청(폴더 열기 · 고르기 · 복제)은 여기서 적용하고, 창이 열 팝업 · 이름 칸의 요청만 @p outRequest 로 돌려준다.
+         * @return 창이 처리할 요청을 꺼냈으면 true 입니다(없으면 false — 루프의 끝).
+         */
+        [[nodiscard]] bool takeViewRequest( ContentBrowserRequest& outRequest );
 
         // ------------------------------------------------------------------------------
         // 2) 루트와 폴더

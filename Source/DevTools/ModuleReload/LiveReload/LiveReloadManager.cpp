@@ -112,6 +112,8 @@ namespace sw
         , _callbackIDAllocator{}
         , _deferredUnloadQueue{ kMaxDeferredUnloadBatchCount }
         , _shadowCopySerials{}
+        , _cascadePhases{}
+        , _buildFinishedSeconds{ 0.0 }
         , _completedReloadCount{ 0 }
         , _bReloadGraphBroken{ SW_FALSE }
         , _bBuildStampPending{ SW_FALSE }
@@ -364,9 +366,12 @@ namespace sw
                     context._bForceReload     = false;
                 }
             }
-            else if ( event._targetName.empty() == false && _mapModule.find( event._targetName ) != _mapModule.end() )
+            else
             {
-                triggerReload( event._targetName );
+                if ( _buildFinishedSeconds == 0.0 )
+                    _buildFinishedSeconds = MonotonicClock::nowSeconds(); // 대기 구간의 시작 — 디바운스 · 리로드 잡음을 지나 연쇄가 시작할 때까지
+                if ( event._targetName.empty() == false && _mapModule.find( event._targetName ) != _mapModule.end() )
+                    triggerReload( event._targetName );
             }
         }
         return event._bInProgress;
@@ -397,6 +402,8 @@ namespace sw
             {
                 _seenBuildToken     = std::move( currentToken );
                 _bBuildStampPending = SW_TRUE;
+                if ( _buildFinishedSeconds == 0.0 )
+                    _buildFinishedSeconds = MonotonicClock::nowSeconds(); // 바깥 빌드의 끝 — 연쇄 시작까지의 대기 구간을 잰다
             }
         }
 
@@ -479,28 +486,10 @@ namespace sw
         }
     }
 
-    Subscription LiveReloadManager::setOnBeforeReload( string_view moduleName, OnBeforeReloadDelegate delegate )
+    Subscription LiveReloadManager::setModuleClient( string_view moduleName, IReloadableModuleClient& client )
     {
-        getOrCreateRecord( moduleName )._onBeforeReload = std::move( delegate );
-        return issueSlotSubscription( moduleName, CallbackSlot::BeforeReload );
-    }
-
-    Subscription LiveReloadManager::setOnAfterReload( string_view moduleName, OnAfterReloadDelegate delegate )
-    {
-        getOrCreateRecord( moduleName )._onAfterReload = std::move( delegate );
-        return issueSlotSubscription( moduleName, CallbackSlot::AfterReload );
-    }
-
-    Subscription LiveReloadManager::setOnReloadFault( string_view moduleName, OnReloadFaultDelegate delegate )
-    {
-        getOrCreateRecord( moduleName )._onReloadFault = std::move( delegate );
-        return issueSlotSubscription( moduleName, CallbackSlot::ReloadFault );
-    }
-
-    Subscription LiveReloadManager::setOnValidateLibrary( string_view moduleName, OnValidateLibraryDelegate delegate )
-    {
-        getOrCreateRecord( moduleName )._onValidateLibrary = std::move( delegate );
-        return issueSlotSubscription( moduleName, CallbackSlot::ValidateLibrary );
+        getOrCreateRecord( moduleName )._pClient = &client;
+        return issueSlotSubscription( moduleName, CallbackSlot::ModuleClient );
     }
 
     Subscription LiveReloadManager::addOnBeforeCommitBatch( OnBeforeCommitBatchDelegate delegate )
@@ -566,24 +555,9 @@ namespace sw
         ModuleRecord& record = *recordIt->second;
         switch ( registration._slot )
         {
-            case CallbackSlot::BeforeReload:
+            case CallbackSlot::ModuleClient:
             {
-                record._onBeforeReload = {};
-                break;
-            }
-            case CallbackSlot::AfterReload:
-            {
-                record._onAfterReload = {};
-                break;
-            }
-            case CallbackSlot::ReloadFault:
-            {
-                record._onReloadFault = {};
-                break;
-            }
-            case CallbackSlot::ValidateLibrary:
-            {
-                record._onValidateLibrary = {};
+                record._pClient = nullptr;
                 break;
             }
             case CallbackSlot::FlushWorkers:
@@ -774,7 +748,7 @@ namespace sw
         {
             // 옛 라이브러리가 아직 도는 동안 호스트가 새 라이브러리를 거절할 수 있는 지점이다. 거절은 적용 전 실패라 옛 라이브러리를 두고 그래프를 막지 않는다.
             // 새 라이브러리의 코드가 불리므로 onAfterReload 와 같이 지킨다.
-            if ( context._onValidateLibrary.isBound() )
+            if ( context._pClient != nullptr )
             {
                 bool        bAccepted{ false };
                 uint32      faultCode{ 0 };
@@ -782,7 +756,7 @@ namespace sw
                 const bool  bCompleted = ModuleCallGuard::run(
                     SW_DELEGATE_LAMBDA( Delegate<void()>, [&context, &bAccepted, pNewHandle]()
                  {
-                    bAccepted = context._onValidateLibrary( ModuleLibraryHandle{ pNewHandle } );
+                    bAccepted = context._pClient->isLibraryUsable( ModuleLibraryHandle{ pNewHandle } );
                 } ),
                     faultCode );
                 if ( bCompleted == false || bAccepted == false )
@@ -817,8 +791,8 @@ namespace sw
             if ( pPreviousHandle != nullptr && flushTasksBeforeUnload() == false )
                 return false;
 
-            if ( context._onBeforeReload.isBound() && pPreviousHandle != nullptr )
-                context._onBeforeReload();
+            if ( context._pClient != nullptr && pPreviousHandle != nullptr )
+                context._pClient->onBeforeReload();
 
             if ( pPreviousHandle != nullptr )
             {
@@ -858,13 +832,13 @@ namespace sw
     void LiveReloadManager::invokeAfterReload( ModuleRecord& context )
     {
         // 새 라이브러리의 코드가 처음 도는 지점이다. 여기서 죽으면 에디터째 종료되어 저장하지 않은 작업을 잃으므로 보호한다.
-        if ( context._onAfterReload.isBound() == false )
+        if ( context._pClient == nullptr )
             return;
         uint32     faultCode{ 0 };
         const bool bCompleted = ModuleCallGuard::run(
             SW_DELEGATE_LAMBDA( Delegate<void()>, [&context]()
         {
-            context._onAfterReload( ModuleLibraryHandle{ context._pLibraryModule } );
+            context._pClient->onAfterReload( ModuleLibraryHandle{ context._pLibraryModule } );
         } ),
             faultCode );
         if ( bCompleted == false )
@@ -872,8 +846,8 @@ namespace sw
             SW_LOG_ERROR_ID( "LiveReloadManager.ModuleFaultedCodeX2", "Module %# faulted (code 0x%#) while starting after the reload — dropping what it handed out; save your work and restart",
                              context._moduleName, Fmt( faultCode, Format( 8, Format::Padding::Zero ).hex() ) );
             markGraphBroken( "a module faulted in onAfterReload" );
-            if ( context._onReloadFault.isBound() )
-                context._onReloadFault( faultCode );
+            if ( context._pClient != nullptr )
+                context._pClient->onReloadFault( faultCode );
         }
     }
 
@@ -908,8 +882,8 @@ namespace sw
 
     void LiveReloadManager::unloadModule( ModuleRecord& context )
     {
-        if ( context._onBeforeReload.isBound() && context._pLibraryModule != nullptr )
-            context._onBeforeReload();
+        if ( context._pClient != nullptr && context._pLibraryModule != nullptr )
+            context._pClient->onBeforeReload();
 
         if ( context._pLibraryModule != nullptr )
         {
@@ -1048,6 +1022,9 @@ namespace sw
     {
         const float64 startSeconds    = MonotonicClock::nowSeconds();
         const uint32  completedBefore = _completedReloadCount;
+        _cascadePhases                = ModuleReloadPhases{};
+        _cascadePhases._waitMs        = _buildFinishedSeconds > 0.0 ? ( startSeconds - _buildFinishedSeconds ) * static_cast<float64>( constant::time::kMillisecondsPerSecond ) : 0.0;
+        _buildFinishedSeconds         = 0.0;
         if ( runCascade( listSubgraphName ) == false )
             return;
         ReloadTracker* const pTracker = engine::areEngineServicesBound() ? engine::findSubsystem<ReloadTracker>() : nullptr;
@@ -1057,6 +1034,9 @@ namespace sw
         for ( const string& moduleName : listSubgraphName )
             pTracker->record( ReloadSource::Module, moduleName, bSucceeded ? ReloadResult::Reloaded : ReloadResult::Failed, "the module swap failed - see the LiveReloadManager log" );
         pTracker->recordElapsed( ReloadSource::Module, ( MonotonicClock::nowSeconds() - startSeconds ) * static_cast<float64>( constant::time::kMillisecondsPerSecond ) );
+        pTracker->recordModulePhases( _cascadePhases );
+        SW_LOG_INFO_ID( "LiveReloadManager.CascadePhasesMs", "Module reload phases: wait %# ms, prepare %# ms, suspend %# ms, commit %# ms", _cascadePhases._waitMs, _cascadePhases._prepareMs,
+                        _cascadePhases._suspendMs, _cascadePhases._commitMs );
     }
 
     bool LiveReloadManager::runCascade( const vector<string>& listSubgraphName )
@@ -1072,8 +1052,12 @@ namespace sw
 
         SW_LOG_TRACE_ID( "LiveReloadManager.CascadeReloadCount", "Cascade reload count=%#", static_cast<uint32>( listOrder.size() ) );
 
+        const float64         msPerSecond = static_cast<float64>( constant::time::kMillisecondsPerSecond );
+        float64               phaseStart  = MonotonicClock::nowSeconds();
         vector<PreparedEntry> listPrepared;
-        if ( prepareCascade( listOrder, listPrepared ) == false )
+        const bool            bPrepared = prepareCascade( listOrder, listPrepared );
+        _cascadePhases._prepareMs       = ( MonotonicClock::nowSeconds() - phaseStart ) * msPerSecond;
+        if ( bPrepared == false )
         {
             abortPrepared( listPrepared, 0 );
             return true;
@@ -1081,8 +1065,10 @@ namespace sw
 
         // 배치 직전 콜백의 거절은 적용 전 실패다. 아무것도 언로드하지 않았으니 새 라이브러리만 버리고 옛 라이브러리로 계속 돈다.
         // 나중에 더한 것(바깥 층)부터 부르고 처음 거절에서 멈춘다. 콜백이 자기 구독을 놓아도 그 항목은 순회가 끝난 뒤 빠진다.
+        phaseStart                 = MonotonicClock::nowSeconds();
         const bool bCommitAccepted = _onBeforeCommitBatch.broadcastUntilReverse( []( bool bAccepted )
         { return bAccepted == false; }, listOrder ) == false;
+        _cascadePhases._suspendMs  = ( MonotonicClock::nowSeconds() - phaseStart ) * msPerSecond;
         if ( bCommitAccepted == false )
         {
             SW_LOG_ERROR_ID( "LiveReloadManager.CascadeReloadRefusedBefore", "Cascade reload refused before the first commit — keeping the previous modules" );
@@ -1091,7 +1077,10 @@ namespace sw
         }
 
         _deferredUnloadQueue.beginBatch();
-        if ( commitCascade( listPrepared ) == false )
+        phaseStart               = MonotonicClock::nowSeconds();
+        const bool bCommitted    = commitCascade( listPrepared );
+        _cascadePhases._commitMs = ( MonotonicClock::nowSeconds() - phaseStart ) * msPerSecond;
+        if ( bCommitted == false )
             return true;
 
         // 새 라이브러리가 모두 로드됐다. 의존 모듈이 옛 라이브러리에 바인딩돼 있으면, 옛 라이브러리를 언로드한 지금 거기로 점프하는 코드가 죽는다. 여기서 막는다.
@@ -1106,10 +1095,7 @@ namespace sw
     }
 
     LiveReloadManager::ModuleRecord::ModuleRecord() noexcept
-        : _onBeforeReload{}
-        , _onAfterReload{}
-        , _onReloadFault{}
-        , _onValidateLibrary{}
+        : _pClient{ nullptr }
         , _moduleName{}
         , _originalModulePath{}
         , _tempModulePath{}

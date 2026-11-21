@@ -6,12 +6,14 @@
 
 #include "Editor/Common/Input/Model/EditorShortcutMap.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
 
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/Config/EditorToolDefaults.h"
+#include "Editor/Common/Input/EditorInputActionNames.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Input/DebugKeyActions.h"
@@ -139,6 +141,37 @@ namespace sw::editor
         }
         if ( outListCommandID.empty() )
             outListCommandID.swap( listOtherCommand );
+    }
+
+    void EditorShortcutMap::collectActionMismatches( const vector<hashed_string>& listMapAction, const vector<EditorCommandDesc>& listCommand, vector<string>& outListUnknown,
+                                                     vector<string>& outListMissing )
+    {
+        outListUnknown.clear();
+        outListMissing.clear();
+        vector<string_view> listCodeAction;
+        for ( const utf8* pAction : editorinput::kArrCodeAction )
+            listCodeAction.push_back( pAction );
+        for ( const utf8* pAction : editorinput::kArrViewportBookmark )
+            listCodeAction.push_back( pAction );
+        for ( const utf8* pAction : editorinput::kArrViewportSetBookmark )
+            listCodeAction.push_back( pAction );
+        for ( const hashed_string& action : listMapAction )
+        {
+            const string_view name   = action.view();
+            bool              bKnown = VectorUtil::contains( listCodeAction, name );
+            for ( size_t index = 0; bKnown == false && index < listCommand.size(); ++index )
+                bKnown = listCommand[index]._inputAction == name;
+            if ( bKnown == false )
+                outListUnknown.push_back( string{ name } );
+        }
+        for ( const string_view codeAction : listCodeAction )
+        {
+            bool bInMap = false;
+            for ( size_t index = 0; bInMap == false && index < listMapAction.size(); ++index )
+                bInMap = listMapAction[index].view() == codeAction;
+            if ( bInMap == false )
+                outListMissing.push_back( string{ codeAction } );
+        }
     }
 
     bool EditorShortcutMap::wasActionTriggered( string_view action ) const

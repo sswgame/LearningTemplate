@@ -10,6 +10,7 @@
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
+#include "Editor/Common/Widgets/EditorVirtualList.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Panels/Catalog/Model/CatalogDocument.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
@@ -154,11 +155,10 @@ namespace sw::editor
             ImGui::TableSetupScrollFreeze( 1, 1 );
             ImGui::TableHeadersRow();
 
-            ImGuiListClipper clipper;
-            clipper.Begin( static_cast<int32>( _listVisibleRow.size() ) );
-            while ( clipper.Step() )
+            EditorVirtualList virtualList( static_cast<int32>( _listVisibleRow.size() ) );
+            while ( virtualList.step() )
             {
-                for ( int32 rowPosition = clipper.DisplayStart; rowPosition < clipper.DisplayEnd; ++rowPosition )
+                for ( int32 rowPosition = virtualList.getBegin(); rowPosition < virtualList.getEnd(); ++rowPosition )
                 {
                     drawRow( document, group, _listVisibleRow[static_cast<size_t>( rowPosition )], rowPosition, bFirstGroup, inoutbFirstCell, inoutbFirstCurveButton, inoutbFirstVariantButton );
                 }

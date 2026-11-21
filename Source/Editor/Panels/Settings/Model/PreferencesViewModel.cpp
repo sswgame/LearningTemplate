@@ -6,7 +6,7 @@
 
 #include "Editor/Common/Config/EditorSettingsRegistry.h"
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
-#include "Editor/Panels/Inspector/Model/InspectorPropertyLayout.h"
+#include "Editor/Common/Widgets/PropertyGrid/Model/InspectorPropertyLayout.h"
 
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Reflection/TypeRegistry.h"

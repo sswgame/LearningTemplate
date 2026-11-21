@@ -11,6 +11,7 @@
 #include "Core/String/formatString.h"
 
 #include "Editor/Common/Commands/Diagnostics/EditorModuleOverrides.h"
+#include "Editor/Common/Commands/EditorCommandIDs.h"
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -219,6 +220,6 @@ namespace sw::editor
 
     bool ModulesViewModel::requestBuildAll()
     {
-        return editor::getSubsystem<EditorContext>().getSubsystem<EditorCommandRegistry>().execute( "build.compileAll", EditorCommandTarget::none() );
+        return editor::getSubsystem<EditorContext>().getSubsystem<EditorCommandRegistry>().execute( editorcommand::kBuildCompileAll, EditorCommandTarget::none() );
     }
 } // namespace sw::editor

@@ -5,11 +5,11 @@
 #include "Editor/Common/EditorExtensionRegistry.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/Input/EditorPopupManager.h"
+#include "Editor/Common/Widgets/PropertyGrid/PropertyDrawerRegistry.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorDefaultObjects.h"
 #include "Editor/Common/Workspace/EditorExtensionSubsystems.h"
 #include "Editor/EditorSubsystemSet.h"
-#include "Editor/Panels/Inspector/InspectorPropertyManager.h"
 #include "Editor/Panels/Inspector/Model/InspectorComponentManager.h"
 
 #include "Engine/Reflection/TypeRegistry.h"
@@ -18,7 +18,7 @@ namespace sw::editor
 {
     span<const utf8* const> EditorModuleUnloadListener::getSubsystemDependencies() const
     {
-        static constexpr const utf8* kArrDependency[] = { EditorPanelManager::kSubsystemName, EditorPopupManager::kSubsystemName, InspectorComponentManager::kSubsystemName, InspectorPropertyManager::kSubsystemName, EditorDefaultObjects::kSubsystemName, EditorExtensionSubsystems::kSubsystemName };
+        static constexpr const utf8* kArrDependency[] = { EditorPanelManager::kSubsystemName, EditorPopupManager::kSubsystemName, InspectorComponentManager::kSubsystemName, PropertyDrawerRegistry::kSubsystemName, EditorDefaultObjects::kSubsystemName, EditorExtensionSubsystems::kSubsystemName };
         return kArrDependency;
     }
 

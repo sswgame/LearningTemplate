@@ -10,7 +10,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Editor/Common/GUI/Panel/EditorStateDocumentPanel.h"
-#include "Editor/Panels/Inspector/EditorPropertyGrid.h"
+#include "Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.h"
 #include "Editor/Panels/ProjectSettings/Model/ProjectSettingsEntry.h"
 #include "Editor/Panels/ProjectSettings/Model/ProjectSettingsPage.h"
 #include "Editor/Panels/ProjectSettings/Model/ProjectSettingsTableHistory.h"

@@ -21,6 +21,8 @@
 #include "Editor/Common/GUI/Panel/EditorDockLayout.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Panel/EditorPanelText.h"
+#include "Editor/Common/Widgets/PropertyGrid/IInspectorProperty.h"
+#include "Editor/Common/Widgets/PropertyGrid/PropertyDrawerRegistry.h"
 #include "Editor/Common/Workspace/EditorCamera.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorLayoutStore.h"
@@ -31,8 +33,6 @@
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Panels/Console/ConsolePanel.h"
-#include "Editor/Panels/Inspector/IInspectorProperty.h"
-#include "Editor/Panels/Inspector/InspectorPropertyManager.h"
 #include "Editor/Panels/Scene/GameViewPanel.h"
 #include "Editor/Panels/Scene/HierarchyPanel.h"
 #include "Editor/Panels/Scene/HistoryPanel.h"
@@ -74,9 +74,9 @@ namespace sw::editor
             static EditorSelfTestStep runPropertyDrawerRegistered( EditorSelfTestContext& context )
             {
                 EditorContext& editorContext = editor::getSubsystem<EditorContext>();
-                editorContext.getSubsystem<InspectorPropertyManager>().syncWithRegistry();
-                context.expect( editorContext.getSubsystem<InspectorPropertyManager>().find( "SelfTestDrawerProbe" ) != nullptr, "the registered property drawer is not in the manager" );
-                context.expect( editorContext.getSubsystem<InspectorPropertyManager>().find( "float32" ) != nullptr, "the built-in float32 widget is gone" );
+                editorContext.getSubsystem<PropertyDrawerRegistry>().syncWithRegistry();
+                context.expect( editorContext.getSubsystem<PropertyDrawerRegistry>().find( "SelfTestDrawerProbe" ) != nullptr, "the registered property drawer is not in the manager" );
+                context.expect( editorContext.getSubsystem<PropertyDrawerRegistry>().find( "float32" ) != nullptr, "the built-in float32 widget is gone" );
                 return EditorSelfTestStep::Done;
             }
 

@@ -5,11 +5,15 @@
 #pragma once
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
+#include "Core/Time/MonotonicClock.h"
 
 #include "Editor/Common/EditorExports.h"
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetTypeID.h"
 #include "Editor/Common/Workspace/Play/EditorSessionPolicy.h"
+
+#include <type_traits>
+#include <utility>
 
 namespace sw
 {
@@ -18,6 +22,20 @@ namespace sw
 
 namespace sw::editor
 {
+    /**
+     * @brief ViewModel 이 "건너뛰기 세대"(`uint64 getGatherGeneration() const`)를 내는지입니다 — 내는 ViewModel 은 세대가 같은 프레임에 `gather` 를 건너뛴다(`IEditorPanel::gatherViewState`).
+     * @details 즉시 모드는 바뀜 알림이 없어 매 프레임 값을 다시 모은다. 유니티 `SerializedObject.UpdateIfRequiredOrScript` · 언리얼 디테일 뷰의 구조 바뀜 재구성처럼, 모델이 세대를 내면
+     *          같은 세대에서 지난 프레임의 ViewState 를 그대로 그린다. 세대는 모델(스냅숏 · 스택)이 정하고, 스크롤 · 클립처럼 View 가 매 프레임 넘기는 입력이 있는 `gather` 는 내지 않는다.
+     */
+    template <typename TViewModel, typename = void>
+    struct EditorHasGatherGeneration : std::false_type
+    {
+    };
+    template <typename TViewModel>
+    struct EditorHasGatherGeneration<TViewModel, std::void_t<decltype( std::declval<const TViewModel&>().getGatherGeneration() )>> : std::true_type
+    {
+    };
+
     class IEditorDocumentPanel;
 
     /**
@@ -133,7 +151,48 @@ namespace sw::editor
         /** @brief ImGui 에 넘길 열림 상태 포인터를 반환합니다. X 가 내린 값은 `absorbCloseButton` 이 받습니다. */
         bool* getOpenFlagAddress() { return &_bOpen; }
 
+        /** @brief 다음 `draw()` 의 `gather` 시간을 잴지 정합니다(패널 매니저 — `-gv_editorPanelTimes` · 감시 값 `Editor.PanelGatherUs`). */
+        void setGatherTimed( bool bTimed ) { _bGatherTimed = bTimed ? SW_TRUE : SW_FALSE; }
+        /** @brief 지난 `setGatherTimed` 뒤 `gatherViewState` 로 잰 시간(ns)을 꺼내고 0 으로 돌립니다. `gatherViewState` 를 쓰지 않는 패널은 0 이다(그리기에 들어 있다). */
+        uint64 takeGatherNanoseconds()
+        {
+            const uint64 nanoseconds = _gatherNanoseconds;
+            _gatherNanoseconds       = 0;
+            return nanoseconds;
+        }
+        /** @brief 세대가 같아 건너뛴 `gather` 의 누적 수입니다(감시 값 `Editor.GatherSkipCount`). */
+        uint64 getSkippedGatherCount() const { return _skippedGatherCount; }
+
     protected:
+        /**
+         * @brief ViewModel 의 `gather` 를 부르는 한 입구입니다(`drawContent` 맨 위 한 번 — `docs/agents/EditorUI.md` MVVM).
+         * @details 패널 매니저가 켰으면 시간을 잰다(그리기와 모으기를 나눠 본다). ViewModel 이 건너뛰기 세대(`EditorHasGatherGeneration`)를 내고 지난 모으기와 같으면 부르지 않는다 —
+         *          지난 프레임의 ViewState 가 그대로 맞다. 한 패널이 세대 있는 ViewModel 을 둘 이상 모으면 세대 칸을 함께 쓰니 하나만 이 길로 건너뛴다.
+         */
+        template <typename TViewModel, typename... TArgs>
+        void gatherViewState( TViewModel& viewModel, TArgs&&... args )
+        {
+            if constexpr ( EditorHasGatherGeneration<TViewModel>::value )
+            {
+                const uint64 generation = viewModel.getGatherGeneration();
+                if ( _bGatherGenerationValid == SW_TRUE && generation == _lastGatherGeneration )
+                {
+                    ++_skippedGatherCount;
+                    return;
+                }
+                _lastGatherGeneration   = generation;
+                _bGatherGenerationValid = SW_TRUE;
+            }
+            if ( _bGatherTimed == SW_FALSE )
+            {
+                viewModel.gather( std::forward<TArgs>( args )... );
+                return;
+            }
+            const Stopwatch stopwatch;
+            viewModel.gather( std::forward<TArgs>( args )... );
+            _gatherNanoseconds += static_cast<uint64>( stopwatch.getElapsedNanoseconds() );
+        }
+
         /** @brief 기본 열림 상태로 에디터 패널을 만듭니다. */
         explicit IEditorPanel( bool bOpenByDefault = true )
             : _bOpen{ bOpenByDefault }
@@ -142,6 +201,11 @@ namespace sw::editor
             , _bOpenedNotified{ SW_FALSE }
             , _bDrawing{ SW_FALSE }
             , _bClosedWhileDrawing{ SW_FALSE }
+            , _bGatherTimed{ SW_FALSE }
+            , _bGatherGenerationValid{ SW_FALSE }
+            , _gatherNanoseconds{ 0 }
+            , _lastGatherGeneration{ 0 }
+            , _skippedGatherCount{ 0 }
             , _contentLineCount{ 0.0f }
             , _contentColumnCount{ 0.0f }
             , _windowID{ 0 }
@@ -201,13 +265,18 @@ namespace sw::editor
 
     private:
         bool    _bOpen; ///< NOLINT(sw-bool-flag): 주소(`&`)를 넘긴다
-        uint8   _bWindowFocused      : 1;
-        uint8   _bContentDrawn       : 1; ///< 마지막 draw 에서 내용을 그렸다(접히거나 가려지지 않았다)
-        uint8   _bOpenedNotified     : 1; ///< 이번 열림에 `onPanelOpened` 를 불렀다(`closeNow` 가 내린다)
-        uint8   _bDrawing            : 1; ///< `draw()` 안이다 — 여기서 닫히면 `onPanelClosed` 를 그 끝으로 미룬다
-        uint8   _bClosedWhileDrawing : 1; ///< 이번 `draw()` 안에서 닫혔다
-        float32 _contentLineCount;        ///< 마지막으로 그린 draw 의 내용 영역 높이 / 글자 줄 높이
-        float32 _contentColumnCount;      ///< 마지막으로 그린 draw 의 내용 영역 폭 / 숫자 "0" 너비
-        uint32  _windowID;                ///< 이 패널 창의 ImGui 창 id(`getWindowID`)
+        uint8   _bWindowFocused         : 1;
+        uint8   _bContentDrawn          : 1; ///< 마지막 draw 에서 내용을 그렸다(접히거나 가려지지 않았다)
+        uint8   _bOpenedNotified        : 1; ///< 이번 열림에 `onPanelOpened` 를 불렀다(`closeNow` 가 내린다)
+        uint8   _bDrawing               : 1; ///< `draw()` 안이다 — 여기서 닫히면 `onPanelClosed` 를 그 끝으로 미룬다
+        uint8   _bClosedWhileDrawing    : 1; ///< 이번 `draw()` 안에서 닫혔다
+        uint8   _bGatherTimed           : 1; ///< 이번 `draw()` 의 `gatherViewState` 시간을 잰다(`setGatherTimed`)
+        uint8   _bGatherGenerationValid : 1; ///< `_lastGatherGeneration` 이 한 번 이상 채워졌다
+        uint64  _gatherNanoseconds;          ///< `gatherViewState` 로 잰 시간(ns, `takeGatherNanoseconds` 가 비운다)
+        uint64  _lastGatherGeneration;       ///< 지난 모으기의 건너뛰기 세대
+        uint64  _skippedGatherCount;         ///< 세대가 같아 건너뛴 모으기 수
+        float32 _contentLineCount;           ///< 마지막으로 그린 draw 의 내용 영역 높이 / 글자 줄 높이
+        float32 _contentColumnCount;         ///< 마지막으로 그린 draw 의 내용 영역 폭 / 숫자 "0" 너비
+        uint32  _windowID;                   ///< 이 패널 창의 ImGui 창 id(`getWindowID`)
     };
 } // namespace sw::editor

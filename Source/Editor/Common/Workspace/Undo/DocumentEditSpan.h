@@ -6,6 +6,7 @@
 #include "Core/Container/string.h"
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Memory/Memory.h"
 
 #include "Editor/Common/EditorExports.h"
 
@@ -14,12 +15,20 @@ namespace sw::editor
     /**
      * @struct DocumentEdit
      * @brief 되돌리기 한 단계로 기록할 문서 편집입니다 — 구간 전 글, 끝 글, 이름.
+     * @details 글은 공유 버퍼다 — 연속한 편집에서 앞 단계의 끝 글이 곧 다음 단계의 전 글이고 구간의 기준선이라 한 벌만 든다(타일맵 · 그래프 문서는 MB 단위).
+     *          VS Code piece tree · Godot `UndoRedo` 처럼 바뀐 것만 남기는 것은 기록 쪽(`EditorTransaction::recordDocumentText` 의 바뀐 구간)이 한다.
      */
     struct DocumentEdit
     {
-        string _before;
-        string _after;
-        string _label;
+        shared_ptr<const string> _pBefore; ///< 구간 전 글(앞 편집의 `_pAfter` 와 같은 버퍼)
+        shared_ptr<const string> _pAfter;  ///< 끝 글(구간의 다음 기준선과 같은 버퍼)
+        string                   _label;
+
+        /** @brief 글 @p before · @p after 를 새 버퍼로 담습니다(구간 밖에서 만든 편집 — 자동 저장 사본 복원). */
+        static DocumentEdit make( string before, string after, string label )
+        {
+            return DocumentEdit{ make_shared<const string>( std::move( before ) ), make_shared<const string>( std::move( after ) ), std::move( label ) };
+        }
     };
 
     /**
@@ -37,7 +46,7 @@ namespace sw::editor
         /** @brief 기준 글을 @p text 로 맞춥니다(로드 · 저장 · 되돌리기 뒤). 쥔 구간은 버린다 — 그 기준선이 없어졌다. */
         void resetBaseline( string text );
         /** @brief 마지막으로 기록한(또는 맞춘) 글입니다. */
-        const string& getBaseline() const { return _baseline; }
+        const string& getBaseline() const { return *_pBaseline; }
         /** @brief 구간을 쥐고 있으면 true 입니다(편집이 있었고 아직 기록하지 않았다). */
         bool isHolding() const { return _bHolding == SW_TRUE; }
 
@@ -69,9 +78,9 @@ namespace sw::editor
         [[nodiscard]] optional<DocumentEdit> notifyEditedText( string_view label, string after, bool bInteracting );
 
     private:
-        string                 _baseline;     ///< 구간 전 글(마지막으로 기록한 글)
-        string                 _pendingLabel; ///< 쥔 구간의 되돌리기 이름(구간의 마지막 알림)
-        uint8                  _bHolding : 1; ///< 구간을 쥐고 있다
-        [[maybe_unused]] uint8 _reserved : 7;
+        shared_ptr<const string> _pBaseline;    ///< 구간 전 글(마지막으로 기록한 글 — 낸 편집의 `_pAfter` 와 같은 버퍼)
+        string                   _pendingLabel; ///< 쥔 구간의 되돌리기 이름(구간의 마지막 알림)
+        uint8                    _bHolding : 1; ///< 구간을 쥐고 있다
+        [[maybe_unused]] uint8   _reserved : 7;
     };
 } // namespace sw::editor

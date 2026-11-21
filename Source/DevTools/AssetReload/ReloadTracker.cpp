@@ -86,6 +86,17 @@ namespace sw
                 return true;
             }
 
+            /** @brief 감시 값 `Reload.Last<단계>Ms.Module` — 마지막 모듈 연쇄 리로드의 한 단계 시간(ms)입니다. */
+            template <float64 ModuleReloadPhases::* kPhase>
+            [[nodiscard]] static bool readModulePhaseMs( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const ReloadTracker* const pTracker = engine::findSubsystem<ReloadTracker>();
+                if ( pTracker == nullptr )
+                    return false;
+                outValue = pTracker->getLastModulePhases().*kPhase;
+                return true;
+            }
+
             static uint32 toIndex( ReloadSource source ) { return static_cast<uint32>( source ); }
 
             /** @brief `reload.status [stale|clear]` — 리로드 결과 표(Output Log · 게임 콘솔이 같다). */
@@ -120,6 +131,7 @@ namespace sw
         , _nextSequence{ 1 }
         , _arrAttemptCount{}
         , _arrLastElapsedMs{}
+        , _lastModulePhases{}
         , _failedCount{ 0 }
     {
     }
@@ -189,6 +201,18 @@ namespace sw
     {
         ScopedLock<mutex> lock{ _mutex };
         _arrLastElapsedMs[ReloadTrackerInternal::toIndex( source )] = elapsedMs;
+    }
+
+    void ReloadTracker::recordModulePhases( const ModuleReloadPhases& phases )
+    {
+        ScopedLock<mutex> lock{ _mutex };
+        _lastModulePhases = phases;
+    }
+
+    ModuleReloadPhases ReloadTracker::getLastModulePhases() const
+    {
+        ScopedLock<mutex> lock{ _mutex };
+        return _lastModulePhases;
     }
 
     uint32 ReloadTracker::getAttemptCount( ReloadSource source ) const
@@ -273,7 +297,8 @@ namespace sw
             _arrAttemptCount[index]  = 0;
             _arrLastElapsedMs[index] = 0.0;
         }
-        _failedCount = 0;
+        _failedCount      = 0;
+        _lastModulePhases = ModuleReloadPhases{};
     }
 
     SW_AUTOMATION_WATCH( devToolsReloadAssetCount, "DevTools.ReloadAssetCount", "Asset paths whose reload result the reload tracker holds (reload.status)",
@@ -292,6 +317,14 @@ namespace sw
     SW_AUTOMATION_WATCH( reloadLastMsAsset, "Reload.LastMs.Asset", "Milliseconds the last asset reload took", &ReloadTrackerInternal::readLastElapsedMs<ReloadSource::Asset> );
     SW_AUTOMATION_WATCH( reloadLastMsShader, "Reload.LastMs.Shader", "Milliseconds the last shader recompile pass took", &ReloadTrackerInternal::readLastElapsedMs<ReloadSource::Shader> );
     SW_AUTOMATION_WATCH( reloadLastMsModule, "Reload.LastMs.Module", "Milliseconds the last module reload cascade took", &ReloadTrackerInternal::readLastElapsedMs<ReloadSource::Module> );
+    SW_AUTOMATION_WATCH( reloadLastWaitMsModule, "Reload.LastWaitMs.Module", "Milliseconds from the detected build end to the last module cascade start (debounce, reload hold; 0 when unknown)",
+                         &ReloadTrackerInternal::readModulePhaseMs<&ModuleReloadPhases::_waitMs> );
+    SW_AUTOMATION_WATCH( reloadLastPrepareMsModule, "Reload.LastPrepareMs.Module", "Milliseconds the last module cascade spent copying and loading the new images",
+                         &ReloadTrackerInternal::readModulePhaseMs<&ModuleReloadPhases::_prepareMs> );
+    SW_AUTOMATION_WATCH( reloadLastSuspendMsModule, "Reload.LastSuspendMs.Module", "Milliseconds the last module cascade spent handing over game state before the swap",
+                         &ReloadTrackerInternal::readModulePhaseMs<&ModuleReloadPhases::_suspendMs> );
+    SW_AUTOMATION_WATCH( reloadLastCommitMsModule, "Reload.LastCommitMs.Module", "Milliseconds the last module cascade spent swapping images and starting the new instances",
+                         &ReloadTrackerInternal::readModulePhaseMs<&ModuleReloadPhases::_commitMs> );
     SW_DEV_COMMAND( ReloadStatus, "reload.status", "reload.status [stale|clear]",
                     "List the last config / asset / shader reload result per file (STALE = the last reload failed and the previous values run)",
                     &ReloadTrackerInternal::runStatus );

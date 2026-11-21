@@ -6,6 +6,7 @@
 
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/Input/EditorPopupManager.h"
+#include "Editor/Common/Widgets/EditorVirtualList.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 
 #include "Engine/Localization/LocText.h"
@@ -101,31 +102,36 @@ namespace sw::editor
             const EditorSearchItem* pExecute = nullptr;
             if ( EditorChrome::beginSection( resultsDesc ) )
             {
-                for ( size_t itemIndex = 0; itemIndex < listFiltered.size(); ++itemIndex )
+                EditorVirtualList virtualList( static_cast<int32>( listFiltered.size() ) ); // 명령 · 에셋 후보 전부 — 보이는 줄만 그린다
+                virtualList.includeRow( _selectedIndex );                                   // 키로 고른 줄은 화면 밖이어도 그린다(Enter 가 그 줄을 실행한다)
+                while ( pExecute == nullptr && virtualList.step() )
                 {
-                    const EditorSearchItem& item        = *listFiltered[itemIndex];
-                    const bool              bIsSelected = ( _selectedIndex == static_cast<int32>( itemIndex ) );
-
-                    ImGui::PushID( static_cast<int32>( itemIndex ) );
-
-                    fixed_string<constant::buffer::kMax256> labelBuf;
-                    formatstring( labelBuf.data(), labelBuf.capacity(), "[%#] %#", item._category.c_str(), item._title.c_str() );
-
-                    if ( ImGui::Selectable( labelBuf.c_str(), bIsSelected ) || ( bIsSelected && bExecuteSelected ) )
+                    for ( size_t itemIndex = static_cast<size_t>( virtualList.getBegin() ); itemIndex < static_cast<size_t>( virtualList.getEnd() ); ++itemIndex )
                     {
-                        pExecute = &item;
+                        const EditorSearchItem& item        = *listFiltered[itemIndex];
+                        const bool              bIsSelected = ( _selectedIndex == static_cast<int32>( itemIndex ) );
+
+                        ImGui::PushID( static_cast<int32>( itemIndex ) );
+
+                        fixed_string<constant::buffer::kMax256> labelBuf;
+                        formatstring( labelBuf.data(), labelBuf.capacity(), "[%#] %#", item._category.c_str(), item._title.c_str() );
+
+                        if ( ImGui::Selectable( labelBuf.c_str(), bIsSelected ) || ( bIsSelected && bExecuteSelected ) )
+                        {
+                            pExecute = &item;
+                            ImGui::PopID();
+                            break; // 바깥 `while` 도 `pExecute` 를 보고 멈춘다
+                        }
+
+                        if ( item._detail.empty() == false )
+                        {
+                            ImGui::SameLine();
+                            ImGui::SetCursorPosX( EditorChrome::resolveTextExtent( overlayDesc._size )._x - kDetailColumnCount * ImGui::CalcTextSize( "0" ).x );
+                            ImGui::TextDisabled( "%s", item._detail.c_str() );
+                        }
+
                         ImGui::PopID();
-                        break;
                     }
-
-                    if ( item._detail.empty() == false )
-                    {
-                        ImGui::SameLine();
-                        ImGui::SetCursorPosX( EditorChrome::resolveTextExtent( overlayDesc._size )._x - kDetailColumnCount * ImGui::CalcTextSize( "0" ).x );
-                        ImGui::TextDisabled( "%s", item._detail.c_str() );
-                    }
-
-                    ImGui::PopID();
                 }
                 if ( listFiltered.empty() )
                     EditorWidgets::drawEmptyHint( _assetIndexJob.isPending() ? SW_LOCKEY( "EdCommon", "QuickOpenIndexing" ) : SW_LOCKEY( "EdCommon", "QuickOpenNoMatches" ) );

@@ -41,7 +41,7 @@ namespace sw::editor
 
     void AnimationRewindPanel::drawContent()
     {
-        _viewModel.gather( _viewState );
+        gatherViewState( _viewModel, _viewState );
         if ( _viewState._content == AnimationRewindContent::NoActiveScene )
         {
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorAnimationRewind", "NoActiveScene" ) );

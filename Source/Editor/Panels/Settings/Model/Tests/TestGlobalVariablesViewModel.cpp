@@ -159,3 +159,12 @@ SW_TEST_CASE_F( GlobalVariablesViewModelTest, PresetSavedDuringScanIsListed )
     SW_REQUIRE_TRUE( waitForPresetScan( folder ) );
     SW_EXPECT_EQUAL( size_t{ 2 }, _model.getPresetFiles().size() );
 }
+
+/**
+ * @brief [GlobalVariablesViewModelTest] 창은 관리자에 닿지 않고 ViewModel 이 에디터 범위의 관리자에서 변수를 찾는다(관리자 접근자는 비공개 — View 누수 단계 ①)
+ */
+SW_TEST_CASE( GlobalVariablesViewModelScopeTest, FindsVariablesThroughTheEditorScope )
+{
+    SW_EXPECT_TRUE( GlobalVariablesViewModel::findVariable( "gv_editorPanelTimes" ) != nullptr );
+    SW_EXPECT_TRUE( GlobalVariablesViewModel::findVariable( "gv_noSuchVariableForTheScopeTest" ) == nullptr );
+}

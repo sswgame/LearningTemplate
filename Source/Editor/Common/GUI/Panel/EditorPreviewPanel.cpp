@@ -10,6 +10,7 @@
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
+#include "Editor/Common/Input/EditorInputActionNames.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
@@ -56,7 +57,7 @@ namespace sw::editor
         const bool bImageHovered = ImGui::IsItemHovered();
         if ( _bAxesShown )
             _viewport.drawAxisIndicator();
-        if ( bImageHovered && EditorInputGUI::wasActionTriggered( "view.frameHovered" ) )
+        if ( bImageHovered && EditorInputGUI::wasActionTriggered( editorinput::kViewFrameHovered ) )
             framePreviewSubject();
         publishPreviewBarState( EditorPreviewPanelViewInternal::kArrPreviewSpeed[_speedIndex] );
     }

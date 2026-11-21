@@ -3,6 +3,7 @@
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Time/MonotonicClock.h"
@@ -12,6 +13,9 @@
 #include "Editor/Common/GUI/Panel/IEditorPanel.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/SelfTest/EditorWatchSupport.h"
+
+#include "Engine/Automation/Watch/AutomationWatch.h"
 
 namespace sw::editor
 {
@@ -156,6 +160,8 @@ namespace sw::editor
         // 2) 등록 순서대로 다시 줄 세우고 새 줄은 만든다 — 그리기 순서와 Panel 메뉴 순서가 등록 목록과 같다
         vector<EditorPanelEntry> listSorted;
         listSorted.reserve( PanelRegistry::getCount() + _listPanel.size() );
+        uint64 createNanos{ 0 };
+        uint32 createdCount{ 0 };
         for ( uint32 index = 0; index < PanelRegistry::getCount(); ++index )
         {
             const EditorPanelRegistration& registration = PanelRegistry::getAt( index );
@@ -166,9 +172,12 @@ namespace sw::editor
                 pExisting->_pRegistration = nullptr; // 옮긴 항목 — 3) 에서 다시 옮기지 않게
                 continue;
             }
+            const Stopwatch          createStopwatch; // 패널 지연 생성의 판정 근거 — 닫힌 패널까지 모두 만드는 비용(감시 값 `Editor.PanelCreateMs`)
             unique_ptr<IEditorPanel> pPanel = registration._pCreate();
+            createNanos += static_cast<uint64>( createStopwatch.getElapsedNanoseconds() );
             if ( pPanel == nullptr )
                 continue;
+            ++createdCount;
             const utf8*      pTitle = pPanel->getPanelTitle();
             EditorPanelEntry entry{};
             entry._id             = registration._pID;
@@ -188,6 +197,12 @@ namespace sw::editor
                 listSorted.push_back( std::move( entry ) );
         }
         _listPanel = std::move( listSorted );
+        if ( createdCount > 0 )
+        {
+            _lastPanelCreateNanos = createNanos;
+            SW_LOG_INFO_ID( "EditorPanelManager.PanelsCreated", "Editor panels created: %# in %# us (closed ones included)", createdCount,
+                            createNanos / static_cast<uint64>( constant::time::kNanosecondsPerMicrosecond ) );
+        }
     }
 
     uint32 EditorPanelManager::resetOptionalPanels()
@@ -233,7 +248,10 @@ namespace sw::editor
 
     void EditorPanelManager::drawOpenPanels()
     {
-        const bool bTimed = gv_editorPanelTimes > 0 && _bPanelTimesReported == false;
+        const bool bReportTimed = gv_editorPanelTimes > 0 && _bPanelTimesReported == false;
+        const bool bWatchTimed  = gv_editorWatchPanel.get().empty() == false;
+        const bool bTimed       = bReportTimed || bWatchTimed;
+        uint64     panelsDrawNanos{ 0 };
         for ( EditorPanelEntry& entry : _listPanel )
         {
             if ( entry._pInstance == nullptr || entry._pInstance->isOpen() == false )
@@ -243,13 +261,24 @@ namespace sw::editor
                 entry._pInstance->draw();
                 continue;
             }
+            entry._pInstance->setGatherTimed( true );
             const Stopwatch stopwatch;
             entry._pInstance->draw();
             const uint64 elapsedNanos = static_cast<uint64>( stopwatch.getElapsedNanoseconds() );
-            entry._drawNanosSum += elapsedNanos;
-            entry._drawNanosMax = MathUtil::max( entry._drawNanosMax, elapsedNanos );
+            entry._pInstance->setGatherTimed( false );
+            entry._lastDrawNanos   = elapsedNanos;
+            entry._lastGatherNanos = entry._pInstance->takeGatherNanoseconds();
+            panelsDrawNanos += elapsedNanos;
+            if ( bReportTimed )
+            {
+                entry._drawNanosSum += elapsedNanos;
+                entry._gatherNanosSum += entry._lastGatherNanos;
+                entry._drawNanosMax = MathUtil::max( entry._drawNanosMax, elapsedNanos );
+            }
         }
-        if ( bTimed && ++_panelTimeFrameCount >= static_cast<uint32>( gv_editorPanelTimes ) )
+        if ( bTimed )
+            _lastPanelsDrawNanos = panelsDrawNanos;
+        if ( bReportTimed && ++_panelTimeFrameCount >= static_cast<uint32>( gv_editorPanelTimes ) )
             reportPanelTimes();
         updateFocusedCommandStack();
         // 그린 뒤에 본다 — 이번 프레임의 편집 · 상호작용 구간이 끝난 상태로 사본을 모은다(감사 E-1)
@@ -258,22 +287,16 @@ namespace sw::editor
 
     void EditorPanelManager::updateFocusedCommandStack()
     {
-        IEditorPanel* pFocused = nullptr;
+        // 패널 id 만 기억한다 — 닫힌 패널 · 사라진 스택은 읽는 순간의 목록에 없어 손으로 풀 것이 없다(`getFocusedCommandStack`).
         for ( const EditorPanelEntry& entry : _listPanel )
         {
             IEditorPanel* const pPanel = entry._pInstance.get();
-            if ( pPanel == nullptr )
+            if ( pPanel == nullptr || pPanel->isOpen() == false || pPanel->isWindowFocused() == false )
                 continue;
-            if ( pPanel->isOpen() == false )
-            {
-                releaseFocusedCommandStack( pPanel->findPanelCommandStack() ); // 닫힌 문서의 스택 — 보이지 않는 문서를 되돌리지 않는다
-                continue;
-            }
-            if ( pFocused == nullptr && pPanel->isWindowFocused() )
-                pFocused = pPanel;
+            if ( pPanel->shouldKeepFocusedCommandStack() == false )
+                setFocusedPanel( entry._id );
+            return;
         }
-        if ( pFocused != nullptr && pFocused->shouldKeepFocusedCommandStack() == false )
-            setFocusedCommandStack( pFocused->findPanelCommandStack() );
     }
 
     void EditorPanelManager::reportPanelTimes()
@@ -290,8 +313,24 @@ namespace sw::editor
         const uint64 frameCount = MathUtil::max<uint64>( 1u, _panelTimeFrameCount );
         for ( const EditorPanelEntry* pEntry : listEntry )
         {
-            SW_LOG_INFO_ID( "EditorPanelManager.EditorPanelTimeAvgUsMax", "EditorPanelTime|%#|avg %# us|max %# us", pEntry->_id.c_str(), pEntry->_drawNanosSum / 1000ull / frameCount, pEntry->_drawNanosMax / 1000ull );
+            SW_LOG_INFO_ID( "EditorPanelManager.EditorPanelTimeAvgUsMax", "EditorPanelTime|%#|avg %# us|max %# us|gather avg %# us", pEntry->_id.c_str(), pEntry->_drawNanosSum / static_cast<uint64>( constant::time::kNanosecondsPerMicrosecond ) / frameCount,
+                            pEntry->_drawNanosMax / static_cast<uint64>( constant::time::kNanosecondsPerMicrosecond ), pEntry->_gatherNanosSum / static_cast<uint64>( constant::time::kNanosecondsPerMicrosecond ) / frameCount );
         }
+    }
+
+    bool EditorPanelManager::findWatchedPanelTimes( uint64& outDrawNanos, uint64& outGatherNanos, uint64& outSkippedGatherCount ) const
+    {
+        const string_view watchedID = gv_editorWatchPanel.get();
+        for ( const EditorPanelEntry& entry : _listPanel )
+        {
+            if ( entry._id != watchedID || entry._pInstance == nullptr || entry._pInstance->isOpen() == false )
+                continue;
+            outDrawNanos          = entry._lastDrawNanos;
+            outGatherNanos        = entry._lastGatherNanos;
+            outSkippedGatherCount = entry._pInstance->getSkippedGatherCount();
+            return true;
+        }
+        return false;
     }
 
     void EditorPanelManager::shutdownAllPanels()
@@ -355,4 +394,67 @@ namespace sw::editor
 
     // 이 종류의 등록 목록 — EditorModule 이미지에 하나(확장 DLL 의 등록자도 내보낸 이 함수로 오른다).
     SW_DEFINE_EDITOR_EXTENSION_KIND( EditorPanelRegistration )
+
+    namespace
+    {
+        struct EditorPanelTimeWatchInternal
+        {
+            /** @brief 감시 값이 읽는 칸입니다 — `-gv_editorWatchPanel` 패널의 마지막 그리기 · 모으기 시간과 건너뛴 모으기 수. */
+            enum class PanelTimeField : uint8
+            {
+                DrawMicroseconds,
+                GatherMicroseconds,
+                SkippedGatherCount,
+            };
+
+            /** @brief 감시 대상 패널(`-gv_editorWatchPanel`)의 칸 @p kField 를 읽습니다. 에디터 · 패널이 없거나 재지 않았으면 값이 없다. */
+            template <PanelTimeField kField>
+            [[nodiscard]] static bool readWatchedPanel( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const EditorPanelManager* const pPanels = EditorPanelManager::findInEditorContext();
+                uint64                          drawNanos{ 0 };
+                uint64                          gatherNanos{ 0 };
+                uint64                          skippedCount{ 0 };
+                if ( pPanels == nullptr || pPanels->findWatchedPanelTimes( drawNanos, gatherNanos, skippedCount ) == false )
+                    return false;
+                const uint64 nanosPerMicro = static_cast<uint64>( constant::time::kNanosecondsPerMicrosecond );
+                if constexpr ( kField == PanelTimeField::DrawMicroseconds )
+                    outValue = static_cast<float64>( drawNanos / nanosPerMicro );
+                else if constexpr ( kField == PanelTimeField::GatherMicroseconds )
+                    outValue = static_cast<float64>( gatherNanos / nanosPerMicro );
+                else
+                    outValue = static_cast<float64>( skippedCount );
+                return true;
+            }
+
+            [[nodiscard]] static bool readPanelCreate( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const EditorPanelManager* const pPanels = EditorPanelManager::findInEditorContext();
+                if ( pPanels == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pPanels->getLastPanelCreateNanoseconds() ) / static_cast<float64>( constant::time::kNanosecondsPerMillisecond );
+                return true;
+            }
+
+            [[nodiscard]] static bool readPanelsDraw( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const EditorPanelManager* const pPanels = EditorPanelManager::findInEditorContext();
+                if ( pPanels == nullptr || gv_editorWatchPanel.get().empty() )
+                    return false;
+                outValue = static_cast<float64>( pPanels->getLastPanelsDrawNanoseconds() / static_cast<uint64>( constant::time::kNanosecondsPerMicrosecond ) );
+                return true;
+            }
+        };
+    } // namespace
+
+    SW_AUTOMATION_WATCH( editorPanelDrawUs, "Editor.PanelDrawUs", "Microseconds the panel named by gv_editorWatchPanel took to draw last frame (gather included)",
+                         &EditorPanelTimeWatchInternal::readWatchedPanel<EditorPanelTimeWatchInternal::PanelTimeField::DrawMicroseconds> );
+    SW_AUTOMATION_WATCH( editorPanelGatherUs, "Editor.PanelGatherUs", "Microseconds the panel named by gv_editorWatchPanel spent in gather last frame (0 when it does not gather through gatherViewState)",
+                         &EditorPanelTimeWatchInternal::readWatchedPanel<EditorPanelTimeWatchInternal::PanelTimeField::GatherMicroseconds> );
+    SW_AUTOMATION_WATCH( editorGatherSkipCount, "Editor.GatherSkipCount", "Gathers the panel named by gv_editorWatchPanel skipped because its view model generation did not change",
+                         &EditorPanelTimeWatchInternal::readWatchedPanel<EditorPanelTimeWatchInternal::PanelTimeField::SkippedGatherCount> );
+    SW_AUTOMATION_WATCH( editorPanelCreateMs, "Editor.PanelCreateMs", "Milliseconds the editor spent creating every registered panel (closed ones included) the last time it synced the panel list",
+                         &EditorPanelTimeWatchInternal::readPanelCreate );
+    SW_AUTOMATION_WATCH( editorPanelsDrawUs, "Editor.PanelsDrawUs", "Microseconds every open editor panel took to draw last frame (measured while gv_editorWatchPanel is set)",
+                         &EditorPanelTimeWatchInternal::readPanelsDraw );
 } // namespace sw::editor

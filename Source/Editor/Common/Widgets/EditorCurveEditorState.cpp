@@ -6,6 +6,7 @@
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
+#include "Editor/Common/Input/EditorInputActionNames.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
@@ -279,7 +280,7 @@ namespace sw::editor
                 if ( bHovered && pointer._wheel != 0.0f )
                     view.zoomAt( mouse, std::pow( kWheelZoomPerStep, pointer._wheel ) );
                 // F(모두 보기)는 에디터 입력 맵의 액션이다 — 캔버스 위에 있을 때만 읽는다.
-                if ( bHovered && EditorInputGUI::wasActionTriggered( "view.frameHovered" ) )
+                if ( bHovered && EditorInputGUI::wasActionTriggered( editorinput::kViewFrameHovered ) )
                     state._bFitPending = true;
 
                 const bool bMoving = bActive && ( pointer._delta._x != 0.0f || pointer._delta._y != 0.0f );

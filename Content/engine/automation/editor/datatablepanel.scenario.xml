@@ -27,6 +27,7 @@
 	<EditorWaitStable/>
 	<Expect watch="Editor.DataTableRecordCount" differsFrom="records"/>
 	<Expect watch="Editor.PanelDirty" equals="1"/>
+	<Expect watch="Editor.DocumentCaptureUs" atLeast="0"/> <!-- 재는 장치: 편집 알림이 문서 글을 만든 시간 — 되돌리기 차이 저장의 판정 근거(편집당 1 ms) -->
 	<!-- 검색 — 더한 키 하나만 보인다 -->
 	<EditorClick mark="dataTable.search"/>
 	<EditorWaitStable/>

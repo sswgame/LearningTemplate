@@ -4,12 +4,14 @@
  */
 #include "pch.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Editor/Common/Workspace/EditorSelection.h"
+#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/Undo/CommandStack.h"
 
@@ -240,4 +242,28 @@ SW_TEST_CASE( EditorSelectionTest, AssetMoveRemapsPreviewSelection )
     SW_EXPECT_TRUE( ( selection.getSelectedAssets() == sw::vector<sw::string>{ "scratch/p04/new.material", "scratch/p04/keep.material" } ) );
     SW_EXPECT_FALSE( selection.hasAsset( "scratch/p04/old.material" ) );
     selection.unbindPreviewScope();
+}
+
+/**
+ * @brief [EditorSelectionTest] 미리보기 선택의 등록은 선택과 수명이 같다 — 묶인 채 사라지면 목록 · 대상 선택에서 빠져 메인으로 돌아온다(맨 포인터가 남지 않는다)
+ */
+SW_TEST_CASE( EditorSelectionTest, PreviewRegistrationEndsWithTheSelection )
+{
+    sw::Scene        scene( "SelectionRegistrationProbe" );
+    sw::CommandStack stack{
+        sw::UndoBufferLimit{ 128u, 1ull << 20 }
+    };
+    sw::editor::EditorSelection* const pMain = sw::editor::getFocusedSelection();
+    {
+        sw::editor::EditorSelection selection;
+        selection.bindPreviewScope( scene, stack );
+        SW_EXPECT_TRUE( sw::VectorUtil::contains( sw::editor::getPreviewSelections(), &selection ) );
+        sw::editor::setFocusedSelection( &selection );
+        SW_EXPECT_TRUE( sw::editor::getFocusedSelection() == &selection );
+    } // 풀지 않고 사라진다 — 소멸자의 `unbindPreviewScope` 가 구독을 놓는다
+    SW_EXPECT_TRUE( sw::editor::getFocusedSelection() == pMain );
+
+    sw::editor::EditorSelection unregistered; // 목록에 없는 선택은 대상이 되지 않는다
+    sw::editor::setFocusedSelection( &unregistered );
+    SW_EXPECT_TRUE( sw::editor::getFocusedSelection() == pMain );
 }

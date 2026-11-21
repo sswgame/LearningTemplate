@@ -14,12 +14,12 @@
 
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Commands/Scene/EditorSceneCommands.h"
+#include "Editor/Common/Widgets/PropertyGrid/Model/InspectorBuiltinValue.h"
+#include "Editor/Common/Widgets/PropertyGrid/Model/PropertyGridViewModel.h"
+#include "Editor/Common/Widgets/PropertyGrid/Model/PropertyGridViewState.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/Undo/CommandStack.h"
-#include "Editor/Panels/Inspector/Model/InspectorBuiltinValue.h"
-#include "Editor/Panels/Inspector/Model/PropertyGridViewModel.h"
-#include "Editor/Panels/Inspector/Model/PropertyGridViewState.h"
 #include "Editor/SelfTest/EditorWatchSupport.h"
 
 #include "Engine/Console/DevCommandRegistry.h"

@@ -161,6 +161,21 @@ namespace sw::editor
         return editor::getSubsystem<GlobalVariableManager>();
     }
 
+    void GlobalVariablesViewModel::resetAllToDefault()
+    {
+        getVariableManager().resetAllToDefault();
+    }
+
+    GlobalVariableInfo* GlobalVariablesViewModel::findVariable( string_view name )
+    {
+        return getVariableManager().findVariable( name );
+    }
+
+    const vector<GlobalVariableInfo*>& GlobalVariablesViewModel::refreshVariableList( string_view filterText )
+    {
+        return refreshVariableList( getVariableManager(), filterText );
+    }
+
     bool GlobalVariablesViewModel::saveSessionPreset()
     {
         return EditorGlobalVariableCommands::saveSessionPreset();

@@ -14,7 +14,7 @@
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/GUI/Panel/EditorDocumentPanel.h"
-#include "Editor/Panels/Inspector/EditorPropertyGrid.h"
+#include "Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.h"
 #include "Editor/Panels/UIPreview/Model/UIPreviewViewModel.h"
 
 namespace sw

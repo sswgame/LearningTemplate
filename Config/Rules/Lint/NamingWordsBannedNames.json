@@ -39,6 +39,17 @@
     "extractSourceAnnotation": "AnnotationLookup::readMarker · findPreviousSiblingMarker — 형식 앞 매크로는 파서 모드 표식 선언(static_assert)이고 소스 글 창 · 디스크 재읽기는 폐지(2026-11-21)",
     "hasSourceAnnotation": "AnnotationLookup::findAnnotateAttr — 멤버 매크로는 선언에 붙는 속성이라 소스 글 폴백이 없다(2026-11-21)",
     "AnnotationMeta": "PredefinedAnnotationField.xxx — 키 철자가 곧 필드 표의 줄 이름, 철자 표(AnnotationMeta.txt) · 별칭 폐지(2026-11-21)",
+    "unregisterPreviewSelection": "없음 — registerPreviewSelection 이 돌려준 Subscription 을 놓으면 목록 · 대상 선택에서 빠진다(2026-11-21)",
+    "setFocusedCommandStack": "editor::setFocusedPanel — 앞 포커스는 패널 id 로 기억하고 읽는 순간 그 패널의 스택을 묻는다(2026-11-21)",
+    "releaseFocusedCommandStack": "없음 — 패널 id 로 찾으므로 사라질 스택을 손으로 풀지 않는다(2026-11-21)",
+    "setOnBeforeReload": "ILiveReloadManager::setModuleClient — 모듈 주인 창구 IReloadableModuleClient 하나로 칸 넷을 함께 건다(2026-11-21)",
+    "setOnAfterReload": "ILiveReloadManager::setModuleClient — 모듈 주인 창구 IReloadableModuleClient 하나로 칸 넷을 함께 건다(2026-11-21)",
+    "setOnReloadFault": "ILiveReloadManager::setModuleClient — 모듈 주인 창구 IReloadableModuleClient 하나로 칸 넷을 함께 건다(2026-11-21)",
+    "setOnValidateLibrary": "ILiveReloadManager::setModuleClient — 모듈 주인 창구 IReloadableModuleClient 하나로 칸 넷을 함께 건다(2026-11-21)",
+    "OnBeforeReloadDelegate": "IReloadableModuleClient::onBeforeReload(2026-11-21)",
+    "OnAfterReloadDelegate": "IReloadableModuleClient::onAfterReload(2026-11-21)",
+    "OnReloadFaultDelegate": "IReloadableModuleClient::onReloadFault(2026-11-21)",
+    "OnValidateLibraryDelegate": "IReloadableModuleClient::isLibraryUsable(2026-11-21)",
     "EditorModuleManager": "ClientModuleManager — 배포 게임도 쓰는 클라이언트 호스트의 모듈 관리자, 장치 재생성 순서는 GameModuleManager::applyPendingDeviceChange(2026-11-21)",
     "reinitializeAfterRHISwap": "GameModuleManager::applyPendingDeviceChange — 장치 교체 순서(DeviceChangeSequence)가 게임 → 호스트 모듈을 다시 세운다(2026-11-21)",
     "recreateEditorInstance": "ClientModuleManager::recreateHostModule — suspendHostModule 의 짝 가상(2026-11-21)",
@@ -1848,6 +1859,7 @@
     "unregisterReadObserver": "PlatformFileUtil::bindReadObserver 가 돌려준 토큰의 reset(2026-11-21)",
     "registerWriteObserver": "PlatformFileUtil::bindWriteObserver — 관찰자 하나, 둘째 등록은 단언(ObserverSlot, 2026-11-21)",
     "unregisterWriteObserver": "PlatformFileUtil::bindWriteObserver 가 돌려준 토큰의 reset(2026-11-21)",
-    "setLowLevelReporter": "internal::bindLowLevelReporter(LowLevelReporterSlot.h) — 보고자 하나, 둘째 등록은 단언, 테스트는 suspendLowLevelReporter(2026-11-21)"
+    "setLowLevelReporter": "internal::bindLowLevelReporter(LowLevelReporterSlot.h) — 보고자 하나, 둘째 등록은 단언, 테스트는 suspendLowLevelReporter(2026-11-21)",
+    "InspectorPropertyManager": "PropertyDrawerRegistry — 프로퍼티 그리드 공용 층 이전 — 행 종류마다 그리는 드로어의 등록부(언리얼 PropertyEditorModule 의 커스텀 레이아웃 등록, 유니티 PropertyDrawer)(2026-11-21)"
   }
 }

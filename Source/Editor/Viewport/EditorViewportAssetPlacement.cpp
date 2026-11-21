@@ -12,6 +12,7 @@
 #include "Editor/Common/Config/EditorSettingsRegistry.h"
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
+#include "Editor/Common/Input/EditorInputActionNames.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
@@ -89,9 +90,9 @@ namespace sw::editor
     void EditorViewportAssetPlacement::updateDragYaw()
     {
         const float32 step = getPreferences<EditorViewportPreferences>()._placementRotateStep.radians();
-        if ( EditorInputGUI::wasActionTriggered( "viewport.placementRotate" ) )
+        if ( EditorInputGUI::wasActionTriggered( editorinput::kViewportPlacementRotate ) )
             _stats._yaw = EditorPlacementDrag::stepYaw( _stats._yaw, step, 1 );
-        if ( EditorInputGUI::wasActionTriggered( "viewport.placementRotateBack" ) )
+        if ( EditorInputGUI::wasActionTriggered( editorinput::kViewportPlacementRotateBack ) )
             _stats._yaw = EditorPlacementDrag::stepYaw( _stats._yaw, step, -1 );
     }
 

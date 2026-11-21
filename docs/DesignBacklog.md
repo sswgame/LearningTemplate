@@ -1655,7 +1655,7 @@ struct SiblingOrderKey
 **결정.** 기록 단위는 (오브젝트 id, 컴포넌트 키, 프로퍼티 경로, 값 글)이다. 컴포넌트 키는 프리팹 오버라이드가 이미 쓰는 `타입#n`(`PrefabOverrides::writesField`), 값 글은 `PropertyGridViewModel::setPropertyText` 가 쓰는 꼴이다.
 
 ```cpp
-// Editor/Panels/Inspector/Model/PropertyEditStep.h
+// Editor/Common/Widgets/PropertyGrid/Model/PropertyEditStep.h
 struct PropertyEditTarget { ObjectID _objectID; string _componentKey; string _propertyPath; };
 /** 되돌리기 · 다시 하기가 함께 쓰는 데이터 단계 — 모델의 쓰기 길(값 쓰기 + `onPropertyChanged`)을 그대로 탄다. */
 void applyPropertyText( UndoStepContext& context, const PropertyEditTarget& target, const string& valueText );

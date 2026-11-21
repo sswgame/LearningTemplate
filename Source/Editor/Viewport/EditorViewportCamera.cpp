@@ -7,6 +7,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/fixed_string.h"
 
+#include "Editor/Common/Input/EditorInputActionNames.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 
 #include "Engine/Input/RawInputEvent.h"
@@ -44,17 +45,17 @@ namespace sw::editor
         const float3  up      = float3{ 0.0f, 1.0f, 0.0f };
 
         float3 moveDir{ 0.0f, 0.0f, 0.0f };
-        if ( EditorInputGUI::isActionDown( "viewport.flyForward" ) )
+        if ( EditorInputGUI::isActionDown( editorinput::kViewportFlyForward ) )
             moveDir += forward;
-        if ( EditorInputGUI::isActionDown( "viewport.flyBack" ) )
+        if ( EditorInputGUI::isActionDown( editorinput::kViewportFlyBack ) )
             moveDir -= forward;
-        if ( EditorInputGUI::isActionDown( "viewport.flyRight" ) )
+        if ( EditorInputGUI::isActionDown( editorinput::kViewportFlyRight ) )
             moveDir += right;
-        if ( EditorInputGUI::isActionDown( "viewport.flyLeft" ) )
+        if ( EditorInputGUI::isActionDown( editorinput::kViewportFlyLeft ) )
             moveDir -= right;
-        if ( EditorInputGUI::isActionDown( "viewport.flyUp" ) )
+        if ( EditorInputGUI::isActionDown( editorinput::kViewportFlyUp ) )
             moveDir += up;
-        if ( EditorInputGUI::isActionDown( "viewport.flyDown" ) )
+        if ( EditorInputGUI::isActionDown( editorinput::kViewportFlyDown ) )
             moveDir -= up;
 
         // 오른쪽 버튼을 누른 채 휠로 비행 속도를 바꾼다(언리얼과 유니티). 툴바 슬라이더와 같은 값이다.
@@ -102,17 +103,15 @@ namespace sw::editor
 
     void EditorViewportCamera::processBookmarkKeys()
     {
+        static_assert( sizeof( editorinput::kArrViewportBookmark ) / sizeof( editorinput::kArrViewportBookmark[0] ) == kBookmarkKeyCount, "a bookmark action per slot" );
+        static_assert( sizeof( editorinput::kArrViewportSetBookmark ) / sizeof( editorinput::kArrViewportSetBookmark[0] ) == kBookmarkKeyCount, "a bookmark action per slot" );
         // 1 ~ 9 는 북마크로 가고 Ctrl+1 ~ 9 는 지금 시점을 저장한다(`Editor.Panel.scene_view` 의 viewport.bookmarkN · viewport.setBookmarkN).
         // 수정 키는 정확히 맞아야 발화하므로 Shift · Alt 를 누른 숫자는 어느 쪽도 아니다.
         for ( uint32 slot = 0; slot < kBookmarkKeyCount; ++slot )
         {
-            fixed_string<constant::buffer::kMax32> setAction;
-            formatstring( setAction.data(), setAction.capacity(), "viewport.setBookmark%u", slot + 1 );
-            fixed_string<constant::buffer::kMax32> goAction;
-            formatstring( goAction.data(), goAction.capacity(), "viewport.bookmark%u", slot + 1 );
-            if ( EditorInputGUI::wasActionTriggered( setAction.c_str() ) )
+            if ( EditorInputGUI::wasActionTriggered( editorinput::kArrViewportSetBookmark[slot] ) )
                 saveBookmark( slot );
-            else if ( EditorInputGUI::wasActionTriggered( goAction.c_str() ) )
+            else if ( EditorInputGUI::wasActionTriggered( editorinput::kArrViewportBookmark[slot] ) )
                 goToBookmark( slot );
         }
     }

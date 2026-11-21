@@ -8,6 +8,7 @@
 #include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Types.h"
 
 #include "Editor/Common/EditorExports.h"
@@ -149,5 +150,6 @@ namespace sw::editor
         uint64                          _revision{ 0 };            ///< `notifyChanged` 마다 오른다(`getRevision`)
         Scene*                          _pPreviewScene{ nullptr }; ///< 묶인 미리보기 씬(빌림). nullptr 이면 메인 선택이다
         CommandStack*                   _pPreviewStack{ nullptr }; ///< 묶인 창의 Undo 스택(빌림)
+        Subscription                    _previewRegistration;      ///< 미리보기 목록 등록(`editor::registerPreviewSelection`) — 풀리면 목록 · 대상 선택에서 빠진다
     };
 } // namespace sw::editor

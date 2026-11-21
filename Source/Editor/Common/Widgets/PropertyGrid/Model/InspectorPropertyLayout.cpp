@@ -1,0 +1,228 @@
+#include "pch.h"
+
+#include "Editor/Common/Widgets/PropertyGrid/Model/InspectorPropertyLayout.h"
+
+#include "Core/Algorithm/VectorUtil.h"
+#include "Core/Math/MathUtil.h"
+#include "Core/String/StringBuilder.h"
+#include "Core/String/StringUtil.h"
+
+#include "Editor/Common/Widgets/Model/EditorDisplayNameUtil.h"
+#include "Editor/Common/Widgets/Model/EditorListFilter.h"
+
+#include "Engine/Reflection/ReflectVisit.h"
+#include "Engine/Reflection/ReflectionEditorMetadata.h"
+#include "Engine/Reflection/ReflectionMetadata.h"
+#include "Engine/Reflection/ReflectionUnits.h"
+#include "Engine/Reflection/TypeInfo.h"
+
+// 인스펙터는 에디터 기능이라 배포 구성은 이 파일을 짓지 않는다(Editor 빌드 단위 — `Source/Editor/CMakeLists.txt`).
+namespace sw::editor
+{
+    void InspectorPropertyLayout::collectTypeChain( const TypeInfo& type, vector<const TypeInfo*>& outListType )
+    {
+        outListType.clear();
+        for ( const TypeInfo* pType : type.getTypeChain() )
+        {
+            outListType.push_back( pType );
+        }
+        VectorUtil::reverse( outListType );
+    }
+
+    void InspectorPropertyLayout::collectPropertyGroups( const TypeInfo& type, const vector<hashed_string>& listDrawnName, const EditorListFilter& filter,
+                                                         vector<InspectorPropertyGroup>& outListGroup )
+    {
+        outListGroup.clear();
+        // 상속분은 기반 → 파생 순으로 온다(파생이 같은 이름을 다시 선언하면 그 위치에서 바뀐다 — `TypeInfo::getPropertiesWithBase`).
+        // 차례는 걷기 한 곳(`ReflectPropertyVisitor`)이 정한다. 인스턴스 없이 스키마만 걷는다.
+        const ReflectPropertyVisitor propertyVisitor{ ReflectVisitOptions{} };
+        (void)propertyVisitor.visitProperties( type, static_cast<const void*>( nullptr ), [&]( const ReflectVisitConstField& field )
+        {
+            const PropertyInfo& prop = field._property;
+            if ( prop._metadata->getEditor()._bHideInInspector == SW_TRUE )
+                return ReflectVisitFlow::Continue;
+            for ( const hashed_string& drawnName : listDrawnName )
+            {
+                if ( drawnName == prop._name )
+                    return ReflectVisitFlow::Continue;
+            }
+            const string label = getPropertyLabel( prop );
+            if ( filter.matchesAny( { string_view{ prop._name.c_str() }, string_view{ label }, string_view{ prop._metadata->getEditor()._category.c_str() } } ) == false )
+                return ReflectVisitFlow::Continue;
+
+            const string_view       category = prop._metadata->getEditor()._category.empty() ? string_view{ "General" } : string_view{ prop._metadata->getEditor()._category.c_str() };
+            InspectorPropertyGroup* pGroup   = nullptr;
+            for ( InspectorPropertyGroup& group : outListGroup )
+            {
+                if ( group._category == category )
+                {
+                    pGroup = &group;
+                    break;
+                }
+            }
+            if ( pGroup == nullptr )
+            {
+                outListGroup.push_back( InspectorPropertyGroup{ string{ category }, {} } );
+                pGroup = &outListGroup.back();
+            }
+            pGroup->_listProperty.push_back( &prop );
+            return ReflectVisitFlow::Continue;
+        } );
+    }
+
+    string InspectorPropertyLayout::getPropertyLabel( const PropertyInfo& prop )
+    {
+        return EditorDisplayNameUtil::chooseLabel( prop._metadata->getEditor()._displayName, prop._name.c_str() );
+    }
+
+    string InspectorPropertyLayout::makeUndoLabel( const utf8* pPropertyLabel )
+    {
+        const bool bUsable = pPropertyLabel != nullptr && pPropertyLabel[0] != '\0' && pPropertyLabel[0] != '#';
+        if ( bUsable == false )
+            return string( "Edit Property" );
+        StringBuilder<constant::buffer::kMax128> labelBuilder;
+        labelBuilder.appendFormat( "Edit %#", pPropertyLabel );
+        return string( labelBuilder.view() );
+    }
+
+    PropertyInfo InspectorPropertyLayout::makeElementProperty( const PropertyInfo& containerProp )
+    {
+        PropertyInfo elementProp{};
+        elementProp._typeName             = containerProp._elementTypeName;
+        elementProp._name                 = containerProp._name;
+        elementProp._metadata             = containerProp._metadata;
+        elementProp._handleTargetTypeName = containerProp._handleTargetTypeName;
+        return elementProp;
+    }
+
+    InspectorDisplayUnit InspectorPropertyLayout::getDisplayUnit( const PropertyInfo& prop )
+    {
+        InspectorDisplayUnit  unit{};
+        const ReflectUnitKind kind = prop._metadata->_unit;
+        if ( kind == ReflectUnitKind::Radian )
+        {
+            unit._scale     = MathUtil::kRadianToDegree;
+            unit._dragSpeed = kAngleDragSpeed;
+            unit._suffix    = "deg";
+            return unit;
+        }
+        if ( kind == ReflectUnitKind::Ratio )
+        {
+            unit._scale     = 100.0f;
+            unit._dragSpeed = kPercentDragSpeed;
+            unit._suffix    = "%";
+            return unit;
+        }
+        // 0..100 으로 저장한 백분율은 그대로 보이고 글자만 `%` 다.
+        if ( kind == ReflectUnitKind::Percent )
+        {
+            unit._dragSpeed = kPercentDragSpeed;
+            unit._suffix    = "%";
+            return unit;
+        }
+        if ( const ReflectUnit* pUnit = ReflectUnit::findUnit( kind ) )
+        {
+            unit._suffix = pUnit->_pName;
+            return unit;
+        }
+        // 표 밖의 자유 글 단위(`Meta = "Units=HP"`)는 글자만 붙인다.
+        const string* pLabel = prop.findCustomMeta( hashed_string( "Units" ) );
+        if ( pLabel != nullptr )
+            unit._suffix = *pLabel;
+        return unit;
+    }
+
+    string InspectorPropertyLayout::appendUnitSuffix( const utf8* pNumberFormat, const string& suffix )
+    {
+        string format = ( pNumberFormat != nullptr ) ? pNumberFormat : "";
+        if ( suffix.empty() )
+            return format;
+        format += " ";
+        for ( const utf8 letter : suffix )
+        {
+            format += letter;
+            if ( letter == '%' )
+                format += '%';
+        }
+        return format;
+    }
+
+    InspectorNumericRange InspectorPropertyLayout::getNumericRange( const PropertyInfo& prop, const ObjectAddress instance )
+    {
+        const PropertyMetadata& meta = *prop._metadata;
+        InspectorNumericRange   range;
+        // 허용 범위는 읽기 공통 끝(`SerializerUtil::isWithinDeclaredRanges`)과 같은 함수로 푼다 — 필드 경계는 그 객체의 지금 값이다.
+        const PropertyAllowedRange allowed = meta.computeAllowedRange( instance.get() );
+        range._bHasClampMin                = allowed._bHasMin;
+        range._bHasClampMax                = allowed._bHasMax;
+        range._clampMin                    = allowed._min;
+        range._clampMax                    = allowed._max;
+
+        const PropertyEditorMetadata& editor = meta.getEditor();
+        range._bHasWidgetMin                 = editor._bHasUIMinRange != SW_FALSE || range._bHasClampMin;
+        range._bHasWidgetMax                 = editor._bHasUIMaxRange != SW_FALSE || range._bHasClampMax;
+        range._widgetMin                     = editor._bHasUIMinRange != SW_FALSE ? static_cast<float64>( editor._uiMinRange ) : range._clampMin;
+        range._widgetMax                     = editor._bHasUIMaxRange != SW_FALSE ? static_cast<float64>( editor._uiMaxRange ) : range._clampMax;
+
+        const bool bSliderMeta = editor.findCustomMeta( hashed_string( "Slider" ) ) != nullptr;
+        const bool bFullClamp  = range._bHasClampMin && range._bHasClampMax;
+        range._bSlider         = editor.hasFullUIRange() || ( bFullClamp && bSliderMeta );
+        return range;
+    }
+
+    float64 InspectorPropertyLayout::clampToAllowedRange( const InspectorNumericRange& range, float64 value )
+    {
+        if ( range._bHasClampMin && value < range._clampMin )
+            value = range._clampMin;
+        if ( range._bHasClampMax && range._clampMax < value )
+            value = range._clampMax;
+        return value;
+    }
+
+    bool InspectorPropertyLayout::isColorRequested( const PropertyInfo& prop )
+    {
+        if ( prop._metadata->getEditor()._bColorHDR != SW_FALSE || prop.findCustomMeta( hashed_string( "Color" ) ) != nullptr )
+            return true;
+        return StringUtil::stristr( prop._name.c_str(), "color" ) != nullptr;
+    }
+
+    bool InspectorPropertyLayout::matchesFileFilter( string_view filter, string_view path )
+    {
+        filter = StringUtil::trim( filter );
+        if ( filter.empty() )
+            return true;
+        bool bMatched = false;
+        StringUtil::forEachToken( filter, ";,", [&]( string_view token )
+        {
+            const string_view pattern = StringUtil::trim( token );
+            // `*.png` 는 확장자 비교, `*` 는 무엇이든, 그 밖은 파일 이름 끝 비교다.
+            const string_view suffix = StringUtil::startsWith( pattern, "*" ) ? pattern.substr( 1 ) : pattern;
+            bMatched                 = pattern == "*" || pattern == "*.*" || ( suffix.empty() == false && StringUtil::endsWith( path, suffix, true ) );
+            return bMatched == false;
+        } );
+        return bMatched;
+    }
+
+    string InspectorPropertyLayout::formatParameterList( const vector<FunctionParameterInfo>& listParameter )
+    {
+        string text;
+        for ( size_t paramIndex = 0; paramIndex < listParameter.size(); ++paramIndex )
+        {
+            const FunctionParameterInfo& parameter = listParameter[paramIndex];
+            if ( paramIndex > 0 )
+                text += ", ";
+            text += parameter._typeName;
+            if ( parameter._name.empty() == false )
+            {
+                text += " ";
+                text += parameter._name;
+            }
+            if ( parameter.hasDefaultValue() )
+            {
+                text += " = ";
+                text += parameter._defaultValue;
+            }
+        }
+        return text;
+    }
+} // namespace sw::editor

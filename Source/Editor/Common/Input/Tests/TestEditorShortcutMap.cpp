@@ -4,11 +4,13 @@
  */
 #include "pch.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
+#include "Editor/Common/Input/EditorInputActionNames.h"
 #include "Editor/Common/Input/Model/EditorShortcutMap.h"
 
 #include "Engine/Input/InputManager.h"
@@ -89,4 +91,23 @@ SW_TEST_CASE( EditorShortcutMapTest, FocusedPanelCommandWinsOverGlobal )
 
     map.setInputManager( nullptr );
     input.shutdown();
+}
+
+SW_TEST_CASE( EditorShortcutMapTest, ActionMismatchesNameTyposAndMissingCodeActions )
+{
+    // 명령의 액션도 코드 액션도 아닌 줄(오타)과, 입력 맵에 없는 코드 액션을 모은다 — 에디터가 명령 표를 맞출 때 오류로 낸다.
+    vector<hashed_string> listMapAction{ hashed_string( "cmd.undo" ), hashed_string( "cmd.undoo" ), hashed_string( editorinput::kViewportFlyForward ) };
+    for ( const utf8* pBookmark : editorinput::kArrViewportBookmark )
+        listMapAction.push_back( hashed_string( pBookmark ) );
+    const vector<EditorCommandDesc> listCommand{ EditorShortcutMapTestInternal::makeCommand( "edit.undo", "cmd.undo" ) };
+
+    vector<string> listUnknown;
+    vector<string> listMissing;
+    EditorShortcutMap::collectActionMismatches( listMapAction, listCommand, listUnknown, listMissing );
+    SW_REQUIRE_TRUE( listUnknown.size() == 1 );
+    SW_EXPECT_TRUE( listUnknown[0] == "cmd.undoo" );
+    // 맵에 없는 코드 액션: 북마크 저장 아홉 + 코드 액션 가운데 비행 앞으로를 뺀 전부
+    const size_t codeActionCount = sizeof( editorinput::kArrCodeAction ) / sizeof( editorinput::kArrCodeAction[0] );
+    SW_EXPECT_TRUE( listMissing.size() == codeActionCount - 1 + 9 );
+    SW_EXPECT_TRUE( VectorUtil::contains( listMissing, string{ editorinput::kViewportFlyForward } ) == false );
 }

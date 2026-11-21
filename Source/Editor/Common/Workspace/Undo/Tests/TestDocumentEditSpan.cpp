@@ -21,7 +21,7 @@ SW_TEST_CASE( DocumentEditSpanTest, BaselineFollowsRecordedEdits )
     const sw::optional<DocumentEdit> direct = span.notifyEdited( "Type", false, []()
     { return string( "b" ); } );
     SW_REQUIRE_TRUE( direct.has_value() );
-    SW_EXPECT_EQUAL( string( "a" ), direct->_before );
+    SW_EXPECT_EQUAL( string( "a" ), *direct->_pBefore );
     SW_EXPECT_EQUAL( string( "b" ), span.getBaseline() );
 
     const sw::optional<DocumentEdit> held = span.notifyEdited( "Drag", true, []()
@@ -32,8 +32,11 @@ SW_TEST_CASE( DocumentEditSpanTest, BaselineFollowsRecordedEdits )
 
     const sw::optional<DocumentEdit> finished = span.finish( "d" );
     SW_REQUIRE_TRUE( finished.has_value() );
-    SW_EXPECT_EQUAL( string( "b" ), finished->_before );
+    SW_EXPECT_EQUAL( string( "b" ), *finished->_pBefore );
     SW_EXPECT_EQUAL( string( "d" ), span.getBaseline() );
+    // 연속한 단계는 글을 한 벌만 든다 — 앞 단계의 끝 글 · 다음 단계의 전 글 · 기준선이 같은 버퍼다.
+    SW_EXPECT_TRUE( direct->_pAfter == finished->_pBefore );
+    SW_EXPECT_TRUE( &span.getBaseline() == finished->_pAfter.get() );
 }
 
 /**

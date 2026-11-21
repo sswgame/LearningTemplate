@@ -104,7 +104,9 @@ namespace sw::editor
          */
         void openDocument( string_view assetPath );
         /** @brief 문서 · 뷰포트가 바뀌었으면 오프스크린 화면을 다시 열고(크기가 바뀌면 렌더 텍스처 경로도), 이번 프레임의 보기를 겁니다. 렌더 텍스처를 바꾸기 전에 `setTargetReleaseListener` 의 함수를 부릅니다. */
-        void syncPreview( const UISystem& ui, UIOffscreenScreens& offscreen );
+        void syncPreview( UIOffscreenScreens& offscreen );
+        /** @brief 에디터 범위의 UI 시스템이 서 있으면 true 입니다. UI 시스템은 Model 안에서만 찾는다 — View 는 이 값만 본다(MVVM 계약). */
+        [[nodiscard]] static bool isUIRunning();
         /** @brief 고른 언어에 맞는 문화권 관리자 사본을 만들고(게임 텍스트가 바뀌면 다시) 화면에 겁니다. */
         void syncLanguage( UIOffscreenScreens& offscreen );
         /** @brief 화면 트리가 새로 지어졌으면(핫 리로드) 고른 위젯 · 포인터 · 포커스를 새 트리로 이어 갑니다. 고친 값이 있었으면(@p bDirty) 버렸다고 알립니다. */
@@ -119,8 +121,6 @@ namespace sw::editor
         const string& getTargetPath() const { return _targetPath; }
         /** @brief 미리보기 렌더 텍스처(`getTargetPath`)의 RHI 핸들입니다. 아직 없거나 GPU 에 올라가지 않았으면 0 입니다. */
         uint64 findTargetTexture() const;
-        /** @brief 에디터 범위의 UI 시스템입니다. 없으면 nullptr 입니다. View 가 서비스 창구(`EditorService.h`)를 보지 않게 여기서 찾는다. */
-        static UISystem* findUISystem();
         /** @brief UI 테마 고르기(툴바의 테마 콤보)입니다. 없으면 멈춘다. */
         static UIThemeController& getThemeController();
         /** @brief 화면 밖 UI 화면(미리보기가 그리는 자리)입니다. 없으면 멈춘다. */
@@ -243,6 +243,10 @@ namespace sw::editor
         void                        updateWatchValues( const UIScreen* pScreen, bool bDirty, bool bTextureReady );
         void                        resetWatchValues() { _watchValues = UIPreviewWatchValues{}; }
         const UIPreviewWatchValues& getWatchValues() const { return _watchValues; }
+
+    private:
+        /** @brief 에디터 범위의 UI 시스템입니다. 없으면 nullptr 입니다. Model 안에서만 쓴다. */
+        static UISystem* findUISystem();
 
     private:
         /** @brief 되돌리기 항목이 모델을 가리키는 길입니다. 모델이 사라지면 끊어, 옛 항목이 사라진 모델에 값을 쓰지 않게 합니다. */

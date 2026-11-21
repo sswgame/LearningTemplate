@@ -10,11 +10,11 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Name/hashed_string.h"
 
+#include "Editor/Common/Widgets/PropertyGrid/Model/InspectorComponentPicker.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorDefaultObjects.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
-#include "Editor/Panels/Inspector/Model/InspectorComponentPicker.h"
 #include "Editor/SelfTest/EditorWatchSupport.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"

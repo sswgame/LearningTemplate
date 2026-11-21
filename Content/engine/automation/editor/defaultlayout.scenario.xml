@@ -36,6 +36,8 @@
 	<EditorWaitStable/>
 	<Expect watch="Editor.PanelContentColumns" atLeast="42"/>
 	<EditorWaitStable/>
+	<!-- 재는 장치: 등록된 패널을 모두(닫힌 것까지) 만든 시간 — 지연 생성의 판정 근거(문턱 50 ms) -->
+	<Expect watch="Editor.PanelCreateMs" atLeast="0"/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

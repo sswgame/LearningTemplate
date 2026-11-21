@@ -12,7 +12,6 @@
 
 namespace sw
 {
-    class AudioService;
 } // namespace sw
 
 namespace sw::editor
@@ -46,8 +45,8 @@ namespace sw::editor
         static float32 getWatchedBusVolume();
 
     private:
-        void drawPreviewBar( AudioService& audio );
-        void drawBusStrip( AudioService& audio, uint32 busIndex );
+        void drawPreviewBar();
+        void drawBusStrip( uint32 busIndex );
 
     private:
         AudioMixerViewModel                     _model;

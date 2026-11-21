@@ -108,6 +108,11 @@ namespace sw
     using DevCommandRegistrar = ModuleEntryRegistrar<DevCommandRegistry, const DevCommandRegistration*>;
 } // namespace sw
 
+// 개발 명령을 등록하지 못하는 번역 단위(에디터 MVVM View — 명령은 모델을 바꾼다)는 빌드가 SW_DEV_COMMAND_REGISTRATION=0 을 준다. 엔진은 그 까닭을 모른다.
+#ifndef SW_DEV_COMMAND_REGISTRATION
+    #define SW_DEV_COMMAND_REGISTRATION 1
+#endif
+
 #if !defined( SW_SHIPPING )
 
 /**
@@ -120,11 +125,12 @@ namespace sw
  * @param pHelp   설명 한 줄
  * @param pFunc   `bool( const vector<string>&, string& )` 본문
  */
-    #define SW_DEV_COMMAND( varName, pName, pUsage, pHelp, pFunc )                                                             \
-        static const ::sw::DevCommandRegistration sw_devCommandRegistration_##varName{ pName, pUsage, pHelp, pFunc, nullptr }; \
-        static ::sw::DevCommandRegistrar          sw_devCommandRegistrar_##varName                                             \
-        {                                                                                                                      \
-            &sw_devCommandRegistration_##varName                                                                               \
+    #define SW_DEV_COMMAND( varName, pName, pUsage, pHelp, pFunc )                                                                                        \
+        static_assert( SW_DEV_COMMAND_REGISTRATION, "dev command " pName ": an MVVM View may not register dev commands - put it in the panel's Model/" ); \
+        static const ::sw::DevCommandRegistration sw_devCommandRegistration_##varName{ pName, pUsage, pHelp, pFunc, nullptr };                            \
+        static ::sw::DevCommandRegistrar          sw_devCommandRegistrar_##varName                                                                        \
+        {                                                                                                                                                 \
+            &sw_devCommandRegistration_##varName                                                                                                          \
         }
 
 /**

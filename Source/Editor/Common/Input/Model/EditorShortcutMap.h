@@ -74,6 +74,13 @@ namespace sw::editor
          */
         void collectTriggeredCommands( const vector<EditorCommandDesc>& listCommand, vector<string>& outListCommandID ) const;
 
+        /**
+         * @brief 단축키 데이터와 코드를 맞춰 봅니다. 입력 맵 액션 가운데 명령의 액션도 코드 액션(`editorinput::kArrCodeAction` · 북마크)도 아닌 것을 @p outListUnknown 에,
+         *        코드 액션 가운데 입력 맵에 없는 것을 @p outListMissing 에 담습니다(둘 다 비우고 채운다). 오타 · 지운 명령의 남은 줄은 조용히 없는 단축키가 된다.
+         */
+        static void collectActionMismatches( const vector<hashed_string>& listMapAction, const vector<EditorCommandDesc>& listCommand, vector<string>& outListUnknown,
+                                             vector<string>& outListMissing );
+
         /** @brief 액션이 이번 프레임에 발화했으면 true 입니다(막기는 어댑터가 본다). */
         bool wasActionTriggered( string_view action ) const;
         /** @brief 액션이 눌려 있으면 true 입니다. */

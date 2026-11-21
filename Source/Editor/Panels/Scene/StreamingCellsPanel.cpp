@@ -29,7 +29,7 @@ namespace sw::editor
 
     void StreamingCellsPanel::drawContent()
     {
-        _viewModel.gather( _viewState );
+        gatherViewState( _viewModel, _viewState );
         switch ( _viewState._content )
         {
             case StreamingCellsContent::NoActiveScene:
