@@ -672,7 +672,8 @@ namespace sw
         if ( pComp->isSceneComponent() && _pPrimaryScene.load( std::memory_order_relaxed ) == nullptr )
             _pPrimaryScene.store( pComp, std::memory_order_relaxed );
         // 엔진 장부(트랜스폼 계층)는 지금 넣고, 어느 레지스트리에 들어갈지(`onRegister`)는 컴포넌트가 안다 — 씬을 짓는 배치 안이면 매니저가 배치 끝까지 미룬다.
-        pComp->bindToManager( *_pOwnerManager );
+        if ( pComp->isSceneComponent() )
+            static_cast<SceneComponent*>( pComp )->bindToManager( *_pOwnerManager );
         _pOwnerManager->registerComponent( *pComp );
         // 둘째 씬 컴포넌트부터는 primary 에 붙인다. 오브젝트의 루트는 하나다(언리얼의 RootComponent). 루트로 두면 **월드 원점**에 놓여
         // 오브젝트를 옮겨도 콜라이더와 메시가 따라오지 않는다.

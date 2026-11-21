@@ -70,6 +70,8 @@ namespace sw
     class SW_API SceneComponent : public Component
     {
         friend class SceneTransformHierarchy;
+        friend class GameObject;      ///< 붙일 때 `bindToManager`
+        friend class GameObjectStore; ///< 해체할 때 `unbindFromManager`
 
     public:
         REFLECT_BODY();
@@ -268,10 +270,14 @@ namespace sw
         void setTransformPrimitiveIndex( uint32 primitiveIndex );
 
     private:
-        /** @brief 매니저를 잡고, 부모가 없으면 루트 SceneComponent 캐시에 자기를 넣습니다(붙는 순간 — `Component::bindToManager`). */
-        void bindToManager( GameObjectManager& manager ) final;
-        /** @brief 루트 SceneComponent 캐시에서 자기를 빼고 매니저를 놓습니다. */
-        void unbindFromManager( GameObjectManager& manager ) final;
+        /**
+         * @brief 매니저를 잡고, 부모가 없으면 루트 SceneComponent 캐시에 자기를 넣습니다. 붙는 순간(`GameObject::attachCreatedComponent`) 부른다 — 미루지 않는다, 장부는 객체 데이터다.
+         * @details 언리얼의 `AttachParent` · 상대 트랜스폼이 로드 때 채워지고 `OnRegister` 가 나중에 월드에 넣는 것과 같은 나눔이다.
+         *          씬 컴포넌트만 하는 일이라 `Component` 의 가상 함수로 두지 않는다 — 부르는 쪽이 `isSceneComponent` 로 고른다.
+         */
+        void bindToManager( GameObjectManager& manager );
+        /** @brief 루트 SceneComponent 캐시에서 자기를 빼고 매니저를 놓습니다(해체 한 곳 `GameObjectStore` 가 `dispatchUnregister` 뒤에 부른다). */
+        void unbindFromManager( GameObjectManager& manager );
         /** @brief 매니저가 병렬 틱 중(트랜스폼 읽기 전용)이면 true 입니다. 이때 세터는 바로 쓰지 않고 틱 뒤에 적용합니다. */
         bool isInParallelTick() const;
         /**

@@ -628,13 +628,7 @@ namespace sw
          * @details 핸들로 다시 찾으므로 그 사이에 파괴돼도 안전하다. 틱 설정(그룹, 틱 여부, 서브틱)이 `GameObject` 의 setName, addTag 와 같은 규칙을 따른다.
          */
         bool deferIfStructureFrozen( Delegate<void( Component& )> func );
-        /**
-         * @brief 붙는 순간 엔진의 장부(트랜스폼 계층 · 매니저 연결)에 넣습니다(`GameObject::attachCreatedComponent`). 미루지 않는다 — 장부는 객체 데이터다.
-         * @details 언리얼의 `AttachParent` · 상대 트랜스폼이 로드 때 채워지고 `OnRegister` 가 나중에 월드에 넣는 것과 같은 나눔이다. `SceneComponent` 만 쓰고 `final` 로 막는다.
-         */
-        virtual void bindToManager( GameObjectManager& manager ) { (void)manager; }
-        /** @brief `bindToManager` 의 짝입니다(해체 한 곳 `GameObjectStore` 가 `dispatchUnregister` 뒤에 부른다). */
-        virtual void unbindFromManager( GameObjectManager& manager ) { (void)manager; }
+        // 붙는 순간의 장부(트랜스폼 계층 · 매니저 연결)는 씬 컴포넌트만 쓴다 — 가상 함수가 아니라 `_bIsSceneComponent` 를 보고 `SceneComponent::bindToManager` 를 바로 부른다.
 
     protected:
         GameObject* _pOwner;      ///< 소유자 GameObject
