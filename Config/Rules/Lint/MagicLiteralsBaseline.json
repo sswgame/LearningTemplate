@@ -453,7 +453,7 @@
     "Source/Engine/Graphics/Mesh/MeshUtil.cpp": {"float": 29, "integer": 4, "hex": 1},
     "Source/Engine/Graphics/Mesh/MeshUtil.h": {"integer": 5},
     "Source/Engine/Graphics/RHI/Backend/RHIConstantBufferMirror.cpp": {"integer": 1},
-    "Source/Engine/Graphics/RHI/Backend/RHIShaderRequest.cpp": {"integer": 1},
+    "Source/Engine/Graphics/Shader/Compile/RHIShaderRequest.cpp": {"integer": 1},
     "Source/Engine/Graphics/RHI/DX/DX11/D3D11RHIResourceFactory.cpp": {"integer": 2},
     "Source/Engine/Graphics/RHI/DX/DX12/D3D12RHIDevice.cpp": {"integer": 2},
     "Source/Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.cpp": {"integer": 12},
