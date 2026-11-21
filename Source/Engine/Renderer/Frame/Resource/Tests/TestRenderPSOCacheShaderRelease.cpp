@@ -81,3 +81,32 @@ SW_TEST_CASE( RenderPSOCacheShaderReleaseTest, ReleasesOnlyPSOsOfTheChangedShade
     SW_EXPECT_FALSE( cache.findDesc( kForwardPSO, desc ) );
     SW_EXPECT_TRUE( cache.findDesc( kShadowPSO, desc ) );
 }
+
+/**
+ * @brief [RenderPSOCacheShaderReleaseTest] 엔진 · 출력 · 모듈 PSO 를 다른 핸들로 덮어쓰면 옛 핸들을 장치의 해제 진입점으로 놓는다 — 같은 핸들을 다시 두면 놓지 않는다
+ * @details 변이: 덮어쓰기가 옛 핸들을 잊기만 하면(예전) 파괴 목록이 비어 진다. 같은 핸들도 놓으면 쓰는 PSO 를 놓아 둘째 단언이 진다.
+ */
+SW_TEST_CASE( RenderPSOCacheShaderReleaseTest, OverwriteReleasesThePreviousPSO )
+{
+    test::FakeRHIBufferFactory factory;
+    test::FakeRHIDevice        device;
+    device._pResourceFactory = &factory;
+
+    const RHIPipelineStateHandle kOld{ 11 };
+    const RHIPipelineStateHandle kNew{ 12 };
+    const hashed_string          programKey{ "Program" };
+    RenderPSOCache               cache;
+    cache.setEnginePSO( &device, RenderPassKind::Shadow, kOld );
+    cache.setEnginePSO( &device, RenderPassKind::Shadow, kOld ); // 같은 핸들 — 놓지 않는다
+    SW_EXPECT_TRUE( factory._listDestroyedPipelineState.empty() );
+    cache.setEnginePSO( &device, RenderPassKind::Shadow, kNew );
+    SW_EXPECT_TRUE( factory._listDestroyedPipelineState == vector<RHIPipelineStateHandle>{ kOld } );
+    SW_EXPECT_EQUAL( kNew, cache.findEnginePSO( RenderPassKind::Shadow ) );
+
+    factory._listDestroyedPipelineState.clear();
+    cache.setOutputPSO( &device, RenderPassKind::Present, RHIFormat::R8G8B8A8_UNORM, kOld );
+    cache.setOutputPSO( &device, RenderPassKind::Present, RHIFormat::R8G8B8A8_UNORM, kNew );
+    cache.setExtensionProgramPSO( &device, programKey, kOld );
+    cache.setExtensionProgramPSO( &device, programKey, RHIPipelineStateHandle{} ); // 실패(0)로 덮어도 옛 핸들은 놓는다
+    SW_EXPECT_TRUE( factory._listDestroyedPipelineState == ( vector<RHIPipelineStateHandle>{ kOld, kOld } ) );
+}

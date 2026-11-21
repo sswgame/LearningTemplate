@@ -23,6 +23,7 @@
 
 #include <iterator>
 #include <thread>
+#include <type_traits>
 
 using namespace sw;
 
@@ -471,4 +472,58 @@ SW_TEST_CASE( RHIDeviceTest, UITargetFormatStaysSDRUnderHDR )
 
     SW_REQUIRE_TRUE( device.setBackBufferColorSpace( RHIColorSpace::SRGBNonLinear, RHIDisplayMetadata{} ) );
     SW_EXPECT_TRUE( device.getUITargetFormat() == RHIFormat::B8G8R8A8_UNORM );
+}
+
+// 핸들 형식: 종류가 다른 핸들 · 정수와 핸들 사이에 암묵 변환이 없다 — 텍스처 핸들을 버퍼 자리에 넘기거나 개수를 핸들 자리에 넘기면 컴파일이 멈춘다.
+// 값은 `uint64` 와 같은 크기 · 복사 비용이다(성능 하락 없음).
+static_assert( std::is_convertible_v<RHITextureHandle, RHIBufferHandle> == false, "a texture handle must not pass as a buffer handle" );
+static_assert( std::is_convertible_v<RHIBufferHandle, RHITextureHandle> == false, "a buffer handle must not pass as a texture handle" );
+static_assert( std::is_convertible_v<RHIPipelineStateHandle, RHIRenderPassHandle> == false, "a PSO handle must not pass as a render pass handle" );
+static_assert( std::is_convertible_v<RHITransientHeapHandle, RHITextureHandle> == false, "a heap handle must not pass as a texture handle" );
+static_assert( std::is_convertible_v<uint64, RHIBufferHandle> == false, "an integer must not become a handle implicitly" );
+static_assert( std::is_convertible_v<RHIBufferHandle, uint64> == false, "a handle must not become an integer implicitly" );
+static_assert( sizeof( RHIBufferHandle ) == sizeof( uint64 ) && std::is_trivially_copyable_v<RHIBufferHandle>, "a handle is a 64-bit value type" );
+
+/**
+ * @brief [RHIReleaseHandleTest] 같은 핸들을 두 번 놓으면 검사 구성에서 단언한다 — 두 번째 해제는 백엔드가 "산 핸들이 아니었다" 고 답한다
+ * @details 변이: 장치가 백엔드의 답을 보지 않으면(예전 `void destroyBuffer`) 단언 수가 0 이라 진다.
+ */
+SW_TEST_CASE( RHIReleaseHandleTest, SecondReleaseOfTheSameHandleAsserts )
+{
+    test::FakeRHIBufferFactory factory;
+    test::FakeRHIDevice        device;
+    device._pResourceFactory     = &factory;
+    const RHIBufferHandle buffer = factory.createVertexBuffer( nullptr, 16 );
+    {
+        test::ScopedAssertCapture assertCapture;
+        device.releaseHandle( buffer ); // 든 프레임이 없다 — 바로 백엔드에 닿는다
+        SW_EXPECT_EQUAL( 0u, assertCapture.getCount() );
+        device.releaseHandle( buffer );
+        if constexpr ( test::ScopedAssertCapture::kAssertsAreActive )
+            SW_EXPECT_EQUAL( 1u, assertCapture.getCount() );
+    }
+    SW_EXPECT_TRUE( factory._listDestroyedBuffer == ( vector<RHIBufferHandle>{ buffer, buffer } ) );
+}
+
+/**
+ * @brief [RHIReleaseHandleTest] 렌더 스레드 밖의 해제는 그때 넘긴 프레임 다음 프레임의 끝(프레임 펜스) 뒤에만 백엔드에 닿는다 — 그 전에는 핸들이 산다
+ * @details 변이: 미루지 않고 바로 놓으면 첫 단언이, 넘긴 프레임만 기다리면 둘째 단언이 진다.
+ */
+SW_TEST_CASE( RHIReleaseHandleTest, DeferredReleaseWaitsForTheFrameFence )
+{
+    test::FakeRHIBufferFactory factory;
+    test::FakeRHIDevice        device;
+    device._pResourceFactory         = &factory;
+    const RHIBufferHandle     buffer = factory.createVertexBuffer( nullptr, 16 );
+    test::ScopedAssertCapture assertCapture;
+
+    device.notifyRenderFrameQueued(); // 프레임 1 이 GPU 로 갔다 — 게임 스레드는 패킷 2 를 짓는 중이다
+    device.releaseHandle( buffer );
+    SW_EXPECT_TRUE( factory._listDestroyedBuffer.empty() );
+    device.notifyRenderFrameRetired(); // 프레임 1 끝 — 패킷 2 가 아직 그 핸들을 들 수 있다
+    SW_EXPECT_TRUE( factory._listDestroyedBuffer.empty() );
+    device.notifyRenderFrameQueued();
+    device.notifyRenderFrameRetired(); // 프레임 2 끝 — 이제 놓는다
+    SW_EXPECT_TRUE( factory._listDestroyedBuffer == vector<RHIBufferHandle>{ buffer } );
+    SW_EXPECT_EQUAL( 0u, assertCapture.getCount() );
 }
