@@ -1,7 +1,7 @@
 /**
  * @file TestGPUMeshVertexPoolFence.cpp
  * @brief 정점 풀이 나간 메시의 구간을 GPU 펜스가 끝난 뒤에만 다시 내주는가 — `update` 를 부른 수로 짐작하지 않는다.
- * @details 디바이스는 가짜(`test::FakeRHIDevice` — `enqueueGPURelease` 를 쌓기만 한다)이고 팩토리는 `test::FakeRHIBufferFactory` 다. 쌓인 해제를 부르는 것이 "GPU 가 끝냈다" 다.
+ * @details 디바이스는 가짜(`test::FakeRHIDevice` — `notifyFrameCompletion` 을 쌓기만 한다)이고 팩토리는 `test::FakeRHIBufferFactory` 다. 쌓인 통지를 `Completed` 로 부르는 것이 "GPU 가 끝냈다" 다.
  */
 #include "pch.h"
 
@@ -58,9 +58,9 @@ SW_TEST_CASE( GPUMeshVertexPoolFenceTest, RetiredSpanWaitsForTheGPUFence )
     }
 
     // GPU 가 지금까지 낸 프레임을 모두 끝냈다 — 다음 `update` 가 구간 0 을 돌려받아 새 메시에 준다(가장 잘 맞는 빈 구간).
-    for ( const RHIResourceReleaseDelegate& release : device._listGPURelease )
+    for ( const RHIFrameCompletionDelegate& completion : device._listFrameCompletion )
     {
-        release();
+        completion( RHIFrameCompletion::Completed );
     }
     const shared_ptr<Mesh> meshLate = makeTriangle();
     listMesh.push_back( meshLate.get() );

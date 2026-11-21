@@ -290,15 +290,17 @@ namespace sw
         explicit WebGPURHIDevice( uint32 deviceGeneration );
         ~WebGPURHIDevice() override;
 
-        [[nodiscard]] bool initializeInternal( const RHISwapChainDesc& desc ) override;
+        [[nodiscard]] bool initializeInternal( const RHIDeviceDesc& deviceDesc ) override;
         void               shutdownInternal() override;
         void               resizeInternal( uint32 width, uint32 height ) override;
         void               applyVSyncInternal() override;
 
         void   enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate ) override;
+        void   notifyFrameCompletion( const RHIFrameCompletionDelegate& completionDelegate ) override;
         uint32 getPendingReleaseCount() const override { return _releaseQueue.getPendingReleaseCount(); }
         /** @brief 장치 손실 표시를 든 전송 시리얼입니다(`IRHIDevice::isDeviceLost` 가 읽는다 — 손실 콜백이 따로 들던 비트필드는 다른 스레드가 쓰는 경쟁이라 없앴다). */
         const RHITransferSerials& getTransferSerials() const override { return _transferSerials; }
+        RHITransferSerials&       getTransferSerials() override { return _transferSerials; }
 
         RHIFormat            getBackBufferFormat() const override { return _swapChain.getRHIFormat(); }
         RHICapabilities      getCapabilities() const override;
@@ -346,7 +348,7 @@ namespace sw
         /** @brief 비동기 요청(어댑터 · 장치)을 기다립니다. 브라우저는 ASYNCIFY · JSPI 로 링크해야 이 대기가 된다(cmake/Toolchain/Platform/Web.cmake). */
         [[nodiscard]] bool waitForFuture( WGPUFuture future, const utf8* pWhat ) const;
         /** @brief 어댑터를 받고 필수 기능 · 한도를 대조해 장치를 만듭니다. 필수 기능이 없으면 `DriverUnsupported` 로 멈춘다. */
-        [[nodiscard]] bool createDeviceInternal( const RHISwapChainDesc& desc );
+        [[nodiscard]] bool createDeviceInternal( const RHIDeviceDesc& desc );
         /** @brief 정적 샘플러 세트(s9..s15)와 빈 슬롯에 걸 1x1 텍스처 · 작은 버퍼, 깊이 사본 파이프라인을 만듭니다. */
         [[nodiscard]] bool createDefaultResources();
         /** @brief 깊이 → R32 실수 사본 파이프라인입니다(백엔드 내장 WGSL — 깊이 텍스처를 `textureLoad` 해 그대로 쓴다). */

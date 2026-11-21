@@ -8,7 +8,11 @@
 
 namespace sw
 {
+    struct RHICapabilities;
+    struct RHICompiledGraphicsStages;
+    struct RHICompiledShaderStage;
     struct RHIPipelineStateDesc;
+    enum class ShaderTargetFormat : uint8;
 
     /**
      * @class IRHIResourceFactory
@@ -28,7 +32,9 @@ namespace sw
         /**
          * @brief 그래픽스 파이프라인 상태(PSO)를 만듭니다.
          * @details 모든 PSO 생성이 지나는 한 입구다 — 셰이더 컴파일과 드라이버 링크 · 특수화(GL 은 프레임 하나에 수십 초)를 컴파일 바쁜 시계
-         *          (`ShaderCache::getCompileBusyClock`)에 센다. 자동화 시한이 그 시간을 뺀다. 백엔드는 `createPipelineStateNative` 를 구현한다.
+         *          (`ShaderCache::getCompileBusyClock`)에 센다. 자동화 시한이 그 시간을 뺀다.
+         *          **셰이더는 여기서 한 번 컴파일한다**: 서술체 해석 → 기동 능력으로 선택 스테이지 거절 → 컴파일 → 정점 리플렉션(실패면 끊는다) → 정점 속성 마스크.
+         *          백엔드는 그 바이트코드 서술(`RHICompiledGraphicsStages`)만 받는다(`createPipelineStateNative`). 실패는 오류 로그와 핸들 0 이다.
          */
         RHIPipelineStateHandle createPipelineState( const RHIPipelineStateDesc& desc );
 
@@ -37,6 +43,13 @@ namespace sw
          * @param listDefine 컴파일 매크로("NAME" 또는 "NAME=VALUE")입니다 — 그래픽스 PSO 의 `RHIPipelineStateDesc::_listShaderDefine` 과 같은 퍼뮤테이션입니다(셰이더 assert 변형이 쓴다).
          */
         RHIPipelineStateHandle createComputePipelineState( string_view shaderPath, string_view entryPoint = {}, const vector<string>& listDefine = {} );
+
+        /**
+         * @brief PSO 앞단이 읽을 셰이더 형식과 능력을 묶습니다. 장치 기동이 백엔드 초기화 뒤 한 번 부른다(`IRHIDevice::initialize`).
+         * @details 능력은 장치가 기동 때 채워 든 값(`IRHIDevice` 의 기동 능력)을 참조로 든다 — PSO 마다 값 반환 가상(`IRHIDevice::getCapabilities`)을 부르지 않는다.
+         *          장치가 팩토리를 소유하므로 참조가 팩토리보다 오래 산다. 묶기 전의 PSO 생성은 오류다.
+         */
+        void bindPipelineFront( ShaderTargetFormat shaderTargetFormat, const RHICapabilities& startupCapabilities );
 
         /** @brief 파이프라인 상태 객체를 해제합니다. */
         virtual void destroyPipelineState( RHIPipelineStateHandle pso ) = 0;
@@ -126,30 +139,13 @@ namespace sw
         virtual void updateGeometryBufferRegions( RHIBufferHandle buffer, const void* pBaseSource, const RHIBufferCopyRegion* pRegions, uint32 regionCount ) = 0;
 
         /**
-         * @brief 범용 버퍼(구조화, UAV, 인다이렉트 인자, 인덱스)를 만듭니다.
-         * @details 내용이 있는 `Vertex` 용도는 createVertexBuffer 로, `Index` 용도는 createIndexBuffer 로 넘긴다
-         *          (`_elementSize` 가 2 면 uint16 인덱스).
+         * @brief 범용 GPU 버퍼(구조화 · UAV · 인다이렉트 인자 · raw)를 만듭니다. 정점 · 인덱스 · 상수 버퍼는 각자의 생성 함수(`createVertexBuffer` · `createIndexBuffer` · `createConstantBuffer`)다.
+         * @details 서술체는 `isValidBufferDesc` 를 지켜야 한다 — 원소 크기 · 원소 수가 0 이 아니고 바이트 수가 그 곱이다. 예전 기본 구현은 비면 값을 지어냈다(바이트 0 → 256, 원소 0 → 4 바이트 · 1 개).
+         *          기본 구현은 구조 버퍼(`createStructuredBuffer`)로 만들고 처음 내용을 올린다. 다른 버퍼 종류가 필요한 백엔드(DX11 인다이렉트 인자 · GL SSBO)가 덮는다.
          */
-        [[nodiscard]] virtual RHIBufferHandle createBuffer( const RHIBufferDesc& desc )
-        {
-            const bool bHasVertexInitialData = EnumUtil::hasFlag( desc._usage, RHIBufferUsage::Vertex ) && desc._pInitialData != nullptr && desc._sizeBytes > 0;
-            if ( bHasVertexInitialData )
-                return createVertexBuffer( desc._pInitialData, desc._sizeBytes );
-            const bool bHasIndexInitialData = EnumUtil::hasFlag( desc._usage, RHIBufferUsage::Index ) && desc._pInitialData != nullptr && desc._sizeBytes > 0;
-            if ( bHasIndexInitialData )
-                return createIndexBuffer( desc._pInitialData, desc._sizeBytes );
-            if ( EnumUtil::hasFlag( desc._usage, RHIBufferUsage::Constant ) )
-                return createConstantBuffer( desc._sizeBytes > 0 ? desc._sizeBytes : 256u );
-            const uint32    elemSize                  = desc._elementSize > 0 ? desc._elementSize : 4u;
-            const uint32    elemCount                 = desc._elementCount > 0
-                                                          ? desc._elementCount
-                                                          : ( desc._sizeBytes > 0 ? ( desc._sizeBytes / elemSize ) : 1u );
-            RHIBufferHandle buffer                    = createStructuredBuffer( elemSize, elemCount );
-            const bool      bHasStructuredInitialData = buffer != 0 && desc._pInitialData != nullptr && desc._sizeBytes > 0;
-            if ( bHasStructuredInitialData )
-                updateStructuredBuffer( buffer, desc._pInitialData, desc._sizeBytes );
-            return buffer;
-        }
+        [[nodiscard]] virtual RHIBufferHandle createBuffer( const RHIBufferDesc& desc );
+        /** @brief @p desc 가 범용 버퍼 서술로 맞으면 true, 아니면 무엇이 틀렸는지 @p pCaller 와 함께 오류로 남기고 false 입니다. 값을 대신 채우지 않는다. */
+        [[nodiscard]] static bool isValidBufferDesc( const RHIBufferDesc& desc, const utf8* pCaller );
 
         /**
          * @brief 내용을 담아 인덱스 버퍼(uint16, uint32)를 만듭니다. 인덱스 크기는 바인딩할 때(`setIndexBuffer`) 다시 알려 줍니다.
@@ -164,14 +160,14 @@ namespace sw
 
         /**
          * @brief GPU 에서 CPU 로 되읽을 읽기 전용 버퍼(@p elementSize x @p elementCount 바이트)를 만듭니다. 만들지 못하면 0 입니다.
-         * @details 비동기 되읽기의 도착지다 — `IRHICommandList::copyBufferToReadback` 이 채우고, 그 프레임이 끝난 뒤(`IRHIDevice::enqueueGPURelease` 콜백) `readReadbackBuffer` 로 읽는다.
+         * @details 비동기 되읽기의 도착지다 — `IRHICommandList::copyBufferToReadback` 이 채우고, 그 프레임이 끝난 뒤(`IRHIDevice::notifyFrameCompletion` 의 `Completed`) `readReadbackBuffer` 로 읽는다.
          *          원본이 구조화 버퍼면 같은 원소 크기로 만든다(DX11 은 구조화 버퍼끼리만 복사한다). 지우는 것은 `destroyBuffer` 다.
          */
         [[nodiscard]] virtual RHIBufferHandle createReadbackBuffer( uint32 elementSize, uint32 elementCount ) = 0;
 
         /**
          * @brief 읽기 버퍼의 앞쪽 @p sizeBytes 를 @p pDestination 에 복사합니다. 끝난 작업을 기다리지 않습니다(DX11 은 드라이버의 사용 추적을 맞추려 짧게 기다리는 Map 이다).
-         * @details **복사를 기록한 프레임의 GPU 작업이 끝난 뒤에만** 부른다 — `IRHIDevice::enqueueGPURelease` 콜백 안이 그 자리다. 콜백은 완료를 확인하는 스레드에서 불리므로
+         * @details **복사를 기록한 프레임의 GPU 작업이 끝난 뒤에만** 부른다 — `IRHIDevice::notifyFrameCompletion` 의 `Completed` 통지 안이 그 자리다. 콜백은 완료를 확인하는 스레드에서 불리므로
          *          이 함수는 어느 스레드에서 불러도 안전하다(DX11 은 즉시 컨텍스트를 잠그고 GL 은 컨텍스트를 빌린다). 끝나기 전에 부르면 결과가 정해져 있지 않다(DX11 은 GPU 가 끝나기를 기다리고, DX12 · Vulkan 은 이전 내용이거나 0, GL 은 드라이버가 암묵적으로 기다린다).
          * @return 핸들이 읽기 버퍼가 아니거나 크기가 버퍼를 넘거나 내용을 가져오지 못하면 false 입니다(이유는 로그). 읽기 버퍼가 아닌 핸들은 네 백엔드가 같이 거절한다
          *         (DX11 스테이징 버퍼, DX12 읽기 힙, Vulkan 복사 도착지 전용 버퍼, GL `GL_STREAM_READ` 만 읽기 버퍼로 본다).
@@ -398,10 +394,18 @@ namespace sw
         virtual void unregisterBindlessUAV( RHIDescriptorIndex index ) = 0;
 
     protected:
-        /** @brief 백엔드의 그래픽스 PSO 생성입니다 — 부르는 쪽은 `createPipelineState` 를 쓴다(컴파일 시계). */
-        [[nodiscard]] virtual RHIPipelineStateHandle createPipelineStateNative( const RHIPipelineStateDesc& desc ) = 0;
+        /**
+         * @brief 백엔드의 그래픽스 PSO 생성입니다 — 부르는 쪽은 `createPipelineState` 를 쓴다(컴파일 시계).
+         * @param desc   렌더 상태 · RT 형식 · 정점 형식을 읽는다. 셰이더 경로는 라벨 · 로그에만 쓴다(컴파일하지 않는다).
+         * @param stages 앞단이 컴파일한 스테이지 바이트코드와 판정(픽셀 스테이지 유무 · RT 수 · 선택 스테이지 · 정점 속성 마스크)입니다.
+         */
+        [[nodiscard]] virtual RHIPipelineStateHandle createPipelineStateNative( const RHIPipelineStateDesc& desc, const RHICompiledGraphicsStages& stages ) = 0;
 
-        /** @brief 백엔드의 컴퓨트 PSO 생성입니다 — 부르는 쪽은 `createComputePipelineState` 를 쓴다(컴파일 시계). */
-        [[nodiscard]] virtual RHIPipelineStateHandle createComputePipelineStateNative( string_view shaderPath, string_view entryPoint, const vector<string>& listDefine ) = 0;
+        /** @brief 백엔드의 컴퓨트 PSO 생성입니다 — 부르는 쪽은 `createComputePipelineState` 를 쓴다(컴파일 시계). @p label 은 셰이더 경로(라벨 · 로그)입니다. */
+        [[nodiscard]] virtual RHIPipelineStateHandle createComputePipelineStateNative( const RHICompiledShaderStage& computeStage, string_view label ) = 0;
+
+    private:
+        const RHICapabilities* _pStartupCapabilities{ nullptr }; ///< 장치가 기동 때 채운 능력(`bindPipelineFront`) — null 이면 아직 묶지 않았다
+        ShaderTargetFormat     _shaderTargetFormat{};            ///< 기동 때 묶은 셰이더 형식
     };
 } // namespace sw

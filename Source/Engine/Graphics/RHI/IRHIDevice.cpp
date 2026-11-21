@@ -274,6 +274,18 @@ namespace sw
         return getTransferSerials().isLost();
     }
 
+    void IRHIDevice::reportDeviceLost( const utf8* pCause )
+    {
+        RHITransferSerials& serials = getTransferSerials(); // 쓰기 접근자 — 표시 저장소는 백엔드가 든 멤버 하나다
+        if ( serials.markLost() == false )
+            return; // 이미 표시했다 — 보고는 처음 한 번
+        SW_LOG_ERROR_ID( "RHI.DeviceLost", "%# device lost (%#) - later transfer submits are rejected and GPU waits stop", getBackendName(), pCause != nullptr ? pCause : "unknown" );
+        uint32       arrBreadcrumb[GPUBreadcrumbs::kMaxReported]{};
+        const uint32 breadcrumbCount = readLastBreadcrumbs( arrBreadcrumb, GPUBreadcrumbs::kMaxReported );
+        GPUBreadcrumbs::reportDeviceLost( getBackendName(), arrBreadcrumb, breadcrumbCount );
+        reportDeviceFaultInternal();
+    }
+
     bool IRHIDevice::queryNativeHandles( RHIBackend expectedBackend, RHINativeHandles& inoutHandles ) const
     {
         // 핸들의 뜻은 백엔드마다 다르다 — 호출처가 캐스트할 백엔드가 아니면 한 칸도 쓰지 않는다.
@@ -522,28 +534,29 @@ namespace sw
 
         constexpr uint32 kBackBufferCount = 3;
 
-        RHISwapChainDesc swapChainDesc{};
-        swapChainDesc._pWindowHandle  = _pSurface->getSurfaceHandle();
-        swapChainDesc._pWindowDisplay = _pSurface->getSurfaceDisplay();
-        swapChainDesc._surfaceKind    = _pSurface->getSurfaceKind();
-        swapChainDesc._width          = _pSurface->getSurfaceWidth();
-        swapChainDesc._height         = _pSurface->getSurfaceHeight();
-        _backBufferWidth              = swapChainDesc._width;
-        _backBufferHeight             = swapChainDesc._height;
-        swapChainDesc._bufferCount    = kBackBufferCount;
-        swapChainDesc._sdrFormat      = requestedFormat;
-        swapChainDesc._bVSync         = _bPreferredVSync;
+        RHIDeviceDesc     deviceDesc{};
+        RHISwapChainDesc& swapChainDesc = deviceDesc._swapChain;
+        swapChainDesc._pWindowHandle    = _pSurface->getSurfaceHandle();
+        swapChainDesc._pWindowDisplay   = _pSurface->getSurfaceDisplay();
+        swapChainDesc._surfaceKind      = _pSurface->getSurfaceKind();
+        swapChainDesc._width            = _pSurface->getSurfaceWidth();
+        swapChainDesc._height           = _pSurface->getSurfaceHeight();
+        _backBufferWidth                = swapChainDesc._width;
+        _backBufferHeight               = swapChainDesc._height;
+        swapChainDesc._bufferCount      = kBackBufferCount;
+        swapChainDesc._sdrFormat        = requestedFormat;
+        swapChainDesc._bVSync           = _bPreferredVSync;
         // 0 은 그대로 넘긴다 — 쓰는 백엔드가 오류로 거절한다(기본값으로 바꿔 주지 않는다).
-        swapChainDesc._stagingRingBytes                 = static_cast<uint64>( rhiConfig._stagingRingMegabytes ) * constant::memory::kBytesPerMegabyte;
-        swapChainDesc._readbackRingBytes                = static_cast<uint64>( rhiConfig._readbackRingMegabytes ) * constant::memory::kBytesPerMegabyte;
-        swapChainDesc._directUploadMaxBytes             = static_cast<uint64>( rhiConfig._directUploadMaxKilobytes ) * constant::memory::kBytesPerKilobyte;
-        swapChainDesc._stagingSoloMaxBytes              = static_cast<uint64>( rhiConfig._stagingSingleMaxMegabytes ) * constant::memory::kBytesPerMegabyte;
-        swapChainDesc._allocationCountReserve           = rhiConfig._allocationCountReserve;
-        swapChainDesc._uploadStagingBytes               = static_cast<uint64>( rhiConfig._uploadStagingMegabytes ) * constant::memory::kBytesPerMegabyte;
-        swapChainDesc._uploadStagingIdleFrames          = rhiConfig._uploadStagingIdleFrames;
-        swapChainDesc._pipelineCacheSaveIntervalSeconds = rhiConfig._pipelineCacheSaveIntervalSeconds;
-        swapChainDesc._bGPUBasedValidation              = rhiConfig._bGPUBasedValidation;
-        swapChainDesc._bSynchronizationValidation       = rhiConfig._bSynchronizationValidation;
+        deviceDesc._stagingRingBytes                 = static_cast<uint64>( rhiConfig._stagingRingMegabytes ) * constant::memory::kBytesPerMegabyte;
+        deviceDesc._readbackRingBytes                = static_cast<uint64>( rhiConfig._readbackRingMegabytes ) * constant::memory::kBytesPerMegabyte;
+        deviceDesc._directUploadMaxBytes             = static_cast<uint64>( rhiConfig._directUploadMaxKilobytes ) * constant::memory::kBytesPerKilobyte;
+        deviceDesc._stagingSoloMaxBytes              = static_cast<uint64>( rhiConfig._stagingSingleMaxMegabytes ) * constant::memory::kBytesPerMegabyte;
+        deviceDesc._allocationCountReserve           = rhiConfig._allocationCountReserve;
+        deviceDesc._uploadStagingBytes               = static_cast<uint64>( rhiConfig._uploadStagingMegabytes ) * constant::memory::kBytesPerMegabyte;
+        deviceDesc._uploadStagingIdleFrames          = rhiConfig._uploadStagingIdleFrames;
+        deviceDesc._pipelineCacheSaveIntervalSeconds = rhiConfig._pipelineCacheSaveIntervalSeconds;
+        deviceDesc._bGPUBasedValidation              = rhiConfig._bGPUBasedValidation;
+        deviceDesc._bSynchronizationValidation       = rhiConfig._bSynchronizationValidation;
         {
             // 검증 층 · DRED · GPU 브레드크럼은 장치를 만들기 전에만 걸 수 있어 여기서 한 번 정한다(설정 기본값, 시작 인자가 이긴다). 배포 구성은 검증 층을 짓지 않아 늘 끈다.
             constexpr RHIDiagnosticBuild kBuild       = build::kShipping ? RHIDiagnosticBuild::Shipping : build::kDebug ? RHIDiagnosticBuild::Debug
@@ -560,15 +573,15 @@ namespace sw
                     return false;
                 }
             }
-            swapChainDesc._bValidationLayer = build::kShipping == false && *validation;
-            swapChainDesc._bDRED            = *dred;
-            _bGPUBreadcrumbs                = *breadcrumbs ? SW_TRUE : SW_FALSE;
+            deviceDesc._bValidationLayer = build::kShipping == false && *validation;
+            deviceDesc._bDRED            = *dred;
+            _bGPUBreadcrumbs             = *breadcrumbs ? SW_TRUE : SW_FALSE;
             // 패스 표 쪽(`GPUBreadcrumbs::registerPass`)도 같은 기동 값을 본다. 서비스 범위가 없는 실행은 표가 없어 표지를 남기지 않는다.
             if ( GPUBreadcrumbLog* const pLog = engine::findSubsystem<GPUBreadcrumbLog>() )
                 pLog->setEnabledAtDeviceCreation( *breadcrumbs );
             SW_LOG_INFO_ID( "RHI.DiagnosticSwitches",
                             "Graphics API validation layer: %#, DRED: %#, GPU breadcrumbs: %# (EngineConfig _rhi._validationLayer · _dred · _gpuBreadcrumbs, -rhi-validation · -rhi-dred · -rhi-breadcrumbs)",
-                            swapChainDesc._bValidationLayer ? "on" : "off", swapChainDesc._bDRED ? "on" : "off", _bGPUBreadcrumbs ? "on" : "off" );
+                            deviceDesc._bValidationLayer ? "on" : "off", deviceDesc._bDRED ? "on" : "off", _bGPUBreadcrumbs ? "on" : "off" );
         }
         {
             string softwareEnv;
@@ -579,8 +592,8 @@ namespace sw
                 SW_LOG_ERROR_ID( "RHI.SWRHISOFTWAREADAPTER", "SW_RHI_SOFTWARE_ADAPTER=\"%#\" is not a boolean (use 1, 0, true, false, yes, no, on or off)", softwareEnv.c_str() );
                 return false;
             }
-            swapChainDesc._bSoftwareAdapter    = rhiConfig._bSoftwareAdapter || bSoftwareEnv;
-            swapChainDesc._bPreferMinimumPower = rhiConfig._bPreferMinimumPower;
+            deviceDesc._bSoftwareAdapter    = rhiConfig._bSoftwareAdapter || bSoftwareEnv;
+            deviceDesc._bPreferMinimumPower = rhiConfig._bPreferMinimumPower;
         }
         _bSoftwareAdapter = SW_FALSE;
         if ( engine::areEngineServicesBound() )
@@ -598,13 +611,17 @@ namespace sw
         _bPreferredVSync = swapChainDesc._bVSync;
 
         _initPhaseTimings.begin();
-        if ( initializeInternal( swapChainDesc ) == false )
+        if ( initializeInternal( deviceDesc ) == false )
             return false;
+        // PSO 앞단은 셰이더 형식과 능력을 기동 때 한 번 받는다 — 백엔드 초기화가 끝나 런타임 능력(네이티브 bindless · 선택 스테이지)이 정해진 뒤다.
+        _startupCapabilities = getCapabilities();
+        if ( IRHIResourceFactory* const pFactory = getResourceFactory() )
+            pFactory->bindPipelineFront( getShaderTargetFormat(), _startupCapabilities );
         _initResult          = RHIInitResult::Succeeded;
         _sdrBackBufferFormat = getBackBufferFormat(); // 주 스왑체인은 SDR 로 선다 — UI 포맷의 첫 값
         // 기동 요약(`App.StartupPhasesHostScopeMs`)의 RHI 몫을 단계로 나눈 줄이다. 로그 중앙값을 시나리오 전체에서 모아 비교한다.
         SW_LOG_INFO_ID( "RHI.InitPhasesMs", "RHI %# init phases: %#", getBackendName(), _initPhaseTimings.describe().c_str() );
-        if ( swapChainDesc._bSoftwareAdapter )
+        if ( deviceDesc._bSoftwareAdapter )
         {
             // 요청대로 섰으면 알림이다(소프트웨어 렌더러 CI 묶음 `swrender` 가 일부러 켠다 — 호스트 스위트는 Warning 을 실패로 센다). 요청을 무시한 것만 경고다.
             if ( _bSoftwareAdapter )

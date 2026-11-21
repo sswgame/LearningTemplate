@@ -16,6 +16,7 @@
 #include "Engine/Graphics/RHI/DX/DX12/D3D12RHIResourcePreset.h"
 #include "Engine/Graphics/RHI/DX/DXGIFormat.h"
 #include "Engine/Graphics/RHI/DX/RHIDxRenderState.h"
+#include "Engine/Graphics/RHI/RHICompiledShaderStages.h"
 #include "Engine/Graphics/RHI/RHIFormatInfo.h"
 #include "Engine/Graphics/RHI/RHIMeshVertexLayout.h"
 #include "Engine/Graphics/RHI/RHIPipelineStateDesc.h"
@@ -410,7 +411,7 @@ namespace sw
         if ( allocateResult != RHISubmitResult::Accepted )
             return RHITransferSubmit::fromUnaccepted( allocateResult );
         // 링 안의 실제 위치로 풋프린트를 다시 받는다(BaseOffset). 구간 시작이 배치 오프셋 정렬(512)의 배수라 서브리소스 오프셋도 규칙을 지킨다.
-        _pDevice->_device->GetCopyableFootprints( &resourceDesc, firstSubresource, mipCount, span._offsetBytes, arrFootprint, arrRowCount, arrRowSize, &totalBytes );
+        _pDevice->_device->GetCopyableFootprints( &resourceDesc, firstSubresource, mipCount, span.getOffsetBytes(), arrFootprint, arrRowCount, arrRowSize, &totalBytes );
 
         // 소스를 스테이징으로 복사한다(계약 1). 이 뒤로 호출자는 버퍼를 재사용해도 된다. 큐 락 밖의 일이다.
         uint8* const pRingBase = ring.getSpanMappedBase( span );
@@ -485,7 +486,7 @@ namespace sw
         if ( allocateResult != RHISubmitResult::Accepted )
             return RHITransferSubmit::fromUnaccepted( allocateResult );
 
-        uint8*       pDstBase = ring.getSpanMappedBase( span ) + span._offsetBytes;
+        uint8*       pDstBase = ring.getSpanMappedBase( span ) + span.getOffsetBytes();
         const uint8* pSrcBase = static_cast<const uint8*>( desc._pData );
         for ( uint32 row = 0; row < desc._height; ++row )
         {
@@ -510,7 +511,7 @@ namespace sw
             D3D12_TEXTURE_COPY_LOCATION src{};
             src.pResource                          = ring.getSpanResource( span );
             src.Type                               = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
-            src.PlacedFootprint.Offset             = span._offsetBytes;
+            src.PlacedFootprint.Offset             = span.getOffsetBytes();
             src.PlacedFootprint.Footprint.Format   = resourceDesc.Format;
             src.PlacedFootprint.Footprint.Width    = desc._width;
             src.PlacedFootprint.Footprint.Height   = desc._height;
@@ -537,7 +538,7 @@ namespace sw
         const bool bDeviceGone = _pDevice->_commandQueue == nullptr || _pDevice->_transferFence == nullptr || _pDevice->isDeviceRemoved();
         if ( bDeviceGone )
         {
-            _pDevice->_transferSerials.markLost();
+            _pDevice->reportDeviceLost( "pollTransfer: no queue, fence or device" );
             return _pDevice->_transferSerials.classify( ticket );
         }
         _pDevice->retireCompletedTransfers();
@@ -567,7 +568,7 @@ namespace sw
         if ( pBuffer == nullptr || isHrSuccess( pBuffer->Map( 0, &readRange, &pMapped ), "Map" ) == false || pMapped == nullptr )
         {
             SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.TakeTextureReadbackFailedMapReadback", "takeTextureReadback: failed to map the readback buffer of ticket %#", ticket._serial );
-            RHITextureTransferDriver::releaseTakenReadback( ring._allocator, record._span );
+            RHITextureTransferDriver::releaseTakenReadback( ring._allocator, std::move( record._span ) );
             return false;
         }
         outBytes.assign( record._layout._sizeBytes, 0 );
@@ -579,7 +580,7 @@ namespace sw
         }
         D3D12_RANGE noWrite{ 0, 0 };
         pBuffer->Unmap( 0, &noWrite );
-        RHITextureTransferDriver::releaseTakenReadback( ring._allocator, record._span );
+        RHITextureTransferDriver::releaseTakenReadback( ring._allocator, std::move( record._span ) );
         if ( record._bDepth != SW_FALSE )
             convertRHIDepth24ToFloat( outBytes.data(), record._layout._width * record._layout._height );
         return true;
@@ -593,7 +594,7 @@ namespace sw
         if ( _pDevice->_readbackTable.take( ticket._serial, record ) == false )
             return; // 업로드 티켓이거나 이미 가져감 · 버림이다 — 계약상 아무 일도 하지 않는다
         // 복사가 아직 GPU 에서 도는 중이면 구간에 시리얼을 붙여 워터마크가 지난 뒤에 돌아오게 한다(Vulkan 과 같은 꼬리).
-        RHITextureTransferDriver::releaseDiscardedReadback( _pDevice->_readbackRing._allocator, record._span, _pDevice->_transferSerials, ticket._serial );
+        RHITextureTransferDriver::releaseDiscardedReadback( _pDevice->_readbackRing._allocator, std::move( record._span ), _pDevice->_transferSerials, ticket._serial );
     }
 
     RHIFormat D3D12RHIResourceFactory::getTextureFormat( RHITextureHandle texture ) const
@@ -654,7 +655,7 @@ namespace sw
         if ( allocateResult != RHISubmitResult::Accepted )
             return RHITransferSubmit::fromUnaccepted( allocateResult );
         // 링 안의 실제 위치로 풋프린트를 다시 받는다(BaseOffset).
-        _pDevice->_device->GetCopyableFootprints( &resourceDesc, subresource, 1, span._offsetBytes, &footprint, &rowCount, &rowSize, &totalBytes );
+        _pDevice->_device->GetCopyableFootprints( &resourceDesc, subresource, 1, span.getOffsetBytes(), &footprint, &rowCount, &rowSize, &totalBytes );
 
         // 구간에는 시리얼을 붙이지 않는다 — 가져가거나 버릴 때까지 결과가 링에 남아야 한다(`runReadbackJob`).
         return RHITextureTransferDriver::runReadbackJob<D3D12RHIDevice::D3D12TransferJob>(
@@ -688,7 +689,7 @@ namespace sw
             _pDevice->recordTextureTransfer( texture, serial );
 
             D3D12RHIDevice::TextureReadbackRecord record;
-            record._span      = span;
+            record._span      = std::move( span );
             record._footprint = footprint;
             record._layout    = outLayout;
             record._rowCount  = rowCount;
@@ -1527,46 +1528,33 @@ namespace sw
         releaseBindlessRecord( BindlessRegistry::UnorderedAccess, index );
     }
 
-    RHIPipelineStateHandle D3D12RHIResourceFactory::createPipelineStateNative( const RHIPipelineStateDesc& desc )
+    RHIPipelineStateHandle D3D12RHIResourceFactory::createPipelineStateNative( const RHIPipelineStateDesc& desc, const RHICompiledGraphicsStages& stages )
     {
         Microsoft::WRL::ComPtr<ID3D12PipelineState> pso;
-        uint32                                      vertexSlotMask{ 0 };
+        const uint32                                vertexSlotMask = stages._vertexSlotMask;
 
-        // 디스크립터 해석(진입점 기본값, define, 뎁스 전용 판정, RT 수)은 RHIShaderRequest 하나가 한다. 백엔드는 받기만 한다.
-        const RHIGraphicsShaderRequest request         = RHIShaderRequest::resolveGraphics( desc, ShaderTargetFormat::DXIL_D3D12 );
-        const bool                     bHasPixelShader = request._bHasPixelShader != SW_FALSE;
-        ShaderCompileResult            vsResult{};
-        ShaderCompileResult            psResult{};
-        if ( RHIShaderRequest::compileGraphics( request, vsResult, psResult ) )
+        // 셰이더 컴파일 · 정점 리플렉션은 앞단(`IRHIResourceFactory::createPipelineState`)이 끝냈다. 여기서는 바이트코드로 PSO 서술만 채운다.
+        const bool bHasPixelShader = stages._bHasPixelShader != SW_FALSE;
+        if ( stages._bHasVertexShader != SW_FALSE )
         {
             // 입력 레이아웃은 메시 정점 형식의 공용 테이블에서 셰이더가 읽는 속성만 골라 만든다(`fillDXGIInputElements` — DX11 과 같은 함수, Vulkan · GL 도 같은 규칙).
             // 정점 입력이 없는 셰이더(SV_VertexID 로 정점을 만든다)는 빈 레이아웃이라 정점 버퍼 없이 그린다.
-            const uint32             consumedMask = RHIShaderRequest::computeConsumedVertexAttributeMask( vsResult._bytecode, ShaderTargetFormat::DXIL_D3D12 );
             D3D12_INPUT_ELEMENT_DESC arrInputElement[constant::render::kVertexAttributeCount]{};
-            const uint32             elementCount = fillDXGIInputElements<D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA>( desc._meshVertexFormat, consumedMask, arrInputElement );
-            vertexSlotMask                        = RHIShaderRequest::toVertexSlotMask( consumedMask );
+            const uint32             elementCount = fillDXGIInputElements<D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA>( desc._meshVertexFormat, stages._consumedAttributeMask, arrInputElement );
 
             D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc{};
             psoDesc.InputLayout    = { elementCount > 0 ? arrInputElement : nullptr, elementCount };
             psoDesc.pRootSignature = _pDevice->_rootSignature.Get();
-            psoDesc.VS             = { vsResult._bytecode.data(), vsResult._bytecode.size() };
-            ShaderCompileResult gsResult{};
-            ShaderCompileResult hsResult{};
-            ShaderCompileResult dsResult{};
-            if ( RHIShaderRequest::compileOptionalStages( request, gsResult, hsResult, dsResult ) == false )
+            psoDesc.VS             = { stages._vertex._bytecode.data(), stages._vertex._bytecode.size() };
+            if ( stages._bHasGeometryShader != SW_FALSE )
+                psoDesc.GS = { stages._geometry._bytecode.data(), stages._geometry._bytecode.size() };
+            if ( stages._bHasTessellation != SW_FALSE )
             {
-                SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.CreatePipelineStateOptionalStageFailed", "createPipelineState: optional stage compile failed (%#)", desc._vertexShaderPath.c_str() );
-                return 0;
-            }
-            if ( request._bHasGeometryShader != SW_FALSE )
-                psoDesc.GS = { gsResult._bytecode.data(), gsResult._bytecode.size() };
-            if ( request._bHasTessellation != SW_FALSE )
-            {
-                psoDesc.HS = { hsResult._bytecode.data(), hsResult._bytecode.size() };
-                psoDesc.DS = { dsResult._bytecode.data(), dsResult._bytecode.size() };
+                psoDesc.HS = { stages._hull._bytecode.data(), stages._hull._bytecode.size() };
+                psoDesc.DS = { stages._domain._bytecode.data(), stages._domain._bytecode.size() };
             }
             if ( bHasPixelShader )
-                psoDesc.PS = { psResult._bytecode.data(), psResult._bytecode.size() };
+                psoDesc.PS = { stages._pixel._bytecode.data(), stages._pixel._bytecode.size() };
             const RenderState& renderState = desc._renderState;
             // 다른 백엔드와 같이 채우기 모드를 읽는다. SOLID 로 고정하면 Wireframe 요청이 DX12 에서만 조용히 솔리드가 된다.
             psoDesc.RasterizerState.FillMode              = ( renderState._fillMode == FillMode::Wireframe )
@@ -1583,9 +1571,9 @@ namespace sw
             psoDesc.RasterizerState.DepthBias            = renderState._depthBias;
             psoDesc.RasterizerState.SlopeScaledDepthBias = renderState._slopeScaledDepthBias;
             psoDesc.SampleMask                           = MathUtil::kMaxUInt32;
-            psoDesc.PrimitiveTopologyType                = request._bHasTessellation != SW_FALSE ? D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH : D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+            psoDesc.PrimitiveTopologyType                = stages._bHasTessellation != SW_FALSE ? D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH : D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
             // 뎁스 전용은 RT 가 0 개다. 1 로 두고 R8G8B8A8 을 선언하면 실제로는 DSV 만 바인딩되는 것과 어긋난다.
-            psoDesc.NumRenderTargets = request._numRenderTargets;
+            psoDesc.NumRenderTargets = stages._numRenderTargets;
             if ( psoDesc.NumRenderTargets > 8 )
                 psoDesc.NumRenderTargets = 8;
             psoDesc.BlendState.IndependentBlendEnable = TRUE; // 꺼 두면 0 번 값이 모든 타깃에 간다
@@ -1659,36 +1647,28 @@ namespace sw
             return 0;
         return _pDevice->_pipelineStates.insert( {
             pso, RHIVertexLayout{ vertexSlotMask, desc._meshVertexFormat },
-            request._bHasTessellation != SW_FALSE ? D3D_PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST : D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST,
+            stages._bHasTessellation != SW_FALSE ? D3D_PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST : D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST,
             desc._renderState._stencilRef
         } );
     }
 
-    RHIPipelineStateHandle D3D12RHIResourceFactory::createComputePipelineStateNative( string_view shaderPath, string_view entryPoint, const vector<string>& listDefine )
+    RHIPipelineStateHandle D3D12RHIResourceFactory::createComputePipelineStateNative( const RHICompiledShaderStage& computeStage, string_view label )
     {
         Microsoft::WRL::ComPtr<ID3D12PipelineState> pso;
-        if ( shaderPath.empty() == false )
         {
-            const ShaderCompileDesc csDesc = RHIShaderRequest::resolveCompute( shaderPath, entryPoint, listDefine, ShaderTargetFormat::DXIL_D3D12 );
-            ShaderCompileResult     res    = RHIShaderRequest::compile( csDesc );
-            if ( res._bSuccess )
-            {
-                D3D12_COMPUTE_PIPELINE_STATE_DESC psoDesc{};
-                psoDesc.pRootSignature = _pDevice->_rootSignature.Get();
-                psoDesc.CS             = { res._bytecode.data(), res._bytecode.size() };
+            D3D12_COMPUTE_PIPELINE_STATE_DESC psoDesc{};
+            psoDesc.pRootSignature = _pDevice->_rootSignature.Get();
+            psoDesc.CS             = { computeStage._bytecode.data(), computeStage._bytecode.size() };
 
-                const HRESULT hr = _pDevice->_device->CreateComputePipelineState( &psoDesc, IID_PPV_ARGS( pso.GetAddressOf() ) );
-                if ( FAILED( hr ) )
-                {
-                    SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.CreateComputePipelineStateFailedHrX", "CreateComputePipelineState failed hr=0x%#", static_cast<uint32>( hr ) );
-                    _pDevice->flushDebugMessages( "CreateComputePipelineState" );
-                    return 0;
-                }
-            }
-            else
+            const HRESULT hr = _pDevice->_device->CreateComputePipelineState( &psoDesc, IID_PPV_ARGS( pso.GetAddressOf() ) );
+            if ( FAILED( hr ) )
+            {
+                SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.CreateComputePipelineStateFailedHrX", "CreateComputePipelineState failed hr=0x%# '%#'", static_cast<uint32>( hr ), label );
+                _pDevice->flushDebugMessages( "CreateComputePipelineState" );
                 return 0;
+            }
         }
-        if ( pso == nullptr ) // 셰이더 경로가 비었다 — 빈 레코드를 등록하지 않는다
+        if ( pso == nullptr )
             return 0;
         return _pDevice->_pipelineStates.insert( { pso, RHIVertexLayout{} } ); // 컴퓨트는 정점 입력이 없다
     }

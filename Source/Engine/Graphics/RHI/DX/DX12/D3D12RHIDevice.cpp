@@ -560,61 +560,62 @@ namespace sw
         if ( bAlreadyDeviceRemoved )
             return;
 
+        // 손실을 처음 본 쪽이 `reportDeviceLost` 로 보고했다(브레드크럼 · DRED 는 `reportDeviceFaultInternal`). 여기서는 반복 로그만 막는다.
         if ( isDeviceRemoved() )
-        {
             _bDeviceRemovedLogged.store( SW_TRUE, std::memory_order_relaxed );
-            // 마지막으로 GPU 가 닿은 패스 - 우리 표지(WriteBufferImmediate)를 이름으로 풀어 로그 · 크래시 문맥 · 빵부스러기에 싣는다.
-            uint32       arrBreadcrumb[GPUBreadcrumbs::kMaxReported]{};
-            const uint32 breadcrumbCount = readLastBreadcrumbs( arrBreadcrumb, GPUBreadcrumbs::kMaxReported );
-            GPUBreadcrumbs::reportDeviceLost( "Direct3D 12", arrBreadcrumb, breadcrumbCount );
-            Microsoft::WRL::ComPtr<ID3D12DeviceRemovedExtendedData> dred;
-            if ( SUCCEEDED( _device.As( &dred ) ) && dred != nullptr )
-            {
-                D3D12_DRED_AUTO_BREADCRUMBS_OUTPUT autoBreadcrumbsOutput{};
-                if ( SUCCEEDED( dred->GetAutoBreadcrumbsOutput( &autoBreadcrumbsOutput ) ) )
-                {
-                    const D3D12_AUTO_BREADCRUMB_NODE* pNode = autoBreadcrumbsOutput.pHeadAutoBreadcrumbNode;
-                    while ( pNode != nullptr )
-                    {
-                        const uint32 executed = ( pNode->pCommandHistory != nullptr && pNode->pLastBreadcrumbValue != nullptr )
-                                                  ? *pNode->pLastBreadcrumbValue
-                                                  : 0;
-                        SW_LOG_ERROR_ID( "D3D12.CommandListTotalExecuted", "CommandList='%#', Total=%#, Executed=%#",
-                                         pNode->pCommandListDebugNameA ? pNode->pCommandListDebugNameA : "unnamed",
-                                         pNode->BreadcrumbCount, executed );
-                        const bool bHasCompletedBreadcrumb = pNode->pCommandHistory != nullptr && 0 < executed && executed <= pNode->BreadcrumbCount;
-                        if ( bHasCompletedBreadcrumb )
-                        {
-                            SW_LOG_ERROR_ID( "D3D12.LastCompletedOpIndex", "Last completed Op index=%#, OpType=%#",
-                                             executed - 1, static_cast<uint32>( pNode->pCommandHistory[executed - 1] ) );
-                            if ( executed < pNode->BreadcrumbCount )
-                            {
-                                SW_LOG_ERROR_ID( "D3D12.FailedFlightOpIndex", "Failed/In-Flight Op index=%#, OpType=%#",
-                                                 executed, static_cast<uint32>( pNode->pCommandHistory[executed] ) );
-                            }
-                        }
-                        pNode = pNode->pNext;
-                    }
-                }
+    }
 
-                D3D12_DRED_PAGE_FAULT_OUTPUT pageFaultOutput{};
-                if ( SUCCEEDED( dred->GetPageFaultAllocationOutput( &pageFaultOutput ) ) )
+    void D3D12RHIDevice::reportDeviceFaultInternal()
+    {
+        if ( _device == nullptr )
+            return;
+        Microsoft::WRL::ComPtr<ID3D12DeviceRemovedExtendedData> dred;
+        if ( SUCCEEDED( _device.As( &dred ) ) && dred != nullptr )
+        {
+            D3D12_DRED_AUTO_BREADCRUMBS_OUTPUT autoBreadcrumbsOutput{};
+            if ( SUCCEEDED( dred->GetAutoBreadcrumbsOutput( &autoBreadcrumbsOutput ) ) )
+            {
+                const D3D12_AUTO_BREADCRUMB_NODE* pNode = autoBreadcrumbsOutput.pHeadAutoBreadcrumbNode;
+                while ( pNode != nullptr )
                 {
-                    SW_LOG_ERROR_ID( "D3D12.PageFaultVAX", "PageFault VA=0x%#", Fmt( static_cast<uint64>( pageFaultOutput.PageFaultVA ), Format( 16, Format::Padding::Zero ).hexUpper() ) );
-                    // 폴트 주소를 덮는 할당을 이름으로 되짚는다 — 살아 있는 것과 최근에 해제된 것(해제 뒤 사용이면 여기 나온다).
-                    // 이름은 storeBuffer · storeTexture 가 붙인다(nameResourceForDiagnostics, `SW Buffer <핸들>`).
-                    for ( const D3D12_DRED_ALLOCATION_NODE* pAllocation = pageFaultOutput.pHeadExistingAllocationNode; pAllocation != nullptr;
-                          pAllocation                                   = pAllocation->pNext )
+                    const uint32 executed = ( pNode->pCommandHistory != nullptr && pNode->pLastBreadcrumbValue != nullptr )
+                                              ? *pNode->pLastBreadcrumbValue
+                                              : 0;
+                    SW_LOG_ERROR_ID( "D3D12.CommandListTotalExecuted", "CommandList='%#', Total=%#, Executed=%#",
+                                     pNode->pCommandListDebugNameA ? pNode->pCommandListDebugNameA : "unnamed",
+                                     pNode->BreadcrumbCount, executed );
+                    const bool bHasCompletedBreadcrumb = pNode->pCommandHistory != nullptr && 0 < executed && executed <= pNode->BreadcrumbCount;
+                    if ( bHasCompletedBreadcrumb )
                     {
-                        SW_LOG_ERROR_ID( "D3D12.PageFaultVAInsideLive", "  PageFault VA is inside live allocation '%#' (type %#)",
-                                         pAllocation->ObjectNameA != nullptr ? pAllocation->ObjectNameA : "unnamed", static_cast<uint32>( pAllocation->AllocationType ) );
+                        SW_LOG_ERROR_ID( "D3D12.LastCompletedOpIndex", "Last completed Op index=%#, OpType=%#",
+                                         executed - 1, static_cast<uint32>( pNode->pCommandHistory[executed - 1] ) );
+                        if ( executed < pNode->BreadcrumbCount )
+                        {
+                            SW_LOG_ERROR_ID( "D3D12.FailedFlightOpIndex", "Failed/In-Flight Op index=%#, OpType=%#",
+                                             executed, static_cast<uint32>( pNode->pCommandHistory[executed] ) );
+                        }
                     }
-                    for ( const D3D12_DRED_ALLOCATION_NODE* pAllocation = pageFaultOutput.pHeadRecentFreedAllocationNode; pAllocation != nullptr;
-                          pAllocation                                   = pAllocation->pNext )
-                    {
-                        SW_LOG_ERROR_ID( "D3D12.PageFaultVAInsideRecently", "  PageFault VA is inside recently freed allocation '%#' (type %#) — use after free",
-                                         pAllocation->ObjectNameA != nullptr ? pAllocation->ObjectNameA : "unnamed", static_cast<uint32>( pAllocation->AllocationType ) );
-                    }
+                    pNode = pNode->pNext;
+                }
+            }
+
+            D3D12_DRED_PAGE_FAULT_OUTPUT pageFaultOutput{};
+            if ( SUCCEEDED( dred->GetPageFaultAllocationOutput( &pageFaultOutput ) ) )
+            {
+                SW_LOG_ERROR_ID( "D3D12.PageFaultVAX", "PageFault VA=0x%#", Fmt( static_cast<uint64>( pageFaultOutput.PageFaultVA ), Format( 16, Format::Padding::Zero ).hexUpper() ) );
+                // 폴트 주소를 덮는 할당을 이름으로 되짚는다 — 살아 있는 것과 최근에 해제된 것(해제 뒤 사용이면 여기 나온다).
+                // 이름은 storeBuffer · storeTexture 가 붙인다(nameResourceForDiagnostics, `SW Buffer <핸들>`).
+                for ( const D3D12_DRED_ALLOCATION_NODE* pAllocation = pageFaultOutput.pHeadExistingAllocationNode; pAllocation != nullptr;
+                      pAllocation                                   = pAllocation->pNext )
+                {
+                    SW_LOG_ERROR_ID( "D3D12.PageFaultVAInsideLive", "  PageFault VA is inside live allocation '%#' (type %#)",
+                                     pAllocation->ObjectNameA != nullptr ? pAllocation->ObjectNameA : "unnamed", static_cast<uint32>( pAllocation->AllocationType ) );
+                }
+                for ( const D3D12_DRED_ALLOCATION_NODE* pAllocation = pageFaultOutput.pHeadRecentFreedAllocationNode; pAllocation != nullptr;
+                      pAllocation                                   = pAllocation->pNext )
+                {
+                    SW_LOG_ERROR_ID( "D3D12.PageFaultVAInsideRecently", "  PageFault VA is inside recently freed allocation '%#' (type %#) — use after free",
+                                     pAllocation->ObjectNameA != nullptr ? pAllocation->ObjectNameA : "unnamed", static_cast<uint32>( pAllocation->AllocationType ) );
                 }
             }
         }
@@ -635,12 +636,13 @@ namespace sw
     }
 
     // 길이 유지(긴 함수 정리 기준): 디바이스 · 큐 · 힙 · 전역 리소스 생성의 순서가 곧 의미라 나누지 않는다.
-    bool D3D12RHIDevice::initializeInternal( const RHISwapChainDesc& desc )
+    bool D3D12RHIDevice::initializeInternal( const RHIDeviceDesc& deviceDesc )
     {
+        const RHISwapChainDesc& desc = deviceDesc._swapChain;
     #if defined( SW_DO_CHECKS )
         // 디버그 레이어는 배포가 아닌 구성에 컴파일돼 있고 켤지는 장치를 만들 때 정한다(EngineConfig `_rhi._validationLayer`, `-rhi-validation` — 언리얼 `-d3ddebug`).
-        _bValidationLayer = desc._bValidationLayer ? SW_TRUE : SW_FALSE;
-        if ( desc._bValidationLayer )
+        _bValidationLayer = deviceDesc._bValidationLayer ? SW_TRUE : SW_FALSE;
+        if ( deviceDesc._bValidationLayer )
         {
             Microsoft::WRL::ComPtr<ID3D12Debug> debugController;
             if ( SUCCEEDED( D3D12GetDebugInterface( IID_PPV_ARGS( debugController.GetAddressOf() ) ) ) )
@@ -648,7 +650,7 @@ namespace sw
                 debugController->EnableDebugLayer();
                 SW_LOG_INFO_ID( "D3D12.DebugLayerEnabled", "Debug layer enabled." );
                 // GPU 기반 검증(GBV)은 장치를 만들기 **전에만** 켤 수 있다(ID3D12Debug1::SetEnableGPUBasedValidation 문서). 켜 달라고 했는데 인터페이스가 없으면 멈춘다(R-9).
-                if ( desc._bGPUBasedValidation )
+                if ( deviceDesc._bGPUBasedValidation )
                 {
                     Microsoft::WRL::ComPtr<ID3D12Debug1> debugController1;
                     if ( FAILED( debugController.As( &debugController1 ) ) )
@@ -660,23 +662,23 @@ namespace sw
                     SW_LOG_INFO_ID( "D3D12.GPUBasedValidationEnabled", "GPU-based validation enabled." );
                 }
             }
-            else if ( desc._bGPUBasedValidation )
+            else if ( deviceDesc._bGPUBasedValidation )
             {
                 SW_LOG_ERROR_ID( "D3D12.GPUBasedValidationNoDebugLayer", "EngineConfig _rhi._bGPUBasedValidation is on, but the D3D12 debug layer is not installed" );
                 return false;
             }
         }
-        else if ( desc._bGPUBasedValidation )
+        else if ( deviceDesc._bGPUBasedValidation )
             SW_LOG_WARNING_ID( "D3D12.GPUBasedValidationWithoutLayer", "EngineConfig _rhi._bGPUBasedValidation is on, but the debug layer is off (_rhi._validationLayer, -rhi-validation) - ignored" );
     #else
-        if ( desc._bGPUBasedValidation )
+        if ( deviceDesc._bGPUBasedValidation )
             SW_LOG_WARNING_ID( "D3D12.GPUBasedValidationWithoutLayer", "EngineConfig _rhi._bGPUBasedValidation is on, but this build has no D3D12 debug layer - ignored" );
     #endif
         // DRED(Device Removed Extended Data)의 자동 브레드크럼 · 페이지 폴트 - 디바이스를 만들기 **전에** 켜야 한다. 켤지는 EngineConfig `_rhi._dred`(배포가 아닌 구성 기본 켬)와
         // `-rhi-dred` 가 정한다 — 배포 구성도 인자로 켠다(언리얼 `-gpucrashdebugging`). 소실 뒤 마지막 패스 이름은 우리 표지(`createBreadcrumbBuffer`, `-rhi-breadcrumbs`)가 싣고,
         // DRED 는 명령 종류별 진행과 폴트 주소를 싣는다.
-        _bDRED = desc._bDRED ? SW_TRUE : SW_FALSE;
-        if ( desc._bDRED )
+        _bDRED = deviceDesc._bDRED ? SW_TRUE : SW_FALSE;
+        if ( deviceDesc._bDRED )
         {
             Microsoft::WRL::ComPtr<ID3D12DeviceRemovedExtendedDataSettings> dredSettings;
             if ( SUCCEEDED( D3D12GetDebugInterface( IID_PPV_ARGS( dredSettings.GetAddressOf() ) ) ) )
@@ -693,14 +695,14 @@ namespace sw
 
         // 소프트웨어 어댑터(WARP) — CI 러너와 같은 래스터라이저(_rhi._bSoftwareAdapter).
         Microsoft::WRL::ComPtr<IDXGIAdapter1> softwareAdapter;
-        if ( desc._bSoftwareAdapter && FAILED( factory->EnumWarpAdapter( IID_PPV_ARGS( softwareAdapter.GetAddressOf() ) ) ) )
+        if ( deviceDesc._bSoftwareAdapter && FAILED( factory->EnumWarpAdapter( IID_PPV_ARGS( softwareAdapter.GetAddressOf() ) ) ) )
         {
             SW_LOG_ERROR_ID( "D3D12.WARPAdapterNotAvailable", "WARP adapter is not available (_rhi._bSoftwareAdapter)" );
             return false;
         }
 
         // 하드웨어는 고성능 순서의 첫 어댑터다 — nullptr(기본 어댑터)은 하이브리드 노트북에서 내장 GPU 다(RHIDxgiAdapter.h).
-        const Microsoft::WRL::ComPtr<IDXGIAdapter1> adapter = softwareAdapter != nullptr ? softwareAdapter : findDXGIPreferredAdapter( factory.Get(), desc._bPreferMinimumPower );
+        const Microsoft::WRL::ComPtr<IDXGIAdapter1> adapter = softwareAdapter != nullptr ? softwareAdapter : findDXGIPreferredAdapter( factory.Get(), deviceDesc._bPreferMinimumPower );
         if ( adapter == nullptr )
         {
             SW_LOG_ERROR_ID( "D3D12.NoHardwareAdapter", "No hardware DXGI adapter (IDXGIFactory6 high-performance enumeration found none)" );
@@ -903,7 +905,7 @@ namespace sw
         if ( isHrSuccess( _device->CreateFence( 0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS( _transferFence.GetAddressOf() ) ), "CreateFence" ) == false )
             return false;
         _transferFenceValue = 0;
-        if ( initializeTransfers( desc ) == false )
+        if ( initializeTransfers( deviceDesc ) == false )
             return false;
 
         if ( createGlobalResources() == false )
@@ -1162,7 +1164,7 @@ namespace sw
             releaseOnlineBlocksDeferred( _frameStreamState );
         }
 
-        waitForPreviousFrame();
+        (void)waitForPreviousFrame(); // 잃은 장치여도 백 버퍼는 놓는다
         swapChain.releaseBackBuffers();
     }
 
@@ -1186,18 +1188,27 @@ namespace sw
     {
         // 다른 스레드가 렌더 스레드를 `waitIdle` 로 세운 채 부른다(`Engine::onMainWindowResize`) — 그동안 프레임 진행 상태는 이 스레드가 빌려 만진다.
         ScopedThreadRoleBorrow borrow{ _swapChain.getRenderThreadRole() };
-        waitForPreviousFrame();
+        const bool             bIdle = waitForPreviousFrame();
         // 프레임 안에서 낸 비동기 컴퓨트 일은 프레임 펜스가 덮지만, 프레임 도중에 세웠으면 아직 돌 수 있다 — 이벤트 없이(null) 끝날 때까지 기다린다.
         if ( _computeFence != nullptr && _computeFence->GetCompletedValue() < _computeFenceValue )
             requireHr( _computeFence->SetEventOnCompletion( _computeFenceValue, nullptr ), "ID3D12Fence::SetEventOnCompletion (compute idle)" );
         // 전송은 같은 큐에서 프레임 펜스보다 먼저 끝났다 — 워터마크를 올려야 전송을 기다리던 텍스처 해제가 `_releaseQueue` 로 넘어와 아래 비우기에 든다.
         retireCompletedTransfers();
-        _releaseQueue.flushAll();
+        // 기다림을 확인했을 때만 통지가 `Completed` 다 — 제거된 장치는 끝났는지 모른다.
+        if ( bIdle )
+            _releaseQueue.releaseAllCompleted();
+        else
+            _releaseQueue.abandonAll();
     }
 
     void D3D12RHIDevice::enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate )
     {
         _releaseQueue.enqueueGPURelease( releaseDelegate, _fenceValue );
+    }
+
+    void D3D12RHIDevice::notifyFrameCompletion( const RHIFrameCompletionDelegate& completionDelegate )
+    {
+        _releaseQueue.enqueueCompletion( completionDelegate, _fenceValue );
     }
 
     unique_ptr<IRHICommandList> D3D12RHIDevice::createCommandList()
@@ -1444,7 +1455,7 @@ namespace sw
             return false;
         SW_LOG_WARNING_ID( "D3D12.RemovingD3D12DeviceRequest", "Removing the D3D12 device on request (rhi.removeDevice) - every later GPU call fails as after a TDR" );
         device5->RemoveDevice();
-        _transferSerials.markLost(); // 제거 직후부터 제출 진입이 Rejected 를 준다(다음 질의를 기다리지 않는다)
+        reportDeviceLost( "rhi.removeDevice" ); // 제거 직후부터 제출 진입이 Rejected 를 준다(다음 질의를 기다리지 않는다)
         return true;
     }
 
@@ -1452,7 +1463,7 @@ namespace sw
     {
         if ( _device == nullptr || SUCCEEDED( _device->GetDeviceRemovedReason() ) )
             return false;
-        _transferSerials.markLost();
+        reportDeviceLost( "GetDeviceRemovedReason" );
         return true;
     }
 
@@ -1461,13 +1472,13 @@ namespace sw
         return _transferSerials.isLost() || isDeviceRemoved();
     }
 
-    void D3D12RHIDevice::waitForPreviousFrame()
+    bool D3D12RHIDevice::waitForPreviousFrame()
     {
         if ( _commandQueue == nullptr || _fence == nullptr )
-            return;
+            return false;
 
         if ( isDeviceRemoved() )
-            return;
+            return false;
 
         // 업로드 내보내기와 Signal · 올리기를 한 락 안에서 한다(`_fenceValue` 의 설명). 기다리는 것은 락 밖에서다.
         UINT64  fenceToWait{ 0 };
@@ -1485,14 +1496,16 @@ namespace sw
             SW_LOG_ERROR_ID( "D3D12.FenceSignalFailedHr", "Fence Signal failed hr=0x%# (DeviceRemoved=0x%#)",
                              static_cast<uint32>( signalHr ),
                              static_cast<uint32>( _device ? _device->GetDeviceRemovedReason() : S_OK ) );
-            return;
+            return false;
         }
 
         if ( waitForFenceValue( fenceToWait ) == false )
-            return;
+            return false;
 
-        if ( isDeviceRemoved() == false )
-            _swapChain.acquireNextImage();
+        if ( isDeviceRemoved() )
+            return false;
+        _swapChain.acquireNextImage();
+        return true;
     }
 
     void D3D12RHIDevice::waitForRingSlot()
@@ -1974,7 +1987,7 @@ namespace sw
                 // Present 가 장치 제거 · 리셋으로 실패하면(DXGI_ERROR_DEVICE_REMOVED / DEVICE_RESET) 전송 손실로 표시한다. 디버그 전용인 flushDebugMessages 에 맡기지 않는다.
                 const bool bPresentLostDevice = presentHr == DXGI_ERROR_DEVICE_REMOVED || presentHr == DXGI_ERROR_DEVICE_RESET || FAILED( removed );
                 if ( bPresentLostDevice )
-                    _transferSerials.markLost();
+                    reportDeviceLost( "Present" );
                 // 디바이스 제거는 자동 복구가 없어서 한 번 일어나면 이후 매 프레임 여기로 들어온다.
                 // 첫 발견 때만 로그를 남기고 그 뒤로는 조용히 건너뛰어 로그 폭주를 막는다.
                 if ( _bDeviceRemovedLogged.load( std::memory_order_relaxed ) == SW_FALSE )
@@ -2255,7 +2268,7 @@ namespace sw
         return index < kBindlessDescriptorCapacity && _arrBindlessReadSlot.get()[index].isLive( space );
     }
 
-    bool D3D12RHIDevice::initializeTransfers( const RHISwapChainDesc& desc )
+    bool D3D12RHIDevice::initializeTransfers( const RHIDeviceDesc& desc )
     {
         if ( desc._stagingRingBytes == 0 || desc._readbackRingBytes == 0 )
         {
@@ -2272,8 +2285,8 @@ namespace sw
         _transferFenceQueue.retireAll( [this]( D3D12TransferJob& job )
         { recycleTransferJob( std::move( job ) ); } );
         // 전송을 기다리던 해제를 프레임 해제 큐로 넘기고 바로 비운다 — 네이티브 디바이스가 사라진 뒤의 소멸자에 맡기지 않는다(종료 3 · 4단계가 넣은 해제는 부를 단계가 없다).
-        _transferReleaseQueue.flushAll();
-        _releaseQueue.flushAll();
+        _transferReleaseQueue.abandonAll();
+        _releaseQueue.abandonAll();
         {
             ScopedLock<mutex> jobLock{ _transferJobMutex };
             _listFreeTransferJob.clear();
@@ -2342,12 +2355,12 @@ namespace sw
         }
         // 결과 옮기기 · 못 받은 구간 놓기 · 이유 로그는 세 백엔드가 같이 쓰는 한 곳이다(잃은 장치면 Full 도 Rejected, 계약 2).
         const RHISubmitResult submitResult = RHIStagingRingUtil::completeAllocation( ring._allocator, _transferSerials, result, sizeBytes, "D3D12", pCaller, outSpan );
-        if ( submitResult != RHISubmitResult::Accepted || outSpan._bSolo == SW_FALSE )
+        if ( submitResult != RHISubmitResult::Accepted || outSpan.isSolo() == false )
             return submitResult;
         // 할당기가 단독 구간을 내줬다면 앞선 단독 구간은 이미 돌아왔다 — 남은 버퍼(아직 회수가 지우지 않은 것)를 GPU 가 더 쓰지 않는다.
         ScopedLock<mutex> soloLock{ ring._soloMutex };
         destroyMappedStagingBuffer( ring._soloBuffer, ring._pSoloMapped );
-        if ( createMappedStagingBuffer( ring._heapType, outSpan._sizeBytes, ring._soloBuffer, ring._pSoloMapped ) )
+        if ( createMappedStagingBuffer( ring._heapType, outSpan.getSizeBytes(), ring._soloBuffer, ring._pSoloMapped ) )
             return RHISubmitResult::Accepted;
         return RHIStagingRingUtil::rejectSoloBufferFailure( ring._allocator, outSpan, "D3D12", pCaller );
     }
@@ -2430,9 +2443,9 @@ namespace sw
         if ( FAILED( signalHr ) )
         {
             // 리스트는 이미 큐에 났지만 끝났는지 알 방법이 없다. 작업은 돌려놓지 않고 버린다(재사용하면 실행 중인 얼로케이터를 Reset 할 수 있다).
-            if ( _transferSerials.markLost() )
-                SW_LOG_ERROR_ID( "D3D12.TransferFenceSignalFailed", "%#: transfer fence Signal failed hr=0x%# (DeviceRemoved=0x%#)", pWhere, static_cast<uint32>( signalHr ),
-                                 static_cast<uint32>( _device->GetDeviceRemovedReason() ) );
+            reportDeviceLost( "transfer fence Signal" );
+            SW_LOG_ERROR_ONCE_ID( "D3D12.TransferFenceSignalFailed", "%#: transfer fence Signal failed hr=0x%# (DeviceRemoved=0x%#)", pWhere, static_cast<uint32>( signalHr ),
+                                  static_cast<uint32>( _device->GetDeviceRemovedReason() ) );
             return 0;
         }
         _transferFenceValue = fenceToSignal;

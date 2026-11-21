@@ -4,6 +4,7 @@
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/Container/unordered_map.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Foundation/Types.h"
@@ -31,6 +32,7 @@ namespace sw
     {
         struct ShaderCookerInternal
         {
+            static constexpr uint32 kPermutationHashHexDigits = 16; ///< 바이너리 이름에 적는 퍼뮤테이션 해시 자릿수 — 64 비트를 다 적는다
             /** @brief 백엔드 하나의 셰이더 타깃과 바이너리 폴더입니다. 쿠킹 테이블(`SW_RHI_BACKEND_TABLE`)의 항목마다 하나입니다. */
             struct BackendFolder
             {
@@ -83,9 +85,20 @@ namespace sw
 
     uint64 ShaderCooker::computePermutationHash( const vector<string>& listPermutation )
     {
-        if ( listPermutation.empty() )
+        const vector<string> listSorted = makeCanonicalDefines( listPermutation );
+        if ( listSorted.empty() )
             return 0;
 
+        uint64 hash{ HashUtil::kFNVOffset64 }; // FNV-1a 64비트 오프셋 기저값
+        for ( const string& define : listSorted )
+        {
+            hash = HashUtil::computeStringHash64( define, false, hash );
+        }
+        return hash;
+    }
+
+    vector<string> ShaderCooker::makeCanonicalDefines( const vector<string>& listPermutation )
+    {
         // `FOO` 와 `FOO=1` 은 컴파일러에게 같은 것이다. 런타임은 ShaderMacroDefine::parse 로 값 없는
         // define 에 "1" 을 채운 **뒤** 해시하므로, 여기서 원문 그대로 해시하면 같은 퍼뮤테이션이
         // 쿠킹과 런타임에서 서로 다른 해시가 된다. 그러면 쿠킹해 둔 변형을 아무도 못 찾는다(값을 적은
@@ -105,19 +118,8 @@ namespace sw
             else
                 listSorted.push_back( define );
         }
-        if ( listSorted.empty() )
-            return 0;
-
         VectorUtil::sort( listSorted );
-
-        uint64 hash{ HashUtil::kFNVOffset64 }; // FNV-1a 64비트 오프셋 기저값
-        for ( const string& define : listSorted )
-        {
-            if ( define.empty() )
-                continue;
-            hash = HashUtil::computeStringHash64( define, false, hash );
-        }
-        return hash;
+        return listSorted;
     }
 
     uint64 ShaderCooker::computePermutationHash( const vector<ShaderMacroDefine>& listDefine )
@@ -157,11 +159,42 @@ namespace sw
         else
             basePart.append( StringUtil::toLower( entryPoint ) );
 
+        // 해시 64 비트를 다 적는다(16 자리) — 32 비트로 자르면 같은 (폴더, 스템, 스테이지) 안의 변형끼리 이름이 겹칠 확률이 올라가고, 겹치면 틀린 셰이더가 조용히 실린다.
         if ( permutationHash != 0 )
-            basePart.appendFormat( "_%#", Fmt( static_cast<uint32>( permutationHash & 0xFFFFFFFFu ), Format( 8, Format::Padding::Zero ).hex() ) );
+            basePart.appendFormat( "_%#", Fmt( permutationHash, Format( ShaderCookerInternal::kPermutationHashHexDigits, Format::Padding::Zero ).hex() ) );
 
         basePart.append( ext );
         return string( basePart.view() );
+    }
+
+    vector<ShaderBinaryNameCollision> ShaderCooker::findBinaryNameCollisions( const vector<ShaderCookRequest>& listRequest )
+    {
+        // 키 = (소문자 셰이더 경로, 확장자 없는 바이너리 이름). 같은 키에 정본 define 이 다르면 한 파일을 두 변형이 덮는다.
+        struct Claim
+        {
+            size_t         _requestIndex;
+            vector<string> _listCanonical;
+        };
+        unordered_map<string, Claim>      mapClaim;
+        vector<ShaderBinaryNameCollision> listCollision;
+        for ( size_t index = 0; index < listRequest.size(); ++index )
+        {
+            const ShaderCookRequest&                 request  = listRequest[index];
+            const string                             fileName = computeBinaryFileName( getStemLower( request._shaderPath ), request._stage, request._entryPoint, request._permutationHash, string_view{} );
+            StringBuilder<constant::buffer::kMax256> keyBuilder;
+            keyBuilder.append( StringUtil::toLower( FileUtil::normalizeSeparators( request._shaderPath ) ) ).append( '\n' ).append( fileName );
+            string         key           = string( keyBuilder.view() );
+            vector<string> listCanonical = makeCanonicalDefines( request._listPermutation );
+            const auto     foundIt       = mapClaim.find( key );
+            if ( foundIt == mapClaim.end() )
+            {
+                mapClaim.emplace( std::move( key ), Claim{ index, std::move( listCanonical ) } );
+                continue;
+            }
+            if ( ( foundIt->second._listCanonical == listCanonical ) == false )
+                listCollision.push_back( ShaderBinaryNameCollision{ foundIt->second._requestIndex, index, fileName } );
+        }
+        return listCollision;
     }
 
     string_view ShaderCooker::getSubfolderForFormat( ShaderTargetFormat format )

@@ -202,23 +202,24 @@ namespace sw
                 }
 
                 /** @brief 바인딩 목록에 낼 리소스 종류 이름입니다. */
-                const utf8* classifyResource( const SPIRVVariable& var, uint32 blockTypeID, bool bIsStorageBuffer ) const
+                /** @brief 바인딩 종류를 가릅니다. SPIR-V 는 읽기 · 쓰기 구조버퍼를 모두 StorageBuffer 로 내 읽기 쪽(`StructuredBuffer`)으로 둔다 — WebGPU 는 번호 띠로 다시 가른다. */
+                ShaderBindingKind classifyResource( const SPIRVVariable& var, uint32 blockTypeID, bool bIsStorageBuffer ) const
                 {
                     if ( bIsStorageBuffer )
-                        return "StorageBuffer";
+                        return ShaderBindingKind::StructuredBuffer;
                     if ( var._storageClass == spirv::kStorageClassUniform )
-                        return "ConstantBuffer";
+                        return ShaderBindingKind::ConstantBuffer;
                     if ( var._storageClass != spirv::kStorageClassUniformConstant )
-                        return "OtherResource";
-                    // 포인터의 원소 타입으로 샘플러만 가른다. 배열(bindless)은 원소를 따라가서 본다.
+                        return ShaderBindingKind::Unknown;
+                    // 포인터의 원소 타입으로 샘플러만 가른다. 배열(bindless)은 원소를 따라가서 본다. 모르면 텍스처다(옛 "TextureOrSampler").
                     auto pointeeIt = _mapType.find( blockTypeID );
                     if ( pointeeIt == _mapType.end() )
-                        return "TextureOrSampler";
+                        return ShaderBindingKind::Texture;
                     if ( pointeeIt->second._kind == SPIRVType::Kind::Sampler )
-                        return "Sampler";
+                        return ShaderBindingKind::Sampler;
                     if ( pointeeIt->second._kind == SPIRVType::Kind::Image && pointeeIt->second._count == 2 )
-                        return "RWTexture"; // 스토리지 이미지(RWTexture2D)
-                    return "TextureOrSampler";
+                        return ShaderBindingKind::RwTexture; // 스토리지 이미지(RWTexture2D)
+                    return ShaderBindingKind::Texture;
                 }
 
                 /** @brief 바인딩 자리가 있는 변수 하나를 CB 레이아웃 · 구조화 원소 · 리소스 목록에 냅니다. */
@@ -266,7 +267,7 @@ namespace sw
                     res._registerSpace = slot._space;
                     res._bindPoint     = slot._bindPoint;
                     res._bindCount     = bIsArray ? 0u : 1u; ///< 무제한 배열([])은 0. DX 리플렉션의 BindCount 와 같은 뜻
-                    res._type          = classifyResource( var, blockTypeID, bIsStorageBuffer );
+                    res._kind          = classifyResource( var, blockTypeID, bIsStorageBuffer );
                     outData._listResource.push_back( std::move( res ) );
                 }
 
@@ -549,22 +550,16 @@ namespace sw
 
 namespace sw
 {
-    ShaderReflectionData ShaderReflectionUtil::reflectSPIRV( const vector<uint8>& bytecode )
+    expected<ShaderReflectionData> ShaderReflectionUtil::reflectSPIRV( const vector<uint8>& bytecode )
     {
         using Internal = ShaderReflectionSPIRVInternal;
         if ( bytecode.size() < 20 || ( bytecode.size() % 4 ) != 0 )
-        {
-            SW_LOG_WARNING_ID( "ShaderReflection.SPIRVBytecodeSize", "SPIR-V bytecode size invalid." );
-            return {};
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "SPIR-V bytecode size invalid" } );
 
         const uint32* pWords    = reinterpret_cast<const uint32*>( bytecode.data() );
         const size_t  wordCount = bytecode.size() / 4;
         if ( pWords[0] != spirv::kMagic )
-        {
-            SW_LOG_WARNING_ID( "ShaderReflection.NotSPIRVModule", "Not a SPIR-V module (bad magic)." );
-            return {};
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "not a SPIR-V module (bad magic)" } );
 
         Internal::SPIRVModule module;
         Internal::parseModule( pWords, wordCount, module );

@@ -200,8 +200,9 @@ namespace sw
     }
 
     // 길이 유지(긴 함수 정리 기준): 인스턴스 · 물리 디바이스 · 논리 디바이스 · 스왑체인 생성의 순서가 곧 의미라 나누지 않는다.
-    bool VulkanRHIDevice::initializeInternal( const RHISwapChainDesc& desc )
+    bool VulkanRHIDevice::initializeInternal( const RHIDeviceDesc& deviceDesc )
     {
+        const RHISwapChainDesc& desc = deviceDesc._swapChain;
 #if defined( SW_PLATFORM_WINDOWS )
         // Windows 의 표면은 Win32 `HWND` 다 — 핸들이 Win32 표면의 것이 아니면 HWND 로 읽지 않고 오류로 멈춘다.
         if ( desc.tryGetWin32Handle( _pHWnd ) == false )
@@ -220,40 +221,40 @@ namespace sw
         _height         = desc._height;
 
         // 할당 수 여유는 EngineConfig 의 `_rhi` 값이다. 없으면(0) 짐작하지 않고 멈춘다.
-        if ( desc._allocationCountReserve == 0 )
+        if ( deviceDesc._allocationCountReserve == 0 )
         {
             SW_LOG_ERROR_ID( "Vulkan.AllocationCountReserveMissing", "EngineConfig _rhi._allocationCountReserve must be > 0 - the Vulkan backend does not start" );
             return false;
         }
-        _allocationCountReserve = desc._allocationCountReserve;
-        if ( desc._uploadStagingBytes == 0 )
+        _allocationCountReserve = deviceDesc._allocationCountReserve;
+        if ( deviceDesc._uploadStagingBytes == 0 )
         {
             SW_LOG_ERROR_ID( "Vulkan.UploadStagingMissing", "EngineConfig _rhi._uploadStagingMegabytes must be > 0 - the Vulkan backend does not start" );
             return false;
         }
-        _uploadStagingBytes = desc._uploadStagingBytes;
-        if ( desc._uploadStagingIdleFrames == 0 )
+        _uploadStagingBytes = deviceDesc._uploadStagingBytes;
+        if ( deviceDesc._uploadStagingIdleFrames == 0 )
         {
             SW_LOG_ERROR_ID( "Vulkan.UploadStagingIdleFramesMissing", "EngineConfig _rhi._uploadStagingIdleFrames must be > 0 - the Vulkan backend does not start" );
             return false;
         }
-        _uploadStagingIdleFrames = desc._uploadStagingIdleFrames;
-        if ( desc._pipelineCacheSaveIntervalSeconds <= 0.0 )
+        _uploadStagingIdleFrames = deviceDesc._uploadStagingIdleFrames;
+        if ( deviceDesc._pipelineCacheSaveIntervalSeconds <= 0.0 )
         {
             SW_LOG_ERROR_ID( "Vulkan.PipelineCacheSaveIntervalMissing", "EngineConfig _rhi._pipelineCacheSaveIntervalSeconds must be > 0 - the Vulkan backend does not start" );
             return false;
         }
-        _pipelineCacheSaveIntervalNanoseconds = MonotonicClock::secondsToNanoseconds( desc._pipelineCacheSaveIntervalSeconds );
+        _pipelineCacheSaveIntervalNanoseconds = MonotonicClock::secondsToNanoseconds( deviceDesc._pipelineCacheSaveIntervalSeconds );
 
         // 검증 레이어는 배포가 아닌 구성(레이어를 싣는 구성, `SW_VULKAN_VALIDATION`)에 컴파일돼 있고 켤지는 장치를 만들 때 정한다
         // (EngineConfig `_rhi._validationLayer`, `-rhi-validation` — 언리얼 `-vulkandebug`). 레이어가 없으면 아래 레이어 확인이 끈다.
 #if defined( SW_VULKAN_VALIDATION )
-        _bEnableValidationLayers = desc._bValidationLayer ? SW_TRUE : SW_FALSE;
+        _bEnableValidationLayers = deviceDesc._bValidationLayer ? SW_TRUE : SW_FALSE;
 #endif
         // 검증 스위치(EngineConfig _rhi)는 검증 레이어를 켠 실행에서만 듣는다. 끈 실행에서 켜 두었으면 듣지 않는다고 알린다.
-        _bGPUAssistedValidationRequested     = desc._bGPUBasedValidation ? SW_TRUE : SW_FALSE;
-        _bSynchronizationValidationRequested = desc._bSynchronizationValidation ? SW_TRUE : SW_FALSE;
-        if ( _bEnableValidationLayers == SW_FALSE && ( desc._bGPUBasedValidation || desc._bSynchronizationValidation ) )
+        _bGPUAssistedValidationRequested     = deviceDesc._bGPUBasedValidation ? SW_TRUE : SW_FALSE;
+        _bSynchronizationValidationRequested = deviceDesc._bSynchronizationValidation ? SW_TRUE : SW_FALSE;
+        if ( _bEnableValidationLayers == SW_FALSE && ( deviceDesc._bGPUBasedValidation || deviceDesc._bSynchronizationValidation ) )
             SW_LOG_WARNING_ID( "Vulkan.ValidationSwitchWithoutLayer", "EngineConfig _rhi asks for GPU-assisted or synchronization validation, but the Vulkan validation layer is off (_rhi._validationLayer, -rhi-validation) - ignored" );
 
         // 백버퍼 포맷 · 개수는 백엔드 간 계약값이다. 스왑체인 재생성 때도 같은 요청을 써야 하므로 보관한다.
@@ -303,7 +304,7 @@ namespace sw
                 return false;
             markInitPhase( "surface" );
 
-            if ( pickPhysicalDevice( desc._bSoftwareAdapter, desc._bPreferMinimumPower ) == false )
+            if ( pickPhysicalDevice( deviceDesc._bSoftwareAdapter, deviceDesc._bPreferMinimumPower ) == false )
                 return false;
             markInitPhase( "adapter" );
 
@@ -359,7 +360,7 @@ namespace sw
 
         BLOCK( "Transfer Pool / Staging Rings" )
         {
-            if ( initializeTransfers( desc ) == false )
+            if ( initializeTransfers( deviceDesc ) == false )
                 return false;
             markInitPhase( "transfers" );
         }
@@ -449,7 +450,7 @@ namespace sw
             }
             // 해제 큐를 버퍼 표를 비우기 전에 한 번 비운다 — 업로드 배치 · 버퍼 해제 대리자가 표를 해석하므로, 표가 빈 뒤에 돌면 해석 실패 길이 생긴다.
             // GPU 는 종료 2 단계(waitIdle)에서 쉬었다. 아래 텍스처 정리가 새로 거는 프레임버퍼 해제는 뒤의 flushAll 이 놓는다.
-            _releaseQueue.flushAll();
+            _releaseQueue.abandonAll();
             shutdownUploads();
 
             _gpuBuffers.forEach( [this]( VulkanBufferRecord& record )
@@ -497,7 +498,7 @@ namespace sw
             _gpuTextures.clear();
             // 오프스크린 프레임버퍼는 해제 큐로 놓인다(`enqueueFramebufferRelease`). GPU 는 2 단계에서 이미 쉬고 있으니 디바이스가 살아 있는 지금 부른다 —
             // 남기면 해제 큐의 소멸자가 부순 VkDevice 로 vkDestroyFramebuffer 를 부른다(`IRHIDevice::shutdown` 이 단언한다).
-            _releaseQueue.flushAll();
+            _releaseQueue.abandonAll();
             _bufferRegistry.clear(); // 빈 목록도 함께 — 남기면 다음 장치가 표 밖 번호를 낸다
             _uavRegistry.clear();
             for ( uint32 index = 0; index < kBindlessBufferCapacity; ++index )
@@ -1473,7 +1474,7 @@ namespace sw
             if ( _bSwapChainColorSpace != SW_FALSE && VulkanRHIUtil::hasExtension( listAvailableExt, VK_EXT_HDR_METADATA_EXTENSION_NAME ) )
                 listDeviceExtension.push_back( VK_EXT_HDR_METADATA_EXTENSION_NAME );
         }
-        // VK_EXT_device_fault(진단 전용): 디바이스를 잃었을 때 결함 주소 · 공급사 코드를 읽는다(reportDeviceFault). 기능 비트까지 있어야 켠다.
+        // VK_EXT_device_fault(진단 전용): 디바이스를 잃었을 때 결함 주소 · 공급사 코드를 읽는다(reportDeviceFaultInternal). 기능 비트까지 있어야 켠다.
         VkPhysicalDeviceFaultFeaturesEXT faultFeatures{};
         faultFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FAULT_FEATURES_EXT;
         if ( build::kShipping == false && VulkanRHIUtil::hasExtension( listAvailableExt, VK_EXT_DEVICE_FAULT_EXTENSION_NAME ) )
@@ -2109,7 +2110,7 @@ namespace sw
             return;
         // 장치 손실은 처음 본 쪽만 알린다. 그 뒤의 호출은 모두 같은 값을 돌려주므로 프레임마다 로그가 쌓인다.
         const bool bDeviceLost = vkResult == VK_ERROR_DEVICE_LOST;
-        if ( bDeviceLost && _transferSerials.markLost() == false )
+        if ( bDeviceLost && isDeviceLost() )
             return;
 
         fixed_string<constant::buffer::kMax64> lastMarker;
@@ -2121,12 +2122,8 @@ namespace sw
                          VulkanRHIDeviceInternal::getResultName( vkResult ), lastMarker.empty() ? "<none>" : lastMarker.c_str() );
         if ( bDeviceLost == false )
             return;
-        SW_LOG_ERROR_ID( "Vulkan.VulkanDeviceLostSubmits", "Vulkan device lost - submits, waits and presents stop; frames are skipped until shutdown" );
-        // 마지막으로 GPU 가 닿은 패스 - 체크포인트를 이름으로 풀어 로그 · 크래시 문맥 · 빵부스러기에 싣는다(없으면 CPU 가 마지막으로 기록한 패스만).
-        uint32       arrBreadcrumb[GPUBreadcrumbs::kMaxReported]{};
-        const uint32 breadcrumbCount = readLastBreadcrumbs( arrBreadcrumb, GPUBreadcrumbs::kMaxReported );
-        GPUBreadcrumbs::reportDeviceLost( "Vulkan", arrBreadcrumb, breadcrumbCount );
-        reportDeviceFault();
+        // 표시 · 브레드크럼 · VK_EXT_device_fault 보고는 공통 입구 하나다(`IRHIDevice::reportDeviceLost` → `reportDeviceFaultInternal`).
+        reportDeviceLost( pWhere != nullptr ? pWhere : "VK_ERROR_DEVICE_LOST" );
     }
 
     bool VulkanRHIDevice::debugRemoveDevice()
@@ -2135,7 +2132,7 @@ namespace sw
             return false;
         SW_LOG_WARNING_ID( "Vulkan.MarkingVulkanDeviceLost", "Marking the Vulkan device lost on request (rhi.removeDevice) - Vulkan cannot remove a device, so this is the state after the first "
                                                              "VK_ERROR_DEVICE_LOST: no more submits, waits or presents" );
-        _transferSerials.markLost(); // 이미 잃은 장치여도 같은 상태다
+        reportDeviceLost( "rhi.removeDevice" ); // 이미 잃은 장치여도 같은 상태다
         return true;
     }
 
@@ -2193,7 +2190,7 @@ namespace sw
         _lastSubmittedEventMarker = pMarker;
     }
 
-    void VulkanRHIDevice::reportDeviceFault()
+    void VulkanRHIDevice::reportDeviceFaultInternal()
     {
         PFN_vkGetDeviceFaultInfoEXT pfnGetFaultInfo =
             ( _bDeviceFault != SW_FALSE && _device != VK_NULL_HANDLE )
@@ -2277,14 +2274,23 @@ namespace sw
                 { recycleTransferJob( job ); } );
             }
         }
-        // 전송을 기다리던 해제가 먼저 프레임 해제 큐로 넘어가야 아래에서 함께 놓인다.
-        _transferReleaseQueue.flushAll();
-        _releaseQueue.flushAll();
+        // 전송을 기다리던 해제가 먼저 프레임 해제 큐로 넘어가야 아래에서 함께 놓인다(전송 큐에는 통지가 없다).
+        _transferReleaseQueue.releaseAllCompleted();
+        // 큐가 빈 것을 확인했을 때만 통지가 `Completed` 다 — 잃은 장치는 끝났는지 모른다.
+        if ( _device && isDeviceLost() == false )
+            _releaseQueue.releaseAllCompleted();
+        else
+            _releaseQueue.abandonAll();
     }
 
     void VulkanRHIDevice::enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate )
     {
         _releaseQueue.enqueueGPURelease( releaseDelegate, _frameFenceRing.getRecordingSerial() );
+    }
+
+    void VulkanRHIDevice::notifyFrameCompletion( const RHIFrameCompletionDelegate& completionDelegate )
+    {
+        _releaseQueue.enqueueCompletion( completionDelegate, _frameFenceRing.getRecordingSerial() );
     }
 
     uint32 VulkanRHIDevice::getTimestampSlotCount() const
@@ -3273,7 +3279,7 @@ namespace sw
         vkCmdSetScissor( _activeFrameBuffer, 0, 1, &scissor );
     }
 
-    bool VulkanRHIDevice::initializeTransfers( const RHISwapChainDesc& desc )
+    bool VulkanRHIDevice::initializeTransfers( const RHIDeviceDesc& desc )
     {
         if ( desc._stagingRingBytes == 0 || desc._readbackRingBytes == 0 )
         {
@@ -3301,7 +3307,7 @@ namespace sw
         // GPU 는 종료 2단계(waitIdle)에서 쉬었다. 잃은 장치면 끝나지 않은 작업이 남아 있을 수 있지만 더 기다리지 않는다(isDeviceLost 설명).
         _transferFenceQueue.retireAll( [this]( VulkanTransferJob& job )
         { recycleTransferJob( job ); } );
-        _transferReleaseQueue.flushAll();
+        _transferReleaseQueue.abandonAll();
         {
             ScopedLock<mutex> jobLock{ _transferJobMutex };
             for ( const VulkanTransferJob& job : _listFreeTransferJob )
@@ -3415,12 +3421,12 @@ namespace sw
         }
         // 결과 옮기기 · 못 받은 구간 놓기 · 이유 로그는 세 백엔드가 같이 쓰는 한 곳이다(잃은 장치면 Full 도 Rejected, 계약 2).
         const RHISubmitResult submitResult = RHIStagingRingUtil::completeAllocation( ring._allocator, _transferSerials, result, sizeBytes, "Vulkan", pCaller, outSpan );
-        if ( submitResult != RHISubmitResult::Accepted || outSpan._bSolo == SW_FALSE )
+        if ( submitResult != RHISubmitResult::Accepted || outSpan.isSolo() == false )
             return submitResult;
         // 할당기가 단독 구간을 내줬다면 앞선 단독 구간은 이미 돌아왔다 — 남은 버퍼(아직 회수가 지우지 않은 것)를 GPU 가 더 쓰지 않는다.
         ScopedLock<mutex> soloLock{ ring._soloMutex };
         destroyMappedStagingBuffer( ring._soloBuffer, ring._soloMemory, ring._pSoloMapped );
-        if ( createMappedStagingBuffer( outSpan._sizeBytes, usageFlags, "single transfer", ring._soloBuffer, ring._soloMemory, ring._pSoloMapped ) )
+        if ( createMappedStagingBuffer( outSpan.getSizeBytes(), usageFlags, "single transfer", ring._soloBuffer, ring._soloMemory, ring._pSoloMapped ) )
             return RHISubmitResult::Accepted;
         return RHIStagingRingUtil::rejectSoloBufferFailure( ring._allocator, outSpan, "Vulkan", pCaller );
     }

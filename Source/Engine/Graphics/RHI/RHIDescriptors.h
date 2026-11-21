@@ -188,10 +188,36 @@ namespace sw
         PROPERTY()
         bool _bFullscreen{ false }; ///< 전체 화면
 
-        PROPERTY( Transient )
-        bool _bSoftwareAdapter{ SW_FALSE }; ///< 소프트웨어 래스터라이저로 띄운다(DX12, DX11 WARP, Vulkan CPU 디바이스). CI 러너와 같은 조건을 재현하는 진단 스위치다.
-        PROPERTY( Transient )
-        bool _bPreferMinimumPower{ false }; ///< 하드웨어 어댑터를 저전력 순서로 고른다(하이브리드 노트북의 내장 GPU — 언리얼 -preferIntel 자리). 기본은 고성능 순서(제조사와 무관)
+        /** @brief 백버퍼 포맷입니다 — 색 공간에서 정한다(`getSwapChainFormat`). */
+        [[nodiscard]] RHIFormat getFormat() const { return getSwapChainFormat( _colorSpace, _sdrFormat ); }
+
+        /**
+         * @brief Win32 표면의 `HWND` 를 @p outHandle 에 `void*` 로 담고 true 입니다. 창이 없으면(핸들이 nullptr, 오프스크린) @p outHandle 이 nullptr 이고 true 입니다.
+         * @details `_pWindowHandle` 은 창 시스템마다 뜻이 다른 `void*` 라서(`_surfaceKind`) DX · WGL 백엔드가 직접 `HWND` 로 읽으면 안 된다.
+         *          종류 확인을 이 함수 한 곳에 모은다 — `IWindow::tryGetWin32Handle` 의 스왑체인 서술판이다. 창이 없는 것은 정상 경로(DX12 오프스크린)라 실패로 치지 않는다.
+         * @return 핸들이 있는데 Win32 표면이 아니면 false 이고 @p outHandle 은 nullptr 입니다. 호출처는 다른 핸들로 대신하지 않고 오류로 멈춘다.
+         */
+        [[nodiscard]] bool tryGetWin32Handle( void*& outHandle ) const
+        {
+            outHandle = nullptr;
+            if ( _pWindowHandle == nullptr )
+                return true;
+            if ( _surfaceKind != NativeSurfaceKind::Win32 )
+                return false;
+            outHandle = _pWindowHandle;
+            return true;
+        }
+    };
+
+    /**
+     * @struct RHIDeviceDesc
+     * @brief 장치를 기동할 때만 쓰는 설정입니다 — 주 스왑체인(`_swapChain`)과 장치 고유의 칸(어댑터 · 스테이징 링 · 검증 층 · DRED · 파이프라인 캐시)을 함께 든다.
+     * @details 예전에는 이 칸들이 `RHISwapChainDesc` 에 들어 있어 창 스왑체인(`IRHIDevice::createSwapChain`)도 쓰지 않는 장치 칸을 날랐다.
+     *          언리얼은 장치 기동 설정(`-d3ddebug` · 어댑터 선택)을 스왑체인 서술과 따로 둔다(기억에 의존한 비교). 실행마다 정하는 기동 값이라 리플렉션하지 않는다.
+     */
+    struct RHIDeviceDesc
+    {
+        RHISwapChainDesc _swapChain; ///< 주 스왑체인 서술
 
         /// @brief 업로드 스테이징 용량(바이트)입니다(`_rhi._stagingRingMegabytes`). GL · Vulkan 은 링 크기, DX11 은 GPU 가 아직 복사 중인 스테이징 텍스처의 합의 상한으로 읽고,
         ///        0 이면 그 백엔드가 초기화를 거절합니다. 실행마다 정하는 설정이라 리플렉션하지 않는다.
@@ -212,34 +238,26 @@ namespace sw
         uint32 _uploadStagingIdleFrames{ 0 };
         /// @brief 파이프라인 캐시 저장 주기(초)입니다(`EngineConfig::_rhi._pipelineCacheSaveIntervalSeconds`). 캐시를 디스크에 두는 백엔드(Vulkan)는 0 이하면 초기화를 거절한다. 리플렉션하지 않는다.
         float64 _pipelineCacheSaveIntervalSeconds{ 0.0 };
+        uint8   _bSoftwareAdapter    : 1; ///< 소프트웨어 래스터라이저로 띄운다(DX12, DX11 WARP, Vulkan CPU 디바이스). CI 러너와 같은 조건을 재현하는 진단 스위치다.
+        uint8   _bPreferMinimumPower : 1; ///< 하드웨어 어댑터를 저전력 순서로 고른다(하이브리드 노트북의 내장 GPU — 언리얼 -preferIntel 자리). 기본은 고성능 순서(제조사와 무관)
         /// @brief 그래픽 API 검증 층(D3D 디버그 레이어 · Vulkan 검증 레이어)을 켭니다(`resolveRHIDiagnosticSwitch` — EngineConfig `_rhi._validationLayer`, `-rhi-validation`).
         ///        배포가 아닌 구성(`SW_DO_CHECKS`)에서만 백엔드가 듣는다. 리플렉션하지 않는다.
-        bool _bValidationLayer{ false };
+        uint8 _bValidationLayer : 1;
         /// @brief D3D12 DRED(자동 브레드크럼 · 페이지 폴트)를 켭니다(`resolveRHIDiagnosticSwitch` — EngineConfig `_rhi._dred`, `-rhi-dred`). 배포 구성에서도 듣는다. 리플렉션하지 않는다.
-        bool _bDRED{ false };
+        uint8 _bDRED : 1;
         /// @brief GPU 기반 검증을 켭니다(`EngineConfig::_rhi._bGPUBasedValidation`, 디버그 레이어가 켜진 실행만). 리플렉션하지 않는다.
-        bool _bGPUBasedValidation{ false };
+        uint8 _bGPUBasedValidation : 1;
         /// @brief Vulkan 동기화 검증을 켭니다(`EngineConfig::_rhi._bSynchronizationValidation`, 검증 레이어가 켜진 실행만). 리플렉션하지 않는다.
-        bool _bSynchronizationValidation{ false };
+        uint8 _bSynchronizationValidation : 1;
 
-        /** @brief 백버퍼 포맷입니다 — 색 공간에서 정한다(`getSwapChainFormat`). */
-        [[nodiscard]] RHIFormat getFormat() const { return getSwapChainFormat( _colorSpace, _sdrFormat ); }
-
-        /**
-         * @brief Win32 표면의 `HWND` 를 @p outHandle 에 `void*` 로 담고 true 입니다. 창이 없으면(핸들이 nullptr, 오프스크린) @p outHandle 이 nullptr 이고 true 입니다.
-         * @details `_pWindowHandle` 은 창 시스템마다 뜻이 다른 `void*` 라서(`_surfaceKind`) DX · WGL 백엔드가 직접 `HWND` 로 읽으면 안 된다.
-         *          종류 확인을 이 함수 한 곳에 모은다 — `IWindow::tryGetWin32Handle` 의 스왑체인 서술판이다. 창이 없는 것은 정상 경로(DX12 오프스크린)라 실패로 치지 않는다.
-         * @return 핸들이 있는데 Win32 표면이 아니면 false 이고 @p outHandle 은 nullptr 입니다. 호출처는 다른 핸들로 대신하지 않고 오류로 멈춘다.
-         */
-        [[nodiscard]] bool tryGetWin32Handle( void*& outHandle ) const
+        RHIDeviceDesc() noexcept
+            : _bSoftwareAdapter{ SW_FALSE }
+            , _bPreferMinimumPower{ SW_FALSE }
+            , _bValidationLayer{ SW_FALSE }
+            , _bDRED{ SW_FALSE }
+            , _bGPUBasedValidation{ SW_FALSE }
+            , _bSynchronizationValidation{ SW_FALSE }
         {
-            outHandle = nullptr;
-            if ( _pWindowHandle == nullptr )
-                return true;
-            if ( _surfaceKind != NativeSurfaceKind::Win32 )
-                return false;
-            outHandle = _pWindowHandle;
-            return true;
         }
     };
 } // namespace sw

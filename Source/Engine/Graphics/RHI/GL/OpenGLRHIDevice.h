@@ -104,7 +104,6 @@ namespace sw
          *          언리얼 GL RHI 는 모든 GL 호출을 한 스레드로 넘겨 이 경합이 없다 — 자원 생성을 렌더 스레드로 넘기는 것이 근본 해법이다.
          */
         static constexpr uint32 kContextAcquireTimeoutMs = 5000;
-        RHIBufferHandle         createBuffer( const RHIBufferDesc& desc );
         RHIBufferHandle         createIndexBuffer( const void* pData, uint32 sizeBytes );
         /** @brief 빈 OpenGL 디바이스를 만듭니다. */
         /** @brief @p deviceGeneration 은 등록표가 붙인 이 장치의 세대입니다(전송 티켓에 싣는다). */
@@ -113,7 +112,7 @@ namespace sw
         virtual ~OpenGLRHIDevice() override;
 
         /** @brief 플랫폼 GL 컨텍스트(WGL, GLX)를 만들고 glad 로 GL 함수를 불러옵니다. */
-        [[nodiscard]] bool initializeInternal( const RHISwapChainDesc& desc ) override;
+        [[nodiscard]] bool initializeInternal( const RHIDeviceDesc& deviceDesc ) override;
 
         /** @brief GL 객체와 컨텍스트를 해제합니다. */
         void shutdownInternal() override;
@@ -165,11 +164,13 @@ namespace sw
 
         /** @brief 지금 기록 중인 프레임을 GPU 가 지난 뒤에 부릅니다. GL 은 프레임 끝마다 내는 펜스(`_arrFrameDoneSync`)로 확인합니다. */
         void   enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate ) override;
+        void   notifyFrameCompletion( const RHIFrameCompletionDelegate& completionDelegate ) override;
         uint32 getPendingReleaseCount() const override { return _releaseQueue.getPendingReleaseCount(); }
         /** @brief 장치 손실 흉내입니다. GL 은 문맥을 일부러 잃을 API 가 없어 DX11 처럼 첫 손실을 본 뒤의 상태(전송 거절 · 대기 멈춤)만 만든다 — GPU 는 살아 있다. */
         bool debugRemoveDevice() override;
         /** @brief 장치 손실 표시를 든 전송 시리얼입니다(`IRHIDevice::isDeviceLost` 가 읽는다). */
         const RHITransferSerials& getTransferSerials() const override { return _transferSerials; }
+        RHITransferSerials&       getTransferSerials() override { return _transferSerials; }
 
         /** @brief 백엔드 타입(OpenGL)을 반환합니다. */
         RHIBackend getBackendType() const override { return RHIBackend::OpenGL; }
@@ -259,7 +260,7 @@ namespace sw
         /// @brief 업로드 · 되읽기 링 구간 시작의 정렬입니다. PBO 오프셋은 픽셀 성분(최대 float 4 바이트)과 BC 블록(16 바이트)의 배수면 되지만, CPU 복사가 캐시 줄 경계에서 시작하도록 넉넉히 둔다.
         static constexpr uint64 kTransferRingAlignmentBytes = 256;
 
-        /// @brief 링보다 큰 전송 한 장(단독 구간, `RHIStagingSpan::_bSolo`)이 쓰는 일회성 영속 매핑 버퍼입니다. 링마다 하나다 — 할당기가 단독 구간을 한 번에 하나만 내준다.
+        /// @brief 링보다 큰 전송 한 장(단독 구간, `RHIStagingSpan::isSolo`)이 쓰는 일회성 영속 매핑 버퍼입니다. 링마다 하나다 — 할당기가 단독 구간을 한 번에 하나만 내준다.
         struct OpenGLSoloTransferBuffer
         {
             uint8* _pMapped{ nullptr }; ///< 영속 매핑 주소. 버퍼가 없으면 nullptr
@@ -468,7 +469,7 @@ namespace sw
          * @details 앞선 단독 구간의 버퍼가 아직 남아 있으면(할당기는 이미 돌려받았다) 먼저 지운다. 만든 버퍼는 메모리 추적기의 Staging 에 올린다.
          * @return 붙였으면 `Accepted`. 컨텍스트를 얻지 못하면 `Busy`, 버퍼를 만들지 못하면 `Rejected` 이고 두 경우 모두 구간을 할당기에 돌려준다.
          */
-        [[nodiscard]] RHISubmitResult attachSoloBuffer( RHIStagingAllocator& ring, OpenGLSoloTransferBuffer& rSolo, const RHIStagingSpan& span, uint32 mapFlags,
+        [[nodiscard]] RHISubmitResult attachSoloBuffer( RHIStagingAllocator& ring, OpenGLSoloTransferBuffer& rSolo, RHIStagingSpan& span, uint32 mapFlags,
                                                         const utf8* pCaller );
         /** @brief 단독 버퍼를 지우고 메모리 추적기에서 내립니다. 컨텍스트를 쥔 채 부릅니다. 버퍼가 없으면 아무것도 하지 않습니다. */
         void deleteSoloBuffer( OpenGLSoloTransferBuffer& rSolo );

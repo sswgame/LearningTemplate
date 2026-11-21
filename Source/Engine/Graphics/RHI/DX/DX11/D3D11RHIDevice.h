@@ -141,7 +141,7 @@ namespace sw
         virtual ~D3D11RHIDevice() override;
 
         /** @brief Direct3D 11 디바이스와 스왑체인(백버퍼 RTV 포함)을 만듭니다. */
-        [[nodiscard]] bool initializeInternal( const RHISwapChainDesc& desc ) override;
+        [[nodiscard]] bool initializeInternal( const RHIDeviceDesc& deviceDesc ) override;
 
         /** @brief D3D11 자원을 해제합니다. */
         void shutdownInternal() override;
@@ -193,6 +193,7 @@ namespace sw
         bool debugRemoveDevice() override;
         /** @brief 장치 손실 표시를 든 전송 시리얼입니다(`IRHIDevice::isDeviceLost` 가 읽는다). */
         const RHITransferSerials& getTransferSerials() const override { return _transferSerials; }
+        RHITransferSerials&       getTransferSerials() override { return _transferSerials; }
         /**
          * @brief 런타임에 장치 제거 이유(`GetDeviceRemovedReason`)를 묻고, 제거됐으면 전송 손실로 표시합니다(`RHITransferSerials::markLost`). 어느 스레드에서나 부릅니다.
          * @details DXGI_ERROR_DEVICE_REMOVED · DEVICE_RESET · DEVICE_HUNG 등 제거 이유가 실패인 모든 경우가 이 한 곳으로 표시된다 — 호출 결과를 보는 자리마다 따로 표시하면 빠뜨린 자리의 티켓이
@@ -210,6 +211,7 @@ namespace sw
 
         /** @brief 지금 기록 중인 프레임을 GPU 가 지난 뒤에 부릅니다. D3D11 은 펜스 대신 프레임 끝마다 내는 이벤트 쿼리(`_arrFrameDoneQuery`)로 확인합니다. */
         void   enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate ) override;
+        void   notifyFrameCompletion( const RHIFrameCompletionDelegate& completionDelegate ) override;
         uint32 getPendingReleaseCount() const override { return _releaseQueue.getPendingReleaseCount(); }
 
         /** @brief 백엔드 종류(DirectX11)를 반환합니다. */
@@ -695,10 +697,10 @@ namespace sw
         vector<Microsoft::WRL::ComPtr<ID3D11Query>> _listFreeTransferQuery;
         /// @brief 아직 가져가지 않은 텍스처 읽기입니다(시리얼로 찾습니다).
         RHIPendingReadbackTable<TextureReadbackRecord> _readbackTable;
-        /// @brief GPU 가 아직 복사 중인 업로드 스테이징의 바이트 합과 그 예산(`RHISwapChainDesc::_stagingRingBytes`)입니다. `UploadStaging` 이 잡고 놓습니다.
+        /// @brief GPU 가 아직 복사 중인 업로드 스테이징의 바이트 합과 그 예산(`RHIDeviceDesc::_stagingRingBytes`)입니다. `UploadStaging` 이 잡고 놓습니다.
         ///        이보다 큰 업로드 하나는 예산 전부를 잡고 혼자 들어갑니다(`allocateUploadStaging`).
         RHIStagingBudget _uploadStagingBudget;
-        /// @brief 이 크기(바이트, `RHISwapChainDesc::_directUploadMaxBytes`) 이하의 업로드는 스테이징 없이 즉시 컨텍스트의 `UpdateSubresource` 로 올립니다.
+        /// @brief 이 크기(바이트, `RHIDeviceDesc::_directUploadMaxBytes`) 이하의 업로드는 스테이징 없이 즉시 컨텍스트의 `UpdateSubresource` 로 올립니다.
         uint64 _directUploadMaxBytes;
 
         sw::unique_ptr<D3D11RHICommandContext>  _frameStreamContext;

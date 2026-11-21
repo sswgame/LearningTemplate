@@ -27,7 +27,7 @@ namespace sw
         /// @brief 'SRFM' 매니페스트 매직입니다.
         constexpr uint32 kMagic = FourCCUtil::make( "SRFM" );
         /// @brief 매니페스트 포맷 버전입니다. 쿠킹하는 쪽과 읽는 쪽이 같은 파일에 있으므로 한 곳만 올리면 됩니다.
-        constexpr uint32 kVersion = 2; ///< 2: 구조버퍼 원소 레이아웃(_listStructuredElement) 추가
+        constexpr uint32 kVersion = 3; ///< 2: 구조버퍼 원소 레이아웃(_listStructuredElement) 추가 · 3: 리소스 종류를 글자 대신 `ShaderBindingKind` 한 바이트로
 
         void writeReflectionInternal( Archive& archive, const ShaderReflectionData& reflection )
         {
@@ -52,7 +52,7 @@ namespace sw
             for ( const ShaderReflectedBinding& resource : reflection._listResource )
             {
                 archive << string_view( resource._name );
-                archive << string_view( resource._type );
+                archive << static_cast<uint8>( resource._kind );
                 archive << resource._registerSpace;
                 archive << resource._bindPoint;
                 archive << resource._bindCount;
@@ -115,7 +115,11 @@ namespace sw
             for ( ShaderReflectedBinding& resource : outReflection._listResource )
             {
                 archive >> resource._name;
-                archive >> resource._type;
+                uint8 kind{ 0 };
+                archive >> kind;
+                if ( kind > static_cast<uint8>( ShaderBindingKind::Unknown ) )
+                    return false; // 모르는 종류 — 읽기 실패로 센다(조용히 Unknown 으로 두지 않는다)
+                resource._kind = static_cast<ShaderBindingKind>( kind );
                 archive >> resource._registerSpace;
                 archive >> resource._bindPoint;
                 archive >> resource._bindCount;

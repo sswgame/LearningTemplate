@@ -2,7 +2,9 @@
 
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Graphics/RHI/RHIPipelineStateDesc.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingLayout.h"
+#include "Engine/Graphics/Shader/Binding/ShaderBindingLayoutCache.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 
 // ShaderBindingLayout — 스테이지별 리플렉션을 슬롯으로 합치기(가시성 · CB 멤버 · 구조 버퍼 stride), 이름 조회(canonical 이름), 드로우 전 바인딩 계획.
@@ -16,11 +18,29 @@ namespace
     {
         using StageList = vector<pair<ShaderStage, const ShaderReflectionData*>>;
 
+        /** @brief 손으로 적는 리플렉션 라벨을 종류로 바꿉니다(리플렉터가 내던 옛 글자 그대로 — 테스트 표를 읽기 쉽게 둔다). */
+        static ShaderBindingKind toKind( string_view label )
+        {
+            if ( label == "Texture" )
+                return ShaderBindingKind::Texture;
+            if ( label == "Sampler" )
+                return ShaderBindingKind::Sampler;
+            if ( label == "ConstantBuffer" )
+                return ShaderBindingKind::ConstantBuffer;
+            if ( label == "StructuredBuffer" || label == "StorageBuffer" )
+                return ShaderBindingKind::StructuredBuffer;
+            if ( label == "UAV" || label == "RWStructuredBuffer" )
+                return ShaderBindingKind::RwStructuredBuffer;
+            if ( label == "RWTexture" )
+                return ShaderBindingKind::RwTexture;
+            return ShaderBindingKind::Unknown;
+        }
+
         static void addResource( ShaderReflectionData& reflection, const utf8* pName, const utf8* pType, uint32 space, uint32 bindPoint, uint32 bindCount = 1 )
         {
             ShaderReflectedBinding resource{};
             resource._name          = pName;
-            resource._type          = pType;
+            resource._kind          = toKind( pType );
             resource._registerSpace = space;
             resource._bindPoint     = bindPoint;
             resource._bindCount     = bindCount;
@@ -77,26 +97,6 @@ namespace
         static hashed_string name( const utf8* pName ) { return hashed_string{ string_view( pName ) }; }
     };
 } // namespace
-
-/**
- * @brief [ShaderBindingLayoutTest] 타입 라벨: DX · SPIR-V 라벨이 같은 종류로 모이고, 모르는 라벨은 Unknown 이다
- */
-SW_TEST_CASE( ShaderBindingLayoutTest, KindFromTypeLabel )
-{
-    SW_EXPECT_EQUAL( ShaderBindingKind::Texture, ShaderBindingLayout::kindFromTypeLabel( "Texture" ) );
-    SW_EXPECT_EQUAL( ShaderBindingKind::Texture, ShaderBindingLayout::kindFromTypeLabel( "TextureOrSampler" ) );
-    SW_EXPECT_EQUAL( ShaderBindingKind::Sampler, ShaderBindingLayout::kindFromTypeLabel( "Sampler" ) );
-    SW_EXPECT_EQUAL( ShaderBindingKind::ConstantBuffer, ShaderBindingLayout::kindFromTypeLabel( "ConstantBuffer" ) );
-    SW_EXPECT_EQUAL( ShaderBindingKind::StructuredBuffer, ShaderBindingLayout::kindFromTypeLabel( "StructuredBuffer" ) );
-    SW_EXPECT_EQUAL( ShaderBindingKind::StructuredBuffer, ShaderBindingLayout::kindFromTypeLabel( "StorageBuffer" ) );
-    SW_EXPECT_EQUAL( ShaderBindingKind::StructuredBuffer, ShaderBindingLayout::kindFromTypeLabel( "ByteAddressBuffer" ) );
-    SW_EXPECT_EQUAL( ShaderBindingKind::RwStructuredBuffer, ShaderBindingLayout::kindFromTypeLabel( "UAV" ) );
-    SW_EXPECT_EQUAL( ShaderBindingKind::RwStructuredBuffer, ShaderBindingLayout::kindFromTypeLabel( "RWStructuredBuffer" ) );
-    SW_EXPECT_EQUAL( ShaderBindingKind::RwStructuredBuffer, ShaderBindingLayout::kindFromTypeLabel( "RWByteAddressBuffer" ) );
-    SW_EXPECT_EQUAL( ShaderBindingKind::RwTexture, ShaderBindingLayout::kindFromTypeLabel( "RWTexture" ) );
-    SW_EXPECT_EQUAL( ShaderBindingKind::Unknown, ShaderBindingLayout::kindFromTypeLabel( "OtherResource" ) );
-    SW_EXPECT_EQUAL( ShaderBindingKind::Unknown, ShaderBindingLayout::kindFromTypeLabel( "" ) );
-}
 
 /**
  * @brief [ShaderBindingLayoutTest] 스테이지가 없거나 리플렉션이 nullptr 이면 빈 레이아웃이다. 모르는 라벨의 리소스는 슬롯이 되지 않는다
@@ -429,4 +429,23 @@ SW_TEST_CASE( ShaderBindingLayoutTest, RebuiltLayoutAtSameAddressIsNewIdentity )
     SW_REQUIRE_TRUE( &layout == pAddress ); // 같은 주소
     SW_EXPECT_TRUE( layout.getIdentity().isValid() );
     SW_EXPECT_TRUE( mapByLayout.find( layout.getIdentity() ) == mapByLayout.end() );
+}
+
+/**
+ * @brief [ShaderBindingLayoutTest] 레이아웃 캐시 키는 define 경계 · 진입점을 잃지 않는다 — 값 `1|B=1` 하나와 define 둘, 같은 파일의 다른 진입점은 다른 키다
+ * @details 변이: 구분자를 `|` 로 되돌리면 첫 단언이, 진입점을 키에서 빼면 둘째 단언이 진다.
+ */
+SW_TEST_CASE( ShaderBindingLayoutTest, CacheKeyKeepsDefineBoundariesAndEntryPoints )
+{
+    RHIPipelineStateDesc base;
+    base._vertexShaderPath      = "engine/shaders/forward_lit.hlsl";
+    base._pixelShaderPath       = "engine/shaders/forward_lit.hlsl";
+    RHIPipelineStateDesc joined = base;
+    RHIPipelineStateDesc split  = base;
+    RHIPipelineStateDesc other  = base;
+    joined._listShaderDefine    = { "A=1|B=1" };
+    split._listShaderDefine     = { "A=1", "B=1" };
+    other._pixelEntryPoint      = "PSOther";
+    SW_EXPECT_TRUE( ShaderBindingLayoutCache::makeCacheKey( joined, ShaderTargetFormat::SPIRV_Vulkan ) != ShaderBindingLayoutCache::makeCacheKey( split, ShaderTargetFormat::SPIRV_Vulkan ) );
+    SW_EXPECT_TRUE( ShaderBindingLayoutCache::makeCacheKey( other, ShaderTargetFormat::SPIRV_Vulkan ) != ShaderBindingLayoutCache::makeCacheKey( base, ShaderTargetFormat::SPIRV_Vulkan ) );
 }

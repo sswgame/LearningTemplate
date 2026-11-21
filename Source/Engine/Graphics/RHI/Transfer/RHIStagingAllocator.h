@@ -12,12 +12,46 @@
 
 namespace sw
 {
-    /** @brief 링에서 잡은 구간 하나입니다. `RHIStagingAllocator::allocate` 가 채우고, 같은 값을 `markSubmitted` 나 `free` 에 한 번만 돌려줍니다. */
-    struct RHIStagingSpan
+    class RHIStagingAllocator;
+
+    /**
+     * @class RHIStagingSpan
+     * @brief 링에서 잡은 구간 하나를 소유합니다. `RHIStagingAllocator::allocate` 가 채우고, `markSubmitted` 나 `free` 에 이동으로 한 번 돌려줍니다.
+     * @details 이동 전용이다 — 복사하면 두 값이 같은 구간을 두 번 돌려준다. 돌려주지 않고 사라지면 소멸자가 `free` 한다(예전에는 평범한 구조체라
+     *          실패 갈래 하나가 반납을 빠뜨리면 산 구간 수가 줄지 않아 단독 전송이 영원히 `Full` 이었다). 언리얼 `FRHILockTracker` 의 짝 맞추기를 소유 형식으로 둔 자리다.
+     *          할당기를 `shutdown` · 다시 `initialize` 한 뒤에 남은 구간은 돌려줄 곳이 없어 조용히 버린다(세대가 다르다 — 링 메모리가 이미 사라졌다).
+     */
+    class SW_API RHIStagingSpan
     {
-        uint64 _offsetBytes{ 0 };  ///< 링 시작에서의 오프셋. 링의 정렬 단위의 배수다. 단독 구간은 0 이다
-        uint64 _sizeBytes{ 0 };    ///< 요청한 크기. 0 이면 잡지 못한 구간이다
-        uint8  _bSolo{ SW_FALSE }; ///< 링보다 큰 요청이 링 밖에 받은 단독 구간이다 — 백엔드는 이 구간만을 위해 만든 버퍼(크기 `_sizeBytes`)를 쓴다
+    public:
+        RHIStagingSpan() = default;
+        ~RHIStagingSpan();
+        RHIStagingSpan( const RHIStagingSpan& )            = delete;
+        RHIStagingSpan& operator=( const RHIStagingSpan& ) = delete;
+        RHIStagingSpan( RHIStagingSpan&& other ) noexcept;
+        RHIStagingSpan& operator=( RHIStagingSpan&& other ) noexcept;
+
+        /** @brief 구간을 쥐고 있는지 묻습니다(잡지 못했거나 돌려준 뒤면 false). */
+        [[nodiscard]] bool isValid() const { return _pAllocator != nullptr; }
+        /** @brief 링 시작에서의 오프셋입니다. 링의 정렬 단위의 배수다. 단독 구간은 0 이다. */
+        [[nodiscard]] uint64 getOffsetBytes() const { return _offsetBytes; }
+        /** @brief 요청한 크기입니다. 0 이면 잡지 못한 구간이다. */
+        [[nodiscard]] uint64 getSizeBytes() const { return _sizeBytes; }
+        /** @brief 링보다 큰 요청이 링 밖에 받은 단독 구간인지 묻습니다 — 백엔드는 이 구간만을 위해 만든 버퍼(크기 `getSizeBytes`)를 쓴다. */
+        [[nodiscard]] bool isSolo() const { return _bSolo != SW_FALSE; }
+
+    private:
+        friend class RHIStagingAllocator;
+        RHIStagingSpan( RHIStagingAllocator& allocator, uint32 generation, uint64 offsetBytes, uint64 sizeBytes, bool bSolo );
+        /** @brief 쥔 것을 놓습니다(돌려주지 않는다 — `unique_ptr::release` 와 같은 뜻). 할당기가 돌려받은 뒤 부른다. */
+        void release();
+
+    private:
+        RHIStagingAllocator* _pAllocator{ nullptr }; ///< 돌려줄 할당기. null 이면 쥔 것이 없다
+        uint64               _offsetBytes{ 0 };
+        uint64               _sizeBytes{ 0 };
+        uint32               _generation{ 0 }; ///< 잡을 때 할당기의 세대(`shutdown` · `initialize` 가 올린다)
+        uint8                _bSolo{ SW_FALSE };
     };
 } // namespace sw
 
@@ -26,7 +60,7 @@ namespace sw
     /** @brief `RHIStagingAllocator::allocate` 의 결과입니다. `RHITransferSerials::classifyStagingAllocation` 한 곳이 `RHISubmitResult` 로 옮깁니다(계약 2, 장치를 잃었으면 모두 `Rejected`). */
     enum class RHIStagingAllocateResult : uint8
     {
-        Allocated, ///< 구간을 잡았다(`RHIStagingSpan::_bSolo` 면 링 밖의 단독 구간)
+        Allocated, ///< 구간을 잡았다(`RHIStagingSpan::isSolo` 면 링 밖의 단독 구간)
         Full,      ///< 지금은 자리가 없지만 앞선 전송이 끝나면 생긴다(단독 구간이 있거나, 단독 요청이 링이 비기를 기다린다) → `Busy`
         TooLarge,  ///< 링 용량과 단독 상한을 모두 넘어 기다려도 못 받는다(또는 0 바이트) → `Rejected`
     };
@@ -77,7 +111,7 @@ namespace sw
          * @brief @p sizeBytes 를 담을 구간을 잡습니다. 먼저 @p completedSerial 이하로 끝난 구간을 모두 돌려받습니다.
          * @param completedSerial 전송 완료 워터마크입니다(`RHITransferSerials::getWatermark`).
          * @return `Allocated` 면 @p outSpan 이 유효합니다(링보다 크면 단독 구간). `Full` 과 `TooLarge` 면 @p outSpan 은 빈 구간입니다.
-         *         단독 구간도 링 구간과 같이 `markSubmitted` 나 `free` 로 한 번 돌려줍니다.
+         *         단독 구간도 링 구간과 같이 `markSubmitted` 나 `free` 로 한 번 돌려줍니다(돌려주지 않으면 구간의 소멸자가 `free` 한다).
          */
         [[nodiscard]] RHIStagingAllocateResult allocate( uint64 sizeBytes, uint64 completedSerial, RHIStagingSpan& outSpan );
 
@@ -85,10 +119,10 @@ namespace sw
          * @brief 구간을 실은 전송의 시리얼을 붙입니다. 워터마크가 이 시리얼을 지나면 구간이 돌아옵니다.
          * @details 되읽기 링은 제출 때 붙이지 않는다(GPU 가 끝나도 CPU 가 아직 읽지 않았다). 결과를 버릴 때(`discardTextureReadback`)만 붙여 GPU 가 그 구간에 다 쓴 뒤 돌려받는다.
          */
-        void markSubmitted( const RHIStagingSpan& span, uint64 serial );
+        void markSubmitted( RHIStagingSpan&& span, uint64 serial );
 
         /** @brief 더 쓰지 않는 구간을 곧바로 돌려받습니다: 제출하지 못한 업로드 구간(컨텍스트를 얻지 못해 `Busy`), CPU 가 다 읽은 되읽기 구간(`takeTextureReadback`). */
-        void free( const RHIStagingSpan& span );
+        void free( RHIStagingSpan&& span );
 
         /** @brief @p completedSerial 이하로 끝난 구간을 모두 돌려받습니다. 기다리지 않습니다. */
         void freeCompleted( uint64 completedSerial );
@@ -109,6 +143,8 @@ namespace sw
         void freeCompletedLocked( uint64 completedSerial ) SW_REQUIRES_LOCK( _mutex );
         /** @brief 단독 구간을 돌려받습니다. `_mutex` 를 쥔 채 부릅니다. */
         void releaseSoloLocked() SW_REQUIRES_LOCK( _mutex );
+        /** @brief @p span 이 이 할당기의 지금 세대 구간인지 봅니다(아니면 돌려줄 곳이 없다). `_mutex` 를 쥔 채 부릅니다. */
+        [[nodiscard]] bool isCurrentLocked( const RHIStagingSpan& span ) const SW_REQUIRES_LOCK( _mutex );
 
     private:
         mutable mutex                        _mutex;
@@ -121,5 +157,6 @@ namespace sw
         int64 _soloReservationMicroseconds   SW_GUARDED_BY( _mutex ); ///< `Full` 을 받은 단독 요청이 링 요청을 막는 시간
         int64 _soloReservedUntilMicroseconds SW_GUARDED_BY( _mutex ); ///< 이 시각(`MonotonicClock`) 전까지 링 요청은 `Full` 이다. 0 이면 예약이 없다
         uint32 _liveCount                    SW_GUARDED_BY( _mutex );
+        uint32 _generation                   SW_GUARDED_BY( _mutex ); ///< `initialize` · `shutdown` 마다 오른다 — 그 앞에 잡은 구간은 돌려받지 않는다
     };
 } // namespace sw

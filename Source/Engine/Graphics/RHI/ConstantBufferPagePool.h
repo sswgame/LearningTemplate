@@ -78,8 +78,11 @@ namespace sw
          * @return 페이지 · 디스크립터를 만들지 못하면 오류를 남기고 false 이며 @p inoutSlice 는 빈다.
          */
         [[nodiscard]] bool fit( IRHIDevice& device, uint32 sizeBytes, ConstantBufferPoolSlice& inoutSlice );
-        /** @brief (렌더 스레드) 구간의 이번 프레임 칸에 @p size 바이트를 씁니다(구간 크기에서 자른다). */
-        static void update( const ConstantBufferPoolSlice& slice, const void* pData, uint32 size );
+        /**
+         * @brief (렌더 스레드) 구간의 이번 프레임 칸에 @p size 바이트를 씁니다.
+         * @return 빈 구간 · 널 데이터 · 구간보다 큰 @p size 는 오류를 남기고 false 이며 쓰지 않습니다(자르지 않는다 — 먼저 `fit`).
+         */
+        [[nodiscard]] static bool update( const ConstantBufferPoolSlice& slice, const void* pData, uint32 size );
         /** @brief (디바이스 종료) 남은 페이지 버퍼를 모두 돌려주고 할당기를 비웁니다. 구간을 든 쪽은 이미 `releaseRHI` 로 놓았다. */
         void releaseAllPages( IRHIDevice& device );
 

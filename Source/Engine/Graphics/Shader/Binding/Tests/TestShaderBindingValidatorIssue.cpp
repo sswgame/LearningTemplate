@@ -19,11 +19,29 @@ namespace
         static constexpr const utf8*        kViolationLogID = "ShaderBindingValidator.ContractViolated";
         static constexpr ShaderTargetFormat kArrFormat[]    = { ShaderTargetFormat::DXBC_D3D11, ShaderTargetFormat::DXIL_D3D12, ShaderTargetFormat::SPIRV_Vulkan, ShaderTargetFormat::SPIRV_OpenGL };
 
+        /** @brief 손으로 적는 리플렉션 라벨을 종류로 바꿉니다(리플렉터가 내던 옛 글자 그대로 — 테스트 표를 읽기 쉽게 둔다). */
+        static ShaderBindingKind toKind( string_view label )
+        {
+            if ( label == "Texture" )
+                return ShaderBindingKind::Texture;
+            if ( label == "Sampler" )
+                return ShaderBindingKind::Sampler;
+            if ( label == "ConstantBuffer" )
+                return ShaderBindingKind::ConstantBuffer;
+            if ( label == "StructuredBuffer" || label == "StorageBuffer" )
+                return ShaderBindingKind::StructuredBuffer;
+            if ( label == "UAV" || label == "RWStructuredBuffer" )
+                return ShaderBindingKind::RwStructuredBuffer;
+            if ( label == "RWTexture" )
+                return ShaderBindingKind::RwTexture;
+            return ShaderBindingKind::Unknown;
+        }
+
         static void addResource( ShaderReflectionData& reflection, const utf8* pName, const utf8* pType, uint32 space, uint32 bindPoint, uint32 bindCount = 0 )
         {
             ShaderReflectedBinding resource{};
             resource._name          = pName;
-            resource._type          = pType;
+            resource._kind          = toKind( pType );
             resource._registerSpace = space;
             resource._bindPoint     = bindPoint;
             resource._bindCount     = bindCount;

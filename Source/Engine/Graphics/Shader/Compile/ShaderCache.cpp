@@ -161,12 +161,14 @@ namespace sw
 
     string ShaderCache::makeCacheKey( const ShaderCompileDesc& desc )
     {
+        // 구분자는 경로 · 식별자 · define 값에 올 수 없는 줄바꿈이다 — `_` 로 이으면 값 `1_B=1` 하나와 define 둘(`A=1`, `B=1`)이 같은 키가 됐다.
+        constexpr utf8                           kSeparator = '\n';
         StringBuilder<constant::buffer::kMax256> sb;
-        sb.append( desc._source.str() ).append( '_' ).append( desc._entryPoint ).append( '_' ).append( static_cast<int32>( desc._stage ) ).append( '_' ).append( static_cast<int32>( desc._targetFormat ) );
-        sb.append( desc._bDebugCodegen != SW_FALSE ? "_dbg" : "_opt" );
+        sb.append( desc._source.str() ).append( kSeparator ).append( desc._entryPoint ).append( kSeparator ).append( static_cast<int32>( desc._stage ) ).append( kSeparator ).append( static_cast<int32>( desc._targetFormat ) );
+        sb.append( kSeparator ).append( desc._bDebugCodegen != SW_FALSE ? "dbg" : "opt" );
         for ( const string& define : ShaderCooker::makeCanonicalDefines( desc._listDefine ) )
         {
-            sb.append( '_' ).append( define );
+            sb.append( kSeparator ).append( define );
         }
         return string( sb.c_str(), sb.size() );
     }

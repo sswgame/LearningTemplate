@@ -26,17 +26,19 @@ namespace sw
     {
     public:
         // ------------------------------------------------------------------------------
-        // 1) 수명: 소멸 시 flushAll
+        // 1) 수명: 소멸 시 abandonAll
         // ------------------------------------------------------------------------------
         RHIReleaseQueue();
-        /** @brief 대기 중인 해제를 모두 실행합니다. */
+        /** @brief 대기 중인 해제를 모두 실행하고 통지는 `Abandoned` 로 보냅니다. */
         ~RHIReleaseQueue();
 
         // ------------------------------------------------------------------------------
         // 2) enqueue, tick, flush
         // ------------------------------------------------------------------------------
-        /** @brief GPU 펜스 값이 완료된 뒤에 해제합니다. */
+        /** @brief GPU 펜스 값이 완료된 뒤에 해제합니다. 해제는 결과를 묻지 않는다 — 기다리지 못한 비우기에서도 놓는다. */
         void enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate, uint64 fenceValue );
+        /** @brief GPU 펜스 값이 완료되면 `Completed`, 그 전에 큐를 버리면 `Abandoned` 로 알립니다. */
+        void enqueueCompletion( const RHIFrameCompletionDelegate& completionDelegate, uint64 fenceValue );
 
         /**
          * @brief 자원을 해제 큐에 쥐여 두었다가 펜스가 지난 뒤 놓고, 그때 추적기에서 줄입니다.
@@ -64,20 +66,31 @@ namespace sw
                                fenceValue );
         }
 
-        /** @brief 완료된 GPU 펜스 이하의 해제 콜백을 실행합니다. */
+        /** @brief 완료된 GPU 펜스 이하의 해제 콜백을 실행하고 통지를 `Completed` 로 보냅니다. */
         void releaseCompleted( uint64 completedFence );
 
-        /** @brief 대기 중인 해제를 모두 즉시 실행합니다. */
-        void flushAll();
+        /** @brief GPU 가 쉬는 것을 확인했을 때(대기 성공) 남은 해제를 모두 실행하고 통지를 `Completed` 로 보냅니다. */
+        void releaseAllCompleted();
+        /**
+         * @brief 끝났는지 모른 채 비울 때(잃은 장치 · 시간 초과 · 종료 · 웹 `waitIdle`) 남은 해제를 모두 실행하고 통지를 `Abandoned` 로 보냅니다.
+         * @details 해제는 놓아도 된다 — 잃은 장치는 GPU 가 더 돌지 않고, WebGPU 는 GPU 가 쓰는 객체를 놓아도 구현이 끝날 때까지 살린다(명세).
+         */
+        void abandonAll();
 
-        /** @brief 아직 실행되지 않은 해제 항목 수를 반환합니다. */
+        /** @brief 아직 실행되지 않은 해제 · 통지 항목 수를 반환합니다. */
         uint32 getPendingReleaseCount() const;
 
     private:
-        RHIRetireList<RHIResourceReleaseDelegate> _listGPUEntry SW_GUARDED_BY( _spinLock ); ///< 키 = 지나야 할 GPU 펜스 값
+        /** @brief 남은 항목을 모두 꺼내 해제를 부르고 통지를 @p result 로 보냅니다. */
+        void flushAll( RHIFrameCompletion result );
+
+    private:
+        RHIRetireList<RHIResourceReleaseDelegate> _listGPUEntry        SW_GUARDED_BY( _spinLock ); ///< 키 = 지나야 할 GPU 펜스 값
+        RHIRetireList<RHIFrameCompletionDelegate> _listCompletionEntry SW_GUARDED_BY( _spinLock ); ///< 키 = 지나야 할 GPU 펜스 값
         /// @brief tick 이 완료된 콜백을 옮겨 담는 임시 버퍼입니다. 잠금 밖에서 부르려고 옮깁니다. 프레임마다 다시 채워 용량이 남습니다.
         ///        `_spinLock` 안에서만 꺼내고 돌려놓습니다. tick 은 여러 스레드에서 올 수 있습니다(DX12 업로드 펜스 대기).
-        vector<RHIResourceReleaseDelegate> _listReadyScratch SW_GUARDED_BY( _spinLock );
-        mutable SpinLock                                     _spinLock;
+        vector<RHIResourceReleaseDelegate> _listReadyScratch      SW_GUARDED_BY( _spinLock );
+        vector<RHIFrameCompletionDelegate> _listCompletionScratch SW_GUARDED_BY( _spinLock ); ///< 통지 쪽 같은 용도의 임시 버퍼
+        mutable SpinLock                                          _spinLock;
     };
 } // namespace sw

@@ -174,10 +174,20 @@ namespace sw
                     const bool      bOutputRead = FileUtil::exists( task._outPath ) && FileUtil::readFile( task._outPath, bytecode ); // 컴파일이 실패하면 출력이 없다 - 아래 분기가 그 오류를 센다
                     if ( bOutputRead && bytecode.empty() == false )
                     {
-                        outResult._reflection = ShaderReflectionData::reflect( bytecode, task._format );
-                        // 쿠킹된 바이너리를 계약과 대조한다. 셰이더 헤더와 백엔드 상수가 한쪽만 바뀌면 여기서 이름과 숫자로 드러난다.
-                        outResult._violationCount = ShaderBindingValidatorIssue::validate( outResult._reflection, task._format, task._outPath );
-                        outResult._bReflected     = true;
+                        expected<ShaderReflectionData> reflected = ShaderReflectionData::reflect( bytecode, task._format );
+                        if ( reflected.has_value() )
+                        {
+                            outResult._reflection = std::move( *reflected );
+                            // 쿠킹된 바이너리를 계약과 대조한다. 셰이더 헤더와 백엔드 상수가 한쪽만 바뀌면 여기서 이름과 숫자로 드러난다.
+                            outResult._violationCount = ShaderBindingValidatorIssue::validate( outResult._reflection, task._format, task._outPath );
+                            outResult._bReflected     = true;
+                        }
+                        else
+                        {
+                            // 리플렉션이 빠진 바이너리는 런타임이 빈 레이아웃으로 읽는다 — 읽지 못한 것으로 세어 쿠킹을 실패시킨다.
+                            SW_LOG_ERROR_ID( "ShaderCooker.ReflectionFailed", "Shader reflection failed for %#: %# (%#)", task._outPath, reflected.error().message(), reflected.error().detail() );
+                            outResult._bUnreadable = true;
+                        }
                     }
                     else if ( outResult._bCompileFailed == false )
                     {
@@ -634,10 +644,20 @@ namespace sw
         }
         state._cookedDir = FileUtil::normalizeSeparators( cookedDir );
 
-        vector<Internal::FormatTask> listTask;
-        for ( const ShaderCookRequest& request : listRequest )
+        // 같은 바이너리 이름에 다른 define 이 오면 한 파일을 두 변형이 덮어 틀린 셰이더가 조용히 실린다 — 쿠킹 실패로 세고 뒤 요청은 굽지 않는다.
+        vector<uint8> listRejected( listRequest.size(), SW_FALSE );
+        for ( const ShaderBinaryNameCollision& collision : ShaderCooker::findBinaryNameCollisions( listRequest ) )
         {
-            Internal::planRequest( request, listTargetFormat, state, listTask );
+            ++state._summary._failedCount;
+            listRejected[collision._secondIndex] = SW_TRUE;
+            SW_LOG_ERROR_ID( "ShaderCooker.BinaryNameCollision", "Shader binary name %# of %# is claimed by two different define sets (request %# and %#) - the permutation hashes collide; rename a define",
+                             collision._fileName, listRequest[collision._secondIndex]._shaderPath, static_cast<uint64>( collision._firstIndex ), static_cast<uint64>( collision._secondIndex ) );
+        }
+        vector<Internal::FormatTask> listTask;
+        for ( size_t index = 0; index < listRequest.size(); ++index )
+        {
+            if ( listRejected[index] == SW_FALSE )
+                Internal::planRequest( listRequest[index], listTargetFormat, state, listTask );
         }
         // 굽기 전에 할 일의 수를 알린다 — 빈 캐시에서는 한 시간 남짓 걸리는데 전체를 모르면 얼마나 남았는지 알 수 없었다(줄마다의 `CookedShader` 와 견준다).
         SW_LOG_INFO_ID( "ShaderCooker.PlannedTasks", "Planned %# shader cook tasks from %# requests across %# format(s)", static_cast<uint32>( listTask.size() ), static_cast<uint32>( listRequest.size() ),

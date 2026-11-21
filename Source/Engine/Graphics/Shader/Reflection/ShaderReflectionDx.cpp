@@ -17,26 +17,26 @@ namespace sw
     {
         struct ShaderReflectionDxInternal
         {
-            static const utf8* resourceTypeName( uint32 sit )
+            static ShaderBindingKind toBindingKind( uint32 sit )
             {
                 switch ( sit )
                 {
                     case static_cast<uint32>( D3D_SIT_TEXTURE ):
-                        return "Texture";
+                        return ShaderBindingKind::Texture;
                     case static_cast<uint32>( D3D_SIT_SAMPLER ):
-                        return "Sampler";
+                        return ShaderBindingKind::Sampler;
                     case static_cast<uint32>( D3D_SIT_CBUFFER ):
-                        return "ConstantBuffer";
+                        return ShaderBindingKind::ConstantBuffer;
                     case static_cast<uint32>( D3D_SIT_STRUCTURED ):
                     case static_cast<uint32>( D3D_SIT_BYTEADDRESS ):
-                        return "StructuredBuffer";
+                        return ShaderBindingKind::StructuredBuffer;
                     case static_cast<uint32>( D3D_SIT_UAV_RWTYPED ):
-                        return "RWTexture"; // RWTexture2D 등. 계약이 버퍼 UAV 와 구분한다(RWBuffer<T> 는 쓰지 않는다)
+                        return ShaderBindingKind::RwTexture; // RWTexture2D 등. 계약이 버퍼 UAV 와 구분한다(RWBuffer<T> 는 쓰지 않는다)
                     case static_cast<uint32>( D3D_SIT_UAV_RWSTRUCTURED ):
                     case static_cast<uint32>( D3D_SIT_UAV_RWBYTEADDRESS ):
-                        return "UAV";
+                        return ShaderBindingKind::RwStructuredBuffer;
                     default:
-                        return "OtherResource";
+                        return ShaderBindingKind::Unknown;
                 }
             }
 
@@ -334,22 +334,27 @@ namespace sw
                     resourceBinding._registerSpace = TAPI::getRegisterSpace( bindDesc );
                     resourceBinding._bindPoint     = bindDesc.BindPoint;
                     resourceBinding._bindCount     = bindDesc.BindCount; ///< 무제한 배열([])은 0
-                    resourceBinding._type          = resourceTypeName( static_cast<uint32>( bindDesc.Type ) );
+                    resourceBinding._kind          = toBindingKind( static_cast<uint32>( bindDesc.Type ) );
                     data._listResource.push_back( std::move( resourceBinding ) );
                 }
 
                 return data;
             }
 
-            static ShaderReflectionData reflectDxbc( const vector<uint8>& bytecode )
+            /** @brief 실패한 HRESULT 를 오류 대상(16 진수)으로 적습니다. */
+            static Error makeHrError( const utf8* pMessage, HRESULT hr )
+            {
+                StringBuilder<constant::buffer::kMax32> detail;
+                detail.appendFormat( "hr=0x%#", Fmt( static_cast<uint32>( hr ), Format( 8, Format::Padding::Zero ).hex() ) );
+                return Error{ ErrorKind::ExternalFailure, pMessage, detail.view() };
+            }
+
+            static expected<ShaderReflectionData> reflectDxbc( const vector<uint8>& bytecode )
             {
                 Microsoft::WRL::ComPtr<ID3D11ShaderReflection> reflection;
                 const HRESULT                                  hr = D3DReflect( bytecode.data(), bytecode.size(), IID_PPV_ARGS( reflection.GetAddressOf() ) );
                 if ( FAILED( hr ) || reflection == nullptr )
-                {
-                    SW_LOG_ERROR_ID( "ShaderReflection.D3DReflectFailedDXBCHr", "D3DReflect failed for DXBC (hr=0x%#).", Fmt( static_cast<uint32>( hr ), Format( 8, Format::Padding::Zero ).hex() ) );
-                    return ShaderReflectionData{};
-                }
+                    return unexpected( makeHrError( "D3DReflect failed for DXBC", hr ) );
 
                 ShaderReflectionData data = fillFromReflection<D3D11ReflectionAPI>( reflection.Get() );
                 SW_LOG_TRACE_ID( "ShaderReflection.ConstantBuffersBoundResources", "ConstantBuffers: %# BoundResources: %#",
@@ -358,22 +363,16 @@ namespace sw
             }
 
     #if defined( SW_HAS_DXC_API )
-            static ShaderReflectionData reflectDXIL( const vector<uint8>& bytecode )
+            static expected<ShaderReflectionData> reflectDXIL( const vector<uint8>& bytecode )
             {
                 // 컴파일과 같은 한 입구다(한 번만 로드 - 함수 정적이라 병렬 쿠킹의 첫 리플렉션들이 동시에 불러도 안전하다).
                 DxcCreateInstanceProc createInstance = reinterpret_cast<DxcCreateInstanceProc>( ShaderCompiler::findDXCCreateInstance() );
                 if ( createInstance == nullptr )
-                {
-                    SW_LOG_WARNING_ID( "ShaderReflection.DXILReflectionUnavailableDxcompiler", "DXIL reflection unavailable: dxcompiler.dll not found or DxcCreateInstance failed." );
-                    return ShaderReflectionData{};
-                }
+                    return unexpected( Error{ ErrorKind::ExternalFailure, "DXIL reflection unavailable: dxcompiler.dll not found or DxcCreateInstance failed" } );
 
                 Microsoft::WRL::ComPtr<IDxcUtils> utils;
                 if ( FAILED( createInstance( CLSID_DxcUtils, IID_PPV_ARGS( utils.GetAddressOf() ) ) ) || utils == nullptr )
-                {
-                    SW_LOG_ERROR_ID( "ShaderReflection.FailedCreateIDxcUtilsReflection", "Failed to create IDxcUtils for reflection." );
-                    return ShaderReflectionData{};
-                }
+                    return unexpected( Error{ ErrorKind::ExternalFailure, "failed to create IDxcUtils for reflection" } );
 
                 DxcBuffer buffer{};
                 buffer.Ptr      = bytecode.data();
@@ -402,7 +401,7 @@ namespace sw
                                          data._listConstantBuffer.size(), data._listResource.size() );
                     }
                     else
-                        SW_LOG_ERROR_ID( "ShaderReflection.IDxcUtilsCreateReflectionFailedDXIL", "IDxcUtils::CreateReflection failed for DXIL (hr=0x%#).", Fmt( static_cast<uint32>( hr ), Format( 8, Format::Padding::Zero ).hex() ) );
+                        return unexpected( makeHrError( "IDxcUtils::CreateReflection failed for DXIL", hr ) );
                 }
 
                 return data;
@@ -414,7 +413,7 @@ namespace sw
 
 namespace sw
 {
-    ShaderReflectionData ShaderReflectionUtil::reflectDx( const vector<uint8>& bytecode, ShaderTargetFormat targetFormat )
+    expected<ShaderReflectionData> ShaderReflectionUtil::reflectDx( const vector<uint8>& bytecode, ShaderTargetFormat targetFormat )
     {
         if ( targetFormat == ShaderTargetFormat::DXBC_D3D11 )
             return ShaderReflectionDxInternal::reflectDxbc( bytecode );
@@ -424,8 +423,7 @@ namespace sw
             return ShaderReflectionDxInternal::reflectDXIL( bytecode );
     #endif
 
-        SW_LOG_ERROR_ID( "ShaderReflection.UnsupportedDXTargetFormat", "Unsupported DX target format %#.", static_cast<uint32>( targetFormat ) );
-        return {};
+        return unexpected( Error{ ErrorKind::Unsupported, "unsupported DX target format for reflection" } );
     }
 } // namespace sw
 #endif
