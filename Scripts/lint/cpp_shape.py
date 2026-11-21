@@ -42,6 +42,8 @@ C++ 모양 규칙 중 컴파일러가 보지 않는 열을 본다. 규칙 문서
 14. `FileUtil` 디스크 I/O(`exists` · `readTextFile` · `writeFile` …)는 `AbsolutePath` 만 받는다 — 문자열은 `FileUtil::toDiskPath( … )` 로 올린다(R2, 2026-11-21 형식 이전).
    리소스 id · `DataPath` · `PathKey` 에서 꺼낸 논리 경로 글이 I/O 로 새던 길이다. 문자열 판은 private 이라 컴파일 오류지만, 병합으로 들어온 옛 자리를
    빌드 전에 잡는다 — 문자열이 틀림없는 인자(글 상수 · `.str()` · `joinPath(` …)만 센다. 판정 · 바꾸기는 `dev/disk_path_args.py`(`py -3 -m Scripts disk-path-args`)와 같다.
+   형식(`AbsolutePath` 지역 · 만드는 쪽 `DerivedDataCache::makePath` · `EditorPaths::resolveEditorStateFile` …)을 `.str()` · `joinPath` 로 글로 꺼내 `toDiskPath` 로 다시 올리는
+   왕복도 같은 규칙이다(복사 · 검사가 두 번이고 `..` 탈출 검사를 건너뛴다). 판정 · 바꾸기는 `dev/disk_path_join.py`(`py -3 -m Scripts disk-path-join`)와 같다.
 
 `py -3 -m Scripts lint cpp-shape [--files …|--all]` 로 돌리고, 커밋 훅(`rules.py` 표)이 staged 파일에 돌린다.
 """
@@ -650,11 +652,15 @@ def check_byte_reader_out_params(raw: str, code: str, relative: str) -> list[tup
 
 
 def check_disk_path_strings(raw: str, code: str, relative: str) -> list[tuple[int, str]]:
-    """규칙 14 — FileUtil 디스크 I/O 에 문자열이 틀림없는 경로 인자(글 상수 · `.str()` · `joinPath(` …)."""
-    from dev import disk_path_args   # 그쪽이 이 모듈의 strip_code 를 가져온다 — 순환 import 를 피해 여기서 연다
+    """규칙 14 — FileUtil 디스크 I/O 에 문자열이 틀림없는 경로 인자(글 상수 · `.str()` · `joinPath(` …)와, 형식을 글로 꺼내 다시 올리는 왕복 감싸기."""
+    from dev import disk_path_args, disk_path_join   # 그쪽이 이 모듈의 strip_code 를 가져온다 — 순환 import 를 피해 여기서 연다
+    list_problem: list[tuple[int, str]] = []
+    if disk_path_join.is_target(relative) and disk_path_join.WRAP_CALL.search(code) is not None:
+        list_problem += [(line, f"형식을 글로 꺼내 toDiskPath 로 다시 올린다 — 형식 조립(`join` · `getParent` · 만드는 쪽 그대로)으로: `py -3 -m Scripts disk-path-join {relative}`")
+                         for line in disk_path_join.find_left(raw)]
     if disk_path_args.is_target(relative) is False or disk_path_args.CALL_PATTERN.search(code) is None:
-        return []
-    return [(site.line, disk_path_args.describe_site(site, relative)) for site in disk_path_args.find_sites(raw, code) if site.known_string]
+        return list_problem
+    return list_problem + [(site.line, disk_path_args.describe_site(site, relative)) for site in disk_path_args.find_sites(raw, code) if site.known_string]
 
 
 @functools.lru_cache(maxsize=1)
@@ -860,6 +866,11 @@ def run_self_check() -> int:
     expect(len(check_disk_path_strings(raw_path, strip_code(raw_path), "Source/Engine/Foo.cpp")) == 1, "a string path into FileUtil disk I/O is flagged")
     typed_path = 'void f( const AbsolutePath& folder, const string& text )\n{\n    (void)FileUtil::exists( folder );\n    (void)FileUtil::exists( FileUtil::toDiskPath( text ) );\n}\n'
     expect(check_disk_path_strings(typed_path, strip_code(typed_path), "Source/Engine/Foo.cpp") == [], "an AbsolutePath and a toDiskPath argument pass")
+    round_trip = ('void f( const DerivedDataCache& cache, const AbsolutePath& root )\n{\n    (void)FileUtil::exists( FileUtil::toDiskPath( cache.makePath( 0, 1 ).str() ) );\n'
+                  '    (void)FileUtil::exists( FileUtil::toDiskPath( FileUtil::joinPath( root.str(), "a" ) ) );\n}\n')
+    expect(len(check_disk_path_strings(round_trip, strip_code(round_trip), "Source/Engine/Foo.cpp")) == 2, "a typed path taken out as text and wrapped again is flagged")
+    string_entry = 'void f( const string& configured )\n{\n    (void)FileUtil::exists( FileUtil::toDiskPath( configured ) );\n}\n'
+    expect(check_disk_path_strings(string_entry, strip_code(string_entry), "Source/Engine/Foo.cpp") == [], "a real string entry (setting · parameter text) wrapped once passes")
     from dev import disk_path_args
     expect(disk_path_args.run_self_check() == 0, "disk-path-args rewrite cases")
     from dev import disk_path_join
