@@ -260,8 +260,8 @@ SW_TEST_CASE( CommandLineTest, ComplexPrefixAndCustomArguments )
     cmdManager.initialize();
 
     // 커스텀 인자 등록
-    cmdManager.addArgument<sw::string>( { "custom_level", "CL" }, sw::string( "DefaultLevel" ), false );
-    cmdManager.addArgument<bool>( { "enable_profiler" }, false, false );
+    cmdManager.addArgument<sw::string>( { "custom_level", "CL" }, sw::string( "DefaultLevel" ) );
+    cmdManager.addArgument<bool>( { "enable_profiler" }, false );
 
     utf8* argv[] = {
         const_cast<utf8*>( "App.exe" ),
@@ -326,8 +326,8 @@ SW_TEST_CASE( CommandLineTest, ProvidedIsNotTheSameAsReadable )
 {
     sw::CommandLineManager cmdManager;
     cmdManager.initialize();
-    cmdManager.addArgument<int32>( { "given_value" }, 7, true );
-    cmdManager.addArgument<int32>( { "omitted_value" }, 7, true );
+    cmdManager.addArgument<int32>( { "given_value" }, 7 );
+    cmdManager.addArgument<int32>( { "omitted_value" }, 7 );
 
     utf8* argv[] = {
         const_cast<utf8*>( "App.exe" ),
@@ -401,9 +401,9 @@ SW_TEST_CASE( CommandLineTest, ValuelessNonBooleanArgumentKeepsItsType )
 {
     sw::CommandLineManager cmdManager;
     cmdManager.initialize();
-    cmdManager.addArgument<int32>( { "gv_benchMeshes" }, 200, true );
-    cmdManager.addArgument<sw::string>( { "gv_startupScene" }, sw::string( "default" ), true );
-    cmdManager.addArgument<float32>( { "gv_lightRadius" }, 4.5f, true );
+    cmdManager.addArgument<int32>( { "gv_benchMeshes" }, 200 );
+    cmdManager.addArgument<sw::string>( { "gv_startupScene" }, sw::string( "default" ) );
+    cmdManager.addArgument<float32>( { "gv_lightRadius" }, 4.5f );
 
     utf8* argv[] = {
         const_cast<utf8*>( "App.exe" ),
@@ -434,7 +434,7 @@ SW_TEST_CASE( CommandLineTest, ValuelessNonBooleanArgumentKeepsItsType )
     // 값을 제대로 준 같은 인자는 당연히 읽힌다 — 위가 "그냥 다 무시" 가 아님을 못박는다.
     sw::CommandLineManager withValue;
     withValue.initialize();
-    withValue.addArgument<int32>( { "gv_benchMeshes" }, 200, true );
+    withValue.addArgument<int32>( { "gv_benchMeshes" }, 200 );
     utf8* argvWithValue[] = {
         const_cast<utf8*>( "App.exe" ),
         const_cast<utf8*>( "-gv_benchMeshes=512" ),
@@ -487,7 +487,7 @@ SW_TEST_CASE( CommandLineTest, BooleanArgumentAcceptsBothForms )
 SW_TEST_CASE( CommandLineTest, InitializeIsNotShiftedByEarlierArguments )
 {
     sw::CommandLineManager cmdManager;
-    cmdManager.addArgument<int32>( { "early_custom" }, 99, true );
+    cmdManager.addArgument<int32>( { "early_custom" }, 99 );
     cmdManager.initialize();
 
     // 비우지 않았다면 0 번 자리가 early_custom 이고 표 전체가 한 칸씩 밀려, 열거값 인덱싱이 다른 인자를 읽는다.

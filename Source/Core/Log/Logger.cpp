@@ -142,28 +142,19 @@ namespace sw
             utf8 arrLine[constant::buffer::kMax8192];
 #if defined( SW_DO_CHECKS )
             formatstring( arrLine, constant::buffer::kMax8192,
-                          "ASSERT failed
-                          "
-                          "Expression : %#
-                          "
-                          "Message    : %#
-                          "
-                          "FileName   : %#
-                          "
-                          "Function   : %#
-                          "
+                          "ASSERT failed\n"
+                          "Expression : %#\n"
+                          "Message    : %#\n"
+                          "FileName   : %#\n"
+                          "Function   : %#\n"
                           "Line       : %#",
                           pExpression, pMessage, pFile, pFunction != nullptr ? pFunction : "", line );
 #else
             formatstring( arrLine, constant::buffer::kMax8192,
-                          "ASSERT failed
-                          "
-                          "Expression : %#
-                          "
-                          "Message    : %#
-                          "
-                          "FileName   : %#
-                          "
+                          "ASSERT failed\n"
+                          "Expression : %#\n"
+                          "Message    : %#\n"
+                          "FileName   : %#\n"
                           "Line       : %#",
                           pExpression, pMessage, pFile, line );
 #endif

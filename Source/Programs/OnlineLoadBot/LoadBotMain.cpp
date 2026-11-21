@@ -77,17 +77,17 @@ namespace sw
                 if ( baseDirectory.has_value() == false )
                     return unexpected( string( "cannot read the startup directory - path arguments cannot be resolved" ) );
                 CommandLineManager commandLine;
-                commandLine.addArgument( { "scenario" }, CommandLineDiskPath{}, false );
-                commandLine.addArgument( { "load" }, CommandLineDiskPath{}, false );
-                commandLine.addArgument( { "online-config" }, CommandLineDiskPath{}, false );
-                commandLine.addArgument( { "store-config" }, CommandLineDiskPath{}, false );
-                commandLine.addArgument( { "report" }, CommandLineDiskPath{}, false );
-                commandLine.addArgument( { "tls" }, CommandLineDiskPath{}, false );
-                commandLine.addArgument( { "server" }, string{}, false );
-                commandLine.addArgument( { "game" }, string{}, false );
-                commandLine.addArgument( { "local-server" }, int32{ 0 }, false );
-                commandLine.addArgument( { "max-error-percent" }, int32{ 1 }, true );
-                commandLine.addArgument( { "light-hash" }, false, true );
+                commandLine.addArgument( { "scenario" }, CommandLineDiskPath{} );
+                commandLine.addArgument( { "load" }, CommandLineDiskPath{} );
+                commandLine.addArgument( { "online-config" }, CommandLineDiskPath{} );
+                commandLine.addArgument( { "store-config" }, CommandLineDiskPath{} );
+                commandLine.addArgument( { "report" }, CommandLineDiskPath{} );
+                commandLine.addArgument( { "tls" }, CommandLineDiskPath{} );
+                commandLine.addArgument( { "server" }, string{} );
+                commandLine.addArgument( { "game" }, string{} );
+                commandLine.addArgument( { "local-server" }, int32{ 0 } );
+                commandLine.addArgument( { "max-error-percent" }, int32{ 1 } );
+                commandLine.addArgument( { "light-hash" }, false );
                 commandLine.parse( argc, argv, *baseDirectory );
                 if ( commandLine.getParseErrors().empty() == false )
                 {
