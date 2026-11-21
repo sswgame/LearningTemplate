@@ -12,6 +12,7 @@
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Object/GameObject/Tick/TickContext.h"
 
+#include "GameFramework/Runtime/Character/Combat/Health/IHealthSource.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/Combat/GimmickDamageUtil.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/GimmickUtil.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/Trigger/GimmickSensorComponent.h"
@@ -90,7 +91,7 @@ namespace sw
     {
         const float3& center = _blastCenter;
         // 반경 안의 것에 거리 감쇠 피해를 준다. 다른 드럼통은 자기 스텝에 터지며 연쇄가 이어진다. 파괴 오브젝트는 경계가 반경에 닿으면 위치 기반 폭발로 깬다.
-        // 피해를 받는 쪽은 센서(`GimmickSensorComponent` — 피해를 쌓는다)와 파괴 컴포넌트뿐이라 그 둘의 등록 목록(`ComponentRegistry`)만 본다 — 씬 전체를 돌지 않는다
+        // 피해를 받는 쪽은 센서(`GimmickSensorComponent` — 피해를 쌓는다) · 체력 원천(`IHealthSource` — 맞음 길로 깎인다) · 파괴 컴포넌트뿐이라 그 등록 목록(`ComponentRegistry`)만 본다 — 씬 전체를 돌지 않는다
         // (2D · 3D 몸 없는 센서도 든다). 조각 깨기는 새 컴포넌트를 등록하므로 고르기를 먼저 끝내고 쓰기(조각 깨기 · 피해 이벤트)는 그 뒤에 한다.
         struct BlastTarget
         {
@@ -123,6 +124,12 @@ namespace sw
         for ( GimmickSensorComponent* pSensor : registry.getAll<GimmickSensorComponent>() )
         {
             GameObject* const pObject = pSensor->getOwner();
+            consider( pObject, pObject != nullptr ? pObject->getComponent<FractureBaseComponent>() : nullptr );
+        }
+        const ComponentRegistry::InterfaceView<IHealthSource> healthView = registry.getAllInterfaces<IHealthSource>();
+        for ( size_t index = 0; index < healthView.size(); ++index )
+        {
+            GameObject* const pObject = healthView.getComponent( index )->getOwner();
             consider( pObject, pObject != nullptr ? pObject->getComponent<FractureBaseComponent>() : nullptr );
         }
         for ( const BlastTarget& target : listTarget )

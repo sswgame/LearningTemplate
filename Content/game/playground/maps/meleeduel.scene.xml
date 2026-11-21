@@ -46,5 +46,22 @@
 				</_listComponent>
 			</GameObject>
 		</entity>
+		<!-- 기믹 피해도 같은 맞음 길로 체력을 깎는다: FuseBarrel 이 0.5 초 뒤 저절로 터져(반경 4, 중심 80) 거리 2 의 BlastDummy 를 40 깎는다(HP 100 → 60). Fighter · Dummy 는 반경 밖이다. -->
+		<entity id="4" name="FuseBarrel">
+			<GameObject _schemaVersion="0" _name="FuseBarrel" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _localPosition="10,0,0" _localRotation="0,0,0" _localScale="0.8,1.2,0.8" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/defaultmaterial.material" _boundsRadius="0.866" />
+					<ExplosiveBarrelComponent _localID="2817874053379422564" _health="30" _radius="4" _damage="80" _fuseTime="0.5" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="5" name="BlastDummy">
+			<GameObject _schemaVersion="0" _name="BlastDummy" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _localPosition="12,0,0" _localRotation="0,0,0" _localScale="0.5,1,0.5" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="game/playground/materials/renderstate/plain_red.material" _boundsRadius="1" />
+					<UnitStatsComponent _localID="12219589951101575178" _hp="100" _maxHP="100" _attack="0" _defense="0" _moveSpeed="0" _maxInvincibilityTime="0" _bIsDead="false" _bShowDamageNumbers="false" _damageNumberOffset="0,0.6,0" />
+				</_listComponent>
+			</GameObject>
+		</entity>
 	</entities>
 </Scene>
