@@ -32,7 +32,7 @@ namespace sw
      * @enum PackFlag
      * @brief 팩 플래그 비트마스크입니다.
      */
-    ENUM( BitFlag )
+    ENUM( Flags )
     enum class PackFlag : uint16
     {
         None          = 0,

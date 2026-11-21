@@ -94,23 +94,23 @@ namespace sw
             }
 
             // 주소는 값 자체다(프로퍼티 오프셋을 더한 뒤). 객체 주소는 `writeProperty` 가 받는다.
-            static void writeJSONValue( JSONValue dst, const ValueAddress value, const hashed_string& typeName, const SerializeContext& context )
+            static void writeJSONValue( JSONValue dst, const ValueAddress value, const hashed_string& typeName, const ReflectValueBinding* pBinding, const SerializeContext& context )
             {
                 if ( dst.isValid() == false )
                     return;
 
-                const hashed_string resolved  = SerializerUtil::resolveHandlerTypeName( typeName, context );
-                const bool          bIsString = ( resolved.isPredefinedType( PredefinedNameType::NameType_string ) ||
-                                         resolved.isPredefinedType( PredefinedNameType::NameType_hashed_string ) ||
+                // 묶음(`pBinding`)이 있으면 처리기 · 열거형 · 구조체를 이름 조회 없이 고른다 — 바이너리와 같은 길(`SerializerUtil::findValueCodecs`).
+                const SerializerUtil::ValueCodecs codecs    = SerializerUtil::findValueCodecs( typeName, pBinding, context );
+                const hashed_string&              resolved  = codecs.getHandlerName();
+                const bool                        bIsString = ( resolved.isPredefinedType( PredefinedNameType::NameType_string ) || resolved.isPredefinedType( PredefinedNameType::NameType_hashed_string ) ||
                                          resolved.isPredefinedType( PredefinedNameType::NameType_TagID ) );
-                const bool          bIsBool   = ( resolved.isPredefinedType( PredefinedNameType::NameType_bool ) ||
-                                       resolved.isPredefinedType( PredefinedNameType::NameType_atomic_bool ) );
-                const bool          bIsEnum   = ( engine::getSubsystem<TypeRegistry>().findEnum( typeName ) != nullptr );
+                const bool                        bIsBool   = ( resolved.isPredefinedType( PredefinedNameType::NameType_bool ) || resolved.isPredefinedType( PredefinedNameType::NameType_atomic_bool ) );
+                const bool                        bIsEnum   = codecs.findEnum( context ) != nullptr;
 
                 if ( bIsString || bIsEnum )
                 {
                     StringBuilder<constant::buffer::kMax8192> text;
-                    SerializerUtil::valueToText( text, value, typeName, context );
+                    SerializerUtil::valueToText( text, value, typeName, pBinding, context );
                     dst.setString( text.view() );
                     return;
                 }
@@ -118,7 +118,7 @@ namespace sw
                 if ( bIsBool )
                 {
                     StringBuilder<constant::buffer::kMax8192> text;
-                    SerializerUtil::valueToText( text, value, typeName, context );
+                    SerializerUtil::valueToText( text, value, typeName, pBinding, context );
                     bool bValue{ false };
                     if ( StringUtil::tryParseBool( text.view(), bValue ) )
                         dst.setBool( bValue );
@@ -127,10 +127,10 @@ namespace sw
                     return;
                 }
 
-                if ( context.findTextWriter( resolved ) != nullptr )
+                if ( codecs.findTextWriter( context ) != nullptr )
                 {
                     StringBuilder<constant::buffer::kMax8192> text;
-                    SerializerUtil::valueToText( text, value, typeName, context );
+                    SerializerUtil::valueToText( text, value, typeName, pBinding, context );
                     JSONDocument parsed;
                     const bool   bParsedScalar = parsed.tryParse( text.view() ) && parsed.getRoot().isObject() == false && parsed.getRoot().isArray() == false;
                     if ( bParsedScalar )
@@ -142,18 +142,14 @@ namespace sw
                     return;
                 }
 
-                const TypeInfo* pStructInfo = engine::getSubsystem<TypeRegistry>().findType( typeName );
-                if ( pStructInfo != nullptr )
+                if ( const TypeInfo* pStructInfo = codecs.findStructType( context ) )
                 {
-                    if ( pStructInfo->isPrimitive() == false )
-                    {
-                        JSONSerializer::writeObject( dst, value.get(), *pStructInfo, context );
-                        return;
-                    }
+                    JSONSerializer::writeObject( dst, value.get(), *pStructInfo, context );
+                    return;
                 }
 
                 StringBuilder<constant::buffer::kMax8192> text;
-                SerializerUtil::valueToText( text, value, typeName, context );
+                SerializerUtil::valueToText( text, value, typeName, pBinding, context );
                 dst.setString( text.view() );
             }
 
@@ -161,9 +157,10 @@ namespace sw
             class ContainerWriter final : public IContainerWriter
             {
             public:
-                ContainerWriter( const JSONValue& root, const SerializeContext& context )
+                ContainerWriter( const JSONValue& root, const SerializeContext& context, const NestedContainerInfo& shape )
                     : _listSlot{}
                     , _context{ context }
+                    , _shape{ shape }
                 {
                     _listSlot.push_back( root );
                 }
@@ -177,7 +174,7 @@ namespace sw
                 void beginMapEntry( const ValueAddress key, const hashed_string& keyTypeName ) override
                 {
                     StringBuilder<constant::buffer::kMax8192> keyText;
-                    SerializerUtil::valueToText( keyText, key, keyTypeName, _context );
+                    SerializerUtil::valueToText( keyText, key, keyTypeName, _shape.findBinding( keyTypeName ), _context );
                     const JSONValue entry = _listSlot.back().set( keyText.view() );
                     _listSlot.push_back( entry );
                 }
@@ -233,7 +230,7 @@ namespace sw
 
                 void writeScalar( const ValueAddress value, const hashed_string& typeName, const ContainerSlot slot ) override
                 {
-                    writeJSONValue( openElementSlot( slot ), value, typeName, _context );
+                    writeJSONValue( openElementSlot( slot ), value, typeName, _shape.findBinding( typeName ), _context );
                 }
 
             private:
@@ -248,6 +245,7 @@ namespace sw
             private:
                 vector<JSONValue, InlineAllocator<JSONValue, 4>> _listSlot;
                 const SerializeContext&                          _context;
+                NestedContainerInfo                              _shape; ///< 맨 바깥 단계의 원소 · 키 묶음(`findBinding`)
             };
 
             /** @brief 컨테이너를 자연스러운 JSON 에서 읽습니다. 모양이 다른 값(배열 자리에 글)은 그 칸만 실패입니다 — 다음 자리는 압니다. */
@@ -261,6 +259,7 @@ namespace sw
                     , _context{ context }
                     , _pOutListOrphan{ pOutListOrphan }
                     , _propForOrphan{ propForOrphan }
+                    , _shape{ propForOrphan.getContainerShape() }
                 {
                     _listCursor.push_back( root );
                 }
@@ -309,7 +308,7 @@ namespace sw
                 // 키는 멤버 이름(글)이다 — XML 의 `key` 속성과 같은 길로 읽는다.
                 ContainerReadResult readMapKey( const MutableValueAddress key, const hashed_string& keyTypeName ) override
                 {
-                    const bool bRead = _pCurrentKey != nullptr && parseTextValueCoerced( key, keyTypeName, *_pCurrentKey, _context );
+                    const bool bRead = _pCurrentKey != nullptr && parseTextValueCoerced( key, keyTypeName, _shape.findBinding( keyTypeName ), *_pCurrentKey, _context );
                     return bRead ? ContainerReadResult::Read : ContainerReadResult::FieldFailed;
                 }
 
@@ -354,7 +353,7 @@ namespace sw
 
                 ContainerReadResult readScalar( const MutableValueAddress value, const hashed_string& typeName, ContainerSlot ) override
                 {
-                    return ContainerVisitor::toElementResult( readJSONValue( value, typeName, _listCursor.back(), _context ) );
+                    return ContainerVisitor::toElementResult( readJSONValue( value, typeName, _shape.findBinding( typeName ), _listCursor.back(), _context ) );
                 }
 
                 ContainerReadResult skipElement( size_t ) override { return ContainerReadResult::FieldFailed; }
@@ -384,6 +383,7 @@ namespace sw
                 const SerializeContext&                          _context;
                 vector<SchemaOrphanValue>*                       _pOutListOrphan;
                 const PropertyInfo&                              _propForOrphan;
+                NestedContainerInfo                              _shape; ///< 맨 바깥 단계의 원소 · 키 묶음(`findBinding`)
             };
 
             /** @brief 값 하나를 읽었는지(`bool`)를 필드 결과로 바꿉니다. 값 하나의 실패는 그 필드의 실패입니다 — 객체째 실패는 구조체 읽기만 압니다. */
@@ -393,14 +393,15 @@ namespace sw
             }
 
             /** @brief @p src 를 @p typeName 값 하나로 읽습니다. 구조체이면 그 객체의 결과(금지된 필드면 ObjectRejected)를 그대로 돌려줍니다. */
-            [[nodiscard]] static FieldReadResult readJSONValue( const MutableValueAddress value, const hashed_string& typeName, const JSONValue& src, const SerializeContext& context )
+            [[nodiscard]] static FieldReadResult readJSONValue( const MutableValueAddress value, const hashed_string& typeName, const ReflectValueBinding* pBinding, const JSONValue& src,
+                                                                const SerializeContext& context )
             {
                 void* const pValPtr = value.get();
                 if ( pValPtr == nullptr || src.isValid() == false )
                     return FieldReadResult::FieldFailed;
 
-                const hashed_string                 resolved    = SerializerUtil::resolveHandlerTypeName( typeName, context );
-                const SerializeContext::TextReadFn* pTextReader = context.findTextReader( resolved );
+                const SerializerUtil::ValueCodecs   codecs      = SerializerUtil::findValueCodecs( typeName, pBinding, context );
+                const SerializeContext::TextReadFn* pTextReader = codecs.findTextReader( context );
                 if ( pTextReader != nullptr )
                 {
                     if ( src.isString() )
@@ -409,7 +410,7 @@ namespace sw
                     return makeFieldResult( text.has_value() && ( *pTextReader )( pValPtr, *text ) );
                 }
 
-                const EnumInfo* pEnumInfo = engine::getSubsystem<TypeRegistry>().findEnum( typeName );
+                const EnumInfo* pEnumInfo = codecs.findEnum( context );
                 if ( pEnumInfo != nullptr )
                 {
                     // 모르는 이름 · 값이면 쓰지 않고 실패한다(XML 과 같다 — `EnumInfo::tryParseText`).
@@ -427,22 +428,18 @@ namespace sw
                     return FieldReadResult::FieldFailed;
                 }
 
-                const TypeInfo* pStructInfo = engine::getSubsystem<TypeRegistry>().findType( typeName );
-                if ( pStructInfo != nullptr )
+                if ( const TypeInfo* pStructInfo = codecs.findStructType( context ) )
                 {
-                    if ( pStructInfo->isPrimitive() == false )
-                    {
-                        if ( src.isObject() )
-                            return JSONSerializer::readObject( src, pValPtr, *pStructInfo, nullptr, nullptr, context );
-                        const expected<string> text = src.dump();
-                        return makeFieldResult( text.has_value() && JSONSerializer::deserialize( pValPtr, *pStructInfo, *text, context ) );
-                    }
+                    if ( src.isObject() )
+                        return JSONSerializer::readObject( src, pValPtr, *pStructInfo, nullptr, nullptr, context );
+                    const expected<string> text = src.dump();
+                    return makeFieldResult( text.has_value() && JSONSerializer::deserialize( pValPtr, *pStructInfo, *text, context ) );
                 }
 
                 if ( src.isString() )
-                    return makeFieldResult( parseTextValueCoerced( value, typeName, src.asString(), context ) );
+                    return makeFieldResult( parseTextValueCoerced( value, typeName, pBinding, src.asString(), context ) );
                 const expected<string> text = src.dump();
-                return makeFieldResult( text.has_value() && parseTextValueCoerced( value, typeName, *text, context ) );
+                return makeFieldResult( text.has_value() && parseTextValueCoerced( value, typeName, pBinding, *text, context ) );
             }
             /** @brief 이 목적이 쓰는 칸을 모두 @p dst(객체)에 씁니다. 차례(기반부터)는 걷기 한 곳(`ReflectPropertyVisitor`)이 정한다 — XML · 바이너리 쓰기와 같은 차례다. */
             static void writeProperties( JSONValue dst, const void* pInstance, const TypeInfo& typeInfo, const SerializeContext& context )
@@ -468,11 +465,12 @@ namespace sw
                 if ( prop._bIsContainer && prop.hasContainerWrapper() )
                 {
                     // 프로퍼티 이름 아래에 바로 배열/오브젝트로 쓴다.
-                    ContainerWriter writer( parent.set( prop._name.c_str() ), context );
-                    ContainerVisitor::write( propValue, prop.getContainerShape(), writer, context );
+                    const NestedContainerInfo shape = prop.getContainerShape();
+                    ContainerWriter           writer( parent.set( prop._name.c_str() ), context, shape );
+                    ContainerVisitor::write( propValue, shape, writer, context );
                     return;
                 }
-                writeJSONValue( parent.set( prop._name.c_str() ), propValue, prop._typeName, context );
+                writeJSONValue( parent.set( prop._name.c_str() ), propValue, prop._typeName, prop.findValueBinding(), context );
             }
 
             [[nodiscard]] static FieldReadResult readProperty( const JSONValue& field, const PropertyInfo& prop, const MutableObjectAddress instance, const SerializeContext& context,
@@ -501,7 +499,7 @@ namespace sw
                     ContainerReader reader( field, context, pOutListOrphan, prop );
                     return ContainerVisitor::toFieldResult( ContainerVisitor::read( propValue, prop.getContainerShape(), reader, context ) );
                 }
-                return readJSONValue( propValue, prop._typeName, field, context );
+                return readJSONValue( propValue, prop._typeName, prop.findValueBinding(), field, context );
             }
         };
     } // namespace

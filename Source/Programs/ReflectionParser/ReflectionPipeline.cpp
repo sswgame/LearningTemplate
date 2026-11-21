@@ -9,6 +9,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/Task/TaskManager.h"
+#include "Core/Time/GameTimer.h"
 
 #include "Programs/ReflectionParser/AstVisitor.h"
 #include "Programs/ReflectionParser/CodeEmit.h"
@@ -328,10 +329,15 @@ namespace sw
         , _runStartTime{ 0 }
         , _listIncludePath{}
         , _arrEmitBytes{}
+        , _arrPhaseMicroseconds{}
     {
         for ( atomic<uint64>& bytes : _arrEmitBytes )
         {
             bytes.store( 0, std::memory_order_relaxed );
+        }
+        for ( atomic<uint64>& microseconds : _arrPhaseMicroseconds )
+        {
+            microseconds.store( 0, std::memory_order_relaxed );
         }
         // 출력 디렉터리를 include 경로 맨 앞에 한 번만 넣는다(원본이 다른 생성 헤더를 include 할 수 있다).
         _listIncludePath.reserve( options._listIncludePath.size() + 1 );
@@ -396,6 +402,7 @@ namespace sw
                         _pOptions->_listInputFile.size(), upToDate, noReflect );
         errorCount += parsePending( listPending );
         logEmitBytes();
+        logPhaseTimes( listPending.size() );
 
         if ( writeFlagOpsUmbrella() == false )
             ++errorCount;
@@ -453,11 +460,19 @@ namespace sw
 
         // clang 오류는 여기서 알리지 않는다 — 헤더마다 다시 파싱할 때 그 헤더의 오류로 나온다.
         ParserContext context( _pSession->_config );
-        if ( context.parse( batchPath, _listIncludePath, listUnsaved, false ) == false )
+        GameTimer     phaseTimer;
+        phaseTimer.resetTimer();
+        phaseTimer.startTimer();
+        const bool bParsed = context.parse( batchPath, _listIncludePath, listUnsaved, false );
+        phaseTimer.updateTimer();
+        addPhaseTime( ParsePhase::Parse, phaseTimer.getDeltaTime() );
+        if ( bParsed == false )
             return false;
 
         AstVisitor visitor( context.getTranslationUnit(), *_pSession, listTargetFile );
         visitor.visit();
+        phaseTimer.updateTimer();
+        addPhaseTime( ParsePhase::Visit, phaseTimer.getDeltaTime() );
         const vector<ParsedHeader>& listHeader = visitor.getParsedHeaders();
         // 묶음의 의존은 묶음 전체로 적는다. `#pragma once` 로 두 번째 include 는 새 파일 항목이 생기지 않아, 헤더별로 가르면 먼저 include 한
         // 헤더에만 붙는다 — 그러면 그 헤더만 다시 파싱되고 나머지는 옛 것을 든다.
@@ -475,6 +490,8 @@ namespace sw
             if ( writeOutputs( inputFile, listPending[index]._paths, listHeader[index], listPending[index]._inputWriteTime, listDependency ) == false )
                 ++outErrorCount;
         }
+        phaseTimer.updateTimer();
+        addPhaseTime( ParsePhase::Emit, phaseTimer.getDeltaTime() );
         return true;
     }
 
@@ -487,21 +504,33 @@ namespace sw
         const vector<ParserUnsavedFile> listUnsaved{
             ParserUnsavedFile{ pending._pInputFile, &pending._content }
         };
-        if ( context.parse( inputFile, _listIncludePath, listUnsaved ) == false )
+        GameTimer phaseTimer;
+        phaseTimer.resetTimer();
+        phaseTimer.startTimer();
+        const bool bParsed = context.parse( inputFile, _listIncludePath, listUnsaved );
+        phaseTimer.updateTimer();
+        addPhaseTime( ParsePhase::Parse, phaseTimer.getDeltaTime() );
+        if ( bParsed == false )
         {
             SW_LOG_ERROR_ID( "ReflectionPipeline.ParseFailed", "Parse failed: %#", inputFile );
             return false;
         }
 
         AstVisitor visitor( context.getTranslationUnit(), *_pSession );
-        if ( visitor.visit() == false || visitor.hasError() )
+        const bool bVisited = visitor.visit() && visitor.hasError() == false;
+        phaseTimer.updateTimer();
+        addPhaseTime( ParsePhase::Visit, phaseTimer.getDeltaTime() );
+        if ( bVisited == false )
         {
             SW_LOG_ERROR_ID( "ReflectionPipeline.ASTAnalysisFailed", "AST analysis failed: %#", inputFile );
             return false;
         }
 
-        return writeOutputs( inputFile, pending._paths, visitor.getParsedHeaders().front(), pending._inputWriteTime,
-                             ReflectionPipelineInternal::collectDependencies( context.getTranslationUnit(), _pOptions->_outputDir, _runStartTime ) );
+        const bool bWritten = writeOutputs( inputFile, pending._paths, visitor.getParsedHeaders().front(), pending._inputWriteTime,
+                                            ReflectionPipelineInternal::collectDependencies( context.getTranslationUnit(), _pOptions->_outputDir, _runStartTime ) );
+        phaseTimer.updateTimer();
+        addPhaseTime( ParsePhase::Emit, phaseTimer.getDeltaTime() );
+        return bWritten;
     }
 
     int32 ReflectionPipeline::parseEachInParallel( const vector<PendingInput>& listPending ) const
@@ -804,6 +833,22 @@ namespace sw
             text.append( "%)" );
         }
         SW_LOG_INFO_ID( "ReflectionParser.EmitBytes", "Generated .gen.cpp bytes by emitter (headers generated in this run, total %#):%#", total, text.view() );
+    }
+
+    void ReflectionPipeline::addPhaseTime( const ParsePhase phase, const float32 seconds ) const
+    {
+        const float64 microseconds = static_cast<float64>( seconds ) * static_cast<float64>( constant::time::kMicrosecondsPerSecond );
+        _arrPhaseMicroseconds[static_cast<size_t>( phase )].fetch_add( microseconds > 0.0 ? static_cast<uint64>( microseconds ) : 0u, std::memory_order_relaxed );
+    }
+
+    void ReflectionPipeline::logPhaseTimes( const size_t parsedCount ) const
+    {
+        if ( parsedCount == 0 )
+            return;
+        const auto toMs = [this]( const ParsePhase phase )
+        { return static_cast<float64>( _arrPhaseMicroseconds[static_cast<size_t>( phase )].load( std::memory_order_relaxed ) ) / static_cast<float64>( constant::time::kMicrosecondsPerMillisecond ); };
+        SW_LOG_INFO_ID( "ReflectionParser.PhaseTime", "Module %# (%# input(s)): parse %# ms, visit %# ms, emit %# ms", _pOptions->_moduleName, parsedCount, toMs( ParsePhase::Parse ),
+                        toMs( ParsePhase::Visit ), toMs( ParsePhase::Emit ) );
     }
 
     bool ReflectionPipeline::writeFlagOpsUmbrella() const

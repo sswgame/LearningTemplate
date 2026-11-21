@@ -17,7 +17,6 @@ namespace sw
     enum class EmitTemplate : uint8
     {
         FileHeader,
-        ReflectTypeTraits,
         TypeInfoAccessors,
         TypeRegistrarBegin,
         TypeRegistrarEnd,
@@ -33,7 +32,6 @@ namespace sw
     /** @brief `EmitTemplate` 열거자 순서의 파일 이름(확장자 뺀 것)입니다. */
     inline constexpr const utf8* kArrEmitTemplateName[] = {
         "FileHeader",
-        "ReflectTypeTraits",
         "TypeInfoAccessors",
         "TypeRegistrarBegin",
         "TypeRegistrarEnd",

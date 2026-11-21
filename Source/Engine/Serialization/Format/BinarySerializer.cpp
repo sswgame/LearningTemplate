@@ -167,6 +167,7 @@ namespace sw
                 uint64                _matchedBitmask{ 0 };
                 unordered_set<uint32> _uniqueMatchedPropHashes{};
                 PropertyReadRollback  _rollback{};
+                uint32                _expectedIndex{ 0 }; ///< 다음 태그가 가리킬 것으로 보는 프로퍼티 자리(직전에 맞은 자리 + 1) — 쓴 순서가 선언 순서다
             };
 
             /**
@@ -190,9 +191,11 @@ namespace sw
                 // 지금 이름을 먼저, 없을 때만 옛 이름(Alias)을 본다. Transient 칸을 가리키는 태그는 모르는 칸과 같다.
                 const PropertyListView listProp     = state._typeInfo.getPropertiesWithBase();
                 const size_t           numProps     = listProp.size();
-                const optional<uint32> matchedIndex = SerializerUtil::findPropertyIndexByNameHash( listProp, tagHash );
-                const bool             bMatched     = matchedIndex.has_value() && listProp[*matchedIndex]._metadata->_bTransient == SW_FALSE;
-                const PropertyInfo*    pTargetProp  = bMatched ? &listProp[*matchedIndex] : nullptr;
+                const optional<uint32> matchedIndex = SerializerUtil::findPropertyIndexByNameHash( listProp, tagHash, state._expectedIndex );
+                if ( matchedIndex.has_value() )
+                    state._expectedIndex = *matchedIndex + 1;
+                const bool          bMatched    = matchedIndex.has_value() && listProp[*matchedIndex]._metadata->_bTransient == SW_FALSE;
+                const PropertyInfo* pTargetProp = bMatched ? &listProp[*matchedIndex] : nullptr;
 
                 if ( pTargetProp == nullptr )
                 {

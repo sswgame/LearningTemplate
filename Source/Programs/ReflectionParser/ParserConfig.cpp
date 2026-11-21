@@ -186,15 +186,12 @@ namespace sw
                 assignArrayIfPresent( config._listComponentBaseType, obj, jsonkey::kParsingComponentBaseTypes );
                 assignArrayIfPresent( config._listPhysicsHookBaseType, obj, jsonkey::kParsingPhysicsHookBaseTypes );
                 assignArrayIfPresent( config._listTypeStripPrefix, obj, jsonkey::kParsingTypeStripPrefixes );
-                assignArrayIfPresent( config._listNameFieldType, obj, jsonkey::kParsingNameFieldTypes );
-                assignArrayIfPresent( config._listNameFieldTypePrefix, obj, jsonkey::kParsingNameFieldPrefixes );
                 assignArrayIfPresent( config._listNameFieldSkipFolder, obj, jsonkey::kParsingNameFieldSkipFolders );
             }
 
             static void applyTuningSection( ParserConfig& config, const nlohmann::json& obj )
             {
-                config._sourceLookbackBytes = getUintOrDefault( obj, jsonkey::kSourceLookbackBytes, config._sourceLookbackBytes );
-                config._maxParallelParses   = getUintOrDefault( obj, jsonkey::kMaxParallelParses, config._maxParallelParses );
+                config._maxParallelParses = getUintOrDefault( obj, jsonkey::kMaxParallelParses, config._maxParallelParses );
             }
 
             /**
@@ -285,18 +282,12 @@ namespace sw
                     {  &config._listComponentBaseType,    "parsing.component_base_types"},
                     {&config._listPhysicsHookBaseType, "parsing.physics_hook_base_types"},
                     {    &config._listTypeStripPrefix,     "parsing.type_strip_prefixes"},
-                    {      &config._listNameFieldType,        "parsing.name_field_types"},
                 };
                 for ( const auto& [pList, pKey] : arrRequiredList )
                 {
                     if ( pList->empty() == false )
                         continue;
                     SW_LOG_ERROR_ID( "ParserConfig.RequiredNonEmptyList", "%#: '%#' is required (a non-empty list)", defaultsPath, pKey );
-                    bComplete = false;
-                }
-                if ( config._sourceLookbackBytes == 0 )
-                {
-                    SW_LOG_ERROR_ID( "ParserConfig.TuningSourceLookbackBytes", "%#: 'tuning.source_lookback_bytes' is required (a positive number)", defaultsPath );
                     bComplete = false;
                 }
                 if ( config._maxParallelParses == 0 )
@@ -403,11 +394,8 @@ namespace sw
         , _listComponentBaseType{}
         , _listPhysicsHookBaseType{}
         , _listTypeStripPrefix{}
-        , _listNameFieldType{}
-        , _listNameFieldTypePrefix{}
         , _listNameFieldSkipFolder{}
         , _listLoadedFile{}
-        , _sourceLookbackBytes{ 0 }
         , _maxParallelParses{ 0 }
         , _bLoaded{ SW_FALSE }
         , _reserved{ 0 }
@@ -588,21 +576,6 @@ namespace sw
             listArg.push_back( forceInclude );
         }
         return listArg;
-    }
-
-    bool ParserConfig::isNameFieldType( const string_view typeText ) const
-    {
-        for ( const string& typeName : _listNameFieldType )
-        {
-            if ( typeText == typeName )
-                return true;
-        }
-        for ( const string& prefix : _listNameFieldTypePrefix )
-        {
-            if ( StringUtil::startsWith( typeText, prefix ) )
-                return true;
-        }
-        return false;
     }
 
     bool ParserConfig::isNameFieldCheckSkipped( const string_view headerPath ) const

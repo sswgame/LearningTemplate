@@ -12,6 +12,7 @@
 #include "Core/Memory/MemoryBlock.h"
 #include "Core/Name/hashed_string.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/Time/GameTimer.h"
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Profiling/FrameProfiler.h"
@@ -387,6 +388,12 @@ namespace sw
     void TypeRegistry::registerPendingTypes( TypeRegistrar* pClassHead, EnumRegistrar* pEnumHead )
     {
         SW_PROFILE_SCOPE( "Reflection.registerPendingTypes" );
+        // 감시 값: 배치 하나의 등록 시간과 수 — 생성 코드를 상수 표로 바꿀지(설계 백로그 리플렉션 발전 방향 ③, 실기기 등록 20 ms 문턱) 판정할 근거다.
+        GameTimer batchTimer;
+        batchTimer.resetTimer();
+        batchTimer.startTimer();
+        uint32 classCount = 0;
+        uint32 enumCount  = 0;
         {
             UniqueLock<shared_mutex> lock{ _mutex };
             ++_batchDepth;
@@ -395,7 +402,10 @@ namespace sw
         while ( pCurrClass != nullptr )
         {
             if ( pCurrClass->_registerFunc != nullptr )
+            {
                 pCurrClass->_registerFunc( *this );
+                ++classCount;
+            }
             pCurrClass = pCurrClass->_pNext;
         }
 
@@ -403,7 +413,10 @@ namespace sw
         while ( pCurrEnum != nullptr )
         {
             if ( pCurrEnum->_registerFunc != nullptr )
+            {
                 pCurrEnum->_registerFunc( *this );
+                ++enumCount;
+            }
             pCurrEnum = pCurrEnum->_pNext;
         }
 
@@ -420,6 +433,10 @@ namespace sw
             }
         }
         rebuildAffected( listAffected );
+        batchTimer.updateTimer();
+        if ( classCount + enumCount > 0 )
+            SW_LOG_INFO_ID( "Reflection.RegisterBatchTime", "Registered %# type(s) and %# enum(s) in %# ms (relinked %#).", classCount, enumCount,
+                            batchTimer.getDeltaTime() * constant::time::kMillisecondsPerSecond, static_cast<uint32>( listAffected.size() ) );
     }
 
     TypeInfo* TypeRegistry::findTypeLocked( const hashed_string& nameOrFqn, const bool bIncludeDead ) const

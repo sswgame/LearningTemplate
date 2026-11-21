@@ -34,8 +34,6 @@ namespace sw
         vector<string> _listPhysicsHookBaseType;
         vector<string> _listTypeStripPrefix;
         /** @brief 이름 · 경로 칸의 타입(소스에 적은 글에서 const · mutable · std:: · sw:: 를 뗀 것)입니다. 이 칸의 C++ 문자열 기본값은 Required 이거나 DefaultName 이어야 한다. */
-        vector<string> _listNameFieldType;
-        vector<string> _listNameFieldTypePrefix; ///< 머리로 견주는 이름 · 경로 칸 타입(`AssetRef<`)
         vector<string> _listNameFieldSkipFolder; ///< 이름 · 경로 칸 기본값을 보지 않는 폴더 이름(테스트 형식은 기본값 자체를 시험한다)
         /**
          * @brief 실제로 읽은 설정 파일들입니다.
@@ -44,7 +42,6 @@ namespace sw
          *          파서가 스스로 "최신" 이라며 건너뛴다).
          */
         vector<string> _listLoadedFile;
-        uint32         _sourceLookbackBytes;
         /**
          * @brief 묶음 파싱이 실패해 헤더마다 다시 파싱할 때 동시에 여는 TU 의 상한입니다(`tuning.max_parallel_parses`, 필수).
          * @details TU 하나가 엔진 공통 헤더 전체를 들고 메모리 대역을 나눠 쓴다 — 16 개를 함께 돌리면 한 파싱이 1.0 초에서 2.1 초로 늘었다(`ReflectionPipeline::parsePending` 주석의 실측).
@@ -69,8 +66,6 @@ namespace sw
          */
         vector<string> makeArgs( const vector<string>& listIncludePath ) const;
 
-        /** @brief 소스에 적은 타입 글 @p typeText 가 이름 · 경로 칸 타입인지 봅니다(`_listNameFieldType` · `_listNameFieldTypePrefix`). */
-        [[nodiscard]] bool isNameFieldType( string_view typeText ) const;
         /** @brief 헤더 경로 @p headerPath 가 이름 · 경로 칸 기본값을 보지 않는 폴더(`_listNameFieldSkipFolder`) 아래인지 봅니다. */
         [[nodiscard]] bool isNameFieldCheckSkipped( string_view headerPath ) const;
     };

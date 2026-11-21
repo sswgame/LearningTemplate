@@ -402,10 +402,10 @@ namespace sw
         return false;
     }
 
-    bool DeclarationValidator::isInsideReflectType( const CXCursor member, const utf8* pMacroName, const ParserConfig& config )
+    bool DeclarationValidator::isInsideReflectType( const CXCursor member, const utf8* pMacroName )
     {
         const CXCursor parent = clang_getCursorSemanticParent( member );
-        if ( AnnotationLookup::hasAnnotation( parent, annotation::kReflect, config ) )
+        if ( AnnotationLookup::isReflectedRecord( parent ) )
             return true;
 
         SW_LOG_ERROR_ID( "AstVisitor.ERRORUsedClassStruct", "ERROR: %#() is used in class/struct '%#', but it lacks REFLECT()!", pMacroName,

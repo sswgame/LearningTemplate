@@ -84,6 +84,7 @@ namespace sw
             return false;
 
         size_t offset{ 0 };
+        uint32 expectedIndex{ 0 }; // diff 항목도 선언 순서로 쓴다 — 다음 자리를 먼저 본다
         while ( offset + sizeof( uint32 ) * 2 <= diffSize )
         {
             uint32 nameHash{ 0 };
@@ -96,9 +97,11 @@ namespace sw
                 return false;
 
             const PropertyListView listProp     = typeInfo.getPropertiesWithBase();
-            const optional<uint32> matchedIndex = SerializerUtil::findPropertyIndexByNameHash( listProp, nameHash );
-            const bool             bMatched     = matchedIndex.has_value() && SerializerUtil::shouldSerializeProperty( typeInfo, listProp[*matchedIndex], context );
-            const PropertyInfo*    pProp        = bMatched ? &listProp[*matchedIndex] : nullptr;
+            const optional<uint32> matchedIndex = SerializerUtil::findPropertyIndexByNameHash( listProp, nameHash, expectedIndex );
+            if ( matchedIndex.has_value() )
+                expectedIndex = *matchedIndex + 1;
+            const bool          bMatched = matchedIndex.has_value() && SerializerUtil::shouldSerializeProperty( typeInfo, listProp[*matchedIndex], context );
+            const PropertyInfo* pProp    = bMatched ? &listProp[*matchedIndex] : nullptr;
             if ( pProp != nullptr )
             {
                 // 값 주소가 없거나 페이로드를 끝까지 읽지 못하면 diff 가 틀린 것이다. 건너뛰지 않고 실패한다(필드 실패와 객체 실패 모두 diff 적용의 실패다).

@@ -24,8 +24,10 @@ namespace sw
         string                          _keyTypeName;
         shared_ptr<ParsedContainerNode> _elementNested;
         ContainerKind                   _containerKind;
-        uint8                           _bIsContainer : 1;
-        [[maybe_unused]] uint8          _reserved     : 7;
+        uint8                           _bIsContainer         : 1;
+        uint8                           _bInvalid             : 1; ///< 컨테이너인데 인자를 clang 형식으로 읽지 못했다(알림은 이미 했다) — 프로퍼티가 실패한다
+        uint8                           _bInPlaceElementWrite : 1; ///< 원소를 제자리에서 쓰는 순서 있는 시퀀스다(표의 State 역할 — 집합 · 맵은 아니다)
+        [[maybe_unused]] uint8          _reserved             : 5;
         [[maybe_unused]] uint16         _padding;
 
         ParsedContainerNode() noexcept
@@ -36,6 +38,8 @@ namespace sw
             , _elementNested{ nullptr }
             , _containerKind{ ContainerKind::None }
             , _bIsContainer{ SW_FALSE }
+            , _bInvalid{ SW_FALSE }
+            , _bInPlaceElementWrite{ SW_FALSE }
             , _reserved{ 0 }
             , _padding{ 0 }
         {
@@ -253,7 +257,7 @@ namespace sw
         /** @brief 이름 · 경로 칸의 C++ 문자열 기본값이 의도한 엔진 기본값입니다(PROPERTY(DefaultName)). 기본값이 없는 칸에 달면 파서 오류입니다. */
         uint8 _bDefaultName : 1;
         /**
-         * @brief 이름 · 경로 칸(`parsing.name_field_types`)인데 헤더 초기값에 비어 있지 않은 문자열 리터럴이 있습니다. 선언에서 온 사실이다(애노테이션 줄이 아니다).
+         * @brief 이름 · 경로 칸(`CursorReader::isNameFieldType`)인데 헤더 초기값에 비어 있지 않은 문자열 리터럴이 있습니다. 선언에서 온 사실이다(애노테이션 줄이 아니다).
          * @details 데이터가 그 칸을 적지 않으면 그 이름이 조용히 쓰인다 — `Required` · `Transient` · `DefaultName` 이 없으면 `validatePropertyFlags` 가 멈춘다.
          */
         uint8                   _bHasNameLiteralDefault : 1;
@@ -357,6 +361,8 @@ namespace sw
         string _handleTargetTypeName;
         /** @brief 인자의 C++ 타입 전체 이름(클랭 정규 철자, `sw::TComponentHandle<sw::LightComponent>`)이며 const · 참조는 뗐다. 타입 핸들 인자의 호출 썽크가 이 타입의 지역 변수를 만든다. */
         string _canonicalTypeName;
+        /** @brief 인자 형식이 어디든(템플릿 인자 안 포함) 타입 핸들을 든다 — clang 형식의 정체로 읽었다(`CursorReader::containsTypeIdentity`). */
+        bool _bHoldsTypedHandle{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw
 
@@ -463,10 +469,6 @@ namespace sw
         uint8 _bComponent : 1;
         /** @brief `parsing.physics_hook_base_types`(`sw::PhysicsComponent`) 파생입니다(추상 포함). 물리 훅 등록(`requiresPhysicsHookRegistration`)이 본다. */
         uint8 _bPhysicsComponent : 1;
-        /** @brief 이 타입이 직접 선언한 재정의입니다(`MemberCollector::collectTraits`). 코드젠이 `TypeMetadata` 의 특성 비트와 일괄 틱 등록을 낸다. */
-        uint8 _bOverridesTick           : 1;
-        uint8 _bOverridesSubTick        : 1;
-        uint8 _bOverridesSerializeState : 1;
         /** @brief 바깥 형식 사슬에 public 이 아닌 고리가 있습니다(private · protected 중첩). 생성 코드는 이름공간 범위에서 이 이름을 쓰지 않는다(`CodeGenerator::makeRegistrarKey`). */
         uint8                  _bHidden        : 1;
         [[maybe_unused]] uint8 _reservedTraits : 3;
@@ -499,9 +501,6 @@ namespace sw
             , _bParentReflected{ SW_FALSE }
             , _bComponent{ SW_FALSE }
             , _bPhysicsComponent{ SW_FALSE }
-            , _bOverridesTick{ SW_FALSE }
-            , _bOverridesSubTick{ SW_FALSE }
-            , _bOverridesSerializeState{ SW_FALSE }
             , _bHidden{ SW_FALSE }
             , _reservedTraits{ 0 }
         {
@@ -510,16 +509,15 @@ namespace sw
         bool requiresTypeAPI() const noexcept { return _bReflectBody == SW_TRUE; }
         bool requiresComponentFactory() const noexcept { return _bComponentFactory == SW_TRUE; }
         /**
-         * @brief 이 타입에 틱 모드 등록(`SW_REGISTER_TICK_TYPE`)을 낸다 — 컴포넌트가 `onTick` · `onSubTick` 을 직접 재정의했거나 `REFLECT( TickMode = … )` 를 달았을 때다.
-         * @details 추상 타입은 `TickMode` 를 적었을 때만 낸다(파생이 물려받는 모드 — 재정의만으로는 그 타입의 인스턴스가 없다).
+         * @brief 이 타입에 틱 등록 줄을 낸다 — `REFLECT( TickMode = … )` 를 단 컴포넌트, 그리고 추상이 아닌 모든 컴포넌트다.
+         * @details 모드를 적지 않은 컴포넌트는 `makeDeclaredTickEntry` 줄이고, 틱 함수를 **직접 선언했는지**는 그 줄이 컴파일에서 정한다(생성기는 이름 · 인자 수를 보지 않는다).
+         *          추상 타입은 `TickMode` 를 적었을 때만 낸다(파생이 물려받는 모드 — 재정의만으로는 그 타입의 인스턴스가 없다).
          */
         bool requiresTickRegistration() const noexcept
         {
             if ( _bComponent == SW_FALSE )
                 return false;
-            if ( _tickMode.empty() == false )
-                return true;
-            return _bAbstract == SW_FALSE && ( _bOverridesTick == SW_TRUE || _bOverridesSubTick == SW_TRUE );
+            return _tickMode.empty() == false || _bAbstract == SW_FALSE;
         }
 
         /**

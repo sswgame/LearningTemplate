@@ -28,7 +28,7 @@ namespace sw
         TickBatch,
         PhysicsHook,
         EnumRegistrar,
-        TypeTraits, ///< `ReflectTypeTraits` 특수화와 타입 API 접근 함수
+        TypeTraits, ///< 타입 API 접근 함수
         Count,
     };
 

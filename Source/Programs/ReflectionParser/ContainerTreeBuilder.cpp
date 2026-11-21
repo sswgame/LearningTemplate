@@ -15,16 +15,6 @@
 
 namespace sw
 {
-    vector<string> ContainerTreeBuilder::extractTemplateArgs( const string_view typeStr )
-    {
-        const size_t start              = typeStr.find( '<' );
-        const size_t end                = typeStr.rfind( '>' );
-        const bool   bInvalidAngleRange = start == string_view::npos || end == string_view::npos || end <= start;
-        if ( bInvalidAngleRange )
-            return {};
-        return ParserUtil::splitCommaRespectingAngles( typeStr.substr( start + 1, end - start - 1 ) );
-    }
-
     CXCursor ContainerTreeBuilder::findContainerDeclaration( const CXType type )
     {
         const CXType canonical = clang_getCanonicalType( type );
@@ -38,14 +28,14 @@ namespace sw
         return result;
     }
 
-    bool ContainerTreeBuilder::findReflectContainer( const CXType type, const ParserConfig& config, ContainerKind& outKind, string& outWrapperStem )
+    bool ContainerTreeBuilder::findReflectContainer( const CXType type, ContainerKind& outKind, string& outWrapperStem )
     {
         const CXCursor declaration = findContainerDeclaration( type );
         if ( clang_Cursor_isNull( declaration ) )
             return false;
 
         const ReflectAnnotationDesc& desc     = annotation::kReflectContainer;
-        const string                 spelling = AnnotationLookup::readAnnotation( declaration, desc, config );
+        const string                 spelling = AnnotationLookup::findPreviousSiblingMarker( declaration, desc );
         if ( spelling.empty() )
             return false;
 
@@ -60,25 +50,21 @@ namespace sw
         return true;
     }
 
-    void ContainerTreeBuilder::markContainer( ParsedContainerNode& node, const ContainerKind kind, const string& wrapperStem )
+    void ContainerTreeBuilder::markContainer( ParsedContainerNode& node, const ContainerKind kind, const string& wrapperStem, const ParserSession& session )
     {
         node._bIsContainer  = SW_TRUE;
         node._containerKind = kind;
         node._containerType = wrapperStem;
+        // 제자리 쓰기 시퀀스인지는 래퍼 줄기의 표 역할(State)이다 — 같은 줄기의 줄은 역할이 같고, 생성 코드가 래퍼 형식과 컴파일 때 대조한다(`matchesTable`).
+        const ContainerTypeRule* pRule = session._containerTypeMap.findByWrapperStem( wrapperStem );
+        node._bInPlaceElementWrite     = pRule != nullptr && pRule->_bState == SW_TRUE ? SW_TRUE : SW_FALSE;
     }
 
-    shared_ptr<ParsedContainerNode> ContainerTreeBuilder::makeNestedContainer( const CXType type, const int32 numClangArgs, const int32 index, const string& spellingFallback, const ParserSession& session )
+    shared_ptr<ParsedContainerNode> ContainerTreeBuilder::makeNestedContainer( const CXType argType, const ParserSession& session )
     {
-        shared_ptr<ParsedContainerNode> nested;
-        if ( 0 <= index && index < numClangArgs )
-        {
-            const CXType argType = clang_Type_getTemplateArgumentAsType( type, static_cast<uint32>( index ) );
-            if ( argType.kind != CXType_Invalid )
-                nested = makeContainerFromType( argType, session );
-        }
-        if ( ( nested == nullptr || nested->_bIsContainer == SW_FALSE ) && spellingFallback.empty() == false )
-            nested = makeContainerFromSpelling( spellingFallback, session );
-        if ( nested != nullptr && nested->_bIsContainer == SW_FALSE )
+        // 원소 · 값 형식도 사용자 별칭을 벗긴 뒤 본다 — `vector<ScoreList>` 의 원소 이름은 벗겨 쓰면서 중첩은 놓치면 이름과 트리가 어긋난다.
+        shared_ptr<ParsedContainerNode> nested = makeContainerFromType( resolvePropertyAlias( argType, session ), session );
+        if ( nested->_bIsContainer == SW_FALSE && nested->_bInvalid == SW_FALSE )
             nested.reset();
         return nested;
     }
@@ -91,7 +77,7 @@ namespace sw
         // 컨테이너의 인자만 다시 짠다. 알려진 이름(`string` 은 `basic_string<utf8>`)의 인자를 벗기면 `string<char>` 같은 모르는 이름이 된다.
         ContainerKind kind = ContainerKind::None;
         string        wrapperStem;
-        const bool    bContainer = session._containerTypeMap.match( outSpelling ) != nullptr || findReflectContainer( resolved, session._config, kind, wrapperStem );
+        const bool    bContainer = session._containerTypeMap.match( outSpelling ) != nullptr || findReflectContainer( resolved, kind, wrapperStem );
         const int32   argCount   = clang_Type_getNumTemplateArguments( resolved );
         if ( bContainer == false || argCount <= 0 )
             return bChanged;
@@ -125,52 +111,38 @@ namespace sw
         return true;
     }
 
-    string ContainerTreeBuilder::resolveTemplateArgName( const CXType type, const int32 numClangArgs, const int32 index, const string& spelling, const ParserSession& session )
+    string ContainerTreeBuilder::resolveTemplateArgName( const CXType argType, const ParserSession& session )
     {
-        if ( 0 <= index && index < numClangArgs )
-        {
-            const CXType argType = clang_Type_getTemplateArgumentAsType( type, static_cast<uint32>( index ) );
-            string       resolvedSpelling;
-            if ( argType.kind != CXType_Invalid && tryResolveAliasSpelling( argType, session, resolvedSpelling ) )
-                return session._typeNameMap.normalize( resolvedSpelling );
-        }
+        string spelling;
+        (void)tryResolveAliasSpelling( argType, session, spelling ); // 벗겼든 아니든 clang 의 철자를 쓴다
         return session._typeNameMap.normalize( spelling );
     }
 
-    void ContainerTreeBuilder::fillContainerArgs( ParsedContainerNode& node, const string& typeSpelling, const CXType type, const ParserSession& session )
+    void ContainerTreeBuilder::fillContainerArgs( ParsedContainerNode& node, const CXType type, const ParserSession& session )
     {
-        const vector<string> listArg      = extractTemplateArgs( typeSpelling );
-        const int32          numClangArgs = ( type.kind == CXType_Invalid ) ? 0 : clang_Type_getNumTemplateArguments( type );
+        // 인자는 clang 형식에서만 읽는다 — 형식 철자를 쪼개 읽던 폴백은 인자를 못 얻은 자리를 조용히 다른 길로 넘겼다.
+        const uint32 requiredCount = node._containerKind == ContainerKind::Map ? 2u : 1u;
+        const int32  numClangArgs  = clang_Type_getNumTemplateArguments( type );
+        CXType       arrArgType[2] = {};
+        bool         bArgsValid    = numClangArgs >= static_cast<int32>( requiredCount );
+        for ( uint32 index = 0; bArgsValid && index < requiredCount; ++index )
+        {
+            arrArgType[index] = clang_Type_getTemplateArgumentAsType( type, index );
+            bArgsValid        = arrArgType[index].kind != CXType_Invalid;
+        }
+        if ( bArgsValid == false )
+        {
+            SW_LOG_ERROR_ID( "ContainerTreeBuilder.ERRORContainerArguments", "ERROR: container type '%#' (%#) needs %# type argument(s) the parser can read - %# has %#.",
+                             CursorReader::takeString( clang_getTypeSpelling( type ) ), toString( node._containerKind ), requiredCount, node._containerType, numClangArgs );
+            node._bInvalid = SW_TRUE;
+            return;
+        }
 
+        const CXType elementType = arrArgType[requiredCount - 1];
         if ( node._containerKind == ContainerKind::Map )
-        {
-            if ( listArg.size() >= 2 )
-            {
-                node._keyTypeName     = resolveTemplateArgName( type, numClangArgs, 0, listArg[0], session );
-                node._elementTypeName = resolveTemplateArgName( type, numClangArgs, 1, listArg[1], session );
-                node._elementNested   = makeNestedContainer( type, numClangArgs, 1, listArg[1], session );
-            }
-        }
-        else if ( listArg.empty() == false )
-        {
-            node._elementTypeName = resolveTemplateArgName( type, numClangArgs, 0, listArg[0], session );
-            node._elementNested   = makeNestedContainer( type, numClangArgs, 0, listArg[0], session );
-        }
-    }
-
-    shared_ptr<ParsedContainerNode> ContainerTreeBuilder::makeContainerFromSpelling( const string& typeSpelling, const ParserSession& session )
-    {
-        shared_ptr<ParsedContainerNode> node = make_shared<ParsedContainerNode>();
-        const ContainerTypeRule*        rule = session._containerTypeMap.match( typeSpelling );
-        if ( rule == nullptr )
-            return node;
-
-        markContainer( *node, rule->_kind, rule->_type );
-        node->_typeName = rule->_match;
-        CXType invalid{};
-        invalid.kind = CXType_Invalid;
-        fillContainerArgs( *node, typeSpelling, invalid, session );
-        return node;
+            node._keyTypeName = resolveTemplateArgName( arrArgType[0], session );
+        node._elementTypeName = resolveTemplateArgName( elementType, session );
+        node._elementNested   = makeNestedContainer( elementType, session );
     }
 
     shared_ptr<ParsedContainerNode> ContainerTreeBuilder::makeContainerFromType( const CXType type, const ParserSession& session )
@@ -185,7 +157,7 @@ namespace sw
             const CXType elementType = clang_getArrayElementType( type );
             // 표의 `array` 줄이 래퍼를 정한다 — 로더가 그 줄이 고정 시퀀스로 있는지 시작할 때 봤다.
             const ContainerTypeRule& fixedArray = *session._containerTypeMap.findByMatch( annotation::kFixedArrayTypeName );
-            markContainer( *node, fixedArray._kind, fixedArray._type );
+            markContainer( *node, fixedArray._kind, fixedArray._type, session );
             node->_typeName        = fixedArray._match;
             node->_elementTypeName = session._typeNameMap.normalize( CursorReader::takeString( clang_getTypeSpelling( elementType ) ) );
             node->_elementNested   = makeContainerFromType( elementType, session );
@@ -199,30 +171,31 @@ namespace sw
 
         ContainerKind kind = ContainerKind::None;
         string        wrapperStem;
-        if ( findReflectContainer( type, session._config, kind, wrapperStem ) )
-            markContainer( *node, kind, wrapperStem );
+        if ( findReflectContainer( type, kind, wrapperStem ) )
+            markContainer( *node, kind, wrapperStem, session );
         else if ( rule != nullptr )
-            markContainer( *node, rule->_kind, rule->_type );
+            markContainer( *node, rule->_kind, rule->_type, session );
         else
             return node;
 
         if ( rule != nullptr )
             node->_typeName = rule->_match;
-        fillContainerArgs( *node, spelling, type, session );
+        fillContainerArgs( *node, type, session );
         return node;
     }
 
     CXType ContainerTreeBuilder::resolvePropertyAlias( const CXType type, const ParserSession& session )
     {
+        // 별칭 사슬은 순환할 수 없어(typedef 는 앞선 형식만 가리킨다) 끝이 있다 — 깊이 상한을 두면 그 너머에서 조용히 멈췄다.
         CXType resolved = type; // 반환은 이 하나다(-Wnrvo)
         CXType current  = type;
-        for ( int32 depth = 0; depth < 8 && current.kind != CXType_Invalid; ++depth )
+        while ( current.kind != CXType_Invalid )
         {
             const string  spelling = CursorReader::takeString( clang_getTypeSpelling( current ) );
             ContainerKind kind     = ContainerKind::None;
             string        wrapperStem;
             const CXType  named         = current.kind == CXType_Elaborated ? clang_Type_getNamedType( current ) : current;
-            const bool    bResolvedType = session._containerTypeMap.match( spelling ) != nullptr || findReflectContainer( current, session._config, kind, wrapperStem ) ||
+            const bool    bResolvedType = session._containerTypeMap.match( spelling ) != nullptr || findReflectContainer( current, kind, wrapperStem ) ||
                                        session._typeNameMap.isKnown( spelling ) || named.kind != CXType_Typedef;
             if ( bResolvedType )
             {
@@ -234,16 +207,26 @@ namespace sw
         return resolved;
     }
 
-    void ContainerTreeBuilder::fillContainerDetails( ParsedPropertyInfo& prop, const CXType fieldType, const ParserSession& session )
+    bool ContainerTreeBuilder::isTreeValid( const ParsedContainerNode& node )
+    {
+        if ( node._bInvalid == SW_TRUE )
+            return false;
+        return node._elementNested == nullptr || isTreeValid( *node._elementNested );
+    }
+
+    bool ContainerTreeBuilder::fillContainerDetails( ParsedPropertyInfo& prop, const CXType fieldType, const ParserSession& session )
     {
         prop._containerTree = makeContainerFromType( fieldType, session );
-        if ( prop._containerTree == nullptr || prop._containerTree->_bIsContainer == SW_FALSE )
-            return;
+        if ( isTreeValid( *prop._containerTree ) == false )
+            return false;
+        if ( prop._containerTree->_bIsContainer == SW_FALSE )
+            return true;
 
         prop._bIsContainer    = SW_TRUE;
         prop._containerKind   = prop._containerTree->_containerKind;
         prop._containerType   = prop._containerTree->_containerType;
         prop._elementTypeName = prop._containerTree->_elementTypeName;
         prop._keyTypeName     = prop._containerTree->_keyTypeName;
+        return true;
     }
 } // namespace sw

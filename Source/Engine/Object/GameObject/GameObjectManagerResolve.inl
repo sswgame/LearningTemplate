@@ -55,7 +55,7 @@ namespace sw
     bool GameObjectManager::isResolvedAs( ComponentHandle handle, const Component* pComponent ) const
     {
         static_assert( std::is_base_of_v<Component, T>, "T must derive from sw::Component" );
-        static_assert( HasOwnReflectBody_v<T> || HasReflectStaticType_v<T>, "T must declare its own REFLECT_BODY() (cannot slice to a base class StaticType)" );
+        static_assert( HasOwnReflectBody_v<T>, "T must declare its own REFLECT_BODY() (cannot slice to a base class StaticType)" );
 #if !defined( SW_SHIPPING )
         if ( pComponent != nullptr && isComponentOfType( *pComponent, findStaticType<T>() ) == false )
         {
@@ -87,7 +87,7 @@ namespace sw
     TypedHandleResult GameObjectManager::makeTypedHandle( ComponentHandle handle, TComponentHandle<T>& outHandle ) const
     {
         static_assert( std::is_base_of_v<Component, T>, "T must derive from sw::Component" );
-        static_assert( HasOwnReflectBody_v<T> || HasReflectStaticType_v<T>, "T must declare its own REFLECT_BODY() (cannot slice to a base class StaticType)" );
+        static_assert( HasOwnReflectBody_v<T>, "T must declare its own REFLECT_BODY() (cannot slice to a base class StaticType)" );
         const TypedHandleResult result = resolveTypedHandleResult( handle, findStaticType<T>() );
         if ( result == TypedHandleResult::Success )
             outHandle = TComponentHandle<T>( ComponentHandleCastKey{}, handle );

@@ -189,6 +189,37 @@ SW_TEST_CASE( TickModesTest, DeclaredModesRunWhereDeclared )
 /**
  * @brief [TickModesTest] 미룬 일은 (디스패치 순번, 쓴 오브젝트, 넣은 순서) 순으로 돈다 — 틱 밖의 일이 맨 앞, 같은 디스패치 안은 쓴 오브젝트 id 순(워커 순이 아니다)
  */
+// 모드를 적지 않은 컴포넌트의 일괄 등록은 틱 함수를 **직접 선언한** 형식만이다 — 판정은 생성기의 메서드 이름 · 인자 수가 아니라 컴파일(`ReflectAccess<TickAccessTag>::hasDeclaredTick`).
+// 물려받은 형식(팔로워 파생 · Main 파생)은 등록하지 않아 가까운 등록 조상의 모드로 가상 호출한다(Main 기반의 파생이 Batch 로 새지 않게).
+static_assert( ReflectAccess<TickAccessTag>::hasDeclaredTick<TickModeMoverTestComponent>() );
+static_assert( ReflectAccess<TickAccessTag>::hasDeclaredTick<TickModeFollowerTestComponent>() );
+static_assert( ReflectAccess<TickAccessTag>::hasDeclaredTick<TickModeFollowerAltTestComponent>() == false );
+static_assert( ReflectAccess<TickAccessTag>::hasDeclaredTick<TickModeMainDerivedTestComponent>() == false );
+static_assert( ReflectAccess<TickAccessTag>::hasDeclaredTick<LifetimeSpawnOnDestroyTestComponent>() == false );
+// 재정의 트레이트도 친구 통로로 본다 — protected 재정의가 하드 오류가 아니라 "재정의함" 이다.
+static_assert( HasOnTickOverride_v<TickModeProtectedTickTestComponent> );
+static_assert( ReflectAccess<TickAccessTag>::hasDeclaredTick<TickModeProtectedTickTestComponent>() );
+static_assert( HasOnTickOverride_v<TickModeMoverTestComponent> && HasOnTickOverride_v<LifetimeSpawnOnDestroyTestComponent> == false );
+
+/**
+ * @brief [TickModesTest] 모드 없는 등록 줄(`makeDeclaredTickEntry`)은 직접 선언한 형식만 Batch 줄로 오르고, 물려받은 형식의 줄은 레지스트리가 받지 않는다
+ */
+SW_TEST_CASE( TickModesTest, DeclaredTickEntryRegistersOnlyDeclaringType )
+{
+    TickBatchRegistry        registry;
+    TickBatchRegistry::Entry declared = makeDeclaredTickEntry<TickModeMoverTestComponent, kMoverBatchScopeName>();
+    SW_EXPECT_TRUE( declared._pStaticType == &TickModeMoverTestComponent::StaticType );
+    SW_EXPECT_TRUE( declared._pFunction == &TickBatchOf<TickModeMoverTestComponent, kMoverBatchScopeName>::tickRange );
+    SW_EXPECT_TRUE( declared._mode == TickMode::Batch );
+    SW_EXPECT_TRUE( registry.registerEntry( declared ) );
+
+    TickBatchRegistry::Entry inherited = makeDeclaredTickEntry<TickModeMainDerivedTestComponent, kMoverBatchScopeName>();
+    SW_EXPECT_TRUE( inherited._pStaticType == nullptr );
+    SW_EXPECT_FALSE( registry.registerEntry( inherited ) );
+    SW_EXPECT_EQUAL( 1u, registry.getRegisteredCount() );
+    registry.unregisterEntry( declared );
+}
+
 SW_TEST_CASE( TickModesTest, DeferredQueueMergesThreadBuffersByKey )
 {
     GameObjectManager     manager;

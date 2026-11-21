@@ -8,7 +8,6 @@
 
 #include "Engine/Reflection/ReflectionEnumNames.h"
 
-#include "Programs/ReflectionParser/AnnotationMeta.h"
 #include "Programs/ReflectionParser/CodeEmit.h"
 
 namespace sw
@@ -309,102 +308,6 @@ namespace sw
                 if ( tryParseFunctionNetRole( value, role ) )
                     target._netRole = role;
             }
-
-            // ------------------------------------------------------------------------------
-            // D) 검증 — AnnotationMeta.txt ↔ 필드 표
-            // ------------------------------------------------------------------------------
-            /** @brief 필드가 받는 값의 종류가 AnnotationMeta.txt 의 kind 와 맞는지 봅니다. */
-            static bool canAcceptKind( const AnnotationValue value, const AnnotationBinding::Kind kind ) noexcept
-            {
-                switch ( value )
-                {
-                    case AnnotationValue::Bool:
-                        return kind == AnnotationBinding::Kind::Flag || kind == AnnotationBinding::Kind::Bool;
-                    case AnnotationValue::String:
-                        return kind == AnnotationBinding::Kind::String;
-                    case AnnotationValue::Float:
-                    case AnnotationValue::Range:
-                        return kind == AnnotationBinding::Kind::Float;
-                    case AnnotationValue::NetRole:
-                        return kind == AnnotationBinding::Kind::NetRole;
-                    case AnnotationValue::Count:
-                        return kind == AnnotationBinding::Kind::Count;
-                }
-                return false;
-            }
-
-            /** @brief 바인딩이 가리키는 필드 이름입니다. 넷 역할은 필드 이름 자리에 역할을 적으므로 NetRole 필드입니다. */
-            static string_view getBoundFieldID( const AnnotationBinding& binding ) noexcept
-            {
-                if ( binding._kind == AnnotationBinding::Kind::NetRole )
-                    return annotation::kNetRoleField;
-                return binding._field;
-            }
-
-            template <typename TParsed>
-            static bool isInScope( const AnnotationMetaEntry& entry )
-            {
-                return entry._scope == getAnnotationScope<TParsed>()._pDesc->_pScope;
-            }
-
-            /** @brief 바인딩 한 줄이 이 스코프의 필드를 알맞은 종류로 가리키는지 봅니다. */
-            template <typename TParsed>
-            static bool isBindingValid( const AnnotationMetaEntry& entry )
-            {
-                const AnnotationScope<TParsed>& scope   = getAnnotationScope<TParsed>();
-                const AnnotationBinding&        binding = entry._binding;
-                const AnnotationField<TParsed>* pField  = scope.findField( getBoundFieldID( binding ) );
-                if ( pField == nullptr )
-                {
-                    SW_LOG_ERROR_ID( "AnnotationFields.AnnotationMetaTxtBindsBut", "AnnotationMeta.txt [%#] binds '%#', but PredefinedAnnotationField.xxx has no %# row for it "
-                                                                                   "- every token spelled that way would be dropped.",
-                                     entry._scope, binding._field, getBoundFieldID( binding ) );
-                    return false;
-                }
-                if ( canAcceptKind( pField->_value, binding._kind ) == false )
-                {
-                    SW_LOG_ERROR_ID( "AnnotationFields.AnnotationMetaTxtDeclaresBut", "AnnotationMeta.txt [%#] declares '%#' as %#, but its field member in ParsedReflection.h "
-                                                                                      "holds another kind of value.",
-                                     entry._scope, binding._field, toString( binding._kind ) );
-                    return false;
-                }
-
-                FunctionNetRole role = FunctionNetRole::Local;
-                if ( binding._kind == AnnotationBinding::Kind::NetRole && tryParseFunctionNetRole( binding._field, role ) == false )
-                {
-                    SW_LOG_ERROR_ID( "AnnotationFields.AnnotationMetaTxtNamesNet", "AnnotationMeta.txt [%#] names net role '%#', which PredefinedFunctionNetRole.xxx does not define.",
-                                     entry._scope, binding._field );
-                    return false;
-                }
-                return true;
-            }
-
-            /** @brief 이 스코프의 필드마다 적을 철자가 하나 이상 있는지 봅니다. 없으면 그 줄은 아무도 켤 수 없습니다. */
-            template <typename TParsed>
-            static bool isEveryFieldBound( const AnnotationMeta& meta )
-            {
-                bool bValid = true;
-                for ( const AnnotationField<TParsed>& field : getAnnotationScope<TParsed>() )
-                {
-                    bool bBound = false;
-                    for ( const AnnotationMetaEntry& entry : meta.getEntries() )
-                    {
-                        if ( isInScope<TParsed>( entry ) && getBoundFieldID( entry._binding ) == field._id )
-                        {
-                            bBound = true;
-                            break;
-                        }
-                    }
-                    if ( bBound == false )
-                    {
-                        SW_LOG_ERROR_ID( "AnnotationFields.PredefinedAnnotationFieldXxxRowBut", "PredefinedAnnotationField.xxx has a %# '%#' row, but AnnotationMeta.txt gives it no spelling "
-                                                                                                "- nothing can set it.",
-                                         getAnnotationScope<TParsed>()._pDesc->_pScope, field._id );
-                        bValid = false;
-                    }
-                }
-                return bValid;
-            }
         };
 
         // ------------------------------------------------------------------------------
@@ -445,7 +348,7 @@ namespace sw
 #define SW_ANNOTATION_IN_Property( Row )
 #define SW_ANNOTATION_IN_Function( Row )
         constexpr AnnotationField<ParsedTypeInfo> kArrReflectField[] = {
-#include "PredefinedAnnotationField.xxx"
+#include "Core/Predefined/PredefinedAnnotationField.xxx"
         };
 #undef SW_ANNOTATION_IN_Reflect
 #undef SW_ANNOTATION_IN_Enum
@@ -454,7 +357,7 @@ namespace sw
 #define SW_ANNOTATION_IN_Reflect( Row )
 #define SW_ANNOTATION_IN_Enum( Row ) Row
         constexpr AnnotationField<ParsedEnumInfo> kArrEnumField[] = {
-#include "PredefinedAnnotationField.xxx"
+#include "Core/Predefined/PredefinedAnnotationField.xxx"
         };
 #undef SW_ANNOTATION_IN_Enum
 #undef SW_ANNOTATION_IN_Property
@@ -463,7 +366,7 @@ namespace sw
 #define SW_ANNOTATION_IN_Enum( Row )
 #define SW_ANNOTATION_IN_Property( Row ) Row
         constexpr AnnotationField<ParsedPropertyInfo> kArrPropertyField[] = {
-#include "PredefinedAnnotationField.xxx"
+#include "Core/Predefined/PredefinedAnnotationField.xxx"
         };
 #undef SW_ANNOTATION_IN_Property
 #undef SW_ANNOTATION_IN_Function
@@ -472,7 +375,7 @@ namespace sw
 #define SW_ANNOTATION_IN_Property( Row )
 #define SW_ANNOTATION_IN_Function( Row ) Row
         constexpr AnnotationField<ParsedFunctionInfo> kArrFunctionField[] = {
-#include "PredefinedAnnotationField.xxx"
+#include "Core/Predefined/PredefinedAnnotationField.xxx"
         };
 #undef SW_ANNOTATION_IN_Function
 #undef SW_ANNOTATION_IN_Enumerator
@@ -481,7 +384,7 @@ namespace sw
 #define SW_ANNOTATION_IN_Function( Row )
 #define SW_ANNOTATION_IN_Enumerator( Row ) Row
         constexpr AnnotationField<ParsedEnumeratorInfo> kArrEnumeratorField[] = {
-#include "PredefinedAnnotationField.xxx"
+#include "Core/Predefined/PredefinedAnnotationField.xxx"
         };
 
 #undef SW_ANNOTATION_IN_Reflect
@@ -613,46 +516,5 @@ namespace sw
         }
         text.append( "Name" );
         return string( text.view() );
-    }
-
-    bool AnnotationFields::validateBindings( const AnnotationMeta& meta )
-    {
-        bool bValid = true;
-        for ( const AnnotationMetaEntry& entry : meta.getEntries() )
-        {
-            if ( AnnotationFieldsInternal::isInScope<ParsedTypeInfo>( entry ) )
-            {
-                bValid = AnnotationFieldsInternal::isBindingValid<ParsedTypeInfo>( entry ) && bValid;
-            }
-            else if ( AnnotationFieldsInternal::isInScope<ParsedEnumInfo>( entry ) )
-            {
-                bValid = AnnotationFieldsInternal::isBindingValid<ParsedEnumInfo>( entry ) && bValid;
-            }
-            else if ( AnnotationFieldsInternal::isInScope<ParsedPropertyInfo>( entry ) )
-            {
-                bValid = AnnotationFieldsInternal::isBindingValid<ParsedPropertyInfo>( entry ) && bValid;
-            }
-            else if ( AnnotationFieldsInternal::isInScope<ParsedFunctionInfo>( entry ) )
-            {
-                bValid = AnnotationFieldsInternal::isBindingValid<ParsedFunctionInfo>( entry ) && bValid;
-            }
-            else if ( AnnotationFieldsInternal::isInScope<ParsedEnumeratorInfo>( entry ) )
-            {
-                bValid = AnnotationFieldsInternal::isBindingValid<ParsedEnumeratorInfo>( entry ) && bValid;
-            }
-            else
-            {
-                SW_LOG_ERROR_ID( "AnnotationFields.AnnotationMetaTxtSectionNot", "AnnotationMeta.txt section [%#] is not an annotation scope (REFLECT / ENUM / ENUMERATOR / PROPERTY / FUNCTION).",
-                                 entry._scope );
-                bValid = false;
-            }
-        }
-
-        bValid = AnnotationFieldsInternal::isEveryFieldBound<ParsedTypeInfo>( meta ) && bValid;
-        bValid = AnnotationFieldsInternal::isEveryFieldBound<ParsedEnumInfo>( meta ) && bValid;
-        bValid = AnnotationFieldsInternal::isEveryFieldBound<ParsedPropertyInfo>( meta ) && bValid;
-        bValid = AnnotationFieldsInternal::isEveryFieldBound<ParsedFunctionInfo>( meta ) && bValid;
-        bValid = AnnotationFieldsInternal::isEveryFieldBound<ParsedEnumeratorInfo>( meta ) && bValid;
-        return bValid;
     }
 } // namespace sw

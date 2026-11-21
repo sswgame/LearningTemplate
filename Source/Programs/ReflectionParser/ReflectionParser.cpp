@@ -7,7 +7,6 @@
 #include "Core/Log/Sink/AsyncLogSink.h"
 #include "Core/Time/GameTimer.h"
 
-#include "Programs/ReflectionParser/AnnotationFields.h"
 #include "Programs/ReflectionParser/ParserDefines.h"
 #include "Programs/ReflectionParser/ParserOptions.h"
 #include "Programs/ReflectionParser/ParserSession.h"
@@ -52,27 +51,13 @@ namespace sw
                 return false;
             }
 
-            /**
-             * @brief 파싱에 쓰는 표들을 채웁니다: builtins · 철자 표(둘 다 필수, 철자 표는 필드 표와 대조).
-             * @details 철자 표와 필드 표가 어긋나면 그 토큰은 애노테이션을 적는 자리에서 보이지 않게 사라진다. 시작할 때 막는다.
-             */
+            /** @brief 파싱에 쓰는 표를 채웁니다: builtins(필수). 애노테이션 키 표는 파서에 컴파일되어 있다(`PredefinedAnnotationField.xxx`). */
             [[nodiscard]] static bool loadTables( const ParserOptions& options, ParserSession& session )
             {
                 session._typeNameMap.setStripPrefixes( session._config._listTypeStripPrefix );
                 if ( loadReflectBuiltins( options._builtinsPath, session ) == false )
                 {
                     SW_LOG_ERROR_ID( "ReflectionParser.FailedLoad", "Failed to load %#: %#", cli::kBuiltins, options._builtinsPath );
-                    return false;
-                }
-
-                if ( session._annotationMeta.loadFromFile( options._annotationMetaPath ) == false )
-                {
-                    SW_LOG_ERROR_ID( "ReflectionParser.FailedLoad", "Failed to load %#: %#", cli::kAnnotationMeta, options._annotationMetaPath );
-                    return false;
-                }
-                if ( AnnotationFields::validateBindings( session._annotationMeta ) == false )
-                {
-                    SW_LOG_ERROR_ID( "ReflectionParser.PredefinedAnnotationFieldXxxDisagreeSee", "%# and PredefinedAnnotationField.xxx disagree (see above).", options._annotationMetaPath );
                     return false;
                 }
                 return true;

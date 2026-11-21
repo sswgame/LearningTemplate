@@ -370,7 +370,7 @@ namespace sw
         T* findComponentOfType() const
         {
             static_assert( std::is_base_of_v<Component, T>, "T must derive from sw::Component" );
-            static_assert( HasOwnReflectBody_v<T> || HasReflectStaticType_v<T>,
+            static_assert( HasOwnReflectBody_v<T>,
                            "T must declare its own REFLECT_BODY() (cannot slice to a base class StaticType)" );
 
 #if defined( SW_DEBUG )
@@ -564,7 +564,7 @@ namespace sw
         // 멤버가 없는 파생 타입도 예외가 아니다. REFLECT_BODY 가 없는 파생 타입은 부모의 TypeInfo 를 물려받는다.
         // 그러면 모듈을 언로드할 때 `destroyComponentsOfModule` 이 TypeInfo 의 모듈 이름으로 대상을 고르므로 그 인스턴스를 놓친다.
         // 그 인스턴스의 vtable 은 언로드된 이미지를 가리킨 채 씬에 남는다(언리얼도 모든 UObject 클래스는 리플렉션을 갖는다).
-        static_assert( HasOwnReflectBody_v<T> || HasReflectStaticType_v<T>, "T must declare its own REFLECT_BODY()." );
+        static_assert( HasOwnReflectBody_v<T>, "T must declare its own REFLECT_BODY()." );
 
         if ( _pOwnerManager == nullptr )
         {
@@ -587,8 +587,6 @@ namespace sw
         const TypeInfo* pTypeInfo = nullptr;
         if constexpr ( HasStaticType_v<T> )
             pTypeInfo = T::StaticType();
-        else if constexpr ( HasReflectStaticType_v<T> )
-            pTypeInfo = ReflectTypeTraits<T>::StaticType();
 
         const ComponentStorage storage = allocateComponentStorage( pTypeInfo, sizeof( T ) );
         if ( storage._pMemory == nullptr )

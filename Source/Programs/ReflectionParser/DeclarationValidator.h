@@ -84,7 +84,7 @@ namespace sw
          * @brief 멤버에 붙은 애노테이션이 REFLECT 타입 안에 있는지 봅니다. 아니면 알리고 false 입니다.
          * @param pMacroName 멤버 쪽 매크로 이름(오류 메시지용)
          */
-        static bool isInsideReflectType( CXCursor member, const utf8* pMacroName, const ParserConfig& config );
+        static bool isInsideReflectType( CXCursor member, const utf8* pMacroName );
 
     private:
         /** @brief 검증 함수(`void fn( ValidationContext& )`)가 그 이름으로 선언됐는지 봅니다. */

@@ -84,9 +84,10 @@ namespace sw
             class ContainerWriter final : public IContainerWriter
             {
             public:
-                ContainerWriter( IXMLBackend& backend, const SerializeContext& context )
+                ContainerWriter( IXMLBackend& backend, const SerializeContext& context, const NestedContainerInfo& shape )
                     : _backend{ backend }
                     , _context{ context }
+                    , _shape{ shape }
                 {
                 }
 
@@ -98,7 +99,7 @@ namespace sw
                 void beginMapEntry( const ValueAddress key, const hashed_string& keyTypeName ) override
                 {
                     StringBuilder<constant::buffer::kMax8192> keyText;
-                    SerializerUtil::valueToText( keyText, key, keyTypeName, _context );
+                    SerializerUtil::valueToText( keyText, key, keyTypeName, _shape.findBinding( keyTypeName ), _context );
                     _backend.beginMap( kXMLEntryTag );
                     _backend.writeAttribute( kXMLKeyAttr, keyText.c_str() );
                 }
@@ -150,7 +151,7 @@ namespace sw
                 void writeScalar( const ValueAddress value, const hashed_string& typeName, const ContainerSlot slot ) override
                 {
                     StringBuilder<constant::buffer::kMax8192> text;
-                    SerializerUtil::valueToText( text, value, typeName, _context );
+                    SerializerUtil::valueToText( text, value, typeName, _shape.findBinding( typeName ), _context );
                     if ( slot == ContainerSlot::SequenceElement )
                         _backend.writeValue( kXMLItemTag, text.c_str() );
                     else
@@ -160,6 +161,7 @@ namespace sw
             private:
                 IXMLBackend&            _backend;
                 const SerializeContext& _context;
+                NestedContainerInfo     _shape; ///< 맨 바깥 단계의 원소 · 키 묶음(`findBinding`)
             };
 
             /** @brief 지금 노드 "안의" 컨테이너를 읽습니다 — 자식 태그 이름에 기대지 않고 차례로 훑습니다(다형 원소만 이름 = 타입). */
@@ -174,6 +176,7 @@ namespace sw
                     , _pOutListRestored{ pOutListRestored }
                     , _propForOrphan{ propForOrphan }
                     , _currentTagName{}
+                    , _shape{ propForOrphan.getContainerShape() }
                 {
                 }
 
@@ -271,7 +274,7 @@ namespace sw
                 /** @brief 글 하나를 값으로 읽습니다. 못 읽으면 그 글을 orphan 으로 남기고 FieldFailed 입니다(조용히 버리지 않는다). */
                 ContainerReadResult readText( const MutableValueAddress value, const hashed_string& typeName, const string& text ) const
                 {
-                    if ( parseTextValueCoerced( value, typeName, text, _context ) )
+                    if ( parseTextValueCoerced( value, typeName, _shape.findBinding( typeName ), text, _context ) )
                         return ContainerReadResult::Read;
                     recordDroppedText( _pOutListOrphan, _propForOrphan, text );
                     return ContainerReadResult::FieldFailed;
@@ -284,6 +287,7 @@ namespace sw
                 vector<RestoredPropertyValue>* _pOutListRestored; ///< 소프트 읽기가 되돌린 칸(모든 깊이) — 루트의 범위 검사가 뺀다. 엄격 읽기는 nullptr
                 const PropertyInfo&            _propForOrphan;
                 string_view                    _currentTagName;
+                NestedContainerInfo            _shape; ///< 맨 바깥 단계의 원소 · 키 묶음(`findBinding`)
             };
 
             // 주소는 프로퍼티를 가진 객체다. 구조체 칸은 그 값 주소를 안쪽 타입의 객체 주소로 적어 다시 부른다.
@@ -314,8 +318,9 @@ namespace sw
                         if ( prop._metadata->_bSkipIfEmpty == SW_TRUE && context.shouldWriteEmptyValues() == false && prop._containerWrapper->getSize( propValue.get() ) == 0 )
                             return ReflectVisitFlow::Continue; // 글 칸과 같은 규칙 — 스키마가 생략을 허락한 빈 목록은 쓰지 않는다
                         backend.beginMap( prop._name.c_str() );
-                        ContainerWriter writer( backend, context );
-                        ContainerVisitor::write( propValue, prop.getContainerShape(), writer, context );
+                        const NestedContainerInfo shape = prop.getContainerShape();
+                        ContainerWriter           writer( backend, context, shape );
+                        ContainerVisitor::write( propValue, shape, writer, context );
                         backend.endMap();
                     }
                     else
@@ -330,7 +335,7 @@ namespace sw
                         else
                         {
                             StringBuilder<constant::buffer::kMax8192> ss;
-                            SerializerUtil::valueToText( ss, propValue, prop._typeName, context );
+                            SerializerUtil::valueToText( ss, propValue, prop._typeName, prop.findValueBinding(), context );
 
                             // 기본은 "모두 쓴다" 이다. 그래야 파일에 없음과 명시적으로 비어 있음이
                             // 구분된다. 생략해도 좋다고 **스키마가 선언한** 필드만 비었을 때 뺀다.
@@ -517,7 +522,7 @@ namespace sw
                     }
                     // 비트필드는 그 비트만 쓴다. 불리언이 아닌 글("ture")은 false 로 삼키지 않고 실패로 남긴다.
                     const bool bApplied = ( prop._bIsBitField == SW_TRUE ) ? SerializerUtil::applyPropertyText( prop, MutableObjectAddress{ pInstance }, strValue, _context )
-                                                                           : parseTextValueCoerced( MutableValueAddress{ pPropPtr }, prop._typeName, strValue, _context );
+                                                                           : parseTextValueCoerced( MutableValueAddress{ pPropPtr }, prop._typeName, prop.findValueBinding(), strValue, _context );
                     if ( bApplied == false )
                     {
                         _bFieldError = true;

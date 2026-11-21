@@ -48,7 +48,6 @@ FILE_RUNTIME_EDITOR_TOOL_DEFAULTS = "Config/Editor/editortooldefaults.json"
 DIR_SOURCE_EDITOR = "Source/Editor"
 
 FILE_REFLECT_BUILTINS = "Source/Engine/Reflection/ReflectBuiltins.xxx"
-FILE_ANNOTATION_META = "Source/Core/Predefined/AnnotationMeta.txt"
 FILE_TPL_BUILTIN_HEADER = "BuiltinFileHeader.tpl"
 FILE_TPL_BUILTIN_REGISTRAR = "BuiltinTypeRegistrar.tpl"
 FILE_TPL_BUILTIN_FOOTER = "BuiltinFileFooter.tpl"

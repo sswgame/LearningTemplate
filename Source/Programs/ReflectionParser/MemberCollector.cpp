@@ -55,22 +55,6 @@ namespace sw
             _bHasError = SW_TRUE;
         if ( DeclarationValidator::validateTickMode( *_pType ) == false )
             _bHasError = SW_TRUE;
-        collectTraits();
-    }
-
-    void MemberCollector::collectTraits()
-    {
-        // 이 타입이 **직접 선언한** 재정의만 센다(언리얼 UHT 가 선언에서 클래스 플래그를 모으는 자리). 손 매크로(`SW_REGISTER_TICK_BATCH`)는 타입을 빠뜨릴 수 있었다.
-        for ( const ParsedMethodSignature& signature : _listMethodSignature )
-        {
-            const size_t parameterCount = signature._listParameterTypeName.size();
-            if ( signature._name == "onTick" && parameterCount == 1 )
-                _pType->_bOverridesTick = SW_TRUE;
-            else if ( signature._name == "onSubTick" && parameterCount == 2 )
-                _pType->_bOverridesSubTick = SW_TRUE;
-            else if ( signature._name == "serializeState" && parameterCount == 1 )
-                _pType->_bOverridesSerializeState = SW_TRUE;
-        }
     }
 
     CXChildVisitResult MemberCollector::memberCollectVisitor( CXCursor cursor, CXCursor, CXClientData data )
@@ -105,7 +89,7 @@ namespace sw
         if ( _baseCount == 1 && bVirtualBase == false )
         {
             _pType->_parentFQN        = baseFQN;
-            _pType->_bParentReflected = AnnotationLookup::isReflectedRecord( baseDecl, _pSession->_config ) ? SW_TRUE : SW_FALSE;
+            _pType->_bParentReflected = AnnotationLookup::isReflectedRecord( baseDecl ) ? SW_TRUE : SW_FALSE;
             return;
         }
 
@@ -135,14 +119,18 @@ namespace sw
             if ( StringUtil::startsWith( canonical, "const " ) )
                 canonical.erase( 0, 6 );
             parameter._canonicalTypeName = std::move( canonical );
+            // 타입 핸들은 형식의 정체로 가른다 — 한 값이면 대상 `T` 를 읽고, 컨테이너 안에 들었으면 `_bHoldsTypedHandle` 만 켜 두어 오류가 된다.
+            const CXType valueType       = clang_getNonReferenceType( clang_getCursorType( argCursor ) );
+            parameter._bHoldsTypedHandle = CursorReader::containsTypeIdentity( valueType, typeidentity::kTypedComponentHandle );
+            if ( CursorReader::getTypeIdentity( valueType ) == typeidentity::kTypedComponentHandle )
+                parameter._handleTargetTypeName = session._typeNameMap.normalize( CursorReader::getTemplateArgumentSpelling( valueType, 0 ) );
             method._listParameter.push_back( std::move( parameter ) );
         }
     }
 
     bool MemberCollector::isEventType( const CXType fieldType )
     {
-        const string canonical = CursorReader::takeString( clang_getTypeSpelling( clang_getCanonicalType( fieldType ) ) );
-        return StringUtil::startsWith( canonical, annotation::kEventTemplatePrefix );
+        return CursorReader::getTypeIdentity( fieldType ) == typeidentity::kMulticastDelegate;
     }
 
     CXType MemberCollector::findEventFunctionType( const CXType fieldType )
@@ -180,11 +168,10 @@ namespace sw
         }
         for ( const string& token : AnnotationApply::splitAnnotationArgs( AnnotationApply::annotationArgumentText( spelling, annotation::kPropertyPrefix ) ) )
         {
-            const size_t             eqPos    = token.find( '=' );
-            const AnnotationBinding* pBinding = ( eqPos == string::npos )
-                                                  ? session._annotationMeta.findBare( annotation::kPropertyScope, token )
-                                                  : session._annotationMeta.findKey( annotation::kPropertyScope, StringUtil::trim( string_view( token ).substr( 0, eqPos ) ) );
-            if ( pBinding != nullptr && AnnotationFields::canAcceptOnEvent( pBinding->_field ) == false )
+            // 키 철자가 곧 필드 표의 줄 이름이다. 모르는 키는 위의 적용이 이미 알렸다.
+            const size_t      eqPos = token.find( '=' );
+            const string_view key   = eqPos == string::npos ? string_view( token ) : StringUtil::trim( string_view( token ).substr( 0, eqPos ) );
+            if ( getAnnotationScope<ParsedPropertyInfo>().findField( key ) != nullptr && AnnotationFields::canAcceptOnEvent( key ) == false )
             {
                 SW_LOG_ERROR_ID( "AstVisitor.ERRORPROPERTYEventEvent", "ERROR: PROPERTY() on event '%#' has '%#'. An event (multicast delegate) takes display metadata only (%#).", owner, token,
                                  AnnotationFields::makeEventFieldList() );
@@ -217,14 +204,14 @@ namespace sw
 
     void MemberCollector::collectField( const CXCursor cursor )
     {
+        // 멤버 앞의 속성은 선언에 붙어 AST 에 남는다(형식 앞 매크로만 표식 선언이다) — 자식 속성만 본다.
         const string spelling = AnnotationLookup::findAnnotateAttr( cursor, annotation::kPropertyPrefix );
-        if ( spelling.empty() && AnnotationLookup::hasSourceAnnotation( cursor, annotation::kProperty, _pSession->_config ) == false )
+        if ( spelling.empty() )
             return;
 
         if ( isEventType( clang_getCursorType( cursor ) ) )
         {
-            const string eventSpelling = spelling.empty() ? AnnotationLookup::extractSourceAnnotation( cursor, annotation::kProperty, _pSession->_config ) : spelling;
-            collectEvent( cursor, eventSpelling, clang_getCursorType( cursor ) );
+            collectEvent( cursor, spelling, clang_getCursorType( cursor ) );
             return;
         }
 
@@ -272,11 +259,16 @@ namespace sw
         clang_getExpansionLocation( clang_getCursorLocation( cursor ), &declarationFile, nullptr, nullptr, nullptr );
         const bool bNameCheckSkipped = declarationFile != nullptr && session._config.isNameFieldCheckSkipped( CursorReader::takeString( clang_getFileName( declarationFile ) ) );
         if ( bNameCheckSkipped == false && SourceTokens::hasStringLiteralDefault( cursor, prop._memberName ) &&
-             session._config.isNameFieldType( SourceTokens::readFieldTypeText( cursor, prop._memberName ) ) )
+             CursorReader::isNameFieldType( clang_getCursorType( cursor ) ) )
             prop._bHasNameLiteralDefault = SW_TRUE;
-        ContainerTreeBuilder::fillContainerDetails( prop, fieldType, session );
-        if ( PropertyResolver::resolveComponentHandleProperty( prop, owner ) == false || PropertyResolver::resolveAssetRefProperty( prop, owner ) == false ||
-             PropertyResolver::resolveCatalogKeyProperty( prop, owner ) == false )
+        if ( ContainerTreeBuilder::fillContainerDetails( prop, fieldType, session ) == false )
+        {
+            SW_LOG_ERROR_ID( "AstVisitor.ERRORPROPERTYContainerType", "ERROR: PROPERTY() '%#' - its container type could not be read (see above).", owner );
+            _bHasError = SW_TRUE;
+            return;
+        }
+        if ( PropertyResolver::resolveComponentHandleProperty( prop, fieldType, session, owner ) == false ||
+             PropertyResolver::resolveAssetRefProperty( prop, fieldType, session, owner ) == false || PropertyResolver::resolveCatalogKeyProperty( prop, fieldType, session, owner ) == false )
         {
             _bHasError = SW_TRUE;
             return;
@@ -321,15 +313,14 @@ namespace sw
             _bHasError = SW_TRUE;
             return;
         }
-        ContainerTreeBuilder::fillContainerDetails( prop, valueType, session );
-        if ( prop._bIsContainer == SW_TRUE )
+        if ( ContainerTreeBuilder::fillContainerDetails( prop, valueType, session ) == false || prop._bIsContainer == SW_TRUE )
         {
             SW_LOG_ERROR_ID( "AstVisitor.ERRORPROPERTYMethodReturns", "ERROR: PROPERTY() on method '%#' returns a container. Accessor properties support single values only.", owner );
             _bHasError = SW_TRUE;
             return;
         }
-        if ( PropertyResolver::resolveComponentHandleProperty( prop, owner ) == false || PropertyResolver::resolveAssetRefProperty( prop, owner ) == false ||
-             PropertyResolver::resolveCatalogKeyProperty( prop, owner ) == false )
+        if ( PropertyResolver::resolveComponentHandleProperty( prop, valueType, session, owner ) == false ||
+             PropertyResolver::resolveAssetRefProperty( prop, valueType, session, owner ) == false || PropertyResolver::resolveCatalogKeyProperty( prop, valueType, session, owner ) == false )
         {
             _bHasError = SW_TRUE;
             return;
@@ -437,16 +428,9 @@ namespace sw
 
     void MemberCollector::collectMethod( const CXCursor cursor, const string& functionSpelling )
     {
-        // 순수 가상 함수는 실제 AnnotateAttr 가 있어야 한다. 소스 창 휴리스틱이
-        // 앞 타입의 FUNCTION(...) 을 집어 `= 0` 메서드를 잘못 등록할 수 있다.
-        const bool bHasAttr = functionSpelling.empty() == false;
-        if ( bHasAttr == false )
-        {
-            if ( clang_CXXMethod_isPureVirtual( cursor ) )
-                return;
-            if ( AnnotationLookup::hasSourceAnnotation( cursor, annotation::kFunction, _pSession->_config ) == false )
-                return;
-        }
+        // FUNCTION() 은 선언에 붙는 속성이다 — 없으면 리플렉션 함수가 아니다.
+        if ( functionSpelling.empty() )
+            return;
 
         const ParserSession& session = *_pSession;
         ParsedFunctionInfo   method;
@@ -457,7 +441,7 @@ namespace sw
         fillParameters( cursor, method, session );
 
         const string owner = CursorReader::makeMemberOwnerName( _pType->_fullyQualifiedName, method._name );
-        if ( bHasAttr && AnnotationLookup::applyAnnotation( functionSpelling, method, session, owner ) == false )
+        if ( AnnotationLookup::applyAnnotation( functionSpelling, method, session, owner ) == false )
         {
             _bHasError = SW_TRUE;
             return;

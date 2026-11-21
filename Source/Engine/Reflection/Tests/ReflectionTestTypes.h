@@ -688,7 +688,7 @@ namespace sw
 {
     /**
      * @brief `Abstract = true` — 단독 토큰이 아니라 대입 꼴로 적은 표본입니다.
-     * @details AnnotationMeta.txt 의 `flag` 줄이 단독 토큰과 `X = true` 를 함께 등록하지 않으면 이 꼴이 경고 한 줄 없이 버려집니다.
+     * @details 플래그 줄(`PredefinedAnnotationField.xxx` 의 uint8 멤버)은 단독 토큰과 `X = true` 를 둘 다 받아야 합니다 — 한쪽만 받으면 이 꼴이 버려집니다.
      */
     REFLECT( Abstract = true )
     struct AssignedAbstractBase
@@ -733,8 +733,8 @@ namespace sw
         PROPERTY( Transient = true )
         ReflectedAny _payload;
 
-        /** @brief 별칭도 두 꼴을 다 받아야 합니다 — 별칭 `xmlAttribute` 가 단독 토큰으로만 등록되면 이 대입 꼴이 버려집니다. */
-        PROPERTY( xmlAttribute = true )
+        /** @brief 플래그 키는 대입 꼴(`XMLAttribute = true`)도 받아야 합니다 — 단독 토큰으로만 받으면 이 꼴이 버려집니다. */
+        PROPERTY( XMLAttribute = true )
         int32 _tag{ 0 };
 
         /** @brief 플래그만 보는 RPC 표본입니다. */

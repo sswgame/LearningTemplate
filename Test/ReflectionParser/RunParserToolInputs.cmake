@@ -1,17 +1,16 @@
-# 리플렉션 파서의 도구 입력 사례 하나를 돈다 — 산출물이 입력만으로 정해지는가(결정성)와, 도구 입력(설정 · 템플릿 · 철자 표)이 깨졌을 때 멈추는가.
+# 리플렉션 파서의 도구 입력 사례 하나를 돈다 — 산출물이 입력만으로 정해지는가(결정성)와, 도구 입력(설정 · 템플릿 · 내장 표)이 깨졌을 때 멈추는가.
 #   MODE=determinism        같은 입력으로 두 번 생성한다(둘째는 스탬프를 지워 다시 파싱하게 한다). 산출물 바이트가 같고, 내용이 같으면 다시 쓰지 않아 시각도 그대로다
 #                           (`GeneratedFileUtil::writeIfChanged` — 다시 쓰면 그 파일을 include 하는 TU 가 모두 다시 컴파일된다).
 #   MODE=args-changed       같은 입력 · 같은 도구로 `--module` 만 바꿔 다시 돈다. 파일 시각은 그대로라도 다시 파싱해야 한다(스탬프의 `args` 줄 — A-8).
 #   MODE=broken-config      설정 파일이 JSON 이 아니다.
 #   MODE=broken-templates   템플릿 폴더에서 템플릿 하나가 빠졌다.
-#   MODE=broken-spelling    철자 표의 첫 줄이 [scope] 절 밖의 바인딩이다.
 #   MODE=broken-builtins-interp   내장 표의 bool 줄에 Interp 역할을 단다 — 섞는 길이 없는 모양(none)이라 시작할 때 멈춰야 한다.
 #   MODE=broken-builtins-widget   내장 표의 TagID 줄 위젯을 Packed 로 바꾼다 — 글 처리기가 packed 가 아니다.
 #   MODE=broken-builtins-layout   내장 표의 int2 줄 Layout 을 모르는 철자(i64)로 바꾼다.
 #   MODE=broken-builtins-container  내장 표의 TArray 줄에서 State 를 뺀다 — 같은 래퍼(Vector)의 vector 줄과 역할이 다르다.
 #   깨진 입력은 0 이 아닌 종료여야 한다 — 기본값으로 이어 가면 빌드가 틀린 생성 코드로 지나간다(폴백 없음).
-# 입력: MODE · TARGET_ARGS · PARSER · FIXTURE · WORK_DIR · SOURCE_ROOT · GENERATED_DIR · BUILTINS · ANNOTATION_META · TEMPLATES · CONFIG · GEN_CPP_SUFFIX
-foreach(required MODE TARGET_ARGS PARSER FIXTURE WORK_DIR SOURCE_ROOT GENERATED_DIR BUILTINS ANNOTATION_META TEMPLATES CONFIG GEN_CPP_SUFFIX)
+# 입력: MODE · TARGET_ARGS · PARSER · FIXTURE · WORK_DIR · SOURCE_ROOT · GENERATED_DIR · BUILTINS · TEMPLATES · CONFIG · GEN_CPP_SUFFIX
+foreach(required MODE TARGET_ARGS PARSER FIXTURE WORK_DIR SOURCE_ROOT GENERATED_DIR BUILTINS TEMPLATES CONFIG GEN_CPP_SUFFIX)
 	if(NOT DEFINED ${required})
 		message(FATAL_ERROR "RunParserToolInputs: ${required} is not given")
 	endif()
@@ -19,7 +18,6 @@ endforeach()
 
 file(REMOVE_RECURSE "${WORK_DIR}")
 file(MAKE_DIRECTORY "${WORK_DIR}/out")
-set(annotation_meta "${ANNOTATION_META}")
 set(templates "${TEMPLATES}")
 set(config "${CONFIG}")
 set(module_name "ParserFixture")
@@ -38,7 +36,6 @@ function(sw_run_parser out_exit_code out_text)
 			--input "${FIXTURE}"
 			--output "${WORK_DIR}/out"
 			--builtins "${BUILTINS}"
-			--annotation-meta "${annotation_meta}"
 			--emit-templates "${templates}"
 			--module "${module_name}"
 			--module-local
@@ -132,10 +129,6 @@ elseif(MODE STREQUAL "broken-templates")
 	endif()
 	list(POP_FRONT list_template)
 	file(COPY ${list_template} DESTINATION "${templates}")
-elseif(MODE STREQUAL "broken-spelling")
-	set(annotation_meta "${WORK_DIR}/broken.annotation.txt")
-	file(READ "${ANNOTATION_META}" meta_text)
-	file(WRITE "${annotation_meta}" "flag.NotInAScope = NotInAScope\n${meta_text}")
 elseif(MODE MATCHES "^broken-builtins-")
 	# 내장 표 한 줄만 바꾼 사본 — 바꿀 줄이 없으면 이 사례는 아무것도 증명하지 않으므로 멈춘다.
 	if(MODE STREQUAL "broken-builtins-interp")

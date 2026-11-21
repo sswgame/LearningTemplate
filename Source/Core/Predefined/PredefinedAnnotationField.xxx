@@ -1,0 +1,162 @@
+/**
+ * @file PredefinedAnnotationField.xxx
+ * @brief REFLECT / ENUM / ENUMERATOR / PROPERTY / FUNCTION 애노테이션 키의 정본 표입니다. 키 하나 = 한 줄입니다.
+ * @details 이 표를 두 곳이 같은 줄로 펼칩니다.
+ *          - ReflectionParser(`AnnotationFields.cpp`): 키 철자로 줄을 찾아 값을 넣고, 코드젠이 Emit 열을 따른다.
+ *          - 편집기 키 목록(`Engine/Reflection/ReflectionAnnotationKeys.h`, clangd 전용): 키 완성 · 오타 오류.
+ *          예전에는 철자 표(AnnotationMeta.txt) · 이 필드 표 · 손으로 맞춘 키 목록 · parser_config 의 `-D` 매크로가 같은 사실을 넷으로 들었고 이미 어긋나 있었다.
+ *
+ *          include 하기 전에 두 매크로를 정의하십시오.
+ *          REGISTER_ANNOTATION_FIELD( Scope, Key, Member, Emit )         값을 멤버에 그대로 넣는다
+ *          REGISTER_ANNOTATION_FIELD_FN( Scope, Key, Member, Fn, Emit )  값을 `Fn( 대상, 값 )` 이 넣는다
+ *
+ *          Scope  : Reflect | Enum | Enumerator | Property | Function   (PredefinedReflectAnnotation.xxx 의 ID)
+ *          Key    : 소스에 적는 **철자 그대로**입니다(`PROPERTY( Min = 0 )` 의 Min). 별칭은 두지 않는다 — 철자 하나가 정본이다(언리얼 UPROPERTY 지정자도 철자 하나).
+ *                   넷 역할(`NetRole`)만 예외다 — 키가 아니라 역할 이름(`FUNCTION( Server )`)을 단독 토큰으로 적고, 역할 목록은 PredefinedFunctionNetRole.xxx 다.
+ *          Member : 값이 들어가는 ParsedReflection.h 의 멤버입니다. **멤버 타입이 곧 값의 종류입니다.**
+ *                     uint8 비트필드   → 플래그  (단독 토큰 `X` 와 `X = true/false` 둘 다)
+ *                     string · 목록    → 문자열  (`X = "..."`)
+ *                     float32          → 실수    (`X = 1.5`)
+ *                     ParsedRangeExpr  → 범위    (`X = 1.5` 또는 숫자 · 필드 이름 목록 `X = "-_halfSize, 0"`)
+ *                     uint32           → 개수    (`X = 16`, 1 이상의 정수 또는 C++ 정수 상수 이름)
+ *                     FunctionNetRole  → 넷 역할 (단독 토큰 `Server` 등. 토큰 자체가 값입니다)
+ *                   그대로 넣는 줄(`REGISTER_ANNOTATION_FIELD`)은 uint8 과 string 만 받습니다. 나머지는 `_FN` 입니다.
+ *          Fn     : `void Fn( 대상&, string_view 값 )`. `AnnotationFields.cpp` 에 있습니다.
+ *          Emit   : Display — 어느 멤버(이벤트 포함)에나 붙는 표시 메타입니다. Editor 와 같은 블록에 씁니다.
+ *                             이벤트(`MulticastDelegate` 필드)의 PROPERTY 가 받는 필드는 이 열이 Display 인 줄과 `Name` 뿐입니다
+ *                   Editor  — 개발 전용 단위(`<이름>.gen.meta.cpp`)에 에디터 메타데이터(`ReflectionEditorMetadata.h`)의 `<Member>` 로 씁니다
+ *                   Runtime — 등록 단위(.gen.cpp)에 `<접두><Member>`(`ReflectionMetadata.h`)로 씁니다
+ *                   Manual  — CodeGenerator 가 손으로 씁니다(템플릿 변수 · 별칭 등록 · 범위처럼 메타데이터 멤버가 아닌 자리)
+ *                   Display · Editor · Runtime 은 **엔진 쪽 메타데이터 멤버 이름이 DTO 멤버와 같다**는 약속입니다. 커스텀 메타
+ *                   (`_listCustomMeta`) 만 엔진에서 `_mapCustomMeta` 로 씁니다 — 목록 → 맵이라 이름이 다릅니다.
+ *
+ *          **행 순서 = 같은 Emit 묶음 안의 출력 순서입니다.** 적용은 철자로 찾으므로 순서와 무관합니다.
+ *
+ *          새 키 = 이 파일 한 줄 + ParsedReflection.h 멤버 + (Display · Editor 면 `ReflectionEditorMetadata.h`, Runtime 이면 `ReflectionMetadata.h` 의) 엔진 멤버.
+ *          표에 없는 토큰은 파서가 "모르는 토큰" 오류로 멈춘다(`AnnotationLookup::applyAnnotation`) — 조용히 버리지 않는다.
+ */
+
+// ── REFLECT (타입) ────────────────────────────────────────────────
+REGISTER_ANNOTATION_FIELD( Reflect, Category, _category, Display )
+REGISTER_ANNOTATION_FIELD( Reflect, DisplayName, _displayName, Display )
+REGISTER_ANNOTATION_FIELD( Reflect, Tooltip, _tooltip, Display )
+REGISTER_ANNOTATION_FIELD( Reflect, HideInMenu, _bHideInMenu, Display )
+REGISTER_ANNOTATION_FIELD_FN( Reflect, Meta, _listCustomMeta, appendCustomMeta, Display )
+REGISTER_ANNOTATION_FIELD( Reflect, Abstract, _bAbstract, Manual )
+REGISTER_ANNOTATION_FIELD( Reflect, Static, _bStatic, Manual )
+// 데이터로 놓을 수 없는 컴포넌트(코드의 정본 길로만 세운다 — 필수 인자가 있는 원격 조종자): 이름 생성 함수를 내지 않아 "Add Component" 메뉴 · 씬 · 프리팹 읽기가 만들지 못한다(언리얼 UCLASS(NotPlaceable))
+REGISTER_ANNOTATION_FIELD( Reflect, NotPlaceable, _bNotPlaceable, Manual )
+// 직렬화 · 핫 리로드용 옛 타입 이름. 여러 개면 Alias="OldA, OldB"
+REGISTER_ANNOTATION_FIELD_FN( Reflect, Alias, _listAlias, appendAlias, Manual )
+// 지운 필드 이름: RemovedField="_oldA, _oldB". 세이브는 필드를 이름의 32 비트 해시로 싣는다 — 새 필드가 지운 이름 · 그 해시를 다시 쓰면 등록이 오류로 멈춘다(언리얼 CoreRedirects 의 지운 프로퍼티 기록)
+REGISTER_ANNOTATION_FIELD_FN( Reflect, RemovedField, _listRemovedField, appendRemovedField, Manual )
+// 지운 타입 이름: RemovedType="sw::OldThing". 보통 뒤를 이은 타입에 적는다. 새 타입 · enum 이 그 이름 · 해시를 다시 쓰면 등록이 오류로 멈춘다
+REGISTER_ANNOTATION_FIELD_FN( Reflect, RemovedType, _listRemovedType, appendRemovedType, Manual )
+// 타입 검증 함수 — 같은 타입의 void fn( ValidationContext& context ) [const]. 로드 · 저장 · 인스펙터 편집 뒤에 불린다(ReflectionValidation)
+REGISTER_ANNOTATION_FIELD( Reflect, Validate, _validate, Manual )
+// 컴포넌트 틱 모드 선언: Batch(기본 — 타입별 일괄) · Task(선행 조건 · 일의 양이 큰 개별 태스크) · Main(메인 스레드 전용 API). 컴포넌트만 받는다. 모드는 등록이 없는 파생이 물려받는다(TickBatchRegistry::findDispatch)
+REGISTER_ANNOTATION_FIELD( Reflect, TickMode, _tickMode, Manual )
+// 타입의 저장 판(1 이상의 정수 · 정수 상수 이름). 칸 배치나 뜻을 바꾸면 올리고, 옛 판은 그 타입에 등록한 패치 사슬(`SW_TYPE_VERSION_PATCH`)이 올린다(ezEngine 타입 판 + GraphPatch 자리). 적지 않으면 1
+REGISTER_ANNOTATION_FIELD_FN( Reflect, Version, _version, applyTypeVersion, Manual )
+
+// ── ENUM ─────────────────────────────────────────────────────────
+REGISTER_ANNOTATION_FIELD_FN( Enum, Meta, _listCustomMeta, appendCustomMeta, Display )
+// TypeRegistry::enumToString / enumFromString 이 쓰는 Invalid 센티널과 (배타적) Count 센티널. 끝 열거자 `Count` 는 적지 않아도 Count 센티널이다(비트 플래그 제외)
+REGISTER_ANNOTATION_FIELD( Enum, Invalid, _invalidEnumerator, Manual )
+REGISTER_ANNOTATION_FIELD( Enum, Count, _countEnumerator, Manual )
+// 비트 플래그 연산자(|, &, ^, ~)를 만든다. 직렬화용 EnumInfo::_bIsBitFlag 도 켠다
+REGISTER_ANNOTATION_FIELD( Enum, Flags, _bIsBitFlag, Manual )
+REGISTER_ANNOTATION_FIELD_FN( Enum, Alias, _listAlias, appendAlias, Manual )
+// 열거자 이름 변경: ValueAlias="OldIdle:Idle, OldMoving:Moving"
+REGISTER_ANNOTATION_FIELD_FN( Enum, ValueAlias, _listValueAlias, appendValueAlias, Manual )
+// 지운 열거자를 대신 읽을 열거자: Removed="OldRunning:Moving". 선언 없이 지운 열거자를 저장된 데이터에서 읽으면 그 칸은 실패한다
+REGISTER_ANNOTATION_FIELD_FN( Enum, Removed, _listRemovedEnumerator, appendRemovedEnumerator, Manual )
+
+// ── ENUMERATOR (열거자 하나 — 언리얼 UMETA, 유니티 InspectorName). 열거자 이름 뒤에 `Red ENUMERATOR( DisplayName = "빨강" ),` 로 적는다 ──
+REGISTER_ANNOTATION_FIELD( Enumerator, DisplayName, _displayName, Display )
+REGISTER_ANNOTATION_FIELD( Enumerator, Tooltip, _tooltip, Display )
+// 에디터 선택지(콤보 · 체크박스)에서 숨긴다. 값은 그대로 읽고 쓴다
+REGISTER_ANNOTATION_FIELD( Enumerator, Hidden, _bHidden, Display )
+REGISTER_ANNOTATION_FIELD_FN( Enumerator, Meta, _listCustomMeta, appendCustomMeta, Display )
+
+// ── PROPERTY ─────────────────────────────────────────────────────
+REGISTER_ANNOTATION_FIELD( Property, Category, _category, Display )
+REGISTER_ANNOTATION_FIELD( Property, DisplayName, _displayName, Display )
+REGISTER_ANNOTATION_FIELD( Property, Tooltip, _tooltip, Display )
+REGISTER_ANNOTATION_FIELD( Property, HideInInspector, _bHideInInspector, Display )
+REGISTER_ANNOTATION_FIELD_FN( Property, Meta, _listCustomMeta, appendCustomMeta, Display )
+// 다른 프로퍼티가 참일 때만 고친다: "bEnabled" · "!bLocked" · "mode == Orbit" · "mode != Off". 거짓이면 인스펙터가 막는다(EditConditionHides 면 숨긴다)
+REGISTER_ANNOTATION_FIELD( Property, EditCondition, _editCondition, Editor )
+REGISTER_ANNOTATION_FIELD( Property, EditConditionHides, _bEditConditionHides, Editor )
+// float3/float4 색을 HDR(1 을 넘는 값)로 고친다. 색 선택기이기도 하다
+REGISTER_ANNOTATION_FIELD( Property, ColorHDR, _bColorHDR, Editor )
+// 여러 줄 글 칸(string)
+REGISTER_ANNOTATION_FIELD( Property, Multiline, _bMultiline, Editor )
+// 경로 칸이 받는 파일: "*.png;*.dds". 끌어다 놓은 경로가 맞지 않으면 받지 않는다
+REGISTER_ANNOTATION_FIELD( Property, FileFilter, _fileFilter, Editor )
+REGISTER_ANNOTATION_FIELD( Property, Default, _defaultValue, Runtime )
+REGISTER_ANNOTATION_FIELD_FN( Property, AssetType, _assetType, applyAssetType, Runtime )
+// 카탈로그 키 칸의 항목 종류입니다. 파서가 `CatalogKey<T>` 칸에 스스로 적는다(손으로 적지 않는다)
+REGISTER_ANNOTATION_FIELD( Property, CatalogKeyTag, _catalogKeyTag, Runtime )
+REGISTER_ANNOTATION_FIELD( Property, ReadOnly, _bReadOnly, Runtime )
+REGISTER_ANNOTATION_FIELD( Property, XMLAttribute, _bXMLAttribute, Runtime )
+REGISTER_ANNOTATION_FIELD( Property, AssetPath, _bAssetPath, Runtime )
+REGISTER_ANNOTATION_FIELD( Property, Transient, _bTransient, Runtime )
+// 값이 비어 있으면 쓸 때 생략한다(읽기에는 영향 없음)
+REGISTER_ANNOTATION_FIELD( Property, SkipIfEmpty, _bSkipIfEmpty, Runtime )
+// 데이터 파일이 이 칸을 반드시 적어야 한다(빠지면 로드 오류 — 초기값은 형식일 뿐 기본값이 아니다)
+REGISTER_ANNOTATION_FIELD( Property, Required, _bRequired, Runtime )
+// 이름 · 경로 칸(글 · hashed_string · DataPath · AssetID · TagID · AssetRef 와 그 vector — 형식 정체 `typeidentity::kArrNameFieldType`)의 C++ 문자열 기본값이 엔진이 정한 기본값이다 — 헤더 초기값에 둔다.
+// 이것도 Required 도 없는 이름 · 경로 칸의 문자열 기본값은 파서 오류다(데이터가 안 적으면 맞지 않는 이름이 조용히 쓰인다). 헤더 초기값이 없는 칸에 달아도 파서 오류
+REGISTER_ANNOTATION_FIELD( Property, DefaultName, _bDefaultName, Manual )
+// 이 칸이 목록 원소의 열쇠다 — 부모를 가리키는 데이터(`_base`)가 목록을 이 칸의 값으로 합친다(DataInheritance)
+REGISTER_ANNOTATION_FIELD( Property, InheritKey, _bInheritKey, Runtime )
+// 부모가 없는 원소만 이 칸을 반드시 적는다 — 부모를 가리키는 칸(InheritParent)이 적힌 원소는 부모의 값을 물려받는다
+REGISTER_ANNOTATION_FIELD( Property, RequiredAtRoot, _bRequiredAtRoot, Runtime )
+// 이 칸이 부모 원소를 가리킨다 — 적혀 있으면 RequiredAtRoot 칸은 물려받은 값으로 채워진 것이다
+REGISTER_ANNOTATION_FIELD( Property, InheritParent, _bInheritParent, Runtime )
+// 네트워크 복제 대상(`PropertyRoleUtil::collectReplicatedProperties`). RepNotify 를 적으면 Replicated 이기도 하다
+REGISTER_ANNOTATION_FIELD( Property, Replicated, _bReplicated, Runtime )
+// 받은 값으로 바꾼 뒤 부를 같은 타입의 메서드 — void fn() 또는 void fn( const T& oldValue ). 없거나 모양이 다르면 파서 오류
+REGISTER_ANNOTATION_FIELD_FN( Property, RepNotify, _repNotify, applyRepNotify, Runtime )
+// 타입(기반 포함)에 하나라도 있으면 세이브(`SerializePurpose::SaveGame`)가 이것만 쓴다. 하나도 없는 타입은 전부 쓴다
+REGISTER_ANNOTATION_FIELD( Property, SaveGame, _bSaveGame, Runtime )
+// 플레이 중에만 의미가 있는 상태 — 저작 저장(`SerializePurpose::Authoring`)이 쓰지 않고, 저작 파일에 있으면 로드 오류다. Transient · Required 와 함께 쓰면 파서 오류
+REGISTER_ANNOTATION_FIELD( Property, RuntimeState, _bRuntimeState, Runtime )
+// 시퀀서 값 트랙이 섞을 수 있다 — 실수 · 정수 · float2/3/4 · quaternion 만(그 밖의 타입은 파서 오류)
+REGISTER_ANNOTATION_FIELD( Property, Interp, _bInterp, Runtime )
+// 프로퍼티 검증 함수 — 같은 타입의 void fn( ValidationContext& context ) [const]. 문제는 context.addError · addWarning 으로 적는다
+REGISTER_ANNOTATION_FIELD( Property, Validate, _validate, Runtime )
+// 허용 범위입니다. 숫자 하나, 또는 따옴표 안에 쉼표로 나눈 숫자 · 앞선 필드 이름 목록("-_halfSize, 0, -_halfSize")을 적습니다. 수학 타입은 원소마다 적습니다.
+// 고정 배치형(롤백 · 넷) 코덱은 이 범위를 와이어 범위로 씁니다. 정수는 범위 비트 수로 쓰고, 범위 밖 값은 쓰기 실패입니다.
+REGISTER_ANNOTATION_FIELD_FN( Property, Min, _minRangeExpr, applyMinRange, Manual )
+REGISTER_ANNOTATION_FIELD_FN( Property, Max, _maxRangeExpr, applyMaxRange, Manual )
+// 고정 배치형 코덱의 양자화 간격입니다(float32 만, Min · Max 필수). 적으면 그 필드는 손실 인코딩입니다
+REGISTER_ANNOTATION_FIELD_FN( Property, Step, _step, applyStep, Manual )
+// 문자열 · vector 의 최대 길이입니다. 고정 배치형 코덱은 이것이 없는 가변 길이 필드를 인코딩하지 않습니다
+REGISTER_ANNOTATION_FIELD_FN( Property, MaxCount, _maxCount, applyMaxCount, Manual )
+// 인스펙터 슬라이더 · 드래그 범위(허용 범위 Min/Max 와 따로). 둘 다 적으면 슬라이더로 그리고, 값은 여전히 Min/Max 로 막는다
+REGISTER_ANNOTATION_FIELD_FN( Property, UIMin, _uiMinRange, applyUIMinRange, Manual )
+REGISTER_ANNOTATION_FIELD_FN( Property, UIMax, _uiMaxRange, applyUIMaxRange, Manual )
+// 저장된 값의 단위 — ReflectionUnits.h 의 표(mm cm m km deg rad ms s min h percent ratio m/s km/h deg/s rad/s m/s2 Hz fps g kg N). 표에 없으면 파서 오류
+REGISTER_ANNOTATION_FIELD( Property, Units, _units, Manual )
+// 여러 개면 Alias="hp, HitPoints" (따옴표가 필요하다. 그래야 콤마가 토큰 구분자로 읽히지 않는다)
+REGISTER_ANNOTATION_FIELD_FN( Property, Alias, _listAlias, appendAlias, Manual )
+// 리플렉션 이름(직렬화 키)을 멤버 이름과 다르게 준다. 값이 객체 밖에 있는 프로퍼티(참조를 돌려주는 메서드에 붙인 PROPERTY)가 옛 필드 이름을 이어 쓸 때 쓴다
+REGISTER_ANNOTATION_FIELD( Property, Name, _name, Manual )
+
+// ── FUNCTION ─────────────────────────────────────────────────────
+REGISTER_ANNOTATION_FIELD( Function, Category, _category, Display )
+REGISTER_ANNOTATION_FIELD( Function, DisplayName, _displayName, Display )
+REGISTER_ANNOTATION_FIELD( Function, Tooltip, _tooltip, Display )
+REGISTER_ANNOTATION_FIELD( Function, CallInEditor, _bCallInEditor, Editor )
+// 에디터 뷰포트 미리보기가 타입 이름 대신 이 값으로 메서드를 찾는다(EditorViewportPreview). 예: EditorPreview = "DialogueLine"
+REGISTER_ANNOTATION_FIELD( Function, EditorPreview, _editorPreview, Editor )
+REGISTER_ANNOTATION_FIELD_FN( Function, Meta, _listCustomMeta, appendCustomMeta, Display )
+// 역할 이름(Server · Client · Multicast)을 단독 토큰으로 적는다 — `NetRole` 이라는 키는 없다
+REGISTER_ANNOTATION_FIELD_FN( Function, NetRole, _netRole, applyNetRole, Runtime )
+REGISTER_ANNOTATION_FIELD( Function, Reliable, _bReliable, Runtime )
+REGISTER_ANNOTATION_FIELD( Function, Validate, _bValidate, Runtime )
+// 원격 호출(`RemoteCall`)의 연결마다 · 함수마다 초당 상한(1 이상의 정수 또는 그 생성 코드에서 보이는 정수 상수 이름 — 클래스 상수는 `Type::kName` 으로 적는다).
+// 적지 않은 함수는 연결 상한(`RemoteCallServerConfig`)만 받는다 — 기본값으로 대신하는 것이 아니라 계약이다. `Server` 함수에만 적는다(다른 역할이면 등록이 거절한다)
+REGISTER_ANNOTATION_FIELD_FN( Function, MaxCallsPerSecond, _maxCallsPerSecond, applyMaxCallsPerSecond, Manual )
