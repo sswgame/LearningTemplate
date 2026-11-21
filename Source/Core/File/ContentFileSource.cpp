@@ -41,27 +41,27 @@ namespace sw
 
     bool DiskContentFileSource::isFile( string_view path ) const
     {
-        return FileUtil::isRegularFile( path );
+        return FileUtil::isRegularFile( FileUtil::toDiskPath( path ) );
     }
 
     bool DiskContentFileSource::isFolder( string_view path ) const
     {
-        return FileUtil::isDirectory( path );
+        return FileUtil::isDirectory( FileUtil::toDiskPath( path ) );
     }
 
     bool DiskContentFileSource::collectFiles( string_view folder, vector<string>& outListPath ) const
     {
-        return FileUtil::collectFiles( folder, {}, outListPath, false );
+        return FileUtil::collectFiles( FileUtil::toDiskPath( folder ), {}, outListPath, false );
     }
 
     bool DiskContentFileSource::readFile( string_view path, vector<uint8>& outBytes ) const
     {
-        return FileUtil::readFile( path, outBytes );
+        return FileUtil::readFile( FileUtil::toDiskPath( path ), outBytes );
     }
 
     bool DiskContentFileSource::readTextFile( string_view path, string& outText ) const
     {
-        return FileUtil::readTextFile( path, outText );
+        return FileUtil::readTextFile( FileUtil::toDiskPath( path ), outText );
     }
 
     AsyncReadHandle DiskContentFileSource::readFileAsync( AsyncFileIO& io, string_view path, AsyncIOPriority priority, const AsyncReadCompleteDelegate& onComplete ) const

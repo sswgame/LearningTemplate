@@ -46,7 +46,7 @@ namespace
                 bytes.insert( bytes.end(), content.begin(), content.end() );
                 bytes.push_back( '#' ); // 다음 파일 앞 구분 — 구간 끝을 넘어 읽으면 섞인다
             }
-            return FileUtil::writeFile( _bundlePath, bytes.data(), bytes.size() );
+            return FileUtil::writeFile( FileUtil::toDiskPath( _bundlePath ), bytes.data(), bytes.size() );
         }
 
         AsyncFileHandle open( string_view bundledName ) const override

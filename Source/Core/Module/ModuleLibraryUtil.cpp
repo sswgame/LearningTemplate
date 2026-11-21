@@ -76,7 +76,7 @@ namespace sw
                     const string moduleDir = FileUtil::toNativeSeparators( ModuleLibraryUtil::getModuleDirectory() );
                     for ( const string& directory : { binaryDir, moduleDir } )
                     {
-                        if ( FileUtil::isDirectory( directory ) )
+                        if ( FileUtil::isDirectory( FileUtil::toDiskPath( directory ) ) )
                             (void)AddDllDirectory( StringUtil::utf8ToUTF16( directory.c_str() ).c_str() ); // 실패하면 그 폴더의 의존 DLL 로드가 실패로 알린다
                     }
                     return true;
@@ -142,8 +142,8 @@ namespace sw
                 symbolDirectory = FileUtil::joinPath( symbolDirectory, moved._arrDirectory );
         }
         string found = FileUtil::joinPath( symbolDirectory, fileName );
-        if ( FileUtil::exists( found ) == false )
-            found = FileUtil::exists( besideLibrary ) ? besideLibrary : string{};
+        if ( FileUtil::exists( FileUtil::toDiskPath( found ) ) == false )
+            found = FileUtil::exists( FileUtil::toDiskPath( besideLibrary ) ) ? besideLibrary : string{};
         return found;
     }
 
@@ -185,10 +185,10 @@ namespace sw
         if ( movedDirectory.empty() == false )
             return FileUtil::joinPath( FileUtil::joinPath( ProcessRoots::get()._binary.str(), movedDirectory ), fileName );
         string modulePath = FileUtil::joinPath( getModuleDirectory(), fileName );
-        if ( FileUtil::exists( modulePath ) == false )
+        if ( FileUtil::exists( FileUtil::toDiskPath( modulePath ) ) == false )
         {
             const string binaryPath = FileUtil::joinPath( ProcessRoots::get()._binary.str(), fileName );
-            if ( FileUtil::exists( binaryPath ) )
+            if ( FileUtil::exists( FileUtil::toDiskPath( binaryPath ) ) )
                 modulePath = binaryPath;
         }
         return modulePath;
