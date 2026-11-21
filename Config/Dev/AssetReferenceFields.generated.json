@@ -1774,6 +1774,20 @@
       ]
     },
     {
+      "owner": "GF_Client_TacticsSRPG",
+      "listField": [],
+      "listAssetRefField": [],
+      "listPathTextField": [],
+      "listTextField": [
+        "_confirmAction",
+        "_endTurnAction",
+        "_moveAction",
+        "confirmAction",
+        "endTurnAction",
+        "moveAction"
+      ]
+    },
+    {
       "owner": "GF_CoopScavenger",
       "listField": [],
       "listAssetRefField": [],
@@ -2563,8 +2577,14 @@
     },
     {
       "owner": "GF_TacticsSRPG",
-      "listField": [],
-      "listAssetRefField": [],
+      "listField": [
+        "_catalogPath",
+        "catalogPath"
+      ],
+      "listAssetRefField": [
+        "_catalogPath",
+        "catalogPath"
+      ],
       "listPathTextField": [],
       "listTextField": [
         "_id",
