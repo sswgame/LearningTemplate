@@ -689,7 +689,7 @@ namespace sw
             string found = AssetPathsInternal::tryUnderRoot( root, lowerFolder, {} );
             if ( found.empty() && rawFolder != lowerFolder )
                 found = AssetPathsInternal::tryUnderRoot( root, rawFolder, {} );
-            if ( found.empty() == false && FileUtil::isDirectory( found ) )
+            if ( found.empty() == false && FileUtil::isDirectory( FileUtil::toDiskPath( found ) ) )
                 outListFolder.push_back( std::move( found ) );
         }
     }

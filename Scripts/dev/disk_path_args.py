@@ -30,7 +30,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 from common.exit_code import ExitCode  # noqa: E402
 from common.git import run_git_or_raise  # noqa: E402
 from common.paths import get_project_root  # noqa: E402
-from dev.byte_reader_values import match_paren, split_top  # noqa: E402
+from dev.byte_reader_values import find_declared_type, match_paren, split_top  # noqa: E402
 from lint.cpp_shape import strip_code  # noqa: E402
 
 TAG = "[disk-path-args]"
@@ -68,24 +68,30 @@ class Site:
     known_string: bool
 
 
-def collect_typed_names(code: str) -> frozenset[str]:
-    """같은 파일에서 `AbsolutePath` · `optional<AbsolutePath>` 로 선언한 이름(이미 형식이라 감싸지 않는다)."""
-    return frozenset(re.findall(r"\b(?:optional\s*<\s*)?AbsolutePath\s*>?\s*[&*]?\s+(\w+)\s*[;,)=({\[]", code))
+def get_declared_kind(code: str, name: str, before: int) -> str | None:
+    """`before` 앞에서 가장 가까운 `name` 선언이 `AbsolutePath` 면 "value", `optional<AbsolutePath>` 면 "optional", 그 밖은 None.
+    파일 전체의 이름 표로 보면 다른 함수의 같은 이름 글 변수(`string filePath`)를 형식으로 잘못 봤다 — 가장 가까운 선언 하나로 본다."""
+    declared = find_declared_type(code, name, before)
+    if declared is None or "AbsolutePath" not in declared:
+        return None
+    return "optional" if "optional" in declared else "value"
 
 
-def is_typed(argument: str, typed_names: frozenset[str]) -> bool:
+def is_typed(argument: str, code: str, position: int) -> bool:
     text = argument.strip()
     if text.startswith(WRAPPER + "(") or re.match(r"(?:::\s*)?(?:sw\s*::\s*)?FileUtil\s*::\s*" + WRAPPER + r"\s*\(", text):
         return True
-    if ROOT_FIELD.search(text):
-        return True
+    if ROOT_FIELD.search(text) or "std::declval" in text:
+        return True   # ProcessRoots 칸 · 문자열 판을 부를 수 없는지 보는 형식 검사(테스트의 SFINAE)
+    dereferenced = text.startswith("*")
     bare = text.lstrip("*").strip()
-    return re.fullmatch(r"\w+", bare) is not None and bare in typed_names
+    if re.fullmatch(r"\w+", bare) is None:
+        return False
+    return get_declared_kind(code, bare, position) == ("optional" if dereferenced else "value")
 
 
 def find_sites(raw: str, code: str) -> list[Site]:
     """`code` 는 `strip_code(raw)`. 아직 형식이 아닌 경로 인자를 모두 낸다(겹친 자리 포함)."""
-    typed_names = collect_typed_names(code)
     list_site: list[Site] = []
     for match in CALL_PATTERN.finditer(code):
         before = code[:match.start()].rstrip()
@@ -106,7 +112,7 @@ def find_sites(raw: str, code: str) -> list[Site]:
             while end > start and code[end - 1].isspace():
                 end -= 1
             argument = raw[start:end]
-            if not argument or is_typed(code[start:end], typed_names):
+            if not argument or is_typed(code[start:end], code, start):
                 continue
             known_string = KNOWN_STRING.search(argument) is not None
             list_site.append(Site(start, end, raw.count("\n", 0, start) + 1, match.group(2), argument, qualifier, known_string))
@@ -116,14 +122,15 @@ def find_sites(raw: str, code: str) -> list[Site]:
 UNWRAP_STR = re.compile(r"^(.+?)\s*(\.|->)\s*str\s*\(\s*\)$")
 
 
-def make_replacement(site: Site, typed_names: frozenset[str]) -> str:
+def make_replacement(site: Site, code: str) -> str:
     """이미 `AbsolutePath` 인 값의 `.str()` 은 글로 돌렸다 다시 만들지 않고 형식째 넘긴다(복사 · 검사 한 번 덜). 나머지는 `toDiskPath` 로 감싼다."""
     match = UNWRAP_STR.match(site.argument)
     if match is not None:
         owner, access = match.group(1), match.group(2)
-        if ROOT_FIELD.search(owner) or (access == "." and owner in typed_names):
+        kind = get_declared_kind(code, owner, site.start) if re.fullmatch(r"\w+", owner) else None
+        if ROOT_FIELD.search(owner) or (access == "." and kind == "value"):
             return owner
-        if access == "->" and owner in typed_names:
+        if access == "->" and kind == "optional":
             return f"*{owner}"
     return f"{site.qualifier}{WRAPPER}( {site.argument} )"
 
@@ -134,12 +141,11 @@ def rewrite_text(raw: str) -> tuple[str, list[Site]]:
     while True:
         code = strip_code(raw)
         sites = find_sites(raw, code)
-        typed_names = collect_typed_names(code)
         innermost = [site for site in sites if not any(other is not site and site.start <= other.start and other.end <= site.end for other in sites)]
         if not innermost:
             return raw, list_done
         for site in sorted(innermost, key=lambda s: s.start, reverse=True):
-            raw = raw[:site.start] + make_replacement(site, typed_names) + raw[site.end:]
+            raw = raw[:site.start] + make_replacement(site, code) + raw[site.end:]
         list_done += innermost
 
 
@@ -173,6 +179,8 @@ def run_self_check() -> int:
         "ok = FileUtil::forEachDirectoryEntry( dir, true, [&]( const DirectoryEntry& e ) { return FileUtil::removeFile( e._path ); } );":
             "ok = FileUtil::forEachDirectoryEntry( FileUtil::toDiskPath( dir ), true, [&]( const DirectoryEntry& e ) { return FileUtil::removeFile( FileUtil::toDiskPath( e._path ) ); } );",
         "ok = cache.exists( key ); // FileUtil::exists( p )": "ok = cache.exists( key ); // FileUtil::exists( p )",
+        "void a( const AbsolutePath& filePath ) { ok = FileUtil::exists( filePath ); }\nvoid b( string filePath ) { ok = FileUtil::exists( filePath ); }":
+            "void a( const AbsolutePath& filePath ) { ok = FileUtil::exists( filePath ); }\nvoid b( string filePath ) { ok = FileUtil::exists( FileUtil::toDiskPath( filePath ) ); }",
         "optional<AbsolutePath> found = f();\nok = FileUtil::exists( found->str() ) && FileUtil::exists( ProcessRoots::get()._saved.str() );":
             "optional<AbsolutePath> found = f();\nok = FileUtil::exists( *found ) && FileUtil::exists( ProcessRoots::get()._saved );",
     }

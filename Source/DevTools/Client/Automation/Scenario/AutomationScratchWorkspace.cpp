@@ -109,7 +109,7 @@ namespace sw
             return unexpected( Error{ ErrorKind::InvalidArgument, "<Scratch as> does not resolve to a disk folder", folder._scratchID } );
         const string& scratchDir = scratchAt->str();
         // 지난 실행(중단된 것 포함)이 남긴 사본을 통째로 지운다 — 잔여 파일이 다음 실행의 이름을 바꾸지 않게 한다.
-        if ( FileUtil::removeDirectory( scratchDir ) == false || FileUtil::ensureDirectoryExists( scratchDir ) == false )
+        if ( FileUtil::removeDirectory( FileUtil::toDiskPath( scratchDir ) ) == false || FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( scratchDir ) ) == false )
         {
             return unexpected( Error{ ErrorKind::ExternalFailure, "could not reset the scratch folder", scratchDir } );
         }

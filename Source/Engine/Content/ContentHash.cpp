@@ -265,7 +265,7 @@ namespace sw
             }
             writer.writePodAt( countOffset, count );
         }
-        if ( FileUtil::ensureParentDirectoryExists( cachePath ) == false || FileUtil::writeFile( cachePath, bytes.data(), bytes.size() ) == false )
+        if ( FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( cachePath ) ) == false || FileUtil::writeFile( FileUtil::toDiskPath( cachePath ), bytes.data(), bytes.size() ) == false )
             return unexpected( Error{ ErrorKind::ExternalFailure, "content hash cache cannot be written", cachePath } );
         return {};
     }
