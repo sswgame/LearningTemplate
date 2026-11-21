@@ -730,7 +730,8 @@ function(sw_collect_unused_kits ACTIVE_LIST_VAR OUT_VAR)
 		list(APPEND pending ${dependencies})
 		# 키트 하나는 최대 세 모듈이다(공유 · 서버 전용 · 클라이언트 전용, `ModuleCatalog.h`) — 게임은 공유 모듈에만 의존할 수 있으므로(서버 전용은 클라이언트 구성에 없다) 공유 모듈을 쓰면 짝도 쓰인다.
 		# 언리얼 플러그인을 켜면 그 플러그인의 Runtime · ServerOnly 모듈이 함께 켜지는 것과 같다(기억에 의존). 대상이 맞지 않는 짝은 앞의 대상 검사가 이미 껐다.
-		if(name MATCHES "^GF_(.+)$" AND NOT name MATCHES "^GF_(Server|Client|EditorPlugin)_")
+		# 짝 이름은 MATCHES 한 번으로 잡는다 — 같은 조건의 두 번째 MATCHES 가 CMAKE_MATCH_1 을 비워 짝이 `GF_Client_` 로 사라졌다(Shipping 이 클라이언트 키트를 빼던 결함).
+		if(NOT name MATCHES "^GF_(Server|Client|EditorPlugin)_" AND name MATCHES "^GF_(.+)$")
 			list(APPEND pending GF_Server_${CMAKE_MATCH_1} GF_Client_${CMAKE_MATCH_1})
 		endif()
 	endwhile()
