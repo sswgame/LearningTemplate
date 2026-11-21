@@ -521,7 +521,7 @@ namespace sw
             return 0;
         record._desc           = desc;
         record._wgpuFormat     = format;
-        record._pUploadSerials = make_unique<RHITextureUploadSerials>();
+        record._pUploadSerials = make_unique<RHITextureTransferSerials>();
 
         WGPUTextureViewDescriptor sampleDesc{};
         sampleDesc.format           = format;

@@ -79,13 +79,13 @@ namespace sw
         return RHITransferStatus::Pending;
     }
 
-    bool RHITransferSerials::isFirstUploadComplete( const RHITextureUploadSerials& marks ) const
+    bool RHITransferSerials::isFirstUploadComplete( const RHITextureTransferSerials& marks ) const
     {
-        const uint64 firstUploadSerial = marks._firstSerial.load(); // 첫 업로드만 본다(RHITextureUploadSerials)
+        const uint64 firstUploadSerial = marks._firstSerial.load(); // 첫 업로드만 본다(RHITextureTransferSerials)
         return firstUploadSerial == 0 || isComplete( firstUploadSerial );
     }
 
-    bool RHITransferSerials::isTextureReadyToRegister( const RHITextureUploadSerials& marks, RHITextureHandle texture ) const
+    bool RHITransferSerials::isTextureReadyToRegister( const RHITextureTransferSerials& marks, RHITextureHandle texture ) const
     {
         if ( isFirstUploadComplete( marks ) )
             return true;

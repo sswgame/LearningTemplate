@@ -895,7 +895,7 @@ namespace sw
         {
             // 레이아웃 기록은 제출 순서를 따른다 — 뒤에 기록 · 제출하는 명령은 이 전송 뒤에 실행되므로 지금 바꿔 둔다.
             pRecord->_layout.storeWhole( static_cast<uint32>( VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ) );
-            pRecord->_uploadSerials.recordWrite( serial );
+            pRecord->_transferSerials.recordWrite( serial );
         } );
     }
 
@@ -963,7 +963,7 @@ namespace sw
             [&]( uint64 serial )
         {
             pRecord->_layout.storeWhole( static_cast<uint32>( VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ) );
-            pRecord->_uploadSerials.recordWrite( serial );
+            pRecord->_transferSerials.recordWrite( serial );
         } );
     }
 
@@ -1156,7 +1156,7 @@ namespace sw
         {
             if ( layoutAfter != VK_IMAGE_LAYOUT_UNDEFINED )
                 pRecord->_layout.storeWhole( static_cast<uint32>( layoutAfter ) );
-            pRecord->_lastReadbackSerial.store( serial );
+            pRecord->_transferSerials._lastReadbackSerial.store( serial );
 
             VulkanRHIDevice::VulkanPendingReadback pending{};
             pending._span              = std::move( span );
@@ -1221,8 +1221,8 @@ namespace sw
 
         // 전송 중인 텍스처의 해제는 전송이 끝난 뒤로 미룬다(전송 계약 6). 끝나면 그때의 다음 프레임 펜스까지 한 번 더 미뤄 이 텍스처를 그린 프레임도 지나게 한다.
         // 지금은 전송과 프레임이 같은 큐라 다음 프레임 펜스도 앞서 낸 전송을 덮지만, 해제가 그 큐 공유에 기대지 않게 전송 완료를 직접 본다(DX12 와 같은 규칙).
-        const uint64 lastWriteSerial     = owned._uploadSerials._lastSerial.load();
-        const uint64 lastReadSerial      = owned._lastReadbackSerial.load();
+        const uint64 lastWriteSerial     = owned._transferSerials._lastSerial.load();
+        const uint64 lastReadSerial      = owned._transferSerials._lastReadbackSerial.load();
         const uint64 lastSerial          = lastWriteSerial > lastReadSerial ? lastWriteSerial : lastReadSerial;
         const bool   bUnfinishedTransfer = lastSerial != 0 && _pDevice->_transferSerials.isComplete( lastSerial ) == false;
         if ( bUnfinishedTransfer )
@@ -1239,7 +1239,7 @@ namespace sw
     bool VulkanRHIResourceFactory::isTextureReadyToSample( RHITextureHandle texture )
     {
         const VulkanRHIDevice::VulkanTextureRecord* pRecord = _pDevice->resolveTexture( texture );
-        return pRecord != nullptr && _pDevice->_transferSerials.isFirstUploadComplete( pRecord->_uploadSerials );
+        return pRecord != nullptr && _pDevice->_transferSerials.isFirstUploadComplete( pRecord->_transferSerials );
     }
 
     RHIDescriptorIndex VulkanRHIResourceFactory::registerBindlessTexture( RHITextureHandle texture )
@@ -1274,8 +1274,8 @@ namespace sw
 
         VulkanRHIDevice::VulkanTextureRecord& record = *pResolved;
         // 등록마다 새 번호다(DX11 · DX12 · GL 과 같다). 같은 텍스처의 번호를 나눠 주면 한쪽의 해제(에디터의 ImGui 등록)가 다른 쪽(엔진)이 쓰는 번호를 놓는다.
-        // 첫 업로드가 끝나지 않은 텍스처는 등록하지 않는다(소비자는 pollTransfer 가 Complete 를 준 뒤에 등록한다 — RHITextureUploadSerials). 뒤의 구간 갱신은 막지 않는다.
-        if ( _pDevice->_transferSerials.isTextureReadyToRegister( record._uploadSerials, texture ) == false )
+        // 첫 업로드가 끝나지 않은 텍스처는 등록하지 않는다(소비자는 pollTransfer 가 Complete 를 준 뒤에 등록한다 — RHITextureTransferSerials). 뒤의 구간 갱신은 막지 않는다.
+        if ( _pDevice->_transferSerials.isTextureReadyToRegister( record._transferSerials, texture ) == false )
             return kInvalidDescriptorIndex;
 
         UniqueLock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
@@ -1378,7 +1378,7 @@ namespace sw
         VkImageView                                 view{ VK_NULL_HANDLE };
         uint32                                      layout{ 0 };
         const bool                                  bCannotRebind = pResolved == nullptr || _pDevice->hasTextureSet() == false ||
-                                   _pDevice->_transferSerials.isTextureReadyToRegister( pResolved->_uploadSerials, texture ) == false ||
+                                   _pDevice->_transferSerials.isTextureReadyToRegister( pResolved->_transferSerials, texture ) == false ||
                                    _pDevice->findBindlessSampleView( texture, view, layout ) == false;
         if ( bCannotRebind )
             return false;
@@ -1404,7 +1404,7 @@ namespace sw
         VkImageView                                 view{ VK_NULL_HANDLE };
         uint32                                      layout{ 0 };
         const bool                                  bCannotActivate = pResolved == nullptr || _pDevice->hasTextureSet() == false ||
-                                     _pDevice->_transferSerials.isTextureReadyToRegister( pResolved->_uploadSerials, texture ) == false ||
+                                     _pDevice->_transferSerials.isTextureReadyToRegister( pResolved->_transferSerials, texture ) == false ||
                                      _pDevice->findBindlessSampleView( texture, view, layout ) == false;
         if ( bCannotActivate )
             return false;
