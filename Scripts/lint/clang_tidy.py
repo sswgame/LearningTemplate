@@ -14,12 +14,22 @@ clang-tidy 를 병렬로 돌리고 진단을 검사 이름별로 모아 센다. 
 워크트리에서 돌리면 DB 의 본 트리 경로(build · Tools 밖)를 이 트리로 바꾼 사본을 임시 폴더에 두고 그것을 쓴다(헤더도 이 트리 것을 본다).
 PCH 사용 플래그(/Yu · /Fp)는 뺀다 — clang-tidy 가 남이 짓는 중인 .pch 를 읽지 않게. 강제 포함(/FI)은 둔다(TU 가 그 헤더에 기댄다).
 
+헤더 하나가 바뀌면 그 헤더를 포함하는 TU 를 모두 돌지 않고 하나만 돈다(같은 폴더 · 같은 이름 .cpp, 없으면 가장 가까운 포함 TU — `select_entries`).
+바뀐 줄만 보는 진단 필터(clang-tidy-diff 의 -line-filter)는 두지 않는다 — 분석은 TU 전체를 그대로 해 시간이 줄지 않고, 판정은 진단이 아니라 실패한 TU 수다.
+
+결과 캐시(ccache direct 모드 꼴): 통과한 TU 의 출력을 본 트리 `Saved/TidyCache/` 에 둔다(본 트리 · 워크트리가 나눈다). 키는 clang-tidy 실행 파일 ·
+`.clang-tidy` · 검사 인자 · 컴파일 명령 · vcpkg 설치 상태 · TU 와 그 포함 닫힘(-I · /FI 로 찾은 모든 헤더의 경로와 내용 해시 — 조건부 포함도 넣어
+넘치게 잡는다)이다. 하나라도 바뀌면 다시 돈다. 풀지 못하는 매크로 포함(`#include MACRO`)이 닫힘에 있는 TU 는 캐시하지 않는다.
+clang-tidy 는 낮은 우선순위로 돈다 — 묶음 검증이 changed · cpu 단계와 겹쳐 띄운다(Scripts/dev/preflight.sh).
+
 종료 코드: clang-tidy 오류(WarningsAsErrors 로 오른 검사 · 컴파일 오류)가 하나라도 있으면 VIOLATION.
 """
 
 from __future__ import annotations
 
 import argparse
+import ctypes
+import hashlib
 import json
 import os
 import re
@@ -34,6 +44,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다
 from common.exit_code import ExitCode  # noqa: E402
 from common.git import run_git  # noqa: E402
+from common.host_platform import is_windows_host  # noqa: E402
 from common.paths import get_project_root  # noqa: E402
 from common.project_constants import KEY_LLVM_TOOLS_SUBDIR  # noqa: E402
 from common.run_process import run_process  # noqa: E402
@@ -51,6 +62,15 @@ DIAGNOSTIC_PATTERN = re.compile(r"^(?P<path>.+?):(?P<line>\d+):(?P<column>\d+): 
 PCH_USE_PATTERN = re.compile(r'\s/(Yu|Fp)("[^"]*"|\S*)')
 #: 저장소 include 꼴(`#include "Core/…/X.h"` — `Source/` 기준 경로).
 INCLUDE_PATTERN = re.compile(r'^[ \t]*#[ \t]*include[ \t]*"([^"]+)"', re.MULTILINE)
+#: 캐시 키의 포함 닫힘을 훑는 꼴 — 따옴표 · 꺾쇠, 그리고 둘 다 아닌 매크로 포함(풀지 못해 그 TU 는 캐시하지 않는다).
+ANY_INCLUDE_PATTERN = re.compile(r'^[ \t]*#[ \t]*include[ \t]*(?:"([^"]+)"|<([^>]+)>|(\S.*))', re.MULTILINE)
+#: 명령의 포함 폴더(-I · /I)와 강제 포함(/FI) — 붙여 쓴 꼴(`-ID:\…`)이다. /imsvc 시스템 폴더는 vcpkg 설치 상태 해시로 대신한다.
+INCLUDE_DIR_PATTERN = re.compile(r'(?:^|\s)[-/](?:external:)?I("[^"]+"|\S+)')
+FORCE_INCLUDE_PATTERN = re.compile(r'(?:^|\s)[-/]FI("[^"]+"|\S+)')
+#: 결과 캐시 — 본 트리 기준.
+CACHE_DIR = Path("Saved") / "TidyCache"
+#: 캐시한 출력 · 키 안의 이 트리 경로 자리 — 본 트리 · 워크트리가 같은 캐시를 나눈다.
+TREE_PLACEHOLDER = "<SW_TREE>"
 
 
 def main_tree_root(tree_root: Path) -> Path:
@@ -170,6 +190,133 @@ def select_entries(list_entry: list[dict], list_file: list[Path], source_root: P
     return list(selected.values()), list_skipped
 
 
+def normalize(path: str) -> str:
+    return os.path.normcase(os.path.normpath(path))
+
+
+def unquote(text: str) -> str:
+    return text[1:-1] if len(text) >= 2 and text[0] == text[-1] == '"' else text
+
+
+class IncludeClosure:
+    """TU 의 포함 닫힘을 (경로, 내용 해시) 목록으로 — 파일 읽기 · 포함 풀기 · 강제 포함(PCH 헤더)의 닫힘은 한 실행 안에서 한 번씩만 한다."""
+
+    def __init__(self) -> None:
+        self._map_digest: dict[str, str] = {}
+        self._map_include: dict[str, list[tuple[str, bool, bool]]] = {}   # 경로 → (글, 따옴표인가, 매크로인가)
+        self._map_dirs_id: dict[tuple[str, ...], int] = {}
+        self._map_children: dict[tuple[str, int], list[str] | None] = {}
+        self._map_root_closure: dict[tuple[str, int], frozenset[str] | None] = {}
+
+    def _children(self, path: str, include_dirs: tuple[str, ...], dirs_id: int) -> list[str] | None:
+        """@p path 가 포함하는 파일 중 포함 폴더에서 찾은 것. 매크로 포함이 있으면 None. 찾지 못한 것은 시스템 헤더(/imsvc · MSVC)로 본다."""
+        key = (path, dirs_id)
+        if key not in self._map_children:
+            if path not in self._map_digest:
+                data = Path(path).read_bytes()
+                self._map_digest[path] = hashlib.sha256(data).hexdigest()
+                self._map_include[path] = [(quoted or angled or other.strip(), bool(quoted), bool(other))
+                                           for quoted, angled, other in ANY_INCLUDE_PATTERN.findall(data.decode("utf-8", errors="replace"))]
+            list_child: list[str] | None = []
+            includer_dir = os.path.dirname(path)
+            for spec, quoted, is_macro in self._map_include[path]:
+                if is_macro:
+                    list_child = None
+                    break
+                candidates = ([includer_dir] if quoted else []) + list(include_dirs)
+                resolved = next((normalize(os.path.join(d, spec)) for d in candidates if os.path.isfile(os.path.join(d, spec))), None)
+                if resolved is not None:
+                    list_child.append(resolved)
+            self._map_children[key] = list_child
+        return self._map_children[key]
+
+    def _traverse(self, path: str, include_dirs: tuple[str, ...], dirs_id: int, seen: set[str]) -> bool:
+        """@p seen 에 @p path 의 닫힘을 더한다(이미 든 것 아래는 닫혀 있어 내려가지 않는다). 매크로 포함을 만나면 거짓."""
+        list_pending = [path]
+        while list_pending:
+            current = list_pending.pop()
+            if current in seen:
+                continue
+            seen.add(current)
+            list_child = self._children(current, include_dirs, dirs_id)
+            if list_child is None:
+                return False
+            list_pending.extend(child for child in list_child if child not in seen)
+        return True
+
+    def collect(self, file_path: str, list_forced: list[str], include_dirs: tuple[str, ...]) -> list[tuple[str, str]] | None:
+        """
+        TU(@p file_path)와 강제 포함(@p list_forced)의 닫힘을 (경로, 해시) 경로 순으로. 풀린 경로가 키에 들어가므로 앞 폴더에 같은 이름 헤더가
+        새로 생겨도 다음 실행의 키가 바뀐다. 매크로 포함을 만나면 None(풀 수 없어 키가 닫히지 않는다).
+        """
+        dirs_id = self._map_dirs_id.setdefault(include_dirs, len(self._map_dirs_id))
+        seen: set[str] = set()
+        for forced in map(normalize, list_forced):
+            key = (forced, dirs_id)
+            if key not in self._map_root_closure:
+                closure: set[str] = set()
+                self._map_root_closure[key] = frozenset(closure) if self._traverse(forced, include_dirs, dirs_id, closure) else None
+            if self._map_root_closure[key] is None:
+                return None
+            seen |= self._map_root_closure[key]
+        if not self._traverse(normalize(file_path), include_dirs, dirs_id, seen):
+            return None
+        return sorted((path, self._map_digest[path]) for path in seen)
+
+
+def make_base_digest(clang_tidy: Path, tree_root: Path, main_root: Path, list_extra: list[str]) -> str:
+    """모든 TU 가 나누는 키 재료: clang-tidy 실행 파일 · `.clang-tidy` · 검사 인자 · vcpkg 설치 상태(꺾쇠 시스템 헤더의 판)."""
+    # shortcut: MSVC STL · Windows SDK 판은 키에 없다(그 헤더의 진단은 세지 않고, 컴파일 오류는 빌드가 먼저 낸다), 판 올림 뒤 Saved/TidyCache 를 비운다.
+    digest = hashlib.sha256()
+    for path in (clang_tidy, tree_root / ".clang-tidy", main_root / "build" / "vcpkg_installed" / "vcpkg" / "status"):
+        digest.update(hashlib.sha256(path.read_bytes()).hexdigest().encode() if path.is_file() else b"-")
+    digest.update(json.dumps(list_extra).encode())
+    return digest.hexdigest()
+
+
+def make_cache_key(base_digest: str, entry: dict, closure: IncludeClosure, tree_root: Path) -> str | None:
+    """TU 하나의 캐시 키. 포함 닫힘을 풀 수 없으면 None(캐시하지 않는다)."""
+    command, directory = entry["command"], entry["directory"]
+    include_dirs = tuple(normalize(os.path.join(directory, unquote(d))) for d in INCLUDE_DIR_PATTERN.findall(command))
+    list_forced = [os.path.join(directory, unquote(f)) for f in FORCE_INCLUDE_PATTERN.findall(command)]
+    list_file = closure.collect(entry["file"], list_forced, include_dirs)
+    if list_file is None:
+        return None
+    tree_text = normalize(str(tree_root))
+    digest = hashlib.sha256(base_digest.encode())
+    digest.update(command.replace(str(tree_root), TREE_PLACEHOLDER).replace(tree_root.as_posix(), TREE_PLACEHOLDER).encode())
+    for path, file_digest in list_file:
+        digest.update(f"\n{path.replace(tree_text, TREE_PLACEHOLDER)}={file_digest}".encode())
+    return digest.hexdigest()
+
+
+def cache_path(cache_dir: Path, key: str) -> Path:
+    return cache_dir / key[:2] / f"{key}.txt"
+
+
+def read_cache(cache_dir: Path, key: str, tree_root: Path) -> str | None:
+    path = cache_path(cache_dir, key)
+    return path.read_text(encoding="utf-8").replace(TREE_PLACEHOLDER, str(tree_root)) if path.is_file() else None
+
+
+def write_cache(cache_dir: Path, key: str, output: str, tree_root: Path) -> None:
+    # shortcut: 항목(TU 출력 몇 KB)을 지우지 않고 쌓는다, Saved/TidyCache 가 커지면 오래된 것부터 지우는 정리를 둔다.
+    path = cache_path(cache_dir, key)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_suffix(f".{os.getpid()}.tmp")
+    temporary.write_text(output.replace(str(tree_root), TREE_PLACEHOLDER).replace(tree_root.as_posix(), TREE_PLACEHOLDER), encoding="utf-8")
+    os.replace(temporary, path)   # 두 실행이 같은 키를 써도 반쯤 쓴 파일을 읽지 않는다
+
+
+def lower_priority() -> None:
+    """이 프로세스(와 우선순위를 물려받는 clang-tidy 자식)를 낮춘다 — 겹쳐 도는 테스트가 CPU 를 먼저 받는다."""
+    if is_windows_host():
+        below_normal_priority_class = 0x4000
+        ctypes.windll.kernel32.SetPriorityClass(ctypes.windll.kernel32.GetCurrentProcess(), below_normal_priority_class)
+    else:
+        os.nice(10)
+
+
 def run_one(clang_tidy: Path, database_dir: Path, file_path: str, list_extra: list[str]) -> tuple[str, int, str]:
     result = run_process([clang_tidy, "-p", database_dir, "--quiet", *list_extra, file_path])
     return file_path, result.return_code, result.stdout + result.stderr
@@ -201,33 +348,54 @@ def main(argv: list[str] | None = None) -> int:
         list_entry, list_skipped = select_entries(list_entry, [path if path.is_absolute() else tree_root / path for path in args.files], tree_root / "Source")
     for path in list_skipped:
         print(f"[tidy] 건너뜀(컴파일 DB 에 TU 가 없다): {path}")
+    # `--` 뒤 인자(--fix 등)는 부작용이 있어 캐시를 쓰지 않는다. --checks 는 키에 들어간다.
+    use_cache = not list_extra
     if args.checks:
         list_extra = [f"--checks={args.checks}", *list_extra]
 
+    lower_priority()
     started = time.monotonic()
-    diagnostics: dict[tuple[str, int, int, str], dict] = {}
-    error_count = 0
+    cache_dir = main_root / CACHE_DIR
+    base_digest = make_base_digest(clang_tidy, tree_root, main_root, list_extra) if use_cache else ""
+    closure = IncludeClosure()
+    list_result: list[tuple[str, int, str]] = []
+    list_run: list[tuple[dict, str | None]] = []
+    for entry in list_entry:
+        key = make_cache_key(base_digest, entry, closure, tree_root) if use_cache else None
+        cached = read_cache(cache_dir, key, tree_root) if key else None
+        if cached is None:
+            list_run.append((entry, key))
+        else:
+            list_result.append((entry["file"], 0, cached))
+    print(f"[tidy] 캐시 적중 {len(list_result)}/{len(list_entry)} TU ({time.monotonic() - started:.0f} 초)", flush=True)
     with tempfile.TemporaryDirectory(prefix="sw-tidy-") as database_dir:
-        (Path(database_dir) / "compile_commands.json").write_text(json.dumps(list_entry), encoding="utf-8")
+        (Path(database_dir) / "compile_commands.json").write_text(json.dumps([entry for entry, _ in list_run]), encoding="utf-8")
         with ThreadPoolExecutor(max_workers=max(1, (os.cpu_count() or 2) - 2)) as pool:
-            futures = [pool.submit(run_one, clang_tidy, Path(database_dir), entry["file"], list_extra) for entry in list_entry]
-            for index, future in enumerate(futures, 1):
-                file_path, return_code, output = future.result()
-                for line in output.splitlines():
-                    match = DIAGNOSTIC_PATTERN.match(line.strip())
-                    # 시스템 헤더(MSVC STL 등)에 찍힌 것은 우리 코드의 매크로 · 템플릿이 끌고 들어간 것이라 그 자리를 고칠 수 없다 — 이 트리 밖은 세지 않는다.
-                    if match and Path(match["path"]).resolve().is_relative_to(tree_root.resolve()):
-                        key = (str(Path(match["path"]).resolve()).lower(), int(match["line"]), int(match["column"]), match["check"])
-                        if key not in diagnostics:
-                            diagnostics[key] = {"path": str(Path(match["path"]).resolve()), "line": int(match["line"]),
-                                                "column": int(match["column"]), "level": match["level"],
-                                                "check": match["check"].split(",")[0], "message": match["message"]}
-                if return_code != 0:
-                    error_count += 1
-                    if not any(DIAGNOSTIC_PATTERN.match(line.strip()) for line in output.splitlines()):
-                        print(f"[tidy] {file_path}: clang-tidy {return_code}\n{output.strip()[:2000]}")
+            futures = [(pool.submit(run_one, clang_tidy, Path(database_dir), entry["file"], list_extra), key) for entry, key in list_run]
+            for index, (future, key) in enumerate(futures, 1):
+                result = future.result()
+                if key and result[1] == 0:   # 진 TU 는 적지 않는다 — 고친 뒤 다시 돌아야 한다
+                    write_cache(cache_dir, key, result[2], tree_root)
+                list_result.append(result)
                 if index % 100 == 0:
                     print(f"[tidy] {index}/{len(futures)} TU", flush=True)
+
+    diagnostics: dict[tuple[str, int, int, str], dict] = {}
+    error_count = 0
+    for file_path, return_code, output in list_result:
+        for line in output.splitlines():
+            match = DIAGNOSTIC_PATTERN.match(line.strip())
+            # 시스템 헤더(MSVC STL 등)에 찍힌 것은 우리 코드의 매크로 · 템플릿이 끌고 들어간 것이라 그 자리를 고칠 수 없다 — 이 트리 밖은 세지 않는다.
+            if match and Path(match["path"]).resolve().is_relative_to(tree_root.resolve()):
+                key = (str(Path(match["path"]).resolve()).lower(), int(match["line"]), int(match["column"]), match["check"])
+                if key not in diagnostics:
+                    diagnostics[key] = {"path": str(Path(match["path"]).resolve()), "line": int(match["line"]),
+                                        "column": int(match["column"]), "level": match["level"],
+                                        "check": match["check"].split(",")[0], "message": match["message"]}
+        if return_code != 0:
+            error_count += 1
+            if not any(DIAGNOSTIC_PATTERN.match(line.strip()) for line in output.splitlines()):
+                print(f"[tidy] {file_path}: clang-tidy {return_code}\n{output.strip()[:2000]}")
 
     list_diagnostic = sorted(diagnostics.values(), key=lambda d: (d["check"], d["path"], d["line"]))
     if args.out:
