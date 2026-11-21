@@ -123,7 +123,7 @@ namespace sw
         , _menuSlot{ kNoSlot }
         , _shownBagRevision{ 0 }
         , _shownEquipmentRevision{ 0 }
-        , _commandCount{ 0 }
+        , _commandCount{}
         , _lastResult{ InventoryCommandResult::Ok }
         , _bLongPressFired{ SW_FALSE }
         , _bBuilt{ SW_FALSE }
@@ -287,7 +287,7 @@ namespace sw
             return InventoryCommandResult::InvalidSlot;
         vector<InventorySlot> listDropped;
         _lastResult = pCharacter->applyCommand( command, listDropped );
-        ++_commandCount;
+        _commandCount.add();
         SW_LOG_INFO_ID( "InventoryScreen.CommandApplied", "Inventory %# from %# to %# (count %#, slot '%#'): %#", getEnumName( command._kind ), command._fromSlot, command._toSlot, command._count,
                         command._equipSlot.c_str(), getEnumName( _lastResult ) );
         GameObject*        pOwner   = pCharacter->getOwner();
@@ -634,7 +634,7 @@ namespace sw
                 const InventoryScreen* pScreen = findTopInventory( outValue );
                 if ( pScreen == nullptr )
                     return false;
-                outValue.setText( pScreen->getCommandCount() == 0 ? "none" : getEnumName( pScreen->getLastResult() ) );
+                outValue.setText( pScreen->getCommandCount().get() == 0 ? "none" : getEnumName( pScreen->getLastResult() ) );
                 return true;
             }
 
@@ -645,7 +645,7 @@ namespace sw
                 const InventoryScreen* pScreen = findTopInventory( outValue );
                 if ( pScreen == nullptr )
                     return false;
-                outValue.setNumber( static_cast<float64>( pScreen->getCommandCount() ) );
+                outValue.setNumber( static_cast<float64>( pScreen->getCommandCount().get() ) );
                 return true;
             }
 

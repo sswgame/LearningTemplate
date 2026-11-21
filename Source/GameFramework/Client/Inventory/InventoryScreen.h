@@ -5,6 +5,7 @@
  *          글 `Details` · `Stats` · `Weight` · `Status`, 동작 메뉴 패널 `Actions`(명령 `ActUse` · `ActEquip` · `ActSplit` · `ActDrop` · `ActClose` 단추, 처음엔 접힘), 명령 `Sort` · `Filter` · `Close` 단추.
  */
 #pragma once
+#include "Core/Concurrency/DevCounter.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/WeakRef.h"
 #include "Core/Foundation/Types.h"
@@ -72,7 +73,7 @@ namespace sw
         int32                  getHeldSlot() const { return _heldSlot; }
         int32                  getMenuSlot() const { return _menuSlot; }
         InventoryCommandResult getLastResult() const { return _lastResult; }
-        uint32                 getCommandCount() const { return _commandCount; }
+        const DevCounter&      getCommandCount() const { return _commandCount; } ///< 감시 값만 읽는 개발 전용 칸(배포는 0)
         const hashed_string&   getFilter() const { return _filter; }
 
     private:
@@ -101,7 +102,7 @@ namespace sw
         int32                                _menuSlot;       ///< 동작 메뉴가 열린 칸
         uint32                               _shownBagRevision;
         uint32                               _shownEquipmentRevision;
-        uint32                               _commandCount; ///< 낸 명령 수(성공 · 실패 모두 — 감시 값)
+        DevCounter                           _commandCount; ///< 낸 명령 수(성공 · 실패 모두 — 감시 값)
         InventoryCommandResult               _lastResult;
         uint8                                _bLongPressFired; ///< 길게 누르기가 메뉴를 열었다 — 이어 오는 클릭을 버린다
         uint8                                _bBuilt;

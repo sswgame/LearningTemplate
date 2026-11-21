@@ -9,6 +9,7 @@
  *          바뀐 도로 타일과 건물 타일을 쌓아 두면 베이스 `GameModeComponent` 가 틱이 끝난 뒤 `onFlush` 로 스폰한다. 효과음도 그때 낸다.
  */
 #pragma once
+#include "Core/Concurrency/DevCounter.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
@@ -69,12 +70,12 @@ namespace sw
         void serializeGameState( StateIO& io ) override;
 
         // ---- 자동화 감시 값이 읽는 것(게임 스레드, 틱 뒤) ----
-        int32  getPopulation() const;
-        int64  getMoney() const;
-        int32  getMonthCount() const { return _monthCount; }
-        int32  getSelectedTool() const { return _selectedTool; }   ///< 0 은 도로, 그 뒤는 카탈로그 건물 순서다
-        uint32 getBuildCount() const { return _buildCount; }       ///< 이번 판에 깔거나 지은 수(도로 · 건물, 성공만)
-        uint32 getDemolishCount() const { return _demolishCount; } ///< 이번 판에 허문 수
+        int32             getPopulation() const;
+        int64             getMoney() const;
+        int32             getMonthCount() const { return _monthCount; }
+        int32             getSelectedTool() const { return _selectedTool; }   ///< 0 은 도로, 그 뒤는 카탈로그 건물 순서다
+        const DevCounter& getBuildCount() const { return _buildCount; }       ///< 이번 판에 깔거나 지은 수(도로 · 건물, 성공만 — 감시 값만 읽는 개발 전용 칸)
+        const DevCounter& getDemolishCount() const { return _demolishCount; } ///< 이번 판에 허문 수(개발 전용 칸)
         /** @brief 커서가 땅 위 타일에 있으면 true 를 반환하고 @p outTile 에 그 타일을 채웁니다(지난 틱의 판정). */
         [[nodiscard]] bool findCursorTile( int2& outTile ) const;
 
@@ -264,10 +265,10 @@ namespace sw
         PROPERTY( RuntimeState )
         int32 _monthCount;
         PROPERTY( RuntimeState )
-        int32  _evolvedCount;  ///< 이번 달 올라간 집 수(월말 로그).
-        uint32 _buildCount;    ///< 자동화 감시 값 `Nile.BuildCount` — 저장하지 않는 이번 판 수
-        uint32 _demolishCount; ///< 자동화 감시 값 `Nile.DemolishCount` — 저장하지 않는 이번 판 수
-        uint8  _bCursorValid : 1;
+        int32      _evolvedCount;  ///< 이번 달 올라간 집 수(월말 로그).
+        DevCounter _buildCount;    ///< 자동화 감시 값 `Nile.BuildCount` — 저장하지 않는 이번 판 수
+        DevCounter _demolishCount; ///< 자동화 감시 값 `Nile.DemolishCount` — 저장하지 않는 이번 판 수
+        uint8      _bCursorValid : 1;
         PROPERTY( RuntimeState )
         uint8                  _bAutoPlanToggle : 1; ///< P 로 켠 자동 계획(설정 PROPERTY 와 전역 변수와는 별개인 실행 상태다).
         [[maybe_unused]] uint8 _reserved        : 6;
