@@ -7,6 +7,7 @@
 
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectEvents.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Presentation/AudioPlayableAsset.h"
@@ -57,9 +58,14 @@ namespace sw
         _requiredTags.addTag( TagID::request( "Player" ) );
     }
 
-    void ScareTriggerComponent::onOverlapBegin( const OverlapInfo& overlap )
+    void ScareTriggerComponent::onRegister( GameObjectManager& manager )
     {
-        Component::onOverlapBegin( overlap );
+        Component::onRegister( manager );
+        _overlapSubscription = GameObjectEvents::listen<&ScareTriggerComponent::handleOverlapBegin>( *this, &GameObjectEvents::_overlapBegin );
+    }
+
+    void ScareTriggerComponent::handleOverlapBegin( const OverlapInfo& overlap )
+    {
         const bool  bTagged     = overlap._pOther != nullptr && ( _requiredTags.getTagCount() == 0 || overlap._pOther->getTags().hasAllTags( _requiredTags ) );
         const bool  bReady      = ( _bOnce == false || _fireCount == 0 ) && _cooldownLeft <= 0.0f;
         GameObject* pOwner      = getOwner();

@@ -2,10 +2,10 @@
 
 #include "GameFramework/Runtime/Character/Combat/Health/HealthSourceComponent.h"
 
-#include "Core/Container/vector.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectEvents.h"
 
 #include "GameFramework/Runtime/Character/Combat/Health/HealthListenerComponent.h"
 
@@ -62,14 +62,7 @@ namespace sw
             return;
         HitInfo fatal = hit;
         fatal._bFatal = true;
-        // 받는 쪽이 오브젝트를 만들 수 있어(절단 조각) 목록을 베껴 돈다 — `CharacterRayHit::deliverHit` 와 같은 거름.
-        const vector<Component*> listTarget( pOwner->getComponents().begin(), pOwner->getComponents().end() );
-        for ( Component* pComponent : listTarget )
-        {
-            const bool bSkipTarget = pComponent == nullptr || pComponent == this || pComponent->isPendingDestroy() || pComponent->isSelfActive() == false;
-            if ( bSkipTarget )
-                continue;
-            pComponent->onHitReceived( fatal );
-        }
+        // 같은 맞음 사건으로 다시 낸다 — 체력 원천(이 컴포넌트 포함)은 치명 표시가 달린 맞음을 건너뛴다(피해는 이미 깎였다).
+        GameObjectEvents::broadcast( *pOwner, &GameObjectEvents::_hitReceived, fatal );
     }
 } // namespace sw

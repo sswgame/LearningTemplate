@@ -17,6 +17,7 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectEvents.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/CameraRegistry.h"
 #include "Engine/Object/GameObject/Service/SceneEngineServices.h"
@@ -289,7 +290,7 @@ namespace sw
                 };
             };
 
-            /** @class AbilityEventHandler @brief 같은 오브젝트의 켜진 컴포넌트에 `onAnimationNotify` 를 보냅니다(구간이면 시작과 끝). */
+            /** @class AbilityEventHandler @brief 같은 오브젝트의 알림 사건(`GameObjectEvents::_animationNotify`)을 냅니다(구간이면 시작과 끝). */
             class AbilityEventHandler final : public IAnimationNotifyHandler
             {
             public:
@@ -309,13 +310,7 @@ namespace sw
                     info._weight = context._fired._weight;
                     info._phase  = phase;
                     record( context, info._event, context._component.findSocketWorldPosition( hashed_string{} ), context._owner.getObjectID(), phase );
-                    const vector<Component*> listTarget( context._owner.getComponents().begin(), context._owner.getComponents().end() );
-                    for ( Component* pComponent : listTarget )
-                    {
-                        const bool bComponentCanReceiveNotify = pComponent != nullptr && pComponent->isPendingDestroy() == false && pComponent->isSelfActive();
-                        if ( bComponentCanReceiveNotify )
-                            pComponent->onAnimationNotify( info );
-                    }
+                    GameObjectEvents::broadcast( context._owner, &GameObjectEvents::_animationNotify, info );
                 }
 
                 static constexpr AnimationNotifyParamDef kArrParam[] = {

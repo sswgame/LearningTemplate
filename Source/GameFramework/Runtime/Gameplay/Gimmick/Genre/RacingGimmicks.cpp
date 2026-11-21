@@ -5,6 +5,7 @@
 #include "Core/Hash/HashUtil.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectEvents.h"
 #include "Engine/Object/GameObject/Tick/TickContext.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameEventUtil.h"
@@ -41,9 +42,14 @@ namespace sw
     {
     }
 
-    void BoostPadComponent::onOverlapBegin( const OverlapInfo& overlap )
+    void BoostPadComponent::onRegister( GameObjectManager& manager )
     {
-        Component::onOverlapBegin( overlap );
+        Component::onRegister( manager );
+        _overlapSubscription = GameObjectEvents::listen<&BoostPadComponent::handleOverlapBegin>( *this, &GameObjectEvents::_overlapBegin );
+    }
+
+    void BoostPadComponent::handleOverlapBegin( const OverlapInfo& overlap )
+    {
         if ( RacingGimmicksInternal::canAccept( overlap, _requiredTags ) == false )
             return;
         ++_boostCount;
@@ -65,9 +71,14 @@ namespace sw
     {
     }
 
-    void ItemBoxComponent::onOverlapBegin( const OverlapInfo& overlap )
+    void ItemBoxComponent::onRegister( GameObjectManager& manager )
     {
-        Component::onOverlapBegin( overlap );
+        Component::onRegister( manager );
+        _overlapSubscription = GameObjectEvents::listen<&ItemBoxComponent::handleOverlapBegin>( *this, &GameObjectEvents::_overlapBegin );
+    }
+
+    void ItemBoxComponent::handleOverlapBegin( const OverlapInfo& overlap )
+    {
         if ( RacingGimmicksInternal::canAccept( overlap, _requiredTags ) )
             (void)open( *overlap._pOther ); // 뽑힌 이름은 쓰지 않는다. 비어 있으면 열리지 않을 뿐이다
     }

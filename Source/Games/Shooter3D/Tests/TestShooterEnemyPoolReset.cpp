@@ -5,6 +5,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Animation/Component/SkeletalAnimatorComponent.h"
+#include "Engine/Character/Hit/CharacterHit.h"
 #include "Engine/Character/Hit/RagdollComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -57,7 +58,7 @@ SW_TEST_CASE( ShooterEnemyPoolResetTest, DeadEnemyComesBackAsFreshSpawn )
 
     SW_REQUIRE_TRUE( pEnemy->launch( GameObjectHandle{}, float3{ 1.0f, 0.0f, 2.0f }, 0.5f, 30.0f, 3.0f ) );
     pEnemy->setNetEntityID( 7 );
-    pEnemy->onHitReceived( Util::makeFatalDamage() );                    // 무기 판정이 보내는 자리(틱 밖)
+    CharacterRayHit::deliverHit( *pObject, Util::makeFatalDamage() );    // 무기 판정이 보내는 자리(틱 밖)
     pAnimator->getParameters().setBool( hashed_string( "Dead" ), true ); // 적의 틱이 쓰는 값이다
     SW_REQUIRE_TRUE( pEnemy->isDead() );
     SW_REQUIRE_TRUE( pRagdoll->getState() == RagdollState::Ragdoll );

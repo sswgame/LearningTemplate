@@ -17,7 +17,7 @@
  *
  *          **피해.** `applyDamage`(메시 공간), `applyPointDamageAtWorld`, `applyRadialDamageAtWorld`, `applyRaycastDamage` 는 어느 틱에서든 불러도 된다.
  *          요청은 잠금 아래 쌓이고 다음 물리 프레임에 게임 스레드에서 적용된다.
- *          충돌(`onCollisionBegin` 의 시작 충격량)은 권한이 있을 때(`_bAuthority`)만 사건이 된다.
+ *          충돌(막는 접촉 시작 사건 `GameObjectEvents::_collisionBegin` 의 충격량)은 권한이 있을 때(`_bAuthority`)만 사건이 된다.
  *          적용한 사건은 `getEventLog()` 에 쌓인다. 다른 기계가 이 사건을 같은 순서로 `applyDamage` 에 넘기면 같은 상태가 된다.
  */
 #pragma once
@@ -25,6 +25,7 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -149,7 +150,6 @@ namespace sw
         void onUnregister( GameObjectManager& manager ) override;
 
         void onBeginPlay() override;
-        void onCollisionBegin( const CollisionInfo& collision ) override;
 
         /** @brief 메시 공간 피해 사건 하나를 쌓습니다. 다음 물리 프레임에 적용하며, 어느 틱에서든 부를 수 있습니다. */
         void applyDamage( const DestructionDamageEvent& event );
@@ -330,6 +330,8 @@ namespace sw
         void recordRecentStateHash();
 
     private:
+        /** @brief 막는 접촉 시작(`GameObjectEvents::_collisionBegin`)의 충격량을 피해 사건으로 쌓습니다. 권한이 있을 때만입니다. */
+        void handleCollisionBegin( const CollisionInfo& collision );
         /** @brief `_staticLayer` 가 물리 레이어 표에 있는지 봅니다(`PhysicsNameValidation`). */
         void validateStaticLayer( ValidationContext& context ) const;
         /** @brief `_chunkLayer` 가 물리 레이어 표에 있는지 봅니다(`PhysicsNameValidation`). */
@@ -338,6 +340,7 @@ namespace sw
         void validateDebrisLayer( ValidationContext& context ) const;
 
     private:
+        Subscription _collisionSubscription; ///< 막는 접촉 시작 구독(`handleCollisionBegin`)
         PROPERTY( Category = "Fracture", DisplayName = "Profile", Tooltip = "Destruction profile (*.destruction.xml); empty uses the engine default" )
         AssetRef<DestructionProfile> _profilePath;
         PROPERTY( Category = "Fracture", DisplayName = "Interior Material", Tooltip = "Material of the cut faces; empty uses the outer one" )

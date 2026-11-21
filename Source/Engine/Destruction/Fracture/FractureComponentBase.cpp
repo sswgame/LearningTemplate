@@ -15,6 +15,7 @@
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectEvents.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Physics/Collision/PhysicsShape.h"
@@ -713,9 +714,8 @@ namespace sw
         return true;
     }
 
-    void FractureComponentBase::onCollisionBegin( const CollisionInfo& collision )
+    void FractureComponentBase::handleCollisionBegin( const CollisionInfo& collision )
     {
-        PhysicsComponent::onCollisionBegin( collision );
         const bool bIgnoreCollision = _bAuthority == false || _bStateReady == SW_FALSE || collision._impulse <= getProfile()._minImpulse;
         if ( bIgnoreCollision )
             return;
@@ -1870,6 +1870,7 @@ namespace sw
     {
         PhysicsComponent::onRegister( manager );
         manager.getComponentRegistry().add<FractureComponentBase>( this );
+        _collisionSubscription = GameObjectEvents::listen<&FractureComponentBase::handleCollisionBegin>( *this, &GameObjectEvents::_collisionBegin );
     }
 
     void FractureComponentBase::onUnregister( GameObjectManager& manager )

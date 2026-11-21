@@ -9,6 +9,7 @@
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectEvents.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -25,10 +26,20 @@ namespace sw
         uint32        _collisionBeginCount{ 0 };      ///< 막는 접촉 시작 수(바디 쌍마다 — 충격 단위)
         vector<uint8> _listOrder{};                   ///< 'B' · 'E' 와 상대 오브젝트 id 의 낮은 바이트가 번갈아 든다
         bool          _bDestroyOtherOnBegin{ false }; ///< NOLINT(sw-bool-flag): 테스트 칸 — 비트필드는 기본값을 둘 수 없다
+        Subscription  _overlapBeginSubscription;
+        Subscription  _overlapEndSubscription;
+        Subscription  _collisionBeginSubscription;
 
-        void onOverlapBegin( const OverlapInfo& overlap ) override
+        void onRegister( GameObjectManager& manager ) override
         {
-            Component::onOverlapBegin( overlap );
+            Component::onRegister( manager );
+            _overlapBeginSubscription   = GameObjectEvents::listen<&OverlapRecorderTestComponent::handleOverlapBegin>( *this, &GameObjectEvents::_overlapBegin );
+            _overlapEndSubscription     = GameObjectEvents::listen<&OverlapRecorderTestComponent::handleOverlapEnd>( *this, &GameObjectEvents::_overlapEnd );
+            _collisionBeginSubscription = GameObjectEvents::listen<&OverlapRecorderTestComponent::handleCollisionBegin>( *this, &GameObjectEvents::_collisionBegin );
+        }
+
+        void handleOverlapBegin( const OverlapInfo& overlap )
+        {
             if ( overlap._bOtherTrigger == SW_TRUE )
                 return;
             ++_beginCount;
@@ -37,18 +48,17 @@ namespace sw
                 overlap._pOther->getMutableManager()->destroyGameObject( overlap._pOther );
         }
 
-        void onOverlapEnd( const OverlapInfo& overlap ) override
+        void handleOverlapEnd( const OverlapInfo& overlap )
         {
-            Component::onOverlapEnd( overlap );
             if ( overlap._bOtherTrigger == SW_TRUE )
                 return;
             ++_endCount;
             record( 'E', overlap );
         }
 
-        void onCollisionBegin( const CollisionInfo& collision ) override
+        void handleCollisionBegin( const CollisionInfo& collision )
         {
-            Component::onCollisionBegin( collision );
+            (void)collision;
             ++_collisionBeginCount;
         }
 

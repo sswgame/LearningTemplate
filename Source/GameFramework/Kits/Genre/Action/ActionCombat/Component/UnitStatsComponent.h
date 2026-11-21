@@ -36,9 +36,12 @@ namespace sw
         void takeDamage( int32 amount, GameObjectHandle instigator = GameObjectHandle{} );
         /**
          * @brief 근접 판정의 맞음(`MeleeHit::sweep`)을 피해로 바꿉니다. 피해는 기본 피해 × 히트 존 배율을 반올림한 값이고 때린 쪽은 맞음의 공격자입니다.
-         * @details 이 맞음으로 쓰러지면 치명 신호를 다시 보낸다(`deliverFatalHit`). 틱 중(구조 동결)이면 맞음 정보째 틱 직후로 미뤄 같은 함수로 다시 들어온다.
+         * @details 맞음 사건(`GameObjectEvents::_hitReceived`)으로 온다. 이 맞음으로 쓰러지면 치명 신호를 다시 보낸다(`deliverFatalHit`) — 그 치명 사본은 받지 않는다.
+         *          틱 중(구조 동결)이면 맞음 정보째 틱 직후로 미뤄 같은 함수로 다시 들어온다.
          */
-        void onHitReceived( const HitInfo& hit ) override;
+        void receiveHit( const HitInfo& hit );
+        /** @brief 맞음 사건을 구독합니다. */
+        void onRegister( GameObjectManager& manager ) override;
         /** @brief HP 를 @p amount 만큼(최대 HP 까지) 채웁니다. 인스펙터가 인자 칸과 실행 단추로 부른다(에디터 전용 감싼 함수를 두지 않는다). */
         FUNCTION( Category = "Actions", DisplayName = "Heal", CallInEditor )
         void heal( int32 amount );
@@ -82,6 +85,7 @@ namespace sw
 
         /** @brief HP 가 깎일 때 호출할 구독자 목록입니다(`registerDamageApplied`). 코드가 등록하는 값이므로 저장하지 않습니다. */
         MulticastDelegate<void( const DamageAppliedEvent& )> _damageAppliedMulticast;
+        Subscription                                         _hitSubscription; ///< 맞음 사건 구독(`receiveHit`)
         PROPERTY( Category = "Stats", DisplayName = "HP", Tooltip = "Current Health Points", Min = 0.0, Meta = "Units=HP" )
         int32 _hp;
         PROPERTY( Category = "Stats", DisplayName = "Max HP", Tooltip = "Maximum Health Points", Min = 1.0, Meta = "Units=HP" )

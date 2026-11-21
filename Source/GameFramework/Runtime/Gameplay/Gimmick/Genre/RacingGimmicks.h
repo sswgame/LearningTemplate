@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
 #include "Core/Time/FixedStepTimer.h"
@@ -43,10 +44,15 @@ namespace sw
         BoostPadComponent();
         virtual ~BoostPadComponent() override = default;
 
-        void  onOverlapBegin( const OverlapInfo& overlap ) override;
+        /** @brief 겹침 진입 사건을 구독합니다. */
+        void  onRegister( GameObjectManager& manager ) override;
         int32 getBoostCount() const { return _boostCount; }
 
     private:
+        /** @brief 밟기 시작한 몸(`GameObjectEvents::_overlapBegin`, 태그로 거름)에 부스트 이벤트를 냅니다. */
+        void handleOverlapBegin( const OverlapInfo& overlap );
+
+        Subscription _overlapSubscription; ///< 겹침 진입 구독(`handleOverlapBegin`)
         PROPERTY( Category = "Boost", DisplayName = "Duration", Min = 0.0, Units = s )
         float32 _duration;
         PROPERTY( Category = "Boost", DisplayName = "Strength", Min = 0.0, Tooltip = "Speed multiplier or added speed, as the vehicle reads it" )
@@ -75,7 +81,8 @@ namespace sw
         ItemBoxComponent();
         virtual ~ItemBoxComponent() override = default;
 
-        void onOverlapBegin( const OverlapInfo& overlap ) override;
+        /** @brief 겹침 진입 사건을 구독합니다. */
+        void onRegister( GameObjectManager& manager ) override;
         void onTick( TickContext& context ) override;
         void stepOnce();
         /** @brief @p target 에게 엽니다. 겹침이 부릅니다. 비어 있어서(숨은 동안) 아이템을 줄 수 없으면 아무 일도 없이 무효 이름을 반환합니다. */
@@ -86,6 +93,10 @@ namespace sw
         int32 getOpenCount() const { return _openCount; }
 
     private:
+        /** @brief 닿은 몸(`GameObjectEvents::_overlapBegin`, 태그로 거름)에게 엽니다. */
+        void handleOverlapBegin( const OverlapInfo& overlap );
+
+        Subscription _overlapSubscription; ///< 겹침 진입 구독(`handleOverlapBegin`)
         PROPERTY( Category = "Item Box", DisplayName = "Choices" )
         vector<GimmickItemChoice> _listChoice;
         PROPERTY( Category = "Item Box", DisplayName = "Required Tags" )

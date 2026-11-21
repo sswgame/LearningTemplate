@@ -3,6 +3,7 @@
  * @brief 활성자가 들어오면 한 번 일을 하는 볼륨의 바탕입니다(튜토리얼 힌트 · 자동 저장). 트리거 콜라이더의 겹침과, 물리 몸이 없는 활성자를 위한 거리 판정을 한 벌로 둡니다.
  */
 #pragma once
+#include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/TagID.h"
 #include "Core/Name/hashed_string.h"
@@ -87,7 +88,7 @@ namespace sw
 
     /**
      * @class ActivatorVolumeComponent
-     * @brief 활성자가 들어오는 길은 둘입니다. 같은 오브젝트의 트리거 콜라이더에 겹치거나(`onOverlapBegin`), `_activator` 가 `_radius` 안에 들어옵니다.
+     * @brief 활성자가 들어오는 길은 둘입니다. 같은 오브젝트의 트리거 콜라이더에 겹치거나(겹침 사건 `GameObjectEvents::_overlapBegin`), `_activator` 가 `_radius` 안에 들어옵니다.
      * @details 거리 판정을 함께 두는 까닭: 말에 탄 기수(말은 물리 몸이 없다)나 격자로 걷는 농부처럼 물리 몸이 없는 활성자는 겹침을 내지 못한다. 언리얼 `ATriggerSphere` 와 유니티 `OnTriggerEnter` 는 몸을 요구하고
      *          그런 게임은 스크립트로 거리를 재는데(기억에 의존한 비교), 볼륨마다 되풀이되어 바탕에 둔다. `_radius` 가 0 이면 거리는 재지 않는다.
      *          거리는 틱(워커)에서 읽고, 일은 틱 뒤 게임 스레드에서 한다 — UI · 저장은 틱 안에서 부르지 않는다. 안에 있는 동안 다시 하지 않는다(들어오는 순간만).
@@ -110,7 +111,8 @@ namespace sw
         ~ActivatorVolumeComponent() override = default;
 
         void onTick( TickContext& context ) override;
-        void onOverlapBegin( const OverlapInfo& overlap ) override;
+        /** @brief 겹침 사건을 구독합니다. */
+        void onRegister( GameObjectManager& manager ) override;
         void onOwnerActiveInHierarchyChanged() override;
         void onPropertyChanged( hashed_string propertyName ) override;
 
@@ -151,6 +153,10 @@ namespace sw
         bool isSpawnEntry( const GameObject& activator, ActivatorSpawnWindow::EntryPath path ) const;
         /** @brief 볼륨이 나타났다(시작 · 다시 켜짐) — 나타남 창을 다시 연다. */
         void markAppeared();
+        /** @brief 겹침 진입(`GameObjectEvents::_overlapBegin`)을 활성자의 진입으로 칩니다(상대 트리거 · 거리로 재는 활성자 · 받지 않는 나타남은 거른다). */
+        void handleOverlapBegin( const OverlapInfo& overlap );
+
+        Subscription _overlapSubscription; ///< 겹침 진입 구독(`handleOverlapBegin`)
 
         PROPERTY( Category = "Volume", DisplayName = "Activator Tag", Tooltip = "Only objects with this tag activate it (empty: any object)" )
         TagID _activatorTag;

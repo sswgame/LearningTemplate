@@ -17,6 +17,7 @@
 #include "Engine/Character/PoseModifier/CharacterPoseUtil.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectEvents.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Physics/Asset/PhysicsAsset.h"
 #include "Engine/Physics/Component/RigidBodyComponent.h"
@@ -393,9 +394,14 @@ namespace sw
         return hashed_string{};
     }
 
-    void DismembermentComponent::onHitReceived( const HitInfo& hit )
+    void DismembermentComponent::onRegister( GameObjectManager& manager )
     {
-        Component::onHitReceived( hit );
+        Component::onRegister( manager );
+        _hitSubscription = GameObjectEvents::listen<&DismembermentComponent::handleHit>( *this, &GameObjectEvents::_hitReceived );
+    }
+
+    void DismembermentComponent::handleHit( const HitInfo& hit )
+    {
         if ( hit._bFatal == false || _bTableLoaded == false )
             return;
         // 맞은 래그돌 바디 → 그 뼈 → 영역.

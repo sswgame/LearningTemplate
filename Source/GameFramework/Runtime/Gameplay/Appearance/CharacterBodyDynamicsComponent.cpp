@@ -26,6 +26,7 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectEvents.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Scene/SceneManager.h"
@@ -170,12 +171,19 @@ namespace sw
         { self.update( manager ); } );
     }
 
-    void CharacterBodyDynamicsComponent::onHitReceived( const HitInfo& hit )
+    void CharacterBodyDynamicsComponent::onRegister( GameObjectManager& manager )
+    {
+        Component::onRegister( manager );
+        _hitSubscription    = GameObjectEvents::listen<&CharacterBodyDynamicsComponent::handleHit>( *this, &GameObjectEvents::_hitReceived );
+        _notifySubscription = GameObjectEvents::listen<&CharacterBodyDynamicsComponent::handleAnimationNotify>( *this, &GameObjectEvents::_animationNotify );
+    }
+
+    void CharacterBodyDynamicsComponent::handleHit( const HitInfo& hit )
     {
         addImpulse( hit._direction * ( hit._impulse * _hitImpulseScale ) );
     }
 
-    void CharacterBodyDynamicsComponent::onAnimationNotify( const AnimationNotifyInfo& notify )
+    void CharacterBodyDynamicsComponent::handleAnimationNotify( const AnimationNotifyInfo& notify )
     {
         if ( notify._event == _wipeEvent && notify._phase != AnimationNotifyPhase::End )
             _pendingWipe += notify._weight;

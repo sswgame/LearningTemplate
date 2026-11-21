@@ -69,10 +69,10 @@ namespace sw
          * @param direction 때린 방향입니다(길이는 상관없고, 거의 0 이면 방향 없음).
          */
         static HitInfo makeHitInfo( const CharacterRayHit& rayHit, GameObject* pInstigator, const float3& direction, float32 damage, float32 impulse );
-        /** @brief 맞은 오브젝트의 켜진 컴포넌트마다 `onHitReceived` 를 호출합니다(목록을 복사해서 돌므로 처리 중에 컴포넌트를 붙이고 떼도 됩니다). */
+        /** @brief 맞은 오브젝트의 맞음 사건(`GameObjectEvents::_hitReceived`)을 냅니다 — 구독한 켜진 컴포넌트만 받습니다(처리 중에 컴포넌트를 붙이고 떼도 됩니다). */
         static void deliverHit( GameObject& target, const HitInfo& hit );
         /**
-         * @brief 무기 한 발입니다. 광선을 쏘아 맞은 오브젝트와 히트 존을 찾고 맞음을 알립니다(레이캐스트, 바디, 히트 존, `onHitReceived` 순서).
+         * @brief 무기 한 발입니다. 광선을 쏘아 맞은 오브젝트와 히트 존을 찾고 맞음을 알립니다(레이캐스트, 바디, 히트 존, 맞음 사건 순서).
          * @param pInstigator 쏜 오브젝트입니다(그 바디는 건너뜁니다). nullptr 이면 건너뛰지 않습니다.
          * @param outHit 알린 맞음입니다(맞지 않았으면 그대로입니다).
          * @return 오브젝트를 맞혔으면 true 입니다.

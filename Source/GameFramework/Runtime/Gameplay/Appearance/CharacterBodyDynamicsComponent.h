@@ -11,6 +11,7 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Name/hashed_string.h"
@@ -41,10 +42,8 @@ namespace sw
         virtual ~CharacterBodyDynamicsComponent() override = default;
 
         void onTick( TickContext& context ) override;
-        /** @brief 맞음(전투 맞음 이벤트)이 지글에 충격을 줍니다 — 때린 방향 × 충격량 × `_hitImpulseScale`. */
-        void onHitReceived( const HitInfo& hit ) override;
-        /** @brief 알림 이벤트 `_wipeEvent`(손으로 닦기)가 화장 층을 아래로 끕니다. */
-        void onAnimationNotify( const AnimationNotifyInfo& notify ) override;
+        /** @brief 맞음 · 애니메이션 알림 사건을 구독합니다. */
+        void onRegister( GameObjectManager& manager ) override;
 
         /** @brief 지글 충격(월드 속도 m/s)을 더합니다(착지 · 게임 코드). 다음 리그 준비 단계에 들어간다. */
         void addImpulse( const float3& worldVelocity );
@@ -90,6 +89,10 @@ namespace sw
             float32       _strength{ 0.0f };
         };
 
+        /** @brief 맞음(`GameObjectEvents::_hitReceived`)이 지글에 충격을 줍니다 — 때린 방향 × 충격량 × `_hitImpulseScale`. */
+        void handleHit( const HitInfo& hit );
+        /** @brief 알림 이벤트 `_wipeEvent`(손으로 닦기, `GameObjectEvents::_animationNotify`)가 화장 층을 아래로 끕니다. */
+        void handleAnimationNotify( const AnimationNotifyInfo& notify );
         /** @brief 쌓인 게임 초만큼 몸 동작을 진행합니다(틱 뒤 게임 스레드). */
         void update( GameObjectManager& manager );
         /** @brief 해석이 바뀌었으면 프로필(지글 물성 · 주름 · 번짐 칸 수)을 다시 겁니다. */
@@ -127,6 +130,8 @@ namespace sw
         vector<ManualTrigger>       _listManualTrigger;
         vector<SkinLayerSmearState> _listSmear; ///< 해석의 피부 층 순서
         vector<float32>             _listSmearResistance;
+        Subscription                _hitSubscription;    ///< 맞음 사건 구독(`handleHit`)
+        Subscription                _notifySubscription; ///< 애니메이션 알림 사건 구독(`handleAnimationNotify`)
         float3                      _pendingImpulse;
         uint64                      _appliedHash;
         float32                     _pendingSeconds;

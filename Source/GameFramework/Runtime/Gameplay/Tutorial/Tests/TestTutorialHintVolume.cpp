@@ -5,6 +5,7 @@
 
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectEvents.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Presentation/IPlayerNotificationSink.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
@@ -122,19 +123,19 @@ SW_TEST_CASE( TutorialHintVolumeTest, ProximityActivatorIgnoresItsOverlap )
     game::ScopedGameScope scopedScope( rig._scope );
     OverlapInfo           walkerOverlap;
     walkerOverlap._pOther = rig._pWalker;
-    rig._pVolume->onOverlapBegin( walkerOverlap );
+    GameObjectEvents::broadcast( *rig._pVolumeObject, &GameObjectEvents::_overlapBegin, walkerOverlap );
     SW_EXPECT_EQUAL( 0u, rig._sink._postCount );
 
     GameObject* pRunner = rig._manager.createGameObject( hashed_string( "Runner" ) );
     OverlapInfo runnerOverlap;
     runnerOverlap._pOther = pRunner;
-    rig._pVolume->onOverlapBegin( runnerOverlap );
+    GameObjectEvents::broadcast( *rig._pVolumeObject, &GameObjectEvents::_overlapBegin, runnerOverlap );
     SW_EXPECT_EQUAL( 1u, rig._sink._postCount );
 
     OverlapInfo sensorOverlap;
     sensorOverlap._pOther        = pRunner;
     sensorOverlap._bOtherTrigger = SW_TRUE;
-    rig._pVolume->onOverlapBegin( sensorOverlap );
+    GameObjectEvents::broadcast( *rig._pVolumeObject, &GameObjectEvents::_overlapBegin, sensorOverlap );
     SW_EXPECT_EQUAL( 1u, rig._sink._postCount );
 }
 

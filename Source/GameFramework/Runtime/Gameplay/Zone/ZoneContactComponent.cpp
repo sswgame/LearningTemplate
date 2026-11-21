@@ -13,6 +13,7 @@
 #include "Engine/Environment/Water/WaterBodyComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectEvents.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Physics/Component/CharacterControllerComponent.h"
@@ -65,6 +66,7 @@ namespace sw
         ZoneOccupantIndex::addLayerReader( manager ); // 표면 지역의 근처 역할이 물리 층을 질의한다(`ZoneTracker::resolveRoleTargets`)
         (void)ZoneSystem::getOrCreate( manager );
         manager.getSubsystem<ScenePhysics>().registerContactStayListener( *this, ContactStayListener{ &ZoneContactComponent::receiveCollisionStay, nullptr } );
+        _collisionSubscription = GameObjectEvents::listen<&ZoneContactComponent::recordCollision>( *this, &GameObjectEvents::_collisionBegin );
     }
 
     void ZoneContactComponent::onUnregister( GameObjectManager& manager )
@@ -96,12 +98,6 @@ namespace sw
             if ( pZone->_bValid == SW_TRUE && pZone->_tracker.getOccupants().empty() == false )
                 pZone->_tracker.exitAllOccupants( manager, pZone->_compiled, ActionSource{ pZone->_sourceName, GameObjectHandle{} } );
         }
-    }
-
-    void ZoneContactComponent::onCollisionBegin( const CollisionInfo& collision )
-    {
-        Component::onCollisionBegin( collision );
-        recordCollision( collision );
     }
 
     void ZoneContactComponent::receiveCollisionStay( Component& self, const CollisionInfo& collision )

@@ -12,6 +12,7 @@
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectEvents.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Service/SceneEngineServices.h"
 #include "Engine/Object/GameObject/Service/ScenePreviewPolicy.h"
@@ -101,7 +102,6 @@ namespace sw
         , _listOverlapTransition{}
         , _listOverlapStay{}
         , _mapStayListener{}
-        , _listDeliverTarget{}
         , _listStayTarget{}
         , _arrContactLog{}
         , _contactLogCount{ 0 }
@@ -906,9 +906,8 @@ namespace sw
             deliverStay( selfUserData, pOther, selfBody, otherBody, point, normal, impulse, bSelfTrigger, bOtherTrigger, bOverlap, bIs2D );
             return;
         }
-        // 처리가 컴포넌트를 붙이고 뗄 수 있으므로 목록을 베껴 돈다(멤버에 — 이벤트마다 새로 할당하지 않는다, 이 함수는 다시 들어오지 않는다).
-        _listDeliverTarget.assign( pSelf->getComponents().begin(), pSelf->getComponents().end() );
-        const vector<Component*>& listTarget = _listDeliverTarget;
+        // 듣는 컴포넌트만 받는다(`GameObjectEvents` — 구독 · 해지 · 스폰 · 파괴를 처리 안에서 해도 된다). 유지는 위에서 `deliverStay` 로 갔다.
+        const bool bBegin = phase == PhysicsContactPhase::Begin;
         if ( bOverlap )
         {
             OverlapInfo overlap;
@@ -918,29 +917,7 @@ namespace sw
             overlap._hitFraction   = hitFraction;
             overlap._bSelfTrigger  = bSelfTrigger ? SW_TRUE : SW_FALSE;
             overlap._bOtherTrigger = bOtherTrigger ? SW_TRUE : SW_FALSE;
-            for ( Component* pComponent : listTarget )
-            {
-                const bool bInactiveTickTarget = pComponent == nullptr || pComponent->isPendingDestroy() || pComponent->isSelfActive() == false;
-                if ( bInactiveTickTarget )
-                    continue;
-                switch ( phase )
-                {
-                    case PhysicsContactPhase::Begin:
-                    {
-                        pComponent->onOverlapBegin( overlap );
-                        break;
-                    }
-                    case PhysicsContactPhase::End:
-                    {
-                        pComponent->onOverlapEnd( overlap );
-                        break;
-                    }
-                    case PhysicsContactPhase::Stay:
-                    {
-                        break; // 유지는 위에서 `deliverStay` 로 갔다
-                    }
-                }
-            }
+            GameObjectEvents::broadcast( *pSelf, bBegin ? &GameObjectEvents::_overlapBegin : &GameObjectEvents::_overlapEnd, overlap );
             return;
         }
         CollisionInfo collision;
@@ -951,29 +928,7 @@ namespace sw
         collision._normal    = normal;
         collision._impulse   = impulse;
         collision._bIs2D     = bIs2D;
-        for ( Component* pComponent : listTarget )
-        {
-            const bool bInactivePhysicsTarget = pComponent == nullptr || pComponent->isPendingDestroy() || pComponent->isSelfActive() == false;
-            if ( bInactivePhysicsTarget )
-                continue;
-            switch ( phase )
-            {
-                case PhysicsContactPhase::Begin:
-                {
-                    pComponent->onCollisionBegin( collision );
-                    break;
-                }
-                case PhysicsContactPhase::End:
-                {
-                    pComponent->onCollisionEnd( collision );
-                    break;
-                }
-                case PhysicsContactPhase::Stay:
-                {
-                    break; // 유지는 위에서 `deliverStay` 로 갔다
-                }
-            }
-        }
+        GameObjectEvents::broadcast( *pSelf, bBegin ? &GameObjectEvents::_collisionBegin : &GameObjectEvents::_collisionEnd, collision );
     }
 
     void ScenePhysics::deliverStay( uint64 selfUserData, GameObject* pOther, PhysicsBodyHandle selfBody, PhysicsBodyHandle otherBody, const float3& point,
