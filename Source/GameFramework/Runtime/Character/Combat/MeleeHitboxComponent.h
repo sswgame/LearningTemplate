@@ -22,7 +22,7 @@ namespace sw
      *          스윕은 틱 밖에서 돈다 — 틱(물리 뒤 단계)이 틱 직후로 미룬다(물리 질의와 맞음 사건은 틱 밖의 일이다).
      */
     REFLECT()
-    class SW_KIT_API MeleeHitboxComponent : public SceneComponent
+    class SW_GF_API MeleeHitboxComponent : public SceneComponent
     {
     public:
         REFLECT_BODY();

@@ -703,7 +703,7 @@
     "Source/GameFramework/Kits/Genre/Action/ActionAdventure/AdventureTargeting.cpp": {"float": 1},
     "Source/GameFramework/Kits/Genre/Action/ActionAdventure/AdventureVitals.cpp": {"float": 2},
     "Source/GameFramework/Kits/Genre/Action/ActionCombat/ActionRoom.cpp": {"float": 13, "integer": 1},
-    "Source/GameFramework/Kits/Genre/Action/ActionCombat/Component/MeleeHitboxComponent.cpp": {"float": 1},
+    "Source/GameFramework/Runtime/Character/Combat/MeleeHitboxComponent.cpp": {"float": 1},
     "Source/GameFramework/Kits/Genre/Action/ActionPlatformer/ActionStageRun.cpp": {"float": 1},
     "Source/GameFramework/Kits/Genre/Action/BattleRoyale/BattleRoyaleDrop.cpp": {"float": 2},
     "Source/GameFramework/Kits/Genre/Action/BattleRoyale/BattleRoyaleLoot.cpp": {"hex": 1},

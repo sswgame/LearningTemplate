@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Genre/Action/ActionCombat/Component/MeleeHitboxComponent.h"
+#include "GameFramework/Runtime/Character/Combat/MeleeHitboxComponent.h"
 
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/String/StringUtil.h"
