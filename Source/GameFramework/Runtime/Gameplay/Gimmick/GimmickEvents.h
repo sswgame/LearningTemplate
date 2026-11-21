@@ -28,7 +28,10 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 연출 신호입니다. 공포 트리거, 폭발, 파괴 단계에서 냅니다. 사운드, 카메라 흔들림, 시퀀서가 이름으로 이 신호를 받습니다. */
+    /**
+     * @brief 연출 신호입니다. 공포 트리거, 폭발, 파괴 단계에서 냅니다(`GimmickUtil::sendCue`). 프리팹 · 소리 연출은 내는 쪽이 큐 표로 바로 걸고,
+     *        이 이벤트는 이름으로 더 받을 쪽(게임 규칙 · 시퀀서 · 퀘스트)의 몫입니다.
+     */
     struct SW_GF_API GimmickCueEvent final : EventBase
     {
         GameObjectHandle _source{};

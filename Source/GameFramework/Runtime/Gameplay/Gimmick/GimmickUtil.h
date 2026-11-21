@@ -7,6 +7,8 @@
 #include "Core/Math/Math.h"
 #include "Core/Name/hashed_string.h"
 
+#include "Engine/Foundation/GameObjectHandle.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -30,7 +32,12 @@ namespace sw
          *          가방은 다른 오브젝트(조종자)의 상태라 틱 중이면 틱 뒤로 미룬다. 폰 · 조종자 · 가방이 없거나 가방이 차면 못 넣은 만큼 주지 않는다.
          */
         static void giveItem( const GameObject& target, const hashed_string& item, int32 count );
-        /** @brief @p source 에서 연출 신호(`GimmickCueEvent`)를 냅니다. 폭발 · 파괴 단계가 씁니다. */
-        static void sendCue( const GameObject& source, const hashed_string& cue, const float3& position, float32 magnitude );
+        /**
+         * @brief @p source 에서 연출 신호 @p cue 를 냅니다. 공포 트리거 · 폭발 · 파괴 단계가 씁니다. @p target 은 신호를 부른 쪽(트리거에 들어온 몸)이고 없으면 빈 핸들입니다.
+         * @details 연출(프리팹 · 소리)은 어빌리티 게임플레이 큐와 같은 표(카탈로그 `<AbilityPresentation tag="<큐 이름>">`)와 클라이언트 창구(`IAbilityCueSink`)로 바로 낸다 —
+         *          언리얼 GameplayCueManager 가 GAS 밖 큐(`ExecuteGameplayCue_NonReplicated`)도 같은 표로 받는 자리. 표에 없는 큐는 연출 없이 이벤트만 나간다.
+         *          받는 쪽이 여럿일 수 있어(게임 규칙 · 시퀀서 · 퀘스트) `GimmickCueEvent` 도 "game" 채널에 낸다(`AbilitySystemComponent` 의 큐와 같은 두 길).
+         */
+        static void sendCue( const GameObject& source, const hashed_string& cue, const float3& position, float32 magnitude, GameObjectHandle target = GameObjectHandle{} );
     };
 } // namespace sw

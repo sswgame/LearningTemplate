@@ -1,6 +1,6 @@
 /**
  * @file NoiseEmitterComponent.h
- * @brief 소리를 내는 것(기계 · 삐걱이는 마루)입니다. AI 청각이 읽을 소리 반경을 남깁니다.
+ * @brief 소리를 내는 것(기계 · 삐걱이는 마루)입니다. 같은 오브젝트의 AI 자극 원천에 소리 반경을 겁니다.
  */
 #pragma once
 #include "Core/Foundation/Types.h"
@@ -15,8 +15,9 @@ namespace sw
 {
     /**
      * @class NoiseEmitterComponent
-     * @brief 소리를 냅니다. `emit` 로 직접 낼 수 있고, `_interval` 마다 낼 수 있으며(기계), 같은 오브젝트의 센서에 새로 올라선 것이 있을 때도 냅니다(삐걱이는 마루). `GimmickNoiseEvent` 와
-     *        마지막 반경(`getNoiseRadius`)을 남기며, 반경은 `AIStimulus::_noiseRadius` 로 넘깁니다.
+     * @brief 소리를 냅니다. `emit` 로 직접 낼 수 있고, `_interval` 마다 낼 수 있으며(기계), 같은 오브젝트의 센서에 새로 올라선 것이 있을 때도 냅니다(삐걱이는 마루).
+     * @details 반경은 같은 오브젝트의 `AIStimulusSourceComponent::reportNoise` 로 걸어 AI 감각이 색인으로 듣고(필수 — 없으면 시작에서 오류), 다음 프레임 틱에서 거둔다.
+     *          이름으로 더 받을 쪽(게임 규칙 · 연출)을 위해 `GimmickNoiseEvent` 도 낸다.
      */
     REFLECT( Category = "Gimmick", DisplayName = "Noise Emitter", Tooltip = "Emits noise events AI hearing can use (periodic, on step, or scripted)" )
     class SW_GF_API NoiseEmitterComponent : public Component
@@ -27,6 +28,8 @@ namespace sw
         NoiseEmitterComponent();
         virtual ~NoiseEmitterComponent() override = default;
 
+        /** @brief 같은 오브젝트에 AI 자극 원천이 없으면 오류를 남깁니다. */
+        void onBeginPlay() override;
         void onTick( TickContext& context ) override;
         void stepOnce();
         /** @brief 반경 @p radius 의 소리를 냅니다. */
@@ -41,7 +44,7 @@ namespace sw
         float32 _interval;
         PROPERTY( Category = "Noise", DisplayName = "On Step", Tooltip = "Emit when something steps onto the sensor" )
         bool _bOnStep;
-        PROPERTY( RuntimeState, Category = "Noise", DisplayName = "Noise Radius", Tooltip = "Runtime: radius of the last noise this step" )
+        PROPERTY( RuntimeState, Category = "Noise", DisplayName = "Noise Radius", Tooltip = "Runtime: radius of the noise held this frame" )
         float32 _noiseRadius;
         PROPERTY( RuntimeState, Category = "Noise", DisplayName = "Steps", Tooltip = "Runtime" )
         int32 _steps;

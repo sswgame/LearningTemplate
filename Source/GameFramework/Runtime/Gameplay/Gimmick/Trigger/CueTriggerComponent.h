@@ -22,7 +22,7 @@ namespace sw
 
     /**
      * @class CueTriggerComponent
-     * @brief 태그(보통 `Player`)를 가진 것이 처음 들어오면 연출 신호(`GimmickCueEvent`, `_cue`)와 소리를 냅니다. `_bOnce` 가 꺼져 있으면 `_cooldown` 뒤에 다시 작동합니다.
+     * @brief 태그(보통 `Player`)를 가진 것이 처음 들어오면 연출 신호(`GimmickUtil::sendCue`, `_cue` — 큐 표의 연출과 `GimmickCueEvent`)와 소리를 냅니다. `_bOnce` 가 꺼져 있으면 `_cooldown` 뒤에 다시 작동합니다.
      */
     REFLECT( Category = "Gimmick", DisplayName = "Scare Trigger", Tooltip = "Fires a scripted scare cue and sound when a tagged object enters" )
     class SW_GF_API CueTriggerComponent : public Component

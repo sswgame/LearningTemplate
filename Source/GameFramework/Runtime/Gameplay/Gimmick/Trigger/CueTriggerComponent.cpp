@@ -10,9 +10,8 @@
 #include "Engine/Object/GameObject/Tick/TickContext.h"
 #include "Engine/Presentation/AudioPlayableAsset.h"
 
-#include "GameFramework/Runtime/Foundation/Framework/GameEventUtil.h"
 #include "GameFramework/Runtime/Foundation/Framework/Presentation/GameSound.h"
-#include "GameFramework/Runtime/Gameplay/Gimmick/GimmickEvents.h"
+#include "GameFramework/Runtime/Gameplay/Gimmick/GimmickUtil.h"
 
 namespace sw
 {
@@ -43,14 +42,9 @@ namespace sw
         if ( bCannotFire )
             return;
         ++_fireCount;
-        _cooldownLeft = _cooldown;
-        GimmickCueEvent event;
-        event._source = pOwner->getHandle();
-        event._target = overlap._pOther->getHandle();
-        event._cue    = _cue;
-        if ( pOwner->getPrimarySceneComponent() != nullptr )
-            event._position = pOwner->getPrimarySceneComponent()->getWorldPosition();
-        GameEventUtil::send( event );
+        _cooldownLeft               = _cooldown;
+        const SceneComponent* pRoot = pOwner->getPrimarySceneComponent();
+        GimmickUtil::sendCue( *pOwner, _cue, pRoot != nullptr ? pRoot->getWorldPosition() : float3{}, 0.0f, overlap._pOther->getHandle() );
         if ( _sound.empty() == false )
             (void)GameSound::play( _sound.id() );
     }
