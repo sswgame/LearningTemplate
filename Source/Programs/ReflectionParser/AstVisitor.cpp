@@ -319,7 +319,8 @@ namespace sw
             return;
         }
         // REFLECT_BODY() 만 있고 REFLECT() 가 없으면 등록기가 없어 StaticType() 이 링크에서야 멈춘다. 둘은 서로 필수다(반대쪽은 `onStructDeclaration`).
-        if ( AnnotationLookup::isReflectedRecord( cursor ) == false )
+        // 정의만 본다 — 전방 선언(`class GameObject;`)은 다른 헤더의 정의를 따라가 본문 표식을 찾으므로, 표식이 그 정의 앞에 있어도 여기서 잘못 멈춘다.
+        if ( clang_isCursorDefinition( cursor ) == 0 || AnnotationLookup::isReflectedRecord( cursor ) == false )
             return;
         SW_LOG_ERROR_ID( "AstVisitor.ERRORUsedClassStruct", "ERROR: %#() is used in class/struct '%#', but it lacks REFLECT()!", annotation::kReflectBodyPrefix,
                          CursorReader::makeFullyQualifiedName( cursor ) );

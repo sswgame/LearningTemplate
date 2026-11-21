@@ -99,6 +99,8 @@ namespace sw
         const NetSentEntity* findEntity( uint32 entityID ) const;
     };
 
+    struct NetOwnerState; // 아래 정의 — NetDeltaSource 는 참조만 든다
+
     /**
      * @brief 서버가 연결 하나에 쓰는 델타의 재료입니다. 월드 목록을 연결마다 복사하지 않고 번호로 가리킵니다.
      * @details 예전에는 연결마다 관련 엔티티의 상태 바이트를 스크래치 스냅샷에 복사했다.
