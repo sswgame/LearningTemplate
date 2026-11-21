@@ -24,6 +24,10 @@ class ClientOnlyTypesTest(unittest.TestCase):
     def test_reflected_types_only(self) -> None:
         self.assertEqual(REFLECTED_TYPE.findall(HEADER), ["HudComponent", "Marker"])
 
+    def test_multi_line_reflect_arguments(self) -> None:
+        header = 'REFLECT( Category = "Kit", DisplayName = "Avatar (client)",\n         Tooltip = "two lines" )\nclass SW_KIT_CLIENT_API AvatarComponent : public Component\n{\n};\n'
+        self.assertEqual(REFLECTED_TYPE.findall(header), ["AvatarComponent"])
+
     def test_table_is_sorted_and_kept_when_unchanged(self) -> None:
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)

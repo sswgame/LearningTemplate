@@ -25,7 +25,8 @@ from typing import Sequence
 
 #: 실행 파일 옆 표 이름 — `ClientOnlyTypeTable::kTableFile` · `pack.py` 의 `CLIENT_ONLY_TYPE_TABLE` 과 같은 이름이다.
 TABLE_FILE_NAME = "ClientOnlyTypes.json"
-REFLECTED_TYPE = re.compile(r"^\s*REFLECT\s*\([^\n]*\)\s*\n\s*(?:class|struct)\s+(?:SW_\w+\s+)?(\w+)", re.M)
+#: 인자가 여러 줄에 걸친 `REFLECT( …,\n … )` 도 잡는다(괄호 한 겹 안의 괄호까지) — 한 줄만 보던 꼴은 두 줄 REFLECT 아바타를 표에서 빠뜨려 서버 쿠킹이 졌다.
+REFLECTED_TYPE = re.compile(r"^\s*REFLECT\s*\((?:[^()]|\([^()]*\))*\)\s*\n\s*(?:class|struct)\s+(?:SW_\w+\s+)?(\w+)", re.M)
 
 
 def collect_type_names(list_header: Sequence[Path]) -> list[str]:
