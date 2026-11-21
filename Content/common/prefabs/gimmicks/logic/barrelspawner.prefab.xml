@@ -15,7 +15,7 @@
 					<GimmickNodeDesc _id="every" _kind="Timer" _params="interval=5" />
 					<GimmickNodeDesc _id="spawn"
 					                 _kind="Spawner"
-					                 _params="maxCount=3; prefab=common/prefabs/gimmicks/shooter/explosivebarrel.prefab.xml; offset=0 1 0" />
+					                 _params="maxCount=3; prefab=common/prefabs/gimmicks/combat/explosivebarrel.prefab.xml; offset=0 1 0" />
 				</_listNode>
 				<_listNodeTarget>
 					<item>0</item>
