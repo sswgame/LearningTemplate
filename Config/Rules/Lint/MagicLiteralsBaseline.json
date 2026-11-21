@@ -716,7 +716,7 @@
     "Source/GameFramework/Kits/Genre/Casual/CardGame/Matgo/HwatuDeck.cpp": {"integer": 16},
     "Source/GameFramework/Kits/Genre/Casual/CardGame/Matgo/MatgoGame.cpp": {"minus-one": 1},
     "Source/GameFramework/Kits/Genre/Casual/CardGame/Poker/PokerHand.cpp": {"integer": 1},
-    "Source/GameFramework/Kits/Genre/Casual/CardGame/Uno/UnoGame.h": {"integer": 1},
+    "Source/GameFramework/Kits/Genre/Casual/CardGame/SheddingCard/SheddingCardGame.h": {"integer": 1},
     "Source/GameFramework/Kits/Genre/Casual/KartRacing/KartAI.cpp": {"float": 1},
     "Source/GameFramework/Kits/Genre/Casual/KartRacing/KartGhost.cpp": {"integer": 8},
     "Source/GameFramework/Kits/Genre/Casual/KartRacing/KartRace.cpp": {"minus-one": 4, "float": 1},

@@ -999,7 +999,7 @@
     "SurvivalForgedSession": "SurvivalFixtureSession — 테스트 조립 값은 Fixture(GoogleTest TEST_F · NamingCpp.md 형식 끝말 줄)(2026-11-13)",
     "ThemeParkForged": "ThemeParkFixture — 테스트 조립 값은 Fixture(GoogleTest TEST_F · NamingCpp.md 형식 끝말 줄)(2026-11-13)",
     "TradeNotice": "TradeNotification — 망 · 플레이어 알림은 Notification(언리얼 FNotificationInfo · 넷 PacketNotify, NamingCpp.md 알림 줄)(2026-11-13)",
-    "UnoForged": "UnoFixture — 테스트 조립 값은 Fixture(GoogleTest TEST_F · NamingCpp.md 형식 끝말 줄)(2026-11-13)",
+    "UnoForged": "SheddingCardFixture — 테스트 조립 값은 Fixture(GoogleTest TEST_F · NamingCpp.md 형식 끝말 줄)(2026-11-13)",
     "WaitSettled": "WaitStable — 화면 · 자산이 멈출 때까지 기다림은 stable(Playwright 의 stable 판정 · toHaveScreenshot 연속 일치)(2026-11-13)",
     "WriteGate": "WriteFilter — 쓰기를 허락 · 거절하는 함수는 filter(Windows minifilter · 언리얼 IPlatformFile 래퍼)(2026-11-13)",
     "_adoptedCount": "_attachedCount — AttachResult 와 짝(2026-11-13)",
@@ -1978,6 +1978,20 @@
     "IAccountPresence": "AccountPresence — 상태가 있는 베이스 — I 는 상태 없는 계약에만(4.2)(2026-11-21)",
     "IOnlineClientService": "OnlineClientService — 상태가 있는 베이스 — I 는 상태 없는 계약에만(4.2)(2026-11-21)",
     "AutomationStepContext": "IAutomationStepContext — 순수 가상만, 상태 없는 계약 — I 접두(4.1)(2026-11-21)",
-    "ZoneModuleProcessor": "IZoneModuleProcessor — 순수 가상 + 인라인 도우미, 상태 없는 처리기 계약 — I 접두(4.1)(2026-11-21)"
+    "ZoneModuleProcessor": "IZoneModuleProcessor — 순수 가상 + 인라인 도우미, 상태 없는 처리기 계약 — I 접두(4.1)(2026-11-21)",
+    "UnoGame": "SheddingCardGame — UNO 는 Mattel 상표 — 장르 일반 이름 shedding-type card game(2026-11-21)",
+    "UnoColor": "SheddingCardColor — 상표 회피 — 주인 SheddingCardGame(2026-11-21)",
+    "UnoValue": "SheddingCardValue — 상표 회피 — 주인 SheddingCardGame(2026-11-21)",
+    "UnoEvent": "SheddingCardEvent — 상표 회피 — 주인 SheddingCardGame(2026-11-21)",
+    "UnoSettings": "SheddingCardSettings — 상표 회피 — 주인 SheddingCardGame(2026-11-21)",
+    "UnoFixture": "SheddingCardFixture — 상표 회피(2026-11-21)",
+    "UnoActionKind": "SheddingCardActionKind — 상표 회피 — 주인 SheddingCardGame(2026-11-21)",
+    "UnoLayout": "SheddingCardLayout — 상표 회피 — 주인 SheddingCardGame(2026-11-21)",
+    "UnoDeclared": "LastCardDeclared — 상표 회피 — 마지막 한 장 선언(last card call)(2026-11-21)",
+    "UnoPenalty": "LastCardPenalty — 상표 회피 — 마지막 한 장 선언(last card call)(2026-11-21)",
+    "CallUno": "CallLastCard — 상표 회피 — 마지막 한 장 선언(last card call)(2026-11-21)",
+    "callUno": "callLastCard — 상표 회피 — 마지막 한 장 선언(last card call)(2026-11-21)",
+    "_unoTarget": "_lastCardTarget — 상표 회피 — 마지막 한 장 선언(last card call)(2026-11-21)",
+    "_unoPenalty": "_lastCardPenalty — 상표 회피 — 마지막 한 장 선언(last card call)(2026-11-21)"
   }
 }
