@@ -244,7 +244,8 @@ namespace sw
          * @brief `collectRuntimeSwitchVariants` 와 같지만 이 머티리얼의 퍼뮤테이션 대신 @p basePermutations(인스턴스가 스위치 · 멀티 컴파일 · 품질을 덮은 사본)에서 시작합니다.
          * @details 머티리얼 인스턴스(`MaterialInstance::collectRuntimeSwitchVariants`)가 부른다 — 인스턴스와 쿠커가 같은 정의 함수를 쓴다.
          */
-        void collectRuntimeSwitchVariants( const MaterialPermutationDef& basePermutations, vector<vector<string>>& outListDefine, vector<uint64>& outListPermutationHash ) const;
+        void collectRuntimeSwitchVariants( const MaterialPermutationDef& basePermutations, const vector<pair<hashed_string, bool>>& listKeywordValueOverride, vector<vector<string>>& outListDefine,
+                                           vector<uint64>& outListPermutationHash ) const;
         /** @brief 멀티컴파일 옵션을 선택합니다. */
         void setMultiCompile( hashed_string name, string_view selectedOption );
         /** @brief float32 파라미터를 설정합니다. */
@@ -275,8 +276,11 @@ namespace sw
         const void* getParameterData( string_view name ) const;
         /** @brief 캐시된 셰이더 define 을 반환합니다. */
         const vector<string>& getCachedShaderDefines() const;
-        /** @brief 퍼뮤테이션 정의 @p permutationDesc 로 이 머티리얼의 define 목록(정렬)을 만듭니다. 캐시를 건드리지 않는다(`getCachedShaderDefines` 의 본문). */
-        void computeShaderDefines( const MaterialPermutationDef& permutationDesc, vector<string>& outListDefine ) const;
+        /**
+         * @brief 퍼뮤테이션 정의 @p permutationDesc 로 이 머티리얼의 define 목록(정렬)을 만듭니다. 캐시를 건드리지 않는다(`getCachedShaderDefines` 의 본문).
+         * @details @p listKeywordValueOverride 는 키워드를 내는 Bool · Keyword 칸(`shaderKeyword`)의 인스턴스 덮어쓰기다(칸 이름, 켬) — 있으면 이 머티리얼의 값 대신 쓴다.
+         */
+        void computeShaderDefines( const MaterialPermutationDef& permutationDesc, const vector<pair<hashed_string, bool>>& listKeywordValueOverride, vector<string>& outListDefine ) const;
         /** @brief 정렬한 define 목록의 퍼뮤테이션 해시입니다(렌더 칸 해시를 섞는다 — `getPermutationHash` 와 같은 규칙). */
         uint64 computePermutationHash( const vector<string>& listDefine ) const;
         /** @brief 퍼뮤테이션 해시를 반환합니다. define 에 렌더 상태 · 그리기 순서를 섞은 값이라 PSO 변형과 배치가 그것으로 갈린다. */

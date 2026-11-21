@@ -114,6 +114,13 @@ namespace sw
                 return nullptr;
             }
 
+            /** @brief 부모의 @p name 칸이 키워드를 내는 Bool · Keyword 칸(`shaderKeyword`)이면 true 입니다 — 그 값 덮어쓰기는 define 을 바꾼다(`Material::computeShaderDefines`). */
+            static bool isKeywordValueProperty( const Material* pParent, hashed_string name )
+            {
+                const MaterialProperty* pProp = pParent != nullptr ? pParent->findProperty( name ) : nullptr;
+                return pProp != nullptr && ( pProp->_type == MaterialPropertyKind::Bool || pProp->_type == MaterialPropertyKind::Keyword ) && pProp->_shaderKeyword.empty() == false;
+            }
+
             /** @brief 부모가 멀티 컴파일 @p name 을 선언하고 그 선택지에 @p option 이 있으면 true 입니다. */
             static bool findMultiCompileOption( const Material* pParent, hashed_string name, string_view option )
             {
@@ -518,6 +525,11 @@ namespace sw
         }
         pOverride->_kind = ValueKind::Text;
         pOverride->_text = value;
+        if ( MaterialInstanceInternal::isKeywordValueProperty( _pParentMaterial, name ) )
+        {
+            _bDefinesDirty = SW_TRUE; // 키워드 칸 값은 define 이다 — 퍼뮤테이션이 바뀐다
+            MaterialPermutation::recordPermutationChange( this );
+        }
         markRenderDirty();
     }
 
@@ -640,8 +652,30 @@ namespace sw
         MaterialPermutationDef permutations;
         if ( makePermutations( permutations ) == false )
             return false; // 부모가 없거나 모르는 덮어쓰기다(makePermutations 가 알렸다)
-        _pParentMaterial->collectRuntimeSwitchVariants( permutations, outListDefine, outListPermutationHash );
+        vector<pair<hashed_string, bool>> listKeywordValue;
+        if ( makeKeywordValueOverrides( listKeywordValue ) == false )
+            return false; // 읽지 못한 키워드 칸 값이다(makeKeywordValueOverrides 가 알렸다)
+        _pParentMaterial->collectRuntimeSwitchVariants( permutations, listKeywordValue, outListDefine, outListPermutationHash );
         return true;
+    }
+
+    bool MaterialInstance::makeKeywordValueOverrides( vector<pair<hashed_string, bool>>& outListOverride ) const
+    {
+        outListOverride.clear();
+        bool bAllRead = true;
+        for ( const ValueOverride& valueOverride : _listValueOverride )
+        {
+            if ( valueOverride._kind != ValueKind::Text || MaterialInstanceInternal::isKeywordValueProperty( _pParentMaterial, valueOverride._name ) == false )
+                continue;
+            bool bEnabled{ false };
+            if ( MaterialPacking::parseBoolToken( valueOverride._text, valueOverride._name.c_str(), "MaterialInstance.KeywordValueUnreadable", bEnabled ) == false )
+            {
+                bAllRead = false; // parseBoolToken 이 오류로 남겼다
+                continue;
+            }
+            outListOverride.emplace_back( valueOverride._name, bEnabled );
+        }
+        return bAllRead;
     }
 
     bool MaterialInstance::getParameter( hashed_string name, string& outValue ) const
@@ -705,8 +739,10 @@ namespace sw
             {
                 // 모르는 덮어쓰기는 makePermutations 가 오류로 알리고 뺀다 — 부모가 선언한 칸만 define 이 되어, 쿠킹하지 않은 define 글이 퍼뮤테이션에 섞이지 않는다.
                 (void)makePermutations( permutations );
+                vector<pair<hashed_string, bool>> listKeywordValue;
+                (void)makeKeywordValueOverrides( listKeywordValue ); // 읽지 못한 값은 오류로 알리고 뺀다 — 부모 값으로 그린다
                 // 부모와 같은 정의 함수 · 해시 규칙이다 — 렌더 상태 · 그리기 순서는 부모의 것이라 다른 렌더 상태의 부모가 한 배치로 합쳐지지 않는다.
-                _pParentMaterial->computeShaderDefines( permutations, _listCachedDefine );
+                _pParentMaterial->computeShaderDefines( permutations, listKeywordValue, _listCachedDefine );
                 _cachedPermutationHash = _pParentMaterial->computePermutationHash( _listCachedDefine );
             }
             else
@@ -889,6 +925,8 @@ namespace sw
         }
         if ( quality.has_value() )
             _qualityOverride = *quality;
+        _bDefinesDirty = SW_TRUE; // 다시 읽은 스위치 · 멀티 컴파일 · 키워드 칸 값이 define 을 바꿀 수 있다
+        MaterialPermutation::recordPermutationChange( this );
         markRenderDirty();
         return true;
     }
