@@ -2754,8 +2754,8 @@
 		</entry>
 		<entry key="EdLabel.ResetToDefault" source="Reset to Default">
 			<origins>
-				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
 				<item>Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp</item>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdLabel.ResetToX100" source="Reset to x1.00">
@@ -4432,8 +4432,8 @@
 		</entry>
 		<entry key="EdVerb.Clear" source="Clear">
 			<origins>
-				<item>Source/Editor/Panels/Console/ConsolePanel.cpp</item>
 				<item>Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp</item>
+				<item>Source/Editor/Panels/Console/ConsolePanel.cpp</item>
 				<item>Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab.cpp</item>
 				<item>Source/Editor/Panels/Multiplayer/MultiplayerSyncTab.cpp</item>
 				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
