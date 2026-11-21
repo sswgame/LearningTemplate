@@ -13,6 +13,7 @@
 
 ## 1. 다음 순서
 
+- **모드 세션 색인:** `ModSession::apply` · 해제가 게임 전체 에셋 색인(4518 개)을 매번 다시 설치한다 — ASan 단독 케이스 2.9 초, tidy 와 겹친 샤드에서 30 초 시한을 넘었다(2026-11-21 `ModSessionTest.LayerModAddsEntriesAndReleases`). 모드 층만 덧대고 떼는 증분 색인으로 바꾼다(언리얼 패치 팩 마운트가 기존 색인에 항목만 더하는 자리).
 - **이벤트 버스 소비자:** `QuestLogComponent` 가 `InteractionCompletedEvent` · `AbilityOwnerDiedEvent` 를 구독해 자기 조종자 폰의 것만 `QuestLog::notify` 로 센다(`onRegister` 구독 · `onUnregister` 해제). 나머지 받는 쪽 없는 이벤트(세이브 · 씬 로드 → UI, 방 클리어 → HUD, 빙의 → 카메라)는 쓰일 때 붙인다.
 - `IHealthSource` 읽기 계약과 맞음 받기를 한 받는 쪽 인터페이스로 합친다.
 - `ActionRoom::drawDebug` 를 클라이언트로. Linux 검증은 여러 묶음 push 뒤 한 번(`linux-verify`).
