@@ -34,6 +34,20 @@ namespace sw
         atomic<uint64> _firstSerial{ 0 };
         atomic<uint64> _lastSerial{ 0 };
 
+        RHITextureUploadSerials() = default;
+        /** @brief 값 사본입니다 — 텍스처 기록이 표에서 빠져 해제 큐로 넘어갈 때 그 순간의 두 시리얼을 담는다(사본은 더 이상 `recordWrite` 를 받지 않는다). */
+        RHITextureUploadSerials( const RHITextureUploadSerials& other )
+            : _firstSerial{ other._firstSerial.load( std::memory_order_relaxed ) }
+            , _lastSerial{ other._lastSerial.load( std::memory_order_relaxed ) }
+        {
+        }
+        RHITextureUploadSerials& operator=( const RHITextureUploadSerials& other )
+        {
+            _firstSerial.store( other._firstSerial.load( std::memory_order_relaxed ), std::memory_order_relaxed );
+            _lastSerial.store( other._lastSerial.load( std::memory_order_relaxed ), std::memory_order_relaxed );
+            return *this;
+        }
+
         /** @brief 쓰기 전송 하나를 적습니다. 첫 시리얼은 처음 한 번만, 마지막 시리얼은 더 큰 값만 받는다(여러 스레드가 제출해 늦게 적은 작은 시리얼이 덮지 않게). */
         void recordWrite( uint64 serial )
         {

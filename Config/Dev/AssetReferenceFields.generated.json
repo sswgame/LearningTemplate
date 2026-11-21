@@ -2249,6 +2249,16 @@
       ]
     },
     {
+      "owner": "GF_NetPairedAnimation",
+      "listField": [],
+      "listAssetRefField": [],
+      "listPathTextField": [],
+      "listTextField": [
+        "_assetPath",
+        "assetPath"
+      ]
+    },
+    {
       "owner": "GF_OpenWorldWestern",
       "listField": [],
       "listAssetRefField": [],
@@ -2584,12 +2594,10 @@
       "listTextField": [
         "_currency",
         "_id",
-        "_layout",
         "_name",
         "_shape",
         "currency",
         "id",
-        "layout",
         "name",
         "shape"
       ]

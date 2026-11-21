@@ -209,7 +209,7 @@ SW_TEST_CASE( TickModesTest, DeclaredTickEntryRegistersOnlyDeclaringType )
     TickBatchRegistry        registry;
     TickBatchRegistry::Entry declared = makeDeclaredTickEntry<TickModeMoverTestComponent, kMoverBatchScopeName>();
     SW_EXPECT_TRUE( declared._pStaticType == &TickModeMoverTestComponent::StaticType );
-    SW_EXPECT_TRUE( declared._pFunction == &TickBatchOf<TickModeMoverTestComponent, kMoverBatchScopeName>::tickRange );
+    SW_EXPECT_TRUE( ( declared._pFunction == &TickBatchOf<TickModeMoverTestComponent, kMoverBatchScopeName>::tickRange ) );
     SW_EXPECT_TRUE( declared._mode == TickMode::Batch );
     SW_EXPECT_TRUE( registry.registerEntry( declared ) );
 

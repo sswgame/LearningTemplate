@@ -6,7 +6,7 @@
 namespace sw::editor
 {
     DocumentEditSpan::DocumentEditSpan()
-        : _pBaseline{ make_shared<const string>() }
+        : _pBaseline{ sw::make_shared<const string>() }
         , _pendingLabel{}
         , _bHolding{ SW_FALSE }
         , _reserved{ 0 }
@@ -15,7 +15,7 @@ namespace sw::editor
 
     void DocumentEditSpan::resetBaseline( string text )
     {
-        _pBaseline = make_shared<const string>( std::move( text ) );
+        _pBaseline = sw::make_shared<const string>( std::move( text ) );
         _pendingLabel.clear();
         _bHolding = SW_FALSE;
     }
@@ -35,7 +35,7 @@ namespace sw::editor
         }
         _bHolding = SW_FALSE;
         _pendingLabel.clear();
-        DocumentEdit edit{ std::move( _pBaseline ), make_shared<const string>( std::move( after ) ), string{ label } };
+        DocumentEdit edit{ std::move( _pBaseline ), sw::make_shared<const string>( std::move( after ) ), string{ label } };
         _pBaseline = edit._pAfter; // 끝 글이 다음 기준선이다 — 복사하지 않고 같은 버퍼를 든다
         return edit;
     }
@@ -47,7 +47,7 @@ namespace sw::editor
         _bHolding = SW_FALSE;
         if ( after == *_pBaseline )
             return nullopt;
-        DocumentEdit edit{ std::move( _pBaseline ), make_shared<const string>( std::move( after ) ), std::move( _pendingLabel ) };
+        DocumentEdit edit{ std::move( _pBaseline ), sw::make_shared<const string>( std::move( after ) ), std::move( _pendingLabel ) };
         _pendingLabel.clear();
         _pBaseline = edit._pAfter; // 끝 글이 다음 기준선이다 — 복사하지 않고 같은 버퍼를 든다
         return edit;

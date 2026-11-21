@@ -28,7 +28,7 @@ namespace sw
         MinigameFlow* const pFlow = game::findSubsystem<MinigameFlow>();
         if ( pFlow == nullptr )
             return;
-        _finishedSubscription = pFlow->onFinished().add( MinigameFlow::FinishedDelegate::delegate_type::create<&MinigameRewardComponent::onMinigameFinished>( this ) );
+        _finishedSubscription = pFlow->onFinished().add( Delegate<void( const MinigameResult& )>::create<&MinigameRewardComponent::onMinigameFinished>( this ) );
     }
 
     void MinigameRewardComponent::onEndPlay()
