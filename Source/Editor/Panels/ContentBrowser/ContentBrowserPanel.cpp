@@ -539,7 +539,7 @@ namespace sw::editor
                     bChanged = _collections.createCollection( _collectionNameBuffer.c_str(), bSharedScope );
                     // 고른 에셋이 있으면 새 컬렉션에 바로 넣는다(언리얼의 "Add to new collection")
                     const string selectedID = EditorPaths::getAssetPaths().toAssetID( _model.getSelectedAssetPath() );
-                    if ( bChanged && selectedID.empty() == false && FileUtil::isDirectory( _model.getSelectedAssetPath() ) == false )
+                    if ( bChanged && selectedID.empty() == false && FileUtil::isDirectory( FileUtil::toDiskPath( _model.getSelectedAssetPath() ) ) == false )
                         (void)_collections.addToCollection( _collectionNameBuffer.c_str(), bSharedScope, selectedID );
                 }
                 if ( bChanged )
@@ -697,7 +697,7 @@ namespace sw::editor
         if ( sourcePath.has_value() == false )
         {
             const optional<AbsolutePath> folderPath = assetPaths.toDiskPath( assetID );
-            if ( folderPath.has_value() && FileUtil::isDirectory( folderPath->str() ) )
+            if ( folderPath.has_value() && FileUtil::isDirectory( *folderPath ) )
                 sourcePath = folderPath;
         }
         if ( sourcePath.has_value() == false )

@@ -27,11 +27,11 @@ namespace
     bool parseScanLikeGltf( const string& root, bool bOcclusionInORM, ParsedGltf& outParsed, string& outSourcePath )
     {
         const string textureFolder = FileUtil::joinPath( root, "textures_raw/scan" );
-        if ( FileUtil::ensureDirectoryExists( textureFolder ) == false || FileUtil::ensureDirectoryExists( FileUtil::joinPath( root, "models_raw" ) ) == false )
+        if ( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( textureFolder ) ) == false || FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( FileUtil::joinPath( root, "models_raw" ) ) ) == false )
             return false;
         for ( const utf8* pName : { "crate_diff_2k.jpg", "crate_nor_gl_2k.jpg", "crate_arm_2k.jpg" } )
         {
-            if ( FileUtil::writeTextFile( FileUtil::joinPath( textureFolder, pName ), pName ) == false )
+            if ( FileUtil::writeTextFile( FileUtil::toDiskPath( FileUtil::joinPath( textureFolder, pName ) ), pName ) == false )
                 return false;
         }
         const string                              occlusion = bOcclusionInORM ? R"(, "occlusionTexture": { "index": 2, "strength": 0.5 })" : "";
@@ -82,7 +82,7 @@ SW_TEST_CASE( ModelImportPBRTest, ReadsFirstTexturedMaterialWithResolvedImagePat
     SW_EXPECT_NEAR( 0.75f, pbr._normalScale, 1e-6f );
     SW_EXPECT_NEAR( 0.0f, pbr._occlusionStrength, 1e-6f );
 
-    SW_EXPECT_TRUE( FileUtil::removeDirectory( root ) );
+    SW_EXPECT_TRUE( FileUtil::removeDirectory( FileUtil::toDiskPath( root ) ) );
 }
 
 /**
@@ -99,7 +99,7 @@ SW_TEST_CASE( ModelImportPBRTest, OcclusionPackedInORMKeepsStrength )
     SW_REQUIRE_TRUE( ModelImportMaterial::readPBRMaterial( *parsed._pData, sourcePath, result ) );
     SW_EXPECT_NEAR( 0.5f, result._pbrMaterial._occlusionStrength, 1e-6f );
 
-    SW_EXPECT_TRUE( FileUtil::removeDirectory( root ) );
+    SW_EXPECT_TRUE( FileUtil::removeDirectory( FileUtil::toDiskPath( root ) ) );
 }
 
 /**
@@ -111,12 +111,12 @@ SW_TEST_CASE( ModelImportPBRTest, MissingImageFileFails )
     ParsedGltf   parsed;
     string       sourcePath;
     SW_REQUIRE_TRUE( parseScanLikeGltf( root, false, parsed, sourcePath ) );
-    SW_REQUIRE_TRUE( FileUtil::removeFile( FileUtil::joinPath( root, "textures_raw/scan/crate_nor_gl_2k.jpg" ) ) );
+    SW_REQUIRE_TRUE( FileUtil::removeFile( FileUtil::toDiskPath( FileUtil::joinPath( root, "textures_raw/scan/crate_nor_gl_2k.jpg" ) ) ) );
 
     ModelImportResult result;
     SW_EXPECT_LOG( "File.NotFound" );
     SW_EXPECT_LOG( "ModelImport.ImageFileMissing" );
     SW_EXPECT_FALSE( ModelImportMaterial::readPBRMaterial( *parsed._pData, sourcePath, result ) );
 
-    SW_EXPECT_TRUE( FileUtil::removeDirectory( root ) );
+    SW_EXPECT_TRUE( FileUtil::removeDirectory( FileUtil::toDiskPath( root ) ) );
 }

@@ -171,7 +171,7 @@ namespace sw::editor
     expected<void> ProjectSettingsJSONDocument::open( string_view absolutePath )
     {
         string text;
-        if ( FileUtil::readTextFile( absolutePath, text ) == false )
+        if ( FileUtil::readTextFile( FileUtil::toDiskPath( absolutePath ), text ) == false )
         {
             _listNode.clear();
             return unexpected( Error{ ErrorKind::NotFound, "the settings file could not be read", absolutePath } );
@@ -230,7 +230,7 @@ namespace sw::editor
             SW_LOG_ERROR_ID( "ProjectSettingsJSON.SaveTextInvalid", "Project settings: the text made for %# does not read back the same - not saved", _absolutePath );
             return false;
         }
-        if ( FileUtil::writeTextFile( _absolutePath, text ) == false )
+        if ( FileUtil::writeTextFile( FileUtil::toDiskPath( _absolutePath ), text ) == false )
         {
             SW_LOG_ERROR_ID( "ProjectSettingsJSON.SaveWriteFailed", "Project settings: %# could not be written", _absolutePath );
             return false;

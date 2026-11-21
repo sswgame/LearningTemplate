@@ -108,14 +108,14 @@ namespace sw::editor
                 string absolutePath;
                 if ( listArgument.size() != 1 || resolveTempAssetPath( listArgument[0], absolutePath, outReply ) == false )
                     return false;
-                if ( FileUtil::exists( absolutePath ) && FileUtil::removeFile( absolutePath ) == false )
+                if ( FileUtil::exists( FileUtil::toDiskPath( absolutePath ) ) && FileUtil::removeFile( FileUtil::toDiskPath( absolutePath ) ) == false )
                 {
                     StringBuilder<constant::buffer::kMax256> replyBuilder;
                     replyBuilder.appendFormat( "could not remove the old temp asset '%#'", absolutePath );
                     outReply = string( replyBuilder.view() );
                     return false;
                 }
-                (void)FileUtil::ensureDirectoryExists( FileUtil::getDirectoryPart( absolutePath ) ); // 못 만들면 ensure 가 폴더와 이유를 남기고 뒤따르는 쓰기가 실패로 답한다
+                (void)FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( FileUtil::getDirectoryPart( absolutePath ) ) ); // 못 만들면 ensure 가 폴더와 이유를 남기고 뒤따르는 쓰기가 실패로 답한다
                 if ( EditorAssetCommands::openPath( absolutePath ) == false )
                 {
                     StringBuilder<constant::buffer::kMax256> replyBuilder;
@@ -191,14 +191,14 @@ namespace sw::editor
                 const optional<AbsolutePath> sourcePath = assetPaths.findLooseFile( FileUtil::normalizePath( listArgument[0] ).str() );
                 const optional<AbsolutePath> targetPath = assetPaths.findLooseFile( FileUtil::normalizePath( listArgument[1] ).str() );
                 string                       text;
-                if ( sourcePath.has_value() == false || targetPath.has_value() == false || FileUtil::readTextFile( sourcePath->str(), text ) == false )
+                if ( sourcePath.has_value() == false || targetPath.has_value() == false || FileUtil::readTextFile( *sourcePath, text ) == false )
                 {
                     StringBuilder<constant::buffer::kMax256> replyBuilder;
                     replyBuilder.appendFormat( "no scratch asset '%#' or '%#' (does the scenario declare <Scratch>?)", listArgument[0], listArgument[1] );
                     outReply = string( replyBuilder.view() );
                     return false;
                 }
-                if ( FileUtil::writeTextFile( targetPath->str(), text ) == false )
+                if ( FileUtil::writeTextFile( *targetPath, text ) == false )
                 {
                     StringBuilder<constant::buffer::kMax256> replyBuilder;
                     replyBuilder.appendFormat( "could not write '%#'", targetPath->str() );
@@ -221,7 +221,7 @@ namespace sw::editor
                     return unexpected( Error{ ErrorKind::InvalidArgument, "the command takes one resource id under the scratch folder", pCommand }.appendDetail( " " ).appendDetail( scratchPrefix ) );
                 const optional<AbsolutePath> scratchPath = editor::getSubsystem<AssetPaths>().findLooseFile( FileUtil::normalizePath( listArgument[0] ).str() );
                 string                       text;
-                if ( scratchPath.has_value() == false || FileUtil::readTextFile( scratchPath->str(), text ) == false )
+                if ( scratchPath.has_value() == false || FileUtil::readTextFile( *scratchPath, text ) == false )
                     return unexpected( Error{ ErrorKind::NotFound, "no scratch asset (does the scenario declare <Scratch>?)", listArgument[0] } );
                 return text;
             }
@@ -288,7 +288,7 @@ namespace sw::editor
                     return false;
                 }
                 const optional<AbsolutePath> diskPath = editor::getSubsystem<AssetPaths>().toDiskPath( listArgument[0] );
-                if ( diskPath.has_value() == false || FileUtil::isRegularFile( diskPath->str() ) == false )
+                if ( diskPath.has_value() == false || FileUtil::isRegularFile( *diskPath ) == false )
                 {
                     StringBuilder<constant::buffer::kMax256> replyBuilder;
                     replyBuilder.appendFormat( "'%#' is not an asset file", listArgument[0] );
@@ -459,7 +459,7 @@ namespace sw::editor
                 string folderPath;
                 if ( listArgument.size() != 1 || resolveTempAssetPath( listArgument[0], folderPath, outReply ) == false )
                     return false;
-                if ( FileUtil::ensureDirectoryExists( folderPath ) == false )
+                if ( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( folderPath ) ) == false )
                 {
                     StringBuilder<constant::buffer::kMax256> replyBuilder;
                     replyBuilder.appendFormat( "could not create '%#'", folderPath );
@@ -478,7 +478,7 @@ namespace sw::editor
                 string absolutePath;
                 if ( listArgument.size() != 1 || resolveTempAssetPath( listArgument[0], absolutePath, outReply ) == false )
                     return false;
-                if ( FileUtil::exists( absolutePath ) && FileUtil::removeFile( absolutePath ) == false )
+                if ( FileUtil::exists( FileUtil::toDiskPath( absolutePath ) ) && FileUtil::removeFile( FileUtil::toDiskPath( absolutePath ) ) == false )
                 {
                     StringBuilder<constant::buffer::kMax256> replyBuilder;
                     replyBuilder.appendFormat( "could not remove '%#'", absolutePath );
@@ -606,7 +606,7 @@ namespace sw::editor
                     outReply = AutomationStep::describeReason( folderPath.error() );
                     return false;
                 }
-                if ( FileUtil::removeDirectory( *folderPath ) == false )
+                if ( FileUtil::removeDirectory( FileUtil::toDiskPath( *folderPath ) ) == false )
                 {
                     StringBuilder<constant::buffer::kMax256> replyBuilder;
                     replyBuilder.appendFormat( "could not remove '%#'", *folderPath );
@@ -623,7 +623,7 @@ namespace sw::editor
             [[nodiscard]] static bool readTempAssetExists( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 const string& path = getEditorState<TempAssetState>()._lastPath;
-                outValue           = ( path.empty() == false && FileUtil::exists( path ) ) ? 1.0 : 0.0;
+                outValue           = ( path.empty() == false && FileUtil::exists( FileUtil::toDiskPath( path ) ) ) ? 1.0 : 0.0;
                 return true;
             }
 
@@ -646,7 +646,7 @@ namespace sw::editor
                     outReply = "select the object to turn into a prefab first";
                     return false;
                 }
-                (void)FileUtil::ensureDirectoryExists( FileUtil::getDirectoryPart( absolutePath ) );                                  // 못 만들면 ensure 가 폴더와 이유를 남기고 뒤따르는 쓰기가 실패로 답한다
+                (void)FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( FileUtil::getDirectoryPart( absolutePath ) ) );          // 못 만들면 ensure 가 폴더와 이유를 남기고 뒤따르는 쓰기가 실패로 답한다
                 const EditorInspectorCommands::AttachResult applied = EditorInspectorCommands::attachChildPrefabInstances( pObject ); // 옮긴 수는 로그가 알린다
                 if ( applied.isRejected() )
                 {

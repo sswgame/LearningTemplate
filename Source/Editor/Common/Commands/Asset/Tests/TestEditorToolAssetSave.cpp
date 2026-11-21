@@ -21,7 +21,7 @@ SW_TEST_CASE( EditorToolAssetSaveTest, GoodDocumentIsSaved )
     SW_REQUIRE_TRUE( EditorToolAssetCommands::saveSequence( asset, path ) );
     fixed_string<constant::buffer::kMax512> checkPath;
     formatstring( checkPath.data(), checkPath.capacity(), "%#.savecheck", path );
-    SW_EXPECT_FALSE( FileUtil::exists( checkPath ) );
+    SW_EXPECT_FALSE( FileUtil::exists( FileUtil::toDiskPath( checkPath ) ) );
 
     SequenceAsset read;
     SW_REQUIRE_TRUE( EditorToolAssetCommands::loadSequence( read, path ) == ToolAssetLoadResult::Loaded );
@@ -45,7 +45,7 @@ SW_TEST_CASE( EditorToolAssetSaveTest, DocumentThatCannotBeReadBackKeepsTheSaved
     SW_EXPECT_FALSE( EditorToolAssetCommands::saveSequence( broken, path ) );
     fixed_string<constant::buffer::kMax512> checkPath;
     formatstring( checkPath.data(), checkPath.capacity(), "%#.savecheck", path );
-    SW_EXPECT_FALSE( FileUtil::exists( checkPath ) );
+    SW_EXPECT_FALSE( FileUtil::exists( FileUtil::toDiskPath( checkPath ) ) );
 
     SequenceAsset read;
     SW_REQUIRE_TRUE( EditorToolAssetCommands::loadSequence( read, path ) == ToolAssetLoadResult::Loaded );

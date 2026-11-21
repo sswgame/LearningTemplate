@@ -122,7 +122,7 @@ namespace sw
     {
         // 빌드 트리는 바이너리 폴더(Bin)의 부모다. 없으면(패키지 · 복사한 바이너리) 빈 글 - 예전에는 Bin 으로 물러나 `cmake --build` 가 엉뚱한 이유로 실패했다.
         const string parentDir  = FileUtil::getDirectoryPart( FileUtil::trimTrailingSlashes( ProcessRoots::get()._binary.str() ) );
-        const bool   bBuildTree = FileUtil::isRegularFile( FileUtil::joinPath( parentDir, "build.ninja" ) ) || FileUtil::isRegularFile( FileUtil::joinPath( parentDir, "CMakeCache.txt" ) );
+        const bool   bBuildTree = FileUtil::isRegularFile( FileUtil::toDiskPath( FileUtil::joinPath( parentDir, "build.ninja" ) ) ) || FileUtil::isRegularFile( FileUtil::toDiskPath( FileUtil::joinPath( parentDir, "CMakeCache.txt" ) ) );
         return bBuildTree ? parentDir : string{};
     }
 
@@ -213,7 +213,7 @@ namespace sw
         // 이 스레드에서 스택이 넘쳐도 크래시 리포트가 남게 한다(ThreadCrashStack::initializeCurrentThread 설명).
         ThreadCrashStack::initializeCurrentThread();
         const string buildDir = findBuildDirectory();
-        if ( buildDir.empty() || FileUtil::isDirectory( buildDir ) == false )
+        if ( buildDir.empty() || FileUtil::isDirectory( FileUtil::toDiskPath( buildDir ) ) == false )
         {
             SW_LOG_ERROR_ID( "ModuleCompiler.NoCMakeBuildTree", "No CMake build tree (build.ninja / CMakeCache.txt) next to the binary folder '%#' - this build cannot compile modules", ProcessRoots::get()._binary.str() );
             failBeforeBuild( targetName );

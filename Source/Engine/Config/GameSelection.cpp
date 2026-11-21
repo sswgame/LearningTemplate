@@ -34,7 +34,7 @@ namespace sw
 
         string       text;
         const string path = FileUtil::joinPath( ModuleLibraryUtil::getModuleDirectory(), config::kFileActiveGame );
-        if ( FileUtil::readTextFile( path, text ) == false )
+        if ( FileUtil::readTextFile( FileUtil::toDiskPath( path ), text ) == false )
             return {};
         return string{ StringUtil::trim( text ) };
     }
@@ -73,7 +73,7 @@ namespace sw
             const string packDirectory = FileUtil::joinPath( config::kDirBinGames, name );
             const string libraryPath   = FileUtil::joinPath( FileUtil::joinPath( ProcessRoots::get()._binary.str(), packDirectory ),
                                                              ModuleLibraryUtil::formatSharedLibraryName( config::kTargetGameModule ) );
-            if ( FileUtil::exists( libraryPath ) == false )
+            if ( FileUtil::exists( FileUtil::toDiskPath( libraryPath ) ) == false )
             {
                 SW_LOG_ERROR_ID( "GameSelection.GameNotBuiltBuild", "Game '%#' is not built in this build (%# is missing) - add it to SW_GAMES or use its preset", name.c_str(), libraryPath.c_str() );
                 return false;

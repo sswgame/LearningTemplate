@@ -111,7 +111,7 @@ namespace sw::editor
         if ( folder.empty() )
             return;
         // 폴더가 없으면 목록이 비고, 부르는 쪽이 기본 벌을 찾다 실패를 남긴다.
-        (void)FileUtil::forEachDirectoryEntry( folder, false, &EditorThemeTokensInternal::addThemeName, &outListName );
+        (void)FileUtil::forEachDirectoryEntry( FileUtil::toDiskPath( folder ), false, &EditorThemeTokensInternal::addThemeName, &outListName );
         VectorUtil::sort( outListName );
     }
 

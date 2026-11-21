@@ -59,7 +59,7 @@ namespace sw::editor
                 if ( fontsFolder.empty() == false )
                 {
                     const string candidate = FileUtil::joinPath( fontsFolder, pFileName );
-                    if ( FileUtil::isRegularFile( candidate ) )
+                    if ( FileUtil::isRegularFile( FileUtil::toDiskPath( candidate ) ) )
                         return candidate;
                 }
 
@@ -71,7 +71,7 @@ namespace sw::editor
             [[nodiscard]] static bool readEmRatio( const string& path, float32& outRatio )
             {
                 vector<uint8> bytes;
-                if ( FileUtil::readFile( path, bytes ) == false )
+                if ( FileUtil::readFile( FileUtil::toDiskPath( path ), bytes ) == false )
                     return false;
                 IFontRasterizer& rasterizer = editor::getSubsystem<FontService>().getRasterizer();
                 const FontFaceID face       = rasterizer.loadFace( std::move( bytes ), 0, path );

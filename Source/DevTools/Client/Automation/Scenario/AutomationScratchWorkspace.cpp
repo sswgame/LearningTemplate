@@ -40,7 +40,7 @@ namespace sw
             {
                 // 지킬 원본(`Content`)이 없는 구성(패키지 - 팩만)에는 막을 것이 없다.
                 const string& rootPath = ProcessRoots::get()._content.str();
-                if ( FileUtil::isDirectory( rootPath ) == false )
+                if ( FileUtil::isDirectory( FileUtil::toDiskPath( rootPath ) ) == false )
                     return {};
                 // 상대 경로는 어디를 가리키는지 정할 수 없다 - 통과시키지 않는다(예전에는 절대로 바꾸지 못하면 열어 줬다).
                 if ( AbsolutePath::isStrictAbsolute( path ) == false )
@@ -91,7 +91,7 @@ namespace sw
     bool AutomationScratchWorkspace::discard( const AutomationScratchFolder& folder )
     {
         const optional<AbsolutePath> scratchDir = engine::getSubsystem<AssetPaths>().toDiskPath( folder._scratchID );
-        return scratchDir.has_value() && FileUtil::removeDirectory( scratchDir->str() ); // 못 풀거나 못 지우면 AssetPaths · FileUtil 이 경로와 이유를 남긴다
+        return scratchDir.has_value() && FileUtil::removeDirectory( *scratchDir ); // 못 풀거나 못 지우면 AssetPaths · FileUtil 이 경로와 이유를 남긴다
     }
 
     expected<void> AutomationScratchWorkspace::prepare( const AutomationScratchFolder& folder )
@@ -101,7 +101,7 @@ namespace sw
         const AssetPaths&            assetPaths = engine::getSubsystem<AssetPaths>();
         const string                 sourceDir  = FileUtil::joinPath( assetPaths.getRootFolderPath(), folder._sourceID );
         const optional<AbsolutePath> scratchAt  = assetPaths.toDiskPath( folder._scratchID ); // 실행 뿌리 아래다(`AssetPaths::getScratchFolderPath`)
-        if ( FileUtil::isDirectory( sourceDir ) == false )
+        if ( FileUtil::isDirectory( FileUtil::toDiskPath( sourceDir ) ) == false )
         {
             return unexpected( Error{ ErrorKind::NotFound, "<Scratch from> is not a folder under Content/", folder._sourceID } );
         }
@@ -109,12 +109,12 @@ namespace sw
             return unexpected( Error{ ErrorKind::InvalidArgument, "<Scratch as> does not resolve to a disk folder", folder._scratchID } );
         const string& scratchDir = scratchAt->str();
         // 지난 실행(중단된 것 포함)이 남긴 사본을 통째로 지운다 — 잔여 파일이 다음 실행의 이름을 바꾸지 않게 한다.
-        if ( FileUtil::removeDirectory( scratchDir ) == false || FileUtil::ensureDirectoryExists( scratchDir ) == false )
+        if ( FileUtil::removeDirectory( FileUtil::toDiskPath( scratchDir ) ) == false || FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( scratchDir ) ) == false )
         {
             return unexpected( Error{ ErrorKind::ExternalFailure, "could not reset the scratch folder", scratchDir } );
         }
         vector<string> listSourceFile;
-        if ( FileUtil::collectFiles( sourceDir, "", listSourceFile, true ) == false )
+        if ( FileUtil::collectFiles( FileUtil::toDiskPath( sourceDir ), "", listSourceFile, true ) == false )
         {
             return unexpected( Error{ ErrorKind::ExternalFailure, "could not list the scratch source folder", sourceDir } );
         }
@@ -126,12 +126,12 @@ namespace sw
                 return unexpected( Error{ ErrorKind::ExternalFailure, "could not place a source file under the scratch source folder", sourceFile } );
             }
             const string targetFile = FileUtil::joinPath( scratchDir, relative );
-            if ( FileUtil::ensureDirectoryExists( FileUtil::getDirectoryPart( targetFile ) ) == false )
+            if ( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( FileUtil::getDirectoryPart( targetFile ) ) ) == false )
             {
                 return unexpected( Error{ ErrorKind::ExternalFailure, "could not create the folder of a scratch file", targetFile } );
             }
             vector<uint8> bytes;
-            if ( FileUtil::readFile( sourceFile, bytes ) == false )
+            if ( FileUtil::readFile( FileUtil::toDiskPath( sourceFile ), bytes ) == false )
             {
                 return unexpected( Error{ ErrorKind::ExternalFailure, "could not read a scratch source file", sourceFile } );
             }
@@ -139,7 +139,7 @@ namespace sw
             const bool bBinary = std::find( bytes.begin(), bytes.end(), uint8{ 0 } ) != bytes.end();
             if ( bBinary )
             {
-                if ( FileUtil::writeFile( targetFile, bytes.data(), bytes.size() ) == false )
+                if ( FileUtil::writeFile( FileUtil::toDiskPath( targetFile ), bytes.data(), bytes.size() ) == false )
                 {
                     return unexpected( Error{ ErrorKind::ExternalFailure, "could not write a scratch file", targetFile } );
                 }
@@ -148,7 +148,7 @@ namespace sw
             const string_view sourceText( reinterpret_cast<const utf8*>( bytes.data() ), bytes.size() );
             // 픽스처가 시나리오의 별칭(`as=` — `scratch/tilesetedit/…`)으로 서로를 가리키면 그 id 는 사본 id 그대로라 바꿀 것이 없다(tilesetedit · uiaudit).
             const string text = AutomationScratch::rebaseText( sourceText, folder._sourceID, folder._scratchID );
-            if ( FileUtil::writeTextFile( targetFile, text ) == false )
+            if ( FileUtil::writeTextFile( FileUtil::toDiskPath( targetFile ), text ) == false )
             {
                 return unexpected( Error{ ErrorKind::ExternalFailure, "could not write a scratch file", targetFile } );
             }

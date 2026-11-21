@@ -51,7 +51,7 @@ namespace sw::editor
     string EditorPaths::findContentFolder( string_view folderID )
     {
         const optional<AbsolutePath> folder = editor::getSubsystem<AssetPaths>().toDiskPath( folderID );
-        return folder.has_value() && FileUtil::isDirectory( folder->str() ) ? folder->str() : string{};
+        return folder.has_value() && FileUtil::isDirectory( *folder ) ? folder->str() : string{};
     }
 
     string EditorPaths::getSceneDialogFolderPath()
@@ -71,7 +71,7 @@ namespace sw::editor
             stateDir = FileUtil::joinPath( ProcessRoots::get()._project.str(), config::kDirSavedEditor );
         }
         // 경로를 묻는 함수라 폴더를 못 만들어도 경로는 돌려준다 — 이유는 ensure 가 남기고, 이 폴더에 쓰는 쪽이 쓰기 실패로 다시 알린다.
-        (void)FileUtil::ensureDirectoryExists( stateDir );
+        (void)FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( stateDir ) );
         return stateDir;
     }
 

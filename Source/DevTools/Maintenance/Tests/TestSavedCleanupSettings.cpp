@@ -25,7 +25,7 @@ SW_TEST_CASE( SavedCleanupSettingsTest, ProjectFileReadsAndRoundTrips )
 {
     using Settings = SavedCleanupTestAccess::Settings;
     string text;
-    SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::joinPath( ProcessRoots::get()._project.str(), "Config/Dev/SavedCleanup.json" ), text ) );
+    SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::toDiskPath( FileUtil::joinPath( ProcessRoots::get()._project.str(), "Config/Dev/SavedCleanup.json" ) ), text ) );
     Settings settings;
     SW_REQUIRE_TRUE( JSONSerializer::deserialize( &settings, *Settings::StaticType(), text ) );
     SW_EXPECT_TRUE( settings._minAgeSeconds > 0 );

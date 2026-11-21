@@ -128,7 +128,7 @@ SW_TEST_CASE( PackEntryIDPropertiesTest, EveryFieldHoldingAnEntryIDIsListed )
     // 쿠커와 같이 모든 게임 프리셋의 규칙을 엔진 규칙 뒤에 합친다 — 게임만 쓰는 칸(`_listVillagerPreset`)은 그 게임 설정에 있다.
     const string   gameConfigFolder = FileUtil::joinPath( ProcessRoots::get()._project.str(), GameConfig::kConfigFolder );
     vector<string> listGameConfig;
-    SW_REQUIRE_TRUE( FileUtil::collectFiles( gameConfigFolder, ".json", listGameConfig, false ) );
+    SW_REQUIRE_TRUE( FileUtil::collectFiles( FileUtil::toDiskPath( gameConfigFolder ), ".json", listGameConfig, false ) );
     for ( const string& gameConfigPath : listGameConfig )
     {
         GameConfig gameConfig;
@@ -138,7 +138,7 @@ SW_TEST_CASE( PackEntryIDPropertiesTest, EveryFieldHoldingAnEntryIDIsListed )
     const PackCookRules& rules = config._cookRules;
 
     string exemptionText;
-    SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::joinPath( ProcessRoots::get()._project.str(), Util::kExemptionPath ), exemptionText ) );
+    SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::toDiskPath( FileUtil::joinPath( ProcessRoots::get()._project.str(), Util::kExemptionPath ) ), exemptionText ) );
     JSONDocument exemptionDoc;
     SW_REQUIRE_TRUE( exemptionDoc.parse( exemptionText, Util::kExemptionPath ) );
     const JSONValue listExempt = exemptionDoc.getRoot().get( "listExempt" );
@@ -146,7 +146,7 @@ SW_TEST_CASE( PackEntryIDPropertiesTest, EveryFieldHoldingAnEntryIDIsListed )
 
     const string   contentRoot = FileUtil::normalizeSeparators( ProcessRoots::get()._content.str() );
     vector<string> listFile;
-    SW_REQUIRE_TRUE( FileUtil::collectFiles( contentRoot, "", listFile, true ) );
+    SW_REQUIRE_TRUE( FileUtil::collectFiles( FileUtil::toDiskPath( contentRoot ), "", listFile, true ) );
 
     // 카탈로그 줄마다 항목 id 를 모은다.
     unordered_set<string> setID;
@@ -162,7 +162,7 @@ SW_TEST_CASE( PackEntryIDPropertiesTest, EveryFieldHoldingAnEntryIDIsListed )
                 continue;
             string      text;
             XMLDocument doc;
-            SW_REQUIRE_TRUE( FileUtil::readTextFile( normalized, text ) );
+            SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::toDiskPath( normalized ), text ) );
             SW_REQUIRE_TRUE( doc.parse( text, normalized ) );
             for ( XMLNode entry = doc.getRoot().findChild( rule._entryElement.c_str() ); entry.isValid(); entry = entry.findNextSibling( rule._entryElement.c_str() ) )
             {
@@ -212,7 +212,7 @@ SW_TEST_CASE( PackEntryIDPropertiesTest, EveryFieldHoldingAnEntryIDIsListed )
             continue;
         string      text;
         XMLDocument doc;
-        if ( FileUtil::readTextFile( normalized, text ) == false || doc.parse( text, normalized ) == false || doc.getRoot().isValid() == false )
+        if ( FileUtil::readTextFile( FileUtil::toDiskPath( normalized ), text ) == false || doc.parse( text, normalized ) == false || doc.getRoot().isValid() == false )
             continue; // 읽지 못하는 글은 런타임 검증의 몫이다
         scan._relativePath = string( relativePath );
         scan._pRule        = Util::findRule( rules, relativePath );

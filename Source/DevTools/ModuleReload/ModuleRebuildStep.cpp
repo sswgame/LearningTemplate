@@ -30,7 +30,7 @@ namespace sw
             static string findBuildDirectory()
             {
                 const string parentDir  = FileUtil::getDirectoryPart( FileUtil::trimTrailingSlashes( ProcessRoots::get()._binary.str() ) );
-                const bool   bBuildTree = FileUtil::isRegularFile( FileUtil::joinPath( parentDir, "build.ninja" ) ) || FileUtil::isRegularFile( FileUtil::joinPath( parentDir, "CMakeCache.txt" ) );
+                const bool   bBuildTree = FileUtil::isRegularFile( FileUtil::toDiskPath( FileUtil::joinPath( parentDir, "build.ninja" ) ) ) || FileUtil::isRegularFile( FileUtil::toDiskPath( FileUtil::joinPath( parentDir, "CMakeCache.txt" ) ) );
                 return bBuildTree ? parentDir : string{};
             }
 
@@ -39,7 +39,7 @@ namespace sw
             {
                 const string variantPath = FileUtil::joinPath( ProcessRoots::get()._project.str(), AutomationReloadSteps::kVariantFile );
                 string       tableText;
-                if ( FileUtil::readTextFile( variantPath, tableText ) == false )
+                if ( FileUtil::readTextFile( FileUtil::toDiskPath( variantPath ), tableText ) == false )
                     return unexpected( Error{ ErrorKind::NotFound, "the module rebuild variant table could not be read", variantPath } );
                 const expected<ModuleRebuildVariant> variant = AutomationReloadSteps::parseVariant( tableText, variantPath, variantName );
                 if ( variant.has_value() == false )
@@ -50,10 +50,10 @@ namespace sw
                 // 판 머리는 CMake 가 기본 글로 만든다(추적 소스를 고치지 않으려고 빌드 트리에 둔다) — 없으면 판을 받는 소스가 없는 빌드다. 지어낸 자리에 쓰지 않는다.
                 const string headerPath = FileUtil::joinPath( FileUtil::joinPath( buildDir, "generated" ), variant->_header );
                 string       original;
-                if ( FileUtil::isRegularFile( headerPath ) == false || FileUtil::readTextFile( headerPath, original ) == false )
+                if ( FileUtil::isRegularFile( FileUtil::toDiskPath( headerPath ) ) == false || FileUtil::readTextFile( FileUtil::toDiskPath( headerPath ), original ) == false )
                     return unexpected( Error{ ErrorKind::NotFound, "the variant header is not in the build tree (does CMake generate it for this module?)", headerPath } );
                 context.restoreFileAtEnd( headerPath, std::move( original ) );
-                if ( FileUtil::writeTextFile( headerPath, variant->_text ) == false )
+                if ( FileUtil::writeTextFile( FileUtil::toDiskPath( headerPath ), variant->_text ) == false )
                     return unexpected( Error{ ErrorKind::ExternalFailure, "could not write the variant header", headerPath } );
                 return {};
             }

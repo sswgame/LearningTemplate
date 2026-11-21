@@ -51,12 +51,12 @@ namespace sw
                     return false;
                 }
                 string     current;
-                const bool bHasCurrent = FileUtil::exists( diskPath->str() ) && FileUtil::readTextFile( diskPath->str(), current );
+                const bool bHasCurrent = FileUtil::exists( *diskPath ) && FileUtil::readTextFile( *diskPath, current );
                 // 산출물 머티리얼도 정체성(머리 GUID)을 든다 — 다시 지을 때 있던 머리를 옮겨 쓴다(지으면 GUID 가 바뀌는 일이 없게).
                 const string desired = bHasCurrent ? AssetGUIDHeader::carryOver( normalizeLineEndings( current ), text ) : string( text );
                 if ( bHasCurrent && normalizeLineEndings( current ) == desired )
                     return true;
-                if ( FileUtil::ensureParentDirectoryExists( diskPath->str() ) == false || FileUtil::writeTextFile( diskPath->str(), desired ) == false )
+                if ( FileUtil::ensureParentDirectoryExists( *diskPath ) == false || FileUtil::writeTextFile( *diskPath, desired ) == false )
                 {
                     SW_LOG_ERROR_ID( "MaterialGraph.GeneratedWriteFailed", "Could not write generated material graph file '%#'", assetID );
                     return false;
@@ -88,21 +88,21 @@ namespace sw
             static void carryStaleMeta( const string& staleShaderPath, const string& currentShaderPath )
             {
                 const string staleMetaPath = AssetMeta::makePath( staleShaderPath );
-                if ( FileUtil::exists( staleMetaPath ) == false )
+                if ( FileUtil::exists( FileUtil::toDiskPath( staleMetaPath ) ) == false )
                     return;
                 const string currentMetaPath = AssetMeta::makePath( currentShaderPath );
-                if ( FileUtil::exists( currentMetaPath ) == false )
+                if ( FileUtil::exists( FileUtil::toDiskPath( currentMetaPath ) ) == false )
                 {
                     string                    metaText;
                     AssetMeta                 meta;
-                    const optional<AssetGUID> guid = FileUtil::readTextFile( staleMetaPath, metaText ) ? meta.parseXML( metaText, staleMetaPath ) : nullopt;
-                    if ( guid.has_value() == false || FileUtil::writeTextFile( currentMetaPath, AssetMeta::makeText( currentShaderPath, *guid, meta._listImportOverride ) ) == false )
+                    const optional<AssetGUID> guid = FileUtil::readTextFile( FileUtil::toDiskPath( staleMetaPath ), metaText ) ? meta.parseXML( metaText, staleMetaPath ) : nullopt;
+                    if ( guid.has_value() == false || FileUtil::writeTextFile( FileUtil::toDiskPath( currentMetaPath ), AssetMeta::makeText( currentShaderPath, *guid, meta._listImportOverride ) ) == false )
                     {
                         SW_LOG_WARNING_ID( "MaterialGraph.ShaderMetaNotCarried", "Could not carry '%#' to the new generated shader '%#' - it keeps a new identity", staleMetaPath, currentShaderPath );
                         return; // 옛 서술을 남겨 손으로 옮길 수 있게 한다
                     }
                 }
-                if ( FileUtil::removeFile( staleMetaPath ) == false )
+                if ( FileUtil::removeFile( FileUtil::toDiskPath( staleMetaPath ) ) == false )
                     SW_LOG_WARNING_ID( "MaterialGraph.StaleShaderNotRemoved", "Could not remove old generated shader '%#'", staleMetaPath );
             }
 
@@ -110,10 +110,10 @@ namespace sw
             static void removeStaleShaders( const AssetPaths& assetPaths, const MaterialGraphGeneratedPaths& paths, string_view currentShaderPath )
             {
                 const optional<AbsolutePath> folder = assetPaths.toDiskPath( paths._shadersFolder );
-                if ( folder.has_value() == false || FileUtil::isDirectory( folder->str() ) == false )
+                if ( folder.has_value() == false || FileUtil::isDirectory( *folder ) == false )
                     return;
                 vector<string> listFile;
-                if ( FileUtil::collectFiles( folder->str(), kShaderSuffix, listFile, false ) == false )
+                if ( FileUtil::collectFiles( *folder, kShaderSuffix, listFile, false ) == false )
                     return;
                 const string currentName = FileUtil::getFileNamePart( currentShaderPath );
                 for ( const string& filePath : listFile )
@@ -124,7 +124,7 @@ namespace sw
                     StringBuilder<constant::buffer::kMax1024> currentPath;
                     currentPath.appendFormat( "%#/%#", folder->str(), currentName );
                     carryStaleMeta( filePath, string( currentPath.view() ) );
-                    if ( FileUtil::removeFile( filePath ) == false )
+                    if ( FileUtil::removeFile( FileUtil::toDiskPath( filePath ) ) == false )
                         SW_LOG_WARNING_ID( "MaterialGraph.StaleShaderNotRemoved", "Could not remove old generated shader '%#'", filePath );
                 }
             }
@@ -230,7 +230,7 @@ namespace sw
     bool MaterialGraphGeneratedPaths::refreshAll( const AssetPaths& assetPaths, string_view contentRoot, uint32* pOutWrittenCount )
     {
         vector<string> listFile;
-        if ( FileUtil::isDirectory( contentRoot ) && AssetPaths::collectContentFiles( contentRoot, MaterialGraphDef::kExtension, listFile ) == false )
+        if ( FileUtil::isDirectory( FileUtil::toDiskPath( contentRoot ) ) && AssetPaths::collectContentFiles( contentRoot, MaterialGraphDef::kExtension, listFile ) == false )
             return false;
         bool bAllRefreshed = true;
         for ( const string& filePath : listFile )

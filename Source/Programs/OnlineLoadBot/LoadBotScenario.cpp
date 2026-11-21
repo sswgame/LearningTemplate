@@ -245,7 +245,7 @@ namespace sw
     expected<LoadBotScenario> LoadBotScenario::loadFromFile( string_view path )
     {
         string text;
-        if ( FileUtil::readTextFile( path, text ) == false )
+        if ( FileUtil::readTextFile( FileUtil::toDiskPath( path ), text ) == false )
             return unexpected( Error{ ErrorKind::NotFound, "cannot read the scenario", path } );
         expected<LoadBotScenario> scenario = loadFromXMLText( text );
         if ( scenario.has_value() )

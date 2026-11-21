@@ -198,18 +198,18 @@ namespace sw::editor
         const ModuleManifest* pManifest = _catalog.findManifest( _pendingModule );
         string                text;
         string                rewritten;
-        if ( pManifest == nullptr || FileUtil::readTextFile( path, text ) == false )
+        if ( pManifest == nullptr || FileUtil::readTextFile( FileUtil::toDiskPath( path ), text ) == false )
         {
             SW_LOG_WARNING_ID( "ModulesPanel.ModulesProjectManifestCould", "Modules: the project manifest %# could not be read", path.c_str() );
             return false;
         }
-        if ( FileUtil::isReadOnlyFile( path ) )
+        if ( FileUtil::isReadOnlyFile( FileUtil::toDiskPath( path ) ) )
         {
             SW_LOG_WARNING_ID( "ModulesPanel.ModulesReadOnlyCheck", "Modules: %# is read-only - check it out first", path.c_str() );
             return false;
         }
         if ( EditorModuleOverrideUtil::setOverride( text, _pendingModule, _bPendingEnabled, pManifest->_bEnabledByDefault, rewritten ) == false ||
-             FileUtil::writeTextFile( path, rewritten ) == false )
+             FileUtil::writeTextFile( FileUtil::toDiskPath( path ), rewritten ) == false )
         {
             SW_LOG_WARNING_ID( "ModulesPanel.ModulesProjectManifestCould2", "Modules: the project manifest %# could not be rewritten", path.c_str() );
             return false;

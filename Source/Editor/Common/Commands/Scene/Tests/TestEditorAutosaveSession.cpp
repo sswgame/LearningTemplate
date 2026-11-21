@@ -22,8 +22,8 @@ namespace
         {
             const sw::string slotFolder = sw::FileUtil::joinPath( session.makeFolder( root ), "maps_test.scene.xml" );
             const sw::string copyPath   = sw::FileUtil::joinPath( slotFolder, "1.scene.xml" );
-            SW_EXPECT_TRUE( sw::FileUtil::ensureDirectoryExists( slotFolder ) );
-            SW_EXPECT_TRUE( sw::FileUtil::writeTextFile( copyPath, "<Scene/>" ) );
+            SW_EXPECT_TRUE( sw::FileUtil::ensureDirectoryExists( sw::FileUtil::toDiskPath( slotFolder ) ) );
+            SW_EXPECT_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::toDiskPath( copyPath ), "<Scene/>" ) );
             return copyPath;
         }
     };
@@ -50,8 +50,8 @@ SW_TEST_CASE( EditorAutosaveSessionTest, OtherSessionEndKeepsLiveSessionCopies )
     SW_EXPECT_TRUE( listRecoveredFolder.empty() ); // A 는 살아 있다 — 복구 후보가 아니다
     Session::removeOwned( root, sessionB._processID );
 
-    SW_EXPECT_TRUE( sw::FileUtil::exists( copyA ) );
-    SW_EXPECT_FALSE( sw::FileUtil::isDirectory( sessionB.makeFolder( root ) ) );
+    SW_EXPECT_TRUE( sw::FileUtil::exists( sw::FileUtil::toDiskPath( copyA ) ) );
+    SW_EXPECT_FALSE( sw::FileUtil::isDirectory( sw::FileUtil::toDiskPath( sessionB.makeFolder( root ) ) ) );
 }
 
 /**
@@ -75,8 +75,8 @@ SW_TEST_CASE( EditorAutosaveSessionTest, DeadSessionIsRecoveredAndRemovedWithRec
     Session owner{};
     SW_REQUIRE_TRUE( Session::readLock( listRecoveredFolder[0], owner ) );
     SW_EXPECT_TRUE( owner._processID == recoveringSession._processID && owner._startTicks == recoveringSession._startTicks );
-    SW_EXPECT_TRUE( sw::FileUtil::exists( deadCopy ) ); // 넘겨받기는 사본을 지우지 않는다 — 복구 후보다
+    SW_EXPECT_TRUE( sw::FileUtil::exists( sw::FileUtil::toDiskPath( deadCopy ) ) ); // 넘겨받기는 사본을 지우지 않는다 — 복구 후보다
 
     Session::removeOwned( root, recoveringSession._processID );
-    SW_EXPECT_FALSE( sw::FileUtil::exists( deadCopy ) );
+    SW_EXPECT_FALSE( sw::FileUtil::exists( sw::FileUtil::toDiskPath( deadCopy ) ) );
 }

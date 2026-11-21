@@ -54,8 +54,8 @@ namespace
             for ( uint32 fileIndex = 0; fileIndex < fileCount; ++fileIndex )
             {
                 const string absPath = FileUtil::joinPath( root, makeAssetID( fileIndex ) );
-                if ( ( fileIndex % kFilePerFolder == 0 && FileUtil::ensureParentDirectoryExists( absPath ) == false ) ||
-                     FileUtil::writeTextFile( absPath, makeText( fileIndex, fileCount ) ) == false )
+                if ( ( fileIndex % kFilePerFolder == 0 && FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( absPath ) ) == false ) ||
+                     FileUtil::writeTextFile( FileUtil::toDiskPath( absPath ), makeText( fileIndex, fileCount ) ) == false )
                     return false;
             }
             return true;
@@ -96,7 +96,7 @@ SW_TEST_CASE( EditorAssetIndexTest, ScanCostBySize, ._tags = "bench", ._disabled
         {
             string changedText = Internal::makeText( fileCount / 2, fileCount );
             changedText.append( repeat + 1, ' ' );
-            SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::joinPath( root, changedID ), changedText ) );
+            SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( FileUtil::joinPath( root, changedID ) ), changedText ) );
             const int64 refreshStart = MonotonicClock::nowNanoseconds();
             index.applyChanges( root, { changedID } );
             refreshNanoseconds += MonotonicClock::nowNanoseconds() - refreshStart;

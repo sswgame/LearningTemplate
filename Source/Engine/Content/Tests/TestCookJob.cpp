@@ -16,7 +16,7 @@ SW_TEST_CASE( CookJobTest, RecordsDiskReadsAsAbsoluteDiskInputs )
 {
     const string folder   = test::makeScratchPath( "Source" );
     const string filePath = FileUtil::joinPath( folder, "a.txt" );
-    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( folder ) && FileUtil::writeTextFile( filePath, "one" ) );
+    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( folder ) ) && FileUtil::writeTextFile( FileUtil::toDiskPath( filePath ), "one" ) );
 
     CookJob        job( CookJobDesc{ ._cookerName = "Fake", ._codeFingerprint = 1, ._target = "Test", ._settingsHash = 0 } );
     vector<uint8>  bytes;

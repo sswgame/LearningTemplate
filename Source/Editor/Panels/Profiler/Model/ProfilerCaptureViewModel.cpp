@@ -54,7 +54,7 @@ namespace sw::editor
     bool ProfilerCaptureViewModel::saveCapture() const
     {
         const string path = getCaptureFilePath();
-        if ( FileUtil::ensureParentDirectoryExists( path ) && _scopeHistory.saveToFile( path ) )
+        if ( FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( path ) ) && _scopeHistory.saveToFile( path ) )
         {
             SW_LOG_INFO_ID( "ProfilerCaptureViewModel.ProfilerCaptureSaved", "Profiler capture saved: %#", path.c_str() );
             return true;

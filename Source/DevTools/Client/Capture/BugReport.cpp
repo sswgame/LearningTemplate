@@ -253,14 +253,14 @@ namespace sw
         text.appendFormat( "%# = %#\n", Internal::kKeyConfigHash, _configHash );
         text.appendFormat( "%# = %#\n", Internal::kKeyInputFrames, _inputFrameCount );
         text.appendFormat( "%# = %#\n", Internal::kKeyInputSeconds, Internal::formatFloat( _inputSeconds ) );
-        return FileUtil::writeTextFile( FileUtil::joinPath( directory, kInfoFileName ), text.view() );
+        return FileUtil::writeTextFile( FileUtil::toDiskPath( FileUtil::joinPath( directory, kInfoFileName ) ), text.view() );
     }
 
     bool BugReport::readInfo( string_view directory, BugReport& outReport )
     {
         string text;
         // 폴더는 언제든 사라질 수 있다(다른 프로세스의 보관 개수 정리 `SavedCleanup`). 없는 것은 오류가 아니라 "그 리포트가 없다" 다. 못 읽은 것은 읽기가 오류를 남긴다.
-        if ( FileUtil::readOptionalTextFile( FileUtil::joinPath( directory, kInfoFileName ), text ) != OptionalFileRead::Read )
+        if ( FileUtil::readOptionalTextFile( FileUtil::toDiskPath( FileUtil::joinPath( directory, kInfoFileName ) ), text ) != OptionalFileRead::Read )
             return false;
         outReport              = BugReport{};
         const string_view body = FileUtil::skipUTF8Bom( text );
@@ -319,7 +319,7 @@ namespace sw
     string BugReport::findLatestDirectory( string_view root )
     {
         vector<string> listFolder;
-        if ( FileUtil::collectFolders( root, listFolder, false ) == false || listFolder.empty() )
+        if ( FileUtil::collectFolders( FileUtil::toDiskPath( root ), listFolder, false ) == false || listFolder.empty() )
             return string{};
         // 이름이 yyyyMMdd-HHmmss(-n) 이라 이름 순이 시간 순이다. 같은 초의 -2 · -3 은 뒤에 온다(-10 이 -9 앞에 오지만 같은 초에 열 번은 드물다).
         const string* pLatest = &listFolder[0];
@@ -359,7 +359,7 @@ namespace sw
     bool BugReport::computeFolderHash( string_view directory, uint64& outHash )
     {
         vector<string> listFile;
-        if ( FileUtil::collectFiles( directory, {}, listFile, true ) == false )
+        if ( FileUtil::collectFiles( FileUtil::toDiskPath( directory ), {}, listFile, true ) == false )
             return false;
         VectorUtil::sort( listFile );
         uint64        hash = HashUtil::kFNVOffset64;
@@ -369,7 +369,7 @@ namespace sw
             // 상대 경로를 같이 접는다 — 같은 바이트의 파일이 이름만 바뀌어도 다른 설정이다.
             const string_view relative = string_view( filePath ).substr( MathUtil::min( filePath.size(), directory.size() ) );
             hash                       = HashUtil::appendBytes64( hash, relative.data(), relative.size() );
-            if ( FileUtil::readFile( filePath, bytes ) == false )
+            if ( FileUtil::readFile( FileUtil::toDiskPath( filePath ), bytes ) == false )
                 return false;
             hash = HashUtil::appendBytes64( hash, bytes.data(), bytes.size() );
         }
@@ -475,7 +475,7 @@ namespace sw
             else
                 SW_LOG_WARNING_ID( "BugReport.ScreenshotPathNotAbsolute", "bugreport: the report folder '%#' is not absolute - no screenshot", directory );
         }
-        if ( inputs._logFilePath.empty() == false && FileUtil::copyFile( inputs._logFilePath, FileUtil::joinPath( directory, kLogFileName ) ) == false )
+        if ( inputs._logFilePath.empty() == false && FileUtil::copyFile( FileUtil::toDiskPath( inputs._logFilePath ), FileUtil::toDiskPath( FileUtil::joinPath( directory, kLogFileName ) ) ) == false )
             SW_LOG_WARNING_ID( "BugReport.BugreportLogFileCould", "bugreport: the log file could not be copied" );
 #if !defined( SW_SHIPPING )
         if ( inputs._pFrameProfiler != nullptr )
@@ -510,7 +510,7 @@ namespace sw
         if ( inputs._bEditor )
             repro.append( " -EnableEditor" );
         repro.appendFormat( " -gv_devConsoleExec=\"bugreport.goto %#\"\n", directory );
-        if ( FileUtil::writeTextFile( FileUtil::joinPath( directory, kReproFileName ), repro.view() ) == false )
+        if ( FileUtil::writeTextFile( FileUtil::toDiskPath( FileUtil::joinPath( directory, kReproFileName ) ), repro.view() ) == false )
             SW_LOG_WARNING_ID( "BugReport.BugreportCouldNotWrite2", "bugreport: could not write the repro command" );
 
         SW_LOG_INFO_ID( "BugReport.Saved", "Bug report saved to %# (note: %#)", directory, report._note );

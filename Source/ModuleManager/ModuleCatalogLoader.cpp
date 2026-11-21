@@ -25,7 +25,7 @@ namespace sw
             [[nodiscard]] static bool readManifest( const string& manifestPath, ModuleManifest& outManifest )
             {
                 string text;
-                if ( FileUtil::readTextFile( manifestPath, text ) == false )
+                if ( FileUtil::readTextFile( FileUtil::toDiskPath( manifestPath ), text ) == false )
                 {
                     SW_LOG_ERROR_ID( "ModuleCatalog.ModuleCatalogCannotRead", "Module catalog: cannot read %#", manifestPath.c_str() );
                     return false;
@@ -42,9 +42,9 @@ namespace sw
             [[nodiscard]] static bool readManifestFolder( const string& directoryPath, bool bRecursive, vector<ModuleManifest>& outListManifest )
             {
                 vector<string> listFile;
-                if ( FileUtil::isDirectory( directoryPath ) == false )
+                if ( FileUtil::isDirectory( FileUtil::toDiskPath( directoryPath ) ) == false )
                     return true;
-                if ( FileUtil::collectFiles( directoryPath, ".json", listFile, bRecursive ) == false )
+                if ( FileUtil::collectFiles( FileUtil::toDiskPath( directoryPath ), ".json", listFile, bRecursive ) == false )
                 {
                     SW_LOG_ERROR_ID( "ModuleCatalog.ModuleCatalogCannotList", "Module catalog: cannot list %#", directoryPath.c_str() );
                     return false;
@@ -173,7 +173,7 @@ namespace sw
         // 무엇을 올릴지는 모듈 매니페스트가 정한다 — 빌드가 실행 파일 옆 `Modules/` 에 복사해 둔 것을 CMake 와 같은 규칙으로 해석한다.
         const string           catalogDirectory = ModuleLibraryUtil::getModuleDirectory();
         vector<ModuleManifest> listManifest;
-        if ( FileUtil::isDirectory( catalogDirectory ) == false )
+        if ( FileUtil::isDirectory( FileUtil::toDiskPath( catalogDirectory ) ) == false )
         {
             SW_LOG_ERROR_ID( "ModuleCatalog.ModuleCatalogModuleCatalog", "Module catalog: Module catalog folder does not exist: %#", catalogDirectory.c_str() );
             return false;

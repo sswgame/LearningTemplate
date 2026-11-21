@@ -333,7 +333,7 @@ namespace sw
 
             const string           resolvedPath = resolveConfigPath( filePath );
             string                 jsonStr;
-            const OptionalFileRead read = FileUtil::readOptionalTextFile( resolvedPath, jsonStr );
+            const OptionalFileRead read = FileUtil::readOptionalTextFile( FileUtil::toDiskPath( resolvedPath ), jsonStr );
             if ( read == OptionalFileRead::Missing )
                 return ConfigReadResult::Missing;
             if ( read == OptionalFileRead::Failed )
@@ -398,10 +398,10 @@ namespace sw
         template <typename T>
         [[nodiscard]] static ConfigReadResult readConfigFile( T& outConfig, string_view absolutePath )
         {
-            if ( FileUtil::isRegularFile( absolutePath ) == false )
+            if ( FileUtil::isRegularFile( FileUtil::toDiskPath( absolutePath ) ) == false )
                 return ConfigReadResult::Missing;
             string jsonStr;
-            if ( FileUtil::readTextFile( absolutePath, jsonStr ) == false )
+            if ( FileUtil::readTextFile( FileUtil::toDiskPath( absolutePath ), jsonStr ) == false )
                 return ConfigReadResult::Invalid;
             const string label( absolutePath );
             return readConfigJSON( outConfig, jsonStr, label.c_str() ) ? ConfigReadResult::Loaded : ConfigReadResult::Invalid;

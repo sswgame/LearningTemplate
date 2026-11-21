@@ -379,7 +379,7 @@ namespace sw
         string saveText = saveToXMLText();
         if ( saveText.empty() )
             return false; // 프리셋 차이를 쓰지 못했다(`saveToXMLText` 가 알렸다)
-        if ( FileUtil::readOptionalTextFile( absPath.str(), existingText ) == OptionalFileRead::Read )
+        if ( FileUtil::readOptionalTextFile( absPath, existingText ) == OptionalFileRead::Read )
         {
             const string baseID = DataInheritance::findBasePath( existingText );
             if ( baseID.empty() == false )

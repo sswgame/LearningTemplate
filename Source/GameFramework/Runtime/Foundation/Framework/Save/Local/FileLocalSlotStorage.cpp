@@ -21,9 +21,9 @@ namespace sw
     FileLocalSlotStorage::FileLocalSlotStorage( string_view rootDirectory )
         : _rootDirectory{ FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( rootDirectory ) ) }
     {
-        (void)FileUtil::ensureDirectoryExists( _rootDirectory ); // 못 만들면 ensure 가 폴더와 이유를 남기고 뒤따르는 쓰기가 실패로 답한다
+        (void)FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( _rootDirectory ) ); // 못 만들면 ensure 가 폴더와 이유를 남기고 뒤따르는 쓰기가 실패로 답한다
         vector<string> listTempPath;
-        (void)FileUtil::forEachDirectoryEntry( _rootDirectory, true, [&listTempPath]( const DirectoryEntry& entry )
+        (void)FileUtil::forEachDirectoryEntry( FileUtil::toDiskPath( _rootDirectory ), true, [&listTempPath]( const DirectoryEntry& entry )
         {
             // 쓴 프로세스가 살아 있는 임시 파일은 다른 인스턴스가 쓰는 중이다 — 지우지 않는다
             if ( entry._bDirectory == false && entry._path.find( kLocalSlotTempMarker ) != string_view::npos && FileUtil::isAbandonedWriteTemp( entry._path ) )
@@ -32,7 +32,7 @@ namespace sw
         } );
         for ( const string& tempPath : listTempPath )
         {
-            if ( FileUtil::tryRemoveFile( tempPath ) )
+            if ( FileUtil::tryRemoveFile( FileUtil::toDiskPath( tempPath ) ) )
                 SW_LOG_WARNING_ID( "LocalStore.LeftoverTempRemoved", "Removed a leftover local store temp file (an interrupted write): %#", tempPath.c_str() );
         }
     }
@@ -40,44 +40,44 @@ namespace sw
     LocalStoreResult FileLocalSlotStorage::readSlot( const string& slot, vector<uint8>& outEnvelopeBytes )
     {
         const string path = makeSlotPath( slot );
-        if ( FileUtil::isRegularFile( path ) == false )
+        if ( FileUtil::isRegularFile( FileUtil::toDiskPath( path ) ) == false )
             return LocalStoreResult::NotFound;
-        return FileUtil::readFile( path, outEnvelopeBytes ) ? LocalStoreResult::Ok : LocalStoreResult::IOError;
+        return FileUtil::readFile( FileUtil::toDiskPath( path ), outEnvelopeBytes ) ? LocalStoreResult::Ok : LocalStoreResult::IOError;
     }
 
     LocalStoreResult FileLocalSlotStorage::writeSlot( const string& slot, const vector<uint8>& envelopeBytes )
     {
         const string path = makeSlotPath( slot );
-        if ( FileUtil::ensureParentDirectoryExists( path ) == false )
+        if ( FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( path ) ) == false )
             return LocalStoreResult::IOError;
         // 지금 파일을 한 세대 남긴다(언리얼 SaveGame 백업 슬롯 자리). 못 남기면 쓰지 않는다 — 다음 쓰기가 덮어 둘 다 잃는 일을 막는다.
         StringBuilder<constant::buffer::kMax512> previousPath;
         previousPath.appendFormat( "%#%#", path, kPreviousGenerationSuffix );
-        if ( FileUtil::isRegularFile( path ) && FileUtil::copyFile( path, previousPath.view() ) == false )
+        if ( FileUtil::isRegularFile( FileUtil::toDiskPath( path ) ) && FileUtil::copyFile( FileUtil::toDiskPath( path ), FileUtil::toDiskPath( previousPath.view() ) ) == false )
             return LocalStoreResult::IOError;
-        return FileUtil::writeFileDurable( path, envelopeBytes.data(), envelopeBytes.size() ) ? LocalStoreResult::Ok : LocalStoreResult::IOError;
+        return FileUtil::writeFileDurable( FileUtil::toDiskPath( path ), envelopeBytes.data(), envelopeBytes.size() ) ? LocalStoreResult::Ok : LocalStoreResult::IOError;
     }
 
     LocalStoreResult FileLocalSlotStorage::readPreviousSlot( const string& slot, vector<uint8>& outEnvelopeBytes )
     {
         StringBuilder<constant::buffer::kMax512> path;
         path.appendFormat( "%#%#", makeSlotPath( slot ), kPreviousGenerationSuffix );
-        if ( FileUtil::isRegularFile( path.view() ) == false )
+        if ( FileUtil::isRegularFile( FileUtil::toDiskPath( path.view() ) ) == false )
             return LocalStoreResult::NotFound;
-        return FileUtil::readFile( path.view(), outEnvelopeBytes ) ? LocalStoreResult::Ok : LocalStoreResult::IOError;
+        return FileUtil::readFile( FileUtil::toDiskPath( path.view() ), outEnvelopeBytes ) ? LocalStoreResult::Ok : LocalStoreResult::IOError;
     }
 
     LocalStoreResult FileLocalSlotStorage::eraseSlot( const string& slot )
     {
         const string path = makeSlotPath( slot );
-        if ( FileUtil::isRegularFile( path ) == false )
+        if ( FileUtil::isRegularFile( FileUtil::toDiskPath( path ) ) == false )
             return LocalStoreResult::NotFound;
         // 직전 세대도 지운다 — 남기면 지운 슬롯이 다음 쓰기의 깨진 읽기에서 되살아난다
         StringBuilder<constant::buffer::kMax512> previousPath;
         previousPath.appendFormat( "%#%#", path, kPreviousGenerationSuffix );
-        if ( FileUtil::isRegularFile( previousPath.view() ) && FileUtil::removeFile( previousPath.view() ) == false )
+        if ( FileUtil::isRegularFile( FileUtil::toDiskPath( previousPath.view() ) ) && FileUtil::removeFile( FileUtil::toDiskPath( previousPath.view() ) ) == false )
             return LocalStoreResult::IOError;
-        return FileUtil::removeFile( path ) ? LocalStoreResult::Ok : LocalStoreResult::IOError;
+        return FileUtil::removeFile( FileUtil::toDiskPath( path ) ) ? LocalStoreResult::Ok : LocalStoreResult::IOError;
     }
 
     LocalStoreResult FileLocalSlotStorage::listSlots( const string& groupPrefix, vector<LocalSlotInfo>& outListSlotInfo )
@@ -86,7 +86,7 @@ namespace sw
         const size_t           rootSize     = _rootDirectory.size() + 1;
         const string           extension    = kSlotExtension;
         vector<LocalSlotInfo>& listSlotInfo = outListSlotInfo;
-        const bool             bListed      = FileUtil::forEachDirectoryEntry( _rootDirectory, true, [&]( const DirectoryEntry& entry )
+        const bool             bListed      = FileUtil::forEachDirectoryEntry( FileUtil::toDiskPath( _rootDirectory ), true, [&]( const DirectoryEntry& entry )
                          {
             const bool bSlotFile = entry._bDirectory == false && entry._path.size() > rootSize + extension.size() &&
                                    entry._path.substr( entry._path.size() - extension.size() ) == extension;
@@ -98,10 +98,10 @@ namespace sw
             LocalSlotInfo& slotInfo = listSlotInfo.emplace_back();
             slotInfo._slot          = string( slot );
             uint64 byteCount        = 0;
-            if ( FileUtil::tryGetFileSize( entry._path, byteCount ) )
+            if ( FileUtil::tryGetFileSize( FileUtil::toDiskPath( entry._path ), byteCount ) )
                 slotInfo._byteCount = static_cast<int64>( byteCount );
             int64 ticks = 0;
-            if ( FileUtil::getFileWriteTime( entry._path, ticks ) )
+            if ( FileUtil::getFileWriteTime( FileUtil::toDiskPath( entry._path ), ticks ) )
                 slotInfo._writtenAtMs = ticks / ( FileUtil::kFileTimeTicksPerSecond / constant::time::kMillisecondsPerSecond );
             return true;
         } );

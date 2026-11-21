@@ -95,7 +95,8 @@ namespace sw
             [[nodiscard]] static bool readTaggedHeader( ByteReader& reader, const TypeInfo& typeInfo, BinaryWireVersion& outWireVersion, uint32& outPropCount )
             {
                 uint32 header{ 0 };
-                if ( reader.readPod( header ) == false )
+                header = reader.readPod<uint32>();
+                if ( reader.hasOverflowed() )
                     return false;
                 const uint32 wireVersionNumber = header >> kTaggedVersionShift;
                 if ( isReadableWireVersion( wireVersionNumber ) == false )
@@ -177,10 +178,13 @@ namespace sw
             static FieldReadResult readTaggedField( TaggedReadState& state, ByteReader& reader, bool& outStop )
             {
                 outStop = true;
-                uint32     tagHash{ 0 };
-                uint32     wireTypeHash{ 0 };
-                uint32     payloadSize{ 0 };
-                const bool bTruncatedTag = reader.readPod( tagHash ) == false || reader.readPod( wireTypeHash ) == false || reader.readPod( payloadSize ) == false;
+                uint32 tagHash{ 0 };
+                uint32 wireTypeHash{ 0 };
+                uint32 payloadSize{ 0 };
+                tagHash                  = reader.readPod<uint32>();
+                wireTypeHash             = reader.readPod<uint32>();
+                payloadSize              = reader.readPod<uint32>();
+                const bool bTruncatedTag = reader.hasOverflowed();
                 if ( bTruncatedTag )
                     return FieldReadResult::FieldFailed;
 
@@ -376,15 +380,19 @@ namespace sw
             {
                 ByteReader reader( pData, dataSize );
                 uint32     header{ 0 };
-                if ( reader.readPod( header ) == false )
+                header = reader.readPod<uint32>();
+                if ( reader.hasOverflowed() )
                     return false;
                 const uint32 propCount = header & kTaggedCountMask;
                 for ( uint32 propIndex = 0; propIndex < propCount; ++propIndex )
                 {
-                    uint32     tagHash{ 0 };
-                    uint32     wireTypeHash{ 0 };
-                    uint32     payloadSize{ 0 };
-                    const bool bTruncatedTagHeader = reader.readPod( tagHash ) == false || reader.readPod( wireTypeHash ) == false || reader.readPod( payloadSize ) == false;
+                    uint32 tagHash{ 0 };
+                    uint32 wireTypeHash{ 0 };
+                    uint32 payloadSize{ 0 };
+                    tagHash                        = reader.readPod<uint32>();
+                    wireTypeHash                   = reader.readPod<uint32>();
+                    payloadSize                    = reader.readPod<uint32>();
+                    const bool bTruncatedTagHeader = reader.hasOverflowed();
                     if ( bTruncatedTagHeader )
                         return false;
                     if ( reader.skipBytes( payloadSize ) == false )
@@ -597,7 +605,8 @@ namespace sw
                                                  uint32 currentVersion, const SerializeContext& context )
     {
         ByteReader reader( pData, dataSize );
-        if ( reader.readPod( outVersion ) == false )
+        outVersion = reader.readPod<uint32>();
+        if ( reader.hasOverflowed() )
             return false;
 
         const uint8* pBody    = pData + reader.getOffset();
@@ -628,7 +637,8 @@ namespace sw
         if ( bInvalidInput )
             return BinaryExactVersionResult::Unreadable;
         ByteReader reader( pData, dataSize );
-        if ( reader.readPod( outReadVersion ) == false )
+        outReadVersion = reader.readPod<uint32>();
+        if ( reader.hasOverflowed() )
             return BinaryExactVersionResult::Unreadable;
         if ( outReadVersion != expectedVersion )
             return BinaryExactVersionResult::VersionMismatch;

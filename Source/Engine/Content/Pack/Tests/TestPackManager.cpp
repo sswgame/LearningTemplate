@@ -36,7 +36,7 @@ SW_TEST_CASE( PackManagerTest, PatchReplacesAndRemovesForDomainAndDomainlessKeys
     const string root  = test::makeScratchPath( "Packs" );
     const string base  = FileUtil::joinPath( root, "engine.pack" );
     const string patch = FileUtil::joinPath( root, "patch_1.pack" );
-    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( root ) );
+    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( root ) ) );
     SW_REQUIRE_TRUE( Internal::writePack( base, "engine", {
                                                               {"textures/a.txt",  "old"},
                                                               {"textures/b.txt", "gone"},
@@ -62,7 +62,7 @@ SW_TEST_CASE( PackManagerTest, FindsDLCDomainPacks )
     using Internal    = TestPackManagerInternal;
     const string root = test::makeScratchPath( "Packs" );
     const string dlc  = FileUtil::joinPath( root, "seasonal.pack" ); // 이름은 도메인을 말하지 않는다
-    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( root ) );
+    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( root ) ) );
     SW_REQUIRE_TRUE( Internal::writePack( dlc, "dlc/winter", {
                                                                  { "maps/snow.txt", "snow" }
     } ) );
@@ -79,7 +79,7 @@ SW_TEST_CASE( PackManagerTest, RejectsPackMountedAgainstItsDomain )
     const string root   = test::makeScratchPath( "Packs" );
     const string domain = FileUtil::joinPath( root, "engine.pack" );
     const string patch  = FileUtil::joinPath( root, "patch_1.pack" );
-    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( root ) );
+    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( root ) ) );
     SW_REQUIRE_TRUE( Internal::writePack( domain, "engine", {
                                                                 { "a.txt", "a" }
     } ) );
@@ -99,13 +99,13 @@ SW_TEST_CASE( PackManagerTest, ScansAndReadsPacksThroughTheContentFileSource )
     using Internal        = TestPackManagerInternal;
     const string diskRoot = test::makeScratchPath( "Packs" );
     const string diskPack = FileUtil::joinPath( diskRoot, "engine.pack" );
-    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( diskRoot ) );
+    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( diskRoot ) ) );
     SW_REQUIRE_TRUE( Internal::writePack( diskPack, "engine", {
                                                                   { "data/a.txt", "from memory" }
     } ) );
     vector<uint8> packBytes;
-    SW_REQUIRE_TRUE( FileUtil::readFile( diskPack, packBytes ) );
-    SW_REQUIRE_TRUE( FileUtil::removeFile( diskPack ) );
+    SW_REQUIRE_TRUE( FileUtil::readFile( FileUtil::toDiskPath( diskPack ), packBytes ) );
+    SW_REQUIRE_TRUE( FileUtil::removeFile( FileUtil::toDiskPath( diskPack ) ) );
 
     MemoryContentFileSource memorySource;
     memorySource.addFile( "/downloaded/engine.pack", std::move( packBytes ) );
@@ -124,7 +124,7 @@ SW_TEST_CASE( PackManagerTest, PackOutsideTheSearchPriorityNeedsAnExplicitPriori
     using Internal    = TestPackManagerInternal;
     const string root = test::makeScratchPath( "Packs" );
     const string dlc  = FileUtil::joinPath( root, "seasonal.pack" );
-    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( root ) );
+    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( root ) ) );
     SW_REQUIRE_TRUE( Internal::writePack( dlc, "dlc/winter", {
                                                                  { "maps/snow.txt", "snow" }
     } ) );
@@ -141,7 +141,7 @@ SW_TEST_CASE( PackManagerTest, PatchPackAloneAnswersItsFullPaths )
     using Internal    = TestPackManagerInternal;
     const string root = test::makeScratchPath( "Packs" );
     const string mod  = FileUtil::joinPath( root, "mod.pack" );
-    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( root ) );
+    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( root ) ) );
     SW_REQUIRE_TRUE( Internal::writePack( mod, {
     },
                                           { { "mods/lantern/data/lantern.xml", "lamp" }, { "game/playground/data/welcome.xml", "modded" } } ) );
@@ -173,7 +173,7 @@ SW_TEST_CASE( PackManagerTest, DLCPackNeedsAnEntitlementValidator )
 {
     const string root = test::makeScratchPath( "Packs" );
     const string dlc  = FileUtil::joinPath( root, "paid.pack" );
-    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( root ) );
+    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( root ) ) );
     PackWriterDesc desc = PackTestUtil::makeDesc( "dlc/paid" );
     desc._dlcAppID      = 4242;
     SW_REQUIRE_TRUE( PackTestUtil::writePack( dlc, desc, {
@@ -208,7 +208,7 @@ SW_TEST_CASE( PackManagerTest, SiblingPacksOverlapIsAnError )
     const string first  = FileUtil::joinPath( root, "game_split.pack" );
     const string second = FileUtil::joinPath( root, "game_split.1.pack" );
     const string clash  = FileUtil::joinPath( root, "game_split.2.pack" );
-    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( root ) );
+    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( root ) ) );
     SW_REQUIRE_TRUE( Internal::writePack( first, "game/split", {
                                                                    { "maps/a.txt", "a" }
     } ) );

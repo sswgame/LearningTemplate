@@ -163,7 +163,7 @@ SW_TEST_CASE( SpriteClipViewModelTest, SaveAndLoadRoundTrip )
     SW_EXPECT_EQUAL( size_t{ 2 }, model.getFrames().size() );
     SW_EXPECT_EQUAL( 0, model.getSelectedAnimation() );
     SW_EXPECT_NEAR( 64.0f, model.editAtlasPixelSize()._x, 1e-3f );
-    (void)FileUtil::removeFile( path );
+    (void)FileUtil::removeFile( FileUtil::toDiskPath( path ) );
 }
 
 // 포커스한 이미지로 연 문서의 경로는 이미지다 - 그대로 저장하면 이미지를 클립 글로 덮어썼다.

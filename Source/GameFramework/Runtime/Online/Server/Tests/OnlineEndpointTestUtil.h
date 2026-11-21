@@ -55,7 +55,7 @@ namespace sw::test
     [[nodiscard]] inline string writeScratchText( string_view name, string_view text )
     {
         string path = FileUtil::normalizeSeparators( makeScratchPath( name ) );
-        SW_EXPECT_TRUE( FileUtil::writeTextFile( path, text ) );
+        SW_EXPECT_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( path ), text ) );
         return path;
     }
 

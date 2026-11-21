@@ -61,7 +61,7 @@ namespace sw
     expected<AutomationImage> AutomationImage::loadPpm( string_view path )
     {
         vector<uint8> bytes;
-        if ( FileUtil::readFile( path, bytes ) == false )
+        if ( FileUtil::readFile( FileUtil::toDiskPath( path ), bytes ) == false )
             return unexpected( Error{ ErrorKind::NotFound, "could not read the image file", path } );
         return parsePpm( bytes.data(), bytes.size() );
     }

@@ -73,14 +73,15 @@ SW_TEST_CASE( LittleEndianUtilTest, CountReadStopsAtRemainingBytes )
     LittleEndianUtil::appendUint32( bytes, 1000000u ); // 원소 백만 개라고 적었지만 뒤에 바이트가 없다
     ByteReader shortReader( bytes.data(), bytes.size() );
     uint32     count = 7;
-    SW_EXPECT_FALSE( shortReader.readCount( 4, count ) );
+    count            = shortReader.readCount( 4 );
     SW_EXPECT_TRUE( shortReader.hasOverflowed() );
-    SW_EXPECT_EQUAL( 7u, count ); // 실패하면 개수를 건드리지 않는다
+    SW_EXPECT_EQUAL( 0u, count ); // 실패하면 0 — 할당 크기로 쓰여도 아무것도 잡지 않는다
 
     LittleEndianUtil::appendUint32( bytes, 0xAABBCCDDu );
     bytes[0] = 1;
     bytes[1] = bytes[2] = bytes[3] = 0;
     ByteReader fullReader( bytes.data(), bytes.size() );
-    SW_EXPECT_TRUE( fullReader.readCount( 4, count ) );
+    count = fullReader.readCount( 4 );
+    SW_EXPECT_FALSE( fullReader.hasOverflowed() );
     SW_EXPECT_EQUAL( 1u, count );
 }

@@ -58,7 +58,7 @@ namespace sw
         }
         stopWatching(); // 워커가 오류로 끝났으면 남은 fd · 스레드를 거둔다
 
-        if ( FileUtil::isDirectory( directoryPath ) == false )
+        if ( FileUtil::isDirectory( FileUtil::toDiskPath( directoryPath ) ) == false )
         {
             SW_LOG_ERROR_ID( "LinuxFileWatcher.DirectoryDoesNotExist", "Directory does not exist: %#", string{ directoryPath }.c_str() );
             return false;
@@ -276,7 +276,7 @@ namespace sw
             return false;
 
         uint32 failedCount{ 0 };
-        (void)FileUtil::forEachDirectoryEntry( directoryPath, true, [this, &failedCount]( const DirectoryEntry& entry )
+        (void)FileUtil::forEachDirectoryEntry( FileUtil::toDiskPath( directoryPath ), true, [this, &failedCount]( const DirectoryEntry& entry )
         {
             if ( entry._bDirectory && addWatchDirectory( entry._path ) == false )
                 ++failedCount;

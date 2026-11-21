@@ -36,12 +36,12 @@ namespace sw
             static vector<Entry> listNewestFirst( const string& folder )
             {
                 vector<Entry> listEntry;
-                (void)FileUtil::forEachDirectoryEntry( folder, false, [&listEntry]( const DirectoryEntry& entry )
+                (void)FileUtil::forEachDirectoryEntry( FileUtil::toDiskPath( folder ), false, [&listEntry]( const DirectoryEntry& entry )
                 {
                     Entry item;
                     item._path       = string( entry._path );
                     item._bDirectory = entry._bDirectory;
-                    (void)FileUtil::getFileWriteTime( item._path, item._writeTicks );
+                    (void)FileUtil::getFileWriteTime( FileUtil::toDiskPath( item._path ), item._writeTicks );
                     listEntry.push_back( std::move( item ) );
                     return true;
                 } );
@@ -59,9 +59,9 @@ namespace sw
                     const Entry& entry = listEntry[index];
                     if ( nowTicks - entry._writeTicks < minAgeTicks )
                         continue;
-                    if ( inoutMoved == 0 && FileUtil::ensureDirectoryExists( trash ) == false )
+                    if ( inoutMoved == 0 && FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( trash ) ) == false )
                         return;
-                    if ( FileUtil::renamePath( entry._path, FileUtil::joinPath( trash, to_string( inoutMoved ) ) ) ) // 다른 폴더의 같은 이름과 겹치지 않게 번호로
+                    if ( FileUtil::renamePath( FileUtil::toDiskPath( entry._path ), FileUtil::toDiskPath( FileUtil::joinPath( trash, to_string( inoutMoved ) ) ) ) ) // 다른 폴더의 같은 이름과 겹치지 않게 번호로
                         ++inoutMoved;
                 }
             }
@@ -79,7 +79,7 @@ namespace sw
     {
         const string path = FileUtil::joinPath( ProcessRoots::get()._project.str(), SavedCleanupSubsystemInternal::kConfigFile );
         string       text;
-        if ( FileUtil::readTextFile( path, text ) == false )
+        if ( FileUtil::readTextFile( FileUtil::toDiskPath( path ), text ) == false )
         {
             SW_LOG_ERROR_ID( "SavedCleanup.ConfigUnreadable", "Saved retention rules %# could not be read - nothing is removed", path );
             return false;
@@ -112,7 +112,7 @@ namespace sw
         for ( const RetentionRule& rule : settings._listRule )
         {
             const string folder = FileUtil::joinPath( saved, rule._folder );
-            if ( FileUtil::isDirectory( folder ) == false )
+            if ( FileUtil::isDirectory( FileUtil::toDiskPath( folder ) ) == false )
                 continue;
             if ( rule._bPerChild == false )
             {
@@ -143,9 +143,9 @@ namespace sw
             fixed_string<constant::buffer::kMax128> claimedName;
             formatstring( claimedName.data(), claimedName.capacity(), "%#%#", claimPrefix.view(), claimCount++ );
             const string claimedPath = FileUtil::joinPath( trashRoot, claimedName.view() );
-            if ( FileUtil::renamePath( pile._path, claimedPath ) == false )
+            if ( FileUtil::renamePath( FileUtil::toDiskPath( pile._path ), FileUtil::toDiskPath( claimedPath ) ) == false )
                 continue; // 다른 프로세스가 먼저 차지했다(또는 아직 채우는 중이다) — 그쪽이 지운다
-            (void)FileUtil::removeDirectory( claimedPath );
+            (void)FileUtil::removeDirectory( FileUtil::toDiskPath( claimedPath ) );
         }
     }
 

@@ -133,7 +133,7 @@ namespace sw
                 // 엔진 DLL 과 같은 폴더(`Bin`)에 빌드가 둔다. 없으면(Tracy 를 끈 배포) 빈 표다 - 선택 구성 요소라 로드 실패 경고를 내지 않게 먼저 묻는다.
                 const string                 clientText = FileUtil::joinPath( ProcessRoots::get()._binary.str(), "TracyClient.dll" );
                 const optional<AbsolutePath> clientPath = AbsolutePath::tryMake( clientText );
-                if ( clientPath.has_value() == false || FileUtil::isRegularFile( clientText ) == false )
+                if ( clientPath.has_value() == false || FileUtil::isRegularFile( FileUtil::toDiskPath( clientText ) ) == false )
                     return api;
                 void* const hClient = ModuleLibraryUtil::loadLibraryAt( *clientPath );
                 if ( hClient == nullptr )

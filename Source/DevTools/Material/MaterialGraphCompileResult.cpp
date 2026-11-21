@@ -209,7 +209,7 @@ namespace sw
                 const string path = FileUtil::joinPath( ProcessRoots::get()._project.str(), kLayerLimitsPath );
                 string       text;
                 JSONDocument doc;
-                if ( FileUtil::readTextFile( path, text ) == false || doc.parse( text, kLayerLimitsPath ) == false )
+                if ( FileUtil::readTextFile( FileUtil::toDiskPath( path ), text ) == false || doc.parse( text, kLayerLimitsPath ) == false )
                     return unexpected( Error{ ErrorKind::NotFound, "the layer limits file cannot be read", kLayerLimitsPath } );
                 const optional<uint32> maxLayerCount       = doc.getRoot().get( "_maxLayerCount" ).read<uint32>();
                 const optional<uint32> maxMaskChannelCount = doc.getRoot().get( "_maxMaskChannelCount" ).read<uint32>();

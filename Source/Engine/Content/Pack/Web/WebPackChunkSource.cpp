@@ -56,7 +56,7 @@ namespace sw
             static void onSuccess( emscripten_fetch_t* pFetch )
             {
                 const WebPackChunkRequest& request  = *static_cast<const WebPackChunkRequest*>( pFetch->userData );
-                const bool                 bWritten = FileUtil::writeFile( request._localPath, reinterpret_cast<const uint8*>( pFetch->data ), static_cast<uint64>( pFetch->numBytes ) );
+                const bool                 bWritten = FileUtil::writeFile( FileUtil::toDiskPath( request._localPath ), reinterpret_cast<const uint8*>( pFetch->data ), static_cast<uint64>( pFetch->numBytes ) );
                 if ( bWritten == false )
                     SW_LOG_ERROR_ID( "WebPackChunkSource.WriteFailed", "Chunk pack '%#' was fetched but could not be written to %#", request._url, request._localPath );
                 finish( pFetch, bWritten );

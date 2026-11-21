@@ -232,7 +232,7 @@ SW_TEST_CASE( LogTest, LogFolderExists )
 {
     const sw::string_view folderPath = sw::Logger::getGlobalSink()->getLogFolderPath();
     if ( folderPath.empty() == false )
-        SW_EXPECT_TRUE( sw::FileUtil::isDirectory( folderPath ) );
+        SW_EXPECT_TRUE( sw::FileUtil::isDirectory( sw::FileUtil::toDiskPath( folderPath ) ) );
 }
 
 /**
@@ -665,7 +665,7 @@ SW_TEST_CASE_F( FileLogOutputTest, WritesTheFileOfItsHourAndSession )
 
     const sw::string firstPath  = makeProbeLogPath( output, 3 );
     const sw::string secondPath = makeProbeLogPath( output, 4 );
-    SW_EXPECT_FALSE_MSG( sw::FileUtil::exists( firstPath ), "a line written before open created the file" );
+    SW_EXPECT_FALSE_MSG( sw::FileUtil::exists( sw::FileUtil::toDiskPath( firstPath ) ), "a line written before open created the file" );
 
     output.write( makeProbeRecord( 3, sw::LogLevel::Info, "probe line in hour 3\n" ) );
     output.write( makeProbeRecord( 4, sw::LogLevel::Error, "probe error in hour 4\n" ) );
@@ -673,12 +673,12 @@ SW_TEST_CASE_F( FileLogOutputTest, WritesTheFileOfItsHourAndSession )
     // Error 는 줄마다 비운다 — 쓰는 중인 파일을 닫기 전에 다른 쪽이 열어 읽을 수 있어야 한다(크래시 직전의 Error 가 버퍼에 남지 않게,
     // 실행 중인 로그를 편집기 · tail 이 열 수 있게).
     sw::string secondText;
-    SW_EXPECT_TRUE_MSG( sw::FileUtil::readTextFile( secondPath, secondText ), "could not open the log file being written (opened exclusively?)" );
+    SW_EXPECT_TRUE_MSG( sw::FileUtil::readTextFile( sw::FileUtil::toDiskPath( secondPath ), secondText ), "could not open the log file being written (opened exclusively?)" );
     SW_EXPECT_TRUE_MSG( sw::StringUtil::contains( secondText, "probe error in hour 4" ), secondText );
 
     output.close();
     sw::string firstText;
-    SW_EXPECT_TRUE( sw::FileUtil::readTextFile( firstPath, firstText ) );
+    SW_EXPECT_TRUE( sw::FileUtil::readTextFile( sw::FileUtil::toDiskPath( firstPath ), firstText ) );
     SW_EXPECT_TRUE_MSG( sw::StringUtil::contains( firstText, "probe line in hour 3" ), firstText );
     SW_EXPECT_FALSE_MSG( sw::StringUtil::contains( firstText, "probe error in hour 4" ), "a line of another hour leaked into the file" );
 }
@@ -710,7 +710,7 @@ namespace
 
         [[nodiscard]] bool open() override
         {
-            _bFolderReady = sw::FileUtil::ensureDirectoryExists( _blockedFolder );
+            _bFolderReady = sw::FileUtil::ensureDirectoryExists( sw::FileUtil::toDiskPath( _blockedFolder ) );
             return _bFolderReady;
         }
         void close() override {}
@@ -788,7 +788,7 @@ SW_TEST_CHILD_ROLE( LogTest, DeadlockChildRunsAScenario )
     {
         // 길을 파일이 막은 폴더를 여는 장치 — 열다가 `FileUtil` 이 오류 로그를 남긴다. 장치를 락 안에서 열면 그 로그가 `initialize` 를 멈춘다.
         const sw::string blocker = sw::test::makeScratchPath( "blocker" );
-        SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( blocker, "a file, not a folder" ) );
+        SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::toDiskPath( blocker ), "a file, not a folder" ) );
 
         sw::unique_ptr<BlockedFolderLogOutput> output   = sw::make_unique<BlockedFolderLogOutput>( sw::FileUtil::joinPath( blocker, "Logs" ) );
         BlockedFolderLogOutput*                pBlocked = output.get();

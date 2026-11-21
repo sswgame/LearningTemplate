@@ -75,11 +75,11 @@ namespace sw
     bool MemoryBudgetMonitor::loadBudgetFile( string_view absolutePath )
     {
         MemoryProfiler* pProfiler = MemoryProfiler::getActive();
-        if ( pProfiler == nullptr || FileUtil::exists( absolutePath ) == false )
+        if ( pProfiler == nullptr || FileUtil::exists( FileUtil::toDiskPath( absolutePath ) ) == false )
             return true;
 
         string text;
-        if ( FileUtil::readTextFile( absolutePath, text ) == false )
+        if ( FileUtil::readTextFile( FileUtil::toDiskPath( absolutePath ), text ) == false )
         {
             SW_LOG_ERROR_ID( "MemoryBudget.CannotReadMemoryBudget", "Cannot read the memory budget file '%#'", absolutePath );
             return false;

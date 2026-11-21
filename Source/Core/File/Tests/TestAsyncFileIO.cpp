@@ -44,7 +44,7 @@ namespace
             bytes[offset] = expectedByteAt( offset );
         }
         sw::string path = sw::test::makeScratchPath( pName );
-        if ( sw::FileUtil::writeFile( path, bytes.data(), bytes.size() ) == false )
+        if ( sw::FileUtil::writeFile( sw::FileUtil::toDiskPath( path ), bytes.data(), bytes.size() ) == false )
             path.clear();
         return path;
     }

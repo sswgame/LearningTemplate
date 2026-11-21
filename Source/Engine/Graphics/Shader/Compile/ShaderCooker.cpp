@@ -273,7 +273,7 @@ namespace sw
             return false;
         }
 
-        if ( FileUtil::ensureParentDirectoryExists( outputPath ) == false || FileUtil::writeFile( outputPath, compileResult._bytecode.data(), compileResult._bytecode.size() ) == false )
+        if ( FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( outputPath ) ) == false || FileUtil::writeFile( FileUtil::toDiskPath( outputPath ), compileResult._bytecode.data(), compileResult._bytecode.size() ) == false )
         {
             SW_LOG_ERROR_ID( "ShaderCooker.FailedWriteCookedBytecode", "Failed to write cooked bytecode to %#", outputPath );
             return false;

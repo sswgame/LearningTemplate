@@ -36,7 +36,7 @@ namespace sw::editor
 
     bool EditorContentScan::collectFiles( string_view folder, string_view extension, vector<string>& outListFilePath, bool bRecursive, const StopToken& stopToken )
     {
-        const bool bListed = FileUtil::collectFiles( folder, extension, outListFilePath, bRecursive, stopToken );
+        const bool bListed = FileUtil::collectFiles( FileUtil::toDiskPath( folder ), extension, outListFilePath, bRecursive, stopToken );
         (void)VectorUtil::removeIf( outListFilePath, []( const string& path )
         { return EditorContentScanInternal::isLeftoverScratch( path ) || isListedFile( FileUtil::normalizeSeparators( path ) ) == false; } );
         return bListed;
@@ -44,7 +44,7 @@ namespace sw::editor
 
     bool EditorContentScan::collectFolders( string_view folder, vector<string>& outListFolder, bool bRecursive )
     {
-        const bool bListed = FileUtil::collectFolders( folder, outListFolder, bRecursive );
+        const bool bListed = FileUtil::collectFolders( FileUtil::toDiskPath( folder ), outListFolder, bRecursive );
         (void)VectorUtil::removeIf( outListFolder, []( const string& path )
         { return EditorContentScanInternal::isLeftoverScratch( path ); } );
         return bListed;
@@ -53,7 +53,7 @@ namespace sw::editor
     bool EditorContentScan::collectTreeFiles( string_view contentRoot, string_view scratchFolder, string_view extension, vector<string>& outListFilePath, const StopToken& stopToken )
     {
         bool bListed = contentRoot.empty() || collectFiles( contentRoot, extension, outListFilePath, true, stopToken );
-        if ( scratchFolder.empty() == false && FileUtil::isDirectory( scratchFolder ) )
+        if ( scratchFolder.empty() == false && FileUtil::isDirectory( FileUtil::toDiskPath( scratchFolder ) ) )
         {
             vector<string> listScratchFile;
             bListed = collectFiles( scratchFolder, extension, listScratchFile, true, stopToken ) && bListed;

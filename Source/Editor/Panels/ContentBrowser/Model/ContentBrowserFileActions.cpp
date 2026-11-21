@@ -89,7 +89,7 @@ namespace sw::editor
 
     expected<vector<EditorAssetMove>> ContentBrowserFileActions::collectMovesToFolder( string_view sourceAbs, string_view folderAbs )
     {
-        if ( FileUtil::isDirectory( sourceAbs ) )
+        if ( FileUtil::isDirectory( FileUtil::toDiskPath( sourceAbs ) ) )
             return EditorAssetFileCommands::collectFolderMoves( sourceAbs, folderAbs );
         const string destinationAbs = FileUtil::joinPath( folderAbs, FileUtil::getFileNamePart( sourceAbs ) );
         if ( FileUtil::isSameDiskPath( destinationAbs, sourceAbs ) )
@@ -122,7 +122,7 @@ namespace sw::editor
             return false;
         }
         const vector<EditorAssetMove>& listMove = *collected;
-        const bool                     bFolder  = FileUtil::isDirectory( sourceAbs );
+        const bool                     bFolder  = FileUtil::isDirectory( FileUtil::toDiskPath( sourceAbs ) );
         EditorAssetMovePlan            plan;
         if ( EditorAssetFileCommands::applyAssetMoves( listMove, inoutIndex, plan ) == false )
             return false; // 이유와 되돌림은 applyAssetMoves 가 알렸다
@@ -131,8 +131,8 @@ namespace sw::editor
         {
             // 파일은 모두 옮겼다 — 빈 폴더 나무만 남았을 때만 지운다(`removeDirectory` 는 재귀라, 그 사이 누가 넣은 파일이 있으면 지우지 않고 둔다)
             vector<string> listLeftFile;
-            const bool     bListed = FileUtil::collectFiles( sourceAbs, "", listLeftFile, true );
-            if ( bListed == false || listLeftFile.empty() == false || FileUtil::removeDirectory( sourceAbs ) == false )
+            const bool     bListed = FileUtil::collectFiles( FileUtil::toDiskPath( sourceAbs ), "", listLeftFile, true );
+            if ( bListed == false || listLeftFile.empty() == false || FileUtil::removeDirectory( FileUtil::toDiskPath( sourceAbs ) ) == false )
                 SW_LOG_WARNING_ID( "ContentBrowserFileActions.SourceFolderKept", "Moved every file of '%#' but kept the folder (not empty or could not be removed)",
                                    FileUtil::getFileNamePart( sourceAbs ) );
         }
@@ -141,7 +141,7 @@ namespace sw::editor
 
     bool ContentBrowserFileActions::beginRename( string_view absolutePath, string& outStem )
     {
-        if ( absolutePath.empty() || FileUtil::isDirectory( absolutePath ) )
+        if ( absolutePath.empty() || FileUtil::isDirectory( FileUtil::toDiskPath( absolutePath ) ) )
             return false;
         string suffix;
         EditorAssetFileCommands::splitAssetName( FileUtil::getFileNamePart( absolutePath ), outStem, suffix );

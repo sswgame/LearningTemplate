@@ -148,13 +148,13 @@ namespace sw
         BitWriter writer;
         if ( write( writer ) == false )
             return false;
-        return FileUtil::writeFile( absPath.str(), writer.getBytes().data(), static_cast<uint64>( writer.getByteCount() ) );
+        return FileUtil::writeFile( absPath, writer.getBytes().data(), static_cast<uint64>( writer.getByteCount() ) );
     }
 
     expected<void> ControlIntentHistory::loadFromFile( string_view path )
     {
         vector<uint8> bytes;
-        if ( FileUtil::readFile( path, bytes ) == false )
+        if ( FileUtil::readFile( FileUtil::toDiskPath( path ), bytes ) == false )
         {
             reset();
             return unexpected( Error{ ErrorKind::NotFound, "the intent recording could not be read", path } );

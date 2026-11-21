@@ -269,7 +269,7 @@ SW_TEST_CASE( NavMeshAssetTest, SaveToFileCreatesTheFolder )
     SW_REQUIRE_TRUE( asset.saveToFile( *absPath ) );
 
     vector<uint8> listRead;
-    SW_REQUIRE_TRUE( FileUtil::readFile( absPath->str(), listRead ) );
+    SW_REQUIRE_TRUE( FileUtil::readFile( *absPath, listRead ) );
     vector<uint8> listExpected;
     asset.writeBytes( listExpected );
     SW_EXPECT_TRUE( listRead == listExpected );

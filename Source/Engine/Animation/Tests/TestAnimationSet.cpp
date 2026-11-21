@@ -29,7 +29,7 @@ namespace
             AnimationSet animationSet;
             animationSet.setClip( "Idle", "common/models/_shared/clips/aaaa.animclip" );
             animationSet.setClip( "walk", "common/models/_shared/clips/bbbb.animclip" );
-            SW_EXPECT_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( pFileName ), animationSet.saveToString() ) );
+            SW_EXPECT_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( domain.makeDiskPath( pFileName ) ), animationSet.saveToString() ) );
             return test::ScopedScratchDomain::makeID( pFileName ).str();
         }
     };
@@ -63,7 +63,7 @@ SW_TEST_CASE( AnimationSetTest, BaseAndBorrowedClipsFlattenIntoOneTable )
     const string                    base = AnimationSetTestUtil::writeBaseSet( domain, "base.animset.xml" );
     AnimationSet                    other;
     other.setClip( "farm_harvest", "common/models/_shared/clips/cccc.animclip" );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "other.animset.xml" ), other.saveToString() ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( domain.makeDiskPath( "other.animset.xml" ) ), other.saveToString() ) );
     const string otherID = test::ScopedScratchDomain::makeID( "other.animset.xml" ).str();
 
     StringBuilder<constant::buffer::kMax512> text;
@@ -114,7 +114,7 @@ SW_TEST_CASE( AnimationSetTest, ChildRemovesAndReplacesBaseLines )
     const string                    base = AnimationSetTestUtil::writeBaseSet( domain, "base.animset.xml" );
     AnimationSet                    other;
     other.setClip( "sprint", "common/models/_shared/clips/cccc.animclip" );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "other.animset.xml" ), other.saveToString() ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( domain.makeDiskPath( "other.animset.xml" ) ), other.saveToString() ) );
     const string otherID = test::ScopedScratchDomain::makeID( "other.animset.xml" ).str();
 
     StringBuilder<constant::buffer::kMax512> text;
@@ -140,14 +140,14 @@ SW_TEST_CASE( AnimationSetTest, LoopsStopWithAnError )
     const string                             self = test::ScopedScratchDomain::makeID( "loop.animset.xml" ).str();
     StringBuilder<constant::buffer::kMax256> xml;
     xml.appendFormat( "<AnimationSet formatVersion=\"0\" _base=\"%#\"/>", self );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "loop.animset.xml" ), xml.view() ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( domain.makeDiskPath( "loop.animset.xml" ) ), xml.view() ) );
     SW_EXPECT_LOG( "DataInheritance.Cycle" );
     SW_EXPECT_TRUE( SharedAssetCache<AnimationSet>::acquire( test::ScopedScratchDomain::makeID( "loop.animset.xml" ).view() ).snapshot() == nullptr );
 
     const string                             selfSet = test::ScopedScratchDomain::makeID( "setloop.animset.xml" ).str();
     StringBuilder<constant::buffer::kMax256> setXML;
     setXML.appendFormat( "<AnimationSet formatVersion=\"0\"><clip name=\"a\" set=\"%#\"/></AnimationSet>", selfSet );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "setloop.animset.xml" ), setXML.view() ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( domain.makeDiskPath( "setloop.animset.xml" ) ), setXML.view() ) );
     SW_EXPECT_LOG( "AnimationSet.ChainTooDeep" );
     SW_EXPECT_TRUE( SharedAssetCache<AnimationSet>::acquire( test::ScopedScratchDomain::makeID( "setloop.animset.xml" ).view() ).snapshot() == nullptr );
 }

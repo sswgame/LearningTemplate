@@ -49,14 +49,14 @@ SW_TEST_CASE( AssetCacheReloadResultTest, BrokenMaterialFailsAndKeepsPreviousVer
 {
     const test::ScopedScratchDomain domain;
     const AssetID                   id = test::ScopedScratchDomain::makeID( "probe.material" );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "probe.material" ), kMaterialXML ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( domain.makeDiskPath( "probe.material" ) ), kMaterialXML ) );
 
     MaterialCache& cache     = engine::getSubsystem<AssetManager>().getAssetCache<MaterialCache>();
     Material*      pMaterial = cache.acquire( id.view() );
     SW_REQUIRE_NOT_NULL( pMaterial );
     SW_REQUIRE_TRUE( pMaterial->loadFromAsset( id ) );
 
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "probe.material" ), kBrokenMaterialXML ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( domain.makeDiskPath( "probe.material" ) ), kBrokenMaterialXML ) );
     SW_EXPECT_LOG( "MaterialCache.HotReloadParseFailed" );
     const ReloadResult result = reloadThroughRegistry( MaterialCache::kAssetKindName, id );
     SW_EXPECT_TRUE( result == ReloadResult::Failed );
@@ -77,11 +77,11 @@ SW_TEST_CASE( AssetCacheReloadResultTest, BrokenCatalogFailsAndKeepsPreviousVers
 {
     const test::ScopedScratchDomain domain;
     const AssetID                   id = test::ScopedScratchDomain::makeID( "probe.tileset.xml" );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "probe.tileset.xml" ), kCatalogXML ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( domain.makeDiskPath( "probe.tileset.xml" ) ), kCatalogXML ) );
     const shared_ptr<const TileSetAsset> pHeld = SharedAssetCache<TileSetAsset>::acquire( id.view() ).snapshot();
     SW_REQUIRE_NOT_NULL( pHeld );
 
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "probe.tileset.xml" ), kBrokenCatalogXML ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( domain.makeDiskPath( "probe.tileset.xml" ) ), kBrokenCatalogXML ) );
     SW_EXPECT_LOG( "TileSet.Invalid" );
     const ReloadResult broken = reloadThroughRegistry( SharedAssetCache<TileSetAsset>::kAssetKindName, id );
     SW_EXPECT_TRUE( broken == ReloadResult::Failed );
@@ -92,7 +92,7 @@ SW_TEST_CASE( AssetCacheReloadResultTest, BrokenCatalogFailsAndKeepsPreviousVers
     tracker.record( ReloadSource::Asset, id.view(), broken, "parse failed" );
     SW_EXPECT_EQUAL( uint32( 1 ), tracker.countStale() );
 
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "probe.tileset.xml" ), kCatalogXML ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( domain.makeDiskPath( "probe.tileset.xml" ) ), kCatalogXML ) );
     const ReloadResult fixed = reloadThroughRegistry( SharedAssetCache<TileSetAsset>::kAssetKindName, id );
     SW_EXPECT_TRUE( fixed == ReloadResult::Reloaded );
     tracker.record( ReloadSource::Asset, id.view(), fixed );
@@ -104,6 +104,6 @@ SW_TEST_CASE( AssetCacheReloadResultTest, UnheldPathIsNotTracked )
 {
     const test::ScopedScratchDomain domain;
     const AssetID                   id = test::ScopedScratchDomain::makeID( "unheld.tileset.xml" );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "unheld.tileset.xml" ), kBrokenCatalogXML ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( domain.makeDiskPath( "unheld.tileset.xml" ) ), kBrokenCatalogXML ) );
     SW_EXPECT_TRUE( reloadThroughRegistry( SharedAssetCache<TileSetAsset>::kAssetKindName, id ) == ReloadResult::NotTracked );
 }

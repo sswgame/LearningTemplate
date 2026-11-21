@@ -119,9 +119,9 @@ SW_TEST_CASE( GlobalVariablesViewModelPresetTest, NameWithPathCharacterIsRejecte
 SW_TEST_CASE_F( GlobalVariablesViewModelTest, ScanListsOnlyPresetFiles )
 {
     const string folder = test::makeScratchPath( "presets" );
-    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( folder ) );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::joinPath( folder, "a.gvpreset.xml" ), "<GlobalVariablesPreset/>" ) );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::joinPath( folder, "b.xml" ), "<Other/>" ) );
+    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( folder ) ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( FileUtil::joinPath( folder, "a.gvpreset.xml" ) ), "<GlobalVariablesPreset/>" ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( FileUtil::joinPath( folder, "b.xml" ) ), "<Other/>" ) );
 
     SW_REQUIRE_TRUE( waitForPresetScan( folder ) );
 
@@ -132,11 +132,11 @@ SW_TEST_CASE_F( GlobalVariablesViewModelTest, ScanListsOnlyPresetFiles )
 SW_TEST_CASE_F( GlobalVariablesViewModelTest, CleanListIsNotScannedAgain )
 {
     const string folder = test::makeScratchPath( "presets" );
-    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( folder ) );
+    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( folder ) ) );
     SW_REQUIRE_TRUE( waitForPresetScan( folder ) );
     SW_EXPECT_TRUE( _model.getPresetFiles().empty() );
 
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::joinPath( folder, "late.gvpreset.xml" ), "<GlobalVariablesPreset/>" ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( FileUtil::joinPath( folder, "late.gvpreset.xml" ) ), "<GlobalVariablesPreset/>" ) );
     SW_EXPECT_FALSE( _model.pollPresetFilesIn( folder ) );
     SW_EXPECT_TRUE( _model.getPresetFiles().empty() );
 
@@ -149,11 +149,11 @@ SW_TEST_CASE_F( GlobalVariablesViewModelTest, CleanListIsNotScannedAgain )
 SW_TEST_CASE_F( GlobalVariablesViewModelTest, PresetSavedDuringScanIsListed )
 {
     const string folder = test::makeScratchPath( "presets" );
-    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( folder ) );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::joinPath( folder, "first.gvpreset.xml" ), "<GlobalVariablesPreset/>" ) );
+    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( folder ) ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( FileUtil::joinPath( folder, "first.gvpreset.xml" ) ), "<GlobalVariablesPreset/>" ) );
 
     SW_EXPECT_TRUE( _model.pollPresetFilesIn( folder ) ); // 훑기를 건다 — 결과는 아직 받지 않았다
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::joinPath( folder, "second.gvpreset.xml" ), "<GlobalVariablesPreset/>" ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( FileUtil::joinPath( folder, "second.gvpreset.xml" ) ), "<GlobalVariablesPreset/>" ) );
     _model.markPresetListStale(); // `savePreset` 이 쓴 뒤 하는 일
 
     SW_REQUIRE_TRUE( waitForPresetScan( folder ) );

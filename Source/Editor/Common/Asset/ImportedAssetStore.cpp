@@ -59,7 +59,7 @@ namespace sw::editor
     bool ImportedAssetStore::writeTextWithIdentity( const AssetPaths& assetPaths, string_view diskPath, string_view text )
     {
         const optional<string> withIdentity = makeTextWithIdentity( assetPaths, diskPath, text );
-        return withIdentity.has_value() && FileUtil::ensureParentDirectoryExists( diskPath ) && FileUtil::writeTextFile( diskPath, *withIdentity );
+        return withIdentity.has_value() && FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( diskPath ) ) && FileUtil::writeTextFile( FileUtil::toDiskPath( diskPath ), *withIdentity );
     }
 
     string ImportedAssetStore::findDomainFolder( string_view sourcePath )
@@ -83,15 +83,15 @@ namespace sw::editor
         // 잠그지 않는다: 병렬 임포트의 두 원본이 같은 키를 써도 키가 내용 지문이라 같은 바이트이고, `FileUtil::writeFile` 은 저마다의 임시 파일에 쓴 뒤
         // 바꿔 끼운다(언리얼 DDC 의 내용 주소 쓰기와 같다) — 프로세스 전역 잠금이 지킬 상태가 없다.
         const string path{ storePath };
-        if ( FileUtil::exists( path ) )
+        if ( FileUtil::exists( FileUtil::toDiskPath( path ) ) )
         {
             vector<uint8> existing;
-            const bool    bSame = FileUtil::readFile( path, existing ) && existing.size() == byteCount && ( byteCount == 0 || Memory::compare( existing.data(), pBytes, byteCount ) == 0 );
+            const bool    bSame = FileUtil::readFile( FileUtil::toDiskPath( path ), existing ) && existing.size() == byteCount && ( byteCount == 0 || Memory::compare( existing.data(), pBytes, byteCount ) == 0 );
             if ( bSame == false )
                 SW_LOG_ERROR_ID( "ImportedAssetStore.ContentMismatch", "Shared import result '%#' exists with other bytes (a hash collision or a hand edit) - delete it and import again", path.c_str() );
             return bSame;
         }
-        if ( FileUtil::ensureParentDirectoryExists( path ) == false || FileUtil::writeFile( path, static_cast<const uint8*>( pBytes ), byteCount ) == false )
+        if ( FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( path ) ) == false || FileUtil::writeFile( FileUtil::toDiskPath( path ), static_cast<const uint8*>( pBytes ), byteCount ) == false )
         {
             SW_LOG_ERROR_ID( "ImportedAssetStore.WriteFailed", "Failed to write shared import result '%#'", path.c_str() );
             return false;
@@ -187,7 +187,7 @@ namespace sw::editor
                 if ( isReferrer( result ) == false )
                     continue;
                 string text;
-                if ( FileUtil::readTextFile( result, text ) == false )
+                if ( FileUtil::readTextFile( FileUtil::toDiskPath( result ), text ) == false )
                 {
                     StringBuilder<constant::buffer::kMax512> problemBuilder;
                     problemBuilder.appendFormat( "%#: could not read it to find its shared results - nothing is removed from %#", result, store );
@@ -209,7 +209,7 @@ namespace sw::editor
                 if ( setReferenced.find( fileName ) != setReferenced.end() )
                     continue;
                 // 키가 내용 해시라 파일 이름만으로 가른다. 저장소 안 파일끼리는 가리키지 않는다.
-                if ( FileUtil::removeFile( stored ) )
+                if ( FileUtil::removeFile( FileUtil::toDiskPath( stored ) ) )
                     ++removedCount;
                 else
                 {

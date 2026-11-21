@@ -343,7 +343,7 @@ SW_TEST_CASE( TimeZoneTest, TableRejectsBadRowsAndUnknownNamesAreNotFound )
         path.appendFormat( "%#/%#", folder, pFileName );
         sw::StringBuilder<sw::constant::buffer::kMax1024> text;
         text.appendFormat( "<TimeZoneTable><_listZone>%#</_listZone></TimeZoneTable>", rows );
-        SW_EXPECT_TRUE( sw::FileUtil::writeTextFile( path.view(), text.view() ) );
+        SW_EXPECT_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::toDiskPath( path.view() ), text.view() ) );
         return sw::test::ScopedScratchDomain::toID( path.view() );
     };
     const sw::string utcRow = R"(<TimeZoneInfo _name="UTC" _standardOffsetMinutes="0" _daylightRule="None" />)";
@@ -627,13 +627,13 @@ SW_TEST_CASE( LocalizationBinaryTableTest, CookedProjectReadsOnlyTheLookupChain 
     {
         sw::vector<uint8> bytes;
         SW_REQUIRE_TRUE( sw::LocalizationCooker::cookCulture( projectID, culture, bytes ) );
-        SW_REQUIRE_TRUE( sw::FileUtil::writeFile( projectDoc.makeCookedTablePath( project, culture ), bytes.data(), bytes.size() ) );
+        SW_REQUIRE_TRUE( sw::FileUtil::writeFile( sw::FileUtil::toDiskPath( projectDoc.makeCookedTablePath( project, culture ) ), bytes.data(), bytes.size() ) );
     }
 
     // 배포본에는 저작 표가 없다 — 지워도 읽힌다.
-    SW_REQUIRE_TRUE( sw::FileUtil::removeFile( sw::FileUtil::joinPath( folder, "test.strings.xml" ) ) );
-    SW_REQUIRE_TRUE( sw::FileUtil::removeFile( sw::FileUtil::joinPath( folder, "ko.translation.xml" ) ) );
-    SW_REQUIRE_TRUE( sw::FileUtil::removeFile( sw::FileUtil::joinPath( folder, "ja.translation.xml" ) ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::removeFile( sw::FileUtil::toDiskPath( sw::FileUtil::joinPath( folder, "test.strings.xml" ) ) ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::removeFile( sw::FileUtil::toDiskPath( sw::FileUtil::joinPath( folder, "ko.translation.xml" ) ) ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::removeFile( sw::FileUtil::toDiskPath( sw::FileUtil::joinPath( folder, "ja.translation.xml" ) ) ) );
 
     sw::LocalizationManager runtime;
     SW_REQUIRE_TRUE( sw::LocalizationManagerTestAccess::mountCooked( runtime, projectID ) );

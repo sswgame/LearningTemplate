@@ -133,7 +133,7 @@ namespace sw
 
             [[nodiscard]] static expected<void> readTextFile( string_view absolutePath, string& outText )
             {
-                if ( FileUtil::readTextFile( absolutePath, outText ) )
+                if ( FileUtil::readTextFile( FileUtil::toDiskPath( absolutePath ), outText ) )
                     return {};
                 return unexpected( Error{ ErrorKind::NotFound, "cannot read the file", absolutePath } );
             }
@@ -142,10 +142,10 @@ namespace sw
             {
                 // 내용이 같으면 쓰지 않는다. 파일 시간이 바뀌면 핫 리로드와 빌드 스탬프가 헛돈다.
                 string     existing;
-                const bool bContentUnchanged = FileUtil::readOptionalTextFile( absolutePath, existing ) == OptionalFileRead::Read && existing == text;
+                const bool bContentUnchanged = FileUtil::readOptionalTextFile( FileUtil::toDiskPath( absolutePath ), existing ) == OptionalFileRead::Read && existing == text;
                 if ( bContentUnchanged )
                     return true;
-                return FileUtil::ensureParentDirectoryExists( absolutePath ) && FileUtil::writeTextFile( absolutePath, text );
+                return FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( absolutePath ) ) && FileUtil::writeTextFile( FileUtil::toDiskPath( absolutePath ), text );
             }
         };
     } // namespace

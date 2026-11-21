@@ -187,7 +187,7 @@ namespace sw
                     for ( const PackCandidateFile& file : candidates._listFile )
                     {
                         uint64 size = 0;
-                        (void)FileUtil::tryGetFileSize( file._absolutePath, size ); // 크기는 요약에만 쓴다 — 읽지 못하는 파일은 팩 쓰기가 오류로 멈춘다
+                        (void)FileUtil::tryGetFileSize( FileUtil::toDiskPath( file._absolutePath ), size ); // 크기는 요약에만 쓴다 — 읽지 못하는 파일은 팩 쓰기가 오류로 멈춘다
                         bytes += size;
                         if ( reach._setIncluded.contains( file._assetID ) == false )
                             continue;
@@ -491,13 +491,13 @@ namespace sw
                 outListDomain.clear();
                 for ( const utf8* pShared : { "engine", "common" } )
                 {
-                    if ( FileUtil::isDirectory( FileUtil::joinPath( params._resourceRoot, pShared ) ) )
+                    if ( FileUtil::isDirectory( FileUtil::toDiskPath( FileUtil::joinPath( params._resourceRoot, pShared ) ) ) )
                         outListDomain.emplace_back( pShared );
                 }
                 const string gameRoot = FileUtil::joinPath( params._resourceRoot, constant::path::kGamePack );
                 if ( params._gamePackFolder.empty() == false )
                 {
-                    if ( FileUtil::isDirectory( FileUtil::joinPath( gameRoot, params._gamePackFolder ) ) == false )
+                    if ( FileUtil::isDirectory( FileUtil::toDiskPath( FileUtil::joinPath( gameRoot, params._gamePackFolder ) ) ) == false )
                     {
                         SW_LOG_ERROR_ID( "PackCooker.GamePackFolderDoes", "Game pack folder '%#' does not exist under %#", params._gamePackFolder, gameRoot );
                         return false;
@@ -520,7 +520,7 @@ namespace sw
             {
                 const string   folder = FileUtil::joinPath( params._projectRoot, GameConfig::kConfigFolder );
                 vector<string> listConfigPath;
-                const bool     bListed = FileUtil::forEachDirectoryEntry( folder, false, [&listConfigPath]( const DirectoryEntry& entry )
+                const bool     bListed = FileUtil::forEachDirectoryEntry( FileUtil::toDiskPath( folder ), false, [&listConfigPath]( const DirectoryEntry& entry )
                     {
                     if ( entry._bDirectory == false && StringUtil::endsWith( entry._path, ".json" ) )
                         listConfigPath.emplace_back( entry._path );
@@ -680,13 +680,13 @@ namespace sw
                 const string            metaAbs = AssetMeta::makePath( absPath );
                 if ( kind == AssetIdentityKind::Skipped || kind == AssetIdentityKind::Sidecar )
                     return true;
-                if ( kind == AssetIdentityKind::Source && rules.isUnderDerivedFolder( assetID ) && FileUtil::isRegularFile( metaAbs ) == false )
+                if ( kind == AssetIdentityKind::Source && rules.isUnderDerivedFolder( assetID ) && FileUtil::isRegularFile( FileUtil::toDiskPath( metaAbs ) ) == false )
                     return true;
                 string              text;
                 optional<AssetGUID> guid;
                 if ( kind == AssetIdentityKind::Header && AssetIO::readTextFile( absPath, text ) )
                     guid = AssetGUIDHeader::read( text )._guid;
-                if ( kind == AssetIdentityKind::Source && FileUtil::isRegularFile( metaAbs ) && AssetIO::readTextFile( metaAbs, text ) )
+                if ( kind == AssetIdentityKind::Source && FileUtil::isRegularFile( FileUtil::toDiskPath( metaAbs ) ) && AssetIO::readTextFile( metaAbs, text ) )
                 {
                     AssetMeta meta;
                     guid = meta.parseXML( text, AssetMeta::makePath( assetID ) );
@@ -819,10 +819,10 @@ namespace sw
             [[nodiscard]] static bool readCookedPackLedger( const string& packOutputDir, unordered_set<string>& outSetName )
             {
                 const string ledgerPath = FileUtil::joinPath( packOutputDir, kCookedPackLedgerName );
-                if ( FileUtil::isRegularFile( ledgerPath ) == false )
+                if ( FileUtil::isRegularFile( FileUtil::toDiskPath( ledgerPath ) ) == false )
                     return true;
                 string text;
-                if ( FileUtil::readTextFile( ledgerPath, text ) == false )
+                if ( FileUtil::readTextFile( FileUtil::toDiskPath( ledgerPath ), text ) == false )
                     return false;
                 size_t lineStart = 0;
                 while ( lineStart < text.size() )
@@ -876,7 +876,7 @@ namespace sw
                 {
                     text.append( name ).append( "\n" );
                 }
-                return FileUtil::ensureDirectoryExists( packOutputDir ) && FileUtil::writeTextFile( FileUtil::joinPath( packOutputDir, kCookedPackLedgerName ), text );
+                return FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( packOutputDir ) ) && FileUtil::writeTextFile( FileUtil::toDiskPath( FileUtil::joinPath( packOutputDir, kCookedPackLedgerName ) ), text );
             }
 
             /**
@@ -887,10 +887,10 @@ namespace sw
              */
             [[nodiscard]] static bool removeStaleSiblingPacks( const string& packOutputDir, const string& domain, const vector<string>& listWrittenName, unordered_set<string>& inoutSetLedger )
             {
-                if ( FileUtil::isDirectory( packOutputDir ) == false )
+                if ( FileUtil::isDirectory( FileUtil::toDiskPath( packOutputDir ) ) == false )
                     return true;
                 vector<string> listPackFile;
-                if ( FileUtil::collectFiles( packOutputDir, ".pack", listPackFile, false ) == false )
+                if ( FileUtil::collectFiles( FileUtil::toDiskPath( packOutputDir ), ".pack", listPackFile, false ) == false )
                     return false;
                 const string                             baseName = PackCooker::makePackFileName( domain );
                 StringBuilder<constant::buffer::kMax256> prefixBuilder;
@@ -911,7 +911,7 @@ namespace sw
                                            packPath, domain, kCookedPackLedgerName );
                         continue;
                     }
-                    if ( FileUtil::removeFile( packPath ) )
+                    if ( FileUtil::removeFile( FileUtil::toDiskPath( packPath ) ) )
                     {
                         inoutSetLedger.erase( name );
                         SW_LOG_INFO_ID( "PackCooker.PackCookRemovedSibling", "Pack cook: removed %# - %# is split into fewer packs now", packPath, domain );
@@ -1216,7 +1216,7 @@ namespace sw
 
     bool PackCooker::writeChunkManifests( const string& packOutputDir, const vector<string>& listDomain, const PackChunkManifest& manifest )
     {
-        if ( FileUtil::ensureDirectoryExists( packOutputDir ) == false )
+        if ( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( packOutputDir ) ) == false )
             return false;
         for ( const string& domain : listDomain )
         {
@@ -1237,7 +1237,7 @@ namespace sw
             }
             // 미룬 청크가 없는 도메인도 쓴다 — 지난 쿠킹의 목록이 남아 이번에 쓰지 않은 팩을 가리키지 않게.
             const string path = FileUtil::joinPath( packOutputDir, PackChunkManifest::makeFileName( domain ) );
-            if ( FileUtil::writeTextFile( path, PackChunkManifest::makeText( domainManifest ) ) == false )
+            if ( FileUtil::writeTextFile( FileUtil::toDiskPath( path ), PackChunkManifest::makeText( domainManifest ) ) == false )
             {
                 SW_LOG_ERROR_ID( "PackCooker.ChunkManifestUnwritable", "Pack cook: the chunk manifest %# could not be written", path );
                 return false;
@@ -1331,7 +1331,7 @@ namespace sw
             for ( const PackCookerInternal::PackItem& item : listing._listItem )
             {
                 uint64 sizeBytes = 0;
-                bSized           = bSized && FileUtil::tryGetFileSize( item._absPath, sizeBytes );
+                bSized           = bSized && FileUtil::tryGetFileSize( FileUtil::toDiskPath( item._absPath ), sizeBytes );
                 listSplitEntry.push_back( PackSplitEntry{ item._relativePath, sizeBytes } );
             }
             if ( bSized == false )

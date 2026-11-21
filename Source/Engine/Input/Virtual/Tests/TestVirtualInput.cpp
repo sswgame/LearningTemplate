@@ -230,8 +230,8 @@ SW_TEST_CASE( InputReplayTest, SaveLoadSaveKeepsBytes )
 
     vector<uint8> firstBytes;
     vector<uint8> secondBytes;
-    SW_REQUIRE_TRUE( FileUtil::readFile( firstPath, firstBytes ) );
-    SW_REQUIRE_TRUE( FileUtil::readFile( secondPath, secondBytes ) );
+    SW_REQUIRE_TRUE( FileUtil::readFile( FileUtil::toDiskPath( firstPath ), firstBytes ) );
+    SW_REQUIRE_TRUE( FileUtil::readFile( FileUtil::toDiskPath( secondPath ), secondBytes ) );
     SW_EXPECT_TRUE( firstBytes.empty() == false );
     SW_EXPECT_TRUE( firstBytes == secondBytes );
 }
@@ -250,11 +250,11 @@ SW_TEST_CASE( InputReplayTest, BrokenFilesAreRefused )
     replay.stopRecording();
     SW_REQUIRE_TRUE( replay.saveToFile( *AbsolutePath::tryMake( path ) ) );
     vector<uint8> good;
-    SW_REQUIRE_TRUE( FileUtil::readFile( path, good ) );
+    SW_REQUIRE_TRUE( FileUtil::readFile( FileUtil::toDiskPath( path ), good ) );
 
     const auto refuses = [&]( const vector<uint8>& bytes )
     {
-        SW_REQUIRE_TRUE( FileUtil::writeFile( path, bytes.data(), bytes.size() ) );
+        SW_REQUIRE_TRUE( FileUtil::writeFile( FileUtil::toDiskPath( path ), bytes.data(), bytes.size() ) );
         SW_EXPECT_FALSE( replay.loadFromFile( path ) );
         SW_EXPECT_EQUAL( string( "kept" ), replay.getReplayName() );
         SW_EXPECT_EQUAL( uint32( 1 ), replay.getFrameCount() );

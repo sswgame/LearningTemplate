@@ -79,7 +79,7 @@ SAVED_TEXT_PATTERN = re.compile(r"^\s*string\s+_savedText\s*;", re.M)
 MAKE_DELTA_PATTERN = re.compile(r"\bDataInheritance::makeDelta\(")
 READ_TEXT_ASSET_PATTERN = re.compile(r"\bAssetIO::readTextAsset\(\s*(\w+)?")
 ENGINE_CHILD_PATTERN = re.compile(r"\bProcessCommand::at\(")
-EDITOR_SCAN_PATTERN = re.compile(r"\bFileUtil::collect(?:Files|Folders)\(\s*([^,]+?)\s*,")
+EDITOR_SCAN_PATTERN = re.compile(r"\bFileUtil::collect(?:Files|Folders)\(\s*((?:sw::)?FileUtil::toDiskPath\(\s*)?([^,]+?)\s*,")
 # 첨자는 getHash() 로 끝나는 안쪽만(`list[ i ]._id.getHash()` 의 앞 첨자는 아니다), 호출은 첫 인자 안의 getHash() 만 본다.
 NAME_HASH_KEY_PATTERN = re.compile(r"\[\s*[^\[\]\n]*\bgetHash\(\s*\)\s*\]|\b(?:emplace|try_emplace|insert|insert_or_assign|find|count|contains|tryClaim)\(\s*[^;\n]*?\bgetHash\(\s*\)|\b\w*(?:[Kk]ey|_id)\s*=\s*[^;=\n]*\bgetHash\(\s*\)")
 ASSET_ENTRANCE_NAME = re.compile(r"\w+::load\w*")   # 리소스 입구 이름(정의는 FunctionSpans 가 찾는다)
@@ -90,6 +90,13 @@ STATE_ENTRY_CALL = re.compile(r"\bStateIO\s+\w+\s*\(|\bStateIO::(?:writeObject|r
 FRAME_FUNCTION_NAME = re.compile(r"(?:\w+::)+(onTick|tick\w*|update\w*|paint\w*)")   # 프레임 함수 정의 이름(정의는 FunctionSpans 가 찾는다)
 LITERAL_NAME = re.compile(r"hashed_string\s*[({]\s*\"")
 
+
+def get_scan_key(match: re.Match[str]) -> str:
+    """손 훑기 예외의 열쇠 — 첫 인자 글(첫 쉼표까지). 디스크 경로 감싸기(`toDiskPath( … )`)는 열쇠에 넣지 않는다(감싸기 전 열쇠 그대로)."""
+    argument = match.group(2)
+    if match.group(1) and argument.count(")") > argument.count("("):
+        argument = argument[:argument.rindex(")")].rstrip()
+    return argument
 
 def find_same_spelling_switches(code: str) -> list[str]:
     """모든 case 가 열거자 철자를 돌려주는 switch 의 열거 이름을 돌려준다. `default: return nullptr`(거르기)는 이름 표가 아니라 보지 않는다."""
@@ -171,7 +178,7 @@ def collect_violations(path: str, text: str) -> list[tuple[str, str, str]]:
     if NAME_HASH_KEY_PATTERN.search(code):
         list_violation.append(("nameHashKey", path, "getHash() 를 손으로 키로 쓴다 — 저장 · 조회 키는 NameHashIndex(같은 해시의 다른 이름을 거절)"))
     if "/Editor/" in path:
-        for argument in sorted(set(match.group(1) for match in EDITOR_SCAN_PATTERN.finditer(code))):
+        for argument in sorted(set(get_scan_key(match) for match in EDITOR_SCAN_PATTERN.finditer(code))):
             list_violation.append(("editorContentScan", f"{path}|{argument}", f"FileUtil 손 훑기({argument}) — 리소스 트리는 EditorContentScan"))
     if is_target(path) and path != STATE_ENTRY_FILE:
         for line, name, message in find_state_pairs(text):

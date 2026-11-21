@@ -53,7 +53,7 @@ SW_TEST_CASE( PhysicsAssetTest, ChildSavesOnlyItsDifference )
     SW_REQUIRE_TRUE( childPath.has_value() );
     SW_REQUIRE_TRUE( child.saveToFile( *childPath ) );
     string saved;
-    SW_REQUIRE_TRUE( FileUtil::readTextFile( childPath->str(), saved ) );
+    SW_REQUIRE_TRUE( FileUtil::readTextFile( *childPath, saved ) );
     SW_EXPECT_TRUE( saved.find( baseID ) != string::npos );
     SW_EXPECT_TRUE( saved.find( "pelvis" ) == string::npos ); // 고치지 않은 바디는 물려받는다
 

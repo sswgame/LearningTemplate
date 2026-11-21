@@ -435,7 +435,7 @@ namespace sw
 
     bool Skeleton::saveToFile( const AbsolutePath& absPath ) const
     {
-        if ( FileUtil::ensureParentDirectoryExists( absPath.str() ) == false )
+        if ( FileUtil::ensureParentDirectoryExists( absPath ) == false )
             return false;
         return ResourceComposer::saveText( absPath.str(), ResourceSaveText::makeComplete( toXML() ) ); // 칸을 빼지 않고 쓴다
     }

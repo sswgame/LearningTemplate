@@ -275,19 +275,19 @@ namespace sw
     // ------------------------------------------------------------------------------
     bool UserSettingsManager::loadUserFile( string_view filePath )
     {
-        if ( filePath.empty() || FileUtil::exists( filePath ) == false )
+        if ( filePath.empty() || FileUtil::exists( FileUtil::toDiskPath( filePath ) ) == false )
             return false;
         // 사용자 파일은 엔진 필수 데이터와 달리 복구가 필요하다. 깨진 파일은 조용히 기본값으로 덮지 않고 `.corrupt` 로 치운 뒤
         // 오류를 남긴다 — 다음 저장이 새 파일을 만들고, 사용자는 치운 파일로 무엇이 있었는지 볼 수 있다.
         // 새 빌드가 쓴 파일(어느 주인의 판이 이 빌드보다 큼)도 `.newer` 로 옮긴다 — 읽은 값을 옛 판 번호로 다시 쓰면 새 빌드가 멱등이 아닌 올림(`Scale`)을 또 돌린다.
         string                           text;
-        const UserSettingsFileReadResult result = FileUtil::readTextFile( filePath, text ) ? loadUserJSON( text, filePath ) : UserSettingsFileReadResult::Unreadable;
+        const UserSettingsFileReadResult result = FileUtil::readTextFile( FileUtil::toDiskPath( filePath ), text ) ? loadUserJSON( text, filePath ) : UserSettingsFileReadResult::Unreadable;
         if ( result == UserSettingsFileReadResult::Read )
             return true;
         const bool                               bNewer = result == UserSettingsFileReadResult::NewerThanBuild;
         StringBuilder<constant::buffer::kMax512> asidePath;
         asidePath.appendFormat( "%#%#", filePath, bNewer ? ".newer" : ".corrupt" );
-        const bool                               bMovedAside = FileUtil::copyFile( filePath, asidePath.view() ) && FileUtil::removeFile( filePath );
+        const bool                               bMovedAside = FileUtil::copyFile( FileUtil::toDiskPath( filePath ), FileUtil::toDiskPath( asidePath.view() ) ) && FileUtil::removeFile( FileUtil::toDiskPath( filePath ) );
         StringBuilder<constant::buffer::kMax512> movedText;
         if ( bMovedAside )
             movedText.appendFormat( "moved to '%#'", asidePath.view() );
@@ -374,7 +374,7 @@ namespace sw
     {
         if ( filePath.empty() )
             return false;
-        if ( FileUtil::ensureParentDirectoryExists( filePath ) == false )
+        if ( FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( filePath ) ) == false )
         {
             SW_LOG_WARNING_ID( "UserSettings.CannotCreateFolderUser", "Cannot create the folder for user settings '%#'", filePath );
             return false;
@@ -390,9 +390,9 @@ namespace sw
         const bool bWritten = [&]()
         {
             if ( engine::areEngineServicesBound() == false )
-                return FileUtil::writeTextFileDurable( filePath, *text );
+                return FileUtil::writeTextFileDurable( FileUtil::toDiskPath( filePath ), *text );
             SW_PROFILE_SCOPE( "GT.Settings.save" );
-            return FileUtil::writeTextFileDurable( filePath, *text );
+            return FileUtil::writeTextFileDurable( FileUtil::toDiskPath( filePath ), *text );
         }();
         if ( bWritten == false )
         {

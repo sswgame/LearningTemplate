@@ -107,11 +107,11 @@ SW_TEST_CASE( JSONDocumentTest, DumpSurvivesInvalidUTF8 )
     SW_EXPECT_FALSE( badKey.dump().has_value() );
 
     const sw::string path = sw::test::makeScratchPath( "InvalidUTF8.json" );
-    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( path, "{\"keep\":1}" ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::toDiskPath( path ), "{\"keep\":1}" ) );
     SW_EXPECT_LOG( "JSONDocument.DumpFailed" );
     SW_EXPECT_FALSE( document.saveToFile( path, 2 ) );
     sw::string kept;
-    SW_REQUIRE_TRUE( sw::FileUtil::readTextFile( path, kept ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::readTextFile( sw::FileUtil::toDiskPath( path ), kept ) );
     SW_EXPECT_EQUAL( sw::string( "{\"keep\":1}" ), kept ); // 있던 파일을 덮지 않는다
 }
 

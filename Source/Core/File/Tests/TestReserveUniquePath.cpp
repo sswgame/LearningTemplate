@@ -17,7 +17,7 @@ SW_TEST_CASE( ReserveUniquePathTest, FilesTakeTheNextFreeSuffix )
     }
     StringBuilder<constant::buffer::kMax1024> secondPath;
     secondPath.appendFormat( "%#-2.png", base );
-    SW_EXPECT_TRUE( FileUtil::isRegularFile( secondPath.view() ) );
+    SW_EXPECT_TRUE( FileUtil::isRegularFile( FileUtil::toDiskPath( secondPath.view() ) ) );
 }
 
 SW_TEST_CASE( ReserveUniquePathTest, DirectoriesTakeTheNextFreeSuffix )
@@ -27,7 +27,7 @@ SW_TEST_CASE( ReserveUniquePathTest, DirectoriesTakeTheNextFreeSuffix )
     StringBuilder<constant::buffer::kMax1024> secondPath;
     secondPath.appendFormat( "%#-2", base );
     SW_EXPECT_EQUAL( string( secondPath.view() ), FileUtil::reserveUniquePath( base, {}, true ) );
-    SW_EXPECT_TRUE( FileUtil::isDirectory( secondPath.view() ) );
+    SW_EXPECT_TRUE( FileUtil::isDirectory( FileUtil::toDiskPath( secondPath.view() ) ) );
 }
 
 SW_TEST_CASE( ReserveUniquePathTest, GivesUpAfterTheLastAttempt )

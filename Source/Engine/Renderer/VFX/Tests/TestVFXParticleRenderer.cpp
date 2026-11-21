@@ -38,7 +38,7 @@ namespace
         const string projectRoot = FileUtil::normalizeSeparators( ProcessRoots::get()._project.str() );
         string       text;
         if ( projectRoot.empty() == false )
-            std::ignore = FileUtil::readTextFile( FileUtil::joinPath( FileUtil::joinPath( projectRoot, "Content/engine/shaders" ), pFileName ), text );
+            std::ignore = FileUtil::readTextFile( FileUtil::toDiskPath( FileUtil::joinPath( FileUtil::joinPath( projectRoot, "Content/engine/shaders" ), pFileName ) ), text );
         return text;
     }
 } // namespace
@@ -52,7 +52,7 @@ SW_TEST_CASE( VFXParticleRendererTest, ShaderReadsOrderRangeFromFlags )
     const string projectRoot = FileUtil::normalizeSeparators( ProcessRoots::get()._project.str() );
     SW_REQUIRE_FALSE( projectRoot.empty() );
     string particleText;
-    SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::joinPath( projectRoot, "Content/engine/shaders/particle.hlsl" ), particleText ) );
+    SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::toDiskPath( FileUtil::joinPath( projectRoot, "Content/engine/shaders/particle.hlsl" ) ), particleText ) );
     fixed_string<constant::buffer::kMax128> declaration;
     formatstring( declaration.data(), declaration.capacity(), "SW_DECLARE_STRUCTURED_BUFFER( uint, %#, SW_SLOT_PARTICLE_ORDER_SRV );", shaderslot::resname::kParticleOrder );
     SW_EXPECT_TRUE( particleText.find( declaration.c_str() ) != string::npos );

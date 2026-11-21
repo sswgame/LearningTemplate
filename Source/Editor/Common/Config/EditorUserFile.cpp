@@ -13,7 +13,7 @@ namespace sw::editor
         StringBuilder<constant::buffer::kMax512> destinationBuilder;
         destinationBuilder.appendFormat( "%#%#", source, kCorruptSuffix );
         const string destination( destinationBuilder.view() );
-        if ( FileUtil::copyFile( source, destination ) == false || FileUtil::removeFile( source ) == false )
+        if ( FileUtil::copyFile( FileUtil::toDiskPath( source ), FileUtil::toDiskPath( destination ) ) == false || FileUtil::removeFile( FileUtil::toDiskPath( source ) ) == false )
         {
             SW_LOG_ERROR_ID( "EditorUserFile.UserFileBrokenCould", "User file %# is broken (%#) and could not be moved to %# - it is left in place", source, string( reason ), destination );
             return false;

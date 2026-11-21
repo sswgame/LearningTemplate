@@ -13,7 +13,7 @@ namespace
     size_t countFiles( const sw::string& directory )
     {
         sw::vector<sw::string> listFile;
-        (void)sw::FileUtil::collectFiles( directory, "", listFile, false ); // 비었으면 빈 목록
+        (void)sw::FileUtil::collectFiles( sw::FileUtil::toDiskPath( directory ), "", listFile, false ); // 비었으면 빈 목록
         return listFile.size();
     }
 } // namespace
@@ -22,7 +22,7 @@ namespace
 SW_TEST_CASE( AtomicFileWriterTest, AppendedChunksAndPatchedHeaderLand )
 {
     const sw::string path = sw::test::makeScratchPath( "stream.bin" );
-    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( path, "old" ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::toDiskPath( path ), "old" ) );
     sw::AtomicFileWriter writer;
     SW_REQUIRE_TRUE( writer.open( path ).has_value() );
     const uint8 arrHeader[4]{ 0, 0, 0, 0 };
@@ -37,7 +37,7 @@ SW_TEST_CASE( AtomicFileWriterTest, AppendedChunksAndPatchedHeaderLand )
     SW_REQUIRE_TRUE( writer.commit().has_value() );
 
     sw::string text;
-    SW_REQUIRE_TRUE( sw::FileUtil::readTextFile( path, text ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::readTextFile( sw::FileUtil::toDiskPath( path ), text ) );
     SW_EXPECT_TRUE( text == "HEADabcabc" );
     SW_EXPECT_EQUAL( countFiles( sw::FileUtil::getDirectoryPart( path ) ), size_t{ 1 } );
 }
@@ -46,7 +46,7 @@ SW_TEST_CASE( AtomicFileWriterTest, AppendedChunksAndPatchedHeaderLand )
 SW_TEST_CASE( AtomicFileWriterTest, AbandonedWriteLeavesTheOriginal )
 {
     const sw::string path = sw::test::makeScratchPath( "keep.bin" );
-    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( path, "original" ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::toDiskPath( path ), "original" ) );
     {
         sw::AtomicFileWriter writer;
         SW_REQUIRE_TRUE( writer.open( path ).has_value() );
@@ -54,7 +54,7 @@ SW_TEST_CASE( AtomicFileWriterTest, AbandonedWriteLeavesTheOriginal )
         SW_REQUIRE_TRUE( writer.append( arrBody, sizeof( arrBody ) ).has_value() );
     }
     sw::string text;
-    SW_REQUIRE_TRUE( sw::FileUtil::readTextFile( path, text ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::readTextFile( sw::FileUtil::toDiskPath( path ), text ) );
     SW_EXPECT_TRUE( text == "original" );
     SW_EXPECT_EQUAL( countFiles( sw::FileUtil::getDirectoryPart( path ) ), size_t{ 1 } );
 }

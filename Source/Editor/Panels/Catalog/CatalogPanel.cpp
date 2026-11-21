@@ -396,7 +396,7 @@ namespace sw::editor
         const optional<AbsolutePath> absolutePath = EditorPaths::getAssetPaths().findLooseFile( assetID ); // 붙인 도메인과 게임 폴더를 거치므로 루트에 직접 붙이지 않는다
         string                       text;
         // 읽지 못하면 고르지 않는다 — 앞 파일의 글을 가진 채 고르면 저장할 때 앞 파일의 내용을 이 파일에 쓴다.
-        if ( absolutePath.has_value() == false || FileUtil::readTextFile( absolutePath->str(), text ) == false )
+        if ( absolutePath.has_value() == false || FileUtil::readTextFile( *absolutePath, text ) == false )
         {
             SW_LOG_ERROR_ID( "CatalogPanel.CouldNotReadCatalog", "Could not read catalog file '%#'", assetID.c_str() );
             _session.setStatus( "Could not read the file" );
@@ -430,9 +430,9 @@ namespace sw::editor
         }
         // 연 뒤 밖에서 바뀐 파일을 말없이 덮어쓰지 않는다. 지워진 파일(읽지 못함)은 다시 만든다.
         string diskText;
-        if ( FileUtil::readTextFile( absolutePath->str(), diskText ) && _session.validateDiskBeforeSave( diskText ) == false )
+        if ( FileUtil::readTextFile( *absolutePath, diskText ) && _session.validateDiskBeforeSave( diskText ) == false )
             return false;
-        if ( FileUtil::writeTextFile( absolutePath->str(), _session.getDocument().getText() ) == false )
+        if ( FileUtil::writeTextFile( *absolutePath, _session.getDocument().getText() ) == false )
         {
             SW_LOG_ERROR_ID( "CatalogPanel.CouldNotWriteCatalog", "Could not write catalog file '%#'", assetID.c_str() );
             _session.setStatus( "Could not write the file" );
@@ -491,7 +491,7 @@ namespace sw::editor
         if ( _session.hasFile() == false )
             return;
         const optional<AbsolutePath> absolutePath = EditorPaths::getAssetPaths().toDiskPath( _session.getAssetID() );
-        if ( absolutePath.has_value() == false || FileUtil::writeTextFile( absolutePath->str(), _session.getPreviousText() ) == false )
+        if ( absolutePath.has_value() == false || FileUtil::writeTextFile( *absolutePath, _session.getPreviousText() ) == false )
         {
             SW_LOG_ERROR_ID( "CatalogPanel.CouldNotRestoreCatalog", "Could not restore catalog file '%#'", _session.getAssetID().c_str() );
             _session.setStatus( "Could not restore the file" );

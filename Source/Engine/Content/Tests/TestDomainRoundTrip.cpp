@@ -36,7 +36,7 @@ namespace
         static string readDisk( const string& domain )
         {
             string text;
-            (void)FileUtil::readTextFile( FileUtil::joinPath( makeDomainFolder( domain ), "shared.txt" ), text );
+            (void)FileUtil::readTextFile( FileUtil::toDiskPath( FileUtil::joinPath( makeDomainFolder( domain ), "shared.txt" ) ), text );
             return text;
         }
     };
@@ -50,7 +50,7 @@ namespace
             for ( const string& domain : { string( "common" ), string( DomainRoundTripInternal::kGamePack ) } )
             {
                 const string folder = DomainRoundTripInternal::makeDomainFolder( domain );
-                if ( FileUtil::ensureDirectoryExists( folder ) == false || FileUtil::writeTextFile( FileUtil::joinPath( folder, "shared.txt" ), domain ) == false )
+                if ( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( folder ) ) == false || FileUtil::writeTextFile( FileUtil::toDiskPath( FileUtil::joinPath( folder, "shared.txt" ) ), domain ) == false )
                 {
                     fixed_string<constant::buffer::kMax512> text;
                     formatstring( text.data(), text.capacity(), "could not write the shared file under %#", folder );
@@ -66,7 +66,7 @@ namespace
         static void removeAll()
         {
             for ( const string& domain : { string( "common" ), string( DomainRoundTripInternal::kGamePack ) } )
-                (void)FileUtil::removeDirectory( DomainRoundTripInternal::makeDomainFolder( domain ) );
+                (void)FileUtil::removeDirectory( FileUtil::toDiskPath( DomainRoundTripInternal::makeDomainFolder( domain ) ) );
         }
     };
 } // namespace
@@ -104,7 +104,7 @@ SW_TEST_CASE( DomainRoundTripTest, OnlyTheOpenedDomainFileChanges )
     const optional<AbsolutePath> relativeTarget = paths.toDiskPath( Internal::kRelative );
     SW_REQUIRE_TRUE( relativeTarget.has_value() );
     SW_EXPECT_EQUAL( Internal::makeID( winner ), paths.toAssetID( relativeTarget->str() ) );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( relativeTarget->str(), "edited-relative" ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( *relativeTarget, "edited-relative" ) );
     SW_EXPECT_EQUAL( string( "edited-relative" ), Internal::readDisk( winner ) );
     SW_EXPECT_EQUAL( loser, Internal::readDisk( loser ) );
 
@@ -118,7 +118,7 @@ SW_TEST_CASE( DomainRoundTripTest, OnlyTheOpenedDomainFileChanges )
         StringBuilder<constant::buffer::kMax64> editedBuilder;
         editedBuilder.appendFormat( "edited-%#", domain );
         const string edited = string( editedBuilder.view() );
-        SW_REQUIRE_TRUE( FileUtil::writeTextFile( target->str(), edited ) );
+        SW_REQUIRE_TRUE( FileUtil::writeTextFile( *target, edited ) );
         SW_EXPECT_EQUAL( edited, Internal::readDisk( domain ) );
         SW_EXPECT_EQUAL( before, Internal::readDisk( other ) );
         SW_REQUIRE_TRUE( AssetIO::readTextAsset( AssetID{ Internal::makeID( domain ) }, text ) );

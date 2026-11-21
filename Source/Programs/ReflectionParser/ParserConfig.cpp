@@ -40,7 +40,7 @@ namespace sw
             [[nodiscard]] static bool loadDocument( const string& path, vector<string>& inoutListLoadedFile, nlohmann::json& outDocument, const bool bRequired = false )
             {
                 outDocument         = nlohmann::json{};
-                const bool bPresent = FileUtil::isRegularFile( path );
+                const bool bPresent = FileUtil::isRegularFile( FileUtil::toDiskPath( path ) );
                 if ( bPresent == false && bRequired )
                 {
                     SW_LOG_ERROR_ID( "ParserConfig.ParserSettingFileMissing", "Parser setting file '%#' is missing - it is committed and required", path );
@@ -50,7 +50,7 @@ namespace sw
                     return true;
 
                 string text;
-                if ( FileUtil::readTextFile( path, text ) == false )
+                if ( FileUtil::readTextFile( FileUtil::toDiskPath( path ), text ) == false )
                 {
                     SW_LOG_ERROR_ID( "ParserConfig.ParserSettingFileExists", "Parser setting file '%#' exists but cannot be read", path );
                     return false;
@@ -506,16 +506,16 @@ namespace sw
             }
 
             const string llvmClangDir = FileUtil::joinPath( llvmPath, _llvmClangRel );
-            if ( FileUtil::isDirectory( llvmClangDir ) )
+            if ( FileUtil::isDirectory( FileUtil::toDiskPath( llvmClangDir ) ) )
             {
                 vector<string> listClangSubFolder;
-                if ( FileUtil::collectFolders( llvmClangDir, listClangSubFolder, false ) == false )
+                if ( FileUtil::collectFolders( FileUtil::toDiskPath( llvmClangDir ), listClangSubFolder, false ) == false )
                     SW_LOG_ERROR_ID( "ParserConfig.ClangResourceFoldersUnder", "clang resource folders under '%#' could not all be listed - the built-in headers may be left out", llvmClangDir );
                 for ( const string& folder : listClangSubFolder )
                 {
                     const string resourceDir = FileUtil::normalizeSeparators( folder );
                     const string clangInc    = FileUtil::joinPath( folder, _clangIncludeRel );
-                    if ( FileUtil::isDirectory( clangInc ) == false )
+                    if ( FileUtil::isDirectory( FileUtil::toDiskPath( clangInc ) ) == false )
                         continue;
 
                     _listBaseArg.emplace_back( _flagResourceDir );
@@ -532,7 +532,7 @@ namespace sw
             BLOCK( "Locate MSVC and Windows SDK Includes" )
             {
                 const string msvcInc = FileUtil::joinPath( msvcToolsDir, _msvcIncludeRel );
-                if ( msvcToolsDir.empty() == false && FileUtil::isDirectory( msvcInc ) )
+                if ( msvcToolsDir.empty() == false && FileUtil::isDirectory( FileUtil::toDiskPath( msvcInc ) ) )
                 {
                     _listBaseArg.emplace_back( _flagIsystem );
                     _listBaseArg.emplace_back( msvcInc );
@@ -543,7 +543,7 @@ namespace sw
                     const string ucrtPath = FileUtil::joinPath(
                         FileUtil::joinPath( FileUtil::joinPath( winSdkDir, _winSdkIncludeRel ), winSdkVer ),
                         _winSdkUcrtRel );
-                    if ( FileUtil::isDirectory( ucrtPath ) )
+                    if ( FileUtil::isDirectory( FileUtil::toDiskPath( ucrtPath ) ) )
                     {
                         _listBaseArg.emplace_back( _flagIsystem );
                         _listBaseArg.emplace_back( ucrtPath );

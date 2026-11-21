@@ -36,7 +36,7 @@ namespace sw::editor
                 if ( item._bIsDirectory == false )
                 {
                     item._extension = FileUtil::getExtension( item._name );
-                    item._bReadOnly = FileUtil::isReadOnlyFile( item._absolutePath );
+                    item._bReadOnly = FileUtil::isReadOnlyFile( FileUtil::toDiskPath( item._absolutePath ) );
                 }
 
                 // 리소스 id(소문자) — 리소스 루트 아래와 작업 도메인(실행 뿌리 아래 `scratch/`)을 한 규칙으로 푼다(`AssetPaths::toAssetID`, 대소문자는 OS 규칙).
@@ -56,7 +56,7 @@ namespace sw::editor
                                                     const StopToken& stopToken )
     {
         outList.clear();
-        if ( folderAbs.empty() || FileUtil::isDirectory( folderAbs ) == false )
+        if ( folderAbs.empty() || FileUtil::isDirectory( FileUtil::toDiskPath( folderAbs ) ) == false )
             return;
 
         // 워커(`EditorFolderListingJob`)에서 돈다 — 경로 상태는 부른 쪽이 넘긴 @p assetPaths 다(읽기만 한다).
@@ -97,7 +97,7 @@ namespace sw::editor
     {
         outList.clear();
         ++getEditorState<EditorFolderListingInternal::ScanStats>()._scanCount;
-        if ( folderAbs.empty() || FileUtil::isDirectory( folderAbs ) == false )
+        if ( folderAbs.empty() || FileUtil::isDirectory( FileUtil::toDiskPath( folderAbs ) ) == false )
             return;
 
         // 표시용 목록 — 도중에 멈춘 것은 collectFolders 가 알리고 모은 데까지 보인다.

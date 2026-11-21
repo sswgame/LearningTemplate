@@ -109,7 +109,7 @@ namespace sw
             {
                 // 묶음 · 로그는 다른 프로세스의 보관 개수 정리(`SavedCleanup`)가 목록을 읽은 뒤에도 지울 수 있다 - 없는 것은 오류가 아니라 빈 내용이다.
                 string text;
-                if ( FileUtil::readOptionalTextFile( path, text ) != OptionalFileRead::Read )
+                if ( FileUtil::readOptionalTextFile( FileUtil::toDiskPath( path ), text ) != OptionalFileRead::Read )
                     text.clear();
                 return text;
             }
@@ -128,7 +128,7 @@ namespace sw
             {
                 outListFolder.clear();
                 vector<string> listFolder;
-                if ( FileUtil::isDirectory( reportsFolder ) == false || FileUtil::collectFolders( reportsFolder, listFolder, false ) == false )
+                if ( FileUtil::isDirectory( FileUtil::toDiskPath( reportsFolder ) ) == false || FileUtil::collectFolders( FileUtil::toDiskPath( reportsFolder ), listFolder, false ) == false )
                     return;
                 for ( const string& folder : listFolder )
                 {
@@ -146,7 +146,7 @@ namespace sw
                 string         log;
                 if ( fixedLogPath.empty() == false )
                     log = readText( string( fixedLogPath ) );
-                else if ( FileUtil::collectFiles( crashFolder, "", listFile, false ) == false )
+                else if ( FileUtil::collectFiles( FileUtil::toDiskPath( crashFolder ), "", listFile, false ) == false )
                     return log;
                 VectorUtil::sort( listFile );
                 string suffix( "_" );
@@ -263,11 +263,11 @@ namespace sw
     uint32 CrashReportService::collectNewCrashes()
     {
         using Internal            = CrashReportServiceInternal;
-        const bool bNoCrashFolder = _bInitialized == SW_FALSE || _crashFolder.empty() || FileUtil::isDirectory( _crashFolder ) == false;
+        const bool bNoCrashFolder = _bInitialized == SW_FALSE || _crashFolder.empty() || FileUtil::isDirectory( FileUtil::toDiskPath( _crashFolder ) ) == false;
         if ( bNoCrashFolder )
             return 0;
         vector<string> listFile;
-        if ( FileUtil::collectFiles( _crashFolder, "", listFile, false ) == false )
+        if ( FileUtil::collectFiles( FileUtil::toDiskPath( _crashFolder ), "", listFile, false ) == false )
             return 0;
         uint32 createdCount = 0;
         for ( const string& path : listFile )
@@ -289,7 +289,7 @@ namespace sw
         StringBuilder<constant::buffer::kMax128> bundleName;
         bundleName.appendFormat( "%#%#", kBundlePrefix, sessionID );
         const string bundleFolder = FileUtil::joinPath( _reportsFolder, bundleName.view() );
-        if ( FileUtil::isDirectory( bundleFolder ) || FileUtil::ensureDirectoryExists( bundleFolder ) == false )
+        if ( FileUtil::isDirectory( FileUtil::toDiskPath( bundleFolder ) ) || FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( bundleFolder ) ) == false )
             return false;
 
         JSONDocument    manifest;
@@ -297,7 +297,7 @@ namespace sw
         root.set( "schema" ).setInt( 1 );
         root.set( "session" ).setString( sessionID );
         uint64 crashTime = 0;
-        if ( FileUtil::tryGetFileTimestamp( contextPath, crashTime ) == false )
+        if ( FileUtil::tryGetFileTimestamp( FileUtil::toDiskPath( contextPath ), crashTime ) == false )
             SW_LOG_WARNING_ID( "CrashReport.CrashReportCannotRead", "Crash report: cannot read the time of %# - the bundle carries crashTime 0", contextPath );
         root.set( "crashTime" ).setUint( crashTime );
         root.set( "bundledBy" ).setString( _currentSessionID );
@@ -334,27 +334,27 @@ namespace sw
         for ( const Internal::CrashFileKind& kind : Internal::kArrCrashFile )
         {
             const string source = Internal::makeCrashFilePath( _crashFolder, sessionID, kind._pExtension );
-            if ( FileUtil::exists( source ) == false )
+            if ( FileUtil::exists( FileUtil::toDiskPath( source ) ) == false )
                 continue;
             const string target = FileUtil::joinPath( bundleFolder, kind._pBundleName );
-            if ( FileUtil::copyFile( source, target ) == false )
+            if ( FileUtil::copyFile( FileUtil::toDiskPath( source ), FileUtil::toDiskPath( target ) ) == false )
             {
                 SW_LOG_WARNING_ID( "CrashReport.CrashReportCouldNot", "Crash report: '%#' could not be copied into the bundle", source.c_str() );
                 continue;
             }
             if ( StringUtil::equals( kind._pExtension, "breadcrumbs.txt" ) )
                 breadcrumbCount = StringUtil::countChar( Internal::readText( target ), '\n' );
-            (void)FileUtil::removeFile( source ); // 실패는 removeFile 이 경고로 남긴다 — 사본은 이미 묶음에 있다
+            (void)FileUtil::removeFile( FileUtil::toDiskPath( source ) ); // 실패는 removeFile 이 경고로 남긴다 — 사본은 이미 묶음에 있다
             const JSONValue entry = files.pushBack();
             entry.setObject();
             entry.set( "name" ).setString( kind._pBundleName );
             uint64 byteCount = 0;
-            if ( FileUtil::tryGetFileSize( target, byteCount ) == false )
+            if ( FileUtil::tryGetFileSize( FileUtil::toDiskPath( target ), byteCount ) == false )
                 SW_LOG_WARNING_ID( "CrashReport.CrashReportCannotRead2", "Crash report: cannot read the size of %#", target );
             entry.set( "bytes" ).setUint( byteCount );
         }
         const string log = Internal::collectSessionLog( _crashFolder, sessionID, fixedLogPath, kMaxLogBytes );
-        if ( log.empty() == false && FileUtil::writeTextFile( FileUtil::joinPath( bundleFolder, "last.log" ), log ) )
+        if ( log.empty() == false && FileUtil::writeTextFile( FileUtil::toDiskPath( FileUtil::joinPath( bundleFolder, "last.log" ) ), log ) )
         {
             const JSONValue entry = files.pushBack();
             entry.setObject();
@@ -422,7 +422,7 @@ namespace sw
         VectorUtil::sort( listByTime );
         for ( size_t index = 0; index + kMaxReports < listByTime.size(); ++index )
         {
-            (void)FileUtil::removeDirectory( listByTime[index].second ); // 실패는 removeDirectory 가 경고로 남기고, 다음 정리가 다시 지운다
+            (void)FileUtil::removeDirectory( FileUtil::toDiskPath( listByTime[index].second ) ); // 실패는 removeDirectory 가 경고로 남기고, 다음 정리가 다시 지운다
         }
     }
 
@@ -531,7 +531,7 @@ namespace sw
             {
                 Internal::setState( manifest, CrashReportState::Sent );
                 // 받는 쪽이 덤프를 가졌다 — 큰 파일만 지우고 매니페스트 · 글 파일은 "무엇을 보냈나" 로 남긴다.
-                (void)FileUtil::removeFile( FileUtil::joinPath( folder, "crash.dmp" ) );
+                (void)FileUtil::removeFile( FileUtil::toDiskPath( FileUtil::joinPath( folder, "crash.dmp" ) ) );
                 ++sentCount;
             }
             else

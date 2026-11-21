@@ -72,7 +72,7 @@ namespace sw
     expected<void> TranslationMemory::loadFromFile( string_view absolutePath )
     {
         string text;
-        if ( FileUtil::readTextFile( absolutePath, text ) == false )
+        if ( FileUtil::readTextFile( FileUtil::toDiskPath( absolutePath ), text ) == false )
             return unexpected( Error{ ErrorKind::NotFound, "cannot read the file", absolutePath } );
         return loadFromXMLText( text, absolutePath );
     }
@@ -96,10 +96,10 @@ namespace sw
     {
         const string text = saveToXMLText();
         string       existing;
-        const bool   bFileContentUnchanged = FileUtil::readOptionalTextFile( absolutePath, existing ) == OptionalFileRead::Read && existing == text;
+        const bool   bFileContentUnchanged = FileUtil::readOptionalTextFile( FileUtil::toDiskPath( absolutePath ), existing ) == OptionalFileRead::Read && existing == text;
         if ( bFileContentUnchanged )
             return true;
-        return FileUtil::ensureParentDirectoryExists( absolutePath ) && FileUtil::writeTextFile( absolutePath, text );
+        return FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( absolutePath ) ) && FileUtil::writeTextFile( FileUtil::toDiskPath( absolutePath ), text );
     }
 
     bool TranslationMemory::addPair( string_view source, string_view text )

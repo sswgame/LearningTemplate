@@ -57,7 +57,7 @@ namespace sw
                     string text;
                     utf8   arrPath[constant::buffer::kMax128]{};
                     formatstring( arrPath, constant::buffer::kMax128, "/sys/class/drm/card%#/device/mem_info_vram_total", cardIndex );
-                    if ( FileUtil::readOptionalTextFile( arrPath, text ) != OptionalFileRead::Read ) // 없는 카드는 오류가 아니라 건너뜀
+                    if ( FileUtil::readOptionalTextFile( FileUtil::toDiskPath( arrPath ), text ) != OptionalFileRead::Read ) // 없는 카드는 오류가 아니라 건너뜀
                         continue;
                     int64 bytes{ 0 };
                     if ( StringUtil::parseInt64( StringUtil::trim( text ), bytes ) && bytes > 0 )

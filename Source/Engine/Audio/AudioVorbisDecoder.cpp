@@ -126,14 +126,16 @@ namespace sw
                 // 판매자 글(길이 uint32 + 바이트), 주석 수(uint32), 주석 글들 — `ByteReader::readStringView` 와 같은 꼴이다. 주석 하나는 적어도 길이 4 바이트다.
                 ByteReader  reader( packetBytes.data() + 7, size - 7 );
                 string_view text;
-                if ( reader.readStringView( text ) == false )
+                text = reader.readStringView();
+                if ( reader.hasOverflowed() )
                     return false;
                 const uint32 commentCount = reader.readUint32();
                 if ( reader.canHold( commentCount, sizeof( uint32 ) ) == false )
                     return false;
                 for ( uint32 commentIndex = 0; commentIndex < commentCount; ++commentIndex )
                 {
-                    if ( reader.readStringView( text ) == false )
+                    text = reader.readStringView();
+                    if ( reader.hasOverflowed() )
                         return false;
                 }
                 return true;

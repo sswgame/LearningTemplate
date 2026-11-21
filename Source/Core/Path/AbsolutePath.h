@@ -15,7 +15,9 @@ namespace sw
 {
     /**
      * @class AbsolutePath
-     * @brief 검증을 지난 절대 경로 글입니다. 빈 값은 만들 수 없다.
+     * @brief 검증을 지난 절대 경로 글입니다. 디스크 I/O(`FileUtil` 의 `exists` · `readTextFile` · `writeFile` …)는 이 형식만 받는다.
+     * @details 문자열에서 만드는 길은 `tryMake` · `tryResolve`(빈 값을 돌려준다)와 `FileUtil::toDiskPath`(I/O 인자 자리 — 거절한 글은 빈 경로) 셋이다.
+     *          빈 경로는 `toDiskPath` 가 빈 글 · 상대 경로를 받았을 때만 생기고, 그 값을 받은 I/O 는 실패한다. 글에서 암시적으로 바뀌지 않는다(아래 static_assert).
      */
     class SW_API AbsolutePath
     {
@@ -34,11 +36,15 @@ namespace sw
         /** @brief 경로 글입니다(구분자 `/`). */
         [[nodiscard]] const string& str() const { return _path; }
         [[nodiscard]] const utf8*   c_str() const { return _path.c_str(); }
+        /** @brief `FileUtil::toDiskPath` 가 거절한 글(빈 글 · 상대 경로)에서 만든 빈 경로면 true 입니다. */
+        [[nodiscard]] bool empty() const { return _path.empty(); }
 
         [[nodiscard]] bool operator==( const AbsolutePath& other ) const { return _path == other._path; }
         [[nodiscard]] bool operator!=( const AbsolutePath& other ) const { return _path != other._path; }
 
     private:
+        friend struct FileUtil; // `toDiskPath` 가 거절한 글을 빈 경로로 만든다
+
         explicit AbsolutePath( string path )
             : _path{ std::move( path ) }
         {
@@ -47,4 +53,9 @@ namespace sw
     private:
         string _path;
     };
+
+    // 논리 경로 글(리소스 id · `DataPath` 를 꺼낸 글)이 디스크 I/O 로 새지 않게 글에서 암시적으로 만들 수 없다.
+    static_assert( std::is_convertible_v<string, AbsolutePath> == false && std::is_convertible_v<string_view, AbsolutePath> == false &&
+                       std::is_convertible_v<const utf8*, AbsolutePath> == false,
+                   "AbsolutePath is made explicitly (tryMake · tryResolve · FileUtil::toDiskPath)" );
 } // namespace sw

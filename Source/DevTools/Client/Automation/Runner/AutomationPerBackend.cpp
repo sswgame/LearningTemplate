@@ -97,7 +97,7 @@ namespace sw
             static void observeProgress( Child& inoutChild )
             {
                 uint64 logBytes = 0;
-                if ( FileUtil::tryGetFileSize( inoutChild._logPath, logBytes ) == false || logBytes == inoutChild._observedLogBytes )
+                if ( FileUtil::tryGetFileSize( FileUtil::toDiskPath( inoutChild._logPath ), logBytes ) == false || logBytes == inoutChild._observedLogBytes )
                     return;
                 inoutChild._observedLogBytes = logBytes;
                 inoutChild._stallDeadline    = Deadline::afterSeconds( AutomationTimeLimits::kProcessStallSeconds );
@@ -125,7 +125,7 @@ namespace sw
             [[nodiscard]] static expected<int32> readStageReport( const string& reportPath, vector<string>& outListRecordLine )
             {
                 string text;
-                if ( FileUtil::readTextFile( reportPath, text ) == false )
+                if ( FileUtil::readTextFile( FileUtil::toDiskPath( reportPath ), text ) == false )
                     return unexpected( Error{ ErrorKind::NotFound, "could not read the stage report", reportPath } );
                 JSONDocument document;
                 if ( document.parse( text, reportPath ) == false )
@@ -154,7 +154,7 @@ namespace sw
             [[nodiscard]] static expected<StageReportResult> readStageResult( const string& reportPath )
             {
                 string text;
-                if ( FileUtil::readTextFile( reportPath, text ) == false )
+                if ( FileUtil::readTextFile( FileUtil::toDiskPath( reportPath ), text ) == false )
                     return unexpected( Error{ ErrorKind::NotFound, "could not read the stage report", reportPath } );
                 JSONDocument document;
                 if ( document.parse( text, reportPath ) == false )
@@ -317,7 +317,7 @@ namespace sw
                     writer.valueString( line );
                 writer.endArray();
                 writer.endObject();
-                if ( FileUtil::ensureParentDirectoryExists( options._reportPath ) == false || FileUtil::writeTextFile( options._reportPath, json ) == false )
+                if ( FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( options._reportPath ) ) == false || FileUtil::writeTextFile( FileUtil::toDiskPath( options._reportPath ), json ) == false )
                     SW_LOG_ERROR_ID( "ScenarioPerBackend.PerBackendCouldNot", "[Scenario] per-backend: could not write the report %#", options._reportPath.c_str() );
             }
         };
@@ -562,7 +562,7 @@ namespace sw
             // 앞 실행이 같은 경로에 남긴 단계 보고를 지운다 — 이번에 돌지 않은 단계의 낡은 기록을 견주지 않게. 없으면 지울 것이 없다(결과는 보지 않는다).
             const size_t stageCountOfChild = AutomationScenarioChain::splitList( scenarioList ).size();
             for ( size_t stage = 0; stage < stageCountOfChild; ++stage )
-                (void)FileUtil::removeFile( AutomationScenarioChain::makeStageReportPath( pChild->_reportPath, stage, stageCountOfChild ) );
+                (void)FileUtil::removeFile( FileUtil::toDiskPath( AutomationScenarioChain::makeStageReportPath( pChild->_reportPath, stage, stageCountOfChild ) ) );
 
             vector<string>                            listArgument;
             StringBuilder<constant::buffer::kMax1024> argument;
@@ -599,7 +599,7 @@ namespace sw
             // 자식마다 제 실행 뿌리(`<이 실행 뿌리>/<백엔드>`) — 사용자 데이터 · 에디터 상태 · 시나리오 사본이 그 아래라 자식끼리 한 폴더를 다투지 않는다
             // (예전에는 한 자식이 다른 자식의 쓰는 중인 세이브 임시 파일을 잔재로 지웠다 — 와일드웨스트). 그 폴더의 주인은 이 부모다 — 띄우기 전에 비운다.
             const string childRunRoot = FileUtil::joinPath( ProcessRoots::get()._run.str(), backend );
-            (void)FileUtil::removeDirectory( childRunRoot ); // 못 지우면 FileUtil 이 경고를 남긴다
+            (void)FileUtil::removeDirectory( FileUtil::toDiskPath( childRunRoot ) ); // 못 지우면 FileUtil 이 경고를 남긴다
             pChild->_runRoot = childRunRoot;
             pChild->_options._listEnvironment.push_back( ProcessEnvironmentEntry{ kRunRootVariable, childRunRoot } );
             // 이 부모가 건 사용자 데이터 뿌리는 환경으로 물려 가므로 자식마다 덮는다. 비면(사람이 OS 폴더를 고름) 환경을 그대로 물려준다.
@@ -647,7 +647,7 @@ namespace sw
             if ( bOverdue )
             {
                 string where;
-                if ( FileUtil::ensureDirectoryExists( child._runRoot ) == false )
+                if ( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( child._runRoot ) ) == false )
                 {
                     StringBuilder<constant::buffer::kMax1024> text;
                     text.appendFormat( "could not create the run root %#", child._runRoot );

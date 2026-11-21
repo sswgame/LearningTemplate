@@ -537,7 +537,7 @@ namespace sw
     {
         Archive archive;
         writeState( archive );
-        if ( FileUtil::writeFile( absolutePath, archive.getData(), archive.getSize() ) )
+        if ( FileUtil::writeFile( FileUtil::toDiskPath( absolutePath ), archive.getData(), archive.getSize() ) )
             return true;
         SW_LOG_ERROR_ID( "HousingPlot.SaveWriteFailed", "Housing plot '%#': cannot write '%#'", _settings._plotID.c_str(), absolutePath );
         return false;
@@ -551,7 +551,7 @@ namespace sw
             return false;
         }
         vector<uint8> bytes;
-        if ( FileUtil::readFile( absolutePath, bytes ) == false )
+        if ( FileUtil::readFile( FileUtil::toDiskPath( absolutePath ), bytes ) == false )
         {
             SW_LOG_ERROR_ID( "HousingPlot.LoadReadFailed", "Housing plot '%#': cannot read '%#'", _settings._plotID.c_str(), absolutePath );
             return false;

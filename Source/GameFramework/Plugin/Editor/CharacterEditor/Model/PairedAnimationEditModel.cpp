@@ -55,7 +55,7 @@ namespace sw::editor
     bool PairedAnimationEditModel::loadFromFile( string_view absolutePath )
     {
         string text;
-        if ( FileUtil::readTextFile( absolutePath, text ) == false )
+        if ( FileUtil::readTextFile( FileUtil::toDiskPath( absolutePath ), text ) == false )
         {
             SW_LOG_WARNING_ID( "PairedAnimationEditModel.PairedAnimationFileCould", "Paired animation file could not be read: %#", string( absolutePath ).c_str() );
             return false;

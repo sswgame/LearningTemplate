@@ -33,7 +33,7 @@ namespace sw
                 if ( ProcessEnvironment::tryReadNonEmpty( "ProgramFiles", programFiles ) == false )
                     return nullptr;
                 const optional<AbsolutePath> libraryPath = AbsolutePath::tryMake( FileUtil::joinPath( FileUtil::joinPath( programFiles, "RenderDoc" ), libraryName ) );
-                if ( libraryPath.has_value() == false || FileUtil::isRegularFile( libraryPath->str() ) == false )
+                if ( libraryPath.has_value() == false || FileUtil::isRegularFile( *libraryPath ) == false )
                     return nullptr; // 설치하지 않았다 - 로드 실패 경고를 내지 않는다
                 return ModuleLibraryUtil::loadLibraryAt( *libraryPath );
 #elif defined( SW_PLATFORM_POSIX )

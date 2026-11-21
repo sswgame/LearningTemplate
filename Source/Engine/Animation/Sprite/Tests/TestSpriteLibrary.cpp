@@ -40,7 +40,7 @@ SW_TEST_CASE( SpriteLibraryTest, FindsLabelsAndResolvesBorders )
 SW_TEST_CASE( SpriteLibraryTest, ChildChangesOnlyWhatItNames )
 {
     const test::ScopedScratchDomain domain;
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "base.spritelib.xml" ), string{ kBaseLibrary } ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( domain.makeDiskPath( "base.spritelib.xml" ) ), string{ kBaseLibrary } ) );
     const string baseID = test::ScopedScratchDomain::makeID( "base.spritelib.xml" ).str();
 
     StringBuilder<constant::buffer::kMax1024> text;

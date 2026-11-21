@@ -89,7 +89,7 @@ namespace sw::editor
             if ( registration._pfnGetType() != nullptr )
                 EditorSettingsRegistryInternal::markLoaded( registration );
         }
-        if ( FileUtil::isRegularFile( filePath ) == false )
+        if ( FileUtil::isRegularFile( FileUtil::toDiskPath( filePath ) ) == false )
             return EditorUserFileResult::Missing;
         JSONDocument document;
         if ( document.loadFromFile( filePath ) == false || document.getRoot().isObject() == false )
@@ -125,7 +125,7 @@ namespace sw::editor
             EditorSettingsRegistryInternal::markLoaded( registration );
             listPending.push_back( &registration );
         }
-        if ( listPending.empty() || FileUtil::isRegularFile( filePath ) == false )
+        if ( listPending.empty() || FileUtil::isRegularFile( FileUtil::toDiskPath( filePath ) ) == false )
             return 0;
         JSONDocument document;
         if ( document.loadFromFile( filePath ) == false || document.getRoot().isObject() == false )
@@ -170,7 +170,7 @@ namespace sw::editor
         // 지금 등록되지 않은 섹션(먼저 내려간 모듈 — 모듈이 내려갈 때마다 저장한다)은 파일에 있던 그대로 둔다. 등록된 섹션만으로 새로 쓰면
         // 종료 중 앞서 내려간 모듈의 값이 지워져 다시 켜면 기본값이었다(테마 액센트 — statedir/savedstate).
         JSONDocument previous;
-        if ( FileUtil::isRegularFile( filePath ) && previous.loadFromFile( filePath ) && previous.getRoot().isObject() )
+        if ( FileUtil::isRegularFile( FileUtil::toDiskPath( filePath ) ) && previous.loadFromFile( filePath ) && previous.getRoot().isObject() )
         {
             for ( const string& sectionID : previous.getRoot().getMemberNames() )
             {
@@ -198,7 +198,7 @@ namespace sw::editor
             root.set( registration._pID ).assignFrom( section );
             keyCount += writtenCount;
         }
-        if ( FileUtil::ensureParentDirectoryExists( filePath ) == false || document.saveToFile( filePath, 4 ) == false )
+        if ( FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( filePath ) ) == false || document.saveToFile( filePath, 4 ) == false )
         {
             SW_LOG_WARNING_ID( "EditorPreferences.EditorPreferencesCouldNot", "Editor preferences could not be saved to %#", string( filePath ).c_str() );
             return false;
@@ -256,7 +256,7 @@ namespace sw::editor
     uint32 EditorPreferencesStore::countSavedKeys( string_view filePath )
     {
         JSONDocument document;
-        const bool   bUnreadableSettingsFile = FileUtil::isRegularFile( filePath ) == false || document.loadFromFile( filePath ) == false || document.getRoot().isObject() == false;
+        const bool   bUnreadableSettingsFile = FileUtil::isRegularFile( FileUtil::toDiskPath( filePath ) ) == false || document.loadFromFile( filePath ) == false || document.getRoot().isObject() == false;
         if ( bUnreadableSettingsFile )
             return 0;
         uint32 keyCount{ 0 };

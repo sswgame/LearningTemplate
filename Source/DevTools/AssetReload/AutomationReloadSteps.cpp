@@ -51,7 +51,7 @@ namespace sw
                 const AutomationOverwriteConfigParams params     = step.readValidatedProperties<AutomationOverwriteConfigParams>();
                 const string                          configPath = FileUtil::joinPath( FileUtil::joinPath( ProcessRoots::get()._project.str(), "Config" ), params._configFile );
                 string                                original;
-                if ( FileUtil::readTextFile( configPath, original ) == false )
+                if ( FileUtil::readTextFile( FileUtil::toDiskPath( configPath ), original ) == false )
                 {
                     fixed_string<constant::buffer::kMax2048> message;
                     formatstring( message.data(), message.capacity(), "no config file '%#' to overwrite", configPath );
@@ -62,7 +62,7 @@ namespace sw
                 if ( params._from.empty() == false )
                 {
                     const optional<AbsolutePath> sourcePath = engine::getSubsystem<AssetPaths>().findLooseFile( params._from );
-                    if ( sourcePath.has_value() == false || FileUtil::readTextFile( sourcePath->str(), text ) == false )
+                    if ( sourcePath.has_value() == false || FileUtil::readTextFile( *sourcePath, text ) == false )
                     {
                         fixed_string<constant::buffer::kMax2048> message;
                         formatstring( message.data(), message.capacity(), "no resource '%#' to copy over the config", params._from );
@@ -72,7 +72,7 @@ namespace sw
                 }
                 context.restoreFileAtEnd( configPath, std::move( original ) );
                 // 쓰기 게이트가 허락한 폴더(`Config/Editor`)만 써진다 — 그 밖은 게이트가 까닭을 남기고 쓰기가 진다.
-                if ( FileUtil::writeTextFile( configPath, text ) == false )
+                if ( FileUtil::writeTextFile( FileUtil::toDiskPath( configPath ), text ) == false )
                 {
                     fixed_string<constant::buffer::kMax2048> message;
                     formatstring( message.data(), message.capacity(), "could not write '%#' (the automation write gate opens only Config/Editor)", configPath );

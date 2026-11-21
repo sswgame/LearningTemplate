@@ -427,7 +427,7 @@ SW_TEST_CASE( ChatServiceTest, PendingSendsAreBoundedAndFinished )
 SW_TEST_CASE( ChatServiceTest, SpamAndFilterApplyToSends )
 {
     const string bannedPath = test::makeScratchPath( "banned.txt" );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( bannedPath, "badword\n" ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( bannedPath ), "badword\n" ) );
 
     MemoryServiceDatabase database;
     ChatServiceConfig     settings   = makeChatSettings();

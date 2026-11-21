@@ -45,7 +45,7 @@ namespace sw::editor
             {
                 outTable = TranslationTable{};
                 outTable.setCulture( culture );
-                if ( FileUtil::exists( path ) == false )
+                if ( FileUtil::exists( FileUtil::toDiskPath( path ) ) == false )
                     return true;
                 const expected<void> read = outTable.loadFromFile( path );
                 if ( read.has_value() )
@@ -125,7 +125,7 @@ namespace sw::editor
                     if ( listWritable[cultureIndex] == 0 )
                         continue;
                     const string path = LocalizationProject::makeTranslationPath( sheet._projectPath, sheet._listCulture[cultureIndex] );
-                    if ( listTranslation[cultureIndex].getEntries().empty() && FileUtil::exists( path ) == false )
+                    if ( listTranslation[cultureIndex].getEntries().empty() && FileUtil::exists( FileUtil::toDiskPath( path ) ) == false )
                         continue; // 번역이 하나도 없는 문화권의 빈 파일은 만들지 않는다
                     const optional<AbsolutePath> translationFile = FileUtil::requireAbsolutePath( path );
                     if ( translationFile.has_value() == false || listTranslation[cultureIndex].saveToFile( *translationFile ) == false )
@@ -287,7 +287,7 @@ namespace sw::editor
         outList.clear();
 
         vector<string> listFile;
-        const bool     bListed = FileUtil::collectFiles( dataFolder, ".xml", listFile, false );
+        const bool     bListed = FileUtil::collectFiles( FileUtil::toDiskPath( dataFolder ), ".xml", listFile, false );
 
         for ( const string& file : listFile )
         {

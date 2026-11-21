@@ -77,7 +77,7 @@ namespace sw
                         continue;
                     }
                     string text;
-                    if ( FileUtil::readTextFile( argv[argIndex] + 1, text ) == false )
+                    if ( FileUtil::readTextFile( FileUtil::toDiskPath( argv[argIndex] + 1 ), text ) == false )
                     {
                         SW_LOG_ERROR_ID( "ParserOptions.CouldNotReadResponse", "Could not read the response file: %#", argv[argIndex] + 1 );
                         return false;

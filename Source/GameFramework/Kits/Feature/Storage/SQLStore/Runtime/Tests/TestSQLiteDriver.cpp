@@ -255,7 +255,7 @@ SW_TEST_CASE( SQLiteDriverTest, OpenFailuresExplainAndLeaveNoConnection )
 
     error.clear();
     const string garbagePath = test::makeScratchPath( "not_a_database.db" );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( garbagePath, "this file is long enough that SQLite reads a header from it and refuses it as not a database at all." ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( garbagePath ), "this file is long enough that SQLite reads a header from it and refuses it as not a database at all." ) );
     error = describeError( pDriver->openConnection( garbagePath, "" ) ); // 설정 문장이 파일 머리를 읽다 진다 — 핸들을 닫고 까닭을 돌려준다
     SW_EXPECT_FALSE( error.empty() );
     SW_EXPECT_TRUE( error.find( garbagePath ) != string::npos );
