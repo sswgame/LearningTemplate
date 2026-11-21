@@ -6,9 +6,26 @@
 - 측정 줄은 문턱을 넘을 때만 고치고, 못 넘으면 값을 커밋 메시지에 남기고 줄을 지운다. "켤 코드" 커밋은 따로 — 값이 흔들림 안이면 그 커밋만 되돌린다.
 - 차례: 결함 · 계약 → 구조 장치(형식으로 막기) → 측정이 문턱을 넘은 성능.
 
+## 0. 인계(2026-11-21 세션 끝 — 다음 세션은 여기부터)
+
+- **push 대기:** origin/main `b969609bd7` 위 커밋 약 260 개. preflight `--no-linux`: build · changed · cpu 통과, `gpu-release` 에서 둘 실패(sha `58f40853ff`) —
+  - `Scenario.editor` → 단계 `editor.selftests` 의 `editor.unitTests` 안 `EditorAssetImportPlanTest.Fo…` 하나(47 중 1).
+  - `Scenario.editor.statedir.viewportoverlay` → 두 번째 실행 frame 0 `Editor.OverlayFlags` 기대 1, 실제 0(에디터 상태 저장 · 복원 키가 개명으로 바뀌었는지부터).
+  - 고치기: `scenario-debug` 로 진 것만 혼자 → 통과하면 남은 단계가 없으니 그 체인 통과로 push(`WINDOWS_OK` 를 원하면 `bash Scripts/dev/preflight.sh --no-linux --from gpu-release`). push 는 `git push origin <sha>:main`(pre-push 훅이 `build/verify.ok` 와 대조).
+- **합칠 갈래(워크트리 `D:/Projects/Personal/LT-wt/<이름>`, 모두 빌드 안 함 — 합친 뒤 네 구성 빌드 + 적힌 시나리오만 dx12 로):**
+  - `w-devmetrics` — 측정 접근자 배포 제외(GameMode 걸음 · 미니게임 나온 뒤 메모리 → 프로파일러 구간 · 감시 값이 읽을 때), `markFailedUnless`→`recordReadResult`, `includeRow`→`includeItemByIndex`, naming-words timing 검사. 시나리오 `kitdemo_respawn` · `minigamememory`.
+  - `w-chores` — `Save.CaptureMs` 를 프로파일러 구간으로, `UsedKitPairTest`(짝 모듈 CMake 회귀), NEXT · CppStyle 줄임(이 0 절과 충돌하면 0 절을 살린다). `kitdemo_respawn` 의 `gpu.timings` 줄이 w-devmetrics 와 겹칠 수 있다.
+  - `w-gimmickevents` — 발사 · 부스트 · 아이템 · 연출 · 소음 받는 쪽. `IBoostReceiver`(Character/Movement) · `IItemReceiver`(Gameplay/Inventory) 포트(합성), 거절이면 소비하지 않고 경고. 테스트 MovementPadTest · LootGrantTest · GimmickSignalTest, 시나리오 `triggercontract`.
+  - `w-kitsplit2` — ActionCombat · ActionPlatformer 를 규칙 · 디렉터(`*GameModeComponent`) · `GF_Client_<X>`(아바타)로. 시나리오 `kitdemo_actioncombat` · `kitdemo_actionplatformer` · `kitdemo_respawn` · `kitdemo_tactics`. Shipping 쿠킹이 `*AvatarComponent` 를 아는지 본다. 손으로 고친 `AssetReferenceFields.generated.json` 은 빌드 산출로 바꿔 커밋.
+  - `w-pathjoin` — `AbsolutePath::join` · `getParent`, 감싸기 1741 → 1140, 문자열 디스크 함수 형식화, Archive · BitReader 값 반환, byte-reader-values 의 대상 덮기 꼴 수정(+3 곳). 합친 뒤 충돌 파일에 `py -3 -m Scripts byte-reader-values` · `disk-path-args` · `disk-path-join` 을 다시 돌린다. 데이터의 상대 경로가 기준 위로 오르면 `join` 이 빈 경로를 준다 — 실행 중 I/O 실패를 본다.
+  - 차례 권장: devmetrics → chores → gimmickevents → kitsplit2 → pathjoin(가장 넓다, 마지막에 스크립트 재실행).
+- **다음 갈래(정함):** `PlayerProgressComponent`(지갑 · 가방 · 퀘스트 일지 · 평판 묶음 — 이름이 뜻과 다르다)를 `InventoryComponent` · `WalletComponent` · `QuestLogComponent` · `ReputationComponent` 로 나누고 `IItemReceiver` 포트를 `InventoryComponent` 로 옮긴다(w-gimmickevents 뒤).
+- **판단 대기(구조):** "game" 채널 `EventDispatcher` 를 제품 코드가 구독하지 않는다 — 받는 쪽 없는 이벤트 13 종(GimmickDamage · PossessionChanged · SaveGameSaved/Loaded · SceneLoadRequested/Completed · AbilityOwnerDied · InteractionCompleted · DamageApplied · AbilityPresentation · RoomCleared · PlayerDefeatedInRoom · ClearGateStateChanged). 버스를 쓸지, 걷고 받는 쪽 인터페이스(포트)로 갈지 정한다.
+- **그 밖:** 남은 경로 만드는 쪽(`AssetMeta::makePath` · DDC `makePath` · `AssetPaths` 디스크 반환)과 `Archive::deserializeVersionedObject( uint32& outVersion … )`. `ActionRoom::drawDebug` 를 클라이언트로. Linux 검증은 여러 묶음 push 뒤 한 번(`linux-verify`).
+
 ## 진행 중(통합 때 지운다)
 
-- RHI 정리(w-rhiclean).
+- 위 0 절의 갈래 다섯.
 
 ## 1. 다음 순서
 
