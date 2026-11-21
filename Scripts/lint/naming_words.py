@@ -18,9 +18,9 @@ Scripts/lint/naming_words.py
   낱말 표는 낱말 하나씩만 봐서 열거형 끝말 모양을 막지 못했다 — 2026-11-19 24 개를 전수 개명한 뒤 새로 들어오지 않게 둔다.
 - component — `…Component` 를 이어받은 형식(정의의 첫 기반 이름이 `Component` 로 끝난다)은 이름도 `Component` 로 끝나고, 컴포넌트가 아닌 형식은 `Component` 로
   끝나지 않는다(언리얼 `U…Component` · 유니티 `Component` 파생 관례 — docs/agents/NamingCpp.md "컴포넌트 이름"). 둘을 함께 보면 "끝이 Component 인 기반 = 컴포넌트" 가
-  귀납으로 성립해 파일 하나만 보고 판정한다. `HorseFollowAIController` 처럼 접미가 빠진 컴포넌트가 있었다(TypeNamingAudit 2026-11-21). `Component` 로 시작하는 이름(`ComponentHandle`)은 해당 없음.
+  귀납으로 성립해 파일 하나만 보고 판정한다. 접미가 빠진 컴포넌트(옛 말 따라가기 AI 조종자)가 있었다(TypeNamingAudit 2026-11-21). `Component` 로 시작하는 이름(`ComponentHandle`)은 해당 없음.
 - interface — `REFLECT( Interface )` 형식(상태 없는 리플렉션 인터페이스)은 `I` + 대문자로 시작한다(NamingCpp 인터페이스 규칙). 상태가 붙는 것은 생성 코드의 `static_assert` 가 막고,
-  이름은 형식이 말하지 못해 여기서 본다 — 역할을 베이스로 만들어 `I` 없는 계약(`HealthSourceComponent`)이 생겼던 자리다.
+  이름은 형식이 말하지 못해 여기서 본다 — 역할을 베이스로 만들어 `I` 없는 계약(옛 체력 원천 베이스)이 생겼던 자리다.
 - word — 모든 선언 이름(형식 · 열거자 · 별칭 · 함수 · 멤버 · 상수 · 변수 · 매크로)과 `Source` 의 파일 · 폴더 이름, 스크립트(`Scripts` · `.claude/hooks` ·
   `.claude/skills` · `cmake` 의 함수 · 클래스 · 상수 · CLI 명령 · 규칙 id · CMake 함수 · 옵션 · 파일 · 폴더 이름)의 **모든 낱말**이 낱말 표
   (`_words` 의 a 업계 · b 게임)에 있어야 한다. 앞 규칙들은 함수 첫 단어 · 형식 끝 단어만 허용 표로 봐서, 멤버 · 파일 이름 · 이름 가운데의 조어

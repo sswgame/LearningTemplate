@@ -4,6 +4,8 @@
 > 독자: 2 단계(전수 개명 · 이동)를 실행할 통합 담당과 작업자.
 > 결론: 바꿈 판정은 컴포넌트 이름 22 · 인터페이스 20(`I` 붙임 5 · 뗌 15) · 그 밖의 형식 · 열거 18 · 층 이동 8 · 파일 · 폴더 재배치 16 자리(기믹 10 · 키트 범용 조각 3 · 폴더 개명 2 · 콘텐츠 1)다. 리플렉션에 "컴포넌트가 내보내는 인터페이스" 표를 더하되 다중 상속 대신 포트 멤버(`exposeMember` 와 같은 모양)로 하고, `Gimmick/Genre` 는 기능 폴더로 쪼갠다. 2 단계는 아래 "실행 차례" 대로 `rename-symbol` · `move-source` 로 한다.
 
+> 상태(2026-11-21, 갈래 w-naming): 2 단계를 실행했다 — 표 A · B · C(개명 표 `Config/Rules/Renames/TypeNamingAudit*.json`), 기믹 쪼개기 · 이동, 리플렉션 인터페이스(4.3), 역할 베이스 → `IHealthSource` · `IHealthListener` · `IGameFlagsOwner`, 층 이동 여섯 + 스프라이트 애니메이터, `MeleeHitboxComponent` · `SkillTree` · `RunMap` 이동, 카드 게임 키트 `SheddingCardGame` 개명. 남긴 것: `HousingPlotComponent`(GameMode 의 상태 바이트 세이브 · 비우기 수명을 쓴다 — 2 절의 "프리팹 스폰뿐" 판정이 틀렸다), `UnitStatsComponent` 이동(키트 형식 `ActionCombatEvents` · `MonsterCatalog` 를 써 Runtime 으로 옮기면 역방향 의존), `CueTriggerComponent` 의 `TriggerComponent` 상속. 아래 본문의 이름은 조사 때의 옛 이름이다(역사 기록).
+
 조사 기준: 2026-11-21 `b17d3dcaa7`(main). 추출 스크립트는 `Source/**/*.h` 에서 `class | struct | enum` 정의를 모아(테스트 · `Source/Games` 제외) 베이스 · 순수 가상 수 · `_` 멤버 수를 셌다. 형식 9079 개(구조체 5162 · 클래스 2527 · 열거 1228), 그중 내보낸(`SW_*_API`) 클래스 1615 개는 이름을 모두 읽었고, `Component` 를 이어받은 형식 262 개 중 `Source/Games` 와 `Editor/SelfTest` 를 뺀 184 개는 아래 표에 한 줄씩 적었다. 아래 표에 없는 내보낸 클래스는 "둠"이다 — 세 엔진 중 하나 이상의 같은 일 이름과 낱말 조합이 맞거나(예: `RenderGraph` · `DerivedDataCache` · `PrefabOverrides`), 서비스 업계 이름(`LeaderboardService` · `MatchMaker` · `ReceiptValidator`)이다.
 
 `Source/Games/*` 의 컴포넌트 78 개(`Farm*` · `Nile*` · `Shooter*` · `Voxel*` · `*DemoComponent` …)는 허브 흡수(NEXT "허브 다음 단계") 때 Playground 로 옮기며 이름을 다시 짓는다. 이 문서의 개명 대상이 아니다.
