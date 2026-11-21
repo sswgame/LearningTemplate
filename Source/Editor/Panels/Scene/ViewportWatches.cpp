@@ -17,6 +17,7 @@
 #include "Editor/Viewport/EditorViewportVisualizer.h"
 #include "Editor/Viewport/Model/EditorGridLevel.h"
 #include "Editor/Viewport/Model/EditorViewportOverlayLayout.h"
+#include "Editor/Viewport/Model/EditorViewportOverlaysViewModel.h"
 #include "Editor/Viewport/Model/Visualizers/SelectionBoundsVisualizer.h"
 #include "Editor/Viewport/ViewportToolbarSettings.h"
 
@@ -336,34 +337,36 @@ namespace sw::editor
             return true;
         }
 
-        /** @brief `-gv_editorWatchOverlay` 바의 상태를 읽습니다. 씬 뷰가 없거나 그 바가 없으면 false 입니다. */
-        [[nodiscard]] bool findWatchedOverlay( const EditorOverlayBarState*& pOutState, const EditorOverlayBarRuntime*& pOutRuntime )
+        /**
+         * @brief `-gv_editorWatchOverlay` 바의 배치(`SceneViewOverlayLayoutStore` 의 사본)와 이번 실행 위치(씬 뷰 런타임, 씬 뷰가 없으면 nullptr)를 읽습니다. 그 바가 없으면 false 입니다.
+         * @details 배치는 씬 뷰 창이 그려지지 않아도(가려진 탭 · 닫힘) 읽힌다 — 명령이 서브시스템을 바로 고친다.
+         */
+        [[nodiscard]] bool findWatchedOverlay( EditorOverlayBarState& outState, const EditorOverlayBarRuntime*& pOutRuntime )
         {
-            const EditorViewportClient* pClient = findSceneViewClient();
-            if ( pClient == nullptr )
+            if ( EditorViewportOverlaysViewModel::findBar( gv_editorWatchOverlay.get(), outState ) == false )
                 return false;
-            pOutState   = pClient->getOverlays().getLayout().findBar( gv_editorWatchOverlay.get() );
-            pOutRuntime = pClient->getOverlays().findRuntime( gv_editorWatchOverlay.get() );
-            return pOutState != nullptr;
+            const EditorViewportClient* pClient = findSceneViewClient();
+            pOutRuntime                         = pClient != nullptr ? pClient->getOverlays().findRuntime( gv_editorWatchOverlay.get() ) : nullptr;
+            return true;
         }
 
         /** @brief 바가 붙은 쪽입니다. 0 은 떠 있음, 1 은 위, 2 는 아래, 3 은 왼쪽, 4 는 오른쪽입니다. */
         [[nodiscard]] bool readOverlayDock( const GameObjectManager* /*pManager*/, float64& outValue )
         {
-            const EditorOverlayBarState*   pState   = nullptr;
+            EditorOverlayBarState          state{};
             const EditorOverlayBarRuntime* pRuntime = nullptr;
-            if ( findWatchedOverlay( pState, pRuntime ) == false )
+            if ( findWatchedOverlay( state, pRuntime ) == false )
                 return false;
-            outValue = static_cast<float64>( pState->_dock );
+            outValue = static_cast<float64>( state._dock );
             return true;
         }
 
         /** @brief 바의 왼쪽 위 X 입니다. 뷰포트 왼쪽 기준 픽셀이며 지난 프레임 값입니다. */
         [[nodiscard]] bool readOverlayX( const GameObjectManager* /*pManager*/, float64& outValue )
         {
-            const EditorOverlayBarState*   pState   = nullptr;
+            EditorOverlayBarState          state{};
             const EditorOverlayBarRuntime* pRuntime = nullptr;
-            if ( findWatchedOverlay( pState, pRuntime ) == false || pRuntime == nullptr )
+            if ( findWatchedOverlay( state, pRuntime ) == false || pRuntime == nullptr )
                 return false;
             outValue = static_cast<float64>( pRuntime->_lastPosition._x );
             return true;
@@ -372,9 +375,9 @@ namespace sw::editor
         /** @brief 바의 왼쪽 위 Y 입니다. 뷰포트 위쪽 기준 픽셀이며 지난 프레임 값입니다. */
         [[nodiscard]] bool readOverlayY( const GameObjectManager* /*pManager*/, float64& outValue )
         {
-            const EditorOverlayBarState*   pState   = nullptr;
+            EditorOverlayBarState          state{};
             const EditorOverlayBarRuntime* pRuntime = nullptr;
-            if ( findWatchedOverlay( pState, pRuntime ) == false || pRuntime == nullptr )
+            if ( findWatchedOverlay( state, pRuntime ) == false || pRuntime == nullptr )
                 return false;
             outValue = static_cast<float64>( pRuntime->_lastPosition._y );
             return true;
@@ -383,22 +386,22 @@ namespace sw::editor
         /** @brief 바가 항목을 세로로 쌓으면(왼쪽 · 오른쪽에 붙음) 1 입니다. 그린 크기가 아니라 배치 상태를 읽는다 — 항목이 적은 바는 세로로 쌓아도 폭이 높이보다 크다. */
         [[nodiscard]] bool readOverlayVertical( const GameObjectManager* /*pManager*/, float64& outValue )
         {
-            const EditorOverlayBarState*   pState   = nullptr;
+            EditorOverlayBarState          state{};
             const EditorOverlayBarRuntime* pRuntime = nullptr;
-            if ( findWatchedOverlay( pState, pRuntime ) == false || pRuntime == nullptr )
+            if ( findWatchedOverlay( state, pRuntime ) == false || pRuntime == nullptr )
                 return false;
-            outValue = EditorViewportOverlayLayout::isVertical( *pState ) ? 1.0 : 0.0;
+            outValue = EditorViewportOverlayLayout::isVertical( state ) ? 1.0 : 0.0;
             return true;
         }
 
-        /** @brief 바가 보이면 1, 숨겨져 있으면 0 이고, 접혀 있으면 10 을 더합니다. */
+        /** @brief 바가 보이면 1, 숨겨져 있으면 0 이고, 접혀 있으면 10 을 더합니다. 씬 뷰 창이 그려지지 않아도 값이 있다. */
         [[nodiscard]] bool readOverlayFlags( const GameObjectManager* /*pManager*/, float64& outValue )
         {
-            const EditorOverlayBarState*   pState   = nullptr;
+            EditorOverlayBarState          state{};
             const EditorOverlayBarRuntime* pRuntime = nullptr;
-            if ( findWatchedOverlay( pState, pRuntime ) == false )
+            if ( findWatchedOverlay( state, pRuntime ) == false )
                 return false;
-            outValue = ( pState->_bVisible ? 1.0 : 0.0 ) + ( pState->_bCollapsed ? 10.0 : 0.0 );
+            outValue = ( state._bVisible ? 1.0 : 0.0 ) + ( state._bCollapsed ? 10.0 : 0.0 );
             return true;
         }
 

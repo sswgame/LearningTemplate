@@ -3,18 +3,18 @@
 #include "Editor/Viewport/EditorViewportOverlays.h"
 
 #include "Core/Algorithm/VectorUtil.h"
-#include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
 
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
-#include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
+#include "Editor/Viewport/Model/EditorViewportOverlaysViewModel.h"
+#include "Editor/Viewport/Model/SceneViewOverlayLayoutStore.h"
 #include "Editor/Viewport/ViewportToolbarSettings.h"
 
 #include "Engine/Localization/LocText.h"
@@ -27,74 +27,16 @@ namespace sw::editor
     {
         struct EditorViewportOverlaysInternal
         {
-            static constexpr const utf8* kFileName     = "ViewportOverlays.json";
-            static constexpr float32     kSnapDistance = 16.0f; ///< 가장자리에 붙는 거리(배율 1)
-            static constexpr float32     kEdgeMargin   = 6.0f;  ///< 가장자리에 붙은 바와 뷰포트 테두리 사이(배율 1)
-
-            /** @brief 바 하나의 고정 정보입니다(제목 · 기본 위치 · 내용). */
-            struct BarDesc
-            {
-                const utf8*       _pID;
-                const utf8*       _pTitle;
-                EditorOverlayDock _defaultDock;
-                float2            _defaultFraction;
-            };
-
-            static constexpr BarDesc kArrBar[] = {
-                {     "view",      "View",    EditorOverlayDock::Top, float2{ 0.0f, 0.0f }},
-                {"transform", "Transform",    EditorOverlayDock::Top, float2{ 0.5f, 0.0f }},
-                {  "display",   "Display", EditorOverlayDock::Bottom, float2{ 0.0f, 1.0f }},
-                {    "tools",     "Tools", EditorOverlayDock::Bottom, float2{ 1.0f, 1.0f }},
-            };
-
-            static const BarDesc* findDesc( string_view barID )
-            {
-                for ( const BarDesc& desc : kArrBar )
-                {
-                    if ( barID == desc._pID )
-                        return &desc;
-                }
-                return nullptr;
-            }
+            static constexpr float32 kSnapDistance = 16.0f; ///< 가장자리에 붙는 거리(배율 1)
+            static constexpr float32 kEdgeMargin   = 6.0f;  ///< 가장자리에 붙은 바와 뷰포트 테두리 사이(배율 1)
         };
     } // namespace
 
     EditorViewportOverlays::EditorViewportOverlays()
-        : _layout{}
+        : _listBarState{}
         , _listRuntime{}
         , _listPlaced{}
-        , _bLoaded{ SW_FALSE }
     {
-    }
-
-    void EditorViewportOverlays::ensureLoaded()
-    {
-        if ( _bLoaded )
-            return;
-        _bLoaded = SW_TRUE;
-        // 저장된 값을 먼저 읽고 등록한다 — 등록은 저장된 바를 덮지 않고 기본값만 적는다.
-        const string path = EditorPaths::resolveEditorStateFile( EditorViewportOverlaysInternal::kFileName );
-        // 처음엔 파일이 없다(Missing). 깨진 파일은 키와 함께 오류를 남기고 기본 배치로 둔다(저장하면 다시 쓴다).
-        const bool bInvalidOverlayFile = path.empty() == false && _layout.loadFromFile( path ) == ConfigReadResult::Invalid;
-        if ( bInvalidOverlayFile )
-            SW_LOG_WARNING_ID( "EditorViewportOverlays.ViewportOverlayLayoutNot", "Viewport overlay layout is not valid - the default layout is used until it is saved again: %#", path.c_str() );
-        for ( const EditorViewportOverlaysInternal::BarDesc& desc : EditorViewportOverlaysInternal::kArrBar )
-        {
-            EditorOverlayBarState state{};
-            state._id       = desc._pID;
-            state._dock     = desc._defaultDock;
-            state._fraction = desc._defaultFraction;
-            _layout.registerBar( state );
-        }
-    }
-
-    void EditorViewportOverlays::save() const
-    {
-        const string path = EditorPaths::resolveEditorStateFile( EditorViewportOverlaysInternal::kFileName );
-        if ( path.empty() )
-            return;
-        if ( _layout.saveToFile( path ) == false )
-            SW_LOG_WARNING_ID( "EditorViewportOverlays.CouldNotSaveViewport", "Could not save the viewport overlay layout to '%#'", path.c_str() );
     }
 
     EditorOverlayBarRuntime& EditorViewportOverlays::getRuntime( string_view barID )
@@ -115,45 +57,22 @@ namespace sw::editor
         return VectorUtil::findBy<&EditorOverlayBarRuntime::_id>( _listRuntime, barID );
     }
 
-    void EditorViewportOverlays::resetToDefault()
-    {
-        ensureLoaded();
-        _layout.resetToDefault();
-        save();
-    }
-
-    bool EditorViewportOverlays::isKnownBarID( string_view barID )
-    {
-        return EditorViewportOverlaysInternal::findDesc( barID ) != nullptr;
-    }
-
-    bool EditorViewportOverlays::setBarVisible( string_view barID, bool bVisible )
-    {
-        ensureLoaded();
-        EditorOverlayBarState* pState = _layout.findBar( barID );
-        if ( pState == nullptr )
-            return false;
-        pState->_bVisible = bVisible;
-        save();
-        return true;
-    }
-
     void EditorViewportOverlays::drawBarMenuItems()
     {
-        for ( const EditorViewportOverlaysInternal::BarDesc& desc : EditorViewportOverlaysInternal::kArrBar )
+        for ( const SceneViewOverlayBarDesc& desc : SceneViewOverlayLayoutStore::kArrBar )
         {
-            EditorOverlayBarState* pState = _layout.findBar( desc._pID );
+            const EditorOverlayBarState* pState = VectorUtil::findBy<&EditorOverlayBarState::_id>( _listBarState, string_view{ desc._pID } );
             if ( pState != nullptr && ImGui::MenuItem( desc._pTitle, nullptr, pState->_bVisible ) )
-                (void)setBarVisible( desc._pID, pState->_bVisible == false ); // 바는 위에서 찾았다
+                EditorViewportOverlaysViewModel::setBarVisible( desc._pID, pState->_bVisible == false );
         }
         ImGui::Separator();
         if ( ImGui::MenuItem( SW_LOCKEY( "EdLabel", "ResetOverlays" ) ) )
-            resetToDefault();
+            EditorViewportOverlaysViewModel::resetToDefault();
     }
 
     void EditorViewportOverlays::drawOverlaysMenu()
     {
-        ensureLoaded();
+        EditorViewportOverlaysViewModel::gather( _listBarState ); // 툴바는 바를 그리기 전에 그린다 — 메뉴의 보임 표시가 이번 프레임 값이다
         if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Layout" ), SW_LOCKEY( "EdButton", "Overlays" ), "Overlays" ) ) )
             EditorInputGUI::openPopup( "##ViewportOverlaysMenu" );
         EditorSelfTestMarks::record( "sceneView.overlays" );
@@ -167,13 +86,13 @@ namespace sw::editor
 
     void EditorViewportOverlays::draw( const float2& canvasMin, const float2& canvasSize, ViewportToolbarSettings& settings, const ViewportToolbarState& toolbarState )
     {
-        ensureLoaded();
+        EditorViewportOverlaysViewModel::gather( _listBarState );
         if ( canvasSize._x <= 1.0f || canvasSize._y <= 1.0f )
             return;
         _listPlaced.clear();
-        for ( EditorOverlayBarState& state : _layout._listBar )
+        for ( const EditorOverlayBarState& state : _listBarState )
         {
-            if ( state._bVisible && EditorViewportOverlaysInternal::findDesc( state._id ) != nullptr )
+            if ( state._bVisible )
                 drawBar( state, canvasMin, canvasSize, settings, toolbarState );
         }
     }
@@ -227,12 +146,12 @@ namespace sw::editor
         return moved;
     }
 
-    void EditorViewportOverlays::drawBar( EditorOverlayBarState& state, const float2& canvasMin, const float2& canvasSize, ViewportToolbarSettings& settings,
+    void EditorViewportOverlays::drawBar( const EditorOverlayBarState& state, const float2& canvasMin, const float2& canvasSize, ViewportToolbarSettings& settings,
                                           const ViewportToolbarState& toolbarState )
     {
-        const EditorViewportOverlaysInternal::BarDesc* pDesc   = EditorViewportOverlaysInternal::findDesc( state._id );
-        EditorOverlayBarRuntime&                       runtime = getRuntime( state._id );
-        const float32                                  scale   = EditorThemeUtil::getDPIScale();
+        const SceneViewOverlayBarDesc* pDesc   = SceneViewOverlayLayoutStore::findBarDesc( state._id );
+        EditorOverlayBarRuntime&       runtime = getRuntime( state._id );
+        const float32                  scale   = EditorThemeUtil::getDPIScale();
         // 가장자리에 붙은 바는 테두리에서 조금 띄운다 — 뷰포트 안쪽 영역(여백을 뺀 크기)에서 위치를 계산한다.
         const float32 margin = EditorViewportOverlaysInternal::kEdgeMargin * scale;
         const float2  innerSize{ MathUtil::max( canvasSize._x - margin * 2.0f, 1.0f ), MathUtil::max( canvasSize._y - margin * 2.0f, 1.0f ) };
@@ -270,10 +189,7 @@ namespace sw::editor
         EditorThemeUtil::popTextColor();
         ImGui::PopStyleColor();
         if ( bToggle )
-        {
-            state._bCollapsed = state._bCollapsed == false;
-            save();
-        }
+            EditorViewportOverlaysViewModel::setBarCollapsed( state._id, state._bCollapsed == false );
         EditorSelfTestMarks::recordFormat( "overlay.collapse.%#", state._id );
         EditorWidgets::drawTooltip( state._bCollapsed ? SW_LOCKEY( "EdCommon", "OverlayExpand" ) : SW_LOCKEY( "EdCommon", "OverlayCollapse" ) );
         if ( state._bCollapsed )
@@ -302,7 +218,7 @@ namespace sw::editor
         ImGui::PopStyleColor();
     }
 
-    void EditorViewportOverlays::drawBarGrip( EditorOverlayBarState& state, EditorOverlayBarRuntime& runtime, const float2& position, const float2& canvasSize,
+    void EditorViewportOverlays::drawBarGrip( const EditorOverlayBarState& state, EditorOverlayBarRuntime& runtime, const float2& position, const float2& canvasSize,
                                               const float2& innerSize, float32 margin, float32 scale )
     {
         // 손잡이: 끌면 옮기고, 놓으면 가까운 가장자리에 붙인다. 오른쪽 클릭은 바 메뉴.
@@ -340,9 +256,8 @@ namespace sw::editor
         {
             runtime._bDragging = SW_FALSE;
             // 놓은 위치(여백 안쪽 기준)로 붙은 쪽 · 비율을 정한다.
-            EditorViewportOverlayLayout::applyDrop( state, float2{ runtime._dragPosition._x - margin, runtime._dragPosition._y - margin }, runtime._lastSize, innerSize,
-                                                    EditorViewportOverlaysInternal::kSnapDistance * scale );
-            save();
+            EditorViewportOverlaysViewModel::dropBar( state._id, float2{ runtime._dragPosition._x - margin, runtime._dragPosition._y - margin }, runtime._lastSize, innerSize,
+                                                      EditorViewportOverlaysInternal::kSnapDistance * scale );
         }
         if ( EditorInputGUI::beginItemContextMenu( "##overlayMenu" ) )
         {
@@ -354,7 +269,7 @@ namespace sw::editor
     float2 EditorViewportOverlays::computeTopRightInset() const
     {
         float2 inset{};
-        for ( const EditorOverlayBarState& state : _layout._listBar )
+        for ( const EditorOverlayBarState& state : _listBarState ) // 지난 프레임에 모은 배치(위치도 지난 프레임 값이다)
         {
             const EditorOverlayBarRuntime* pRuntime = findRuntime( state._id );
             if ( state._bVisible == false || pRuntime == nullptr )

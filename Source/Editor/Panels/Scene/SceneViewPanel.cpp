@@ -17,7 +17,6 @@
 #include "Editor/Panels/Scene/Model/SceneViewModel.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 #include "Editor/Viewport/EditorViewportClient.h"
-#include "Editor/Viewport/EditorViewportOverlays.h"
 
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Localization/LocText.h"
@@ -52,16 +51,6 @@ namespace sw::editor
                     _viewportClient.setCameraPose( float3{ pPose[0], pPose[1], pPose[2] }, float3{ pPose[3], pPose[4], 0.0f } );
                     break;
                 }
-                case SceneViewRequestKind::OverlayReset:
-                {
-                    _viewportClient.getOverlays().resetToDefault();
-                    break;
-                }
-                case SceneViewRequestKind::OverlayShow:
-                {
-                    (void)_viewportClient.getOverlays().setBarVisible( request._barID, request._bVisible ); // 명령이 바 id 를 이미 보았다
-                    break;
-                }
             }
         }
     }
@@ -71,7 +60,7 @@ namespace sw::editor
         const bool bFocused = ImGui::IsWindowFocused( ImGuiFocusedFlags_RootAndChildWindows );
         const bool bHovered = ImGui::IsWindowHovered( ImGuiHoveredFlags_RootAndChildWindows );
         // 엔진 프레임의 실제 경과(시간 배율 · 정지와 무관) — 고정 프레임 시간(`-gv_fixedFrameDelta`)으로 도는 시나리오에서 카메라 비행이 결정적이다.
-        applyRequests(); // 개발 명령(`camera.*` · `overlay.*`)이 쌓은 요청 — 이번 프레임의 카메라 갱신 앞에서
+        applyRequests(); // 개발 명령(`camera.*`)이 쌓은 요청 — 이번 프레임의 카메라 갱신 앞에서
         const float32 dt = SceneViewModel::getUnscaledDeltaTime();
         _viewportClient.update( dt, bFocused, bHovered );
 
