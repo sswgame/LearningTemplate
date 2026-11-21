@@ -197,14 +197,14 @@ namespace sw
     /** @brief Leaderboard 메서드 표입니다. 번호는 열거자 순서에서 나오고, 요청 · 응답의 짝과 호출 규칙은 서술자가 정합니다. */
     struct LeaderboardMethod : OnlineMethodTable<LeaderboardMethodName, OnlineMethodRange::kLeaderboard, LeaderboardPushName>
     {
-        using GetTop                 = Method<MethodName::GetTop, LeaderboardTopRequest, LeaderboardEntriesReply>;                                                  ///< 기간 id 와 항목 목록을 돌려준다
-        using GetAround              = Method<MethodName::GetAround, LeaderboardAroundRequest, LeaderboardEntriesReply>;                                            ///< 내 주변 항목을 나를 포함해 돌려준다
-        using GetStats               = Method<MethodName::GetStats, LeaderboardListPageRequest, LeaderboardStatsReply>;                                             ///< 내 통계 목록 한 쪽을 돌려준다
+        using GetTop                 = Method<MethodName::GetTop, LeaderboardTopRequest, LeaderboardEntriesReply, OnlineMethodFlag::ReadOnly>;                      ///< 기간 id 와 항목 목록을 돌려준다
+        using GetAround              = Method<MethodName::GetAround, LeaderboardAroundRequest, LeaderboardEntriesReply, OnlineMethodFlag::ReadOnly>;                ///< 내 주변 항목을 나를 포함해 돌려준다
+        using GetStats               = Method<MethodName::GetStats, LeaderboardListPageRequest, LeaderboardStatsReply, OnlineMethodFlag::ReadOnly>;                 ///< 내 통계 목록 한 쪽을 돌려준다
         using SubmitScore            = Method<MethodName::SubmitScore, LeaderboardSubmitRequest, LeaderboardSubmitReply, OnlineMethodFlag::RequiresIdempotencyKey>; ///< 적용한 뒤의 점수를 돌려준다. 다시 보내도 합산 보드에 두 번 들어가지 않는다. 클라이언트 제출이 켜진 보드만 받는다
-        using GetAchievements        = Method<MethodName::GetAchievements, LeaderboardListPageRequest, LeaderboardAchievementsReply>;                               ///< 달성한 업적 목록 한 쪽을 돌려준다
-        using GetSeasonResult        = Method<MethodName::GetSeasonResult, LeaderboardSeasonRequest, LeaderboardSeasonReply>;                                       ///< 내 결과를 돌려준다. 없으면 NotRanked 이다
-        using GetScoresOf            = Method<MethodName::GetScoresOf, LeaderboardScoresRequest, LeaderboardEntriesReply>;                                          ///< 이번 기간 점수를 목록 안 순위로 돌려준다
-        using GetAchievementProgress = Method<MethodName::GetAchievementProgress, OnlineNoBody, LeaderboardProgressReply>;                                          ///< 등록한 업적마다 진행률을 돌려준다. 숨긴 업적은 달성 전에 가린다
+        using GetAchievements        = Method<MethodName::GetAchievements, LeaderboardListPageRequest, LeaderboardAchievementsReply, OnlineMethodFlag::ReadOnly>;   ///< 달성한 업적 목록 한 쪽을 돌려준다
+        using GetSeasonResult        = Method<MethodName::GetSeasonResult, LeaderboardSeasonRequest, LeaderboardSeasonReply, OnlineMethodFlag::ReadOnly>;           ///< 내 결과를 돌려준다. 없으면 NotRanked 이다
+        using GetScoresOf            = Method<MethodName::GetScoresOf, LeaderboardScoresRequest, LeaderboardEntriesReply, OnlineMethodFlag::ReadOnly>;              ///< 이번 기간 점수를 목록 안 순위로 돌려준다
+        using GetAchievementProgress = Method<MethodName::GetAchievementProgress, OnlineNoBody, LeaderboardProgressReply, OnlineMethodFlag::ReadOnly>;              ///< 등록한 업적마다 진행률을 돌려준다. 숨긴 업적은 달성 전에 가린다
         using Achievement            = Push<PushName::Achievement, AchievementState>;                                                                               ///< 업적 id 와 달성 시각을 보낸다
     };
 } // namespace sw

@@ -95,14 +95,14 @@ namespace sw
         static constexpr float3 kSlantedKeyDirection{ -0.35f, -0.85f, -0.25f };
 
         /**
-         * @brief 씬의 주광입니다 — 켜져 있는 첫 방향광(등록 순서). 없으면 nullptr 이고, 렌더러가 기본값으로 폴백합니다.
+         * @brief 씬의 주광입니다 — 켜져 있는 방향광 가운데 가장 밝은 것(같으면 컴포넌트 번호가 작은 것). 없으면 nullptr 이고, 렌더러가 기본값으로 폴백합니다.
          * @details 카메라와 달리 캐시하지 않고 그때그때 찾습니다(빛 레지스트리만 봅니다). 비용이 빛의 수에 비례하고 씬 크기와 무관합니다.
          */
         [[nodiscard]] static DirectionalLightComponent* findActive( const GameObjectManager* pObjectManager );
         /**
-         * @brief 그림자 맵을 가져가는 방향광입니다 — 켜져 있고 그림자를 드리우는 첫 방향광(등록 순서). 없으면 nullptr 입니다.
-         * @details 그림자 행렬을 만드는 쪽과 그림자 플래그를 싣는 쪽(`collectSceneLights`)이 **둘 다 이것을 부릅니다.** 주의: 둘이 따로 고르면 첫 방향광이 그림자를 끄고
-         *          뒤의 빛이 켤 때 행렬은 비고 플래그는 뒤의 빛에 붙어, 그림자를 드리우는 빛에 그림자가 지지 않는다. 방향 · 색 · 앰비언트는 그대로 주광에서 옵니다.
+         * @brief 그림자 맵을 가져가는 방향광입니다 — 켜져 있고 그림자를 드리우는 방향광 가운데 가장 밝은 것(같으면 컴포넌트 번호가 작은 것). 없으면 nullptr 입니다.
+         * @details 그림자 행렬을 만드는 쪽과 그림자 플래그를 싣는 쪽(`collectSceneLights`)이 **둘 다 이것을 부릅니다.** 주의: 둘이 따로 고르면 주광이 그림자를 끄고
+         *          다른 빛이 켤 때 행렬은 비고 플래그는 뒤의 빛에 붙어, 그림자를 드리우는 빛에 그림자가 지지 않는다. 방향 · 색 · 앰비언트는 그대로 주광에서 옵니다.
          */
         [[nodiscard]] static DirectionalLightComponent* findShadowCasting( const GameObjectManager* pObjectManager );
 

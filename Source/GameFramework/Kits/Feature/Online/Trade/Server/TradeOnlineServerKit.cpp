@@ -3,11 +3,15 @@
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/String/StringUtil.h"
 
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Identity/AccountPresence.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Ledger/IBalanceChangedListener.h"
 #include "GameFramework/Kits/Feature/Online/Trade/Server/TradeKitConfig.h"
 #include "GameFramework/Kits/Feature/Online/Trade/Server/TradeServer.h"
 #include "GameFramework/Kits/Feature/Online/Trade/Server/TradeService.h"
 #include "GameFramework/Kits/Feature/Online/Trade/Server/TradeStateMachine.h"
 #include "GameFramework/Kits/Feature/Online/Trade/Server/TradeStoreLogic.h"
+#include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
+#include "GameFramework/Runtime/Online/Ledger/LedgerTypes.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerConfig.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerKit.h"
 #include "GameFramework/Runtime/Online/Service/Server/OnlineServiceHost.h"
@@ -44,7 +48,7 @@ namespace sw
          * @class TradeOnlineServerKit
          * @brief 거래 키트의 서버 조립입니다.
          */
-        class TradeOnlineServerKit final : public IOnlineServerKit
+        class TradeOnlineServerKit final : public OnlineServerKit<OnlineKitRequired<IAccountDirectory>, OnlineKitOptional<const ILedgerPolicy, IAccountPresence, IBalanceChangedListener>>
         {
         public:
             TradeOnlineServerKit()
@@ -55,7 +59,7 @@ namespace sw
             {
             }
 
-            [[nodiscard]] expected<void> initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry ) override
+            [[nodiscard]] expected<void> initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, const Dependencies& ) override
             {
                 TradeKitConfig kitConfig;
                 if ( expected<void> result = entry.readSettings( kitConfig ); result.has_value() == false )
@@ -72,12 +76,12 @@ namespace sw
                                    TradeStoreLogic::makeTTLRule( kitConfig._closedSessionTTL.getExpireAfterMs() ), kitConfig._closedSessionTTL );
             }
 
-            expected<void> start( OnlineServerKitContext& context ) override
+            expected<void> start( OnlineServerKitContext& context, const Dependencies& interfaces, const UnorderedDependencies& ) override
             {
-                _service.initialize( context._pStore, &_policy, context._kits.find<const ILedgerPolicy>(), context._serverID, _serviceSettings );
+                _service.initialize( context._pStore, &_policy, interfaces.find<const ILedgerPolicy>(), context._serverID, _serviceSettings );
                 // 상대 찾기는 필수 키트라 정렬이 없으면 기동 오류로 막았다.
-                _server.initialize( &_service, &context._kits.get<IAccountDirectory>(), context._kits.find<IAccountPresence>(), context._pMetricRegistry );
-                _server.setBalanceNotification( context._kits.find<IBalanceChangedListener>() ); // 경제 키트(정산 잔액 변경 알림)
+                _server.initialize( &_service, &interfaces.get<IAccountDirectory>(), interfaces.find<IAccountPresence>(), context._pMetricRegistry );
+                _server.setBalanceNotification( interfaces.find<IBalanceChangedListener>() ); // 경제 키트(정산 잔액 변경 알림)
                 return {};
             }
 
@@ -107,17 +111,6 @@ namespace sw
                 // 거래 로직은 맡긴 정산 일을 회수한 뒤(저장소를 종료한 뒤) 종료한다 — 정산 중 거래는 재시작 복구가 마무리한다.
                 if ( isStarted() )
                     _service.shutdown();
-            }
-
-            span<const utf8* const> getRequiredKits() const override
-            {
-                static constexpr const utf8* kArrKit[] = { OnlineServerKitName::kAccount }; // 상대 찾기
-                return kArrKit;
-            }
-            span<const utf8* const> getOptionalKits() const override
-            {
-                static constexpr const utf8* kArrKit[] = { OnlineServerKitName::kEconomy }; // 원장 정책
-                return kArrKit;
             }
 
         private:

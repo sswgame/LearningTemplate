@@ -4,19 +4,23 @@
 
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Asset/AssetManager.h"
+#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Config/IGameAutoplayQuery.h"
 #include "Engine/Input/IInputCaptureQuery.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/GameInputView.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
+#include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Object/Prefab/PrefabCache.h"
 #include "Engine/Reflection/TypeFqn.h"
 #include "Engine/Serialization/Format/Archive.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
+#include "GameFramework/Runtime/Foundation/Framework/Minigame/MinigameFlow.h"
 
 namespace sw
 {
@@ -26,6 +30,27 @@ namespace sw
         {
             /** @brief 세운 핸들 목록을 덜어 내기 시작하는 크기입니다(그 뒤로는 덜어 낸 크기의 두 배마다). */
             static constexpr uint32 kMinCompactThreshold = 64;
+
+            /** @brief 감시 값 `GameMode.StepMs` · `GameMode.StepPeakMs` 입니다 — 씬의 열린 디렉터 중 가장 긴 마지막 · 최고 걸음 시간(밀리초). 열린 디렉터가 없으면 값이 없다. */
+            template <bool bPeak>
+            [[nodiscard]] static bool readStepMilliseconds( const GameObjectManager* pManager, float64& outValue )
+            {
+                if ( pManager == nullptr )
+                    return false;
+                bool  bFound       = false;
+                int64 microseconds = 0;
+                for ( const GameModeComponent* pGameMode : pManager->getComponentRegistry().getAll<GameModeComponent>() )
+                {
+                    if ( pGameMode->isStarted() == false )
+                        continue;
+                    const int64 value = bPeak ? pGameMode->getPeakStepMicroseconds() : pGameMode->getLastStepMicroseconds();
+                    if ( bFound == false || value > microseconds )
+                        microseconds = value;
+                    bFound = true;
+                }
+                outValue = static_cast<float64>( microseconds ) / static_cast<float64>( constant::time::kMicrosecondsPerMillisecond );
+                return bFound;
+            }
         };
     } // namespace
 } // namespace sw
@@ -41,6 +66,8 @@ namespace sw
         , _soundQueue{}
         , _compactThreshold{ GameModeComponentInternal::kMinCompactThreshold }
         , _pendingRuleDeltaTime{ 0.0f }
+        , _lastStepMicroseconds{ 0 }
+        , _peakStepMicroseconds{ 0 }
         , _bStarted{ SW_FALSE }
         , _bViewsSpawned{ SW_FALSE }
         , _bFlushScheduled{ SW_FALSE }
@@ -72,6 +99,33 @@ namespace sw
         despawnViews();
         _bStarted = SW_FALSE;
         Component::onEndPlay();
+    }
+
+    void GameModeComponent::onRegister( GameObjectManager& manager )
+    {
+        Component::onRegister( manager );
+        manager.getComponentRegistry().add<GameModeComponent>( this );
+    }
+
+    void GameModeComponent::onUnregister( GameObjectManager& manager )
+    {
+        manager.getComponentRegistry().remove<GameModeComponent>( this );
+        Component::onUnregister( manager );
+    }
+
+    bool GameModeComponent::finishMinigame( const hashed_string& resultName )
+    {
+        MinigameFlow* const pFlow = game::findSubsystem<MinigameFlow>();
+        if ( pFlow == nullptr || pFlow->findActiveDefinition() == nullptr )
+        {
+            SW_LOG_ERROR_ID( "GameMode.FinishWithoutMinigame", "GameMode '%#' finishes with result '%#' but no minigame is active - only a minigame director ends a minigame",
+                             getTypeName().c_str(), resultName.c_str() );
+            return false;
+        }
+        vector<MinigameResultValue> listValue;
+        collectMinigameResult( listValue );
+        pFlow->requestLeave( resultName, std::move( listValue ) );
+        return true;
     }
 
     void GameModeComponent::onTick( TickContext& context )
@@ -136,7 +190,12 @@ namespace sw
             return;
         if ( _bViewsSpawned == SW_FALSE )
             scheduleFlush(); // 상태 저장 전에 걷었다(또는 처음) — 지금 상태대로 다시 세운다
+        // 디렉터 계약 ① 의 재는 자리 — 측정 문턱(RTS 유닛 2000 에서 2 ms 등)을 판정할 값을 모든 디렉터가 줄 추가 없이 낸다.
+        const Stopwatch stepWatch;
         updateGame( deltaTime );
+        _lastStepMicroseconds = stepWatch.getElapsedMicroseconds();
+        if ( _lastStepMicroseconds > _peakStepMicroseconds )
+            _peakStepMicroseconds = _lastStepMicroseconds;
         if ( _soundQueue.isEmpty() == false || hasPendingSpawn() )
             scheduleFlush();
     }
@@ -370,4 +429,9 @@ namespace sw
         GameObject* pOwner = getOwner();
         return pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
     }
+
+    SW_AUTOMATION_WATCH( gameModeStepMs, "GameMode.StepMs", "Longest last rule step (updateGame) in game-thread milliseconds among the active scene's started game modes",
+                         &GameModeComponentInternal::readStepMilliseconds<false> );
+    SW_AUTOMATION_WATCH( gameModeStepPeakMs, "GameMode.StepPeakMs", "Longest rule step (updateGame) in game-thread milliseconds since play began among the active scene's game modes",
+                         &GameModeComponentInternal::readStepMilliseconds<true> );
 } // namespace sw

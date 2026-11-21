@@ -40,7 +40,7 @@ namespace sw
     protected:
         bool onInitialize() override;
         void onUpdate( float32 deltaTime ) override;
-        /** @brief 폰의 걸음 상태(`ShooterMoveState` 의 복제 칸)를 폰 엔티티 타입으로 등록합니다 — 칸이 다른 빌드는 핸드셰이크에서 갈린다. */
+        /** @brief 폰의 걸음 상태 · 적 상태 · 소유자 상태(`ShooterMoveState` · `ShooterEnemyNetState` · `ShooterOwnerNetState` 의 복제 칸)를 등록합니다 — 칸이 다른 빌드는 핸드셰이크에서 갈린다. */
         [[nodiscard]] bool onRegisterReplicatedTypes( NetMessageChannel& outChannel ) override;
 
     private:
@@ -72,7 +72,9 @@ namespace sw
 
     bool Shooter3DGame::onRegisterReplicatedTypes( NetMessageChannel& outChannel )
     {
-        return outChannel.registerReplicatedType<ShooterMoveState>( static_cast<uint8>( ShooterNetPawnComponent::kPawnTypeID ) );
+        return outChannel.registerReplicatedType<ShooterMoveState>( static_cast<uint8>( ShooterNetPawnComponent::kPawnTypeID ) ) &&
+               outChannel.registerReplicatedType<ShooterEnemyNetState>( static_cast<uint8>( ShooterNetPawnComponent::kEnemyTypeID ) ) &&
+               outChannel.registerReplicatedType<ShooterOwnerNetState>( static_cast<uint8>( ShooterNetPawnComponent::kOwnerStateSchemaID ) );
     }
 
     bool Shooter3DGame::onInitialize()

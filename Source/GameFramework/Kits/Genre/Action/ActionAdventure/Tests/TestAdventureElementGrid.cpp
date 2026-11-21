@@ -4,6 +4,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/Tests/StateBytesTestUtil.h"
 
 #include "GameFramework/Kits/Genre/Action/ActionAdventure/AdventureElementGrid.h"
 
@@ -392,4 +393,41 @@ SW_TEST_CASE( AdventureElementGridTest, StateRoundTripIsDeterministic )
     sw::Archive  truncated( written.getData(), written.getSize() - 1 );
     SW_EXPECT_FALSE( truncatedTarget.readState( truncated ) );
     SW_EXPECT_EQUAL( hashBefore, truncatedTarget.computeStateHash() );
+}
+
+/**
+ * @brief [AdventureElementGridTest] 결정성: 섞인 재질 격자에 바람 · 불 · 얼음 · 전기를 걸음 번호로 넣으면 두 판의 상태 바이트가 같고, 중간 세이브를 읽어 이어 돌려도 같다
+ * @details 키트의 판 상태 중 던전 상태는 열린 문 · 장치 플래그를 빌린 `GameFlags` 에 두어 바이트 밖 상태에 기대므로, 스스로 다 갖는 화학 격자로 건다.
+ */
+SW_TEST_CASE( AdventureElementGridTest, ElementGridDeterminism )
+{
+    const auto setup = []( sw::AdventureElementGrid& grid )
+    {
+        if ( grid.initialize( 8, 8, sw::AdventureElementSettings{} ) == false )
+            return false;
+        constexpr sw::AdventureMaterial kArrMaterial[] = { sw::AdventureMaterial::Grass, sw::AdventureMaterial::Grass, sw::AdventureMaterial::Wood, sw::AdventureMaterial::Metal,
+                                                           sw::AdventureMaterial::Water, sw::AdventureMaterial::Ice, sw::AdventureMaterial::Empty };
+        for ( int32 y = 0; y < grid.getHeight(); ++y )
+        {
+            for ( int32 x = 0; x < grid.getWidth(); ++x )
+            {
+                grid.setMaterial( sw::int2{ x, y }, kArrMaterial[( x * 3 + y ) % static_cast<int32>( SW_COUNT_OF( kArrMaterial ) )] );
+            }
+        }
+        return true;
+    };
+    const auto step = []( sw::AdventureElementGrid& grid, int32 stepIndex )
+    {
+        const sw::int2 cell{ stepIndex % 8, ( stepIndex / 8 ) % 8 };
+        if ( stepIndex % 16 == 0 )
+            grid.setWind( sw::int2{ stepIndex % 3 - 1, ( stepIndex / 16 ) % 3 - 1 } );
+        if ( stepIndex % 5 == 0 )
+            (void)grid.applyFire( cell );
+        if ( stepIndex % 11 == 3 )
+            (void)grid.applyIce( cell );
+        if ( stepIndex % 13 == 7 )
+            (void)grid.applyElectric( cell );
+        (void)grid.update( 1.0f / 30.0f );
+    };
+    SW_EXPECT_TRUE( sw::StateBytesTestUtil::isDeterministic<sw::AdventureElementGrid>( setup, step, 240 ) );
 }

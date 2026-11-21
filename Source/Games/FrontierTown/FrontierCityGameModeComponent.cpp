@@ -12,6 +12,7 @@
 #include "GameFramework/Kits/Genre/Strategy/CityBuilder/CityCatalog.h"
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSWorld.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
+#include "GameFramework/Runtime/Gameplay/SessionState/PlayerProgressComponent.h"
 #include "GameFramework/Runtime/Gameplay/SessionState/SessionStateComponent.h"
 
 #include "Games/FrontierTown/FrontierTownData.h"
@@ -47,14 +48,15 @@ namespace sw
 
     void FrontierCityGameModeComponent::serializeGameState( StateIO& io )
     {
-        SessionStateComponent* pState = io.isReading() ? SessionStateComponent::findOnOwner( *this ) : nullptr;
-        if ( io.check( pState != nullptr ) == false )
+        SessionStateComponent*   pState    = io.isReading() ? SessionStateComponent::findOnOwner( *this ) : nullptr;
+        PlayerProgressComponent* pProgress = io.isReading() ? PlayerProgressComponent::findOnOwner( *this ) : nullptr;
+        if ( io.check( pState != nullptr && pProgress != nullptr ) == false )
             return;
         io.header( kStateTag, kStateVersion ); // 배치를 마쳤는지는 상태 칸이다(`GameModeComponent::serializeState`)
         if ( io.isOk() == false )
             return;
         CitySimulation restoredCity;
-        if ( io.isReading() && io.check( initializeCity( restoredCity, *pState ) ) == false )
+        if ( io.isReading() && io.check( initializeCity( restoredCity, *pState, *pProgress ) ) == false )
             return;
         CitySimulation& city = io.isWriting() ? _city : restoredCity;
         io.section( CitySimulation::kStateTag, CitySimulation::kStateVersion, [&city]( StateIO& bodyIO )
@@ -66,12 +68,12 @@ namespace sw
         _bViewsDirty = SW_TRUE;
     }
 
-    bool FrontierCityGameModeComponent::initializeCity( CitySimulation& outCity, SessionStateComponent& state )
+    bool FrontierCityGameModeComponent::initializeCity( CitySimulation& outCity, SessionStateComponent& state, PlayerProgressComponent& progress )
     {
         const CityCatalog* pCatalog = game::findSubsystem<const CityCatalog>();
         if ( pCatalog == nullptr )
             return false;
-        if ( outCity.initialize( pCatalog, FrontierTownData::kLandSize, FrontierTownData::kLandSize, state.makeRefs() ) == false )
+        if ( outCity.initialize( pCatalog, FrontierTownData::kLandSize, FrontierTownData::kLandSize, state.makeRefs( progress ) ) == false )
             return false;
         // 땅은 놓기 전에 빌린다 — 이미 놓인 도로 · 건물은 땅을 얻지 않는다(CitySimulation::bindLand).
         outCity.bindLand( &state.getLand(), int2{ 0, 0 } );
@@ -81,9 +83,12 @@ namespace sw
     bool FrontierCityGameModeComponent::startGame()
     {
         // 이 오브젝트의 첫 디렉터가 판을 연다. 시작 돈은 새 판일 때만(복원한 판 위에 덧쌓이지 않게).
-        SessionStateInitResult initResult = SessionStateInitResult::Refused;
-        SessionStateComponent* pState     = SessionStateComponent::openOnOwner( *this, FrontierTownData::makeStateSettings(), initResult );
+        SessionStateComponent* pState = SessionStateComponent::openOnOwner( *this, FrontierTownData::makeStateSettings() );
         if ( pState == nullptr )
+            return false;
+        SessionStateInitResult   initResult = SessionStateInitResult::Refused;
+        PlayerProgressComponent* pProgress  = PlayerProgressComponent::openOnOwner( *this, FrontierTownData::makeProgressSettings(), initResult );
+        if ( pProgress == nullptr )
             return false;
         if ( initResult == SessionStateInitResult::Fresh )
         {
@@ -100,10 +105,10 @@ namespace sw
                 SW_LOG_ERROR_ID( "FrontierCity.CityCatalogMissing", "[Frontier] the city catalog is not loaded - the starting money has no currency" );
                 return false;
             }
-            pState->getWallet().add( pCity->getRules()._currency, _startingDeben );
-            pState->getWallet().add( pUnits->getRules()._mineralCurrency, _startingMinerals );
+            pProgress->getWallet().add( pCity->getRules()._currency, _startingDeben );
+            pProgress->getWallet().add( pUnits->getRules()._mineralCurrency, _startingMinerals );
         }
-        if ( initializeCity( _city, *pState ) == false )
+        if ( initializeCity( _city, *pState, *pProgress ) == false )
         {
             SW_LOG_ERROR_ID( "FrontierCity.CityCannotStartCity", "[Frontier] the city cannot start - the city catalog is not loaded" );
             return false;

@@ -5,6 +5,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Scene/StreamingCellGrid.h"
+#include "Engine/Serialization/Fixed/ReplicatedLayout.h"
 
 #include "GameFramework/Kits/Feature/Network/NetMMO/MMOReplicator.h"
 
@@ -129,18 +130,16 @@ SW_TEST_CASE( MMOReplicatorAlwaysRelevantTest, AlwaysRelevantCandidatesAreAskedW
 
 namespace
 {
-    /** @brief 새로 보임 메시지 하나(엔티티 하나)를 손으로 씁니다 — 보내는 쪽(`writeEntity`)과 같은 배치. */
+    /** @brief 새로 보임 메시지 하나(엔티티 하나)를 씁니다 — 머리는 보내는 쪽과 같은 칸 선언(`MMOEntityEnterHeader`)이다. */
     void writeMMOEnterForTest( BitWriter& writer, uint32 entityID )
     {
         writer.writeBits( NetMMOMessage::kEnter, 8 );
         writer.writeVarUint( 7 ); // 틱
         writer.writeBool( true );
-        writer.writeVarUint( entityID ); // id
-        writer.writeVarUint( 1 );        // 타입
-        writer.writeVarUint( 0 );        // 정적 id(동적 엔티티)
-        writer.writeFloat( 0.0f );
-        writer.writeFloat( 0.0f );
-        writer.writeFloat( 0.0f );
+        MMOEntityEnterHeader header;
+        header._header._entityID = entityID;
+        header._typeID           = 1; // 정적 id 0 — 동적 엔티티
+        SW_EXPECT_TRUE( ReplicatedLayout::writeFull( header, writer ) );
         writer.writeVarUint( 0 ); // 상태 길이
         writer.writeBool( false );
     }

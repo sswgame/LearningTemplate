@@ -166,6 +166,7 @@
 	<Field owner="QuestObjectiveMarkerComponent" field="_quest" tag="QuestDef"/>
 	<CatalogKey tag="AbilityEffectDef" catalog="AbilityCatalog" entry="AbilityEffect"/>
 	<Field owner="JumpEscapeReactionComponent" field="_effect" tag="AbilityEffectDef"/>
+	<Field owner="MinigameRewardEffect" field="_effect" tag="AbilityEffectDef"/>
 	<CatalogKey tag="WeatherDef" catalog="WeatherCatalog" entry="Weather"/>
 	<Field owner="WeatherDirectorComponent" field="_startWeather" tag="WeatherDef"/>
 	<CatalogKey tag="VoxelBlockDef" catalog="VoxelBlockCatalog" entry="Block"/>
@@ -224,4 +225,7 @@
 	<Field owner="BattleRoyaleLootSpotDef" field="table" tag="LootTableDef"/>
 	<Element type="BattleRoyaleSupplyDropDef" catalog="BattleRoyaleCatalog" path="SupplyDrop"/>
 	<Field owner="BattleRoyaleSupplyDropDef" field="table" tag="LootTableDef"/>
+	<CatalogKey tag="CoasterLayoutDef" catalog="CoasterLayoutCatalog" entry="Layout"/>
+	<Element type="ParkCoasterDef" catalog="ParkLayout" path="Coaster"/>
+	<Field owner="ParkCoasterDef" field="_layout" tag="CoasterLayoutDef"/>
 </DataCatalogReferenceTable>

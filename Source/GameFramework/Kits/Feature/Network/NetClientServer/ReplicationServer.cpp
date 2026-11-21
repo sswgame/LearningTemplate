@@ -2,6 +2,8 @@
 
 #include "GameFramework/Kits/Feature/Network/NetClientServer/ReplicationServer.h"
 
+#include "Core/Algorithm/CompareUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/Connection/NetEndpoint.h"
 #include "Core/Network/Message/NetSendBudget.h"
@@ -12,34 +14,42 @@
 #include "GameFramework/Runtime/Character/Control/Intent/ControlIntent.h"
 #include "GameFramework/Runtime/Foundation/GameData/ConfigRangeUtil.h"
 
+#include <algorithm>
+
 namespace sw
 {
     ReplicationServer::ReplicationServer()
         : _listClient{}
         , _world{}
+        , _listPendingEntity{}
         , _settings{}
         , _pHost{ nullptr }
         , _pPolicy{ nullptr }
         , _defaultPolicy{}
         , _parallel{}
         , _snapshotScratch{}
+        , _listAwakeIndex{}
+        , _listAllIndex{}
+        , _listWokenScratch{}
         , _listConnectionScratch{}
         , _listClientScratch{}
-        , _worldEntityCount{ 0 }
+        , _pendingEntityCount{ 0 }
+        , _lastRevision{ 0 }
         , _oversizedEntityCount{ 0 }
         , _pRangeConnection{ nullptr }
         , _ppRangeClient{ nullptr }
     {
     }
 
-    void IReplicationPolicy::collectRelevantEntities( int32 connectionID, const vector<NetEntityState>& listWorldEntity, vector<NetRelevantEntity>& outList ) const
+    void IReplicationPolicy::collectRelevantEntities( int32 connectionID, const vector<NetEntityState>& listWorldEntity, const vector<uint32>& listCandidate,
+                                                      vector<NetRelevantEntity>& outList ) const
     {
         outList.clear();
-        for ( size_t worldIndex = 0; worldIndex < listWorldEntity.size(); ++worldIndex )
+        for ( const uint32 worldIndex : listCandidate )
         {
             float32 priority{ 0.0f };
             if ( evaluateEntity( connectionID, listWorldEntity[worldIndex], priority ) )
-                outList.push_back( NetRelevantEntity{ static_cast<uint32>( worldIndex ), priority } );
+                outList.push_back( NetRelevantEntity{ worldIndex, priority } );
         }
     }
 
@@ -57,8 +67,10 @@ namespace sw
         _settings = settings;
         _pPolicy  = pPolicy != nullptr ? pPolicy : &_defaultPolicy;
         _listClient.clear();
-        _world            = NetSnapshot{};
-        _worldEntityCount = 0;
+        _world = NetSnapshot{};
+        _listPendingEntity.clear();
+        _pendingEntityCount = 0;
+        _lastRevision       = 0;
         return true;
     }
 
@@ -96,8 +108,8 @@ namespace sw
 
     void ReplicationServer::beginTick( uint32 tick )
     {
-        _world._tick      = tick;
-        _worldEntityCount = 0; // 항목은 지우지 않는다. `setEntity` 가 덮어쓰고 `endTick` 이 남는 항목을 자르므로 버퍼 용량을 재사용한다
+        _world._tick        = tick;
+        _pendingEntityCount = 0; // 항목은 지우지 않는다. `setEntity` 가 덮어쓰고 `endTick` 이 남는 항목을 자르므로 버퍼 용량을 재사용한다
     }
 
     void ReplicationServer::setEntity( uint32 entityID, uint32 typeID, const vector<uint8>& buffer )
@@ -110,9 +122,9 @@ namespace sw
                                  entityID, static_cast<int32>( buffer.size() ), NetSnapshot::kMaxEntityBytes );
             ++_oversizedEntityCount;
         }
-        if ( _worldEntityCount == _world._listEntity.size() )
-            _world._listEntity.emplace_back();
-        NetEntityState& entity = _world._listEntity[_worldEntityCount++];
+        if ( _pendingEntityCount == _listPendingEntity.size() )
+            _listPendingEntity.emplace_back();
+        NetEntityState& entity = _listPendingEntity[_pendingEntityCount++];
         entity._entityID       = entityID;
         entity._typeID         = typeID;
         entity._buffer         = buffer; // 복사 대입으로 항목의 용량을 재사용한다
@@ -120,8 +132,21 @@ namespace sw
 
     void ReplicationServer::endTick()
     {
-        _world._listEntity.resize( _worldEntityCount );
-        _world.sortEntities();
+        _listPendingEntity.resize( _pendingEntityCount );
+        VectorUtil::sort( _listPendingEntity, Ascending<&NetEntityState::_entityID>{} );
+        // 지난 월드와 둘 다 id 순이라 나란히 걷는다. 종류 · 바이트가 같으면 판을 물려받고, 다르거나 새 엔티티면 새 판을 받는다.
+        const vector<NetEntityState>& listOld  = _world._listEntity;
+        size_t                        oldIndex = 0;
+        for ( NetEntityState& entity : _listPendingEntity )
+        {
+            while ( oldIndex < listOld.size() && listOld[oldIndex]._entityID < entity._entityID )
+                ++oldIndex;
+            const NetEntityState* pOld       = oldIndex < listOld.size() && listOld[oldIndex]._entityID == entity._entityID ? &listOld[oldIndex] : nullptr;
+            const bool            bUnchanged = pOld != nullptr && pOld->_typeID == entity._typeID && pOld->_buffer == entity._buffer;
+            entity._revision                 = bUnchanged ? pOld->_revision : ++_lastRevision;
+            entity._wakeTick                 = bUnchanged ? pOld->_wakeTick : _world._tick; // 판이 오르면 깨어난다 — 깨우는 호출이 따로 없다
+        }
+        _world._listEntity.swap( _listPendingEntity );
     }
 
     void ReplicationServer::setTaskManager( TaskManager* pTaskManager, uint32 serialThreshold )
@@ -136,9 +161,10 @@ namespace sw
         // 클라이언트 상태는 나눠 실행하기 전에 모두 확보한다. `acquireClient` 는 목록을 키울 수 있기 때문이다. 나눠 실행하는 동안에는 아무도 목록을 건드리지 않는다.
         _pHost->collectConnected( _listConnectionScratch );
         _listClientScratch.resize( _listConnectionScratch.size() );
+        bool bNeedsAllIndex = false; // 첫 스냅샷을 받는 연결이 있으면 휴면 엔티티까지 후보로 둔다
         for ( size_t index = 0; index < _listConnectionScratch.size(); ++index )
         {
-            acquireClient( _listConnectionScratch[index] );
+            bNeedsAllIndex = acquireClient( _listConnectionScratch[index] )._bFullyEvaluated == SW_FALSE || bNeedsAllIndex;
         }
         for ( size_t index = 0; index < _listConnectionScratch.size(); ++index )
         {
@@ -151,6 +177,7 @@ namespace sw
             _listClientScratch[index]         = &client;
         }
         _pPolicy->prepareSnapshots( _world._listEntity ); // 연결이 함께 쓰는 정책 표 — 나눠 돌기 전에 게임 스레드에서 한 번
+        prepareCandidates( bNeedsAllIndex );
         _snapshotScratch.prepare( _parallel );
         _pRangeConnection = _listConnectionScratch.data();
         _ppRangeClient    = _listClientScratch.data();
@@ -170,67 +197,92 @@ namespace sw
     void ReplicationServer::sendSnapshot( int32 connectionID, ClientState& client, SnapshotScratch& scratch )
     {
         const NetSnapshot& world = _world; // 여러 워커가 함께 읽는다 — const 로 잡아 쓰기 접근(경합 검사가 쓰기로 센다)을 막는다
-        // 이 클라이언트에 관련 있는 엔티티만 넣는다. 엔티티 버퍼는 제자리에 덮어써서 용량을 남긴다.
-        NetSnapshot& filtered           = scratch._filtered;
-        filtered._tick                  = world._tick;
-        filtered._ownerState            = client._ownerState;                  // 복사 대입으로 스크래치 버퍼의 용량을 재사용한다
-        filtered._firstMissingInputTick = client._input.getFirstMissingTick(); // 여러 워커가 읽기만 한다. 입력은 전송 전에 게임 스레드가 넣었다
-        NetPrioritizer& prioritizer     = client._prioritizer;
-        prioritizer.beginAccumulate();
-        size_t                     relevantCount = 0;
-        vector<NetRelevantEntity>& listRelevant  = scratch._listRelevant;
-        _pPolicy->collectRelevantEntities( connectionID, world._listEntity, listRelevant ); // 월드는 여러 워커가 함께 읽는다. 차례는 월드 차례(id 순)다
-        for ( const NetRelevantEntity& relevant : listRelevant )
+        // 기준은 클라이언트가 확인한 틱에 우리가 보낸 기록이다. 너무 오래돼 덮어써졌으면 기준 없이 보낸다.
+        const NetSentSnapshot* pBaseline = nullptr;
+        if ( client._bHasAck )
         {
-            const NetEntityState& entity   = world._listEntity[relevant._worldIndex];
-            const float32         priority = relevant._priority;
-            if ( relevantCount < filtered._listEntity.size() )
-                filtered._listEntity[relevantCount] = entity;
-            else
-                filtered._listEntity.push_back( entity );
-            ++relevantCount;
-            prioritizer.accumulate( entity._entityID, priority, 1.0f ); // 스냅샷 하나에 한 번 누적한다
+            const NetSentSnapshot* pCandidate = client._listSent.find( client._ackedTick );
+            const bool             bRecent    = world._tick - client._ackedTick < static_cast<uint32>( client._listSent.getCapacity() );
+            if ( pCandidate != nullptr && bRecent )
+                pBaseline = pCandidate;
         }
-        filtered._listEntity.resize( relevantCount );
-        prioritizer.removeUntouched(); // 더는 관련 없는 엔티티는 잊는다. 다시 관련되면 0부터 쌓는다
-        resolveUnconfirmedSends( client, filtered );
-        // 쌓인 우선도가 큰 것부터 처리한다. 관련 엔티티는 id 순으로 정렬돼 있으므로 이분 탐색으로 찾는다.
+
+        // 정책에는 후보(깨어 있는 엔티티, 첫 스냅샷이면 전부)만 묻는다. 차례는 월드 차례(id 순)다.
+        vector<NetRelevantEntity>& listEvaluated = scratch._listRelevant;
+        const vector<uint32>&      listCandidate = client._bFullyEvaluated == SW_TRUE ? _listAwakeIndex : _listAllIndex;
+        _pPolicy->collectRelevantEntities( connectionID, world._listEntity, listCandidate, listEvaluated );
+        // 지난 스냅샷에서 관련 있던 휴면 엔티티는 묻지 않고 그 판단(우선도)을 이어 간다. 둘 다 id 순이라 월드 쪽 자리는 앞으로만 간다.
+        vector<NetRelevantEntity>& listMerged = scratch._listMerged;
+        listMerged.clear();
+        size_t evaluatedCursor = 0;
+        auto   worldIt         = world._listEntity.begin();
+        for ( const RelevantRecord& record : client._listLastRelevant )
+        {
+            worldIt = std::lower_bound( worldIt, world._listEntity.end(), record._entityID, []( const NetEntityState& entity, uint32 id )
+            { return entity._entityID < id; } );
+            if ( worldIt == world._listEntity.end() )
+                break;
+            if ( worldIt->_entityID != record._entityID || isEntityDormant( *worldIt ) == false )
+                continue; // 사라졌거나, 깨어 있어 후보로 다시 물었다
+            const uint32 worldIndex = static_cast<uint32>( worldIt - world._listEntity.begin() );
+            while ( evaluatedCursor < listEvaluated.size() && listEvaluated[evaluatedCursor]._worldIndex < worldIndex )
+                listMerged.push_back( listEvaluated[evaluatedCursor++] );
+            listMerged.push_back( NetRelevantEntity{ worldIndex, record._priority } );
+        }
+        while ( evaluatedCursor < listEvaluated.size() )
+            listMerged.push_back( listEvaluated[evaluatedCursor++] );
+        client._bFullyEvaluated = SW_TRUE;
+
+        // 받는 쪽이 이미 지금 판을 가진 휴면 엔티티는 기준에서 그대로 둔다 — 받는 쪽이 가질 목록(사라짐 판정)에는 들지만 우선도 · 델타 후보에서는 빠진다.
+        NetPrioritizer& prioritizer = client._prioritizer;
+        prioritizer.beginAccumulate();
+        vector<uint32>& listRelevantIndex = scratch._listRelevantIndex;
+        listRelevantIndex.clear();
+        client._listLastRelevant.clear();
+        for ( const NetRelevantEntity& relevant : listMerged )
+        {
+            const NetEntityState& entity = world._listEntity[relevant._worldIndex];
+            listRelevantIndex.push_back( relevant._worldIndex );
+            client._listLastRelevant.push_back( RelevantRecord{ entity._entityID, relevant._priority } );
+            const NetSentEntity* pHave           = pBaseline != nullptr ? pBaseline->findEntity( entity._entityID ) : nullptr;
+            const bool           bAlreadyCurrent = pHave != nullptr && pHave->_revision == entity._revision && isEntityDormant( entity );
+            if ( bAlreadyCurrent == false )
+                prioritizer.accumulate( entity._entityID, relevant._priority, 1.0f ); // 스냅샷 하나에 한 번 누적한다
+        }
+        prioritizer.removeUntouched(); // 더는 관련 없거나 받는 쪽에 자리 잡은 휴면 엔티티는 잊는다. 다시 후보가 되면 0부터 쌓는다
+        resolveUnconfirmedSends( client, listRelevantIndex );
+        // 쌓인 우선도가 큰 것부터 처리한다. 관련 엔티티는 id 순이므로 이분 탐색으로 찾는다.
         vector<uint32>& listOrderEntity = scratch._listOrderEntity;
         prioritizer.collectOrder( listOrderEntity );
         vector<int32>& listOrder = scratch._listOrder;
         listOrder.resize( listOrderEntity.size() );
         for ( size_t index = 0; index < listOrderEntity.size(); ++index )
         {
-            listOrder[index] = static_cast<int32>( filtered.findEntity( listOrderEntity[index] ) - filtered._listEntity.data() );
+            const auto relevantIt = std::lower_bound( listRelevantIndex.begin(), listRelevantIndex.end(), listOrderEntity[index], [&world]( uint32 worldIndex, uint32 entityID )
+            { return world._listEntity[worldIndex]._entityID < entityID; } );
+            listOrder[index]      = static_cast<int32>( relevantIt - listRelevantIndex.begin() );
         }
 
-        // 기준은 클라이언트가 확인한 틱에 우리가 보낸 복원 스냅샷이다. 너무 오래돼 덮어써졌으면 기준 없이 보낸다.
-        const NetSnapshot* pBaseline = nullptr;
-        if ( client._bHasAck )
-        {
-            const NetSnapshot* pCandidate = client._listSent.find( client._ackedTick );
-            const bool         bRecent    = world._tick - client._ackedTick < static_cast<uint32>( client._listSent.getCapacity() );
-            if ( pCandidate != nullptr && bRecent )
-                pBaseline = pCandidate;
-        }
-        BitWriter& writer = scratch._messageWriter.beginMessage<NetClientServerMessage::Table, NetClientServerMessage::Snapshot>();
-        // 보낸 복원 스냅샷은 그 틱의 슬롯에 바로 쓴다. 같은 틱을 두 번 보내서 기준 슬롯과 겹치면 사본을 거친다. 슬롯의 이전 버퍼는 남는다.
-        NetSnapshot& slot = client._listSent.acquire( world._tick );
+        // 입력(빈틈없이 받은 다음 틱)은 전송 전에 게임 스레드가 넣었다 — 여러 워커가 읽기만 한다.
+        const NetDeltaSource source{ world._listEntity, listRelevantIndex, listOrder, client._ownerState, world._tick, client._input.getFirstMissingTick() };
+        BitWriter&           writer = scratch._messageWriter.beginMessage<NetClientServerMessage::Table, NetClientServerMessage::Snapshot>();
+        // 보낸 기록은 그 틱의 슬롯에 바로 쓴다. 같은 틱을 두 번 보내서 기준 슬롯과 겹치면 사본을 거친다. 슬롯의 이전 버퍼는 남는다.
+        NetSentSnapshot& slot = client._listSent.acquire( world._tick );
         if ( &slot == pBaseline )
         {
-            NetSnapshot written;
-            filtered.writeDelta( writer, pBaseline, client._snapshotBudgetBytes, written, &listOrder, &scratch._listCurrent );
+            NetSentSnapshot written;
+            NetSnapshot::writeDelta( writer, source, pBaseline, client._snapshotBudgetBytes, written, scratch._listCurrent );
             slot = std::move( written );
         }
         else
         {
-            filtered.writeDelta( writer, pBaseline, client._snapshotBudgetBytes, slot, &listOrder, &scratch._listCurrent );
+            NetSnapshot::writeDelta( writer, source, pBaseline, client._snapshotBudgetBytes, slot, scratch._listCurrent );
         }
         // 받는 쪽이 이미 지금 상태인 엔티티는 확정으로 보고 우선도를 0으로 되돌린다. 이번에 실은 엔티티도 확인을 기다리는 전송으로 두고 0으로 되돌린다.
         // 못 실은 엔티티는 우선도가 쌓인 채로 남아 다음 스냅샷에서 앞선다.
-        for ( size_t index = 0; index < filtered._listEntity.size(); ++index )
+        for ( size_t index = 0; index < listRelevantIndex.size(); ++index )
         {
-            const uint32 entityID = filtered._listEntity[index]._entityID;
+            const uint32 entityID = world._listEntity[listRelevantIndex[index]]._entityID;
             if ( scratch._listCurrent[index] == NetSnapshot::kEntityAlreadyCurrent )
                 prioritizer.markSent( entityID );
             else if ( scratch._listCurrent[index] == NetSnapshot::kEntityWritten )
@@ -239,26 +291,28 @@ namespace sw
         (void)scratch._messageWriter.sendMessage( *_pHost, connectionID ); // 여러 스레드가 동시에 호출해도 NetEndpoint 가 보호한다
     }
 
-    void ReplicationServer::resolveUnconfirmedSends( ClientState& client, const NetSnapshot& filtered ) const
+    void ReplicationServer::resolveUnconfirmedSends( ClientState& client, const vector<uint32>& listRelevantIndex ) const
     {
         // 여러 워커가 클라이언트마다 따로 부른다. 이 클라이언트의 상태만 쓰고 월드는 읽기만 한다.
-        NetPrioritizer&    prioritizer = client._prioritizer;
-        const NetSnapshot* pAcked      = client._bHasAck == SW_TRUE ? client._listSent.find( client._ackedTick ) : nullptr;
-        const uint32       capacity    = static_cast<uint32>( client._listSent.getCapacity() );
-        for ( const NetEntityState& entity : filtered._listEntity )
+        NetPrioritizer&        prioritizer = client._prioritizer;
+        const NetSentSnapshot* pAcked      = client._bHasAck == SW_TRUE ? client._listSent.find( client._ackedTick ) : nullptr;
+        const uint32           capacity    = static_cast<uint32>( client._listSent.getCapacity() );
+        for ( const uint32 worldIndex : listRelevantIndex )
         {
-            uint32 sentTick = 0;
-            if ( prioritizer.findUnconfirmedSendTick( entity._entityID, sentTick ) == false )
+            const uint32 entityID = _world._listEntity[worldIndex]._entityID;
+            uint32       sentTick = 0;
+            if ( prioritizer.findUnconfirmedSendTick( entityID, sentTick ) == false )
                 continue;
             const bool bAckedPast = client._bHasAck == SW_TRUE && client._ackedTick >= sentTick;
-            const bool bExpired   = _world._tick - sentTick >= capacity; // 보낸 복원 스냅샷이 링 버퍼에서 밀려났으므로 더 기다리지 않는다
+            const bool bExpired   = _world._tick - sentTick >= capacity; // 보낸 기록이 링 버퍼에서 밀려났으므로 더 기다리지 않는다
             if ( bAckedPast == false && bExpired == false )
                 continue; // 아직 전송 중이다
-            const NetSnapshot*    pSent      = bExpired ? nullptr : client._listSent.find( sentTick );
-            const NetEntityState* pSentState = pSent != nullptr ? pSent->findEntity( entity._entityID ) : nullptr;
-            const NetEntityState* pHave      = pAcked != nullptr ? pAcked->findEntity( entity._entityID ) : nullptr;
-            const bool            bDelivered = pSentState != nullptr && pHave != nullptr && pHave->_typeID == pSentState->_typeID && pHave->_buffer == pSentState->_buffer;
-            prioritizer.resolveSend( entity._entityID, bDelivered );
+            // 확인된 기록이 그때 보낸 판을 들고 있으면 닿은 것이다 — 바이트가 아니라 판으로 비교한다.
+            const NetSentSnapshot* pSent      = bExpired ? nullptr : client._listSent.find( sentTick );
+            const NetSentEntity*   pSentState = pSent != nullptr ? pSent->findEntity( entityID ) : nullptr;
+            const NetSentEntity*   pHave      = pAcked != nullptr ? pAcked->findEntity( entityID ) : nullptr;
+            const bool             bDelivered = pSentState != nullptr && pHave != nullptr && pHave->_revision == pSentState->_revision;
+            prioritizer.resolveSend( entityID, bDelivered );
         }
     }
 
@@ -395,6 +449,37 @@ namespace sw
     uint64 ReplicationServer::getOversizedEntityCount() const
     {
         return _oversizedEntityCount;
+    }
+
+    bool ReplicationServer::isEntityDormant( const NetEntityState& entity ) const
+    {
+        const uint32 tick = _world._tick;
+        return tick >= entity._wakeTick && tick - entity._wakeTick >= static_cast<uint32>( _settings._dormancyTicks );
+    }
+
+    void ReplicationServer::prepareCandidates( bool bNeedsAllIndex )
+    {
+        // 정책이 관련 여부가 바뀌었다고 알린 엔티티를 깨운다(관찰자가 다가가 휴면 가구가 보이게 되는 등). 월드는 id 순이다.
+        vector<NetEntityState>& listWorld = _world._listEntity;
+        _listWokenScratch.clear();
+        _pPolicy->collectWokenEntities( _listWokenScratch );
+        for ( const uint32 entityID : _listWokenScratch )
+        {
+            const auto entityIt = std::lower_bound( listWorld.begin(), listWorld.end(), entityID, []( const NetEntityState& entity, uint32 id )
+            { return entity._entityID < id; } );
+            if ( entityIt != listWorld.end() && entityIt->_entityID == entityID )
+                entityIt->_wakeTick = _world._tick;
+        }
+        // 연결마다 묻는 후보는 깨어 있는 엔티티다 — 연결당 평가가 월드 크기가 아니라 깨어 있는 수에 비례한다.
+        _listAwakeIndex.clear();
+        _listAllIndex.clear();
+        for ( size_t worldIndex = 0; worldIndex < listWorld.size(); ++worldIndex )
+        {
+            if ( isEntityDormant( listWorld[worldIndex] ) == false )
+                _listAwakeIndex.push_back( static_cast<uint32>( worldIndex ) );
+            if ( bNeedsAllIndex )
+                _listAllIndex.push_back( static_cast<uint32>( worldIndex ) );
+        }
     }
 
     uint32 ReplicationServer::getAckedTick( int32 connectionID ) const

@@ -70,13 +70,12 @@ namespace sw
             outSettings._bUnderwater   = SW_TRUE;
             return true;
         }
-        for ( const FogComponent* pFog : manager.getComponentRegistry().getAll<FogComponent>() )
-        {
-            if ( pFog->isPendingDestroy() || pFog->isActive() == false )
-                continue;
-            outSettings = pFog->makeSettings();
-            return true;
-        }
-        return false;
+        // 안개는 씬에 하나다(언리얼 Exponential Height Fog 와 같다) — 켜진 것이 둘이면 오류로 쓰지 않는다(등록 순서로 고르지 않는다).
+        const FogComponent* pFog = manager.getComponentRegistry().findUnique<FogComponent>( []( const FogComponent& fog )
+        { return fog.isPendingDestroy() == false && fog.isActive(); } );
+        if ( pFog == nullptr )
+            return false;
+        outSettings = pFog->makeSettings();
+        return true;
     }
 } // namespace sw

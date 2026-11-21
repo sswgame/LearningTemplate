@@ -90,10 +90,11 @@ namespace sw
                 const utf8* pMoveID = XMLReadUtil::findRequiredID( node, sourceName );
                 if ( pMoveID == nullptr )
                     return false;
-                FighterMove          move;
-                bool                 bValid   = XMLFields::readProperties( node, move, sourceName, { "id", "frames", "command", "priority", "maxGap", "from", "breakButtons" } );
-                const string_view    framesID = node.getAttributeText( "frames" );
-                const MoveFrameData* pFrame   = moveCatalog.find( hashed_string( framesID.empty() ? string_view( pMoveID ) : framesID ) );
+                FighterMove                     move;
+                bool                            bValid   = XMLFields::readProperties( node, move, sourceName, { "id", "frames", "command", "priority", "maxGap", "from", "breakButtons" } );
+                const string_view               framesID = node.getAttributeText( "frames" );
+                const CatalogKey<MoveFrameData> frameKey{ hashed_string( framesID.empty() ? string_view( pMoveID ) : framesID ) };
+                const MoveFrameData*            pFrame = moveCatalog.find( frameKey );
                 if ( pFrame == nullptr )
                 {
                     SW_LOG_ERROR_ID( "FighterCatalog.MoveNoFrameData", "%#: move '%#' has no frame data in the MoveCatalog", sourceName, pMoveID );

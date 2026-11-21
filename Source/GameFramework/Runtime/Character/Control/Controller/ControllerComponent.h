@@ -30,6 +30,27 @@ namespace sw
         float32                   _deltaTime{ 0.0f };
         uint32                    _tick{ 0 }; ///< 조종 시스템이 센 틱(기록 · 네트워크 창의 틱 번호)
     };
+
+    /**
+     * @brief 조종 프레임 N 번에 한 번 차례가 오고, 그 사이 프레임 시간을 모읍니다(AI 판단 간격 — 언리얼 `TickInterval`, 행동 트리 서비스의 간격).
+     * @details 차례는 조종 시스템의 틱 번호(`ControlFrameContext::_tick`)로 정한다 — 시간이 멈춘 프레임은 틱이 오르지 않아 차례도 오지 않는다.
+     *          @p phase 로 같은 간격의 조종자들을 서로 다른 프레임에 흩는다. 간격 1 은 매 프레임이다(결정성이 필요한 판은 1 을 쓴다).
+     */
+    struct ControlFrameInterval
+    {
+        float32 _elapsed{ 0.0f }; ///< 지난 차례 뒤 모은 프레임 시간
+
+        /** @brief 이번 프레임의 시간을 모으고, 차례면 모은 시간을 @p outDeltaTime 에 내고 비운 뒤 true 입니다. */
+        bool advance( const ControlFrameContext& context, uint32 interval, uint32 phase, float32& outDeltaTime )
+        {
+            _elapsed += context._deltaTime;
+            if ( interval > 1 && ( context._tick + phase ) % interval != 0 )
+                return false;
+            outDeltaTime = _elapsed;
+            _elapsed     = 0.0f;
+            return true;
+        }
+    };
 } // namespace sw
 
 namespace sw

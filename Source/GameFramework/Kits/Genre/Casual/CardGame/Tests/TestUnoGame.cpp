@@ -2,6 +2,8 @@
 
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Serialization/Format/Tests/StateBytesTestUtil.h"
+
 #include "GameFramework/Kits/Genre/Casual/CardGame/CardDeck.h"
 #include "GameFramework/Kits/Genre/Casual/CardGame/Uno/UnoGame.h"
 
@@ -43,4 +45,35 @@ SW_TEST_CASE( UnoGameTest, WholeDeckScoresTheKnownTotal )
     sw::UnoGame::makeDeck( deck );
     SW_REQUIRE_EQUAL( 108, deck.getCount() );
     SW_EXPECT_EQUAL( 1240, sw::UnoGame::computeHandPoints( deck ) );
+}
+
+/** @brief [UnoGameTest] 결정성: 차례인 사람이 걸음 번호로 고른 낼 패를 내거나 뽑고, 우노를 잡으며 다시 섞기까지 가면 두 판의 상태 바이트가 같고, 중간 세이브를 읽어 이어 돌려도 같다. */
+SW_TEST_CASE( UnoGameTest, GameDeterminism )
+{
+    sw::UnoSettings settings;
+    settings._bStackDrawTwo  = SW_TRUE;
+    settings._bStackDrawFour = SW_TRUE;
+    const auto setup         = [&settings]( sw::UnoGame& game )
+    { return game.initialize( settings, 7u ); };
+    const auto step = []( sw::UnoGame& game, int32 stepIndex )
+    {
+        if ( game.getWinner() >= 0 )
+            return;
+        const int32 player = game.getCurrentPlayer();
+        if ( stepIndex % 10 == 9 )
+            (void)game.callUno( ( player + 1 ) % game.getPlayerCount() );
+        const sw::CardPile& hand  = game.getHand( player );
+        const int32         count = hand.getCount();
+        for ( int32 offset = 0; offset < count; ++offset )
+        {
+            const sw::Card& card = hand.getAt( ( stepIndex + offset ) % count );
+            if ( game.isPlayable( card ) )
+            {
+                (void)game.playCard( player, card._id, static_cast<sw::UnoColor>( stepIndex % 4 ), stepIndex % 3 != 0 );
+                return;
+            }
+        }
+        (void)game.drawCard( player );
+    };
+    SW_EXPECT_TRUE( sw::StateBytesTestUtil::isDeterministic<sw::UnoGame>( setup, step, 240 ) );
 }

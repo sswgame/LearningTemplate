@@ -7,6 +7,7 @@
 #include "Engine/Reflection/TypeFqn.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Format/Tests/StateBytesTestUtil.h"
 #include "Engine/Serialization/Format/Tests/StateIOTestUtil.h"
 
 #include "GameFramework/Kits/Genre/Strategy/TacticsSRPG/RunMap.h"
@@ -923,6 +924,38 @@ SW_TEST_CASE_F( SRPGRulesTest, StateRoundTrip )
     openField( smaller, 4, 4, "plain", _settings, 1 );
     sw::Archive readingAgain( written.getData(), written.getSize() );
     SW_EXPECT_FALSE( smaller.readState( readingAgain ) );
+}
+
+/**
+ * @brief [SRPGRulesTest] 결정성: 양 편을 AI 가 국면마다 돌리고(난수 명중 · 크리티컬 · 지원 공격), 걸음 번호로 아군 국면을 건너뛰기도 한 전장은 같은 바이트를 내고, 중간에 쓰고 읽은 전장도 같게 이어 돈다
+ */
+SW_TEST_CASE_F( SRPGRulesTest, BattlefieldDeterminism )
+{
+    const sw::SRPGSettings rules = _catalog.getRules(); // 지원 공격 · 방어가 켜진 카탈로그 규칙 그대로
+    const auto             setup = [this, rules]( sw::SRPGBattlefield& field )
+    {
+        openField( field, 10, 10, "plain", rules, 7 );
+        (void)field.fillTerrain( sw::int2{ 4, 0 }, sw::int2{ 5, 9 }, "forest" );
+        bool bPlaced = true;
+        for ( int32 index = 0; index < 3; ++index )
+        {
+            bPlaced = bPlaced && field.addUnit( "gm", "rookie", sw::SRPGTeam::Player, sw::int2{ 0, 2 + index * 2 } ).has_value();
+            bPlaced = bPlaced && field.addUnit( index == 0 ? "striker" : "runner", "ace", sw::SRPGTeam::Enemy, sw::int2{ 9, 3 + index * 2 } ).has_value();
+        }
+        field.beginBattle();
+        return bPlaced;
+    };
+    const auto step = []( sw::SRPGBattlefield& field, int32 stepIndex )
+    {
+        if ( field.getPhaseTeam() == sw::SRPGTeam::Player && stepIndex % 7 == 3 )
+        {
+            field.endPhase(); // 아군이 움직이지 않고 국면을 넘긴다
+            return;
+        }
+        const sw::SRPGCommanderAI ai;
+        (void)ai.runPhase( field, field.getPhaseTeam() );
+    };
+    SW_EXPECT_TRUE( sw::StateBytesTestUtil::isDeterministic<sw::SRPGBattlefield>( setup, step, 60 ) );
 }
 
 /**

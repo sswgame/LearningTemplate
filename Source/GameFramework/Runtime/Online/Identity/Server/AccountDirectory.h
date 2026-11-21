@@ -16,6 +16,7 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Online/Identity/AccountIdentity.h"
+#include "GameFramework/Runtime/Online/Service/OnlineServerKitName.h"
 
 namespace sw
 {
@@ -33,6 +34,8 @@ namespace sw
     class IAccountDirectory
     {
     public:
+        static constexpr const utf8* kProviderKit = OnlineServerKitName::kAccount; ///< 이 인터페이스를 내는 키트다. 받는 키트의 의존 이름이 여기서 나온다(`OnlineServerKit`)
+
         IAccountDirectory()          = default;
         virtual ~IAccountDirectory() = default;
 
@@ -59,6 +62,8 @@ namespace sw
     {
         // 순수 인터페이스라 내보내지 않는다. 인라인 생성자와 소멸자를 GameFramework.dll 이 내보내지 않으므로 dllimport 로 해석되면 키트 링크가 깨진다(C-3).
     public:
+        static constexpr const utf8* kProviderKit = OnlineServerKitName::kSocial; ///< 이 인터페이스를 내는 키트다. 받는 키트의 의존 이름이 여기서 나온다(`OnlineServerKit`)
+
         IAccountBlockList()          = default;
         virtual ~IAccountBlockList() = default;
 
@@ -81,6 +86,8 @@ namespace sw
     {
         // 순수 인터페이스라 내보내지 않는다. 인라인 생성자와 소멸자를 GameFramework.dll 이 내보내지 않으므로 dllimport 로 해석되면 키트 링크가 깨진다(C-3).
     public:
+        static constexpr const utf8* kProviderKit = OnlineServerKitName::kAccount; ///< 이 인터페이스를 내는 키트다. 받는 키트의 의존 이름이 여기서 나온다(`OnlineServerKit`)
+
         IAccountSessionControl()          = default;
         virtual ~IAccountSessionControl() = default;
 
@@ -110,6 +117,8 @@ namespace sw
     {
         // 순수 인터페이스라 내보내지 않는다. 인라인 생성자와 소멸자를 GameFramework.dll 이 내보내지 않으므로 dllimport 로 해석되면 키트 링크가 깨진다(C-3).
     public:
+        static constexpr const utf8* kProviderKit = OnlineServerKitName::kAccount; ///< 이 인터페이스를 내는 키트다. 받는 키트의 의존 이름이 여기서 나온다(`OnlineServerKit`)
+
         IAccountNameIndex()          = default;
         virtual ~IAccountNameIndex() = default;
 
@@ -137,6 +146,8 @@ namespace sw
     {
         // 순수 인터페이스라 내보내지 않는다. 인라인 생성자와 소멸자를 GameFramework.dll 이 내보내지 않으므로 dllimport 로 해석되면 키트 링크가 깨진다(C-3).
     public:
+        static constexpr const utf8* kProviderKit = OnlineServerKitName::kAccount; ///< 이 인터페이스를 내는 키트다. 받는 키트의 의존 이름이 여기서 나온다(`OnlineServerKit`)
+
         IAccountExternalLinks()          = default;
         virtual ~IAccountExternalLinks() = default;
 
@@ -160,6 +171,8 @@ namespace sw
     class IOfflinePushSender
     {
     public:
+        static constexpr const utf8* kProviderKit = OnlineServerKitName::kLiveOps; ///< 이 인터페이스를 내는 키트다. 받는 키트의 의존 이름이 여기서 나온다(`OnlineServerKit`)
+
         IOfflinePushSender()          = default;
         virtual ~IOfflinePushSender() = default;
 

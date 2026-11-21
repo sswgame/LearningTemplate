@@ -32,6 +32,9 @@ namespace sw
 {
     namespace
     {
+        /** @brief 슈터 서버가 받는 서버 키트 인터페이스 형식 목록입니다. 백필은 매칭 키트가 `gameServer` 로 선 서버에만 있어 선택이다. */
+        using ShooterServerKits = ServerKitDependencies<ServerKitRequired<>, ServerKitOptional<IMatchBackfillSender>>;
+
         struct ShooterNetPawnComponentInternal
         {
             /**
@@ -41,7 +44,8 @@ namespace sw
              */
             static void reportPlayerLeft( uint64 accountID )
             {
-                IMatchBackfillSender* const pBackfill = findServerKit<IMatchBackfillSender>( game::findSubsystem<IServerKitLocator>() );
+                const optional<ShooterServerKits> kits      = ShooterServerKits::resolve( game::findSubsystem<IServerKitLocator>() );
+                IMatchBackfillSender* const       pBackfill = kits.has_value() ? kits->find<IMatchBackfillSender>() : nullptr;
                 if ( pBackfill == nullptr )
                     return;
                 const MatchmakingServiceResult result = pBackfill->submitPlayerLeft( static_cast<AccountID>( accountID ), WallClock::nowUnixMilliseconds() );
@@ -60,36 +64,36 @@ namespace sw
                 return movement.simulate( listBox, state, movement.makeInput( intent ), tickInterval, bLanded );
             }
 
-            /** @brief 적 하나의 엔티티 상태를 씁니다 — 자리 · 요 · 단계 · 종류 · 외형 씨앗. */
-            static void writeEnemy( const ShooterEnemyView& view, vector<uint8>& outBytes )
+            static_assert( static_cast<uint8>( ShooterEnemyPhase::Dying ) == 4, "ShooterEnemyNetState::_phase 의 Max 를 열거의 끝 값과 맞춘다" );
+
+            /** @brief 적 하나의 엔티티 상태를 씁니다 — 칸은 `ShooterEnemyNetState` 의 선언이다. 자리가 복제 범위 밖이면 false 입니다. */
+            [[nodiscard]] static bool writeEnemy( const ShooterEnemyView& view, vector<uint8>& outBytes )
             {
+                ShooterEnemyNetState state;
+                state._position       = view._position;
+                state._yaw            = MathUtil::wrapAngle( view._yaw ); // 회전은 같고 범위([-π, π])에 든다
+                state._phase          = static_cast<uint8>( view._phase );
+                state._kindIndex      = view._kindIndex;
+                state._appearanceSeed = view._appearanceSeed;
                 BitWriter writer{ std::move( outBytes ) };
                 writer.clear();
-                writer.writeFloat( view._position._x );
-                writer.writeFloat( view._position._y );
-                writer.writeFloat( view._position._z );
-                writer.writeFloat( view._yaw );
-                writer.writeVarUint( static_cast<uint32>( view._phase ) );
-                writer.writeVarUint( view._kindIndex );
-                writer.writeVarUint( view._appearanceSeed );
-                outBytes = writer.releaseBytes();
+                const bool bWritten = ReplicatedLayout::writeFull( state, writer );
+                outBytes            = writer.releaseBytes();
+                return bWritten;
             }
 
-            /** @brief 적 하나의 엔티티 상태를 읽습니다. 깨졌거나 단계 · 종류가 범위 밖이면 false 입니다. */
+            /** @brief 적 하나의 엔티티 상태를 읽습니다. 깨졌거나 칸이 선언 범위 밖이면 false 입니다. */
             [[nodiscard]] static bool readEnemy( const vector<uint8>& bytes, ShooterReplicatedEnemy& outEnemy )
             {
-                BitReader  reader( bytes.data(), static_cast<int32>( bytes.size() ) );
-                const bool bFinite = reader.readFiniteFloat( outEnemy._position._x ) && reader.readFiniteFloat( outEnemy._position._y ) &&
-                                     reader.readFiniteFloat( outEnemy._position._z ) && reader.readFiniteFloat( outEnemy._yaw );
-                if ( bFinite == false )
+                BitReader            reader( bytes.data(), static_cast<int32>( bytes.size() ) );
+                ShooterEnemyNetState state;
+                if ( ReplicatedLayout::readFull( reader, state, nullptr ) != FixedReadResult::Ok )
                     return false;
-                const uint32 phase       = reader.readVarUint32();
-                const uint32 kindIndex   = reader.readVarUint32();
-                outEnemy._appearanceSeed = reader.readVarUint32();
-                if ( reader.hasOverflowed() || phase > static_cast<uint32>( ShooterEnemyPhase::Dying ) || kindIndex > ShooterGameModeComponent::kEliteKindIndex )
-                    return false;
-                outEnemy._phase     = static_cast<ShooterEnemyPhase>( phase );
-                outEnemy._kindIndex = static_cast<uint8>( kindIndex );
+                outEnemy._position       = state._position;
+                outEnemy._yaw            = state._yaw;
+                outEnemy._phase          = static_cast<ShooterEnemyPhase>( state._phase );
+                outEnemy._kindIndex      = state._kindIndex;
+                outEnemy._appearanceSeed = state._appearanceSeed;
                 return true;
             }
 
@@ -550,8 +554,11 @@ namespace sw
                 record._radius    = view._radius;
                 record._height    = view._height;
                 record._entityID  = view._netEntityID;
-                ShooterNetPawnComponentInternal::writeEnemy( view, _bytesScratch );
-                _server.setEntity( view._netEntityID, kEnemyTypeID, _bytesScratch );
+                if ( ShooterNetPawnComponentInternal::writeEnemy( view, _bytesScratch ) )
+                    _server.setEntity( view._netEntityID, kEnemyTypeID, _bytesScratch );
+                else
+                    SW_LOG_ERROR_ID( "ShooterNetPawn.EnemyOutOfRange", "Enemy %# is outside the replicated range (%#, %#, %#) - not replicated this tick", view._netEntityID,
+                                     view._position._x, view._position._y, view._position._z );
                 _interest.setEntityPosition( view._netEntityID, view._position );
                 _listEntityScratch.push_back( view._netEntityID );
             }
@@ -696,28 +703,28 @@ namespace sw
 
     bool ShooterNetPawnComponent::writeOwnerState( const ShooterMoveState& state, uint32 confirmedHitCount, float32 health, vector<uint8>& outBytes )
     {
+        // 걸음 상태와 판정 결과를 한 선언(`ShooterOwnerNetState`)으로 쓴다 — 뒤에 값을 손으로 이어 쓰지 않는다.
+        ShooterOwnerNetState owner;
+        owner._move              = state;
+        owner._confirmedHitCount = confirmedHitCount;
+        owner._health            = health;
         BitWriter writer{ std::move( outBytes ) };
         writer.clear();
-        const bool bWritten = ReplicatedLayout::writeFull( state, writer );
-        writer.writeVarUint( confirmedHitCount );
-        writer.writeFloat( health );
-        outBytes = writer.releaseBytes();
+        const bool bWritten = ReplicatedLayout::writeFull( owner, writer );
+        outBytes            = writer.releaseBytes();
         return bWritten;
     }
 
     bool ShooterNetPawnComponent::readOwnerState( const vector<uint8>& bytes, ShooterMoveState& outState, uint32& outConfirmedHitCount, float32& outHealth )
     {
-        BitReader        reader( bytes.data(), static_cast<int32>( bytes.size() ) );
-        ShooterMoveState state = outState;
-        if ( ReplicatedLayout::readFull( reader, state, nullptr ) != FixedReadResult::Ok )
+        BitReader            reader( bytes.data(), static_cast<int32>( bytes.size() ) );
+        ShooterOwnerNetState owner;
+        owner._move = outState; // 복제 칸 밖의 걸음 상태 칸은 지금 값에서 이어진다
+        if ( ReplicatedLayout::readFull( reader, owner, nullptr ) != FixedReadResult::Ok )
             return false;
-        const uint32 confirmedHitCount = reader.readVarUint32();
-        float32      health            = 0.0f;
-        if ( reader.readFiniteFloat( health ) == false || reader.hasOverflowed() )
-            return false;
-        outState             = state;
-        outConfirmedHitCount = confirmedHitCount;
-        outHealth            = health;
+        outState             = owner._move;
+        outConfirmedHitCount = owner._confirmedHitCount;
+        outHealth            = owner._health;
         return true;
     }
 

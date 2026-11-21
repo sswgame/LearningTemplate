@@ -11,6 +11,7 @@
 #include "GameFramework/Runtime/Character/AI/Blackboard.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
+#include "GameFramework/Runtime/Gameplay/SessionState/PlayerProgressComponent.h"
 #include "GameFramework/Runtime/Gameplay/SessionState/SessionStateComponent.h"
 #include "GameFramework/Runtime/World/Environment/WorldClock.h"
 
@@ -156,13 +157,14 @@ namespace sw
 
     void FarmAutoFarmerAIComponent::updateBlackboard( const ControlFrameContext& context, const PawnComponent& pawn )
     {
-        using Internal                          = FarmAutoFarmerAIComponentInternal;
-        Blackboard&                  blackboard = getBlackboard();
-        const GameObject*            pPawnOwner = pawn.getOwner();
-        const GameObjectManager*     pManager   = pPawnOwner != nullptr ? pPawnOwner->getManager() : nullptr;
-        const FarmGameModeComponent* pGameMode  = pManager != nullptr ? GameModeComponent::resolve<FarmGameModeComponent>( *pManager, _gameMode ) : nullptr;
-        const SessionStateComponent* pState     = pGameMode != nullptr ? SessionStateComponent::findOnOwner( *pGameMode ) : nullptr;
-        const bool                   bReady     = pState != nullptr && pGameMode->isStarted();
+        using Internal                            = FarmAutoFarmerAIComponentInternal;
+        Blackboard&                    blackboard = getBlackboard();
+        const GameObject*              pPawnOwner = pawn.getOwner();
+        const GameObjectManager*       pManager   = pPawnOwner != nullptr ? pPawnOwner->getManager() : nullptr;
+        const FarmGameModeComponent*   pGameMode  = pManager != nullptr ? GameModeComponent::resolve<FarmGameModeComponent>( *pManager, _gameMode ) : nullptr;
+        const SessionStateComponent*   pState     = pGameMode != nullptr ? SessionStateComponent::findOnOwner( *pGameMode ) : nullptr;
+        const PlayerProgressComponent* pProgress  = pGameMode != nullptr ? PlayerProgressComponent::findOnOwner( *pGameMode ) : nullptr;
+        const bool                     bReady     = pState != nullptr && pProgress != nullptr && pGameMode->isStarted();
         blackboard.setBool( "FarmReady", bReady );
         if ( bReady == false )
             return;
@@ -171,7 +173,7 @@ namespace sw
         blackboard.setFloat( "ActionTimer", *actionTimer - context._deltaTime );
 
         const FarmGameModeComponent& gameMode = *pGameMode;
-        const Inventory&             bag      = pState->getInventory();
+        const Inventory&             bag      = pProgress->getInventory();
         const CropCatalog&           catalog  = gameMode.getCropCatalog();
         const vector<hashed_string>& listSeed = gameMode.getSeeds();
         blackboard.setVector( "PlayerPosition", gameMode.getPlayerPosition() );
@@ -192,7 +194,7 @@ namespace sw
         const bool     bHasSeed      = seasonalSeed >= 0 && bag.getItemCount( listSeed[static_cast<size_t>( seasonalSeed )] ) > 0;
         blackboard.setBool( "SeedSelected", seasonalSeed < 0 || gameMode.getSelectedSeedIndex() == seasonalSeed );
         blackboard.setBool( "HasSeed", bHasSeed );
-        blackboard.setBool( "CanAffordSeed", pSeasonalCrop != nullptr && pState->getWallet().canAfford( gameMode.getCurrency(), pSeasonalCrop->_seedPrice ) );
+        blackboard.setBool( "CanAffordSeed", pSeasonalCrop != nullptr && pProgress->getWallet().canAfford( gameMode.getCurrency(), pSeasonalCrop->_seedPrice ) );
         Internal::writeTileJob( gameMode.getField(), _cultivateLimit, seasonalSeed >= 0, bHasSeed, blackboard );
         blackboard.setVector( "ShipSpot", gameMode.getShippingBinPosition() + float3{ -1.0f, 0.0f, 0.0f } );
         blackboard.setVector( "ShopSpot", gameMode.getShopPosition() + float3{ 1.4f, 0.0f, 0.0f } );

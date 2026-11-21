@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="d1495cf4de26154a73324b6311e51dd0"?>
 <!--
-  Playground 의 어빌리티 카탈로그 — 지역 효과 시연(maps/zoneshowcase · surfaceinteraction)의 이펙트 · 어빌리티 · 세트.
+  Playground 의 어빌리티 카탈로그 — 지역 효과 시연(maps/zoneshowcase · surfaceinteraction)과 마을(maps/hub) 주민의 이펙트 · 어빌리티 · 세트.
   지역 프로필(zones/*.zone.xml)은 이펙트를 정본으로 쓴다: 가라앉음은 머문 시간만큼 쌓이는 스택(SinkDepth · MoveSpeedScale 를 스택 수만큼 바꾼다),
   감속은 MovementConstraint 가 읽는 속성(MoveSpeedScale), 상태는 태그(삼켜짐 · 끌려감 · 화상 · 중독). 저항 · 면역은 대상 쪽이다 —
   화염 면역은 이펙트의 BlockedTag(State.Fireproof), 저항은 지역의 식이 대상 속성(FireResist)을 읽는다.
@@ -128,6 +128,39 @@
       <Attribute name="FireResist" base="1"/>
     </AttributeSet>
     <Tag tag="State.Fireproof"/>
+  </AbilitySet>
+
+  <!-- ===================================================================== -->
+  <!-- 마을 주민(maps/hub 의 Player) — 미니게임 보상은 결과 값 → 이펙트 표(MinigameRewardComponent)로 걸린다 -->
+  <!-- ===================================================================== -->
+
+  <!-- 미니게임 보상 회복 — 값의 수(SetByCaller Data.Amount)만큼 체력을 채운다. -->
+  <AbilityEffect id="GE_HubRewardHeal" duration="Instant">
+    <Modifier attribute="IncomingHealing" op="Add" source="SetByCaller" name="Data.Amount"/>
+    <AssetTag tag="Effect.Heal"/>
+  </AbilityEffect>
+
+  <!-- 미니게임 보상 버프 아이템 — 60 초 걷는 속도 +20%. -->
+  <AbilityEffect id="GE_HubRewardHaste" duration="HasDuration" seconds="60">
+    <Modifier attribute="MoveSpeedScale" op="Multiply" magnitude="1.2"/>
+    <GrantedTag tag="State.Hasted"/>
+  </AbilityEffect>
+
+  <!-- 넘어짐 — 시나리오 automation/hub 가 ability.apply 로 체력을 깎아 보상 회복을 본다. -->
+  <AbilityEffect id="GE_HubStumble" duration="Instant">
+    <Modifier attribute="IncomingDamage" op="Add" magnitude="50"/>
+    <AssetTag tag="Effect.Damage.Physical"/>
+  </AbilityEffect>
+
+  <AbilitySet id="HubResident">
+    <AttributeSet class="Combat">
+      <Attribute name="Health" base="100"/>
+      <Attribute name="MaxHealth" base="100"/>
+      <Attribute name="MoveSpeed" base="3.5"/>
+    </AttributeSet>
+    <AttributeSet class="Generic">
+      <Attribute name="MoveSpeedScale" base="1"/>
+    </AttributeSet>
   </AbilitySet>
 
 </AbilityCatalog>

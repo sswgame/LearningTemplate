@@ -1403,3 +1403,37 @@ SW_TEST_CASE_F( AsymmetricHorrorRulesTest, ReadRefusesCraftedBytes )
     SW_EXPECT_FALSE( fixture.readPatched<int32>( _catalog, size - 5, 99 ) );
     SW_EXPECT_FALSE( fixture.readPatched<uint8>( _catalog, size - 1, 2 ) );
 }
+
+/**
+ * @brief [AsymmetricHorrorTest] 결정성: 같은 입력이면 수리 · 스킬 체크(시드 난수) · 공격 · 이동이 같은 바이트를 내고, 중간 저장에서 이어도 같다
+ */
+SW_TEST_CASE_F( AsymmetricHorrorTest, MatchDeterminism )
+{
+    const auto setup = [this]( AsymmetricHorrorMatch& match ) -> bool
+    {
+        if ( match.initialize( AsymmetricHorrorTestUtil::makeSettings(), &_catalog ) == false )
+            return false;
+        const bool bStaged = match.addSurvivor( float3{} ).has_value() && match.addSurvivor( AsymmetricHorrorTestUtil::at( 0.0f, 1.0f ) ).has_value() &&
+                             match.addGenerator( float3{} ).has_value() && match.addGenerator( AsymmetricHorrorTestUtil::at( 1.0f, 0.0f ) ).has_value();
+        if ( bStaged == false )
+            return false;
+        match.setKillerPosition( AsymmetricHorrorTestUtil::at( 0.0f, -2.0f ) );
+        match.start();
+        return true;
+    };
+    const auto step = []( AsymmetricHorrorMatch& match, int32 stepIndex )
+    {
+        if ( stepIndex % 20 == 0 )
+            (void)match.startRepair( 0, ( stepIndex / 20 ) % 2 );
+        const InteractionProgress* pProgress = match.findActivityProgress( 0 );
+        if ( pProgress != nullptr && pProgress->hasPendingSkillCheck() )
+            match.respondSkillCheck( 0, stepIndex % 2 == 0 ? pProgress->getSkillCheckTargetTime() : pProgress->getTime() ); // 번갈아 맞히고 놓친다
+        if ( stepIndex % 30 == 15 )
+            (void)match.killerAttack();
+        const float32 side = ( stepIndex / 15 ) % 2 == 0 ? 1.0f : -1.0f;
+        match.moveSurvivor( 1, float3{ side, 0.0f, 0.0f }, kAsymmetricStep );
+        match.moveKiller( float3{ -side * 0.5f, 0.0f, 0.5f }, kAsymmetricStep );
+        match.update( kAsymmetricStep );
+    };
+    SW_EXPECT_TRUE( StateBytesTestUtil::isDeterministic<AsymmetricHorrorMatch>( setup, step, 180 ) );
+}

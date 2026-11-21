@@ -27,6 +27,7 @@
 #include "Core/Name/hashed_string.h"
 
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Runtime/Online/Service/OnlineServerKitName.h"
 
 namespace sw
 {
@@ -299,6 +300,8 @@ namespace sw
     class IServiceStore
     {
     public:
+        static constexpr const utf8* kProviderKit = OnlineServerKitName::kBase; ///< 런타임의 공통 기반이 키트 범위에 건다. 게임 모듈 묶음(`ServerKitDependencies`)의 의존 이름이 여기서 나온다
+
         IServiceStore()          = default;
         virtual ~IServiceStore() = default;
 

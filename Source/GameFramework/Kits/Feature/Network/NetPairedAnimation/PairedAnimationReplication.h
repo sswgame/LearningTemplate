@@ -20,6 +20,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Network/Message/NetMessage.h"
@@ -43,6 +44,34 @@ namespace sw
     class PairedAnimationSystem;
     class SkeletalAnimatorComponent;
 
+    /** @brief 페어드 애니메이션 선 형식의 상한입니다. 세션 상태 칸 선언(`PROPERTY( MaxCount )`)이 쓴다. */
+    struct PairedAnimationNetLimit
+    {
+        static constexpr int32 kMaxAssetPathBytes = static_cast<int32>( constant::file::kMaxPathSize ) - 1; ///< 에셋 경로 바이트 상한(끝 0 자리 제외)
+        static constexpr int32 kMaxRoleCount      = PairedAnimationSessionSnapshot::kMaxRoleCount;          ///< 역할 수 상한 — 스냅숏의 역할 상한과 같다
+        static constexpr int32 kMaxSnapshotBytes  = 2048;                                                   ///< 스냅숏 바이트 상한(역할 하나가 9 바이트 남짓 — 역할 수백 개까지)
+    };
+
+    /**
+     * @brief 세션 상태 메시지(`NetPairedAnimationMessage::SessionState`) · 롤백 소유 상태의 바이트입니다. 칸 선언(`Replicated` · `MaxCount`)이 곧 바이트다(`ReplicatedLayout`).
+     * @details 예전에는 `PairedAnimationNetState::write` · `read` 가 같은 차례 · 상한을 손으로 맞췄다. 스냅숏은 엔진 형식(`PairedAnimationSessionSnapshot::writeBytes` — 그쪽도 칸 선언)의 바이트로 싣는다.
+     *          칸을 바꾸면 `SessionState` 의 본문 판을 올린다 — 손 본문이라 판이 스키마 해시를 따라가지 않는다.
+     */
+    REFLECT()
+    struct PairedAnimationSessionStateBody
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Replicated, MaxCount = PairedAnimationNetLimit::kMaxAssetPathBytes )
+        string _assetPath{};
+
+        PROPERTY( Replicated, MaxCount = PairedAnimationNetLimit::kMaxRoleCount )
+        vector<NetObjectID> _listRoleNetID{}; ///< 에셋의 역할 순서, 0 은 바인딩 없음
+
+        PROPERTY( Replicated, MaxCount = PairedAnimationNetLimit::kMaxSnapshotBytes, Min = 0, Max = 255 )
+        vector<uint8> _snapshotBytes{}; ///< `PairedAnimationSessionSnapshot::writeBytes`
+    };
+
     /** @brief 세션 끝(서버 → 클라이언트) 본문입니다. */
     REFLECT()
     struct PairedAnimationSessionEndBody
@@ -54,11 +83,12 @@ namespace sw
 
     /**
      * @brief 페어드 애니메이션 키트의 메시지 표입니다. 종류 · 마스크 · 와이어 버전은 표에서 나온다(`NetMessageTable`).
-     * @details 세션 상태는 롤백 소유 상태에도 실리는 공개 형식(`PairedAnimationNetState::write`)이라 손 본문이다. 세션 끝은 고정 배치형(`NetMessageBodyDef`)이다.
+     * @details 세션 상태는 롤백 소유 상태에도 실리는 공개 형식(`PairedAnimationNetState::write`)이라 손 본문이고 바이트는 칸 선언(`PairedAnimationSessionStateBody`)이다.
+     *          세션 끝은 고정 배치형(`NetMessageBodyDef`)이다.
      */
     struct NetPairedAnimationMessage
     {
-        using SessionState = NetMessageDef<0, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, 2>;                                 ///< 세션 상태(시작 · 늦은 참가). 판 2: 참가 오브젝트 번호 64 비트(`NetObjectID`)
+        using SessionState = NetMessageDef<0, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, 3>;                                 ///< 세션 상태(시작 · 늦은 참가). 판 3: 칸 선언(`PairedAnimationSessionStateBody`)으로 쓴다(2: 번호 64 비트)
         using SessionEnd   = NetMessageBodyDef<1, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, PairedAnimationSessionEndBody>; ///< 세션 끝 — 상태 메시지 뒤에 닿아야 한다
         using Table        = NetMessageTable<NetKitMessageRange::kPairedAnimation, SessionState, SessionEnd>;
 
@@ -75,16 +105,14 @@ namespace sw
      */
     struct SW_KIT_API PairedAnimationNetState
     {
-        /** @brief 스냅숏 바이트의 상한입니다(역할 하나가 9 바이트 남짓 — 역할 수백 개까지). 넘으면 쓰지 않습니다. */
-        static constexpr int32 kMaxSnapshotBytes = 2048;
-        /** @brief 역할 수의 상한입니다. 깨진 바이트가 큰 수를 말해도 그만큼 잡지 않습니다. */
-        static constexpr uint32 kMaxRoleCount = 64;
-
         string                         _assetPath{};
         vector<NetObjectID>            _listRoleNetID{};
         PairedAnimationSessionSnapshot _snapshot{};
 
-        /** @brief 본문에 씁니다. 경로가 `constant::file::kMaxPathSize` 이상이거나 역할 수가 상한을 넘으면 쓰지 않고 false 입니다. */
+        /**
+         * @brief 본문(`PairedAnimationSessionStateBody`)에 씁니다. 경로가 비었으면 쓰지 않고 false, 경로 · 역할 수 · 스냅숏이 상한(`PairedAnimationNetLimit`)을 넘으면
+         *        false 이고 @p writer 에 쓰다 만 비트가 남습니다(메시지를 버린다).
+         */
         [[nodiscard]] bool write( BitWriter& writer ) const;
         /** @brief `write` 가 쓴 본문을 읽습니다. 깨졌으면 false 이고 @p outState 는 비웁니다. 값이 에셋에 맞는지는 복원이 봅니다. */
         [[nodiscard]] static bool read( BitReader& reader, PairedAnimationNetState& outState );

@@ -30,8 +30,10 @@ namespace sw
         : _turnRate{ 6.0f }
         , _arriveDistance{ 0.3f }
         , _behaviorTree{}
+        , _thinkInterval{ 1 }
         , _pBehaviorTree{}
         , _runner{}
+        , _thinkSchedule{}
         , _blackboard{}
         , _stateName{}
         , _pending{}
@@ -54,6 +56,7 @@ namespace sw
     {
         unpossess();
         _runner.reset();
+        _thinkSchedule = ControlFrameInterval{};
         _blackboard.clear();
         _stateName        = hashed_string{};
         _pending          = ControlIntent{};
@@ -80,6 +83,11 @@ namespace sw
                 SW_LOG_ERROR_ID( "AIControllerComponent.BehaviorTreeMissing", "AI controller '%#' decides only through a behavior tree but _behaviorTree is empty - it stands still", name );
             return false;
         }
+        if ( _thinkInterval == 0 )
+        {
+            SW_LOG_ERROR_ID( "AIControllerComponent.ThinkIntervalZero", "AI controller '%#' has _thinkInterval 0 - set 1 or more (1 thinks every control frame); it stands still", name );
+            return false;
+        }
         _pBehaviorTree = _behaviorTree.acquire();
         if ( _pBehaviorTree == nullptr || _pBehaviorTree->getTree().isValid() == false )
         {
@@ -103,8 +111,13 @@ namespace sw
                 stopMoving();
             return;
         }
-        updateBlackboard( context, pawn );
-        (void)_runner.tick( _blackboard, this, context._deltaTime ); // 루트의 결과는 쓰지 않는다 — 잎이 이미 목표를 정했다
+        // 판단은 간격마다 한 번, 그 사이 시간을 모아 돈다. 바라보기 · 이동 축은 매 프레임 이번 프레임 시간으로 낸다(목표는 판단 사이에도 남는다).
+        // 차례를 흩는 위상은 컴포넌트 id 다 — 같은 간격의 적들이 한 프레임에 몰려 돌지 않는다.
+        ControlFrameContext thinkContext = context;
+        if ( _thinkSchedule.advance( context, _thinkInterval, static_cast<uint32>( getComponentID() ), thinkContext._deltaTime ) == false )
+            return;
+        updateBlackboard( thinkContext, pawn );
+        (void)_runner.tick( _blackboard, this, thinkContext._deltaTime ); // 루트의 결과는 쓰지 않는다 — 잎이 이미 목표를 정했다
     }
 
     void AIControllerComponent::produceIntent( const ControlFrameContext& context, const PawnComponent& pawn, ControlIntent& outIntent )

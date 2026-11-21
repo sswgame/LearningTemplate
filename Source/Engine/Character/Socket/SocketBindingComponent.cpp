@@ -155,7 +155,7 @@ namespace sw
         if ( bCannotAttachToHolder )
             return false;
         SceneComponent* pHolderScene = pHolder->getPrimarySceneComponent();
-        if ( pScene->getParent() != pHolderScene && pScene->attachToComponent( pHolderScene, AttachRule::KeepRelative ) == false )
+        if ( pScene->attachToComponent( pHolderScene, AttachRule::KeepRelative ) == false ) // 이미 그 부모면 true — 틱 중 떼기 뒤의 다시 붙이기를 버리지 않게 세터가 본다
         {
             SW_LOG_WARNING_ID( "SocketBinding.CannotAttachSocket", "'%#' cannot attach to socket '%#' of '%#'", getOwner()->getName().c_str(), _socketName.c_str(), pHolder->getName().c_str() );
             return false;
@@ -184,8 +184,7 @@ namespace sw
         if ( state != SocketBindingState::Returning )
             _returnElapsed = 0.0f;
         const bool bNeedsTick = state == SocketBindingState::ReleasedPhysics || state == SocketBindingState::Returning;
-        if ( canEverTick() != bNeedsTick )
-            setCanEverTick( bNeedsTick );
+        setCanEverTick( bNeedsTick ); // 지금 값과 견주지 않는다 — 틱 중이면 앞서 미룬 반대 요청이 큐에 있을 수 있다. 같은 값은 세터가 거른다
     }
 
     bool SocketBindingComponent::bindToSocket( GameObject* pHolder, const hashed_string& socketName, const float4x4& socketInHolder )

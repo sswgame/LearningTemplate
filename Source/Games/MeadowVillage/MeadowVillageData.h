@@ -10,6 +10,7 @@
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Gameplay/Progression/Reputation.h"
 #include "GameFramework/Runtime/Gameplay/Quest/QuestCatalog.h"
+#include "GameFramework/Runtime/Gameplay/SessionState/PlayerProgressComponent.h"
 #include "GameFramework/Runtime/Gameplay/SessionState/SessionStateComponent.h"
 
 namespace sw
@@ -32,13 +33,20 @@ namespace sw
             settings._clock._secondsPerDay = 120.0f;
             settings._clock._daysPerSeason = 28;
             settings._clock._startHour     = 6.0f;
-            settings._pQuestCatalog        = game::findSubsystem<const QuestCatalog>();
-            settings._pReputationCatalog   = game::findSubsystem<const ReputationCatalog>(); // 생물 호감도 = 세력 creature.<종>
             // 공유 땅 — 하우징 부지가 칸을 차지한다(밭 · 마을 자리와 겹치지 않게 씬에서 둔다). 칸 1 m 는 하우징 카탈로그의 칸과 같아야 한다.
             settings._landWidth    = kLandSize;
             settings._landHeight   = kLandSize;
             settings._landCellSize = 1.0f;
             settings._landOrigin   = float3{ -kLandHalfExtent, 0.0f, -kLandHalfExtent };
+            return settings;
+        }
+
+        /** @brief 플레이어 진행(지갑 · 부탁 일지 · 생물 호감도)의 설정입니다. */
+        static PlayerProgressSettings makeProgressSettings()
+        {
+            PlayerProgressSettings settings;
+            settings._pQuestCatalog      = game::findSubsystem<const QuestCatalog>();
+            settings._pReputationCatalog = game::findSubsystem<const ReputationCatalog>(); // 생물 호감도 = 세력 creature.<종>
             return settings;
         }
     };

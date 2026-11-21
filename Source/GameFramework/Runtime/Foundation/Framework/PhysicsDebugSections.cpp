@@ -156,7 +156,7 @@ namespace sw
                     writer.addLine( "scene", "none" );
                     return;
                 }
-                if ( const CharacterControllerComponent* pController = GameplayDebugTarget::findTargetComponent<CharacterControllerComponent>( writer.getSceneIterationKey(), *pManager ) )
+                if ( const CharacterControllerComponent* pController = GameplayDebugTarget::findTargetOrLowestIDComponent<CharacterControllerComponent>( writer.getSceneIterationKey(), *pManager ) )
                 {
                     if ( pController->getOwner() != nullptr )
                         writer.addLineFormat( "target", "%# (3D)", pController->getOwner()->getName().c_str() );
@@ -165,7 +165,7 @@ namespace sw
                     writeController3D( writer, *pController );
                     return;
                 }
-                if ( const CharacterController2DComponent* pController = GameplayDebugTarget::findTargetComponent<CharacterController2DComponent>( writer.getSceneIterationKey(), *pManager ) )
+                if ( const CharacterController2DComponent* pController = GameplayDebugTarget::findTargetOrLowestIDComponent<CharacterController2DComponent>( writer.getSceneIterationKey(), *pManager ) )
                 {
                     if ( pController->getOwner() != nullptr )
                         writer.addLineFormat( "target", "%# (2D)", pController->getOwner()->getName().c_str() );

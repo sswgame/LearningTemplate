@@ -54,7 +54,7 @@ namespace sw
         KillcamPhase           getPhase() const { return _pose._phase; }
         const KillcamSettings& getSettings() const { return _settings; }
 
-        /** @brief 씬의 첫 킬캠(등록 순서)입니다(쏘는 쪽이 기록을 넣을 곳). 없으면 nullptr 입니다 — 킬캠이 없는 씬은 기록하지 않는다. 레지스트리를 읽어 씬을 훑지 않는다. */
+        /** @brief 씬의 킬캠(씬에 하나 — 쏘는 쪽이 기록을 넣을 곳)입니다. 없으면 nullptr 입니다 — 킬캠이 없는 씬은 기록하지 않는다. 둘 이상이면 오류를 남기고 nullptr 이다(어느 쪽에 기록할지 등록 순서로 고르지 않는다). 레지스트리를 읽어 씬을 훑지 않는다. */
         static KillcamComponent* findInScene( const GameObjectManager& manager );
 
     private:

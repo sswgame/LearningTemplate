@@ -10,6 +10,7 @@
 
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSCatalog.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
+#include "GameFramework/Runtime/Gameplay/SessionState/PlayerProgressComponent.h"
 #include "GameFramework/Runtime/Gameplay/SessionState/SessionStateComponent.h"
 
 #include "Games/FrontierTown/FrontierTownData.h"
@@ -48,8 +49,9 @@ namespace sw
 
     void FrontierSkirmishGameModeComponent::serializeGameState( StateIO& io )
     {
-        SessionStateComponent* pState = io.isReading() ? SessionStateComponent::findOnOwner( *this ) : nullptr;
-        if ( io.check( pState != nullptr ) == false )
+        SessionStateComponent*   pState    = io.isReading() ? SessionStateComponent::findOnOwner( *this ) : nullptr;
+        PlayerProgressComponent* pProgress = io.isReading() ? PlayerProgressComponent::findOnOwner( *this ) : nullptr;
+        if ( io.check( pState != nullptr && pProgress != nullptr ) == false )
             return;
         io.header( kStateTag, kStateVersion );
         // 틱 수 · 순찰 방향은 상태 칸이다(`GameModeComponent::serializeState`). 유닛 id 는 묶은 값으로 손 본문이 싣는다.
@@ -60,7 +62,7 @@ namespace sw
         if ( io.isOk() == false )
             return;
         // RTSWorld 는 옮길 수 없다(경로 풀이가 같은 객체의 격자를 참조한다) — 읽기는 지형을 다시 세운 _world 에 바로 한다. 유닛 · 시야 복원은 RTSWorld 직렬화가 임시 값에 읽고 다 읽은 뒤에만 옮긴다.
-        if ( io.isReading() && io.check( initializeWorld( _world, *pState ) ) == false )
+        if ( io.isReading() && io.check( initializeWorld( _world, *pState, *pProgress ) ) == false )
             return;
         io.value( _world );
         io.end();
@@ -71,7 +73,7 @@ namespace sw
         _bViewsDirty = SW_TRUE;
     }
 
-    bool FrontierSkirmishGameModeComponent::initializeWorld( RTSWorld& outWorld, SessionStateComponent& state )
+    bool FrontierSkirmishGameModeComponent::initializeWorld( RTSWorld& outWorld, SessionStateComponent& state, PlayerProgressComponent& progress )
     {
         const RTSCatalog* pCatalog = game::findSubsystem<const RTSCatalog>();
         if ( pCatalog == nullptr )
@@ -79,17 +81,18 @@ namespace sw
         if ( outWorld.initialize( pCatalog, FrontierTownData::kLandSize, FrontierTownData::kLandSize ) == false )
             return false;
         outWorld.bindLand( &state.getLand(), int2{ 0, 0 } );
-        (void)outWorld.addPlayer( 0, &state.getWallet(), float3{ 2.0f, 0.0f, 2.0f } ); // 플레이어 0 이 공유 지갑을 쓴다
+        (void)outWorld.addPlayer( 0, &progress.getWallet(), float3{ 2.0f, 0.0f, 2.0f } ); // 플레이어 0 이 플레이어 진행의 지갑을 쓴다
         return true;
     }
 
     bool FrontierSkirmishGameModeComponent::startGame()
     {
         // 도시 디렉터가 먼저 열었으면 아무것도 하지 않는다 — 같은 설정이라 어느 쪽이 먼저 열어도 같은 판이다.
-        SessionStateComponent* pState = SessionStateComponent::openOnOwner( *this, FrontierTownData::makeStateSettings() );
-        if ( pState == nullptr )
+        SessionStateComponent*   pState    = SessionStateComponent::openOnOwner( *this, FrontierTownData::makeStateSettings() );
+        PlayerProgressComponent* pProgress = pState != nullptr ? PlayerProgressComponent::openOnOwner( *this, FrontierTownData::makeProgressSettings() ) : nullptr;
+        if ( pProgress == nullptr )
             return false;
-        if ( initializeWorld( _world, *pState ) == false )
+        if ( initializeWorld( _world, *pState, *pProgress ) == false )
         {
             SW_LOG_ERROR_ID( "FrontierSkirmish.SkirmishCannotStartRTS", "[Frontier] the skirmish cannot start - the RTS unit catalog is not loaded" );
             return false;

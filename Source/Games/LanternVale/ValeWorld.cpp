@@ -5,6 +5,8 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Serialization/BitStream.h"
 
+#include "Engine/Serialization/Fixed/ReplicatedLayout.h"
+
 #include "GameFramework/Runtime/Foundation/GameData/DepletingValue.h"
 
 namespace sw
@@ -12,35 +14,18 @@ namespace sw
     // ------------------------------------------------------------------------------
     // ValeProfile
     // ------------------------------------------------------------------------------
-    void ValeProfile::write( BitWriter& writer ) const
+    bool ValeProfile::write( BitWriter& writer ) const
     {
         writer.writeVarUint( kFormatVersion );
-        writer.writeVarInt( _level );
-        writer.writeVarInt( _experience );
-        writer.writeVarInt( _coins );
-        writer.writeVarInt( _herbCount );
-        writer.writeVarInt( _defeatCount );
-        writer.writeFloat( _position._x );
-        writer.writeFloat( _position._y );
-        writer.writeFloat( _position._z );
+        return ReplicatedLayout::writeFull( *this, writer );
     }
 
     bool ValeProfile::read( BitReader& reader )
     {
-        if ( reader.readVarUint() != kFormatVersion )
+        const uint64 formatVersion = reader.readVarUint();
+        if ( reader.hasOverflowed() || formatVersion != kFormatVersion )
             return false;
-        ValeProfile loaded;
-        loaded._level        = reader.readVarInt32();
-        loaded._experience   = reader.readVarInt32();
-        loaded._coins        = reader.readVarInt32();
-        loaded._herbCount    = reader.readVarInt32();
-        loaded._defeatCount  = reader.readVarInt32();
-        const bool bPosition = reader.readFiniteFloat( loaded._position._x ) && reader.readFiniteFloat( loaded._position._y ) && reader.readFiniteFloat( loaded._position._z );
-        const bool bInRange  = loaded._level >= 1 && loaded._experience >= 0 && loaded._coins >= 0 && loaded._herbCount >= 0 && loaded._defeatCount >= 0;
-        if ( reader.hasOverflowed() || bPosition == false || bInRange == false )
-            return false;
-        *this = loaded;
-        return true;
+        return ReplicatedLayout::readFull( reader, *this, nullptr ) == FixedReadResult::Ok; // `Ok` 일 때만 값을 바꾼다
     }
 
     // ------------------------------------------------------------------------------

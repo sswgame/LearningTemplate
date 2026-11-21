@@ -103,13 +103,13 @@ namespace sw
     bool SkyComponent::findSky( const GameObjectManager& manager, SkyGradient& outGradient )
     {
         outGradient = SkyGradient{};
-        for ( const SkyComponent* pSky : manager.getComponentRegistry().getAll<SkyComponent>() )
+        // 하늘은 씬에 하나다(언리얼 Sky Atmosphere 와 같다) — 켜진 것이 둘이면 오류로 쓰지 않는다(등록 순서로 고르지 않는다).
+        if ( const SkyComponent* pSky = manager.getComponentRegistry().findUnique<SkyComponent>( []( const SkyComponent& sky )
+        { return sky.isPendingDestroy() == false && sky.isActive(); } ) )
         {
-            if ( pSky->isPendingDestroy() || pSky->isActive() == false )
-                continue;
             outGradient           = pSky->makeGradient();
             outGradient._sourceID = pSky->getComponentID();
-            // 대기 모드의 해는 씬의 첫 활성 방향광이다. 없으면 해 색 0 — 하늘이 어둡다. 구름도 같은 해로 빛을 받는다.
+            // 대기 모드의 해는 씬의 주광(가장 밝은 활성 방향광)이다. 없으면 해 색 0 — 하늘이 어둡다. 구름도 같은 해로 빛을 받는다.
             if ( const DirectionalLightComponent* const pDirectional = DirectionalLightComponent::findActive( &manager ) )
                 outGradient.setSun( pDirectional->getLightDirection(), pDirectional->getColor() );
             return true;

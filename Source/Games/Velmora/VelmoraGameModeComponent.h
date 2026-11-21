@@ -23,6 +23,7 @@
 
 namespace sw
 {
+    class PlayerProgressComponent;
     class SessionStateComponent;
     class VelmoraRegionCatalog;
     struct VelmoraRegionDef;
@@ -41,7 +42,7 @@ namespace sw
 {
     /**
      * @class VelmoraGameModeComponent
-     * @brief 오픈월드 싱글 수직 슬라이스 한 판입니다. 같은 오브젝트의 판 상태(`SessionStateComponent`, 맨 앞)를 열고 퀘스트 일지 · 깃발 · 지갑을 그곳에 둔다.
+     * @brief 오픈월드 싱글 수직 슬라이스 한 판입니다. 같은 오브젝트의 월드 상태(`SessionStateComponent`, 맨 앞 — 깃발)와 플레이어 진행(`PlayerProgressComponent` — 퀘스트 일지 · 지갑)을 연다.
      * @details 지역 · 전투 배치는 게임 서비스 `VelmoraRegionCatalog`, 적 수치는 `MonsterCatalog`, 퀘스트는 `QuestCatalog` 다(게임 인스턴스가 건다 — 확장 팩이 층으로 항목을 더한다).
      *          - 걷기: 지역 밖으로는 나가지 못한다(지역이 땅이다). 전투 중에는 그 지역 경계 안에 묶인다(게이트가 닫힌다).
      *          - 지역 진입: 진행 규칙에 알리고 자동 저장에 지역 이동을 알린다. 깨지 않은 전투가 있으면 홀(없으면 보스)을 연다. 보스 앞에서 자동 저장에 알린다.
@@ -96,13 +97,13 @@ namespace sw
         /** @brief 이번 프레임의 걷기를 적용합니다. 지역 밖(전투 중이면 그 지역 밖)으로는 가지 않는다. */
         void movePlayer( const float2& move, float32 deltaTime, const VelmoraRegionCatalog& regions );
         /** @brief 지금 자리의 지역이 바뀌었으면 진입을 처리합니다. */
-        void updateRegion( const VelmoraRegionCatalog& regions, SessionStateComponent& state );
+        void updateRegion( const VelmoraRegionCatalog& regions, SessionStateComponent& state, PlayerProgressComponent& progress );
         /** @brief @p region 의 전투를 엽니다(홀이 있으면 홀, 없으면 보스 대기). */
         void beginEncounter( const VelmoraRegionDef& region );
         /** @brief 곁의 봉화를 켜거나 야영지에서 쉽니다. */
-        void interactWithSite( const VelmoraRegionDef& region, SessionStateComponent& state );
+        void interactWithSite( const VelmoraRegionDef& region, SessionStateComponent& state, PlayerProgressComponent& progress );
         /** @brief 전투 한 프레임을 돌리고 결과(피해 · 클리어)를 적용합니다. */
-        void updateEncounter( float32 deltaTime, const VelmoraRegionCatalog& regions, SessionStateComponent& state );
+        void updateEncounter( float32 deltaTime, const VelmoraRegionCatalog& regions, SessionStateComponent& state, PlayerProgressComponent& progress );
         /** @brief 쓰러졌습니다. 룸을 비우고 일어설 지역의 자리에서 일어섭니다. */
         void handlePlayerDowned( const VelmoraRegionCatalog& regions );
         /** @brief 불러온 판이 지금 표에 없는 지역을 가리키면 일어설 자리로 옮기고 전투를 닫습니다. */

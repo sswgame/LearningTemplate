@@ -8,6 +8,7 @@
 #include "Engine/Reflection/TypeFqn.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Format/Tests/StateBytesTestUtil.h"
 
 #include "GameFramework/Kits/Genre/RPG/MonsterHuntRPG/MonsterHuntAlchemy.h"
 #include "GameFramework/Kits/Genre/RPG/MonsterHuntRPG/MonsterHuntBestiary.h"
@@ -1326,4 +1327,32 @@ SW_TEST_CASE( MonsterHuntCatalogTest, ReportsBrokenElements )
     SW_EXPECT_TRUE( catalog.findMonster( "no_kills" ) == nullptr );
     SW_EXPECT_TRUE( catalog.findMonster( "lost" ) != nullptr );
     SW_EXPECT_TRUE( catalog.findContract( "broken" ) == nullptr );
+}
+
+/**
+ * @brief [MonsterHuntCombatTest] 결정성: 같은 입력이면 스태미나 · 몸 동작 · 표식 상태이상(시드 난수) · 아드레날린이 같은 바이트를 내고, 중간 저장에서 이어도 같다
+ */
+SW_TEST_CASE_F( MonsterHuntCombatTest, CombatDeterminism )
+{
+    _stats.setValue( "signIntensity", 20.0f );
+    const auto setup = [this]( sw::MonsterHuntCombat& combat ) -> bool
+    { return combat.initialize( &_catalog, 7 ); };
+    const auto step = [this]( sw::MonsterHuntCombat& combat, int32 stepIndex )
+    {
+        const sw::MonsterHuntAction arrAction[] = { sw::MonsterHuntAction::FastAttack, sw::MonsterHuntAction::StrongAttack, sw::MonsterHuntAction::Dodge, sw::MonsterHuntAction::Roll };
+        if ( stepIndex % 6 == 0 )
+            (void)combat.performAction( arrAction[( stepIndex / 6 ) % 4] );
+        if ( stepIndex % 10 == 3 )
+            (void)combat.castSign( "igni", stepIndex % 20 == 3, nullptr, _stats, &_chart ); // 대체 시전은 스킬이 없어 거절된다
+        if ( stepIndex % 13 == 7 )
+            (void)combat.castSign( "quen", false, nullptr, _stats, &_chart );
+        if ( stepIndex % 8 == 5 )
+            combat.registerHitLanded();
+        if ( stepIndex % 23 == 11 )
+            combat.registerHitTaken();
+        if ( stepIndex % 40 == 39 )
+            (void)combat.consumeAdrenalinePoints();
+        combat.update( 1.0f / 30.0f );
+    };
+    SW_EXPECT_TRUE( sw::StateBytesTestUtil::isDeterministic<sw::MonsterHuntCombat>( setup, step, 240 ) );
 }

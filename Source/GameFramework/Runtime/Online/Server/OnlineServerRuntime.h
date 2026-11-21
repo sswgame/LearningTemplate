@@ -3,7 +3,7 @@
  * @brief 온라인 서비스 서버 조립입니다. 저장소, 캐시, 버스, 예약 작업, 원격 설정, 서비스 호스트를 만들고 로드된 키트(`IOnlineServerKit`)를 설정대로 연결합니다.
  * @details - 전용 서버는 서버 서비스(`OnlineServerService`)로 이것을 띄웁니다. 부하 테스트 봇의 `--local-server` 와 끝단 테스트도 같은 조립을 씁니다.
  *          - 공통 기반(저장소 · 캐시 · 버스 · 예약 작업 · 호스트)과 키트는 지역 `SubsystemScope` 의 노드입니다. 모든 키트가 기반 노드(`OnlineServerKitName::kBase`)에
- *            의존하고 키트끼리는 이름 의존(`IOnlineServerKit::getRequiredKits` · `getOptionalKits`)으로 정렬되어, 순서를 손으로 적는 곳이 없습니다.
+ *            의존하고 키트끼리는 이름 의존(키트가 받는 인터페이스 형식 목록의 제공 키트 상수 — `OnlineServerKit`)으로 정렬되어, 순서를 손으로 적는 곳이 없습니다.
  *          - 시작: 기반 `initialize`(저장소와 캐시, 버스) → 키트 `initialize`(바인딩을 등록하고 인터페이스를 건다) → 호스트(전송, TLS) → 버스를 라우터에 연결
  *            → 키트 `start`(초기화 순서) → 서버 등록입니다. 종료: 서버 등록 → 컬렉션 `shutdownAll` 이 키트 `stop`(역순) → 기반 stop(호스트 → 예약 작업 → 저장소와
  *            남은 완료) → 키트 `shutdown`(역순) → 기반 shutdown(캐시)을 돕니다. 온라인 기반의 종료 계약과 같습니다.
@@ -33,6 +33,7 @@ namespace sw
     class MetricRegistry;
     class OnlineServiceHost;
     class ServiceHealthRegistry;
+    class SubsystemScope;
 
     /** @brief 저장소나 캐시 하나의 드라이버 항목입니다. 비밀은 이미 환경 변수에서 읽은 값입니다. */
     struct OnlineServerStoreConfig
@@ -111,6 +112,8 @@ namespace sw
         void collectKitNames( vector<string>& outListName ) const;
         /** @brief 키트가 내놓은 인터페이스와 기반을 가진 문맥입니다(테스트와 진단). */
         const OnlineServerKitContext& getContext() const;
+        /** @brief 키트가 인터페이스를 건 지역 범위입니다. 게임 모듈 창구(`publish` · `withdraw`)와 테스트가 봅니다 — 키트는 형식 목록 묶음으로만 받는다(`OnlineServerKit`). */
+        SubsystemScope& getKitScope() const;
 
     private:
         struct Parts;

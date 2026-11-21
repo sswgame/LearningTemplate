@@ -4,6 +4,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/Tests/StateBytesTestUtil.h"
 
 #include "GameFramework/Kits/Genre/Action/ActionPlatformer/ActionCombatSimulation.h"
 #include "GameFramework/Kits/Genre/Action/ActionPlatformer/ActionPlatformerCatalog.h"
@@ -526,4 +527,41 @@ SW_TEST_CASE( ActionCombatSimulationTest, ReadRejectsBrokenProjectiles )
     sw::Archive whole( written.getData(), written.getSize() );
     SW_EXPECT_TRUE( target.readState( whole ) );
     SW_EXPECT_EQUAL( size_t( 1 ), target.getProjectiles().size() );
+}
+
+/**
+ * @brief [ActionCombatSimulationTest] 결정성: 콤보 · 패리 · 퍼지는 총 · 적 탄 · 맞은 탄 꺼내기를 걸음 번호로 넣으면 두 판의 상태 바이트가 같고, 중간 세이브를 읽어 이어 돌려도 같다
+ */
+SW_TEST_CASE( ActionCombatSimulationTest, CombatDeterminism )
+{
+    sw::ActionPlatformerCatalog catalog;
+    SW_REQUIRE_TRUE( catalog.loadFromXMLText( kRigCatalogXML, "ActionCombatSimulationTest" ) );
+    sw::MoveCatalog moves;
+    SW_REQUIRE_TRUE( moves.loadFromXMLText( kRigMoveXML, "ActionCombatSimulationTest" ) );
+    sw::WeaponDef gun              = ActionCombatSimulationTestUtil::makeShotgun();
+    gun._maxSpread                 = sw::Radians::fromRadians( 0.3f );
+    gun._spreadPerShot             = sw::Radians::fromRadians( 0.1f );
+    gun._maxReserveAmmo            = 40;
+    const sw::ProjectileDef pellet = ActionCombatSimulationTestUtil::makePellet();
+
+    const auto setup = [&]( sw::ActionCombatSimulation& rig )
+    { return rig.initialize( &catalog, &moves, kSword ) && rig.equipGun( gun, pellet, 40, 7u ); };
+    const auto step = []( sw::ActionCombatSimulation& rig, int32 stepIndex )
+    {
+        if ( stepIndex % 5 == 0 )
+            rig.pressAttack();
+        if ( stepIndex % 11 == 4 )
+            rig.pressParry();
+        if ( stepIndex % 9 == 2 )
+            (void)rig.fireGun( kRigPlayer, sw::float2{ 1.0f, static_cast<float32>( stepIndex % 3 ) - 1.0f }, true );
+        if ( stepIndex % 13 == 6 )
+            (void)rig.spawnProjectile( ActionCombatSimulationTestUtil::makeShot( sw::float2{ 1.5f, 0.0f }, sw::float2{ -3.0f, 0.0f } ) );
+        if ( stepIndex % 7 == 3 )
+        {
+            sw::vector<sw::ProjectileState> listHit;
+            (void)rig.takeProjectileHits( sw::ActionTeam::Enemy, kRigPlayer, 0.5f, listHit );
+        }
+        rig.advanceFrame( nullptr, kRigPlayer );
+    };
+    SW_EXPECT_TRUE( sw::StateBytesTestUtil::isDeterministic<sw::ActionCombatSimulation>( setup, step, 180 ) );
 }

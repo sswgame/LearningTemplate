@@ -13,6 +13,8 @@
 
 namespace sw
 {
+    class Component;
+    class GameObjectManager;
     class NavGrid;
 
     /** @brief 감각 설정입니다. */
@@ -55,8 +57,10 @@ namespace sw
 {
     /**
      * @class AIPerception
-     * @brief 언리얼 `UAIPerceptionComponent`(Sight, Hearing, Max Age)를 작게 만든 것입니다. 대상 후보는 게임이 고릅니다(보통 공간 해시의 원 질의).
-     * @details 격자가 있으면 가림을 셀 시선(`NavGrid::hasLineOfSight`)으로 봅니다. 벽 뒤는 보이지 않고, 소리는 벽을 넘습니다.
+     * @brief 언리얼 `UAIPerceptionComponent`(Sight, Hearing, Max Age)를 작게 만든 것입니다.
+     * @details 씬에서는 자극 원천(`AIStimulusSourceComponent`)이 팀 · 종류별 공간 색인에 오르고 감각이 그 색인을 직접 묻는다(씬 판 `sense` — 언리얼 `UAIPerceptionSystem` 의
+     *          자극 원천 등록). 씬이 없는 규칙 키트(순수 시뮬레이션)는 후보 목록 판 `sense` 에 자기 자극을 넘긴다.
+     *          격자가 있으면 가림을 셀 시선(`NavGrid::hasLineOfSight`)으로 봅니다. 벽 뒤는 보이지 않고, 소리는 벽을 넘습니다.
      */
     class SW_GF_API AIPerception
     {
@@ -70,6 +74,11 @@ namespace sw
          * @param pGrid 가림을 볼 격자입니다. 없으면 가림을 보지 않습니다.
          */
         void sense( const float3& eyePosition, const float3& forward, const vector<AIStimulus>& listCandidate, const NavGrid* pGrid, float32 deltaTime );
+        /**
+         * @brief 씬 판: @p ownTeam 이 아닌 팀의 자극 원천을 공간 색인에서 직접 골라(`AIStimulusSourceComponent::gatherStimuli`, 시야 상자) 한 번 감지합니다.
+         * @details 질의 버퍼는 이 감각이 들고 있어 프레임마다 새로 잡지 않는다. 같은 감각을 두 스레드에서 함께 부르지 않는다.
+         */
+        void sense( const GameObjectManager& manager, uint8 ownTeam, const float3& eyePosition, const float3& forward, const NavGrid* pGrid, float32 deltaTime );
         /** @brief 이 위치와 방향에서 @p target 이 보이는지입니다. 기억과는 상관없습니다. @p bAlreadySeen 이면 놓치는 거리를 씁니다. */
         bool canSee( const float3& eyePosition, const float3& forward, const float3& target, const NavGrid* pGrid, bool bAlreadySeen ) const;
 
@@ -82,5 +91,7 @@ namespace sw
     private:
         AIPerceptionSettings      _settings;
         vector<AIPerceivedTarget> _listTarget;
+        vector<AIStimulus>        _listCandidate; ///< 씬 판 `sense` 의 후보 버퍼
+        vector<Component*>        _listQueryKey;  ///< 씬 판 `sense` 의 색인 질의 버퍼
     };
 } // namespace sw

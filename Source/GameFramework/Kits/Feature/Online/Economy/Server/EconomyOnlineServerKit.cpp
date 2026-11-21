@@ -12,6 +12,7 @@
 #include "GameFramework/Kits/Feature/Online/Economy/Server/EconomyStoreLogic.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/ReceiptProviderManager.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/ReceiptValidator.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Identity/AccountPresence.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Provider/OnlineProviderFile.h"
 #include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerConfig.h"
@@ -29,7 +30,7 @@ namespace sw
          * @class EconomyOnlineServerKit
          * @brief 경제 키트의 서버 조립입니다. 카탈로그는 저장소 스레드가 읽으므로 서비스보다 오래 살고 읽은 뒤 바꾸지 않습니다.
          */
-        class EconomyOnlineServerKit final : public IOnlineServerKit
+        class EconomyOnlineServerKit final : public OnlineServerKit<OnlineKitRequired<>, OnlineKitOptional<IAccountPresence, const IAccountExternalLinks>>
         {
         public:
             EconomyOnlineServerKit()
@@ -42,7 +43,7 @@ namespace sw
             {
             }
 
-            [[nodiscard]] expected<void> initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry ) override
+            [[nodiscard]] expected<void> initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, const Dependencies& interfaces ) override
             {
                 EconomyKitConfig kitConfig;
                 if ( expected<void> settings = entry.readSettings( kitConfig ); settings.has_value() == false )
@@ -78,9 +79,9 @@ namespace sw
                 settings._pOfferCatalog          = _pOfferCatalog;
                 settings._pReceiptRegistry       = &_receiptRegistry;
                 settings._pMetricRegistry        = context._pMetricRegistry;
-                settings._pScheduler             = context._pScheduler;                               // 원장 보존 검사를 매일 서버 하나가 돌린다
-                settings._pPresence              = context._kits.find<IAccountPresence>();            // 계정 키트(다른 서버에 붙은 계정에 잔액 변경 알림을 중계). 선택 의존이라 먼저 섰다
-                settings._pExternalLinks         = context._kits.find<const IAccountExternalLinks>(); // 계정 키트(영수증 구매자를 외부 로그인으로 묶는 제공자가 쓴다 — 그런 제공자가 있는데 없으면 서비스가 거절한다)
+                settings._pScheduler             = context._pScheduler;                            // 원장 보존 검사를 매일 서버 하나가 돌린다
+                settings._pPresence              = interfaces.find<IAccountPresence>();            // 계정 키트(다른 서버에 붙은 계정에 잔액 변경 알림을 중계). 선택 의존이라 먼저 섰다
+                settings._pExternalLinks         = interfaces.find<const IAccountExternalLinks>(); // 계정 키트(영수증 구매자를 외부 로그인으로 묶는 제공자가 쓴다 — 그런 제공자가 있는데 없으면 서비스가 거절한다)
                 settings._bAcceptSandboxReceipts = kitConfig._bAcceptSandboxReceipts ? SW_TRUE : SW_FALSE;
                 settings._refundRecovery         = kitConfig._refundRecovery;
                 if ( _service.initialize( context._pStore, settings ) == false )
@@ -103,7 +104,7 @@ namespace sw
                 return exposed;
             }
 
-            expected<void> start( OnlineServerKitContext& context ) override
+            expected<void> start( OnlineServerKitContext& context, const Dependencies&, const UnorderedDependencies& ) override
             {
                 (void)context;
                 return {};
@@ -126,12 +127,6 @@ namespace sw
             {
                 // 저장소를 종료하고 남은 완료를 돌린 뒤다 — 레지스트리가 빌려 쓰던 제공자를 내린다.
                 _receiptProviders.shutdown();
-            }
-
-            span<const utf8* const> getOptionalKits() const override
-            {
-                static constexpr const utf8* kArrKit[] = { OnlineServerKitName::kAccount }; // 접속 상태 · 외부 로그인 연동(`initialize` 에서 받는다)
-                return kArrKit;
             }
 
         private:

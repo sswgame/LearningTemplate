@@ -172,19 +172,19 @@ namespace sw
     /** @brief Matchmaking 메서드 표입니다. 번호는 열거자 순서에서 나오고, 요청 · 응답의 짝과 호출 규칙은 서술자가 정합니다. */
     struct MatchmakingMethod : OnlineMethodTable<MatchmakingMethodName, OnlineMethodRange::kMatchmaking, MatchmakingPushName>
     {
-        using PartyCreate  = Method<MethodName::PartyCreate, OnlineNoBody, MatchmakingPartyReply>;         ///< 파티를 돌려준다
-        using PartyInvite  = Method<MethodName::PartyInvite, MatchmakingIDRequest, MatchmakingPartyReply>; ///< 계정을 받아 파티를 돌려준다. 파티장만 부를 수 있다
-        using PartyAccept  = Method<MethodName::PartyAccept, MatchmakingIDRequest, MatchmakingPartyReply>; ///< 파티 id 를 받아 파티를 돌려준다
-        using PartyLeave   = Method<MethodName::PartyLeave, OnlineNoBody, MatchmakingPartyReply>;
-        using PartyKick    = Method<MethodName::PartyKick, MatchmakingIDRequest, MatchmakingPartyReply>;       ///< 계정을 받는다. 파티장만 부를 수 있다
-        using LobbyCreate  = Method<MethodName::LobbyCreate, LobbySnapshot, MatchmakingLobbyReply>;            ///< 로비(이름, 모드, 정원, 설정)를 받아 로비를 돌려준다
-        using LobbyList    = Method<MethodName::LobbyList, MatchmakingModeRequest, MatchmakingLobbyListReply>; ///< 모드를 받아 로비 목록을 돌려준다. 새 로비부터 나온다
-        using LobbyJoin    = Method<MethodName::LobbyJoin, MatchmakingIDRequest, MatchmakingLobbyReply>;       ///< 로비 id 를 받아 로비를 돌려준다
-        using LobbyLeave   = Method<MethodName::LobbyLeave, MatchmakingIDRequest, MatchmakingLobbyReply>;      ///< 로비 id
-        using LobbyReady   = Method<MethodName::LobbyReady, MatchmakingReadyRequest, MatchmakingLobbyReply>;
-        using LobbyStart   = Method<MethodName::LobbyStart, MatchmakingIDRequest, MatchmakingLobbyReply>;   ///< 로비 id 를 받으며 방장만 부를 수 있다. 전용 서버 배정은 결과 알림으로 전달한다
-        using QueueJoin    = Method<MethodName::QueueJoin, MatchmakingModeRequest, MatchmakingTicketReply>; ///< 모드와 지역을 받아 티켓 id 를 돌려준다. 파티장이면 파티 전체의 티켓이다
-        using QueueLeave   = Method<MethodName::QueueLeave, OnlineNoBody, MatchmakingTicketReply>;
+        using PartyCreate  = Method<MethodName::PartyCreate, OnlineNoBody, MatchmakingPartyReply, OnlineMethodFlag::RequiresIdempotencyKey>;         ///< 파티를 돌려준다
+        using PartyInvite  = Method<MethodName::PartyInvite, MatchmakingIDRequest, MatchmakingPartyReply, OnlineMethodFlag::RequiresIdempotencyKey>; ///< 계정을 받아 파티를 돌려준다. 파티장만 부를 수 있다
+        using PartyAccept  = Method<MethodName::PartyAccept, MatchmakingIDRequest, MatchmakingPartyReply, OnlineMethodFlag::RequiresIdempotencyKey>; ///< 파티 id 를 받아 파티를 돌려준다
+        using PartyLeave   = Method<MethodName::PartyLeave, OnlineNoBody, MatchmakingPartyReply, OnlineMethodFlag::IdempotentRemove>;
+        using PartyKick    = Method<MethodName::PartyKick, MatchmakingIDRequest, MatchmakingPartyReply, OnlineMethodFlag::IdempotentRemove>;       ///< 계정을 받는다. 파티장만 부를 수 있다
+        using LobbyCreate  = Method<MethodName::LobbyCreate, LobbySnapshot, MatchmakingLobbyReply, OnlineMethodFlag::RequiresIdempotencyKey>;      ///< 로비(이름, 모드, 정원, 설정)를 받아 로비를 돌려준다
+        using LobbyList    = Method<MethodName::LobbyList, MatchmakingModeRequest, MatchmakingLobbyListReply, OnlineMethodFlag::ReadOnly>;         ///< 모드를 받아 로비 목록을 돌려준다. 새 로비부터 나온다
+        using LobbyJoin    = Method<MethodName::LobbyJoin, MatchmakingIDRequest, MatchmakingLobbyReply, OnlineMethodFlag::RequiresIdempotencyKey>; ///< 로비 id 를 받아 로비를 돌려준다
+        using LobbyLeave   = Method<MethodName::LobbyLeave, MatchmakingIDRequest, MatchmakingLobbyReply, OnlineMethodFlag::IdempotentRemove>;      ///< 로비 id
+        using LobbyReady   = Method<MethodName::LobbyReady, MatchmakingReadyRequest, MatchmakingLobbyReply, OnlineMethodFlag::IdempotentSet>;
+        using LobbyStart   = Method<MethodName::LobbyStart, MatchmakingIDRequest, MatchmakingLobbyReply, OnlineMethodFlag::RequiresIdempotencyKey>;   ///< 로비 id 를 받으며 방장만 부를 수 있다. 전용 서버 배정은 결과 알림으로 전달한다
+        using QueueJoin    = Method<MethodName::QueueJoin, MatchmakingModeRequest, MatchmakingTicketReply, OnlineMethodFlag::RequiresIdempotencyKey>; ///< 모드와 지역을 받아 티켓 id 를 돌려준다. 파티장이면 파티 전체의 티켓이다
+        using QueueLeave   = Method<MethodName::QueueLeave, OnlineNoBody, MatchmakingTicketReply, OnlineMethodFlag::IdempotentRemove>;
         using Party        = Push<PushName::Party, PartySnapshot>;         ///< 파티 알림이다. 멤버가 비어 있으면 해산, 나감, 내보내짐을 뜻한다
         using PartyInvited = Push<PushName::PartyInvite, sw::PartyInvite>; ///< 초대한 계정과 파티 id 를 보낸다
         using Lobby        = Push<PushName::Lobby, LobbySnapshot>;         ///< 로비 알림이다. 멤버가 비어 있으면 나감을 뜻한다

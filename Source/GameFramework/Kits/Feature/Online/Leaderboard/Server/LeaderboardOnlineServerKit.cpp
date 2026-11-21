@@ -6,6 +6,8 @@
 #include "GameFramework/Kits/Feature/Online/Leaderboard/Server/LeaderboardKitConfig.h"
 #include "GameFramework/Kits/Feature/Online/Leaderboard/Server/LeaderboardServer.h"
 #include "GameFramework/Kits/Feature/Online/Leaderboard/Server/LeaderboardService.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Identity/AccountPresence.h"
+#include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerConfig.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerKit.h"
 #include "GameFramework/Runtime/Online/Service/Server/OnlineServiceHost.h"
@@ -22,7 +24,7 @@ namespace sw
          * @class LeaderboardOnlineServerKit
          * @brief 순위표 키트의 서버 조립입니다.
          */
-        class LeaderboardOnlineServerKit final : public IOnlineServerKit
+        class LeaderboardOnlineServerKit final : public OnlineServerKit<OnlineKitRequired<>, OnlineKitOptional<IAccountDirectory, IAccountPresence>>
         {
         public:
             LeaderboardOnlineServerKit()
@@ -34,7 +36,7 @@ namespace sw
             {
             }
 
-            [[nodiscard]] expected<void> initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry ) override
+            [[nodiscard]] expected<void> initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, const Dependencies& ) override
             {
                 LeaderboardKitConfig kitConfig;
                 if ( expected<void> result = entry.readSettings( kitConfig ); result.has_value() == false )
@@ -65,7 +67,7 @@ namespace sw
                 { return addTTLRule( context, entry, resultRule, kitConfig._seasonResultTTL ); } );
             }
 
-            expected<void> start( OnlineServerKitContext& context ) override
+            expected<void> start( OnlineServerKitContext& context, const Dependencies& interfaces, const UnorderedDependencies& ) override
             {
                 if ( context._pRouter == nullptr )
                     return unexpected( Error{ ErrorKind::InvalidArgument, "the leaderboard needs a cache (ranks live in sorted sets)" } );
@@ -79,7 +81,7 @@ namespace sw
                     _service.shutdown(); // 실패한 start 는 `stop` · `shutdown` 이 보지 않으므로 세운 서비스를 여기서 내린다
                     return definitions;
                 }
-                _server.initialize( &_service, context._kits.find<IAccountDirectory>(), context._kits.find<IAccountPresence>(), context._pMetricRegistry );
+                _server.initialize( &_service, interfaces.find<IAccountDirectory>(), interfaces.find<IAccountPresence>(), context._pMetricRegistry );
                 return {};
             }
 
@@ -100,12 +102,6 @@ namespace sw
                 // 순위표 로직은 맡긴 저장 일을 회수한 뒤(저장소를 종료한 뒤) 종료한다 — 서비스 계약.
                 if ( isStarted() )
                     _service.shutdown();
-            }
-
-            span<const utf8* const> getOptionalKits() const override
-            {
-                static constexpr const utf8* kArrKit[] = { OnlineServerKitName::kAccount }; // 표시 이름 · 접속 여부 · 접속 상태
-                return kArrKit;
             }
 
         private:

@@ -336,6 +336,24 @@ SW_TEST_CASE( AccountServerTest, MalformedBodiesAreRefused )
     SW_EXPECT_TRUE( rig.take( client )._result == LoginResult::Ok );
 }
 
+/** @brief [AccountServerTest] 가입은 계정을 만드는 상태 변경이라 멱등 키가 필수다 — 키 없는 맨 요청은 서비스에 닿지 않고 kInvalidRequest 이고, 창구(`AccountClient`)는 키를 만들어 보내 가입된다 */
+SW_TEST_CASE( AccountServerTest, RegisterWithoutAKeyIsRefused )
+{
+    AccountServerFixture rig;
+    const int32          client = rig.addClient();
+
+    AccountCredentialRequest request;
+    request._loginName = "bob_01";
+    request._password  = kPassword;
+    BitWriter body;
+    SW_EXPECT_TRUE( AccountProtocol::MessageTypes::write( body, request ) );
+    const int32 pendingBefore = rig._loginService.getPendingCount();
+    SW_EXPECT_EQUAL( OnlineError::kInvalidRequest, rig.sendRaw( client, AccountMethod::Register::kID, body )._errorCode );
+    SW_EXPECT_EQUAL( pendingBefore, rig._loginService.getPendingCount() );
+
+    SW_EXPECT_NOT_EQUAL( kInvalidAccountID, rig.registerAccount( client, "bob_01" ) );
+}
+
 /** @brief [AccountServerTest] 세션이 있는 연결의 깨진 몸도 kInvalidRequest 이고 세션은 그대로다. 빈 서버 id 는 발급할 곳이 없어 같다. 모르는 메서드도 같다 */
 SW_TEST_CASE( AccountServerTest, SessionMethodsCheckTheirBodies )
 {

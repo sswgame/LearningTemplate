@@ -294,6 +294,29 @@ SW_TEST_CASE( BitStreamTest, WriterReusesTheGivenBufferAndReleasesItWithoutCopyi
     SW_EXPECT_FALSE( reader.hasOverflowed() );
 }
 
+/** @brief [BitStreamTest] 써 본 뒤 되돌리면 그 앞까지만 남고 끝 바이트의 남은 비트가 0 이라, 이어 쓴 바이트가 처음부터 그렇게 쓴 것과 같다. */
+SW_TEST_CASE( BitStreamTest, TruncateRewindsToAMeasuredBitCount )
+{
+    BitWriter expected;
+    expected.writeBits( 0x5u, 3 );
+    expected.writeVarUint( 300 );
+
+    BitWriter writer;
+    writer.writeBits( 0x5u, 3 );
+    const int32 mark = writer.getBitCount();
+    writer.writeUint32( 0xFFFFFFFFu ); // 예산을 넘었다고 치고 물린다
+    writer.writeBits( 0x7u, 3 );
+    writer.truncate( mark );
+    SW_EXPECT_EQUAL( mark, writer.getBitCount() );
+    SW_EXPECT_EQUAL( 1, writer.getByteCount() );
+    SW_EXPECT_EQUAL( uint8{ 0x5 }, writer.getBytes()[0] );
+    writer.writeVarUint( 300 );
+    SW_EXPECT_TRUE( writer.getBytes() == expected.getBytes() );
+
+    writer.truncate( 0 );
+    SW_EXPECT_EQUAL( 0, writer.getByteCount() );
+}
+
 SW_TEST_CASE( BitStreamTest, BitStreamKeepsWireLayoutAndRoundTripsRandomProperties )
 {
     // 선 위의 비트 배치는 바꾸지 않는다 — 바이트 단위로 빨라진 쓰기가 옛 비트 단위 쓰기와 같은 바이트를 낸다.

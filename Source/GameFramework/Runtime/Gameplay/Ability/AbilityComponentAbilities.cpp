@@ -419,6 +419,7 @@ namespace sw
         _ownedTagCounts.updateCounts( config._activationOwnedTags, TagCountTable::kGrantDelta );
         _blockedAbilityTagCounts.updateCounts( config._blockAbilitiesWithTags, TagCountTable::kGrantDelta );
         cancelAbilitiesWithTags( config._cancelAbilitiesWithTags, &ability );
+        refreshTickEnabled();
         _abilityActivatedMulticast.broadcast( ability );
     }
 
@@ -428,6 +429,7 @@ namespace sw
         const AbilityConfig& config = ability.getConfig();
         _ownedTagCounts.updateCounts( config._activationOwnedTags, TagCountTable::kRevokeDelta );
         _blockedAbilityTagCounts.updateCounts( config._blockAbilitiesWithTags, TagCountTable::kRevokeDelta );
+        refreshTickEnabled();
         _abilityEndedMulticast.broadcast( ability, bWasCancelled );
     }
 

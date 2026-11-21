@@ -172,7 +172,7 @@ SW_TEST_CASE( SkyTest, GroundAlbedoLightsTheDownwardView )
 }
 
 /**
- * @brief [SkyTest] 대기 모드의 해는 씬의 첫 활성 방향광이다 — 해 쪽은 빛이 나아가는 방향의 반대이고, 방향광이 없으면 해 색이 0 이다. 구름 값은 컴포넌트에서 그대로 온다
+ * @brief [SkyTest] 대기 모드의 해는 씬의 주광(가장 밝은 활성 방향광)이다 — 해 쪽은 빛이 나아가는 방향의 반대이고, 방향광이 없으면 해 색이 0 이다. 구름 값은 컴포넌트에서 그대로 온다
  */
 SW_TEST_CASE( SkyTest, FindSkyTakesTheSunFromTheDirectionalLight )
 {
@@ -320,4 +320,23 @@ SW_TEST_CASE( SkyTest, FindSkyCarriesTheComponentAsSource )
     SW_REQUIRE_TRUE( SkyComponent::findSky( manager, gradient ) );
     SW_EXPECT_EQUAL( pSky->getComponentID(), gradient._sourceID );
     SW_EXPECT_TRUE( gradient._sourceID != 0 );
+}
+
+/** @brief [SkyTest] 하늘은 씬에 하나다 — 켜진 하늘이 둘이면 오류로 찾지 않는다(등록 순서로 첫 것을 고르지 않는다) */
+SW_TEST_CASE( SkyTest, SecondActiveSkyIsAnError )
+{
+    SW_EXPECT_LOG( "ComponentRegistry.DuplicateUnique" );
+    GameObjectManager manager;
+    SkyComponent*     pFirst  = manager.createGameObject( hashed_string( "SkyA" ) )->addComponent<SkyComponent>();
+    SkyComponent*     pSecond = manager.createGameObject( hashed_string( "SkyB" ) )->addComponent<SkyComponent>();
+    SW_REQUIRE_NOT_NULL( pFirst );
+    SW_REQUIRE_NOT_NULL( pSecond );
+    pSecond->setActive( false );
+    SkyGradient gradient;
+    SW_REQUIRE_TRUE( SkyComponent::findSky( manager, gradient ) );
+    SW_EXPECT_EQUAL( pFirst->getComponentID(), gradient._sourceID );
+
+    pSecond->setActive( true );
+    SW_EXPECT_FALSE( SkyComponent::findSky( manager, gradient ) );
+    SW_EXPECT_NEAR( 0.0f, gradient._intensity, 1.0e-6f );
 }

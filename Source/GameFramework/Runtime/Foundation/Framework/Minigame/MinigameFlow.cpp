@@ -2,10 +2,14 @@
 
 #include "GameFramework/Runtime/Foundation/Framework/Minigame/MinigameFlow.h"
 
+#include "Core/Diagnostics/MemoryProfiler.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/String/StringUtil.h"
 
+#include "Engine/Asset/AssetManager.h"
+#include "Engine/Asset/Cache/AssetCacheBase.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Console/DevCommandRegistry.h"
@@ -106,16 +110,33 @@ namespace sw
                 return true;
             }
 
-            /** @brief `minigame.leave [결과]` 의 몸통입니다 — 맨 위 미니게임을 끄고 돌아올 자리로 간다(돌아왔는지는 감시 값 `Minigame.Active` · `Minigame.RestoreCount` · `Minigame.LastResult`). */
+            /**
+             * @brief `minigame.leave [결과] [이름=수 ...]` 의 몸통입니다 — 맨 위 미니게임을 끄고 돌아올 자리로 간다(돌아왔는지는 감시 값 `Minigame.Active` · `Minigame.RestoreCount` · `Minigame.LastResult`).
+             * @details 뒤의 `이름=수` 는 결과 값(`MinigameResultValue`)이다 — 디렉터 없이 결과를 받는 쪽(허브의 `MinigameRewardComponent`)을 시나리오가 볼 때 쓴다. 꼴이 틀리면 거절한다.
+             */
             static bool runLeaveCommand( const vector<string>& listArgument, string& outReply )
             {
-                if ( listArgument.size() > 1 )
-                    return false;
+                vector<MinigameResultValue> listValue;
+                for ( size_t index = 1; index < listArgument.size(); ++index )
+                {
+                    const string_view   token  = listArgument[index];
+                    const size_t        equals = token.find( '=' );
+                    MinigameResultValue value;
+                    const bool          bParsed = equals != string_view::npos && equals > 0 && StringUtil::parseInt64( token.substr( equals + 1 ), value._amount );
+                    if ( bParsed == false )
+                    {
+                        outReply = "minigame.leave: a result value must be name=integer";
+                        return true;
+                    }
+                    value._name = hashed_string( token.substr( 0, equals ) );
+                    listValue.push_back( std::move( value ) );
+                }
                 MinigameFlow* const pFlow = game::findSubsystem<MinigameFlow>();
                 if ( pFlow == nullptr )
                     outReply = "minigame.leave: no game is running";
                 else
-                    outReply = pFlow->leave( listArgument.empty() ? hashed_string{} : hashed_string( listArgument[0] ) ) ? "minigame.leave: leaving" : "minigame.leave: refused";
+                    outReply = pFlow->leave( listArgument.empty() ? hashed_string{} : hashed_string( listArgument[0] ), std::move( listValue ) ) ? "minigame.leave: leaving"
+                                                                                                                                                 : "minigame.leave: refused";
                 return true;
             }
 
@@ -171,6 +192,28 @@ namespace sw
                 return true;
             }
 
+            /** @brief 감시 값 `Minigame.LeaveAssetCacheBytes` 입니다 — 마지막으로 나온 순간의 에셋 캐시 바이트 추정 합(되풀이해 느는지 본다). */
+            [[nodiscard]] static bool readLeaveAssetCacheBytes( const GameObjectManager* pObjects, float64& outValue )
+            {
+                (void)pObjects;
+                const MinigameFlow* const pFlow = game::findSubsystem<MinigameFlow>();
+                if ( pFlow == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pFlow->getLeaveAssetCacheBytes() );
+                return true;
+            }
+
+            /** @brief 감시 값 `Minigame.LeaveHeapBytes` 입니다 — 마지막으로 나온 순간의 힙 바이트(되풀이해 느는지 본다). */
+            [[nodiscard]] static bool readLeaveHeapBytes( const GameObjectManager* pObjects, float64& outValue )
+            {
+                (void)pObjects;
+                const MinigameFlow* const pFlow = game::findSubsystem<MinigameFlow>();
+                if ( pFlow == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pFlow->getLeaveHeapBytes() );
+                return true;
+            }
+
             /** @brief 감시 값 `Minigame.Depth` 입니다 — 쌓인 칸 수(켜진 미니게임 + 덮인 미니게임). */
             [[nodiscard]] static bool readDepth( const GameObjectManager* pObjects, float64& outValue )
             {
@@ -193,11 +236,14 @@ namespace sw
         , _pReturning{ nullptr }
         , _pendingEnter{}
         , _pendingPlacement{}
+        , _pendingLeave{}
         , _onFinished{}
         , _lastResult{}
         , _sceneLoadRequested{}
         , _leakCount{ 0 }
         , _restoreCount{ 0 }
+        , _leaveAssetCacheBytes{ 0 }
+        , _leaveHeapBytes{ 0 }
         , _bEntering{ SW_FALSE }
         , _bRequestingScene{ SW_FALSE }
     {
@@ -219,6 +265,7 @@ namespace sw
         _sceneLoadRequested.reset();
         _pendingEnter.clear();
         _pendingPlacement = nullopt;
+        _pendingLeave     = nullopt;
         _pReturning.reset();
         deactivateScope(); // 게임 범위 기능은 게임 인스턴스가 이 뒤에 끈다(미니게임의 해제 검사는 그것이 켜진 채로 찍었다)
         _stack.clear();
@@ -457,7 +504,7 @@ namespace sw
         return true;
     }
 
-    bool MinigameFlow::leave( const hashed_string& resultName )
+    bool MinigameFlow::leave( const hashed_string& resultName, vector<MinigameResultValue> listValue )
     {
         if ( rejectIfLoadPending( "leave" ) )
             return false;
@@ -468,7 +515,7 @@ namespace sw
             return false;
         }
         deactivateScope();
-        MinigameResult result{ frame._definition._name, resultName };
+        MinigameResult result{ frame._definition._name, resultName, std::move( listValue ) };
         // 하위 레벨은 그 자리에서 끝난다 — 빼고, 덮였던 미니게임을 다시 켜고, 결과를 넘긴다.
         if ( const MinigameSubLevelReturn* const pSubLevel = std::get_if<MinigameSubLevelReturn>( &frame._returnPoint ) )
         {
@@ -507,6 +554,17 @@ namespace sw
         return true;
     }
 
+    void MinigameFlow::requestLeave( const hashed_string& resultName, vector<MinigameResultValue> listValue )
+    {
+        if ( _pendingLeave.has_value() )
+        {
+            SW_LOG_WARNING_ID( "MinigameFlow.LeaveAlreadyRequested", "Minigame leave with result '%#' is dropped - a leave with result '%#' was requested first in this frame",
+                               resultName.c_str(), _pendingLeave->_resultName.c_str() );
+            return;
+        }
+        _pendingLeave = MinigameResult{ hashed_string{}, resultName, std::move( listValue ) };
+    }
+
     void MinigameFlow::requestEnter( string_view name, const optional<SubLevelPlacement>& placement )
     {
         if ( _pendingEnter.empty() == false )
@@ -523,6 +581,13 @@ namespace sw
         // 다시 읽힌 카탈로그를 먼저 건다 — 이 프레임의 진입 · 컴포넌트가 새 판을 찾는다.
         if ( _pActive != nullptr )
             _pActive->rebindReloadedCatalogs();
+        // 나가기가 먼저다 — 같은 프레임에 끝난 미니게임의 트리거가 다음 진입을 맡겨도 끝낸 칸 위에 쌓지 않는다(나가기가 맵을 기다리면 진입은 `rejectIfLoadPending` 이 거절한다).
+        if ( _pendingLeave.has_value() )
+        {
+            MinigameResult pending = std::move( *_pendingLeave );
+            _pendingLeave          = nullopt;
+            (void)leave( pending._resultName, std::move( pending._listValue ) ); // 실패는 leave 가 알렸다
+        }
         if ( _pendingEnter.empty() )
             return;
         const string                      name      = std::move( _pendingEnter );
@@ -573,8 +638,31 @@ namespace sw
             (void)subLevels.removeSubLevel( returnPoint._subLevelName.view() ); // 방금 찾은 이름이다
     }
 
+    void MinigameFlow::sampleLeaveMemory()
+    {
+        // 나올 때마다 한 번 — 캐시마다 에셋 줄을 모아 더한다(프레임 길이 아니다).
+        uint64              cacheBytes    = 0;
+        const AssetManager* pAssetManager = game::findSubsystem<AssetManager>();
+        if ( pAssetManager != nullptr )
+        {
+            vector<AssetMemoryEntry> listEntry;
+            for ( const AssetCacheBase* pCache : pAssetManager->getAllAssetCache() )
+            {
+                pCache->collectMemoryEntries( listEntry );
+            }
+            for ( const AssetMemoryEntry& entry : listEntry )
+            {
+                cacheBytes += entry._cpuBytes + entry._gpuBytes;
+            }
+        }
+        _leaveAssetCacheBytes           = cacheBytes;
+        const MemoryProfiler* pProfiler = MemoryProfiler::getActive();
+        _leaveHeapBytes                 = pProfiler != nullptr ? pProfiler->getLiveAllocatedBytes() : MemoryProfiler::getPlatformHeapBytes();
+    }
+
     void MinigameFlow::deliverResult( const MinigameResult& result )
     {
+        sampleLeaveMemory(); // 끈 범위 · 뺀 하위 레벨 · 돌아간 씬이 선 뒤다 — 모든 나오기 길이 여기를 지난다
         _lastResult = result;
         SW_LOG_INFO_ID( "MinigameFlow.Finished", "Minigame '%#' finished (result '%#')", result._minigame.c_str(), result._resultName.c_str() );
         _onFinished.broadcast( result );
@@ -594,7 +682,8 @@ namespace sw
     {
         SW_LOG_INFO_ID( "MinigameFlow.ClearedByTravel", "Travel to '%#' was requested outside the minigame flow - the stacked minigames and the scenes to return to are dropped",
                         scenePath.c_str() );
-        _pReturning.reset(); // 저장 막기도 풀린다 — 새 씬(세이브 · 타이틀)이 바깥 진행이다
+        _pReturning.reset();     // 저장 막기도 풀린다 — 새 씬(세이브 · 타이틀)이 바깥 진행이다
+        _pendingLeave = nullopt; // 맡긴 나가기의 칸은 방금 버렸다
         deactivateScope();
         _stack.clear();
     }
@@ -696,8 +785,8 @@ namespace sw
     SW_DEV_COMMAND( MinigameEnter, "minigame.enter", "minigame.enter <name> [anchor object]",
                     "Stack a minigame (<pack>/minigames/<name>.minigame.xml); a sub-level minigame is placed at the anchor object's transform", &MinigameFlowInternal::runEnterCommand );
     SW_DEV_COMMAND( MinigameSwitch, "minigame.switch", "minigame.switch <name>", "Replace the top scene-switch minigame and keep its scene to return to", &MinigameFlowInternal::runSwitchCommand );
-    SW_DEV_COMMAND( MinigameLeave, "minigame.leave", "minigame.leave [result]",
-                    "Leave the top minigame and return to the scene it was entered from (restored from the capture on a scene switch; the entrance scene without one), then hand over the result",
+    SW_DEV_COMMAND( MinigameLeave, "minigame.leave", "minigame.leave [result] [name=amount ...]",
+                    "Leave the top minigame and return to the scene it was entered from (restored from the capture on a scene switch; the entrance scene without one), then hand over the result and its values",
                     &MinigameFlowInternal::runLeaveCommand );
     SW_AUTOMATION_QUERY_WATCH( minigameActive, "Minigame.Active", "Name of the active (top) minigame; none without one (also while it waits for its map)", &MinigameFlowInternal::readActive, false,
                                false );
@@ -707,4 +796,9 @@ namespace sw
                          &MinigameFlowInternal::readLeakCount );
     SW_AUTOMATION_WATCH( minigameRestoreCount, "Minigame.RestoreCount", "Times the scene captured before a scene-switch minigame was restored on leaving", &MinigameFlowInternal::readRestoreCount );
     SW_AUTOMATION_WATCH( minigameDepth, "Minigame.Depth", "Stacked minigames (the active one and the ones it covers)", &MinigameFlowInternal::readDepth );
+    SW_AUTOMATION_WATCH( minigameLeaveAssetCacheBytes, "Minigame.LeaveAssetCacheBytes",
+                         "Estimated bytes held by the asset caches when the last minigame was left (repeat enter and leave to see whether it grows)", &MinigameFlowInternal::readLeaveAssetCacheBytes );
+    SW_AUTOMATION_WATCH( minigameLeaveHeapBytes, "Minigame.LeaveHeapBytes",
+                         "Heap bytes when the last minigame was left: live sw allocator bytes with the memory profiler, else the platform heap (0 where it cannot be measured)",
+                         &MinigameFlowInternal::readLeaveHeapBytes );
 } // namespace sw

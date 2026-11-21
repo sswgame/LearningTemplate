@@ -432,6 +432,8 @@ namespace sw
 
     public:
         static constexpr const utf8* kHonorFactionID = "western.honor"; ///< 명예가 쓰는 평판 세력 id(키트 접두어를 붙인다)
+        /** @brief 명예 세력의 형식 있는 키입니다(`getHonorReputation().find`) — 다른 카탈로그의 키로 찾으면 컴파일 오류다. */
+        static CatalogKey<FactionDef> getHonorFactionKey() { return CatalogKey<FactionDef>{ hashed_string( kHonorFactionID ) }; }
         /** @brief 이 데이터 종류입니다(등록은 `WesternCatalog.cpp` 의 공유 캐시 줄이 로더를 더한다). 접미사가 없어 타입 있는 참조 `AssetRef<WesternCatalog>` 는 경로 규칙으로 가른다. */
         static constexpr AssetTypeDef kAssetType = AssetTypeDef::makeDataFile( "western", AssetPathRule{ "game/", {}, "/data/western.xml" }, {} );
 

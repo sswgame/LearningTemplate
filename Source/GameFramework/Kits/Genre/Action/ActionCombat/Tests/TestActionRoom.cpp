@@ -6,6 +6,7 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Format/Tests/StateBytesTestUtil.h"
 
 #include "GameFramework/Kits/Genre/Action/ActionCombat/ActionCombatEvents.h"
 #include "GameFramework/Kits/Genre/Action/ActionCombat/ActionRoom.h"
@@ -653,6 +654,39 @@ SW_TEST_CASE( ActionRoomTest, ReadRejectsUnknownMonster )
     SW_EXPECT_FALSE( target.isActive() );
 }
 
+/**
+ * @brief [ActionRoomTest] 결정성: 걷는 적 · 쏘는 적 · 서 있는 적의 홀에서 걸음 번호로 정한 공격 · 대시 · 이동이면 상태 바이트가 같고, 중간 세이브를 읽어 이어 돌려도 같다
+ */
+SW_TEST_CASE( ActionRoomTest, RoomDeterminism )
+{
+    RoomBench bench;
+    SW_REQUIRE_TRUE( bench.setUp() );
+    sw::game::ScopedGameScope scopedScope( bench._scope );
+
+    const auto setup = []( sw::ActionRoom& room )
+    {
+        sw::ActionRoomLayout layout;
+        for ( const sw::ActionRoomSpawnDef& spawn : {
+                  sw::ActionRoomSpawnDef{    kWalker,  sw::float2{ 3.0f, 1.0f }},
+                  sw::ActionRoomSpawnDef{    kGunner, sw::float2{ -2.0f, 2.0f }},
+                  sw::ActionRoomSpawnDef{kSideGunner, sw::float2{ 2.0f, -2.0f }},
+                  sw::ActionRoomSpawnDef{     kGrunt,  sw::float2{ 0.8f, 0.0f }}
+        } )
+        {
+            layout._listHallSpawn.push_back( spawn );
+        }
+        room.setLayout( layout );
+        room.beginHall();
+        return room.getAliveEnemyCount() == 4;
+    };
+    const auto step = []( sw::ActionRoom& room, int32 stepIndex )
+    {
+        const sw::float2    position{ static_cast<float32>( stepIndex % 8 ) * 0.25f - 1.0f, static_cast<float32>( stepIndex % 5 ) * 0.2f - 0.4f };
+        const sw::FacingDir facing = stepIndex % 4 < 2 ? sw::FacingDir::Right : sw::FacingDir::Left;
+        (void)room.update( kRoomStep, ActionRoomTestUtil::makeInput( position, facing, stepIndex % 2 == 0, stepIndex % 7 == 3 ) );
+    };
+    SW_EXPECT_TRUE( sw::StateBytesTestUtil::isDeterministic<sw::ActionRoom>( setup, step, 120 ) );
+}
 /**
  * @brief [MonsterCatalogTest] 스탯 · AI · 사격 줄 · 보상을 읽는다. 적지 않은 보상은 0 이다
  */

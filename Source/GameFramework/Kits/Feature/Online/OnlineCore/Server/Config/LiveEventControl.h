@@ -13,6 +13,7 @@
 
 #include "GameFramework/Runtime/Online/Audit/Server/ServiceAuditLog.h"
 #include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
+#include "GameFramework/Runtime/Online/Service/OnlineServerKitName.h"
 
 namespace sw
 {
@@ -43,6 +44,8 @@ namespace sw
     class ILiveEventControl
     {
     public:
+        static constexpr const utf8* kProviderKit = OnlineServerKitName::kLiveOps; ///< 이 인터페이스를 내는 키트다. 받는 키트의 의존 이름이 여기서 나온다(`OnlineServerKit`)
+
         ILiveEventControl()          = default;
         virtual ~ILiveEventControl() = default;
 

@@ -511,7 +511,7 @@ SW_TEST_CASE( PushKitAssemblyTest, KitOptionsSelectTheProviders )
         const expected<void> started = rig.fromConfig( kServerJSON, makeOnlineJSON( string( textBuilder.view() ) ), nowMs );
         SW_REQUIRE_TRUE_MSG( started.has_value(), started.has_value() ? string_view{} : started.error().message() );
     }
-    SW_EXPECT_TRUE( rig._runtime.getContext()._kits.find<IOfflinePushSender>() != nullptr );
+    SW_EXPECT_TRUE( rig._runtime.getKitScope().find<IOfflinePushSender>() != nullptr );
 }
 
 /** @brief [PushKitAssemblyTest] 저장소에 든 견본(`Shooter3D.push.json`)이 같은 읽기를 지난다 - 견본이 코드와 어긋나 낡지 않게 한다 */

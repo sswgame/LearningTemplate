@@ -7,6 +7,8 @@
  *          - 관찰자를 정하지 않은 연결에는 자리를 알린 엔티티를 보내지 않는다(자리 없는 엔티티와 소유자 상태만 간다).
  *          - 보내지 않게 된 엔티티는 스냅샷 델타가 클라이언트에서 지운다(`ReplicationServer` 머리말). 와이어 형식은 바뀌지 않는다.
  *          우선도는 기본 정책과 같은 모양(중요도 1 / (1 + 거리 / 10))이다.
+ *          - 휴면(`ReplicationServer` 머리말): 보이는 목록에 들고 나는 엔티티, 자리를 처음 알리거나 지운 엔티티, 관찰자를 지운 연결이 보던 엔티티는 관련 여부가 바뀐 것이라
+ *            서버에 알려 깨운다(`collectWokenEntities`). 휴면 가구에 관찰자가 다가가면 깨어나 보인다.
  */
 #pragma once
 #include "Core/Container/SlotHandle.h"
@@ -52,11 +54,14 @@ namespace sw
         bool    evaluateEntity( int32 connectionID, const NetEntityState& entity, float32& outPriority ) const override;
         /** @brief 자리를 알리지 않은 엔티티의 월드 번호를 모읍니다(연결마다 월드 전체를 돌지 않게, 틱마다 한 번). */
         void prepareSnapshots( const vector<NetEntityState>& listWorldEntity ) override;
+        /** @brief 지난 알림 뒤 관련 여부가 바뀐 엔티티(보이는 목록 드나듦 · 자리 알림 시작 · 지움 · 관찰자 지움)를 넘기고 잊습니다. */
+        void collectWokenEntities( vector<uint32>& outListEntityID ) override;
         /**
-         * @brief 관찰자의 보이는 목록(id 순)과 자리 없는 엔티티 목록만 돌아 월드 차례로 합칩니다 — 엔티티 × 연결이던 일이 (보이는 수 + 자리 없는 수) × 연결이 된다.
-         * @details 결과는 기본 구현(모든 엔티티에 `evaluateEntity`)과 같다: 보이는 목록에 남아 있어도 자리를 지운 엔티티는 자리 없는 엔티티로 한 번만 든다.
+         * @brief 관찰자의 보이는 목록(id 순)과 자리 없는 엔티티 목록을 후보와 나란히 걸어 월드 차례로 합칩니다 — 엔티티 × 연결이던 일이 (보이는 수 + 자리 없는 수 + 후보 수) × 연결이 된다.
+         * @details 결과는 기본 구현(후보마다 `evaluateEntity`)과 같다: 보이는 목록에 남아 있어도 자리를 지운 엔티티는 자리 없는 엔티티로 한 번만 든다.
          */
-        void collectRelevantEntities( int32 connectionID, const vector<NetEntityState>& listWorldEntity, vector<NetRelevantEntity>& outList ) const override;
+        void collectRelevantEntities( int32 connectionID, const vector<NetEntityState>& listWorldEntity, const vector<uint32>& listCandidate,
+                                      vector<NetRelevantEntity>& outList ) const override;
 
         int32 getVisibleCount( int32 connectionID ) const;
 
@@ -78,5 +83,6 @@ namespace sw
         vector<uint32>                _listEnterScratch;
         vector<uint32>                _listMergeScratch;
         vector<uint32>                _listUnpositionedIndex; ///< 이번 틱 월드에서 자리를 알리지 않은 엔티티의 번호(오름차순, `prepareSnapshots`)
+        vector<uint32>                _listRelevancyChanged;  ///< 지난 `collectWokenEntities` 뒤 관련 여부가 바뀐 엔티티 id(겹칠 수 있다)
     };
 } // namespace sw

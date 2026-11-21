@@ -5,20 +5,23 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
-#include "Engine/Automation/Watch/AutomationWatchComponent.h"
-#include "Engine/Console/DebugHUDRegistry.h"
-#include "Engine/Console/DebugHUDSectionFormat.h"
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/FormatUpgrade.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameplayDebugTarget.h"
 #include "GameFramework/Runtime/Foundation/GameData/ConfigRangeUtil.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/Wallet.h"
+#include "GameFramework/Runtime/Gameplay/Progression/Reputation.h"
+#include "GameFramework/Runtime/Gameplay/Quest/QuestLog.h"
+#include "GameFramework/Runtime/Gameplay/SessionState/PlayerProgressComponent.h"
+#include "GameFramework/Runtime/Gameplay/SessionState/StateSectionTableUtil.h"
 
 namespace sw
 {
@@ -26,122 +29,57 @@ namespace sw
     {
         struct SessionStateComponentInternal
         {
-            static constexpr uint32 kSectionCount = 8;
+            static constexpr uint32 kSectionCount = 4;
 
-            /** @brief 읽은 구간 하나입니다. 본문은 읽은 바이트를 가리키는 뷰입니다. */
-            struct Section
-            {
-                Archive _body{};
-                uint32  _tag{ 0 };
-                uint32  _version{ 0 };
-            };
-
-            /** @brief 상태 하나를 그 타입의 태그와 버전으로 구간 하나에 씁니다. */
-            template <typename TState>
-            static void writeStateSection( Archive& outArchive, const TState& state )
-            {
-                Archive body;
-                state.writeState( body );
-                StateIO::writeSection( outArchive, TState::kStateTag, TState::kStateVersion, body );
-            }
+            /** @brief 판 1 의 플레이어 구간(지갑 · 일지 · 평판 · 가방)이면 true 입니다 — 판 2 부터 `PlayerProgressComponent` 가 싣는다. */
+            static bool isPlayerSection( uint32 tag ) { return tag == Wallet::kStateTag || tag == QuestLog::kStateTag || tag == ReputationState::kStateTag || tag == Inventory::kStateTag; }
 
             /**
-             * @brief 구간 하나를 사본에 읽고 끝까지 맞으면 반영합니다. 옛 판은 판 올림 사슬(`SW_STATE_FORMAT_UPGRADE`)로 올려 읽습니다(감사 A-6).
-             *        올릴 단계가 없거나 깨졌으면 경고를 남기고 그대로 둔 채 false 입니다(부르는 쪽이 로드 전체를 실패시킨다).
+             * @brief 판 1 → 2: 플레이어 구간을 버리고 월드 구간(플래그 · 시계 · 날씨 · 땅)만 옮깁니다. 구간 본문은 그대로입니다.
+             * @details 플레이어 구간은 다른 컴포넌트(`PlayerProgressComponent`)의 상태라 이 컴포넌트의 바이트에서 옮겨 줄 수 없다 — 버린 것을 경고로 알린다.
              */
-            template <typename TState>
-            [[nodiscard]] static bool applyStateSection( const Section& section, TState& inoutState, const utf8* pName )
+            [[nodiscard]] static bool upgradeStateFrom1( Archive& inOldBody, Archive& outNewBody )
             {
-                Archive body = section._body;
-                // 머리로 판을 올리는 형식(`kStateHeaderlessVersion` — 세계 시계)은 안쪽 머리가 올린다 — 구간 판으로 또 올리면 두 번 오른다.
-                constexpr bool bVersionedByHeader = StateIOInternal::HasHeaderlessVersion<TState>::value;
-                if ( bVersionedByHeader == false && StateIO::upgradeSectionBody( TState::kStateTag, section._version, TState::kStateVersion, body ) == false )
+                uint32 sectionCount = 0;
+                inOldBody >> sectionCount;
+                vector<StateSectionTableUtil::Section> listKept;
+                uint32                                 droppedCount = 0;
+                for ( uint32 sectionIndex = 0; sectionIndex < sectionCount; ++sectionIndex )
                 {
-                    SW_LOG_WARNING_ID( "SessionState.SessionStateSectionVersionNot", "SessionState: %# section version %# is not %# and has no upgrade chain to it", pName, section._version,
-                                       TState::kStateVersion );
-                    return false;
+                    StateSectionTableUtil::Section section;
+                    if ( StateIO::readSection( inOldBody, section._tag, section._version, section._body ) == false )
+                        return false;
+                    if ( isPlayerSection( section._tag ) )
+                        ++droppedCount;
+                    else
+                        listKept.push_back( section );
                 }
-                TState     state = inoutState;
-                const bool bRead = state.readState( body ) && body.getRemainingBytes() == 0;
-                if ( bRead == false )
-                {
-                    SW_LOG_WARNING_ID( "SessionState.SessionStateSectionBrokenStarts", "SessionState: %# section is broken", pName );
-                    return false;
-                }
-                inoutState = std::move( state );
-                return true;
+                if ( droppedCount > 0 )
+                    SW_LOG_WARNING_ID( "SessionState.PlayerSectionsDropped", "SessionState: an old save (version 1) held %# player section(s) (wallet, quest log, reputation, inventory) - they are not carried to the player progress",
+                                       droppedCount );
+                outNewBody << static_cast<uint32>( listKept.size() );
+                for ( const StateSectionTableUtil::Section& section : listKept )
+                    StateIO::writeSection( outNewBody, section._tag, section._version, section._body );
+                return inOldBody.isOk();
             }
         };
 
         struct SessionStateDevCommandsInternal
         {
-            /** @brief 활성 씬에서 열린 첫 판 상태입니다. 없으면 답을 채우고 nullptr 입니다. */
+            /** @brief 활성 씬에서 열린 월드 상태(씬에 하나)입니다. 없으면 답을 채우고 nullptr 입니다. */
             static SessionStateComponent* findSessionState( string& outReply )
             {
-                SceneManager* const pSceneManager = game::findSubsystem<SceneManager>();
-                GameObjectManager*  pManager      = pSceneManager != nullptr ? pSceneManager->findActiveObjectManager() : nullptr;
+                SceneManager* const      pSceneManager = game::findSubsystem<SceneManager>();
+                const GameObjectManager* pManager      = pSceneManager != nullptr ? pSceneManager->findActiveObjectManager() : nullptr;
                 if ( pManager == nullptr )
                 {
                     outReply = "cheat: no active scene";
                     return nullptr;
                 }
-                SessionStateComponent* pFound = nullptr;
-                for ( SessionStateComponent* pComponent : pManager->getComponentRegistry().getAll<SessionStateComponent>() )
-                {
-                    if ( pComponent->isInitialized() )
-                    {
-                        pFound = pComponent;
-                        break;
-                    }
-                }
+                SessionStateComponent* const pFound = SessionStateComponent::findOpen( pManager );
                 if ( pFound == nullptr )
                     outReply = "cheat: no initialized SessionStateComponent in the active scene";
                 return pFound;
-            }
-
-            /** @brief `cheat.give <itemID> [count]` — 판 상태의 가방에 아이템을 넣습니다(슬롯 · 무게가 모자라면 일부만). */
-            static bool runGive( const vector<string>& listArgument, string& outReply )
-            {
-                int32      count                  = 1;
-                const bool bInvalidCountArguments = listArgument.empty() || listArgument.size() > 2 || ( listArgument.size() == 2 && StringUtil::parseInt( listArgument[1], count ) == false ) || count < 1;
-                if ( bInvalidCountArguments )
-                    return false;
-                SessionStateComponent* pState = findSessionState( outReply );
-                if ( pState == nullptr )
-                    return true;
-                Inventory& inventory = pState->getInventory();
-                if ( inventory.getSlotCount() == 0 )
-                {
-                    outReply = "cheat.give: the session state has no inventory (slot count 0)";
-                    return true;
-                }
-                const int32                              addedCount = inventory.addItem( hashed_string( listArgument[0] ), count );
-                StringBuilder<constant::buffer::kMax256> replyBuilder;
-                replyBuilder.appendFormat( "cheat.give added %# of %# '%#'", addedCount, count, listArgument[0] );
-                outReply = string( replyBuilder.view() );
-                return true;
-            }
-
-            /** @brief `cheat.money <amount> [currency]` — 지갑에 돈을 더합니다(양수만). 통화를 적지 않으면 기본 통화입니다. */
-            static bool runMoney( const vector<string>& listArgument, string& outReply )
-            {
-                int64      amount                  = 0;
-                const bool bInvalidAmountArguments = listArgument.empty() || listArgument.size() > 2 || StringUtil::parseInt64( listArgument[0], amount ) == false || amount <= 0;
-                if ( bInvalidAmountArguments )
-                    return false;
-                SessionStateComponent* pState = findSessionState( outReply );
-                if ( pState == nullptr )
-                    return true;
-                const hashed_string currency = listArgument.size() == 2 ? hashed_string( listArgument[1] ) : Wallet::getDefaultCurrency();
-                Wallet&             wallet   = pState->getWallet();
-                wallet.add( currency, amount );
-                StringBuilder<constant::buffer::kMax256> replyBuilder;
-                if ( listArgument.size() == 2 )
-                    replyBuilder.appendFormat( "cheat.money balance %# %#", wallet.getBalance( currency ), listArgument[1] );
-                else
-                    replyBuilder.appendFormat( "cheat.money balance %# (default currency)", wallet.getBalance( currency ) );
-                outReply = string( replyBuilder.view() );
-                return true;
             }
 
             /** @brief `cheat.weather <weatherID> [duration]` — 판 상태의 날씨를 곧바로 바꿉니다(전환 없이). 기간을 빼면 정의의 범위에서 고른다. 표면 젖음 · 강수 시나리오가 쓴다. */
@@ -168,11 +106,9 @@ namespace sw
         };
     } // namespace
 
-    // 등록 줄은 기능 파일로 옮길 때(165e16647c) 빠졌다 — 함수만 남아 명령이 없었다.
-    SW_DEV_COMMAND( CheatGive, "cheat.give", "cheat.give <itemID> [count]", "Add items to the session state's inventory (partly when slots or weight run out)",
-                    &SessionStateDevCommandsInternal::runGive );
-    SW_DEV_COMMAND( CheatMoney, "cheat.money", "cheat.money <amount> [currency]", "Add money to the session state's wallet (default currency when none is given)",
-                    &SessionStateDevCommandsInternal::runMoney );
+    SW_STATE_FORMAT_UPGRADE( sessionState1To2, "GTST", 1, 2, &SessionStateComponentInternal::upgradeStateFrom1 );
+
+    // 지갑 · 가방 명령(`cheat.money` · `cheat.give`)은 플레이어 진행(`PlayerProgressComponent.cpp`)에 있다.
     SW_DEV_COMMAND( CheatWeather, "cheat.weather", "cheat.weather <weatherID> [duration]", "Switch the session state's weather now, without the transition (duration in game seconds; none picks from the definition)",
                     &SessionStateDevCommandsInternal::runWeather );
 } // namespace sw
@@ -180,12 +116,8 @@ namespace sw
 namespace sw
 {
     SessionStateComponent::SessionStateComponent()
-        : _wallet{}
-        , _flags{}
+        : _flags{}
         , _clock{}
-        , _questLog{}
-        , _reputation{}
-        , _inventory{}
         , _pWeatherCatalog{}
         , _weather{}
         , _weatherMaterial{}
@@ -224,12 +156,7 @@ namespace sw
         }
         if ( _clock.initialize( settings._clock ) == false )
             return SessionStateInitResult::Refused;
-        _wallet.clear();
         _flags.clear();
-        _questLog.initialize( settings._pQuestCatalog );
-        _reputation.initialize( settings._pReputationCatalog );
-        if ( _inventory.initialize( settings._pItemCatalog, settings._inventorySlotCount ) == false )
-            return SessionStateInitResult::Refused;
         _pWeatherCatalog = settings._pWeatherCatalog;
         _weather.initialize( _pWeatherCatalog.get(), settings._weatherSeed, _clock.getSeasonName() );
         _bWeather = settings._pWeatherCatalog != nullptr ? SW_TRUE : SW_FALSE;
@@ -275,13 +202,7 @@ namespace sw
         if ( _bInitialized == SW_FALSE )
             return;
         _clock.update( context.getDeltaTime() );
-        _clock.pollEvents( _listClockEvent );
-        // 공유 평판은 공유 날짜가 넘어갈 때 한 번만 식힌다. 참조해서 쓰는 키트는 식히지 않는다. 키트 수만큼 반복해서 식지 않게 하기 위해서다.
-        for ( const WorldClockEvent& clockEvent : _listClockEvent )
-        {
-            if ( clockEvent._kind == WorldClockEvent::Kind::DayChanged )
-                _reputation.advanceDay();
-        }
+        _clock.pollEvents( _listClockEvent ); // 날이 넘어가면 플레이어 진행이 이 알림을 읽고 평판을 식힌다(`PlayerProgressComponent::onTick`)
         if ( _bWeather == SW_TRUE && _clock.isPaused() == false )
             (void)_weather.update( context.getDeltaTime() * _clock.getTimeScale() * 86400.0f / _clock.getSettings()._secondsPerDay, _clock.getSeasonName() );
         // 묶음은 게임 스레드만 고친다 — 쓰기는 틱 뒤에 한다.
@@ -301,12 +222,8 @@ namespace sw
         // 구간 표는 여기 한 곳이다. 쓰기는 이 순서로 싣고, 읽기는 표로 찾아 넘긴다.
         const auto forEachSection = [this]( auto&& visit )
         {
-            visit( _wallet, "wallet" );
             visit( _flags, "flags" );
             visit( _clock, "clock" );
-            visit( _questLog, "quest log" );
-            visit( _reputation, "reputation" );
-            visit( _inventory, "inventory" );
             visit( _weather, "weather" );
             visit( _land, "land" );
         };
@@ -319,71 +236,11 @@ namespace sw
                 archive.writeBytes( _pendingStateBytes.data(), _pendingStateBytes.size() );
                 return;
             }
-            StateIO::writeHeader( archive, kStateTag, kStateVersion );
-            archive << SessionStateComponentInternal::kSectionCount;
-            forEachSection( [&archive]( const auto& state, const utf8* )
-            { SessionStateComponentInternal::writeStateSection( archive, state ); } );
+            StateSectionTableUtil::write( archive, kStateTag, kStateVersion, SessionStateComponentInternal::kSectionCount, forEachSection );
             return;
         }
-        io.header( kStateTag, kStateVersion );
-        Archive& archive      = io.getArchive(); // 머리 뒤에 받는다 — 옛 판이면 올린 바이트다
-        uint32   sectionCount = 0;
-        // 구간마다 태그, 버전, 길이(12바이트) 이상
-        io.count( 12, sectionCount );
-        if ( io.isOk() == false )
-            return;
-        // 구조를 끝까지 먼저 읽는다. 구조가 깨졌으면 아무것도 바꾸지 않는다.
-        vector<SessionStateComponentInternal::Section> listSection;
-        listSection.resize( sectionCount );
-        for ( SessionStateComponentInternal::Section& section : listSection )
-        {
-            if ( io.check( StateIO::readSection( archive, section._tag, section._version, section._body ) ) == false )
-                return;
-        }
-        if ( io.check( archive.getRemainingBytes() == 0 ) == false )
-            return;
-        // 구간 하나라도 읽지 못하면 로드 전체가 실패다(감사 P0-5) — 예전에는 그 구간만 경고하고 새 판으로 두어, 가방 슬롯 수 같은 설정을 바꾼 패치 뒤
-        // 인벤토리 · 땅 · 달력이 통째로 사라졌고 이어진 저장이 그것을 굳혔다. 읽기 전 상태를 같은 구간 형식으로 떠 두었다가 실패하면 되돌린다(전부 아니면 없음).
-        Archive backup;
-        forEachSection( [&backup]( const auto& state, const utf8* )
-        { SessionStateComponentInternal::writeStateSection( backup, state ); } );
-        bool bAllApplied = true;
-        for ( const SessionStateComponentInternal::Section& section : listSection )
-        {
-            bool bKnown = false;
-            forEachSection( [&section, &bKnown, &bAllApplied]( auto& state, const utf8* pName )
-            {
-                if ( section._tag == std::decay_t<decltype( state )>::kStateTag )
-                {
-                    if ( SessionStateComponentInternal::applyStateSection( section, state, pName ) == false )
-                        bAllApplied = false;
-                    bKnown = true;
-                }
-            } );
-            if ( bKnown == false )
-            {
-                SW_LOG_WARNING_ID( "SessionState.SessionStateUnknownSectionSkipped", "SessionState: unknown section %# skipped", section._tag );
-            }
-        }
-        if ( bAllApplied == false )
-        {
-            // 되돌린다 — 방금 떠 둔 구간이라 반드시 읽힌다.
-            for ( uint32 sectionIndex = 0; sectionIndex < SessionStateComponentInternal::kSectionCount && backup.getRemainingBytes() > 0; ++sectionIndex )
-            {
-                SessionStateComponentInternal::Section section;
-                if ( StateIO::readSection( backup, section._tag, section._version, section._body ) == false )
-                    break;
-                forEachSection( [&section]( auto& state, const utf8* pName )
-                {
-                    if ( section._tag == std::decay_t<decltype( state )>::kStateTag )
-                        (void)SessionStateComponentInternal::applyStateSection( section, state, pName ); // 같은 판으로 떠 둔 것이다
-                } );
-            }
-            SW_LOG_ERROR_ID( "SessionState.LoadRejected", "SessionState: a section of the save could not be read - the save is not loaded (the session state is unchanged)" );
-            io.fail();
-            return;
-        }
-        _listClockEvent.clear();
+        if ( StateSectionTableUtil::read( io, kStateTag, kStateVersion, SessionStateComponentInternal::kSectionCount, forEachSection, "the session state" ) )
+            _listClockEvent.clear();
     }
 
     void SessionStateComponent::restoreState( vector<uint8>&& bytes )
@@ -393,15 +250,15 @@ namespace sw
             _bFreshGame = SW_FALSE;
     }
 
-    SessionStateRefs SessionStateComponent::makeRefs()
+    SessionStateRefs SessionStateComponent::makeRefs( PlayerProgressComponent& progress )
     {
         SessionStateRefs refs;
-        refs._pWallet     = &_wallet;
+        refs._pWallet     = &progress.getWallet();
         refs._pFlags      = &_flags;
         refs._pClock      = &_clock;
-        refs._pQuestLog   = &_questLog;
-        refs._pReputation = &_reputation;
-        refs._pInventory  = _inventory.getSlotCount() > 0 ? &_inventory : nullptr;
+        refs._pQuestLog   = &progress.getQuestLog();
+        refs._pReputation = &progress.getReputation();
+        refs._pInventory  = progress.getInventory().getSlotCount() > 0 ? &progress.getInventory() : nullptr;
         refs._pWeather    = _bWeather == SW_TRUE ? &_weather : nullptr;
         refs._pLand       = _land.isInitialized() ? &_land : nullptr;
         return refs;
@@ -454,93 +311,4 @@ namespace sw
         return bRestored;
     }
 
-} // namespace sw
-
-namespace sw
-{
-    void SessionStateComponent::writeProgressDebugLines( DebugHUDSectionWriter& writer, uint32 maxLines ) const
-    {
-        uint32     lineCount = 0;
-        uint32     skipped   = 0;
-        const auto add       = [&]( string_view label, string_view value )
-        {
-            if ( lineCount >= maxLines )
-            {
-                ++skipped;
-                return;
-            }
-            writer.addLine( label, value );
-            ++lineCount;
-        };
-        vector<GameFlagEntry> listFlag;
-        _flags.fillEntries( listFlag );
-        for ( const GameFlagEntry& flag : listFlag )
-        {
-            fixed_string<constant::buffer::kMax256> label;
-            formatstring( label.data(), label.capacity(), "flag %#", flag._name.c_str() );
-            fixed_string<constant::buffer::kMax32> value;
-            formatstring( value.data(), value.capacity(), "%#", flag._value );
-            add( label.view(), value.view() );
-        }
-        for ( const WalletBalance& balance : _wallet.getBalances() )
-        {
-            fixed_string<constant::buffer::kMax256> label;
-            formatstring( label.data(), label.capacity(), "wallet %#", balance._currency.c_str() );
-            fixed_string<constant::buffer::kMax32> value;
-            formatstring( value.data(), value.capacity(), "%#", balance._amount );
-            add( label.view(), value.view() );
-        }
-        for ( int32 slot = 0; slot < _inventory.getSlotCount(); ++slot )
-        {
-            const InventorySlot& content = _inventory.getSlot( slot );
-            if ( content.isEmpty() )
-                continue;
-            fixed_string<constant::buffer::kMax32> label;
-            formatstring( label.data(), label.capacity(), "slot %#", slot );
-            fixed_string<constant::buffer::kMax256> value;
-            formatstring( value.data(), value.capacity(), "%# x%#", content._itemID.c_str(), content._count );
-            add( label.view(), value.view() );
-        }
-        if ( skipped > 0 )
-            writer.addLineFormat( "...", "%# more", skipped );
-    }
-} // namespace sw
-
-namespace sw
-{
-    namespace
-    {
-        /** @brief 판 상태를 읽는 게임플레이 디버그 섹션(퀘스트 · 진행 조건)입니다. 대상은 `debug.target`, 없으면 첫 열린 판 상태입니다. */
-        struct SessionStateDebugSectionsInternal
-        {
-            static const SessionStateComponent* findTarget( DebugHUDSectionWriter& writer )
-            {
-                const GameObjectManager* const pManager = GameplayDebugTarget::findActiveObjectManager();
-                const SessionStateComponent*   pState   = pManager != nullptr ? GameplayDebugTarget::findTargetComponent<SessionStateComponent>( writer.getSceneIterationKey(), *pManager ) : nullptr;
-                if ( pState == nullptr || pState->isInitialized() == false )
-                {
-                    writer.addLine( "target", "none (no open game state in the active scene)" );
-                    return nullptr;
-                }
-                writer.addLine( "target", pState->getOwner() != nullptr ? string( pState->getOwner()->getName().c_str() ) : string( "?" ) );
-                return pState;
-            }
-
-            /** @brief 진행 중 퀘스트의 단계 · 목표 달성도, 받지 않은 퀘스트의 잠금 사유입니다(레벨 조건은 판정하지 않고 표시만 — 판 상태는 레벨을 모른다). */
-            static void writeQuest( DebugHUDSectionWriter& writer )
-            {
-                if ( const SessionStateComponent* pState = findTarget( writer ) )
-                    pState->getQuestLog().writeDebugLines( writer, MathUtil::kMaxInt32, GameplayDebugTarget::kMaxLines );
-            }
-
-            static void writeProgress( DebugHUDSectionWriter& writer )
-            {
-                if ( const SessionStateComponent* pState = findTarget( writer ) )
-                    pState->writeProgressDebugLines( writer, GameplayDebugTarget::kMaxLines );
-            }
-        };
-    } // namespace
-
-    SW_DEBUG_HUD_SECTION( quest, "quest", "Quests", 200, DebugHUDSectionFlag::kNone, &SessionStateDebugSectionsInternal::writeQuest );
-    SW_DEBUG_HUD_SECTION( progress, "progress", "Progress (flags, wallet, bag)", 210, DebugHUDSectionFlag::kNone, &SessionStateDebugSectionsInternal::writeProgress );
 } // namespace sw

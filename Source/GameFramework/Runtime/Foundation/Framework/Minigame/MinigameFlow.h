@@ -92,13 +92,18 @@ namespace sw
          *        덮였던 미니게임은 씬 복원 전에 다시 켜고, 결과(@p resultName)는 복원 뒤에 `onFinished` 로 넘긴다.
          * @return 칸이 없거나, 다른 진입 · 나가기가 맵을 기다리는 중이거나, 씬 요청이 거절되면 알리고 false 입니다(거절이면 칸은 그대로다).
          */
-        [[nodiscard]] bool leave( const hashed_string& resultName = hashed_string{} );
+        [[nodiscard]] bool leave( const hashed_string& resultName = hashed_string{}, vector<MinigameResultValue> listValue = {} );
+        /**
+         * @brief 틱 뒤 작업(디렉터의 `finishMinigame`)에서 나가기를 맡깁니다 — 다음 `update`(틱 밖)가 `leave` 합니다. 맡긴 나가기가 이미 있으면 경고하고 이것을 버립니다.
+         * @details 하위 레벨 나가기는 그 자리에서 하위 레벨을 빼므로 그 안 디렉터의 규칙 중에 부르면 자기를 지운다 — 진입(`requestEnter`)과 같은 줄로 미룬다.
+         */
+        void requestLeave( const hashed_string& resultName, vector<MinigameResultValue> listValue );
         /**
          * @brief 틱 뒤 작업(트리거)에서 진입을 맡깁니다 — 다음 `update`(틱 밖)가 `enter` 합니다. 이미 맡긴 것이 있으면 경고하고 이것을 버립니다.
          * @details 씬 전환의 스냅숏은 씬을 도는 동안 찍지 않는다(자동 저장과 같은 자리 — `GameInstance::update`).
          */
         void requestEnter( string_view name, const optional<SubLevelPlacement>& placement );
-        /** @brief 켜진 범위의 다시 읽힌 카탈로그를 새 판으로 걸고(`GameFeatureScope::rebindReloadedCatalogs`) 맡긴 진입을 처리합니다 — `GameInstance::update` 앞머리(틱 밖)가 부른다. */
+        /** @brief 켜진 범위의 다시 읽힌 카탈로그를 새 판으로 걸고(`GameFeatureScope::rebindReloadedCatalogs`) 맡긴 나가기 · 진입을 처리합니다 — `GameInstance::update` 앞머리(틱 밖)가 부른다. */
         void update();
         /**
          * @brief 실행 전역 변수 `gv_firstMinigame` 가 있으면 그 미니게임으로 들어갑니다 — 게임 인스턴스의 첫 씬 자리(`GameInstance::startFirstScene`)가 부른다.
@@ -121,6 +126,13 @@ namespace sw
         uint32 getLeakCount() const { return _leakCount; }
         /** @brief 씬 전환 미니게임에서 나와 돌아올 자리를 복원한 수입니다. 감시 값 `Minigame.RestoreCount` 가 읽는다. */
         uint32 getRestoreCount() const { return _restoreCount; }
+        /**
+         * @brief 마지막으로 나온 순간(결과를 넘기기 직전)의 에셋 캐시가 쥔 바이트 추정 합(CPU + GPU, `AssetCacheBase::collectMemoryEntries`)입니다. 감시 값 `Minigame.LeaveAssetCacheBytes` 가 읽는다.
+         * @details 들어가기 → 나오기를 되풀이하며 이 값과 `getLeaveHeapBytes` 가 회차마다 느는지 본다(미니게임이 쥔 것을 나올 때 돌려주는지). 판정 문턱은 측정 뒤에 정한다.
+         */
+        uint64 getLeaveAssetCacheBytes() const { return _leaveAssetCacheBytes; }
+        /** @brief 마지막으로 나온 순간의 힙 바이트입니다 — 메모리 프로파일러가 있으면 sw 할당자의 살아 있는 바이트, 없으면 플랫폼 힙(측정 못 하는 구성은 0). 감시 값 `Minigame.LeaveHeapBytes` 가 읽는다. */
+        uint64 getLeaveHeapBytes() const { return _leaveHeapBytes; }
         /** @brief 마지막으로 넘긴 결과입니다. 없으면 빈 값입니다. 감시 값 `Minigame.LastResult` 이 읽는다. */
         const MinigameResult& getLastResult() const { return _lastResult; }
 
@@ -166,6 +178,8 @@ namespace sw
         void deactivateScope();
         /** @brief 하위 레벨 @p returnPoint 를 바탕 씬이 아직 활성이면 뺍니다. */
         static void removeSubLevel( const MinigameSubLevelReturn& returnPoint );
+        /** @brief 나온 순간의 에셋 캐시 · 힙 바이트를 찍습니다(`getLeaveAssetCacheBytes` · `getLeaveHeapBytes`). */
+        void sampleLeaveMemory();
         /** @brief 결과를 넘깁니다(`onFinished`). */
         void deliverResult( const MinigameResult& result );
         /** @brief 다른 진입 · 나가기가 맵을 기다리는 중이면 @p name 의 요청을 거절한다고 알리고 true 입니다. */
@@ -182,11 +196,14 @@ namespace sw
         unique_ptr<PendingReturn>    _pReturning;           ///< 나가며 돌아갈 씬을 기다리는 중이면 그 자리와 결과(없으면 nullptr)
         string                       _pendingEnter;         ///< 틱 뒤 작업에서 맡긴 진입(`requestEnter`) — 비었으면 없음
         optional<SubLevelPlacement>  _pendingPlacement;     ///< 맡긴 진입의 얹을 자리
+        optional<MinigameResult>     _pendingLeave;         ///< 틱 뒤 작업에서 맡긴 나가기(`requestLeave` — 이름 칸은 비워 두고 `leave` 가 채운다). 없으면 nullopt
         FinishedDelegate             _onFinished;           ///< 결과를 받는 함수 목록
         MinigameResult               _lastResult;           ///< 마지막으로 넘긴 결과
         Subscription                 _sceneLoadRequested;   ///< 씬 로드 받아들임 알림의 구독(초기화가 걸고 종료가 푼다)
         uint32                       _leakCount;            ///< 끈 범위들이 남긴 것의 합
         uint32                       _restoreCount;         ///< 돌아올 자리 복원 수
+        uint64                       _leaveAssetCacheBytes; ///< 마지막으로 나온 순간의 에셋 캐시 바이트 추정 합
+        uint64                       _leaveHeapBytes;       ///< 마지막으로 나온 순간의 힙 바이트
         uint8                        _bEntering        : 1; ///< 맨 위 미니게임의 맵을 기다리는 중이면 1(하나만 — 겹친 진입은 거절한다)
         uint8                        _bRequestingScene : 1; ///< 이 흐름이 씬 로드를 요청하는 동안 1(받아들임 알림이 동기로 온다)
     };

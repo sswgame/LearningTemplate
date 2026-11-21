@@ -106,6 +106,11 @@ namespace sw
         void alignToByte();
         /** @brief 비웁니다. 잡아 둔 버퍼는 남겨 다시 씁니다. */
         void clear();
+        /**
+         * @brief 앞서 잰 비트 수(`getBitCount`)까지 되돌립니다 — 써 본 뒤 예산을 넘으면 물린다(언리얼 `FBitWriterMark::Pop` 자리).
+         * @details 크기를 따로 세는 함수(쓰기와 짝을 손으로 맞추는)를 두지 않으려는 것이다. 지금보다 큰 값이나 음수는 단언으로 멈추고 아무것도 하지 않습니다.
+         */
+        void truncate( int32 bitCount );
 
         int32 getBitCount() const { return _bitCount; }
         int32 getByteCount() const { return ( _bitCount + 7 ) / 8; }

@@ -177,11 +177,14 @@ SW_TEST_CASE( MailboxServiceTest, ListClaimDelete )
 
     const OnlineResult<MailboxListReply> listed = rig.list();
     SW_EXPECT_TRUE( listed.isOk() );
+    SW_EXPECT_FALSE( listed._idempotencyKey.isValid() ); // 읽기(`ReadOnly`)는 창구가 키를 만들지 않는다
     SW_REQUIRE_EQUAL( size_t( 1 ), listed._reply._listMail.size() );
     SW_REQUIRE_EQUAL( size_t( 1 ), rig._client.getMails().size() );
     SW_EXPECT_EQUAL( 1, rig._client.countUnread() );
 
-    SW_EXPECT_TRUE( rig.call<MailboxMethod::MarkRead>( MailboxServiceTestUtil::makeMailRequest( mailKey ) ).isOk() );
+    const OnlineResult<MailboxResultReply> marked = rig.call<MailboxMethod::MarkRead>( MailboxServiceTestUtil::makeMailRequest( mailKey ) );
+    SW_EXPECT_TRUE( marked.isOk() );
+    SW_EXPECT_FALSE( marked._idempotencyKey.isValid() ); // 본래 멱등(`IdempotentSet`)도 키가 없다
     SW_EXPECT_EQUAL( 0, rig._client.countUnread() );
 
     const OnlineResult<MailboxClaimReply> claimed = rig.call<MailboxMethod::Claim>( MailboxServiceTestUtil::makeMailRequest( mailKey ) );
@@ -191,7 +194,9 @@ SW_TEST_CASE( MailboxServiceTest, ListClaimDelete )
     SW_EXPECT_EQUAL( int64( 5 ), rig.getBalanceOf( kPlayer ) );
     SW_EXPECT_TRUE( rig._client.getMails()[0]._state == ServiceMailState::Claimed );
 
-    SW_EXPECT_TRUE( rig.call<MailboxMethod::Delete>( MailboxServiceTestUtil::makeMailRequest( mailKey ) ).isOk() );
+    const OnlineResult<MailboxResultReply> deleted = rig.call<MailboxMethod::Delete>( MailboxServiceTestUtil::makeMailRequest( mailKey ) );
+    SW_EXPECT_TRUE( deleted.isOk() );
+    SW_EXPECT_FALSE( deleted._idempotencyKey.isValid() ); // 본래 멱등(`IdempotentRemove`)도 키가 없다
     SW_EXPECT_TRUE( rig._client.getMails().empty() );
     SW_EXPECT_TRUE( rig.list()._reply._listMail.empty() );
 }

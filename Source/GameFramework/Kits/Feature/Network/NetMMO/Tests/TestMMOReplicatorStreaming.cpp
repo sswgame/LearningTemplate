@@ -11,6 +11,7 @@
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDocument.h"
 #include "Engine/Scene/SceneStreamingSubsystem.h"
+#include "Engine/Serialization/Fixed/ReplicatedLayout.h"
 
 #include "GameFramework/Kits/Feature/Network/NetMMO/MMOReplicator.h"
 
@@ -60,35 +61,38 @@ namespace
             return settings;
         }
 
-        /** @brief 새로 보임 하나(엔티티 하나)를 보내는 쪽(`writeEntity`)과 같은 배치로 씁니다. */
+        /** @brief 새로 보임 하나(엔티티 하나)를 씁니다 — 머리는 보내는 쪽과 같은 칸 선언(`MMOEntityEnterHeader`)이다. */
         static vector<uint8> writeEnter( uint32 tick, uint32 entityID, uint64 staticID, const float3& position )
         {
             BitWriter writer;
             writer.writeBits( NetMMOMessage::kEnter, 8 );
             writer.writeVarUint( tick );
             writer.writeBool( true );
-            writer.writeVarUint( entityID );
-            writer.writeVarUint( 1 ); // 타입
-            writer.writeVarUint( staticID );
-            writer.writeFloat( position._x );
-            writer.writeFloat( position._y );
-            writer.writeFloat( position._z );
+            MMOEntityEnterHeader header;
+            header._header._entityID = entityID;
+            header._header._position = position;
+            header._typeID           = 1;
+            header._staticID         = staticID;
+            const bool bWritten      = ReplicatedLayout::writeFull( header, writer );
+            SW_EXPECT_TRUE( bWritten );
             writer.writeVarUint( 0 ); // 상태 길이
             writer.writeBool( false );
             return writer.getBytes();
         }
 
+        /** @brief 갱신 하나(엔티티 하나)를 씁니다 — 머리는 `MMOEntityUpdateHeader` 다. */
         static vector<uint8> writeUpdate( uint32 tick, uint32 entityID, const float3& position )
         {
             BitWriter writer;
             writer.writeBits( NetMMOMessage::kUpdate, 8 );
             writer.writeVarUint( tick );
             writer.writeBool( true );
-            writer.writeVarUint( entityID );
-            writer.writeFloat( position._x );
-            writer.writeFloat( position._y );
-            writer.writeFloat( position._z );
-            writer.writeVarUint( 0 );
+            MMOEntityUpdateHeader header;
+            header._entityID    = entityID;
+            header._position    = position;
+            const bool bWritten = ReplicatedLayout::writeFull( header, writer );
+            SW_EXPECT_TRUE( bWritten );
+            writer.writeVarUint( 0 ); // 상태 길이
             writer.writeBool( false );
             return writer.getBytes();
         }

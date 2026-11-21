@@ -1010,18 +1010,12 @@ namespace sw
         if ( pManager == nullptr )
             return true;
         // 이 오브젝트를 따라가는 게임 카메라 디렉터(시점 카메라)의 프리셋 모드를 구한다.
-        const GameObjectHandle self         = pOwner->getHandle();
-        bool                   bFirstPerson = true;
-        // 틱마다 묻는다. 씬 전체를 훑지 않고 등록된 디렉터만 본다.
-        for ( const CameraDirectorComponent* pCameraDirector : pManager->getComponentRegistry().getAll<CameraDirectorComponent>() )
-        {
-            if ( pCameraDirector->isPendingDestroy() || pCameraDirector->getTarget() != self )
-                continue;
-            const CameraPresetDef* pPreset = pCameraDirector->getCatalog().find( pCameraDirector->getActivePresetID() );
-            if ( pPreset != nullptr )
-                bFirstPerson = pPreset->_view._mode == CameraPresetMode::FirstPerson;
-        }
-        return bFirstPerson;
+        // 틱마다 묻는다. 씬 전체를 훑지 않고 등록된 디렉터만 본다. 이 오브젝트를 따라가는 디렉터는 하나다 — 둘이면 오류로 기본(1인칭)이다(등록 순서로 고르지 않는다).
+        const GameObjectHandle         self            = pOwner->getHandle();
+        const CameraDirectorComponent* pCameraDirector = pManager->getComponentRegistry().findUnique<CameraDirectorComponent>( [&self]( const CameraDirectorComponent& director )
+        { return director.isPendingDestroy() == false && director.getTarget() == self; } );
+        const CameraPresetDef*         pPreset         = pCameraDirector != nullptr ? pCameraDirector->getCatalog().find( pCameraDirector->getActivePresetID() ) : nullptr;
+        return pPreset == nullptr || pPreset->_view._mode == CameraPresetMode::FirstPerson;
     }
 
     void ShooterPlayerComponent::updateHUD()

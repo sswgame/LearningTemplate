@@ -57,6 +57,11 @@
 	<Store watch="Save.Written" as="writtenBefore"/>
 	<DevCommand line="game.save kitdemo/respawn"/>
 	<WaitUntil watch="Save.Written" differsFrom="writtenBefore" timeoutWallSeconds="10"/>
+	<!-- 측정 문턱을 재는 자리(docs/DesignBacklog.md GameFramework ②) — 디렉터 걸음 시간 · 세이브 찍기 시간을 기록만 한다(판정은 측정 뒤) -->
+	<Record watch="Save.CaptureMs"/>
+	<Record watch="Save.CapturePeakMs"/>
+	<Record watch="GameMode.StepMs"/>
+	<Record watch="GameMode.StepPeakMs"/>
 	<Press slot="Key.D"/>
 	<WaitUntil watch="KitDemo.Platformer.PlayerY" atMost="0" timeoutFrames="240"/>
 	<Release slot="Key.D"/>

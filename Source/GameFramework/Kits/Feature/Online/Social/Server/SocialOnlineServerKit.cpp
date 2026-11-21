@@ -1,11 +1,13 @@
 #include "pch.h"
 
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Identity/AccountPresence.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Identity/GroupChannelMembership.h"
 #include "GameFramework/Kits/Feature/Online/Social/Server/GuildService.h"
 #include "GameFramework/Kits/Feature/Online/Social/Server/SocialKitConfig.h"
 #include "GameFramework/Kits/Feature/Online/Social/Server/SocialServer.h"
 #include "GameFramework/Kits/Feature/Online/Social/Server/SocialService.h"
 #include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
+#include "GameFramework/Runtime/Online/Ledger/LedgerTypes.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerConfig.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerKit.h"
 #include "GameFramework/Runtime/Online/Service/Server/OnlineServiceHost.h"
@@ -53,7 +55,7 @@ namespace sw
          * @class SocialOnlineServerKit
          * @brief 친구 키트의 서버 조립입니다.
          */
-        class SocialOnlineServerKit final : public IOnlineServerKit
+        class SocialOnlineServerKit final : public OnlineServerKit<OnlineKitRequired<>, OnlineKitOptional<const IAccountNameIndex, const ILedgerPolicy, IAccountPresence>, OnlineKitUnordered<IGroupChannelMembership>>
         {
         public:
             SocialOnlineServerKit()
@@ -66,7 +68,7 @@ namespace sw
             {
             }
 
-            [[nodiscard]] expected<void> initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry ) override
+            [[nodiscard]] expected<void> initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, const Dependencies& ) override
             {
                 SocialKitConfig kitConfig;
                 if ( expected<void> result = entry.readSettings( kitConfig ); result.has_value() == false )
@@ -86,22 +88,22 @@ namespace sw
                 { return addTTLRule( context, entry, GuildService::makeApplicationTTLRule( kitConfig._expiredApplicationTTL.getExpireAfterMs() ), kitConfig._expiredApplicationTTL ); } );
             }
 
-            expected<void> start( OnlineServerKitContext& context ) override
+            expected<void> start( OnlineServerKitContext& context, const Dependencies& interfaces, const UnorderedDependencies& unordered ) override
             {
                 SocialServiceDependencies dependencies;
                 dependencies._pStore     = context._pStore;
                 dependencies._pRouter    = context._pRouter;
                 dependencies._pBus       = context._pBus;
-                dependencies._pNameIndex = context._kits.find<const IAccountNameIndex>();
+                dependencies._pNameIndex = interfaces.find<const IAccountNameIndex>();
                 _socialService.initialize( dependencies );
                 _guildService.initialize( context._pStore );
-                _guildService.setLedgerPolicy( context._kits.find<const ILedgerPolicy>() ); // 창고에서 꺼낼 때 화폐 상한을 본다. 경제 키트가 없으면 원장 상한만 본다
-                // 채팅 키트는 의존으로 적지 않는다 — 채팅이 이 키트의 차단 목록에 의존해 순환이 된다. 채팅의 멤버 창은 채팅 서비스가 서기 전과 내린 뒤의 호출을 무시하므로
+                _guildService.setLedgerPolicy( interfaces.find<const ILedgerPolicy>() ); // 창고에서 꺼낼 때 화폐 상한을 본다. 경제 키트가 없으면 원장 상한만 본다
+                // 채팅 키트는 순서 없는 목록(`OnlineKitUnordered`)에 적는다 — 채팅이 이 키트의 차단 목록에 의존해 순환이 된다. 채팅의 멤버 창은 채팅 서비스가 서기 전과 내린 뒤의 호출을 무시하므로
                 // 순서가 없어도 되고, 찾기는 모든 키트의 `initialize` 뒤인 여기서 한다.
-                _pGroupChannels = context._kits.find<IGroupChannelMembership>();
+                _pGroupChannels = unordered.find<IGroupChannelMembership>();
                 if ( _pGroupChannels != nullptr )
                     _guildEventSubscription = _guildService.bindEventDelegate( GuildEventDelegate::create<&SocialOnlineServerKit::onGuildEvent>( this ) );
-                _socialServer.initialize( &_socialService, &_guildService, context._kits.find<IAccountPresence>(), context._pMetricRegistry );
+                _socialServer.initialize( &_socialService, &_guildService, interfaces.find<IAccountPresence>(), context._pMetricRegistry );
                 return {};
             }
 
@@ -125,12 +127,6 @@ namespace sw
                     return;
                 _guildService.shutdown();
                 _socialService.shutdown();
-            }
-
-            span<const utf8* const> getOptionalKits() const override
-            {
-                static constexpr const utf8* kArrKit[] = { OnlineServerKitName::kAccount, OnlineServerKitName::kEconomy }; // 이름 찾기 · 접속 상태, 원장 정책
-                return kArrKit;
             }
 
         private:

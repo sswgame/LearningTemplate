@@ -2,6 +2,8 @@
 
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Serialization/Format/Tests/StateBytesTestUtil.h"
+
 #include "GameFramework/Kits/Genre/Simulation/CreatureLife/CreatureLifeCatalog.h"
 #include "GameFramework/Kits/Genre/Simulation/CreatureLife/CreatureTown.h"
 #include "GameFramework/Runtime/Foundation/Framework/SessionStateRefs.h"
@@ -127,4 +129,29 @@ SW_TEST_CASE_F( CreatureTownRulesTest, GiftTakesOneItemOncePerDay )
     // 빌린 평판이 없으면 호감도 단계도 없다(값을 지어내지 않는다)
     SW_EXPECT_TRUE( _town.getFriendshipTier( kSprout ).empty() );
     SW_EXPECT_EQUAL( 0, _town.getFriendship( kSprout ) );
+}
+
+/** @brief [CreatureTownRulesTest] 결정성: 물건 놓기 · 방문 굴림 · 능력 · 집 · 대화 · 날 넘김을 걸음 번호로 돌린 마을은 같은 바이트를 내고, 중간에 쓰고 읽은 마을도 같게 이어 돈다 */
+SW_TEST_CASE_F( CreatureTownRulesTest, TownDeterminism )
+{
+    const auto setup = [this]( sw::CreatureTown& town )
+    { return town.initialize( &_catalog, sw::SessionStateRefs{}, kRulesTownSize, kRulesTownSize ); };
+    const auto step = []( sw::CreatureTown& town, int32 stepIndex )
+    {
+        const int32 hour = stepIndex % 24;
+        if ( stepIndex == 0 )
+            (void)town.setObject( 0, 0, "tree" );
+        (void)town.attractVisitorsAt( stepIndex / 24, hour, hour < 18 ? sw::DayPhase::Day : sw::DayPhase::Night, stepIndex % 5 == 0 ? "rainy" : "sunny" );
+        if ( stepIndex % 6 == 2 )
+            (void)town.useAbility( kSprout, kPlant, stepIndex % kRulesTownSize, ( stepIndex / kRulesTownSize ) % kRulesTownSize, nullptr );
+        if ( stepIndex == 30 )
+            (void)town.placeHouse( kRulesTownSize - 1, kRulesTownSize - 1, 1 );
+        if ( stepIndex == 31 )
+            (void)town.assignHomeless();
+        if ( stepIndex % 10 == 7 )
+            (void)town.talkTo( kSprout );
+        if ( hour == 23 )
+            town.advanceDay();
+    };
+    SW_EXPECT_TRUE( sw::StateBytesTestUtil::isDeterministic<sw::CreatureTown>( setup, step, 96 ) );
 }

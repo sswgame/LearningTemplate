@@ -76,7 +76,7 @@ namespace sw
             static void writeController( DebugHUDSectionWriter& writer, uint32 maxLines )
             {
                 const GameObjectManager* const     pManager    = GameplayDebugTarget::findActiveObjectManager();
-                const AIControllerComponent* const pController = pManager != nullptr ? GameplayDebugTarget::findTargetComponent<AIControllerComponent>( writer.getSceneIterationKey(), *pManager ) : nullptr;
+                const AIControllerComponent* const pController = pManager != nullptr ? GameplayDebugTarget::findTargetOrLowestIDComponent<AIControllerComponent>( writer.getSceneIterationKey(), *pManager ) : nullptr;
                 if ( pController == nullptr )
                 {
                     writer.addLine( "ai", "none (no AI controller in the active scene)" );

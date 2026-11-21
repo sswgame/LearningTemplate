@@ -208,6 +208,18 @@ namespace sw
         _bFailed  = SW_FALSE;
     }
 
+    void BitWriter::truncate( int32 bitCount )
+    {
+        SW_CHECK_INDEX_OR_END( bitCount, _bitCount );
+        if ( bitCount < 0 || bitCount > _bitCount )
+            return;
+        _buffer.resize( static_cast<size_t>( ( bitCount + 7 ) >> 3 ) );
+        const int32 remainder = bitCount & 7;
+        if ( remainder != 0 )
+            _buffer.back() = static_cast<uint8>( _buffer.back() & ( ( 1u << remainder ) - 1u ) ); // 끝 바이트의 남은 비트는 0 이다(`getBytes`)
+        _bitCount = bitCount;
+    }
+
     // ------------------------------------------------------------------------------
     // BitReader
     // ------------------------------------------------------------------------------

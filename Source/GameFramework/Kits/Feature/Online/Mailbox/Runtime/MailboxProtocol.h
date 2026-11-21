@@ -168,11 +168,11 @@ namespace sw
     /** @brief 우편함 메서드 표입니다. 번호는 열거자 순서에서 나오고, 요청 · 응답의 짝과 호출 규칙은 서술자가 정합니다. */
     struct MailboxMethod : OnlineMethodTable<MailboxMethodName, OnlineMethodRange::kMailbox, MailboxPushName>
     {
-        using List     = Method<MethodName::List, MailboxListRequest, MailboxListReply>;
-        using MarkRead = Method<MethodName::MarkRead, MailboxMailRequest, MailboxResultReply>;
+        using List     = Method<MethodName::List, MailboxListRequest, MailboxListReply, OnlineMethodFlag::ReadOnly>;
+        using MarkRead = Method<MethodName::MarkRead, MailboxMailRequest, MailboxResultReply, OnlineMethodFlag::IdempotentSet>;
         using Claim    = Method<MethodName::Claim, MailboxMailRequest, MailboxClaimReply, OnlineMethodFlag::RequiresIdempotencyKey>;
         using ClaimAll = Method<MethodName::ClaimAll, OnlineNoBody, MailboxClaimReply, OnlineMethodFlag::RequiresIdempotencyKey>;
-        using Delete   = Method<MethodName::Delete, MailboxMailRequest, MailboxResultReply>;
+        using Delete   = Method<MethodName::Delete, MailboxMailRequest, MailboxResultReply, OnlineMethodFlag::IdempotentRemove>;
         using NewMail  = Push<PushName::NewMail, MailboxNewMail>; ///< 새 우편이 왔다. 클라이언트는 목록을 다시 읽는다
     };
 } // namespace sw

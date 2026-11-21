@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="475df1a7bc6546afb012df1e78af40e5"?>
+<!--
+  미니게임에서 나올 때 메모리를 돌려주는지 재는 시나리오 — 들어가기(minigame.enter) → 나오기(minigame.leave)를 네 번 되풀이하고, 나올 때마다
+  감시 값 Minigame.LeaveAssetCacheBytes(에셋 캐시가 쥔 바이트 추정 합) · Minigame.LeaveHeapBytes(힙 바이트)를 기록한다(docs/DesignBacklog.md "구조 · 성능 발전 방향" GameFramework ⑧).
+  첫 회차는 캐시 · 풀이 차는 몫이라 둘째 회차부터의 기울기를 본다. 판정 문턱은 측정 뒤에 정한다 — 지금은 기록과 범위 해제 검사(LeakCount)만 판정한다.
+  무대는 minigame.scenario.xml 과 같다: 첫 씬 maps/fogshowcase 에서 minigames/smoketest(맵 editortest, 게임 기능 없음)로 들어간다.
+  실행: App -scenario=game/playground/automation/minigamememory.scenario.xml -unattended (체인: ctest -R Scenario.playground)
+-->
+<Scenario name="game.playground.minigamememory" fixedDelta="0.0166667" timeoutFrames="3600" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/playground/maps/fogshowcase.scene.xml"/>
+	<Expect watch="Minigame.Active" is="none"/>
+	<!-- 1 회차(캐시 · 풀이 차는 몫) -->
+	<DevCommand line="minigame.enter smoketest"/>
+	<WaitUntil watch="Minigame.Active" is="smoketest" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<DevCommand line="minigame.leave"/>
+	<WaitUntil watch="Minigame.RestoreCount" equals="1" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<Record watch="Minigame.LeaveAssetCacheBytes"/>
+	<Record watch="Minigame.LeaveHeapBytes"/>
+	<!-- 2 회차 -->
+	<DevCommand line="minigame.enter smoketest"/>
+	<WaitUntil watch="Minigame.Active" is="smoketest" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<DevCommand line="minigame.leave"/>
+	<WaitUntil watch="Minigame.RestoreCount" equals="2" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<Record watch="Minigame.LeaveAssetCacheBytes"/>
+	<Record watch="Minigame.LeaveHeapBytes"/>
+	<!-- 3 회차 -->
+	<DevCommand line="minigame.enter smoketest"/>
+	<WaitUntil watch="Minigame.Active" is="smoketest" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<DevCommand line="minigame.leave"/>
+	<WaitUntil watch="Minigame.RestoreCount" equals="3" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<Record watch="Minigame.LeaveAssetCacheBytes"/>
+	<Record watch="Minigame.LeaveHeapBytes"/>
+	<!-- 4 회차 -->
+	<DevCommand line="minigame.enter smoketest"/>
+	<WaitUntil watch="Minigame.Active" is="smoketest" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<DevCommand line="minigame.leave"/>
+	<WaitUntil watch="Minigame.RestoreCount" equals="4" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<Record watch="Minigame.LeaveAssetCacheBytes"/>
+	<Record watch="Minigame.LeaveHeapBytes"/>
+	<ExpectActiveScene path="game/playground/maps/fogshowcase.scene.xml"/>
+	<Expect watch="Minigame.Active" is="none"/>
+	<Expect watch="Minigame.LeakCount" equals="0"/>
+	<ExpectLog id="MinigameFlow.Restored" count="4"/>
+	<Pass/>
+</Scenario>

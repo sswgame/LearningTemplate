@@ -14,6 +14,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Service/NetObjectTable.h"
+#include "Engine/Serialization/Fixed/ReplicatedLayout.h"
 
 #include <algorithm>
 
@@ -56,48 +57,28 @@ namespace sw
 {
     bool PairedAnimationNetState::write( BitWriter& writer ) const
     {
-        const bool bPathFits  = _assetPath.empty() == false && _assetPath.size() < constant::file::kMaxPathSize;
-        const bool bRoleCount = _listRoleNetID.size() <= kMaxRoleCount;
-        if ( bPathFits == false || bRoleCount == false )
+        if ( _assetPath.empty() )
             return false;
-        vector<uint8> snapshotBytes;
-        _snapshot.writeBytes( snapshotBytes );
-        if ( snapshotBytes.size() > static_cast<size_t>( kMaxSnapshotBytes ) )
+        PairedAnimationSessionStateBody body;
+        body._assetPath     = _assetPath;
+        body._listRoleNetID = _listRoleNetID;
+        if ( _snapshot.writeBytes( body._snapshotBytes ) == false )
             return false;
-        writer.writeBlob( reinterpret_cast<const uint8*>( _assetPath.data() ), static_cast<int32>( _assetPath.size() ) );
-        writer.writeVarUint( _listRoleNetID.size() );
-        for ( const NetObjectID netID : _listRoleNetID )
-        {
-            writer.writeVarUint( netID );
-        }
-        writer.writeBlob( snapshotBytes.data(), static_cast<int32>( snapshotBytes.size() ) );
-        return true;
+        return ReplicatedLayout::writeFull( body, writer ); // 상한(`MaxCount`)은 선언이 본다
     }
 
     bool PairedAnimationNetState::read( BitReader& reader, PairedAnimationNetState& outState )
     {
         outState = PairedAnimationNetState{};
+        PairedAnimationSessionStateBody body;
+        if ( ReplicatedLayout::readFull( reader, body, nullptr ) != FixedReadResult::Ok || body._assetPath.empty() )
+            return false;
         PairedAnimationNetState state{};
-        vector<uint8>           pathBytes;
-        if ( reader.readBlob( pathBytes, static_cast<int32>( constant::file::kMaxPathSize ) - 1 ) == false || pathBytes.empty() )
+        if ( PairedAnimationSessionSnapshot::readBytes( body._snapshotBytes, state._snapshot ) != PairedAnimationSessionSnapshot::ReadResult::Success )
             return false;
-        state._assetPath.assign( reinterpret_cast<const utf8*>( pathBytes.data() ), pathBytes.size() );
-        const uint64 roleCount = reader.readVarUint();
-        if ( reader.hasOverflowed() || roleCount > kMaxRoleCount )
-            return false;
-        state._listRoleNetID.resize( static_cast<size_t>( roleCount ) );
-        for ( NetObjectID& netID : state._listRoleNetID )
-        {
-            netID = reader.readVarUint();
-        }
-        vector<uint8> snapshotBytes;
-        if ( reader.readBlob( snapshotBytes, kMaxSnapshotBytes ) == false )
-            return false;
-        if ( PairedAnimationSessionSnapshot::readBytes( snapshotBytes, state._snapshot ) != PairedAnimationSessionSnapshot::ReadResult::Success )
-            return false;
-        if ( reader.hasOverflowed() )
-            return false;
-        outState = std::move( state );
+        state._assetPath     = std::move( body._assetPath );
+        state._listRoleNetID = std::move( body._listRoleNetID );
+        outState             = std::move( state );
         return true;
     }
 } // namespace sw

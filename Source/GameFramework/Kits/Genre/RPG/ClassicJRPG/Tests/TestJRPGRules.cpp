@@ -6,6 +6,7 @@
 #include "Engine/Reflection/TypeFqn.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Format/Tests/StateBytesTestUtil.h"
 
 #include "GameFramework/Kits/Genre/RPG/ClassicJRPG/JRPGBattle.h"
 #include "GameFramework/Kits/Genre/RPG/ClassicJRPG/JRPGCatalog.h"
@@ -15,6 +16,7 @@
 #include "GameFramework/Runtime/Foundation/Framework/SessionStateRefs.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/Wallet.h"
 
 #include <algorithm>
 #include <iterator>
@@ -1317,4 +1319,61 @@ SW_TEST_CASE( JRPGTest, CatalogReportsUnknownReferences )
     party.initialize( &catalog, nullptr, sw::SessionStateRefs{} );
     SW_REQUIRE_TRUE( party.addMember( "hero", "Hero", "hero" ) == 0 );
     SW_EXPECT_TRUE( party.getMember( 0 )._listSpell.empty() );
+}
+
+namespace
+{
+    /** @brief 전투와 빌려 준 파티 · 지갑 · 가방을 한 판으로 묶습니다. 파티는 전투 밖이라 전투 바이트에 없으므로 결정성 테스트가 함께 싣습니다. */
+    struct JRPGBattleRun
+    {
+        sw::Wallet     _wallet{};
+        sw::Inventory  _inventory{};
+        sw::JRPGParty  _party{};
+        sw::JRPGBattle _battle{};
+
+        /** @brief 지갑 · 파티를 먼저 싣습니다 — 전투 읽기가 연결한 파티의 멤버 수를 본다. */
+        SW_DECLARE_STATE_IO_IN_PLACE()
+        {
+            io.value( _wallet );
+            io.value( _party );
+            io.value( _battle );
+        }
+    };
+} // namespace
+
+/**
+ * @brief [JRPGRulesTest] 결정성: 같은 명령이면 행동 순서 · 물리 피해 · 주문(난수 폭) · 회복 · 합동기 · 방어가 같은 바이트를 내고, 중간 저장에서 이어도 같다
+ */
+SW_TEST_CASE_F( JRPGRulesTest, BattleDeterminism )
+{
+    const auto setup = [this]( JRPGBattleRun& run ) -> bool
+    {
+        if ( run._inventory.initialize( &_itemCatalog, 5 ) == false )
+            return false;
+        sw::SessionStateRefs refs;
+        refs._pWallet    = &run._wallet;
+        refs._pInventory = &run._inventory;
+        run._party.initialize( &_catalog, &_itemCatalog, refs );
+        if ( run._party.addMember( "hero", "Hero", "hero" ) != 0 || run._party.addMember( "mage", "Mage", "mage" ) != 1 )
+            return false;
+        run._battle.initialize( &_catalog, &_judge, _settings, 7 );
+        run._battle.setTimingInput( &_timing );
+        const sw::vector<sw::hashed_string> listEnemy{ sw::hashed_string( "slime" ), sw::hashed_string( "brittle" ) };
+        return run._battle.start( &run._party, listEnemy );
+    };
+    const auto step = []( JRPGBattleRun& run, int32 stepIndex )
+    {
+        const int32           target = stepIndex % 2;
+        const sw::JRPGCommand hero   = stepIndex % 5 == 0  ? sw::JRPGCommand::makeSpell( "flare", target )
+                                     : stepIndex % 11 == 4 ? sw::JRPGCommand::makeSpell( "mend", 1 )
+                                     : stepIndex % 7 == 3  ? sw::JRPGCommand::makeDefend()
+                                                           : sw::JRPGCommand::makeAttack( target );
+        const sw::JRPGCommand mage   = stepIndex % 6 == 2 ? sw::JRPGCommand::makeCombo( "eclipse", target )
+                                     : stepIndex % 3 == 0 ? sw::JRPGCommand::makeSpell( "flare", target )
+                                                          : sw::JRPGCommand::makeAttack( target );
+        (void)run._battle.setCommand( 0, hero ); // MP · 포인트가 모자라면 거절된다 — 그 길도 같은 판을 낸다
+        (void)run._battle.setCommand( 1, mage );
+        run._battle.resolveRound();
+    };
+    SW_EXPECT_TRUE( sw::StateBytesTestUtil::isDeterministic<JRPGBattleRun>( setup, step, 120 ) );
 }

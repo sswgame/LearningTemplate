@@ -44,6 +44,7 @@
 #include "Core/Network/Replication/NetParallel.h"
 #include "Core/Network/Replication/NetPrioritizer.h"
 #include "Core/Network/Replication/TickRingBuffer.h"
+#include "Core/Serialization/BitStream.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Scene/StreamingCellGrid.h"
@@ -60,9 +61,9 @@ namespace sw
     /** @brief MMO 키트의 메시지 표입니다. 종류 · 마스크 · 와이어 버전은 표에서 나온다(`NetMessageTable`). */
     struct NetMMOMessage
     {
-        using Enter  = NetMessageDef<0, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, 2>; ///< 판 2: 엔티티마다 정적 id(`MMOEntity::_staticID`)를 싣는다
+        using Enter  = NetMessageDef<0, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, 3>; ///< 판 3: 엔티티 머리를 칸 선언(`MMOEntityEnterHeader`)으로 쓴다(2: 정적 id)
         using Leave  = NetMessageDef<1, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered>;
-        using Update = NetMessageDef<2, NetMessageDirection::ToClient, NetChannelKind::Unreliable, 4>; ///< 서버 → 클라이언트(비신뢰, 전달 통지). 통지 값은 서버 틱이다. 판 4: 갱신 확인 메시지 없이 전달 통지로 판정한다
+        using Update = NetMessageDef<2, NetMessageDirection::ToClient, NetChannelKind::Unreliable, 5>; ///< 서버 → 클라이언트(비신뢰, 전달 통지). 통지 값은 서버 틱이다. 판 5: 엔티티 머리를 칸 선언(`MMOEntityUpdateHeader`)으로 쓴다(4: 전달 통지 판정)
         using Table  = NetMessageTable<NetKitMessageRange::kMMO, Enter, Leave, Update>;
 
         static constexpr uint8 kEnter  = Table::getKindOf<Enter>();
@@ -71,6 +72,40 @@ namespace sw
 
         static constexpr int32  kMaxStateBytes       = 512; ///< 엔티티 상태 상한. 서버는 넘는 엔티티를 받지 않고, 클라이언트는 넘는 길이를 손상된 메시지로 본다
         static constexpr uint32 kMaxUnconfirmedTicks = 64;  ///< 이만큼 지나도 판정이 없으면 잃은 것으로 본다. 서버 판정 테이블의 크기이기도 하다
+    };
+
+    /**
+     * @brief 갱신 메시지(`NetMMOMessage::Update`)에 싣는 엔티티 머리입니다. 칸 선언(`Replicated` · 범위)이 곧 바이트다(`ReplicatedLayout`). 뒤에 상태 바이트(`MMOEntity::_listState`)가 덩어리로 붙는다.
+     * @details 예전에는 쓰는 쪽 · 읽는 쪽 · 비트 수를 세는 쪽이 같은 차례를 손으로 맞췄다(어긋나도 컴파일됐다). 지금 비트 수는 써 본 길이다(`BitWriter::truncate`).
+     *          자리 범위는 NaN · 무한대를 거절하는 경계다 — 서버는 `MMOReplicator::setEntity` 에서 받지 않고, 클라이언트는 깨진 메시지로 본다.
+     *          칸을 바꾸면 `Update`(와 이 머리를 품은 `Enter`)의 본문 판을 올린다 — 손 본문이라 판이 스키마 해시를 따라가지 않는다.
+     */
+    REFLECT()
+    struct MMOEntityUpdateHeader
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Replicated )
+        uint32 _entityID{ 0 };
+
+        PROPERTY( Replicated, Min = -1000000, Max = 1000000 )
+        float3 _position{ 0.0f, 0.0f, 0.0f }; ///< 월드 자리(m, 비트 그대로)
+    };
+
+    /** @brief 새로 보임 메시지(`NetMMOMessage::Enter`)에 싣는 엔티티 머리입니다 — 갱신 머리에 타입 · 정적 id 가 붙는다. 칸을 바꾸면 `Enter` 의 본문 판을 올린다. */
+    REFLECT()
+    struct MMOEntityEnterHeader
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Replicated )
+        MMOEntityUpdateHeader _header{};
+
+        PROPERTY( Replicated )
+        uint32 _typeID{ 0 };
+
+        PROPERTY( Replicated )
+        uint64 _staticID{ 0 }; ///< `MMOEntity::_staticID`
     };
 } // namespace sw
 
@@ -188,7 +223,10 @@ namespace sw
          * @details 서버 게임이 스트리밍 서브시스템과 다른 격자를 넘겨 관심 영역과 올라온 셀이 어긋나는 일을 막는다(복제기의 칸은 스트리밍 격자의 칸이어야 한다).
          */
         [[nodiscard]] bool initializeWithStreaming( INetPeers* pHost, const MMOReplicatorConfig& settings, const SceneStreamingSubsystem& streaming, const IInterestPolicy* pPolicy = nullptr );
-        /** @brief 엔티티를 추가하거나 갱신합니다. 상태가 `NetMMOMessage::kMaxStateBytes` 를 넘으면 받지 않고 그 엔티티는 지난 값을 유지합니다. 처음 한 번만 경고하고 그 뒤로는 횟수만 셉니다. */
+        /**
+         * @brief 엔티티를 추가하거나 갱신합니다. 상태가 `NetMMOMessage::kMaxStateBytes` 를 넘거나 머리(`MMOEntityEnterHeader`)가 선언 범위 밖이면 받지 않고 그 엔티티는 지난 값을 유지합니다.
+         *        갈래마다 처음 한 번만 오류를 남기고 그 뒤로는 횟수만 셉니다.
+         */
         void setEntity( const MMOEntity& entity );
         void removeEntity( uint32 entityID );
         /** @brief 연결 @p connectionID 의 관찰자를 엔티티 @p entityID 로 정합니다. 처음 정한 관찰자의 스트리밍 소스는 격자 로딩 반경 · `Normal` 입니다. */
@@ -236,6 +274,8 @@ namespace sw
         uint64 getSentUpdateCount() const { return _sentUpdateCount; }
         /** @brief 상한을 넘어서 받지 않은 `setEntity` 호출 수를 반환합니다. */
         uint64 getOversizedEntityCount() const { return _oversizedEntityCount; }
+        /** @brief 머리(`MMOEntityEnterHeader`)가 선언 범위 밖이라(자리 NaN · 무한대 · 범위 밖) 받지 않은 `setEntity` 호출 수를 반환합니다. */
+        uint64 getOutOfRangeEntityCount() const { return _outOfRangeEntityCount; }
 
     private:
         struct VisibleEntry
@@ -298,6 +338,8 @@ namespace sw
         const IInterestPolicy*              _pPolicy;
         uint64                              _sentUpdateCount;
         uint64                              _oversizedEntityCount;
+        uint64                              _outOfRangeEntityCount;
+        BitWriter                           _headerScratch; ///< `setEntity` 가 머리를 써 보는 자리(틱마다 다시 쓴다)
         NetParallelFor                      _parallel;
         NetParallelScratch<ObserverScratch> _observerScratch;   ///< 스레드마다 하나씩 둔다
         float32                             _tickDeltaTime;     ///< 이번 update 의 시간. 나눠 실행하는 본문이 읽는다

@@ -11,6 +11,7 @@
 
 #include "GameFramework/Kits/Genre/Simulation/Farming/CropCatalog.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
+#include "GameFramework/Runtime/Gameplay/SessionState/PlayerProgressComponent.h"
 #include "GameFramework/Runtime/Gameplay/SessionState/SessionStateComponent.h"
 
 #include "Games/MeadowVillage/MeadowVillageData.h"
@@ -93,12 +94,15 @@ namespace sw
             return false;
         }
         // 이 오브젝트의 첫 디렉터가 판을 연다. 시작 돈은 새 판일 때만(복원한 판 위에 덧쌓이지 않게).
-        SessionStateInitResult initResult = SessionStateInitResult::Refused;
-        SessionStateComponent* pState     = SessionStateComponent::openOnOwner( *this, MeadowVillageData::makeStateSettings(), initResult );
+        SessionStateComponent* pState = SessionStateComponent::openOnOwner( *this, MeadowVillageData::makeStateSettings() );
         if ( pState == nullptr )
             return false;
+        SessionStateInitResult   initResult = SessionStateInitResult::Refused;
+        PlayerProgressComponent* pProgress  = PlayerProgressComponent::openOnOwner( *this, MeadowVillageData::makeProgressSettings(), initResult );
+        if ( pProgress == nullptr )
+            return false;
         if ( initResult == SessionStateInitResult::Fresh )
-            pState->getWallet().add( Wallet::getDefaultCurrency(), _startingGold );
+            pProgress->getWallet().add( Wallet::getDefaultCurrency(), _startingGold );
         _field.initialize( kFieldWidth, kFieldHeight, pCrops );
         const hashed_string season = pState->getClock().getSeasonName();
         for ( int32 y = 0; y < kFieldHeight; ++y )
@@ -120,8 +124,9 @@ namespace sw
     void MeadowFarmGameModeComponent::updateGame( float32 deltaTime )
     {
         (void)deltaTime;
-        SessionStateComponent* pState = SessionStateComponent::findOnOwner( *this );
-        if ( pState == nullptr )
+        SessionStateComponent*   pState    = SessionStateComponent::findOnOwner( *this );
+        PlayerProgressComponent* pProgress = PlayerProgressComponent::findOnOwner( *this );
+        if ( pState == nullptr || pProgress == nullptr )
             return;
         // 키는 입력 맵(`data/gamesettings.xml` 의 입력 맵 묶음)이 정한다. 시계를 미는 것은 밭 디렉터 하나다(마을은 읽기만).
         const bool bFastForward = isAutoPlayOn() || isActionDown( hashed_string( MeadowVillageData::kFastForwardAction ) );
@@ -130,11 +135,11 @@ namespace sw
         for ( const WorldClockEvent& clockEvent : pState->getClockEvents() )
         {
             if ( clockEvent._kind == WorldClockEvent::Kind::DayChanged )
-                startNextDay( *pState );
+                startNextDay( *pState, *pProgress );
         }
     }
 
-    void MeadowFarmGameModeComponent::startNextDay( SessionStateComponent& state )
+    void MeadowFarmGameModeComponent::startNextDay( SessionStateComponent& state, PlayerProgressComponent& progress )
     {
         const hashed_string season = state.getClock().getSeasonName(); // 계절은 공유 시계의 데이터
         _field.advanceDay( season, false );
@@ -163,9 +168,9 @@ namespace sw
         }
         if ( 0 < earned )
         {
-            state.getWallet().add( Wallet::getDefaultCurrency(), earned );
+            progress.getWallet().add( Wallet::getDefaultCurrency(), earned );
             SW_LOG_INFO_ID( "MeadowFarm.DayHarvestSoldG", "[Meadow] day %# - harvest sold for %# G (wallet %# G)", state.getClock().getDay(), earned,
-                            state.getWallet().getBalance( Wallet::getDefaultCurrency() ) );
+                            progress.getWallet().getBalance( Wallet::getDefaultCurrency() ) );
         }
         _bViewsDirty = SW_TRUE;
     }

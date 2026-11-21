@@ -8,10 +8,13 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Service/SceneNetLink.h"
+#include "Engine/Serialization/Fixed/ReplicatedLayout.h"
 
 #include "GameFramework/Kits/Feature/Network/NetDestruction/DestructionNetSessionComponent.h"
 #include "GameFramework/Kits/Feature/Network/NetDestruction/DestructionReplication.h"
 #include "GameFramework/Kits/Feature/Network/NetDestruction/Tests/DestructionNetTestComponents.h"
+
+#include <limits>
 
 // DestructionNetSessionComponentTest — 씬의 넷 링크(서버)에 붙은 파괴 세션이 틱 뒤 큐에서 프레임마다 한 번 복제를 돌리는지 본다(틱은 델타만 적는다).
 // 관측점: 같은 틱 그룹에서 세션의 주 틱 뒤에 도는 서브틱이 세션 번호를 읽는다 — 틱 안에서 복제하면 오른 번호, 틱 뒤 큐면 오르기 전 번호가 보인다.
@@ -112,20 +115,21 @@ SW_TEST_CASE( DestructionReplicationTest, BodyMessagesRejectTruncatedAndTrailing
 }
 
 /**
- * @brief [DestructionReplicationTest] 손 본문 자세 — 남는 바이트 · 예산 넘는 개수 · 잘린 자세는 깨진 메시지다(하나도 적용하지 않는다)
+ * @brief [DestructionReplicationTest] 손 본문 자세 — 남는 바이트 · 잘린 자세 · 유한하지 않은 자세는 깨진 메시지다(하나도 적용하지 않는다)
  */
-SW_TEST_CASE( DestructionReplicationTest, PoseMessagesRejectTrailingBytesAndHugeCounts )
+SW_TEST_CASE( DestructionReplicationTest, PoseMessagesRejectTrailingBytesAndNonFinitePoses )
 {
     DestructionReplicationClient client;
     BitWriter                    writer;
+    DestructionExactPoseNetState pose; // 회전 기본값 — 단위 사원수
     writer.writeBits( NetDestructionMessage::kPose, 8 );
     writer.writeBool( true );  // 멈춤 — 정확한 자세
     writer.writeVarUint( 42 ); // 오브젝트(등록 없음 — 소비하고 버린다)
     writer.writeVarUint( 3 );  // 틱
-    writer.writeVarUint( 1 );  // 개수
+    writer.writeBool( true );  // 자세가 이어진다
     writer.writeVarUint( 5 );  // 덩어리
-    for ( int32 index = 0; index < 7; ++index )
-        writer.writeFloat( index == 6 ? 1.0f : 0.0f ); // 위치 · 회전(w = 1)
+    SW_REQUIRE_TRUE( ReplicatedLayout::writeFull( pose, writer ) );
+    writer.writeBool( false ); // 끝
     SW_EXPECT_TRUE( NetHandleResult::Handled == client.handleMessage( 0, writer.getBytes() ) );
     vector<uint8> listTrailing = writer.getBytes();
     listTrailing.push_back( 0xFF );
@@ -133,11 +137,17 @@ SW_TEST_CASE( DestructionReplicationTest, PoseMessagesRejectTrailingBytesAndHuge
     const vector<uint8> listTruncated( writer.getBytes().begin(), writer.getBytes().end() - 2 );
     SW_EXPECT_TRUE( NetHandleResult::Malformed == client.handleMessage( 0, listTruncated ) );
 
+    // 자리에 NaN 비트를 실은 자세 — 칸 선언의 범위가 거절한다.
     writer.clear();
     writer.writeBits( NetDestructionMessage::kPose, 8 );
-    writer.writeBool( false );
+    writer.writeBool( true );
     writer.writeVarUint( 42 );
     writer.writeVarUint( 3 );
-    writer.writeVarUint( 1u << 20 ); // 예산(900 바이트)에 들 수 없는 수
+    writer.writeBool( true );
+    writer.writeVarUint( 5 );
+    writer.writeFloat( std::numeric_limits<float32>::quiet_NaN() );
+    for ( int32 index = 0; index < 6; ++index )
+        writer.writeFloat( index == 5 ? 1.0f : 0.0f ); // 나머지 자리 · 회전(w = 1)
+    writer.writeBool( false );
     SW_EXPECT_TRUE( NetHandleResult::Malformed == client.handleMessage( 0, writer.getBytes() ) );
 }

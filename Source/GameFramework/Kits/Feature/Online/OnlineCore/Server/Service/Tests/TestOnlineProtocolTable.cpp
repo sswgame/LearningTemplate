@@ -40,21 +40,23 @@ namespace
 
     struct TestMethod : OnlineMethodTable<TestMethodName, OnlineMethodRange::kGame, TestPushName>
     {
-        using ReadCall  = Method<MethodName::Read, ServiceMailAttachment, LedgerBalance>;
+        using ReadCall  = Method<MethodName::Read, ServiceMailAttachment, LedgerBalance, OnlineMethodFlag::ReadOnly>;
         using WriteCall = Method<MethodName::Write, LedgerBalance, ServiceMailAttachment, OnlineMethodFlag::RequiresIdempotencyKey>;
-        using LoginCall = Method<MethodName::Login, OnlineNoBody, OnlineNoBody, OnlineMethodFlag::Anonymous>;
+        using LoginCall = Method<MethodName::Login, OnlineNoBody, OnlineNoBody, OnlineMethodFlag::IdempotentIssue | OnlineMethodFlag::Anonymous>;
         using Changed   = Push<PushName::Changed, LedgerBalance>;
 
         // 두 메서드의 타입만 맞바꾼 표 — 메시지 집합과 이름 순서가 같아도 짝이 다르다
-        using SwappedRead  = Method<MethodName::Read, LedgerBalance, ServiceMailAttachment>;
+        using SwappedRead  = Method<MethodName::Read, LedgerBalance, ServiceMailAttachment, OnlineMethodFlag::ReadOnly>;
         using SwappedWrite = Method<MethodName::Write, ServiceMailAttachment, LedgerBalance, OnlineMethodFlag::RequiresIdempotencyKey>;
-        // 호출 규칙만 다른 메서드
-        using UnkeyedWrite = Method<MethodName::Write, LedgerBalance, ServiceMailAttachment>;
+        // 호출 규칙만 다른 메서드 — 본래 멱등으로 적었고, 까닭만 다른 것도 따로 둔다
+        using UnkeyedWrite = Method<MethodName::Write, LedgerBalance, ServiceMailAttachment, OnlineMethodFlag::IdempotentSet>;
+        using RemoveWrite  = Method<MethodName::Write, LedgerBalance, ServiceMailAttachment, OnlineMethodFlag::IdempotentRemove>;
     };
 
     using TestTable    = OnlineProtocolTable<TestMethod, OnlineMethodList<TestMethod::ReadCall, TestMethod::WriteCall, TestMethod::LoginCall>, OnlinePushList<TestMethod::Changed>>;
     using SwappedTable = OnlineProtocolTable<TestMethod, OnlineMethodList<TestMethod::SwappedRead, TestMethod::SwappedWrite, TestMethod::LoginCall>, OnlinePushList<TestMethod::Changed>>;
     using UnkeyedTable = OnlineProtocolTable<TestMethod, OnlineMethodList<TestMethod::ReadCall, TestMethod::UnkeyedWrite, TestMethod::LoginCall>, OnlinePushList<TestMethod::Changed>>;
+    using RemoveTable  = OnlineProtocolTable<TestMethod, OnlineMethodList<TestMethod::ReadCall, TestMethod::RemoveWrite, TestMethod::LoginCall>, OnlinePushList<TestMethod::Changed>>;
 
     struct TestVisitor
     {
@@ -99,6 +101,23 @@ SW_TEST_CASE( OnlineProtocolTableTest, HashSeesMethodTypePairs )
     SW_EXPECT_EQUAL( hash, TestTable::computeMessageHash() );
     SW_EXPECT_NOT_EQUAL( hash, SwappedTable::computeMessageHash() );
     SW_EXPECT_NOT_EQUAL( hash, UnkeyedTable::computeMessageHash() );
+    SW_EXPECT_NOT_EQUAL( UnkeyedTable::computeMessageHash(), RemoveTable::computeMessageHash() ); // 본래 멱등의 까닭도 와이어의 뜻이다
+}
+
+/**
+ * @brief [OnlineProtocolTableTest] 호출 종류가 키를 정한다 — 상태 변경만 키가 필수이고(클라이언트가 만들고 서버가 없으면 거절), 읽기 · 본래 멱등(덮어쓰기 · 지우기 · 발급)은 키가 없다.
+ *        종류를 빠뜨리거나 둘 적은 서술자는 `static_assert` 로 컴파일되지 않으므로 실행 테스트로는 재지 않는다.
+ */
+SW_TEST_CASE( OnlineProtocolTableTest, CallKindDecidesTheKey )
+{
+    SW_EXPECT_TRUE( TestMethod::WriteCall::kRequiresIdempotencyKey );
+    SW_EXPECT_FALSE( TestMethod::ReadCall::kRequiresIdempotencyKey );
+    SW_EXPECT_FALSE( TestMethod::UnkeyedWrite::kRequiresIdempotencyKey );
+    SW_EXPECT_FALSE( TestMethod::RemoveWrite::kRequiresIdempotencyKey );
+    SW_EXPECT_FALSE( TestMethod::LoginCall::kRequiresIdempotencyKey );
+    SW_EXPECT_EQUAL( static_cast<uint8>( OnlineMethodFlag::ReadOnly ), TestMethod::ReadCall::kCallKindBits );
+    SW_EXPECT_EQUAL( static_cast<uint8>( OnlineMethodFlag::IdempotentIssue ), TestMethod::LoginCall::kCallKindBits ); // 익명은 종류가 아니다
+    SW_EXPECT_EQUAL( static_cast<uint8>( OnlineMethodFlag::IdempotentSet ), TestMethod::UnkeyedWrite::kCallKindBits );
 }
 
 /** @brief [OnlineProtocolTableTest] 번호로 서술자를 찾아 부르고, 표에 없는 번호는 false 이다 */
