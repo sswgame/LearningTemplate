@@ -365,7 +365,8 @@ namespace sw
             return;
         }
         pOverride->_text.clear();
-        pOverride->_kind = kind;
+        pOverride->_kind       = kind;
+        pOverride->_bFromAsset = SW_FALSE;
         Memory::copy( pOverride->_arrValue, pValue, count * sizeof( float32 ) );
         markRenderDirty();
     }
@@ -509,7 +510,10 @@ namespace sw
     void MaterialInstance::setParent( Material* pParentMaterial )
     {
         _pParentMaterial = pParentMaterial;
-        _bDefinesDirty   = SW_TRUE;
+        // 거절하지 않고 버린다 — 부모를 거절하면 인스턴스가 부모 없이 남아 그리지 못한다. 어긋난 모양을 알리고 버리는 `dropShapeMismatchedOverrides` 와 같은 처리다.
+        VectorUtil::removeIf( _listValueOverride, [this]( const ValueOverride& valueOverride )
+        { return valueOverride._bFromAsset == SW_FALSE && rejectStaticValue( valueOverride._name ); } );
+        _bDefinesDirty = SW_TRUE;
         MaterialPermutation::recordPermutationChange( this );
         markRenderDirty();
     }
@@ -528,11 +532,11 @@ namespace sw
     {
         if ( rejectStaticValue( name ) )
             return false;
-        assignText( name, value );
+        assignText( name, value, false );
         return true;
     }
 
-    void MaterialInstance::assignText( hashed_string name, string_view value )
+    void MaterialInstance::assignText( hashed_string name, string_view value, bool bFromAsset )
     {
         ValueOverride* pOverride = findValueOverride( name );
         if ( pOverride == nullptr )
@@ -544,8 +548,9 @@ namespace sw
         {
             return;
         }
-        pOverride->_kind = ValueKind::Text;
-        pOverride->_text = value;
+        pOverride->_kind       = ValueKind::Text;
+        pOverride->_text       = value;
+        pOverride->_bFromAsset = bFromAsset ? SW_TRUE : SW_FALSE;
         markRenderDirty(); // 키워드 칸 값(define)은 에셋 읽기만 쓰고, 읽기 끝에서 정의 캐시를 더럽힌다(`loadFromXML`)
     }
 
@@ -932,7 +937,7 @@ namespace sw
             if ( overrideItem._assetPath.empty() == false )
                 setTextureParameter( hashed_string( overrideItem._name.c_str() ), overrideItem._assetPath );
             else
-                assignText( hashed_string( overrideItem._name.c_str() ), overrideItem._value ); // 에셋의 키워드 칸 값은 쿠커가 굽는다 — 런타임 거절(`setParameter`)을 거치지 않는다
+                assignText( hashed_string( overrideItem._name.c_str() ), overrideItem._value, true ); // 에셋의 키워드 칸 값은 쿠커가 굽는다 — 런타임 거절(`setParameter`)을 거치지 않는다
         }
         for ( const MaterialInstanceDef::KeywordOverride& keywordItem : _desc._listKeyword )
         {

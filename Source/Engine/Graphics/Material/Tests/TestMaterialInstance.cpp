@@ -407,3 +407,28 @@ SW_TEST_CASE( MaterialInstanceTest, ParentReloadRefreshesInstanceCaches )
     SW_EXPECT_NEAR( 0.5f, arrColor[0], 1e-6f ); // 덮지 않은 칸은 새 부모 값
     SW_EXPECT_NEAR( 0.25f, roughness, 1e-6f );  // 덮은 칸은 인스턴스 값
 }
+
+/**
+ * @brief [MaterialInstanceTest] 부모 없이 쓴 키워드 칸 값은 나중에 부모를 붙일 때 오류로 알리고 버린다 — 거절(`setParameter`)을 비켜 가지 못한다. 에셋에서 읽은 값과 값 칸은 남는다
+ * @details 변이: `setParent` 가 덮어쓰기를 거르지 않으면 쿠킹하지 않은 `MATERIAL_DETAIL_MASK` 가 define 에 들어 줄이 진다.
+ */
+SW_TEST_CASE( MaterialInstanceTest, SetParentDropsRuntimeStaticValues )
+{
+    SW_EXPECT_LOG( "MaterialInstance.StaticValueRejected" );
+    shared_ptr<Material> material = Material::create();
+    SW_REQUIRE_TRUE( material->loadFromXML( MaterialInstanceKeywordValueTestUtil::kKeywordValueMaterial ) );
+
+    shared_ptr<MaterialInstance> orphan = MaterialInstance::create( nullptr );
+    SW_EXPECT_TRUE( orphan->setParameter( hashed_string( "_detailMask" ), "1" ) ); // 부모가 없어 아직 모른다
+    SW_EXPECT_TRUE( orphan->setParameter( hashed_string( "_color" ), "0.5 0.5 0.5 1" ) );
+    orphan->setParent( material.get() );
+    SW_EXPECT_FALSE( orphan->isParameterOverridden( hashed_string( "_detailMask" ) ) );
+    SW_EXPECT_TRUE( orphan->isParameterOverridden( hashed_string( "_color" ) ) );
+    SW_EXPECT_FALSE( MaterialInstanceTestUtil::hasDefine( orphan->getCachedShaderDefines(), "MATERIAL_DETAIL_MASK" ) );
+
+    shared_ptr<MaterialInstance> asset = MaterialInstance::create( nullptr );
+    SW_REQUIRE_TRUE( MaterialInstanceSwitchTestUtil::loadInstance( *asset, "detailmask_late.materialinstance", MaterialInstanceKeywordValueTestUtil::kDetailMaskInstance ) );
+    asset->setParent( material.get() );
+    SW_EXPECT_TRUE( asset->isParameterOverridden( hashed_string( "_detailMask" ) ) );
+    SW_EXPECT_TRUE( MaterialInstanceTestUtil::hasDefine( asset->getCachedShaderDefines(), "MATERIAL_DETAIL_MASK" ) );
+}
