@@ -159,7 +159,6 @@ namespace sw
         , _lodViewPosition{}
         , _frameIndex{ 0 }
         , _deltaSeconds{ 0.0f }
-        , _averageEvaluationMicroseconds{ 0.0f }
         , _expectedEvaluationMicroseconds{ 0.0f }
         , _activeMeshCount{ 0 }
         , _poseEvaluatedMeshCount{ 0 }
@@ -359,7 +358,8 @@ namespace sw
                 _listScratchBudgetItem.push_back( AnimationBudgetItem{ state._significance, state._updateRateDivisor } );
         }
 
-        // 단가는 표의 비용 모형이다 — 측정 평균(`_averageEvaluationMicroseconds`)을 넣으면 같은 입력이 기계 · 부하마다 다른 주기가 된다.
+        // 단가는 표의 비용 모형이다 — 측정값을 넣으면 같은 입력이 기계 · 부하마다 다른 주기가 된다. 단가를 고칠 때는 프로파일러의
+        // `GT.Animation.phasePose` 시간 ÷ `GT.Animation.poseSkeletalMeshes` 수와 견준다(런타임 칸으로 재지 않는다).
         _expectedEvaluationMicroseconds = AnimationLODState::allocateBudget( _listScratchBudgetItem.data(), static_cast<uint32>( _listScratchBudgetItem.size() ),
                                                                              _lodSettings._meshCostMicroseconds, _lodSettings._budgetMilliseconds * constant::time::kMicrosecondsPerMillisecond,
                                                                              _lodSettings._maxUpdateRateDivisor );
@@ -619,7 +619,6 @@ namespace sw
             poseMeshCount += pSkeletalMesh->isPoseNeededThisFrame() ? 1u : 0u;
             poseBoneCount += pSkeletalMesh->isPoseNeededThisFrame() ? pSkeletalMesh->getEvaluatedBoneCount() : 0u;
         }
-        const int64 poseStart = MonotonicClock::nowNanoseconds();
         {
             // 벽시계 구간은 포즈 단계 넷을 합친 하나다 — 단계는 유닛 안에서 이어서 돌아 전체 대기가 단계마다 없다. 단계별 몫은 워커가 단계마다 누적한 CPU 시간(나노초)의 프레임 합이며
             // 비용 곡선이 샘플 · 블렌드(BasePose) · 부착 · 리그 노드(PostProcess) · 팔레트(SkinPalette)를 따로 읽는다(스레드를 더한 값이라 벽시계보다 클 수 있다).
@@ -645,11 +644,6 @@ namespace sw
         // 성분 수는 병렬로 나눌 수 있는 항목 수이고, 가장 큰 성분은 직렬로 도는 임계 경로의 길이(유닛 수)다.
         SW_PROFILE_COUNT( "GT.Animation.componentCount", _componentActive.getComponentCount() );
         SW_PROFILE_COUNT( "GT.Animation.maxComponentSize", _componentActive.getMaxComponentSize() );
-        if ( poseMeshCount > 0 )
-        {
-            const float32 sample           = static_cast<float32>( MonotonicClock::nowNanoseconds() - poseStart ) * 0.001f / static_cast<float32>( poseMeshCount );
-            _averageEvaluationMicroseconds = ( _averageEvaluationMicroseconds <= 0.0f ) ? sample : ( _averageEvaluationMicroseconds * 0.9f + sample * 0.1f );
-        }
     }
 
     void AnimationSystem::endEvaluationFrame( float32 deltaSeconds )

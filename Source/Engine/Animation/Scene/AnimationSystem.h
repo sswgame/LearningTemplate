@@ -507,11 +507,6 @@ namespace sw
         /** @brief LOD 테이블을 정합니다(테스트, 게임). 정하지 않으면 처음 판정할 때 `EngineDefaultAssets::_animationLODSettings` 를 읽습니다. */
         void                        setLODSettings( const AnimationLODSettings& settings );
         const AnimationLODSettings& getLODSettings() const { return _lodSettings; }
-        /**
-         * @brief 지난 판정에서 포즈 하나를 만드는 데 든 평균 시간(마이크로초, 지수 이동 평균)입니다.
-         * @details 측정 보기 전용이다 — 예산 배분은 표의 단가(`AnimationLODSettings::_meshCostMicroseconds`)를 쓴다. 단가를 고칠 때 이 값과 견준다.
-         */
-        float32 getAverageEvaluationMicroseconds() const { return _averageEvaluationMicroseconds; }
         /** @brief 지난 판정에서 예산 배분 뒤의 예상 비용(마이크로초)입니다. */
         float32 getExpectedEvaluationMicroseconds() const { return _expectedEvaluationMicroseconds; }
         /** @brief 지난 평가에서 실제로 포즈를 만든 유닛 수입니다. */
@@ -595,8 +590,7 @@ namespace sw
          */
         void collectActiveMeshes( float32 deltaSeconds );
         /**
-         * @brief 포즈 단계 넷(기본 포즈 · 부착 · 후처리 · 스킨 팔레트)을 성분 위로 `runParallelByCost` 한 번에 돌리고(성분 안은 유닛 먼저), 포즈 단계의 벽시계 평균
-         *        (`_averageEvaluationMicroseconds`)을 갱신합니다. 단계별 시간은 워커가 단계마다 누적해 한 청크에 한 번 프로파일 카운터로 냅니다.
+         * @brief 포즈 단계 넷(기본 포즈 · 부착 · 후처리 · 스킨 팔레트)을 성분 위로 `runParallelByCost` 한 번에 돌리고(성분 안은 유닛 먼저), 단계별 시간은 워커가 단계마다 누적해 한 청크에 한 번 프로파일 카운터로 냅니다.
          */
         void runPosePhases();
         /** @brief 프레임을 마칩니다 — 군중을 닫고 되감기 기록을 남깁니다. */
@@ -648,7 +642,6 @@ namespace sw
         float3                                      _lodViewPosition;
         uint64                                      _frameIndex;
         float32                                     _deltaSeconds;
-        float32                                     _averageEvaluationMicroseconds;
         float32                                     _expectedEvaluationMicroseconds;
         uint32                                      _activeMeshCount;
         uint32                                      _poseEvaluatedMeshCount;
