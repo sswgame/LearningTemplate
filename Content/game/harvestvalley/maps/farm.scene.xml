@@ -846,7 +846,8 @@
 			<GameObject _schemaVersion="0" _name="FarmGameMode" _bActive="true">
 				<_listComponent>
 					<GameStateComponent _localID="6673597520240684436" _componentName="GameStateComponent" _bActive="true" />
-					<PlayerProgressComponent _localID="7202751467146875245" _componentName="PlayerProgressComponent" _bActive="true" />
+					<WalletComponent _localID="7202751467146875245" _componentName="WalletComponent" _bActive="true" />
+					<InventoryComponent _localID="6041785841110900339" _componentName="InventoryComponent" _bActive="true" />
 					<FarmGameModeComponent _localID="12488349250694271848" _componentName="FarmGameModeComponent"
 					                       _bActive="true"
 					                       _cropDataPath="game/harvestvalley/data/crops.xml"

@@ -1,6 +1,6 @@
 /**
  * @file FrontierCityGameModeComponent.h
- * @brief 개척 마을의 도시 디렉터 — 월드 상태(`GameStateComponent`)와 플레이어 진행(`PlayerProgressComponent`)을 여는 첫 디렉터. 도시 키트(`CitySimulation`)를 공유 땅 · 지갑 · 시계 위에 돌립니다.
+ * @brief 개척 마을의 도시 디렉터 — 월드 상태(`GameStateComponent`)와 플레이어 지갑(`WalletComponent`)에 시작 돈을 넣는 첫 디렉터. 도시 키트(`CitySimulation`)를 공유 땅 · 지갑 · 시계 위에 돌립니다.
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -22,12 +22,12 @@
 
 namespace sw
 {
-    class PlayerProgressComponent;
+    class WalletComponent;
     class GameStateComponent;
 
     /**
      * @class FrontierCityGameModeComponent
-     * @brief 도시 한 판입니다. 같은 오브젝트의 맨 앞 `GameStateComponent` · `PlayerProgressComponent` 를 열고(새 판이면 두 통화의 시작 돈), 첫 틱에 기념 건물(막힌 땅)과 도로(막히지 않은 땅)를 놓습니다.
+     * @brief 도시 한 판입니다. 같은 오브젝트의 맨 앞 `GameStateComponent` 를 열고 플레이어 지갑(`WalletComponent`)에 새 판이면 두 통화의 시작 돈을 넣고, 첫 틱에 기념 건물(막힌 땅)과 도로(막히지 않은 땅)를 놓습니다.
      * @details 도시는 공유 땅을 빌린다(`CitySimulation::bindLand`, 원점 (0, 0)) — 같은 땅을 RTS 디렉터가 빌리므로 도시가 지은 칸에 RTS 는 짓지 못하고 유닛은 돌아간다.
      *          공유 시계의 날 넘김이 도시의 달 결산이다(`settleMonth`). `FastForward`(Space)를 누르는 동안, 또는 자동 플레이면 시계가 `_fastTimeScale` 배로 흐른다.
      *          시계를 미는 것은 이 디렉터 하나다(RTS 는 읽기만). 상태는 도시 하나(구간 'CITY')와 배치를 마쳤는지이고, 돈 · 시계 · 땅은 공유 상태에 있다.
@@ -58,7 +58,7 @@ namespace sw
 
     private:
         /** @brief 빈 도시를 열고 공유 땅을 빌립니다(시작과 복원이 같은 설정으로 연다). 카탈로그가 없으면 false 입니다. */
-        [[nodiscard]] static bool initializeCity( CitySimulation& outCity, GameStateComponent& state, PlayerProgressComponent& progress );
+        [[nodiscard]] static bool initializeCity( CitySimulation& outCity, GameStateComponent& state, WalletComponent& wallet );
         /** @brief 첫 틱의 배치 — 기념 건물과 도로입니다. 놓지 못하면 이유를 남긴다(데이터 오류). */
         void layOutTown();
         /** @brief 지금 도시(건물 · 도로)를 동기화에 쌓습니다 — 바뀐 슬롯만 맞출 목록에 들어간다. */

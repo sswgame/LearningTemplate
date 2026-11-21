@@ -1,6 +1,6 @@
 /**
  * @file MeadowFarmGameModeComponent.h
- * @brief 마을 밭 디렉터 — 월드 상태(`GameStateComponent`)와 플레이어 진행(`PlayerProgressComponent`)을 여는 첫 디렉터. 하루가 넘어가면 밭이 자라고, 다 자란 칸을 거둬 플레이어 지갑에 팔고 다시 심습니다.
+ * @brief 마을 밭 디렉터 — 월드 상태(`GameStateComponent`)와 플레이어 상태(지갑 · 부탁 일지 · 생물 호감도)를 여는 첫 디렉터. 하루가 넘어가면 밭이 자라고, 다 자란 칸을 거둬 플레이어 지갑에 팔고 다시 심습니다.
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -22,7 +22,7 @@
 
 namespace sw
 {
-    class PlayerProgressComponent;
+    class WalletComponent;
     class GameStateComponent;
 
     /**
@@ -59,7 +59,7 @@ namespace sw
 
     private:
         /** @brief 하루 넘김 — 밭이 자라고, 다 자란 칸을 거둬 팔고 다시 심고, 나머지는 물 준다. */
-        void startNextDay( GameStateComponent& state, PlayerProgressComponent& progress );
+        void startNextDay( GameStateComponent& state, WalletComponent& wallet );
         void replant( int32 x, int32 y, const hashed_string& season );
         /** @brief 밭 칸마다 지금 모습(풀 · 갈림 · 물 줌 · 다 익음)을 동기화에 쌓습니다 — 바뀐 칸만 맞출 목록에 들어간다. */
         void             collectFieldViews();

@@ -65,7 +65,9 @@
 					                _attachOwnerID="0"
 					                _attachComponent="None" />
 					<GameStateComponent _localID="6673597520240684436" _componentName="GameStateComponent" _bActive="true" />
-					<PlayerProgressComponent _localID="7280284032837436068" _componentName="PlayerProgressComponent" _bActive="true" />
+					<WalletComponent _localID="7280284032837436068" _componentName="WalletComponent" _bActive="true" />
+					<QuestLogComponent _localID="6142667033349566711" _componentName="QuestLogComponent" _bActive="true" />
+					<ReputationComponent _localID="7241694008514979400" _componentName="ReputationComponent" _bActive="true" />
 					<MeadowFarmGameModeComponent _localID="8448271495034838971" _componentName="MeadowFarmGameModeComponent"
 					                             _bActive="true"
 					                             _bAutoPlay="false"

@@ -9,14 +9,14 @@
 
 #include "GameFramework/Runtime/Character/Control/Controller/PlayerControllerComponent.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
-#include "GameFramework/Runtime/Gameplay/GameState/PlayerProgressComponent.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/Loot/ItemBoxComponent.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/Loot/Tests/ItemReceiverTestComponent.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/InventoryComponent.h"
 
 using namespace sw;
 
 /**
- * @brief [LootGrantTest] 아이템 상자를 연 폰의 조종자 가방(포트로 계약을 내보냄)에 뽑힌 아이템 × 수가 들어가고, 받을 가방이 없는 몸에는 열리지 않는다(경고)
+ * @brief [LootGrantTest] 아이템 상자를 연 폰의 조종자 가방(`InventoryComponent` — 포트로 계약을 내보냄)에 뽑힌 아이템 × 수가 들어가고, 가방 컴포넌트가 없는 몸에는 열리지 않는다(경고)
  */
 SW_TEST_CASE( LootGrantTest, ItemBoxFillsThePlayerBag )
 {
@@ -26,16 +26,16 @@ SW_TEST_CASE( LootGrantTest, ItemBoxFillsThePlayerBag )
     GameObject*                pPawnObject = manager.createGameObject( hashed_string( "Pawn" ) );
     PawnComponent*             pPawn       = pPawnObject->addComponent<PawnComponent>();
     GameObject*                pController = manager.createGameObject( hashed_string( "Controller" ) );
-    PlayerProgressComponent*   pProgress   = pController->addComponent<PlayerProgressComponent>();
+    InventoryComponent*        pBag        = pController->addComponent<InventoryComponent>();
     PlayerControllerComponent* pPlayer     = pController->addComponent<PlayerControllerComponent>();
     GameObject*                pStranger   = manager.createGameObject( hashed_string( "Stranger" ) );
     ItemBoxComponent*          pBoxA       = manager.createGameObject( hashed_string( "BoxA" ) )->addComponent<ItemBoxComponent>();
     ItemBoxComponent*          pBoxB       = manager.createGameObject( hashed_string( "BoxB" ) )->addComponent<ItemBoxComponent>(); // 연 상자는 숨는다 — 열 때마다 새 상자
     SW_REQUIRE_NOT_NULL( pBoxA );
     SW_REQUIRE_NOT_NULL( pBoxB );
-    PlayerProgressSettings settings;
-    settings._inventorySlotCount = 4;
-    SW_REQUIRE_TRUE( pProgress->initialize( settings ) == GameStateInitResult::Fresh );
+    InventorySettings settings;
+    settings._slotCount = 4;
+    SW_REQUIRE_TRUE( pBag->initialize( settings ) == GameStateInitResult::Fresh );
     manager.beginPlay();
     pPlayer->possess( *pPawn );
 
@@ -51,7 +51,7 @@ SW_TEST_CASE( LootGrantTest, ItemBoxFillsThePlayerBag )
     SW_EXPECT_EQUAL( 0, pBoxA->getOpenCount() );
 
     SW_EXPECT_TRUE( pBoxB->open( *pPawnObject ) == gem );
-    SW_EXPECT_EQUAL( 3, pProgress->getInventory().getItemCount( gem ) );
+    SW_EXPECT_EQUAL( 3, pBag->getInventory().getItemCount( gem ) );
 }
 
 /**

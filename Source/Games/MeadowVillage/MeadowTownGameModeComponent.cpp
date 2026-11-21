@@ -13,7 +13,8 @@
 #include "GameFramework/Kits/Genre/Simulation/CreatureLife/CreatureLifeCatalog.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Gameplay/GameState/GameStateComponent.h"
-#include "GameFramework/Runtime/Gameplay/GameState/PlayerProgressComponent.h"
+#include "GameFramework/Runtime/Gameplay/GameState/PlayerComponentUtil.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/WalletComponent.h"
 
 #include "Games/MeadowVillage/MeadowVillageData.h"
 
@@ -69,15 +70,16 @@ namespace sw
 
     void MeadowTownGameModeComponent::serializeGameState( StateIO& io )
     {
-        GameStateComponent*      pState    = io.isReading() ? GameStateComponent::findOnOwner( *this ) : nullptr;
-        PlayerProgressComponent* pProgress = io.isReading() ? PlayerProgressComponent::findOnOwner( *this ) : nullptr;
-        if ( io.check( pState != nullptr && pProgress != nullptr ) == false )
+        GameStateComponent*  pState      = io.isReading() ? GameStateComponent::findOnOwner( *this ) : nullptr;
+        ReputationComponent* pReputation = io.isReading() ? PlayerComponentUtil::findOnOwner<ReputationComponent>( *this ) : nullptr;
+        QuestLogComponent*   pQuestLog   = io.isReading() ? PlayerComponentUtil::findOnOwner<QuestLogComponent>( *this ) : nullptr;
+        if ( io.check( pState != nullptr && pReputation != nullptr && pQuestLog != nullptr ) == false )
             return;
         io.header( kStateTag, kStateVersion );
         if ( io.isOk() == false )
             return;
         CreatureTown restoredTown;
-        if ( io.isReading() && io.check( initializeTown( restoredTown, *pState, *pProgress ) ) == false )
+        if ( io.isReading() && io.check( initializeTown( restoredTown, *pState, *pReputation, *pQuestLog ) ) == false )
             return;
         CreatureTown& town = io.isWriting() ? _town : restoredTown;
         io.section( CreatureTown::kStateTag, CreatureTown::kStateVersion, [&town]( StateIO& bodyIO )
@@ -93,11 +95,12 @@ namespace sw
     bool MeadowTownGameModeComponent::startGame()
     {
         // 밭 디렉터가 이미 열었으면 아무것도 하지 않는다. 범위 밖 설정은 판 상태가 오류를 남겼다.
-        GameStateComponent*      pState    = GameStateComponent::openOnOwner( *this, MeadowVillageData::makeStateSettings() );
-        PlayerProgressComponent* pProgress = pState != nullptr ? PlayerProgressComponent::openOnOwner( *this, MeadowVillageData::makeProgressSettings() ) : nullptr;
-        if ( pProgress == nullptr )
+        GameStateComponent* pState = GameStateComponent::openOnOwner( *this, MeadowVillageData::makeStateSettings() );
+        if ( pState == nullptr || MeadowVillageData::openPlayerState( *this ) == false )
             return false;
-        if ( initializeTown( _town, *pState, *pProgress ) == false || validateViews( *game::findSubsystem<const CreatureLifeCatalog>() ) == false )
+        ReputationComponent* pReputation = PlayerComponentUtil::findOnOwner<ReputationComponent>( *this ); // 방금 열었다 — 있다
+        QuestLogComponent*   pQuestLog   = PlayerComponentUtil::findOnOwner<QuestLogComponent>( *this );
+        if ( initializeTown( _town, *pState, *pReputation, *pQuestLog ) == false || validateViews( *game::findSubsystem<const CreatureLifeCatalog>() ) == false )
             return false;
         if ( pState->isFreshGame() )
         {
@@ -111,9 +114,10 @@ namespace sw
     void MeadowTownGameModeComponent::updateGame( float32 deltaTime )
     {
         (void)deltaTime;
-        GameStateComponent*      pState    = GameStateComponent::findOnOwner( *this );
-        PlayerProgressComponent* pProgress = PlayerProgressComponent::findOnOwner( *this );
-        if ( pState == nullptr || pProgress == nullptr )
+        GameStateComponent* pState    = GameStateComponent::findOnOwner( *this );
+        QuestLogComponent*  pQuestLog = PlayerComponentUtil::findOnOwner<QuestLogComponent>( *this );
+        WalletComponent*    pWallet   = PlayerComponentUtil::findOnOwner<WalletComponent>( *this );
+        if ( pState == nullptr || pQuestLog == nullptr || pWallet == nullptr )
             return;
         const WorldClock&   clock = pState->getClock();
         const hashed_string sprout( MeadowVillageData::kSproutSpecies );
@@ -133,19 +137,19 @@ namespace sw
             }
         }
         const hashed_string request( MeadowVillageData::kRequestQuest );
-        const bool          bCanAsk = _town.findCreature( sprout ) != nullptr && pProgress->getQuestLog().getStatus( request ) == QuestStatus::NotStarted;
+        const bool          bCanAsk = _town.findCreature( sprout ) != nullptr && pQuestLog->getQuestLog().getStatus( request ) == QuestStatus::NotStarted;
         if ( bCanAsk && _town.startRequest( sprout, request ) == CreatureRequestResult::Ok )
             SW_LOG_INFO_ID( "MeadowTown.SproutAsksOrchardG", "[Meadow] sprout asks for an orchard (%# G)", _orchardPrice );
 
         // 밭이 이번 틱에 번 돈도 여기서 보인다 — 같은 오브젝트에서 밭이 먼저 돈다.
-        Wallet&    wallet         = pProgress->getWallet();
+        Wallet&    wallet         = pWallet->getWallet();
         const bool bCanBuyOrchard = _town.countHabitats( "orchard" ) == 0 && wallet.canAfford( Wallet::getDefaultCurrency(), _orchardPrice );
         if ( bCanBuyOrchard && wallet.trySpend( Wallet::getDefaultCurrency(), _orchardPrice ) )
         {
             (void)_town.setObject( 0, 2, "tree" );
             (void)_town.setObject( 1, 2, "tree" );
             SW_LOG_INFO_ID( "MeadowTown.OrchardPlantedDayRequest", "[Meadow] orchard planted on day %# - request %#", clock.getDay(),
-                            pProgress->getQuestLog().getStatus( request ) == QuestStatus::Completed ? "done" : "still open" );
+                            pQuestLog->getQuestLog().getStatus( request ) == QuestStatus::Completed ? "done" : "still open" );
             _bViewsDirty = SW_TRUE;
         }
 
@@ -171,7 +175,7 @@ namespace sw
         _listView.clear();
     }
 
-    bool MeadowTownGameModeComponent::initializeTown( CreatureTown& outTown, GameStateComponent& state, PlayerProgressComponent& progress )
+    bool MeadowTownGameModeComponent::initializeTown( CreatureTown& outTown, GameStateComponent& state, ReputationComponent& reputation, QuestLogComponent& questLog )
     {
         const CreatureLifeCatalog* pCatalog = game::findSubsystem<const CreatureLifeCatalog>();
         if ( pCatalog == nullptr )
@@ -179,7 +183,7 @@ namespace sw
             SW_LOG_ERROR_ID( "MeadowTown.TownCannotStartCreature", "[Meadow] the town cannot start - the creature catalog is not loaded" );
             return false;
         }
-        return outTown.initialize( pCatalog, &progress.getReputation(), &progress.getQuestLog(), &state.getClock(), kTownSize, kTownSize );
+        return outTown.initialize( pCatalog, &reputation.getReputation(), &questLog.getQuestLog(), &state.getClock(), kTownSize, kTownSize );
     }
 
     bool MeadowTownGameModeComponent::validateViews( const CreatureLifeCatalog& catalog ) const

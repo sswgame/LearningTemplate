@@ -9,9 +9,11 @@
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Gameplay/GameState/GameStateComponent.h"
-#include "GameFramework/Runtime/Gameplay/GameState/PlayerProgressComponent.h"
+#include "GameFramework/Runtime/Gameplay/GameState/PlayerComponentUtil.h"
 #include "GameFramework/Runtime/Gameplay/Progression/Reputation.h"
+#include "GameFramework/Runtime/Gameplay/Progression/ReputationComponent.h"
 #include "GameFramework/Runtime/Gameplay/Quest/QuestCatalog.h"
+#include "GameFramework/Runtime/Gameplay/Quest/QuestLogComponent.h"
 
 namespace sw
 {
@@ -41,13 +43,15 @@ namespace sw
             return settings;
         }
 
-        /** @brief 플레이어 진행(지갑 · 부탁 일지 · 생물 호감도)의 설정입니다. */
-        static PlayerProgressSettings makeProgressSettings()
+        /**
+         * @brief 플레이어 부탁 일지 · 생물 호감도(세력 creature.<종>)를 엽니다. 두 디렉터 가운데 먼저 연 쪽의 카탈로그를 쓴다(같은 값). 없거나 거절되면 오류를 남기고 false 입니다.
+         * @details 지갑(`WalletComponent`)은 열기가 없다 — 디렉터가 `PlayerComponentUtil::requireOnOwner` 로 찾는다.
+         */
+        [[nodiscard]] static bool openPlayerState( const Component& gameMode )
         {
-            PlayerProgressSettings settings;
-            settings._pQuestCatalog      = game::findSubsystem<const QuestCatalog>();
-            settings._pReputationCatalog = game::findSubsystem<const ReputationCatalog>(); // 생물 호감도 = 세력 creature.<종>
-            return settings;
+            const bool bQuestLogOpen   = PlayerComponentUtil::openOnOwner<QuestLogComponent>( gameMode, game::findSubsystem<const QuestCatalog>() ) != nullptr;
+            const bool bReputationOpen = PlayerComponentUtil::openOnOwner<ReputationComponent>( gameMode, game::findSubsystem<const ReputationCatalog>() ) != nullptr;
+            return bQuestLogOpen && bReputationOpen;
         }
     };
 } // namespace sw

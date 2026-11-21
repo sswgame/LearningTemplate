@@ -23,7 +23,10 @@
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/Framework/Presentation/IHUDViewModelBinder.h"
 #include "GameFramework/Runtime/Gameplay/GameState/GameStateComponent.h"
-#include "GameFramework/Runtime/Gameplay/GameState/PlayerProgressComponent.h"
+#include "GameFramework/Runtime/Gameplay/GameState/PlayerComponentUtil.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/InventoryComponent.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/WalletComponent.h"
+#include "GameFramework/Runtime/Gameplay/Progression/ReputationComponent.h"
 #include "GameFramework/Runtime/Gameplay/Vehicle/MountMovementComponent.h"
 #include "GameFramework/Runtime/Gameplay/Vehicle/VehicleSeatComponent.h"
 
@@ -122,19 +125,20 @@ namespace sw
         GameStateComponent* pState     = GameStateComponent::openOnOwner( *this, settings );
         if ( pState == nullptr )
             return false; // 까닭은 판 상태가 남겼다
-        PlayerProgressSettings progressSettings{};
-        progressSettings._pReputationCatalog = &_pWesternCatalog->getHonorReputation();
-        PlayerProgressComponent* pProgress   = PlayerProgressComponent::openOnOwner( *this, progressSettings );
-        if ( pProgress == nullptr )
-            return false; // 까닭은 플레이어 진행이 남겼다
-        AIPerceptionSettings sight{};
+        const ReputationCatalog* const pHonor      = &_pWesternCatalog->getHonorReputation();
+        ReputationComponent* const     pReputation = PlayerComponentUtil::openOnOwner<ReputationComponent>( *this, pHonor );
+        WalletComponent* const         pWallet     = PlayerComponentUtil::requireOnOwner<WalletComponent>( *this );
+        if ( pReputation == nullptr || pWallet == nullptr )
+            return false;                                                                               // 까닭은 찾기 · 열기가 남겼다
+        InventoryComponent* const pBag = PlayerComponentUtil::findOnOwner<InventoryComponent>( *this ); // 가방은 선택이다 — 프레리 씬은 붙이지 않는다
+        AIPerceptionSettings      sight{};
         sight._sightRange = _witnessSightRange;
         // 전리품 카탈로그는 없다 — 프레리 동물은 전리품 테이블을 적지 않는다(적으면 손질이 오류를 낸다).
-        if ( _outlaw.initialize( _pWesternCatalog.get(), nullptr, pProgress->getWallet(), pProgress->getReputation(), pState->getClock(), &pState->getFlags(), pState->findWeather(),
-                                 pProgress->findInventory(), _regionID.key(), _regionBaseTemperature, sight ) == false )
+        if ( _outlaw.initialize( _pWesternCatalog.get(), nullptr, pWallet->getWallet(), pReputation->getReputation(), pState->getClock(), &pState->getFlags(), pState->findWeather(),
+                                 pBag != nullptr ? &pBag->getInventory() : nullptr, _regionID.key(), _regionBaseTemperature, sight ) == false )
             return false; // 까닭은 무법자가 남겼다
-        if ( pProgress->isFreshGame() && _startingMoney > 0 )
-            pProgress->getWallet().add( _pWesternCatalog->getCurrency(), _startingMoney );
+        if ( pWallet->isFreshGame() && _startingMoney > 0 )
+            pWallet->getWallet().add( _pWesternCatalog->getCurrency(), _startingMoney );
         return true;
     }
 
