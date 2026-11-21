@@ -52,7 +52,7 @@ namespace sw
         if ( _pDevice != nullptr && _srv != kInvalidDescriptorIndex )
             _pDevice->getResourceFactory()->unregisterBindlessTexture( _srv );
         if ( _pDevice != nullptr && _texture != 0 )
-            _pDevice->getResourceFactory()->destroyTexture( _texture );
+            _pDevice->releaseHandle( _texture );
         _texture = 0;
         _srv     = kInvalidDescriptorIndex;
         _width   = 0;

@@ -106,17 +106,17 @@ namespace sw
     /** @brief bindless 번호 하나가 가리키는 것입니다. 에뮬이라 번호는 슬롯에 걸 자원을 되짚는 표의 칸일 뿐이다(DX11 과 같다). */
     struct WebGPUBindlessEntry
     {
-        uint64 _handle{ 0 };          ///< 버퍼 또는 텍스처 핸들(0 이면 빈 칸)
-        uint8  _bTexture{ SW_FALSE }; ///< 참이면 텍스처, 거짓이면 버퍼
-        uint32 _sliceOffset{ 0 };     ///< 상수 버퍼 페이지 구간의 바인딩 오프셋(감사 R-4). 크기 0 이면 버퍼 전체
-        uint32 _sliceSize{ 0 };
+        RHIBufferHandle  _buffer{ 0 };      ///< 버퍼 칸이면 그 버퍼(둘 다 0 이면 빈 칸) — 종류는 형식이 가른다(예전 정수 + 텍스처 깃발 대신, DX12 · GL 기록과 같은 모양)
+        RHITextureHandle _texture{ 0 };     ///< 텍스처 칸이면 그 텍스처
+        uint32           _sliceOffset{ 0 }; ///< 상수 버퍼 페이지 구간의 바인딩 오프셋(감사 R-4). 크기 0 이면 버퍼 전체
+        uint32           _sliceSize{ 0 };
 
         bool operator==( const WebGPUBindlessEntry& other ) const
         {
-            return _handle == other._handle && _bTexture == other._bTexture && _sliceOffset == other._sliceOffset && _sliceSize == other._sliceSize;
+            return _buffer == other._buffer && _texture == other._texture && _sliceOffset == other._sliceOffset && _sliceSize == other._sliceSize;
         }
         /** @brief 자원을 부술 때 이 칸을 찾는 주인입니다(`RHIBindlessRegistry::releaseBuffer` · `releaseTexture`). */
-        RHIBindlessOwner getBindlessOwner() const { return _bTexture != SW_FALSE ? RHIBindlessOwner{ 0, _handle } : RHIBindlessOwner{ _handle, 0 }; }
+        RHIBindlessOwner getBindlessOwner() const { return RHIBindlessOwner{ _buffer, _texture }; }
     };
 
     /** @brief 번호 공간 하나(텍스처 SRV · 버퍼 · UAV)의 표입니다. 기록 때 번호를 자원으로 풀므로 비운 번호는 바로 다시 쓴다(`RHIBindlessReuse::Immediately`). */
@@ -469,10 +469,10 @@ namespace sw
         unique_ptr<WebGPURHIResourceFactory> _resourceFactory;
         unique_ptr<WebGPURHICommandContext>  _frameStreamContext;
 
-        RHIHandleTable<WebGPUBufferRecord>   _buffers;
-        RHIHandleTable<WebGPUTextureRecord>  _textures;
-        RHIHandleTable<WebGPUPipelineRecord> _pipelines;
-        RHIHandleTable<RHIRenderPassDesc>    _renderPasses;
+        RHIHandleTable<RHIBufferHandle, WebGPUBufferRecord>          _buffers;
+        RHIHandleTable<RHITextureHandle, WebGPUTextureRecord>        _textures;
+        RHIHandleTable<RHIPipelineStateHandle, WebGPUPipelineRecord> _pipelines;
+        RHIHandleTable<RHIRenderPassHandle, RHIRenderPassDesc>       _renderPasses;
 
         /// @brief 세 번호 공간을 지킨다. 등록은 게임 스레드, 읽기는 기록 스레드 · 진단(`isBindlessIndexLive`)이라 읽기는 공유 잠금이다.
         mutable shared_mutex _bindlessMutex;

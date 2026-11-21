@@ -56,7 +56,7 @@ namespace sw
             const optional<RHIBufferState> stateAfter = findState( lastAccess );
             const bool                     bReadable  = stateAfter.has_value() &&
                                    _readback.initialize( pDevice, entry._elementSize, entry._elementCount );
-            if ( bReadable && _readback.request( cmd, static_cast<RHIBufferHandle>( entry._handle ), *stateAfter, ++_tag ) )
+            if ( bReadable && _readback.request( cmd, entry.getBuffer(), *stateAfter, ++_tag ) )
             {
                 _pendingEntry  = failure._entry;
                 _pendingSerial = serial;

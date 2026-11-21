@@ -139,10 +139,11 @@ namespace sw
         /** @brief desc 로 만든(또는 스왑체인 RP 를 별칭한) 렌더패스를 등록하고 핸들(인덱스+1)을 반환합니다. */
         RHIRenderPassHandle addRenderPassRecord( VkRenderPass renderPass, bool bOwned );
         /**
-         * @brief 핸들의 렌더패스를 파괴합니다. 소유한 것만 부수고 스왑체인 RP 는 건너뜁니다. 레코드는 비웁니다.
+         * @brief 핸들의 레코드를 비우고, 부숴야 할 렌더패스(소유한 것만 — 스왑체인 RP 는 아니다)를 @p outOwnedRenderPass 로 넘깁니다. 부수기는 부르는 쪽이 GPU 펜스 뒤로 미룬다.
          * @details 레코드를 읽는 쪽이 이 함수 하나라 포인터를 밖으로 내주지 않습니다(`add` 의 재할당 뒤에 매달리지 않게). 어느 스레드에서나 부를 수 있습니다.
+         * @return 산 핸들이었으면 true 입니다(0 · 모르는 · 이미 비운 핸들은 false).
          */
-        void destroyRenderPassRecord( VkDevice device, RHIRenderPassHandle handle, VkRenderPass swapchainRenderPass );
+        [[nodiscard]] bool detachRenderPassRecord( RHIRenderPassHandle handle, VkRenderPass swapchainRenderPass, VkRenderPass& outOwnedRenderPass );
 
         /** @brief 모두 파괴하고 비웁니다(디바이스가 살아 있을 때). 스왑체인 RP 별칭은 소유가 아니라 건너뜁니다. */
         void destroyAll( VkDevice device, VkRenderPass swapchainRenderPass );

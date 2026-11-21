@@ -6,6 +6,7 @@
  *          배포 구성은 `Tests/` 를 짓지 않으므로 이 하네스도 여기 둔다.
  */
 #pragma once
+#include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Name/hashed_string.h"
@@ -334,25 +335,34 @@ namespace sw::test
     class FakeRHIBufferFactory final : public IRHIResourceFactory
     {
     public:
-        RHIBufferHandle                _nextBuffer{ 1 };
+        uint64                         _nextBuffer{ 1 };     /**< 다음에 낼 버퍼 핸들의 packed 값 */
+        unordered_set<RHIBufferHandle> _setLiveBuffer;       /**< 만들고 아직 놓지 않은 버퍼 — 놓기가 산 핸들이었는지 답한다(장치의 두 번 해제 단언) */
+        vector<RHIBufferHandle>        _listDestroyedBuffer; /**< 백엔드 파괴(`destroyBufferNative`)에 닿은 버퍼(닿은 순서) */
         uint32                         _gpuVertexBufferCount{ 0 };
         uint32                         _structuredUpdateCount{ 0 };                                                                  /**< `updateStructuredBufferRegions` 호출 수(한 조각 갱신 · 만들 때의 초기 내용도 이 길이다) */
         uint32                         _structuredCreateCount{ 0 };                                                                  /**< `createStructuredBuffer` 호출 수 */
         uint32                         _lastStructuredElementCount{ 0 };                                                             /**< 마지막으로 만든 구조 버퍼의 원소 수 */
         uint32                         _readbackReadCount{ 0 };                                                                      /**< `readReadbackBuffer` 호출 수 */
         bool                           _bReadbackReadable{ true }; /**< `readReadbackBuffer` 가 돌려줄 값(내용은 건드리지 않는다) */ ///< NOLINT(sw-bool-flag): 테스트가 바꾸는 답
-        vector<RHIPipelineStateHandle> _listDestroyedPipelineState;                                                                  /**< `destroyPipelineState` 로 받은 PSO(받은 순서) */
+        vector<RHIPipelineStateHandle> _listDestroyedPipelineState;                                                                  /**< `destroyPipelineStateNative` 로 받은 PSO(받은 순서) */
 
-        RHIBufferHandle createVertexBuffer( const void*, uint32 ) override { return _nextBuffer++; }
+        /** @brief 새 버퍼 핸들을 내고 산 목록에 올립니다. */
+        RHIBufferHandle makeBuffer()
+        {
+            const RHIBufferHandle buffer{ _nextBuffer++ };
+            _setLiveBuffer.insert( buffer );
+            return buffer;
+        }
+
+        RHIBufferHandle createVertexBuffer( const void*, uint32 ) override { return makeBuffer(); }
         RHIBufferHandle createGPUVertexBuffer( uint32 ) override
         {
             ++_gpuVertexBufferCount;
-            return _nextBuffer++;
+            return makeBuffer();
         }
-        RHIBufferHandle createIndexBuffer( const void*, uint32 ) override { return _nextBuffer++; }
+        RHIBufferHandle createIndexBuffer( const void*, uint32 ) override { return makeBuffer(); }
         void            updateGeometryBufferRegions( RHIBufferHandle, const void*, const RHIBufferCopyRegion*, uint32 ) override {}
         void            updateStructuredBufferRegions( RHIBufferHandle, const void*, const RHIBufferCopyRegion*, uint32 ) override { ++_structuredUpdateCount; }
-        void            destroyBuffer( RHIBufferHandle ) override {}
 
         RHITransferSubmit      submitTextureUpload( RHITextureHandle, const RHITextureUploadDesc& ) override { return RHITransferSubmit::rejected(); }
         RHITransferSubmit      submitTextureRegionUpload( RHITextureHandle, const RHITextureRegionUploadDesc& ) override { return RHITransferSubmit::rejected(); }
@@ -362,9 +372,7 @@ namespace sw::test
         void                   discardTextureReadback( RHITransferTicket ) override {}
         RHIPipelineStateHandle createPipelineStateNative( const RHIPipelineStateDesc&, const RHICompiledGraphicsStages& ) override { return 0; }
         RHIPipelineStateHandle createComputePipelineStateNative( const RHICompiledShaderStage&, string_view ) override { return 0; }
-        void                   destroyPipelineState( RHIPipelineStateHandle pso ) override { _listDestroyedPipelineState.push_back( pso ); }
         RHIRenderPassHandle    createRenderPass( const RHIRenderPassDesc& ) override { return 0; }
-        void                   destroyRenderPass( RHIRenderPassHandle ) override {}
         RHIBufferHandle        createConstantBuffer( uint32 ) override { return 0; }
         void                   updateConstantBuffer( RHIBufferHandle, const void*, uint32 ) override {}
         RHIBufferHandle        createConstantBufferPage( uint32 ) override { return 0; }
@@ -373,16 +381,15 @@ namespace sw::test
         {
             ++_structuredCreateCount;
             _lastStructuredElementCount = elementCount;
-            return _nextBuffer++;
+            return makeBuffer();
         }
-        RHIBufferHandle    createReadbackBuffer( uint32, uint32 ) override { return _nextBuffer++; }
+        RHIBufferHandle    createReadbackBuffer( uint32, uint32 ) override { return makeBuffer(); }
         [[nodiscard]] bool readReadbackBuffer( RHIBufferHandle, uint32, void* ) override
         {
             ++_readbackReadCount;
             return _bReadbackReadable;
         }
         RHITextureHandle   createTexture2D( const RHITextureDesc& ) override { return 0; }
-        void               destroyTexture( RHITextureHandle ) override {}
         RHIFormat          getTextureFormat( RHITextureHandle ) const override { return RHIFormat::Unknown; }
         RHIDescriptorIndex registerBindlessTexture( RHITextureHandle ) override { return kInvalidDescriptorIndex; }
         bool               rebindBindlessTexture( RHIDescriptorIndex, RHITextureHandle ) override { return false; }
@@ -396,5 +403,19 @@ namespace sw::test
         RHIDescriptorIndex registerBindlessBufferUAV( RHIBufferHandle ) override { return kInvalidDescriptorIndex; }
         RHIDescriptorIndex registerBindlessTextureUAV( RHITextureHandle ) override { return kInvalidDescriptorIndex; }
         void               unregisterBindlessUAV( RHIDescriptorIndex ) override {}
+
+    protected:
+        [[nodiscard]] bool destroyBufferNative( RHIBufferHandle buffer ) override
+        {
+            _listDestroyedBuffer.push_back( buffer );
+            return _setLiveBuffer.erase( buffer ) != 0;
+        }
+        [[nodiscard]] bool destroyTextureNative( RHITextureHandle ) override { return true; }
+        [[nodiscard]] bool destroyPipelineStateNative( RHIPipelineStateHandle pso ) override
+        {
+            _listDestroyedPipelineState.push_back( pso );
+            return true;
+        }
+        [[nodiscard]] bool destroyRenderPassNative( RHIRenderPassHandle ) override { return true; }
     };
 } // namespace sw::test

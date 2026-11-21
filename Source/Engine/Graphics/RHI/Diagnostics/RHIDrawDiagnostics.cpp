@@ -33,7 +33,7 @@ namespace sw
     {
         const uint32 count = countReport();
         if ( count < kMaxReportedDraw )
-            SW_LOG_ERROR_ID( "RHI.DrawSkippedVertexBufferDestroyed", "%# draw skipped: its vertex buffer (handle %#) was destroyed while bound - rebind before drawing", getBackendName(), handle );
+            SW_LOG_ERROR_ID( "RHI.DrawSkippedVertexBufferDestroyed", "%# draw skipped: its vertex buffer (handle %#) was destroyed while bound - rebind before drawing", getBackendName(), handle.getPacked() );
     }
 
     void RHIDrawDiagnostics::reportDrawWithoutRenderPass() const
@@ -89,7 +89,7 @@ namespace sw
         CallStack stack{};
         CallStackCapture::capture( stack, 2 );
         SW_LOG_ERROR_ID( "RHI.ConstantBufferRewrittenInFrame", "%# constant buffer %# was written twice in one frame - earlier draws read the last value. Give each value its own buffer (PassConstantRing)\n%#",
-                         getBackendName(), handle, CallStackCapture::symbolize( stack ).c_str() );
+                         getBackendName(), handle.getPacked(), CallStackCapture::symbolize( stack ).c_str() );
     }
 
     void RHIDrawDiagnostics::reportIndexBufferUnbound() const
@@ -103,7 +103,7 @@ namespace sw
     {
         const uint32 count = countReport();
         if ( count < kMaxReportedDraw )
-            SW_LOG_ERROR_ID( "RHI.DrawSkippedIndexBufferDestroyed", "%# indexed draw skipped: its index buffer (handle %#) was destroyed while bound - rebind before drawing", getBackendName(), handle );
+            SW_LOG_ERROR_ID( "RHI.DrawSkippedIndexBufferDestroyed", "%# indexed draw skipped: its index buffer (handle %#) was destroyed while bound - rebind before drawing", getBackendName(), handle.getPacked() );
     }
 
     bool RHIDrawDiagnostics::validateVertexSlotsBound( const RHIVertexLayout& input, const RHIGeometryBindings& bindings ) const

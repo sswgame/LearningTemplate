@@ -64,7 +64,7 @@ namespace sw
         for ( RHITextureHandle* pTexture : { &_sceneTexture, &_uiTexture } )
         {
             if ( pFactory != nullptr && *pTexture != 0 )
-                pFactory->destroyTexture( *pTexture );
+                _pDevice->releaseHandle( *pTexture );
             *pTexture = 0;
         }
         _width  = 0;

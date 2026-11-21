@@ -79,9 +79,9 @@ namespace sw
         {
             SW_LOG_ERROR_ID( "Mesh.CreateVertexBufferFailedVerts", "createVertexBuffer / createIndexBuffer failed (%# verts, %# indices)", listVertex.size(), listIndex.size() );
             if ( vertexBuffer != 0 )
-                pResource->destroyBuffer( vertexBuffer );
+                pDevice->releaseHandle( vertexBuffer );
             if ( indexBuffer != 0 )
-                pResource->destroyBuffer( indexBuffer );
+                pDevice->releaseHandle( indexBuffer );
             return false;
         }
         _vertex.attach( pDevice, vertexBuffer );
@@ -115,9 +115,9 @@ namespace sw
         // 마지막 소유는 게임 스레드가 아무 때나 놓는다(지형 LOD 교체, 씬 교체). 렌더 스레드가 프레임을 기록하는 동안이면 반환을 그 프레임 뒤로
         // 미룬다. 팩터리를 직접 부르면 기록이 읽는 백엔드 테이블(DX11 버퍼 SRV, 기록 상태에 바인딩된 정점 버퍼)을 기록과 동시에 바꾸게 된다.
         if ( IRHIDevice* pLiveDevice = _vertex.getLiveDevice() )
-            pLiveDevice->releaseHandle( RHIHandleKind::Buffer, _vertex._buffer );
+            pLiveDevice->releaseHandle( _vertex._buffer );
         if ( IRHIDevice* pLiveDevice = _index.getLiveDevice() )
-            pLiveDevice->releaseHandle( RHIHandleKind::Buffer, _index._buffer );
+            pLiveDevice->releaseHandle( _index._buffer );
         _vertex.clear();
         _index.clear();
     }

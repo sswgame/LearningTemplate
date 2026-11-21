@@ -25,8 +25,8 @@ SW_TEST_CASE( RHIMemoryTrackerTest, FreeSubtractsWhatTheSameKeyAdded )
     SW_EXPECT_LOG( "RHI.MemoryKeyRecordedTwice" );
     RHIMemoryTracker tracker;
     constexpr uint64 kSharedHandle = 0x100000001ull;
-    tracker.recordAllocation( RHIMemoryKey::makeBuffer( kSharedHandle ), RHIMemoryKind::Buffer, 1000 );
-    tracker.recordAllocation( RHIMemoryKey::makeTexture( kSharedHandle ), RHIMemoryKind::RenderTarget, 4096 );
+    tracker.recordAllocation( RHIMemoryKey::makeBuffer( RHIBufferHandle{ kSharedHandle } ), RHIMemoryKind::Buffer, 1000 );
+    tracker.recordAllocation( RHIMemoryKey::makeTexture( RHITextureHandle{ kSharedHandle } ), RHIMemoryKind::RenderTarget, 4096 );
     int32 poolStandIn{ 0 };
     tracker.recordAllocation( RHIMemoryKey::makeDeviceObject( &poolStandIn ), RHIMemoryKind::Descriptor, kRHIMemoryUnknownBytes );
 
@@ -37,20 +37,20 @@ SW_TEST_CASE( RHIMemoryTrackerTest, FreeSubtractsWhatTheSameKeyAdded )
     SW_EXPECT_EQUAL( 1u, tracker.getStats( RHIMemoryKind::Descriptor )._unknownSizeCount );
     SW_EXPECT_EQUAL( 5096ull, tracker.getTrackedBytes() );
 
-    tracker.recordFree( RHIMemoryKey::makeTexture( kSharedHandle ) );
+    tracker.recordFree( RHIMemoryKey::makeTexture( RHITextureHandle{ kSharedHandle } ) );
     SW_EXPECT_EQUAL( 0ull, tracker.getStats( RHIMemoryKind::RenderTarget )._liveBytes );
     SW_EXPECT_EQUAL( 1000ull, tracker.getStats( RHIMemoryKind::Buffer )._liveBytes );
 
-    tracker.recordFree( RHIMemoryKey::makeTexture( kSharedHandle ) );
-    tracker.recordFree( RHIMemoryKey::makeBuffer( 0x7777ull ) );
+    tracker.recordFree( RHIMemoryKey::makeTexture( RHITextureHandle{ kSharedHandle } ) );
+    tracker.recordFree( RHIMemoryKey::makeBuffer( RHIBufferHandle{ 0x7777ull } ) );
     SW_EXPECT_EQUAL( 1000ull, tracker.getTrackedBytes() );
 
-    tracker.recordAllocation( RHIMemoryKey::makeBuffer( kSharedHandle ), RHIMemoryKind::Buffer, 300 ); // 같은 키를 다시 올린다 — 경고와 함께 바꾼다
+    tracker.recordAllocation( RHIMemoryKey::makeBuffer( RHIBufferHandle{ kSharedHandle } ), RHIMemoryKind::Buffer, 300 ); // 같은 키를 다시 올린다 — 경고와 함께 바꾼다
     SW_EXPECT_EQUAL( 300ull, tracker.getStats( RHIMemoryKind::Buffer )._liveBytes );
     SW_EXPECT_EQUAL( 1u, tracker.getStats( RHIMemoryKind::Buffer )._liveCount );
 
     tracker.recordFree( RHIMemoryKey::makeDeviceObject( &poolStandIn ) );
-    tracker.recordFree( RHIMemoryKey::makeBuffer( kSharedHandle ) );
+    tracker.recordFree( RHIMemoryKey::makeBuffer( RHIBufferHandle{ kSharedHandle } ) );
     for ( uint32 kindIndex = 0; kindIndex < kRHIMemoryKindCount; ++kindIndex )
     {
         const RHIMemoryKindStats stats = tracker.getStats( static_cast<RHIMemoryKind>( kindIndex ) );
@@ -125,9 +125,9 @@ SW_TEST_CASE( RHIMemoryTrackerTest, KindNamesAndOrderByLiveBytes )
     SW_EXPECT_EQUAL( string( "Invalid" ), string( RHIMemoryTracker::getKindName( RHIMemoryKind::MaxKinds ) ) );
 
     RHIMemoryTracker tracker;
-    tracker.recordAllocation( RHIMemoryKey::makeBuffer( 1 ), RHIMemoryKind::Buffer, 10 );
-    tracker.recordAllocation( RHIMemoryKey::makeTexture( 1 ), RHIMemoryKind::TransientPool, 30 );
-    tracker.recordAllocation( RHIMemoryKey::makeTexture( 2 ), RHIMemoryKind::Texture, 20 );
+    tracker.recordAllocation( RHIMemoryKey::makeBuffer( RHIBufferHandle{ 1 } ), RHIMemoryKind::Buffer, 10 );
+    tracker.recordAllocation( RHIMemoryKey::makeTexture( RHITextureHandle{ 1 } ), RHIMemoryKind::TransientPool, 30 );
+    tracker.recordAllocation( RHIMemoryKey::makeTexture( RHITextureHandle{ 2 } ), RHIMemoryKind::Texture, 20 );
     const array<RHIMemoryKind, kRHIMemoryKindCount> arrOrder = tracker.makeKindOrderByLiveBytes();
     SW_EXPECT_TRUE( arrOrder[0] == RHIMemoryKind::TransientPool );
     SW_EXPECT_TRUE( arrOrder[1] == RHIMemoryKind::Texture );
@@ -143,8 +143,8 @@ SW_TEST_CASE( RHIMemoryTrackerTest, KindNamesAndOrderByLiveBytes )
 SW_TEST_CASE( RHIMemoryTrackerTest, SummaryComputesOutsideOnlyForProcessUsage )
 {
     RHIMemoryTracker tracker;
-    tracker.recordAllocation( RHIMemoryKey::makeTexture( 1 ), RHIMemoryKind::Texture, 300 );
-    tracker.recordAllocation( RHIMemoryKey::makeBuffer( 1 ), RHIMemoryKind::Buffer, kRHIMemoryUnknownBytes );
+    tracker.recordAllocation( RHIMemoryKey::makeTexture( RHITextureHandle{ 1 } ), RHIMemoryKind::Texture, 300 );
+    tracker.recordAllocation( RHIMemoryKey::makeBuffer( RHIBufferHandle{ 1 } ), RHIMemoryKind::Buffer, kRHIMemoryUnknownBytes );
 
     const RHIMemorySummary unknown = tracker.makeSummary();
     SW_EXPECT_TRUE( unknown._budget._bUsageKnown == SW_FALSE && unknown._budget._bBudgetKnown == SW_FALSE );
@@ -198,7 +198,7 @@ SW_TEST_CASE( RHIMemoryTrackerTest, RefreshWithoutDriverQueryLeavesEveryFieldUnk
 SW_TEST_CASE( RHIMemoryTrackerTest, ReportPrintsUsedKindsAndUnknownDriverValues )
 {
     RHIMemoryTracker tracker;
-    tracker.recordAllocation( RHIMemoryKey::makeTexture( 1 ), RHIMemoryKind::TransientPool, 3ull * 1024ull * 1024ull );
+    tracker.recordAllocation( RHIMemoryKey::makeTexture( RHITextureHandle{ 1 } ), RHIMemoryKind::TransientPool, 3ull * 1024ull * 1024ull );
     int32 poolStandIn{ 0 };
     tracker.recordAllocation( RHIMemoryKey::makeDeviceObject( &poolStandIn ), RHIMemoryKind::Descriptor, kRHIMemoryUnknownBytes );
     RHIMemoryBudget deviceBudget{};
@@ -250,10 +250,10 @@ SW_TEST_CASE( RHIMemoryTrackerTest, CollectResourcesListsShapeAndLabel )
     target._format           = RHIFormat::R16G16B16A16_FLOAT;
     target._bIsRenderTarget  = SW_TRUE;
     constexpr uint64 kHandle = 7;
-    tracker.recordTexture( kHandle, target, 65536 );
-    tracker.setLabel( RHIMemoryKey::makeTexture( kHandle ), "SceneColor" );
-    tracker.recordAllocation( RHIMemoryKey::makeBuffer( 3 ), RHIMemoryKind::Buffer, 256 );
-    tracker.setLabel( RHIMemoryKey::makeTexture( 99 ), "NotRecorded" ); // 올리지 않은 키는 무시한다
+    tracker.recordTexture( RHITextureHandle{ kHandle }, target, 65536 );
+    tracker.setLabel( RHIMemoryKey::makeTexture( RHITextureHandle{ kHandle } ), "SceneColor" );
+    tracker.recordAllocation( RHIMemoryKey::makeBuffer( RHIBufferHandle{ 3 } ), RHIMemoryKind::Buffer, 256 );
+    tracker.setLabel( RHIMemoryKey::makeTexture( RHITextureHandle{ 99 } ), "NotRecorded" ); // 올리지 않은 키는 무시한다
 
     vector<RHIMemoryResourceEntry> listEntry;
     tracker.collectResources( listEntry );
@@ -266,7 +266,7 @@ SW_TEST_CASE( RHIMemoryTrackerTest, CollectResourcesListsShapeAndLabel )
     SW_EXPECT_TRUE( pTexture->_shape._format == RHIFormat::R16G16B16A16_FLOAT );
     SW_EXPECT_EQUAL( string( "SceneColor" ), pTexture->_label );
 
-    tracker.recordFree( RHIMemoryKey::makeTexture( kHandle ) );
+    tracker.recordFree( RHIMemoryKey::makeTexture( RHITextureHandle{ kHandle } ) );
     tracker.collectResources( listEntry );
     SW_REQUIRE_EQUAL( size_t{ 1 }, listEntry.size() );
     SW_EXPECT_TRUE( listEntry[0]._key._space == RHIMemoryKeySpace::Buffer );

@@ -7,7 +7,6 @@
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/Backend/RHIBufferSizeUtil.h"
-#include "Engine/Graphics/RHI/Backend/RHIShaderRequest.h"
 #include "Engine/Graphics/RHI/DX/DX11/D3D11RHIDevice.h"
 #include "Engine/Graphics/RHI/DX/DXGIFormat.h"
 #include "Engine/Graphics/RHI/DX/RHIDxRenderState.h"
@@ -310,17 +309,17 @@ namespace sw
         return _pDevice->storeBuffer( std::move( buffer ) );
     }
 
-    void D3D11RHIResourceFactory::destroyBuffer( RHIBufferHandle buffer )
+    bool D3D11RHIResourceFactory::destroyBufferNative( RHIBufferHandle buffer )
     {
         if ( buffer == 0 )
-            return;
+            return false;
         // 아래 `removeBufferInRecordingStates` 는 다른 스레드가 기록 중인 리스트의 상태에 쓴다. 병렬 기록 중에는 부르지 않는 것이 계약이다.
         _pDevice->requireRegistryMutableNow( "destroyBuffer" );
         _pDevice->removeBufferInRecordingStates( buffer );
 
         D3D11RHIDevice::BufferRecord owned;
         if ( _pDevice->_gpuBuffers.take( buffer, owned ) == false )
-            return;
+            return false;
 
         UniqueLock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
         const auto               ignore = []( RHIDescriptorIndex ) {};
@@ -328,7 +327,8 @@ namespace sw
         _pDevice->_uavRegistry.releaseBuffer( RHIBindlessReuse::Immediately, buffer, ignore );
 
         // 추적기는 자원을 실제로 놓을 때 줄인다(해제 요청 시점이 아니라). SRV 도 버퍼와 함께 그때 놓인다.
-        _pDevice->_releaseQueue.enqueueGPUTrackedRelease<RHIMemoryKeySpace::Buffer>( owned, _pDevice->getMemoryTracker(), buffer, _pDevice->_frameFenceRing.getRecordingSerial() );
+        _pDevice->_releaseQueue.enqueueGPUTrackedRelease<RHIMemoryKeySpace::Buffer>( owned, _pDevice->getMemoryTracker(), buffer.getPacked(), _pDevice->_frameFenceRing.getRecordingSerial() );
+        return true;
     }
 
     RHIBufferHandle D3D11RHIResourceFactory::createReadbackBuffer( uint32 elementSize, uint32 elementCount )
@@ -364,7 +364,7 @@ namespace sw
         const bool bNotReadback = bufferDesc.Usage != D3D11_USAGE_STAGING || ( bufferDesc.CPUAccessFlags & D3D11_CPU_ACCESS_READ ) == 0 || sizeBytes > bufferDesc.ByteWidth;
         if ( bNotReadback )
         {
-            SW_LOG_ERROR_ID( "D3D11.ReadReadbackBufferBufferNotReadback", "readReadbackBuffer: buffer %# is not a readback buffer of at least %# bytes", readback, sizeBytes );
+            SW_LOG_ERROR_ID( "D3D11.ReadReadbackBufferBufferNotReadback", "readReadbackBuffer: buffer %# is not a readback buffer of at least %# bytes", readback.getPacked(), sizeBytes );
             return false;
         }
         // Map 에서 Unmap 까지 한 덩어리로 잠근다. 부르는 쪽 계약이 "GPU 작업이 끝난 뒤" 라서(완료 콜백 안) 기다리는 Map 이다 — `DO_NOT_WAIT` 는 끝난 복사에도
@@ -385,7 +385,7 @@ namespace sw
         const bool                     bTextureNotUploadable = pRecord == nullptr || pRecord->_texture == nullptr || _pDevice->_immediateContext.isValid() == false;
         if ( bTextureNotUploadable )
         {
-            SW_LOG_ERROR_ID( "D3D11.SubmitTextureUploadTextureDeviceContext", "submitTextureUpload: texture %# or the device context is not usable", texture );
+            SW_LOG_ERROR_ID( "D3D11.SubmitTextureUploadTextureDeviceContext", "submitTextureUpload: texture %# or the device context is not usable", texture.getPacked() );
             return RHITransferSubmit::rejected();
         }
         // 장치를 잃은 뒤에는 전송이 끝나지 않아 스테이징 예산도 돌아오지 않는다 — Busy 를 영원히 되풀이하지 않게 진입에서 거절한다(계약 2).
@@ -396,7 +396,7 @@ namespace sw
         }
         if ( pRecord->_bDepth != SW_FALSE )
         {
-            SW_LOG_ERROR_ID( "D3D11.SubmitTextureUploadTextureDepthTexture", "submitTextureUpload: texture %# is a depth texture", texture );
+            SW_LOG_ERROR_ID( "D3D11.SubmitTextureUploadTextureDepthTexture", "submitTextureUpload: texture %# is a depth texture", texture.getPacked() );
             return RHITransferSubmit::rejected();
         }
 
@@ -461,7 +461,7 @@ namespace sw
         const bool                     bTextureRegionNotUploadable = pRecord == nullptr || pRecord->_texture == nullptr || _pDevice->_immediateContext.isValid() == false || pRecord->_bDepth != SW_FALSE;
         if ( bTextureRegionNotUploadable )
         {
-            SW_LOG_ERROR_ID( "D3D11.SubmitTextureRegionUploadTextureMissingDepth", "submitTextureRegionUpload: texture %# is missing, a depth texture, or the device context is not usable", texture );
+            SW_LOG_ERROR_ID( "D3D11.SubmitTextureRegionUploadTextureMissingDepth", "submitTextureRegionUpload: texture %# is missing, a depth texture, or the device context is not usable", texture.getPacked() );
             return RHITransferSubmit::rejected();
         }
         // 장치를 잃은 뒤에는 전송이 끝나지 않아 스테이징 예산도 돌아오지 않는다 — Busy 를 영원히 되풀이하지 않게 진입에서 거절한다(계약 2).
@@ -586,7 +586,7 @@ namespace sw
         const bool                     bTextureNotReadable = pRecord == nullptr || pRecord->_texture == nullptr || _pDevice->_device == nullptr || _pDevice->_immediateContext.isValid() == false;
         if ( bTextureNotReadable || _pDevice->pollDeviceLost() ) // 장치를 잃었으면 진입에서 Rejected 다(계약 2)
         {
-            SW_LOG_ERROR_ID( "D3D11.SubmitTextureReadbackTextureDeviceNot", "submitTextureReadback: texture %# or the device is not usable (uninitialized or lost)", texture );
+            SW_LOG_ERROR_ID( "D3D11.SubmitTextureReadbackTextureDeviceNot", "submitTextureReadback: texture %# or the device is not usable (uninitialized or lost)", texture.getPacked() );
             return RHITransferSubmit::rejected();
         }
 
@@ -805,14 +805,14 @@ namespace sw
         return _pDevice->storeTexture( std::move( record ), desc );
     }
 
-    void D3D11RHIResourceFactory::destroyTexture( RHITextureHandle texture )
+    bool D3D11RHIResourceFactory::destroyTextureNative( RHITextureHandle texture )
     {
         if ( texture == 0 )
-            return;
+            return false;
 
         D3D11RHIDevice::TextureRecord* pSlot = _pDevice->resolveTexture( texture );
         if ( pSlot == nullptr )
-            return;
+            return false;
 
         {
             UniqueLock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
@@ -824,10 +824,11 @@ namespace sw
 
         D3D11RHIDevice::TextureRecord owned;
         if ( _pDevice->_gpuTextures.take( texture, owned ) == false )
-            return;
+            return false;
 
         // 추적기는 자원을 실제로 놓을 때 줄인다(해제 요청 시점이 아니라).
-        _pDevice->_releaseQueue.enqueueGPUTrackedRelease<RHIMemoryKeySpace::Texture>( owned, _pDevice->getMemoryTracker(), texture, _pDevice->_frameFenceRing.getRecordingSerial() );
+        _pDevice->_releaseQueue.enqueueGPUTrackedRelease<RHIMemoryKeySpace::Texture>( owned, _pDevice->getMemoryTracker(), texture.getPacked(), _pDevice->_frameFenceRing.getRecordingSerial() );
+        return true;
     }
 
     bool D3D11RHIResourceFactory::isTextureReadyToSample( RHITextureHandle texture )
@@ -851,7 +852,7 @@ namespace sw
         // 셰이더의 텍스처 슬롯은 Texture2D 로 선언돼 있다. 배열이나 큐브 뷰를 바인딩하면 셰이더가 읽지 못한다(RHITextureDimension 참고).
         if ( pRecord->_dimension != RHITextureDimension::Texture2D )
         {
-            SW_LOG_ERROR_ID( "D3D11.RegisterBindlessTextureTextureTextureOnly", "registerBindlessTexture: texture %# is a %# texture — only Texture2D can be bound to shader texture slots yet", texture,
+            SW_LOG_ERROR_ID( "D3D11.RegisterBindlessTextureTextureTextureOnly", "registerBindlessTexture: texture %# is a %# texture — only Texture2D can be bound to shader texture slots yet", texture.getPacked(),
                              static_cast<uint32>( pRecord->_dimension ) );
             return kInvalidDescriptorIndex;
         }
@@ -1131,14 +1132,15 @@ namespace sw
         return _pDevice->_pipelineStates.insert( std::move( pso ) );
     }
 
-    void D3D11RHIResourceFactory::destroyPipelineState( RHIPipelineStateHandle pso )
+    bool D3D11RHIResourceFactory::destroyPipelineStateNative( RHIPipelineStateHandle pso )
     {
         if ( pso == 0 )
-            return;
+            return false;
         // 아래 `removePipelineStateInRecordingStates` 는 다른 스레드가 기록 중인 리스트의 상태에 쓴다. 병렬 기록 중에는 부르지 않는 것이 계약이다.
         _pDevice->requireRegistryMutableNow( "destroyPipelineState" );
-        _pDevice->_pipelineStates.erase( pso );
+        const bool bLive = _pDevice->_pipelineStates.erase( pso );
         _pDevice->removePipelineStateInRecordingStates( pso );
+        return bLive;
     }
 
     RHIRenderPassHandle D3D11RHIResourceFactory::createRenderPass( const RHIRenderPassDesc& desc )
@@ -1146,9 +1148,9 @@ namespace sw
         return _pDevice->_renderPassRegistry.add( desc );
     }
 
-    void D3D11RHIResourceFactory::destroyRenderPass( RHIRenderPassHandle pass )
+    bool D3D11RHIResourceFactory::destroyRenderPassNative( RHIRenderPassHandle pass )
     {
-        _pDevice->_renderPassRegistry.retire( pass );
+        return _pDevice->_renderPassRegistry.retire( pass );
     }
 } // namespace sw
 #endif

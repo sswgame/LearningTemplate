@@ -40,8 +40,6 @@ namespace sw::editor
     class DrawSnapshotHandoff;
     class EditorDrawDataSnapshot;
 
-    using RHITextureHandle = uint64;
-
     /**
      * @class ImGuiRenderer
      * @brief ImGui 그리기 목록 · 텍스처 · 보조 창을 RHI 로 다룹니다. `ImGuiEditor` 가 하나를 갖습니다.

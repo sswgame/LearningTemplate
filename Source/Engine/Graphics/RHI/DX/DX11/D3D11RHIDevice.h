@@ -602,8 +602,8 @@ namespace sw
         RHISwapChainSet<D3D11RHISwapChain> _windowSwapChains;
 
         /// @brief 버퍼 핸들에서 버퍼와 SRV 를 찾는 테이블입니다(텍스처 `_gpuTextures` 와 같은 구조). 기록 스레드가 SRV 를 락 없이 읽습니다(`resolveBufferSRV`).
-        RHIHandleTable<BufferRecord>  _gpuBuffers;
-        RHIHandleTable<TextureRecord> _gpuTextures;
+        RHIHandleTable<RHIBufferHandle, BufferRecord>   _gpuBuffers;
+        RHIHandleTable<RHITextureHandle, TextureRecord> _gpuTextures;
 
         /// @brief 즉시 컨텍스트가 쓰는 기록 상태입니다. 리스트는 각자 자기 것을 가집니다.
         D3D11RecordingState _recordingState;
@@ -674,8 +674,8 @@ namespace sw
         RHIBindlessRegistry<RHITextureHandle, RHIBindlessTextureOwnerOf> _textureRegistry;
         RHIBindlessRegistry<UAVEntry>                                    _uavRegistry;
 
-        RHIHandleTable<D3D11PipelineStateRecord> _pipelineStates;
-        RHIRenderPassRegistry                    _renderPassRegistry; ///< 렌더 패스 핸들 등록부. 자기 뮤텍스로 직렬화해 어느 스레드에서나 부른다.
+        RHIHandleTable<RHIPipelineStateHandle, D3D11PipelineStateRecord> _pipelineStates;
+        RHIRenderPassRegistry                                            _renderPassRegistry; ///< 렌더 패스 핸들 등록부. 자기 뮤텍스로 직렬화해 어느 스레드에서나 부른다.
 
         /// @brief 정적 샘플러 세트입니다(binding_slots.hlsli 4, DX12 와 같은 테이블). s9..s15 에 바인딩합니다. 셰이더가 Bindless::sampleIndexWith 의 samplerID 로 고릅니다.
         Microsoft::WRL::ComPtr<ID3D11SamplerState> _arrStaticSampler[shaderslot::kStaticSamplerArrayCount];

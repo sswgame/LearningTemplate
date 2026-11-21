@@ -92,7 +92,7 @@ namespace sw
             uint32          _offset{ 0 };
 
             bool   operator==( const Key& other ) const { return _buffer == other._buffer && _offset == other._offset; }
-            uint64 computeHash() const { return HashUtil::combine( _buffer, _offset ); }
+            uint64 computeHash() const { return HashUtil::combine( _buffer.getPacked(), _offset ); }
         };
 
         /**

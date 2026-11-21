@@ -82,9 +82,9 @@ SW_TEST_CASE( MemorySnapshotTest, CollectReadsCacheEntriesAndTrackerResources )
     desc._mipLevels = 1;
     desc._arraySize = 1;
     desc._format    = RHIFormat::R8G8B8A8_UNORM;
-    tracker.recordTexture( 9, desc, 8192 );
-    tracker.setLabel( RHIMemoryKey::makeTexture( 9 ), "Albedo" );
-    tracker.recordAllocation( RHIMemoryKey::makeBuffer( 2 ), RHIMemoryKind::Buffer, 1024 );
+    tracker.recordTexture( RHITextureHandle{ 9 }, desc, 8192 );
+    tracker.setLabel( RHIMemoryKey::makeTexture( RHITextureHandle{ 9 } ), "Albedo" );
+    tracker.recordAllocation( RHIMemoryKey::makeBuffer( RHIBufferHandle{ 2 } ), RHIMemoryKind::Buffer, 1024 );
 
     MemorySnapshotSources sources{};
     sources._listAssetCache.push_back( &cache );

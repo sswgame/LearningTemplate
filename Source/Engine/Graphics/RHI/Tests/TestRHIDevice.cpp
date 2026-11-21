@@ -23,6 +23,7 @@
 
 #include <iterator>
 #include <thread>
+#include <type_traits>
 
 using namespace sw;
 
@@ -231,14 +232,14 @@ SW_TEST_CASE( RHIDeferredHandleTest, ReleasesWaitForTheRenderThreadFrame )
     test::FakeRHIDevice device;
 
     // 렌더 스레드가 든 프레임이 없으면 바로 내린다.
-    device.releaseHandle( RHIHandleKind::BindlessResource, 7 );
+    device.releaseBindlessIndex( RHIBindlessIndexSpace::Buffer, 7 );
     SW_EXPECT_EQUAL( size_t( 0 ), device.getDeferredHandleCount() );
 
     // 프레임을 넘긴 뒤 다른 스레드(렌더 스레드가 아니다)가 내리면 미룬다.
     device.notifyRenderFrameQueued();
-    device.releaseHandle( RHIHandleKind::BindlessResource, 8 );
-    device.releaseHandle( RHIHandleKind::Buffer, 9 );
-    device.releaseHandle( RHIHandleKind::Buffer, 0 ); // 빈 핸들은 무시
+    device.releaseBindlessIndex( RHIBindlessIndexSpace::Buffer, 8 );
+    device.releaseHandle( RHIBufferHandle{ 9 } );
+    device.releaseHandle( RHIBufferHandle{} ); // 빈 핸들은 무시
     SW_EXPECT_EQUAL( size_t( 2 ), device.getDeferredHandleCount() );
 
     // 프레임이 끝나도 렌더 스레드가 비우기 전까지는 남는다 — 비우면 내린다.
@@ -249,12 +250,12 @@ SW_TEST_CASE( RHIDeferredHandleTest, ReleasesWaitForTheRenderThreadFrame )
 
     // 남는 프레임 통보는 셈을 음수로 만들지 않는다.
     device.notifyRenderFrameRetired();
-    device.releaseHandle( RHIHandleKind::Texture, 10 );
+    device.releaseHandle( RHITextureHandle{ 10 } );
     SW_EXPECT_EQUAL( size_t( 0 ), device.getDeferredHandleCount() );
 
     // waitIdle 은 렌더 스레드를 비운 뒤 미룬 것을 내린다.
     device.notifyRenderFrameQueued();
-    device.releaseHandle( RHIHandleKind::BindlessTexture, 11 );
+    device.releaseBindlessIndex( RHIBindlessIndexSpace::Texture, 11 );
     SW_EXPECT_EQUAL( size_t( 1 ), device.getDeferredHandleCount() );
     device.waitIdle( RHIWaitIdleReason::Tool );
     SW_EXPECT_EQUAL( size_t( 0 ), device.getDeferredHandleCount() );
@@ -269,7 +270,7 @@ SW_TEST_CASE( RHIDeferredHandleTest, DrainRenderThreadWaitsForGPUIdle )
 {
     test::FakeRHIDevice device;
     device.notifyRenderFrameQueued();
-    device.releaseHandle( RHIHandleKind::BindlessTexture, 13 );
+    device.releaseBindlessIndex( RHIBindlessIndexSpace::Texture, 13 );
 
     device.flushRenderThread();
     SW_EXPECT_EQUAL( size_t( 1 ), device.getDeferredHandleCount() );
@@ -293,7 +294,7 @@ SW_TEST_CASE( RHIDeferredHandleTest, ReleasesWaitForThePacketBeingBuilt )
 
     // 프레임 A 가 든 동안 해제한다 — 게임 스레드는 다음 패킷 B 를 짓는 중이다. A 가 끝나도 B 가 남았다.
     device.notifyRenderFrameQueued();
-    device.releaseHandle( RHIHandleKind::BindlessTexture, 12 );
+    device.releaseBindlessIndex( RHIBindlessIndexSpace::Texture, 12 );
     device.notifyRenderFrameRetired();
     SW_EXPECT_EQUAL( size_t( 1 ), device.getDeferredHandleCount() );
     device.notifyRenderFrameQueued();
@@ -302,14 +303,14 @@ SW_TEST_CASE( RHIDeferredHandleTest, ReleasesWaitForThePacketBeingBuilt )
 
     // 렌더 스레드가 떠 있으면 든 프레임이 없어도 미룬다(짓는 중인 패킷이 있다). 다음 프레임이 끝나면 내린다.
     device.setRenderThreadFlush( []( void* ) {}, nullptr, std::thread::id{} );
-    device.releaseHandle( RHIHandleKind::Texture, 13 );
+    device.releaseHandle( RHITextureHandle{ 13 } );
     SW_EXPECT_EQUAL( size_t( 1 ), device.getDeferredHandleCount() );
     device.notifyRenderFrameQueued();
     device.notifyRenderFrameRetired();
     SW_EXPECT_EQUAL( size_t( 0 ), device.getDeferredHandleCount() );
 
     // 렌더 스레드를 풀면 남은 것을 모두 내린다.
-    device.releaseHandle( RHIHandleKind::Texture, 14 );
+    device.releaseHandle( RHITextureHandle{ 14 } );
     device.setRenderThreadFlush( nullptr, nullptr, std::thread::id{} );
     SW_EXPECT_EQUAL( size_t( 0 ), device.getDeferredHandleCount() );
 }
@@ -471,4 +472,58 @@ SW_TEST_CASE( RHIDeviceTest, UITargetFormatStaysSDRUnderHDR )
 
     SW_REQUIRE_TRUE( device.setBackBufferColorSpace( RHIColorSpace::SRGBNonLinear, RHIDisplayMetadata{} ) );
     SW_EXPECT_TRUE( device.getUITargetFormat() == RHIFormat::B8G8R8A8_UNORM );
+}
+
+// 핸들 형식: 종류가 다른 핸들 · 정수와 핸들 사이에 암묵 변환이 없다 — 텍스처 핸들을 버퍼 자리에 넘기거나 개수를 핸들 자리에 넘기면 컴파일이 멈춘다.
+// 값은 `uint64` 와 같은 크기 · 복사 비용이다(성능 하락 없음).
+static_assert( std::is_convertible_v<RHITextureHandle, RHIBufferHandle> == false, "a texture handle must not pass as a buffer handle" );
+static_assert( std::is_convertible_v<RHIBufferHandle, RHITextureHandle> == false, "a buffer handle must not pass as a texture handle" );
+static_assert( std::is_convertible_v<RHIPipelineStateHandle, RHIRenderPassHandle> == false, "a PSO handle must not pass as a render pass handle" );
+static_assert( std::is_convertible_v<RHITransientHeapHandle, RHITextureHandle> == false, "a heap handle must not pass as a texture handle" );
+static_assert( std::is_convertible_v<uint64, RHIBufferHandle> == false, "an integer must not become a handle implicitly" );
+static_assert( std::is_convertible_v<RHIBufferHandle, uint64> == false, "a handle must not become an integer implicitly" );
+static_assert( sizeof( RHIBufferHandle ) == sizeof( uint64 ) && std::is_trivially_copyable_v<RHIBufferHandle>, "a handle is a 64-bit value type" );
+
+/**
+ * @brief [RHIReleaseHandleTest] 같은 핸들을 두 번 놓으면 검사 구성에서 단언한다 — 두 번째 해제는 백엔드가 "산 핸들이 아니었다" 고 답한다
+ * @details 변이: 장치가 백엔드의 답을 보지 않으면(예전 `void destroyBuffer`) 단언 수가 0 이라 진다.
+ */
+SW_TEST_CASE( RHIReleaseHandleTest, SecondReleaseOfTheSameHandleAsserts )
+{
+    test::FakeRHIBufferFactory factory;
+    test::FakeRHIDevice        device;
+    device._pResourceFactory     = &factory;
+    const RHIBufferHandle buffer = factory.createVertexBuffer( nullptr, 16 );
+    {
+        test::ScopedAssertCapture assertCapture;
+        device.releaseHandle( buffer ); // 든 프레임이 없다 — 바로 백엔드에 닿는다
+        SW_EXPECT_EQUAL( 0u, assertCapture.getCount() );
+        device.releaseHandle( buffer );
+        if constexpr ( test::ScopedAssertCapture::kAssertsAreActive )
+            SW_EXPECT_EQUAL( 1u, assertCapture.getCount() );
+    }
+    SW_EXPECT_TRUE( factory._listDestroyedBuffer == ( vector<RHIBufferHandle>{ buffer, buffer } ) );
+}
+
+/**
+ * @brief [RHIReleaseHandleTest] 렌더 스레드 밖의 해제는 그때 넘긴 프레임 다음 프레임의 끝(프레임 펜스) 뒤에만 백엔드에 닿는다 — 그 전에는 핸들이 산다
+ * @details 변이: 미루지 않고 바로 놓으면 첫 단언이, 넘긴 프레임만 기다리면 둘째 단언이 진다.
+ */
+SW_TEST_CASE( RHIReleaseHandleTest, DeferredReleaseWaitsForTheFrameFence )
+{
+    test::FakeRHIBufferFactory factory;
+    test::FakeRHIDevice        device;
+    device._pResourceFactory         = &factory;
+    const RHIBufferHandle     buffer = factory.createVertexBuffer( nullptr, 16 );
+    test::ScopedAssertCapture assertCapture;
+
+    device.notifyRenderFrameQueued(); // 프레임 1 이 GPU 로 갔다 — 게임 스레드는 패킷 2 를 짓는 중이다
+    device.releaseHandle( buffer );
+    SW_EXPECT_TRUE( factory._listDestroyedBuffer.empty() );
+    device.notifyRenderFrameRetired(); // 프레임 1 끝 — 패킷 2 가 아직 그 핸들을 들 수 있다
+    SW_EXPECT_TRUE( factory._listDestroyedBuffer.empty() );
+    device.notifyRenderFrameQueued();
+    device.notifyRenderFrameRetired(); // 프레임 2 끝 — 이제 놓는다
+    SW_EXPECT_TRUE( factory._listDestroyedBuffer == vector<RHIBufferHandle>{ buffer } );
+    SW_EXPECT_EQUAL( 0u, assertCapture.getCount() );
 }

@@ -15,6 +15,7 @@
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Graphics/RHI/RHIEnums.h"
+#include "Engine/Graphics/RHI/RHIHandles.h"
 
 namespace sw
 {
@@ -71,9 +72,9 @@ namespace sw
         RHIMemoryKeySpace _space{ RHIMemoryKeySpace::Buffer };
 
         /** @brief 버퍼 핸들의 키입니다. */
-        static constexpr RHIMemoryKey makeBuffer( uint64 handle ) { return RHIMemoryKey{ handle, RHIMemoryKeySpace::Buffer }; }
+        static constexpr RHIMemoryKey makeBuffer( RHIBufferHandle handle ) { return RHIMemoryKey{ handle.getPacked(), RHIMemoryKeySpace::Buffer }; }
         /** @brief 텍스처 핸들의 키입니다. */
-        static constexpr RHIMemoryKey makeTexture( uint64 handle ) { return RHIMemoryKey{ handle, RHIMemoryKeySpace::Texture }; }
+        static constexpr RHIMemoryKey makeTexture( RHITextureHandle handle ) { return RHIMemoryKey{ handle.getPacked(), RHIMemoryKeySpace::Texture }; }
         /** @brief 핸들이 없는 디바이스 내부 객체의 키입니다. 살아 있는 동안 주소가 겹치지 않는 네이티브 객체를 넘깁니다. */
         static RHIMemoryKey makeDeviceObject( const void* pObject )
         {
@@ -209,7 +210,7 @@ namespace sw
          * @brief 텍스처 하나를 서술 @p desc 의 항목(`classifyTexture`) · 모양과 함께 올립니다. 네 백엔드가 텍스처를 만드는 곳에서 이것 하나를 부른다.
          * @details 모양은 자원 목록(`collectResources`)이 그대로 내준다 — 백엔드마다 서술을 다시 읽어 맞추지 않게 공통 면을 여기 하나로 둔다.
          */
-        void recordTexture( uint64 textureHandle, const RHITextureDesc& desc, uint64 bytes );
+        void recordTexture( RHITextureHandle textureHandle, const RHITextureDesc& desc, uint64 bytes );
         /** @brief 올라 있는 자원 @p key 에 디버그 이름 @p label 을 붙입니다(백엔드의 `setTextureDebugName`). 올라 있지 않은 키는 무시한다. */
         void setLabel( const RHIMemoryKey& key, string_view label );
         /** @brief 살아 있는 자원 전부를 @p outListEntry 에 복사합니다(비운 뒤 채운다). 잠금은 복사하는 동안만 잡는다 — 렌더 · 로더 스레드를 오래 막지 않는다. */

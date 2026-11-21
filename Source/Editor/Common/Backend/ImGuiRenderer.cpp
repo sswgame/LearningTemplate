@@ -232,7 +232,7 @@ namespace sw::editor
         _mapForeignSRV.clear();
         _wordBuffer.release( _pDevice );
         if ( _pso != 0 && _pDevice->getResourceFactory() != nullptr )
-            _pDevice->getResourceFactory()->destroyPipelineState( _pso );
+            _pDevice->releaseHandle( _pso );
         _pso = 0;
 
         if ( ImGui::GetCurrentContext() != nullptr )
@@ -512,7 +512,7 @@ namespace sw::editor
         if ( slot._srv != kInvalidDescriptorIndex )
             pFactory->unregisterBindlessTexture( slot._srv );
         if ( slot._texture != 0 )
-            pFactory->destroyTexture( slot._texture );
+            device.releaseHandle( slot._texture );
     }
 
     void ImGuiRenderer::queueTextureUpdates()
@@ -601,7 +601,7 @@ namespace sw::editor
             {
                 SW_LOG_ERROR_ID( "ImGuiRenderer.TextureCreateFailed", "Failed to create an editor UI texture (%#x%#) - its glyphs are not drawn", op._width, op._height );
                 if ( handle != 0 )
-                    pFactory->destroyTexture( handle );
+                    device.releaseHandle( handle );
                 return true; // 칸은 텍스처 없이 남는다 — 그 ID 의 그리기는 건너뛰고, ImGui 가 파괴를 내면 비운다
             }
             ScopedLock<mutex> lock{ _textureMutex };

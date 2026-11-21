@@ -17,8 +17,8 @@ using namespace sw;
 SW_TEST_CASE( RHIConstantBufferWriteLogTest, SecondWriteInAFrameIsRejected )
 {
     RHIConstantBufferWriteLog log;
-    constexpr RHIBufferHandle kBufferA = 0x100000001ull;
-    constexpr RHIBufferHandle kBufferB = 0x100000002ull;
+    constexpr RHIBufferHandle kBufferA{ 0x100000001ull };
+    constexpr RHIBufferHandle kBufferB{ 0x100000002ull };
     log.beginFrame();
     SW_EXPECT_TRUE( log.recordWrite( kBufferA ) );
     SW_EXPECT_TRUE( log.recordWrite( kBufferB ) );

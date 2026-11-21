@@ -87,7 +87,7 @@ namespace sw
         // 옛 풀을 읽는 복사를 방금 기록했다 — 이 프레임이 끝난 뒤에 놓는다(`releaseHandle` 이 이미 만든 패킷 뒤로 미룬다).
         for ( const RHIBufferHandle retired : _listRetiredBuffer )
         {
-            device.releaseHandle( RHIHandleKind::Buffer, retired );
+            device.releaseHandle( retired );
         }
         _listRetiredBuffer.clear();
     }
@@ -277,7 +277,7 @@ namespace sw
         if ( oldVertexBuffer != 0 )
             _listRetiredBuffer.push_back( oldVertexBuffer );
         if ( _indexBuffer != 0 )
-            pFactory->destroyBuffer( _indexBuffer ); // 인덱스는 CPU 인덱스에서 새로 올린다(업로드 힙)
+            pDevice->releaseHandle( _indexBuffer ); // 인덱스는 CPU 인덱스에서 새로 올린다(업로드 힙)
         _vertexBuffer = 0;
         _indexBuffer  = 0;
         _allocator.reset( capacity );
@@ -370,17 +370,17 @@ namespace sw
     {
         IRHIResourceFactory* pFactory = pDevice != nullptr ? pDevice->getResourceFactory() : nullptr;
         if ( pFactory != nullptr && _vertexBuffer != 0 )
-            pFactory->destroyBuffer( _vertexBuffer );
+            pDevice->releaseHandle( _vertexBuffer );
         // 기록하지 못한 복사는 버린다(디바이스가 바뀌거나 내려간다) — 옛 풀 버퍼도 함께 놓는다.
         for ( const RHIBufferHandle retired : _listRetiredBuffer )
         {
             if ( pFactory != nullptr )
-                pFactory->destroyBuffer( retired );
+                pDevice->releaseHandle( retired );
         }
         _listRetiredBuffer.clear();
         _listPendingCopy.clear();
         if ( pFactory != nullptr && _indexBuffer != 0 )
-            pFactory->destroyBuffer( _indexBuffer );
+            pDevice->releaseHandle( _indexBuffer );
         _vertexBuffer = 0;
         _indexBuffer  = 0;
         _mapEntry.clear();

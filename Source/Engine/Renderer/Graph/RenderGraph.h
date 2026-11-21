@@ -173,13 +173,13 @@ namespace sw
         template <RenderGraphAccess kAccess>
         RHIBufferHandle getBuffer( RenderGraphHandle<RenderGraphViewableKind::Buffer, kAccess> handle, uint32 slot = 0 ) const
         {
-            return findDeclaredHandle( handle, slot );
+            return RHIBufferHandle{ findDeclaredHandle( handle, slot ) };
         }
         /** @brief 이 패스가 선언한 텍스처 접근 @p handle 의 뷰 칸 @p slot 텍스처입니다. 규칙은 `getBuffer` 와 같다. */
         template <RenderGraphAccess kAccess>
         RHITextureHandle getTexture( RenderGraphHandle<RenderGraphViewableKind::Texture, kAccess> handle, uint32 slot = 0 ) const
         {
-            return findDeclaredHandle( handle, slot );
+            return RHITextureHandle{ findDeclaredHandle( handle, slot ) };
         }
         /**
          * @brief 한 패스 안의 연속 디스패치(HZB 밉 사슬 · 컬링 → 정렬)가 앞 디스패치의 UAV 쓰기를 기다리게 합니다(뷰 칸 @p slot).

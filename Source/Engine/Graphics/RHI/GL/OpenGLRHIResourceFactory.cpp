@@ -9,7 +9,6 @@
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/Backend/RHIBufferSizeUtil.h"
-#include "Engine/Graphics/RHI/Backend/RHIShaderRequest.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
 #include "Engine/Graphics/RHI/GL/OpenGLRHIDevice.h"
 #include "Engine/Graphics/RHI/RHICompiledShaderStages.h"
@@ -383,17 +382,17 @@ namespace sw
         glBindBuffer( GL_COPY_WRITE_BUFFER, 0 );
     }
 
-    void OpenGLRHIResourceFactory::destroyBuffer( RHIBufferHandle buffer )
+    bool OpenGLRHIResourceFactory::destroyBufferNative( RHIBufferHandle buffer )
     {
         if ( buffer == 0 )
-            return;
+            return false;
 
         ScopedOpenGLContext contextScope( _pDevice );
         _pDevice->_recordingState._geometry.remove( buffer );
 
         OpenGLRHIDevice::OpenGLBufferRecord taken{};
         if ( _pDevice->_gpuBuffers.take( buffer, taken ) == false )
-            return;
+            return false;
         const uint32 glName = taken._glName;
 
         {
@@ -415,6 +414,7 @@ namespace sw
             pTracker->recordFree( RHIMemoryKey::makeBuffer( buffer ) );
         };
         _pDevice->_releaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, releaseCb ), _pDevice->_frameFenceRing.getRecordingSerial() );
+        return true;
     }
 
     RHIBufferHandle OpenGLRHIResourceFactory::createReadbackBuffer( uint32 elementSize, uint32 elementCount )
@@ -456,7 +456,7 @@ namespace sw
         if ( bReadable )
             glGetBufferSubData( GL_COPY_READ_BUFFER, 0, static_cast<GLsizeiptr>( sizeBytes ), pDestination );
         else if ( bIsReadback == false )
-            SW_LOG_ERROR_ID( "OpenGLRHIResourceFactory.ReadReadbackBufferBufferNotReadback", "readReadbackBuffer: buffer %# is not a readback buffer", readback );
+            SW_LOG_ERROR_ID( "OpenGLRHIResourceFactory.ReadReadbackBufferBufferNotReadback", "readReadbackBuffer: buffer %# is not a readback buffer", readback.getPacked() );
         else
             SW_LOG_ERROR_ID( "OpenGLRHIResourceFactory.ReadReadbackBufferBytesPastEnd", "readReadbackBuffer: %# bytes is past the end of the %#-byte readback buffer", sizeBytes, static_cast<int64>( bufferBytes ) );
         glBindBuffer( GL_COPY_READ_BUFFER, 0 );
@@ -471,12 +471,12 @@ namespace sw
         const bool bTextureNotUploadable = pRecord == nullptr || pRecord->_texture == 0 || _pDevice->_bInitialized == SW_FALSE || _pDevice->_transferSerials.isLost();
         if ( bTextureNotUploadable )
         {
-            SW_LOG_ERROR_ID( "OpenGLRHIResourceFactory.SubmitTextureUploadTextureDeviceNot", "submitTextureUpload: texture %# or the device is not usable (uninitialized or lost)", texture );
+            SW_LOG_ERROR_ID( "OpenGLRHIResourceFactory.SubmitTextureUploadTextureDeviceNot", "submitTextureUpload: texture %# or the device is not usable (uninitialized or lost)", texture.getPacked() );
             return RHITransferSubmit::rejected();
         }
         if ( pRecord->_bDepthStencil != SW_FALSE )
         {
-            SW_LOG_ERROR_ID( "OpenGLRHIResourceFactory.SubmitTextureUploadTextureDepthTexture", "submitTextureUpload: texture %# is a depth texture", texture );
+            SW_LOG_ERROR_ID( "OpenGLRHIResourceFactory.SubmitTextureUploadTextureDepthTexture", "submitTextureUpload: texture %# is a depth texture", texture.getPacked() );
             return RHITransferSubmit::rejected();
         }
         if ( desc._arraySlice >= pRecord->_arraySize )
@@ -576,7 +576,7 @@ namespace sw
                                                  _pDevice->_transferSerials.isLost();
         if ( bTextureRegionNotUploadable )
         {
-            SW_LOG_ERROR_ID( "OpenGLRHIResourceFactory.SubmitTextureRegionUploadTextureMissingDepth", "submitTextureRegionUpload: texture %# is missing, a depth texture, or the device is not usable (uninitialized or lost)", texture );
+            SW_LOG_ERROR_ID( "OpenGLRHIResourceFactory.SubmitTextureRegionUploadTextureMissingDepth", "submitTextureRegionUpload: texture %# is missing, a depth texture, or the device is not usable (uninitialized or lost)", texture.getPacked() );
             return RHITransferSubmit::rejected();
         }
         uint32 rowBytes{ 0 };
@@ -678,7 +678,7 @@ namespace sw
         const bool                            bTextureNotReadable = pRecord == nullptr || pRecord->_texture == 0 || _pDevice->_bInitialized == SW_FALSE || _pDevice->_transferSerials.isLost();
         if ( bTextureNotReadable )
         {
-            SW_LOG_ERROR_ID( "OpenGLRHIResourceFactory.SubmitTextureReadbackTextureDeviceNot", "submitTextureReadback: texture %# or the device is not usable (uninitialized or lost)", texture );
+            SW_LOG_ERROR_ID( "OpenGLRHIResourceFactory.SubmitTextureReadbackTextureDeviceNot", "submitTextureReadback: texture %# or the device is not usable (uninitialized or lost)", texture.getPacked() );
             return RHITransferSubmit::rejected();
         }
         if ( mip >= pRecord->_mipLevels || arraySlice >= pRecord->_arraySize )
@@ -850,15 +850,15 @@ namespace sw
         return handle;
     }
 
-    void OpenGLRHIResourceFactory::destroyTexture( RHITextureHandle texture )
+    bool OpenGLRHIResourceFactory::destroyTextureNative( RHITextureHandle texture )
     {
         if ( texture == 0 )
-            return;
+            return false;
 
         ScopedOpenGLContext                  contextScope( _pDevice );
         OpenGLRHIDevice::OpenGLTextureRecord owned;
         if ( _pDevice->_gpuTextures.take( texture, owned ) == false )
-            return;
+            return false;
 
         for ( auto compIt = _pDevice->_mapCompositeFbo.begin(); compIt != _pDevice->_mapCompositeFbo.end(); )
         {
@@ -897,6 +897,7 @@ namespace sw
             pTracker->recordFree( RHIMemoryKey::makeTexture( texture ) );
         };
         _pDevice->_releaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, releaseCb ), _pDevice->_frameFenceRing.getRecordingSerial() );
+        return true;
     }
 
     bool OpenGLRHIResourceFactory::isTextureReadyToSample( RHITextureHandle texture )
@@ -918,7 +919,7 @@ namespace sw
         const OpenGLRHIDevice::OpenGLTextureRecord* pRecord = _pDevice->resolveTexture( texture );
         if ( pRecord != nullptr && pRecord->_dimension != RHITextureDimension::Texture2D )
         {
-            SW_LOG_ERROR_ID( "OpenGLRHIResourceFactory.RegisterBindlessTextureTextureTextureOnly", "registerBindlessTexture: texture %# is a %# texture — only Texture2D can be bound to shader texture units yet", texture,
+            SW_LOG_ERROR_ID( "OpenGLRHIResourceFactory.RegisterBindlessTextureTextureTextureOnly", "registerBindlessTexture: texture %# is a %# texture — only Texture2D can be bound to shader texture units yet", texture.getPacked(),
                              static_cast<uint32>( pRecord->_dimension ) );
             return kInvalidDescriptorIndex;
         }
@@ -1211,11 +1212,11 @@ namespace sw
         return _pDevice->_pipelineStates.insert( record );
     }
 
-    void OpenGLRHIResourceFactory::destroyPipelineState( RHIPipelineStateHandle pso )
+    bool OpenGLRHIResourceFactory::destroyPipelineStateNative( RHIPipelineStateHandle pso )
     {
         OpenGLRHIDevice::OpenGLPipelineStateRecord* pRecordPtr = _pDevice->_pipelineStates.get( pso );
         if ( pRecordPtr == nullptr )
-            return;
+            return false;
 
         OpenGLRHIDevice::OpenGLPipelineStateRecord& record  = *pRecordPtr;
         const GLuint                                program = record._program;
@@ -1228,7 +1229,7 @@ namespace sw
             _pDevice->_recordingState._boundComputePSO = 0;
 
         if ( program == 0 && vao == 0 )
-            return;
+            return true;
 
         auto releaseCb = [program, vao]()
         {
@@ -1244,6 +1245,7 @@ namespace sw
             }
         };
         _pDevice->_releaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, releaseCb ), _pDevice->_frameFenceRing.getRecordingSerial() );
+        return true;
     }
 
     RHIRenderPassHandle OpenGLRHIResourceFactory::createRenderPass( const RHIRenderPassDesc& desc )
@@ -1251,9 +1253,9 @@ namespace sw
         return _pDevice->_renderPassRegistry.add( desc );
     }
 
-    void OpenGLRHIResourceFactory::destroyRenderPass( RHIRenderPassHandle pass )
+    bool OpenGLRHIResourceFactory::destroyRenderPassNative( RHIRenderPassHandle pass )
     {
-        _pDevice->_renderPassRegistry.retire( pass );
+        return _pDevice->_renderPassRegistry.retire( pass );
     }
 
     bool OpenGLRHIResourceFactory::linkProgram( uint32 program, const utf8* pLabel )

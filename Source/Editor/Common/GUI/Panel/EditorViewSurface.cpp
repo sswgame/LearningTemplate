@@ -95,7 +95,7 @@ namespace sw::editor
         EditorRenderViews* const pViews = EditorViewSurfaceInternal::findRenderViews();
         if ( rhiTexture == 0 || pViews == nullptr || pViews->getRenderer() == nullptr )
             return nullptr; // 렌더 스레드가 아직 만들지 않았다(다음 프레임)
-        return pViews->getRenderer()->registerTexture( rhiTexture );
+        return pViews->getRenderer()->registerTexture( RHITextureHandle{ rhiTexture } );
     }
 
     void EditorViewSurface::unregisterImage( void* pTextureID )

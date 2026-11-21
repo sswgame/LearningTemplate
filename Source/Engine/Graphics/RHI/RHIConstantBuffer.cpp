@@ -43,7 +43,7 @@ namespace sw
         if ( _index != kInvalidDescriptorIndex )
             pDevice->getResourceFactory()->unregisterBindlessResource( _index );
         if ( _buffer != 0 )
-            pDevice->getResourceFactory()->destroyBuffer( _buffer );
+            pDevice->releaseHandle( _buffer );
         clear();
     }
 } // namespace sw

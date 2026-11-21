@@ -30,7 +30,7 @@ SW_TEST_CASE( RHIRenderPassInterruptTest, TransitionInsideOpenPassIsReported )
 
     context.beginRenderPass( backBufferPass() );
     SW_REQUIRE_TRUE( context.isRenderPassOpen() );
-    context.prepareTextureForShaderRead( 1 );
+    context.prepareTextureForShaderRead( RHITextureHandle{ 1 } );
     SW_EXPECT_FALSE( context.isRenderPassOpen() ); // 닫기는 그대로 한다
     SW_EXPECT_EQUAL( 1u, context._endNativeCount );
     context.draw( 3 );
@@ -43,7 +43,7 @@ SW_TEST_CASE( RHIRenderPassInterruptTest, TransitionAfterEndRenderPassIsSilent )
     test::FakeRHIDevice         device;
     test::FakeRHICommandContext context{ device };
 
-    context.prepareTextureForShaderRead( 1 ); // 입력은 패스 전에 건다
+    context.prepareTextureForShaderRead( RHITextureHandle{ 1 } ); // 입력은 패스 전에 건다
     context.beginRenderPass( backBufferPass() );
     context.draw( 3 );
     context.endRenderPass();
@@ -77,7 +77,7 @@ SW_TEST_CASE( RHIRenderPassInterruptTest, DepthOnlyPassIgnoresColorHandles )
 
     RHIRenderPassBeginInfo beginInfo{};
     beginInfo._bBindColor  = SW_FALSE;
-    beginInfo._depthTarget = 7;
+    beginInfo._depthTarget = RHITextureHandle{ 7 };
     context.beginRenderPass( beginInfo );
     SW_EXPECT_TRUE( context.isRenderPassOpen() );
     SW_EXPECT_EQUAL( 1u, context._beginNativeCount );
@@ -91,9 +91,9 @@ SW_TEST_CASE( RHIRenderPassInterruptTest, NullTextureTransitionAndBlitAreDropped
     SW_EXPECT_LOG( "RHI.NullTextureHandle" );
 
     const RHITextureTransition arrTransition[] = {
-        RHITextureTransition{                    3, RHITextureState::ShaderResource},
+        RHITextureTransition{RHITextureHandle{ 3 }, RHITextureState::ShaderResource},
         RHITextureTransition{                    0,   RHITextureState::RenderTarget},
-        RHITextureTransition{                    5,   RHITextureState::RenderTarget},
+        RHITextureTransition{RHITextureHandle{ 5 },   RHITextureState::RenderTarget},
         RHITextureTransition{kRHIBackBufferTexture,   RHITextureState::RenderTarget},
     };
     context.transitionTextures( arrTransition, 4 );
@@ -104,7 +104,7 @@ SW_TEST_CASE( RHIRenderPassInterruptTest, NullTextureTransitionAndBlitAreDropped
 
     context.prepareTextureForShaderRead( 0 );
     context.blitTexture( 0, kRHIBackBufferTexture );
-    context.blitTexture( 4, kRHIBackBufferTexture );
+    context.blitTexture( RHITextureHandle{ 4 }, kRHIBackBufferTexture );
     SW_EXPECT_EQUAL( 3u, static_cast<uint32>( context._listTransitionTexture.size() ) );
     SW_EXPECT_EQUAL( 1u, context._blitNativeCount );
 }

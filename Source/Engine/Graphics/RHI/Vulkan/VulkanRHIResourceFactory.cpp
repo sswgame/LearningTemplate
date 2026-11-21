@@ -9,7 +9,6 @@
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/Backend/RHIBufferSizeUtil.h"
-#include "Engine/Graphics/RHI/Backend/RHIShaderRequest.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
 #include "Engine/Graphics/RHI/RHICompiledShaderStages.h"
 #include "Engine/Graphics/RHI/RHIFormatInfo.h"
@@ -383,7 +382,7 @@ namespace sw
         if ( _pDevice->recordUploadCopy( pData, sizeBytes, handle, 0 ) == false )
         {
             SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.DeviceLocalUploadFailed", "Failed to record a %#-byte device-local upload", sizeBytes );
-            destroyBuffer( handle );
+            (void)destroyBufferNative( handle );
             return 0;
         }
         return handle;
@@ -448,10 +447,10 @@ namespace sw
         }
     }
 
-    void VulkanRHIResourceFactory::destroyBuffer( RHIBufferHandle buffer )
+    bool VulkanRHIResourceFactory::destroyBufferNative( RHIBufferHandle buffer )
     {
         if ( buffer == 0 )
-            return;
+            return false;
         // 렌더 스레드의 기록 상태(`_recordingState` 의 묶인 정점 · 인덱스 버퍼)는 여기서 지우지 않는다. 이 함수는 게임 스레드에서도 불리는데 그 값은
         // 렌더 스레드만 쓴다(여기서 쓰면 경쟁이다). 핸들은 세대가 있어 다시 쓰이지 않으므로 지운 핸들은 드로우에서 풀리지 않고,
         // 그 드로우는 버리고 알린다(`bindMeshVertexBufferForDraw` · `RHIDrawDiagnostics`).
@@ -459,7 +458,7 @@ namespace sw
 
         VulkanRHIDevice::VulkanBufferRecord owned;
         if ( _pDevice->_gpuBuffers.take( buffer, owned ) == false )
-            return;
+            return false;
 
         // 아직 등록돼 있으면 인덱스를 반납한다 (unregister 를 안 부른 소유자 정리). 디스크립터는 드로우 시점 슬롯 세트에만
         // 있으므로 되돌릴 것이 없다.
@@ -483,6 +482,7 @@ namespace sw
             pTracker->recordFree( RHIMemoryKey::makeBuffer( buffer ) );
         } ),
                                                    _pDevice->_frameFenceRing.getRecordingSerial() );
+        return true;
     }
 
     void VulkanRHIResourceFactory::setTextureDebugName( RHITextureHandle texture, const utf8* pName )
@@ -618,18 +618,18 @@ namespace sw
         shared_ptr<VulkanRHIDevice::VulkanHeapMemory> pHeap = make_shared<VulkanRHIDevice::VulkanHeapMemory>();
         if ( _pDevice->allocateDeviceMemory( allocInfo, pHeap->_memory ) == false )
             return 0;
-        pHeap->_pOwner                      = _pDevice;
-        pHeap->_sizeBytes                   = sizeBytes;
-        pHeap->_memoryTypeIndex             = memoryTypeIndex;
-        const RHITransientHeapHandle handle = _pDevice->_nextTransientHeap++;
+        pHeap->_pOwner          = _pDevice;
+        pHeap->_sizeBytes       = sizeBytes;
+        pHeap->_memoryTypeIndex = memoryTypeIndex;
+        const RHITransientHeapHandle handle{ _pDevice->_nextTransientHeap++ };
         _pDevice->_mapTransientHeap.emplace( handle, std::move( pHeap ) );
         return handle;
     }
 
-    void VulkanRHIResourceFactory::destroyTransientHeap( RHITransientHeapHandle heap )
+    bool VulkanRHIResourceFactory::destroyTransientHeapNative( RHITransientHeapHandle heap )
     {
         // 그 위의 placed 텍스처가 각자 힙 참조를 든다 — 핸들 표에서만 지운다. 마지막 텍스처의 해제 대리자가 (펜스 뒤) 놓일 때 메모리가 풀린다.
-        _pDevice->_mapTransientHeap.erase( heap );
+        return _pDevice->_mapTransientHeap.erase( heap ) != 0;
     }
 
     RHITextureHandle VulkanRHIResourceFactory::createPlacedTexture2D( const RHITextureDesc& desc, RHITransientHeapHandle heap, uint64 offsetBytes )
@@ -637,7 +637,7 @@ namespace sw
         const auto it = _pDevice->_mapTransientHeap.find( heap );
         if ( it == _pDevice->_mapTransientHeap.end() )
         {
-            SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.PlacedTextureNoHeap", "createPlacedTexture2D: transient heap %# does not exist", heap );
+            SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.PlacedTextureNoHeap", "createPlacedTexture2D: transient heap %# does not exist", heap.getPacked() );
             return 0;
         }
         return createTextureResource( desc, it->second, offsetBytes );
@@ -809,12 +809,12 @@ namespace sw
         if ( bTextureUploadUnavailable )
         {
             // 장치를 잃었으면 진입에서 Rejected 다(계약 2) — 잃은 장치의 큐는 제출을 받지 못하고 펜스는 끝나지 않는다.
-            SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.SubmitTextureUploadTextureDeviceNot", "submitTextureUpload: texture %# or the device is not usable (uninitialized or lost)", texture );
+            SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.SubmitTextureUploadTextureDeviceNot", "submitTextureUpload: texture %# or the device is not usable (uninitialized or lost)", texture.getPacked() );
             return RHITransferSubmit::rejected();
         }
         if ( pRecord->_bDepthStencil != SW_FALSE )
         {
-            SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.SubmitTextureUploadTextureDepthTexture", "submitTextureUpload: texture %# is a depth texture", texture );
+            SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.SubmitTextureUploadTextureDepthTexture", "submitTextureUpload: texture %# is a depth texture", texture.getPacked() );
             return RHITransferSubmit::rejected();
         }
         if ( desc._arraySlice >= pRecord->_arrayLayers )
@@ -908,7 +908,7 @@ namespace sw
                                                      pRecord->_bDepthStencil != SW_FALSE || _pDevice->isDeviceLost();
         if ( bTextureRegionUploadUnavailable )
         {
-            SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.SubmitTextureRegionUploadTextureMissingDepth", "submitTextureRegionUpload: texture %# is missing, a depth texture, or the device is not usable (uninitialized or lost)", texture );
+            SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.SubmitTextureRegionUploadTextureMissingDepth", "submitTextureRegionUpload: texture %# is missing, a depth texture, or the device is not usable (uninitialized or lost)", texture.getPacked() );
             return RHITransferSubmit::rejected();
         }
         const RHIFormat format = static_cast<RHIFormat>( pRecord->_rhiFormat );
@@ -1038,7 +1038,7 @@ namespace sw
         const bool bNotReadback = pRecord->_usage != VK_BUFFER_USAGE_TRANSFER_DST_BIT;
         if ( bNotReadback )
         {
-            SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.ReadReadbackBufferBufferNotReadback", "readReadbackBuffer: buffer %# is not a readback buffer", readback );
+            SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.ReadReadbackBufferBufferNotReadback", "readReadbackBuffer: buffer %# is not a readback buffer", readback.getPacked() );
             return false;
         }
         // 프레임 펜스를 기다린 뒤(해제 콜백)라 GPU 쓰기가 호스트에 보인다.
@@ -1064,7 +1064,7 @@ namespace sw
                                                  _pDevice->_graphicsQueue == VK_NULL_HANDLE || _pDevice->_transferCommandPool == VK_NULL_HANDLE || _pDevice->isDeviceLost();
         if ( bTextureReadbackUnavailable )
         {
-            SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.SubmitTextureReadbackTextureDeviceNot", "submitTextureReadback: texture %# or the device is not usable (uninitialized or lost)", texture );
+            SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.SubmitTextureReadbackTextureDeviceNot", "submitTextureReadback: texture %# or the device is not usable (uninitialized or lost)", texture.getPacked() );
             return RHITransferSubmit::rejected();
         }
         if ( mip >= pRecord->_mipLevels || arraySlice >= pRecord->_arrayLayers )
@@ -1167,14 +1167,14 @@ namespace sw
         } );
     }
 
-    void VulkanRHIResourceFactory::destroyTexture( RHITextureHandle texture )
+    bool VulkanRHIResourceFactory::destroyTextureNative( RHITextureHandle texture )
     {
         if ( texture == 0 )
-            return;
+            return false;
 
         VulkanRHIDevice::VulkanTextureRecord* pSlot = _pDevice->resolveTexture( texture );
         if ( pSlot == nullptr )
-            return;
+            return false;
 
         _pDevice->destroyCompositeFramebuffersUsing( texture );
 
@@ -1190,7 +1190,7 @@ namespace sw
         _pDevice->destroyOffscreenFramebuffer( *pSlot );
         VulkanRHIDevice::VulkanTextureRecord owned;
         if ( _pDevice->_gpuTextures.take( texture, owned ) == false )
-            return;
+            return false;
         VkDevice            dev        = _pDevice->_device;
         VkImageView         view       = owned._imageView;
         VkImageView         sampleView = owned._sampleView;
@@ -1231,9 +1231,10 @@ namespace sw
             _pDevice->_transferReleaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [pDevice, releaseDelegate]()
             { pDevice->_releaseQueue.enqueueGPURelease( releaseDelegate, pDevice->_frameFenceRing.getRecordingSerial() ); } ),
                                                                lastSerial );
-            return;
+            return true;
         }
         _pDevice->_releaseQueue.enqueueGPURelease( releaseDelegate, _pDevice->_frameFenceRing.getRecordingSerial() );
+        return true;
     }
 
     bool VulkanRHIResourceFactory::isTextureReadyToSample( RHITextureHandle texture )
@@ -1255,7 +1256,7 @@ namespace sw
         // 텍스처 배열 세트(set 1 binding 0)는 sampler2D[] 다 — 배열 · 큐브 뷰는 넣을 수 없다(RHITextureDimension 참고).
         if ( pResolved->_dimension != RHITextureDimension::Texture2D )
         {
-            SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.RegisterBindlessTextureTextureTextureOnly", "registerBindlessTexture: texture %# is a %# texture — only Texture2D can be bound to the bindless texture set yet", texture,
+            SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.RegisterBindlessTextureTextureTextureOnly", "registerBindlessTexture: texture %# is a %# texture — only Texture2D can be bound to the bindless texture set yet", texture.getPacked(),
                              static_cast<uint32>( pResolved->_dimension ) );
             return kInvalidDescriptorIndex;
         }
@@ -1836,11 +1837,11 @@ namespace sw
         return _pDevice->_pipelineStates.insert( record );
     }
 
-    void VulkanRHIResourceFactory::destroyPipelineState( RHIPipelineStateHandle pso )
+    bool VulkanRHIResourceFactory::destroyPipelineStateNative( RHIPipelineStateHandle pso )
     {
         VulkanRHIDevice::VulkanPipelineStateRecord record{};
         if ( _pDevice->_pipelineStates.take( pso, record ) == false )
-            return;
+            return false;
         if ( record._pipeline != VK_NULL_HANDLE )
         {
             VkDevice   dev  = _pDevice->_device;
@@ -1853,6 +1854,7 @@ namespace sw
         }
         if ( _pDevice->_recordingState._activeGraphicsPSO == pso )
             _pDevice->_recordingState._activeGraphicsPSO = 0;
+        return true;
     }
 
     RHIRenderPassHandle VulkanRHIResourceFactory::createRenderPass( const RHIRenderPassDesc& desc )
@@ -1893,8 +1895,19 @@ namespace sw
         return _pDevice->_renderPassCache.addRenderPassRecord( created, true );
     }
 
-    void VulkanRHIResourceFactory::destroyRenderPass( RHIRenderPassHandle pass )
+    bool VulkanRHIResourceFactory::destroyRenderPassNative( RHIRenderPassHandle pass )
     {
-        _pDevice->_renderPassCache.destroyRenderPassRecord( _pDevice->_device, pass, _pDevice->_renderPass );
+        VkRenderPass ownedRenderPass = VK_NULL_HANDLE;
+        if ( _pDevice->_renderPassCache.detachRenderPassRecord( pass, _pDevice->_renderPass, ownedRenderPass ) == false )
+            return false;
+        if ( ownedRenderPass != VK_NULL_HANDLE )
+        {
+            // 다른 자원과 같은 규칙 — 이 렌더패스로 기록한 프레임의 GPU 펜스가 지난 뒤 부순다(예전에는 바로 부숴 비행 중 명령이 쥔 객체를 지웠다).
+            VkDevice dev = _pDevice->_device;
+            _pDevice->_releaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, ownedRenderPass]()
+            { vkDestroyRenderPass( dev, ownedRenderPass, nullptr ); } ),
+                                                       _pDevice->_frameFenceRing.getRecordingSerial() );
+        }
+        return true;
     }
 } // namespace sw

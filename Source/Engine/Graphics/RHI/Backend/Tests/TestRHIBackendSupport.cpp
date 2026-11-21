@@ -18,10 +18,10 @@
 #include "Engine/Graphics/RHI/Backend/RHIFrameFenceRing.h"
 #include "Engine/Graphics/RHI/Backend/RHIHandleTable.h"
 #include "Engine/Graphics/RHI/Backend/RHIReleaseQueue.h"
-#include "Engine/Graphics/RHI/Backend/RHIShaderRequest.h"
 #include "Engine/Graphics/RHI/Backend/RHITrackedState.h"
 #include "Engine/Graphics/RHI/RHIDescriptors.h"
 #include "Engine/Graphics/RHI/RHIPipelineStateDesc.h"
+#include "Engine/Graphics/Shader/Compile/RHIShaderRequest.h"
 
 #include <thread>
 
@@ -155,29 +155,29 @@ SW_TEST_CASE( RHIReleaseQueueTest, ConcurrentTicksRunEachCallbackOnce )
 SW_TEST_CASE( RHIBindlessRegistryTest, DefersReuseAndRejectsDoubleRelease )
 {
     RHIBindlessRegistry<RHIBufferHandle, RHIBindlessBufferOwnerOf> registry( 2 );
-    const RHIDescriptorIndex                                       first  = registry.allocate( 11 );
-    const RHIDescriptorIndex                                       second = registry.allocate( 22 );
+    const RHIDescriptorIndex                                       first  = registry.allocate( RHIBufferHandle{ 11 } );
+    const RHIDescriptorIndex                                       second = registry.allocate( RHIBufferHandle{ 22 } );
     SW_EXPECT_EQUAL( 0u, first );
     SW_EXPECT_EQUAL( 1u, second );
-    SW_EXPECT_EQUAL( kInvalidDescriptorIndex, registry.allocate( 33 ) ); // 상한
-    SW_EXPECT_EQUAL( kInvalidDescriptorIndex, registry.allocate( 0 ) );  // 빈 값
+    SW_EXPECT_EQUAL( kInvalidDescriptorIndex, registry.allocate( RHIBufferHandle{ 33 } ) ); // 상한
+    SW_EXPECT_EQUAL( kInvalidDescriptorIndex, registry.allocate( RHIBufferHandle{ 0 } ) );  // 빈 값
 
     SW_EXPECT_TRUE( registry.release( first, RHIBindlessReuse::AfterFence ) );
     SW_EXPECT_FALSE( registry.isLive( first ) );
-    SW_EXPECT_FALSE( registry.release( first, RHIBindlessReuse::AfterFence ) ); // 이중 해제
-    SW_EXPECT_EQUAL( kInvalidDescriptorIndex, registry.allocate( 44 ) );        // 대기 칸은 아직 나가지 않는다
+    SW_EXPECT_FALSE( registry.release( first, RHIBindlessReuse::AfterFence ) );             // 이중 해제
+    SW_EXPECT_EQUAL( kInvalidDescriptorIndex, registry.allocate( RHIBufferHandle{ 44 } ) ); // 대기 칸은 아직 나가지 않는다
     registry.finishRelease( first );
-    SW_EXPECT_EQUAL( first, registry.allocate( 44 ) );
-    SW_EXPECT_EQUAL( static_cast<uint64>( 44 ), registry.get( first ) );
+    SW_EXPECT_EQUAL( first, registry.allocate( RHIBufferHandle{ 44 } ) );
+    SW_EXPECT_EQUAL( RHIBufferHandle{ 44 }, registry.get( first ) );
 
     // 쓰기 훅이 거절하면 칸을 바로 돌려받는다.
     SW_EXPECT_TRUE( registry.release( second, RHIBindlessReuse::Immediately ) );
-    SW_EXPECT_EQUAL( kInvalidDescriptorIndex, registry.allocate( 55, []( RHIDescriptorIndex )
+    SW_EXPECT_EQUAL( kInvalidDescriptorIndex, registry.allocate( RHIBufferHandle{ 55 }, []( RHIDescriptorIndex )
     { return false; } ) );
-    SW_EXPECT_EQUAL( second, registry.allocate( 55 ) );
+    SW_EXPECT_EQUAL( second, registry.allocate( RHIBufferHandle{ 55 } ) );
 
     uint32 releasedCount{ 0 };
-    registry.releaseBuffer( RHIBindlessReuse::Immediately, 55, [&releasedCount]( RHIDescriptorIndex )
+    registry.releaseBuffer( RHIBindlessReuse::Immediately, RHIBufferHandle{ 55 }, [&releasedCount]( RHIDescriptorIndex )
     { ++releasedCount; } );
     SW_EXPECT_EQUAL( 1u, releasedCount );
     SW_EXPECT_FALSE( registry.isLive( second ) );
@@ -202,50 +202,50 @@ namespace
 SW_TEST_CASE( RHIBindlessRegistryTest, ReleasesOnlyOwnerIndices )
 {
     RHIBindlessRegistry<TestBindlessRecord> registry;
-    const RHIDescriptorIndex                bufferA  = registry.allocate( TestBindlessRecord{ 7, 0 } );
-    const RHIDescriptorIndex                textureA = registry.allocate( TestBindlessRecord{ 0, 7 } ); // 버퍼 7 과 값이 같은 텍스처 7
-    const RHIDescriptorIndex                bufferB  = registry.allocate( TestBindlessRecord{ 7, 0 } );
-    const RHIDescriptorIndex                bufferC  = registry.allocate( TestBindlessRecord{ 7, 0 } );
-    SW_EXPECT_EQUAL( 3u, registry.getBufferIndexCount( 7 ) );
-    SW_EXPECT_EQUAL( 1u, registry.getTextureIndexCount( 7 ) );
+    const RHIDescriptorIndex                bufferA  = registry.allocate( TestBindlessRecord{ RHIBufferHandle{ 7 }, RHITextureHandle{ 0 } } );
+    const RHIDescriptorIndex                textureA = registry.allocate( TestBindlessRecord{ RHIBufferHandle{ 0 }, RHITextureHandle{ 7 } } ); // 버퍼 7 과 값이 같은 텍스처 7
+    const RHIDescriptorIndex                bufferB  = registry.allocate( TestBindlessRecord{ RHIBufferHandle{ 7 }, RHITextureHandle{ 0 } } );
+    const RHIDescriptorIndex                bufferC  = registry.allocate( TestBindlessRecord{ RHIBufferHandle{ 7 }, RHITextureHandle{ 0 } } );
+    SW_EXPECT_EQUAL( 3u, registry.getBufferIndexCount( RHIBufferHandle{ 7 } ) );
+    SW_EXPECT_EQUAL( 1u, registry.getTextureIndexCount( RHITextureHandle{ 7 } ) );
 
     // 낱개 해제(unregister)는 주인 목록에서도 빠진다 — 뒤의 파괴가 같은 번호를 두 번 놓지 않는다.
     SW_EXPECT_TRUE( registry.release( bufferB, RHIBindlessReuse::AfterFence ) );
-    SW_EXPECT_EQUAL( 2u, registry.getBufferIndexCount( 7 ) );
+    SW_EXPECT_EQUAL( 2u, registry.getBufferIndexCount( RHIBufferHandle{ 7 } ) );
 
     vector<RHIDescriptorIndex> listReleased;
-    registry.releaseBuffer( RHIBindlessReuse::AfterFence, 7, [&listReleased]( RHIDescriptorIndex index )
+    registry.releaseBuffer( RHIBindlessReuse::AfterFence, RHIBufferHandle{ 7 }, [&listReleased]( RHIDescriptorIndex index )
     { listReleased.push_back( index ); } );
     SW_EXPECT_EQUAL( static_cast<size_t>( 2 ), listReleased.size() );
     SW_EXPECT_TRUE( ( listReleased[0] == bufferA && listReleased[1] == bufferC ) || ( listReleased[0] == bufferC && listReleased[1] == bufferA ) );
     SW_EXPECT_FALSE( registry.isLive( bufferA ) );
     SW_EXPECT_FALSE( registry.isLive( bufferC ) );
     SW_EXPECT_TRUE( registry.isLive( textureA ) );
-    SW_EXPECT_EQUAL( 0u, registry.getBufferIndexCount( 7 ) );
+    SW_EXPECT_EQUAL( 0u, registry.getBufferIndexCount( RHIBufferHandle{ 7 } ) );
 
     // 두 번째 파괴 · 모르는 주인 · 빈 핸들은 아무것도 놓지 않는다.
     uint32     extraCount{ 0 };
     const auto countExtra = [&extraCount]( RHIDescriptorIndex )
     { ++extraCount; };
-    registry.releaseBuffer( RHIBindlessReuse::AfterFence, 7, countExtra );
-    registry.releaseBuffer( RHIBindlessReuse::AfterFence, 99, countExtra );
-    registry.releaseTexture( RHIBindlessReuse::AfterFence, 0, countExtra );
+    registry.releaseBuffer( RHIBindlessReuse::AfterFence, RHIBufferHandle{ 7 }, countExtra );
+    registry.releaseBuffer( RHIBindlessReuse::AfterFence, RHIBufferHandle{ 99 }, countExtra );
+    registry.releaseTexture( RHIBindlessReuse::AfterFence, RHITextureHandle{ 0 }, countExtra );
     SW_EXPECT_EQUAL( 0u, extraCount );
 
     // 펜스 뒤 번호를 다시 낸 새 자원은 옛 주인의 목록에 남지 않는다.
     registry.finishRelease( bufferA );
-    const RHIDescriptorIndex reused = registry.allocate( TestBindlessRecord{ 8, 0 } );
+    const RHIDescriptorIndex reused = registry.allocate( TestBindlessRecord{ RHIBufferHandle{ 8 }, RHITextureHandle{ 0 } } );
     SW_EXPECT_EQUAL( bufferA, reused );
-    registry.releaseBuffer( RHIBindlessReuse::AfterFence, 7, countExtra );
+    registry.releaseBuffer( RHIBindlessReuse::AfterFence, RHIBufferHandle{ 7 }, countExtra );
     SW_EXPECT_EQUAL( 0u, extraCount );
     SW_EXPECT_TRUE( registry.isLive( reused ) );
 
-    registry.releaseTexture( RHIBindlessReuse::Immediately, 7, countExtra );
+    registry.releaseTexture( RHIBindlessReuse::Immediately, RHITextureHandle{ 7 }, countExtra );
     SW_EXPECT_EQUAL( 1u, extraCount );
     SW_EXPECT_FALSE( registry.isLive( textureA ) );
 
     registry.clear();
-    SW_EXPECT_EQUAL( 0u, registry.getBufferIndexCount( 8 ) );
+    SW_EXPECT_EQUAL( 0u, registry.getBufferIndexCount( RHIBufferHandle{ 8 } ) );
 }
 
 /**
@@ -255,18 +255,18 @@ SW_TEST_CASE( RHIBindlessRegistryTest, ReleasesOnlyOwnerIndices )
 SW_TEST_CASE( RHIBindlessRegistryTest, RebindKeepsIndexAndMovesOwner )
 {
     RHIBindlessRegistry<RHITextureHandle, RHIBindlessTextureOwnerOf> registry;
-    const RHIDescriptorIndex                                         index = registry.allocate( 5 );
+    const RHIDescriptorIndex                                         index = registry.allocate( RHITextureHandle{ 5 } );
     RHITextureHandle                                                 previous{ 0 };
-    SW_EXPECT_TRUE( registry.rebind( index, 6, &previous ) );
-    SW_EXPECT_EQUAL( static_cast<uint64>( 5 ), previous );
-    SW_EXPECT_EQUAL( static_cast<uint64>( 6 ), registry.get( index ) );
-    SW_EXPECT_EQUAL( 0u, registry.getTextureIndexCount( 5 ) );
-    SW_EXPECT_EQUAL( 1u, registry.getTextureIndexCount( 6 ) );
+    SW_EXPECT_TRUE( registry.rebind( index, RHITextureHandle{ 6 }, &previous ) );
+    SW_EXPECT_EQUAL( RHITextureHandle{ 5 }, previous );
+    SW_EXPECT_EQUAL( RHITextureHandle{ 6 }, registry.get( index ) );
+    SW_EXPECT_EQUAL( 0u, registry.getTextureIndexCount( RHITextureHandle{ 5 } ) );
+    SW_EXPECT_EQUAL( 1u, registry.getTextureIndexCount( RHITextureHandle{ 6 } ) );
 
-    SW_EXPECT_FALSE( registry.rebind( index, 0 ) );      // 빈 값
-    SW_EXPECT_FALSE( registry.rebind( index + 1u, 7 ) ); // 산 칸이 아니다
+    SW_EXPECT_FALSE( registry.rebind( index, RHITextureHandle{ 0 } ) );      // 빈 값
+    SW_EXPECT_FALSE( registry.rebind( index + 1u, RHITextureHandle{ 7 } ) ); // 산 칸이 아니다
     SW_EXPECT_TRUE( registry.release( index, RHIBindlessReuse::AfterFence ) );
-    SW_EXPECT_FALSE( registry.rebind( index, 7 ) ); // 해제 대기 칸
+    SW_EXPECT_FALSE( registry.rebind( index, RHITextureHandle{ 7 } ) ); // 해제 대기 칸
 }
 
 /**
@@ -275,14 +275,14 @@ SW_TEST_CASE( RHIBindlessRegistryTest, RebindKeepsIndexAndMovesOwner )
 SW_TEST_CASE( RHIBindlessRegistryTest, DestroyOfPreviousOwnerKeepsReboundIndex )
 {
     RHIBindlessRegistry<RHITextureHandle, RHIBindlessTextureOwnerOf> registry;
-    const RHIDescriptorIndex                                         index = registry.allocate( 5 );
-    SW_REQUIRE_TRUE( registry.rebind( index, 6 ) );
+    const RHIDescriptorIndex                                         index = registry.allocate( RHITextureHandle{ 5 } );
+    SW_REQUIRE_TRUE( registry.rebind( index, RHITextureHandle{ 6 } ) );
     uint32 releasedCount{ 0 };
-    registry.releaseTexture( RHIBindlessReuse::AfterFence, 5, [&releasedCount]( RHIDescriptorIndex )
+    registry.releaseTexture( RHIBindlessReuse::AfterFence, RHITextureHandle{ 5 }, [&releasedCount]( RHIDescriptorIndex )
     { ++releasedCount; } );
     SW_EXPECT_EQUAL( 0u, releasedCount );
     SW_EXPECT_TRUE( registry.isLive( index ) );
-    registry.releaseTexture( RHIBindlessReuse::AfterFence, 6, [&releasedCount]( RHIDescriptorIndex )
+    registry.releaseTexture( RHIBindlessReuse::AfterFence, RHITextureHandle{ 6 }, [&releasedCount]( RHIDescriptorIndex )
     { ++releasedCount; } );
     SW_EXPECT_EQUAL( 1u, releasedCount );
     SW_EXPECT_FALSE( registry.isLive( index ) );
@@ -296,18 +296,18 @@ SW_TEST_CASE( RHIBindlessRegistryTest, BorrowedIndexSurvivesTargetDestroy )
 {
     RHIBindlessRegistry<RHITextureHandle, RHIBindlessTextureOwnerOf> registry;
     const RHIDescriptorIndex                                         index = registry.reserveIndex();
-    SW_REQUIRE_TRUE( registry.assign( index, 5, RHIBindlessLink::Borrowed ) );
+    SW_REQUIRE_TRUE( registry.assign( index, RHITextureHandle{ 5 }, RHIBindlessLink::Borrowed ) );
     SW_EXPECT_TRUE( registry.getLink( index ) == RHIBindlessLink::Borrowed );
-    SW_EXPECT_EQUAL( 0u, registry.getTextureIndexCount( 5 ) );
+    SW_EXPECT_EQUAL( 0u, registry.getTextureIndexCount( RHITextureHandle{ 5 } ) );
     uint32 releasedCount{ 0 };
-    registry.releaseTexture( RHIBindlessReuse::AfterFence, 5, [&releasedCount]( RHIDescriptorIndex )
+    registry.releaseTexture( RHIBindlessReuse::AfterFence, RHITextureHandle{ 5 }, [&releasedCount]( RHIDescriptorIndex )
     { ++releasedCount; } );
     SW_EXPECT_EQUAL( 0u, releasedCount );
     SW_EXPECT_TRUE( registry.isLive( index ) );
 
-    SW_REQUIRE_TRUE( registry.rebind( index, 6 ) ); // 진짜 텍스처로 옮겨도 빌린 칸이다
+    SW_REQUIRE_TRUE( registry.rebind( index, RHITextureHandle{ 6 } ) ); // 진짜 텍스처로 옮겨도 빌린 칸이다
     SW_EXPECT_TRUE( registry.getLink( index ) == RHIBindlessLink::Borrowed );
-    SW_EXPECT_EQUAL( 0u, registry.getTextureIndexCount( 6 ) );
+    SW_EXPECT_EQUAL( 0u, registry.getTextureIndexCount( RHITextureHandle{ 6 } ) );
     SW_EXPECT_TRUE( registry.release( index, RHIBindlessReuse::AfterFence ) );
     SW_EXPECT_TRUE( registry.getLink( index ) == RHIBindlessLink::Owned ); // 비운 칸은 기본으로 돌아간다
 }
@@ -362,8 +362,8 @@ SW_TEST_CASE( RHIDescriptorRingMirrorTest, ReleasedIndexIsSkipped )
 {
     RHIBindlessRegistry<RHITextureHandle, RHIBindlessTextureOwnerOf> registry;
     RHIDescriptorRingMirror                                          mirror;
-    const RHIDescriptorIndex                                         index = registry.allocate( 5 );
-    SW_REQUIRE_TRUE( registry.rebind( index, 6 ) );
+    const RHIDescriptorIndex                                         index = registry.allocate( RHITextureHandle{ 5 } );
+    SW_REQUIRE_TRUE( registry.rebind( index, RHITextureHandle{ 6 } ) );
     mirror.recordRewrite( index );
     SW_REQUIRE_TRUE( registry.release( index, RHIBindlessReuse::AfterFence ) );
     uint32 writtenCount{ 0 };
@@ -393,7 +393,7 @@ SW_TEST_CASE( RHIBindlessRegistryTest, DestroyDoesNotScanWholeTable )
     const Stopwatch stopwatch;
     for ( uint32 owner = 1; owner <= kOwnerCount; ++owner )
     {
-        registry.releaseTexture( RHIBindlessReuse::Immediately, owner, [&releasedCount]( RHIDescriptorIndex )
+        registry.releaseTexture( RHIBindlessReuse::Immediately, RHITextureHandle{ owner }, [&releasedCount]( RHIDescriptorIndex )
         { ++releasedCount; } );
     }
     const int64 elapsed = stopwatch.getElapsedMilliseconds();
@@ -447,8 +447,8 @@ SW_TEST_CASE( RHIFrameFenceRingTest, BoundsFramesInFlightAndRetiresInOrder )
  */
 SW_TEST_CASE( RHIHandleTableTest, GenerationInvalidatesStaleHandles )
 {
-    RHIHandleTable<uint32> table;
-    const uint64           first = table.insert( 42u );
+    RHIHandleTable<RHIBufferHandle, uint32> table;
+    const RHIBufferHandle                   first = table.insert( 42u );
     SW_EXPECT_TRUE( first != 0 );
     uint32* pSlot = table.get( first );
     SW_REQUIRE_NOT_NULL( pSlot );
@@ -459,7 +459,7 @@ SW_TEST_CASE( RHIHandleTableTest, GenerationInvalidatesStaleHandles )
     SW_EXPECT_EQUAL( 42u, taken );
     SW_EXPECT_TRUE( table.get( first ) == nullptr );
 
-    const uint64 second = table.insert( 99u );
+    const RHIBufferHandle second = table.insert( 99u );
     SW_EXPECT_TRUE( second != 0 );
     SW_EXPECT_TRUE( second != first );
     SW_EXPECT_TRUE( table.get( first ) == nullptr );
@@ -546,7 +546,7 @@ SW_TEST_CASE( RHIConstantBufferMirrorTest, FillsStaleSlotsOnceAndForgets )
 
     RHIConstantBufferMirror shadow;
     const uint8             arrFirst[kSlotBytes] = { 1, 2, 3, 4, 5, 6, 7, 8 };
-    shadow.write( 7, 0, 0, arrFirst, kSlotBytes, writeSlot );
+    shadow.write( RHIBufferHandle{ 7 }, 0, 0, arrFirst, kSlotBytes, writeSlot );
     SW_EXPECT_EQUAL( 1u, writeCount );
     SW_EXPECT_EQUAL( 1u, shadow.getPendingBufferCount() );
 
@@ -571,13 +571,13 @@ SW_TEST_CASE( RHIConstantBufferMirrorTest, FillsStaleSlotsOnceAndForgets )
 
     // 짧은 쓰기: 앞 두 바이트만 바뀌고 뒤는 그대로여야 한다.
     const uint8 arrPrefix[2] = { 9, 9 };
-    shadow.write( 7, 0, 1, arrPrefix, 2, writeSlot );
+    shadow.write( RHIBufferHandle{ 7 }, 0, 1, arrPrefix, 2, writeSlot );
     shadow.fillSlot( 2 % kSlotCount, writeSlot );
     const uint8 arrExpected[kSlotBytes] = { 9, 9, 3, 4, 5, 6, 7, 8 };
     SW_EXPECT_TRUE( Memory::compare( arrSlot[2 % kSlotCount], arrExpected, kSlotBytes ) == 0 );
 
     // 부순 버퍼는 채우지 않는다.
-    shadow.remove( 7 );
+    shadow.remove( RHIBufferHandle{ 7 } );
     SW_EXPECT_EQUAL( 0u, shadow.getPendingBufferCount() );
     const uint32 writeCountBeforeRemove = writeCount;
     for ( uint32 slot = 0; slot < kSlotCount; ++slot )
@@ -601,15 +601,15 @@ SW_TEST_CASE( RHIConstantBufferMirrorTest, KeepsPageSlicesApart )
     RHIConstantBufferMirror shadow;
     const uint8             arrFirst[4]  = { 1, 2, 3, 4 };
     const uint8             arrSecond[4] = { 5, 6, 7, 8 };
-    shadow.write( 9, 0, 0, arrFirst, 4, writeSlot );
-    shadow.write( 9, 256, 0, arrSecond, 4, writeSlot );
+    shadow.write( RHIBufferHandle{ 9 }, 0, 0, arrFirst, 4, writeSlot );
+    shadow.write( RHIBufferHandle{ 9 }, 256, 0, arrSecond, 4, writeSlot );
     SW_EXPECT_EQUAL( 2u, shadow.getPendingBufferCount() );
 
     shadow.fillSlot( 1 % kSlotCount, writeSlot );
     SW_EXPECT_TRUE( Memory::compare( arrSlot[1 % kSlotCount], arrFirst, 4 ) == 0 );
     SW_EXPECT_TRUE( Memory::compare( arrSlot[1 % kSlotCount] + 256, arrSecond, 4 ) == 0 );
 
-    shadow.remove( 9 );
+    shadow.remove( RHIBufferHandle{ 9 } );
     SW_EXPECT_EQUAL( 0u, shadow.getPendingBufferCount() );
 }
 

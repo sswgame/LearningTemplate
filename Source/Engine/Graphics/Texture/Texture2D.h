@@ -268,7 +268,7 @@ namespace sw
          * @brief 만든 텍스처 @p handle 에 @p upload 를 제출합니다. `Accepted` 면 @p outTicket 에 티켓을 담습니다. `Busy`(비차단일 때) · 거절 · 시간 초과면 텍스처를 지우고 그 결과를 돌려줍니다.
          * @details 첫 업로드 두 갈래(밉 사슬 · CPU 원본)가 같은 정리를 쓴다 — 따로 쓰면 한쪽만 지우기를 빠뜨린다.
          */
-        [[nodiscard]] static Texture2DUploadStep submitCreatedTexture( IRHIResourceFactory& factory, RHITextureHandle handle, const RHITextureUploadDesc& upload, bool bBlocking,
+        [[nodiscard]] static Texture2DUploadStep submitCreatedTexture( IRHIDevice& device, RHITextureHandle handle, const RHITextureUploadDesc& upload, bool bBlocking,
                                                                        string_view label, RHITransferTicket& outTicket );
         /** @brief @p device 가 @p image 의 형식을 받으면 그대로, 세 채널 실수인데 못 받으면 네 채널로 편 @p outExpanded 를 돌려줍니다(`expandToFourChannels`). */
         static const DDSImageData& selectDeviceImage( const IRHIDevice& device, const DDSImageData& image, DDSImageData& outExpanded );

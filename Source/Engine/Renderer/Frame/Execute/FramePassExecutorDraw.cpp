@@ -924,7 +924,7 @@ namespace sw
                 const GPUMeshBatch& batch = inoutState._batches[headBatchIndex + groupIndex];
                 triangleCount += static_cast<uint64>( batch._indexCount / 3u ) * batch._visibleCapacity;
             }
-            if ( pDebug->allowDraw( context._passName, batchPSO, _psoManager.findLayout( batchPSO ), head._indexCount, groupCount, triangleCount ) == false )
+            if ( pDebug->allowDraw( context._passName, batchPSO.getPacked(), _psoManager.findLayout( batchPSO ), head._indexCount, groupCount, triangleCount ) == false )
                 return false;
         }
 #endif

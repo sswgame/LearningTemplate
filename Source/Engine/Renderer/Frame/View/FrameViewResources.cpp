@@ -505,7 +505,7 @@ namespace sw
         if ( view._depthHistoryUAV != kInvalidDescriptorIndex )
             _pDevice->getResourceFactory()->unregisterBindlessUAV( view._depthHistoryUAV );
         if ( view._depthHistory != 0 )
-            _pDevice->getResourceFactory()->destroyTexture( view._depthHistory );
+            _pDevice->releaseHandle( view._depthHistory );
         view._depthHistory         = 0;
         view._depthHistoryUAV      = kInvalidDescriptorIndex;
         view._bLastFrameDepthValid = SW_FALSE;
@@ -519,7 +519,7 @@ namespace sw
         }
         if ( view._taaHistory != 0 )
         {
-            _pDevice->getResourceFactory()->destroyTexture( view._taaHistory );
+            _pDevice->releaseHandle( view._taaHistory );
             view._taaHistory = 0;
         }
         view._transientPool.release( _pDevice );

@@ -881,8 +881,8 @@ namespace sw
         StructuredUploadSlot _arrStructuredUploadSlot[constant::render::kMaxFrameCountInFlight];
 
         /// @brief 버퍼 · 텍스처 레코드입니다. 칸 찾기는 락이 없고(`SlotHandleTable::get`), 추적 상태도 칸 안의 원자값이라 배리어가 락을 잡지 않는다.
-        RHIHandleTable<BufferRecord>  _gpuBuffers;
-        RHIHandleTable<TextureRecord> _gpuTextures;
+        RHIHandleTable<RHIBufferHandle, BufferRecord>   _gpuBuffers;
+        RHIHandleTable<RHITextureHandle, TextureRecord> _gpuTextures;
         /// @brief 구조 버퍼 핸들에서 원소 stride 를 찾는 맵입니다(bindless StructuredBuffer SRV, UAV 생성용). `_bindlessMutex` 가 보호합니다(등록이 그 배타 락 안에서 읽습니다).
         unordered_map<RHIBufferHandle, uint32> _mapStructuredStride;
 
@@ -900,8 +900,8 @@ namespace sw
         RHIDescriptorRingMirror _bindlessRingMirror                                SW_GUARDED_BY( _bindlessMutex ); ///< 산 번호 다시 쓰기를 링 슬롯마다 그 차례에 쓰도록 예약한다(R-6)
         RHIConstantBufferMirror _constantBufferMirror                              SW_GUARDED_BY( _bindlessMutex ); ///< 한 번 쓴 상수 버퍼를 나머지 링 슬롯에도 채운다.
 
-        RHIHandleTable<D3D12PipelineStateRecord> _pipelineStates;
-        RHIRenderPassRegistry                    _renderPassRegistry; ///< 렌더 패스 핸들 등록부. 자기 뮤텍스로 직렬화해 어느 스레드에서나 부른다.
+        RHIHandleTable<RHIPipelineStateHandle, D3D12PipelineStateRecord> _pipelineStates;
+        RHIRenderPassRegistry                                            _renderPassRegistry; ///< 렌더 패스 핸들 등록부. 자기 뮤텍스로 직렬화해 어느 스레드에서나 부른다.
 
         /// @brief 메인 창의 백버퍼 묶음입니다. 백버퍼, 인덱스, 리소스 상태, Present 가 모두 여기 모여 있습니다.
         D3D12RHISwapChain _swapChain;

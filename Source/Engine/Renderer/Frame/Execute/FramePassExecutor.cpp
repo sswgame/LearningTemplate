@@ -1136,11 +1136,11 @@ namespace sw
             if ( entry._viewable == RenderGraphViewableKind::Buffer )
             {
                 if ( const optional<RHIBufferState> state = findGraphBufferState( entry._initialAccess ) )
-                    _levelBufferTransitions.add( entry._handle, *state );
+                    _levelBufferTransitions.add( entry.getBuffer(), *state );
             }
             else if ( const optional<RHITextureState> state = findGraphTextureState( entry._initialAccess ) )
             {
-                listTexture.push_back( RHITextureTransition{ entry._handle, *state } );
+                listTexture.push_back( RHITextureTransition{ entry.getTexture(), *state } );
             }
         } );
         _graphTransitionCount += static_cast<uint32>( listTexture.size() + _levelBufferTransitions.getPending().size() );
@@ -1220,22 +1220,22 @@ namespace sw
                 {
                     if ( barrier._bUAVBarrier != 0 )
                     {
-                        cmd.uavBarrier( entry._handle );
+                        cmd.uavBarrier( entry.getBuffer() );
                         ++uavBarrierCount;
                     }
                     else if ( const optional<RHIBufferState> state = findGraphBufferState( barrier._access ) )
                     {
-                        _levelBufferTransitions.add( entry._handle, *state );
+                        _levelBufferTransitions.add( entry.getBuffer(), *state );
                     }
                 }
                 else if ( barrier._bUAVBarrier != 0 )
                 {
-                    cmd.uavBarrierTexture( entry._handle );
+                    cmd.uavBarrierTexture( entry.getTexture() );
                     ++uavBarrierCount;
                 }
                 else if ( const optional<RHITextureState> state = findGraphTextureState( barrier._access ) )
                 {
-                    listTransition.push_back( RHITextureTransition{ entry._handle, *state } );
+                    listTransition.push_back( RHITextureTransition{ entry.getTexture(), *state } );
                 }
             }
             // 등록하지 않은 버퍼는 이 프레임 · 뷰에 일하지 않는다(등록 조건이 실행 조건) — 전이를 내지 않는다.

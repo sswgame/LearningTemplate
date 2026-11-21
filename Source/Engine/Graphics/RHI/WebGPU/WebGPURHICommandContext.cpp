@@ -408,7 +408,7 @@ namespace sw
     WGPUTextureView WebGPURHICommandContext::resolveSampledView( RHIDescriptorIndex index ) const
     {
         const WebGPUBindlessEntry  entry    = _pDevice->findBindless( _pDevice->_textureTable, index );
-        const WebGPUTextureRecord* pTexture = entry._handle != 0 ? _pDevice->findTexture( entry._handle ) : nullptr;
+        const WebGPUTextureRecord* pTexture = entry._texture != 0 ? _pDevice->findTexture( entry._texture ) : nullptr;
         if ( pTexture == nullptr )
             return _pDevice->_defaultTextureView;
         // 깊이 텍스처의 샘플 뷰는 R32 사본이다 — 깊이를 쓴 뒤 옮기지 않았으면 낡은 깊이(또는 0)를 읽는다. 부르는 쪽이 `prepareTextureForShaderRead` 를 빠뜨렸다.
@@ -433,16 +433,16 @@ namespace sw
             {
                 const uint32              slot  = binding - wgpu::kUShift;
                 const WebGPUBindlessEntry entry = slot < wgpu::kURange ? _pDevice->findBindless( _pDevice->_uavTable, slots._arrUnorderedAccess[slot] ) : WebGPUBindlessEntry{};
-                if ( entry._handle != 0 && entry._bTexture != SW_FALSE )
+                if ( entry._texture != 0 )
                 {
-                    const WebGPUTextureRecord* pTexture = _pDevice->findTexture( entry._handle );
+                    const WebGPUTextureRecord* pTexture = _pDevice->findTexture( entry._texture );
                     if ( pTexture != nullptr && pTexture->_listSliceView.empty() == false )
                     {
                         listEntry.push_back( Internal::makeTextureEntry( binding, pTexture->_listSliceView[0] ) );
                         continue;
                     }
                 }
-                const WebGPUBufferRecord* pBuffer = entry._handle != 0 && entry._bTexture == SW_FALSE ? _pDevice->_buffers.get( entry._handle ) : nullptr;
+                const WebGPUBufferRecord* pBuffer = entry._buffer != 0 ? _pDevice->_buffers.get( entry._buffer ) : nullptr;
                 if ( pBuffer == nullptr )
                 {
                     // 셰이더가 쓰는 쓰기 자리를 엔진이 걸지 않았다 — 빈 버퍼에 쓴다. DX11 · GL 도 안 걸린 UAV 쓰기를 버린다(같은 결과).
@@ -471,7 +471,7 @@ namespace sw
                     continue;
                 }
                 const WebGPUBindlessEntry entry   = _pDevice->findBindless( _pDevice->_bufferTable, index );
-                const WebGPUBufferRecord* pBuffer = entry._handle != 0 ? _pDevice->_buffers.get( entry._handle ) : nullptr;
+                const WebGPUBufferRecord* pBuffer = entry._buffer != 0 ? _pDevice->_buffers.get( entry._buffer ) : nullptr;
                 // 안 걸린 읽기 버퍼는 빈 버퍼다 — 셰이더는 PassCB 의 인덱스가 무효면 읽지 않는다(DX11 · GL 의 빈 SRV 와 같다).
                 listEntry.push_back( pBuffer != nullptr ? Internal::makeBufferEntry( binding, pBuffer->_buffer, 0, pBuffer->_sizeBytes )
                                                         : Internal::makeBufferEntry( binding, _pDevice->_defaultBuffer, 0, WGPU_WHOLE_SIZE ) );
@@ -491,7 +491,7 @@ namespace sw
                 continue;
             }
             const WebGPUBindlessEntry entry   = slot < wgpu::kBRange ? _pDevice->findBindless( _pDevice->_bufferTable, slots._arrConstantBuffer[slot] ) : WebGPUBindlessEntry{};
-            const WebGPUBufferRecord* pBuffer = entry._handle != 0 ? _pDevice->_buffers.get( entry._handle ) : nullptr;
+            const WebGPUBufferRecord* pBuffer = entry._buffer != 0 ? _pDevice->_buffers.get( entry._buffer ) : nullptr;
             if ( pBuffer == nullptr )
             {
                 listEntry.push_back( Internal::makeBufferEntry( binding, _pDevice->_defaultBuffer, 0, WGPU_WHOLE_SIZE ) );
@@ -519,7 +519,7 @@ namespace sw
         const WebGPUPipelineRecord* pPipeline = _pDevice->_pipelines.get( _state._graphicsPSO );
         // 백엔드 계약(다섯 백엔드 같음): 등록된 그래픽스 PSO 없이 그리면 오류로 멈춘다(부르는 쪽의 결함).
         if ( pPipeline == nullptr || pPipeline->_renderPipeline == nullptr )
-            SW_FATAL( "WebGPU draw without a registered graphics PSO (handle %#)", _state._graphicsPSO );
+            SW_FATAL( "WebGPU draw without a registered graphics PSO (handle %#)", _state._graphicsPSO.getPacked() );
         if ( _state._boundRenderPSO != _state._graphicsPSO )
         {
             wgpuRenderPassEncoderSetPipeline( _state._renderPass, pPipeline->_renderPipeline );
@@ -613,7 +613,7 @@ namespace sw
     {
         const WebGPUPipelineRecord* pPipeline = _pDevice != nullptr ? _pDevice->_pipelines.get( _state._computePSO ) : nullptr;
         if ( pPipeline == nullptr || pPipeline->_computePipeline == nullptr )
-            SW_FATAL( "WebGPU dispatch without a registered compute PSO (handle %#)", _state._computePSO );
+            SW_FATAL( "WebGPU dispatch without a registered compute PSO (handle %#)", _state._computePSO.getPacked() );
         const WGPUComputePassEncoder pass = ensureComputePass();
         if ( pass == nullptr )
             return nullptr;

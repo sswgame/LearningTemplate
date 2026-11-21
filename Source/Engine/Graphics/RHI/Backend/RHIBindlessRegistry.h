@@ -37,7 +37,7 @@ namespace sw
     };
 
     /**
-     * @brief 등록표 칸 하나가 어느 자원의 번호인가입니다. 버퍼 · 텍스처 핸들은 값 공간이 겹치므로(둘 다 `uint64`) 종류를 따로 든다. 0 이면 그 종류의 주인이 없다.
+     * @brief 등록표 칸 하나가 어느 자원의 번호인가입니다. 버퍼 · 텍스처 핸들은 packed 값 공간이 겹치므로 종류를 따로 든다. 0 이면 그 종류의 주인이 없다.
      */
     struct RHIBindlessOwner
     {
@@ -51,7 +51,7 @@ namespace sw
     {
         RHIBindlessOwner operator()( const TEntry& entry ) const { return entry.getBindlessOwner(); }
     };
-    /** @brief 값이 버퍼 핸들 그대로인 등록표의 주인 풀이입니다(`RHIBufferHandle` 은 `uint64` 라 멤버 함수를 둘 수 없고, 텍스처 핸들과 형식이 같다). */
+    /** @brief 값이 버퍼 핸들 그대로인 등록표의 주인 풀이입니다. */
     struct RHIBindlessBufferOwnerOf
     {
         RHIBindlessOwner operator()( RHIBufferHandle buffer ) const { return RHIBindlessOwner{ buffer, 0 }; }
@@ -291,7 +291,8 @@ namespace sw
         uint32 getTextureIndexCount( RHITextureHandle texture ) const { return countOwned( _mapTextureIndex, texture ); }
 
     private:
-        using OwnerIndexMap = unordered_map<uint64, vector<RHIDescriptorIndex>>;
+        template <typename Handle>
+        using OwnerIndexMap = unordered_map<Handle, vector<RHIDescriptorIndex>>;
 
         void store( RHIDescriptorIndex index, const TEntry& entry, RHIBindlessLink link )
         {
@@ -310,7 +311,8 @@ namespace sw
             if ( owner._texture != 0 )
                 _mapTextureIndex[owner._texture].push_back( index );
         }
-        static void unlinkOwner( OwnerIndexMap& map, uint64 key, RHIDescriptorIndex index )
+        template <typename Handle>
+        static void unlinkOwner( OwnerIndexMap<Handle>& map, Handle key, RHIDescriptorIndex index )
         {
             if ( key == 0 )
                 return;
@@ -329,8 +331,8 @@ namespace sw
             if ( listIndex.empty() )
                 map.erase( key );
         }
-        template <typename FnReleased>
-        void releaseOwned( OwnerIndexMap& map, uint64 key, RHIBindlessReuse reuse, FnReleased& fnReleased )
+        template <typename Handle, typename FnReleased>
+        void releaseOwned( OwnerIndexMap<Handle>& map, Handle key, RHIBindlessReuse reuse, FnReleased& fnReleased )
         {
             if ( key == 0 )
                 return;
@@ -346,18 +348,19 @@ namespace sw
                     fnReleased( index );
             }
         }
-        static uint32 countOwned( const OwnerIndexMap& map, uint64 key )
+        template <typename Handle>
+        static uint32 countOwned( const OwnerIndexMap<Handle>& map, Handle key )
         {
             const auto it = map.find( key );
             return it == map.end() ? 0 : static_cast<uint32>( it->second.size() );
         }
 
     private:
-        vector<TEntry>             _listEntry;
-        vector<uint8>              _listLink;        ///< 칸마다 `RHIBindlessLink`(`_listEntry` 와 같은 길이)
-        OwnerIndexMap              _mapBufferIndex;  ///< 버퍼 → 그 버퍼의 산 칸 번호들
-        OwnerIndexMap              _mapTextureIndex; ///< 텍스처 → 그 텍스처의 산 칸 번호들
-        RHIBindlessIndexAllocator  _ownAllocator;
-        RHIBindlessIndexAllocator* _pAllocator; ///< 자기 발급기 또는 다른 표와 나누는 발급기
+        vector<TEntry>                  _listEntry;
+        vector<uint8>                   _listLink;        ///< 칸마다 `RHIBindlessLink`(`_listEntry` 와 같은 길이)
+        OwnerIndexMap<RHIBufferHandle>  _mapBufferIndex;  ///< 버퍼 → 그 버퍼의 산 칸 번호들
+        OwnerIndexMap<RHITextureHandle> _mapTextureIndex; ///< 텍스처 → 그 텍스처의 산 칸 번호들
+        RHIBindlessIndexAllocator       _ownAllocator;
+        RHIBindlessIndexAllocator*      _pAllocator; ///< 자기 발급기 또는 다른 표와 나누는 발급기
     };
 } // namespace sw

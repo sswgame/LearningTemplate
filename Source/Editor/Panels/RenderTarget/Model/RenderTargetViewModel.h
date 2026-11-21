@@ -124,7 +124,7 @@ namespace sw::editor
         /** @brief ImGui 에 등록한 미리보기 텍스처 id 입니다. 선택이 바뀌면 해제하고 다시 등록합니다. */
         void* _pPreviewTextureID;
         /** @brief 그 id 가 가리키는 RHI 텍스처 핸들입니다. 같으면 다시 등록하지 않습니다. */
-        uint64 _previewTexture;
+        RHITextureHandle _previewTexture;
 
         RenderTargetViewSettings _viewSettings;
         /** @brief 고른 타깃을 CPU 로 읽은 마지막 결과입니다. `_texture` 가 고른 타깃과 다르면 쓰지 않습니다. */

@@ -19,12 +19,12 @@
 #include "Engine/Graphics/Material/MaterialPacking.h"
 #include "Engine/Graphics/Material/MaterialPermutation.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
-#include "Engine/Graphics/RHI/Backend/RHIShaderRequest.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/RHI/RHIPipelineStateDesc.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingLayout.h"
+#include "Engine/Graphics/Shader/Compile/RHIShaderRequest.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 #include "Engine/Profiling/FrameProfiler.h"
@@ -475,9 +475,9 @@ namespace sw
             computeDesc._listShaderDefine  = computeJob._listDefine;
             _pCache->registerDesc( pso, computeDesc );
             if ( computeJob._pipelinePassName.empty() == false )
-                _pCache->setExtensionProgramPSO( computeJob._pipelinePassName, pso ); // 패스 이름이 키다 — 확장 프로그램과 같은 저장소(같이 해제한다)
+                _pCache->setExtensionProgramPSO( _pDevice, computeJob._pipelinePassName, pso ); // 패스 이름이 키다 — 확장 프로그램과 같은 저장소(같이 해제한다)
             else
-                _pCache->setEnginePSO( computeJob._passType, pso );
+                _pCache->setEnginePSO( _pDevice, computeJob._passType, pso );
         }
         for ( const PassPSOJob& job : listJob )
         {
@@ -491,7 +491,7 @@ namespace sw
                 // 주 출력에 그리는 PSO 다 — 없으면 화면에 아무것도 낼 수 없고, 다른 PSO · 복사로 대신하지 않으므로 여기서 멈춘다.
                 if ( pso == 0 )
                     SW_FATAL( "Output pass %# could not create its PSO for target format %# - nothing can be presented", job._passType, static_cast<uint32>( job._outputFormat ) );
-                _pCache->setOutputPSO( job._passType, job._outputFormat, pso );
+                _pCache->setOutputPSO( _pDevice, job._passType, job._outputFormat, pso );
                 continue;
             }
             // 다른 패스의 PSO 로 대신하지 않는다 — 이 패스는 그리지 않고(drawFullscreen 은 PSO 없이 그리지 않는다) 여기서 이유를 한 번 남긴다.
@@ -500,7 +500,7 @@ namespace sw
                 SW_LOG_ERROR_ID( "FramePSOManager.EnginePSOPassCould", "Engine PSO for pass %# could not be created (shader '%#') - the pass draws nothing", job._passType, job._desc._vertexShaderPath.c_str() );
                 continue;
             }
-            _pCache->setEnginePSO( job._passType, pso );
+            _pCache->setEnginePSO( _pDevice, job._passType, pso );
         }
         for ( const DeferredTilePSOJob& tileJob : listTileJob )
         {
@@ -633,7 +633,7 @@ namespace sw
             {
                 // 선언은 있는데 원소 레이아웃이 없다 = 리플렉션 공백. 그대로 두면 머티리얼 없는 배치가 슬롯을 비운 채
                 // 그리게 되고(Vulkan 은 partially-bound 슬롯을 읽으면 정의되지 않는다) 원인을 찾기 어렵다.
-                SW_LOG_ERROR_ID( "FramePSOManager.MaterialBufferElementStride", "The material buffer element stride of PSO %# is 0 - reflection did not provide the g_SwMaterials element layout.", pso );
+                SW_LOG_ERROR_ID( "FramePSOManager.MaterialBufferElementStride", "The material buffer element stride of PSO %# is 0 - reflection did not provide the g_SwMaterials element layout.", pso.getPacked() );
                 continue;
             }
 
@@ -826,7 +826,7 @@ namespace sw
         registerLayout( handle, desc );
         if ( handle == 0 )
             SW_LOG_ERROR_ID( "FramePSOManager.ExtensionProgramCouldNot", "Extension program '%#' could not be created (see the shader error above) - passes that use it are not drawn", program._shaderPath );
-        _pCache->setExtensionProgramPSO( programKey, handle );
+        _pCache->setExtensionProgramPSO( _pDevice, programKey, handle );
         return handle;
     }
 

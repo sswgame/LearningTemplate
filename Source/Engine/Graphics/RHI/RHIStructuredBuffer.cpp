@@ -156,7 +156,7 @@ namespace sw
             pDevice->getResourceFactory()->unregisterBindlessResource( _srv );
         if ( _uav != kInvalidDescriptorIndex )
             pDevice->getResourceFactory()->unregisterBindlessUAV( _uav );
-        pDevice->getResourceFactory()->destroyBuffer( _buffer );
+        pDevice->releaseHandle( _buffer );
         *this = RHIStructuredBuffer{};
     }
 } // namespace sw

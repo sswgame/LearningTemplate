@@ -149,7 +149,7 @@ namespace sw
         // 부르는 쪽이 디스패치를 건너뛰는 것이 렌더러의 규칙이라, 여기 닿은 것은 부르는 쪽의 결함이다(지운 핸들 · 컴퓨트 PSO 를 걸지 않은 디스패치).
         const D3D11RHIDevice::D3D11PipelineStateRecord* pRecord = _pDevice->_pipelineStates.get( _pState->_activeComputePSO );
         if ( pRecord == nullptr || pRecord->_cs == nullptr )
-            SW_FATAL( "D3D11 dispatch without a registered compute PSO (handle %#)", _pState->_activeComputePSO );
+            SW_FATAL( "D3D11 dispatch without a registered compute PSO (handle %#)", _pState->_activeComputePSO.getPacked() );
     }
 
     RHIRenderPassBeginResult D3D11RHICommandContext::beginRenderPassNative( const RHIRenderPassBeginInfo& beginInfo )
@@ -399,7 +399,7 @@ namespace sw
         // 백엔드 계약(네 백엔드 같음): 등록된 그래픽스 PSO 없이 그리면 오류로 멈춘다. 기본 상태로 대신 그리지 않는다 — PSO 가 0 이면 부르는 쪽이
         // 드로우를 건너뛰는 것이 렌더러의 규칙이라, 여기 닿은 것은 부르는 쪽의 결함이다(지운 핸들 · 컴퓨트 PSO 를 그래픽스로 건 것).
         if ( pPSO == nullptr || pPSO->_vs == nullptr )
-            SW_FATAL( "D3D11 draw without a registered graphics PSO (handle %#)", _pState->_activeGraphicsPSO );
+            SW_FATAL( "D3D11 draw without a registered graphics PSO (handle %#)", _pState->_activeGraphicsPSO.getPacked() );
         pVs = pPSO->_vs.Get();
         if ( pPSO->_ps )
             pPs = pPSO->_ps.Get();

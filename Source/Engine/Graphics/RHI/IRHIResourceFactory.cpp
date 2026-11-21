@@ -6,10 +6,10 @@
 #include "Core/Time/BusyClock.h"
 
 #include "Engine/Foundation/EngineServices.h"
-#include "Engine/Graphics/RHI/Backend/RHIShaderRequest.h"
 #include "Engine/Graphics/RHI/RHICapabilities.h"
 #include "Engine/Graphics/RHI/RHICompiledShaderStages.h"
 #include "Engine/Graphics/RHI/RHIPipelineStateDesc.h"
+#include "Engine/Graphics/Shader/Compile/RHIShaderRequest.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 
 namespace sw

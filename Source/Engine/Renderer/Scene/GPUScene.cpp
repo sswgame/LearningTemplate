@@ -538,7 +538,7 @@ namespace sw
         if ( _instanceSlotStreamCapacity >= slotCount && _instanceSlotStream != 0 )
             return;
         if ( _instanceSlotStream != 0 )
-            pDevice->getResourceFactory()->destroyBuffer( _instanceSlotStream );
+            pDevice->releaseHandle( _instanceSlotStream );
         const uint32   capacity = MathUtil::max( slotCount, 256u );
         vector<uint32> listSlot( capacity );
         for ( uint32 slotIndex = 0; slotIndex < capacity; ++slotIndex )
@@ -660,7 +660,7 @@ namespace sw
         }
         const bool bReleasableSlotStream = _instanceSlotStream != 0 && pDevice != nullptr && pDevice->getResourceFactory() != nullptr;
         if ( bReleasableSlotStream )
-            pDevice->getResourceFactory()->destroyBuffer( _instanceSlotStream );
+            pDevice->releaseHandle( _instanceSlotStream );
         _instanceSlotStream         = 0;
         _instanceSlotStreamCapacity = 0;
         for ( GPUMeshBatchBinding& gpu : _listBatchBinding )

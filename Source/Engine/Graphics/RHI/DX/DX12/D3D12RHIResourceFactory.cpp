@@ -11,7 +11,6 @@
 #include "Engine/Foundation/EnginePlatformHeaders.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/Backend/RHIBufferSizeUtil.h"
-#include "Engine/Graphics/RHI/Backend/RHIShaderRequest.h"
 #include "Engine/Graphics/RHI/DX/DX12/D3D12RHIDevice.h"
 #include "Engine/Graphics/RHI/DX/DX12/D3D12RHIResourcePreset.h"
 #include "Engine/Graphics/RHI/DX/DXGIFormat.h"
@@ -375,7 +374,7 @@ namespace sw
         if ( bTextureUploadUnavailable )
         {
             // 장치를 잃었으면 진입에서 Rejected 다(계약 2) — Accepted 를 주고 폴링에서야 Failed 가 되면 호출자가 잃은 장치에 올린 줄 알고 기다린다.
-            SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.SubmitTextureUploadTextureDeviceNot", "submitTextureUpload: texture %# or the device is not usable (uninitialized or lost)", texture );
+            SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.SubmitTextureUploadTextureDeviceNot", "submitTextureUpload: texture %# or the device is not usable (uninitialized or lost)", texture.getPacked() );
             return RHITransferSubmit::rejected();
         }
 
@@ -468,7 +467,7 @@ namespace sw
         const bool      bTextureRegionUploadUnavailable = pTexture == nullptr || _pDevice->_device == nullptr || _pDevice->_commandQueue == nullptr || _pDevice->pollDeviceLost();
         if ( bTextureRegionUploadUnavailable )
         {
-            SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.SubmitTextureRegionUploadTextureDeviceNot", "submitTextureRegionUpload: texture %# or the device is not usable (uninitialized or lost)", texture );
+            SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.SubmitTextureRegionUploadTextureDeviceNot", "submitTextureRegionUpload: texture %# or the device is not usable (uninitialized or lost)", texture.getPacked() );
             return RHITransferSubmit::rejected();
         }
 
@@ -619,7 +618,7 @@ namespace sw
         const bool      bTextureReadbackUnavailable = pTexture == nullptr || _pDevice->_device == nullptr || _pDevice->_commandQueue == nullptr || _pDevice->pollDeviceLost();
         if ( bTextureReadbackUnavailable )
         {
-            SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.SubmitTextureReadbackTextureDeviceNot", "submitTextureReadback: texture %# or the device is not usable (uninitialized or lost)", texture );
+            SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.SubmitTextureReadbackTextureDeviceNot", "submitTextureReadback: texture %# or the device is not usable (uninitialized or lost)", texture.getPacked() );
             return RHITransferSubmit::rejected();
         }
 
@@ -774,10 +773,10 @@ namespace sw
         return createDefaultBufferWithData( pData, sizeBytes, D3D12_RESOURCE_STATE_INDEX_BUFFER );
     }
 
-    void D3D12RHIResourceFactory::destroyBuffer( RHIBufferHandle buffer )
+    bool D3D12RHIResourceFactory::destroyBufferNative( RHIBufferHandle buffer )
     {
         if ( buffer == 0 )
-            return;
+            return false;
         // 렌더 스레드의 기록 상태(`_frameStreamState` 의 묶인 정점 · 인덱스 버퍼)는 여기서 지우지 않는다. 이 함수는 게임 스레드에서도 불리는데 그 값은
         // 렌더 스레드만 쓴다(여기서 쓰면 경쟁이다). 핸들은 세대가 있어 다시 쓰이지 않으므로, 지운 핸들은 드로우의 `resolveBuffer` 가 null 로
         // 풀어 건너뛴다.
@@ -795,7 +794,7 @@ namespace sw
         _pDevice->_constantBufferMirror.remove( buffer );
         D3D12RHIDevice::BufferRecord taken{};
         if ( _pDevice->_gpuBuffers.take( buffer, taken ) == false )
-            return;
+            return false;
         Microsoft::WRL::ComPtr<ID3D12Resource> owned = std::move( taken._resource );
 
         // 이 버퍼의 번호를 모두 놓는다(다섯 백엔드 같은 계약 — 위 `registryLock` 아래). 예전에는 값만 지우고 번호를 돌려받지 않아 힙 칸이 샜다.
@@ -808,6 +807,7 @@ namespace sw
         _pDevice->_uavRegistry.releaseBuffer( RHIBindlessReuse::AfterFence, buffer, deferFree );
 
         _pDevice->releaseTrackedResourceDeferred( std::move( owned ), RHIMemoryKey::makeBuffer( buffer ) );
+        return true;
     }
 
     RHIBufferHandle D3D12RHIResourceFactory::createReadbackBuffer( uint32 elementSize, uint32 elementCount )
@@ -839,7 +839,7 @@ namespace sw
         const bool            bNotReadback = FAILED( pResource->GetHeapProperties( &heapProperties, &heapFlags ) ) || heapProperties.Type != D3D12_HEAP_TYPE_READBACK;
         if ( bNotReadback )
         {
-            SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.ReadReadbackBufferBufferNotReadback", "readReadbackBuffer: buffer %# is not a readback buffer", readback );
+            SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.ReadReadbackBufferBufferNotReadback", "readReadbackBuffer: buffer %# is not a readback buffer", readback.getPacked() );
             return false;
         }
         const bool bTooLarge = static_cast<uint64>( sizeBytes ) > pResource->GetDesc().Width;
@@ -898,15 +898,15 @@ namespace sw
         Microsoft::WRL::ComPtr<ID3D12Heap> heap;
         if ( isHrSuccess( _pDevice->_device->CreateHeap( &heapDesc, IID_PPV_ARGS( heap.GetAddressOf() ) ), "CreateHeap (transient)" ) == false )
             return 0;
-        const RHITransientHeapHandle handle = _nextTransientHeap++;
+        const RHITransientHeapHandle handle{ _nextTransientHeap++ };
         _mapTransientHeap.emplace( handle, std::move( heap ) );
         return handle;
     }
 
-    void D3D12RHIResourceFactory::destroyTransientHeap( RHITransientHeapHandle heap )
+    bool D3D12RHIResourceFactory::destroyTransientHeapNative( RHITransientHeapHandle heap )
     {
         // 그 위의 placed 텍스처가 각자 힙을 붙든다 — 핸들 표에서만 지운다. 마지막 텍스처가 (해제 큐가 GPU 를 기다린 뒤) 놓일 때 힙이 사라진다.
-        _mapTransientHeap.erase( heap );
+        return _mapTransientHeap.erase( heap ) != 0;
     }
 
     RHITextureHandle D3D12RHIResourceFactory::createPlacedTexture2D( const RHITextureDesc& desc, RHITransientHeapHandle heap, uint64 offsetBytes )
@@ -914,7 +914,7 @@ namespace sw
         const auto it = _mapTransientHeap.find( heap );
         if ( it == _mapTransientHeap.end() )
         {
-            SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.PlacedTextureNoHeap", "createPlacedTexture2D: transient heap %# does not exist", heap );
+            SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.PlacedTextureNoHeap", "createPlacedTexture2D: transient heap %# does not exist", heap.getPacked() );
             return 0;
         }
         return createTextureResource( desc, it->second.Get(), offsetBytes );
@@ -1087,27 +1087,27 @@ namespace sw
         {
             SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.OffscreenViewPageFailed", "Could not create the RTV/DSV views of a %#x%# texture (%# slices) - texture creation fails", desc._width, desc._height,
                              desc._arraySize );
-            destroyTexture( handle ); // 레코드를 붙이기 전이라 칸은 위에서 이미 돌려줬다
+            (void)destroyTextureNative( handle ); // 레코드를 붙이기 전이라 칸은 위에서 이미 돌려줬다
             return 0;
         }
 
         D3D12RHIDevice::TextureRecord* const pTextureRecord = _pDevice->findTextureRecord( handle );
         if ( pTextureRecord == nullptr )
-            SW_FATAL( "D3D12: texture handle %# vanished while it was being created", handle );
+            SW_FATAL( "D3D12: texture handle %# vanished while it was being created", handle.getPacked() );
         pTextureRecord->_offscreen  = std::move( record );
         pTextureRecord->_bOffscreen = SW_TRUE;
         pTextureRecord->_state.initialize( static_cast<uint16>( mipLevels ), static_cast<uint16>( desc._arraySize ), D3D12_RESOURCE_STATE_COMMON );
         return handle;
     }
 
-    void D3D12RHIResourceFactory::destroyTexture( RHITextureHandle texture )
+    bool D3D12RHIResourceFactory::destroyTextureNative( RHITextureHandle texture )
     {
         if ( texture == 0 )
-            return;
+            return false;
         _pDevice->requireRegistryMutableNow( "destroyTexture" );
         D3D12RHIDevice::TextureRecord taken{};
         if ( _pDevice->_gpuTextures.take( texture, taken ) == false )
-            return;
+            return false;
         if ( taken._bOffscreen != SW_FALSE )
         {
             ScopedLock<mutex> offscreenLock{ _pDevice->_offscreenViewMutex };
@@ -1140,9 +1140,10 @@ namespace sw
         if ( bUnfinishedTransfer )
         {
             _pDevice->releaseTextureAfterTransfer( std::move( owned ), texture, lastTransferSerial );
-            return;
+            return true;
         }
         _pDevice->releaseTrackedResourceDeferred( std::move( owned ), RHIMemoryKey::makeTexture( texture ) );
+        return true;
     }
 
     D3D12RHIResourceFactory::BindlessHandleSet D3D12RHIResourceFactory::bindlessHandlesAt( RHIDescriptorIndex index ) const
@@ -1192,7 +1193,7 @@ namespace sw
             if ( pTextureRecord != nullptr && pTextureRecord->_bOffscreen != SW_FALSE && pTextureRecord->_offscreen._dimension != RHITextureDimension::Texture2D )
             {
                 SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.RegisterBindlessTextureTextureTextureOnly", "registerBindlessTexture: texture %# is a %# texture — only Texture2D can be bound to the bindless texture table yet",
-                                 texture, static_cast<uint32>( pTextureRecord->_offscreen._dimension ) );
+                                 texture.getPacked(), static_cast<uint32>( pTextureRecord->_offscreen._dimension ) );
                 return kInvalidDescriptorIndex;
             }
         }
@@ -1673,16 +1674,17 @@ namespace sw
         return _pDevice->_pipelineStates.insert( { pso, RHIVertexLayout{} } ); // 컴퓨트는 정점 입력이 없다
     }
 
-    void D3D12RHIResourceFactory::destroyPipelineState( RHIPipelineStateHandle pso )
+    bool D3D12RHIResourceFactory::destroyPipelineStateNative( RHIPipelineStateHandle pso )
     {
         if ( pso == 0 )
-            return;
+            return false;
         D3D12RHIDevice::D3D12PipelineStateRecord record{};
         if ( _pDevice->_pipelineStates.take( pso, record ) == false )
-            return;
+            return false;
         if ( _pDevice->_frameStreamState._activeGraphicsPSO == pso )
             _pDevice->_frameStreamState._activeGraphicsPSO = 0;
         _pDevice->_releaseQueue.enqueueGPUKeepAlive( record._pso, _pDevice->_fenceValue );
+        return true;
     }
 
     RHIRenderPassHandle D3D12RHIResourceFactory::createRenderPass( const RHIRenderPassDesc& desc )
@@ -1690,9 +1692,9 @@ namespace sw
         return _pDevice->_renderPassRegistry.add( desc );
     }
 
-    void D3D12RHIResourceFactory::destroyRenderPass( RHIRenderPassHandle pass )
+    bool D3D12RHIResourceFactory::destroyRenderPassNative( RHIRenderPassHandle pass )
     {
-        _pDevice->_renderPassRegistry.retire( pass );
+        return _pDevice->_renderPassRegistry.retire( pass );
     }
 } // namespace sw
 #endif

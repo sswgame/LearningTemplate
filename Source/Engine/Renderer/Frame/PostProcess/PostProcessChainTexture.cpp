@@ -47,7 +47,7 @@ namespace sw
         if ( pDevice != nullptr && _srv != kInvalidDescriptorIndex )
             pDevice->getResourceFactory()->unregisterBindlessTexture( _srv );
         if ( pDevice != nullptr && _texture != 0 )
-            pDevice->getResourceFactory()->destroyTexture( _texture );
+            pDevice->releaseHandle( _texture );
         _texture = 0;
         _srv     = kInvalidDescriptorIndex;
         _format  = RHIFormat::Unknown;

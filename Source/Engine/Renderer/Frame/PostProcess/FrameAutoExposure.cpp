@@ -165,7 +165,7 @@ namespace sw
             if ( _pDevice != nullptr && view._arrAutoExposureUAV[slot] != kInvalidDescriptorIndex )
                 _pDevice->getResourceFactory()->unregisterBindlessUAV( view._arrAutoExposureUAV[slot] );
             if ( _pDevice != nullptr && view._arrAutoExposure[slot] != 0 )
-                _pDevice->getResourceFactory()->destroyTexture( view._arrAutoExposure[slot] );
+                _pDevice->releaseHandle( view._arrAutoExposure[slot] );
             view._arrAutoExposure[slot]    = 0;
             view._arrAutoExposureSRV[slot] = kInvalidDescriptorIndex;
             view._arrAutoExposureUAV[slot] = kInvalidDescriptorIndex;

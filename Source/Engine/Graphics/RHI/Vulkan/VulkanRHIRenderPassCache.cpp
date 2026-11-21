@@ -47,7 +47,7 @@ namespace sw
 
     size_t VulkanRHIRenderPassCache::CompositeKeyHash::operator()( const CompositeKey& key ) const
     {
-        size_t hash = static_cast<size_t>( key._depth ) * 1315423911u;
+        size_t hash = static_cast<size_t>( key._depth.getPacked() ) * 1315423911u;
         hash ^= static_cast<size_t>( key._colorCount ) + HashUtil::kGoldenRatio32;
         hash ^= static_cast<size_t>( key._depthLoadOp ) + HashUtil::kGoldenRatio32;
         hash ^= ( static_cast<size_t>( key._depthStoreOp ) << 3 ) + HashUtil::kGoldenRatio32;
@@ -55,7 +55,7 @@ namespace sw
         hash ^= static_cast<size_t>( key._depthMip ) + HashUtil::kGoldenRatio32; // 밉은 같음 비교가 가른다 — 해시는 퍼뜨리기만 한다
         for ( uint32 colorIndex = 0; colorIndex < key._colorCount; ++colorIndex )
         {
-            hash ^= static_cast<size_t>( key._arrColor[colorIndex] ) + HashUtil::kGoldenRatio32 + ( hash << 6 ) + ( hash >> 2 );
+            hash ^= static_cast<size_t>( key._arrColor[colorIndex].getPacked() ) + HashUtil::kGoldenRatio32 + ( hash << 6 ) + ( hash >> 2 );
             hash ^= static_cast<size_t>( key._arrColorLoadOp[colorIndex] ) + HashUtil::kGoldenRatio32;
             hash ^= ( static_cast<size_t>( key._arrColorStoreOp[colorIndex] ) << 3 ) + HashUtil::kGoldenRatio32;
             hash ^= static_cast<size_t>( key._arrColorSlice[colorIndex] ) * 2246822519u;
@@ -257,22 +257,27 @@ namespace sw
         record._bOwned     = bOwned ? SW_TRUE : SW_FALSE;
         ScopedLock<mutex> lock{ _recordMutex };
         _listRenderPassRecord.push_back( record );
-        return _listRenderPassRecord.size();
+        return RHIRenderPassHandle{ _listRenderPassRecord.size() };
     }
 
-    void VulkanRHIRenderPassCache::destroyRenderPassRecord( VkDevice device, RHIRenderPassHandle handle, VkRenderPass swapchainRenderPass )
+    bool VulkanRHIRenderPassCache::detachRenderPassRecord( RHIRenderPassHandle handle, VkRenderPass swapchainRenderPass, VkRenderPass& outOwnedRenderPass )
     {
+        outOwnedRenderPass = VK_NULL_HANDLE;
         RenderPassRecord record{};
         {
             ScopedLock<mutex> lock{ _recordMutex };
-            if ( handle == 0 || handle > _listRenderPassRecord.size() )
-                return;
-            record                            = _listRenderPassRecord[handle - 1];
-            _listRenderPassRecord[handle - 1] = RenderPassRecord{};
+            const uint64      packed = handle.getPacked();
+            if ( packed == 0 || packed > _listRenderPassRecord.size() )
+                return false;
+            record                            = _listRenderPassRecord[packed - 1];
+            _listRenderPassRecord[packed - 1] = RenderPassRecord{};
         }
-        const bool bOwnedRenderPass = record._bOwned != SW_FALSE && record._renderPass != VK_NULL_HANDLE && record._renderPass != swapchainRenderPass;
+        if ( record._renderPass == VK_NULL_HANDLE )
+            return false; // 이미 비운 칸이다
+        const bool bOwnedRenderPass = record._bOwned != SW_FALSE && record._renderPass != swapchainRenderPass;
         if ( bOwnedRenderPass )
-            vkDestroyRenderPass( device, record._renderPass, nullptr );
+            outOwnedRenderPass = record._renderPass;
+        return true;
     }
 
     void VulkanRHIRenderPassCache::destroyAll( VkDevice device, VkRenderPass swapchainRenderPass )

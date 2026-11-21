@@ -40,7 +40,8 @@ namespace sw
     class ConstantBufferPagePool;
     enum class ShaderTargetFormat : uint8;
 
-    /** @brief `IRHIDevice::releaseHandle` 이 해제하는 핸들의 종류입니다. 종류마다 해제에 쓰는 팩터리 함수가 다릅니다. */
+    enum class RHIHandleKind : uint8; // 미룬 해제 줄의 칸 종류(IRHIDevice.cpp 안 — 부르는 쪽은 핸들 형식으로 오버로드를 고른다)
+
     /**
      * @struct RHIQueueSyncPoint
      * @brief 비동기 컴퓨트 큐에 낸 일 하나의 완료 지점입니다(`IRHIDevice::submitAsyncCompute` 가 주고 `waitForAsyncCompute` 가 받는다). 0 은 "없음" 이다.
@@ -51,14 +52,6 @@ namespace sw
         uint64 _value{ 0 };
 
         bool isValid() const { return _value != 0; }
-    };
-
-    enum class RHIHandleKind : uint8
-    {
-        BindlessResource = 0, ///< `registerBindlessBufferSRV` 가 돌려준 인덱스이며 `unregisterBindlessResource` 로 해제한다.
-        BindlessTexture,      ///< `registerBindlessTexture` 가 돌려준 인덱스이며 `unregisterBindlessTexture` 로 해제한다.
-        Buffer,               ///< `createBuffer` 가 돌려준 핸들이며 `destroyBuffer` 로 해제한다.
-        Texture               ///< `createTexture` 가 돌려준 핸들이며 `destroyTexture` 로 해제한다.
     };
 
     /** @brief bindless 인덱스가 속한 공간입니다. DX12 는 둘이 힙 하나를 나눠 쓰고, 나머지 백엔드는 공간마다 번호가 따로입니다. */
@@ -103,7 +96,7 @@ namespace sw
      * @class IRHIDevice
      * @brief DX11, DX12, Vulkan, OpenGL, WebGPU 하드웨어 디바이스의 추상화입니다.
      * @details 프레임 수명주기(beginFrame/endFrame/resize), 커맨드 리스트 생성과 제출, 능력 조회, 네이티브 핸들을
-     *          담당한다. 리소스 생성과 파괴는 `getResourceFactory()` 가 반환하는 `IRHIResourceFactory` 가 담당한다.
+     *          담당한다. 리소스 생성은 `getResourceFactory()` 가 반환하는 `IRHIResourceFactory` 가, 파괴는 `releaseHandle` 이 담당한다.
      *          기록 스트림은 두 가지다. 하나는 디바이스가 소유한 프레임 스트림(`getFrameStreamContext`)이고,
      *          다른 하나는 패스마다 만드는 커맨드 리스트(`createCommandList`)다.
      *
@@ -290,7 +283,9 @@ namespace sw
         void assumeRenderThreadRole() const SW_ASSERT_CAPABILITY_LOCK( _renderThread ) { _renderThread.assumeHeld(); }
 
         /**
-         * @brief 자원 핸들 하나를 해제합니다. 렌더 스레드가 떠 있을 때 다른 스레드가 부르면, **다음에 넘길 프레임**이 끝날 때(병렬 기록 밖)까지 미룹니다.
+         * @brief 버퍼 하나를 해제합니다 — 자원 해제의 진입점은 이 오버로드 묶음 하나다(종류는 핸들 형식이 고른다, 팩터리의 파괴 함수는 장치만 부른다).
+         *        렌더 스레드가 떠 있을 때 다른 스레드가 부르면, **다음에 넘길 프레임**이 끝날 때(병렬 기록 밖)까지 미룹니다. 그 뒤 백엔드가 GPU 펜스가 지난 뒤 놓는다.
+         *        핸들 0 은 무시하고, 이미 놓은(또는 모르는) 핸들은 검사 구성에서 단언한다(같은 핸들 두 번 해제).
          * @details 게임 스레드는 GPU 자원을 가진 객체(`Material`, `MaterialInstance`, `Texture2D`)의 마지막 소유를 아무 때나 놓을 수 있다.
          *          GPUScene 후보를 덮는 수집 잡, 핫 리로드로 정리한 뷰, 로드 중 텍스처를 진짜로 바꾸는 머티리얼이 그 예다. 그 순간 렌더 스레드가 기록 중이면 bindless 테이블을
          *          바꾸면 안 되고(`setParallelRecording`), 게임 스레드가 이미 지었지만 아직 넘기지 않은 패킷도 옛 인덱스를 값으로 들고 있다(배치의 머티리얼 텍스처 SRV).
@@ -298,11 +293,24 @@ namespace sw
          *          언리얼의 `FDeferredCleanupInterface`, `BeginReleaseResource` 에 해당한다. 렌더 스레드 자신이 부르거나, 렌더 스레드가 없고 넘긴 프레임도 없으면 바로 해제한다.
          *          주의: 게임 스레드가 프레임을 넘기지 않는 동안에는 미룬 핸들이 쌓인다 — `waitIdle` · 렌더 스레드 해제 · `shutdown` 이 모두 내린다.
          */
-        void releaseHandle( RHIHandleKind kind, uint64 handle );
+        void releaseHandle( RHIBufferHandle buffer );
+        /** @brief 텍스처 하나를 해제합니다. 시점 규칙은 버퍼와 같다. 그 텍스처의 bindless 번호도 백엔드가 모두 놓는다. */
+        void releaseHandle( RHITextureHandle texture );
+        /** @brief PSO 하나를 해제합니다. 시점 규칙은 버퍼와 같다. */
+        void releaseHandle( RHIPipelineStateHandle pso );
+        /** @brief 렌더 패스 객체 하나를 해제합니다. 시점 규칙은 버퍼와 같다. */
+        void releaseHandle( RHIRenderPassHandle pass );
+        /** @brief 겹침 힙 하나를 해제합니다. 시점 규칙은 버퍼와 같다. */
+        void releaseHandle( RHITransientHeapHandle heap );
+        /**
+         * @brief bindless 번호 하나를 놓습니다(`registerBindlessTexture` · `registerBindlessBufferSRV` 가 준 번호). 시점 규칙은 `releaseHandle` 과 같다.
+         * @details 번호는 형식이 하나(`RHIDescriptorIndex`)라 공간(@p space)을 함께 받는다 — 버퍼 공간은 `unregisterBindlessResource`, 텍스처 공간은 `unregisterBindlessTexture` 로 간다.
+         */
+        void releaseBindlessIndex( RHIBindlessIndexSpace space, RHIDescriptorIndex index );
         /**
          * @brief 텍스처 번호 하나를 예약하고 @p placeholder 를 가리키게 할 일을 줄에 넣습니다. **어느 스레드에서든** 부른다(감사 R-6 — 텍스처 캐시가 로드를 시작할 때).
          * @details 번호는 곧바로 돌려주지만 산 칸은 렌더 스레드가 `activateReservedBindlessTextures` 로 디스크립터를 쓴 뒤다. 그 함수는 프레임 시작(`beginFrame`)과
-         *          텍스처 업로드 펌프가 기록 전에 부르므로, 그 번호를 실은 렌더 사본이 그려지기 전에 산다. 해제는 등록한 번호와 같다(`releaseHandle( BindlessTexture )`).
+         *          텍스처 업로드 펌프가 기록 전에 부르므로, 그 번호를 실은 렌더 사본이 그려지기 전에 산다. 해제는 등록한 번호와 같다(`releaseBindlessIndex( RHIBindlessIndexSpace::Texture, … )`).
          * @return 표가 차면 kInvalidDescriptorIndex 입니다.
          */
         [[nodiscard]] RHIDescriptorIndex reserveBindlessTexture( RHITextureHandle placeholder );
@@ -747,6 +755,10 @@ namespace sw
         void markInitPhase( const utf8* pPhaseName ) { _initPhaseTimings.mark( pPhaseName ); }
 
     private:
+        /** @brief 모든 해제 오버로드의 본문입니다 — 지금 놓을지 다음에 넘길 프레임 뒤로 미룰지 정한다. 0 은 무시한다. */
+        void releaseHandleInternal( RHIHandleKind kind, uint64 packed );
+        /** @brief 핸들 하나를 지금 그 종류의 백엔드 파괴 함수로 내립니다. 백엔드가 산 핸들이 아니었다고 하면 단언한다(같은 핸들 두 번 해제). */
+        static void releaseNow( IRHIResourceFactory& factory, RHIHandleKind kind, uint64 packed );
         /** @brief 미룬 핸들 중 기다리던 프레임이 끝난 것만 해제합니다(`notifyRenderFrameRetired`). */
         void releaseRetiredHandles();
         /** @brief 할당 수 지표(`RT.RHI.liveBuffers` · `RT.RHI.constantBufferPages`)를 냅니다. `beginFrame` 이 프레임에 한 번 부른다. */

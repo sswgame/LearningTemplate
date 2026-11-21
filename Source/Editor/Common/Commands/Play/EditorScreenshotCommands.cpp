@@ -53,13 +53,13 @@ namespace sw::editor
     {
         EditorContext& editorContext = editor::getSubsystem<EditorContext>();
         // 씬 뷰 RT 는 에디터가 요청한 R8G8B8A8_UNORM 이다(`EditorRenderViews::ensureViewTargetSize`). 단축키 · 버튼(UI)이 부르므로 UI 쪽 타깃 값을 읽는다.
-        const uint64 renderTarget = editorContext.getSubsystem<EditorRenderViews>().getUITargetState( EditorViewKind::Scene )._renderTarget;
+        const RHITextureHandle renderTarget = editorContext.getSubsystem<EditorRenderViews>().getUITargetState( EditorViewKind::Scene )._renderTarget;
         if ( renderTarget == 0 )
         {
             editorContext.getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifyScreenshotTitle" ), SW_LOCKEY( "EdCommon", "NotifyScreenshotNoSceneView" ), NotificationKind::Warning );
             return;
         }
-        EditorScreenshotCommandsInternal::request( ScreenshotLocalTime::makeDefaultPathNow(), static_cast<RHITextureHandle>( renderTarget ) );
+        EditorScreenshotCommandsInternal::request( ScreenshotLocalTime::makeDefaultPathNow(), renderTarget );
     }
 
     void EditorScreenshotCommands::captureFocusedView()

@@ -64,7 +64,7 @@ namespace sw
         if ( _pDevice != nullptr && view._upscaleIntermediateSRV != kInvalidDescriptorIndex )
             _pDevice->getResourceFactory()->unregisterBindlessTexture( view._upscaleIntermediateSRV );
         if ( _pDevice != nullptr && view._upscaleIntermediate != 0 )
-            _pDevice->getResourceFactory()->destroyTexture( view._upscaleIntermediate );
+            _pDevice->releaseHandle( view._upscaleIntermediate );
         view._upscaleIntermediate    = 0;
         view._upscaleIntermediateSRV = kInvalidDescriptorIndex;
         view._upscaleWidth           = 0;

@@ -149,7 +149,7 @@ namespace sw
             if ( it->second._srv != kInvalidDescriptorIndex )
                 pDevice->getResourceFactory()->unregisterBindlessTexture( it->second._srv );
             if ( it->second._texture != 0 )
-                pDevice->getResourceFactory()->destroyTexture( it->second._texture );
+                pDevice->releaseHandle( it->second._texture );
         }
         _mapAttachment.erase( it );
         return true;
@@ -226,11 +226,11 @@ namespace sw
                 if ( attachment._srv != kInvalidDescriptorIndex )
                     pDevice->getResourceFactory()->unregisterBindlessTexture( attachment._srv );
                 if ( attachment._texture != 0 )
-                    pDevice->getResourceFactory()->destroyTexture( attachment._texture );
+                    pDevice->releaseHandle( attachment._texture );
             }
             // 놓인 텍스처가 각자 힙을 붙든다(미룬 파괴가 끝날 때까지) — 핸들은 텍스처 뒤에 바로 놓아도 된다.
             if ( _heap != 0 )
-                pDevice->getResourceFactory()->destroyTransientHeap( _heap );
+                pDevice->releaseHandle( _heap );
         }
         clear();
     }

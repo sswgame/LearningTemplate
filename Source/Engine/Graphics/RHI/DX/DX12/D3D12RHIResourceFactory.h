@@ -21,9 +21,9 @@ namespace sw
             : _pDevice{ pDevice } {}
         RHIPipelineStateHandle          createPipelineStateNative( const RHIPipelineStateDesc& desc, const RHICompiledGraphicsStages& stages ) override;
         RHIPipelineStateHandle          createComputePipelineStateNative( const RHICompiledShaderStage& computeStage, string_view label ) override;
-        void                            destroyPipelineState( RHIPipelineStateHandle pso ) override;
+        [[nodiscard]] bool              destroyPipelineStateNative( RHIPipelineStateHandle pso ) override;
         RHIRenderPassHandle             createRenderPass( const RHIRenderPassDesc& desc ) override;
-        void                            destroyRenderPass( RHIRenderPassHandle pass ) override;
+        [[nodiscard]] bool              destroyRenderPassNative( RHIRenderPassHandle pass ) override;
         RHIBufferHandle                 createConstantBuffer( uint32 size ) override;
         void                            updateConstantBuffer( RHIBufferHandle buffer, const void* pData, uint32 size ) override;
         RHIBufferHandle                 createConstantBufferPage( uint32 size ) override;
@@ -35,16 +35,16 @@ namespace sw
         RHIBufferHandle                 createGPUVertexBuffer( uint32 sizeBytes ) override;
         void                            updateGeometryBufferRegions( RHIBufferHandle buffer, const void* pBaseSource, const RHIBufferCopyRegion* pRegions, uint32 regionCount ) override;
         RHIBufferHandle                 createIndexBuffer( const void* pData, uint32 sizeBytes ) override;
-        void                            destroyBuffer( RHIBufferHandle buffer ) override;
+        [[nodiscard]] bool              destroyBufferNative( RHIBufferHandle buffer ) override;
         RHIBufferHandle                 createReadbackBuffer( uint32 elementSize, uint32 elementCount ) override;
         [[nodiscard]] bool              readReadbackBuffer( RHIBufferHandle readback, uint32 sizeBytes, void* pDestination ) override;
         RHITextureHandle                createTexture2D( const RHITextureDesc& desc ) override;
         RHITextureAllocationInfo        getTextureAllocationInfo( const RHITextureDesc& desc ) override;
         RHITransientHeapHandle          createTransientHeap( uint64 sizeBytes ) override;
-        void                            destroyTransientHeap( RHITransientHeapHandle heap ) override;
+        [[nodiscard]] bool              destroyTransientHeapNative( RHITransientHeapHandle heap ) override;
         RHITextureHandle                createPlacedTexture2D( const RHITextureDesc& desc, RHITransientHeapHandle heap, uint64 offsetBytes ) override;
         void                            setTextureDebugName( RHITextureHandle texture, const utf8* pName ) override;
-        void                            destroyTexture( RHITextureHandle texture ) override;
+        [[nodiscard]] bool              destroyTextureNative( RHITextureHandle texture ) override;
         [[nodiscard]] RHITransferSubmit submitTextureUpload( RHITextureHandle texture, const RHITextureUploadDesc& desc ) override;
         [[nodiscard]] RHITransferSubmit submitTextureRegionUpload( RHITextureHandle texture, const RHITextureRegionUploadDesc& desc ) override;
         [[nodiscard]] RHITransferSubmit submitTextureReadback( RHITextureHandle texture, uint32 mip, uint32 arraySlice, RHITextureMipSpan& outLayout ) override;
@@ -146,7 +146,7 @@ namespace sw
         D3D12RHIDevice* _pDevice;
         /// @brief 트랜지언트 힙(`createTransientHeap`)입니다. 핸들을 놓아도 그 위의 placed 텍스처가 각자 힙을 붙든다(`SetPrivateDataInterface`). 생성 · 파괴는 셋업 스레드다.
         unordered_map<RHITransientHeapHandle, Microsoft::WRL::ComPtr<ID3D12Heap>> _mapTransientHeap;
-        RHITransientHeapHandle                                                    _nextTransientHeap{ 1 };
+        uint64                                                                    _nextTransientHeap{ 1 }; ///< 다음에 낼 힙 핸들의 packed 값
     };
 } // namespace sw
 #endif

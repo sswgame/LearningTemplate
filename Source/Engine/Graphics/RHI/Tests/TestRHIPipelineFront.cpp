@@ -7,11 +7,11 @@
 
 #include "Core/Testing/TestFramework.h"
 
-#include "Engine/Graphics/RHI/Backend/RHIShaderRequest.h"
 #include "Engine/Graphics/RHI/RHICapabilities.h"
 #include "Engine/Graphics/RHI/RHICompiledShaderStages.h"
 #include "Engine/Graphics/RHI/RHIPipelineStateDesc.h"
 #include "Engine/Graphics/RHI/Tests/RHIFakeDevice.h"
+#include "Engine/Graphics/Shader/Compile/RHIShaderRequest.h"
 #include "Engine/Graphics/Shader/Reflection/ShaderReflectionData.h"
 
 using namespace sw;

@@ -73,8 +73,33 @@ namespace sw
         }
     }
 
-    void RenderPSOCache::setEnginePSO( RenderPassKind passType, RHIPipelineStateHandle pso )
+    void RenderPSOCache::releaseReplacedPSO( IRHIDevice* pDevice, RHIPipelineStateHandle previous, RHIPipelineStateHandle next )
     {
+        if ( previous == 0 || previous == next )
+            return;
+        if ( pDevice != nullptr )
+            pDevice->releaseHandle( previous ); // 장치가 기록 밖으로, 백엔드 해제 큐가 GPU 완료 뒤로 미룬다(`releasePSOsUsingShader` 와 같은 길)
+        {
+            ScopedLock<mutex> lock{ _materialPSOMutex };
+            for ( auto it = _mapMaterialPSO.begin(); it != _mapMaterialPSO.end(); )
+            {
+                // 패스 PSO 를 그대로 가리키는(소유하지 않은) 변형은 옛 핸들과 함께 사라진다 — 남기면 놓은 핸들을 그린다.
+                if ( it->second._state == MaterialPSOState::Ready && it->second._bOwned == 0 && it->second._pso == previous )
+                    it = _mapMaterialPSO.erase( it );
+                else
+                    ++it;
+            }
+        }
+        ScopedLock<mutex> lock{ _layoutMutex };
+        _mapPSOLayout.erase( previous );
+        _mapPSODesc.erase( previous );
+    }
+
+    void RenderPSOCache::setEnginePSO( IRHIDevice* pDevice, RenderPassKind passType, RHIPipelineStateHandle pso )
+    {
+        const auto it = _mapEnginePSO.find( passType );
+        if ( it != _mapEnginePSO.end() )
+            releaseReplacedPSO( pDevice, it->second, pso );
         _mapEnginePSO.insert_or_assign( passType, pso );
     }
 
@@ -84,9 +109,13 @@ namespace sw
         return ( it != _mapEnginePSO.end() ) ? it->second : 0;
     }
 
-    void RenderPSOCache::setOutputPSO( RenderPassKind passType, RHIFormat targetFormat, RHIPipelineStateHandle pso )
+    void RenderPSOCache::setOutputPSO( IRHIDevice* pDevice, RenderPassKind passType, RHIFormat targetFormat, RHIPipelineStateHandle pso )
     {
-        _mapOutputPSO.insert_or_assign( makeOutputPSOKey( passType, targetFormat ), pso );
+        const uint64 key = makeOutputPSOKey( passType, targetFormat );
+        const auto   it  = _mapOutputPSO.find( key );
+        if ( it != _mapOutputPSO.end() )
+            releaseReplacedPSO( pDevice, it->second, pso );
+        _mapOutputPSO.insert_or_assign( key, pso );
     }
 
     bool RenderPSOCache::findOutputPSO( RenderPassKind passType, RHIFormat targetFormat, RHIPipelineStateHandle& outPipelineState ) const
@@ -98,8 +127,11 @@ namespace sw
         return true;
     }
 
-    void RenderPSOCache::setExtensionProgramPSO( const hashed_string& programKey, RHIPipelineStateHandle pso )
+    void RenderPSOCache::setExtensionProgramPSO( IRHIDevice* pDevice, const hashed_string& programKey, RHIPipelineStateHandle pso )
     {
+        const auto it = _mapExtensionProgramPSO.find( programKey );
+        if ( it != _mapExtensionProgramPSO.end() )
+            releaseReplacedPSO( pDevice, it->second, pso );
         _mapExtensionProgramPSO.insert_or_assign( programKey, pso );
     }
 
@@ -114,7 +146,7 @@ namespace sw
 
     uint64 RenderPSOCache::materialPSOKey( RHIPipelineStateHandle passPSO, uint64 permutationHash, RenderViewMode viewMode, bool bReverseCulling, RHIMeshVertexFormat vertexFormat )
     {
-        uint64 key = static_cast<uint64>( passPSO ) * HashUtil::kGoldenRatio64;
+        uint64 key = passPSO.getPacked() * HashUtil::kGoldenRatio64;
         key        = HashUtil::combine( key, permutationHash );
         key ^= ( static_cast<uint64>( viewMode ) + 1 ) * 0xff51afd7ed558ccdull;
         if ( bReverseCulling )
@@ -222,7 +254,7 @@ namespace sw
             for ( auto& [key, entry] : _mapMaterialPSO )
             {
                 if ( entry._bOwned != 0 && entry._pso != 0 )
-                    pDevice->getResourceFactory()->destroyPipelineState( entry._pso );
+                    pDevice->releaseHandle( entry._pso );
             }
             _mapMaterialPSO.clear();
         }
@@ -230,21 +262,21 @@ namespace sw
         for ( auto& [passType, pso] : _mapEnginePSO )
         {
             if ( pso != 0 )
-                pDevice->getResourceFactory()->destroyPipelineState( pso );
+                pDevice->releaseHandle( pso );
         }
         _mapEnginePSO.clear();
 
         for ( auto& [key, pso] : _mapOutputPSO )
         {
             if ( pso != 0 )
-                pDevice->getResourceFactory()->destroyPipelineState( pso );
+                pDevice->releaseHandle( pso );
         }
         _mapOutputPSO.clear();
 
         for ( auto& [programKey, pso] : _mapExtensionProgramPSO )
         {
             if ( pso != 0 )
-                pDevice->getResourceFactory()->destroyPipelineState( pso );
+                pDevice->releaseHandle( pso );
         }
         _mapExtensionProgramPSO.clear();
 
@@ -260,7 +292,6 @@ namespace sw
 
     uint32 RenderPSOCache::releasePSOsUsingShader( IRHIDevice* pDevice, string_view shaderPath )
     {
-        IRHIResourceFactory* const pFactory = pDevice != nullptr ? pDevice->getResourceFactory() : nullptr;
         // 1) 그 셰이더를 쓰는 PSO — desc 의 세 경로를 레이아웃 캐시와 같은 규칙으로 본다(지울 레이아웃을 쥔 PSO 가 남지 않게).
         vector<RHIPipelineStateHandle> listAffected;
         {
@@ -275,12 +306,12 @@ namespace sw
             }
         }
         vector<RHIPipelineStateHandle> listReleased;
-        const auto                     destroy = [pFactory, &listReleased]( RHIPipelineStateHandle pso )
+        const auto                     destroy = [pDevice, &listReleased]( RHIPipelineStateHandle pso )
         {
             if ( pso == 0 )
                 return;
-            if ( pFactory != nullptr )
-                pFactory->destroyPipelineState( pso ); // 백엔드 해제 큐가 그 PSO 를 쓴 프레임의 GPU 완료 뒤로 미룬다
+            if ( pDevice != nullptr )
+                pDevice->releaseHandle( pso ); // 장치가 기록 밖으로, 백엔드 해제 큐가 그 PSO 를 쓴 프레임의 GPU 완료 뒤로 미룬다
             listReleased.push_back( pso );
         };
 

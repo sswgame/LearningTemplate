@@ -125,7 +125,7 @@ namespace sw::editor
         if ( _targetID == 0 )
             return 0;
         const EditorPreviewTargetState* pTarget = editorContext.getSubsystem<EditorRenderViews>().findUIPreviewTargetState( _targetID );
-        return pTarget != nullptr ? pTarget->_state._renderTarget : 0;
+        return pTarget != nullptr ? pTarget->_state._renderTarget.getPacked() : 0;
     }
 
     void EditorPreviewViewport::setOrbit( const float3& target, float32 distance, float32 yaw, float32 pitch )
