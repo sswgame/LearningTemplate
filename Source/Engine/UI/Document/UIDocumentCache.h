@@ -53,7 +53,7 @@ namespace sw
         /** @brief 파일 대신 읽을 문서 텍스트를 경로에 등록합니다(테스트와 도구용). 이미 읽어 둔 그 경로의 문서는 버립니다. */
         void registerMemoryDocument( string_view path, string_view text ) { _cache.registerMemoryText( path, text ); }
         /** @brief 문서 글을 읽어 파싱한 횟수입니다(캐시가 파일을 한 번만 읽는지 테스트가 본다). */
-        uint32 getParseCount() const { return _cache.getParseCount(); }
+        const DevCounter& getParseCount() const { return _cache.getParseCount(); }
         /** @brief 다시 읽어 바꾼 문서를 알리는 칸입니다(`UITextAssetCache::onReloaded`). */
         UIAssetReloadedEvent& onReloaded() { return _cache.onReloaded(); }
 

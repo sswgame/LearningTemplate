@@ -162,14 +162,14 @@ SW_TEST_CASE( UIDocumentTest, TagOverrideVariantsAreCachedApart )
     engineTags.removeAxis( "screen" );
     const ResourceTagSet previousTags = engine::getSubsystem<ResourceTags>().exchange( engineTags ); // 엔진 판은 screen 축이 없다 — compact 가 아니다
 
-    const uint32                                      parseCount = cache.getParseCount();
+    const uint64                                      parseCount = cache.getParseCount().get();
     const expected<shared_ptr<const UIDocumentAsset>> engineDoc  = cache.acquire( kPath );
     const expected<shared_ptr<const UIDocumentAsset>> variantDoc = cache.acquire( kPath, tagOverride );
     SW_REQUIRE_TRUE( engineDoc.has_value() );
     SW_REQUIRE_TRUE( variantDoc.has_value() );
     SW_EXPECT_FALSE( engineDoc->get() == variantDoc->get() );
     SW_EXPECT_TRUE( cache.acquire( kPath, tagOverride )->get() == variantDoc->get() );
-    SW_EXPECT_EQUAL( parseCount + 2u, cache.getParseCount() );
+    SW_EXPECT_EQUAL( parseCount + 2u, cache.getParseCount().get() );
     SW_EXPECT_TRUE( engine::getSubsystem<ResourceTags>().capture() == engineTags );
 
     vector<UIBindingDef>     listBinding;

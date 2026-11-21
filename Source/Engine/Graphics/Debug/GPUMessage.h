@@ -165,8 +165,6 @@ namespace sw
         /** @brief 도착한 가장 최근 사본을 읽어 새 기록을 로그로 냅니다(메시지 id 별로 묶는다). 몇 프레임 늦게 도착한다. */
         void poll();
 
-        /** @brief 지금까지 로그로 낸 기록의 총수입니다(검사 · 감시 값용). */
-        uint64 getReportedCount() const { return _reportedCount; }
         /** @brief 링이 한 바퀴 넘어 버려진 기록의 총수입니다(검사용). */
         uint64 getDroppedCount() const { return _droppedCount; }
 
@@ -176,7 +174,6 @@ namespace sw
         AsyncBufferReadback _readback;
         uint64              _frameSerial;
         uint32              _processedCounter; ///< 지난번까지 읽은 누적 기록 수(셰이더 카운터와 같은 축, 32 비트로 돈다)
-        uint64              _reportedCount;
         uint64              _droppedCount;
     };
 } // namespace sw

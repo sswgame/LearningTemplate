@@ -26,6 +26,7 @@ namespace sw
     struct RHIBindlessReservationQueue;
     struct RHIMemoryBudget;
 
+    class DevCounter;
     class IRenderSurface;
     class IRHICommandContext;
     class IRHICommandList;
@@ -213,7 +214,7 @@ namespace sw
          */
         void flushRenderThread();
         /** @brief `waitIdle` 이 GPU 를 통째로 기다린 횟수(누적)입니다. 씬 활성화 · 에셋 핫 리로드 · 캡처가 늘리지 않는지 시나리오가 본다(감시 값 `RHI.GPUIdleWaits`). */
-        uint64 getGPUIdleWaitCount() const;
+        const DevCounter& getGPUIdleWaitCount() const;
 
         /**
          * @brief 지금 기록 중인 프레임의 GPU 작업이 끝난 뒤에 @p releaseDelegate 를 부릅니다. 프레임 밖이면 다음에 제출하는 프레임을 기준으로 합니다.

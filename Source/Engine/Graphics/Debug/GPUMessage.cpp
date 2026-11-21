@@ -257,7 +257,6 @@ namespace sw
         , _readback{}
         , _frameSerial{ 0 }
         , _processedCounter{ 0 }
-        , _reportedCount{ 0 }
         , _droppedCount{ 0 }
     {
     }
@@ -408,7 +407,6 @@ namespace sw
 
         for ( const GPUMessageGroup& group : listGroup )
         {
-            _reportedCount += group._count;
             const GPUMessageFormat* pFormat = GPUMessageFormat::find( group._first._id );
             if ( pFormat == nullptr )
             {
