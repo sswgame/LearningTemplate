@@ -41,7 +41,7 @@ namespace sw
     /**
      * @class BuoyancyComponent
      * @brief 폰툰(구)마다 그 자리의 수면 높이(`WaterBodyComponent::computeSurfaceHeight`, 파도 포함)로 부력과 물 저항을 계산해 같은 오브젝트의 동적 강체에 줍니다.
-     * @details 물리 고정 스텝마다(`prePhysicsStep`) 폰툰 자리를 바디의 지금 자세로 옮기고, 그 (x, z) 를 덮는 물을 찾아(`findWaterAt`) 잠긴 비율을 구한다.
+     * @details 물리 고정 스텝마다(`onPrePhysicsStep`) 폰툰 자리를 바디의 지금 자세로 옮기고, 그 (x, z) 를 덮는 물을 찾아(`findWaterAt`) 잠긴 비율을 구한다.
      *          부력은 중력 반대 방향, 저항은 폰툰 자리의 물에 대한 상대 속도(바디 속도 − 물 흐름 `computeFlowVelocity`) 반대 방향이며 둘 다 폰툰 자리에
      *          충격량으로 준다(기울면 바로 서는 회전이 생기고, 흐르는 물에서는 흐름을 탄다).
      *          파도 시간은 물 컴포넌트의 것(`getWaveTime`)이라 화면의 파도와 부력이 같은 수면을 본다. 중력은 그 씬의 물리 설정 표에서 온다.
@@ -70,7 +70,7 @@ namespace sw
     protected:
         /** @brief 폰툰이 힘을 거는 강체를 묶습니다 — 같은 오브젝트에 `RigidBodyComponent` 가 없으면 등록이 오류다(물리 단계마다 찾지 않는다). */
         [[nodiscard]] bool bindRequiredComponents() override { return _rigidBody.bind( *this ); }
-        void               prePhysicsStep( ScenePhysics& physics, float32 fixedDeltaTime, uint32 stepIndex, uint32 stepCount ) override;
+        void               onPrePhysicsStep( const FixedStepContext& context );
         void               releasePhysics( ScenePhysics& physics ) override;
 
     private:

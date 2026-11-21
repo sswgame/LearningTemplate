@@ -45,7 +45,7 @@ namespace sw
         void setConnectToWorld( bool bConnectToWorld );
 
     protected:
-        void beginPhysicsFrame( ScenePhysics& physics ) override;
+        void onPhysicsFrameBegin( const FixedStepContext& context );
         void releasePhysics( ScenePhysics& physics ) override;
 
     private:

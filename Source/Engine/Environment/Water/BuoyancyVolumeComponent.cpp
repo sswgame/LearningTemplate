@@ -3,6 +3,7 @@
 #include "Engine/Environment/Water/BuoyancyVolumeComponent.h"
 
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
+#include "Engine/Object/GameObject/Tick/FixedStepContext.h"
 #include "Engine/Physics/Collision/PhysicsQuery.h"
 #include "Engine/Physics/IPhysicsScene.h"
 #include "Engine/Physics/Scene/ScenePhysics.h"
@@ -36,10 +37,10 @@ namespace sw
         return true;
     }
 
-    void BuoyancyVolumeComponent::prePhysicsStep( ScenePhysics& physics, float32 fixedDeltaTime, uint32 stepIndex, uint32 stepCount )
+    void BuoyancyVolumeComponent::onPrePhysicsStep( const FixedStepContext& context )
     {
-        (void)stepIndex;
-        (void)stepCount;
+        ScenePhysics& physics         = context.getPhysics();
+        const float32 fixedDeltaTime  = context.getFixedDeltaTime();
         _submergedBodyCount           = 0;
         IPhysicsScene3D* const pScene = physics.getScene3D();
         if ( isSimulated() == false || pScene == nullptr )

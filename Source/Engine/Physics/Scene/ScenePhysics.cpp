@@ -18,6 +18,7 @@
 #include "Engine/Object/GameObject/Service/SceneEngineServices.h"
 #include "Engine/Object/GameObject/Service/ScenePreviewPolicy.h"
 #include "Engine/Object/GameObject/Service/SceneServiceRegistry.h"
+#include "Engine/Object/GameObject/Tick/FixedStepContext.h"
 #include "Engine/Physics/Collision/PhysicsQuery.h"
 #include "Engine/Physics/Component/BoxCollider2DComponent.h"
 #include "Engine/Physics/Component/PhysicsComponent.h"
@@ -82,11 +83,6 @@ namespace sw
         , _pScene2D{}
         , _stepTimer{}
         , _arrListComponent{}
-        , _arrListFrameHook{}
-        , _arrListFrameHookRun{}
-        , _mapHookEntry{}
-        , _pHookRegistry{ locateSubsystem<PhysicsHookRegistry>( manager.getSceneEngineServices()._pEngineSubsystems ) }
-        , _hookGeneration{ 0 }
         , _listBodyPoseSlot3D{}
         , _listBodyPoseSlot2D{}
         , _listFrameEvent3D{}
@@ -111,8 +107,6 @@ namespace sw
         , _debrisBudget{}
         , _fixedStepOverride{ 0.0f }
         , _bConfigured{ SW_FALSE }
-        , _bFrameHookListStale{ SW_TRUE }
-        , _bHookBatchEnabled{ SW_TRUE }
         , _bFrameEventsPending{ SW_FALSE }
         , _bStreamingHolds{ SW_FALSE }
     {
@@ -412,7 +406,6 @@ namespace sw
         vector<PhysicsComponent*>& listComponent = _arrListComponent[static_cast<uint32>( pComponent->_phase )];
         pComponent->_physicsIndex                = static_cast<uint32>( listComponent.size() );
         listComponent.push_back( pComponent );
-        _bFrameHookListStale = SW_TRUE;
     }
 
     void ScenePhysics::unregisterComponent( PhysicsComponent* pComponent )
@@ -428,114 +421,6 @@ namespace sw
         pMoved->_physicsIndex    = index;
         listComponent.pop_back();
         pComponent->_physicsIndex = PhysicsComponent::kNotRegistered;
-        _bFrameHookListStale      = SW_TRUE; // 스텝 훅 목록이 지운 컴포넌트를 가리키지 않게 다음 사용 전에 다시 거른다
-    }
-
-    void ScenePhysics::setHookBatchEnabled( bool bEnabled )
-    {
-        _bHookBatchEnabled   = bEnabled ? SW_TRUE : SW_FALSE;
-        _bFrameHookListStale = SW_TRUE;
-    }
-
-    const PhysicsHookRegistry::Entry* ScenePhysics::findHookEntry( const TypeInfo* pType )
-    {
-        if ( _pHookRegistry == nullptr || pType == nullptr )
-            return nullptr;
-        const auto found = _mapHookEntry.find( pType );
-        if ( found != _mapHookEntry.end() )
-            return found->second;
-        const PhysicsHookRegistry::Entry* pEntry = _pHookRegistry->findEntry( pType );
-        _mapHookEntry.insert_or_assign( pType, pEntry );
-        return pEntry;
-    }
-
-    PhysicsHookBatchFunction ScenePhysics::getVirtualHook( PhysicsHookSlot slot )
-    {
-        // 등록이 없는 타입은 가상 호출이다(기본 구현은 아무것도 하지 않는다). 람다는 `ScenePhysics` 의 멤버 안이라 컴포넌트의 보호된 훅을 부를 수 있다(친구).
-        switch ( slot )
-        {
-            case PhysicsHookSlot::BeginFrame:
-                return []( ScenePhysics& physics, PhysicsComponent* const* ppComponent, uint32 count, const PhysicsHookArgs& )
-                {
-                    for ( uint32 index = 0; index < count; ++index )
-                        ppComponent[index]->beginPhysicsFrame( physics );
-                };
-            case PhysicsHookSlot::PreStep:
-                return []( ScenePhysics& physics, PhysicsComponent* const* ppComponent, uint32 count, const PhysicsHookArgs& args )
-                {
-                    for ( uint32 index = 0; index < count; ++index )
-                        ppComponent[index]->prePhysicsStep( physics, args._fixedDeltaTime, args._stepIndex, args._stepCount );
-                };
-            case PhysicsHookSlot::PostStep:
-                return []( ScenePhysics& physics, PhysicsComponent* const* ppComponent, uint32 count, const PhysicsHookArgs& )
-                {
-                    for ( uint32 index = 0; index < count; ++index )
-                        ppComponent[index]->postPhysicsStep( physics );
-                };
-            case PhysicsHookSlot::EndFrame:
-                return []( ScenePhysics& physics, PhysicsComponent* const* ppComponent, uint32 count, const PhysicsHookArgs& args )
-                {
-                    for ( uint32 index = 0; index < count; ++index )
-                        ppComponent[index]->endPhysicsFrame( physics, args._alpha );
-                };
-            case PhysicsHookSlot::Count:
-                break;
-        }
-        SW_FATAL( "ScenePhysics: unknown physics hook slot %#", static_cast<uint32>( slot ) );
-        return nullptr;
-    }
-
-    void ScenePhysics::refreshFrameHookLists()
-    {
-        // 훅 표가 바뀌었으면(모듈 적재 · 해제) 기억한 줄을 버린다 — 내려간 모듈의 함수를 들고 있으면 안 된다.
-        const uint32 generation = _pHookRegistry != nullptr ? _pHookRegistry->getGeneration() : 0;
-        if ( generation != _hookGeneration )
-        {
-            _hookGeneration = generation;
-            _mapHookEntry.clear();
-            _bFrameHookListStale = SW_TRUE;
-        }
-        if ( _bFrameHookListStale == SW_FALSE )
-            return;
-        _bFrameHookListStale = SW_FALSE;
-        for ( const PhysicsHookSlot slot : EnumRange<PhysicsHookSlot>{} )
-        {
-            const PhysicsHookBatchFunction pVirtualHook = getVirtualHook( slot );
-            for ( uint32 phase = 0; phase < ScenePhysicsInternal::kPhaseCount; ++phase )
-            {
-                vector<PhysicsComponent*>& listHook = _arrListFrameHook[slot][phase];
-                vector<FrameHookRun>&      listRun  = _arrListFrameHookRun[slot][phase];
-                listHook.clear();
-                listRun.clear();
-                const TypeInfo* pRunType = nullptr;
-                for ( PhysicsComponent* pComponent : _arrListComponent[phase] )
-                {
-                    const TypeInfo*                   pType     = pComponent->findCachedTypeInfo();
-                    const PhysicsHookRegistry::Entry* pEntry    = _bHookBatchEnabled ? findHookEntry( pType ) : nullptr;
-                    const PhysicsHookBatchFunction    pFunction = pEntry != nullptr ? pEntry->_arrFunction[slot] : pVirtualHook;
-                    if ( pFunction == nullptr )
-                        continue; // 그 타입은 이 훅을 재정의하지 않았다(`PhysicsHooksOf`)
-                    // 단계 목록에서 이어진 같은 타입만 한 구간이다(차례를 지킨다). 가상 호출 구간은 타입이 섞여도 된다.
-                    const bool bContiguous = listRun.empty() == false && listRun.back()._start + listRun.back()._count == static_cast<uint32>( listHook.size() );
-                    const bool bExtend     = bContiguous && listRun.back()._pFunction == pFunction && ( pFunction == pVirtualHook || pRunType == pType );
-                    if ( bExtend )
-                        ++listRun.back()._count;
-                    else
-                        listRun.push_back( FrameHookRun{ pFunction, static_cast<uint32>( listHook.size() ), 1 } );
-                    pRunType = pType;
-                    listHook.push_back( pComponent );
-                }
-            }
-        }
-    }
-
-    void ScenePhysics::runFrameHook( PhysicsHookSlot slot, uint32 phase, const PhysicsHookArgs& args )
-    {
-        const vector<PhysicsComponent*>& listHook = _arrListFrameHook[slot][phase];
-        for ( const FrameHookRun& run : _arrListFrameHookRun[slot][phase] )
-        {
-            run._pFunction( *this, listHook.data() + run._start, run._count, args );
-        }
     }
 
     void ScenePhysics::bindBodyOwner( RigidBodyComponent& owner )
@@ -751,28 +636,17 @@ namespace sw
             return;
         configureOnce();
 
-        // 바디 → 관절 → 캐릭터. 콜백이 컴포넌트를 더하거나 뺄 수는 없다(구조 변경은 이 밖에서 난다). 훅 사이마다 구간이 낡았는지 본다.
-        // 훅은 그 훅을 재정의한 타입만 타입별 일괄 함수로 부른다(`PhysicsHookRegistry` — 차례는 단계 목록 그대로).
-        refreshFrameHookLists();
-        PhysicsHookArgs args{};
-        for ( uint32 phase = 0; phase < ScenePhysicsInternal::kPhaseCount; ++phase )
-        {
-            runFrameHook( PhysicsHookSlot::BeginFrame, phase, args );
-        }
+        // 고정 스텝 훅은 틱 시스템의 고정 스텝 그룹이 부른다(`SceneTickScheduler::tickFixedStepGroup` — 재정의한 타입만 타입별 일괄 함수, 차례는 단계 바디 → 관절 → 캐릭터).
+        // 콜백이 컴포넌트를 더하거나 뺄 수는 없다(구조 변경은 이 밖에서 난다). 그룹마다 구간이 낡았는지 본다.
+        (void)_manager.tickFixedStepGroup( FixedStepGroup::FrameBegin, FixedStepContext{ *this, 0.0f, 0, 0, 0.0f } );
         sweepContinuousColliders2D();
 
         const uint32  stepCount = static_cast<uint32>( _stepTimer.consume( deltaTime ) );
         const float32 fixedStep = _stepTimer.getStep();
         for ( uint32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
         {
-            refreshFrameHookLists();
-            args._fixedDeltaTime = fixedStep;
-            args._stepIndex      = stepIndex;
-            args._stepCount      = stepCount;
-            for ( uint32 phase = 0; phase < ScenePhysicsInternal::kPhaseCount; ++phase )
-            {
-                runFrameHook( PhysicsHookSlot::PreStep, phase, args );
-            }
+            const FixedStepContext stepContext{ *this, fixedStep, stepIndex, stepCount, 0.0f };
+            (void)_manager.tickFixedStepGroup( FixedStepGroup::PreStep, stepContext );
             flushCharacterMoves( fixedStep ); // 캐릭터는 바디 · 관절이 이번 스텝 목표를 정한 뒤, 월드 스텝 앞에 움직인다(예전 차례 그대로)
             stepWorlds( makeWriteFence(), fixedStep );
             ++_stepCount;
@@ -781,22 +655,13 @@ namespace sw
                 readMovedBodies( _listBodyPoseSlot3D, static_cast<const IPhysicsBodyScene3D&>( *_pScene3D ), _poseRead3D );
             if ( _pScene2D != nullptr )
                 readMovedBodies( _listBodyPoseSlot2D, static_cast<const IPhysicsBodyScene2D&>( *_pScene2D ), _poseRead2D );
-            refreshFrameHookLists();
-            for ( uint32 phase = 0; phase < ScenePhysicsInternal::kPhaseCount; ++phase )
-            {
-                runFrameHook( PhysicsHookSlot::PostStep, phase, args );
-            }
+            (void)_manager.tickFixedStepGroup( FixedStepGroup::PostStep, stepContext );
         }
 
-        args._alpha = _stepTimer.getAlpha();
         // 파편 예산은 씬 전체에서 한 번 고른다 — 프레임 끝 훅에서 주인마다 자기 몫만 지운다(먼저 틱한 오브젝트가 값을 치르지 않는다, 감사 S-11).
         if ( const PhysicsSettings* pSettings = findSettings(); pSettings != nullptr )
             _debrisBudget.planRemovals( pSettings->_maxDebrisBodyCount );
-        refreshFrameHookLists();
-        for ( uint32 phase = 0; phase < ScenePhysicsInternal::kPhaseCount; ++phase )
-        {
-            runFrameHook( PhysicsHookSlot::EndFrame, phase, args );
-        }
+        (void)_manager.tickFixedStepGroup( FixedStepGroup::FrameEnd, FixedStepContext{ *this, fixedStep, 0, stepCount, _stepTimer.getAlpha() } );
         applyPoseWrites();
         // 이벤트는 여기서 나눠 주지 않는다 — `FlushPostPhysics` 단계의 `ScenePhysicsEvents` 가 부른다(파일 머리말).
         _bFrameEventsPending = SW_TRUE;

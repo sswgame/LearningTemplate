@@ -7,6 +7,7 @@
 #include "Engine/Environment/Terrain/TerrainHeightfield.h"
 #include "Engine/Environment/Terrain/TerrainMeshBuilder.h"
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/Tick/FixedStepContext.h"
 #include "Engine/Physics/Collision/PhysicsShape.h"
 #include "Engine/Physics/IPhysicsScene.h"
 #include "Engine/Physics/PhysicsDesc.h"
@@ -124,9 +125,10 @@ namespace sw
         requestRebuild();
     }
 
-    void TerrainColliderComponent::beginPhysicsFrame( ScenePhysics& physics )
+    void TerrainColliderComponent::onPhysicsFrameBegin( const FixedStepContext& context )
     {
-        SW_PROFILE_SCOPE( "GT.TerrainCollider.beginPhysicsFrame" );
+        ScenePhysics& physics = context.getPhysics();
+        SW_PROFILE_SCOPE( "GT.TerrainCollider.onPhysicsFrameBegin" );
         if ( isSimulated() == false )
         {
             releasePhysics( physics );

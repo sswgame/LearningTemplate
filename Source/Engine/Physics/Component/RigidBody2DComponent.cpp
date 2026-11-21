@@ -7,6 +7,7 @@
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/StateHashBuilder.h"
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/Tick/FixedStepContext.h"
 #include "Engine/Physics/IPhysicsScene.h"
 #include "Engine/Physics/Scene/PhysicsNameValidation.h"
 #include "Engine/Physics/Scene/PhysicsPoseStore.h"
@@ -273,8 +274,9 @@ namespace sw
         return true;
     }
 
-    void RigidBody2DComponent::beginPhysicsFrame( ScenePhysics& physics )
+    void RigidBody2DComponent::onPhysicsFrameBegin( const FixedStepContext& context )
     {
+        ScenePhysics& physics = context.getPhysics();
         if ( isSimulated() == false )
         {
             releasePhysics( physics );
@@ -362,11 +364,15 @@ namespace sw
             pScene->wakeBody( body );
     }
 
-    void RigidBody2DComponent::prePhysicsStep( ScenePhysics& physics, float32 fixedDeltaTime, uint32 stepIndex, uint32 stepCount )
+    void RigidBody2DComponent::onPrePhysicsStep( const FixedStepContext& context )
     {
-        IPhysicsBodyScene2D*    pScene = physics.findScene2D();
-        const uint32            index  = getPoseIndex();
-        const PhysicsBodyHandle body   = _pPosePage->_arrBody[index];
+        ScenePhysics&           physics        = context.getPhysics();
+        const float32           fixedDeltaTime = context.getFixedDeltaTime();
+        const uint32            stepIndex      = context.getStepIndex();
+        const uint32            stepCount      = context.getStepCount();
+        IPhysicsBodyScene2D*    pScene         = physics.findScene2D();
+        const uint32            index          = getPoseIndex();
+        const PhysicsBodyHandle body           = _pPosePage->_arrBody[index];
         if ( pScene == nullptr || body.isValid() == false )
             return;
         if ( _bodyType == PhysicsBodyType::Kinematic )
@@ -397,10 +403,12 @@ namespace sw
             pScene->addTorque( body, torque );
     }
 
-    void RigidBody2DComponent::endPhysicsFrame( ScenePhysics& physics, float32 alpha )
+    void RigidBody2DComponent::onPhysicsFrameEnd( const FixedStepContext& context )
     {
-        PhysicsBodyPage2D& page  = *_pPosePage;
-        const uint32       index = getPoseIndex();
+        ScenePhysics&      physics = context.getPhysics();
+        const float32      alpha   = context.getAlpha();
+        PhysicsBodyPage2D& page    = *_pPosePage;
+        const uint32       index   = getPoseIndex();
         page.editCommand( index, []( PhysicsBodyCommand<PhysicsDimension2D>& command )
         {
             command._force  = float2{};

@@ -349,16 +349,16 @@ namespace sw
         { return typeInfo.requiresTickRegistration(); } );
         if ( bTickBatch )
             buffer.append( "#include \"Engine/Object/GameObject/Tick/TickBatchRegistry.h\"\n\n" );
-        const bool bPhysicsHooks = VectorUtil::containsIf( _header._listType, []( const ParsedTypeInfo& typeInfo )
-        { return typeInfo.requiresPhysicsHookRegistration(); } );
-        if ( bPhysicsHooks )
-            buffer.append( "#include \"Engine/Physics/Scene/PhysicsHookRegistry.h\"\n\n" );
+        const bool bFixedStep = VectorUtil::containsIf( _header._listType, []( const ParsedTypeInfo& typeInfo )
+        { return typeInfo.requiresFixedStepRegistration(); } );
+        if ( bFixedStep )
+            buffer.append( "#include \"Engine/Physics/Scene/FixedStepBatch.h\"\n\n" );
         buffer.append( emitdirective::kGeneratedNsOpen );
         for ( size_t typeIndex = 0; typeIndex < _header._listType.size(); ++typeIndex )
         {
             emitTypeRegistrar( buffer, _header._listType[typeIndex], typeIndex );
             emitTickBatchRegistration( buffer, _header._listType[typeIndex] );
-            emitPhysicsHookRegistration( buffer, _header._listType[typeIndex] );
+            emitFixedStepRegistration( buffer, _header._listType[typeIndex] );
         }
         for ( const ParsedEnumInfo& enumInfo : _header._listEnum )
         {
@@ -1011,11 +1011,11 @@ namespace sw
         emit.line( "" );
     }
 
-    void CodeGenerator::emitPhysicsHookRegistration( CodeEmitBuffer& outBuffer, const ParsedTypeInfo& typeInfo ) const
+    void CodeGenerator::emitFixedStepRegistration( CodeEmitBuffer& outBuffer, const ParsedTypeInfo& typeInfo ) const
     {
-        const CodeEmitByteScope byteScope{ _emitBytes, outBuffer, CodeEmitSection::PhysicsHook };
-        // 등록 줄 모양은 받는 쪽(`PhysicsHookRegistry.h`)이 정한 `SW_REGISTER_PHYSICS_HOOKS( 타입 )` 하나다. 재정의 여부는 그 줄이 컴파일에서 정한다.
-        if ( typeInfo.requiresPhysicsHookRegistration() == false )
+        const CodeEmitByteScope byteScope{ _emitBytes, outBuffer, CodeEmitSection::FixedStep };
+        // 등록 줄 모양은 받는 쪽(`FixedStepBatch.h`)이 정한 `SW_REGISTER_FIXED_STEP_TYPE( 타입 )` 하나다. 재정의 여부는 그 줄이 컴파일에서 정한다.
+        if ( typeInfo.requiresFixedStepRegistration() == false )
             return;
         CodeEmit emit( outBuffer );
         emit.push( 1 );
@@ -1023,9 +1023,9 @@ namespace sw
         const string_view qualifiedName = typeInfo._fullyQualifiedName;
         const string_view swPrefix      = "sw::";
         if ( StringUtil::startsWith( qualifiedName, swPrefix ) && qualifiedName.substr( swPrefix.size() ) == string_view( typeInfo._name ) )
-            emit.linef( "SW_REGISTER_PHYSICS_HOOKS( %# );", typeInfo._name );
+            emit.linef( "SW_REGISTER_FIXED_STEP_TYPE( %# );", typeInfo._name );
         else
-            emit.linef( "static ::sw::PhysicsHookRegistrar s_%#_physicsHooks{ ::sw::PhysicsHooksOf<%#>::makeEntry() };", sanitizeIdentifier( typeInfo._fullyQualifiedName ),
+            emit.linef( "static ::sw::FixedStepRegistrar s_%#_fixedStep{ ::sw::FixedStepBatchOf<%#>::makeEntry() };", sanitizeIdentifier( typeInfo._fullyQualifiedName ),
                         typeInfo._fullyQualifiedName );
         emit.line( "" );
     }

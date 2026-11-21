@@ -144,9 +144,9 @@ namespace sw
         const PhysicsHitZoneDef* findHitZone( uint32 bodyIndex ) const;
 
     protected:
-        void beginPhysicsFrame( ScenePhysics& physics ) override;
-        void prePhysicsStep( ScenePhysics& physics, float32 fixedDeltaTime, uint32 stepIndex, uint32 stepCount ) override;
-        void endPhysicsFrame( ScenePhysics& physics, float32 alpha ) override;
+        void onPhysicsFrameBegin( const FixedStepContext& context );
+        void onPrePhysicsStep( const FixedStepContext& context );
+        void onPhysicsFrameEnd( const FixedStepContext& context );
         void releasePhysics( ScenePhysics& physics ) override;
 
     private:

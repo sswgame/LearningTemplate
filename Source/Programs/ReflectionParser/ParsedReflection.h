@@ -461,8 +461,8 @@ namespace sw
         uint8 _bParentReflected : 1;
         /** @brief `Component` 파생입니다(추상 포함). 틱 모드 등록(`requiresTickRegistration`)과 `TickMode` 검사가 본다. */
         uint8 _bComponent : 1;
-        /** @brief `parsing.physics_hook_base_types`(`sw::PhysicsComponent`) 파생입니다(추상 포함). 물리 훅 등록(`requiresPhysicsHookRegistration`)이 본다. */
-        uint8 _bPhysicsComponent : 1;
+        /** @brief `parsing.fixed_step_base_types`(`sw::PhysicsComponent`) 파생입니다(추상 포함). 고정 스텝 훅 등록(`requiresFixedStepRegistration`)이 본다. */
+        uint8 _bFixedStepComponent : 1;
         /** @brief 이 타입이 직접 선언한 재정의입니다(`MemberCollector::collectTraits`). 코드젠이 `TypeMetadata` 의 특성 비트와 일괄 틱 등록을 낸다. */
         uint8 _bOverridesTick           : 1;
         uint8 _bOverridesSubTick        : 1;
@@ -498,7 +498,7 @@ namespace sw
             , _bNotPlaceable{ SW_FALSE }
             , _bParentReflected{ SW_FALSE }
             , _bComponent{ SW_FALSE }
-            , _bPhysicsComponent{ SW_FALSE }
+            , _bFixedStepComponent{ SW_FALSE }
             , _bOverridesTick{ SW_FALSE }
             , _bOverridesSubTick{ SW_FALSE }
             , _bOverridesSerializeState{ SW_FALSE }
@@ -523,10 +523,10 @@ namespace sw
         }
 
         /**
-         * @brief 이 타입에 물리 훅 등록(`SW_REGISTER_PHYSICS_HOOKS`)을 낸다 — 추상이 아닌 물리 컴포넌트마다다.
+         * @brief 이 타입에 고정 스텝 훅 등록(`SW_REGISTER_FIXED_STEP_TYPE`)을 낸다 — 추상이 아닌 물리 컴포넌트마다다.
          * @details 재정의 여부는 파서가 보지 않는다. 중간 기반의 재정의를 물려받은 타입도 있어, 판정은 생성된 줄이 `&T::훅` 의 형식으로 컴파일에서 한다.
          */
-        bool requiresPhysicsHookRegistration() const noexcept { return _bPhysicsComponent == SW_TRUE && _bAbstract == SW_FALSE; }
+        bool requiresFixedStepRegistration() const noexcept { return _bFixedStepComponent == SW_TRUE && _bAbstract == SW_FALSE; }
     };
 } // namespace sw
 

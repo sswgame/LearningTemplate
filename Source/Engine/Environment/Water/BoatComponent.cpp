@@ -12,6 +12,7 @@
 #include "Engine/Environment/Water/WaterBodyComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Tick/FixedStepContext.h"
 #include "Engine/Physics/Component/RigidBodyComponent.h"
 #include "Engine/Physics/IPhysicsScene.h"
 #include "Engine/Physics/Scene/ScenePhysics.h"
@@ -105,11 +106,11 @@ namespace sw
         _arrPitchPeak[1] = MathUtil::max( _arrPitchPeak[1], MathUtil::abs( pitch ) );
     }
 
-    void BoatComponent::prePhysicsStep( ScenePhysics& physics, float32 fixedDeltaTime, uint32 stepIndex, uint32 stepCount )
+    void BoatComponent::onPrePhysicsStep( const FixedStepContext& context )
     {
-        (void)stepIndex;
-        (void)stepCount;
-        _state = BoatState{};
+        ScenePhysics& physics        = context.getPhysics();
+        const float32 fixedDeltaTime = context.getFixedDeltaTime();
+        _state                       = BoatState{};
         if ( isSimulated() == false )
             return;
         IPhysicsBodyScene3D*      pScene    = physics.findScene3D();

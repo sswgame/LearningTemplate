@@ -13,6 +13,7 @@
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Foundation/StateHashBuilder.h"
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/Tick/FixedStepContext.h"
 #include "Engine/Physics/IPhysicsScene.h"
 #include "Engine/Physics/Scene/PhysicsNameValidation.h"
 #include "Engine/Physics/Scene/PhysicsPoseStore.h"
@@ -271,8 +272,9 @@ namespace sw
         inoutBuilder.addUint8( isGrounded() ? 1 : 0 );
     }
 
-    void CharacterControllerComponent::beginPhysicsFrame( ScenePhysics& physics )
+    void CharacterControllerComponent::onPhysicsFrameBegin( const FixedStepContext& context )
     {
+        ScenePhysics& physics = context.getPhysics();
         if ( isSimulated() == false )
         {
             releasePhysics( physics );
@@ -296,7 +298,7 @@ namespace sw
         const bool bTransformChanged = consumeTransformChange();
         const bool bCreate           = _character.isValid() == false;
         const bool bTeleported       = consumeTeleport();
-        // 배율은 끝 훅(`endPhysicsFrame`)이 먼저 읽었을 수 있다 — 변경 번호만이 아니라 지은 배율과의 값 비교로도 본다.
+        // 배율은 끝 훅(`onPhysicsFrameEnd`)이 먼저 읽었을 수 있다 — 변경 번호만이 아니라 지은 배율과의 값 비교로도 본다.
         const float32 requestedReduction = MathUtil::max( 0.0f, _requestedHeightReduction.load( std::memory_order_relaxed ) );
         const bool    bResize            = bCreate == false && requestedReduction != _appliedHeightReduction;
         const bool    bUnchanged         = bCreate == false && bTransformChanged == false && bTeleported == false && bResize == false && isShapeScaleStale( _worldScale ) == false;
@@ -349,8 +351,12 @@ namespace sw
             _verticalSpeed = 0.0f;
     }
 
-    void CharacterControllerComponent::prePhysicsStep( ScenePhysics& physics, float32 fixedDeltaTime, uint32 stepIndex, uint32 stepCount )
+    void CharacterControllerComponent::onPrePhysicsStep( const FixedStepContext& context )
     {
+        ScenePhysics& physics        = context.getPhysics();
+        const float32 fixedDeltaTime = context.getFixedDeltaTime();
+        const uint32  stepIndex      = context.getStepIndex();
+        const uint32  stepCount      = context.getStepCount();
         _physicsStep.assumeHeld(); // 물리 스텝은 이 컴포넌트마다 한 번에 한 스레드가 돈다
         IPhysicsScene3D* pScene = physics.findScene3D();
         if ( pScene == nullptr || _character.isValid() == false )
@@ -427,13 +433,14 @@ namespace sw
         _previousPosition   = _state._position;
         _queuedStepVelocity = float3{ moveVelocity._x, _verticalSpeed, moveVelocity._z };
         _queuedStepSeconds  = fixedDeltaTime;
-        // 옮기기는 씬이 모든 캐릭터를 모아 한 번에 한다(이 스텝의 모든 `prePhysicsStep` 뒤, 월드 스텝 앞) — 결과는 `postPhysicsStep` 이 잇는다.
+        // 옮기기는 씬이 모든 캐릭터를 모아 한 번에 한다(이 스텝의 모든 `onPrePhysicsStep` 뒤, 월드 스텝 앞) — 결과는 `onPostPhysicsStep` 이 잇는다.
         physics.queueCharacterMove( _character, _queuedStepVelocity );
     }
 
-    void CharacterControllerComponent::postPhysicsStep( ScenePhysics& physics )
+    void CharacterControllerComponent::onPostPhysicsStep( const FixedStepContext& context )
     {
-        _physicsStep.assumeHeld(); // `prePhysicsStep` 과 같은 스레드 규칙이다
+        ScenePhysics& physics = context.getPhysics();
+        _physicsStep.assumeHeld(); // `onPrePhysicsStep` 과 같은 스레드 규칙이다
         const float32 fixedDeltaTime  = _queuedStepSeconds;
         _queuedStepSeconds            = 0.0f;
         const IPhysicsScene3D* pScene = physics.findScene3D();
@@ -470,8 +477,10 @@ namespace sw
         }
     }
 
-    void CharacterControllerComponent::endPhysicsFrame( ScenePhysics& physics, float32 alpha )
+    void CharacterControllerComponent::onPhysicsFrameEnd( const FixedStepContext& context )
     {
+        ScenePhysics& physics = context.getPhysics();
+        const float32 alpha   = context.getAlpha();
         if ( _character.isValid() == false )
             return;
         const float3 position = float3::lerp( _previousPosition, _state._position, alpha );

@@ -73,9 +73,9 @@ namespace sw
         void setMaterial( const hashed_string& material );
 
     protected:
-        void beginPhysicsFrame( ScenePhysics& physics ) override;
+        void onPhysicsFrameBegin( const FixedStepContext& context );
         void releasePhysics( ScenePhysics& physics ) override;
-        /** @brief 청크마다 정적 바디 서술자 하나를 냅니다(`beginPhysicsFrame` 과 같은 메시 · 레이어 · 재질, 모두 구멍인 청크는 뺀다). */
+        /** @brief 청크마다 정적 바디 서술자 하나를 냅니다(`onPhysicsFrameBegin` 과 같은 메시 · 레이어 · 재질, 모두 구멍인 청크는 뺀다). */
         void appendStaticBodies3D( const ScenePhysics& physics, vector<PhysicsBodyDesc3D>& outListBody ) const override;
 
     private:

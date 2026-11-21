@@ -257,10 +257,10 @@ namespace sw
         /** @brief 붙어 있는 조각의 형태가 바뀌었을 때 불립니다. 처음 쪼갰을 때, 붙은 그룹이 갈라졌을 때, 떨어졌을 때입니다. 게임 스레드의 물리 프레임 안에서 호출됩니다. */
         virtual void onAnchoredShapeChanged() {}
 
-        void beginPhysicsFrame( ScenePhysics& physics ) override;
-        void prePhysicsStep( ScenePhysics& physics, float32 fixedDeltaTime, uint32 stepIndex, uint32 stepCount ) override;
-        void postPhysicsStep( ScenePhysics& physics ) override;
-        void endPhysicsFrame( ScenePhysics& physics, float32 alpha ) override;
+        void onPhysicsFrameBegin( const FixedStepContext& context );
+        void onPrePhysicsStep( const FixedStepContext& context );
+        void onPostPhysicsStep( const FixedStepContext& context );
+        void onPhysicsFrameEnd( const FixedStepContext& context );
         void releasePhysics( ScenePhysics& physics ) override;
 
     private:

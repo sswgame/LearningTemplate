@@ -65,9 +65,9 @@ namespace sw
         PhysicsWheeledVehicleDesc makeVehicleDesc() const;
 
     protected:
-        void beginPhysicsFrame( ScenePhysics& physics ) override;
+        void onPhysicsFrameBegin( const FixedStepContext& context );
         /** @brief 스텝이 끝난 상태(속도 · 기어 · 접지)를 읽어 둡니다. */
-        void endPhysicsFrame( ScenePhysics& physics, float32 alpha ) override;
+        void onPhysicsFrameEnd( const FixedStepContext& context );
         void releasePhysics( ScenePhysics& physics ) override;
 
     private:

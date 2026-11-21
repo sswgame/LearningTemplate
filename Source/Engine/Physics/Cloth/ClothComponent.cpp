@@ -7,6 +7,7 @@
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/Tick/FixedStepContext.h"
 #include "Engine/Physics/IPhysicsScene.h"
 #include "Engine/Physics/Scene/PhysicsNameValidation.h"
 #include "Engine/Physics/Scene/ScenePhysics.h"
@@ -323,8 +324,9 @@ namespace sw
         return desc;
     }
 
-    void ClothComponent::beginPhysicsFrame( ScenePhysics& physics )
+    void ClothComponent::onPhysicsFrameBegin( const FixedStepContext& context )
     {
+        ScenePhysics& physics = context.getPhysics();
         if ( isSimulated() == false )
         {
             releasePhysics( physics );
@@ -382,7 +384,7 @@ namespace sw
     {
         IPhysicsScene3D* const pScene = physics.getScene3D();
         if ( pScene == nullptr || findPinBoneWorlds( _listPinBoneWorld ) == false )
-            return; // `beginPhysicsFrame` 이 같은 프레임에 씬과 뼈를 이미 확인했다
+            return; // `onPhysicsFrameBegin` 이 같은 프레임에 씬과 뼈를 이미 확인했다
         pScene->setSoftBodySkinningPose( _softBody, _listPinBoneWorld, bHardSkinAll );
     }
 
@@ -453,12 +455,12 @@ namespace sw
         return true;
     }
 
-    void ClothComponent::endPhysicsFrame( ScenePhysics& physics, float32 alpha )
+    void ClothComponent::onPhysicsFrameEnd( const FixedStepContext& context )
     {
-        (void)alpha;
+        ScenePhysics& physics = context.getPhysics();
         if ( _bLODSuspended == SW_TRUE )
         {
-            updateRenderMesh(); // LOD 로 내린 동안의 쉬는 격자(`beginPhysicsFrame` 이 채웠다)
+            updateRenderMesh(); // LOD 로 내린 동안의 쉬는 격자(`onPhysicsFrameBegin` 이 채웠다)
             return;
         }
         const IPhysicsScene3D* pScene = physics.findScene3D();

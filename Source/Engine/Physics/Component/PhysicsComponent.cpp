@@ -8,6 +8,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Service/SceneSpatialGrid.h"
+#include "Engine/Object/GameObject/Tick/FixedStepTickList.h"
 #include "Engine/Physics/Component/CharacterControllerComponent.h"
 #include "Engine/Physics/Component/RigidBodyComponent.h"
 #include "Engine/Physics/Scene/ScenePhysics.h"
@@ -49,35 +50,13 @@ namespace sw
         return kLayer;
     }
 
-    void PhysicsComponent::beginPhysicsFrame( ScenePhysics& physics )
-    {
-        (void)physics;
-    }
-
-    void PhysicsComponent::prePhysicsStep( ScenePhysics& physics, float32 fixedDeltaTime, uint32 stepIndex, uint32 stepCount )
-    {
-        (void)physics;
-        (void)fixedDeltaTime;
-        (void)stepIndex;
-        (void)stepCount;
-    }
-
-    void PhysicsComponent::postPhysicsStep( ScenePhysics& physics )
-    {
-        (void)physics;
-    }
-
-    void PhysicsComponent::endPhysicsFrame( ScenePhysics& physics, float32 alpha )
-    {
-        (void)physics;
-        (void)alpha;
-    }
-
     void PhysicsComponent::onRegister( GameObjectManager& manager )
     {
         SceneComponent::onRegister( manager );
         _pScenePhysics = &manager.getSubsystem<sw::ScenePhysics>();
         _pScenePhysics->registerComponent( this );
+        // 고정 스텝 훅은 틱 시스템이 부른다 — 단계가 차례다(바디 → 관절 → 캐릭터, `FixedStepTickList` 의 단계 버킷).
+        (void)manager.getFixedStepTickList().add( *this, getFixedStepPhase() );
         // 3D 캐릭터 · 강체는 지역 같은 공간 질의의 후보다 — 씬을 훑지 않게 등록 동안 공간 색인에 올린다(점, 반 크기 0).
         const SpatialGridLayerDesc* pLayer = castTo<CharacterControllerComponent>( this ) != nullptr ? &getCharacterSpatialLayer()
                                            : castTo<RigidBodyComponent>( this ) != nullptr           ? &getBodySpatialLayer()
@@ -93,6 +72,7 @@ namespace sw
             releasePhysics( *_pScenePhysics );
             _pScenePhysics->unregisterComponent( this );
         }
+        (void)manager.getFixedStepTickList().remove( *this );
         _pScenePhysics = nullptr;
         manager.getSubsystem<SceneSpatialGrid>().remove( _spatialEntry );
         SceneComponent::onUnregister( manager );
@@ -126,6 +106,23 @@ namespace sw
                             PhysicsComponentInternal::kShapeScaleTolerance * MathUtil::max( 1.0f, MathUtil::abs( _shapeScale._y ) ),
                             PhysicsComponentInternal::kShapeScaleTolerance * MathUtil::max( 1.0f, MathUtil::abs( _shapeScale._z ) ) };
         return MathUtil::abs( delta._x ) > limit._x || MathUtil::abs( delta._y ) > limit._y || MathUtil::abs( delta._z ) > limit._z;
+    }
+
+    TickPhase PhysicsComponent::getFixedStepPhase() const
+    {
+        switch ( _phase )
+        {
+            case PhysicsComponentPhase::Body:
+                return TickPhase::Early;
+            case PhysicsComponentPhase::Joint:
+                return TickPhase::Normal; // 관절은 바디가 있어야 만든다
+            case PhysicsComponentPhase::Character:
+                return TickPhase::Late;
+            case PhysicsComponentPhase::Count:
+                break;
+        }
+        SW_FATAL( "PhysicsComponent: unknown physics phase %#", static_cast<uint32>( _phase ) );
+        return TickPhase::Early;
     }
 
     bool PhysicsComponent::isSimulated() const

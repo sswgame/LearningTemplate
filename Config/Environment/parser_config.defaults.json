@@ -63,7 +63,7 @@
             "SceneComponent",
             "sw::SceneComponent"
         ],
-        "physics_hook_base_types": [
+        "fixed_step_base_types": [
             "PhysicsComponent",
             "sw::PhysicsComponent"
         ],

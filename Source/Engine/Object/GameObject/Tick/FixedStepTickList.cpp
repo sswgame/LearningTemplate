@@ -98,14 +98,24 @@ namespace sw
         if ( _bStale == SW_FALSE )
             return;
         _bStale = SW_FALSE;
+        if ( pRegistry == nullptr )
+        {
+            // 표 없이 구성원이 있으면 훅을 부를 길이 없다 — 조용히 건너뛰지 않는다(가상 호출 물러나기는 지웠다).
+            if ( _mapLocation.empty() == false )
+                SW_FATAL( "FixedStepTickList: %# fixed step members but the scene has no TickBatchRegistry", static_cast<uint32>( _mapLocation.size() ) );
+            for ( const FixedStepGroup group : EnumRange<FixedStepGroup>{} )
+            {
+                _arrListComponent[group].clear();
+                _arrListRun[group].clear();
+            }
+            return;
+        }
         for ( const FixedStepGroup group : EnumRange<FixedStepGroup>{} )
         {
             vector<Component*>& listComponent = _arrListComponent[group];
             vector<Run>&        listRun       = _arrListRun[group];
             listComponent.clear();
             listRun.clear();
-            if ( pRegistry == nullptr )
-                continue;
             for ( const vector<Member>& listMember : _arrListMember )
             {
                 for ( const Member& member : listMember )

@@ -144,9 +144,9 @@ namespace sw
         void resetMotion() override;
         /** @brief 동적 바디만 바닥 없이 떨어진다. */
         bool needsStreamingFloor() const override { return _bodyType == PhysicsBodyType::Dynamic; }
-        void beginPhysicsFrame( ScenePhysics& physics ) override;
-        void prePhysicsStep( ScenePhysics& physics, float32 fixedDeltaTime, uint32 stepIndex, uint32 stepCount ) override;
-        void endPhysicsFrame( ScenePhysics& physics, float32 alpha ) override;
+        void onPhysicsFrameBegin( const FixedStepContext& context );
+        void onPrePhysicsStep( const FixedStepContext& context );
+        void onPhysicsFrameEnd( const FixedStepContext& context );
         void releasePhysics( ScenePhysics& physics ) override;
         /** @brief 정적이고 트리거가 아니면 지금 자리의 바디 서술자 하나를 냅니다(`createBody` 와 같은 서술자). */
         void appendStaticBodies3D( const ScenePhysics& physics, vector<PhysicsBodyDesc3D>& outListBody ) const override;
@@ -203,7 +203,7 @@ namespace sw
         PhysicsBodyPage<PhysicsDimension3D>* _pPosePage;    ///< 강체 칸이 든 페이지 — 바디 핸들 · 스텝 자세 · 속도 · 명령(`PhysicsPoseStore`)
         uint32                               _poseSlot;     ///< 강체 칸 번호
         PhysicsFieldSample                   _pendingField; ///< 이번 게임 프레임에 모인 물리 필드 — 명령과 같은 칸 잠금(`PhysicsBodyPage::_arrCommandLock`) 아래다
-        PhysicsFieldSample                   _frameField;   ///< 이번 물리 프레임의 필드(`beginPhysicsFrame` 이 옮긴다)
+        PhysicsFieldSample                   _frameField;   ///< 이번 물리 프레임의 필드(`onPhysicsFrameBegin` 이 옮긴다)
         float3                               _worldScale;   ///< 트랜스폼에서 마지막으로 읽은 월드 배율(변경 번호가 같으면 그대로다)
         float3                               _kinematicStartPosition;
         float3                               _kinematicTargetPosition;

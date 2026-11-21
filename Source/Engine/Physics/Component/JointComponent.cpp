@@ -4,6 +4,7 @@
 
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/Tick/FixedStepContext.h"
 #include "Engine/Physics/Component/RigidBodyComponent.h"
 #include "Engine/Physics/IPhysicsScene.h"
 #include "Engine/Physics/Scene/ScenePhysics.h"
@@ -87,8 +88,9 @@ namespace sw
         return nullptr;
     }
 
-    void JointComponent::beginPhysicsFrame( ScenePhysics& physics )
+    void JointComponent::onPhysicsFrameBegin( const FixedStepContext& context )
     {
+        ScenePhysics& physics = context.getPhysics();
         if ( isSimulated() == false )
         {
             releasePhysics( physics );

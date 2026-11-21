@@ -1,5 +1,5 @@
 // 캐릭터 컨트롤러 3D · 2D 의 입력이 `PhysicsPoseStore` 의 칸(`PhysicsCommandPage`)에 든 뒤에도 예전 컴포넌트 멤버 + `_commandLock` 때와 같은 값을 같은 단계에서 꺼낸다.
-// 쓰는 쪽: 아무 틱 워커(`setMoveVelocity` · `jump` · `addRootMotionDisplacement` …, 칸의 잠금 아래). 읽는 쪽: 게임 스레드의 물리 프레임(`beginPhysicsFrame` · `prePhysicsStep`).
+// 쓰는 쪽: 아무 틱 워커(`setMoveVelocity` · `jump` · `addRootMotionDisplacement` …, 칸의 잠금 아래). 읽는 쪽: 게임 스레드의 물리 프레임(`onPhysicsFrameBegin` · `onPrePhysicsStep`).
 #include "pch.h"
 
 #include "Core/Testing/TestFramework.h"

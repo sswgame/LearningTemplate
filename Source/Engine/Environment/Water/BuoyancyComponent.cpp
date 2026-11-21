@@ -8,6 +8,7 @@
 #include "Engine/Environment/Water/WaterBodyComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Tick/FixedStepContext.h"
 #include "Engine/Physics/Component/RigidBodyComponent.h"
 #include "Engine/Physics/IPhysicsScene.h"
 #include "Engine/Physics/PhysicsSettings.h"
@@ -45,11 +46,11 @@ namespace sw
     {
     }
 
-    void BuoyancyComponent::prePhysicsStep( ScenePhysics& physics, float32 fixedDeltaTime, uint32 stepIndex, uint32 stepCount )
+    void BuoyancyComponent::onPrePhysicsStep( const FixedStepContext& context )
     {
-        (void)stepIndex;
-        (void)stepCount;
-        _submergedPontoonCount = 0;
+        ScenePhysics& physics        = context.getPhysics();
+        const float32 fixedDeltaTime = context.getFixedDeltaTime();
+        _submergedPontoonCount       = 0;
         if ( isSimulated() == false )
             return;
         IPhysicsBodyScene3D*      pScene    = physics.findScene3D();
