@@ -35,7 +35,7 @@ namespace
 
         sw::AutosaveManager::SaveDelegate makeSave()
         {
-            return sw::AutosaveManager::SaveDelegate::create( [this]( sw::vector<uint8>& outBytes )
+            return SW_DELEGATE_LAMBDA( sw::AutosaveManager::SaveDelegate, [this]( sw::vector<uint8>& outBytes )
             {
                 sw::StringBuilder<sw::constant::buffer::kMax256> stateBuilder;
                 stateBuilder.appendFormat( "state%#", _listSavedState.size() );
@@ -48,7 +48,7 @@ namespace
         /** @brief 바로 적용하고 완료를 안에서 알린다. `_bDeferRestore` 면 씬을 옮기는 게임처럼 바이트와 완료를 들고 있다가 `finishDeferredRestore` 에서 적용한다. */
         sw::AutosaveManager::LoadDelegate makeLoad()
         {
-            return sw::AutosaveManager::LoadDelegate::create( [this]( const sw::string& slot, const sw::vector<uint8>& bytes, const sw::AutosaveManager::RestoreCompletedFunction& onCompleted )
+            return SW_DELEGATE_LAMBDA( sw::AutosaveManager::LoadDelegate, [this]( const sw::string& slot, const sw::vector<uint8>& bytes, const sw::AutosaveManager::RestoreCompletedFunction& onCompleted )
             {
                 (void)slot;
                 if ( _bDeferRestore == SW_TRUE )

@@ -62,7 +62,7 @@ SW_TEST_CASE( BehaviorTreeEditModelTest, EditNotifiesOnceAndParseKeepsTheRecorde
 {
     uint32                     count{ 0 };
     string                     lastLabel;
-    const DocumentEditRecorder recorder{ DocumentEditRecorder::RecordDelegate::create( [&count, &lastLabel]( string_view label )
+    const DocumentEditRecorder recorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, [&count, &lastLabel]( string_view label )
     {
         ++count;
         lastLabel = string{ label };

@@ -451,7 +451,7 @@ namespace sw
             context->CopySubresourceRegion( record._texture.Get(), firstDestinationSubresource + mip, destinationX, destinationY, 0, staging.getTexture(), mip, nullptr );
         }
         const uint64 serial = endTransfer( context, std::move( query ), std::move( staging ) );
-        record._uploadSerials.recordWrite( serial );
+        record._transferSerials.recordWrite( serial );
         return _transferSerials.makeAccepted( serial );
     }
 

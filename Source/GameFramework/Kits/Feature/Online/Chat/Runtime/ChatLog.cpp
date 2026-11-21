@@ -55,7 +55,7 @@ namespace sw
         ChatSendRequest request;
         request._channelID = string( channelID );
         request._text      = string( text );
-        (void)_pClient->call<ChatMethod::Send>( request, OnlineReplyDelegate<ChatMethod::Send>::create<&ChatLog::onSendReply>( this ) );
+        (void)_pClient->call<ChatMethod::Send>( request, SW_DELEGATE_METHOD( OnlineReplyDelegate<ChatMethod::Send>, &ChatLog::onSendReply, this ) );
         return true;
     }
 

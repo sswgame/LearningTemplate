@@ -81,7 +81,7 @@ namespace sw
         _mapServerToReserved.clear();
         _outstandingCount = 1;
         _indexRequestID   = _pRouter->submit( EphemeralRequest::makeScoreRange( ServerRecord::makeIndexKey( _kind ), 0, kMaxServerCount ),
-                                              EphemeralStoreRouter::ReplyDelegate::create<&ServerRegistryReader::onIndexReply>( this ), _replyOwner );
+                                              SW_DELEGATE_METHOD( EphemeralStoreRouter::ReplyDelegate, &ServerRegistryReader::onIndexReply, this ), _replyOwner );
     }
 
     void ServerRegistryReader::onIndexReply( const EphemeralReply& reply )
@@ -101,10 +101,10 @@ namespace sw
             if ( ServerRecord::parseMember( member._member, serverID ) == false )
                 continue;
             const uint64 requestID           = _pRouter->submit( EphemeralRequest::makeGet( ServerRecord::makeRecordKey( serverID ) ),
-                                                                 EphemeralStoreRouter::ReplyDelegate::create<&ServerRegistryReader::onRecordReply>( this ), _replyOwner );
+                                                                 SW_DELEGATE_METHOD( EphemeralStoreRouter::ReplyDelegate, &ServerRegistryReader::onRecordReply, this ), _replyOwner );
             _mapRequestToServer[requestID]   = serverID;
             const uint64 seatRequestID       = _pRouter->submit( EphemeralRequest::makeGet( ServerRecord::makeSeatKey( serverID ) ),
-                                                                 EphemeralStoreRouter::ReplyDelegate::create<&ServerRegistryReader::onSeatReply>( this ), _replyOwner );
+                                                                 SW_DELEGATE_METHOD( EphemeralStoreRouter::ReplyDelegate, &ServerRegistryReader::onSeatReply, this ), _replyOwner );
             _mapRequestToSeat[seatRequestID] = serverID;
             _outstandingCount += 2;
         }

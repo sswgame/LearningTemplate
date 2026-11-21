@@ -166,7 +166,7 @@ namespace sw
         , _listSkinPalette{}
         , _listDependency{}
         , _listTask{}
-        , _phaseTaskSubscriptions{ ItemSubscriptionList<IAnimationPhaseTask>::ReleaseFunction::create<&SkeletalMeshComponent::detachAnimationPhaseTask>( this ) }
+        , _phaseTaskSubscriptions{ SW_DELEGATE_METHOD( ItemSubscriptionList<IAnimationPhaseTask>::ReleaseFunction, &SkeletalMeshComponent::detachAnimationPhaseTask, this ) }
         , _listLeaderBone{}
         , _leader{}
         , _pLeaderSkeletonForMap{ nullptr }
@@ -184,7 +184,7 @@ namespace sw
         , _listBoneLODMaskCount{}
         , _listBoneRequirement{}
         , _mirrorBoneMap{}
-        , _boneRequirementSubscriptions{ SubscriptionList::ReleaseFunction::create<&SkeletalMeshComponent::releaseBoneRequirement>( this ) }
+        , _boneRequirementSubscriptions{ SW_DELEGATE_METHOD( SubscriptionList::ReleaseFunction, &SkeletalMeshComponent::releaseBoneRequirement, this ) }
         , _nextBoneRequirementID{ 1 }
         , _interpolationFrom{}
         , _interpolationTarget{}

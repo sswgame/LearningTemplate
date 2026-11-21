@@ -230,8 +230,8 @@ SW_TEST_CASE( MinigameTest, ResultReachesSubscribers )
 {
     MinigameFlow::FinishedDelegate finished;
     vector<MinigameResult>         listReceived;
-    Subscription                   subscription = finished.add( Delegate<void( const MinigameResult& )>::create( [&listReceived]( const MinigameResult& result )
-    { listReceived.push_back( result ); } ) );
+    Subscription                   subscription = finished.add( SW_DELEGATE_LAMBDA( Delegate<void( const MinigameResult& )>, [&listReceived]( const MinigameResult& result )
+                      { listReceived.push_back( result ); } ) );
     MinigameStack                  stack;
     stack.push( MinigameFrame{ makeMinigame( "fishing", MinigameEntry::SceneSwitch ), MinigameReturnPoint{ MinigameEntranceReturn{} } } );
     MinigameFrame popped;
@@ -254,8 +254,8 @@ SW_TEST_CASE( MinigameTest, ResultCarriesDirectorOwnedValues )
     director.collectResultForTest( listValue );
     MinigameFlow::FinishedDelegate finished;
     vector<MinigameResult>         listReceived;
-    Subscription                   subscription = finished.add( Delegate<void( const MinigameResult& )>::create( [&listReceived]( const MinigameResult& result )
-    { listReceived.push_back( result ); } ) );
+    Subscription                   subscription = finished.add( SW_DELEGATE_LAMBDA( Delegate<void( const MinigameResult& )>, [&listReceived]( const MinigameResult& result )
+                      { listReceived.push_back( result ); } ) );
     finished.broadcast( MinigameResult{ hashed_string( "fishing" ), hashed_string( "win" ), std::move( listValue ) } );
     SW_REQUIRE_TRUE( listReceived.size() == 1 );
     SW_REQUIRE_TRUE( listReceived[0]._listValue.size() == 1 );

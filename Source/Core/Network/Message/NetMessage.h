@@ -377,6 +377,6 @@ namespace sw
         vector<int32>                                 _listRefusedConnection; ///< 이번 `poll` 에서 판이 달라 끊은 연결 — 남은 메시지를 넘기지 않는다
         uint8                                         _bWireVersionsChanged;  ///< 등록이 바뀌었다 — 다음 `poll` 이 상대 모두에게 알리고 들고 있는 상대 판과 견준다
         /** @brief 이 객체가 내준 처리기 등록 구독입니다. 풀리면 `releaseHandler` 가 불린다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다. */
-        ItemSubscriptionList<INetMessageHandler> _subscriptions{ ItemSubscriptionList<INetMessageHandler>::ReleaseFunction::create<&NetMessageRouter::releaseHandler>( this ) };
+        ItemSubscriptionList<INetMessageHandler> _subscriptions{ SW_DELEGATE_METHOD( ItemSubscriptionList<INetMessageHandler>::ReleaseFunction, &NetMessageRouter::releaseHandler, this ) };
     };
 } // namespace sw

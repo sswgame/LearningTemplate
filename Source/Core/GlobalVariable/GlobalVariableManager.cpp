@@ -113,7 +113,7 @@ namespace sw
             static void addCommandLineArgument( CommandLineManager& commandLine, const GlobalVariableInfo& info )
             {
                 const T defaultValue = std::holds_alternative<T>( info._defaultValue ) ? std::get<T>( info._defaultValue ) : T{};
-                commandLine.addArgument<T>( { info._name }, defaultValue, true );
+                commandLine.addArgument<T>( { info._name }, defaultValue );
             }
 
             [[nodiscard]] static bool readCommandLineArgument( const CommandLineManager& commandLine, GlobalVariableInfo& info, string& /*outPendingText*/ )
@@ -150,7 +150,7 @@ namespace sw
             static void addCommandLineArgument( CommandLineManager& commandLine, const GlobalVariableInfo& info )
             {
                 string defaultValue = std::holds_alternative<string>( info._defaultValue ) ? std::get<string>( info._defaultValue ) : string{};
-                commandLine.addArgument<string>( { info._name }, std::move( defaultValue ), true );
+                commandLine.addArgument<string>( { info._name }, std::move( defaultValue ) );
             }
 
             [[nodiscard]] static bool readCommandLineArgument( const CommandLineManager& commandLine, GlobalVariableInfo& info, string& /*outPendingText*/ )
@@ -192,7 +192,7 @@ namespace sw
             static void addCommandLineArgument( CommandLineManager& commandLine, const GlobalVariableInfo& info )
             {
                 // 명령줄이 받을 때 절대화한다 - 같은 규칙(CommandLineDiskPath · AbsolutePath::tryResolve)이다. 기본값은 빈 글(끔)만 둔다.
-                commandLine.addArgument<CommandLineDiskPath>( { info._name }, CommandLineDiskPath{}, false );
+                commandLine.addArgument<CommandLineDiskPath>( { info._name }, CommandLineDiskPath{} );
             }
 
             [[nodiscard]] static bool readCommandLineArgument( const CommandLineManager& commandLine, GlobalVariableInfo& info, string& outPendingText )
@@ -241,7 +241,7 @@ namespace sw
             static void addCommandLineArgument( CommandLineManager& commandLine, const GlobalVariableInfo& info )
             {
                 // 숫자 또는 열거자 이름이라 글로 받는다. 정수로 받으면 `Vulkan` 이 파싱 경고 한 줄과 함께 버려진다.
-                commandLine.addArgument<string>( { info._name }, string{}, false );
+                commandLine.addArgument<string>( { info._name }, string{} );
             }
 
             [[nodiscard]] static bool readCommandLineArgument( const CommandLineManager& commandLine, GlobalVariableInfo& info, string& outPendingText )

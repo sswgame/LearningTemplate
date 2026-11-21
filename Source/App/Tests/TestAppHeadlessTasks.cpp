@@ -66,7 +66,7 @@ SW_TEST_CASE( AppHeadlessTasksTest, EmptyTableSucceeds )
 {
     CommandLineManager          commandLine;
     EditorModuleHeadlessSession editorModule; // 모듈을 찾는 작업이 없으면 아무것도 올리지 않는다
-    SW_EXPECT_TRUE( AppHeadlessTasks::runTable( nullptr, 0, commandLine ) );
+    SW_EXPECT_TRUE( AppHeadlessTasks::runTable( nullptr, 0, commandLine, editorModule ) );
 }
 
 /** @brief [AppHeadlessTasksTest] 에디터 모듈 세션은 부르는 작업이 없으면 모듈을 올리지 않는다(헤드리스 실행 한 번에 많아야 한 번 올린다) */

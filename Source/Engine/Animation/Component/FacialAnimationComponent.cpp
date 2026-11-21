@@ -126,7 +126,7 @@ namespace sw
         , _listExpressionWeight{}
         , _listLiveWeight{}
         , _pLiveSource{ nullptr }
-        , _liveSourceSubscriptions{ ItemSubscriptionList<const IFacialLiveSource>::ReleaseFunction::create<&FacialAnimationComponent::detachLiveSource>( this ) }
+        , _liveSourceSubscriptions{ SW_DELEGATE_METHOD( ItemSubscriptionList<const IFacialLiveSource>::ReleaseFunction, &FacialAnimationComponent::detachLiveSource, this ) }
         , _listExpressionTarget{}
         , _listVisemeTarget{}
         , _listBlinkTarget{}

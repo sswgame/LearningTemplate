@@ -103,7 +103,7 @@ namespace sw
 
     private:
         /** @brief 이 객체가 내준 구독입니다(믹스인 상속 대신 합성). 풀리면 `releaseSubscription` 이 불린다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다. */
-        SubscriptionList _subscriptions{ SubscriptionList::ReleaseFunction::create<&UserSettingsHandlerRegistry::releaseSubscription>( this ) };
+        SubscriptionList _subscriptions{ SW_DELEGATE_METHOD( SubscriptionList::ReleaseFunction, &UserSettingsHandlerRegistry::releaseSubscription, this ) };
     };
 } // namespace sw
 

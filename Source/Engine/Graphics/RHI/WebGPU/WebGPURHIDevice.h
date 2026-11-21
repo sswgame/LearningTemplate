@@ -73,15 +73,15 @@ namespace sw
         WGPUTextureView         _sampleView{ nullptr };
         vector<WGPUTextureView> _listSliceView{};
 
-        RHITextureDesc                      _desc{};
-        WGPUTextureFormat                   _wgpuFormat{ WGPUTextureFormat_Undefined };
-        unique_ptr<RHITextureUploadSerials> _pUploadSerials{};               ///< 첫 업로드 · 마지막 업로드 시리얼(등록 가능 판정 — 원자값이라 레코드가 움직여도 자리가 그대로이게 따로 둔다)
-        WGPUTexture                         _depthSampleTexture{ nullptr };  ///< 셰이더가 읽는 깊이 텍스처의 R32 실수 사본(깊이가 아니거나 셰이더가 읽지 않으면 nullptr). `_sampleView` 가 이 사본의 뷰다
-        vector<WGPUTextureView>             _listDepthCopyTarget{};          ///< 면마다 사본의 첨부 뷰(밉 0)
-        vector<WGPUTextureView>             _listDepthReadView{};            ///< 면마다 원본의 깊이 측면 2D 뷰(밉 0) — 사본 패스가 읽는다
-        vector<WGPUBindGroup>               _listDepthCopyGroup{};           ///< 면마다 사본 패스의 그룹 0(`_listDepthReadView` 하나)
-        uint64                              _depthWriteCount{ 1 };           ///< 깊이 첨부로 연 패스 · 복사 대상이 된 횟수(처음은 1 — 첫 사본을 옮긴다)
-        uint64                              _depthCopySourceWriteCount{ 0 }; ///< 사본이 담은 깊이의 쓰기 횟수 — `_depthWriteCount` 와 같으면 사본이 최신이라 다시 옮기지 않는다
+        RHITextureDesc                        _desc{};
+        WGPUTextureFormat                     _wgpuFormat{ WGPUTextureFormat_Undefined };
+        unique_ptr<RHITextureTransferSerials> _pUploadSerials{};               ///< 첫 업로드 · 마지막 업로드 시리얼(등록 가능 판정 — 원자값이라 레코드가 움직여도 자리가 그대로이게 따로 둔다)
+        WGPUTexture                           _depthSampleTexture{ nullptr };  ///< 셰이더가 읽는 깊이 텍스처의 R32 실수 사본(깊이가 아니거나 셰이더가 읽지 않으면 nullptr). `_sampleView` 가 이 사본의 뷰다
+        vector<WGPUTextureView>               _listDepthCopyTarget{};          ///< 면마다 사본의 첨부 뷰(밉 0)
+        vector<WGPUTextureView>               _listDepthReadView{};            ///< 면마다 원본의 깊이 측면 2D 뷰(밉 0) — 사본 패스가 읽는다
+        vector<WGPUBindGroup>                 _listDepthCopyGroup{};           ///< 면마다 사본 패스의 그룹 0(`_listDepthReadView` 하나)
+        uint64                                _depthWriteCount{ 1 };           ///< 깊이 첨부로 연 패스 · 복사 대상이 된 횟수(처음은 1 — 첫 사본을 옮긴다)
+        uint64                                _depthCopySourceWriteCount{ 0 }; ///< 사본이 담은 깊이의 쓰기 횟수 — `_depthWriteCount` 와 같으면 사본이 최신이라 다시 옮기지 않는다
 
         /** @brief (밉 @p mip, 면 @p slice) 의 첨부 뷰입니다. 없으면 nullptr 입니다. */
         WGPUTextureView findAttachmentView( uint32 slice, uint32 mip ) const

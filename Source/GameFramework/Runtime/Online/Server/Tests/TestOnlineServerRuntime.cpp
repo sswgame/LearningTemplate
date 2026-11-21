@@ -560,7 +560,7 @@ SW_TEST_CASE_F( OnlineServerRuntimeTest, GameServerIsInTheDirectoryBeforeTheFirs
     const Subscription    owner  = router.openReplyOwner();
     DirectoryIndexProbe   probe;
     (void)router.submit( EphemeralRequest::makeScoreRange( ServerRecord::makeIndexKey( settings._config._serverKind ), 0, 16 ),
-                         EphemeralStoreRouter::ReplyDelegate::create<&DirectoryIndexProbe::onReply>( &probe ), owner );
+                         SW_DELEGATE_METHOD( EphemeralStoreRouter::ReplyDelegate, &DirectoryIndexProbe::onReply, &probe ), owner );
     for ( int64 tick = 0; tick < 10 && probe._replyCount == 0; ++tick )
     {
         runtime.update( UnixMilliseconds{ 1000 + tick } );

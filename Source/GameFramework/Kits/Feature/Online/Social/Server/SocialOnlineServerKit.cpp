@@ -102,7 +102,7 @@ namespace sw
                 // 순서가 없어도 되고, 찾기는 모든 키트의 `initialize` 뒤인 여기서 한다.
                 _pGroupChannels = unordered.find<IGroupChannelMembership>();
                 if ( _pGroupChannels != nullptr )
-                    _guildEventSubscription = _guildService.bindEventDelegate( GuildEventDelegate::create<&SocialOnlineServerKit::onGuildEvent>( this ) );
+                    _guildEventSubscription = _guildService.bindEventDelegate( SW_DELEGATE_METHOD( GuildEventDelegate, &SocialOnlineServerKit::onGuildEvent, this ) );
                 _socialServer.initialize( &_socialService, &_guildService, interfaces.find<AccountPresence>(), context._pMetricRegistry );
                 return {};
             }

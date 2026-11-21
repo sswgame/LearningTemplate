@@ -46,7 +46,7 @@ namespace sw::editor
         IContentFolderWatch* pFolderWatch = findSubsystem<IContentFolderWatch>(); // 개발 도구가 건다 — 없으면 refresh 가 내용을 비교한다
         if ( pFolderWatch == nullptr )
             return;
-        const IContentFolderWatch::ChangedDelegate onChanged  = IContentFolderWatch::ChangedDelegate::create<&ParkLayoutPreview::onDataFolderChanged>( this );
+        const IContentFolderWatch::ChangedDelegate onChanged  = SW_DELEGATE_METHOD( IContentFolderWatch::ChangedDelegate, &ParkLayoutPreview::onDataFolderChanged, this );
         const string                               layoutDir  = FileUtil::getDirectoryPart( _layoutPath );
         const string                               coasterDir = FileUtil::getDirectoryPart( coasterPath );
         _layoutWatch                                          = pFolderWatch->watchAssetFolder( layoutDir, { ".xml" }, onChanged );

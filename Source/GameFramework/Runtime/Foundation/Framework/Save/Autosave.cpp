@@ -255,7 +255,7 @@ namespace sw
         if ( pSlot == nullptr || _onLoad.isBound() == false || isScanning() || isRestoring() )
             return false;
         _restoringCheckpointID = bCheckpoint ? pSlot->_label : hashed_string{};
-        _restoreRequest        = _pStore->submitRead( pSlot->_slotName, GameLocalStore::CompletionFunction::create<&AutosaveManager::onSlotRead>( this ) );
+        _restoreRequest        = _pStore->submitRead( pSlot->_slotName, SW_DELEGATE_METHOD( GameLocalStore::CompletionFunction, &AutosaveManager::onSlotRead, this ) );
         return true;
     }
 
@@ -270,7 +270,7 @@ namespace sw
         }
         // 적용은 게임이 씬을 옮긴 뒤일 수 있다(감사 G-7) — 체크포인트 표시는 완료에서 한다.
         _restoringSlot = completion._slot;
-        if ( _onLoad( completion._slot, completion._bytes, RestoreCompletedFunction::create<&AutosaveManager::onRestoreCompleted>( this ) ) == false )
+        if ( _onLoad( completion._slot, completion._bytes, SW_DELEGATE_METHOD( RestoreCompletedFunction, &AutosaveManager::onRestoreCompleted, this ) ) == false )
             onRestoreCompleted( false );
     }
 
@@ -396,9 +396,9 @@ namespace sw
         infoOptions._formatVersion = AutosaveInternal::kInfoVersion;
         _savingSlot                = info;
         // 기록은 상태 바로 뒤에 맡긴다 - 저장소는 맡은 순서로 쓰므로, 끝낼 때 맡긴 종료 저장도 기록까지 남는다(완료를 기다렸다 맡기면 저장소가 닫힌 뒤가 된다).
-        _saveRequest = _pStore->submitWrite( info._slotName, std::move( stateBytes ), stateOptions, GameLocalStore::CompletionFunction::create<&AutosaveManager::onSlotWritten>( this ) );
+        _saveRequest = _pStore->submitWrite( info._slotName, std::move( stateBytes ), stateOptions, SW_DELEGATE_METHOD( GameLocalStore::CompletionFunction, &AutosaveManager::onSlotWritten, this ) );
         _infoRequest = _pStore->submitWrite( _settings.makeInfoSlotName( slot ), std::move( infoBytes ), infoOptions,
-                                             GameLocalStore::CompletionFunction::create<&AutosaveManager::onInfoWritten>( this ) );
+                                             SW_DELEGATE_METHOD( GameLocalStore::CompletionFunction, &AutosaveManager::onInfoWritten, this ) );
         return true;
     }
 
@@ -411,7 +411,7 @@ namespace sw
             SW_LOG_WARNING_ID( "Autosave.WriteFailed", "Autosave (%#) to %# failed (local store result %#) - the previous slots are kept", getEnumName( info._trigger ), completion._slot.c_str(),
                                static_cast<int32>( completion._result ) );
             _listSlot[static_cast<size_t>( info._slot )] = AutosaveSlotInfo{};
-            _infoRequest                                 = _pStore->submitErase( _settings.makeInfoSlotName( info._slot ), GameLocalStore::CompletionFunction::create<&AutosaveManager::onInfoWritten>( this ) );
+            _infoRequest                                 = _pStore->submitErase( _settings.makeInfoSlotName( info._slot ), SW_DELEGATE_METHOD( GameLocalStore::CompletionFunction, &AutosaveManager::onInfoWritten, this ) );
             return;
         }
         _listSlot[static_cast<size_t>( info._slot )] = info;
@@ -445,7 +445,7 @@ namespace sw
         _scanPendingCount = _settings._slotCount;
         for ( int32 slot = 0; slot < _settings._slotCount; ++slot )
         {
-            _listScanRequest.push_back( _pStore->submitRead( _settings.makeInfoSlotName( slot ), GameLocalStore::CompletionFunction::create<&AutosaveManager::onInfoRead>( this ) ) );
+            _listScanRequest.push_back( _pStore->submitRead( _settings.makeInfoSlotName( slot ), SW_DELEGATE_METHOD( GameLocalStore::CompletionFunction, &AutosaveManager::onInfoRead, this ) ) );
         }
     }
 

@@ -318,7 +318,7 @@ namespace sw
         MatchmakingModeRequest request;
         request._modeID = kMatchMode;
         request._region = kMatchRegion;
-        (void)session.get<MatchmakingClient>().call<MatchmakingMethod::QueueJoin>( request, OnlineReplyDelegate<MatchmakingMethod::QueueJoin>::create<&ShooterOnlineFlowInternal::onQueueJoined>() );
+        (void)session.get<MatchmakingClient>().call<MatchmakingMethod::QueueJoin>( request, SW_DELEGATE_FUNCTION( OnlineReplyDelegate<MatchmakingMethod::QueueJoin>, &ShooterOnlineFlowInternal::onQueueJoined ) );
     }
 
     void ShooterOnlineFlow::requestSubmitKills( OnlineSession& session, int64 kills )
@@ -326,7 +326,7 @@ namespace sw
         LeaderboardSubmitRequest request;
         request._boardID = kBoardKills;
         request._score   = kills;
-        (void)session.get<LeaderboardClient>().call<LeaderboardMethod::SubmitScore>( request, OnlineReplyDelegate<LeaderboardMethod::SubmitScore>::create<&ShooterOnlineFlow::onScoreSubmitted>( this ) );
+        (void)session.get<LeaderboardClient>().call<LeaderboardMethod::SubmitScore>( request, SW_DELEGATE_METHOD( OnlineReplyDelegate<LeaderboardMethod::SubmitScore>, &ShooterOnlineFlow::onScoreSubmitted, this ) );
     }
 
     void ShooterOnlineFlow::onScoreSubmitted( const OnlineResult<LeaderboardSubmitReply>& result )
@@ -346,7 +346,7 @@ namespace sw
         request._boardID = kBoardKills;
         request._offset  = 0;
         request._count   = kTopCount;
-        (void)session.get<LeaderboardClient>().call<LeaderboardMethod::GetTop>( request, OnlineReplyDelegate<LeaderboardMethod::GetTop>::create<&ShooterOnlineFlow::onTopKills>( this ) );
+        (void)session.get<LeaderboardClient>().call<LeaderboardMethod::GetTop>( request, SW_DELEGATE_METHOD( OnlineReplyDelegate<LeaderboardMethod::GetTop>, &ShooterOnlineFlow::onTopKills, this ) );
     }
 
     void ShooterOnlineFlow::onTopKills( const OnlineResult<LeaderboardEntriesReply>& result )
@@ -367,12 +367,12 @@ namespace sw
 
     void ShooterOnlineFlow::requestMailList( OnlineSession& session )
     {
-        (void)session.get<MailboxClient>().call<MailboxMethod::List>( MailboxListRequest{}, OnlineReplyDelegate<MailboxMethod::List>::create<&ShooterOnlineFlowInternal::onMailList>() );
+        (void)session.get<MailboxClient>().call<MailboxMethod::List>( MailboxListRequest{}, SW_DELEGATE_FUNCTION( OnlineReplyDelegate<MailboxMethod::List>, &ShooterOnlineFlowInternal::onMailList ) );
     }
 
     void ShooterOnlineFlow::requestClaimAll( OnlineSession& session )
     {
-        (void)session.get<MailboxClient>().call<MailboxMethod::ClaimAll>( OnlineReplyDelegate<MailboxMethod::ClaimAll>::create<&ShooterOnlineFlow::onClaimAll>( this ) );
+        (void)session.get<MailboxClient>().call<MailboxMethod::ClaimAll>( SW_DELEGATE_METHOD( OnlineReplyDelegate<MailboxMethod::ClaimAll>, &ShooterOnlineFlow::onClaimAll, this ) );
     }
 
     void ShooterOnlineFlow::onClaimAll( const OnlineResult<MailboxClaimReply>& result )

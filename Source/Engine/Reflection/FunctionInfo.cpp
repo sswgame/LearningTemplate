@@ -45,8 +45,8 @@ namespace sw
         , _returnTypeName{ desc._pReturnTypeName }
         , _listParameter{}
         , _metadata{}
-        , _invoker{ desc._pConstruct != nullptr ? Delegate<TaskValue( void*, const TaskArgs& )>::create<&FunctionDesc::invokeConstructor>( &desc ) // 표는 정적 저장소라 줄 주소가 모듈 수명 동안 산다
-                                                : Delegate<TaskValue( void*, const TaskArgs& )>::create( desc._pInvoke ) }
+        , _invoker{ desc._pConstruct != nullptr ? SW_DELEGATE_METHOD( Delegate<TaskValue( void*, const TaskArgs& )>, &FunctionDesc::invokeConstructor, &desc ) // 표는 정적 저장소라 줄 주소가 모듈 수명 동안 산다
+                                                : SW_DELEGATE_LAMBDA( Delegate<TaskValue( void*, const TaskArgs& )>, desc._pInvoke ) }
         , _pReturnType{ desc._pReturnType }
     {
         _listParameter.reserve( desc._parameterCount );

@@ -130,7 +130,7 @@ namespace sw
         template <typename TMethod, typename TClient>
         void callKit( TClient& client, const typename TMethod::Request& request )
         {
-            (void)client.template call<TMethod>( request, OnlineReplyDelegate<TMethod>::template create<&LoadBot::onKitReply<typename TMethod::Reply>>( this ) );
+            (void)client.template call<TMethod>( request, SW_DELEGATE_METHOD( OnlineReplyDelegate<TMethod>, &LoadBot::onKitReply<typename TMethod::Reply>, this ) );
         }
 
         // 응답 처리기 — 키트마다 하나(지연 · 오류만 본다)

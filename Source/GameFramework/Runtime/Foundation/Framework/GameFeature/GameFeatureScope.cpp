@@ -88,7 +88,7 @@ namespace sw
             return false;
         }
         // 이름으로 다시 찾는다 — 변수를 등록한 모듈이 그 사이 다시 올라왔으면 옛 칸을 건드리지 않는다.
-        addCleanup( Delegate<void()>::create( [this, variableName = string( name ), previousValue = std::move( previous )]()
+        addCleanup( SW_DELEGATE_LAMBDA( Delegate<void()>, [this, variableName = string( name ), previousValue = std::move( previous )]()
         {
             GlobalVariableInfo* const pRestored = _variables.findVariable( variableName );
             if ( pRestored != nullptr )

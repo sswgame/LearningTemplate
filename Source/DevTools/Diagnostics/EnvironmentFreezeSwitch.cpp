@@ -58,7 +58,7 @@ namespace sw
                 SW_LOG_ERROR_ID( "EnvironmentFreezeSwitch.VariableMissing", "The environment freeze switch found no '%#' registration", EnvironmentFreezeSwitchInternal::kVariableName );
                 return SubsystemInitResult::Failed;
             }
-            _variableSubscription = pVariable->bindOnValueChanged( GlobalVariableChangedDelegate::create<&EnvironmentFreezeSwitchInternal::onVariableChanged>() );
+            _variableSubscription = pVariable->bindOnValueChanged( SW_DELEGATE_FUNCTION( GlobalVariableChangedDelegate, &EnvironmentFreezeSwitchInternal::onVariableChanged ) );
             EnvironmentFreezeSwitchInternal::applyToPolicy();
             return SubsystemInitResult::Succeeded;
         }

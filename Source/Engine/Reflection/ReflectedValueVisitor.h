@@ -142,8 +142,8 @@ namespace sw
                 for ( size_t elementIndex = 0; elementIndex < listLeaf.size(); ++elementIndex )
                 {
                     const TLeaf leaf = listLeaf[elementIndex];
-                    bAllAppended     = sequence.appendElement( pContainer, elementIndex, ElementFillDelegate::create( [leaf]( void* pElement )
-                    {
+                    bAllAppended     = sequence.appendElement( pContainer, elementIndex, SW_DELEGATE_LAMBDA( ElementFillDelegate, [leaf]( void* pElement )
+                        {
                         Memory::copy( pElement, &leaf, sizeof( TLeaf ) );
                         return true;
                     } ) ) && bAllAppended;
@@ -166,7 +166,7 @@ namespace sw
         {
             // 값부터 제자리에서 바꾼다(잎, 잎을 품은 구조체, 중첩 컨테이너).
             bool bAllVisited = true;
-            map.forEachMutable( pContainer, MapForEachMutableDelegate::create( [this, &shape, &bAllVisited]( const void*, void* pValue )
+            map.forEachMutable( pContainer, SW_DELEGATE_LAMBDA( MapForEachMutableDelegate, [this, &shape, &bAllVisited]( const void*, void* pValue )
             {
                 const MutableValueAddress value{ pValue };
                 if ( shape._elementNested != nullptr )
@@ -199,7 +199,7 @@ namespace sw
             vector<TLeaf> listKey;
             listKey.reserve( entryCount );
             bool bCopied = true;
-            map.forEach( pContainer, MapForEachDelegate::create( [this, &map, pValueBlock, valueStride, &listKey, &bCopied]( const void* pKey, const void* pValue )
+            map.forEach( pContainer, SW_DELEGATE_LAMBDA( MapForEachDelegate, [this, &map, pValueBlock, valueStride, &listKey, &bCopied]( const void* pKey, const void* pValue )
             {
                 void* pSlot = pValueBlock + valueStride * listKey.size();
                 map.defaultConstructValue( pSlot );

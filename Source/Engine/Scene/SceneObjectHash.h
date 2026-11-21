@@ -211,7 +211,7 @@ namespace sw
         vector<Channel> _listChannel;
         uint32          _capacity{ 0 };
         /** @brief 제공자 등록의 구독입니다. 풀리면 `releaseProvider` 가 불린다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다. */
-        ItemSubscriptionList<const IStateHashProvider> _subscriptions{ ItemSubscriptionList<const IStateHashProvider>::ReleaseFunction::create<&StateHashHistory::releaseProvider>( this ) };
+        ItemSubscriptionList<const IStateHashProvider> _subscriptions{ SW_DELEGATE_METHOD( ItemSubscriptionList<const IStateHashProvider>::ReleaseFunction, &StateHashHistory::releaseProvider, this ) };
 
         SW_SERVICE_SLOT( StateHashHistory, Optional );
     };

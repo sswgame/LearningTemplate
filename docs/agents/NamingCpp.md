@@ -1,6 +1,6 @@
-> 질문: C++ 이름(대소문자, 접두어, 컨테이너, 클래스 접미사, 함수 어휘)을 어떻게 짓는가?
-> 독자: C++ 이름을 짓거나 바꾸는 사람.
-> 결론: 타입은 `PascalCase`, 함수와 지역은 `camelCase`, 멤버는 `_camelCase`, 상수는 `kPascalCase`, 전역은 `gv_camelCase`. 컨테이너는 접두어 + 단수(`_listItem`). 클래스 접미사와 함수 어휘는 아래 표를 따른다.
+# NamingCpp
+
+> 결론: 타입은 `PascalCase`, 함수와 지역은 `camelCase`, 멤버는 `_camelCase`, 상수는 `kPascalCase`, 전역은 `gv_camelCase`. 컨테이너는 접두어 + 단수(`_listItem`). 함수 첫 단어 · 금지 이름 · 약어 · 모든 낱말은 린트 `naming-words` 가 강제한다(표 `Config/Rules/Lint/NamingWords.json`).
 
 ## Naming
 
@@ -17,166 +17,154 @@
 | Static variables | `s_camelCase`; private statics `_s_camelCase` |
 | Macros | `SW_SCREAMING_CASE` |
 
-- Descriptive names. No opaque abbreviations, no loop counters `i` / `j` / `k` (use at least `index`).
+- Descriptive names. No opaque abbreviations, no loop counters `i` / `j` / `k` (at least `index`).
 - **Global variables** (`Core/GlobalVariable/GlobalVariableManager.h`), type first:
-  - `SW_GLOBAL_VARIABLE( type, name, default, desc )`: runtime settings someone changes in the editor or the shipped game.
-  - `SW_TEST_GLOBAL_VARIABLE`: bench, automation and diagnostic switches. Settable with `-gv_*`, hidden from the editor panel, folded to a constant in Shipping, declared only in dev-only places (`Dev/` · `Tests/` · DevTools · Editor · automation runner — the macro's `static_assert` checks `__FILE__`).
-  - `SW_EXTERN_GLOBAL_VARIABLE( type, name )` (`SW_EXTERN_TEST_GLOBAL_VARIABLE` for the test form): the `extern`.
+  - `SW_GLOBAL_VARIABLE( type, name, default, desc )`: runtime settings changed in the editor or the shipped game.
+  - `SW_TEST_GLOBAL_VARIABLE`: bench, automation and diagnostic switches; folded to a constant in Shipping, declared only in dev-only places (the macro's `static_assert` checks `__FILE__`).
+  - `SW_EXTERN_GLOBAL_VARIABLE( type, name )` (`SW_EXTERN_TEST_GLOBAL_VARIABLE`): the `extern`.
 
 #### Pointers and containers
 
 | Kind | Prefix | Example |
 | --- | --- | --- |
 | Raw pointer | `p` | `pObject`, `_pObject` |
-| Double pointer | `pp` | `ppMember`, `_ppMember` |
-| Triple pointer or more | forbidden (architectural flaw) | |
+| Double pointer | `pp` | `ppMember` |
+| Triple pointer or more | forbidden | |
 | Associative container | `map` | `_mapIDToName` |
 | Fixed array | `arr` | `_arrBuffer` |
 | Variable array / list | `list` (never a `List` suffix) | `_listItem` |
 | Set | `unique` | `_uniqueIds` |
-| Byte vector (`vector<uint8>`, `<int8>`, `<utf8>`) whose name has `byte` / `bytes` | no `list` prefix | `_bytes`, `outBytes`, `pOutBytes` |
+| Byte vector named `byte` / `bytes` | no prefix | `_bytes`, `outBytes` |
 
-All container and parameter names are **singular** (`_listActor`, `outListHandle`; `_listActors` is forbidden). The only plurals are the `unique` prefix (`_uniqueIds`, `outUniqueIds`) and raw byte buffers (`_bytes`).
+All container and parameter names are **singular** (`_listActors` is forbidden); the only plurals are the `unique` prefix and byte buffers.
 
 #### Parameters
 
-- Output parameters start with `out` + PascalCase (`outValue`, `outConfig`). A container follows `out` in singular (`outListItem`, `outMapData`, `outArrBuffer`).
-- Raw pointer outputs put `p` / `pp` before `out`: `pOutBuffer`, `ppOutObject`.
-- In/out parameters: `inout` / `pInOut` (`inoutSkeleton`, `pInOutSize`).
-- A bare `out` names nothing and is blocked in header declarations.
+- Outputs: `out` + PascalCase (`outValue`); a container follows `out` in singular (`outListItem`). Raw pointer outputs: `pOutBuffer`, `ppOutObject`. In/out: `inout` / `pInOut`. A bare `out` is blocked in header declarations.
 
 #### GPU resource verbs (closed vocabulary)
 
-A class that owns RHI resources derives from `RHIRenderResource` and names its device-lifecycle methods from this table only (no `upload`, `applyToGPU`, `isReady`, `releaseGPU`):
+A class that owns RHI resources derives from `RHIRenderResource` and uses only these (no `upload`, `applyToGPU`, `isReady`, `releaseGPU`):
 
 | Verb | Meaning |
 | --- | --- |
-| `initRHI( pDevice )` | Create this object's GPU resources on `pDevice`. Idempotent: return `true` when already resident |
-| `updateRHI( pDevice )` | Push changed CPU data to resources that already exist |
-| `releaseRHI( pDevice )` | `pDevice` is **still alive**: hand the resources back and clear the handles |
-| `clearRHI( pDevice )` | `pDevice` is **already gone**: clear the handles only; calling destroy here is use-after-free |
-| `isRHIValid()` | Are this object's GPU resources live right now? |
+| `initRHI( pDevice )` | Create GPU resources; idempotent |
+| `updateRHI( pDevice )` | Push changed CPU data to existing resources |
+| `releaseRHI( pDevice )` | Device **still alive**: hand resources back, clear handles |
+| `clearRHI( pDevice )` | Device **already gone**: clear handles only |
+| `isRHIValid()` | Are the GPU resources live now? |
 
-Never call `releaseRHI` / `clearRHI` / `initRHI` in a loop from outside: `IRHIDevice` broadcasts them to the whole registry (`releaseAllForDevice` / `clearAllForDevice` / `initAllForDevice`). Per-frame buffer managers that are not assets (`GPUScene`) keep their own vocabulary.
+Never loop `releaseRHI` / `clearRHI` / `initRHI` from outside: `IRHIDevice` broadcasts them (`releaseAllForDevice` …).
 
 ### Class suffixes
 
-A suffix says what the class does with the objects it names, as the commercial engines use it:
-
 | Suffix | Meaning |
 | --- | --- |
-| `…Manager` | Owns the lifetime of a set of runtime objects and decides the create / destroy / load policy (Unreal `UAssetManager`) |
-| `…Registry` | Lookup table filled by registration, keyed by name or ID. No lifetime policy (Unreal `AssetRegistry`) |
-| `…System` | Runs every frame over many objects / components with the same logic (Unity DOTS `System`) |
+| `…Manager` | Owns the lifetime of a set of runtime objects and the create / destroy / load policy |
+| `…Registry` | Lookup table filled by registration; no lifetime policy |
+| `…System` | Runs every frame over many objects with the same logic |
 | `…Service` | Replaceable function window reached through service binding or a remote endpoint |
-| `…Backend` | Platform or library implementation of an interface (`XAudio2AudioBackend`, `ImGuiWin32PlatformBackend`) |
-| `…API` | A C function table (`GameAPI`, `EditorAPI`, `ModuleAPI`) |
+| `…Backend` | Platform or library implementation of an interface |
+| `…API` | A C function table |
 
-- Spell `Anim` out as `Animation`, except a name that refers to an outside term (Unreal's `AnimInstance`).
-- A boolean variable or member keeps the `b` prefix (`bVisible`, `_bOpen`), as in Unreal. Only a function that returns a boolean follows `is` / `has` / `can` / `should`.
-- Name a graphics type for what a game programmer would call it in Unreal or Unity. `Slot` is only a shader binding slot or a position in a ring or array; a type that owns a buffer is named after the buffer (`RHIStructuredBuffer`, `RHIConstantBuffer`). Do not use bookkeeping metaphors (`Ledger`): a counter of sizes is a `…Tracker` (`RHIMemoryTracker`), a handle table is a `…Registry`, and a range allocator is an `…Allocator`.
-- `Scene` owns the data of one scene. `GameObjectManager` manages the lifetime of that scene's objects; `GameObjectStore` is the storage it uses.
+- Spell `Anim` out as `Animation`, except outside terms (`AnimInstance`).
+- A boolean variable or member keeps the `b` prefix (`_bOpen`); a function returning a boolean starts with `is` / `has` / `can` / `should`.
+- Name a graphics type as a game programmer would in Unreal or Unity. `Slot` is only a shader binding slot or a position in a ring; a type owning a buffer is named after the buffer. No bookkeeping metaphors (`Ledger`): `…Tracker`, `…Registry`, `…Allocator`.
+- `Scene` owns one scene's data; `GameObjectManager` manages its objects' lifetime; `GameObjectStore` is the storage.
 
 ### Function names
 
-A reader who knows one of these names must be able to guess the rest. Use a banned verb only when it is the domain's own term (`UUID::generate`, `SurfaceBVH::build`).
+Use a banned verb only when it is the domain's own term (`UUID::generate`, `SurfaceBVH::build`).
 
 #### One verb per concept
 
 | Concept | Verb | Never |
 | --- | --- | --- |
-| Bring an object to life / take it down | `initialize` / `shutdown` | `setup`, `startup`, `cleanup`, `teardown` |
-| Hand out and take back memory or a slot | `allocate` / `free` | `alloc`, `dealloc`, `dispose` |
+| Bring to life / take down | `initialize` / `shutdown` | `setup`, `startup`, `cleanup`, `teardown` |
+| Hand out / take back memory or a slot | `allocate` / `free` | `alloc`, `dealloc`, `dispose` |
 | Build and return a new value | `create` (owning) · `make` (plain value) | `build`, `construct`, `generate` |
-| Refill state that already exists | `rebuild` (from scratch) · `populate` (fill from a source) | `build` |
-| Look something up | `get` (always there) · `find` (may miss, returns value or pointer) · `tryGet` (may miss, `bool` + out parameter, only when "none" cannot be returned) | `fetch`, `retrieve`, `lookup`, `obtain` |
-| Get, loading on a miss, shared ownership | `acquire( path )` (the caches) | `getOrLoad` |
+| Refill existing state | `rebuild` · `populate` | `build` |
+| Look up | `get` (always there) · `find` (may miss) · `tryGet` (`bool` + out, only when "none" cannot be returned) | `fetch`, `retrieve`, `lookup`, `obtain` |
+| Get, loading on a miss, shared | `acquire( path )` | `getOrLoad` |
 | Get, creating on a miss | `getOrCreate` | `findOrAdd`, `ensure` that returns something |
-| Make sure something exists, return nothing | `ensure*` | |
-| Work out a value from inputs | `compute` | `calculate`, `calc` |
-| Advance one frame / fixed step / gather input | `update` · `step` · `poll` | `tick` (outside the tick system) |
-| Move a clock by a given amount | `advance( seconds )`, `advanceDay()` | |
-| Put into / take out of a container this object owns (the container decides order or key) | `add` / `remove` | `push` outside a stack or queue |
-| Hand over something called or looked up later (callback, observer, handler, task, factory, cache) whose lifetime the caller ends with the pair | `register` / `unregister` | `add*Handler`, `add*Observer`, `add*Listener`, `remove*Handler` |
-| Join to the end of an ordered sequence (text, bytes, a list whose order is the meaning) | `append` | `add` for text |
+| Make sure it exists, return nothing | `ensure*` | |
+| Work out a value | `compute` | `calculate`, `calc` |
+| Advance a frame / fixed step / gather input | `update` · `step` · `poll` | `tick` (outside the tick system) |
+| Move a clock by an amount | `advance( seconds )` | |
+| Put into / take out of an owned container | `add` / `remove` | `push` outside a stack or queue |
+| Hand over something called later, ended by the pair | `register` / `unregister` | `add*Handler`, `add*Observer`, `add*Listener` |
+| Join to the end of an ordered sequence | `append` | `add` for text |
 
-- `tick` names only the tick system itself (`SceneTickScheduler`, `TickBatchRegistry`, component `onTick`) and behavior-tree node ticks. Everything else that advances a frame or time is `update`.
-- A variable or member holding a count is `xCount` (`itemCount`, `_listenerCount`); `countX()` is a function that counts by scanning.
+- `tick` names only the tick system and behavior-tree node ticks.
+- A count variable is `xCount`; `countX()` counts by scanning.
 
 #### Acronyms
 
-- An acronym is written in capitals, everywhere. A shortening (`Nav`, `Anim`, `Info`) is not an acronym. `Ok` is a word (okay), not an acronym — `bOk` · `isOk` stay (Unreal `IsOk()`, Abseil `Status::ok()`).
-- Types, files, namespaces, enums, folders, modules, test executables: `UISystem`, `GPUScene`, `UISystem.h`.
-- Functions, variables, members: capitals in the middle or at the end (`updateUI`, `entityID`, `pUISystem`), all lower case as the first word (`uiSystem`, `_gpuScene`).
-- Two capital acronyms never touch (`RHIUI…`): spell one out or put a word between.
-- Lower-case extensions and resource paths, `gv_` prefixes and third-party names keep their spelling.
-- A new acronym is added to the acronym list (`_acronyms` in `Config/Rules/Lint/NamingWords.json`, checked by the `naming-words` lint) and rewritten everywhere in one commit. Third-party spellings and serialized keys go to `_acronymKeep` with a reason.
+- Capitals everywhere: `UISystem`, `GPUScene`, `updateUI`, `entityID`; all lower case only as the first word (`uiSystem`, `_gpuScene`). A shortening (`Nav`, `Anim`, `Info`) is not an acronym; `Ok` is a word (`bOk`, `isOk`).
+- Two capital acronyms never touch (`RHIUI…`).
+- Lower-case extensions and paths, `gv_` prefixes and third-party names keep their spelling.
+- A new acronym goes to `_acronyms` and is rewritten everywhere in one commit; third-party spellings and serialized keys go to `_acronymKeep` with a reason. Lint `naming-words` enforces.
 
 #### Type suffixes
 
 | Suffix | What the data is for |
 | --- | --- |
-| `Def` | Authored data definition (read from a file, shared, immutable). A sub-struct of a catalog file is a `Def` (`BattleRoyaleZoneDef` in `BattleRoyaleCatalog`) |
-| `Desc` | Creation description handed to a `create*` call |
-| `Spec` | A granted runtime instance, Unreal GAS sense (`AbilitySpec` ↔ `FGameplayAbilitySpec`; the authored data is the `Def`) |
-| `Config` | Preset or deployment configuration (project, server, build; the `initialize` configuration of a service, host, transport or store driver) |
-| `Settings` | User or game settings changed at run time. Project-wide engine tables (`PhysicsSettings`, `UIScaleSettings`) keep the Unreal `U*Settings` name, and so do match rules a game picks per match |
+| `Def` | Authored data definition (from a file, shared, immutable); a catalog sub-struct is a `Def` |
+| `Desc` | Creation description handed to `create*` |
+| `Spec` | A granted runtime instance (GAS `AbilitySpec`) |
+| `Config` | Preset or deployment configuration; a service's `initialize` configuration |
+| `Settings` | User or game settings changed at run time; project-wide engine tables (`PhysicsSettings`) |
 | `Params` | Call arguments bundled into one value |
-| `Context` | The environment a caller hands a callee for one call, pass, frame or operation (`RenderGraphPassContext`, `SerializeContext`). A graphics API object keeps the API's term (`RHICommandContext`). A record the owner keeps per managed thing is a `Record`, not a `Context` |
-| `Unit` | A game-play unit, an animated skeletal mesh in `AnimationSystem`, or a measurement unit; each header says which |
+| `Context` | The environment handed to a callee for one call, pass or frame. A per-thing record the owner keeps is a `Record` |
+| `Unit` | A game-play unit, an animated skeletal mesh in `AnimationSystem`, or a measurement unit |
 
-`RT` means render thread (`RT.Frame`, `RT.BeginFrame`). A render target is spelled `RenderTarget`.
+`RT` means render thread. A render target is spelled `RenderTarget`.
 
 #### Names and strings
 
-- **A name is a `hashed_string`, and only that.** Take names as `const hashed_string&`. A string literal converts implicitly (`isActionDown( "Jump" )`); pointers, `string_view` and `string` stay explicit so interning dynamic text is visible (`hashed_string( text )`).
-- Never declare a `string_view` overload next to the `hashed_string` one (a literal call is ambiguous). A lookup that must **not** intern gets its own name: `findStringByText( string_view )`.
-- `hashed_string` follows Unreal `FName`: `==` and `getHash()` ignore case, `c_str()` is the spelling you wrote (`isEqual( other, NameCase::CaseSensitive )` for "did the name change?"). There is no `operator<`: sort with `HashedStringLexicalLess` (stable, for output) or `HashedStringFastLess` (intern order, lookup only).
-- An empty `hashed_string` gives empty text through `c_str()` / `view()` (Godot `StringName`), so it is safe in a path, resource id or key. Display text (logs, editor labels) comes from `toString()` (`"None"` when empty, like `FName::ToString()`); `formatstring` / log `%#` take the name itself. `hashed_string( "None" )` is the empty name.
-- **Enumerator name vs text** (Unreal `UEnum`): `EnumInfo::getNameByValue` · `getFlagsNameByValue` return the name (`hashed_string`, for hashes and keys; enumerator `None` is the empty name); `toString` · `toStringFlags` return display text (`string_view`; `None` reads `"None"`, an unknown value is empty). Never take text out of a name with `c_str()`.
-- **Pick the string type by what it holds.**
-  - A name on a per-frame path is a `hashed_string` or a `string_view` into existing storage; return a view, not a copy.
-  - `fixed_string<N>` only for text whose bound is a code constant (never data, a path or user input) where the heap is off limits (crash, log and signal paths) or a fixed buffer is required (ImGui input). `size()` scans for a null (O(length), not in a loop condition), overflow truncates with a warning (use `try_assign` / `try_append` where truncation is wrong), and a null is never data in it.
-  - Up to 15 characters `string` is already heap-free (SSO).
+- **A name is a `hashed_string`.** Take `const hashed_string&`; literals convert implicitly, `string_view` / `string` stay explicit (`hashed_string( text )`).
+- Never declare a `string_view` overload beside the `hashed_string` one. A lookup that must not intern gets its own name (`findStringByText`).
+- `hashed_string` follows `FName`: `==` ignores case; no `operator<` — sort with `HashedStringLexicalLess` (output) or `HashedStringFastLess` (lookup).
+- An empty name gives empty text through `c_str()` / `view()`; display text comes from `toString()` (`"None"`).
+- Enumerators: `EnumInfo::getNameByValue` returns the name (`hashed_string`), `toString` returns display text. Never take text out of a name with `c_str()`.
+- String type by content: a per-frame name is `hashed_string` or a `string_view` into existing storage; `fixed_string<N>` only for code-bounded text where the heap is off limits (crash, log, signal paths) or a fixed buffer is required (ImGui); up to 15 characters `string` is heap-free (SSO).
 
 #### Predicates, callbacks, results
 
-- **A predicate reads as a question**: `is` / `has` / `was` / `can` / `should`, or a third-person verb (`supportsX`, `usesX`, `requiresX`, `matchesX`, `allowsX`, `overlapsX`).
-  - `check*` is not a predicate: a `bool` one is `is*`/`has*`, a `void` one that asserts is `assert*`.
-  - A getter paired with `setX()` is `getX()` / `isX()`, never bare `x()`.
-- **`on*` means "this happened"**: a notification handler, never the call that registers one. Registering is `register*` / `unregister*`.
-- **Spell the word out** unless one of this repo's own type names abbreviates it. `XMLNode` has `attribute()`, not `attr()`, because the type beside it is `XMLAttribute`; `TagQueryExpr::…Expr` and `ShaderEngineCbMember`'s `…Cb…` are fine because the type carries the same short form.
-- **A fallible verb returns a result you must not drop silently.** A `bool` whose name starts with `load` · `save` · `read` · `write` · `parse` · `apply` · `remove` · `spawn` · `attach` … is `[[nodiscard]]`. Dropping it on purpose is `(void)call(); // why that is fine`. Other `(void)` casts need no reason.
+- A predicate reads as a question: `is` / `has` / `was` / `can` / `should` or a third-person verb (`supportsX`, `usesX`). `check*` is not a predicate (`bool` → `is*`, asserting `void` → `assert*`). A getter paired with `setX()` is `getX()` / `isX()`.
+- `on*` is a notification handler, never the registering call.
+- Spell words out unless a repo type abbreviates it (`XMLNode::attribute()`, not `attr()`).
+- A `bool` from a fallible verb (`load` · `save` · `read` · `write` · `parse` · `apply` · `remove` · `spawn` · `attach` …) is `[[nodiscard]]`; dropping it is `(void)call(); // why`.
 
 ### 용어 — 같은 단어 한 뜻
 
-폴더 · 형식 · 함수 이름의 낱말 뜻이다. 새 이름이 같은 낱말을 다른 뜻으로 쓰면 이름을 바꾼다. 새 낱말은 `Config/Rules/Lint/NamingWords.json` 에 먼저 올린다 — 모든 이름(함수 · 형식 · 멤버 · 상수 · 매크로 · 열거자 · 스크립트)과 파일 · 폴더 이름의 **모든 낱말**이 `_words` 에 있어야 하고, 문맥마다 갈리는 낱말은 `_scopedWords`(린트 `naming-words`, 커밋 훅), 옛 이름은 그 `_bannedNames` 에 둔다.
+새 이름이 같은 낱말을 다른 뜻으로 쓰면 이름을 바꾼다. 새 낱말은 `Config/Rules/Lint/NamingWords.json` `_words`(문맥마다 갈리면 `_scopedWords`)에 먼저 올리고, 옛 이름은 `_bannedNames` 에 둔다(린트 `naming-words`).
 
-이름 · 경로는 도구로 바꾼다(`py -3 -m Scripts rename-symbol` · `move-source`, 여러 쌍은 `rename-symbol --pairs <표>` — 옛 이름은 금지 이름 표에 오르고 형식 이름 파일도 옮긴다) — 코드와 문서(`docs/agents` 포함)를 함께 고치고, 리플렉션 프로퍼티는 데이터(XML · JSON)에 적힌 직렬화 이름(`_bFooBar` → `fooBar`)도 함께 바꾼다(같은 직렬화 이름을 다른 멤버도 쓰면 겹친 자리를 알리고 멈춘다). 옛 이름을 일부러 적는 줄("쓰지 않는 것" 예, 이력)에는 표지 `keep-old-name` 를 단다(Markdown 은 `<!-- keep-old-name -->`, 규칙은 `Scripts/common/rename_scope.py`).
+이름 · 경로는 도구로 바꾼다(`py -3 -m Scripts rename-symbol` · `move-source`, 여러 쌍은 `rename-symbol --pairs <표>`) — 코드 · 문서 · 데이터의 직렬화 이름을 함께 고친다. 옛 이름을 일부러 적는 줄에는 `keep-old-name` 표지(Markdown 은 `<!-- keep-old-name -->`).
 
 | 규칙 | 근거 |
 |---|---|
-| Asset = 콘텐츠(`Engine/Asset`, 데이터 폴더 `Content/`), Resource = GPU · RHI 자원만 | 언리얼 Content · FRenderResource |
-| 업계 공용어는 그대로(Cook = 원본을 런타임 바이너리로 굽기, Pawn · Possess). 한 엔진 · 게임만의 고유 이름 · 브랜드 · 약어는 내용으로 바꾼다(`BugReport`) | 이름은 내용으로 |
-| Pack(`.pack`) · Watch(자동화 감시 값 — Probe 는 라이트 · 리플렉션 프로브, 카메라 충돌 프로브(언리얼 SpringArm ProbeSize), 운영 상태 프로브(Kubernetes probe)만. 확인용 컴포넌트는 `…TestComponent`, 자체 테스트 상태는 `…TestState`) · Scene(씬 컨테이너 — World 는 월드 공간 뜻만) | 같은 단어 한 뜻 |
-| Module 은 동적으로 올리는 코드 단위만(`IModuleLoader` · `ModuleLoadStage`; 모듈 문맥의 Image → Library). 렌더러 확장점은 `RenderExtension` | 언리얼 SceneViewExtension |
-| Host = 엔진을 돌리는 프로세스(App · Server · 테스트 하네스)와 그 쪽(`HostService`, 엔진 쪽 짝 `EngineServices`). 네트워크 끝점 `NetEndpoint*`, 에디터 패널 진입점 `IEditorPanelService`, 온라인 키트 `IOnlineServerService` · `OnlineClientService` | 같은 단어 한 뜻 |
-| Runtime = 모든 호스트에서 도는 것(키트 `Runtime/`) · 실행 중. 모듈 C-ABI 계약은 `Source/ModuleAPI` | 언리얼 모듈 형식 Runtime |
-| Automation = 시나리오 자동 테스트(창구 `Engine/Automation`, 실행기 `DevTools/Client/Automation`). UI 시나리오 단계는 `UI/Scenario/UIScenarioSteps` — "UI Automation" 은 Windows UIA 만 | 언리얼 Automation System |
-| 대상을 인자로 받는 상태 없는 정적 함수 묶음은 도메인 이름 그대로. 고칠 것은 서브시스템 상태 위의 정적 파사드뿐 | 언리얼 FJsonSerializer · FPaths |
-| 낮은 층 · 높은 층이 서로 알아야 하면 위가 아래에 건다(엔진 범위에 건 `PackManager` · `IMeshDerivedCache`, 위 층의 의존 칸) | 언리얼 FPlatformFileManager |
-| 키트 하나의 에디터 확장은 그 키트의 `Editor/`(런타임 · 서버로 나뉜 키트는 `<기능>/Editor/`). `Plugin/Editor` 는 GameFramework 자체와 여러 키트를 잇는 확장만 | 언리얼 플러그인 <X>Editor 모듈 |
-| 폴더 · 파일 이름은 내용으로(자리는 [FolderLayout](FolderLayout.md)). 에셋 파일 형식은 `*Asset`, XML 정의는 `*Def` | |
-| 콘텐츠(씬 · 프리팹)가 쓰는 형식의 모듈은 그 도메인이 가진다 — `game/<팩>` 은 그 게임 매니페스트 의존, `common/` 은 모든 게임, `editor/` 는 엔진 · EditorModule, `engine/` 은 엔진만. configure 가 맞대고 멈춘다(`Scripts/generate/content_modules.py`) | 언리얼 .uproject Plugins |
-| 한 판의 규칙 · 상태 컴포넌트는 `GameMode`(`<게임>GameModeComponent`). `Director` 는 페이싱 감독 · 카메라 연출만. 차지할 수 있는 슬롯은 `SmartObject`, 장비는 `Equipment`(동사 `equip`) | 언리얼 AGameModeBase · Smart Objects, Lyra |
-| Def 여러 개를 담은 파일은 `<X>Catalog`(XML 루트도 클래스 이름). `Table` 은 가중 추첨 · 구간 표와 StringTable 만, `Set` 은 GAS 이름과 한 에셋 안의 이름 → 항목 묶음만, 코드 등록 표는 `Registry` | 한 이름 |
-| 쌓인 일을 끝낼 때까지 막기 `flush`, 큐를 꺼내 처리 `poll`, 꺼내 넘기기 `take`. `drain` 은 서버 드레인 · 게임 수치 소모만 | 언리얼 FlushRenderingCommands |
-| 기록 `record`(`note` 아님), 지우기 `remove` · `clear` · `untrack`(`forget` 아님), 결과 채택 `apply` · `attach`(`adopt` 아님), 허가 `allow` · `accept`(`admit` 은 손님 입장 게임 말만) | 낱말 한 벌 |
-| 형식 끝말: 리플렉션으로 읽는 칸 묶음 `Params`(`Fields` 는 칸 자체를 다루는 도구만), 비동기 일 하나 `Job`(`Work` 아님), 결과 `Result`(`Outcome` · `Verdict` 아님), 테스트 조립 `Fixture`(`Rig` 은 애니메이션 리그만) | 낱말 한 벌 |
-| `Reply` 는 키트 응답 본문, `OnlineResponse` 는 전송 봉투(합치지 않는다). `Since` 는 시간을 세는 칸(`_timeSinceShot`)만 | 뜻이 다르다 |
-| 저작 정의는 `Def` 하나(`Definition` 쓰지 않음). 값의 갈래를 고르는 열거형은 `…Kind` — `…Type` 은 C++ · 리플렉션 형식과 외부 API 의 자기 용어만 | 저장소 다수 |
-| 읽기 · 쓰기 동사는 원본 종류를 넣고 짝을 맞춘다: `loadFromAsset`(에셋 id) · `loadFromFile`/`saveToFile`(OS 경로) · `loadFromXMLText`/`saveToXMLText`(글). `read*`/`write*` 는 바이트 스트림 · Archive, `parse*` 는 글 → 스칼라만. GameObject 는 `createGameObject` ↔ `destroyGameObject` | 언리얼 LoadFromFile · SpawnActor |
-| 에디터 창 하나의 상태 · 명령은 `<창>ViewModel`(View 가 값을 읽고 명령을 보내는 창구 — 폴더는 `Model/`), 창이 고치는 문서 사본과 편집 연산은 `<문서>EditModel`. 창 클래스에 끝말 `Model` 만 붙이지 않는다([EditorUI](EditorUI.md)). `Document` 는 메모리에 든 파일 내용(SceneDocument · XMLDocument)만 | MVVM(WPF · 언리얼 UMG ViewModel) |
-| 알림: 버스의 "바뀌었다" 는 `<X>Changed` · `<X>Revoked`, 플레이어 알림 `<X>Notification`, 운영 공지 `Announcement`. `Notice` 는 영어 관용구(`ShutdownNotice`)만 | Apple · Google 서버 알림 |
-| 은유 대신 내용: 셈 `Stats`, 기록 `History`, 런타임에 형식을 고르는 구조체 값 `InstancedStruct`. 매크로는 낱말마다 `_`(`SW_THEME_COLOR`) — 언리얼 고유 이름을 따른 것(`SW_LOCTEXT`)만 붙인다 | 언리얼 FCookStats · FInstancedStruct |
-| 둔 것: `Editor*` · `Automation*` 접두어(타입 이름은 전역 유일), App 폴더(언리얼 Launch), `*Info` 정적 사실 표(FPixelFormatInfo), 폴더 이름과 같은 접두어 묶음(`Core/Container`), `IWindowTitleTarget`(창 제목 거는 길을 하나로 막는 이음매) | |
+| Asset = 콘텐츠(`Engine/Asset`, `Content/`), Resource = GPU · RHI 자원만 | 언리얼 Content · FRenderResource |
+| 업계 공용어는 그대로(Cook · Pawn · Possess). 한 엔진 · 게임 고유 이름 · 브랜드는 내용으로(`BugReport`) | 이름은 내용으로 |
+| Pack(`.pack`) · Watch(자동화 감시 값 — Probe 는 라이트 · 리플렉션 프로브, 카메라 충돌 프로브, 운영 상태 프로브만. 확인용 컴포넌트는 `…TestComponent`, 자체 테스트 상태는 `…TestState`) · Scene(씬 컨테이너 — World 는 월드 공간 뜻만) | 같은 단어 한 뜻 |
+| Module 은 동적으로 올리는 코드 단위만(모듈 문맥의 Image → Library). 렌더러 확장점은 `RenderExtension` | 언리얼 SceneViewExtension |
+| Host = 엔진을 돌리는 프로세스와 그 쪽(`HostService`, 짝 `EngineServices`). 네트워크 끝점 `NetEndpoint*`, 에디터 패널 진입점 `IEditorPanelService`, 온라인 키트 `IOnlineServerService` · `OnlineClientService` | 같은 단어 한 뜻 |
+| Runtime = 모든 호스트에서 도는 것(키트 `Runtime/`). 모듈 C-ABI 계약은 `Source/ModuleAPI` | 언리얼 모듈 형식 |
+| Automation = 시나리오 자동 테스트(`Engine/Automation`, 실행기 `DevTools/Client/Automation`). "UI Automation" 은 Windows UIA 만 | 언리얼 Automation System |
+| 대상을 인자로 받는 상태 없는 정적 함수 묶음은 도메인 이름 그대로 | 언리얼 FPaths |
+| 낮은 층 · 높은 층이 서로 알아야 하면 위가 아래에 건다 | 언리얼 FPlatformFileManager |
+| 키트 하나의 에디터 확장은 그 키트의 `Editor/`. `Plugin/Editor` 는 GameFramework 자체와 여러 키트를 잇는 확장만 | 언리얼 플러그인 <X>Editor |
+| 폴더 · 파일 이름은 내용으로([FolderLayout](FolderLayout.md)). 에셋 파일 형식은 `*Asset`, XML 정의는 `*Def` | |
+| 콘텐츠가 쓰는 형식의 모듈은 그 도메인이 가진다(`game/<팩>` · `common/` · `editor/` · `engine/`) — configure 가 멈춘다(`Scripts/generate/content_modules.py`) | 언리얼 .uproject Plugins |
+| 한 판의 규칙 · 상태 컴포넌트는 `GameMode`. `Director` 는 페이싱 · 카메라 연출만. 차지할 슬롯은 `SmartObject`, 장비는 `Equipment` | 언리얼 AGameModeBase, Lyra |
+| Def 여러 개를 담은 파일은 `<X>Catalog`. `Table` 은 가중 추첨 · 구간 표와 StringTable 만, `Set` 은 GAS 이름과 이름 → 항목 묶음만, 코드 등록 표는 `Registry` | 한 이름 |
+| 막고 끝내기 `flush`, 큐를 꺼내 처리 `poll`, 꺼내 넘기기 `take`. `drain` 은 서버 드레인 · 게임 수치 소모만 | 언리얼 FlushRenderingCommands |
+| 기록 `record`, 지우기 `remove` · `clear` · `untrack`, 결과 채택 `apply` · `attach`, 허가 `allow` · `accept` | 낱말 한 벌 |
+| 형식 끝말: 리플렉션으로 읽는 칸 묶음 `Params`(`Fields` 는 칸 자체를 다루는 도구만), 비동기 일 하나 `Job`, 결과 `Result`, 테스트 조립 `Fixture`(`Rig` 은 애니메이션 리그만) | 낱말 한 벌 |
+| `Reply` 는 키트 응답 본문, `OnlineResponse` 는 전송 봉투. `Since` 는 시간을 세는 칸만 | 뜻이 다르다 |
+| 저작 정의는 `Def` 하나. 값의 갈래를 고르는 열거형은 `…Kind` — `…Type` 은 C++ · 리플렉션 형식과 외부 API 용어만 | 저장소 다수 |
+| 읽기 · 쓰기 동사는 원본 종류를 넣고 짝을 맞춘다: `loadFromAsset` · `loadFromFile`/`saveToFile` · `loadFromXMLText`/`saveToXMLText`. `read*`/`write*` 는 바이트 스트림 · Archive, `parse*` 는 글 → 스칼라만. `createGameObject` ↔ `destroyGameObject` | 언리얼 LoadFromFile |
+| 에디터 창 하나의 상태 · 명령은 `<창>ViewModel`(폴더 `Model/`), 문서 사본과 편집 연산은 `<문서>EditModel`([EditorUI](EditorUI.md)). `Document` 는 메모리에 든 파일 내용만 | MVVM |
+| 알림: 버스의 "바뀌었다" 는 `<X>Changed` · `<X>Revoked`, 플레이어 알림 `<X>Notification`, 운영 공지 `Announcement`. `Notice` 는 영어 관용구만 | Apple · Google 서버 알림 |
+| 은유 대신 내용: 셈 `Stats`, 기록 `History`, `InstancedStruct`. 매크로는 낱말마다 `_`(`SW_THEME_COLOR`) | 언리얼 FCookStats |
+| 둔 것: `Editor*` · `Automation*` 접두어, App 폴더, `*Info` 정적 사실 표, 폴더 이름과 같은 접두어 묶음, `IWindowTitleTarget` | |

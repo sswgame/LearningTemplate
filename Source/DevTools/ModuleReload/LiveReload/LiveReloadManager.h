@@ -334,14 +334,14 @@ namespace sw
         MulticastDelegate<bool( const vector<string>& )> _onBeforeCommitBatch;         ///< 배치 직전 콜백(더한 순서 — 부를 때는 거꾸로, `broadcastUntilReverse`)
         MulticastDelegate<bool()>                        _reloadHolds;                 ///< 리로드 잡음(`addReloadHold`)
         FlushWorkersDelegate                             _flushWorkers;
-        vector<CallbackRegistration>                     _listCallbackRegistration;                                                                                    ///< 살아 있는 칸 구독이 가리키는 칸
-        IDAllocator<uint64>                              _callbackIDAllocator;                                                                                         ///< 칸 구독 번호(0 은 빈 구독)
-        SubscriptionList                                 _subscriptions{ SubscriptionList::ReleaseFunction::create<&LiveReloadManager::releaseSubscription>( this ) }; ///< 칸 구독을 내준다(믹스인 상속 대신 합성 — 기반은 창구 하나). 풀리면 `releaseSubscription`
-        DeferredLibraryUnloadQueue                       _deferredUnloadQueue;                                                                                         ///< 언로드를 미룬 옛 라이브러리(`kMaxDeferredUnloadBatchCount` 배치까지)
-        ShadowCopySerials                                _shadowCopySerials;                                                                                           ///< 섀도 복사본 이름의 일련번호 · 라이브러리 이름 세대(`ModuleShadowCopy::writeShadowCopy`)
-        ModuleReloadPhases                               _cascadePhases;                                                                                               ///< 지금(마지막) 연쇄의 단계별 시간 — `runCascade` 가 채우고 `reloadCascade` 가 집계에 적는다
-        float64                                          _buildFinishedSeconds;                                                                                        ///< 빌드 끝을 처음 본 시각(단조 초, 0 이면 없음) — 연쇄 시작까지의 대기 구간을 잰다
-        uint32                                           _completedReloadCount;                                                                                        ///< 끝까지 성공한 연쇄 리로드 수(`getCompletedReloadCount`)
+        vector<CallbackRegistration>                     _listCallbackRegistration;                                                                                                ///< 살아 있는 칸 구독이 가리키는 칸
+        IDAllocator<uint64>                              _callbackIDAllocator;                                                                                                     ///< 칸 구독 번호(0 은 빈 구독)
+        SubscriptionList                                 _subscriptions{ SW_DELEGATE_METHOD( SubscriptionList::ReleaseFunction, &LiveReloadManager::releaseSubscription, this ) }; ///< 칸 구독을 내준다(믹스인 상속 대신 합성 — 기반은 창구 하나). 풀리면 `releaseSubscription`
+        DeferredLibraryUnloadQueue                       _deferredUnloadQueue;                                                                                                     ///< 언로드를 미룬 옛 라이브러리(`kMaxDeferredUnloadBatchCount` 배치까지)
+        ShadowCopySerials                                _shadowCopySerials;                                                                                                       ///< 섀도 복사본 이름의 일련번호 · 라이브러리 이름 세대(`ModuleShadowCopy::writeShadowCopy`)
+        ModuleReloadPhases                               _cascadePhases;                                                                                                           ///< 지금(마지막) 연쇄의 단계별 시간 — `runCascade` 가 채우고 `reloadCascade` 가 집계에 적는다
+        float64                                          _buildFinishedSeconds;                                                                                                    ///< 빌드 끝을 처음 본 시각(단조 초, 0 이면 없음) — 연쇄 시작까지의 대기 구간을 잰다
+        uint32                                           _completedReloadCount;                                                                                                    ///< 끝까지 성공한 연쇄 리로드 수(`getCompletedReloadCount`)
         uint8                                            _bReloadGraphBroken : 1;
         uint8                                            _bBuildStampPending : 1; ///< 스탬프가 바뀌었는데 이 프로세스의 빌드가 도는 중이라 아직 보지 않았다
         [[maybe_unused]] uint8                           _reserved           : 6;

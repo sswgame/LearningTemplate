@@ -19,7 +19,7 @@ namespace sw::editor
             template <typename TMove>
             static void requestMove( const TMove& move )
             {
-                EditorCommandRegistry::getInEditorContext().requestHistoryMove( Delegate<void()>::create( move ) );
+                EditorCommandRegistry::getInEditorContext().requestHistoryMove( SW_DELEGATE_LAMBDA( Delegate<void()>, move ) );
             }
         };
     } // namespace

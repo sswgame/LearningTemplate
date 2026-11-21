@@ -61,7 +61,7 @@ namespace sw
         {
             if ( _pPresence == nullptr )
                 return false;
-            return track( _pPresence->submitFindByAccount( accountID, AccountPresenceDelegate::create<&AccountPresenceTracker::onFound>( this ), _owner ), ownerTag,
+            return track( _pPresence->submitFindByAccount( accountID, SW_DELEGATE_METHOD( AccountPresenceDelegate, &AccountPresenceTracker::onFound, this ), _owner ), ownerTag,
                           std::forward<TComplete>( complete ) );
         }
 
@@ -71,7 +71,7 @@ namespace sw
         {
             if ( _pPresence == nullptr )
                 return false;
-            return track( _pPresence->submitFindByDisplayName( displayName, AccountPresenceDelegate::create<&AccountPresenceTracker::onFound>( this ), _owner ), ownerTag,
+            return track( _pPresence->submitFindByDisplayName( displayName, SW_DELEGATE_METHOD( AccountPresenceDelegate, &AccountPresenceTracker::onFound, this ), _owner ), ownerTag,
                           std::forward<TComplete>( complete ) );
         }
 

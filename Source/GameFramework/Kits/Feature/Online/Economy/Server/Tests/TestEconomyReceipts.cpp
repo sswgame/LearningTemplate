@@ -373,7 +373,7 @@ namespace
             EconomyCall call = pCall != nullptr ? *pCall : EconomyCall{ UnixMilliseconds{ kNowMs } };
             call._method     = method;
             call._accountID  = accountID;
-            _service.submitCall( call, EconomyService::ReplyDelegate::create<&EconomyReplySink::onReply>( &_sink ) );
+            _service.submitCall( call, SW_DELEGATE_METHOD( EconomyService::ReplyDelegate, &EconomyReplySink::onReply, &_sink ) );
             poll();
             SW_EXPECT_EQUAL( size_t( 1 ), _sink._listReply.size() );
             const OnlineResult<EconomyCallReply> result = _sink._listReply.empty() ? OnlineResult<EconomyCallReply>{} : _sink._listReply.back();
@@ -444,7 +444,7 @@ namespace
             call._accountID         = accountID;
             call._redeem._storeName = "fake";
             call._redeem._payload   = string( payload );
-            _service.submitCall( call, EconomyService::ReplyDelegate::create<&EconomyReplySink::onReply>( &_sink ) );
+            _service.submitCall( call, SW_DELEGATE_METHOD( EconomyService::ReplyDelegate, &EconomyReplySink::onReply, &_sink ) );
             poll();
             SW_EXPECT_EQUAL( size_t( 1 ), _sink._listReply.size() );
             const EconomyServiceResult result = _sink._listReply.empty() ? EconomyServiceResult::fail( OnlineError::kUnavailable ) : EconomyReplySink::toResult( _sink._listReply.back() );

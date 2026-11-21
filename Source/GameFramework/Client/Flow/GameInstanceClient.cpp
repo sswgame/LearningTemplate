@@ -60,7 +60,7 @@ namespace sw
                         return false;
                     }
                     // UI 서비스는 엔진 수명이라 미니게임보다 오래 산다. 이미 닫힌 화면을 닫는 것은 할 일이 없다.
-                    scope.addCleanup( Delegate<void()>::create( [pUI, handle]()
+                    scope.addCleanup( SW_DELEGATE_LAMBDA( Delegate<void()>, [pUI, handle]()
                     { pUI->closeScreen( handle ); } ) );
                 }
                 return true;

@@ -1,168 +1,126 @@
-> 질문: 로그 · 시간 · 난수 · 파일 같은 흔한 일에 Core · Engine 의 무엇을 쓰고, 무엇을 직접 부르지 않는가?
-> 독자: C++ 코드에서 흔한 일을 처음 구현하려는 사람과 에이전트.
-> 결론: 새로 짜기 전에 아래 표의 "Use" 를 찾아 쓴다. "Do not use" 를 쓴 곳은 리뷰가 되돌린다. 없는 기능은 직접 짜지 말고 Core · Engine 에 하나 더한다.
+# ExistingFacilities
+
+> 결론: 흔한 일을 새로 짜기 전에 아래 표의 "Use" 를 쓴다. "Do not use" 는 리뷰가 되돌린다. 없는 기능은 지역 사본 대신 Core · Engine 에 하나 더한다(새 줄은 헤더와 API 를 적는다).
 
 ## Existing facilities
 
-Search here before writing a helper for a common job. If the job is missing, search the header tree, then add the facility to Core or Engine once instead of a local copy. Where a type can make the direct API unreachable it does (`DataPath` has no literal constructor); review covers the rest.
-
 | Need | Use (header · API) | Do not use |
 | --- | --- | --- |
-| Log a line | `Core/Log/Logger.h` `SW_LOG_ERROR_ID` · `SW_LOG_WARNING_ID` · `SW_LOG_INFO_ID` · `SW_LOG_TRACE_ID` (every line has an `"Area.Event"` id — there is no id-less macro); once per scope: `Core/Log/LogOnce.h` `SW_LOG_ERROR_ONCE_ID` | `printf` · `fprintf` · `puts` · `std::cout` · `std::cerr` |
-| Return a value or why it failed / a lookup that may find nothing | `Core/Foundation/Expected.h` `sw::expected<T>` · `sw::expected<void>` · `sw::optional<T>` · `sw::Error` ([Errors](Errors.md)) | `std::optional` · `bool f( …, string& outError )` |
-| Report below the Log tier or before the logger starts | `Core/Foundation/Macros.h` `SW_LOW_LEVEL_ERROR` · `SW_LOW_LEVEL_WARNING` (stderr until the logger registers) | `fprintf( stderr, … )` |
-| Command-line output (help text, lists) | `Core/Process/StandardOutput.h` `StandardOutput::write` | `fputs( …, stdout )` · `std::cout` |
-| Assert | `Core/Foundation/Macros.h` `SW_ASSERT`; with a message and a log line in every build: `Core/Log/Logger.h` `SW_LOG_ASSERT` | `assert` |
-| Current time, elapsed time, wait deadline | `Core/Time/MonotonicClock.h` `MonotonicClock::nowNanoseconds` · `Stopwatch` · `Deadline::afterMilliseconds` · `sleepUntilNanoseconds` | `std::chrono::steady_clock` · `high_resolution_clock` · `system_clock` |
-| Count or time something only tests · watches · profiling read (diagnostic counter, per-frame cost) | Per-frame time or count: `Engine/Profiling/FrameProfiler.h` `SW_PROFILE_SCOPE` · `SW_PROFILE_COUNT`, a watch reads the slot (`FrameProfiler::getLastFrameNanos`, `SceneTickScheduler::kComponentTickScopeName`). Cumulative count across frames: `Core/Concurrency/DevCounter.h` `DevCounter` (empty in Shipping, accessor returns `const DevCounter&`) | `uint32` / `atomic` counter field or a clock-reading member plus a getter on a runtime class |
+| Log a line | `Core/Log/Logger.h` `SW_LOG_ERROR_ID` · `_WARNING_ID` · `_INFO_ID` · `_TRACE_ID` (every line has an `"Area.Event"` id); once per scope `Core/Log/LogOnce.h` `SW_LOG_ERROR_ONCE_ID` | `printf` · `fprintf` · `puts` · `std::cout` · `std::cerr` |
+| Value or failure / lookup that may find nothing | `Core/Foundation/Expected.h` `sw::expected<T>` · `sw::optional<T>` · `sw::Error` ([Errors](Errors.md)) | `std::optional` · `bool f( …, string& outError )` |
+| Report below the Log tier or before the logger starts | `Core/Foundation/Macros.h` `SW_LOW_LEVEL_ERROR` · `SW_LOW_LEVEL_WARNING` | `fprintf( stderr, … )` |
+| Command-line output | `Core/Process/StandardOutput.h` `StandardOutput::write` | `fputs( …, stdout )` · `std::cout` |
+| Assert | `SW_ASSERT`; with message + log in every build `SW_LOG_ASSERT` | `assert` |
+| Time, elapsed, deadline | `Core/Time/MonotonicClock.h` `MonotonicClock::nowNanoseconds` · `Stopwatch` · `Deadline::afterMilliseconds` · `sleepUntilNanoseconds` | `std::chrono::*_clock` |
+| Diagnostic count or time (tests · watches · profiling) | per frame `SW_PROFILE_SCOPE` · `SW_PROFILE_COUNT` (`Engine/Profiling/FrameProfiler.h`); cumulative `Core/Concurrency/DevCounter.h` `DevCounter` (empty in Shipping) | counter field or clock member + getter on a runtime class |
 | UTC time, local calendar | `Core/Time/WallClock.h` (services take `nowMs` as a parameter) | `system_clock` · `localtime` · `gmtime` |
-| Frame delta | `Core/Time/GameTimer.h` · `Core/Time/FixedTimestep.h` | own delta bookkeeping |
-| Random value (engine) | `Core/Math/MathUtil.h` `MathUtil::getRandom<T>` · `getRandomRange` · `getRandomBits64` | `rand` · `srand` · `std::mt19937` · `std::random_device` |
-| Deterministic sequence (tests, replay, procedural) | `Core/Math/XorShift32.h`; 64-bit: `Core/Hash/HashUtil.h` `HashUtil::splitMix64Next`; game rules: `GameFramework/Runtime/Foundation/Random/GameRandom.h` | `std::mt19937` with a seed, `std::shuffle` (its algorithm differs per standard library) |
-| Angle wrap and interpolation | `Core/Math/MathUtil.h` `wrapAngle` · `lerpAngle` (radians) | `while ( a > kPi ) a -= kTwoPi` loops, degree copies of them |
-| Data-defined resource path | `Engine/Serialization/Serializer/DataPath.h` `DataPath` (only data files fill it) | string literal paths in headers |
-| Field that points at another asset | `Engine/Asset/AssetRef.h` `AssetRef<T>` (`T::kAssetType`; wrong suffix is a load error, `acquire` · `request` go to the kind's cache, reference lists and pickers follow the type) | a `string` path field with `AssetPath` |
-| Resolve a resource id | `Engine/Content/AssetPaths.h`; read: `Engine/Content/AssetIO.h` `readTextAsset` · `readBinaryAsset` · `collectAssets` | disk paths in runtime game code |
-| User data and config folder | `Core/File/UserDataPath.h` `getDataDirectory` · `getConfigDirectory` · `resolve` | `getenv( "HOME" )` · `%LOCALAPPDATA%` by hand |
-| Path text (join, extension, normalize) | `Core/File/FileUtil.h` `joinPath` · `getExtension` · `removeExtension` · `getFileNamePart` · `getDirectoryPart` · `normalizeSeparators` · `splitPath`; part under a root: `tryMakePathUnderRoot` | `std::filesystem::path`, `rfind( '.' )` · `find_last_of( '/' )` loops |
-| Read or write a whole file | `Core/File/FileUtil.h` `readFile` · `readTextFile` · `writeFile` · `writeTextFile` (`[[nodiscard]] bool`) | `fopen` · `_wfopen` · `std::ifstream` · `std::ofstream` |
-| Print, log or assert from a shader | `Content/engine/shaders/gpu_message.hlsli` `SW_GPU_PRINT` (pixel · thread chosen by `gpu.inspect x y` · `gpu.thread n`) · `SW_GPU_LOG` (per-id frame budget) · `SW_GPU_ASSERT` · `SW_GPU_ASSERT_ARGS`; id in `gpu_message_ids.hlsli`, format in C++ `SW_GPU_MESSAGE_FORMAT`; the pass gets `RenderPassTraitFlag::kGPUMessageTarget`; run with `-gv_gpuMessages=1` | debug colors written to the output, a per-shader UAV of your own, string literals in HLSL |
-| Name a GPU pass for captures and device-lost reports | `Engine/Graphics/Debug/GPUBreadcrumbs.h` `GPUPassScope` (event marker + begin/end breadcrumb); texture names: `IRHIResourceFactory::setTextureDebugName` | `beginEventMarker` · `endEventMarker` · `GPUBreadcrumbs::beginPass` pairs by hand |
-| Dispatch compute over N items | `IRHICommandList::dispatchThreads( count…, groupSize… )` (rounds up, skips empty work) | `dispatchCompute( ( n + g - 1 ) / g, … )` by hand |
-| Upload or bind mesh vertices on the GPU | `Engine/Graphics/RHI/RHIMeshVertexStreams.h` `write` (CPU `RHIVertex` → [position \| attribute] streams in the mesh's `RHIMeshVertexFormat`) · `bind` (slots 0 and 2); a mesh that stores data in color or tangent sets `Mesh::setVertexFormat( Full )` | `createVertexBuffer( listRHIVertex )` · `setVertexBuffer( 0, …, sizeof( RHIVertex ) )` by hand |
-| Vertex shader inputs | mesh vertices: `VertexInput` (or `VertexPositionInput` when only the position is read) and `SW_INSTANCE_SLOT_INPUT( name )` from `common.hlsli`; vertices built from `SV_VertexID`: no vertex input at all (the PSO's input layout is empty) | an own input struct, `VertexInput` in a shader that builds its vertices, `input._position = input._position` |
-| Change files (append, copy, delete, recycle bin) | `Core/File/FileUtil.h` `appendTextFile` · `copyFile` · `removeFile` · `tryRemoveFile` · `removeDirectory` · `moveToRecycleBin` — all pass the automation write gate `isWriteAllowed`; a third-party save that opens the path itself (DDS, SQLite) asks `isWriteAllowed` first | `rename` · `unlink` · `mkdir` · `MoveFile` · `DeleteFile` · `open( … O_WRONLY )` · `PlatformFileUtil::openFile` / `replaceFile` / `moveToRecycleBin` |
-| Read a file that reports size 0 (`/proc`, `/sys`) | `Core/File/FileUtil.h` `readStreamTextFile` | `fopen` + `fgets` |
-| Read a file without blocking | `Core/File/AsyncFileIO.h` (priority, cancel, `TaskFuture`) | a thread that reads |
-| Walk a folder, file stamps | `Core/File/FileUtil.h` `collectFiles` · `collectFolders` · `forEachDirectoryEntry` · `getFileWriteTime` · `tryGetFileSize` · `tryGetFileTimestamp` · `getFileStamp` | `std::filesystem` (anything), `Core/File/PlatformFileSystem.h` (only `FileUtil` includes it) |
+| Frame delta | `Core/Time/GameTimer.h` · `FixedTimestep.h` | own delta bookkeeping |
+| Random value | `MathUtil::getRandom<T>` · `getRandomRange` · `getRandomBits64` | `rand` · `std::mt19937` · `std::random_device` |
+| Deterministic sequence | `Core/Math/XorShift32.h`; 64-bit `HashUtil::splitMix64Next`; game rules `GameFramework/Runtime/Foundation/Random/GameRandom.h` | seeded `std::mt19937`, `std::shuffle` |
+| Angle wrap and interpolation | `MathUtil::wrapAngle` · `lerpAngle` (radians) | hand `while ( a > kPi )` loops |
+| Data-defined resource path | `Engine/Serialization/Serializer/DataPath.h` `DataPath` | string literal paths in headers |
+| Field pointing at another asset | `Engine/Asset/AssetRef.h` `AssetRef<T>` | a `string` path field with `AssetPath` |
+| Resolve a resource id, read it | `Engine/Content/AssetPaths.h`; `Engine/Content/AssetIO.h` `readTextAsset` · `readBinaryAsset` · `collectAssets` | disk paths in runtime game code |
+| User data and config folder | `Core/File/UserDataPath.h` | `getenv( "HOME" )` · `%LOCALAPPDATA%` by hand |
+| Path text | `Core/File/FileUtil.h` `joinPath` · `getExtension` · `removeExtension` · `getFileNamePart` · `getDirectoryPart` · `normalizeSeparators` · `splitPath` · `tryMakePathUnderRoot` | `std::filesystem::path`, `rfind( '.' )` loops |
+| Read or write a whole file | `FileUtil::readFile` · `readTextFile` · `writeFile` · `writeTextFile` (`[[nodiscard]]`) | `fopen` · `std::ifstream` · `std::ofstream` |
+| Change files | `FileUtil::appendTextFile` · `copyFile` · `removeFile` · `tryRemoveFile` · `removeDirectory` · `moveToRecycleBin` (all pass the write gate `isWriteAllowed`; a third-party save asks `isWriteAllowed` first) | `rename` · `unlink` · `mkdir` · `MoveFile` · `DeleteFile` · `PlatformFileUtil::*` |
+| Read a size-0 file (`/proc`, `/sys`) | `FileUtil::readStreamTextFile` | `fopen` + `fgets` |
+| Read without blocking | `Core/File/AsyncFileIO.h` | a thread that reads |
+| Walk a folder, file stamps | `FileUtil::collectFiles` · `collectFolders` · `forEachDirectoryEntry` · `getFileStamp` · `tryGetFileSize` | `std::filesystem`, `PlatformFileSystem.h` |
+| Shader print, log, assert | `gpu_message.hlsli` `SW_GPU_PRINT` · `SW_GPU_LOG` · `SW_GPU_ASSERT`; ids in `gpu_message_ids.hlsli`, format `SW_GPU_MESSAGE_FORMAT`; pass trait `kGPUMessageTarget`; run `-gv_gpuMessages=1` | debug colours in the output, own UAV, HLSL string literals |
+| Name a GPU pass | `Engine/Graphics/Debug/GPUBreadcrumbs.h` `GPUPassScope`; textures `setTextureDebugName` | hand `beginEventMarker` · `endEventMarker` pairs |
+| Dispatch over N items | `IRHICommandList::dispatchThreads( count…, groupSize… )` | `dispatchCompute( ( n + g - 1 ) / g, … )` |
+| Upload or bind mesh vertices | `Engine/Graphics/RHI/RHIMeshVertexStreams.h` `write` · `bind`; data in colour or tangent → `Mesh::setVertexFormat( Full )` | `createVertexBuffer( listRHIVertex )` by hand |
+| Vertex shader inputs | `VertexInput` (or `VertexPositionInput`) + `SW_INSTANCE_SLOT_INPUT( name )` from `common.hlsli`; `SV_VertexID`-built: no vertex input | own input struct |
 | Environment variable | `Core/Process/ProcessEnvironment.h` `tryRead` · `tryReadNonEmpty` | `getenv` · `GetEnvironmentVariable` |
-| Parse a number or bool | `Core/String/StringUtil.h` `parseInt` · `parseInt64` · `parseUint64` · `parseFloat` · `parseDouble` · `tryParseBool` · `parseIntList`; exactly N floats: `parseExactFloats` | `atoi` · `strtol` · `strtod` · `std::stoi` · `sscanf` |
-| Split text into a list | `Core/String/StringUtil.h` `split( text, separators, StringSplitOptions{ _bTrim, _bDropEmpty } )`; one token at a time without allocation: `forEachToken`; lines: `forEachLine` | `find` · `substr` loops, a local `splitList` / `splitTokens` |
-| Trim, compare, case | `Core/String/StringUtil.h` `trim` · `startsWith` · `endsWith` · `toLower` · `matchesWildcard` | hand loops over `char` |
-| UTF-8 and UTF-16 | `Core/String/StringUtil.h` `utf8ToUTF16` · `utf16ToUTF8` · `isValidUTF8` | `MultiByteToWideChar` at call sites |
-| Format text, hex, colors, Base64 | `Core/String/formatString.h` `formatstring` (`%x`, `%X`, `Format::hex`); build: `Core/String/StringBuilder.h`; colors: `Core/Math/Color.h` `Color::fromHex` · `toHex`; Base64: `Core/Encoding/Base64Util.h` | `snprintf` chains, own hex tables |
-| Bytes or fixed-width integers as hex | `Core/Encoding/HexUtil.h` `encodeBytes` · `appendBytes` · `appendUint64` · `decodeBytes` (`HexCase`) | a `"0123456789abcdef"` table and nibble shifts |
-| Hash, interned name | `Core/Hash/HashUtil.h` `combine` · `computeStringHash64` · `mix64`; `Core/Name/hashed_string.h` | literal FNV or golden-ratio constants |
-| Read a game data catalog's root elements | `GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h` `XMLCatalogElement` · `XMLCatalogReadResult::readInDocumentOrder` · `readInTableOrder` (`loadRoot` receives `XMLCatalogRoot`, which has no `findChild`; hand reads go through `getRawNode`) | `for ( XMLNode x = root.findChild(` loops, `isElement` chains, per-catalog "unknown element" and "no entries" logs |
-| Check that a catalog's ids point at entries that exist | one `<Reference>` row in `Content/engine/settings/datacatalogreferences.xml` (`Engine/Serialization/Inherit/DataCatalogReferences.h` — the catalog loader and the pack cook run the same rows; a broken required reference fails the load and the cook) | per-catalog `find( id ) == nullptr` loops after reading, code-side reference tables the cook cannot see |
-| A component or scene struct field that names a catalog entry | `CatalogKey<EntryDef>` (`Engine/Serialization/Serializer/CatalogKey.h` — a key of another catalog does not compile; typed `GameCatalog::find( key )` · `require( key )` at start) plus one `<CatalogKey tag catalog entry>` and one `<Field owner field tag>` row in `datacatalogreferences.xml` (the pack cook checks scene and prefab values against every cooked catalog of that kind; the inspector shows the entries as a combo; `DataCatalogReferencesTest.FieldTableMatchesReflection` keeps rows and fields equal). The owner must be findable by element name: a component or a struct in a list; a single struct field needs a `<Struct owner field type>` row (it is written under its field name) and a catalog definition (weapon → projectile) needs an `<Element type catalog path>` row (catalogs name it by element, not by type). The cook does not follow inheritance | `hashed_string` · `string` id fields, per-component "not in the catalog" checks the cook cannot see |
-| Read hand-written data XML attributes | `Engine/Serialization/XML/XMLReadUtil.h` `loadRootOrWarn` · `findRequiredID` · `readRequiredName` · `parseNameList` · `parseFloat3` · `readOptionalNumber` · `readOptionalFlag` · `forEachNamedNumber`; attribute present: `XMLNode::hasAttribute`; curves: `GameDataXML::readFloatCurve`; reflection Def rows: `XMLFields::readProperties` · `readInto` | per-kit copies of the same readers, aliases that forward to them |
-| Serialize an object | `Engine/Serialization/Format/XMLSerializer.h` · `JSONSerializer.h` · `BinarySerializer.h` through reflection; raw binary: `Engine/Serialization/Format/Archive.h` | `pugixml` or JSON library calls outside Serialization |
-| Save or restore runtime state (hot reload, save game, snapshot) | `Engine/Serialization/Format/StateIO.h`: `SW_DECLARE_STATE_IO()` in the class and one `void serializeState( StateIO& io )` for both directions (`io.value` · `flag` · `enumValue` · `list` · `reference` · `section` · `check`). lint `common-shapes` (`statePair`) checks it | A hand `writeState( Archive& )` / `readState( Archive& )` pair |
-| Read a binary file format, a save or a packet | `Core/Serialization/ByteStream.h` `ByteReader`: `readCount` · `readList` · `readCountedList` · `readPodList` (a count from the file is filtered by the remaining bytes before anything is allocated) · `canHold` · `readView` · `isFullyRead`, dimensions `tryMultiplyCounts`; `Archive::readCount` · `readFiniteFloats`. Floats are finite only. `LittleEndianUtil::read*` is private to `ByteReader` | `LittleEndianUtil::read*` with an own cursor, `.resize( countFromFile )`, `count * elementSize <= size` |
-| Reacting to a shared asset reload | `Engine/Asset/Cache/AssetReloadWatch.h` `AssetReloadWatch<T>` (`markSeen` · `isStale` · `takeChanged`) | a `_seen…ReloadCount` field |
-| Editor model: saved value + undo | `Editor/Common/Workspace/Undo/EditorDocumentState.h` (`EditSnapshotHistory` alone when nothing is saved; `SaveReloadGuard<T>` to tell own saves from outside edits) | `_savedText` + a hand undo stack |
-| Node graph canvas: removals, comments, frame end | `EditorNodeGraph::collectRemovals` · `addRequestedComment` · `removeComments` · `finishCanvas` | `ed::BeginDelete` in a panel |
-| Saving a `_base` document | `ResourceComposer::saveDelta` (difference, read-back check, write; `saveText` creates the folder) | `makeDelta` + `ensureParentDirectoryExists` + write per format |
-| Scenario step that only reads its schema | `&AutomationStep::validateProperties<TParams>`, `SW_AUTOMATION_STEP_SCHEMA`; options through `AutomationStepOptions` | a one-line `readProperties` validator |
-| Watch value read from the first component | `SW_AUTOMATION_GETTER_WATCH` (a const getter) · `SW_AUTOMATION_COMPONENT_WATCH` (`bool( const T&, float64& )`) | a hand first-component search |
+| Parse a number or bool | `StringUtil::parseInt` · `parseInt64` · `parseUint64` · `parseFloat` · `parseDouble` · `tryParseBool` · `parseIntList` · `parseExactFloats` | `atoi` · `strtol` · `std::stoi` · `sscanf` |
+| Split text | `StringUtil::split( text, separators, StringSplitOptions{ _bTrim, _bDropEmpty } )` · `forEachToken` · `forEachLine` | `find` · `substr` loops, local `splitList` |
+| Trim, compare, case | `StringUtil::trim` · `startsWith` · `endsWith` · `toLower` · `matchesWildcard` | hand `char` loops |
+| UTF-8 and UTF-16 | `StringUtil::utf8ToUTF16` · `utf16ToUTF8` · `isValidUTF8` | `MultiByteToWideChar` at call sites |
+| Format text, colours, Base64 | `Core/String/formatString.h` `formatstring`; `StringBuilder.h`; `Color::fromHex` · `toHex`; `Core/Encoding/Base64Util.h` | `snprintf` chains, string `+` |
+| Bytes as hex | `Core/Encoding/HexUtil.h` | own `"0123456789abcdef"` table |
+| Hash, interned name | `HashUtil::combine` · `computeStringHash64` · `mix64`; `Core/Name/hashed_string.h` | literal FNV or golden-ratio constants |
+| Read a game catalog's root elements | `GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h` `XMLCatalogElement` · `readInDocumentOrder` · `readInTableOrder` | `root.findChild(` loops, per-catalog "unknown element" logs |
+| Check catalog ids point at entries | one `<Reference>` row in `Content/engine/settings/datacatalogreferences.xml` (loader and cook run the same rows) | per-catalog `find( id ) == nullptr` loops |
+| Component or scene field naming a catalog entry | `CatalogKey<EntryDef>` + `<CatalogKey>` and `<Field>` rows in `datacatalogreferences.xml` (single struct field: `<Struct>` row; catalog definition: `<Element>` row; test `FieldTableMatchesReflection`) | `hashed_string` · `string` id fields |
+| Read hand-written data XML | `Engine/Serialization/XML/XMLReadUtil.h` `loadRootOrWarn` · `findRequiredID` · `readRequiredName` · `parseNameList` · `parseFloat3` · `readOptionalNumber` · `readOptionalFlag`; curves `GameDataXML::readFloatCurve`; reflection rows `XMLFields::readProperties` · `readInto` | per-kit copies of the readers |
+| Serialize an object | `XMLSerializer.h` · `JSONSerializer.h` · `BinarySerializer.h` through reflection; raw `Archive.h` | `pugixml` or JSON library calls outside Serialization |
+| Save or restore runtime state | `Engine/Serialization/Format/StateIO.h` `SW_DECLARE_STATE_IO()` + one `serializeState( StateIO& io )` (lint `common-shapes` `statePair`) | hand `writeState` / `readState` pair |
+| Read a binary format, save or packet | `Core/Serialization/ByteStream.h` `ByteReader` `readCount` · `readList` · `readPodList` · `canHold` · `isFullyRead`, `tryMultiplyCounts`; floats finite only | `LittleEndianUtil::read*` with own cursor, `.resize( countFromFile )` |
+| React to a shared asset reload | `Engine/Asset/Cache/AssetReloadWatch.h` `AssetReloadWatch<T>` | a `_seen…ReloadCount` field |
+| Editor saved value + undo | `Editor/Common/Workspace/Undo/EditorDocumentState.h` (`EditSnapshotHistory`, `SaveReloadGuard<T>`) | `_savedText` + hand undo stack |
+| Node graph removals, comments, frame end | `EditorNodeGraph::collectRemovals` · `addRequestedComment` · `removeComments` · `finishCanvas` | `ed::BeginDelete` in a panel |
+| Save a `_base` document | `ResourceComposer::saveDelta` | `makeDelta` + write per format |
+| Scenario step that only reads its schema | `&AutomationStep::validateProperties<TParams>`, `SW_AUTOMATION_STEP_SCHEMA`, `AutomationStepOptions` | a one-line `readProperties` validator |
+| Watch value from the first component | `SW_AUTOMATION_GETTER_WATCH` · `SW_AUTOMATION_COMPONENT_WATCH` | hand first-component search |
 | Callback, multicast event | `Core/Delegate/Delegate.h` `Delegate` · `MulticastDelegate` · `SW_DECLARE_DELEGATE` · `SW_DECLARE_MULTI_CAST_DELEGATE` | `std::function` |
-| Publish and subscribe by channel | `Core/Event/EventDispatcher.h` `subscribe` · `publish` · `push` | a hand-rolled listener list |
-| Background work, parallel loop | `Core/Task/TaskManager.h` `emplaceTask` · `submit` · `runParallel` · `whenAll`; result: `Core/Task/TaskFuture.h` | `std::async` · a thread per job |
-| A dedicated thread | `Core/Concurrency/thread.h` `sw::thread`; locks: `Core/Concurrency/mutex.h` | `std::thread` |
-| Load an asset | `Engine/Asset/AssetManager.h` asset caches (`getAssetCache`); text and bytes: `AssetIO` | `FileUtil` reads of `Content/` in game code |
-| Engine or game setting | `Engine/Config/ConfigManager.h` `getConfig<T>` (keyed by type) | config lookup by a name string |
-| Console variable, cheat, switch | `Core/GlobalVariable/GlobalVariableManager.h` `SW_GLOBAL_VARIABLE` · `SW_EXTERN_GLOBAL_VARIABLE`; text is `GlobalString` / `GlobalDiskPath`, read as a copy with `get()` (another thread may change it) | a mutable `static` tuning flag; a plain `sw::string` global |
-| User-facing text | `Engine/Localization/LocalizationManager.h` `getString` · `formatText` through `engine::getSubsystem<LocalizationManager>()` | literal UI strings |
-| Editor label on a widget whose label is its ImGui ID (button, combo, menu, tab, window) | `EditorThemeUtil::makeIconLabel( icon, SW_LOCKEY(...), "English" )` · `makeStableLabel( SW_LOCKEY(...), "English" )` → "label###id"; panel windows: `EditorPanelText::makeWindowName` (names in `editor/panels/editor.panels.xml`), finding a window by title: `makeWindowID`; data text (commands · panels): `Meta = "Localizable"` + `EditorDataText::localize`; keys held by static registration tables: `SW_LOCKEYREF` resolved at draw | the translated text as the ID (it changes with the language), `FindWindowByName( title )` |
-| Adding a localization key | entry in `editor.strings.xml` (editor code) or `engine.strings.xml` (GameFramework editor folders, ko · ja) → `App -export-po` → fill `po/<culture>.po` → `App -import-po=<po>` → `App --gather-text` → `App --check-text` (0 errors); fixed digits `TextArgumentList::addDecimal`, words chosen in code ICU `select`, counts `plural`; no `[word]` in sources (rich text tag) | English literals left in code, a key without its translations |
-| Moving a file that has `SW_LOCKEY` | rerun `App --gather-text` and commit `Content/**/localization/*.strings.xml` (origins carry the source path; ToolCheckText fails otherwise) | committing the move alone |
-| Moving, renaming or deleting an asset | `py -3 -m Scripts move-asset <old id> <new id>` (git mv + every path field, folders and `models_raw` sources included; editor: Content Browser rename · move); after a delete the pre-commit lint (`Scripts/lint/asset_references.py`) lists who still points at it; full check `py -3 -m Scripts asset-refs` · `App --check-asset-refs`. Path fields come only from reflection declarations (`PROPERTY( AssetPath )` · `AssetRef<T>` · `DataPath`) collected into `Config/Dev/AssetReferenceFields.generated.json`; a hand-read XML path field moves to a schema struct read by `XMLFields` | `git mv` or a text search-and-replace of the old path |
-| A lint rule's exceptions or ratchet baseline | `Scripts/lint/rule_tables.py`: the path comes from the rule id (`rules.py` `tables` → `Config/Rules/Lint/<RuleId>.json`, machine-written `…Baseline.json`); `ExceptionTable` (section → key → reason; empty reasons and unused rows fail) · `Baseline` (file → kind → count; `--ratchet` lowers, `--accept` raises) | a path constant, `json.loads` and a hand-written stale-row or ratchet loop in the rule module |
-| Player input | `Engine/Input/InputManager.h` `getInputMap`; actions are defined in `*.input.xml` (a game stacks `common/input/` maps and its own diff, [InputMapBundle](../InputMapBundle.md)) and queried by name | polling `getKeyboard()` keys in game code |
-| Run a child process | `Core/Process/Process.h` `Process::execute` · `launch` · `launchDetached` with `ProcessCommand::at( AbsolutePath, … )` (a file) or `ProcessCommand::fromSearchPath( "git", … )` (a PATH name); Python: `Scripts/common/run_process.py` `run_process` | `system` · `popen` · `CreateProcess` · `fork` · `exec*`; a string that may be either a path or a name; Python `subprocess` |
-| App · Server command-line arguments from a script | `Scripts/common/app_arguments.py` `flag` · `option` · `variable` (checked against `Source/Core/Predefined/ArgumentList.xxx` and the registered `gv_` names), `without` · `readValue`, ctest chain command `find_chain_command` · `read_chain_stages` | literal `"-scenario=…"` · `"-unattended"` · `"-gv_x=…"` strings; parsing `ctest -N` output in each script |
-| Load a shared library | `Core/Module/ModuleLibraryUtil.h` `loadLibraryAt( AbsolutePath )` (one try, no search) · `loadSystemLibrary( "xinput1_4.dll" )` (Windows System32 / Linux loader path) · `findLoadedLibrary` (pin an injected one) · `getDynamicSymbol` | `LoadLibrary*` · `dlopen` · `GetProcAddress` · `dlsym` · `SetDllDirectory`, candidate chains that try one place after another |
-| Absolute disk path as a value | `Core/Path/AbsolutePath.h` `AbsolutePath::tryMake` (rejects `C:foo`, `\foo`, relative) | `FileUtil::isAbsolutePath` for validation |
-| Read stdin commands | `Core/Process/StandardInputReader.h` | a blocking `std::cin` loop |
-| Containers | `Core/Container/` `vector` · `unordered_map` · `map` · `set` · `deque` · `string` · `span` (`map` · `set` share `internal::SortedVectorBase`, `unordered_map` · `unordered_set` share `internal::DenseHashTable` — fix shared behavior there, once) | `std::` containers |
-| Wrap a stream transport (proxy header · WebSocket upgrade · send delay …) | `Core/Network/Transport/StreamTransportDecorator.h` — derive and override only what the decorator changes; the base forwards the rest to the inner transport | forwarding every `IStreamTransport` function by hand |
-| Stable handle to pooled data | `Core/Container/SlotHandleTable.h` · `SlotHandle.h` · `IndexFreeList.h` — `SlotTableSync::Internal` (own mutex + atomics) or `External` (the caller's lock or one thread; vector + free list), generation bump only in `SlotHandle::nextGeneration`, handle types are `SlotHandle` aliases; objects: `Engine/Foundation/GameObjectHandle.h` · `ComponentHandle.h` | raw pointers or indices into pooled storage, a hand-written slot + generation + free-index table |
-| Identity of a content version or object ("did it change", cache key) | `Core/Memory/IdentityToken.h` `IdentityToken::make` — hold the token and compare it (no ABA); object · component ids: `Engine/Object/GameObject/ObjectIDAllocator.h` (engine-scope subsystem) | a process-wide `atomic<uint64>` id counter |
-| Own a byte block or object | `Core/Memory/MemoryBlock.h` `MemoryBlock`; `make_unique<T>`; `vector<T>` | `malloc` · `Memory::allocate` · raw `new` |
-| Many short-lived allocations | `Core/Memory/LinearAllocator.h` (per frame too: two and `reset`, see `EventDispatcher`) · `PoolAllocator.h`; small inline: `InlineAllocator.h` | a private free list |
-| Reach a service | `getSubsystem<T>()` · `findSubsystem<T>()` in the owning scope | singletons, `getInstance()`, function-local or file-scope mutable state ([CppStyle](CppStyle.md) "No mutable statics") |
-| Static registration (registered before any scope exists, removed at module unload) | `Core/Registry/RegistrationList.h` `SW_DEFINE_REGISTRATION_LIST` · `StaticRegistrar` (`SW_DEFINE_STATIC_REGISTRAR` · `SW_STATIC_REGISTRATION`); one registration: `Core/Registry/RegistrationSlot.h` | a hand-written registrar struct, a static `vector` of registrations |
-| Well-known constants | `Core/Math/MathUtil.h` `kPi` …; units: `Core/Foundation/Constants.h` `constant::time` · `constant::memory` | retyped literals |
-
-A new row names the header and the API.
+| Publish and subscribe | `Core/Event/EventDispatcher.h` | hand listener list |
+| Background work, parallel loop | `Core/Task/TaskManager.h` `emplaceTask` · `submit` · `runParallel` · `whenAll`; `TaskFuture.h` | `std::async` · a thread per job |
+| Dedicated thread, locks | `Core/Concurrency/thread.h` `sw::thread`; `mutex.h` | `std::thread` |
+| Load an asset | `AssetManager` asset caches (`getAssetCache`); text and bytes `AssetIO` | `FileUtil` reads of `Content/` in game code |
+| Engine or game setting | `Engine/Config/ConfigManager.h` `getConfig<T>` | lookup by name string |
+| Console variable, cheat, switch | `SW_GLOBAL_VARIABLE` · `SW_EXTERN_GLOBAL_VARIABLE`; text `GlobalString` / `GlobalDiskPath` read as a copy with `get()` | mutable `static` flag, plain `sw::string` global |
+| User-facing text | `LocalizationManager::getString` · `formatText` | literal UI strings |
+| Editor label on an ImGui-ID widget | `EditorThemeUtil::makeIconLabel( icon, SW_LOCKEY(...), "English" )` · `makeStableLabel`; windows `EditorPanelText::makeWindowName` · `makeWindowID`; data text `Meta = "Localizable"` + `EditorDataText::localize`; static tables `SW_LOCKEYREF` | translated text as the ID, `FindWindowByName( title )` |
+| Add a localization key | entry in `editor.strings.xml` / `engine.strings.xml` → `App -export-po` → fill `po/<culture>.po` → `App -import-po=<po>` → `App --gather-text` → `App --check-text` (0 errors); `TextArgumentList::addDecimal`, ICU `select` · `plural`; no `[word]` in sources | English literals, a key without translations |
+| Move a file that has `SW_LOCKEY` | rerun `App --gather-text`, commit `Content/**/localization/*.strings.xml` (ToolCheckText fails otherwise) | committing the move alone |
+| Move, rename or delete an asset | `py -3 -m Scripts move-asset <old id> <new id>` (editor: Content Browser); pre-commit lint `asset_references.py` lists dangling refs; full check `py -3 -m Scripts asset-refs` · `App --check-asset-refs` | `git mv` or text replace of the path |
+| Lint rule exceptions or ratchet | `Scripts/lint/rule_tables.py` `ExceptionTable` · `Baseline` (path from the rule id → `Config/Rules/Lint/<RuleId>.json`) | path constant + hand `json.loads` in the rule |
+| Player input | `InputManager::getInputMap`, actions in `*.input.xml` queried by name ([DataInheritance](DataInheritance.md) "입력 맵 묶음") | polling `getKeyboard()` keys in game code |
+| Run a child process | `Core/Process/Process.h` `Process::execute` · `launch` · `launchDetached` with `ProcessCommand::at( AbsolutePath, … )` or `fromSearchPath( "git", … )`; Python `Scripts/common/run_process.py` `run_process` | `system` · `popen` · `CreateProcess` · `fork` · `exec*`; Python `subprocess` |
+| App · Server arguments from a script | `Scripts/common/app_arguments.py` `flag` · `option` · `variable` · `find_chain_command` · `read_chain_stages` | literal `"-scenario=…"` strings, parsing `ctest -N` |
+| Load a shared library | `Core/Module/ModuleLibraryUtil.h` `loadLibraryAt( AbsolutePath )` · `loadSystemLibrary` · `findLoadedLibrary` · `getDynamicSymbol` | `LoadLibrary*` · `dlopen` · `GetProcAddress` · `dlsym`, candidate chains |
+| Absolute disk path as a value | `Core/Path/AbsolutePath.h` `AbsolutePath::tryMake` | `FileUtil::isAbsolutePath` for validation |
+| Read stdin commands | `Core/Process/StandardInputReader.h` | blocking `std::cin` loop |
+| Containers | `Core/Container/` `vector` · `unordered_map` · `map` · `set` · `deque` · `string` · `span` (fix shared behaviour once in `SortedVectorBase` · `DenseHashTable`) | `std::` containers |
+| Wrap a stream transport | `Core/Network/Transport/StreamTransportDecorator.h` | forwarding every `IStreamTransport` function |
+| Stable handle to pooled data | `Core/Container/SlotHandleTable.h` · `SlotHandle.h` · `IndexFreeList.h`; objects `GameObjectHandle.h` · `ComponentHandle.h` | raw pointers or indices, hand slot + generation tables |
+| Content version or object identity | `Core/Memory/IdentityToken.h` `IdentityToken::make`; object ids `ObjectIDAllocator.h` | process-wide `atomic<uint64>` counter |
+| Own a byte block or object | `Core/Memory/MemoryBlock.h`; `make_unique<T>`; `vector<T>` | `malloc` · `Memory::allocate` · raw `new` |
+| Many short-lived allocations | `Core/Memory/LinearAllocator.h` · `PoolAllocator.h` · `InlineAllocator.h` | private free list |
+| Reach a service | `getSubsystem<T>()` · `findSubsystem<T>()` | singletons, `getInstance()`, mutable statics ([CppStyle](CppStyle.md)) |
+| Static registration | `Core/Registry/RegistrationList.h` `SW_DEFINE_REGISTRATION_LIST` · `StaticRegistrar`; one registration `RegistrationSlot.h` | hand registrar struct, static `vector` of registrations |
+| Well-known constants | `MathUtil` `kPi` …; `Core/Foundation/Constants.h` `constant::time` · `constant::memory` | retyped literals |
 
 ## 경로 · 리소스 신원 규칙 (R1 ~ R9)
 
-경로 · 신원 · 인자를 형식 없는 `string` 으로 넘기면 받는 쪽이 글자로 다시 추측한다. 아래 규칙과 형식으로 막는다. 코드 주석이 `(R2)` · `(R3 · R8)` 처럼 이 번호를 가리킨다.
+코드 주석이 `(R2)` 처럼 이 번호를 가리킨다.
 
-| 규칙 | 뜻 | 상용 엔진 |
-|---|---|---|
-| R1 OS 경계 하나 | 파일 · 폴더 · 라이브러리 · 환경 변수 · 실행 파일 경로 같은 OS 호출은 `PlatformFileUtil`(과 그 짝) 한 곳만. Win32 · POSIX 네이티브로 통일하고 `std::filesystem` 은 쓰지 않는다 — 한 층에 오류 모델 · UTF-16 변환이 둘이면 결함이 난다 | 언리얼 `IPlatformFile`, Godot `FileAccess` · `DirAccess` |
-| R2 디스크 I/O 는 절대 경로만 | `FileUtil` · `PlatformFileUtil` 의 I/O 는 절대 경로만 받는다. 상대 · `C:foo` · `\foo` 는 오류. 경로 글 연산(`joinPath` 등)은 대상이 아니다 | |
-| R3 리소스는 리소스 경로만 | `AssetPaths` · `AssetIO` 는 `ResourcePath{도메인(선택), 상대 경로}` 만 받는다. 도메인을 비우면 우선순위로 찾고, 넣으면 그 도메인만. 문자열에서 도메인을 추측하지 않는다 | 언리얼 `/Game/…`, 덮어쓰기는 pak 우선순위 |
-| R4 쓰기는 FileUtil 이 절대 경로로 | `AssetPaths` · `AssetIO` 는 읽기와 경로 풀기만. 있는 파일은 리소스 경로를 디스크 위치로 풀어 쓰고, 새 파일은 도메인 루트 아래에 잇는다 | |
-| R5 상대 → 절대는 경계에서 한 번 | 명령줄 · 설정 · 콘솔 · 시나리오 값은 들어오는 자리에서 기동 때 고정한 루트 기준으로 한 번 바꾼다. 실행 중 작업 폴더는 읽지 않는다 | 언리얼 `FPaths::ProjectSavedDir` |
-| R6 폴백 없음 | 필요한 값이 없으면 오류로 멈춘다. "못 찾으면 받은 글", "실패하면 기본값", "실패하면 다른 구현" 은 없다 | |
-| R7 확인과 실행은 같은 해석 | 있는지 · 쓸 수 있는지를 묻는 쪽과 실제로 읽고 쓰는 쪽이 같은 함수로 푼다 | |
-| R8 같은 일은 하나 | 같은 판정 · 정규화 · 표 · 백오프 · 파서는 하나만 둔다. 답을 아는 쪽이 값을 넘긴다(재추측 금지) | |
-| R9 구성 차이는 크기대로 | 규칙은 [BuildConfigSwitch](BuildConfigSwitch.md) | 언리얼 Runtime · Developer · Editor 모듈과 `#if !UE_BUILD_SHIPPING` |
+| 규칙 | 뜻 |
+|---|---|
+| R1 OS 경계 하나 | 파일 · 폴더 · 라이브러리 · 환경 변수 · 실행 파일 OS 호출은 `PlatformFileUtil`(과 짝)만. `std::filesystem` 은 쓰지 않는다 |
+| R2 디스크 I/O 는 절대 경로만 | `FileUtil` · `PlatformFileUtil` I/O 는 절대 경로만 받는다(상대 · `C:foo` · `\foo` 는 오류). 경로 글 연산은 대상 밖 |
+| R3 리소스는 리소스 경로만 | `AssetPaths` · `AssetIO` 는 `ResourcePath{도메인(선택), 상대 경로}` 만 받는다. 문자열에서 도메인을 추측하지 않는다 |
+| R4 쓰기는 FileUtil 이 절대 경로로 | `AssetPaths` · `AssetIO` 는 읽기와 경로 풀기만 |
+| R5 상대 → 절대는 경계에서 한 번 | 명령줄 · 설정 · 콘솔 · 시나리오 값은 들어오는 자리에서 기동 때 고정한 루트(`ProcessRoots`) 기준으로 한 번. 실행 중 작업 폴더는 읽지 않는다 |
+| R6 폴백 없음 | 필요한 값이 없으면 오류로 멈춘다 |
+| R7 확인과 실행은 같은 해석 | 있는지 묻는 쪽과 읽고 쓰는 쪽이 같은 함수로 푼다 |
+| R8 같은 일은 하나 | 같은 판정 · 정규화 · 표 · 파서는 하나. 답을 아는 쪽이 값을 넘긴다 |
+| R9 구성 차이는 크기대로 | [BuildConfigSwitch](BuildConfigSwitch.md) |
 
-| 형식 | 자리 | 막는 것 |
-|---|---|---|
-| `AbsolutePath` | `Core/Path/AbsolutePath.h` — `tryMake` · `tryResolve` 로만 만든다(Windows `X:/` · UNC, POSIX `/`) | 느슨한 판정 — `FileUtil::isAbsolutePath` 는 `C:foo` · `\foo` 도 절대로 보므로 디스크 입구는 이 형식(`FileUtil::requireAbsolutePath`)으로 받는다 |
-| `ProcessRoots` | `Core/File/ProcessRoots.h` — 기동 때 한 번(실행 파일 위치 · `-project=`): binary · project · content · saved · logs · crash · userData · packs · DDC. 못 정하면 기동 오류 | 작업 폴더 의존, Saved 기준 여럿, `"Saved"` 리터럴 |
-| `ResourcePath` · `DomainTable` | `Engine/Content/ResourcePath.h` — 만들 때 정규화(소문자 · `/` · `..` 거절), 문자열에서 암시적으로 못 만든다. 도메인 이름표 · 우선순위 · 쿠킹 대상은 표 하나, 한 줄 참조(`common/x`)는 이 표의 최장 일치(`DomainTable::split`)로만 가른다 | 캐시마다 다른 키 정규화, 도메인 판정 · 나열 · 우선순위 표 여러 벌 |
-| 입력 경계 | 명령줄 값 종류 `CommandLineDiskPath`(parse 때 R5 로 절대화, 오류는 모아 기동 실패), `gv_` 보류 값도 같은 변환기, 개발 명령 `readDiskPathArgument` | "실패하면 0 넣고 읽음 표시", 인자 글자 비교 · 추측 |
-
-정해 둔 것:
-
-- `AssetPaths` 의 공개 해석은 `toDiskPath` · `findLooseFile` · `toAssetID` · `collectLooseFolders` 와 설정(`setSearchPriority` · `mountDiskDomain`)뿐이다. 붙인 디스크 도메인(`isMountedDiskDomainID`)은 팩을 보지 않는다.
-- `collectAssets` 는 소스 · 팩 구성 모두 합집합이다(같은 이름은 앞선 도메인 · 높은 팩, 언리얼 `IterateDirectory`). 팩의 도메인은 팩 안(스트링 풀 맨 앞)에 적고 파일 이름으로 추측하지 않는다(언리얼 pak mount point).
-- 개발 명령의 디스크 경로 인자와 문서 · 직렬화기의 `saveToFile` 은 글을 받는다 — 저장으로 갈 때만 `FileUtil::requireAbsolutePath` 로 형식에 올리고 OS 경계가 상대 경로를 거절한다. 시나리오 단계 속성마다 경로 종류를 선언하지 않는다(`{out}` 은 명령 글 안에서도 쓰여 속성 형식으로 막을 수 없다 — 경로를 받는 명령이 검사한다).
-- 씬 데이터의 `string _…Path` 칸은 참조 형식으로 바꾸지 않는다 — 그 값이 디스크 입구로 가는 곳이 없고, 상대 경로가 OS 경계에 닿으면 R2 가 오류로 드러낸다. 새 결함이 이 모양으로 나오면 그때 형식으로.
-- `TextureCache` 렌더 타깃 기본 크기(256)는 폴백이 아니라 자리 표시 값이다 — 카메라가 크기를 알리면 `resizeRenderTarget` 이 다시 만든다.
-- 저장: 런타임 저장소 `GameLocalStore` 는 게임 범위다(봉투 · 백엔드가 GameFramework, 슬롯 폴더가 게임마다 — 언리얼 `ISaveGameSystem` + `AsyncSaveGameToSlot`), 완료 배분은 기반 `LocalStoreChannel`. 에디터 사용자 자료(`CharacterEditorLocalStore`)는 게임 인스턴스 밖의 사용자 자료라 따로다(언리얼 에디터 설정의 `Saved/`). 쓰는 확장이 둘이 되면 공용 에디터 플러그인으로 옮긴다.
-- 합치지 않는 것: 디렉터 컴포넌트의 카탈로그 읽기는 씬마다 다른 데이터라 게임 범위 `loadRequiredCatalog` 로 옮기지 않는다(실패는 ERROR). 파일 글 되돌리기 둘(프리팹 · 리그)은 뒤따르는 일이 달라 합치지 않는다.
+- 디스크 입구는 `AbsolutePath`(`tryMake` · `tryResolve`, `FileUtil::requireAbsolutePath`)로 받는다 — `FileUtil::isAbsolutePath` 는 `C:foo` 도 절대로 본다.
+- 루트는 `ProcessRoots`(기동 때 한 번) — `"Saved"` 리터럴 · 작업 폴더 의존 금지.
+- `ResourcePath` 는 문자열에서 암시적으로 못 만든다. 도메인 판정은 `DomainTable::split` 하나.
+- 명령줄 디스크 경로는 `CommandLineDiskPath`, 개발 명령은 `readDiskPathArgument`.
 
 ## 리소스 읽기 입구와 에셋 참조
 
-리소스는 한 길을 지난다. 새 형식은 종류 정의 한 줄로 합성 · 공유 · 다시 읽기 · 쿠킹 · 참조 색인 · 에디터 선택기를 얻는다. 파일에 적는 법(`_base` · `_when` · 층 · 경로 교체)은 [DataInheritance](DataInheritance.md), 새 형식 순서는 그 문서 "새 형식을 올리는 법" 이다.
+길: 리소스 파일 → `ResourceComposer`(부모 → 조건 → 층) → 종류 정의 로더 → `SharedAssetCache<T>`(경로 하나에 객체 하나) → `AssetRef<T>` 가 꺼낸다. 실행 상태는 쓰는 쪽이 따로 가진다. 파일에 적는 법은 [DataInheritance](DataInheritance.md).
 
-```
-리소스 파일
-  └─ 합성 읽기 ResourceComposer: 부모(_base) → 조건(_when) → 덮어쓰기 층 → 펼친 글
-       └─ 종류 정의(AssetTypeDef)의 로더: 글 → const T
-            └─ 공유 캐시 SharedAssetCache<T>: 경로 하나에 객체 하나, 다시 읽기, 로드 상태
-                 └─ AssetRef<T> 가 꺼낸다 → 실행 상태는 쓰는 쪽이 따로 가진다
-```
-
-- **종류 정의:** 등록은 `SW_ASSET_TYPE( id, 정의.withPathRule( … ).withLoader( AssetTypeLoader::of<T>( 메모리 태그 ) ) )` 한 줄이다(문맥이 더 필요한 로더는 `AssetTypeLoader::with<T, 함수>`). `AssetTypeDef` 가 이름 · 접미사 · 판 · 쿠킹 접미사 · 경로 규칙(`/data/items.xml` 처럼 접미사로 가를 수 없는 파일) · 내장 이름 · 로더를 들고, 고치는 함수는 `withPathRule` · `withBuiltinNames` · `withLoader` 뿐이다. 헤더의 `kAssetType` 은 쿠킹이 쓰는 사실만, 로더는 등록 표의 사본에만 있다. 검증 전용 로더는 두지 않는다 — 스키마 테스트도 진짜 로더를 부른다.
-- **공유 캐시 등록:** `SW_SHARED_ASSET_CACHE( id, T, 정의 )`(Engine) · `SW_MODULE_SHARED_ASSET_CACHE( id, T, 내보내기, 정의 )`(모듈 — 모듈 수명으로 등록, `Engine/Module/ModuleSharedAssetCache.h`) 한 줄이 종류 등록 · 캐시 인스턴스화 · 레지스트리 등록을 함께 한다. 캐시 이름도 정의의 이름 하나다. `XMLCatalog` 형식은 모두 캐시를 가진다.
-- **쿠킹 제약:** 팩 쿠킹은 게임 모듈을 올리기 전에 돈다(`HeadlessSubsystem::runCookTask`). 쿠킹이 알아야 하는 합성 규칙은 데이터(`Content/engine/settings/datacataloginheritance.xml`)에 두고, 배포 런타임도 이 표를 읽는다.
-- **창구:** `request( 경로 )` 는 핸들(로드 상태), `acquire( 경로 )` 는 `SharedAssetRef<T>` 를 돌려준다. `XMLCatalog` 에 감싸개를 두지 않는다(내보내는 카탈로그가 베이스 멤버를 모두 인스턴스화해 캐시 없는 카탈로그의 링크가 깨진다). 다시 읽은 횟수는 비공개이고 `AssetReloadWatch<T>` 만 읽는다.
-- **다시 읽기:** 다시 읽으면 늘 새 판이 생긴다. `SharedAssetRef<T>` 로 쥔 쪽은 새 판을 보고, `shared_ptr<const T>`(`.snapshot()`)로 쥔 쪽은 받은 때의 판을 그대로 읽는다 — 진행 중인 세션 · 워커 일감 · 번호를 지어 둔 쪽이 이것이다. 옛 판은 `collectRetiredVersions` 가 프레임 경계에서 놓는다. 지어 둔 것은 `AssetReloadWatch` 로 횟수를 보고 다시 짓는다. 시나리오 `editor/catalogshared`.
-- **사본을 못 만들게 한다:** `loadFromAsset` 은 비공개이고 `AssetTypeLoader` 만 friend 다. 게임 범위 서비스는 `GameInstance::loadRequiredCatalog` 로 받고, 테스트 · 미리 보기는 `loadFromXMLText`. 쿠커가 읽는 형식만 공개 `loadCopyFromAsset` 을 둔다 — 쿠킹 작업(`CookJob`)은 범위 안의 읽기를 입력으로 기록하므로 캐시의 한 벌을 쓰면 입력이 빠진다.
-- **사본이 맞는 것:** 프로세스에 한 벌이고 서비스가 기동 때 자기 상태로 옮기는 엔진 설정(`PhysicsSettings` · `UIScaleSettings` 등, 언리얼 `UDeveloperSettings` 자리), 쓰는 쪽이 고치는 입력(`InputMap` 재바인딩 · 높이장 · `NavMeshAsset` · `TileMapXMLData`), 도구 입력(정점 애니메이션 쿠커 · 머티리얼 그래프 컴파일러 · 에디터 편집 사본).
-- **정의와 실행 상태:** 공유 객체는 `const` 다. 실행 상태가 섞인 카탈로그는 나눈다(`BehaviorTree` · `BehaviorTreeRunner`, `AbilityCatalog` · `AbilityClassRegistry`). `MeshCache` · `TextureCache` · `MaterialCache` · `PrefabCache` 는 GPU 수명 · 쓰는 쪽의 수정이 있어 합치지 않는다(`SharedAssetCache.h` 머리말). `AssetHandle` · 로드 상태 · 종류 정의는 공유한다.
-- 아직 쓰는 게임이 없는 키트 카탈로그(약 20 종)는 라이브러리라 지우지 않고 캐시 등록과 접미사만 둔다.
-
-- **리소스는 id 로 읽는다.** 그래야 조건(`_when`) · 덮어쓰기 층 · 다시 읽기 기록 · 접속 대조(리소스 해시)를 받는다. 리플렉션 파일 하나는 `ConfigManager::readComposedXMLDocument`, 루트를 손으로 읽는 형식은 `XMLReadUtil::parseResourceRoot`, 그 밖은 `XMLDocument::loadResource` · `loadResourceAs` · `parseResourceText`(테스트 `ResourceEntranceTest`).
-- 글을 읽은 뒤 id 없이 글 입구(`loadFromAsset` · `loadFromFile`)로 넘기지 않는다 — 린트 `common-shapes` 의 `assetEntrance` 가 막고, 예외는 문맥을 정하는 쪽(문화권 표 · 경로 교체 표)만 `Config/Rules/Lint/CommonShapes.json` 에 까닭과 함께. 팩 설정(`PackEngineSettings`)은 층 · 조건이 기대는 값을 정하므로 그대로 읽는다. 미리 보기 · 테스트는 `loadFromXMLText`(층을 얹지 않는다).
-- **다른 에셋을 가리키는 칸은 `AssetRef<T>`**(언리얼 `TSoftObjectPtr<T>`). 스스로 읽지 않는다(`acquire()` · `request()`). 접미사가 대상 종류와 다르면 로드 오류다. 값은 `AssetRefBase`(경로 + `const AssetTypeDef*`)와 `AssetRef<T>` — 대상 종류를 값이 품어 `vector<AssetRef<T>>` · 중첩 구조체 · 덮어쓰기 패치가 같은 검사를 지나고, 의존성 수집 · 미리 읽기(`PreloadSet`) · 쿠킹 입력 · 참조 색인 · 에디터 선택기가 모두 이 칸을 본다.
-- 경로 칸은 리플렉션 선언에서만 온다 — 손으로 쓴 이름 표를 두지 않는다. 생성 목록은 `Config/Dev/AssetReferenceFields.generated.json`(낡음은 `--check-asset-refs`), `Config/Dev/AssetReferenceFields.json` 에는 도메인 · 확장자 · 임포트 폴더 규칙만.
-- `AssetRef<T>` 칸이 만들어지는 곳에서 `T` 는 완전해야 한다(`unique_ptr<T>` 소멸자와 같은 규칙) — 대상 헤더를 못 읽으면 생성자를 .cpp 로 옮긴다.
-- 종류는 접미사 · 경로 규칙(`AssetTypeDef::makeDataFile`) · 내장 이름(`withBuiltinNames`) 셋으로만 가른다. 셋 다 없는 종류는 `AssetRef<T>` 가 컴파일에서 막는다(`AssetTypeDef::canTellPath`). 모르는 내장 이름은 폴백 없이 오류다.
-- 종류가 하나로 정해지지 않는 칸(인턴 열쇠로 쓰는 칸, 종류가 여럿인 칸, 종류 정의가 없는 파일)은 `PROPERTY( AssetPath )` 로 두어 생성 목록에 넣는다.
-- **쿠킹은 닿는 것만 담는다**(`PackReachability`, 언리얼 "참조된 패키지만 쿠킹"): 뿌리(`PackConfig.json` `_cookRules`, 게임 설정 `<RequiredData>`, `SW_ASSET_COOK_ROOT`)에서 참조 칸 · `_base` · 곁 파일(`SW_ASSET_COMPANION`)을 따라간다. 코드가 경로를 조립해 읽는 파일은 뿌리나 곁 파일로 선언한다 — 닿지 않으면 배포에서 빠진다. 닿는 참조가 없는 파일을 가리키면 쿠킹 오류다. 계산과 칸 규칙(`AssetReferenceFields`)은 `Engine/Asset/Reference` 에 있다. 큰 카탈로그는 항목 단위로 고르고(`_listEntryCatalog` · `_listEntryIDField`), 스테이징 산출물은 원본이 쓰일 때만 담는다(`PackStagedSelection`).
+- **종류 등록**은 `SW_ASSET_TYPE( id, 정의.withPathRule( … ).withLoader( AssetTypeLoader::of<T>( 메모리 태그 ) ) )` 한 줄, 공유 캐시는 `SW_SHARED_ASSET_CACHE`(Engine) · `SW_MODULE_SHARED_ASSET_CACHE`(모듈) 한 줄. 검증 전용 로더를 두지 않는다 — 스키마 테스트도 진짜 로더를 부른다.
+- 쿠킹이 알아야 하는 합성 규칙은 데이터(`datacataloginheritance.xml`)에 둔다 — 팩 쿠킹은 게임 모듈 전에 돈다.
+- `request( 경로 )` 는 핸들, `acquire( 경로 )` 는 `SharedAssetRef<T>`. `XMLCatalog` 에 감싸개를 두지 않는다. 다시 읽은 횟수는 `AssetReloadWatch<T>` 로만 본다.
+- 다시 읽으면 새 판이 생긴다. 진행 중 세션 · 워커 일감 · 번호를 지어 둔 쪽은 `shared_ptr<const T>`(`.snapshot()`)로 쥐고, 지어 둔 것은 `AssetReloadWatch` 로 다시 짓는다.
+- **사본을 만들지 않는다**: `loadFromAsset` 은 비공개. 게임 범위 서비스는 `GameInstance::loadRequiredCatalog`, 테스트 · 미리 보기는 `loadFromXMLText`, 쿠커가 읽는 형식만 `loadCopyFromAsset`. 사본이 맞는 것은 기동 때 서비스 상태로 옮기는 엔진 설정, 쓰는 쪽이 고치는 입력(`InputMap` · `NavMeshAsset` 등), 도구 입력뿐.
+- 공유 객체는 `const`. 실행 상태가 섞인 카탈로그는 정의와 실행으로 나눈다(`BehaviorTree` · `BehaviorTreeRunner`).
+- **리소스는 id 로 읽는다**(조건 · 층 · 다시 읽기 · 접속 대조를 받으려고): `ConfigManager::readComposedXMLDocument` · `XMLReadUtil::parseResourceRoot` · `XMLDocument::loadResource` · `loadResourceAs` · `parseResourceText`. 읽은 글을 id 없이 글 입구로 넘기는 것은 린트 `common-shapes` `assetEntrance` 가 막는다.
+- **다른 에셋을 가리키는 칸은 `AssetRef<T>`** — 스스로 읽지 않는다(`acquire()` · `request()`), 접미사가 다르면 로드 오류. 칸이 만들어지는 곳에서 `T` 는 완전해야 한다(못 읽으면 생성자를 `.cpp` 로). 종류가 하나로 정해지지 않는 칸만 `PROPERTY( AssetPath )`.
+- 경로 칸은 리플렉션 선언에서만 온다 — 손으로 쓴 이름 표를 두지 않는다(생성 목록 `Config/Dev/AssetReferenceFields.generated.json`, 낡음은 `--check-asset-refs`).
+- **쿠킹은 닿는 것만 담는다**(`PackReachability`). 코드가 경로를 조립해 읽는 파일은 뿌리(`_cookRules` · `<RequiredData>` · `SW_ASSET_COOK_ROOT`)나 곁 파일(`SW_ASSET_COMPANION`)로 선언한다 — 아니면 배포에서 빠진다.
 
 ## 리플렉션 스키마로 읽지 않고 손으로 두는 것
 
-데이터 파일의 칸은 `PROPERTY` 구조체 + `XMLFields` · `JSONFields::readProperties` 로 읽는다. 목록 칸(`vector<이름 · 태그 ID · 수 · 열거>`)은 속성 하나에 낱말을 잇고(구분자 `,;| \t`), 범위는 원소마다 본다. 아래만 손으로 둔다.
+데이터 파일의 칸은 `PROPERTY` 구조체 + `XMLFields` · `JSONFields::readProperties` 로 읽는다. 손으로 읽는 것은 다음뿐: 바깥 표준 · 원문을 지키는 것(VRM · glTF · TMX · JWT · 영수증 · 트레이스 · CSS 철자 스타일 시트 등), 양이 많거나 적었는지가 뜻인 칸(타일맵 타일, 문화권 표, `<Requires>` 같은 조건 원소), 고유 문법(`ScheduleCondition`, 이름=수 목록, 비트 합치는 낱말 칸, 격자 글), `TagContainer`(`addTag` 불변식), 키가 동적인 JSON, Core 층(리플렉션 없음). 새로 손으로 읽으려면 이 목록 가운데 어디에 드는지 주석에 적는다.
 
-- 바깥 표준 · 원문을 지키며 고치는 것: VRM · glTF(`ModelImportVrm` · `ModelImportMaterial`), TMX(`TranslationMemory`), JWT, 스토어 영수증, 프로파일러 트레이스, `UIStyleSheet`(상태 이름은 CSS 철자), `CatalogXMLText` · `RigSaveParams`, `TextGatherer`, `XMLReadUtil`, 시나리오 단계의 수 비교(`equals` · `near` · `atLeast` · `atMost`)와 감시 값 참조 · 시한, 알림 `<Notify>`(처리기마다 인자가 다르다), 머티리얼 속성 항목 쓰기(생략이 곧 부모 값), 타일맵 머리말.
-- 양이 많거나 물려받기가 뜻인 칸: 타일맵 타일 칸(`readProperties` 는 속성마다 이름 글을 만들어 느리다), 립싱크 프레임 가중치, 문화권 표(적었는지가 뜻이라 스키마 기본값으로 담지 못한다).
-- 적었는지가 뜻인 것: 조건 하나만 적는 원소(`<Requires>` · `<When>` · `<Hide>`), 값 · 범위 · 선택지 중 하나를 적는 외형 값과 장비 슬롯, `width` 와 `early` · `late`, 없으면 다른 칸을 따르는 `max`.
-- 고유 문법: `ScheduleCondition`, 이름=수 목록(`seasons="Spring=2"`), 고정 길이 수 배열, 낱말을 비트로 합치는 칸(`sizes` · `targets` · `search` · `services`), 격자 · 패턴 글, 시계 표기 시각.
-- `TagContainer` 칸: 정렬 불변식을 `addTag` 가 지킨다(`AppearanceXMLUtil::readTags`).
-- 키가 동적인 JSON: 메시 수정자 인자 · 격자 · 커브 키, 크래시 매니페스트 문맥, 사용자 설정 값, 프로젝트 설정 차이 쓰기, 프리팹 트리, 부하 봇 단계, 비주얼 로그 벡터 배열, `LoadBotMetrics`(쓰기만).
-- 이름표로 두는 것: UI 라벨 · 명령 이름 · 바깥 표준 철자(Prometheus 지표 종류 · CLDR 복수 범주 · 명령줄 백엔드 이름), 사용자 기기에 저장되는 설정 값, 엔진 서비스가 내려간 뒤 쓰는 이름(RHI 메모리 종류), Core 층(리플렉션 없음).
-
-## 에디터 패널: 그리기와 로직
-
-[EditorUI](EditorUI.md) 의 MVVM 절이 정본이다 — 로직은 `Model/` 의 ViewModel(ImGui include 는 빌드가 막는다), 패널에는 ImGui 호출과 명령 호출만.
+에디터 패널의 그리기와 로직 분리는 [EditorUI](EditorUI.md) MVVM 절.

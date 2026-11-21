@@ -26,7 +26,7 @@ namespace
         {
             _listValue.push_back( reply._value );
             if ( _pReopenTable != nullptr && _listValue.size() == 1 )
-                (void)_pReopenTable->open( LocalCallTable::ReplyDelegate::create<&LocalReplySink::onReply>( this ) );
+                (void)_pReopenTable->open( SW_DELEGATE_METHOD( LocalCallTable::ReplyDelegate, &LocalReplySink::onReply, this ) );
         }
     };
 } // namespace
@@ -36,7 +36,7 @@ SW_TEST_CASE( OnlineLocalCallTableTest, CallIsAnsweredOnce )
 {
     LocalCallTable table;
     LocalReplySink sink;
-    const uint64   callID = table.open( LocalCallTable::ReplyDelegate::create<&LocalReplySink::onReply>( &sink ) );
+    const uint64   callID = table.open( SW_DELEGATE_METHOD( LocalCallTable::ReplyDelegate, &LocalReplySink::onReply, &sink ) );
     SW_EXPECT_TRUE( LocalCallTable::isLocal( callID ) );
     SW_EXPECT_FALSE( LocalCallTable::isLocal( 1 ) );
     SW_EXPECT_EQUAL( 1, table.getCount() );
@@ -55,7 +55,7 @@ SW_TEST_CASE( OnlineLocalCallTableTest, ReplyDelegateMayOpenAnotherCall )
     LocalCallTable table;
     LocalReplySink sink;
     sink._pReopenTable  = &table;
-    const uint64 callID = table.open( LocalCallTable::ReplyDelegate::create<&LocalReplySink::onReply>( &sink ) );
+    const uint64 callID = table.open( SW_DELEGATE_METHOD( LocalCallTable::ReplyDelegate, &LocalReplySink::onReply, &sink ) );
     SW_EXPECT_TRUE( table.finish( callID, LocalReply{ 1 } ) );
     SW_EXPECT_EQUAL( 1, table.getCount() );
     table.clear();

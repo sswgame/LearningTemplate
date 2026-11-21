@@ -8,7 +8,7 @@
 | --- | --- |
 | package | `web-package` 와 같은 묶음 + 확인 페이지 `check.html`(배포 페이지 `index.html` 에 보고 스크립트만 더한 것) |
 | serve | 교차 출처 격리 헤더를 주는 로컬 서버(`IsolatedRequestHandler`) + 보고 받는 끝점 `POST /__swcheck/<종류>` |
-| run 1 | 브라우저(Chrome · Edge — `browser-mcp` 와 같은 후보, 임시 프로필)로 `check.html?probe=write` — `--seconds` 동안 돌린 뒤 화면을 PNG 로 받고 IDBFS 에 표지 파일을 쓴다 |
+| run 1 | 브라우저(Chrome · Edge — `BROWSER_CANDIDATES`, 임시 프로필)로 `check.html?probe=write` — `--seconds` 동안 돌린 뒤 화면을 PNG 로 받고 IDBFS 에 표지 파일을 쓴다 |
 | run 2 | 같은 프로필로 다시 띄워 `check.html?probe=read` — 앱이 IDBFS 를 붙인 뒤 표지를 읽어 run 1 의 값과 대조한다(새 세션에 영속 폴더가 살아 있다) |
 
 판정(모두 지나야 통과): `navigator.gpu` 가 있다, 오류 줄(printErr · 창 오류 · 처리 안 된 거부)이 없다, 앱이 확인 시간 안에 끝나거나 멈추지 않았다, 화면 PNG 를 받았다,
@@ -27,6 +27,7 @@ from __future__ import annotations
 import argparse
 import functools
 import http.server
+import os
 import secrets
 import shutil
 import subprocess
@@ -44,7 +45,15 @@ from common.host_platform import is_windows_host  # noqa: E402
 from common.paths import get_build_dir, get_project_root  # noqa: E402
 from package.pack import PACK_FOLDER_NAME  # noqa: E402
 from package.web_package import IsolatedRequestHandler, WebPackageError, INDEX_HTML, PACK_LOADER_NAME, PRESET_NAME, make_web_package  # noqa: E402
-from setup.browser_mcp import find_browser  # noqa: E402
+
+#: Chrome, 없으면 Edge(둘 다 Chromium 이라 같은 DevTools 프로토콜) — 임시 프로필로 띄운다.
+BROWSER_CANDIDATES = (
+    r"%ProgramFiles%\Google\Chrome\Application\chrome.exe",
+    r"%ProgramFiles(x86)%\Google\Chrome\Application\chrome.exe",
+    r"%LOCALAPPDATA%\Google\Chrome\Application\chrome.exe",
+    r"%ProgramFiles(x86)%\Microsoft\Edge\Application\msedge.exe",
+    r"%ProgramFiles%\Microsoft\Edge\Application\msedge.exe",
+)
 
 CHECK_PAGE_NAME = "check.html"
 REPORT_PREFIX = "/__swcheck/"
@@ -89,6 +98,14 @@ REPORTER_SCRIPT = """<script>
 }})();
 </script>
 """
+
+
+def find_browser() -> str | None:
+    for candidate in BROWSER_CANDIDATES:
+        path = os.path.expandvars(candidate)
+        if os.path.isfile(path):
+            return path
+    return None
 
 
 @dataclass
@@ -210,7 +227,7 @@ def main(argv: list[str] | None = None) -> int:
         return ExitCode.CHECK_INVALID
     browser = find_browser()
     if browser is None:
-        print("[web-check] FAILED Chrome or Edge not found (the same candidates as browser-mcp)")
+        print("[web-check] FAILED Chrome or Edge not found (BROWSER_CANDIDATES)")
         return ExitCode.CHECK_INVALID
 
     token = secrets.token_hex(8)

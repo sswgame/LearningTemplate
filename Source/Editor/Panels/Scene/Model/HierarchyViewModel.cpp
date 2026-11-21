@@ -42,7 +42,7 @@ namespace sw::editor
             template <typename TEdit>
             static void requestSceneEdit( const TEdit& edit )
             {
-                EditorCommandRegistry::getInEditorContext().requestSceneEdit( Delegate<void( EditorTransaction& )>::create( edit ) );
+                EditorCommandRegistry::getInEditorContext().requestSceneEdit( SW_DELEGATE_LAMBDA( Delegate<void( EditorTransaction& )>, edit ) );
             }
 
             static GameObject* findObject( uint64 objectID )

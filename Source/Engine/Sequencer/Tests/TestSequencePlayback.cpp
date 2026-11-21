@@ -637,8 +637,8 @@ SW_TEST_CASE( SequencePlaybackTest, ComponentSkipToEndFinishesOnce )
     pPlayer->setSequence( Util::makeMoveSequence( SequenceFinishPolicy::KeepState ) );
     pPlayer->setBinding( 1, pHero->getHandle() );
     uint32             finishedCount = 0;
-    const Subscription finished      = pPlayer->registerFinished( OnSequenceFinishedDelegate::create( [&finishedCount]()
-    { ++finishedCount; } ) );
+    const Subscription finished      = pPlayer->registerFinished( SW_DELEGATE_LAMBDA( OnSequenceFinishedDelegate, [&finishedCount]()
+         { ++finishedCount; } ) );
 
     SW_EXPECT_FALSE( pPlayer->skipToEnd() ); // 재생 중이 아니다
     pPlayer->play();

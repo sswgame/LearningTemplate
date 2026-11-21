@@ -940,7 +940,7 @@ SW_TEST_CASE_F( SRPGRulesTest, BattlefieldDeterminism )
         for ( int32 index = 0; index < 3; ++index )
         {
             bPlaced = bPlaced && field.addUnit( "gm", "rookie", sw::SRPGTeam::Player, sw::int2{ 0, 2 + index * 2 } ).has_value();
-            bPlaced = bPlaced && field.addUnit( index == 0 ? "striker" : "runner", "ace", sw::SRPGTeam::Enemy, sw::int2{ 9, 3 + index * 2 } ).has_value();
+            bPlaced = bPlaced && field.addUnit( sw::hashed_string{ index == 0 ? "striker" : "runner" }, "ace", sw::SRPGTeam::Enemy, sw::int2{ 9, 3 + index * 2 } ).has_value();
         }
         field.beginBattle();
         return bPlaced;

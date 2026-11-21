@@ -55,6 +55,7 @@ SW_TEST_CASE( OverflowConcurrentQueueTest, ConcurrentProducersAndConsumersLoseNo
     constexpr uint32                        kTotal         = kProducerCount * kPerProducer;
     sw::vector<sw::atomic<uint32>>          listSeen( kTotal );
     sw::atomic<uint32>                      takenCount{ 0 };
+    sw::atomic<uint32>* const               pSeen = listSeen.data(); // 스레드 전에 한 번 — vector 의 non-const 접근은 경쟁 감지에서 쓰기로 센다(원소는 atomic 이다)
 
     sw::vector<std::thread> listThread;
     for ( uint32 producer = 0; producer < kProducerCount; ++producer )
@@ -69,14 +70,14 @@ SW_TEST_CASE( OverflowConcurrentQueueTest, ConcurrentProducersAndConsumersLoseNo
     }
     for ( uint32 consumer = 0; consumer < 2; ++consumer )
     {
-        listThread.emplace_back( [&queue, &listSeen, &takenCount]()
+        listThread.emplace_back( [&queue, pSeen, &takenCount]()
         {
             uint32 item = 0;
             while ( takenCount.load( std::memory_order_acquire ) < kTotal )
             {
                 if ( queue.dequeue( item ) )
                 {
-                    listSeen[item].fetch_add( 1, std::memory_order_relaxed );
+                    pSeen[item].fetch_add( 1, std::memory_order_relaxed );
                     takenCount.fetch_add( 1, std::memory_order_acq_rel );
                 }
                 else

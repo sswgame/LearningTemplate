@@ -21,7 +21,7 @@ namespace
     struct AudioEventEditModelTestRecorder
     {
         uint32               _count{ 0 };
-        DocumentEditRecorder _recorder{ DocumentEditRecorder::RecordDelegate::create( [this]( string_view )
+        DocumentEditRecorder _recorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, [this]( string_view )
         { ++_count; } ) };
     };
 } // namespace

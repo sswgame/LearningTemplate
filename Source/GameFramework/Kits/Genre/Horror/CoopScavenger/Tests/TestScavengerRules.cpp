@@ -1073,7 +1073,7 @@ SW_TEST_CASE_F( ScavengerExpeditionTest, ExpeditionDeterminism )
             (void)expedition.movePlayer( 0, arrRoute[51 - stepIndex] );
         if ( stepIndex == 52 )
         {
-            (void)expedition.movePlayer( 0, sw::ScavengerExpedition::kShipAreaID );
+            (void)expedition.movePlayer( 0, sw::hashed_string{ sw::ScavengerExpedition::kShipAreaID } );
             (void)expedition.depositToShip( 0 );
         }
         expedition.update( 2.0f ); // 하루 240 초 — 내린 지 90 걸음에 자정이라 저절로 뜬다

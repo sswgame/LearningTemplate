@@ -33,6 +33,9 @@ C++ 모양 규칙 중 컴파일러가 보지 않는 열을 본다. 규칙 문서
 11. 브라우저 JS 는 C++ 안에 쓰지 않는다(`EM_JS` · `EM_ASYNC_JS` · `EM_ASM…`): 매크로 본문을 C++ 포맷터가 C++ 로 다뤄 `=>` · `!==` 를 띄우고, 브라우저 JS 가 링크 뒤
    문법 오류로 멈췄다(2026-11-09 — IDBFS 마운트 · URL 열기). 기능 옆 `Web/*.js` Emscripten 라이브러리(addToLibrary)에 두고 C++ 는 `extern "C"` 로 선언한다
    (Platform/Web.cmake 가 모두 링크에 넘긴다). 예외는 없다.
+12. 델리게이트는 `SW_DELEGATE_FUNCTION` · `SW_DELEGATE_METHOD` · `SW_DELEGATE_LAMBDA` 로 붙인다(사용자 2026-11-20): 맨 `X::create<&f>()` · `X::create( 람다 )` 는
+   종류마다 함수를 템플릿 인자로 주는지 생성자 인자로 주는지 달라 모양을 외워야 한다. 판정 · 바꾸기는 `dev/delegate_macros.py`(`py -3 -m Scripts delegate-macros`)와 같다.
+   `Core/Delegate/` (맨 API 의 정의 · 구현 · 그 테스트)만 뺀다.
 
 `py -3 -m Scripts lint cpp-shape [--files …|--all]` 로 돌리고, 커밋 훅(`rules.py` 표)이 staged 파일에 돌린다.
 """
@@ -622,6 +625,16 @@ def check_net_message_table(code: str, relative: str) -> list[tuple[int, str]]:
     return list_problem
 
 
+def check_bare_delegate_create(raw: str, code: str, relative: str, names: frozenset[str] | None = None) -> list[tuple[int, str]]:
+    """델리게이트형의 맨 create 를 막는다(규칙 12). 이름 표는 맨 create 모양이 있는 파일에서만 모은다(git grep 한 번 — 프로세스 캐시)."""
+    from dev import delegate_macros   # 그쪽이 이 모듈의 strip_code 를 가져온다 — 순환 import 를 피해 여기서 연다
+    if delegate_macros.is_target(relative) is False or delegate_macros.CREATE_PATTERN.search(code) is None:
+        return []
+    if names is None:
+        names = delegate_macros.load_delegate_names(str(Path(__file__).resolve().parents[2]))
+    return [(site.line, f"델리게이트는 SW_DELEGATE_{site.kind} 로 붙인다 — `py -3 -m Scripts delegate-macros {relative}`") for site in delegate_macros.find_sites(raw, code, names)]
+
+
 @functools.lru_cache(maxsize=1)
 def load_rules(project_root: str) -> tuple[ExceptionTable, int]:
     """예외 표(`경로|타입` → 까닭 칸 셋)와 규칙 10 의 문턱 `_stateMutatorMinFunctions`. 프로세스마다 한 번 읽는다 — 파일 · 칸이 없으면 멈춘다."""
@@ -747,6 +760,7 @@ def inspect_file(path: Path, relative: str) -> list[str]:
     list_problem += check_inline_browser_js(code)
     list_problem += check_online_protocol_table(raw, code, relative)
     list_problem += check_net_message_table(code, relative)
+    list_problem += check_bare_delegate_create(raw, code, relative)
     return [f"{relative}:{line}: {message}" for line, message in sorted(set(list_problem))]
 
 
@@ -776,7 +790,7 @@ def check_cpp_shape(project_root: Path, scope: LintScope) -> list[str]:
 
 
 def run_self_check() -> int:
-    """규칙 10(.cpp 상태 · `…Internal` 변경자)의 자체 시험입니다."""
+    """규칙 10(.cpp 상태 · `…Internal` 변경자) · 규칙 12(델리게이트 매크로) · strip_code 의 자체 테스트입니다."""
     failures = 0
 
     def expect(condition: bool, message: str) -> None:
@@ -801,6 +815,13 @@ def run_self_check() -> int:
     owned = ("class CapState\n{\npublic:\n    void group();\nprivate:\n    vector<int32> _listGroup;\n};\n"
              "struct FooInternal\n{\n    static void a( CapState& s ) { s._listGroup.clear(); }\n    static void b( CapState& s ) { s._listGroup.clear(); }\n};\n")
     expect(check_state_mutators(owned, "Source/Engine/Foo.cpp", 2, table) == [], "private fields are not counted")
+    names = frozenset({"Delegate", "DoneDelegate"})
+    bare = "void f()\n{\n    auto d = DoneDelegate::create<&Foo::bar>( this );\n}\n"
+    expect(len(check_bare_delegate_create(bare, strip_code(bare), "Source/Engine/Foo.cpp", names)) == 1, "a bare delegate create is flagged")
+    wrapped = "void f()\n{\n    auto d = SW_DELEGATE_METHOD( DoneDelegate, &Foo::bar, this );\n    auto m = Mesh::create( desc );\n}\n"
+    expect(check_bare_delegate_create(wrapped, strip_code(wrapped), "Source/Engine/Foo.cpp", names) == [], "the macro form and a non-delegate factory pass")
+    from dev import delegate_macros   # 바꾸기 도구의 변환 테스트도 린트 자체 테스트와 함께 돈다
+    expect(delegate_macros.run_self_check() == 0, "delegate-macros rewrite cases")
     stripped = {
         'a // c\nb': 'a     \nb', 'x /* c\nd */ y': 'x     \n     y', 's = "q\\"w";': 's = "    ";', "c = 'x'; it's": "c = ' '; it's",
         'r = R"d(a)"b\n)d";': 'r = R       \n   ;', 'fooR"x"': 'fooR" "', '#define A \\\n  B\nint q;': '           \n   \nint q;',
@@ -813,7 +834,7 @@ def run_self_check() -> int:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="C++ 모양 규칙(선언 순서 · 깃발 칸 · 익명 네임스페이스 · 주인 우선 · 중괄호 안 include · .cpp 상태 변경자)을 본다")
+    parser = argparse.ArgumentParser(description="C++ 모양 규칙(선언 순서 · 깃발 칸 · 익명 네임스페이스 · 주인 우선 · 중괄호 안 include · .cpp 상태 변경자 · 델리게이트 매크로)을 본다")
     parser.add_argument("--files", nargs="*", default=None, help="볼 파일(없으면 --all)")
     parser.add_argument("--all", action="store_true", help="Source 전체")
     parser.add_argument("--self-check", action="store_true", help="규칙 10 의 자체 시험")

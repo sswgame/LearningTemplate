@@ -168,8 +168,8 @@ SW_TEST_CASE( GlobalVariableTest, CommandLineIntegration )
     // 테스트 대상 변수만 파싱한 뒤 setValueFromString 으로 적용한다.
     sw::CommandLineManager cmd;
     cmd.initialize();
-    cmd.addArgument<int32>( { "gv_testInt" }, int32{ 60 }, false );
-    cmd.addArgument<sw::string>( { "gv_testString" }, sw::string( "InitialValue" ), false );
+    cmd.addArgument<int32>( { "gv_testInt" }, int32{ 60 } );
+    cmd.addArgument<sw::string>( { "gv_testString" }, sw::string( "InitialValue" ) );
 
     utf8  arg0[] = "CoreUtilityTest";
     utf8  arg1[] = "gv_testInt=777";

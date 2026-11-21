@@ -26,7 +26,7 @@ SW_TEST_CASE( ComponentAssetPathUtilTest, AssetPathWalkReachesNestedValues )
 
     vector<string> listPath;
     vector<string> listTop;
-    ComponentAssetPathUtil::forEachAssetPath( *AssetRefSampleHolder::StaticType(), &holder, AssetPathVisitor::create( [&listPath, &listTop]( const AssetPathValue& value )
+    ComponentAssetPathUtil::forEachAssetPath( *AssetRefSampleHolder::StaticType(), &holder, SW_DELEGATE_LAMBDA( AssetPathVisitor, [&listPath, &listTop]( const AssetPathValue& value )
     {
         if ( value.getPath().empty() )
             return;

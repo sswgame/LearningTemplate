@@ -275,7 +275,7 @@ namespace
             _response = TradeResponseSink{};
             NetRequestOptions options;
             options._idempotencyKey = NetIdempotencyKey::makeRandom(); // 표의 호출 규칙이다. 빠진 요청은 kInvalidRequest 다
-            (void)_pRig->_clients.getClient( slot ).sendRequest( method, body, options, OnlineResponseDelegate::create<&TradeResponseSink::onResponse>( &_response ) );
+            (void)_pRig->_clients.getClient( slot ).sendRequest( method, body, options, SW_DELEGATE_METHOD( OnlineResponseDelegate, &TradeResponseSink::onResponse, &_response ) );
             poll();
             return _response;
         }

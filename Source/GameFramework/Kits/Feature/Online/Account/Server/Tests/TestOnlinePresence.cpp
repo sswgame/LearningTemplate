@@ -66,7 +66,7 @@ namespace
             }
         }
 
-        AccountPresenceDelegate makeDelegate() { return AccountPresenceDelegate::create<&FoundSink::onFound>( &_sink ); }
+        AccountPresenceDelegate makeDelegate() { return SW_DELEGATE_METHOD( AccountPresenceDelegate, &FoundSink::onFound, &_sink ); }
 
         /** @brief 서버 B 에서 찾고 결과 하나를 받습니다. */
         AccountPresenceResult findAccountFromB( AccountID accountID )
@@ -175,7 +175,7 @@ SW_TEST_CASE( OnlinePresenceTest, DetachedFindEndsNotFoundOnTheNextTick )
     SW_EXPECT_FALSE( presence.isEnabled() );
     Subscription owner = presence.openFindOwner();
     FoundSink    sink;
-    const uint64 lookupID = presence.submitFindByAccount( kAlice, AccountPresenceDelegate::create<&FoundSink::onFound>( &sink ), owner );
+    const uint64 lookupID = presence.submitFindByAccount( kAlice, SW_DELEGATE_METHOD( AccountPresenceDelegate, &FoundSink::onFound, &sink ), owner );
     SW_EXPECT_TRUE( lookupID != 0 );
     SW_EXPECT_TRUE( sink._listResult.empty() );
     presence.update( UnixMilliseconds{ kNowMs } );

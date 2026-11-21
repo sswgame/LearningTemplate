@@ -43,7 +43,7 @@ namespace
             _pLeaf = &leaf;
             for ( const utf8* pCommand : { "tick", "up", "down" } )
             {
-                _listSubscription.push_back( _screen.registerCommand( hashed_string( pCommand ), UICommandDelegate::create<&CommandLog::onCommand>( &_log ) ) );
+                _listSubscription.push_back( _screen.registerCommand( hashed_string( pCommand ), SW_DELEGATE_METHOD( UICommandDelegate, &CommandLog::onCommand, &_log ) ) );
             }
         }
 

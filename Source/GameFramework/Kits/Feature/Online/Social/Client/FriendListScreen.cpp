@@ -149,9 +149,9 @@ namespace sw
             return;
         }
         // 줄은 목록이 보이는 만큼만 만들고 다시 쓴다(친구 수와 무관하다). 항목 수를 다시 넣으면 모든 줄을 다시 잇는다.
-        pFriends->setRowFactory( ListViewWidget::RowFactoryDelegate::create( []()
+        pFriends->setRowFactory( SW_DELEGATE_LAMBDA( ListViewWidget::RowFactoryDelegate, []()
         { return makeRow(); } ) );
-        pFriends->setRowBinder( ListViewWidget::RowBinderDelegate::create( [this]( Widget& row, uint32 itemIndex )
+        pFriends->setRowBinder( SW_DELEGATE_LAMBDA( ListViewWidget::RowBinderDelegate, [this]( Widget& row, uint32 itemIndex )
         {
             if ( const FriendList* const pBound = _model.get() ) // 줄은 다음 배치에서 이어진다 — 그 사이 모델이 사라졌을 수 있다
                 bindRow( row, pBound->getEntries()[itemIndex] );

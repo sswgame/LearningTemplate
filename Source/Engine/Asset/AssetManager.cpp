@@ -100,7 +100,7 @@ namespace sw
         , _pPackManager{ make_unique<PackManager>() }
         , _pPackChunks{}
         , _listBuiltInAssetCache{}
-        , _registeredAssetCache{ "AssetManager.AssetCache", RegistrationList<AssetCacheBase>::ReleaseFunction::create<&AssetManager::releaseAssetCache>( this ) }
+        , _registeredAssetCache{ "AssetManager.AssetCache", SW_DELEGATE_METHOD( RegistrationList<AssetCacheBase>::ReleaseFunction, &AssetManager::releaseAssetCache, this ) }
         , _listReloadEntry{}
         , _configReloadedSubscription{}
     {

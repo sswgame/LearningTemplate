@@ -514,7 +514,7 @@ namespace sw
         StringBuilder<constant::buffer::kMax64> key;
         key.appendFormat( "%#%#", LoginServiceInternal::kAttemptKeyPrefix, ServiceKeyUtil::makeHex64( clientKey ) );
         const uint64 requestID = _pRouter->submit( EphemeralRequest::makeIncrement( key.view(), 1, _settings._sharedAttemptWindowMs ),
-                                                   EphemeralStoreRouter::ReplyDelegate::create<&LoginService::onCacheReply>( this ), _cacheReplyOwner );
+                                                   SW_DELEGATE_METHOD( EphemeralStoreRouter::ReplyDelegate, &LoginService::onCacheReply, this ), _cacheReplyOwner );
         if ( requestID == 0 )
         {
             onAllowed(); // 맡기지 못했다(라우터가 오류 로그를 남겼다) — 이 서버의 버킷은 이미 지났다
@@ -564,7 +564,7 @@ namespace sw
         nonceKey.appendFormat( "%#%#", LoginServiceInternal::kNonceKeyPrefix, nonce );
         const uint64 requestID =
             _pRouter->submit( EphemeralRequest::makeSet( nonceKey.view(), vector<uint8>{ 1 }, _settings._loginNonceLifetimeMs, EphemeralCondition::IfAbsent ),
-                              EphemeralStoreRouter::ReplyDelegate::create<&LoginService::onCacheReply>( this ), _cacheReplyOwner );
+                              SW_DELEGATE_METHOD( EphemeralStoreRouter::ReplyDelegate, &LoginService::onCacheReply, this ), _cacheReplyOwner );
         if ( requestID == 0 )
         {
             pushImmediate( LoginOperation::IssueLoginNonce, requestTag, LoginServiceResult::fail( OnlineError::kUnavailable ), LoginGrant{} );
@@ -1187,7 +1187,7 @@ namespace sw
         StringBuilder<constant::buffer::kMax128> nonceKey;
         nonceKey.appendFormat( "%#%#", LoginServiceInternal::kNonceKeyPrefix, nonce );
         const uint64 requestID = _pRouter->submit( EphemeralRequest::makeErase( nonceKey.view() ),
-                                                   EphemeralStoreRouter::ReplyDelegate::create<&LoginService::onCacheReply>( this ), _cacheReplyOwner );
+                                                   SW_DELEGATE_METHOD( EphemeralStoreRouter::ReplyDelegate, &LoginService::onCacheReply, this ), _cacheReplyOwner );
         if ( requestID == 0 )
         {
             pushImmediate( operation, requestTag, LoginResult::ProviderUnavailable, LoginGrant{} );

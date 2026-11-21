@@ -7,6 +7,7 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Service/SceneSpatialGrid.h"
 
 #include "GameFramework/Runtime/Character/AI/AIPerception.h"

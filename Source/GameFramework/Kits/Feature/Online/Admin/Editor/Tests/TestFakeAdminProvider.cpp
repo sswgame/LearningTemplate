@@ -55,7 +55,7 @@ namespace
         static AdminServiceResult send( FakeAdminProvider& provider, uint16 method, const AdminRequest& request, const NetIdempotencyKey& key = NetIdempotencyKey{} )
         {
             ReplyRecorder recorder;
-            provider.sendCommand( method, request, key, AdminClient::ReplyDelegate::create<&ReplyRecorder::onReply>( &recorder ) );
+            provider.sendCommand( method, request, key, SW_DELEGATE_METHOD( AdminClient::ReplyDelegate, &ReplyRecorder::onReply, &recorder ) );
             SW_EXPECT_EQUAL( 1, recorder._count );
             return recorder._last._errorCode != OnlineError::kOk ? AdminServiceResult::fail( recorder._last._errorCode ) : AdminServiceResult{ recorder._last._reply._result };
         }
@@ -79,14 +79,14 @@ SW_TEST_CASE( FakeAdminProviderTest, LookupFindsByIDOrNameAndReportsUnknown )
     AdminRequest      request;
     request._accountID = FakeAdminProvider::kSeedPlayerID;
     ReplyRecorder recorder;
-    provider.sendCommand( AdminMethod::LookupAccount::kID, request, NetIdempotencyKey{}, AdminClient::ReplyDelegate::create<&ReplyRecorder::onReply>( &recorder ) );
+    provider.sendCommand( AdminMethod::LookupAccount::kID, request, NetIdempotencyKey{}, SW_DELEGATE_METHOD( AdminClient::ReplyDelegate, &ReplyRecorder::onReply, &recorder ) );
     SW_REQUIRE_TRUE( recorder._last._reply._result == AdminResult::Ok );
     SW_EXPECT_EQUAL( string( "Player One" ), recorder._last._reply._identity._displayName );
     SW_EXPECT_EQUAL( size_t( 1 ), recorder._last._reply._listBalance.size() );
 
     AdminRequest byName;
     byName._displayName = "Player Two";
-    provider.sendCommand( AdminMethod::LookupAccount::kID, byName, NetIdempotencyKey{}, AdminClient::ReplyDelegate::create<&ReplyRecorder::onReply>( &recorder ) );
+    provider.sendCommand( AdminMethod::LookupAccount::kID, byName, NetIdempotencyKey{}, SW_DELEGATE_METHOD( AdminClient::ReplyDelegate, &ReplyRecorder::onReply, &recorder ) );
     SW_EXPECT_EQUAL( AccountID( FakeAdminProvider::kSeedOtherID ), recorder._last._reply._identity._accountID );
 
     AdminRequest unknown;
@@ -179,9 +179,9 @@ SW_TEST_CASE( FakeAdminProviderTest, IdempotencyKeyReplaysTheFirstReply )
     FakeAdminProvider       provider{ kNowMs };
     const NetIdempotencyKey key = NetIdempotencyKey::makeRandom();
     ReplyRecorder           recorder;
-    provider.sendCommand( AdminMethod::AdjustAsset::kID, FakeAdminProviderTestUtil::makeAdjust( 10 ), key, AdminClient::ReplyDelegate::create<&ReplyRecorder::onReply>( &recorder ) );
+    provider.sendCommand( AdminMethod::AdjustAsset::kID, FakeAdminProviderTestUtil::makeAdjust( 10 ), key, SW_DELEGATE_METHOD( AdminClient::ReplyDelegate, &ReplyRecorder::onReply, &recorder ) );
     SW_EXPECT_EQUAL( SW_FALSE, recorder._last._reply._bReplayed );
-    provider.sendCommand( AdminMethod::AdjustAsset::kID, FakeAdminProviderTestUtil::makeAdjust( 10 ), key, AdminClient::ReplyDelegate::create<&ReplyRecorder::onReply>( &recorder ) );
+    provider.sendCommand( AdminMethod::AdjustAsset::kID, FakeAdminProviderTestUtil::makeAdjust( 10 ), key, SW_DELEGATE_METHOD( AdminClient::ReplyDelegate, &ReplyRecorder::onReply, &recorder ) );
     SW_EXPECT_EQUAL( SW_TRUE, recorder._last._reply._bReplayed );
     SW_EXPECT_TRUE( recorder._last._reply._result == AdminResult::Ok );
     SW_EXPECT_EQUAL( int64( 110 ), FakeAdminProviderTestUtil::findGold( provider ) );
@@ -237,14 +237,14 @@ SW_TEST_CASE( FakeAdminProviderTest, AuditRecordsChangesNewestFirst )
     ReplyRecorder recorder;
     AdminRequest  listAll;
     listAll._maxCount = 2;
-    provider.sendCommand( AdminMethod::ListAudit::kID, listAll, NetIdempotencyKey{}, AdminClient::ReplyDelegate::create<&ReplyRecorder::onReply>( &recorder ) );
+    provider.sendCommand( AdminMethod::ListAudit::kID, listAll, NetIdempotencyKey{}, SW_DELEGATE_METHOD( AdminClient::ReplyDelegate, &ReplyRecorder::onReply, &recorder ) );
     SW_REQUIRE_EQUAL( size_t( 2 ), recorder._last._reply._listAudit.size() );
     SW_EXPECT_EQUAL( string( "admin.adjust" ), recorder._last._reply._listAudit[0]._action ); // 최근 것
     SW_EXPECT_EQUAL( string( "admin.sanction" ), recorder._last._reply._listAudit[1]._action );
 
     AdminRequest byAccount;
     byAccount._subject = "acct.0000000000000101/";
-    provider.sendCommand( AdminMethod::ListAudit::kID, byAccount, NetIdempotencyKey{}, AdminClient::ReplyDelegate::create<&ReplyRecorder::onReply>( &recorder ) );
+    provider.sendCommand( AdminMethod::ListAudit::kID, byAccount, NetIdempotencyKey{}, SW_DELEGATE_METHOD( AdminClient::ReplyDelegate, &ReplyRecorder::onReply, &recorder ) );
     SW_EXPECT_EQUAL( size_t( 1 ), recorder._last._reply._listAudit.size() );
 }
 
@@ -268,7 +268,7 @@ SW_TEST_CASE( FakeAdminProviderTest, LiveProviderWithoutAClientAnswersUnavailabl
 
     AdminClientProvider live;
     ReplyRecorder       recorder;
-    live.sendCommand( AdminMethod::LookupAccount::kID, AdminRequest{}, NetIdempotencyKey{}, AdminClient::ReplyDelegate::create<&ReplyRecorder::onReply>( &recorder ) );
+    live.sendCommand( AdminMethod::LookupAccount::kID, AdminRequest{}, NetIdempotencyKey{}, SW_DELEGATE_METHOD( AdminClient::ReplyDelegate, &ReplyRecorder::onReply, &recorder ) );
     SW_EXPECT_EQUAL( 1, recorder._count );
     SW_EXPECT_EQUAL( OnlineError::kUnavailable, recorder._last._errorCode );
     SW_EXPECT_TRUE( live.isLive() );

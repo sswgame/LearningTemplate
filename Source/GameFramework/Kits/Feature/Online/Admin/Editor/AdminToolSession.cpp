@@ -249,12 +249,12 @@ namespace sw::editor
 
     void AdminToolSession::send( uint16 method, const AdminRequest& request, const NetIdempotencyKey& key )
     {
-        sendWith( method, request, key, AdminClient::ReplyDelegate::create<&AdminToolSession::onReply>( this ) );
+        sendWith( method, request, key, SW_DELEGATE_METHOD( AdminClient::ReplyDelegate, &AdminToolSession::onReply, this ) );
     }
 
     void AdminToolSession::sendRefresh( uint16 method, const AdminRequest& request )
     {
-        sendWith( method, request, NetIdempotencyKey{}, AdminClient::ReplyDelegate::create<&AdminToolSession::onRefreshReply>( this ) );
+        sendWith( method, request, NetIdempotencyKey{}, SW_DELEGATE_METHOD( AdminClient::ReplyDelegate, &AdminToolSession::onRefreshReply, this ) );
     }
 
     void AdminToolSession::sendWith( uint16 method, const AdminRequest& request, const NetIdempotencyKey& key, AdminClient::ReplyDelegate onReplyDelegate )

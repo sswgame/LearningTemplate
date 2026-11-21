@@ -631,7 +631,7 @@ namespace sw
                 continue;
             }
             const uint64 cacheRequestID            = _dependencies._pRouter->submit( EphemeralRequest::makeGet( SocialServiceInternal::makePresenceKey( link._otherID ) ),
-                                                                                     EphemeralStoreRouter::ReplyDelegate::create<&SocialService::onPresenceReply>( this ), _replyOwner );
+                                                                                     SW_DELEGATE_METHOD( EphemeralStoreRouter::ReplyDelegate, &SocialService::onPresenceReply, this ), _replyOwner );
             _mapCacheRequestToRead[cacheRequestID] = PresenceRead{ queryID, link._otherID };
             ++query._outstandingCount;
         }

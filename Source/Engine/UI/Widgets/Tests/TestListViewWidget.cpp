@@ -26,10 +26,10 @@ namespace
         {
             ListViewWidget& list = UITestUtil::setRoot<ListViewWidget>( tree );
             list.setRowHeight( kRowHeight );
-            list.setRowFactory( ListViewWidget::RowFactoryDelegate::create( []() -> unique_ptr<Widget>
+            list.setRowFactory( SW_DELEGATE_LAMBDA( ListViewWidget::RowFactoryDelegate, []() -> unique_ptr<Widget>
             { return make_unique<UITestLeaf>( float2{ 10.0f, 10.0f } ); } ) );
             s_bindCount = 0;
-            list.setRowBinder( ListViewWidget::RowBinderDelegate::create( []( Widget& row, uint32 itemIndex )
+            list.setRowBinder( SW_DELEGATE_LAMBDA( ListViewWidget::RowBinderDelegate, []( Widget& row, uint32 itemIndex )
             {
                 ++s_bindCount;
                 row.setName( hashed_string( to_string( static_cast<uint64>( itemIndex ) ) ) );

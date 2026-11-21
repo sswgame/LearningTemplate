@@ -93,7 +93,7 @@ namespace sw
         unordered_map<CompressionCodecKind, uint64> _mapOwner                        SW_GUARDED_BY( _mutex ); ///< 타입마다 지금 등록의 구독 번호(내장은 없다)
         IDAllocator<uint64> _ownerIDAllocator                                        SW_GUARDED_BY( _mutex );
         /** @brief 이 객체가 내준 구독입니다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다. */
-        SubscriptionList _subscriptions{ SubscriptionList::ReleaseFunction::create<&CompressionCodecRegistry::releaseSubscription>( this ) };
+        SubscriptionList _subscriptions{ SW_DELEGATE_METHOD( SubscriptionList::ReleaseFunction, &CompressionCodecRegistry::releaseSubscription, this ) };
 
         SW_SERVICE_SLOT( CompressionCodecRegistry, Required );
     };

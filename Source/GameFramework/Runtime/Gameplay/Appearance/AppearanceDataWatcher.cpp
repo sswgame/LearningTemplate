@@ -29,7 +29,7 @@ namespace sw
         IContentFolderWatch* const pFolderWatch = game::findSubsystem<IContentFolderWatch>();
         if ( pFolderWatch == nullptr )
             return false; // 감시 창구가 없는 빌드(배포)다 — 데이터는 팩에 들어 있다
-        _watch = pFolderWatch->watchAssetFolder( folder, { ".xml" }, IContentFolderWatch::ChangedDelegate::create<&AppearanceDataWatcher::onFolderChanged>( this ) );
+        _watch = pFolderWatch->watchAssetFolder( folder, { ".xml" }, SW_DELEGATE_METHOD( IContentFolderWatch::ChangedDelegate, &AppearanceDataWatcher::onFolderChanged, this ) );
         if ( _watch.isActive() == false )
             return false; // 팩 데이터이거나 감시자가 이유를 남겼다
         _folder   = string( folder );

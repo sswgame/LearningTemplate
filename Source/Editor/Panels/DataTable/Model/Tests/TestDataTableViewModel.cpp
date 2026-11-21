@@ -70,7 +70,7 @@ namespace
 SW_TEST_CASE( DataTableViewModelTest, OpeningLoadsTheFile )
 {
     const DataTableTestFiles   files;
-    const DocumentEditRecorder recorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) };
+    const DocumentEditRecorder recorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) };
     DataTableViewModel         model{ recorder };
     SW_EXPECT_TRUE( model.getGameDataPath().empty() );
     SW_REQUIRE_TRUE( model.openGameDataFile( files._second._absolutePath ) );
@@ -84,7 +84,7 @@ SW_TEST_CASE( DataTableViewModelTest, OpeningLoadsTheFile )
 SW_TEST_CASE( DataTableViewModelTest, ReloadedListKeepsTheOpenFile )
 {
     const DataTableTestFiles   files;
-    const DocumentEditRecorder recorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) };
+    const DocumentEditRecorder recorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) };
     DataTableViewModel         model{ recorder };
     model.setGameDataFiles( { files._first, files._second } );
     SW_REQUIRE_TRUE( model.openGameDataFile( files._second._absolutePath ) );
@@ -102,7 +102,7 @@ SW_TEST_CASE( DataTableViewModelTest, ReloadedListKeepsTheOpenFile )
 SW_TEST_CASE( DataTableViewModelTest, SaveWritesAndReopenRestores )
 {
     const DataTableTestFiles   files;
-    const DocumentEditRecorder recorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) };
+    const DocumentEditRecorder recorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) };
     DataTableViewModel         model{ recorder };
     SW_REQUIRE_TRUE( model.openGameDataFile( files._first._absolutePath ) );
     const uint32 loadCount = model.getGameDataLoadCount();
@@ -127,7 +127,7 @@ SW_TEST_CASE( DataTableViewModelTest, SaveWritesAndReopenRestores )
 SW_TEST_CASE( DataTableViewModelTest, TableEditUpdatesTheRawText )
 {
     const DataTableTestFiles   files;
-    const DocumentEditRecorder recorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) };
+    const DocumentEditRecorder recorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) };
     DataTableViewModel         model{ recorder };
     SW_REQUIRE_TRUE( model.openGameDataFile( files._first._absolutePath ) );
     SW_REQUIRE_TRUE( model.editGameDataDocument().setCell( 0, "a", "3" ) );
@@ -143,7 +143,7 @@ SW_TEST_CASE( DataTableViewModelTest, UnreadableFileIsNotOpened )
     SW_EXPECT_LOG( "DataTablePanel.CouldNotReadGame" );
     const DataTableTestFiles   files;
     const string               missingPath = test::makeScratchPath( "SwDataTableMissing.xml" );
-    const DocumentEditRecorder recorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) };
+    const DocumentEditRecorder recorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) };
     DataTableViewModel         model{ recorder };
     SW_REQUIRE_TRUE( model.openGameDataFile( files._first._absolutePath ) );
     SW_EXPECT_FALSE( model.openGameDataFile( missingPath ) );
@@ -158,7 +158,7 @@ SW_TEST_CASE( DataTableViewModelTest, UnreadableFileIsNotOpened )
 
 SW_TEST_CASE( DataTableViewModelTest, KeysAreUniqueAndNeedATable )
 {
-    const DocumentEditRecorder recorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) };
+    const DocumentEditRecorder recorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) };
     DataTableViewModel         model{ recorder };
     SW_EXPECT_FALSE( model.addKey( "hello" ) ); // 표가 없다
     SW_EXPECT_FALSE( model.isLocalizationDirty() );
@@ -178,7 +178,7 @@ SW_TEST_CASE( DataTableViewModelTest, KeysAreUniqueAndNeedATable )
 
 SW_TEST_CASE( DataTableViewModelTest, DeletedKeyIsRememberedForTheSave )
 {
-    const DocumentEditRecorder recorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) };
+    const DocumentEditRecorder recorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) };
     DataTableViewModel         model{ recorder };
     model.editSheet()._listTablePath.push_back( "strings.csv" );
     SW_REQUIRE_TRUE( model.addKey( "a" ) );
@@ -194,7 +194,7 @@ SW_TEST_CASE( DataTableViewModelTest, DeletedKeyIsRememberedForTheSave )
 
 SW_TEST_CASE( DataTableViewModelTest, FilterLooksAtKeySourceAndTranslations )
 {
-    const DocumentEditRecorder recorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) };
+    const DocumentEditRecorder recorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) };
     DataTableViewModel         model{ recorder };
     model.editSheet()._listTablePath.push_back( "strings.csv" );
     model.editSheet()._listCulture.push_back( "ko" );
@@ -224,7 +224,7 @@ SW_TEST_CASE( DataTableViewModelTest, BrokenXMLIsNotSaved )
 {
     SW_EXPECT_LOG( "DataTablePanel.GameDataNotValidXML" );
     const DataTableTestFiles   files;
-    const DocumentEditRecorder recorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) };
+    const DocumentEditRecorder recorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) };
     DataTableViewModel         model{ recorder };
     SW_REQUIRE_TRUE( model.openGameDataFile( files._first._absolutePath ) );
     model.replaceGameDataRawText( "<First a=" );
@@ -241,7 +241,7 @@ SW_TEST_CASE( DataTableViewModelTest, BrokenXMLIsNotSaved )
 SW_TEST_CASE( DataTableViewModelTest, RawEditInPlaceUpdatesTheDocument )
 {
     const DataTableTestFiles   files;
-    const DocumentEditRecorder recorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) };
+    const DocumentEditRecorder recorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) };
     DataTableViewModel         model{ recorder };
     SW_REQUIRE_TRUE( model.openGameDataFile( files._first._absolutePath ) );
     model.editGameDataRawText() = "<First a=\"8\"/>";
@@ -255,7 +255,7 @@ SW_TEST_CASE( DataTableViewModelTest, RawEditInPlaceUpdatesTheDocument )
 // 결함: 칸을 고쳐도 상태가 읽은 때 그대로라, 고친 번역이 저장한 뒤에도 "낡음" 색으로 남았다.
 SW_TEST_CASE( DataTableViewModelTest, EditingUpdatesTheTranslationState )
 {
-    const DocumentEditRecorder recorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) };
+    const DocumentEditRecorder recorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) };
     DataTableViewModel         model{ recorder };
     LocalizationRecord&        record = SheetUtil::addRecord( model, "a", "옛 글", TranslationState::Stale );
 
@@ -280,7 +280,7 @@ SW_TEST_CASE( DataTableViewModelTest, EditingUpdatesTheTranslationState )
 
 SW_TEST_CASE( DataTableViewModelTest, ConfirmOnlyTouchesStaleAndReview )
 {
-    const DocumentEditRecorder recorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) };
+    const DocumentEditRecorder recorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) };
     DataTableViewModel         model{ recorder };
     (void)SheetUtil::addRecord( model, "stale", "글", TranslationState::Stale );
     (void)SheetUtil::addRecord( model, "missing", "", TranslationState::Missing );
@@ -309,7 +309,7 @@ SW_TEST_CASE( DataTableViewModelTest, ConfirmedTranslationIsSavedAsCurrent )
     translationText.appendFormat( "<TranslationTable culture=\"ko\"><entries><entry key=\"a\" text=\"글\" sourceHash=\"%#\" /></entries></TranslationTable>", oldHash );
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::joinPath( folder, "ko.translation.xml" ), translationText.view() ) );
 
-    const DocumentEditRecorder recorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) };
+    const DocumentEditRecorder recorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) };
     DataTableViewModel         model{ recorder };
     SW_REQUIRE_TRUE( EditorDataTableCommands::loadLocalizationProject( projectPath, model.editSheet() ) );
     SW_REQUIRE_EQUAL( size_t{ 1 }, model.getSheet()._listRecord.size() );
@@ -331,7 +331,7 @@ SW_TEST_CASE( DataTableViewModelTest, ConfirmedTranslationIsSavedAsCurrent )
 // 할 일만 보기: 없음 · 낡음 · 검토가 남은 행만 지난다. 검색과 함께 걸린다.
 SW_TEST_CASE( DataTableViewModelTest, NeedsWorkFilterSkipsFinishedRows )
 {
-    const DocumentEditRecorder recorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) };
+    const DocumentEditRecorder recorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) };
     DataTableViewModel         model{ recorder };
     (void)SheetUtil::addRecord( model, "menu.done", "끝", TranslationState::Current );
     (void)SheetUtil::addRecord( model, "menu.stale", "낡음", TranslationState::Stale );
@@ -360,7 +360,7 @@ SW_TEST_CASE( DataTableViewModelTest, TranslationLengthCountsCharactersNotBytes 
 // 결함: 읽기가 도는 사이 다른 프로젝트를 고르면 앞 프로젝트의 표를 받아, 콤보와 표 · 저장 대상이 어긋났다.
 SW_TEST_CASE( DataTableViewModelTest, SheetOfAnotherProjectIsDiscarded )
 {
-    const DocumentEditRecorder recorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) };
+    const DocumentEditRecorder recorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) };
     DataTableViewModel         model{ recorder };
     model.setLocalizationProjects( { "a.locproject", "b.locproject" } );
     model.selectProject( 1 );
@@ -384,7 +384,7 @@ SW_TEST_CASE( DataTableViewModelTest, SheetOfAnotherProjectIsDiscarded )
 // 결함: 읽는 동안 앞 표에 키를 더할 수 있었고, 그러면 dirty 라 읽은 결과를 버리기만 해 표가 영영 읽히지 않았다.
 SW_TEST_CASE( DataTableViewModelTest, ReloadEmptiesTheSheetUntilItIsRead )
 {
-    const DocumentEditRecorder recorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) };
+    const DocumentEditRecorder recorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) };
     DataTableViewModel         model{ recorder };
     model.editSheet()._listTablePath.push_back( "strings.xml" );
     SW_REQUIRE_TRUE( model.addKey( "a" ) );
@@ -400,7 +400,7 @@ SW_TEST_CASE( DataTableViewModelTest, GameDataEditNotifiesAndUndoTextRoundTrips 
 {
     const DataTableTestFiles   files;
     uint32                     notifyCount{ 0 };
-    const DocumentEditRecorder recorder{ DocumentEditRecorder::RecordDelegate::create( [&notifyCount]( string_view )
+    const DocumentEditRecorder recorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, [&notifyCount]( string_view )
     { ++notifyCount; } ) };
     DataTableViewModel         model{ recorder };
     SW_EXPECT_TRUE( model.captureGameDataText().empty() ); // 열린 표가 없으면 되돌릴 글이 없다

@@ -223,7 +223,7 @@ namespace
         void send( AccountID adminID, uint16 method, const AdminRequest& request, uint64 keyLow = 0 )
         {
             const NetIdempotencyKey key{ 1, keyLow != 0 ? keyLow : _nextKey++ };
-            _service.submitCall( adminID, method, request, key, UnixMilliseconds{ kNowMs }, AdminService::ReplyDelegate::create<&AdminReplySink::onReply>( &_sink ) );
+            _service.submitCall( adminID, method, request, key, UnixMilliseconds{ kNowMs }, SW_DELEGATE_METHOD( AdminService::ReplyDelegate, &AdminReplySink::onReply, &_sink ) );
             while ( _store.pollCompletions() > 0 )
             {
             }
@@ -283,7 +283,7 @@ SW_TEST_CASE( AdminServiceTest, EntryRules )
     AdminService   unstarted;
     AdminReplySink sink;
     SW_EXPECT_FALSE( unstarted.initialize( nullptr, AdminServiceConfig{} ) );
-    unstarted.submitCall( kSuper, AdminMethod::LookupAccount::kID, makeRequest(), NetIdempotencyKey{ 1, 1 }, UnixMilliseconds{ kNowMs }, AdminService::ReplyDelegate::create<&AdminReplySink::onReply>( &sink ) );
+    unstarted.submitCall( kSuper, AdminMethod::LookupAccount::kID, makeRequest(), NetIdempotencyKey{ 1, 1 }, UnixMilliseconds{ kNowMs }, SW_DELEGATE_METHOD( AdminService::ReplyDelegate, &AdminReplySink::onReply, &sink ) );
     SW_REQUIRE_EQUAL( size_t( 1 ), sink._listReply.size() );
     SW_EXPECT_EQUAL( OnlineError::kUnavailable, sink._listReply[0]._errorCode );
     unstarted.shutdown();

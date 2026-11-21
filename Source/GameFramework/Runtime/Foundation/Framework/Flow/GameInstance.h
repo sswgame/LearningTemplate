@@ -304,7 +304,7 @@ namespace sw
         void followScopedService( const SharedAssetRef<TCatalog>& ref )
         {
             const SharedAssetRef<TCatalog>* const pRef = &ref;
-            _listFollowedService.push_back( Delegate<void()>::create( [this, pRef]()
+            _listFollowedService.push_back( SW_DELEGATE_LAMBDA( Delegate<void()>, [this, pRef]()
             {
                 const TCatalog* const pLatest = pRef->get();
                 if ( pLatest == nullptr || _gameScope.find<const TCatalog>() == pLatest )

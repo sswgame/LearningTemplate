@@ -451,7 +451,7 @@ namespace sw
             context->UpdateSubresource( pRecord->_texture.Get(), subresource, nullptr, span._pData, span._rowBytes, span._sizeBytes );
         }
         const uint64 serial = _pDevice->endTransfer( context, std::move( query ) );
-        pRecord->_uploadSerials.recordWrite( serial );
+        pRecord->_transferSerials.recordWrite( serial );
         return _pDevice->_transferSerials.makeAccepted( serial );
     }
 
@@ -495,7 +495,7 @@ namespace sw
             return RHITransferSubmit::rejected();
         context->UpdateSubresource( pRecord->_texture.Get(), subresource, &box, desc._pData, rowBytes, uploadBytes );
         const uint64 serial = _pDevice->endTransfer( context, std::move( query ) );
-        pRecord->_uploadSerials.recordWrite( serial );
+        pRecord->_transferSerials.recordWrite( serial );
         return _pDevice->_transferSerials.makeAccepted( serial );
     }
 
@@ -833,7 +833,7 @@ namespace sw
     bool D3D11RHIResourceFactory::isTextureReadyToSample( RHITextureHandle texture )
     {
         const D3D11RHIDevice::TextureRecord* pRecord = _pDevice->resolveTexture( texture );
-        return pRecord != nullptr && _pDevice->_transferSerials.isFirstUploadComplete( pRecord->_uploadSerials );
+        return pRecord != nullptr && _pDevice->_transferSerials.isFirstUploadComplete( pRecord->_transferSerials );
     }
 
     RHIDescriptorIndex D3D11RHIResourceFactory::registerBindlessTexture( RHITextureHandle texture )
@@ -846,7 +846,7 @@ namespace sw
         if ( pRecord == nullptr || pRecord->_srv == nullptr )
             return kInvalidDescriptorIndex;
         // 끝나지 않은 업로드가 남은 텍스처는 등록하지 않는다(소비자는 pollTransfer 가 Complete 를 준 뒤에 등록한다 — IRHIResourceFactory 전송 계약 머리말).
-        if ( _pDevice->_transferSerials.isTextureReadyToRegister( pRecord->_uploadSerials, texture ) == false )
+        if ( _pDevice->_transferSerials.isTextureReadyToRegister( pRecord->_transferSerials, texture ) == false )
             return kInvalidDescriptorIndex;
         // 셰이더의 텍스처 슬롯은 Texture2D 로 선언돼 있다. 배열이나 큐브 뷰를 바인딩하면 셰이더가 읽지 못한다(RHITextureDimension 참고).
         if ( pRecord->_dimension != RHITextureDimension::Texture2D )
@@ -902,7 +902,7 @@ namespace sw
         _pDevice->requireRegistryMutableNow( "rebindBindlessTexture" );
         D3D11RHIDevice::TextureRecord* pRecord       = texture != 0 ? _pDevice->resolveTexture( texture ) : nullptr;
         const bool                     bCannotRebind = pRecord == nullptr || pRecord->_srv == nullptr || pRecord->_dimension != RHITextureDimension::Texture2D ||
-                                   _pDevice->_transferSerials.isTextureReadyToRegister( pRecord->_uploadSerials, texture ) == false;
+                                   _pDevice->_transferSerials.isTextureReadyToRegister( pRecord->_transferSerials, texture ) == false;
         if ( bCannotRebind )
             return false;
         // 기록 때 번호를 자원으로 풀므로 등록표 값만 바꾼다(다음 바인딩부터 새 텍스처).
@@ -922,7 +922,7 @@ namespace sw
         _pDevice->requireRegistryMutableNow( "activateReservedBindlessTexture" );
         D3D11RHIDevice::TextureRecord* pRecord         = texture != 0 ? _pDevice->resolveTexture( texture ) : nullptr;
         const bool                     bCannotActivate = pRecord == nullptr || pRecord->_srv == nullptr || pRecord->_dimension != RHITextureDimension::Texture2D ||
-                                     _pDevice->_transferSerials.isTextureReadyToRegister( pRecord->_uploadSerials, texture ) == false;
+                                     _pDevice->_transferSerials.isTextureReadyToRegister( pRecord->_transferSerials, texture ) == false;
         if ( bCannotActivate )
             return false;
         UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };

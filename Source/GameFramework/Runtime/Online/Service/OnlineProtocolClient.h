@@ -69,7 +69,7 @@ namespace sw
             options._idempotencyKey = usedKey;
             options._kind           = TMethod::kAnonymous ? OnlineRequestKind::Anonymous : OnlineRequestKind::Session; // 세션 요청은 재접속 보류에 걸린다
             (void)getTable<TMethod>().template sendMessage<typename TProtocol::MessageTypes>( *_pClient, TMethod::kID, request, options,
-                                                                                              OnlineResponseDelegate::create<&OnlineProtocolClient::template onResponse<TMethod>>( this ), pending );
+                                                                                              SW_DELEGATE_METHOD( OnlineResponseDelegate, &OnlineProtocolClient::template onResponse<TMethod>, this ), pending );
             return pending._requestID; // 응답은 pending._requestID 로 알린다
         }
 

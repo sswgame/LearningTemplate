@@ -48,7 +48,7 @@ namespace sw
     void CacheRecordUpdater::startRead( unique_ptr<Operation> operation )
     {
         const uint64 requestID = _pRouter->submit( EphemeralRequest::makeGet( operation->_key ),
-                                                   EphemeralStoreRouter::ReplyDelegate::create<&CacheRecordUpdater::onReadReply>( this ), _replyOwner );
+                                                   SW_DELEGATE_METHOD( EphemeralStoreRouter::ReplyDelegate, &CacheRecordUpdater::onReadReply, this ), _replyOwner );
         _mapRequestToOperation.emplace( requestID, std::move( operation ) );
     }
 
@@ -87,7 +87,7 @@ namespace sw
             write = EphemeralRequest::makeCompareAndSet( operation->_key, operation->_oldBytes, operation->_newBytes, operation->_ttlMs );
         else
             write = EphemeralRequest::makeSet( operation->_key, operation->_newBytes, operation->_ttlMs, EphemeralCondition::IfAbsent );
-        const uint64 requestID = _pRouter->submit( write, EphemeralStoreRouter::ReplyDelegate::create<&CacheRecordUpdater::onWriteReply>( this ), _replyOwner );
+        const uint64 requestID = _pRouter->submit( write, SW_DELEGATE_METHOD( EphemeralStoreRouter::ReplyDelegate, &CacheRecordUpdater::onWriteReply, this ), _replyOwner );
         _mapRequestToOperation.emplace( requestID, std::move( operation ) );
     }
 

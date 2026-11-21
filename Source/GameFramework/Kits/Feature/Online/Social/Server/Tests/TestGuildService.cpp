@@ -66,7 +66,7 @@ namespace
             , _eventSubscription{}
         {
             _service.initialize( &_store );
-            _eventSubscription = _service.bindEventDelegate( GuildEventDelegate::create<&GuildEventSink::onEvent>( &_sink ) );
+            _eventSubscription = _service.bindEventDelegate( SW_DELEGATE_METHOD( GuildEventDelegate, &GuildEventSink::onEvent, &_sink ) );
         }
 
         GuildCompletion run( GuildOperation operation, AccountID accountID, AccountID targetID = kInvalidAccountID, string_view text = "", uint64 guildID = 0, int64 nowMs = kNowMs )

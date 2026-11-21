@@ -92,7 +92,7 @@ patterns = [
     "^Engine/Scene/",
     "^Engine/.+/Component/",
     "^Engine/Input/InputManager[.]h", # 입력 상태 · 주입은 모델이 쥔다 — View 는 값 묶음(`InputMapDeviceState` · 입력 오버레이 값)과 명령만 쓴다. 열거는 잎 헤더(`InputGlyphStyle.h` · `InputKeyboardFocus.h`)
-    "^Engine/Audio/IAudioService[.]h", # 오디오 서비스 · 엔진은 ViewModel 이 찾는다(`AudioMixerViewModel::refresh` · `AudioEventBrowserUtil::readStats`)
+    "^Engine/Audio/AudioService[.]h", # 오디오 서비스 · 엔진은 ViewModel 이 찾는다(`AudioMixerViewModel::refresh` · `AudioEventBrowserUtil::readStats`)
     "^Engine/Audio/AudioEngine[.]h",
     "^Engine/UI/UISystem[.]h",          # UI 시스템은 ViewModel 이 찾는다(`UIPreviewViewModel::isUIRunning`)
     "^Engine/Graphics/RHI/IRHIDevice[.]h", # 장치는 ViewModel 이 값으로 모은다(`ProfilerViewModel::gatherGPUMemory`)
@@ -109,8 +109,11 @@ defaultBan = [
 [panelViewAllowed]
 "GameFramework/GameFrameworkExports.h" = "내보내기 매크로"
 "Engine/EngineMinimal.h" = "엔진 최소 머리(형식 · 매크로)"
+"Engine/pch.h" = "모든 번역 단위의 미리 컴파일 머리 — CoreMinimal · EngineMinimal · Foundation 만 담는다"
+"Engine/Foundation/Foundation.h" = "엔진 기초 형식(핸들 · 값) — Engine/pch.h 가 담는다"
 "DevTools/DevToolsAPI.h" = "내보내기 매크로"
 "Editor/Common/Commands/EditorCommandRegistry.h" = "등록된 명령을 id 로 부르는 창구 — 명령은 다음 프레임 시작에 메인 스레드가 돈다(queueCommand)"
+"Editor/Common/Commands/EditorCommandIDs.h" = "명령 id 상수(Types.h 만 포함) — View 가 EditorCommandRegistry 로 부를 때 쓴다"
 "Editor/Common/Commands/EditorCommandTarget.h" = "명령이 받는 대상 값(종류 · 선택 스냅숏 · id) — 포인터가 없다"
 "Editor/Common/Commands/EditorDragPayload.h" = "끌어 놓기 페이로드 값({종류, id})"
 "Editor/Common/Workspace/EditorPanelID.h" = "패널 id 형식과 상수 — 값"

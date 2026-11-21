@@ -27,7 +27,7 @@ namespace sw::editor
         /** @brief 글 @p before · @p after 를 새 버퍼로 담습니다(구간 밖에서 만든 편집 — 자동 저장 사본 복원). */
         static DocumentEdit make( string before, string after, string label )
         {
-            return DocumentEdit{ make_shared<const string>( std::move( before ) ), make_shared<const string>( std::move( after ) ), std::move( label ) };
+            return DocumentEdit{ sw::make_shared<const string>( std::move( before ) ), sw::make_shared<const string>( std::move( after ) ), std::move( label ) };
         }
     };
 

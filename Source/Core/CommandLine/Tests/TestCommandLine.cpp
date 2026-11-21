@@ -260,8 +260,8 @@ SW_TEST_CASE( CommandLineTest, ComplexPrefixAndCustomArguments )
     cmdManager.initialize();
 
     // 커스텀 인자 등록
-    cmdManager.addArgument<sw::string>( { "custom_level", "CL" }, sw::string( "DefaultLevel" ), false );
-    cmdManager.addArgument<bool>( { "enable_profiler" }, false, false );
+    cmdManager.addArgument<sw::string>( { "custom_level", "CL" }, sw::string( "DefaultLevel" ) );
+    cmdManager.addArgument<bool>( { "enable_profiler" }, false );
 
     utf8* argv[] = {
         const_cast<utf8*>( "App.exe" ),
@@ -318,16 +318,16 @@ SW_TEST_CASE( CommandLineTest, UnprovidedFlagIsNotReadable )
 
 /**
  * @brief "실제로 적혔는가" 와 "값을 읽을 수 있는가" 는 다르다
- * @details `getArgument` 는 기본값을 가진 인자라면 **안 적어도 true** 를 돌려준다. 그래서 그것만으로는
- *          "설정 파일 기본값보다 커맨드라인이 우선" 을 판단할 수 없다. 이것으로 판단하면 설정 파일의 기본 백엔드가
+ * @details 명령줄 표에는 기본값이 없다(기본값은 설정이 가진다, 셋째 칸은 형식 견본) — 안 적은 인자는 읽기가 false 이고 값을 건드리지 않는다.
+ *          "설정 파일 기본값보다 커맨드라인이 우선" 은 `isArgumentProvided` 로 판단한다. 다르게 판단하면 설정 파일의 기본 백엔드가
  *          `-gv_rhiBackend` 를 조용히 덮어, **네 백엔드를 검증했다고 믿은 것이 전부 한 백엔드**가 된다.
  */
 SW_TEST_CASE( CommandLineTest, ProvidedIsNotTheSameAsReadable )
 {
     sw::CommandLineManager cmdManager;
     cmdManager.initialize();
-    cmdManager.addArgument<int32>( { "given_value" }, 7, true );
-    cmdManager.addArgument<int32>( { "omitted_value" }, 7, true );
+    cmdManager.addArgument<int32>( { "given_value" }, 7 );
+    cmdManager.addArgument<int32>( { "omitted_value" }, 7 );
 
     utf8* argv[] = {
         const_cast<utf8*>( "App.exe" ),
@@ -335,13 +335,13 @@ SW_TEST_CASE( CommandLineTest, ProvidedIsNotTheSameAsReadable )
     };
     cmdManager.parse( 2, argv, makeCommandLineTestBaseDirectory() );
 
-    // 둘 다 읽히지만(기본값이 있으므로), 적힌 것은 하나뿐이다.
+    // 적은 것만 읽히고, 안 적은 것은 값을 건드리지 않는다.
     int32 given{ 0 };
-    int32 omitted{ 0 };
+    int32 omitted{ -1 };
     SW_EXPECT_TRUE( cmdManager.getArgument( std::string_view( "given_value" ), given ) );
-    SW_EXPECT_TRUE( cmdManager.getArgument( std::string_view( "omitted_value" ), omitted ) );
+    SW_EXPECT_FALSE( cmdManager.getArgument( std::string_view( "omitted_value" ), omitted ) );
     SW_EXPECT_EQUAL( 3, given );
-    SW_EXPECT_EQUAL( 7, omitted );
+    SW_EXPECT_EQUAL( -1, omitted );
 
     SW_EXPECT_TRUE_MSG( cmdManager.isArgumentProvided( "given_value" ), "적은 인자를 안 적었다고 한다" );
     SW_EXPECT_TRUE_MSG( cmdManager.isArgumentProvided( "omitted_value" ) == false,
@@ -393,17 +393,16 @@ SW_TEST_CASE( CommandLineTest, EnumLookupMatchesStringLookup )
 /**
  * @brief 값을 빠뜨린 비-bool 인자는 조용히 무시되지 않는다
  * @details 값 없이 적을 수 있는 것은 bool 뿐이고(`ArgumentInfo::isFlagArgument`), 나머지는 경고를 남기고 무시되므로
- *          기본값이 그대로 살아 있다. "값 없이 적어도 되는가" 를 타입과 따로 정하면 값을 빠뜨린 `-gv_benchMeshes` 가
- *          int32 자리에 **bool `true` 를 밀어 넣고**, `_bParsed` 는 켜지는데 `get_if<int32>` 가 nullptr 이라
- *          `getArgument` 가 기본값으로 돌아가지도 못하고 false 를 돌려준다 — 경고 한 줄 없이 **스위치가 아무 일도 안 한다.**
+ *          적지 않은 것으로 남는다. "값 없이 적어도 되는가" 를 타입과 따로 정하면 값을 빠뜨린 `-gv_benchMeshes` 가
+ *          int32 자리에 **bool `true` 를 밀어 넣어** 경고 한 줄 없이 **스위치가 아무 일도 안 한다.**
  */
 SW_TEST_CASE( CommandLineTest, ValuelessNonBooleanArgumentKeepsItsType )
 {
     sw::CommandLineManager cmdManager;
     cmdManager.initialize();
-    cmdManager.addArgument<int32>( { "gv_benchMeshes" }, 200, true );
-    cmdManager.addArgument<sw::string>( { "gv_startupScene" }, sw::string( "default" ), true );
-    cmdManager.addArgument<float32>( { "gv_lightRadius" }, 4.5f, true );
+    cmdManager.addArgument<int32>( { "gv_benchMeshes" }, 200 );
+    cmdManager.addArgument<sw::string>( { "gv_startupScene" }, sw::string( "default" ) );
+    cmdManager.addArgument<float32>( { "gv_lightRadius" }, 4.5f );
 
     utf8* argv[] = {
         const_cast<utf8*>( "App.exe" ),
@@ -414,19 +413,18 @@ SW_TEST_CASE( CommandLineTest, ValuelessNonBooleanArgumentKeepsItsType )
     cmdManager.parse( 4, argv, makeCommandLineTestBaseDirectory() );
     SW_EXPECT_EQUAL( size_t( 3 ), cmdManager.getParseErrors().size() ); // 값 없는 비-bool 인자는 거절 이유를 남기고 무시한다
 
-    // 값이 없었으므로 **적히지 않은 것으로** 남고, 기본값이 그대로 읽힌다.
+    // 값이 없었으므로 **적히지 않은 것으로** 남는다 — 표에는 기본값이 없고(기본값은 설정이 가진다, 셋째 칸은 형식 견본) 읽기는 false 이며 값을 건드리지 않는다.
     int32 meshCount{ -1 };
-    SW_EXPECT_TRUE_MSG( cmdManager.getArgument( std::string_view( "gv_benchMeshes" ), meshCount ),
-                        "값을 빠뜨린 int 인자가 기본값조차 못 읽게 만들었습니다" );
-    SW_EXPECT_EQUAL( 200, meshCount );
+    SW_EXPECT_FALSE( cmdManager.getArgument( std::string_view( "gv_benchMeshes" ), meshCount ) );
+    SW_EXPECT_EQUAL( -1, meshCount );
 
-    sw::string sceneName;
-    SW_EXPECT_TRUE( cmdManager.getArgument( std::string_view( "gv_startupScene" ), sceneName ) );
-    SW_EXPECT_EQUAL( sw::string( "default" ), sceneName );
+    sw::string sceneName{ "untouched" };
+    SW_EXPECT_FALSE( cmdManager.getArgument( std::string_view( "gv_startupScene" ), sceneName ) );
+    SW_EXPECT_EQUAL( sw::string( "untouched" ), sceneName );
 
-    float32 radius{ 0.0f };
-    SW_EXPECT_TRUE( cmdManager.getArgument( std::string_view( "gv_lightRadius" ), radius ) );
-    SW_EXPECT_TRUE( radius > 4.4f && radius < 4.6f );
+    float32 radius{ -1.0f };
+    SW_EXPECT_FALSE( cmdManager.getArgument( std::string_view( "gv_lightRadius" ), radius ) );
+    SW_EXPECT_TRUE( radius < 0.0f );
 
     SW_EXPECT_TRUE_MSG( cmdManager.isArgumentProvided( "gv_benchMeshes" ) == false,
                         "값 없이 적은 int 인자를 '주었다' 로 셌습니다" );
@@ -434,7 +432,7 @@ SW_TEST_CASE( CommandLineTest, ValuelessNonBooleanArgumentKeepsItsType )
     // 값을 제대로 준 같은 인자는 당연히 읽힌다 — 위가 "그냥 다 무시" 가 아님을 못박는다.
     sw::CommandLineManager withValue;
     withValue.initialize();
-    withValue.addArgument<int32>( { "gv_benchMeshes" }, 200, true );
+    withValue.addArgument<int32>( { "gv_benchMeshes" }, 200 );
     utf8* argvWithValue[] = {
         const_cast<utf8*>( "App.exe" ),
         const_cast<utf8*>( "-gv_benchMeshes=512" ),
@@ -487,7 +485,7 @@ SW_TEST_CASE( CommandLineTest, BooleanArgumentAcceptsBothForms )
 SW_TEST_CASE( CommandLineTest, InitializeIsNotShiftedByEarlierArguments )
 {
     sw::CommandLineManager cmdManager;
-    cmdManager.addArgument<int32>( { "early_custom" }, 99, true );
+    cmdManager.addArgument<int32>( { "early_custom" }, 99 );
     cmdManager.initialize();
 
     // 비우지 않았다면 0 번 자리가 early_custom 이고 표 전체가 한 칸씩 밀려, 열거값 인덱싱이 다른 인자를 읽는다.

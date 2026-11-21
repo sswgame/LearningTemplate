@@ -51,7 +51,7 @@ namespace
         {
             StreamTransportConfig transportSettings;
             transportSettings._ioThreadCount = 0;
-            SW_EXPECT_TRUE( _server.initialize( _network.createTransport(), transportSettings, HTTPServerConfig{}, HTTPRequestFunction::create<&ProviderHTTPFixture::onRequest>( this ) ) );
+            SW_EXPECT_TRUE( _server.initialize( _network.createTransport(), transportSettings, HTTPServerConfig{}, SW_DELEGATE_METHOD( HTTPRequestFunction, &ProviderHTTPFixture::onRequest, this ) ) );
             SW_EXPECT_TRUE( _client.initialize( _network.createTransport(), transportSettings, HTTPClientConfig{} ) );
             SW_EXPECT_TRUE( _appleClient.initialize( _network.createTransport(), transportSettings, HTTPClientConfig{} ) );
             StringBuilder<constant::buffer::kMax64> baseURL;

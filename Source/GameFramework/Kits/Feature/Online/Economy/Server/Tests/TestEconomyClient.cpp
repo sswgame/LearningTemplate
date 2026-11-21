@@ -145,7 +145,7 @@ namespace
         template <typename TMethod>
         OnlineReplyDelegate<TMethod> makeDelegate()
         {
-            return OnlineReplyDelegate<TMethod>::template create<&EconomyReplyRecorder::onReply<typename TMethod::Reply>>( this );
+            return SW_DELEGATE_METHOD( OnlineReplyDelegate<TMethod>, &EconomyReplyRecorder::onReply<typename TMethod::Reply>, this );
         }
     };
 
@@ -188,7 +188,7 @@ namespace
         StorePurchaseFlow           _flow;
 
         PurchaseFlowFixture()
-            : _flow{ _bridge, _client._economy, StorePurchaseFlow::ReportDelegate::create<&PurchaseFlowFixture::onReport>( this ) }
+            : _flow{ _bridge, _client._economy, SW_DELEGATE_METHOD( StorePurchaseFlow::ReportDelegate, &PurchaseFlowFixture::onReport, this ) }
         {
         }
 

@@ -219,6 +219,6 @@ namespace sw
             if ( result != ReflectCallResult::Ok )
                 SW_LOG_WARNING_ID( "ReflectionInvoke.EventBoundCallFailed", "Event-bound call '%#::%#' failed: %#", pTargetType->_fullyQualifiedName.c_str(), functionName.c_str(), getEnumName( result ) );
         };
-        return bindEvent( event, pSource, ReflectEventHandler::create( forward ) );
+        return bindEvent( event, pSource, SW_DELEGATE_LAMBDA( ReflectEventHandler, forward ) );
     }
 } // namespace sw

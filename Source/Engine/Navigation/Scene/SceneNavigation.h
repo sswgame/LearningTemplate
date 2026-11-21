@@ -382,9 +382,9 @@ namespace sw
         uint8                                _bCrowdUpdateLaunched : 1; ///< ⑤ 가 진행을 넘겼고 아직 ⑥ 이 쓰지 않았다 — 그동안 군중을 만지면 단언한다
         uint8                                _bCrowdTasksInFlight  : 1; ///< ⑤ 가 워커 태스크를 냈다(워커가 없어 이 자리에서 진행했으면 기다릴 것이 없다)
         // 슬롯 색인(`_navIndex`)으로 O(1) 빼는 목록 넷의 등록 구독입니다. 풀리면 그 종류의 `unregister…` 가 불린다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다.
-        ItemSubscriptionList<NavMeshAgentComponent>    _agentSubscriptions{ ItemSubscriptionList<NavMeshAgentComponent>::ReleaseFunction::create<&SceneNavigation::unregisterAgent>( this ) };
-        ItemSubscriptionList<NavMeshSurfaceComponent>  _surfaceSubscriptions{ ItemSubscriptionList<NavMeshSurfaceComponent>::ReleaseFunction::create<&SceneNavigation::unregisterSurface>( this ) };
-        ItemSubscriptionList<NavMeshObstacleComponent> _obstacleSubscriptions{ ItemSubscriptionList<NavMeshObstacleComponent>::ReleaseFunction::create<&SceneNavigation::unregisterObstacle>( this ) };
-        ItemSubscriptionList<NavMeshLinkComponent>     _linkSubscriptions{ ItemSubscriptionList<NavMeshLinkComponent>::ReleaseFunction::create<&SceneNavigation::unregisterLink>( this ) };
+        ItemSubscriptionList<NavMeshAgentComponent>    _agentSubscriptions{ SW_DELEGATE_METHOD( ItemSubscriptionList<NavMeshAgentComponent>::ReleaseFunction, &SceneNavigation::unregisterAgent, this ) };
+        ItemSubscriptionList<NavMeshSurfaceComponent>  _surfaceSubscriptions{ SW_DELEGATE_METHOD( ItemSubscriptionList<NavMeshSurfaceComponent>::ReleaseFunction, &SceneNavigation::unregisterSurface, this ) };
+        ItemSubscriptionList<NavMeshObstacleComponent> _obstacleSubscriptions{ SW_DELEGATE_METHOD( ItemSubscriptionList<NavMeshObstacleComponent>::ReleaseFunction, &SceneNavigation::unregisterObstacle, this ) };
+        ItemSubscriptionList<NavMeshLinkComponent>     _linkSubscriptions{ SW_DELEGATE_METHOD( ItemSubscriptionList<NavMeshLinkComponent>::ReleaseFunction, &SceneNavigation::unregisterLink, this ) };
     };
 } // namespace sw

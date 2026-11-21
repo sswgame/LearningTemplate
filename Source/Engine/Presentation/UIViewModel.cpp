@@ -8,7 +8,7 @@ namespace sw
         : _listFieldChange{}
         , _listObserver{}
         , _changeSerial{ 0 }
-        , _observerSubscriptions{ ItemSubscriptionList<IUIViewModelObserver>::ReleaseFunction::create<&UIViewModel::removeObserver>( this ) }
+        , _observerSubscriptions{ SW_DELEGATE_METHOD( ItemSubscriptionList<IUIViewModelObserver>::ReleaseFunction, &UIViewModel::removeObserver, this ) }
     {
     }
 
