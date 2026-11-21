@@ -1,6 +1,8 @@
 {
   "_comment": "전수 개명한 옛 이름 → 새 이름 · 까닭(Scripts/lint/naming_words.py 의 naming-words 규칙이 되살린 옛 이름을 막는다). 언리얼 CoreRedirects 의 옛 이름 → 새 이름 자리이되 고쳐 주지 않고 막는다. 개명 도구(py -3 -m Scripts rename-symbol)가 줄을 더한다 — 키(옛 이름)는 개명 도구가 바꾸지 않는다.",
   "_bannedNames": {
+    "bindRequiredComponents": "지움 — 필요 컴포넌트는 그 컴포넌트의 onRegister 에서 찾아 핸들로 든다(언리얼 BeginPlay 의 FindComponentByClass 자리). 쓰는 곳 하나에 기반 클래스 가상 함수 · 래퍼 형식을 두던 것을 걷어냈다(2026-11-21 사용자 지적)",
+    "reportMissingRequiredComponent": "지움 — 찾는 컴포넌트가 자기 오류를 낸다(예: Buoyancy.RigidBodyMissing)(2026-11-21)",
     "onOverlapBegin": "GameObjectEvents::_overlapBegin — 듣는 컴포넌트만 onRegister 에서 GameObjectEvents::listen 으로 구독하고 Subscription 을 멤버로 든다 — 모든 컴포넌트에 빈 가상 호출을 훑던 유니티식 메시지 대신 언리얼 액터 델리게이트 자리(2026-11-21)",
     "onOverlapEnd": "GameObjectEvents::_overlapEnd — 듣는 컴포넌트만 onRegister 에서 GameObjectEvents::listen 으로 구독하고 Subscription 을 멤버로 든다 — 모든 컴포넌트에 빈 가상 호출을 훑던 유니티식 메시지 대신 언리얼 액터 델리게이트 자리(2026-11-21)",
     "onCollisionBegin": "GameObjectEvents::_collisionBegin — 듣는 컴포넌트만 onRegister 에서 GameObjectEvents::listen 으로 구독하고 Subscription 을 멤버로 든다 — 모든 컴포넌트에 빈 가상 호출을 훑던 유니티식 메시지 대신 언리얼 액터 델리게이트 자리(2026-11-21)",

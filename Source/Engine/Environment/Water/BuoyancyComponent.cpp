@@ -45,6 +45,15 @@ namespace sw
     {
     }
 
+    void BuoyancyComponent::onRegister( GameObjectManager& manager )
+    {
+        PhysicsComponent::onRegister( manager );
+        const RigidBodyComponent* pRigid = getOwner()->getComponent<RigidBodyComponent>();
+        _rigidBody                       = pRigid != nullptr ? TComponentHandle<RigidBodyComponent>{ pRigid } : TComponentHandle<RigidBodyComponent>{};
+        if ( pRigid == nullptr )
+            SW_LOG_ERROR_ID( "Buoyancy.RigidBodyMissing", "Buoyancy on '%#' needs a RigidBodyComponent on the same object - add it before this component", getOwner()->getName().c_str() );
+    }
+
     void BuoyancyComponent::prePhysicsStep( ScenePhysics& physics, float32 fixedDeltaTime, uint32 stepIndex, uint32 stepCount )
     {
         (void)stepIndex;
@@ -53,8 +62,8 @@ namespace sw
         if ( isSimulated() == false )
             return;
         IPhysicsBodyScene3D*      pScene    = physics.findScene3D();
-        const RigidBodyComponent* pRigid    = _rigidBody.find();
         const GameObjectManager*  pManager  = getOwner()->getManager();
+        const RigidBodyComponent* pRigid    = pManager != nullptr ? pManager->resolveComponent( _rigidBody ) : nullptr;
         const bool                bHasInput = pScene != nullptr && pRigid != nullptr && pManager != nullptr;
         if ( bHasInput == false || pRigid->getBodyType() != PhysicsBodyType::Dynamic )
             return;

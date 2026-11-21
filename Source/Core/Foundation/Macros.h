@@ -438,10 +438,11 @@ namespace sw::internal
 // 8) 비트 필드 불리언 값. 1과 0이 개수가 아니라 상태라는 점을 드러낸다.
 //        비트 필드에 true/false 를 바로 대입하면 경고가 날 수 있어 SW_TRUE(1) / SW_FALSE(0) 을 쓴다.
 // ------------------------------------------------------------------------------
+// 형식은 uint8(비트 필드의 바탕 형식)이다 — 정수 1 · 0 이면 `b ? SW_TRUE : SW_FALSE` 가 int 가 되어 uint8 비트 필드의 중괄호 초기화에서 좁히기 오류로 멈췄다(2026-11-21 두 번).
 /** @brief 비트 필드에 참(1)을 대입할 때 사용합니다. */
-#define SW_TRUE 1
+#define SW_TRUE static_cast<unsigned char>( 1 )
 /** @brief 비트 필드에 거짓(0)을 대입할 때 사용합니다. */
-#define SW_FALSE 0
+#define SW_FALSE static_cast<unsigned char>( 0 )
 
 /** @brief 템플릿 제약(SFINAE)을 한 줄로 붙입니다. */
 #define SW_REQUIRES( ... ) , std::enable_if_t<( __VA_ARGS__ ), int32> = 0

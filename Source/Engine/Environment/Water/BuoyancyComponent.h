@@ -8,7 +8,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
-#include "Engine/Object/Component/RequiredComponent.h"
+#include "Engine/Foundation/ComponentHandle.h"
 #include "Engine/Physics/Component/PhysicsComponent.h"
 #include "Engine/Physics/Component/RigidBodyComponent.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -68,10 +68,10 @@ namespace sw
         bool isInWater() const { return _submergedPontoonCount > 0; }
 
     protected:
-        /** @brief 폰툰이 힘을 거는 강체를 묶습니다 — 같은 오브젝트에 `RigidBodyComponent` 가 없으면 등록이 오류다(물리 단계마다 찾지 않는다). */
-        [[nodiscard]] bool bindRequiredComponents() override { return _rigidBody.bind( *this ); }
-        void               prePhysicsStep( ScenePhysics& physics, float32 fixedDeltaTime, uint32 stepIndex, uint32 stepCount ) override;
-        void               releasePhysics( ScenePhysics& physics ) override;
+        /** @brief 폰툰이 힘을 거는 강체를 등록 때 한 번 찾아 핸들로 듭니다 — 같은 오브젝트에 `RigidBodyComponent` 가 없으면 오류다(물리 단계마다 찾지 않는다, 언리얼 BeginPlay 의 FindComponentByClass 자리). 모듈 리로드 뒤 다시 등록되면 다시 찾는다. */
+        void onRegister( GameObjectManager& manager ) override;
+        void prePhysicsStep( ScenePhysics& physics, float32 fixedDeltaTime, uint32 stepIndex, uint32 stepCount ) override;
+        void releasePhysics( ScenePhysics& physics ) override;
 
     private:
         PROPERTY( Category = "Buoyancy", DisplayName = "Pontoons", Tooltip = "Spheres that sample the water surface (body local)" )
@@ -82,7 +82,7 @@ namespace sw
         float32 _linearDrag;
 
         uint32 _submergedPontoonCount;
-        /** @brief 힘을 거는 강체입니다(필요 컴포넌트 — `bindRequiredComponents`). */
-        Required<RigidBodyComponent> _rigidBody;
+        /** @brief 힘을 거는 강체입니다(`onRegister` 가 찾는다). */
+        TComponentHandle<RigidBodyComponent> _rigidBody;
     };
 } // namespace sw
