@@ -176,7 +176,7 @@ SW_TEST_CASE( ImportedAssetStoreTest, SlotRoundTripsAndInstanceValuesDoNotMix )
     // 인스턴스 값은 부모(공유 머티리얼)를 고치지 않는다.
     shared_ptr<MaterialInstance> first  = MaterialInstance::create( material.get() );
     shared_ptr<MaterialInstance> second = MaterialInstance::create( material.get() );
-    first->setParameter( hashed_string( "_roughness" ), "0.125" );
+    SW_REQUIRE_TRUE( first->setParameter( hashed_string( "_roughness" ), "0.125" ) );
     SW_EXPECT_EQUAL( string( "0.5" ), material->findProperty( hashed_string( "_roughness" ) )->_defaultValue );
     string firstValue;
     string secondValue;

@@ -99,15 +99,24 @@ namespace sw
         /** @brief 부모가 선언한 런타임 정적 스위치를 끕니다. 규칙은 `enableKeyword` 와 같습니다. */
         [[nodiscard]] bool disableKeyword( hashed_string keyword );
 
-        /** @brief 부모 머티리얼을 설정합니다. */
+        /**
+         * @brief 부모 머티리얼을 설정합니다.
+         * @details 런타임 값 API 로 쌓인 덮어쓰기 가운데 새 부모의 정적 종류 칸(키워드를 내는 칸)인 것은 오류(`MaterialInstance.StaticValueRejected`)로 알리고 버린다 —
+         *          부모 없이 값을 쓰고 나중에 붙여 거절(`setParameter`)을 비켜 가지 못하게. 에셋에서 읽은 값은 쿠커가 굽는 조합이라 남긴다.
+         */
         void setParent( Material* pParentMaterial );
         /** @brief 인스턴스 이름을 설정합니다. */
         void setName( string_view name ) { _desc._name = name; }
-        /** @brief 일반 오버라이드입니다(Enum/BitFlag/Color/Range/Bool/스칼라 텍스트). */
-        void setParameter( hashed_string name, string_view value );
-        /** @brief 스칼라 파라미터를 설정합니다. */
+        /**
+         * @brief 일반 오버라이드입니다(Enum/BitFlag/Color/Range/Bool/스칼라 텍스트). 받았으면 true 입니다.
+         * @details 부모의 정적 종류 칸(키워드를 내는 Bool · Keyword — `shaderKeyword`)은 오류(`MaterialInstance.StaticValueRejected`)로 거절하고 false 다 — 그 값은 define 이라
+         *          런타임에 바꾸면 쿠킹하지 않은 조합이 생긴다(배포에서 대체 해시). 그 칸은 `.materialinstance` 에셋에 적고(쿠커가 굽는다), 런타임 전환은 부모가 선언한 런타임 스위치
+         *          (`enableKeyword`)로 한다. 언리얼 MID 도 정적 파라미터를 못 바꾼다(MIC 에셋만).
+         */
+        [[nodiscard]] bool setParameter( hashed_string name, string_view value );
+        /** @brief 스칼라 파라미터를 설정합니다. 정적 종류 칸은 `setParameter` 처럼 오류로 거절한다(틱마다 부르는 숫자 세터라 결과를 돌려주지 않는다 — 거절은 코드 결함이다). */
         void setScalarParameter( hashed_string name, float32 value );
-        /** @brief 벡터 파라미터를 설정합니다. */
+        /** @brief 벡터 파라미터를 설정합니다. 정적 종류 칸 거절은 `setScalarParameter` 와 같습니다. */
         void setVectorParameter( hashed_string name, const float4& value );
         /**
          * @brief 텍스처 파라미터를 **텍스처 에셋**으로 덮어씁니다(리소스 경로, 예: `engine/textures/perlin.dds`). 빈 경로면 덮어쓰기를 지웁니다.
@@ -186,6 +195,7 @@ namespace sw
             string        _text;          ///< `ValueKind::Text` 일 때만 쓴다
             float32       _arrValue[4]{}; ///< `Scalar` 는 앞 한 칸, `Vector` 는 네 칸
             ValueKind     _kind{ ValueKind::Text };
+            uint8         _bFromAsset{ SW_FALSE }; ///< `.materialinstance` 에셋에서 읽었다(쿠커가 굽는 조합). 런타임 값 API 가 쓴 것은 거짓이다(`setParent` 가 정적 종류면 버린다)
 
             /** @brief float 칸 수입니다. */
             uint32 getFloatCount() const { return _kind == ValueKind::Vector ? 4u : 1u; }
@@ -193,6 +203,10 @@ namespace sw
             string makeText() const;
         };
 
+        /** @brief 부모의 @p name 칸이 정적 종류(키워드를 내는 칸)면 오류를 남기고 true 입니다 — 런타임 값 API 가 거절한다. */
+        bool rejectStaticValue( hashed_string name ) const;
+        /** @brief 글 덮어쓰기를 씁니다(`setParameter` · 에셋 읽기 공통 — 에셋의 키워드 칸 값은 쿠커가 굽는 조합이라 받는다). */
+        void assignText( hashed_string name, string_view value, bool bFromAsset );
         /** @brief 이름의 값 덮어쓰기입니다. 없으면 nullptr 입니다. */
         ValueOverride* findValueOverride( hashed_string name );
         /** @brief float 덮어쓰기를 씁니다. 같은 모양의 같은 값(비트)이면 사본을 낡게 하지 않는다 — 틱마다 값을 쓰는 물 · 식생이 값이 그대로일 때 사본을 다시 만들지 않는다. */
@@ -273,6 +287,7 @@ namespace sw
         mutable uint64         _cachedPermutationHash;
         mutable uint64         _previousPermutationHash; ///< 정의를 다시 만들기 직전의 `_cachedPermutationHash`
         mutable uint64         _parentPermutationHash;
+        mutable uint32         _parentLoadGeneration; ///< 정의를 만들 때의 부모 `getLoadGeneration()`. 다르면 부모를 다시 읽은 것이라 정의를 다시 만든다
         mutable uint8          _bDefinesDirty : 1;
         [[maybe_unused]] uint8 _instReserved  : 7;
 

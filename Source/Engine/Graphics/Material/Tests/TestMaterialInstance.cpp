@@ -306,30 +306,129 @@ namespace
 } // namespace
 
 /**
- * @brief [MaterialInstanceTest] 키워드를 내는 Bool 칸의 값 덮어쓰기는 define · 퍼뮤테이션 해시를 바꾸고, 인스턴스 에셋의 그 덮어쓰기는 쿠커 조합 목록에 든다
- * @details 변이: 부모의 `computeShaderDefines` 가 덮어쓰기를 보지 않으면(예전) `MATERIAL_DETAIL_MASK` 줄이 진다. `setParameter` 가 정의 캐시를 더럽히지 않으면 해시 줄이 진다.
+ * @brief [MaterialInstanceTest] 키워드를 내는 Bool 칸은 런타임 값 API 가 오류로 거절해 define · 해시가 그대로이고, 인스턴스 에셋의 그 덮어쓰기는 define 과 쿠커 조합 목록에 든다.
+ *        런타임 전환은 부모가 선언한 런타임 스위치(`enableKeyword`)로만 된다
+ * @details 변이: 값 API 가 키워드 칸을 받으면(예전) 쿠킹하지 않은 `MATERIAL_DETAIL_MASK` 조합이 생겨 해시 줄이 진다. 부모의 `computeShaderDefines` 가 덮어쓰기를 보지 않으면 에셋 줄이 진다.
  */
 SW_TEST_CASE( MaterialInstanceTest, KeywordValueOverrideChangesDefines )
 {
+    SW_EXPECT_LOG( "MaterialInstance.StaticValueRejected" );
     shared_ptr<Material> material = Material::create();
     SW_REQUIRE_TRUE( material->loadFromXML( MaterialInstanceKeywordValueTestUtil::kKeywordValueMaterial ) );
     SW_EXPECT_FALSE( MaterialInstanceTestUtil::hasDefine( material->getCachedShaderDefines(), "MATERIAL_DETAIL_MASK" ) );
 
     shared_ptr<MaterialInstance> instance = MaterialInstance::create( material.get() );
     const uint64                 baseHash = instance->getPermutationHash();
-    instance->setParameter( hashed_string( "_detailMask" ), "1" );
-    SW_EXPECT_TRUE( MaterialInstanceTestUtil::hasDefine( instance->getCachedShaderDefines(), "MATERIAL_DETAIL_MASK" ) );
-    SW_EXPECT_NOT_EQUAL( baseHash, instance->getPermutationHash() );
-    SW_EXPECT_FALSE( MaterialInstanceTestUtil::hasDefine( material->getCachedShaderDefines(), "MATERIAL_DETAIL_MASK" ) ); // 부모는 그대로다
-    instance->setParameter( hashed_string( "_detailMask" ), "0" );
+    SW_EXPECT_FALSE( instance->setParameter( hashed_string( "_detailMask" ), "1" ) );
+    instance->setScalarParameter( hashed_string( "_detailMask" ), 1.0f );
+    SW_EXPECT_FALSE( instance->isParameterOverridden( hashed_string( "_detailMask" ) ) );
+    SW_EXPECT_FALSE( MaterialInstanceTestUtil::hasDefine( instance->getCachedShaderDefines(), "MATERIAL_DETAIL_MASK" ) );
     SW_EXPECT_EQUAL( baseHash, instance->getPermutationHash() );
+    SW_EXPECT_TRUE( instance->setParameter( hashed_string( "_color" ), "0.5 0.5 0.5 1" ) ); // 값 칸은 그대로 받는다
 
     shared_ptr<MaterialInstance> asset = MaterialInstance::create( material.get() );
     SW_REQUIRE_TRUE( MaterialInstanceSwitchTestUtil::loadInstance( *asset, "detailmask.materialinstance", MaterialInstanceKeywordValueTestUtil::kDetailMaskInstance ) );
+    SW_EXPECT_TRUE( MaterialInstanceTestUtil::hasDefine( asset->getCachedShaderDefines(), "MATERIAL_DETAIL_MASK" ) );
+    SW_EXPECT_NOT_EQUAL( baseHash, asset->getPermutationHash() );
+    SW_EXPECT_FALSE( MaterialInstanceTestUtil::hasDefine( material->getCachedShaderDefines(), "MATERIAL_DETAIL_MASK" ) ); // 부모는 그대로다
     vector<vector<string>> listDefine;
     vector<uint64>         listHash;
     SW_REQUIRE_TRUE( asset->collectRuntimeSwitchVariants( listDefine, listHash ) );
     SW_REQUIRE_EQUAL( size_t( 1 ), listDefine.size() );
     SW_EXPECT_TRUE( MaterialInstanceTestUtil::hasDefine( listDefine[0], "MATERIAL_DETAIL_MASK" ) );
     SW_EXPECT_EQUAL( asset->getPermutationHash(), listHash[0] );
+
+    // 런타임 스위치 길은 그대로다 — 부모가 선언한 `bShaderFeature="0"` 스위치는 런타임에 켜고 끈다.
+    shared_ptr<Material> switches = Material::create();
+    SW_REQUIRE_TRUE( switches->loadFromXML( MaterialInstanceSwitchTestUtil::kSwitchMaterial ) );
+    shared_ptr<MaterialInstance> runtime = MaterialInstance::create( switches.get() );
+    SW_EXPECT_TRUE( runtime->enableKeyword( hashed_string( "Detail" ) ) );
+    SW_EXPECT_TRUE( MaterialInstanceTestUtil::hasDefine( runtime->getCachedShaderDefines(), "MATERIAL_DETAIL" ) );
+}
+
+namespace
+{
+    struct MaterialInstanceReloadTestUtil
+    {
+        /** @brief 런타임 스위치(Detail, 끔 · 끔 키워드 없음)와 값 칸을 선언한 부모입니다. %# 는 스위치 키워드 · 색 기본값입니다. */
+        static string makeParent( const utf8* pKeyword, const utf8* pColor )
+        {
+            string text;
+            text.appendFormat( R"(<MaterialDef formatVersion="0" name="Reload" shaderPath="engine/shaders/pbr_lit.hlsl" surfaceModel="Lit" alphaMode="Opaque">
+	<_properties>
+		<item name="_color" type="Color" defaultValue="%#"/>
+		<item name="_roughness" type="Range" defaultValue="1" min="0.0" max="1.0"/>
+	</_properties>
+	<_permutations quality="High" shaderLOD="300" usage="StaticMesh">
+		<_staticSwitches>
+			<item name="Detail" keyword="%#" bEnabled="0" bShaderFeature="0"/>
+		</_staticSwitches>
+	</_permutations>
+</MaterialDef>
+)",
+                               pColor, pKeyword );
+            return text;
+        }
+    };
+} // namespace
+
+/**
+ * @brief [MaterialInstanceTest] 부모를 다시 읽으면 인스턴스의 정의 · 렌더 사본이 새 부모를 따른다 — 부모 자신의 해시가 같아도(덮은 스위치의 키워드 이름만 바뀜) 옛 define 을 쥐지 않는다
+ * @details 변이: 인스턴스가 부모 퍼뮤테이션 해시만 보면(예전) 끈 스위치의 키워드 이름 변경은 부모 define 을 바꾸지 않아 `MATERIAL_DETAIL_V2` 줄이 진다.
+ *          덮지 않은 값 칸은 부모 바이트 세대로 다시 복사된다(`getRenderBinding`).
+ */
+SW_TEST_CASE( MaterialInstanceTest, ParentReloadRefreshesInstanceCaches )
+{
+    shared_ptr<Material> material = Material::create();
+    SW_REQUIRE_TRUE( material->loadFromXML( MaterialInstanceReloadTestUtil::makeParent( "MATERIAL_DETAIL", "1 1 1 1" ) ) );
+    shared_ptr<MaterialInstance> instance = MaterialInstance::create( material.get() );
+    SW_REQUIRE_TRUE( instance->enableKeyword( hashed_string( "Detail" ) ) );
+    instance->setScalarParameter( hashed_string( "_roughness" ), 0.25f );
+    SW_EXPECT_TRUE( MaterialInstanceTestUtil::hasDefine( instance->getCachedShaderDefines(), "MATERIAL_DETAIL" ) );
+    const MaterialRenderBinding before     = instance->getRenderBinding( MaterialRenderInputs::capture() );
+    const uint64                parentHash = material->getPermutationHash();
+    SW_REQUIRE_TRUE( before._data != nullptr );
+
+    SW_REQUIRE_TRUE( material->loadFromXML( MaterialInstanceReloadTestUtil::makeParent( "MATERIAL_DETAIL_V2", "0.5 0.25 0.125 1" ) ) );
+    SW_EXPECT_EQUAL( parentHash, material->getPermutationHash() ); // 부모 자신의 define 은 같다 — 해시만 보면 놓치는 경우다
+    SW_EXPECT_TRUE( MaterialInstanceTestUtil::hasDefine( instance->getCachedShaderDefines(), "MATERIAL_DETAIL_V2" ) );
+    SW_EXPECT_FALSE( MaterialInstanceTestUtil::hasDefine( instance->getCachedShaderDefines(), "MATERIAL_DETAIL" ) );
+
+    const MaterialRenderBinding after = instance->getRenderBinding( MaterialRenderInputs::capture() );
+    SW_REQUIRE_TRUE( after._data != nullptr );
+    SW_EXPECT_TRUE( before._data != after._data );
+    const MaterialProperty* pColor     = material->findProperty( hashed_string( "_color" ) );
+    const MaterialProperty* pRoughness = material->findProperty( hashed_string( "_roughness" ) );
+    SW_REQUIRE_TRUE( pColor != nullptr && pRoughness != nullptr );
+    float32 arrColor[4]{};
+    float32 roughness{ 0.0f };
+    Memory::copy( arrColor, after._data->_bytes.data() + pColor->_offset, sizeof( arrColor ) );
+    Memory::copy( &roughness, after._data->_bytes.data() + pRoughness->_offset, sizeof( roughness ) );
+    SW_EXPECT_NEAR( 0.5f, arrColor[0], 1e-6f ); // 덮지 않은 칸은 새 부모 값
+    SW_EXPECT_NEAR( 0.25f, roughness, 1e-6f );  // 덮은 칸은 인스턴스 값
+}
+
+/**
+ * @brief [MaterialInstanceTest] 부모 없이 쓴 키워드 칸 값은 나중에 부모를 붙일 때 오류로 알리고 버린다 — 거절(`setParameter`)을 비켜 가지 못한다. 에셋에서 읽은 값과 값 칸은 남는다
+ * @details 변이: `setParent` 가 덮어쓰기를 거르지 않으면 쿠킹하지 않은 `MATERIAL_DETAIL_MASK` 가 define 에 들어 줄이 진다.
+ */
+SW_TEST_CASE( MaterialInstanceTest, SetParentDropsRuntimeStaticValues )
+{
+    SW_EXPECT_LOG( "MaterialInstance.StaticValueRejected" );
+    shared_ptr<Material> material = Material::create();
+    SW_REQUIRE_TRUE( material->loadFromXML( MaterialInstanceKeywordValueTestUtil::kKeywordValueMaterial ) );
+
+    shared_ptr<MaterialInstance> orphan = MaterialInstance::create( nullptr );
+    SW_EXPECT_TRUE( orphan->setParameter( hashed_string( "_detailMask" ), "1" ) ); // 부모가 없어 아직 모른다
+    SW_EXPECT_TRUE( orphan->setParameter( hashed_string( "_color" ), "0.5 0.5 0.5 1" ) );
+    orphan->setParent( material.get() );
+    SW_EXPECT_FALSE( orphan->isParameterOverridden( hashed_string( "_detailMask" ) ) );
+    SW_EXPECT_TRUE( orphan->isParameterOverridden( hashed_string( "_color" ) ) );
+    SW_EXPECT_FALSE( MaterialInstanceTestUtil::hasDefine( orphan->getCachedShaderDefines(), "MATERIAL_DETAIL_MASK" ) );
+
+    shared_ptr<MaterialInstance> asset = MaterialInstance::create( nullptr );
+    SW_REQUIRE_TRUE( MaterialInstanceSwitchTestUtil::loadInstance( *asset, "detailmask_late.materialinstance", MaterialInstanceKeywordValueTestUtil::kDetailMaskInstance ) );
+    asset->setParent( material.get() );
+    SW_EXPECT_TRUE( asset->isParameterOverridden( hashed_string( "_detailMask" ) ) );
+    SW_EXPECT_TRUE( MaterialInstanceTestUtil::hasDefine( asset->getCachedShaderDefines(), "MATERIAL_DETAIL_MASK" ) );
 }
