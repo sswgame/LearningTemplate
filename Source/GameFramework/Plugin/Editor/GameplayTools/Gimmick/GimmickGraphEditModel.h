@@ -17,8 +17,8 @@
 #include "Engine/Asset/GraphCommentBox.h"
 #include "Engine/Foundation/GameObjectHandle.h"
 
-#include "GameFramework/Runtime/Gameplay/Gimmick/GimmickCircuitDesc.h"
-#include "GameFramework/Runtime/Gameplay/Gimmick/GimmickNodeRegistry.h"
+#include "GameFramework/Runtime/Gameplay/Gimmick/Circuit/GimmickCircuitDesc.h"
+#include "GameFramework/Runtime/Gameplay/Gimmick/Circuit/GimmickNodeRegistry.h"
 
 namespace sw
 {

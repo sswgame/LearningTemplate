@@ -13,7 +13,7 @@
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Object/GameObject/Service/NetObjectTable.h"
 
-#include "GameFramework/Runtime/Gameplay/Gimmick/Genre/ExplosiveBarrelComponent.h"
+#include "GameFramework/Runtime/Gameplay/Gimmick/Combat/ExplosiveBarrelComponent.h"
 
 #include <algorithm>
 
