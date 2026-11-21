@@ -19,7 +19,6 @@
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Foundation/Condition/GameFlags.h"
 #include "GameFramework/Runtime/Foundation/Condition/IGameFlagsOwner.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameStateRefs.h"
 #include "GameFramework/Runtime/World/Environment/WeatherMaterialWriter.h"
 #include "GameFramework/Runtime/World/Environment/WeatherSystem.h"
 #include "GameFramework/Runtime/World/Environment/WorldClock.h"
@@ -43,11 +42,11 @@ namespace sw
         REFLECT_BODY();
         PROPERTY()
         WorldClockSettings               _clock{};
-        shared_ptr<const WeatherCatalog> _pWeatherCatalog; ///< 없으면 날씨가 없고 `makeRefs` 의 날씨 포인터가 nullptr 이다. 받은 때의 판(스냅숏) — 날씨 상태가 그 판의 항목을 가리키므로 판 상태가 쥔다
+        shared_ptr<const WeatherCatalog> _pWeatherCatalog; ///< 없으면 날씨가 없고 `findWeather` 가 nullptr 이다. 받은 때의 판(스냅숏) — 날씨 상태가 그 판의 항목을 가리키므로 판 상태가 쥔다
         PROPERTY()
         uint32 _weatherSeed{ DeterministicRandom32::kDefaultSeed }; ///< 날씨 수열의 씨앗(0 은 거절된다 — 씨앗을 주지 않으면 기본 씨앗)
         PROPERTY( Min = 0 )
-        int32 _landWidth{ 0 }; ///< 공유 땅의 셀 수. 0 이면 땅이 없고 `makeRefs` 의 땅 포인터가 nullptr 이다. 격자 키트는 단독으로 쓴다
+        int32 _landWidth{ 0 }; ///< 공유 땅의 셀 수. 0 이면 땅이 없다(`LandRegistry::isInitialized` 가 false). 격자 키트는 단독으로 쓴다
         PROPERTY( Min = 0 )
         int32 _landHeight{ 0 };
         PROPERTY( Min = 0.001 )
@@ -143,11 +142,8 @@ namespace sw
         /** @brief 이번 틱에 시계가 넘은 경계 목록입니다. 읽기만 하며, 다음 틱 처음에 비웁니다. */
         const vector<WorldClockEvent>& getClockEvents() const { return _listClockEvent; }
 
-        /**
-         * @brief 이 월드 상태와 @p progress(플레이어 진행)를 키트에 참조로 넘겨 줄 포인터 모음입니다. 설정에서 열지 않은 것(가방 슬롯 0, 날씨 카탈로그 없음, 땅 크기 0)은 nullptr 입니다.
-         * @details 플레이어 진행을 인자로 받는다 — 키트가 빌리는 지갑 · 가방이 어느 플레이어의 것인지 부르는 쪽이 정한다.
-         */
-        GameStateRefs makeRefs( PlayerProgressComponent& progress );
+        /** @brief 날씨 카탈로그로 열었으면 날씨이고, 아니면 nullptr 입니다 — 날씨를 선택으로 빌리는 키트(`T*`)에 넘긴다. */
+        [[nodiscard]] WeatherSystem* findWeather() { return _bWeather == SW_TRUE ? &_weather : nullptr; }
 
         /** @brief @p component 와 같은 오브젝트에 있는 판 상태입니다. 없으면 nullptr 입니다. */
         static GameStateComponent* findOnOwner( const Component& component );

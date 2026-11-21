@@ -62,7 +62,7 @@ namespace
             SW_REQUIRE_TRUE( _clock.initialize( WorldClockSettings{} ) );
             SW_REQUIRE_TRUE( _loot.loadFromXMLText( kOutlawLootXML, "WesternOutlawTestLoot" ) );
             SW_REQUIRE_TRUE( _bag.initialize( nullptr, 4 ) );
-            SW_REQUIRE_TRUE( _outlaw.initialize( &_catalog, &_loot, makeRefs(), hashed_string( "frontier" ), 20.0f, AIPerceptionSettings{} ) );
+            SW_REQUIRE_TRUE( _outlaw.initialize( &_catalog, &_loot, _wallet, _reputation, _clock, &_flags, nullptr, &_bag, hashed_string( "frontier" ), 20.0f, AIPerceptionSettings{} ) );
         }
 
         /** @brief 빌려 준 판 상태(시계 · 지갑 · 평판 · 플래그 · 가방)와 무법자를 함께 싣습니다 — 결정성 테스트가 판 전체로 쓴다. */
@@ -74,17 +74,6 @@ namespace
             io.value( _flags );
             io.value( _bag );
             io.value( _outlaw );
-        }
-
-        GameStateRefs makeRefs()
-        {
-            GameStateRefs refs;
-            refs._pWallet     = &_wallet;
-            refs._pReputation = &_reputation;
-            refs._pClock      = &_clock;
-            refs._pFlags      = &_flags;
-            refs._pInventory  = &_bag;
-            return refs;
         }
 
         [[nodiscard]] bool doDeed( WesternDeedKind kind, const utf8* pID = "", const vector<WesternWitness>& listWitness = {} )

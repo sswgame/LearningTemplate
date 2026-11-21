@@ -11,7 +11,6 @@
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Foundation/Condition/GameFlags.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameStateRefs.h"
 #include "GameFramework/Runtime/Foundation/GameData/DepletingValue.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Runtime/World/Land/AreaGraph.h"
@@ -124,7 +123,7 @@ namespace sw
     {
     }
 
-    bool SurvivalHorrorSession::initialize( const SurvivalHorrorCatalog* pCatalog, AreaGraph* pAreaGraph, const hashed_string& startArea, const GameStateRefs& refs,
+    bool SurvivalHorrorSession::initialize( const SurvivalHorrorCatalog* pCatalog, AreaGraph* pAreaGraph, const hashed_string& startArea, GameFlags* pFlags,
                                             GridInventory& inventory, Inventory& itemBox )
     {
         if ( pCatalog == nullptr )
@@ -150,7 +149,7 @@ namespace sw
         _pAreaGraph = pAreaGraph;
         _pInventory = &inventory;
         _pItemBox   = &itemBox;
-        _pFlags     = refs._pFlags;
+        _pFlags     = pFlags;
         _sanity     = sanity;
         _battery    = battery;
         _uniqueSeenMonster.clear();

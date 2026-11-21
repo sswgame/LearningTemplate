@@ -259,20 +259,6 @@ namespace sw
             _bFreshGame = SW_FALSE;
     }
 
-    GameStateRefs GameStateComponent::makeRefs( PlayerProgressComponent& progress )
-    {
-        GameStateRefs refs;
-        refs._pWallet     = &progress.getWallet();
-        refs._pFlags      = &_flags;
-        refs._pClock      = &_clock;
-        refs._pQuestLog   = &progress.getQuestLog();
-        refs._pReputation = &progress.getReputation();
-        refs._pInventory  = progress.getInventory().getSlotCount() > 0 ? &progress.getInventory() : nullptr;
-        refs._pWeather    = _bWeather == SW_TRUE ? &_weather : nullptr;
-        refs._pLand       = _land.isInitialized() ? &_land : nullptr;
-        return refs;
-    }
-
     GameStateComponent* GameStateComponent::openOnOwner( const Component& component, const GameStateSettings& settings, GameStateInitResult& outResult )
     {
         outResult                  = GameStateInitResult::Refused;

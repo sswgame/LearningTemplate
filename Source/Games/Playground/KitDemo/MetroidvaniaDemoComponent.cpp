@@ -12,7 +12,6 @@
 #include "GameFramework/Kits/Genre/Action/Metroidvania/MetroidvaniaDeathRestState.h"
 #include "GameFramework/Runtime/Character/Combat/Health/HealthStateMachine.h"
 #include "GameFramework/Runtime/Foundation/Condition/GameFlags.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameStateRefs.h"
 #include "GameFramework/Runtime/Foundation/Random/GameRandom.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemStackList.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Wallet.h"
@@ -67,10 +66,8 @@ namespace sw
             SW_LOG_ERROR_ID( "KitDemo.MetroidvaniaHealthFailed", "Metroidvania demo: the catalog health settings were refused - the loop does not run" );
             return false;
         }
-        GameStateRefs refs;
-        refs._pWallet = &wallet;
         MetroidvaniaDeathRestState state;
-        state.initialize( &catalog, refs );
+        state.initialize( &catalog, &wallet );
         const hashed_string restSite{ MetroidvaniaDemoComponentInternal::kRestSite };
         if ( state.rest( restSite, healthMachine ) == false )
         {

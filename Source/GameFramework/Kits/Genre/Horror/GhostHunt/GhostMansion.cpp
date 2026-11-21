@@ -12,7 +12,6 @@
 
 #include "GameFramework/Kits/Genre/Horror/GhostHunt/GhostCatalog.h"
 #include "GameFramework/Runtime/Foundation/Condition/GameFlags.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameStateRefs.h"
 #include "GameFramework/Runtime/Foundation/GameData/DepletingValue.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemStackList.h"
@@ -41,16 +40,16 @@ namespace sw
     {
     }
 
-    bool GhostMansion::initialize( const GhostCatalog* pCatalog, const LootCatalog* pLoot, AreaGraph* pAreaGraph, const GameStateRefs& refs, uint32 seed )
+    bool GhostMansion::initialize( const GhostCatalog* pCatalog, const LootCatalog* pLoot, AreaGraph* pAreaGraph, GameFlags* pFlags, Inventory* pInventory, Wallet* pWallet, uint32 seed )
     {
         if ( _encounter.initialize( pCatalog, seed ) == false )
             return false;
         _pCatalog   = pCatalog;
         _pLoot      = pLoot;
         _pAreaGraph = pAreaGraph;
-        _pFlags     = refs._pFlags;
-        _pInventory = refs._pInventory;
-        _pWallet    = refs._pWallet;
+        _pFlags     = pFlags;
+        _pInventory = pInventory;
+        _pWallet    = pWallet;
         _seed       = seed;
         _random.setSeed( GameRandom::deriveSeed( seed, 0xB00B00u ) );
         _eventBuffer.clear();

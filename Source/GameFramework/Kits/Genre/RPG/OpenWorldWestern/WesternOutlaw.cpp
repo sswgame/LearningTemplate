@@ -38,7 +38,12 @@ namespace sw
         , _random{}
         , _listCarcass{}
         , _listPelt{}
-        , _refs{}
+        , _pWallet{ nullptr }
+        , _pReputation{ nullptr }
+        , _pClock{ nullptr }
+        , _pFlags{ nullptr }
+        , _pWeather{ nullptr }
+        , _pInventory{ nullptr }
         , _regionID{}
         , _pCatalog{ nullptr }
         , _pLoot{ nullptr }
@@ -49,13 +54,13 @@ namespace sw
     {
     }
 
-    bool WesternOutlaw::initialize( const WesternCatalog* pCatalog, const LootCatalog* pLoot, const GameStateRefs& refs, const hashed_string& regionID, float32 regionBaseTemperature,
+    bool WesternOutlaw::initialize( const WesternCatalog* pCatalog, const LootCatalog* pLoot, Wallet& wallet, ReputationState& reputation, WorldClock& clock, GameFlags* pFlags,
+                                    WeatherSystem* pWeather, Inventory* pInventory, const hashed_string& regionID, float32 regionBaseTemperature,
                                     const AIPerceptionSettings& sight )
     {
-        const bool bMissingState = pCatalog == nullptr || refs._pWallet == nullptr || refs._pReputation == nullptr || refs._pClock == nullptr;
-        if ( bMissingState )
+        if ( pCatalog == nullptr )
         {
-            SW_LOG_ERROR_ID( "WesternOutlaw.MissingCatalogOrSessionState", "[Western] the outlaw needs a western catalog and the session wallet, reputation and clock" );
+            SW_LOG_ERROR_ID( "WesternOutlaw.MissingCatalog", "[Western] the outlaw needs a western catalog" );
             return false;
         }
         if ( pCatalog->findRegion( regionID ) == nullptr )
@@ -65,10 +70,15 @@ namespace sw
         }
         if ( _survival.initialize( pCatalog ) == false )
             return false; // 까닭은 생존이 남겼다
-        _honor.initialize( pCatalog, refs );
+        _honor.initialize( pCatalog, &reputation );
         _law.initialize( pCatalog );
         _sight                 = WesternPerceptionSight{ sight, nullptr };
-        _refs                  = refs;
+        _pWallet               = &wallet;
+        _pReputation           = &reputation;
+        _pClock                = &clock;
+        _pFlags                = pFlags;
+        _pWeather              = pWeather;
+        _pInventory            = pInventory;
         _regionID              = regionID;
         _pCatalog              = pCatalog;
         _pLoot                 = pLoot;
@@ -82,12 +92,12 @@ namespace sw
 
     float32 WesternOutlaw::computeAirTemperature() const
     {
-        return _refs._pWeather != nullptr ? WesternSurvival::computeAirTemperature( *_refs._pWeather, _regionBaseTemperature ) : _regionBaseTemperature;
+        return _pWeather != nullptr ? WesternSurvival::computeAirTemperature( *_pWeather, _regionBaseTemperature ) : _regionBaseTemperature;
     }
 
     int64 WesternOutlaw::getMoney() const
     {
-        return _refs._pWallet != nullptr && _pCatalog != nullptr ? _refs._pWallet->getBalance( _pCatalog->getCurrency() ) : 0;
+        return _pWallet != nullptr && _pCatalog != nullptr ? _pWallet->getBalance( _pCatalog->getCurrency() ) : 0;
     }
 
     void WesternOutlaw::update( float32 deltaTime )
@@ -95,7 +105,7 @@ namespace sw
         using Internal = WesternOutlawInternal;
         if ( _pCatalog == nullptr )
             return;
-        const float64 clockHours = Internal::readClockHours( *_refs._pClock );
+        const float64 clockHours = Internal::readClockHours( *_pClock );
         const float64 lastHours  = _bClockSeen == SW_TRUE ? _lastClockHours : clockHours;
         const float32 gameHours  = clockHours > lastHours ? static_cast<float32>( clockHours - lastHours ) : 0.0f; // 불러온 시계가 뒤로 가도 시간을 되돌리지 않는다
         const int32   dayCount   = static_cast<int32>( clockHours / Internal::kHoursPerDay ) - static_cast<int32>( lastHours / Internal::kHoursPerDay );
@@ -113,8 +123,8 @@ namespace sw
             _law.advanceDay();
         }
         logLawEvents();
-        if ( _refs._pFlags != nullptr )
-            _honor.applyDialogueFlags( *_refs._pFlags );
+        if ( _pFlags != nullptr )
+            _honor.applyDialogueFlags( *_pFlags );
     }
 
     bool WesternOutlaw::perform( const WesternDeed& deed, const vector<WesternWitness>& listCandidate )
@@ -148,7 +158,7 @@ namespace sw
             }
             case WesternDeedKind::PayBounty:
             {
-                return _law.payBounty( _regionID, *_refs._pWallet ) == WesternPayResult::Ok;
+                return _law.payBounty( _regionID, *_pWallet ) == WesternPayResult::Ok;
             }
             case WesternDeedKind::Eat:
             {
@@ -205,13 +215,13 @@ namespace sw
         for ( size_t carcassIndex = _listCarcass.size(); carcassIndex > 0; --carcassIndex )
         {
             const WesternAnimalDef* const pAnimal = _pCatalog->findAnimal( _listCarcass[carcassIndex - 1]._animalID );
-            if ( pAnimal != nullptr && pAnimal->_lootTable.empty() == false && ( _pLoot == nullptr || _refs._pInventory == nullptr ) )
+            if ( pAnimal != nullptr && pAnimal->_lootTable.empty() == false && ( _pLoot == nullptr || _pInventory == nullptr ) )
             {
                 SW_LOG_ERROR_ONCE_ID( "WesternOutlaw.LootWithoutCatalogOrBag", "[Western] animal '%#' names loot table '%#' but the outlaw has no loot catalog or bag - the loot is not rolled",
                                       pAnimal->_id.c_str(), pAnimal->_lootTable.c_str() );
             }
             WesternPelt pelt;
-            if ( WesternCarcass::skin( *_pCatalog, _listCarcass[carcassIndex - 1], _refs._pInventory != nullptr ? _pLoot : nullptr, _random, pelt, listItem ) == false )
+            if ( WesternCarcass::skin( *_pCatalog, _listCarcass[carcassIndex - 1], _pInventory != nullptr ? _pLoot : nullptr, _random, pelt, listItem ) == false )
                 continue;
             _listPelt.push_back( pelt );
             _listCarcass.erase( _listCarcass.begin() + static_cast<ptrdiff_t>( carcassIndex - 1 ) );
@@ -219,7 +229,7 @@ namespace sw
         }
         for ( const ItemStack& stack : listItem.getItems() )
         {
-            const int32 added = _refs._pInventory->addItem( stack._itemID, stack._count );
+            const int32 added = _pInventory->addItem( stack._itemID, stack._count );
             if ( added < stack._count )
                 SW_LOG_WARNING_ID( "WesternOutlaw.BagFull", "[Western] the bag is full - %# of '%#' from skinning left behind", stack._count - added, stack._itemID.c_str() );
         }
@@ -242,7 +252,7 @@ namespace sw
         const int32   dollars    = paid / Internal::kCentsPerDollar;
         _centsCarry              = paid - dollars * Internal::kCentsPerDollar;
         if ( dollars > 0 )
-            _refs._pWallet->add( _pCatalog->getCurrency(), dollars );
+            _pWallet->add( _pCatalog->getCurrency(), dollars );
         _listPelt.clear();
         return true;
     }

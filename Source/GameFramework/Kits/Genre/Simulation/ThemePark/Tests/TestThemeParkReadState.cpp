@@ -9,7 +9,6 @@
 
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/Tests/ThemeParkTestRules.h"
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/ThemePark.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameStateRefs.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Wallet.h"
 
 // ThemeParkReadStateTest — 놀이공원 상태 바이트의 신뢰 경계: 음수 · 범위 밖 값, 손님과 맞지 않는 줄과 탑승자를 거절하고 공원을 그대로 둔다.
@@ -136,9 +135,7 @@ namespace
         ThemeParkReadStateTest()
         {
             _wallet.add( sw::ThemeParkTestRules::make()._currency, 100000 );
-            sw::GameStateRefs refs;
-            refs._pWallet = &_wallet;
-            SW_REQUIRE_TRUE( _park.initialize( sw::ThemeParkTestRules::make(), refs ) );
+            SW_REQUIRE_TRUE( _park.initialize( sw::ThemeParkTestRules::make(), &_wallet ) );
         }
     };
 } // namespace
@@ -165,9 +162,7 @@ SW_TEST_CASE_F( ThemeParkReadStateTest, RealAndCraftedStatesRead )
     sw::Archive written;
     _park.writeState( written );
     sw::ThemeParkSimulation restored;
-    sw::GameStateRefs       refs;
-    refs._pWallet = &_wallet;
-    SW_REQUIRE_TRUE( restored.initialize( sw::ThemeParkTestRules::make(), refs ) );
+    SW_REQUIRE_TRUE( restored.initialize( sw::ThemeParkTestRules::make(), &_wallet ) );
     sw::Archive reading( written.getData(), written.getSize() );
     SW_REQUIRE_TRUE( restored.readState( reading ) );
     SW_EXPECT_EQUAL( _park.getGuests().size(), restored.getGuests().size() );
@@ -186,9 +181,7 @@ SW_TEST_CASE( ThemeParkSimulationTest, ParkDeterminism )
     {
         const sw::ThemeParkSettings settings = sw::ThemeParkTestRules::make();
         run._wallet.add( settings._currency, 100000 );
-        sw::GameStateRefs refs;
-        refs._pWallet = &run._wallet;
-        return run._park.initialize( settings, refs );
+        return run._park.initialize( settings, &run._wallet );
     };
     const auto step = []( ThemeParkRun& run, int32 stepIndex )
     {
@@ -376,16 +369,15 @@ SW_TEST_CASE( ThemeParkSimulationTest, RejectsZeroDivisorSettings )
 {
     SW_EXPECT_LOG( "ThemePark.RefusedSettings" );
     sw::ThemeParkSimulation park;
-    sw::GameStateRefs       refs;
     sw::ThemeParkSettings   zeroFee = sw::ThemeParkTestRules::make();
     zeroFee._noArrivalEntryFee      = 0.0f;
-    SW_EXPECT_FALSE( park.initialize( zeroFee, refs ) );
+    SW_EXPECT_FALSE( park.initialize( zeroFee, nullptr ) );
     sw::ThemeParkSettings zeroScale = sw::ThemeParkTestRules::make();
     zeroScale._arrivalRatingScale   = 0.0f;
-    SW_EXPECT_FALSE( park.initialize( zeroScale, refs ) );
+    SW_EXPECT_FALSE( park.initialize( zeroScale, nullptr ) );
     sw::ThemeParkSettings swappedCash = sw::ThemeParkTestRules::make();
     swappedCash._guestCashMin         = 100;
     swappedCash._guestCashMax         = 10;
-    SW_EXPECT_FALSE( park.initialize( swappedCash, refs ) );
-    SW_EXPECT_TRUE( park.initialize( sw::ThemeParkTestRules::make(), refs ) );
+    SW_EXPECT_FALSE( park.initialize( swappedCash, nullptr ) );
+    SW_EXPECT_TRUE( park.initialize( sw::ThemeParkTestRules::make(), nullptr ) );
 }

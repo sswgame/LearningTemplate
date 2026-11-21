@@ -10,7 +10,6 @@
 #include "GameFramework/Kits/Genre/Action/Metroidvania/MetroidvaniaDeathRestState.h"
 #include "GameFramework/Kits/Genre/Action/Metroidvania/MetroidvaniaDuelist.h"
 #include "GameFramework/Runtime/Foundation/Condition/GameFlags.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameStateRefs.h"
 #include "GameFramework/Runtime/Foundation/Random/GameRandom.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemStackList.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/LootTable.h"
@@ -68,9 +67,7 @@ namespace
         {
             if ( _catalog.loadFromXMLText( kDuelXML, "MetroidvaniaDeathRestTest" ) == false || _loot.loadFromXMLText( kDuelLootXML, "loot" ) == false )
                 return false;
-            sw::GameStateRefs refs;
-            refs._pWallet = &_wallet;
-            _state.initialize( &_catalog, refs );
+            _state.initialize( &_catalog, &_wallet );
             return _healthMachine.initialize( _catalog.getRules()._health );
         }
 
@@ -299,13 +296,13 @@ SW_TEST_CASE( MetroidvaniaDeathRestTest, MissingWalletOrCatalogIsSafe )
     DeathRestBench bench;
     SW_REQUIRE_TRUE( bench.setUp() );
     sw::MetroidvaniaDeathRestState noWallet;
-    noWallet.initialize( &bench._catalog, sw::GameStateRefs{} );
+    noWallet.initialize( &bench._catalog, nullptr );
     SW_EXPECT_EQUAL( 5, noWallet.registerKill( kSpawnA, kHusk, bench._flags, nullptr, bench._random, bench._drops ) );
     (void)noWallet.die( kHall, sw::float2{}, bench._healthMachine );
     SW_EXPECT_TRUE( noWallet.getCorpse()._bActive == SW_FALSE );
 
     sw::MetroidvaniaDeathRestState noCatalog;
-    noCatalog.initialize( nullptr, sw::GameStateRefs{} );
+    noCatalog.initialize( nullptr, nullptr );
     SW_EXPECT_FALSE( noCatalog.rest( kBench, bench._healthMachine ) );
     SW_EXPECT_EQUAL( -1, noCatalog.registerKill( kSpawnA, kHusk, bench._flags, nullptr, bench._random, bench._drops ) );
     SW_EXPECT_FALSE( noCatalog.drinkFlask( bench._healthMachine ) );

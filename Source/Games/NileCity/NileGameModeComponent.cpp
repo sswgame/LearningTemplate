@@ -271,7 +271,7 @@ namespace sw
             return false; // 범위 밖(달 길이 `_secondsPerMonth` 등)은 시계가 오류를 남겼다
         _wallet.clear();
         _wallet.add( _pCatalog->getRules()._currency, _startingMoney );
-        if ( _city.initialize( _pCatalog.get(), NileCityPlanner::kMapWidth, NileCityPlanner::kMapHeight, makeRefs() ) == false )
+        if ( _city.initialize( _pCatalog.get(), NileCityPlanner::kMapWidth, NileCityPlanner::kMapHeight, _wallet ) == false )
             return false; // 범위 밖 도시 설정은 도시가 오류를 남겼다
         if ( _city.claimEvents( _cityEventLease ) == false )
             return false; // 이 디렉터의 표뿐이라 일어날 수 없다 — 둘째 소비자가 생기면 게이트가 어서션을 남긴다
@@ -324,13 +324,6 @@ namespace sw
             }
             _city.settleMonth( bNewYear );
         }
-    }
-
-    GameStateRefs NileGameModeComponent::makeRefs()
-    {
-        GameStateRefs refs;
-        refs._pWallet = &_wallet;
-        return refs;
     }
 
     NileCityLayout NileGameModeComponent::makeCityLayout() const
@@ -476,7 +469,7 @@ namespace sw
         {
             // 자동 계획을 읽지 못하면 이유는 플래너가 남겼다
             if ( io.check( restoredPlanner.reset( makeCityLayout(), AssetID{ _autoPlanPath } ) ) == false || io.check( restoredClock.initialize( makeClockSettings() ) ) == false ||
-                 io.check( restoredCity.initialize( _pCatalog.get(), NileCityPlanner::kMapWidth, NileCityPlanner::kMapHeight, makeRefs() ) ) == false )
+                 io.check( restoredCity.initialize( _pCatalog.get(), NileCityPlanner::kMapWidth, NileCityPlanner::kMapHeight, _wallet ) ) == false )
                 return;
         }
         io.value( io.isWriting() ? _city : restoredCity );

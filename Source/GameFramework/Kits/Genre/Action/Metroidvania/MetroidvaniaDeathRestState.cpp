@@ -12,7 +12,6 @@
 #include "GameFramework/Kits/Genre/Action/Metroidvania/MetroidvaniaCatalog.h"
 #include "GameFramework/Runtime/Character/Combat/Health/HealthStateMachine.h"
 #include "GameFramework/Runtime/Foundation/Condition/GameFlags.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameStateRefs.h"
 #include "GameFramework/Runtime/Foundation/Random/GameRandom.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemStackList.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/LootTable.h"
@@ -34,10 +33,10 @@ namespace sw
     {
     }
 
-    void MetroidvaniaDeathRestState::initialize( const MetroidvaniaCatalog* pCatalog, const GameStateRefs& refs )
+    void MetroidvaniaDeathRestState::initialize( const MetroidvaniaCatalog* pCatalog, Wallet* pWallet )
     {
         _pCatalog = pCatalog;
-        _pWallet  = refs._pWallet;
+        _pWallet  = pWallet;
         _listKill.clear();
         _eventBuffer.clear();
         _corpse = MetroidvaniaCorpse{};

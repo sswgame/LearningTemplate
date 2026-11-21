@@ -11,7 +11,6 @@
 #include "GameFramework/Kits/Genre/Horror/SurvivalHorror/SurvivalHorrorEncounter.h"
 #include "GameFramework/Kits/Genre/Horror/SurvivalHorror/SurvivalHorrorSession.h"
 #include "GameFramework/Runtime/Foundation/Condition/GameFlags.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameStateRefs.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/GridInventory.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Runtime/World/Land/AreaGraph.h"
@@ -143,9 +142,7 @@ namespace
 
         bool open( SurvivalHorrorSession& outSession, const hashed_string& startArea = "hall" )
         {
-            GameStateRefs refs;
-            refs._pFlags = &_flags;
-            return outSession.initialize( &_catalog, &_graph, startArea, refs, _grid, _box );
+            return outSession.initialize( &_catalog, &_graph, startArea, &_flags, _grid, _box );
         }
 
         /** @brief 규칙 하나를 바꿔 새 판을 엽니다. */
@@ -438,7 +435,7 @@ SW_TEST_CASE_F( SurvivalHorrorRulesTest, InitializeRefusesNoCatalog )
 {
     SW_EXPECT_LOG( "SurvivalHorrorSession.SurvivalHorrorSessionRefusedNoCatalog" );
     SurvivalHorrorSession session;
-    SW_EXPECT_FALSE( session.initialize( nullptr, &_graph, "hall", GameStateRefs{}, _grid, _box ) );
+    SW_EXPECT_FALSE( session.initialize( nullptr, &_graph, "hall", nullptr, _grid, _box ) );
 }
 
 /**
@@ -778,7 +775,7 @@ SW_TEST_CASE_F( SurvivalHorrorRulesTest, NoFlagsKeepsConditionalPathsClosed )
 {
     _flags.setFlag( "redOpen", 1 );
     SurvivalHorrorSession session;
-    SW_REQUIRE_TRUE( session.initialize( &_catalog, &_graph, "hall", GameStateRefs{}, _grid, _box ) );
+    SW_REQUIRE_TRUE( session.initialize( &_catalog, &_graph, "hall", nullptr, _grid, _box ) );
     SW_EXPECT_FALSE( session.tryMoveTo( "cellar" ) );
 }
 

@@ -8,12 +8,11 @@
 
 #include "GameFramework/Runtime/Character/Control/Controller/PlayerControllerComponent.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameStateRefs.h"
 #include "GameFramework/Runtime/Gameplay/GameState/GameStateComponent.h"
 #include "GameFramework/Runtime/Gameplay/GameState/PlayerProgressComponent.h"
 
 // PlayerProgressTest — 플레이어 진행(PlayerProgressComponent — 조종자 오브젝트의 지갑 · 가방 · 일지 · 평판): 저장 왕복, 폰에서 찾기, 씬 하나를 읽는 쪽의 "하나뿐" 규칙,
-// 월드 상태와 묶어 키트에 빌려 주기(makeRefs)를 본다(nogpu, 헤드리스).
+// 선택 상태(가방 · 날씨)는 설정에서 열지 않으면 nullptr 로 빌려 준다(nogpu, 헤드리스).
 
 using namespace sw;
 
@@ -74,8 +73,8 @@ SW_TEST_CASE( PlayerProgressTest, SecondOpenProgressStopsTheSingleReader )
     SW_EXPECT_NULL( PlayerProgressComponent::findOpen( &manager ) );
 }
 
-/** @brief [PlayerProgressTest] 키트에 빌려 주는 묶음은 지갑 · 일지 · 평판을 플레이어 진행에서, 시계 · 플래그를 월드 상태에서 채우고, 슬롯 0 이면 가방이 없다 */
-SW_TEST_CASE( PlayerProgressTest, RefsBorrowFromBothScopes )
+/** @brief [PlayerProgressTest] 키트가 선택으로 빌리는 상태는 설정에서 열지 않으면 없다 — 슬롯 0 이면 가방이, 날씨 카탈로그가 없으면 날씨가 nullptr 이다 */
+SW_TEST_CASE( PlayerProgressTest, OptionalStateIsNullWhenNotOpened )
 {
     GameObjectManager        manager;
     GameObject*              pDirector = manager.createGameObject( hashed_string( "Director" ) );
@@ -84,11 +83,6 @@ SW_TEST_CASE( PlayerProgressTest, RefsBorrowFromBothScopes )
     SW_REQUIRE_TRUE( pWorld->initialize( GameStateSettings{} ) == GameStateInitResult::Fresh );
     SW_REQUIRE_TRUE( pProgress->initialize( PlayerProgressSettings{} ) == GameStateInitResult::Fresh );
 
-    const GameStateRefs refs = pWorld->makeRefs( *pProgress );
-    SW_EXPECT_TRUE( refs._pWallet == &pProgress->getWallet() );
-    SW_EXPECT_TRUE( refs._pQuestLog == &pProgress->getQuestLog() );
-    SW_EXPECT_TRUE( refs._pReputation == &pProgress->getReputation() );
-    SW_EXPECT_TRUE( refs._pFlags == &pWorld->getFlags() );
-    SW_EXPECT_TRUE( refs._pClock == &pWorld->getClock() );
-    SW_EXPECT_NULL( refs._pInventory );
+    SW_EXPECT_NULL( pProgress->findInventory() );
+    SW_EXPECT_NULL( pWorld->findWeather() );
 }

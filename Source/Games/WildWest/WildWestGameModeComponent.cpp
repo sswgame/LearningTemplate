@@ -130,7 +130,8 @@ namespace sw
         AIPerceptionSettings sight{};
         sight._sightRange = _witnessSightRange;
         // 전리품 카탈로그는 없다 — 프레리 동물은 전리품 테이블을 적지 않는다(적으면 손질이 오류를 낸다).
-        if ( _outlaw.initialize( _pWesternCatalog.get(), nullptr, pState->makeRefs( *pProgress ), _regionID.key(), _regionBaseTemperature, sight ) == false )
+        if ( _outlaw.initialize( _pWesternCatalog.get(), nullptr, pProgress->getWallet(), pProgress->getReputation(), pState->getClock(), &pState->getFlags(), pState->findWeather(),
+                                 pProgress->findInventory(), _regionID.key(), _regionBaseTemperature, sight ) == false )
             return false; // 까닭은 무법자가 남겼다
         if ( pProgress->isFreshGame() && _startingMoney > 0 )
             pProgress->getWallet().add( _pWesternCatalog->getCurrency(), _startingMoney );
