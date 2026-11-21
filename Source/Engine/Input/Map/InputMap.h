@@ -103,7 +103,7 @@ namespace sw
          *          `<remove name>` 은 그 액션을 지운다. 한 액션은 묶음에서 한 번만 덮거나 지울 수 있다 — 여러 파일이 덮으면 이기는 쪽이 읽는 순서에 달린다.
          *          맵 전체 값은 기본 맵의 것이고, 예외는 `virtualCursor` 하나다(기능이라 그것을 쓰는 게임의 묶음에 파일로 얹힌다 · 묶음에서 한 번만 적는다).
          *          겹침 · 가상 커서 검사는 다 읽은 맵에 한 번 한다 — 앞 파일끼리의 겹침을 뒤 파일이 풀 수 있으므로 파일마다 보면 거짓 오류가 난다.
-         *          언리얼 Enhanced Input 의 매핑 컨텍스트 쌓기 · 유니티 Action Asset 의 맵 켜기 · Godot 의 프로젝트 입력 맵과 비교한 까닭은 `docs/InputMapBundle.md`.
+         *          언리얼 Enhanced Input 의 매핑 컨텍스트 쌓기 · 유니티 Action Asset 의 맵 켜기 · Godot 의 프로젝트 입력 맵과 견주어 레이어 쌓기로 정했다(규칙은 `docs/agents/DataInheritance.md` "입력 맵 묶음" 절).
          * @return 모두 읽었고 겹침이 없으면 true 입니다. 실패하면 맵을 비운다(일부만 든 맵으로 게임을 띄우지 않는다).
          */
         [[nodiscard]] bool loadBundle( const vector<AssetID>& listAsset );

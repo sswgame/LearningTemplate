@@ -227,6 +227,32 @@ namespace sw
                     (void)FileUtil::tryWriteFile( marker, reinterpret_cast<const uint8*>( markerText.data() ), markerText.size() ); // 못 쓰면 다음 실행이 다시 훑는다
             }
 
+#if defined( SW_PLATFORM_WINDOWS )
+            /**
+             * @brief FXC 판 — 이 프로세스가 실은 d3dcompiler(System32 — vcpkg 기록에 없고 OS 업데이트로 바뀐다)의 내용 해시입니다. 못 읽으면 0 이고 오류를 한 번 남긴다.
+             * @details DXBC 캐시 키에만 든다(언리얼이 셰이더 형식마다 컴파일러 판을 셰이더 맵 키에 넣는 자리). 도구 지문(`ShaderCookStamp::getToolchainFingerprint`)에 넣지 않는 것은
+             *          쿠킹 스탬프가 기계마다(OS 판마다) 갈려 모든 셰이더를 다시 굽지 않게다. d3dcompiler 는 일반 import 라 기동 때 이미 실려 있다.
+             */
+            [[nodiscard]] static uint64 getFxcLibraryHash()
+            {
+                static const uint64 s_hash = []
+                {
+                    const HMODULE hModule = ::GetModuleHandleW( D3DCOMPILER_DLL_W );
+                    utf16         arrPath[MAX_PATH]{};
+                    const DWORD   length = hModule != nullptr ? ::GetModuleFileNameW( hModule, arrPath, MAX_PATH ) : 0;
+                    vector<uint8> bytes;
+                    const bool    bRead = length > 0 && length < MAX_PATH && FileUtil::readFile( StringUtil::utf16ToUTF8( arrPath ), bytes ) && bytes.empty() == false;
+                    if ( bRead == false )
+                    {
+                        SW_LOG_ERROR_ID( "ShaderCompiler.FxcVersionUnreadable", "The loaded d3dcompiler library could not be read - DXBC compiles skip the shader cache" );
+                        return uint64( 0 );
+                    }
+                    return ContentHash::computeBytes( bytes );
+                }();
+                return s_hash;
+            }
+#endif
+
             static ShaderCacheSlot computeCacheSlot( const ShaderCompileDesc& desc, const ShaderCompileInput& input )
             {
                 ShaderCacheSlot slot;
@@ -255,6 +281,20 @@ namespace sw
                 // 도구 지문은 키에 넣는다 — DXC 나 옵션을 바꾸면 옛 바이트를 돌려주면 안 된다. 디버그 코드젠 여부도 키다(같은 소스라도 바이트코드가 다르다).
                 text.append( "\ntoolchain=" ).append( to_string( ShaderCookStamp::getToolchainFingerprint( *desc._enginePolicy ) ) );
                 text.append( "\ncodegen=" ).append( desc._bDebugCodegen != SW_FALSE ? "dbg" : "opt" ).append( "\n" );
+#if defined( SW_PLATFORM_WINDOWS )
+                // FXC 는 OS 의 것이라 도구 지문(vcpkg 기록)에 없다 — DXBC 항목만 실린 d3dcompiler 의 내용을 키에 더한다. 못 읽으면 판을 모르니 디스크 캐시를 쓰지 않는다.
+                const ShaderTargetFormatInfo* const pTargetInfo = ShaderTargetFormatTable::find( desc._targetFormat );
+                if ( pTargetInfo != nullptr && pTargetInfo->_tool == ShaderCompilerTool::Fxc )
+                {
+                    const uint64 fxcHash = getFxcLibraryHash();
+                    if ( fxcHash == 0 )
+                    {
+                        slot._directory.clear();
+                        return slot;
+                    }
+                    text.append( "fxc=" ).append( to_string( fxcHash ) ).append( "\n" );
+                }
+#endif
                 slot._key = HashUtil::computeStringHash64( string_view{ text }, false );
                 return slot;
             }

@@ -8,6 +8,7 @@
 #include "Engine/Module/ModuleSharedAssetCache.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLReadUtil.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
@@ -112,7 +113,7 @@ namespace sw
     {
         CityHouseLevelDef level;
         bool              bValid = XMLFields::readProperties( node, level, sourceName, { "services" } );
-        StringUtil::forEachToken( node.getAttributeText( "services" ), ",; ", [&]( string_view token )
+        StringUtil::forEachToken( node.getAttributeText( "services" ), XMLReadUtil::kListSeparators, [&]( string_view token )
         {
             CityService service = CityService::Count;
             if ( game::getSubsystem<TypeRegistry>().enumFromString( token, service ) && service != CityService::Count )

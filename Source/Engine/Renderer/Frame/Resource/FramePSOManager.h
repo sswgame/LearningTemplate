@@ -78,7 +78,7 @@ namespace sw
         void createPassPSOs();
         /** @brief 소유한 저장소의 PSO · 레이아웃과 폴백 버퍼를 놓습니다. 빌린 저장소는 놓지 않습니다(소유자의 몫). 디바이스가 없으면 핸들만 잊습니다. */
         void release();
-        /** @brief 셰이더 핫 리로드 — 소유한 저장소에서 그 셰이더의 바인딩 레이아웃을 무효화합니다. */
+        /** @brief 셰이더 핫 리로드 — 소유한 저장소에서 그 셰이더를 쓰는 PSO 와 레이아웃만 놓습니다(`RenderPSOCache::releasePSOsUsingShader`). 다시 채우기는 `createPassPSOs` 입니다. */
         void onShaderRecompiled( string_view shaderPath );
 
         /** @brief 패스 타입에 해당하는 엔진 PSO 입니다. 없으면 0 입니다. 프레임 패스(`isFramePassType`)는 이 파이프라인이 선언하지 않았으면 0 입니다. */

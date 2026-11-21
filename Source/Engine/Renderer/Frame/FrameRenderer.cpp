@@ -949,20 +949,20 @@ namespace sw
         if ( listShaderPath.empty() || _pDevice == nullptr )
             return;
 
+        // **바뀐 셰이더를 쓰는 PSO 만 놓고 다시 만든다**(언리얼 셰이더 핫 리로드와 같은 범위). PSO 는 바이트코드를 박아 넣은 객체라 레이아웃만 새로 만들면
+        // 화면이 옛 셰이더 그대로다. 패스 자원(상수 버퍼 · 풀 · 라이트 버퍼 · 그래프)은 셰이더와 무관해 그대로 둔다 — 예전에는 셰이더 하나에 모두 놓고 동기로 다시 만들었다.
+        //
+        // ShaderRecompiler 가 바뀐 ShaderCache 항목을 새 바이트로 바꾼 뒤에 알렸고(그래야 새 바이트코드를 집는다), 이 함수는 렌더 스레드가
+        // 프레임을 기록하기 전에 돈다 — GPU 를 기다리지 않는다. 옛 PSO 는 디바이스가 그것을 쓴 프레임의 GPU 완료 뒤로 미뤄 놓는다(백엔드 해제 큐).
         for ( const string& shaderPath : listShaderPath )
         {
             _psoManager.onShaderRecompiled( shaderPath );
         }
-
-        // **PSO 를 실제로 다시 만든다.** 주의: 바인딩 레이아웃만 새로 만들면 PSO 는 바이트코드를 박아 넣은
-        // 객체라 화면이 시작 때 컴파일된 셰이더 그대로다. 재컴파일 묶음 하나에 한 번만 다시 만든다.
-        //
-        // 순서는 loadPipeline 과 같다. ShaderRecompiler 가 바뀐 ShaderCache 항목을 새 바이트로 바꾼 뒤에 알렸고(그래야 새 바이트코드를 집는다), 이 함수는 렌더 스레드가
-        // 프레임을 기록하기 전에 돈다 — GPU 를 기다리지 않는다. 옛 PSO · 트랜지언트는 디바이스가 그것을 쓴 프레임의 GPU 완료 뒤로 미뤄 놓는다(백엔드 해제 큐).
-        releasePassResources();
-        ensurePassResources();
-        ensureTransientResources();
-        _bCallbacksBound = _passExecutor.bindPassCallbacks() ? SW_TRUE : SW_FALSE;
+        // 그리기 캐시가 놓은 PSO 핸들을 쥐고 있을 수 있다 — 다음 그리기가 다시 건다.
+        _state._frameContext.resetBindingCache();
+        // 빠진 엔진 · 출력 · 파이프라인 컴퓨트 PSO 와 디퍼드 타일 변형을 채운다(있는 것은 건너뛴다). 머티리얼 변형 · 입자 · 모듈 프로그램은 다음 셋업이 지연 생성한다.
+        if ( _bPassResourcesReady != SW_FALSE )
+            _psoManager.createPassPSOs();
     }
 
     void FrameRenderer::ensureTransientResources( uint32 overrideWidth, uint32 overrideHeight )

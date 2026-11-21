@@ -279,3 +279,57 @@ SW_TEST_CASE( MaterialInstanceTest, InstanceAssetCombinationsAreCollectedForCook
     SW_EXPECT_TRUE( listDefine.empty() );
     SW_EXPECT_FALSE( MaterialInstanceTestUtil::hasDefine( unknown->getCachedShaderDefines(), "MATERIAL_NOT_DECLARED" ) );
 }
+
+namespace
+{
+    struct MaterialInstanceKeywordValueTestUtil
+    {
+        /** @brief 키워드를 내는 Bool 칸(`_detailMask` → `MATERIAL_DETAIL_MASK`, 기본 끔)을 선언한 부모입니다. */
+        static constexpr const utf8* kKeywordValueMaterial = R"(<?xml version="1.0" encoding="utf-8"?>
+<MaterialDef formatVersion="0" name="KeywordValue" shaderPath="engine/shaders/pbr_lit.hlsl" surfaceModel="Lit" alphaMode="Opaque">
+	<_properties>
+		<item name="_color" type="Color" defaultValue="1 1 1 1"/>
+		<item name="_detailMask" type="Bool" defaultValue="0" shaderKeyword="MATERIAL_DETAIL_MASK"/>
+	</_properties>
+</MaterialDef>
+)";
+
+        /** @brief 키워드 칸을 켠 인스턴스 에셋입니다. */
+        static constexpr const utf8* kDetailMaskInstance = R"(<?xml version="1.0" encoding="utf-8"?>
+<MaterialInstanceDef formatVersion="0" name="DetailMaskInstance" parentPath="testproject/keywordvalue.material">
+	<_overrides>
+		<item name="_detailMask" value="1"/>
+	</_overrides>
+</MaterialInstanceDef>
+)";
+    };
+} // namespace
+
+/**
+ * @brief [MaterialInstanceTest] 키워드를 내는 Bool 칸의 값 덮어쓰기는 define · 퍼뮤테이션 해시를 바꾸고, 인스턴스 에셋의 그 덮어쓰기는 쿠커 조합 목록에 든다
+ * @details 변이: 부모의 `computeShaderDefines` 가 덮어쓰기를 보지 않으면(예전) `MATERIAL_DETAIL_MASK` 줄이 진다. `setParameter` 가 정의 캐시를 더럽히지 않으면 해시 줄이 진다.
+ */
+SW_TEST_CASE( MaterialInstanceTest, KeywordValueOverrideChangesDefines )
+{
+    shared_ptr<Material> material = Material::create();
+    SW_REQUIRE_TRUE( material->loadFromXML( MaterialInstanceKeywordValueTestUtil::kKeywordValueMaterial ) );
+    SW_EXPECT_FALSE( MaterialInstanceTestUtil::hasDefine( material->getCachedShaderDefines(), "MATERIAL_DETAIL_MASK" ) );
+
+    shared_ptr<MaterialInstance> instance = MaterialInstance::create( material.get() );
+    const uint64                 baseHash = instance->getPermutationHash();
+    instance->setParameter( hashed_string( "_detailMask" ), "1" );
+    SW_EXPECT_TRUE( MaterialInstanceTestUtil::hasDefine( instance->getCachedShaderDefines(), "MATERIAL_DETAIL_MASK" ) );
+    SW_EXPECT_NOT_EQUAL( baseHash, instance->getPermutationHash() );
+    SW_EXPECT_FALSE( MaterialInstanceTestUtil::hasDefine( material->getCachedShaderDefines(), "MATERIAL_DETAIL_MASK" ) ); // 부모는 그대로다
+    instance->setParameter( hashed_string( "_detailMask" ), "0" );
+    SW_EXPECT_EQUAL( baseHash, instance->getPermutationHash() );
+
+    shared_ptr<MaterialInstance> asset = MaterialInstance::create( material.get() );
+    SW_REQUIRE_TRUE( MaterialInstanceSwitchTestUtil::loadInstance( *asset, "detailmask.materialinstance", MaterialInstanceKeywordValueTestUtil::kDetailMaskInstance ) );
+    vector<vector<string>> listDefine;
+    vector<uint64>         listHash;
+    SW_REQUIRE_TRUE( asset->collectRuntimeSwitchVariants( listDefine, listHash ) );
+    SW_REQUIRE_EQUAL( size_t( 1 ), listDefine.size() );
+    SW_EXPECT_TRUE( MaterialInstanceTestUtil::hasDefine( listDefine[0], "MATERIAL_DETAIL_MASK" ) );
+    SW_EXPECT_EQUAL( asset->getPermutationHash(), listHash[0] );
+}
