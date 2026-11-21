@@ -16,6 +16,8 @@
 #include "Core/Testing/ThreadTestAccess.h"
 #include "Core/Time/MonotonicClock.h"
 
+#include <thread>
+
 namespace
 {
     /** @brief 테스트가 쓰는 최대 대기 시간. 정상 동작은 수 밀리초면 끝난다. */
@@ -1975,11 +1977,11 @@ namespace
 
 /**
  * @brief 워커가 하나뿐일 때 워커 안에서 큐 용량을 넘겨 넣어도 끝나고, 모두 한 번씩 · 우선순위 큐는 넣은 차례대로 돈다
- * @details 고치기 전에는 가득 찬 큐에서 넣는 쪽이 잠든 워커를 깨우고 양보만 했다 — 넣는 쪽이 유일한 워커라 아무도 꺼내지 않아 끝나지 않았다
- *          (High · Low 는 워커가 넣어도 전역 큐로 가고, Normal 은 데크와 전역 큐가 모두 찼을 때). 메인은 태스크를 돕지 않는 Futex 로 기다린다 —
+ * @details 전역 큐는 링이 차면 넘침 목록이 받는다(`OverflowConcurrentQueue`) — 넣는 쪽이 유일한 워커여도 기다리지 않고, 링 → 넘침 차례로 꺼내 FIFO 가 남는다.
+ *          예전에는 가득 찬 큐에서 넣는 워커가 그 자리에서 실행했고 겹침 상한(16)을 넘으면 다시 깨우고 양보만 했다. 메인은 태스크를 돕지 않는 Futex 로 기다린다 —
  *          `waitAll` 로 기다리면 메인이 큐를 비워 결함이 가려진다. 끝나지 않으면 케이스 시한이 이름과 함께 끊는다.
  */
-SW_TEST_CASE( TaskManagerTest, WorkerSubmittingPastQueueCapacityRunsAQueuedItemInsteadOfSpinning )
+SW_TEST_CASE( TaskManagerTest, WorkerSubmittingPastQueueCapacityFinishesInOrder )
 {
     sw::TaskManager manager;
     SW_REQUIRE_TRUE( manager.initialize( 1 ) );
@@ -2033,5 +2035,42 @@ SW_TEST_CASE( TaskManagerTest, WorkerSubmittingPastQueueCapacityRunsAQueuedItemI
     SW_EXPECT_EQUAL( QueueOverflowProbe::kNormalCount, probe._normalRanCount.load() );
     SW_EXPECT_EQUAL( 0, probe._highOutOfOrderCount.load() );
     SW_EXPECT_EQUAL( 0, probe._lowOutOfOrderCount.load() );
+    manager.shutdown();
+}
+
+/**
+ * @brief 워커가 아닌 스레드가 메인 스레드 큐 용량(1024)보다 많은 메인 전용 일을 넣어도 메인을 기다리지 않고 끝나고, 메인이 비우면 모두 한 번씩 돈다
+ * @details 예전에는 메인 큐가 차면 넣는 스레드가 메인을 깨우고 양보하며 돌았다 — 메인이 그 스레드를 기다리고 있으면 둘 다 멈췄다. 여기서 메인은 넣는 스레드가
+ *          끝나기를 먼저 기다린 뒤에야 비운다(그 순서가 예전에는 끝나지 않았다).
+ */
+SW_TEST_CASE( TaskManagerTest, MainThreadQueuePastCapacityDoesNotWaitForTheMainThread )
+{
+    sw::TaskManager manager;
+    SW_REQUIRE_TRUE( manager.initialize( 1 ) );
+    constexpr int32   kTaskCount = 1024 * 2 + 16;
+    sw::atomic<int32> ranCount{ 0 };
+    sw::atomic<int32> wrongThreadCount{ 0 };
+
+    std::thread producer{ [&manager, &ranCount, &wrongThreadCount]()
+    {
+        for ( int32 index = 0; index < kTaskCount; ++index )
+        {
+            sw::TaskHandle handle = manager.emplaceTask( "MainOverflow", SW_DELEGATE_LAMBDA( sw::TaskDelegate, [&manager, &ranCount, &wrongThreadCount]()
+            {
+                if ( manager.isMainThread() == false )
+                    wrongThreadCount.fetch_add( 1, std::memory_order_relaxed );
+                ranCount.fetch_add( 1, std::memory_order_relaxed );
+            } ),
+                                                         sw::TaskThreadAffinity::MainThread );
+            handle.submit();
+        }
+    } };
+    producer.join(); // 메인은 아직 비우지 않는다 — 넣는 쪽이 메인을 기다리면 여기서 끝나지 않는다
+    SW_EXPECT_EQUAL( 0, ranCount.load() );
+
+    manager.dispatchMainThreadTasks();
+    manager.waitAll( "TaskManagerTest" );
+    SW_EXPECT_EQUAL( kTaskCount, ranCount.load() );
+    SW_EXPECT_EQUAL( 0, wrongThreadCount.load() );
     manager.shutdown();
 }

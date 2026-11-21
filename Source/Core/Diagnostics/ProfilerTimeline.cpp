@@ -10,7 +10,6 @@
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Network/Connection/NetFlowLog.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
@@ -38,6 +37,9 @@ namespace sw
             void*       _pBuffer{ nullptr };
         };
         thread_local ThreadBufferCache t_threadBufferCache{};
+
+        /** @brief 기록 중인 타임라인 수입니다(`ProfilerTimeline::isAnyTimelineRecording`). 네트워크 흐름 링이 메시지마다 읽는 프로세스 칸이다. */
+        atomic<uint32> s_recordingTimelineCount{ 0 };
     } // namespace
 } // namespace sw
 
@@ -144,16 +146,25 @@ namespace sw
     {
         const bool bWasRecording = _bRecording.exchange( bRecording, std::memory_order_relaxed );
 #if !defined( SW_SHIPPING )
-        // 타임라인이 기록하는 동안 네트워크 흐름도 남긴다 — 트레이스 저장이 같은 구간의 흐름을 함께 쓴다(`NetFlowLog`).
+        // 타임라인이 기록하는 동안 네트워크 흐름도 남는다 — 흐름 링(`NetFlowLog`)이 이 수를 읽는다(트레이스 저장이 같은 구간의 흐름을 함께 쓴다).
         if ( bWasRecording != bRecording )
         {
             if ( bRecording )
-                NetFlowLog::addRecorder();
+                s_recordingTimelineCount.fetch_add( 1, std::memory_order_relaxed );
             else
-                NetFlowLog::removeRecorder();
+                s_recordingTimelineCount.fetch_sub( 1, std::memory_order_relaxed );
         }
 #else
         (void)bWasRecording; // 흐름 링은 트레이스 내보내기가 있는 구성에만 있다
+#endif
+    }
+
+    bool ProfilerTimeline::isAnyTimelineRecording()
+    {
+#if !defined( SW_SHIPPING )
+        return s_recordingTimelineCount.load( std::memory_order_relaxed ) != 0;
+#else
+        return false;
 #endif
     }
 

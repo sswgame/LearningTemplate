@@ -90,7 +90,7 @@ namespace sw
     enum class CommandLineArgument : uint8
     {
 /** @brief ArgumentList.xxx 한 줄을 열거 멤버로 펼칩니다. */
-#define SW_REGISTER_ARGUMENT( name, defaultValue, ... ) name,
+#define SW_REGISTER_ARGUMENT( name, ... ) name,
 #include "Core/Predefined/ArgumentList.xxx"
 
 #undef SW_REGISTER_ARGUMENT
@@ -103,8 +103,8 @@ namespace sw
      */
     inline constexpr const utf8* kArrCommandLineArgumentSpelling[] = {
 /** @brief 줄의 철자 목록(`...`)에서 첫 철자만 고릅니다. 철자가 하나뿐인 줄에서도 가변 인자가 비지 않게 뒤에 nullptr 를 붙여 부릅니다. */
-#define SW_ARGUMENT_FIRST_SPELLING( first, ... )                                first
-#define SW_REGISTER_ARGUMENT( name, usage, defaultValue, useDefaultValue, ... ) SW_ARGUMENT_FIRST_SPELLING( __VA_ARGS__, nullptr ),
+#define SW_ARGUMENT_FIRST_SPELLING( first, ... )              first
+#define SW_REGISTER_ARGUMENT( name, usage, valueSample, ... ) SW_ARGUMENT_FIRST_SPELLING( __VA_ARGS__, nullptr ),
 #include "Core/Predefined/ArgumentList.xxx"
 
 #undef SW_REGISTER_ARGUMENT
@@ -140,16 +140,15 @@ namespace sw
      */
     class SW_API CommandLineManager final
     {
-        /** @brief 인자 하나의 현재 값 · 기본값 · 파싱 여부입니다. */
+        /** @brief 인자 하나의 현재 값 · 저장 타입 견본 · 파싱 여부입니다. */
         struct ArgumentInfo
         {
             using Value = std::variant<int32, bool, float32, string, CommandLineDiskPath>;
 
             Value                  _value;
-            Value                  _defaultValue;
-            uint8                  _bUseDefaultValue : 1;
-            uint8                  _bParsed          : 1;
-            [[maybe_unused]] uint8 _reserved         : 6;
+            Value                  _valueSample; ///< 저장 타입을 정하는 견본(표의 `valueSample`). 값은 읽지 않는다
+            uint8                  _bParsed  : 1;
+            [[maybe_unused]] uint8 _reserved : 7;
 
             /**
              * @brief 값을 비우고 플래그를 끕니다.
@@ -158,8 +157,7 @@ namespace sw
              */
             ArgumentInfo()
                 : _value{}
-                , _defaultValue{}
-                , _bUseDefaultValue{ SW_FALSE }
+                , _valueSample{}
                 , _bParsed{ SW_FALSE }
                 , _reserved{ 0 } {}
 
@@ -170,7 +168,7 @@ namespace sw
              *          `-gv_stressTestMeshes` 를 받아 주면 int32 항목에 bool 이 들어가고, `readValue` 의 `get_if<int32>` 가 nullptr 을
              *          반환해 **경고 한 줄 없이 아무 일도 일어나지 않습니다.**
              */
-            bool isFlagArgument() const { return std::holds_alternative<bool>( _defaultValue ); }
+            bool isFlagArgument() const { return std::holds_alternative<bool>( _valueSample ); }
         };
 
     public:
@@ -277,11 +275,10 @@ namespace sw
          * @tparam T 저장 타입. **값을 반드시 적어야 하는지도 이것으로 정해집니다.** `bool` 이면 `-key` 만 적을 수 있고(그때
          *         true), 나머지는 `-key=value` 를 요구합니다(`ArgumentInfo::isFlagArgument`).
          * @param listAlias 이 인자를 부르는 이름들. 하나라도 이미 쓰이고 있으면 **아무것도 넣지 않습니다.**
-         * @param defaultValue `bUseDefaultValue` 가 켜져 있을 때 `getArgument` 가 반환할 값
-         * @param bUseDefaultValue 인자를 주지 않아도 `getArgument` 가 true 를 반환할지 여부
+         * @param valueSample 저장 타입을 정하는 견본 값(값 자체는 쓰이지 않는다 — 주지 않은 인자는 `getArgument` 가 false)
          */
         template <typename T>
-        void addArgument( const std::initializer_list<string_view>& listAlias, T defaultValue, bool bUseDefaultValue );
+        void addArgument( const std::initializer_list<string_view>& listAlias, T valueSample );
         /** @brief `initialize` 가 줄마다 부릅니다 — 다음 등록이 열거값 @p expected 자리인지 단언합니다(단언을 줄마다 펼치지 않으려고 함수로 둔다). */
         void assertRegistrationOrder( CommandLineArgument expected, const utf8* pName ) const;
 
@@ -374,8 +371,6 @@ namespace sw
         const ArgumentInfo::Value* pTargetValue{ nullptr };
         if ( argument._bParsed != SW_FALSE )
             pTargetValue = &argument._value;
-        else if ( argument._bUseDefaultValue != SW_FALSE )
-            pTargetValue = &argument._defaultValue;
         else
             return false;
 
@@ -428,7 +423,7 @@ namespace sw
     }
 
     template <typename T>
-    void CommandLineManager::addArgument( const std::initializer_list<string_view>& listAlias, T defaultValue, const bool bUseDefaultValue )
+    void CommandLineManager::addArgument( const std::initializer_list<string_view>& listAlias, T valueSample )
     {
         // 먼저 모두 검사한다. 겹치는 이름을 만난 즉시 돌아가면 그 앞에서 이미 넣은 별칭들이 끝내 만들어지지
         // 않는 인덱스를 가리킨 채 남고, 그 별칭으로 조회하면 _listArgument 범위 밖을 읽는다.
@@ -442,8 +437,7 @@ namespace sw
         }
 
         ArgumentInfo argument{};
-        argument._bUseDefaultValue = bUseDefaultValue ? SW_TRUE : SW_FALSE;
-        argument._defaultValue     = std::move( defaultValue );
+        argument._valueSample = std::move( valueSample );
 
         const uint32 newArgumentIndex = static_cast<uint32>( _listArgument.size() );
         _listArgument.push_back( std::move( argument ) );

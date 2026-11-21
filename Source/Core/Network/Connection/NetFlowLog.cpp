@@ -8,6 +8,7 @@
 
     #include "Core/Algorithm/CompareUtil.h"
     #include "Core/Concurrency/atomic.h"
+    #include "Core/Diagnostics/ProfilerTimeline.h"
     #include "Core/Foundation/StdHeaders.h"
     #include "Core/Hash/HashUtil.h"
     #include "Core/Time/MonotonicClock.h"
@@ -21,7 +22,6 @@ namespace sw
         {
             static constexpr uint32 kCapacity = NetFlowLog::kCapacity;
 
-            atomic<uint32> _recorderCount{ 0 }; ///< 기록하는 쪽의 수 — 0 이면 남기지 않는다
             atomic<uint64> _writeCount{ 0 };
             atomic<uint64> _arrStamp[kCapacity]{}; ///< 쓴 번호 + 1, 쓰는 중이면 0
             atomic<uint64> _arrNanos[kCapacity]{};
@@ -31,7 +31,7 @@ namespace sw
 
         /**
          * @brief 프로세스에 하나인 흐름 링입니다. 연결(`NetConnection`)이 보낼 때마다 잠금 없이 기록하는 핫 경로라 서비스 범위를 찾지 않는다(Core 의 아래 층이기도 하다).
-         * @details 원자 변수뿐이라 상수 초기화되므로 지연 생성하는 접근자를 두지 않고 이 변수 하나가 소유한다. 기록하는 쪽이 없으면(`_recorderCount` 0) 쓰지 않는다.
+         * @details 원자 변수뿐이라 상수 초기화되므로 지연 생성하는 접근자를 두지 않고 이 변수 하나가 소유한다. 기록 중인 타임라인이 없으면(`ProfilerTimeline::isAnyTimelineRecording`) 쓰지 않는다.
          */
         NetFlowRing s_ring;
 
@@ -52,21 +52,11 @@ namespace sw
         return ( connection << ( kIndexBits + kChannelBits ) ) | ( channelBit << kIndexBits ) | ( wireIndex & ( ( 1ull << kIndexBits ) - 1ull ) );
     }
 
-    void NetFlowLog::addRecorder()
-    {
-        s_ring._recorderCount.fetch_add( 1, std::memory_order_relaxed );
-    }
-
-    void NetFlowLog::removeRecorder()
-    {
-        s_ring._recorderCount.fetch_sub( 1, std::memory_order_relaxed );
-    }
-
     void NetFlowLog::record( uint64 id, uint8 kind, bool bReceive )
     {
-        NetFlowRing& ring = s_ring;
-        if ( ring._recorderCount.load( std::memory_order_relaxed ) == 0 )
+        if ( ProfilerTimeline::isAnyTimelineRecording() == false )
             return;
+        NetFlowRing& ring       = s_ring;
         const uint64 writeIndex = ring._writeCount.fetch_add( 1, std::memory_order_relaxed );
         const uint32 cell       = static_cast<uint32>( writeIndex % NetFlowRing::kCapacity );
         ring._arrStamp[cell].store( 0, std::memory_order_relaxed );

@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Foundation/Macros.h"
+#include "Core/Foundation/ObserverSlot.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/MemoryTag.h"
@@ -82,7 +83,7 @@ namespace sw
 namespace sw
 {
     // ------------------------------------------------------------------------------
-    // 1) Memory — allocateAligned / freeAligned 와 바이트 유틸리티(모두 static)
+    // 1) Memory — 할당 · 정렬 할당 · 해제(해제 길은 하나)와 바이트 유틸리티(모두 static)
     // ------------------------------------------------------------------------------
     /** @brief 플랫폼 정렬 할당과 바이트 복사 · 채우기 · 비교입니다. */
     struct SW_API Memory
@@ -95,12 +96,6 @@ namespace sw
          */
         static void* allocateAligned( size_t size, size_t alignment );
 
-        /**
-         * @brief allocateAligned 로 할당한 메모리 블록을 해제합니다.
-         * @param pPtr 해제할 메모리 포인터
-         */
-        static void freeAligned( void* pPtr );
-
         /** @brief pSrc 에서 pDest 로 size 바이트를 복사합니다. */
         static void* copy( void* pDest, const void* pSrc, size_t size );
         /** @brief 겹칠 수 있는 영역 pSrc 에서 pDest 로 size 바이트를 옮깁니다(memmove). */
@@ -112,37 +107,50 @@ namespace sw
         /** @brief 두 버퍼의 size 바이트를 비교합니다. 같으면 0 입니다. */
         static int32 compare( const void* pLhs, const void* pRhs, size_t size );
 
-        // 일반 할당 함수
+        /** @brief 기본 정렬(`__STDCPP_DEFAULT_NEW_ALIGNMENT__`) 블록을 잡습니다. 실패하면 nullptr 입니다. */
         static void* allocate( size_t size );
-        static void  free( void* pPtr );
+        /**
+         * @brief `allocate` · `allocateAligned` 로 잡은 블록을 풉니다. nullptr 이면 아무것도 하지 않습니다.
+         * @details **해제 길은 하나다.** 정렬 블록을 따로 푸는 함수가 있으면 부르는 쪽이 짝을 골라야 하고, 틀리면 백엔드에 따라 힙이 깨졌다(CRT 의 Windows 정렬 블록) —
+         *          그래서 CRT 백엔드는 Windows 에서 모든 블록을 정렬 힙(`_aligned_malloc`)에서 잡는다(언리얼 `FMalloc::Free` 도 하나다).
+         */
+        static void free( void* pPtr );
 
         /**
          * @brief 용도 태그를 그 자리에서 정해 할당합니다(스레드의 태그 스코프를 보지 않는다). 해제는 보통의 `free` 입니다.
          * @details 버퍼를 잡는 곳과 쓰는 하위 시스템이 다를 때 씁니다 — 예컨대 IO 스레드가 텍스처 로드를 위해 잡는 버퍼. 배포본에서는 태그를 버립니다.
          */
         static void* allocate( size_t size, MemoryTag tag );
-        /** @brief `allocate( size, tag )` 의 정렬 판입니다. 해제는 `freeAligned` 입니다. */
+        /** @brief `allocate( size, tag )` 의 정렬 판입니다. 해제는 보통의 `free` 입니다. */
         static void* allocateAligned( size_t size, size_t alignment, MemoryTag tag );
 
         /** @brief 할당 블록 하나가 사용자 크기 앞에 더 잡는 헤더 바이트입니다(크기 · 태그 · 콜스택 해시). 배포본은 헤더가 없어 0 입니다. */
         static size_t getAllocationHeaderSize();
 
-        /**
-         * @brief 할당 · 해제를 밖(외부 프로파일러)에 알리는 관찰자를 등록합니다. 배포본에서는 아무것도 하지 않습니다(헤더가 없다).
-         * @details 관찰자가 등록된 동안 할당된 블록에만 표시를 남기고, **그 블록의 해제만** 알립니다 — 관찰자를 등록하기 전에 잡은 블록의 해제를
-         *          알리면 받는 쪽(Tracy)은 짝 없는 해제로 기록을 멈춥니다. @p pObserver 는 `unregisterAllocationObserver` 까지 살아 있어야 합니다.
-         */
-        static void registerAllocationObserver( const MemoryAllocationObserver* pObserver );
-        /** @brief 등록된 할당 관찰자를 해제합니다. 배포본에서는 아무것도 하지 않습니다. */
-        static void unregisterAllocationObserver();
+        /** @brief 할당 관찰자 등록 토큰입니다. 토큰이 사라지면 관찰자를 뗍니다. */
+        using AllocationObserverRegistration = ObserverSlot<const MemoryAllocationObserver>::Registration;
+        /** @brief 할당 기록기 등록 토큰입니다. 토큰이 사라지면 기록기를 뗍니다. */
+        using AllocationTrackerRegistration = ObserverSlot<IAllocationTracker>::Registration;
 
         /**
-         * @brief 할당 기록기를 겁니다. 이미 다른 기록기가 걸려 있으면 아무것도 하지 않습니다.
-         * @param pTracker 뗄 때까지 살아 있어야 합니다.
+         * @brief 할당 · 해제를 밖(외부 프로파일러)에 알리는 관찰자를 겁니다. 배포본은 블록 헤더가 없어 알리지 않습니다.
+         * @details 관찰자가 걸린 동안 할당된 블록에만 표시를 남기고, **그 블록의 해제만** 알립니다 — 관찰자를 걸기 전에 잡은 블록의 해제를
+         *          알리면 받는 쪽(Tracy)은 짝 없는 해제로 기록을 멈춥니다. 관찰자는 하나이고 이미 걸려 있으면 이중 등록 단언입니다(덮어쓰지 않는다).
+         *          @p pObserver 는 돌려준 토큰이 사라질 때까지 살아 있어야 합니다.
          */
-        static void registerAllocationTracker( IAllocationTracker* pTracker );
-        /** @brief @p pTracker 가 걸린 기록기이면 뗍니다. */
-        static void unregisterAllocationTracker( IAllocationTracker* pTracker );
+        [[nodiscard]] static AllocationObserverRegistration registerAllocationObserver( const MemoryAllocationObserver* pObserver );
+
+        /**
+         * @brief 할당 기록기를 겁니다. 먼저 건 기록기가 주인이라 이미 걸려 있으면 빈 토큰입니다(`isActive()` 가 false — 엔진 기록기가 걸린 뒤 테스트의 지역 기록기).
+         * @param pTracker 돌려준 토큰이 사라질 때까지 살아 있어야 합니다.
+         */
+        [[nodiscard]] static AllocationTrackerRegistration registerAllocationTracker( IAllocationTracker* pTracker );
+
+        /**
+         * @brief 이 스레드가 지금까지 한 sw 할당 횟수입니다. 배포본은 블록 헤더 경로가 없어 늘 0 입니다.
+         * @details 테스트 계수기(`test::ScopedAllocationCount`)가 앞뒤 차이로 센다 — 관찰자 칸을 빌리지 않으므로 프로파일러 관찰자와 부딪히지 않는다.
+         */
+        [[nodiscard]] static uint64 getThreadAllocationCount();
 
         /** @brief 현재 스레드의 할당 태그를 설정합니다. 보통은 구조 자리(서브시스템 생성 · 초기화, 에셋 로더, 모듈 경계, 스레드 · 태스크 상속)가 `ScopedMemoryTag` 로 겁니다. */
         static void setCurrentMemoryTag( MemoryTag tag );
@@ -154,13 +162,10 @@ namespace sw
 namespace sw
 {
     /**
-     * @brief `T` 를 담는 블록을 정렬 할당(`allocateAligned` · `freeAligned`)으로 잡아야 하는지입니다.
-     * @details **`sw_delete` · `make_unique` · `Allocator` 가 모두 이 한 기준을 씁니다.** 기준은 컴파일러가 정렬 `operator new` 를
+     * @brief `T` 를 담는 블록을 정렬 할당(`allocateAligned`)으로 잡아야 하는지입니다. 할당 쪽만 본다 — 해제는 `Memory::free` 하나다.
+     * @details **`make_unique` · `Allocator` · `sw_new_array_func` 가 이 한 기준을 씁니다.** 기준은 컴파일러가 정렬 `operator new` 를
      *          고르는 경계(`__STDCPP_DEFAULT_NEW_ALIGNMENT__`, x64 에서 16)입니다. `Memory::allocate` 는 16 바이트 정렬을 보장합니다(헤더 48 바이트).
-     *
-     *          주의: 할당과 해제가 다른 기준을 보면 힙이 깨집니다. 예컨대 `alignof( std::max_align_t )` 는 MSVC 에서 **8** 이라, 한쪽만
-     *          그것을 보면 16 바이트 정렬 타입이 일반 할당으로 잡히고 정렬 해제로 풀립니다. 64 바이트 정렬 타입(`ParallelGroup` 등)과
-     *          `vector` · `make_shared` 에 담긴 과정렬 타입도 이 기준으로 정렬 할당을 받습니다.
+     *          64 바이트 정렬 타입(`ParallelGroup` 등)과 `vector` · `make_shared` 에 담긴 과정렬 타입도 이 기준으로 정렬 할당을 받습니다.
      */
     template <typename T>
     inline constexpr bool kUsesAlignedAllocation = alignof( T ) > __STDCPP_DEFAULT_NEW_ALIGNMENT__;
@@ -195,13 +200,7 @@ namespace sw
             throw std::bad_alloc();
         }
 
-        void deallocate( T* p, size_t ) noexcept
-        {
-            if constexpr ( kUsesAlignedAllocation<T> )
-                Memory::freeAligned( static_cast<void*>( p ) );
-            else
-                Memory::free( static_cast<void*>( p ) );
-        }
+        void deallocate( T* p, size_t ) noexcept { Memory::free( static_cast<void*>( p ) ); }
     };
 
     template <typename T, typename U>
@@ -237,10 +236,7 @@ void sw_delete( T* pPtr )
     if ( pPtr != nullptr )
     {
         pPtr->~T();
-        if constexpr ( sw::kUsesAlignedAllocation<T> )
-            sw::Memory::freeAligned( pPtr );
-        else
-            sw::Memory::free( const_cast<void*>( static_cast<const void*>( pPtr ) ) );
+        sw::Memory::free( const_cast<void*>( static_cast<const void*>( pPtr ) ) );
     }
 }
 
@@ -255,12 +251,7 @@ void sw_delete_array_func( T* pPtr )
     static_assert( std::is_trivially_destructible_v<T>,
                    "sw_delete_array_func 는 원소 소멸자를 부르지 않습니다. vector<T> 또는 FixedCountArray<T, N> 을 쓰세요." );
     if ( pPtr != nullptr )
-    {
-        if constexpr ( sw::kUsesAlignedAllocation<T> )
-            sw::Memory::freeAligned( pPtr );
-        else
-            sw::Memory::free( const_cast<void*>( static_cast<const void*>( pPtr ) ) );
-    }
+        sw::Memory::free( const_cast<void*>( static_cast<const void*>( pPtr ) ) );
 }
 
 // `static_cast<void*>` 를 끼운다. T 가 포인터일 때(`vector<char*>` 등) `char**` → `void*` 가 암시적 다단 포인터
@@ -304,10 +295,7 @@ void sw_delete_array_func( T* pArray, size_t count )
     if ( pArray == nullptr )
         return;
     std::destroy_n( pArray, count );
-    if constexpr ( sw::kUsesAlignedAllocation<T> )
-        sw::Memory::freeAligned( pArray );
-    else
-        sw::Memory::free( const_cast<void*>( static_cast<const void*>( pArray ) ) );
+    sw::Memory::free( const_cast<void*>( static_cast<const void*>( pArray ) ) );
 }
 
 namespace sw
@@ -319,14 +307,11 @@ namespace sw
 
         /**
          * @brief 파생 타입의 해제자에서 기반 타입의 해제자로 바꿉니다(`unique_ptr<Derived>` → `unique_ptr<Base>`).
-         * @details 정렬 할당 타입(`kUsesAlignedAllocation`)은 정렬 해제로만 놓아야 한다. 기반 타입이 기본 정렬이면 기반 포인터로 지우는 해제는 일반 해제를
-         *          골라 할당 헤더를 엉뚱한 자리에서 읽는다(배포본 · ASan 에서 힙 손상, Debug 는 조용하다). 그래서 정렬 할당 여부가 다른 변환은 컴파일 오류다 —
-         *          그런 객체는 제 타입으로 들거나, 넘긴 타입으로 지우는 소유자(`SubsystemCollection::add`)에 넘긴다.
+         * @details 해제 길이 하나라 과정렬 파생 타입도 기반 포인터로 지울 수 있다(예전에는 정렬 해제 짝이 달라 컴파일 오류로 막았다).
          */
         template <typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
         default_delete( const default_delete<U>& ) noexcept
         {
-            static_assert( kUsesAlignedAllocation<U> == kUsesAlignedAllocation<T>, "an over-aligned object must be deleted as its own type" );
         }
 
         void operator()( T* pPtr ) const
@@ -406,10 +391,7 @@ namespace sw
             catch ( ... )
             {
                 // 생성자가 던지면 소유자가 아직 없다 — 블록을 여기서 풀고 다시 던진다(옛 `sw_new` 의 짝 operator delete 가 하던 일).
-                if constexpr ( kUsesAlignedAllocation<T> )
-                    Memory::freeAligned( pMem );
-                else
-                    Memory::free( pMem );
+                Memory::free( pMem );
                 throw;
             }
         }

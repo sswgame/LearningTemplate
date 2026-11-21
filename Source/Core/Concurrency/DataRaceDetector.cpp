@@ -13,7 +13,7 @@ namespace sw
     namespace
     {
         /** @brief 걸린 경합 보고 함수입니다. 경합을 찾았을 때만 읽습니다. */
-        atomic<DataRaceReportFunction> s_pReportFunction{ nullptr };
+        ObserverSlot<DataRaceReportSignature> s_reportFunctionSlot{};
 
 #if defined( SW_DO_CHECKS )
         static constexpr uint32 kWriterBitShift = 16;
@@ -36,9 +36,19 @@ namespace sw
 
 namespace sw
 {
-    void RaceDetectContext::setReportFunction( DataRaceReportFunction pFunction )
+    RaceDetectContext::ReportFunctionRegistration RaceDetectContext::bindReportFunction( DataRaceReportFunction pFunction )
     {
-        s_pReportFunction.store( pFunction, std::memory_order_release );
+        return s_reportFunctionSlot.bind( pFunction );
+    }
+
+    RaceDetectContext::ReportFunctionSuspension RaceDetectContext::suspendReportFunction()
+    {
+        return ReportFunctionSuspension{ s_reportFunctionSlot };
+    }
+
+    DataRaceReportFunction RaceDetectContext::getReportFunction()
+    {
+        return s_reportFunctionSlot.get();
     }
 
 #if defined( SW_DO_CHECKS )
@@ -129,7 +139,7 @@ namespace sw
         const uint32                 state   = _state.load( std::memory_order_relaxed );
         const uint32                 readers = state & kCountMask;
         const uint32                 writers = ( state >> kWriterBitShift ) & kCountMask;
-        const DataRaceReportFunction pReport = s_pReportFunction.load( std::memory_order_acquire );
+        const DataRaceReportFunction pReport = s_reportFunctionSlot.get();
         // 보고 스택은 지금(늦게 들어온) 스레드 것뿐이다 — 먼저 들어와 있던 스레드(주인)를 id 로 함께 적어 상대를 찾을 수 있게 한다.
         // id 는 GL 컨텍스트 로그 · 크래시 보고와 같은 `std::hash<std::thread::id>` 값이라 렌더 스레드 등과 맞춰 볼 수 있다.
         char arrMessage[256]{};

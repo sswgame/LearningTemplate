@@ -5,7 +5,7 @@
  */
 #include "pch.h"
 
-#include "Core/Container/map.h"
+#include "Core/Container/flat_map.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
@@ -36,7 +36,7 @@ namespace
             size_t getStoredCount() const { return _mapStored.size(); }
 
         private:
-            map<string, vector<uint8>> _mapStored;
+            flat_map<string, vector<uint8>> _mapStored;
         };
 
         /** @brief 플레이 중인 세션 하나를 꾸밉니다 — 롤백 스냅샷 · 남길 변경 · 맡기지 않을 편집 막기와 거절 기록까지. */

@@ -17,7 +17,7 @@ from common.paths import get_project_root
 from common.run_process import run_process
 
 ARGUMENT_TABLE = Path('Source') / 'Core' / 'Predefined' / 'ArgumentList.xxx'
-ARGUMENT_LINE = re.compile(r'^SW_REGISTER_ARGUMENT\(\s*\w+\s*,\s*(\w+)\s*,\s*([^,]+?)\s*,\s*\w+\s*,\s*(.+?)\s*\)\s*$', re.MULTILINE)
+ARGUMENT_LINE = re.compile(r'^SW_REGISTER_ARGUMENT\(\s*\w+\s*,\s*(\w+)\s*,\s*([^,]+?)\s*,\s*(.+?)\s*\)\s*$', re.MULTILINE)
 #: 쓰는 구성(`CommandLineArgumentUsage`) 중 배포 구성이 철자를 등록하지 않는 것 — 배포 App 에 주면 기동이 멈춘다.
 SHIPPING_REJECTED_USAGE_SET = frozenset({'Dev', 'Test', 'AndroidDev'})
 GLOBAL_VARIABLE = re.compile(r'SW_[A-Z_]*GLOBAL_VARIABLE[A-Z_]*\(\s*[\w:<> ]+?\s*,\s*(gv_\w+)\s*,')

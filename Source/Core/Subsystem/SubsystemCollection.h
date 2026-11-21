@@ -115,11 +115,11 @@ namespace sw
         /** @brief 마지막 `shutdownAll` 에서 내린 서브시스템의 시간입니다(내린 순서). `destroyAll` 이 비운다 — 그 전에 읽는다. */
         const vector<SubsystemTiming>& getShutdownTimings() const { return _listShutdownTiming; }
         /**
-         * @brief 기동 · 종료 시간을 재는 단조 시계(나노초)를 정합니다. 없으면(기본) 재지 않습니다.
-         * @details Subsystem 층은 Time 층을 include 할 수 없어 위 층이 함수로 건넨다. `MonotonicClock::nowNanoseconds` 를 넘긴다.
-         *          종료도 잰다 — 로그 없이 오래 걸린 종료(Debug 의 자식 클라이언트가 15 초 시한에 걸렸다)가 어느 서브시스템인지 줄 하나로 보인다.
+         * @brief 기동 · 종료 시간을 잴지 정합니다(기본은 재지 않음). 단조 시계(`MonotonicClock`)를 직접 읽는다.
+         * @details 종료도 잰다 — 로그 없이 오래 걸린 종료(Debug 의 자식 클라이언트가 15 초 시한에 걸렸다)가 어느 서브시스템인지 줄 하나로 보인다.
+         *          예전에는 Subsystem 층이 Time 층 아래라 위 층이 시계를 함수 포인터로 건넸다 — Time 을 티어 2 로 내려 우회를 없앴다.
          */
-        void setTimingClock( int64 ( *pClockNanos )() noexcept ) { _pClockNanos = pClockNanos; }
+        void setTimingEnabled( bool bEnabled ) { _bTimingEnabled = bEnabled ? SW_TRUE : SW_FALSE; }
         /** @brief `shutdownDependents` 가 내리고 아직 다시 세우지 않은 서브시스템(자리, 초기화 순서)입니다. */
         const vector<uint32>& getStoppedIndices() const { return _listStopped; }
         /** @brief 정렬 오류 · 초기화 실패입니다. 없으면 빈 글입니다. */
@@ -189,7 +189,7 @@ namespace sw
         vector<SubsystemTiming> _listInitTiming;     ///< `initializeAll` 이 잰 초기화 시간(`getInitTimings`)
         vector<SubsystemTiming> _listShutdownTiming; ///< `shutdownAll` 이 잰 종료 시간(`getShutdownTimings`)
         string                  _error;              ///< 정렬 오류 · 초기화 실패
-        uint8                   _bSorted : 1;        ///< 마지막 추가 뒤에 정렬했는가
-        int64 ( *_pClockNanos )() noexcept;          ///< `setTimingClock` 의 시계. nullptr 이면 시간을 재지 않는다
+        uint8                   _bSorted        : 1; ///< 마지막 추가 뒤에 정렬했는가
+        uint8                   _bTimingEnabled : 1; ///< 기동 · 종료 시간을 재는가(`setTimingEnabled`)
     };
 } // namespace sw

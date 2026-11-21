@@ -1,8 +1,10 @@
 /**
  * @file atomic.h
- * @brief PROPERTY 로 노출하고 직렬화할 수 있는 원자 값 래퍼입니다.
- * @details std::atomic 은 복사도 memcpy 도 할 수 없어서 리플렉션 프로퍼티로 쓸 수 없습니다. 이 래퍼는 load/store 로 값을
- *          옮기므로 텍스트 · 바이너리 핸들러와 PROPERTY() 를 쓸 수 있습니다.
+ * @brief 엔진 기본 원자 값(`sw::atomic`)과, PROPERTY 로 노출 · 직렬화하는 복사되는 원자 값(`sw::reflected_atomic`)입니다.
+ * @details `sw::atomic` 은 `std::atomic` 처럼 **복사되지 않습니다** — 다른 스레드가 쓰는 칸을 복사하면 두 읽기 사이의 값을 말없이 찢어 옮긴다.
+ *          예전에는 리플렉션 프로퍼티 때문에 모든 원자 값이 복사돼 엔진 전체(약 900곳)의 원자 칸이 말없이 복사될 수 있었다.
+ *          이동은 남긴다 — 칸을 홀로 쥔 주인이 컨테이너 재배치 · 이름 있는 값 반환으로 옮기는 자리다(`std::move` 가 부른 자리에 보인다).
+ *          리플렉션 프로퍼티(`PROPERTY()` 칸, 리플렉션 기본형 `atomic_bool`)는 대입으로 값을 옮겨야 해서 복사되는 `reflected_atomic` 을 쓴다.
  */
 #pragma once
 #include "Core/Foundation/Types.h"
@@ -12,7 +14,7 @@
 namespace sw
 {
     /**
-     * @brief std::atomic<T> 를 감싼 값입니다. 복사와 직렬화는 저장된 값만 옮깁니다.
+     * @brief std::atomic<T> 를 감싼 값입니다. 복사는 막고 이동은 저장된 값만 옮깁니다.
      */
     template <typename T>
     class atomic
@@ -28,10 +30,7 @@ namespace sw
         {
         }
 
-        atomic( const atomic& other ) noexcept
-            : _value{ other.load() }
-        {
-        }
+        atomic( const atomic& ) = delete;
 
         atomic( atomic&& other ) noexcept
             : _value{ other.load() }
@@ -40,11 +39,7 @@ namespace sw
 
         ~atomic() = default;
 
-        atomic& operator=( const atomic& other ) noexcept
-        {
-            store( other.load() );
-            return *this;
-        }
+        atomic& operator=( const atomic& ) = delete;
 
         atomic& operator=( atomic&& other ) noexcept
         {
@@ -139,5 +134,54 @@ namespace sw
 
     private:
         std::atomic<T> _value;
+    };
+
+    /**
+     * @brief 리플렉션 프로퍼티용 복사되는 원자 값입니다(`PROPERTY()` 칸 · 리플렉션 기본형 `atomic_bool`). 복사 · 대입은 저장된 값만 옮깁니다.
+     * @details 리플렉션의 값 복사(`TypeInfo` 의 칸 대입) · 스키마 이전이 칸을 대입으로 옮긴다. 일반 원자 칸은 `sw::atomic` 을 쓴다 — 이 이름이 복사됨을 알린다.
+     */
+    template <typename T>
+    class reflected_atomic final : public atomic<T>
+    {
+    public:
+        constexpr reflected_atomic() noexcept
+            : atomic<T>{}
+        {
+        }
+
+        constexpr reflected_atomic( T desired ) noexcept
+            : atomic<T>{ desired }
+        {
+        }
+
+        reflected_atomic( const reflected_atomic& other ) noexcept
+            : atomic<T>{ other.load() }
+        {
+        }
+
+        reflected_atomic( reflected_atomic&& other ) noexcept
+            : atomic<T>{ other.load() }
+        {
+        }
+
+        ~reflected_atomic() = default;
+
+        reflected_atomic& operator=( const reflected_atomic& other ) noexcept
+        {
+            this->store( other.load() );
+            return *this;
+        }
+
+        reflected_atomic& operator=( reflected_atomic&& other ) noexcept
+        {
+            this->store( other.load() );
+            return *this;
+        }
+
+        reflected_atomic& operator=( T desired ) noexcept
+        {
+            this->store( desired );
+            return *this;
+        }
     };
 } // namespace sw

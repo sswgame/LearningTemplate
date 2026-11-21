@@ -277,7 +277,7 @@ namespace sw
             else if ( prop._typeName.isPredefinedType( PredefinedNameType::NameType_hashed_string ) )
                 sw_placement_new( pPropPtr ) hashed_string();
             else if ( prop._typeName.isPredefinedType( PredefinedNameType::NameType_atomic_bool ) )
-                sw_placement_new( pPropPtr ) atomic<bool>();
+                sw_placement_new( pPropPtr ) reflected_atomic<bool>();
             else if ( prop._typeName.isPredefinedType( PredefinedNameType::NameType_TagID ) )
                 sw_placement_new( pPropPtr ) TagID();
             else
@@ -314,7 +314,7 @@ namespace sw
             else if ( prop._typeName.isPredefinedType( PredefinedNameType::NameType_hashed_string ) )
                 std::destroy_at( static_cast<hashed_string*>( pPropPtr ) );
             else if ( prop._typeName.isPredefinedType( PredefinedNameType::NameType_atomic_bool ) )
-                std::destroy_at( static_cast<atomic<bool>*>( pPropPtr ) );
+                std::destroy_at( static_cast<reflected_atomic<bool>*>( pPropPtr ) );
             else if ( prop._typeName.isPredefinedType( PredefinedNameType::NameType_TagID ) )
                 std::destroy_at( static_cast<TagID*>( pPropPtr ) );
             else

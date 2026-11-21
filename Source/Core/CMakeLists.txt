@@ -48,6 +48,9 @@ foreach(tier_line IN LISTS list_core_tier_line)
 	string(REGEX MATCH "^\"?([A-Za-z0-9_/]+)\"?[ \t]*=[ \t]*([0-9]+)" ignored "${tier_line}")
 	set(core_tier_${CMAKE_MATCH_1} ${CMAKE_MATCH_2})
 endforeach()
+if(NOT DEFINED core_tier_Network)
+	message(FATAL_ERROR "[Core] ${core_tier_table} 의 [tier] 에서 Network 의 티어를 읽지 못했다 — 소켓 링크(ws2_32)를 걸 부분을 가를 수 없다")
+endif()
 if(NOT DEFINED core_tier_Log)
 	message(FATAL_ERROR "[Core] ${core_tier_table} 의 [tier] 에서 Log 의 티어를 읽지 못했다 — 로그가 있는 티어를 가를 수 없다")
 endif()
@@ -190,7 +193,11 @@ foreach(tier IN LISTS list_core_tier)
 		target_compile_definitions(${part_name} PRIVATE SW_EXPORTS)
 	endif()
 	if(WIN32)
-		target_link_libraries(${part_name} PUBLIC bcrypt comdlg32 ole32 shell32 dbghelp synchronization ws2_32)
+		target_link_libraries(${part_name} PUBLIC bcrypt comdlg32 ole32 shell32 dbghelp synchronization)
+		# 소켓은 맨 위 티어 Network 만 쓴다 — 다른 부분이 Winsock 을 물려받지 않는다(Core STATIC · Engine 은 아래에서 그대로 링크한다).
+		if(tier EQUAL core_tier_Network)
+			target_link_libraries(${part_name} PUBLIC ws2_32)
+		endif()
 	endif()
 	# `SW_LOG_TAG` · 등록자의 모듈 이름(`SW_REGISTRAR_MODULE` — Core 오브젝트가 들어가는 이미지 이름, Engine 과 같다)은 로그가 있는 티어만 정의한다.
 	# 부분마다 pch 를 따로 지으므로(clang 은 pch 와 `-D` 가 다르면 거부) 정의가 달라도 된다.
@@ -206,8 +213,8 @@ foreach(tier IN LISTS list_core_tier)
 	list(APPEND list_core_objects ${part_name})
 endforeach()
 
-# 벡터 거리 · 길이(`float3::getDistance` 등)는 파괴 · 파쇄가 쓰는 줄 밖 함수다 — 구성마다 같은 비트여야 한다(`sw_mark_deterministic_sources`).
-# 여기서 축약을 끄는 비용은 이 함수들의 FMA 하나씩이다(인라인이 아니라 호출 비용이 이미 더 크다). 결정적 삼각함수(`DeterministicMathUtil`)는 롤백 시뮬레이션이
+# 벡터 기본 연산(`float3::dot` · `getDistance` 등)은 `VectorMath.h` 끝의 축약을 끈 pragma 구간에서 헤더 인라인이다 — 부르는 TU 의 옵션과 상관없이 같은 비트다.
+# 여기 남는 Math .cpp 는 행렬 · 쿼터니언 · libm 을 부르는 줄 밖 함수다(구성마다 같은 비트여야 한다 — `sw_mark_deterministic_sources`). 결정적 삼각함수(`DeterministicMathUtil`)는 롤백 시뮬레이션이
 # libm 대신 부르는 줄 밖 함수라 같은 표시를 건다. 파쇄 다각형 삼각 분할(`Spatial/PolygonTriangulation`)도 파괴 사건 해시가 구성마다 같아야 해 같은 표시를 건다.
 # 광선 ↔ 도형 판정 · 방향 판정(`Math/Ray` · `Math/OrientationUtil`)은 결정적 시뮬레이션 키트(MechArena)가 부르는 줄 밖 실수 함수라 같은 표시를 건다.
 # Math 폴더는 통째로 건다(감사 C-14) — 손으로 적은 목록은 결정성 물리가 부르는 `MatrixMath`(쿼터니언 곱 · 회전) · `ValueNoise` 를 빠뜨렸다.

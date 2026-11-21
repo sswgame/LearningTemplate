@@ -28,8 +28,8 @@ namespace sw
             atomic<uint64> _creationEpoch{ 0 };
             /** @brief 파일 · 폴더를 지운 횟수입니다(`FileUtil::getRemovalEpoch`). */
             atomic<uint64> _removalEpoch{ 0 };
-            /** @brief 쓰기 입구 게이트입니다(`FileUtil::setWriteFilter`). 함수 포인터 하나라 상수 초기화된다. */
-            atomic<FileUtil::WriteFilter> _writeFilter{ nullptr };
+            /** @brief 쓰기 입구 게이트입니다(`FileUtil::bindWriteFilter` — 하나, 둘째 등록은 단언). 상수 초기화된다. */
+            ObserverSlot<FileUtil::WriteFilterSignature> _writeFilterSlot{};
             /** @brief 새로 만드는 자리의 이름 규칙입니다(`FileUtil::setCreateRule`). 함수 포인터 하나라 상수 초기화된다. */
             atomic<FileUtil::WriteFilter> _createRule{ nullptr };
             /** @brief 읽기 전용이 "체크아웃 안 함" 인 자리의 규칙입니다(`FileUtil::setCheckoutRule`). 함수 포인터 하나라 상수 초기화된다. */
@@ -834,9 +834,9 @@ namespace sw
         FileUtilInternal::s_writeCounters._removalEpoch.fetch_add( 1, std::memory_order_release );
     }
 
-    void FileUtil::setWriteFilter( WriteFilter filter )
+    FileUtil::WriteFilterRegistration FileUtil::bindWriteFilter( WriteFilter filter )
     {
-        FileUtilInternal::s_writeCounters._writeFilter.store( filter, std::memory_order_release );
+        return FileUtilInternal::s_writeCounters._writeFilterSlot.bind( filter );
     }
 
     void FileUtil::setCreateRule( WriteFilter rule )
@@ -846,7 +846,7 @@ namespace sw
 
     bool FileUtil::isWriteAllowed( string_view path )
     {
-        if ( const WriteFilter filter = FileUtilInternal::s_writeCounters._writeFilter.load( std::memory_order_acquire ); filter != nullptr )
+        if ( const WriteFilter filter = FileUtilInternal::s_writeCounters._writeFilterSlot.get(); filter != nullptr )
         {
             const expected<void> evaluation = filter( path );
             if ( evaluation.has_value() == false )
@@ -1201,7 +1201,7 @@ namespace sw
             return true;
 
         const string directory = trimTrailingSlashes( normalizeSeparators( directoryPath ) );
-        // 새 폴더도 새 자리다 — 이름 규칙(리소스 트리는 소문자)을 지난다. 자동화 쓰기 게이트는 보지 않는다(이미 있는 폴더에 흔히 부르는 입구다 — `setWriteFilter`).
+        // 새 폴더도 새 자리다 — 이름 규칙(리소스 트리는 소문자)을 지난다. 자동화 쓰기 게이트는 보지 않는다(이미 있는 폴더에 흔히 부르는 입구다 — `bindWriteFilter`).
         if ( isCreateAllowed( directory ) == false )
             return false;
         if ( FileUtilInternal::createDirectoryTree( directory ) )

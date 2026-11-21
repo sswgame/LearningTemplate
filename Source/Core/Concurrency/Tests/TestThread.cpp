@@ -30,18 +30,12 @@ namespace
     struct ScopedHostLockObserverRemoval
     {
 
-        ILockObserver* _pPrevious;
+        mutex::LockObserverSuspension _suspension;
         ScopedHostLockObserverRemoval()
-            : _pPrevious{ mutex::getLockObserver() }
+            : _suspension{ mutex::suspendLockObserver() }
         {
-            if ( _pPrevious != nullptr )
-                mutex::unregisterLockObserver( _pPrevious );
         }
-        ~ScopedHostLockObserverRemoval()
-        {
-            if ( _pPrevious != nullptr )
-                mutex::registerLockObserver( _pPrevious );
-        }
+        ~ScopedHostLockObserverRemoval()                                                 = default;
         ScopedHostLockObserverRemoval( const ScopedHostLockObserverRemoval& )            = delete;
         ScopedHostLockObserverRemoval& operator=( const ScopedHostLockObserverRemoval& ) = delete;
     };
@@ -117,14 +111,14 @@ SW_TEST_CASE( ThreadTest, JoinIsAWaitOnTheThreadsJoinKey )
 {
     const ScopedHostLockObserverRemoval hostObserverRemoval;
     RecordingLockObserver               observer;
-    mutex::registerLockObserver( &observer );
+    mutex::LockObserverRegistration     registration = mutex::bindLockObserver( &observer );
     SW_REQUIRE_TRUE( mutex::getLockObserver() == &observer );
 
     std::thread::id workerID;
     thread          worker{ ThreadTestAccess::getKey(), [&workerID]()
     { workerID = std::this_thread::get_id(); } };
     worker.join();
-    mutex::unregisterLockObserver( &observer );
+    registration.reset();
 
     // 그동안 다른 스레드(태스크 워커)의 사건도 들어올 수 있다 — 워커가 스스로 알린 키(합류 키)만 본다.
     const vector<RecordingLockObserver::Event> listAll = observer.takeEvents();

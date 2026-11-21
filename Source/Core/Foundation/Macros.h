@@ -223,8 +223,7 @@ namespace sw::internal
     /** @brief 대화상자 함수입니다. @p pMessage 는 `SW_LOG_ASSERT` 의 메시지이며, 없으면 nullptr 입니다. */
     using AssertDialogFunc = AssertAction ( * )( const utf8* pExpression, const utf8* pMessage, const utf8* pFile, int32 line );
 
-    /** @brief 대화상자를 설치합니다. nullptr 이면 해제하며, 이후 단언은 항상 멈춥니다. "항상 무시"로 고른 위치도 함께 잊습니다. */
-    SW_API void setAssertDialog( AssertDialogFunc pfnDialog ) noexcept;
+    // 대화상자를 거는 함수(`bindAssertDialog`, 등록 토큰)는 `Core/Foundation/AssertDialogSlot.h` 에 있다.
     /** @brief 대화상자가 설치돼 있으면 true 를 반환합니다. */
     [[nodiscard]] SW_API bool hasAssertDialog() noexcept;
     /** @brief "늘 무시" 로 기억한 자리 수입니다(최대 256). */
@@ -259,7 +258,7 @@ namespace sw::internal
 // 10) 로그보다 아래 티어의 보고. `Core/Log` 는 컨테이너 · 메모리 · 수학보다 위라서 그 아래 티어는 `SW_LOG_*` 를 쓸 수 없다.
 //     아래 티어는 `SW_LOW_LEVEL_ERROR` · `SW_LOW_LEVEL_WARNING` · `SW_LOW_LEVEL_ASSERT` 로 보고한다(`SW_LOG_*` 와 같은 호출 구조: 수준은 이름에,
 //     호출하는 쪽의 이름은 인자가 아니라 파일에서 자동으로 정해진다). 구조는 Godot 의 `_err_print_error` + `add_error_handler` 와 같다 —
-//     `const char*` 만 오가는 동기 통로이고, 로그가 기동 때 등록하는 보고자(`setLowLevelReporter`, `Logger.cpp`)가 로그 줄로 바꾼다.
+//     `const char*` 만 오가는 동기 통로이고, 로그가 기동 때 거는 보고자(`bindLowLevelReporter`, `Logger.cpp`)가 로그 줄로 바꾼다.
 //     **Error · 단언은 보고자가 있어도 stderr 에 먼저 동기로 쓰고 flush 한 뒤** 보고자에게 넘긴다(비동기 로거는 크래시 직전 메시지를 잃는다).
 //     Warning 은 보고자가 받아 가면 stderr 에 쓰지 않는다. 보고자가 없거나 받지 못하면(로거 이전 · 로거 없는 도구 · 싱크 없음) stderr 에 남는다.
 //     stderr 로 가는 경로는 `Core/Foundation/Macros.cpp` 한 곳이다.
@@ -292,8 +291,7 @@ namespace sw::internal
      */
     using LowLevelReporterFunc = bool ( * )( LowLevelReportLevel level, const utf8* pFile, int32 line, const utf8* pMessage, const utf8* pID ) noexcept;
 
-    /** @brief 보고자를 설치하고 전에 등록돼 있던 보고자를 돌려줍니다. nullptr 이면 해제하며, 이후 보고는 stderr 로 갑니다. */
-    SW_API LowLevelReporterFunc setLowLevelReporter( LowLevelReporterFunc pfnReporter ) noexcept;
+    // 보고자를 거는 함수(`bindLowLevelReporter`, 등록 토큰)는 `Core/Foundation/LowLevelReporterSlot.h` 에 있다.
     /** @brief @p pFormat(`printf` 문법)을 @p pBuffer 에 씁니다. @p capacity 를 넘기면 끝을 `...[truncated]` 로 바꿔 잘렸음을 드러냅니다. */
     SW_API void formatLowLevelMessage( utf8* pBuffer, size_t capacity, const utf8* pFormat, ... ) noexcept SW_PRINTF_FORMAT( 3, 4 );
     /** @brief 한 줄을 보고합니다. `Error` 는 stderr 에 먼저 쓰고 보고자에게 넘기며, `Warning` 은 보고자가 받지 못할 때만 stderr 로 갑니다. @p pID 는 로그 id 입니다. */

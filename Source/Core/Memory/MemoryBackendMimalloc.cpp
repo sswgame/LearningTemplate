@@ -36,11 +36,6 @@ namespace sw
         mi_free( pBlock );
     }
 
-    void MemoryBackend::freeAligned( void* pBlock ) noexcept
-    {
-        mi_free( pBlock );
-    }
-
     size_t MemoryBackend::getUsableSize( const void* pBlock ) noexcept
     {
         return mi_usable_size( pBlock );

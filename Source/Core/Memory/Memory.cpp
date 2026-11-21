@@ -38,15 +38,17 @@ namespace sw
     namespace
     {
         /** @brief 걸린 할당 기록기(`MemoryProfiler`)입니다. 할당마다 acquire 읽기 하나입니다. */
-        atomic<IAllocationTracker*> s_pAllocationTracker{ nullptr };
+        ObserverSlot<IAllocationTracker> s_allocationTrackerSlot{};
         /** @brief 마지막으로 나눠 준 기록기 번호입니다(`IAllocationTracker` 생성자). 0 은 "세지 않음" 이라 1 부터 나눈다. */
         atomic<uint64> s_nextTrackerID{ 0 };
         /** @brief 이 스레드의 현재 할당 태그입니다(`Memory::setCurrentMemoryTag`). */
         thread_local MemoryTag t_currentMemoryTag{ MemoryTag::Unknown };
 
 #if !defined( SW_SHIPPING )
-        /** @brief 걸린 할당 관찰자입니다. 할당마다 relaxed 읽기 하나입니다. */
-        atomic<const MemoryAllocationObserver*> s_pAllocationObserver{ nullptr };
+        /** @brief 걸린 할당 관찰자입니다. 할당마다 acquire 읽기 하나입니다. */
+        ObserverSlot<const MemoryAllocationObserver> s_allocationObserverSlot{};
+        /** @brief 이 스레드의 sw 할당 횟수입니다(`Memory::getThreadAllocationCount`). 헤더를 쓰는 길에서 스레드 지역 증가 하나입니다. */
+        thread_local uint64 t_allocationCount{ 0 };
 
         struct MemoryInternal
         {
@@ -66,8 +68,9 @@ namespace sw
                 pHeader->_trackerID   = 0;
                 pHeader->_bObserved   = SW_FALSE;
                 RealtimeSection::recordAllocation(); // 실시간 구간(오디오 장치 콜백)의 할당을 센다 — 검사 구성의 할당은 모두 여기를 지난다
+                ++t_allocationCount;
 
-                IAllocationTracker* pTracker = s_pAllocationTracker.load( std::memory_order_acquire );
+                IAllocationTracker* pTracker = s_allocationTrackerSlot.get();
                 if ( pTracker != nullptr )
                 {
                     const AllocationRecord record = pTracker->recordAllocation( pUserPtr, size, pHeader->_tag );
@@ -79,7 +82,7 @@ namespace sw
                     }
                 }
 
-                const MemoryAllocationObserver* pObserver = s_pAllocationObserver.load( std::memory_order_acquire );
+                const MemoryAllocationObserver* pObserver = s_allocationObserverSlot.get();
                 if ( pObserver != nullptr )
                 {
                     pHeader->_bObserved = SW_TRUE;
@@ -99,7 +102,7 @@ namespace sw
             }
 
             /**
-             * @brief 헤더를 확인하고 프로파일러에 해제를 알린 뒤 매직을 지웁니다(이중 해제 방지). `free` · `freeAligned` 가 함께 씁니다.
+             * @brief 헤더를 확인하고 프로파일러에 해제를 알린 뒤 매직을 지웁니다(이중 해제 방지). 보통 · 정렬 블록 모두 `free` 가 씁니다.
              * @return OS 에 돌려줄 원래 할당 주소입니다. 헤더가 손상됐거나 엔진이 할당한 블록이 아니면 nullptr 이고, 그때는 해제하지 않습니다.
              */
             static void* releaseAllocHeader( void* pUserPtr )
@@ -112,7 +115,7 @@ namespace sw
                 // 센 블록을 센 기록기에만 알린다. 기록기가 떨어졌거나 다른 기록기로 바뀌었으면 알릴 곳이 없다.
                 if ( pHeader->_trackerID != 0 )
                 {
-                    IAllocationTracker* pTracker = s_pAllocationTracker.load( std::memory_order_acquire );
+                    IAllocationTracker* pTracker = s_allocationTrackerSlot.get();
                     if ( pTracker != nullptr && pTracker->getTrackerID() == pHeader->_trackerID )
                         pTracker->recordFree( pUserPtr, pHeader->_size, pHeader->_tag, AllocationRecord{ pHeader->_hash, true, pHeader->_windowStamp } );
                 }
@@ -120,7 +123,7 @@ namespace sw
                 // 관찰 중에 할당된 블록만 알린다. 관찰자가 그 사이 떨어졌으면 알릴 곳이 없다.
                 if ( pHeader->_bObserved == SW_TRUE )
                 {
-                    const MemoryAllocationObserver* pObserver = s_pAllocationObserver.load( std::memory_order_acquire );
+                    const MemoryAllocationObserver* pObserver = s_allocationObserverSlot.get();
                     if ( pObserver != nullptr )
                         pObserver->_pOnFree( pUserPtr, pHeader->_tag );
                 }
@@ -164,27 +167,6 @@ namespace sw
         const uintptr_t rawAddr  = reinterpret_cast<uintptr_t>( pRawPtr );
         const uintptr_t userAddr = MathUtil::align( rawAddr + sizeof( AllocHeader ), static_cast<uintptr_t>( align ) );
         return MemoryInternal::writeAllocHeader( reinterpret_cast<void*>( userAddr ), pRawPtr, size, tag );
-#endif // SW_SHIPPING
-    }
-
-    /**
-     * @brief 정렬 할당한 메모리 블록을 해제합니다.
-     */
-    void Memory::freeAligned( void* pPtr )
-    {
-        if ( pPtr == nullptr )
-            return;
-
-#if defined( SW_SHIPPING )
-        MemoryBackend::freeAligned( pPtr );
-#else  // SW_SHIPPING
-        void* pRawPtr = MemoryInternal::releaseAllocHeader( pPtr );
-        if ( pRawPtr == nullptr )
-        {
-            MemoryInternal::reportForeignFree( pPtr );
-            return;
-        }
-        MemoryBackend::freeAligned( pRawPtr );
 #endif // SW_SHIPPING
     }
 
@@ -246,17 +228,22 @@ namespace sw
 #endif
     }
 
-    void Memory::registerAllocationObserver( [[maybe_unused]] const MemoryAllocationObserver* pObserver )
+    Memory::AllocationObserverRegistration Memory::registerAllocationObserver( const MemoryAllocationObserver* pObserver )
     {
-#if !defined( SW_SHIPPING )
-        s_pAllocationObserver.store( pObserver, std::memory_order_release );
+#if defined( SW_SHIPPING )
+        (void)pObserver;
+        return {}; // 배포본은 블록 헤더가 없어 알릴 길이 없다
+#else
+        return s_allocationObserverSlot.bind( pObserver );
 #endif
     }
 
-    void Memory::unregisterAllocationObserver()
+    uint64 Memory::getThreadAllocationCount()
     {
-#if !defined( SW_SHIPPING )
-        s_pAllocationObserver.store( nullptr, std::memory_order_release );
+#if defined( SW_SHIPPING )
+        return 0;
+#else
+        return t_allocationCount;
 #endif
     }
 
@@ -312,16 +299,9 @@ namespace sw
     {
     }
 
-    void Memory::registerAllocationTracker( IAllocationTracker* pTracker )
+    Memory::AllocationTrackerRegistration Memory::registerAllocationTracker( IAllocationTracker* pTracker )
     {
-        IAllocationTracker* pExpected{ nullptr };
-        s_pAllocationTracker.compare_exchange_strong( pExpected, pTracker, std::memory_order_acq_rel, std::memory_order_relaxed );
-    }
-
-    void Memory::unregisterAllocationTracker( IAllocationTracker* pTracker )
-    {
-        IAllocationTracker* pExpected = pTracker;
-        s_pAllocationTracker.compare_exchange_strong( pExpected, nullptr, std::memory_order_acq_rel, std::memory_order_relaxed );
+        return s_allocationTrackerSlot.tryBind( pTracker );
     }
 
     void Memory::setCurrentMemoryTag( MemoryTag tag )

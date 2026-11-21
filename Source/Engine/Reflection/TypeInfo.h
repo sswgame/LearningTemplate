@@ -193,7 +193,7 @@ namespace sw
      * @brief `TypeInfo` 의 선언에서 **파생된** 캐시(상속 병합 목록, 자기 이름 맵, 부모 포인터, 판정)를 한 칸에 묶습니다.
      * @details 비우기는 `_derived = {}` 한 줄입니다(`TypeInfo::invalidateDerivedCaches`) — 칸마다 손으로 비우던 목록은 캐시를 더하고 비우기를 빠뜨리면
      *          대입된 타입이 **이전 타입의 캐시**로 답했다(이름 조회가 다른 오프셋). 새 캐시는 이 구조체에 기본값과 함께 두면 저절로 비워진다.
-     *          원자 칸(`sw::atomic`)은 대입이 값을 옮기고, 상속 판 칸은 대입이 옛 판을 지우지 않는다(`TypeInheritedPropertySlot`).
+     *          원자 칸(`sw::reflected_atomic`)은 대입이 값을 옮기고, 상속 판 칸은 대입이 옛 판을 지우지 않는다(`TypeInheritedPropertySlot`).
      *          조상 테이블(`TypeInfo::_castHeader`)은 캐스트가 맨 앞 주소로 읽어 이 묶음 밖에 둔다.
      */
     struct TypeDerivedCache

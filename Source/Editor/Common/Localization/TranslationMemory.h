@@ -7,7 +7,7 @@
  *          유사도는 정규화한 글자열의 편집 거리(레벤슈타인, UTF-8 글자 단위)로 측정한다. 상용 CAT 도구(memoQ, Trados)의 퍼지 일치와 같은 생각이다.
  */
 #pragma once
-#include "Core/Container/map.h"
+#include "Core/Container/flat_map.h"
 #include "Core/Container/string.h"
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
@@ -72,7 +72,7 @@ namespace sw
         size_t        getEntryCount() const { return _mapSourceToText.size(); }
 
     private:
-        string              _culture;
-        map<string, string> _mapSourceToText;
+        string                   _culture;
+        flat_map<string, string> _mapSourceToText;
     };
 } // namespace sw

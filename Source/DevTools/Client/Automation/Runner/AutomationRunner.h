@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/File/FileUtil.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
@@ -379,31 +380,31 @@ namespace sw
         void publishHangSnapshot( string_view position );
 
     private:
-        AutomationScenario            _scenario;
-        VirtualInputScript            _inputScript;
-        AutomationEvaluator           _evaluator;    ///< 판정 상태 · 비교(실패 · 미확정 · 로그 게이트 · 감시 값 이력). 시간 · 입력은 모른다
-        AutomationStepTimeline        _run;          ///< 진행 상태(프레임 · 단계 순번 · 대기 · 시한 · 스크린샷 대기열). 판정은 읽지 않는다
-        AutomationReportWriter        _reportWriter; ///< 보고 경로 · JSON 보고 쓰기
-        AutomationTimeline            _wallProfile;  ///< 벽시계가 프레임 종류(고정 대기 · 조건 대기 · 단계 …)별로 어디에 쓰였는지(보고의 `timeline`)
-        string                        _outputDirectory;
-        uint8                         _bStarted         : 1;
-        uint8                         _bEnded           : 1;
-        uint8                         _bHangWatchArmed  : 1; ///< `armHangWatchdog` 를 불렀다(실제 프로세스를 끝낼 수 있는 감시라 세션만 켠다)
-        uint8                         _bWriteFilterHeld : 1; ///< 쓰기 입구 게이트를 쥐고 있다(`AutomationScratchWorkspace::acquireWriteFilter` — `endRun` 이나 소멸자가 놓는다)
-        uint8                         _bStartPauseHeld  : 1; ///< 시작 전 게임 시간 정지 요청을 쥐고 있다(`holdGameTimeUntilStart`)
-        [[maybe_unused]] uint8        _reserved         : 3;
-        string                        _startedAt;              ///< 벽시계 시작 지역 시각 글(`2026-10-26 14:03:11`). 얻지 못하면 빈 글
-        AutomationReproduceInput      _reproduceInput;         ///< 보고의 재현 명령 재료(`setReproduceInput`). 이 시나리오의 `<Launch>` 변수는 보고를 쓸 때 더한다
-        AutomationHangPayload         _hangPayload;            ///< 감시 스레드에 넘기는 스냅샷의 게임 스레드 쪽 사본(바뀌지 않는 칸은 시작할 때 한 번 채운다)
-        AutomationHangWatchdog        _hangWatchdog;           ///< 프레임이 멈춘 행을 잡는 감시 스레드(`armHangWatchdog` 로 켠 실행만)
-        GameObjectManager*            _pObjectManagerOverride; ///< `setObjectManager` 로 정한 매니저입니다(nullptr 이면 활성 씬).
-        InputManager*                 _pInputManager;          ///< 시작 프레임에 받은 입력 관리자(`onFrameBegin`)
-        int64                         _startedUnixMs;          ///< 시작 시각의 유닉스 밀리초(보고용)
-        float32                       _wallLimitSeconds;       ///< 이 실행의 벽시계 상한 — 시나리오의 `wallTimeoutSeconds` + 단계 종류별 예산 + 조건 대기의 제 시한(`computeWallLimitSeconds`)
-        string                        _startScenePath;         ///< 시작 조건 전에 열 씬(`requireStartScene`). 열렸으면 비운다
-        TaskFuture<Scene*>            _startSceneLoad;         ///< 시작 씬의 로드 요청(요청 전이면 무효)
-        optional<AutomationRunResult> _runResult;              ///< 끝난 판정(도는 중이면 없다 — `isActive`). 결과 · 종류 · 까닭이 한 값이라 따로 놀지 않는다
-        AutomationFrameStats          _frameStats{};           ///< 벤치마크 구간의 프레임 시간(`BeginFrameStats` … `EndFrameStats`)
+        AutomationScenario                _scenario;
+        VirtualInputScript                _inputScript;
+        AutomationEvaluator               _evaluator;    ///< 판정 상태 · 비교(실패 · 미확정 · 로그 게이트 · 감시 값 이력). 시간 · 입력은 모른다
+        AutomationStepTimeline            _run;          ///< 진행 상태(프레임 · 단계 순번 · 대기 · 시한 · 스크린샷 대기열). 판정은 읽지 않는다
+        AutomationReportWriter            _reportWriter; ///< 보고 경로 · JSON 보고 쓰기
+        AutomationTimeline                _wallProfile;  ///< 벽시계가 프레임 종류(고정 대기 · 조건 대기 · 단계 …)별로 어디에 쓰였는지(보고의 `timeline`)
+        string                            _outputDirectory;
+        FileUtil::WriteFilterRegistration _writeFilterRegistration; ///< 쥔 쓰기 입구 게이트(`AutomationScratchWorkspace::acquireWriteFilter` — `endRun` 이나 소멸자가 놓는다)
+        uint8                             _bStarted        : 1;
+        uint8                             _bEnded          : 1;
+        uint8                             _bHangWatchArmed : 1; ///< `armHangWatchdog` 를 불렀다(실제 프로세스를 끝낼 수 있는 감시라 세션만 켠다)
+        uint8                             _bStartPauseHeld : 1; ///< 시작 전 게임 시간 정지 요청을 쥐고 있다(`holdGameTimeUntilStart`)
+        [[maybe_unused]] uint8            _reserved        : 4;
+        string                            _startedAt;              ///< 벽시계 시작 지역 시각 글(`2026-10-26 14:03:11`). 얻지 못하면 빈 글
+        AutomationReproduceInput          _reproduceInput;         ///< 보고의 재현 명령 재료(`setReproduceInput`). 이 시나리오의 `<Launch>` 변수는 보고를 쓸 때 더한다
+        AutomationHangPayload             _hangPayload;            ///< 감시 스레드에 넘기는 스냅샷의 게임 스레드 쪽 사본(바뀌지 않는 칸은 시작할 때 한 번 채운다)
+        AutomationHangWatchdog            _hangWatchdog;           ///< 프레임이 멈춘 행을 잡는 감시 스레드(`armHangWatchdog` 로 켠 실행만)
+        GameObjectManager*                _pObjectManagerOverride; ///< `setObjectManager` 로 정한 매니저입니다(nullptr 이면 활성 씬).
+        InputManager*                     _pInputManager;          ///< 시작 프레임에 받은 입력 관리자(`onFrameBegin`)
+        int64                             _startedUnixMs;          ///< 시작 시각의 유닉스 밀리초(보고용)
+        float32                           _wallLimitSeconds;       ///< 이 실행의 벽시계 상한 — 시나리오의 `wallTimeoutSeconds` + 단계 종류별 예산 + 조건 대기의 제 시한(`computeWallLimitSeconds`)
+        string                            _startScenePath;         ///< 시작 조건 전에 열 씬(`requireStartScene`). 열렸으면 비운다
+        TaskFuture<Scene*>                _startSceneLoad;         ///< 시작 씬의 로드 요청(요청 전이면 무효)
+        optional<AutomationRunResult>     _runResult;              ///< 끝난 판정(도는 중이면 없다 — `isActive`). 결과 · 종류 · 까닭이 한 값이라 따로 놀지 않는다
+        AutomationFrameStats              _frameStats{};           ///< 벤치마크 구간의 프레임 시간(`BeginFrameStats` … `EndFrameStats`)
         /// 대기 정책(`Config/Dev/ScenarioRun.json` — 정지 시한 · 정착 조건의 문턱). 렌더 정착 · 활동 수가 있는 벽시계 감시 값을 처음 기다릴 때 읽는다(`loadRunPolicy`) — 둘을 기다리지 않는 재생(데모)은 그 파일이 없어도 돈다
         optional<AutomationRunPolicy> _runPolicy{};
         AutomationTextStore           _storedText{}; ///< 이 실행 안에서 이름 붙여 기억한 글(`storeText`)

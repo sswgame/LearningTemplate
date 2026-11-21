@@ -163,7 +163,6 @@ namespace sw
         , _bStarted{ SW_FALSE }
         , _bEnded{ SW_FALSE }
         , _bHangWatchArmed{ SW_FALSE }
-        , _bWriteFilterHeld{ SW_FALSE }
         , _bStartPauseHeld{ SW_FALSE }
         , _reserved{ 0 }
         , _startedAt{}
@@ -215,18 +214,14 @@ namespace sw
 
     void AutomationRunner::acquireWriteFilter()
     {
-        if ( _bWriteFilterHeld == SW_TRUE )
+        if ( _writeFilterRegistration.isActive() )
             return;
-        AutomationScratchWorkspace::acquireWriteFilter();
-        _bWriteFilterHeld = SW_TRUE;
+        _writeFilterRegistration = AutomationScratchWorkspace::acquireWriteFilter();
     }
 
     void AutomationRunner::releaseWriteFilter()
     {
-        if ( _bWriteFilterHeld == SW_FALSE )
-            return;
-        AutomationScratchWorkspace::releaseWriteFilter();
-        _bWriteFilterHeld = SW_FALSE;
+        _writeFilterRegistration.reset();
     }
 
     void AutomationRunner::startFromPath( const AssetID& assetID, string_view reportPath )

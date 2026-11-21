@@ -28,7 +28,7 @@ namespace sw
             {
                 (void)size;
                 if ( pPointer != nullptr )
-                    Memory::freeAligned( pPointer );
+                    Memory::free( pPointer );
             }
         };
 

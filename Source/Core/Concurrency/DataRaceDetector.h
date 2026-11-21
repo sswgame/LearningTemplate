@@ -5,18 +5,21 @@
 #pragma once
 #include "Core/Concurrency/atomic.h"
 #include "Core/Foundation/Macros.h"
+#include "Core/Foundation/ObserverSlot.h"
 
 namespace sw
 {
     /**
-     * @brief 경합을 찾았을 때 디버거에서 멈추기 전에 부르는 보고 함수입니다(`RaceDetectContext::setReportFunction`).
+     * @brief 경합을 찾았을 때 디버거에서 멈추기 전에 부르는 보고 함수입니다(`RaceDetectContext::bindReportFunction`).
      * @details 로그 · 호출 스택은 컨테이너보다 위층이라 여기서 직접 부르지 않고 함수로 받습니다. 보고기는 `DataRaceReporter`(Diagnostics)가 겁니다.
      * @param pMessage    충돌 종류를 적은 문장
      * @param pContext    충돌한 `RaceDetectContext` 의 주소
      * @param readerCount 그 순간 들어와 있던 읽기 수
      * @param writerCount 그 순간 들어와 있던 쓰기 수
      */
-    using DataRaceReportFunction = void ( * )( const utf8* pMessage, const void* pContext, uint32 readerCount, uint32 writerCount );
+    using DataRaceReportSignature = void( const utf8* pMessage, const void* pContext, uint32 readerCount, uint32 writerCount );
+    /** @brief 보고 함수 포인터입니다(`DataRaceReportSignature`). */
+    using DataRaceReportFunction = DataRaceReportSignature*;
 } // namespace sw
 
 namespace sw
@@ -37,10 +40,20 @@ namespace sw
         /** @brief 따로 정리할 것이 없습니다. */
         ~RaceDetectContext() = default;
 
+        /** @brief 보고 함수 등록 토큰입니다. 토큰이 사라지면 보고 함수를 뗍니다(그 뒤 경합은 멈추기만 한다). */
+        using ReportFunctionRegistration = ObserverSlot<DataRaceReportSignature>::Registration;
+        /** @brief 걸린 보고 함수를 범위 동안 떼어 두는 범위입니다(테스트가 자기 보고 함수를 걸 때). */
+        using ReportFunctionSuspension = ObserverSlot<DataRaceReportSignature>::Suspension;
+
         /**
-         * @brief 경합을 찾았을 때 부를 보고 함수를 겁니다. nullptr 이면 멈추기만 합니다. 모든 구성에 있지만 Debug 에서만 불립니다.
+         * @brief 경합을 찾았을 때 부를 보고 함수를 겁니다. 보고기는 하나라 이미 걸려 있으면 이중 등록 단언이고 빈 토큰입니다(예전에는 말없이 덮어썼다).
+         *        걸린 것이 없으면 멈추기만 합니다. 모든 구성에 있지만 검사 구성에서만 불립니다.
          */
-        static void setReportFunction( DataRaceReportFunction pFunction );
+        [[nodiscard]] static ReportFunctionRegistration bindReportFunction( DataRaceReportFunction pFunction );
+        /** @brief 걸린 보고 함수를 범위 동안 떼어 둡니다 — 테스트만 쓴다. */
+        [[nodiscard]] static ReportFunctionSuspension suspendReportFunction();
+        /** @brief 걸린 보고 함수입니다. 없으면 nullptr 입니다. */
+        [[nodiscard]] static DataRaceReportFunction getReportFunction();
 
 #if defined( SW_DO_CHECKS )
         // 복사 · 이동은 허용한다. 컨테이너를 복사해도 컨텍스트는 0 인 초기 상태로 복사된다.
@@ -108,7 +121,7 @@ namespace sw
          *
          * @details 데이터 레이스는 정의상 두 스레드가 있어야 생깁니다. 스레드를 구분하지 않으면 한 스레드가 가드를 잡은 채
          *          **같은 객체의 다른 가드 메서드를 부르기만 해도** 레이스로 보고합니다. 예를 들어
-         *          `sw::set::operator=(initializer_list)` 는 쓰기 가드를 잡고 `clear()` · `insert()` 를 부르는데, 그 둘도 가드를 잡습니다.
+         *          `sw::flat_set::operator=(initializer_list)` 는 쓰기 가드를 잡고 `clear()` · `insert()` 를 부르는데, 그 둘도 가드를 잡습니다.
          *
          *          `map` 에도 같은 곳이 있고, 쓰기 가드 안에서 const 메서드를 부르는 경우도 모두 같은 모양입니다. 즉 "가드 메서드가
          *          가드 메서드를 부르지 않게 조심한다" 로는 막을 수 없는 **구조적인** 오탐입니다. 그래서 주인 스레드를 기억해

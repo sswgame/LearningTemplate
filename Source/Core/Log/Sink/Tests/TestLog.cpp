@@ -20,6 +20,7 @@
 #include "Core/String/StringUtil.h"
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
+#include "Core/Testing/ScopedAllocationCount.h"
 #include "Core/Testing/ScopedAssertCapture.h"
 #include "Core/Testing/TestFramework.h"
 #include "Core/Testing/TestWait.h"
@@ -162,7 +163,7 @@ namespace
         sw::vector<sw::string> _listFormatted;
         [[nodiscard]] bool     open() override { return true; }
         void                   close() override {}
-        void                   write( const sw::LogRecord& record ) override { _listFormatted.push_back( record._formatted ); }
+        void                   write( const sw::LogRecord& record ) override { _listFormatted.push_back( sw::string( record._formatted.view() ) ); }
     };
 
     /**
@@ -181,13 +182,13 @@ namespace
         void               write( const sw::LogRecord& record ) override
         {
             sw::ScopedLock<sw::mutex> lock{ _mutex };
-            if ( record._formatted.find( "TestLog.BlockHere" ) != sw::string::npos )
+            if ( record._formatted.view().find( "TestLog.BlockHere" ) != sw::string::npos )
             {
                 _bHeld.store( true );
                 (void)sw::test::waitUntil( [this]()
                 { return _bOpen.load(); } );
             }
-            const size_t orderStart = record._formatted.find( "TestLog.LineOrder " );
+            const size_t orderStart = record._formatted.view().find( "TestLog.LineOrder " );
             if ( orderStart != sw::string::npos )
                 _listOrder.push_back( static_cast<uint32>( std::strtoul( record._formatted.c_str() + orderStart + 18, nullptr, 10 ) ) );
         }
@@ -392,6 +393,36 @@ SW_TEST_CASE( LogTest, LogMacrosFormatArguments )
     // 실수 자릿수는 기본 정밀도에 달려 있으므로 앞부분만 확인합니다.
     if ( capture.getCount() == 4u )
         SW_EXPECT_TRUE( sw::StringUtil::startsWith( capture.getEntries()[3]._message, "[TestLog] SW_LOG_TRACE 3.14" ) );
+}
+
+/**
+ * @brief [LogTest] `SW_ENSURE` 는 조건의 참 · 거짓을 돌려주고, 거짓이면 단언 줄(`SW_ASSERT_LOG_ID`)을 남긴다 · 참이면 아무것도 남기지 않는다
+ */
+SW_TEST_CASE( LogTest, EnsureReturnsConditionAndReportsFailure )
+{
+    // 단언 줄은 "[TestLog] " 접두로 시작하지 않아 LogCapture 가 거른다 — 메시지에 든 탐침 글자로 직접 모은다.
+    uint32                 failedLineCount = 0;
+    const sw::Subscription subscription    = sw::Logger::registerGlobalListener( SW_DELEGATE_LAMBDA(
+        sw::LogWrittenDelegate,
+        [&failedLineCount]( const sw::LogEntry& entry )
+    {
+        if ( sw::StringUtil::contains( entry._message, "ensure probe" ) && sw::StringUtil::contains( entry._message, "ASSERT failed" ) )
+            ++failedLineCount;
+    } ) );
+    SW_REQUIRE_TRUE( subscription.isActive() );
+    [[maybe_unused]] sw::test::ScopedAssertCapture assertCapture;
+    SW_EXPECT_LOG( SW_ASSERT_LOG_ID ); // 거짓 조건의 Error 줄은 이 테스트가 보려는 대상이다
+
+    int32 evaluated = 0;
+    SW_EXPECT_TRUE( SW_ENSURE( ++evaluated == 1, "ensure probe holds %#", 1 ) );
+    SW_EXPECT_EQUAL( 0u, failedLineCount );
+
+    const bool bProbe = false;
+    SW_EXPECT_FALSE( SW_ENSURE( bProbe, "ensure probe failed %#", 7 ) );
+    SW_EXPECT_EQUAL( 1, evaluated ); // 식은 한 번만 평가한다
+    SW_EXPECT_EQUAL( 1u, failedLineCount );
+    if ( sw::test::ScopedAssertCapture::kAssertsAreActive )
+        SW_EXPECT_EQUAL( 1u, assertCapture.getCount() );
 }
 
 /**
@@ -683,7 +714,7 @@ namespace
             return _bFolderReady;
         }
         void close() override {}
-        void write( const sw::LogRecord& record ) override { _listFormatted.push_back( record._formatted ); }
+        void write( const sw::LogRecord& record ) override { _listFormatted.push_back( sw::string( record._formatted.view() ) ); }
     };
 
     /** @class SelfLoggingLogOutput @brief `open` 이나 첫 `write` 안에서 로그를 남기는 장치입니다 — 장치가 부르는 쪽으로 로그를 되돌리는 모양을 만듭니다. */
@@ -1018,4 +1049,31 @@ SW_TEST_CASE( LogTest, FullQueueKeepsLineOrder )
     {
         SW_REQUIRE_EQUAL( index, listOrder[index] );
     }
+}
+
+/**
+ * @brief [LogTest] 레코드의 완성된 줄은 고정 칸에 들어가면 할당하지 않고, 칸을 넘는 긴 줄만 힙 글에 둔다(크래시 처리기가 큐를 비울 때 짧은 줄은 힙을 부르지 않는다)
+ */
+SW_TEST_CASE( LogTest, RecordLineTextKeepsShortLinesInline )
+{
+    sw::LogRecord record{};
+    {
+        const sw::test::ScopedAllocationCount counter;
+        record._formatted = sw::string_view{ "[Info][Engine] short line" };
+        if ( sw::test::ScopedAllocationCount::kCountsAreActive )
+            SW_EXPECT_EQUAL( uint64( 0 ), counter.getCount() );
+    }
+    SW_EXPECT_TRUE( record._formatted.isInline() );
+    SW_EXPECT_EQUAL( sw::string_view{ "[Info][Engine] short line" }, record._formatted.view() );
+
+    const sw::string longLine( sw::LogLineText::kInlineCapacity + 10, 'x' );
+    record._formatted = sw::string_view{ longLine };
+    SW_EXPECT_FALSE( record._formatted.isInline() );
+    SW_EXPECT_EQUAL( longLine.size(), record._formatted.size() );
+    SW_EXPECT_EQUAL( sw::string_view{ longLine }, sw::string_view{ record._formatted.c_str() } );
+
+    // 다시 짧은 줄 — 칸으로 돌아오고 널로 끝난다
+    record._formatted = sw::string_view{ "ok" };
+    SW_EXPECT_TRUE( record._formatted.isInline() );
+    SW_EXPECT_EQUAL( sw::string_view{ "ok" }, sw::string_view{ record._formatted.c_str() } );
 }

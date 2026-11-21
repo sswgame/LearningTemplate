@@ -131,7 +131,7 @@ namespace sw
             result = string( stripped.view() );
         }
 
-        // 2) 템플릿 타입(예: map<K, V>, vector<T>)이면 재귀적으로 정규화
+        // 2) 템플릿 타입(예: flat_map<K, V>, vector<T>)이면 재귀적으로 정규화
         const size_t openAngle             = result.find( '<' );
         const size_t closeAngle            = result.rfind( '>' );
         const bool   bHasTemplateArguments = openAngle != string::npos && closeAngle != string::npos && openAngle < closeAngle;

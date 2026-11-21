@@ -14,7 +14,7 @@
  */
 #pragma once
 #include "Core/Container/SlotHandleTable.h"
-#include "Core/Container/map.h"
+#include "Core/Container/flat_map.h"
 #include "Core/Container/pair.h"
 #include "Core/Container/span.h"
 #include "Core/Container/unordered_map.h"
@@ -212,7 +212,7 @@ namespace sw
         SlotHandleTable<CharacterRecord>          _characters;
         SlotHandleTable<ShapeRecord>              _shapes;
         unordered_map<uint64, PhysicsBodyHandle>  _mapShapeToBody;     ///< 셰이프 id(인덱스 | 세대 << 32)에서 바디로 가는 맵이다. 지워진 셰이프의 끝 이벤트도 찾는다.
-        map<pair<uint64, uint64>, b2JointId>      _mapPairToJoint;     ///< 충돌을 끈 바디 쌍(작은 핸들 먼저)에서 필터 관절로 가는 맵이다.
+        flat_map<pair<uint64, uint64>, b2JointId> _mapPairToJoint;     ///< 충돌을 끈 바디 쌍(작은 핸들 먼저)에서 필터 관절로 가는 맵이다.
         mutable vector<b2ContactData>             _listContactScratch; ///< 충격량을 읽을 때 쓰는 버퍼다(할당을 재사용한다).
         PhysicsContactTracker<PhysicsDimension2D> _contactTracker;
         vector<PhysicsContactEvent2D>             _listContactEvent;

@@ -197,7 +197,7 @@ namespace sw
         XMLNode     entries;
         if ( expected<void> header = Internal::readHeader( document, xmlText, sourceName, "SourceStringTable", culture, entries ); header.has_value() == false )
             return unexpected( Internal::atSource( std::move( header ).error(), sourceName ) );
-        map<string, SourceTextEntry> mapEntry;
+        flat_map<string, SourceTextEntry> mapEntry;
         for ( XMLNode entryNode = entries.findChild(); entryNode.isValid(); entryNode = entryNode.findNextSibling() )
         {
             string key;
@@ -290,7 +290,7 @@ namespace sw
         XMLNode     entries;
         if ( expected<void> header = Internal::readHeader( document, xmlText, sourceName, "TranslationTable", culture, entries ); header.has_value() == false )
             return unexpected( Internal::atSource( std::move( header ).error(), sourceName ) );
-        map<string, TranslationEntry> mapEntry;
+        flat_map<string, TranslationEntry> mapEntry;
         for ( XMLNode entryNode = entries.findChild(); entryNode.isValid(); entryNode = entryNode.findNextSibling() )
         {
             string key;

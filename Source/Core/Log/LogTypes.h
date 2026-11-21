@@ -11,6 +11,7 @@
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Log/LogContext.h"
+#include "Core/Memory/Memory.h"
 
 namespace sw
 {
@@ -76,19 +77,69 @@ namespace sw
 namespace sw
 {
     /**
+     * @brief 로그 한 줄의 완성된 글입니다. 짧은 줄(대부분)은 레코드 안 고정 칸에, 칸을 넘는 긴 줄만 힙 글에 둡니다.
+     * @details 줄마다 `string` 을 할당하면 로그 한 줄이 힙 할당 하나였고, 크래시 처리기가 큐를 비울 때(`AsyncLogSink::flushForCrash`) 레코드 소멸이 힙을 불렀다 —
+     *          할당기 안에서 죽은 크래시면 거기서 멈출 수 있다. 고정 칸 줄은 할당도 해제도 없다(빈 힙 글은 할당하지 않는다).
+     *          칸 크기는 측정 전 값이다 — 큐 칸(4096) × 크기가 상주 메모리라 줄 길이 분포를 센 뒤 줄인다(DesignBacklog "구조 · 성능 발전 방향" Core ④).
+     */
+    class LogLineText
+    {
+    public:
+        /** @brief 고정 칸 크기(끝의 널 포함)입니다. 이보다 긴 줄은 힙 글에 둡니다. */
+        static constexpr uint32 kInlineCapacity = 256;
+
+        LogLineText() noexcept
+            : _length{ 0 }
+        {
+            _arrInline[0] = '\0';
+        }
+
+        /** @brief @p text 를 담습니다. 칸에 들어가면 칸에, 아니면 힙 글에 복사합니다. */
+        LogLineText& operator=( string_view text )
+        {
+            _length = static_cast<uint32>( text.size() );
+            if ( text.size() < kInlineCapacity )
+            {
+                Memory::copy( _arrInline, text.data(), text.size() );
+                _arrInline[text.size()] = '\0';
+                _heapText.clear();
+            }
+            else
+            {
+                _heapText.assign( text.data(), text.size() );
+            }
+            return *this;
+        }
+
+        /** @brief 널로 끝나는 글입니다. */
+        [[nodiscard]] const utf8* c_str() const noexcept { return isInline() ? _arrInline : _heapText.c_str(); }
+        /** @brief 글의 보기입니다. */
+        [[nodiscard]] string_view view() const noexcept { return string_view{ c_str(), _length }; }
+        /** @brief 글자 수(바이트)입니다. */
+        [[nodiscard]] size_t size() const noexcept { return _length; }
+        /** @brief 칸에 담겼으면 true(힙 글을 쓰지 않는다)입니다. */
+        [[nodiscard]] bool isInline() const noexcept { return _length < kInlineCapacity; }
+
+    private:
+        utf8   _arrInline[kInlineCapacity];
+        uint32 _length;
+        string _heapText; ///< 칸을 넘는 줄만 — 짧은 줄에서는 비어 있어 할당하지 않는다
+    };
+
+    /**
      * @brief 비동기 lock-free 큐로 보내는 로그 레코드입니다. **출력 장치에 필요한 것이 모두** 들어 있습니다.
      * @details 포맷은 이미 끝나 있고(`_formatted`), 날짜 필드는 파일 출력이 시간별로 파일을 바꿀지 판단할 때 씁니다.
      *          콘솔은 `_level` 로 색만 고릅니다.
      */
     struct LogRecord
     {
-        string   _formatted;
-        string   _json; ///< JSON lines 한 줄(끝의 줄바꿈 포함). `ILogOutput::needsStructuredProperties` 장치가 달려 있을 때만 채운다(아니면 빈 글)
-        int32    _year{ 0 };
-        int32    _month{ 0 };
-        int32    _day{ 0 };
-        int32    _hour{ 0 };
-        LogLevel _level = LogLevel::Info;
+        LogLineText _formatted; ///< 파일 · 콘솔이 쓰는 완성된 줄. 짧은 줄은 레코드 안 칸이라 할당하지 않는다
+        string      _json;      ///< JSON lines 한 줄(끝의 줄바꿈 포함). `ILogOutput::needsStructuredProperties` 장치가 달려 있을 때만 채운다(아니면 빈 글)
+        int32       _year{ 0 };
+        int32       _month{ 0 };
+        int32       _day{ 0 };
+        int32       _hour{ 0 };
+        LogLevel    _level = LogLevel::Info;
     };
 
     SW_DECLARE_MULTI_CAST_DELEGATE( void, LogWrittenMulticast, const LogEntry& );

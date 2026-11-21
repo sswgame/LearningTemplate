@@ -475,7 +475,7 @@ namespace sw
 
     bool GameInstance::loadDeclaredCharacterData()
     {
-        const map<string, string>& mapRequired = _packConfig._data._mapRequiredDataPack;
+        const flat_map<string, string>& mapRequired = _packConfig._data._mapRequiredDataPack;
         if ( mapRequired.find( ItemCatalog::kDataKind ) != mapRequired.end() )
         {
             if ( loadRequiredCatalog( _pItemCatalog ) == false )

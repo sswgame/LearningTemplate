@@ -7,7 +7,7 @@
  */
 #pragma once
 #include "Core/Concurrency/mutex.h"
-#include "Core/Container/map.h"
+#include "Core/Container/flat_map.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
@@ -59,7 +59,7 @@ namespace sw
             vector<uint8> _bytes{};
             uint64        _version{ 0 };
         };
-        using Table = map<string, Entry>;
+        using Table = flat_map<string, Entry>;
 
         /** @brief 잠금 안에서 부릅니다. 설정해 둔 실패가 @p fault 이고 차례가 됐으면 해제하고 true 입니다. */
         bool         consumeFault( ServiceStoreFault fault ) SW_REQUIRES_LOCK( _mutex );

@@ -71,21 +71,46 @@ namespace sw
 
             unordered_map* _pMap;
             size_t         _index;
+#if defined( SW_DO_CHECKS )
+            uint32 _generation; ///< 만들 때의 표 세대(`DenseHashTable::assertIteratorGeneration`)
+#endif
 
             iterator( unordered_map* pMap, size_t index )
                 : _pMap{ pMap }
-                , _index{ index } {}
+                , _index{ index }
+#if defined( SW_DO_CHECKS )
+                , _generation{ pMap != nullptr ? pMap->getIteratorGeneration() : 0u }
+#endif
+            {
+            }
 
             iterator& operator++()
             {
+                assertGeneration();
                 ++_index;
                 return *this;
             }
 
             bool      operator==( const iterator& other ) const { return _index == other._index; }
             bool      operator!=( const iterator& other ) const { return _index != other._index; }
-            reference operator*() const { return *reinterpret_cast<pointer>( const_cast<pair<Key, T>*>( &std::as_const( _pMap->_listDenseData )[_index]._keyValuePair ) ); }
-            pointer   operator->() const { return reinterpret_cast<pointer>( const_cast<pair<Key, T>*>( &std::as_const( _pMap->_listDenseData )[_index]._keyValuePair ) ); }
+            reference operator*() const
+            {
+                assertGeneration();
+                return *reinterpret_cast<pointer>( const_cast<pair<Key, T>*>( &std::as_const( _pMap->_listDenseData )[_index]._keyValuePair ) );
+            }
+            pointer operator->() const
+            {
+                assertGeneration();
+                return reinterpret_cast<pointer>( const_cast<pair<Key, T>*>( &std::as_const( _pMap->_listDenseData )[_index]._keyValuePair ) );
+            }
+
+        private:
+            void assertGeneration() const noexcept
+            {
+#if defined( SW_DO_CHECKS )
+                _pMap->assertIteratorGeneration( _generation );
+#endif
+            }
         };
 
         /** @brief 밀집 배열을 순회하는 상수 이터레이터입니다. */
@@ -100,25 +125,55 @@ namespace sw
 
             const unordered_map* _pMap;
             size_t               _index;
+#if defined( SW_DO_CHECKS )
+            uint32 _generation; ///< 만들 때의 표 세대(`DenseHashTable::assertIteratorGeneration`)
+#endif
 
             const_iterator( const unordered_map* pMap, size_t index )
                 : _pMap{ pMap }
-                , _index{ index } {}
+                , _index{ index }
+#if defined( SW_DO_CHECKS )
+                , _generation{ pMap != nullptr ? pMap->getIteratorGeneration() : 0u }
+#endif
+            {
+            }
 
             const_iterator( const iterator& other )
                 : _pMap{ other._pMap }
-                , _index{ other._index } {}
+                , _index{ other._index }
+#if defined( SW_DO_CHECKS )
+                , _generation{ other._generation }
+#endif
+            {
+            }
 
             const_iterator& operator++()
             {
+                assertGeneration();
                 ++_index;
                 return *this;
             }
 
             bool      operator==( const const_iterator& other ) const { return _index == other._index; }
             bool      operator!=( const const_iterator& other ) const { return _index != other._index; }
-            reference operator*() const { return *reinterpret_cast<pointer>( &std::as_const( _pMap->_listDenseData )[_index]._keyValuePair ); }
-            pointer   operator->() const { return reinterpret_cast<pointer>( &std::as_const( _pMap->_listDenseData )[_index]._keyValuePair ); }
+            reference operator*() const
+            {
+                assertGeneration();
+                return *reinterpret_cast<pointer>( &std::as_const( _pMap->_listDenseData )[_index]._keyValuePair );
+            }
+            pointer operator->() const
+            {
+                assertGeneration();
+                return reinterpret_cast<pointer>( &std::as_const( _pMap->_listDenseData )[_index]._keyValuePair );
+            }
+
+        private:
+            void assertGeneration() const noexcept
+            {
+#if defined( SW_DO_CHECKS )
+                _pMap->assertIteratorGeneration( _generation );
+#endif
+            }
         };
 
         // ------------------------------------------------------------------------------

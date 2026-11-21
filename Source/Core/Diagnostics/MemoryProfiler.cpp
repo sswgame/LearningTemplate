@@ -338,7 +338,7 @@ namespace sw
 
         MemoryProfiler* pExpected{ nullptr };
         MemoryProfilerInternal::s_activeProfiler.compare_exchange_strong( pExpected, this, std::memory_order_acq_rel, std::memory_order_relaxed );
-        Memory::registerAllocationTracker( this );
+        _trackerRegistration = Memory::registerAllocationTracker( this );
     }
 
     void MemoryProfiler::shutdown()
@@ -347,7 +347,7 @@ namespace sw
             return;
 
         // 훅이 더 이상 이 인스턴스를 보지 않도록 먼저 등록을 해제한다.
-        Memory::unregisterAllocationTracker( this );
+        _trackerRegistration.reset();
         auto pExpected = this;
         MemoryProfilerInternal::s_activeProfiler.compare_exchange_strong( pExpected, nullptr, std::memory_order_acq_rel, std::memory_order_relaxed );
 

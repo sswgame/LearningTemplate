@@ -1,6 +1,7 @@
 // 단언 대화상자 — 대화상자 자리에 테스트 함수를 걸어 세 가지 답(이번만 · 늘 무시 · 멈춤)과 단언 가로채기가 먼저인지를 본다(Debug 의 멈추는 단언에만 있다).
 #include "pch.h"
 
+#include "Core/Foundation/AssertDialogSlot.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Testing/ScopedAssertCapture.h"
 #include "Core/Testing/TestFramework.h"
@@ -39,12 +40,14 @@ namespace
     /** @brief 테스트가 건 대화상자를 끝에 뗀다 — `--test` 실행은 대화상자가 없으므로(App 은 대화형 에디터 실행에서만 건다) 떼면 처음 상태다. */
     struct ScopedAssertDialogForTest
     {
+        internal::AssertDialogRegistration _registration; ///< 범위가 끝나면 대화상자를 뗀다
+
         explicit ScopedAssertDialogForTest( internal::AssertDialogFunc pfnDialog )
+            : _registration{ internal::bindAssertDialog( pfnDialog ) }
         {
             AssertDialogTestInternal::_s_callCount = 0;
-            internal::setAssertDialog( pfnDialog );
         }
-        ~ScopedAssertDialogForTest() { internal::setAssertDialog( nullptr ); }
+        ~ScopedAssertDialogForTest()                                             = default;
         ScopedAssertDialogForTest( const ScopedAssertDialogForTest& )            = delete;
         ScopedAssertDialogForTest& operator=( const ScopedAssertDialogForTest& ) = delete;
     };
@@ -81,7 +84,6 @@ SW_TEST_CASE( AssertDialogTest, IgnoreOnceAsksEveryTime )
  */
 SW_TEST_CASE( AssertDialogTest, BreakWithoutDialogOrWhenChosen )
 {
-    internal::setAssertDialog( nullptr );
     SW_EXPECT_FALSE( internal::hasAssertDialog() );
     SW_EXPECT_TRUE( internal::shouldBreakOnAssert( "false", nullptr, __FILE__, __LINE__ ) );
 
@@ -132,4 +134,23 @@ SW_TEST_CASE( AssertDialogTest, IgnoreAlwaysRespectsRememberOptionAndClear )
     AssertDialogTestInternal::failAtOneSite( false );
     SW_EXPECT_EQUAL( 4u, AssertDialogTestInternal::_s_callCount );
 }
+/** @brief 대화상자는 하나다 — 걸린 동안 둘째 등록은 단언(가로채기로 센다)하고 앞 대화상자를 덮지 않으며, 토큰이 사라지면 떨어진다. */
+SW_TEST_CASE( AssertDialogTest, SecondDialogBindAssertsAndKeepsTheFirst )
+{
+    {
+        const ScopedAssertDialogForTest dialog( &AssertDialogTestInternal::answerIgnoreOnce );
+        {
+            test::ScopedAssertCapture capture;
+            SW_EXPECT_LOG( SW_ASSERT_LOG_ID ); // 이중 등록 단언은 이 테스트가 보려는 대상이다
+            const internal::AssertDialogRegistration second = internal::bindAssertDialog( &AssertDialogTestInternal::answerBreak );
+            SW_EXPECT_FALSE( second.isActive() );
+            SW_EXPECT_EQUAL( 1u, capture.getCount() );
+        }
+        SW_EXPECT_TRUE( internal::hasAssertDialog() );
+        SW_EXPECT_FALSE( internal::shouldBreakOnAssert( "false", nullptr, __FILE__, __LINE__ ) ); // 앞 대화상자(이번만 무시)가 답한다
+        SW_EXPECT_EQUAL( 1u, AssertDialogTestInternal::_s_callCount );
+    }
+    SW_EXPECT_FALSE( internal::hasAssertDialog() );
+}
+
 #endif

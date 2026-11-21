@@ -11,6 +11,9 @@
  *    메모리 단편화를 없앱니다. 노드는 해시를 32비트로 접은 태그를 들고, 체인을 걸을 때 키를 비교하기 전에 태그부터 견주며
  *    `erase` 와 버킷 다시 만들기는 키를 다시 해시하지 않고 태그로 버킷을 구합니다(문자열 키에서 크다).
  * 3. 순회 순서: 넣은 순서이고, `erase` 는 마지막 원소를 빈 슬롯으로 옮깁니다(swap-and-pop — 기존 이터레이터가 무효화될 수 있다).
+ * 4. 이터레이터 세대(검사 구성만): 표가 원소 자리를 옮길 때(`erase` · `clear` · 대입) 세대를 올리고, 이터레이터는 만들 때의 세대와 다르면 역참조 · 전진에서 단언한다
+ *    (Abseil 해시 표의 세대 검사 · MSVC `_ITERATOR_DEBUG_LEVEL` 자리). 이름(`unordered_map`)이 말하지 않는 무효화를 실행 때 잡는다. 삽입은 세대를 올리지 않는다 —
+ *    이터레이터가 번호라 밀집 배열이 커져도 같은 원소를 가리킨다(원소 주소 `&it->second` 는 바뀐다, 세대 검사도 못 잡는다). 배포 구성은 칸도 검사도 없다.
  */
 #pragma once
 #include "Core/Concurrency/DataRaceDetector.h"
@@ -102,6 +105,7 @@ namespace sw::internal
             {
                 SW_SCOPED_RACE_WRITE();
                 SW_SCOPED_RACE_READ_OTHER( other );
+                bumpIteratorGeneration();
                 _listBucket    = other._listBucket;
                 _listDenseData = other._listDenseData;
                 _traits        = other._traits;
@@ -115,6 +119,8 @@ namespace sw::internal
             {
                 SW_SCOPED_RACE_WRITE();
                 SW_SCOPED_RACE_WRITE_OTHER( other );
+                bumpIteratorGeneration();
+                other.bumpIteratorGeneration();
                 _listBucket    = std::move( other._listBucket );
                 _listDenseData = std::move( other._listDenseData );
                 _traits        = std::move( other._traits );
@@ -164,6 +170,7 @@ namespace sw::internal
         void clear() noexcept
         {
             SW_SCOPED_RACE_WRITE();
+            bumpIteratorGeneration();
             _listDenseData.clear();
             for ( uint32& bucket : _listBucket )
             {
@@ -187,6 +194,7 @@ namespace sw::internal
             {
                 if ( _listDenseData[currentIndex]._tag == tag && get_equal()( _listDenseData[currentIndex].getKey(), key ) )
                 {
+                    bumpIteratorGeneration(); // 지운 자리로 마지막 원소가 옮겨 온다 — 옛 이터레이터가 다른 원소를 가리키게 된다
                     // 버킷 체인에서 분리한다
                     if ( previousIndex == kEmptySlot )
                         _listBucket[bucketIndex] = _listDenseData[currentIndex]._next;
@@ -281,6 +289,20 @@ namespace sw::internal
 
         const hasher&    get_hasher() const noexcept { return _traits.first(); }
         const key_equal& get_equal() const noexcept { return _traits.second(); }
+
+#if defined( SW_DO_CHECKS )
+        /** @brief 지금 이터레이터 세대입니다(검사 구성만). 이터레이터가 만들 때 읽어 둔다. */
+        uint32 getIteratorGeneration() const noexcept { return _iteratorGeneration; }
+        /** @brief 이터레이터가 만들 때의 세대 @p generation 이 지금과 다르면 단언합니다 — 그 사이 `erase` · `clear` · 대입이 원소 자리를 옮겼다. */
+        void assertIteratorGeneration( uint32 generation ) const noexcept
+        {
+            SW_LOW_LEVEL_ASSERT( generation == _iteratorGeneration,
+                                 "hash container iterator used after erase/clear/assign moved elements (swap-and-pop) - take the iterator again (erase(it) returns the next one)" );
+        }
+        void bumpIteratorGeneration() noexcept { ++_iteratorGeneration; }
+#else
+        static void bumpIteratorGeneration() noexcept {}
+#endif
 
         /**
          * @brief 키가 든 밀집 배열 인덱스입니다. 없으면 원소 수(`end()` 의 인덱스)입니다. 레이스 가드는 부르는 쪽이 잡습니다.
@@ -436,6 +458,9 @@ namespace sw::internal
         vector<uint32>                    _listBucket;    ///< 버킷마다 체인 첫 노드의 인덱스
         vector<Node>                      _listDenseData; ///< 연속 메모리에 놓인 밀집 데이터 배열
         CompressedPair<hasher, key_equal> _traits;        ///< 해시 · 키 비교 함수 객체(EBO 로 압축 보관)
+#if defined( SW_DO_CHECKS )
+        uint32 _iteratorGeneration{ 0 }; ///< 원소 자리를 옮기는 변경마다 오르는 세대(검사 구성만 — 배포 sizeof 는 그대로)
+#endif
         SW_RACE_CTX_MEMBER
     };
 } // namespace sw::internal

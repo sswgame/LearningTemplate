@@ -665,16 +665,16 @@ namespace sw
          *          인스펙터는 컴포넌트 머리의 체크박스로 그린다.
          */
         PROPERTY( HideInInspector )
-        atomic<bool> _bActive;
-        atomic<bool> _bIsPendingDestroy; ///< 삭제 예정 표시
-        TickGroup    _tickGroup;         ///< 이 컴포넌트가 속한 TickGroup
-        uint8        _bCanEverTick      : 1;
-        uint8        _bIsSceneComponent : 1; ///< SceneComponent 생성자가 세운다
-        uint8        _bHasBegunPlay     : 1; ///< onBeginPlay 가 불렸고 onEndPlay 는 아직 불리지 않았다. `dispatchBeginPlay` 와 `dispatchEndPlay` 만 바꾼다
-        uint8        _bRegistered       : 1; ///< onRegister 가 불렸고 onUnregister 는 아직 불리지 않았다. `dispatchRegister` 와 `dispatchUnregister` 만 바꾼다
-        uint8        _bPostLoadPending  : 1; ///< 상태를 읽었고 `onPostLoad` 가 배치 끝에 온다. `markPostLoadPending` 과 `dispatchPostLoad` 만 바꾼다
-        uint8        _bStaged           : 1; ///< 나눠 짓는 셀에 들어 아직 드러나지 않았다. 저장소 잠금 아래에서 `stageGameObjects` · `releaseStagedGameObjects` 만 바꾼다
-        uint8        _reservedFlags     : 2;
+        reflected_atomic<bool> _bActive;
+        atomic<bool>           _bIsPendingDestroy; ///< 삭제 예정 표시
+        TickGroup              _tickGroup;         ///< 이 컴포넌트가 속한 TickGroup
+        uint8                  _bCanEverTick      : 1;
+        uint8                  _bIsSceneComponent : 1; ///< SceneComponent 생성자가 세운다
+        uint8                  _bHasBegunPlay     : 1; ///< onBeginPlay 가 불렸고 onEndPlay 는 아직 불리지 않았다. `dispatchBeginPlay` 와 `dispatchEndPlay` 만 바꾼다
+        uint8                  _bRegistered       : 1; ///< onRegister 가 불렸고 onUnregister 는 아직 불리지 않았다. `dispatchRegister` 와 `dispatchUnregister` 만 바꾼다
+        uint8                  _bPostLoadPending  : 1; ///< 상태를 읽었고 `onPostLoad` 가 배치 끝에 온다. `markPostLoadPending` 과 `dispatchPostLoad` 만 바꾼다
+        uint8                  _bStaged           : 1; ///< 나눠 짓는 셀에 들어 아직 드러나지 않았다. 저장소 잠금 아래에서 `stageGameObjects` · `releaseStagedGameObjects` 만 바꾼다
+        uint8                  _reservedFlags     : 2;
         /**
          * @brief `_pPoolEntry` 의 버킷 안 위치입니다. 버킷에 없으면 `kNotInPoolEntry` 입니다. 제거를 O(1) 로 하려고 둡니다.
          * @details 플래그(4 B) 뒤, `_listSubTick` 앞의 정렬 패딩에 들어간다. 앞쪽으로 옮기면 객체가 커진다. 저장소의 `_mutex` 아래에서만 바뀐다.

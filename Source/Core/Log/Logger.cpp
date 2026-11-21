@@ -4,6 +4,7 @@
 
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/Foundation/LowLevelReporterSlot.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/StringUtil.h"
@@ -70,12 +71,8 @@ namespace sw
             return true;
         }
 
-        /// @brief 기동 때 보고자를 건다. 포인터 하나를 상수 초기화된 원자에 넣을 뿐이라 정적 초기화 순서를 타지 않는다.
-        [[maybe_unused]] const bool s_bLowLevelReporterInstalled = []() noexcept
-        {
-            internal::setLowLevelReporter( &forwardLowLevelReport );
-            return true;
-        }();
+        /// @brief 기동 때 건 보고자의 등록이다. 칸이 상수 초기화돼 정적 초기화 순서를 타지 않고, 프로세스가 끝날 때 토큰이 떼어 낸다(그 뒤 보고는 stderr).
+        internal::LowLevelReporterRegistration s_lowLevelReporterRegistration = internal::bindLowLevelReporter( &forwardLowLevelReport );
     } // namespace
 } // namespace sw
 
@@ -133,6 +130,50 @@ namespace sw
     {
         std::fprintf( stderr, "\n[SW_LOG_ASSERT] %s\n  %s\n  at %s:%d\n  in %s\n", pExpression, pMessage, pFile, line, pFunction );
         std::fflush( stderr );
+    }
+
+    bool Logger::reportAssertFailure( const utf8* pTag, const utf8* pExpression, const utf8* pMessage, const utf8* pFile, int32 line, const utf8* pFunction ) noexcept
+    {
+#if defined( SW_DO_CHECKS )
+        printAssertFailureToStderr( pExpression, pMessage, pFile, line, pFunction != nullptr ? pFunction : "" );
+#endif
+        if ( shouldLog( LogLevel::Error ) )
+        {
+            utf8 arrLine[constant::buffer::kMax8192];
+#if defined( SW_DO_CHECKS )
+            formatstring( arrLine, constant::buffer::kMax8192,
+                          "ASSERT failed
+                          "
+                          "Expression : %#
+                          "
+                          "Message    : %#
+                          "
+                          "FileName   : %#
+                          "
+                          "Function   : %#
+                          "
+                          "Line       : %#",
+                          pExpression, pMessage, pFile, pFunction != nullptr ? pFunction : "", line );
+#else
+            formatstring( arrLine, constant::buffer::kMax8192,
+                          "ASSERT failed
+                          "
+                          "Expression : %#
+                          "
+                          "Message    : %#
+                          "
+                          "FileName   : %#
+                          "
+                          "Line       : %#",
+                          pExpression, pMessage, pFile, line );
+#endif
+            writeLogGlobal( LogLevel::Error, pTag, arrLine, pFile, line, SW_ASSERT_LOG_ID );
+        }
+#if defined( SW_DO_CHECKS )
+        return internal::tryCaptureAssert() == false && internal::shouldBreakOnAssert( pExpression, pMessage, pFile, line );
+#else
+        return false;
+#endif
     }
 
     void Logger::writeLogGlobal( LogLevel level, const utf8* pTag, const utf8* pMessage, const utf8* pFile, int32 line, const utf8* pID )

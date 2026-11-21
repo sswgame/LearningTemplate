@@ -1,8 +1,8 @@
 /**
- * @file map.h
- * @brief 정렬 맵입니다. 정렬된 벡터와 이진 검색입니다. 두 구성(`SW_ENABLE_STL_CONTAINER`)에서 같은 구현이고 기본 할당자(`ContainerAllocator`)만 다릅니다.
+ * @file flat_map.h
+ * @brief 정렬 맵(flat_map)입니다. 정렬된 벡터와 이진 검색입니다 — 이름이 `std::map`(노드 트리 · 주소 안정)이 아님을 알린다(C++23 `std::flat_map` 과 같은 보장). 두 구성(`SW_ENABLE_STL_CONTAINER`)에서 같은 구현이고 기본 할당자(`ContainerAllocator`)만 다릅니다.
  * @details 키 순서로 돕니다. 원소 주소 · 반복자는 삽입 · 삭제마다 무효가 될 수 있습니다(주소를 오래 쥐어야 하면 값을 `unique_ptr` 로 든다).
- *          저장소 · 조회 · 삽입 · 삭제는 `set` 과 함께 쓰는 몸통(`internal::SortedVectorBase`)에 있고, 여기에는 키 → 값 접근(`at` · `operator[]` · `try_emplace`)만 있습니다.
+ *          저장소 · 조회 · 삽입 · 삭제는 `flat_set` 과 함께 쓰는 몸통(`internal::SortedVectorBase`)에 있고, 여기에는 키 → 값 접근(`at` · `operator[]` · `try_emplace`)만 있습니다.
  */
 #pragma once
 #include "Core/Concurrency/DataRaceDetector.h"
@@ -15,7 +15,7 @@ namespace sw
 {
     /** @brief 정렬된 벡터로 구현한 맵입니다. 조회는 이진 검색이고, 삽입할 때 정렬을 유지합니다. */
     template <typename Key, typename T, typename Compare = std::less<void>, typename Allocator = ContainerAllocator<pair<Key, T>>>
-    class map : public internal::SortedVectorBase<pair<Key, T>, Compare, internal::PairKeyLess<pair<Key, T>, Compare>, Allocator>
+    class flat_map : public internal::SortedVectorBase<pair<Key, T>, Compare, internal::PairKeyLess<pair<Key, T>, Compare>, Allocator>
     {
         using Base      = internal::SortedVectorBase<pair<Key, T>, Compare, internal::PairKeyLess<pair<Key, T>, Compare>, Allocator>;
         using ValueLess = internal::PairKeyLess<pair<Key, T>, Compare>;
@@ -30,7 +30,7 @@ namespace sw
         // 생성자는 몸통의 것을 그대로 쓴다(기본 · 복사 · 이동은 암시적으로 몸통의 것을 부른다).
         using Base::Base;
 
-        map& operator=( std::initializer_list<value_type> ilist )
+        flat_map& operator=( std::initializer_list<value_type> ilist )
         {
             Base::assign( ilist );
             return *this;
@@ -44,7 +44,7 @@ namespace sw
             auto it = this->lower_bound( key );
             if ( it != this->end() && this->_comp( key, it->first ) == false )
                 return it->second;
-            throw std::out_of_range( "map::at" );
+            throw std::out_of_range( "flat_map::at" );
         }
 
         /** @brief 키에 해당하는 값을 반환합니다. 키가 없으면 std::out_of_range 를 던집니다. */
@@ -55,7 +55,7 @@ namespace sw
             auto it = this->lower_bound( key );
             if ( it != this->end() && this->_comp( key, it->first ) == false )
                 return it->second;
-            throw std::out_of_range( "map::at" );
+            throw std::out_of_range( "flat_map::at" );
         }
 
         T& operator[]( const Key& key )

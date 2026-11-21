@@ -250,3 +250,36 @@ SW_TEST_CASE( ByteStreamTest, WritePodAtPastTheEndIsCheckedAndIgnored )
     SW_EXPECT_EQUAL( uint8{ 0x44 }, bytes[4] );
     SW_EXPECT_EQUAL( uint8{ 0x11 }, bytes[7] );
 }
+
+/**
+ * @brief [ByteStreamTest] 끝 검사 `finish()` 는 끈적한 실패 하나로 판정한다 — 끝까지 읽으면 성공, 남은 바이트 · 지난 실패(읽기 부족 · markFailed)는 오류이고 뒤 읽기가 실패를 지우지 않는다
+ */
+SW_TEST_CASE( ByteStreamTest, FinishReportsStickyFailureAndTrailingBytes )
+{
+    vector<uint8> bytes;
+    ByteWriter    writer{ bytes };
+    writer.writeUint32( 7 );
+    writer.writeUint8( 1 );
+    {
+        ByteReader reader{ bytes.data(), bytes.size() };
+        SW_EXPECT_EQUAL( 7u, reader.readUint32() );
+        SW_EXPECT_FALSE( reader.finish().has_value() ); // 1 바이트가 남았다
+        SW_EXPECT_EQUAL( uint8( 1 ), reader.readUint8() );
+        SW_EXPECT_TRUE( reader.finish().has_value() );
+    }
+    {
+        ByteReader reader{ bytes.data(), bytes.size() };
+        SW_EXPECT_EQUAL( uint64( 0 ), reader.readUint64() ); // 8 바이트가 없다 — 0 을 돌려주고 실패를 세운다
+        SW_EXPECT_EQUAL( 7u, reader.readUint32() );          // 실패 뒤에도 읽을 수는 있지만
+        SW_EXPECT_EQUAL( uint8( 1 ), reader.readUint8() );
+        SW_EXPECT_FALSE( reader.finish().has_value() ); // 실패는 끈적하다 — 끝까지 읽어도 지워지지 않는다
+    }
+    {
+        ByteReader reader{ bytes.data(), bytes.size() };
+        (void)reader.readUint32();
+        (void)reader.readUint8();
+        reader.markFailed(); // 값이 형식에 맞지 않을 때 부르는 쪽이 세운다 — 같은 깃발이다
+        SW_EXPECT_FALSE( reader.finish().has_value() );
+        SW_EXPECT_TRUE( reader.hasOverflowed() );
+    }
+}

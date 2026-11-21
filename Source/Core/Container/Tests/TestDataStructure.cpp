@@ -12,10 +12,10 @@
 #include "Core/Container/DynamicBitset.h"
 #include "Core/Container/array.h"
 #include "Core/Container/deque.h"
+#include "Core/Container/flat_map.h"
+#include "Core/Container/flat_set.h"
 #include "Core/Container/list.h"
-#include "Core/Container/map.h"
 #include "Core/Container/pair.h"
-#include "Core/Container/set.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/unordered_set.h"
@@ -501,12 +501,12 @@ SW_TEST_CASE( DataStructureTest, ArrayOperations )
 }
 
 /**
- * @brief [DataStructureTest] sw::map 및 sw::set 정렬 컨테이너 연산 검증
+ * @brief [DataStructureTest] sw::flat_map 및 sw::flat_set 정렬 컨테이너 연산 검증
  */
 SW_TEST_CASE( DataStructureTest, MapAndSetOperations )
 {
-    // 1) sw::map
-    sw::map<sw::string, int32> mapA;
+    // 1) sw::flat_map
+    sw::flat_map<sw::string, int32> mapA;
     mapA["Bravo"]   = 20;
     mapA["Alpha"]   = 10;
     mapA["Charlie"] = 30;
@@ -525,8 +525,8 @@ SW_TEST_CASE( DataStructureTest, MapAndSetOperations )
     SW_EXPECT_EQUAL( 2u, mapA.size() );
     SW_EXPECT_FALSE( mapA.contains( "Alpha" ) );
 
-    // 2) sw::set
-    sw::set<int32> setA;
+    // 2) sw::flat_set
+    sw::flat_set<int32> setA;
     setA.insert( 30 );
     setA.insert( 10 );
     setA.insert( 20 );
@@ -826,28 +826,26 @@ SW_TEST_CASE( DataStructureTest, PairBasicAndStructuredBinding )
 }
 
 /**
- * @brief [DataStructureTest] pair EBO (Empty Base Optimization) 압축 검증
+ * @brief [DataStructureTest] pair 는 빈 형식이 들어가도 늘 데이터 멤버 first · second 를 두고(구조적 바인딩 포함), 빈 함수 객체 압축은 CompressedPair 가 한다
  */
-SW_TEST_CASE( DataStructureTest, PairEmptyBaseOptimization )
+SW_TEST_CASE( DataStructureTest, PairAlwaysHasMembersAndCompressedPairPacksEmpty )
 {
-    // 1) 일반 타입 쌍: 8 바이트
     static_assert( sizeof( sw::pair<int32, int32> ) == 8, "pair<int, int> must be 8 bytes" );
-    // 2) 빈 클래스 1개 + 포인터: EBO 압축으로 8 바이트
-    static_assert( sizeof( sw::pair<EmptyTestHasher, int32*> ) == sizeof( int32* ), "Empty + pointer must be pointer size (EBO)" );
-    // 3) 빈 클래스 2개: EBO 압축으로 최소 크기 1 바이트
-    static_assert( sizeof( sw::pair<EmptyTestHasher, EmptyTestEqual> ) == 1, "Empty + Empty must be 1 byte (EBO)" );
 
     sw::pair<EmptyTestHasher, int32> pEmptyFirst{ EmptyTestHasher{}, 1234 };
     SW_EXPECT_EQUAL( 1234, pEmptyFirst.second );
-    SW_EXPECT_EQUAL( static_cast<size_t>( 10 * 2654435761u ), pEmptyFirst.first()( 10 ) );
+    SW_EXPECT_EQUAL( static_cast<size_t>( 10 * 2654435761u ), pEmptyFirst.first( 10 ) ); // first 는 함수 객체 멤버다
 
-    sw::pair<int32, EmptyTestEqual> pEmptySecond{ 5678, EmptyTestEqual{} };
-    SW_EXPECT_EQUAL( 5678, pEmptySecond.first );
-    SW_EXPECT_TRUE( pEmptySecond.second()( 10, 10 ) );
-    SW_EXPECT_FALSE( pEmptySecond.second()( 10, 20 ) );
+    const auto& [hasher, value] = pEmptyFirst;
+    SW_EXPECT_EQUAL( 1234, value );
+    SW_EXPECT_EQUAL( static_cast<size_t>( 10 * 2654435761u ), hasher( 10 ) );
 
-    sw::pair<EmptyTestHasher, EmptyTestEqual> pBothEmpty{};
-    SW_EXPECT_TRUE( pBothEmpty.second()( 5, 5 ) );
+    // 압축은 CompressedPair 의 몫 — 접근자가 늘 함수라 원소가 비었는지에 흔들리지 않는다.
+    static_assert( sizeof( sw::CompressedPair<EmptyTestHasher, int32*> ) == sizeof( int32* ), "Empty + pointer must be pointer size (EBO)" );
+    static_assert( sizeof( sw::CompressedPair<EmptyTestHasher, EmptyTestEqual> ) == 1, "Empty + Empty must be 1 byte (EBO)" );
+    sw::CompressedPair<EmptyTestHasher, EmptyTestEqual> both{};
+    SW_EXPECT_TRUE( both.second()( 5, 5 ) );
+    SW_EXPECT_FALSE( both.second()( 10, 20 ) );
 }
 
 /**
@@ -1255,12 +1253,12 @@ SW_TEST_CASE( DataStructureTest, AssociativeContainersFindWithoutBuildingAKey )
     const sw::string_view probe{ stored.data(), stored.size() };
     const sw::string_view missing{ "engine/shaders/none.hlsl" };
 
-    sw::map<sw::string, int32> orderedMap;
+    sw::flat_map<sw::string, int32> orderedMap;
     orderedMap[stored] = 7;
     SW_EXPECT_TRUE( orderedMap.find( probe ) != orderedMap.end() );
     SW_EXPECT_TRUE( orderedMap.find( missing ) == orderedMap.end() );
 
-    sw::set<sw::string> orderedSet;
+    sw::flat_set<sw::string> orderedSet;
     orderedSet.insert( stored );
     SW_EXPECT_TRUE( orderedSet.find( probe ) != orderedSet.end() );
     SW_EXPECT_TRUE( orderedSet.find( missing ) == orderedSet.end() );
@@ -1588,7 +1586,7 @@ SW_TEST_CASE( DataStructureTest, TryEmplaceKeepsArgumentsAndMapUpperBound )
     mapList.try_emplace( 7, size_t{ 5 } );
     SW_EXPECT_EQUAL( 5u, static_cast<uint32>( mapList.find( 7 )->second.size() ) );
 
-    sw::map<int32, int32> mapSorted;
+    sw::flat_map<int32, int32> mapSorted;
     mapSorted.insert( { 10, 1 } );
     mapSorted.insert( { 20, 2 } );
     mapSorted.insert( { 30, 3 } );
@@ -1707,14 +1705,14 @@ SW_TEST_CASE( MapTest, RangeBuildKeepsTheFirstOfEqualKeys )
         {3, 7}
     };
 
-    const sw::map<int32, int32> mapBuilt( listInput.begin(), listInput.end() );
+    const sw::flat_map<int32, int32> mapBuilt( listInput.begin(), listInput.end() );
     SW_REQUIRE_EQUAL( 4u, mapBuilt.size() );
     SW_EXPECT_EQUAL( 3, mapBuilt.at( 1 ) );
     SW_EXPECT_EQUAL( 5, mapBuilt.at( 2 ) );
     SW_EXPECT_EQUAL( 1, mapBuilt.at( 3 ) );
     SW_EXPECT_EQUAL( 2, mapBuilt.at( 5 ) );
 
-    sw::map<int32, int32> mapGrown{
+    sw::flat_map<int32, int32> mapGrown{
         {5, 50},
         {4, 40}
     };
@@ -1736,7 +1734,7 @@ SW_TEST_CASE( MapTest, RangeBuildKeepsTheFirstOfEqualKeys )
     {
         listLong.emplace_back( ( index * 7 ) % 37, index );
     }
-    sw::map<int32, int32> mapLong{
+    sw::flat_map<int32, int32> mapLong{
         { 36, -1 }
     };
     mapLong.insert( listLong.begin(), listLong.end() );
@@ -1748,7 +1746,7 @@ SW_TEST_CASE( MapTest, RangeBuildKeepsTheFirstOfEqualKeys )
             SW_EXPECT_EQUAL( index, mapLong.at( ( index * 7 ) % 37 ) ); // 7 과 37 이 서로소라 첫 37 개가 키를 한 번씩 덮는다
     }
 
-    sw::set<int32>          setGrown{ 3, 1, 3 };
+    sw::flat_set<int32>     setGrown{ 3, 1, 3 };
     const sw::vector<int32> listMore{ 4, 0, 1, 4, 2 };
     setGrown.insert( listMore.begin(), listMore.end() );
     SW_REQUIRE_EQUAL( 5u, setGrown.size() );
@@ -1758,4 +1756,51 @@ SW_TEST_CASE( MapTest, RangeBuildKeepsTheFirstOfEqualKeys )
         SW_EXPECT_EQUAL( expected, value );
         ++expected;
     }
+}
+
+/**
+ * @brief [DataStructureTest] 해시 컨테이너 이터레이터 세대 — erase 뒤 옛 이터레이터를 역참조하면 검사 구성에서 단언하고, erase(it) 가 돌려준 이터레이터 · 삽입 뒤 이터레이터는 그대로 쓴다
+ */
+SW_TEST_CASE( DataStructureTest, HashIteratorGenerationCatchesUseAfterErase )
+{
+    sw::unordered_map<int32, int32> map;
+    for ( int32 key = 0; key < 8; ++key )
+    {
+        map[key] = key * 10;
+    }
+
+    // 지우며 도는 정석 — erase(it) 가 다음(옮겨 온) 원소를 돌려준다. 단언이 없어야 한다.
+    for ( auto it = map.begin(); it != map.end(); )
+    {
+        if ( it->first % 2 == 0 )
+            it = map.erase( it );
+        else
+            ++it;
+    }
+    SW_EXPECT_EQUAL( size_t( 4 ), map.size() );
+
+    // 삽입은 세대를 올리지 않는다 — 이터레이터가 번호라 같은 원소를 가리킨다.
+    auto kept = map.find( 1 );
+    SW_REQUIRE_TRUE( kept != map.end() );
+    map[100] = 1000;
+    SW_EXPECT_EQUAL( 10, kept->second );
+
+    sw::test::ScopedAssertCapture capture;
+    SW_EXPECT_LOG( SW_ASSERT_LOG_ID ); // 옛 이터레이터 역참조 단언은 이 테스트가 보려는 대상이다
+    auto stale = map.find( 3 );
+    SW_REQUIRE_TRUE( stale != map.end() );
+    (void)map.erase( 1 );
+    [[maybe_unused]] const int32 movedValue = stale->second; // 지운 자리로 옮겨 온 원소를 읽을 수 있다 — 세대가 달라 단언한다
+    if ( sw::test::ScopedAssertCapture::kAssertsAreActive )
+        SW_EXPECT_EQUAL( 1u, capture.getCount() );
+
+    sw::unordered_set<int32> set{ 1, 2, 3 };
+    auto                     setStale = set.find( 2 );
+    set.clear();
+    set.insert( 1 ); // 같은 번호 자리를 다시 채워 범위 안을 읽게 한다 — 세대 단언만 본다
+    set.insert( 2 );
+    set.insert( 3 );
+    [[maybe_unused]] const int32 setValue = *setStale;
+    if ( sw::test::ScopedAssertCapture::kAssertsAreActive )
+        SW_EXPECT_EQUAL( 2u, capture.getCount() );
 }

@@ -17,15 +17,13 @@ namespace sw
 
     FileReadDiagnostics::FileReadDiagnostics()
         : _emulatedDiskBusyUntilNano{ 0 }
+        , _readObserverRegistration{ PlatformFileUtil::bindReadObserver( this ) }
     {
-        const bool bRegistered = PlatformFileUtil::registerReadObserver( this );
-        SW_ASSERT( bRegistered && "another file read observer is already registered" );
-        (void)bRegistered;
     }
 
     FileReadDiagnostics::~FileReadDiagnostics()
     {
-        PlatformFileUtil::unregisterReadObserver( this );
+        _readObserverRegistration.reset(); // 다른 스레드의 읽기가 이 관찰자를 부르지 않게 멤버보다 먼저 뗀다
     }
 
     void FileReadDiagnostics::recordDeviceRead( size_t byteCount )

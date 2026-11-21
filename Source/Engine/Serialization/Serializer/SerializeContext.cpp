@@ -121,7 +121,7 @@ namespace sw
 
             static void writeAtomicBoolBinary( const void* pPtr, vector<uint8>& listBuf )
             {
-                const uint8 flag = static_cast<const atomic<bool>*>( pPtr )->load() ? 1 : 0;
+                const uint8 flag = static_cast<const reflected_atomic<bool>*>( pPtr )->load() ? 1 : 0;
                 listBuf.push_back( flag );
             }
 
@@ -129,7 +129,7 @@ namespace sw
             {
                 if ( offset + sizeof( uint8 ) > size )
                     return false;
-                static_cast<atomic<bool>*>( pPtr )->store( pData[offset] != 0 );
+                static_cast<reflected_atomic<bool>*>( pPtr )->store( pData[offset] != 0 );
                 offset += sizeof( uint8 );
                 return true;
             }
@@ -163,14 +163,14 @@ namespace sw
             // 불리언 글이 아니면 실패다(값은 그대로) — "ture" 가 조용히 false 가 되지 않게. 읽는 쪽이 고아 · 실패로 알린다.
             [[nodiscard]] static bool readBoolText( void* pPtr, string_view strView ) { return StringUtil::tryParseBool( strView, *static_cast<bool*>( pPtr ) ); }
 
-            static string writeAtomicBoolText( const void* pPtr ) { return static_cast<const atomic<bool>*>( pPtr )->load() ? "true" : "false"; }
+            static string writeAtomicBoolText( const void* pPtr ) { return static_cast<const reflected_atomic<bool>*>( pPtr )->load() ? "true" : "false"; }
 
             [[nodiscard]] static bool readAtomicBoolText( void* pPtr, string_view strView )
             {
                 bool bValue = false;
                 if ( StringUtil::tryParseBool( strView, bValue ) == false )
                     return false;
-                static_cast<atomic<bool>*>( pPtr )->store( bValue );
+                static_cast<reflected_atomic<bool>*>( pPtr )->store( bValue );
                 return true;
             }
 
@@ -247,7 +247,7 @@ namespace sw
             static void regBuiltinBin( SerializeContext& context, const utf8* pName )
             {
                 constexpr bool bSkippedBuiltInType = std::is_same_v<T, string> || std::is_same_v<T, hashed_string> ||
-                                                     std::is_same_v<T, atomic<bool>> || std::is_same_v<T, TagID>;
+                                                     std::is_same_v<T, reflected_atomic<bool>> || std::is_same_v<T, TagID>;
                 if constexpr ( bSkippedBuiltInType )
                     return;
                 context.registerBinaryHandler( hashed_string( pName ), SW_DELEGATE_FUNCTION( SerializeContext::BinaryWriteFn, &writeBuiltinBinary<T> ),

@@ -1,10 +1,9 @@
 /**
  * @file pair.h
- * @brief 값 쌍(sw::pair)과 EBO(Empty Base Optimization) 압축입니다.
+ * @brief 값 쌍(sw::pair)과 빈 함수 객체를 0 바이트로 담는 쌍(sw::CompressedPair)입니다.
  *
- * - sw::pair:
- *   1) 상태가 있는 일반 타입의 쌍: std::pair 와 똑같이 first, second 데이터 멤버를 둡니다.
- *   2) 상태가 없는 빈 클래스가 들어가면: 상속(EBO)으로 그쪽을 0바이트로 압축해 보관합니다.
+ * - sw::pair: std::pair 와 같이 **늘** first, second 데이터 멤버를 둡니다. 예전에는 빈 형식이 들어가면 그쪽을 EBO 로 압축해
+ *   `first` 가 함수 `first()` 로 바뀌었다 — 제네릭 코드와 구조적 바인딩이 원소 형식에 따라 깨졌다. 압축은 접근자가 늘 함수인 `CompressedPair` 가 맡는다.
  * - sw::make_pair: 인자 타입을 decay 해서 알맞은 sw::pair 를 만드는 팩토리 함수입니다.
  */
 #pragma once
@@ -77,11 +76,9 @@ namespace sw
 namespace sw
 {
     // ------------------------------------------------------------------------------
-    // 1) Case 1: T1, T2 모두 일반 타입(비어 있지 않음) -> first, second 를 직접 멤버로 둔다
+    // 1) pair. first, second 를 늘 데이터 멤버로 둔다(std::pair 와 같다)
     // ------------------------------------------------------------------------------
-    template <typename T1, typename T2,
-              bool T1Empty = ( std::is_empty_v<T1> && std::is_final_v<T1> == false ),
-              bool T2Empty = ( std::is_empty_v<T2> && std::is_final_v<T2> == false )>
+    template <typename T1, typename T2>
     struct pair
     {
         using first_type  = T1;
@@ -186,142 +183,6 @@ namespace sw
             , second{ std::forward<Args2>( std::get<Index2>( secondArgs ) )... } {}
     };
 
-    // ------------------------------------------------------------------------------
-    // 2) Case 2: T1 은 빈 클래스(EBO 압축), T2 는 일반 타입
-    // ------------------------------------------------------------------------------
-    template <typename T1, typename T2>
-    struct pair<T1, T2, true, false> : private internal::EmptyElementTag<T1, 0>
-    {
-        using first_type  = T1;
-        using second_type = T2;
-        using BaseTag     = internal::EmptyElementTag<T1, 0>;
-
-        T2 second;
-
-        constexpr pair()
-            : BaseTag{}
-            , second{} {}
-
-        constexpr pair( const T1& a, const T2& b )
-            : BaseTag{ a }
-            , second{ b } {}
-
-        template <typename U1, typename U2>
-        constexpr pair( U1&& a, U2&& b )
-            : BaseTag{ std::forward<U1>( a ) }
-            , second{ std::forward<U2>( b ) } {}
-
-        constexpr pair( const pair& )                = default;
-        constexpr pair( pair&& ) noexcept            = default;
-        constexpr pair& operator=( const pair& )     = default;
-        constexpr pair& operator=( pair&& ) noexcept = default;
-
-        constexpr T1&       first() noexcept { return BaseTag::get(); }
-        constexpr const T1& first() const noexcept { return BaseTag::get(); }
-
-        constexpr void swap( pair& other ) noexcept( std::is_nothrow_swappable_v<T2> )
-        {
-            using std::swap;
-            swap( second, other.second );
-        }
-
-    private:
-        template <typename... Args1, typename... Args2, size_t... Index1, size_t... Index2>
-        constexpr pair( std::tuple<Args1...>& firstArgs, std::tuple<Args2...>& secondArgs,
-                        std::index_sequence<Index1...>, std::index_sequence<Index2...> )
-            : BaseTag{ std::in_place, std::forward<Args1>( std::get<Index1>( firstArgs ) )... }
-            , second{ std::forward<Args2>( std::get<Index2>( secondArgs ) )... } {}
-    };
-
-    // ------------------------------------------------------------------------------
-    // 3) Case 3: T1 은 일반 타입, T2 는 빈 클래스(EBO 압축)
-    // ------------------------------------------------------------------------------
-    template <typename T1, typename T2>
-    struct pair<T1, T2, false, true> : private internal::EmptyElementTag<T2, 1>
-    {
-        using first_type  = T1;
-        using second_type = T2;
-        using BaseTag     = internal::EmptyElementTag<T2, 1>;
-
-        T1 first;
-
-        constexpr pair()
-            : BaseTag{}
-            , first{} {}
-
-        constexpr pair( const T1& a, const T2& b )
-            : BaseTag{ b }
-            , first{ a } {}
-
-        template <typename U1, typename U2>
-        constexpr pair( U1&& a, U2&& b )
-            : BaseTag{ std::forward<U2>( b ) }
-            , first{ std::forward<U1>( a ) } {}
-
-        constexpr pair( const pair& )                = default;
-        constexpr pair( pair&& ) noexcept            = default;
-        constexpr pair& operator=( const pair& )     = default;
-        constexpr pair& operator=( pair&& ) noexcept = default;
-
-        constexpr T2&       second() noexcept { return BaseTag::get(); }
-        constexpr const T2& second() const noexcept { return BaseTag::get(); }
-
-        constexpr void swap( pair& other ) noexcept( std::is_nothrow_swappable_v<T1> )
-        {
-            using std::swap;
-            swap( first, other.first );
-        }
-
-    private:
-        template <typename... Args1, typename... Args2, size_t... Index1, size_t... Index2>
-        constexpr pair( std::tuple<Args1...>& firstArgs, std::tuple<Args2...>& secondArgs,
-                        std::index_sequence<Index1...>, std::index_sequence<Index2...> )
-            : BaseTag{ std::in_place, std::forward<Args2>( std::get<Index2>( secondArgs ) )... }
-            , first{ std::forward<Args1>( std::get<Index1>( firstArgs ) )... } {}
-    };
-
-    // ------------------------------------------------------------------------------
-    // 4) Case 4: T1, T2 모두 빈 클래스(둘 다 EBO 압축 -> 1바이트)
-    // ------------------------------------------------------------------------------
-    template <typename T1, typename T2>
-    struct pair<T1, T2, true, true> : private internal::EmptyElementTag<T1, 0>, private internal::EmptyElementTag<T2, 1>
-    {
-        using first_type  = T1;
-        using second_type = T2;
-        using FirstBase   = internal::EmptyElementTag<T1, 0>;
-        using SecondBase  = internal::EmptyElementTag<T2, 1>;
-
-        constexpr pair() = default;
-
-        constexpr pair( const T1& a, const T2& b )
-            : FirstBase{ a }
-            , SecondBase{ b } {}
-
-        template <typename U1, typename U2>
-        constexpr pair( U1&& a, U2&& b )
-            : FirstBase{ std::forward<U1>( a ) }
-            , SecondBase{ std::forward<U2>( b ) } {}
-
-        constexpr pair( const pair& )                = default;
-        constexpr pair( pair&& ) noexcept            = default;
-        constexpr pair& operator=( const pair& )     = default;
-        constexpr pair& operator=( pair&& ) noexcept = default;
-
-        constexpr T1&       first() noexcept { return FirstBase::get(); }
-        constexpr const T1& first() const noexcept { return FirstBase::get(); }
-        constexpr T2&       second() noexcept { return SecondBase::get(); }
-        constexpr const T2& second() const noexcept { return SecondBase::get(); }
-
-        constexpr void swap( pair& ) noexcept {}
-
-    private:
-        template <typename... Args1, typename... Args2, size_t... Index1, size_t... Index2>
-        constexpr pair( std::tuple<Args1...>& firstArgs, std::tuple<Args2...>& secondArgs,
-                        std::index_sequence<Index1...>, std::index_sequence<Index2...> )
-            : FirstBase{ std::in_place, std::forward<Args1>( std::get<Index1>( firstArgs ) )... }
-            , SecondBase{ std::in_place, std::forward<Args2>( std::get<Index2>( secondArgs ) )... } {}
-    };
-
     template <typename T1, typename T2>
     constexpr pair<std::decay_t<T1>, std::decay_t<T2>> make_pair( T1&& a, T2&& b )
     {
@@ -331,14 +192,7 @@ namespace sw
     template <typename T1, typename T2>
     constexpr bool operator==( const pair<T1, T2>& lhs, const pair<T1, T2>& rhs )
     {
-        if constexpr ( std::is_empty_v<T1> && std::is_empty_v<T2> )
-            return true;
-        else if constexpr ( std::is_empty_v<T1> )
-            return lhs.second == rhs.second;
-        else if constexpr ( std::is_empty_v<T2> )
-            return lhs.first == rhs.first;
-        else
-            return lhs.first == rhs.first && lhs.second == rhs.second;
+        return lhs.first == rhs.first && lhs.second == rhs.second;
     }
 
     template <typename T1, typename T2>
@@ -350,26 +204,11 @@ namespace sw
     template <typename T1, typename T2>
     constexpr bool operator<( const pair<T1, T2>& lhs, const pair<T1, T2>& rhs )
     {
-        if constexpr ( std::is_empty_v<T1> == false && std::is_empty_v<T2> == false )
-        {
-            if ( lhs.first < rhs.first )
-                return true;
-            if ( rhs.first < lhs.first )
-                return false;
-            return lhs.second < rhs.second;
-        }
-        else if constexpr ( std::is_empty_v<T1> == false )
-        {
-            return lhs.first < rhs.first;
-        }
-        else if constexpr ( std::is_empty_v<T2> == false )
-        {
-            return lhs.second < rhs.second;
-        }
-        else
-        {
+        if ( lhs.first < rhs.first )
+            return true;
+        if ( rhs.first < lhs.first )
             return false;
-        }
+        return lhs.second < rhs.second;
     }
 
     template <typename T1, typename T2>
@@ -388,57 +227,27 @@ namespace sw
     constexpr decltype( auto ) get( pair<T1, T2>& p ) noexcept
     {
         if constexpr ( Index == 0 )
-        {
-            if constexpr ( std::is_empty_v<T1> && std::is_final_v<T1> == false )
-                return p.first();
-            else
-                return ( p.first );
-        }
+            return ( p.first );
         else
-        {
-            if constexpr ( std::is_empty_v<T2> && std::is_final_v<T2> == false )
-                return p.second();
-            else
-                return ( p.second );
-        }
+            return ( p.second );
     }
 
     template <size_t Index, typename T1, typename T2>
     constexpr decltype( auto ) get( const pair<T1, T2>& p ) noexcept
     {
         if constexpr ( Index == 0 )
-        {
-            if constexpr ( std::is_empty_v<T1> && std::is_final_v<T1> == false )
-                return p.first();
-            else
-                return ( p.first );
-        }
+            return ( p.first );
         else
-        {
-            if constexpr ( std::is_empty_v<T2> && std::is_final_v<T2> == false )
-                return p.second();
-            else
-                return ( p.second );
-        }
+            return ( p.second );
     }
 
     template <size_t Index, typename T1, typename T2>
     constexpr decltype( auto ) get( pair<T1, T2>&& p ) noexcept
     {
         if constexpr ( Index == 0 )
-        {
-            if constexpr ( std::is_empty_v<T1> && std::is_final_v<T1> == false )
-                return std::move( p.first() );
-            else
-                return std::move( p.first );
-        }
+            return std::move( p.first );
         else
-        {
-            if constexpr ( std::is_empty_v<T2> && std::is_final_v<T2> == false )
-                return std::move( p.second() );
-            else
-                return std::move( p.second );
-        }
+            return std::move( p.second );
     }
 } // namespace sw
 

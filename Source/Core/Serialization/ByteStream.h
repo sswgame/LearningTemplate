@@ -15,6 +15,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
@@ -100,7 +101,10 @@ namespace sw
 {
     /**
      * @class ByteReader
-     * @brief 빌린 바이트를 앞에서부터 리틀 엔디언 값으로 읽습니다. 남은 바이트가 모자라면 읽지 않고 넘침으로 표시합니다.
+     * @brief 빌린 바이트를 앞에서부터 리틀 엔디언 값으로 읽습니다. 남은 바이트가 모자라면 읽지 않고 실패로 표시합니다.
+     * @details **오류 관례는 하나다 — 끈적한 실패(`_bFailed`)**. 모든 읽기(값 반환 · `bool` 반환 모두)와 `markFailed` 가 같은 깃발을 세우고, 한 번 서면 내려가지 않는다.
+     *          `bool` 을 돌려주는 읽기의 반환값은 그 깃발의 거울이라 매 줄 검사하지 않아도 된다 — 형식의 끝에서 `finish()` 한 번이 모든 실패와 남은 바이트를 본다
+     *          (언리얼 `FArchive::IsError` 와 같은 자리, 못 믿는 입력에 분기가 적고 빠뜨리기 어렵다). `finish()` 는 `[[nodiscard]]` 라 끝 검사를 잊는 모양이 컴파일 경고다.
      */
     class ByteReader
     {
@@ -109,7 +113,7 @@ namespace sw
             : _pData{ pData }
             , _byteCount{ pData != nullptr ? byteCount : 0 }
             , _offset{ 0 }
-            , _bOverflow{ SW_FALSE }
+            , _bFailed{ SW_FALSE }
         {
         }
 
@@ -168,7 +172,7 @@ namespace sw
             // 지수 비트가 모두 1 이면 NaN · 무한대다. 이 층은 Math 를 끌어오지 않아도 된다.
             if ( ( LittleEndianUtil::readUint32( pBytes ) & 0x7F800000u ) == 0x7F800000u )
             {
-                _bOverflow = SW_TRUE;
+                _bFailed = SW_TRUE;
                 return 0.0f;
             }
             return LittleEndianUtil::readFloat32( pBytes );
@@ -187,10 +191,10 @@ namespace sw
         /** @brief @p byteCount 바이트를 읽지 않고 넘깁니다. 모자라면 false 입니다. */
         [[nodiscard]] bool skipBytes( size_t byteCount ) { return byteCount == 0 || consume( byteCount ) != nullptr; }
 
-        [[nodiscard]] bool readVarUint( uint64& outValue ) { return markOverflowUnless( VarIntUtil::decodeVarUint64( _pData, _byteCount, _offset, outValue ) ); }
-        [[nodiscard]] bool readVarUint( uint32& outValue ) { return markOverflowUnless( VarIntUtil::decodeVarUint32( _pData, _byteCount, _offset, outValue ) ); }
-        [[nodiscard]] bool readVarInt( int64& outValue ) { return markOverflowUnless( VarIntUtil::decodeVarInt64( _pData, _byteCount, _offset, outValue ) ); }
-        [[nodiscard]] bool readVarInt( int32& outValue ) { return markOverflowUnless( VarIntUtil::decodeVarInt32( _pData, _byteCount, _offset, outValue ) ); }
+        [[nodiscard]] bool readVarUint( uint64& outValue ) { return markFailedUnless( VarIntUtil::decodeVarUint64( _pData, _byteCount, _offset, outValue ) ); }
+        [[nodiscard]] bool readVarUint( uint32& outValue ) { return markFailedUnless( VarIntUtil::decodeVarUint32( _pData, _byteCount, _offset, outValue ) ); }
+        [[nodiscard]] bool readVarInt( int64& outValue ) { return markFailedUnless( VarIntUtil::decodeVarInt64( _pData, _byteCount, _offset, outValue ) ); }
+        [[nodiscard]] bool readVarInt( int32& outValue ) { return markFailedUnless( VarIntUtil::decodeVarInt32( _pData, _byteCount, _offset, outValue ) ); }
         /** @brief `writeString` 이 쓴 글을 읽습니다. 모자라면 false 입니다. */
         [[nodiscard]] bool readString( string& outText )
         {
@@ -240,7 +244,7 @@ namespace sw
          */
         [[nodiscard]] bool canHold( uint64 declaredCount, size_t minElementBytes )
         {
-            return markOverflowUnless( hasOverflowed() == false && canHoldCount( declaredCount, minElementBytes, getRemainingByteCount() ) );
+            return markFailedUnless( hasOverflowed() == false && canHoldCount( declaredCount, minElementBytes, getRemainingByteCount() ) );
         }
         /**
          * @brief 원소 개수(uint32)를 읽습니다. 원소 하나가 파일에서 적어도 @p minElementBytes 바이트이므로 남은 바이트로 담을 수 없는 개수면 넘침으로 표시하고 false 입니다.
@@ -314,19 +318,31 @@ namespace sw
             return readBytes( reinterpret_cast<uint8*>( &outValue ), sizeof( T ) );
         }
 
-        /** @brief 값이 형식에 맞지 않으면(길이 상한을 넘은 글 등) 부르는 쪽이 실패로 표시합니다. 넘침과 같은 끈적한 실패입니다. */
-        void   markFailed() { _bOverflow = SW_TRUE; }
-        bool   hasOverflowed() const { return _bOverflow != SW_FALSE; }
+        /** @brief 값이 형식에 맞지 않으면(길이 상한을 넘은 글 등) 부르는 쪽이 실패로 표시합니다. 바이트 부족과 같은 끈적한 실패입니다. */
+        void   markFailed() { _bFailed = SW_TRUE; }
+        bool   hasOverflowed() const { return _bFailed != SW_FALSE; }
         size_t getOffset() const { return _offset; }
         size_t getRemainingByteCount() const { return _byteCount - _offset; }
         /** @brief 실패 없이 끝까지 읽었으면 true 입니다. 형식의 끝에서 한 번 봅니다 — 남은 바이트가 있으면 길이가 틀린 파일입니다. */
         bool isFullyRead() const { return hasOverflowed() == false && getRemainingByteCount() == 0; }
+        /**
+         * @brief 형식의 끝에서 한 번 부르는 끝 검사입니다. 읽기 중 실패(바이트 부족 · `markFailed`)나 남은 바이트가 있으면 그 까닭을 오류로 돌려줍니다.
+         * @details `isFullyRead` 와 같은 판정에 까닭(실패 / 남은 바이트 수)을 붙인다. 결과를 버리면 컴파일 경고다(`[[nodiscard]]`).
+         */
+        [[nodiscard]] expected<void> finish() const
+        {
+            if ( hasOverflowed() )
+                return unexpected( Error{ ErrorKind::InvalidArgument, "byte stream is malformed (read past the end or a value out of range)" } );
+            if ( getRemainingByteCount() != 0 )
+                return unexpected( Error{ ErrorKind::InvalidArgument, "byte stream has trailing bytes (length does not match the format)" } );
+            return {};
+        }
 
     private:
-        bool markOverflowUnless( bool bRead )
+        bool markFailedUnless( bool bRead )
         {
             if ( bRead == false )
-                _bOverflow = SW_TRUE;
+                _bFailed = SW_TRUE;
             return bRead;
         }
         /** @brief @p byteCount 바이트를 차지하고 그 시작을 돌려줍니다. 모자라면 nullptr 이고 위치는 그대로, 넘침으로 표시합니다. */
@@ -334,7 +350,7 @@ namespace sw
         {
             if ( byteCount > _byteCount - _offset )
             {
-                _bOverflow = SW_TRUE;
+                _bFailed = SW_TRUE;
                 return nullptr;
             }
             const uint8* pBytes = _pData + _offset;
@@ -346,6 +362,6 @@ namespace sw
         const uint8* _pData;
         size_t       _byteCount;
         size_t       _offset;
-        uint8        _bOverflow;
+        uint8        _bFailed;
     };
 } // namespace sw

@@ -12,7 +12,7 @@
  *            </GameSettings>
  */
 #pragma once
-#include "Core/Container/map.h"
+#include "Core/Container/flat_map.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
@@ -86,7 +86,7 @@ namespace sw
          * @details 플레이어가 바꾸지 않은 값만 따라갑니다. 모르는 id · 받을 수 없는 값은 기동 오류로 알립니다(`UserSettingsManager::setGameDefault`).
          */
         PROPERTY()
-        map<string, string> _mapUserSettingDefault{};
+        flat_map<string, string> _mapUserSettingDefault{};
 
         /**
          * @brief 팩 루트 @p packRoot 의 `data/gamesettings.xml` 에서 `<Engine>` 요소를 읽습니다.

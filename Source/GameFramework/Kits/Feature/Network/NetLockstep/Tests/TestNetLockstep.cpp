@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Core/Container/map.h"
+#include "Core/Container/flat_map.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Network/Connection/NetEndpoint.h"
 #include "Core/Network/Message/NetMessage.h"
@@ -53,10 +53,10 @@ namespace
         class DuelGame final : public IRollbackGame
         {
         public:
-            int32             _arrPosition[2] = { 1, 2 };
-            int32             _frame{ 0 };
-            map<int32, int64> _mapHistory{}; ///< 프레임 → 그 프레임 뒤 상태(되감기가 덮어쓴다)
-            void              saveState( vector<uint8>& outStateBuffer ) override
+            int32                  _arrPosition[2] = { 1, 2 };
+            int32                  _frame{ 0 };
+            flat_map<int32, int64> _mapHistory{}; ///< 프레임 → 그 프레임 뒤 상태(되감기가 덮어쓴다)
+            void                   saveState( vector<uint8>& outStateBuffer ) override
             {
                 outStateBuffer.resize( sizeof( _arrPosition ) );
                 std::memcpy( outStateBuffer.data(), _arrPosition, sizeof( _arrPosition ) );
@@ -111,9 +111,9 @@ namespace
         class InputRecordingGame final : public IRollbackGame
         {
         public:
-            int32                     _frame{ 0 };
-            map<int32, vector<uint8>> _mapInput{};
-            void                      saveState( vector<uint8>& outStateBuffer ) override { outStateBuffer.assign( 1, static_cast<uint8>( _frame ) ); }
+            int32                          _frame{ 0 };
+            flat_map<int32, vector<uint8>> _mapInput{};
+            void                           saveState( vector<uint8>& outStateBuffer ) override { outStateBuffer.assign( 1, static_cast<uint8>( _frame ) ); }
 
             void loadState( const vector<uint8>& stateBuffer ) override { _frame = stateBuffer[0]; }
 
@@ -157,9 +157,9 @@ SW_TEST_CASE( NetLockstepTest, LockstepPlayersAdvanceIdenticallyAndDetectDesyncs
     NetLockstepTestInternal::connectLockstepCluster( cluster, 2, conditions );
     SW_REQUIRE_TRUE( cluster.areClientsConnected() );
 
-    vector<LockstepSession>     listSession( 3 );
-    vector<uint32>              listHash( 3, HashUtil::kFNVOffset32 );
-    vector<map<uint32, uint32>> listHashByTick( 3 );
+    vector<LockstepSession>          listSession( 3 );
+    vector<uint32>                   listHash( 3, HashUtil::kFNVOffset32 );
+    vector<flat_map<uint32, uint32>> listHashByTick( 3 );
     for ( int32 index = 0; index < 3; ++index )
     {
         const int32 player = index == 0 ? 0 : cluster.getEndpoint( index ).getClientIndex().value() + 1;

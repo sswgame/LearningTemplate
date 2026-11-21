@@ -57,7 +57,7 @@ namespace sw::editor
                 const T& value = *static_cast<const T*>( pValue );
                 if constexpr ( std::is_same_v<T, bool> )
                     formatstring( pOutBuf, capacity, "%#", value ? "true" : "false" );
-                else if constexpr ( std::is_same_v<T, atomic<bool>> )
+                else if constexpr ( std::is_same_v<T, reflected_atomic<bool>> )
                     formatstring( pOutBuf, capacity, "%#", value.load( std::memory_order_relaxed ) ? "true" : "false" );
                 else if constexpr ( std::is_arithmetic_v<T> )
                     formatstring( pOutBuf, capacity, "%#", value );

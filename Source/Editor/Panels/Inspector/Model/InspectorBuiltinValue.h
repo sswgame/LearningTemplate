@@ -37,7 +37,7 @@ namespace sw::editor
     {
         None,      ///< 위젯이 없다. 내장 타입에는 없어야 한다
         Number,    ///< 정수와 실수 드래그. 범위, 슬라이더, 단위 메타를 지원한다
-        Checkbox,  ///< bool 과 atomic<bool>
+        Checkbox,  ///< bool 과 reflected_atomic<bool>
         Text,      ///< string. 애셋 경로 메타가 있으면 드롭 대상이 된다
         Name,      ///< hashed_string. Enter 로 확정하며 키 입력마다 인턴하지 않는다
         Vector2,   ///< float2

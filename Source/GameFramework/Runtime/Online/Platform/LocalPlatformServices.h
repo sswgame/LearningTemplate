@@ -8,7 +8,7 @@
  *          언리얼 `OnlineSubsystemNull`, 유니티 Game Services 의 로컬 에뮬레이션 자리다(기억에 의존).
  */
 #pragma once
-#include "Core/Container/map.h"
+#include "Core/Container/flat_map.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
@@ -51,17 +51,17 @@ namespace sw
 
     private:
         [[nodiscard]] static bool isPlainFileName( string_view fileName );
-        [[nodiscard]] bool        writeKeyValueFile( const utf8* pFileName, const map<string, string>& mapValue ) const;
-        void                      readKeyValueFile( const utf8* pFileName, map<string, string>& outMapValue ) const;
+        [[nodiscard]] bool        writeKeyValueFile( const utf8* pFileName, const flat_map<string, string>& mapValue ) const;
+        void                      readKeyValueFile( const utf8* pFileName, flat_map<string, string>& outMapValue ) const;
 
     private:
-        string                 _folder;
-        vector<string>         _listUnlocked;
-        map<string, string>    _mapStat;
-        map<string, string>    _mapPresence;
-        uint8                  _bAchievementsDirty : 1;
-        uint8                  _bStatsDirty        : 1;
-        uint8                  _bPresenceDirty     : 1;
-        [[maybe_unused]] uint8 _reserved           : 5;
+        string                   _folder;
+        vector<string>           _listUnlocked;
+        flat_map<string, string> _mapStat;
+        flat_map<string, string> _mapPresence;
+        uint8                    _bAchievementsDirty : 1;
+        uint8                    _bStatsDirty        : 1;
+        uint8                    _bPresenceDirty     : 1;
+        [[maybe_unused]] uint8   _reserved           : 5;
     };
 } // namespace sw

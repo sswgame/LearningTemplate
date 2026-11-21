@@ -6,6 +6,7 @@
 #pragma once
 #include "Core/Concurrency/Futex.h"
 #include "Core/Concurrency/Queue/ConcurrentQueue.h"
+#include "Core/Concurrency/Queue/OverflowConcurrentQueue.h"
 #include "Core/Concurrency/Queue/WorkStealingDeque.h"
 #include "Core/Concurrency/thread.h"
 #include "Core/Container/span.h"
@@ -504,12 +505,6 @@ namespace sw
         static constexpr uint32 kMaxHelperThreadCount = 8;
 
     private:
-        /**
-         * @brief @p fullQueue 가 가득 찼을 때 한 걸음 자리를 냅니다. 워커면 그 큐의 가장 오래된 항목 하나를 그 자리에서 실행하고, 아니면 잠든 워커를 깨운 뒤 양보합니다.
-         * @details 워커가 깨우고 양보만 하면 워커가 하나(웹 · 저사양)이거나 모든 워커가 넣는 중일 때 아무도 꺼내지 않아 끝나지 않는다(TBB · UE Tasks 도 넣는 워커가 일을 돕는다).
-         */
-        template <uint32 Capacity>
-        void waitForQueueSpace( ConcurrentQueue<uintptr_t, Capacity>& fullQueue );
         // --- 수명 · 정리 ---
         /** @brief 워커 스레드의 메인 루프입니다. 큐 소비 · 훔치기 · 세대 스핀 · 자기 워드에서 잠들기를 합니다. */
         void workerLoop( uint32 workerID );
@@ -676,11 +671,12 @@ namespace sw
          *          기다리므로 그 줄이 그대로 프레임 지연이 됩니다(큐브 8000개 벤치에서 렌더 스레드의 그래프 기록이 약 1.5 배로 늘어납니다).
          *          상용 엔진이 렌더 · 오디오 잡을 별도 큐에 두는 이유입니다.
          */
-        ConcurrentQueue<uintptr_t, 1024> _globalHighQueue;
-        ConcurrentQueue<uintptr_t, 4096> _globalWorkerQueue; ///< `Normal` 전역 큐. 워커가 아닌 스레드(게임 · 렌더 스레드)가 넣는 곳
+        OverflowConcurrentQueue<uintptr_t, 1024> _globalHighQueue;
+        OverflowConcurrentQueue<uintptr_t, 4096> _globalWorkerQueue; ///< `Normal` 전역 큐. 워커가 아닌 스레드(게임 · 렌더 스레드)가 넣는 곳
         /** @brief `TaskPriority::Low` 전용 전역 큐입니다. 훔쳐 올 것도 없을 때만 봅니다. 백그라운드 I/O · 통계용입니다. */
-        ConcurrentQueue<uintptr_t, 1024> _globalLowQueue;
-        ConcurrentQueue<TaskNode*, 1024> _queueMainThread; ///< 메인 스레드 전용 태스크 큐(lock-free)
+        OverflowConcurrentQueue<uintptr_t, 1024> _globalLowQueue;
+        /** @brief 메인 스레드 전용 태스크 큐입니다. 평소에는 잠금 없는 링이고, 차면 넘침 목록이 받아 넣는 쪽이 메인을 기다리지 않는다. */
+        OverflowConcurrentQueue<TaskNode*, 1024> _queueMainThread;
         /** @brief 워커가 아닌 스레드(메인 · 렌더 · 로더 …)의 대기자 슬롯입니다. 번호는 `getCurrentThreadScratchSlot` 의 도우미 칸과 같습니다. */
         WaiterSlot _arrHelperWaiter[kMaxHelperThreadCount];
 
