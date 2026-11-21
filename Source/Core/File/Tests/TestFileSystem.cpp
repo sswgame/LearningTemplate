@@ -96,3 +96,44 @@ SW_TEST_CASE( FileSystemTest, RelativePathsDoNotReachTheOS )
     SW_EXPECT_LOG( "File.RelativePath" );
     SW_EXPECT_FALSE( FileUtil::exists( FileUtil::toDiskPath( "Config/Engine/EngineConfig.json" ) ) ); // 작업 폴더가 저장소 루트여도 없다
 }
+
+namespace
+{
+    /** @brief `FileUtil::exists` 를 @p T 로 부를 수 있으면 true — 문자열 판은 private 이라 바깥에서는 부를 수 없다(접근 검사도 치환 실패다). */
+    template <typename T, typename = void>
+    struct CanCallExists : std::false_type
+    {
+    };
+    template <typename T>
+    struct CanCallExists<T, std::void_t<decltype( FileUtil::exists( std::declval<T>() ) )>> : std::true_type
+    {
+    };
+    static_assert( CanCallExists<const AbsolutePath&>::value, "disk I/O takes AbsolutePath" );
+    static_assert( CanCallExists<string>::value == false && CanCallExists<string_view>::value == false && CanCallExists<const utf8*>::value == false,
+                   "disk I/O does not take strings - lift them with FileUtil::toDiskPath (disk-path-args)" );
+    static_assert( std::is_convertible_v<string, AbsolutePath> == false && std::is_convertible_v<string_view, AbsolutePath> == false,
+                   "a string never becomes a disk path implicitly" );
+} // namespace
+
+/**
+ * @brief 문자열 → 디스크 경로의 명시적 입구(`FileUtil::toDiskPath`): 엄격한 절대 경로는 구분자를 `/` 로 맞추고, 빈 글은 오류 없이 빈 경로이며 그 경로의 I/O 는 실패한다.
+ * @details 변이: 구분자 정규화를 빼면 Windows 의 `\` 경로가 그대로 남아 진다. 빈 글에 오류를 남기면 이 케이스가 로그로 진다(빈 인자는 예전에도 조용한 실패였다).
+ */
+SW_TEST_CASE( FileSystemTest, ToDiskPathNormalizesAndEmptyFails )
+{
+    const string       file     = test::makeScratchPath( "disk-path.txt" );
+    const AbsolutePath diskPath = FileUtil::toDiskPath( file );
+    SW_REQUIRE_FALSE( diskPath.empty() );
+    SW_EXPECT_EQUAL( FileUtil::normalizeSeparators( file ), diskPath.str() );
+#if defined( SW_PLATFORM_WINDOWS )
+    SW_EXPECT_EQUAL( string( "C:/a/b" ), FileUtil::toDiskPath( "C:\a\b" ).str() );
+#endif
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( diskPath, "abc" ) );
+    SW_EXPECT_TRUE( FileUtil::isRegularFile( diskPath ) );
+
+    const AbsolutePath emptyPath = FileUtil::toDiskPath( "" ); // 로그 없음 - 오류 로그가 나면 케이스가 진다
+    SW_EXPECT_TRUE( emptyPath.empty() );
+    SW_EXPECT_FALSE( FileUtil::exists( emptyPath ) );
+    string text;
+    SW_EXPECT_TRUE( FileUtil::readOptionalTextFile( emptyPath, text ) != OptionalFileRead::Read );
+}

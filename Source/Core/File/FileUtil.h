@@ -464,7 +464,7 @@ namespace sw
         /** @brief 디렉터리 아래의 폴더를 모읍니다(경로 규칙 · 반환은 collectFiles 와 같습니다). */
         [[nodiscard]] static bool collectFolders( const AbsolutePath& directory, vector<string>& outListFolder, bool bRecursive );
 
-    public:
+    private:
         // 디스크 I/O 의 문자열 경로 판 — 구현은 이것이고 위의 `const AbsolutePath&` 판이 넘긴다. 바깥 호출이 문자열을 넘기면 형식 판이 아니라 이것이 골라져
         // 접근 오류가 난다(논리 경로 글이 I/O 에 들어가지 못한다). 문자열은 `toDiskPath` 로 올린다.
         [[nodiscard]] static bool             forEachDirectoryEntry( string_view directory, bool bRecursive, DirectoryEntryVisitFn visit, void* pContext );

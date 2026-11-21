@@ -49,7 +49,7 @@ namespace sw
             {
                 const PathKey lowerComponent = FileUtil::normalizePath( component );
                 outName.clear();
-                (void)FileUtil::forEachDirectoryEntry( directory, false, [&outName, &lowerComponent]( const DirectoryEntry& entry )
+                (void)FileUtil::forEachDirectoryEntry( FileUtil::toDiskPath( directory ), false, [&outName, &lowerComponent]( const DirectoryEntry& entry )
                 {
                     const size_t      nameStart = entry._path.rfind( '/' );
                     const string_view name      = nameStart == string_view::npos ? entry._path : entry._path.substr( nameStart + 1 );
@@ -73,7 +73,7 @@ namespace sw
             /** @brief 실패한 쓰기의 임시 파일을 지웁니다. 지우지 못하면 경고합니다 — 원본 옆에 `.tmp<pid>_<번호>` 가 남습니다. */
             static void discardTempFile( const string& tempPath )
             {
-                if ( FileUtil::removeFile( tempPath ) == false )
+                if ( FileUtil::removeFile( FileUtil::toDiskPath( tempPath ) ) == false )
                     SW_LOG_WARNING_ID( "FileUtil.FailedRemoveTemporaryFile", "Failed to remove the temporary file %# - delete it by hand", tempPath.c_str() );
             }
 
@@ -123,7 +123,7 @@ namespace sw
             static void logWriteResult( FileWriteResult result, string_view fileName )
             {
                 // 읽기 전용이 아닌 거절은 쓰기 게이트(`isWriteAllowed`)가 이미 남겼다
-                if ( result == FileWriteResult::Refused && FileUtil::isReadOnlyFile( fileName ) )
+                if ( result == FileWriteResult::Refused && FileUtil::isReadOnlyFile( FileUtil::toDiskPath( fileName ) ) )
                     SW_LOG_ERROR_ID( "File.WriteReadOnly", "Refused to replace the read-only file %# - make it writable (check it out) first", fileName );
                 else if ( result == FileWriteResult::ReplaceFailed )
                     SW_LOG_ERROR_ID( "File.WriteFailed", "Failed to replace %# with the newly written file — the original file was left untouched", fileName );
@@ -140,7 +140,7 @@ namespace sw
                     return false;
                 // 읽기 전용 대상은 어느 플랫폼에서도 바꿔 끼우지 않는다 — POSIX `rename` 은 대상 권한을 보지 않아 버전 관리 잠금(git LFS lockable)이 조용히 뚫리고,
                 // Windows 는 바꿔 끼우기가 져 아래 재시도(20 ms × 10)를 헛되이 잔다. 언리얼 `IFileManager::Move` 도 읽기 전용 대상은 덮지 않는다(EvenIfReadOnly 를 따로 받는다).
-                if ( FileUtil::isReadOnlyFile( filePath ) )
+                if ( FileUtil::isReadOnlyFile( FileUtil::toDiskPath( filePath ) ) )
                     return false;
                 outTempPath = FileUtil::makeWriteTempPath( filePath );
                 outFilePath = filePath;
@@ -208,7 +208,7 @@ namespace sw
                 if ( handle == kInvalidNativeFileHandle )
                 {
                     // 열지 못한 뒤 없으면 "없음" 이다(그 사이 지워진 것도 없음이다). 있는데 못 열었으면(권한 · 잠금) 늘 오류다.
-                    if ( bMissingIsError == false && FileUtil::exists( filePath ) == false )
+                    if ( bMissingIsError == false && FileUtil::exists( FileUtil::toDiskPath( filePath ) ) == false )
                         return OptionalFileRead::Missing;
                     SW_LOG_ERROR_ID( "File.NotFound", "File not found: %#", fileName );
                     return OptionalFileRead::Failed;
@@ -333,7 +333,7 @@ namespace sw
             {
                 if ( PlatformFileSystem::createDirectory( path ) )
                     return true;
-                if ( FileUtil::isDirectory( path ) )
+                if ( FileUtil::isDirectory( FileUtil::toDiskPath( path ) ) )
                     return false;
                 const string parent = FileUtil::getDirectoryPart( path );
                 if ( parent.empty() || parent == path )

@@ -100,6 +100,8 @@
 | R9 구성 차이는 크기대로 | [BuildConfigSwitch](BuildConfigSwitch.md) |
 
 - 디스크 입구는 `AbsolutePath`(`tryMake` · `tryResolve`, `FileUtil::requireAbsolutePath`)로 받는다 — `FileUtil::isAbsolutePath` 는 `C:foo` 도 절대로 본다.
+- `FileUtil` 디스크 I/O(`exists` · `readTextFile` · `writeFile` …)는 `const AbsolutePath&` 만 받는다. 글은 `FileUtil::toDiskPath( 글 )` 로 올린다(남은 자리 · 병합 뒤 변환은 `py -3 -m Scripts disk-path-args`, 린트 `cpp-shape` 규칙 14).
+- `ByteReader` 한 값 읽기는 값을 돌려준다(`readPod<T>()` · `readString()` · `readCount( n )`, 실패는 `hasOverflowed()` · `finish()`) — 출력 인자 꼴은 없다(`byte-reader-values`, 규칙 13).
 - 루트는 `ProcessRoots`(기동 때 한 번) — `"Saved"` 리터럴 · 작업 폴더 의존 금지.
 - `ResourcePath` 는 문자열에서 암시적으로 못 만든다. 도메인 판정은 `DomainTable::split` 하나.
 - 명령줄 디스크 경로는 `CommandLineDiskPath`, 개발 명령은 `readDiskPathArgument`.
