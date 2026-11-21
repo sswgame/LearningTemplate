@@ -12,9 +12,9 @@
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/Framework/Presentation/IAbilityCueSink.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityCatalog.h"
-#include "GameFramework/Runtime/Gameplay/GameState/PlayerProgressComponent.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/GimmickEvents.h"
 #include "GameFramework/Runtime/Gameplay/Interaction/InteractableComponent.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/IItemReceiver.h"
 
 namespace sw
 {
@@ -55,20 +55,17 @@ namespace sw
         } );
     }
 
-    void GimmickUtil::giveItem( const GameObject& target, const hashed_string& item, int32 count )
+    bool GimmickUtil::giveItem( const GameObject& giver, const GameObject& target, const hashed_string& item, int32 count )
     {
-        const GameObjectManager* pManager = target.getManager(); // 채집은 틱에서 부른다 — 가방은 조종자 오브젝트의 것이라 틱 뒤에 넣는다
-        if ( pManager == nullptr || item.empty() || count <= 0 )
-            return;
-        const GameObjectHandle handle = target.getHandle();
-        pManager->executeOrDeferPostTickOnScene( [handle, item, count]( GameObjectManager& sceneManager )
-        {
-            const GameObject*        pTarget   = sceneManager.resolveGameObject( handle );
-            PlayerProgressComponent* pProgress = pTarget != nullptr ? PlayerProgressComponent::findForPawnObject( sceneManager, *pTarget ) : nullptr;
-            Inventory*               pBag      = pProgress != nullptr ? pProgress->findInventory() : nullptr;
-            if ( pBag != nullptr )
-                (void)pBag->addItem( item, count ); // 넣은 수는 쓰지 않는다 — 가방이 차면 남는 것은 주지 않는다
-        } );
+        if ( item.empty() || count <= 0 )
+            return false;
+        IItemReceiver* const  pReceiver = IItemReceiver::findForTarget( target );
+        const ItemGrantResult result    = pReceiver != nullptr ? pReceiver->receiveItem( item, count ) : ItemGrantResult::NoBag;
+        if ( result == ItemGrantResult::Granted )
+            return true;
+        const utf8* pWhy = pReceiver == nullptr ? "no item receiver on it or its controller" : ( result == ItemGrantResult::NoBag ? "it has no bag" : "its bag is full" );
+        SW_LOG_WARNING_ID( "GimmickUtil.ItemNotGranted", "'%#' could not give %# x '%#' to '%#' (%#) - the item stays", giver.getName().c_str(), count, item.c_str(), target.getName().c_str(), pWhy );
+        return false;
     }
 
     void GimmickUtil::sendCue( const GameObject& source, const hashed_string& cue, const float3& position, float32 magnitude, GameObjectHandle target )

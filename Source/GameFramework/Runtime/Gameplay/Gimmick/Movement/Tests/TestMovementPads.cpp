@@ -1,4 +1,4 @@
-// MovementPadTest — 발사대가 겹친 동적 강체를 쏘는지(실제 2D 물리, Box2D), 부스트 패드가 탈것 모터에 부스트를 거는지 본다(nogpu). 받는 쪽이 하나라 이벤트 없이 직접 부른다.
+// MovementPadTest — 발사대가 겹친 동적 강체를 쏘는지(실제 2D 물리, Box2D), 부스트 패드가 부스트 계약(IBoostReceiver — 탈것 · 테스트 받는 쪽)에 부스트를 거는지 본다(nogpu). 받는 쪽이 하나라 이벤트 없이 직접 부른다.
 #include "pch.h"
 
 #include "Core/Name/hashed_string.h"
@@ -11,6 +11,7 @@
 
 #include "GameFramework/Runtime/Gameplay/Gimmick/Movement/BoostPadComponent.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/Movement/LaunchPadComponent.h"
+#include "GameFramework/Runtime/Gameplay/Gimmick/Movement/Tests/BoostReceiverTestComponent.h"
 #include "GameFramework/Runtime/Gameplay/Vehicle/KinematicVehicleComponent.h"
 
 using namespace sw;
@@ -70,7 +71,7 @@ SW_TEST_CASE( MovementPadTest, LaunchPadSetsDynamicBodyVelocity )
 }
 
 /**
- * @brief [MovementPadTest] 부스트 패드는 탈것 모터에 패드 시간(기본 1 초)만큼 부스트를 걸고, 탈것이 아닌 몸은 지나간다
+ * @brief [MovementPadTest] 부스트 패드는 탈것 모터(계약을 포트로 내보냄)에 패드 시간(기본 1 초)만큼 부스트를 걸고, 계약이 없는 몸은 지나간다
  * @details 플레이를 시작하지 않는다 — 탈것 시작은 튜닝 에셋을 읽는데, 이 테스트는 패드 → 모터 길만 본다(기본 모터 설정은 부스트 모듈이 켜져 있다).
  */
 SW_TEST_CASE( MovementPadTest, BoostPadStartsVehicleBoost )
@@ -91,4 +92,26 @@ SW_TEST_CASE( MovementPadTest, BoostPadStartsVehicleBoost )
     SW_EXPECT_EQUAL( 1, pPad->getBoostCount() );
     SW_EXPECT_TRUE( pVehicle->getMotor().isBoosting() );
     SW_EXPECT_NEAR( 1.0f, pVehicle->getMotor().getBoostTime(), 1e-5f );
+}
+
+/**
+ * @brief [MovementPadTest] 부스트 패드는 계약(`IBoostReceiver`)만 본다 — 테스트 받는 쪽도 패드 시간을 받고, 거절하면 세지 않고 경고를 남긴다
+ */
+SW_TEST_CASE( MovementPadTest, BoostPadUsesTheBoostContract )
+{
+    SW_EXPECT_LOG( "BoostPadComponent.BoostRefused" );
+    GameObjectManager           manager;
+    BoostPadComponent*          pPad      = manager.createGameObject( hashed_string( "Pad" ) )->addComponent<BoostPadComponent>();
+    GameObject*                 pSled     = manager.createGameObject( hashed_string( "Sled" ) );
+    BoostReceiverTestComponent* pReceiver = pSled->addComponent<BoostReceiverTestComponent>();
+    SW_REQUIRE_NOT_NULL( pPad );
+    SW_REQUIRE_NOT_NULL( pReceiver );
+
+    pPad->boost( *pSled );
+    SW_EXPECT_EQUAL( 1, pPad->getBoostCount() );
+    SW_EXPECT_NEAR( 1.0f, pReceiver->_lastDuration, 1e-5f );
+
+    pReceiver->_bAccept = SW_FALSE;
+    pPad->boost( *pSled );
+    SW_EXPECT_EQUAL( 1, pPad->getBoostCount() );
 }

@@ -18,6 +18,7 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Runtime/Character/Movement/IBoostReceiver.h"
 #include "GameFramework/Runtime/Character/Movement/KinematicVehicleMotor.h"
 
 namespace sw
@@ -40,6 +41,7 @@ namespace sw
     {
     public:
         REFLECT_BODY();
+        REFLECT_INTERFACE( IBoostReceiver, _boostReceiverPort );
 
         KinematicVehicleComponent();
         ~KinematicVehicleComponent() override;
@@ -102,5 +104,12 @@ namespace sw
         optional<int32>               _boostIndex;
         optional<int32>               _jumpIndex;
         bool                          _bReady;
+
+        /** @brief 부스트 계약을 주인의 모터(`KinematicVehicleMotor::startBoost`)로 넘기는 포트입니다(`REFLECT_INTERFACE`). */
+        struct BoostReceiverPort final : IBoostReceiver
+        {
+            [[nodiscard]] bool receiveBoost( float32 durationSeconds ) override;
+        };
+        BoostReceiverPort _boostReceiverPort;
     };
 } // namespace sw

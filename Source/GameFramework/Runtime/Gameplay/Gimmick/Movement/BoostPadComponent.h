@@ -16,10 +16,10 @@ namespace sw
 {
     /**
      * @class BoostPadComponent
-     * @brief 밟기 시작한 탈것(태그로 거름, `KinematicVehicleComponent`)의 모터에 `_duration` 초 부스트를 겁니다(`KinematicVehicleMotor::startBoost`). 탈것이 아닌 몸은 지나갑니다.
-     * @details 부스트 세기는 탈것 튜닝의 부스트 모듈이 정한다 — 패드는 시간만 준다(트랙 패드 `KartTrack::applyBoostPad` 와 같은 길).
+     * @brief 밟기 시작한 몸(태그로 거름)이 부스트 계약(`IBoostReceiver` — 바디 없는 탈것 등)을 내보내면 `_duration` 초 부스트를 겁니다. 계약이 없는 몸은 지나가고, 거절하면 경고를 남깁니다.
+     * @details 부스트 세기는 받는 쪽 튜닝(탈것의 부스트 모듈)이 정한다 — 패드는 시간만 준다(트랙 패드 `KartTrack::applyBoostPad` 와 같은 길).
      */
-    REFLECT( Category = "Gimmick", DisplayName = "Boost Pad", Tooltip = "Boosts the kinematic vehicle that starts overlapping (the vehicle tuning sets the strength)" )
+    REFLECT( Category = "Gimmick", DisplayName = "Boost Pad", Tooltip = "Boosts whatever starts overlapping and accepts boosts (IBoostReceiver; the receiver tuning sets the strength)" )
     class SW_GF_API BoostPadComponent : public Component
     {
     public:
@@ -30,7 +30,7 @@ namespace sw
 
         /** @brief 겹침 진입 사건을 구독합니다. */
         void onRegister( GameObjectManager& manager ) override;
-        /** @brief @p target 이 탈것이면 부스트를 겁니다. 겹침이 부르며, 테스트와 스크립트도 부를 수 있습니다. */
+        /** @brief @p target 이 부스트 계약을 내보내면 부스트를 겁니다. 겹침이 부르며, 테스트와 스크립트도 부를 수 있습니다. */
         void  boost( GameObject& target );
         int32 getBoostCount() const { return _boostCount; }
 

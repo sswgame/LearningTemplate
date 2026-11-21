@@ -28,8 +28,9 @@ namespace sw
         GameObject* pOwner = getOwner();
         if ( pOwner == nullptr || isDepleted() )
             return false;
+        if ( GimmickUtil::giveItem( *pOwner, who, _item, _count ) == false )
+            return false; // 받을 가방이 없거나 차면 채집 횟수를 쓰지 않는다
         ++_usesTaken;
-        GimmickUtil::giveItem( who, _item, _count );
         if ( isDepleted() )
         {
             _respawnStepsLeft = _respawnDelay > 0.0f ? _clock.secondsToSteps( _respawnDelay, 1 ) : 0;
@@ -60,9 +61,17 @@ namespace sw
         if ( pSensor != nullptr && pSensor->consumeUses() > 0.0f )
         {
             const InteractableComponent* pInteractable = pOwner->getComponent<InteractableComponent>();
-            const GameObject*            pWho          = pInteractable != nullptr ? pManager->resolveGameObject( pInteractable->getLastInteractor() ) : nullptr;
-            if ( pWho != nullptr )
-                (void)gather( *pWho );
+            const GameObjectHandle       who           = pInteractable != nullptr ? pInteractable->getLastInteractor() : GameObjectHandle{};
+            // 가방은 다른 오브젝트(조종자)의 상태라 틱 뒤 게임 스레드에서 준다.
+            const GameObjectHandle node = pOwner->getHandle();
+            pManager->executeOrDeferPostTickOnScene( [node, who]( GameObjectManager& sceneManager )
+            {
+                GameObject*             pNodeObject = sceneManager.resolveGameObject( node );
+                GatheringNodeComponent* pNode       = pNodeObject != nullptr ? pNodeObject->getComponent<GatheringNodeComponent>() : nullptr;
+                const GameObject*       pWho        = sceneManager.resolveGameObject( who );
+                if ( pNode != nullptr && pWho != nullptr )
+                    (void)pNode->gather( *pWho ); // 줬는지는 쓰지 않는다 — 못 주면 giveItem 이 경고를 남긴다
+            } );
         }
         if ( isDepleted() == false || _respawnStepsLeft <= 0 )
             return;
