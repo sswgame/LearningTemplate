@@ -4,7 +4,7 @@
  * @details 피라미드는 뷰의 깊이 사본(깊이 히스토리 텍스처 — R32, RW 텍스처로 읽는다)에서 짓는다(hzb_build.hlsl, 밉마다 디스패치 하나). 한 프레임에 세 번까지 짓는다:
  *          1) 프레임 처음(프레임 패스 `HZBBuild`) — 지난 프레임 장면 깊이. 컬링의 앞 단계(또는 한 단계)가 읽고, 주 시점은 16 px 밉의 최대 깊이를 가림 타일 버퍼에도 써
  *             몇 프레임 늦게 CPU 로 되읽는다(`requestReadback` · `getSnapshot` — 게임 스레드의 가림 질의).
- *          2) 깊이 프리패스 뒤(2 단계 가림, `FrameGraphExecutor::recordLateOcclusion`) — 이번 프레임에 앞 단계가 그린 깊이. 뒤 단계 컬링이 읽는다.
+ *          2) 깊이 프리패스 뒤(2 단계 가림의 뒤 단계 패스 `LateOcclusion`, `FrameGraphExecutor::recordLateOcclusion`) — 이번 프레임에 앞 단계가 그린 깊이. 뒤 단계 컬링이 읽는다.
  *          3) 화면 공간 반사 앞(`FrameGraphExecutor::recordSceneDepthHZB`) — 이번 프레임 불투명을 다 그린 깊이. hi-z trace 가 최소 깊이를 읽는다.
  *          버퍼는 뷰마다 하나이고 짓는 때마다 덮는다 — 읽는 쪽은 늘 바로 앞에 지은 것을 읽는다(그래서 무엇을 그린 깊이인지 · 배치를 뷰가 함께 든다: `FrameViewTarget::_hzbLayout`).
  *          명령 리스트 · 디바이스 · PSO 는 실행기(`FrameGraphExecutor`)가 넘긴다 — 이 객체는 되읽기 고리 · 우편함 · 자리표만 든다.
@@ -26,6 +26,7 @@ namespace sw
     struct OcclusionCullingConfig;
     class FrameBufferTable;
     class IRHICommandList;
+    class IRHIPassCommandList;
     class IRHIDevice;
     struct FrameViewTarget;
 
@@ -58,7 +59,7 @@ namespace sw
         /**
          * @brief 프레임 패스 `HZBBuild` 에서 뷰 @p target 의 깊이 사본(이미 채운 `_depthHistory`)으로 피라미드를 짓는 디스패치를 기록하고, 지은 배치 · 뷰-투영을 뷰에 적습니다(`_bHZBValid`).
          * @details 전이는 그래프 레벨 콜백이 냈다(`HZB` · `OcclusionTiles` 를 UAV 로, 읽는 컬링 앞에서 SRV 로). 밉 사이 의존은 선언한 UAV 핸들의 `uavBarrier` 다.
-         *          깊이 사본은 생산자(`FrameGraphExecutor::copySceneDepth`)가 RW 텍스처 상태로 넘겨 둔다.
+         *          깊이 사본은 생산자(`FrameGraphExecutor::recordDepthHistory`)가 RW 텍스처 상태로 넘겨 둔다.
          * @param graphContext 이 패스의 그래프 문맥(선언한 접근 · 자원 표 · 리스트)입니다.
          * @param viewSlot 이 뷰의 칸(`registerFrameResources` 와 같은 값)입니다.
          * @param pso `RenderPassKind::HZBBuild` 의 PSO 입니다(없으면 0 — 짓지 않는다).
@@ -70,17 +71,18 @@ namespace sw
         bool record( const RenderGraphPassContext& graphContext, uint32 viewSlot, IRHIDevice& device, RHIPipelineStateHandle pso, uint32 depthWidth, uint32 depthHeight,
                      const float4x4& viewProj, bool bWriteTiles, FrameViewTarget& target ) const;
         /**
-         * @brief 뷰 그래프 패스 안(깊이 프리패스 뒤 2 단계 가림 · 화면 공간 반사 앞)에서 피라미드를 짓습니다. 인자 뜻은 프레임 패스 판과 같다.
-         * @details shortcut: 뷰 그래프는 버퍼 접근을 모른다 — 여기서는 전이와 밉 사이 UAV 배리어를 손으로 낸다(앞 UAV, 끝 SRV), 뷰 패스를 접근 핸들로 옮길 때(렌더 그래프 접근 핸들 ③) 지운다.
+         * @brief 뷰 그래프 패스 안(2 단계 가림의 뒤 단계 · 화면 공간 반사 앞)에서 피라미드를 짓습니다. 인자 뜻은 프레임 패스 판과 같다.
+         * @details 부르는 패스가 피라미드 · 가림 타일을 UAV 로 선언했다(`ViewGraphResource::hzb` · `occlusionTiles` — 뷰 자원 표의 칸 0). 앞 UAV 는 레벨 콜백이 내고, 밉 사이는
+         *          선언한 핸들의 `uavBarrier`, 끝은 같은 패스가 읽는 셰이더 읽기로 `transition` 한다 — 손 전이가 없다.
          */
-        bool recordInViewPass( IRHICommandList& cmd, IRHIDevice& device, RHIPipelineStateHandle pso, uint32 depthWidth, uint32 depthHeight, const float4x4& viewProj,
-                               FrameViewTarget& target ) const;
+        bool recordInViewPass( const RenderGraphPassContext& graphContext, IRHIDevice& device, RHIPipelineStateHandle pso, uint32 depthWidth, uint32 depthHeight,
+                               const float4x4& viewProj, FrameViewTarget& target ) const;
         /**
          * @brief 주 시점 가림 타일을 되읽는 복사를 프레임 그래프 리스트에 넣고, 이미 도착한 사본이 있으면 우편함에 올립니다(`getSnapshot`).
          * @details 프레임 처음 짓기 직후에 부른다. 이번 프레임에 타일을 짓지 않았거나 기록을 버리는 프레임이면 우편함을 비운다(그 타일은 지난 장면의 것이라 맞지 않는다).
          *          요청 때의 뷰-투영 · 격자는 메타 고리에 적어 두었다가 사본이 도착하면 붙인다.
          */
-        void requestReadback( IRHICommandList* pCmd, IRHIDevice* pDevice, bool bEnabled, const FrameViewTarget& view );
+        void requestReadback( IRHIPassCommandList* pCmd, IRHIDevice* pDevice, bool bEnabled, const FrameViewTarget& view );
         /**
          * @brief 컬링 상수에 뷰 @p view 의 지금 피라미드로 가림 판정 값을 채웁니다. 피라미드가 없으면(`_bHZBValid` 가 아님) 판정을 끈다(발자국 0).
          * @details 프레임 처음 피라미드는 지난 프레임 깊이로 이번 경계를 보므로 그 사이에 드러난 물체는 한 프레임 늦게 나온다 — 2 단계 가림의 뒤 단계가 그것을 이번 프레임 깊이로
@@ -112,7 +114,7 @@ namespace sw
          * @details @p barriers 가 디스패치 앞(`begin`) · 밉 사이(`betweenMips`) · 뒤(`end`)의 배리어를 낸다 — 프레임 패스는 그래프 핸들, 뷰 패스 안은 손 배리어다(cpp 의 두 판).
          */
         template <typename Barriers>
-        bool recordPyramid( IRHICommandList& cmd, IRHIDevice& device, RHIPipelineStateHandle pso, uint32 depthWidth, uint32 depthHeight, const float4x4& viewProj, bool bWriteTiles,
+        bool recordPyramid( IRHIPassCommandList& cmd, IRHIDevice& device, RHIPipelineStateHandle pso, uint32 depthWidth, uint32 depthHeight, const float4x4& viewProj, bool bWriteTiles,
                             FrameViewTarget& target, const Barriers& barriers ) const;
 
     private:

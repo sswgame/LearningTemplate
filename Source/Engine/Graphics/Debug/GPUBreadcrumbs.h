@@ -29,6 +29,7 @@
 namespace sw
 {
     class IRHICommandList;
+    class IRHIPassCommandList;
     class IRHIDevice;
 
     /**
@@ -65,9 +66,9 @@ namespace sw
          * @brief 패스의 시작 표지를 남깁니다 — 이름을 표에 올리고 CPU 가 마지막으로 기록한 패스로 적은 뒤 GPU 표지(`IRHICommandList::writeBreadcrumb`)를 기록합니다.
          * @return 짝이 되는 `endPass` 에 넘길 id 입니다. 꺼져 있거나 표가 찼으면 0 이고 아무것도 기록하지 않습니다.
          */
-        [[nodiscard]] static uint32 beginPass( IRHICommandList& commands, string_view passName );
+        [[nodiscard]] static uint32 beginPass( IRHIPassCommandList& commands, string_view passName );
         /** @brief 패스의 끝 표지(`id | kEndMarkerBit`)를 남깁니다. @p id 가 0 이면 아무것도 하지 않습니다. 소실 뒤 "마지막으로 끝난 패스" 와 "시작했지만 끝나지 않은 패스" 를 가른다. */
-        static void endPass( IRHICommandList& commands, uint32 id );
+        static void endPass( IRHIPassCommandList& commands, uint32 id );
 
         /**
          * @struct Report
@@ -111,22 +112,22 @@ namespace sw
         /// @brief 타임스탬프를 쓰지 않는 구간의 슬롯 값입니다.
         static constexpr uint32 kNoTimestamp = constant::invalid_index::kUint32;
 
-        GPUPassScope( IRHICommandList& commands, string_view passName );
+        GPUPassScope( IRHIPassCommandList& commands, string_view passName );
         /**
          * @brief 구간의 시작 · 끝에 GPU 타임스탬프도 씁니다 — 시작은 @p timestampBeginSlot, 끝은 그 다음 칸(`IRHICommandList::writeTimestamp`).
          * @details 슬롯이 `kNoTimestamp` 면 쓰지 않는다. 쓸지는 부르는 쪽이 정한다(계측 스위치 `GPUPassTimeline::isRecording` · 칸 배치 `GPUTimestampSlotLayout`).
          *          타임스탬프는 이벤트 표지 안쪽이라 캡처 도구에서 같은 구간에 붙는다.
          */
-        GPUPassScope( IRHICommandList& commands, string_view passName, uint32 timestampBeginSlot );
+        GPUPassScope( IRHIPassCommandList& commands, string_view passName, uint32 timestampBeginSlot );
         ~GPUPassScope();
         GPUPassScope( const GPUPassScope& )            = delete;
         GPUPassScope& operator=( const GPUPassScope& ) = delete;
 
     private:
-        IRHICommandList& _commands;
-        uint32           _breadcrumbID;       ///< 0 이면 끝 표지를 쓰지 않는다
-        uint32           _timestampBeginSlot; ///< `kNoTimestamp` 면 타임스탬프를 쓰지 않는다
-        uint8            _bEventOpen;         ///< 이벤트 표지를 열었으면 1
+        IRHIPassCommandList& _commands;
+        uint32               _breadcrumbID;       ///< 0 이면 끝 표지를 쓰지 않는다
+        uint32               _timestampBeginSlot; ///< `kNoTimestamp` 면 타임스탬프를 쓰지 않는다
+        uint8                _bEventOpen;         ///< 이벤트 표지를 열었으면 1
     };
 } // namespace sw
 

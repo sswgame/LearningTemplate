@@ -1061,7 +1061,7 @@ namespace sw
             return;
 
         // beginFrame 은 프레임 수명주기만 맡고 백버퍼를 바인딩하거나 클리어하지 않는다. 백버퍼를 타깃으로
-        // 삼고 클리어하는 것은 RenderThread 가 여는 명시적 beginRenderPass(핸들 0) 뿐이다.
+        // 삼고 클리어하는 것은 RenderThread 가 여는 명시적 beginRenderPass(`kRHIBackBufferTexture`) 뿐이다.
         // RTV 재취득은 FLIP_DISCARD 때문에 수명주기에 속한다.
 
         constexpr float32 kDefaultViewportX        = 0.0f;

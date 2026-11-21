@@ -159,7 +159,7 @@ namespace sw
         void                         destroySwapChainInternal( IRHISwapChain& swapChain ) override;
         [[nodiscard]] bool           acquireSwapChainImageInternal( IRHISwapChain& swapChain ) override { return useSwapChain( &swapChain ).getBackBufferRTV() != nullptr; }
 
-        /** @brief 프레임을 엽니다(타임스탬프, 백버퍼 RTV 재취득, 정적 샘플러). 백버퍼 클리어는 beginRenderPass(핸들 0)가 합니다. */
+        /** @brief 프레임을 엽니다(타임스탬프, 백버퍼 RTV 재취득, 정적 샘플러). 백버퍼 클리어는 beginRenderPass(`kRHIBackBufferTexture`)가 합니다. */
         void beginFrameInternal() override;
 
         /** @brief 프레임을 닫고 Present 합니다(bPresent=false 면 Present 를 생략합니다). */

@@ -157,7 +157,7 @@ namespace sw
         RHIRenderPassBeginInfo encodeInfo{};
         encodeInfo._bBindColor        = SW_TRUE;
         encodeInfo._colorTargetCount  = 1;
-        encodeInfo._arrColorTarget[0] = 0;                          // 스왑체인 이미지
+        encodeInfo._arrColorTarget[0] = kRHIBackBufferTexture;      // 스왑체인 이미지
         encodeInfo._arrLoadOp[0]      = RHIRenderPassLoadOp::Clear; // 이 프레임에 아무도 쓰지 않은 스왑체인 이미지(Vulkan 레이아웃 UNDEFINED)는 Load 로 열 수 없다
         encodeInfo._arrClearColor[0]  = float4{ 0.0f, 0.0f, 0.0f, 1.0f };
         encodeInfo._width             = _width;

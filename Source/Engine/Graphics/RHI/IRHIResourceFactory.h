@@ -224,7 +224,7 @@ namespace sw
          * @brief 텍스처가 실제로 만들어진 RHIFormat 을 반환합니다(없는 핸들이면 Unknown).
          * @details 렌더 타깃에 그리는 PSO 는 **대상의 실제 포맷**으로 만들어야 한다. 언리얼이 PSO 초기화자의
          *          RenderTargetFormats 를 바인딩된 FRHITexture::GetFormat() 에서 뽑는 것과 같은 방식이다.
-         *          백버퍼(핸들 0)는 여기가 아니라 `IRHIDevice::getBackBufferFormat()` 이 알려 준다.
+         *          백버퍼(`kRHIBackBufferTexture`)는 여기가 아니라 `IRHIDevice::getBackBufferFormat()` 이 알려 준다.
          */
         virtual RHIFormat getTextureFormat( RHITextureHandle texture ) const = 0;
 

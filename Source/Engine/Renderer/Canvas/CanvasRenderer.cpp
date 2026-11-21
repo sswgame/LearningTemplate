@@ -70,13 +70,13 @@ namespace sw
         _quadBuffer.upload( device, inoutFrame, _markers.getMarkerCount() > 0 );
     }
 
-    void CanvasRenderer::recordMarkerProjection( IRHICommandList& cmd, RHIPipelineStateHandle pso, RHIBufferHandle instanceBuffer, RHIDescriptorIndex instanceSRV, RHIDescriptorIndex placeholderSRV,
+    void CanvasRenderer::recordMarkerProjection( IRHIPassCommandList& cmd, RHIPipelineStateHandle pso, RHIBufferHandle instanceBuffer, RHIDescriptorIndex instanceSRV, RHIDescriptorIndex placeholderSRV,
                                                  GPUMessageChannel& inoutMessages, bool bShowInstanceSlots )
     {
         _markers.record( cmd, _quadBuffer, pso, instanceBuffer, instanceSRV, placeholderSRV, inoutMessages, bShowInstanceSlots );
     }
 
-    uint32 CanvasRenderer::drawList( IRHICommandList& cmd, const CanvasDrawList& list, uint32 quadBase, RHIPipelineStateHandle pso, uint32 targetWidth,
+    uint32 CanvasRenderer::drawList( IRHIPassCommandList& cmd, const CanvasDrawList& list, uint32 quadBase, RHIPipelineStateHandle pso, uint32 targetWidth,
                                      uint32 targetHeight, bool bNativeBindless, uint32 colorVisionMode ) const
     {
         const bool bNothingToDraw = list.isEmpty() || pso == 0 || _quadBuffer.getSlot().isValid() == false || targetWidth == 0 || targetHeight == 0;

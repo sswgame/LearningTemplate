@@ -16,7 +16,7 @@ namespace sw
         return vertexCapacity * ( constant::render::kMeshPositionStride + constant::render::getMeshAttributeStride( format ) );
     }
 
-    void RHIMeshVertexStreams::bind( IRHICommandList& cmd, RHIBufferHandle vertexBuffer, uint32 attributeOffset, RHIMeshVertexFormat format )
+    void RHIMeshVertexStreams::bind( IRHIPassCommandList& cmd, RHIBufferHandle vertexBuffer, uint32 attributeOffset, RHIMeshVertexFormat format )
     {
         cmd.setVertexBuffer( constant::render::kMeshPositionSlot, vertexBuffer, constant::render::kMeshPositionStride, 0 );
         cmd.setVertexBuffer( constant::render::kMeshAttributeSlot, vertexBuffer, constant::render::getMeshAttributeStride( format ), attributeOffset );

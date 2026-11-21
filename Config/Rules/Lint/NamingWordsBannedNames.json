@@ -33,6 +33,7 @@
     "resourceTypeName": "ShaderReflectionDxInternal::toBindingKind — DX 리플렉션이 종류를 열거로 낸다(2026-11-21)",
     "onGPUDone": "AsyncBufferReadback::State::onGPUCompletion — 완료 통지(RHIFrameCompletion)를 받는다(2026-11-21)",
     "reportDeviceFault": "reportDeviceFaultInternal — IRHIDevice::reportDeviceLost 가 부르는 결함 상세 훅(2026-11-21)",
+    "copySceneDepth": "FrameGraphExecutor::drawSceneDepthCopy — 전이 없는 그리기만, 앞뒤 전이는 부르는 쪽(프레임 패스는 전체 리스트, 뷰 패스는 선언 핸들 transition)(2026-11-21)",
     "EditorModuleManager": "ClientModuleManager — 배포 게임도 쓰는 클라이언트 호스트의 모듈 관리자, 장치 재생성 순서는 GameModuleManager::applyPendingDeviceChange(2026-11-21)",
     "reinitializeAfterRHISwap": "GameModuleManager::applyPendingDeviceChange — 장치 교체 순서(DeviceChangeSequence)가 게임 → 호스트 모듈을 다시 세운다(2026-11-21)",
     "recreateEditorInstance": "ClientModuleManager::recreateHostModule — suspendHostModule 의 짝 가상(2026-11-21)",

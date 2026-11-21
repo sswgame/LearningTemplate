@@ -367,6 +367,12 @@ namespace sw
                         info._flags         = Flag::kDrawsDeclaredColor | Flag::kHasInputContract | Flag::kSkipsWithoutPostProcess | Flag::kBypassesToSource;
                         break;
                     }
+                    case RenderPassKind::LateOcclusion:
+                    {
+                        // 셰이더 없이 엔진 PSO(HZB 짓기 · 컬링)로 도는 전용 실행이다(`FrameGraphExecutor::recordLateOcclusion`). 입력 · 출력 선언은 종류가 한다(`ViewGraphResource`).
+                        info._flags = 0;
+                        break;
+                    }
                     case RenderPassKind::Compute:
                     {
                         // 셰이더는 XML 이 고른다 — 표의 기본값이 없고, 첨부를 RW 텍스처로 묶는 전용 실행이다(`FramePassExecutor::executeComputePass`).

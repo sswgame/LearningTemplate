@@ -349,7 +349,7 @@ namespace sw
         /**
          * @brief 프레임 기록을 엽니다. 프레임당 정확히 한 번, 그 프레임의 어떤 기록보다 먼저 부릅니다.
          * @details **수명주기 전용**이다. 펜스 대기(GPU 백프레셔), 스왑체인 이미지 획득, 기록 시작만 하고 렌더 타깃은 바인딩하지 않는다.
-         *          백버퍼 바인딩과 클리어는 `IRHICommandList::beginRenderPass`(타깃 핸들 0)가 명시적으로 한다(`RenderThread::executeFrameBody`).
+         *          백버퍼 바인딩과 클리어는 `IRHICommandList::beginRenderPass`(타깃 `kRHIBackBufferTexture`)가 명시적으로 한다(`RenderThread::executeFrameBody`).
          *          프레임 수명주기(beginFrame, endFrame, resize)는 디바이스의 일이다. 스왑체인 쪽에 두면 디바이스의 private 상태를 건드려야 한다.
          * @note 스왑체인 자체(백버퍼, 이미지 인덱스, 동기화, present)는 `IRHISwapChain` 의 백엔드 구현이 소유합니다. 메인 창도 그 가운데 하나이고,
          *       `endFrame` 은 그 프레임에 그린 스왑체인을 모두 표시합니다(`createSwapChain`).
@@ -639,10 +639,10 @@ namespace sw
          * @brief 병렬 기록 중에 배리어가 나왔음을 **진단으로만** 남깁니다(디버그 전용, 8회까지).
          * @details 배리어는 레벨 프롤로그(`RenderGraph::setLevelPrologue`)가 단일 스레드에서 미리
          *          발행하는 것이 원칙이다. 다만 프롤로그는 그래프가 **선언한** 입출력만 알 수 있어서
-         *          선언이 빠진 자원(패스 콜백이 직접 바인딩하는 텍스처)은 놓친다. 그래서 이것은 assert 가 아니다.
-         *          깊이 첨부(`_depthAttachment`)는 `FramePassExecutor::bindPassCallbacks` 가 그래프에 선언한다.
-         *          실제 전이는 락이 보호하므로 남아 있어도 안전하다. 여기 찍히는 이름이 곧
-         *          "파이프라인 선언을 채우면 사라질 항목" 이다.
+         *          선언이 빠진 자원(패스 콜백이 직접 바인딩하는 텍스처)은 놓친다. 그래서 이것은 assert 가 아니다 — 패스가 쓰기로 선언한 자원의 패스 안 왕복
+         *          (`RenderGraphPassContext::transition`)도 여기 오는데 그것은 맞는 길이고, RHI 는 둘을 가를 수 없다.
+         *          선언이 빠진 자원의 전이는 **안전하지 않다** — 추적 상태의 비교 교환은 배리어를 낼 쪽 하나만 정하고 실행 순서를 정하지 않는다(뒤 리스트가 먼저 기록하면
+         *          앞 리스트가 배리어 없이 먼저 실행된다). 여기 찍히는 이름이 곧 "패스 선언을 채워야 할 항목" 이다.
          * @note 레지스트리 쪽(`requireRegistryMutableNow`)은 불변식이 확실해서 멈춘다.
          *       두 감시의 강도가 다른 이유가 이것이다.
          */

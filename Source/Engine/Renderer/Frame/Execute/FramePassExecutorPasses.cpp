@@ -50,6 +50,7 @@
 #include "Engine/Renderer/Extension/RenderExtensionRegistry.h"
 #include "Engine/Renderer/Frame/Capture/FrameCapture.h"
 #include "Engine/Renderer/Frame/Execute/FramePassExecutor.h"
+#include "Engine/Renderer/Frame/Execute/ViewGraphResource.h"
 #include "Engine/Renderer/Frame/Extension/FrameExtensionHost.h"
 #include "Engine/Renderer/Frame/FrameRenderState.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
@@ -177,9 +178,7 @@ namespace sw
             SW_LOG_ERROR_ONCE_ID( "FramePassExecutor.ExecutePassNoActiveIRHICommandList", "executePass: no active IRHICommandList" );
             return;
         }
-        // 뷰 패스 고르기가 이번 뷰에 할 일이 없다고 정한 패스(꺼진 효과 · 그릴 것 없는 덧그리기 · 읽는 쪽이 없는 패스)는 기록하지 않는다 — 패스마다 다시 판정하지 않는다.
-        if ( isPassDisabledInView( passDesc ) )
-            return;
+        // 이번 뷰에서 꺼진 패스는 그래프 콜백이 맨 앞에서 돌려보냈다(`onGraphPassExecute` — 문맥 복사 · 상수 칸 잡기 전).
 
         // 이벤트 표지(캡처의 구간 이름) + GPU 브레드크럼 시작 · 끝 표지 — 디바이스 소실 때 끝난 패스와 돌던 패스를 이름으로 싣는다. 어느 길로 돌아가도 짝이 맞는다.
         const GPUPassScope passScope{ *context._pCmd, passName };
@@ -201,7 +200,7 @@ namespace sw
 
         // 컬러 타깃은 파이프라인이 선언한 컬러 출력이다(로드 때 해석한 `_listResolvedColorOutput`, 선언 순서). 컬러를 그리는 패스(kDrawsDeclaredColor)는
         // 로드가 선언을 요구하므로 비어 있지 않다. 이름(SceneColor · GBufferAlbedo · TAAColor 등)으로 짐작하지 않는다 — 다른 이름을 쓰는
-        // 파이프라인에서 없는 첨부(핸들 0 은 백버퍼)를 열었다. 뎁스 로드 연산은 바인딩한 뎁스의 클리어 기록으로 정한다.
+        // 파이프라인에서 없는 첨부(핸들 0 — 무효)를 열었다. 뎁스 로드 연산은 바인딩한 뎁스의 클리어 기록으로 정한다.
         const vector<RenderGraphPassDesc::ResolvedAttachment>& declaredColor = passDesc._listResolvedColorOutput;
 
         const RenderPassKindInfo& info = getRenderPassKindInfo( passType );
@@ -241,9 +240,14 @@ namespace sw
                     beginDepthOnlyPass( context, passDepth, getColorLoadFor( passDepth ) );
                     drawSceneMeshes( context, _psoManager.getEnginePSO( RenderPassKind::DepthPrepass ), input._bTransparentBatch );
                     context._pCmd->endRenderPass();
-                    // 2 단계 가림의 뒤 단계 — 방금 그린 깊이로 HZB 를 다시 짓고 앞 단계에서 가려졌던 것만 다시 컬링해 이 뒤 불투명 패스가 함께 그린다(주 시점, 앞 단계가 적었을 때만).
-                    _frameGraphExecutor.recordLateOcclusion( *context._pCmd, *_pActiveView );
                     _bHasExecutedDepthPrepass.store( 1 );
+                    break;
+                }
+                case RenderPassKind::LateOcclusion:
+                {
+                    // 2 단계 가림의 뒤 단계 — 깊이 프리패스가 그린 깊이로 HZB 를 다시 짓고 앞 단계에서 가려졌던 것만 다시 컬링해 이 뒤 불투명 패스가 함께 그린다.
+                    // 자원은 모두 이 패스의 선언이다 — 돌지 않는 뷰 · 프레임은 등록이 없어 아무것도 기록하지 않는다(`FrameGraphExecutor::registerViewGraphResources`).
+                    _frameGraphExecutor.recordLateOcclusion( *context._pGraphPass, *_pActiveView );
                     break;
                 }
                 case RenderPassKind::ForwardOpaque:
@@ -478,7 +482,7 @@ namespace sw
 
         // 1) 분류 — 간접 인자를 지우고(그룹 하나) 타일마다 그룹 하나. 렌더 패스 밖이다. G버퍼 알베도는 그래프가 이 패스의 입력으로 셰이더 읽기 상태로 옮겨 두었다.
         FramePassContext&         context      = input._context;
-        IRHICommandList&          cmd          = *context._pCmd;
+        IRHIPassCommandList&      cmd          = *context._pCmd;
         const RHIBufferTransition arrToWrite[] = {
             RHIBufferTransition{view._deferredTileArgs._buffer, RHIBufferState::UnorderedAccess},
             RHIBufferTransition{view._deferredTileList._buffer, RHIBufferState::UnorderedAccess}
@@ -551,7 +555,6 @@ namespace sw
         constants._width       = _pActiveView->scaleToRect( output, true );
         constants._height      = _pActiveView->scaleToRect( output, false );
         // 입력은 역할로 고른다(로드가 계약을 검사했다). 원본 · 깊이는 SRV 로 읽는다 — 깊이 형식은 RW 로 묶을 수 없다.
-        frame_vector<RHITextureHandle> listInputTexture{ FrameAllocator<RHITextureHandle>{ _frameArena } };
         for ( const RenderGraphPassDesc::ResolvedAttachment& resolved : passDesc._listResolvedInput )
         {
             const TransientAttachmentPool::Attachment source = activePool().find( resolved._attachment );
@@ -568,8 +571,6 @@ namespace sw
             {
                 constants._depthIndex = static_cast<uint32>( source._srv );
             }
-            context._pCmd->prepareTextureForShaderRead( source._texture );
-            listInputTexture.push_back( source._texture );
         }
         // 패스 상수(시드가 이미 채운 값)에서 효과의 값을 옮긴다 — 컴퓨트 PSO 에는 PassCB 가 묶이지 않는다.
         uint32       valueSize     = 0;
@@ -594,12 +595,11 @@ namespace sw
             return;
         }
         // 그룹은 8x8 출력 텍셀이다(셰이더의 SW_NUMTHREADS 와 같다 — 그룹 공유 타일의 크기).
+        // 입력은 레벨 콜백이 셰이더 읽기로, 출력은 이 패스의 UAV 선언으로 RW 텍스처 상태로 옮겼다(`bindPassCallbacks`). 뒤 패스의 읽기 · UAV 는 레벨 콜백이 옮기거나 기다린다.
         constexpr uint32 kGroupSize = 8;
-        context._pCmd->prepareTextureForUnorderedAccess( output._texture );
         context._pCmd->setComputePipelineState( pso );
         context._pCmd->setComputeRootConstants( 0, sizeof( constants ) / sizeof( uint32 ), &constants );
         context._pCmd->dispatchCompute( FrameRendererUtil::divideRoundUp( constants._width, kGroupSize ), FrameRendererUtil::divideRoundUp( constants._height, kGroupSize ), 1 );
-        context._pCmd->prepareTextureForShaderRead( output._texture );
         (void)markAttachmentCleared( target );
     }
 
@@ -629,9 +629,8 @@ namespace sw
         constants._outputIndex = bNative ? static_cast<uint32>( output._uav ) : 0u;
         constants._width       = _pActiveView->scaleToRect( output, true ); // 사각형 밖은 디스패치하지 않는다
         constants._height      = _pActiveView->scaleToRect( output, false );
-        context._pCmd->prepareTextureForUnorderedAccess( output._texture );
+        // 출력은 UAV, 입력은 UAV 읽기로 이 패스가 선언했다 — 레벨 콜백이 RW 텍스처 상태로 옮기고, 앞 컴퓨트의 쓰기 뒤면 텍스처 UAV 배리어로 기다린다(`bindPassCallbacks`).
         context._pCmd->bindComputeUAV( output._uav, shaderslot::kComputeTextureUAV0 );
-        frame_vector<RHITextureHandle> listInputTexture{ FrameAllocator<RHITextureHandle>{ _frameArena } };
         for ( uint32 inputIndex = 0; inputIndex < passDesc._listResolvedInput.size(); ++inputIndex )
         {
             const TransientAttachmentPool::Attachment source = activePool().find( passDesc._listResolvedInput[inputIndex]._attachment );
@@ -641,19 +640,12 @@ namespace sw
                 return;
             }
             constants._arrInputIndex[inputIndex] = bNative ? static_cast<uint32>( source._uav ) : inputIndex + 1u;
-            context._pCmd->prepareTextureForUnorderedAccess( source._texture );
             context._pCmd->bindComputeUAV( source._uav, shaderslot::kComputeTextureUAV0 + inputIndex + 1u );
-            listInputTexture.push_back( source._texture );
         }
         context._pCmd->setComputePipelineState( pso );
         context._pCmd->setComputeRootConstants( 0, sizeof( constants ) / sizeof( uint32 ), &constants );
         context._pCmd->dispatchCompute( FrameRendererUtil::divideRoundUp( constants._width, passDesc._threadGroupSize ), FrameRendererUtil::divideRoundUp( constants._height, passDesc._threadGroupSize ), 1 );
-        // 뒤 패스가 샘플한다. 컴퓨트가 칠했으니 이번 프레임 첫 렌더 패스가 지우면 안 된다.
-        context._pCmd->prepareTextureForShaderRead( output._texture );
-        for ( const RHITextureHandle texture : listInputTexture )
-        {
-            context._pCmd->prepareTextureForShaderRead( texture );
-        }
+        // 뒤 패스가 샘플하면 레벨 콜백이 셰이더 읽기로 옮긴다. 컴퓨트가 칠했으니 이번 프레임 첫 렌더 패스가 지우면 안 된다.
         (void)markAttachmentCleared( target );
     }
 
@@ -867,15 +859,22 @@ namespace sw
         context._pCmd->endRenderPass();
     }
 
-    bool FramePassExecutor::isPassDisabledInView( const RenderGraphPassDesc& pass ) const
+    bool FramePassExecutor::isPassDisabledInView( uint32 passIndex ) const
+    {
+        // 파이프라인 패스 목록 밖(모듈 확장 패스)은 고르기가 보지 않는다 — 부르는 쪽(`onGraphPassExecute`)이 거른다.
+        const vector<uint8>& listPassDisabled = _pActiveView->_listPassDisabled;
+        return passIndex < listPassDisabled.size() && listPassDisabled[passIndex] == SW_TRUE;
+    }
+
+    bool FramePassExecutor::isPassKindEnabledInView( RenderPassKind type ) const
     {
         const vector<RenderGraphPassDesc>& listPass = _pipelineResource.getGraphPass();
-        // 파이프라인 패스 목록 밖(모듈 확장 패스)은 고르기가 보지 않는다 — 늘 활성이다.
-        if ( listPass.empty() || &pass < listPass.data() || &pass >= listPass.data() + listPass.size() )
-            return false;
-        const size_t         index            = static_cast<size_t>( &pass - listPass.data() );
-        const vector<uint8>& listPassDisabled = _pActiveView->_listPassDisabled;
-        return index < listPassDisabled.size() && listPassDisabled[index] == SW_TRUE;
+        for ( uint32 passIndex = 0; passIndex < static_cast<uint32>( listPass.size() ); ++passIndex )
+        {
+            if ( listPass[passIndex]._type == type && isPassDisabledInView( passIndex ) == false )
+                return true;
+        }
+        return false;
     }
 
     void FramePassExecutor::executeDistortionPass( const PassExecuteInput& input )
@@ -959,7 +958,7 @@ namespace sw
         const hashed_string& target  = input._declaredColor[0]._attachment;
         // hi-z trace 가 읽는 HZB 를 이번 장면 깊이(불투명을 다 그린 것)로 짓는다 — 렌더 패스를 열기 전이다. 못 지으면 그리지 않는다(선형 탐색으로 대신하지 않는다).
         FrameViewTarget& view = *_pActiveView;
-        if ( _frameGraphExecutor.recordSceneDepthHZB( *context._pCmd, view ) == false )
+        if ( _frameGraphExecutor.recordSceneDepthHZB( *context._pGraphPass, view ) == false )
         {
             SW_LOG_ERROR_ONCE_ID( "FramePassExecutor.SSRWithoutHZB", "Screen space reflection is on but this view has no HZB (depth history, HZBBuild PSO or buffer missing) - reflections are not drawn" );
             return;
@@ -1025,7 +1024,10 @@ namespace sw
             {
                 context._pCmd->endRenderPass();
                 context._pCmd->blitTexture( targetTexture, draw._pChainSource->getTexture() );
-                context._pCmd->prepareTextureForShaderRead( draw._pChainSource->getTexture() );
+                // 사본은 이 패스가 복사 대상으로 선언했다(`ViewGraphResource` — 이어 그리는 머티리얼이 있는 뷰만 등록) — 다음 머티리얼이 읽도록 셰이더 읽기로 옮긴다.
+                context._pGraphPass->transition( location == PostProcessBlendableLocation::BeforeTonemap ? ViewGraphResource::postProcessChainBeforeTonemap()
+                                                                                                         : ViewGraphResource::postProcessChainAfterTonemap(),
+                                                 RHITextureState::ShaderResource );
                 context._resourceRegistry.registerTexture( attachmentNames()._sourceColor, draw._pChainSource->getTexture(), draw._pChainSource->getSRV() );
                 if ( beginColorPass( context, target, hashed_string{}, getTargetClearColor( target ), RHIRenderPassLoadOp::Load, RHIRenderPassLoadOp::Load ) == false )
                     return;
@@ -1268,10 +1270,9 @@ namespace sw
         }
         else
         {
-            // 원본이 없으면 PSO 없이(백엔드 기본 파이프라인으로) 대신 그리지 않는다. 출력 대상은 상태만 렌더 타깃으로 맞춘다.
+            // 원본이 없으면 PSO 없이(백엔드 기본 파이프라인으로) 대신 그리지 않는다. 출력 대상의 상태는 옮기지 않는다 — 뒤의 복사 · 겹치기 · 렌더 스레드 UI 패스가 스스로 맞춘다
+            // (렌더 패스 · 블릿이 대상 상태를 옮긴다). 패스 기록 면에는 텍스처 전이가 없다.
             SW_LOG_ERROR_ONCE_ID( "FramePassExecutor.PresentSourceColorNo", "Present source color has no transient (its allocation failed) - the output is not drawn" );
-            if ( dstTarget != 0 ) // 백버퍼(0)는 백엔드가 Present 쪽에서 상태를 맞춘다
-                context._pCmd->prepareTextureForRenderTarget( dstTarget );
         }
         if ( target._bCaptureFromOutput == SW_TRUE && isLastSwapchainWriter( passDesc ) )
             _capture.copyPresentFromOutput( *context._pCmd, target._texture, target._width, target._height, target._format );
@@ -1314,7 +1315,7 @@ namespace sw
         // 순서가 계약이다: 사진 캡처(캡처 텍스처에 그리기 · 출력에서 복사)가 끝난 뒤, 화면에 나가는 대상에만 그린다 — 사진 · 골든에 개발 겹치기가 들지 않는다.
         const CanvasDrawList&  list        = _state._canvasFrame.getDevOverlay();
         const bool             bOnScreen   = target._bCapture == SW_FALSE || target._bCaptureToBack == SW_TRUE; // 크기를 덮어쓴 캡처는 화면에 나가지 않는다
-        const RHITextureHandle screen      = getScreenTarget();                                                 // 0 = 스왑체인, 회전한 화면이면 대기 텍스처, HDR 출력이면 UI RT
+        const RHITextureHandle screen      = getScreenTarget();                                                 // `kRHIBackBufferTexture` = 스왑체인, 회전한 화면이면 대기 텍스처, HDR 출력이면 UI RT
         const RHITextureHandle sceneTarget = _displayEncode.getSceneTarget();
         // 호스트 타깃(에디터 게임 뷰)에는 그리지 않는다. HDR 출력의 Present 는 장면 출력 RT 에 그렸어도 화면에 나가는 대상이다(겹치기는 UI RT 에 그린다).
         const bool bBackBuffer  = target._bCaptureToBack == SW_TRUE || target._texture == screen || ( sceneTarget != 0 && target._texture == sceneTarget );

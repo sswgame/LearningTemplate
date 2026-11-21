@@ -691,17 +691,17 @@ namespace sw
         for ( const Dispatch& dispatch : _listDispatch )
         {
             const EmitterState& state = *dispatch._pState;
-            std::ignore               = table.registerBuffer( VFXFrameResource::state(), state._frameSlot, state._stateBuffer, RenderGraphAccess::UnorderedAccess );
-            std::ignore               = table.registerBuffer( VFXFrameResource::particles(), state._frameSlot, state._particleBuffer, RenderGraphAccess::ShaderRead );
-            std::ignore               = table.registerBuffer( VFXFrameResource::args(), state._frameSlot, state._argsBuffer, RenderGraphAccess::IndirectArgs );
+            table.registerBuffer( VFXFrameResource::state(), state._frameSlot, state._stateBuffer, RenderGraphAccess::UnorderedAccess );
+            table.registerBuffer( VFXFrameResource::particles(), state._frameSlot, state._particleBuffer, RenderGraphAccess::ShaderRead );
+            table.registerBuffer( VFXFrameResource::args(), state._frameSlot, state._argsBuffer, RenderGraphAccess::IndirectArgs );
         }
         // 시뮬레이션하지 않고 읽기만 하는 방출기(밀린 단계가 없는 프레임의 정렬 · 메시 쓰기) — 한 방출기를 여러 정렬 일이 읽어도 한 번만 등록한다.
         const auto registerReads = [&table]( const EmitterState& state )
         {
             if ( state._bSimulated != SW_FALSE || table.findBuffer( VFXFrameResource::idleParticles(), state._frameSlot ) != 0 )
                 return;
-            std::ignore = table.registerBuffer( VFXFrameResource::idleParticles(), state._frameSlot, state._particleBuffer, RenderGraphAccess::ShaderRead );
-            std::ignore = table.registerBuffer( VFXFrameResource::idleArgs(), state._frameSlot, state._argsBuffer, RenderGraphAccess::IndirectArgs );
+            table.registerBuffer( VFXFrameResource::idleParticles(), state._frameSlot, state._particleBuffer, RenderGraphAccess::ShaderRead );
+            table.registerBuffer( VFXFrameResource::idleArgs(), state._frameSlot, state._argsBuffer, RenderGraphAccess::IndirectArgs );
         };
         for ( const SortDispatch& dispatch : _listSortDispatch )
         {
@@ -712,7 +712,7 @@ namespace sw
             registerReads( *dispatch._pState );
         }
         if ( _listSortDispatch.empty() == false )
-            std::ignore = table.registerBuffer( VFXFrameResource::order(), 0, _orderBuffer, RenderGraphAccess::ShaderRead );
+            table.registerBuffer( VFXFrameResource::order(), 0, _orderBuffer, RenderGraphAccess::ShaderRead );
     }
 
     bool VFXGPUSimulation::hasDeclaredReads( const RenderGraphPassContext& context, const EmitterState& state )
@@ -725,9 +725,9 @@ namespace sw
 
     void VFXGPUSimulation::recordEmitterPasses( const RenderGraphPassContext& context, const Dispatch& dispatch ) const
     {
-        IRHICommandList&    cmd   = *context._pCmdList;
-        const EmitterState& state = *dispatch._pState;
-        const uint32        slot  = state._frameSlot;
+        IRHIPassCommandList& cmd   = *context.getCommandList();
+        const EmitterState&  state = *dispatch._pState;
+        const uint32         slot  = state._frameSlot;
         // 루트 상수 둘: 매개변수 구간의 첫 행, 패스 번호 | 단계 번호 << SW_VFX_PASS_STEP_SHIFT(vfx_simulate.hlsl).
         const auto recordPass = [&]( uint32 pass, uint32 stepIndex, uint32 groupCount )
         {
@@ -768,18 +768,18 @@ namespace sw
 
     void VFXGPUSimulation::recordSimulation( const RenderGraphPassContext& context, RHIPipelineStateHandle pso ) const
     {
-        const bool bNothingToDispatch = _listDispatch.empty() || pso == 0 || _paramBuffer.isValid() == false || context._pCmdList == nullptr;
+        const bool bNothingToDispatch = _listDispatch.empty() || pso == 0 || _paramBuffer.isValid() == false || context.getCommandList() == nullptr;
         if ( bNothingToDispatch )
             return;
         SW_PROFILE_SCOPE( "RT.VFX.Simulate" );
-        IRHICommandList&            cmd   = *context._pCmdList;
+        IRHIPassCommandList&        cmd   = *context.getCommandList();
         const VFXDepthHistoryInput& depth = _frameInput._depth;
         cmd.setComputePipelineState( pso );
         // 깊이 히스토리 — 지난 프레임 그 뷰가 남긴 깊이를 옮긴 R32 실수 텍스처. RW 텍스처로 읽는다(에뮬 백엔드의 컴퓨트는 샘플 텍스처를 읽지 못한다).
-        // 생산자(`FrameGraphExecutor::copySceneDepth` — 입력을 채운 판정 `canCopyDepthHistory` 와 같다)가 RW 텍스처 상태로 넘겨 두었다.
+        // 생산자(`FrameGraphExecutor::recordDepthHistory` — 입력을 채운 판정 `canCopyDepthHistory` 와 같다)가 RW 텍스처 상태로 넘겨 두었다.
         const bool bBindDepth = depth._texture != 0 && depth._uav != kInvalidDescriptorIndex;
-        // 전이는 그래프 레벨 콜백이 냈다(`registerFrameResources` 가 등록한 칸). 라이트 버퍼는 쓰는 프레임에만 등록했다(`writesParticleLights`).
-        const bool bLightBufferReady = writesParticleLights() && context.getBuffer( getLightBufferUAV() ) != 0;
+        // 전이는 그래프 레벨 콜백이 냈다(`registerFrameResources` 가 등록한 칸). 라이트 버퍼는 쓰는 프레임에만 등록했다(`writesParticleLights` — 등록 조건이 곧 실행 조건).
+        const bool bLightBufferReady = context.isRegistered( getLightBufferUAV() );
         for ( const Dispatch& dispatch : _listDispatch )
         {
             const EmitterState& state = *dispatch._pState;
@@ -811,11 +811,11 @@ namespace sw
     void VFXGPUSimulation::recordSort( const RenderGraphPassContext& context, RHIPipelineStateHandle pso ) const
     {
         // 정렬 — 방출기(ViewDepth 는 방출기 × 뷰)마다 워크그룹 하나가 살아 있는 입자를 정렬해 순서 버퍼의 그 구간에 쓴다(vfx_particle_sort.hlsl).
-        const bool bSortReady = _listSortDispatch.empty() == false && pso != 0 && _orderBuffer.isValid() && _paramBuffer.isValid() && context._pCmdList != nullptr;
+        const bool bSortReady = _listSortDispatch.empty() == false && pso != 0 && _orderBuffer.isValid() && _paramBuffer.isValid() && context.getCommandList() != nullptr;
         if ( bSortReady == false || context.getBuffer( RenderGraphBufferUAV{ VFXFrameResource::order() } ) == 0 )
             return;
         SW_PROFILE_SCOPE( "RT.VFX.SortParticles" );
-        IRHICommandList& cmd = *context._pCmdList;
+        IRHIPassCommandList& cmd = *context.getCommandList();
         cmd.setComputePipelineState( pso );
         for ( const SortDispatch& dispatch : _listSortDispatch )
         {
@@ -836,10 +836,10 @@ namespace sw
     {
         // 메시 입자 — 렌더 입력을 인스턴스 칸으로 옮긴다. 인스턴스 애니메이션 · 컬링이 이어서 이 버퍼를 읽는다(그 앞 전이도 그래프가 낸다).
         const bool bMeshWrites =
-            _listMeshDispatch.empty() == false && pso != 0 && _frameInput._instanceUAV != kInvalidDescriptorIndex && _paramBuffer.isValid() && context._pCmdList != nullptr;
+            _listMeshDispatch.empty() == false && pso != 0 && _frameInput._instanceUAV != kInvalidDescriptorIndex && _paramBuffer.isValid() && context.getCommandList() != nullptr;
         if ( bMeshWrites == false || context.getBuffer( getInstanceBufferUAV() ) == 0 )
             return;
-        IRHICommandList& cmd = *context._pCmdList;
+        IRHIPassCommandList& cmd = *context.getCommandList();
         cmd.setComputePipelineState( pso );
         for ( const MeshDispatch& dispatch : _listMeshDispatch )
         {

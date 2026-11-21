@@ -167,6 +167,14 @@ namespace sw
          */
         MotionBlurNeighborMax,
         /**
+         * @brief 2 단계 가림의 뒤 단계입니다 — 깊이 프리패스가 그린 이번 프레임 깊이로 HZB 를 다시 짓고, 앞 단계(프레임 패스 GPUCull)에서 가려져 빠진 차례만 다시 컬링해
+         *        이제 보이는 것을 주 시점 간접 인자에 더합니다(gpu_cull.hlsl 머리말 · `FrameGraphExecutor::recordLateOcclusion`). 셰이더 칸은 비워 둔다(엔진 PSO — HZB 짓기 · 컬링).
+         *        XML 에는 자리만 적는다 — 쓰는 자원(장면 깊이 · 깊이 사본 · HZB · 컬링 인자 · 가시 목록 · LOD 상태 · 차례 표시)은 종류가 선언한다(`ViewGraphResource`).
+         *        깊이 프리패스 뒤 · 깊이를 다시 쓰는 베이스 패스(G버퍼 · 포워드 불투명) 앞에 둔다. 주 시점에서 앞 단계가 차례를 적은 프레임에만 돈다(언리얼 `FDeferredShadingSceneRenderer` 의
+         *        프리패스 뒤 HZB · 가림 재판정 자리).
+         */
+        LateOcclusion,
+        /**
          * @brief 파이프라인 XML 이 고른 컴퓨트 셰이더(`_shaderPath` · `_computeEntryPoint`)를 돌립니다 — 코드 없이 데이터만으로 효과를 더하는 패스입니다(언리얼 RDG 의 컴퓨트 패스 자리).
          *        선언한 컬러 출력 하나에 쓰고 입력(최대 둘, 깊이 형식 제외)을 읽습니다. 첨부는 RW 텍스처로 묶입니다(`compute_pass.hlsli` 의 루트 상수). 그룹 수는 첨부 크기를 `_threadGroupSize` 로 나눈 값입니다.
          */
@@ -540,7 +548,7 @@ namespace sw
          *        XML 로드 시 RenderPipelineAsset 가 채웁니다.
          * @details 지오메트리 패스(ForwardOpaque, GBuffer, Transparent)는 이 목록에서 컬러 타깃을 고른다. GBuffer 는 역할(GBufferAlbedo,
          *          GBufferNormal, GBufferMaterial)로 고르고, 역할이 없으면 선언 순서([0] 알베도, [1] 노멀, [2] 머티리얼)로 고른다. 주의: 첨부 이름(SceneColor, GBufferAlbedo 등)을 코드에
-         *          박으면 다른 이름을 쓰는 파이프라인에서 없는 첨부를 열고, 없는 첨부의 핸들 0은 백버퍼라 화면에 그린다.
+         *          박으면 다른 이름을 쓰는 파이프라인에서 없는 첨부를 열고, 없는 첨부의 핸들 0 은 무효라 그 패스가 빠진다.
          */
         vector<ResolvedAttachment> _listResolvedColorOutput;
 

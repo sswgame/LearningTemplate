@@ -28,14 +28,17 @@ namespace sw::test
     class FakeRHICommandList final : public IRHICommandList
     {
     public:
-        uint32        _creationIndex;                                                                 /**< 디바이스가 몇 번째로 만든 리스트인지(0 부터) */
-        uint32        _beginCount{ 0 };                                                               /**< `beginCommandList` 횟수 */
-        uint32        _endCount{ 0 };                                                                 /**< `endCommandList` 횟수 */
-        bool          _bOpen{ false }; /**< 열려 있는가(닫지 않고 제출하면 실제 백엔드는 실패한다) */ ///< NOLINT(sw-bool-flag): 주소(`&`)를 넘긴다
-        hashed_string _passName;                                                                      /**< 이 리스트에 기록한 패스 — 테스트의 패스 콜백이 적는다 */
-        uint32        _transitionBatchCount{ 0 };                                                     /**< `transitionBuffers` 호출 수 */
-        uint32        _transitionCount{ 0 };                                                          /**< `transitionBuffers` 로 받은 전이 수의 합 */
-        uint32        _uavBarrierCount{ 0 };                                                          /**< `uavBarrier` 호출 수 */
+        uint32                       _creationIndex;                                                                 /**< 디바이스가 몇 번째로 만든 리스트인지(0 부터) */
+        uint32                       _beginCount{ 0 };                                                               /**< `beginCommandList` 횟수 */
+        uint32                       _endCount{ 0 };                                                                 /**< `endCommandList` 횟수 */
+        bool                         _bOpen{ false }; /**< 열려 있는가(닫지 않고 제출하면 실제 백엔드는 실패한다) */ ///< NOLINT(sw-bool-flag): 주소(`&`)를 넘긴다
+        hashed_string                _passName;                                                                      /**< 이 리스트에 기록한 패스 — 테스트의 패스 콜백이 적는다 */
+        uint32                       _transitionBatchCount{ 0 };                                                     /**< `transitionBuffers` 호출 수 */
+        uint32                       _transitionCount{ 0 };                                                          /**< `transitionBuffers` 로 받은 전이 수의 합 */
+        uint32                       _uavBarrierCount{ 0 };                                                          /**< `uavBarrier` 호출 수 */
+        vector<RHITextureTransition> _listTextureTransition;                                                         /**< `transitionTextures` 로 받은 텍스처 전이(받은 순서) */
+        vector<RHITextureHandle>     _listTextureUAVBarrier;                                                         /**< `uavBarrierTexture` 로 받은 텍스처(받은 순서) */
+        vector<RHIBufferTransition>  _listBufferTransition;                                                          /**< `transitionBuffer` 로 받은 단일 버퍼 전이(받은 순서) */
         /** @brief `copyBufferRegion` 한 번입니다. */
         struct BufferCopy
         {
@@ -87,11 +90,11 @@ namespace sw::test
         void prepareTextureForShaderRead( RHITextureHandle ) override {}
         void prepareTextureForRenderTarget( RHITextureHandle ) override {}
         void prepareTextureForUnorderedAccess( RHITextureHandle ) override {}
-        void transitionTextures( const RHITextureTransition*, uint32 ) override {}
+        void transitionTextures( const RHITextureTransition* pTransition, uint32 count ) override { _listTextureTransition.insert( _listTextureTransition.end(), pTransition, pTransition + count ); }
         void blitTexture( RHITextureHandle, RHITextureHandle ) override {}
         void drawIndirect( RHIBufferHandle, uint32, uint32, RHIBufferHandle, uint32 ) override {}
         void dispatchIndirect( RHIBufferHandle, uint32 ) override {}
-        void transitionBuffer( RHIBufferHandle, RHIBufferState ) override {}
+        void transitionBuffer( RHIBufferHandle buffer, RHIBufferState state ) override { _listBufferTransition.push_back( RHIBufferTransition{ buffer, state } ); }
         void transitionBuffers( const RHIBufferTransition*, uint32 count ) override
         {
             ++_transitionBatchCount;
@@ -100,6 +103,7 @@ namespace sw::test
         void copyBufferToReadback( RHIBufferHandle, RHIBufferHandle, uint32 ) override {}
         void copyBufferRegion( RHIBufferHandle destination, uint64 destinationOffset, RHIBufferHandle source, uint64 sourceOffset, uint64 sizeBytes ) override { _listBufferCopy.push_back( BufferCopy{ destination, destinationOffset, source, sourceOffset, sizeBytes } ); }
         void uavBarrier( RHIBufferHandle ) override { ++_uavBarrierCount; }
+        void uavBarrierTexture( RHITextureHandle texture ) override { _listTextureUAVBarrier.push_back( texture ); }
         void drawIndexedIndirect( RHIBufferHandle, uint32, uint32, RHIBufferHandle, uint32 ) override {}
         void beginEventMarker( const utf8* ) override {}
         void endEventMarker() override {}
@@ -262,9 +266,11 @@ namespace sw::test
     class FakeRHICommandContext final : public IRHICommandContext
     {
     public:
-        uint32 _beginNativeCount{ 0 }; /**< `beginRenderPassNative` 횟수 */
-        uint32 _endNativeCount{ 0 };   /**< `endRenderPassNative` 횟수 — 기반이 열린 패스가 있을 때만 부른다 */
-        uint32 _drawNativeCount{ 0 };  /**< 나간 드로우 수(패스가 없어 버린 드로우는 세지 않는다) */
+        uint32                   _beginNativeCount{ 0 }; /**< `beginRenderPassNative` 횟수 */
+        uint32                   _endNativeCount{ 0 };   /**< `endRenderPassNative` 횟수 — 기반이 열린 패스가 있을 때만 부른다 */
+        uint32                   _drawNativeCount{ 0 };  /**< 나간 드로우 수(패스가 없어 버린 드로우는 세지 않는다) */
+        uint32                   _blitNativeCount{ 0 };  /**< 백엔드에 닿은 블릿 수 */
+        vector<RHITextureHandle> _listTransitionTexture; /**< 백엔드에 닿은 텍스처 전이의 핸들(차례대로) */
 
         /** @brief 진단을 낼 디바이스와 함께 만듭니다. */
         explicit FakeRHICommandContext( FakeRHIDevice& device )
@@ -306,14 +312,15 @@ namespace sw::test
         void setComputePipelineStateNative( RHIPipelineStateHandle ) override {}
         void dispatchComputeNative( uint32, uint32, uint32 ) override {}
         void dispatchIndirectNative( RHIBufferHandle, uint32 ) override {}
-        void prepareTextureForShaderReadNative( RHITextureHandle ) override {}
-        void prepareTextureForRenderTargetNative( RHITextureHandle ) override {}
-        void prepareTextureForUnorderedAccessNative( RHITextureHandle ) override {}
-        void blitTextureNative( RHITextureHandle, RHITextureHandle ) override {}
+        void prepareTextureForShaderReadNative( RHITextureHandle texture ) override { _listTransitionTexture.push_back( texture ); }
+        void prepareTextureForRenderTargetNative( RHITextureHandle texture ) override { _listTransitionTexture.push_back( texture ); }
+        void prepareTextureForUnorderedAccessNative( RHITextureHandle texture ) override { _listTransitionTexture.push_back( texture ); }
+        void blitTextureNative( RHITextureHandle, RHITextureHandle ) override { ++_blitNativeCount; }
         void transitionBufferNative( RHIBufferHandle, RHIBufferState ) override {}
         void copyBufferToReadbackNative( RHIBufferHandle, RHIBufferHandle, uint32 ) override {}
         void copyBufferRegionNative( RHIBufferHandle, uint64, RHIBufferHandle, uint64, uint64 ) override {}
         void uavBarrierNative( RHIBufferHandle ) override {}
+        void uavBarrierTextureNative( RHITextureHandle texture ) override { _listTransitionTexture.push_back( texture ); }
         void updateConstantBufferNative( RHIBufferHandle, const void*, uint32 ) override {}
 
     private:

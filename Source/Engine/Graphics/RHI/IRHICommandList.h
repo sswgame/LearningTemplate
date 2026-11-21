@@ -14,25 +14,27 @@
 namespace sw
 {
     /**
-     * @class IRHICommandList
-     * @brief GPU 그래픽스 명령과 컴퓨트 명령을 기록하는 커맨드 리스트입니다.
+     * @class IRHIPassCommandList
+     * @brief 패스 몸통이 받는 기록 면입니다 — 그리기 · 바인딩 · 디스패치 · 렌더 패스 · 버퍼 전이는 있고 **텍스처 상태 전이와 기록 범위(열기 · 닫기)는 없다**.
+     * @details 뷰 그래프 패스 몸통(`FramePassContext::_pCmd`)이 이 형식을 받는다. 텍스처 전이는 그래프가 선언에서 내고(레벨 프롤로그), 패스 안 왕복은
+     *          쓰기로 선언한 자원만 `RenderGraphPassContext::transition` 으로 한다 — 병렬 기록에서 선언하지 않은 자원의 추적 상태를 워커가 바꾸던 모양(RHI 검토 S1)을
+     *          쓸 수 없게 한다. wgpu 의 `RenderPassEncoder` 가 전이 · 복사를 받지 않고 언리얼 RDG 패스가 전이를 선언에서 받는 것과 같은 자리다.
+     *          전이까지 하는 전체 리스트는 이것을 넓힌 `IRHICommandList` 다(그래프 · 프레임 단위 일 · 백엔드).
      */
-    class SW_API IRHICommandList
+    class SW_API IRHIPassCommandList
     {
     public:
         // ------------------------------------------------------------------------------
         // 1) 수명: 복사 금지
         // ------------------------------------------------------------------------------
-        virtual ~IRHICommandList()                           = default;
-        IRHICommandList()                                    = default;
-        IRHICommandList( const IRHICommandList& )            = delete;
-        IRHICommandList& operator=( const IRHICommandList& ) = delete;
+        virtual ~IRHIPassCommandList()                               = default;
+        IRHIPassCommandList()                                        = default;
+        IRHIPassCommandList( const IRHIPassCommandList& )            = delete;
+        IRHIPassCommandList& operator=( const IRHIPassCommandList& ) = delete;
 
         // ------------------------------------------------------------------------------
-        // 2) 기록 범위, 뷰포트, PSO, 렌더 패스
+        // 2) 뷰포트, PSO, 렌더 패스
         // ------------------------------------------------------------------------------
-        virtual void beginCommandList() = 0;
-        virtual void endCommandList()   = 0;
         /**
          * @brief 뷰포트를 설정합니다. **가위 사각형도 이 뷰포트 전체로 되돌립니다**(`beginRenderPass` 도 그 패스 크기로 되돌립니다).
          * @details 가위를 설정하고 잊어버려도 다음 뷰포트나 다음 패스로 새지 않는다(언리얼 `RHISetViewport` 가 가위를 끄는 것과 같다).
@@ -189,50 +191,12 @@ namespace sw
         virtual void bindComputeShaderResource( RHIDescriptorIndex index, uint32 slot ) = 0;
 
         // ------------------------------------------------------------------------------
-        // 5) 배리어와 blit: 샘플링 가능 상태로 전환, 컬러 복사 (dst==0은 스왑체인)
+        // 5) blit: 컬러 복사 (`kRHIBackBufferTexture` 는 스왑체인, 0 은 오류). 텍스처 상태 전이는 `IRHICommandList` 에만 있다
         // ------------------------------------------------------------------------------
-        virtual void prepareTextureForShaderRead( RHITextureHandle texture ) = 0;
 
         /**
-         * @brief 텍스처를 렌더 타깃(또는 뎁스)으로 쓸 수 있는 상태로 만듭니다.
-         * @details `prepareTextureForShaderRead` 와 짝을 이룬다. 그래프가 레벨을 **병렬로 기록하기 전에**
-         *          단일 스레드에서 미리 불러 두는 용도다. 그러면 패스 콜백이 이미 맞는 상태를 보므로
-         *          기록 중에 리소스 상태 같은 공유 데이터를 바꾸지 않는다. 배리어를 기록
-         *          스레드에서 결정하던 구조는 이 프로젝트에서 실제로 여러 번 깨졌다.
-         * @note 컬러인지 뎁스인지는 **백엔드가 자기 텍스처 레코드를 보고 판단한다.** 호출하는 쪽이
-         *       그것을 알아내려면 첨부 포맷을 다시 뒤져야 하고, 그러다 틀리면 배리어가 어긋난다.
-         * @note GL 은 상태가 없어 아무 일도 하지 않는다. DX11 은 전이가 없지만 이 텍스처가 바인딩된 PS SRV 슬롯을 해제한다. 그대로 두면
-         *       첨부로 바인딩할 때 런타임이 SRV 를 NULL 로 강제하고 해저드 경고를 낸다.
-         */
-        virtual void prepareTextureForRenderTarget( RHITextureHandle texture ) = 0;
-
-        /**
-         * @brief 텍스처를 컴퓨트가 쓰는 RW 텍스처(UAV) 상태로 만듭니다. 디스패치 전에 부릅니다.
-         * @details DX12 는 UNORDERED_ACCESS 전이이고, Vulkan 은 GENERAL 레이아웃 전이다. DX11 은 할 일이 없고, GL 은 이미지 접근 배리어다.
-         *          다시 샘플링하려면 prepareTextureForShaderRead 를 부른다.
-         */
-        virtual void prepareTextureForUnorderedAccess( RHITextureHandle texture ) = 0;
-
-        /**
-         * @brief 힙에 겹쳐 놓은 텍스처(`IRHIResourceFactory::createPlacedTexture2D`)를 이제부터 이 텍스처로 쓴다고 알립니다 — 같은 바이트의 앞 텍스처 쓰기가 끝난 뒤에 이 텍스처를 쓴다.
-         * @details DX12 는 앨리어싱 배리어(앞 리소스를 특정하지 않는 형태)다. 겹쳐 놓기가 없는 백엔드(능력 `_bPlacedTextures` 거짓)는 그런 텍스처가 없어 할 일이 없다 — 기본 구현이 그것이다.
-         *          첫 쓰기 전이(`prepareTextureForRenderTarget`) 앞에 부른다.
-         */
-        virtual void beginTextureAlias( RHITextureHandle texture ) { (void)texture; }
-
-        /**
-         * @brief 여러 텍스처의 전이를 한 번에 냅니다. 상태마다 같은 이름의 단일 함수(`prepareTextureFor*`)와 같은 일이고, 이미 그 상태인 텍스처는 건너뛴다.
-         * @details DX12 는 `ResourceBarrier` 한 번, Vulkan 은 `vkCmdPipelineBarrier` 한 번(단계는 모든 전이의 합)으로 낸다 — 둘 다 배리어 배열 하나로 여러 자원을
-         *          옮길 수 있다(https://learn.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12graphicscommandlist-resourcebarrier ·
-         *          https://docs.vulkan.org/refpages/latest/refpages/source/vkCmdPipelineBarrier.html). DX11 · GL · WebGPU 는 텍스처마다 단일 함수의 일을 한다.
-         *          렌더 타깃 상태의 핸들 0 은 스왑체인이다. 같은 텍스처가 둘 들면 안 된다. 앨리어싱 시작(`beginTextureAlias`)은 이 묶음 앞에 따로 낸다.
-         *          그래프 레벨 프롤로그(`FramePassExecutor::onGraphLevelPrologue`)가 레벨마다 한 번 부른다(언리얼 RDG 가 패스 앞 전이를 한 배치로 내는 자리).
-         */
-        virtual void transitionTextures( const RHITextureTransition* pTransition, uint32 count ) = 0;
-
-        /**
-         * @brief 텍스처 전체를 다른 텍스처로 복사합니다. **0 은 백버퍼다.** dst 가 0 이면 화면으로 내보내고, src 가 0 이면 화면에 나갈 이미지를 읽는다(테스트와 진단용).
-         * @details 둘 다 0 이면 아무것도 하지 않는다. 백버퍼에서 텍스처로 복사할 때는 크기가 백버퍼와 같아야 하고, D3D 는 포맷도 같아야 한다(`getBackBufferFormat` 으로 만든다.
+         * @brief 텍스처 전체를 다른 텍스처로 복사합니다. **`kRHIBackBufferTexture` 는 백버퍼다.** dst 가 백버퍼면 화면으로 내보내고, src 가 백버퍼면 화면에 나갈 이미지를 읽는다(테스트와 진단용).
+         * @details 둘 다 백버퍼면 아무것도 하지 않는다. 0 은 오류로 알리고 버린다. 백버퍼에서 텍스처로 복사할 때는 크기가 백버퍼와 같아야 하고, D3D 는 포맷도 같아야 한다(`getBackBufferFormat` 으로 만든다.
          *          Vulkan 은 블릿이라 변환한다). GL 은 창의 0행이 아래쪽이라 읽을 때 뒤집으므로, 결과 텍스처의 0행은 항상 화면 위쪽이다.
          *          주의: 백버퍼는 Present 뒤에 내용이 버려지므로(플립 모델) Present 전에 프레임 스트림에 기록한다.
          */
@@ -312,6 +276,13 @@ namespace sw
          */
         virtual void uavBarrier( RHIBufferHandle buffer ) = 0;
         /**
+         * @brief 앞선 디스패치의 텍스처 UAV(RW 텍스처) 쓰기가 끝난 뒤에 다음 디스패치가 읽고 쓰도록 막습니다 — 버퍼 판(`uavBarrier`)의 텍스처 짝이다.
+         * @details 상태가 그대로(UAV → UAV)라 전이로는 알 수 없는 의존이다(컴퓨트 패스 둘이 같은 첨부를 RW 로 이어 쓴다). 핸들 0 은 오류로 알리고 버린다.
+         *          DX12 는 그 리소스의 UAV 배리어, Vulkan 은 GENERAL → GENERAL 이미지 메모리 배리어(가시성만), GL 은 이미지 접근 · 텍스처 읽기 glMemoryBarrier,
+         *          DX11 · WebGPU 는 디스패치 · 패스가 순서를 지켜 할 일이 없다.
+         */
+        virtual void uavBarrierTexture( RHITextureHandle texture ) = 0;
+        /**
          * @brief 인덱스 버퍼를 쓰는 드로우를 GPU 가 기록해 둔 인자로 발행합니다(`drawIndirect` 와 같은 모양 — 여러 개 · 개수 버퍼).
          * @param argumentBuffer `RHIDrawIndexedIndirectCommand` 가 이어 놓인 버퍼입니다. 위와 같은 이유로 그 구조체가 레이아웃 기준입니다.
          * @param argumentBufferOffset 그 버퍼 안의 바이트 오프셋입니다.
@@ -331,5 +302,65 @@ namespace sw
          *          아무것도 하지 않는다(`RHICapabilities::_bGPUBreadcrumbs` 가 거짓). 소실 뒤 읽는 쪽은 `IRHIDevice::readLastBreadcrumbs` 다. 0 은 표지가 아니다. 최상위 비트가 선 값은 패스의 끝 표지다(`GPUBreadcrumbs::kEndMarkerBit` — DX12 는 끝 칸에 MARKER_OUT 으로 쓴다).
          */
         virtual void writeBreadcrumb( uint32 markerID ) = 0;
+    };
+
+    /**
+     * @class IRHICommandList
+     * @brief GPU 그래픽스 명령과 컴퓨트 명령을 기록하는 커맨드 리스트입니다 — 패스 기록 면(`IRHIPassCommandList`)에 기록 범위와 텍스처 상태 전이를 더한다.
+     * @details 그래프(레벨 프롤로그 · `RenderGraphPassContext::transition`), 프레임 단위 일(프리패스 · 화면 출력), 백엔드가 이 형식을 쓴다.
+     */
+    class SW_API IRHICommandList : public IRHIPassCommandList
+    {
+    public:
+        ~IRHICommandList() override = default;
+        IRHICommandList()           = default;
+
+        // ------------------------------------------------------------------------------
+        // 기록 범위
+        // ------------------------------------------------------------------------------
+        virtual void beginCommandList() = 0;
+        virtual void endCommandList()   = 0;
+
+        // ------------------------------------------------------------------------------
+        // 텍스처 상태 전이 (`kRHIBackBufferTexture` 는 스왑체인, 0 은 오류)
+        // ------------------------------------------------------------------------------
+        virtual void prepareTextureForShaderRead( RHITextureHandle texture ) = 0;
+
+        /**
+         * @brief 텍스처를 렌더 타깃(또는 뎁스)으로 쓸 수 있는 상태로 만듭니다.
+         * @details `prepareTextureForShaderRead` 와 짝을 이룬다. 그래프가 레벨을 **병렬로 기록하기 전에**
+         *          단일 스레드에서 미리 불러 두는 용도다. 그러면 패스 콜백이 이미 맞는 상태를 보므로
+         *          기록 중에 리소스 상태 같은 공유 데이터를 바꾸지 않는다. 배리어를 기록
+         *          스레드에서 결정하던 구조는 이 프로젝트에서 실제로 여러 번 깨졌다.
+         * @note 컬러인지 뎁스인지는 **백엔드가 자기 텍스처 레코드를 보고 판단한다.** 호출하는 쪽이
+         *       그것을 알아내려면 첨부 포맷을 다시 뒤져야 하고, 그러다 틀리면 배리어가 어긋난다.
+         * @note GL 은 상태가 없어 아무 일도 하지 않는다. DX11 은 전이가 없지만 이 텍스처가 바인딩된 PS SRV 슬롯을 해제한다. 그대로 두면
+         *       첨부로 바인딩할 때 런타임이 SRV 를 NULL 로 강제하고 해저드 경고를 낸다.
+         */
+        virtual void prepareTextureForRenderTarget( RHITextureHandle texture ) = 0;
+
+        /**
+         * @brief 텍스처를 컴퓨트가 쓰는 RW 텍스처(UAV) 상태로 만듭니다. 디스패치 전에 부릅니다.
+         * @details DX12 는 UNORDERED_ACCESS 전이이고, Vulkan 은 GENERAL 레이아웃 전이다. DX11 은 할 일이 없고, GL 은 이미지 접근 배리어다.
+         *          다시 샘플링하려면 prepareTextureForShaderRead 를 부른다.
+         */
+        virtual void prepareTextureForUnorderedAccess( RHITextureHandle texture ) = 0;
+
+        /**
+         * @brief 힙에 겹쳐 놓은 텍스처(`IRHIResourceFactory::createPlacedTexture2D`)를 이제부터 이 텍스처로 쓴다고 알립니다 — 같은 바이트의 앞 텍스처 쓰기가 끝난 뒤에 이 텍스처를 쓴다.
+         * @details DX12 는 앨리어싱 배리어(앞 리소스를 특정하지 않는 형태)다. 겹쳐 놓기가 없는 백엔드(능력 `_bPlacedTextures` 거짓)는 그런 텍스처가 없어 할 일이 없다 — 기본 구현이 그것이다.
+         *          첫 쓰기 전이(`prepareTextureForRenderTarget`) 앞에 부른다.
+         */
+        virtual void beginTextureAlias( RHITextureHandle texture ) { (void)texture; }
+
+        /**
+         * @brief 여러 텍스처의 전이를 한 번에 냅니다. 상태마다 같은 이름의 단일 함수(`prepareTextureFor*`)와 같은 일이고, 이미 그 상태인 텍스처는 건너뛴다.
+         * @details DX12 는 `ResourceBarrier` 한 번, Vulkan 은 `vkCmdPipelineBarrier` 한 번(단계는 모든 전이의 합)으로 낸다 — 둘 다 배리어 배열 하나로 여러 자원을
+         *          옮길 수 있다(https://learn.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12graphicscommandlist-resourcebarrier ·
+         *          https://docs.vulkan.org/refpages/latest/refpages/source/vkCmdPipelineBarrier.html). DX11 · GL · WebGPU 는 텍스처마다 단일 함수의 일을 한다.
+         *          렌더 타깃 상태의 `kRHIBackBufferTexture` 는 스왑체인이고 핸들 0 은 오류로 알리고 그 원소만 버린다. 같은 텍스처가 둘 들면 안 된다. 앨리어싱 시작(`beginTextureAlias`)은 이 묶음 앞에 따로 낸다.
+         *          그래프 레벨 프롤로그(`FramePassExecutor::onGraphLevelPrologue`)가 레벨마다 한 번 부른다(언리얼 RDG 가 패스 앞 전이를 한 배치로 내는 자리).
+         */
+        virtual void transitionTextures( const RHITextureTransition* pTransition, uint32 count ) = 0;
     };
 } // namespace sw

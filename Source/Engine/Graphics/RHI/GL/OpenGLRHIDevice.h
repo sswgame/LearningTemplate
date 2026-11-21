@@ -132,7 +132,7 @@ namespace sw
          */
         OpenGLRHISwapChain* useSwapChain( IRHISwapChain* pSwapChain );
 
-        /** @brief 프레임을 엽니다(컨텍스트 되찾기, 뷰포트, 타임스탬프 수거). 백버퍼 클리어는 beginRenderPass(핸들 0)가 합니다. */
+        /** @brief 프레임을 엽니다(컨텍스트 되찾기, 뷰포트, 타임스탬프 수거). 백버퍼 클리어는 beginRenderPass(`kRHIBackBufferTexture`)가 합니다. */
         void beginFrameInternal() override;
 
         /** @brief 프레임을 닫고, bPresent 면 플랫폼 컨텍스트로 백버퍼를 내보냅니다(SwapBuffers 등). */

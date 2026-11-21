@@ -103,10 +103,14 @@ namespace sw
          */
         bool shouldDrawBatchInPass( RenderPassKind passType, const GPUMeshBatch& batch, const GPUMeshBatchBinding& binding ) const;
         /**
-         * @brief 파이프라인 패스 @p pass 가 이번 뷰에서 비활성이면 true 입니다(꺼진 효과 · 그릴 것 없는 덧그리기 · 읽는 쪽이 없는 패스) — 뷰 패스 고르기의 결과(`FrameViewTarget::_listPassDisabled`)를 그대로 읽는다.
+         * @brief 파이프라인 패스 번호 @p passIndex(`getGraphPass` 의 차례)가 이번 뷰에서 비활성이면 true 입니다(꺼진 효과 · 그릴 것 없는 덧그리기 · 읽는 쪽이 없는 패스)
+         *        — 뷰 패스 고르기의 결과(`FrameViewTarget::_listPassDisabled`)를 그대로 읽는다.
          * @details 덧그리는 패스(SSR · 왜곡 누적 · 왜곡 적용)의 실행이 따로 판정하지 않는다 — 판정이 둘이면 고르기가 뺀 사본을 실행이 읽거나, 실행이 쉬는데 사본을 만든다.
+         *          그래프 콜백(`onGraphPassExecute`)이 패스 문맥을 만들기 전에 맨 앞에서 본다.
          */
-        bool isPassDisabledInView( const RenderGraphPassDesc& pass ) const;
+        bool isPassDisabledInView( uint32 passIndex ) const;
+        /** @brief 종류가 @p type 인 파이프라인 패스 하나라도 이번 뷰에서 켜져 있으면 true 입니다(뷰 자원 등록 — 그 종류가 쓰는 엔진 자원을 등록할지). */
+        bool isPassKindEnabledInView( RenderPassKind type ) const;
         /** @brief 그림자 캐시의 거르기(@p filter)가 이 배치를 그리게 하면 true 입니다(`GPUMeshBatch::_bStaticShadowCaster`). */
         static bool shouldDrawCasterBatch( ShadowCasterFilter filter, const GPUMeshBatch& batch );
 
@@ -203,15 +207,30 @@ namespace sw
         // ------------------------------------------------------------------------------
         // 그래프 콜백과 패스별 실행
         // ------------------------------------------------------------------------------
-        /** @brief RenderGraph 가 패스를 실행할 때 부르는 콜백입니다. */
+        /**
+         * @brief 뷰 그래프가 패스를 실행할 때 부르는 콜백입니다. 패스 번호는 문맥의 `_payload` 다(파이프라인 패스는 차례, 모듈 확장 패스는 그 뒤 — 이름으로 다시 찾지 않는다).
+         * @details 이번 뷰에서 꺼진 패스는 맨 앞에서 돌려보낸다(문맥 복사 · 상수 칸 잡기보다 먼저). 패스 몸통은 뷰 자원 표(`_viewResourceTable`)를 실은 그래프 문맥을 받는다.
+         */
         void onGraphPassExecute( const RenderGraphPassContext& context );
-        /** @brief 프레임 그래프가 프레임 패스를 실행할 때 부르는 콜백입니다. 서술의 종류로 `FrameGraphExecutor::executePass` 를 부릅니다. */
+        /** @brief 프레임 그래프가 프레임 패스를 실행할 때 부르는 콜백입니다. 패스 번호(`_payload`)의 서술 종류로 `FrameGraphExecutor::executePass` 를 부릅니다. */
         void onFrameGraphPassExecute( const RenderGraphPassContext& context );
+        /**
+         * @brief 뷰 @p view 의 그래프 엔진 자원(`ViewGraphResource` — 자동 노출 기록 · FSR 중간 RT · 그림자 캐시 층 · 후처리 사본 · 깊이 사본 · HZB · 주 시점 컬링 버퍼)을
+         *        뷰 자원 표 `_viewResourceTable` 의 칸 0 으로 다시 채웁니다. 뷰 그래프를 그 뷰로 돌리기 직전에 부른다.
+         * @details 그 프레임 · 뷰에 일하는 자원만 등록한다 — 등록이 없으면 레벨 콜백이 전이를 내지 않고 패스 몸통은 그 일을 건너뛴다(등록 조건이 곧 실행 조건).
+         */
+        void registerViewResources( FrameViewTarget& view );
         /**
          * @brief 컴파일한 뷰 그래프의 수명(레벨)으로 트랜지언트 앨리어싱 계획을 세워 `FrameRenderState::_transientAliasPlan` 에 두고 세대를 올립니다.
          * @details 깊이 · `Load` 첨부 · TAA 출력은 나누지 않고, 꺼지면 원본을 가리키는 효과(`kBypassesToSource`)는 원본과 출력을 한 구간으로 묶는다. NaN 감시를 켠 실행은 나누지 않는다.
          */
         void rebuildTransientAliasPlan();
+        /**
+         * @brief 파이프라인 패스 @p pass 의 종류가 스스로 쓰는 엔진 자원 접근(`ViewGraphResource` — 자동 노출 · FSR 중간 RT · 그림자 캐시 층 · 후처리 사본 · 깊이 사본 · HZB · 컬링 버퍼)을
+         *        @p inoutListAccess 에 더합니다. XML 은 첨부만 적고 이 자원은 종류가 선언한다(언리얼 RDG 패스 파라미터가 패스 형식에 박힌 자원 자리).
+         * @param bTonemapPass @p pass 가 톤맵하는 패스(`FrameAutoExposure::findTonemapPass`)인지입니다 — 자동 노출 기록을 읽고 쓴다.
+         */
+        static void appendEngineResourceAccesses( const RenderGraphPassDesc& pass, bool bTonemapPass, vector<RenderGraphResourceAccess>& inoutListAccess );
         /** @brief 프레임 패스를 프레임 그래프 노드로 묶고 컴파일합니다(`bindPassCallbacks` 의 뒷부분). 프레임 패스가 없으면 빈 그래프이고 true 입니다. */
         [[nodiscard]] bool bindFramePassCallbacks();
         /** @brief 프레임 그래프를 프리패스 리스트(`_pCmd`)에 기록합니다. 뷰 그래프보다 먼저 큐에 내는 리스트다. */
@@ -223,7 +242,7 @@ namespace sw
         void returnFrameResourcesToInitialAccess();
         /**
          * @brief 레벨을 기록하기 **직전에** 그 레벨이 만질 자원의 배리어를 미리 발행합니다. 직렬 경로에서는 패스마다 발행합니다.
-         * @details 등록한 프레임 자원(`FrameBufferTable` — 이름의 모든 뷰 칸)의 버퍼 전이는 `transitionBuffers` 한 번, UAV → UAV 는 UAV 배리어로 낸다. 뷰 그래프와 프레임 그래프가 이 콜백 하나를 쓴다.
+         * @details 등록한 프레임 자원(`FrameBufferTable` — 이름의 모든 뷰 칸)의 버퍼 전이는 `transitionBuffers` 한 번, UAV → UAV 는 UAV 배리어로 낸다. 이것은 뷰 그래프 판이다(등록 자원 = 지금 뷰의 `_viewResourceTable`) — 프레임 그래프는 `onFrameGraphLevelPrologue`.
          *          자원 이름으로 실제 텍스처를 찾아 읽기 · 렌더 타깃 전이를 한 묶음(`IRHICommandList::transitionTextures`)으로
          *          레벨 첫 패스 리스트의 앞머리에 기록한다(직렬 경로에서는
          *          그 패스의 리스트). 같은 레벨의 다른 리스트는 큐 순서상 그 뒤에 실행되므로 GPU 타임라인에서도 배리어가 앞선다.
@@ -232,6 +251,10 @@ namespace sw
          *          않는다. 주의: 병렬 기록 스레드가 배리어를 정하게 하면 중복 배리어와 레이아웃 불일치가 생긴다.
          */
         void onGraphLevelPrologue( const RenderGraphLevelContext& context );
+        /** @brief 프레임 그래프의 레벨 콜백입니다 — 등록 자원 표가 프레임 자원 표(`_frameBufferTable`)인 것만 뷰 그래프 판(`onGraphLevelPrologue`)과 다르다. */
+        void onFrameGraphLevelPrologue( const RenderGraphLevelContext& context );
+        /** @brief 레벨의 전이를 냅니다 — 등록 자원은 @p table 에서, 나머지 텍스처(첨부)는 지금 뷰의 풀에서 찾는다. 두 레벨 콜백이 함께 쓴다. */
+        void issueLevelBarriers( const RenderGraphLevelContext& context, const FrameBufferTable& table );
         /**
          * @brief 패스 타입에 맞는 실행 함수를 부릅니다. 공통 입력(`PassExecuteInput`)을 한 번 정하고 패스별 `execute*Pass` 로 나눠 줍니다.
          * @details 패스 서술을 참조로 받는다 — 서술 없이 원본 이름(SceneColor · TAAColor 등)으로 타깃을 짐작하던 길을 형식으로 막았다.
@@ -300,7 +323,7 @@ namespace sw
         void executeCanvasPass( const PassExecuteInput& input );
         /**
          * @brief 개발 겹치기 목록(`CanvasFrameData::getDevOverlay` — 디버그 HUD)을 **사진 캡처를 읽은 뒤** 화면에 나가는 대상에 그립니다. 주 출력의 마지막 쓰기 패스 끝에서만 부른다.
-         * @details 캡처 실행이면 캡처를 백버퍼로 옮긴 뒤 백버퍼(0)에, 아니면 출력(백버퍼)에 그린다 — 캡처 텍스처에는 쓰지 않으므로 스크린샷 · `<ExpectImage>` 골든에 들지 않는다.
+         * @details 캡처 실행이면 캡처를 백버퍼로 옮긴 뒤 백버퍼(`kRHIBackBufferTexture`)에, 아니면 출력(백버퍼)에 그린다 — 캡처 텍스처에는 쓰지 않으므로 스크린샷 · `<ExpectImage>` 골든에 들지 않는다.
          *          출력이 호스트 렌더 타깃(에디터 게임 뷰)이면 그리지 않는다 — 그 타깃은 사진이 읽고 에디터 UI 캡처에 든다(수집기가 겹치기를 자기 렌더 텍스처로 실었다).
          *          화면에 나가지 않는 캡처(크기를 덮어쓴 출력)와 렌더 텍스처 · 호스트 타깃 뷰도 그리지 않는다. 언리얼이 디버그 캔버스를 하이레스 스크린샷 뒤 뷰포트에 그리는 순서와 같다.
          */
@@ -341,7 +364,7 @@ namespace sw
         /**
          * @brief MRT 컬러 패스를 시작합니다.
          * @return 열었으면 true 입니다. 컬러 타깃 이름 중 이번 프레임에 없는 것이 있으면 **열지 않고** false 를 반환하며 오류를 한 번 남깁니다.
-         *         없는 첨부의 핸들 0 은 백버퍼를 가리키므로, 그대로 열면 패스가 화면에 그립니다.
+         *         없는 첨부의 핸들 0 은 무효라 RHI 가 패스를 열지 않고 알리지만, 어느 첨부가 없는지는 여기서 알린다.
          */
         bool beginColorPassMrt( FramePassContext& context, const hashed_string* pColorNames, const float4* pTargetClearColor,
                                 const RHIRenderPassLoadOp* pColorLoad, uint32 colorCount, const hashed_string& depthName,
@@ -368,7 +391,7 @@ namespace sw
          * @param bSceneLayer Present(장면)면 true 다 — HDR 출력이면 화면 대신 장면 출력 RT 에 쓴다(`FrameDisplayEncode`). Canvas 는 false(화면 = HDR 이면 UI RT)다.
          */
         PresentTarget resolvePresentTarget( bool bSceneLayer ) const;
-        /** @brief 화면에 쓰는 대상입니다 — 0 이면 스왑체인, 회전한 화면이면 회전 대기 텍스처, HDR 출력이면 UI RT 입니다(`FrameRenderer::getScreenTarget` 과 같은 판단). */
+        /** @brief 화면에 쓰는 대상입니다 — `kRHIBackBufferTexture` 이면 스왑체인, 회전한 화면이면 회전 대기 텍스처, HDR 출력이면 UI RT 입니다(`FrameRenderer::getScreenTarget` 과 같은 판단). */
         RHITextureHandle getScreenTarget() const;
         /** @brief 이 패스가 Swapchain 을 쓰는 마지막 패스면 true 입니다. 스크린샷 캡처를 백버퍼로 복사하는 일을 이 패스 끝에서 합니다. */
         bool isLastSwapchainWriter( const RenderGraphPassDesc& passDesc ) const;
@@ -519,6 +542,11 @@ namespace sw
         hashed_string resolvePresentSource() const;
         /** @brief 개발 보기 `gpu.show <첨부>`(GPUPixelInspector)가 켜져 있으면 주 시점 Present 의 SourceColor 를 그 첨부로 다시 등록합니다. 선언한 입력 등록 뒤에 부릅니다. */
         void registerVisualizedAttachment( FramePassContext& context );
+        /**
+         * @brief 개발 보기 `gpu.show <첨부>` 가 켜져 있으면 그 첨부를 @p cmd(주 시점 Present 패스의 리스트)에서 셰이더 읽기로 옮깁니다 — Present 가 선언하지 않은 첨부를 읽는 유일한 길이다.
+         * @details 패스 몸통은 텍스처를 옮길 수 없어(`IRHIPassCommandList`) 실행기가 몸통 앞에서 부른다(`onGraphPassExecute`). 개발 전용이다.
+         */
+        void prepareVisualizedAttachment( IRHICommandList& cmd ) const;
         /** @brief 지금 그리는 뷰의 트랜지언트 풀입니다. */
         TransientAttachmentPool&       activePool() { return _pActiveView->_transientPool; }
         const TransientAttachmentPool& activePool() const { return _pActiveView->_transientPool; }
@@ -535,16 +563,19 @@ namespace sw
         FrameFog&                  _fog;
         FrameExtensionHost&        _extensionHost;
         FrameCapture&              _capture;
-        const FrameScreenRotation& _screenRotation; ///< 화면에 쓰는 대상(0 = 스왑체인, 회전한 화면이면 논리 크기 대기 텍스처)
+        const FrameScreenRotation& _screenRotation; ///< 화면에 쓰는 대상(`kRHIBackBufferTexture` = 스왑체인, 회전한 화면이면 논리 크기 대기 텍스처)
         const FrameDisplayEncode&  _displayEncode;  ///< HDR 출력이면 Present 는 장면 출력 RT, 화면에 쓰는 나머지는 UI RT 에 쓴다
         /// @brief 프레임 패스 종류마다의 실행(깊이 히스토리 · 가림 타일 · 입자 · 변형 · 컬링 · 라이트 그리드 · 볼륨 안개 · 프로브 · 마커)입니다. 순서는 프레임 그래프가 정한다.
         FrameGraphExecutor _frameGraphExecutor;
-        /// @brief 프레임 그래프 노드 이름 → `_listFramePass` 번호입니다. `bindPassCallbacks` 가 채웁니다.
-        unordered_map<hashed_string, uint32> _mapFramePassNameToIndex;
         /// @brief 프레임 그래프 실행 상태입니다(뷰 그래프와 따로 — 자원 이름이 다르고 프레임에 한 번 돈다).
         RenderGraphExecutionContext _frameGraphContext;
         /// @brief 프레임 그래프 자원(이름 · 뷰 칸) → RHI 핸들입니다. `recordFrameGraph` 가 프레임마다 비우고 주인이 다시 등록한다(`FrameGraphExecutor::beginFrame`).
         FrameBufferTable _frameBufferTable;
+        /**
+         * @brief 뷰 그래프 엔진 자원(`ViewGraphResource`)의 지금 뷰 핸들입니다(칸 0). 뷰를 돌릴 때마다 `registerViewResources` 가 비우고 다시 채운다.
+         * @details 병렬 기록 중에는 읽기만 한다(등록은 그 뷰 그래프 앞에 끝났다). 첨부는 넣지 않는다 — 첨부는 풀(`activePool`)이 이름으로 준다.
+         */
+        FrameBufferTable _viewResourceTable;
         /// @brief 버퍼 보기(에디터 렌더 디버거 · 개발 명령)가 요청한 `_frameBufferTable` 버퍼를 프레임 그래프 끝에서 읽는다(`RenderDebugRegistry`). 읽기 버퍼는 장치 자원이라 여기서 놓는다.
         RenderBufferInspector _bufferInspector;
         /// @brief 레벨 콜백이 모은 버퍼 전이입니다(`transitionBuffers` 한 번). 레벨 콜백은 한 스레드에서만 돈다 — 용량을 프레임 사이에 다시 쓴다.
@@ -565,12 +596,9 @@ namespace sw
          * @brief 패스 슬롯별 컨텍스트입니다. 프레임마다 `_frameContext` 를 **대입**해 씁니다. 용량이 남아 있어 힙을 건드리지 않습니다.
          * @details 패스마다 지역 복사본을 만들면 상수 값 목록과 레지스트리 맵이 프레임마다 패스 수만큼 새로
          *          늘어난다. 크기는 병렬 기록 **전**(`submitGraph`)에 맞춘다. 기록 중에 늘리면 워커끼리 경합한다.
-         *          마지막 슬롯은 이름을 찾지 못한 패스가 쓴다.
+         *          칸 번호는 그래프 패스 번호(`RenderGraphPassContext::_payload`)다 — 파이프라인 패스 차례, 그 뒤가 모듈 확장 패스다.
          */
-        vector<FramePassContext>             _listPassContext;
-        unordered_map<hashed_string, uint32> _mapPassNameToIndex;
-        /// @brief 모듈 확장 패스(`FrameExtensionHost::getPasses`)의 그래프 노드 이름 → 목록 번호입니다. `bindPassCallbacks` 가 채웁니다.
-        unordered_map<hashed_string, uint32> _mapExtensionPassIndex;
+        vector<FramePassContext> _listPassContext;
         /// @brief 그래프 실행 상태(이름별 리소스 상태 추적)입니다. 디바이스가 바뀌면 버린다(`clearDevice`).
         RenderGraphExecutionContext _graphContext;
         /// @brief 패스 출력 NaN · Inf 감시(`-gv_nanCheck`). 그래프가 끝난 뒤 `scanPassOutputsForNan` 이 자기 리스트(`_nanCheckCommandList`)에 기록한다. 꺼져 있으면 비어 있다.

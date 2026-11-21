@@ -17,7 +17,6 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Config/OcclusionCullingConfig.h"
-#include "Engine/Graphics/RHI/RHIBufferTransitionBatch.h"
 #include "Engine/Graphics/RHI/RHIConstantBuffer.h"
 #include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
 #include "Engine/Renderer/Frame/Execute/HZBOcclusion.h"
@@ -32,6 +31,7 @@ namespace sw
     class FrameFog;
     class FramePSOManager;
     class IRHICommandList;
+    class IRHIPassCommandList;
     class IRHIDevice;
     struct FrameRenderState;
     struct FrameViewTarget;
@@ -69,18 +69,28 @@ namespace sw
         /** @brief 이번 프레임에 그린 뷰마다 그 뷰-투영과 눈 위치를 적어 둡니다(다음 프레임의 깊이 히스토리가 짝이 된다). 모든 뷰를 그린 뒤 부릅니다. */
         void rememberDepthHistoryViews();
         /**
-         * @brief 2 단계 가림의 뒤 단계입니다 — 깊이 프리패스(@p view 가 주 시점일 때)가 끝난 직후 @p cmd 에 그 깊이로 HZB 를 다시 짓고, 앞 단계에서 가려졌던 차례만 다시 컬링해
+         * @brief 뷰 그래프가 이 뷰 @p view 에서 쓰는 엔진 자원(깊이 사본 · HZB · 가림 타일 — 이번 장면 깊이로 짓는 패스가 있을 때, 주 시점 컬링 버퍼 · 차례 표시 · 장면 깊이 — 2 단계 가림의
+         *        뒤 단계가 도는 프레임)을 뷰 자원 표 @p table 의 칸 0 으로 등록합니다(`ViewGraphResource`). 뷰 그래프를 돌리기 전에 뷰마다 부른다.
+         * @details 등록 조건이 곧 실행 조건이다 — 뒤 단계 패스(`LateOcclusion`)는 차례 표시가 등록됐는지만 보고 돈다. 이 판정이 이번 프레임 "뒤 단계를 기록했는가"(`hasLatePhaseRun`)이기도 하다.
+         * @param bBuildsSceneDepthHZB 이 뷰에서 이번 장면 깊이로 HZB 를 짓는 패스(화면 공간 반사)가 켜져 있는지입니다.
+         */
+        void registerViewGraphResources( FrameBufferTable& table, const FrameViewTarget& view, bool bBuildsSceneDepthHZB );
+        /**
+         * @brief 2 단계 가림의 뒤 단계 패스(`RenderPassKind::LateOcclusion` — 깊이 프리패스 뒤)입니다. 그 깊이로 HZB 를 다시 짓고, 앞 단계에서 가려졌던 차례만 다시 컬링해
          *        이제 보이는 것을 주 시점 간접 인자에 더합니다(gpu_cull.hlsl 머리말). 뒤 패스(G버퍼 · 포워드 불투명)가 더한 것까지 그린다.
-         * @details 앞 단계가 이번 프레임에 차례를 적었을 때만 돈다(`_bLatePhasePending` — 설정 `_bTwoPhase`, 간접 멀티 드로우 능력, 지난 HZB 가 있어야 한다).
+         * @details 자원은 모두 이 패스가 선언한 것이다(장면 깊이 · 깊이 사본 · HZB · 가림 타일 · 컬링 인자 · 가시 목록 · LOD 상태 · 차례 표시) — 앞 전이는 그래프 레벨 콜백이 내고,
+         *          패스 안 왕복(장면 깊이 셰이더 읽기 ↔ 깊이 쓰기, 깊이 사본 UAV, 그리는 쪽 상태로 돌리기)은 `RenderGraphPassContext::transition` 이다. 실행기 멤버를 쓰지 않는다.
+         *          뒤 단계가 도는 프레임에만 차례 표시를 등록했다(`registerViewGraphResources`) — 등록이 없으면 돌지 않는다(주 시점 밖 · 앞 단계가 적지 않은 프레임).
          *          깊이 프리패스가 없는 파이프라인은 뒤 단계가 없다 — 앞 단계에서 빠진 것은 한 단계 가림처럼 한 프레임 늦게 나온다.
          *          한계: 뒤 단계에서 더한 인스턴스는 깊이 프리패스에 없어 그 프레임의 DBuffer 데칼이 그 자리를 모른다(G버퍼가 깊이를 다시 쓴다) — 드러나는 첫 프레임 한 번이다.
          */
-        void recordLateOcclusion( IRHICommandList& cmd, FrameViewTarget& view );
+        void recordLateOcclusion( const RenderGraphPassContext& graphContext, FrameViewTarget& view ) const;
         /**
-         * @brief 뷰 @p view 의 이번 프레임 장면 깊이로 HZB 를 @p cmd 에 짓습니다(화면 공간 반사의 hi-z trace 앞 — 불투명을 다 그린 깊이). 지었으면 true 입니다.
+         * @brief 뷰 @p view 의 이번 프레임 장면 깊이로 HZB 를 짓습니다(화면 공간 반사의 hi-z trace 앞 — 불투명을 다 그린 깊이). 지었으면 true 입니다.
          * @details 깊이 히스토리 텍스처에 장면 깊이를 옮긴 뒤 짓는다 — 그 텍스처는 프레임 처음 프레임 패스(입자 · HZB)가 다 읽었고 다음 프레임 처음에 다시 채운다.
+         *          깊이 사본 · HZB · 가림 타일은 부르는 패스가 선언했다(`ViewGraphResource`) — 등록이 없으면 짓지 않는다.
          */
-        [[nodiscard]] bool recordSceneDepthHZB( IRHICommandList& cmd, FrameViewTarget& view );
+        [[nodiscard]] bool recordSceneDepthHZB( const RenderGraphPassContext& graphContext, FrameViewTarget& view ) const;
         /** @brief 2 단계 가림을 이번 프레임에 쓸 수 있는지입니다 — 가림 판정 켬 · 설정 `_bTwoPhase` · 간접 멀티 드로우 능력(WebGPU 는 없다 — 웹 깃발). */
         bool isTwoPhaseOcclusionEnabled() const;
         /** @brief 이번 프레임에 2 단계 가림의 뒤 단계 컬링을 기록했는지입니다(감시 값 `Render.OcclusionLatePhase`). */
@@ -156,7 +166,7 @@ namespace sw
         void computeLODFadeStep();
         /** @brief GPU 생산자로 뷰마다의 라이트 그리드를 채웁니다(light_grid.hlsl, 그룹 하나 = 뷰 하나). 생산자가 GPU 가 아니면 아무것도 하지 않습니다. */
         void dispatchLightGrid( const RenderGraphPassContext& graphContext );
-        /** @brief 이번 프레임에 실시간 프로브를 갱신하는가 — 버퍼 등록(`beginFrame`)과 패스 몸통이 같은 판정을 쓴다. */
+        /** @brief 이번 프레임에 실시간 프로브를 갱신하는가 — 버퍼 등록(`beginFrame`)의 판정이고, 패스 몸통은 등록만 본다(`RenderGraphPassContext::isRegistered`). */
         [[nodiscard]] bool shouldUpdateRealtimeProbes() const;
         /** @brief 실시간 프로브 갱신 컴퓨트를 기록합니다. `prepareRealtimeProbes` 가 켠 프레임에만 돕니다. */
         void dispatchRealtimeProbes( const RenderGraphPassContext& graphContext );
@@ -165,15 +175,21 @@ namespace sw
         /** @brief 뷰 @p view 의 장면 깊이 첨부를 깊이 히스토리 텍스처에 옮길 수 있으면 true 입니다(히스토리 · 복사 PSO · 장면 깊이가 있다 — 지난 깊이인지는 묻지 않는다). */
         bool canCopySceneDepth( const FrameViewTarget& view ) const;
         /** @brief 뷰마다 지난 장면 깊이를 깊이 히스토리로 옮기는 풀스크린을 기록합니다(depth_history.hlsl). 프레임 패스 `DepthHistory` 의 일입니다. */
-        void recordDepthHistories();
+        void recordDepthHistories( const RenderGraphPassContext& graphContext );
+        /** @brief 이번 프레임에 깊이 히스토리를 옮기는 뷰의 지난 장면 깊이 · 히스토리를 @p table 에 등록합니다(`PreviousSceneDepth` · `DepthHistory`, 칸은 HZB 와 같다). */
+        void registerDepthHistoryResources( FrameBufferTable& table ) const;
         /**
          * @brief 뷰 @p target 하나의 깊이 히스토리 복사를 기록합니다(`recordDepthHistories` 가 뷰마다 부른다).
          * @details 끝에 히스토리를 RW 텍스처 상태로 둔다 — 읽는 쪽(가림 타일 · GPU 입자)은 둘 다 RW 텍스처로 읽고, 비동기 컴퓨트 큐에서 돌면 그래픽스 상태(렌더 타깃)에서
          *          옮기는 배리어를 기록할 수 없다(D3D12 컴퓨트 리스트는 렌더 타깃 상태를 모른다). 생산자가 소비자의 상태로 넘겨 주는 자리다.
+         *          앞 전이(지난 장면 깊이 셰이더 읽기 · 히스토리 렌더 타깃)는 레벨 콜백이, 끝의 RW 텍스처 전이는 이 패스가 쓰기로 선언한 핸들의 `transition` 이 낸다(칸 @p slot).
          */
-        void recordDepthHistory( FrameViewTarget& target );
-        /** @brief 뷰 @p target 의 장면 깊이 첨부를 깊이 히스토리 텍스처에 옮기는 풀스크린을 기록합니다(depth_history.hlsl). 끝에 히스토리를 RW 텍스처 상태로 둔다. */
-        void copySceneDepth( FrameViewTarget& target );
+        void recordDepthHistory( const RenderGraphPassContext& graphContext, FrameViewTarget& target, uint32 slot );
+        /**
+         * @brief 뷰 @p target 의 장면 깊이 첨부를 깊이 히스토리 텍스처에 옮기는 풀스크린 렌더 패스를 @p cmd 에 기록합니다(depth_history.hlsl). 전이는 하지 않는다 —
+         *        부르는 쪽이 장면 깊이를 셰이더 읽기, 히스토리를 렌더 타깃으로 두고, 끝나면 히스토리를 읽는 쪽 상태(RW 텍스처)로 넘긴다.
+         */
+        void drawSceneDepthCopy( IRHIPassCommandList& cmd, const FrameViewTarget& target ) const;
         /**
          * @brief 뷰마다 깊이 히스토리(지난 장면 깊이)에서 HZB 를 짓고 주 시점 가림 타일 되읽기를 요청합니다(hzb_build.hlsl). 프레임 패스 `HZBBuild` 의 일입니다.
          * @details 가림 판정을 켠 프레임에 컬링이 있는 백엔드에서만 짓는다(화면 공간 반사는 이번 프레임 깊이로 따로 짓는다 — `recordSceneDepthHZB`). 기록을 버리는 프레임(처음 · 컷)은
@@ -182,8 +198,13 @@ namespace sw
         void recordFrameHZBs( const RenderGraphPassContext& graphContext );
         /** @brief 프레임 패스 `HZBBuild` 가 이번 프레임에 뷰 @p view 의 피라미드를 짓는지입니다(가림 판정 켬 · 컬링 능력 · 기록을 버리지 않는 프레임 · 깊이 히스토리 복사). 등록과 짓기가 같은 판정을 본다. */
         bool shouldBuildFrameHZB( const FrameViewTarget& view ) const;
-        /** @brief 이번 프레임 장면 깊이로 뷰 @p view 의 HZB 를 짓습니다(장면 깊이 → 깊이 히스토리 → 피라미드). `_pCmd` 가 지금 리스트여야 한다. */
-        bool recordCurrentDepthHZB( FrameViewTarget& view );
+        /**
+         * @brief 이번 프레임 장면 깊이로 뷰 @p view 의 HZB 를 짓습니다(장면 깊이 → 깊이 히스토리 → 피라미드). 부르는 패스가 깊이 사본 · HZB · 가림 타일을 선언했고 장면 깊이는 셰이더 읽기다.
+         * @details 깊이 사본은 패스 안에서 렌더 타깃 → RW 텍스처로, 피라미드는 끝에 셰이더 읽기로 옮긴다(`RenderGraphPassContext::transition`). 등록이 없으면 짓지 않는다.
+         */
+        bool recordCurrentDepthHZB( const RenderGraphPassContext& graphContext, FrameViewTarget& view ) const;
+        /** @brief 이번 프레임 2 단계 가림의 뒤 단계가 돌 수 있는지입니다(앞 단계가 차례를 적었다 · PSO · 슬롯 · 차례 표시 · 상수 버퍼 · 장면 깊이 복사). 등록(`registerViewGraphResources`)이 본다. */
+        bool canRunLateOcclusion() const;
         /** @brief 뷰 @p view 를 그리는 카메라의 뷰-투영입니다(주 시점은 주 카메라, 추가 뷰는 자기 컬링 입력 — `rememberDepthHistoryViews` 와 같은 출처). */
         const float4x4& findViewProj( const FrameViewTarget& view ) const;
         /**
@@ -194,11 +215,11 @@ namespace sw
                              FrameRendererUtil::GPUCullParams& outParams ) const;
 
     private:
-        IRHIDevice* const& _pDevice; ///< 렌더러의 `_pDevice` 변수를 참조합니다
-        FrameRenderState&  _state;
-        FramePSOManager&   _psoManager;
-        FrameFog&          _fog;
-        IRHICommandList*   _pCmd{ nullptr }; ///< `executePass` · `endFrame` 하는 동안만 지금 리스트를 가리킨다
+        IRHIDevice* const&   _pDevice; ///< 렌더러의 `_pDevice` 변수를 참조합니다
+        FrameRenderState&    _state;
+        FramePSOManager&     _psoManager;
+        FrameFog&            _fog;
+        IRHIPassCommandList* _pCmd{ nullptr }; ///< 프레임 패스(`executePass`)를 기록하는 동안만 그 패스의 기록 면을 가리킨다(텍스처 전이 없음) — 뷰 그래프 패스는 쓰지 않는다
         /// @brief 순번 테이블이 없는 뷰(주 시점, 그림자)의 정렬 디스패치가 t2 에 바인딩하는 원소 하나짜리 자리 표시 버퍼입니다. 셰이더는 플래그(`g_UseViewRank`)가 0 이면 읽지 않습니다.
         RHIStructuredBuffer _transparentRankPlaceholder{};
         /// @brief GPU 컬링의 가림 판정(HZB 짓기 · 가림 타일 되읽기 · 자리표)입니다.
@@ -209,9 +230,9 @@ namespace sw
         RHIConstantBuffer _lateCullCb{};
         /// @brief 2 단계 가림의 차례마다 표시(uint — 앞 단계에서 가려져 빠졌으면 1, gpu_cull.hlsl u3)입니다. 주 시점 하나만 쓴다.
         RHIStructuredBuffer _occludedOrders{};
-        /// @brief 앞 단계가 이번 프레임에 차례를 적어 뒤 단계가 남았다(`recordLateOcclusion` 이 내린다).
+        /// @brief 앞 단계가 이번 프레임에 차례를 적어 뒤 단계가 남았다(프레임 그래프의 컬링이 정한다 — 뷰 그래프 패스는 읽기만 한다).
         uint8 _bLatePhasePending{ 0 };
-        /// @brief 이번 프레임에 뒤 단계 컬링을 기록했다(`hasLatePhaseRun`).
+        /// @brief 이번 프레임에 뒤 단계 컬링을 기록한다(`hasLatePhaseRun` — 뒤 단계 자원을 등록한 판정, `registerViewGraphResources`).
         uint8 _bLatePhaseRan{ 0 };
         /// @brief 앞 단계가 쓴 전환 상태 비우기 신호입니다(뒤 단계가 같은 값을 쓴다).
         uint8 _bLateLODReset{ 0 };
@@ -230,8 +251,6 @@ namespace sw
         };
         /// @brief 이번 프레임의 컬링 일감입니다. 프레임마다 다시 쓰고 용량은 지닌다.
         vector<CullJob> _listCullJob;
-        /// @brief 컬링 슬롯 모두의 앞 · 뒤 버퍼 전이를 한 번씩 내는 묶음입니다(슬롯마다 넷을 따로 내지 않는다).
-        RHIBufferTransitionBatch _bufferTransitions;
         /// @brief GPU 메시 입자 되읽기의 이번 프레임 출처입니다(`endFrame`). 프레임마다 다시 쓰고 용량은 지닌다.
         vector<VFXGPUSimulation::MeshProbeSource> _listScratchMeshProbeSource;
         /// @brief 이번 프레임에 컬링 컴퓨트가 실제로 돌았는지입니다(`isGPUCullingActive`).

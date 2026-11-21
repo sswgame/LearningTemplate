@@ -24,6 +24,7 @@
 namespace sw
 {
     class IRHICommandList;
+    class IRHIPassCommandList;
     class IRHIDevice;
     class RenderPipelineAsset;
     class TransientAttachmentPool;
@@ -78,7 +79,7 @@ namespace sw
          * @details 백버퍼 출력은 캡처에 그린 뒤 백버퍼로 복사합니다(백버퍼는 읽을 핸들이 없습니다). RT 출력은 그 RT 가 곧 읽을 수 있는 텍스처라
          *          그린 뒤에 복사합니다. RT 에 그린 이미지가 에디터 게임 뷰에 그대로 나가야 하므로 대상을 캡처로 바꾸지 않습니다.
          */
-        void copyPresentFromOutput( IRHICommandList& cmd, RHITextureHandle output, uint32 width, uint32 height, RHIFormat format );
+        void copyPresentFromOutput( IRHIPassCommandList& cmd, RHITextureHandle output, uint32 width, uint32 height, RHIFormat format );
 
         // ------------------------------------------------------------------------------
         // 되읽기와 파일: GPU 를 기다린다

@@ -233,13 +233,13 @@ namespace sw
         FrameCapture&       getCapture() { return _capture; }
         const FrameCapture& getCapture() const { return _capture; }
         /**
-         * @brief 화면에 쓰는 대상입니다 — 0 이면 스왑체인(백버퍼) 그대로, 회전한 휴대 기기 화면이면 논리 크기 대기 텍스처(`FrameScreenRotation`), HDR 출력이면 SDR UI RT(`FrameDisplayEncode`)입니다.
+         * @brief 화면에 쓰는 대상입니다 — `kRHIBackBufferTexture` 이면 스왑체인(백버퍼) 그대로, 회전한 휴대 기기 화면이면 논리 크기 대기 텍스처(`FrameScreenRotation`), HDR 출력이면 SDR UI RT(`FrameDisplayEncode`)입니다.
          * @details 렌더 스레드의 UI 패스도 여기에 쓰고, 끝에 `recordScreenOutput` 이 스왑체인 이미지로 옮긴다. 회전(Android)과 HDR(데스크톱)은 함께 오지 않는다.
          */
         RHITextureHandle getScreenTarget() const
         {
             const RHITextureHandle rotationTarget = _screenRotation.getScreenTarget();
-            return rotationTarget != 0 ? rotationTarget : _displayEncode.getUITarget();
+            return rotationTarget != kRHIBackBufferTexture || _displayEncode.isActive() == false ? rotationTarget : _displayEncode.getUITarget();
         }
         /**
          * @brief 화면 대상을 스왑체인 이미지로 옮깁니다(프레임의 마지막 화면 쓰기 뒤 · 표시 앞) — 회전 대기 텍스처는 돌려 그리고, HDR 출력은 UI 를 합성해 인코딩한다.

@@ -2596,7 +2596,7 @@ namespace sw
         vkCmdSetScissor( _activeFrameBuffer, 0, 1, &scissor );
 
         // 백버퍼 렌더패스는 여기서 열지 않는다. beginFrame 은 프레임 수명주기 전용이고, 백버퍼
-        // 타깃팅은 RenderThread 가 여는 beginRenderPass(핸들 0) 가 명시적으로 한다.
+        // 타깃팅은 RenderThread 가 여는 beginRenderPass(`kRHIBackBufferTexture`) 가 명시적으로 한다.
         // 클리어도 그 렌더패스의 loadOp 이 맡는다.
     }
 

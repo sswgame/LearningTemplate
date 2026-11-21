@@ -444,7 +444,7 @@ namespace sw::editor
             pass._pSwapChain        = pSwapChain;
             pass._bBindColor        = SW_TRUE;
             pass._colorTargetCount  = 1;
-            pass._arrColorTarget[0] = 0;
+            pass._arrColorTarget[0] = kRHIBackBufferTexture; // 이 창(`_pSwapChain`)의 백버퍼
             pass._arrLoadOp[0]      = RHIRenderPassLoadOp::Clear;
             pass._arrClearColor[0]  = float4{ 0.0f, 0.0f, 0.0f, 1.0f };
             pCmd->beginRenderPass( pass );

@@ -335,7 +335,7 @@ namespace sw
         _buffer.upload( _pDevice, arrControl, sizeof( arrControl ), sizeof( uint32 ) * SW_GPU_MESSAGE_HEADER_SELECT_X );
     }
 
-    void GPUMessageChannel::bindCompute( IRHICommandList& commands )
+    void GPUMessageChannel::bindCompute( IRHIPassCommandList& commands )
     {
         if ( isActive() == false )
             return;
@@ -343,7 +343,7 @@ namespace sw
         commands.bindComputeUAV( _buffer._uav, SW_SLOT_GPU_MESSAGE_UAV );
     }
 
-    void GPUMessageChannel::bindGraphics( IRHICommandList& commands )
+    void GPUMessageChannel::bindGraphics( IRHIPassCommandList& commands )
     {
         if ( isActive() == false )
             return;
