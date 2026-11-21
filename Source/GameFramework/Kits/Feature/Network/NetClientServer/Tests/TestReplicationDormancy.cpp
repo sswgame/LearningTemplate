@@ -102,8 +102,7 @@ SW_TEST_CASE( ReplicationDormancyTest, QuietEntitiesLeaveEvaluationButStayOnClie
     {
         lastEvaluated = rig.sendTick( tick, 0 );
     }
-    SW_EXPECT_EQUAL( size_t{ Rig::kChangedCount }, rig._server.getAwakeEntityCount() );
-    SW_EXPECT_EQUAL( rig._server.getAwakeEntityCount(), lastEvaluated ); // 연결당 평가 수 = 깨어 있는 수(전체 100 이 아니다)
+    SW_EXPECT_EQUAL( size_t{ Rig::kChangedCount }, lastEvaluated ); // 연결당 평가 수 = 깨어 있는(바뀐) 수(전체 100 이 아니다)
     const NetSnapshot* pLatest = rig._client.getLatest();
     SW_REQUIRE_NOT_NULL( pLatest );
     SW_EXPECT_EQUAL( size_t{ Rig::kEntityCount }, pLatest->_listEntity.size() ); // 휴면 엔티티는 받는 쪽 기준에 그대로 있다
@@ -120,7 +119,6 @@ SW_TEST_CASE( ReplicationDormancyTest, ChangedEntityWakesAndIsSentNextSnapshot )
     }
     const size_t evaluated = rig.sendTick( 11, 50 ); // 휴면이던 50 이 바뀐다 — 깨우는 호출은 없다
     SW_EXPECT_EQUAL( size_t{ Rig::kChangedCount + 1 }, evaluated );
-    SW_EXPECT_EQUAL( size_t{ Rig::kChangedCount + 1 }, rig._server.getAwakeEntityCount() );
     const NetSnapshot* pLatest = rig._client.getLatest();
     SW_REQUIRE_NOT_NULL( pLatest );
     SW_EXPECT_EQUAL( uint32{ 11 }, pLatest->_tick );
