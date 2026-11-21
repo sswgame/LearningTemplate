@@ -81,7 +81,7 @@ namespace sw
     /** @brief 구운 메시 캐시의 셈입니다(`AppearanceBakedMeshCache::readCounters`). 찾기 수는 차림 하나의 조립마다 구운 키 · 합친 키로 두 번까지 오른다. */
     struct AppearanceBakedMeshCounters
     {
-        uint64 _hitCount{ 0 };    ///< 찾아서 내준 횟수(누적)
+        uint64 _hitCount{ 0 };    ///< 찾아서 내준 횟수(누적, 개발 전용 칸에서 읽는다 — 배포는 0)
         uint64 _cachedBytes{ 0 }; ///< 지금 쥔 바이트
         uint32 _entryCount{ 0 };  ///< 지금 쥔 차림 수
     };
