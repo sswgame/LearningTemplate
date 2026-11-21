@@ -268,7 +268,7 @@ SW_TEST_CASE( NavTileStreamingTest, TileWithChangedInputIsRebakedAlone )
     SW_EXPECT_EQUAL( 1u, navigation.getPendingTileCount() ); // 하나만 다시 굽는다
     navigation.flushTileBakes();
     SW_EXPECT_EQUAL( 4u, pNavMesh->getLoadedTileCount() );
-    SW_EXPECT_EQUAL( 1u, navigation.getRebakedTileCount() );
+    SW_EXPECT_EQUAL( uint64{ 1 }, navigation.getRebakedTileCount().get() );
 }
 
 /** @brief [NavTileStreamingTest] 셀이 오르면 그 구역 타일의 입력을 다시 재고, 다시 베이크가 셀의 기하가 든 지금 기하를 쓴다 */

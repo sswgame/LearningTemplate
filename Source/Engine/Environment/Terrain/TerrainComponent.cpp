@@ -907,7 +907,7 @@ namespace sw
         const uint32 rebuildCount = static_cast<uint32>( listBuildChunk.size() );
         if ( rebuildCount == 0 )
             return;
-        _chunkMeshBuildCount += rebuildCount;
+        _chunkMeshBuildCount.add( rebuildCount );
         vector<Internal::ChunkMeshRequest> listRequest( rebuildCount );
         vector<Internal::ChunkMeshBuild>   listBuild( rebuildCount );
         for ( uint32 index = 0; index < rebuildCount; ++index )

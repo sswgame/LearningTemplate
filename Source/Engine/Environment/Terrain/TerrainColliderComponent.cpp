@@ -98,7 +98,7 @@ namespace sw
         , _listBuiltGeneration{}
         , _listTriangleCount{}
         , _triangleCount{ 0 }
-        , _chunkBuildCount{ 0 }
+        , _chunkBuildCount{}
     {
     }
 
@@ -170,7 +170,7 @@ namespace sw
             _triangleCount -= _listTriangleCount[chunkIndex];
             _listTriangleCount[chunkIndex]   = 0;
             _listBuiltGeneration[chunkIndex] = listGeneration[chunkIndex];
-            ++_chunkBuildCount;
+            _chunkBuildCount.add();
             // 모두 구멍인 청크는 바디가 없다(무효 핸들로 남는다).
             const bool bSolid = TerrainColliderComponent::makeChunkCollisionMesh( heightfield, layout, chunkIndex % layout._chunkCountX, chunkIndex / layout._chunkCountX,
                                                                                   desc._listShape[0] );

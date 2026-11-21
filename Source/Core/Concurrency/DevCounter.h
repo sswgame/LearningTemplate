@@ -22,9 +22,14 @@ namespace sw
     {
     public:
         DevCounter() = default;
-
-        DevCounter( const DevCounter& )            = delete;
-        DevCounter& operator=( const DevCounter& ) = delete;
+        /** @brief 센 수를 옮겨 담습니다 — 칸을 든 형식(스트림 창 · 바인딩 묶음)이 복사 · 이동될 수 있어 원자처럼 막지 않는다. */
+        DevCounter( const DevCounter& other ) { add( other.get() ); }
+        DevCounter& operator=( const DevCounter& other )
+        {
+            reset();
+            add( other.get() );
+            return *this;
+        }
 
         /** @brief @p count 를 더합니다. */
         void add( [[maybe_unused]] uint64 count = 1 )

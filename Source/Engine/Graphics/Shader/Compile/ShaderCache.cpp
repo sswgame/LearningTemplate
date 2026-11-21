@@ -72,8 +72,8 @@ namespace sw
         , _requestLog{}
         , _requestLogPath{}
         , _configReloadedSubscription{}
-        , _memoryHitCount{ 0 }
-        , _providerLoadCount{ 0 }
+        , _memoryHitCount{}
+        , _providerLoadCount{}
         , _compileBusy{}
         , _bLiveDebugCodegen{ SW_FALSE }
     {
@@ -135,8 +135,8 @@ namespace sw
             return false;
         }
         clearCache();
-        _memoryHitCount.store( 0 );
-        _providerLoadCount.store( 0 );
+        _memoryHitCount.reset();
+        _providerLoadCount.reset();
         _pProvider = std::move( pProvider );
         return true;
     }
@@ -267,13 +267,13 @@ namespace sw
             const uint64 currentFingerprint = provider.computeFingerprint( cachedEntry._result, desc );
             if ( currentFingerprint != 0 && currentFingerprint == cachedEntry._sourceFingerprint )
             {
-                ++_memoryHitCount;
+                _memoryHitCount.add();
                 return cachedEntry._result;
             }
         }
 
         // 1) 공급자 — 쿠킹본 정책은 팩의 쿠킹본, 소스 정책은 실행 중 컴파일(셰이더 DDC 를 먼저 본다).
-        ++_providerLoadCount;
+        _providerLoadCount.add();
         ShaderCompileResult result;
         {
             BusyScope busy{ _compileBusy };

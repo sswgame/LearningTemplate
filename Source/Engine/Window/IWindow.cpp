@@ -43,7 +43,7 @@ namespace sw
         , _minClientWidth{ 0 }
         , _minClientHeight{ 0 }
         , _monitorGeneration{ 0 }
-        , _renderPausedTickCount{ 0 }
+        , _renderPausedTickCount{}
         , _simulatedInterruptionTicks{ 0 }
         , _onResize{}
         , _onModalLoopUpdate{}
@@ -112,7 +112,7 @@ namespace sw
     void IWindow::advanceLifecycleTick()
     {
         if ( isRenderPaused() )
-            ++_renderPausedTickCount;
+            _renderPausedTickCount.add();
         if ( _simulatedInterruptionTicks == 0 )
             return;
         --_simulatedInterruptionTicks;

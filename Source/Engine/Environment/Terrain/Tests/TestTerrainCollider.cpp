@@ -98,7 +98,7 @@ SW_TEST_CASE( TerrainColliderTest, HeightEditKeepsContact )
     // 지형에 닿았다(시작 하나). 60 프레임이면 상자는 잠든다 — 잠들어도 끝이 나지 않는다(Jolt 의 잠듦 제거는 쉼으로 둔다, `suspendSubContact`).
     SW_REQUIRE_EQUAL( 1u, edges );
     SW_REQUIRE_EQUAL( 1u, pCollider->getBodyCount() );
-    const uint32 buildCount = pCollider->getChunkBuildCount();
+    const uint64 buildCount = pCollider->getChunkBuildCount().get();
 
     constexpr uint32 kSampleX    = 30;
     constexpr uint32 kSampleZ    = 30;
@@ -114,7 +114,7 @@ SW_TEST_CASE( TerrainColliderTest, HeightEditKeepsContact )
         manager.update( Internal::kFrame );
         restart += Internal::countEdges( physics, pCrate->getBodyHandle() );
     }
-    SW_EXPECT_TRUE( pCollider->getChunkBuildCount() > buildCount ); // 청크 셰이프를 새 높이로 지었다
+    SW_EXPECT_TRUE( pCollider->getChunkBuildCount().get() > buildCount ); // 청크 셰이프를 새 높이로 지었다
     SW_EXPECT_EQUAL( 1u, pCollider->getBodyCount() );
     SW_EXPECT_EQUAL( 0u, restart ); // 셰이프가 바뀌며 깨운 상자도 같은 접촉을 잇는다
 }
