@@ -241,7 +241,7 @@ namespace sw
                     utf16         arrPath[MAX_PATH]{};
                     const DWORD   length = hModule != nullptr ? ::GetModuleFileNameW( hModule, arrPath, MAX_PATH ) : 0;
                     vector<uint8> bytes;
-                    const bool    bRead = length > 0 && length < MAX_PATH && FileUtil::readFile( StringUtil::utf16ToUTF8( arrPath ), bytes ) && bytes.empty() == false;
+                    const bool    bRead = length > 0 && length < MAX_PATH && FileUtil::readFile( FileUtil::toDiskPath( StringUtil::utf16ToUTF8( arrPath ) ), bytes ) && bytes.empty() == false;
                     if ( bRead == false )
                     {
                         SW_LOG_ERROR_ID( "ShaderCompiler.FxcVersionUnreadable", "The loaded d3dcompiler library could not be read - DXBC compiles skip the shader cache" );

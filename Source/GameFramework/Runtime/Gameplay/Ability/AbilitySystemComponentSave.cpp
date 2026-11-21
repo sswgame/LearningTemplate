@@ -334,7 +334,7 @@ namespace sw
         _bRestoringState = SW_FALSE;
 
         refreshOngoingTagRequirements();
-        notifyHealthChanged( true );
+        IHealthSource::notifyHealthChanged( _healthSourcePort, getOwner(), true );
         return true;
     }
 } // namespace sw

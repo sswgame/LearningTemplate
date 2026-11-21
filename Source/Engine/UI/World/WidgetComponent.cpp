@@ -74,7 +74,7 @@ namespace sw
 namespace sw
 {
     WidgetComponent::WidgetComponent()
-        : Component{}
+        : SceneComponent{}
         , _pendingContent{}
         , _markerWidget{ kInvalidWidgetID }
         , _lastPlacement{}

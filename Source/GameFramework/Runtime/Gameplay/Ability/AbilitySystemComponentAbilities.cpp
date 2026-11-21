@@ -373,7 +373,7 @@ namespace sw
     {
         _healthAttribute    = health;
         _maxHealthAttribute = maxHealth;
-        notifyHealthChanged( true );
+        IHealthSource::notifyHealthChanged( _healthSourcePort, getOwner(), true );
     }
 
     HealthReading AbilitySystemComponent::getHealthReading() const

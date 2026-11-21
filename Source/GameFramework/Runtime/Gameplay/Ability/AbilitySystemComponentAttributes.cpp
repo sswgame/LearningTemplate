@@ -99,7 +99,7 @@ namespace sw
         {
             recomputeAttribute( name );
         }
-        notifyHealthChanged( true );
+        IHealthSource::notifyHealthChanged( _healthSourcePort, getOwner(), true );
         return pRaw;
     }
 
@@ -269,7 +269,7 @@ namespace sw
 
         const bool bHealth = name == _healthAttribute;
         if ( bHealth || name == _maxHealthAttribute )
-            notifyHealthChanged( false );
+            IHealthSource::notifyHealthChanged( _healthSourcePort, getOwner(), false );
         // 쓰러졌다 — 래그돌 · 절단에 치명 신호를 낸다(`deliverFatalHit`). 맞힌 자리는 즉시 이펙트의 컨텍스트가 실은 것이고, 없으면(주기 피해 · 코드가 깎음) 바디 없는 신호다.
         const bool bDied = bHealth && oldValue > 0.0f && newValue <= 0.0f;
         if ( bDied )
@@ -282,7 +282,7 @@ namespace sw
                 hit                         = _pExecutingContext->_hit;
                 hit._pInstigator            = pManager != nullptr ? pManager->resolveGameObject( _pExecutingContext->_instigator ) : nullptr;
             }
-            deliverFatalHit( hit );
+            IHealthSource::deliverFatalHit( getOwner(), hit );
         }
         const bool bDamageTaken = bHealth && newValue < oldValue && _bShowDamageNumbers && _bRestoringState == SW_FALSE; // 불러온 체력은 맞은 것이 아니다
         if ( bDamageTaken )
