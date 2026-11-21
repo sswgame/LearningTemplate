@@ -6,7 +6,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Name/hashed_string.h"
 
-#include "Editor/Common/GUI/Panel/IEditorPanel.h"
+#include "Editor/Common/GUI/Panel/EditorPanel.h"
 #include "Editor/Common/Workspace/EditorPanelID.h"
 #include "Editor/Panels/Scene/Model/SceneViewModel.h"
 #include "Editor/Viewport/EditorViewportClient.h"
@@ -18,7 +18,7 @@ namespace sw::editor
      * @brief 씬 뷰 RT(`EditorViewKind::Scene`)를 그리고 그 위에 편집 보조선 · 기즈모를 얹습니다(유니티 Scene 뷰 · 언리얼 레벨 뷰포트).
      * @details Play 중에도 에디터 카메라로 그립니다 — 게임 카메라 출력은 `GameViewPanel` 이 그립니다. 패널이 보이지 않으면 씬 뷰를 그리지 않습니다.
      */
-    class SceneViewPanel : public IEditorPanel
+    class SceneViewPanel : public EditorPanel
     {
     public:
         /** @brief 패널 id 입니다. 등록(`SW_EDITOR_PANEL`)과 조회(`EditorPanelManager::findPanel<…>` · `setPanelOpen<…>`)가 모두 이 상수에서 온다. */
@@ -30,7 +30,7 @@ namespace sw::editor
         SceneViewPanel();
 
         // ------------------------------------------------------------------------------
-        // 1) IEditorPanel — 제목/그리기
+        // 1) EditorPanel — 제목/그리기
         // ------------------------------------------------------------------------------
         /** @brief 창 제목을 반환합니다. */
         const utf8*    getPanelTitle() const override { return kPanelTitle; }

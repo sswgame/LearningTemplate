@@ -111,9 +111,9 @@ SW_TEST_CASE( ChatModerationTest, WordFilterMasksOrRejectsNormalizedMatches )
 SW_TEST_CASE( ChatModerationTest, IgnoredCharacterFileRejectsBadLines )
 {
     const string folder = test::makeScratchPath( "ChatIgnored" );
-    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( folder ) );
+    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( folder ) ) );
     const string path = FileUtil::joinPath( folder, "ignored.txt" );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( path, "# comment\nU+002E\n.\n" ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( path ), "# comment\nU+002E\n.\n" ) );
     ChatTextNormalizer normalizer;
     SW_EXPECT_LOG( "ChatTextNormalizer.BadLine" );
     SW_EXPECT_FALSE( normalizer.loadFromFile( path ) );
@@ -121,7 +121,7 @@ SW_TEST_CASE( ChatModerationTest, IgnoredCharacterFileRejectsBadLines )
     SW_EXPECT_LOG( "File.NotFound" );
     SW_EXPECT_LOG( "ChatTextNormalizer.CannotRead" );
     SW_EXPECT_FALSE( normalizer.loadFromFile( FileUtil::joinPath( folder, "missing.txt" ) ) );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( path, "U+002E\n" ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( path ), "U+002E\n" ) );
     SW_REQUIRE_TRUE( normalizer.loadFromFile( path ) );
     SW_EXPECT_EQUAL( uint32( 0 ), normalizer.normalize( '.' ) );
     SW_EXPECT_EQUAL( uint32( 'a' ), normalizer.normalize( 'A' ) );

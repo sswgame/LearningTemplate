@@ -15,9 +15,9 @@
 #include "GameFramework/Kits/Genre/Action/ActionCombat/MonsterCatalog.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/Autosave.h"
+#include "GameFramework/Runtime/Gameplay/GameState/GameStateComponent.h"
+#include "GameFramework/Runtime/Gameplay/GameState/PlayerProgressComponent.h"
 #include "GameFramework/Runtime/Gameplay/Quest/QuestCatalog.h"
-#include "GameFramework/Runtime/Gameplay/SessionState/PlayerProgressComponent.h"
-#include "GameFramework/Runtime/Gameplay/SessionState/SessionStateComponent.h"
 
 #include "Games/Velmora/VelmoraRegionCatalog.h"
 
@@ -76,7 +76,7 @@ namespace sw
         , _room{}
         , _bossDelay{}
         , _playerPosition{ 0.0f, 0.0f }
-        , _facing{ FacingDir::Right }
+        , _facing{ FacingDirection::Right }
         , _currentRegion{}
         , _encounterRegion{}
         , _pendingArea{}
@@ -92,9 +92,9 @@ namespace sw
 
     VelmoraGameModeComponent::~VelmoraGameModeComponent() = default;
 
-    SessionStateComponent* VelmoraGameModeComponent::findState() const
+    GameStateComponent* VelmoraGameModeComponent::findState() const
     {
-        return SessionStateComponent::findOnOwner( *this );
+        return GameStateComponent::findOnOwner( *this );
     }
 
     const VelmoraRegionCatalog* VelmoraGameModeComponent::findRegions() const
@@ -145,7 +145,7 @@ namespace sw
         }
         if ( validateRegionMonsters( *pRegions ) == false )
             return false;
-        if ( SessionStateComponent::openOnOwner( *this, SessionStateSettings{} ) == nullptr )
+        if ( GameStateComponent::openOnOwner( *this, GameStateSettings{} ) == nullptr )
             return false;
         PlayerProgressSettings progressSettings;
         progressSettings._pQuestCatalog = pQuests;
@@ -156,7 +156,7 @@ namespace sw
         _room.clear();
         _bossDelay.clear();
         _playerPosition  = pStart->_respawn;
-        _facing          = FacingDir::Right;
+        _facing          = FacingDirection::Right;
         _currentRegion   = hashed_string{};
         _encounterRegion = hashed_string{};
         _fallCount       = 0;
@@ -173,9 +173,9 @@ namespace sw
     void VelmoraGameModeComponent::movePlayer( const float2& move, float32 deltaTime, const VelmoraRegionCatalog& regions )
     {
         if ( move._x > VelmoraGameModeComponentInternal::kFacingDeadZone )
-            _facing = FacingDir::Right;
+            _facing = FacingDirection::Right;
         else if ( move._x < -VelmoraGameModeComponentInternal::kFacingDeadZone )
-            _facing = FacingDir::Left;
+            _facing = FacingDirection::Left;
         const float2 next{ _playerPosition._x + move._x * _moveSpeed * deltaTime, _playerPosition._y + move._y * _moveSpeed * deltaTime };
         if ( _encounterRegion.empty() == false )
         {
@@ -196,7 +196,7 @@ namespace sw
             _playerPosition._y = next._y;
     }
 
-    void VelmoraGameModeComponent::updateRegion( const VelmoraRegionCatalog& regions, SessionStateComponent& state, PlayerProgressComponent& progress )
+    void VelmoraGameModeComponent::updateRegion( const VelmoraRegionCatalog& regions, GameStateComponent& state, PlayerProgressComponent& progress )
     {
         const VelmoraRegionDef* const pRegion = regions.findAt( _playerPosition );
         if ( pRegion == nullptr || pRegion->_id == _currentRegion )
@@ -225,7 +225,7 @@ namespace sw
         _pendingBoss = region._id;
     }
 
-    void VelmoraGameModeComponent::interactWithSite( const VelmoraRegionDef& region, SessionStateComponent& state, PlayerProgressComponent& progress )
+    void VelmoraGameModeComponent::interactWithSite( const VelmoraRegionDef& region, GameStateComponent& state, PlayerProgressComponent& progress )
     {
         const float32 radiusSquared = _useRadius * _useRadius;
         const auto    isNear        = [this, radiusSquared]( const VelmoraSiteDef& site )
@@ -247,7 +247,7 @@ namespace sw
         }
     }
 
-    void VelmoraGameModeComponent::updateEncounter( float32 deltaTime, const VelmoraRegionCatalog& regions, SessionStateComponent& state, PlayerProgressComponent& progress )
+    void VelmoraGameModeComponent::updateEncounter( float32 deltaTime, const VelmoraRegionCatalog& regions, GameStateComponent& state, PlayerProgressComponent& progress )
     {
         static const hashed_string    s_attackAction( VelmoraGameModeComponentInternal::kAttackAction );
         static const hashed_string    s_dashAction( VelmoraGameModeComponentInternal::kDashAction );
@@ -341,7 +341,7 @@ namespace sw
         if ( deltaTime <= 0.0f )
             return;
         const VelmoraRegionCatalog* const pRegions  = findRegions();
-        SessionStateComponent* const      pState    = findState();
+        GameStateComponent* const         pState    = findState();
         PlayerProgressComponent* const    pProgress = PlayerProgressComponent::findOnOwner( *this );
         if ( pRegions == nullptr || pState == nullptr || pProgress == nullptr )
             return;
@@ -373,7 +373,7 @@ namespace sw
         drawWorld( *pRegions, *pState );
     }
 
-    void VelmoraGameModeComponent::drawWorld( const VelmoraRegionCatalog& regions, const SessionStateComponent& state ) const
+    void VelmoraGameModeComponent::drawWorld( const VelmoraRegionCatalog& regions, const GameStateComponent& state ) const
     {
         DebugDrawQueue* const pDraw = game::findSubsystem<DebugDrawQueue>();
         if ( pDraw == nullptr )
@@ -447,9 +447,9 @@ namespace sw
             return;
         // 자리 · 쓰러진 수는 상태 칸이다(`GameModeComponent::serializeState`). 판 진행(리플렉션 칸이 아닌 멤버) · 방향(리플렉션 열거가 아니다)은 손 본문이 싣는다.
         VelmoraCampaign campaign = _campaign;
-        FacingDir       facing   = _facing;
+        FacingDirection facing   = _facing;
         io.value( campaign );
-        io.enumValue( facing, FacingDir::Up );
+        io.enumValue( facing, FacingDirection::Up );
         io.end();
         if ( io.isWriting() || io.isOk() == false )
             return;

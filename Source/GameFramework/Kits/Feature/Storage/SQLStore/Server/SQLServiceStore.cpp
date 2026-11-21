@@ -50,7 +50,7 @@ namespace sw
 
             static SQLValue makeBytesValue( const vector<uint8>& bytes ) { return SQLValue::makeBlob( bytes.data(), static_cast<int32>( bytes.size() ) ); }
 
-            /** @brief 연결이 일 하나 동안 무엇을 하는지입니다(`IServiceStoreJob::isSnapshotRead`). */
+            /** @brief 연결이 일 하나 동안 무엇을 하는지입니다(`ServiceStoreJob::isSnapshotRead`). */
             enum class ConnectionMode : uint8
             {
                 ReadWrite = 0, ///< 호출마다 그때를 읽고, 커밋은 쓰기 트랜잭션이다
@@ -273,11 +273,11 @@ namespace sw
                 ConnectionMode  _mode;
             };
 
-            /** @brief `IServiceStoreJob` 를 풀의 일로 감쌉니다. 맡긴 스레드의 로그 컨텍스트를 저장해 두었다가 워커의 `run` 과 서비스 스레드의 `complete` 에서 다시 적용합니다. */
+            /** @brief `ServiceStoreJob` 를 풀의 일로 감쌉니다. 맡긴 스레드의 로그 컨텍스트를 저장해 두었다가 워커의 `run` 과 서비스 스레드의 `complete` 에서 다시 적용합니다. */
             class SQLServiceStoreJob final : public ISQLJob
             {
             public:
-                SQLServiceStoreJob( unique_ptr<IServiceStoreJob> job, ServiceStoreCommitStats& inoutStats )
+                SQLServiceStoreJob( unique_ptr<ServiceStoreJob> job, ServiceStoreCommitStats& inoutStats )
                     : _job{ std::move( job ) }
                     , _pStats{ &inoutStats }
                 {
@@ -311,8 +311,8 @@ namespace sw
                 }
 
             private:
-                unique_ptr<IServiceStoreJob> _job;
-                ServiceStoreCommitStats*     _pStats; ///< 저장소 앞의 것 — 풀이 일을 다 돌린 뒤에 앞이 사라진다
+                unique_ptr<ServiceStoreJob> _job;
+                ServiceStoreCommitStats*    _pStats; ///< 저장소 앞의 것 — 풀이 일을 다 돌린 뒤에 앞이 사라진다
             };
         };
     } // namespace
@@ -348,7 +348,7 @@ namespace sw
         return _pool.initialize( pDriver, settings );
     }
 
-    void SQLServiceStore::submit( unique_ptr<IServiceStoreJob> job )
+    void SQLServiceStore::submit( unique_ptr<ServiceStoreJob> job )
     {
         _pool.submit( sw::make_unique<SQLServiceStoreInternal::SQLServiceStoreJob>( std::move( job ), _commitStats ) );
     }

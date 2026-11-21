@@ -13,8 +13,8 @@
 #pragma once
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/ServiceSlot.h"
+#include "Core/Subsystem/Subsystem.h"
 
 namespace sw
 {
@@ -37,7 +37,7 @@ namespace sw
      * @class DeterministicRun
      * @brief 결정적 실행 정책을 드는 엔진 서비스 서브시스템입니다(`engine::getSubsystem<DeterministicRun>()`). 정책은 게임 스레드에서 프레임 사이에 바꾸고, 어느 스레드에서나 읽습니다(칸 하나를 읽을 뿐이다).
      */
-    class SW_API DeterministicRun final : public ISubsystem
+    class SW_API DeterministicRun final : public Subsystem
     {
     public:
         static constexpr const utf8* kSubsystemName = "DeterministicRun";

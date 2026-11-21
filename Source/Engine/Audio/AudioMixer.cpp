@@ -90,7 +90,7 @@ namespace sw
             for ( const AudioEffectDef& effectDesc : busDesc._listEffect )
             {
                 // 지원하지 않는 레이아웃 · 읽지 못한 자원(임펄스 응답)은 조용히 건너뛰지 않고 그래프 전체를 오류로 멈춘다(오류는 createEffect 가 남긴다).
-                unique_ptr<IAudioEffect> pEffect = AudioEffectRegistry::createEffect( effectDesc, bus._layout );
+                unique_ptr<AudioEffect> pEffect = AudioEffectRegistry::createEffect( effectDesc, bus._layout );
                 if ( pEffect == nullptr )
                 {
                     SW_LOG_ERROR_ID( "AudioMixer.BusEffectCouldNot", "Bus '%#' effect '%#' could not be created for %# bus channels", busDesc._name.c_str(), effectDesc._type.c_str(), busChannelCount );
@@ -141,7 +141,7 @@ namespace sw
         return false;
     }
 
-    IAudioEffect* AudioMixer::findEffect( uint32 busIndex, const hashed_string& effectName ) const
+    AudioEffect* AudioMixer::findEffect( uint32 busIndex, const hashed_string& effectName ) const
     {
         const Bus& bus = _listBusState[busIndex];
         for ( size_t effectIndex = 0; effectIndex < bus._listEffect.size(); ++effectIndex )
@@ -240,7 +240,7 @@ namespace sw
             const AudioBlockView input = bus._input.makeView( blockFrames );
 
             // 인서트 이펙트는 센드와 페이더 앞에서 처리한다(채널 스트립과 같은 위치).
-            for ( const unique_ptr<IAudioEffect>& pEffect : bus._listEffect )
+            for ( const unique_ptr<AudioEffect>& pEffect : bus._listEffect )
             {
                 pEffect->process( input );
             }

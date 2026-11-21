@@ -245,7 +245,7 @@ SW_TEST_CASE( AdminStoreLogicTest, OperatorWriteFailsWhenDemotedBeforeCommit )
     write._auditEntry._timeMs  = kNowMs;
 
     InterleavingConnection   interleaving( fixture.database, kOperator );
-    ServiceReadSetConnection readSet( interleaving ); // 저장소 입구(`IServiceStoreJob::execute`)가 거는 것과 같은 포장
+    ServiceReadSetConnection readSet( interleaving ); // 저장소 입구(`ServiceStoreJob::execute`)가 거는 것과 같은 포장
     SW_EXPECT_TRUE( write.commit( readSet ) == ServiceAuditedWriteResult::Unavailable );
     SW_EXPECT_TRUE( write.commit( fixture.database ) == ServiceAuditedWriteResult::Forbidden );
     ServiceRecord record;

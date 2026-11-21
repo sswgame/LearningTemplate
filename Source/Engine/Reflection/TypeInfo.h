@@ -86,6 +86,69 @@ namespace sw
         size_t                     _count;
     };
 
+    // ── 리플렉션 인터페이스 표(`REFLECT_INTERFACE( I, _port )`) ────────────────────────
+    // 언리얼 `UClass::Interfaces`(`FImplementedInterface` — 인터페이스 클래스 + 포인터 오프셋)와 같은 자리다. 다른 점은 다중 상속 대신 포트 멤버라는 것 —
+    // "기반 하나" 규칙(CppStyle)을 지키고, 포트가 주인을 찾는 길도 오프셋 하나다(`getPortOwner`). 이름은 정규 FQN 이다 — 조상 표(`TypeCastHeader`)처럼
+    // 포인터가 아니라 이름을 견줘 모듈을 다시 올려도 같은 칸이다. 이 헤더의 pch 밖 포함 상한(header-include-limits) 때문에 따로 떼지 않는다.
+    /** @brief 표의 한 칸입니다. */
+    struct TypeInterfaceEntry
+    {
+        hashed_string _interfaceName{}; ///< 인터페이스 형식의 정규 FQN(`TypeInfo::_fullyQualifiedName`)
+        uint32        _portOffset{ 0 }; ///< 형식 시작에서 포트 멤버까지의 바이트
+
+        bool operator==( const TypeInterfaceEntry& other ) const { return _interfaceName == other._interfaceName && _portOffset == other._portOffset; }
+        bool operator!=( const TypeInterfaceEntry& other ) const { return ( *this == other ) == false; }
+    };
+
+    /**
+     * @struct TypeInterfaceTable
+     * @brief 고정 칸(`constant::reflection::kMaxInterfaceCount`)의 인터페이스 표입니다. 할당이 없다.
+     */
+    struct TypeInterfaceTable
+    {
+        TypeInterfaceEntry _arrEntry[constant::reflection::kMaxInterfaceCount]{};
+        uint32             _count{ 0 };
+
+        /**
+         * @brief 칸을 더합니다. 같은 인터페이스가 이미 있거나 칸이 찼으면 더하지 않고 false 입니다.
+         * @details 생성 코드(자기 표)와 상속 병합(`TypeInfo::rebuildDerivedCaches`)이 부른다 — 거절은 등록 검사(`TypeRegistry::reportInterfaceProblems`)가 오류로 알린다.
+         */
+        [[nodiscard]] bool add( const hashed_string& interfaceName, uint32 portOffset )
+        {
+            if ( _count >= constant::reflection::kMaxInterfaceCount || find( interfaceName ) != nullptr )
+                return false;
+            _arrEntry[_count] = TypeInterfaceEntry{ interfaceName, portOffset };
+            ++_count;
+            return true;
+        }
+        /** @brief @p interfaceName 의 칸입니다. 없으면 nullptr 입니다. */
+        const TypeInterfaceEntry* find( const hashed_string& interfaceName ) const
+        {
+            for ( uint32 index = 0; index < _count; ++index )
+            {
+                if ( _arrEntry[index]._interfaceName == interfaceName )
+                    return &_arrEntry[index];
+            }
+            return nullptr;
+        }
+        bool                      empty() const { return _count == 0; }
+        uint32                    size() const { return _count; }
+        const TypeInterfaceEntry* begin() const { return _arrEntry; }
+        const TypeInterfaceEntry* end() const { return _arrEntry + _count; }
+
+        bool operator==( const TypeInterfaceTable& other ) const
+        {
+            if ( _count != other._count )
+                return false;
+            for ( uint32 index = 0; index < _count; ++index )
+            {
+                if ( _arrEntry[index] != other._arrEntry[index] )
+                    return false;
+            }
+            return true;
+        }
+    };
+
     struct TypeInfo;
 
     /**
@@ -144,6 +207,7 @@ namespace sw
         {
             vector<const PropertyInfo*>                       _listProperty;      ///< 기반부터, 파생이 같은 이름을 제자리에서 덮는다
             unordered_map<hashed_string, const PropertyInfo*> _mapNameToProperty; ///< 이름과 별칭에서 항목으로. 뒤의 항목(파생)이 앞(기반)을 덮는다
+            TypeInterfaceTable                                _interfaces;        ///< 조상부터 합친 인터페이스 표(`REFLECT_INTERFACE`) — 찾기에 사슬 걷기가 없다
         };
 
     private:
@@ -155,7 +219,7 @@ namespace sw
         void publish( unique_ptr<Snapshot> pSnapshot )
         {
             const Snapshot* const pCurrent = _pPublished.load( std::memory_order_relaxed );
-            if ( pCurrent != nullptr && pCurrent->_listProperty == pSnapshot->_listProperty )
+            if ( pCurrent != nullptr && pCurrent->_listProperty == pSnapshot->_listProperty && pCurrent->_interfaces == pSnapshot->_interfaces )
                 return;
             _pPublished.store( pSnapshot.get(), std::memory_order_release );
             _listOwned.push_back( std::move( pSnapshot ) );
@@ -292,7 +356,12 @@ namespace sw
         vector<EventInfo>    _listEvent; ///< 이 타입이 선언한 이벤트다. 기반 타입의 이벤트는 `findEventInHierarchy` 가 따라 올라가며 찾는다
         /// @brief `REFLECT( RemovedField = … )` 로 적은 지운 필드 이름입니다. 옛 세이브에는 이 이름의 해시가 남아 있어 새 필드가 그 이름 · 해시를 쓰면 등록이 오류를 남긴다
         ///        (`TypeRegistry::reportFieldNameHashClashes`, 언리얼 CoreRedirects 의 지운 프로퍼티 기록과 같은 자리).
-        vector<hashed_string>            _listRemovedField;
+        vector<hashed_string> _listRemovedField;
+        /**
+         * @brief 이 형식이 **선언한** 인터페이스 표입니다(`REFLECT_INTERFACE( I, _port )` 한 줄 = 한 칸, 생성 코드가 채운다). 조상까지 합친 표는 `getInterfacesWithBase`.
+         * @details 직렬화하지 않는다 — 형식의 성질이다(언리얼 `UClass::Interfaces` 와 같은 자리).
+         */
+        TypeInterfaceTable               _ownInterfaces;
         ReflectMetadataBox<TypeMetadata> _metadata; ///< `REFLECT()` 에 적은 메타데이터(`ReflectionMetadata.h`)
         /** @brief 선언에서 파생된 캐시 묶음입니다(`TypeDerivedCache`). 비우기는 `_derived = {}` 한 줄입니다. */
         TypeDerivedCache _derived;
@@ -307,8 +376,10 @@ namespace sw
         /** @brief `REFLECT( Static )` 타입(함수 라이브러리)입니다. `FunctionMetadata::_bStatic` 과는 다릅니다. */
         uint8 _bStatic : 1;
         /** @brief 내장 스칼라나 문자열 타입입니다(int32, bool, sw::string 등). REFLECT 코드젠이 없습니다. */
-        uint8                  _bPrimitive    : 1;
-        [[maybe_unused]] uint8 _reservedFlags : 5;
+        uint8 _bPrimitive : 1;
+        /** @brief `REFLECT( Interface )` 형식입니다 — 상태 없는 계약(순수 가상 + vptr 하나, 생성 코드의 `static_assert` 가 지킨다). 만들 수 없고 컴포넌트가 포트 멤버로 내보낸다. */
+        uint8                  _bInterface    : 1;
+        [[maybe_unused]] uint8 _reservedFlags : 4;
         [[maybe_unused]] uint8 _reservedPadding[3];
 
         static constexpr uint8 kDerivedPODFastPath         = 1u << 0;
@@ -456,6 +527,13 @@ namespace sw
          *          레지스트리에 든 타입은 등록이 짓는다. 짓지 않은 사본(레지스트리 밖에서 손으로 만든 파생 타입)에 부르면 조용히 자기 목록만 주지 않고 멈춘다.
          */
         PropertyListView getPropertiesWithBase() const;
+        /**
+         * @brief 조상까지 합친 인터페이스 표입니다(기반 먼저). 부모가 없으면 자기 표(`_ownInterfaces`)입니다.
+         * @details 부모가 있는 형식은 `rebuildDerivedCaches` 가 지은 판에서 읽는다. 판이 없는 레지스트리 밖 사본은 자기 표다(상속한 표를 지은 적이 없다).
+         */
+        const TypeInterfaceTable& getInterfacesWithBase() const;
+        /** @brief `REFLECT( Interface )` 형식이면 true 입니다. */
+        bool isInterface() const noexcept { return _bInterface != SW_FALSE; }
         /**
          * @brief 이름이나 별칭이 @p nameText 와 철자 그대로 같은 프로퍼티를 상속 포함으로 찾습니다(`PropertyInfo::matchesNameText`). 없으면 nullptr 입니다.
          * @details XML · JSON 의 태그 · 속성 이름을 프로퍼티에 맞출 때 씁니다 — 대소문자만 다른 이름은 모르는 이름입니다(`findProperty( hashed_string )` 는 대소문자를 무시한다).

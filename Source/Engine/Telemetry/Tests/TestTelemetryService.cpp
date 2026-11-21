@@ -34,9 +34,9 @@ namespace
             , _folder{ test::makeScratchPath( "telemetry" ) }
             , _leftoverFile{}
         {
-            (void)FileUtil::ensureDirectoryExists( _folder );
+            (void)FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( _folder ) );
             _leftoverFile = FileUtil::joinPath( _folder, "telemetry_old_0000.jsonl" );
-            (void)FileUtil::writeTextFile( _leftoverFile, "{\"type\":\"context\"}\n{\"type\":\"event\"}\n" );
+            (void)FileUtil::writeTextFile( FileUtil::toDiskPath( _leftoverFile ), "{\"type\":\"context\"}\n{\"type\":\"event\"}\n" );
             SW_EXPECT_TRUE( _service.loadSchemaText( kSchemaText, "test.telemetry.xml" ) );
             TelemetryContext context;
             context._sessionID = "now";
@@ -153,7 +153,7 @@ SW_TEST_CASE( TelemetryServiceTest, UploadDoesNotBlockRecordOrFrame )
     SW_EXPECT_EQUAL( string( "telemetry_old_0000.jsonl" ), FileUtil::getFileNamePart( uploader.getBatch( 0 )._filePath ) ); // 지난 실행의 파일부터(오래된 것부터)
     SW_EXPECT_EQUAL( uint32{ 2 }, uploader.getBatch( 1 )._eventCount );
     SW_EXPECT_EQUAL( uint32{ 2 }, fixture._service.getStats()._uploadedFiles );
-    SW_EXPECT_FALSE( FileUtil::exists( fixture._leftoverFile ) );
+    SW_EXPECT_FALSE( FileUtil::exists( FileUtil::toDiskPath( fixture._leftoverFile ) ) );
     vector<string> listSpool;
     fixture._service.collectSpoolFiles( listSpool );
     SW_EXPECT_TRUE( listSpool.empty() );
@@ -187,14 +187,14 @@ SW_TEST_CASE( TelemetryServiceTest, FailedUploadBacksOff )
     fixture._service.update( 1.0f ); // 아직 물러서는 중 — 보내지 않는다
     fixture._service.flush();
     SW_EXPECT_EQUAL( uint32{ 2 }, uploader.getCallCount() );
-    SW_EXPECT_TRUE( FileUtil::exists( fixture._leftoverFile ) );
+    SW_EXPECT_TRUE( FileUtil::exists( FileUtil::toDiskPath( fixture._leftoverFile ) ) );
 
     uploader.setResult( TelemetryUploadResult::Sent );
     fixture._service.update( 10.0f ); // 물러서기가 끝났다 — 다시 보내 받아들여진다
     fixture._service.flush();
     SW_EXPECT_EQUAL( uint32{ 3 }, uploader.getCallCount() );
     SW_EXPECT_EQUAL( uint32{ 1 }, fixture._service.getStats()._uploadedFiles );
-    SW_EXPECT_FALSE( FileUtil::exists( fixture._leftoverFile ) );
+    SW_EXPECT_FALSE( FileUtil::exists( FileUtil::toDiskPath( fixture._leftoverFile ) ) );
     fixture._service.releaseUploader( uploader );
     fixture._service.shutdown();
 }
@@ -212,7 +212,7 @@ SW_TEST_CASE( TelemetryServiceTest, WithdrawnConsentPurgesAfterQueuedWrites )
     vector<string> listSpool;
     fixture._service.collectSpoolFiles( listSpool );
     SW_EXPECT_TRUE( listSpool.empty() );
-    SW_EXPECT_FALSE( FileUtil::exists( fixture._leftoverFile ) );
+    SW_EXPECT_FALSE( FileUtil::exists( FileUtil::toDiskPath( fixture._leftoverFile ) ) );
     SW_EXPECT_EQUAL( uint32{ 2 }, fixture._service.getStats()._purgedFiles ); // 지난 실행의 파일 + 방금 쓴 파일
     fixture._service.shutdown();
 }

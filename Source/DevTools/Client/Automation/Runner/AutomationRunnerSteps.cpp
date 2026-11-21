@@ -40,7 +40,7 @@
 #include "Engine/Renderer/Frame/View/RenderStability.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
-#include "Engine/Window/IWindow.h"
+#include "Engine/Window/GenericWindow.h"
 #include "Engine/Window/MainWindowSubsystem.h"
 
 namespace sw
@@ -362,11 +362,11 @@ namespace sw
     struct AutomationRunnerEngineSteps
     {
         /** @brief 엔진 단계는 실행기 자신의 상태(가상 입력 원천 · 스크린샷 대기열 · 종료 시한)를 만진다. 그래서 문맥을 실행기로 되돌려 쓴다 — 이 단계들은 실행기에만 등록되어 돈다. */
-        static AutomationRunner& asRunner( AutomationStepContext& context ) { return static_cast<AutomationRunner&>( context ); }
+        static AutomationRunner& asRunner( IAutomationStepContext& context ) { return static_cast<AutomationRunner&>( context ); }
 
         // --- 준비(`AutomationStepPrepareFunction`): 입력 단계는 가상 입력 원천으로 옮긴다. 인자는 검사와 같은 `parse*` 로 읽고, 실패하면 버리지 않고 오류다 ---
 
-        [[nodiscard]] static expected<void> prepareSlotStep( AutomationStepContext& context, const AutomationStep& step )
+        [[nodiscard]] static expected<void> prepareSlotStep( IAutomationStepContext& context, const AutomationStep& step )
         {
             AutomationRunner&                                           runner = asRunner( context );
             const expected<AutomationRunnerStepsInternal::SlotStepArgs> args   = AutomationRunnerStepsInternal::parseSlotStep( step );
@@ -383,7 +383,7 @@ namespace sw
             return {};
         }
 
-        [[nodiscard]] static expected<void> prepareWheel( AutomationStepContext& context, const AutomationStep& step )
+        [[nodiscard]] static expected<void> prepareWheel( IAutomationStepContext& context, const AutomationStep& step )
         {
             AutomationRunner&        runner = asRunner( context );
             AutomationAxisPairParams args;
@@ -397,7 +397,7 @@ namespace sw
             return {};
         }
 
-        [[nodiscard]] static expected<void> prepareMouseDelta( AutomationStepContext& context, const AutomationStep& step )
+        [[nodiscard]] static expected<void> prepareMouseDelta( IAutomationStepContext& context, const AutomationStep& step )
         {
             AutomationRunner&        runner = asRunner( context );
             AutomationAxisPairParams args;
@@ -408,12 +408,12 @@ namespace sw
             return {};
         }
 
-        [[nodiscard]] static expected<void> prepareMousePosition( AutomationStepContext& context, const AutomationStep& step )
+        [[nodiscard]] static expected<void> prepareMousePosition( IAutomationStepContext& context, const AutomationStep& step )
         {
             AutomationRunner& runner = asRunner( context );
             // 창 클라이언트 영역의 비율을 픽셀로 바꾼다(시작할 때의 창 크기). 창이 없으면(헤드리스) 그 위치를 낼 수 없다.
-            const IWindow* pWindow             = MainWindowSubsystem::findMainWindow();
-            const bool     bNoWindowForPointer = pWindow == nullptr || pWindow->getWidth() == 0 || pWindow->getHeight() == 0;
+            const GenericWindow* pWindow             = MainWindowSubsystem::findMainWindow();
+            const bool           bNoWindowForPointer = pWindow == nullptr || pWindow->getWidth() == 0 || pWindow->getHeight() == 0;
             if ( bNoWindowForPointer )
                 return unexpected( Error{ ErrorKind::Unsupported, "no window to place the pointer in" } );
             AutomationMousePositionParams args;
@@ -426,12 +426,12 @@ namespace sw
             return {};
         }
 
-        [[nodiscard]] static expected<void> prepareTouch( AutomationStepContext& context, const AutomationStep& step )
+        [[nodiscard]] static expected<void> prepareTouch( IAutomationStepContext& context, const AutomationStep& step )
         {
             AutomationRunner& runner = asRunner( context );
             // 창 클라이언트 영역의 비율을 픽셀로 바꾼다(`MousePosition` 과 같은 규칙). 손가락은 마우스와 따로 간다 — 터치 장치의 포인터 0 이다.
-            const IWindow* pWindow           = MainWindowSubsystem::findMainWindow();
-            const bool     bNoWindowForTouch = pWindow == nullptr || pWindow->getWidth() == 0 || pWindow->getHeight() == 0;
+            const GenericWindow* pWindow           = MainWindowSubsystem::findMainWindow();
+            const bool           bNoWindowForTouch = pWindow == nullptr || pWindow->getWidth() == 0 || pWindow->getHeight() == 0;
             if ( bNoWindowForTouch )
                 return unexpected( Error{ ErrorKind::Unsupported, "no window to touch" } );
             AutomationTouchParams args;
@@ -445,7 +445,7 @@ namespace sw
             return {};
         }
 
-        [[nodiscard]] static expected<void> prepareGamepadAxis( AutomationStepContext& context, const AutomationStep& step )
+        [[nodiscard]] static expected<void> prepareGamepadAxis( IAutomationStepContext& context, const AutomationStep& step )
         {
             AutomationRunner&           runner = asRunner( context );
             AutomationGamepadAxisParams args;
@@ -458,7 +458,7 @@ namespace sw
             return {};
         }
 
-        [[nodiscard]] static expected<void> prepareText( AutomationStepContext& context, const AutomationStep& step )
+        [[nodiscard]] static expected<void> prepareText( IAutomationStepContext& context, const AutomationStep& step )
         {
             AutomationRunner&              runner = asRunner( context );
             const AutomationTextStepParams params = step.readValidatedProperties<AutomationTextStepParams>();
@@ -468,7 +468,7 @@ namespace sw
         }
 
         /** @brief 붙잡는 동안 같은 프레임의 다른 단계가 여러 번 돌거나(입력 전 단계) 조건보다 먼저 돌지 않게, 기다림은 그 프레임에 혼자 둔다(순차 형식은 읽기가 자리를 나눈다 — 이것은 그 약속의 그물이다). */
-        [[nodiscard]] static expected<void> prepareWaitUntil( AutomationStepContext& context, const AutomationStep& step )
+        [[nodiscard]] static expected<void> prepareWaitUntil( IAutomationStepContext& context, const AutomationStep& step )
         {
             AutomationRunner&     runner     = asRunner( context );
             const AutomationStep* pOtherStep = runner._scenario.findOtherStepAtSameFrame( step );
@@ -479,7 +479,7 @@ namespace sw
 
         // --- 실행(`AutomationStepFunction`): 씬 틱 뒤에 돈다 -------------------------------------------------------
 
-        static bool runVariable( AutomationStepContext& context, const AutomationStep& step )
+        static bool runVariable( IAutomationStepContext& context, const AutomationStep& step )
         {
             AutomationRunner&              runner = asRunner( context );
             const AutomationVariableParams params = step.readValidatedProperties<AutomationVariableParams>();
@@ -492,7 +492,7 @@ namespace sw
             return true;
         }
 
-        static bool runExpectVariable( AutomationStepContext& context, const AutomationStep& step )
+        static bool runExpectVariable( IAutomationStepContext& context, const AutomationStep& step )
         {
             AutomationRunner&                    runner = asRunner( context );
             const AutomationExpectVariableParams params = step.readValidatedProperties<AutomationExpectVariableParams>();
@@ -521,49 +521,49 @@ namespace sw
             return true;
         }
 
-        static bool runExpect( AutomationStepContext& context, const AutomationStep& step )
+        static bool runExpect( IAutomationStepContext& context, const AutomationStep& step )
         {
             AutomationRunner& runner = asRunner( context );
             runner._evaluator.runExpect( runner, step );
             return true;
         }
 
-        static bool runExpectVisited( AutomationStepContext& context, const AutomationStep& step )
+        static bool runExpectVisited( IAutomationStepContext& context, const AutomationStep& step )
         {
             AutomationRunner& runner = asRunner( context );
             runner._evaluator.runExpectVisited( runner, step );
             return true;
         }
 
-        static bool runRecord( AutomationStepContext& context, const AutomationStep& step )
+        static bool runRecord( IAutomationStepContext& context, const AutomationStep& step )
         {
             AutomationRunner& runner = asRunner( context );
             runner._evaluator.runRecord( runner, step );
             return true;
         }
 
-        static bool runStore( AutomationStepContext& context, const AutomationStep& step )
+        static bool runStore( IAutomationStepContext& context, const AutomationStep& step )
         {
             AutomationRunner& runner = asRunner( context );
             runner._evaluator.runStore( runner, step );
             return true;
         }
 
-        static bool runExpectLog( AutomationStepContext& context, const AutomationStep& step )
+        static bool runExpectLog( IAutomationStepContext& context, const AutomationStep& step )
         {
             AutomationRunner& runner = asRunner( context );
             runner._evaluator.runExpectLog( runner, step );
             return true;
         }
 
-        static bool runScreenshot( AutomationStepContext& context, const AutomationStep& step )
+        static bool runScreenshot( IAutomationStepContext& context, const AutomationStep& step )
         {
             AutomationRunner& runner    = asRunner( context );
             const string      path      = runner.resolveOutputPath( step.readValidatedProperties<AutomationScreenshotParams>()._file );
             const string      directory = FileUtil::getDirectoryPart( path );
             if ( directory.empty() == false )
-                (void)FileUtil::ensureDirectoryExists( directory ); // 못 만들면 ensure 가 폴더와 이유를 남기고 뒤따르는 쓰기가 실패로 답한다
-            (void)FileUtil::tryRemoveFile( path );                  // 지난 실행의 이미지를 읽지 않게 지운다
+                (void)FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( directory ) ); // 못 만들면 ensure 가 폴더와 이유를 남기고 뒤따르는 쓰기가 실패로 답한다
+            (void)FileUtil::tryRemoveFile( FileUtil::toDiskPath( path ) );                  // 지난 실행의 이미지를 읽지 않게 지운다
             const optional<AbsolutePath> absolutePath = AbsolutePath::tryMake( path );
             if ( absolutePath.has_value() == false )
             {
@@ -574,14 +574,14 @@ namespace sw
             return true;
         }
 
-        static bool runExpectImage( AutomationStepContext& context, const AutomationStep& step )
+        static bool runExpectImage( IAutomationStepContext& context, const AutomationStep& step )
         {
             AutomationRunner& runner = asRunner( context );
             runner._evaluator.deferExpectImage( runner, step );
             return true;
         }
 
-        static bool runExpectImagesDiffer( AutomationStepContext& context, const AutomationStep& step )
+        static bool runExpectImagesDiffer( IAutomationStepContext& context, const AutomationStep& step )
         {
             asRunner( context )._evaluator.deferExpectImagesDiffer( step );
             return true;
@@ -599,7 +599,7 @@ namespace sw
                 runner._run._expectedExitCode = step.readValidatedProperties<AutomationExpectExitWithinParams>()._exitCode;
                 return true;
             }
-            IWindow* pWindow = MainWindowSubsystem::findMainWindow();
+            GenericWindow* pWindow = MainWindowSubsystem::findMainWindow();
             if ( pWindow == nullptr )
                 runner.recordFailure( step, "there is no window to close" );
             else
@@ -607,11 +607,11 @@ namespace sw
             return true;
         }
 
-        static bool runCloseWindow( AutomationStepContext& context, const AutomationStep& step ) { return startExitDeadline( asRunner( context ), step, true ); }
+        static bool runCloseWindow( IAutomationStepContext& context, const AutomationStep& step ) { return startExitDeadline( asRunner( context ), step, true ); }
 
-        static bool runExpectExitWithin( AutomationStepContext& context, const AutomationStep& step ) { return startExitDeadline( asRunner( context ), step, false ); }
+        static bool runExpectExitWithin( IAutomationStepContext& context, const AutomationStep& step ) { return startExitDeadline( asRunner( context ), step, false ); }
 
-        static bool runPass( AutomationStepContext& context, const AutomationStep& step )
+        static bool runPass( IAutomationStepContext& context, const AutomationStep& step )
         {
             AutomationRunner& runner = asRunner( context );
             runner._evaluator.evaluateDeferred( runner ); // 스크린샷 · 끝 차단 조건의 뒤의 일은 `holdPass` 가 다 끝난 뒤에 놓는다
@@ -624,7 +624,7 @@ namespace sw
          * @brief 뒤의 일 - 요청한 스크린샷의 쓰기와 등록된 끝 차단 조건(`AutomationStepRegistry::findFinishBlocker`, 편집기 UI 캡처의 파일 쓰기) - 이 끝날 때까지 `<Pass/>` 를 붙잡습니다.
          *        미룬 `<ExpectImage>` 는 그 뒤 `runPass` 가 판정한다. 상한을 넘기면 실패로 적고 끝낸다.
          */
-        static AutomationStepHold holdPass( AutomationStepContext& context, const AutomationStep& step, InputManager& input )
+        static AutomationStepHold holdPass( IAutomationStepContext& context, const AutomationStep& step, InputManager& input )
         {
             AutomationRunner&                       runner   = asRunner( context );
             const utf8*                             pBlocker = runner._run.hasPendingScreenshot() ? "Screenshot" : AutomationStepRegistry::findFinishBlocker()._pName;
@@ -641,7 +641,7 @@ namespace sw
             return hold;
         }
 
-        static bool runFail( AutomationStepContext& context, const AutomationStep& step )
+        static bool runFail( IAutomationStepContext& context, const AutomationStep& step )
         {
             AutomationRunner& runner  = asRunner( context );
             const string*     pReason = step.findAttribute( "reason" );
@@ -651,7 +651,7 @@ namespace sw
             return true;
         }
 
-        static bool runSkip( AutomationStepContext& context, const AutomationStep& step )
+        static bool runSkip( IAutomationStepContext& context, const AutomationStep& step )
         {
             AutomationRunner& runner  = asRunner( context );
             const string*     pReason = step.findAttribute( "reason" );
@@ -660,7 +660,7 @@ namespace sw
         }
 
         /** @brief 감시 값이 0 이면 건너뛴다(장치 능력이 없다고 선언된 백엔드). 못 읽으면 실패다 — 읽지 못한 것을 능력 없음으로 짐작하지 않는다. */
-        static bool runSkipUnless( AutomationStepContext& context, const AutomationStep& step )
+        static bool runSkipUnless( IAutomationStepContext& context, const AutomationStep& step )
         {
             AutomationRunner&    runner = asRunner( context );
             AutomationWatchValue value{};
@@ -684,7 +684,7 @@ namespace sw
         // --- 차례(`AutomationStepHoldFunction`) -------------------------------------------------------------------
 
         /** @brief 조건이 참이 될 때까지(또는 시한까지) 시나리오 시계를 붙잡습니다. 놓으면 단계는 끝난다(실행 함수가 없다). */
-        static AutomationStepHold holdWaitUntil( AutomationStepContext& context, const AutomationStep& step, InputManager& input )
+        static AutomationStepHold holdWaitUntil( IAutomationStepContext& context, const AutomationStep& step, InputManager& input )
         {
             AutomationRunner& runner = asRunner( context );
             return runner.shouldHoldForCondition( step, input ) ? AutomationStepHold::Hold : AutomationStepHold::Run;
@@ -762,7 +762,7 @@ namespace sw
          *          기다리는 동안은 `WaitUntil` 처럼 시나리오 시계를 붙잡는다 — 세면 뒤 단계의 프레임이 지나 버려 사진을 요청한 프레임에 한꺼번에 돌고,
          *          그 변화(순간이동 · 변수)가 다음 패킷이 찍는 사진에 들어간다. 상용 엔진 비교: 언리얼 스크린샷 기능 테스트는 흔들리는 기능을 끄고 지연 뒤 찍는다 — 여기서는 끄지 않고 정착을 기다린다.
          */
-        static AutomationStepHold holdScreenshot( AutomationStepContext& context, const AutomationStep& step, InputManager& input )
+        static AutomationStepHold holdScreenshot( IAutomationStepContext& context, const AutomationStep& step, InputManager& input )
         {
             using Stability                     = AutomationRunnerStepsInternal::ScreenshotStabilityMode;
             AutomationRunner&         runner    = asRunner( context );
@@ -818,7 +818,7 @@ namespace sw
         }
 
         /** @brief `<WaitRenderStable/>` — 렌더 정착(`holdForRenderStable`)을 기다립니다. 사진이 아닌 단계(백엔드 교체 · 창 크기 · 값 단언) 앞이나 프레임이 정해진 사진(`stability="none"`) 앞에 둔다. */
-        static AutomationStepHold holdWaitRenderStable( AutomationStepContext& context, const AutomationStep& step, InputManager& input )
+        static AutomationStepHold holdWaitRenderStable( IAutomationStepContext& context, const AutomationStep& step, InputManager& input )
         {
             return holdForRenderStable( asRunner( context ), step, input );
         }

@@ -4,7 +4,7 @@
  */
 #pragma once
 #include "Core/Foundation/Types.h"
-#include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/Subsystem.h"
 
 #include "DevTools/DevToolsAPI.h"
 
@@ -23,7 +23,7 @@ namespace sw
      *          언리얼 `?listen` · `-port=` 의 자리다. 평문 리슨은 루프백 · 개발 빌드로만 남긴다(U4 — `GameNetSession::makeServerParams`) — 그래서 배포에는 이 길이 없다.
      *          세션에 의존한다 — 세션이 열기 전에 걸리고, 세션보다 먼저 내려가며 덮어쓰기를 푼다.
      */
-    class SW_DEVTOOLS_API NetListenLaunchSubsystem final : public ISubsystem
+    class SW_DEVTOOLS_API NetListenLaunchSubsystem final : public Subsystem
     {
     public:
         static constexpr const utf8* kSubsystemName = "NetListenLaunch";

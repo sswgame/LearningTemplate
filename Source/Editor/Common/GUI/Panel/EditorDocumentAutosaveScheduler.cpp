@@ -9,8 +9,8 @@
 #include "Editor/Common/Commands/Asset/EditorDocumentAutosave.h"
 #include "Editor/Common/Commands/Scene/EditorAutosaveCommands.h"
 #include "Editor/Common/Config/EditorToolDefaults.h"
+#include "Editor/Common/GUI/Panel/EditorDocumentPanelBase.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
-#include "Editor/Common/GUI/Panel/IEditorDocumentPanel.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorStateStore.h"
 
@@ -30,7 +30,7 @@ namespace sw::editor
             {
                 Stopwatch                      _sinceCopy{};
                 EditorDocumentAutosaveWriteJob _writeJob{};
-                vector<const IEditorPanel*>    _listDeferred{};      ///< 지난 판에 미룬 패널 — 비어 있지 않으면 이 패널만 다시 묻는다(다른 문서의 글을 끄는 동안 프레임마다 만들지 않게). 지금 목록에 있는 것만 쓴다(비교만 한다)
+                vector<const EditorPanel*>     _listDeferred{};      ///< 지난 판에 미룬 패널 — 비어 있지 않으면 이 패널만 다시 묻는다(다른 문서의 글을 끄는 동안 프레임마다 만들지 않게). 지금 목록에 있는 것만 쓴다(비교만 한다)
                 uint32                         _writtenCount{ 0 };   ///< 워커가 쓴 사본 수(끝난 잡의 결과를 더한다)
                 bool                           _bForceNext{ false }; ///< 다음 판은 주기를 보지 않는다(`autosave.documentsNow`). NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
             };
@@ -82,16 +82,16 @@ namespace sw::editor
             return; // 씬 자동 저장이 세션을 아직 열지 않았거나 열지 못했다(이유는 거기서 남겼다)
 
         EditorDocumentAutosaveBatch batch;
-        batch._sessionFolder                        = sessionFolder;
-        const vector<const IEditorPanel*> listRetry = std::move( state._listDeferred );
+        batch._sessionFolder                       = sessionFolder;
+        const vector<const EditorPanel*> listRetry = std::move( state._listDeferred );
         state._listDeferred.clear();
         for ( const EditorPanelEntry& panelEntry : listPanel )
         {
-            IEditorPanel* const pPanel = panelEntry._pInstance.get();
+            EditorPanel* const pPanel = panelEntry._pInstance.get();
             if ( pPanel == nullptr )
                 continue;
-            IEditorDocumentPanel* const pDocument = pPanel->asDocumentPanel();
-            const bool                  bAsked    = listRetry.empty() || std::find( listRetry.begin(), listRetry.end(), pPanel ) != listRetry.end();
+            EditorDocumentPanelBase* const pDocument = pPanel->asDocumentPanel();
+            const bool                     bAsked    = listRetry.empty() || std::find( listRetry.begin(), listRetry.end(), pPanel ) != listRetry.end();
             if ( pDocument == nullptr || bAsked == false )
                 continue;
             EditorDocumentAutosaveEntry  entry{};

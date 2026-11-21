@@ -46,7 +46,7 @@ namespace sw
         TelemetryUploadLink( const TelemetryUploadLink& )            = delete;
         TelemetryUploadLink& operator=( const TelemetryUploadLink& ) = delete;
 
-        // ISubsystem - 끝점이 없으면 아무 일도 하지 않고 성공이다. 끝점이 있는데 클라이언트를 세우지 못하면(TLS 신뢰 파일 · 키 환경 변수) 실패다.
+        // Subsystem - 끝점이 없으면 아무 일도 하지 않고 성공이다. 끝점이 있는데 클라이언트를 세우지 못하면(TLS 신뢰 파일 · 키 환경 변수) 실패다.
         SubsystemInitResult initializeSubsystem() override;
         void                shutdownSubsystem() override;
         const utf8*         getSubsystemName() const override { return kSubsystemName; }

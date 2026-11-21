@@ -153,7 +153,7 @@ namespace sw::editor
         void requestOpenPanelByID( string_view panelID );
         /** @brief 열린 패널의 도킹을 풀어 메인 창 밖의 제 OS 창으로 띄우기를 요청합니다(개발 명령 `panel.float` — 보조 창 그리기 · 스왑체인 경로를 시나리오가 본다). */
         void requestFloatPanelByID( string_view panelID );
-        /** @brief 애셋 종류 @p kind 의 문서를 여는 도구 패널(`IEditorPanel::getDocumentKind`)을 열기를 요청합니다. */
+        /** @brief 애셋 종류 @p kind 의 문서를 여는 도구 패널(`EditorPanel::getDocumentKind`)을 열기를 요청합니다. */
         void requestOpenDocumentPanel( const EditorAssetType& kind );
         /** @brief 쌓인 요청을 꺼냅니다. 없으면 false 입니다. */
         [[nodiscard]] bool consumeOpenPanel( EditorPanelOpenRequest& outRequest );

@@ -74,7 +74,7 @@ namespace sw
         void addFieldOfViewKick( const CameraFieldOfViewKickDef& def ) { _fieldOfViewKickListener.addKick( def ); }
         /**
          * @brief 출처 @p source 의 후처리 덧칠을 가중치 @p weight(0..1)로 정합니다. 0 이하이면 뺍니다. 섞인 포즈의 후처리 위에 출처를 정한 순서로 섞는다(`blendPostProcess`).
-         * @details 지역의 화면 반응(독가스 · 유황 · 늪 — `ScreenReactionComponent`)이 쓴다. 가중치를 올리고 내리는 것(페이드)은 출처가 하고, 디렉터는 프레임마다 받은 값만 섞는다.
+         * @details 지역의 화면 반응(독가스 · 유황 · 늪 — `TagPostProcessComponent`)이 쓴다. 가중치를 올리고 내리는 것(페이드)은 출처가 하고, 디렉터는 프레임마다 받은 값만 섞는다.
          *          스택(저장 상태)에 넣지 않는다 — 출처가 프레임마다 다시 정한다. 언리얼 PostProcessVolume 의 BlendWeight · 유니티 Volume weight 와 같은 자리다.
          */
         void setPostProcessOverlay( const GameObjectHandle& source, const PostProcessValues& values, float32 weight );

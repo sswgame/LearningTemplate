@@ -15,12 +15,12 @@ using namespace sw;
 namespace
 {
     /** @brief 부모를 글 표에서 읽습니다. */
-    class DataInheritanceTestSource final : public IDataInheritanceSource
+    class DataInheritanceTestSource final : public DataInheritanceSource
     {
     public:
         /** @brief 깊이 상한 @p maxDepth 를 싣습니다. 기본은 설정(`EngineConfig.json`)과 같은 값입니다. */
         explicit DataInheritanceTestSource( optional<uint32> maxDepth = 8u )
-            : IDataInheritanceSource{ maxDepth }
+            : DataInheritanceSource{ maxDepth }
         {
         }
 
@@ -439,13 +439,13 @@ SW_TEST_CASE( DataInheritanceTest, CollectChildrenFindsDirectChildren )
     const test::ScopedScratchDomain domain;
     const string                    idBase = test::ScopedScratchDomain::makeID( "base.xml" ).str();
     const string                    idMid  = test::ScopedScratchDomain::makeID( "mid.xml" ).str();
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "base.xml" ), "<Doc />" ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( domain.makeDiskPath( "base.xml" ) ), "<Doc />" ) );
     StringBuilder<constant::buffer::kMax256> body;
     body.appendFormat( "<Doc _base=\"%#\" />", idBase );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "mid.xml" ), body.view() ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( domain.makeDiskPath( "mid.xml" ) ), body.view() ) );
     body.clear();
     body.appendFormat( "<Doc _base=\"%#\" />", idMid );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "leaf.xml" ), body.view() ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( domain.makeDiskPath( "leaf.xml" ) ), body.view() ) );
 
     vector<string> listChild;
     SW_REQUIRE_TRUE( DataInheritance::collectChildren( domain.getFolder(), idBase, { ".xml" }, listChild ) );

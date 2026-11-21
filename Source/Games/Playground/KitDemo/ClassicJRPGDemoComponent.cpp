@@ -11,7 +11,7 @@
 
 #include "GameFramework/Kits/Genre/RPG/ClassicJRPG/JRPGBattle.h"
 #include "GameFramework/Kits/Genre/RPG/ClassicJRPG/JRPGParty.h"
-#include "GameFramework/Runtime/Foundation/Framework/SessionStateRefs.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameStateRefs.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Wallet.h"
 
 namespace sw
@@ -52,9 +52,9 @@ namespace sw
     bool ClassicJRPGDemoComponent::runBattle()
     {
         // 장비 · 전직을 쓰지 않는 시연이라 아이템 카탈로그 · 가방은 넘기지 않고, 골드 보상을 받을 지갑만 빌려 준다.
-        Wallet           wallet;
-        JRPGParty        party;
-        SessionStateRefs refs;
+        Wallet        wallet;
+        JRPGParty     party;
+        GameStateRefs refs;
         refs._pWallet = &wallet;
         party.initialize( _pCatalog.get(), nullptr, refs );
         if ( party.addMember( "hero", "Hero", "hero" ).has_value() == false )

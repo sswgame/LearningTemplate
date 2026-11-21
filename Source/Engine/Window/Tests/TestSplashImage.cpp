@@ -2,7 +2,7 @@
 
 #include "Core/Testing/TestFramework.h"
 
-#include "Engine/Window/ISplashWindow.h"
+#include "Engine/Window/SplashWindowBase.h"
 
 // 스플래시 이미지 스케일러 — 창을 만들지 않으므로 GPU·디스플레이가 필요 없다(`nogpu`).
 //
@@ -37,7 +37,7 @@ SW_TEST_CASE( SplashImageTest, DownscaleAveragesTheCoveredPixels )
     writeBgraPixel( listSource, 3, 0, 0, 0, 255 );
 
     sw::vector<uint8> listDest( 1 * 1 * 4, 0xAB );
-    sw::ISplashWindow::scaleBgraImage( listSource.data(), 2, 2, listDest.data(), 1, 1 );
+    sw::SplashWindowBase::scaleBgraImage( listSource.data(), 2, 2, listDest.data(), 1, 1 );
 
     // (0 + 100 + 200 + 0) / 4 = 75
     SW_EXPECT_EQUAL( 75, static_cast<int32>( listDest[0] ) );
@@ -62,8 +62,8 @@ SW_TEST_CASE( SplashImageTest, DownscaleFillsEveryDestinationPixel )
     sw::vector<uint8> listSource( static_cast<size_t>( kSourceWidth ) * kSourceHeight * 4, 0xFF );
     sw::vector<uint8> listDest( static_cast<size_t>( kDestWidth ) * kDestHeight * 4, 0x00 );
 
-    sw::ISplashWindow::scaleBgraImage( listSource.data(), kSourceWidth, kSourceHeight,
-                                       listDest.data(), kDestWidth, kDestHeight );
+    sw::SplashWindowBase::scaleBgraImage( listSource.data(), kSourceWidth, kSourceHeight,
+                                          listDest.data(), kDestWidth, kDestHeight );
 
     size_t untouchedCount = 0;
     for ( size_t byteIndex = 0; byteIndex < listDest.size(); ++byteIndex )
@@ -85,7 +85,7 @@ SW_TEST_CASE( SplashImageTest, UpscaleReplicatesSourcePixels )
     writeBgraPixel( listSource, 0, 10, 20, 30, 40 );
 
     sw::vector<uint8> listDest( 3 * 2 * 4, 0 );
-    sw::ISplashWindow::scaleBgraImage( listSource.data(), 1, 1, listDest.data(), 3, 2 );
+    sw::SplashWindowBase::scaleBgraImage( listSource.data(), 1, 1, listDest.data(), 3, 2 );
 
     for ( size_t pixelIndex = 0; pixelIndex < 3 * 2; ++pixelIndex )
     {
@@ -106,10 +106,10 @@ SW_TEST_CASE( SplashImageTest, EmptyInputIsLeftAlone )
     sw::vector<uint8>       listDest( 2 * 2 * 4, 0x7F );
     const sw::vector<uint8> listExpected = listDest;
 
-    sw::ISplashWindow::scaleBgraImage( nullptr, 4, 4, listDest.data(), 2, 2 );
+    sw::SplashWindowBase::scaleBgraImage( nullptr, 4, 4, listDest.data(), 2, 2 );
     sw::vector<uint8> listSource( 4 * 4 * 4, 0xFF );
-    sw::ISplashWindow::scaleBgraImage( listSource.data(), 0, 4, listDest.data(), 2, 2 );
-    sw::ISplashWindow::scaleBgraImage( listSource.data(), 4, 4, listDest.data(), 0, 2 );
+    sw::SplashWindowBase::scaleBgraImage( listSource.data(), 0, 4, listDest.data(), 2, 2 );
+    sw::SplashWindowBase::scaleBgraImage( listSource.data(), 4, 4, listDest.data(), 0, 2 );
 
     SW_EXPECT_TRUE_MSG( listDest == listExpected, "빈 입력인데 목적지를 건드렸습니다" );
 }

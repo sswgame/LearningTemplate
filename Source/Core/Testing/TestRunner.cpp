@@ -482,7 +482,7 @@ namespace sw::test
             folder = state._scratchFolder;
         }
         SW_ASSERT( folder.empty() == false && "makeScratchPath is only valid inside a running test case" );
-        if ( FileUtil::ensureDirectoryExists( folder ) == false )
+        if ( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( folder ) ) == false )
         {
             StringBuilder<constant::buffer::kMax1024> message;
             message.appendFormat( "could not create the scratch folder %#", folder );
@@ -508,7 +508,7 @@ namespace sw::test
         string       normalized( actual );
         normalized.erase( std::remove( normalized.begin(), normalized.end(), '\r' ), normalized.end() );
         string     expected;
-        const bool bHasSnapshot = FileUtil::readOptionalTextFile( path, expected ) == OptionalFileRead::Read;
+        const bool bHasSnapshot = FileUtil::readOptionalTextFile( FileUtil::toDiskPath( path ), expected ) == OptionalFileRead::Read;
         expected.erase( std::remove( expected.begin(), expected.end(), '\r' ), expected.end() );
         if ( bHasSnapshot && expected == normalized )
             return true;
@@ -516,7 +516,7 @@ namespace sw::test
         const bool bWrite = recording == SnapshotWriteMode::All || ( recording == SnapshotWriteMode::Missing && bHasSnapshot == false );
         if ( bWrite )
         {
-            const bool bWritten = FileUtil::ensureDirectoryExists( FileUtil::getDirectoryPart( path ) ) && FileUtil::writeTextFile( path, normalized );
+            const bool bWritten = FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( FileUtil::getDirectoryPart( path ) ) ) && FileUtil::writeTextFile( FileUtil::toDiskPath( path ), normalized );
             if ( bWritten == false )
             {
                 StringBuilder<constant::buffer::kMax1024> message;
@@ -1183,7 +1183,7 @@ namespace sw::test
         // 모두 통과한 실행의 쓰기 폴더는 지운다 — 남기면 실행마다 쌓였다(`Saved/Test` 아래 수백 개). 실패한 실행은 들여다보도록 남기고 보고도 그 안에 쓴다(언리얼 자동화의 실패 산출물).
         // 보고 경로를 준 실행(`--test-report`)은 늘 그 경로에 쓴다.
         const bool bKeepScratch = failedCount > 0 || listUnmatched.empty() == false;
-        if ( bKeepScratch == false && FileUtil::removeDirectory( scratchRoot ) == false )
+        if ( bKeepScratch == false && FileUtil::removeDirectory( FileUtil::toDiskPath( scratchRoot ) ) == false )
         {
             formatstring( arrBuffer, constant::buffer::kMax1024, "[ WARNING  ] the scratch folder could not be removed: %#", scratchRoot );
             Internal::writeLine( arrBuffer );
@@ -1216,7 +1216,7 @@ namespace sw::test
             report.append( "],\n  \"cases\": [" );
             report.append( caseReport.view() );
             report.append( "\n  ]\n}\n" );
-            if ( FileUtil::ensureDirectoryExists( FileUtil::getDirectoryPart( reportPath ) ) == false || FileUtil::writeTextFile( reportPath, report.view() ) == false )
+            if ( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( FileUtil::getDirectoryPart( reportPath ) ) ) == false || FileUtil::writeTextFile( FileUtil::toDiskPath( reportPath ), report.view() ) == false )
             {
                 formatstring( arrBuffer, constant::buffer::kMax1024, "[  FAILED  ] could not write the test report %#", reportPath );
                 Internal::writeLine( arrBuffer );

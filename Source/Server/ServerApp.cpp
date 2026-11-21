@@ -79,7 +79,7 @@ namespace sw
          * @brief 호스트 범위의 종료 신호 처리기(POSIX SIGTERM · SIGINT, Windows 콘솔 제어)입니다. 엔진보다 먼저 걸고 엔진 종료가 끝난 뒤 뗀다.
          * @details 걸지 못해도 서버는 선다(표준 입력 `quit` 로 끝낸다) — 로거가 서기 전이라 로그 아래 티어(`SW_LOW_LEVEL_WARNING`)로 알린다. 떼기는 건 것이 없으면 아무것도 하지 않는다.
          */
-        class ShutdownSignalSubsystem final : public ISubsystem
+        class ShutdownSignalSubsystem final : public Subsystem
         {
         public:
             SubsystemInitResult initializeSubsystem() override
@@ -94,7 +94,7 @@ namespace sw
     } // namespace
 
     /** @brief 지표 · 상태 레지스트리 · 운영 HTTP · 프로세스 지표입니다. 맨 먼저 서고 맨 나중에 내려간다. */
-    class ServerApp::ObservabilityHostService final : public ISubsystem
+    class ServerApp::ObservabilityHostService final : public Subsystem
     {
     public:
         static constexpr const utf8* kSubsystemName = "Observability";
@@ -120,7 +120,7 @@ namespace sw
     };
 
     /** @brief 지난 실행의 크래시를 묶어 지표로 냅니다(남은 묶음 수를 지표로 내므로 관측 뒤). */
-    class ServerApp::CrashReportsHostService final : public ISubsystem
+    class ServerApp::CrashReportsHostService final : public Subsystem
     {
     public:
         static constexpr const utf8* kSubsystemName = "CrashReports";
@@ -150,7 +150,7 @@ namespace sw
     };
 
     /** @brief 서버 문맥을 호스트 범위에 빌려 겁니다 — 문맥이 지표 · 상태 레지스트리를 빌려주므로 관측 뒤, 게임 · 키트가 기동하며 찾으므로 게임 앞. */
-    class ServerApp::ServiceContextHostService final : public ISubsystem
+    class ServerApp::ServiceContextHostService final : public Subsystem
     {
     public:
         static constexpr const utf8* kSubsystemName = "ServiceContext";
@@ -193,7 +193,7 @@ namespace sw
     };
 
     /** @brief 게임 인스턴스 — 모듈 호스트입니다(창과 디바이스는 없다). 게임과 키트가 기동하며 서버 지표 · 상태 레지스트리에 자기 것을 올리고 게임 포트를 열므로 서버 문맥 뒤. */
-    class ServerApp::GameHostService final : public ISubsystem
+    class ServerApp::GameHostService final : public Subsystem
     {
     public:
         static constexpr const utf8* kSubsystemName = "Game";
@@ -227,7 +227,7 @@ namespace sw
     };
 
     /** @brief 표준 입력 명령 채널입니다. */
-    class ServerApp::StandardInputHostService final : public ISubsystem
+    class ServerApp::StandardInputHostService final : public Subsystem
     {
     public:
         static constexpr const utf8* kSubsystemName = "StandardInput";
@@ -254,7 +254,7 @@ namespace sw
     };
 
     /** @brief 개발 콘솔(명령 처리기)입니다. 명령이 게임이 올린 개발 명령 · 변수를 부른다 — 게임 뒤에 서고 게임보다 먼저 내려간다. */
-    class ServerApp::DevConsoleHostService final : public ISubsystem
+    class ServerApp::DevConsoleHostService final : public Subsystem
     {
     public:
         static constexpr const utf8* kSubsystemName = "DevConsole";
@@ -287,7 +287,7 @@ namespace sw
     };
 
     /** @brief 원격 개발 명령 채널(개발 구성)과 관리 채널입니다. 원격 줄을 개발 콘솔로 돌리므로 콘솔 뒤. */
-    class ServerApp::DebugChannelHostService final : public ISubsystem
+    class ServerApp::DebugChannelHostService final : public Subsystem
     {
     public:
         static constexpr const utf8* kSubsystemName = "DebugChannel";

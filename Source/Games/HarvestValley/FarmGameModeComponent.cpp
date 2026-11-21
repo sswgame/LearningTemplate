@@ -26,10 +26,10 @@
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/Grid/GridTopology.h"
+#include "GameFramework/Runtime/Gameplay/GameState/GameStateComponent.h"
+#include "GameFramework/Runtime/Gameplay/GameState/PlayerProgressComponent.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
-#include "GameFramework/Runtime/Gameplay/SessionState/PlayerProgressComponent.h"
-#include "GameFramework/Runtime/Gameplay/SessionState/SessionStateComponent.h"
 #include "GameFramework/Runtime/World/Environment/WorldClock.h"
 
 #include "Games/HarvestValley/FarmAutoFarmerAIComponent.h"
@@ -50,10 +50,10 @@ namespace sw
             /** @brief 비를 정하는 날씨 값 이름입니다(날씨 카탈로그 `<Values wetness>` — 표면 젖음과 같은 값). 이 값이 반 이상이면 비다. */
             static constexpr const utf8* kWetnessValue     = "wetness";
             static constexpr float32     kRainingWetness   = 0.5f;
-            static constexpr float32     kGameSecondsInDay = 86400.0f; ///< 판 상태 날씨의 시간 단위(하루 = 86400 게임 초, `SessionStateComponent::update`)
+            static constexpr float32     kGameSecondsInDay = 86400.0f; ///< 판 상태 날씨의 시간 단위(하루 = 86400 게임 초, `GameStateComponent::update`)
 
             /** @brief 판 상태의 지금 날씨가 비인지입니다. 날씨가 없는 판이면 false 다(시작이 카탈로그를 요구하므로 없을 수 없다). */
-            static bool isRaining( const SessionStateComponent& state ) { return state.getWeather().computeValue( hashed_string( kWetnessValue ) ) >= kRainingWetness; }
+            static bool isRaining( const GameStateComponent& state ) { return state.getWeather().computeValue( hashed_string( kWetnessValue ) ) >= kRainingWetness; }
 
             /** @brief 폰 버튼 이름입니다. `FarmButton` 순서이며 입력 맵 묶음의 액션 이름과 같습니다. */
             static constexpr auto kArrButtonName = makeEnumTable<FarmButton, const utf8*>( "Farm.Tool1", "Farm.Tool2", "Farm.Tool3", "Farm.Tool4", "Farm.SeedPrev", "Farm.SeedNext",
@@ -196,7 +196,7 @@ namespace sw
         }
 
         // 시간은 공유 시계를 공유 상태가 흘린다. 다음 날 2시가 되면 그 위치에서 쓰러져 아침이 된다(체력 반).
-        const SessionStateComponent* pState = SessionStateComponent::findOnOwner( *this );
+        const GameStateComponent* pState = GameStateComponent::findOnOwner( *this );
         if ( pState != nullptr )
         {
             const WorldClock& clock = pState->getClock();
@@ -344,23 +344,23 @@ namespace sw
         }
         _itemCatalog = ItemCatalog{};
         _pCropCatalog->fillItemCatalog( _itemCatalog, _itemStackSize );
-        SessionStateSettings settings;
+        GameStateSettings settings;
         settings._clock._listSeason    = FarmGameModeComponentInternal::makeSeasons();
         settings._clock._secondsPerDay = _secondsPerDay;
         settings._clock._startHour     = _wakeHour;
         settings._clock._daysPerSeason = _daysPerSeason;
         settings._pWeatherCatalog      = _pWeatherCatalog.snapshot(); // 비는 판 상태 날씨다(계절 가중치 · 하루 길이 — 카탈로그 데이터)
-        SessionStateComponent* pState  = SessionStateComponent::openOnOwner( *this, settings );
+        GameStateComponent* pState     = GameStateComponent::openOnOwner( *this, settings );
         if ( pState == nullptr )
             return false; // 범위 밖(하루 길이 · 계절 날 수 등)은 판 상태가 오류를 남겼다
         PlayerProgressSettings progressSettings;
         progressSettings._pItemCatalog       = &_itemCatalog;
         progressSettings._inventorySlotCount = kBagSlotCount;
-        SessionStateInitResult   initResult  = SessionStateInitResult::Refused;
+        GameStateInitResult      initResult  = GameStateInitResult::Refused;
         PlayerProgressComponent* pProgress   = PlayerProgressComponent::openOnOwner( *this, progressSettings, initResult );
         if ( pProgress == nullptr )
             return false;
-        const bool bFresh = initResult == SessionStateInitResult::Fresh;
+        const bool bFresh = initResult == GameStateInitResult::Fresh;
         _field.initialize( kFieldWidth, kFieldHeight, _pCropCatalog.get() );
         _shipment = FarmShippingBin{};
         _listSeed.clear();
@@ -603,7 +603,7 @@ namespace sw
             return;
         }
 
-        SessionStateComponent*   pState    = SessionStateComponent::findOnOwner( *this );
+        GameStateComponent*      pState    = GameStateComponent::findOnOwner( *this );
         PlayerProgressComponent* pProgress = PlayerProgressComponent::findOnOwner( *this );
         FarmActionResult         result    = FarmActionResult::Done;
         switch ( _tool )
@@ -716,7 +716,7 @@ namespace sw
 
     void FarmGameModeComponent::endDay( bool bPassedOut )
     {
-        SessionStateComponent*   pState    = SessionStateComponent::findOnOwner( *this );
+        GameStateComponent*      pState    = GameStateComponent::findOnOwner( *this );
         PlayerProgressComponent* pProgress = PlayerProgressComponent::findOnOwner( *this );
         if ( pState == nullptr || pProgress == nullptr )
             return;
@@ -752,7 +752,7 @@ namespace sw
         if ( isAutoPlayOn() )
             return; // 자동 농부는 씨앗을 하나씩 넘겨 가며 고른다. 그 줄은 로그에 남기지 않는다.
         [[maybe_unused]] const CropDef*                 pCrop     = _pCropCatalog->findCropBySeed( getSelectedSeed() );
-        [[maybe_unused]] const SessionStateComponent*   pState    = SessionStateComponent::findOnOwner( *this );
+        [[maybe_unused]] const GameStateComponent*      pState    = GameStateComponent::findOnOwner( *this );
         [[maybe_unused]] const PlayerProgressComponent* pProgress = PlayerProgressComponent::findOnOwner( *this );
         SW_LOG_INFO_ID( "FarmGameMode.SeedG", "[Farm] seed: %# (have %#, %#G)%#", getSelectedSeed().c_str(), pProgress != nullptr ? pProgress->getInventory().getItemCount( getSelectedSeed() ) : 0,
                         pCrop != nullptr ? pCrop->_seedPrice : 0, pCrop != nullptr && pState != nullptr && pCrop->canGrowIn( pState->getClock().getSeasonName() ) ? "" : " - not this season" );
@@ -770,7 +770,7 @@ namespace sw
 
     void FarmGameModeComponent::logStatus( bool bForce )
     {
-        const SessionStateComponent*   pState    = SessionStateComponent::findOnOwner( *this );
+        const GameStateComponent*      pState    = GameStateComponent::findOnOwner( *this );
         const PlayerProgressComponent* pProgress = PlayerProgressComponent::findOnOwner( *this );
         if ( pState == nullptr || pProgress == nullptr )
             return;

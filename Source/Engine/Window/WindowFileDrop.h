@@ -13,7 +13,7 @@
 
 namespace sw
 {
-    /** @brief 창이 파일 끌어 놓기를 어디까지 받는지입니다(능력 표 — `IWindow::getFileDropSupport`). */
+    /** @brief 창이 파일 끌어 놓기를 어디까지 받는지입니다(능력 표 — `GenericWindow::getFileDropSupport`). */
     enum class WindowFileDropSupport : uint8
     {
         None = 0, ///< 받지 않는다(웹 · Android · 머리 없는 실행 — 창 시스템에 그런 입력이 없거나 아직 잇지 않았다)
@@ -32,7 +32,7 @@ namespace sw
 
     /**
      * @struct WindowFileDropEvent
-     * @brief 창이 내는 끌어 놓기 사건 하나입니다. 처리기(`IWindow::bindFileDropHandler`)가 도는 동안만 산다.
+     * @brief 창이 내는 끌어 놓기 사건 하나입니다. 처리기(`GenericWindow::bindFileDropHandler`)가 도는 동안만 산다.
      */
     struct WindowFileDropEvent
     {

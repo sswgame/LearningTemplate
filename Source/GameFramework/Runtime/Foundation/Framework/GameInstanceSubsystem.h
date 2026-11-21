@@ -9,7 +9,7 @@
 #pragma once
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/MemoryTag.h"
-#include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/Subsystem.h"
 
 namespace sw
 {
@@ -17,7 +17,7 @@ namespace sw
      * @class GameInstanceSubsystem
      * @brief 게임 인스턴스가 소유하는 서브시스템의 기반입니다. 이름(`getSubsystemName`)만 반드시 적습니다.
      */
-    class GameInstanceSubsystem : public ISubsystem
+    class GameInstanceSubsystem : public Subsystem
     {
     public:
         SubsystemInitResult        initializeSubsystem() override { return SubsystemInitResult::Succeeded; }

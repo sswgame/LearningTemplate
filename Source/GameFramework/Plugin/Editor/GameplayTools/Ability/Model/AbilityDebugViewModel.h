@@ -14,7 +14,7 @@
 
 namespace sw::editor
 {
-    /** @brief 대상 고르기 목록의 한 줄입니다(활성 씬에서 `AbilityComponent` 를 가진 오브젝트). */
+    /** @brief 대상 고르기 목록의 한 줄입니다(활성 씬에서 `AbilitySystemComponent` 를 가진 오브젝트). */
     struct AbilityDebugCandidate
     {
         string           _name{};

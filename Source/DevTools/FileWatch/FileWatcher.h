@@ -1,0 +1,152 @@
+/**
+ * @file FileWatcher.h
+ * @brief 디렉터리 변경 감시 인터페이스입니다. 구현은 플랫폼별 헤더(Windows · LinuxKernel — 리눅스 · Android inotify)에 있습니다.
+ * @details 이 플랫폼의 구현을 만드는 `createNative` 는 플랫폼 폴더의 .cpp 가 정의하고 CMake 가 고른다(`sw_filter_platform_sources` — `FileWatch/Windows` · `FileWatch/LinuxKernel` · `FileWatch/Web`).
+ *          고르는 쪽에 플랫폼 `#if` 가 없고, 구현이 없는 플랫폼은 링크가 실패한다(mtime 폴링으로 대신하지 않는다). OS 감시가 없는 플랫폼(웹)은 그 사실을 nullptr 로 답한다.
+ */
+#pragma once
+#include "Core/Concurrency/mutex.h"
+#include "Core/Container/string.h"
+#include "Core/Container/vector.h"
+#include "Core/Delegate/Delegate.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
+#include "Core/Memory/Memory.h"
+
+#include "DevTools/DevToolsAPI.h"
+
+namespace sw
+{
+    // ------------------------------------------------------------------------------
+    // 1) FileChangeEvent — 워커가 큐에 넣고, pollEvents 가 메인 스레드에서 꺼낸다
+    // ------------------------------------------------------------------------------
+    /** @brief 감시 큐에 올라가는 변경 종류입니다. */
+    enum class FileWatcherAction : uint8
+    {
+        Added,
+        Removed,
+        Modified,
+        RenamedOldName,
+        RenamedNewName
+    };
+
+    /** @brief 파일 · 폴더의 변경 하나입니다. */
+    struct FileChangeEvent
+    {
+        FileWatcherAction _action;
+        string            _directory;
+        string            _filename;
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @brief `FileWatcher::pollEvents` 의 결과입니다. 형식에 `[[nodiscard]]` 를 달아 받는 쪽이 감시가 끊긴 것을 버리지 못하게 합니다.
+     * @details 감시 워커는 OS 오류(디렉터리 삭제 · 핸들 오류 · inotify 읽기 실패)로 멈출 수 있습니다. 그때 이벤트가 오지 않을 뿐이면
+     *          받는 쪽은 "변경이 없다" 와 구별하지 못해 핫 리로드가 조용히 꺼집니다. 그래서 끊김을 결과에 실어 한 번 알립니다.
+     */
+    struct [[nodiscard]] FileWatchPollResult
+    {
+        uint32 _eventCount{ 0 };     ///< 꺼낸 이벤트 수(합성 리스캔 포함)
+        bool   _bWatchLost{ false }; ///< 워커가 오류로 멈췄다 — 이 뒤로는 변경이 오지 않는다. 받는 쪽이 감시를 내리고 오류로 알린다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+    };
+} // namespace sw
+
+namespace sw
+{
+    SW_DECLARE_DELEGATE( void, FileChangeDelegate, const FileChangeEvent& );
+
+    // ------------------------------------------------------------------------------
+    // 2) FileWatcher — startWatching → pollEvents(메인) → stopWatching
+    // ------------------------------------------------------------------------------
+    /**
+     * @class FileWatcher
+     * @brief 디렉터리와 파일의 변경을 감시하는 크로스 플랫폼 인터페이스입니다.
+     */
+    class SW_DEVTOOLS_API FileWatcher
+    {
+    public:
+        /** @brief 이 플랫폼의 OS 감시자(Windows ReadDirectoryChangesW · 리눅스 · Android inotify)를 만듭니다. 감시는 `startWatching` 이 시작합니다. OS 감시가 없는 플랫폼(웹)은 nullptr 입니다. 파일 머리말 참고. */
+        [[nodiscard]] static unique_ptr<FileWatcher> createNative();
+
+        /** @brief 가상 소멸자입니다. 감시를 멈추고 워커 스레드를 조인하는 일은 구현 클래스가 합니다. */
+        virtual ~FileWatcher() = default;
+
+        /** @brief 복사를 금지합니다. */
+        FileWatcher( const FileWatcher& ) = delete;
+        /** @brief 복사 대입을 금지합니다. */
+        FileWatcher& operator=( const FileWatcher& ) = delete;
+
+        /**
+         * @brief 디렉터리 감시를 시작합니다.
+         * @param directoryPath 감시할 디렉터리의 절대 · 상대 경로
+         * @param bRecursive 하위 폴더까지 감시할지 여부
+         * @return 감시를 시작했으면 true. 실패하면 이유를 오류 로그로 남깁니다
+         */
+        [[nodiscard]] virtual bool startWatching( string_view directoryPath, bool bRecursive = true ) = 0;
+
+        /**
+         * @brief 큐에 쌓인 파일 변경 이벤트를 꺼냅니다(메인 스레드의 업데이트 루프에서 부르십시오).
+         * @param outListEvent 꺼낸 파일 변경 이벤트 목록
+         * @return 꺼낸 이벤트 수와 감시 끊김 여부
+         * @details **여기서 한 번만 구현합니다**(세 플랫폼이 함께 씁니다). 큐를 비우고, 넘쳤거나 감시가 끊겼으면 합성 리스캔 하나를
+         *          덧붙이고, 표시를 내리는 일입니다. 같은 코드를 세 벌 두면 하나가 조용히 어긋납니다. 끊김은 한 번만 알립니다.
+         */
+        FileWatchPollResult pollEvents( vector<FileChangeEvent>& outListEvent );
+
+        /**
+         * @brief 감시를 끝내고 자원을 해제합니다.
+         */
+        virtual void stopWatching() = 0;
+
+        /** @brief 워커가 돌고 있으면 true 입니다. */
+        virtual bool isWatching() const = 0;
+
+    protected:
+        /**
+         * @brief 폴링하기 전까지 쌓아 둘 변경 이벤트의 상한입니다.
+         * @details `pollEvents` 를 부르는 쪽이 없거나 밀리는 동안(대량 임포트 · 브랜치 전환) 큐가 끝없이 커지지 않게 합니다.
+         *          상한에 걸리면 개별 이벤트 대신 **합성 리스캔 하나**로 합칩니다. `_filename` 이 빈 `Modified` 가 그 약속이고,
+         *          받는 쪽은 그것을 "전부 다시 확인하라" 로 읽습니다. `pushChange` · `pollEvents` 가 모두 여기 있으므로 값도
+         *          하나뿐입니다.
+         */
+        static constexpr size_t _s_kMaxQueuedEvent = 4096;
+        /** @brief 인터페이스만 만들고 감시는 시작하지 않습니다. */
+        FileWatcher() = default;
+
+        /**
+         * @brief 변경 하나를 큐에 넣습니다. 플랫폼 워커 스레드에서 부릅니다.
+         * @details **상한 · 넘침 표시 · 연속 중복 합치기를 여기서 한 번만 합니다.** 플랫폼 구현마다 적으면 한쪽만 빠져도 그 OS 에서
+         *          돌려 보기 전에는 드러나지 않습니다.
+         * @param action 변경 종류
+         * @param directory 이벤트의 디렉터리(보통 감시 루트)
+         * @param filename 디렉터리 기준 상대 경로. 비어 있으면 "전부 다시 확인하라" 는 뜻입니다
+         */
+        void pushChange( FileWatcherAction action, string_view directory, string_view filename );
+
+        /**
+         * @brief 워커가 OS 오류로 감시를 잃었다고 알립니다. 플랫폼 워커 스레드에서 부르고, 부른 뒤 워커는 끝납니다.
+         * @details 오류 로그를 남기고 다음 `pollEvents` 가 `_bWatchLost` 와 합성 리스캔으로 받는 쪽에 전합니다. 워커가 조용히 끝나면
+         *          받는 쪽은 변경이 없는 것과 구별하지 못합니다.
+         * @param reason 감시를 잃은 이유(OS 오류 문구)
+         */
+        void reportWatchLost( string_view reason );
+
+    protected:
+        /** @brief 감시 중인 디렉터리입니다. 합성 리스캔 이벤트에 이 값을 넣습니다. */
+        string _directoryPath;
+
+        /** @brief 큐를 보호합니다. 플랫폼 워커가 넣고, 폴링하는 쪽이 꺼냅니다. */
+        mutex _eventMutex;
+
+        /** @brief 폴링하기 전까지 쌓이는 변경 목록입니다. */
+        vector<FileChangeEvent> _listEventQueue SW_GUARDED_BY( _eventMutex );
+
+        /** @brief 상한에 걸려 개별 이벤트를 버렸다는 표시입니다. 다음 폴링이 합성 리스캔으로 바꿔 전달합니다. */
+        bool _bEventQueueOverflowed SW_GUARDED_BY( _eventMutex ){ false };
+
+        /** @brief 워커가 감시를 잃었다는 표시입니다(`reportWatchLost`). 다음 폴링이 한 번 알리고 내립니다. */
+        bool _bWatchLost SW_GUARDED_BY( _eventMutex ){ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+    };
+} // namespace sw

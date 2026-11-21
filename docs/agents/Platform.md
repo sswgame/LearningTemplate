@@ -48,7 +48,7 @@
 
 ## 화면 · 입력
 
-- 크기 · 회전 · 수명 이벤트는 `CallbackInputWindow::applyPlatformResize` 한 곳으로 모은다. 안전 여백은 `IWindow::getSafeAreaInsets`, 화면 태그(`screen.compact` · `orientation.portrait`) 규칙은 `UIScaleSettings::makeScreenTags` 한 곳.
+- 크기 · 회전 · 수명 이벤트는 `CallbackInputWindow::applyPlatformResize` 한 곳으로 모은다. 안전 여백은 `GenericWindow::getSafeAreaInsets`, 화면 태그(`screen.compact` · `orientation.portrait`) 규칙은 `UIScaleSettings::makeScreenTags` 한 곳.
 - pre-rotation 은 출력 패스 하나(`RenderPassKind::ScreenRotation`)만 돌린다 — 다른 패스는 논리 크기로 그린다. 스왑체인은 회전 · 크기가 정말 바뀌었을 때만 다시 만든다.
 - 터치 대상은 `_minTouchTargetSize`(48)까지 넓혀 고른다(`UIEventRouter::hitTestTouch`).
 - APK: `py -3 -m Scripts android-apk --game <게임>`(값은 `Config/Environment/android_package.json`).

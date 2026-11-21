@@ -5,7 +5,7 @@
 #include "Engine/Reflection/TypeInfo.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
-#include "GameFramework/Runtime/Gameplay/Gimmick/GimmickCircuitComponent.h"
+#include "GameFramework/Runtime/Gameplay/Gimmick/Circuit/GimmickCircuitComponent.h"
 
 namespace sw::editor
 {

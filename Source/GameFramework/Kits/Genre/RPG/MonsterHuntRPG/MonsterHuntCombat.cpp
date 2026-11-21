@@ -9,9 +9,9 @@
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/RPG/MonsterHuntRPG/MonsterHuntCatalog.h"
-#include "GameFramework/Kits/Genre/RPG/MonsterHuntRPG/SkillTree.h"
 #include "GameFramework/Runtime/Character/Combat/Damage/ElementChart.h"
 #include "GameFramework/Runtime/Foundation/GameData/StatBlock.h"
+#include "GameFramework/Runtime/Gameplay/Progression/SkillTree.h"
 
 namespace sw
 {

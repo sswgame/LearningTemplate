@@ -99,7 +99,7 @@ namespace sw::editor
                 for ( const auto& [filePath, assetID] : listReferrer )
                 {
                     string text;
-                    if ( FileUtil::readTextFile( filePath, text ) == false )
+                    if ( FileUtil::readTextFile( FileUtil::toDiskPath( filePath ), text ) == false )
                         return -1; // 이유는 FileUtil 이 남겼다
                     StringBuilder<constant::buffer::kMax256> labelBuilder;
                     labelBuilder.appendFormat( "Content/%#", assetID );
@@ -109,7 +109,7 @@ namespace sw::editor
                 for ( const string& cmakeFile : params.getCMakeFiles() )
                 {
                     string text;
-                    if ( FileUtil::readTextFile( FileUtil::joinPath( projectRoot, cmakeFile ), text ) == false )
+                    if ( FileUtil::readTextFile( FileUtil::toDiskPath( FileUtil::joinPath( projectRoot, cmakeFile ) ), text ) == false )
                         return -1; // 칸 목록이 적은 파일이 없으면 목록이 틀린 것이다
                     problemCount += validateFile( params, assets, cmakeFile, text, AssetReferenceSyntax::CMake );
                     ++scannedCount;

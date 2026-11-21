@@ -24,7 +24,7 @@
 #include "Engine/Automation/AutomationResult.h"
 #include "Engine/Automation/Scenario/AutomationReadiness.h"
 #include "Engine/Automation/Scenario/AutomationScenario.h"
-#include "Engine/Automation/Scenario/AutomationStepContext.h"
+#include "Engine/Automation/Scenario/IAutomationStepContext.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Input/Virtual/VirtualInputScript.h"
 
@@ -125,7 +125,7 @@ namespace sw
      *          판정(비교 · 실패 · 로그 게이트)은 `AutomationEvaluator`, 진행 상태(프레임 · 단계 순번 · 대기 · 시한)는 `AutomationStepTimeline`, 보고 쓰기는 `AutomationReportWriter` 가 값 멤버로 맡는다 —
      *          실행기는 시작 · 프레임 · 끝맺음을 잇는 얇은 몸통이다.
      */
-    class SW_DEVTOOLS_API AutomationRunner final : public AutomationStepContext
+    class SW_DEVTOOLS_API AutomationRunner final : public IAutomationStepContext
     {
     public:
         /** @param pLogPolicy 세션 수명의 로그 판정(`AutomationSession::getLogPolicy`) — 판정이 빌려 쓴다. */
@@ -186,7 +186,7 @@ namespace sw
         /** @brief 지표 값 줄들입니다(`darkFraction(0,0,1,0.12) park.ppm = 0.034`). 보고에 적습니다. */
         const vector<string>& getMetricLines() const { return _evaluator.getMetricLines(); }
 
-        // --- 단계 문맥(`AutomationStepContext`): 단계 함수가 쓰는 좁은 면입니다 ---
+        // --- 단계 문맥(`IAutomationStepContext`): 단계 함수가 쓰는 좁은 면입니다 ---
 
         /** @brief 단계 처리기가 실패를 적습니다(시나리오는 계속 진행하고 끝에서 Failed 가 됩니다). */
         void recordFailure( const AutomationStep& step, string_view message ) override;

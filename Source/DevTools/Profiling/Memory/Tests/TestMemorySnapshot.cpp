@@ -190,20 +190,20 @@ SW_TEST_CASE( MemorySnapshotTest, SheetTableSplitsBytesAndWritesUnderKoreanFolde
     SW_EXPECT_EQUAL( string( "1.000" ), MemorySnapshotExport::formatMegabytes( 1048576 ) );
 
     const string folder = test::makeScratchPath( "메모리 내보내기" );
-    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( folder ) );
+    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( folder ) ) );
     const expected<MemoryExportResult> result = MemorySnapshotExport::writeSnapshot( snapshot, folder );
     SW_REQUIRE_TRUE( result.has_value() );
     SW_EXPECT_EQUAL( size_t{ 1 + kMemorySheetCount }, result->_listFile.size() );
 
     string text;
-    SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::joinPath( folder, "Assets.csv" ), text ) );
+    SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::toDiskPath( FileUtil::joinPath( folder, "Assets.csv" ) ), text ) );
     const vector<string> listLine = splitCSVLines( text );
     SW_REQUIRE_EQUAL( size_t{ 3 }, listLine.size() );
     SW_EXPECT_EQUAL( string( "Kind,Path,Total (bytes),Total (MB),CPU (bytes),CPU (MB),GPU (bytes),GPU (MB),References" ), listLine[0] );
     SW_EXPECT_TRUE( StringUtil::contains( listLine[2], "\"game/b, \"\"quoted\"\".mesh\"" ) );
 
     vector<uint8> listByte;
-    SW_REQUIRE_TRUE( FileUtil::readFile( FileUtil::joinPath( folder, "Tags.csv" ), listByte ) );
+    SW_REQUIRE_TRUE( FileUtil::readFile( FileUtil::toDiskPath( FileUtil::joinPath( folder, "Tags.csv" ) ), listByte ) );
     SW_REQUIRE_TRUE( listByte.size() >= 3 );
     SW_EXPECT_TRUE( listByte[0] == 0xEF && listByte[1] == 0xBB && listByte[2] == 0xBF ); // readTextFile 은 BOM 을 떼므로 바이트로 본다
 }

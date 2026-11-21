@@ -5,7 +5,7 @@
  *          켜는 일은 개발 도구가 기동 확장으로 한다(배포 호스트는 DevTools 를 링크하지 않아 늘 꺼져 있다).
  */
 #pragma once
-#include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/Subsystem.h"
 
 namespace sw
 {
@@ -14,7 +14,7 @@ namespace sw
      * @brief 기동 단계 서브시스템입니다 — 초기화 때 `-gv_stateHashHistory` 가 0 보다 크면 엔진 서비스 `StateHashHistory` 의 용량을 그만큼 둡니다.
      * @details 서비스 범위는 기동 단계보다 먼저 서므로 초기화 때 이력이 이미 있다. 전용 서버는 자기 틱으로, 클라이언트 App 은 서버가 알린 틱으로 남긴다(`StateHashHistory::recordActiveScene`).
      */
-    class StateHashRecorder final : public ISubsystem
+    class StateHashRecorder final : public Subsystem
     {
     public:
         static constexpr const utf8* kSubsystemName = "StateHashRecorder";

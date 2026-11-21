@@ -64,7 +64,7 @@ namespace sw::editor
         /** @brief 원소 하나의 속성 값입니다. 속성이 없으면 nullptr 입니다(포인터는 다음 편집까지 유효합니다). */
         const string* findCellValue( int32 elementIndex, string_view column ) const;
         /** @brief 부모 파일을 읽는 곳을 줍니다(`load` 전에). 없으면 상속을 보지 않고 원문만 봅니다. 소유하지 않습니다. */
-        void setInheritanceSource( IDataInheritanceSource* pSource ) { _inheritance.setSource( pSource ); }
+        void setInheritanceSource( DataInheritanceSource* pSource ) { _inheritance.setSource( pSource ); }
         /** @brief 원소가 칸 @p column 을 적지 않으면 물려받을 값입니다(카탈로그 항목 상속). 없으면 nullptr 이고, 포인터는 다음 편집까지 유효합니다. */
         const utf8* findInheritedValue( int32 elementIndex, string_view column ) const;
         /**

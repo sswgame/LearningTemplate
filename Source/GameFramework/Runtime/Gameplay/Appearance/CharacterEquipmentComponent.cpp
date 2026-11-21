@@ -23,7 +23,7 @@
 #include "GameFramework/Runtime/Gameplay/Appearance/CustomizationSchema.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/ItemVisual.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
-#include "GameFramework/Runtime/Gameplay/Inventory/WorldItemComponent.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/PickupComponent.h"
 
 namespace sw
 {
@@ -380,18 +380,18 @@ namespace sw
                 CharacterEquipmentComponent* pEquipment = findEquipment( listArgument[0], outReply );
                 if ( pEquipment == nullptr )
                     return false;
-                GameObject*         pObject = engine::findActiveObject( hashed_string( listArgument[1] ) );
-                WorldItemComponent* pItem   = pObject != nullptr ? pObject->getComponent<WorldItemComponent>() : nullptr;
+                GameObject*      pObject = engine::findActiveObject( hashed_string( listArgument[1] ) );
+                PickupComponent* pItem   = pObject != nullptr ? pObject->getComponent<PickupComponent>() : nullptr;
                 if ( pItem == nullptr )
                 {
                     StringBuilder<constant::buffer::kMax256> replyBuilder;
-                    replyBuilder.appendFormat( "no object named '%#' with a WorldItemComponent", listArgument[1] );
+                    replyBuilder.appendFormat( "no object named '%#' with a PickupComponent", listArgument[1] );
                     outReply = string( replyBuilder.view() );
                     return false;
                 }
                 if ( pItem->pickUp( pEquipment->getBagForTrade() ) == false )
                 {
-                    SW_LOG_INFO_ID( "WorldItem.PickUpRefused", "The bag of %# has no room for %# - it stays on the ground", listArgument[0].c_str(), listArgument[1].c_str() );
+                    SW_LOG_INFO_ID( "Pickup.PickUpRefused", "The bag of %# has no room for %# - it stays on the ground", listArgument[0].c_str(), listArgument[1].c_str() );
                     StringBuilder<constant::buffer::kMax256> replyBuilder;
                     replyBuilder.appendFormat( "the bag has no room for %#", listArgument[1] );
                     outReply = string( replyBuilder.view() );

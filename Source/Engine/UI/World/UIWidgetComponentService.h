@@ -9,8 +9,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Ray.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/ServiceSlot.h"
+#include "Core/Subsystem/Subsystem.h"
 
 #include "Engine/Foundation/EngineSubsystemHost.h"
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
@@ -36,13 +36,13 @@ namespace sw
      *          그리기 뒤(`onUpdateAfterPaint`, 앵커 표를 물리 픽셀로 내고 World 트리를 칠한다).
      *          마커 화면(HUD 레이어, 캔버스 패널 루트, 클릭을 막지 않음)은 처음 붙일 때 화면 스택에 올리고 마지막 위젯을 뗄 때 닫는다. 게임 스레드에서만 쓴다.
      */
-    class SW_API UIWidgetComponentService final : public ISubsystem
+    class SW_API UIWidgetComponentService final : public Subsystem
     {
     public:
         UIWidgetComponentService();
         ~UIWidgetComponentService() override;
 
-        // ISubsystem — 화면 스택에 의존한다. 종료는 등록한 컴포넌트가 이 서비스를 잊게 하고(컴포넌트가 더 오래 남을 수 있다) 마커 화면을 닫는다.
+        // Subsystem — 화면 스택에 의존한다. 종료는 등록한 컴포넌트가 이 서비스를 잊게 하고(컴포넌트가 더 오래 남을 수 있다) 마커 화면을 닫는다.
         /** @brief 서브시스템 이름입니다. */
         static constexpr const utf8* kSubsystemName = "UIWidgetComponents";
         SubsystemInitResult          initializeSubsystem() override;

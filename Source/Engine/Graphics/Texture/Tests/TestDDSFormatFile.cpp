@@ -53,7 +53,7 @@ namespace
 SW_TEST_CASE( DDSFormatFileTest, MatchesTheLoaderTables )
 {
     string text;
-    SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::joinPath( ProcessRoots::get()._project.str(), "Config/Editor/DdsFormats.json" ), text ) );
+    SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::toDiskPath( FileUtil::joinPath( ProcessRoots::get()._project.str(), "Config/Editor/DdsFormats.json" ) ), text ) );
     JSONDocument document;
     SW_REQUIRE_TRUE( document.parse( text, "DdsFormats.json" ) );
     const JSONValue formats = document.getRoot().get( "dxgi_formats" );

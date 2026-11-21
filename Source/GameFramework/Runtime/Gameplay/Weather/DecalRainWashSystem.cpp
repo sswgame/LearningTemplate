@@ -10,7 +10,7 @@
 #include "Engine/Visual/Component/DecalComponent.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/FrameSystemUtil.h"
-#include "GameFramework/Runtime/Gameplay/SessionState/SessionStateComponent.h"
+#include "GameFramework/Runtime/Gameplay/GameState/GameStateComponent.h"
 
 namespace sw
 {
@@ -19,7 +19,7 @@ namespace sw
         struct DecalRainWashSystemInternal
         {
             static constexpr uint32 kAllLayers = 0xFFFFFFFFu;
-            /** @brief 강수 날씨 값 이름 — 캐릭터 노출(`SurfaceExposureComponent::_precipitationValue` 기본)과 같은 칸이다. 이름은 생성자가 만든다(정적 초기화에는 이름 풀이 없다). */
+            /** @brief 강수 날씨 값 이름 — 캐릭터 노출(`CharacterWetnessComponent::_precipitationValue` 기본)과 같은 칸이다. 이름은 생성자가 만든다(정적 초기화에는 이름 풀이 없다). */
             static constexpr const utf8* kPrecipitationValue = "wetness";
         };
     } // namespace
@@ -74,8 +74,8 @@ namespace sw
     void DecalRainWashSystem::runWashPass( GameObjectManager& manager, float32 seconds )
     {
         // 비: 날씨 값 × 하늘이 열렸는지. 날씨가 없는 씬은 비가 없다(판 상태가 날씨를 열지 않았다).
-        const SessionStateComponent* pSession      = SessionStateComponent::findOpen( &manager );
-        const float32                precipitation = pSession != nullptr ? MathUtil::max( 0.0f, pSession->getWeather().computeValue( _precipitationValue ) ) : 0.0f;
+        const GameStateComponent* pSession      = GameStateComponent::findOpen( &manager );
+        const float32             precipitation = pSession != nullptr ? MathUtil::max( 0.0f, pSession->getWeather().computeValue( _precipitationValue ) ) : 0.0f;
         if ( precipitation <= 0.0f || seconds <= 0.0f )
             return;
         // 씻김이 데칼을 지울 수 있다 — 도는 목록은 핸들 사본이라 지워진 데칼을 다시 찾지 않는다.

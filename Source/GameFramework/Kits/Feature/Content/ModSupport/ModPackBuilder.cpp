@@ -35,7 +35,7 @@ namespace sw
     bool ModPackBuilder::buildFromFolder( string_view contentFolder, string_view packPath, const ModSupportSettings& settings )
     {
         vector<string> listFilePath;
-        if ( FileUtil::collectFiles( contentFolder, {}, listFilePath, true ) == false )
+        if ( FileUtil::collectFiles( FileUtil::toDiskPath( contentFolder ), {}, listFilePath, true ) == false )
         {
             SW_LOG_ERROR_ID( "ModPackBuilder.CannotList", "Mod source folder '%#' could not be listed", contentFolder );
             return false;
@@ -65,7 +65,7 @@ namespace sw
                 return false;
             }
             uint64 size = 0;
-            if ( FileUtil::tryGetFileSize( filePath, size ) == false || size > settings._maxEntryBytes )
+            if ( FileUtil::tryGetFileSize( FileUtil::toDiskPath( filePath ), size ) == false || size > settings._maxEntryBytes )
             {
                 SW_LOG_ERROR_ID( "ModPackBuilder.FileTooLarge", "Mod source file '%#' is unreadable or larger than %# bytes", relativePath, settings._maxEntryBytes );
                 return false;
@@ -81,7 +81,7 @@ namespace sw
         {
             string        relativePath;
             vector<uint8> bytes;
-            if ( FileUtil::makeRelativePath( contentFolder, ordered.second, relativePath ) == false || FileUtil::readFile( ordered.second, bytes ) == false )
+            if ( FileUtil::makeRelativePath( contentFolder, ordered.second, relativePath ) == false || FileUtil::readFile( FileUtil::toDiskPath( ordered.second ), bytes ) == false )
             {
                 SW_LOG_ERROR_ID( "ModPackBuilder.CannotRead", "Mod source file '%#' could not be read", ordered.second );
                 return false;
@@ -121,7 +121,7 @@ namespace sw
             }
             string        relativePath;
             vector<uint8> bytes;
-            if ( FileUtil::makeRelativePath( contentFolder, filePath, relativePath ) == false || FileUtil::readFile( filePath, bytes ) == false )
+            if ( FileUtil::makeRelativePath( contentFolder, filePath, relativePath ) == false || FileUtil::readFile( FileUtil::toDiskPath( filePath ), bytes ) == false )
             {
                 SW_LOG_ERROR_ID( "ModPackBuilder.CannotRead", "Mod source file '%#' could not be read", filePath );
                 return false;

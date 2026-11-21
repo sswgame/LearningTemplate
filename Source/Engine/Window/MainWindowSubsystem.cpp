@@ -8,7 +8,7 @@
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemHost.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
-#include "Engine/Window/IWindow.h"
+#include "Engine/Window/GenericWindow.h"
 
 namespace sw
 {
@@ -20,7 +20,7 @@ namespace sw
         return ( ProcessEnvironment::tryReadNonEmpty( "SW_SHOW_WINDOWS", showWindows ) && showWindows == "1" ) == false;
     }
 
-    IWindow* MainWindowSubsystem::findMainWindow()
+    GenericWindow* MainWindowSubsystem::findMainWindow()
     {
         const MainWindowSubsystem* const pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
         return pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
@@ -69,10 +69,10 @@ namespace sw
 
     void MainWindowSubsystem::applyWindowTitle( const utf8* pTitle )
     {
-        _window->setTitle( pTitle ); // 창 제목을 거는 유일한 곳(IWindow 의 friend)
+        _window->setTitle( pTitle ); // 창 제목을 거는 유일한 곳(GenericWindow 의 friend)
     }
 
-    bool MainWindowSubsystem::attach( unique_ptr<IWindow>& window )
+    bool MainWindowSubsystem::attach( unique_ptr<GenericWindow>& window )
     {
         if ( window == nullptr || _window != nullptr )
             return false;

@@ -17,7 +17,7 @@
 
 #include "DevTools/AssetReload/ReloadSource.h"
 #include "DevTools/AssetReload/ReloadTracker.h"
-#include "DevTools/FileWatch/IFileWatcher.h"
+#include "DevTools/FileWatch/FileWatcher.h"
 #include "DevTools/ModuleReload/LiveReload/ModuleCallGuard.h"
 #include "DevTools/ModuleReload/LiveReload/ModuleCompiler.h"
 #include "DevTools/ModuleReload/LiveReload/ModuleLibraryPatch.h"
@@ -100,7 +100,7 @@ namespace sw
         : _mapModule{}
         , _dependencyGraph{}
         , _listSharedModule{}
-        , _fileWatcher{ IFileWatcher::createNative() }
+        , _fileWatcher{ FileWatcher::createNative() }
         , _buildStampPath{}
         , _seenBuildToken{}
         , _buildMutex{}
@@ -212,7 +212,7 @@ namespace sw
         }
 
         const string modulePath = ModuleLibraryUtil::findModuleLibraryPath( moduleName );
-        if ( FileUtil::exists( modulePath ) == false )
+        if ( FileUtil::exists( FileUtil::toDiskPath( modulePath ) ) == false )
         {
             SW_LOG_INFO_ID( "LiveReloadManager.SharedModuleNotBuilt", "Shared module %# is not built (Bin/Modules · Bin) — nothing links it", moduleName );
             return true;
@@ -265,7 +265,7 @@ namespace sw
         }
 
         const string moduleDir = ModuleLibraryUtil::getModuleDirectory();
-        if ( FileUtil::isDirectory( moduleDir ) == false )
+        if ( FileUtil::isDirectory( FileUtil::toDiskPath( moduleDir ) ) == false )
         {
             SW_LOG_ERROR_ID( "LiveReloadManager.ModuleDirectoryDoesNot", "Module directory does not exist: %#", moduleDir );
             return false;
@@ -319,7 +319,7 @@ namespace sw
         SW_LOG_INFO_ID( "LiveReload.ManualQueued", "Manual Live Reload queued for %# (debounce %#ms)...",
                         moduleName, kMtimeDebounceMs );
         context._debounceStamp = FileStamp{};
-        (void)FileUtil::getFileStamp( context._originalModulePath, context._debounceStamp ); // 빌드 도중이라 없으면 빈 도장 - 다음 확인에서 도장이 달라 다시 기다린다
+        (void)FileUtil::getFileStamp( FileUtil::toDiskPath( context._originalModulePath ), context._debounceStamp ); // 빌드 도중이라 없으면 빈 도장 - 다음 확인에서 도장이 달라 다시 기다린다
         context._debounceTimer.resetTimer();
         context._debounceTimer.startTimer();
         context._bMtimeDebouncing = true;
@@ -416,7 +416,7 @@ namespace sw
             {
                 ModuleRecord& context = *pContext;
                 FileStamp     sourceStamp{};
-                if ( FileUtil::getFileStamp( context._originalModulePath, sourceStamp ) == false || sourceStamp == context._loadedSourceStamp )
+                if ( FileUtil::getFileStamp( FileUtil::toDiskPath( context._originalModulePath ), sourceStamp ) == false || sourceStamp == context._loadedSourceStamp )
                     continue; // 없으면(빌드가 아직 쓰는 중) 바뀐 것으로 보지 않는다
                 SW_LOG_TRACE_ID( "LiveReloadManager.ModuleBuildStampChanged", "Module build stamp changed — queuing reload for %#", context._moduleName );
                 context._bPendingReload = true;
@@ -434,7 +434,7 @@ namespace sw
                 continue;
 
             FileStamp  sourceStamp{};
-            const bool bReadable = FileUtil::getFileStamp( context._originalModulePath, sourceStamp );
+            const bool bReadable = FileUtil::getFileStamp( FileUtil::toDiskPath( context._originalModulePath ), sourceStamp );
             // 바깥 링커가 쓰는 중인지는 알릴 길이 없어 조용해지기를 시간 창(`kMtimeDebounceMs`)으로 기다린다 — 바깥 도구의 쓰기만 시간으로 거르는 자리.
             if ( bReadable == false || sourceStamp != context._debounceStamp ) // 없으면(빌드가 쓰는 중) 더 기다린다
             {
@@ -669,7 +669,7 @@ namespace sw
     bool LiveReloadManager::readBuildToken( string_view stampPath, string& outToken )
     {
         outToken.clear();
-        return stampPath.empty() == false && FileUtil::readOptionalTextFile( stampPath, outToken ) == OptionalFileRead::Read && outToken.empty() == false;
+        return stampPath.empty() == false && FileUtil::readOptionalTextFile( FileUtil::toDiskPath( stampPath ), outToken ) == OptionalFileRead::Read && outToken.empty() == false;
     }
 
     bool LiveReloadManager::prepareShadowCopy( ModuleRecord& context, PreparedShadow& outShadow )
@@ -677,7 +677,7 @@ namespace sw
         outShadow = {};
         BLOCK( "Check Original Module" )
         {
-            if ( FileUtil::exists( context._originalModulePath ) == false )
+            if ( FileUtil::exists( FileUtil::toDiskPath( context._originalModulePath ) ) == false )
             {
                 SW_LOG_ERROR_ID( "LiveReloadManager.OriginalModuleNotFound", "Original module not found: %#", context._originalModulePath.c_str() );
                 return false;
@@ -685,7 +685,7 @@ namespace sw
         }
 
         outShadow._sourceStamp = FileStamp{};
-        if ( FileUtil::getFileStamp( context._originalModulePath, outShadow._sourceStamp ) == false )
+        if ( FileUtil::getFileStamp( FileUtil::toDiskPath( context._originalModulePath ), outShadow._sourceStamp ) == false )
             SW_LOG_WARNING_ID( "LiveReloadManager.CannotReadTimeNext", "Cannot read the time of %# - the next build stamp check reloads it again", context._originalModulePath );
 
         BLOCK( "Create Shadow Copy" )

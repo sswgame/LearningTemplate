@@ -140,7 +140,7 @@ namespace sw
             [[nodiscard]] static expected<void> readLoad( const string& loadPath, LoadBotScenario& inoutScenario )
             {
                 string text;
-                if ( FileUtil::readTextFile( loadPath, text ) == false )
+                if ( FileUtil::readTextFile( FileUtil::toDiskPath( loadPath ), text ) == false )
                     return unexpected( Error{ ErrorKind::NotFound, "cannot read the load declaration", loadPath } );
                 AutomationScenario declaration;
                 if ( const expected<void> parsed = declaration.parse( text, loadPath ); parsed.has_value() == false )
@@ -299,7 +299,7 @@ namespace sw
                     const expected<string> report = metrics.formatJSON( runner.getScenario(), elapsedMs );
                     if ( report.has_value() == false )
                         SW_LOG_ERROR_ID( "OnlineLoadBot.ReportNotWritable", "OnlineLoadBot: report could not be written as JSON: %# (%#)", report.error().message(), report.error().detail() );
-                    bReportFailed = report.has_value() == false || FileUtil::writeTextFile( options._reportPath, *report ) == false;
+                    bReportFailed = report.has_value() == false || FileUtil::writeTextFile( FileUtil::toDiskPath( options._reportPath ), *report ) == false;
                 }
                 if ( bReportFailed )
                     SW_LOG_ERROR_ID( "OnlineLoadBot.OnlineLoadBotCannotWriteReport", "OnlineLoadBot: cannot write report '%#'", options._reportPath );

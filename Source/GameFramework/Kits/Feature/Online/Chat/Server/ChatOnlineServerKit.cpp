@@ -74,7 +74,7 @@ namespace sw
          * @class ChatOnlineServerKit
          * @brief 채팅 키트의 서버 조립입니다.
          */
-        class ChatOnlineServerKit final : public OnlineServerKit<OnlineKitRequired<IAccountDirectory>, OnlineKitOptional<const IAccountBlockList, IAccountPresence>>
+        class ChatOnlineServerKit final : public OnlineServerKit<OnlineKitRequired<IAccountDirectory>, OnlineKitOptional<const IAccountBlockList, AccountPresence>>
         {
         public:
             ChatOnlineServerKit()
@@ -119,7 +119,7 @@ namespace sw
                 ChatServiceDependencies dependencies;
                 dependencies._pStore     = context._pStore;
                 dependencies._pBus       = context._pBus;
-                dependencies._pPresence  = interfaces.find<IAccountPresence>();
+                dependencies._pPresence  = interfaces.find<AccountPresence>();
                 dependencies._pDirectory = &interfaces.get<IAccountDirectory>(); // 필수 키트라 정렬이 없으면 기동 오류로 막았다
                 dependencies._pPolicy    = _policy.get();
                 dependencies._serverID   = context._serverID;

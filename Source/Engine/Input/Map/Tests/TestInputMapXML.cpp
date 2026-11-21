@@ -31,7 +31,7 @@ namespace
     sw::string saveText( const sw::InputMap& map, const sw::string& path )
     {
         sw::string text;
-        SW_EXPECT_TRUE( sw::InputRemapSerializer::save( map, path ) && sw::FileUtil::readTextFile( path, text ) );
+        SW_EXPECT_TRUE( sw::InputRemapSerializer::save( map, path ) && sw::FileUtil::readTextFile( sw::FileUtil::toDiskPath( path ), text ) );
         return text;
     }
 } // namespace
@@ -68,11 +68,11 @@ SW_TEST_CASE( InputMapXMLTest, RejectsUnknownNamesAndProperties )
     SW_EXPECT_LOG( "InputRemapSerializer.UserBindingsInvalidAttribute" );
     const sw::string brokenBinds   = sw::test::makeScratchPath( "brokenbinds.xml" );
     const sw::string brokenElement = sw::test::makeScratchPath( "brokenelement.xml" );
-    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( brokenBinds, "<UserBindings><action name=\"Jump\">"
-                                                               "<bind source=\"Key\" code=\"NoSuchKey\" layer=\"Gameplay\"/>"
-                                                               "<bind source=\"Key\" code=\"Space\" colour=\"red\"/>"
-                                                               "</action></UserBindings>" ) );
-    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( brokenElement, "<UserBindings><action name=\"Jump\"><wiggle/></action></UserBindings>" ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::toDiskPath( brokenBinds ), "<UserBindings><action name=\"Jump\">"
+                                                                                           "<bind source=\"Key\" code=\"NoSuchKey\" layer=\"Gameplay\"/>"
+                                                                                           "<bind source=\"Key\" code=\"Space\" colour=\"red\"/>"
+                                                                                           "</action></UserBindings>" ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::toDiskPath( brokenElement ), "<UserBindings><action name=\"Jump\"><wiggle/></action></UserBindings>" ) );
     sw::InputMap map;
     SW_EXPECT_FALSE( sw::InputRemapSerializer::load( map, brokenBinds ) );
     SW_EXPECT_FALSE( sw::InputRemapSerializer::load( map, brokenElement ) ); // 모르는 원소가 있는 액션은 통째로 읽지 않는다

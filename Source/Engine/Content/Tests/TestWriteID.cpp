@@ -57,22 +57,22 @@ SW_TEST_CASE( WriteIDTest, NewNamesUnderContentMustBeLowercase )
     upperFileBuilder.appendFormat( "%#/scratch/write_id_test_not_yet/Upper.txt", content );
     const string upperFile = string( upperFileBuilder.view() );
     SW_EXPECT_LOG( "File.CreateRefused" );
-    SW_EXPECT_FALSE( FileUtil::writeTextFile( upperFile, "x" ) );
-    SW_EXPECT_FALSE( FileUtil::exists( upperFile ) );
+    SW_EXPECT_FALSE( FileUtil::writeTextFile( FileUtil::toDiskPath( upperFile ), "x" ) );
+    SW_EXPECT_FALSE( FileUtil::exists( FileUtil::toDiskPath( upperFile ) ) );
 
     // 폴더를 만드는 입구도 같은 규칙이다 — 대문자 이름의 빈 폴더가 생기지 않는다. 소문자 폴더는 만든다.
     StringBuilder<constant::buffer::kMax512> upperFolderBuilder;
     upperFolderBuilder.appendFormat( "%#/scratch/write_id_test_not_yet/UpperFolder", content );
     const string upperFolder = string( upperFolderBuilder.view() );
     SW_EXPECT_LOG( "File.CreateRefused" );
-    SW_EXPECT_FALSE( FileUtil::ensureDirectoryExists( upperFolder ) );
-    SW_EXPECT_FALSE( FileUtil::isDirectory( upperFolder ) );
+    SW_EXPECT_FALSE( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( upperFolder ) ) );
+    SW_EXPECT_FALSE( FileUtil::isDirectory( FileUtil::toDiskPath( upperFolder ) ) );
     StringBuilder<constant::buffer::kMax512> lowerFolder;
     lowerFolder.appendFormat( "%#/scratch/write_id_test_not_yet/lower_folder", content );
-    SW_EXPECT_TRUE( FileUtil::ensureDirectoryExists( lowerFolder.view() ) );
+    SW_EXPECT_TRUE( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( lowerFolder.view() ) ) );
     StringBuilder<constant::buffer::kMax512> testFolder;
     testFolder.appendFormat( "%#/scratch/write_id_test_not_yet", content );
-    (void)FileUtil::removeDirectory( testFolder.view() ); // 못 지우면 경고만 남는다 — 다음 실행이 같은 이름을 다시 쓴다
+    (void)FileUtil::removeDirectory( FileUtil::toDiskPath( testFolder.view() ) ); // 못 지우면 경고만 남는다 — 다음 실행이 같은 이름을 다시 쓴다
 }
 
 SW_TEST_CASE( WriteIDTest, RelativeKeyWritesTheFileReadingPicked )
@@ -116,6 +116,6 @@ SW_TEST_CASE( WriteIDTest, BareDomainIsTheDomainRoot )
     // 도메인 이름만인 id 는 그 도메인 루트다(에디터의 도메인 폴더 - 콘텐츠 브라우저 루트). `game` 은 팩 이름까지가 도메인이다.
     const optional<AbsolutePath> path = engine::getSubsystem<AssetPaths>().toDiskPath( "engine" );
     SW_REQUIRE_TRUE( path.has_value() );
-    SW_EXPECT_TRUE( FileUtil::isDirectory( path->str() ) );
+    SW_EXPECT_TRUE( FileUtil::isDirectory( *path ) );
     SW_EXPECT_EQUAL( FileUtil::joinPath( ProcessRoots::get()._content.str(), "engine" ), path->str() );
 }

@@ -43,15 +43,15 @@ namespace sw::editor
             return false;
         const string& place = resolved->str();
         // 폴더를 가리키면 그 안의 실행 파일, 파일을 가리키면 그대로. 폴더를 먼저 본다 — `exists` 는 폴더에도 true 다.
-        if ( FileUtil::isDirectory( place ) )
+        if ( FileUtil::isDirectory( FileUtil::toDiskPath( place ) ) )
         {
             const string inFolder = FileUtil::joinPath( place, getViewerFileName() );
-            if ( FileUtil::exists( inFolder ) == false )
+            if ( FileUtil::exists( FileUtil::toDiskPath( inFolder ) ) == false )
                 return false;
             outPath = inFolder;
             return true;
         }
-        if ( FileUtil::exists( place ) == false )
+        if ( FileUtil::exists( FileUtil::toDiskPath( place ) ) == false )
             return false;
         outPath = place;
         return true;

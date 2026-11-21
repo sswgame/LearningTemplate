@@ -20,8 +20,8 @@
 #include "Core/Log/LogOnce.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Name/hashed_string.h"
-#include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/ServiceSlot.h"
+#include "Core/Subsystem/Subsystem.h"
 
 #include "Engine/Renderer/Extension/RenderExtension.h"
 
@@ -37,7 +37,7 @@ namespace sw
      * @brief 엔진 서비스 범위의 서브시스템입니다. 엔진이 소유하므로 모듈이 내려가도 사라지지 않습니다.
      * @details 렌더러는 `engine::findSubsystem<RenderExtensionRegistry>()`, 모듈은 `game::findSubsystem<RenderExtensionRegistry>()` 로 찾습니다(아래 선택 칸, 등록은 GameVisible).
      */
-    class SW_API RenderExtensionRegistry : public ISubsystem
+    class SW_API RenderExtensionRegistry : public Subsystem
     {
     public:
         /** @brief 서브시스템 이름입니다. 초기화하거나 종료할 것이 없고, 수명만 컬렉션이 정합니다. */

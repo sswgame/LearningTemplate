@@ -9,7 +9,7 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/string.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/Subsystem.h"
 
 #include "DevTools/DevToolsAPI.h"
 
@@ -29,7 +29,7 @@ namespace sw
      * @brief 시작 인자 사진의 차례(대기 프레임 · 화면 자리 잡음 · 간격 · 장 수)를 정해 맡기고, 종류별 끝 · 실패를 적어 `-gv_screenshotQuit` 의 종료 코드를 냅니다.
      * @details `expectCapture` · `reportCaptureFinished` 는 어느 스레드에서 불러도 된다(에디터의 쓰기 워커가 부른다). `update` 는 게임 스레드의 프레임 끝에서만 부른다.
      */
-    class SW_DEVTOOLS_API StartupCaptureSubsystem final : public ISubsystem
+    class SW_DEVTOOLS_API StartupCaptureSubsystem final : public Subsystem
     {
     public:
         static constexpr const utf8*               kSubsystemName      = "StartupCapture";

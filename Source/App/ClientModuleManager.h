@@ -46,7 +46,7 @@ namespace sw
          * @param pRenderDriver 렌더러 창구(워커 비우기용)
          * @param bEnableEditor 에디터 모드 여부
          */
-        [[nodiscard]] bool initialize( ILiveReloadManager* pLiveReloadManager, RHI* pRHI, IWindow* pWindow, IEngineRenderDriver* pRenderDriver, bool bEnableEditor );
+        [[nodiscard]] bool initialize( ILiveReloadManager* pLiveReloadManager, RHI* pRHI, GenericWindow* pWindow, IEngineRenderDriver* pRenderDriver, bool bEnableEditor );
         /** @brief 에디터 모듈 라이브러리의 ABI · API 표 심볼 이름입니다. 인스턴스 경로와 헤드리스 작업(`EditorModuleHeadlessTasks`)이 같이 씁니다. */
         [[nodiscard]] static const ModuleAPISymbols& getModuleSymbols();
 

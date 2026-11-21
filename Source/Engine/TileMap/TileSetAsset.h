@@ -264,7 +264,7 @@ namespace sw
     /**
      * @brief 타일셋을 경로마다 한 벌 나눠 줍니다("TileSetAsset", 인스턴스화는 `TileSetAsset.cpp`).
      * @details 다시 읽기는 떼어 낸다(`Detach`) — 쥔 쪽은 칸마다 브러시 번호를 지어 두므로 브러시 목록이 제자리에서 바뀌면 번호가 어긋난다.
-     *          쥔 쪽(`TileMapRendererComponent`)은 다시 읽은 횟수가 바뀌면 새 객체를 받아 번호 · 배치를 다시 짓는다(유니티 Tile Palette · Godot TileSet 리소스 한 벌, 기억에 의존).
+     *          쥔 쪽(`TileMapComponent`)은 다시 읽은 횟수가 바뀌면 새 객체를 받아 번호 · 배치를 다시 짓는다(유니티 Tile Palette · Godot TileSet 리소스 한 벌, 기억에 의존).
      */
     SW_DECLARE_SHARED_ASSET_CACHE( SW_API_EXTERN_TEMPLATE, TileSetAsset );
 } // namespace sw

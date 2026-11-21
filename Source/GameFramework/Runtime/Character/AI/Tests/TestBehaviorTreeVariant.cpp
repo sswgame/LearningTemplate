@@ -16,14 +16,14 @@ using namespace sw;
 namespace
 {
     /** @brief 리소스 id → 글 표입니다. 부모 · 하위 트리 파일을 디스크 없이 준다. */
-    class XTestSource final : public IDataInheritanceSource
+    class XTestSource final : public DataInheritanceSource
     {
     public:
         vector<std::pair<string, string>> _listFile;
 
         /** @brief 설정(`EngineConfig.json`)과 같은 깊이 상한을 싣습니다. */
         XTestSource()
-            : IDataInheritanceSource{ 8u }
+            : DataInheritanceSource{ 8u }
             , _listFile{}
         {
         }

@@ -31,7 +31,7 @@ namespace
         string useReportFolder( string_view name )
         {
             const string folder = test::makeScratchPath( name );
-            if ( FileUtil::ensureDirectoryExists( folder ) == false )
+            if ( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( folder ) ) == false )
                 return {};
             _handler.setReportFolder( folder );
             return folder;
@@ -42,7 +42,7 @@ namespace
         {
             utf8 arrPath[constant::buffer::kMax1024]{};
             _handler.makeReportPath( arrPath, constant::buffer::kMax1024, pExtension );
-            return FileUtil::readTextFile( arrPath, outText );
+            return FileUtil::readTextFile( FileUtil::toDiskPath( arrPath ), outText );
         }
     };
 } // namespace

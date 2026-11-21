@@ -23,7 +23,7 @@ SW_TEST_CASE( ContentScenesTest, EngineAndActiveGameScenesLoad )
     for ( const string& folder : listFolder )
     {
         vector<string> listPath;
-        SW_EXPECT_TRUE( FileUtil::collectFiles( folder, ".scene.xml", listPath, true ) );
+        SW_EXPECT_TRUE( FileUtil::collectFiles( FileUtil::toDiskPath( folder ), ".scene.xml", listPath, true ) );
         for ( const string& path : listPath )
         {
             SceneDocument                            document;

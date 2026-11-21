@@ -17,11 +17,11 @@
 
 #include "GameFramework/Runtime/Foundation/Framework/Tests/SceneNetLinkTestBinding.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityCatalog.h"
-#include "GameFramework/Runtime/Gameplay/Ability/AbilityComponent.h"
+#include "GameFramework/Runtime/Gameplay/Ability/AbilitySystemComponent.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AttributeSet.h"
 #include "GameFramework/Runtime/Gameplay/Ability/MovementConstraint.h"
-#include "GameFramework/Runtime/Gameplay/Zone/JumpEscapeReactionComponent.h"
-#include "GameFramework/Runtime/Gameplay/Zone/ScreenReactionComponent.h"
+#include "GameFramework/Runtime/Gameplay/Zone/Reaction/RemoveStacksOnJumpComponent.h"
+#include "GameFramework/Runtime/Gameplay/Zone/Reaction/TagPostProcessComponent.h"
 #include "GameFramework/Runtime/Gameplay/Zone/ZoneModule.h"
 #include "GameFramework/Runtime/Gameplay/Zone/ZoneOccupantIndex.h"
 #include "GameFramework/Runtime/Gameplay/Zone/ZoneProfile.h"
@@ -38,9 +38,9 @@ namespace
     /** @brief 어빌리티 컴포넌트를 가진 대상 하나와 시험 카탈로그입니다. */
     struct ZoneFixture
     {
-        GameObjectManager _manager;
-        AbilityCatalog    _catalog;
-        AbilityComponent* _pHero{ nullptr };
+        GameObjectManager       _manager;
+        AbilityCatalog          _catalog;
+        AbilitySystemComponent* _pHero{ nullptr };
 
         static inline const hashed_string kHealth{ "Health" };
         static inline const hashed_string kBurn{ "Burn" };
@@ -48,7 +48,7 @@ namespace
 
         ZoneFixture()
         {
-            _pHero                        = _manager.createGameObject( hashed_string( "Hero" ) )->addComponent<AbilityComponent>();
+            _pHero                        = _manager.createGameObject( hashed_string( "Hero" ) )->addComponent<AbilitySystemComponent>();
             unique_ptr<AttributeSet> pSet = make_unique<AttributeSet>();
             pSet->defineAttribute( kHealth, 100.0f );
             pSet->defineAttribute( hashed_string( "MaxHealth" ), 100.0f );
@@ -275,7 +275,7 @@ SW_TEST_CASE( ZoneTest, KillRespectsInvulnerabilityUnlessTold )
     ZoneCompiledProfile ruthless;
     SW_REQUIRE_TRUE( ruthless.compile( profile, "test", &fixture._catalog ) );
 
-    fixture._pHero->getOwnedTagCounts().updateCount( AbilityComponent::getInvulnerableTag(), 1 );
+    fixture._pHero->getOwnedTagCounts().updateCount( AbilitySystemComponent::getInvulnerableTag(), 1 );
     ZoneTracker pit;
     fixture.runInside( pit, respectful, "volume:Pit", 1.0f, 0.1f );
     SW_EXPECT_NEAR( 100.0f, fixture._pHero->getAttributeValue( ZoneFixture::kHealth ).value_or( -1.0f ), 1.0e-4f );
@@ -460,7 +460,7 @@ SW_TEST_CASE( ZoneTest, ZoneSystemRunsRegisteredZoneComponents )
     GameObjectManager manager;
     SW_EXPECT_TRUE( ZoneSystem::find( manager ) == nullptr );
     GameObject*                  pWalker = manager.createGameObject( hashed_string( "Walker" ) );
-    JumpEscapeReactionComponent* pEscape = pWalker->addComponent<JumpEscapeReactionComponent>();
+    RemoveStacksOnJumpComponent* pEscape = pWalker->addComponent<RemoveStacksOnJumpComponent>();
     SW_REQUIRE_TRUE( pEscape != nullptr );
     SW_EXPECT_FALSE( pEscape->canEverTick() ); // 프레임 일은 시스템이 한다
     ZoneSystem* pSystem = ZoneSystem::find( manager );
@@ -470,11 +470,11 @@ SW_TEST_CASE( ZoneTest, ZoneSystemRunsRegisteredZoneComponents )
 }
 
 /** @brief [ZoneTest] 화면 반응: 태그(State.Poisoned)가 있으면 페이드 인 시간(0.5 초) 동안 가중치가 1 로 오르고, 태그가 사라지면 페이드 아웃(1 초) 동안 0 으로 내린다. 시간이 0 이면 그대로다 */
-SW_TEST_CASE( ZoneTest, ScreenReactionFadesWithTag )
+SW_TEST_CASE( ZoneTest, TagPostProcessFadesWithTag )
 {
     ZoneFixture              fixture;
     GameObject*              pHero   = fixture._pHero->getOwner();
-    ScreenReactionComponent* pScreen = pHero->addComponent<ScreenReactionComponent>();
+    TagPostProcessComponent* pScreen = pHero->addComponent<TagPostProcessComponent>();
     SW_REQUIRE_TRUE( pScreen != nullptr );
     pScreen->setTag( "State.Poisoned"_tag ); // 태그는 데이터가 적는 칸이다(기본값 없음)
     ZoneSystem* pSystem = ZoneSystem::find( fixture._manager );
@@ -585,7 +585,7 @@ SW_TEST_CASE( ZoneTest, SurfaceStampChecksContextParamsWhenStamping )
 
 /**
  * @brief [ZoneTest] 나타남 Ignore: 볼륨이 설 때 이미 안에 있던 대상은 창이 지나도 안에 있는 동안 대상이 아니고(진입 · 할 일 없음), 나갔다 다시 들어오면 진입한다
- * @details 판정은 활성자 볼륨과 같은 `ActivatorSpawnWindow` 다. 변이: `touch` 의 빠짐 검사를 지우면 첫 단언이 진다.
+ * @details 판정은 활성자 볼륨과 같은 `TriggerSpawnWindow` 다. 변이: `touch` 의 빠짐 검사를 지우면 첫 단언이 진다.
  */
 SW_TEST_CASE( ZoneTest, SpawnInsideIgnoreWaitsForTheWalkIn )
 {
@@ -599,9 +599,9 @@ SW_TEST_CASE( ZoneTest, SpawnInsideIgnoreWaitsForTheWalkIn )
     SW_REQUIRE_TRUE( compiled.compile( profile, "test", &fixture._catalog ) );
 
     ZoneTracker tracker;
-    tracker.setSpawnInside( ActivatorSpawnInside::Ignore );
+    tracker.setSpawnInside( TriggerSpawnInside::Ignore );
     tracker.markAppeared( fixture._manager ); // 볼륨이 막 섰다(시작 · 셀 올라옴 · 다시 켜짐) — 대상은 이미 안이다
-    for ( uint32 frame = 0; frame < 2 * static_cast<uint32>( ActivatorSpawnWindow::kFrames ); ++frame )
+    for ( uint32 frame = 0; frame < 2 * static_cast<uint32>( TriggerSpawnWindow::kFrames ); ++frame )
     {
         fixture.runInside( tracker, compiled, "volume:Arrival", 1.0f, 1.0f / 60.0f );
         fixture._manager.update( 1.0f / 60.0f );
@@ -626,10 +626,10 @@ SW_TEST_CASE( ZoneTest, SpawnInsideIgnoreSkipsABodyBornInside )
     ZoneCompiledProfile compiled; // 빈 프로필 — 대상 기록만 본다
     ZoneTracker         ignoreTracker;
     ZoneTracker         activateTracker;
-    ignoreTracker.setSpawnInside( ActivatorSpawnInside::Ignore );
+    ignoreTracker.setSpawnInside( TriggerSpawnInside::Ignore );
     ignoreTracker.markAppeared( fixture._manager );
     activateTracker.markAppeared( fixture._manager );
-    for ( uint32 frame = 0; frame <= static_cast<uint32>( ActivatorSpawnWindow::kFrames ) + 1; ++frame )
+    for ( uint32 frame = 0; frame <= static_cast<uint32>( TriggerSpawnWindow::kFrames ) + 1; ++frame )
     {
         fixture._manager.update( 1.0f / 60.0f );
         fixture.leave( ignoreTracker, compiled, "volume:Arrival" ); // 밖에 있는 동안 창이 지난다
@@ -654,17 +654,17 @@ SW_TEST_CASE( ZoneTest, SpawnInsideIgnoreSkipsABodyBornInside )
  */
 SW_TEST_CASE( ZoneTest, ServerModulesRunOnlyOnTheServerWorld )
 {
-    const std::pair<const utf8*, ActivatorAuthority> arrKind[] = {
-        {        "Action", ActivatorAuthority::Server},
-        {    "Blackboard", ActivatorAuthority::Server},
-        {       "NavArea", ActivatorAuthority::Server},
-        {  "PhysicsField",  ActivatorAuthority::Local},
-        {"SurfaceChannel",  ActivatorAuthority::Local},
-        {  "SurfaceStamp",  ActivatorAuthority::Local},
+    const std::pair<const utf8*, TriggerAuthority> arrKind[] = {
+        {        "Action", TriggerAuthority::Server},
+        {    "Blackboard", TriggerAuthority::Server},
+        {       "NavArea", TriggerAuthority::Server},
+        {  "PhysicsField",  TriggerAuthority::Local},
+        {"SurfaceChannel",  TriggerAuthority::Local},
+        {  "SurfaceStamp",  TriggerAuthority::Local},
     };
     for ( const auto& kind : arrKind )
     {
-        const ZoneModuleProcessor* pProcessor = ZoneModuleRegistry::find( kind.first );
+        const IZoneModuleProcessor* pProcessor = ZoneModuleRegistry::find( kind.first );
         SW_REQUIRE_NOT_NULL( pProcessor );
         SW_EXPECT_TRUE_MSG( pProcessor->getAuthority() == kind.second, kind.first );
     }

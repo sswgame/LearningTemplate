@@ -1,6 +1,6 @@
 /**
  * @file LoginStoreLogic.h
- * @brief 로그인의 저장 부분입니다. 저장소 스레드에서 `IServiceStoreJob::run` 이 만들어 한 번 쓰고 버립니다. 서비스 상태는 건드리지 않고 `LoginStoreResult` 에 결과를 적습니다.
+ * @brief 로그인의 저장 부분입니다. 저장소 스레드에서 `ServiceStoreJob::run` 이 만들어 한 번 쓰고 버립니다. 서비스 상태는 건드리지 않고 `LoginStoreResult` 에 결과를 적습니다.
  * @details 저장소 테이블은 다음과 같고 키는 ASCII 이다.
  *          - `login_account`: 소문자 이름에서 비밀번호 레코드로 가는 테이블이다.
  *          - `login_account_id`: 계정 id(16진)에서 계정 프로필로 가는 테이블이다. 프로필에는 이름 키(없으면 빈 문자열), 표시 이름, 게스트 여부, 탈퇴 예약이 있다.

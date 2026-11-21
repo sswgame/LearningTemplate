@@ -101,7 +101,7 @@ namespace sw
         /** @brief 이 연결 계정의 현재 세션 id 입니다. 테스트와 진단에 씁니다. 없으면 0입니다. */
         uint64 findSessionID( AccountID accountID ) const;
         /** @brief 접속 상태 관리자입니다. 거래와 채팅이 빌려 쓰며, 서버 한 대이면 찾기는 "없음" 으로 끝납니다. 이 객체와 수명이 같습니다. */
-        IAccountPresence* getPresence() { return &_presence; }
+        AccountPresence* getPresence() { return &_presence; }
 
     protected:
         uint16 validateRequest( OnlineServiceHost& host, const OnlineCallContext& context ) override;

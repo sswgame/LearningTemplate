@@ -42,7 +42,7 @@ namespace sw::editor
     } // namespace
 
     RenderDebuggerPanel::RenderDebuggerPanel()
-        : IEditorPanel( false )
+        : EditorPanel( false )
         , _viewModel{}
         , _pState{ nullptr }
         , _nodeGraph{}

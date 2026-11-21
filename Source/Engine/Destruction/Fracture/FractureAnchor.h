@@ -1,6 +1,6 @@
 /**
  * @file FractureAnchor.h
- * @brief 어느 잎을 앵커(땅에 붙은 조각)로 볼지 정하는 순수 계산입니다. `FractureComponentBase` 가 상태를 시작할 때 한 번 부릅니다.
+ * @brief 어느 잎을 앵커(땅에 붙은 조각)로 볼지 정하는 순수 계산입니다. `FractureBaseComponent` 가 상태를 시작할 때 한 번 부릅니다.
  * @details 물리를 모른다. `World` 모드의 "정적 월드에 닿았나" 는 물리 질의라 부르는 쪽이 잎마다 물어 `listWorldContact` 로 넘긴다.
  *          그래서 엔진이나 물리 씬 없이 쿠킹한 `FractureAsset` 하나로 테스트할 수 있다.
  */

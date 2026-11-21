@@ -18,7 +18,7 @@
 
 Core folders are tiers (`Config/Rules/Layers/CoreLayers.toml`): a file includes only its own folder or a lower tier. Folder roles are in [FolderLayout](FolderLayout.md) 2.
 
-- A lower tier that must reach up takes an interface or a function pointer (`ILockObserver`, `IAllocationTracker`).
+- A lower tier that must reach up takes an interface or a function pointer (`ILockObserver`, `AllocationTracker`).
 - Tiers below `Log` get no `Logger.h` (`SW_LOG_*`, `StringBuilder`, `FileUtil` do not compile): report with `SW_LOW_LEVEL_*`.
 
 ### Target gates
@@ -56,7 +56,7 @@ Reach a service through its lifetime window: `getSubsystem<T>()` (must exist, `T
   - `SW_ENGINE_SERVICE_SUBSYSTEM( T, GameVisible | HostOnly, Services | Startup, ( TypesBuiltFirst... ), factory )` (`SW_ENGINE_DEFAULT_FACTORY( T )`);
   - `SW_ENGINE_SUBSYSTEM( T, Services | Startup, ( … ), factory )` — no slot;
   - `SW_ENGINE_SERVICE( T, GameVisible | HostOnly )` — a slot another subsystem binds, next to that `bind`.
-  - List a type in the parentheses only when the factory looks it up; a cycle or unregistered type stops startup. Init/shutdown order comes from `ISubsystem::getSubsystemDependencies`.
+  - List a type in the parentheses only when the factory looks it up; a cycle or unregistered type stops startup. Init/shutdown order comes from `Subsystem::getSubsystemDependencies`.
 - Tests inject mocks through scopes (`game::ScopedGameScope`, `editor::ScopedEditorScope`).
 - A dynamically loaded module owns its services as module subsystems: `SW_MODULE_SUBSYSTEM( Process | Engine, T, PublishedTypes... )`. A lower layer finds a higher layer's implementation by interface type — no function slot, no function-local static provider.
 - A slotless host subsystem the editor must find declares `static constexpr SubsystemModuleVisibility kModuleVisibility = SubsystemModuleVisibility::HostModules;` — no hand list.

@@ -45,7 +45,7 @@ namespace
             xml.append( children );
             xml += "</MaterialDef>";
             const test::ScopedScratchDomain domain;
-            SW_EXPECT_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "state.material" ), xml ) );
+            SW_EXPECT_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( domain.makeDiskPath( "state.material" ) ), xml ) );
             return material.loadFromAsset( test::ScopedScratchDomain::makeID( "state.material" ) );
         }
     };

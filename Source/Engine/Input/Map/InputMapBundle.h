@@ -13,8 +13,8 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Registry/RegistrationList.h"
-#include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/ServiceSlot.h"
+#include "Core/Subsystem/Subsystem.h"
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Module/ModuleEntryRegistrar.h"
@@ -35,7 +35,7 @@ namespace sw
      * @class InputMapExtensionRegistry
      * @brief 올라온 모듈이 선언한 입력 맵의 목록입니다(엔진 서비스 범위). 모듈을 올릴 때 붙고 내리기 전에 빠집니다(`ModuleObjectRegistrar`).
      */
-    class SW_API InputMapExtensionRegistry final : public ISubsystem
+    class SW_API InputMapExtensionRegistry final : public Subsystem
     {
     public:
         static constexpr const utf8* kSubsystemName = "InputMapExtensionRegistry";

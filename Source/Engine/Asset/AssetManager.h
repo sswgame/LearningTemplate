@@ -21,8 +21,8 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Name/hashed_string.h"
 #include "Core/Registry/RegistrationList.h"
-#include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/ServiceSlot.h"
+#include "Core/Subsystem/Subsystem.h"
 #include "Core/Task/TaskTypes.h"
 
 #include "Engine/Asset/AssetFormat.h"
@@ -38,7 +38,7 @@ namespace sw
      * @class AssetManager
      * @brief 에셋 식별자, 스키마, 인스턴스 캐시와 VFS 팩 매니저를 한 객체로 소유합니다.
      */
-    class SW_API AssetManager final : public ISubsystem
+    class SW_API AssetManager final : public Subsystem
     {
     public:
         /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */

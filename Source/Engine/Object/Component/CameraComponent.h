@@ -184,7 +184,7 @@ namespace sw
          */
         SceneViewQuery makeViewQuery( float32 aspectRatio ) const;
         /**
-         * @brief 오브젝트의 렌더 경계(`ScenePrimitive::computeObjectRenderBounds`)가 @p view 의 절두체에 걸치면 true 입니다. 렌더 경계가 없으면 false 입니다.
+         * @brief 오브젝트의 렌더 경계(`PrimitiveComponent::computeObjectRenderBounds`)가 @p view 의 절두체에 걸치면 true 입니다. 렌더 경계가 없으면 false 입니다.
          * @details **기하만** 본다 — 가림 · 렌더러가 실제로 그렸는지(언리얼 `WasRecentlyRendered`, 유니티 `Renderer.isVisible`)는 보지 않는다. GPU 컬링과 같은 평면 · 같은 구다.
          */
         [[nodiscard]] static bool isObjectInFrustum( const SceneViewQuery& view, const GameObject& object );

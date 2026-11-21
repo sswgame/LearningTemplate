@@ -1,0 +1,152 @@
+﻿#include "pch.h"
+
+#include "Engine/Window/SplashWindowBase.h"
+
+#include "Core/Log/Logger.h"
+#include "Core/Math/MathUtil.h"
+
+#include "Engine/Asset/Image/DDSLoader.h"
+#include "Engine/Content/AssetPaths.h"
+#include "Engine/Window/WindowPlatform.h"
+
+namespace sw
+{
+    SplashWindowBase::SplashWindowBase()
+        : _status{}
+        , _splashData{}
+        , _listScaledPixel{}
+        , _progress{ 0.0f }
+        , _width{ 480 }
+        , _height{ 280 }
+        , _bOpen{ SW_FALSE }
+        , _reserved{ 0 }
+    {
+    }
+
+    SplashWindowBase::~SplashWindowBase() = default;
+
+    unique_ptr<SplashWindowBase> SplashWindowBase::createPlatformSplash()
+    {
+        const WindowPlatformFactory* const pFactory = WindowPlatform::find();
+        return pFactory != nullptr ? pFactory->_pfnCreateSplash() : nullptr;
+    }
+
+    bool SplashWindowBase::isPlatformSupported()
+    {
+        const WindowPlatformFactory* const pFactory = WindowPlatform::find();
+        return pFactory != nullptr && pFactory->_pfnIsSplashSupported();
+    }
+
+    void SplashWindowBase::createScaledImage()
+    {
+        _listScaledPixel.clear();
+        if ( _splashData.isValid() == false || _splashData.getPixels() == nullptr )
+            return;
+        if ( _width == 0 || _height == 0 )
+            return;
+
+        _listScaledPixel.assign( static_cast<size_t>( _width ) * static_cast<size_t>( _height ) * 4u, 0 );
+        scaleBgraImage( _splashData.getPixels(), _splashData._width, _splashData._height,
+                        _listScaledPixel.data(), _width, _height );
+    }
+
+    void SplashWindowBase::scaleBgraImage( const uint8* pSource, uint32 sourceWidth, uint32 sourceHeight,
+                                           uint8* pOutPixel, uint32 destWidth, uint32 destHeight )
+    {
+        if ( pSource == nullptr || pOutPixel == nullptr )
+            return;
+        const bool bEmptyImageSize = sourceWidth == 0 || sourceHeight == 0 || destWidth == 0 || destHeight == 0;
+        if ( bEmptyImageSize )
+            return;
+
+        const size_t sourceStride = static_cast<size_t>( sourceWidth ) * 4u;
+
+        for ( uint32 destY = 0; destY < destHeight; ++destY )
+        {
+            // 목적지 한 픽셀이 덮는 원본 구간 [y0, y1). 정수로만 나눠 배율을 따로 들지 않는다.
+            const uint32 sourceY0 = ( destY * sourceHeight ) / destHeight;
+            const uint32 sourceY1 = MathUtil::max( sourceY0 + 1u, ( ( destY + 1u ) * sourceHeight ) / destHeight );
+
+            for ( uint32 destX = 0; destX < destWidth; ++destX )
+            {
+                const uint32 sourceX0 = ( destX * sourceWidth ) / destWidth;
+                const uint32 sourceX1 = MathUtil::max( sourceX0 + 1u, ( ( destX + 1u ) * sourceWidth ) / destWidth );
+
+                uint32 sumB        = 0;
+                uint32 sumG        = 0;
+                uint32 sumR        = 0;
+                uint32 sumA        = 0;
+                uint32 sampleCount = 0;
+
+                for ( uint32 sourceY = sourceY0; sourceY < sourceY1 && sourceY < sourceHeight; ++sourceY )
+                {
+                    const uint8* pRow = pSource + ( static_cast<size_t>( sourceY ) * sourceStride );
+                    for ( uint32 sourceX = sourceX0; sourceX < sourceX1 && sourceX < sourceWidth; ++sourceX )
+                    {
+                        const uint8* pPixel = pRow + ( static_cast<size_t>( sourceX ) * 4u );
+                        sumB += pPixel[0];
+                        sumG += pPixel[1];
+                        sumR += pPixel[2];
+                        sumA += pPixel[3];
+                        ++sampleCount;
+                    }
+                }
+
+                if ( sampleCount == 0 )
+                    continue;
+
+                uint8* pDest = pOutPixel + ( ( static_cast<size_t>( destY ) * destWidth + destX ) * 4u );
+                pDest[0]     = static_cast<uint8>( sumB / sampleCount );
+                pDest[1]     = static_cast<uint8>( sumG / sampleCount );
+                pDest[2]     = static_cast<uint8>( sumR / sampleCount );
+                pDest[3]     = static_cast<uint8>( sumA / sampleCount );
+            }
+        }
+    }
+
+    bool SplashWindowBase::loadSplashImage()
+    {
+        if ( DDSLoader::loadFromAsset( AssetID{ "textures/splash.dds" }, _splashData ) == false || _splashData.isValid() == false )
+            return false;
+
+        // 스플래시를 그리는 두 경로는 **압축 없는 32bpp** 를 전제한다. Win32 는 StretchDIBits 에
+        // biBitCount=32 로, X11 은 XCreateImage 에 depth 32 로 넘기고, 그 전에 아래
+        // `normalizeSplashToBgra` 가 폭×높이 개의 픽셀을 4바이트씩 제자리에서 뒤집는다. 압축 텍스처가
+        // 들어오면(BC1 은 같은 크기의 1/8 이다) 그 뒤집기 루프가 버퍼 밖을 **쓴다**. 지금 들어 있는
+        // splash.dds 는 B8G8R8A8 이라 맞지만, 아트를 교체하면서 압축으로 저장하는 것은 흔한 일이다.
+        const size_t requiredBytes = static_cast<size_t>( _splashData._width ) * static_cast<size_t>( _splashData._height ) * 4u;
+        if ( _splashData._bCompressed != SW_FALSE || _splashData._bytes.size() < requiredBytes )
+        {
+            SW_LOG_ERROR_ID( "SplashWindow.SplashImageMustUncompressed",
+                             "Splash image must be uncompressed 32bpp — got %#x%#, %# bytes (need %#), compressed=%#. Skipping splash.",
+                             _splashData._width, _splashData._height, _splashData._bytes.size(), requiredBytes,
+                             static_cast<uint32>( _splashData._bCompressed ) );
+            _splashData = DDSImageData{};
+            return false;
+        }
+
+        normalizeSplashToBgra();
+        return true;
+    }
+
+    void SplashWindowBase::normalizeSplashToBgra()
+    {
+        // **채널 순서를 여기서 한 번에 맞춘다**(모든 플랫폼). 플랫폼 창 안에서 뒤집으면 아트를 `R8G8B8A8` 로 다시 내보낼 때
+        // 그 플랫폼만 맞고 나머지는 빨강과 파랑이 뒤바뀐다(지금 `splash.dds` 는 `B8G8R8A8` 이라 뒤집기가 건너뛰어진다).
+        //
+        // 그리는 두 경로가 모두 BGRA 를 원한다. Win32 의 `BI_RGB` 32bpp DIB 는 메모리에서 B,G,R,X
+        // 순서이고, X11 의 리틀 엔디언 TrueColor 비주얼(0x00RRGGBB)도 같은 순서다.
+        if ( _splashData._bIsBgra != SW_FALSE || _splashData.getPixels() == nullptr )
+            return;
+
+        // 픽셀 수와 바이트 오프셋을 size_t 로 센다. int 로 곱하면 큰 이미지에서 넘치고,
+        // 그 값이 포인터 오프셋으로 쓰이므로 버퍼 밖을 가리킨다.
+        const size_t totalPixels = static_cast<size_t>( _splashData._width ) * static_cast<size_t>( _splashData._height );
+        for ( size_t pixelIndex = 0; pixelIndex < totalPixels; ++pixelIndex )
+        {
+            uint8* pPixel = _splashData.getPixels() + ( pixelIndex * 4 );
+            std::swap( pPixel[0], pPixel[2] );
+        }
+        _splashData._bIsBgra = SW_TRUE;
+    }
+} // namespace sw

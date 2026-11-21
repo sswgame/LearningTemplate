@@ -49,7 +49,7 @@ namespace
             vector<string>                           listPath;
             StringBuilder<constant::buffer::kMax256> folder;
             folder.appendFormat( "%#/%#", ProcessRoots::get()._project.str(), kLibraryFolder );
-            SW_EXPECT_TRUE( FileUtil::collectFiles( folder.view(), ".material", listPath, true ) );
+            SW_EXPECT_TRUE( FileUtil::collectFiles( FileUtil::toDiskPath( folder.view() ), ".material", listPath, true ) );
             for ( const string& path : listPath )
             {
                 const size_t contentAt = path.find( "Content/" );
@@ -121,7 +121,7 @@ SW_TEST_CASE( MaterialLibraryTest, TerrainMaterialsDeformVertices )
     vector<string>                           listPath;
     StringBuilder<constant::buffer::kMax256> folder;
     folder.appendFormat( "%#/Content/engine/materials", ProcessRoots::get()._project.str() );
-    SW_REQUIRE_TRUE( FileUtil::collectFiles( folder.view(), ".material", listPath, true ) );
+    SW_REQUIRE_TRUE( FileUtil::collectFiles( FileUtil::toDiskPath( folder.view() ), ".material", listPath, true ) );
     uint32 terrainCount = 0;
     for ( const string& path : listPath )
     {
@@ -162,7 +162,7 @@ SW_TEST_CASE( MaterialLibraryTest, LayeredShadingModelMatchesLobeValues )
     vector<string>                           listPath;
     StringBuilder<constant::buffer::kMax256> folder;
     folder.appendFormat( "%#/Content/engine/materials", ProcessRoots::get()._project.str() );
-    SW_REQUIRE_TRUE( FileUtil::collectFiles( folder.view(), ".material", listPath, true ) );
+    SW_REQUIRE_TRUE( FileUtil::collectFiles( FileUtil::toDiskPath( folder.view() ), ".material", listPath, true ) );
     uint32 coatCount        = 0;
     uint32 anisotropicCount = 0;
     for ( const string& path : listPath )

@@ -1,6 +1,6 @@
 /**
  * @file OnlinePresence.h
- * @brief 서버 여러 대의 접속 상태를 관리합니다. `IAccountPresence` 구현입니다.
+ * @brief 서버 여러 대의 접속 상태를 관리합니다. `AccountPresence` 구현입니다.
  * @details 이 프로세스에 접속한 계정을 캐시에 기록한다. `presence:<계정>` 키는 서버를 값으로 갖고, `presence.name:<이름 해시>` 키는 계정, 서버, 이름을 값으로 갖는다.
  *          계정이 접속한 서버를 계정 id 나 표시 이름으로 찾을 수 있고, 다른 서버에 접속한 계정에게는 알림을 버스(`push.<서버>`)로 넘긴다.
  *          - 캐시는 원본이 아니다. 시한(기본 60초)을 걸고 주기(기본 30초)마다 다시 기록하므로, 캐시가 비어도(재시작) 다음 주기에 복구된다. 원본은 저장소의 세션 레코드이다.
@@ -54,7 +54,7 @@ namespace sw
      * @class OnlinePresence
      * @brief 접속 상태를 관리합니다. 호스트 틱 스레드에서 씁니다.
      */
-    class SW_KIT_SERVER_API OnlinePresence final : public IAccountPresence
+    class SW_KIT_SERVER_API OnlinePresence final : public AccountPresence
     {
     public:
         OnlinePresence();
@@ -83,7 +83,7 @@ namespace sw
         static string makeAccountKey( AccountID accountID );
         static string makeNameKey( string_view displayName );
 
-        // IAccountPresence
+        // AccountPresence
         uint64 submitFindByDisplayName( string_view displayName, const AccountPresenceDelegate& onFound, const Subscription& owner ) override;
         uint64 submitFindByAccount( AccountID accountID, const AccountPresenceDelegate& onFound, const Subscription& owner ) override;
         bool   relayRemotePush( const OnlinePushRelay& relay ) override;

@@ -5,7 +5,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Input/InputManager.h"
-#include "Engine/Window/IWindow.h"
+#include "Engine/Window/GenericWindow.h"
 #include "Engine/Window/NativeWindowEvent.h"
 #include "Engine/Window/Tests/FakeWindow.h"
 #include "Engine/Window/WindowTextInput.h"

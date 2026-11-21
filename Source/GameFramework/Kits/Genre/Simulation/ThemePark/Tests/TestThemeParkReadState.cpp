@@ -9,7 +9,7 @@
 
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/Tests/ThemeParkTestRules.h"
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/ThemePark.h"
-#include "GameFramework/Runtime/Foundation/Framework/SessionStateRefs.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameStateRefs.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Wallet.h"
 
 // ThemeParkReadStateTest — 놀이공원 상태 바이트의 신뢰 경계: 음수 · 범위 밖 값, 손님과 맞지 않는 줄과 탑승자를 거절하고 공원을 그대로 둔다.
@@ -136,7 +136,7 @@ namespace
         ThemeParkReadStateTest()
         {
             _wallet.add( sw::ThemeParkTestRules::make()._currency, 100000 );
-            sw::SessionStateRefs refs;
+            sw::GameStateRefs refs;
             refs._pWallet = &_wallet;
             SW_REQUIRE_TRUE( _park.initialize( sw::ThemeParkTestRules::make(), refs ) );
         }
@@ -165,7 +165,7 @@ SW_TEST_CASE_F( ThemeParkReadStateTest, RealAndCraftedStatesRead )
     sw::Archive written;
     _park.writeState( written );
     sw::ThemeParkSimulation restored;
-    sw::SessionStateRefs    refs;
+    sw::GameStateRefs       refs;
     refs._pWallet = &_wallet;
     SW_REQUIRE_TRUE( restored.initialize( sw::ThemeParkTestRules::make(), refs ) );
     sw::Archive reading( written.getData(), written.getSize() );
@@ -186,7 +186,7 @@ SW_TEST_CASE( ThemeParkSimulationTest, ParkDeterminism )
     {
         const sw::ThemeParkSettings settings = sw::ThemeParkTestRules::make();
         run._wallet.add( settings._currency, 100000 );
-        sw::SessionStateRefs refs;
+        sw::GameStateRefs refs;
         refs._pWallet = &run._wallet;
         return run._park.initialize( settings, refs );
     };
@@ -376,7 +376,7 @@ SW_TEST_CASE( ThemeParkSimulationTest, RejectsZeroDivisorSettings )
 {
     SW_EXPECT_LOG( "ThemePark.RefusedSettings" );
     sw::ThemeParkSimulation park;
-    sw::SessionStateRefs    refs;
+    sw::GameStateRefs       refs;
     sw::ThemeParkSettings   zeroFee = sw::ThemeParkTestRules::make();
     zeroFee._noArrivalEntryFee      = 0.0f;
     SW_EXPECT_FALSE( park.initialize( zeroFee, refs ) );

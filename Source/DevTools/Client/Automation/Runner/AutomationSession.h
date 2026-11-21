@@ -10,7 +10,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/Subsystem.h"
 
 #include "DevTools/Client/Automation/Runner/AutomationRunTitle.h"
 #include "DevTools/Client/Automation/Scenario/ScenarioRecorder.h"
@@ -42,7 +42,7 @@ namespace sw
      *          세션의 바깥 창구(`Runtime::start`)는 기본 재생기 하나를 만들어 호스트 범위에 `IScenarioPlayer` 로 걸기만 한다(언리얼 Automation 세션과 Level Sequence Player 의 나눔).
      *          게임 스레드에서만 쓴다.
      */
-    class SW_DEVTOOLS_API AutomationSession : public ISubsystem
+    class SW_DEVTOOLS_API AutomationSession : public Subsystem
     {
     public:
         /** @brief 서브시스템 이름입니다(같은 범위의 다른 서브시스템이 의존 칸에 적는다). */

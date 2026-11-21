@@ -16,7 +16,7 @@ namespace
     constexpr sw::EventTypeID kResizeProbeEventID   = 3;
 
     /** @brief 고정 ID 이벤트 테스트용입니다 — 예약 ID 를 쓰는 값 타입의 모양(크기 페이로드)만 흉내 냅니다. */
-    struct ResizeProbeEvent final : sw::IEvent
+    struct ResizeProbeEvent final : sw::EventBase
     {
         int32 _width{ 0 };
         int32 _height{ 0 };
@@ -25,13 +25,13 @@ namespace
     };
 
     /** @brief 페이로드 없는 고정 ID 이벤트입니다. */
-    struct CloseProbeEvent final : sw::IEvent
+    struct CloseProbeEvent final : sw::EventBase
     {
         SW_REGISTER_EVENT_ID( kCloseProbeEventID );
     };
 
     /** @brief 불리언 하나를 싣는 고정 ID 이벤트입니다. */
-    struct ActivateProbeEvent final : sw::IEvent
+    struct ActivateProbeEvent final : sw::EventBase
     {
         uint8 _bActive : 1;
 
@@ -69,7 +69,7 @@ namespace
     }
 
     /** @brief 소멸 횟수를 세는 테스트용 이벤트 — 큐에 남은 것이 실제로 파괴되는지 본다. */
-    struct DestructorCountingEvent final : sw::IEvent
+    struct DestructorCountingEvent final : sw::EventBase
     {
         static int32 s_liveCount;
 
@@ -77,7 +77,7 @@ namespace
 
         DestructorCountingEvent() { ++s_liveCount; }
         DestructorCountingEvent( const DestructorCountingEvent& other )
-            : sw::IEvent( other )
+            : sw::EventBase( other )
             , _payload{ other._payload }
         {
             ++s_liveCount;
@@ -255,7 +255,7 @@ SW_TEST_CASE( EventTest, FrameAllocatorOverflowFallback )
 
 /**
  * @brief `clear()` 는 큐에 남은 이벤트를 **파괴하고** 버린다
- * @details `processEvents` 는 방송한 뒤 `pEvent->~IEvent()` 를 부른다. `clear()` 가 큐 맵만
+ * @details `processEvents` 는 방송한 뒤 `pEvent->~EventBase()` 를 부른다. `clear()` 가 큐 맵만
  *          비우고 아레나를 되감으면 안 된다. 이벤트는 아레나에 placement new 로 올라가므로, 소멸자를
  *          부르지 않으면 **멤버가 든 힙이 그대로 샌다**(게임플레이 이벤트는 `sw::string` 을 든다).
  *          소멸자가 도는지를 살아 있는 개수로 본다.

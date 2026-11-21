@@ -19,7 +19,7 @@ namespace sw
             /** @brief 디렉터리가 실제로 있을 때만 구분자를 맞춰 목록에 더합니다. */
             static void appendIfDirectory( vector<string>& outListDirectory, const string& candidate )
             {
-                if ( candidate.empty() == false && FileUtil::isDirectory( candidate ) )
+                if ( candidate.empty() == false && FileUtil::isDirectory( FileUtil::toDiskPath( candidate ) ) )
                     outListDirectory.push_back( FileUtil::normalizeSeparators( candidate ) );
             }
         };
@@ -38,7 +38,7 @@ namespace sw
             for ( const string& directory : getSystemFontDirectories() )
             {
                 vector<string> listFilePath;
-                if ( FileUtil::collectFiles( directory, {}, listFilePath, true ) == false )
+                if ( FileUtil::collectFiles( FileUtil::toDiskPath( directory ), {}, listFilePath, true ) == false )
                     continue;
                 for ( string& filePath : listFilePath )
                 {
@@ -100,7 +100,7 @@ namespace sw
         for ( const string& directory : getSystemFontDirectories() )
         {
             string direct = FileUtil::joinPath( directory, fileName );
-            if ( FileUtil::isRegularFile( direct ) )
+            if ( FileUtil::isRegularFile( FileUtil::toDiskPath( direct ) ) )
                 return direct;
         }
 #if defined( SW_PLATFORM_LINUX )

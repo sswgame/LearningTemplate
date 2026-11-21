@@ -26,7 +26,7 @@
 #include "Engine/Config/GameTimeScale.h"
 #include "Engine/Config/PackEngineSettings.h"
 #include "Engine/Scene/Scene.h"
-#include "Engine/Window/IWindow.h"
+#include "Engine/Window/GenericWindow.h"
 #include "Engine/Window/MainWindowSubsystem.h"
 
 #include <imgui.h>
@@ -65,7 +65,7 @@ namespace sw::editor
             {
                 // 선택(②): 창 호스트 · 창은 헤드리스 실행에 없다. 없으면 제목을 쓸 곳이 없다.
                 MainWindowSubsystem* pWindowHost = editor::findSubsystem<MainWindowSubsystem>();
-                IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
+                GenericWindow*       pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
                 if ( pWindow == nullptr )
                     return;
                 const PackEngineSettings& packSettings = editor::getSubsystem<const PackEngineSettings>(); // 필수 - 창이 있으면 팩 설정도 있다

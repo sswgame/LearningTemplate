@@ -721,7 +721,7 @@ namespace
 
     /** @brief 저장소 일 하나를 함수 하나로 감쌉니다. `run` 은 저장소 스레드, `complete` 는 호스트 틱입니다. */
     template <typename TFunction>
-    class PostgresTestJob final : public IServiceStoreJob
+    class PostgresTestJob final : public ServiceStoreJob
     {
     public:
         PostgresTestJob( TFunction function, int32& outCompleteCount )

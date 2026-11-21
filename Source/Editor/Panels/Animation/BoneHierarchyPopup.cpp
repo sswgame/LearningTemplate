@@ -16,7 +16,7 @@ namespace sw::editor
     SW_EDITOR_POPUP( BoneHierarchyPopup, 300 );
 
     BoneHierarchyPopup::BoneHierarchyPopup()
-        : IEditorPopup{ false }
+        : EditorPopup{ false }
         , _viewModel{}
         , _viewState{}
     {

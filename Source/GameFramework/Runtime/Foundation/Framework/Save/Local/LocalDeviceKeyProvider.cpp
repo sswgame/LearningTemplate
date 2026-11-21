@@ -124,10 +124,10 @@ namespace sw
     expected<void> LocalDeviceKeyProvider::loadOrCreateKeyLocked( string& outSetAsidePath )
     {
         using Internal = LocalDeviceKeyProviderInternal;
-        if ( FileUtil::isRegularFile( _keyFilePath ) )
+        if ( FileUtil::isRegularFile( FileUtil::toDiskPath( _keyFilePath ) ) )
         {
             vector<uint8> bytes;
-            if ( FileUtil::readFile( _keyFilePath, bytes ) == false )
+            if ( FileUtil::readFile( FileUtil::toDiskPath( _keyFilePath ), bytes ) == false )
                 return unexpected( Error{ ErrorKind::ExternalFailure, "Local store key file could not be read", _keyFilePath } ); // 잠김 · 권한 — 다음 요청이 다시 읽는다
             if ( Internal::unprotectKey( bytes, _arrKey, kKeySize ) )
             {
@@ -141,7 +141,7 @@ namespace sw
             StringBuilder<constant::buffer::kMax512> setAsideBase;
             setAsideBase.appendFormat( "%#%#", _keyFilePath, kUnreadableKeySuffix );
             outSetAsidePath       = FileUtil::reserveUniquePath( setAsideBase.view(), "", false );
-            const bool bKeptAside = outSetAsidePath.empty() == false && ( bytes.empty() || FileUtil::writeFileDurable( outSetAsidePath, bytes.data(), bytes.size() ) );
+            const bool bKeptAside = outSetAsidePath.empty() == false && ( bytes.empty() || FileUtil::writeFileDurable( FileUtil::toDiskPath( outSetAsidePath ), bytes.data(), bytes.size() ) );
             Memory::wipe( bytes.data(), bytes.size() ); // 다른 사용자의 키 파일일 수 있다
             if ( bKeptAside == false )
             {
@@ -152,8 +152,8 @@ namespace sw
         if ( _pSecurityProvider == nullptr || _pSecurityProvider->fillRandomBytes( _arrKey, kKeySize ) == false )
             return unexpected( Error{ ErrorKind::ExternalFailure, "Could not generate a local store key (no security provider or no random bytes)" } );
         vector<uint8> bytes;
-        const bool    bWritten = Internal::protectKey( _arrKey, kKeySize, bytes ) && FileUtil::ensureParentDirectoryExists( _keyFilePath ) &&
-                              FileUtil::writeFileDurable( _keyFilePath, bytes.data(), bytes.size() );
+        const bool    bWritten = Internal::protectKey( _arrKey, kKeySize, bytes ) && FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( _keyFilePath ) ) &&
+                              FileUtil::writeFileDurable( FileUtil::toDiskPath( _keyFilePath ), bytes.data(), bytes.size() );
         Memory::wipe( bytes.data(), bytes.size() ); // DPAPI 가 없는 플랫폼에서는 파일에 쓴 바이트가 곧 키다
         if ( bWritten == false )
         {

@@ -10,8 +10,8 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Registry/RegistrationList.h"
-#include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/ServiceSlot.h"
+#include "Core/Subsystem/Subsystem.h"
 
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Foundation/SceneIterationKey.h"
@@ -137,10 +137,10 @@ namespace sw
      *          등록 · 해제(이미지 로더의 정적 초기화)와 조회(게임 스레드)가 잠금 하나로 등록 목록을 지킨다. 섹션 본문은 잠금 밖에서 부른다 —
      *          `getSections` 는 복사본을 돌려준다(HUD 가 보일 때만 부르는 Dev 전용 경로라 프레임 핫 경로가 아니다).
      */
-    class SW_API DebugHUDRegistry final : public ISubsystem
+    class SW_API DebugHUDRegistry final : public Subsystem
     {
     public:
-        static constexpr MemoryTag   kSubsystemMemoryTag = MemoryTag::EngineMisc; ///< 할당 용도(`ISubsystem::getSubsystemMemoryTag`)
+        static constexpr MemoryTag   kSubsystemMemoryTag = MemoryTag::EngineMisc; ///< 할당 용도(`Subsystem::getSubsystemMemoryTag`)
         static constexpr const utf8* kSubsystemName      = "DebugHUDRegistry";
 
         DebugHUDRegistry();

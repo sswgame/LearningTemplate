@@ -45,10 +45,10 @@ namespace
         static bool writeFlippedByte( const string& path, uint64 offset )
         {
             vector<uint8> bytes;
-            if ( FileUtil::readFile( path, bytes ) == false || offset >= bytes.size() )
+            if ( FileUtil::readFile( FileUtil::toDiskPath( path ), bytes ) == false || offset >= bytes.size() )
                 return false;
             bytes[static_cast<size_t>( offset )] ^= 0x5Au;
-            return FileUtil::writeFile( path, bytes.data(), bytes.size() );
+            return FileUtil::writeFile( FileUtil::toDiskPath( path ), bytes.data(), bytes.size() );
         }
 
         /** @brief 파일 끝의 헤더를 읽습니다. */
@@ -56,7 +56,7 @@ namespace
         {
             vector<uint8> bytes;
             PackHeader    header{};
-            if ( FileUtil::readFile( path, bytes ) && bytes.size() >= sizeof( PackHeader ) )
+            if ( FileUtil::readFile( FileUtil::toDiskPath( path ), bytes ) && bytes.size() >= sizeof( PackHeader ) )
                 Memory::copy( &header, bytes.data() + bytes.size() - sizeof( PackHeader ), sizeof( PackHeader ) );
             return header;
         }
@@ -91,13 +91,13 @@ SW_TEST_CASE( PackPatchTest, TamperedIndexFailsAtMount )
                                                                     { "game/test/data/a.xml", "a" }
     } ) );
     vector<uint8> fileBytes;
-    SW_REQUIRE_TRUE( FileUtil::readFile( packPath, fileBytes ) );
+    SW_REQUIRE_TRUE( FileUtil::readFile( FileUtil::toDiskPath( packPath ), fileBytes ) );
     const PackHeader unsignedHeader = Util::readHeader( packPath );
     PackIndexTrust   unsignedTrust{ &provider, {} };
     test::FakeNetSecurityProvider::computeFakeDigest( fileBytes.data() + unsignedHeader._indexOffset, static_cast<int32>( fileBytes.size() - unsignedHeader._indexOffset ),
                                                       unsignedTrust._indexDigest._arrByte );
     SW_EXPECT_FALSE( packs.mountPatchPack( packPath, 100, {}, &unsignedTrust ) );
-    SW_EXPECT_TRUE( FileUtil::removeFile( packPath ) );
+    SW_EXPECT_TRUE( FileUtil::removeFile( FileUtil::toDiskPath( packPath ) ) );
 }
 
 // 색인은 그대로이고 페이로드 블록 하나가 바뀐 팩은 열리지만, 그 블록을 읽는 순간 거절한다 — 다른 항목은 읽힌다.
@@ -127,7 +127,7 @@ SW_TEST_CASE( PackPatchTest, TamperedPayloadBlockFailsAtRead )
     SW_EXPECT_FALSE( reader.readFile( tamperedPath, bytes ) );
     SW_EXPECT_TRUE( reader.readFile( intactPath, bytes ) );
     reader.close();
-    SW_EXPECT_TRUE( FileUtil::removeFile( packPath ) );
+    SW_EXPECT_TRUE( FileUtil::removeFile( FileUtil::toDiskPath( packPath ) ) );
 }
 
 // 서명 확인 비용은 색인 크기에만 비례하고 팩 크기 한도가 없다 — 페이로드가 2 GiB 너머에 있는 팩(앞은 성긴 파일의 구멍)을 신뢰로 열고 읽는다.
@@ -201,5 +201,5 @@ SW_TEST_CASE( PackPatchTest, PatchOverTwoGiBIsAccepted )
     SW_REQUIRE_TRUE( reader.readFile( entryPath, bytes ) );
     SW_EXPECT_TRUE( string_view( reinterpret_cast<const utf8*>( bytes.data() ), bytes.size() ) == payload );
     reader.close();
-    SW_EXPECT_TRUE( FileUtil::removeFile( packPath ) );
+    SW_EXPECT_TRUE( FileUtil::removeFile( FileUtil::toDiskPath( packPath ) ) );
 }

@@ -7,7 +7,7 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Runtime/Character/Combat/Health/HealthListenerComponent.h"
+#include "GameFramework/Runtime/Character/Combat/Health/IHealthListener.h"
 
 namespace sw
 {
@@ -20,7 +20,7 @@ namespace sw
      * @brief 소유 오브젝트 위에 떠 있는 HP 바입니다.
      * @details 같은 오브젝트의 `WidgetComponent`(Screen 모드의 화면 마커로, 크기, 머리 위 오프셋, 피벗을 가짐)에 막대 위젯을 넣고 값을 채운다.
      *          비율은 셋이다.
-     *          - `_targetRatio`: 참 HP 비율이다. 체력 시스템의 알림(`onHealthChanged`, `HealthListenerComponent::broadcast`)이 넣는다.
+     *          - `_targetRatio`: 참 HP 비율이다. 체력 시스템의 알림(`onHealthChanged`, `IHealthListener::broadcast`)이 넣는다.
      *          - `_hpRatio`: 채움 막대의 길이이다. 줄 때는 바로 따라가고(맞은 순간 줄어든다) 늘 때는 `_lerpSpeed` 로 차오른다.
      *          - `_remainRatio`: 피해 흔적이다. 채움보다 길면 `_lerpSpeed` 로 채움까지 줄어들어 "방금 잃은 만큼"을 잠깐 보여 준다.
      *          그림은 겹친 진행 막대 둘이다.
@@ -34,10 +34,11 @@ namespace sw
      *          값은 컴포넌트 필드에 이미 있기 때문이다.
      */
     REFLECT( Category = "UI", DisplayName = "Health Bar Component", Tooltip = "Smooth lerping HP bar drawn by the object's screen-marker WidgetComponent" )
-    class SW_GF_API HealthBarComponent : public HealthListenerComponent
+    class SW_GF_API HealthBarComponent : public Component
     {
     public:
         REFLECT_BODY();
+        REFLECT_INTERFACE( IHealthListener, _healthListenerPort );
 
         /** @brief 막대 위젯 안의 자식 순서입니다. 겹침 패널의 아래에서 위로 셉니다. */
         static constexpr uint32 kTrailBarIndex = 0;
@@ -46,7 +47,7 @@ namespace sw
         HealthBarComponent();
         virtual ~HealthBarComponent() override = default;
 
-        /** @brief 막대 위젯을 같은 오브젝트의 `WidgetComponent` 에 넣고, 비율을 같은 오브젝트의 체력 원천(`HealthSourceComponent`)에 맞춥니다. 원천이 없으면 저장된 `_hpRatio` 를 쓰며 흔적은 없습니다. */
+        /** @brief 막대 위젯을 같은 오브젝트의 `WidgetComponent` 에 넣고, 비율을 같은 오브젝트의 체력 원천(`IHealthSource`)에 맞춥니다. 원천이 없으면 저장된 `_hpRatio` 를 쓰며 흔적은 없습니다. */
         void onBeginPlay() override;
         /** @brief 채움과 흔적을 참 비율 쪽으로 옮기고, 틱 뒤에 막대 값을 넣게 합니다. */
         void onTick( TickContext& context ) override;
@@ -66,7 +67,7 @@ namespace sw
          *          둘 다 아니면 쓰러짐도 `_bShowWhenHurt` 에 따라 보인다. 한 방에 쓰러진 적이 그 예이다.
          *          보이기 정책은 바가 정한다. 체력 시스템은 바를 모른다.
          */
-        void onHealthChanged( const HealthChangedEvent& event ) override;
+        void onHealthChanged( const HealthChangedEvent& event );
 
         /**
          * @brief 참 HP 비율(0..1)을 넣습니다. 체력 시스템의 입력은 이것 하나입니다. 범위 밖은 묶습니다.
@@ -135,5 +136,13 @@ namespace sw
         float32 _spawnRatio;               ///< 체력 원천이 없을 때 시작한 비율(저장된 칸)
         bool    _bSpawnVisible;            ///< 시작할 때의 보임(풀 반환이 되돌린다)
         bool    _bRatioResyncPending;      ///< 풀 반환 뒤 첫 틱이 비율을 체력 원천에서 다시 읽는다
+
+    private:
+        /** @brief 체력 변화 계약을 주인의 `onHealthChanged` 로 넘기는 포트입니다(`REFLECT_INTERFACE`). */
+        struct HealthListenerPort final : IHealthListener
+        {
+            void onHealthChanged( const HealthChangedEvent& event ) override;
+        };
+        HealthListenerPort _healthListenerPort;
     };
 } // namespace sw

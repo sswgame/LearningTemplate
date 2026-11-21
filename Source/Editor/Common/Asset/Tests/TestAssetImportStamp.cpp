@@ -19,7 +19,7 @@ namespace
     /** @brief 부모 폴더를 만들고 글을 씁니다. */
     bool writeText( const string& path, string_view text )
     {
-        return FileUtil::ensureParentDirectoryExists( path ) && FileUtil::writeTextFile( path, text );
+        return FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( path ) ) && FileUtil::writeTextFile( FileUtil::toDiskPath( path ), text );
     }
 
     /** @brief `things_raw/<y>.src` 를 `things/<y>.out` 과 옆 폴더 `things/<y>/side.txt` 로 쓰는 임포터입니다. */
@@ -46,7 +46,7 @@ namespace
             const string sidePath = FileUtil::joinPath( FileUtil::removeExtension( importedPath ), "side.txt" );
             for ( const string& path : { string( importedPath ), sidePath } )
             {
-                if ( FileUtil::isRegularFile( path ) )
+                if ( FileUtil::isRegularFile( FileUtil::toDiskPath( path ) ) )
                     outListPath.push_back( path );
             }
         }
@@ -86,17 +86,17 @@ SW_TEST_CASE( AssetImportStampTest, RemovingASourceRemovesItsResult )
     const FakeThingImporter importer;
     const DerivedDataCache  cache{ vector<DerivedDataLayer>{ DerivedDataLayer{ test::makeScratchPath( "ImportDDC" ), DerivedDataAccess::ReadWrite } } }; // 프로젝트 DDC 에 쓰지 않는다
     SW_REQUIRE_TRUE( AssetImportStampUtil::importAll( root, importer, AssetImportMode::ImportStale, nullptr, cache ).isClean() );
-    SW_REQUIRE_TRUE( FileUtil::exists( FileUtil::joinPath( root, "pack/things/gone.out" ) ) );
-    SW_REQUIRE_TRUE( FileUtil::exists( FileUtil::joinPath( root, "pack/things/gone/side.txt" ) ) );
+    SW_REQUIRE_TRUE( FileUtil::exists( FileUtil::toDiskPath( FileUtil::joinPath( root, "pack/things/gone.out" ) ) ) );
+    SW_REQUIRE_TRUE( FileUtil::exists( FileUtil::toDiskPath( FileUtil::joinPath( root, "pack/things/gone/side.txt" ) ) ) );
 
-    SW_REQUIRE_TRUE( FileUtil::removeFile( FileUtil::joinPath( root, "pack/things_raw/gone.src" ) ) );
+    SW_REQUIRE_TRUE( FileUtil::removeFile( FileUtil::toDiskPath( FileUtil::joinPath( root, "pack/things_raw/gone.src" ) ) ) );
     SW_EXPECT_TRUE( AssetImportStampUtil::importAll( root, importer, AssetImportMode::ImportStale, nullptr, cache ).isClean() );
-    SW_EXPECT_FALSE( FileUtil::exists( FileUtil::joinPath( root, "pack/things/gone.out" ) ) );
-    SW_EXPECT_FALSE( FileUtil::exists( FileUtil::joinPath( root, "pack/things/gone" ) ) );
-    SW_EXPECT_TRUE( FileUtil::exists( FileUtil::joinPath( root, "pack/things/kept.out" ) ) );
+    SW_EXPECT_FALSE( FileUtil::exists( FileUtil::toDiskPath( FileUtil::joinPath( root, "pack/things/gone.out" ) ) ) );
+    SW_EXPECT_FALSE( FileUtil::exists( FileUtil::toDiskPath( FileUtil::joinPath( root, "pack/things/gone" ) ) ) );
+    SW_EXPECT_TRUE( FileUtil::exists( FileUtil::toDiskPath( FileUtil::joinPath( root, "pack/things/kept.out" ) ) ) );
     SW_EXPECT_TRUE( AssetImportStampUtil::importAll( root, importer, AssetImportMode::CheckOnly, nullptr, cache ).isClean() );
 
-    SW_EXPECT_TRUE( FileUtil::removeDirectory( root ) );
+    SW_EXPECT_TRUE( FileUtil::removeDirectory( FileUtil::toDiskPath( root ) ) );
 }
 
 /**
@@ -117,8 +117,8 @@ SW_TEST_CASE( AssetImportStampTest, StaleSourceIsServedFromCache )
     SW_EXPECT_EQUAL( 0u, second.getImportCount() );
     SW_EXPECT_EQUAL( 1u, summary._importedCount );
     string text;
-    SW_EXPECT_TRUE( FileUtil::readTextFile( FileUtil::joinPath( secondRoot, "pack/things/a.out" ), text ) && text == "out:default" );
-    SW_EXPECT_TRUE( FileUtil::readTextFile( FileUtil::joinPath( secondRoot, "pack/things/a/side.txt" ), text ) && text == "side" );
+    SW_EXPECT_TRUE( FileUtil::readTextFile( FileUtil::toDiskPath( FileUtil::joinPath( secondRoot, "pack/things/a.out" ) ), text ) && text == "out:default" );
+    SW_EXPECT_TRUE( FileUtil::readTextFile( FileUtil::toDiskPath( FileUtil::joinPath( secondRoot, "pack/things/a/side.txt" ) ), text ) && text == "side" );
     // 받은 결과로 스탬프도 맞았다 — 다음 대조는 깨끗하다.
     SW_EXPECT_TRUE( AssetImportStampUtil::importAll( secondRoot, second, AssetImportMode::CheckOnly, nullptr, cache ).isClean() );
 }
@@ -137,5 +137,5 @@ SW_TEST_CASE( AssetImportStampTest, DifferentSettingsMiss )
     SW_EXPECT_TRUE( AssetImportStampUtil::importAll( secondRoot, second, AssetImportMode::ImportStale, nullptr, cache ).isClean() );
     SW_EXPECT_EQUAL( 1u, second.getImportCount() );
     string text;
-    SW_EXPECT_TRUE( FileUtil::readTextFile( FileUtil::joinPath( secondRoot, "pack/things/a.out" ), text ) && text == "out:best" );
+    SW_EXPECT_TRUE( FileUtil::readTextFile( FileUtil::toDiskPath( FileUtil::joinPath( secondRoot, "pack/things/a.out" ) ), text ) && text == "out:best" );
 }

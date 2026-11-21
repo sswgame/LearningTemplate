@@ -7,8 +7,8 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
 #include "GameFramework/Runtime/Gameplay/Ability/Ability.h"
-#include "GameFramework/Runtime/Gameplay/Ability/AbilityComponent.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityEffect.h"
+#include "GameFramework/Runtime/Gameplay/Ability/AbilitySystemComponent.h"
 #include "GameFramework/Runtime/Gameplay/Ability/CombatAttributeSet.h"
 #include "GameFramework/Runtime/Gameplay/Ability/TagCountTable.h"
 
@@ -34,27 +34,27 @@ namespace
     /** @brief `CombatAttributeSet` 을 붙인 오브젝트 하나와 피격 · 쓰러짐 이벤트 기록입니다. */
     struct CombatFixture
     {
-        GameObjectManager _manager;
-        AbilityComponent* _pAbilities{ nullptr };
-        vector<TagID>     _listEventTag{};
-        Subscription      _hitSubscription{};
-        Subscription      _deathSubscription{};
-        float32           _lastHitMagnitude{ 0.0f };
-        GameObjectHandle  _lastHitInstigator{};
-        GameObjectHandle  _lastHitTarget{};
+        GameObjectManager       _manager;
+        AbilitySystemComponent* _pAbilities{ nullptr };
+        vector<TagID>           _listEventTag{};
+        Subscription            _hitSubscription{};
+        Subscription            _deathSubscription{};
+        float32                 _lastHitMagnitude{ 0.0f };
+        GameObjectHandle        _lastHitInstigator{};
+        GameObjectHandle        _lastHitTarget{};
 
         CombatFixture()
         {
-            _pAbilities = _manager.createGameObject( hashed_string( "Fighter" ) )->addComponent<AbilityComponent>();
+            _pAbilities = _manager.createGameObject( hashed_string( "Fighter" ) )->addComponent<AbilitySystemComponent>();
             (void)_pAbilities->addAttributeSet<CombatAttributeSet>();
-            _hitSubscription   = _pAbilities->registerGameplayEvent( CombatAttributeSet::getHitEventTag(), SW_DELEGATE_LAMBDA( AbilityComponent::AbilityEventDelegate, [this]( const AbilityEventData& event )
+            _hitSubscription   = _pAbilities->registerGameplayEvent( CombatAttributeSet::getHitEventTag(), SW_DELEGATE_LAMBDA( AbilitySystemComponent::AbilityEventDelegate, [this]( const AbilityEventData& event )
               {
                 _listEventTag.push_back( CombatAttributeSet::getHitEventTag() );
                 _lastHitMagnitude  = event._magnitude;
                 _lastHitInstigator = event._instigator;
                 _lastHitTarget     = event._target;
             } ) );
-            _deathSubscription = _pAbilities->registerGameplayEvent( CombatAttributeSet::getDeathEventTag(), SW_DELEGATE_LAMBDA( AbilityComponent::AbilityEventDelegate, [this]( const AbilityEventData& )
+            _deathSubscription = _pAbilities->registerGameplayEvent( CombatAttributeSet::getDeathEventTag(), SW_DELEGATE_LAMBDA( AbilitySystemComponent::AbilityEventDelegate, [this]( const AbilityEventData& )
             { _listEventTag.push_back( CombatAttributeSet::getDeathEventTag() ); } ) );
         }
 
@@ -286,7 +286,7 @@ SW_TEST_CASE( CombatAttributeSetTest, IncomingHealingMovesToHealthUpToMaximum )
 SW_TEST_CASE( CombatAttributeSetTest, InvulnerableOwnerTakesNoHitAndDoesNotDie )
 {
     CombatFixture rig;
-    rig._pAbilities->getOwnedTagCounts().updateCount( AbilityComponent::getInvulnerableTag(), 1 );
+    rig._pAbilities->getOwnedTagCounts().updateCount( AbilitySystemComponent::getInvulnerableTag(), 1 );
     rig.applyInstant( CombatAttributes::incomingDamage(), 500.0f );
     SW_EXPECT_EQUAL( 100.0f, rig.current( CombatAttributes::health() ) );
     SW_EXPECT_EQUAL( 0.0f, rig.base( CombatAttributes::incomingDamage() ) );

@@ -30,9 +30,9 @@ namespace sw
         /** @brief @p path 에 @p pText 를 쓰고 쓰기 시각을 한 시간 전으로 돌립니다(바깥 도구가 오래전에 쓴 파일 — 시간 창 밖이라 캐시된다). */
         void writeHourOldFile( const string& path, const utf8* pText )
         {
-            SW_REQUIRE_TRUE( FileUtil::writeTextFile( path, pText ) );
+            SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( path ), pText ) );
             const int64 hourAgo = FileUtil::getCurrentFileWriteTime() - 3600 * FileUtil::kFileTimeTicksPerSecond;
-            SW_REQUIRE_TRUE( FileUtil::setFileWriteTime( path, hourAgo ) );
+            SW_REQUIRE_TRUE( FileUtil::setFileWriteTime( FileUtil::toDiskPath( path ), hourAgo ) );
         }
 
         AbsolutePath makeCachePath()
@@ -92,9 +92,9 @@ SW_TEST_CASE( ContentHashCacheTest, StampInsideTheWriteWindowIsHashedAgain )
 {
     const string       path      = test::makeScratchPath( "fresh.txt" );
     const AbsolutePath cachePath = makeCachePath();
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( path, "aaaa" ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( path ), "aaaa" ) );
     int64 writeTicks = 0;
-    SW_REQUIRE_TRUE( FileUtil::getFileWriteTime( path, writeTicks ) );
+    SW_REQUIRE_TRUE( FileUtil::getFileWriteTime( FileUtil::toDiskPath( path ), writeTicks ) );
     {
         ContentHashCache first;
         SW_REQUIRE_TRUE( first.load( cachePath ).has_value() );
@@ -103,8 +103,8 @@ SW_TEST_CASE( ContentHashCacheTest, StampInsideTheWriteWindowIsHashedAgain )
         SW_REQUIRE_TRUE( first.save().has_value() );
     }
     // 바깥 도구가 같은 틱에 같은 크기로 다시 썼다 — 도장이 같다.
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( path, "bbbb" ) );
-    SW_REQUIRE_TRUE( FileUtil::setFileWriteTime( path, writeTicks ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( path ), "bbbb" ) );
+    SW_REQUIRE_TRUE( FileUtil::setFileWriteTime( FileUtil::toDiskPath( path ), writeTicks ) );
     ContentHashCache second;
     SW_REQUIRE_TRUE( second.load( cachePath ).has_value() );
     SW_EXPECT_EQUAL( second.computeFile( path ), ContentHash::computeBytes( makeBytes( "bbbb" ) ) );
@@ -115,15 +115,15 @@ SW_TEST_CASE( ContentHashCacheTest, StampInsideTheWriteWindowIsHashedAgain )
 SW_TEST_CASE( ContentHashCacheTest, ExternalRewriteInTheOwnWriteTickIsSeen )
 {
     const string path = test::makeScratchPath( "ownrace.txt" );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( path, "aaaa" ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( path ), "aaaa" ) );
     int64 writeTicks = 0;
-    SW_REQUIRE_TRUE( FileUtil::getFileWriteTime( path, writeTicks ) );
+    SW_REQUIRE_TRUE( FileUtil::getFileWriteTime( FileUtil::toDiskPath( path ), writeTicks ) );
     ContentHashCache cache;
     cache.recordOwnWrite( path );
     SW_EXPECT_EQUAL( cache.computeFile( path ), ContentHash::computeBytes( makeBytes( "aaaa" ) ) );
     // 바깥 도구가 같은 틱에 같은 크기로 다시 썼다 — 도장이 같고 이 캐시에는 알림이 없다.
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( path, "bbbb" ) );
-    SW_REQUIRE_TRUE( FileUtil::setFileWriteTime( path, writeTicks ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( path ), "bbbb" ) );
+    SW_REQUIRE_TRUE( FileUtil::setFileWriteTime( FileUtil::toDiskPath( path ), writeTicks ) );
     SW_EXPECT_EQUAL( cache.computeFile( path ), ContentHash::computeBytes( makeBytes( "bbbb" ) ) );
 }
 
@@ -140,14 +140,14 @@ SW_TEST_CASE( ContentHashCacheTest, CacheFromAnotherVersionIsDropped )
         SW_REQUIRE_TRUE( first.save().has_value() );
     }
     vector<uint8> bytes;
-    SW_REQUIRE_TRUE( FileUtil::readFile( cachePath.str(), bytes ) );
+    SW_REQUIRE_TRUE( FileUtil::readFile( cachePath, bytes ) );
     SW_REQUIRE_TRUE( bytes.size() >= 8 );
     const uint32 otherVersion = ContentHashCache::kCacheFormatVersion + 1; // 머리: 표지(4 B) 뒤의 판(4 B, 리틀 엔디언)
     for ( uint32 byteIndex = 0; byteIndex < 4; ++byteIndex )
     {
         bytes[4 + byteIndex] = static_cast<uint8>( otherVersion >> ( 8 * byteIndex ) );
     }
-    SW_REQUIRE_TRUE( FileUtil::writeFile( cachePath.str(), bytes.data(), bytes.size() ) );
+    SW_REQUIRE_TRUE( FileUtil::writeFile( cachePath, bytes.data(), bytes.size() ) );
     ContentHashCache second;
     SW_REQUIRE_TRUE( second.load( cachePath ).has_value() );
     SW_EXPECT_EQUAL( second.computeFile( path ), ContentHash::computeBytes( makeBytes( "versioned" ) ) );
@@ -164,12 +164,12 @@ SW_TEST_CASE( ContentHashTest, OwnRewriteOfTheSameSizeIsSeenAtOnce )
     const string path = test::makeScratchPath( "rewrite.txt" );
     for ( const utf8* pText : { "aaaa", "bbbb", "cccc", "aaaa" } )
     {
-        SW_REQUIRE_TRUE( FileUtil::writeTextFile( path, pText ) );
+        SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( path ), pText ) );
         const uint64 expected = ContentHash::computeBytes( makeBytes( pText ) );
         SW_EXPECT_EQUAL( ContentHash::computeFile( path ), expected );
         SW_EXPECT_EQUAL( ContentHash::computeFile( path ), expected ); // 두 번째는 캐시에서 — 같은 값이어야 한다
     }
-    SW_REQUIRE_TRUE( FileUtil::removeFile( path ) );
+    SW_REQUIRE_TRUE( FileUtil::removeFile( FileUtil::toDiskPath( path ) ) );
     // 지운 파일은 못 읽음(0)이다. 스트림 해시는 크기를 조용히 묻고(tryGetFileSize) 없음을 값(NotFound)으로 돌려주므로 로그는 없다 — 판단은 부른 쪽 몫이다.
     SW_EXPECT_EQUAL( ContentHash::computeFile( path ), uint64( 0 ) );
 }

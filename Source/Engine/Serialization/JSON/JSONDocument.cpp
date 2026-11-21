@@ -804,7 +804,7 @@ namespace sw
                              text.error().message(), text.error().detail() );
             return false;
         }
-        return FileUtil::writeTextFile( absPath, *text );
+        return FileUtil::writeTextFile( FileUtil::toDiskPath( absPath ), *text );
     }
 
     string JSONDocument::unescapeString( string_view value )

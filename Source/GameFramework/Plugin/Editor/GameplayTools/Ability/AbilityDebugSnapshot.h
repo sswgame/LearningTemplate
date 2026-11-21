@@ -11,7 +11,7 @@
 
 namespace sw
 {
-    class AbilityComponent;
+    class AbilitySystemComponent;
 } // namespace sw
 
 namespace sw::editor
@@ -61,7 +61,7 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    /** @brief 최근 이펙트 기록(적용 · 거부 까닭 · 제거 원인) 한 줄입니다(`AbilityComponent::collectEffectLog`). */
+    /** @brief 최근 이펙트 기록(적용 · 거부 까닭 · 제거 원인) 한 줄입니다(`AbilitySystemComponent::collectEffectLog`). */
     struct AbilityDebugLogRow
     {
         string  _event{};  ///< 기록 종류 이름(`AbilityEffectLogKind`)
@@ -88,6 +88,6 @@ namespace sw::editor
 
         // 컴포넌트 상태 → 표 행 변환입니다.
         /** @brief @p abilitySystem 의 지금 상태로 @p outSnapshot 을 다시 채웁니다. 지우는 중인 이펙트는 뺍니다. 행 순서는 컴포넌트의 순서(세트 · 건 순서 · 부여 순서)를 따릅니다. */
-        static void collect( const AbilityComponent& abilitySystem, AbilityDebugSnapshot& outSnapshot );
+        static void collect( const AbilitySystemComponent& abilitySystem, AbilityDebugSnapshot& outSnapshot );
     };
 } // namespace sw::editor

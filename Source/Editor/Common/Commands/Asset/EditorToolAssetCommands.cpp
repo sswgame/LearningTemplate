@@ -126,7 +126,7 @@ namespace sw::editor
             {
                 string       text;
                 TileSetAsset asset;
-                if ( FileUtil::readTextFile( resolved, text ) == false || asset.loadFromXMLText( text, resolved ) == false )
+                if ( FileUtil::readTextFile( FileUtil::toDiskPath( resolved ), text ) == false || asset.loadFromXMLText( text, resolved ) == false )
                     return false;
                 outData = asset.getContent();
                 return true;
@@ -134,7 +134,7 @@ namespace sw::editor
 
             [[nodiscard]] static bool writeDocument( const TileSetContent& data, const string& resolved )
             {
-                return FileUtil::writeTextFile( resolved, data.saveToXMLText() );
+                return FileUtil::writeTextFile( FileUtil::toDiskPath( resolved ), data.saveToXMLText() );
             }
 
             [[nodiscard]] static bool writeDocument( const TileMapXMLData& data, const string& resolved )
@@ -155,7 +155,7 @@ namespace sw::editor
             static ToolAssetLoadResult loadToolDocument( const ToolDocumentDef& desc, TAsset& outData, string_view path, string* pOutStatus )
             {
                 const string resolved = resolveDocumentPath( desc, path, DocumentUse::Read );
-                if ( resolved.empty() || FileUtil::isRegularFile( resolved ) == false )
+                if ( resolved.empty() || FileUtil::isRegularFile( FileUtil::toDiskPath( resolved ) ) == false )
                 {
                     if ( pOutStatus != nullptr )
                     {
@@ -206,7 +206,7 @@ namespace sw::editor
                 const bool   bProbeWritten = writeDocument( data, probePath );
                 const bool   bReadsBack    = bProbeWritten && readDocument( readBack, probePath );
                 if ( bProbeWritten )
-                    (void)FileUtil::removeFile( probePath );
+                    (void)FileUtil::removeFile( FileUtil::toDiskPath( probePath ) );
                 if ( bProbeWritten && bReadsBack == false )
                 {
                     SW_LOG_ERROR_ID( "EditorToolAssetCommands.WouldNotReadBack", "The %# was not saved to '%#' - the file could not be read back (see the log above), so the saved file is kept", desc._pLabel, resolved );
@@ -276,7 +276,7 @@ namespace sw::editor
     bool EditorToolAssetCommands::hasToolDocument( string_view path )
     {
         const string resolved = EditorToolAssetInternal::resolveToolDocumentPath( path, EditorToolAssetInternal::DocumentUse::Read );
-        return resolved.empty() == false && FileUtil::isRegularFile( resolved );
+        return resolved.empty() == false && FileUtil::isRegularFile( FileUtil::toDiskPath( resolved ) );
     }
 
     ToolAssetLoadResult EditorToolAssetCommands::loadSpriteClip( SpriteClipAsset& outData, string& outStatus, string_view path )

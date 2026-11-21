@@ -90,7 +90,7 @@ namespace sw
 {
     /**
      * @brief 주인에게 정한 태그나 그 하위 태그의 게임플레이 이벤트가 오면 콜백을 부릅니다(언리얼의 `UAbilityTask_WaitGameplayEvent` 에 해당).
-     * @details 작업이 붙을 때 구독을 등록하고(`AbilityComponent::registerGameplayEvent`), 끝날 때 해제한다.
+     * @details 작업이 붙을 때 구독을 등록하고(`AbilitySystemComponent::registerGameplayEvent`), 끝날 때 해제한다.
      */
     class SW_GF_API AbilityTaskWaitEvent final : public AbilityTask
     {

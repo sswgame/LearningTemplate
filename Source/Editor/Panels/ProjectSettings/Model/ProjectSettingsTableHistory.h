@@ -34,7 +34,7 @@ namespace sw::editor
         ProjectSettingsTableHistory( const ProjectSettingsTableHistory& )            = delete;
         ProjectSettingsTableHistory& operator=( const ProjectSettingsTableHistory& ) = delete;
 
-        /** @brief Ctrl+Z 가 갈 스택입니다(`IEditorPanel::findPanelCommandStack`). */
+        /** @brief Ctrl+Z 가 갈 스택입니다(`EditorPanel::findPanelCommandStack`). */
         CommandStack& getStack() { return *_pStack; }
         /** @brief @p page 의 표 문서가 만든 되돌리기 단계 하나를 올립니다. 단계가 문서를 움직이면 @p onMoved 를 부른다. */
         void push( ProjectSettingsPage& page, const ProjectSettingsTableMovedDelegate& onMoved );

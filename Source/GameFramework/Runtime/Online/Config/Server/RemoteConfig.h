@@ -108,9 +108,9 @@ namespace sw
         RemoteConfig& operator=( const RemoteConfig& ) = delete;
 
         /** @brief 저장소에서 다시 읽는 작업을 요청합니다. 완료되면 값과 번들 해시가 바뀝니다. */
-        void requestReload( IServiceStore& store );
+        void requestReload( ServiceStore& store );
         /** @brief 운영자나 GM 이 값 하나를 바꿉니다. 버전 조건과 감사 줄을 한 트랜잭션에 넣습니다. 다른 서버는 주기적으로 다시 읽어 반영합니다. */
-        void submitSet( IServiceStore& store, string_view key, const RemoteConfigValue& value, const ServiceAuditEntry& audit );
+        void submitSet( ServiceStore& store, string_view key, const RemoteConfigValue& value, const ServiceAuditEntry& audit );
 
         [[nodiscard]] bool findInteger( string_view key, int64& outValue ) const;
         [[nodiscard]] bool findReal( string_view key, float64& outValue ) const;

@@ -8,13 +8,13 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Runtime/Foundation/Framework/ActivatorVolumeComponent.h"
+#include "GameFramework/Runtime/Foundation/Framework/TriggerComponent.h"
 
 namespace sw
 {
     /**
      * @class MinigameTriggerComponent
-     * @brief 활성자가 들어오면(`ActivatorVolumeComponent` — 겹침 또는 거리) `_minigame` 으로 들어가기를 `MinigameFlow` 에 맡깁니다(`requestEnter` — 다음 게임 프레임 앞, 틱 밖).
+     * @brief 활성자가 들어오면(`TriggerComponent` — 겹침 또는 거리) `_minigame` 으로 들어가기를 `MinigameFlow` 에 맡깁니다(`requestEnter` — 다음 게임 프레임 앞, 틱 밖).
      * @details 용과 같이 · GTA 의 가게 문 · 오락실 기계, 유니티의 `OnTriggerEnter` 에서 `SceneManager.LoadScene` 을 부르는 스크립트 자리다 —
      *          게임마다 적는 일을 데이터 칸 하나로 둔다. 진입이 되었는지는 흐름이 알린다(맡기기까지가 발동이다). 판정은 서버만 한다(게임 상태를 바꾸는 일).
      *          나오기는 미니게임 쪽 일이다(`minigame.leave` · 미니게임의 끝) — 이 볼륨은 들어가기만 한다.
@@ -22,7 +22,7 @@ namespace sw
      *          게임 인스턴스(흐름)가 없는 월드(에디터 편집 씬)는 오류를 남기고 발동으로 치지 않는다.
      */
     REFLECT( Category = "Gameplay", DisplayName = "Minigame Trigger", Tooltip = "Enters a minigame when the activator enters (trigger overlap or distance)" )
-    class SW_GF_API MinigameTriggerComponent : public ActivatorVolumeComponent
+    class SW_GF_API MinigameTriggerComponent : public TriggerComponent
     {
     public:
         REFLECT_BODY();

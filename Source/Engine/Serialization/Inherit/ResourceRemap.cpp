@@ -7,8 +7,8 @@
 #include "Core/Container/vector.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/StringUtil.h"
-#include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/ServiceSlot.h"
+#include "Core/Subsystem/Subsystem.h"
 
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Foundation/EngineServices.h"
@@ -57,7 +57,7 @@ namespace sw
      * @class ResourceRemapTable
      * @brief 지금 읽은 경로 교체 표입니다(엔진 서비스 서브시스템 — 예전 함수 정적은 엔진을 다시 세워도 앞 엔진의 표가 남았다). `ResourceRemap` 의 정적 창구가 이것을 쓴다.
      */
-    class ResourceRemapTable final : public ISubsystem
+    class ResourceRemapTable final : public Subsystem
     {
     public:
         static constexpr const utf8* kSubsystemName = "ResourceRemapTable";

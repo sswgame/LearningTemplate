@@ -8,7 +8,7 @@
 #pragma once
 #include "Core/Foundation/Macros.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/Subsystem.h"
 
 namespace sw
 {
@@ -22,7 +22,7 @@ namespace sw
      * @brief 2D 렌더 설정을 엔진 파일에서 읽어 소유하는 서브시스템입니다.
      * @details 읽지 못하면 기동을 멈춘다(대신 쓸 표가 없다 - 기본 표를 지어내지 않는다). 호스트는 소유한 값을 범위에 `exposeMember` 로 걸어 서비스 표가 찾게 한다.
      */
-    class SW_API Render2DSettingsSubsystem : public ISubsystem
+    class SW_API Render2DSettingsSubsystem : public Subsystem
     {
     public:
         /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */

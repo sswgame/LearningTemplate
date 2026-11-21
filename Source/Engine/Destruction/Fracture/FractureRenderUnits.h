@@ -1,7 +1,7 @@
 /**
  * @file FractureRenderUnits.h
  * @brief 쪼갠 오브젝트의 렌더 유닛입니다. 슬롯(겉면, 안쪽 면)마다 스킨드 메시 컴포넌트 하나와, 쉬는 자세를 베이크한 정적 메시 컴포넌트 하나를 오브젝트에 붙여 다룹니다.
- * @details `FractureComponentBase` 의 값 멤버이고 컴포넌트가 직접(비가상으로) 부른다. 잎마다 본 로컬 변환(`listPiecePose`)은 컴포넌트가 그룹 자세로 구해 넘긴다.
+ * @details `FractureBaseComponent` 의 값 멤버이고 컴포넌트가 직접(비가상으로) 부른다. 잎마다 본 로컬 변환(`listPiecePose`)은 컴포넌트가 그룹 자세로 구해 넘긴다.
  *          붙인 컴포넌트는 핸들로 들고 쓸 때마다 오브젝트의 매니저로 찾는다. 사라졌으면 그 슬롯을 건너뛴다.
  */
 #pragma once

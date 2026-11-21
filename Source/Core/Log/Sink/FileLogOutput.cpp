@@ -73,7 +73,7 @@ namespace sw
                 return false;
             }
         }
-        const bool bFolderReady = FileUtil::ensureDirectoryExists( logFolderPath );
+        const bool bFolderReady = FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( logFolderPath ) );
 
         ScopedLock<mutex> lock{ _mutex };
         if ( _bOpened )

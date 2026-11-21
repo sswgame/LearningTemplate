@@ -357,7 +357,7 @@ namespace sw
              * @brief @p text 를 합쳐 @p outText 에 씁니다. @p inoutChain 은 지나온 부모 id 입니다.
              * @details 출처는 사슬의 위부터 얹는다 — 재귀에서 돌아오는 순서가 곧 그 순서다.
              */
-            [[nodiscard]] static bool flattenChain( string_view text, string_view sourceName, const DataInheritanceSchema& schema, IDataInheritanceSource& source, vector<string>& inoutChain, string& outText,
+            [[nodiscard]] static bool flattenChain( string_view text, string_view sourceName, const DataInheritanceSchema& schema, DataInheritanceSource& source, vector<string>& inoutChain, string& outText,
                                                     DataInheritanceProvenance* pOutProvenance )
             {
                 XMLDocument childDoc;
@@ -646,7 +646,7 @@ namespace sw
 namespace sw
 {
     DataInheritanceResourceSource::DataInheritanceResourceSource()
-        : IDataInheritanceSource{ engine::getSubsystem<ResourceComposition>().findInheritanceMaxDepth() }
+        : DataInheritanceSource{ engine::getSubsystem<ResourceComposition>().findInheritanceMaxDepth() }
     {
     }
 
@@ -656,7 +656,7 @@ namespace sw
     }
 
     DataInheritanceDiskSource::DataInheritanceDiskSource( string_view contentRoot, optional<uint32> maxDepth )
-        : IDataInheritanceSource{ maxDepth }
+        : DataInheritanceSource{ maxDepth }
         , _contentRoot{ contentRoot }
     {
     }
@@ -817,13 +817,13 @@ namespace sw
         return string{ doc.getRoot().getAttributeText( kBaseAttribute ) };
     }
 
-    bool DataInheritance::flatten( string_view text, string_view sourceName, const DataInheritanceSchema& schema, IDataInheritanceSource& source, string& outText, DataInheritanceProvenance* pOutProvenance )
+    bool DataInheritance::flatten( string_view text, string_view sourceName, const DataInheritanceSchema& schema, DataInheritanceSource& source, string& outText, DataInheritanceProvenance* pOutProvenance )
     {
         vector<string> listChain;
         return DataInheritanceInternal::flattenChain( text, sourceName, schema, source, listChain, outText, pOutProvenance );
     }
 
-    bool DataInheritance::collectChain( string_view text, string_view sourceName, IDataInheritanceSource& source, vector<DataInheritanceLayer>& outListLayer )
+    bool DataInheritance::collectChain( string_view text, string_view sourceName, DataInheritanceSource& source, vector<DataInheritanceLayer>& outListLayer )
     {
         outListLayer.clear();
         outListLayer.push_back( DataInheritanceLayer{ string{ sourceName }, string{ text } } );

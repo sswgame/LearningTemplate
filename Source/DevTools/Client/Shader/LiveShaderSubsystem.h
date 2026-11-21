@@ -12,7 +12,7 @@
 #include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/Subsystem.h"
 
 #include "DevTools/DevToolsAPI.h"
 
@@ -26,7 +26,7 @@ namespace sw
      * @class LiveShaderSubsystem
      * @brief 셰이더 재컴파일을 렌더러에 알리는 서브시스템입니다.
      */
-    class SW_DEVTOOLS_API LiveShaderSubsystem final : public ISubsystem
+    class SW_DEVTOOLS_API LiveShaderSubsystem final : public Subsystem
     {
     public:
         /** @brief 서브시스템 이름입니다(다른 선언의 의존 항목이 이 상수를 가리킨다). */

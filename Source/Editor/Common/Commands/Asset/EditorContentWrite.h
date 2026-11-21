@@ -19,7 +19,7 @@ namespace sw::editor
 
     /**
      * @struct EditorContentWrite
-     * @brief 씬 저장 · 문서 패널 저장(`IEditorDocumentPanel::saveDocumentAndClearDirty`) · 에셋 옮기기 계획 · 삭제가 모두 이 확인을 지난다.
+     * @brief 씬 저장 · 문서 패널 저장(`EditorDocumentPanelBase::saveDocumentAndClearDirty`) · 에셋 옮기기 계획 · 삭제가 모두 이 확인을 지난다.
      * @details 예전에는 씬 저장 두 곳만 읽기 전용을 물었다. 문서 저장은 묻지 않고 원자적 쓰기로 가서 POSIX `rename` 이 읽기 전용 대상을 바꿔 끼웠다(git LFS lockable 잠금이 뚫린다).
      *          언리얼은 저장 전 `PromptForCheckoutAndSave` 가 모든 패키지에 같은 길이고, 유니티 VCS 도 저장 · 옮기기 · 삭제 앞에서 체크아웃을 묻는다 — 동작마다 따로 묻지 않는 것이 그 자리다.
      *          남의 잠금은 따로 보지 않는다: LFS 는 잠근 사람 사본만 쓰기 가능으로 두므로 남이 잠근 파일은 이 사본에서 읽기 전용이다.

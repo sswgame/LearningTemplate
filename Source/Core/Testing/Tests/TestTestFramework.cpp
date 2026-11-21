@@ -25,7 +25,7 @@ SW_TEST_CASE( TestFrameworkTest, ScratchPathIsStableWithinACaseAndDistinctPerNam
     SW_EXPECT_TRUE( StringUtil::endsWith( path, "sample.wav" ) );
     SW_EXPECT_EQUAL( path, test::makeScratchPath( "sample.wav" ) );
     SW_EXPECT_TRUE( path != test::makeScratchPath( "other.wav" ) );
-    SW_EXPECT_TRUE( FileUtil::isDirectory( FileUtil::getDirectoryPart( path ) ) ); // 폴더는 처음 부를 때 선다
+    SW_EXPECT_TRUE( FileUtil::isDirectory( FileUtil::toDiskPath( FileUtil::getDirectoryPart( path ) ) ) ); // 폴더는 처음 부를 때 선다
 }
 
 #if defined( SW_DO_CHECKS )

@@ -1,7 +1,7 @@
 /**
  * @file MeshComponent.h
  * @brief 메시를 그리는 SceneComponent 입니다(3D 렌더링). 프리미티브 레지스트리를 거쳐 GPUScene 으로 들어갑니다.
- * @details 레지스트리 번호는 코어 기반 `ScenePrimitive` 가 가집니다. 레지스트리는 그 기반만 알고, 빌더가 이 타입으로 `static_cast` 합니다.
+ * @details 레지스트리 번호는 코어 기반 `PrimitiveComponent` 가 가집니다. 레지스트리는 그 기반만 알고, 빌더가 이 타입으로 `static_cast` 합니다.
  */
 #pragma once
 #include "Core/Concurrency/atomic.h"
@@ -13,7 +13,7 @@
 
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Graphics/Mesh/MeshCache.h"
-#include "Engine/Object/GameObject/Registry/ScenePrimitive.h"
+#include "Engine/Object/GameObject/Registry/PrimitiveComponent.h"
 #include "Engine/Presentation/InstanceCustomData.h"
 #include "Engine/Presentation/InstanceHighlight.h"
 #include "Engine/Presentation/InstanceSpriteFrame.h"
@@ -35,7 +35,7 @@ namespace sw
      * @brief GameObject 에 붙어 그려지는 메시입니다(월드 트랜스폼은 SceneComponent 에서 얻습니다).
      */
     REFLECT( Category = "Rendering 3D", DisplayName = "Mesh Component", Tooltip = "3D Static Mesh Renderer", Meta = "Icon=Cube" )
-    class SW_API MeshComponent : public ScenePrimitive
+    class SW_API MeshComponent : public PrimitiveComponent
     {
     public:
         REFLECT_BODY();

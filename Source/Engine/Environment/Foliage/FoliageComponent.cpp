@@ -461,14 +461,14 @@ namespace sw
         // 레지스트리에서 한 번에 빼고(배치마다 소멸자가 빼면 목록을 셀 수만큼 접는다) 놓는다. 이미 빠진 배치의 소멸자는 아무것도 하지 않는다.
         if ( _pPrimitiveRegistry != nullptr )
         {
-            vector<ScenePrimitiveBatch*> listBatch;
+            vector<PrimitiveBatch*> listBatch;
             listBatch.reserve( _listCell.size() );
             for ( Cell& cell : _listCell )
             {
                 for ( const unique_ptr<MeshInstanceBatch>& pBatch : cell._listBatch )
                     listBatch.push_back( pBatch.get() );
             }
-            _pPrimitiveRegistry->removeInstanceBatches( vector_reference<ScenePrimitiveBatch* const>( listBatch.data(), listBatch.size() ) );
+            _pPrimitiveRegistry->removeInstanceBatches( vector_reference<PrimitiveBatch* const>( listBatch.data(), listBatch.size() ) );
         }
         _listCell.clear();
         _instanceCount = 0;
@@ -714,7 +714,7 @@ namespace sw
     {
         if ( _pPrimitiveRegistry != nullptr )
         {
-            vector<ScenePrimitiveBatch*> listRemoved;
+            vector<PrimitiveBatch*> listRemoved;
             for ( size_t cellIndex = 0; cellIndex < _listCell.size(); ++cellIndex )
             {
                 if ( _listCell[cellIndex]._layerIndex != layerIndex || listKeep[cellIndex] == SW_TRUE )
@@ -722,7 +722,7 @@ namespace sw
                 for ( const unique_ptr<MeshInstanceBatch>& pBatch : _listCell[cellIndex]._listBatch )
                     listRemoved.push_back( pBatch.get() );
             }
-            _pPrimitiveRegistry->removeInstanceBatches( vector_reference<ScenePrimitiveBatch* const>( listRemoved.data(), listRemoved.size() ) );
+            _pPrimitiveRegistry->removeInstanceBatches( vector_reference<PrimitiveBatch* const>( listRemoved.data(), listRemoved.size() ) );
         }
         size_t keptCount{ 0 };
         for ( size_t cellIndex = 0; cellIndex < _listCell.size(); ++cellIndex )

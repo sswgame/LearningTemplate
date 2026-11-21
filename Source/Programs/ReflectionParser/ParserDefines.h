@@ -50,12 +50,15 @@ namespace sw
          */
         inline constexpr const utf8* kNetRoleField = "NetRole";
 
-        inline constexpr const utf8* kReflectBodyPrefix     = "REFLECT_BODY";
-        inline constexpr const utf8* kReflectBodyMarkerFn   = "__sw_reflect_body";
-        inline constexpr const utf8* kCtorLookupName        = "$ctor";
-        inline constexpr const utf8* kVoidTypeName          = "void";
-        inline constexpr const utf8* kDefaultMethodCategory = "General";
-        inline constexpr const utf8* kConstructorCategory   = "Constructor";
+        inline constexpr const utf8* kReflectBodyPrefix   = "REFLECT_BODY";
+        inline constexpr const utf8* kReflectBodyMarkerFn = "__sw_reflect_body";
+        /** @brief `REFLECT_INTERFACE( I, _port )` 의 애노테이션 머리와 표식 함수 이름 머리입니다(`ReflectionMacros.h`). */
+        inline constexpr const utf8* kReflectInterfacePrefix   = "REFLECT_INTERFACE;";
+        inline constexpr const utf8* kReflectInterfaceMarkerFn = "__sw_reflect_interface_";
+        inline constexpr const utf8* kCtorLookupName           = "$ctor";
+        inline constexpr const utf8* kVoidTypeName             = "void";
+        inline constexpr const utf8* kDefaultMethodCategory    = "General";
+        inline constexpr const utf8* kConstructorCategory      = "Constructor";
         /** @brief 끝에 오면 개수 표식으로 보는 열거자 이름입니다(`ENUM( Count = … )` 을 적지 않아도 된다). */
         inline constexpr const utf8* kCountEnumerator = "Count";
 

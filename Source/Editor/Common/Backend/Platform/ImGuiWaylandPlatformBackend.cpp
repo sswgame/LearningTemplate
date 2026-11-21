@@ -11,7 +11,7 @@
 
     #include "Engine/Input/Map/InputKeyTable.h"
     #include "Engine/Window/CursorShape.h"
-    #include "Engine/Window/IWindow.h"
+    #include "Engine/Window/GenericWindow.h"
     #include "Engine/Window/Linux/Wayland/WaylandInputEvent.h"
     #include "Engine/Window/NativeWindowEvent.h"
 
@@ -83,7 +83,7 @@ namespace sw::editor
      * @brief Wayland 창(`WaylandWindow`)용 ImGui 플랫폼 백엔드입니다 — 창 하나만 다룬다.
      * @details Wayland 클라이언트는 창 자리를 정하지 못하고 최상위 창을 나란히 놓을 수도 없다(xdg-shell). 그래서 ImGui 멀티 뷰포트(패널을 OS 창으로 떼어 내기)는 켜지 않는다 —
      *          `PlatformHasViewports` 를 알리지 않으면 ImGui 가 `ViewportsEnable` 을 스스로 끄고 패널은 메인 창 안에서만 도킹한다.
-     *          입력은 창이 `NativeWindowEvent::kMessageWayland` 로 넘기는 `WaylandInputEvent` 이고(키 · 포인터 · 휠 · 포커스), 클립보드는 창의 클립보드 능력(`IWindow::supportsClipboard`)에,
+     *          입력은 창이 `NativeWindowEvent::kMessageWayland` 로 넘기는 `WaylandInputEvent` 이고(키 · 포인터 · 휠 · 포커스), 클립보드는 창의 클립보드 능력(`GenericWindow::supportsClipboard`)에,
      *          커서 모양은 창의 커서 모양 능력(`supportsCursorShape`)에 잇는다.
      */
     class ImGuiWaylandPlatformBackend : public IImGuiPlatformBackend
@@ -103,7 +103,7 @@ namespace sw::editor
         {
         }
 
-        bool initialize( IWindow* pWindow, RHIBackend backendType ) override
+        bool initialize( GenericWindow* pWindow, RHIBackend backendType ) override
         {
             if ( pWindow == nullptr )
                 return false;
@@ -316,7 +316,7 @@ namespace sw::editor
         }
 
     private:
-        IWindow*             _pWindow;
+        GenericWindow*       _pWindow;
         GameTimer            _timer;
         string               _clipboardText; ///< `Platform_GetClipboardTextFn` 이 돌려주는 글(다음 호출까지 살아 있어야 한다)
         ImGuiTextInputBridge _textInput;     ///< 창의 입력기와 ImGui 를 잇는다
@@ -325,7 +325,7 @@ namespace sw::editor
         uint8                _heldModifierKeyMask; ///< 누른 좌우 수정 키(`ImGuiKey_LeftCtrl` 부터 8 개 — 왼쪽 넷, 오른쪽 넷)
     };
 
-    unique_ptr<IImGuiPlatformBackend> IImGuiPlatformBackend::createPlatformBackendFor( const IWindow& window )
+    unique_ptr<IImGuiPlatformBackend> IImGuiPlatformBackend::createPlatformBackendFor( const GenericWindow& window )
     {
         if ( window.getSurfaceKind() == NativeSurfaceKind::Wayland )
             return make_unique<ImGuiWaylandPlatformBackend>();

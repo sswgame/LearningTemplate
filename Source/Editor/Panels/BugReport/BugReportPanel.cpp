@@ -18,7 +18,7 @@ namespace sw::editor
     SW_EDITOR_PANEL( BugReportPanel, BugReportPanel::kPanelID, EditorPanelCategory::Tool, 2045 );
 
     BugReportPanel::BugReportPanel()
-        : IEditorPanel( false ) // 필요할 때 여는 도구라 닫힌 채 시작한다
+        : EditorPanel( false ) // 필요할 때 여는 도구라 닫힌 채 시작한다
         , _viewModel{}
         , _viewState{}
         , _note{}

@@ -14,18 +14,18 @@ namespace sw
 {
     namespace
     {
-        /** @brief 애니메이션 이름의 방향 꼬리입니다(`FacingDir` 순서). */
-        const utf8* toFacingSuffix( FacingDir facing )
+        /** @brief 애니메이션 이름의 방향 꼬리입니다(`FacingDirection` 순서). */
+        const utf8* toFacingSuffix( FacingDirection facing )
         {
             switch ( facing )
             {
-                case FacingDir::Down:
+                case FacingDirection::Down:
                     return "down";
-                case FacingDir::Left:
+                case FacingDirection::Left:
                     return "left";
-                case FacingDir::Right:
+                case FacingDirection::Right:
                     return "right";
-                case FacingDir::Up:
+                case FacingDirection::Up:
                     return "up";
             }
             return "down";

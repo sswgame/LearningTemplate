@@ -49,7 +49,7 @@ namespace sw
             {
                 const PathKey lowerComponent = FileUtil::normalizePath( component );
                 outName.clear();
-                (void)FileUtil::forEachDirectoryEntry( directory, false, [&outName, &lowerComponent]( const DirectoryEntry& entry )
+                (void)FileUtil::forEachDirectoryEntry( FileUtil::toDiskPath( directory ), false, [&outName, &lowerComponent]( const DirectoryEntry& entry )
                 {
                     const size_t      nameStart = entry._path.rfind( '/' );
                     const string_view name      = nameStart == string_view::npos ? entry._path : entry._path.substr( nameStart + 1 );
@@ -73,7 +73,7 @@ namespace sw
             /** @brief 실패한 쓰기의 임시 파일을 지웁니다. 지우지 못하면 경고합니다 — 원본 옆에 `.tmp<pid>_<번호>` 가 남습니다. */
             static void discardTempFile( const string& tempPath )
             {
-                if ( FileUtil::removeFile( tempPath ) == false )
+                if ( FileUtil::removeFile( FileUtil::toDiskPath( tempPath ) ) == false )
                     SW_LOG_WARNING_ID( "FileUtil.FailedRemoveTemporaryFile", "Failed to remove the temporary file %# - delete it by hand", tempPath.c_str() );
             }
 
@@ -123,7 +123,7 @@ namespace sw
             static void logWriteResult( FileWriteResult result, string_view fileName )
             {
                 // 읽기 전용이 아닌 거절은 쓰기 게이트(`isWriteAllowed`)가 이미 남겼다
-                if ( result == FileWriteResult::Refused && FileUtil::isReadOnlyFile( fileName ) )
+                if ( result == FileWriteResult::Refused && FileUtil::isReadOnlyFile( FileUtil::toDiskPath( fileName ) ) )
                     SW_LOG_ERROR_ID( "File.WriteReadOnly", "Refused to replace the read-only file %# - make it writable (check it out) first", fileName );
                 else if ( result == FileWriteResult::ReplaceFailed )
                     SW_LOG_ERROR_ID( "File.WriteFailed", "Failed to replace %# with the newly written file — the original file was left untouched", fileName );
@@ -140,7 +140,7 @@ namespace sw
                     return false;
                 // 읽기 전용 대상은 어느 플랫폼에서도 바꿔 끼우지 않는다 — POSIX `rename` 은 대상 권한을 보지 않아 버전 관리 잠금(git LFS lockable)이 조용히 뚫리고,
                 // Windows 는 바꿔 끼우기가 져 아래 재시도(20 ms × 10)를 헛되이 잔다. 언리얼 `IFileManager::Move` 도 읽기 전용 대상은 덮지 않는다(EvenIfReadOnly 를 따로 받는다).
-                if ( FileUtil::isReadOnlyFile( filePath ) )
+                if ( FileUtil::isReadOnlyFile( FileUtil::toDiskPath( filePath ) ) )
                     return false;
                 outTempPath = FileUtil::makeWriteTempPath( filePath );
                 outFilePath = filePath;
@@ -208,7 +208,7 @@ namespace sw
                 if ( handle == kInvalidNativeFileHandle )
                 {
                     // 열지 못한 뒤 없으면 "없음" 이다(그 사이 지워진 것도 없음이다). 있는데 못 열었으면(권한 · 잠금) 늘 오류다.
-                    if ( bMissingIsError == false && FileUtil::exists( filePath ) == false )
+                    if ( bMissingIsError == false && FileUtil::exists( FileUtil::toDiskPath( filePath ) ) == false )
                         return OptionalFileRead::Missing;
                     SW_LOG_ERROR_ID( "File.NotFound", "File not found: %#", fileName );
                     return OptionalFileRead::Failed;
@@ -333,7 +333,7 @@ namespace sw
             {
                 if ( PlatformFileSystem::createDirectory( path ) )
                     return true;
-                if ( FileUtil::isDirectory( path ) )
+                if ( FileUtil::isDirectory( FileUtil::toDiskPath( path ) ) )
                     return false;
                 const string parent = FileUtil::getDirectoryPart( path );
                 if ( parent.empty() || parent == path )
@@ -1183,6 +1183,173 @@ namespace sw
             return nullopt;
         }
         return AbsolutePath::tryMake( path );
+    }
+
+    AbsolutePath FileUtil::toDiskPath( string_view text )
+    {
+        // 빈 글은 그대로 빈 경로 - `canAcceptPathInput` 이 상대 경로에 `File.RelativePath` 를 남긴다(OS 경계와 같은 오류 하나).
+        if ( text.empty() == false && PlatformFileUtil::canAcceptPathInput( text ) )
+        {
+            optional<AbsolutePath> path = AbsolutePath::tryMake( text );
+            if ( path.has_value() )
+                return std::move( *path );
+        }
+        return AbsolutePath{ string{} };
+    }
+
+    bool FileUtil::ensureParentDirectoryExists( const AbsolutePath& filePath )
+    {
+        return ensureParentDirectoryExists( filePath.str() );
+    }
+
+    bool FileUtil::ensureDirectoryExists( const AbsolutePath& directoryPath )
+    {
+        return ensureDirectoryExists( directoryPath.str() );
+    }
+
+    bool FileUtil::exists( const AbsolutePath& path )
+    {
+        return exists( path.str() );
+    }
+
+    bool FileUtil::isDirectory( const AbsolutePath& path )
+    {
+        return isDirectory( path.str() );
+    }
+
+    bool FileUtil::isRegularFile( const AbsolutePath& path )
+    {
+        return isRegularFile( path.str() );
+    }
+
+    bool FileUtil::isReadOnlyFile( const AbsolutePath& fileName )
+    {
+        return isReadOnlyFile( fileName.str() );
+    }
+
+    bool FileUtil::setWritable( const AbsolutePath& path, bool bWritable )
+    {
+        return setWritable( path.str(), bWritable );
+    }
+
+    bool FileUtil::tryGetFileTimestamp( const AbsolutePath& fileName, uint64& outSeconds )
+    {
+        return tryGetFileTimestamp( fileName.str(), outSeconds );
+    }
+
+    bool FileUtil::getFileWriteTime( const AbsolutePath& path, int64& outTicks )
+    {
+        return getFileWriteTime( path.str(), outTicks );
+    }
+
+    bool FileUtil::setFileWriteTime( const AbsolutePath& path, int64 ticks )
+    {
+        return setFileWriteTime( path.str(), ticks );
+    }
+
+    bool FileUtil::tryGetFileSize( const AbsolutePath& fileName, uint64& outSize )
+    {
+        return tryGetFileSize( fileName.str(), outSize );
+    }
+
+    bool FileUtil::getFileStamp( const AbsolutePath& fileName, FileStamp& outStamp )
+    {
+        return getFileStamp( fileName.str(), outStamp );
+    }
+
+    bool FileUtil::copyFile( const AbsolutePath& source, const AbsolutePath& destination )
+    {
+        return copyFile( source.str(), destination.str() );
+    }
+
+    bool FileUtil::removeFile( const AbsolutePath& path )
+    {
+        return removeFile( path.str() );
+    }
+
+    bool FileUtil::replaceFile( const AbsolutePath& tempPath, const AbsolutePath& targetPath )
+    {
+        return replaceFile( tempPath.str(), targetPath.str() );
+    }
+
+    bool FileUtil::tryRemoveFile( const AbsolutePath& path )
+    {
+        return tryRemoveFile( path.str() );
+    }
+
+    bool FileUtil::removeDirectory( const AbsolutePath& path )
+    {
+        return removeDirectory( path.str() );
+    }
+
+    bool FileUtil::renamePath( const AbsolutePath& from, const AbsolutePath& to )
+    {
+        return renamePath( from.str(), to.str() );
+    }
+
+    bool FileUtil::writeFile( const AbsolutePath& fileName, const uint8* pData, uint64 size )
+    {
+        return writeFile( fileName.str(), pData, size );
+    }
+
+    FileWriteResult FileUtil::tryWriteFile( const AbsolutePath& fileName, const uint8* pData, uint64 size )
+    {
+        return tryWriteFile( fileName.str(), pData, size );
+    }
+
+    bool FileUtil::writeFileDurable( const AbsolutePath& fileName, const uint8* pData, uint64 size )
+    {
+        return writeFileDurable( fileName.str(), pData, size );
+    }
+
+    bool FileUtil::readFile( const AbsolutePath& fileName, vector<uint8>& outBytes, uint64 offset, uint64 maxReadCount )
+    {
+        return readFile( fileName.str(), outBytes, offset, maxReadCount );
+    }
+
+    bool FileUtil::readTextFile( const AbsolutePath& fileName, string& outText )
+    {
+        return readTextFile( fileName.str(), outText );
+    }
+
+    OptionalFileRead FileUtil::readOptionalTextFile( const AbsolutePath& fileName, string& outText )
+    {
+        return readOptionalTextFile( fileName.str(), outText );
+    }
+
+    bool FileUtil::readStreamTextFile( const AbsolutePath& fileName, string& outText, uint64 maxBytes )
+    {
+        return readStreamTextFile( fileName.str(), outText, maxBytes );
+    }
+
+    bool FileUtil::writeTextFile( const AbsolutePath& fileName, string_view text )
+    {
+        return writeTextFile( fileName.str(), text );
+    }
+
+    bool FileUtil::writeTextFileDurable( const AbsolutePath& fileName, string_view text )
+    {
+        return writeTextFileDurable( fileName.str(), text );
+    }
+
+    bool FileUtil::appendTextFile( const AbsolutePath& fileName, string_view text )
+    {
+        return appendTextFile( fileName.str(), text );
+    }
+
+    bool FileUtil::forEachDirectoryEntry( const AbsolutePath& directory, bool bRecursive, DirectoryEntryVisitFn visit, void* pContext )
+    {
+        return forEachDirectoryEntry( directory.str(), bRecursive, visit, pContext );
+    }
+
+    bool FileUtil::collectFiles( const AbsolutePath& directory, string_view filterExtension, vector<string>& outListFilePath, bool bRecursive, const StopToken& stopToken )
+    {
+        return collectFiles( directory.str(), filterExtension, outListFilePath, bRecursive, stopToken );
+    }
+
+    bool FileUtil::collectFolders( const AbsolutePath& directory, vector<string>& outListFolder, bool bRecursive )
+    {
+        return collectFolders( directory.str(), outListFolder, bRecursive );
     }
 
     bool FileUtil::makeAbsolutePath( string_view path, string& outResult )

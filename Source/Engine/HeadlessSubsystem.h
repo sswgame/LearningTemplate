@@ -9,7 +9,7 @@
 #pragma once
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/Foundation/Macros.h"
-#include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/Subsystem.h"
 
 #include "Engine/Foundation/HeadlessTask.h"
 
@@ -46,7 +46,7 @@ namespace sw
      * @class HeadlessSubsystem
      * @brief 명령줄의 헤드리스 작업을 돌리는 서브시스템입니다.
      */
-    class SW_API HeadlessSubsystem final : public ISubsystem
+    class SW_API HeadlessSubsystem final : public Subsystem
     {
     public:
         /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */

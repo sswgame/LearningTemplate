@@ -25,16 +25,16 @@ namespace sw
     uint32 ShadowCopyName::removeCopies( string_view directoryPath )
     {
         vector<string> listFile;
-        if ( FileUtil::collectFiles( directoryPath, "", listFile, false ) == false )
+        if ( FileUtil::collectFiles( FileUtil::toDiskPath( directoryPath ), "", listFile, false ) == false )
             return 0; // 아직 아무것도 쓰지 않았다
         vector<string> listFolder;
-        (void)FileUtil::collectFolders( directoryPath, listFolder, false ); // 폴더가 없는 자리(리눅스)도 있다 — 파일 정리는 그대로 한다
+        (void)FileUtil::collectFolders( FileUtil::toDiskPath( directoryPath ), listFolder, false ); // 폴더가 없는 자리(리눅스)도 있다 — 파일 정리는 그대로 한다
 
         uint32 removedCount{ 0 };
         for ( const string& filePath : listFile )
         {
             // 아직 올려 둔 사본은 지워지지 않는다(예상된 실패 — 알리지 않는다).
-            if ( FileUtil::tryRemoveFile( filePath ) )
+            if ( FileUtil::tryRemoveFile( FileUtil::toDiskPath( filePath ) ) )
                 ++removedCount;
         }
 
@@ -42,15 +42,15 @@ namespace sw
         for ( const string& folderPath : listFolder )
         {
             vector<string> listCopyFile;
-            if ( FileUtil::collectFiles( folderPath, "", listCopyFile, false ) == false )
+            if ( FileUtil::collectFiles( FileUtil::toDiskPath( folderPath ), "", listCopyFile, false ) == false )
                 continue;
             bool bEmptied{ true };
             for ( const string& copyFilePath : listCopyFile )
             {
-                if ( FileUtil::tryRemoveFile( copyFilePath ) == false )
+                if ( FileUtil::tryRemoveFile( FileUtil::toDiskPath( copyFilePath ) ) == false )
                     bEmptied = false;
             }
-            if ( bEmptied && FileUtil::removeDirectory( folderPath ) )
+            if ( bEmptied && FileUtil::removeDirectory( FileUtil::toDiskPath( folderPath ) ) )
                 ++removedCount;
         }
         return removedCount;

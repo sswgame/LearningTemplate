@@ -76,7 +76,7 @@ namespace
     };
 
     /** @brief 찾기를 들고 있다가 테스트가 답하는 가짜 접속 상태 관리자입니다. 원격 알림은 받는 계정만 적습니다. */
-    class FakeTradePresence final : public IAccountPresence
+    class FakeTradePresence final : public AccountPresence
     {
     public:
         vector<AccountID> _listRelayedAccount{};
@@ -128,7 +128,7 @@ namespace
     };
 
     /** @brief 클라이언트 쪽 거래 알림을 받아 적습니다. 키트 클라이언트 대신 맨 요청을 보내므로 영역만 맞춘다. */
-    class TradePushSink final : public IOnlineClientService
+    class TradePushSink final : public OnlineClientService
     {
     public:
         vector<uint16>            _listKind{};

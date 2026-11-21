@@ -228,7 +228,7 @@ namespace sw::editor
             pathBuilder.appendFormat( "%#%#", FileUtil::removeExtension( fullPath ), EditorTransformCommandsInternal::kPresetSuffix );
             fullPath = string( pathBuilder.view() );
         }
-        if ( FileUtil::ensureParentDirectoryExists( fullPath ) == false )
+        if ( FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( fullPath ) ) == false )
             return false;
 
         // 저장 입구(`saveToFile`)가 빈 직렬화 결과를 거절하고 이유를 남긴다.
@@ -242,7 +242,7 @@ namespace sw::editor
             return false;
 
         string xmlData;
-        if ( FileUtil::readTextFile( presetFilePath, xmlData ) == false )
+        if ( FileUtil::readTextFile( FileUtil::toDiskPath( presetFilePath ), xmlData ) == false )
             return false;
 
         return EditorTransformCommandsInternal::applyComponentXML( pComp, xmlData, "Apply Component Preset" );

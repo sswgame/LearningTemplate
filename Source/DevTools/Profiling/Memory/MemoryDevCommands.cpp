@@ -108,7 +108,7 @@ namespace sw
                 formatstring( fileName.data(), fileName.capacity(), "%#.csv", sheetName );
                 const string  path = FileUtil::joinPath( folder, fileName.view() );
                 vector<uint8> listByte;
-                if ( folder.empty() || FileUtil::readFile( path, listByte ) == false )
+                if ( folder.empty() || FileUtil::readFile( FileUtil::toDiskPath( path ), listByte ) == false )
                 {
                     StringBuilder<constant::buffer::kMax1024> reply;
                     reply.appendFormat( "memory.exportinfo: no file '%#'", path );

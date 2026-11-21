@@ -17,7 +17,7 @@ namespace
         /** @brief @p folder 에 도메인 팩 하나를 씁니다. */
         static bool writePack( const string& folder, string_view fileName, string_view domain, const vector<std::pair<string, string>>& listEntry )
         {
-            if ( FileUtil::ensureDirectoryExists( folder ) == false )
+            if ( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( folder ) ) == false )
                 return false;
             return PackTestUtil::writeTextPack( FileUtil::joinPath( folder, fileName ), domain, listEntry );
         }
@@ -103,7 +103,7 @@ SW_TEST_CASE( PackPatchBuilderTest, RefusesFoldersThatAreNotABaseBuild )
     SW_REQUIRE_TRUE( Util::writePack( folder, "game.pack", "game", {
                                                                        { "a.txt", "1" }
     } ) );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::joinPath( folder, PackPatchBuilder::makeManifestFileName( "2" ) ), "<x/>" ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( FileUtil::joinPath( folder, PackPatchBuilder::makeManifestFileName( "2" ) ) ), "<x/>" ) );
     SW_EXPECT_FALSE( PackPatchBuilder::collectBuildEntries( folder, listEntry ) );
 }
 
@@ -130,7 +130,7 @@ SW_TEST_CASE( PackPatchBuilderTest, PatchTurnsTheOldBuildIntoTheNewOne )
     SW_REQUIRE_TRUE( PackPatchBuilder::makePatch( Util::makeParams( newFolder, recordPath, output, "2" ) ) );
 
     string manifestText;
-    SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::joinPath( output, PackPatchBuilder::makeManifestFileName( "2" ) ), manifestText ) );
+    SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::toDiskPath( FileUtil::joinPath( output, PackPatchBuilder::makeManifestFileName( "2" ) ) ), manifestText ) );
     PackPatchManifest manifest;
     SW_REQUIRE_TRUE( PackPatchManifest::parse( manifestText, "manifest", manifest ) );
     SW_EXPECT_EQUAL( string( "1" ), manifest._fromBuild );
@@ -149,7 +149,7 @@ SW_TEST_CASE( PackPatchBuilderTest, PatchTurnsTheOldBuildIntoTheNewOne )
 
     // 함께 쓴 새 내용 목록은 다음 패치의 이전 기록이다
     string recordText;
-    SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::joinPath( output, "2.packbuild.xml" ), recordText ) );
+    SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::toDiskPath( FileUtil::joinPath( output, "2.packbuild.xml" ) ), recordText ) );
     PackBuildRecord record;
     SW_REQUIRE_TRUE( PackBuildRecord::parse( recordText, "record", record ) );
     SW_EXPECT_EQUAL( string( "2" ), record._build );
@@ -195,5 +195,5 @@ SW_TEST_CASE( PackPatchBuilderTest, BadInputIsRejected )
     SW_EXPECT_FALSE( PackPatchBuilder::makePatch( Util::makeParams( folder, FileUtil::joinPath( root, "absent.xml" ), output, "2" ) ) );
     SW_EXPECT_FALSE( PackPatchBuilder::makePatch( Util::makeParams( folder, noPatching, output, "2" ) ) );
     SW_EXPECT_FALSE( PackPatchBuilder::makePatch( Util::makeParams( "", recordPath, output, "2" ) ) );
-    SW_EXPECT_FALSE( FileUtil::exists( output ) ); // 실패한 입력은 아무것도 쓰지 않는다
+    SW_EXPECT_FALSE( FileUtil::exists( FileUtil::toDiskPath( output ) ) ); // 실패한 입력은 아무것도 쓰지 않는다
 }

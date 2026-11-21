@@ -193,7 +193,7 @@ namespace sw
                 const optional<uint32> busIndex = mixer.findBusIndex( effectItem._bus );
                 if ( busIndex.has_value() == false )
                     continue;
-                IAudioEffect*         pEffect     = mixer.findEffect( *busIndex, effectItem._effect );
+                AudioEffect*          pEffect     = mixer.findEffect( *busIndex, effectItem._effect );
                 const AudioEffectDef* pEffectDesc = desc.findEffect( *busIndex, effectItem._effect );
                 if ( pEffect == nullptr || pEffectDesc == nullptr )
                     continue;

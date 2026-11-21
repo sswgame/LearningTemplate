@@ -18,7 +18,7 @@ SW_TEST_CASE( BugReportTest, ReportThatVanishedIsNotAnError )
 SW_TEST_CASE( BugReportTest, EnvironmentAndInputPropertiesRoundTrip )
 {
     const string directory = test::makeScratchPath( "SwBugReportEnvironment" );
-    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( directory ) );
+    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( directory ) ) );
     BugReport written;
     written._note            = "env";
     written._platform        = "Windows";
@@ -60,22 +60,22 @@ SW_TEST_CASE( BugReportTest, EnvironmentMismatchListsOnlyDifferingProperties )
 SW_TEST_CASE( BugReportTest, FolderHashFollowsBytesAndNames )
 {
     const string directory = test::makeScratchPath( "SwBugReportFolderHash" );
-    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( directory ) );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::joinPath( directory, "a.json" ), "{}" ) );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::joinPath( directory, "b.json" ), "[1]" ) );
+    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( directory ) ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( FileUtil::joinPath( directory, "a.json" ) ), "{}" ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( FileUtil::joinPath( directory, "b.json" ) ), "[1]" ) );
     uint64 first = 0;
     SW_REQUIRE_TRUE( BugReport::computeFolderHash( directory, first ) );
     uint64 again = 0;
     SW_REQUIRE_TRUE( BugReport::computeFolderHash( directory, again ) );
     SW_EXPECT_EQUAL( first, again );
 
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::joinPath( directory, "b.json" ), "[2]" ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( FileUtil::joinPath( directory, "b.json" ) ), "[2]" ) );
     uint64 changedBytes = 0;
     SW_REQUIRE_TRUE( BugReport::computeFolderHash( directory, changedBytes ) );
     SW_EXPECT_TRUE( changedBytes != first );
 
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::joinPath( directory, "b.json" ), "[1]" ) );
-    SW_REQUIRE_TRUE( FileUtil::renamePath( FileUtil::joinPath( directory, "b.json" ), FileUtil::joinPath( directory, "c.json" ) ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( FileUtil::joinPath( directory, "b.json" ) ), "[1]" ) );
+    SW_REQUIRE_TRUE( FileUtil::renamePath( FileUtil::toDiskPath( FileUtil::joinPath( directory, "b.json" ) ), FileUtil::toDiskPath( FileUtil::joinPath( directory, "c.json" ) ) ) );
     uint64 renamed = 0;
     SW_REQUIRE_TRUE( BugReport::computeFolderHash( directory, renamed ) );
     SW_EXPECT_TRUE( renamed != first );

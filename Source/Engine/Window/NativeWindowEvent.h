@@ -17,7 +17,7 @@ namespace sw
         static constexpr uint32 kMessageX11 = 0x8001;
         /** @brief Wayland: processMessages 가 `WaylandInputEvent*` 를 lParam 에 실을 때 쓰는 메시지 코드입니다(`Window/Linux/Wayland/WaylandInputEvent.h`). */
         static constexpr uint32 kMessageWayland = 0x8002;
-        /** @brief 창이 낸 조합 · 확정 글입니다. lParam 이 `WindowTextInputEvent*` 입니다(`IWindow::dispatchTextInput`). 키 이벤트와 같은 경로로 오고 `isKeyboardInput` 이 true 입니다. */
+        /** @brief 창이 낸 조합 · 확정 글입니다. lParam 이 `WindowTextInputEvent*` 입니다(`GenericWindow::dispatchTextInput`). 키 이벤트와 같은 경로로 오고 `isKeyboardInput` 이 true 입니다. */
         static constexpr uint32 kMessageTextInput     = 0x8003;
         static constexpr uint32 kMessagePlatformInput = 0x8004; ///< 콜백으로 입력을 받는 창(웹 · Android)의 입력 — `_lParam` 이 `const PlatformInputEvent*`
 
@@ -38,7 +38,7 @@ namespace sw
         /**
          * @brief Win32 창이 낸 이벤트면 `HWND` 를 `void*` 로 반환하고, 아니면(X11 · Wayland) 또는 창이 실리지 않았으면 nullptr 입니다. 호출처가 `static_cast<HWND>` 로 읽는다.
          * @details 창 핸들은 창 시스템마다 뜻이 다른 `void*` 라서 종류 확인 없이 `HWND` 로 읽으면 다른 창 시스템의 값을 Win32 호출에 넘긴다.
-         *          그래서 핸들은 비공개로 두고 종류 확인과 값 확인을 이 함수 한 곳에 모은다 — `IWindow::tryGetWin32Handle` 의 이벤트판이다.
+         *          그래서 핸들은 비공개로 두고 종류 확인과 값 확인을 이 함수 한 곳에 모은다 — `GenericWindow::tryGetWin32Handle` 의 이벤트판이다.
          *          반환값을 버리면 안 되고, nullptr 이면 호출처가 건너뛴다(다른 핸들로 대신하지 않는다).
          */
         [[nodiscard]] void* tryGetWin32Window() const { return _windowKind == NativeSurfaceKind::Win32 ? _pNativeWindow : nullptr; }

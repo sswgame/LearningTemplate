@@ -19,7 +19,7 @@
 namespace sw::editor
 {
     PreferencesPanel::PreferencesPanel()
-        : IEditorPanel( false )
+        : EditorPanel( false )
         , _grid{}
         , _model{}
         , _listHidden{}

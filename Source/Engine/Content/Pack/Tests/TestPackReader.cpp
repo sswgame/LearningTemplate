@@ -89,7 +89,7 @@ namespace
             append( _listBlock.data(), _listBlock.size() * sizeof( PackBlockEntryOnDisk ) );
             append( _pool.data(), _pool.size() );
             append( &_header, sizeof( PackHeader ) );
-            SW_REQUIRE_TRUE( FileUtil::writeFile( path, bytes.data(), bytes.size() ) );
+            SW_REQUIRE_TRUE( FileUtil::writeFile( FileUtil::toDiskPath( path ), bytes.data(), bytes.size() ) );
         }
     };
 
@@ -102,7 +102,7 @@ namespace
             : _path{ test::makeScratchPath( "SwPackReaderTest.pack" ) }
         {
         }
-        ~PackTestFile() { (void)FileUtil::removeFile( _path ); }
+        ~PackTestFile() { (void)FileUtil::removeFile( FileUtil::toDiskPath( _path ) ); }
 
         /** @brief @p image 를 쓰고 여는 결과를 돌려줍니다. */
         bool open( const PackImage& image, PackReader& reader ) const
@@ -270,7 +270,7 @@ SW_TEST_CASE( PackReaderTest, ShortFileIsRefused )
     SW_EXPECT_LOG( "PackReader.CorruptedPackHeader" );
     const PackTestFile file;
     const uint8        arrShort[4] = { 1, 2, 3, 4 };
-    SW_REQUIRE_TRUE( FileUtil::writeFile( file._path, arrShort, sizeof( arrShort ) ) );
+    SW_REQUIRE_TRUE( FileUtil::writeFile( FileUtil::toDiskPath( file._path ), arrShort, sizeof( arrShort ) ) );
     PackReader reader;
     SW_EXPECT_FALSE( reader.open( file._path ) );
 }
@@ -482,7 +482,7 @@ SW_TEST_CASE( PackReaderTest, RangeReadEqualsTheSameSliceOfAWholeRead )
     SW_EXPECT_FALSE( reader.readRange( pathHash, uint64{ size } + 1, 0, outside ) );
     SW_EXPECT_FALSE( reader.readRange( HashUtil::computeStringHash64( string_view( "nope.dds" ) ), 0, 1, outside ) );
     reader.close();
-    SW_EXPECT_TRUE( FileUtil::removeFile( packPath ) );
+    SW_EXPECT_TRUE( FileUtil::removeFile( FileUtil::toDiskPath( packPath ) ) );
 }
 
 // 블록 하나가 망가지면 그 블록에 걸친 읽기만 거절한다 — 다른 블록의 범위 읽기는 된다.
@@ -565,7 +565,7 @@ SW_TEST_CASE( PackReaderTest, StoredEntryRangeReadReturnsTheSameSpan )
     SW_REQUIRE_TRUE( reader.readFile( compressedPath, whole ) );
     SW_EXPECT_TRUE( whole == compressed );
     reader.close();
-    SW_EXPECT_TRUE( FileUtil::removeFile( packPath ) );
+    SW_EXPECT_TRUE( FileUtil::removeFile( FileUtil::toDiskPath( packPath ) ) );
 }
 
 // 저장 방식은 디스크 값이다 — 모르는 값의 항목이 있는 팩은 열지 않는다.

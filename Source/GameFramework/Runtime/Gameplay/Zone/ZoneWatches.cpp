@@ -21,9 +21,9 @@
 #include "Engine/Reflection/EnumName.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameplayDebugTarget.h"
-#include "GameFramework/Runtime/Gameplay/Zone/JumpEscapeReactionComponent.h"
-#include "GameFramework/Runtime/Gameplay/Zone/ScreenReactionComponent.h"
-#include "GameFramework/Runtime/Gameplay/Zone/VisualSinkReactionComponent.h"
+#include "GameFramework/Runtime/Gameplay/Zone/Reaction/RemoveStacksOnJumpComponent.h"
+#include "GameFramework/Runtime/Gameplay/Zone/Reaction/SinkOffsetComponent.h"
+#include "GameFramework/Runtime/Gameplay/Zone/Reaction/TagPostProcessComponent.h"
 #include "GameFramework/Runtime/Gameplay/Zone/ZoneContactComponent.h"
 #include "GameFramework/Runtime/Gameplay/Zone/ZoneVolumeComponent.h"
 
@@ -179,7 +179,7 @@ namespace sw
             /** @brief 감시 값 `Zone.SinkVisual` 입니다. 대상의 외형을 내린 깊이(m)입니다. */
             [[nodiscard]] static bool readSinkVisual( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
-                const VisualSinkReactionComponent* pReaction = query.findTargetComponent<VisualSinkReactionComponent>( "VisualSinkReactionComponent", outValue );
+                const SinkOffsetComponent* pReaction = query.findTargetComponent<SinkOffsetComponent>( "SinkOffsetComponent", outValue );
                 if ( pReaction == nullptr )
                     return false;
                 outValue.setNumber( static_cast<float64>( pReaction->getAppliedDepth() ) );
@@ -189,7 +189,7 @@ namespace sw
             /** @brief 감시 값 `Zone.ScreenWeight` 입니다. 대상의 화면 반응 가중치(0..1)입니다. */
             [[nodiscard]] static bool readScreenWeight( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
-                const ScreenReactionComponent* pReaction = query.findTargetComponent<ScreenReactionComponent>( "ScreenReactionComponent", outValue );
+                const TagPostProcessComponent* pReaction = query.findTargetComponent<TagPostProcessComponent>( "TagPostProcessComponent", outValue );
                 if ( pReaction == nullptr )
                     return false;
                 outValue.setNumber( static_cast<float64>( pReaction->getWeight() ) );
@@ -199,7 +199,7 @@ namespace sw
             /** @brief 감시 값 `Zone.EscapeCount` 입니다. 대상이 뛰어서 스택을 줄인 수입니다. */
             [[nodiscard]] static bool readEscapeCount( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
-                const JumpEscapeReactionComponent* pReaction = query.findTargetComponent<JumpEscapeReactionComponent>( "JumpEscapeReactionComponent", outValue );
+                const RemoveStacksOnJumpComponent* pReaction = query.findTargetComponent<RemoveStacksOnJumpComponent>( "RemoveStacksOnJumpComponent", outValue );
                 if ( pReaction == nullptr )
                     return false;
                 outValue.setNumber( static_cast<float64>( pReaction->getEscapeCount() ) );
@@ -287,10 +287,10 @@ namespace sw
     SW_AUTOMATION_QUERY_WATCH( zoneModules, "Zone.Modules", "Modules the target zone volume runs (preset, variant and placement overrides merged) joined by ','", &ZoneWatchesInternal::readModules,
                                true, false );
     SW_AUTOMATION_QUERY_WATCH( zoneParam, "Zone.Param", "Text of a module parameter the target zone volume runs (key = <module>.<parameter>)", &ZoneWatchesInternal::readParam, true, true );
-    SW_AUTOMATION_QUERY_WATCH( zoneSinkVisual, "Zone.SinkVisual", "Metres the target's look is lowered by its VisualSinkReactionComponent", &ZoneWatchesInternal::readSinkVisual, true, false );
-    SW_AUTOMATION_QUERY_WATCH( zoneScreenWeight, "Zone.ScreenWeight", "Weight (0..1) of the post-process look the target's ScreenReactionComponent blends into cameras following it",
+    SW_AUTOMATION_QUERY_WATCH( zoneSinkVisual, "Zone.SinkVisual", "Metres the target's look is lowered by its SinkOffsetComponent", &ZoneWatchesInternal::readSinkVisual, true, false );
+    SW_AUTOMATION_QUERY_WATCH( zoneScreenWeight, "Zone.ScreenWeight", "Weight (0..1) of the post-process look the target's TagPostProcessComponent blends into cameras following it",
                                &ZoneWatchesInternal::readScreenWeight, true, false );
-    SW_AUTOMATION_QUERY_WATCH( zoneEscapeCount, "Zone.EscapeCount", "Jumps that removed stacks through the target's JumpEscapeReactionComponent", &ZoneWatchesInternal::readEscapeCount, true, false );
+    SW_AUTOMATION_QUERY_WATCH( zoneEscapeCount, "Zone.EscapeCount", "Jumps that removed stacks through the target's RemoveStacksOnJumpComponent", &ZoneWatchesInternal::readEscapeCount, true, false );
     SW_AUTOMATION_QUERY_WATCH( characterMovementMode, "Character.MovementMode", "Movement mode the target's character controller picked from its physics field (Walking, Falling, Swimming, Floating)",
                                &ZoneWatchesInternal::readMovementMode, true, false );
     SW_AUTOMATION_QUERY_WATCH( physicsField, "Physics.Field", "Physics field the target received last physics frame (key: gravityScale, drag, fluidDensity, friction, immersion, flowSpeed)",

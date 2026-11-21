@@ -15,7 +15,7 @@
 
 namespace sw
 {
-    class IWindow;
+    class GenericWindow;
     class UISystem;
 
     /**
@@ -28,6 +28,6 @@ namespace sw
          * @brief 접근성 버스에 붙어 앱을 등록한 브리지를 만듭니다. 세션 버스 · 접근성 버스 · 레지스트리가 없으면(헤드리스, 스크린 리더 환경이 아님) 이유를 로그로 남기고 nullptr 입니다.
          * @details nullptr 은 이 기계에 스크린 리더 연결이 없다는 뜻이다 — 호스트는 그대로 진행한다(Windows 브리지와 같다).
          */
-        [[nodiscard]] static unique_ptr<IUIAccessibilityBridge> createBridge( UISystem& ui, IWindow& window );
+        [[nodiscard]] static unique_ptr<IUIAccessibilityBridge> createBridge( UISystem& ui, GenericWindow& window );
     };
 } // namespace sw

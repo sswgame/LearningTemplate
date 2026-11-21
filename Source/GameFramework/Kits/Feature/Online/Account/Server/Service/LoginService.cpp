@@ -346,7 +346,7 @@ namespace sw
 
     LoginService::~LoginService() = default; // 비밀번호 요청(`LoginPasswordCall`)이 이 파일에서 완전한 형식이다
 
-    expected<void> LoginService::initialize( IServiceStore* pStore, ILoginCrypto* pCrypto, IPasswordHasher* pHasher, TaskManager* pTaskManager, const LoginServiceConfig& settings,
+    expected<void> LoginService::initialize( ServiceStore* pStore, ILoginCrypto* pCrypto, IPasswordHasher* pHasher, TaskManager* pTaskManager, const LoginServiceConfig& settings,
                                              const uint8 ( &arrTicketMasterKey )[LoginTicketAuthority::kMasterKeySize] )
     {
         // 비밀번호 해시는 작업 풀 위의 상한 있는 줄에서만 돈다 — 작업 풀 · 해시 구현이 없으면 기동 오류다(저장소 워커로 대신하지 않는다, 감사 O-3).

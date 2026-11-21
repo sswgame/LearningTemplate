@@ -9,9 +9,9 @@
 
 #include "Engine/Serialization/Format/XMLSerializer.h"
 
-#include "GameFramework/Runtime/Gameplay/Gimmick/GimmickCircuit.h"
-#include "GameFramework/Runtime/Gameplay/Gimmick/GimmickCircuitComponent.h"
-#include "GameFramework/Runtime/Gameplay/Gimmick/GimmickCircuitDef.h"
+#include "GameFramework/Runtime/Gameplay/Gimmick/Circuit/GimmickCircuit.h"
+#include "GameFramework/Runtime/Gameplay/Gimmick/Circuit/GimmickCircuitComponent.h"
+#include "GameFramework/Runtime/Gameplay/Gimmick/Circuit/GimmickCircuitDef.h"
 
 namespace sw::editor
 {

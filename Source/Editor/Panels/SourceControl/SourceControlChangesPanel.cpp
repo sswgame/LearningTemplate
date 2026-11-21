@@ -105,7 +105,7 @@ namespace sw::editor
                          &SourceControlChangesPanelInternal::readDetailLines );
 
     SourceControlChangesPanel::SourceControlChangesPanel()
-        : IEditorPanel( false )
+        : EditorPanel( false )
         , _selectedPath{}
         , _revertPath{}
         , _bOpenRevert{ SW_FALSE }

@@ -27,7 +27,7 @@ namespace sw::editor
         virtual ~AnimationGraphPanel() override = default;
 
         // ------------------------------------------------------------------------------
-        // 1) IEditorPanel: 제목과 그리기
+        // 1) EditorPanel: 제목과 그리기
         // ------------------------------------------------------------------------------
         void shutdown() override;
         /** @brief 애니메이션 그래프 UI 를 그립니다. */

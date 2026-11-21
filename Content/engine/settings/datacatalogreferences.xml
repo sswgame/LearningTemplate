@@ -112,7 +112,7 @@
 	</Catalog>
 	<!-- 카탈로그 키 칸(CatalogKey<Tag>) — 항목 종류 줄, 그 아래 그 종류를 쓰는 칸 줄. -->
 	<CatalogKey tag="AbilitySetDef" catalog="AbilityCatalog" entry="AbilitySet"/>
-	<Field owner="AbilityComponent" field="_abilitySetID" tag="AbilitySetDef"/>
+	<Field owner="AbilitySystemComponent" field="_abilitySetID" tag="AbilitySetDef"/>
 	<Field owner="ArenaGameModeComponent" field="_playerAbilitySet" tag="AbilitySetDef"/>
 	<Field owner="ArenaGameModeComponent" field="_gruntAbilitySet" tag="AbilitySetDef"/>
 	<Field owner="ArenaGameModeComponent" field="_casterAbilitySet" tag="AbilitySetDef"/>
@@ -156,8 +156,8 @@
 	<Field owner="WesternDeedComponent" field="_zone" tag="WesternHitZoneDef"/>
 	<CatalogKey tag="VelmoraRegionDef" catalog="VelmoraRegionCatalog" entry="Region"/>
 	<Field owner="VelmoraGameModeComponent" field="_startRegion" tag="VelmoraRegionDef"/>
-	<CatalogKey tag="ScheduleNPCDef" catalog="Schedules" entry="NPC"/>
-	<Field owner="ScheduleNPCComponent" field="_npcID" tag="ScheduleNPCDef"/>
+	<CatalogKey tag="NPCScheduleDef" catalog="Schedules" entry="NPC"/>
+	<Field owner="NPCScheduleComponent" field="_npcID" tag="NPCScheduleDef"/>
 	<CatalogKey tag="InteractionDef" catalog="Interactions" entry="Interaction"/>
 	<CatalogKey tag="SmartObjectDef" catalog="Interactions" entry="SmartObject"/>
 	<Field owner="InteractableComponent" field="_interactionID" tag="InteractionDef"/>
@@ -165,7 +165,7 @@
 	<CatalogKey tag="QuestDef" catalog="QuestCatalog" entry="Quest"/>
 	<Field owner="QuestObjectiveMarkerComponent" field="_quest" tag="QuestDef"/>
 	<CatalogKey tag="AbilityEffectDef" catalog="AbilityCatalog" entry="AbilityEffect"/>
-	<Field owner="JumpEscapeReactionComponent" field="_effect" tag="AbilityEffectDef"/>
+	<Field owner="RemoveStacksOnJumpComponent" field="_effect" tag="AbilityEffectDef"/>
 	<Field owner="MinigameRewardEffect" field="_effect" tag="AbilityEffectDef"/>
 	<CatalogKey tag="WeatherDef" catalog="WeatherCatalog" entry="Weather"/>
 	<Field owner="WeatherDirectorComponent" field="_startWeather" tag="WeatherDef"/>

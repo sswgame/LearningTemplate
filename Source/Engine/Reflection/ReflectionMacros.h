@@ -30,6 +30,19 @@ namespace sw
      */
     template <typename TTag>
     struct ReflectAccess;
+
+    /**
+     * @brief 리플렉션 인터페이스의 포트 멤버(`REFLECT_INTERFACE( I, _port )`)에서 주인 객체로 돌아갑니다. @p portOffset 은 `offsetof( Owner, _port )` 입니다.
+     * @details 포트가 주인 포인터를 들지 않는다 — 오프셋 하나로 되돌린다(리눅스 `container_of` · CppStyle 의 "nested port forwards to the owner").
+     *          const 포트면 @p TOwner 도 const 로 준다: `getPortOwner<const Owner>( *this, offsetof( Owner, _port ) )`.
+     */
+    template <typename TOwner, typename TPort>
+    TOwner& getPortOwner( TPort& port, size_t portOffset ) noexcept
+    {
+        static_assert( std::is_const_v<TPort> == false || std::is_const_v<TOwner>, "a const port returns a const owner" );
+        using Byte = std::conditional_t<std::is_const_v<TPort>, const uint8, uint8>;
+        return *reinterpret_cast<TOwner*>( reinterpret_cast<Byte*>( &port ) - portOffset );
+    }
 } // namespace sw
 
 namespace sw::generated
@@ -70,6 +83,13 @@ namespace sw::generated
     #define REFLECT_CONTAINER( ... ) static_assert( true, "REFLECT_CONTAINER;" #__VA_ARGS__ );
 
     /**
+     * @brief 컴포넌트가 리플렉션 인터페이스 @p InterfaceType 을 포트 멤버 @p PortMember 로 내보냅니다(`TypeInfo::_ownInterfaces` 한 칸, `GameObject::findInterface<I>()` 가 찾는다).
+     * @details 언리얼 `UINTERFACE` 다중 상속 대신 포트 멤버다 — 기반은 하나(CppStyle), 포트는 주인에게 넘긴다(`SW_CONTAINER_OF`). 파서 모드에서는 이름 있는 표식 함수로
+     *          선언해 같은 형식 안의 여러 줄을 멤버 수집이 차례로 읽는다. 생성 코드가 포트가 그 인터페이스를 잇는지(`std::is_base_of_v`) 컴파일에서 본다.
+     */
+    #define REFLECT_INTERFACE( InterfaceType, PortMember ) void __sw_reflect_interface_##PortMember() __attribute__( ( annotate( "REFLECT_INTERFACE;" #InterfaceType "," #PortMember ) ) )
+
+    /**
      * @brief GENERATED_BODY 와 같은 역할입니다. .gen.cpp 에 StaticType() 정의를 요청합니다(파서용 마커).
      * @note 본문에 주석을 넣지 마십시오. 주석 줄에 줄 이음(\)이 빠지면 매크로가 거기서 끊기고
      *       나머지 줄이 네임스페이스 스코프로 새어 나갑니다.
@@ -89,6 +109,7 @@ namespace sw::generated
     #define ENUM( ... )
     #define ENUMERATOR( ... )
     #define REFLECT_CONTAINER( ... )
+    #define REFLECT_INTERFACE( InterfaceType, PortMember ) static_assert( true, "REFLECT_INTERFACE" )
 
     /**
      * @brief StaticType() 을 인라인으로 정의합니다. 적중 경로는 클래스의 캐시 칸(`swStaticTypeCache`)을 세대 비교 하나로 읽고, 놓치면 .gen.cpp 의 `swFindStaticType` 이 찾습니다.

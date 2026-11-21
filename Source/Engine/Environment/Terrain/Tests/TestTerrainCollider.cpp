@@ -35,7 +35,7 @@ namespace
             asset._listHeight.assign( static_cast<size_t>( kResolution ) * kResolution, uint16{ 0 } );
             vector<uint8> bytes;
             asset.saveToMemory( bytes );
-            SW_EXPECT_TRUE( FileUtil::writeFile( domain.makeDiskPath( "flat.heightfield" ), bytes.data(), static_cast<uint64>( bytes.size() ) ) );
+            SW_EXPECT_TRUE( FileUtil::writeFile( FileUtil::toDiskPath( domain.makeDiskPath( "flat.heightfield" ) ), bytes.data(), static_cast<uint64>( bytes.size() ) ) );
             return test::ScopedScratchDomain::makeID( "flat.heightfield" ).str();
         }
 

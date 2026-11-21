@@ -10,7 +10,7 @@
 
 namespace sw
 {
-    void IServiceStoreJob::execute( IServiceStoreConnection& connection, ServiceStoreCommitStats& inoutStats )
+    void ServiceStoreJob::execute( IServiceStoreConnection& connection, ServiceStoreCommitStats& inoutStats )
     {
         ServiceReadSetConnection readSet( connection, &inoutStats );
         run( readSet );

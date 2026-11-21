@@ -13,9 +13,9 @@
 
 #include "Engine/Automation/Scenario/AutomationScenario.h"
 #include "Engine/Automation/Scenario/AutomationStageReset.h"
-#include "Engine/Automation/Scenario/AutomationStepContext.h"
 #include "Engine/Automation/Scenario/AutomationStepParams.h"
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
+#include "Engine/Automation/Scenario/IAutomationStepContext.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Config/GameTimeScale.h"
 #include "Engine/Foundation/EngineServices.h"
@@ -232,7 +232,7 @@ namespace sw
                 return true;
             }
 
-            static bool runExpectUI( AutomationStepContext& runner, const AutomationStep& step )
+            static bool runExpectUI( IAutomationStepContext& runner, const AutomationStep& step )
             {
                 const UISystem& ui = engine::getSubsystem<UISystem>();
                 string          failure;
@@ -242,11 +242,11 @@ namespace sw
             }
 
             /** @brief 상대 경로면 시나리오 산출물 폴더(`Saved/Automation/<이름>/`) 아래에 둡니다. 스크린샷과 같은 위치입니다. */
-            static bool runLayoutDump( AutomationStepContext& runner, const AutomationStep& step )
+            static bool runLayoutDump( IAutomationStepContext& runner, const AutomationStep& step )
             {
                 const string file = step.readValidatedProperties<AutomationFileStepParams>()._file;
                 const string path = FileUtil::isAbsolutePath( file ) ? file : FileUtil::joinPath( runner.getOutputDirectory(), file );
-                if ( FileUtil::ensureParentDirectoryExists( path ) == false || FileUtil::writeTextFile( path, engine::getSubsystem<UISystem>().makeLayoutDump() ) == false )
+                if ( FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( path ) ) == false || FileUtil::writeTextFile( FileUtil::toDiskPath( path ), engine::getSubsystem<UISystem>().makeLayoutDump() ) == false )
                 {
                     fixed_string<constant::buffer::kMax512> message;
                     formatstring( message.data(), message.capacity(), "could not write %#", path );

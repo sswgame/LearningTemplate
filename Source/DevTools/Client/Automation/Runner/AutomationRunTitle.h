@@ -27,7 +27,7 @@ namespace sw
         uint32      _frame{ 0 };
 
         // 실행 정보 글 만들기입니다.
-        /** @brief 창 제목 글 길이의 위쪽 한계(바이트)입니다. 넘으면 `…` 로 줄입니다(`IWindow::kTitleCapacity` 보다 작다). */
+        /** @brief 창 제목 글 길이의 위쪽 한계(바이트)입니다. 넘으면 `…` 로 줄입니다(`GenericWindow::kTitleCapacity` 보다 작다). */
         static constexpr uint32 kMaxTitleBytes = 200;
         /** @brief 창 제목을 몇 프레임마다 다시 만들지 정합니다(단계가 바뀔 때는 바로 만든다). */
         static constexpr uint32 kTitleRefreshFrames = 30;

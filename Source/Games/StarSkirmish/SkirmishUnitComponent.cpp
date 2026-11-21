@@ -180,13 +180,13 @@ namespace sw
 
     void SkirmishUnitComponent::onRegister( GameObjectManager& manager )
     {
-        GameModeBoundComponent::onRegister( manager );
+        GameFrameworkComponent::onRegister( manager );
         manager.getComponentRegistry().add<SkirmishUnitComponent>( this );
     }
 
     void SkirmishUnitComponent::onUnregister( GameObjectManager& manager )
     {
         manager.getComponentRegistry().remove<SkirmishUnitComponent>( this );
-        GameModeBoundComponent::onUnregister( manager );
+        GameFrameworkComponent::onUnregister( manager );
     }
 } // namespace sw

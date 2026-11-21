@@ -49,7 +49,7 @@ SW_TEST_CASE( MountedDiskDomainTest, WritePathKeepsTheDiskSpellingOfExistingFold
     const string                             directory = domain.getFolder();
     StringBuilder<constant::buffer::kMax512> automationFolder;
     automationFolder.appendFormat( "%#/Saved/Automation", directory );
-    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( automationFolder.view() ) );
+    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( automationFolder.view() ) ) );
     StringBuilder<constant::buffer::kMax512> diskFileBuilder;
     diskFileBuilder.appendFormat( "%#/Saved/Automation/Out.txt", directory );
     const string diskFile = string( diskFileBuilder.view() );
@@ -73,7 +73,7 @@ SW_TEST_CASE( MountedDiskDomainTest, WritePathKeepsTheDiskSpellingOfExistingFold
     SW_EXPECT_TRUE( FileUtil::isSameDiskPath( expectedFreshPath.view(), freshPath->str() ) );
 
     // 쓴 뒤에는 같은 id 를 대소문자만 다르게 물어도 같은 파일이다(둘째 쓰기가 옆 폴더를 만들지 않는다).
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( writePath->str(), "first" ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( *writePath, "first" ) );
     const optional<AbsolutePath> again = paths.toDiskPath( diskID );
     SW_REQUIRE_TRUE( again.has_value() );
     SW_EXPECT_TRUE( FileUtil::isSameDiskPath( writePath->str(), again->str() ) );
@@ -93,13 +93,13 @@ SW_TEST_CASE( MountedDiskDomainTest, PathCacheDropsAnswersWhenThisProcessCreates
 
     SW_EXPECT_FALSE( findLoose( fileID ).has_value() ); // "없음" 을 기억한다
     SW_EXPECT_FALSE( findLoose( folderID ).has_value() );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( filePath, "late" ) );
-    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( folderPath ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( filePath ), "late" ) );
+    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( folderPath ) ) );
     SW_EXPECT_TRUE( findLoose( fileID ).has_value() );
     SW_EXPECT_TRUE( findLoose( folderID ).has_value() );
 
-    SW_REQUIRE_TRUE( FileUtil::removeFile( filePath ) ); // "있음" 을 기억한 칸이 낡는다
-    SW_REQUIRE_TRUE( FileUtil::removeDirectory( folderPath ) );
+    SW_REQUIRE_TRUE( FileUtil::removeFile( FileUtil::toDiskPath( filePath ) ) ); // "있음" 을 기억한 칸이 낡는다
+    SW_REQUIRE_TRUE( FileUtil::removeDirectory( FileUtil::toDiskPath( folderPath ) ) );
     SW_EXPECT_FALSE( findLoose( fileID ).has_value() );
     SW_EXPECT_FALSE( findLoose( folderID ).has_value() );
 }
@@ -119,8 +119,8 @@ SW_TEST_CASE( MountedDiskDomainTest, ResourceEntryRefusesOSPathsInEveryContentSo
 
     const string insideRoot  = FileUtil::joinPath( paths.getRootFolderPath(), "game/playground/maps/editortest.scene.xml" );
     const string outsideRoot = domain.makeDiskPath( "outside.txt" );
-    SW_REQUIRE_TRUE( FileUtil::exists( insideRoot ) );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( outsideRoot, "OUTSIDE" ) );
+    SW_REQUIRE_TRUE( FileUtil::exists( FileUtil::toDiskPath( insideRoot ) ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( outsideRoot ), "OUTSIDE" ) );
     const AssetID outsideID = ScopedScratchDomain::makeID( "outside.txt" );
 
     SW_EXPECT_LOG( "AssetIO.OSPathRejected" );
@@ -155,8 +155,8 @@ SW_TEST_CASE( MountedDiskDomainTest, UnmountedDomainNoLongerResolves )
     AssetPaths&  paths  = engine::getSubsystem<AssetPaths>();
     const string first  = sw::test::makeScratchPath( "first" );
     const string second = sw::test::makeScratchPath( "second" );
-    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( first ) && FileUtil::ensureDirectoryExists( second ) );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::joinPath( first, "a.txt" ), "A" ) );
+    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( first ) ) && FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( second ) ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( FileUtil::joinPath( first, "a.txt" ) ), "A" ) );
 
     SW_REQUIRE_TRUE( paths.mountDiskDomain( "unmounttest", first ) );
     SW_EXPECT_TRUE( findLoose( "unmounttest/a.txt" ).has_value() );

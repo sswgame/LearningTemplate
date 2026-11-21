@@ -7,7 +7,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/String/fixed_string.h"
 
-#include "Editor/Common/GUI/Panel/IEditorPanel.h"
+#include "Editor/Common/GUI/Panel/EditorPanel.h"
 #include "Editor/Panels/AudioMixer/Model/AudioMixerViewModel.h"
 
 namespace sw
@@ -23,7 +23,7 @@ namespace sw::editor
      *          다음 블록(약 5 ms)에 적용된다. 사용자 볼륨은 옵션 메뉴와 같은 값이라 에디터에서 올린 소리가 게임 옵션에도 그대로 보인다.
      *          미터는 피크(절댓값 최대)를 dB 로 보이고 천천히 내려간다. 믹서 그래프 데이터를 고치면 에셋 핫 리로드(`AssetHotReload` → 엔진 캐시 `AudioData`)가 다시 읽어 이 창이 따라간다.
      */
-    class AudioMixerPanel final : public IEditorPanel
+    class AudioMixerPanel final : public EditorPanel
     {
     public:
         /** @brief 패널 id 입니다. 등록(`SW_EDITOR_PANEL`)과 조회(`EditorPanelManager::findPanel<…>` · `setPanelOpen<…>`)가 모두 이 상수에서 온다. */

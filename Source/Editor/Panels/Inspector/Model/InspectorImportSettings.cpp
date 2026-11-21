@@ -45,14 +45,14 @@ namespace sw::editor
             static bool readMetaText( string_view assetID, string& outText )
             {
                 const string metaPath = findMetaPath( assetID );
-                return metaPath.empty() == false && FileUtil::isRegularFile( metaPath ) && FileUtil::readTextFile( metaPath, outText );
+                return metaPath.empty() == false && FileUtil::isRegularFile( FileUtil::toDiskPath( metaPath ) ) && FileUtil::readTextFile( FileUtil::toDiskPath( metaPath ), outText );
             }
 
             /** @brief 서술 글을 쓰고 그 원본을 다시 임포트합니다(원본 해시에 해석한 규칙이 들어 예외가 바뀐 원본만 다시 임포트된다). */
             static bool writeMetaText( string_view assetID, string_view text )
             {
                 const string metaPath = findMetaPath( assetID );
-                if ( metaPath.empty() || FileUtil::writeTextFile( metaPath, text ) == false )
+                if ( metaPath.empty() || FileUtil::writeTextFile( FileUtil::toDiskPath( metaPath ), text ) == false )
                 {
                     SW_LOG_ERROR_ID( "InspectorImportSettings.WriteFailed", "Import settings: could not write the .meta of '%#'", string{ assetID }.c_str() );
                     return false;

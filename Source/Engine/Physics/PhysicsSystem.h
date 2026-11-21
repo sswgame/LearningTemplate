@@ -9,8 +9,8 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/ServiceSlot.h"
+#include "Core/Subsystem/Subsystem.h"
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Physics/IPhysicsScene.h"
@@ -19,7 +19,7 @@
 namespace sw
 {
     /** @class PhysicsSystem @brief 물리 서비스입니다. 파일 머리말 참고. */
-    class SW_API PhysicsSystem : public ISubsystem
+    class SW_API PhysicsSystem : public Subsystem
     {
     public:
         /** @brief 설정 테이블의 기본값입니다. */
@@ -39,7 +39,7 @@ namespace sw
         /** @brief 백엔드를 내립니다. 이 서비스로 만든 씬은 먼저 모두 사라져 있어야 합니다. */
         void shutdown();
 
-        // ISubsystem — 기동 단계 `Physics`. 기본 설정 표로 선다.
+        // Subsystem — 기동 단계 `Physics`. 기본 설정 표로 선다.
         /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */
         static constexpr const utf8* kSubsystemName = "Physics";
 

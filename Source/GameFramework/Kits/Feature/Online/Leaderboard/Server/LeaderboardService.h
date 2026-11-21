@@ -46,12 +46,12 @@ namespace sw
     struct LeaderboardWriteInput;
 
     class EphemeralStoreRouter;
-    class IServiceStore;
+    class ServiceStore;
 
     /** @brief 빌려 쓰는 객체들입니다. */
     struct LeaderboardServiceDependencies
     {
-        IServiceStore*        _pStore{ nullptr };  ///< 필수
+        ServiceStore*         _pStore{ nullptr };  ///< 필수
         EphemeralStoreRouter* _pRouter{ nullptr }; ///< 필수이다. 순위에 쓴다
     };
 } // namespace sw

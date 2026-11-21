@@ -27,13 +27,13 @@ SW_TEST_CASE( FileTest, LongPathBeyondMaxPathIsWrittenAndRead )
     sw::string dir = sw::test::makeScratchPath( "SwLongPathRoot" );
     while ( dir.size() < 300 )
         dir += "/segment_padding_for_long_path";
-    SW_REQUIRE_TRUE( sw::FileUtil::ensureDirectoryExists( dir ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::ensureDirectoryExists( sw::FileUtil::toDiskPath( dir ) ) );
     sw::StringBuilder<sw::constant::buffer::kMax1024> filePathBuilder;
     filePathBuilder.appendFormat( "%#/long.txt", dir );
     const sw::string filePath( filePathBuilder.view() );
-    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( filePath, "long path" ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::toDiskPath( filePath ), "long path" ) );
     sw::string text;
-    SW_REQUIRE_TRUE( sw::FileUtil::readTextFile( filePath, text ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::readTextFile( sw::FileUtil::toDiskPath( filePath ), text ) );
     SW_EXPECT_EQUAL( sw::string( "long path" ), text );
 
     SW_EXPECT_TRUE( sw::PlatformFileUtil::toWindowsFilePath( filePath ).compare( 0, 4, L"\\\\?\\" ) == 0 );
@@ -55,7 +55,7 @@ SW_TEST_CASE( FileTest, PathQueriesBeyond4096CharactersSucceed )
     sw::string dir = sw::test::makeScratchPath( "SwVeryLongPathRoot" );
     while ( dir.size() < 4300 )
         dir += "/segment_padding_for_a_path_longer_than_the_old_fixed_buffer";
-    SW_REQUIRE_TRUE( sw::FileUtil::ensureDirectoryExists( dir ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::ensureDirectoryExists( sw::FileUtil::toDiskPath( dir ) ) );
 
     sw::string absolutePath;
     SW_REQUIRE_TRUE( sw::FileUtil::makeAbsolutePath( dir, absolutePath ) );

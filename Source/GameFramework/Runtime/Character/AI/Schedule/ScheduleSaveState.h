@@ -37,7 +37,7 @@ namespace sw
 {
     /** @brief NPC 하나의 상태입니다. 오늘 계획을 세운 시각과 위치, 끼어들기, 태그를 담습니다. */
     REFLECT()
-    struct SW_GF_API ScheduleNPCSaveState
+    struct SW_GF_API NPCScheduleSaveState
     {
         REFLECT_BODY();
 
@@ -98,7 +98,7 @@ namespace sw
         PROPERTY()
         hashed_string _weather{};
         PROPERTY()
-        vector<ScheduleNPCSaveState> _listNPC{};
+        vector<NPCScheduleSaveState> _listNPC{};
         PROPERTY()
         vector<string> _listBrokenAppointment{}; ///< 오늘 깨진 약속
         PROPERTY()

@@ -23,10 +23,10 @@ namespace
         static void write( const string& root, string_view assetID, string_view text )
         {
             const string absPath = FileUtil::joinPath( root, assetID );
-            SW_EXPECT_TRUE( FileUtil::ensureParentDirectoryExists( absPath ) && FileUtil::writeTextFile( absPath, text ) ); // 도우미라 REQUIRE(케이스 본문 전용)를 쓰지 않는다
+            SW_EXPECT_TRUE( FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( absPath ) ) && FileUtil::writeTextFile( FileUtil::toDiskPath( absPath ), text ) ); // 도우미라 REQUIRE(케이스 본문 전용)를 쓰지 않는다
         }
 
-        static void remove( const string& root, string_view assetID ) { SW_EXPECT_TRUE( FileUtil::removeFile( FileUtil::joinPath( root, assetID ) ) ); }
+        static void remove( const string& root, string_view assetID ) { SW_EXPECT_TRUE( FileUtil::removeFile( FileUtil::toDiskPath( FileUtil::joinPath( root, assetID ) ) ) ); }
 
         static EditorAssetIndex scan( const string& root )
         {
@@ -113,7 +113,7 @@ SW_TEST_CASE( EditorAssetIndexTest, RemovedFileDropsItsReferences )
     index.findDependencies( "game/a/referrer.prefab.xml", listDependency );
     SW_EXPECT_TRUE( listDependency.empty() );
 
-    SW_REQUIRE_TRUE( FileUtil::removeDirectory( FileUtil::joinPath( root, "game/b" ) ) );
+    SW_REQUIRE_TRUE( FileUtil::removeDirectory( FileUtil::toDiskPath( FileUtil::joinPath( root, "game/b" ) ) ) );
     index.applyChanges( root, { "game/b" } );
     SW_EXPECT_FALSE( index.containsFile( "game/b/one.png" ) );
     SW_EXPECT_FALSE( index.containsFile( "game/b/two.png" ) );

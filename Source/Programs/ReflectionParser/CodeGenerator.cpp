@@ -884,6 +884,22 @@ namespace sw
             fe.push( 3 );
             fe.flagIf( typeInfo._bAbstract, "info._bAbstract" );
             fe.flagIf( typeInfo._bStatic, "info._bStatic" );
+            // 리플렉션 인터페이스는 상태 없는 계약이다 — 칸이 붙으면(크기가 vptr 하나를 넘으면) 컴파일이 멈춘다(파서의 데이터 멤버 검사가 놓친 기반 · 정렬까지).
+            if ( typeInfo._bInterface == SW_TRUE )
+            {
+                fe.line( "info._bInterface = SW_TRUE;" );
+                fe.linef( "static_assert( std::is_abstract_v<%#> && std::is_polymorphic_v<%#> && sizeof( %# ) == sizeof( void* ), "
+                          "\"REFLECT( Interface ) %# holds state - an interface is pure virtual functions only; move the state to the implementing component\" );",
+                          typeInfo._fullyQualifiedName, typeInfo._fullyQualifiedName, typeInfo._fullyQualifiedName, typeInfo._name );
+            }
+            // 내보낸 인터페이스 한 줄 = 표 한 칸(이름, 포트 오프셋). 포트가 그 인터페이스를 잇는지는 컴파일러가 본다 — 오프셋으로 되돌리는 캐스트의 전제다.
+            for ( const ParsedInterfaceExport& entry : typeInfo._listInterfaceExport )
+            {
+                fe.linef( "static_assert( std::is_base_of_v<::%#, decltype( ::%#::%# )>, \"port %# must derive from %#\" );", entry._interfaceFQN, typeInfo._fullyQualifiedName,
+                          entry._portMember, entry._portMember, entry._interfaceSpelling );
+                fe.linef( "(void)info._ownInterfaces.add( ::sw::hashed_string( \"%#\" ), static_cast<::uint32>( offsetof( %#, %# ) ) );", entry._interfaceFQN,
+                          typeInfo._fullyQualifiedName, entry._portMember );
+            }
             // 컴포넌트 생성 함수는 타입 줄의 칸이다(언리얼 `UClass` 의 생성자 칸과 같은 자리). 이름으로 만드는 길은 이 칸만 본다.
             if ( typeInfo.requiresComponentFactory() )
                 fe.linef( "info._addComponent = &::sw::GameObject::addComponentForReflection<%#>;", typeInfo._fullyQualifiedName );
@@ -895,7 +911,7 @@ namespace sw
         }
 
         string keyDeclaration;
-        // 부모는 리플렉션된 형식일 때만 적는다 — 리플렉션 밖 기반(`ISubsystem` 같은 Core 인터페이스)은 등록부 사슬에 없어 끊긴 고리가 된다(언리얼 UCLASS 사슬도 UObject 계열 기반만 잇는다).
+        // 부모는 리플렉션된 형식일 때만 적는다 — 리플렉션 밖 기반(`Subsystem` 같은 Core 인터페이스)은 등록부 사슬에 없어 끊긴 고리가 된다(언리얼 UCLASS 사슬도 UObject 계열 기반만 잇는다).
         const string parentFQN    = typeInfo._bParentReflected == SW_TRUE ? typeInfo._parentFQN : string{};
         const string registrarKey = makeRegistrarKey( typeInfo._bHidden == SW_TRUE, registrarName, typeInfo._fullyQualifiedName, keyDeclaration );
         outBuffer.append( keyDeclaration );

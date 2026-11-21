@@ -68,7 +68,7 @@ namespace
 
     struct ActionRoomTestUtil
     {
-        static sw::ActionRoomFrameInput makeInput( const sw::float2& position = sw::float2{ 0.0f, 0.0f }, sw::FacingDir facing = sw::FacingDir::Right, bool bAttack = false, bool bDash = false )
+        static sw::ActionRoomFrameInput makeInput( const sw::float2& position = sw::float2{ 0.0f, 0.0f }, sw::FacingDirection facing = sw::FacingDirection::Right, bool bAttack = false, bool bDash = false )
         {
             sw::ActionRoomFrameInput input;
             input._playerPos      = position;
@@ -78,7 +78,7 @@ namespace
             return input;
         }
 
-        static sw::ActionRoomFrameInput makeAttack( sw::FacingDir facing = sw::FacingDir::Right ) { return makeInput( sw::float2{ 0.0f, 0.0f }, facing, true ); }
+        static sw::ActionRoomFrameInput makeAttack( sw::FacingDirection facing = sw::FacingDirection::Right ) { return makeInput( sw::float2{ 0.0f, 0.0f }, facing, true ); }
 
         /** @brief 적 하나를 세운 보스 룸을 시작합니다. 보스 룸은 `getBossHPFill` 로 체력이 보인다. */
         static void beginBossWith( sw::ActionRoom& room, const sw::hashed_string& monsterID, const sw::float2& position )
@@ -117,7 +117,7 @@ SW_TEST_CASE( ActionRoomTest, AttackHitsFacingBoxWithArmorAndCooldown )
     ActionRoomTestUtil::beginBossWith( room, kGrunt, sw::float2{ 1.0f, 0.0f } );
     SW_EXPECT_NEAR( 1.0f, room.getBossHPFill(), kRoomTolerance );
 
-    (void)room.update( kRoomStep, ActionRoomTestUtil::makeAttack( sw::FacingDir::Left ) ); // 등 뒤로 휘두른다 — 쿨다운만 돈다
+    (void)room.update( kRoomStep, ActionRoomTestUtil::makeAttack( sw::FacingDirection::Left ) ); // 등 뒤로 휘두른다 — 쿨다운만 돈다
     SW_EXPECT_NEAR( 1.0f, room.getBossHPFill(), kRoomTolerance );
     (void)room.update( kRoomStep, ActionRoomTestUtil::makeInput() );
 
@@ -150,9 +150,9 @@ SW_TEST_CASE( ActionRoomTest, AttackDirectionsAndMinimumDamage )
     room.setSettings( settings );
     ActionRoomTestUtil::beginBossWith( room, kGrunt, sw::float2{ 0.0f, 1.0f } );
 
-    (void)room.update( kRoomStep, ActionRoomTestUtil::makeAttack( sw::FacingDir::Up ) );
+    (void)room.update( kRoomStep, ActionRoomTestUtil::makeAttack( sw::FacingDirection::Up ) );
     SW_EXPECT_NEAR( 1.0f, room.getBossHPFill(), kRoomTolerance );
-    (void)room.update( kRoomStep, ActionRoomTestUtil::makeAttack( sw::FacingDir::Down ) ); // 방어 4 > 피해 1 이어도 1
+    (void)room.update( kRoomStep, ActionRoomTestUtil::makeAttack( sw::FacingDirection::Down ) ); // 방어 4 > 피해 1 이어도 1
     SW_EXPECT_NEAR( 49.0f / 50.0f, room.getBossHPFill(), kRoomTolerance );
 }
 
@@ -272,7 +272,7 @@ SW_TEST_CASE( ActionRoomTest, DashGrantsInvulnerabilityWithoutShorteningIt )
     room.setSettings( settings );
     ActionRoomTestUtil::beginHallWith( room, kGrunt, sw::float2{ 0.0f, 0.0f } );
     const sw::ActionRoomFrameInput idle = ActionRoomTestUtil::makeInput();
-    const sw::ActionRoomFrameInput dash = ActionRoomTestUtil::makeInput( sw::float2{ 0.0f, 0.0f }, sw::FacingDir::Right, false, true );
+    const sw::ActionRoomFrameInput dash = ActionRoomTestUtil::makeInput( sw::float2{ 0.0f, 0.0f }, sw::FacingDirection::Right, false, true );
     SW_EXPECT_NEAR( 1.0f, room.getDashFill(), kRoomTolerance );
 
     sw::ActionRoomFrameResult result = room.update( kRoomStep, dash ); // 대시한 프레임에는 맞지 않는다
@@ -681,8 +681,8 @@ SW_TEST_CASE( ActionRoomTest, RoomDeterminism )
     };
     const auto step = []( sw::ActionRoom& room, int32 stepIndex )
     {
-        const sw::float2    position{ static_cast<float32>( stepIndex % 8 ) * 0.25f - 1.0f, static_cast<float32>( stepIndex % 5 ) * 0.2f - 0.4f };
-        const sw::FacingDir facing = stepIndex % 4 < 2 ? sw::FacingDir::Right : sw::FacingDir::Left;
+        const sw::float2          position{ static_cast<float32>( stepIndex % 8 ) * 0.25f - 1.0f, static_cast<float32>( stepIndex % 5 ) * 0.2f - 0.4f };
+        const sw::FacingDirection facing = stepIndex % 4 < 2 ? sw::FacingDirection::Right : sw::FacingDirection::Left;
         (void)room.update( kRoomStep, ActionRoomTestUtil::makeInput( position, facing, stepIndex % 2 == 0, stepIndex % 7 == 3 ) );
     };
     SW_EXPECT_TRUE( sw::StateBytesTestUtil::isDeterministic<sw::ActionRoom>( setup, step, 120 ) );

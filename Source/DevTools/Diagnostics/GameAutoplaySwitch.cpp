@@ -9,7 +9,7 @@
 #include "Core/Container/vector.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
-#include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/Subsystem.h"
 
 #include "Engine/Config/GameAutoplay.h"
 #include "Engine/Config/IGameAutoplayQuery.h"
@@ -66,7 +66,7 @@ namespace sw
      * @brief 개발 구성에서 런타임 칸 `IGameAutoplayQuery` 를 채우는 서브시스템입니다. 배포 구성은 이 파일을 짓지 않아 칸이 비고, 게임 모드는 씬 데이터만 본다.
      * @details 창구는 멤버로 들고 `exposeMember` 로 건다(다중 상속을 두지 않는다).
      */
-    class GameAutoplaySubsystem final : public ISubsystem
+    class GameAutoplaySubsystem final : public Subsystem
     {
     public:
         static constexpr const utf8* kSubsystemName = "GameAutoplaySubsystem";

@@ -12,8 +12,8 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Automation/Scenario/AutomationScenario.h"
-#include "Engine/Automation/Scenario/AutomationStepContext.h"
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
+#include "Engine/Automation/Scenario/IAutomationStepContext.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
@@ -43,7 +43,7 @@ namespace sw
             }
 
             /** @brief 이름의 오브젝트입니다. 없으면 실패를 적고 nullptr 입니다. */
-            static GameObject* findObject( AutomationStepContext& runner, const AutomationStep& step, const string& objectName )
+            static GameObject* findObject( IAutomationStepContext& runner, const AutomationStep& step, const string& objectName )
             {
                 GameObjectManager* pManager = runner.findActiveObjectManager();
                 GameObject*        pObject  = pManager != nullptr ? pManager->findGameObjectByName( hashed_string( objectName ) ) : nullptr;
@@ -77,7 +77,7 @@ namespace sw
             }
 
             /** @brief 폰을 기록 조종자로 `frames` 틱 동안 몰고 원래 조종자에게 돌려준다. 버튼은 첫 틱에 발동 + 내내 누름. */
-            static bool runIntentStep( AutomationStepContext& runner, const AutomationStep& step )
+            static bool runIntentStep( IAutomationStepContext& runner, const AutomationStep& step )
             {
                 const ControlIntentStepParams params  = step.readValidatedProperties<ControlIntentStepParams>( { "yaw", "pitch" } );
                 GameObject*                   pObject = findObject( runner, step, params._pawn );
@@ -130,7 +130,7 @@ namespace sw
             }
 
             /** @brief 조종자 오브젝트가 폰을 쥐게 한다(`pawn` 이 없으면 놓게). */
-            static bool runPossessStep( AutomationStepContext& runner, const AutomationStep& step )
+            static bool runPossessStep( IAutomationStepContext& runner, const AutomationStep& step )
             {
                 const ControlPossessStepParams params  = step.readValidatedProperties<ControlPossessStepParams>();
                 GameObject*                    pObject = findObject( runner, step, params._controller );

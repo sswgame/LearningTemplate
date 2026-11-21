@@ -54,7 +54,7 @@ namespace sw::editor
     {
         _listRow.clear();
         vector<string> listFolder;
-        if ( FileUtil::collectFolders( BugReport::getRoot(), listFolder, false ) == false )
+        if ( FileUtil::collectFolders( FileUtil::toDiskPath( BugReport::getRoot() ), listFolder, false ) == false )
             return; // 아직 한 번도 모으지 않았으면 루트가 없다
         // 이름이 yyyyMMdd-HHmmss(-n) 이라 이름 역순이 최근 순이다(BugReport::findLatestDirectory 와 같은 규칙).
         VectorUtil::sort( listFolder, []( const string& lhs, const string& rhs )

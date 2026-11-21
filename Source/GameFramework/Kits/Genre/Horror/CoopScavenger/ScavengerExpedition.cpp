@@ -10,7 +10,7 @@
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
-#include "GameFramework/Runtime/Foundation/Framework/SessionStateRefs.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameStateRefs.h"
 #include "GameFramework/Runtime/World/Environment/WeatherSystem.h"
 #include "GameFramework/Runtime/World/Environment/WorldClock.h"
 
@@ -52,7 +52,7 @@ namespace sw
     {
     }
 
-    bool ScavengerExpedition::initialize( const ScavengerExpeditionData& data, const SessionStateRefs& refs, Inventory& shipStorage, uint32 seed, int32 crewCount )
+    bool ScavengerExpedition::initialize( const ScavengerExpeditionData& data, const GameStateRefs& refs, Inventory& shipStorage, uint32 seed, int32 crewCount )
     {
         if ( crewCount < 1 || data._pCatalog == nullptr )
         {

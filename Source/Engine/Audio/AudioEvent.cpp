@@ -52,11 +52,11 @@ namespace sw
             }
 
             /** @brief 부모 이벤트를 이름으로 찾아 문서로 돌려줍니다. */
-            class EventSource final : public IDataInheritanceSource
+            class EventSource final : public DataInheritanceSource
             {
             public:
                 explicit EventSource( const XMLNode& eventList )
-                    : IDataInheritanceSource{ engine::getSubsystem<ResourceComposition>().findInheritanceMaxDepth() }
+                    : DataInheritanceSource{ engine::getSubsystem<ResourceComposition>().findInheritanceMaxDepth() }
                     , _eventList{ eventList }
                 {
                 }
@@ -379,7 +379,7 @@ namespace sw
         string saveText = saveToXMLText();
         if ( saveText.empty() )
             return false; // 프리셋 차이를 쓰지 못했다(`saveToXMLText` 가 알렸다)
-        if ( FileUtil::readOptionalTextFile( absPath.str(), existingText ) == OptionalFileRead::Read )
+        if ( FileUtil::readOptionalTextFile( absPath, existingText ) == OptionalFileRead::Read )
         {
             const string baseID = DataInheritance::findBasePath( existingText );
             if ( baseID.empty() == false )

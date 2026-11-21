@@ -121,7 +121,7 @@
 		<entity id="305" name="Weather">
 			<GameObject _schemaVersion="0" _name="Weather" _bActive="true">
 				<_listComponent>
-					<SessionStateComponent _localID="6673597520240684436" />
+					<GameStateComponent _localID="6673597520240684436" />
 					<WeatherDirectorComponent _localID="3377167033740769073" _weatherDataPath="game/shooter3d/data/rainyard.weather.xml" _startWeather="clear" _seed="7" />
 				</_listComponent>
 			</GameObject>

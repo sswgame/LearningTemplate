@@ -1,7 +1,7 @@
 /**
  * @file GameplayAutomationSteps.cpp
  * @brief 자동화 시나리오의 영역을 넘는 게임 로직 단계입니다. 등록은 이 .cpp 의 정적 등록자가 합니다(Shipping 은 GameFramework 를 통째로 링크한다 — `sw_link_whole_archive`).
- * @details - 게임 시간: `AdvanceGameTime`(minutes · hours · toHour) — 활성 씬의 판 상태(`SessionStateComponent`) 시계를 감는다.
+ * @details - 게임 시간: `AdvanceGameTime`(minutes · hours · toHour) — 활성 씬의 판 상태(`GameStateComponent`) 시계를 감는다.
  *          - 빙의 · 탑승: 단계 `Mount` · `Dismount`(`VehicleSeatComponent`). 빙의 단계 `Possess` 는 조종 층(`ControlAutomationSteps`)에 있다.
  *          - 오브젝트 대상(`rider` · `vehicle`)은 `AutomationTarget` 규칙으로 고른다 — 같은 이름이 여럿이면 `Name[N]`.
  *          감시 값은 각 영역 폴더의 자기 .cpp 가 등록한다: `Clock.*` · `Session.Money`(`SessionStateProbes.cpp`), `Quest.Status`(`QuestProbes.cpp`), `Schedule.*`(`ScheduleProbes.cpp`),
@@ -14,8 +14,8 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Automation/Scenario/AutomationScenario.h"
-#include "Engine/Automation/Scenario/AutomationStepContext.h"
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
+#include "Engine/Automation/Scenario/IAutomationStepContext.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
@@ -23,7 +23,7 @@
 
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Runtime/Gameplay/Automation/GameplayAutomationParams.h"
-#include "GameFramework/Runtime/Gameplay/SessionState/SessionStateComponent.h"
+#include "GameFramework/Runtime/Gameplay/GameState/GameStateComponent.h"
 #include "GameFramework/Runtime/Gameplay/Vehicle/VehicleSeatComponent.h"
 #include "GameFramework/Runtime/World/Environment/WorldClock.h"
 
@@ -50,13 +50,13 @@ namespace sw
              * @brief 활성 씬의 판 상태(씬에 하나)의 시계를 감는다. 지나간 시 · 날 경계는 알림으로 남아 다음 틱의 디렉터 · 일정이 받는다(잠 · 빨리 감기와 같은 길).
              * @details 씬 틱 뒤에 돌므로 같은 프레임의 틱은 감기 전 시각을 봤다. 감시 값은 감은 시각을 바로 보지만 몸(일정을 따르는 오브젝트)은 다음 틱에 옮겨진다.
              */
-            static bool runAdvanceGameTime( AutomationStepContext& runner, const AutomationStep& step )
+            static bool runAdvanceGameTime( IAutomationStepContext& runner, const AutomationStep& step )
             {
-                const AdvanceGameTimeParams  params = step.readValidatedProperties<AdvanceGameTimeParams>();
-                SessionStateComponent* const pState = SessionStateComponent::findOpen( runner.findActiveObjectManager() ); // 씬에 하나다
+                const AdvanceGameTimeParams params = step.readValidatedProperties<AdvanceGameTimeParams>();
+                GameStateComponent* const   pState = GameStateComponent::findOpen( runner.findActiveObjectManager() ); // 씬에 하나다
                 if ( pState == nullptr )
                 {
-                    runner.recordFailure( step, "the active scene has no open SessionStateComponent (game clock)" );
+                    runner.recordFailure( step, "the active scene has no open GameStateComponent (game clock)" );
                     return true;
                 }
                 WorldClock& clock = pState->getClock();
@@ -68,7 +68,7 @@ namespace sw
             }
 
             /** @brief 대상 고르기 규칙(`AutomationTarget` — `Name` · `Name[N]`)으로 찾은 오브젝트입니다. 없으면 실패를 적고 nullptr 입니다. */
-            static GameObject* findObject( AutomationStepContext& runner, const AutomationStep& step, const string& objectName )
+            static GameObject* findObject( IAutomationStepContext& runner, const AutomationStep& step, const string& objectName )
             {
                 const expected<GameObject*> found = AutomationTarget::find( runner.findActiveObjectManager(), objectName );
                 if ( found.has_value() == false )
@@ -80,7 +80,7 @@ namespace sw
             }
 
             /** @brief 이름의 오브젝트의 폰입니다. 없으면 실패를 적고 nullptr 입니다. */
-            static PawnComponent* findPawn( AutomationStepContext& runner, const AutomationStep& step, const string& objectName )
+            static PawnComponent* findPawn( IAutomationStepContext& runner, const AutomationStep& step, const string& objectName )
             {
                 GameObject*    pObject = findObject( runner, step, objectName );
                 PawnComponent* pPawn   = pObject != nullptr ? pObject->getComponent<PawnComponent>() : nullptr;
@@ -94,7 +94,7 @@ namespace sw
             }
 
             /** @brief 탑승자 폰을 탈것 오브젝트의 빈 좌석(운전석 먼저)에 태운다. 탈 수 없으면 그 까닭(`TooFar` 등)을 실패로 적는다. */
-            static bool runMountStep( AutomationStepContext& runner, const AutomationStep& step )
+            static bool runMountStep( IAutomationStepContext& runner, const AutomationStep& step )
             {
                 const MountStepParams params      = step.readValidatedProperties<MountStepParams>();
                 const string&         riderName   = params._rider;
@@ -127,7 +127,7 @@ namespace sw
                 return true;
             }
 
-            static bool runDismountStep( AutomationStepContext& runner, const AutomationStep& step )
+            static bool runDismountStep( IAutomationStepContext& runner, const AutomationStep& step )
             {
                 const string   riderName = step.readValidatedProperties<DismountStepParams>()._rider;
                 PawnComponent* pRider    = findPawn( runner, step, riderName );

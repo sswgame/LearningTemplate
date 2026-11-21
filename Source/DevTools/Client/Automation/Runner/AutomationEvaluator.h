@@ -17,7 +17,7 @@
 #include "Engine/Automation/AutomationResult.h"
 #include "Engine/Automation/Scenario/AutomationDeferredValue.h"
 #include "Engine/Automation/Scenario/AutomationScenario.h"
-#include "Engine/Automation/Scenario/AutomationStepContext.h"
+#include "Engine/Automation/Scenario/IAutomationStepContext.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 
 namespace sw
@@ -70,7 +70,7 @@ namespace sw
     /**
      * @class AutomationEvaluator
      * @brief 단언 단계의 비교와 결과 판정에 필요한 상태를 모두 쥡니다. 시간 · 입력 · 대기는 모릅니다(그것은 `AutomationStepTimeline` 과 실행기의 일).
-     * @details 판정이 읽는 바깥 값(시나리오 프레임 · 산출물 경로 · 오브젝트 매니저)은 단계 문맥(`AutomationStepContext`)에서 호출마다 받는다 — 판정이 실행기를 알지 못한다.
+     * @details 판정이 읽는 바깥 값(시나리오 프레임 · 산출물 경로 · 오브젝트 매니저)은 단계 문맥(`IAutomationStepContext`)에서 호출마다 받는다 — 판정이 실행기를 알지 못한다.
      *          실패는 `addFailure` 로만 쌓이고, 결과를 정하는 것(`Passed` → `Failed` · `UnhandledLog`)은 실행기의 끝맺음이다.
      *          상용 엔진 비교: 언리얼 Automation Test 의 `FAutomationTestBase`(테스트 기록 · 오류 목록)가 실행기와 갈라진 모양과 같다. 게임 스레드에서만 쓴다.
      */
@@ -109,28 +109,28 @@ namespace sw
         void addRecordLine( string line );
 
         /** @brief `<ExpectVisited>` 가 보는 감시 값마다 이번 프레임 값을 읽어 바뀌었으면 적습니다(씬 틱 뒤, 단계 전). */
-        void sampleWatches( AutomationStepContext& context );
+        void sampleWatches( IAutomationStepContext& context );
 
         /** @brief 감시 값 단계(`Expect`, `WaitUntil`)의 비교를 봅니다. 감시 값에 값이 없으면 false 이고 @p outMessage 에 이유를 씁니다(값이 있으면 `<감시 값> <규칙>, got <값>`). */
-        [[nodiscard]] bool compareWatch( const AutomationStepContext& context, const AutomationStep& step, bool& outMatched, string& outMessage ) const;
+        [[nodiscard]] bool compareWatch( const IAutomationStepContext& context, const AutomationStep& step, bool& outMatched, string& outMessage ) const;
 
-        void runExpect( AutomationStepContext& context, const AutomationStep& step );
-        void runExpectVisited( AutomationStepContext& context, const AutomationStep& step );
-        void runRecord( AutomationStepContext& context, const AutomationStep& step );
-        void runStore( AutomationStepContext& context, const AutomationStep& step );
-        void runExpectLog( AutomationStepContext& context, const AutomationStep& step );
+        void runExpect( IAutomationStepContext& context, const AutomationStep& step );
+        void runExpectVisited( IAutomationStepContext& context, const AutomationStep& step );
+        void runRecord( IAutomationStepContext& context, const AutomationStep& step );
+        void runStore( IAutomationStepContext& context, const AutomationStep& step );
+        void runExpectLog( IAutomationStepContext& context, const AutomationStep& step );
         /**
          * @brief `<ExpectImage>` 를 미뤄 둡니다 - 인자와 그때의 백엔드(골든이 백엔드마다 따로다)만 지금 읽고, 비교는 시나리오 끝(`evaluateDeferredImages`)에서 한다.
          * @details 판정은 다음 단계 진행에 쓰이지 않는다(실패를 적을 뿐). 예전에는 단계마다 스크린샷 쓰기를 기다려 프레임을 붙잡았다. 같은 파일을 두 번 찍는 시나리오는
          *          읽을 때 거절한다(`AutomationStepValidation::validateScreenshotFiles`) - 미룬 비교가 덮어쓴 그림을 보지 않게.
          */
-        void deferExpectImage( AutomationStepContext& context, const AutomationStep& step );
+        void deferExpectImage( IAutomationStepContext& context, const AutomationStep& step );
         /** @brief `<ExpectImagesDiffer>` 를 미뤄 둡니다. 스크린샷은 렌더 스레드가 나중에 쓰므로 `<ExpectImage>` 와 같이 시나리오 끝에서 견준다. */
         void deferExpectImagesDiffer( const AutomationStep& step );
-        /** @brief 워커가 낼 값 @p pValue 가 @p limit 이하인지를 시나리오 끝(`evaluateDeferred`)으로 미룹니다(`AutomationStepContext::deferExpectAtMost`). */
+        /** @brief 워커가 낼 값 @p pValue 가 @p limit 이하인지를 시나리오 끝(`evaluateDeferred`)으로 미룹니다(`IAutomationStepContext::deferExpectAtMost`). */
         void deferExpectAtMost( const AutomationStep& step, string description, float64 limit, shared_ptr<const AutomationDeferredValue> pValue );
         /** @brief 미룬 `<ExpectImage>` 와 값 상한을 차례로 판정합니다. 스크린샷과 끝 차단 조건의 뒤의 일이 모두 끝난 뒤(`<Pass/>`) 부른다. */
-        void evaluateDeferred( AutomationStepContext& context );
+        void evaluateDeferred( IAutomationStepContext& context );
 
         /**
          * @brief 로그 게이트입니다. 시작한 시나리오의 처리하지 않은 Warning · Error 줄과 빠진 현지화 키를 모아 보고(`unhandledLogs`)에 싣습니다 — 결과가 실패여도 싣는다.
@@ -164,7 +164,7 @@ namespace sw
         const expected<AutomationGoldenPolicy>& getGoldenPolicy() const { return _goldenPolicy; }
 
         /** @brief 단계의 감시 값 · 대상 · 키를 읽어 값을 냅니다. 없으면 false 이고(`<SkipUnless>` 같은 단계도 같은 읽기를 쓴다) @p outMessage 에 이유를 씁니다. */
-        [[nodiscard]] bool readWatchValue( const AutomationStepContext& context, const AutomationStep& step, AutomationWatchValue& outValue, string& outMessage ) const;
+        [[nodiscard]] bool readWatchValue( const IAutomationStepContext& context, const AutomationStep& step, AutomationWatchValue& outValue, string& outMessage ) const;
 
     private:
         /**
@@ -206,12 +206,12 @@ namespace sw
         /** @brief 시작할 때 `<ExpectVisited>` 가 보는 감시 값마다 이력을 만듭니다. */
         void prepareWatches( const AutomationScenario& scenario );
         /** @brief 미룬 `<ExpectImage>` 하나를 판정합니다(@p backendTag 는 단언한 때의 백엔드). 판정은 `AutomationGoldenUtil::evaluate` · `decide` 한 식이다. */
-        void evaluateImage( AutomationStepContext& context, const AutomationStep& step, string_view backendTag );
+        void evaluateImage( IAutomationStepContext& context, const AutomationStep& step, string_view backendTag );
         /** @brief 기록 실행에서 골든 @p goldenID 와 그 메타(`*.golden.json`)를 씁니다. @p pPrevious 는 쓰기 전 골든과의 차이(견주지 못했으면 nullptr)입니다. */
-        void writeGolden( AutomationStepContext& context, const AutomationStep& step, const AutomationImage& image, const string& goldenID, string_view backendTag, const utf8* pReason,
+        void writeGolden( IAutomationStepContext& context, const AutomationStep& step, const AutomationImage& image, const string& goldenID, string_view backendTag, const utf8* pReason,
                           const AutomationImageDifference* pPrevious, const AutomationGoldenLimits& limits );
         /** @brief 미룬 `<ExpectImagesDiffer>` 하나를 판정합니다. */
-        void evaluateImagesDiffer( AutomationStepContext& context, const AutomationStep& step );
+        void evaluateImagesDiffer( IAutomationStepContext& context, const AutomationStep& step );
 
     private:
         AutomationLogCapture             _logCapture;                                           ///< 시나리오 동안의 로그 줄(`<ExpectLog>`, 로그 게이트)

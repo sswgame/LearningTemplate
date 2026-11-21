@@ -16,8 +16,8 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/ServiceSlot.h"
+#include "Core/Subsystem/Subsystem.h"
 #include "Core/Task/TaskTypes.h"
 
 namespace sw
@@ -45,7 +45,7 @@ namespace sw
      *   장을 큐에 넣고, 티켓을 가져간 스레드는 원자 카운터로 남은 청크를 계속 가져와 실행합니다. 호출 스레드도 바로 함께
      *   실행합니다.
      */
-    class SW_API TaskManager : public ISubsystem
+    class SW_API TaskManager : public Subsystem
     {
         friend struct TaskNode;
 

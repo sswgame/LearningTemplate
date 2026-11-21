@@ -345,7 +345,7 @@ L-1(진단 락 제거)은 됐다. 잎 락(`_onlineBlockMutex` · `_cmdListPoolMu
 ### 트리거 Enter · Stay · Exit 계약
 
 - 규칙: 겹침은 오브젝트 쌍(`PhysicsOverlapTracker`), 막는 접촉은 바디 쌍. 한 프레임에 끝 먼저 → 시작. 셀 · 하위 레벨 오름은 "안에서 생성" 진입, 내림은 파괴 규칙.
-- 활성자 볼륨 파생은 `ActivatorAuthority`(Server · Local)를, 지역 모듈 처리기는 `getAuthority` 를 반드시 고른다.
+- 활성자 볼륨 파생은 `TriggerAuthority`(Server · Local)를, 지역 모듈 처리기는 `getAuthority` 를 반드시 고른다.
 - 남은 위험: 원점 이동 뒤 AI 인지의 마지막 본 자리가 옛 원점 기준이다.
 - shortcut: Activator 컷씬 재생 중 다른 플레이어 진입은 틀지 않는다 — 동시 개인 컷씬이 필요하면 플레이어마다 디렉터를 세운다. 나타남 판정 창(8 프레임)이 모자라는 구성이 나오면 물리가 "막 더한 바디" 를 표시한다.
 

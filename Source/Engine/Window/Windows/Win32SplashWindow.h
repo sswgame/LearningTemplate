@@ -1,6 +1,6 @@
 /**
  * @file Win32SplashWindow.h
- * @brief Windows 전용(Win32 GDI 기반) ISplashWindow 구현입니다.
+ * @brief Windows 전용(Win32 GDI 기반) SplashWindowBase 구현입니다.
  */
 #pragma once
 #include "Core/Concurrency/ScopedLock.h"
@@ -10,7 +10,7 @@
 #include "Core/Container/string.h"
 #include "Core/Foundation/Types.h"
 
-#include "Engine/Window/ISplashWindow.h"
+#include "Engine/Window/SplashWindowBase.h"
 
 #include <condition_variable>
 
@@ -36,7 +36,7 @@ namespace sw
      *          Windows 가 창을 "응답 없음" 으로 덮었다(감사 P-13). 언리얼 `FWindowsSplash` 처럼 스플래시 스레드가 `GetMessageW` 로 늘 답하고,
      *          기동 스레드는 상태만 적고 상태 띠를 무효로 한다(다른 스레드의 창에도 `InvalidateRect` 는 된다 — 그리기는 창 스레드의 `WM_PAINT`).
      */
-    class Win32SplashWindow : public ISplashWindow
+    class Win32SplashWindow : public SplashWindowBase
     {
     public:
         Win32SplashWindow();

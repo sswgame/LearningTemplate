@@ -2,8 +2,8 @@
 #include "Core/Container/deque.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/File/AsyncFileIO.h"
-#include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/ServiceSlot.h"
+#include "Core/Subsystem/Subsystem.h"
 #include "Core/Task/TaskFuture.h"
 #include "Core/Task/TaskTypes.h"
 
@@ -52,7 +52,7 @@ namespace sw
      *          팩 항목의 압축 해제와 CRC 는 완료를 받은 태스크 워커가 한다. 여러 요청의 해제가 나란히 돈다. 있는지만 보는 요청(`requestAsset`)은
      *          태스크 하나다. 완료 콜백은 `update` 를 부른 스레드에서 실행된다.
      */
-    class SW_API AssetStreamingQueue : public ISubsystem
+    class SW_API AssetStreamingQueue : public Subsystem
     {
     public:
         AssetStreamingQueue();

@@ -9,7 +9,7 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Runtime/Foundation/Framework/GameModeBoundComponent.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameFrameworkComponent.h"
 
 namespace sw
 {
@@ -19,7 +19,7 @@ namespace sw
      * @details 상태가 바뀔 때만 모습(디렉터가 나눠 주는 머티리얼 인스턴스)을 바꿉니다.
      */
     REFLECT( Category = "Farming", DisplayName = "Farm Soil View", Tooltip = "Colours one field tile by the farm game mode soil state" )
-    class FarmSoilComponent : public GameModeBoundComponent
+    class FarmSoilComponent : public GameFrameworkComponent
     {
     public:
         REFLECT_BODY();

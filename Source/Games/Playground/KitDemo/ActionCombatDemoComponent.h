@@ -105,8 +105,8 @@ namespace sw
         Countdown  _bossDelay;
         Countdown  _resultHold; ///< 판이 끝난 뒤 미니게임을 끝내기까지(결과를 보여 주는 시간)
         PROPERTY( RuntimeState )
-        float2    _playerPosition;
-        FacingDir _facing; ///< 리플렉션 열거가 아니다 — 손 본문이 싣는다
+        float2          _playerPosition;
+        FacingDirection _facing; ///< 리플렉션 열거가 아니다 — 손 본문이 싣는다
         PROPERTY( RuntimeState )
         int32 _playerHP;
         PROPERTY( RuntimeState )

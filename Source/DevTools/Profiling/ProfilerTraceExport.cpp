@@ -792,7 +792,7 @@ namespace sw
     expected<ProfilerLoadedTrace> ProfilerTraceExport::loadTraceFile( string_view path )
     {
         string text;
-        if ( FileUtil::readTextFile( path, text ) == false )
+        if ( FileUtil::readTextFile( FileUtil::toDiskPath( path ), text ) == false )
             return unexpected( Error{ ErrorKind::NotFound, "cannot read the trace file", path } );
         expected<ProfilerLoadedTrace> trace = parseTraceJSON( text );
         if ( trace.has_value() )
@@ -804,7 +804,7 @@ namespace sw
     {
         vector<string> listFile;
         const string   folder = FileUtil::joinPath( ProcessRoots::get()._saved.str(), "Traces" );
-        if ( FileUtil::collectFiles( folder, ".json", listFile, false ) == false )
+        if ( FileUtil::collectFiles( FileUtil::toDiskPath( folder ), ".json", listFile, false ) == false )
             return {};
         string latest;
         int64  latestStamp = -1;
@@ -836,7 +836,7 @@ namespace sw
         [[nodiscard]] bool writeTraceFile( const string& path, const vector<ProfilerTimelineThread>& listThread, const vector<uint64>& listFrameBegin,
                                            const vector<string>& listSlotName, const ProfilerTraceMeta& meta, string& outReply )
         {
-            if ( FileUtil::ensureParentDirectoryExists( path ) == false )
+            if ( FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( path ) ) == false )
             {
                 StringBuilder<constant::buffer::kMax1024> reply;
                 reply.appendFormat( "cannot create the folder of %#", path );
@@ -857,7 +857,7 @@ namespace sw
             }
             if ( beginNanos <= endNanos )
                 NetFlowLog::collect( beginNanos, endNanos, metaWithFlow._listFlow );
-            if ( FileUtil::writeTextFile( path, ProfilerTraceExport::makeTraceJSON( listThread, listFrameBegin, listSlotName, metaWithFlow ) ) == false )
+            if ( FileUtil::writeTextFile( FileUtil::toDiskPath( path ), ProfilerTraceExport::makeTraceJSON( listThread, listFrameBegin, listSlotName, metaWithFlow ) ) == false )
             {
                 StringBuilder<constant::buffer::kMax1024> reply;
                 reply.appendFormat( "cannot write %#", path );
@@ -1112,7 +1112,7 @@ namespace sw
         for ( const string& path : listInputPath )
         {
             ProfilerTraceMergeInput input;
-            if ( FileUtil::readTextFile( path, input._json ) == false )
+            if ( FileUtil::readTextFile( FileUtil::toDiskPath( path ), input._json ) == false )
             {
                 StringBuilder<constant::buffer::kMax1024> reply;
                 reply.appendFormat( "cannot read %#", path );
@@ -1130,7 +1130,7 @@ namespace sw
         }
         const string                              path( outputPath );
         StringBuilder<constant::buffer::kMax1024> reply;
-        if ( FileUtil::ensureParentDirectoryExists( path ) == false || FileUtil::writeTextFile( path, json ) == false )
+        if ( FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( path ) ) == false || FileUtil::writeTextFile( FileUtil::toDiskPath( path ), json ) == false )
         {
             reply.appendFormat( "cannot write %#", path );
             outReply = string( reply.view() );

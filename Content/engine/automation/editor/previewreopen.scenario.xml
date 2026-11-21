@@ -44,7 +44,7 @@
 	<EditorWaitStable/>
 	<WaitUntil watch="Editor.MaterialPreviewSceneFrames" atLeast="40" timeoutFrames="600"/>
 	<!-- 머티리얼 창 1/8: 닫기 → 닫아 둔 채 20 프레임 → 열기 → 프레임이 다시 오름 → 30 프레임 그린 뒤 다음 닫기 -->
-	<!-- 포커스를 쥔 채 닫는다 — 창이 쥔 초점 씬 · Undo 스택이 닫힌 뒤에도 남지 않아야 한다(닫힌 창은 그려지지 않아 스스로 풀지 못한다: IEditorPanel::onPanelClosed) -->
+	<!-- 포커스를 쥔 채 닫는다 — 창이 쥔 초점 씬 · Undo 스택이 닫힌 뒤에도 남지 않아야 한다(닫힌 창은 그려지지 않아 스스로 풀지 못한다: EditorPanel::onPanelClosed) -->
 	<EditorWaitStable/>
 	<Expect watch="Editor.ToolFocusIsMain" equals="0"/>
 	<EditorWaitStable/>

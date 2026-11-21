@@ -47,7 +47,7 @@
 					                _localScale="1,1,1"
 					                _attachOwner="None"
 					                _attachComponent="None" />
-					<TileMapRendererComponent _localID="10766413655964845934" _tileMapPath="game/playground/pixeltown/maps/town.tilemap.xml"
+					<TileMapComponent _localID="10766413655964845934" _tileMapPath="game/playground/pixeltown/maps/town.tilemap.xml"
 					                          _materialPath="engine/materials/sprite2dpixel.material"
 					                          _sortingLayer="Default"
 					                          _orderInLayer="-20"
@@ -64,7 +64,7 @@
 					                _localScale="1,1,1"
 					                _attachOwner="None"
 					                _attachComponent="None" />
-					<TileMapRendererComponent _localID="10766413655964845934" _tileMapPath="game/playground/pixeltown/maps/townprops.tilemap.xml"
+					<TileMapComponent _localID="10766413655964845934" _tileMapPath="game/playground/pixeltown/maps/townprops.tilemap.xml"
 					                          _materialPath="engine/materials/sprite2dpixel.material"
 					                          _sortingLayer="Default"
 					                          _orderInLayer="-10"
@@ -85,11 +85,7 @@
 					                 _materialPath="engine/materials/sprite2dpixel.material"
 					                 _sortingLayer="Default"
 					                 _orderInLayer="0" />
-					<SpriteAnimatorComponent _localID="6519445003455735703" _localPosition="0,0,0"
-					                         _localRotation="0,0,0"
-					                         _localScale="1,1,1"
-					                         _attachOwner="None"
-					                         _attachComponent="None"
+					<SpriteAnimatorComponent _localID="6519445003455735703"
 					                         _bRepeat="true" />
 					<OverworldWalkerViewComponent _localID="9355334654231144314" _gameMode="6" _spriteOffset="0,0.6" _depthPerUnitY="0.01" />
 					<PawnComponent _localID="11149290121538025405" _moveAction="Move"
@@ -119,11 +115,7 @@
 					                 _materialPath="engine/materials/sprite2dpixel.material"
 					                 _sortingLayer="Default"
 					                 _orderInLayer="0" />
-					<SpriteAnimatorComponent _localID="6519445003455735703" _localPosition="0,0,0"
-					                         _localRotation="0,0,0"
-					                         _localScale="1,1,1"
-					                         _attachOwner="None"
-					                         _attachComponent="None"
+					<SpriteAnimatorComponent _localID="6519445003455735703"
 					                         _currentAnimation="idle_down"
 					                         _bRepeat="true" />
 					<DialogueRunnerComponent _localID="1294512687050719775" _graphPath="game/playground/pixeltown/dialogue/elder.dialogue.xml" _bPostSubtitles="true">

@@ -33,7 +33,7 @@ namespace sw
                 pOut[1] = pIn[1];
                 pOut[2] = pIn[2];
             }
-            return FileUtil::writeFile( outFilePath, outBytes.data(), outBytes.size() );
+            return FileUtil::writeFile( FileUtil::toDiskPath( outFilePath ), outBytes.data(), outBytes.size() );
         }
     } // namespace
 } // namespace sw

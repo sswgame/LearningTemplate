@@ -26,20 +26,20 @@ namespace
             _first._absolutePath  = test::makeScratchPath( _first._fileName );
             _second._fileName     = "SwDataTableSecond.xml";
             _second._absolutePath = test::makeScratchPath( _second._fileName );
-            SW_REQUIRE_TRUE( FileUtil::writeTextFile( _first._absolutePath, "<First a=\"1\"/>" ) );
-            SW_REQUIRE_TRUE( FileUtil::writeTextFile( _second._absolutePath, "<Second b=\"2\"/>" ) );
+            SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( _first._absolutePath ), "<First a=\"1\"/>" ) );
+            SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( _second._absolutePath ), "<Second b=\"2\"/>" ) );
         }
 
         ~DataTableTestFiles()
         {
-            (void)FileUtil::removeFile( _first._absolutePath );
-            (void)FileUtil::removeFile( _second._absolutePath );
+            (void)FileUtil::removeFile( FileUtil::toDiskPath( _first._absolutePath ) );
+            (void)FileUtil::removeFile( FileUtil::toDiskPath( _second._absolutePath ) );
         }
 
         static string read( const GameDataFileEntry& entry )
         {
             string text;
-            SW_EXPECT_TRUE( FileUtil::readTextFile( entry._absolutePath, text ) );
+            SW_EXPECT_TRUE( FileUtil::readTextFile( FileUtil::toDiskPath( entry._absolutePath ), text ) );
             return text;
         }
     };
@@ -150,7 +150,7 @@ SW_TEST_CASE( DataTableViewModelTest, UnreadableFileIsNotOpened )
     SW_EXPECT_TRUE( model.getGameDataPath().empty() );
     SW_EXPECT_TRUE( model.getGameDataRawText().empty() );
     SW_EXPECT_FALSE( model.saveGameDataFile() ); // 쓸 곳이 없다
-    SW_EXPECT_FALSE( FileUtil::exists( missingPath ) );
+    SW_EXPECT_FALSE( FileUtil::exists( FileUtil::toDiskPath( missingPath ) ) );
     SW_EXPECT_TRUE( DataTableTestFiles::read( files._first ) == "<First a=\"1\"/>" );
 }
 
@@ -302,12 +302,12 @@ SW_TEST_CASE( DataTableViewModelTest, ConfirmedTranslationIsSavedAsCurrent )
     const string folder      = test::makeScratchPath( "SwDataTableConfirm" );
     const string projectPath = FileUtil::joinPath( folder, "t.locproject.xml" );
     const string oldHash     = SourceTextEntry::formatSourceHash( SourceTextEntry::computeSourceHash( "Older" ) );
-    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( folder ) );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( projectPath, "<LocalizationProject name=\"t\" sourceCulture=\"en\"><cultures><item>ko</item></cultures><stringTables><item>t.strings.xml</item></stringTables></LocalizationProject>" ) );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::joinPath( folder, "t.strings.xml" ), "<SourceStringTable culture=\"en\"><entries><entry key=\"a\" source=\"Old\" /></entries></SourceStringTable>" ) );
+    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( folder ) ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( projectPath ), "<LocalizationProject name=\"t\" sourceCulture=\"en\"><cultures><item>ko</item></cultures><stringTables><item>t.strings.xml</item></stringTables></LocalizationProject>" ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( FileUtil::joinPath( folder, "t.strings.xml" ) ), "<SourceStringTable culture=\"en\"><entries><entry key=\"a\" source=\"Old\" /></entries></SourceStringTable>" ) );
     StringBuilder<constant::buffer::kMax256> translationText;
     translationText.appendFormat( "<TranslationTable culture=\"ko\"><entries><entry key=\"a\" text=\"글\" sourceHash=\"%#\" /></entries></TranslationTable>", oldHash );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::joinPath( folder, "ko.translation.xml" ), translationText.view() ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( FileUtil::joinPath( folder, "ko.translation.xml" ) ), translationText.view() ) );
 
     const DocumentEditRecorder recorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) };
     DataTableViewModel         model{ recorder };
@@ -325,7 +325,7 @@ SW_TEST_CASE( DataTableViewModelTest, ConfirmedTranslationIsSavedAsCurrent )
     SW_REQUIRE_EQUAL( size_t{ 1 }, saved._listRecord.size() );
     SW_EXPECT_TRUE( saved._listRecord[0]._listState[0] == TranslationState::Current );
     SW_EXPECT_TRUE( saved._listRecord[0]._listTranslation[0] == "글" );
-    (void)FileUtil::removeDirectory( folder );
+    (void)FileUtil::removeDirectory( FileUtil::toDiskPath( folder ) );
 }
 
 // 할 일만 보기: 없음 · 낡음 · 검토가 남은 행만 지난다. 검색과 함께 걸린다.

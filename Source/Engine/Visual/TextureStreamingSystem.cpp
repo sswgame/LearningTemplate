@@ -69,8 +69,8 @@ namespace sw
         // 월드 캐시는 읽기만 해야 한다 — 남은 더티가 있으면 먼저 펼친다(`MeshLODSystem::update` 와 같은 규칙).
         if ( _manager.hasDirtySceneTransforms() )
             _manager.flushSceneTransforms();
-        const vector<ScenePrimitive*>& listPrimitive = _manager.getPrimitiveRegistry().getAll(); // 메시 계열만 든다(`ScenePrimitive.h` 의 불변식)
-        const uint32                   count         = static_cast<uint32>( listPrimitive.size() );
+        const vector<PrimitiveComponent*>& listPrimitive = _manager.getPrimitiveRegistry().getAll(); // 메시 계열만 든다(`PrimitiveComponent.h` 의 불변식)
+        const uint32                       count         = static_cast<uint32>( listPrimitive.size() );
         _listMeshDemand.resize( count );
         engine::runParallelIntoByCost<TextureStreamingDemand>( _listMeshDemand, [&lodSystem, &streaming, &listPrimitive]( uint32 index, TextureStreamingDemand& outDemand )
         {

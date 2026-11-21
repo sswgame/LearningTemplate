@@ -30,7 +30,7 @@ namespace sw::editor
 {
     struct EditorCommandTarget;
 
-    class IInspectorComponent;
+    class IComponentInspector;
 } // namespace sw::editor
 
 namespace sw::editor
@@ -194,7 +194,7 @@ namespace sw::editor
         // 확장 창구
         // ------------------------------------------------------------------------------
         /** @brief 타입 이름 @p typeName 과 그 기반에 등록된 인스펙터 확장입니다(기반 → 파생 순서). */
-        static const vector<IInspectorComponent*>& getInspectorsForType( const hashed_string& typeName );
+        static const vector<IComponentInspector*>& getInspectorsForType( const hashed_string& typeName );
         /** @brief 보이는 오브젝트에 종류 @p typeName 의 컴포넌트를 더하라고 게임 스레드에 요청합니다(되돌리기 한 단계 — `EditorSceneCommands::addComponent`). 보이는 오브젝트가 없으면 `Rejected` 입니다. */
         [[nodiscard]] SceneEditRequestResult addComponent( const hashed_string& typeName );
 

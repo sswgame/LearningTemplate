@@ -61,7 +61,7 @@ namespace
     };
 
     /** @brief 찾기를 쌓아 두고 손으로 답하는 접속 상태입니다. */
-    class FakePresence final : public IAccountPresence
+    class FakePresence final : public AccountPresence
     {
     public:
         struct Find
@@ -427,7 +427,7 @@ SW_TEST_CASE( ChatServiceTest, PendingSendsAreBoundedAndFinished )
 SW_TEST_CASE( ChatServiceTest, SpamAndFilterApplyToSends )
 {
     const string bannedPath = test::makeScratchPath( "banned.txt" );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( bannedPath, "badword\n" ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( bannedPath ), "badword\n" ) );
 
     MemoryServiceDatabase database;
     ChatServiceConfig     settings   = makeChatSettings();

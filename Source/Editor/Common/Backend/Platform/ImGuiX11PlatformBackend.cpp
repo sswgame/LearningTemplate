@@ -13,7 +13,7 @@
     #include "Editor/Common/Backend/Platform/ImGuiTextInputBridge.h"
 
     #include "Engine/Input/Map/InputKeyTable.h"
-    #include "Engine/Window/IWindow.h"
+    #include "Engine/Window/GenericWindow.h"
     #include "Engine/Window/NativeWindowEvent.h"
     #include "Engine/Window/WindowMonitor.h"
 
@@ -45,7 +45,7 @@ namespace sw::editor
         {
         }
 
-        bool initialize( IWindow* pWindow, RHIBackend backendType ) override
+        bool initialize( GenericWindow* pWindow, RHIBackend backendType ) override
         {
             if ( pWindow == nullptr )
                 return false;
@@ -397,7 +397,7 @@ namespace sw::editor
             return XC_left_ptr;
         }
 
-        /** @brief ImGui 커서의 X 커서입니다(처음 쓸 때 만든다). 주 창 몫만 다루는 `IWindow::setCursorShape` 대신 쓰는 까닭은 떼어 낸 창에도 걸어야 해서다 - X 커서는 창마다 걸린다(GLFW 백엔드도 뷰포트마다 건다). */
+        /** @brief ImGui 커서의 X 커서입니다(처음 쓸 때 만든다). 주 창 몫만 다루는 `GenericWindow::setCursorShape` 대신 쓰는 까닭은 떼어 낸 창에도 걸어야 해서다 - X 커서는 창마다 걸린다(GLFW 백엔드도 뷰포트마다 건다). */
         Cursor getOrCreateCursor( ImGuiMouseCursor cursor )
         {
             const int32 index = cursor >= 0 && cursor < ImGuiMouseCursor_COUNT ? cursor : ImGuiMouseCursor_Arrow;
@@ -761,7 +761,7 @@ namespace sw::editor
         }
 
     private:
-        IWindow*             _pWindow;
+        GenericWindow*       _pWindow;
         Display*             _pDisplay;
         Window               _mainWindow;
         Atom                 _wmDelete;
@@ -770,7 +770,7 @@ namespace sw::editor
         ImGuiTextInputBridge _textInput;                         ///< 창의 입력기와 ImGui 를 잇는다
         int2                 _lastPointer;                       ///< 마지막으로 ImGui 에 알린 실제 포인터 위치
         uint32               _lastPointerMask;                   ///< 마지막으로 ImGui 에 알린 실제 버튼 상태
-        uint32               _monitorGeneration;                 ///< `platformIO.Monitors` 를 읽은 때의 `IWindow::getMonitorGeneration`
+        uint32               _monitorGeneration;                 ///< `platformIO.Monitors` 를 읽은 때의 `GenericWindow::getMonitorGeneration`
         uint64               _arrCursor[ImGuiMouseCursor_COUNT]; ///< 모양마다 만든 X 커서(0 이면 아직 없음). 이 연결의 자원이라 `shutdown` 이 놓는다
         ImGuiMouseCursor     _lastCursor;                        ///< 창에 건 커서. 처음에는 `ImGuiMouseCursor_COUNT` 라 첫 프레임에 건다
         uint8                _bPointerRead : 1;                  ///< 포인터를 한 번이라도 읽었는지

@@ -419,7 +419,7 @@ SW_TEST_CASE( ReflectionProbeAssetTest, SaveToFileCreatesTheFolder )
     SW_REQUIRE_TRUE( absPath.has_value() );
     SW_REQUIRE_TRUE( Util::makeAsset().saveToFile( *absPath ) );
     vector<uint8> listRead;
-    SW_REQUIRE_TRUE( FileUtil::readFile( absPath->str(), listRead ) );
+    SW_REQUIRE_TRUE( FileUtil::readFile( *absPath, listRead ) );
     SW_EXPECT_TRUE( listRead == Util::makeBytes() );
 }
 

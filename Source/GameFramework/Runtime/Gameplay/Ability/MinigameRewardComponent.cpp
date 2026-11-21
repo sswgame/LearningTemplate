@@ -8,8 +8,8 @@
 #include "GameFramework/Runtime/Foundation/Framework/Minigame/MinigameFlow.h"
 #include "GameFramework/Runtime/Foundation/Framework/Minigame/MinigameStack.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityCatalog.h"
-#include "GameFramework/Runtime/Gameplay/Ability/AbilityComponent.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityEffect.h"
+#include "GameFramework/Runtime/Gameplay/Ability/AbilitySystemComponent.h"
 
 namespace sw
 {
@@ -56,12 +56,12 @@ namespace sw
     {
         if ( result._listValue.empty() )
             return true;
-        GameObject* const       pOwner   = getOwner();
-        AbilityComponent* const pAbility = pOwner != nullptr ? pOwner->getComponent<AbilityComponent>() : nullptr;
-        const AbilityCatalog*   pCatalog = pAbility != nullptr ? pAbility->findCatalog() : nullptr;
+        GameObject* const             pOwner   = getOwner();
+        AbilitySystemComponent* const pAbility = pOwner != nullptr ? pOwner->getComponent<AbilitySystemComponent>() : nullptr;
+        const AbilityCatalog*         pCatalog = pAbility != nullptr ? pAbility->findCatalog() : nullptr;
         if ( pCatalog == nullptr )
         {
-            SW_LOG_ERROR_ID( "MinigameReward.NoAbilitySystem", "Minigame '%#' result: '%#' has no AbilityComponent with an AbilityCatalog - %# reward values are dropped",
+            SW_LOG_ERROR_ID( "MinigameReward.NoAbilitySystem", "Minigame '%#' result: '%#' has no AbilitySystemComponent with an AbilityCatalog - %# reward values are dropped",
                              result._minigame.c_str(), pOwner != nullptr ? pOwner->getName().c_str() : "(no owner)", result._listValue.size() );
             return false;
         }

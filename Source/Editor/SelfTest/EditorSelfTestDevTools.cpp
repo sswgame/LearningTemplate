@@ -92,11 +92,11 @@ namespace sw::editor
              * @brief 패널을 열고 그 탭을 앞으로 가져온 뒤 그 패널을 반환합니다. 없으면 실패로 기록하고 nullptr 을 반환합니다.
              * @details 씬 뷰와 게임 뷰는 같은 영역의 탭이므로, 앞에 없는 쪽은 그려지지 않는다. 탭이 앞으로 오는 것은 다음 프레임부터다.
              */
-            static IEditorPanel* openAndFocus( EditorSelfTestContext& context, const utf8* pPanelID )
+            static EditorPanel* openAndFocus( EditorSelfTestContext& context, const utf8* pPanelID )
             {
                 EditorContext& editorContext = editor::getSubsystem<EditorContext>();
                 (void)editorContext.getSubsystem<EditorPanelManager>().setPanelOpen( pPanelID, true );
-                IEditorPanel* pPanel = editorContext.getSubsystem<EditorPanelManager>().findPanelByID( pPanelID );
+                EditorPanel* pPanel = editorContext.getSubsystem<EditorPanelManager>().findPanelByID( pPanelID );
                 if ( context.expect( pPanel != nullptr, "the panel is not registered" ) == false )
                     return nullptr;
                 if ( context.getStepIndex() == 0 )
@@ -299,7 +299,7 @@ namespace sw::editor
                     if ( context.expect( pDock->saveNamedLayout( kLayoutName, folder ), "could not save the named layout" ) == false )
                         return EditorSelfTestStep::Done;
                     string iniText;
-                    (void)FileUtil::readTextFile( EditorLayoutStore::makeImguiINIPath( folder, kLayoutName ), iniText ); // 없으면 아래 단언이 알린다
+                    (void)FileUtil::readTextFile( FileUtil::toDiskPath( EditorLayoutStore::makeImguiINIPath( folder, kLayoutName ) ), iniText ); // 없으면 아래 단언이 알린다
                     (void)context.expect( iniText.find( "[Docking]" ) != string::npos && iniText.find( "[Window][Hierarchy]" ) != string::npos,
                                           "the saved layout has no docking section or no hierarchy window" );
                     (void)editorContext.getSubsystem<EditorPanelManager>().setPanelOpen( kPanelID, false );
@@ -307,7 +307,7 @@ namespace sw::editor
                     return EditorSelfTestStep::WaitStable; // 다음 프레임 시작에 적용되고 그 프레임에 창이 다시 만들어진다 — 정지(도크 적용 끝)까지
                 }
 
-                const IEditorPanel* pPanel = editorContext.getSubsystem<EditorPanelManager>().findPanelByID( kPanelID );
+                const EditorPanel* pPanel = editorContext.getSubsystem<EditorPanelManager>().findPanelByID( kPanelID );
                 (void)context.expect( pPanel != nullptr && pPanel->isOpen(), "loading the layout did not reopen the panel it saved open" );
                 const ImGuiWindow* pHierarchy = ImGui::FindWindowByName( EditorPanelText::makeWindowID( HierarchyPanel::kPanelTitle ).c_str() );
                 (void)context.expect( pHierarchy != nullptr && pHierarchy->DockId != 0, "the hierarchy is no longer docked after loading the layout" );

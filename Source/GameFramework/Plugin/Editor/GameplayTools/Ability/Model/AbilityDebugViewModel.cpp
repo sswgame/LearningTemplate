@@ -10,7 +10,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
 
-#include "GameFramework/Runtime/Gameplay/Ability/AbilityComponent.h"
+#include "GameFramework/Runtime/Gameplay/Ability/AbilitySystemComponent.h"
 
 namespace sw::editor
 {
@@ -25,7 +25,7 @@ namespace sw::editor
                 editor::getMainSceneSelection().getSelectedObjects( listSelected );
                 for ( GameObject* pObject : listSelected )
                 {
-                    if ( pObject != nullptr && pObject->getComponent<AbilityComponent>() != nullptr )
+                    if ( pObject != nullptr && pObject->getComponent<AbilitySystemComponent>() != nullptr )
                         return pObject;
                 }
                 return nullptr;
@@ -42,10 +42,10 @@ namespace sw::editor
         // 선택한 오브젝트에 컴포넌트가 있으면 그것을 보고, 없으면 목록에서 고른 것을 이어서 본다.
         if ( GameObject* pSelected = AbilityDebugViewModelInternal::findSelectedOwner() )
             _pickedHandle = pSelected->getHandle();
-        GameObjectManager* pObjects = getActiveObjectManager();
-        outState._bHasScene         = pObjects != nullptr ? SW_TRUE : SW_FALSE;
-        GameObject*       pOwner    = pObjects != nullptr && _pickedHandle.isValid() ? pObjects->resolveGameObject( _pickedHandle ) : nullptr;
-        AbilityComponent* pTarget   = pOwner != nullptr ? pOwner->getComponent<AbilityComponent>() : nullptr;
+        GameObjectManager* pObjects     = getActiveObjectManager();
+        outState._bHasScene             = pObjects != nullptr ? SW_TRUE : SW_FALSE;
+        GameObject*             pOwner  = pObjects != nullptr && _pickedHandle.isValid() ? pObjects->resolveGameObject( _pickedHandle ) : nullptr;
+        AbilitySystemComponent* pTarget = pOwner != nullptr ? pOwner->getComponent<AbilitySystemComponent>() : nullptr;
         if ( pTarget == nullptr )
             return;
         outState._targetName = pOwner->getName().c_str();
@@ -64,7 +64,7 @@ namespace sw::editor
         const GameObject* pCurrent = _pickedHandle.isValid() ? pObjects->resolveGameObject( _pickedHandle ) : nullptr;
         pObjects->forEachGameObject( editor::EditorSceneIterationAccess::getKey(), [&outListCandidate, pCurrent]( GameObject* pObject )
         {
-            if ( pObject == nullptr || pObject->getComponent<AbilityComponent>() == nullptr )
+            if ( pObject == nullptr || pObject->getComponent<AbilitySystemComponent>() == nullptr )
                 return;
             AbilityDebugCandidate candidate;
             candidate._name     = pObject->getName().c_str();

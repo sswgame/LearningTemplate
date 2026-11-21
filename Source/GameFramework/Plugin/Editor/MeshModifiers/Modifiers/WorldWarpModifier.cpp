@@ -36,7 +36,7 @@ namespace sw::editor
             SW_LOG_ERROR_ID( "WorldWarpModifier.NotWritable", "Warp file could not be written as JSON: %# (%#) - %# was not written", text.error().message(), text.error().detail(), absPath.str() );
             return false;
         }
-        return FileUtil::writeTextFile( absPath.str(), *text );
+        return FileUtil::writeTextFile( absPath, *text );
     }
 
     bool WorldWarpModifier::readWarpFile( string_view assetID, MeshModifierStack& outStack )

@@ -12,9 +12,9 @@ namespace
 {
     struct AutomationStepOptionsTestUtil
     {
-        static bool               run( AutomationStepContext&, const AutomationStep& ) { return true; }
-        static expected<void>     prepare( AutomationStepContext&, const AutomationStep& ) { return {}; }
-        static AutomationStepHold hold( AutomationStepContext&, const AutomationStep&, InputManager& ) { return AutomationStepHold::Run; }
+        static bool               run( IAutomationStepContext&, const AutomationStep& ) { return true; }
+        static expected<void>     prepare( IAutomationStepContext&, const AutomationStep& ) { return {}; }
+        static AutomationStepHold hold( IAutomationStepContext&, const AutomationStep&, InputManager& ) { return AutomationStepHold::Run; }
     };
 } // namespace
 

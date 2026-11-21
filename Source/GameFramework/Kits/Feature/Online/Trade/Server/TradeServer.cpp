@@ -25,7 +25,7 @@ namespace sw
         setReady( false );
     }
 
-    void TradeServer::initialize( TradeService* pTradeService, const IAccountDirectory* pDirectory, IAccountPresence* pPresence, MetricRegistry* pMetricRegistry )
+    void TradeServer::initialize( TradeService* pTradeService, const IAccountDirectory* pDirectory, AccountPresence* pPresence, MetricRegistry* pMetricRegistry )
     {
         _pTradeService = pTradeService;
         _pDirectory    = pDirectory;

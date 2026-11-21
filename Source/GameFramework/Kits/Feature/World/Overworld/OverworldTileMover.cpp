@@ -121,22 +121,22 @@ namespace sw
         outY = _tile._y;
         switch ( _loco.getFacing() )
         {
-            case FacingDir::Up:
+            case FacingDirection::Up:
             {
                 --outY;
                 break;
             }
-            case FacingDir::Down:
+            case FacingDirection::Down:
             {
                 ++outY;
                 break;
             }
-            case FacingDir::Left:
+            case FacingDirection::Left:
             {
                 --outX;
                 break;
             }
-            case FacingDir::Right:
+            case FacingDirection::Right:
             {
                 ++outX;
                 break;

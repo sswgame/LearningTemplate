@@ -22,7 +22,7 @@ namespace sw
             static void tryDeleteFile( string_view path )
             {
                 // 아직 매핑된 그림자 사본은 지금 지울 수 없다. 남은 것은 종료의 ShadowCopyName::removeCopies, 그다음은 실행 뿌리째 주인 정리가 거둔다.
-                (void)FileUtil::tryRemoveFile( path );
+                (void)FileUtil::tryRemoveFile( FileUtil::toDiskPath( path ) );
             }
 
             static void copyDebugSymbolsIfPresent( string_view originalModulePath, string_view shadowModulePath )
@@ -33,7 +33,7 @@ namespace sw
                 if ( originalDebugPath.empty() )
                     return;
 
-                if ( FileUtil::copyFile( originalDebugPath, shadowDebugPath ) == false )
+                if ( FileUtil::copyFile( FileUtil::toDiskPath( originalDebugPath ), FileUtil::toDiskPath( shadowDebugPath ) ) == false )
                     SW_LOG_WARNING_ID( "LiveReloadManager.FailedCopyDebugSymbols", "Failed to copy debug symbols: %#", shadowDebugPath.c_str() );
             }
 
@@ -131,7 +131,7 @@ namespace sw
     {
         for ( int32 retryIndex = 0; retryIndex < 10; ++retryIndex )
         {
-            if ( FileUtil::readFile( path, outBytes ) )
+            if ( FileUtil::readFile( FileUtil::toDiskPath( path ), outBytes ) )
                 return true;
             ThreadUtil::sleepForMilliseconds( 100 );
         }
@@ -199,10 +199,10 @@ namespace sw
         // 로더는 import 를 파일 이름으로 맞춘다 — 복사본 파일 이름이 곧 세대 이름이다. 같은 모듈의 앞 세대와 겹치지 않게 복사본마다 제 폴더에 둔다.
         const string shadowDirectory = FileUtil::joinPath( shadowDir, tempName );
         const string shadowPath      = FileUtil::joinPath( shadowDirectory, inoutLibraryName._current );
-        const bool   bWritten        = FileUtil::ensureDirectoryExists( shadowDirectory ) && FileUtil::writeFile( shadowPath, bytes.data(), bytes.size() );
+        const bool   bWritten        = FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( shadowDirectory ) ) && FileUtil::writeFile( FileUtil::toDiskPath( shadowPath ), bytes.data(), bytes.size() );
 #else
         const string shadowPath = FileUtil::joinPath( shadowDir, ModuleLibraryUtil::formatSharedLibraryName( tempName ) );
-        const bool   bWritten   = FileUtil::ensureDirectoryExists( shadowDir ) && FileUtil::writeFile( shadowPath, bytes.data(), bytes.size() );
+        const bool   bWritten   = FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( shadowDir ) ) && FileUtil::writeFile( FileUtil::toDiskPath( shadowPath ), bytes.data(), bytes.size() );
 #endif
         if ( bWritten == false )
         {
@@ -228,8 +228,8 @@ namespace sw
         string_view directoryPath;
         FileUtil::getDirectoryPart( shadowPath, directoryPath );
         vector<string> listLeftFile;
-        if ( FileUtil::isPathUnderRoot( ShadowCopyName::getDirectory(), directoryPath ) && FileUtil::collectFiles( directoryPath, "", listLeftFile, false ) && listLeftFile.empty() )
-            (void)FileUtil::removeDirectory( directoryPath );
+        if ( FileUtil::isPathUnderRoot( ShadowCopyName::getDirectory(), directoryPath ) && FileUtil::collectFiles( FileUtil::toDiskPath( directoryPath ), "", listLeftFile, false ) && listLeftFile.empty() )
+            (void)FileUtil::removeDirectory( FileUtil::toDiskPath( directoryPath ) );
 #endif
     }
 } // namespace sw

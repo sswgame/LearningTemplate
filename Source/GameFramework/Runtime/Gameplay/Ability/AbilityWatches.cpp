@@ -9,7 +9,7 @@
 #include "Engine/Automation/Watch/AutomationWatchComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 
-#include "GameFramework/Runtime/Gameplay/Ability/AbilityComponent.h"
+#include "GameFramework/Runtime/Gameplay/Ability/AbilitySystemComponent.h"
 
 namespace sw
 {
@@ -18,15 +18,15 @@ namespace sw
         struct AbilityWatchesInternal
         {
             /** @brief 대상의 어빌리티 컴포넌트입니다. 없으면 까닭을 적고 nullptr 입니다. */
-            static const AbilityComponent* findAbility( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
+            static const AbilitySystemComponent* findAbility( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
-                return query.findTargetComponent<AbilityComponent>( "AbilityComponent", outValue );
+                return query.findTargetComponent<AbilitySystemComponent>( "AbilitySystemComponent", outValue );
             }
 
             /** @brief 감시 값 `Ability.Attribute` 입니다. 대상 속성(key)의 current 값입니다. */
             [[nodiscard]] static bool readAttribute( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
-                const AbilityComponent* pAbility = findAbility( query, outValue );
+                const AbilitySystemComponent* pAbility = findAbility( query, outValue );
                 if ( pAbility == nullptr )
                     return false;
                 const optional<float32> value = pAbility->getAttributeValue( hashed_string( query._key ) );
@@ -44,7 +44,7 @@ namespace sw
             /** @brief 감시 값 `Ability.HasTag` 입니다. 대상이 태그(key, 하위 태그 포함)를 가졌으면 1, 아니면 0 입니다. */
             [[nodiscard]] static bool readHasTag( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
-                const AbilityComponent* pAbility = findAbility( query, outValue );
+                const AbilitySystemComponent* pAbility = findAbility( query, outValue );
                 if ( pAbility == nullptr )
                     return false;
                 outValue.setNumber( pAbility->getOwnedTagCounts().hasMatchingTag( TagID::request( query._key ) ) ? 1.0 : 0.0 );
@@ -54,7 +54,7 @@ namespace sw
             /** @brief 감시 값 `Ability.StackCount` 입니다. 대상에 걸린 이펙트(key = 정의 id)의 스택 수이고, 걸려 있지 않으면 0 입니다. */
             [[nodiscard]] static bool readStackCount( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
-                const AbilityComponent* pAbility = findAbility( query, outValue );
+                const AbilitySystemComponent* pAbility = findAbility( query, outValue );
                 if ( pAbility == nullptr )
                     return false;
                 const ActiveEffectHandle handle = pAbility->findActiveEffectByID( hashed_string( query._key ) );

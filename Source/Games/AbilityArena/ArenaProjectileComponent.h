@@ -11,7 +11,7 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Runtime/Foundation/Framework/GameModeBoundComponent.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameFrameworkComponent.h"
 
 namespace sw
 {
@@ -23,7 +23,7 @@ namespace sw
      *          탄을 게임 오브젝트로 돌리지 않으므로 탄 수가 늘어도 규칙 비용은 시뮬레이션 하나다. 모습은 상태 저장 전에 디렉터가 걷는다.
      */
     REFLECT( Category = "AbilityArena", DisplayName = "Arena Projectile", Tooltip = "Shows one projectile of the arena game mode's projectile simulation" )
-    class ArenaProjectileComponent : public GameModeBoundComponent
+    class ArenaProjectileComponent : public GameFrameworkComponent
     {
     public:
         REFLECT_BODY();

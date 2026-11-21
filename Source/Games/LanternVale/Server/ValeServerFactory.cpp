@@ -21,7 +21,7 @@
 namespace sw
 {
     /** @brief 골짜기 서버가 받는 서버 키트 인터페이스 형식 목록입니다. 진행 저장소는 필수다(조립이 섰는데 없으면 서버를 세우지 않는다). */
-    using ValeServerKits = ServerKitDependencies<ServerKitRequired<IServiceStore>, ServerKitOptional<>>;
+    using ValeServerKits = ServerKitDependencies<ServerKitRequired<ServiceStore>, ServerKitOptional<>>;
 
     /** @class ValeServerFactory @brief 서버 링크를 만드는 모듈 창구입니다(`SW_MODULE_PART`). 이름 해시가 함수 서명 글이라 `sw` 에 둔다. */
     class ValeServerFactory final : public IValeServerFactory
@@ -38,10 +38,10 @@ namespace sw
                 return {};
             }
             unique_ptr<ValeServerLink>   pServer = make_unique<ValeServerLink>();
-            const ValeServiceStoreSource source  = SW_DELEGATE_LAMBDA( ValeServiceStoreSource, []() -> IServiceStore*
+            const ValeServiceStoreSource source  = SW_DELEGATE_LAMBDA( ValeServiceStoreSource, []() -> ServiceStore*
              {
                 const optional<ValeServerKits> kits = ValeServerKits::resolve( game::findSubsystem<IServerKitLocator>() );
-                return kits.has_value() ? &kits->get<IServiceStore>() : nullptr;
+                return kits.has_value() ? &kits->get<ServiceStore>() : nullptr;
             } );
             if ( pServer->initialize( peers, router, rules, gridDef, source ) == false )
                 return {};

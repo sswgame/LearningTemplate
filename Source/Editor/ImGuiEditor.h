@@ -43,7 +43,7 @@ namespace sw::editor
         // 2) IEditor: 초기화, 프레임, 이벤트, 뷰, 플레이 상태
         // ------------------------------------------------------------------------------
         /** @brief 플랫폼 백엔드, 렌더러, 폰트를 초기화합니다. */
-        [[nodiscard]] bool initialize( IWindow* pWindow, IRHIDevice* pRHIDevice ) override;
+        [[nodiscard]] bool initialize( GenericWindow* pWindow, IRHIDevice* pRHIDevice ) override;
         /** @brief 에디터 리소스를 해제합니다. */
         void shutdown() override;
         /** @brief 메인 스레드에서 ImGui 프레임을 갱신하고, 패널을 그리고, 플랫폼 창을 갱신합니다. */
@@ -127,7 +127,7 @@ namespace sw::editor
 
     private:
         SubsystemCollection                  _startup;    ///< 위의 기동 단계들 — 의존 순서로 초기화하고 역순으로 종료한다
-        IWindow*                             _pWindow;    ///< `initialize` 가 받은 창(기동 단계가 읽는다)
+        GenericWindow*                       _pWindow;    ///< `initialize` 가 받은 창(기동 단계가 읽는다)
         IRHIDevice*                          _pRHIDevice; ///< `initialize` 가 받은 디바이스(기동 단계가 읽는다)
         unique_ptr<IImGuiPlatformBackend>    _platformBackend;
         unique_ptr<ImGuiRenderer>            _renderer;

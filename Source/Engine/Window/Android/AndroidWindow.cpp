@@ -119,9 +119,9 @@ namespace sw
         AndroidWindow* AndroidWindowInternal::s_pWindow = nullptr;
 
         const WindowPlatformFactory s_androidWindowFactory{
-            []() -> unique_ptr<IWindow>
+            []() -> unique_ptr<GenericWindow>
         { return make_unique<AndroidWindow>(); },
-            []() -> unique_ptr<ISplashWindow>
+            []() -> unique_ptr<SplashWindowBase>
         { return nullptr; },
             []()
         { return false; } }; // 스플래시는 액티비티 테마(windowSplashScreen)가 그린다

@@ -3,7 +3,7 @@
  * @brief 카드 게임 공통 요소를 담습니다. 카드 한 장(`Card`), 카드 더미(`CardPile`, 덱, 버린 더미, 손패), 시드를 고정한 셔플(Fisher-Yates + `GameRandom`), 뽑기, 나누기,
  *        턴 중계(`GF_NetTurnRelay`)에 실을 행동 바이트(`CardAction`, `CardAction`)를 제공합니다.
  * @details 카드는 게임마다 뜻이 다른 두 필드(`_suit`, `_rank`)와 덱 안의 고유 번호(`_id`)만 가진다. 트럼프는 무늬와 숫자(에이스 = 1),
- *          화투는 종류와 월, 우노는 색과 값이다. 띠 색이나 고도리 같은 속성은 게임이 `_id` 로 별도 테이블에서 찾는다.
+ *          화투는 종류와 월, 셰딩 카드 게임은 색과 값이다. 띠 색이나 고도리 같은 속성은 게임이 `_id` 로 별도 테이블에서 찾는다.
  */
 #pragma once
 #include "Core/Container/vector.h"
@@ -32,9 +32,9 @@ namespace sw
         PROPERTY()
         uint16 _id{ kNoCard };
         PROPERTY()
-        uint8 _suit{ 0 }; ///< 트럼프는 무늬, 화투는 종류, 우노는 색이다
+        uint8 _suit{ 0 }; ///< 트럼프는 무늬, 화투는 종류, 셰딩 카드 게임은 색이다
         PROPERTY()
-        uint8 _rank{ 0 }; ///< 트럼프는 숫자(에이스 = 1, 킹 = 13), 화투는 월(1..12), 우노는 값이다
+        uint8 _rank{ 0 }; ///< 트럼프는 숫자(에이스 = 1, 킹 = 13), 화투는 월(1..12), 셰딩 카드 게임은 값이다
 
         bool isValid() const { return _id != kNoCard; }
         bool operator==( const Card& other ) const { return _id == other._id && _suit == other._suit && _rank == other._rank; }
@@ -159,7 +159,7 @@ namespace sw
     /**
      * @struct CardAction
      * @brief 한 게임의 행동 하나입니다. 뜻은 게임이 정합니다(`_kind` 는 게임의 행동 enum 이고, 카드, 대상, 금액을 함께 가진다).
-     * @details 포커는 종류와 금액을, 맞고는 낸 카드와 고를 바닥 카드를, 우노는 낸 카드와 고른 색(`_targetID`)과 우노 선언(`_amount`)을 쓴다.
+     * @details 포커는 종류와 금액을, 맞고는 낸 카드와 고를 바닥 카드를, 셰딩 카드 게임은 낸 카드와 고른 색(`_targetID`)과 셰딩 카드 게임 선언(`_amount`)을 쓴다.
      */
     struct SW_KIT_API CardAction
     {

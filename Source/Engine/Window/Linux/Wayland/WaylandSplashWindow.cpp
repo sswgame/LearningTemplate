@@ -121,7 +121,7 @@ namespace sw
     } // namespace
 
     WaylandSplashWindow::WaylandSplashWindow()
-        : ISplashWindow{}
+        : SplashWindowBase{}
         , _pState{ make_unique<State>() }
         , _splashThread{}
     {

@@ -75,7 +75,7 @@ namespace sw::editor
         {
             ContentBrowserDroppedFile file{};
             file._path         = FileUtil::normalizeSeparators( path );
-            file._bRegularFile = FileUtil::isAbsolutePath( file._path ) && FileUtil::isRegularFile( file._path ) && FileUtil::tryGetFileSize( file._path, file._byteSize );
+            file._bRegularFile = FileUtil::isAbsolutePath( file._path ) && FileUtil::isRegularFile( FileUtil::toDiskPath( file._path ) ) && FileUtil::tryGetFileSize( FileUtil::toDiskPath( file._path ), file._byteSize );
             outListFile.push_back( std::move( file ) );
         }
     }

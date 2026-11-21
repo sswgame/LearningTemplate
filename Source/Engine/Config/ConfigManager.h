@@ -20,7 +20,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Name/hashed_string.h"
 #include "Core/String/StringUtil.h"
-#include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/Subsystem.h"
 
 #include "Engine/Config/IConfig.h"
 #include "Engine/Reflection/ReflectionFwd.h"
@@ -121,7 +121,7 @@ namespace sw
      *          묶어야 해서, 값이 읽히기 전부터 자리(`getHostEngineConfig` · `getHostGameConfig`)가 있고 읽으면 그 자리에 담긴다 — 다시 읽기도 제자리라
      *          주소는 이 표가 사는 동안 바뀌지 않는다. 정적 사본(`setActive`)을 따로 두지 않으므로 표가 둘이면 설정도 둘이다.
      */
-    class SW_API ConfigManager : public ISubsystem
+    class SW_API ConfigManager : public Subsystem
     {
     public:
         /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */
@@ -333,7 +333,7 @@ namespace sw
 
             const string           resolvedPath = resolveConfigPath( filePath );
             string                 jsonStr;
-            const OptionalFileRead read = FileUtil::readOptionalTextFile( resolvedPath, jsonStr );
+            const OptionalFileRead read = FileUtil::readOptionalTextFile( FileUtil::toDiskPath( resolvedPath ), jsonStr );
             if ( read == OptionalFileRead::Missing )
                 return ConfigReadResult::Missing;
             if ( read == OptionalFileRead::Failed )
@@ -398,10 +398,10 @@ namespace sw
         template <typename T>
         [[nodiscard]] static ConfigReadResult readConfigFile( T& outConfig, string_view absolutePath )
         {
-            if ( FileUtil::isRegularFile( absolutePath ) == false )
+            if ( FileUtil::isRegularFile( FileUtil::toDiskPath( absolutePath ) ) == false )
                 return ConfigReadResult::Missing;
             string jsonStr;
-            if ( FileUtil::readTextFile( absolutePath, jsonStr ) == false )
+            if ( FileUtil::readTextFile( FileUtil::toDiskPath( absolutePath ), jsonStr ) == false )
                 return ConfigReadResult::Invalid;
             const string label( absolutePath );
             return readConfigJSON( outConfig, jsonStr, label.c_str() ) ? ConfigReadResult::Loaded : ConfigReadResult::Invalid;

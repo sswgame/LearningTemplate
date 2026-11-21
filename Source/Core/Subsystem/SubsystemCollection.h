@@ -1,6 +1,6 @@
 /**
  * @file Core/Subsystem/SubsystemCollection.h
- * @brief 서브시스템(`ISubsystem`)을 소유하고, 선언된 의존으로 위상 정렬한 순서로 초기화 · 역순 종료 · 역순 소멸합니다.
+ * @brief 서브시스템(`Subsystem`)을 소유하고, 선언된 의존으로 위상 정렬한 순서로 초기화 · 역순 종료 · 역순 소멸합니다.
  * @details 언리얼 `FSubsystemCollectionBase` 와 같은 자리입니다. 순서의 진실은 서브시스템이 선언한 의존 하나이고, 추가한 순서는 뜻이 없습니다
  *          (준비된 것이 여럿이면 이름이 앞인 것이 먼저라 결정적입니다). 정렬은 같은 이름 · 모르는 의존 · 순환 · 호스트 어긋남(어느 호스트에서 도는 것이
  *          그 호스트에서 돌지 않는 것에 의존)을 오류로 거절합니다.
@@ -16,7 +16,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/Subsystem.h"
 
 namespace sw
 {
@@ -60,9 +60,9 @@ namespace sw
         template <class TSubsystem>
         TSubsystem& add( unique_ptr<TSubsystem> subsystem )
         {
-            static_assert( std::is_base_of_v<ISubsystem, TSubsystem>, "SubsystemCollection::add takes an ISubsystem" );
-            TSubsystem& added                            = *subsystem;
-            static_cast<ISubsystem&>( added )._memoryTag = TSubsystem::kSubsystemMemoryTag; // 용도는 형식이 안다(`ISubsystem::getSubsystemMemoryTag`)
+            static_assert( std::is_base_of_v<Subsystem, TSubsystem>, "SubsystemCollection::add takes a Subsystem" );
+            TSubsystem& added                           = *subsystem;
+            static_cast<Subsystem&>( added )._memoryTag = TSubsystem::kSubsystemMemoryTag; // 용도는 형식이 안다(`Subsystem::getSubsystemMemoryTag`)
             addInternal( Entry{ subsystem.release(), &destroyAs<TSubsystem> } );
             return added;
         }
@@ -89,7 +89,7 @@ namespace sw
          * @brief @p subsystem 에 (간접으로라도) 의존하는 **초기화된** 서브시스템을 `shutdownAll` 과 같이 역순으로 멈춘 뒤 역순으로 종료합니다. @p subsystem 자신은 그대로 둡니다.
          * @details 기동 중에 하나를 갈아 끼울 때 씁니다(백엔드 교체: RHI 의 디바이스를 다시 만든다). 내린 것은 `restartStopped` 가 다시 세웁니다.
          */
-        void shutdownDependents( const ISubsystem& subsystem );
+        void shutdownDependents( const Subsystem& subsystem );
         /**
          * @brief `shutdownDependents` 가 내린 서브시스템을 위상 순서로 다시 초기화합니다.
          * @return 모두 다시 섰으면 true 입니다. 실패한 것에서 멈추고(`getError` 에 적는다), 그것과 나머지는 내린 채로 남습니다(종료 대상에서도 빠진다).
@@ -99,7 +99,7 @@ namespace sw
         /** @brief 서브시스템 수입니다(추가한 수). */
         uint32 getSubsystemCount() const { return static_cast<uint32>( _listEntry.size() ); }
         /** @brief @p index(추가한 자리)의 서브시스템입니다. `destroyAll` 뒤에는 없습니다. */
-        ISubsystem& getSubsystem( uint32 index ) const { return *_listEntry[index]._pSubsystem; }
+        Subsystem& getSubsystem( uint32 index ) const { return *_listEntry[index]._pSubsystem; }
         /** @brief 의존에서 계산한 초기화 순서(자리)입니다. 종료 · 소멸은 이 역순입니다. 정렬 전이나 오류면 빕니다. */
         const vector<uint32>& getInitializeOrder() const { return _listOrder; }
         /** @brief 지금 초기화돼 있는 서브시스템(자리, 초기화한 순서)입니다. */
@@ -138,7 +138,7 @@ namespace sw
          *          서브시스템 하나를 더하는 순간 아직 서지 않은 객체를 읽는다 — 그 모양을 기동에서 바로 멈춘다(언리얼 `InitializeDependency` 가 맡는 자리).
          *          다른 목록(상위 범위 · 매단 자식)의 객체는 범위 수명이 지키므로 보지 않는다. 초기화 밖 · 다른 스레드의 조회는 아무 일도 하지 않는다.
          */
-        static void recordInitializeLookup( const ISubsystem& target );
+        static void recordInitializeLookup( const Subsystem& target );
 
         /**
          * @class HostedTaskScope
@@ -166,12 +166,12 @@ namespace sw
         /** @brief 서브시스템 하나와 그것을 넘긴 타입으로 소멸시키는 함수입니다. */
         struct Entry
         {
-            ISubsystem* _pSubsystem;
-            void ( *_pDestroy )( ISubsystem* pSubsystem );
+            Subsystem* _pSubsystem;
+            void ( *_pDestroy )( Subsystem* pSubsystem );
         };
 
         template <class TSubsystem>
-        static void destroyAs( ISubsystem* pSubsystem )
+        static void destroyAs( Subsystem* pSubsystem )
         {
             default_delete<TSubsystem>{}( static_cast<TSubsystem*>( pSubsystem ) );
         }

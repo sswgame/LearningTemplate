@@ -16,9 +16,9 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Automation/Scenario/AutomationScenario.h"
-#include "Engine/Automation/Scenario/AutomationStepContext.h"
 #include "Engine/Automation/Scenario/AutomationStepParams.h"
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
+#include "Engine/Automation/Scenario/IAutomationStepContext.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -45,14 +45,14 @@ namespace sw
                 }
             };
 
-            static bool runNothing( AutomationStepContext& context, const AutomationStep& step )
+            static bool runNothing( IAutomationStepContext& context, const AutomationStep& step )
             {
                 (void)context;
                 (void)step;
                 return true; // 일은 붙잡기 함수가 했다
             }
 
-            static AutomationStepHold holdLoadScene( AutomationStepContext& context, const AutomationStep& step, InputManager& input )
+            static AutomationStepHold holdLoadScene( IAutomationStepContext& context, const AutomationStep& step, InputManager& input )
             {
                 const AutomationLoadSceneParams params = step.readValidatedProperties<AutomationLoadSceneParams>();
                 // 상태는 맡긴 이 단계만 만든다 — 같은 타입으로 되돌려 읽는다.
@@ -78,7 +78,7 @@ namespace sw
                 return hold;
             }
 
-            static bool runExpectActiveScene( AutomationStepContext& context, const AutomationStep& step )
+            static bool runExpectActiveScene( IAutomationStepContext& context, const AutomationStep& step )
             {
                 const AutomationExpectActiveSceneParams params = step.readValidatedProperties<AutomationExpectActiveSceneParams>();
                 const Scene* const                      pScene = engine::getSubsystem<SceneManager>().getActiveScene();
@@ -93,7 +93,7 @@ namespace sw
                 return true;
             }
 
-            static SequencePlayerComponent* findSequence( AutomationStepContext& context, const AutomationStep& step )
+            static SequencePlayerComponent* findSequence( IAutomationStepContext& context, const AutomationStep& step )
             {
                 GameObjectManager* pManager = context.findActiveObjectManager();
                 GameObject*        pObject  = pManager != nullptr ? pManager->findGameObjectByName( hashed_string{ step.readValidatedProperties<AutomationSequenceStepParams>()._object } ) : nullptr;
@@ -115,7 +115,7 @@ namespace sw
                 return false;
             }
 
-            static bool runPlaySequence( AutomationStepContext& context, const AutomationStep& step )
+            static bool runPlaySequence( IAutomationStepContext& context, const AutomationStep& step )
             {
                 SequencePlayerComponent* pSequence = findSequence( context, step );
                 if ( pSequence == nullptr )
@@ -163,7 +163,7 @@ namespace sw
                 return true;
             }
 
-            static bool runSkipSequence( AutomationStepContext& context, const AutomationStep& step )
+            static bool runSkipSequence( IAutomationStepContext& context, const AutomationStep& step )
             {
                 SequencePlayerComponent* pSequence = findSequence( context, step );
                 if ( pSequence == nullptr )
@@ -173,7 +173,7 @@ namespace sw
                 return true;
             }
 
-            static AutomationStepHold holdWaitSequence( AutomationStepContext& context, const AutomationStep& step, InputManager& input )
+            static AutomationStepHold holdWaitSequence( IAutomationStepContext& context, const AutomationStep& step, InputManager& input )
             {
                 const AutomationSequenceStepParams       params    = step.readValidatedProperties<AutomationSequenceStepParams>();
                 SequencePlayerComponent*                 pSequence = findSequence( context, step );

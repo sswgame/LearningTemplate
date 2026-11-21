@@ -14,7 +14,7 @@
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
-#include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Component/HorseFollowAIController.h"
+#include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Component/FollowOwnerAIControllerComponent.h"
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Component/WesternDeedComponent.h"
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Component/WesternHorseComponent.h"
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/WesternCatalog.h"
@@ -22,8 +22,8 @@
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/Framework/Presentation/IHUDViewModelBinder.h"
-#include "GameFramework/Runtime/Gameplay/SessionState/PlayerProgressComponent.h"
-#include "GameFramework/Runtime/Gameplay/SessionState/SessionStateComponent.h"
+#include "GameFramework/Runtime/Gameplay/GameState/GameStateComponent.h"
+#include "GameFramework/Runtime/Gameplay/GameState/PlayerProgressComponent.h"
 #include "GameFramework/Runtime/Gameplay/Vehicle/MountMovementComponent.h"
 #include "GameFramework/Runtime/Gameplay/Vehicle/VehicleSeatComponent.h"
 
@@ -116,10 +116,10 @@ namespace sw
         }
         if ( acquireRequired( _weatherDataPath, _pWeatherCatalog ) == false )
             return false;
-        SessionStateSettings settings{};
+        GameStateSettings settings{};
         settings._clock._secondsPerDay = _secondsPerDay;
         settings._pWeatherCatalog      = _pWeatherCatalog.snapshot();
-        SessionStateComponent* pState  = SessionStateComponent::openOnOwner( *this, settings );
+        GameStateComponent* pState     = GameStateComponent::openOnOwner( *this, settings );
         if ( pState == nullptr )
             return false; // 까닭은 판 상태가 남겼다
         PlayerProgressSettings progressSettings{};
@@ -202,11 +202,11 @@ namespace sw
         if ( pManager == nullptr )
             return;
         int32 calledCount = 0;
-        for ( HorseFollowAIController* pAI : pManager->getComponentRegistry().getAll<HorseFollowAIController>() )
+        for ( FollowOwnerAIControllerComponent* pAI : pManager->getComponentRegistry().getAll<FollowOwnerAIControllerComponent>() )
         {
             if ( pAI->getOwnerObject() != _player )
                 continue;
-            pAI->whistle();
+            pAI->recall();
             ++calledCount;
         }
         SW_LOG_INFO_ID( "WildWestGameMode.WhistleHorseComing", "[WildWest] whistle - %# horse(s) coming", calledCount );

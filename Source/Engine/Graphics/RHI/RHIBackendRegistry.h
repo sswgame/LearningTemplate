@@ -12,8 +12,8 @@
 #include "Core/Foundation/DynamicModules.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/ServiceSlot.h"
+#include "Core/Subsystem/Subsystem.h"
 
 #include "Engine/Config/RHIBackendType.h"
 #include "Engine/Graphics/RHI/RHICapabilities.h"
@@ -59,7 +59,7 @@ namespace sw
      * @class RHIBackendRegistry
      * @brief 백엔드 팩토리의 등록, 조회와 MODULE 로드를 맡습니다.
      */
-    class SW_API RHIBackendRegistry : public ISubsystem
+    class SW_API RHIBackendRegistry : public Subsystem
     {
     public:
         /** @brief 서브시스템 이름입니다. 초기화하거나 종료할 것이 없고, 수명만 컬렉션이 정합니다. 서비스 범위는 엔진 범위보다 먼저 생성되고 나중에 사라집니다. */

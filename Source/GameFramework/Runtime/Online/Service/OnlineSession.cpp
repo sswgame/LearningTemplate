@@ -292,12 +292,12 @@ namespace sw
             _localServer->update( WallClock::nowUnixMilliseconds() );
     }
 
-    IServiceStore* OnlineSession::findLocalServerStore() const
+    ServiceStore* OnlineSession::findLocalServerStore() const
     {
         return _localServer != nullptr ? _localServer->findStore() : nullptr;
     }
 
-    IOnlineClientService* OnlineSession::findByType( uint64 typeHash ) const
+    OnlineClientService* OnlineSession::findByType( uint64 typeHash ) const
     {
         for ( const ClientEntry& entry : _listClient )
         {

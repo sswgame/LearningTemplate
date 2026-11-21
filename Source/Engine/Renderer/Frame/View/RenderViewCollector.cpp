@@ -16,7 +16,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/CameraRegistry.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
-#include "Engine/Object/GameObject/Registry/ScenePrimitive.h"
+#include "Engine/Object/GameObject/Registry/PrimitiveComponent.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Renderer/Frame/View/OcclusionTileSnapshot.h"
 #include "Engine/UserSettings/UserSettingsVariables.h"
@@ -106,7 +106,7 @@ namespace sw
 
             /**
              * @brief 보임 오브젝트(모니터)가 화면들 중 가장 크게 보이는 크기(경계 구 지름 / 화면 높이, 애니메이션 LOD 와 같은 식)입니다. 어느 화면에도 없으면 0 입니다.
-             * @details 경계는 오브젝트의 렌더 경계(`ScenePrimitive::computeObjectRenderBounds` — 카메라 질의와 같은 구)다. 그릴 것이 없으면 오브젝트 위치(반지름 1)로 봅니다.
+             * @details 경계는 오브젝트의 렌더 경계(`PrimitiveComponent::computeObjectRenderBounds` — 카메라 질의와 같은 구)다. 그릴 것이 없으면 오브젝트 위치(반지름 1)로 봅니다.
              *          오브젝트가 없으면(파괴됐다) 볼 것이 없으니 0 입니다.
              *          @p pMainOcclusion 이 있고 첫 화면(주 시점)에서 경계 구가 가림 타일 뒤에 가려졌으면 그 화면은 세지 않는다.
              */
@@ -118,7 +118,7 @@ namespace sw
                     return 0.0f;
                 float3  center{};
                 float32 radius = 0.0f;
-                if ( ScenePrimitive::computeObjectRenderBounds( *pObject, center, radius ) == false )
+                if ( PrimitiveComponent::computeObjectRenderBounds( *pObject, center, radius ) == false )
                 {
                     const SceneComponent* pScene = pObject->getPrimarySceneComponent();
                     if ( pScene == nullptr )

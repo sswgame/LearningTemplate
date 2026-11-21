@@ -13,7 +13,7 @@
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/WesternLaw.h"
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/WesternSurvival.h"
 #include "GameFramework/Runtime/Foundation/Condition/GameFlags.h"
-#include "GameFramework/Runtime/Foundation/Framework/SessionStateRefs.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameStateRefs.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemStackList.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/LootTable.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Wallet.h"
@@ -272,7 +272,7 @@ namespace
         WesternHonorTest()
         {
             _reputation.initialize( &_catalog.getHonorReputation() );
-            sw::SessionStateRefs refs;
+            sw::GameStateRefs refs;
             refs._pReputation = &_reputation;
             _honor.initialize( &_catalog, refs );
         }

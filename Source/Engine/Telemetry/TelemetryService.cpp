@@ -55,8 +55,8 @@ namespace sw
                     // 그 사이 지워진 파일은 시각 0 으로 맨 앞에 선다 - 다음 정리가 목록에서 뺀다.
                     uint64 lhsTime = 0;
                     uint64 rhsTime = 0;
-                    (void)FileUtil::tryGetFileTimestamp( lhs, lhsTime );
-                    (void)FileUtil::tryGetFileTimestamp( rhs, rhsTime );
+                    (void)FileUtil::tryGetFileTimestamp( FileUtil::toDiskPath( lhs ), lhsTime );
+                    (void)FileUtil::tryGetFileTimestamp( FileUtil::toDiskPath( rhs ), rhsTime );
                     if ( lhsTime != rhsTime )
                         return lhsTime < rhsTime;
                     return lhs < rhs;
@@ -225,7 +225,7 @@ namespace sw
         // 지난 실행이 닫지 못하고 남긴 파일까지 이어 받는다 — 동의가 켜지면 올리고, 동의가 꺼지면 `setConsent( false )` 가 지운다. 폴더 읽기는 잠금 밖이다.
         vector<string> listLeftover;
         vector<string> listFile;
-        if ( FileUtil::isDirectory( folderPath ) && FileUtil::collectFiles( folderPath, "", listFile, false ) )
+        if ( FileUtil::isDirectory( FileUtil::toDiskPath( folderPath ) ) && FileUtil::collectFiles( FileUtil::toDiskPath( folderPath ), "", listFile, false ) )
         {
             for ( const string& path : listFile )
             {
@@ -754,7 +754,7 @@ namespace sw
     {
         if ( job._listLine.empty() )
             return;
-        if ( FileUtil::ensureDirectoryExists( _spoolFolder.get() ) == false )
+        if ( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( _spoolFolder.get() ) ) == false )
         {
             SW_LOG_WARNING_ID( "Telemetry.TelemetrySpoolFolderCannot", "Telemetry spool folder '%#' cannot be created - %# events dropped", _spoolFolder.get().c_str(), static_cast<uint32>( job._listLine.size() ) );
             return;
@@ -768,7 +768,7 @@ namespace sw
             if ( bFull )
             {
                 // 이 줄을 넣으면 상한을 넘는다 — 모은 것을 쓰고 파일을 닫은 뒤 새 파일로.
-                if ( chunk.empty() == false && FileUtil::appendTextFile( _currentFile, chunk ) )
+                if ( chunk.empty() == false && FileUtil::appendTextFile( FileUtil::toDiskPath( _currentFile ), chunk ) )
                     _currentFileBytes += chunk.size();
                 chunk.clear();
                 closeCurrentFileSpoolLocked();
@@ -789,7 +789,7 @@ namespace sw
         }
         if ( chunk.empty() == false )
         {
-            if ( FileUtil::appendTextFile( _currentFile, chunk ) )
+            if ( FileUtil::appendTextFile( FileUtil::toDiskPath( _currentFile ), chunk ) )
                 _currentFileBytes += chunk.size();
             else
                 SW_LOG_WARNING_ID( "Telemetry.TelemetrySpoolFileCannot", "Telemetry spool file '%#' cannot be written", _currentFile.c_str() );
@@ -813,7 +813,7 @@ namespace sw
         for ( const string& path : _listClosedFile )
         {
             uint64 byteCount = 0;
-            (void)FileUtil::tryGetFileSize( path, byteCount ); // 그 사이 지워진 파일은 차지하는 바이트가 없다
+            (void)FileUtil::tryGetFileSize( FileUtil::toDiskPath( path ), byteCount ); // 그 사이 지워진 파일은 차지하는 바이트가 없다
             totalBytes += byteCount;
         }
         // 지금 파일은 지우지 않는다 — 상한을 넘는 만큼 가장 오래된 닫힌 파일부터(보내지 못한 채) 버린다.
@@ -825,9 +825,9 @@ namespace sw
                 break;
             const string oldest      = _listClosedFile.front();
             uint64       oldestBytes = 0;
-            (void)FileUtil::tryGetFileSize( oldest, oldestBytes ); // 그 사이 지워졌으면 뺄 것이 없다
+            (void)FileUtil::tryGetFileSize( FileUtil::toDiskPath( oldest ), oldestBytes ); // 그 사이 지워졌으면 뺄 것이 없다
             totalBytes -= MathUtil::min( totalBytes, oldestBytes );
-            (void)FileUtil::removeFile( oldest ); // 실패는 removeFile 이 경고로 남긴다
+            (void)FileUtil::removeFile( FileUtil::toDiskPath( oldest ) ); // 실패는 removeFile 이 경고로 남긴다
             _listClosedFile.erase( _listClosedFile.begin() );
             ++_spoolStats._droppedFiles;
         }
@@ -849,7 +849,7 @@ namespace sw
             }
             // 잠금 밖 — 파일 읽기와 보내기. 끝점이 느려도 게임 스레드는 기다리지 않는다(목록을 바꾸는 것은 이 스레드뿐이라 맨 앞 파일은 그대로다).
             batch._sessionID             = _context->_sessionID;
-            const bool            bRead  = FileUtil::readTextFile( batch._filePath, batch._content );
+            const bool            bRead  = FileUtil::readTextFile( FileUtil::toDiskPath( batch._filePath ), batch._content );
             TelemetryUploadResult result = TelemetryUploadResult::Kept;
             if ( bRead )
             {
@@ -869,7 +869,7 @@ namespace sw
                 else if ( result == TelemetryUploadResult::Sent )
                 {
                     _uploadBackoff.reset();
-                    (void)FileUtil::removeFile( batch._filePath ); // 실패는 removeFile 이 경고로 남긴다
+                    (void)FileUtil::removeFile( FileUtil::toDiskPath( batch._filePath ) ); // 실패는 removeFile 이 경고로 남긴다
                     _listClosedFile.erase( _listClosedFile.begin() );
                     ++_spoolStats._uploadedFiles;
                     bNext = true;
@@ -898,7 +898,7 @@ namespace sw
             listFile.push_back( _currentFile );
         for ( const string& path : listFile )
         {
-            if ( FileUtil::exists( path ) && FileUtil::removeFile( path ) )
+            if ( FileUtil::exists( FileUtil::toDiskPath( path ) ) && FileUtil::removeFile( FileUtil::toDiskPath( path ) ) )
                 ++_spoolStats._purgedFiles;
         }
         _listClosedFile.clear();

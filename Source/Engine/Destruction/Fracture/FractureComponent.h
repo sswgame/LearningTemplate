@@ -1,6 +1,6 @@
 /**
  * @file FractureComponent.h
- * @brief 3D 파괴 가능 메시입니다. 오브젝트의 메시 옆 `.fracture`(모델 임포트가 쿠킹한 조각)를 Jolt 바디와 스킨드 조각 메시로 부숩니다. 동작은 `FractureComponentBase` 에 있습니다.
+ * @brief 3D 파괴 가능 메시입니다. 오브젝트의 메시 옆 `.fracture`(모델 임포트가 쿠킹한 조각)를 Jolt 바디와 스킨드 조각 메시로 부숩니다. 동작은 `FractureBaseComponent` 에 있습니다.
  * @details 오브젝트는 다음처럼 구성한다. 온전할 때 그릴 `MeshComponent`(`.mesh`), 충돌용 `RigidBodyComponent`(벽은 Static, 상자는 Dynamic), 그리고 이 컴포넌트다.
  *          파쇄 경로를 비우면 오브젝트 메시의 `_meshID`(`a/b.mesh`)에서 `a/b.fracture` 를 찾는다.
  */
@@ -12,7 +12,7 @@
 
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Asset/Cache/AssetReloadWatch.h"
-#include "Engine/Destruction/Fracture/FractureComponentBase.h"
+#include "Engine/Destruction/Fracture/FractureBaseComponent.h"
 #include "Engine/Navigation/Scene/SceneNavigation.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -46,7 +46,7 @@ namespace sw
 namespace sw
 {
     REFLECT( Category = "Physics", DisplayName = "Fracture", Tooltip = "Pre-fractured destructible mesh (.fracture): breaks into physics pieces under damage", Meta = "Icon=Fracture" )
-    class SW_API FractureComponent : public FractureComponentBase
+    class SW_API FractureComponent : public FractureBaseComponent
     {
     public:
         REFLECT_BODY();

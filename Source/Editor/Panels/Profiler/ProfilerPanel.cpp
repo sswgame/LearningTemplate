@@ -249,7 +249,7 @@ namespace sw::editor
 #endif
 
     ProfilerPanel::ProfilerPanel()
-        : IEditorPanel( false )
+        : EditorPanel( false )
         , _capture{}
         , _timeline{}
         , _performance{}

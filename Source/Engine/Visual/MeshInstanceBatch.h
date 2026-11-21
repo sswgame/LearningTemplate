@@ -14,7 +14,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Name/hashed_string.h"
 
-#include "Engine/Object/GameObject/Registry/ScenePrimitive.h"
+#include "Engine/Object/GameObject/Registry/PrimitiveComponent.h"
 #include "Engine/Presentation/InstanceCustomData.h"
 #include "Engine/Presentation/InstanceSpriteFrame.h"
 
@@ -38,7 +38,7 @@ namespace sw
     class MaterialInstance;
     class Mesh;
 
-    class SW_API MeshInstanceBatch : public ScenePrimitiveBatch
+    class SW_API MeshInstanceBatch : public PrimitiveBatch
     {
     public:
         /** @brief 인스턴스 하나입니다. 렌더에 필요한 것만 듭니다. */

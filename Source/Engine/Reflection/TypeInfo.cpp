@@ -129,6 +129,7 @@ namespace sw
         , _listMethod{}
         , _listEvent{}
         , _listRemovedField{}
+        , _ownInterfaces{}
         , _metadata{}
         , _derived{}
         , _typeID{ 0 }
@@ -136,6 +137,7 @@ namespace sw
         , _bAbstract{ SW_FALSE }
         , _bStatic{ SW_FALSE }
         , _bPrimitive{ SW_FALSE }
+        , _bInterface{ SW_FALSE }
         , _reservedFlags{ 0 }
         , _reservedPadding{ 0, 0, 0 }
     {
@@ -222,6 +224,15 @@ namespace sw
                     pSnapshot->_mapNameToProperty[alias] = pProp;
             }
         }
+        // 인터페이스 표도 기반부터 접는다. 같은 인터페이스가 두 번이면 앞(기반)의 것을 두고, 칸이 차면 멈춘다 — 둘 다 등록 검사가 오류로 알린다
+        // (`TypeRegistry::reportInterfaceProblems` — 여기는 독점 잠금 안이라 로그를 남기지 않는다).
+        for ( uint32 level = depth; level > 0; --level )
+        {
+            for ( const TypeInterfaceEntry& entry : chain[level - 1]->_ownInterfaces )
+            {
+                (void)pSnapshot->_interfaces.add( entry._interfaceName, entry._portOffset );
+            }
+        }
         _derived._inheritedProperties.publish( std::move( pSnapshot ) );
     }
 
@@ -249,11 +260,13 @@ namespace sw
         _listMethod         = other._listMethod;
         _listEvent          = other._listEvent;
         _listRemovedField   = other._listRemovedField;
+        _ownInterfaces      = other._ownInterfaces;
         _metadata           = other._metadata;
         _typeID             = other._typeID;
         _bAbstract          = other._bAbstract;
         _bStatic            = other._bStatic;
         _bPrimitive         = other._bPrimitive;
+        _bInterface         = other._bInterface;
 
         invalidateDerivedCaches();
 
@@ -278,11 +291,13 @@ namespace sw
         _listMethod         = std::move( other._listMethod );
         _listEvent          = std::move( other._listEvent );
         _listRemovedField   = std::move( other._listRemovedField );
+        _ownInterfaces      = other._ownInterfaces;
         _metadata           = std::move( other._metadata );
         _typeID             = other._typeID;
         _bAbstract          = other._bAbstract;
         _bStatic            = other._bStatic;
         _bPrimitive         = other._bPrimitive;
+        _bInterface         = other._bInterface;
 
         invalidateDerivedCaches();
 
@@ -381,6 +396,15 @@ namespace sw
             return PropertyListView{ _listProperty.data(), _listProperty.size() };
         const TypeInheritedPropertySlot::Snapshot& snapshot = loadInheritedProperties();
         return PropertyListView{ snapshot._listProperty.data(), snapshot._listProperty.size() };
+    }
+
+    const TypeInterfaceTable& TypeInfo::getInterfacesWithBase() const
+    {
+        if ( _parentFQN.empty() )
+            return _ownInterfaces;
+        // 모든 컴포넌트 등록이 이 길을 지난다(`ComponentRegistry::addInterfaces`) — 레지스트리 밖 사본(테스트 목의 손 `TypeInfo`)은 판이 없고 상속한 표도 없으니 자기 표다.
+        const TypeInheritedPropertySlot::Snapshot* const pSnapshot = _derived._inheritedProperties.load();
+        return pSnapshot != nullptr ? pSnapshot->_interfaces : _ownInterfaces;
     }
 
     const PropertyInfo* TypeInfo::findPropertyByNameText( string_view nameText ) const

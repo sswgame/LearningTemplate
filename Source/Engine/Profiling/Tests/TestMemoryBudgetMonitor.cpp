@@ -67,7 +67,7 @@ SW_TEST_CASE( MemoryBudgetMonitorTest, RepositoryBudgetFileIsValid )
 {
     const string path = FileUtil::joinPath( ProcessRoots::get()._project.str(), MemoryBudgetMonitor::kBudgetFile );
     string       text;
-    SW_REQUIRE_TRUE_MSG( FileUtil::readTextFile( path, text ), path );
+    SW_REQUIRE_TRUE_MSG( FileUtil::readTextFile( FileUtil::toDiskPath( path ), text ), path );
 
     MemoryProfiler profiler;
     SW_EXPECT_TRUE( MemoryBudgetMonitor::applyBudgetJSON( text, profiler ).has_value() );

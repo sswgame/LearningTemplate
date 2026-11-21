@@ -4,7 +4,7 @@
  * @details 요청은 호출 번호를 요청 태그로 삼아 로직에 맡기고, 완료는 응답으로 보내며, 업적 달성은 그 계정에 알린다.
  *          - 점수 제출은 보드 정의의 `_bClientSubmit` 이 켜진 보드만 받는다. 아니면 로직에 넘기지 않고 NotAllowed 로 끝낸다. 점수는 서버가 낸다는 것이 사용자가 정한 정책이다.
  *            표시 이름은 이 프로세스의 계정 디렉터리(`IAccountDirectory`)에서 가져온다.
- *          - 업적 달성 알림은 받는 계정이 이 프로세스에 접속해 있지 않으면 접속 상태 관리자(`IAccountPresence::sendRemotePush`)로 보낸다.
+ *          - 업적 달성 알림은 받는 계정이 이 프로세스에 접속해 있지 않으면 접속 상태 관리자(`AccountPresence::sendRemotePush`)로 보낸다.
  *          - 호스트에 등록하는 일은 호출하는 쪽이 한다(`host.registerServerService( &server )`, 호스트 `initialize` 전에).
  */
 #pragma once
@@ -21,7 +21,7 @@
 namespace sw
 {
     class IAccountDirectory;
-    class IAccountPresence;
+    class AccountPresence;
     class MetricRegistry;
 
     /**
@@ -34,7 +34,7 @@ namespace sw
         LeaderboardServer();
 
         /** @brief 넘긴 객체는 빌려 씁니다. @p pDirectory 는 점수 제출의 표시 이름에 쓰며 없으면 빈 이름이고, @p pPresence 는 서버가 여러 대일 때만 넘깁니다. */
-        void initialize( LeaderboardService* pService, const IAccountDirectory* pDirectory, IAccountPresence* pPresence, MetricRegistry* pMetricRegistry = nullptr );
+        void initialize( LeaderboardService* pService, const IAccountDirectory* pDirectory, AccountPresence* pPresence, MetricRegistry* pMetricRegistry = nullptr );
         void shutdown();
 
         // 프로토콜 표의 메서드 - 결과는 호출 번호로 `takeCompletions` 에서 받는다.
@@ -61,6 +61,6 @@ namespace sw
         vector<AchievementUnlock>     _listUnlockScratch;
         LeaderboardService*           _pService;
         const IAccountDirectory*      _pDirectory;
-        IAccountPresence*             _pPresence;
+        AccountPresence*              _pPresence;
     };
 } // namespace sw

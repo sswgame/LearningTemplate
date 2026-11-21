@@ -8,10 +8,10 @@
 #include "Engine/Input/Map/CommonInputActions.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
+#include "GameFramework/Runtime/Gameplay/GameState/GameStateComponent.h"
+#include "GameFramework/Runtime/Gameplay/GameState/PlayerProgressComponent.h"
 #include "GameFramework/Runtime/Gameplay/Progression/Reputation.h"
 #include "GameFramework/Runtime/Gameplay/Quest/QuestCatalog.h"
-#include "GameFramework/Runtime/Gameplay/SessionState/PlayerProgressComponent.h"
-#include "GameFramework/Runtime/Gameplay/SessionState/SessionStateComponent.h"
 
 namespace sw
 {
@@ -26,9 +26,9 @@ namespace sw
         static constexpr int32       kLandSize          = 40;    ///< 공유 땅 한 변의 칸 수(칸 1 m — 밭 · 마을 · 집 부지를 덮는다)
         static constexpr float32     kLandHalfExtent    = 20.0f; ///< 땅이 월드 원점을 가운데에 두도록 원점을 이만큼 뺀다(m)
 
-        static SessionStateSettings makeStateSettings()
+        static GameStateSettings makeStateSettings()
         {
-            SessionStateSettings settings;
+            GameStateSettings settings;
             settings._clock._listSeason    = { "Spring", "Summer", "Fall", "Winter" };
             settings._clock._secondsPerDay = 120.0f;
             settings._clock._daysPerSeason = 28;

@@ -15,7 +15,7 @@ namespace sw
 {
     /**
      * @class WeatherWaveComponent
-     * @brief 틱마다 씬의 첫 열린 판 상태(`SessionStateComponent`)의 날씨 값 `_weatherValue`(기본 `wind`, 0 = 잔잔 .. 1 = 폭풍)를 읽어
+     * @brief 틱마다 씬의 첫 열린 판 상태(`GameStateComponent`)의 날씨 값 `_weatherValue`(기본 `wind`, 0 = 잔잔 .. 1 = 폭풍)를 읽어
      *        물의 진폭 배율을 1 → `_stormScale` 사이로 정합니다(`WaterBodyComponent::setWaveAmplitudeScale`).
      * @details Engine 의 물은 GameFramework 의 날씨를 읽을 수 없어(층 방향) 이 어댑터가 밀어 넣는다(`SplineRiverPathComponent` 와 같은 자리).
      *          화면 파도와 부력이 같은 배율을 본다. 날씨가 없는 씬(판 상태가 날씨를 열지 않았다)은 배율 1 — 적은 파도 그대로다.

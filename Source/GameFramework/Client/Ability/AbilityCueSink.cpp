@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/Subsystem.h"
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Module/ModuleSubsystemRegistrar.h"
@@ -40,7 +40,7 @@ namespace sw
                     if ( pScene != nullptr )
                         pScene->setWorldPosition( position );
                     else
-                        SW_LOG_WARNING_ID( "AbilityComponent.GameplayCuePrefabCould", "Gameplay cue '%#': prefab '%#' could not be spawned", cueDef._cueTag.getString(), cueDef._prefab.c_str() );
+                        SW_LOG_WARNING_ID( "AbilitySystemComponent.GameplayCuePrefabCould", "Gameplay cue '%#': prefab '%#' could not be spawned", cueDef._cueTag.getString(), cueDef._prefab.c_str() );
                 }
                 // 재생 id 는 쓰지 않는다(원샷). 오디오 서비스가 없는 구성(헤드리스)에서는 0 이다.
                 if ( cueDef._soundEvent.empty() == false && cueDef._bPositional == SW_TRUE )

@@ -118,7 +118,7 @@ namespace sw
 
     bool CSVTable::writeFile( string_view path ) const
     {
-        return FileUtil::writeTextFile( path, writeText() );
+        return FileUtil::writeTextFile( FileUtil::toDiskPath( path ), writeText() );
     }
 
     expected<MemorySnapshotPolicy> MemorySnapshotPolicy::parse( string_view jsonText, string_view sourceName )
@@ -144,7 +144,7 @@ namespace sw
     {
         const string path = FileUtil::joinPath( ProcessRoots::get()._project.str(), kPolicyFile );
         string       text;
-        if ( FileUtil::readTextFile( path, text ) == false )
+        if ( FileUtil::readTextFile( FileUtil::toDiskPath( path ), text ) == false )
             return unexpected( Error{ ErrorKind::NotFound, "could not read the memory snapshot policy", path } );
         return parse( text, path );
     }
@@ -270,7 +270,7 @@ namespace sw
     string MemorySnapshotExport::findLatestFolder( string_view root )
     {
         vector<string> listFolder;
-        if ( FileUtil::collectFolders( root, listFolder, false ) == false || listFolder.empty() )
+        if ( FileUtil::collectFolders( FileUtil::toDiskPath( root ), listFolder, false ) == false || listFolder.empty() )
             return string{};
         // 이름이 yyyyMMdd-HHmmss(-n) 이라 이름 순이 시간 순이다.
         const string* pLatest = &listFolder[0];

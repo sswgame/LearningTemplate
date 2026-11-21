@@ -87,7 +87,7 @@ SW_TEST_CASE( OverworldTileMoverTest, AxisMapsToOneTileAndYIsUp )
     rig.push( 0.0f, 1.0f );
     SW_EXPECT_EQUAL( 2, rig._mover.getTileX() );
     SW_EXPECT_EQUAL( 1, rig._mover.getTileY() );
-    SW_EXPECT_TRUE( rig._mover.getLocomotion().getFacing() == FacingDir::Up );
+    SW_EXPECT_TRUE( rig._mover.getLocomotion().getFacing() == FacingDirection::Up );
     SW_EXPECT_TRUE( rig._mover.getLocomotion().getState() == LocomotionState::Walk );
     SW_EXPECT_TRUE( rig._mover.consumeMovedFlag() );
     SW_EXPECT_FALSE( rig._mover.consumeMovedFlag() );
@@ -121,7 +121,7 @@ SW_TEST_CASE( OverworldTileMoverTest, BlockedTileOnlyTurns )
     rig._map.setWalkable( 3, 2, false );
     rig.push( 1.0f, 0.0f );
     SW_EXPECT_EQUAL( 2, rig._mover.getTileX() );
-    SW_EXPECT_TRUE( rig._mover.getLocomotion().getFacing() == FacingDir::Right );
+    SW_EXPECT_TRUE( rig._mover.getLocomotion().getFacing() == FacingDirection::Right );
     SW_EXPECT_TRUE( rig._mover.getLocomotion().getState() == LocomotionState::Idle );
     SW_EXPECT_FALSE( rig._mover.consumeMovedFlag() );
 
@@ -232,7 +232,7 @@ SW_TEST_CASE( OverworldTileMoverTest, StateRoundTripsMidStep )
     SW_EXPECT_EQUAL( 3, restored._mover.getTileX() );
     SW_EXPECT_EQUAL( 2, restored._mover.getTileY() );
     SW_EXPECT_TRUE( restored._mover.getLocomotion().getState() == LocomotionState::Walk );
-    SW_EXPECT_TRUE( restored._mover.getLocomotion().getFacing() == FacingDir::Right );
+    SW_EXPECT_TRUE( restored._mover.getLocomotion().getFacing() == FacingDirection::Right );
     SW_EXPECT_TRUE( OverworldFixture::save( restored._mover ) == listSaved );
 }
 

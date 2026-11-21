@@ -14,8 +14,8 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Path/AbsolutePath.h"
-#include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/ServiceSlot.h"
+#include "Core/Subsystem/Subsystem.h"
 
 #include "Engine/Graphics/RHI/RHIEnums.h"
 #include "Engine/Graphics/RHI/RHIHandles.h"
@@ -52,7 +52,7 @@ namespace sw
      * @details 요청은 받은 차례로 처리하고(덮어쓰지 않는다), 요청마다 표를 돌려줘 기다리는 쪽이 제 결과만 읽는다 — 개발 명령 · 에디터 버튼 · 시작 인자 사진이 한 실행에서
      *          함께 요청해도 남의 결과를 제 것으로 읽지 않는다. 모든 함수는 어느 스레드에서 불러도 됩니다.
      */
-    class SW_API ScreenshotRequestQueue final : public ISubsystem
+    class SW_API ScreenshotRequestQueue final : public Subsystem
     {
     public:
         /** @brief 서브시스템 이름입니다. 초기화하거나 종료할 것이 없고, 수명만 컬렉션이 정합니다. */

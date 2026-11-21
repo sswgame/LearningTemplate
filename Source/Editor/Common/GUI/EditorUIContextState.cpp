@@ -6,9 +6,9 @@
 
 #include "Editor/Common/Commands/Asset/EditorSaveFileLock.h"
 #include "Editor/Common/GUI/Panel/EditorDockLayout.h"
+#include "Editor/Common/GUI/Panel/EditorDocumentPanelBase.h"
+#include "Editor/Common/GUI/Panel/EditorPanel.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
-#include "Editor/Common/GUI/Panel/IEditorDocumentPanel.h"
-#include "Editor/Common/GUI/Panel/IEditorPanel.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorRenderViews.h"
@@ -99,8 +99,8 @@ namespace sw::editor
             /** @brief 패널을 열고 그 창을 앞으로 가져옵니다(같은 도크 영역의 탭이면 그 탭이 선택된다). 다음 프레임 시작에 적용됩니다. */
             static bool runPanelFocus( const vector<string>& listArgument, string& outReply )
             {
-                EditorContext*      pContext = editor::findSubsystem<EditorContext>();
-                const IEditorPanel* pPanel   = ( listArgument.size() == 1 && pContext != nullptr ) ? pContext->getSubsystem<EditorPanelManager>().findPanelByID( listArgument[0] ) : nullptr;
+                EditorContext*     pContext = editor::findSubsystem<EditorContext>();
+                const EditorPanel* pPanel   = ( listArgument.size() == 1 && pContext != nullptr ) ? pContext->getSubsystem<EditorPanelManager>().findPanelByID( listArgument[0] ) : nullptr;
                 if ( pPanel == nullptr )
                     return false;
                 pContext->getSubsystem<EditorWorkspace>().requestOpenPanelByID( listArgument[0] );
@@ -112,8 +112,8 @@ namespace sw::editor
 
             static bool runPanelFloat( const vector<string>& listArgument, string& outReply )
             {
-                EditorContext*      pContext = editor::findSubsystem<EditorContext>();
-                const IEditorPanel* pPanel   = ( listArgument.size() == 1 && pContext != nullptr ) ? pContext->getSubsystem<EditorPanelManager>().findPanelByID( listArgument[0] ) : nullptr;
+                EditorContext*     pContext = editor::findSubsystem<EditorContext>();
+                const EditorPanel* pPanel   = ( listArgument.size() == 1 && pContext != nullptr ) ? pContext->getSubsystem<EditorPanelManager>().findPanelByID( listArgument[0] ) : nullptr;
                 if ( pPanel == nullptr )
                     return false;
                 pContext->getSubsystem<EditorWorkspace>().requestFloatPanelByID( listArgument[0] );
@@ -124,11 +124,11 @@ namespace sw::editor
             }
 
             /** @brief 인자의 id 가 문서 패널이면 그것을, 아니면 이유를 적고 nullptr 를 돌려줍니다(`panel.saveDocument` · `panel.reloadDocument`). */
-            static IEditorDocumentPanel* findDocumentPanel( const vector<string>& listArgument, string& outReply )
+            static EditorDocumentPanelBase* findDocumentPanel( const vector<string>& listArgument, string& outReply )
             {
-                EditorContext*        pContext  = editor::findSubsystem<EditorContext>();
-                IEditorPanel*         pPanel    = ( listArgument.size() == 1 && pContext != nullptr ) ? pContext->getSubsystem<EditorPanelManager>().findPanelByID( listArgument[0] ) : nullptr;
-                IEditorDocumentPanel* pDocument = pPanel != nullptr ? pPanel->asDocumentPanel() : nullptr;
+                EditorContext*           pContext  = editor::findSubsystem<EditorContext>();
+                EditorPanel*             pPanel    = ( listArgument.size() == 1 && pContext != nullptr ) ? pContext->getSubsystem<EditorPanelManager>().findPanelByID( listArgument[0] ) : nullptr;
+                EditorDocumentPanelBase* pDocument = pPanel != nullptr ? pPanel->asDocumentPanel() : nullptr;
                 if ( pDocument == nullptr )
                 {
                     StringBuilder<constant::buffer::kMax256> replyBuilder;
@@ -144,7 +144,7 @@ namespace sw::editor
              */
             static bool runPanelSaveDocument( const vector<string>& listArgument, string& outReply )
             {
-                IEditorDocumentPanel* pDocument = findDocumentPanel( listArgument, outReply );
+                EditorDocumentPanelBase* pDocument = findDocumentPanel( listArgument, outReply );
                 if ( pDocument == nullptr )
                     return false;
                 if ( pDocument->saveDocumentAndClearDirty() == false )
@@ -160,10 +160,10 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief 문서 패널의 문서를 dirty 와 무관하게 디스크에서 다시 읽습니다(`IEditorDocumentPanel::reloadDocument`). */
+            /** @brief 문서 패널의 문서를 dirty 와 무관하게 디스크에서 다시 읽습니다(`EditorDocumentPanelBase::reloadDocument`). */
             static bool runPanelReloadDocument( const vector<string>& listArgument, string& outReply )
             {
-                IEditorDocumentPanel* pDocument = findDocumentPanel( listArgument, outReply );
+                EditorDocumentPanelBase* pDocument = findDocumentPanel( listArgument, outReply );
                 if ( pDocument == nullptr )
                     return false;
                 pDocument->reloadDocument();
@@ -173,10 +173,10 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief 문서 패널의 되돌리기가 문서를 그대로 돌리는지 봅니다(`IEditorDocumentPanel::validateUndoRoundTrip`, 되돌리기 전수 시나리오의 문서 패널 단계). 아니면 실패입니다. */
+            /** @brief 문서 패널의 되돌리기가 문서를 그대로 돌리는지 봅니다(`EditorDocumentPanelBase::validateUndoRoundTrip`, 되돌리기 전수 시나리오의 문서 패널 단계). 아니면 실패입니다. */
             static bool runPanelExpectUndoRoundTrip( const vector<string>& listArgument, string& outReply )
             {
-                IEditorDocumentPanel* pDocument = findDocumentPanel( listArgument, outReply );
+                EditorDocumentPanelBase* pDocument = findDocumentPanel( listArgument, outReply );
                 if ( pDocument == nullptr )
                     return false;
                 const expected<void> roundTrip = pDocument->validateUndoRoundTrip();
@@ -194,13 +194,13 @@ namespace sw::editor
             }
 
             /**
-             * @brief 문서 패널이 저장할 파일(`IEditorDocumentPanel::collectFilesToSave`)의 글을 붙잡고 모두 읽기 전용으로 둡니다 — 버전 관리가 잠그지 않은 파일(git LFS lockable)을 흉내 낸다.
+             * @brief 문서 패널이 저장할 파일(`EditorDocumentPanelBase::collectFilesToSave`)의 글을 붙잡고 모두 읽기 전용으로 둡니다 — 버전 관리가 잠그지 않은 파일(git LFS lockable)을 흉내 낸다.
              * @details 패널이 내놓는 목록을 그대로 잠그므로 여러 파일을 쓰는 패널 · 연 경로가 없는 상태 문서도 같은 명령이다. 목록이 비면 확인할 것이 없어 실패다.
              *          잠금은 `EditorSaveFileLock` 가 쥐어 시나리오가 `panel.unlockSaveFiles` 전에 끊겨도(실패 · 시간 초과 · 창 닫힘 · 체인 다음 단계) 쓰기를 되돌린다.
              */
             static bool runPanelLockSaveFiles( const vector<string>& listArgument, string& outReply )
             {
-                const IEditorDocumentPanel* pDocument = findDocumentPanel( listArgument, outReply );
+                const EditorDocumentPanelBase* pDocument = findDocumentPanel( listArgument, outReply );
                 if ( pDocument == nullptr )
                     return false;
                 vector<string> listPath;
@@ -226,7 +226,7 @@ namespace sw::editor
             /** @brief 문서 패널 저장이 거절되면(`saveDocumentAndClearDirty` 가 false) 성공입니다 — 잠근 파일 앞에서 쓰지 않고 알렸는지 본다(알림 · 로그는 시나리오가 따로 본다). */
             static bool runPanelExpectSaveRefused( const vector<string>& listArgument, string& outReply )
             {
-                IEditorDocumentPanel* pDocument = findDocumentPanel( listArgument, outReply );
+                EditorDocumentPanelBase* pDocument = findDocumentPanel( listArgument, outReply );
                 if ( pDocument == nullptr )
                     return false;
                 if ( pDocument->saveDocumentAndClearDirty() )
@@ -264,7 +264,7 @@ namespace sw::editor
                 const bool     bClosePanelFailed = listArgument.size() != 1 || pContext == nullptr || pContext->getSubsystem<EditorPanelManager>().setPanelOpen( listArgument[0], false ) == false;
                 if ( bClosePanelFailed )
                     return false;
-                const IEditorPanel*                      pPanel = pContext->getSubsystem<EditorPanelManager>().findPanelByID( listArgument[0] );
+                const EditorPanel*                       pPanel = pContext->getSubsystem<EditorPanelManager>().findPanelByID( listArgument[0] );
                 StringBuilder<constant::buffer::kMax256> replyBuilder;
                 replyBuilder.appendFormat( "%#%#", ( pPanel != nullptr && pPanel->isOpen() ? "waiting for the close confirmation of " : "closed " ), listArgument[0] );
                 outReply = string( replyBuilder.view() );

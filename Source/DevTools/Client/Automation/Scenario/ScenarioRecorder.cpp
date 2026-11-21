@@ -612,7 +612,7 @@ namespace sw
     bool ScenarioRecorder::mountSavedDomain()
     {
         const string& savedFolder = ProcessRoots::get()._saved.str();
-        if ( FileUtil::ensureDirectoryExists( savedFolder ) == false )
+        if ( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( savedFolder ) ) == false )
         {
             SW_LOG_ERROR_ID( "Automation.CouldNotCreateDomain", "[Scenario] could not create '%#' for the '%#' domain", savedFolder.c_str(), kSavedDomain );
             return false;

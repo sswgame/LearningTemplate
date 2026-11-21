@@ -182,7 +182,7 @@ namespace sw
                     outReply = "no AppearanceDatabase game service";
                     return false;
                 }
-                if ( FileUtil::writeTextFile( path, AppearanceSelection::encode( selection, *pDatabase ) ) == false )
+                if ( FileUtil::writeTextFile( FileUtil::toDiskPath( path ), AppearanceSelection::encode( selection, *pDatabase ) ) == false )
                 {
                     StringBuilder<constant::buffer::kMax256> replyBuilder;
                     replyBuilder.appendFormat( "could not write %#", path );
@@ -206,7 +206,7 @@ namespace sw
                 string                        code;
                 if ( pAppearance == nullptr )
                     return false;
-                if ( pDatabase == nullptr || FileUtil::readTextFile( path, code ) == false )
+                if ( pDatabase == nullptr || FileUtil::readTextFile( FileUtil::toDiskPath( path ), code ) == false )
                 {
                     StringBuilder<constant::buffer::kMax256> replyBuilder;
                     if ( pDatabase == nullptr )

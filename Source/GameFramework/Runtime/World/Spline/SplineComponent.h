@@ -7,7 +7,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
-#include "Engine/Object/Component/Component.h"
+#include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -22,7 +22,7 @@ namespace sw
      * @details 틱하지 않습니다. 값을 바꾸면(`setControlPoints`, 에디터 편집) 로컬 곡선을 다시 만들고, 플레이 중이면 월드 곡선도 지금 변환으로 다시 고정합니다.
      */
     REFLECT( Category = "Gimmick", DisplayName = "Spline", Tooltip = "Catmull-Rom / Bezier / linear path in owner space, arc-length parameterized" )
-    class SW_GF_API SplineComponent : public Component
+    class SW_GF_API SplineComponent : public SceneComponent
     {
     public:
         REFLECT_BODY();

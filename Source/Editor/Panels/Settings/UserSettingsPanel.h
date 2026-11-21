@@ -5,7 +5,7 @@
 #pragma once
 #include "Core/Foundation/Types.h"
 
-#include "Editor/Common/GUI/Panel/IEditorPanel.h"
+#include "Editor/Common/GUI/Panel/EditorPanel.h"
 
 namespace sw
 {
@@ -21,7 +21,7 @@ namespace sw::editor
      * @brief 카테고리 탭 · 설정 줄(종류별 위젯) · 적용 / 되돌리기 / 기본값 · 확인 카운트다운을 그립니다.
      * @details 게임 메뉴 UI 가 할 일의 견본이기도 합니다 — 값은 `getValue`(보류 우선), 바꾸기는 `setPendingValue`, 회색은 `isSettingEnabled`.
      */
-    class UserSettingsPanel : public IEditorPanel
+    class UserSettingsPanel : public EditorPanel
     {
     public:
         /** @brief 패널 id 입니다. 등록(`SW_EDITOR_PANEL`)과 조회(`EditorPanelManager::findPanel<…>` · `setPanelOpen<…>`)가 모두 이 상수에서 온다. */

@@ -279,7 +279,7 @@ namespace sw::editor
 
         const auto addRoot = [this]( string_view name, string_view path )
         {
-            if ( path.empty() || FileUtil::isDirectory( path ) == false )
+            if ( path.empty() || FileUtil::isDirectory( FileUtil::toDiskPath( path ) ) == false )
                 return;
             ContentBrowserRoot root;
             root._displayName  = string{ name };

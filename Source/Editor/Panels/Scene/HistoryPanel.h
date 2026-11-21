@@ -6,13 +6,13 @@
 #pragma once
 #include "Core/Foundation/Types.h"
 
-#include "Editor/Common/GUI/Panel/IEditorPanel.h"
+#include "Editor/Common/GUI/Panel/EditorPanel.h"
 #include "Editor/Panels/Scene/Model/HistoryViewModel.h"
 
 namespace sw::editor
 {
     /** @brief 작업 히스토리 스택을 살펴보고 특정 시점으로 이동하는 에디터 도구 창입니다. */
-    class HistoryPanel : public IEditorPanel
+    class HistoryPanel : public EditorPanel
     {
     public:
         /** @brief 패널 id 입니다. 등록(`SW_EDITOR_PANEL`)과 조회(`EditorPanelManager::findPanel<…>` · `setPanelOpen<…>`)가 모두 이 상수에서 온다. */
@@ -24,7 +24,7 @@ namespace sw::editor
         virtual ~HistoryPanel() override = default;
 
         // ------------------------------------------------------------------------------
-        // 1) IEditorPanel — 제목/그리기
+        // 1) EditorPanel — 제목/그리기
         // ------------------------------------------------------------------------------
         /** @brief 창 제목을 반환합니다. */
         const utf8* getPanelTitle() const override { return "History"; }

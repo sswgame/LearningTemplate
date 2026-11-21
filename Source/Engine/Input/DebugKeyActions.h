@@ -11,8 +11,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Name/hashed_string.h"
-#include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/ServiceSlot.h"
+#include "Core/Subsystem/Subsystem.h"
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -47,7 +47,7 @@ namespace sw
      * @details 서비스 범위에 서는 까닭: 엔진의 값 멤버로 두면 호스트 · 개발 도구가 엔진을 거쳐 읽는 전달 함수(`Engine::wasDebugActionTriggered` …)가 늘었다.
      *          맵이 입력 매니저(기동 단계)를 가리키므로, 엔진 종료가 기동 단계를 내린 뒤 · 해제하기 전에 `reset` 을 부른다(`Engine::shutdown`).
      */
-    class SW_API DebugKeyActions final : public ISubsystem
+    class SW_API DebugKeyActions final : public Subsystem
     {
     public:
         static constexpr const utf8* kSubsystemName = "DebugKeyActions";

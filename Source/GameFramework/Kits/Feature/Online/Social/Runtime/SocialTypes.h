@@ -3,7 +3,7 @@
  * @brief 친구 키트의 타입입니다. 결과, 관계 상태, 관계 한 줄, 접속 상태, 알림 종류, 상한, 길드(역할, 멤버, 정보, 상한)를 정의합니다.
  * @details 관계에는 방향이 있다. "나에서 상대로" 가는 한 줄이 상태를 가지며, 상태는 친구, 보낸 신청, 받은 신청, 내가 막음 중 하나이다. 친구는 양쪽 줄이 모두 친구인 경우이다.
  *          접속 상태는 친구에게 보이는 "상태와 짧은 활동 문구"이다. Steam Rich Presence 와 EOS Presence 에 해당한다.
- *          계정이 어느 서버에 접속해 있는지(`IAccountPresence`)와는 별개이다.
+ *          계정이 어느 서버에 접속해 있는지(`AccountPresence`)와는 별개이다.
  */
 #pragma once
 #include "Core/Container/string.h"

@@ -3,7 +3,7 @@
 #include "GameFramework/Client/Marker/DamageNumberComponent.h"
 
 #include "Core/Math/MathUtil.h"
-#include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/Subsystem.h"
 
 #include "Engine/Module/ModuleSubsystemRegistrar.h"
 #include "Engine/Object/Component/SceneComponent.h"

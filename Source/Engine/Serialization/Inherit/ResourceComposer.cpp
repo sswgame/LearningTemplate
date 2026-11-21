@@ -24,11 +24,11 @@ namespace sw
     namespace
     {
         /** @brief 층 파일의 암묵적 부모(@p baseID)는 지금까지 합친 글로 답하고, 나머지 부모(다른 파일의 카탈로그 항목)는 리소스로 읽습니다. */
-        class ResourceLayerBaseSource final : public IDataInheritanceSource
+        class ResourceLayerBaseSource final : public DataInheritanceSource
         {
         public:
             ResourceLayerBaseSource( string_view baseID, string_view baseText )
-                : IDataInheritanceSource{ engine::getSubsystem<ResourceComposition>().findInheritanceMaxDepth() }
+                : DataInheritanceSource{ engine::getSubsystem<ResourceComposition>().findInheritanceMaxDepth() }
                 , _baseID{ baseID }
                 , _baseText{ baseText }
             {
@@ -510,7 +510,7 @@ namespace sw
              * @brief 루트 이름으로 규칙을 찾아 펼칩니다. 문서 표 → 합치기 함수 → 손 형식 차례입니다. 모두 없으면 오류입니다.
              * @details 리플렉션 형식의 규칙은 문서 표에만 있다 — 쿠커는 대상마다 지어진 형식이 다르고(서버는 Renderer 를 짓지 않는다) 게임 모듈을 올리기 전에 돈다. 표가 코드와 같은지는 `ResourceComposerTest` 가 본다.
              */
-            [[nodiscard]] static bool flattenByRootName( string_view text, string_view id, IDataInheritanceSource& source, string& outText, bool& outbComposed )
+            [[nodiscard]] static bool flattenByRootName( string_view text, string_view id, DataInheritanceSource& source, string& outText, bool& outbComposed )
             {
                 XMLDocument doc;
                 if ( doc.parse( text, id ) == false || doc.getRoot().isValid() == false )
@@ -601,7 +601,7 @@ namespace sw
              * @details 리플렉션 형식은 리플렉션에서 규칙을 만든다(코드가 곁에 있으니 표를 읽지 않는다). 표와 리플렉션이 같은지는
              *          `ResourceComposerTest.DocumentTableMatchesReflection` 이 본다. 카탈로그 표 문맥(`forDocument`)은 표를 읽는다 — 표는 엔진 팩에 담겨 배포 런타임의 층(DLC · 모드)도 읽는다.
              */
-            [[nodiscard]] static bool mergeLayer( string_view layerText, string_view layerID, const ResourceContext& context, IDataInheritanceSource& source, string& outText )
+            [[nodiscard]] static bool mergeLayer( string_view layerText, string_view layerID, const ResourceContext& context, DataInheritanceSource& source, string& outText )
             {
                 switch ( context._parentRule )
                 {
@@ -730,7 +730,7 @@ namespace sw
         return ResourceContext{ ParentRule::KnownMerge, nullptr, nullptr, pfnMerge, nullptr, AssetID{}, nullptr };
     }
 
-    ResourceContext ResourceContext::forPackCook( IDataInheritanceSource& source )
+    ResourceContext ResourceContext::forPackCook( DataInheritanceSource& source )
     {
         return ResourceContext{ ParentRule::RootName, nullptr, nullptr, nullptr, &source, AssetID{}, nullptr };
     }
@@ -864,18 +864,18 @@ namespace sw
                 return false;
             }
         }
-        if ( FileUtil::ensureParentDirectoryExists( absPath ) == false )
+        if ( FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( absPath ) ) == false )
             return false;
         string sourceText;
-        if ( FileUtil::isRegularFile( absPath ) == false || FileUtil::readTextFile( absPath, sourceText ) == false )
-            return FileUtil::writeTextFile( absPath, text.getText() );
+        if ( FileUtil::isRegularFile( FileUtil::toDiskPath( absPath ) ) == false || FileUtil::readTextFile( FileUtil::toDiskPath( absPath ), sourceText ) == false )
+            return FileUtil::writeTextFile( FileUtil::toDiskPath( absPath ), text.getText() );
         string               restoredText;
         const ResourceTags&  engineTags = engine::getSubsystem<ResourceTags>();
         const ResourceTagSet tags       = pTagOverride != nullptr ? engineTags.captureWith( *pTagOverride ) : engineTags.capture();
         if ( restoreConditions( text, sourceText, absPath, tags, restoredText ) == false )
             return false;
         // 정체성 머리(`<?asset guid?>`)는 문서 밖의 처리 지시라 다시 쓴 글에 없다 — 있던 파일의 것을 옮겨 쓴다(고쳐 저장해도 GUID 는 그대로).
-        return FileUtil::writeTextFile( absPath, AssetGUIDHeader::carryOver( sourceText, restoredText ) );
+        return FileUtil::writeTextFile( FileUtil::toDiskPath( absPath ), AssetGUIDHeader::carryOver( sourceText, restoredText ) );
     }
 
     expected<void> ResourceComposer::validateDeltaReadsBack( const string& deltaText, const string_view fullText, const string_view baseID, const ResourceRereadFunction& reread )

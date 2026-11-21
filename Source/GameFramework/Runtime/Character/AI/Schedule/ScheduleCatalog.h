@@ -158,7 +158,7 @@ namespace sw
 {
     /** @brief NPC 하나입니다. 읽을 때 자기 루틴과 아키타입 체인의 루틴을 모아 둡니다. 같은 id 면 자기 것이 덮어씁니다. */
     REFLECT()
-    struct SW_GF_API ScheduleNPCDef
+    struct SW_GF_API NPCScheduleDef
     {
         REFLECT_BODY();
 
@@ -276,19 +276,19 @@ namespace sw
         void                                  setActivityRegistry( const ScheduleActivityRegistry* pRegistry ) { _pActivityRegistry = pRegistry; }
         const ScheduleConditionSchema&        getVocabulary() const { return _vocabulary; }
         const SchedulePlaceDef*               findPlace( const hashed_string& id ) const { return _placeCatalog.find( id ); }
-        const ScheduleNPCDef*                 findNPC( const hashed_string& id ) const { return _npcCatalog.find( id ); }
+        const NPCScheduleDef*                 findNPC( const hashed_string& id ) const { return _npcCatalog.find( id ); }
         const ScheduleArchetypeDef*           findArchetype( const hashed_string& id ) const { return _archetypeCatalog.find( id ); }
         const ScheduleAppointmentDef*         findAppointment( const hashed_string& id ) const { return _appointmentCatalog.find( id ); }
         [[nodiscard]] optional<int32>         findAppointmentIndex( const hashed_string& id ) const { return _appointmentCatalog.findIndex( id ); }
         const ScheduleInterruptDef*           findInterrupt( const hashed_string& id ) const { return _interruptCatalog.find( id ); }
         const vector<SchedulePlaceDef>&       getPlaces() const { return _placeCatalog.getAll(); }
         const vector<ScheduleSpotDef>&        getSpots() const { return _spotCatalog.getAll(); }
-        const vector<ScheduleNPCDef>&         getNPCs() const { return _npcCatalog.getAll(); }
+        const vector<NPCScheduleDef>&         getNPCs() const { return _npcCatalog.getAll(); }
         const vector<ScheduleEventDef>&       getEvents() const { return _eventCatalog.getAll(); }
         const vector<ScheduleAppointmentDef>& getAppointments() const { return _appointmentCatalog.getAll(); }
         const vector<ScheduleInterruptDef>&   getInterrupts() const { return _interruptCatalog.getAll(); }
         /** @brief 아키타입 체인(자기부터 부모 쪽으로)에 @p archetypeID 가 있으면 true 입니다. */
-        bool isNPCOfArchetype( const ScheduleNPCDef& npc, const hashed_string& archetypeID ) const;
+        bool isNPCOfArchetype( const NPCScheduleDef& npc, const hashed_string& archetypeID ) const;
 
     private:
         static constexpr const utf8* kXMLRootName = "Schedules"; ///< 루트 원소(`XMLCatalog`)
@@ -332,7 +332,7 @@ namespace sw
         GameCatalog<ScheduleInterruptDef>   _interruptCatalog;
         GameCatalog<ScheduleAppointmentDef> _appointmentCatalog;
         GameCatalog<ScheduleArchetypeDef>   _archetypeCatalog;
-        GameCatalog<ScheduleNPCDef>         _npcCatalog;
+        GameCatalog<NPCScheduleDef>         _npcCatalog;
         GameCatalog<ScheduleEventDef>       _eventCatalog;
         ScheduleConditionSchema             _vocabulary;
         const ScheduleActivityRegistry*     _pActivityRegistry;

@@ -1,7 +1,7 @@
 /**
  * @file ShooterSelfMail.cpp
  * @brief 프로세스 안 서버의 저장소에 금화 우편을 넣는 개발 명령(`shooter.online.sendmail`)과 그 저장소 작업입니다.
- * @details 우편 넣기(`ServiceMail`)와 저장소 작업(`IServiceStoreJob`)은 서버 코드라 이 폴더(`Server/`)에 둔다 — 클라이언트 구성은 짓지 않아 명령이 없고,
+ * @details 우편 넣기(`ServiceMail`)와 저장소 작업(`ServiceStoreJob`)은 서버 코드라 이 폴더(`Server/`)에 둔다 — 클라이언트 구성은 짓지 않아 명령이 없고,
  *          공유 헤더(`ShooterOnlineFlow.h`)는 저장소 형식을 모른다(프로세스 안 서버도 없으니 쓸 데가 없다). 언리얼에서 서버 전용 치트를 `WITH_SERVER_CODE` 안에 두는 것과 같은 갈림이다.
  *          작업은 저장소가 들고 끝나면 지운다 — 종료 때 기다릴 일이 없는 개발 명령이라 추적기(`ServiceStoreTracker`)를 두지 않는다.
  */
@@ -31,7 +31,7 @@ namespace sw
          * @class ShooterSelfMailJob
          * @brief 우편 하나를 저장소 스레드에서 넣고, 끝나면 게임 스레드에서 흐름의 보낸 수를 올리는 저장소 작업입니다.
          */
-        class ShooterSelfMailJob final : public IServiceStoreJob
+        class ShooterSelfMailJob final : public ServiceStoreJob
         {
         public:
             ShooterSelfMailJob( ShooterOnlineFlow& flow, ServiceMailMessage message );
@@ -72,7 +72,7 @@ namespace sw
             /** @brief 이 프로세스 안에 세운 서버의 저장소에 로그인한 계정 앞으로 금화 우편을 넣습니다. @return 안에 세운 서버가 없거나 로그인 전이면 false 입니다. */
             static bool sendOnLocalServer( OnlineSession& session, ShooterOnlineFlow& flow, int64 amount, int64 nowMs )
             {
-                IServiceStore* const pStore    = session.findLocalServerStore();
+                ServiceStore* const  pStore    = session.findLocalServerStore();
                 const AccountClient& account   = session.get<AccountClient>();
                 const AccountID      accountID = account.getIdentity()._accountID;
                 if ( pStore == nullptr || account.isLoggedIn() == false )

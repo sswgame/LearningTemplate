@@ -1,7 +1,7 @@
 /**
  * @file LinuxWindowBackend.h
  * @brief 리눅스 창 계층(X11 · Wayland)을 고르는 환경 변수 `SW_WINDOW_BACKEND` 를 읽는 한 곳입니다.
- * @details 메인 창(`IWindow::createPlatformWindow`)과 스플래시 창(`ISplashWindow`)이 같은 계층을 골라야 하므로 읽는 코드를 한 곳에 둔다.
+ * @details 메인 창(`GenericWindow::createPlatformWindow`)과 스플래시 창(`SplashWindowBase`)이 같은 계층을 골라야 하므로 읽는 코드를 한 곳에 둔다.
  */
 #pragma once
 #include "Core/Foundation/Types.h"

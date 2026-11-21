@@ -12,8 +12,8 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Name/hashed_string.h"
-#include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/ServiceSlot.h"
+#include "Core/Subsystem/Subsystem.h"
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Foundation/EngineSubsystemHost.h"
@@ -86,7 +86,7 @@ namespace sw
      *          알림 `UINotificationService` · 자막 `UISubtitleService` · 툴팁 `UITooltipService` · 접근성 `UIAccessibilityService` ·
      *          위젯 컴포넌트(화면 마커 · World 위젯) `UIWidgetComponentService` · 오프스크린 화면 `UIOffscreenScreens`.
      */
-    class SW_API UISystem final : public ISubsystem
+    class SW_API UISystem final : public Subsystem
     {
     public:
         UISystem();
@@ -106,7 +106,7 @@ namespace sw
         void shutdown();
         bool isInitialized() const { return _input.getInputManager() != nullptr; }
 
-        // ISubsystem — 기동 단계 `UI`. 배율 규칙 · UI 행동 맵을 못 읽으면 데이터 오류라 기동 실패다(테마 목록은 서브시스템 `UIThemes` 가 읽는다).
+        // Subsystem — 기동 단계 `UI`. 배율 규칙 · UI 행동 맵을 못 읽으면 데이터 오류라 기동 실패다(테마 목록은 서브시스템 `UIThemes` 가 읽는다).
         /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */
         static constexpr const utf8* kSubsystemName = "UI";
 
@@ -321,7 +321,7 @@ namespace sw
         void                   setScaleSettings( const UIScaleSettings& settings ) { _scaleSettings = settings; }
         /**
          * @brief 물리 화면 크기로 이번 프레임의 UI 뷰포트를 만듭니다. 배율은 규칙 × gv_uiScale(설정이 켜면 × 창 배율)이고, 안전 영역은 gv_uiSafeZone 입니다.
-         * @param contentScale 창의 OS 배율입니다(`IWindow::getContentScale`).
+         * @param contentScale 창의 OS 배율입니다(`GenericWindow::getContentScale`).
          */
         UIViewport computeViewport( const float2& physicalSize, float32 contentScale, const float4& platformSafeInsets ) const;
         /**

@@ -9,7 +9,7 @@
 -->
 <AbilityCatalog>
 
-  <!-- 가라앉음: 스택 하나에 0.1 m · 걷는 속도 −10%, 아홉 번까지(0.9 m · 10%). 탈출(JumpEscapeReactionComponent)이 스택을 줄인다. -->
+  <!-- 가라앉음: 스택 하나에 0.1 m · 걷는 속도 −10%, 아홉 번까지(0.9 m · 10%). 탈출(RemoveStacksOnJumpComponent)이 스택을 줄인다. -->
   <AbilityEffect id="GE_Sink" duration="Infinite" stacking="AggregateByTarget" stackLimit="9" refreshOnStack="true">
     <Modifier attribute="SinkDepth" op="Add" magnitude="0.1"/>
     <Modifier attribute="MoveSpeedScale" op="Multiply" magnitude="0.9"/>

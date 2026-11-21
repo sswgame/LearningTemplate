@@ -143,7 +143,7 @@ SW_TEST_CASE( TextureFormatSelectionTest, UnknownNamesAreErrors )
 SW_TEST_CASE( TextureFormatSelectionTest, CompanionsCoverEveryFamilySuffix )
 {
     string text;
-    SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::joinPath( ProcessRoots::get()._project.str(), "Config/Engine/EngineConfig.json" ), text ) );
+    SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::toDiskPath( FileUtil::joinPath( ProcessRoots::get()._project.str(), "Config/Engine/EngineConfig.json" ) ), text ) );
     JSONDocument document;
     SW_REQUIRE_TRUE( document.parse( text, "EngineConfig.json" ) );
     const JSONValue table = document.getRoot().get( "_textureFormats" );
@@ -179,10 +179,10 @@ SW_TEST_CASE( TextureFormatSelectionTest, CookedVariantDDSRoundTrips )
     const vector<uint8> payload( ( 4 + 1 + 1 + 1 ) * 16, 0x5A ); // 8x8 · 4x4 · 2x2 · 1x1 = 블록 4 + 1 + 1 + 1
     const string        root = test::makeScratchPath( "TextureVariantDDS" );
     const string        path = FileUtil::joinPath( root, "a.astc.dds" );
-    SW_REQUIRE_TRUE( FileUtil::ensureParentDirectoryExists( path ) );
+    SW_REQUIRE_TRUE( FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( path ) ) );
     SW_REQUIRE_TRUE( ImageFileWriter::writeDDS( path, payload, kWidth, kHeight, 4, DDSFormat::kDXGIASTC4x4Unorm, 32 ) );
     vector<uint8> bytes;
-    SW_REQUIRE_TRUE( FileUtil::readFile( path, bytes ) );
+    SW_REQUIRE_TRUE( FileUtil::readFile( FileUtil::toDiskPath( path ), bytes ) );
 
     DDSImageData image;
     SW_REQUIRE_TRUE( DDSLoader::loadFromMemory( bytes.data(), bytes.size(), image ) );
@@ -192,7 +192,7 @@ SW_TEST_CASE( TextureFormatSelectionTest, CookedVariantDDSRoundTrips )
     SW_EXPECT_TRUE( Texture2D::toRHIFormatFromDXGI( DDSFormat::kEngineDXGIETC2RGBA8 ) == RHIFormat::ETC2_RGBA8_UNORM );
     SW_EXPECT_TRUE( Texture2D::toRHIFormatFromDXGI( DDSFormat::kEngineDXGIEACR11 ) == RHIFormat::EAC_R11_UNORM );
     SW_EXPECT_TRUE( Texture2D::toRHIFormatFromDXGI( DDSFormat::kEngineDXGIEACRG11 ) == RHIFormat::EAC_RG11_UNORM );
-    SW_EXPECT_TRUE( FileUtil::removeDirectory( root ) );
+    SW_EXPECT_TRUE( FileUtil::removeDirectory( FileUtil::toDiskPath( root ) ) );
 }
 
 /**

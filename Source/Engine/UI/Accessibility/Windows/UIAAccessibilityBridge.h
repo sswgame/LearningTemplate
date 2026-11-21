@@ -15,7 +15,7 @@
 
 namespace sw
 {
-    class IWindow;
+    class GenericWindow;
     class UISystem;
 
     /**
@@ -30,6 +30,6 @@ namespace sw
          * @brief @p window 의 `WM_GETOBJECT` 에 답하는 브리지를 만들어 창에 훅을 겁니다. 브리지를 지우면(또는 UI 시스템에서 빼면) 훅이 풀린다.
          * @details 창과 UI 시스템은 브리지보다 오래 살아야 한다(호스트가 UI 시스템에서 브리지를 먼저 뺀다).
          */
-        [[nodiscard]] static unique_ptr<IUIAccessibilityBridge> createBridge( UISystem& ui, IWindow& window );
+        [[nodiscard]] static unique_ptr<IUIAccessibilityBridge> createBridge( UISystem& ui, GenericWindow& window );
     };
 } // namespace sw

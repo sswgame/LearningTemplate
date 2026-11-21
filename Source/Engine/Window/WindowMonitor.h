@@ -1,6 +1,6 @@
 /**
  * @file WindowMonitor.h
- * @brief 창 시스템이 알리는 모니터 하나와, 플랫폼이 읽은 값을 목록으로 맞추는 규칙입니다(`IWindow::tryGetMonitors`).
+ * @brief 창 시스템이 알리는 모니터 하나와, 플랫폼이 읽은 값을 목록으로 맞추는 규칙입니다(`GenericWindow::tryGetMonitors`).
  * @details 값을 읽는 일은 플랫폼 창(Win32 `EnumDisplayMonitors`, X11 RandR, Wayland `wl_output`)이 하고, 맞추는 규칙은 여기 한 벌이다 - OS 헤더가 없어 단위 테스트가 가짜 값으로 돈다.
  */
 #pragma once
@@ -39,7 +39,7 @@ namespace sw
         vector<int2>      _listResolution;       ///< 이 모니터가 내는 해상도(작은 것부터, 중복 없음). 설정 화면의 선택지다
         WindowMonitorRect _area;                 ///< 모니터 전체
         WindowMonitorRect _workArea;             ///< 작업 표시줄 · 패널을 뺀 영역
-        float32           _contentScale{ 1.0f }; ///< 이 모니터의 권장 배율(96 DPI = 1). 물리 크기로 재지 않는다(`IWindow::getContentScale` 과 같은 출처)
+        float32           _contentScale{ 1.0f }; ///< 이 모니터의 권장 배율(96 DPI = 1). 물리 크기로 재지 않는다(`GenericWindow::getContentScale` 과 같은 출처)
         bool              _bPrimary{ false };    ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
 
         /** @brief 해상도 목록에 넣는 가장 작은 변(픽셀)입니다. 옛 모드(640x480 등)는 옵션 메뉴에 필요 없다. */

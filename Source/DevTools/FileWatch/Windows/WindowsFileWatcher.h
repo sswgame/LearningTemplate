@@ -11,7 +11,7 @@
 #include "Core/Foundation/StdHeaders.h"
 
 #include "DevTools/DevToolsAPI.h"
-#include "DevTools/FileWatch/IFileWatcher.h"
+#include "DevTools/FileWatch/FileWatcher.h"
 
 // Windows.h 전체를 헤더에 넣지 않도록 HANDLE 만 전방 선언한다.
 using HANDLE = void*;
@@ -27,7 +27,7 @@ namespace sw
      * @class WindowsFileWatcher
      * @brief Windows 전용 FileWatcher 입니다(ReadDirectoryChangesW 사용).
      */
-    class SW_DEVTOOLS_API WindowsFileWatcher final : public IFileWatcher
+    class SW_DEVTOOLS_API WindowsFileWatcher final : public FileWatcher
     {
     public:
         /** @brief 핸들과 큐가 빈 상태로 만듭니다. */
@@ -49,7 +49,7 @@ namespace sw
         void pushNotifyEntries( const uint8* pBuffer );
 
     private:
-        // 큐 · 뮤텍스 · 감시 경로 · 넘침 표시는 IFileWatcher 가 가진다. 세 플랫폼이 똑같이 가져야 하는 것들이다.
+        // 큐 · 뮤텍스 · 감시 경로 · 넘침 표시는 FileWatcher 가 가진다. 세 플랫폼이 똑같이 가져야 하는 것들이다.
         HANDLE       _hDirectory;
         HANDLE       _hCompletionPort;
         sw::thread   _workerThread;

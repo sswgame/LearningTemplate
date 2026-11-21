@@ -22,7 +22,7 @@
 
 namespace sw
 {
-    class IServiceStore;
+    class ServiceStore;
 
     /** @brief 일정 종류입니다. */
     enum class ScheduleKind : uint8
@@ -82,7 +82,7 @@ namespace sw
         ServiceScheduler( const ServiceScheduler& )            = delete;
         ServiceScheduler& operator=( const ServiceScheduler& ) = delete;
 
-        void initialize( IServiceStore* pStore, uint64 serverID );
+        void initialize( ServiceStore* pStore, uint64 serverID );
         /** @brief 차지 레코드의 TTL(밀리초)을 알립니다. 0 이면 지우지 않는다. 이보다 긴 구간 작업(`Window`)은 등록을 거절한다 — 구간 안에서 레코드가 지워지면 다시 돈다. */
         void setRunTTLMs( int64 runTTLMs ) { _runTTLMs = runTTLMs; }
         void shutdown();

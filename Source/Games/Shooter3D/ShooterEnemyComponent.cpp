@@ -100,7 +100,7 @@ namespace sw
             pScene->setLocalPosition( _position );
             pScene->setLocalRotation( float3{ 0.0f, _yaw, 0.0f } );
         }
-        notifyHealthChanged( true );
+        IHealthSource::notifyHealthChanged( _healthSourcePort, getOwner(), true );
         // 걷기는 몸 이동(플레이어와 같은 코드)이 의도로 한다 — 빠르기는 웨이브마다 달라 걷기 빠르기로 넣는다. 내비메시 에이전트(SteerOnly)는 속도만 낸다:
         // 최고 속도가 걷기 빠르기와 같아야 AI 조종자가 낸 이동 축(속도 / 최고 속도)이 그 빠르기로 걷는다.
         ShooterBodyMovementComponent* pMovement = pOwner != nullptr ? pOwner->getComponent<ShooterBodyMovementComponent>() : nullptr;
@@ -211,7 +211,7 @@ namespace sw
         (void)_healthMachine.applyDamage( amount ); // 결과는 아래 isAlive 로 읽는다
         _healthMachine.discardEvents();             // 피해 알림은 notifyHealthChanged 가 맡는다
         // 체력 신호 — HP 바가 보이기 · 숨기기를 스스로 정한다(프리팹의 `_bShowWhenHurt` · `_bHideWhenDead`). 쓰러짐은 읽기(`isDead`)가 정한다.
-        notifyHealthChanged( false );
+        IHealthSource::notifyHealthChanged( _healthSourcePort, getOwner(), false );
         if ( _healthMachine.isAlive() == false )
         {
             enterPhase( ShooterEnemyPhase::Dying );
@@ -229,7 +229,7 @@ namespace sw
 
     void ShooterEnemyComponent::onRegister( GameObjectManager& manager )
     {
-        HealthSourceComponent::onRegister( manager );
+        Component::onRegister( manager );
         _hitSubscription    = GameObjectEvents::listen<&ShooterEnemyComponent::handleHit>( *this, &GameObjectEvents::_hitReceived );
         _notifySubscription = GameObjectEvents::listen<&ShooterEnemyComponent::handleAnimationNotify>( *this, &GameObjectEvents::_animationNotify );
     }
@@ -247,7 +247,7 @@ namespace sw
         if ( pRagdoll == nullptr || pRagdoll->isRagdollOnFatalHit() == false )
             SW_LOG_ERROR_ID( "ShooterEnemyComponent.EnemyNoRagdollComponentCannot", "Enemy '%#' has no RagdollComponent with _bRagdollOnFatalHit - it cannot collapse into a ragdoll",
                              pOwner != nullptr ? pOwner->getName().c_str() : "(no owner)" );
-        deliverFatalHit( hit );
+        IHealthSource::deliverFatalHit( getOwner(), hit );
     }
 
     HealthReading ShooterEnemyComponent::getHealthReading() const
@@ -435,5 +435,10 @@ namespace sw
                     SW_LOG_ERROR_ID( "ShooterEnemyComponent.EnemyPartRigidBody", "Enemy part '%#' has a rigid body but could not be released to physics", pPart->getName().c_str() );
             }
         } );
+    }
+
+    HealthReading ShooterEnemyComponent::HealthSourcePort::getHealthReading() const
+    {
+        return getPortOwner<const ShooterEnemyComponent>( *this, offsetof( ShooterEnemyComponent, _healthSourcePort ) ).getHealthReading();
     }
 } // namespace sw

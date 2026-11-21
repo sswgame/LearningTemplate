@@ -808,7 +808,7 @@
 					                _attachOwner="None"
 					                _attachOwnerID="0"
 					                _attachComponent="None" />
-					<TutorialHintComponent _localID="11197792962895791182" _componentName="TutorialHintComponent"
+					<TutorialHintTriggerComponent _localID="11197792962895791182" _componentName="TutorialHintTriggerComponent"
 					                       _bActive="true"
 					                       _activator="33"
 					                       _radius="2"
@@ -845,7 +845,7 @@
 		<entity id="35" name="FarmGameMode">
 			<GameObject _schemaVersion="0" _name="FarmGameMode" _bActive="true">
 				<_listComponent>
-					<SessionStateComponent _localID="6673597520240684436" _componentName="SessionStateComponent" _bActive="true" />
+					<GameStateComponent _localID="6673597520240684436" _componentName="GameStateComponent" _bActive="true" />
 					<PlayerProgressComponent _localID="7202751467146875245" _componentName="PlayerProgressComponent" _bActive="true" />
 					<FarmGameModeComponent _localID="12488349250694271848" _componentName="FarmGameModeComponent"
 					                       _bActive="true"

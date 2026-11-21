@@ -1,21 +1,21 @@
 /**
  * @file WaylandSplashWindow.h
- * @brief Linux Wayland 기반 ISplashWindow 구현입니다(xdg-shell 최상위 창 + 공유 메모리 버퍼).
+ * @brief Linux Wayland 기반 SplashWindowBase 구현입니다(xdg-shell 최상위 창 + 공유 메모리 버퍼).
  * @details 게임 창보다 먼저 뜨므로 자기 컴포지터 연결을 따로 연다(`WaylandWindow` 와 연결을 나누지 않는다). 창 자리는 컴포지터가 정한다(Wayland 클라이언트는 자리를 정하지 못한다) —
  *          크기는 최소 · 최대를 같게 두어 고정한다. 연결 · 창 · 이벤트 루프는 스플래시 스레드(`LinuxSplashThread`)가 갖는다 — 기동 스레드가 오래 막혀도 핑에 답하고
  *          버퍼 반납을 받는다(예전에는 `updateStatus` 안에서만 연결을 처리해 긴 단계마다 "응답 없음" 이 됐다, 감사 P-13). 글은 `WaylandTextPainter`(시스템 글꼴)로 그리고
- *          글꼴이 없으면 글 없이 그림과 진행 막대만 그린다. `SW_ENABLE_WAYLAND` 로 지은 리눅스 클라이언트에서만 실제로 돈다. 선택은 `ISplashWindow::createPlatformSplash` 가 한다.
+ *          글꼴이 없으면 글 없이 그림과 진행 막대만 그린다. `SW_ENABLE_WAYLAND` 로 지은 리눅스 클라이언트에서만 실제로 돈다. 선택은 `SplashWindowBase::createPlatformSplash` 가 한다.
  */
 #pragma once
 #include "Core/Container/string.h"
 
-#include "Engine/Window/ISplashWindow.h"
 #include "Engine/Window/Linux/LinuxSplashThread.h"
+#include "Engine/Window/SplashWindowBase.h"
 
 namespace sw
 {
     /** @class WaylandSplashWindow @brief 파일 머리말 참고. */
-    class WaylandSplashWindow : public ISplashWindow
+    class WaylandSplashWindow : public SplashWindowBase
     {
     public:
         WaylandSplashWindow();

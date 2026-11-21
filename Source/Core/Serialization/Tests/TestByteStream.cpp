@@ -202,11 +202,16 @@ SW_TEST_CASE( ByteStreamTest, VarIntsStringsPodsRoundTripAndTruncationFails )
     sw::vector<uint8> listByte;
     Header            header{};
     SW_EXPECT_EQUAL( 7u, reader.readUint32() );
-    SW_REQUIRE_TRUE( reader.readVarUint( unsignedValue ) );
-    SW_REQUIRE_TRUE( reader.readVarInt( signedValue ) );
-    SW_REQUIRE_TRUE( reader.readString( text ) );
-    SW_REQUIRE_TRUE( reader.readByteVector( listByte ) );
-    SW_REQUIRE_TRUE( reader.readPod( header ) );
+    unsignedValue = reader.readVarUint();
+    SW_REQUIRE_FALSE( reader.hasOverflowed() );
+    signedValue = reader.readVarInt32();
+    SW_REQUIRE_FALSE( reader.hasOverflowed() );
+    text = reader.readString();
+    SW_REQUIRE_FALSE( reader.hasOverflowed() );
+    listByte = reader.readByteVector();
+    SW_REQUIRE_FALSE( reader.hasOverflowed() );
+    header = reader.readPod<Header>();
+    SW_REQUIRE_FALSE( reader.hasOverflowed() );
     SW_EXPECT_EQUAL( uint64{ 300 }, unsignedValue );
     SW_EXPECT_EQUAL( -5, signedValue );
     SW_EXPECT_TRUE( text == "hello" );
@@ -221,8 +226,9 @@ SW_TEST_CASE( ByteStreamTest, VarIntsStringsPodsRoundTripAndTruncationFails )
     shortWriter.writeString( "hello" );
     truncated.resize( truncated.size() - 2 );
     sw::ByteReader shortReader{ truncated.data(), truncated.size() };
-    SW_EXPECT_FALSE( shortReader.readString( text ) );
+    text = shortReader.readString();
     SW_EXPECT_TRUE( shortReader.hasOverflowed() );
+    SW_EXPECT_TRUE( text.empty() ); // 실패한 읽기는 빈 값이다 — 옛 값이 남지 않는다
 }
 
 /**
@@ -280,6 +286,64 @@ SW_TEST_CASE( ByteStreamTest, FinishReportsStickyFailureAndTrailingBytes )
         (void)reader.readUint8();
         reader.markFailed(); // 값이 형식에 맞지 않을 때 부르는 쪽이 세운다 — 같은 깃발이다
         SW_EXPECT_FALSE( reader.finish().has_value() );
+        SW_EXPECT_TRUE( reader.hasOverflowed() );
+    }
+}
+
+namespace
+{
+    /** @brief 출력 인자 꼴(`reader.readX( out )`)을 부를 수 있으면 true — 값 읽기만 남았는지 컴파일 때 본다. */
+    template <typename T, typename = void>
+    struct HasOutParamPodRead : std::false_type
+    {
+    };
+    template <typename T>
+    struct HasOutParamPodRead<T, std::void_t<decltype( std::declval<T&>().readPod( std::declval<uint32&>() ) )>> : std::true_type
+    {
+    };
+    template <typename T, typename = void>
+    struct HasOutParamStringRead : std::false_type
+    {
+    };
+    template <typename T>
+    struct HasOutParamStringRead<T, std::void_t<decltype( std::declval<T&>().readString( std::declval<string&>() ) )>> : std::true_type
+    {
+    };
+    static_assert( HasOutParamPodRead<ByteReader>::value == false, "ByteReader::readPod returns the value - no output parameter (byte-reader-values)" );
+    static_assert( HasOutParamStringRead<ByteReader>::value == false, "ByteReader::readString returns the value - no output parameter (byte-reader-values)" );
+} // namespace
+
+/**
+ * @brief 끝을 넘는 값 읽기는 값 초기화한 결과(0 · 빈 값 · nullptr)를 돌려주고 끈적한 실패를 세운다 — 버퍼 밖을 읽지 않고 옛 값도 남지 않는다.
+ * @details 변이: `readPod` 가 모자란 바이트에도 복사하면 버퍼 밖을 읽고(ASan) 값이 0 이 아니다. `readCount` 가 거른 개수 대신 적힌 개수를 돌려주면 1000000 이 나온다.
+ */
+SW_TEST_CASE( ByteStreamTest, ValueReadsPastTheEndReturnEmptyAndFail )
+{
+    vector<uint8> bytes;
+    ByteWriter    writer{ bytes };
+    writer.writeUint32( 1000000u ); // 원소 백만 개라고 적었지만 뒤에 바이트가 없다
+    {
+        ByteReader reader{ bytes.data(), bytes.size() };
+        SW_EXPECT_EQUAL( 0u, reader.readCount( 4 ) );
+        SW_EXPECT_TRUE( reader.hasOverflowed() );
+    }
+    {
+        ByteReader reader{ bytes.data(), bytes.size() };
+        SW_EXPECT_EQUAL( uint64( 0 ), reader.readPod<uint64>() );
+        SW_EXPECT_TRUE( reader.hasOverflowed() );
+        SW_EXPECT_EQUAL( size_t( 0 ), reader.getOffset() ); // 모자란 읽기는 자리를 옮기지 않는다
+    }
+    {
+        ByteReader reader{ bytes.data(), bytes.size() };
+        SW_EXPECT_TRUE( reader.readString().empty() ); // 길이 백만, 내용 없음
+        SW_EXPECT_TRUE( reader.hasOverflowed() );
+        SW_EXPECT_FALSE( reader.finish().has_value() );
+    }
+    {
+        ByteReader reader{ bytes.data(), bytes.size() };
+        SW_EXPECT_TRUE( reader.readView( 5 ) == nullptr );
+        SW_EXPECT_TRUE( reader.readByteVector().empty() ); // 실패 뒤의 읽기도 빈 값이다
+        SW_EXPECT_EQUAL( uint64( 0 ), reader.readVarUint() );
         SW_EXPECT_TRUE( reader.hasOverflowed() );
     }
 }

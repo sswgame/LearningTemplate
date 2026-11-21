@@ -18,7 +18,7 @@ namespace sw
 {
     // 아래 매크로가 불투명 핸들을 되돌릴 때만 필요하다. ABI/ 쪽 계약 헤더는 이 타입들을 모른다.
     class IRHIDevice;
-    class IWindow;
+    class GenericWindow;
 
     /** @brief 게임 모듈의 표 항목이 부르는 전달 도우미입니다 — 모듈 코드를 부르는 동안의 할당을 `kGameModuleMemoryTag` 로 센다. */
     using GameModuleForwardUtil = ModuleForwardUtil<kGameModuleMemoryTag>;
@@ -46,7 +46,7 @@ namespace sw
         pOutAPI->create     = []() -> sw::GameHandle { return sw::GameModuleForwardUtil::create<GameClass>(); };                                                                                   \
         pOutAPI->destroy    = []( sw::GameHandle gameHandle ) { sw::GameModuleForwardUtil::destroy<GameClass>( gameHandle ); };                                                                    \
         pOutAPI->initialize = []( sw::GameHandle gameHandle, sw::WindowHandle windowHandle ) -> bool                                                                                               \
-        { return sw::GameModuleForwardUtil::callOr<GameClass, bool>( gameHandle, false, &GameClass::initialize, static_cast<sw::IWindow*>( windowHandle ) ); };                                    \
+        { return sw::GameModuleForwardUtil::callOr<GameClass, bool>( gameHandle, false, &GameClass::initialize, static_cast<sw::GenericWindow*>( windowHandle ) ); };                              \
         pOutAPI->shutdown    = []( sw::GameHandle gameHandle ) { sw::GameModuleForwardUtil::callVoid<GameClass>( gameHandle, &GameClass::shutdown ); };                                            \
         pOutAPI->update      = []( sw::GameHandle gameHandle, float32 deltaTime ) { sw::GameModuleForwardUtil::callVoid<GameClass>( gameHandle, &GameClass::update, deltaTime ); };                \
         pOutAPI->fixedUpdate = []( sw::GameHandle gameHandle, float32 fixedDeltaTime ) { sw::GameModuleForwardUtil::callVoid<GameClass>( gameHandle, &GameClass::fixedUpdate, fixedDeltaTime ); }; \

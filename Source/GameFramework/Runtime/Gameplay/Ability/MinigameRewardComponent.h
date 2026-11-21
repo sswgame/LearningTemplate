@@ -36,7 +36,7 @@ namespace sw
 
     /**
      * @class MinigameRewardComponent
-     * @brief 미니게임 결과 값을 같은 오브젝트의 `AbilityComponent` 이펙트로 거는 받는 쪽입니다(파일 머리말 참고).
+     * @brief 미니게임 결과 값을 같은 오브젝트의 `AbilitySystemComponent` 이펙트로 거는 받는 쪽입니다(파일 머리말 참고).
      */
     REFLECT( Category = "Gameplay", DisplayName = "Minigame Reward", Tooltip = "Applies minigame result values to this object's ability system as effects (value name to effect table)" )
     class SW_GF_API MinigameRewardComponent : public Component

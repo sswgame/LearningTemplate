@@ -11,9 +11,9 @@
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Automation/Scenario/AutomationScenario.h"
-#include "Engine/Automation/Scenario/AutomationStepContext.h"
 #include "Engine/Automation/Scenario/AutomationStepParams.h"
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
+#include "Engine/Automation/Scenario/IAutomationStepContext.h"
 #include "Engine/Serialization/JSON/JSONWriter.h"
 
 #include <algorithm>
@@ -116,14 +116,14 @@ namespace sw
     {
         struct AutomationFrameStatsSteps
         {
-            static bool runBegin( AutomationStepContext& context, const AutomationStep& step )
+            static bool runBegin( IAutomationStepContext& context, const AutomationStep& step )
             {
                 (void)step;
                 context.getFrameStats().begin();
                 return true;
             }
 
-            static bool runEnd( AutomationStepContext& context, const AutomationStep& step )
+            static bool runEnd( IAutomationStepContext& context, const AutomationStep& step )
             {
                 FrameStatsSummary summary;
                 if ( context.getFrameStats().end( summary ) == false )
@@ -132,7 +132,7 @@ namespace sw
                     return true;
                 }
                 const string path = context.resolveOutputPath( step.readValidatedProperties<AutomationFileStepParams>()._file );
-                if ( FileUtil::ensureParentDirectoryExists( path ) == false || FileUtil::writeTextFile( path, AutomationFrameStats::toJSON( summary, path ) ) == false )
+                if ( FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( path ) ) == false || FileUtil::writeTextFile( FileUtil::toDiskPath( path ), AutomationFrameStats::toJSON( summary, path ) ) == false )
                 {
                     StringBuilder<constant::buffer::kMax1024> text;
                     text.appendFormat( "could not write the frame stats to %#", path );

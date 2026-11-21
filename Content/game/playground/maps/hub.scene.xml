@@ -6,7 +6,7 @@
 	     ArcadeGate(x 6): 오락실 기계 — minigames/kitdemo_actioncombat(SceneSwitch)으로 씬을 바꾼다. 마을은 돌아올 자리로 찍어 두고 돌아올 때 복원한다.
 	     두 입구 모두 Player 태그만 받고 다시 들어갈 수 있으며(_bOnce false), 안에서 나타난 플레이어(돌아와 복원된 자리)는 세지 않는다(_spawnInside Ignore — 나갔다 들어와야 다시 들어간다).
 	     Marker 는 마을 상태 표지다 — 시나리오 automation/hub 가 옮긴 자리가 미니게임에 다녀온 뒤에도 그대로인지 본다.
-	     Player 는 어빌리티 시스템(세트 HubResident — 공용 전투 어트리뷰트 체력)을 가진다. HP 바는 체력 원천 계약(HealthSourceComponent)으로 그것을 읽고,
+	     Player 는 어빌리티 시스템(세트 HubResident — 공용 전투 어트리뷰트 체력)을 가진다. HP 바는 체력 원천 계약(IHealthSource)으로 그것을 읽고,
 	     미니게임 결과 값(heal · haste)은 MinigameRewardComponent 가 돌아온 뒤 이펙트로 건다 — 미니게임 디렉터는 플레이어를 직접 고치지 않는다. -->
 	<SceneSettings _bStreaming="true" _unloadMargin="10" _maxCellLoadsPerFrame="4" _addToWorldBudgetMicroseconds="2000">
 		<_cellGrid _cellSize="10" _loadingRadius="40" />
@@ -52,7 +52,7 @@
 						<_listAnalog />
 					</PawnComponent>
 					<AIStimulusSourceComponent _localID="7318405526120394117" _team="0" _bVisible="true" />
-					<CharacterPawnMovementComponent _localID="14594004469458933705" _sprintButton="None" _jumpButton="None" _walkSpeed="3.5" _sprintSpeed="3.5" _acceleration="30" _deceleration="40" _jumpSpeed="5" _turnRate="12" _facingMode="MoveDirection" />
+					<CharacterMovementComponent _localID="14594004469458933705" _sprintButton="None" _jumpButton="None" _walkSpeed="3.5" _sprintSpeed="3.5" _acceleration="30" _deceleration="40" _jumpSpeed="5" _turnRate="12" _facingMode="MoveDirection" />
 					<TagComponent _localID="5249839963692551013">
 						<_tags>
 							<_listTag>
@@ -60,7 +60,7 @@
 							</_listTag>
 						</_tags>
 					</TagComponent>
-					<AbilityComponent _localID="2238906797121419031" _abilitySetID="HubResident" _healthAttribute="Health" _maxHealthAttribute="MaxHealth" _damageNumberOffset="0,1.9,0" _bShowDamageNumbers="false" />
+					<AbilitySystemComponent _localID="2238906797121419031" _abilitySetID="HubResident" _healthAttribute="Health" _maxHealthAttribute="MaxHealth" _damageNumberOffset="0,1.9,0" _bShowDamageNumbers="false" />
 					<WidgetComponent _localID="11339505928329980331" _documentPath="" _space="Screen" _drawSize="64,8" _pivot="0.5,1" _worldSize="1,0.5" _screenOffset="0,0"
 					                 _worldOffset="0,2.1,0" _maxDistance="0" _referenceDistance="10" _bClampToScreenEdge="false" _bScaleWithDistance="false" />
 					<HealthBarComponent _localID="13661083042096604780" _hpRatio="1" _remainRatio="1" _targetRatio="1" _lerpSpeed="5" _fillColor="0.25,0.85,0.3,1"

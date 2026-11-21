@@ -231,7 +231,7 @@ namespace sw
             return false;
         const string modFolder    = FileUtil::joinPath( request._installFolder, id );
         const string sourceFolder = FileUtil::joinPath( modFolder, ModPackBuilder::kSourceFolderName );
-        if ( FileUtil::isDirectory( sourceFolder ) == false )
+        if ( FileUtil::isDirectory( FileUtil::toDiskPath( sourceFolder ) ) == false )
         {
             SW_LOG_ERROR_ID( "ModSession.ExportNoSource", "mod.pack: '%#' has no %#/ source folder to pack", string( id ), ModPackBuilder::kSourceFolderName );
             return false;
@@ -239,12 +239,12 @@ namespace sw
         const string exportFolder = FileUtil::joinPath( getExportFolder(), id );
         const string packPath     = FileUtil::joinPath( exportFolder, ModPackBuilder::kPackFileName );
         const string manifestPath = FileUtil::joinPath( exportFolder, ModManifest::kFileName );
-        const bool   bExported    = FileUtil::ensureDirectoryExists( exportFolder ) && ModPackBuilder::buildFromFolder( sourceFolder, packPath, settings ) &&
-                               FileUtil::copyFile( FileUtil::joinPath( modFolder, ModManifest::kFileName ), manifestPath );
+        const bool   bExported    = FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( exportFolder ) ) && ModPackBuilder::buildFromFolder( sourceFolder, packPath, settings ) &&
+                               FileUtil::copyFile( FileUtil::toDiskPath( FileUtil::joinPath( modFolder, ModManifest::kFileName ) ), FileUtil::toDiskPath( manifestPath ) );
         if ( bExported == false )
         {
-            (void)FileUtil::removeFile( packPath ); // 반쯤 쓴 배포 형태를 남기지 않는다(패키지가 베끼지 않게)
-            (void)FileUtil::removeFile( manifestPath );
+            (void)FileUtil::removeFile( FileUtil::toDiskPath( packPath ) ); // 반쯤 쓴 배포 형태를 남기지 않는다(패키지가 베끼지 않게)
+            (void)FileUtil::removeFile( FileUtil::toDiskPath( manifestPath ) );
             SW_LOG_ERROR_ID( "ModSession.ExportFailed", "mod.pack: '%#' could not be packed into %#", string( id ), exportFolder );
             return false;
         }
@@ -434,7 +434,7 @@ namespace sw
         _listLayerPath.clear();
         for ( const string& builtPath : _listBuiltPackPath )
         {
-            if ( FileUtil::removeFile( builtPath ) == false )
+            if ( FileUtil::removeFile( FileUtil::toDiskPath( builtPath ) ) == false )
                 SW_LOG_WARNING_ID( "ModSession.BuiltPackKept", "The mod pack built for this session could not be removed: %#", builtPath );
         }
         _listBuiltPackPath.clear();
@@ -458,7 +458,7 @@ namespace sw
             }
             const string manifestPath = FileUtil::joinPath( FileUtil::joinPath( request._installFolder, id ), ModManifest::kFileName );
             uint64       manifestSize = 0;
-            if ( FileUtil::tryGetFileSize( manifestPath, manifestSize ) == false )
+            if ( FileUtil::tryGetFileSize( FileUtil::toDiskPath( manifestPath ), manifestSize ) == false )
             {
                 SW_LOG_ERROR_ID( "ModSession.MissingMod", "Requested mod '%#' is not installed (no %#)", id, manifestPath );
                 return false;
@@ -469,7 +469,7 @@ namespace sw
                 return false;
             }
             string text;
-            if ( FileUtil::readTextFile( manifestPath, text ) == false )
+            if ( FileUtil::readTextFile( FileUtil::toDiskPath( manifestPath ), text ) == false )
             {
                 SW_LOG_ERROR_ID( "ModSession.CannotReadManifest", "Mod manifest '%#' could not be read", manifestPath );
                 return false;
@@ -493,8 +493,8 @@ namespace sw
         const string packPath     = FileUtil::joinPath( modFolder, ModPackBuilder::kPackFileName );
         const string sourceFolder = FileUtil::joinPath( modFolder, ModPackBuilder::kSourceFolderName );
         uint64       packSize     = 0;
-        const bool   bPacked      = FileUtil::tryGetFileSize( packPath, packSize );
-        const bool   bSource      = FileUtil::isDirectory( sourceFolder );
+        const bool   bPacked      = FileUtil::tryGetFileSize( FileUtil::toDiskPath( packPath ), packSize );
+        const bool   bSource      = FileUtil::isDirectory( FileUtil::toDiskPath( sourceFolder ) );
         if ( bPacked == bSource )
         {
             SW_LOG_ERROR_ID( "ModSession.PackShape", "Mod '%#' must have exactly one of %# (packed) and %#/ (source) - it has %#", manifest._id, ModPackBuilder::kPackFileName,
@@ -512,7 +512,7 @@ namespace sw
             SW_LOG_ERROR_ID( "ModSession.SourceModInShipping", "Mod '%#' is a source folder - a packaged game loads only packed mods (%#)", manifest._id, ModPackBuilder::kPackFileName );
             return false;
         }
-        if ( FileUtil::ensureDirectoryExists( request._buildFolder ) == false )
+        if ( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( request._buildFolder ) ) == false )
         {
             SW_LOG_ERROR_ID( "ModSession.NoBuildFolder", "The mod build folder '%#' could not be created", request._buildFolder );
             return false;
@@ -531,7 +531,7 @@ namespace sw
     bool ModSession::validatePack( string_view packPath, const ModManifest& manifest, const ModSupportSettings& settings, uint64& outContentHash )
     {
         uint64 packSize = 0;
-        if ( FileUtil::tryGetFileSize( packPath, packSize ) == false || packSize > settings._maxPackBytes )
+        if ( FileUtil::tryGetFileSize( FileUtil::toDiskPath( packPath ), packSize ) == false || packSize > settings._maxPackBytes )
         {
             SW_LOG_ERROR_ID( "ModSession.PackTooLarge", "Mod pack '%#' is unreadable or larger than %# bytes", packPath, settings._maxPackBytes );
             return false;

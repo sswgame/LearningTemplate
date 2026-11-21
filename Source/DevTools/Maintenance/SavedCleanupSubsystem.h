@@ -10,7 +10,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
-#include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/Subsystem.h"
 
 #include "DevTools/DevToolsAPI.h"
 
@@ -22,7 +22,7 @@ namespace sw
 
     /** @class SavedCleanupSubsystem @brief `Saved` 의 오래된 실행 산출물을 지우는 서브시스템입니다. */
     REFLECT()
-    class SW_DEVTOOLS_API SavedCleanupSubsystem final : public ISubsystem
+    class SW_DEVTOOLS_API SavedCleanupSubsystem final : public Subsystem
     {
     public:
         REFLECT_BODY();

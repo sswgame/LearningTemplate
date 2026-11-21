@@ -590,9 +590,9 @@ namespace sw
         return true;
     }
 
-    GPUSceneBuilder::CandidateFillResult GPUSceneBuilder::fillCandidateFromPrimitive( ScenePrimitive* pPrimitive, Scene* pScene, DrawCandidate& candidate )
+    GPUSceneBuilder::CandidateFillResult GPUSceneBuilder::fillCandidateFromPrimitive( PrimitiveComponent* pPrimitive, Scene* pScene, DrawCandidate& candidate )
     {
-        // 레지스트리는 코어 기반만 알고, 들어오는 타입은 메시 계열뿐이다(`ScenePrimitive.h` 의 불변식). 인스턴스 배치도 같다.
+        // 레지스트리는 코어 기반만 알고, 들어오는 타입은 메시 계열뿐이다(`PrimitiveComponent.h` 의 불변식). 인스턴스 배치도 같다.
         MeshComponent* pMeshComp = static_cast<MeshComponent*>( pPrimitive );
         if ( pMeshComp == nullptr || pMeshComp->isVisible() == false )
             return CandidateFillResult::Excluded;
@@ -1088,7 +1088,7 @@ namespace sw
     GPUSceneBuilder::MeshCollectResult GPUSceneBuilder::collectDirtyCandidatesInPlace( const MeshCollectInput& input )
     {
         SW_PROFILE_SCOPE( "GT.GPUScene.build.collect" );
-        const vector<ScenePrimitive*>&        listPrimitive     = *input._pListPrimitive;
+        const vector<PrimitiveComponent*>&    listPrimitive     = *input._pListPrimitive;
         const vector<PrimitiveInstanceEntry>& listInstanceEntry = *input._pListInstanceEntry;
         MeshCollectResult                     result{};
         bool                                  bKeysSame  = true;
@@ -1252,7 +1252,7 @@ namespace sw
         {
             GPUSceneBuilder*              _pBuilder{ nullptr };
             Scene*                        _pScene{ nullptr };
-            ScenePrimitive* const*        _ppPrimitive{ nullptr };
+            PrimitiveComponent* const*    _ppPrimitive{ nullptr };
             const PrimitiveInstanceEntry* _pEntry{ nullptr };
             uint32                        _meshCount{ 0 };
             const uint32*                 _pPrevMap{ nullptr };
@@ -1484,9 +1484,9 @@ namespace sw
     void GPUSceneBuilder::updateStaticShadowGeneration( const PrimitiveRegistry& primitives, bool bSetChanged )
     {
         // 정적 메시는 대개 움직이지 않으므로 이 길은 거의 일하지 않는다 — 더티 슬롯 중 정적인 것 하나면 세대를 올린다.
-        constexpr uint64               kStaticSignatureSeed = 0x9E3779B97F4A7C15ull;
-        const vector<ScenePrimitive*>& listPrimitive        = primitives.getAll();
-        bool                           bStaticDirty         = false;
+        constexpr uint64                   kStaticSignatureSeed = 0x9E3779B97F4A7C15ull;
+        const vector<PrimitiveComponent*>& listPrimitive        = primitives.getAll();
+        bool                               bStaticDirty         = false;
         for ( const vector<uint32>* pListSlot : { &_listDirtyPrimitive, &_listTransformDirtyPrimitive } )
         {
             for ( const uint32 slot : *pListSlot )
@@ -1500,7 +1500,7 @@ namespace sw
         {
             uint64 signature   = 0;
             uint32 staticCount = 0;
-            for ( const ScenePrimitive* pPrimitive : listPrimitive )
+            for ( const PrimitiveComponent* pPrimitive : listPrimitive )
             {
                 if ( pPrimitive == nullptr || static_cast<const MeshComponent*>( pPrimitive )->isStatic() == false )
                     continue;

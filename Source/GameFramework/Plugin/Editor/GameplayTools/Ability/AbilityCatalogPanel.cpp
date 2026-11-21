@@ -215,7 +215,7 @@ namespace sw::editor
         const optional<AbsolutePath> absolutePath = getDocumentDiskPath();
         string                       text;
         // 읽지 못하면 저장을 막는다(`Malformed`) — 앞 파일의 글을 이 경로에 저장하지 않는다.
-        if ( absolutePath.has_value() == false || FileUtil::readTextFile( absolutePath->str(), text ) == false )
+        if ( absolutePath.has_value() == false || FileUtil::readTextFile( *absolutePath, text ) == false )
         {
             StringBuilder<constant::buffer::kMax256> statusBuilder;
             statusBuilder.appendFormat( "Could not read '%#'", path );
@@ -250,7 +250,7 @@ namespace sw::editor
             _status = "Nothing to save - open a well-formed file first";
             return false;
         }
-        if ( FileUtil::writeTextFile( absolutePath->str(), _model.getDocument().getText() ) == false )
+        if ( FileUtil::writeTextFile( *absolutePath, _model.getDocument().getText() ) == false )
         {
             StringBuilder<constant::buffer::kMax256> statusBuilder;
             statusBuilder.appendFormat( "Could not write '%#'", openPath );

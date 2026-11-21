@@ -2,7 +2,7 @@
  * @file DecalRainWashSystem.h
  * @brief 비가 데칼을 씻는 프레임 시스템입니다 — 날씨 값(`wetness`) × 지붕 판정을 `DecalComponent::applyRainWash` 에 넣습니다.
  * @details 데칼은 엔진 타입이라 날씨(GameFramework)를 모른다 — 날씨를 여는 `WeatherDirectorComponent` 가 플레이 시작에 붙이고 끝에 뗀다(강수를 가진 쪽이 그 효과도 갖는다).
- *          씻기는지 · 얼마나 빨리는 데칼 데이터(`_rainWashPerSecond`)가 밝힌다 — 0 인 데칼(칠한 선 · 그을음)은 건너뛴다. 캐릭터 젖음(`SurfaceExposureSystem`)과 같은 비 · 지붕 규칙이다.
+ *          씻기는지 · 얼마나 빨리는 데칼 데이터(`_rainWashPerSecond`)가 밝힌다 — 0 인 데칼(칠한 선 · 그을음)은 건너뛴다. 캐릭터 젖음(`CharacterWetnessSystem`)과 같은 비 · 지붕 규칙이다.
  *          지붕 광선은 데칼마다 매 프레임 쏘지 않는다 — 시간을 쌓아 `kWashIntervalSeconds` 마다 한 번 넣는다(피 · 흙이 씻기는 빠르기는 초 단위다).
  */
 #pragma once

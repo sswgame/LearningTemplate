@@ -23,7 +23,7 @@ namespace
         sw::string                                       text;
         sw::StringBuilder<sw::constant::buffer::kMax256> path;
         path.appendFormat( "%#/%#", sw::ProcessRoots::get()._project.str(), relativePath );
-        if ( sw::FileUtil::readTextFile( path.view(), text ) == false )
+        if ( sw::FileUtil::readTextFile( sw::FileUtil::toDiskPath( path.view() ), text ) == false )
             return false;
         sw::XMLDocument doc;
         if ( doc.parse( text ) == false )
@@ -112,7 +112,7 @@ SW_TEST_CASE( MaterialXMLTest, AssetFormatAcceptsCurrentMaterialXML )
     SW_EXPECT_EQUAL( sw::Material::kAssetType._formatVersion, sw::AssetXMLFormat::readXMLVersion( root ) );
 
     const sw::test::ScopedScratchDomain domain;
-    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( domain.makeDiskPath( "current.material" ), current ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::toDiskPath( domain.makeDiskPath( "current.material" ) ), current ) );
     sw::shared_ptr<sw::Material> material = sw::Material::create();
     SW_EXPECT_TRUE( material->loadFromAsset( sw::test::ScopedScratchDomain::makeID( "current.material" ) ) );
     SW_EXPECT_EQUAL( sw::string( "CurrentMat" ), material->getName() );
@@ -143,7 +143,7 @@ namespace
 SW_TEST_CASE( MaterialXMLTest, ChildInheritsParentAndOverridesOnlyWrittenValues )
 {
     const sw::test::ScopedScratchDomain domain;
-    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( domain.makeDiskPath( "parent.material" ), kParentMaterial ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::toDiskPath( domain.makeDiskPath( "parent.material" ) ), kParentMaterial ) );
     sw::StringBuilder<sw::constant::buffer::kMax512> child;
     child.appendFormat( R"(<?xml version="1.0" encoding="utf-8"?>
 <MaterialDef formatVersion="0" name="ChildMat" _base="%#">
@@ -153,7 +153,7 @@ SW_TEST_CASE( MaterialXMLTest, ChildInheritsParentAndOverridesOnlyWrittenValues 
 </MaterialDef>
 )",
                         sw::test::ScopedScratchDomain::makeID( "parent.material" ).str() );
-    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( domain.makeDiskPath( "child.material" ), child.view() ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::toDiskPath( domain.makeDiskPath( "child.material" ) ), child.view() ) );
 
     sw::shared_ptr<sw::Material> material = sw::Material::create();
     SW_REQUIRE_TRUE( material->loadFromAsset( sw::test::ScopedScratchDomain::makeID( "child.material" ) ) );
@@ -191,17 +191,17 @@ SW_TEST_CASE( MaterialXMLTest, MissingOrCyclicParentFailsToLoad )
     const sw::string                                 idB = sw::test::ScopedScratchDomain::makeID( "b.material" ).str();
     sw::StringBuilder<sw::constant::buffer::kMax256> xml;
     xml.appendFormat( "<MaterialDef formatVersion=\"0\" name=\"A\" _base=\"%#\"/>", idB );
-    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( domain.makeDiskPath( "a.material" ), xml.view() ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::toDiskPath( domain.makeDiskPath( "a.material" ) ), xml.view() ) );
     xml.clear();
     xml.appendFormat( "<MaterialDef formatVersion=\"0\" name=\"B\" _base=\"%#\"/>", idA );
-    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( domain.makeDiskPath( "b.material" ), xml.view() ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::toDiskPath( domain.makeDiskPath( "b.material" ) ), xml.view() ) );
     sw::shared_ptr<sw::Material> cyclic = sw::Material::create();
     SW_EXPECT_LOG( "DataInheritance.Cycle" );
     SW_EXPECT_FALSE( cyclic->loadFromAsset( sw::test::ScopedScratchDomain::makeID( "a.material" ) ) );
 
     xml.clear();
     xml.appendFormat( "<MaterialDef formatVersion=\"0\" name=\"Orphan\" _base=\"%#\"/>", sw::test::ScopedScratchDomain::makeID( "missing.material" ).str() );
-    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( domain.makeDiskPath( "orphan.material" ), xml.view() ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::toDiskPath( domain.makeDiskPath( "orphan.material" ) ), xml.view() ) );
     sw::shared_ptr<sw::Material> orphan = sw::Material::create();
     SW_EXPECT_LOG( "DataInheritance.BaseNotFound" );
     SW_EXPECT_FALSE( orphan->loadFromAsset( sw::test::ScopedScratchDomain::makeID( "orphan.material" ) ) );
@@ -213,7 +213,7 @@ SW_TEST_CASE( MaterialXMLTest, MissingOrCyclicParentFailsToLoad )
 SW_TEST_CASE( MaterialXMLTest, AssetFormatRejectsLegacyMaterialXML )
 {
     const sw::test::ScopedScratchDomain domain;
-    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( domain.makeDiskPath( "legacy.material" ), R"(<?xml version="1.0" encoding="utf-8"?>
+    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::toDiskPath( domain.makeDiskPath( "legacy.material" ) ), R"(<?xml version="1.0" encoding="utf-8"?>
 <Material>
 	<_name>LegacyMat</_name>
 	<_shader>engine/shaders/forward_lit.hlsl</_shader>

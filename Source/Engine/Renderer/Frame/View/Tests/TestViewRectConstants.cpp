@@ -51,9 +51,9 @@ SW_TEST_CASE( ViewRectConstantsTest, PassBufferDeclaresViewRectConstants )
     const string projectRoot = FileUtil::normalizeSeparators( ProcessRoots::get()._project.str() );
     SW_REQUIRE_FALSE( projectRoot.empty() );
     string bindingText;
-    SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::joinPath( projectRoot, "Content/engine/shaders/binding.hlsli" ), bindingText ) );
+    SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::toDiskPath( FileUtil::joinPath( projectRoot, "Content/engine/shaders/binding.hlsli" ) ), bindingText ) );
     string textureText;
-    SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::joinPath( projectRoot, "Content/engine/shaders/binding_texture.hlsli" ), textureText ) );
+    SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::toDiskPath( FileUtil::joinPath( projectRoot, "Content/engine/shaders/binding_texture.hlsli" ) ), textureText ) );
 
     const PassConstantNames&                names = passConstantNames();
     fixed_string<constant::buffer::kMax128> declaration;

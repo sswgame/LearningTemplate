@@ -11,14 +11,14 @@
 #pragma once
 #include "Core/Diagnostics/CrashHandler.h"
 #include "Core/Foundation/Macros.h"
-#include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/Subsystem.h"
 
 namespace sw
 {
     class CommandLineSubsystem;
 
     /** @class CrashHandlerSubsystem @brief 크래시 핸들러 서브시스템입니다. */
-    class SW_API CrashHandlerSubsystem final : public ISubsystem
+    class SW_API CrashHandlerSubsystem final : public Subsystem
     {
     public:
         /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */

@@ -10,7 +10,7 @@
 #include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/DynamicModules.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/Subsystem.h"
 
 #include "DevTools/DevToolsAPI.h"
 
@@ -30,7 +30,7 @@ namespace sw
      * @details 요청은 메뉴 · 콘솔(`gv_rhiBackend`)과 시나리오 단계 `SwapBackend` 가 같은 길로 합니다. 단계와 감시 값은 `engine::findSubsystem<RHIBackendSwitcher>()` 로 찾습니다.
      *          RHI 단계에 의존을 선언하지 않는다 — 기대면 백엔드 교체(`shutdownDependents`)가 이것도 내렸다 세운다. RHI · 렌더 스레드는 쓸 때 찾는다(`EngineRenderDriver` 와 같은 까닭).
      */
-    class SW_DEVTOOLS_API RHIBackendSwitcher final : public ISubsystem
+    class SW_DEVTOOLS_API RHIBackendSwitcher final : public Subsystem
     {
     public:
         static constexpr const utf8* kSubsystemName      = "RHIBackendSwitcher";

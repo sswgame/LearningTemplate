@@ -258,7 +258,7 @@ namespace sw
         PROPERTY( Min = 1 )
         int32 _level{ 1 };
         PROPERTY( Name = "input", Min = -1 )
-        int32 _inputID{ constant::invalid_index::kInt32 }; ///< `AbilityComponent::kNoInputID` 와 같은 값
+        int32 _inputID{ constant::invalid_index::kInt32 }; ///< `AbilitySystemComponent::kNoInputID` 와 같은 값
     };
 } // namespace sw
 

@@ -1,7 +1,7 @@
 /**
  * @file TestFileWatcher.cpp
  * @brief 플랫폼 워처가 공유하는 큐 규칙 — 상한 · 오버플로 리스캔 · 연속 중복 접기.
- * @details 규칙은 `IFileWatcher` 한 곳에 있으므로 **플랫폼과 무관하게** 검사한다 — 여기서 OS 를 전혀 건드리지 않고
+ * @details 규칙은 `FileWatcher` 한 곳에 있으므로 **플랫폼과 무관하게** 검사한다 — 여기서 OS 를 전혀 건드리지 않고
  *          규칙만 확인한다.
  */
 #include "pch.h"
@@ -10,12 +10,12 @@
 #include "Core/String/formatString.h"
 #include "Core/Testing/TestFramework.h"
 
-#include "DevTools/FileWatch/IFileWatcher.h"
+#include "DevTools/FileWatch/FileWatcher.h"
 
 namespace
 {
     /** @brief OS 를 쓰지 않는 테스트용 워처 — 공유 큐 규칙만 드러낸다. */
-    class StubFileWatcher final : public sw::IFileWatcher
+    class StubFileWatcher final : public sw::FileWatcher
     {
     public:
         /** @brief 감시 루트를 정해 둡니다. 합성 리스캔 이벤트가 이 값을 답니다. */

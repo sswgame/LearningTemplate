@@ -71,7 +71,7 @@ namespace sw
 namespace sw
 {
     Win32SplashWindow::Win32SplashWindow()
-        : ISplashWindow{}
+        : SplashWindowBase{}
         , _hWnd{ nullptr }
         , _gdiplusToken{ 0 }
         , _hBackgroundDC{ nullptr }

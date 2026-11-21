@@ -10,7 +10,7 @@
 
 #include "Editor/Common/EditorExtensionRegistry.h"
 #include "Editor/Common/EditorSubsystem.h"
-#include "Editor/Common/GUI/IEditorPopup.h"
+#include "Editor/Common/GUI/EditorPopup.h"
 
 namespace sw::editor
 {
@@ -21,7 +21,7 @@ namespace sw::editor
     struct EditorPopupEntry
     {
         string                         _id;
-        unique_ptr<IEditorPopup>       _pInstance;
+        unique_ptr<EditorPopup>        _pInstance;
         const EditorPopupRegistration* _pRegistration{ nullptr }; ///< 이 인스턴스를 만든 등록 줄(직접 registerPopup 한 것은 nullptr)
     };
 } // namespace sw::editor
@@ -36,7 +36,7 @@ namespace sw::editor
     {
         SW_EDITOR_EXTENSION_KIND( "popup" );
 
-        unique_ptr<IEditorPopup> ( *_pCreate )();
+        unique_ptr<EditorPopup> ( *_pCreate )();
     };
 } // namespace sw::editor
 
@@ -44,7 +44,7 @@ namespace sw::editor
 {
     /** @brief 등록 줄이 가리키는 팝업 생성 함수입니다. */
     template <typename TPopup>
-    unique_ptr<IEditorPopup> createEditorPopup()
+    unique_ptr<EditorPopup> createEditorPopup()
     {
         return make_unique<TPopup>();
     }
@@ -72,7 +72,7 @@ namespace sw::editor
         /** @brief 지금 에디터 컨텍스트의 팝업 관리자입니다. 에디터가 서 있을 때만 부른다. 팝업 View 가 작업 공간 헤더(`EditorContext`) 없이 찾는 창구다(`docs/agents/EditorUI.md` MVVM). */
         [[nodiscard]] static EditorPopupManager& getInEditorContext();
 
-        void registerPopup( unique_ptr<IEditorPopup> pPopup );
+        void registerPopup( unique_ptr<EditorPopup> pPopup );
 
         template <typename TPopup, typename... TArgs>
         TPopup* registerPopup( TArgs&&... args )
@@ -83,7 +83,7 @@ namespace sw::editor
             return pRaw;
         }
 
-        IEditorPopup* findPopup( string_view id );
+        EditorPopup* findPopup( string_view id );
 
         template <typename TPopup>
         TPopup* findPopup( string_view id )
@@ -111,7 +111,7 @@ namespace sw::editor
 
 /**
  * @brief 팝업 종류를 그 팝업의 .cpp 에서 등록합니다. 예: `SW_EDITOR_POPUP( QuickLauncherPopup, 100 );`
- * @param TPopup 기본 생성자와 `static constexpr const utf8* kPopupID` 가 있는 `IEditorPopup` 구현
+ * @param TPopup 기본 생성자와 `static constexpr const utf8* kPopupID` 가 있는 `EditorPopup` 구현
  * @param order  그리기 순서(작을수록 먼저 — 뒤의 것이 위에 그려집니다)
  */
 #define SW_EDITOR_POPUP( TPopup, order ) \

@@ -47,7 +47,7 @@
 namespace sw
 {
     class IEphemeralStore;
-    class IServiceStore;
+    class ServiceStore;
     class IStreamTransport;
     class OnlineServiceHost;
     class RemoteConfig;
@@ -152,7 +152,7 @@ namespace sw
         NetAddress            _listenAddress{ NetAddress::makeAnyInterface( OnlineProtocolConstant::kDefaultPort ) }; ///< 포트 0 = 아무 포트(`getListenPort`)
         NetAddress            _adminListenAddress{ NetAddress::makeLoopback( 0 ) };                                   ///< `_pAdminTransport` 가 받을 주소. 포트 0 = 아무 포트(`getAdminListenPort`)
         IStreamTransport*     _pAdminTransport{ nullptr };                                                            ///< 빌려 쓴다. 있으면 GM 리슨을 따로 열고 서비스의 노출(`getExposure`)대로 리슨을 가른다
-        IServiceStore*        _pServiceStore{ nullptr };
+        ServiceStore*         _pServiceStore{ nullptr };
         IEphemeralStore*      _pEphemeralStore{ nullptr };     ///< 없으면 서버 한 대(라우터 없음)
         IServerBusTransport*  _pServerBusTransport{ nullptr }; ///< 없으면 서버 한 대. 키트에는 호스트가 만든 앞(`getServerBus`)만 간다
         RemoteConfig*         _pRemoteConfig{ nullptr };
@@ -248,7 +248,7 @@ namespace sw
         RemoteConfig* getRemoteConfig() const { return _settings._pRemoteConfig; }
         /** @brief 버스의 타입 있는 앞입니다. 버스가 없으면(서버 한 대) nullptr 입니다. `initialize` 뒤부터 있습니다. */
         ServerBus*       getServerBus() const { return _pServerBus.get(); }
-        IServiceStore*   getServiceStore() const { return _settings._pServiceStore; }
+        ServiceStore*    getServiceStore() const { return _settings._pServiceStore; }
         IEphemeralStore* getEphemeralStore() const { return _settings._pEphemeralStore; }
         uint16           getListenPort() const;
         /** @brief 서비스 하나가 응답을 기다리게 둘 호출 상한입니다(`OnlineServiceHostConfig::_maxPendingCallsPerService`). */

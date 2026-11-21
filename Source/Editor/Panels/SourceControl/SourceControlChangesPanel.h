@@ -8,12 +8,12 @@
 #include "Core/Container/string.h"
 #include "Core/Foundation/Types.h"
 
-#include "Editor/Common/GUI/Panel/IEditorPanel.h"
+#include "Editor/Common/GUI/Panel/EditorPanel.h"
 
 namespace sw::editor
 {
     /** @brief 바뀐 파일 표 · 상세(diff · 이력) · 되돌리기 확인을 그리는 도구 창입니다. */
-    class SourceControlChangesPanel : public IEditorPanel
+    class SourceControlChangesPanel : public EditorPanel
     {
     public:
         /** @brief 패널 id 입니다(`SW_EDITOR_PANEL`). */

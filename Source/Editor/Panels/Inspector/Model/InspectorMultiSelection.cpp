@@ -35,7 +35,7 @@ namespace sw::editor
         EditorTransaction::endTransaction();
     }
 
-    size_t InspectorMultiSelection::countUnsharedComponents( const GameObject& primary, const vector<EditorMultiEditComponent>& listCommon )
+    size_t InspectorMultiSelection::countUnsharedComponents( const GameObject& primary, const vector<EditorMultiEditGroup>& listCommon )
     {
         size_t unsharedCount{ 0 };
         for ( const Component* pComponent : primary.getComponents() )
@@ -43,7 +43,7 @@ namespace sw::editor
             if ( pComponent == nullptr || pComponent->getTypeInfo() == nullptr )
                 continue;
             bool bShared = false;
-            for ( const EditorMultiEditComponent& common : listCommon )
+            for ( const EditorMultiEditGroup& common : listCommon )
             {
                 bShared = bShared || common._pType == pComponent->getTypeInfo();
             }
@@ -60,6 +60,6 @@ namespace sw::editor
         {
             listInstance.push_back( ObjectAddress{ pComponent } );
         }
-        return EditorMultiEditComponent::hasMixedValues( prop, listInstance );
+        return EditorMultiEditGroup::hasMixedValues( prop, listInstance );
     }
 } // namespace sw::editor

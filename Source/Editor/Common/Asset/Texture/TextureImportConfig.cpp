@@ -66,7 +66,7 @@ namespace sw::editor
     ConfigReadResult TextureImportConfig::loadFromFile( string_view configPath )
     {
         string                 text;
-        const OptionalFileRead read = FileUtil::readOptionalTextFile( configPath, text );
+        const OptionalFileRead read = FileUtil::readOptionalTextFile( FileUtil::toDiskPath( configPath ), text );
         if ( read == OptionalFileRead::Missing )
             return ConfigReadResult::Missing;
         if ( read == OptionalFileRead::Failed || text.empty() )

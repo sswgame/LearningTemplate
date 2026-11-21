@@ -38,7 +38,7 @@ namespace sw
 {
     struct ScheduleBlockDef;
     struct ScheduleConditionContext;
-    struct ScheduleNPCDef;
+    struct NPCScheduleDef;
     struct ScheduleSaveState;
 
     class GameFlags;
@@ -55,7 +55,7 @@ namespace sw
 
     /** @brief NPC 가 지금 하는 일입니다. */
     ENUM()
-    enum class ScheduleNPCPhase : uint8
+    enum class NPCSchedulePhase : uint8
     {
         Traveling = 0, ///< 다음 블록의 위치로 가는 중
         Performing,    ///< 블록의 위치에서 활동 중
@@ -103,7 +103,7 @@ namespace sw
 namespace sw
 {
     /** @brief 게임이 읽는 NPC 의 지금 모습입니다. */
-    struct ScheduleNPCView
+    struct NPCScheduleView
     {
         ScheduleLocation _location{}; ///< Near 면 고운 경로 위, Far 면 계획 경로 위
         ScheduleLocation _target{};
@@ -112,7 +112,7 @@ namespace sw
         hashed_string    _interruption{}; ///< 맨 위 끼어들기(없으면 빈 이름)
         optional<int32>  _segmentIndex{}; ///< 지금 칸(남은 칸이 없으면 비어 있다)
         float32          _travelFraction{ 1.0f };
-        ScheduleNPCPhase _phase{ ScheduleNPCPhase::Performing };
+        NPCSchedulePhase _phase{ NPCSchedulePhase::Performing };
         ScheduleLOD      _lod{ ScheduleLOD::Far };
     };
 } // namespace sw
@@ -232,7 +232,7 @@ namespace sw
      *     schedules.setWeather( weather.getCurrent() );
      *     schedules.setNPCLOD( npcIndex, bVisible ? ScheduleLOD::Near : ScheduleLOD::Far );
      *     schedules.update( clock );
-     *     const ScheduleNPCView view = schedules.getNPCView( npcIndex ); // 위치, 활동, 애니메이션
+     *     const NPCScheduleView view = schedules.getNPCView( npcIndex ); // 위치, 활동, 애니메이션
      * @endcode
      */
     class SW_GF_API ScheduleSystem
@@ -281,7 +281,7 @@ namespace sw
         void        removeNPCTag( int32 npcIndex, const TagID& tag );
         /**
          * @brief NPC 의 호감도(하트 수 같은 정수 관계 단계)를 정합니다. 조건의 `minAffinity` 와 `maxAffinity` 가 읽습니다. 값이 바뀌면 그 NPC 의 계획을 다시 세웁니다.
-         * @details 기본은 0 입니다. 저장 상태에 실립니다(`ScheduleNPCSaveState::_affinity`).
+         * @details 기본은 0 입니다. 저장 상태에 실립니다(`NPCScheduleSaveState::_affinity`).
          */
         void  setNPCAffinity( int32 npcIndex, int32 affinity );
         int32 getNPCAffinity( int32 npcIndex ) const;
@@ -296,7 +296,7 @@ namespace sw
         int32                         getNPCCount() const { return static_cast<int32>( _listNPC.size() ); }
         [[nodiscard]] optional<int32> findNPCIndex( const hashed_string& npcID ) const;
         hashed_string                 getNPCID( int32 npcIndex ) const;
-        ScheduleNPCView               getNPCView( int32 npcIndex ) const;
+        NPCScheduleView               getNPCView( int32 npcIndex ) const;
         /** @brief 오늘 계획입니다. */
         const vector<ScheduleSegment>& getPlan( int32 npcIndex ) const;
         bool                           isAppointmentMet( const hashed_string& appointmentID ) const;
@@ -351,7 +351,7 @@ namespace sw
             int32                   _planDay{ -1 };
             int32                   _affinity{ 0 }; ///< 호감도(관계 단계). 바뀌면 `_bTagsDirty` 로 계획을 다시 세운다
             int32                   _wakeMinute{ 0 };
-            ScheduleNPCPhase        _emittedPhase{ ScheduleNPCPhase::Performing };
+            NPCSchedulePhase        _emittedPhase{ NPCSchedulePhase::Performing };
             ScheduleLOD             _lod{ ScheduleLOD::Far };
             uint8                   _bTagsDirty{ SW_FALSE }; ///< 태그나 호감도가 바뀌었다. 다음 시간 흐름에서 계획을 다시 세운다
             uint8                   _bEmitted{ SW_FALSE };   ///< `_emittedSegment` 가 유효한가
@@ -404,7 +404,7 @@ namespace sw
 
         // 상태
         ScheduleLocation        computeLogicLocation( int32 npcIndex, int32 absoluteMinute ) const;
-        ScheduleNPCPhase        computePhase( const NPCRuntime& npc, int32 segmentIndex, float32 minuteOfDay, float32& outFraction ) const;
+        NPCSchedulePhase        computePhase( const NPCRuntime& npc, int32 segmentIndex, float32 minuteOfDay, float32& outFraction ) const;
         ScheduleLocation        computePlanningLocationOnRoute( const NPCRuntime& npc, int32 segmentIndex, float32 fraction ) const;
         bool                    isAttendeePresent( int32 npcIndex, int32 appointmentIndex ) const;
         bool                    isValidNPC( int32 npcIndex ) const { return 0 <= npcIndex && npcIndex < getNPCCount(); }

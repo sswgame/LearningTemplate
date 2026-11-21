@@ -6,8 +6,8 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/ServiceSlot.h"
+#include "Core/Subsystem/Subsystem.h"
 
 namespace sw
 {
@@ -17,7 +17,7 @@ namespace sw
      * @details 0 이면 게임 시간이 멈춥니다(에디터 UI 와 에디터 카메라는 자기 시간으로 계속 돕니다). 범위 밖은 `kMinScale` · `kMaxScale` 로 자릅니다.
      *          정지 요청 수와 이번 프레임의 실제 경과는 이 서비스(서비스 범위 — `engine::` · `game::` · `editor::getSubsystem<GameTimeScale>()`)가 든다(정적 칸이 아니다).
      */
-    class SW_API GameTimeScale final : public ISubsystem
+    class SW_API GameTimeScale final : public Subsystem
     {
     public:
         static constexpr const utf8* kSubsystemName = "GameTimeScale";

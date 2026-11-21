@@ -21,7 +21,7 @@ namespace sw
 
     bool FileWatchDispatcher::initialize( string_view watchRootPath )
     {
-        _fileWatcher          = IFileWatcher::createNative();
+        _fileWatcher          = FileWatcher::createNative();
         const string rootPath = watchRootPath.empty() ? engine::getSubsystem<AssetPaths>().getRootFolderPath() : string( watchRootPath );
         // 네이티브 감시를 걸지 못하면 mtime 폴링으로 몰래 바꾸지 않고 실패로 돌려준다 — 부른 쪽이 핫 리로드를 끈 채로 둔다.
         // 루트가 없는 것은 팩만 실린 실행의 정상 상태라 경고이고, 있는 루트를 걸지 못한 것은 오류다.
@@ -216,18 +216,18 @@ namespace sw
         [[maybe_unused]] uint32 found{ 0 };
         for ( const WatchEntry& entry : _listWatch )
         {
-            if ( FileUtil::isDirectory( entry._pathPrefix ) == false )
+            if ( FileUtil::isDirectory( FileUtil::toDiskPath( entry._pathPrefix ) ) == false )
                 continue;
 
             vector<string> listFile;
-            if ( FileUtil::collectFiles( entry._pathPrefix, {}, listFile, true ) == false )
+            if ( FileUtil::collectFiles( FileUtil::toDiskPath( entry._pathPrefix ), {}, listFile, true ) == false )
                 SW_LOG_WARNING_ID( "FileWatchDispatcher.WatchTreeCouldNot", "Watch tree '%#' could not be listed completely - changes in the part left out are not recovered", entry._pathPrefix );
             for ( const string& filePath : listFile )
             {
                 if ( isExtensionAllowed( entry, filePath ) == false )
                     continue;
                 uint64 mtime = 0;
-                if ( FileUtil::tryGetFileTimestamp( filePath, mtime ) == false || mtime < sinceTimestamp )
+                if ( FileUtil::tryGetFileTimestamp( FileUtil::toDiskPath( filePath ), mtime ) == false || mtime < sinceTimestamp )
                     continue; // 그 사이 지워졌거나 그 뒤로 바뀌지 않았다
 
                 const string normalized = FileUtil::makeComparableDiskPath( filePath ).str(); // 집합 키

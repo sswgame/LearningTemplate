@@ -116,7 +116,7 @@ namespace sw::editor
             {
                 outListGeneration.clear();
                 vector<string> listFile;
-                if ( FileUtil::collectFiles( slotFolder, "", listFile, false ) == false )
+                if ( FileUtil::collectFiles( FileUtil::toDiskPath( slotFolder ), "", listFile, false ) == false )
                     return; // 폴더가 아직 없다 — 사본이 없다
                 for ( const string& file : listFile )
                 {
@@ -156,7 +156,7 @@ namespace sw::editor
                 outListEntry.clear();
                 vector<string> listSlot;
                 for ( const string& sessionFolder : listSessionFolder )
-                    (void)FileUtil::collectFolders( sessionFolder, listSlot, false ); // 붙여 모은다. 없는 폴더(그새 지운 세션)는 사본이 없다
+                    (void)FileUtil::collectFolders( FileUtil::toDiskPath( sessionFolder ), listSlot, false ); // 붙여 모은다. 없는 폴더(그새 지운 세션)는 사본이 없다
                 const string projectRoot = ProcessRoots::get()._project.str();
                 for ( const string& slotFolder : listSlot )
                 {
@@ -166,7 +166,7 @@ namespace sw::editor
                         continue;
                     const uint32 newest = listGeneration.back();
                     string       metaText;
-                    if ( FileUtil::readTextFile( makeMetaPath( slotFolder, newest ), metaText ) == false )
+                    if ( FileUtil::readTextFile( FileUtil::toDiskPath( makeMetaPath( slotFolder, newest ) ), metaText ) == false )
                         continue; // 메타 없는 사본은 어디 것인지 모른다 — 복구하지 않는다
                     EditorAutosaveEntry entry{};
                     entry._snapshotAbs = makeSnapshotPath( slotFolder, newest );
@@ -204,7 +204,7 @@ namespace sw::editor
                 State& state         = getState();
                 state._bSessionBegun = true;
                 const string folder  = getFolder();
-                if ( folder.empty() || FileUtil::ensureDirectoryExists( folder ) == false )
+                if ( folder.empty() || FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( folder ) ) == false )
                 {
                     SW_LOG_ERROR_ID( "EditorAutosaveCommands.NoFolder", "Autosave: the editor state folder is unknown or cannot be created - autosave is off for this session" );
                     return;
@@ -249,8 +249,8 @@ namespace sw::editor
                 collectGenerations( slotFolder, listGeneration );
                 while ( listGeneration.size() > keepCount )
                 {
-                    (void)FileUtil::tryRemoveFile( makeSnapshotPath( slotFolder, listGeneration.front() ) );
-                    (void)FileUtil::tryRemoveFile( makeMetaPath( slotFolder, listGeneration.front() ) );
+                    (void)FileUtil::tryRemoveFile( FileUtil::toDiskPath( makeSnapshotPath( slotFolder, listGeneration.front() ) ) );
+                    (void)FileUtil::tryRemoveFile( FileUtil::toDiskPath( makeMetaPath( slotFolder, listGeneration.front() ) ) );
                     listGeneration.erase( listGeneration.begin() );
                 }
             }
@@ -273,7 +273,7 @@ namespace sw::editor
                 const string slotName   = bUntitled ? makeUntitledSlotName( editor::getSubsystem<SceneManager>().getSceneGeneration() ) : EditorAutosaveCommands::makeSlotName( sourceID );
                 const string slotFolder = FileUtil::joinPath( state._sessionFolder, slotName );
                 const uint64 sourceHash = bUntitled ? 0 : EditorAutosaveCommands::computeSourceHash( sourceID ); // 새 씬은 견줄 원본이 없다(메타 sourceHash=0)
-                if ( ( bUntitled == false && sourceHash == 0 ) || FileUtil::ensureDirectoryExists( slotFolder ) == false )
+                if ( ( bUntitled == false && sourceHash == 0 ) || FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( slotFolder ) ) == false )
                     return false;
                 vector<uint32> listGeneration;
                 collectGenerations( slotFolder, listGeneration );
@@ -287,9 +287,9 @@ namespace sw::editor
                 StringBuilder<constant::buffer::kMax256> metaBuilder;
                 metaBuilder.appendFormat( "source=%#\nproject=%#\nsaved=%#\nsourceHash=%#\n", sourceID, ProcessRoots::get()._project.str(), FileUtil::getCurrentFileWriteTime(), sourceHash );
                 const string meta{ metaBuilder.view() };
-                if ( FileUtil::writeTextFile( makeMetaPath( slotFolder, generation ), meta ) == false )
+                if ( FileUtil::writeTextFile( FileUtil::toDiskPath( makeMetaPath( slotFolder, generation ) ), meta ) == false )
                 {
-                    (void)FileUtil::tryRemoveFile( snapshotPath->str() ); // 메타 없는 사본은 복구할 수 없다
+                    (void)FileUtil::tryRemoveFile( *snapshotPath ); // 메타 없는 사본은 복구할 수 없다
                     return false;
                 }
                 pruneGenerations( slotFolder, getPreferences<EditorAutosavePreferences>()._keepGenerations );
@@ -318,8 +318,8 @@ namespace sw::editor
                     pScene->setSourcePath( state._pendingSourceID );
                     editor::getSubsystem<EditorWorkspace>().markSceneDirty();
                     ++state._restoredCount;
-                    if ( FileUtil::isDirectory( state._pendingSlotFolder ) )
-                        (void)FileUtil::removeDirectory( state._pendingSlotFolder ); // 씬이 메모리에 dirty 로 있다 — 남기면 리로드 · 다음 기동이 같은 사본을 또 묻는다
+                    if ( FileUtil::isDirectory( FileUtil::toDiskPath( state._pendingSlotFolder ) ) )
+                        (void)FileUtil::removeDirectory( FileUtil::toDiskPath( state._pendingSlotFolder ) ); // 씬이 메모리에 dirty 로 있다 — 남기면 리로드 · 다음 기동이 같은 사본을 또 묻는다
                     vector<EditorAutosaveEntry>& listEntry = state._listRecoverable;
                     listEntry.erase( std::remove_if( listEntry.begin(), listEntry.end(), [&state]( const EditorAutosaveEntry& entry )
                     { return AssetPaths::normalizeAssetID( entry._snapshotID ) == state._pendingSnapshotID; } ),
@@ -509,8 +509,8 @@ namespace sw::editor
         {
             const string slotFolder     = FileUtil::joinPath( state._sessionFolder, slotName );
             const bool   bPendingFolder = state._pendingSnapshotID.empty() == false && FileUtil::isSameDiskPath( slotFolder, state._pendingSlotFolder );
-            if ( bPendingFolder == false && FileUtil::isDirectory( slotFolder ) )
-                (void)FileUtil::removeDirectory( slotFolder );
+            if ( bPendingFolder == false && FileUtil::isDirectory( FileUtil::toDiskPath( slotFolder ) ) )
+                (void)FileUtil::removeDirectory( FileUtil::toDiskPath( slotFolder ) );
         }
         // 이미 저장한 씬은 복구 후보에서도 빼고 그 사본(넘겨받은 세션의 것)도 지운다 — 저장한 원본이 사본보다 새것이다
         vector<EditorAutosaveEntry>& listEntry = state._listRecoverable;
@@ -522,8 +522,8 @@ namespace sw::editor
         for ( const EditorAutosaveEntry& entry : listEntry )
         {
             const string entrySlotFolder = FileUtil::getDirectoryPart( entry._snapshotAbs );
-            if ( entry._sourceID == sourceID && isPendingCopy( entry ) == false && FileUtil::isDirectory( entrySlotFolder ) )
-                (void)FileUtil::removeDirectory( entrySlotFolder );
+            if ( entry._sourceID == sourceID && isPendingCopy( entry ) == false && FileUtil::isDirectory( FileUtil::toDiskPath( entrySlotFolder ) ) )
+                (void)FileUtil::removeDirectory( FileUtil::toDiskPath( entrySlotFolder ) );
         }
         listEntry.erase( std::remove_if( listEntry.begin(), listEntry.end(), [sourceID, &isPendingCopy]( const EditorAutosaveEntry& entry )
         { return entry._sourceID == sourceID && isPendingCopy( entry ) == false; } ),
@@ -539,7 +539,7 @@ namespace sw::editor
     {
         // 모든 세션 폴더(이 세션 것 포함)를 비정상 종료가 남긴 것처럼 읽는다 — 개발 명령 `autosave.rescan` 의 시나리오용
         vector<string> listSessionFolder;
-        (void)FileUtil::collectFolders( EditorAutosaveCommandsInternal::getFolder(), listSessionFolder, false ); // 폴더가 없으면 후보도 없다
+        (void)FileUtil::collectFolders( FileUtil::toDiskPath( EditorAutosaveCommandsInternal::getFolder() ), listSessionFolder, false ); // 폴더가 없으면 후보도 없다
         EditorAutosaveCommandsInternal::State& state = EditorAutosaveCommandsInternal::getState();
         EditorAutosaveCommandsInternal::scanRecoverable( listSessionFolder, state._listRecoverable );
         EditorAutosaveCommandsInternal::scanRecoverableDocuments( listSessionFolder, state._listRecoverableDocument );
@@ -593,7 +593,7 @@ namespace sw::editor
         vector<EditorDocumentAutosaveEntry>& listEntry = EditorAutosaveCommandsInternal::getState()._listRecoverableDocument;
         if ( index >= listEntry.size() )
             return;
-        (void)FileUtil::tryRemoveFile( listEntry[index]._textAbs );
+        (void)FileUtil::tryRemoveFile( FileUtil::toDiskPath( listEntry[index]._textAbs ) );
         SW_LOG_INFO_ID( "EditorAutosaveCommands.DocumentDiscarded", "Autosave: discarded the copy of document '%#'", listEntry[index]._documentPath );
         listEntry.erase( listEntry.begin() + static_cast<ptrdiff_t>( index ) );
     }
@@ -610,7 +610,7 @@ namespace sw::editor
         for ( const EditorDocumentAutosaveEntry& entry : listEntry )
         {
             if ( entry._documentPath == documentPath )
-                (void)FileUtil::tryRemoveFile( entry._textAbs ); // 문서가 dirty 로 메모리에 있다 — 남기면 다음 기동이 같은 사본을 또 묻는다
+                (void)FileUtil::tryRemoveFile( FileUtil::toDiskPath( entry._textAbs ) ); // 문서가 dirty 로 메모리에 있다 — 남기면 다음 기동이 같은 사본을 또 묻는다
         }
         listEntry.erase( std::remove_if( listEntry.begin(), listEntry.end(), [documentPath]( const EditorDocumentAutosaveEntry& entry )
         { return entry._documentPath == documentPath; } ),
@@ -655,8 +655,8 @@ namespace sw::editor
         if ( index >= listEntry.size() )
             return;
         const string slotFolder = FileUtil::getDirectoryPart( listEntry[index]._snapshotAbs );
-        if ( FileUtil::isDirectory( slotFolder ) )
-            (void)FileUtil::removeDirectory( slotFolder );
+        if ( FileUtil::isDirectory( FileUtil::toDiskPath( slotFolder ) ) )
+            (void)FileUtil::removeDirectory( FileUtil::toDiskPath( slotFolder ) );
         SW_LOG_INFO_ID( "EditorAutosaveCommands.Discarded", "Autosave: discarded the copies of '%#'", listEntry[index]._sourceID );
         listEntry.erase( listEntry.begin() + static_cast<ptrdiff_t>( index ) );
     }
@@ -681,7 +681,7 @@ namespace sw::editor
     bool EditorAutosaveSession::readLock( string_view sessionFolder, EditorAutosaveSession& outSession )
     {
         string lockText;
-        if ( FileUtil::readTextFile( FileUtil::joinPath( sessionFolder, kLockFileName ), lockText ) == false )
+        if ( FileUtil::readTextFile( FileUtil::toDiskPath( FileUtil::joinPath( sessionFolder, kLockFileName ) ), lockText ) == false )
             return false;
         return StringUtil::parseInt( EditorAutosaveCommands::findMetaValue( lockText, "pid" ), outSession._processID ) &&
                StringUtil::parseInt64( EditorAutosaveCommands::findMetaValue( lockText, "start" ), outSession._startTicks );
@@ -694,7 +694,7 @@ namespace sw::editor
         lockBuilder.appendFormat( "pid=%#\nstart=%#\n", _processID, _startTicks );
         const string   ownFolder = makeFolder( root );
         vector<string> listSessionFolder;
-        (void)FileUtil::collectFolders( root, listSessionFolder, false ); // 루트가 없으면 넘겨받을 세션도 없다
+        (void)FileUtil::collectFolders( FileUtil::toDiskPath( root ), listSessionFolder, false ); // 루트가 없으면 넘겨받을 세션도 없다
         for ( const string& sessionFolder : listSessionFolder )
         {
             EditorAutosaveSession owner{};
@@ -703,24 +703,24 @@ namespace sw::editor
             const bool bSelf = owner._processID == _processID && owner._startTicks == _startTicks;
             // 같은 pid 의 다른 시각은 이 프로세스의 세션이 아니다(OS 가 pid 를 다시 썼다, 또는 맡김 칸 없이 리로드했다) — 죽은 세션으로 본다
             const bool bDead = bSelf == false && ( owner._processID == _processID || Process::isProcessAlive( owner._processID ) == false );
-            if ( bDead && FileUtil::writeTextFile( FileUtil::joinPath( sessionFolder, kLockFileName ), lockBuilder.view() ) == false )
+            if ( bDead && FileUtil::writeTextFile( FileUtil::toDiskPath( FileUtil::joinPath( sessionFolder, kLockFileName ) ), lockBuilder.view() ) == false )
                 continue; // 넘겨받지 못하면 다음 기동이 다시 묻는다
             if ( bSelf || bDead )
                 outListRecoveredFolder.push_back( sessionFolder );
         }
-        return FileUtil::ensureDirectoryExists( ownFolder ) && FileUtil::writeTextFile( FileUtil::joinPath( ownFolder, kLockFileName ), lockBuilder.view() );
+        return FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( ownFolder ) ) && FileUtil::writeTextFile( FileUtil::toDiskPath( FileUtil::joinPath( ownFolder, kLockFileName ) ), lockBuilder.view() );
     }
 
     void EditorAutosaveSession::removeOwned( string_view root, const int32 processID )
     {
         vector<string> listSessionFolder;
-        (void)FileUtil::collectFolders( root, listSessionFolder, false ); // 루트가 없으면 지울 것도 없다
+        (void)FileUtil::collectFolders( FileUtil::toDiskPath( root ), listSessionFolder, false ); // 루트가 없으면 지울 것도 없다
         for ( const string& sessionFolder : listSessionFolder )
         {
             EditorAutosaveSession owner{};
             // 넘겨받은 폴더는 잠금을 이 pid 로 고쳐 썼고, 같은 pid 의 남의 폴더는 open 이 모두 넘겨받았다 — pid 가 같으면 이 세션 것이다
             if ( readLock( sessionFolder, owner ) && owner._processID == processID )
-                (void)FileUtil::removeDirectory( sessionFolder );
+                (void)FileUtil::removeDirectory( FileUtil::toDiskPath( sessionFolder ) );
         }
     }
 

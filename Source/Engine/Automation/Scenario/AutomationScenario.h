@@ -82,7 +82,7 @@ namespace sw
          * @details 단계 함수의 오류는 위치를 담지 않는다(`sw::Error` 는 고정 문장 + 대상) — 어느 단계인지는 이 글을 짓는 쪽이 붙인다.
          */
         [[nodiscard]] string describeError( const Error& error ) const;
-        /** @brief 위치 없는 이유 글(`<문장>: <대상>`)입니다 — 위치를 스스로 붙이는 곳(`AutomationStepContext::recordFailure`)에 넘긴다. */
+        /** @brief 위치 없는 이유 글(`<문장>: <대상>`)입니다 — 위치를 스스로 붙이는 곳(`IAutomationStepContext::recordFailure`)에 넘긴다. */
         [[nodiscard]] static string describeReason( const Error& error );
         /** @brief 속성 이름이 모두 @p listAllowed 안에 있는지 봅니다. 아니면 모르는 속성 이름이 대상인 오류입니다. */
         [[nodiscard]] expected<void> hasOnlyAttributes( std::initializer_list<string_view> listAllowed ) const;

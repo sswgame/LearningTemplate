@@ -21,7 +21,7 @@ namespace sw
     using EventTypeID = uint32;
 
     // 엔진 예약 구간(1..255, 0 은 무효)에는 지금 이벤트가 없다. 창 이벤트 셋은 발행하는 곳이 없어 지웠다 — 창의 최소화 · 포커스는
-    // `IWindow` 가 들고, 크기는 `IWindow::setResizeCallback` 이 알린다. 고정 ID 가 필요해지면 번호가 겹치지 않게 이 자리에 상수를 두고
+    // `GenericWindow` 가 들고, 크기는 `GenericWindow::setResizeCallback` 이 알린다. 고정 ID 가 필요해지면 번호가 겹치지 않게 이 자리에 상수를 두고
     // `SW_REGISTER_EVENT_ID` 로 등록한다.
 
     /** @brief 컴파일 타임 FNV-1a 32비트 해시로 게임플레이 이벤트 ID 를 만듭니다. StringUtil 과 같은 상수 · 알고리즘입니다. */
@@ -40,7 +40,7 @@ namespace sw
     }
 
 /**
- * @brief 고정된 EventTypeID 로 IEvent 를 등록합니다.
+ * @brief 고정된 EventTypeID 로 EventBase 를 등록합니다.
  * @warning **이 매크로 뒤는 `private:` 입니다.** 멤버를 더하려면 매크로 **위**에 적으십시오. 아래에 적으면 조용히
  *          private 이 됩니다(`struct` 라서 기본이 public 인 것과 어긋납니다).
  * @details 이름을 모두 `sw::` 로 한정합니다 — `namespace sw` 밖에서도 쓸 수 있게. 한정하지 않으면 `EventTypeID` 를 찾지 못하고,
@@ -60,35 +60,35 @@ private:                                                      \
 #define SW_DECLARE_GAMEPLAY_EVENT( TypeName ) SW_REGISTER_EVENT_ID( sw::eventTypeIDFromString( #TypeName ) )
 
     // ------------------------------------------------------------------------------
-    // 2) IEvent — 큐 노드. 파생 타입은 SW_REGISTER_* 로 kType 을 심는다
+    // 2) EventBase — 큐 노드. 파생 타입은 SW_REGISTER_* 로 kType 을 심는다
     // ------------------------------------------------------------------------------
     /** @brief 디스패처 큐에 올라가는 이벤트 베이스입니다. */
-    struct SW_API IEvent
+    struct SW_API EventBase
     {
 
-        mutable atomic<IEvent*> _next;
+        mutable atomic<EventBase*> _next;
         /** @brief 다음 포인터만 비운 상태로 만듭니다. */
-        IEvent();
+        EventBase();
         /** @brief 큐 링크는 복사하지 않습니다 — 사본은 어느 큐에도 매달리지 않은 상태로 시작합니다. */
-        IEvent( const IEvent& )
+        EventBase( const EventBase& )
             : _next{ nullptr }
         {
         }
         /** @brief 큐 링크는 복사하지 않고 자기 링크를 유지합니다. */
-        IEvent& operator=( const IEvent& ) { return *this; }
+        EventBase& operator=( const EventBase& ) { return *this; }
         /**
          * @brief 큐 링크는 가져오지 않습니다.
          * @note `noexcept` 가 **계약의 일부**입니다. 이동이 noexcept 가 아니면 `vector` 같은 컨테이너는 재할당 때 강한 예외
          *       보장을 지키려고 **이동 대신 복사**를 씁니다. 본문이 비어 있어 예외를 던질 수 없어도 표시가 있어야 합니다.
          */
-        IEvent( IEvent&& ) noexcept
+        EventBase( EventBase&& ) noexcept
             : _next{ nullptr }
         {
         }
         /** @brief 큐 링크는 가져오지 않고 자기 링크를 유지합니다. */
-        IEvent& operator=( IEvent&& ) noexcept { return *this; }
+        EventBase& operator=( EventBase&& ) noexcept { return *this; }
         /** @brief 가상 소멸자라 파생 이벤트를 안전하게 지울 수 있습니다. */
-        virtual ~IEvent();
+        virtual ~EventBase();
         /** @brief 등록된 이벤트 타입 ID 입니다. */
         virtual EventTypeID getEventType() const = 0;
     };

@@ -5,7 +5,7 @@
 #pragma once
 #include "Core/Foundation/Types.h"
 
-#include "Editor/Common/GUI/Panel/IEditorPanel.h"
+#include "Editor/Common/GUI/Panel/EditorPanel.h"
 #include "Editor/Common/Widgets/EditorNodeGraph.h"
 #include "Editor/Panels/RenderDebugger/Model/RenderDebuggerViewModel.h"
 
@@ -16,7 +16,7 @@ namespace sw::editor
      * @brief 파일 머리말 참고. 값과 명령은 `RenderDebuggerViewModel` 이 맡고 이 창은 그리기만 한다(MVVM 계약).
      * @details 프레임 디버거가 멈춘 지점의 그림은 렌더 타깃 창(`RenderTargetPanel`)과 게임 뷰가 보인다 — 렌더러가 그 지점 뒤의 씬 드로우를 내지 않는다.
      */
-    class RenderDebuggerPanel : public IEditorPanel
+    class RenderDebuggerPanel : public EditorPanel
     {
     public:
         /** @brief 패널 id 입니다(등록 · 조회 · `panel.focus`). */

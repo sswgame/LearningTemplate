@@ -1,6 +1,6 @@
 /**
  * @file AutomationDeferredValue.h
- * @brief 단계가 요청한 뒤 다른 스레드(워커)가 나중에 채우는 판정 값 하나입니다. 실행기가 `<Pass/>` 에서 읽어 판정한다(`AutomationStepContext::deferExpectAtMost`).
+ * @brief 단계가 요청한 뒤 다른 스레드(워커)가 나중에 채우는 판정 값 하나입니다. 실행기가 `<Pass/>` 에서 읽어 판정한다(`IAutomationStepContext::deferExpectAtMost`).
  * @details 값은 워커가 한 번 쓰고(`publish` · `abandon`) 게임 스레드가 읽는다. 쓰는 쪽은 값을 먼저 두고 상태를 release 로 올리고, 읽는 쪽은 상태를 acquire 로 본 뒤 값을 읽는다.
  *          만들기는 엔진 안(`create`)이다 - shared_ptr 의 제어 블록 코드가 엔진에 있어야 단계를 등록한 모듈(편집기)이 내려간 뒤 판정이 마지막 참조를 놓아도 안전하다.
  */

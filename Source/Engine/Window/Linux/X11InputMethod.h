@@ -1,6 +1,6 @@
 /**
  * @file X11InputMethod.h
- * @brief X 입력기(XIM)입니다 - 한글 조합 · 옛 키심 레이아웃(키릴 등)의 글을 `WindowTextInputKind` 로 냅니다. 헤더에 X11 타입을 두지 않아 어느 플랫폼의 `IWindow.cpp` 에서도 읽힌다.
+ * @brief X 입력기(XIM)입니다 - 한글 조합 · 옛 키심 레이아웃(키릴 등)의 글을 `WindowTextInputKind` 로 냅니다. 헤더에 X11 타입을 두지 않아 어느 플랫폼의 `GenericWindow.cpp` 에서도 읽힌다.
  * @details 창(`X11Window`)이 이벤트 루프에서 부른다. 규칙은 GLFW · SDL · Godot 와 같다.
  *          - 입력기가 볼 이벤트는 처리기보다 먼저 `XFilterEvent` 를 지난다(`filterEvent`). 입력기가 가져간 키는 키 이벤트로 나가지 않는다.
  *          - 글은 키 누름마다 한 번만 읽는다(`emitKeyText`). `Xutf8LookupString` 은 확정 글을 꺼내는 호출이라 처리기마다(ImGui · 입력 관리자) 부르면 둘째가 빈 글을 받는다 - 그래서 창이 읽어 글 이벤트로 나눠 준다.

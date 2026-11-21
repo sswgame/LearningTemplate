@@ -34,7 +34,7 @@
 #include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
 #include "Engine/Renderer/Frame/OffscreenSceneRenderers.h"
 #include "Engine/UI/UISystem.h"
-#include "Engine/Window/IWindow.h"
+#include "Engine/Window/GenericWindow.h"
 #include "Engine/Window/MainWindowSubsystem.h"
 
 namespace sw::editor
@@ -65,7 +65,7 @@ namespace sw::editor
                 SW_LOG_ERROR_ID( "EditorWorkspaceWatches.WatchEditorWindowTitleDirtyMainWindowSubsystem", "[Scenario] watch Editor.WindowTitleDirty: MainWindowSubsystem is missing" );
                 return false;
             }
-            const IWindow* pWindow = pWindowHost->getWindow();
+            const GenericWindow* pWindow = pWindowHost->getWindow();
             if ( pWindow == nullptr )
                 return false; // 창 없는 실행(헤드리스)에서는 값이 없다
             // 창에는 엔진이 프레임 끝에 건 제목(실행 정보 포함)이 있어 한 프레임 늦다 — 에디터가 정한 평소 제목을 본다.

@@ -17,8 +17,8 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
-#include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/ServiceSlot.h"
+#include "Core/Subsystem/Subsystem.h"
 
 #include "Engine/Renderer/Graph/RenderGraphSnapshot.h"
 
@@ -77,7 +77,7 @@ namespace sw
      * @class RenderDebugRegistry
      * @brief 파일 머리말 참고. 요청 · 설정은 아무 스레드, `take…` · `publish…` · `beginFrame` · `allowDraw` · `endFrame` 은 렌더 스레드입니다.
      */
-    class SW_API RenderDebugRegistry : public ISubsystem
+    class SW_API RenderDebugRegistry : public Subsystem
     {
     public:
         static constexpr const utf8* kSubsystemName      = "RenderDebugRegistry";

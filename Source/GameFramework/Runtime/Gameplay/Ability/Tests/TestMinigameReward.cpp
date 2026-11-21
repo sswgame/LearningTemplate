@@ -8,8 +8,8 @@
 
 #include "GameFramework/Runtime/Foundation/Framework/Minigame/MinigameStack.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityCatalog.h"
-#include "GameFramework/Runtime/Gameplay/Ability/AbilityComponent.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityEffect.h"
+#include "GameFramework/Runtime/Gameplay/Ability/AbilitySystemComponent.h"
 #include "GameFramework/Runtime/Gameplay/Ability/CombatAttributeSet.h"
 #include "GameFramework/Runtime/Gameplay/Ability/MinigameRewardComponent.h"
 #include "GameFramework/Runtime/Gameplay/Ability/TagCountTable.h"
@@ -23,13 +23,13 @@ namespace
     {
         GameObjectManager        _manager;
         AbilityCatalog           _catalog;
-        AbilityComponent*        _pAbility{ nullptr };
+        AbilitySystemComponent*  _pAbility{ nullptr };
         MinigameRewardComponent* _pReward{ nullptr };
 
         MinigameRewardFixture()
         {
             GameObject* const pHero = _manager.createGameObject( hashed_string( "HubPlayer" ) );
-            _pAbility               = pHero->addComponent<AbilityComponent>();
+            _pAbility               = pHero->addComponent<AbilitySystemComponent>();
             _pReward                = pHero->addComponent<MinigameRewardComponent>();
             _pAbility->setCatalog( &_catalog );
             (void)_pAbility->addAttributeSet<CombatAttributeSet>();

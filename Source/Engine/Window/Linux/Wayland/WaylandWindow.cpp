@@ -43,7 +43,7 @@ namespace sw
 #if defined( SW_WITH_WAYLAND )
 namespace sw
 {
-    /** @brief 바인드한 `wl_output` 하나와 그 값입니다(`IWindow::tryGetMonitors`). `_bEntered` 는 창(wl_surface)이 이 출력에 걸쳐 있는지입니다. */
+    /** @brief 바인드한 `wl_output` 하나와 그 값입니다(`GenericWindow::tryGetMonitors`). `_bEntered` 는 창(wl_surface)이 이 출력에 걸쳐 있는지입니다. */
     struct WaylandOutput
     {
         wl_output*   _pOutput{ nullptr };
@@ -374,7 +374,7 @@ namespace sw
                     pEntry->_size = int2{ width, height };
             }
 
-            /** @brief 출력의 값이 한 묶음 끝났습니다(`done`). 받는 쪽은 `IWindow::getMonitorGeneration` 으로 다시 읽는다. */
+            /** @brief 출력의 값이 한 묶음 끝났습니다(`done`). 받는 쪽은 `GenericWindow::getMonitorGeneration` 으로 다시 읽는다. */
             static void onOutputDone( void* pData, wl_output* pOutput )
             {
                 (void)pOutput;

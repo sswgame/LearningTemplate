@@ -8,8 +8,8 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/StringUtil.h"
-#include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/ServiceSlot.h"
+#include "Core/Subsystem/Subsystem.h"
 
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Content/AssetIO.h"
@@ -148,7 +148,7 @@ namespace sw
      * @class AssetRedirectTable
      * @brief 지금 읽은 리다이렉트 표입니다(엔진 서비스 서브시스템 — `ResourceRemapTable` 과 같은 자리). `AssetRedirect` 의 정적 창구가 이것을 쓴다.
      */
-    class AssetRedirectTable final : public ISubsystem
+    class AssetRedirectTable final : public Subsystem
     {
     public:
         static constexpr const utf8* kSubsystemName = "AssetRedirectTable";

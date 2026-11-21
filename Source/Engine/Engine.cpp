@@ -93,7 +93,7 @@
 #include "Engine/UserSettings/HardwareDetectionResult.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
 #include "Engine/UserSettings/UserSettingsVariables.h"
-#include "Engine/Window/IWindow.h"
+#include "Engine/Window/GenericWindow.h"
 #include "Engine/Window/MainWindowSubsystem.h"
 
 #include "sw/config/ConfigConstants.h"
@@ -289,7 +289,7 @@ namespace sw
             string                     skipped;
             for ( const uint32 index : subsystems.getInitializeOrder() )
             {
-                const ISubsystem& subsystem = subsystems.getSubsystem( index );
+                const Subsystem& subsystem = subsystems.getSubsystem( index );
                 if ( ( static_cast<uint8>( subsystem.getSubsystemHost() ) & static_cast<uint8>( EngineSubsystemHost::kServer ) ) != 0 )
                     continue;
                 if ( skipped.empty() == false )
@@ -530,8 +530,8 @@ namespace sw
     {
         if ( _pUIDriver == nullptr )
             return; // UI 를 짓지 않는 구성(전용 서버)
-        const IWindow* const pMainWindow = MainWindowSubsystem::findMainWindow();
-        EngineUIFrame        frame{};
+        const GenericWindow* const pMainWindow = MainWindowSubsystem::findMainWindow();
+        EngineUIFrame              frame{};
         frame._width         = vpWidth;
         frame._height        = vpHeight;
         frame._pointerOrigin = int2{ mainOutput._windowX, mainOutput._windowY };
@@ -549,12 +549,12 @@ namespace sw
         const ViewportTarget& mainOutput = views.getMainOutput();
         // 게임이 그려지는 픽셀 크기 — 주 출력이 있으면 그 크기(에디터 게임 뷰의 이미지), 없으면 백버퍼(게임 창)다. 창 크기가 아니다:
         // 에디터의 게임 뷰는 창의 일부라 창 크기로 종횡비를 세면 카메라가 늘어난다. 카메라(종횡비 · 픽셀 퍼펙트)와 런타임 UI 가 이 값 하나를 쓴다.
-        const IWindow* const pMainWindow = MainWindowSubsystem::findMainWindow();
-        const bool           bHasDevice  = _pRHI != nullptr && _pRHI->hasDevice();
-        const bool           bHasOutput  = mainOutput._width > 0 && mainOutput._height > 0;
-        const uint32         vpWidth     = bHasOutput ? mainOutput._width : ( bHasDevice ? _pRHI->getDevice().getBackBufferWidth() : ( pMainWindow != nullptr ? pMainWindow->getWidth() : 0 ) );
-        const uint32         vpHeight    = bHasOutput ? mainOutput._height : ( bHasDevice ? _pRHI->getDevice().getBackBufferHeight() : ( pMainWindow != nullptr ? pMainWindow->getHeight() : 0 ) );
-        _frameDeltaSeconds               = deltaTime;
+        const GenericWindow* const pMainWindow = MainWindowSubsystem::findMainWindow();
+        const bool                 bHasDevice  = _pRHI != nullptr && _pRHI->hasDevice();
+        const bool                 bHasOutput  = mainOutput._width > 0 && mainOutput._height > 0;
+        const uint32               vpWidth     = bHasOutput ? mainOutput._width : ( bHasDevice ? _pRHI->getDevice().getBackBufferWidth() : ( pMainWindow != nullptr ? pMainWindow->getWidth() : 0 ) );
+        const uint32               vpHeight    = bHasOutput ? mainOutput._height : ( bHasDevice ? _pRHI->getDevice().getBackBufferHeight() : ( pMainWindow != nullptr ? pMainWindow->getHeight() : 0 ) );
+        _frameDeltaSeconds                     = deltaTime;
 
         if ( _headlessState.isHeadless() )
             return;

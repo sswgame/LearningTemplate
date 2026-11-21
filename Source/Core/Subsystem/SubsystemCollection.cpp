@@ -17,7 +17,7 @@ namespace sw
         {
             SubsystemCollection*      _pCollection; ///< 초기화를 부른 목록
             uint32                    _index;       ///< 초기화 중인 자리
-            const ISubsystem*         _pUndeclared; ///< 의존 선언 없이 얻은 첫 서브시스템(없으면 nullptr)
+            const Subsystem*          _pUndeclared; ///< 의존 선언 없이 얻은 첫 서브시스템(없으면 nullptr)
             SubsystemInitializeFrame* _pOuter;      ///< 바깥 프레임(없으면 nullptr)
         };
 
@@ -134,7 +134,7 @@ namespace sw
 
     SubsystemInitResult SubsystemCollection::initializeAt( uint32 index )
     {
-        ISubsystem&              subsystem = *_listEntry[index]._pSubsystem;
+        Subsystem&               subsystem = *_listEntry[index]._pSubsystem;
         const ScopedMemoryTag    subsystemMemoryTag{ subsystem.getSubsystemMemoryTag() };
         SubsystemInitializeFrame frame{ this, index, nullptr, t_pInitializeFrame };
         t_pInitializeFrame               = &frame;
@@ -186,7 +186,7 @@ namespace sw
         t_pInitializeFrame = static_cast<SubsystemInitializeFrame*>( _pSaved );
     }
 
-    void SubsystemCollection::recordInitializeLookup( const ISubsystem& target )
+    void SubsystemCollection::recordInitializeLookup( const Subsystem& target )
     {
         SubsystemInitializeFrame* const pFrame = t_pInitializeFrame;
         if ( pFrame == nullptr || pFrame->_pUndeclared != nullptr )
@@ -263,8 +263,8 @@ namespace sw
             _listShutdownTiming.resize( _listInitialized.size() );
         for ( size_t order = _listInitialized.size(); order > 0; --order )
         {
-            ISubsystem* const pSubsystem = _listEntry[_listInitialized[order - 1]]._pSubsystem;
-            const int64       startNanos = _bTimingEnabled ? MonotonicClock::nowNanoseconds() : 0;
+            Subsystem* const pSubsystem = _listEntry[_listInitialized[order - 1]]._pSubsystem;
+            const int64      startNanos = _bTimingEnabled ? MonotonicClock::nowNanoseconds() : 0;
             pSubsystem->stopSubsystem();
             if ( _bTimingEnabled )
                 _listShutdownTiming[order - 1] = { pSubsystem->getSubsystemName(), ( MonotonicClock::nowNanoseconds() - startNanos ) / constant::time::kNanosecondsPerMicrosecond };
@@ -310,7 +310,7 @@ namespace sw
         _bSorted = SW_FALSE;
     }
 
-    void SubsystemCollection::shutdownDependents( const ISubsystem& subsystem )
+    void SubsystemCollection::shutdownDependents( const Subsystem& subsystem )
     {
         // 위상 순서로 훑으며 의존을 따라 표시한다 — 의존이 늘 먼저 오므로 한 번에 닫힌다(간접 의존 포함).
         vector<uint8> listDependent( _listEntry.size(), SW_FALSE );

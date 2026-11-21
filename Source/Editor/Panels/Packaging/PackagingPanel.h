@@ -7,13 +7,13 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Process/Process.h"
 
-#include "Editor/Common/GUI/Panel/IEditorPanel.h"
+#include "Editor/Common/GUI/Panel/EditorPanel.h"
 #include "Editor/Panels/Packaging/Model/PackagingViewModel.h"
 
 namespace sw::editor
 {
     /** @brief 배포 패키지를 만드는 도구 창입니다. 진행은 진입점의 `[package]` 줄로 읽습니다. */
-    class PackagingPanel : public IEditorPanel
+    class PackagingPanel : public EditorPanel
     {
     public:
         /** @brief 패널 id 입니다. */

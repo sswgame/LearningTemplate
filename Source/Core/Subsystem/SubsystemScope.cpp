@@ -97,7 +97,7 @@ namespace sw
         return findInMounted( typeHash );
     }
 
-    bool SubsystemScope::registerEntry( uint64 typeHash, void* pObject, ISubsystem* pOwner, SubsystemModuleVisibility moduleVisibility )
+    bool SubsystemScope::registerEntry( uint64 typeHash, void* pObject, Subsystem* pOwner, SubsystemModuleVisibility moduleVisibility )
     {
         // 겹침은 이 범위 자신의 칸만 본다 — 자식이 공개한 같은 타입이 있어도 이 범위는 제 것을 걸 수 있다(이 범위의 칸이 이긴다).
         if ( findOwnEntry( typeHash ) != nullptr )
@@ -108,7 +108,7 @@ namespace sw
         return true;
     }
 
-    bool SubsystemScope::publishEntry( uint64 typeHash, void* pObject, ISubsystem* pOwner )
+    bool SubsystemScope::publishEntry( uint64 typeHash, void* pObject, Subsystem* pOwner )
     {
         Entry* const pEntry = VectorUtil::findBy<&Entry::_typeHash>( _listEntry, typeHash );
         if ( pEntry != nullptr )
@@ -175,7 +175,7 @@ namespace sw
         }
     }
 
-    ISubsystem* SubsystemScope::findOwner( uint64 typeHash ) const
+    Subsystem* SubsystemScope::findOwner( uint64 typeHash ) const
     {
         const Entry* pEntry = findOwnEntry( typeHash );
         return pEntry != nullptr ? pEntry->_pOwner : nullptr;

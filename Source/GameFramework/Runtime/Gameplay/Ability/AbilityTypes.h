@@ -6,7 +6,7 @@
  *          - **어트리뷰트**(`AttributeSet`): 숫자 상태(체력, 마나, 공격력). 기본값(base)과 지속 효과를 더한 현재값(current)을 따로 둔다.
  *          - **게임플레이 이펙트**(`AbilityEffectDef` 와 `AbilityEffectSpec`): 어트리뷰트와 태그를 바꾸는 데이터. 즉시, 지속, 무한 유형이 있고 주기와 스택을 지원한다.
  *          - **게임플레이 어빌리티**(`Ability`): 발동 조건(태그, 비용, 쿨다운)을 통과하면 실행되는 행동. 지연 작업은 `AbilityTask` 가 맡는다.
- *          - **어빌리티 시스템 컴포넌트**(`AbilityComponent`): 위 셋을 한 오브젝트에서 함께 돌리고, 시간과 태그와 이벤트를 처리한다.
+ *          - **어빌리티 시스템 컴포넌트**(`AbilitySystemComponent`): 위 셋을 한 오브젝트에서 함께 돌리고, 시간과 태그와 이벤트를 처리한다.
  *
  *          이 파일은 네 부분이 모두 include 하므로 다른 어빌리티 헤더를 include 하지 않는다.
  */
@@ -28,7 +28,7 @@ namespace sw
     /**
      * @brief 대상에 적용된 이펙트 하나를 가리키는 핸들입니다(언리얼의 `FActiveGameplayEffectHandle` 에 해당).
      * @details 즉시(Instant) 이펙트도 적용에 성공하면 유효한 핸들을 받는다. 다만 활성 목록에는 없으므로 `findActiveEffect` 는 nullptr 을 반환한다.
-     *          "적용됐는가" 는 `isValid()` 로, "아직 걸려 있는가" 는 `AbilityComponent::isActiveEffect` 로 확인한다.
+     *          "적용됐는가" 는 `isValid()` 로, "아직 걸려 있는가" 는 `AbilitySystemComponent::isActiveEffect` 로 확인한다.
      */
     struct ActiveEffectHandle
     {
@@ -128,7 +128,7 @@ namespace sw
     // 3) 어빌리티 열거형
     // ------------------------------------------------------------------------------
     /**
-     * @brief 어빌리티 발동이 실패한 이유입니다. `AbilityComponent::tryActivateAbility` 가 반환합니다.
+     * @brief 어빌리티 발동이 실패한 이유입니다. `AbilitySystemComponent::tryActivateAbility` 가 반환합니다.
      * @details 언리얼은 실패 이유를 태그로 반환한다. 여기서는 UI 와 테스트가 바로 읽을 수 있도록 열거형으로 둔다(이름은 `TypeRegistry::enumToString` 으로 얻는다).
      */
     ENUM()

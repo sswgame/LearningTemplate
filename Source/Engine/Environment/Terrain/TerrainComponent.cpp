@@ -829,13 +829,13 @@ namespace sw
         // 레지스트리에서 한 번에 빼고(배치마다 소멸자가 빼면 목록을 청크 수만큼 접는다) 놓는다. 이미 빠진 배치의 소멸자는 아무것도 하지 않는다.
         if ( _pPrimitiveRegistry != nullptr )
         {
-            vector<ScenePrimitiveBatch*> listBatch;
+            vector<PrimitiveBatch*> listBatch;
             listBatch.reserve( _listChunk.size() );
             for ( Chunk& chunk : _listChunk )
             {
                 listBatch.push_back( chunk._batch.get() );
             }
-            _pPrimitiveRegistry->removeInstanceBatches( vector_reference<ScenePrimitiveBatch* const>( listBatch.data(), listBatch.size() ) );
+            _pPrimitiveRegistry->removeInstanceBatches( vector_reference<PrimitiveBatch* const>( listBatch.data(), listBatch.size() ) );
         }
         _listChunk.clear();
         _listStaleChunk.clear();

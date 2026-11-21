@@ -36,7 +36,7 @@
 #include "Engine/Renderer/Frame/Packet/RenderFramePacket.h"
 #include "Engine/Renderer/RenderThread.h"
 #include "Engine/Scene/SceneManager.h"
-#include "Engine/Window/IWindow.h"
+#include "Engine/Window/GenericWindow.h"
 #include "Engine/Window/MainWindowSubsystem.h"
 #include "Engine/Window/NativeWindowEvent.h"
 #include "Engine/Window/SplashSubsystem.h"
@@ -81,13 +81,13 @@ namespace sw
                 return true;
             }
 
-            /** @brief 표면이 없거나 앱이 멈춘 동안 창 메시지를 기다리는 최대 시간입니다. 메시지(수명 이벤트)가 오면 곧 깬다(`IWindow::waitForMessages`). */
+            /** @brief 표면이 없거나 앱이 멈춘 동안 창 메시지를 기다리는 최대 시간입니다. 메시지(수명 이벤트)가 오면 곧 깬다(`GenericWindow::waitForMessages`). */
             static constexpr uint32 kPausedWaitMilliseconds = 10;
 
             /** @brief 감시 값 `Window.RenderPausedTicks` — 표면을 잃거나 앱이 멈춰 프레임을 돌지 않은 메인 루프 틱의 누적입니다. 주 창이 없으면(헤드리스) 값이 없습니다. */
             [[nodiscard]] static bool readWindowRenderPausedTicks( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                const IWindow* pWindow = MainWindowSubsystem::findMainWindow();
+                const GenericWindow* pWindow = MainWindowSubsystem::findMainWindow();
                 if ( pWindow == nullptr )
                     return false;
                 outValue = static_cast<float64>( pWindow->getRenderPausedTickCount().get() );
@@ -97,7 +97,7 @@ namespace sw
             /** @brief 감시 값 `Window.Minimized` — 주 창이 최소화돼 있으면 1 입니다(플랫폼 통보 기준). 주 창이 없으면(헤드리스) 값이 없습니다. */
             [[nodiscard]] static bool readWindowMinimized( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                const IWindow* pWindow = MainWindowSubsystem::findMainWindow();
+                const GenericWindow* pWindow = MainWindowSubsystem::findMainWindow();
                 if ( pWindow == nullptr )
                     return false;
                 outValue = pWindow->isMinimized() ? 1.0 : 0.0;
@@ -144,7 +144,7 @@ namespace sw
     App::~App() = default;
 
     /** @brief 게임(과 에디터) 인스턴스 — 모듈 호스트입니다. `ClientModuleManager` 로 게임과 에디터 인스턴스를 만든다(라이브러리는 `loadModuleLibraries` 가 이미 올렸다). */
-    class App::GameHostService final : public ISubsystem
+    class App::GameHostService final : public Subsystem
     {
     public:
         static constexpr const utf8* kSubsystemName = "Game";
@@ -185,7 +185,7 @@ namespace sw
     };
 
     /** @brief 사용자 설정의 화면 적용입니다. */
-    class App::UserSettingsHostService final : public ISubsystem
+    class App::UserSettingsHostService final : public Subsystem
     {
     public:
         static constexpr const utf8* kSubsystemName = "UserSettings";
@@ -208,7 +208,7 @@ namespace sw
     };
 
     /** @brief 런타임 UI 의 클립보드 · 접근성 · 끝내기 명령입니다. */
-    class App::RuntimeUIHooksHostService final : public ISubsystem
+    class App::RuntimeUIHooksHostService final : public Subsystem
     {
     public:
         static constexpr const utf8* kSubsystemName = "RuntimeUIHooks";
@@ -231,7 +231,7 @@ namespace sw
     };
 
     /** @brief 개발 콘솔(게임 창 콘솔과 표준 입력 채널)입니다. 명령이 게임이 올린 개발 명령 · 변수를 부른다 — 게임 뒤에 서고 게임보다 먼저 내려간다. */
-    class App::DevConsoleHostService final : public ISubsystem
+    class App::DevConsoleHostService final : public Subsystem
     {
     public:
         static constexpr const utf8* kSubsystemName = "DevConsole";
@@ -413,7 +413,7 @@ namespace sw
         }
         if ( pWindowHost->getWindow() == nullptr )
         {
-            unique_ptr<IWindow> window = IWindow::createMainWindow( engine::getSubsystem<PackEngineSettings>()._windowTitle.c_str(), width, height, commandLineManager );
+            unique_ptr<GenericWindow> window = GenericWindow::createMainWindow( engine::getSubsystem<PackEngineSettings>()._windowTitle.c_str(), width, height, commandLineManager );
             if ( window == nullptr )
             {
                 SW_LOG_ERROR_ID( "App.FailedCreatePlatformWindow", "Failed to create platform window!" );

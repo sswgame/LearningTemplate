@@ -5,8 +5,8 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
+#include "GameFramework/Runtime/Character/AI/Schedule/NPCScheduleComponent.h"
 #include "GameFramework/Runtime/Character/AI/Schedule/ScheduleCatalog.h"
-#include "GameFramework/Runtime/Character/AI/Schedule/ScheduleNPCComponent.h"
 #include "GameFramework/Runtime/Character/AI/Schedule/ScheduleSaveState.h"
 #include "GameFramework/Runtime/Character/AI/Schedule/ScheduleSystem.h"
 
@@ -128,7 +128,7 @@ SW_TEST_CASE( ScheduleSystemTest, BrokenLinksFailTheLoad )
 }
 
 /**
- * @brief [ScheduleSystemTest] 오브젝트가 어느 일정 NPC 인지는 `ScheduleNPCComponent` 의 id 로 찾는다 — 이름이 NPC id 와 같아도 칸이 없으면 NPC 가 아니다
+ * @brief [ScheduleSystemTest] 오브젝트가 어느 일정 NPC 인지는 `NPCScheduleComponent` 의 id 로 찾는다 — 이름이 NPC id 와 같아도 칸이 없으면 NPC 가 아니다
  * @details 예전에는 디버그 HUD 가 오브젝트 이름(`Villager.<id>` 의 끝)으로, 상호작용 끼어들기가 이름 그대로 맞췄다. 변이: `findNPCIndex` 가 이름을 보면 둘째 단언이 진다.
  */
 SW_TEST_CASE( ScheduleSystemTest, NPCObjectIsFoundByItsComponentNotItsName )
@@ -140,11 +140,11 @@ SW_TEST_CASE( ScheduleSystemTest, NPCObjectIsFoundByItsComponentNotItsName )
 
     sw::GameObjectManager manager;
     sw::GameObject*       pVillager = manager.createGameObject( sw::hashed_string( "Villager.b" ) );
-    pVillager->addComponent<sw::ScheduleNPCComponent>()->setNPCID( sw::hashed_string( "b" ) );
+    pVillager->addComponent<sw::NPCScheduleComponent>()->setNPCID( sw::hashed_string( "b" ) );
     sw::GameObject* pNamedOnly = manager.createGameObject( sw::hashed_string( "a" ) );
 
-    const sw::optional<int32> villagerIndex = sw::ScheduleNPCComponent::findNPCIndex( schedule, *pVillager );
+    const sw::optional<int32> villagerIndex = sw::NPCScheduleComponent::findNPCIndex( schedule, *pVillager );
     SW_REQUIRE_TRUE( villagerIndex.has_value() );
     SW_EXPECT_TRUE( schedule.getNPCID( *villagerIndex ) == sw::hashed_string( "b" ) );
-    SW_EXPECT_FALSE( sw::ScheduleNPCComponent::findNPCIndex( schedule, *pNamedOnly ).has_value() );
+    SW_EXPECT_FALSE( sw::NPCScheduleComponent::findNPCIndex( schedule, *pNamedOnly ).has_value() );
 }

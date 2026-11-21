@@ -5,8 +5,8 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringUtil.h"
-#include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/ServiceSlot.h"
+#include "Core/Subsystem/Subsystem.h"
 
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Foundation/EngineServices.h"
@@ -129,7 +129,7 @@ namespace sw
      * @class CharacterStepHistorySwitch
      * @brief 모든 캐릭터의 스텝 기록 스위치(물리 워커가 읽는다) — 예전 함수 정적(감춘 싱글턴)을 엔진 범위 서브시스템이 든다. 엔진을 다시 세우면 새로 선다.
      */
-    class CharacterStepHistorySwitch final : public ISubsystem
+    class CharacterStepHistorySwitch final : public Subsystem
     {
     public:
         static constexpr const utf8* kSubsystemName = "CharacterStepHistorySwitch";

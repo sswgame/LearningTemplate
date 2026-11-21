@@ -51,7 +51,7 @@ namespace sw
             int32                 npcIndex = -1;
             if ( findNPC( query._target, pSystem, npcIndex, outValue ) == false )
                 return false;
-            const ScheduleNPCView view = pSystem->getNPCView( npcIndex );
+            const NPCScheduleView view = pSystem->getNPCView( npcIndex );
             outValue.setText( view._activity.empty() ? string_view{ "none" } : string_view{ view._activity.c_str() } );
             return true;
         }
@@ -65,17 +65,17 @@ namespace sw
                 return false;
             switch ( pSystem->getNPCView( npcIndex )._phase )
             {
-                case ScheduleNPCPhase::Traveling:
+                case NPCSchedulePhase::Traveling:
                 {
                     outValue.setText( "Traveling" );
                     break;
                 }
-                case ScheduleNPCPhase::Performing:
+                case NPCSchedulePhase::Performing:
                 {
                     outValue.setText( "Performing" );
                     break;
                 }
-                case ScheduleNPCPhase::Interrupted:
+                case NPCSchedulePhase::Interrupted:
                 {
                     outValue.setText( "Interrupted" );
                     break;
@@ -110,7 +110,7 @@ namespace sw
             int32                 npcIndex = -1;
             if ( findNPC( query._target, pSystem, npcIndex, outValue ) == false )
                 return false;
-            const ScheduleNPCView view = pSystem->getNPCView( npcIndex );
+            const NPCScheduleView view = pSystem->getNPCView( npcIndex );
             outValue.setNumber( static_cast<float64>( float3::getHorizontalDistance( view._location._position, view._target._position ) ) );
             return true;
         }

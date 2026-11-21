@@ -16,6 +16,11 @@ Scripts/lint/naming_words.py
 - lookup — 끝 단어가 `For` · `Of` 인 함수는 조회 동사(`_lookupWords` — get · find · compute …)로 시작해야 한다(`materialGroupFor` 는 "찾거나 만든다" 를 숨겼다).
 - kind — 값의 갈래를 고르는 열거형(`enum class`)은 끝이 `Kind` 다 — `…Type` 은 C++ · 리플렉션 형식을 뜻한다(NamingCpp). 프로토콜 · 외부 API 의 자기 용어(`HTTP2FrameType`)는 `_keep`.
   낱말 표는 낱말 하나씩만 봐서 열거형 끝말 모양을 막지 못했다 — 2026-11-19 24 개를 전수 개명한 뒤 새로 들어오지 않게 둔다.
+- component — `…Component` 를 이어받은 형식(정의의 첫 기반 이름이 `Component` 로 끝난다)은 이름도 `Component` 로 끝나고, 컴포넌트가 아닌 형식은 `Component` 로
+  끝나지 않는다(언리얼 `U…Component` · 유니티 `Component` 파생 관례 — docs/agents/NamingCpp.md "컴포넌트 이름"). 둘을 함께 보면 "끝이 Component 인 기반 = 컴포넌트" 가
+  귀납으로 성립해 파일 하나만 보고 판정한다. 접미가 빠진 컴포넌트(옛 말 따라가기 AI 조종자)가 있었다(TypeNamingAudit 2026-11-21). `Component` 로 시작하는 이름(`ComponentHandle`)은 해당 없음.
+- interface — `REFLECT( Interface )` 형식(상태 없는 리플렉션 인터페이스)은 `I` + 대문자로 시작한다(NamingCpp 인터페이스 규칙). 상태가 붙는 것은 생성 코드의 `static_assert` 가 막고,
+  이름은 형식이 말하지 못해 여기서 본다 — 역할을 베이스로 만들어 `I` 없는 계약(옛 체력 원천 베이스)이 생겼던 자리다.
 - word — 모든 선언 이름(형식 · 열거자 · 별칭 · 함수 · 멤버 · 상수 · 변수 · 매크로)과 `Source` 의 파일 · 폴더 이름, 스크립트(`Scripts` · `.claude/hooks` ·
   `.claude/skills` · `cmake` 의 함수 · 클래스 · 상수 · CLI 명령 · 규칙 id · CMake 함수 · 옵션 · 파일 · 폴더 이름)의 **모든 낱말**이 낱말 표
   (`_words` 의 a 업계 · b 게임)에 있어야 한다. 앞 규칙들은 함수 첫 단어 · 형식 끝 단어만 허용 표로 봐서, 멤버 · 파일 이름 · 이름 가운데의 조어
@@ -52,7 +57,7 @@ from lint.rule_tables import ExceptionTable, get_table_path, read_rule_table  # 
 
 RULE_ID = "naming-words"
 CONFIG_PATH = get_table_path(RULE_ID)   # 안내 글이 가리키는 낱말 표
-NAME_RULES = ("verb", "term", "predicate", "lookup", "word", "kind")   # 이름마다 한 줄씩 모으는 판정(같은 이름은 처음 자리 하나만)
+NAME_RULES = ("verb", "term", "predicate", "lookup", "word", "kind", "component", "interface")   # 이름마다 한 줄씩 모으는 판정(같은 이름은 처음 자리 하나만)
 KEEP_SECTIONS = ("_keep", "_acronymKeep")   # 이름 하나씩의 예외 — 까닭은 형식이 보고, 낡은 줄은 예전처럼 세지 않는다
 EXTENSIONS = (".h", ".cpp", ".inl")
 COMMENT = re.compile(r"//[^\n]*|/\*.*?\*/", re.S)
@@ -94,6 +99,10 @@ MACRO_DECLARATION = re.compile(r"^[ \t]*#[ \t]*define[ \t]+([A-Za-z_]\w*)", re.M
 FUNCTION_DECLARATION = re.compile(r"\b([A-Za-z_]\w*)[\s\*&>]+((?:[A-Za-z_]\w*::)*)~?([A-Za-z_]\w*)\s*\(")
 VARIABLE_DECLARATION = re.compile(r"\b([A-Za-z_]\w*)[\s\*&>]+([A-Za-z_]\w*)\s*(?=[;=\{\[,\)]|:(?!:))")
 MACRO_NAME = re.compile(r"[A-Z0-9_]+")
+#: 기반 목록이 있는 형식 정의(`class X : public Y {`) — 전방 선언(`class X;`)은 `{` 가 없어 빠진다. 기반 목록은 둘째 무리(없으면 None)
+TYPE_DEFINITION = re.compile(r"\b(?:class|struct)\s+(?:(?:SW_\w+|alignas\s*\([^)]*\)|\[\[[^\]]*\]\])\s+)*([A-Za-z_]\w*)\s*(?:final\s*)?(?::(?!:)\s*([^{;()]*))?\{")
+REFLECT_INTERFACE_TYPE = re.compile(r"\bREFLECT\(\s*Interface\b[^)]*\)\s*(?:class|struct)\s+(?:SW_\w+\s+)*([A-Za-z_]\w*)")
+COMPONENT_SUFFIX = "Component"
 LETTERS = re.compile(r"[A-Za-z]+")
 PARAMETER_PREFIXES = ("out", "inout", "outb", "inoutb", "arr", "list", "map", "set")
 DECLARATION_KINDS = ("type", "enumerator", "alias", "function", "member", "constant", "variable", "macro", "command", "file", "folder")
@@ -105,6 +114,30 @@ def classify_variable(name: str) -> str:
     if re.match(r"k[A-Z]", name):
         return "constant"
     return "variable"
+
+
+def find_first_base(bases: str | None) -> str:
+    """기반 목록 글(`public sw::Foo<T>, private Bar`)의 첫 기반의 짧은 이름(`Foo`)입니다. 없으면 빈 글입니다."""
+    if not bases:
+        return ""
+    text = bases
+    while True:   # 템플릿 인자를 안쪽부터 지운다 — 인자의 쉼표가 기반 구분으로 읽히지 않게
+        stripped = re.sub(r"<[^<>]*>", "", text)
+        if stripped == text:
+            break
+        text = stripped
+    words = [word for word in re.findall(r"[A-Za-z_]\w*", text.split(",")[0]) if word not in ("public", "protected", "private", "virtual")]
+    return words[-1] if words else ""
+
+
+def find_component_problem(name: str, first_base: str) -> str | None:
+    """component 규칙 — 이름과 첫 기반의 `Component` 접미가 어긋나면 그 안내입니다."""
+    base_is_component = first_base.endswith(COMPONENT_SUFFIX)
+    if base_is_component and not name.endswith(COMPONENT_SUFFIX):
+        return f"컴포넌트 '{name}'(기반 {first_base})의 이름이 Component 로 끝나지 않는다 — [수식어][기전]Component 로 바꾼다(docs/agents/NamingCpp.md 컴포넌트 이름)"
+    if name.endswith(COMPONENT_SUFFIX) and name != COMPONENT_SUFFIX and not base_is_component:
+        return f"'{name}' 는 컴포넌트가 아닌데(첫 기반 {first_base or '없음'}) 이름이 Component 로 끝난다 — 하는 일 이름으로 바꾸거나 Component 를 잇는다"
+    return None
 
 
 def collect_declarations(code: str) -> list[tuple[str, str]]:
@@ -267,6 +300,15 @@ def classify_names(list_code: Iterable[tuple[str, str]], table: dict) -> tuple[l
             name = match.group(1)
             if name.endswith("Type"):
                 record("kind", name, path, f"열거형 '{name}' 의 끝이 Type 이다 — 값의 갈래는 …Kind(NamingCpp, 언리얼 E…Kind · 유니티 …Kind). 프로토콜 · 외부 API 의 자기 용어면 _keep 에 이유와 함께")
+        for match in TYPE_DEFINITION.finditer(code):
+            name = match.group(1)
+            problem = find_component_problem(name, find_first_base(match.group(2)))
+            if problem is not None:
+                record("component", name, path, problem)
+        for match in REFLECT_INTERFACE_TYPE.finditer(code):
+            name = match.group(1)
+            if re.fullmatch(r"I[A-Z]\w*", name) is None:
+                record("interface", name, path, f"REFLECT( Interface ) 형식 '{name}' 는 I + 대문자로 시작한다 — 상태 없는 계약의 이름 규칙(NamingCpp 인터페이스)")
         for match in BOOL_FUNCTION.finditer(code):
             name = match.group(1)
             words = split_words(name, function=True)
@@ -387,7 +429,7 @@ def run_self_check() -> None:
     table = {"_banned": {"drain": "flush 또는 poll"},
              "_bannedTerms": {"Verdict": "Result", "Work": "Job"}, "_keepTerms": ["WorkArea"], "_predicateWords": ["is", "has", "uses", "starts"], "_lookupWords": ["get", "find"],
              "_keep": {"MailboxServiceResult": "이유"}}
-    clean = 'struct FooComponent {}; int getValue( int x ); struct MailboxServiceResult {}; // drainEvents() hasWork\nconst char* s = "drainEvents() Verdict"; bool hasValue(); bool setAxisTags(); bool focusPanel(); bool startsWith(); RECT readWorkArea; int getSlotFor( int x );'
+    clean = 'struct FooComponent : Component {}; int getValue( int x ); struct MailboxServiceResult {}; // drainEvents() hasWork\nconst char* s = "drainEvents() Verdict"; bool hasValue(); bool setAxisTags(); bool focusPanel(); bool startsWith(); RECT readWorkArea; int getSlotFor( int x );'
     problems, found_by_rule = classify_names([("a.h", strip_code(clean))], table)
     assert problems == [] and all(not names for names in found_by_rule.values()), (problems, found_by_rule)
     bad = 'void drainEvents( int x ); struct FooVerdict {}; bool hasPendingWork(); bool drawsBatch(); int materialGroupFor( int x ); int _verdictCount;'
@@ -399,6 +441,12 @@ def run_self_check() -> None:
     assert set(found_by_rule["lookup"]) == {"materialGroupFor"}, found_by_rule
     kind_problems, kind_found = classify_names([("a.h", strip_code("enum class PacketType : uint8 { A }; enum class PacketKind { A }; enum OldType { B }; struct ValueType {};"))], table)
     assert set(kind_found["kind"]) == {"PacketType"}, kind_found   # enum class 만 본다 — 구조체 · 옛 enum 은 다른 규칙 몫
+    shape_code = strip_code("class SW_API FooComponent : public SceneComponent {}; struct BarMover final : public sw::Component {}; struct BazComponent : public Widget<Component> {};"
+                            "class ComponentHandle {}; class SW_API Component {}; struct QuxComponent; REFLECT( Interface ) struct IGood { }; REFLECT( Interface ) struct Bad { };")
+    _, shape_found = classify_names([("a.h", shape_code)], table)
+    assert set(shape_found["component"]) == {"BarMover", "BazComponent"}, shape_found   # 양성: 접미 없는 컴포넌트 · 컴포넌트가 아닌 Component 끝말. 음성: FooComponent · ComponentHandle · 기반 Component · 전방 선언
+    assert set(shape_found["interface"]) == {"Bad"}, shape_found   # 양성: I 없는 인터페이스. 음성: IGood
+    assert find_first_base("public sw::Map<Key, Value>, private Other") == "Map" and find_first_base(None) == ""
     name_problems = list_name_problems(found_by_rule)
     assert len(name_problems) == 6 and name_problems[0].startswith("[verb] a.h: ") and any("materialGroupFor" in line for line in name_problems), name_problems
     table_names = dict(table, _bannedNames={"CombatHealth": "HealthStateMachine"})

@@ -14,8 +14,8 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/ServiceSlot.h"
+#include "Core/Subsystem/Subsystem.h"
 
 #include "Engine/Serialization/XML/XMLDocument.h"
 
@@ -32,7 +32,7 @@ namespace sw
      * @class ComponentDefaults
      * @brief 게임 팩 설정이 지정한 gamesettings.xml 의 `<Defaults>` 를 리플렉션으로 주입하는 서비스입니다.
      */
-    class SW_API ComponentDefaults : public ISubsystem
+    class SW_API ComponentDefaults : public Subsystem
     {
     public:
         /** @brief 서브시스템 이름입니다. 초기화 · 종료할 것이 없고 수명(서비스 범위 — 엔진 범위보다 먼저 서고 나중에 사라진다)만 컬렉션이 정한다. */

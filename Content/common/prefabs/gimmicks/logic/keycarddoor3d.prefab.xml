@@ -1,0 +1,21 @@
+<?asset guid="308e0f591f0edeefc4844bfadfea63fa"?>
+<Prefab formatVersion="1" _base="common/prefabs/gimmicks/logic/lockeddoor3d.prefab.xml" name="KeycardDoor3D">
+	<PrefabOverrides>
+		<Override key="#93b8f1000cacd0ad">
+			<InteractableComponent _interactionID="SwipeKeycard" />
+		</Override>
+		<Override key="#afcc91cc53412045">
+			<GimmickCircuitComponent>
+				<_listNode>
+					<GimmickNodeDesc _id="swipe" _kind="Interaction" _params="" />
+					<GimmickNodeDesc _id="hold" _kind="Pulse" _params="seconds=4" />
+					<GimmickNodeDesc _id="door" _kind="Door" _params="openTime=0.4; closeTime=0.8; openOffset=0 3 0" />
+				</_listNode>
+				<_listWire>
+					<GimmickWireDesc _from="swipe.OnUsed" _to="hold.In" _bInvert="false" />
+					<GimmickWireDesc _from="hold.Out" _to="door.Open" _bInvert="false" />
+				</_listWire>
+			</GimmickCircuitComponent>
+		</Override>
+	</PrefabOverrides>
+</Prefab>

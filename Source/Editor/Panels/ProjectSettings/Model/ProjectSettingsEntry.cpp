@@ -57,7 +57,7 @@ namespace sw::editor
             const ProjectSettingsEntry active = *pLoaded; // 복사 — 아래 push_back 이 배열을 옮긴다
             pLoaded->_gameName                = FileUtil::removeExtension( FileUtil::getFileNamePart( active._relativePath ) );
             vector<string> listPath;
-            if ( FileUtil::collectFiles( FileUtil::joinPath( projectRoot, presetFolder ), ".json", listPath, false ) == false )
+            if ( FileUtil::collectFiles( FileUtil::toDiskPath( FileUtil::joinPath( projectRoot, presetFolder ) ), ".json", listPath, false ) == false )
             {
                 SW_LOG_ERROR_ID( "ProjectSettingsPanel.PresetFolderUnreadable", "Project settings: %# could not be listed - the other games' presets are missing", presetFolder );
                 continue;
@@ -84,7 +84,7 @@ namespace sw::editor
         outListEntry.clear();
         const string   configFolder = FileUtil::joinPath( projectRoot, kTableFolder );
         vector<string> listPath;
-        if ( FileUtil::collectFiles( configFolder, ".json", listPath, true ) == false )
+        if ( FileUtil::collectFiles( FileUtil::toDiskPath( configFolder ), ".json", listPath, true ) == false )
         {
             SW_LOG_ERROR_ID( "ProjectSettingsPanel.TableFolderUnreadable", "Project settings: %# could not be listed - the table pages are missing", configFolder );
             return false;

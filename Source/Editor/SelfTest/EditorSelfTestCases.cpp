@@ -43,7 +43,7 @@
 #include "Engine/Object/GameObject/Registry/CameraRegistry.h"
 #include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
-#include "Engine/Window/IWindow.h"
+#include "Engine/Window/GenericWindow.h"
 #include "Engine/Window/MainWindowSubsystem.h"
 
 #include <imgui.h>
@@ -313,7 +313,7 @@ namespace sw::editor
             };
 
             // ------------------------------------------------------------------------------
-            // dock.corePanelsAreDocked: 영역을 밝힌 열린 패널(`IEditorPanel::getDefaultDockSlot`)이 기본 배치에서 실제로 도킹됐는지 확인한다(열린 채 시작하는 도구 패널 포함)
+            // dock.corePanelsAreDocked: 영역을 밝힌 열린 패널(`EditorPanel::getDefaultDockSlot`)이 기본 배치에서 실제로 도킹됐는지 확인한다(열린 채 시작하는 도구 패널 포함)
             // ------------------------------------------------------------------------------
             static EditorSelfTestStep runCorePanelsAreDocked( EditorSelfTestContext& context )
             {
@@ -346,7 +346,7 @@ namespace sw::editor
                  * @brief 이번 프레임의 메인 뷰포트와 도크 노드를 검사합니다.
                  * @param bCompareShare false 이면 노드마다 창에 대한 비율을 기준으로 기록하고, true 이면 기록해 둔 기준과 비교합니다.
                  */
-                static void expectDockFitsViewport( EditorSelfTestContext& context, const IWindow& window, bool bCompareShare )
+                static void expectDockFitsViewport( EditorSelfTestContext& context, const GenericWindow& window, bool bCompareShare )
                 {
                     constexpr float32 kPixelTolerance = 1.0f;
                     constexpr float32 kShareTolerance = 0.03f;
@@ -394,7 +394,7 @@ namespace sw::editor
                     constexpr uint32 kNarrowWidth       = 640; // 에디터 최소 크기보다 작다. 창은 최소 크기에서 멈춰야 한다
                     constexpr uint32 kNarrowHeight      = 360;
 
-                    IWindow* pWindow = MainWindowSubsystem::findMainWindow();
+                    GenericWindow* pWindow = MainWindowSubsystem::findMainWindow();
                     if ( context.expect( pWindow != nullptr, "no active window" ) == false )
                         return EditorSelfTestStep::Done;
 
@@ -453,7 +453,7 @@ namespace sw::editor
              * @brief 창 크기 바꾸기가 에디터에 다 닿았으면 true 입니다 — 주 뷰포트 크기가 창 클라이언트 크기와 같고 주 도크스페이스가 그 크기로 갱신됐다.
              * @details 크기 통보 → 다음 NewFrame 의 DisplaySize → 도크 갱신 순서로 반영된다. 예전에는 단계마다 3 프레임을 어림해 기다렸다.
              */
-            static bool isWindowSizeApplied( const IWindow& window )
+            static bool isWindowSizeApplied( const GenericWindow& window )
             {
                 const ImGuiViewport* pMain  = ImGui::GetMainViewport();
                 const ImGuiDockNode* pRoot  = EditorDockLayout::findMainDockspace();

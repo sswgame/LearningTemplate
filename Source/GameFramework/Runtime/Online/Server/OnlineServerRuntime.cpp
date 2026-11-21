@@ -108,7 +108,7 @@ namespace sw
          * @class OnlineServerKitNode
          * @brief 키트 하나를 지역 컬렉션의 노드로 둡니다. 의존은 공통 기반 + 필수 키트 + 설정에 있는 선택 키트입니다.
          */
-        class OnlineServerKitNode final : public ISubsystem
+        class OnlineServerKitNode final : public Subsystem
         {
         public:
             OnlineServerKitNode( unique_ptr<IOnlineServerKit> kit, const utf8* pName, const OnlineServerKitEntry& entry, vector<const utf8*> listDependency,
@@ -222,7 +222,7 @@ namespace sw
         OnlineServerConfig                  _config{};
         SubsystemScope                      _kitScope{}; ///< 기반 노드와 키트 노드를 소유하고, 키트가 내놓은 인터페이스를 타입으로 찾게 한다
         OnlineServerKitContext              _context{ _kitScope, _clock };
-        unique_ptr<IServiceStore>           _store{};
+        unique_ptr<ServiceStore>            _store{};
         unique_ptr<IEphemeralStore>         _cache{};
         unique_ptr<IStreamTransport>        _ownedTransport{};
         unique_ptr<IStreamTransport>        _ownedAdminTransport{};
@@ -252,7 +252,7 @@ namespace sw
      * @brief 공통 기반(저장소 · 캐시 · 버스 · 예약 작업 · 호스트)의 노드입니다. 모든 키트가 이것에 의존하므로 처음 서고, 키트가 모두 멈춘 뒤 멈추며, 키트가 모두 종료한 뒤 종료합니다.
      * @details 호스트는 이 노드의 `initialize` 가 아니라 키트 `initialize` 뒤에 런타임이 띄운다(키트가 바인딩을 먼저 등록한다). 내리는 것은 이 노드의 `stop` 이다.
      */
-    class OnlineServerRuntime::BaseNode final : public ISubsystem
+    class OnlineServerRuntime::BaseNode final : public Subsystem
     {
     public:
         /** @p settings 는 `initialize` 의 인자이고 그 함수가 도는 동안(컬렉션 초기화)만 읽는다. */
@@ -353,7 +353,7 @@ namespace sw
             parts._healthCheckIndex = parts._pHealthRegistry->registerCheck( kHealthCheckName, true );
 
         SubsystemCollection& collection = parts._kitScope.getCollection();
-        const ISubsystem&    baseNode   = collection.add( make_unique<BaseNode>( *this, settings, nowMs ) );
+        const Subsystem&     baseNode   = collection.add( make_unique<BaseNode>( *this, settings, nowMs ) );
         if ( expected<void> kits = addKits( settings._bReverseIndependentKitOrder == SW_TRUE ); kits.has_value() == false )
             return kits;
         if ( collection.initializeAll( SubsystemHostMask::All ) == false )
@@ -364,7 +364,7 @@ namespace sw
         }
         for ( const uint32 index : collection.getInitializedIndices() )
         {
-            ISubsystem& node = collection.getSubsystem( index );
+            Subsystem& node = collection.getSubsystem( index );
             if ( &node != &baseNode )
                 parts._listKit.push_back( static_cast<OnlineServerKitNode*>( &node ) );
         }
@@ -434,7 +434,7 @@ namespace sw
                 StringUtil::wipeSecret( settings._store._secret );
                 return unexpected( Error{ ErrorKind::Unsupported, "the store driver needs a storage kit (GF_Server_SQLStore) that is not loaded", settings._store._driver } );
             }
-            expected<unique_ptr<IServiceStore>> store =
+            expected<unique_ptr<ServiceStore>> store =
                 pDriver->createServiceStore( settings._store._driver, settings._store._connection, settings._store._secret, parts._config._storeWorkerCount, nowMs );
             StringUtil::wipeSecret( settings._store._secret );
             if ( store.has_value() == false )
@@ -475,8 +475,8 @@ namespace sw
         OnlineServerKitContext& context = parts._context;
         context._pHost                  = &parts._host;
         context._pStore                 = parts._store.get();
-        // 전용 서버의 게임 모듈도 같은 저장소를 쓴다 — 키트 범위에 걸어 호스트 칸(`IServerKitLocator` · `ServerKitDependencies<ServerKitRequired<IServiceStore>, …>`)으로 찾게 한다(키트 인터페이스와 같은 길).
-        if ( parts._kitScope.bind<IServiceStore>( parts._store.get() ) == false )
+        // 전용 서버의 게임 모듈도 같은 저장소를 쓴다 — 키트 범위에 걸어 호스트 칸(`IServerKitLocator` · `ServerKitDependencies<ServerKitRequired<ServiceStore>, …>`)으로 찾게 한다(키트 인터페이스와 같은 길).
+        if ( parts._kitScope.bind<ServiceStore>( parts._store.get() ) == false )
             return unexpected( Error{ ErrorKind::AlreadyExists, "the service store is already in the kit scope" } );
         context._pCache              = parts._cache.get();
         context._pBus                = parts._busFront.get();

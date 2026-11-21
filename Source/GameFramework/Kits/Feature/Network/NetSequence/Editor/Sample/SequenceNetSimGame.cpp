@@ -17,7 +17,7 @@
 #include "GameFramework/Runtime/Character/Control/Controller/RemoteControllerComponent.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Runtime/Foundation/Condition/GameFlags.h"
-#include "GameFramework/Runtime/Gameplay/SessionState/SessionStateComponent.h"
+#include "GameFramework/Runtime/Gameplay/GameState/GameStateComponent.h"
 
 namespace sw
 {
@@ -134,8 +134,8 @@ namespace sw
                 }
                 if ( key == "EveryoneSeen" )
                 {
-                    const GameObject*            pSessionObject = _pWorld->getObjectManager().findGameObjectByName( hashed_string( kSessionName ) );
-                    const SessionStateComponent* pSession       = pSessionObject != nullptr ? pSessionObject->getComponent<SessionStateComponent>() : nullptr;
+                    const GameObject*         pSessionObject = _pWorld->getObjectManager().findGameObjectByName( hashed_string( kSessionName ) );
+                    const GameStateComponent* pSession       = pSessionObject != nullptr ? pSessionObject->getComponent<GameStateComponent>() : nullptr;
                     if ( pSession == nullptr )
                         return false;
                     outValue = static_cast<float64>( pSession->getFlags().getFlag( hashed_string( SequenceNetSimGame::kEveryoneFlag ) ) );
@@ -187,9 +187,9 @@ namespace sw
         GameObject*        pSessionObject = manager.createGameObject( hashed_string( kSessionName ) );
         if ( pSessionObject != nullptr )
         {
-            SessionStateComponent* pSession = pSessionObject->addComponent<SessionStateComponent>();
+            GameStateComponent* pSession = pSessionObject->addComponent<GameStateComponent>();
             if ( pSession != nullptr )
-                (void)pSession->initialize( SessionStateSettings{} );
+                (void)pSession->initialize( GameStateSettings{} );
         }
         addDirector( manager, kEveryoneDirector, kEveryoneFrames );
         addDirector( manager, kPlayerDirector, kPlayerFrames );

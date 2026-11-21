@@ -11,8 +11,8 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
-#include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/ServiceSlot.h"
+#include "Core/Subsystem/Subsystem.h"
 
 namespace sw
 {
@@ -67,7 +67,7 @@ namespace sw
      *          `-gv_assetLoadProfile=0` 이면 아무것도 모으지 않는다. 보고는 `report`(개발 도구가 `-gv_assetLoadReport=1` 이면 엔진 종료 때 부른다 — `ProfilerLaunchSubsystem`).
      *          언리얼 Insights 의 LoadTimeProfiler(패키지마다 IO · 직렬화 시간) · 유니티 프로파일러의 Loading 마커와 같은 자리입니다.
      */
-    class SW_API AssetLoadProfiler final : public ISubsystem
+    class SW_API AssetLoadProfiler final : public Subsystem
     {
     public:
         static constexpr uint32      kSlowestCount  = 16;

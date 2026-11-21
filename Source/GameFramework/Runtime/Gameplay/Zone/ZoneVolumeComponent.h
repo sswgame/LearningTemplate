@@ -19,7 +19,7 @@
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Asset/AssetRef.h"
-#include "Engine/Object/Component/Component.h"
+#include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -46,7 +46,7 @@ namespace sw
      * @brief 지역 볼륨입니다(파일 머리말 참고).
      */
     REFLECT( Category = "Gameplay", DisplayName = "Zone Volume", Tooltip = "Area that runs a zone profile (*.zone.xml) on the bodies inside: actions, physics fields, NPC and nav reactions" )
-    class SW_GF_API ZoneVolumeComponent : public Component
+    class SW_GF_API ZoneVolumeComponent : public SceneComponent
     {
     public:
         REFLECT_BODY();
@@ -84,7 +84,7 @@ namespace sw
         /** @brief 코드로 만든 볼륨 · 테스트가 칸을 정합니다. 씬에 놓은 볼륨은 PROPERTY 가 채운다. */
         void configure( string_view profilePath, ZoneVolumeShape shape, const float3& halfExtents );
         /** @brief 이미 안에 있는 채로 나타난 대상을 셀지 정합니다. 코드로 만든 볼륨 · 테스트가 쓴다. 씬에 놓은 볼륨은 PROPERTY 가 채운다. */
-        void setSpawnInside( ActivatorSpawnInside spawnInside );
+        void setSpawnInside( TriggerSpawnInside spawnInside );
         /**
          * @brief 이번 프레임을 처리합니다 — 안에 든 대상을 고르고 위치 값을 내 `ZoneTracker` 에 넘깁니다(`ZoneSystem` 이 틱 뒤 게임 스레드에서 부른다). 준비되지 않았으면 할 일이 없다.
          * @details 후보는 씬을 돌지 않고 씬 공간 색인(`ZoneOccupantIndex` → `SceneSpatialGrid`)에서 자기 수평 사각형에 든 것만 받는다 — 움직인 개체만 색인에서 옮긴다.
@@ -119,7 +119,7 @@ namespace sw
         PROPERTY( Category = "Shape", DisplayName = "Flow Points", Units = m, Tooltip = "Path of the flow relative to the owner (Flow fields follow the nearest segment)" )
         vector<float3> _listFlowPoint;
         PROPERTY( Category = "Zone", DisplayName = "Spawn Inside", Tooltip = "A body that appears already inside (spawn, login, respawn, load, the volume turning on): Activate counts it as entering, Ignore waits until it leaves and comes back" )
-        ActivatorSpawnInside _spawnInside;
+        TriggerSpawnInside _spawnInside;
         PROPERTY( Category = "Runtime", DisplayName = "Lifetime", Min = 0.0, Units = s, Tooltip = "Seconds before the volume's object is destroyed (0: stays) - spread gas, temporary fields" )
         float32 _lifetime;
         PROPERTY( Category = "Runtime", DisplayName = "Growth Rate", Min = 0.0, Units = "m/s", Tooltip = "How fast the size grows (added to the half extents and radius)" )

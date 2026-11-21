@@ -12,8 +12,8 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Name/hashed_string.h"
 #include "Core/Registry/RegistrationList.h"
-#include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/ServiceSlot.h"
+#include "Core/Subsystem/Subsystem.h"
 
 #include "Engine/Animation/Rig/RigNode.h"
 #include "Engine/Content/AssetID.h"
@@ -31,10 +31,10 @@ namespace sw
      * @brief 노드 종류 이름에서 생성 함수로 가는 레지스트리입니다. 데이터의 `"type"` 이 여기서 고르고, 모르는 이름은 로드 오류입니다.
      * @details 엔진 서비스 범위가 소유한다. 엔진 노드(IK, 제약, 스프링, 포즈 구동, 발 디딤)는 만들 때 등록된다. 게임과 키트는 `registerNode` 로 추가한다.
      */
-    class SW_API RigNodeRegistry final : public ISubsystem
+    class SW_API RigNodeRegistry final : public Subsystem
     {
     public:
-        static constexpr MemoryTag   kSubsystemMemoryTag = MemoryTag::Animation; ///< 할당 용도(`ISubsystem::getSubsystemMemoryTag`)
+        static constexpr MemoryTag   kSubsystemMemoryTag = MemoryTag::Animation; ///< 할당 용도(`Subsystem::getSubsystemMemoryTag`)
         static constexpr const utf8* kSubsystemName      = "RigNodeRegistry";
 
         /** @brief 엔진 노드가 든 표를 만듭니다. */

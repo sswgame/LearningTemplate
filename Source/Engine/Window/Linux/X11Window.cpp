@@ -236,7 +236,7 @@ namespace sw
         , _reservedX11{ 0 }
         , _padding{ 0 }
     {
-        // 복원 위치는 기반(`IWindow`)이 가지고 절차도 기반이 맡는다. 플랫폼은 "알아서" 값만 정한다.
+        // 복원 위치는 기반(`GenericWindow`)이 가지고 절차도 기반이 맡는다. 플랫폼은 "알아서" 값만 정한다.
         clearRestorePosition();
     }
 

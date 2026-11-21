@@ -6,7 +6,7 @@
 
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
-#include "Editor/Panels/Inspector/IInspectorComponent.h"
+#include "Editor/Panels/Inspector/IComponentInspector.h"
 #include "Editor/Panels/Inspector/Model/InspectorComponentEdit.h"
 #include "Editor/Panels/Inspector/Model/InspectorComponentManager.h"
 
@@ -17,7 +17,7 @@ namespace sw::editor
     namespace
     {
         /** @brief TagComponent 전용 칩 스타일 */
-        class TagComponentInspector final : public IInspectorComponent
+        class TagComponentInspector final : public IComponentInspector
         {
         public:
             void drawFooter( const EditorPropertyGridTarget& target ) override

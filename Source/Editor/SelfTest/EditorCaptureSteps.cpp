@@ -28,8 +28,8 @@
 
 #include "Engine/Automation/AutomationResult.h"
 #include "Engine/Automation/Scenario/AutomationScenario.h"
-#include "Engine/Automation/Scenario/AutomationStepContext.h"
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
+#include "Engine/Automation/Scenario/IAutomationStepContext.h"
 
 #include <imgui_internal.h>
 
@@ -123,7 +123,7 @@ namespace sw::editor
              *          세션은 컨텍스트와 함께 살아 체인의 다음 시나리오까지 남는다.
              * @param phase 반복 실패 차단 열쇠의 꼬리(`<단계 종류> <phase>`)
              */
-            static AutomationStepHold giveUpCapture( AutomationStepContext& runner, const AutomationStep& step, PendingCapture& pending, string_view reason, string_view phase )
+            static AutomationStepHold giveUpCapture( IAutomationStepContext& runner, const AutomationStep& step, PendingCapture& pending, string_view reason, string_view phase )
             {
                 vector<PendingCapture>& listPending = findSession()->_listPending; // 항목이 있으므로 세션이 있다
                 listPending.erase( listPending.begin() + ( &pending - listPending.data() ) );
@@ -136,7 +136,7 @@ namespace sw::editor
             }
 
             /** @brief 처음 차례가 오면 캡처를 요청하고, 결과가 나올 때까지 붙잡습니다. */
-            static AutomationStepHold holdCapture( AutomationStepContext& runner, const AutomationStep& step, InputManager& input )
+            static AutomationStepHold holdCapture( IAutomationStepContext& runner, const AutomationStep& step, InputManager& input )
             {
                 EditorUICapture* const pCapture = findSubsystem<EditorUICapture>();
                 Session* const         pSession = findSession();
@@ -205,7 +205,7 @@ namespace sw::editor
             }
 
             /** @brief 속성 @p attributeName 의 상한을 넘으면 실패를 남깁니다. 속성이 없으면 @p defaultLimit(비면 보지 않음)입니다. */
-            static void expectAtMost( AutomationStepContext& runner, const AutomationStep& step, string_view attributeName, float64 value, string_view detail,
+            static void expectAtMost( IAutomationStepContext& runner, const AutomationStep& step, string_view attributeName, float64 value, string_view detail,
                                       string_view defaultLimit = {} )
             {
                 float64 limit = 0.0;
@@ -227,7 +227,7 @@ namespace sw::editor
                 runner.recordFailure( step, message );
             }
 
-            static bool runCapture( AutomationStepContext& runner, const AutomationStep& step )
+            static bool runCapture( IAutomationStepContext& runner, const AutomationStep& step )
             {
                 EditorUICapture* const pCapture = findSubsystem<EditorUICapture>();
                 PendingCapture* const  pPending = findPending( step );

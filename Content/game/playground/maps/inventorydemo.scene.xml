@@ -1,7 +1,7 @@
 <?asset guid="5e4824070a8d6dfc5280c9330cd91a9b"?>
 <Scene formatVersion="3" name="InventoryDemo">
 	<!-- 인벤토리 · 오프라인 상점 시연(시나리오 automation/inventory · shopoffline). Player 는 마을 사람 프리셋에 장비 컴포넌트(가방 4 칸 · 무게 3)를 단다.
-	     바닥에 포션 더미(3 개) · 장화 · 투구 · 망토가 놓여 있다(WorldItemComponent). InventoryDemo 의 개발 명령(demo.inventory · demo.shop)이 화면을 연다. -->
+	     바닥에 포션 더미(3 개) · 장화 · 투구 · 망토가 놓여 있다(PickupComponent). InventoryDemo 의 개발 명령(demo.inventory · demo.shop)이 화면을 연다. -->
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
 	</SceneSettings>
@@ -33,7 +33,7 @@
 			<GameObject _schemaVersion="0" _name="PotionPile" _bActive="true">
 				<_listComponent>
 					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent" _bActive="true" _localPosition="1.2,0.15,0.5" _localRotation="0,0,0" _localScale="0.3,0.3,0.3" _attachOwner="None" _attachOwnerID="0" _attachComponent="None" _meshID="Cube" _materialPath="" _boundsRadius="0.866" _gpuSpinSeed="0" _bVisible="true" />
-					<WorldItemComponent _localID="1054056226997779200" _componentName="WorldItemComponent" _bActive="true" _itemID="potion_health" _count="3" />
+					<PickupComponent _localID="1054056226997779200" _componentName="PickupComponent" _bActive="true" _itemID="potion_health" _count="3" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -41,7 +41,7 @@
 			<GameObject _schemaVersion="0" _name="BootsDrop" _bActive="true">
 				<_listComponent>
 					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent" _bActive="true" _localPosition="-1.2,0.15,0.5" _localRotation="0,0,0" _localScale="0.3,0.3,0.3" _attachOwner="None" _attachOwnerID="0" _attachComponent="None" _meshID="Cube" _materialPath="" _boundsRadius="0.866" _gpuSpinSeed="0" _bVisible="true" />
-					<WorldItemComponent _localID="1054056226997779200" _componentName="WorldItemComponent" _bActive="true" _itemID="boots_low" _count="1" />
+					<PickupComponent _localID="1054056226997779200" _componentName="PickupComponent" _bActive="true" _itemID="boots_low" _count="1" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -49,7 +49,7 @@
 			<GameObject _schemaVersion="0" _name="HelmetDrop" _bActive="true">
 				<_listComponent>
 					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent" _bActive="true" _localPosition="0.6,0.15,1.2" _localRotation="0,0,0" _localScale="0.3,0.3,0.3" _attachOwner="None" _attachOwnerID="0" _attachComponent="None" _meshID="Cube" _materialPath="" _boundsRadius="0.866" _gpuSpinSeed="0" _bVisible="true" />
-					<WorldItemComponent _localID="1054056226997779200" _componentName="WorldItemComponent" _bActive="true" _itemID="helmet_knight" _count="1" />
+					<PickupComponent _localID="1054056226997779200" _componentName="PickupComponent" _bActive="true" _itemID="helmet_knight" _count="1" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -57,7 +57,7 @@
 			<GameObject _schemaVersion="0" _name="CapeDrop" _bActive="true">
 				<_listComponent>
 					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent" _bActive="true" _localPosition="-0.6,0.15,1.2" _localRotation="0,0,0" _localScale="0.3,0.3,0.3" _attachOwner="None" _attachOwnerID="0" _attachComponent="None" _meshID="Cube" _materialPath="" _boundsRadius="0.866" _gpuSpinSeed="0" _bVisible="true" />
-					<WorldItemComponent _localID="1054056226997779200" _componentName="WorldItemComponent" _bActive="true" _itemID="cape_rogue" _count="1" />
+					<PickupComponent _localID="1054056226997779200" _componentName="PickupComponent" _bActive="true" _itemID="cape_rogue" _count="1" />
 				</_listComponent>
 			</GameObject>
 		</entity>

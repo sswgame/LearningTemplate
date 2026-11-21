@@ -181,8 +181,8 @@ SW_TEST_CASE( ResourceSaveConditionTest, LayeredResourceIsNotSavedOverTheOrigina
     const XSaveTagScope       scope;
     const vector<string>      listPreviousLayer = engine::getSubsystem<ResourceComposition>().getLayers();
     (void)domain.makeDiskFolder( "layers/night/testproject" );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "layers/night/testproject/doc.xml" ), R"(<Doc a="layer" />)" ) );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "doc.xml" ), R"(<Doc a="base" />)" ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( domain.makeDiskPath( "layers/night/testproject/doc.xml" ) ), R"(<Doc a="layer" />)" ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( domain.makeDiskPath( "doc.xml" ) ), R"(<Doc a="base" />)" ) );
     SW_REQUIRE_TRUE( engine::getSubsystem<ResourceComposition>().setLayers( { ScopedScratchDomain::makeID( "layers/night" ).str() } ) );
 
     const AssetID id = ScopedScratchDomain::makeID( "doc.xml" );
@@ -194,7 +194,7 @@ SW_TEST_CASE( ResourceSaveConditionTest, LayeredResourceIsNotSavedOverTheOrigina
     SW_EXPECT_LOG( "ResourceLayer.SaveWouldBake" );
     SW_EXPECT_FALSE( ResourceComposer::saveText( domain.makeDiskPath( "doc.xml" ), ResourceSaveText::makeComplete( flatText ) ) );
     string onDisk;
-    SW_REQUIRE_TRUE( FileUtil::readTextFile( domain.makeDiskPath( "doc.xml" ), onDisk ) );
+    SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::toDiskPath( domain.makeDiskPath( "doc.xml" ) ), onDisk ) );
     SW_EXPECT_TRUE( onDisk.find( "base" ) != string::npos );
 
     SW_REQUIRE_TRUE( engine::getSubsystem<ResourceComposition>().setLayers( listPreviousLayer ) );
@@ -214,7 +214,7 @@ SW_TEST_CASE( ResourceSaveDeltaTest, WritesTheDeltaOnlyWhenItReadsBack )
     SW_REQUIRE_TRUE( ResourceComposer::saveDelta( path, kFull, kParent, schema, "parent.xml", [kFull]( const string& )
     { return string{ kFull }; } ) );
     string written;
-    SW_REQUIRE_TRUE( FileUtil::readTextFile( path, written ) );
+    SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::toDiskPath( path ), written ) );
     SW_EXPECT_TRUE( written.find( "_base" ) != string::npos );
     SW_EXPECT_TRUE( written.find( "a=" ) == string::npos ); // 부모와 같은 칸은 적지 않는다
 
@@ -222,7 +222,7 @@ SW_TEST_CASE( ResourceSaveDeltaTest, WritesTheDeltaOnlyWhenItReadsBack )
     SW_EXPECT_FALSE( ResourceComposer::saveDelta( path, R"(<Doc a="1" />)", kParent, schema, "parent.xml", []( const string& )
     { return string{ "different" }; } ) );
     string kept;
-    SW_REQUIRE_TRUE( FileUtil::readTextFile( path, kept ) );
+    SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::toDiskPath( path ), kept ) );
     SW_EXPECT_EQUAL( written, kept );
 }
 

@@ -904,7 +904,7 @@ namespace
      * @brief 저장소 앞(front)입니다. 일을 맡자마자 연결 @p connection 에서 돌리고, `pollCompletions` 가 완료를 부릅니다.
      * @details 연결을 바꿔 끼울 수 있어 "읽기와 커밋 사이" 에 다른 서버의 일을 끼울 수 있다(메모리 저장소의 앞은 데이터베이스에 직접 붙는다).
      */
-    class ConnectionServiceStore final : public IServiceStore
+    class ConnectionServiceStore final : public ServiceStore
     {
     public:
         explicit ConnectionServiceStore( IServiceStoreConnection& connection )
@@ -912,16 +912,16 @@ namespace
         {
         }
 
-        void submit( unique_ptr<IServiceStoreJob> job ) override
+        void submit( unique_ptr<ServiceStoreJob> job ) override
         {
             job->execute( _connection, _commitStats );
             _listDone.push_back( std::move( job ) );
         }
         int32 pollCompletions() override
         {
-            vector<unique_ptr<IServiceStoreJob>> listDone = std::move( _listDone );
+            vector<unique_ptr<ServiceStoreJob>> listDone = std::move( _listDone );
             _listDone.clear();
-            for ( const unique_ptr<IServiceStoreJob>& job : listDone )
+            for ( const unique_ptr<ServiceStoreJob>& job : listDone )
             {
                 job->complete();
             }
@@ -931,8 +931,8 @@ namespace
         void  shutdown() override {}
 
     private:
-        IServiceStoreConnection&             _connection;
-        vector<unique_ptr<IServiceStoreJob>> _listDone{};
+        IServiceStoreConnection&            _connection;
+        vector<unique_ptr<ServiceStoreJob>> _listDone{};
     };
 
     /** @brief 첫 커밋 바로 앞에 다른 서버(같은 데이터베이스에 붙은 @p otherServer)의 일 @p cut 을 한 번 끼워 넣는 연결입니다. */

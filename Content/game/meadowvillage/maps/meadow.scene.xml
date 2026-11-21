@@ -64,7 +64,7 @@
 					                _attachOwner="None"
 					                _attachOwnerID="0"
 					                _attachComponent="None" />
-					<SessionStateComponent _localID="6673597520240684436" _componentName="SessionStateComponent" _bActive="true" />
+					<GameStateComponent _localID="6673597520240684436" _componentName="GameStateComponent" _bActive="true" />
 					<PlayerProgressComponent _localID="7280284032837436068" _componentName="PlayerProgressComponent" _bActive="true" />
 					<MeadowFarmGameModeComponent _localID="8448271495034838971" _componentName="MeadowFarmGameModeComponent"
 					                             _bActive="true"

@@ -49,13 +49,13 @@ namespace
     {
         unordered_set<string> setName;
         vector<string>        listFile;
-        const bool            bCollected = FileUtil::collectFiles( FileUtil::joinPath( ProcessRoots::get()._project.str(), "Source" ), "", listFile, true );
+        const bool            bCollected = FileUtil::collectFiles( FileUtil::toDiskPath( FileUtil::joinPath( ProcessRoots::get()._project.str(), "Source" ) ), "", listFile, true );
         SW_EXPECT_TRUE( bCollected );
         for ( const string& filePath : listFile )
         {
             const bool bCode = FileUtil::hasExtension( filePath, ".cpp" ) || FileUtil::hasExtension( filePath, ".h" ) || FileUtil::hasExtension( filePath, ".inl" );
             string     text;
-            if ( bCode == false || StringUtil::contains( filePath, "graphify-out" ) || FileUtil::readTextFile( filePath, text ) == false )
+            if ( bCode == false || StringUtil::contains( filePath, "graphify-out" ) || FileUtil::readTextFile( FileUtil::toDiskPath( filePath ), text ) == false )
                 continue;
             collectNameLiterals( text, "SW_EDITOR_ICON_NAME", setName );
             collectNameLiterals( text, "SW_EDITOR_ICON", setName );

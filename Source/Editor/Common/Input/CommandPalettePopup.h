@@ -1,6 +1,6 @@
 /**
  * @file CommandPalettePopup.h
- * @brief 전역 커맨드 팔레트 팝업입니다(IEditorPopup 구현).
+ * @brief 전역 커맨드 팔레트 팝업입니다(EditorPopup 구현).
  */
 #pragma once
 #include "Core/Container/vector.h"
@@ -9,7 +9,7 @@
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/Commands/EditorBackgroundIO.h"
-#include "Editor/Common/GUI/IEditorPopup.h"
+#include "Editor/Common/GUI/EditorPopup.h"
 #include "Editor/Common/Input/EditorSearchItem.h"
 
 namespace sw::editor
@@ -21,7 +21,7 @@ namespace sw::editor
      *          커맨드를 **직접 보관하고 있지 않습니다.** 열릴 때마다 `EditorCommandRegistry` 와 패널 목록과 활성 씬을 읽고, 에셋은 워커가 색인한다.
      *          팔레트에 커맨드를 더하려면 `EditorCommandGUI::registerDefaults` 의 테이블에 한 줄을 넣으십시오. 그러면 메뉴와 단축키에도 같이 나타납니다.
      */
-    class CommandPalettePopup : public IEditorPopup
+    class CommandPalettePopup : public EditorPopup
     {
     public:
         /** @brief 팝업 매니저에서 이 팝업을 찾는 id 입니다. */
@@ -31,7 +31,7 @@ namespace sw::editor
         virtual ~CommandPalettePopup() override = default;
 
         // ------------------------------------------------------------------------------
-        // IEditorPopup 구현
+        // EditorPopup 구현
         // ------------------------------------------------------------------------------
         virtual const utf8* getPopupID() const override { return kPopupID; }
         virtual const utf8* getPopupTitle() const override { return "Command Palette"; }

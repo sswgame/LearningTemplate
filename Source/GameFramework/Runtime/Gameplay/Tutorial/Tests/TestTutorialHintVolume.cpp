@@ -13,9 +13,9 @@
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/Framework/Tests/SceneNetLinkTestBinding.h"
-#include "GameFramework/Runtime/Gameplay/Tutorial/TutorialHintComponent.h"
+#include "GameFramework/Runtime/Gameplay/Tutorial/TutorialHintTriggerComponent.h"
 
-// TutorialHintVolumeTest — 볼륨 바탕(`ActivatorVolumeComponent`)의 거리 판정이 트리거 계약(DesignBacklog "트리거 Enter · Stay · Exit 계약")의 경계를 따르는지
+// TutorialHintVolumeTest — 볼륨 바탕(`TriggerComponent`)의 거리 판정이 트리거 계약(DesignBacklog "트리거 Enter · Stay · Exit 계약")의 경계를 따르는지
 // 들어올 때마다 하는 튜토리얼 힌트 볼륨으로 센다: 안에서 생겨남 = 진입, 꺼진 볼륨 · 꺼진 활성자 = 이탈, 한 활성자는 한 길로만 들어온다(nogpu, 물리 없음).
 
 using namespace sw;
@@ -40,12 +40,12 @@ namespace
     /** @brief 들어올 때마다 힌트를 띄우는 볼륨(원점, 반지름 2)과 거리로 재는 활성자 하나를 둔 씬입니다. 알림은 넘긴 창구로 간다(게임 범위의 서비스가 없다). */
     struct HintVolumeRig
     {
-        CountingNotificationSink _sink;
-        SubsystemScope           _scope; ///< 게임 범위 — 힌트 설정만 든 사용자 설정 서비스를 둔다(없으면 엔진 범위의 서비스가 보여 그 실행의 스키마에 달린다)
-        GameObjectManager        _manager;
-        GameObject*              _pVolumeObject{ nullptr };
-        GameObject*              _pWalker{ nullptr };
-        TutorialHintComponent*   _pVolume{ nullptr };
+        CountingNotificationSink      _sink;
+        SubsystemScope                _scope; ///< 게임 범위 — 힌트 설정만 든 사용자 설정 서비스를 둔다(없으면 엔진 범위의 서비스가 보여 그 실행의 스키마에 달린다)
+        GameObjectManager             _manager;
+        GameObject*                   _pVolumeObject{ nullptr };
+        GameObject*                   _pWalker{ nullptr };
+        TutorialHintTriggerComponent* _pVolume{ nullptr };
 
         /** @brief @p walkerX 는 활성자가 처음 놓이는 자리입니다. */
         explicit HintVolumeRig( float32 walkerX )
@@ -55,7 +55,7 @@ namespace
             SW_EXPECT_TRUE( bSchemaLoaded );
             _pVolumeObject = _manager.createGameObject( hashed_string( "HintVolume" ) );
             (void)_pVolumeObject->addComponent<SceneComponent>();
-            _pVolume = _pVolumeObject->addComponent<TutorialHintComponent>();
+            _pVolume = _pVolumeObject->addComponent<TutorialHintTriggerComponent>();
             _pVolume->configure( "hint", TagID{} );
             _pVolume->setOnce( false );
             _pVolume->setNotificationSink( &_sink );

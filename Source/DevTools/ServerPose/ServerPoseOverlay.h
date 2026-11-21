@@ -20,7 +20,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/Subsystem.h"
 #include "Core/Task/TaskTypes.h"
 
 #include "DevTools/DevToolsAPI.h"
@@ -80,7 +80,7 @@ namespace sw
      * @brief 서버 포즈를 읽어 고스트를 겹치는 엔진 서비스입니다(`engine::findSubsystem<ServerPoseOverlay>()`). 서비스 범위가 소유하고, 게임 스레드가 `update` 를 부릅니다.
      * @details 읽기 태스크가 엔진 이미지의 코드라서 엔진은 이미지가 내려가기 전에 `shutdown` 으로 그 태스크를 기다린다(범위가 사라질 때 소멸자도 한 번 더 부른다).
      */
-    class SW_DEVTOOLS_API ServerPoseOverlay final : public ISubsystem
+    class SW_DEVTOOLS_API ServerPoseOverlay final : public Subsystem
     {
     public:
         static constexpr const utf8* kSubsystemName = "ServerPoseOverlay";

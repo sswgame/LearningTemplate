@@ -132,7 +132,7 @@ namespace sw
     bool FileServeContentSource::downloadFile( const string& relative, uint64 sizeBytes, const string& mirrorPath ) const
     {
         AtomicFileWriter writer;
-        if ( FileUtil::ensureParentDirectoryExists( mirrorPath ) == false || writer.open( mirrorPath ).has_value() == false )
+        if ( FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( mirrorPath ) ) == false || writer.open( mirrorPath ).has_value() == false )
             return false;
         vector<uint8> chunk;
         for ( uint64 offset = 0; offset < sizeBytes; offset += kChunkBytes )
@@ -176,10 +176,10 @@ namespace sw
         stampText += " ";
         StringUtil::appendNumber( stampText, stat._modifiedNanos );
         string     existingStamp;
-        const bool bFresh = FileUtil::readOptionalTextFile( stampPath, existingStamp ) == OptionalFileRead::Read && existingStamp == stampText && FileUtil::isRegularFile( mirrorPath );
+        const bool bFresh = FileUtil::readOptionalTextFile( FileUtil::toDiskPath( stampPath ), existingStamp ) == OptionalFileRead::Read && existingStamp == stampText && FileUtil::isRegularFile( FileUtil::toDiskPath( mirrorPath ) );
         if ( bFresh == false )
         {
-            if ( downloadFile( relative, stat._sizeBytes, mirrorPath ) == false || FileUtil::writeTextFile( stampPath, stampText ) == false )
+            if ( downloadFile( relative, stat._sizeBytes, mirrorPath ) == false || FileUtil::writeTextFile( FileUtil::toDiskPath( stampPath ), stampText ) == false )
             {
                 SW_LOG_WARNING_ID( "FileServe.DownloadFailed", "Fileserve could not mirror '%#' to '%#' - treated as missing", relative, mirrorPath );
                 // PC 에서 받는 사이 다시 구웠을 수 있다(구간이 416) — 다음 열기가 상태를 다시 묻게 기억을 지운다.

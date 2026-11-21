@@ -147,7 +147,7 @@ namespace sw
         _pCodec   = pCodec;
         _openWatch.restart();
         _state = State::Open;
-        if ( FileUtil::ensureParentDirectoryExists( packPath ) == false )
+        if ( FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( packPath ) ) == false )
             return fail( Error{ ErrorKind::ExternalFailure, "pack parent folder cannot be made", packPath } );
         // 앞 빌드 팩은 바꿔 끼우기 전까지 그대로라(임시 파일에 쓴다) 열기 뒤에 읽어도 된다.
         const expected<void> opened = _file.open( packPath );
@@ -164,7 +164,7 @@ namespace sw
 
     expected<void> PackStreamWriter::loadPreviousSlots()
     {
-        const bool bNoPrevious = _desc._layoutMode != PackLayoutMode::Slot || _desc._previousPackPath.empty() || FileUtil::exists( _desc._previousPackPath ) == false;
+        const bool bNoPrevious = _desc._layoutMode != PackLayoutMode::Slot || _desc._previousPackPath.empty() || FileUtil::exists( FileUtil::toDiskPath( _desc._previousPackPath ) ) == false;
         if ( bNoPrevious )
             return {};
         struct Placed
@@ -511,7 +511,7 @@ namespace sw
             for ( uint64 copied = 0; copied < storedSize; copied += chunk.size() )
             {
                 const uint64 size = storedSize - copied < PackWriterInternal::kCompactChunkBytes ? storedSize - copied : PackWriterInternal::kCompactChunkBytes;
-                if ( FileUtil::readFile( _packPath, chunk, oldOffset + copied, size ) == false || chunk.size() != size )
+                if ( FileUtil::readFile( FileUtil::toDiskPath( _packPath ), chunk, oldOffset + copied, size ) == false || chunk.size() != size )
                     return unexpected( Error{ ErrorKind::ExternalFailure, "slot layout pack cannot be read back for compaction", _packPath } );
                 const expected<void> appended = writeBytes( _file.getSize(), chunk.data(), chunk.size() );
                 if ( appended.has_value() == false )

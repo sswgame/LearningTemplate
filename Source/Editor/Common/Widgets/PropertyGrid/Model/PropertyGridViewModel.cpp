@@ -1411,7 +1411,7 @@ namespace sw::editor
         // (언리얼 임시 마운트 지점의 패키지도 에셋 레지스트리에 오른다). 폴더가 없으면 고를 것이 없다.
         vector<string> listScratchFile;
         const string&  scratchFolder = AssetPaths::getScratchFolderPath();
-        if ( FileUtil::isDirectory( scratchFolder ) && EditorContentScan::collectFiles( scratchFolder, ".xml", listScratchFile, true ) )
+        if ( FileUtil::isDirectory( FileUtil::toDiskPath( scratchFolder ) ) && EditorContentScan::collectFiles( scratchFolder, ".xml", listScratchFile, true ) )
         {
             for ( const string& filePath : listScratchFile )
             {

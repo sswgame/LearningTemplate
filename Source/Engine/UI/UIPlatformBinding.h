@@ -15,7 +15,7 @@
 
 namespace sw
 {
-    class IWindow;
+    class GenericWindow;
     class Widget;
 
     /**
@@ -32,7 +32,7 @@ namespace sw
          * @param pWindow 스크린 리더가 접근성 요청을 받을 주 창. 없으면 연결하지 않는다.
          * @param bEditor 에디터 안이면 끝내기 · 스크린 리더를 걸지 않는다.
          */
-        void install( IWindow* pWindow, bool bEditor );
+        void install( GenericWindow* pWindow, bool bEditor );
         /** @brief `install` 이 끼운 것을 뗍니다. 엔진 서비스와 창이 내려가기 전에 부릅니다. */
         void remove();
 

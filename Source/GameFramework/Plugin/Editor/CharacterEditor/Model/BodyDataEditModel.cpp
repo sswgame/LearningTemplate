@@ -38,7 +38,7 @@ namespace sw::editor
         if ( isOpen() && StringUtil::equals( _diskPath, diskPath ) && isDirty() == false )
             return true;
         string text;
-        if ( FileUtil::readTextFile( diskPath, text ) == false )
+        if ( FileUtil::readTextFile( FileUtil::toDiskPath( diskPath ), text ) == false )
         {
             StringBuilder<constant::buffer::kMax512> error;
             error.appendFormat( "%#: cannot read the file", diskPath );
@@ -53,7 +53,7 @@ namespace sw::editor
     {
         if ( isOpen() == false || _diskPath.empty() )
             return false;
-        if ( FileUtil::writeTextFile( _diskPath, _text ) == false )
+        if ( FileUtil::writeTextFile( FileUtil::toDiskPath( _diskPath ), _text ) == false )
         {
             StringBuilder<constant::buffer::kMax512> error;
             error.appendFormat( "%#: cannot write the file", _diskPath );

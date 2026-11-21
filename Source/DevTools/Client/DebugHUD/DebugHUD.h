@@ -8,7 +8,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Name/hashed_string.h"
-#include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/Subsystem.h"
 
 #include "DevTools/DevToolsAPI.h"
 
@@ -52,7 +52,7 @@ namespace sw
      *
      *          게임 스레드에서만 쓴다. 개발 도구(`DevToolsHost`)가 기동 단계 서브시스템으로 더하고 씬 틱 뒤(`UISystem::update` 앞)에 `update` 를 부른다.
      */
-    class SW_DEVTOOLS_API DebugHUD final : public ISubsystem
+    class SW_DEVTOOLS_API DebugHUD final : public Subsystem
     {
     public:
         /** @brief 서브시스템 이름입니다. */
