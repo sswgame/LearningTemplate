@@ -34,7 +34,6 @@
 #pragma once
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
-#include "Core/Container/EnumArray.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Registry/RegistrationList.h"
@@ -42,7 +41,6 @@
 #include "Core/Subsystem/ServiceSlot.h"
 
 #include "Engine/Module/ModuleEntryRegistrar.h"
-#include "Engine/Object/GameObject/Tick/FixedStepContext.h"
 #include "Engine/Object/GameObject/Tick/StructuralChangeBuffer.h"
 #include "Engine/Object/GameObject/Tick/TickContext.h"
 #include "Engine/Object/GameObject/Tick/TickRegistry.h"
@@ -79,28 +77,10 @@ namespace sw
             TickMode           _mode;        ///< 그 타입이 선언한 모드
         };
 
-        /**
-         * @struct FixedStepEntry
-         * @brief 고정 스텝 훅 줄 하나입니다(`FixedStepGroup` 마다 일괄 함수 — 재정의하지 않은 그룹은 nullptr). 프레임 틱 줄(`Entry`)과 같은 목록 규칙 · 같은 세대를 쓴다.
-         * @details 함수는 정확한 타입에만 쓴다(파생은 물려받지 않는다 — 파생의 훅을 건너뛰지 않게). 생성기가 `SW_REGISTER_FIXED_STEP_TYPE` 로 낸다(`PhysicsFixedStep.h`).
-         */
-        struct FixedStepEntry
-        {
-            StaticTypeFunction                                _pStaticType;
-            EnumArray<FixedStepGroup, FixedStepBatchFunction> _arrFunction;
-        };
-
         // ISubsystem — 세울 것이 없다(줄은 모듈을 올리는 길이 붙인다).
         SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
         void                shutdownSubsystem() override {}
         const utf8*         getSubsystemName() const override { return kSubsystemName; }
-
-        /** @brief 고정 스텝 줄 하나를 등록합니다. 세대를 올립니다. 타입이 비었으면 false 입니다. */
-        [[nodiscard]] bool registerEntry( FixedStepEntry& entry ) SW_EXCLUDES_LOCK( _mutex );
-        /** @brief 자기 고정 스텝 줄의 등록을 지웁니다(모듈 해제). 오르지 않은 줄이면 아무것도 하지 않습니다. 세대를 올립니다. */
-        void unregisterEntry( FixedStepEntry& entry ) SW_EXCLUDES_LOCK( _mutex );
-        /** @brief 정확히 @p pType 의 고정 스텝 줄입니다. 나중에 오른 줄이 먼저다(테스트의 지역 줄이 정적 등록을 덮는다). 없으면 nullptr — 그 타입은 고정 스텝 훅을 부르지 않는다. */
-        const FixedStepEntry* findFixedStepEntry( const TypeInfo* pType ) SW_EXCLUDES_LOCK( _mutex );
 
         /** @brief 줄 하나를 등록합니다. 세대를 올립니다. 같은 함수의 줄이 둘 오를 수 있으며(정적 등록자와 테스트의 지역 줄), 각자 자기 줄만 지웁니다. 타입이 비었거나 Batch 줄의 함수가 비었으면 false 입니다. */
         [[nodiscard]] bool registerEntry( Entry& entry ) SW_EXCLUDES_LOCK( _mutex );
@@ -117,10 +97,9 @@ namespace sw
         uint32 getRegisteredCount() SW_EXCLUDES_LOCK( _mutex );
 
     private:
-        mutex                                                _mutex;
-        RegistrationList<Entry> _listEntry                   SW_GUARDED_BY( _mutex ){ "TickBatchRegistry" };
-        RegistrationList<FixedStepEntry> _listFixedStepEntry SW_GUARDED_BY( _mutex ){ "TickBatchRegistry.FixedStep" };
-        atomic<uint32>                                       _generation{ 0 };
+        mutex                              _mutex;
+        RegistrationList<Entry> _listEntry SW_GUARDED_BY( _mutex ){ "TickBatchRegistry" };
+        atomic<uint32>                     _generation{ 0 };
 
         SW_SERVICE_SLOT( TickBatchRegistry, Required );
     };
@@ -130,8 +109,6 @@ namespace sw
      * @details 링크 때 목록에 달리는 객체라 정적 객체로만 둔다. 테스트처럼 범위 안에서만 올리려면 지역 `TickBatchRegistry::Entry` 를 레지스트리에 직접 올린다.
      */
     using TickBatchRegistrar = ModuleEntryRegistrar<TickBatchRegistry, TickBatchRegistry::Entry>;
-    /** @brief 고정 스텝 줄 하나의 정적 등록자입니다(`TickBatchRegistrar` 와 같은 규칙). */
-    using FixedStepRegistrar = ModuleEntryRegistrar<TickBatchRegistry, TickBatchRegistry::FixedStepEntry>;
 } // namespace sw
 
 namespace sw

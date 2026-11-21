@@ -73,6 +73,8 @@ namespace sw
         void setMaterial( const hashed_string& material );
 
     protected:
+        /** @brief 쓰는 고정 스텝 그룹마다 메서드를 등록합니다(`registerFixedStep`). */
+        void onRegister( GameObjectManager& manager ) override;
         void onPhysicsFrameBegin( const FixedStepContext& context );
         void releasePhysics( ScenePhysics& physics ) override;
         /** @brief 청크마다 정적 바디 서술자 하나를 냅니다(`onPhysicsFrameBegin` 과 같은 메시 · 레이어 · 재질, 모두 구멍인 청크는 뺀다). */

@@ -1869,6 +1869,10 @@ namespace sw
     void FractureComponentBase::onRegister( GameObjectManager& manager )
     {
         PhysicsComponent::onRegister( manager );
+        registerFixedStep<&FractureComponentBase::onPhysicsFrameBegin>( manager, FixedStepGroup::FrameBegin );
+        registerFixedStep<&FractureComponentBase::onPrePhysicsStep>( manager, FixedStepGroup::PreStep );
+        registerFixedStep<&FractureComponentBase::onPostPhysicsStep>( manager, FixedStepGroup::PostStep );
+        registerFixedStep<&FractureComponentBase::onPhysicsFrameEnd>( manager, FixedStepGroup::FrameEnd );
         manager.getComponentRegistry().add<FractureComponentBase>( this );
         _collisionSubscription = GameObjectEvents::listen<&FractureComponentBase::handleCollisionBegin>( *this, &GameObjectEvents::_collisionBegin );
     }

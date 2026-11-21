@@ -272,6 +272,15 @@ namespace sw
         inoutBuilder.addUint8( isGrounded() ? 1 : 0 );
     }
 
+    void CharacterControllerComponent::onRegister( GameObjectManager& manager )
+    {
+        PhysicsComponent::onRegister( manager );
+        registerFixedStep<&CharacterControllerComponent::onPhysicsFrameBegin>( manager, FixedStepGroup::FrameBegin );
+        registerFixedStep<&CharacterControllerComponent::onPrePhysicsStep>( manager, FixedStepGroup::PreStep );
+        registerFixedStep<&CharacterControllerComponent::onPostPhysicsStep>( manager, FixedStepGroup::PostStep );
+        registerFixedStep<&CharacterControllerComponent::onPhysicsFrameEnd>( manager, FixedStepGroup::FrameEnd );
+    }
+
     void CharacterControllerComponent::onPhysicsFrameBegin( const FixedStepContext& context )
     {
         ScenePhysics& physics = context.getPhysics();

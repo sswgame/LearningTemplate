@@ -78,6 +78,12 @@ namespace sw
         return nullptr;
     }
 
+    void Joint2DComponent::onRegister( GameObjectManager& manager )
+    {
+        PhysicsComponent::onRegister( manager );
+        registerFixedStep<&Joint2DComponent::onPhysicsFrameBegin>( manager, FixedStepGroup::FrameBegin );
+    }
+
     void Joint2DComponent::onPhysicsFrameBegin( const FixedStepContext& context )
     {
         ScenePhysics& physics = context.getPhysics();

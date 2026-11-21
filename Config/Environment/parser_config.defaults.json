@@ -63,10 +63,6 @@
             "SceneComponent",
             "sw::SceneComponent"
         ],
-        "fixed_step_base_types": [
-            "PhysicsComponent",
-            "sw::PhysicsComponent"
-        ],
         "type_strip_prefixes": [
             "const ",
             "volatile ",

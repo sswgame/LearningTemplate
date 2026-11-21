@@ -110,6 +110,8 @@ namespace sw
     protected:
         /** @brief 동적 바디면 선속도 · 각속도를 0 으로 줍니다(3D `RigidBodyComponent::resetMotion` 과 같다). */
         void resetMotion() override;
+        /** @brief 쓰는 고정 스텝 그룹마다 메서드를 등록합니다(`registerFixedStep`). */
+        void onRegister( GameObjectManager& manager ) override;
         void onPhysicsFrameBegin( const FixedStepContext& context );
         void onPrePhysicsStep( const FixedStepContext& context );
         void onPhysicsFrameEnd( const FixedStepContext& context );

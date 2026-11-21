@@ -316,6 +316,14 @@ namespace sw
         return body;
     }
 
+    void RigidBodyComponent::onRegister( GameObjectManager& manager )
+    {
+        PhysicsComponent::onRegister( manager );
+        registerFixedStep<&RigidBodyComponent::onPhysicsFrameBegin>( manager, FixedStepGroup::FrameBegin );
+        registerFixedStep<&RigidBodyComponent::onPrePhysicsStep>( manager, FixedStepGroup::PreStep );
+        registerFixedStep<&RigidBodyComponent::onPhysicsFrameEnd>( manager, FixedStepGroup::FrameEnd );
+    }
+
     void RigidBodyComponent::onPhysicsFrameBegin( const FixedStepContext& context )
     {
         ScenePhysics& physics = context.getPhysics();

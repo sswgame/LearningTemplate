@@ -55,8 +55,6 @@ namespace sw
         SceneComponent::onRegister( manager );
         _pScenePhysics = &manager.getSubsystem<sw::ScenePhysics>();
         _pScenePhysics->registerComponent( this );
-        // 고정 스텝 훅은 틱 시스템이 부른다 — 단계가 차례다(바디 → 관절 → 캐릭터, `FixedStepTickList` 의 단계 버킷).
-        (void)manager.getFixedStepTickList().add( *this, getFixedStepPhase() );
         // 3D 캐릭터 · 강체는 지역 같은 공간 질의의 후보다 — 씬을 훑지 않게 등록 동안 공간 색인에 올린다(점, 반 크기 0).
         const SpatialGridLayerDesc* pLayer = castTo<CharacterControllerComponent>( this ) != nullptr ? &getCharacterSpatialLayer()
                                            : castTo<RigidBodyComponent>( this ) != nullptr           ? &getBodySpatialLayer()
@@ -106,6 +104,14 @@ namespace sw
                             PhysicsComponentInternal::kShapeScaleTolerance * MathUtil::max( 1.0f, MathUtil::abs( _shapeScale._y ) ),
                             PhysicsComponentInternal::kShapeScaleTolerance * MathUtil::max( 1.0f, MathUtil::abs( _shapeScale._z ) ) };
         return MathUtil::abs( delta._x ) > limit._x || MathUtil::abs( delta._y ) > limit._y || MathUtil::abs( delta._z ) > limit._z;
+    }
+
+    void PhysicsComponent::registerFixedStepFunction( GameObjectManager& manager, FixedStepGroup group, FixedStepBatchFunction pFunction )
+    {
+        // 차례는 단계 버킷 안의 등록 차례다(바디 → 관절 → 캐릭터) — 컴포넌트마다 `onRegister` 에서 넣으므로 예전 단계 목록과 같은 차례다.
+        if ( manager.getFixedStepTickList().addFunction( *this, group, getFixedStepPhase(), pFunction ) == false )
+            SW_LOG_ERROR_ID( "PhysicsComponent.FixedStepTwice", "Physics component registered fixed step group %# twice - the later method is ignored",
+                             static_cast<uint32>( group ) );
     }
 
     TickPhase PhysicsComponent::getFixedStepPhase() const

@@ -106,6 +106,12 @@ namespace sw
         _arrPitchPeak[1] = MathUtil::max( _arrPitchPeak[1], MathUtil::abs( pitch ) );
     }
 
+    void BoatComponent::onRegister( GameObjectManager& manager )
+    {
+        PhysicsComponent::onRegister( manager );
+        registerFixedStep<&BoatComponent::onPrePhysicsStep>( manager, FixedStepGroup::PreStep );
+    }
+
     void BoatComponent::onPrePhysicsStep( const FixedStepContext& context )
     {
         ScenePhysics& physics        = context.getPhysics();

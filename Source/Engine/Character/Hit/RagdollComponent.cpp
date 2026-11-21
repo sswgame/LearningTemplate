@@ -434,6 +434,9 @@ namespace sw
     void RagdollComponent::onRegister( GameObjectManager& manager )
     {
         PhysicsComponent::onRegister( manager );
+        registerFixedStep<&RagdollComponent::onPhysicsFrameBegin>( manager, FixedStepGroup::FrameBegin );
+        registerFixedStep<&RagdollComponent::onPrePhysicsStep>( manager, FixedStepGroup::PreStep );
+        registerFixedStep<&RagdollComponent::onPhysicsFrameEnd>( manager, FixedStepGroup::FrameEnd );
         _hitSubscription = GameObjectEvents::listen<&RagdollComponent::handleHit>( *this, &GameObjectEvents::_hitReceived );
     }
 

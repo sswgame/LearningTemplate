@@ -636,7 +636,7 @@ namespace sw
             return;
         configureOnce();
 
-        // 고정 스텝 훅은 틱 시스템의 고정 스텝 그룹이 부른다(`SceneTickScheduler::tickFixedStepGroup` — 재정의한 타입만 타입별 일괄 함수, 차례는 단계 바디 → 관절 → 캐릭터).
+        // 고정 스텝 훅은 틱 시스템의 고정 스텝 그룹이 부른다(`SceneTickScheduler::tickFixedStepGroup` — 컴포넌트가 onRegister 에서 등록한 메서드만 메서드별 일괄 함수, 차례는 단계 바디 → 관절 → 캐릭터).
         // 콜백이 컴포넌트를 더하거나 뺄 수는 없다(구조 변경은 이 밖에서 난다). 그룹마다 구간이 낡았는지 본다.
         (void)_manager.tickFixedStepGroup( FixedStepGroup::FrameBegin, FixedStepContext{ *this, 0.0f, 0, 0, 0.0f } );
         sweepContinuousColliders2D();

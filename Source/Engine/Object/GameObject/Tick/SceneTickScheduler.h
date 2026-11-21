@@ -48,7 +48,7 @@ namespace sw
         void tickPhase( float32 deltaTime, uint32 firstGroup, uint32 endGroup );
 
         /**
-         * @brief 고정 스텝 그룹 @p group 을 돕니다 — 고정 스텝 구성원(`getFixedStepTickList`)을 구간마다 그 타입의 일괄 함수로 부른다.
+         * @brief 고정 스텝 그룹 @p group 을 돕니다 — 고정 스텝 구성원(`getFixedStepTickList`)을 구간마다 등록한 메서드의 일괄 함수로 부른다.
          * @details 물리 프레임(`ScenePhysics::step`)이 게임 스레드에서 그룹 차례대로 부른다(스텝 그룹은 스텝마다). 프레임 그룹과 달리 병렬 · 동결 · 쓰기 큐가 없다 —
          *          훅이 물리 씬을 만지므로 게임 스레드에서 차례로 돈다(언리얼 물리 서브스텝 콜백 · 유니티 `FixedUpdate` 와 같다).
          * @return 부른 구성원 수입니다.
@@ -61,7 +61,7 @@ namespace sw
         const TickRegistry& getTickRegistry() const { return _tickRegistry; }
         /**
          * @brief 고정 스텝 그룹(`FixedStepGroup`)의 구성원 · 구간입니다 — 프레임 그룹 레지스트리(`getTickRegistry`)와 나란한 두 번째 주기입니다(`FixedStepTickList.h`).
-         * @details 컴포넌트가 등록 동안 넣고(`FixedStepTickList::add`) 해제에서 뺍니다. 게임 스레드에서만.
+         * @details 컴포넌트가 등록 자리에서 메서드를 넣고(`FixedStepTickList::add<&T::메서드>`) 해제에서 뺍니다. 게임 스레드에서만.
          */
         FixedStepTickList& getFixedStepTickList() { return _fixedStepTickList; }
 

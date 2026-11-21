@@ -184,7 +184,6 @@ namespace sw
             static void applyParsingSection( ParserConfig& config, const nlohmann::json& obj )
             {
                 assignArrayIfPresent( config._listComponentBaseType, obj, jsonkey::kParsingComponentBaseTypes );
-                assignArrayIfPresent( config._listFixedStepBaseType, obj, jsonkey::kParsingFixedStepBaseTypes );
                 assignArrayIfPresent( config._listTypeStripPrefix, obj, jsonkey::kParsingTypeStripPrefixes );
                 assignArrayIfPresent( config._listNameFieldType, obj, jsonkey::kParsingNameFieldTypes );
                 assignArrayIfPresent( config._listNameFieldTypePrefix, obj, jsonkey::kParsingNameFieldPrefixes );
@@ -282,10 +281,9 @@ namespace sw
                     bComplete = false;
                 }
                 const pair<const vector<string>*, const utf8*> arrRequiredList[] = {
-                    {&config._listComponentBaseType,  "parsing.component_base_types"},
-                    {&config._listFixedStepBaseType, "parsing.fixed_step_base_types"},
-                    {  &config._listTypeStripPrefix,   "parsing.type_strip_prefixes"},
-                    {    &config._listNameFieldType,      "parsing.name_field_types"},
+                    {&config._listComponentBaseType, "parsing.component_base_types"},
+                    {  &config._listTypeStripPrefix,  "parsing.type_strip_prefixes"},
+                    {    &config._listNameFieldType,     "parsing.name_field_types"},
                 };
                 for ( const auto& [pList, pKey] : arrRequiredList )
                 {
@@ -401,7 +399,6 @@ namespace sw
         , _listValueForbiddenBaseType{}
         , _valueForbiddenMessage{}
         , _listComponentBaseType{}
-        , _listFixedStepBaseType{}
         , _listTypeStripPrefix{}
         , _listNameFieldType{}
         , _listNameFieldTypePrefix{}

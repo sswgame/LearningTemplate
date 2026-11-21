@@ -91,8 +91,6 @@ namespace sw
         void emitEnumRegistrar( CodeEmitBuffer& outBuffer, const ParsedEnumInfo& enumInfo ) const;
         /** @brief 틱 모드 등록 줄(`SW_REGISTER_TICK_TYPE( 타입, 모드 )`)을 냅니다(NEXT 5-4 W-R3 c · 5-3 1c). 대상은 `ParsedTypeInfo::requiresTickRegistration`. */
         void emitTickBatchRegistration( CodeEmitBuffer& outBuffer, const ParsedTypeInfo& typeInfo ) const;
-        /** @brief 고정 스텝 훅 등록 줄(`SW_REGISTER_FIXED_STEP_TYPE( 타입 )`)을 냅니다(틱 시스템의 고정 스텝 그룹 — `FixedStepBatch.h`). 대상은 `ParsedTypeInfo::requiresFixedStepRegistration`. */
-        void emitFixedStepRegistration( CodeEmitBuffer& outBuffer, const ParsedTypeInfo& typeInfo ) const;
 
         // ------------------------------------------------------------------------------
         // 3) maps — enumerator·식별자 표기

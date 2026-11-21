@@ -2,7 +2,8 @@
  * @file FixedStepContext.h
  * @brief 물리 고정 스텝 그룹(`FixedStepGroup`)과 그 훅이 받는 문맥(`FixedStepContext`)입니다 — 프레임 틱 그룹(`TickGroup`)과 나란한 두 번째 주기입니다.
  * @details 프레임 틱은 한 프레임에 한 번, 고정 스텝 훅은 물리 프레임 안에서 돈다(스텝 훅은 한 프레임 0..N 번). 주기는 나누고 스케줄링은 틱 시스템 하나가 한다 —
- *          등록은 같은 표(`TickBatchRegistry`), 구성원 · 일괄 구간은 틱 스케줄러의 고정 스텝 목록(`FixedStepTickList`), 디스패치는 같은 스케줄러
+ *          컴포넌트가 등록 자리(`onRegister`)에서 멤버 함수 포인터로 명시 등록하고(`FixedStepTickList::add<&T::메서드>` — 프레임 틱 `registerSubTick` ·
+ *          사건 `GameObjectEvents::listen<&T::메서드>` 와 같은 모양), 구성원 · 일괄 구간은 틱 스케줄러의 고정 스텝 목록, 디스패치는 같은 스케줄러
  *          (`SceneTickScheduler::tickFixedStepGroup`)다. 유니티 `Update` 대 `FixedUpdate`, Godot `_process` 대 `_physics_process`(같은 우선순위 장치),
  *          언리얼 틱 그룹 대 물리 서브스텝 콜백과 같은 나눔이다.
  */
@@ -66,8 +67,33 @@ namespace sw
     };
 
     /**
-     * @brief 같은 타입의 컴포넌트 @p count 개(@p ppComponent)에 고정 스텝 훅 하나를 한정 호출하는 함수입니다(`TickBatchFunction` 과 같은 자리).
-     * @details 타입마다 생성기가 낸 등록 줄이 그룹마다 하나씩 든다(재정의하지 않은 그룹은 nullptr). 가상 호출 길은 없다 — 등록이 없는 타입은 부르지 않는다.
+     * @brief 같은 메서드를 등록한 컴포넌트 @p count 개(@p ppComponent)에 그 메서드를 부르는 함수입니다(`TickBatchFunction` 과 같은 자리).
+     * @details 메서드마다 `runFixedStepBatch<&T::메서드>` 하나가 인스턴스화된다 — 메서드 포인터가 컴파일 시간 상수라 가상 호출이 아닌 직접 호출로 접힌다.
      */
     using FixedStepBatchFunction = void ( * )( const FixedStepContext& context, Component* const* ppComponent, uint32 count );
+
+    /** @brief 고정 스텝 메서드 형식에서 그 클래스를 꺼냅니다. 서명이 `void ( T::* )( const FixedStepContext& )` 가 아니면 정의가 없어 컴파일이 멈춘다. */
+    template <typename TMethod>
+    struct FixedStepMethodClass;
+
+    template <typename TClass>
+    struct FixedStepMethodClass<void ( TClass::* )( const FixedStepContext& )>
+    {
+        using Type = TClass;
+    };
+
+    /**
+     * @brief 메서드 @p TMethod 의 일괄 함수입니다 — 등록한 쪽(`FixedStepTickList::add<TMethod>`)의 TU 에서 인스턴스화된다.
+     * @details 등록 자리에서 메서드를 이름으로 집으므로(접근 검사도 그 자리) 이름은 자유이고, 서명이 틀리면 `FixedStepMethodClass` 에서 컴파일이 멈춘다.
+     */
+    template <auto TMethod>
+    void runFixedStepBatch( const FixedStepContext& context, Component* const* ppComponent, uint32 count )
+    {
+        using TClass = typename FixedStepMethodClass<decltype( TMethod )>::Type;
+        static_assert( std::is_base_of_v<Component, TClass>, "fixed step methods belong to a component type" );
+        for ( uint32 index = 0; index < count; ++index )
+        {
+            ( static_cast<TClass*>( ppComponent[index] )->*TMethod )( context );
+        }
+    }
 } // namespace sw

@@ -7,8 +7,6 @@
 #include "Engine/Object/GameObject/Tick/FixedStepTickList.h"
 
 #include "Engine/Object/Component/Component.h"
-#include "Engine/Object/GameObject/Tick/TickBatchRegistry.h"
-#include "Engine/Profiling/FrameProfiler.h"
 
 namespace sw
 {
@@ -17,24 +15,43 @@ namespace sw
         , _mapLocation{}
         , _arrListComponent{}
         , _arrListRun{}
-        , _mapFunctions{}
-        , _registryGeneration{ 0 }
         , _bStale{ SW_TRUE }
     {
     }
 
-    bool FixedStepTickList::add( Component& component, TickPhase phase )
+    bool FixedStepTickList::addFunction( Component& component, FixedStepGroup group, TickPhase phase, FixedStepBatchFunction pFunction )
     {
-        if ( _mapLocation.find( &component ) != _mapLocation.end() )
-            return false;
         // 단계는 64 간격이라 칸 하나가 버킷 하나다(`TickPhase`).
         const uint32 bucket = static_cast<uint32>( phase ) / kPhaseBucketWidth;
         SW_CHECK_INDEX( bucket, kPhaseBucketCount );
-        vector<Member>& listMember = _arrListMember[bucket];
-        _mapLocation.insert_or_assign( &component, Location{ bucket, static_cast<uint32>( listMember.size() ) } );
-        listMember.push_back( Member{ &component, SW_TRUE } );
+        if ( pFunction == nullptr )
+            return false;
+        auto found = _mapLocation.find( &component );
+        if ( found == _mapLocation.end() )
+        {
+            vector<Member>& listMember = _arrListMember[bucket];
+            found                      = _mapLocation.insert_or_assign( &component, Location{ bucket, static_cast<uint32>( listMember.size() ) } ).first;
+            listMember.push_back( Member{ &component, {}, SW_TRUE } );
+        }
+        else if ( found->second._bucket != bucket )
+        {
+            // 한 구성원은 한 단계다 — 그룹마다 단계가 다르면 차례(단계 버킷의 넣은 차례)를 하나로 정할 수 없다.
+            SW_LOG_ERROR_ID( "FixedStepTickList.PhaseMismatch", "Fixed step: a component registered groups in two phases (%# and %#) - the later group is ignored",
+                             found->second._bucket, bucket );
+            return false;
+        }
+        FixedStepBatchFunction& slot = _arrListMember[found->second._bucket][found->second._index]._arrFunction[group];
+        if ( slot != nullptr )
+            return false;
+        slot    = pFunction;
         _bStale = SW_TRUE;
         return true;
+    }
+
+    bool FixedStepTickList::isRegistered( const Component& component, FixedStepGroup group ) const
+    {
+        const auto found = _mapLocation.find( &component );
+        return found != _mapLocation.end() && _arrListMember[found->second._bucket][found->second._index]._arrFunction[group] != nullptr;
     }
 
     bool FixedStepTickList::remove( const Component& component )
@@ -73,43 +90,11 @@ namespace sw
         return found != _mapLocation.end() && _arrListMember[found->second._bucket][found->second._index]._bEnabled == SW_TRUE;
     }
 
-    const FixedStepTickList::FunctionTable& FixedStepTickList::findFunctions( TickBatchRegistry& registry, const TypeInfo* pType )
+    void FixedStepTickList::refresh()
     {
-        const auto found = _mapFunctions.find( pType );
-        if ( found != _mapFunctions.end() )
-            return found->second;
-        FunctionTable                            table{};
-        const TickBatchRegistry::FixedStepEntry* pEntry = pType != nullptr ? registry.findFixedStepEntry( pType ) : nullptr;
-        if ( pEntry != nullptr )
-            table = pEntry->_arrFunction;
-        return _mapFunctions.insert_or_assign( pType, table ).first->second;
-    }
-
-    void FixedStepTickList::refresh( TickBatchRegistry* pRegistry )
-    {
-        // 표가 바뀌었으면(모듈 적재 · 해제) 기억한 함수를 버린다 — 내려간 모듈의 함수를 들고 있으면 안 된다.
-        const uint32 generation = pRegistry != nullptr ? pRegistry->getGeneration() : 0;
-        if ( generation != _registryGeneration )
-        {
-            _registryGeneration = generation;
-            _mapFunctions.clear();
-            _bStale = SW_TRUE;
-        }
         if ( _bStale == SW_FALSE )
             return;
         _bStale = SW_FALSE;
-        if ( pRegistry == nullptr )
-        {
-            // 표 없이 구성원이 있으면 훅을 부를 길이 없다 — 조용히 건너뛰지 않는다(가상 호출 물러나기는 지웠다).
-            if ( _mapLocation.empty() == false )
-                SW_FATAL( "FixedStepTickList: %# fixed step members but the scene has no TickBatchRegistry", static_cast<uint32>( _mapLocation.size() ) );
-            for ( const FixedStepGroup group : EnumRange<FixedStepGroup>{} )
-            {
-                _arrListComponent[group].clear();
-                _arrListRun[group].clear();
-            }
-            return;
-        }
         for ( const FixedStepGroup group : EnumRange<FixedStepGroup>{} )
         {
             vector<Component*>& listComponent = _arrListComponent[group];
@@ -120,12 +105,10 @@ namespace sw
             {
                 for ( const Member& member : listMember )
                 {
-                    if ( member._bEnabled == SW_FALSE )
+                    const FixedStepBatchFunction pFunction = member._arrFunction[group];
+                    if ( member._bEnabled == SW_FALSE || pFunction == nullptr )
                         continue;
-                    const FixedStepBatchFunction pFunction = findFunctions( *pRegistry, member._pComponent->findCachedTypeInfo() )[group];
-                    if ( pFunction == nullptr )
-                        continue; // 그 타입은 이 그룹의 훅을 재정의하지 않았다(또는 줄이 없다)
-                    // 차례 그대로 이어진 같은 함수만 한 구간이다(차례를 지킨다 — 파일 머리말). 같은 함수면 같은 타입의 한정 호출이다.
+                    // 차례 그대로 이어진 같은 함수(같은 메서드)만 한 구간이다(차례를 지킨다 — 파일 머리말).
                     const bool bExtend = listRun.empty() == false && listRun.back()._pFunction == pFunction &&
                                          listRun.back()._start + listRun.back()._count == static_cast<uint32>( listComponent.size() );
                     if ( bExtend )
@@ -138,9 +121,9 @@ namespace sw
         }
     }
 
-    uint32 FixedStepTickList::run( FixedStepGroup group, const FixedStepContext& context, TickBatchRegistry* pRegistry )
+    uint32 FixedStepTickList::run( FixedStepGroup group, const FixedStepContext& context )
     {
-        refresh( pRegistry );
+        refresh();
         // 구간은 이 그룹을 도는 동안 다시 짓지 않는다 — 훅 안의 켜고 끄기 · 빼기는 다음 그룹부터 맞다(파일 머리말).
         const vector<Component*>& listComponent = _arrListComponent[group];
         for ( const Run& run : _arrListRun[group] )

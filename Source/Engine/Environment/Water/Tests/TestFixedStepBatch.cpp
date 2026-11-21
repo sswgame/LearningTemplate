@@ -5,27 +5,18 @@
 
 #include "Engine/Environment/Water/BuoyancyComponent.h"
 #include "Engine/Environment/Water/WaterBodyComponent.h"
-#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/Tick/TickBatchRegistry.h"
+#include "Engine/Object/GameObject/Tick/FixedStepTickList.h"
 #include "Engine/Physics/Collision/PhysicsShape.h"
 #include "Engine/Physics/Component/JointComponent.h"
 #include "Engine/Physics/Component/RigidBodyComponent.h"
-#include "Engine/Physics/Scene/FixedStepBatch.h"
 #include "Engine/Physics/Scene/ScenePhysics.h"
 
-// 고정 스텝 훅 일괄 함수(층 8 — 부력 · 물이 섞인 장면이라 여기 둔다) — 재정의 판정은 컴파일에서(`FixedStepBatchOf`), 생성기가 낸 등록 줄이 표에 오르고,
+// 고정 스텝 메서드 등록(층 8 — 부력 · 물이 섞인 장면이라 여기 둔다) — 컴포넌트가 onRegister 에서 쓰는 그룹만 명시 등록하고(`registerFixedStep<&T::메서드>`),
 // 틱 시스템의 고정 스텝 그룹이 같은 입력에 같은 결과(비트까지)를 낸다.
 
 using namespace sw;
-
-// 재정의 판정은 `&T::훅` 의 클래스 형식이다 — 물려받은 표식은 칸이 nullptr 라 부르지 않는다.
-static_assert( FixedStepBatchOf<RigidBodyComponent>::kOverridesFrameBegin && FixedStepBatchOf<RigidBodyComponent>::kOverridesPreStep &&
-               FixedStepBatchOf<RigidBodyComponent>::kOverridesFrameEnd );
-static_assert( FixedStepBatchOf<RigidBodyComponent>::kOverridesPostStep == false );
-static_assert( FixedStepBatchOf<BuoyancyComponent>::kOverridesPreStep && FixedStepBatchOf<BuoyancyComponent>::kOverridesFrameBegin == false );
-static_assert( FixedStepBatchOf<JointComponent>::kOverridesFrameBegin && FixedStepBatchOf<JointComponent>::kOverridesPreStep == false );
 
 namespace
 {
@@ -85,20 +76,28 @@ namespace
 } // namespace
 
 /**
- * @brief [FixedStepBatchTest] 생성기가 낸 등록 줄이 틱 일괄 표에 오른다 — 재정의한 그룹만 함수가 있고, 물려받은 표식의 그룹은 nullptr 다
+ * @brief [FixedStepBatchTest] 등록 자리에서 쓰는 그룹만 오른다 — 강체는 시작 · 스텝 앞 · 끝, 부력은 스텝 앞, 관절은 시작만이고 등록하지 않은 그룹은 비었다
  */
-SW_TEST_CASE( FixedStepBatchTest, GeneratedEntriesMatchOverrides )
+SW_TEST_CASE( FixedStepBatchTest, RegisteredGroupsMatchComponents )
 {
-    TickBatchRegistry* pRegistry = engine::findSubsystem<TickBatchRegistry>();
-    SW_REQUIRE_NOT_NULL( pRegistry );
-    const TickBatchRegistry::FixedStepEntry* pBody = pRegistry->findFixedStepEntry( RigidBodyComponent::StaticType() );
+    GameObjectManager   manager;
+    GameObject*         pObject = manager.createGameObject( hashed_string( "Crate" ) );
+    RigidBodyComponent* pBody   = pObject->addComponent<RigidBodyComponent>();
+    BuoyancyComponent*  pFloat  = pObject->addComponent<BuoyancyComponent>();
+    JointComponent*     pJoint  = manager.createGameObject( hashed_string( "Hinge" ) )->addComponent<JointComponent>();
     SW_REQUIRE_NOT_NULL( pBody );
-    SW_EXPECT_TRUE( pBody->_arrFunction[FixedStepGroup::PreStep] != nullptr );
-    SW_EXPECT_TRUE( pBody->_arrFunction[FixedStepGroup::PostStep] == nullptr );
-    const TickBatchRegistry::FixedStepEntry* pFloat = pRegistry->findFixedStepEntry( BuoyancyComponent::StaticType() );
     SW_REQUIRE_NOT_NULL( pFloat );
-    SW_EXPECT_TRUE( pFloat->_arrFunction[FixedStepGroup::FrameBegin] == nullptr );
-    SW_EXPECT_TRUE( pFloat->_arrFunction[FixedStepGroup::PreStep] != nullptr );
+    SW_REQUIRE_NOT_NULL( pJoint );
+    const FixedStepTickList& list = manager.getFixedStepTickList();
+    SW_EXPECT_TRUE( list.isRegistered( *pBody, FixedStepGroup::FrameBegin ) );
+    SW_EXPECT_TRUE( list.isRegistered( *pBody, FixedStepGroup::PreStep ) );
+    SW_EXPECT_FALSE( list.isRegistered( *pBody, FixedStepGroup::PostStep ) );
+    SW_EXPECT_TRUE( list.isRegistered( *pBody, FixedStepGroup::FrameEnd ) );
+    SW_EXPECT_FALSE( list.isRegistered( *pFloat, FixedStepGroup::FrameBegin ) );
+    SW_EXPECT_TRUE( list.isRegistered( *pFloat, FixedStepGroup::PreStep ) );
+    SW_EXPECT_TRUE( list.isRegistered( *pJoint, FixedStepGroup::FrameBegin ) );
+    SW_EXPECT_FALSE( list.isRegistered( *pJoint, FixedStepGroup::PreStep ) );
+    SW_EXPECT_EQUAL( 3u, list.getMemberCount() );
 }
 
 /**

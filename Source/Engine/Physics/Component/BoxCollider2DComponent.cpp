@@ -97,6 +97,7 @@ namespace sw
     void BoxCollider2DComponent::onRegister( GameObjectManager& manager )
     {
         PhysicsComponent::onRegister( manager );
+        registerFixedStep<&BoxCollider2DComponent::onPhysicsFrameBegin>( manager, FixedStepGroup::FrameBegin );
         manager.getSubsystem<sw::ScenePhysics>().registerCollider2D( this );
     }
 

@@ -70,8 +70,10 @@ namespace sw
     protected:
         /** @brief 폰툰이 힘을 거는 강체를 묶습니다 — 같은 오브젝트에 `RigidBodyComponent` 가 없으면 등록이 오류다(물리 단계마다 찾지 않는다). */
         [[nodiscard]] bool bindRequiredComponents() override { return _rigidBody.bind( *this ); }
-        void               onPrePhysicsStep( const FixedStepContext& context );
-        void               releasePhysics( ScenePhysics& physics ) override;
+        /** @brief 쓰는 고정 스텝 그룹마다 메서드를 등록합니다(`registerFixedStep`). */
+        void onRegister( GameObjectManager& manager ) override;
+        void onPrePhysicsStep( const FixedStepContext& context );
+        void releasePhysics( ScenePhysics& physics ) override;
 
     private:
         PROPERTY( Category = "Buoyancy", DisplayName = "Pontoons", Tooltip = "Spheres that sample the water surface (body local)" )

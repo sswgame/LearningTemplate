@@ -1,5 +1,5 @@
 // FixedStepGroupTest — 물리 고정 스텝 훅이 틱 시스템의 고정 스텝 그룹으로 도는지 본다: 한 프레임 여러 스텝의 그룹 차례 · 스텝 수만큼 부름 · 단계 차례
-// (바디 → 캐릭터) · 도는 중 켜고 끄기 · 0 스텝 프레임. 기록 컴포넌트(`FixedStepRecorderTestComponent.h`)는 생성기가 낸 등록 줄로 불린다.
+// (바디 → 캐릭터) · 도는 중 켜고 끄기 · 0 스텝 프레임. 기록 컴포넌트(`FixedStepRecorderTestComponent.h`)는 onRegister 에서 명시 등록한 메서드로 불린다.
 #include "pch.h"
 
 #include "Core/Container/vector.h"

@@ -3,8 +3,8 @@
  * @brief 강체 물리 컴포넌트(바디 · 관절 · 캐릭터, 2D · 3D)의 기반입니다 — 씬의 물리(`ScenePhysics`)에 등록되고, 프레임마다 정해진 순서로 불립니다.
  * @details 컴포넌트는 틱하지 않습니다(병렬 틱에서 물리 씬을 만지면 같은 그룹의 다른 오브젝트가 스케줄에 따라 다른 자리를 본다). 매니저가 틱 ·
  *          트랜스폼 적용이 끝난 뒤 게임 스레드에서 `ScenePhysics::step` 을 부르고, 그것이 틱 시스템의 고정 스텝 그룹(`FixedStepGroup`)을 차례로 돕니다.
- *          등록된 컴포넌트는 등록 동안 고정 스텝 목록(`FixedStepTickList`)에 단계(바디 Early → 관절 Normal → 캐릭터 Late) 순으로 들고, 그룹마다 그 훅을
- *          재정의한 타입만 타입별 일괄 함수로 불린다(`FixedStepBatch.h` — 가상 호출이 아니다):
+ *          컴포넌트는 등록 자리(`onRegister`)에서 쓰는 그룹마다 메서드를 명시 등록하고(`registerFixedStep<&T::메서드>( manager, 그룹 )`), 고정 스텝 목록
+ *          (`FixedStepTickList`)이 단계(바디 Early → 관절 Normal → 캐릭터 Late) 순으로 메서드별 일괄 함수를 부른다(가상 호출이 아니다). 엔진 타입은 아래 이름을 쓴다:
  *
  *          1. `onPhysicsFrameBegin` — 시작 전이면 아무것도 하지 않고, 시작했으면 바디를 만들거나(처음) 트랜스폼의 바깥 변화(코드가 옮김 ·
  *             `teleportTo`)를 바디로 옮깁니다.
@@ -25,6 +25,7 @@
 #include "Core/Math/Math.h"
 
 #include "Engine/Object/Component/SceneComponent.h"
+#include "Engine/Object/GameObject/Tick/FixedStepContext.h"
 #include "Engine/Physics/Collision/PhysicsShape.h"
 #include "Engine/Physics/PhysicsDesc.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -32,7 +33,6 @@
 namespace sw
 {
     struct SpatialGridLayerDesc;
-    class FixedStepContext;
     class GameObjectManager;
     class ScenePhysics;
 
@@ -156,19 +156,16 @@ namespace sw
         void markShapeScale( const float3& scale ) { _shapeScale = scale; }
 
         /**
-         * @brief 고정 스텝 훅 넷의 **표식**입니다 — 가상 함수가 아니고 정의도 없다(부르면 링크가 멈춘다).
-         * @details 파생이 같은 서명으로 다시 선언하면 그 그룹(`FixedStepGroup`)을 재정의한 것이다. 재정의 여부는 `FixedStepBatchOf<T>`(`FixedStepBatch.h`)가
-         *          `&T::훅` 의 클래스 형식으로 컴파일에서 정하고, 틱 스케줄러는 재정의한 타입만 타입별 일괄 함수로 부른다(`SceneTickScheduler::tickFixedStepGroup`).
-         *          스케줄링을 틱 시스템 하나로 두려고 가상 훅을 지웠다 — 주기만 프레임 틱과 다르다(유니티 `FixedUpdate` · Godot `_physics_process`).
-         *          물리 프레임 시작 — 백엔드 객체를 만들거나 트랜스폼의 바깥 변화를 옮깁니다.
+         * @brief 메서드 @p TMethod 를 고정 스텝 그룹 @p group 에 등록합니다 — 등록 자리(`onRegister`, 기반의 `onRegister` 뒤)에서 쓰는 그룹마다 한 번 부른다.
+         * @details 서명은 `void ( T::* )( const FixedStepContext& )` 여야 컴파일된다(`FixedStepMethodClass`) — 이름은 자유이고, 등록하지 않은 메서드는 불리지 않는다.
+         *          단계는 이 컴포넌트의 것(`getFixedStepPhase`)이다. 해제(`onUnregister`)가 모든 그룹을 함께 뺀다. 프레임 틱 `registerSubTick` ·
+         *          사건 `GameObjectEvents::listen<&T::메서드>` 와 같은 모양이다(유니티 `FixedUpdate` · Godot `_physics_process` 의 자리).
          */
-        void onPhysicsFrameBegin( const FixedStepContext& context );
-        /** @brief 표식 — 고정 스텝 직전(스텝 칸 `getStepIndex` · `getStepCount` · `getFixedDeltaTime`). */
-        void onPrePhysicsStep( const FixedStepContext& context );
-        /** @brief 표식 — 고정 스텝 직후, 자세를 기록합니다. */
-        void onPostPhysicsStep( const FixedStepContext& context );
-        /** @brief 표식 — 물리 프레임 끝, 보간 비(`getAlpha`)로 자세를 트랜스폼에 씁니다. */
-        void onPhysicsFrameEnd( const FixedStepContext& context );
+        template <auto TMethod>
+        void registerFixedStep( GameObjectManager& manager, FixedStepGroup group )
+        {
+            registerFixedStepFunction( manager, group, &runFixedStepBatch<TMethod> );
+        }
         /**
          * @brief 백엔드 객체(바디 · 관절 · 캐릭터)를 놓습니다. 몇 번 불려도 됩니다.
          * @details 고정 스텝 훅과 달리 가상 그대로다 — 스텝마다가 아니라 해제 · 플레이 끝에 한 번 부르는 수명 훅이라 일괄 호출로 얻을 것이 없다(언리얼 `OnDestroyPhysicsState` 자리).
@@ -186,6 +183,9 @@ namespace sw
         }
 
     private:
+        /** @brief 일괄 함수 @p pFunction 을 이 컴포넌트의 그룹 @p group 으로 고정 스텝 목록에 넣습니다(`registerFixedStep`). 이미 있으면 오류를 남깁니다. */
+        void registerFixedStepFunction( GameObjectManager& manager, FixedStepGroup group, FixedStepBatchFunction pFunction );
+
         ScenePhysics*         _pScenePhysics;
         uint32                _physicsIndex;           ///< `ScenePhysics` 의 단계 목록 자리. 없으면 `kNotRegistered`
         uint32                _syncedTransformVersion; ///< 마지막으로 맞춘 월드 변경 번호(`consumeTransformChange`). 처음 0 — 칸의 번호는 받을 때 1 이상이라 첫 비교는 "바뀜"

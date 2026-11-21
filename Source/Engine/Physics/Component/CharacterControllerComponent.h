@@ -152,6 +152,8 @@ namespace sw
         void resetMotion() override { stopMovementImmediately(); }
         /** @brief 캐릭터는 바닥 없이 떨어진다. */
         bool needsStreamingFloor() const override { return true; }
+        /** @brief 쓰는 고정 스텝 그룹마다 메서드를 등록합니다(`registerFixedStep`). */
+        void onRegister( GameObjectManager& manager ) override;
         void onPhysicsFrameBegin( const FixedStepContext& context );
         /** @brief 이번 스텝의 속도를 정해 씬에 이동을 넣습니다(`ScenePhysics::queueCharacterMove` — 씬이 모든 캐릭터를 한 번에 옮긴다, 감사 S-8). */
         void onPrePhysicsStep( const FixedStepContext& context );

@@ -46,6 +46,12 @@ namespace sw
     {
     }
 
+    void BuoyancyComponent::onRegister( GameObjectManager& manager )
+    {
+        PhysicsComponent::onRegister( manager );
+        registerFixedStep<&BuoyancyComponent::onPrePhysicsStep>( manager, FixedStepGroup::PreStep );
+    }
+
     void BuoyancyComponent::onPrePhysicsStep( const FixedStepContext& context )
     {
         ScenePhysics& physics        = context.getPhysics();

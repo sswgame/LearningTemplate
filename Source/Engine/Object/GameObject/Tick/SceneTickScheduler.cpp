@@ -15,10 +15,8 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/SceneTransformHierarchy.h"
 #include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
 #include "Engine/Object/GameObject/Tick/StructuralChangeBuffer.h"
-#include "Engine/Object/GameObject/Tick/TickBatchRegistry.h"
 #include "Engine/Object/GameObject/Tick/TickContext.h"
 #include "Engine/Profiling/FrameProfiler.h"
 
@@ -253,7 +251,7 @@ namespace sw
             FrameProfiler::registerEngineScopeSite( "GT.Scene.fixedStep.FrameEnd", __func__, __FILE__, __LINE__ ),
         };
         const ScopedFrameProfile groupScope{ kArrGroupScopeID[static_cast<uint32>( group )] };
-        return _fixedStepTickList.run( group, context, _pManager->getSceneEngineServices()._pTickBatchRegistry );
+        return _fixedStepTickList.run( group, context );
     }
 
     void SceneTickScheduler::tickGroups( float32 deltaTime, uint32 firstGroup, uint32 endGroup )

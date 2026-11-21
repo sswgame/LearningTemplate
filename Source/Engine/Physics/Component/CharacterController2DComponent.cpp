@@ -92,6 +92,14 @@ namespace sw
         inoutBuilder.addUint8( isGrounded() ? 1 : 0 );
     }
 
+    void CharacterController2DComponent::onRegister( GameObjectManager& manager )
+    {
+        PhysicsComponent::onRegister( manager );
+        registerFixedStep<&CharacterController2DComponent::onPhysicsFrameBegin>( manager, FixedStepGroup::FrameBegin );
+        registerFixedStep<&CharacterController2DComponent::onPrePhysicsStep>( manager, FixedStepGroup::PreStep );
+        registerFixedStep<&CharacterController2DComponent::onPhysicsFrameEnd>( manager, FixedStepGroup::FrameEnd );
+    }
+
     void CharacterController2DComponent::onPhysicsFrameBegin( const FixedStepContext& context )
     {
         ScenePhysics& physics = context.getPhysics();

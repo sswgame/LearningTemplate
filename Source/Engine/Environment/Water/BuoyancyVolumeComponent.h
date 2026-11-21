@@ -41,6 +41,8 @@ namespace sw
         void setFlowVelocity( const float3& flowVelocity ) { _flowVelocity = flowVelocity; }
 
     protected:
+        /** @brief 쓰는 고정 스텝 그룹마다 메서드를 등록합니다(`registerFixedStep`). */
+        void onRegister( GameObjectManager& manager ) override;
         void onPrePhysicsStep( const FixedStepContext& context );
 
     private:

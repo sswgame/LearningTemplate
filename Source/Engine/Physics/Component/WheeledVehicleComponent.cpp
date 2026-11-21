@@ -102,6 +102,13 @@ namespace sw
         return desc;
     }
 
+    void WheeledVehicleComponent::onRegister( GameObjectManager& manager )
+    {
+        PhysicsComponent::onRegister( manager );
+        registerFixedStep<&WheeledVehicleComponent::onPhysicsFrameBegin>( manager, FixedStepGroup::FrameBegin );
+        registerFixedStep<&WheeledVehicleComponent::onPhysicsFrameEnd>( manager, FixedStepGroup::FrameEnd );
+    }
+
     void WheeledVehicleComponent::onPhysicsFrameBegin( const FixedStepContext& context )
     {
         ScenePhysics& physics = context.getPhysics();

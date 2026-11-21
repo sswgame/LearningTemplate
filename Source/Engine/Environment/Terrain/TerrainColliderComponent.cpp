@@ -125,6 +125,12 @@ namespace sw
         requestRebuild();
     }
 
+    void TerrainColliderComponent::onRegister( GameObjectManager& manager )
+    {
+        PhysicsComponent::onRegister( manager );
+        registerFixedStep<&TerrainColliderComponent::onPhysicsFrameBegin>( manager, FixedStepGroup::FrameBegin );
+    }
+
     void TerrainColliderComponent::onPhysicsFrameBegin( const FixedStepContext& context )
     {
         ScenePhysics& physics = context.getPhysics();
