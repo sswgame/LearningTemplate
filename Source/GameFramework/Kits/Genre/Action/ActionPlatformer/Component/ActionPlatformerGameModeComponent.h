@@ -1,9 +1,11 @@
 /**
- * @file ActionPlatformerDemoComponent.h
- * @brief 장르 키트 시연 — 액션 플랫포머(`GF_ActionPlatformer`)의 스테이지 한 판입니다. 키트의 몸(`ActionPlatformerBody`)과 진행(`ActionStageRun`)을 플레이어 입력(입력 맵 `Move` · `KitDemo.Jump`)으로 돌립니다.
- * @details 지형은 씬 데이터(키트 글자 형식의 줄 — '#' 벽, '-' 발판, 'D' 흙, 'O' 갈고리 지점, 나머지는 빈 칸)이고, 체크포인트 · 비밀 · 골은 스테이지 정의(카탈로그)의 id 에 씬의 자리를 맞춘 것이다.
- *          아래로 떨어지거나(낙사) 개발 명령 `kitdemo.platformer.kill` 로 죽으면(목숨 하나) 공통 부활 흐름(`RespawnFlow`)이 스테이지의 `<Respawn>` 규칙대로
- *          다시 세운다 — 마지막 체크포인트 · 제자리(낭떠러지면 가까운 설 자리, `ActionPlatformerRespawnWorld`) · 시작 지점. 골에 닿으면 깨고 결과(시간 · 피격 · 수집 점수와 등급)를 남긴다. 모습은 디버그 그리기다.
+ * @file ActionPlatformerGameModeComponent.h
+ * @brief 액션 플랫포머 키트(`GF_ActionPlatformer`)의 디렉터 — 스테이지 한 판을 진행합니다. 키트의 몸(`ActionPlatformerBody`)과 진행(`ActionStageRun`)을 플레이어 입력 명령(`submitPlayerInput`)으로 돌립니다.
+ * @details 키트 세 갈래의 가운데다: 규칙(키트 루트)을 들고 씬과 잇는다. 입력 읽기 · 모습은 클라이언트 모듈(`GF_Client_ActionPlatformer` 의 `ActionPlatformerAvatarComponent`)이
+ *          이 디렉터의 명령 · 읽기 API 로만 다룬다 — 전용 서버는 그 모듈을 짓지 않는다.
+ *          지형은 씬 데이터(키트 글자 형식의 줄 — '#' 벽, '-' 발판, 'D' 흙, 'O' 갈고리 지점, 나머지는 빈 칸)이고, 체크포인트 · 비밀 · 골은 스테이지 정의(카탈로그)의 id 에 씬의 자리를 맞춘 것이다.
+ *          아래로 떨어지거나(낙사) 개발 명령 `actionplatformer.kill` 로 죽으면(목숨 하나) 공통 부활 흐름(`RespawnFlow`)이 스테이지의 `<Respawn>` 규칙대로
+ *          다시 세운다 — 마지막 체크포인트 · 제자리(낭떠러지면 가까운 설 자리, `ActionPlatformerRespawnWorld`) · 시작 지점. 골에 닿으면 깨고 결과(시간 · 피격 · 수집 점수와 등급)를 남긴다.
  *          장르 완결 루프 시나리오: `game/playground/automation/kitdemo_actionplatformer.scenario.xml`, 부활: `game/playground/automation/kitdemo_respawn.scenario.xml`.
  */
 #pragma once
@@ -19,6 +21,7 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Serializer/CatalogKey.h"
 
+#include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Action/ActionPlatformer/ActionPlatformerBody.h"
 #include "GameFramework/Kits/Genre/Action/ActionPlatformer/ActionPlatformerCatalog.h"
 #include "GameFramework/Kits/Genre/Action/ActionPlatformer/ActionStageRun.h"
@@ -29,36 +32,50 @@
 namespace sw
 {
     /**
-     * @class ActionPlatformerDemoComponent
-     * @brief 시작 → 체크포인트 · 비밀 → 골(또는 게임 오버)을 플레이어 입력으로 진행합니다.
+     * @class ActionPlatformerGameModeComponent
+     * @brief 시작 → 체크포인트 · 비밀 → 골(또는 게임 오버)을 플레이어 입력 명령으로 진행합니다.
      */
-    REFLECT( Category = "KitDemo", DisplayName = "Action Platformer Demo", Tooltip = "Runs one ActionPlatformer kit stage (checkpoints, secrets, goal, grade) from the player's input actions" )
-    class ActionPlatformerDemoComponent : public GameModeComponent
+    REFLECT( Category = "ActionPlatformer", DisplayName = "Action Platformer Game Mode", Tooltip = "Runs one ActionPlatformer stage (checkpoints, secrets, goal, grade) from player input commands" )
+    class SW_KIT_API ActionPlatformerGameModeComponent : public GameModeComponent
     {
     public:
         REFLECT_BODY();
 
-        ActionPlatformerDemoComponent();
-        virtual ~ActionPlatformerDemoComponent() override;
+        ActionPlatformerGameModeComponent();
+        virtual ~ActionPlatformerGameModeComponent() override;
 
         void serializeGameState( StateIO& io ) override;
 
-        // ---- 자동화 감시 값이 읽는 것 ----
-        int32   getRunState() const { return static_cast<int32>( _run.getState() ); }
-        int32   getCheckpointIndex() const { return _run.getCheckpointIndex(); }
-        int32   getSecretCount() const { return _run.getSecretCommittedCount() + _run.getSecretPendingCount(); }
-        int32   getLives() const { return _run.getLives(); }
-        float32 getScore() const { return _run.computeResult()._score; }
-        float32 getPlayerX() const { return _body.getPosition()._x; }
-        float32 getPlayerY() const { return _body.getPosition()._y; }
-        int32   getRespawnPhase() const { return static_cast<int32>( _respawn.getPhase() ); }
-        int32   getRespawnCount() const { return _respawnCount; }
-        int32   getLastRespawnPolicy() const { return _lastRespawnPolicy; }
-        float32 getLastRespawnShift() const { return _lastRespawnShift; }
-        int32   getInPlaceUses() const { return _respawn.getPolicyUses( RespawnPolicyKind::InPlace ); }
-
+        // ---- 명령(게임 스레드) ----
+        /**
+         * @brief 이번 프레임의 플레이어 입력(가로 이동 축, 점프 키를 누른 채인가)을 넘깁니다. 다음 규칙 걸음(`updateGame`)이 몸에 넣는다 — 점프 누름(눌린 순간)은 디렉터가 누른 채 깃발로 가린다.
+         * @return 판이 열렸고 진행 중이라 입력을 받으면 true 입니다(죽어 있는 동안도 받는다 — 되살아난 뒤 첫 걸음이 쓴다). 아니면 받지 않고 false 입니다.
+         */
+        [[nodiscard]] bool submitPlayerInput( float32 moveX, bool bJumpHeld );
         /** @brief 플레이어를 그 자리에서 죽입니다(목숨 하나, 부활 흐름 시작). 진행 중이 아니거나 이미 죽어 있으면 false 입니다. 낙사와 개발 명령이 부릅니다. */
-        bool killPlayer();
+        [[nodiscard]] bool killPlayer();
+
+        // ---- 읽기(클라이언트 모듈 · 감시 값) ----
+        /** @brief 판이 열렸고 진행 중(깸 · 게임 오버 전)이라 입력 명령을 받으면 true 입니다. */
+        bool                   isAcceptingInput() const;
+        const PlatformTileMap& getTileMap() const { return _map; }
+        const ActionStageRun&  getRun() const { return _run; }
+        /** @brief 씬이 놓은 비밀 자리입니다(스테이지 정의의 비밀 순서). */
+        const vector<float2>& getSecretPositions() const { return _listSecretPosition; }
+        float32               getGoalX() const { return _goalX; }
+        float2                getPlayerPosition() const { return _body.getPosition(); }
+        int32                 getRunState() const { return static_cast<int32>( _run.getState() ); }
+        int32                 getCheckpointIndex() const { return _run.getCheckpointIndex(); }
+        int32                 getSecretCount() const { return _run.getSecretCommittedCount() + _run.getSecretPendingCount(); }
+        int32                 getLives() const { return _run.getLives(); }
+        float32               getScore() const { return _run.computeResult()._score; }
+        float32               getPlayerX() const { return _body.getPosition()._x; }
+        float32               getPlayerY() const { return _body.getPosition()._y; }
+        int32                 getRespawnPhase() const { return static_cast<int32>( _respawn.getPhase() ); }
+        int32                 getRespawnCount() const { return _respawnCount; }
+        int32                 getLastRespawnPolicy() const { return _lastRespawnPolicy; }
+        float32               getLastRespawnShift() const { return _lastRespawnShift; }
+        int32                 getInPlaceUses() const { return _respawn.getPolicyUses( RespawnPolicyKind::InPlace ); }
 
     protected:
         [[nodiscard]] bool startGame() override;
@@ -77,7 +94,6 @@ namespace sw
         void applyMarkers();
         /** @brief 죽어 있는 동안 부활 흐름을 돌리고, 스폰하면 몸을 그 자리에 세웁니다. */
         void updateRespawn( float32 deltaTime );
-        void drawStage() const;
 
     private:
         PROPERTY( Category = "Data", DisplayName = "Catalog", Tooltip = "Action platformer catalog XML (stages, grading, body settings)" )
@@ -112,7 +128,10 @@ namespace sw
         int32 _lastRespawnPolicy; ///< 마지막 부활의 정책(`RespawnPolicyKind`, −1 이면 아직 없음)
         PROPERTY( RuntimeState )
         float32 _lastRespawnShift; ///< 마지막 부활에서 죽은 자리와 선 자리의 거리(m)
+        float32 _commandMoveX;     ///< 마지막 입력 명령의 가로 이동 축 — 클라이언트가 프레임마다 덮는 입력이라 싣지 않는다
         PROPERTY( RuntimeState )
-        uint8 _bJumpHeldLastFrame : 1;
+        uint8                  _bJumpHeldLastFrame : 1;
+        uint8                  _bCommandJumpHeld   : 1; ///< 마지막 입력 명령의 점프 키 누른 채(싣지 않는다 — `_commandMoveX` 와 같은 까닭)
+        [[maybe_unused]] uint8 _reserved           : 6;
     };
 } // namespace sw

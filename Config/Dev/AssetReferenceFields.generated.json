@@ -1593,18 +1593,29 @@
       "listPathTextField": [],
       "listTextField": [
         "_id",
+        "_listBossMonster",
+        "_listHallMonster",
         "_name",
         "id",
+        "listBossMonster",
+        "listHallMonster",
         "name"
       ]
     },
     {
       "owner": "GF_ActionPlatformer",
-      "listField": [],
-      "listAssetRefField": [],
+      "listField": [
+        "_catalogPath",
+        "catalogPath"
+      ],
+      "listAssetRefField": [
+        "_catalogPath",
+        "catalogPath"
+      ],
       "listPathTextField": [],
       "listTextField": [
         "_id",
+        "_listTerrainRow",
         "_name",
         "_next",
         "_onHit",
@@ -1612,6 +1623,7 @@
         "_start",
         "checkpoints",
         "id",
+        "listTerrainRow",
         "moves",
         "name",
         "next",
@@ -1771,6 +1783,32 @@
         "type",
         "types",
         "weak"
+      ]
+    },
+    {
+      "owner": "GF_Client_ActionCombat",
+      "listField": [],
+      "listAssetRefField": [],
+      "listPathTextField": [],
+      "listTextField": [
+        "_attackAction",
+        "_dashAction",
+        "_moveAction",
+        "attackAction",
+        "dashAction",
+        "moveAction"
+      ]
+    },
+    {
+      "owner": "GF_Client_ActionPlatformer",
+      "listField": [],
+      "listAssetRefField": [],
+      "listPathTextField": [],
+      "listTextField": [
+        "_jumpAction",
+        "_moveAction",
+        "jumpAction",
+        "moveAction"
       ]
     },
     {
@@ -3606,9 +3644,6 @@
         "_characterOddClip",
         "_faceExpression",
         "_faceTalkClip",
-        "_listBossMonster",
-        "_listHallMonster",
-        "_listTerrainRow",
         "_rigAimState",
         "_shopID",
         "_target",
@@ -3620,9 +3655,6 @@
         "characterOddClip",
         "faceExpression",
         "faceTalkClip",
-        "listBossMonster",
-        "listHallMonster",
-        "listTerrainRow",
         "rigAimState",
         "shopID",
         "target"

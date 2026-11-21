@@ -1,0 +1,22 @@
+{
+    "_name": "GF_Client_ActionPlatformer",
+    "_version": "1.0.0",
+    "_kind": "Kit",
+    "_description": "액션 플랫포머 키트(클라이언트) — 입력 맵 액션을 디렉터 입력 명령으로 바꾸고 스테이지 · 몸을 그린다(뷰 · 입력). 규칙 · 디렉터는 GF_ActionPlatformer",
+    "_listDependency": [
+        {
+            "_name": "GameFramework"
+        },
+        {
+            "_name": "GF_ActionPlatformer"
+        }
+    ],
+    "_listConfiguration": [
+        "Dev",
+        "Shipping"
+    ],
+    "_listTarget": [
+        "Client"
+    ],
+    "_bEnabledByDefault": true
+}

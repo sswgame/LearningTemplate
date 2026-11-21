@@ -3,7 +3,7 @@
  * @brief 장르 키트 시연 가운데 "판을 여는 순간 규칙을 끝까지 돌리고 결과만 쥐는" 것들의 공통 베이스입니다.
  * @details 이 시연들은 모습 · 입력이 없다(언리얼 Functional Test 의 규칙 단계와 같은 자리). 그래서 틱마다 돌릴 규칙도, 세울 오브젝트도 없고
  *          상태는 "마쳤는가" 와 결과 수 몇 개뿐이다. 시연마다 같은 빈 `updateGame` · `onFlush` 와 같은 모양의 `serializeGameState` 를 적던 것을 여기 한 번 둔다.
- *          모습이 있는 시연(`ActionCombatDemoComponent` · `ActionPlatformerDemoComponent`)은 `GameModeComponent` 를 바로 잇는다.
+ *          모습 · 입력이 있는 판은 키트로 옮겨 디렉터(키트 `Component/` 의 `*GameModeComponent`)와 클라이언트 모듈(`GF_Client_<키트>`)로 가른다.
  */
 #pragma once
 #include "Core/Foundation/Types.h"

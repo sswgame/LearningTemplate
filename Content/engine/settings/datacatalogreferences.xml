@@ -117,7 +117,7 @@
 	<Field owner="ArenaGameModeComponent" field="_gruntAbilitySet" tag="AbilitySetDef"/>
 	<Field owner="ArenaGameModeComponent" field="_casterAbilitySet" tag="AbilitySetDef"/>
 	<CatalogKey tag="ActionStageDef" catalog="ActionPlatformer" entry="Stage"/>
-	<Field owner="ActionPlatformerDemoComponent" field="_stageID" tag="ActionStageDef"/>
+	<Field owner="ActionPlatformerGameModeComponent" field="_stageID" tag="ActionStageDef"/>
 	<CatalogKey tag="SRPGTerrainDef" catalog="SRPGCatalog" entry="Terrain"/>
 	<CatalogKey tag="SRPGUnitDef" catalog="SRPGCatalog" entry="Unit"/>
 	<CatalogKey tag="SRPGPilotDef" catalog="SRPGCatalog" entry="Pilot"/>
