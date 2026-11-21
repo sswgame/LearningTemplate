@@ -40,6 +40,8 @@ SW_TEST_CASE( DerivedDataCacheTest, SharedHitFillsLocal )
     SW_REQUIRE_TRUE( fixture.makeSharedWriter().store( kKey, "job-a", kPayload ) );
 
     const DerivedDataCache cache = fixture.makeLayered( DerivedDataAccess::ReadOnly );
+    SW_EXPECT_TRUE( cache.makePath( 0, kKey ) == fixture._localRoot.join( "ab/abcdef0123456789" ) ); // 층 루트 아래 `<키 앞 두 글자>/<키>` — 형식으로 잇는다
+    SW_EXPECT_TRUE( cache.makePath( 1, kKey ).getParent().getParent() == fixture._sharedRoot );
     SW_EXPECT_FALSE( FileUtil::exists( cache.makePath( 0, kKey ) ) );
     vector<uint8> bytes;
     SW_REQUIRE_TRUE( cache.find( kKey, "job-a", bytes ) );

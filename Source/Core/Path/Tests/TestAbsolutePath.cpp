@@ -146,3 +146,23 @@ SW_TEST_CASE( AbsolutePathTest, ParentFollowsDirectoryPartRules )
     SW_REQUIRE_TRUE( folder.has_value() );
     SW_EXPECT_EQUAL( concat( root, "baseText" ), folder->getParent().str() ); // 끝 구분자는 무시한다
 }
+
+SW_TEST_CASE( AbsolutePathTest, AppendSuffixNamesASidecarAndRejectsComponentChanges )
+{
+#if defined( SW_PLATFORM_POSIX )
+    const string root = "/";
+#elif defined( SW_PLATFORM_WINDOWS )
+    const string root = "C:/";
+#else
+    #error "Unsupported platform"
+#endif
+    const optional<AbsolutePath> file = AbsolutePath::tryMake( concat( root, "baseText/hit.ogg" ) );
+    SW_REQUIRE_TRUE( file.has_value() );
+    SW_EXPECT_EQUAL( concat( root, "baseText/hit.ogg.meta" ), file->appendSuffix( ".meta" ).str() );
+    SW_EXPECT_TRUE( file->appendSuffix( "" ) == *file );
+    SW_EXPECT_TRUE( file->appendSuffix( "/x" ).empty() ); // 성분을 바꾸는 접미사는 join 의 일이다
+    SW_EXPECT_TRUE( file->appendSuffix( "\\x" ).empty() );
+    const optional<AbsolutePath> rootPath = AbsolutePath::tryMake( root );
+    SW_REQUIRE_TRUE( rootPath.has_value() );
+    SW_EXPECT_TRUE( rootPath->appendSuffix( ".meta" ).empty() ); // 뿌리는 이름이 없다
+}

@@ -146,6 +146,8 @@ SW_TEST_CASE( AssetDatabaseTest, MetaTextRoundTripsAndRejectsOtherShapes )
     SW_EXPECT_TRUE( *read == guid );
     SW_EXPECT_EQUAL( string( "hit.ogg" ), meta._source );
     SW_EXPECT_EQUAL( string( "a/b/hit.ogg.meta" ), AssetMeta::makePath( "a/b/hit.ogg" ) );
+    const AbsolutePath diskSource = sw::test::makeScratchPath( "a/b/hit.ogg" );
+    SW_EXPECT_TRUE( AssetMeta::makePath( diskSource ) == diskSource.getParent().join( "hit.ogg.meta" ) ); // 디스크 판은 형식으로 곁 파일을 잇는다
 
     SW_EXPECT_LOG( "AssetMeta.InvalidGUID" );
     SW_EXPECT_LOG( "Config.KeyUnknown" );

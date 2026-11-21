@@ -182,7 +182,7 @@ namespace sw
     AbsolutePath AbsolutePath::appendSuffix( string_view suffix ) const
     {
         if ( _path.empty() || _path.back() == '/' || suffix.find_first_of( string_view( "/\\\0", 3 ) ) != string_view::npos )
-            return AbsolutePath{ string{} }; // 빈 경로 · 뿌리(끝이 구분자 — 뿌리 밖의 끝 구분자는 만들지 않는다) · 성분을 바꾸는 접미사
+            return AbsolutePath{ string{} }; // 빈 경로 · 끝이 구분자(뿌리 · 폴더 표기 — 이름이 없다) · 성분을 바꾸는 접미사
         string appended;
         appended.reserve( _path.size() + suffix.size() );
         appended.append( _path ).append( suffix.data(), suffix.size() );
