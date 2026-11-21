@@ -1,246 +1,61 @@
 # RenderPipelineXml
 
-> 질문: 렌더 패스를 코드 없이 데이터로 어떻게 바꾸는가?
-> 독자: 파이프라인 · 렌더 패스 XML 을 쓰거나 패스 코드를 고치는 사람과 에이전트.
-> 결론: 파이프라인 XML 에 적힌 값이 곧 실행되는 값이다. 패스와 머티리얼은 같은 렌더 상태 칸을 쓰고 실행은 패스 → 머티리얼 순서로 합친다. 실행이 받아 줄 수 없는 조합은 무시되지 않고 읽기 오류다. 표(`RenderPassKindInfo`)는 XML 이 없는 내부 슬롯, XML 이 비운 기본값, 머티리얼에게 내주는 범위만 정한다.
+> 결론: 파이프라인 XML 에 적힌 값이 곧 실행되는 값이다. 실행이 받아 줄 수 없는 조합은 무시하지 않고 읽기 오류로 만든다(`RenderPipelineAsset::validate` · `findInvalidReason` — 로드 강제). 표(`RenderPassKindInfo`)는 XML 이 없는 내부 슬롯, XML 이 비운 기본값, 머티리얼에게 내주는 범위만 정한다.
 
 ## 파일
 
 | 파일 | 하는 일 |
 |---|---|
-| `<도메인>/pipeline/*.xml` (`RenderPipelineDesc`) | 첨부, 패스 그래프, 패스별 PSO 설정. 고르는 법은 `-gv_renderPipeline=` 또는 팩 설정 |
-| `engine/renderpass/*.xml` (`RenderPassDesc`) | 여러 파이프라인이 함께 쓰는 묶음(첨부 · 프레임 자원 · 프레임 패스). `_listRenderPassRef` 로 가져오면 읽을 때 같은 목록 앞에 합쳐진다. 프레임 패스 한 벌은 `framecomputerenderpass.xml` |
-| `engine/renderstate/blendpresets.xml` (`RenderBlendPresetTable`) | 블렌드 프리셋(Opaque · Transparent · Additive · Multiply · Premultiplied). 줄을 더하면 코드 없이 새 프리셋이다 |
-| `*.material` (`MaterialDef`) | 머티리얼. 렌더 상태 칸은 패스와 같은 형식이다(아래 머티리얼 칸) |
+| `<도메인>/pipeline/*.xml` (`RenderPipelineDesc`) | 첨부, 패스 그래프, 패스별 PSO 설정(`-gv_renderPipeline=` 또는 팩 설정) |
+| `engine/renderpass/*.xml` (`RenderPassDesc`) | 여러 파이프라인이 함께 쓰는 묶음(`_listRenderPassRef` 로 가져온다). 프레임 패스 한 벌은 `framecomputerenderpass.xml` |
+| `engine/renderstate/blendpresets.xml` | 블렌드 프리셋 — 줄을 더하면 코드 없이 새 프리셋 |
+| `*.material` (`MaterialDef`) | 렌더 상태 칸은 패스와 같은 형식(머티리얼 XML 은 앞 `_` 와 불리언 `b` 를 뗀 이름) |
 
-이름이 겹치는 첨부는 오류다 — 파이프라인이 덮어쓰지 않는다.
-
-비슷한 파이프라인은 `_base="engine/pipeline/forwardpipeline.xml"` 로 부모를 가리키고 차이만 적는다. 패스 · 첨부 목록은 `_name` 으로 합치고(`_op="Remove"` · `_op="Replace"` · `_before` · `_after`), 쿠킹이 펼친다. 규칙은 [DataInheritance](DataInheritance.md).
-
-## 첨부 칸
-
-| 칸 | 뜻 | 받아 주지 않는 조합(읽기 오류) |
-|---|---|---|
-| `_format` | `RHIFormat` 이름 | 그 밖의 글. 렌더 타깃이 될 수 없는 형식 |
-| `_loadOp` | 프레임에 처음 여는 패스의 로드 동작. `Clear` · `Load` · `DontCare`. 뒤의 패스는 언제나 `Load` 다 | 그 밖의 글 |
-| `_storeOp` | 여는 패스의 저장 동작. `Store` · `DontCare`(DX12 · Vulkan 은 버리고 DX11 · GL 은 그대로 둔다) | `DontCare` 인데 읽는 패스가 있거나 여는 패스가 둘 이상일 때 |
-| `_clearColor` · `_clearDepth` · `_clearStencil` | 지우는 값 | |
-
-## 패스 칸
-
-칸은 리플렉션 enum 이다. 받는 철자는 enum 하나에서 나오고 오타는 읽기 오류다.
-
-| 칸 | 뜻 | 받아 주지 않는 조합(읽기 오류) |
-|---|---|---|
-| `_type` | `RenderPassKind` | 그 밖의 글. 내부 슬롯 |
-| `_depthAttachment` | 붙일 깊이 첨부 | 깊이 테스트를 끄고 적었을 때 |
-| `_blendPreset` | 모든 렌더 타깃의 블렌드 프리셋. 비면 불투명. 곧은 알파인지 프리멀티플라이인지는 셰이더의 출력 규약에 맞춘다(캔버스 · 안개는 `Premultiplied`) | 없는 이름. `_listBlendTarget` 과 함께. 컴퓨트 패스. 반투명 패스에서 끄면 경고만 한다 |
-| `_listBlendTarget` | 렌더 타깃마다의 `BlendTargetState`. 하나면 모든 타깃에 같다 | 둘 이상인데 컬러 출력 수와 다를 때. 알파 계수 자리의 색 계수 |
-| `_shaderPath` · `_listPermutation` | 셰이더와 define. 비면 표의 기본 셰이더 | 컴퓨트 패스의 빈 `_shaderPath` |
-| `_vertexEntryPoint` · `_pixelEntryPoint` | 진입점. 비면 `VSMain` · `PSMain` | |
-| `_geometryEntryPoint` | 적으면 지오메트리 스테이지가 붙는다 | 머티리얼 셰이더 패스, 컴퓨트 패스 |
-| `_hullEntryPoint` · `_domainEntryPoint` | 함께 적으면 테셀레이션이 붙고 제어점 셋의 패치로 그린다 | 한쪽만 적었을 때, 머티리얼 셰이더 패스, 컴퓨트 패스 |
-| `_computeEntryPoint` · `_threadGroupSize` | 컴퓨트 패스의 진입점과 그룹 크기(셰이더의 `numthreads` 와 같게) | 컴퓨트 패스 밖의 진입점 |
-
-메시 · 증폭 스테이지는 지원하지 않는다(적으면 모르는 칸이라 오류다).
-
-## 렌더 상태 칸
-
-패스(`RenderGraphPassDesc`)와 머티리얼 루트가 같은 칸을 쓴다. 정본은 `FixedRenderState` · `BlendTargetState` 이고 패스 XML 은 C++ 이름 그대로(`_cullMode`), 머티리얼 XML 은 앞의 `_` 와 불리언 `b` 를 뗀 이름(`cullMode`, `enableStencil`)이다.
-
-| 묶음 | 칸 | 뜻 · 조합 규칙 |
-|---|---|---|
-| 깊이 | `_bEnableDepthTest` | 깊이 첨부를 붙이는지이기도 하다. 켜면 `_depthAttachment` 가 있어야 하고 그 패스 종류가 깊이를 붙여야 한다 |
-| | `_bEnableDepthWrite` · `_depthCompare` · `_depthBias` · `_slopeScaledDepthBias` | 쓰기 · 바이어스는 깊이 테스트가 있어야 한다. 비교의 기본은 `LessEqual` |
-| | `_bEnableDepthClip` | 끄면 평면 밖 기하를 눌러 그린다. Vulkan 은 장치 기능 `depthClamp` 이 없으면 PSO 를 만들지 않는다 |
-| 래스터 | `_cullMode` · `_fillMode` · `_frontFace` | 풀스크린 패스의 컬은 `None` 이어야 한다 |
-| 스텐실 | `_bEnableStencil` · `_stencilRef` · `_stencilReadMask` · `_stencilWriteMask` | 깊이 테스트가 있어야 첨부가 있다(모두 통과시키려면 `_depthCompare="Always"`). 마스크 · 참조는 면마다 있지 않다(D3D 와 같다) |
-| | `_stencilFront*` · `_stencilBack*`(`Fail` · `DepthFail` · `Pass` · `Compare`) | 앞면 · 뒷면의 연산과 비교. 첨부의 스텐실은 깊이와 같은 로드 · 저장 동작이다 |
-| 블렌드 | `_srcColor` · `_dstColor` · `_colorOp` · `_srcAlpha` · `_dstAlpha` · `_alphaOp` · `_colorWriteMask` · `_bEnableBlend` | 렌더 타깃 하나의 값(`BlendTargetState`) |
+- 비슷한 파이프라인은 `_base` 로 부모를 가리키고 차이만 적는다([DataInheritance](DataInheritance.md)). 이름이 겹치는 첨부는 오류다.
+- 패스 칸은 리플렉션 enum 이다 — 철자 오타는 읽기 오류. 메시 · 증폭 스테이지는 없다.
 
 ## 머티리얼 칸
 
-머티리얼은 위 렌더 상태 칸 중 **적은 칸만** 패스 위에 덮는다. 적지 않은 칸은 패스의 값이다. 실행은 패스 → 머티리얼 → 보기 모드 → 컬 반전 순서로 합쳐 변형 PSO 를 만든다(`FramePSOManager::createMaterialPSOVariant`, `RenderStateOverride::applyTo`).
+- 머티리얼은 **적은 칸만** 패스 위에 덮는다. 합치는 차례는 패스 → 머티리얼 → 보기 모드 → 컬 반전(`RenderStateOverride::applyTo`). 덮을 수 있는 범위는 패스 종류 표(`getMaterialStateScope`)가 정한다: GBuffer 는 블렌드를, Shadow · DepthPrepass 는 깊이 · 스텐실 · 블렌드를 받지 않는다. 깊이 테스트는 언제나 패스의 값.
+- `surfaceModel` 은 필수(`_base` 로 물려받는다). `MATERIAL_ALPHA_CUTOFF` · `MATERIAL_FORWARD_ONLY` · `MATERIAL_TWO_SIDED` define 은 직접 적지 않는다 — `alphaMode` · `surfaceModel` · `twoSidedLighting` 칸이 낸다.
+- 순서에 기대는 머티리얼에 `renderQueue` 차례를 적지 않는다 — 불투명 띠는 렌더 상태가 정한다(`OpaqueDrawBand`).
+- `MaterialInstance` 는 값 · 텍스처 · 키워드만 덮는다. 렌더 상태 · `alphaMode` · `renderQueue` 가 다르면 `parent=` 로 자식 머티리얼을 만든다 — 드로우마다 PSO 를 가르지 않는다.
 
-| 칸 | 뜻 | 받아 주지 않는 조합(읽기 오류) |
-|---|---|---|
-| `alphaMode` | `Opaque` · `Mask`(불투명 목록, 문턱 아래 알파를 버린다 — `MATERIAL_ALPHA_CUTOFF`) · `Blend`(반투명 목록) | 그 밖의 글. define `MATERIAL_ALPHA_CUTOFF` 를 직접 적었을 때 |
-| `surfaceModel` | 필수(`_base` 로 물려받는다). `Lit` · `Unlit` · `Emissive` · `Toon` · `Hair` · `CustomLit`(`MaterialSurfaceModel`) — define `MATERIAL_SURFACE_MODEL_<이름>` 을 내고, 셰이더 뼈대가 조명 훅과 맞춰 본다(material_shader.hlsli 머리말 표, 어긋나면 쿠킹 실패). `Toon` · `Hair` · `CustomLit` 은 `MATERIAL_FORWARD_ONLY` 도 낸다 | 적지 않았을 때. 그 밖의 글. 포워드 전용 모델에 `MATERIAL_FORWARD_ONLY` 를 define · 스위치로 직접 적었을 때 |
-| `alphaCutoff` | `Mask` 의 문턱. `_alphaCutoff` 프로퍼티로 간다 | `Mask` 가 아닌데 기본값(0.5)이 아닐 때. 프로퍼티가 없는 셰이더의 기본값 아닌 값 |
-| `renderQueue` | 그리기 순서(작은 것부터, 기본 0). 반투명 정렬의 첫 키, 불투명은 띠 안의 순서다. 불투명의 띠는 렌더 상태가 정한다(`OpaqueDrawBand`) — 보통 → 스텐실 쓰기(마스크) → 그려진 것을 읽거나 일부만 덮는 것(채널 일부 쓰기 · 블렌드 · 스텐실 비교 · 깊이 Less/LessEqual 밖 · 깊이 쓰기 끔). 순서에 기대는 머티리얼에 차례를 적지 않는다 | |
-| `twoSidedLighting` | 뒷면에서 노멀을 뒤집는다(`MATERIAL_TWO_SIDED`) | `cullMode="None"` 없이 적었을 때. define 을 직접 적었을 때 |
-| `blendPreset` · `_listBlendTarget` | 패스의 블렌드를 덮는다 | 함께 적었을 때. 없는 이름. 블렌드가 켜진 값인데 `alphaMode` 가 `Blend` 가 아닐 때(쓰기 마스크만 바꾸는 값은 불투명도 받는다) |
-| `enableDepthTest` | 없음 — 첨부와 함께 움직여 패스의 것이다 | 적었을 때 |
+## 화면 속도 · 왜곡
 
-무엇을 덮을 수 있는지는 패스 종류의 표가 정한다(`RenderPassTraitFlag::kMaterialFixedState` · `kMaterialBlend`, `RenderPassKindInfo::getMaterialStateScope`).
-
-| 패스 | 컬 · 앞면 방향 | 깊이 · 스텐실 · 채우기 | 블렌드 · 쓰기 마스크 | 까닭 |
-|---|---|---|---|---|
-| ForwardOpaque · ForwardOnlyOpaque · Transparent | 받는다 | 받는다 | 받는다 | |
-| GBuffer | 받는다 | 받는다 | 받지 않는다 | 첨부 셋의 의미가 정해져 있다 |
-| Shadow · DepthPrepass · 그 밖의 씬 메시 패스 | 받는다 | 받지 않는다 | 받지 않는다 | 깊이의 모양이 색 패스와 같아야 한다 |
-
-- 패스의 컬이 `Back` 이 아니면 컬은 패스의 것이다. 뒤집은 껍질 외곽선은 양면 머티리얼도 앞면을 잘라야 외곽선이다.
-- 깊이 첨부가 없는 패스는 깊이 쓰기 · 바이어스 · 스텐실을 받지 않는다. 깊이 테스트는 언제나 패스의 값이다.
-- `MaterialInstance` 는 값 · 텍스처 · 키워드만 덮는다(문턱은 프로퍼티라 덮을 수 있다). 렌더 상태 · `alphaMode` · `renderQueue` 가 다르면 `parent=` 로 자식 머티리얼을 만든다 — 드로우마다 PSO 를 가르지 않는다(언리얼 Dynamic Instance · 유니티 MaterialPropertyBlock 과 같다).
-- 렌더 칸은 퍼뮤테이션 해시에 섞여 배치 키와 PSO 변형을 가른다(`Material::getRenderPropertiesHash`). 칸을 적지 않은 머티리얼의 해시는 define 만의 값이다.
-
-## 화면 속도
-
-TAA · 모션 블러가 읽는 물체별 화면 속도(이번 UV - 지난 UV)는 파이프라인이 첨부로 선언한다. 첨부는 `SceneVelocity`(역할 Velocity, `R16G16_FLOAT`, 클리어 0 — `GBufferLayout` 의 넷째 칸과 같은 값)다.
-
-| 누가 | 어떻게 | 받아 주지 않는 조합(읽기 오류) |
-|---|---|---|
-| 쓰는 패스 | 깊이를 쓰는 불투명 지오메트리 패스(`RenderPassTraitFlag::kWritesVelocity` — GBuffer · ForwardOpaque · ForwardOnlyOpaque)가 `_listOutput` 에 적는다. G버퍼는 넷째 MRT, 포워드는 [색, 속도] 둘째 출력이다. 포워드는 선언이 있을 때만 `SW_PASS_VELOCITY` 로 쓴다 — 깊이 프리패스 뒤의 내부 슬롯도 ForwardOpaque 의 선언을 따른다 | 다른 패스가 적을 때. 포맷 · 클리어 값이 다를 때. 포워드에서 둘째 출력이 아닐 때 |
-| 읽는 패스 | TAA · MotionBlur 의 필수 입력이다(`_listInput`) | 적지 않았을 때 |
-
-반투명 · 외곽선 껍질은 속도를 쓰지 않는다(언리얼 기본값과 같다). 속도를 읽는 패스가 없는 파이프라인(2D)은 첨부도 쓰기도 두지 않는다.
-
-## 화면 왜곡
-
-뒤의 장면을 비껴 보이게 하는 효과(충격파 · 아지랑이 · 굴절)는 두 패스다(언리얼 Distortion 패스).
-
-| 패스 | 하는 일 | 선언 |
-|---|---|---|
-| `Distortion` | 머티리얼에 `MATERIAL_DISTORTION` 이 있는 반투명 배치만 왜곡 훅(`computeMaterialDistortion`)으로 화면 UV 오프셋을 더한다(가산 블렌드, 깊이는 테스트만) | 출력 `SceneDistortion`(역할 Distortion, `R16G16_FLOAT`, 클리어 0), `_depthAttachment`, `_blendPreset="Additive"` |
-| `DistortionApply` | 장면 색 사본을 오프셋만큼 비껴 읽어 장면 색에 쓴다. 비껴 읽을 자리가 이 픽셀보다 가까우면 끌어오지 않는다 | 입력 SceneColorCopy · SceneDistortion · SceneDepth(필수), 출력 장면 색 |
-
-- 장면 색 사본 뒤 · 반투명 앞에 둔다 — 반투명은 깊이를 쓰지 않아 뒤에 두면 앞의 반투명이 끌려 들어온다. 장면 색 사본이 없는 파이프라인(2D)은 두 패스를 지운다.
-- 머티리얼: `_alwaysDefines` 에 `MATERIAL_DISTORTION` · `MATERIAL_BLEND_TRANSLUCENT`, 셰이더는 `SW_MATERIAL_CUSTOM_DISTORTION` 과 훅을 정의한다(본보기 `engine/materials/distortion.material` · `engine/shaders/distortion.hlsl`).
+- 속도 첨부는 `SceneVelocity`(`R16G16_FLOAT`, 클리어 0). 쓰는 것은 깊이를 쓰는 불투명 패스(`kWritesVelocity`)만, 포워드는 둘째 출력. TAA · MotionBlur 는 `_listInput` 에 꼭 적는다. 반투명 · 외곽선 껍질은 속도를 쓰지 않는다. 읽는 패스가 없는 파이프라인(2D)은 첨부도 두지 않는다.
+- `Distortion` · `DistortionApply` 는 장면 색 사본 뒤 · 반투명 앞에 둔다(뒤에 두면 앞의 반투명이 끌려 들어온다). 머티리얼은 `_alwaysDefines` 에 `MATERIAL_DISTORTION` · `MATERIAL_BLEND_TRANSLUCENT`(본보기 `engine/materials/distortion.material`).
 
 ## 컴퓨트 패스
 
-`_type="Compute"` 패스는 셰이더 하나로 효과를 더한다. 선언: 컬러 출력 하나, 입력 최대 둘(깊이 형식 제외 — 깊이는 `SceneDepthCopy` 를 읽는다), 입력과 출력은 겹치지 않는다. 첨부는 RW 텍스처로 묶이고 값은 `compute_pass.hlsli` 의 루트 상수로 받는다. GL 은 묶은 포맷과 셰이더 선언이 같아야 하므로 include 전에 `SW_RW_SLOT0_GL_FORMAT` 을 적는다. 예: `game/playground/pipeline/computepasspipeline.xml`.
+- `_type="Compute"`: 컬러 출력 하나, 입력 최대 둘(깊이는 `SceneDepthCopy` 를 읽는다), 입출력이 겹치지 않는다. 값은 `compute_pass.hlsli` 루트 상수. GL 은 include 전에 `SW_RW_SLOT0_GL_FORMAT` 을 적는다.
+- `_implementation="Compute"`(표의 `kComputeImplementation` 종류만)는 측정이 이득을 보일 때 그 패스에 한 줄 적는다. 네이티브 bindless 백엔드만 컴퓨트로 돈다. 값은 루트 상수로(컴퓨트 PSO 에 PassCB 가 없다).
 
-## 후처리 값 · 볼륨
+## 후처리
 
-뷰마다의 후처리 값은 `PostProcessValues` 한 벌이다(`Engine/Graphics/View`). 카메라 값이 바탕이고, 카메라가 선 자리의 `PostProcessVolumeComponent` 들이 우선순위가 낮은 것부터 **덮어쓴 칸만** 섞는다(`PostProcessVolumeComponent::resolveAt`, 뷰 수집 `RenderViewCollector`). 언리얼 Post Process Volume 과 같은 칸이다(모양 · Priority · Blend Weight · Blend Radius, `bOverride_*` 는 `PostProcessOverrides::_b<칸>`). 언리얼과 달리 카메라 값이 볼륨 아래다 — 카메라 값은 프리셋 · 포즈 블렌드가 쓰는 샷의 룩이다.
-
-| 할 일 | 고칠 곳 |
-|---|---|
-| 값 칸을 더한다 | `PostProcessValues` 에 칸, `PostProcessOverrides` 에 같은 차례로 `_b<칸>` 비트와 생성자 줄. 섞기 · 포즈 블렌드는 리플렉션으로 따라온다(테스트 `PostProcessVolumeTest.OverrideFlagsPairEveryValue` 가 짝을 본다). 섞을 수 없는 형식(경로)은 `blendOverrides` 에 주소로 고르는 줄을 더한다(절반에서 바꾼다) |
-| 셰이더가 읽는다 | 기본값은 지금 그림을 바꾸지 않는 중립이어야 한다. 패스 상수는 `FramePassExecutor::applyViewPassConstants` 가 뷰마다 채운다 |
-| 텍스처를 가리킨다(LUT · 먼지 마스크) | 칸은 `DataPath`, 로드는 `PathTextureSet::requestReady`(비동기 — 읽는 동안 그 효과는 빠진다), 셰이더 칸은 엔진 텍스처 표(`shaderslot::emulated::kEngineTextureNames`)의 이름이다. 에뮬(DX11 · GL)의 엔진 텍스처 칸은 GL 유닛 0..15 안이라 둘이 더 남는다 |
-
-- 컬러 그레이딩 · 렌즈 왜곡 · 색수차 · 선명화 · 필름 그레인은 톤맵하는 셰이더(Tonemap 패스 · 후처리 체인 `SW_POST_TONEMAP`) 안의 함수이고, 블룸 먼지 마스크 · 블룸 고스트는 블룸을 더하는 함수(`post_bloom.hlsli`) 안이다. 이런 효과에 패스를 따로 두지 않는다(왕복 하나가 든다). 값이 모두 중립이면 C++ 가 켬 상수를 0 으로 두어 셰이더가 건너뛴다. 후처리를 끈 뷰(`SW_PASS_FLAG_SKIP_POST`)는 톤맵만 한다.
-
-### 후처리 체인과 디퍼드
-
-포워드 파이프라인은 블룸 · 외곽선 · 톤맵을 Present 한 패스(`post_chain.hlsl`, `SW_POST_*`)로 합친다. 디퍼드 기본 파이프라인은 합치지 않는다 — 아래 차이로 그림(골든)이 바뀐다.
-
-| 차이 | 디퍼드 단계 파이프라인 | 후처리 체인으로 합치면 |
-|---|---|---|
-| 순서 | 블룸 · 외곽선 → TAA → 피사계 심도 → 모션 블러 → 톤맵 | 체인은 한 패스라 TAA · 피사계 심도 · 모션 블러 **뒤**에서만 돈다 — 외곽선이 흐림 위에 선명하게 남고, 블룸이 TAA 누적 · 모션 블러를 받지 않는다 |
-| AO | PostBloom 이 AOColor 를 곱한다 | 체인에 AO 입력이 없다 |
-| 품질 단계 | PostBloom 은 `_minPostQuality="1"` 이라 low 에서 원본을 넘긴다 | 체인의 효과는 퍼뮤테이션이라 품질로 끌 수 없다 |
-| 렌즈 | 톤맵 패스가 블룸 뒤 원본에서 | 체인은 블룸 앞에서 |
-
-합치려면 TAA · 피사계 심도 · 모션 블러를 블룸 앞에 두는 파이프라인을 따로 두고 골든을 새로 찍는다.
-
-화면 공간 반사(`ScreenSpaceReflection`, 디퍼드)는 장면 색 위에 블렌드하는 전용 실행이다 — 꺼진 효과의 우회(`kBypassesToSource`)는 출력을 그 패스만 써야 해서(로드 검증) 반투명이 같은 장면 색에 그리는 자리에는 쓸 수 없다.
-
-## 디퍼드 데칼
-
-`DecalComponent`(컴포넌트 변환 = 상자, 로컬 -Y 로 투영)가 G버퍼를 덮는다(언리얼 Deferred Decal · 유니티 HDRP Decal Projector). 길 · 흙 · 손상처럼 지형 · 벽 위에 얹는 그림이다.
-
-| 칸 | 뜻 | 받아 주지 않는 조합(읽기 오류) |
-|---|---|---|
-| `_type="Decal"` | 데칼마다 풀스크린 하나로 장면 깊이에서 위치를 복원해 상자 안 픽셀만 섞는다(decal.hlsl). 입력은 장면 깊이 | 출력이 G버퍼 알베도 · 노멀 · 머티리얼 셋(이 차례)이 아님(3-9) |
-| `_listBlendTarget` | 곧은 알파 셋 — 쓰기 마스크가 알베도 알파(셰이딩 모델 번호) · 머티리얼 b · a(반사율 · 가림)를 지킨다 | |
-
-- 칸마다의 덮임은 셰이더 출력 알파다(데칼 `_channels` 비트 × 불투명도 × 텍스처 알파 × 각도 · 끝 페이드). 노멀 텍스처가 없으면 노멀 칸을 끈다.
-- G버퍼 뒤 · 조명 · SSAO 앞에 둔다. 포워드 파이프라인은 덮을 G버퍼가 없어 그리지 않는다(DBuffer 는 모든 포워드 머티리얼 셰이더가 데칼 버퍼를 읽어야 해 두지 않는다).
-- shortcut: 데칼마다 화면 전체를 돈다 — 수십 개를 넘으면 상자 래스터 · 타일 목록으로 바꾼다.
-
-## 후처리 머티리얼
-
-카메라 · 볼륨의 블렌더블 목록(`PostProcessValues::_listBlendable` — 경로 · 무게 · 자리)이 그리는 머티리얼이다(언리얼 Post Process Material · Blendable Location). 볼륨은 목록 칸(`_bListBlendable`)을 켜면 자기 항목을 볼륨 무게로 **더한다**(같은 경로 · 자리는 무게를 섞는다 — 아래 항목은 남는다). 포즈 블렌드는 앞 카메라에만 있던 항목을 넘어가는 만큼 줄인다.
-
-| 칸 | 뜻 | 받아 주지 않는 조합(읽기 오류) |
-|---|---|---|
-| `_type="PostProcessMaterial"` | 그 자리의 블렌더블을 목록 차례로 원본 위에 무게만큼 그린다(프리멀티플라이). 입력은 원본(필수)과 깊이 · G버퍼(선택 — 그래프 "Post Process" 노드가 읽는다) | `_shaderPath`(셰이더는 머티리얼의 것) |
-| `_blendableLocation` | `BeforeTonemap` · `AfterTonemap` · `ReplacingTonemap`. 그 패스만 적는다 | 그 패스의 None · 다른 패스의 값 · 같은 자리 둘 · 톤맵 대신 자리의 출력을 앞의 패스가 쓰지 않음(3-8) |
-
-- 톤맵 앞 · 뒤: 원본을 출력에 복사하고 그 위에 그린다. 그릴 머티리얼이 없는 뷰는 출력이 원본을 가리킨다(`kBypassesToSource` — 출력은 원본과 같은 형식, 3-6). 후처리를 끈 뷰도 같다.
-- 톤맵 대신: HDR 원본을 읽어 톤맵 출력 위에 무게만큼 덮는다 — 출력을 톤맵과 함께 써서 늘 돌고, 그릴 것이 없으면 아무것도 하지 않는다.
-- 머티리얼은 PostProcess 영역이다(`_alwaysDefines` 의 `MATERIAL_DOMAIN_POST_PROCESS`, 셰이더 뼈대 `post_process_material.hlsli` — 본보기 `engine/materials/postprocess/colortint.material`). 아니면 게임 스레드가 오류로 거절한다(`PostProcessMaterialSet`).
-- shortcut: 같은 자리의 머티리얼은 모두 패스의 원본을 읽는다(앞 머티리얼의 결과를 읽지 않는다 — 언리얼은 이어 읽는다).
-- 엔진 디퍼드 파이프라인이 세 자리를 모두 둔다. 포워드 파이프라인은 톤맵이 Present(후처리 체인) 안이라 톤맵 뒤 · 대신 자리가 없다 — 쓰려면 자식 파이프라인이 Present 앞에 톤맵 앞 자리 패스를 더한다.
+- 뷰마다 값은 `PostProcessValues` 한 벌. 볼륨은 **덮어쓴 칸만** 우선순위 차례로 섞는다. 카메라 값이 볼륨 아래.
+- 값 칸을 더할 때: `PostProcessValues` 에 칸, `PostProcessOverrides` 에 같은 차례로 `_b<칸>`(테스트 `OverrideFlagsPairEveryValue`). 섞을 수 없는 형식은 `blendOverrides` 에 줄. 기본값은 지금 그림을 바꾸지 않는 중립.
+- 텍스처를 가리키는 칸은 `DataPath`, 로드는 `PathTextureSet::requestReady`, 셰이더 쪽은 엔진 텍스처 표 이름.
+- 그레이딩 · 렌즈 · 색수차 · 선명화 · 그레인은 톤맵 셰이더 안 함수, 블룸 먼지 · 고스트는 `post_bloom.hlsli` 안 — **이런 효과에 패스를 따로 두지 않는다**(왕복 하나). 값이 중립이면 C++ 가 켬 상수를 0 으로.
+- 디퍼드 기본 파이프라인은 후처리 체인(`post_chain.hlsl`)으로 합치지 않는다 — 순서 · AO · 품질 단계가 달라 골든이 바뀐다. 합치려면 TAA · DOF · 모션 블러를 블룸 앞에 둔 새 파이프라인과 새 골든.
+- 후처리 머티리얼(`_type="PostProcessMaterial"`): `_shaderPath` 를 적지 않는다(머티리얼의 것), `_blendableLocation` 은 그 패스만 적고 자리마다 하나. 머티리얼은 `MATERIAL_DOMAIN_POST_PROCESS`(본보기 `engine/materials/postprocess/colortint.material`).
+- 데칼(`_type="Decal"`)은 G버퍼 뒤 · 조명 · SSAO 앞, 출력은 G버퍼 알베도 · 노멀 · 머티리얼 차례. 포워드 파이프라인에는 두지 않는다. shortcut: 데칼마다 화면 전체 — 수십 개를 넘으면 상자 래스터 · 타일 목록으로.
 
 ## 프레임 그래프
 
-뷰 그래프(`_listPass`)는 뷰마다 다시 돈다. 프레임에 한 번 모든 뷰의 몫을 기록하는 일(깊이 히스토리 · 가림 타일 · 입자 · 스킨 · 컬링 · 라이트 그리드 · 볼륨 안개 · 프로브 등)은 프레임 그래프(`_listFramePass`)에 두고, 뷰 그래프보다 먼저 큐에 낸다(`FrameGraphExecutor`).
+- 프레임에 한 번 모든 뷰 몫을 기록하는 일은 `_listFramePass` 에, 뷰마다 도는 일은 `_listPass` 에. 프레임 그래프가 통째로 앞이므로 뷰 패스는 그 결과를 입력으로 적지 않는다.
+- `_listResource` 는 순서만 정한다(버퍼 주인은 서브시스템). `Persistent` = 프레임을 넘는 히스토리, `External` = 서브시스템이 채우는 버퍼. `Transient` 는 적지 않는다(첨부의 몫).
+- 선언하지 않은 종류는 PSO 도, 준비 작업도 없다(`FramePSOManager::getEnginePSO`). 각 패스는 자기 버퍼 배리어를 스스로 건다.
+- `_queue="AsyncCompute"` 는 컴퓨트 프레임 패스에만. 능력 `_bAsyncCompute` 가 없으면 그래픽스 큐에서 같은 차례로 돈다(비교 `-gv_asyncCompute=0`). 이득이 없으면 그 줄을 지운다.
+- 트랜지언트 앨리어싱은 적을 칸이 없다 — 수명은 패스 입출력 선언이 정한다(비교 `-gv_transientAliasing=0`).
 
-| 칸 | 뜻 | 받아 주지 않는 조합(읽기 오류) |
-|---|---|---|
-| `_listResource` 의 `RenderGraphResourceDesc` | 프레임 패스가 읽고 쓰는 자원 이름과 `_kind`. 그래프는 버퍼를 만들지 않고 순서만 정한다(주인은 서브시스템) | 이름이 겹침 · 첨부와 겹침. `_kind="Transient"`(첨부의 몫) |
-| `_kind="Persistent"` | 프레임을 넘는 히스토리(깊이 히스토리 · 가림 타일 · 입자 상태 · 프로브). 앞선 쓰기 없이 읽으면 지난 프레임 값이고, 이번 프레임 첫 쓰기보다 앞에 온다 | |
-| `_kind="External"` | 서브시스템이 프레임마다 채우는 버퍼(인스턴스 · 라이트 · 컬링 결과 · 그리드). "쓰지 않고 읽는다" 경고가 없다 | |
-| `_listFramePass` 의 패스 | `_type` 은 프레임 패스 종류(`isFramePassType`). 입출력은 `_listResource` 이름 | 뷰 패스 종류 · 같은 종류 둘 · 자원이 아닌 이름 · 셰이더 · 진입점 · 퍼뮤테이션 칸(셰이더는 표의 것) · `_depthAttachment` · `_minPostQuality` · 뷰 패스와 같은 이름 |
+## 선택 스테이지 · 변위
 
-- 선언하지 않은 종류는 PSO 도 없고 돌지 않는다. 그 종류가 채우는 버퍼를 준비하는 쪽(간접 인자를 컬링에 맡김 · GPU 라이트 그리드 · 볼륨 안개 · 프로브 · 스킨 풀)도 PSO 가 없으니 준비하지 않는다(`FramePSOManager::getEnginePSO` 가 선언을 본다).
-- 각 패스는 자기 버퍼의 배리어를 스스로 건다. 깊이 히스토리 패스는 끝에 히스토리를 RW 텍스처 상태로 넘겨 둔다(읽는 쪽 둘 다 RW 텍스처로 읽고, 비동기 컴퓨트 큐는 렌더 타깃 상태를 옮길 수 없다).
-- 뷰 그래프의 패스는 프레임 그래프 결과(컬링 결과 · 그리드)를 입력으로 적지 않는다 — 프레임 그래프가 통째로 앞이다.
-
-### 비동기 컴퓨트 큐(`_queue`)
-
-| 칸 | 뜻 | 받아 주지 않는 조합(읽기 오류) |
-|---|---|---|
-| `_queue` | `Graphics`(기본) · `AsyncCompute`. 언리얼 `ERDGPassFlags::AsyncCompute` 자리 | 뷰 패스의 `AsyncCompute`. 컴퓨트가 아닌 프레임 패스(깊이 히스토리)의 `AsyncCompute` |
-
-- 능력 `RHICapabilities::_bAsyncCompute` 가 참인 백엔드(DX12 · 큐가 둘인 Vulkan 장치)에서만 따로 돌고, 나머지는 그래픽스 큐에서 같은 순서로 돈다 — 능력 표가 정한 길이지 실패의 대체가 아니다. 비교는 `-gv_asyncCompute=0`.
-- 포크 · 조인은 그래프 간선이 정한다(`RenderGraph::getQueueSteps`). 텍스처는 생산자가 컴퓨트가 아는 상태로 넘겨 둔다(깊이 히스토리 → RW). 컴퓨트 큐 리스트의 배리어는 픽셀 셰이더 상태를 쓰지 않는다(`D3D12RHICommandContext::toQueueState`).
-- 이득이 없으면 그 패스의 `_queue` 한 줄을 지운다(`framecomputerenderpass.xml`).
-
-## 컴퓨트 구현(`_implementation`)
-
-| 칸 | 뜻 | 받아 주지 않는 조합(읽기 오류) |
-|---|---|---|
-| `_implementation` | `Pixel`(기본, 풀스크린 삼각형) · `Compute`(같은 셰이더 파일의 `CSMain` — define `SW_PASS_COMPUTE`, 8x8 그룹 공유 타일) | 표에 컴퓨트 구현이 없는 종류(`kComputeImplementation` — 지금은 BloomDownsample · DepthOfField 만) |
-
-- 컴퓨트 구현은 네이티브 bindless(DX12 · Vulkan)에서만 돌고 DX11 · GL · WebGPU 는 픽셀 구현이 돈다(쿠커는 둘 다 굽는다).
-- 효과의 값(블룸 문턱 · 렌즈 · 역뷰-투영 4 열)은 루트 상수로 간다(`post_compute.hlsli`) — 컴퓨트 PSO 에는 PassCB 가 묶이지 않는다.
-- 어느 쪽을 낼지는 측정이 정한다 — 그 패스에 `_implementation="Compute"` 한 줄이다(자식 파이프라인은 물려받는다).
-
-## 트랜지언트 앨리어싱
-
-뷰 그래프의 첨부 중 레벨 수명이 겹치지 않고 서술(형식 · 나눗수 · RW 용도 · 클리어 값)이 같은 것은 텍스처 하나를 나눠 쓴다(`RenderGraphAliasPlan::make`, 계획은 `FramePassExecutor::rebuildTransientAliasPlan`). XML 에 적을 칸은 없다 — 수명은 패스의 입출력 선언이 정한다.
-
-- 나누지 않는 것: 깊이 형식(장면 깊이는 다음 프레임의 깊이 히스토리가 읽는다 · 그림자 맵), `_loadOp="Load"`(프레임을 넘어 잇는다), TAA 출력, 처음 쓸 때 만드는 효과 출력(그 주인 · 별칭은 자기 텍스처다).
-- 꺼지면 원본을 가리키는 효과(`kBypassesToSource`)는 원본과 출력을 한 구간으로 묶는다. NaN 감시(`-gv_nanCheck`)를 켠 실행은 나누지 않는다. 비교는 `-gv_transientAliasing=0`.
-- 능력 `_bPlacedTextures`(DX12)가 있으면 서술이 다른 첨부도 힙 하나에 겹쳐 놓는다 — 첫 쓰기가 지우기(`_loadOp="Clear"`)이고 RW 가 아닌 칸만(`RenderGraphMemoryPlan`). 다른 백엔드는 같은 서술끼리만 나눈다.
-
-## 선택 스테이지를 쓰는 셰이더
-
-- 소스는 패스 셰이더 한 파일이다. 머티리얼 변형은 머티리얼 셰이더의 정점 출력으로 만들어져 신호가 맞지 않아 머티리얼 셰이더 패스에는 쓸 수 없다.
-- 헐 · 도메인의 제어점 위치는 `SV_POSITION` 이 아니라 일반 값으로 넘긴다. 내장 위치로 넘기면 GL 에서 오류 없이 아무것도 그리지 않는다. 예: `game/playground/shaders/optional_stages.hlsl`.
-- 이 스테이지는 패스 상수 · 루트 상수를 받지 않는다고 보고 쓴다. 필요하면 정점 스테이지에서 값으로 넘긴다.
-
-## 머티리얼 변위(테셀레이션)
-
-패스 XML 의 헐 · 도메인과 별개로, 머티리얼이 `_alwaysDefines` 에 `MATERIAL_DISPLACEMENT` 를 적으면 렌더러가 그 머티리얼의 변형 PSO 에 머티리얼 셰이더의 `HSMain` · `DSMain` 과 패치 토폴로지를 붙인다(`RenderPassKindInfo::isMaterialTessellated` — 쿠커와 런타임이 같은 판정). 셰이더는 `material_displacement.hlsli`(뼈대가 보간 칸 VSMain 대신 include)다.
-
-- 값은 머티리얼 칸이다: `_displacementMap`(R 높이) · `_displacementScale`(m) · `_displacementMidLevel` · `_tessellationDensity`(각 1 rad 당 분할 수) · `_tessellationMaxFactor`(64 이하). `pbrmaterial.material` 이 칸을 가진다.
-- 변 계수는 변의 두 끝점(월드 위치 · 카메라 뷰 깊이)만으로 정해 틈이 없다. 식의 C++ 짝 `MaterialDisplacement` 를 단위 테스트가 지킨다.
-- 그림자 · 깊이 프리패스도 머티리얼 셰이더로 같은 변위를 그린다(`usesMaterialShaderForDepth`). 뷰 깊이는 그림자 패스에서도 카메라의 값이라 계수까지 같다.
-- 테셀레이션이 없는 백엔드는 변형을 만들지 않고 `FramePSOManager.DisplacementUnsupported` 오류를 남긴다 — 평면으로 대신 그리지 않는다. 능력은 `RHICapabilities::_bMaterialTessellation`: DX11 · DX12 참, Vulkan 은 장치 기능 `tessellationShader`, OpenGL 거짓(헐 · 도메인이 머티리얼 구조 버퍼를 읽으면 링크 거절 — binding.hlsli 9 절), WebGPU 거짓. 시나리오는 `<SkipUnless watch="RHI.MaterialTessellation">` 로 그 백엔드를 건너뛴다.
-- 받지 않는 조합(셰이더 `#error`): 머티리얼 없는 셰이더, 사용자 보간 칸(`SW_MATERIAL_CUSTOM_VARYINGS`), 외곽선 패스.
-
-## 화면 공간 GI · GTAO
-
-- GTAO 는 SSAO 패스의 `_shaderPath="engine/shaders/gtao.hlsl"` 로 고른다(같은 AOColor — r 가림, gba 굽은 노멀). 값은 퍼뮤테이션 `SW_GTAO_RADIUS` · `SW_GTAO_SLICES` · `SW_GTAO_STEPS` · `SW_GTAO_INTENSITY` 이고 셰이더에 기본값이 없다.
-- `_type="ScreenSpaceGI"`(ssgi.hlsl)는 입력 넷(SceneColorCopy · SceneDepth · GBufferNormal · GBufferAlbedo)을 읽어 조명 첨부에 `_blendPreset="Additive"` 로 더한다. 출력을 여러 패스가 쓰므로 뷰마다 건너뛰지 않는다(`_minPostQuality="0"`) — 켜고 끄는 것은 파이프라인이다. 값은 `SW_SSGI_RADIUS` · `SW_SSGI_DIRECTIONS` · `SW_SSGI_STEPS` · `SW_SSGI_INTENSITY`.
-- 예: `engine/pipeline/deferredpipeline_gi.xml`(기본 디퍼드는 그대로).
-
-## 렌즈 플레어
-
-- `_type="LensFlare"`(lens_flare.hlsl)는 입력 SceneDepth 하나와 HDR 컬러 출력 하나, `_blendPreset="Additive"` 다. 기본 포워드 · 디퍼드 파이프라인이 안개 뒤 · 블룸(포워드는 피사계 심도) 앞에 둔다. 2D 파이프라인은 뺀다.
-- 그릴 것은 데이터다: 빛 컴포넌트의 `_lensFlarePath` 가 `*.lensflare.xml`(`LensFlareAsset`)을 가리킨다. 블룸 고스트와 별개다(유니티 SRP Lens Flare).
+- 지오메트리 · 헐 · 도메인은 패스 셰이더 한 파일에서만(머티리얼 셰이더 패스 불가). 제어점 위치는 `SV_POSITION` 이 아니라 일반 값으로 넘긴다 — GL 에서 오류 없이 아무것도 안 그린다. 패스 상수 · 루트 상수를 받지 않는다고 보고, 필요하면 정점 스테이지에서 값으로.
+- 머티리얼 변위는 `_alwaysDefines` 의 `MATERIAL_DISPLACEMENT` + `material_displacement.hlsli`. 테셀레이션 능력(`_bMaterialTessellation`)이 없는 백엔드는 오류(`DisplacementUnsupported`)로 남기고 평면으로 대신 그리지 않는다. 시나리오는 `<SkipUnless watch="RHI.MaterialTessellation">`.
 
 ## 고칠 때
 
-렌더 상태 칸을 더할 곳은 `Engine/Graphics/RenderState/RenderState.h` 하나와 각 백엔드의 읽기다 — XML 읽기 · 쓰기는 리플렉션이, 패스 · 머티리얼 합치기와 해시 · 비교는 바이트가 따라온다(패딩이 생기면 `static_assert` 가 멈춘다). 조합 규칙은 `findInvalidReason`, 머티리얼에게 내주지 않을 칸은 `RenderStateOverride::applyTo` 에 적는다. RHI ABI 는 손으로 올리지 않는다 — 헤더가 바뀌면 빌드가 엔진 ABI 스탬프를 다시 만들어 옛 백엔드 모듈이 거부된다(`RHIModuleABI.h`).
-
-그 밖의 패스 칸은 PSO(`FramePSOManager::makePassPSODesc`) · 쿠커(`ShaderCookRequestCollector`) · 검증(`RenderPipelineAsset::validate`)을 함께 고친다. 칸만 두고 실행이 읽지 않으면 XML 이 거짓말을 한다. 값이 그림을 바꾸는지는 끄고 켠 두 장을 같은 실행에서 견주는 시나리오로 확인한다(`<ExpectImagesDiffer>`, 예: `game/playground/automation/renderstate_stencil`).
-
-쿠커 코드를 고칠 때 번호를 올릴 일이 없다 — 쿠킹 키는 소스 지문에서 산출한다(`Config/Dev/CookCodeInputs.json`). 새 쿠커는 이 표에 폴더를 적는다.
+- 렌더 상태 칸은 `Engine/Graphics/RenderState/RenderState.h` 하나와 각 백엔드 읽기에 더한다. 조합 규칙은 `findInvalidReason`, 머티리얼에 내주지 않을 칸은 `RenderStateOverride::applyTo`. RHI ABI 는 손으로 올리지 않는다(빌드가 스탬프를 다시 만든다).
+- 그 밖의 패스 칸은 PSO(`makePassPSODesc`) · 쿠커(`ShaderCookRequestCollector`) · 검증(`validate`)을 함께 고친다 — 실행이 읽지 않는 칸은 XML 이 거짓말을 한다. 그림을 바꾸는지는 `<ExpectImagesDiffer>` 시나리오로 확인한다.
+- 쿠커 코드를 고쳐도 번호를 올리지 않는다(쿠킹 키 = 소스 지문). 새 쿠커는 `Config/Dev/CookCodeInputs.json` 에 폴더를 적는다.
