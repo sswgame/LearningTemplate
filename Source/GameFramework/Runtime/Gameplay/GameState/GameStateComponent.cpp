@@ -122,9 +122,7 @@ namespace sw
         , _weatherMaterial{}
         , _land{}
         , _listClockEvent{}
-        , _pendingStateBytes{}
-        , _bInitialized{ SW_FALSE }
-        , _bFreshGame{ SW_FALSE }
+        , _restore{}
         , _bWeather{ SW_FALSE }
         , _bOpenAtBeginPlay{ SW_FALSE }
         , _bRefusedInScene{ SW_FALSE }
@@ -136,7 +134,7 @@ namespace sw
 
     GameStateInitResult GameStateComponent::initialize( const GameStateSettings& settings )
     {
-        if ( _bInitialized == SW_TRUE )
+        if ( _restore.isOpen() )
             return GameStateInitResult::AlreadyInitialized;
         // 값을 범위 안으로 맞춰 열지 않는다. 시계 설정 안까지 보며, 상태를 바꾸기 전에 본다.
         const string rangeError = ConfigRangeUtil::describeRangeErrors( settings );
@@ -157,14 +155,7 @@ namespace sw
         _weatherMaterial.open( _pWeatherCatalog.get() ); // 강수를 칸으로 적은 카탈로그면 지면 머티리얼이 날씨를 따른다(없으면 열지 않는다)
         _land.initialize( settings._landWidth, settings._landHeight, settings._landCellSize, settings._landOrigin );
         _listClockEvent.clear();
-        _bInitialized = SW_TRUE;
-        _bFreshGame   = SW_TRUE;
-        if ( _pendingStateBytes.empty() )
-            return GameStateInitResult::Fresh;
-        if ( applyPendingState() == false )
-            return GameStateInitResult::Fresh;
-        _bFreshGame = SW_FALSE;
-        return GameStateInitResult::Restored;
+        return _restore.open( *this );
     }
 
     void GameStateComponent::onRegister( GameObjectManager& manager )
@@ -207,7 +198,7 @@ namespace sw
     {
         Component::onTick( context );
         _listClockEvent.clear();
-        if ( _bInitialized == SW_FALSE )
+        if ( _restore.isOpen() == false )
             return;
         _clock.update( context.getDeltaTime() );
         _clock.pollEvents( _listClockEvent ); // 날이 넘어가면 평판 컴포넌트가 이 알림을 읽고 평판을 식힌다(`ReputationComponent::onTick`)
@@ -235,27 +226,14 @@ namespace sw
             visit( _weather, "weather" );
             visit( _land, "land" );
         };
-        if ( io.isWriting() )
-        {
-            Archive& archive = io.getArchive();
-            // 열리기 전(복원한 직후의 두 번째 캡처)이면 받은 바이트가 곧 상태이다. 빈 판을 쓰면 세이브를 잃는다.
-            if ( _bInitialized == SW_FALSE && _pendingStateBytes.empty() == false )
-            {
-                archive.writeBytes( _pendingStateBytes.data(), _pendingStateBytes.size() );
-                return;
-            }
-            StateSectionTableUtil::write( archive, kStateTag, kStateVersion, GameStateComponentInternal::kSectionCount, forEachSection );
-            return;
-        }
-        if ( StateSectionTableUtil::read( io, kStateTag, kStateVersion, GameStateComponentInternal::kSectionCount, forEachSection, "the session state" ) )
+        const bool bRead = _restore.serializeSections( io, kStateTag, kStateVersion, GameStateComponentInternal::kSectionCount, forEachSection, "the session state" );
+        if ( io.isReading() && bRead )
             _listClockEvent.clear();
     }
 
     void GameStateComponent::restoreState( vector<uint8>&& bytes )
     {
-        _pendingStateBytes = std::move( bytes );
-        if ( _bInitialized == SW_TRUE && applyPendingState() )
-            _bFreshGame = SW_FALSE;
+        _restore.receive( *this, std::move( bytes ) );
     }
 
     GameStateComponent* GameStateComponent::openOnOwner( const Component& component, const GameStateSettings& settings, GameStateInitResult& outResult )
@@ -293,16 +271,6 @@ namespace sw
                 return pState; // 씬에 하나다(`onRegister` 가 둘째를 거절한다)
         }
         return nullptr;
-    }
-
-    bool GameStateComponent::applyPendingState()
-    {
-        Archive    archive( _pendingStateBytes.data(), _pendingStateBytes.size() );
-        const bool bRestored = readState( archive );
-        _pendingStateBytes.clear();
-        if ( bRestored == false )
-            SW_LOG_ERROR_ID( "GameState.SavedSharedState", "GameState: the saved shared state could not be read - the game state starts fresh" );
-        return bRestored;
     }
 
     GameFlags* GameStateComponent::GameFlagsOwnerPort::findOpenFlags()

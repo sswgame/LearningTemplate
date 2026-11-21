@@ -73,9 +73,11 @@ SW_TEST_CASE( LocalControlTest, PlayerStateIsFoundFromThePawnAndRoundTripsItsFla
     PlayerControllerComponent* pPlayer     = pController->addComponent<PlayerControllerComponent>();
     manager.beginPlay();
 
-    SW_EXPECT_NULL( PlayerStateComponent::findForPawnObject( manager, *pPawnObject ) ); // 아직 쥐지 않았다
+    SW_EXPECT_NULL( PawnComponent::findControllerObject( manager, *pPawnObject ) ); // 아직 쥐지 않았다
     pPlayer->possess( *pPawn );
-    SW_EXPECT_TRUE( PlayerStateComponent::findForPawnObject( manager, *pPawnObject ) == pState );
+    GameObject* const pFound = PawnComponent::findControllerObject( manager, *pPawnObject );
+    SW_REQUIRE_TRUE( pFound == pController );
+    SW_EXPECT_TRUE( pFound->getComponent<PlayerStateComponent>() == pState );
 
     pState->getProgressFlags().setFlag( hashed_string( "town.arrivalSeen" ) );
     Archive written;

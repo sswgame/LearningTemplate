@@ -5,11 +5,8 @@
 #include "Core/Log/Logger.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Runtime/Character/Control/Controller/ControllerComponent.h"
-#include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/ComponentStateStore.h"
 
 namespace sw
@@ -43,13 +40,5 @@ namespace sw
     {
         Archive archive( bytes.data(), static_cast<uint64>( bytes.size() ) );
         (void)readState( archive ); // 맞지 않는 묶음은 serializeState 가 알리고 지금 값으로 둔다
-    }
-
-    PlayerStateComponent* PlayerStateComponent::findForPawnObject( GameObjectManager& manager, const GameObject& pawnObject )
-    {
-        const PawnComponent*       pPawn            = pawnObject.getComponent<PawnComponent>();
-        const ControllerComponent* pController      = pPawn != nullptr ? manager.resolveComponent( pPawn->getController() ) : nullptr;
-        GameObject*                pControllerOwner = pController != nullptr ? pController->getOwner() : nullptr;
-        return pControllerOwner != nullptr ? pControllerOwner->getComponent<PlayerStateComponent>() : nullptr;
     }
 } // namespace sw

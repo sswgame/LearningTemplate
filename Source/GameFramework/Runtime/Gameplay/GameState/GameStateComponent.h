@@ -19,6 +19,7 @@
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Foundation/Condition/GameFlags.h"
 #include "GameFramework/Runtime/Foundation/Condition/IGameFlagsOwner.h"
+#include "GameFramework/Runtime/Gameplay/GameState/DeferredStateRestore.h"
 #include "GameFramework/Runtime/World/Environment/WeatherMaterialWriter.h"
 #include "GameFramework/Runtime/World/Environment/WeatherSystem.h"
 #include "GameFramework/Runtime/World/Environment/WorldClock.h"
@@ -52,18 +53,6 @@ namespace sw
         float32 _landCellSize{ 1.0f }; ///< 셀 한 변의 월드 길이. 0 보다 커야 한다(`LandRegistry::initialize` 의 전제 조건)
         PROPERTY()
         float3 _landOrigin{};
-    };
-} // namespace sw
-
-namespace sw
-{
-    /** @brief `GameStateComponent::initialize` · 플레이어 상태 컴포넌트 `initialize`(`DeferredStateRestore::open`)의 결과입니다. */
-    enum class GameStateInitResult : uint8
-    {
-        Fresh = 0,          ///< 새 판이다. 여는 디렉터가 시작값(시작 돈, 첫 플래그)을 넣는다
-        Restored,           ///< 보관하고 있던 세이브나 핫 리로드 바이트로 복원했다. 시작값은 넣지 않는다
-        AlreadyInitialized, ///< 앞 디렉터가 이미 열었다. 설정은 무시하며, 새 판인지는 `isFreshGame` 으로 확인한다
-        Refused             ///< 설정이 선언된 범위 밖이라 열지 않았다(오류를 남겼다). 여는 디렉터는 시작을 멈춘다
     };
 } // namespace sw
 
@@ -124,9 +113,9 @@ namespace sw
         /** @brief 열리기 전이면 보관해 두었다가 `initialize` 에서 적용하고, 열린 뒤면 바로 적용합니다. `ComponentStateStore::restore` 가 부릅니다. */
         void restoreState( vector<uint8>&& bytes );
 
-        bool isInitialized() const { return _bInitialized == SW_TRUE; }
+        bool isInitialized() const { return _restore.isOpen(); }
         /** @brief 이번 판이 새 판으로 열렸으면 true 이고, 복원한 판이면 false 입니다. 디렉터가 시작값을 넣을지 판단할 때 묻습니다. */
-        bool isFreshGame() const { return _bFreshGame == SW_TRUE; }
+        bool isFreshGame() const { return _restore.isFreshGame(); }
         /** @brief 열렸으면 판 상태의 플래그입니다(`IGameFlagsOwner` — 아래 층의 활성자 볼륨이 진행 플래그를 적는다). */
         [[nodiscard]] GameFlags* findOpenFlags() { return isInitialized() ? &_flags : nullptr; }
         GameFlags&               getFlags() { return _flags; }
@@ -160,10 +149,6 @@ namespace sw
         [[nodiscard]] static GameStateComponent* findOpen( const GameObjectManager* pManager );
 
     private:
-        /** @brief 보관하고 있던 복원 바이트를 적용합니다. 구조가 깨졌으면 경고를 남기고 false 를 반환합니다. */
-        [[nodiscard]] bool applyPendingState();
-
-    private:
         GameFlags                        _flags;
         WorldClock                       _clock;
         shared_ptr<const WeatherCatalog> _pWeatherCatalog; ///< 날씨가 가리키는 카탈로그의 판(열 때의 스냅숏 — 다시 읽기 정리가 놓아도 날씨의 항목 포인터가 끊기지 않는다)
@@ -171,14 +156,12 @@ namespace sw
         WeatherMaterialWriter            _weatherMaterial; ///< 날씨 → 지면 머티리얼 묶음(카탈로그의 바인딩). `_pWeatherCatalog` 뒤에 둔다 — 먼저 사라진다
         LandRegistry                     _land;            ///< 공유 땅. 격자와 배치 키트가 셀을 얻어 쓴다
         vector<WorldClockEvent>          _listClockEvent;
-        vector<uint8>                    _pendingStateBytes; ///< 열리기 전에 받은 복원 바이트
-        uint8                            _bInitialized : 1;
-        uint8                            _bFreshGame   : 1;
-        uint8                            _bWeather     : 1; ///< 날씨 카탈로그로 열었는지 여부
+        DeferredStateRestore             _restore;      ///< 열리기 전에 받은 복원 바이트 · 열림 · 새 판
+        uint8                            _bWeather : 1; ///< 날씨 카탈로그로 열었는지 여부
         PROPERTY( Tooltip = "Open with default settings at begin play - only for scenes without a kit director (showcases, tests); a director opens it with its own settings" )
         uint8                  _bOpenAtBeginPlay : 1;
         uint8                  _bRefusedInScene  : 1; ///< 같은 씬에 이미 월드 상태가 있어 등록에서 거절됐다(`onRegister`) — 레지스트리에 없고 열리지 않는다
-        [[maybe_unused]] uint8 _reserved         : 3;
+        [[maybe_unused]] uint8 _reserved         : 5;
 
     private:
         /** @brief 플래그 주인 계약을 주인의 `findOpenFlags` 로 넘기는 포트입니다(`REFLECT_INTERFACE`). */

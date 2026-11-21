@@ -24,7 +24,7 @@ namespace sw
      * @details 월드 상태(`GameStateComponent`)는 씬에 하나 — 멀티플레이에서 "그 플레이어만" 의 기록(도착 컷씬을 본 사람)은 플레이어마다 따로 있어야 한다.
      *          지갑 · 가방 · 퀘스트 일지 · 평판은 같은 오브젝트의 형제 `WalletComponent` · `InventoryComponent` · `QuestLogComponent` · `ReputationComponent`(게임플레이 층)가 든다.
      *          언리얼은 `APlayerState` 를 컨트롤러가 쥐어 폰을 바꿔 타도 남고, 유니티 · Godot 은 게임 코드가 플레이어 객체에 둔다. 여기도 조종자 오브젝트에 둬서 폰을 다시
-     *          세워도(부활) 남는다. 폰에서 찾는 길은 `findForPawnObject` 하나다(폰 → 쥔 조종자 → 그 오브젝트).
+     *          세워도(부활) 남는다. 폰에서는 `PawnComponent::findControllerObject`(폰 → 쥔 조종자 → 그 오브젝트)로 찾는다.
      *          플래그는 PROPERTY 가 아니라 `ComponentStateStore` 계약(`serializeState` / `restoreState`)으로 게임 상태 스냅샷에 실린다(판 상태의 플래그와 같은 바이트 형식).
      *          서버의 접속별 영구 저장(계정 진행)은 이 상태를 읽어 쓰는 쪽(온라인 서비스)의 몫이다.
      */
@@ -46,9 +46,6 @@ namespace sw
         SW_DECLARE_STATE_IO_IN_PLACE();
         /** @brief 저장된 바이트로 진행 플래그를 되살립니다. 읽지 못하면 경고를 남기고 지금 값을 둡니다. */
         void restoreState( vector<uint8>&& bytes );
-
-        /** @brief @p pawnObject 의 폰을 쥔 조종자 오브젝트의 플레이어 상태입니다. 폰 · 조종자 · 플레이어 상태가 없으면 nullptr 입니다. */
-        [[nodiscard]] static PlayerStateComponent* findForPawnObject( GameObjectManager& manager, const GameObject& pawnObject );
 
     private:
         GameFlags _progressFlags;

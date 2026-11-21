@@ -10,6 +10,7 @@
 #include "Engine/Sequencer/SequencePlayerComponent.h"
 
 #include "GameFramework/Runtime/Character/Control/Controller/PlayerStateComponent.h"
+#include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Runtime/Foundation/Condition/GameFlags.h"
 
 namespace sw
@@ -80,9 +81,10 @@ namespace sw
             return TriggerComponent::findProgressFlags( pActivator );
         if ( pActivator == nullptr )
             return nullptr; // 활성자 없이 묻는 것(`hasFired`) — 플레이어별 기록은 고를 플레이어가 없다
-        const GameObject*     pOwner   = getOwner();
-        GameObjectManager*    pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
-        PlayerStateComponent* pState   = pManager != nullptr ? PlayerStateComponent::findForPawnObject( *pManager, *pActivator ) : nullptr;
+        const GameObject*        pOwner            = getOwner();
+        const GameObjectManager* pManager          = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObject*              pControllerObject = pManager != nullptr ? PawnComponent::findControllerObject( *pManager, *pActivator ) : nullptr;
+        PlayerStateComponent*    pState            = pControllerObject != nullptr ? pControllerObject->getComponent<PlayerStateComponent>() : nullptr;
         if ( pState == nullptr )
         {
             SW_LOG_ERROR_ID( "SequenceTrigger.ActivatorNoPlayerState", "Sequence trigger '%#' records progress flag '%#' per player but '%#' has no controller with a PlayerStateComponent - nothing plays",

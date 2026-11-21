@@ -162,9 +162,11 @@ SW_TEST_CASE( PlayerStateComponentsTest, FoundFromThePawn )
     PlayerControllerComponent* pPlayer     = pController->addComponent<PlayerControllerComponent>();
     manager.beginPlay();
 
-    SW_EXPECT_NULL( PlayerComponentUtil::findForPawnObject<WalletComponent>( manager, *pPawnObject ) ); // 아직 쥐지 않았다
+    SW_EXPECT_NULL( PawnComponent::findControllerObject( manager, *pPawnObject ) ); // 아직 쥐지 않았다
     pPlayer->possess( *pPawn );
-    SW_EXPECT_TRUE( PlayerComponentUtil::findForPawnObject<WalletComponent>( manager, *pPawnObject ) == pWallet );
+    GameObject* const pFound = PawnComponent::findControllerObject( manager, *pPawnObject );
+    SW_REQUIRE_NOT_NULL( pFound );
+    SW_EXPECT_TRUE( pFound->getComponent<WalletComponent>() == pWallet );
 }
 
 /** @brief [PlayerStateComponentsTest] 씬 하나를 읽는 쪽(`findOpen` — 감시 값 · 치트 · 목표 표시)은 열린 것만 보고, 둘이면 오류로 멈춘다 — 어느 플레이어인지 등록 순서로 고르지 않는다 */

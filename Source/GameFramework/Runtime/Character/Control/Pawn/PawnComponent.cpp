@@ -177,4 +177,11 @@ namespace sw
         _intent._controlYaw   = MathUtil::wrapAngle( _intent._controlYaw + offset._x );
         _intent._controlPitch = MathUtil::clamp( _intent._controlPitch + offset._y, -_maxPitch.radians(), _maxPitch.radians() );
     }
+
+    GameObject* PawnComponent::findControllerObject( const GameObjectManager& manager, const GameObject& pawnObject )
+    {
+        const PawnComponent*       pPawn       = pawnObject.getComponent<PawnComponent>();
+        const ControllerComponent* pController = pPawn != nullptr ? manager.resolveComponent( pPawn->getController() ) : nullptr;
+        return pController != nullptr ? pController->getOwner() : nullptr;
+    }
 } // namespace sw
