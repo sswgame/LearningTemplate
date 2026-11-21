@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="f177571b3166ac290fc4d15d0a942178"?>
 <!-- WildWest 팩의 설정 — 시작 맵은 평원 씬이다(게임마다 팩의 data/gamesettings.xml 하나다).
-     inputMap 줄들은 입력 맵 묶음이다 — 기본 맵, 공통 파일들, 맨 끝이 게임 차이다(docs/InputMapBundle.md). -->
+     inputMap 줄들은 입력 맵 묶음이다 — 기본 맵, 공통 파일들, 맨 끝이 게임 차이다(docs/agents/DataInheritance.md "입력 맵 묶음" 절). -->
 <GameSettings>
   <!-- 엔진이 읽는 칸(PackEngineSettings) — 창 제목 · 렌더 파이프라인 · 사용자 설정과 텔레메트리 스키마 · UI 규칙 -->
   <Engine _windowTitle="Wild West" />

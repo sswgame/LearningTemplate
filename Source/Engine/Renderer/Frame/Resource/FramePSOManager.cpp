@@ -381,8 +381,12 @@ namespace sw
         }
 
         // 파이프라인 컴퓨트 패스는 셰이더가 패스마다 달라 표가 아니라 그래프를 돈다. 컴퓨트 능력이 없는 백엔드는 이 패스를 돌리지 못한다.
+        // 이미 있는 패스는 만들지 않는다 — 다시 부르는 자리(백버퍼 형식 변경 · 셰이더 핫 리로드)에서 덮어쓰면 옛 PSO 가 파괴되지 않고 남는다.
         for ( const RenderGraphPassDesc& pass : _pipeline.getGraphPass() )
         {
+            RHIPipelineStateHandle existingCompute{ 0 };
+            if ( _pCache->findExtensionProgramPSO( hashed_string( pass._name.c_str() ), existingCompute ) )
+                continue;
             // 일반 풀스크린 패스의 컴퓨트 구현 — 네이티브 bindless 에서만 만든다(에뮬 백엔드는 픽셀 구현이 돈다 — 그 PSO 는 위의 표 단계가 늘 만든다). 키는 패스 이름이다.
             if ( pass._implementation == RenderPassExecutionMode::Compute && _pDevice->supportsNativeBindlessSampling() )
             {
@@ -464,6 +468,12 @@ namespace sw
                 SW_LOG_ERROR_ID( "FramePSOManager.EnginePSOPassCould", "Engine PSO for pass %# could not be created (shader '%#') - the pass draws nothing", computeJob._passType, computeJob._shaderPath.c_str() );
                 continue;
             }
+            // 어느 셰이더로 만들었는지 적는다 — 셰이더 핫 리로드가 그 셰이더의 PSO 만 놓는다(`RenderPSOCache::releasePSOsUsingShader`).
+            RHIPipelineStateDesc computeDesc{};
+            computeDesc._computeShaderPath = computeJob._shaderPath;
+            computeDesc._computeEntryPoint = computeJob._entryPoint;
+            computeDesc._listShaderDefine  = computeJob._listDefine;
+            _pCache->registerDesc( pso, computeDesc );
             if ( computeJob._pipelinePassName.empty() == false )
                 _pCache->setExtensionProgramPSO( computeJob._pipelinePassName, pso ); // 패스 이름이 키다 — 확장 프로그램과 같은 저장소(같이 해제한다)
             else
@@ -529,9 +539,9 @@ namespace sw
 
     void FramePSOManager::onShaderRecompiled( string_view shaderPath )
     {
-        // 빌려 쓰는 저장소(미리보기 씬 렌더러)는 소유자인 주 렌더러가 이미 무효화하고 다시 채웠다.
+        // 빌려 쓰는 저장소(미리보기 씬 렌더러)는 소유자인 주 렌더러가 이미 놓았다 — 빌린 쪽은 자기 파이프라인에서 빠진 것만 채운다(`createPassPSOs`).
         if ( hasOwnCache() )
-            _pCache->invalidateLayoutsByShaderPath( shaderPath );
+            (void)_pCache->releasePSOsUsingShader( _pDevice, shaderPath ); // 놓은 수는 쓰지 않는다 — 빈 자리는 createPassPSOs · 지연 생성이 채운다
     }
 
     RHIPipelineStateHandle FramePSOManager::findPipelineComputePSO( const hashed_string& passName ) const

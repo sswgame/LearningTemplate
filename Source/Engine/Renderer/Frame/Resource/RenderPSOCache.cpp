@@ -2,6 +2,7 @@
 
 #include "Engine/Renderer/Frame/Resource/RenderPSOCache.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Hash/HashUtil.h"
 
 #include "Engine/Graphics/RHI/IRHIDevice.h"
@@ -53,9 +54,12 @@ namespace sw
         return true;
     }
 
-    void RenderPSOCache::invalidateLayoutsByShaderPath( string_view shaderPath )
+    void RenderPSOCache::registerDesc( RHIPipelineStateHandle pso, const RHIPipelineStateDesc& desc )
     {
-        _bindingLayoutCache.invalidateByShaderPath( shaderPath );
+        if ( pso == 0 )
+            return;
+        ScopedLock<mutex> lock{ _layoutMutex };
+        _mapPSODesc[pso] = desc;
     }
 
     void RenderPSOCache::collectLayouts( vector<RegisteredLayout>& outListLayout ) const
@@ -252,6 +256,98 @@ namespace sw
             _mapPSOLayout.clear();
             _mapPSODesc.clear();
         }
+    }
+
+    uint32 RenderPSOCache::releasePSOsUsingShader( IRHIDevice* pDevice, string_view shaderPath )
+    {
+        IRHIResourceFactory* const pFactory = pDevice != nullptr ? pDevice->getResourceFactory() : nullptr;
+        // 1) 그 셰이더를 쓰는 PSO — desc 의 세 경로를 레이아웃 캐시와 같은 규칙으로 본다(지울 레이아웃을 쥔 PSO 가 남지 않게).
+        vector<RHIPipelineStateHandle> listAffected;
+        {
+            ScopedLock<mutex> lock{ _layoutMutex };
+            for ( const auto& [pso, desc] : _mapPSODesc )
+            {
+                const bool bUses = ShaderBindingLayoutCache::matchesShaderPath( desc._vertexShaderPath, shaderPath ) ||
+                                   ShaderBindingLayoutCache::matchesShaderPath( desc._pixelShaderPath, shaderPath ) ||
+                                   ShaderBindingLayoutCache::matchesShaderPath( desc._computeShaderPath, shaderPath );
+                if ( bUses )
+                    listAffected.push_back( pso );
+            }
+        }
+        vector<RHIPipelineStateHandle> listReleased;
+        const auto                     destroy = [pFactory, &listReleased]( RHIPipelineStateHandle pso )
+        {
+            if ( pso == 0 )
+                return;
+            if ( pFactory != nullptr )
+                pFactory->destroyPipelineState( pso ); // 백엔드 해제 큐가 그 PSO 를 쓴 프레임의 GPU 완료 뒤로 미룬다
+            listReleased.push_back( pso );
+        };
+
+        // 2) 엔진 · 출력 · 모듈 프로그램 PSO. 패스 PSO 를 놓았는지 기억한다(아래 변형).
+        bool bPassReleased{ false };
+        for ( auto it = _mapEnginePSO.begin(); it != _mapEnginePSO.end(); )
+        {
+            if ( VectorUtil::contains( listAffected, it->second ) == false )
+            {
+                ++it;
+                continue;
+            }
+            destroy( it->second );
+            bPassReleased = true;
+            it            = _mapEnginePSO.erase( it );
+        }
+        for ( auto it = _mapOutputPSO.begin(); it != _mapOutputPSO.end(); )
+        {
+            if ( VectorUtil::contains( listAffected, it->second ) == false )
+            {
+                ++it;
+                continue;
+            }
+            destroy( it->second );
+            it = _mapOutputPSO.erase( it );
+        }
+        for ( auto it = _mapExtensionProgramPSO.begin(); it != _mapExtensionProgramPSO.end(); )
+        {
+            if ( it->second != 0 && VectorUtil::contains( listAffected, it->second ) == false )
+            {
+                ++it;
+                continue;
+            }
+            destroy( it->second );
+            it = _mapExtensionProgramPSO.erase( it );
+        }
+
+        // 3) 머티리얼 변형(입자 · 쿠키 아틀라스 · 디퍼드 타일 포함). 소유한 것만 파괴한다 — `_bOwned` 가 0 이면 패스 PSO 그대로다.
+        {
+            ScopedLock<mutex> lock{ _materialPSOMutex };
+            for ( auto it = _mapMaterialPSO.begin(); it != _mapMaterialPSO.end(); )
+            {
+                const MaterialPSOEntry& entry    = it->second;
+                const bool              bRelease = entry._state == MaterialPSOState::Failed ||
+                                      ( entry._state == MaterialPSOState::Ready && ( bPassReleased || VectorUtil::contains( listAffected, entry._pso ) ) );
+                if ( bRelease == false )
+                {
+                    ++it;
+                    continue;
+                }
+                if ( entry._bOwned != 0 )
+                    destroy( entry._pso );
+                it = _mapMaterialPSO.erase( it );
+            }
+        }
+
+        // 4) 놓은 핸들의 레이아웃 · desc, 그리고 그 셰이더의 레이아웃 캐시. PSO 를 먼저 놓아야 지운 레이아웃을 가리키는 항목이 남지 않는다.
+        {
+            ScopedLock<mutex> lock{ _layoutMutex };
+            for ( const RHIPipelineStateHandle pso : listReleased )
+            {
+                _mapPSOLayout.erase( pso );
+                _mapPSODesc.erase( pso );
+            }
+        }
+        _bindingLayoutCache.invalidateByShaderPath( shaderPath );
+        return static_cast<uint32>( listReleased.size() );
     }
 
     void RenderPSOCache::clearAll()

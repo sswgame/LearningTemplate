@@ -238,6 +238,11 @@ namespace sw
          *          켬 키워드와 끔 키워드(`keywordOff`)가 함께 들어가는 일이 없다.
          */
         bool makePermutations( MaterialPermutationDef& outPermutations ) const;
+        /**
+         * @brief 키워드를 내는 부모 칸(Bool · Keyword + `shaderKeyword`)의 값 덮어쓰기를 (칸 이름, 켬)으로 모읍니다 — 부모의 `computeShaderDefines` 에 넘겨 define 에 들어간다.
+         * @details 읽지 못한 값은 오류로 알리고 빼며 false 다(쿠커가 멈춘다). 런타임 정의와 쿠커가 이 하나를 쓴다.
+         */
+        [[nodiscard]] bool makeKeywordValueOverrides( vector<pair<hashed_string, bool>>& outListOverride ) const;
 
     private:
         Material*           _pParentMaterial;

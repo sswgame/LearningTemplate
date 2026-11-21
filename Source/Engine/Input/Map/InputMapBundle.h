@@ -4,7 +4,7 @@
  * @details 차례는 기본 맵(첫 줄) → 키트의 맵(id 순) → 나머지 줄(공통 묶음, 맨 끝이 게임 차이)입니다. 게임 차이가 맨 뒤라 키트 · 공통 액션을 덮거나 지울 수 있습니다.
  *          키트는 `SW_INPUT_MAP_EXTENSION` 한 줄로 선언합니다. 등록자는 모듈과 함께 올라가고 내려가므로 게임 매니페스트(`_listDependency`)가 닿는 키트만 묶음에 듭니다.
  *          Shipping 은 매니페스트를 복사하지 않지만(정적 링크) 의존한 키트만 링크되므로 같은 결과입니다.
- *          묶음의 규칙과 상용 엔진 비교는 `docs/InputMapBundle.md`.
+ *          묶음의 규칙은 `docs/agents/DataInheritance.md` "입력 맵 묶음" 절.
  */
 #pragma once
 #include "Core/Concurrency/mutex.h"

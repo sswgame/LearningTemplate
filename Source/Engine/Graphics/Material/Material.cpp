@@ -949,7 +949,7 @@ namespace sw
     {
         if ( _bDefinesDirty != SW_FALSE )
         {
-            computeShaderDefines( _desc._permutations, _listCachedDefine );
+            computeShaderDefines( _desc._permutations, {}, _listCachedDefine );
             _previousPermutationHash = _cachedPermutationHash; // 처음 만들 때는 0 이다(직전 변형이 없다)
             _cachedPermutationHash   = computePermutationHash( _listCachedDefine );
             _bDefinesDirty           = SW_FALSE;
@@ -964,7 +964,7 @@ namespace sw
         return renderPropertiesHash != 0 ? HashUtil::combine( defineHash, renderPropertiesHash ) : defineHash;
     }
 
-    void Material::computeShaderDefines( const MaterialPermutationDef& permutationDesc, vector<string>& outListDefine ) const
+    void Material::computeShaderDefines( const MaterialPermutationDef& permutationDesc, const vector<pair<hashed_string, bool>>& listKeywordValueOverride, vector<string>& outListDefine ) const
     {
         outListDefine.clear();
         for ( const string& defineStr : permutationDesc._listAlwaysDefine )
@@ -1010,8 +1010,16 @@ namespace sw
                 continue;
             if ( prop._shaderKeyword.empty() )
                 continue;
-            bool bKeywordOn{ false };
-            if ( MaterialPacking::parseBoolToken( prop._value, prop._name, "Material.BooleanKeywordUnreadable", bKeywordOn ) && bKeywordOn ) // 읽지 못한 값은 parseBoolToken 이 오류로 남긴다(로드가 이미 거부한다)
+            bool                             bKeywordOn{ false };
+            const hashed_string              propName( prop._name.c_str() );
+            const pair<hashed_string, bool>* pOverride = VectorUtil::findIf( listKeywordValueOverride, [&propName]( const pair<hashed_string, bool>& entry )
+            { return entry.first == propName; } );
+            // 인스턴스 덮어쓰기는 인스턴스가 만들 때 이미 읽어 검사했다. 부모 값을 읽지 못하면 parseBoolToken 이 오류로 남긴다(로드가 이미 거부한다).
+            if ( pOverride != nullptr )
+                bKeywordOn = pOverride->second;
+            else if ( MaterialPacking::parseBoolToken( prop._value, prop._name, "Material.BooleanKeywordUnreadable", bKeywordOn ) == false )
+                bKeywordOn = false;
+            if ( bKeywordOn )
                 MaterialPermutation::appendUniqueDefine( outListDefine, prop._shaderKeyword );
         }
 
@@ -1020,15 +1028,16 @@ namespace sw
 
     void Material::collectRuntimeSwitchVariants( vector<vector<string>>& outListDefine, vector<uint64>& outListPermutationHash ) const
     {
-        collectRuntimeSwitchVariants( _desc._permutations, outListDefine, outListPermutationHash );
+        collectRuntimeSwitchVariants( _desc._permutations, {}, outListDefine, outListPermutationHash );
     }
 
-    void Material::collectRuntimeSwitchVariants( const MaterialPermutationDef& basePermutations, vector<vector<string>>& outListDefine, vector<uint64>& outListPermutationHash ) const
+    void Material::collectRuntimeSwitchVariants( const MaterialPermutationDef& basePermutations, const vector<pair<hashed_string, bool>>& listKeywordValueOverride, vector<vector<string>>& outListDefine,
+                                                 vector<uint64>& outListPermutationHash ) const
     {
         outListDefine.clear();
         outListPermutationHash.clear();
         vector<string> listBaseDefine;
-        computeShaderDefines( basePermutations, listBaseDefine );
+        computeShaderDefines( basePermutations, listKeywordValueOverride, listBaseDefine );
         outListPermutationHash.push_back( computePermutationHash( listBaseDefine ) );
         outListDefine.push_back( std::move( listBaseDefine ) );
         vector<size_t>                      listRuntimeSwitch;
@@ -1053,7 +1062,7 @@ namespace sw
         {
             for ( size_t bit = 0; bit < listRuntimeSwitch.size(); ++bit )
                 variantDesc._listStaticSwitch[listRuntimeSwitch[bit]]._bEnabled = ( combo & ( 1u << bit ) ) != 0 ? 1 : 0;
-            computeShaderDefines( variantDesc, listDefine );
+            computeShaderDefines( variantDesc, listKeywordValueOverride, listDefine );
             if ( VectorUtil::contains( outListDefine, listDefine ) )
                 continue;
             outListPermutationHash.push_back( computePermutationHash( listDefine ) );
