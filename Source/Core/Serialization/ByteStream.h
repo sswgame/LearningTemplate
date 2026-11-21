@@ -197,25 +197,25 @@ namespace sw
         [[nodiscard]] uint64 readVarUint()
         {
             uint64 value = 0;
-            return markFailedUnless( VarIntUtil::decodeVarUint64( _pData, _byteCount, _offset, value ) ) ? value : 0ull;
+            return recordReadResult( VarIntUtil::decodeVarUint64( _pData, _byteCount, _offset, value ) ) ? value : 0ull;
         }
         /** @brief 32 비트를 넘지 않아야 하는 가변 길이 정수를 읽습니다. 넘거나 모자라면 0 이고 실패로 표시합니다. */
         [[nodiscard]] uint32 readVarUint32()
         {
             uint32 value = 0;
-            return markFailedUnless( VarIntUtil::decodeVarUint32( _pData, _byteCount, _offset, value ) ) ? value : 0u;
+            return recordReadResult( VarIntUtil::decodeVarUint32( _pData, _byteCount, _offset, value ) ) ? value : 0u;
         }
         /** @brief 지그재그 가변 길이 정수(`writeVarInt`)를 읽습니다. 깨졌거나 모자라면 0 이고 실패로 표시합니다. */
         [[nodiscard]] int64 readVarInt()
         {
             int64 value = 0;
-            return markFailedUnless( VarIntUtil::decodeVarInt64( _pData, _byteCount, _offset, value ) ) ? value : int64{ 0 };
+            return recordReadResult( VarIntUtil::decodeVarInt64( _pData, _byteCount, _offset, value ) ) ? value : int64{ 0 };
         }
         /** @brief 32 비트를 넘지 않아야 하는 지그재그 가변 길이 정수를 읽습니다. 넘거나 모자라면 0 이고 실패로 표시합니다. */
         [[nodiscard]] int32 readVarInt32()
         {
             int32 value = 0;
-            return markFailedUnless( VarIntUtil::decodeVarInt32( _pData, _byteCount, _offset, value ) ) ? value : int32{ 0 };
+            return recordReadResult( VarIntUtil::decodeVarInt32( _pData, _byteCount, _offset, value ) ) ? value : int32{ 0 };
         }
         /** @brief `writeString` 이 쓴 글을 읽습니다. 모자라면 빈 글이고 실패로 표시합니다. */
         [[nodiscard]] string readString()
@@ -253,7 +253,7 @@ namespace sw
          */
         [[nodiscard]] bool canHold( uint64 declaredCount, size_t minElementBytes )
         {
-            return markFailedUnless( hasOverflowed() == false && canHoldCount( declaredCount, minElementBytes, getRemainingByteCount() ) );
+            return recordReadResult( hasOverflowed() == false && canHoldCount( declaredCount, minElementBytes, getRemainingByteCount() ) );
         }
         /**
          * @brief 원소 개수(uint32)를 읽습니다. 원소 하나가 파일에서 적어도 @p minElementBytes 바이트이므로 남은 바이트로 담을 수 없는 개수면 0 이고 실패로 표시합니다.
@@ -348,7 +348,8 @@ namespace sw
         }
 
     private:
-        bool markFailedUnless( bool bRead )
+        /** @brief 읽기 결과 @p bRead 를 그대로 돌려줍니다. false 면 스트림에 실패를 남깁니다(뒤 읽기 · `finish` 가 본다 — 언리얼 `FArchive::SetError` 자리). */
+        bool recordReadResult( bool bRead )
         {
             if ( bRead == false )
                 _bFailed = SW_TRUE;

@@ -214,8 +214,6 @@ namespace sw
         const NetSnapshot& getWorldSnapshot() const { return _world; }
         /** @brief 상한을 넘어서 복제하지 않은 `setEntity` 호출 수입니다. */
         uint64 getOversizedEntityCount() const;
-        /** @brief 마지막 `sendSnapshots` 에서 깨어 있던 엔티티 수입니다(연결마다 평가하는 후보 수). 월드 엔티티 수와 견주면 휴면 비율이다. */
-        size_t getAwakeEntityCount() const { return _listAwakeIndex.size(); }
 
     private:
         /** @brief 연결이 지난 스냅샷에서 관련 있다고 본 엔티티 하나 — 휴면 엔티티는 다시 묻지 않고 이 판단을 들고 간다. */

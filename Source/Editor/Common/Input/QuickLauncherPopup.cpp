@@ -295,8 +295,8 @@ namespace sw::editor
             const QuickLauncherRowLayout layout = QuickLauncherLayoutUtil::makeRowLayout( ImGui::GetContentRegionAvail().x, getWidestBadgeWidth(),
                                                                                           ImGui::GetFrameHeight(), ImGui::GetTextLineHeight(), ImGui::GetStyle().ItemSpacing.x );
 
-            EditorVirtualList virtualList( filteredCount ); // 에셋 후보 전부(수천) — 보이는 줄만 그린다
-            virtualList.includeRow( _selectedIndex );       // 키로 고른 줄은 화면 밖이어도 그려 그 자리로 스크롤한다
+            EditorVirtualList virtualList( filteredCount );   // 에셋 후보 전부(수천) — 보이는 줄만 그린다
+            virtualList.includeItemByIndex( _selectedIndex ); // 키로 고른 줄은 화면 밖이어도 그려 그 자리로 스크롤한다
             while ( virtualList.step() )
             {
                 for ( int32 itemIndex = virtualList.getBegin(); itemIndex < virtualList.getEnd(); ++itemIndex )

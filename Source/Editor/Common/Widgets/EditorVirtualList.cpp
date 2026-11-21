@@ -20,7 +20,7 @@ namespace sw::editor
         _pClipper->End();
     }
 
-    void EditorVirtualList::includeRow( int32 rowIndex )
+    void EditorVirtualList::includeItemByIndex( int32 rowIndex )
     {
         if ( 0 <= rowIndex && rowIndex < _rowCount )
             _pClipper->IncludeItemByIndex( rowIndex );

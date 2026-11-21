@@ -4,7 +4,6 @@
 
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
@@ -16,6 +15,7 @@
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Object/Prefab/PrefabCache.h"
+#include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Reflection/TypeFqn.h"
 #include "Engine/Serialization/Format/Archive.h"
 
@@ -30,26 +30,32 @@ namespace sw
         {
             /** @brief 세운 핸들 목록을 덜어 내기 시작하는 크기입니다(그 뒤로는 덜어 낸 크기의 두 배마다). */
             static constexpr uint32 kMinCompactThreshold = 64;
+            /** @brief 최고 걸음 시간으로 읽는 백분위입니다. */
+            static constexpr uint32 kPeakPercent = 100;
 
-            /** @brief 감시 값 `GameMode.StepMs` · `GameMode.StepPeakMs` 입니다 — 씬의 열린 디렉터 중 가장 긴 마지막 · 최고 걸음 시간(밀리초). 열린 디렉터가 없으면 값이 없다. */
+            /**
+             * @brief 감시 값 `GameMode.StepMs` · `GameMode.StepPeakMs` 입니다 — 프로파일러 구간 `kStepScopeName` 의 마지막 프레임 시간(씬의 디렉터 걸음 합) · 측정 창의 최고(밀리초).
+             * @details 최고는 분포의 p100 이라 칸 아래 끝이다(약 12% 안, `FrameProfiler::getPercentileNanos`). 열린 디렉터가 없거나 계측이 꺼져 있으면 값이 없다(`Scene.ComponentTickMs` 와 같은 길).
+             */
             template <bool bPeak>
             [[nodiscard]] static bool readStepMilliseconds( const GameObjectManager* pManager, float64& outValue )
             {
                 if ( pManager == nullptr )
                     return false;
-                bool  bFound       = false;
-                int64 microseconds = 0;
+                FrameProfiler* const pProfiler = game::findSubsystem<FrameProfiler>();
+                if ( pProfiler == nullptr || pProfiler->isEnabled() == false )
+                    return false;
+                bool bStarted = false;
                 for ( const GameModeComponent* pGameMode : pManager->getComponentRegistry().getAll<GameModeComponent>() )
                 {
-                    if ( pGameMode->isStarted() == false )
-                        continue;
-                    const int64 value = bPeak ? pGameMode->getPeakStepMicroseconds() : pGameMode->getLastStepMicroseconds();
-                    if ( bFound == false || value > microseconds )
-                        microseconds = value;
-                    bFound = true;
+                    bStarted = bStarted || pGameMode->isStarted();
                 }
-                outValue = static_cast<float64>( microseconds ) / static_cast<float64>( constant::time::kMicrosecondsPerMillisecond );
-                return bFound;
+                if ( bStarted == false )
+                    return false;
+                const uint32 slot  = pProfiler->registerScope( GameModeComponent::kStepScopeName );
+                const uint64 nanos = bPeak ? pProfiler->getPercentileNanos( slot, kPeakPercent ) : pProfiler->getLastFrameNanos( slot );
+                outValue           = static_cast<float64>( nanos ) / static_cast<float64>( constant::time::kNanosecondsPerMillisecond );
+                return true;
             }
         };
     } // namespace
@@ -66,8 +72,6 @@ namespace sw
         , _soundQueue{}
         , _compactThreshold{ GameModeComponentInternal::kMinCompactThreshold }
         , _pendingRuleDeltaTime{ 0.0f }
-        , _lastStepMicroseconds{ 0 }
-        , _peakStepMicroseconds{ 0 }
         , _bStarted{ SW_FALSE }
         , _bViewsSpawned{ SW_FALSE }
         , _bFlushScheduled{ SW_FALSE }
@@ -191,11 +195,10 @@ namespace sw
         if ( _bViewsSpawned == SW_FALSE )
             scheduleFlush(); // 상태 저장 전에 걷었다(또는 처음) — 지금 상태대로 다시 세운다
         // 디렉터 계약 ① 의 재는 자리 — 측정 문턱(RTS 유닛 2000 에서 2 ms 등)을 판정할 값을 모든 디렉터가 줄 추가 없이 낸다.
-        const Stopwatch stepWatch;
-        updateGame( deltaTime );
-        _lastStepMicroseconds = stepWatch.getElapsedMicroseconds();
-        if ( _lastStepMicroseconds > _peakStepMicroseconds )
-            _peakStepMicroseconds = _lastStepMicroseconds;
+        {
+            SW_PROFILE_SCOPE( kStepScopeName );
+            updateGame( deltaTime );
+        }
         if ( _soundQueue.isEmpty() == false || hasPendingSpawn() )
             scheduleFlush();
     }
@@ -430,8 +433,8 @@ namespace sw
         return pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
     }
 
-    SW_AUTOMATION_WATCH( gameModeStepMs, "GameMode.StepMs", "Longest last rule step (updateGame) in game-thread milliseconds among the active scene's started game modes",
+    SW_AUTOMATION_WATCH( gameModeStepMs, "GameMode.StepMs", "Rule step (updateGame) time of the last profiled frame in milliseconds, summed over the active scene's game modes (no value while the profiler is off)",
                          &GameModeComponentInternal::readStepMilliseconds<false> );
-    SW_AUTOMATION_WATCH( gameModeStepPeakMs, "GameMode.StepPeakMs", "Longest rule step (updateGame) in game-thread milliseconds since play began among the active scene's game modes",
+    SW_AUTOMATION_WATCH( gameModeStepPeakMs, "GameMode.StepPeakMs", "Longest profiled frame of rule steps (updateGame) in milliseconds since the profiler window opened (bucket lower bound; profiler on)",
                          &GameModeComponentInternal::readStepMilliseconds<true> );
 } // namespace sw
