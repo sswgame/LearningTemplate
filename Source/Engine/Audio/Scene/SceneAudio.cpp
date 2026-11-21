@@ -164,7 +164,7 @@ namespace sw
     // 오디오 스레드가 명령을 옮겨야 값이 바뀐다 — 벽시계 시한으로 기다린다.
     SW_AUTOMATION_WALL_WATCH( audioInstanceCount, "Audio.InstanceCount", "Sound event instances alive in the audio engine", &SceneAudioInternal::readInstanceCount, &SceneAudioInternal::readAudioActivity );
     // 디코드 결과는 워커가 넣는다 — 같은 까닭으로 벽시계 시한이다.
-    // 실시간 스레드의 최악 값 — 허브 부하 시나리오에서 0 이어야 한다(문턱: 할당 0 · 잠금 0 · 언더런 0, DesignBacklog Engine 발전 방향 ①).
+    // 실시간 스레드의 최악 값 — 허브 부하 시나리오에서 0 이어야 한다(문턱: 할당 0 · 잠금 0 · 언더런 0, docs/NEXT.md 측정 오디오 실시간 스레드).
     SW_AUTOMATION_WATCH( audioOutputUnderruns, "Audio.OutputUnderruns", "Underruns (xruns, glitches) the output device reported since the stream opened", &SceneAudioInternal::readOutputUnderruns );
     SW_AUTOMATION_WATCH( audioRealtimeAllocations, "Audio.RealtimeAllocations", "Heap allocations and frees inside the audio render callback (checked builds)", &SceneAudioInternal::readRealtimeAllocations );
     SW_AUTOMATION_WATCH( audioRealtimeLocks, "Audio.RealtimeLocks", "Lock acquisitions inside the audio render callback (checked builds)", &SceneAudioInternal::readRealtimeLocks );

@@ -177,7 +177,7 @@ namespace sw
     {
         /**
          * @enum Scope
-         * @brief 패스 종류가 머티리얼에게 내주는 칸의 범위입니다(표: `docs/agents/RenderPipelineXml.md`, 고르는 쪽 `RenderPassTraitFlag::kMaterialRenderState` 등).
+         * @brief 패스 종류가 머티리얼에게 내주는 칸의 범위입니다(표: `docs/agents/Rendering.md`, 고르는 쪽 `RenderPassTraitFlag::kMaterialRenderState` 등).
          */
         enum class Scope : uint8
         {

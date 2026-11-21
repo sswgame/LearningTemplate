@@ -1128,7 +1128,7 @@ namespace sw
 
     bool AutomationRunner::holdWhileWallWatchActive( const AutomationStep& step )
     {
-        // 벽시계 감시 값만 활동 수를 낸다(`SW_AUTOMATION_WALL_WATCH`) — 프레임 감시 값의 대기는 시한만 본다(DesignBacklog D2-3).
+        // 벽시계 감시 값만 활동 수를 낸다(`SW_AUTOMATION_WALL_WATCH`) — 프레임 감시 값의 대기는 시한만 본다.
         const string*                      pWatch        = step.findAttribute( "watch" );
         const AutomationWatchRegistration* pRegistration = pWatch != nullptr ? AutomationWatchRegistry::find( *pWatch ) : nullptr;
         if ( pRegistration == nullptr || pRegistration->_pActivityFunction == nullptr )

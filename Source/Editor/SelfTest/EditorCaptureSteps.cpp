@@ -119,7 +119,7 @@ namespace sw::editor
 
             /**
              * @brief 캡처 대기가 `kCaptureWaitFrames` 에 닿았다 — 대기 항목을 지우고 `WaitTimeout` 으로 시나리오를 끝냅니다(Skip — 단계는 돌지 않는다).
-             * @details 예전에는 놓아서 단계가 "never completed" 를 적고 다음 단계로 갔다(DesignBacklog D2-4 와 같은 모양). 항목은 단계가 돌 때 지우던 것이라 여기서 지운다 —
+             * @details 예전에는 놓아서 단계가 "never completed" 를 적고 다음 단계로 갔다. 항목은 단계가 돌 때 지우던 것이라 여기서 지운다 —
              *          세션은 컨텍스트와 함께 살아 체인의 다음 시나리오까지 남는다.
              * @param phase 반복 실패 차단 열쇠의 꼬리(`<단계 종류> <phase>`)
              */

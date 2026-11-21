@@ -6,12 +6,12 @@ Scripts/lint/cpp_shape.py
 C++ 모양 규칙 중 컴파일러가 보지 않는 열을 본다. 규칙 문서만 있고 검사가 없어 어긋남이 퍼졌던 자리다(2026-11-05 — 선언 순서 위반 1240 곳 · bool 깃발 1228 칸).
 **왜 형식이 아니라 린트인가.** 여섯 다 C++ 문법으로 막을 수 없다(멤버 순서 · 칸 형식의 선택 · 익명 네임스페이스 수 · 함수가 놓인 타입 · include 자리).
 
-1. 선언 순서(`docs/agents/Includes.md`): public 멤버 변수 → 생성자 · 소멸자 → … → private 함수(따로 된 접근 구역) → private 멤버 변수(마지막).
+1. 선언 순서(`docs/agents/CppStyle.md` "Constructors and fields"): public 멤버 변수 → 생성자 · 소멸자 → … → private 함수(따로 된 접근 구역) → private 멤버 변수(마지막).
    - public 멤버 변수가 함수 뒤에 온다 · private/protected 멤버 변수 뒤에 함수가 온다 · private/protected 함수와 변수가 한 구역에 섞였다.
 2. 깃발 칸(`docs/agents/CppStyle.md` "bit packing"): `bool _bX` 멤버 대신 `uint8 _bX : 1`. 주소를 쓰는 칸(ImGui `&b` · 출력 인자) · 여러 스레드가 따로 쓰는
    이웃 칸(같은 바이트 경합)은 `bool` 로 두고 그 줄에 `NOLINT(sw-bool-flag): <이유>` 를 적는다.
-3. 익명 네임스페이스(`docs/agents/Helpers.md`): `.cpp` 에 하나(전처리 갈래가 갈리는 경우는 갈래마다), 빈 블록 없음.
-4. 주인 우선(`docs/agents/Helpers.md`): 헤더의 static 함수만 든 타입(이름은 보지 않는다 — Util · Scanner · Rules …)이 같은 헤더의 타입 하나(열거 · 템플릿 · I 인터페이스 제외)를
+3. 익명 네임스페이스(`docs/agents/CppStyle.md Helpers`): `.cpp` 에 하나(전처리 갈래가 갈리는 경우는 갈래마다), 빈 블록 없음.
+4. 주인 우선(`docs/agents/CppStyle.md Helpers`): 헤더의 static 함수만 든 타입(이름은 보지 않는다 — Util · Scanner · Rules …)이 같은 헤더의 타입 하나(열거 · 템플릿 · I 인터페이스 제외)를
    함수 서명 절반 이상에서 받으면, 그 함수는 그 타입의 (static) 멤버다. 주인이 정말 없는 것은 `Config/Rules/Lint/CppShape.json` 의 `_staticOwner` 에 까닭을 적는다.
 5. 중괄호 안 헤더 include: X-매크로 표(`.xxx`) · 인라인 본문(`.inl`) 말고는 `#include` 가 이름공간 · 클래스 · 함수 몸통 안에 있으면 안 된다.
    2026-11-05 — 파일을 합치는 일회용 스크립트가 "마지막 include 뒤" 에 헤더를 붙여 클래스 몸통 · 배열 초기값 안에 들어갔고, 다른 헤더가 먼저 끌어와
@@ -27,7 +27,7 @@ C++ 모양 규칙 중 컴파일러가 보지 않는 열을 본다. 규칙 문서
    (`SubsystemScope::exposeMember` · 모듈 창구 `SW_MODULE_PART` · `getPublishedPart`). `std::enable_shared_from_this` 는 세지 않는다(표준 믹스인).
    예외는 `Config/Rules/Lint/CppShape.json` 의 `_multipleBase` 에 `경로|클래스` → 까닭으로 적는다(플랫폼 COM · 빈 기반 최적화 · 역할 인터페이스 묶음).
    전체 실행(`--all`)은 더는 없는 예외 자리도 위반으로 센다.
-10. 상태와 그것을 바꾸는 논리는 한 타입(`docs/agents/Helpers.md` — 규칙 4 의 `.cpp` 짝): `.cpp` 에 정의한 상태 타입(공개 칸, 이름이 `…Internal` 아님)의 공개 칸을
+10. 상태와 그것을 바꾸는 논리는 한 타입(`docs/agents/CppStyle.md Helpers` — 규칙 4 의 `.cpp` 짝): `.cpp` 에 정의한 상태 타입(공개 칸, 이름이 `…Internal` 아님)의 공개 칸을
    같은 파일 `…Internal` 의 static 함수가 `const` 아닌 참조 · 포인터(`outX` 이름 말고 — 한 번 채우는 기록은 제외)로 받아 바꾸는 수가 문턱 이상이면 위반이다.
    문턱 `_stateMutatorMinFunctions` 과 예외 `_stateMutator`(`경로|타입` → 까닭)는 `Config/Rules/Lint/CppShape.json`, 전체 실행은 낡은 예외도 센다.
 11. 브라우저 JS 는 C++ 안에 쓰지 않는다(`EM_JS` · `EM_ASYNC_JS` · `EM_ASM…`): 매크로 본문을 C++ 포맷터가 C++ 로 다뤄 `=>` · `!==` 를 띄우고, 브라우저 JS 가 링크 뒤
@@ -530,7 +530,7 @@ def collect_static_only_types(code: str) -> tuple[dict[str, tuple[int, list[str]
 
 def check_static_owner(code: str, relative: str, table: ExceptionTable) -> list[tuple[int, str]]:
     """
-    주인 우선(`docs/agents/Helpers.md`): 헤더의 static 함수만 든 타입이 같은 헤더의 타입 하나를 함수 서명 절반 이상에서 받으면 그 함수들은 그 타입의 (static) 멤버다.
+    주인 우선(`docs/agents/CppStyle.md Helpers`): 헤더의 static 함수만 든 타입이 같은 헤더의 타입 하나를 함수 서명 절반 이상에서 받으면 그 함수들은 그 타입의 (static) 멤버다.
     이름(`XUtil` · `XScanner` · `XRules` …)은 보지 않는다 — 2026-11-08 `MarkupTagScanner`(데이터 `MarkupToken` 옆)처럼 Util 이 아닌 이름으로 같은 모양이 남았다.
     형식으로는 막을 수 없다(어느 함수가 어느 타입의 일인지는 C++ 이 모른다). 여러 타입에 걸친 알고리즘 · 등록 목록처럼 주인이 정말 없는 것은
     `Config/Rules/Lint/CppShape.json` 의 _staticOwner 에 까닭과 함께 적는다.
@@ -551,7 +551,7 @@ def check_static_owner(code: str, relative: str, table: ExceptionTable) -> list[
         owner, count = max(sorted(counts.items()), key=lambda item: item[1])   # 같은 수면 이름 순 첫 것 — 집합 순서(해시)로 메시지가 실행마다 바뀌었다
         if count * 2 >= len(statics):
             problems.append((line, f"`{name}` 는 static 함수만 들고 그 함수 대부분({count}/{len(statics)})이 같은 헤더의 `{owner}` 를 다룬다 — `{owner}` 의 (static) 멤버로 합친다"
-                                   f"(Helpers.md 주인 우선). 주인이 정말 없으면 {table.hint('_staticOwner')} 적는다"))
+                                   f"(CppStyle.md Helpers 주인 우선). 주인이 정말 없으면 {table.hint('_staticOwner')} 적는다"))
     return problems
 
 
@@ -728,7 +728,7 @@ def find_state_mutators(code: str) -> dict[str, tuple[int, str, int]]:
 
 def check_state_mutators(code: str, relative: str, minimum: int, table: ExceptionTable) -> list[tuple[int, str]]:
     """
-    상태와 그것을 바꾸는 논리는 한 타입(`docs/agents/Helpers.md` 주인 우선): `.cpp` 의 상태 구조체 공개 칸을 따로 선 `…Internal` 의 static 함수 여럿이
+    상태와 그것을 바꾸는 논리는 한 타입(`docs/agents/CppStyle.md Helpers` 주인 우선): `.cpp` 의 상태 구조체 공개 칸을 따로 선 `…Internal` 의 static 함수 여럿이
     차례로 바꾸면, 상태를 비공개 칸 + 그 함수들을 멤버로 든 클래스로 합친다(`TerrainBrushToolState`). 규칙 4 는 헤더만 보아 이 모양이 `.cpp` 에 남았다(2026-11-09).
     형식으로는 막을 수 없다(어느 함수가 어느 상태의 일인지 C++ 이 모른다). 문턱(`_stateMutatorMinFunctions` → @p minimum)과 예외(`_stateMutator`, `경로|타입` → 까닭)는 데이터다.
     """
@@ -738,7 +738,7 @@ def check_state_mutators(code: str, relative: str, minimum: int, table: Exceptio
     for state, (line, helper, count) in find_state_mutators(code).items():
         if count >= minimum and not table.allows("_stateMutator", f"{relative}|{state}"):
             problems.append((line, f"`{state}` 의 공개 칸을 `{helper}` 의 static 함수 {count} 개가 바꾼다 — 상태와 그것을 바꾸는 논리는 한 타입이다: 칸을 비공개로, 그 함수들을 `{state}` 의 멤버로"
-                                   f"(Helpers.md). 불가피하면 {table.hint('_stateMutator')} 적는다"))
+                                   f"(CppStyle.md Helpers). 불가피하면 {table.hint('_stateMutator')} 적는다"))
     return problems
 
 

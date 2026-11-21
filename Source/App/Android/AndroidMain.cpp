@@ -3,7 +3,7 @@
  * @brief Android NativeActivity 의 진입점입니다(`android_native_app_glue` 가 자기 스레드에서 `android_main` 을 부른다). 앱 수명은 데스크톱과 같은 `AppEntry::run` 이다.
  * @details 명령줄은 인텐트의 문자열 추가값(`AndroidWindow::kIntentArgumentsExtra`)이다 — 데스크톱과 같은 글을 따옴표 규칙으로 나눈다(`-scenario` · `-log` …).
  *          표면이 생긴 뒤에 앱을 세운다(RHI 가 창을 찾는다).
- *          개발 구성에서 `-fileserve=<주소>` 면 팩을 APK 대신 PC 의 Fileserve 서버에서 받아 읽는다(설계 DesignBacklog "Fileserve" 결정 3 — 엔진이 첫 팩을 읽기 전에 건다).
+ *          개발 구성에서 `-fileserve=<주소>` 면 팩을 APK 대신 PC 의 Fileserve 서버에서 받아 읽는다(엔진이 첫 팩을 읽기 전에 건다).
  */
 #include "pch.h"
 

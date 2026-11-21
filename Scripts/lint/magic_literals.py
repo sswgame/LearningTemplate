@@ -5,7 +5,7 @@ Scripts/lint/magic_literals.py
 
 숫자 리터럴 래칫(게이트)과 집계(보고). `Source` 의 C++ 에서 `-1` · 실수 · 두 자리 이상 정수 · 16진수를 모아 **어디에 있는지**(생성물 · 테스트 ·
 표 줄 · 리플렉션 메타 · 이름 붙은 정의 · 형식 번호 · 일반 코드)로 나누고, `-1` 은 **무슨 뜻인지**(인덱스 표지 · 찾지 못함 반환 · 무제한 · 기본값 사용 ·
-방향 · 이름 붙은 표지)를 이름과 문맥으로 첫 분류한다. 정본 규칙은 `docs/agents/Constants.md`, 판단은 `docs/DesignBacklog.md` "데이터 기반 값 · 매직 리터럴".
+방향 · 이름 붙은 표지)를 이름과 문맥으로 첫 분류한다. 정본 규칙은 `docs/agents/CppStyle.md Constants`.
 
 **왜 래칫인가.** 리터럴 하나가 매직인지는 형식이 가르지 못한다(`0.5f` 는 절반이고 `0.35f` 는 튜닝이다). 그래서 모든 줄을 막지 않고, **일반 코드**
 (`code` 장소)에서 흔한 수학 값이 아닌 리터럴의 **파일마다 종류별 수**를 기준선(`Config/Rules/Lint/MagicLiteralsBaseline.json`)에 두고:
@@ -65,9 +65,9 @@ FORMAT_NAME = re.compile(r"\bk\w*(?:Version|Magic|Tag|Revision)\b")
 REFLECTION_META = re.compile(r"\b(?:PROPERTY|REFLECT|FUNCTION|ENUM|EVENT)\s*\(")
 TABLE_ROW = re.compile(r"^\s*\{.*\}\s*,?\s*$")
 # 칸의 기본값: 선언(`float32 _speed{ 3.5f };`)과 생성자 초기화 목록(`, _speed{ 3.5f }`). 튜닝 값의 정본 자리다(PROPERTY · 설정 · 카탈로그 칸 —
-# Constants.md "Tuning values are data") — 칸 이름이 뜻을 말한다. 단 `-1` 은 '없음' 표지라 여기서도 센다.
+# CppStyle.md Constants "Tuning values are data") — 칸 이름이 뜻을 말한다. 단 `-1` 은 '없음' 표지라 여기서도 센다.
 FIELD_DEFAULT = re.compile(r"^\s*(?!return\b)(?:[\w:<>,\*&]+\s+)+_\w+\s*(?:\{[^;{}]*\}|=\s*[^;=]+)\s*;|^\s*[:,]\s*_\w+\s*[{(][^;]*[})]\s*,?\s*$")
-# 뜻을 사람이 볼 장소(테스트 기대값 · 생성물 · 리플렉션 메타는 옮기지 않는다 — Constants.md "Literals that stay literal")
+# 뜻을 사람이 볼 장소(테스트 기대값 · 생성물 · 리플렉션 메타는 옮기지 않는다 — CppStyle.md Constants "Literal stays literal")
 REVIEW_PLACES = ("code", "named-definition", "table-row", "field-default")
 # 래칫이 세는 장소. 이름 붙은 정의 · 표 줄 · 형식 번호 · 칸 기본값은 이미 이름이나 표가 뜻을 말한다.
 COUNTED_PLACE = "code"
@@ -91,7 +91,7 @@ MEANING_RULE: tuple[MeaningRule, ...] = (
     MeaningRule("os-contract", re.compile(r"\b\w*(?:Fd|fd|FD|Descriptor)\w*\s*(?:\[\d\])?\s*(?:=|==|!=|\{)\s*-\s*1\b|MultiByteToWideChar|WideCharToMultiByte"),
                 "운영체제 · C API 계약(파일 기술자, 널 끝 길이) — 그대로 둔다"),
     MeaningRule("named-sentinel", re.compile(r"\bk[A-Z]\w*\s*(?:=|\{)\s*-\s*1\b"),
-                "도메인 이름은 두고 값은 constant::invalid_index 에서 가져온다(Constants.md)"),
+                "도메인 이름은 두고 값은 constant::invalid_index 에서 가져온다(CppStyle.md Constants)"),
     MeaningRule("unlimited", re.compile(r"\w*(?:Max|Limit|Cap|Stock|Quota|Budget|Remaining|Uses|Charges)\w*\s*(?:=|==|!=|\{|\()\s*-\s*1\b|-\s*1\b.*//.*(?:무제한|무한|제한 없|끝낼 때까지|unlimited|infinite)", re.I),
                 "무제한은 표지 값이 아니라 형식(optional · 제한 없음 열거자 · 명시적 제한 타입)으로"),
     MeaningRule("use-default", re.compile(r"\w*(?:Price|Default|Override|Fallback|Inherit)\w*\s*(?:=|==|!=|\{|\()\s*-\s*1\b", re.I),

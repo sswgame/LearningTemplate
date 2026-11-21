@@ -529,7 +529,7 @@ namespace sw
     // ----------------------------------------------------------------------------------------------------------------------
     // 모듈 잇기 — 개발은 게임 · 키트 · GameFramework 를 동적 라이브러리로 리로드 매니저에 올리고 게임 API 를 라이브러리 심볼에서 읽는다.
     // 배포는 정적 링크라 로드할 라이브러리 · 리로드 매니저 · 모듈 컴파일러가 없고 게임 API 는 정적 `exportGameAPI` 다. 두 방식은 진짜 구현 둘이다
-    // (빈 몸통이 아니다 — 언리얼 `IS_MONOLITHIC`). 동적 쪽이 배포에 없는 리로드 매니저(`ILiveReloadManager` — DevTools 가 구현)를 써서 여기만 `SW_WITH_DYNAMIC_MODULES` 로 가른다(docs/agents/BuildConfigSwitch.md 둘째 줄).
+    // (빈 몸통이 아니다 — 언리얼 `IS_MONOLITHIC`). 동적 쪽이 배포에 없는 리로드 매니저(`ILiveReloadManager` — DevTools 가 구현)를 써서 여기만 `SW_WITH_DYNAMIC_MODULES` 로 가른다(docs/agents/CppStyle.md "Build configuration switches" 둘째 줄).
     // ----------------------------------------------------------------------------------------------------------------------
 #if SW_WITH_DYNAMIC_MODULES
 

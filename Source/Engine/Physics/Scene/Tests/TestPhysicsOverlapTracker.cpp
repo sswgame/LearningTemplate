@@ -1,4 +1,4 @@
-// PhysicsOverlapTrackerTest — 바디 쌍 겹침을 오브젝트 쌍 진입 · 이탈 · 유지로 바꾸는 계약(DesignBacklog "트리거 Enter · Stay · Exit 계약"). 물리 없음(nogpu).
+// PhysicsOverlapTrackerTest — 바디 쌍 겹침을 오브젝트 쌍 진입 · 이탈 · 유지로 바꾸는 계약(docs/agents/Gameplay.md "트리거 · 물리"). 물리 없음(nogpu).
 #include "pch.h"
 
 #include "Core/Container/vector.h"

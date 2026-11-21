@@ -56,9 +56,7 @@ From taste-skill `references/app-screens.md`:
 
 ## Capture
 
-- `<CaptureEditorUI file="…" maxMagentaFraction="0" maxClippedWindows="N"/>` re-draws every viewport's ImGui draw lists off-screen once the editor settles; it counts magenta and clipped windows (names in the `Editor UI capture` log line).
-- `editor/uiaudit.scenario.xml` captures one panel at a time; `editor/uicapture.scenario.xml` the default layout in dark, light and highcontrast on every backend. PNGs are in `build/<preset>/Testing/Scenario/…`.
-- No pixel goldens for editor UI (fonts and DPI differ per machine) — read the PNG on the same machine.
+- 화면 확인은 `editor/uiaudit.scenario.xml`(패널 하나씩) · `editor/uicapture.scenario.xml`(기본 배치를 dark · light · highcontrast × 모든 백엔드) 캡처 PNG 로 한다. `<CaptureEditorUI maxMagentaFraction="0" maxClippedWindows="N"/>` 이 마젠타 · 잘린 창을 센다. 화소 골든은 두지 않는다.
 
 ## Review checklist
 
@@ -79,6 +77,14 @@ Read each PNG at full size. One line per defect: `priority | panel | file | defe
 | Missing art | Magenta, a tofu glyph, a localisation key shown instead of text |
 
 Not judgeable from one picture: tab order, focus visibility, 24×24 hit targets — write "not judged".
+
+## Editing rules
+
+- 있는 기능을 새로 만들지 않는다. 범용 시각 편집 프레임워크를 만들지 않는다 — 데이터 의미로 도구를 고르고, 같은 결합이 반복될 때만 공용 헬퍼.
+- 미리보기 전용 사본을 두지 않는다. 선택 · 문서가 바뀌면 끌기를 끝내고, 빠른 끌기는 Undo 한 단계. 사라진 본 · 소켓 참조는 조용히 버리지 않고 표시한다.
+- 창 메시지를 날것으로 미뤄 ImGui 가 큐에서 읽게 하지 않는다 — 번역은 창을 가진 스레드에서. UI 스레드는 나누지 않는다([NEXT](../NEXT.md) "지킬 결정").
+- 자동 저장은 원본을 덮지 않는다.
+- 첫 그리기가 느린 패널은 동기 준비를 `onPanelOpened` 가 띄우는 잡으로, Model 이 `isReady()`, View 는 준비 전 한 줄. 시간 문턱은 시나리오 판정에 넣지 않는다.
 
 ## Input and context menus
 

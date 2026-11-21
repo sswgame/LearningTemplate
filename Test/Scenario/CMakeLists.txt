@@ -118,7 +118,7 @@ foreach(load_path IN LISTS list_engine_load_scenario)
 	sw_add_load_scenario("${load_path}")
 endforeach()
 
-# 편집기 부하(첫 패널 · Hierarchy 8000 — DesignBacklog 측정 계획). 편집기 체인(`Scenario.editor`)은 바로 아래만 줍고 이 하위 폴더는 혼자 돈다.
+# 편집기 부하(첫 패널 · Hierarchy 8000 — docs/NEXT.md 측정 E1). 편집기 체인(`Scenario.editor`)은 바로 아래만 줍고 이 하위 폴더는 혼자 돈다.
 if(TARGET EditorModule)
 	sw_glob_source_tree(list_editor_load_scenario RELATIVE "${scenario_root}" "${scenario_root}/engine/automation/editor/load/*.scenario.xml")
 	foreach(load_path IN LISTS list_editor_load_scenario)

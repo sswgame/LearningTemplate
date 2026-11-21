@@ -792,7 +792,7 @@ SW_TEST_CASE( DelegateTest, SourceLeftOpenAtDestructionIsFatal, ._tags = "slow",
 /**
  * @brief [DelegateTest] 구독 비용(ns/짝 · 출처 만들고 지우기)을 로그로 남깁니다. 시간 문턱은 두지 않는다
  * @details 재는 법: Release `App --test --test-filter=DelegateTest.SubscribeCost` 5 번, 제어 블록 커밋과 그 앞에서 로그 `DelegateTest.SubscribeCost` 의 중앙값.
- *          판정(docs/DesignBacklog.md 구독 제어 블록 절): ns/짝 증가가 30 ns 를 넘으면 출처가 스레드 정책을 고르게 한다.
+ *          판정(docs/NEXT.md 측정 "구독 제어 블록"): ns/짝 증가가 30 ns 를 넘으면 출처가 스레드 정책을 고르게 한다.
  */
 SW_TEST_CASE( DelegateTest, SubscribeCost, ._tags = "bench" )
 {

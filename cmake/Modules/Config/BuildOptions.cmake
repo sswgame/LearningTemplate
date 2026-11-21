@@ -2,7 +2,7 @@
 # @file cmake/Modules/Config/BuildOptions.cmake
 # @brief SW Engine 전역 기능 빌드 옵션(SW_*) 및 워크스페이스 메타데이터 정의
 #
-# [CMake 이름 규칙] — 정본은 docs/agents/NamingScripts.md CMake 절:
+# [CMake 이름 규칙] — 정본은 docs/agents/NamingCpp.md CMake 절:
 # - sw_snake_case     : 우리 function()(매크로는 쓰지 않는다) · 내부 INTERFACE 타깃 (예: sw_add_module_library, sw_global_options)
 # - SW_UPPER_SNAKE    : option() · 캐시 · 전역 변수 · C++ 컴파일 정의 (예: SW_ENABLE_PCH, SW_FLAG_LIBRARIES)
 # - snake_case        : 함수 지역 · 파일 임시 변수(sw 접두 없음), cmake_parse_arguments 접두는 ARG

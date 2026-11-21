@@ -1,4 +1,4 @@
-// 머티리얼 그래프의 노드 묶음입니다. 새 노드는 여기에 한 줄을 더한다 — 컴파일러 · 메뉴 · 검사를 고치지 않는다. 문법은 docs/agents/MaterialGraph.md.
+// 머티리얼 그래프의 노드 묶음입니다. 새 노드는 여기에 한 줄을 더한다 — 컴파일러 · 메뉴 · 검사를 고치지 않는다. 문법은 docs/agents/Rendering.md "머티리얼 그래프".
 #include "pch.h"
 
 #include "DevTools/Material/MaterialGraphNodeRegistry.h"

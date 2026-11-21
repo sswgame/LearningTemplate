@@ -145,7 +145,7 @@ namespace sw
 
     /**
      * @brief 조건의 문턱을 `Config/Dev/ScenarioRun.json` 의 `_conditions.<조건 이름>` 에서 읽어 조건을 등록한 기능이 제 자리에 둡니다. 칸이 없거나 틀리면 그 칸이 대상인 오류입니다.
-     * @details 공용 구조체에 칸을 더하지 않는다 — 기능마다 칸을 더하던 닫힌 집합체(배포 엔진 설정의 사진 정착 문턱 칸)가 세 갈래의 충돌 자리였다(DesignBacklog 실패 9).
+     * @details 공용 구조체에 칸을 더하지 않는다 — 기능마다 칸을 더하던 닫힌 집합체(배포 엔진 설정의 사진 정착 문턱 칸)가 세 갈래의 충돌 자리였다.
      */
     using AutomationConditionConfigureFunction = expected<void> ( * )( const JSONValue& config );
 

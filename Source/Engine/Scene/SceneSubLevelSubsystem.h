@@ -2,7 +2,7 @@
  * @file SceneSubLevelSubsystem.h
  * @brief 런타임에 다른 씬을 활성 씬에 더하고 빼는 씬 서비스입니다(언리얼 `ULevelStreamingDynamic::LoadLevelInstance` · 유니티 `SceneManager.LoadSceneAsync( Additive )` 자리).
  *
- * [모델 — 런타임 씬 인스턴스(설계 `docs/DesignBacklog.md` "런타임 하위 레벨 · Packed Level · 원점 이동")]
+ * [모델 — 런타임 씬 인스턴스]
  * 하위 레벨은 씬 파일 안의 씬 인스턴스(`<entity scene=…>`)를 실행 중에 놓은 것이다. 월드는 하나(오브젝트 매니저 하나)이고, 더한 씬의 엔티티는 앵커 오브젝트 아래에 펼친다.
  * - 앵커: 하위 레벨마다 씬 컴포넌트 하나를 가진 오브젝트를 놓은 자리(위치 · 회전)에 세운다. 늘 올라 있음(`GameObject::_bAlwaysLoaded`)이라 스트리밍 셀이 삼키지 않는다.
  * - 파일 id: 앵커는 이름에서 정한 넓은 값(`computeAnchorFileID`)이고 멤버는 내부 파일 id ^ 앵커 범위(`SceneDocument::computeInstanceIDScope`)다 — 파일 안 씬 인스턴스와 같은 규칙이라

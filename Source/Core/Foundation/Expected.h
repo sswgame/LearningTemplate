@@ -12,7 +12,7 @@
  *          - 예외를 쓰지 않는다: 틀린 쪽의 `value()` · `error()` 는 `bad_expected_access` 대신 프로세스를 멈춘다(`SW_LOW_LEVEL_FATAL`).
  *            `operator*` · `operator->` 는 Debug 단언만 한다(std 도 미정의 동작).
  *          - 형식 자체가 `[[nodiscard]]` 다 — 결과를 버리는 호출은 컴파일 경고(오류)다. 정말 버릴 때만 `(void)` 로 적는다.
- * @note 규칙(언제 expected · 언제 optional · outError 출력 인자 금지)은 `docs/agents/Errors.md` 다.
+ * @note 규칙(언제 expected · 언제 optional · outError 출력 인자 금지)은 `docs/agents/CppStyle.md "Errors"` 다.
  */
 #pragma once
 #include "Core/Foundation/Macros.h"

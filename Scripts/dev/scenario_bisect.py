@@ -165,7 +165,7 @@ def stage_failed_in_reports(list_report: Sequence[dict], stage_name: str) -> boo
 
 
 # ------------------------------------------------------------------------------
-# 진 단계 다시 돌기(--rerun-failed) · 단계부터 끝까지(--from-stage) · 진행 목록(--advances) — DesignBacklog 검증 시간 절 V1
+# 진 단계 다시 돌기(--rerun-failed) · 단계부터 끝까지(--from-stage) · 진행 목록(--advances)
 # ------------------------------------------------------------------------------
 
 def find_latest_per_backend_folder(automation_dir: pathlib.Path, stage_names: set[str], chain_log: pathlib.Path) -> pathlib.Path | None:

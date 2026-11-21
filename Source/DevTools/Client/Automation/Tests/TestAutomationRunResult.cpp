@@ -14,7 +14,7 @@ using namespace sw;
 
 /**
  * @brief [AutomationRunResultTest] 통과로 끝맺었는데 실패 줄이 있으면 첫 실패 줄이 까닭이다 — 끝 단계 이름(`<Pass/>`)이 까닭으로 남지 않는다
- * @details 예전 끝 줄: `Failed X at frame 5: <Pass/>` — 결과와 까닭이 따로 든 두 변수였다(DesignBacklog 실패 10).
+ * @details 예전 끝 줄: `Failed X at frame 5: <Pass/>` — 결과와 까닭이 따로 든 두 변수였다.
  */
 SW_TEST_CASE( AutomationRunResultTest, PassWithRecordedFailuresTakesTheFirstFailureAsReason )
 {
@@ -79,7 +79,7 @@ SW_TEST_CASE( AutomationRunResultTest, ChainStageLineCarriesTheResult )
 
 /**
  * @brief [AutomationRunResultTest] `keepGoing` 체인도 같은 대기 실패(종류 + 반복 열쇠)가 한도만큼 나오면 멈추고 끝 표에 `RepeatedFailure` 줄을 남긴다 — 다른 열쇠 · 열쇠 없는 실패는 세지 않는다
- * @details 변이: 열쇠를 세지 않으면 넷째 단계로 넘어가 셋째 단언이 진다. 종류를 열쇠에 넣지 않으면 시한 · 정지가 한데 세여 둘째 단언이 진다(DesignBacklog D2-5).
+ * @details 변이: 열쇠를 세지 않으면 넷째 단계로 넘어가 셋째 단언이 진다. 종류를 열쇠에 넣지 않으면 시한 · 정지가 한데 세여 둘째 단언이 진다.
  */
 SW_TEST_CASE( AutomationRunResultTest, RepeatedWaitFailureStopsTheChain )
 {

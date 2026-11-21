@@ -1,6 +1,6 @@
 /**
  * @file ConstantBufferSlotAllocator.h
- * @brief 작은 상수 버퍼(머티리얼 인스턴스)를 큰 페이지의 고정 크기 칸으로 모으는 할당기의 CPU 쪽입니다(설계: DesignBacklog "자원 구간 할당", 감사 R-4).
+ * @brief 작은 상수 버퍼(머티리얼 인스턴스)를 큰 페이지의 고정 크기 칸으로 모으는 할당기의 CPU 쪽입니다(감사 R-4).
  * @details 백엔드를 모른다 — 칸은 (페이지 번호, 오프셋, 등급)이고 부르는 쪽이 페이지 번호마다 RHI 버퍼(`createConstantBuffer( kPageBytes )`)를 하나 갖는다.
  *          등급은 256 · 512 · 1024 · 2048 · 4096 B(256 B 는 DX12 CBV · WebGPU 동적 오프셋의 정렬이라 모든 칸이 정렬된다), 페이지 하나는 한 등급만 담는다(빈 칸 목록이 단순하다).
  *          등급보다 큰 요청은 칸이 없다 — 부르는 쪽이 전용 버퍼를 만든다. 언리얼 `FD3D12PoolAllocator` 의 크기 등급 풀 · Vulkan `FVulkanResourceHeap` 페이지와 같은 자리다.

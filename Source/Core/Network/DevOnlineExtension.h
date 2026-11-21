@@ -3,7 +3,7 @@
  * @brief 네트워크 · 온라인 기반과 키트의 개발 대체물(평문 공개 게임 포트 허용 · 개발 인증서 · 개발 티켓 키 · 가벼운 해시 · 테스트 계정 · 가짜 제공자)을 꽂는 확장점입니다.
  * @details - 확장점은 기능이 자기 `.cpp` 에 정의하고(`SW_DEFINE_DEV_ONLINE_EXTENSION`), 값은 정적 등록자로 올린다(`SW_REGISTER_DEV_ONLINE_EXTENSION`).
  *            배포 구성은 등록하지 않고 값을 `[[maybe_unused]]` 로만 붙잡는다 — 개발 대체물 코드는 모든 구성에서 컴파일되고, 쓰는 곳이 없어 배포 실행 파일에서 빠진다.
- *            파일 이름으로 배포에서 빼지 않는다(`docs/agents/BuildConfigSwitch.md`).
+ *            파일 이름으로 배포에서 빼지 않는다(`docs/agents/CppStyle.md "Build configuration switches"`).
  *          - 쓰는 쪽은 `require` 로 값을 받는다. 비었으면(배포 · DevOnline 단위가 없는 구성) 까닭을 적고 nullptr — 폴백 없이 기동 오류로 멈춘다.
  *          - 확장점과 등록자는 같은 모듈(DLL)에 있다 — 모듈을 내리면 둘이 함께 사라지고, 등록자 소멸이 칸을 비운다(핫 리로드 · 언로드).
  *          - 칸은 상수 초기화(constexpr 생성자)라 정적 초기화 순서와 무관하고, 정적 초기화(등록자) 뒤에는 읽기만 한다.

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="2992dbf4d8aeb51e26b1f34096e82e4c"?>
 <!--
-  지역 진입 컷씬 — 트리거 계약(DesignBacklog "트리거 Enter · Stay · Exit 계약")의 오브젝트 쌍 진입이 SequenceTriggerComponent 로 컷씬을 튼다. 무대 maps/cutscenetrigger.
+  지역 진입 컷씬 — 트리거 계약(docs/agents/Gameplay.md "트리거 · 물리")의 오브젝트 쌍 진입이 SequenceTriggerComponent 로 컷씬을 튼다. 무대 maps/cutscenetrigger.
   재생 정책은 씬 데이터다: 볼륨의 _bOnce(한 번만 · 다시 재생 — 블루프린트 DoOnce 자리), 디렉터의 _playerMovement · _bHideHUD · _bSkippable · _bAllowFastForward.
   ① 볼륨 안에서 태어남: Landing(다시 재생)이 첫 물리 스텝의 진입으로 한 번 튼다. 안에 머물러도(유지) 다시 틀지 않고, 나갔다 들어오면 다시 튼다.
   ② Gate(한 번만)에 들어가면 컷씬이 한 번 — 이동이 막히고 HUD 가 숨으며, 안에 머물러도 다시 틀지 않는다.

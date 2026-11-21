@@ -5,7 +5,7 @@
  *          줄 하나가 이름 · 우선순위(작을수록 먼저, 주석이던 "순서가 곧 우선순위" 를 값으로) · 도는 호스트 · 요청 판정 · 본문을 함께 든다.
  *          - 요청된 작업 가운데 이 호스트에서 돌지 않는 것이 하나라도 있으면 아무것도 돌리지 않고 실패한다(조용히 넘기지 않는다 — 옛 `rejectClientOnlyTask`).
  *          - 그다음 요청된 작업 중 우선순위가 가장 앞선 하나만 돈다. 들어가며 `HeadlessTaskState::enterHeadless` 가 누수 기준선을 잡는다.
- *          배포에서 빠지는 작업(단위 테스트)은 그 줄을 `#if !defined( SW_SHIPPING )` 안에 둔다(BuildConfigSwitch). 언리얼 커맨드릿(`-run=`)이 클래스 등록으로 찾히는 것과 같은 자리다.
+ *          배포에서 빠지는 작업(단위 테스트)은 그 줄을 `#if !defined( SW_SHIPPING )` 안에 둔다(CppStyle.md "Build configuration switches"). 언리얼 커맨드릿(`-run=`)이 클래스 등록으로 찾히는 것과 같은 자리다.
  *          바닥 층(0)이라 어느 층의 기능 폴더든 자기 작업을 올릴 수 있다(쿠커를 DevTools/Cook 으로 옮길 때 줄도 함께 옮긴다).
  */
 #pragma once

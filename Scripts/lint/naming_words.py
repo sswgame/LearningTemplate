@@ -27,7 +27,7 @@ Scripts/lint/naming_words.py
   (`SceneWalkKey` · `aimAtMark` · `parkHistory`)가 들어왔다(2026-11-13). 함수 첫 단어 · 형식 끝 단어 허용 표(`_functionWords` 1100 · `_typeSuffixes` 1240)는
   2026-11-18 지웠다 — 본 낱말을 모두 올린 허용 목록(`two` · `from` · `days`)이 되어 동사 · 접미 규율을 더는 지키지 못했고, 선언의 첫 · 끝 낱말은 이 규칙이 본다. 문맥에 따라 맞기도 틀리기도 한 낱말은 `_scopedWords` 가 쓸 경로를 정한다
   (게임의 walk 는 맞고 엔진의 walk 는 순회다). 바깥 철자(`PFN_` · `VK_` · ImGui 깃발)는 `_externalPatterns`, 받아 온 스킬은 `_externalPaths` 가 뺀다.
-  파이썬 이름의 PEP 8 꼴(모듈 · 함수 snake_case, 클래스 PascalCase, 상수 UPPER_CASE — docs/agents/NamingScripts.md)도 여기서 막는다.
+  파이썬 이름의 PEP 8 꼴(모듈 · 함수 snake_case, 클래스 PascalCase, 상수 UPPER_CASE — docs/agents/NamingCpp.md)도 여기서 막는다.
   CMake 함수는 `sw_snake_case` 꼴만 받는다(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test). CMake 함수 꼴은 cmake 밖
   (Source · Test · ThirdParty 감싸기 · 뿌리 CMakeLists, vcpkg 포트 제외)의 정의도 본다. 전수 집계는 `py -3 -m Scripts naming-census`.
 - 이름 하나씩의 예외는 `_keep`, 전수 개명한 옛 이름은 이름 이력 표(`Config/Rules/Lint/NamingWordsBannedNames.json` 의 `_bannedNames`, C++ 는 주석 · 문자열 밖 코드, 스크립트는 선언 · 파일 · CLI 명령 이름을 본다).
@@ -177,7 +177,7 @@ def collect_path_names(relative: str, root_depth: int = 1) -> list[tuple[str, st
     return [("folder", part) for part in parts[:-1]] + [("file", parts[-1].split(".")[0])] if parts else []
 
 
-# 스크립트 · 빌드 이름 — Python(Scripts · 훅 · 스킬 스크립트) · 셸 · CMake. 파이썬은 PEP 8(docs/agents/NamingScripts.md: 모듈 · 함수 snake_case ·
+# 스크립트 · 빌드 이름 — Python(Scripts · 훅 · 스킬 스크립트) · 셸 · CMake. 파이썬은 PEP 8(docs/agents/NamingCpp.md: 모듈 · 함수 snake_case ·
 # 클래스 PascalCase · 상수 UPPER_CASE)의 꼴도 보고, CMake 는 함수 꼴(sw_snake_case)과 낱말을 본다(옵션 SW_ 는 낱말만). CLI 하위 명령(`Subcommand("…"`)과 린트 규칙 id(`Rule("…"`)도 이름이다.
 SCRIPT_ROOTS = ("Scripts", ".claude/hooks", ".claude/skills", "cmake")
 SCRIPT_EXTENSIONS = (".py", ".sh", ".cmake")
@@ -386,11 +386,11 @@ def classify_words(list_name: Iterable[tuple[str, str, str]], table: dict) -> di
             found[name] = f"{path}: 옛 이름 '{name}' — {banned_names[name]}"
             continue
         if kind == "function" and is_cmake_path(path) and CMAKE_FUNCTION_SHAPE.fullmatch(name) is None:
-            found[name] = f"{path}: CMake 함수 '{name}' 는 sw_snake_case 여야 한다(docs/agents/NamingScripts.md — 내장 명령 꼴 + 우리 접두, 약어도 소문자)"
+            found[name] = f"{path}: CMake 함수 '{name}' 는 sw_snake_case 여야 한다(docs/agents/NamingCpp.md — 내장 명령 꼴 + 우리 접두, 약어도 소문자)"
             continue
         shape = PYTHON_SHAPES.get(kind) if path.endswith(".py") else None
         if shape is not None and shape[0].fullmatch(name) is None:
-            found[name] = f"{path}: 파이썬 이름 '{name}' 가 PEP 8 꼴이 아니다 — {shape[1]}(docs/agents/NamingScripts.md). 바깥 덮어쓰기(setUp · do_POST)는 _keep"
+            found[name] = f"{path}: 파이썬 이름 '{name}' 가 PEP 8 꼴이 아니다 — {shape[1]}(docs/agents/NamingCpp.md). 바깥 덮어쓰기(setUp · do_POST)는 _keep"
             continue
         stripped = name
         for term in keep_terms:

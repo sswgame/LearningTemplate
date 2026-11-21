@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="9b2e47d1c6a54f0e8d3b7a61f2c09e45"?>
 <!--
-  미니게임 쌓기 · 교체 · 결과(docs/DesignBacklog.md "게임 기능 · 미니게임"). 무대: 첫 씬 maps/fogshowcase.
+  미니게임 쌓기 · 교체 · 결과(docs/agents/Gameplay.md "게임 기능 · 미니게임"). 무대: 첫 씬 maps/fogshowcase.
   ① 쌓기: smoketest(맵 editortest) 위에 pixeltown 을 쌓고(깊이 2), minigame.leave win 이 editortest 를 복원한 뒤 덮였던 smoketest 를 다시 켠 채로 결과를 넘긴다(Minigame.LastResult).
   ② 다시 나가면 fogshowcase 로 돌아간다(깊이 0).
   ③ 교체(마리오 파티식): smoketest 에서 minigame.switch pixeltown — 깊이는 1 그대로, 나가면 처음 자리(fogshowcase)로 돌아간다.

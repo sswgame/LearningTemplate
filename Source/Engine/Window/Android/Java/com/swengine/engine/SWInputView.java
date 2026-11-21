@@ -1,5 +1,5 @@
 /*
- * SWInputView.java — 입력기(IME)의 InputConnection 호출을 엔진(C++)에 넘기는 얇은 뷰입니다(설계: docs/DesignBacklog.md "Android IME 조합", 감사 P-4).
+ * SWInputView.java — 입력기(IME)의 InputConnection 호출을 엔진(C++)에 넘기는 얇은 뷰입니다(감사 P-4).
  *
  * NativeActivity 의 입력 연결은 키 이벤트만 보내 한글 · 일본어 · 중국어 조합이 오지 않는다. 이 뷰가 내용 뷰 위(1 x 1)에 붙어 포커스를 받고
  * onCreateInputConnection 으로 BaseInputConnection 파생을 돌려준다 — 호출(조합 글 · 조합 끝 · 확정 · 주변 글 지우기)은 그대로 JNI 로 넘기고,

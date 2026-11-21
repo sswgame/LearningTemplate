@@ -1,4 +1,4 @@
-// TriggerOverlapContractTest — 트리거 진입 · 이탈 계약을 실제 물리 씬(Jolt 3D · Box2D 2D)에서 본다(DesignBacklog "트리거 Enter · Stay · Exit 계약"). 디바이스 없음(nogpu).
+// TriggerOverlapContractTest — 트리거 진입 · 이탈 계약을 실제 물리 씬(Jolt 3D · Box2D 2D)에서 본다(docs/agents/Gameplay.md "트리거 · 물리"). 디바이스 없음(nogpu).
 // 안에서 생성 → 진입 한 번, 파괴 · 비활성 → 이탈 한 번, 트리거 끄고 켜기, 순간 이동(지나친 길은 이벤트 없음), 몸 둘인 오브젝트 한 번, 같은 프레임 이탈 먼저, 처리 안 파괴.
 // 서버 단위(`Server --test`)에도 그대로 돈다 — 전용 서버도 Engine(물리)을 싣는다.
 #include "pch.h"
@@ -271,7 +271,7 @@ SW_TEST_CASE( TriggerOverlapContractTest, SpawnToggleAndDestroy2D )
 
 /**
  * @brief [TriggerOverlapContractTest] 막는 접촉은 바디 쌍마다다 — 몸이 둘인 오브젝트가 바닥에 떨어지면 바닥은 접촉 시작을 둘 받는다(충격 단위: 조각마다 피해 · 소리)
- * @details 겹침(있음 · 없음)은 오브젝트 쌍으로 모으지만 접촉은 부딪힌 바디마다의 충격이라 모으지 않는다(언리얼 OnComponentHit · 유니티 콜라이더 쌍과 같다, DesignBacklog 트리거 계약 7).
+ * @details 겹침(있음 · 없음)은 오브젝트 쌍으로 모으지만 접촉은 부딪힌 바디마다의 충격이라 모으지 않는다(언리얼 OnComponentHit · 유니티 콜라이더 쌍과 같다).
  */
 SW_TEST_CASE( TriggerOverlapContractTest, CollisionStaysPerBodyPair3D )
 {

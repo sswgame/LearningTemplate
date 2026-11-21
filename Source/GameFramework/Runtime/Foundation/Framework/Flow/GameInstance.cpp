@@ -803,7 +803,7 @@ namespace sw
     // 활동 수 없음: 저장 잠금은 게임 상태(씬 로드 · 깨진 복원 · 컷신)가 풀어 주는 문이다 — 셀 수 있는 일의 양이 아니다.
     SW_AUTOMATION_WALL_WATCH( saveBlocked, "Save.Blocked", "1 while the running game's save gate refuses saving (scene loading, broken restore, cutscene)", &GameInstanceInternal::readSaveBlocked,
                               nullptr );
-    // 측정 문턱(Android 4 ms)을 재는 자리 — 넘기 전에는 감시 값만 둔다(`docs/DesignBacklog.md` GameFramework ②).
+    // 측정 문턱(Android 4 ms)을 재는 자리 — 넘기 전에는 감시 값만 둔다(`docs/NEXT.md` 측정 게임 프레임워크).
     SW_AUTOMATION_WATCH( saveCaptureMs, "Save.CaptureMs", "Game-thread milliseconds of the last save-game capture by the running game (0 before the first save)",
                          &GameInstanceInternal::readCaptureMilliseconds<false> );
     SW_AUTOMATION_WATCH( saveCapturePeakMs, "Save.CapturePeakMs", "Longest save-game capture in game-thread milliseconds by the running game",

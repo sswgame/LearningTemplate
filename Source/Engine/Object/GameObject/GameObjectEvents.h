@@ -26,7 +26,7 @@ namespace sw
         /**
          * @brief 이 오브젝트의 콜라이더가 다른 오브젝트의 콜라이더와 겹치기 시작했다(언리얼 `OnActorBeginOverlap`, 유니티 `OnTriggerEnter`). `ScenePhysics` 가 낸다.
          * @details 틱과 트랜스폼 적용 뒤에 게임 스레드에서 온다. 한 프레임 안에서는 이탈이 먼저, 진입이 다음이다. 트리거 안에서 생긴 것은 다음 물리 스텝에 진입하고,
-         *          파괴 · 비활성은 이탈을 받는다(DesignBacklog "트리거 Enter · Stay · Exit 계약"). 유지(Stay)는 `ScenePhysics::registerContactStayListener` 다.
+         *          파괴 · 비활성은 이탈을 받는다(docs/agents/Gameplay.md "트리거 · 물리"). 유지(Stay)는 `ScenePhysics::registerContactStayListener` 다.
          */
         MulticastDelegate<void( const OverlapInfo& )> _overlapBegin;
         /** @brief 겹침이 끝났다(떨어짐, 꺼짐, 사라짐). 상대가 이미 사라졌으면 `OverlapInfo::_pOther` 는 nullptr 다. `ScenePhysics` 가 낸다. */

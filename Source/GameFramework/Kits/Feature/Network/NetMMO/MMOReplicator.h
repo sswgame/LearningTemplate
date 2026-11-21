@@ -21,7 +21,7 @@
  *
  *          엔티티 상태의 크기는 `NetMMOMessage::kMaxStateBytes` 까지 허용한다. 서버와 클라이언트가 같은 상한을 쓰며, 이를 넘는 `setEntity` 는 받지 않는다.
  *
- *          스트리밍 월드(설계: DesignBacklog "멀티플레이 스트리밍 소스 · 관련성")
+ *          스트리밍 월드(docs/agents/Gameplay.md "스트리밍 · 네트워크")
  *          - 서버: 관찰자마다 스트리밍 소스 하나(위치 · 반경 · 우선순위 — `setObserverStreaming`)이고 서버가 올리는 셀은 그 반경의 합집합이다(`feedStreamingSources`).
  *          - 셀에 놓인 엔티티(`MMOEntity::_staticID` = 쿠킹된 씬의 파일 id)는 클라이언트가 스폰하지 않고 제 셀 오브젝트에 묶는다(`Bound` · `Unbound` — 언리얼 정적 액터 NetGUID).
  *          - 클라이언트: 새로 보인 엔티티의 셀이 아직 오르지 않았으면 보류하고 오르면 놓는다(`MMOClientView::setWorld` · `update`). 클라이언트는 셀 상태를 서버에 알리지 않는다 —

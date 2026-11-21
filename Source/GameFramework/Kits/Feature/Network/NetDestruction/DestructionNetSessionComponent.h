@@ -9,7 +9,7 @@
  *          틱은 마지막 그룹(`PostUpdate`)이다 — 서버는 이번 틱의 물리가 만든 사건을 같은 틱에 보낸다. 서버의 사건 · 자세 시각은 틱 번호 × `_tickInterval` 이므로
  *          서버 고정 틱과 같아야 한다. 서버는 첫 틱의 델타가 다르면 오류를 남기고 복제를 멈춘다(다른 값으로 대신 돌지 않는다).
  *          틱은 델타만 적고 복제는 틱 뒤 큐 한 번에 건다 — 복제가 남의 오브젝트(파괴 컴포넌트)의 상태를 쓰므로 틱 안(워커)에서 하지 않는다
- *          (`TickPlacement.md` 규칙 6 — 씬에 하나라 프레임에 한 일이다. 하우징 `HousingNetSessionComponent` 와 같은 자리).
+ *          (`Gameplay.md` 규칙 6 — 씬에 하나라 프레임에 한 일이다. 하우징 `HousingNetSessionComponent` 와 같은 자리).
  */
 #pragma once
 #include "Core/Foundation/Macros.h"

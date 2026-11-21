@@ -1,6 +1,6 @@
 /**
  * @file VelmoraGame.cpp
- * @brief 벨모라 골짜기 — 오픈월드 싱글 액션 어드벤처의 작은 수직 슬라이스입니다(`docs/DesignBacklog.md` "오픈월드 액션 RPG 키트" 싱글플레이 줄).
+ * @brief 벨모라 골짜기 — 오픈월드 싱글 액션 어드벤처의 작은 수직 슬라이스입니다.
  * @details 지역 진입 → 탐험(봉화) · 전투(홀 · 보스) → 보상 · 퀘스트 → 저장 · 다시 불러오기, 그리고 확장 팩(DLC, 모드 `velmora_tidecaves`)을 켜 기존 세이브를 잇는다.
  *          새 키트를 만들지 않고 기존 키트를 조합한다 — 몸(`AdventureVitals`, GF_ActionAdventure), 지역 전투(`ActionRoom` · `MonsterCatalog`, GF_ActionCombat),
  *          확장 팩(`ModSession` 의 덮어쓰기 층, GF_ModSupport), 판 상태(퀘스트 일지 · 깃발 · 지갑)와 자동 저장 · 세이브 슬롯(GameFramework).

@@ -615,7 +615,7 @@ namespace sw
 
     uint32 TextureCache::completePendingLoads( IRHIDevice* pDevice, uint32 maxCount )
     {
-        // 업로드 전용 계측(렌더 스레드 업로드 판단 — DesignBacklog "렌더 스레드와 업로드"): 펌프 CPU 시간, 프레임당 제출 · 폴링 · 대기 수.
+        // 업로드 전용 계측(렌더 스레드 업로드 판단 — docs/NEXT.md 측정 GPU 업로드): 펌프 CPU 시간, 프레임당 제출 · 폴링 · 대기 수.
         SW_PROFILE_SCOPE( "RT.TextureUpload.pump" );
         return processPendingLoads( pDevice, maxCount, false );
     }

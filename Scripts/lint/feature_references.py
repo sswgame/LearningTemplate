@@ -13,7 +13,7 @@ Scripts/lint/feature_references.py
 - 등록 없는 명령 함수: 명령 모양(`static bool f( const vector<string>&, string& )`)의 함수가 그 파일에서 정의 말고 한 번도 불리지 않으면 위반이다 —
   `*DevCommands.cpp` 를 기능 파일로 합칠 때(165e16647c) `SW_DEV_COMMAND` 줄만 빠져 치트 명령 아홉이 함수만 남았는데, 익명 구조체의 static 멤버는 컴파일러가 경고하지 않는다.
 - 낡은 기대 로그 id(방향이 거꾸로 — 참조가 정의를 요구한다): `SW_EXPECT_LOG( "X" )` · 시나리오 `<ExpectLog id="X">` · `<AllowLog id="X">` 의 X 가 정의에 없으면 위반이다 —
-  id 를 바꾸거나 지우면 기대가 조용히 무의미해진다(`docs/DesignBacklog.md` D4-5). 정의 = `Tests/` 밖 C++ 의 id 모양(`영역.사건`) 글자 리터럴 전부(주석 · `SW_EXPECT_LOG` 인자 제외),
+  id 를 바꾸거나 지우면 기대가 조용히 무의미해진다(`docs/agents/Testing.md` 시나리오). 정의 = `Tests/` 밖 C++ 의 id 모양(`영역.사건`) 글자 리터럴 전부(주석 · `SW_EXPECT_LOG` 인자 제외),
   `Tests/` 안에서는 `SW_*_ID( "X"` 의 첫 인자. 로그 매크로만 보지 않는 까닭: id 는 `addErrorWithID` · `report` · `parseBoolToken` · `#define SW_LOG_ID_…` 같은 도우미를 거쳐
   매크로에 닿아(`"" id` 이어 붙이기) 매크로 자리에는 이름만 남는다. 실행 중에 이어 붙인 id 는 리터럴이 없으니 예외 표(`_logIDs`)에 까닭과 함께 둔다.
 

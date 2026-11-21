@@ -1,5 +1,5 @@
 {
-    "_comment": "다이어트한 헤더의 pch 밖 포함 수 상한(Scripts/lint/header_include_limits.py, DesignBacklog \"헤더 팬인 다이어트\" 결정 4). _limits 의 키는 Source 기준 헤더 경로, _limit 은 `py -3 -m Scripts header-fanin` 의 non-pch 칸 — 늘면 지고, 줄면 이 값을 낮춘다.",
+    "_comment": "다이어트한 헤더의 pch 밖 포함 수 상한(Scripts/lint/header_include_limits.py, docs/agents/CppStyle.md Includes and layers). _limits 의 키는 Source 기준 헤더 경로, _limit 은 `py -3 -m Scripts header-fanin` 의 non-pch 칸 — 늘면 지고, 줄면 이 값을 낮춘다.",
     "_limits": {
         "Engine/Object/Component/Component.h": {"_limit": 10, "_reason": "틱 컨텍스트를 전방 선언으로 받는다(TickContext.h 사슬 다섯 개를 뺐다)"},
         "Engine/Object/GameObject/Registry/TagIndex.h": {"_limit": 7, "_reason": "오브젝트를 포인터로만 들어 GameObject.h 대신 ObjectFwd.h 를 포함한다"},

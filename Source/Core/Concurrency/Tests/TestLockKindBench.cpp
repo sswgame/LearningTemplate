@@ -1,4 +1,4 @@
-// LockKindBenchTest — 잠금 종류 감사(DesignBacklog "잠금 종류 감사(2026-11-20)")의 측정 후보를 스레드 2 · 4 · 8 경쟁에서 전후로 잰다.
+// LockKindBenchTest — 잠금 종류(docs/NEXT.md 측정 "잠금 종류")의 측정 후보를 스레드 2 · 4 · 8 경쟁에서 전후로 잰다.
 #include "pch.h"
 
 #include "Core/Concurrency/Queue/ConcurrentQueue.h"
@@ -19,7 +19,7 @@
 
 /**
  * @file TestLockKindBench.cpp
- * @brief 잠금 종류 후보의 전후 비교 벤치입니다. 시간 문턱은 두지 않고 값을 로그(`LockKindBenchTest.*`)로 남긴다 — 판정은 통합이 DesignBacklog 같은 절의 문턱으로 한다.
+ * @brief 잠금 종류 후보의 전후 비교 벤치입니다. 시간 문턱은 두지 않고 값을 로그(`LockKindBenchTest.*`)로 남긴다 — 판정은 통합이 docs/NEXT.md 측정 "잠금 종류" 의 문턱으로 한다.
  * @details 재는 법: Release `App --test --test-run-disabled --test-filter=LockKindBenchTest.*` 5 번, 줄마다 중앙값. 코어 수보다 많은 스레드(8)는 Android 처럼
  *          코어가 적은 기기의 과다 구독도 본다. 값은 한 연산의 평균 ns(스레드 하나의 몫을 끝낸 벽시계 시간 ÷ 몫) — 다투면 커진다.
  *          실제 자리의 잠금을 바꾸지 않고, 같은 모양(구간 길이 · 자료 구조 · 읽기/쓰기 비율)을 따로 만들어 잠금만 갈아 끼운다.
@@ -291,7 +291,7 @@ using namespace sw;
 
 /**
  * @brief [LockKindBenchTest] RenderPSOCache 의 `findMaterialPSO` · `findLayout` 모양 — 4096 항목, 읽기만 · 1000 · 100 읽기마다 쓰기 하나.
- * @details 문턱(DesignBacklog 같은 절): 쓰기 비율 1/1000 · 1/100 에서 4 · 8 스레드의 shared_mutex 가 mutex 보다 20 % 이상 빠르고 2 스레드가 5 % 넘게 느리지 않으면 바꾼다.
+ * @details 문턱(docs/NEXT.md 측정 "잠금 종류"): 쓰기 비율 1/1000 · 1/100 에서 4 · 8 스레드의 shared_mutex 가 mutex 보다 20 % 이상 빠르고 2 스레드가 5 % 넘게 느리지 않으면 바꾼다.
  */
 SW_TEST_CASE( LockKindBenchTest, RenderPSOCacheLookup, ._tags = "bench", ._disabledReason = "bench - Release 에서 --test-run-disabled 로 돌린다", ._timeoutSeconds = 600 )
 {

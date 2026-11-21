@@ -17,7 +17,7 @@ namespace sw
      * @details 가져가는 쪽이 같은 목록을 비워 다시 쓰면 두 저장소가 번갈아 돌아 프레임마다 할당하지 않는다(언리얼 렌더 명령 큐의 이중 버퍼와 같은 모양).
      *          잠금과 목록을 한 곳에 묶어, 목록을 잠금 없이 만지는 모양을 쓸 수 없게 한다 — 예전에는 쓰는 쪽마다 `mutex` 와 `vector` 를 따로 들었다.
      * @tparam TLock 잠금 타입. 기본은 교착 검출 · 잠금 추적이 걸리는 `mutex` 이고, `SpinLock` 으로 바꿀지는 `LockKindBenchTest.LockedSwapQueuePush` 로 재고 정한다
-     *               (DesignBacklog "잠금 종류 감사(2026-11-20)").
+     *               (docs/NEXT.md 측정 "잠금 종류").
      */
     template <typename T, typename TLock = mutex>
     class LockedSwapQueue

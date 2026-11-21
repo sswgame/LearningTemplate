@@ -1,7 +1,7 @@
 /**
  * @file WaylandShell.h
  * @brief 창(`WaylandWindow`)과 스플래시(`WaylandSplashWindow`)가 같이 쓰는 xdg-shell 연결 규칙입니다 — 핑 응답, 표면 configure 확인, 첫 configure 대기, 막지 않는 이벤트 펌프.
- * @details 예전에는 두 창이 같은 리스너 · 펌프를 따로 들고 있었다(DesignBacklog "구조 점검에서 닫은 것" Core · Engine 15). 창마다 다른 것(최상위 configure · 닫기, 입력)만 각자 둔다.
+ * @details 예전에는 두 창이 같은 리스너 · 펌프를 따로 들고 있었다. 창마다 다른 것(최상위 configure · 닫기, 입력)만 각자 둔다.
  *          라이브러리 헤더는 .cpp 에만 있다.
  */
 #pragma once

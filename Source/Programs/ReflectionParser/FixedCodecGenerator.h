@@ -12,7 +12,7 @@
  *            펼칠 수 없으면 그 타입의 코덱을 실행 시간에 찾아 부릅니다(`Codec` 칸).
  *          - **복제 스키마**: `PROPERTY( Replicated )` 칸이 있는 타입은 그 칸만 든 두 번째 표와 정규 문자열(`R=` 로 시작)을 내고 `FixedCodec::_pReplicated` 에 겁니다
  *            (런타임 `ReplicatedLayout`). 타입 전체가 적격이 아니어도 낸다. `Replicated` 칸의 형식이 인코딩 표 밖이거나, 범위 이름이 앞선 `Replicated` 칸이
- *            아니면 생성 오류다 — 전체 코덱의 "이유 등록" 과 달리 `Replicated` 는 명시한 요청이다(docs/DesignBacklog.md 리플렉션 남은 몫 N1).
+ *            아니면 생성 오류다 — 전체 코덱의 "이유 등록" 과 달리 `Replicated` 는 명시한 요청이다(docs/NEXT.md 5-4 N1).
  */
 #pragma once
 #include "Engine/EngineMinimal.h"

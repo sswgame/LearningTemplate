@@ -360,7 +360,7 @@ namespace sw
          */
         constexpr bool hasPixelStage() const { return _colorTargetCount > 0; }
 
-        /** @brief 이 패스 종류가 머티리얼에게 내주는 렌더 상태의 범위입니다(표: `docs/agents/RenderPipelineXml.md`). 그리는 쪽과 테스트가 같은 답을 본다. */
+        /** @brief 이 패스 종류가 머티리얼에게 내주는 렌더 상태의 범위입니다(표: `docs/agents/Rendering.md`). 그리는 쪽과 테스트가 같은 답을 본다. */
         RenderStateOverride::Scope getMaterialStateScope() const
         {
             if ( hasFlag( RenderPassTraitFlag::kMaterialBlend ) )

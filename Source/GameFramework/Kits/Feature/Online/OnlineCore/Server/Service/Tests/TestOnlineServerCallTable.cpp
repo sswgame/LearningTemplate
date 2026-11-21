@@ -10,7 +10,7 @@
 //
 // 재는 법(통합 담당): `App --test --test-filter=OnlineServerCallTableTest.CompletionCostByPending` 를 Release 로 5 번 돌려
 // 로그 `OnlineServerCallTableTest.CompletionCost` 의 P 별 ns/완료 중앙값을 본다. 판정: 지표 `service_store_pending_peak` 의 실제 최대치 P 에서
-// 선형 표(`HEAD~1` 의 벡터)와 색인 표의 차이가 실행 간 흔들림보다 크면 색인을 둔다. 아니면 그 커밋을 되돌리고 값을 DesignBacklog 판단 절에 적는다.
+// 선형 표(`HEAD~1` 의 벡터)와 색인 표의 차이가 실행 간 흔들림보다 크면 색인을 둔다. 아니면 그 커밋을 되돌리고 값을 커밋 메시지에 적고 docs/NEXT.md 의 줄을 지운다.
 
 using namespace sw;
 

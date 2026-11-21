@@ -490,7 +490,7 @@ namespace sw
         /**
          * @brief 컴포넌트 레지스트리에 타입 T 로 오른 것 중 켜진 것(`Component::isActive`, 삭제 대기 아님)마다 @p func( T& ) 를 등록 순서로 부릅니다.
          * @details 틱 대신 씬 서비스 · 프레임 시스템이 자기 타입을 한 곳에서 한 번에 도는 길이다(언리얼 WorldSubsystem 이 등록받은 목록을 돌고 Mass 처리기가 한 종류를 한 번에 도는 자리 —
-         *          매 틱 자기 일을 통째로 틱 뒤 큐로 미루던 컴포넌트가 여기로 온다, `TickPlacement.md`). 핸들 사본(@p inoutScratch, 부르는 쪽의 재사용 버퍼)을 돌고 하나씩 다시 찾으므로
+         *          매 틱 자기 일을 통째로 틱 뒤 큐로 미루던 컴포넌트가 여기로 온다, `Gameplay.md`). 핸들 사본(@p inoutScratch, 부르는 쪽의 재사용 버퍼)을 돌고 하나씩 다시 찾으므로
          *          @p func 가 구조를 바꿔도(만들기 · 지우기 · 등록) 된다. 게임 스레드, 틱 밖에서 부른다.
          */
         template <typename T, typename TFunc>

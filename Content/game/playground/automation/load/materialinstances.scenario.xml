@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="ebd5d5a70e2b4628b126d90c702051bb"?>
 <!--
-  부하 시나리오 — 머티리얼 인스턴스 5000(감사 R-4 자원 구간 할당의 측정 씬, DesignBacklog "자원 구간 할당" 측정). 큐브 5000 개가 저마다 머티리얼 인스턴스를 든다
+  부하 시나리오 — 머티리얼 인스턴스 5000(감사 R-4 자원 구간 할당의 측정 씬, docs/NEXT.md 측정 자원 구간 할당). 큐브 5000 개가 저마다 머티리얼 인스턴스를 든다
   (-gv_stressTestMaterialInstances=1). 값은 바꾸지 않는다 — 상수 버퍼 할당 수와 프레임 시간만 본다.
   감시 값: RT.RHI.liveBuffers(살아 있는 버퍼 — DX12 는 버퍼마다 커밋 자원), RT.RHI.constantBufferPages(머티리얼 상수 버퍼 페이지),
            RT.Vulkan.allocationCount(살아 있는 VkDeviceMemory — maxMemoryAllocationCount 의 분자), 프레임 시간 p50.

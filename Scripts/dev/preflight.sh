@@ -16,7 +16,7 @@
 #   build       lint --all(뒤에서) ‖ Release 빌드 → 임포트 → (ASan 빌드 → 서버 빌드 ‖ 배포 프리셋 둘 빌드 · 쿠킹 → shipping-check 기동 · 종료). 배포 빌드는 증분 빌드의 링크 꼬리에 비는 코어를 쓴다(2026-11-13: CPU 단계 11.5 분 중 9 분이 배포 빌드였다).
 #               ASan 빌드가 끝나면 tidy 를 뒤에서 띄운다(아래 tidy).
 #               Debug 는 짓지 않는다 — 단언 · 검사는 SW_DO_CHECKS 로 Release 에 있고, CPU 단위는 ASan(Release + clang-cl ASan)이 돈다(사용자 결정 2026-11-18).
-#   changed     origin/main 뒤에 들어온 · 바뀐 테스트 · 시나리오만 Release 로 먼저(test_history.py changed — DesignBacklog D4). 돈 적 없는 테스트 · 기준 파일의 실패를
+#   changed     origin/main 뒤에 들어온 · 바뀐 테스트 · 시나리오만 Release 로 먼저(test_history.py changed). 돈 적 없는 테스트 · 기준 파일의 실패를
 #               전체 실행 중간이 아니라 빌드 직후에 갈래 이름과 함께 낸다. 없는 골든 · 스냅숏만 쓰고(MissingBaseline) 쓴 것이 있으면 멈춘다 — 보고 커밋한 뒤 --from changed.
 #               지면 cpu · gpu-release 를 시작하지 않는다. 끝 줄 CHANGED_OK=<sha> · CHANGED_FAILED.
 #   cpu         ASan ctest -L nogpu(단위 · 셰이더 다시 굽기 · 파서 …) ‖ 서버(Release) 단위 → launch-args(--from 으로 build 를 건너뛰었으면 → shipping-check 빌드 · 기동) ‖ shader warm.
@@ -65,7 +65,7 @@ while true; do
   esac
 done
 
-# 판정 요약 — 실행기가 판정 값 하나에서 찍은 끝 줄만 모은다(DesignBacklog D6): 단위 실행의 TEST_RESULT=, 시나리오 부모의 SCENARIO_RESULT=,
+# 판정 요약 — 실행기가 판정 값 하나에서 찍은 끝 줄만 모은다: 단위 실행의 TEST_RESULT=, 시나리오 부모의 SCENARIO_RESULT=,
 # 진 단계를 (단계 · 종류 · 까닭)으로 접어 백엔드를 붙인 per-backend failure: 줄. 통과 · 건너뜀 끝 줄은 뺀다. 로그 문구를 해석하지 않는다. 인자는 읽을 파일들이다.
 print_results() {
   grep -h -o -E "(TEST_RESULT=|SCENARIO_RESULT=|per-backend failure: ).*" "$@" 2>/dev/null |
@@ -240,7 +240,7 @@ job_lint() {
   return $RC
 }
 
-# 새로 들어온 · 바뀐 테스트 · 시나리오만 먼저(DesignBacklog D4). 표와 끝 줄을 찍고, 지면 뒤 단계를 시작하지 않는다 — 끝 줄은 CHANGED_FAILED 다.
+# 새로 들어온 · 바뀐 테스트 · 시나리오만 먼저. 표와 끝 줄을 찍고, 지면 뒤 단계를 시작하지 않는다 — 끝 줄은 CHANGED_FAILED 다.
 run_changed() {
   echo "== changed $(date +%T)"
   run build/verify.changed.log py -3 -m Scripts test-history changed --preset Ninja-Release

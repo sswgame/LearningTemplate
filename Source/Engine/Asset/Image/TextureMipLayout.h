@@ -1,7 +1,7 @@
 /**
  * @file TextureMipLayout.h
  * @brief DDS 파일 안 밉마다의 바이트 구간(`TextureMipLayout`)입니다 — 머리만으로 구하고, 밉 범위를 파일 구간으로 바꿔 범위 읽기(`IContentFileSource::readRangeAsync`)에 넘긴다.
- * @details 설계: DesignBacklog "텍스처 스트리밍 밉 범위 대기 줄"(MR-1). DDS 는 큰 밉부터 이어지므로 밉 범위가 곧 파일의 한 구간이다(언리얼 `FTexture2DStreamIn_IO` 가 벌크 데이터에서
+ * @details 규칙: docs/agents/Rendering.md "렌더 · RHI 결정". DDS 는 큰 밉부터 이어지므로 밉 범위가 곧 파일의 한 구간이다(언리얼 `FTexture2DStreamIn_IO` 가 벌크 데이터에서
  *          밉을 오프셋으로 읽는 자리, 유니티 Mipmap Streaming 의 `.resS` 오프셋 읽기). 머리 풀이는 전체 읽기와 같은 `DDSLoader::parseHeader` 다. 파일 없이 테스트한다.
  */
 #pragma once

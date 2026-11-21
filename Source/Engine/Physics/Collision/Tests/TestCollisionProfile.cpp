@@ -1,4 +1,4 @@
-// CollisionProfileTest — 충돌 채널 · 응답 · 프로필(DesignBacklog "충돌 채널 · 응답 · 프리셋"). 응답 규칙(약한 쪽 · 대칭), 데이터 검사, 배포 설정이 옛 레이어 표와 같은지,
+// CollisionProfileTest — 충돌 채널 · 응답 · 프로필. 응답 규칙(약한 쪽 · 대칭), 데이터 검사, 배포 설정이 옛 레이어 표와 같은지,
 // Jolt · Box2D 에서 막음은 막고 겹침은 밀지 않으며 무시는 아무것도 없는지, 트레이스 채널 질의 거르기. 디바이스 없음(nogpu) — 서버 단위(`Server --test`)에도 돈다.
 #include "pch.h"
 

@@ -3,7 +3,7 @@
 """
 Scripts/lint/header_include_limits.py
 
-헤더 포함 상한(래칫) — 다이어트한 헤더(DesignBacklog "헤더 팬인 다이어트" 결정 4)가 pch 밖에서 (전이적으로) 끌어오는 헤더 수를
+헤더 포함 상한(래칫) — 다이어트한 헤더(docs/agents/CppStyle.md Includes and layers)가 pch 밖에서 (전이적으로) 끌어오는 헤더 수를
 표(`Config/Rules/Lint/HeaderIncludeLimits.json` 의 `_limits` — 헤더 → 상한 · 까닭)의 상한과 견준다. 수는 `header-fanin` 의 `non-pch` 칸과 같은 계산이다(`dev.header_fanin`).
 - 수가 상한보다 **늘면** 진다 — 전방 선언(`Engine/Object/ObjectFwd.h` · `Engine/Reflection/ReflectionFwd.h`)이나 `.inl` · .cpp 로 옮긴다.
 - 수가 **줄면** 표도 같이 낮춰야 선다 — 옮긴 자리에 포함이 다시 들어오지 못한다(`magic-literals` 래칫과 같은 꼴).

@@ -4,7 +4,6 @@
  * @details 시트(Tags · AllocationSites · Assets · GPUResources · Types · Caches)마다 칸 서술이 표 하나(`getMemorySheetSchema`)에 있고, 줄은 칸마다 글 또는 숫자다.
  *          비교 · CSV · 에디터 표 · 원격 글이 시트별 코드를 갖지 않는다 — 시트를 더하면 서술 한 줄과 수집 함수 하나만 는다.
  *          상용 엔진 비교: 유니티 Memory Profiler 의 스냅숏(표 여럿 · 두 스냅숏 비교), 언리얼 `memreport -full` 의 표 묶음(`obj list` · `ListTextures` · `rhi.DumpMemory`).
- *          설계는 `docs/DesignBacklog.md` "메모리 사용량 디버그 · 내보내기".
  */
 #pragma once
 #include "Core/Container/array.h"

@@ -33,10 +33,10 @@ Scripts/dev/test_history.py
 **느려짐 경고.** ingest 는 새로 넣은 검증 실행이 같은 (테스트, 백엔드)의 지난 통과 실행 p95 의 `_slowFactor` 배를 넘으면 경고 줄을, `stage` 는 같은 단계의 지난 통과 시간 p95 와
 견줘 경고 줄을 찍는다(판정을 바꾸지 않는다 — 시한은 실행기가 따로 끊는다). 표본이 `SLOW_MIN_SAMPLES` 보다 적으면 견주지 않는다.
 
-**시간표(`costs`).** 체인 샤드 나누기(DesignBacklog "샤드 시간 균형" T2)의 입력이다 — 언리얼 Horde · 크로미움 Swarming 처럼 지난 실행 시간으로 나눈다.
+**시간표(`costs`).** 체인 샤드 나누기(docs/NEXT.md T2)의 입력이다 — 언리얼 Horde · 크로미움 Swarming 처럼 지난 실행 시간으로 나눈다.
 표는 `--write` 로 갱신하고 **사람이 커밋할 때만 바뀐다**(실행마다 다시 나누면 앞 단계가 가리던 결함이 실행마다 드러났다 숨는다). 표에 없는 시나리오는 표의 중앙값이다.
 
-**`changed`(DesignBacklog D4).** push 는 검증한 커밋만 하므로 `origin/main` 에 있는 것은 돈 적이 있고, 그 뒤에 더해지거나 바뀐 것은 돈 적이 없다 — 상태 파일 없이
+**`changed`.** push 는 검증한 커밋만 하므로 `origin/main` 에 있는 것은 돈 적이 있고, 그 뒤에 더해지거나 바뀐 것은 돈 적이 없다 — 상태 파일 없이
 `git diff --name-status <base>...HEAD` 로 가른다(이력 DB 는 기계마다 달라 쓰지 않는다). 묶음 검증이 build 와 cpu 사이에 부른다(`preflight.sh` 의 `changed` 단계).
   (a) 바뀐 소스 · 테스트 파일의 기능 폴더(`…/Tests/…` 는 `Tests` 앞, 아니면 그 파일의 폴더 — 테스트가 없으면 한 단계 위)를 그 폴더를 싣는 단위 항목
       (`UnitTests` · `UnitTests.<게임>` · `UnitTests.OnlineKits` — ctest 의 명령을 `ctest --show-only=json-v1` 에서 읽는다)에 `--test-source=` 로 좁혀 돈다.
@@ -312,7 +312,7 @@ def make_ctest_exclude(list_entry: Sequence[QuarantineEntry]) -> str:
 
 
 # ---------------------------------------------------------------------------
-# changed — origin/main 뒤에 들어온 테스트 · 시나리오를 먼저 돈다(DesignBacklog D4)
+# changed — origin/main 뒤에 들어온 테스트 · 시나리오를 먼저 돈다
 # ---------------------------------------------------------------------------
 CHANGED_OUTPUT = Path("Testing") / "Changed"   # 빌드 폴더 아래 이 단계의 로그 · 보고 — 돌 때마다 비운다
 UNIT_ITEM_PATTERN = re.compile(r"^UnitTests(\.[A-Za-z0-9_]+)?$")

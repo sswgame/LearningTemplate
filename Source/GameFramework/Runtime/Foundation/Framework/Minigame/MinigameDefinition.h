@@ -2,7 +2,7 @@
  * @file MinigameDefinition.h
  * @brief 미니게임 데이터(`<팩>/minigames/<이름>.minigame.xml`)입니다 — 미니게임 하나가 쓰는 맵 · 들어가는 방식 · 게임 기능 · 입력 문맥 · UI · 카탈로그.
  * @details 언리얼 Lyra 의 `ULyraExperienceDefinition`(켤 Game Feature · 액션 셋), 용과 같이 · GTA · 마리오 파티의 미니게임 하나와 같은 자리다. 키트는 모두 링크되어 있고 미니게임은
- *          그 게임 기능 등록만 켜고 끈다(런타임 모듈 로드 기각 — `docs/DesignBacklog.md` "게임 기능 · 미니게임"). 판을 돌리는 컴포넌트(`GameModeComponent` 파생)는 맵에 둔다 —
+ *          그 게임 기능 등록만 켜고 끈다(런타임 모듈 로드 기각 — `docs/agents/Gameplay.md` "게임 기능 · 미니게임"). 판을 돌리는 컴포넌트(`GameModeComponent` 파생)는 맵에 둔다 —
  *          정의에 게임 모드 칸을 두지 않는다(어디에도 적용되지 않던 `<GameMode>` 원소를 지웠다). 읽기는 루트 속성을 리플렉션 스키마로(`XMLFields::readProperties`), 자식 원소는 없다.
  * @code
  *     <Minigame name="kitdemo_actionplatformer" map="game/playground/maps/kitdemo_actionplatformer.scene.xml" entry="SceneSwitch"

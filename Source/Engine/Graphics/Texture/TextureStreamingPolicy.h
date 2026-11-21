@@ -1,7 +1,7 @@
 /**
  * @file TextureStreamingPolicy.h
  * @brief 텍스처 밉을 어디까지 올리고 내릴지 정하는 순수 계산(`TextureStreamingPolicy`)입니다 — 예산 · 화면이 원하는 밉 · 유휴 프레임만 입력이라 GPU 없이 테스트한다.
- * @details 설계: DesignBacklog "렌더 · RHI 설계(2026-11-17)" R6-2. 언리얼 `FRenderAssetStreamingManager` 의 wanted mip · 풀 예산, 유니티 Mipmap Streaming 의 메모리 예산 자리다.
+ * @details 규칙: docs/agents/Rendering.md "렌더 · RHI 결정". 언리얼 `FRenderAssetStreamingManager` 의 wanted mip · 풀 예산, 유니티 Mipmap Streaming 의 메모리 예산 자리다.
  *          올리기 · 내리기를 실제로 내는 쪽(R6-6 — bindless 번호를 지키는 rebind 뒤)은 이 결정을 그대로 따른다.
  */
 #pragma once

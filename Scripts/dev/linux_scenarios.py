@@ -543,7 +543,7 @@ def sanitize(arguments):
     if rc != 0:
         print(f'SANITIZE_FAILED={kind} - /tmp/lt.sanitize.log')
         return rc
-    # 퍼저는 ASan 묶음 끝에 타깃마다 30 초(DesignBacklog 퍼징 절) — 클론은 위에서 이미 옮겼다.
+    # 퍼저는 ASan 묶음 끝에 타깃마다 30 초(docs/NEXT.md 퍼저 타깃) — 클론은 위에서 이미 옮겼다.
     if kind == 'address' and run_fuzz([], FUZZ_SMOKE_SECONDS, sync=False) != 0:
         print('SANITIZE_FAILED=fuzz')
         return 1
@@ -574,7 +574,7 @@ def configure_and_build(preset, targets, tsan=False):
     return 0
 
 
-FUZZ_SMOKE_SECONDS = 30  # sanitize 끝의 타깃별 시간 — 셋이면 1.5 분(DesignBacklog 퍼징 절의 "sanitize 단계 합 5 분")
+FUZZ_SMOKE_SECONDS = 30  # sanitize 끝의 타깃별 시간 — 셋이면 1.5 분(sanitize 단계 합 5 분 안)
 FUZZ_FAILURE = re.compile(r'ERROR: (AddressSanitizer|LeakSanitizer|libFuzzer)|runtime error:|deadly signal')
 FUZZ_MODULES = re.compile(r'Loaded (\d+) modules')
 

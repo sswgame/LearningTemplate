@@ -15,7 +15,7 @@
 #include "GameFramework/Runtime/Foundation/Framework/Tests/SceneNetLinkTestBinding.h"
 #include "GameFramework/Runtime/Gameplay/Tutorial/TutorialHintTriggerComponent.h"
 
-// TutorialHintVolumeTest — 볼륨 바탕(`TriggerComponent`)의 거리 판정이 트리거 계약(DesignBacklog "트리거 Enter · Stay · Exit 계약")의 경계를 따르는지
+// TutorialHintVolumeTest — 볼륨 바탕(`TriggerComponent`)의 거리 판정이 트리거 계약(docs/agents/Gameplay.md "트리거 · 물리")의 경계를 따르는지
 // 들어올 때마다 하는 튜토리얼 힌트 볼륨으로 센다: 안에서 생겨남 = 진입, 꺼진 볼륨 · 꺼진 활성자 = 이탈, 한 활성자는 한 길로만 들어온다(nogpu, 물리 없음).
 
 using namespace sw;

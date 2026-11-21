@@ -389,7 +389,7 @@ namespace sw
         bool hasBegunPlay() const { return _bHasBegunPlay == SW_TRUE; }
         /**
          * @brief 프레임마다 불리는 주 업데이트 콜백입니다. @p context 가 시간 · 읽기 전용 씬(`getManager`) · 자기 오브젝트(`getSelf`) · 틱 뒤 큐(`deferPostTick`)를 엽니다.
-         * @details 남의 오브젝트 쓰기 · 구조 변경은 `context.deferPostTick` 로 보낸다(`TickContext.h`, `docs/agents/TickPlacement.md`).
+         * @details 남의 오브젝트 쓰기 · 구조 변경은 `context.deferPostTick` 로 보낸다(`TickContext.h`, `docs/agents/Gameplay.md`).
          */
         virtual void onTick( TickContext& context );
         /** @brief 프레임마다 서브틱별로 불리는 보조 업데이트 콜백입니다. */

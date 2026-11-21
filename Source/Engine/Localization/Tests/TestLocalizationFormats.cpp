@@ -739,7 +739,7 @@ namespace
 
 /**
  * @brief [CultureInfoTest] 자식 문화권은 자기가 적은 칸만 덮는다 — 적지 않은 속성 · 패턴 · 복수형 규칙은 부모 것이다
- * @details 문화권 부모 병합을 리플렉션 상속(`_base`)으로 옮기는 일(docs/DesignBacklog.md 리플렉션 남은 몫 W-R3 (e))이 지켜야 하는 동작이다.
+ * @details 문화권 부모 병합을 리플렉션 상속(`_base`)으로 옮기는 일이 지켜야 하는 동작이다.
  */
 SW_TEST_CASE( CultureInfoTest, ChildOverridesOnlyWhatItWrites )
 {
@@ -846,7 +846,7 @@ SW_TEST_CASE( CultureInfoTest, BaseChainReadsTheReflectedElements )
 /**
  * @brief [CultureInfoTest] 출하 표의 모든 문화권에 대해 숫자 · 통화 · 날짜 · 복수형 서식 결과가 기록과 글자까지 같다
  * @details 손 파서를 리플렉션 상속으로 바꾸기 **전에** 기록한다(`App --test --test-filter=CultureInfoTest.FormatsMatchTheHandParserForEveryShippedCulture --update-snapshots`) —
- *          바꾼 뒤에도 같은 스냅숏이어야 한다(docs/DesignBacklog.md 리플렉션 남은 몫 W-R3 (e)).
+ *          바꾼 뒤에도 같은 스냅숏이어야 한다.
  */
 SW_TEST_CASE( CultureInfoTest, FormatsMatchTheHandParserForEveryShippedCulture )
 {

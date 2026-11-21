@@ -1,6 +1,6 @@
 /**
  * @file AndroidInputConnectionState.h
- * @brief Android `InputConnection` 호출(조합 글 설정 · 조합 끝 · 확정 · 주변 글 지우기)을 엔진의 조합 · 확정 글과 지우기 키로 옮기는 규칙입니다(설계: DesignBacklog "Android IME 조합").
+ * @brief Android `InputConnection` 호출(조합 글 설정 · 조합 끝 · 확정 · 주변 글 지우기)을 엔진의 조합 · 확정 글과 지우기 키로 옮기는 규칙입니다(감사 P-4).
  * @details 플랫폼 헤더가 없는 순수 코드라 데스크톱 단위 테스트가 Android 없이 본다. Java 뷰(`SWInputView`)의 호출을 JNI 가 이 객체에 넘기고, 나온 동작을 창이
  *          `CallbackInputWindow::queueTextInput` · 키 입력으로 낸다. 편집기 글은 엔진(UI 글 칸)이 갖고 Java 편집기는 비워 둔다 — 언리얼 GameTextInput 이 확정마다 상태를 비우는 것과 같다.
  *          `deleteSurroundingText` 는 명세대로 조합 구간을 빼고 커서 앞뒤를 지운다 — 조합은 그대로 두고 지우기 키만 낸다.

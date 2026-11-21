@@ -16,7 +16,7 @@
 #include "sw/config/ConfigConstants.h"
 
 // 동적 모듈 구성에만 있다 — 정적 구성(배포 · 웹 · Android 개발)은 에디터 모듈이 없고 모듈 라이브러리를 올리고 내리는 길(`ModuleLibraryUtil::unloadModuleLibrary`)도 짓지 않는다.
-// 부르는 자리(`AppHeadlessTasks.cpp`)는 `build::kStaticModules` 로 가른다 — 버려지는 갈래라 정의가 없어도 된다(docs/agents/BuildConfigSwitch.md 첫 줄).
+// 부르는 자리(`AppHeadlessTasks.cpp`)는 `build::kStaticModules` 로 가른다 — 버려지는 갈래라 정의가 없어도 된다(docs/agents/CppStyle.md "Build configuration switches" 첫 줄).
 #if SW_WITH_DYNAMIC_MODULES
     #include "Core/File/FileUtil.h"
     #include "Core/Module/ModuleLibraryUtil.h"

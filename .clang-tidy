@@ -115,7 +115,7 @@ Checks: >
 # -misc/cppcoreguidelines-non-private-member-variables-in-classes  6104+198
 #                                                       (규약) 리플렉션 데이터 형식(REFLECT 필드)과 POD 설명자는 공개 필드가 본질이다.
 # -readability-braces-around-statements           4744  (규약) 한 줄 if 는 중괄호를 뺀다(docs/agents/CppStyle.md "Braces").
-# -misc-include-cleaner                           4720  (린트) include 는 clang-format(IncludeCategories) · 저장소 린트(LayerIncludes · Includes.md 의 층)가 본다.
+# -misc-include-cleaner                           4720  (린트) include 는 clang-format(IncludeCategories) · 저장소 린트(LayerIncludes · CppStyle.md 의 층)가 본다.
 #                                                       이 검사는 PCH · 강제 포함 헤더를 모르고 "직접 포함" 을 요구해 층 규칙과 어긋난다.
 # -readability-redundant-member-init              3383  (규약) 필드는 생성자 초기화 목록에서 모두 적는다(CppStyle — `_value{}` 도 의도다).
 # -readability/cppcoreguidelines-magic-numbers    2567  (린트) 매직 리터럴은 MagicLiterals 린트가 정책 값만 골라 본다. 수학 · 그래픽스 상수까지 짚는다.
@@ -129,7 +129,7 @@ Checks: >
 # -modernize/cppcoreguidelines-use-default-member-init  591
 #                                                       (규약) 필드 초기화는 생성자에서만 한다(CppStyle · .cpp 생성자) — 정반대를 요구한다.
 # -misc-use-anonymous-namespace                    588  (규약) 483 건이 SW_TEST_CASE · 등록 매크로가 펼친 `static` 이다. 매크로는 아무 자리에서
-#                                                       익명 네임스페이스를 열 수 없다. 손으로 쓴 도우미는 Helpers.md 가 익명 네임스페이스 하나로 모은다.
+#                                                       익명 네임스페이스를 열 수 없다. 손으로 쓴 도우미는 CppStyle.md Helpers 가 익명 네임스페이스 하나로 모은다.
 # -readability-redundant-access-specifiers         520  (취향) REFLECT 매크로 · 접근 구역을 묶음별로 다시 여는 것이 의도다.
 # -cppcoreguidelines-pro-bounds-*        496+323+317  (취향) GSL(span · at) 전제 규칙이다. 엔진 저수준(직렬화 · RHI · 컨테이너)은 포인터 산술이 본질이다.
 # -cppcoreguidelines-pro-type-reinterpret-cast/union-access/vararg/static-cast-downcast/const-cast  87+67+34+26+13

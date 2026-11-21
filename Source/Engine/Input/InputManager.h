@@ -136,7 +136,7 @@ namespace sw
         bool postRawEvent( const RawInputEvent& rawEvent );
         /**
          * @brief 원시 이벤트를 입력 프레임 @p inputFrame 에 적용하도록 넣습니다. 그 번호의 `beginFrame`(이미 지났으면 다음 `beginFrame`)이 넣은 순서대로 적용합니다.
-         * @details 에디터 UI 스레드 분리의 경계다(`docs/DesignBacklog.md` "에디터 UI 스레드 분리 검토" 2) — 창 · ImGui 를 가진 스레드가 게임 뷰 입력을 다음 게임 프레임 번호로 넣으면
+         * @details 에디터 UI 스레드 분리의 경계다 — 창 · ImGui 를 가진 스레드가 게임 뷰 입력을 다음 게임 프레임 번호로 넣으면
          *          스레드가 언제 돌든 같은 입력이 같은 게임 프레임에 닿는다(한 프레임 지연이 계약). 언리얼 `FDeferredWindowsMessage` 가 받은 스레드에서 수정 키 상태까지 값으로 떠 두고 나중에 처리하는 것과 같은 자리다.
          */
         bool postRawEventAt( const RawInputEvent& rawEvent, uint32 inputFrame );
