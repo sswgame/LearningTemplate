@@ -47,7 +47,11 @@ PACK_DATA_NAME = "packs.data"
 PACK_LOADER_NAME = "packs.js"
 FILE_PACKAGER_PATH = Path("Tools") / "emsdk" / "upstream" / "emscripten" / "tools" / "file_packager.py"
 DEFAULT_PORT = 8080
+#: WebAssembly SIMD 확인 모듈 — `() -> v128` 함수 하나(i32.const 0 · i8x16.splat · i8x16.popcnt). 빌드가 `-msimd128` 이라(Architecture/WASM32.cmake)
+#: SIMD 가 없는 브라우저는 App.wasm 을 컴파일하지 못하고 빈 화면이 된다 — 띄우기 전에 이것을 검증해 안내를 보인다(wasm-feature-detect 의 simd 검사와 같은 바이트).
+SIMD_PROBE_BYTES = "0, 97, 115, 109, 1, 0, 0, 0, 1, 5, 1, 96, 0, 1, 123, 3, 2, 1, 0, 10, 10, 1, 8, 0, 65, 0, 253, 15, 253, 98, 11"
 #: 페이지 틀. `reporter` 는 배포 페이지에서 비고, 확인 페이지(`web-check` 의 check.html)만 보고 스크립트를 넣는다 — Module 을 만든 뒤 · App.js 앞.
+#: 팩 로더 · App.js 는 SIMD 확인을 지난 뒤 차례대로(async = false) 붙인다.
 INDEX_HTML = """<!doctype html>
 <html lang="ko">
 <head>
@@ -65,11 +69,26 @@ var Module = {{
     printErr: (text) => console.error(text),
 }};
 </script>
-{reporter}<script src="{loader}"></script>
-<script src="App.js"></script>
+{reporter}<script>
+(function () {{
+    var simdProbe = new Uint8Array([{simd_probe}]);
+    if (typeof WebAssembly !== "object" || WebAssembly.validate(simdProbe) === false) {{
+        document.body.innerHTML = '<p id="unsupported" style="color: #ddd; font: 16px sans-serif; padding: 24px;">'
+            + "이 브라우저는 WebAssembly SIMD 를 지원하지 않아 게임을 열 수 없습니다. 최신 Chrome · Edge · Firefox · Safari 로 여세요.</p>";
+        console.error("WebAssembly SIMD is not supported - App.wasm is built with -msimd128");
+        return;
+    }}
+    ["{loader}", "App.js"].forEach(function (source) {{
+        var script = document.createElement("script");
+        script.src = source;
+        script.async = false;
+        document.body.appendChild(script);
+    }});
+}})();
+</script>
 </body>
 </html>
-"""
+""".replace("{simd_probe}", SIMD_PROBE_BYTES)
 
 
 class WebPackageError(Exception):

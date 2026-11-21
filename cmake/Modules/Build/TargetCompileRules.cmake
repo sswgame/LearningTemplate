@@ -116,29 +116,47 @@ function(sw_add_shared_pch_owner OWNER_NAME HEADER_PATH)
 	if(ARG_DEFINITIONS)
 		target_compile_definitions(${OWNER_NAME} PRIVATE ${ARG_DEFINITIONS}) # 쓰는 타깃 모두가 같은 정의를 가질 때만(게임 팩의 `SW_LOG_TAG` · `SW_MODULE_EXPORTS`)
 	endif()
-	set_target_properties(${OWNER_NAME} PROPERTIES FOLDER "Build/PCH" EXCLUDE_FROM_ALL ON)
+	# clang 은 PIC 수준이 다른 PCH 를 거부한다 — 쓰는 쪽(동적 구성의 키트 SHARED · 게임 MODULE)이 PIC 이므로 소유자도 같게 짓는다.
+	# 정적 모듈 구성은 쓰는 쪽이 STATIC 이라 플랫폼 값(CMAKE_POSITION_INDEPENDENT_CODE — Android 는 켬)을 따른다. COFF(Windows)는 무관하다.
+	if(NOT SW_STATIC_MODULES OR CMAKE_POSITION_INDEPENDENT_CODE)
+		set(owner_pic ON)
+	else()
+		set(owner_pic OFF)
+	endif()
+	set_target_properties(${OWNER_NAME} PROPERTIES FOLDER "Build/PCH" EXCLUDE_FROM_ALL ON POSITION_INDEPENDENT_CODE ${owner_pic})
 	sw_require_template_definitions(${OWNER_NAME}) # 쓰는 쪽(키트 · 게임)과 같은 옵션으로 PCH 를 굽는다
 	target_precompile_headers(${OWNER_NAME} PRIVATE "${HEADER_PATH}")
 endfunction()
 
 # ------------------------------------------------------------------------------
-# sw_use_shared_pch — 타깃이 `sw_add_shared_pch_owner` 의 PCH 를 쓴다(clang-cl 만 — 그 밖은 PCH 없이 짓는다).
+# sw_use_shared_pch — 타깃이 `sw_add_shared_pch_owner` 의 PCH 를 쓴다(clang-cl · GNU 드라이버 clang 둘 다 — 언리얼 UBT SharedPCH 자리).
 #   CMake 의 `REUSE_PRECOMPILE_HEADERS_FROM` 을 쓰지 않는 까닭 둘:
 #   - 속성만 세우면(`set_target_properties`) CMake 4.4 는 조용히 무시한다 — `target_precompile_headers( REUSE_FROM )` 이어야 붙는다.
 #   - CMake 는 PCH 플래그(`/Yu` · `/FI<cmake_pch.hxx>`)를 명령줄 맨 끝에 둔다. clang-cl 은 PCH 헤더보다 **앞에** 강제 포함한 파일을 건너뛰므로
 #     타깃 고유 정의 헤더(`sw_set_target_defs_header`)가 사라진다. 그래서 PCH 플래그를 타깃 옵션 맨 앞(`BEFORE`)에 직접 넣어 정의 헤더 ·
 #     의존 타깃의 `FlagOps.gen.h` 가 PCH **뒤에** 읽히게 한다.
-#   PCH 안 헤더는 `/showIncludes` 에 나오지 않으므로 소유자의 PCH 오브젝트를 모든 C++ 소스의 `OBJECT_DEPENDS` 로 건다 —
-#   소스가 다 붙은 뒤(리플렉션 단계 뒤) 부른다. `SKIP_PRECOMPILE_HEADERS` 소스는 `/Y-` 로 PCH 를 끈다.
+#   GNU 드라이버(Linux · Android)는 `-include-pch <소유자>/cmake_pch.hxx.pch`(CMake Compiler/Clang.cmake 의 USE_PCH 와 같은 파일)다 — clang 은 이 PCH 를
+#     어떤 `-include` 보다 먼저 싣는다. 명령줄에서 소스 하나만 뺄 수 없으므로 `SKIP_PRECOMPILE_HEADERS` 소스(ABI 스탬프 · 서버 전용 표시 TU)도
+#     PCH 를 싣는다 — 같은 정의 · 옵션이라 결과는 같고 의존만 하나 는다. 소스별 옵션은 유니티 묶음에서 그 소스를 빼므로 쓰지 않는다.
+#   PCH 안 헤더는 `/showIncludes` · depfile 에 나오지 않으므로 소유자의 PCH 산출물을 C++ 소스의 `OBJECT_DEPENDS` 로 건다 —
+#   소스가 다 붙은 뒤(리플렉션 단계 뒤) 부른다. clang-cl 의 `SKIP_PRECOMPILE_HEADERS` 소스는 `/Y-` 로 PCH 를 끈다.
 # ------------------------------------------------------------------------------
 function(sw_use_shared_pch TARGET_NAME OWNER_NAME)
-	if(NOT SW_ENABLE_PCH OR NOT MSVC OR NOT TARGET ${OWNER_NAME})
+	if(NOT SW_ENABLE_PCH OR NOT TARGET ${OWNER_NAME})
 		return()
 	endif()
 	get_target_property(owner_binary_dir ${OWNER_NAME} BINARY_DIR)
 	set(pch_dir "${owner_binary_dir}/CMakeFiles/${OWNER_NAME}.dir")
-	set(pch_header "${pch_dir}/cmake_pch.hxx")
-	target_compile_options(${TARGET_NAME} BEFORE PRIVATE "/Yu${pch_header}" "/Fp${pch_dir}/cmake_pch.cxx.pch" "/FI${pch_header}")
+	if(MSVC)
+		set(pch_header "${pch_dir}/cmake_pch.hxx")
+		set(pch_output "${pch_dir}/cmake_pch.cxx.obj")
+		target_compile_options(${TARGET_NAME} BEFORE PRIVATE "/Yu${pch_header}" "/Fp${pch_dir}/cmake_pch.cxx.pch" "/FI${pch_header}")
+	elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+		set(pch_output "${pch_dir}/cmake_pch.hxx.pch")
+		target_compile_options(${TARGET_NAME} BEFORE PRIVATE "$<$<COMPILE_LANGUAGE:CXX>:-include-pch>" "$<$<COMPILE_LANGUAGE:CXX>:${pch_output}>")
+	else()
+		message(FATAL_ERROR "sw_use_shared_pch(${TARGET_NAME}): shared PCH needs clang (clang-cl or the GNU driver), got ${CMAKE_CXX_COMPILER_ID}")
+	endif()
 	add_dependencies(${TARGET_NAME} ${OWNER_NAME})
 	get_target_property(list_source ${TARGET_NAME} SOURCES)
 	foreach(src IN LISTS list_source)
@@ -146,10 +164,10 @@ function(sw_use_shared_pch TARGET_NAME OWNER_NAME)
 			continue()
 		endif()
 		get_source_file_property(skip_pch "${src}" TARGET_DIRECTORY ${TARGET_NAME} SKIP_PRECOMPILE_HEADERS)
-		if(skip_pch)
+		if(skip_pch AND MSVC)
 			set_property(SOURCE "${src}" TARGET_DIRECTORY ${TARGET_NAME} APPEND PROPERTY COMPILE_OPTIONS "/Y-")
 		else()
-			set_property(SOURCE "${src}" TARGET_DIRECTORY ${TARGET_NAME} APPEND PROPERTY OBJECT_DEPENDS "${pch_dir}/cmake_pch.cxx.obj")
+			set_property(SOURCE "${src}" TARGET_DIRECTORY ${TARGET_NAME} APPEND PROPERTY OBJECT_DEPENDS "${pch_output}")
 		endif()
 	endforeach()
 endfunction()
@@ -188,7 +206,7 @@ endfunction()
 
 # ------------------------------------------------------------------------------
 # sw_mark_deterministic_sources —같은 입력이면 구성 · 컴파일러 · 플랫폼을 넘어 같은 비트를 내야 하는 시뮬레이션 TU(파괴 · 파쇄 · 그 복제)에
-#   부동소수점 축약(FMA 합치기)을 끈다. Release 의 /arch:AVX2 · -mavx2 는 `a * b + c` 를 FMA 한 번으로 합쳐 반올림이 Debug(/Od · AVX2 없음)와
+#   부동소수점 축약(FMA 합치기)을 끈다. Release 의 Haswell 수준(clang-cl /arch:AVX2 · GNU -march=haswell — X64.cmake)은 `a * b + c` 를 FMA 한 번으로 합쳐 반올림이 Debug(FMA 없음)와
 #   달라진다 — 씨앗과 사건만 보내고 받는 쪽이 같은 계산을 하는 파괴 네트워킹은 Debug 서버 ↔ Shipping 클라이언트에서 다른 그림이 된다.
 #   엔진 전체에는 걸지 않는다(렌더 · 애니메이션 수학은 FMA 가 이득이고 비트 결정성이 필요 없다). 언리얼도 결정성이 필요한 물리 경로만 /fp:precise 로 짓는다.
 #   clang-cl 의 기본 /fp:precise 는 축약을 허락하므로(-ffp-contract=on) 축약만 따로 끈다.
@@ -317,7 +335,7 @@ endfunction()
 # 타깃 경계 게이트 — 위 층 껍데기와 같은 틀을 타깃 단위로 넓힌다. `Source/` 가 모든 타깃의 include 루트라 층 표 밖(Core → Engine, Engine → GameFramework, 키트 → 매니페스트 밖 키트)은
 # 헤더만 쓰면 컴파일 · 링크가 되었다. 껍데기는 configure 의 `Scripts/generate/target_layers.py` 가 표(`Config/Rules/Layers/TargetLayers.toml`)와 매니페스트로 쓴다.
 #
-# sw_apply_target_layer_guard: 타깃의 include 자리 맨 앞에 게이트 폴더들을 둔다. 부분(`sw_add_module_part`)은 소유 타깃의 include 자리를 복사하므로 부분을 만들기 전에 부른다.
+# sw_apply_target_layer_guard: 타깃의 include 자리 맨 앞에 게이트 폴더들을 둔다. 부분(`sw_add_module_part`)은 디렉터리 끝에 소유 타깃의 include 자리를 받는다(DEFER).
 # sw_apply_module_layer_guard: 모듈 종류의 공통 게이트와 모듈별 게이트(`module/<이름>` — 매니페스트 전이 폐쇄 밖 모듈의 헤더)를 건다.
 # ------------------------------------------------------------------------------
 include("${CMAKE_BINARY_DIR}/generated/sw/config/TargetLayers.cmake")
@@ -342,7 +360,7 @@ endfunction()
 # sw_require_template_definitions: 정의를 보지 못한 템플릿 함수를 부르면 컴파일이 멈춘다(clang `-Werror=undefined-func-template`).
 # 템플릿 몸체를 `.inl` 로 뺀 헤더(`GameObjectManager.inl` — 헤더를 읽는 TU 400 여 개 중 부르는 TU 만 읽게)는 `.inl` 를 빠뜨리면 링크에서야 정의 없는 심볼로 섰고,
 # 같은 이미지의 다른 TU 가 같은 인자로 실체화하면 링크도 지나 숨었다(W-S4). 다른 TU 에 실체화가 있는 템플릿은 `extern template` 선언으로 알린다(`SharedAssetCache`).
-# 엔진 · GameFramework · 키트 · 게임만 건다 — 부분(`sw_add_module_part`)과 Jolt 오브젝트는 소유 타깃의 옵션을 복사하므로 그 전에 부른다. MSVC 에는 같은 진단이 없다.
+# 엔진 · GameFramework · 키트 · 게임만 건다 — 부분(`sw_add_module_part`)과 Jolt 오브젝트는 디렉터리 끝에 소유 타깃의 옵션을 받는다(DEFER). MSVC 에는 같은 진단이 없다.
 # ------------------------------------------------------------------------------
 function(sw_require_template_definitions TARGET_NAME)
 	if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")

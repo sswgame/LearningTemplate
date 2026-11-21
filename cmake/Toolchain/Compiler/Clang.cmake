@@ -157,11 +157,16 @@ if(MSVC)
 		$<$<CONFIG:Debug>:/DEBUG:GHASH> # 형식 레코드를 해시로 합친다(오브젝트에 해시가 없으면 lld 가 병렬로 계산) — 측정은 커밋 메시지
 		# Release 도 PDB 와 RSDS 서명을 만든다 — 크래시 덤프를 그 빌드의 심볼과 짝짓는 열쇠(`ModuleBuildID`). /DEBUG 는 /OPT:REF · /OPT:ICF 를 끄므로 아래에 다시 켠다.
 		# PDB 경로는 이름만 적는다(/PDBALTPATH:%_PDB%) — 빌드 기계의 경로가 배포물에 새지 않고, 심볼 서버는 이름 + GUID 로 찾는다.
-		$<$<CONFIG:Release>:/DEBUG:FULL>
 		$<$<CONFIG:Release>:/PDBALTPATH:%_PDB%>
 		$<$<CONFIG:Release>:/OPT:REF> # 미참조 함수 및 데이터 제거
-		$<$<CONFIG:Release>:/OPT:ICF> # 동일한 코드의 중복 함수 병합
 	)
+	# 배포만 같은 기계어 함수를 합친다(/OPT:ICF — 링크가 모든 함수 내용을 견주어 느리다). 개발 Release 는 증분 되풀이가 일이라 ICF 를 빼고
+	# 형식 레코드를 해시로 합친다(/DEBUG:GHASH — Debug 와 같다). 언리얼도 Shipping 이 아니면 ICF 를 끈다. LTO 를 배포에만 둔 것과 같은 결정(BuildLayout.cmake).
+	if(SW_SHIPPING_BUILD)
+		target_link_options(sw_compiler_clang INTERFACE $<$<CONFIG:Release>:/DEBUG:FULL> $<$<CONFIG:Release>:/OPT:ICF>)
+	else()
+		target_link_options(sw_compiler_clang INTERFACE $<$<CONFIG:Release>:/DEBUG:GHASH>)
+	endif()
 else()
 	# build-id 노트를 늘 적는다(배포판 clang 의 기본에 기대지 않는다) — `ModuleBuildID` 가 읽고 `.build-id/` 심볼 배치의 열쇠다.
 	target_link_options(sw_compiler_clang INTERFACE -fuse-ld=lld LINKER:--build-id=sha1)

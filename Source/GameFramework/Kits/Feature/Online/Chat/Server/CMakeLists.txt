@@ -4,8 +4,3 @@
 # ==============================================================================
 
 sw_add_game_framework_kit(GF_Server_Chat)
-if(NOT TARGET GF_Server_Chat)
-	return()
-endif()
-sw_link_runtime_kit(GF_Server_Chat GF_Chat)
-sw_link_runtime_kit(GF_Server_Chat GF_Server_OnlineCore)

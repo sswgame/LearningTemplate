@@ -4,8 +4,3 @@
 # ==============================================================================
 
 sw_add_game_framework_kit(GF_Server_Trade)
-if(NOT TARGET GF_Server_Trade)
-	return()
-endif()
-sw_link_runtime_kit(GF_Server_Trade GF_Trade)
-sw_link_runtime_kit(GF_Server_Trade GF_Server_OnlineCore)

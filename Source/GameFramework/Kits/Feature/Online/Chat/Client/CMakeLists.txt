@@ -4,7 +4,3 @@
 # ==============================================================================
 
 sw_add_game_framework_kit(GF_Client_Chat)
-if(NOT TARGET GF_Client_Chat)
-	return()
-endif()
-sw_link_runtime_kit(GF_Client_Chat GF_Chat)

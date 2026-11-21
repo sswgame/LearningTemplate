@@ -198,14 +198,20 @@ endfunction()
 # 그 헤더를 include 하면 "file not found" 로 멈춘다. 정적 라이브러리 · 별도 DLL 이 아닌 까닭: 확장 모듈이 따로 링크하면 정적 상태가
 # 두 벌이 되고 export 가 빠질 수 있다(언리얼이 모듈을 쪼개지 않고 Private 폴더 의존만 가르는 것과 같은 자리).
 # 정의 · 컴파일 옵션 · 자기 include 자리(내보내기 매크로 · 로그 태그 · 리플렉션 산출물 · FlagOps 강제 포함)는 모듈 타깃에서 그대로 받아
-# 같은 값을 두 곳에 적지 않는다. 모듈의 sw_add_module_library 다음에 부른다(리플렉션 산출 단계에 의존을 건다).
+# 같은 값을 두 곳에 적지 않는다. 받는 때는 이 디렉터리의 CMakeLists 가 끝날 때다(`cmake_language(DEFER)` — sw_copy_owner_compile_settings) —
+# 그래서 모듈에 설정을 더하는 줄이 부분을 만든 줄보다 뒤에 있어도 부분에 간다(예전에는 "모든 설정 뒤에 부분" 이라는 순서 규칙이었다).
 #
-#   OWNER    모듈 타깃(sw_add_module_library 로 만든 것)
-#   SOURCES  부분의 소스(모듈 SOURCES 에서는 부르는 쪽이 뺀다)
-#   LINK     부분이 쓰는 라이브러리(모듈의 LINK_PRIVATE 보다 좁게)
+#   OWNER       모듈 타깃(sw_add_module_library 로 만든 것)
+#   SOURCES     부분의 소스(모듈 SOURCES 에서는 부르는 쪽이 뺀다)
+#   LINK        부분이 쓰는 라이브러리(모듈의 LINK_PRIVATE 보다 좁게)
+#   LINK_OWNER  모듈의 링크 목록을 그대로 받는다(층 부분 — 좁힐 것이 없을 때). 다른 부분은 빼고 받는다. 정의 · 옵션 · 링크가 주인과 같으므로
+#               PCH 도 하나를 나눠 쓴다(`<OWNER>PartPch` — Engine 층 12 개가 각자 굽던 1.4 GB 를 하나로, 언리얼 UBT SharedPCH 자리). 주인의 PCH 를
+#               바로 쓰지 않는 까닭: REUSE_FROM 은 그 타깃에 빌드 의존을 거는데 주인은 부분을 링크해 순환이 된다. 층 껍데기 include 자리는 PCH 뒤 TU 에만
+#               걸리지만 PCH 내용(pch.h)은 가장 낮은 층 부분에서도 지어지던 것이라 위 층 헤더를 끌어오지 않는다.
+#               부분만의 정의를 더하는 부분(에디터 MVVM View 의 SW_EDITOR_PANEL_VIEW)은 clang 이 PCH 를 거부하므로 쓰지 않는다.
 # ------------------------------------------------------------------------------
 function(sw_add_module_part PART_NAME)
-	cmake_parse_arguments(ARG "" "OWNER" "SOURCES;LINK" ${ARGN})
+	cmake_parse_arguments(ARG "LINK_OWNER" "OWNER" "SOURCES;LINK" ${ARGN})
 	if(NOT TARGET ${ARG_OWNER})
 		message(FATAL_ERROR "sw_add_module_part(${PART_NAME}): OWNER '${ARG_OWNER}' is not a target")
 	endif()
@@ -223,23 +229,78 @@ function(sw_add_module_part PART_NAME)
 	else()
 		set(part_pic OFF)
 	endif()
-	set_target_properties(${PART_NAME} PROPERTIES FOLDER "${owner_folder}" POSITION_INDEPENDENT_CODE ${part_pic})
+	set_target_properties(${PART_NAME} PROPERTIES FOLDER "${owner_folder}" POSITION_INDEPENDENT_CODE ${part_pic} SW_MODULE_PART_OWNER ${ARG_OWNER})
 	target_link_libraries(${PART_NAME} PRIVATE ${ARG_LINK} sw_global_options)
-	# 생성식(`$<TARGET_PROPERTY:…>`)으로 받으면 모듈이 링크한 라이브러리의 사용 요구까지 따라와(imgui include 자리) 경계가 사라진다.
-	# 구성 때 모듈 자신의 값만 읽는다.
-	foreach(property COMPILE_DEFINITIONS COMPILE_OPTIONS INCLUDE_DIRECTORIES)
-		get_target_property(list_owner_value ${ARG_OWNER} ${property})
-		if(list_owner_value)
-			set_property(TARGET ${PART_NAME} APPEND PROPERTY ${property} ${list_owner_value})
-		endif()
-	endforeach()
+	set(copy_link OFF)
+	if(ARG_LINK_OWNER)
+		set(copy_link ON)
+	endif()
+	# DEFER 의 인자는 실행할 때 풀리므로 지금 값을 글로 박아 넘긴다.
+	cmake_language(EVAL CODE "cmake_language(DEFER CALL sw_copy_owner_compile_settings [[${PART_NAME}]] [[${ARG_OWNER}]] ${copy_link})")
 	if(TARGET ${ARG_OWNER}_ReflectionGen)
 		add_dependencies(${PART_NAME} ${ARG_OWNER}_ReflectionGen)
 	endif()
-	sw_configure_pch(${PART_NAME} "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
+	if(ARG_LINK_OWNER AND SW_ENABLE_PCH)
+		set(part_pch_owner ${ARG_OWNER}PartPch)
+		if(NOT TARGET ${part_pch_owner})
+			set(part_pch_source "${CMAKE_BINARY_DIR}/generated/sw/pch/${part_pch_owner}.cpp")
+			file(GENERATE OUTPUT "${part_pch_source}" CONTENT "// ${part_pch_owner}: PCH shared by the parts of ${ARG_OWNER} (no code)\n")
+			add_library(${part_pch_owner} OBJECT "${part_pch_source}")
+			set_target_properties(${part_pch_owner} PROPERTIES FOLDER "${owner_folder}" EXCLUDE_FROM_ALL ON POSITION_INDEPENDENT_CODE ${part_pic} SW_MODULE_PART_OWNER ${ARG_OWNER})
+			target_link_libraries(${part_pch_owner} PRIVATE sw_global_options)
+			cmake_language(EVAL CODE "cmake_language(DEFER CALL sw_copy_owner_compile_settings [[${part_pch_owner}]] [[${ARG_OWNER}]] ON)")
+			if(TARGET ${ARG_OWNER}_ReflectionGen)
+				add_dependencies(${part_pch_owner} ${ARG_OWNER}_ReflectionGen)
+			endif()
+			sw_configure_pch(${part_pch_owner} "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
+		endif()
+		target_precompile_headers(${PART_NAME} REUSE_FROM ${part_pch_owner})
+	else()
+		sw_configure_pch(${PART_NAME} "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
+	endif()
 	sw_set_unity_build(${PART_NAME})
 	# OBJECT 라이브러리를 직접 링크하면 오브젝트가 모듈 라이브러리에 들어간다(CMake 3.12+). 확장 모듈은 모듈의 export 로 그대로 쓴다.
 	target_link_libraries(${ARG_OWNER} PRIVATE ${PART_NAME})
+endfunction()
+
+# ------------------------------------------------------------------------------
+# sw_copy_owner_compile_settings — 모듈(OWNER)의 정의 · 컴파일 옵션 · include 자리와 손으로 더한 빌드 의존을 TARGET_NAME 에 더한다.
+#   부분(sw_add_module_part)과 Engine 의 Jolt 오브젝트가 디렉터리 끝에(DEFER) 부른다 — 모듈 설정이 다 붙은 뒤다.
+#   생성식(`$<TARGET_PROPERTY:…>`)으로 받으면 모듈이 링크한 라이브러리의 사용 요구까지 따라와(imgui include 자리) 경계가 사라진다 — 모듈 자신의 값만 읽는다.
+#   COPY_LINK 가 켜져 있으면 링크 목록도 받는다(다른 부분은 뺀다 — 부분끼리 서로 링크하지 않는다).
+# ------------------------------------------------------------------------------
+function(sw_copy_owner_compile_settings TARGET_NAME OWNER COPY_LINK)
+	set(list_property COMPILE_DEFINITIONS COMPILE_OPTIONS INCLUDE_DIRECTORIES)
+	foreach(property IN LISTS list_property)
+		get_target_property(list_owner_value ${OWNER} ${property})
+		if(list_owner_value)
+			set_property(TARGET ${TARGET_NAME} APPEND PROPERTY ${property} ${list_owner_value})
+		endif()
+	endforeach()
+	if(COPY_LINK)
+		get_target_property(list_owner_link ${OWNER} LINK_LIBRARIES)
+		set(list_link "")
+		foreach(library IN LISTS list_owner_link)
+			if(TARGET ${library})
+				get_target_property(library_owner ${library} SW_MODULE_PART_OWNER)
+				if(library_owner)
+					continue()
+				endif()
+			endif()
+			list(APPEND list_link "${library}")
+		endforeach()
+		if(list_link)
+			set_property(TARGET ${TARGET_NAME} APPEND PROPERTY LINK_LIBRARIES ${list_link})
+		endif()
+	endif()
+	# 모듈이 기다리는 코드젠을 같이 기다린다 — 자기 자신(Engine 이 Jolt 오브젝트를 기다린다)은 뺀다.
+	get_target_property(list_owner_dependency ${OWNER} MANUALLY_ADDED_DEPENDENCIES)
+	if(list_owner_dependency)
+		list(REMOVE_ITEM list_owner_dependency ${TARGET_NAME})
+	endif()
+	if(list_owner_dependency)
+		add_dependencies(${TARGET_NAME} ${list_owner_dependency})
+	endif()
 endfunction()
 
 # RHI 그래픽스 백엔드 MODULE — 표(CookContract.json rhi_backends)의 이름 하나를 받는다. Dev 만 짓는다(배포는 Source/Engine/CMakeLists.txt 가
@@ -286,6 +347,18 @@ function(sw_add_game_framework_kit KIT_NAME)
 		LINK_PUBLIC GameFramework Engine sw_public_source_includes
 		REFLECTION_EXCLUDE "/Editor/"
 	)
+	# 매니페스트의 키트 의존(`_listDependency` 가운데 Kit)을 PUBLIC 으로 링크한다 — 서버 · 클라이언트 키트(GF_Server_<X> · GF_Client_<X>)가 같은 기능의
+	# 런타임 키트(GF_<X>)와 GF_Server_OnlineCore 를 쓰는 자리. CMake 에 다시 적지 않는다(매니페스트가 원본, 에디터 확장 · 게임 모듈과 같은 방식).
+	# 일반 import 다 — 모듈 호스트가 런타임 키트의 섀도 복사본에 세대 이름을 주고 이 키트 복사본의 import 이름을 그 이름으로 바꾼다
+	# (`ModuleShadowCopy::writeShadowCopy`). 키트 폴더를 의존 순서로 들어가므로(Kits/CMakeLists.txt) 의존 키트 타깃이 먼저 서 있다.
+	sw_get_module_dependencies_of_kind(${KIT_NAME} Kit list_kit_dependency)
+	foreach(kit_dependency IN LISTS list_kit_dependency)
+		if(NOT TARGET ${kit_dependency})
+			get_property(dependency_reason GLOBAL PROPERTY SW_MODULE_${kit_dependency}_REASON)
+			message(FATAL_ERROR "sw_add_game_framework_kit(${KIT_NAME}): manifest dependency '${kit_dependency}' has no target (${dependency_reason})")
+		endif()
+		target_link_libraries(${KIT_NAME} PUBLIC ${kit_dependency})
+	endforeach()
 	# 키트의 에디터 확장(언리얼 플러그인의 <X>Editor 모듈)은 키트 폴더의 Editor/ 다. 런타임 · 서버로 나뉜 키트는 `Runtime/` 이 이 함수를 부르고
 	# 확장은 그 옆(`<기능>/Editor/`)에 있다.
 	if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Editor/CMakeLists.txt")
@@ -296,21 +369,6 @@ function(sw_add_game_framework_kit KIT_NAME)
 			add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/../Editor" "${CMAKE_CURRENT_BINARY_DIR}/Editor")
 		endif()
 	endif()
-endfunction()
-
-# 서버 · 클라이언트 키트(GF_Server_<X> · GF_Client_<X>)가 같은 기능의 런타임 키트(GF_<X>)를 링크합니다.
-# 일반 import 다 — 모듈 호스트가 런타임 키트의 섀도 복사본에 세대 이름을 주고 이 키트 복사본의 import 이름을 그 이름으로 바꾼다
-# (`ModuleShadowCopy::writeShadowCopy`). 그래서 의존은 매니페스트에 있어야 한다(없으면 로드가 거절된다).
-function(sw_link_runtime_kit KIT_NAME RUNTIME_KIT_NAME)
-	# 링크는 매니페스트 의존이어야 한다 — 키트 폴더를 의존 순서로 들어가므로(Kits/CMakeLists.txt) 그래야 런타임 키트 타깃이 먼저 선다.
-	get_property(list_dependency GLOBAL PROPERTY SW_MODULE_${KIT_NAME}_DEPENDENCIES)
-	if(NOT RUNTIME_KIT_NAME IN_LIST list_dependency)
-		message(FATAL_ERROR "sw_link_runtime_kit: ${KIT_NAME}.module.json must list ${RUNTIME_KIT_NAME} in _listDependency")
-	endif()
-	if(NOT TARGET ${KIT_NAME} OR NOT TARGET ${RUNTIME_KIT_NAME})
-		message(FATAL_ERROR "sw_link_runtime_kit: target '${KIT_NAME}' or '${RUNTIME_KIT_NAME}' does not exist")
-	endif()
-	target_link_libraries(${KIT_NAME} PUBLIC ${RUNTIME_KIT_NAME})
 endfunction()
 
 # ------------------------------------------------------------------------------

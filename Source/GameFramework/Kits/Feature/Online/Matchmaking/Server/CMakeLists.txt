@@ -4,8 +4,3 @@
 # ==============================================================================
 
 sw_add_game_framework_kit(GF_Server_Matchmaking)
-if(NOT TARGET GF_Server_Matchmaking)
-	return()
-endif()
-sw_link_runtime_kit(GF_Server_Matchmaking GF_Matchmaking)
-sw_link_runtime_kit(GF_Server_Matchmaking GF_Server_OnlineCore)

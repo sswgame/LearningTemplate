@@ -4,7 +4,3 @@
 # ==============================================================================
 
 sw_add_game_framework_kit(GF_Client_Social)
-if(NOT TARGET GF_Client_Social)
-	return()
-endif()
-sw_link_runtime_kit(GF_Client_Social GF_Social)

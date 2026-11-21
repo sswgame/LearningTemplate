@@ -21,6 +21,14 @@ sw_execute_python_script("Scripts/generate/configure_files.py"
 	REQUIRED
 )
 set(SW_CONFIGURE_FILES_GENERATED ON)
+# 생성기가 읽은 파일(생성기 .py · 층 표 · 매니페스트 · 프리셋)을 생성기 스스로 적는다 — 손 목록은 생성기 코드와 새 입력을 빠뜨렸다.
+# 목록이 없으면 생성기가 끝까지 돌지 않은 것이다 — 폴백 없이 멈춘다.
+set(configure_files_deps "${CMAKE_BINARY_DIR}/generated/sw/config/ConfigureFiles.deps")
+if(NOT EXISTS "${configure_files_deps}")
+	message(FATAL_ERROR "[ConfigureFiles] ${configure_files_deps} is missing - Scripts/generate/configure_files.py must write its input list")
+endif()
+file(STRINGS "${configure_files_deps}" list_configure_input)
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${list_configure_input})
 
 # ------------------------------------------------------------------------------
 # 2) project_constants.py 의 상수를 CMake 변수로(SW_DIR_* · SW_FILE_* …) · 쿠킹 표의 CMake 쪽

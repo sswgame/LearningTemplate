@@ -371,9 +371,20 @@ function(sw_decide_module_activation OUT_ACTIVE)
 		set(build_targets ${SW_TARGET_TYPE})
 	endif()
 
+	# 정적 모듈 구성(배포 · 웹 · Android 개발)은 RHI 백엔드 하나(SW_SHIPPING_RHI_BACKEND)를 Engine 에 링크한다 — 그 백엔드만 켜진다.
+	# 예전에는 RHI 매니페스트가 Dev 전용이라 정적 개발 구성에서 다섯이 모두 "켜짐" 인데 타깃이 없고, 배포에서는 고른 것도 "꺼짐" 이었다.
+	set(static_rhi_module "")
+	if(SW_STATIC_MODULES)
+		set(static_rhi_module "${SW_RHI_BACKEND_${SW_SHIPPING_RHI_BACKEND}_MODULE}")
+		if(static_rhi_module STREQUAL "")
+			message(FATAL_ERROR "[Module] SW_SHIPPING_RHI_BACKEND='${SW_SHIPPING_RHI_BACKEND}' is not an RHI backend of Config/Engine/CookContract.json (${SW_RHI_BACKEND_NAMES})")
+		endif()
+	endif()
+
 	set(active "")
 
 	foreach(name IN LISTS names)
+		get_property(kind GLOBAL PROPERTY SW_MODULE_${name}_KIND)
 		get_property(default GLOBAL PROPERTY SW_MODULE_${name}_ENABLED_BY_DEFAULT)
 		get_property(platforms GLOBAL PROPERTY SW_MODULE_${name}_PLATFORMS)
 		get_property(configurations GLOBAL PROPERTY SW_MODULE_${name}_CONFIGURATIONS)
@@ -406,6 +417,8 @@ function(sw_decide_module_activation OUT_ACTIVE)
 			sw_deactivate_module(${name} "not built for ${SW_CONFIGURATION_NAME}")
 		elseif(NOT target_hit)
 			sw_deactivate_module(${name} "not built for the ${SW_TARGET_TYPE} target")
+		elseif(static_rhi_module AND kind STREQUAL "RHI" AND NOT name STREQUAL static_rhi_module)
+			sw_deactivate_module(${name} "not the linked RHI backend (SW_SHIPPING_RHI_BACKEND=${SW_SHIPPING_RHI_BACKEND})")
 		else()
 			set_property(GLOBAL PROPERTY SW_MODULE_${name}_ACTIVE ON)
 			list(APPEND active ${name})
@@ -622,7 +635,7 @@ function(sw_sort_modules_by_dependency LIST_VAR)
 endfunction()
 
 # 종류가 KIND 인 모듈의 폴더를 의존 순서로(동점은 이름 순) OUT_VAR 에 — 꺼진 것도 든다(그 폴더의 팩토리가 "짓지 않는다" 로 적고 건너뛴다).
-# 의존 순서인 이유: 서버 · 클라이언트 키트가 같은 기능의 런타임 키트 타깃을 링크한다(`sw_link_runtime_kit` — 그 타깃이 먼저 있어야 한다).
+# 의존 순서인 이유: 키트가 매니페스트의 키트 의존 타깃을 링크한다(`sw_add_game_framework_kit` — 그 타깃이 먼저 있어야 한다).
 function(sw_get_module_directories_of_kind KIND OUT_VAR)
 	get_property(names GLOBAL PROPERTY SW_MODULE_NAMES)
 	set(of_kind "")

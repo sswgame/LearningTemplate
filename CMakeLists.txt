@@ -134,6 +134,8 @@ sw_configure_app_dependencies(Server)
 
 # 이 구성이 일부러 짓지 않는 소스(배포의 에디터 · 핫 리로드 · 고르지 않은 RHI 백엔드 …)를 빌드 트리에 적는다 — 구성 끝에 목록 파일로 쓴다.
 sw_write_excluded_source_list()
+# 모든 타깃을 훑어 이 구성이 짓지 않을 소스(플랫폼 폴더 · 개발 전용 · 반대쪽 대상 전용 · 위 목록)를 든 타깃이 있으면 구성을 세운다.
+sw_verify_built_sources()
 
 # 모든 타깃이 선 뒤 — `Source/` 아래 폴더를 include 경로로 준 타깃이 있으면 구성을 세운다(접두 없는 include 가 층 게이트를 비껴가는 길).
 sw_verify_source_include_roots()

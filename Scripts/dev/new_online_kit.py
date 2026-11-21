@@ -212,11 +212,6 @@ namespace sw
 # ==============================================================================
 
 sw_add_game_framework_kit(GF_Server_{name})
-if(NOT TARGET GF_Server_{name})
-	return()
-endif()
-sw_link_runtime_kit(GF_Server_{name} GF_{name})
-sw_link_runtime_kit(GF_Server_{name} GF_Server_OnlineCore)
 '''
     files[f"Server/{name}Service.h"] = f'''/**
  * @file {name}Service.h

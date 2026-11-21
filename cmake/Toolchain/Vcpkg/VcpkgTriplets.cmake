@@ -119,11 +119,11 @@ function(sw_vcpkg_write_overlay_triplets OUT_DIR)
 	endif()
 
 	# 웹: 엔진은 pthread(공유 메모리)로 짓는다(Platform/Web.cmake) — 포트도 -pthread(atomics · bulk-memory)여야 링크된다. 기본 triplet 을 읽고 플래그만 더해
-	# 도구 사슬 · 연결 방식은 vcpkg 기본을 따른다.
+	# 도구 사슬 · 연결 방식은 vcpkg 기본을 따른다. -msimd128 은 엔진(Architecture/WASM32.cmake)과 같게 — Jolt 의 벡터 형식이 v128 로 바뀌어 섞으면 ABI 가 갈린다.
 	sw_vcpkg_write_if_changed("${dir}/wasm32-emscripten-pthread.cmake"
 		"include(\"\${VCPKG_ROOT_DIR}/triplets/community/wasm32-emscripten.cmake\")"
-		"set(VCPKG_C_FLAGS \"-pthread\")"
-		"set(VCPKG_CXX_FLAGS \"-pthread\")"
+		"set(VCPKG_C_FLAGS \"-pthread -msimd128\")"
+		"set(VCPKG_CXX_FLAGS \"-pthread -msimd128\")"
 	)
 
 	set(${OUT_DIR} "${dir}" PARENT_SCOPE)

@@ -170,4 +170,25 @@ if(NOT TARGET sw_graphics_libs)
 	)
 endif()
 
+# ------------------------------------------------------------------------------
+# 3) 링크 — 증분 링크 · 기동 결속 · 배포 섹션 GC
+# ------------------------------------------------------------------------------
+# 공유 라이브러리가 바뀌어도 그것을 링크하는 쪽을 다시 링크하지 않는다(Windows 의 임포트 라이브러리 유지 — BuildLayout.cmake 와 같은 자리, 크로미움 `.TOC` 의 거친 판).
+# libEngine.so 하나를 고치면 모듈 · 키트 .so 전부가 다시 링크되던 것을 Engine 하나로 줄인다. 헤더가 바뀐 변경은 ABI 스탬프 TU 가 다시 컴파일돼 그 모듈이
+# 옵션과 무관하게 다시 링크된다(EngineABIStamp.cmake) — 남는 틈은 헤더는 두고 `.cpp` 에서만 지운 내보내기다. 그 틈은 아래 `-z now` 가 기동에서 잡는다.
+# 타깃을 만들기 전에 정해야 한다(LINK_DEPENDS_NO_SHARED 의 기본값) — LoadCompileFlags 는 타깃 규칙보다 먼저 읽힌다.
+set(CMAKE_LINK_DEPENDS_NO_SHARED ON)
+# 개발 구성은 실행 파일도 기동 때 모든 심볼을 결속한다 — 모듈은 이미 `dlopen( RTLD_NOW )`(ModuleLibraryUtil)라 적재에서 죽지만, 실행 파일(App · 테스트)은
+# 기본이 지연 결속이라 지운 함수를 처음 부를 때에야 죽었다. 위 증분 링크와 짝이다 — 빌드를 빠져나간 내보내기 제거를 기동에서 잡는다.
+# 배포는 정적 링크 한 실행 파일이라 둘 다 해당이 없다.
+if(NOT SW_SHIPPING_BUILD)
+	target_link_options(sw_platform_linux INTERFACE LINKER:-z,now)
+endif()
+# 배포본은 쓰지 않는 함수 · 데이터 섹션을 링크에서 버린다(Windows 의 /OPT:REF, NDK 는 이미 준다 — Android.cmake). 등록자는 정적 객체 생성자라
+# `.init_array` 가 붙잡아 지워지지 않는다. 크기 판정(5 % 미만이면 뺀다)은 배포본 바이트로 — ThinLTO 가 이미 많이 지운다.
+if(SW_SHIPPING_BUILD)
+	target_compile_options(sw_platform_linux INTERFACE $<$<CONFIG:Release>:-ffunction-sections> $<$<CONFIG:Release>:-fdata-sections>)
+	target_link_options(sw_platform_linux INTERFACE $<$<CONFIG:Release>:LINKER:--gc-sections>)
+endif()
+
 list(APPEND SW_FLAG_LIBRARIES sw_platform_linux)

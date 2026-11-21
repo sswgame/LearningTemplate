@@ -4,8 +4,3 @@
 # ==============================================================================
 
 sw_add_game_framework_kit(GF_Server_Leaderboard)
-if(NOT TARGET GF_Server_Leaderboard)
-	return()
-endif()
-sw_link_runtime_kit(GF_Server_Leaderboard GF_Leaderboard)
-sw_link_runtime_kit(GF_Server_Leaderboard GF_Server_OnlineCore)

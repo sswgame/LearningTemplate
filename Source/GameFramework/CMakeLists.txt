@@ -97,10 +97,8 @@ target_link_libraries(GameFramework PRIVATE openssl)
 # ------------------------------------------------------------------------------
 # 2) 층 부분 — 층마다 OBJECT 라이브러리 `GameFrameworkLayer<N>`(오브젝트는 GameFramework 이미지 안, `sw_add_module_part`). 부분 N 은 N 보다 위 층의 헤더마다
 #    같은 경로의 `#error` 껍데기를 자기 include 자리 맨 앞에 둔다(`sw_add_layer_stubs`) — 엔진 층과 같은 방식이다.
-#    GameFramework 설정(정의 · 링크 · 결정성 표시)이 모두 끝난 뒤에 둔다 — 부분은 그 값을 구성 때 복사한다.
+#    부분은 GameFramework 의 정의 · 옵션 · include · 링크 목록을 이 파일이 끝날 때 받는다(`LINK_OWNER`, DEFER).
 # ------------------------------------------------------------------------------
-# 링크 목록은 부분을 만들기 전에 한 번 읽는다 — `sw_add_module_part` 가 부분을 GameFramework 에 링크하므로 뒤에 읽으면 앞 부분이 섞인다.
-get_target_property(game_framework_link_libraries GameFramework LINK_LIBRARIES)
 foreach(tier IN LISTS SW_GAMEFRAMEWORK_TIER_LIST)
 	if(NOT game_framework_tier_source_${tier})
 		continue()   # 이 구성이 짓지 않는 층
@@ -108,7 +106,7 @@ foreach(tier IN LISTS SW_GAMEFRAMEWORK_TIER_LIST)
 	sw_add_module_part(GameFrameworkLayer${tier}
 		OWNER GameFramework
 		SOURCES ${game_framework_tier_source_${tier}}
-		LINK ${game_framework_link_libraries}
+		LINK_OWNER
 	)
 	sw_add_layer_stubs(GameFrameworkLayer${tier} ${tier} SW_GAMEFRAMEWORK_TIER GameFramework)
 endforeach()

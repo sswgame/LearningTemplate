@@ -4,7 +4,3 @@
 # ==============================================================================
 
 sw_add_game_framework_kit(GF_Client_ServerDirectory)
-if(NOT TARGET GF_Client_ServerDirectory)
-	return()
-endif()
-sw_link_runtime_kit(GF_Client_ServerDirectory GF_ServerDirectory)

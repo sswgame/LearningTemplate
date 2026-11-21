@@ -1,6 +1,6 @@
 # ==============================================================================
 # @file cmake/Toolchain/Vcpkg/VcpkgInstallPolicy.cmake
-# @brief 이 구성이 vcpkg 설치 폴더에 쓸 수 있는지 — 읽기 전용이면 그 까닭을 돌려준다(빈 값 = 설치해도 된다)
+# @brief vcpkg 설치 폴더 정책 — 이 구성이 설치 폴더에 쓸 수 있는지(읽기 전용이면 그 까닭, 빈 값 = 설치해도 된다)와 설치 계획(dry-run) 읽기
 #
 # 2026-11-10: 워크트리 구성에 `-DVCPKG_INSTALLED_DIR=<본 트리>/build/vcpkg_installed -DVCPKG_MANIFEST_INSTALL=OFF` 를 주었는데
 # 게이트가 VCPKG_MANIFEST_INSTALL 을 자기 판단으로 FORCE 해 덮고, 워크트리의 vcpkg 가 본 트리 설치(포트 49 → 10)를 지웠다.
@@ -34,4 +34,36 @@ function(sw_vcpkg_install_read_only_reason SOURCE_DIR INSTALLED_DIR USER_INSTALL
 	endif()
 
 	set(${OUT_REASON} "${reason}" PARENT_SCOPE)
+endfunction()
+
+# `vcpkg install --dry-run` 출력(영어로 고정 — VSLANG=1033)에서 지울 · 지을(다시 지을 포함) 포트를 읽는다.
+# 절마다 머리 줄("The following packages will be removed:" 등) 아래에 포트가 한 줄씩 온다. 게이트(Vcpkg.cmake 1b)가 부른다.
+function(sw_vcpkg_parse_install_plan OUTPUT OUT_REMOVE OUT_BUILD)
+	string(REPLACE "\r" "" output "${OUTPUT}")
+	string(REPLACE ";" "," output "${output}")
+	string(REPLACE "\n" ";" lines "${output}")
+	set(section "")
+	set(remove "")
+	set(build "")
+
+	foreach(line IN LISTS lines)
+		if(line MATCHES "^The following packages will be removed")
+			set(section "remove")
+		elseif(line MATCHES "^The following packages will be (built and installed|rebuilt)")
+			set(section "build")
+		elseif(line MATCHES "^The following packages")
+			set(section "")
+		elseif(line MATCHES "^ +[*]? *([^ :]+):")
+			if(section STREQUAL "remove")
+				list(APPEND remove "${CMAKE_MATCH_1}")
+			elseif(section STREQUAL "build")
+				list(APPEND build "${CMAKE_MATCH_1}")
+			endif()
+		elseif(NOT line MATCHES "^ ")
+			set(section "")
+		endif()
+	endforeach()
+
+	set(${OUT_REMOVE} "${remove}" PARENT_SCOPE)
+	set(${OUT_BUILD} "${build}" PARENT_SCOPE)
 endfunction()
