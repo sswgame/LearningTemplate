@@ -1,13 +1,13 @@
 #include "pch.h"
 
-#include "GameFramework/Runtime/Character/Combat/Health/HealthSourceComponent.h"
+#include "GameFramework/Runtime/Character/Combat/Health/IHealthSource.h"
 
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectEvents.h"
 
-#include "GameFramework/Runtime/Character/Combat/Health/HealthListenerComponent.h"
+#include "GameFramework/Runtime/Character/Combat/Health/IHealthListener.h"
 
 namespace sw
 {
@@ -25,21 +25,16 @@ namespace sw
 
 namespace sw
 {
-    HealthSourceComponent::HealthSourceComponent() = default;
-
-    HealthSourceComponent::~HealthSourceComponent() = default;
-
-    float32 HealthSourceComponent::getHealthRatio() const
+    float32 IHealthSource::getHealthRatio() const
     {
         return computeRatio( getHealthReading() );
     }
 
-    void HealthSourceComponent::notifyHealthChanged( bool bReset ) const
+    void IHealthSource::notifyHealthChanged( const IHealthSource& source, const GameObject* pOwner, bool bReset )
     {
-        const GameObject* pOwner = getOwner();
         if ( pOwner == nullptr )
             return;
-        const HealthReading reading = getHealthReading();
+        const HealthReading reading = source.getHealthReading();
         if ( reading._bHasHealth == SW_FALSE )
             return;
 
@@ -51,13 +46,12 @@ namespace sw
             event._kind = HealthChangeKind::Died;
         else
             event._kind = HealthChangeKind::Changed;
-        HealthListenerComponent::broadcast( *pOwner, event );
+        IHealthListener::broadcast( *pOwner, event );
     }
 
-    void HealthSourceComponent::deliverFatalHit( const HitInfo& hit )
+    void IHealthSource::deliverFatalHit( GameObject* pOwner, const HitInfo& hit )
     {
         // 이미 치명 표시가 달린 맞음이면 다른 컴포넌트도 그 표시로 받았다 — 두 번 보내지 않는다.
-        GameObject* pOwner = getOwner();
         if ( pOwner == nullptr || hit._bFatal )
             return;
         HitInfo fatal = hit;

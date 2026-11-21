@@ -21,7 +21,7 @@
 #include "Engine/Serialization/Serializer/CatalogKey.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Runtime/Character/Combat/Health/HealthSourceComponent.h"
+#include "GameFramework/Runtime/Character/Combat/Health/IHealthSource.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityEffect.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityPendingList.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityTypes.h"
@@ -72,8 +72,8 @@ namespace sw
      *          **다른 오브젝트에** 이펙트를 걸거나 이벤트를 보내면(`applyGameplayEffectSpecToTarget`, `sendGameplayEventToTarget`) 틱이 끝난 직후로 미룬다.
      *          `UnitStatsComponent::takeDamage` 도 같은 규칙을 따른다. 체력이 깎일 때 띄우는 피해 숫자도 틱 직후에 만든다.
      *
-     *          **연결된 UI**: 이 컴포넌트는 체력 원천(`HealthSourceComponent`)이다. 체력이나 최대 체력이 바뀔 때마다 같은 오브젝트의
-     *          `HealthListenerComponent`(HP 바)에 비율을 알리고, 체력이 0 이면 쓰러짐(`Died`)을 알린다. 이 컴포넌트는 HP 바의 존재를 알지 못한다.
+     *          **연결된 UI**: 이 컴포넌트는 체력 원천(`IHealthSource`)이다. 체력이나 최대 체력이 바뀔 때마다 같은 오브젝트의
+     *          `IHealthListener`(HP 바)에 비율을 알리고, 체력이 0 이면 쓰러짐(`Died`)을 알린다. 이 컴포넌트는 HP 바의 존재를 알지 못한다.
      *          `_bShowDamageNumbers` 가 켜져 있으면 체력이 깎일 때 피해 숫자 창구(`IDamageNumberSink`, 클라이언트 전용 구현)로 숫자를 띄운다.
      *          체력 어트리뷰트의 이름은 `_healthAttribute` 와 `_maxHealthAttribute` 로 바꿀 수 있다.
      *
@@ -82,12 +82,13 @@ namespace sw
      *          부여한 어빌리티는 싣지 않고 플레이를 시작할 때 세트가 다시 준다. 실행 중이던 어빌리티는 이어 가지 않는다(언리얼 GAS 와 같다).
      */
     REFLECT( Category = "Gameplay", DisplayName = "Ability System Component", Tooltip = "Attributes, gameplay effects, abilities and gameplay tags (Unreal GAS style)" )
-    class SW_GF_API AbilitySystemComponent : public HealthSourceComponent
+    class SW_GF_API AbilitySystemComponent : public Component
     {
         friend class Ability;
 
     public:
         REFLECT_BODY();
+        REFLECT_INTERFACE( IHealthSource, _healthSourcePort );
 
         using AttributeChangedDelegate    = Delegate<void( const AttributeChangeData& )>;
         using EffectDelegate              = Delegate<void( const ActiveGameplayEffect& )>;
@@ -362,7 +363,7 @@ namespace sw
         const hashed_string& getHealthAttribute() const { return _healthAttribute; }
         const hashed_string& getMaxHealthAttribute() const { return _maxHealthAttribute; }
         /** @brief 체력 원천의 읽기 값입니다. `_healthAttribute` 와 `_maxHealthAttribute` 의 current 를 읽고, 체력이 0 이하이면 쓰러진 것으로 봅니다. 체력 어트리뷰트가 없으면 `_bHasHealth` 가 SW_FALSE 입니다. */
-        HealthReading getHealthReading() const override;
+        HealthReading getHealthReading() const;
 
     private:
         /** @brief 부여된 어빌리티 하나입니다(언리얼의 `FGameplayAbilitySpec` 에 해당). 주소가 바뀌지 않도록 `unique_ptr` 로 보관한다. */
@@ -536,5 +537,13 @@ namespace sw
         float3 _damageNumberOffset;
         PROPERTY( Category = "Feedback", DisplayName = "Show Damage Numbers", Tooltip = "Spawn a floating number whenever health goes down" )
         bool _bShowDamageNumbers;
+
+    private:
+        /** @brief 체력 읽기 계약을 주인의 `getHealthReading` 으로 넘기는 포트입니다(`REFLECT_INTERFACE`). */
+        struct HealthSourcePort final : IHealthSource
+        {
+            HealthReading getHealthReading() const override;
+        };
+        HealthSourcePort _healthSourcePort;
     };
 } // namespace sw

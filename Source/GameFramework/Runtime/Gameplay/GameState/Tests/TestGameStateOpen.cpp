@@ -8,9 +8,10 @@
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
-#include "GameFramework/Runtime/Foundation/Condition/GameFlagsOwnerComponent.h"
+#include "GameFramework/Runtime/Foundation/Condition/IGameFlagsOwner.h"
 #include "GameFramework/Runtime/Gameplay/GameState/GameStateComponent.h"
 #include "GameFramework/Runtime/Gameplay/GameState/StateSectionTableUtil.h"
+#include "GameFramework/Runtime/Gameplay/GameState/Tests/FlagsOwnerTestComponent.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Wallet.h"
 
 using namespace sw;
@@ -47,8 +48,8 @@ SW_TEST_CASE( GameStateOpenTest, SecondStateInSceneIsRefused )
 }
 
 /**
- * @brief [GameStateOpenTest] 월드 플래그 소유자가 씬에 둘 열려 있으면 찾는 쪽(`GameFlagsOwnerComponent::findOpen` — 활성자 볼륨의 진행 플래그)이 오류로 멈춘다 — 등록 순서로 고르지 않는다
- * @details 판 상태는 둘째 열기를 거절하므로, 오브젝트 밖에서 연 판 상태를 레지스트리에 직접 올려 "둘 열림" 을 만든다(하위 레벨이 둘째 소유자를 연 경우).
+ * @brief [GameStateOpenTest] 월드 플래그 소유자가 씬에 둘 열려 있으면 찾는 쪽(`IGameFlagsOwner::findOpen` — 활성자 볼륨의 진행 플래그)이 오류로 멈춘다 — 등록 순서로 고르지 않는다
+ * @details 판 상태는 둘째 열기를 거절하므로, 같은 계약을 내보내는 다른 컴포넌트(`FlagsOwnerTestComponent`)로 "둘 열림" 을 만든다(하위 레벨이 둘째 소유자를 연 경우).
  */
 SW_TEST_CASE( GameStateOpenTest, SecondOpenFlagsOwnerIsAnError )
 {
@@ -57,14 +58,14 @@ SW_TEST_CASE( GameStateOpenTest, SecondOpenFlagsOwnerIsAnError )
     GameStateComponent* const pScene = manager.createGameObject( hashed_string( "Town" ) )->addComponent<GameStateComponent>();
     SW_REQUIRE_NOT_NULL( pScene );
     SW_REQUIRE_TRUE( pScene->initialize( GameStateSettings{} ) == GameStateInitResult::Fresh );
-    SW_EXPECT_TRUE( GameFlagsOwnerComponent::findOpen( &manager ) == &pScene->getFlags() );
+    SW_EXPECT_TRUE( IGameFlagsOwner::findOpen( &manager ) == &pScene->getFlags() );
 
-    GameStateComponent loose;
-    SW_REQUIRE_TRUE( loose.initialize( GameStateSettings{} ) == GameStateInitResult::Fresh ); // 오브젝트 밖이라 씬 검사를 지나지 않는다
-    manager.getComponentRegistry().add<GameFlagsOwnerComponent>( &loose );
-    SW_EXPECT_NULL( GameFlagsOwnerComponent::findOpen( &manager ) );
-    manager.getComponentRegistry().remove<GameFlagsOwnerComponent>( &loose );
-    SW_EXPECT_TRUE( GameFlagsOwnerComponent::findOpen( &manager ) == &pScene->getFlags() );
+    GameObject* const              pLevel = manager.createGameObject( hashed_string( "SubLevel" ) );
+    FlagsOwnerTestComponent* const pLoose = pLevel->addComponent<FlagsOwnerTestComponent>(); // 같은 계약의 둘째 주인 — 레지스트리 인터페이스 칸에 저절로 오른다
+    SW_REQUIRE_NOT_NULL( pLoose );
+    SW_EXPECT_NULL( IGameFlagsOwner::findOpen( &manager ) );
+    SW_REQUIRE_TRUE( pLevel->removeComponent( pLoose ) );
+    SW_EXPECT_TRUE( IGameFlagsOwner::findOpen( &manager ) == &pScene->getFlags() );
 }
 
 /** @brief [GameStateOpenTest] 판 1 세이브(플레이어 구간이 월드 상태 안에 있던 판)는 플레이어 구간을 버리고 경고하며 월드 구간(플래그)은 그대로 읽는다 */

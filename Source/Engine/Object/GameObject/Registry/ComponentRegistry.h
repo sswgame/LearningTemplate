@@ -149,6 +149,8 @@ namespace sw
             Iterator end() const { return Iterator( _pListEntry->data() + _pListEntry->size(), _pInterface ); }
             size_t   size() const { return _pListEntry->size(); }
             bool     empty() const { return _pListEntry->empty(); }
+            /** @brief 등록 순서로 @p index 번째의 포트입니다. */
+            I* operator[]( size_t index ) const { return static_cast<I*>( findPort( ( *_pListEntry )[index], _pInterface ) ); }
             /** @brief 등록 순서로 @p index 번째 항목의 컴포넌트입니다(로그 · 핸들용 — 계약은 `I*` 로 쓴다). */
             const Component* getComponent( size_t index ) const { return ( *_pListEntry )[index]._pComponent; }
 

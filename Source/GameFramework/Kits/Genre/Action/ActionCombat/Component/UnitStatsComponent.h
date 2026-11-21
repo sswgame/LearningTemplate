@@ -6,7 +6,7 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Runtime/Character/Combat/Health/HealthSourceComponent.h"
+#include "GameFramework/Runtime/Character/Combat/Health/IHealthSource.h"
 
 namespace sw
 {
@@ -14,10 +14,11 @@ namespace sw
     struct MonsterStatsDef;
 
     REFLECT( Category = "Gameplay", DisplayName = "Unit Stats Component", Tooltip = "Manages HP, Attack, Defense, Movement Speed, and Invincibility" )
-    class SW_KIT_API UnitStatsComponent : public HealthSourceComponent
+    class SW_KIT_API UnitStatsComponent : public Component
     {
     public:
         REFLECT_BODY();
+        REFLECT_INTERFACE( IHealthSource, _healthSourcePort );
         /** @brief 피해가 HP 에 닿는 시점에 호출되는 델리게이트입니다(`registerDamageApplied`). */
         using DamageAppliedDelegate = Delegate<void( const DamageAppliedEvent& )>;
 
@@ -62,7 +63,7 @@ namespace sw
         float32 getMoveSpeed() const { return _moveSpeed; }
         bool    isDead() const { return _bIsDead; }
         /** @brief 체력 원천의 읽기 뷰입니다. HP, 최대 HP, 죽음을 그대로 전달합니다. */
-        HealthReading getHealthReading() const override;
+        HealthReading getHealthReading() const;
 
         /** @brief 스탯을 한 번에 정합니다. 같은 오브젝트의 HP 바는 새 비율로 다시 맞춥니다(변화 연출 없이). */
         void setStats( int32 hp, int32 maxHP, int32 attack, int32 defense, float32 moveSpeed, float32 maxInvincibilityTime );
@@ -106,5 +107,13 @@ namespace sw
         bool _bShowDamageNumbers;
         PROPERTY( Category = "Feedback", DisplayName = "Damage Number Offset", Tooltip = "Where damage numbers appear, relative to the unit", Units = m )
         float3 _damageNumberOffset;
+
+    private:
+        /** @brief 체력 읽기 계약을 주인의 `getHealthReading` 으로 넘기는 포트입니다(`REFLECT_INTERFACE`). */
+        struct HealthSourcePort final : IHealthSource
+        {
+            HealthReading getHealthReading() const override;
+        };
+        HealthSourcePort _healthSourcePort;
     };
 } // namespace sw

@@ -18,7 +18,7 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Foundation/Condition/GameFlags.h"
-#include "GameFramework/Runtime/Foundation/Condition/GameFlagsOwnerComponent.h"
+#include "GameFramework/Runtime/Foundation/Condition/IGameFlagsOwner.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameStateRefs.h"
 #include "GameFramework/Runtime/World/Environment/WeatherMaterialWriter.h"
 #include "GameFramework/Runtime/World/Environment/WeatherSystem.h"
@@ -84,10 +84,11 @@ namespace sw
      *            게임 인스턴스가 생성자에서 `getStateSnapshot().registerStatefulComponent<GameStateComponent>()` 로 스냅샷에 등록한다.
      */
     REFLECT( Category = "Framework", DisplayName = "Game State", Tooltip = "World state, one per scene (flags, clock, weather, land) used by the kit directors on the same object" )
-    class SW_GF_API GameStateComponent : public GameFlagsOwnerComponent
+    class SW_GF_API GameStateComponent : public Component
     {
     public:
         REFLECT_BODY();
+        REFLECT_INTERFACE( IGameFlagsOwner, _gameFlagsOwnerPort );
 
         static constexpr uint32 kStateTag     = FourCCUtil::make( "GTST" );
         static constexpr uint32 kStateVersion = 2; ///< 2: 플레이어 구간(지갑 · 일지 · 평판 · 가방)이 `PlayerProgressComponent` 로 갔다 — 판 1 은 그 구간을 버리고 올린다
@@ -125,8 +126,8 @@ namespace sw
         bool isInitialized() const { return _bInitialized == SW_TRUE; }
         /** @brief 이번 판이 새 판으로 열렸으면 true 이고, 복원한 판이면 false 입니다. 디렉터가 시작값을 넣을지 판단할 때 묻습니다. */
         bool isFreshGame() const { return _bFreshGame == SW_TRUE; }
-        /** @brief 열렸으면 판 상태의 플래그입니다(`GameFlagsOwnerComponent` — 아래 층의 활성자 볼륨이 진행 플래그를 적는다). */
-        [[nodiscard]] GameFlags* findOpenFlags() override { return isInitialized() ? &_flags : nullptr; }
+        /** @brief 열렸으면 판 상태의 플래그입니다(`IGameFlagsOwner` — 아래 층의 활성자 볼륨이 진행 플래그를 적는다). */
+        [[nodiscard]] GameFlags* findOpenFlags() { return isInitialized() ? &_flags : nullptr; }
         GameFlags&               getFlags() { return _flags; }
         const GameFlags&         getFlags() const { return _flags; }
         WorldClock&              getClock() { return _clock; }
@@ -179,5 +180,13 @@ namespace sw
         PROPERTY( Tooltip = "Open with default settings at begin play - only for scenes without a kit director (showcases, tests); a director opens it with its own settings" )
         uint8                  _bOpenAtBeginPlay : 1;
         [[maybe_unused]] uint8 _reserved         : 4;
+
+    private:
+        /** @brief 플래그 주인 계약을 주인의 `findOpenFlags` 로 넘기는 포트입니다(`REFLECT_INTERFACE`). */
+        struct GameFlagsOwnerPort final : IGameFlagsOwner
+        {
+            [[nodiscard]] GameFlags* findOpenFlags() override;
+        };
+        GameFlagsOwnerPort _gameFlagsOwnerPort;
     };
 } // namespace sw

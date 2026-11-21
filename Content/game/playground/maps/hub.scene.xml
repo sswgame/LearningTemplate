@@ -6,7 +6,7 @@
 	     ArcadeGate(x 6): 오락실 기계 — minigames/kitdemo_actioncombat(SceneSwitch)으로 씬을 바꾼다. 마을은 돌아올 자리로 찍어 두고 돌아올 때 복원한다.
 	     두 입구 모두 Player 태그만 받고 다시 들어갈 수 있으며(_bOnce false), 안에서 나타난 플레이어(돌아와 복원된 자리)는 세지 않는다(_spawnInside Ignore — 나갔다 들어와야 다시 들어간다).
 	     Marker 는 마을 상태 표지다 — 시나리오 automation/hub 가 옮긴 자리가 미니게임에 다녀온 뒤에도 그대로인지 본다.
-	     Player 는 어빌리티 시스템(세트 HubResident — 공용 전투 어트리뷰트 체력)을 가진다. HP 바는 체력 원천 계약(HealthSourceComponent)으로 그것을 읽고,
+	     Player 는 어빌리티 시스템(세트 HubResident — 공용 전투 어트리뷰트 체력)을 가진다. HP 바는 체력 원천 계약(IHealthSource)으로 그것을 읽고,
 	     미니게임 결과 값(heal · haste)은 MinigameRewardComponent 가 돌아온 뒤 이펙트로 건다 — 미니게임 디렉터는 플레이어를 직접 고치지 않는다. -->
 	<SceneSettings _bStreaming="true" _unloadMargin="10" _maxCellLoadsPerFrame="4" _addToWorldBudgetMicroseconds="2000">
 		<_cellGrid _cellSize="10" _loadingRadius="40" />

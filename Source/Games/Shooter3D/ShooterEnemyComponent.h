@@ -13,8 +13,8 @@
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Runtime/Character/Combat/Health/HealthSourceComponent.h"
 #include "GameFramework/Runtime/Character/Combat/Health/HealthStateMachine.h"
+#include "GameFramework/Runtime/Character/Combat/Health/IHealthSource.h"
 
 namespace sw
 {
@@ -51,10 +51,11 @@ namespace sw
      *          `_radius` · `_height` 는 몸 이동 · 내비 에이전트 · 자동 조준이 쓰는 몸 크기다(판정에는 쓰지 않는다).
      */
     REFLECT( Category = "Shooter3D", DisplayName = "Shooter Enemy", Tooltip = "Skeleton enemy that rises, walks to the player, swings, staggers when hit and collapses" )
-    class ShooterEnemyComponent : public HealthSourceComponent
+    class ShooterEnemyComponent : public Component
     {
     public:
         REFLECT_BODY();
+        REFLECT_INTERFACE( IHealthSource, _healthSourcePort );
 
         ShooterEnemyComponent();
         virtual ~ShooterEnemyComponent() override = default;
@@ -86,7 +87,7 @@ namespace sw
         bool isAlive() const { return _bLaunched == SW_TRUE && _healthMachine.isAlive(); }
         bool isDead() const { return _bLaunched == SW_TRUE && _healthMachine.isAlive() == false; }
         /** @brief 체력 원천의 읽기입니다 — 쓰러짐은 `isDead()`. */
-        HealthReading getHealthReading() const override;
+        HealthReading getHealthReading() const;
         /** @brief 쓰러진 뒤 시체 시간이 지나 걷어도 되면 true 입니다. */
         bool              isRemovable() const { return isDead() && _phaseTime >= _corpseTime; }
         ShooterEnemyPhase getPhase() const { return _phase; }
@@ -179,5 +180,13 @@ namespace sw
         uint8                  _bHitEventMissingReported : 1; ///< 맞는 알림 없이 끝난 휘두름을 이미 오류로 알렸다(한 번만)
         uint8                  _bReplica                 : 1; ///< 네트 클라이언트의 복제 모습이다(규칙이 돌지 않는다)
         [[maybe_unused]] uint8 _reserved                 : 1;
+
+    private:
+        /** @brief 체력 읽기 계약을 주인의 `getHealthReading` 으로 넘기는 포트입니다(`REFLECT_INTERFACE`). */
+        struct HealthSourcePort final : IHealthSource
+        {
+            HealthReading getHealthReading() const override;
+        };
+        HealthSourcePort _healthSourcePort;
     };
 } // namespace sw

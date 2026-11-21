@@ -35,6 +35,11 @@ namespace sw
         _health       = health;
         _maxHealth    = maxHealth;
         _bHasSnapshot = SW_TRUE;
-        notifyHealthChanged( bFirst );
+        IHealthSource::notifyHealthChanged( _healthSourcePort, getOwner(), bFirst );
+    }
+
+    HealthReading RuleHealthViewComponent::HealthSourcePort::getHealthReading() const
+    {
+        return getPortOwner<const RuleHealthViewComponent>( *this, offsetof( RuleHealthViewComponent, _healthSourcePort ) ).getHealthReading();
     }
 } // namespace sw

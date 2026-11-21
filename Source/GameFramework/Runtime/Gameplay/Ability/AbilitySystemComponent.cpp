@@ -112,7 +112,7 @@ namespace sw
         if ( _abilitySetID.empty() == false )
             (void)grantAbilitySet( _abilitySetID.key() ); // 실패는 안에서 알린다
         (void)applyPendingState();                        // 세트가 어트리뷰트 · 시작 이펙트를 만든 뒤에 덮는다. 없으면 새 판이다
-        notifyHealthChanged( true );
+        IHealthSource::notifyHealthChanged( _healthSourcePort, getOwner(), true );
     }
 
     void AbilitySystemComponent::onEndPlay()
@@ -471,7 +471,7 @@ namespace sw
 
     void AbilitySystemComponent::onRegister( GameObjectManager& manager )
     {
-        HealthSourceComponent::onRegister( manager );
+        Component::onRegister( manager );
         manager.getComponentRegistry().add<AbilitySystemComponent>( this );
         // 모듈 내림은 이 컴포넌트만 듣는다(기반 가상 함수로 모든 컴포넌트를 훑지 않는다 — 언리얼 `FCoreUObjectDelegates` 구독 자리).
         _moduleUnloadingSubscription = game::getSubsystem<TypeRegistry>().subscribeModuleUnloading(
@@ -482,6 +482,11 @@ namespace sw
     {
         _moduleUnloadingSubscription = Subscription{};
         manager.getComponentRegistry().remove<AbilitySystemComponent>( this );
-        HealthSourceComponent::onUnregister( manager );
+        Component::onUnregister( manager );
+    }
+
+    HealthReading AbilitySystemComponent::HealthSourcePort::getHealthReading() const
+    {
+        return getPortOwner<const AbilitySystemComponent>( *this, offsetof( AbilitySystemComponent, _healthSourcePort ) ).getHealthReading();
     }
 } // namespace sw

@@ -175,14 +175,14 @@ namespace sw
 
     void GameStateComponent::onRegister( GameObjectManager& manager )
     {
-        GameFlagsOwnerComponent::onRegister( manager );
+        Component::onRegister( manager );
         manager.getComponentRegistry().add<GameStateComponent>( this );
     }
 
     void GameStateComponent::onUnregister( GameObjectManager& manager )
     {
         manager.getComponentRegistry().remove<GameStateComponent>( this );
-        GameFlagsOwnerComponent::onUnregister( manager );
+        Component::onUnregister( manager );
     }
 
     void GameStateComponent::onBeginPlay()
@@ -311,4 +311,8 @@ namespace sw
         return bRestored;
     }
 
+    GameFlags* GameStateComponent::GameFlagsOwnerPort::findOpenFlags()
+    {
+        return getPortOwner<GameStateComponent>( *this, offsetof( GameStateComponent, _gameFlagsOwnerPort ) ).findOpenFlags();
+    }
 } // namespace sw

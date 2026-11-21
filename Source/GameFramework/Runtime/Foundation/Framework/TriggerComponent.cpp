@@ -13,7 +13,7 @@
 #include "Engine/Physics/Scene/ScenePhysics.h"
 
 #include "GameFramework/Runtime/Foundation/Condition/GameFlags.h"
-#include "GameFramework/Runtime/Foundation/Condition/GameFlagsOwnerComponent.h"
+#include "GameFramework/Runtime/Foundation/Condition/IGameFlagsOwner.h"
 
 namespace sw
 {
@@ -205,7 +205,7 @@ namespace sw
     {
         (void)pActivator; // 바탕은 세션 기록이다 — 플레이어별 기록은 파생이 고른다(`SequenceTriggerComponent::_audience`)
         const GameObject* pOwner = getOwner();
-        GameFlags*        pFlags = GameFlagsOwnerComponent::findOpen( pOwner != nullptr ? pOwner->getManager() : nullptr ); // 감시 값 `Session.Flag` 와 같은 월드 상태(씬에 하나)
+        GameFlags*        pFlags = IGameFlagsOwner::findOpen( pOwner != nullptr ? pOwner->getManager() : nullptr ); // 감시 값 `Session.Flag` 와 같은 월드 상태(씬에 하나)
         if ( pFlags == nullptr )
         {
             SW_LOG_ERROR_ID( "Trigger.ProgressFlagNoSession", "Trigger '%#' records progress flag '%#' but the scene has no open GameStateComponent - it does nothing",

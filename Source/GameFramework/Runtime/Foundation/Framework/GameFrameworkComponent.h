@@ -3,7 +3,7 @@
  * @brief 게임 모드(`GameModeComponent`)를 핸들로 보는 뷰 · 컨트롤러 컴포넌트의 베이스입니다.
  * @details 게임 19 형식이 `_gameMode` 칸과 매니저 찾기 · `resolve` 를 저마다 적던 것을 합쳤다. 언리얼의 `GetWorld()->GetAuthGameMode<T>()` 자리다(비교는 기억에 의존한다).
  *          리플렉션이 템플릿 기반을 다루지 못해(`REFLECT` 형식은 템플릿 인자로 칸을 낼 수 없다) 게임 모드 형식은 찾을 때 받는다. 칸 이름 `_gameMode` 가 씬 · 프리팹의 키이므로 바꾸지 않는다.
- *          다른 기반을 잇는 형식(`HealthSourceComponent` · `AIControllerComponent` 파생)은 다중 상속을 하지 않고 `GameModeComponent::resolve` 를 그대로 쓴다.
+ *          다른 기반을 잇는 형식(`IHealthSource` · `AIControllerComponent` 파생)은 다중 상속을 하지 않고 `GameModeComponent::resolve` 를 그대로 쓴다.
  */
 #pragma once
 #include "Core/Foundation/Types.h"

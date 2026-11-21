@@ -1,0 +1,5 @@
+[
+  {"old": "HealthSourceComponent", "new": "IHealthSource", "why": "역할 베이스 → 리플렉션 인터페이스(포트 멤버, TypeNamingAudit 4.3)", "allowExisting": true},
+  {"old": "HealthListenerComponent", "new": "IHealthListener", "why": "역할 베이스 → 리플렉션 인터페이스(포트 멤버, TypeNamingAudit 4.3)", "allowExisting": true},
+  {"old": "GameFlagsOwnerComponent", "new": "IGameFlagsOwner", "why": "역할 베이스 → 리플렉션 인터페이스(포트 멤버, TypeNamingAudit 4.3)", "allowExisting": true}
+]

@@ -1,6 +1,6 @@
 /**
  * @file DismountOnDeathComponent.h
- * @brief 탑승자가 쓰러지면 강제로 내리게 합니다. 같은 오브젝트의 체력 신호(`HealthListenerComponent`)를 듣습니다. `VehicleSeatComponent::mount` 가 탑승자에게 이 컴포넌트를 붙입니다.
+ * @brief 탑승자가 쓰러지면 강제로 내리게 합니다. 같은 오브젝트의 체력 신호(`IHealthListener`)를 듣습니다. `VehicleSeatComponent::mount` 가 탑승자에게 이 컴포넌트를 붙입니다.
  */
 #pragma once
 #include "Core/Foundation/Macros.h"
@@ -9,7 +9,7 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Runtime/Character/Combat/Health/HealthListenerComponent.h"
+#include "GameFramework/Runtime/Character/Combat/Health/IHealthListener.h"
 
 namespace sw
 {
@@ -20,20 +20,29 @@ namespace sw
      * @details 탑승 중에도 탑승자의 히트박스는 소켓 계층을 따라가므로 그대로 맞는다. 탈것의 체력은 탈것의 것이다. 탑승 중이라고 무적이 되지는 않는다.
      */
     REFLECT( Category = "Vehicle", DisplayName = "Rider Down Watcher", Tooltip = "Forces the rider off its seat when its health reports death" )
-    class SW_GF_API DismountOnDeathComponent : public HealthListenerComponent
+    class SW_GF_API DismountOnDeathComponent : public Component
     {
     public:
         REFLECT_BODY();
+        REFLECT_INTERFACE( IHealthListener, _healthListenerPort );
 
         DismountOnDeathComponent();
         ~DismountOnDeathComponent() override = default;
 
-        void onHealthChanged( const HealthChangedEvent& event ) override;
+        void onHealthChanged( const HealthChangedEvent& event );
         /** @brief 탑승자가 사라지면 좌석을 비웁니다. 끊긴 핸들을 든 좌석은 다시 탈 수 없습니다. */
         void onUnregister( GameObjectManager& manager ) override;
 
     private:
         /** @brief 틱 뒤에 실행합니다. 앉아 있으면 강제로 내립니다. */
         void forceDismount();
+
+    private:
+        /** @brief 체력 변화 계약을 주인의 `onHealthChanged` 로 넘기는 포트입니다(`REFLECT_INTERFACE`). */
+        struct HealthListenerPort final : IHealthListener
+        {
+            void onHealthChanged( const HealthChangedEvent& event ) override;
+        };
+        HealthListenerPort _healthListenerPort;
     };
 } // namespace sw

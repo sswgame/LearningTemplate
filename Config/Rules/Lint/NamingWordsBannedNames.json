@@ -67,7 +67,7 @@
     "OnAfterReloadDelegate": "IReloadableModuleClient::onAfterReload(2026-11-21)",
     "OnReloadFaultDelegate": "IReloadableModuleClient::onReloadFault(2026-11-21)",
     "OnValidateLibraryDelegate": "IReloadableModuleClient::isLibraryUsable(2026-11-21)",
-    "findFirstOpen": "GameFlagsOwnerComponent::findOpen — 월드 플래그 소유자는 씬에 하나, 열린 것이 둘이면 오류로 nullptr(등록 순서로 고르지 않는다, 2026-11-21)",
+    "findFirstOpen": "IGameFlagsOwner::findOpen — 월드 플래그 소유자는 씬에 하나, 열린 것이 둘이면 오류로 nullptr(등록 순서로 고르지 않는다, 2026-11-21)",
     "EditorModuleManager": "ClientModuleManager — 배포 게임도 쓰는 클라이언트 호스트의 모듈 관리자, 장치 재생성 순서는 GameModuleManager::applyPendingDeviceChange(2026-11-21)",
     "reinitializeAfterRHISwap": "GameModuleManager::applyPendingDeviceChange — 장치 교체 순서(DeviceChangeSequence)가 게임 → 호스트 모듈을 다시 세운다(2026-11-21)",
     "recreateEditorInstance": "ClientModuleManager::recreateHostModule — suspendHostModule 의 짝 가상(2026-11-21)",
@@ -1992,6 +1992,9 @@
     "CallUno": "CallLastCard — 상표 회피 — 마지막 한 장 선언(last card call)(2026-11-21)",
     "callUno": "callLastCard — 상표 회피 — 마지막 한 장 선언(last card call)(2026-11-21)",
     "_unoTarget": "_lastCardTarget — 상표 회피 — 마지막 한 장 선언(last card call)(2026-11-21)",
-    "_unoPenalty": "_lastCardPenalty — 상표 회피 — 마지막 한 장 선언(last card call)(2026-11-21)"
+    "_unoPenalty": "_lastCardPenalty — 상표 회피 — 마지막 한 장 선언(last card call)(2026-11-21)",
+    "HealthSourceComponent": "IHealthSource — 역할 베이스 → 리플렉션 인터페이스(포트 멤버, TypeNamingAudit 4.3)(2026-11-21)",
+    "HealthListenerComponent": "IHealthListener — 역할 베이스 → 리플렉션 인터페이스(포트 멤버, TypeNamingAudit 4.3)(2026-11-21)",
+    "GameFlagsOwnerComponent": "IGameFlagsOwner — 역할 베이스 → 리플렉션 인터페이스(포트 멤버, TypeNamingAudit 4.3)(2026-11-21)"
   }
 }
