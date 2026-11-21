@@ -22,14 +22,14 @@ namespace sw
 
     void ShadowCaster2DComponent::onRegister( GameObjectManager& manager )
     {
-        Component::onRegister( manager );
+        SceneComponent::onRegister( manager );
         manager.getComponentRegistry().add<ShadowCaster2DComponent>( this );
     }
 
     void ShadowCaster2DComponent::onUnregister( GameObjectManager& manager )
     {
         manager.getComponentRegistry().remove<ShadowCaster2DComponent>( this );
-        Component::onUnregister( manager );
+        SceneComponent::onUnregister( manager );
     }
 
     void ShadowCaster2DComponent::computeWorldSegments( vector<float4>& outListSegment, vector<float2>& outListOutward ) const
@@ -49,7 +49,7 @@ namespace sw
             }
         }
         // 상자: 네 모서리를 월드로 옮기고, 변마다 바깥쪽은 가운데에서 멀어지는 쪽이다(거울 변환이어도 맞다).
-        const SceneComponent* pRoot        = pOwner->getPrimarySceneComponent();
+        const SceneComponent* pRoot        = this;
         const float4x4        world        = ( pRoot != nullptr ) ? pRoot->getWorldMatrix() : float4x4::Identity;
         const float32         halfX        = _size._x * 0.5f;
         const float32         halfY        = _size._y * 0.5f;

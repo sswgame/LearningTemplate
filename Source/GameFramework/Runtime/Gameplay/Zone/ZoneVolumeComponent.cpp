@@ -61,7 +61,7 @@ namespace sw
 
     void ZoneVolumeComponent::onRegister( GameObjectManager& manager )
     {
-        Component::onRegister( manager );
+        SceneComponent::onRegister( manager );
         manager.getComponentRegistry().add<ZoneVolumeComponent>( this );
         ZoneOccupantIndex::addLayerReader( manager );
         (void)ZoneSystem::getOrCreate( manager );
@@ -72,12 +72,12 @@ namespace sw
         manager.getComponentRegistry().remove<ZoneVolumeComponent>( this );
         ZoneOccupantIndex::removeLayerReader( manager );
         ZoneSystem::releaseIfUnused( manager );
-        Component::onUnregister( manager );
+        SceneComponent::onUnregister( manager );
     }
 
     void ZoneVolumeComponent::onBeginPlay()
     {
-        Component::onBeginPlay();
+        SceneComponent::onBeginPlay();
         _tracker.setSpawnInside( _spawnInside );
         if ( const GameObjectManager* pManager = getOwner() != nullptr ? getOwner()->getManager() : nullptr )
             _tracker.markAppeared( *pManager );
@@ -94,7 +94,7 @@ namespace sw
             const ActionSource source{ getSourceName(), pOwner->getHandle() };
             _tracker.exitAllOccupants( *pManager, _compiled, source );
         }
-        Component::onEndPlay();
+        SceneComponent::onEndPlay();
     }
 
     void ZoneVolumeComponent::releaseOccupants( GameObjectManager& manager )
@@ -112,7 +112,7 @@ namespace sw
         // 월드 경계 상자의 수평 반 크기 중 큰 쪽이다 — 회전 · 배율이 든다. 오너 트랜스폼이 없으면 로컬 반 크기다.
         const float3                half   = computeLocalHalfExtents();
         const GameObject* const     pOwner = getOwner();
-        const SceneComponent* const pScene = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
+        const SceneComponent* const pScene = pOwner != nullptr ? this : nullptr;
         if ( pScene == nullptr )
             return MathUtil::max( half._x, half._z );
         const AABB worldBox = AABB{ -half, half }.transformedBy( pScene->getWorldMatrix() );
@@ -199,7 +199,7 @@ namespace sw
     bool ZoneVolumeComponent::sampleAt( const float3& position, float32 bodyHeight, ZoneSample& outSample ) const
     {
         const GameObject* const     pOwner = getOwner();
-        const SceneComponent* const pScene = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
+        const SceneComponent* const pScene = pOwner != nullptr ? this : nullptr;
         if ( pScene == nullptr )
             return false;
         const float4x4 world = pScene->getWorldMatrix();
@@ -291,7 +291,7 @@ namespace sw
 
         // 안에 든 물리 개체를 고른다 — 캐릭터는 발, 움직이는 강체는 중심. 한 오브젝트에 둘이 있으면 캐릭터 쪽 하나다(거르기는 질의가 한다).
         _tracker.beginFrame();
-        const SceneComponent* const pScene = pOwner->getPrimarySceneComponent();
+        const SceneComponent* const pScene = this;
         float4x4                    world{};
         float4x4                    worldInverse{}; // 후보마다 풀지 않고 프레임에 한 번
         if ( pScene != nullptr )

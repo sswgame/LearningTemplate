@@ -8,7 +8,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
-#include "Engine/Object/Component/Component.h"
+#include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
@@ -24,7 +24,7 @@ namespace sw
      *          빛 레지스트리(`ComponentRegistry`)에 붙을 때 등록합니다.
      */
     REFLECT( Category = "Rendering 2D", DisplayName = "Shadow Caster 2D", Tooltip = "Blocks 2D lights with a box or the tile map outline" )
-    class SW_API ShadowCaster2DComponent : public Component
+    class SW_API ShadowCaster2DComponent : public SceneComponent
     {
     public:
         REFLECT_BODY();

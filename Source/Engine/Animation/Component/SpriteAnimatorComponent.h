@@ -14,7 +14,7 @@
 #include "Engine/Animation/Scene/AnimationSystem.h"
 #include "Engine/Animation/Sprite/SpriteClipPlayable.h"
 #include "Engine/Asset/AssetRef.h"
-#include "Engine/Object/Component/SceneComponent.h"
+#include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
@@ -81,7 +81,7 @@ namespace sw
      *          (언리얼은 루트 모션을 켜지 않으면 애니메이션이 액터 루트를 옮기지 않고, 유니티 2D 도 움직이는 스프라이트를 자식에 둔다).
      */
     REFLECT( Category = "Animation 2D", DisplayName = "Sprite Animator Component", Tooltip = "2D Sprite frame animation controller", Meta = "Icon=Animation" )
-    class SW_API SpriteAnimatorComponent : public SceneComponent
+    class SW_API SpriteAnimatorComponent : public Component
     {
         friend class SpriteAnimatorClipSource;
         friend class SpriteAnimatorLODClient;

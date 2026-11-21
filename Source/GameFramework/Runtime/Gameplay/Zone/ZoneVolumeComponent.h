@@ -19,7 +19,7 @@
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Asset/AssetRef.h"
-#include "Engine/Object/Component/Component.h"
+#include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -46,7 +46,7 @@ namespace sw
      * @brief 지역 볼륨입니다(파일 머리말 참고).
      */
     REFLECT( Category = "Gameplay", DisplayName = "Zone Volume", Tooltip = "Area that runs a zone profile (*.zone.xml) on the bodies inside: actions, physics fields, NPC and nav reactions" )
-    class SW_GF_API ZoneVolumeComponent : public Component
+    class SW_GF_API ZoneVolumeComponent : public SceneComponent
     {
     public:
         REFLECT_BODY();

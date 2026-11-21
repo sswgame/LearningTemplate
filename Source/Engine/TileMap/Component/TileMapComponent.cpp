@@ -63,12 +63,12 @@ namespace sw
     {
         removePhysicsBodies();
         releaseChunks();
-        Component::onUnregister( manager );
+        SceneComponent::onUnregister( manager );
     }
 
     void TileMapComponent::onPostLoad()
     {
-        Component::onPostLoad();
+        SceneComponent::onPostLoad();
         // 편집 중 미리보기 — 플레이 전에도 보이게 그리기 배치만 만든다(바디는 플레이 시작의 rebuild 가 만든다).
         if ( _tileMapPath.empty() == false && loadTileMap() )
             (void)rebuildChunks(); // 관리자가 없으면(소유자 없음) 그릴 곳이 없다 — 알릴 것도 없다
@@ -76,7 +76,7 @@ namespace sw
 
     void TileMapComponent::onBeginPlay()
     {
-        Component::onBeginPlay();
+        SceneComponent::onBeginPlay();
         setTickGroup( TickGroup::PrePhysics );
         const bool bLoadFailed = _bLoaded == SW_FALSE && _tileMapPath.empty() == false && loadTileMap() == false;
         if ( bLoadFailed )
@@ -88,7 +88,7 @@ namespace sw
     void TileMapComponent::onEndPlay()
     {
         removePhysicsBodies();
-        Component::onEndPlay();
+        SceneComponent::onEndPlay();
     }
 
     void TileMapComponent::onTick( TickContext& context )
@@ -114,7 +114,7 @@ namespace sw
         // 오브젝트가 움직였는지 본다. 타일맵은 대개 서 있다 — 장면 컴포넌트와 월드 변경 번호가 그대로면 행렬도 읽지 않는다.
         // 번호가 바뀌어도 행렬이 같으면(같은 값으로 다시 합성) 칸을 다시 놓지 않도록 행렬 비교는 남긴다.
         const GameObject*     pOwner         = getOwner();
-        const SceneComponent* pRoot          = ( pOwner != nullptr ) ? pOwner->getPrimarySceneComponent() : nullptr;
+        const SceneComponent* pRoot          = ( pOwner != nullptr ) ? this : nullptr;
         const uint32          version        = ( pRoot != nullptr ) ? pRoot->getWorldTransformVersion() : 0u;
         const bool            bSameTransform = pRoot == _pLastOwnerRoot && version == _lastOwnerVersion;
         _pLastOwnerRoot                      = pRoot;
@@ -199,7 +199,7 @@ namespace sw
 
     void TileMapComponent::onPropertyChanged( hashed_string propertyName )
     {
-        Component::onPropertyChanged( propertyName );
+        SceneComponent::onPropertyChanged( propertyName );
         static const hashed_string s_tileMapName( "_tileMapPath" );
         static const hashed_string s_materialName( "_materialPath" );
         static const hashed_string s_sortingLayerName( "_sortingLayer" );
@@ -231,7 +231,7 @@ namespace sw
 
     void TileMapComponent::onOwnerActiveInHierarchyChanged()
     {
-        Component::onOwnerActiveInHierarchyChanged();
+        SceneComponent::onOwnerActiveInHierarchyChanged();
         for ( unique_ptr<SpriteInstanceBatch>& pBatch : _listChunkBatch )
         {
             if ( pBatch != nullptr )
@@ -668,7 +668,7 @@ namespace sw
     float4x4 TileMapComponent::getOwnerWorld() const
     {
         const GameObject*     pOwner = getOwner();
-        const SceneComponent* pRoot  = ( pOwner != nullptr ) ? pOwner->getPrimarySceneComponent() : nullptr;
+        const SceneComponent* pRoot  = ( pOwner != nullptr ) ? this : nullptr;
         return ( pRoot != nullptr ) ? pRoot->getWorldMatrix() : float4x4::Identity;
     }
 } // namespace sw

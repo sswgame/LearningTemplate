@@ -15,7 +15,7 @@
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Asset/Cache/AssetReloadWatch.h"
 #include "Engine/Foundation/PhysicsHandle.h"
-#include "Engine/Object/Component/Component.h"
+#include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Physics/IPhysicsSceneFwd.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/TileMap/TileGridUtil.h"
@@ -48,7 +48,7 @@ namespace sw
      *          물리 바디는 `rebuild`(플레이 시작)만 만듭니다. 편집 중에는 틱이 없으므로 오브젝트를 옮긴 뒤의 칸 자리는 다음 미리보기 갱신에 따라옵니다.
      */
     REFLECT( Category = "Rendering 2D", DisplayName = "Tile Map Renderer", Tooltip = "Draws a tile layer with rule and animated tiles and builds its colliders", Meta = "Icon=TileMap" )
-    class SW_API TileMapComponent : public Component
+    class SW_API TileMapComponent : public SceneComponent
     {
     public:
         REFLECT_BODY();

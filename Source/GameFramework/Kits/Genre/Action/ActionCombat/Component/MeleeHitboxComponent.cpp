@@ -38,7 +38,7 @@ namespace sw
 
     void MeleeHitboxComponent::onBeginPlay()
     {
-        Component::onBeginPlay();
+        SceneComponent::onBeginPlay();
         // 물리가 이번 프레임 위치로 옮긴 뒤에 쓴다.
         setTickGroup( TickGroup::PostPhysics );
         _listPreviousPoint.clear();
@@ -46,7 +46,7 @@ namespace sw
 
     void MeleeHitboxComponent::onTick( TickContext& context )
     {
-        Component::onTick( context );
+        SceneComponent::onTick( context );
 
         if ( _bIsAttacking == false )
             return;
@@ -97,7 +97,7 @@ namespace sw
     void MeleeHitboxComponent::collectBlade( vector<float3>& outListPoint ) const
     {
         const GameObject*     pOwner = getOwner();
-        const SceneComponent* pScene = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
+        const SceneComponent* pScene = pOwner != nullptr ? this : nullptr;
         const float4x4        world  = pScene != nullptr ? pScene->getWorldMatrix() : float4x4::Identity;
         MeleeHit::makeBlade( float3::transform( _bladeStart, world ), float3::transform( _bladeEnd, world ), kMeleeHitboxBladeSampleCount, outListPoint );
     }

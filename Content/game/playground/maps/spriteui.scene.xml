@@ -31,11 +31,7 @@
 					                 _attachOwner="None"
 					                 _attachComponent="None"
 					                 _clipPath="engine/textures/test/quadrants.sprite.xml" />
-					<SpriteAnimatorComponent _localID="6519445003455735703" _localPosition="0,0,0"
-					                         _localRotation="0,0,0"
-					                         _localScale="1,1,1"
-					                         _attachOwner="None"
-					                         _attachComponent="None"
+					<SpriteAnimatorComponent _localID="6519445003455735703"
 					                         _bRepeat="true" />
 				</_listComponent>
 			</GameObject>
