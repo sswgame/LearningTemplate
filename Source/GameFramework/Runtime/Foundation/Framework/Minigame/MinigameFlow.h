@@ -126,13 +126,6 @@ namespace sw
         uint32 getLeakCount() const { return _leakCount; }
         /** @brief 씬 전환 미니게임에서 나와 돌아올 자리를 복원한 수입니다. 감시 값 `Minigame.RestoreCount` 가 읽는다. */
         uint32 getRestoreCount() const { return _restoreCount; }
-        /**
-         * @brief 마지막으로 나온 순간(결과를 넘기기 직전)의 에셋 캐시가 쥔 바이트 추정 합(CPU + GPU, `AssetCacheBase::collectMemoryEntries`)입니다. 감시 값 `Minigame.LeaveAssetCacheBytes` 가 읽는다.
-         * @details 들어가기 → 나오기를 되풀이하며 이 값과 `getLeaveHeapBytes` 가 회차마다 느는지 본다(미니게임이 쥔 것을 나올 때 돌려주는지). 판정 문턱은 측정 뒤에 정한다.
-         */
-        uint64 getLeaveAssetCacheBytes() const { return _leaveAssetCacheBytes; }
-        /** @brief 마지막으로 나온 순간의 힙 바이트입니다 — 메모리 프로파일러가 있으면 sw 할당자의 살아 있는 바이트, 없으면 플랫폼 힙(측정 못 하는 구성은 0). 감시 값 `Minigame.LeaveHeapBytes` 가 읽는다. */
-        uint64 getLeaveHeapBytes() const { return _leaveHeapBytes; }
         /** @brief 마지막으로 넘긴 결과입니다. 없으면 빈 값입니다. 감시 값 `Minigame.LastResult` 이 읽는다. */
         const MinigameResult& getLastResult() const { return _lastResult; }
 
@@ -178,8 +171,6 @@ namespace sw
         void deactivateScope();
         /** @brief 하위 레벨 @p returnPoint 를 바탕 씬이 아직 활성이면 뺍니다. */
         static void removeSubLevel( const MinigameSubLevelReturn& returnPoint );
-        /** @brief 나온 순간의 에셋 캐시 · 힙 바이트를 찍습니다(`getLeaveAssetCacheBytes` · `getLeaveHeapBytes`). */
-        void sampleLeaveMemory();
         /** @brief 결과를 넘깁니다(`onFinished`). */
         void deliverResult( const MinigameResult& result );
         /** @brief 다른 진입 · 나가기가 맵을 기다리는 중이면 @p name 의 요청을 거절한다고 알리고 true 입니다. */
@@ -202,8 +193,6 @@ namespace sw
         Subscription                 _sceneLoadRequested;   ///< 씬 로드 받아들임 알림의 구독(초기화가 걸고 종료가 푼다)
         uint32                       _leakCount;            ///< 끈 범위들이 남긴 것의 합
         uint32                       _restoreCount;         ///< 돌아올 자리 복원 수
-        uint64                       _leaveAssetCacheBytes; ///< 마지막으로 나온 순간의 에셋 캐시 바이트 추정 합
-        uint64                       _leaveHeapBytes;       ///< 마지막으로 나온 순간의 힙 바이트
         uint8                        _bEntering        : 1; ///< 맨 위 미니게임의 맵을 기다리는 중이면 1(하나만 — 겹친 진입은 거절한다)
         uint8                        _bRequestingScene : 1; ///< 이 흐름이 씬 로드를 요청하는 동안 1(받아들임 알림이 동기로 온다)
     };

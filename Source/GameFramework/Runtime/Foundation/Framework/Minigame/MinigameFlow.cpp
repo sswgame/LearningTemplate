@@ -192,25 +192,47 @@ namespace sw
                 return true;
             }
 
-            /** @brief 감시 값 `Minigame.LeaveAssetCacheBytes` 입니다 — 마지막으로 나온 순간의 에셋 캐시 바이트 추정 합(되풀이해 느는지 본다). */
+            /** @brief 미니게임에서 나와 바탕 판에 있으면(켜진 · 나가는 미니게임이 없다) 흐름을, 아니면 nullptr 입니다 — 나온 뒤 메모리 감시 값의 조건. */
+            static const MinigameFlow* findLeftFlow()
+            {
+                const MinigameFlow* const pFlow = game::findSubsystem<MinigameFlow>();
+                if ( pFlow == nullptr || pFlow->getStack().getDepth() != 0 || pFlow->isLeaving() )
+                    return nullptr;
+                return pFlow;
+            }
+
+            /**
+             * @brief 감시 값 `Minigame.LeaveAssetCacheBytes` 입니다 — 나온 뒤 지금 에셋 캐시가 쥔 바이트 추정 합(CPU + GPU, `AssetCacheBase::collectMemoryEntries`). 미니게임 안이면 값이 없다.
+             * @details 읽을 때 잰다 — 흐름은 칸 · 접근자를 들지 않아 배포에 재는 일도 읽는 API 도 없다. 들어가기 → 나오기를 되풀이하며 회차마다 느는지 본다(판정 문턱은 측정 뒤).
+             */
             [[nodiscard]] static bool readLeaveAssetCacheBytes( const GameObjectManager* pObjects, float64& outValue )
             {
                 (void)pObjects;
-                const MinigameFlow* const pFlow = game::findSubsystem<MinigameFlow>();
-                if ( pFlow == nullptr )
+                const AssetManager* pAssetManager = game::findSubsystem<AssetManager>();
+                if ( findLeftFlow() == nullptr || pAssetManager == nullptr )
                     return false;
-                outValue = static_cast<float64>( pFlow->getLeaveAssetCacheBytes() );
+                vector<AssetMemoryEntry> listEntry;
+                for ( const AssetCacheBase* pCache : pAssetManager->getAllAssetCache() )
+                {
+                    pCache->collectMemoryEntries( listEntry );
+                }
+                uint64 cacheBytes = 0;
+                for ( const AssetMemoryEntry& entry : listEntry )
+                {
+                    cacheBytes += entry._cpuBytes + entry._gpuBytes;
+                }
+                outValue = static_cast<float64>( cacheBytes );
                 return true;
             }
 
-            /** @brief 감시 값 `Minigame.LeaveHeapBytes` 입니다 — 마지막으로 나온 순간의 힙 바이트(되풀이해 느는지 본다). */
+            /** @brief 감시 값 `Minigame.LeaveHeapBytes` 입니다 — 나온 뒤 지금 힙 바이트(메모리 프로파일러가 있으면 sw 할당자의 살아 있는 바이트, 없으면 플랫폼 힙). 미니게임 안이면 값이 없다. */
             [[nodiscard]] static bool readLeaveHeapBytes( const GameObjectManager* pObjects, float64& outValue )
             {
                 (void)pObjects;
-                const MinigameFlow* const pFlow = game::findSubsystem<MinigameFlow>();
-                if ( pFlow == nullptr )
+                if ( findLeftFlow() == nullptr )
                     return false;
-                outValue = static_cast<float64>( pFlow->getLeaveHeapBytes() );
+                const MemoryProfiler* pProfiler = MemoryProfiler::getActive();
+                outValue                        = static_cast<float64>( pProfiler != nullptr ? pProfiler->getLiveAllocatedBytes() : MemoryProfiler::getPlatformHeapBytes() );
                 return true;
             }
 
@@ -242,8 +264,6 @@ namespace sw
         , _sceneLoadRequested{}
         , _leakCount{ 0 }
         , _restoreCount{ 0 }
-        , _leaveAssetCacheBytes{ 0 }
-        , _leaveHeapBytes{ 0 }
         , _bEntering{ SW_FALSE }
         , _bRequestingScene{ SW_FALSE }
     {
@@ -638,31 +658,8 @@ namespace sw
             (void)subLevels.removeSubLevel( returnPoint._subLevelName.view() ); // 방금 찾은 이름이다
     }
 
-    void MinigameFlow::sampleLeaveMemory()
-    {
-        // 나올 때마다 한 번 — 캐시마다 에셋 줄을 모아 더한다(프레임 길이 아니다).
-        uint64              cacheBytes    = 0;
-        const AssetManager* pAssetManager = game::findSubsystem<AssetManager>();
-        if ( pAssetManager != nullptr )
-        {
-            vector<AssetMemoryEntry> listEntry;
-            for ( const AssetCacheBase* pCache : pAssetManager->getAllAssetCache() )
-            {
-                pCache->collectMemoryEntries( listEntry );
-            }
-            for ( const AssetMemoryEntry& entry : listEntry )
-            {
-                cacheBytes += entry._cpuBytes + entry._gpuBytes;
-            }
-        }
-        _leaveAssetCacheBytes           = cacheBytes;
-        const MemoryProfiler* pProfiler = MemoryProfiler::getActive();
-        _leaveHeapBytes                 = pProfiler != nullptr ? pProfiler->getLiveAllocatedBytes() : MemoryProfiler::getPlatformHeapBytes();
-    }
-
     void MinigameFlow::deliverResult( const MinigameResult& result )
     {
-        sampleLeaveMemory(); // 끈 범위 · 뺀 하위 레벨 · 돌아간 씬이 선 뒤다 — 모든 나오기 길이 여기를 지난다
         _lastResult = result;
         SW_LOG_INFO_ID( "MinigameFlow.Finished", "Minigame '%#' finished (result '%#')", result._minigame.c_str(), result._resultName.c_str() );
         _onFinished.broadcast( result );
@@ -797,8 +794,8 @@ namespace sw
     SW_AUTOMATION_WATCH( minigameRestoreCount, "Minigame.RestoreCount", "Times the scene captured before a scene-switch minigame was restored on leaving", &MinigameFlowInternal::readRestoreCount );
     SW_AUTOMATION_WATCH( minigameDepth, "Minigame.Depth", "Stacked minigames (the active one and the ones it covers)", &MinigameFlowInternal::readDepth );
     SW_AUTOMATION_WATCH( minigameLeaveAssetCacheBytes, "Minigame.LeaveAssetCacheBytes",
-                         "Estimated bytes held by the asset caches when the last minigame was left (repeat enter and leave to see whether it grows)", &MinigameFlowInternal::readLeaveAssetCacheBytes );
+                         "Estimated bytes held by the asset caches now, read after leaving a minigame (no value inside one; repeat enter and leave to see whether it grows)", &MinigameFlowInternal::readLeaveAssetCacheBytes );
     SW_AUTOMATION_WATCH( minigameLeaveHeapBytes, "Minigame.LeaveHeapBytes",
-                         "Heap bytes when the last minigame was left: live sw allocator bytes with the memory profiler, else the platform heap (0 where it cannot be measured)",
+                         "Heap bytes now, read after leaving a minigame: live sw allocator bytes with the memory profiler, else the platform heap (no value inside one; 0 where it cannot be measured)",
                          &MinigameFlowInternal::readLeaveHeapBytes );
 } // namespace sw
