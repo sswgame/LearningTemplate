@@ -65,7 +65,7 @@ namespace sw
         : _mods{ nullptr }
         , _clientPart{ nullptr }
     {
-        // 키트 시연 디렉터(GameModeComponent 파생 — KitDemoComponent · ActionPlatformerDemoComponent …)의 판 상태를 세이브 · 핫 리로드에 싣는다. 바탕 형식 하나로 올리면
+        // 키트 시연 디렉터(GameModeComponent 파생 — KitDemoComponent · ActionPlatformerGameModeComponent …)의 판 상태를 세이브 · 핫 리로드에 싣는다. 바탕 형식 하나로 올리면
         // 파생이 모두 실린다(순회는 파생을 포함하고 상태는 가상 serializeState). 올리지 않으면 game.save · game.load 가 판을 조용히 새로 연다(kitdemo_respawn 4).
         getStateSnapshot().registerGameMode<GameModeComponent>();
     }

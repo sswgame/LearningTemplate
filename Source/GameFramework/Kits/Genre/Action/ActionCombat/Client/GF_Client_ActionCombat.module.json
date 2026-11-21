@@ -1,0 +1,22 @@
+{
+    "_name": "GF_Client_ActionCombat",
+    "_version": "1.0.0",
+    "_kind": "Kit",
+    "_description": "액션 컴뱃 키트(클라이언트) — 입력 맵 액션을 디렉터 입력 명령으로 바꾸고 룸 · 플레이어 · HP 바를 그린다(뷰 · 입력 · HUD). 규칙 · 디렉터는 GF_ActionCombat",
+    "_listDependency": [
+        {
+            "_name": "GameFramework"
+        },
+        {
+            "_name": "GF_ActionCombat"
+        }
+    ],
+    "_listConfiguration": [
+        "Dev",
+        "Shipping"
+    ],
+    "_listTarget": [
+        "Client"
+    ],
+    "_bEnabledByDefault": true
+}

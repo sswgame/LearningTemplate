@@ -25,12 +25,11 @@
 		<entity id="2" name="Director">
 			<GameObject _schemaVersion="0" _name="Director" _bActive="true">
 				<_listComponent>
-					<ActionCombatDemoComponent _localID="4983187070023613512" _componentName="ActionCombatDemoComponent"
-					                           _bActive="true"
-					                           _playerMaxHP="100"
-					                           _playerSpeed="4"
-					                           _bossDelaySeconds="1"
-					                           _playerView="3">
+					<ActionCombatGameModeComponent _localID="4983187070023613512" _componentName="ActionCombatGameModeComponent"
+					                               _bActive="true"
+					                               _playerMaxHP="100"
+					                               _playerSpeed="4"
+					                               _bossDelaySeconds="1">
 						<_listHallMonster>
 							<item>demo_grunt</item>
 							<item>demo_grunt</item>
@@ -45,7 +44,13 @@
 						<_listBossPosition>
 							<item>1.6,0</item>
 						</_listBossPosition>
-					</ActionCombatDemoComponent>
+					</ActionCombatGameModeComponent>
+					<ActionCombatAvatarComponent _localID="7311592208746153035" _componentName="ActionCombatAvatarComponent"
+					                             _bActive="true"
+					                             _moveAction="Move"
+					                             _attackAction="KitDemo.Attack"
+					                             _dashAction="KitDemo.Dash"
+					                             _playerView="3" />
 				</_listComponent>
 			</GameObject>
 		</entity>

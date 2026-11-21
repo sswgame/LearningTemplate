@@ -1491,7 +1491,7 @@
     "tickReplica": "ShooterEnemyComponent::updateReplica — tick 은 틱 시스템만, 한 프레임 진행은 update(2026-11-19)",
     "lookupRangeName": "findRangeName — 못 찾을 수 있는 조회는 find(2026-11-19)",
     "AutomationValidatorLookup": "AutomationValidatorResult — findValidator 의 답, 결과 형식 끝말은 Result(2026-11-19)",
-    "buildTerrain": "ActionPlatformerDemoComponent::populateTerrain — 이미 있는 상태를 원본(씬의 지형 줄)으로 채우는 것은 populate(2026-11-19)",
+    "buildTerrain": "ActionPlatformerGameModeComponent::populateTerrain — 이미 있는 상태를 원본(씬의 지형 줄)으로 채우는 것은 populate(2026-11-19)",
     "findFor": "SceneNetLink::findBoundFor — 링크를 찾고 자리마다 isBound 를 다시 묻던 것을 묶인 값만 돌려주는 조회 하나로 바꿨다(2026-11-19)",
     "attachmentFormatName": "RHIFormatUtil::getName — 포맷 이름은 렌더러 도우미가 아니라 RHI 포맷 정보(RHIFormatInfo.h)의 것이다(2026-11-19)",
     "PortraitBatchUtil": "PortraitStudio::renderPrefabList — 한 장을 그리는 형식 곁의 정적 묶음을 그 형식의 정적 멤버로 접었다(2026-11-19)",
@@ -1999,6 +1999,11 @@
     "GameFlagsOwnerComponent": "IGameFlagsOwner — 역할 베이스 → 리플렉션 인터페이스(포트 멤버, TypeNamingAudit 4.3)(2026-11-21)",
     "IInspectorComponent": "IComponentInspector — 컴포넌트가 아닌 인스펙터 계약 — Component 끝말은 컴포넌트만(naming-words component 규칙)(2026-11-21)",
     "FractureComponentBase": "FractureBaseComponent — PhysicsComponent 파생 — 컴포넌트 이름은 Component 로 끝난다(2026-11-21)",
-    "EditorMultiEditComponent": "EditorMultiEditGroup — 다중 편집의 같은 형식 컴포넌트 묶음 — 컴포넌트가 아니다(2026-11-21)"
+    "EditorMultiEditComponent": "EditorMultiEditGroup — 다중 편집의 같은 형식 컴포넌트 묶음 — 컴포넌트가 아니다(2026-11-21)",
+    "ActionCombatDemoComponent": "ActionCombatGameModeComponent — 키트 셋 가르기: 시연 컴포넌트가 키트 디렉터(Component/*GameModeComponent)가 됐다(2026-11-21)",
+    "ActionCombatDemoComponentInternal": "ActionCombatGameModeComponentInternal — 키트 셋 가르기: 시연 컴포넌트가 키트 디렉터(Component/*GameModeComponent)가 됐다(2026-11-21)",
+    "ActionCombatDemoPhase": "ActionCombatPhase — 키트 셋 가르기: 시연 컴포넌트가 키트 디렉터(Component/*GameModeComponent)가 됐다(2026-11-21)",
+    "ActionPlatformerDemoComponent": "ActionPlatformerGameModeComponent — 키트 셋 가르기: 시연 컴포넌트가 키트 디렉터(Component/*GameModeComponent)가 됐다(2026-11-21)",
+    "ActionPlatformerDemoComponentInternal": "ActionPlatformerGameModeComponentInternal — 키트 셋 가르기: 시연 컴포넌트가 키트 디렉터(Component/*GameModeComponent)가 됐다(2026-11-21)"
   }
 }

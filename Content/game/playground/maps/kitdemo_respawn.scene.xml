@@ -25,14 +25,14 @@
 		<entity id="2" name="Director">
 			<GameObject _schemaVersion="0" _name="Director" _bActive="true">
 				<_listComponent>
-					<ActionPlatformerDemoComponent _localID="4169608954724604248" _componentName="ActionPlatformerDemoComponent"
-					                               _bActive="true"
-					                               _catalogPath="game/playground/data/kitdemo/demo.actionplatformer.xml"
-					                               _stageID="respawn-1"
-					                               _startPosition="1.5,1.6"
-					                               _goalX="37"
-					                               _fallY="-3"
-					                               _pickupRadius="0.6">
+					<ActionPlatformerGameModeComponent _localID="4169608954724604248" _componentName="ActionPlatformerGameModeComponent"
+					                                   _bActive="true"
+					                                   _catalogPath="game/playground/data/kitdemo/demo.actionplatformer.xml"
+					                                   _stageID="respawn-1"
+					                                   _startPosition="1.5,1.6"
+					                                   _goalX="37"
+					                                   _fallY="-3"
+					                                   _pickupRadius="0.6">
 						<_listTerrainRow>
 							<item>........................................</item>
 							<item>........................................</item>
@@ -44,7 +44,11 @@
 						<_listCheckpointX>
 							<item>15</item>
 						</_listCheckpointX>
-					</ActionPlatformerDemoComponent>
+					</ActionPlatformerGameModeComponent>
+					<ActionPlatformerAvatarComponent _localID="6094217358812046127" _componentName="ActionPlatformerAvatarComponent"
+					                                 _bActive="true"
+					                                 _moveAction="Move"
+					                                 _jumpAction="KitDemo.Jump" />
 				</_listComponent>
 			</GameObject>
 		</entity>
