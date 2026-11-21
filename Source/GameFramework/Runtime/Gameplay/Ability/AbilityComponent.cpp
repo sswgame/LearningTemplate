@@ -10,6 +10,7 @@
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Object/GameObject/Tick/TickContext.h"
 #include "Engine/Reflection/TypeInfo.h"
+#include "Engine/Reflection/TypeRegistry.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/Framework/Presentation/IDamageNumberSink.h"
@@ -430,10 +431,14 @@ namespace sw
     {
         HealthSourceComponent::onRegister( manager );
         manager.getComponentRegistry().add<AbilityComponent>( this );
+        // 모듈 내림은 이 컴포넌트만 듣는다(기반 가상 함수로 모든 컴포넌트를 훑지 않는다 — 언리얼 `FCoreUObjectDelegates` 구독 자리).
+        _moduleUnloadingSubscription = game::getSubsystem<TypeRegistry>().subscribeModuleUnloading(
+            TypeRegistry::ModuleUnloadingDelegate::create<&AbilityComponent::onModuleUnloading>( this ) );
     }
 
     void AbilityComponent::onUnregister( GameObjectManager& manager )
     {
+        _moduleUnloadingSubscription = Subscription{};
         manager.getComponentRegistry().remove<AbilityComponent>( this );
         HealthSourceComponent::onUnregister( manager );
     }

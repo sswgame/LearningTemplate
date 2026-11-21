@@ -362,12 +362,6 @@ namespace sw
         return listAllGameObject;
     }
 
-    void GameObjectManager::notifyModuleUnloading( string_view moduleName )
-    {
-        forEachComponent( SceneIterationKey{}, [moduleName]( Component* pComponent )
-        { pComponent->onModuleUnloading( moduleName ); } );
-    }
-
     uint32 GameObjectManager::destroyComponentsOfModule( string_view moduleName )
     {
         if ( _structuralChangeBuffer.isFrozen() == false )

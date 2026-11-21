@@ -112,12 +112,7 @@ namespace sw
          * @details 남이 건 델리게이트(HP 바 · UI 의 어트리뷰트 변화 구독)는 오브젝트와 함께 사는 것이라 그대로 둔다. 코드가 준 세트(`grantAbilitySet`)는 꺼낸 쪽이 다시 준다.
          */
         [[nodiscard]] SpawnStateReset resetToSpawnState() override;
-        /**
-         * @brief 모듈 @p moduleName 을 내리기 전에 그 모듈 타입(`getTypeInfo` 의 모듈 이름)의 어빌리티 · 어트리뷰트 세트와, 그 모듈의 실행 계산을 쓰는 이펙트를 놓습니다.
-         * @details 모듈을 다시 올리면 `_abilitySetID` 가 어빌리티를 다시 준다. 게임이 건 델리게이트는 게임이 든 구독이 게임과 함께 푼다.
-         */
-        void onModuleUnloading( string_view moduleName ) override;
-        void onTick( TickContext& context ) override;
+        void                          onTick( TickContext& context ) override;
         /**
          * @brief `ComponentStateStore` 계약입니다. 어트리뷰트 base, 걸린 이펙트(정의 id · 남은 시간 · 스택 · 계산해 둔 모디파이어), 이펙트 밖 태그를 놓습니다.
          * @details 읽기는 끝까지 맞고 세트 · 카탈로그와도 맞을 때만 한 번에 적용한다(`applySaveState`). 맞지 않으면 아무것도 바꾸지 않고 거절한다.
@@ -423,6 +418,12 @@ namespace sw
         void refreshOngoingTagRequirements();
         /** @brief 가진 태그가 생기거나 사라질 때 부릅니다(`_ownedTagCounts` 구독). 걸린 동안의 조건을 다시 보고, 생긴 태그로 발동하는 어빌리티를 발동합니다. */
         void onOwnedTagChanged( TagID tag, int32 newCount );
+        /**
+         * @brief 모듈 @p moduleName 을 내리기 전에 그 모듈 타입(`getTypeInfo` 의 모듈 이름)의 어빌리티 · 어트리뷰트 세트와, 그 모듈의 실행 계산을 쓰는 이펙트를 놓습니다.
+         * @details 모듈 내림 알림(`TypeRegistry::subscribeModuleUnloading`, 등록된 동안 구독)이 부른다. 모듈을 다시 올리면 `_abilitySetID` 가 어빌리티를 다시 준다.
+         *          게임이 건 델리게이트는 게임이 든 구독이 게임과 함께 푼다.
+         */
+        void onModuleUnloading( string_view moduleName );
         /** @brief 적용된 이펙트를 찾습니다. 지우는 중인 것은 제외합니다. */
         ActiveGameplayEffect* findActiveEffectMutable( ActiveEffectHandle handle );
         /** @brief 같은 정의로 걸려 있는 스택 이펙트를 찾습니다. */
@@ -489,8 +490,9 @@ namespace sw
         ActiveEffectContainer                                                                           _activeEffects;
         AbilitySpecContainer                                                                            _abilitySpecs;
         TagCountTable                                                                                   _ownedTagCounts;
-        Subscription                                                                                    _ownedTagSubscription;    ///< `_ownedTagCounts` 의 변화를 자기가 듣는 구독(`onOwnedTagChanged`)
-        TagCountTable                                                                                   _blockedAbilityTagCounts; ///< `_blockAbilitiesWithTags` 가 막은 어빌리티 태그(알림 없이 센다)
+        Subscription                                                                                    _ownedTagSubscription;        ///< `_ownedTagCounts` 의 변화를 자기가 듣는 구독(`onOwnedTagChanged`)
+        Subscription                                                                                    _moduleUnloadingSubscription; ///< 등록된 동안 모듈 내림을 듣는 구독(`onModuleUnloading`)
+        TagCountTable                                                                                   _blockedAbilityTagCounts;     ///< `_blockAbilitiesWithTags` 가 막은 어빌리티 태그(알림 없이 센다)
         unordered_map<hashed_string, unique_ptr<MulticastDelegate<void( const AttributeChangeData& )>>> _mapAttributeChangedMulticast;
         unordered_map<uint64, unique_ptr<MulticastDelegate<void( const AbilityEventData& )>>>           _mapGameplayEventMulticast;
         MulticastDelegate<void( const AttributeChangeData& )>                                           _anyAttributeChangedMulticast;

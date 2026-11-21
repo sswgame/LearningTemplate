@@ -448,12 +448,8 @@ namespace sw
          *          비동기 씬 로드에서는 워커 스레드에서 불릴 수 있으므로 공유 상태는 잠금을 지원하는 API 로만 만진다.
          */
         virtual void onPostLoad() {}
-        /**
-         * @brief 모듈 @p moduleName 을 내리기 직전(그 코드가 아직 있을 때)에 불립니다. 그 모듈 **타입**(`TypeInfo` 의 모듈 이름)의 객체를 든 컴포넌트가 그것을 놓는다.
-         * @details 컴포넌트 자신이 그 모듈 타입이면 이 뒤에 지워진다(`destroyComponentsOfModule`) — 여기서 할 일은 엔진 · 키트 컴포넌트가 든 남의 모듈 객체(어빌리티 · 세트)다.
-         *          모듈 언로드는 개발 빌드만 하고 게임 스레드에서 부른다(`engine::unregisterModuleTypes`). 코드 주소로 고르지 않는다(언리얼은 클래스의 패키지로 다시 만든다).
-         */
-        virtual void onModuleUnloading( string_view moduleName ) { (void)moduleName; }
+        // 남의 모듈 타입 객체(어빌리티 · 세트)를 든 컴포넌트는 모듈 내림을 가상 함수로 받지 않는다 — 그 컴포넌트만 `onRegister` 에서
+        // `TypeRegistry::subscribeModuleUnloading` 을 구독한다(`AbilityComponent`). 모든 컴포넌트에 빈 가상 호출을 훑지 않는다.
         /**
          * @brief 씬 상태 해시(`SceneObjectHash`)에 이 컴포넌트의 시뮬레이션 상태를 접습니다. 기본은 상태 역할 칸(`PROPERTY( RuntimeState )`, 기반부터)을 리플렉션으로 접습니다.
          * @details 두 프로세스가 같은 입력으로 같은 상태가 되었는지 견주는 값이라 게임플레이를 바꾸는 상태(트랜스폼 · 속도 · 난수 상태 · 남은 시간)만 넣는다.

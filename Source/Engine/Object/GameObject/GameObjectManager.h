@@ -616,8 +616,6 @@ namespace sw
          * @return 지운 컴포넌트 수입니다.
          */
         uint32 destroyComponentsOfModule( string_view moduleName );
-        /** @brief 씬의 모든 컴포넌트에 `Component::onModuleUnloading( moduleName )` 을 알립니다 — 남의 모듈 타입 객체를 든 컴포넌트가 먼저 놓는다(`destroyComponentsOfModule` 앞, 틱 밖). */
-        void notifyModuleUnloading( string_view moduleName );
 
         /**
          * @brief 타입 이름(짧은 이름 · FQN · 옛 이름 별칭, `이름#번호` 꼬리는 무시)으로 컴포넌트를 만들어 붙입니다. 에디터 · 직렬화 전용이고, 게임은 addComponent<T> 를 씁니다.
