@@ -9,6 +9,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
+#include "Engine/Object/GameObject/Tick/FixedStepContext.h"
 #include "Engine/Physics/Component/RigidBodyComponent.h"
 #include "Engine/Physics/IPhysicsScene.h"
 #include "Engine/Physics/PhysicsSettings.h"
@@ -53,13 +54,14 @@ namespace sw
         _rigidBody                       = pRigid != nullptr ? TComponentHandle<RigidBodyComponent>{ pRigid } : TComponentHandle<RigidBodyComponent>{};
         if ( pRigid == nullptr )
             SW_LOG_ERROR_ID( "Buoyancy.RigidBodyMissing", "Buoyancy on '%#' needs a RigidBodyComponent on the same object - add it before this component", getOwner()->getName().c_str() );
+        registerFixedStep<&BuoyancyComponent::onPrePhysicsStep>( manager, FixedStepGroup::PreStep );
     }
 
-    void BuoyancyComponent::prePhysicsStep( ScenePhysics& physics, float32 fixedDeltaTime, uint32 stepIndex, uint32 stepCount )
+    void BuoyancyComponent::onPrePhysicsStep( const FixedStepContext& context )
     {
-        (void)stepIndex;
-        (void)stepCount;
-        _submergedPontoonCount = 0;
+        ScenePhysics& physics        = context.getPhysics();
+        const float32 fixedDeltaTime = context.getFixedDeltaTime();
+        _submergedPontoonCount       = 0;
         if ( isSimulated() == false )
             return;
         IPhysicsBodyScene3D*      pScene    = physics.findScene3D();

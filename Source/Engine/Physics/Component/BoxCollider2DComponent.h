@@ -34,7 +34,7 @@ namespace sw
      *          Box2D 는 키네마틱끼리 접촉을 만들지 않으므로, 센서여야 콜라이더끼리 겹침이 납니다. 그래서 이 콜라이더는 강체를 막지 않고 겹침만 냅니다
      *          (겹침 사건 `GameObjectEvents::_overlapBegin` · `_overlapEnd`, `OverlapInfo::_bOtherTrigger` 로 트리거를 가린다). 질의(광선 · 쓸기)에서는 트리거가 아닌 콜라이더가 막는 것으로 보입니다.
      *
-     *          바디는 상자(`getBounds`)를 그대로 따릅니다 — 매 물리 프레임 처음(`beginPhysicsFrame`)에 자리를 옮기고, 크기 · 레이어 · 트리거가 바뀌면
+     *          바디는 상자(`getBounds`)를 그대로 따릅니다 — 매 물리 프레임 처음(`onPhysicsFrameBegin`)에 자리를 옮기고, 크기 · 레이어 · 트리거가 바뀌면
      *          다시 만듭니다. 상자는 축 정렬이라 바디는 돌지 않습니다.
      *
      *          **연속 판정**(`_bContinuous`, 투사체): Box2D 센서는 연속 충돌이 없으므로, 지난 자리에서 지금 자리까지 상자를 쓸어 지나친 것을
@@ -113,7 +113,7 @@ namespace sw
         bool isTouching( const BoxCollider2DComponent* pOther ) const;
 
     protected:
-        void beginPhysicsFrame( ScenePhysics& physics ) override;
+        void onPhysicsFrameBegin( const FixedStepContext& context );
         void releasePhysics( ScenePhysics& physics ) override;
 
     private:
@@ -125,7 +125,7 @@ namespace sw
          * @brief 연속 판정 — 이번 프레임의 출발점에서 바디 중심까지 상자를 쓸어 지나친 것을 씬 물리에 알립니다(`ScenePhysics::queueSweptOverlap2D`).
          * @details 가만히 있던 바디는 Box2D 쓸기로, @p listMoved (이번 프레임에 움직인 콜라이더, 자기 포함)는 두 이동의 차이로 측정한다. 움직인 바디를 Box2D
          *          쓸기로 측정하면 상대가 이번 자리에 선 채로 측정돼 길을 가로질러 건너간 상대를 놓친다. 출발점에서 이미 겹친 것(닿은 시점 0)과 도착점에서도
-         *          겹친 것은 뺀다 — 앞은 지난 프레임의 센서가, 뒤는 이번 프레임의 센서가 시작을 낸다. 모든 콜라이더의 `beginPhysicsFrame` 뒤에 부른다.
+         *          겹친 것은 뺀다 — 앞은 지난 프레임의 센서가, 뒤는 이번 프레임의 센서가 시작을 낸다. 모든 콜라이더의 `onPhysicsFrameBegin` 뒤에 부른다.
          */
         void sweepPassedBodies( ScenePhysics& physics, const vector<BoxCollider2DComponent*>& listMoved );
         /** @brief 이 콜라이더와 상대 바디가 지나치며 겹친 기록 하나를 만듭니다(`sweepPassedBodies`). */

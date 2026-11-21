@@ -65,9 +65,11 @@ namespace sw
         PhysicsWheeledVehicleDesc makeVehicleDesc() const;
 
     protected:
-        void beginPhysicsFrame( ScenePhysics& physics ) override;
+        /** @brief 쓰는 고정 스텝 그룹마다 메서드를 등록합니다(`registerFixedStep`). */
+        void onRegister( GameObjectManager& manager ) override;
+        void onPhysicsFrameBegin( const FixedStepContext& context );
         /** @brief 스텝이 끝난 상태(속도 · 기어 · 접지)를 읽어 둡니다. */
-        void endPhysicsFrame( ScenePhysics& physics, float32 alpha ) override;
+        void onPhysicsFrameEnd( const FixedStepContext& context );
         void releasePhysics( ScenePhysics& physics ) override;
 
     private:

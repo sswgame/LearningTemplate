@@ -7,6 +7,7 @@
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/StateHashBuilder.h"
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/Tick/FixedStepContext.h"
 #include "Engine/Physics/IPhysicsScene.h"
 #include "Engine/Physics/PhysicsSettings.h"
 #include "Engine/Physics/Scene/PhysicsNameValidation.h"
@@ -315,8 +316,17 @@ namespace sw
         return body;
     }
 
-    void RigidBodyComponent::beginPhysicsFrame( ScenePhysics& physics )
+    void RigidBodyComponent::onRegister( GameObjectManager& manager )
     {
+        PhysicsComponent::onRegister( manager );
+        registerFixedStep<&RigidBodyComponent::onPhysicsFrameBegin>( manager, FixedStepGroup::FrameBegin );
+        registerFixedStep<&RigidBodyComponent::onPrePhysicsStep>( manager, FixedStepGroup::PreStep );
+        registerFixedStep<&RigidBodyComponent::onPhysicsFrameEnd>( manager, FixedStepGroup::FrameEnd );
+    }
+
+    void RigidBodyComponent::onPhysicsFrameBegin( const FixedStepContext& context )
+    {
+        ScenePhysics& physics = context.getPhysics();
         if ( isSimulated() == false )
         {
             releasePhysics( physics );
@@ -408,11 +418,15 @@ namespace sw
             pScene->wakeBody( body ); // 잠든 바디는 힘을 받지 않는다 — 필드 안에서는 깨어 있어야 뜨고 흐른다
     }
 
-    void RigidBodyComponent::prePhysicsStep( ScenePhysics& physics, float32 fixedDeltaTime, uint32 stepIndex, uint32 stepCount )
+    void RigidBodyComponent::onPrePhysicsStep( const FixedStepContext& context )
     {
-        IPhysicsBodyScene3D*    pScene = physics.findScene3D();
-        const uint32            index  = getPoseIndex();
-        const PhysicsBodyHandle body   = _pPosePage->_arrBody[index];
+        ScenePhysics&           physics        = context.getPhysics();
+        const float32           fixedDeltaTime = context.getFixedDeltaTime();
+        const uint32            stepIndex      = context.getStepIndex();
+        const uint32            stepCount      = context.getStepCount();
+        IPhysicsBodyScene3D*    pScene         = physics.findScene3D();
+        const uint32            index          = getPoseIndex();
+        const PhysicsBodyHandle body           = _pPosePage->_arrBody[index];
         if ( pScene == nullptr || body.isValid() == false )
             return;
         if ( _bodyType == PhysicsBodyType::Kinematic )
@@ -465,10 +479,12 @@ namespace sw
         return acceleration * scene.getBodyMass( getBodyHandle() );
     }
 
-    void RigidBodyComponent::endPhysicsFrame( ScenePhysics& physics, float32 alpha )
+    void RigidBodyComponent::onPhysicsFrameEnd( const FixedStepContext& context )
     {
-        PhysicsBodyPage3D& page  = *_pPosePage;
-        const uint32       index = getPoseIndex();
+        ScenePhysics&      physics = context.getPhysics();
+        const float32      alpha   = context.getAlpha();
+        PhysicsBodyPage3D& page    = *_pPosePage;
+        const uint32       index   = getPoseIndex();
         // 힘 · 토크는 한 프레임짜리다.
         page.editCommand( index, []( PhysicsBodyCommand<PhysicsDimension3D>& command )
         {

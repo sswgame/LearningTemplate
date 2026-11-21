@@ -141,7 +141,7 @@ namespace sw
     /**
      * @struct CharacterCommand3D
      * @brief 3D 캐릭터 컨트롤러가 다음 물리 프레임에 받을 입력입니다 — 이동 요청과 아직 스텝에 넘기지 않은 대기(점프 · 루트 모션 · 면 속도 · 이동 계수 · 발사 · 필드).
-     * @details 아무 틱 워커든 칸의 잠금(`PhysicsCommandPage::_arrCommandLock`) 아래에서 쌓고, 물리 프레임(`beginPhysicsFrame` · `prePhysicsStep`)이 꺼낸다.
+     * @details 아무 틱 워커든 칸의 잠금(`PhysicsCommandPage::_arrCommandLock`) 아래에서 쌓고, 물리 프레임(`onPhysicsFrameBegin` · `onPrePhysicsStep`)이 꺼낸다.
      */
     struct CharacterCommand3D
     {

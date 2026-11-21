@@ -24,7 +24,7 @@ namespace sw
     struct TypeInfo;
     /**
      * @brief 리플렉트 형식의 숨은 멤버에 닿는 엔진 쪽 통로입니다. `REFLECT_BODY()` 가 이 템플릿을 통째로 친구로 연다.
-     * @details 쓰는 쪽이 태그마다 특수화한다 — 일괄 틱(`TickAccessTag`, `TickBatchRegistry.h`) · 물리 훅(`PhysicsHookAccessTag`, `PhysicsHookRegistry.h`).
+     * @details 쓰는 쪽이 태그마다 특수화한다 — 일괄 틱(`TickAccessTag`, `TickBatchRegistry.h`).
      *          서브시스템이 늘어도 REFLECT_BODY 의 친구 줄이 늘지 않는다(boost.serialization · cereal 의 `access` 와 같은 꼴). 특수화는 한정 이름 호출
      *          (`comp.T::onTick( … )`)로 비가상 호출을 그대로 둔다 — 멤버 포인터로 넘기면 가상 디스패치가 된다.
      */

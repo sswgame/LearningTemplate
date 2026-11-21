@@ -184,7 +184,6 @@ namespace sw
             static void applyParsingSection( ParserConfig& config, const nlohmann::json& obj )
             {
                 assignArrayIfPresent( config._listComponentBaseType, obj, jsonkey::kParsingComponentBaseTypes );
-                assignArrayIfPresent( config._listPhysicsHookBaseType, obj, jsonkey::kParsingPhysicsHookBaseTypes );
                 assignArrayIfPresent( config._listTypeStripPrefix, obj, jsonkey::kParsingTypeStripPrefixes );
                 assignArrayIfPresent( config._listNameFieldSkipFolder, obj, jsonkey::kParsingNameFieldSkipFolders );
             }
@@ -279,9 +278,8 @@ namespace sw
                     bComplete = false;
                 }
                 const pair<const vector<string>*, const utf8*> arrRequiredList[] = {
-                    {  &config._listComponentBaseType,    "parsing.component_base_types"},
-                    {&config._listPhysicsHookBaseType, "parsing.physics_hook_base_types"},
-                    {    &config._listTypeStripPrefix,     "parsing.type_strip_prefixes"},
+                    {&config._listComponentBaseType, "parsing.component_base_types"},
+                    {  &config._listTypeStripPrefix,  "parsing.type_strip_prefixes"},
                 };
                 for ( const auto& [pList, pKey] : arrRequiredList )
                 {
@@ -392,7 +390,6 @@ namespace sw
         , _listValueForbiddenBaseType{}
         , _valueForbiddenMessage{}
         , _listComponentBaseType{}
-        , _listPhysicsHookBaseType{}
         , _listTypeStripPrefix{}
         , _listNameFieldSkipFolder{}
         , _listLoadedFile{}

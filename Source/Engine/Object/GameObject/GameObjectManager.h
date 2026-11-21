@@ -71,6 +71,8 @@ namespace sw
     class Component;
     class ComponentRegistry;
     class DebugDrawQueue;
+    class FixedStepContext;
+    class FixedStepTickList;
     class GameObject;
     class GameObjectManager;
     class GameObjectStore;
@@ -88,6 +90,7 @@ namespace sw
     struct ScenePreviewPolicy;
     struct SceneTransformWrite;
     struct TypeInfo;
+    enum class FixedStepGroup : uint8;  ///< 정의는 `Tick/FixedStepContext.h`
     enum class SceneLightPhase : uint8; ///< 정의는 `Service/ISceneService.h`(바탕 형식이 같아야 한다)
 
     /** @brief `GameObjectManager::makeTypedHandle` 의 결과입니다. */
@@ -469,6 +472,13 @@ namespace sw
         TickRegistry& getTickRegistry();
         /** @brief 틱에 참여하는 오브젝트의 레지스트리입니다. */
         const TickRegistry& getTickRegistry() const;
+        /**
+         * @brief 고정 스텝 그룹 @p group 을 돕니다(`SceneTickScheduler::tickFixedStepGroup`) — 물리 프레임(`ScenePhysics::step`)이 게임 스레드에서 부른다.
+         * @return 부른 구성원 수입니다.
+         */
+        uint32 tickFixedStepGroup( FixedStepGroup group, const FixedStepContext& context );
+        /** @brief 고정 스텝 그룹의 구성원 · 구간입니다(`SceneTickScheduler::getFixedStepTickList` — 컴포넌트가 등록 동안 넣고 해제에서 뺀다). 게임 스레드에서만. */
+        FixedStepTickList& getFixedStepTickList();
 
         /**
          * @brief 핸들이 가리키는 컴포넌트를 찾습니다. 삭제 예정이면 nullptr 입니다. 타입을 아는 곳은 타입 핸들(`TComponentHandle<T>`)의 찾기를 씁니다.

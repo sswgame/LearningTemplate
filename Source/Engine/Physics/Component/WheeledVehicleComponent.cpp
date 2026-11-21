@@ -4,6 +4,7 @@
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/Tick/FixedStepContext.h"
 #include "Engine/Physics/Component/RigidBodyComponent.h"
 #include "Engine/Physics/IPhysicsScene.h"
 #include "Engine/Physics/Scene/PhysicsPoseStore.h"
@@ -101,8 +102,16 @@ namespace sw
         return desc;
     }
 
-    void WheeledVehicleComponent::beginPhysicsFrame( ScenePhysics& physics )
+    void WheeledVehicleComponent::onRegister( GameObjectManager& manager )
     {
+        PhysicsComponent::onRegister( manager );
+        registerFixedStep<&WheeledVehicleComponent::onPhysicsFrameBegin>( manager, FixedStepGroup::FrameBegin );
+        registerFixedStep<&WheeledVehicleComponent::onPhysicsFrameEnd>( manager, FixedStepGroup::FrameEnd );
+    }
+
+    void WheeledVehicleComponent::onPhysicsFrameBegin( const FixedStepContext& context )
+    {
+        ScenePhysics& physics = context.getPhysics();
         if ( isSimulated() == false )
         {
             releasePhysics( physics );
@@ -136,10 +145,10 @@ namespace sw
         pScene->setVehicleInput( _vehicle, input._forward, input._right, input._brake, input._handBrake );
     }
 
-    void WheeledVehicleComponent::endPhysicsFrame( ScenePhysics& physics, float32 alpha )
+    void WheeledVehicleComponent::onPhysicsFrameEnd( const FixedStepContext& context )
     {
-        (void)alpha;
-        const IPhysicsScene3D* pScene = physics.findScene3D();
+        ScenePhysics&          physics = context.getPhysics();
+        const IPhysicsScene3D* pScene  = physics.findScene3D();
         if ( pScene != nullptr && _vehicle.isValid() )
             (void)pScene->getVehicleState( _vehicle, _state );
     }

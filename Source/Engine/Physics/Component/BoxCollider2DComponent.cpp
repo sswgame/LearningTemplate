@@ -9,6 +9,7 @@
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Tick/FixedStepContext.h"
 #include "Engine/Physics/Collision/CollisionLayers.h"
 #include "Engine/Physics/Collision/PhysicsQuery.h"
 #include "Engine/Physics/Collision/SweepHit.h"
@@ -96,6 +97,7 @@ namespace sw
     void BoxCollider2DComponent::onRegister( GameObjectManager& manager )
     {
         PhysicsComponent::onRegister( manager );
+        registerFixedStep<&BoxCollider2DComponent::onPhysicsFrameBegin>( manager, FixedStepGroup::FrameBegin );
         manager.getSubsystem<sw::ScenePhysics>().registerCollider2D( this );
     }
 
@@ -212,8 +214,9 @@ namespace sw
         _bBodyTrigger       = _bTrigger;
     }
 
-    void BoxCollider2DComponent::beginPhysicsFrame( ScenePhysics& physics )
+    void BoxCollider2DComponent::onPhysicsFrameBegin( const FixedStepContext& context )
     {
+        ScenePhysics& physics = context.getPhysics();
         // 시작 전(편집 중)이거나 꺼진 콜라이더는 겹침에 들지 않는다 — 유니티도 꺼진 콜라이더를 시뮬레이션에서 뺀다.
         if ( isSimulated() == false )
         {

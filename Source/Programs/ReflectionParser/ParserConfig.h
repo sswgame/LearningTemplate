@@ -30,8 +30,6 @@ namespace sw
         vector<string> _listValueForbiddenBaseType;
         string         _valueForbiddenMessage;
         vector<string> _listComponentBaseType;
-        /** @brief 물리 훅(`beginPhysicsFrame` …)을 가진 기반 타입입니다. 그 파생마다 `SW_REGISTER_PHYSICS_HOOKS` 를 냅니다(`parsing.physics_hook_base_types`). */
-        vector<string> _listPhysicsHookBaseType;
         vector<string> _listTypeStripPrefix;
         /** @brief 이름 · 경로 칸의 타입(소스에 적은 글에서 const · mutable · std:: · sw:: 를 뗀 것)입니다. 이 칸의 C++ 문자열 기본값은 Required 이거나 DefaultName 이어야 한다. */
         vector<string> _listNameFieldSkipFolder; ///< 이름 · 경로 칸 기본값을 보지 않는 폴더 이름(테스트 형식은 기본값 자체를 시험한다)

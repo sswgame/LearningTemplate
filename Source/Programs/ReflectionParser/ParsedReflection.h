@@ -467,11 +467,9 @@ namespace sw
         uint8 _bParentReflected : 1;
         /** @brief `Component` 파생입니다(추상 포함). 틱 모드 등록(`requiresTickRegistration`)과 `TickMode` 검사가 본다. */
         uint8 _bComponent : 1;
-        /** @brief `parsing.physics_hook_base_types`(`sw::PhysicsComponent`) 파생입니다(추상 포함). 물리 훅 등록(`requiresPhysicsHookRegistration`)이 본다. */
-        uint8 _bPhysicsComponent : 1;
         /** @brief 바깥 형식 사슬에 public 이 아닌 고리가 있습니다(private · protected 중첩). 생성 코드는 이름공간 범위에서 이 이름을 쓰지 않는다(`CodeGenerator::makeRegistrarKey`). */
         uint8                  _bHidden        : 1;
-        [[maybe_unused]] uint8 _reservedTraits : 3;
+        [[maybe_unused]] uint8 _reservedTraits : 4;
 
         ParsedTypeInfo() noexcept
             : _name{}
@@ -500,7 +498,6 @@ namespace sw
             , _bNotPlaceable{ SW_FALSE }
             , _bParentReflected{ SW_FALSE }
             , _bComponent{ SW_FALSE }
-            , _bPhysicsComponent{ SW_FALSE }
             , _bHidden{ SW_FALSE }
             , _reservedTraits{ 0 }
         {
@@ -519,12 +516,6 @@ namespace sw
                 return false;
             return _tickMode.empty() == false || _bAbstract == SW_FALSE;
         }
-
-        /**
-         * @brief 이 타입에 물리 훅 등록(`SW_REGISTER_PHYSICS_HOOKS`)을 낸다 — 추상이 아닌 물리 컴포넌트마다다.
-         * @details 재정의 여부는 파서가 보지 않는다. 중간 기반의 재정의를 물려받은 타입도 있어, 판정은 생성된 줄이 `&T::훅` 의 형식으로 컴파일에서 한다.
-         */
-        bool requiresPhysicsHookRegistration() const noexcept { return _bPhysicsComponent == SW_TRUE && _bAbstract == SW_FALSE; }
     };
 } // namespace sw
 
