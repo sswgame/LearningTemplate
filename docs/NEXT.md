@@ -32,10 +32,7 @@
 
 ## 3. 알려진 실패 · 흔들림
 
-- **shooter3d dx11 골든:** crowd `fight` 25.7 %, enemydeath `death_b` 1.37 % — 다시 지면 `scenario_bisect --golden-margins`(군중 정착 조건 의심).
-- **`editor.tilemapdatalayers` 단독 실패:** 글 칸 키보드 초점 — `EditorSelfTestInput::isKeyboardTargetStable` 를 `scenario-debug` "단독으로만 지면" 으로.
 - **Linux:** sequencercuts · sequencerkeys `SequencerUnboundCount`(`--gpu software chain editor`), netresourcedigest, 에디터 체인 약 18 단계(입력 초점), themepark 체인 멈춤, lavapipe `blendEnable` + `R16G16_SNORM`(재현 안 되면 지운다), `editor.screenrectview` 1.09375 %(`all` 에서만 — 사진 앞 대기를 정착 조건으로). 빈 골든은 `scenario_bisect.py --golden-coverage` 로 찾아 채운다.
-- **`AudioDataVariantTest.GraphVariantSavesOnlyItsDifference`:** 한 번 "base … could not be read" — 다시 지면 앞 케이스 · 스크래치 마운트.
 - **라이브 리로드(Debug):** Building 중인 변형이 옛 바이트코드를 집고 옛 키 항목이 쌓인다.
 - **손 빌드:** Ninja 재압축 이름 바꾸기 보정(`.ninja_deps` 실종)이 preflight 에만 있다 — 손 빌드에도.
 - 흔들리는 게임 골든: 다시 지면 단계 · 백엔드 · 직전 `Assets.Pending` 을 적는다.
