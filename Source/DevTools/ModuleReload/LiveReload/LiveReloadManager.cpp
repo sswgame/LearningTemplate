@@ -332,13 +332,13 @@ namespace sw
         _buildEvent._bInProgress = true;
     }
 
-    void LiveReloadManager::notifyBuildFinished( bool bSucceeded, string_view targetName )
+    void LiveReloadManager::notifyBuildFinished( bool bSucceeded, string_view moduleName )
     {
         ScopedLock<mutex> lock{ _buildMutex };
         _buildEvent._bInProgress      = false;
         _buildEvent._bFinishedPending = true;
         _buildEvent._bSucceeded       = bSucceeded;
-        _buildEvent._targetName       = string( targetName );
+        _buildEvent._moduleName       = string( moduleName );
     }
 
     bool LiveReloadManager::consumeBuildEvent()
@@ -355,7 +355,7 @@ namespace sw
             {
                 // 빌드 실패도 모듈 리로드 실패다 — 옛 이미지로 계속 돈다(집계가 낡음으로 보인다). 이 프로세스가 시작한 빌드만 여기에 온다.
                 if ( ReloadTracker* const pTracker = engine::areEngineServicesBound() ? engine::findSubsystem<ReloadTracker>() : nullptr )
-                    pTracker->record( ReloadSource::Module, event._targetName, ReloadResult::Failed, "the module build failed - the previous image runs" );
+                    pTracker->record( ReloadSource::Module, event._moduleName, ReloadResult::Failed, "the module build failed - the previous image runs" );
                 // 실패한 빌드가 다시 쓴 모듈은 반쯤 완성된 집합일 수 있으므로 로드하지 않는다. 파일은 그대로라 다음에 성공한 빌드의 변경과 함께 로드된다.
                 for ( auto& [name, pContext] : _mapModule )
                 {
@@ -370,8 +370,8 @@ namespace sw
             {
                 if ( _buildFinishedSeconds == 0.0 )
                     _buildFinishedSeconds = MonotonicClock::nowSeconds(); // 대기 구간의 시작 — 디바운스 · 리로드 잡음을 지나 연쇄가 시작할 때까지
-                if ( event._targetName.empty() == false && _mapModule.find( event._targetName ) != _mapModule.end() )
-                    triggerReload( event._targetName );
+                if ( event._moduleName.empty() == false && _mapModule.find( event._moduleName ) != _mapModule.end() )
+                    triggerReload( event._moduleName );
             }
         }
         return event._bInProgress;

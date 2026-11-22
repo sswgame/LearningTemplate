@@ -37,7 +37,6 @@
 
 ## 3. 알려진 실패 · 흔들림
 
-- **`editor.playreload` 격리(만료 2026-11-27, `Config/Rules/Test/Quarantine.json`):** 게임 모듈 교체가 시계를 170 초 넘게 잡는다 — 풀고 다시 돌린다.
 - **shooter3d dx11 골든:** crowd `fight` 25.7 %, enemydeath `death_b` 1.37 % — 다시 지면 `scenario_bisect --golden-margins`(군중 정착 조건 의심).
 - **`editor.tilemapdatalayers` 단독 실패:** 글 칸 키보드 초점 — `EditorSelfTestInput::isKeyboardTargetStable` 를 `scenario-debug` "단독으로만 지면" 으로.
 - **Linux:** sequencercuts · sequencerkeys `SequencerUnboundCount`(`--gpu software chain editor`), netresourcedigest, 에디터 체인 약 18 단계(입력 초점), themepark 체인 멈춤, lavapipe `blendEnable` + `R16G16_SNORM`(재현 안 되면 지운다), `editor.screenrectview` 1.09375 %(`all` 에서만 — 사진 앞 대기를 정착 조건으로). 빈 골든은 `scenario_bisect.py --golden-coverage` 로 찾아 채운다.

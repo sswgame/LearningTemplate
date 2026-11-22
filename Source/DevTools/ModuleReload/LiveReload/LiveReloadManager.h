@@ -120,10 +120,10 @@ namespace sw
         void notifyBuildStarted();
         /**
          * @brief `notifyBuildStarted` 로 알린 빌드가 끝났음을 알립니다. 어느 스레드에서나 부를 수 있으며, 다음 `update` 가 게임 스레드에서 처리합니다.
-         * @param bSucceeded 성공이면 기다리던 변경을 적용합니다(@p targetName 이 등록된 모듈이면 바뀌지 않았어도 다시 로드합니다). 실패나 취소면
+         * @param bSucceeded 성공이면 기다리던 변경을 적용합니다(@p moduleName 이 등록된 모듈이면 바뀌지 않았어도 다시 로드합니다). 실패나 취소면
          *        그 빌드가 쓴 변경을 버립니다(반쯤 링크된 집합을 로드하지 않습니다. 다음에 성공한 빌드가 적용합니다).
          */
-        void notifyBuildFinished( bool bSucceeded, string_view targetName );
+        void notifyBuildFinished( bool bSucceeded, string_view moduleName );
 
         /**
          * @brief 파일 변경을 확인하고 예약된 리로드를 실행합니다.
@@ -257,7 +257,7 @@ namespace sw
         /** @brief 빌드 쪽(`notifyBuildStarted` · `notifyBuildFinished`, 빌드 스레드)이 쓰고 `update` 가 읽는 상태입니다. `_buildMutex` 가 지킵니다. */
         struct BuildEvent
         {
-            string _targetName;                ///< 끝난 빌드의 타깃(비면 전체 빌드)
+            string _moduleName;                ///< 끝난 빌드가 다시 쓴 모듈(`SWGame` — 빌드 대상 `SWGame_<게임>` 이 아니다, 비면 전체 빌드)
             bool   _bInProgress{ false };      ///< 빌드가 도는 중이다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
             bool   _bFinishedPending{ false }; ///< 끝났는데 `update` 가 아직 처리하지 않았다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
             bool   _bSucceeded{ false };       ///< 끝난 빌드가 성공했다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다

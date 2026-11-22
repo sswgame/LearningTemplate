@@ -60,7 +60,6 @@
 	<Expect watch="Reload.LastPrepareMs.Module" atLeast="0.001"/>
 	<Expect watch="Reload.LastSuspendMs.Module" atLeast="0.001"/>
 	<Expect watch="Reload.LastCommitMs.Module" atLeast="0.001"/>
-	<ExpectLog id="ModuleCompiler.CompilationSucceededTarget" contains="SWGame" count="2"/> <!-- probe-next 와 끝의 되돌린 다시 짓기 -->
 
 	<!-- ③ 에셋 덮어쓰기 — 사본 파일을 바깥 편집기의 저장처럼 덮으면 감시가 알리고 캐시가 다시 읽는다 -->
 	<Store watch="Reload.Count.Asset" as="assetBefore"/>
@@ -112,6 +111,7 @@
 	<Expect watch="KitDemo.SurvivalHorror.Health" equals="75"/>
 	<Expect watch="KitDemo.SurvivalHorror.Sanity" equals="70"/>
 	<ExpectLog id="Xml.MissingRoot" count="1"/>
+	<ExpectLog id="AssetHotReload.HotReloadSkippedRunning" count="1"/> <!-- 다시 읽기에 진 카탈로그 — 실행 중인 씬은 이전 판으로 돈다는 알림 -->
 
 	<!-- 틀린 설정 JSON: 설정 리로드가 지고 이전 값으로 돈다 -->
 	<OverwriteConfig configFile="Editor/editortooldefaults.json" from="game/playground/automation/desktop/editor/playreload/tooldefaults_broken.json"/>
@@ -141,6 +141,7 @@
 	<ExpectStateHash key="playing"/>
 	<Expect watch="Reload.StaleCount" equals="0"/>
 
+	<ExpectLog id="ModuleCompiler.CompilationSucceededTarget" contains="SWGame" count="2"/> <!-- probe-next 와 바로 위 되돌린 다시 짓기 — 그 자리에서 세므로 둘 다 끝난 뒤에 둔다 -->
 	<DevCommand line="stop"/>
 	<EditorWaitStable/>
 	<WaitUntil watch="Editor.PlayState" equals="0" timeoutFrames="600"/>

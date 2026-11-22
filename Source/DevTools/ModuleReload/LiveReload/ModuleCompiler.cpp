@@ -83,7 +83,7 @@ namespace sw
         if ( _pLiveReloadManager != nullptr )
             _pLiveReloadManager->notifyBuildStarted();
 
-        _workerThread = sw::thread( ThreadCreationKey{}, &ModuleCompiler::runBuildThread, this, string( targetName ), Memory::getCurrentMemoryTag() );
+        _workerThread = sw::thread( ThreadCreationKey{}, &ModuleCompiler::runBuildThread, this, string( moduleName ), string( targetName ), Memory::getCurrentMemoryTag() );
         return true;
     }
 
@@ -126,11 +126,11 @@ namespace sw
         return bBuildTree ? parentDir : string{};
     }
 
-    void ModuleCompiler::failBeforeBuild( const string& targetName )
+    void ModuleCompiler::failBeforeBuild( const string& moduleName )
     {
         _buildState.store( BuildState::Failed, std::memory_order_relaxed );
         _lastExitCode.store( kNoExitCode, std::memory_order_relaxed );
-        notifyBuildFinished( false, targetName );
+        notifyBuildFinished( false, moduleName );
         _bIsCompiling.store( false, std::memory_order_relaxed );
     }
 
@@ -206,7 +206,7 @@ namespace sw
         return false;
     }
 
-    void ModuleCompiler::runBuildThread( const string& targetName, MemoryTag memoryTag, StopToken stopToken )
+    void ModuleCompiler::runBuildThread( const string& moduleName, const string& targetName, MemoryTag memoryTag, StopToken stopToken )
     {
         // 이 스레드의 할당은 빌드를 요청한 쪽의 용도로 센다.
         const ScopedMemoryTag threadMemoryTag{ memoryTag };
@@ -216,7 +216,7 @@ namespace sw
         if ( buildDir.empty() || FileUtil::isDirectory( FileUtil::toDiskPath( buildDir ) ) == false )
         {
             SW_LOG_ERROR_ID( "ModuleCompiler.NoCMakeBuildTree", "No CMake build tree (build.ninja / CMakeCache.txt) next to the binary folder '%#' - this build cannot compile modules", ProcessRoots::get()._binary.str() );
-            failBeforeBuild( targetName );
+            failBeforeBuild( moduleName );
             return;
         }
 
@@ -238,7 +238,7 @@ namespace sw
         if ( pProcess->launch( command, options ) == false )
         {
             SW_LOG_ERROR_ID( "ModuleCompiler.FailedLaunchCMakeProcess", "Failed to launch CMake process! Command: %#", command.toCommandLine() );
-            failBeforeBuild( targetName );
+            failBeforeBuild( moduleName );
             return;
         }
 
@@ -249,14 +249,15 @@ namespace sw
 
         relayBuildOutput();
         const bool bSucceeded = recordBuildResult( targetDisplayName, stopToken );
-        notifyBuildFinished( bSucceeded, targetName );
+        // 매니저에는 리로드할 모듈 이름을 넘긴다 — 빌드 대상(`SWGame_<게임>`)으로 넘기면 모듈 표에 없어 교체가 걸리지 않았다(playreload 170 초 대기).
+        notifyBuildFinished( bSucceeded, moduleName );
         _bIsCompiling.store( false, std::memory_order_relaxed );
     }
 
-    void ModuleCompiler::notifyBuildFinished( bool bSucceeded, const string& targetName )
+    void ModuleCompiler::notifyBuildFinished( bool bSucceeded, const string& moduleName )
     {
         // 빌드 스레드다 — 리로드는 여기서 하지 않고 넘기기만 한다. 게임 스레드의 `LiveReloadManager::update` 가 처리한다.
         if ( _pLiveReloadManager != nullptr )
-            _pLiveReloadManager->notifyBuildFinished( bSucceeded, targetName );
+            _pLiveReloadManager->notifyBuildFinished( bSucceeded, moduleName );
     }
 } // namespace sw
