@@ -230,7 +230,6 @@ namespace sw
     void ShooterEnemyComponent::onRegister( GameObjectManager& manager )
     {
         Component::onRegister( manager );
-        _hitSubscription    = GameObjectEvents::listen<&ShooterEnemyComponent::handleHit>( *this, &GameObjectEvents::_hitReceived );
         _notifySubscription = GameObjectEvents::listen<&ShooterEnemyComponent::handleAnimationNotify>( *this, &GameObjectEvents::_animationNotify );
     }
 
@@ -435,6 +434,11 @@ namespace sw
                     SW_LOG_ERROR_ID( "ShooterEnemyComponent.EnemyPartRigidBody", "Enemy part '%#' has a rigid body but could not be released to physics", pPart->getName().c_str() );
             }
         } );
+    }
+
+    void ShooterEnemyComponent::HitReceiverPort::receiveHit( const HitInfo& hit )
+    {
+        getPortOwner<ShooterEnemyComponent>( *this, offsetof( ShooterEnemyComponent, _hitReceiverPort ) ).handleHit( hit );
     }
 
     HealthReading ShooterEnemyComponent::HealthSourcePort::getHealthReading() const

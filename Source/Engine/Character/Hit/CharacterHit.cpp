@@ -5,6 +5,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringUtil.h"
 
+#include "Engine/Character/Hit/IHitReceiver.h"
 #include "Engine/Character/Hit/RagdollComponent.h"
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Object/Component/Component.h"
@@ -260,6 +261,9 @@ namespace sw
     {
         if ( target.isPendingDestroy() || target.isActiveInHierarchy() == false )
             return;
+        // 피해는 받는 쪽 하나가 먼저 정한다(쓰러짐이면 치명 사본을 반응에 다시 낸다) — 반응이 체력보다 먼저 돌지 않는다(언리얼 TakeDamage → OnTakeAnyDamage).
+        if ( IHitReceiver* const pReceiver = target.findInterface<IHitReceiver>() )
+            pReceiver->receiveHit( hit );
         GameObjectEvents::broadcast( target, &GameObjectEvents::_hitReceived, hit );
     }
 

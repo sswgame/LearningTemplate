@@ -53,7 +53,6 @@ namespace sw
         , _ownedTagCounts{}
         , _ownedTagSubscription{}
         , _moduleUnloadingSubscription{}
-        , _hitSubscription{}
         , _blockedAbilityTagCounts{}
         , _mapAttributeChangedMulticast{}
         , _mapGameplayEventMulticast{}
@@ -479,15 +478,18 @@ namespace sw
         // 모듈 내림은 이 컴포넌트만 듣는다(기반 가상 함수로 모든 컴포넌트를 훑지 않는다 — 언리얼 `FCoreUObjectDelegates` 구독 자리).
         _moduleUnloadingSubscription = game::getSubsystem<TypeRegistry>().subscribeModuleUnloading(
             SW_DELEGATE_METHOD( TypeRegistry::ModuleUnloadingDelegate, &AbilitySystemComponent::onModuleUnloading, this ) );
-        _hitSubscription = GameObjectEvents::listen<&AbilitySystemComponent::receiveHit>( *this, &GameObjectEvents::_hitReceived );
     }
 
     void AbilitySystemComponent::onUnregister( GameObjectManager& manager )
     {
         _moduleUnloadingSubscription = Subscription{};
-        _hitSubscription             = Subscription{};
         manager.getComponentRegistry().remove<AbilitySystemComponent>( this );
         Component::onUnregister( manager );
+    }
+
+    void AbilitySystemComponent::HitReceiverPort::receiveHit( const HitInfo& hit )
+    {
+        getPortOwner<AbilitySystemComponent>( *this, offsetof( AbilitySystemComponent, _hitReceiverPort ) ).receiveHit( hit );
     }
 
     HealthReading AbilitySystemComponent::HealthSourcePort::getHealthReading() const

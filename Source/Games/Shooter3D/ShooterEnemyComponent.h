@@ -10,6 +10,7 @@
 #include "Core/Name/hashed_string.h"
 #include "Core/Time/Countdown.h"
 
+#include "Engine/Character/Hit/IHitReceiver.h"
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -56,6 +57,7 @@ namespace sw
     public:
         REFLECT_BODY();
         REFLECT_INTERFACE( IHealthSource, _healthSourcePort );
+        REFLECT_INTERFACE( IHitReceiver, _hitReceiverPort );
 
         ShooterEnemyComponent();
         virtual ~ShooterEnemyComponent() override = default;
@@ -129,7 +131,6 @@ namespace sw
         void requestDropSocketParts() const;
 
     private:
-        Subscription _hitSubscription;    ///< 맞음 사건 구독(`handleHit`)
         Subscription _notifySubscription; ///< 애니메이션 알림 사건 구독(`handleAnimationNotify`)
         PROPERTY( Category = "Enemy", DisplayName = "Game Mode", Tooltip = "Object with the ShooterGameModeComponent" )
         GameObjectHandle _gameMode;
@@ -188,5 +189,11 @@ namespace sw
             HealthReading getHealthReading() const override;
         };
         HealthSourcePort _healthSourcePort;
+        /** @brief 맞음 피해를 주인의 `handleHit` 으로 넘기는 포트입니다(`CharacterRayHit::deliverHit` 가 찾는다). */
+        struct HitReceiverPort final : IHitReceiver
+        {
+            void receiveHit( const HitInfo& hit ) override;
+        };
+        HitReceiverPort _hitReceiverPort;
     };
 } // namespace sw

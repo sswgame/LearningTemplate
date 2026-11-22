@@ -145,12 +145,6 @@ namespace sw
             IHealthSource::deliverFatalHit( getOwner(), HitInfo{} );
     }
 
-    void UnitStatsComponent::onRegister( GameObjectManager& manager )
-    {
-        Component::onRegister( manager );
-        _hitSubscription = GameObjectEvents::listen<&UnitStatsComponent::receiveHit>( *this, &GameObjectEvents::_hitReceived );
-    }
-
     void UnitStatsComponent::receiveHit( const HitInfo& hit )
     {
         if ( hit._bFatal )
@@ -277,6 +271,11 @@ namespace sw
     } // namespace
 
     SW_AUTOMATION_QUERY_WATCH( unitStatsHP, "UnitStats.HP", "Current HP of the target's UnitStatsComponent", &UnitStatsWatchesInternal::readHP, true, false );
+
+    void UnitStatsComponent::HitReceiverPort::receiveHit( const HitInfo& hit )
+    {
+        getPortOwner<UnitStatsComponent>( *this, offsetof( UnitStatsComponent, _hitReceiverPort ) ).receiveHit( hit );
+    }
 
     HealthReading UnitStatsComponent::HealthSourcePort::getHealthReading() const
     {

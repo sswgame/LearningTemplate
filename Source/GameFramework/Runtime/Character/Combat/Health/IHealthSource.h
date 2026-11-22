@@ -63,8 +63,8 @@ namespace sw
          * @brief 이 맞음으로 쓰러졌다고 정했을 때 부릅니다. @p pOwner 의 다른 컴포넌트에 치명 표시(`HitInfo::_bFatal`)를 단 사본을 다시 보냅니다.
          * @details 엔진은 체력을 몰라 때린 쪽(무기 레이캐스트 · 근접 판정)은 치명인지 모른다. 쓰러짐을 정하는 쪽이 체력 원천이라 치명 신호도 여기서 낸다 —
          *          래그돌 전환(`RagdollComponent::_bRagdollOnFatalHit`) · 절단(`SkeletalSeveringComponent`)이 같은 신호 하나로 움직인다. 언리얼에서 체력 컴포넌트의
-         *          죽음 이벤트에 래그돌 · 절단을 묶는 자리다. 맞음 사건(`GameObjectEvents::_hitReceived`)으로 다시 내므로 자기에게도 온다 —
-         *          체력 원천의 맞음 처리는 치명 표시가 달린 맞음을 건너뛴다. 이미 치명 표시가 달린 맞음이면 보내지 않는다.
+         *          죽음 이벤트에 래그돌 · 절단을 묶는 자리다. 맞음 사건(`GameObjectEvents::_hitReceived`)으로 다시 내며 반응만 받는다 —
+         *          피해는 받는 쪽 포트(`IHitReceiver`)로 들어와 사건을 구독하지 않으므로 다시 깎이지 않는다. 이미 치명 표시가 달린 맞음이면 보내지 않는다.
          */
         static void deliverFatalHit( GameObject* pOwner, const HitInfo& hit );
     };

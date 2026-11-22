@@ -15,6 +15,7 @@
 #include "Core/Name/TagID.h"
 #include "Core/Name/hashed_string.h"
 
+#include "Engine/Character/Hit/IHitReceiver.h"
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -89,6 +90,7 @@ namespace sw
     public:
         REFLECT_BODY();
         REFLECT_INTERFACE( IHealthSource, _healthSourcePort );
+        REFLECT_INTERFACE( IHitReceiver, _hitReceiverPort );
 
         using AttributeChangedDelegate    = Delegate<void( const AttributeChangeData& )>;
         using EffectDelegate              = Delegate<void( const ActiveGameplayEffect& )>;
@@ -508,7 +510,6 @@ namespace sw
         TagCountTable                                                                                   _ownedTagCounts;
         Subscription                                                                                    _ownedTagSubscription;        ///< `_ownedTagCounts` 의 변화를 자기가 듣는 구독(`onOwnedTagChanged`)
         Subscription                                                                                    _moduleUnloadingSubscription; ///< 등록된 동안 모듈 내림을 듣는 구독(`onModuleUnloading`)
-        Subscription                                                                                    _hitSubscription;             ///< 등록된 동안 맞음 사건을 듣는 구독(`receiveHit`)
         TagCountTable                                                                                   _blockedAbilityTagCounts;     ///< `_blockAbilitiesWithTags` 가 막은 어빌리티 태그(알림 없이 센다)
         unordered_map<hashed_string, unique_ptr<MulticastDelegate<void( const AttributeChangeData& )>>> _mapAttributeChangedMulticast;
         unordered_map<uint64, unique_ptr<MulticastDelegate<void( const AbilityEventData& )>>>           _mapGameplayEventMulticast;
@@ -553,5 +554,11 @@ namespace sw
             HealthReading getHealthReading() const override;
         };
         HealthSourcePort _healthSourcePort;
+        /** @brief 맞음 피해를 주인의 `receiveHit` 으로 넘기는 포트입니다(`CharacterRayHit::deliverHit` 가 찾는다). */
+        struct HitReceiverPort final : IHitReceiver
+        {
+            void receiveHit( const HitInfo& hit ) override;
+        };
+        HitReceiverPort _hitReceiverPort;
     };
 } // namespace sw
