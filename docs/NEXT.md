@@ -12,7 +12,7 @@
 
 ## 1. 다음 순서
 
-- **이벤트 버스 소비자:** `QuestLogComponent` 가 `InteractionCompletedEvent` · `AbilityOwnerDiedEvent` 를 구독해 자기 조종자 폰의 것만 `QuestLog::notify` 로 센다(`onRegister` 구독 · `onUnregister` 해제). 나머지 받는 쪽 없는 이벤트(세이브 · 씬 로드 → UI, 방 클리어 → HUD, 빙의 → 카메라)는 쓰일 때 붙인다.
+- **이벤트 버스 소비자 남은 몫:** 받는 쪽 없는 이벤트(세이브 · 씬 로드 → UI, 방 클리어 → HUD, 빙의 → 카메라)는 쓰일 때 붙인다.
 - `IHealthSource` 읽기 계약과 맞음 받기를 한 받는 쪽 인터페이스로 합친다.
 - `ActionRoom::drawDebug` 를 클라이언트로. Linux 검증은 여러 묶음 push 뒤 한 번(`linux-verify`).
 
