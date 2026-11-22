@@ -103,6 +103,8 @@ namespace sw
         , _registeredAssetCache{ "AssetManager.AssetCache", SW_DELEGATE_METHOD( RegistrationList<AssetCacheBase>::ReleaseFunction, &AssetManager::releaseAssetCache, this ) }
         , _listReloadEntry{}
         , _configReloadedSubscription{}
+        , _listBaseRegistryLayer{}
+        , _bSourceRegistryBaseReady{ SW_FALSE }
     {
         // 내장 캐시는 기능 폴더가 등록표에 올린 것이다 — Resource 는 그 타입을 모른다. 모두 여기서 만들어 소유한다(정적 창구는 `getAssetCache<T>()` 로 찾는다).
         // 등록 순서는 링크 순서라 종류 이름 순으로 늘어놓아 비우기 순서를 고정한다. 등록 · "내장인가" 판정이 모두 이 목록을 본다.
@@ -428,17 +430,17 @@ namespace sw
             publishLoadPolicy();
     }
 
-    bool AssetManager::rebuildAssetRegistry() const
+    bool AssetManager::rebuildAssetRegistry()
     {
         return installAssetRegistry( _pPackManager->getContentSource() );
     }
 
-    bool AssetManager::installAssetRegistry( const ContentSource source ) const
+    bool AssetManager::buildBaseRegistryLayers( const ContentSource source, const vector<string>& listDomain, vector<AssetRegistryLayer>& outListLayer ) const
     {
-        vector<AssetRegistryLayer> listLayer;
+        outListLayer.clear();
         if ( source == ContentSource::Cooked )
         {
-            for ( const string& domain : _pPackManager->getMountedDomainsByPriority() )
+            for ( const string& domain : listDomain )
             {
                 const string indexID = FileUtil::joinPath( domain, AssetPackIndex::kFileName );
                 string       text;
@@ -459,7 +461,7 @@ namespace sw
                 {
                     layer._listEntry.push_back( AssetRegistryEntry{ entry._guid, FileUtil::joinPath( domain, entry._path ) } );
                 }
-                listLayer.push_back( std::move( layer ) );
+                outListLayer.push_back( std::move( layer ) );
             }
         }
         else
@@ -474,8 +476,25 @@ namespace sw
             if ( listIssue.empty() == false )
                 SW_LOG_WARNING_ID( "AssetManager.SourceIndexIssues", "Source content: %# asset identity issues (first: %#) - their GUID references will not resolve; run py -3 -m Scripts asset-ids --fix",
                                    listIssue.size(), listIssue.front().toString() );
-            listLayer.push_back( database.makeRegistryLayer( roots._content.str() ) );
+            outListLayer.push_back( database.makeRegistryLayer( roots._content.str() ) );
         }
+        return true;
+    }
+
+    bool AssetManager::installAssetRegistry( const ContentSource source )
+    {
+        // 소스 바닥 층(콘텐츠 전체 스캔)은 한 번 지어 다시 쓴다 — 모드 적용 · 해제마다 훑지 않는다. 쿠킹 바닥 층(도메인 색인 몇 개)은 패치 팩이 도메인 색인 파일을
+        // 덮을 수 있어 매번 다시 읽는다(싸다).
+        const bool bReuseSourceBase = source == ContentSource::Source && _bSourceRegistryBaseReady == SW_TRUE;
+        if ( bReuseSourceBase == false )
+        {
+            vector<AssetRegistryLayer> listBase;
+            if ( buildBaseRegistryLayers( source, _pPackManager->getMountedDomainsByPriority(), listBase ) == false )
+                return false;
+            _listBaseRegistryLayer    = std::move( listBase );
+            _bSourceRegistryBaseReady = source == ContentSource::Source ? SW_TRUE : SW_FALSE;
+        }
+        vector<AssetRegistryLayer> listLayer = _listBaseRegistryLayer;
         // 패치 · 모드 팩이 실은 자기 색인(줄은 전체 리소스 id) — 도메인 층 뒤에 쌓아 그 팩의 새 에셋과 옮긴 줄이 이긴다. 색인을 싣지 않은 패치 팩(바뀐 파일만)은 건너뛴다.
         vector<string> listPatchText;
         vector<string> listPatchSource;

@@ -27,6 +27,7 @@
 
 #include "Engine/Asset/AssetFormat.h"
 #include "Engine/Asset/Cache/AssetCacheBase.h"
+#include "Engine/Content/AssetRegistry.h"
 #include "Engine/Content/ContentSource.h"
 #include "Engine/Content/Pack/PackChunkLoader.h"
 
@@ -171,9 +172,11 @@ namespace sw
 
         /**
          * @brief 지금 마운트한 콘텐츠로 GUID 색인을 다시 지어 겁니다(`installAssetRegistry` — 콘텐츠 정책은 팩 매니저의 것). 런타임에 팩을 붙이거나 뗀 뒤(모드 · 패치) 부른다.
-         * @details 패치 팩이 도메인 색인(`<도메인>/assetindex.xml`)을 덮었으면 덮은 것을 읽는다. 못 지으면 오류를 남기고 false 이며 있던 색인을 그대로 둔다 — 부르는 쪽이 붙인 팩을 되돌린다.
+         * @details 소스 바닥 층(콘텐츠 전체 스캔)은 기동 때 지은 것을 다시 쓰고 패치 · 모드 팩 층만 새로 읽어 합친다 — 모드 적용 · 해제마다 콘텐츠 전체를 다시 훑지 않는다
+         *          (언리얼 패치 팩 마운트가 기존 색인에 항목만 더하는 자리). 쿠킹 바닥 층은 패치 팩이 도메인 색인을 덮을 수 있어 매번 다시 읽는다.
+         *          못 지으면 오류를 남기고 false 이며 있던 색인을 그대로 둔다 — 부르는 쪽이 붙인 팩을 되돌린다.
          */
-        [[nodiscard]] bool rebuildAssetRegistry() const;
+        [[nodiscard]] bool rebuildAssetRegistry();
 
         /**
          * @brief 씬 @p sceneID 를 열기 전에 그 씬이 쓰는 미룬 청크(`packchunks.xml`)를 준비합니다(게임 스레드 — 씬 열기가 `Ready` 가 될 때까지 프레임마다 묻는다).
@@ -223,7 +226,9 @@ namespace sw
          *          틀렸거나 한 팩 안에서 겹치면 오류다 — 쿠킹은 늘 색인을 담는다(`PackCooker`). 소스 트리는 저작 색인(`AssetDatabase::scan`)이 층 하나다 — 결함(겹친 GUID ·
          *          짝 잃은 `.meta`)은 경고로 남기고 결함 파일은 색인에 들지 않는다(그 GUID 참조는 읽을 때 오류다). 규칙 파일을 못 읽으면 false 입니다.
          */
-        [[nodiscard]] bool installAssetRegistry( ContentSource source ) const;
+        [[nodiscard]] bool installAssetRegistry( ContentSource source );
+        /** @brief 바닥 층(쿠킹 도메인마다 `assetindex.xml`, 소스면 저작 스캔 한 층)을 지어 @p outListLayer 에 담습니다. 못 지으면 오류를 남기고 false 입니다. */
+        [[nodiscard]] bool buildBaseRegistryLayers( ContentSource source, const vector<string>& listDomain, vector<AssetRegistryLayer>& outListLayer ) const;
         /** @brief 읽기가 싣는 설정 사본(데이터 상속 깊이 상한 — `ResourceComposition::setInheritanceMaxDepth`)을 뜹니다. 게임 스레드(기동 · 다시 읽기 알림)만 부른다. */
         static void publishLoadPolicy();
         /** @brief 설정 다시 읽기 알림입니다. 엔진 설정이면 사본을 다시 뜹니다. */
@@ -243,8 +248,10 @@ namespace sw
          *          같은 종류 이름의 둘째 캐시는 거절한다(이름으로 찾는 쪽이 어느 것을 받을지 정해지지 않는다).
          */
         RegistrationList<AssetCacheBase> _registeredAssetCache;
-        vector<ReloadEntry>              _listReloadEntry;            ///< 리로드 함수가 있는 캐시만(배포는 늘 비었다)
-        Subscription                     _configReloadedSubscription; ///< 설정 다시 읽기 알림 구독(`publishLoadPolicy`)
+        vector<ReloadEntry>              _listReloadEntry;              ///< 리로드 함수가 있는 캐시만(배포는 늘 비었다)
+        Subscription                     _configReloadedSubscription;   ///< 설정 다시 읽기 알림 구독(`publishLoadPolicy`)
+        vector<AssetRegistryLayer>       _listBaseRegistryLayer;        ///< 마지막으로 지은 바닥 층(`buildBaseRegistryLayers`) — 다시 짓기가 패치 층을 뒤에 쌓는다
+        uint8                            _bSourceRegistryBaseReady : 1; ///< 소스 바닥 층(콘텐츠 스캔)을 지었으면 1 — 다시 짓기가 스캔을 건너뛴다
 
         SW_SERVICE_SLOT( AssetManager, Required );
     };
