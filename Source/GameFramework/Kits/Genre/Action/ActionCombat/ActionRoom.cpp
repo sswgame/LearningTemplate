@@ -6,7 +6,6 @@
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Reflection/TypeFqn.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
@@ -219,29 +218,6 @@ namespace sw
         resolvePlayerHits( input._playerPos._x, input._playerPos._y, result );
         refreshCleared( result );
         return result;
-    }
-
-    void ActionRoom::drawDebug() const
-    {
-        if ( _kind == ActionRoomKind::None )
-            return;
-
-        DebugDrawQueue* pDbg = game::findSubsystem<DebugDrawQueue>();
-        if ( pDbg == nullptr )
-            return;
-
-        const float4 actorColor = ( _kind == ActionRoomKind::Boss ) ? float4( 1.0f, 0.25f, 0.2f, 1.0f ) : float4( 1.0f, 0.55f, 0.2f, 1.0f );
-        for ( const Actor& actor : _listActor )
-        {
-            if ( actor._bAlive == SW_FALSE )
-                continue;
-            const float32 radius = _listMonsterDef[actor._defIndex]._stats._radius;
-            pDbg->drawSphere( float3( actor._position._x, 0.5f, actor._position._y ), radius, actorColor );
-        }
-        for ( const ProjectileState& projectile : _projectiles.getProjectiles() )
-        {
-            pDbg->drawSphere( float3( projectile._position._x, 0.4f, projectile._position._y ), projectile._radius, float4( 1.0f, 0.9f, 0.2f, 1.0f ) );
-        }
     }
 
     AABB ActionRoom::computeProjectileBounds( const ProjectileState& projectile )

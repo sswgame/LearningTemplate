@@ -209,8 +209,18 @@ namespace sw
          *          언리얼에서 폰의 죽음을 GameMode 에 알리고 GameMode 가 브로드캐스트하는 것과 같다.
          */
         void onPlayerDefeated();
-        /** @brief 디버그 오버레이를 그립니다. */
-        void drawDebug() const;
+        /** @brief 살아 있는 적마다 @p visit( 자리, 반경 ) 을 부릅니다 — 그리기는 클라이언트(`GF_Client_ActionCombat`)가 한다. */
+        template <typename TVisit>
+        void forEachLiveActor( TVisit&& visit ) const
+        {
+            for ( const Actor& actor : _listActor )
+            {
+                if ( actor._bAlive != SW_FALSE )
+                    visit( actor._position, _listMonsterDef[actor._defIndex]._stats._radius );
+            }
+        }
+        /** @brief 날고 있는 적 투사체입니다(그리기 · 감시용 읽기). */
+        const vector<ProjectileState>& getProjectiles() const { return _projectiles.getProjectiles(); }
 
         /**
          * @brief 종류, 클리어, 공격, 대시, 무적 남은 시간, 이번 싸움의 종 id를 씁니다(보스 최대 체력 같은 수치는 정의가 가지고 있습니다). 적(위치, 체력, 사격 시간, 종 인덱스, 생존)과 투사체도 씁니다.

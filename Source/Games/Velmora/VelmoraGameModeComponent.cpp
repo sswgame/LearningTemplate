@@ -29,9 +29,14 @@ namespace sw
     {
         struct VelmoraGameModeComponentInternal
         {
-            static constexpr const utf8* kAttackAction = "Velmora.Attack";
-            static constexpr const utf8* kDashAction   = "Velmora.Dash";
-            static constexpr const utf8* kUseAction    = "Velmora.Use";
+            static constexpr float4      kRoomActorColor       = float4( 1.0f, 0.55f, 0.2f, 1.0f ); ///< 홀 적
+            static constexpr float4      kRoomBossColor        = float4( 1.0f, 0.25f, 0.2f, 1.0f ); ///< 보스 룸 적
+            static constexpr float4      kRoomProjectileColor  = float4( 1.0f, 0.9f, 0.2f, 1.0f );  ///< 적 투사체
+            static constexpr float32     kRoomActorHeight      = 0.5f;                              ///< 적 공을 띄우는 높이
+            static constexpr float32     kRoomProjectileHeight = 0.4f;                              ///< 투사체 공을 띄우는 높이
+            static constexpr const utf8* kAttackAction         = "Velmora.Attack";
+            static constexpr const utf8* kDashAction           = "Velmora.Dash";
+            static constexpr const utf8* kUseAction            = "Velmora.Use";
 
             /** @brief 축 입력이 이보다 작으면 바라보는 쪽을 바꾸지 않는다(패드 스틱의 떨림). */
             static constexpr float32 kFacingDeadZone = 0.2f;
@@ -402,8 +407,17 @@ namespace sw
             if ( region._camp.isSet() )
                 pDraw->drawSphere( float3( region._camp._position._x, 0.2f, region._camp._position._y ), 0.4f, float4( 0.95f, 0.4f, 0.1f, 1.0f ) );
         }
-        if ( _phase == VelmoraPhase::Hall || _phase == VelmoraPhase::Boss )
-            _room.drawDebug();
+        if ( ( _phase == VelmoraPhase::Hall || _phase == VelmoraPhase::Boss ) && _room.isActive() )
+        {
+            // 룸 규칙은 그리지 않는다(렌더 의존 없음) — 그리는 쪽이 읽어 그린다. 키트 클라이언트(`ActionCombatAvatarComponent`)와 같은 색이다.
+            const float4 actorColor = _room.getKind() == ActionRoomKind::Boss ? VelmoraGameModeComponentInternal::kRoomBossColor : VelmoraGameModeComponentInternal::kRoomActorColor;
+            _room.forEachLiveActor( [pDraw, &actorColor]( const float2& position, float32 radius )
+            { pDraw->drawSphere( float3( position._x, VelmoraGameModeComponentInternal::kRoomActorHeight, position._y ), radius, actorColor ); } );
+            for ( const ProjectileState& projectile : _room.getProjectiles() )
+            {
+                pDraw->drawSphere( float3( projectile._position._x, VelmoraGameModeComponentInternal::kRoomProjectileHeight, projectile._position._y ), projectile._radius, VelmoraGameModeComponentInternal::kRoomProjectileColor );
+            }
+        }
         const float4 playerColor = _room.isPlayerInvulnerable() ? float4( 0.6f, 0.9f, 1.0f, 1.0f ) : float4( 0.2f, 0.6f, 1.0f, 1.0f );
         pDraw->drawSphere( float3( _playerPosition._x, height, _playerPosition._y ), 0.28f, playerColor );
     }
