@@ -110,6 +110,13 @@ namespace sw
             particle._velocity._x = VFXCPUSimulationInternal::lerpFloat( def._velocityMin._x, def._velocityMax._x, VFXCPUSimulationInternal::nextUnitFloat( state ) );
             particle._velocity._y = VFXCPUSimulationInternal::lerpFloat( def._velocityMin._y, def._velocityMax._y, VFXCPUSimulationInternal::nextUnitFloat( state ) );
             particle._velocity._z = VFXCPUSimulationInternal::lerpFloat( def._velocityMin._z, def._velocityMax._z, VFXCPUSimulationInternal::nextUnitFloat( state ) );
+            // 상자 생성은 속도 뒤의 난수를 쓴다 — 점 생성(상자 0)의 수열은 그대로다.
+            if ( def._spawnHalfExtents != float3::Zero )
+            {
+                particle._position._x = VFXCPUSimulationInternal::lerpFloat( -def._spawnHalfExtents._x, def._spawnHalfExtents._x, VFXCPUSimulationInternal::nextUnitFloat( state ) );
+                particle._position._y = VFXCPUSimulationInternal::lerpFloat( -def._spawnHalfExtents._y, def._spawnHalfExtents._y, VFXCPUSimulationInternal::nextUnitFloat( state ) );
+                particle._position._z = VFXCPUSimulationInternal::lerpFloat( -def._spawnHalfExtents._z, def._spawnHalfExtents._z, VFXCPUSimulationInternal::nextUnitFloat( state ) );
+            }
             _listParticle.push_back( particle );
         }
     }
@@ -155,6 +162,14 @@ namespace sw
         particle._velocity        = tangentPart * ( 1.0f - def._collision._friction ) - normalPart * def._collision._restitution;
         particle._position        = hit._point + hit._normal * VFXCollisionDef::kSurfaceSkin;
         return true;
+    }
+
+    void VFXCPUSimulation::moveEmitter( const float3& localOffset )
+    {
+        if ( getDef()._space != VFXSimulationSpace::World )
+            return;
+        for ( Particle& particle : _listParticle )
+            particle._position -= localOffset;
     }
 
     void VFXCPUSimulation::writeParticles( vector<GPUParticle>& outListParticle ) const

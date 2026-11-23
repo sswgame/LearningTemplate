@@ -70,30 +70,43 @@ namespace sw
             static VFXSimulationTargetSet collisionTargets( const VFXEmitterDef& def ) { return def._collision.getSupportedTargets(); }
             static VFXSimulationTargetSet lightTargets( const VFXEmitterDef& def ) { return def._light.getSupportedTargets(); }
 
+            /** @brief 상자 생성은 CPU 전용이다 — GPU 시뮬레이션(vfx_simulate.hlsl)은 방출기 점에서만 낸다. */
+            static VFXSimulationTargetSet spawnBoxTargets( const VFXEmitterDef& def )
+            {
+                return def._spawnHalfExtents == float3::Zero ? VFXSimulationTargetSet::makeAll() : VFXSimulationTargetSet::makeOnly( VFXSimulationTarget::CPU );
+            }
+            /** @brief 월드 공간은 CPU 전용이다 — GPU 입자는 방출기 로컬 버퍼에만 산다. */
+            static VFXSimulationTargetSet spaceTargets( const VFXEmitterDef& def )
+            {
+                return def._space == VFXSimulationSpace::Local ? VFXSimulationTargetSet::makeAll() : VFXSimulationTargetSet::makeOnly( VFXSimulationTarget::CPU );
+            }
+
             /** @brief 방출기의 모든 칸입니다. 칸을 더하면 여기에 줄을 더한다(`VFXEffectDefTest.EveryEmitterFieldDeclaresItsTargets`). */
             static constexpr ModuleRow kArrModuleRow[] = {
-                {         "_name",      &everyTarget, false},
-                {   "_renderMode",      &everyTarget, false},
-                {  "_texturePath",      &everyTarget, false},
-                {    "_blendMode",      &everyTarget, false},
-                {     "_sortMode",      &everyTarget, false},
-                {         "_mesh",      &meshTargets, false},
-                {     "_bLooping",      &everyTarget, false},
-                { "_maxParticles",      &everyTarget, false},
-                {     "_duration",      &everyTarget, false},
-                {    "_spawnRate",      &everyTarget, false},
-                {    "_listBurst",      &everyTarget, false},
-                {  "_lifetimeMin",      &everyTarget, false},
-                {  "_lifetimeMax",      &everyTarget, false},
-                {  "_velocityMin",      &everyTarget, false},
-                {  "_velocityMax",      &everyTarget, false},
-                {      "_gravity",      &everyTarget, false},
-                { "_sizeOverLife",      &everyTarget, false},
-                {"_colorOverLife",      &everyTarget, false},
-                {    "_collision", &collisionTargets, false},
-                {        "_light",     &lightTargets, false},
-                {"_tintParameter",      &everyTarget, false},
-                {"_sizeParameter",      &everyTarget, false},
+                {            "_name",      &everyTarget, false},
+                {      "_renderMode",      &everyTarget, false},
+                {     "_texturePath",      &everyTarget, false},
+                {       "_blendMode",      &everyTarget, false},
+                {        "_sortMode",      &everyTarget, false},
+                {            "_mesh",      &meshTargets, false},
+                {        "_bLooping",      &everyTarget, false},
+                {    "_maxParticles",      &everyTarget, false},
+                {        "_duration",      &everyTarget, false},
+                {       "_spawnRate",      &everyTarget, false},
+                {       "_listBurst",      &everyTarget, false},
+                {     "_lifetimeMin",      &everyTarget, false},
+                {     "_lifetimeMax",      &everyTarget, false},
+                {"_spawnHalfExtents",  &spawnBoxTargets, false},
+                {           "_space",     &spaceTargets, false},
+                {     "_velocityMin",      &everyTarget, false},
+                {     "_velocityMax",      &everyTarget, false},
+                {         "_gravity",      &everyTarget, false},
+                {    "_sizeOverLife",      &everyTarget, false},
+                {   "_colorOverLife",      &everyTarget, false},
+                {       "_collision", &collisionTargets, false},
+                {           "_light",     &lightTargets, false},
+                {   "_tintParameter",      &everyTarget, false},
+                {   "_sizeParameter",      &everyTarget, false},
             };
         };
     } // namespace
@@ -215,6 +228,9 @@ namespace sw
         bValid            = Check::expect( _lifetimeMin <= _lifetimeMax, sourceLabel, _name, "_lifetimeMax must not be below _lifetimeMin" ) && bValid;
         const bool bEmits = _spawnRate > 0.0f || _listBurst.empty() == false;
         bValid            = Check::expect( bEmits, sourceLabel, _name, "needs _spawnRate above 0 or a burst" ) && bValid;
+
+        const bool bSpawnBoxValid = _spawnHalfExtents._x >= 0.0f && _spawnHalfExtents._y >= 0.0f && _spawnHalfExtents._z >= 0.0f;
+        bValid                    = Check::expect( bSpawnBoxValid, sourceLabel, _name, "_spawnHalfExtents must not be negative on any axis" ) && bValid;
 
         const bool bVelocityOrdered = _velocityMin._x <= _velocityMax._x && _velocityMin._y <= _velocityMax._y && _velocityMin._z <= _velocityMax._z;
         bValid                      = Check::expect( bVelocityOrdered, sourceLabel, _name, "_velocityMax must not be below _velocityMin on any axis" ) && bValid;

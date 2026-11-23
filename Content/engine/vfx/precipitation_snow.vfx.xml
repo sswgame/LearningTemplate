@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="c5e2918f0d7b4a3c8e61f4a2b9d05c77"?>
+<!-- 눈 — 작은 원이 천천히 흩날리며 떨어진다(1.2 ~ 1.8 m/s, 시점 위 10 m 에서 8 초).
+     시점 위를 따라다니는 상자에서 태어나 월드에 남고(_space World), 물리 바디에 닿으면 사라진다(_collision Kill — 지붕 아래에는 들지 않는다). 세기는 Intensity 의 알파다
+     (PrecipitationComponent). 텍스처는 Kenney 파티클 팩(CC0). -->
+<VFXEffectDef>
+	<_listUserParameter>
+		<VFXUserParameterDef _name="Intensity" _value="1, 1, 1, 1"/>
+	</_listUserParameter>
+	<_listEmitter>
+		<VFXEmitterDef _name="Flakes" _texturePath="engine/textures/particles/kenney_particle/circle_05.dds" _blendMode="Alpha" _bLooping="true"
+		               _maxParticles="1000" _duration="1" _spawnRate="110" _lifetimeMin="8" _lifetimeMax="8"
+		               _spawnHalfExtents="10, 1, 10" _space="World" _velocityMin="-0.5, -1.8, -0.5" _velocityMax="0.5, -1.2, 0.5" _gravity="0, 0, 0" _tintParameter="Intensity">
+			<_collision _mode="Kill" _method="PhysicsRaycast"/>
+			<_sizeOverLife><_listKey><FloatCurveKey _time="0" _value="0.07" _interpolation="Linear"/></_listKey></_sizeOverLife>
+			<_colorOverLife>
+				<_red><_listKey><FloatCurveKey _time="0" _value="0.95" _interpolation="Linear"/></_listKey></_red>
+				<_green><_listKey><FloatCurveKey _time="0" _value="0.97" _interpolation="Linear"/></_listKey></_green>
+				<_blue><_listKey><FloatCurveKey _time="0" _value="1.0" _interpolation="Linear"/></_listKey></_blue>
+				<_alpha><_listKey><FloatCurveKey _time="0" _value="0.85" _interpolation="Linear"/></_listKey></_alpha>
+			</_colorOverLife>
+		</VFXEmitterDef>
+	</_listEmitter>
+</VFXEffectDef>

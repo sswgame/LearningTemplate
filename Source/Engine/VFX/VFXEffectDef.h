@@ -59,6 +59,14 @@ namespace sw
         GPU, ///< vfx_simulate.hlsl — 렌더 스레드가 컴퓨트로 돌리고 간접 인자로 그린다(`VFXGPUSimulation`)
     };
 
+    /** @brief 입자가 사는 공간입니다(유니티 Simulation Space · 언리얼 Niagara Local Space). */
+    ENUM()
+    enum class VFXSimulationSpace : uint8
+    {
+        Local, ///< 방출기를 따라 움직인다
+        World, ///< 태어난 월드 자리에 남는다 — 카메라를 따라가는 비 · 눈이 끌려가지 않는다. 방출기의 이동만 되돌린다(회전 · 배율이 바뀌면 함께 돈다). CPU 전용
+    };
+
     /** @brief 입자가 무엇에 닿았을 때 반응하는지입니다. */
     ENUM()
     enum class VFXCollisionMode : uint8
@@ -290,6 +298,10 @@ namespace sw
         float32 _lifetimeMin{ 0.0f };
         PROPERTY( Min = 0.0, Units = s, Tooltip = "Longest particle life (required)" )
         float32 _lifetimeMax{ 0.0f };
+        PROPERTY( Tooltip = "Half size of the box around the emitter the particles are born in (zero = the emitter point; CPU simulation)" )
+        float3 _spawnHalfExtents{};
+        PROPERTY( Tooltip = "Space the particles live in: Local follows the emitter, World stays where each particle was born (CPU simulation)" )
+        VFXSimulationSpace _space{ VFXSimulationSpace::Local };
         PROPERTY( Tooltip = "Per-axis lower bound of the initial velocity" )
         float3 _velocityMin{};
         PROPERTY( Tooltip = "Per-axis upper bound of the initial velocity" )
