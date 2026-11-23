@@ -148,7 +148,7 @@ namespace sw
         _state._vfxMeshReadback.release( _pDevice );
     }
 
-    void FrameGraphExecutor::beginFrame( FrameBufferTable& table )
+    void FrameGraphExecutor::beginFrame( IRHICommandList& cmd, FrameBufferTable& table )
     {
         _bGPUCullingActive = 0;
         _state._gpuMessages.poll();
@@ -156,6 +156,7 @@ namespace sw
         // 이번 프레임의 출력 선택(`gpu.inspect` · `gpu.thread`)과 로그 예산 — 프레임의 기록보다 먼저 큐에 들어간다.
         const GPUPixelInspector* const pInspector = engine::findSubsystem<GPUPixelInspector>();
         _state._gpuMessages.updateControl( pInspector != nullptr ? pInspector->getSelection() : GPUMessageSelection{}, _state._settings._diagnostics._gpuMessageLogBudget );
+        _state._gpuMessages.transitionForWrite( cmd ); // 위 업로드가 읽기 상태로 남긴다 — 패스 몸통은 전이하지 않는다
         // HZB · 가림 타일 표시는 짓는 쪽(HZBBuild 패스 · 프리패스 뒤 · 반사 앞)이 다시 켠다. 패스가 없는 파이프라인에서 지난 프레임의 표시가 남아 컬링이 낡은 피라미드를 읽지 않게 비운다.
         _bLatePhasePending                         = 0;
         _bLatePhaseRan                             = 0;
@@ -206,7 +207,7 @@ namespace sw
 
     void FrameGraphExecutor::executePass( RenderPassKind type, const RenderGraphPassContext& graphContext )
     {
-        _pCmd = graphContext.getCommandList(); // 패스 기록 면 — 텍스처 전이는 이 패스가 쓰기로 선언한 자원의 `RenderGraphPassContext::transition` 뿐이다
+        _pCmd = graphContext.getCommandList(); // 패스 기록 면 — 전이는 이 패스가 쓰기로 선언한 자원의 `RenderGraphPassContext::transition` 뿐이다
         switch ( type )
         {
             case RenderPassKind::DepthHistory:
@@ -298,6 +299,9 @@ namespace sw
     {
         // 메시지가 켜진 디스패치(컬링 · 모프 · 마커)가 끝났다 — 링을 읽기 버퍼로 복사하는 명령을 넣는다(그래픽스 패스의 기록은 다음 프레임 사본에 실린다).
         _state._gpuMessages.requestReadback( cmd );
+        // 가림 타일의 되읽기 — 짓기(HZBBuild 패스)와 컬링이 끝난 프레임 끝이다. 컬링이 없는 백엔드(DX11)는 짓지 않는다.
+        const bool bOcclusion = _pDevice != nullptr && _state._settings._bOcclusionCulling != SW_FALSE && _pDevice->getCapabilities()._bGPUCulling != SW_FALSE;
+        _occlusion.requestReadback( cmd, _pDevice, bOcclusion, _state._mainView );
         // GPU 메시 입자의 살아 있는 수 · 주 시점이 그린 수 — 컬링과 그리기가 끝난 프레임 끝이다(자동화 감시 값 `VFX.GPUMesh*`).
         if ( _pDevice != nullptr )
         {
@@ -773,8 +777,7 @@ namespace sw
         if ( _pCmd == nullptr || _pDevice == nullptr )
             return;
         // HZB 는 옮긴 깊이 히스토리(지난 장면 깊이)에서 짓는다 — 컬링(GPUCull 패스)이 `HZB` 를 읽어 이 뒤에 온다. 전이는 그래프가 냈다(`beginFrame` 이 등록한 칸).
-        const RHIPipelineStateHandle pso      = _psoManager.getEnginePSO( RenderPassKind::HZBBuild );
-        const bool                   bEnabled = _state._settings._bOcclusionCulling != SW_FALSE && _pDevice->getCapabilities()._bGPUCulling != SW_FALSE;
+        const RHIPipelineStateHandle pso = _psoManager.getEnginePSO( RenderPassKind::HZBBuild );
         // 지난 프레임 사각형만 읽는다(자동 렌더 배율 — 사각형 밖은 옛 깊이다).
         const auto recordView = [this, &graphContext, pso]( FrameViewTarget& view, uint32 viewSlot, bool bWriteTiles )
         {
@@ -784,9 +787,8 @@ namespace sw
             return _occlusion.record( graphContext, viewSlot, *_pDevice, pso, view.scaleToPreviousRect( depth._width, true ), view.scaleToPreviousRect( depth._height, false ),
                                       view._depthHistoryViewProj, bWriteTiles, view );
         };
-        // 주 시점만 가림 타일(16 px 밉)도 쓴다 — 게임 스레드의 가림 질의가 되읽는다.
+        // 주 시점만 가림 타일(16 px 밉)도 쓴다 — 게임 스레드의 가림 질의가 되읽는다(복사는 그래프 뒤 `endFrame`).
         _state._mainView._bOcclusionTilesThisFrame = recordView( _state._mainView, 0, true ) ? SW_TRUE : SW_FALSE;
-        _occlusion.requestReadback( _pCmd, _pDevice, bEnabled, _state._mainView );
         for ( uint32 extraIndex = 0; extraIndex < static_cast<uint32>( _state._listExtraView.size() ); ++extraIndex )
         {
             FrameViewTarget& view = *_state._listExtraView[extraIndex];

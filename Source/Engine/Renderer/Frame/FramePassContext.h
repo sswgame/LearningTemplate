@@ -36,7 +36,7 @@ namespace sw
     {
         /**
          * @brief 이 패스의 기록 면입니다 — 텍스처 상태 전이 · 기록 범위가 없는 형식이다(`IRHIPassCommandList`).
-         * @details 텍스처 전이는 그래프가 선언에서 낸다. 패스 안 왕복은 쓰기로 선언한 자원만 `_pGraphPass->transition` 으로 한다.
+         * @details 전이는 그래프가 선언에서 낸다. 패스 안 왕복은 쓰기로 선언한 자원만 `_pGraphPass->transition` 으로 한다.
          */
         IRHIPassCommandList* _pCmd{ nullptr };
         /** @brief 이 패스의 그래프 문맥입니다(선언한 접근 · 뷰 자원 표 · 리스트) — 뷰 그래프 패스를 기록하는 동안만 가리킨다(`FramePassExecutor::onGraphPassExecute`). 그 밖에서는 nullptr 이다. */

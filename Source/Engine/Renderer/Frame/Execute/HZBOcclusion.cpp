@@ -189,10 +189,10 @@ namespace sw
         return true;
     }
 
-    void HZBOcclusion::requestReadback( IRHIPassCommandList* pCmd, IRHIDevice* pDevice, bool bEnabled, const FrameViewTarget& view )
+    void HZBOcclusion::requestReadback( IRHICommandList& cmd, IRHIDevice* pDevice, bool bEnabled, const FrameViewTarget& view )
     {
         // 켜져 있지 않으면 고리를 비워 둔다(읽기 버퍼를 만들지 않는다). 켰다 끄면 남은 사본도 치운다.
-        const bool bReadable = bEnabled && pDevice != nullptr && pCmd != nullptr;
+        const bool bReadable = bEnabled && pDevice != nullptr;
         if ( bReadable == false )
         {
             if ( _readback.isInitialized() )
@@ -253,8 +253,8 @@ namespace sw
         meta._depthWidth   = static_cast<float32>( view._hzbLayout._depthWidth ); // 타일을 지은 사각형과 같다(지난 사각형)
         meta._depthHeight  = static_cast<float32>( view._hzbLayout._depthHeight );
         meta._bValid       = view._bHistoryReset == SW_FALSE ? SW_TRUE : SW_FALSE;
-        // 타일은 프레임 패스 `HZBBuild` 가 UAV 로 썼고 그래프에서 읽는 패스가 없다 — 복사 뒤에도 그 상태로 되돌린다(그래프가 아는 상태 그대로).
-        if ( _readback.request( *pCmd, view._occlusionTiles._buffer, RHIBufferState::UnorderedAccess, next ) )
+        // 프레임 그래프가 끝나 타일은 등록 접근(셰이더 읽기 — `registerFrameResources`)이다 — 복사 뒤에도 그 상태로 되돌린다.
+        if ( _readback.request( cmd, view._occlusionTiles._buffer, RHIBufferState::ShaderResource, next ) )
             _readbackSerial = next;
     }
 

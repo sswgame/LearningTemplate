@@ -7,9 +7,13 @@
 
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
 #include "Engine/Graphics/RHI/Tests/RHIFakeDevice.h"
 #include "Engine/Renderer/Graph/FrameBufferTable.h"
+
+#include <type_traits>
+#include <utility>
 
 using namespace sw;
 
@@ -24,6 +28,44 @@ namespace
         buffer._capacityElements = 16;
         return buffer;
     }
+
+    /** @brief 형식 @p T 로 버퍼 · 텍스처 전이, UAV 배리어, 버퍼 복사를 부를 수 있는지 하나씩 봅니다. */
+    template <typename T, typename = void>
+    struct HasBufferTransition : std::false_type
+    {
+    };
+    template <typename T>
+    struct HasBufferTransition<T, std::void_t<decltype( std::declval<T&>().transitionBuffer( RHIBufferHandle{}, RHIBufferState::Common ) )>> : std::true_type
+    {
+    };
+    template <typename T, typename = void>
+    struct HasTextureTransition : std::false_type
+    {
+    };
+    template <typename T>
+    struct HasTextureTransition<T, std::void_t<decltype( std::declval<T&>().prepareTextureForShaderRead( RHITextureHandle{} ) )>> : std::true_type
+    {
+    };
+    template <typename T, typename = void>
+    struct HasUAVBarrier : std::false_type
+    {
+    };
+    template <typename T>
+    struct HasUAVBarrier<T, std::void_t<decltype( std::declval<T&>().uavBarrier( RHIBufferHandle{} ) )>> : std::true_type
+    {
+    };
+    template <typename T, typename = void>
+    struct HasBufferCopy : std::false_type
+    {
+    };
+    template <typename T>
+    struct HasBufferCopy<T, std::void_t<decltype( std::declval<T&>().copyBufferToReadback( RHIBufferHandle{}, RHIBufferHandle{}, 0u ) )>> : std::true_type
+    {
+    };
+    // 패스 몸통이 보는 형식에는 전이 · 배리어 · 복사가 없다 — 그래프가 모르는 상태 변화를 몸통이 쓸 수 없다.
+    static_assert( HasBufferTransition<IRHIPassCommandList>::value == false && HasTextureTransition<IRHIPassCommandList>::value == false );
+    static_assert( HasUAVBarrier<IRHIPassCommandList>::value == false && HasBufferCopy<IRHIPassCommandList>::value == false );
+    static_assert( HasBufferTransition<IRHICommandList>::value && HasTextureTransition<IRHICommandList>::value && HasUAVBarrier<IRHICommandList>::value && HasBufferCopy<IRHICommandList>::value );
 } // namespace
 
 /**
@@ -172,7 +214,7 @@ SW_TEST_CASE( FrameBufferTableTest, ChangedAccessesReturnToTheirInitialAccess )
 
 /**
  * @brief [FrameBufferTableTest] 패스 안 전이(`transition`)는 쓰기로 선언한 등록 자원만 이 패스의 리스트에 낸다 — 선언하지 않은 이름은 오류이고 아무것도 내지 않는다
- * @details 패스 기록 면(`IRHIPassCommandList`)에는 텍스처 전이가 없어 이 길 하나다. 읽기 접근 핸들로 부르는 코드는 컴파일되지 않는다(static_assert — 그래프가 레벨 앞에서 옮긴다).
+ * @details 패스 기록 면(`IRHIPassCommandList`)에는 전이가 없어 이 길 하나다(아래 static_assert). 읽기 접근 핸들로 부르는 코드는 컴파일되지 않는다(static_assert — 그래프가 레벨 앞에서 옮긴다).
  *          결함이면 병렬 레벨의 워커가 선언하지 않은 자원의 추적 상태를 바꾼다(앞 리스트가 배리어 없이 먼저 실행된다 — RHI 검토 S1).
  *          변이: 선언 검사를 빼면 선언 안 한 전이가 리스트에 들어가 개수 단언이, 버퍼 판을 텍스처로 내면 버퍼 단언이 진다.
  */

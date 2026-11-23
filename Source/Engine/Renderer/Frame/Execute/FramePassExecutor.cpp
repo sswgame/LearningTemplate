@@ -1055,7 +1055,7 @@ namespace sw
     void FramePassExecutor::recordFrameGraph( IRHIDevice* pDevice )
     {
         _frameBufferTable.reset();
-        _frameGraphExecutor.beginFrame( _frameBufferTable );
+        _frameGraphExecutor.beginFrame( *_pCmd, _frameBufferTable );
         RenderGraph& frameGraph = _state._frameGraph;
         // 주인이 등록한 접근이 프레임 그래프의 시작이자 끝이다(언리얼 RegisterExternalBuffer) — 그래프가 끝에 되돌린다.
         frameGraph.importResources( _frameBufferTable );

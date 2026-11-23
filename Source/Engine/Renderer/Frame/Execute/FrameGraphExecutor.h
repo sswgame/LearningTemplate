@@ -57,14 +57,15 @@ namespace sw
          *        그래프가 전이를 낼 자원(지금은 HZB · 가림 타일 — 짓는 뷰만)을 @p table 에 등록합니다(뷰 칸: 주 시점 0, 추가 뷰 `_listExtraView` 번호 + 1).
          * @details 표시를 여기서 비우는 까닭: 파이프라인이 그 패스를 선언하지 않으면 패스가 돌지 않아 지난 파이프라인의 값이 남는다.
          *          짓지 않는 뷰는 등록하지 않는다 — 등록하면 그래프가 쓰지 않는 버퍼에 전이를 낸다(가림 판정은 기본 끔).
+         * @param cmd 프레임 그래프를 기록할 리스트입니다 — 셰이더 메시지 링의 UAV 전이를 그래프 앞에 넣는다.
          */
-        void beginFrame( FrameBufferTable& table );
+        void beginFrame( IRHICommandList& cmd, FrameBufferTable& table );
         /**
          * @brief 프레임 패스 하나를 그래프 문맥 @p graphContext 의 리스트에 기록합니다(리스트는 부르는 쪽이 열고 닫는다). @p type 은 `isFramePassType` 이어야 합니다(로드 검증이 막는다).
          * @details 같은 종류를 두 번 선언할 수 없다(검증) — 컬링 · 그리드는 프레임에 한 번 모든 뷰를 돈다. 등록한 자원은 문맥의 접근 핸들로 받는다(`RenderGraphPassContext::getBuffer`).
          */
         void executePass( RenderPassKind type, const RenderGraphPassContext& graphContext );
-        /** @brief 프레임 그래프가 끝난 뒤 부릅니다. assert 가 켜진 디스패치(컬링 · 모프 · 마커)의 링 되읽기를 @p cmd 에 요청합니다. */
+        /** @brief 프레임 그래프가 끝난 뒤 부릅니다. 되읽기 복사(메시지가 켜진 디스패치의 링 · 주 시점 가림 타일 · GPU 메시 입자)를 @p cmd 에 요청합니다. */
         void endFrame( IRHICommandList& cmd );
         /** @brief 이번 프레임에 그린 뷰마다 그 뷰-투영과 눈 위치를 적어 둡니다(다음 프레임의 깊이 히스토리가 짝이 된다). 모든 뷰를 그린 뒤 부릅니다. */
         void rememberDepthHistoryViews();
