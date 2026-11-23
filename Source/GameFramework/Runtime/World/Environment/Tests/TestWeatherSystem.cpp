@@ -2,9 +2,14 @@
 
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Environment/Wind/WindComponent.h"
+#include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Visual/Component/DirectionalLightComponent.h"
 
 #include "GameFramework/Runtime/World/Environment/WeatherMaterialWriter.h"
+#include "GameFramework/Runtime/World/Environment/WeatherSceneWriter.h"
 #include "GameFramework/Runtime/World/Environment/WeatherSystem.h"
 
 using namespace sw;
@@ -287,4 +292,60 @@ SW_TEST_CASE( WeatherSystemTest, MaterialBindingsMapWeatherValuesToChannels )
     SW_EXPECT_LOG( "WeatherSystem.MaterialBindingNoCollection" );
     (void)broken.loadFromXMLText( R"(<WeatherCatalog><MaterialBinding parameter="Weather" valueX="wetness"/><Weather id="Clear" minDuration="100" maxDuration="100"/></WeatherCatalog>)", "weather" );
     SW_EXPECT_TRUE( broken.getMaterialBindings().empty() );
+}
+
+/** @brief [WeatherSystemTest] `<SceneBinding>` 은 날씨 값을 배율로 옮긴다 — 0 은 atZero, 1 은 atOne, 같은 대상은 곱하고, 바인딩이 없는 대상은 1 이다 */
+SW_TEST_CASE( WeatherSystemTest, SceneBindingsScaleSceneValues )
+{
+    WeatherCatalog catalog;
+    SW_REQUIRE_TRUE( catalog.loadFromXMLText( R"(<WeatherCatalog transition="10">
+        <SceneBinding target="SunIntensity" value="skyLight" atZero="0.2" atOne="1"/>
+        <SceneBinding target="WindSpeed" value="wind" atZero="1" atOne="4"/>
+        <SceneBinding target="WindSpeed" value="gale" atZero="1" atOne="2"/>
+        <SoundBinding event="Weather.Rain" value="rain" parameter="WeatherRain" opennessParameter="WeatherOpenness"/>
+        <Weather id="Storm" minDuration="50" maxDuration="50"><Values skyLight="0" wind="0.5" gale="1" rain="1"/></Weather>
+    </WeatherCatalog>)",
+                                              "weather" ) );
+    SW_REQUIRE_EQUAL( 3u, static_cast<uint32>( catalog.getSceneBindings().size() ) );
+    SW_REQUIRE_EQUAL( 1u, static_cast<uint32>( catalog.getSoundBindings().size() ) );
+    WeatherSystem weather;
+    weather.initialize( &catalog, 1, WeatherSystemTestUtil::kSpring );
+    SW_EXPECT_NEAR( 0.2f, WeatherSceneWriter::computeScale( catalog, weather, WeatherSceneTarget::SunIntensity ), 1.0e-6f );
+    SW_EXPECT_NEAR( 5.0f, WeatherSceneWriter::computeScale( catalog, weather, WeatherSceneTarget::WindSpeed ), 1.0e-5f );
+    SW_EXPECT_NEAR( 1.0f, WeatherSceneWriter::computeScale( catalog, weather, WeatherSceneTarget::FogDensity ), 1.0e-6f );
+}
+
+/** @brief [WeatherSystemTest] 쓰개는 씬의 빛 · 바람에 배율을 쓰고, 값이 0 보다 큰 소리를 내며, 닫으면 배율을 1 로 되돌린다 */
+SW_TEST_CASE( WeatherSystemTest, SceneWriterScalesAndRestoresTheScene )
+{
+    WeatherCatalog catalog;
+    SW_REQUIRE_TRUE( catalog.loadFromXMLText( R"(<WeatherCatalog transition="10">
+        <SceneBinding target="SunIntensity" value="skyLight" atZero="0.25" atOne="1"/>
+        <SceneBinding target="WindSpeed" value="wind" atZero="1" atOne="3"/>
+        <SoundBinding event="Weather.Rain" value="rain" parameter="WeatherRain"/>
+        <Weather id="Storm" minDuration="50" maxDuration="50"><Values skyLight="0" wind="1" rain="1"/></Weather>
+    </WeatherCatalog>)",
+                                              "weather" ) );
+    WeatherSystem weather;
+    weather.initialize( &catalog, 1, WeatherSystemTestUtil::kSpring );
+    GameObjectManager manager;
+    GameObject*       pObject = manager.createGameObject( hashed_string( "Sky" ) );
+    SW_REQUIRE_NOT_NULL( pObject );
+    DirectionalLightComponent* pSun  = pObject->addComponent<DirectionalLightComponent>();
+    WindComponent*             pWind = pObject->addComponent<WindComponent>();
+    SW_REQUIRE_NOT_NULL( pSun );
+    SW_REQUIRE_NOT_NULL( pWind );
+    pSun->setIntensity( 2.0f );
+    pWind->setSpeed( 4.0f );
+    WeatherSceneWriter writer;
+    writer.open( &catalog );
+    SW_EXPECT_TRUE( writer.isOpen() );
+    writer.apply( manager, weather );
+    SW_EXPECT_NEAR( 0.5f, pSun->getIntensity(), 1.0e-6f );
+    SW_EXPECT_NEAR( 12.0f, pWind->makeSettings()._speed, 1.0e-5f );
+    SW_EXPECT_TRUE( writer.isSoundPlaying( hashed_string( "Weather.Rain" ) ) );
+    writer.close( &manager );
+    SW_EXPECT_NEAR( 2.0f, pSun->getIntensity(), 1.0e-6f );
+    SW_EXPECT_NEAR( 4.0f, pWind->makeSettings()._speed, 1.0e-6f );
+    SW_EXPECT_FALSE( writer.isSoundPlaying( hashed_string( "Weather.Rain" ) ) );
 }

@@ -82,6 +82,13 @@ namespace sw
         { pEmitter->setParameter( name, value ); } );
     }
 
+    void AudioSoundPlayer::setParameter( const hashed_string& name, float32 value )
+    {
+        AudioEngine* pEngine = findEngine();
+        if ( pEngine != nullptr )
+            pEngine->setParameter( name, value );
+    }
+
     void AudioSoundPlayer::stop( SoundPlayingID playingID, float32 fadeSeconds )
     {
         AudioEngine* pEngine = findEngine();

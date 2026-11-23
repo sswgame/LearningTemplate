@@ -5,6 +5,7 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
+#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
@@ -63,6 +64,38 @@ namespace sw
             }
         };
 
+        struct GameStateWeatherWatchesInternal
+        {
+            /** @brief 열린 판 상태입니다. 없으면 까닭을 적고 nullptr 입니다. */
+            static const GameStateComponent* findState( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
+            {
+                const GameStateComponent* pState = GameStateComponent::findOpen( query._pManager );
+                if ( pState == nullptr )
+                    outValue.setText( "no initialized GameStateComponent" );
+                return pState;
+            }
+
+            /** @brief 감시 값 `Weather.SoundPlaying` 입니다. 이벤트 key 의 날씨 소리를 내는 중이면 1 입니다. */
+            [[nodiscard]] static bool readSoundPlaying( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
+            {
+                const GameStateComponent* pState = findState( query, outValue );
+                if ( pState == nullptr )
+                    return false;
+                outValue.setNumber( pState->getWeatherScene().isSoundPlaying( hashed_string( query._key ) ) ? 1.0 : 0.0 );
+                return true;
+            }
+
+            /** @brief 감시 값 `Weather.SkyOpenness` 입니다. 듣는 자리의 하늘 열림(0 실내 .. 1 트임)입니다. */
+            [[nodiscard]] static bool readSkyOpenness( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
+            {
+                const GameStateComponent* pState = findState( query, outValue );
+                if ( pState == nullptr )
+                    return false;
+                outValue.setNumber( static_cast<float64>( pState->getWeatherScene().getSkyOpenness() ) );
+                return true;
+            }
+        };
+
         struct GameStateDevCommandsInternal
         {
             /** @brief 활성 씬에서 열린 월드 상태(씬에 하나)입니다. 없으면 답을 채우고 nullptr 입니다. */
@@ -107,6 +140,9 @@ namespace sw
 
     SW_STATE_FORMAT_UPGRADE( sessionState1To2, "GTST", 1, 2, &GameStateComponentInternal::upgradeStateFrom1 );
 
+    SW_AUTOMATION_QUERY_WATCH( weatherSoundPlaying, "Weather.SoundPlaying", "1 while the weather sound event named key plays", &GameStateWeatherWatchesInternal::readSoundPlaying, false, true );
+    SW_AUTOMATION_QUERY_WATCH( weatherSkyOpenness, "Weather.SkyOpenness", "Share of the sky open above the listener while a weather sound plays (0 indoors, 1 open)", &GameStateWeatherWatchesInternal::readSkyOpenness,
+                               false, false );
     // 지갑 · 가방 명령(`cheat.money` · `cheat.give`)은 플레이어 상태 개발 도구(`PlayerStateDevTools.cpp`)에 있다.
     SW_DEV_COMMAND( CheatWeather, "cheat.weather", "cheat.weather <weatherID> [duration]", "Switch the session state's weather now, without the transition (duration in game seconds; none picks from the definition)",
                     &GameStateDevCommandsInternal::runWeather );
@@ -120,6 +156,7 @@ namespace sw
         , _pWeatherCatalog{}
         , _weather{}
         , _weatherMaterial{}
+        , _weatherScene{}
         , _land{}
         , _listClockEvent{}
         , _restore{}
@@ -153,6 +190,7 @@ namespace sw
         _weather.initialize( _pWeatherCatalog.get(), settings._weatherSeed, _clock.getSeasonName() );
         _bWeather = settings._pWeatherCatalog != nullptr ? SW_TRUE : SW_FALSE;
         _weatherMaterial.open( _pWeatherCatalog.get() ); // 강수를 칸으로 적은 카탈로그면 지면 머티리얼이 날씨를 따른다(없으면 열지 않는다)
+        _weatherScene.open( _pWeatherCatalog.get() );
         _land.initialize( settings._landWidth, settings._landHeight, settings._landCellSize, settings._landOrigin );
         _listClockEvent.clear();
         return _restore.open( *this );
@@ -204,15 +242,19 @@ namespace sw
         _clock.pollEvents( _listClockEvent ); // 날이 넘어가면 평판 컴포넌트가 이 알림을 읽고 평판을 식힌다(`ReputationComponent::onTick`)
         if ( _bWeather == SW_TRUE && _clock.isPaused() == false )
             (void)_weather.update( context.getDeltaTime() * _clock.getTimeScale() * 86400.0f / _clock.getSettings()._secondsPerDay, _clock.getSeasonName() );
-        // 묶음은 게임 스레드만 고친다 — 쓰기는 틱 뒤에 한다.
-        if ( _weatherMaterial.isOpen() )
-            context.deferPostTickOnComponent( *this, []( GameStateComponent& state )
-            { state._weatherMaterial.apply( state._weather ); } );
+        // 묶음 · 다른 컴포넌트의 배율 · 소리는 게임 스레드만 고친다 — 쓰기는 틱 뒤에 한다(씬에 하나인 컴포넌트라 큐에 일 하나다).
+        if ( _weatherMaterial.isOpen() || _weatherScene.isOpen() )
+            context.deferPostTickOnComponent( *this, []( GameStateComponent& state, GameObjectManager& manager )
+            {
+                state._weatherMaterial.apply( state._weather );
+                state._weatherScene.apply( manager, state._weather );
+            } );
     }
 
     void GameStateComponent::onEndPlay()
     {
         _weatherMaterial.close();
+        _weatherScene.close( getOwner() != nullptr ? getOwner()->getMutableManager() : nullptr );
         Component::onEndPlay();
     }
 

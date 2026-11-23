@@ -57,6 +57,10 @@ namespace sw
         void         setDirection( float32 radians ) { _direction = Radians::fromRadians( radians ); }
         void         setStrength( float32 strength ) { _strength = strength; }
         void         setSpeed( float32 speed ) { _speed = speed; }
+        /** @brief 적은 흔들림 세기(돌풍 포함)에 곱할 배율입니다(날씨 — 폭풍). 저장하지 않습니다. 음수는 0 으로 자릅니다. */
+        void setStrengthScale( float32 scale ) { _strengthScale = scale > 0.0f ? scale : 0.0f; }
+        /** @brief 적은 풍속에 곱할 배율입니다(날씨 — 폭풍). 저장하지 않습니다. 음수는 0 으로 자릅니다. */
+        void setSpeedScale( float32 scale ) { _speedScale = scale > 0.0f ? scale : 0.0f; }
 
         /** @brief @p manager 의 켜진 바람(씬에 하나)입니다. 없거나 둘 이상이면(오류) 기본값을 채우고 false 입니다. 병렬 틱 안에서 불러도 됩니다(읽기만 합니다). */
         [[nodiscard]] static bool findWind( const GameObjectManager& manager, WindSettings& outSettings );
@@ -74,5 +78,8 @@ namespace sw
         float32 _swayFrequency;
         PROPERTY( Category = "Wind", DisplayName = "Speed", Min = 0.0, Units = "m/s", Tooltip = "Wind speed that pushes sails (foliage sway uses Strength)" )
         float32 _speed;
+
+        float32 _strengthScale; ///< 날씨 같은 실행 중 배율(저장하지 않는다)
+        float32 _speedScale;    ///< 날씨 같은 실행 중 배율(저장하지 않는다)
     };
 } // namespace sw

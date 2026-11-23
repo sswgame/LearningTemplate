@@ -4,9 +4,34 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
+
+namespace sw
+{
+    namespace
+    {
+        struct WindWatchesInternal
+        {
+            /** @brief 감시 값 `Wind.Speed` 입니다. 씬의 바람 풍속(m/s, 적은 풍속 × 날씨 배율)입니다. */
+            [[nodiscard]] static bool readSpeed( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
+            {
+                WindSettings wind;
+                if ( query._pManager == nullptr || WindComponent::findWind( *query._pManager, wind ) == false )
+                {
+                    outValue.setText( "no wind in the scene" );
+                    return false;
+                }
+                outValue.setNumber( static_cast<float64>( wind._speed ) );
+                return true;
+            }
+        };
+    } // namespace
+
+    SW_AUTOMATION_QUERY_WATCH( windSpeed, "Wind.Speed", "Wind speed of the scene (m/s, authored speed x weather scale, without gusts)", &WindWatchesInternal::readSpeed, false, false );
+} // namespace sw
 
 namespace sw
 {
@@ -17,6 +42,8 @@ namespace sw
         , _gustFrequency{ 0.25f }
         , _swayFrequency{ 1.2f }
         , _speed{ 2.0f }
+        , _strengthScale{ 1.0f }
+        , _speedScale{ 1.0f }
     {
     }
 
@@ -24,11 +51,11 @@ namespace sw
     {
         WindSettings settings;
         settings._direction     = float2{ MathUtil::cos( _direction.radians() ), MathUtil::sin( _direction.radians() ) };
-        settings._strength      = _strength;
-        settings._gustStrength  = _gustStrength;
+        settings._strength      = _strength * _strengthScale;
+        settings._gustStrength  = _gustStrength * _strengthScale;
         settings._gustFrequency = _gustFrequency;
         settings._swayFrequency = _swayFrequency;
-        settings._speed         = _speed;
+        settings._speed         = _speed * _speedScale;
         return settings;
     }
 
