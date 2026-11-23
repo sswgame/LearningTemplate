@@ -444,24 +444,13 @@ namespace sw
                         return S_OK;
                     POINT clientPoint{ static_cast<LONG>( x ), static_cast<LONG>( y ) };
                     (void)ScreenToClient( hwnd, &clientPoint );
-                    const UIViewport& viewport = _pCore->_pUI->getViewport();
-                    const float64     scale    = viewport._uiScale > 0.0f ? static_cast<float64>( viewport._uiScale ) : 1.0;
-                    const float64     uiX      = static_cast<float64>( clientPoint.x - viewport._pointerOrigin._x ) / scale;
-                    const float64     uiY      = static_cast<float64>( clientPoint.y - viewport._pointerOrigin._y ) / scale;
-                    // 트리 순서에서 부모가 자식보다 앞이라, 점을 담는 마지막 노드가 가장 깊은 요소다.
-                    for ( size_t index = pSnapshot->_listNode.size(); index > 0; --index )
-                    {
-                        const AccessibleNode& node     = pSnapshot->_listNode[index - 1];
-                        const float64         left     = static_cast<float64>( node._bounds._x );
-                        const float64         top      = static_cast<float64>( node._bounds._y );
-                        const bool            bInsideX = left <= uiX && uiX <= left + static_cast<float64>( node._bounds._z );
-                        const bool            bInsideY = top <= uiY && uiY <= top + static_cast<float64>( node._bounds._w );
-                        if ( bInsideX && bInsideY )
-                        {
-                            *ppOutFragment = createElement( *_pCore, node._screen, node._widget, false );
-                            break;
-                        }
-                    }
+                    const UIViewport&      viewport = _pCore->_pUI->getViewport();
+                    const float64          scale    = viewport._uiScale > 0.0f ? static_cast<float64>( viewport._uiScale ) : 1.0;
+                    const float64          uiX      = static_cast<float64>( clientPoint.x - viewport._pointerOrigin._x ) / scale;
+                    const float64          uiY      = static_cast<float64>( clientPoint.y - viewport._pointerOrigin._y ) / scale;
+                    const optional<uint32> found    = pSnapshot->findNodeAt( float2{ static_cast<float32>( uiX ), static_cast<float32>( uiY ) } );
+                    if ( found.has_value() )
+                        *ppOutFragment = createElement( *_pCore, pSnapshot->_listNode[*found]._screen, pSnapshot->_listNode[*found]._widget, false );
                     return S_OK;
                 }
 

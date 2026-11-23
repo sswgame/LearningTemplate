@@ -3,6 +3,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/UI/Accessibility/UIAccessibilityService.h"
+#include "Engine/UI/Accessibility/UIAccessibilitySnapshot.h"
 #include "Engine/UI/Layout/CanvasPanel.h"
 #include "Engine/UI/Screen/UIScreen.h"
 
@@ -20,6 +21,28 @@ namespace
         return make_unique<UIScreen>( desc, make_unique<CanvasPanel>() );
     }
 } // namespace
+
+/** @brief [UIAccessibilityTest] 점 아래의 요소는 맨 위 화면에서 고르고, 그 화면 안에서 가장 깊은 노드다(결함: 목록 끝부터 골라 겹친 화면에서 아래 화면의 요소를 답했다) */
+SW_TEST_CASE( UIAccessibilityTest, NodeAtPointComesFromTheTopScreen )
+{
+    UIAccessibilitySnapshot snapshot;
+    const auto              addNode = [&snapshot]( uint32 screen, const float4& bounds )
+    {
+        AccessibleNode node;
+        node._screen = screen;
+        node._bounds = bounds;
+        snapshot._listNode.push_back( std::move( node ) );
+    };
+    addNode( 2, float4{ 0.0f, 0.0f, 100.0f, 100.0f } );   // 위 화면의 바탕
+    addNode( 2, float4{ 10.0f, 10.0f, 20.0f, 20.0f } );   // 위 화면의 단추
+    addNode( 1, float4{ 0.0f, 0.0f, 400.0f, 400.0f } );   // 아래 화면의 바탕
+    addNode( 1, float4{ 10.0f, 10.0f, 300.0f, 300.0f } ); // 아래 화면의 단추
+
+    SW_EXPECT_TRUE( snapshot.findNodeAt( float2{ 15.0f, 15.0f } ) == 1u );
+    SW_EXPECT_TRUE( snapshot.findNodeAt( float2{ 60.0f, 60.0f } ) == 0u );
+    SW_EXPECT_TRUE( snapshot.findNodeAt( float2{ 200.0f, 200.0f } ) == 3u ); // 위 화면 밖이면 아래 화면이다
+    SW_EXPECT_FALSE( snapshot.findNodeAt( float2{ 500.0f, 500.0f } ).has_value() );
+}
 
 /** @brief [UIAccessibilityTest] 시킬 수 있는 화면은 위에서 모달까지다 — 모달 아래 · 오버레이에는 시키지 못한다(결함: 쥐고 있던 요소로 모달 아래 단추를 눌렀다) */
 SW_TEST_CASE( UIAccessibilityTest, InteractiveScreensStopAtTheModal )
