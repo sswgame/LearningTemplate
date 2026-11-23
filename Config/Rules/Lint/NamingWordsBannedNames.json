@@ -2095,6 +2095,7 @@
     "MeadowTownCreatureView": "CreatureTownCreatureView — MeadowVillage 를 Playground 미니게임으로 흡수하며 마을 디렉터를 CreatureLife 키트로 옮겼다(NEXT 7 절 8 단계)(2026-11-24)",
     "MeadowVillageGame": "PlaygroundGame — 게임 MeadowVillage 를 Playground 미니게임 meadowvillage 로 흡수했다(NEXT 7 절 8 단계)(2026-11-24)",
     "MeadowVillageData": "MeadowFarmGameModeComponent · CreatureTownGameModeComponent 의 씬 데이터 — 게임 MeadowVillage 를 Playground 미니게임 meadowvillage 로 흡수했다(NEXT 7 절 8 단계)(2026-11-24)",
+    "HostSubsystemNames": "ModuleLoaderSubsystem::kSubsystemName — 쓰는 곳이 주인 하나뿐이라 헤더째 접었다(2026-11-24)",
     "gv_meadowAutoPlay": "gv_playgroundAutoPlay — 게임 MeadowVillage 를 Playground 미니게임 meadowvillage 로 흡수했다(NEXT 7 절 8 단계)(2026-11-24)"
   }
 }
