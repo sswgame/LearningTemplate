@@ -608,6 +608,21 @@ namespace sw
             }
         }
 
+        /** @brief 기반부터 파생 순서로 메서드를 순회합니다. 파생이 같은 찾는 이름(`_hashName`)을 다시 선언한 기반 메서드는 건너뜁니다(`findMethodInHierarchy` 와 같은 우선). */
+        template <typename Func>
+        void forEachMethodWithBase( Func&& func ) const
+        {
+            const TypeChain chain = getTypeChain();
+            for ( uint32 depth = chain.size(); depth > 0; --depth )
+            {
+                for ( const FunctionInfo& method : chain[depth - 1]->_listMethod )
+                {
+                    if ( findMethodInHierarchy( method._hashName ) == &method )
+                        func( method );
+                }
+            }
+        }
+
         /** @brief 이 타입이 선언한 이벤트를 이름으로 찾습니다. */
         const EventInfo* findEvent( const hashed_string& eventName ) const
         {

@@ -503,6 +503,48 @@ SW_TEST_CASE( ReflectionTypeInfoTest, ForEachMethodVisitsDeclaredOrder )
 }
 
 /**
+ * @brief [ReflectionTypeRegistryTest] 서술자로 등록한 타입은 옛 이름으로도 찾고, `forEachMethodWithBase` 는 기반부터 한 번씩 · 파생이 다시 선언한 것은 파생 것만 넘긴다
+ */
+SW_TEST_CASE( ReflectionTypeRegistryTest, RegisterTypeDescAliasesAndInheritedMethods )
+{
+    const sw::test::ScopedTestModule scopedModule( "TestTypeDesc" );
+    sw::TypeRegistry&                registry = sw::engine::getSubsystem<sw::TypeRegistry>();
+
+    static constexpr sw::FunctionDesc::InvokeFunction kInvoke = []( void*, const sw::TaskArgs& )
+    { return sw::TaskValue{}; };
+    static constexpr sw::FunctionDesc kBaseMethods[] = {
+        {"stop", "stop", "void", nullptr, nullptr, 0u, kInvoke},
+        {"play", "play", "void", nullptr, nullptr, 0u, kInvoke},
+    };
+    static constexpr sw::FunctionDesc kDerivedMethods[] = {
+        { "play", "play", "void", nullptr, nullptr, 0u, kInvoke, nullptr, sw::FunctionMetadataFlag::kConst },
+        { "rewind", "rewind", "void", nullptr, nullptr, 0u, kInvoke },
+    };
+    static constexpr const utf8*  kAliases[] = { "swtest::OldDescBase" };
+    static constexpr sw::TypeDesc kBase      = sw::TypeDesc{ "DescBase", "swtest::DescBase", "", "TestTypeDesc", 4 }.withMethods( kBaseMethods ).withAliases( kAliases );
+    static constexpr sw::TypeDesc kDerived   = sw::TypeDesc{ "DescDerived", "swtest::DescDerived", "swtest::DescBase", "TestTypeDesc", 8 }.withMethods( kDerivedMethods ).withVersion( 3u );
+    registry.registerType( kBase );
+    registry.registerType( kDerived );
+
+    const sw::TypeInfo* pBase    = registry.findType( sw::hashed_string( "swtest::DescBase" ) );
+    const sw::TypeInfo* pDerived = registry.findType( sw::hashed_string( "swtest::DescDerived" ) );
+    SW_REQUIRE_NOT_NULL( pBase );
+    SW_REQUIRE_NOT_NULL( pDerived );
+    SW_EXPECT_TRUE( registry.findType( sw::hashed_string( "swtest::OldDescBase" ) ) == pBase );
+    SW_EXPECT_EQUAL( 3u, pDerived->_metadata->getVersion() );
+    SW_EXPECT_EQUAL( size_t{ 8 }, pDerived->_size );
+
+    sw::vector<const sw::FunctionInfo*> listVisited;
+    pDerived->forEachMethodWithBase( [&listVisited]( const sw::FunctionInfo& method )
+    { listVisited.push_back( &method ); } );
+    SW_REQUIRE_EQUAL( size_t{ 3 }, listVisited.size() );
+    SW_EXPECT_TRUE( listVisited[0]->_hashName == sw::hashed_string( "stop" ) );
+    SW_EXPECT_TRUE( listVisited[1]->_hashName == sw::hashed_string( "play" ) );
+    SW_EXPECT_TRUE( listVisited[1]->_metadata->_bConst == SW_TRUE ); // 기반 것이 아니라 파생이 다시 선언한 것
+    SW_EXPECT_TRUE( listVisited[2]->_hashName == sw::hashed_string( "rewind" ) );
+}
+
+/**
  * @brief [ReflectionTypeInfoTest] 동적 메서드 호출
  */
 SW_TEST_CASE( ReflectionTypeInfoTest, DynamicMethodInvoke )

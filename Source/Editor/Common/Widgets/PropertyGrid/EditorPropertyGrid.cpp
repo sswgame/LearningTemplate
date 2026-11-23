@@ -246,14 +246,8 @@ namespace sw::editor
             return;
         const TypeInfo* pType = _model.getType();
         bool            bAny  = false;
-        for ( const FunctionInfo& method : pType->_listMethod )
-        {
-            if ( method._metadata->_bConstructor == SW_FALSE && isMethodListed( method ) )
-            {
-                bAny = true;
-                break;
-            }
-        }
+        pType->forEachMethodWithBase( [this, &bAny]( const FunctionInfo& method )
+        { bAny = bAny || ( method._metadata->_bConstructor == SW_FALSE && isMethodListed( method ) ); } );
         if ( bAny )
         {
             ImGui::SeparatorText( SW_LOCKEY( "EdSection", "Methods" ) );
@@ -851,19 +845,20 @@ namespace sw::editor
         resetFrameCounts();
 
         // 그릴 메서드: 생성자는 빼고, 진단 보기가 아니면 CallInEditor 만. 숨긴 것이 있으면 빈 칸 글이 그렇다고 말한다("메서드 없음" 으로 읽히지 않게).
+        // 상속한 메서드도 보인다 — 호출이 이미 계층에서 찾는다(`ReflectionInvoke::callByName`, 언리얼 Details 의 CallInEditor 도 기반 클래스 것을 보인다).
         uint32 drawableCount = 0;
         uint32 hiddenCount   = 0;
         if ( pTypeInfo != nullptr )
         {
-            for ( const FunctionInfo& method : pTypeInfo->_listMethod )
+            pTypeInfo->forEachMethodWithBase( [this, &drawableCount, &hiddenCount]( const FunctionInfo& method )
             {
                 if ( method._metadata->_bConstructor != SW_FALSE )
-                    continue;
+                    return;
                 if ( isMethodListed( method ) )
                     ++drawableCount;
                 else
                     ++hiddenCount;
-            }
+            } );
         }
         _hiddenMethodCount += hiddenCount;
 
@@ -880,17 +875,17 @@ namespace sw::editor
         // 액션 즐겨찾기(별)를 먼저, 나머지를 선언 순서로 — 반복 작업에 쓰는 메서드가 목록 길이와 상관없이 맨 위에 있다.
         for ( const bool bFavoritePass : { true, false } )
         {
-            for ( const FunctionInfo& method : pTypeInfo->_listMethod )
+            pTypeInfo->forEachMethodWithBase( [this, pTypeInfo, bFavoritePass]( const FunctionInfo& method )
             {
                 if ( method._metadata->_bConstructor != SW_FALSE || isMethodListed( method ) == false )
-                    continue;
+                    return;
                 if ( _model.isActionFavorite( *pTypeInfo, method ) != bFavoritePass )
-                    continue;
+                    return;
                 ++_methodRowCount;
                 if ( bFavoritePass )
                     ++_favoriteMethodRowCount;
                 drawTypeMethod( pTypeInfo, method );
-            }
+            } );
         }
     }
 
