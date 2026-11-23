@@ -132,6 +132,8 @@ namespace sw
         void serializeState( StateIO& io );
         /** @brief `ComponentStateStore` 계약입니다. 시작 전이면 보관했다가 카탈로그를 읽은 뒤 적용하고, 시작 뒤면 바로 적용합니다. 읽지 못하면 알리고 지금 상태를 둡니다. */
         void restoreState( vector<uint8>&& bytes );
+        /** @brief 시작 전에 받아 보관한 상태입니다(`ComponentStateStore` 계약 — 있으면 그것이 곧 상태다). */
+        const vector<uint8>& getPendingStateBytes() const { return _pendingStateBytes; }
 
         /**
          * @brief @p manager 에서 화면 시점을 모는 디렉터입니다 — 게임 시점 카메라(`CameraRole::Game`)에 있거나 카메라 매니저의 뷰 타깃인 것(씬에 하나). 없으면 nullptr 입니다.

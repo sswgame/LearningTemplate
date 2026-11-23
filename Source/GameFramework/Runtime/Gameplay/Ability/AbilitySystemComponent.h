@@ -132,6 +132,8 @@ namespace sw
         void serializeState( StateIO& io );
         /** @brief 다시 만든 컴포넌트가 상태를 받습니다. 플레이 시작 전이면 보관했다가 세트를 준 뒤(`onBeginPlay`) 적용합니다 — 세트가 어트리뷰트를 만든 뒤라야 읽힌다. */
         void restoreState( vector<uint8>&& bytes );
+        /** @brief 시작 전에 받아 보관한 상태입니다(`ComponentStateStore` 계약 — 있으면 그것이 곧 상태다). */
+        const vector<uint8>& getPendingStateBytes() const { return _pendingStateBytes; }
 
         // --------------------------------------------------------------------------
         // 1) 시간, 카탈로그, 세트

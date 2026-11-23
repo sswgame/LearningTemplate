@@ -5,6 +5,9 @@
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/WorldOrigin.h"
+
 #include "GameFramework/Runtime/Character/AI/AIStimulusSourceComponent.h"
 #include "GameFramework/Runtime/Character/Navigation/NavGrid.h"
 
@@ -15,11 +18,20 @@ namespace sw
         , _listTarget{}
         , _listCandidate{}
         , _listQueryKey{}
+        , _worldOrigin{}
     {
     }
 
     void AIPerception::sense( const GameObjectManager& manager, uint8 ownTeam, const float3& eyePosition, const float3& forward, const NavGrid* pGrid, float32 deltaTime )
     {
+        // 감지는 오브젝트의 새 자리로 하므로 기억도 같은 원점으로 맞춘다(처음 부를 때는 기억이 비어 있다).
+        const double3& origin = manager.getWorldOrigin()._position;
+        const float3   moved{ static_cast<float32>( _worldOrigin._x - origin._x ), static_cast<float32>( _worldOrigin._y - origin._y ), static_cast<float32>( _worldOrigin._z - origin._z ) };
+        for ( AIPerceivedTarget& target : _listTarget )
+        {
+            target._lastKnownPosition = target._lastKnownPosition + moved;
+        }
+        _worldOrigin        = origin;
         const float32 range = MathUtil::max( _settings._sightRange, _settings._loseSightRange );
         AIStimulusSourceComponent::gatherStimuli( manager, ownTeam, eyePosition, range, _listCandidate, _listQueryKey );
         sense( eyePosition, forward, _listCandidate, pGrid, deltaTime );

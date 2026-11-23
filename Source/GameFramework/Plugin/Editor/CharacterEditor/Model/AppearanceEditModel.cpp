@@ -310,13 +310,13 @@ namespace sw::editor
         return _state.redo( _selection );
     }
 
-    bool AppearanceEditModel::loadFromPreset( const UserAppearancePresetStore& store, string_view name )
+    expected<void> AppearanceEditModel::loadFromPreset( const UserAppearancePresetStore& store, string_view name, const AppearanceDatabase& database )
     {
-        const UserAppearancePreset* pPreset = store.findPresetByName( name );
-        if ( pPreset == nullptr )
-            return false;
-        setSelection( pPreset->_selection );
-        return true;
+        AppearanceSelection  selection;
+        const expected<void> decoded = store.decodePreset( name, database, selection );
+        if ( decoded.has_value() )
+            setSelection( selection );
+        return decoded;
     }
 
     void AppearanceEditModel::collectSlotItems( const AppearanceDatabase& database, const hashed_string& slot, vector<hashed_string>& outListItem )

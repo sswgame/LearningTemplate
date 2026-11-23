@@ -19,19 +19,11 @@ namespace sw
 {
     class AppearanceDatabase;
 
-    /** @brief 플레이어 프리셋 하나입니다. 내용은 선택(`AppearanceSelection`)이며, 부분 프리셋이면 그 카테고리만 담습니다. */
-    struct UserAppearancePreset
-    {
-        AppearanceSelection _selection{};
-        string              _name{};
-        string              _thumbnailSlot{}; ///< 미리보기 이미지(PNG)를 둔 로컬 저장소 슬롯 이름(같은 저장소). 비면 없다
-        uint8               _bFavorite{ SW_FALSE };
-    };
-} // namespace sw
-
-namespace sw
-{
-    /** @brief 세이브의 프리셋 한 줄입니다(`UserAppearancePresetFile` 의 원소). 내용은 공유 코드(`AppearanceSelection`) 한 줄입니다. */
+    /**
+     * @brief 플레이어 프리셋 하나입니다(`UserAppearancePresetFile` 의 원소). 내용은 공유 코드(`AppearanceSelection`) 한 줄이며, 부분 프리셋이면 그 카테고리만 담습니다.
+     * @details 코드가 정본이고 선택은 쓸 때 푼다(`UserAppearancePresetStore::decodePreset`). 읽으며 풀어 두고 쓸 때 다시 담으면 지금 콘텐츠가 모르는 것(더 새 스키마 판, 아직 읽지 않은
+     *          외형 데이터)이 다른 프리셋을 저장하는 순간 사라진다.
+     */
     REFLECT()
     struct SW_GF_API UserAppearancePresetRecord
     {
@@ -74,7 +66,7 @@ namespace sw
      * @brief 플레이어 프리셋 목록을 리플렉션 JSON(`UserAppearancePresetFile`)으로 읽고 씁니다. 로컬 저장 슬롯의 본문에 해당합니다. 프리셋 내용은 공유 코드(`AppearanceSelection`) 한 줄로 싣습니다.
      *        세이브와 공유가 같은 코드이고 콘텐츠가 바뀌어도 읽힙니다. 펼칠 때 `AppearanceSelection::applySelection` 이 지워진 것을 보고합니다.
      * @details 판 3 부터 JSON 이다. 판 1 · 2 의 `key=value` 세이브와 판 3(썸네일 경로)은 출시 전 데이터라 읽는 길을 두지 않았다 — 읽기가 실패로 알린다.
-     *          현재 판보다 새 파일도 읽지 않는다. 망가진 프리셋(읽지 못한 공유 코드)은 경고를 남기고 건너뛴다.
+     *          현재 판보다 새 파일도 읽지 않는다. 이 콘텐츠가 풀지 못하는 코드도 목록에 남고 그대로 다시 써진다(`decodePreset` 만 까닭과 함께 실패한다).
      */
     class SW_GF_API UserAppearancePresetStore : public SaveGame
     {
@@ -83,36 +75,34 @@ namespace sw
 
         UserAppearancePresetStore();
 
-        /** @brief 프리셋 내용을 공유 코드로 쓰고 읽을 때 참조하는 외형 데이터입니다. 소유하지 않고 참조만 합니다. */
-        void setDatabase( const AppearanceDatabase* pDatabase ) { _pDatabase = pDatabase; }
-
-        /** @brief 이름 슬롯에 저장합니다. 같은 이름이 있으면 내용만 바꾸고, 즐겨찾기와 썸네일은 그대로 둡니다. 슬롯 번호를 반환합니다. */
-        int32              savePreset( string_view name, const AppearanceSelection& selection );
-        [[nodiscard]] bool removePreset( string_view name );
+        /** @brief 이름 슬롯에 저장합니다. 같은 이름이 있으면 내용만 바꾸고, 즐겨찾기와 썸네일은 그대로 둡니다. 다듬은 이름이 비면 false 입니다. */
+        [[nodiscard]] bool savePreset( string_view name, const AppearanceSelection& selection, const AppearanceDatabase& database );
+        /** @brief 프리셋 @p name 의 내용을 지금 콘텐츠로 풉니다. 이름이 없거나 코드를 풀지 못하면(더 새 스키마 판 · 망가진 코드) 까닭입니다 — 프리셋은 그대로 남습니다. */
+        [[nodiscard]] expected<void> decodePreset( string_view name, const AppearanceDatabase& database, AppearanceSelection& outSelection ) const;
+        [[nodiscard]] bool           removePreset( string_view name );
         /** @brief 이름을 바꿉니다. 새 이름이 이미 있으면 false 입니다. */
         [[nodiscard]] bool renamePreset( string_view fromName, string_view toName );
         [[nodiscard]] bool setFavorite( string_view name, bool bFavorite );
         [[nodiscard]] bool setThumbnailSlot( string_view name, string_view thumbnailSlot );
         void               clear() { _listPreset.clear(); }
 
-        const UserAppearancePreset*         findPresetByName( string_view name ) const;
-        const vector<UserAppearancePreset>& getPresets() const { return _listPreset; }
+        const UserAppearancePresetRecord*         findPresetByName( string_view name ) const;
+        const vector<UserAppearancePresetRecord>& getPresets() const { return _listPreset; }
         /** @brief 즐겨찾기만 저장한 순서대로 모읍니다. */
-        void collectFavorites( vector<const UserAppearancePreset*>& outListPreset ) const;
+        void collectFavorites( vector<const UserAppearancePresetRecord*>& outListPreset ) const;
 
         [[nodiscard]] const utf8* getFormatKind() const override { return "UserAppearancePresetStore"; }
         [[nodiscard]] bool        writeBytes( vector<uint8>& outBytes ) const override;
         [[nodiscard]] bool        readBytes( const uint8* pData, size_t size ) override;
         /** @brief 프리셋 파일 글을 만듭니다. 이름 · 코드에 잘못된 UTF-8 이 있으면 오류입니다(`JSONSerializer::serialize`). */
         [[nodiscard]] expected<string> saveToText() const;
-        /** @brief 텍스트에서 읽습니다. JSON 이 아니거나 판이 지금과 다르면 false 이고, 망가진 프리셋 줄은 경고를 남기고 건너뜁니다. */
+        /** @brief 텍스트에서 읽습니다. JSON 이 아니거나 판이 지금과 다르면 false 이고 목록은 그대로입니다. */
         [[nodiscard]] bool loadFromXMLText( string_view text );
 
     private:
-        UserAppearancePreset* findMutablePreset( string_view name );
+        UserAppearancePresetRecord* findMutablePreset( string_view name );
 
     private:
-        vector<UserAppearancePreset> _listPreset;
-        const AppearanceDatabase*    _pDatabase;
+        vector<UserAppearancePresetRecord> _listPreset;
     };
 } // namespace sw

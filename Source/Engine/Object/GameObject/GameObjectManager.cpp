@@ -679,6 +679,18 @@ namespace sw
         {
             entry._pService->onWorldOriginShifted( delta );
         }
+        vector<GameObject*> listObject;
+        _pState->_store.getAllGameObjects( listObject );
+        for ( const GameObject* pObject : listObject )
+        {
+            if ( pObject == nullptr || pObject->isPendingDestroy() )
+                continue;
+            for ( Component* pComponent : pObject->getComponents() )
+            {
+                if ( pComponent != nullptr && pComponent->isPendingDestroy() == false )
+                    pComponent->onWorldOriginShifted( delta );
+            }
+        }
     }
 
     void GameObjectManager::applyPreviewPolicy( const ScenePreviewPolicy& policy )

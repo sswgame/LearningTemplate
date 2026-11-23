@@ -84,6 +84,8 @@ namespace sw
         /** @brief 값을 지웁니다. 지운 뒤에는 `isSet` 이 false 입니다. */
         void clearValue( const hashed_string& key );
         void clear();
+        /** @brief 월드 원점이 옮겨졌습니다 — 벡터 값(모두 위치다)을 @p delta 만큼 옮깁니다. 위치가 바뀐 것이 아니라 기준이 바뀐 것이라 리비전은 오르지 않습니다. */
+        void shiftWorldOrigin( const float3& delta );
 
         bool isSet( const hashed_string& key ) const;
         /** @brief 수치로 읽습니다(실수 · 정수 · 참거짓 · 오브젝트). 없으면 비어 있습니다. */

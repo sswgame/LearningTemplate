@@ -567,7 +567,7 @@ namespace sw
         const WorldOrigin& getWorldOrigin() const;
         /** @brief 월드 원점을 적습니다 — 오브젝트는 옮기지 않는다(씬이 옮기거나, 복원된 자리가 이미 그 원점 기준이다). */
         void setWorldOrigin( const double3& origin );
-        /** @brief 모든 씬 서비스에 월드 원점이 @p delta 만큼 옮겨졌다고 알립니다(`ISceneService::onWorldOriginShifted`, 씬이 루트를 옮긴 뒤 부른다). */
+        /** @brief 모든 씬 서비스와 컴포넌트에 월드 원점이 @p delta 만큼 옮겨졌다고 알립니다(`ISceneService::onWorldOriginShifted` · `Component::onWorldOriginShifted`, 씬이 루트를 옮긴 뒤 부른다). */
         void notifyWorldOriginShifted( const float3& delta );
         /** @brief 모든 씬 서비스에 미리보기 정책을 적용합니다(`ISceneService::applyPreviewPolicy`). */
         void applyPreviewPolicy( const ScenePreviewPolicy& policy );

@@ -127,6 +127,16 @@ namespace sw
         ++_revision;
     }
 
+    void Blackboard::shiftWorldOrigin( const float3& delta )
+    {
+        for ( auto& [key, value] : _mapValue )
+        {
+            (void)key;
+            if ( value._type == BlackboardValueKind::Vector )
+                value._vector = value._vector + delta;
+        }
+    }
+
     bool Blackboard::isSet( const hashed_string& key ) const
     {
         const BlackboardValue* pValue = findValue( key );

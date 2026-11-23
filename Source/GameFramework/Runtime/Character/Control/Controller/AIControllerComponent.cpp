@@ -229,6 +229,14 @@ namespace sw
         return direction;
     }
 
+    void AIControllerComponent::onWorldOriginShifted( const float3& delta )
+    {
+        _destination = _destination + delta;
+        _focusPoint  = _focusPoint + delta;
+        _blackboard.shiftWorldOrigin( delta );
+        _runner.shiftWorldOrigin( delta );
+    }
+
     void AIControllerComponent::moveTo( const float3& destination )
     {
         if ( _bHasDestination == SW_TRUE && _destination == destination )
