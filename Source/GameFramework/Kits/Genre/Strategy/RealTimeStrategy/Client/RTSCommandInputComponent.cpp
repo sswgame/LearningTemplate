@@ -104,7 +104,8 @@ namespace sw
         , _selection{}
         , _dragStart{}
         , _dragPoint{}
-        , _matchRevision{ 0 }
+        , _appliedMatchID{ 0 }
+        , _selectionMatchID{ 0 }
         , _bInputLive{ SW_FALSE }
         , _bNamesValid{ SW_FALSE }
         , _bDragging{ SW_FALSE }
@@ -152,11 +153,15 @@ namespace sw
     void RTSCommandInputComponent::serializeState( StateIO& io )
     {
         io.header( kStateTag, kStateVersion );
+        uint64       matchID   = _selectionMatchID;
         RTSSelection selection = _selection;
+        io.value( matchID );
         io.value( selection );
         io.end();
-        if ( io.isReading() && io.isOk() )
-            _selection = std::move( selection );
+        if ( io.isWriting() || io.isOk() == false )
+            return;
+        _selectionMatchID = matchID;
+        _selection        = std::move( selection );
     }
 
     void RTSCommandInputComponent::restoreState( vector<uint8>&& bytes )
@@ -182,7 +187,8 @@ namespace sw
         SkirmishGameModeComponent* const pDirector = manager.resolveComponent( _director );
         if ( pDirector == nullptr || pDirector->isStarted() == false )
             return;
-        if ( _matchRevision != pDirector->getMatchRevision() )
+        const uint64 matchID = pDirector->getMatchID();
+        if ( _appliedMatchID != matchID || _selectionMatchID != matchID )
             applyMatch( manager, *pDirector );
         playStepEvents( manager, *pDirector );
         _selection.prune( pDirector->getWorld() );
@@ -202,11 +208,12 @@ namespace sw
 
     void RTSCommandInputComponent::applyMatch( GameObjectManager& manager, const SkirmishGameModeComponent& director )
     {
-        // 같은 씬에서 판이 다시 열렸으면 앞 판의 유닛 id 를 버린다. 처음이면 복원이 먼저 놓은 고르기일 수 있어 그대로 둔다(죽은 id 는 prune 이 거른다).
-        if ( _matchRevision != 0 )
+        // 유닛 id 는 판마다 처음부터 다시 나간다 — 다른 판(세이브 판이 맞지 않아 새로 연 판 포함)의 고르기는 우연히 겹친 유닛을 가리키므로 버린다.
+        if ( _selectionMatchID != director.getMatchID() )
             _selection = RTSSelection{};
-        _matchRevision = director.getMatchRevision();
-        _bDragging     = SW_FALSE;
+        _selectionMatchID = director.getMatchID();
+        _appliedMatchID   = director.getMatchID();
+        _bDragging        = SW_FALSE;
         _selection.setPlayer( director.getLocalPlayer() );
         _selection.setMaxCount( _maxSelectionCount );
         _bNamesValid = hasValidNames( director ) ? SW_TRUE : SW_FALSE;

@@ -31,7 +31,7 @@ SW_TEST_CASE( SkirmishGameModeTest, MatchWithoutUnitDataDoesNotOpenAndTakesNoCom
     SW_REQUIRE_NOT_NULL( pGameMode );
     manager.beginPlay();
     SW_EXPECT_FALSE( pGameMode->isStarted() );
-    SW_EXPECT_EQUAL( 0u, pGameMode->getMatchRevision() );
+    SW_EXPECT_EQUAL( uint64{ 0 }, pGameMode->getMatchID() );
     SW_EXPECT_EQUAL( 0, pGameMode->submitCommand( RTSCommand{} ) );
     SW_EXPECT_FALSE( pGameMode->submitTimeInput( true, false, false ) );
     manager.endPlay();

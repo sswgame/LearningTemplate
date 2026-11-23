@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/Component/SkirmishGameModeComponent.h"
 
 #include "Core/Encoding/FourCCUtil.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 #include "Core/String/fixed_string.h"
@@ -29,7 +30,7 @@ namespace sw
         struct SkirmishGameModeComponentInternal
         {
             static constexpr uint32 kStateTag     = FourCCUtil::make( "RTMS" );
-            static constexpr uint32 kStateVersion = 3; ///< 3: 고른 유닛 · 부대가 클라이언트 구간(`RTSCommandInputComponent`)으로 나갔다(옛 판은 거절한다 — 출시 전)
+            static constexpr uint32 kStateVersion = 3; ///< 3: 판의 정체(`getMatchID`)를 싣고, 고른 유닛 · 부대가 클라이언트 구간(`RTSCommandInputComponent`)으로 나갔다(옛 판은 거절한다 — 출시 전)
         };
 
         /** @brief 감시 값 `Skirmish.UnitCount` 입니다. 두 진영의 유닛 · 건물 수의 합입니다(AI 가 일꾼 · 군대를 늘리는지 본다). */
@@ -154,7 +155,7 @@ namespace sw
         , _match{}
         , _listStepEvent{}
         , _speed{}
-        , _matchRevision{ 0 }
+        , _matchID{ 0 }
         , _bAutoPlayChangeReported{ SW_FALSE }
         , _reserved{ 0 }
     {
@@ -200,6 +201,8 @@ namespace sw
             return;
         if ( io.isReading() && findCatalog() != nullptr )
             _match.getWorld().rebindCatalog( *findCatalog() ); // 다시 읽힌 카탈로그면 새 판으로 읽는다
+        uint64 matchID = _matchID;
+        io.value( matchID );
         io.value( _match );
         float32 timeScale = _speed.getTimeScale();
         uint8   bPaused   = _speed.isPaused() ? SW_TRUE : SW_FALSE;
@@ -209,9 +212,10 @@ namespace sw
         if ( io.isReading() && io.isOk() )
         {
             GameSpeedControl restoredSpeed;
-            if ( io.check( restoredSpeed.restore( timeScale, bPaused != SW_FALSE ) ) == false )
-                return; // 범위 밖 배속(깨진 세이브)은 거절한다
-            _speed = restoredSpeed;
+            if ( io.check( restoredSpeed.restore( timeScale, bPaused != SW_FALSE ) && matchID != 0 ) == false )
+                return; // 범위 밖 배속 · 정체 없는 판(깨진 세이브)은 거절한다
+            _speed   = restoredSpeed;
+            _matchID = matchID;
             _listStepEvent.clear();
         }
     }
@@ -265,7 +269,10 @@ namespace sw
         if ( _match.initialize( findCatalog(), *humanMask, matchSettings ) == false )
             return false;
         _listStepEvent.clear();
-        ++_matchRevision;
+        do
+        {
+            _matchID = MathUtil::getRandom<uint64>();
+        } while ( _matchID == 0 );
         return true;
     }
 

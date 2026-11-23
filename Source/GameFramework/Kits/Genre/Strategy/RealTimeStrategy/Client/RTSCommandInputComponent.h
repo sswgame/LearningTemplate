@@ -6,7 +6,7 @@
  *          명령은 틱 뒤 게임 스레드에서 낸다. 이 컴포넌트는 `PostUpdate` 라 디렉터 걸음 뒤에 돌아, 넘긴 명령은 다음 걸음이 쓴다.
  *
  *          **저장 계약**: 고른 유닛 · 부대는 이 화면 사람의 것이라 판 상태(디렉터)가 아니라 이 컴포넌트의 구간이다 — 세이브 · 핫 리로드는 넘기고(스타크래프트 II 의 세이브가 부대 지정을 지키는 것과 같다),
- *          락스텝 체크섬과 전용 서버의 판 상태에는 없다. 유닛 id 는 같은 세이브가 되살린 월드의 것이고, 죽은 id 는 다음 프레임이 걸러 낸다. 판을 새로 열면 비운다.
+ *          락스텝 체크섬과 전용 서버의 판 상태에는 없다. 유닛 id 는 그 판의 것이라 판의 정체(`SkirmishGameModeComponent::getMatchID`)를 함께 싣고, 열린 판의 정체와 다르면(세이브 판이 맞지 않아 새로 연 판 · 다시 연 판) 버린다. 죽은 id 는 다음 프레임이 걸러 낸다.
  */
 #pragma once
 #include "Core/Container/vector.h"
@@ -77,7 +77,7 @@ namespace sw
     private:
         /** @brief 틱 뒤 게임 스레드: 새 판이면 맞추고, 알림을 내고, 시간이 흐르는 동안 입력을 명령으로 바꿉니다. */
         void updateInput( GameObjectManager& manager );
-        /** @brief 새로 열린 판에 맞춥니다 — 앞 판의 고르기를 버리고 플레이어 · 상한을 정하고 데이터 이름을 보고 카메라를 맞춘 뒤 조작을 안내합니다. */
+        /** @brief 열린 판에 맞춥니다 — 다른 판의 고르기를 버리고 플레이어 · 상한을 정하고 데이터 이름을 보고 카메라를 맞춘 뒤 조작을 안내합니다. */
         void applyMatch( GameObjectManager& manager, const SkirmishGameModeComponent& director );
         /** @brief 씬 데이터가 준 이름(입력 액션 · 건설 단축키 표 · 관전 프리셋)이 입력 맵과 유닛 카탈로그에 모두 있는지 봅니다. 빠진 것은 모두 오류로 남기고 false 다 — 입력을 읽지 않는다. */
         [[nodiscard]] bool hasValidNames( const SkirmishGameModeComponent& director ) const;
@@ -146,8 +146,9 @@ namespace sw
         RTSSelection                                _selection;
         float3                                      _dragStart;
         float3                                      _dragPoint;
-        uint32                                      _matchRevision; ///< 맞춘 판(`SkirmishGameModeComponent::getMatchRevision`, 0 이면 아직)
-        uint8                                       _bInputLive;    ///< 이번 틱의 시간이 흘렀다(멈춤 중에는 입력을 넘기지 않는다). 틱이 쓰므로 뷰가 읽는 비트와 나눈다
+        uint64                                      _appliedMatchID;   ///< 맞춘 판(`SkirmishGameModeComponent::getMatchID`, 0 이면 아직)
+        uint64                                      _selectionMatchID; ///< 고르기가 속한 판(되돌린 구간이 실은 것이거나 맞춘 판)
+        uint8                                       _bInputLive;       ///< 이번 틱의 시간이 흘렀다(멈춤 중에는 입력을 넘기지 않는다). 틱이 쓰므로 뷰가 읽는 비트와 나눈다
         uint8                                       _bNamesValid        : 1;
         uint8                                       _bDragging          : 1;
         uint8                                       _bDragPointValid    : 1;

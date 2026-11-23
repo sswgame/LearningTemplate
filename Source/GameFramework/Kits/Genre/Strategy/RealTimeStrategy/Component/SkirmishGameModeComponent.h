@@ -61,8 +61,11 @@ namespace sw
         bool                 isLocalPlayerHuman() const override { return _match.isHumanPlayer( getLocalPlayer() ); }
         /** @brief 마지막 걸음(`updateGame`)에 나온 알림입니다. 다음 걸음이 비운다(시간이 멈춘 걸음도 비운다). */
         const vector<RTSEvent>& getStepEvents() const { return _listStepEvent; }
-        /** @brief 판을 연 횟수입니다 — 열린 판은 1 이상이고 상태 복원은 올리지 않는다. 클라이언트가 새 판에서 옛 판의 고르기를 버리는 데 쓴다. */
-        uint32 getMatchRevision() const { return _matchRevision; }
+        /**
+         * @brief 이 판의 정체입니다 — 새 판을 열 때마다 새로 뽑고(0 은 아직 열지 않음) 세이브를 읽으면 그 판의 것이 된다. 유닛 id 를 따로 저장하는 쪽(고르기)이 같은 판의 것인지 견준다.
+         * @details 유닛 id(슬롯 · 세대)는 판마다 처음부터 다시 나가 다른 판의 id 와 겹친다. 락스텝 체크섬(판 상태)에는 들지 않는다 — 두 프로세스가 저마다 뽑는다.
+         */
+        uint64 getMatchID() const { return _matchID; }
         /** @brief 컴퓨터 상대의 행동 트리 실행기를 행동 트리 창에 내놓습니다(활성 노드 보기). */
         const IBehaviorTreeDebugSource* findBehaviorTreeDebugSource() const override { return &_commanderDebugSource; }
 
@@ -139,7 +142,7 @@ namespace sw
         SkirmishMatch                     _match;
         vector<RTSEvent>                  _listStepEvent;
         GameSpeedControl                  _speed;                       ///< 배속 · 일시정지(2 인 대전에서는 쓰지 않는다)
-        uint32                            _matchRevision;               ///< `getMatchRevision`
+        uint64                            _matchID;                     ///< `getMatchID`
         uint8                             _bAutoPlayChangeReported : 1; ///< 판이 열린 뒤 자동 플레이가 바뀐 것을 한 번 알렸다
         [[maybe_unused]] uint8            _reserved                : 7;
     };
