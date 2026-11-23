@@ -19,7 +19,9 @@
      씬 청크 이름 `scene_<옛>_`, 대소문자 · 구분자가 다른 경로 `Game/<Old>/` · `Game\\<Old>/`(옛 이름의 대소문자 꼴을 새 이름에 옮긴다).
      정확한 접두만 바꾼다(앞 글자가 낱말 글자면 다른 낱말이다) — 일반 낱말 `Empty` 는 건드리지 않는다. 리다이렉트 표는 옛 id 를 적으려고 있어 건너뛴다.
      팩 흡수(`game/<옛>` → `game/<새>/<하위>` — 폐기할 게임을 허브 팩의 미니게임 폴더로)면 콘텐츠 경로 `game/<옛>/` 와 도메인 `"game/<옛>"` 만 새 자리로 바꾸고,
-     옛 도메인이 사라지므로 리다이렉트는 새 도메인 표에 접두 한 줄이다. 시나리오 이름 `game.<옛>.` · 체인 `Scenario.<옛>` 은 새 이름을 Experience 마다 고르므로 남은 목록에 찍는다.
+     옛 도메인이 사라지므로 리다이렉트는 새 도메인 표에 접두 한 줄이다. 시나리오 이름 `game.<옛>.` · 체인 `Scenario.<옛>` 은 새 자리를 시나리오마다 고르므로 남은 목록에 찍는다.
+     시나리오 파일 하나를 옮기면(`….scenario.xml` → `….scenario.xml`) 이름이 파일을 따라간다: `<Scenario name>` 의 끝 마디는 새 파일 이름, 팩 마디는 새 팩이고
+     그 시나리오의 골든(`golden/<이름>.<골든>.<백엔드>…`)과 글 속 그 이름도 함께 바꾼다(골든은 이름만 — 그림은 다시 찍지 않는다).
   5. 작업 트리 전체를 검사해 끊어진 참조가 남았으면 알린다(실패 코드).
 `--resume` 은 파일 옮기기를 건너뛰고 2–5 만 다시 돈다 — 규칙을 넓힌 뒤 이미 옮긴 자리에 적용한다(바꾸기는 모두 정확한 접두라 두 번 돌아도 같다).
 임포트 산출물은 커밋하지 않으므로 원본을 옮긴 뒤에는 `App --import-models` 등으로 다시 임포트한다.
@@ -49,6 +51,7 @@ LEFTOVER_SUFFIX = (".xml", ".json", ".material", ".md", ".txt", ".cpp", ".h", ".
 PACK_STRING_SUFFIX = (".cpp", ".h", ".hpp", ".inl", ".py", ".cmake", ".json", ".xml", ".po", ".hlsl", ".hlsli", ".material", ".sh", ".js")
 PACK_STRING_FILE_NAME = ("CMakeLists.txt", ".gitignore")
 GOLDEN_FOLDER = "golden"
+SCENARIO_EXTENSION = ".scenario.xml"
 
 
 @dataclass(frozen=True)
@@ -102,6 +105,45 @@ def rewrite_absorbed_strings(text: str, absorb: PackAbsorb) -> tuple[str, int]:
     """글 속 `game/<옛>/…` 경로와 따옴표로 끝나는 도메인 `"game/<옛>"` 를 새 자리로. 앞 글자가 낱말 글자(`mygame/<옛>/`)거나 더 긴 이름이면 두지 않는다."""
     pattern = re.compile(r"(?<![A-Za-z0-9_.])game/" + re.escape(absorb.old_pack) + r"(?=[/\"'`])")
     return pattern.subn(absorb.new_id, text)
+
+
+@dataclass(frozen=True)
+class ScenarioRename:
+    """시나리오 파일 하나를 옮길 때 바뀌는 시나리오 이름과 골든 폴더."""
+    old_name: str
+    new_name: str
+    old_golden_folder: str
+    new_golden_folder: str
+
+
+def get_scenario_rename(old_id: str, new_id: str, text: str) -> ScenarioRename | None:
+    """두 id 가 모두 시나리오 파일이고 이름의 끝 마디가 파일 이름이면 새 이름을 짓는다. 팩 마디(`game.<팩>.`)는 새 팩을 따르고 그 밖의 앞 마디(`editor.` · `engine.`)는 그대로다."""
+    if not old_id.endswith(SCENARIO_EXTENSION) or not new_id.endswith(SCENARIO_EXTENSION):
+        return None
+    match = re.search(r"<Scenario\b[^>]*?\bname\s*=\s*[\"']([^\"']+)[\"']", text)
+    old_folder, _, old_file = old_id.rpartition("/")
+    new_folder, _, new_file = new_id.rpartition("/")
+    old_stem, new_stem = old_file[:-len(SCENARIO_EXTENSION)], new_file[:-len(SCENARIO_EXTENSION)]
+    if match is None or not match.group(1).endswith("." + old_stem):
+        return None
+    list_part = match.group(1)[:-len(old_stem) - 1].split(".")
+    new_parts = new_id.split("/")
+    if len(list_part) > 1 and list_part[0] == new_parts[0] == "game":
+        list_part[1] = new_parts[1]
+    new_name = ".".join([*list_part, new_stem])
+    return ScenarioRename(match.group(1), new_name, f"{CONTENT_FOLDER}/{old_folder}/{GOLDEN_FOLDER}", f"{CONTENT_FOLDER}/{new_folder}/{GOLDEN_FOLDER}")
+
+
+def list_scenario_golden_renames(list_index: list[str], rename: ScenarioRename) -> list[tuple[str, str]]:
+    """그 시나리오의 골든 파일(그림 · 기록 메타)마다 (옛 경로, 새 경로)."""
+    old_prefix = f"{rename.old_golden_folder}/{rename.old_name}."
+    return [(path, f"{rename.new_golden_folder}/{rename.new_name}.{path[len(old_prefix):]}") for path in list_index if path.startswith(old_prefix)]
+
+
+def rewrite_scenario_name(text: str, rename: ScenarioRename) -> tuple[str, int]:
+    """글 속 시나리오 이름(골든 id 접두 포함)을 새 이름으로. 더 긴 이름(`game.x.mountain`)은 두지 않는다."""
+    pattern = re.compile(r"(?<![A-Za-z0-9_.])" + re.escape(rename.old_name) + r"(?![A-Za-z0-9_])")
+    return pattern.subn(rename.new_name, text)
 
 
 def list_leftover_patterns(old_id: str, absorb: PackAbsorb | None) -> list[str]:
@@ -320,6 +362,7 @@ def main(argv: list[str]) -> int:
     list_rule = make_rules(old_id, new_id, is_folder, config)
     rename = get_pack_rename(old_id, new_id)
     absorb = get_pack_absorb(old_id, new_id)
+    scenario = None if is_folder else get_scenario_rename(old_id, new_id, (root / moved_path).read_bytes().decode("utf-8", "surrogateescape"))
     # 옛 도메인 뿌리를 통째로 옮기면 옛 도메인 폴더가 사라진다 — 새 자리가 다른 도메인의 하위 폴더여도(흡수) 접두 한 줄이 새 도메인 표에 간다.
     is_root_move = is_folder and is_domain_root(old_id)
     if is_root_move and not is_domain_root(new_id) and (root / moved_path / REDIRECT_FILE_NAME).is_file():
@@ -331,6 +374,9 @@ def main(argv: list[str]) -> int:
         if not is_folder:
             move_sidecar(root, old_path, new_path)   # 폴더는 안의 .meta 가 함께 간다
     list_golden = list_golden_renames(list_index_files(root), rename) if rename is not None else []
+    if scenario is not None:
+        list_golden = list_scenario_golden_renames(list_index_files(root), scenario)
+        print(f"  [시나리오 이름] {scenario.old_name} -> {scenario.new_name}")
     for old_golden, new_golden in list_golden:
         print(f"  [골든] {old_golden} -> {new_golden.rsplit('/', 1)[-1]}")
         if not args.dry_run:
@@ -340,7 +386,7 @@ def main(argv: list[str]) -> int:
         if not (root / relative_path).is_file():
             continue
         is_field_file = is_referrer(relative_path, config)
-        is_string_file = (rename is not None or absorb is not None) and is_pack_string_file(relative_path)
+        is_string_file = (rename is not None or absorb is not None or scenario is not None) and is_pack_string_file(relative_path)
         if not is_field_file and not is_string_file:
             continue
         text = (root / relative_path).read_bytes().decode("utf-8", "surrogateescape")
@@ -351,6 +397,10 @@ def main(argv: list[str]) -> int:
                 string_file_count += 1
                 string_count.path += absorbed_count
                 print(f"  [팩 흡수 경로] {relative_path}: {absorbed_count}")
+        elif is_string_file and scenario is not None:
+            rewritten, name_count = rewrite_scenario_name(rewritten, scenario)
+            if name_count:
+                print(f"  [시나리오 이름] {relative_path}: {name_count}")
         elif is_string_file:
             rewritten, count = rewrite_pack_strings(rewritten, rename)
             if count.scenario_name + count.other_name + count.path + count.chain + count.domain:
@@ -383,7 +433,7 @@ def main(argv: list[str]) -> int:
         list_move = [] if is_root_move else list_moved_files(root, old_id, new_id, is_folder)
         for table_path in write_redirects(root, list_move, (old_id, new_id) if is_root_move else None):
             print(f"  [리다이렉트] {table_path}")
-        report_leftovers(root, list_leftover_patterns(old_id, absorb))
+        report_leftovers(root, list_leftover_patterns(old_id, absorb) + ([scenario.old_name.lower()] if scenario is not None else []))
     if args.dry_run:
         return ExitCode.PASSED
 
