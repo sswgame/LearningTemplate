@@ -3,7 +3,7 @@
 <!--
   장르 수직 슬라이스(G1, 테마파크) — 시작 → 목표(themepark_guests.scenario.xml 의 단계 그대로) → 결과 → 저장 · 복원 해시 동일.
   목표 단계는 그 시나리오가 정본이다 — 거기를 고치면 이 파일도 맞춘다. 저장 슬롯은 themepark/slice.
-  공원 맵을 씬으로 바로 연다 — 하위 레벨 미니게임 안에서는 저장이 막힌다(`MinigameFlow`).
+  공원 맵을 씬으로 바로 연다 — 하위 레벨로 얹은 공원의 세이브 왕복은 themepark_sublevel 이 본다.
 -->
 <Scenario name="game.playground.themepark_slice" fixedDelta="0.0166667" timeoutFrames="5600" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<Launch variable="gv_firstScene" value="game/playground/themepark/maps/park.scene.xml"/>

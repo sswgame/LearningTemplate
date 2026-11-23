@@ -6,9 +6,10 @@
   ② 조작: 공원 레이어의 Tab 이 배치를 고르고 B 가 짓는다(씬의 ParkViewComponent 액션 이름 — 디렉터 명령).
   ③ 나가면 하위 레벨과 세운 모습(손님 풀)이 모두 사라지고 무대는 그대로이며, 미니게임 범위에 남은 것이 없다.
   ④ 다시 들어가도 새 공원이 열린다(앞 판의 시계 · 손님이 남지 않는다 — 손님 풀은 다시 정문에 선다).
+  ⑤ 안에서 저장한다 — 막히지 않고, 나와서 불러오면 지은 것까지 그 공원으로 같은 자리에 이어진다.
   실행: ctest -R Scenario.playground · App -scenario=game/playground/automation/themepark_sublevel.scenario.xml -unattended
 -->
-<Scenario name="game.playground.themepark_sublevel" fixedDelta="0.0166667" timeoutFrames="3600" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+<Scenario name="game.playground.themepark_sublevel" fixedDelta="0.0166667" timeoutFrames="4800" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<Launch variable="gv_firstScene" value="game/playground/automation/themepark_stage/stage.scene.xml"/>
 	<Variable name="gv_playgroundAutoPlay" value="0"/>
 	<Expect watch="Minigame.Active" is="none"/>
@@ -53,6 +54,30 @@
 	<Expect watch="ThemePark.GuestCount" equals="0"/>
 	<Expect watch="Object.X" target="themepark/ParkGate" near="20" tolerance="0.05"/>
 	<Expect watch="Object.Z" target="themepark/ParkGate" near="-40" tolerance="0.05"/>
+
+	<!-- ⑤ 세이브 왕복 — 셋째 배치까지 지은 공원이 이어진다 -->
+	<WaitUntil watch="Object.Exists" target="RideEntrance[1]" equals="1" timeoutFrames="60"/>
+	<Expect watch="Object.Exists" target="RideEntrance[2]" equals="0"/>
+	<Tap slot="Key.Tab" hold="1"/>
+	<WaitUntil watch="Object.Property" target="themepark/ParkGameMode" key="ParkViewComponent._selectedPlacement" equals="1" timeoutFrames="30"/>
+	<Tap slot="Key.B" hold="1"/>
+	<WaitUntil watch="Object.Exists" target="RideEntrance[2]" equals="1" timeoutFrames="30"/>
+	<Expect watch="Save.Blocked" equals="0"/>
+	<Store watch="Save.Written" as="writtenBefore"/>
+	<Store watch="Save.Loaded" as="loadedBefore"/>
+	<DevCommand line="game.save themeparksublevel/a"/>
+	<WaitUntil watch="Save.Written" differsFrom="writtenBefore" timeoutWallSeconds="10"/>
+	<DevCommand line="minigame.leave"/>
+	<WaitUntil watch="Scene.SubLevelCount" equals="0" timeoutFrames="30"/>
+	<WaitUntil watch="Object.Exists" target="RideEntrance[0]" equals="0" timeoutFrames="30"/>
+	<DevCommand line="game.load themeparksublevel/a"/>
+	<WaitUntil watch="Save.Loaded" differsFrom="loadedBefore" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Scene.LoadedSubLevelCount" equals="1" timeoutWallSeconds="30"/>
+	<Expect watch="Minigame.Active" is="themepark"/>
+	<Expect watch="Minigame.Depth" equals="1"/>
+	<Expect watch="Object.X" target="themepark/ParkGate" near="20" tolerance="0.05"/>
+	<Expect watch="Object.Z" target="themepark/ParkGate" near="-40" tolerance="0.05"/>
+	<WaitUntil watch="Object.Exists" target="RideEntrance[2]" equals="1" timeoutFrames="60"/>
 	<DevCommand line="minigame.leave"/>
 	<WaitUntil watch="Scene.SubLevelCount" equals="0" timeoutFrames="30"/>
 	<Expect watch="Minigame.LeakCount" equals="0"/>
