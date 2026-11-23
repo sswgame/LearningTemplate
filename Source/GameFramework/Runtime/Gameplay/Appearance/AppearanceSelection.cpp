@@ -607,9 +607,9 @@ namespace sw
 
         for ( const AppearanceSlotRequest& request : selection._listSlot )
         {
-            const bool bUnrepresentable = request._customization.isEmpty() == false || request._listDetachedPart.empty() == false || request._bSuppressed == SW_TRUE;
+            const bool bUnrepresentable = request._customization.isEmpty() == false || request._listDetachedPart.empty() == false || request._bSuppressed == SW_TRUE || request._bHiddenByPlayer == SW_TRUE;
             if ( bUnrepresentable )
-                return unexpected( Error{ ErrorKind::Unsupported, "the slot has item instance values, detached parts or a suppressed state, which a preset cannot carry yet", request._slot.c_str() } );
+                return unexpected( Error{ ErrorKind::Unsupported, "the slot has item instance values, detached parts, a suppressed state or is hidden by the player, which a preset cannot carry yet", request._slot.c_str() } );
             CharacterAppearanceSlotDef slot;
             slot._slot = request._slot;
             if ( request._itemID.empty() )

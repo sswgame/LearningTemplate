@@ -315,6 +315,10 @@ SW_TEST_CASE_F( AppearanceSelectionTest, MakePresetDefRefusesWhatItCannotCarry )
     AppearanceSelection suppressed       = selection;
     suppressed._listSlot[0]._bSuppressed = SW_TRUE;
     SW_EXPECT_FALSE( AppearanceSelection::makePresetDef( _database, suppressed, hashed_string( "Mine" ), def ) );
+
+    AppearanceSelection hidden           = selection;
+    hidden._listSlot[0]._bHiddenByPlayer = SW_TRUE; // 조용히 버리면 내보낸 프리셋에서 숨긴 투구가 다시 보인다
+    SW_EXPECT_FALSE( AppearanceSelection::makePresetDef( _database, hidden, hashed_string( "Mine" ), def ) );
 }
 
 /** @brief [AppearanceSelectionTest] 비트 코덱: 값 · 슬롯이 되돌아오고, 받는 쪽이 모르는 이름은 임시 이름이 되어 펼칠 때 지워진 것으로 보고된다 */
