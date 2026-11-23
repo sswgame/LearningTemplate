@@ -691,6 +691,8 @@
 		<entry source="Events" text="이벤트" />
 		<entry source="Events posted since start, and events dropped by cooldown, limit or slot shortage"
 		       text="시작 뒤 재생한 이벤트와 쿨다운 · 상한 · 슬롯 부족으로 버린 이벤트" />
+		<entry source="Every issue is hidden by the Errors and Warnings checkboxes."
+		       text="Errors · Warnings 체크칸이 결과를 모두 가렸습니다." />
 		<entry source="Every translation is up to date." text="모든 번역이 최신입니다." />
 		<entry source="Ex: boss_defeated &amp;&amp; gold >= 10" text="예: boss_defeated &amp;&amp; gold >= 10" />
 		<entry source="Ex: give_item:potion:3" text="예: give_item:potion:3" />
@@ -765,6 +767,10 @@
 		       text="모든 노드가 보이게 맞춥니다. 고른 노드가 있으면 그 노드로 갑니다(F)" />
 		<entry source="Fix" text="고치기" />
 		<entry source="Fix All" text="모두 고치기" />
+		<entry source="Fix applies the safe change of one row and Fix All applies every one as a single undo step. Double-click a row to frame its object."
+		       text="Fix 는 그 줄의 안전한 고침을, Fix All 은 모두를 되돌리기 한 단계로 적용합니다. 줄을 두 번 누르면 오브젝트를 화면에 맞춥니다." />
+		<entry source="Fix the red line and press Package again. Skip Build and Skip Cook keep the steps that already passed."
+		       text="빨간 줄을 고치고 Package 를 다시 누르세요. Skip Build 와 Skip Cook 은 이미 통과한 단계를 건너뜁니다." />
 		<entry source="Float parameter that blends the inputs (0 = first, 1 = second)."
 		       text="입력을 섞는 실수 파라미터입니다(0 = 첫째, 1 = 둘째)." />
 		<entry source="Floor" text="바닥" />
@@ -1255,6 +1261,8 @@
 		       text="아직 프레임 그래프 버퍼 목록이 없습니다. 목록 새로 고침을 누릅니다." />
 		<entry source="No game camera - the load and unload column needs one."
 		       text="게임 카메라가 없습니다 - 올림 · 내림 열은 게임 카메라가 있어야 합니다." />
+		<entry source="No game preset was found in Config/Game. Add one there, then reopen this window."
+		       text="Config/Game 에 게임 설정이 없습니다. 하나 더한 뒤 창을 다시 여세요." />
 		<entry source="No global variables registered." text="등록된 전역 변수가 없습니다." />
 		<entry source="No inspector for {type}" text="{type} 에는 인스펙터가 없습니다" />
 		<entry source="No item covers the current frame." text="현재 프레임에 걸친 항목이 없습니다." />
@@ -1331,6 +1339,8 @@
 		<entry source="Note to attach (what you did and what went wrong)"
 		       text="붙일 메모(무엇을 했고 무엇이 잘못됐는지)" />
 		<entry source="Nothing is playing" text="재생 중인 것이 없습니다" />
+		<entry source="Nothing packaged in this session. Pick a target and a game, then press Package - the first run builds the code and cooks every asset, so it takes the longest."
+		       text="이번 세션에 패키징한 것이 없습니다. 타깃과 게임을 고르고 Package 를 누르세요. 첫 실행은 코드를 짓고 에셋을 모두 쿠킹하므로 가장 오래 걸립니다." />
 		<entry source="Nothing recorded yet. Play the sequence to see its events and camera signals."
 		       text="아직 기록된 것이 없습니다. 시퀀스를 재생하면 이벤트와 카메라 신호가 보입니다." />
 		<entry source="Nothing recorded yet. Turn recording on and play (PIE) - or 'anim.rewind on' in the console."
@@ -2097,6 +2107,8 @@
 		<entry source="Select a node to edit its values" text="값을 고칠 노드를 고르세요" />
 		<entry source="Select a prefab instance in the Hierarchy to see and apply its overrides."
 		       text="하이어라키에서 프리팹 인스턴스를 고르면 덮어쓴 값을 보고 적용할 수 있습니다." />
+		<entry source="Select a row to open its object in the Inspector and change the named property. Double-click to frame it."
+		       text="줄을 고르면 오브젝트가 Inspector 에 열립니다. 적힌 프로퍼티를 고치세요. 두 번 누르면 화면에 맞춥니다." />
 		<entry source="Select a target folder to import assets into first"
 		       text="에셋을 가져올 대상 폴더를 먼저 선택하세요" />
 		<entry source="Select a widget to edit its properties." text="위젯을 고르면 프로퍼티를 편집합니다." />
@@ -2485,6 +2497,8 @@
 		       text="이미 쓰이는 조합입니다. Replace 를 누르면 다른 명령에서 지웁니다." />
 		<entry source="This file is not tracked yet, so there is nothing to compare with."
 		       text="이 파일은 아직 추적하지 않아 비교할 것이 없습니다." />
+		<entry source="This folder is empty. Import source files here, or drop them onto this window."
+		       text="폴더가 비어 있습니다. 여기로 원본 파일을 임포트하거나 이 창에 끌어 놓으세요." />
 		<entry source="This format cannot be read back." text="이 포맷은 다시 읽어 올 수 없습니다." />
 		<entry source="This is a prefab instance" text="프리팹 인스턴스입니다" />
 		<entry source="This map has no actions yet. Create one in the section below."
@@ -2495,6 +2509,8 @@
 		<entry source="This object is part of another scene placed in this one"
 		       text="다른 씬을 이 씬에 넣은 인스턴스의 일부입니다" />
 		<entry source="This row has no child fields to show" text="이 행에는 보일 자식 칸이 없습니다" />
+		<entry source="This scene has no objects yet. Add one here, or drag a prefab or mesh from the Content Browser into the scene view."
+		       text="이 씬에는 아직 오브젝트가 없습니다. 여기서 더하거나 Content Browser 의 프리팹 · 메시를 씬 뷰로 끌어 놓으세요." />
 		<entry source="This scene was built from a cooked file and is already split into cells. Open the scene file to preview the split."
 		       text="이 씬은 쿠킹본에서 지어져 이미 셀로 나뉘어 있습니다. 나눔을 미리 보려면 씬 파일을 엽니다." />
 		<entry source="This sequence has no bindings." text="이 시퀀스에는 바인딩이 없습니다." />

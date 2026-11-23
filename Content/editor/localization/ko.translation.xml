@@ -1919,6 +1919,9 @@
 		<entry key="EditorContentBrowser.EmptyCollection"
 		       text="이 컬렉션은 비었습니다. 에셋을 이름 위에 놓으면 더해집니다."
 		       sourceHash="7b266442dc624f84" />
+		<entry key="EditorContentBrowser.EmptyFolder"
+		       text="폴더가 비어 있습니다. 여기로 원본 파일을 임포트하거나 이 창에 끌어 놓으세요."
+		       sourceHash="c3731b80c4475501" />
 		<entry key="EditorContentBrowser.FindSelected" text="선택 항목 찾기" sourceHash="418d11f7640d60f7" />
 		<entry key="EditorContentBrowser.FindSelectedTip"
 		       text="메인 씬에서 고른 오브젝트의 에셋으로 가서 여기서 고릅니다. 미리보기 창의 선택은 따라가지 않습니다."
@@ -2419,12 +2422,21 @@
 		<entry key="EditorInspector.ViewOptions"
 		       text="보기 옵션: 바뀐 프로퍼티만 보기, 모든 영역 펼치기 또는 접기"
 		       sourceHash="890de6ef869bfc26" />
+		<entry key="EditorMapCheck.AllIssuesHidden"
+		       text="Errors · Warnings 체크칸이 결과를 모두 가렸습니다."
+		       sourceHash="565fff4c1441f9e9" />
 		<entry key="EditorMapCheck.CheckMap"
 		       text="활성 씬의 모든 오브젝트를 다시 검증합니다"
 		       sourceHash="513adef7c162ddc7" />
 		<entry key="EditorMapCheck.FixAllTooltip"
 		       text="보이는 줄의 안전한 고침을 모두 한 번의 실행 취소 단계로 적용합니다. 고치기 버튼이 없는 줄은 손으로 고쳐야 합니다"
 		       sourceHash="3778efd46b5886db" />
+		<entry key="EditorMapCheck.NextActionFix"
+		       text="Fix 는 그 줄의 안전한 고침을, Fix All 은 모두를 되돌리기 한 단계로 적용합니다. 줄을 두 번 누르면 오브젝트를 화면에 맞춥니다."
+		       sourceHash="cd5e9b0e04b9bdac" />
+		<entry key="EditorMapCheck.NextActionInspect"
+		       text="줄을 고르면 오브젝트가 Inspector 에 열립니다. 적힌 프로퍼티를 고치세요. 두 번 누르면 화면에 맞춥니다."
+		       sourceHash="c67a89c58392eafc" />
 		<entry key="EditorMapCheck.NoIssues"
 		       text="검증 문제가 없습니다. Check Map 은 활성 씬의 모든 오브젝트를 검증합니다."
 		       sourceHash="a042e68eb738c2fe" />
@@ -2691,7 +2703,16 @@
 		<entry key="EditorMultiplayer.WindowSize"
 		       text="App 창마다의 클라이언트 영역 크기(픽셀)"
 		       sourceHash="9328b054689ddf9d" />
+		<entry key="EditorPackaging.FirstPackage"
+		       text="이번 세션에 패키징한 것이 없습니다. 타깃과 게임을 고르고 Package 를 누르세요. 첫 실행은 코드를 짓고 에셋을 모두 쿠킹하므로 가장 오래 걸립니다."
+		       sourceHash="8c76bfea54389df3" />
 		<entry key="EditorPackaging.Game" text="패키징할 게임입니다" sourceHash="a713beed8fb43944" />
+		<entry key="EditorPackaging.NextActionFailed"
+		       text="빨간 줄을 고치고 Package 를 다시 누르세요. Skip Build 와 Skip Cook 은 이미 통과한 단계를 건너뜁니다."
+		       sourceHash="3b89c04d56677cc5" />
+		<entry key="EditorPackaging.NoGames"
+		       text="Config/Game 에 게임 설정이 없습니다. 하나 더한 뒤 창을 다시 여세요."
+		       sourceHash="8585232a1dbd569d" />
 		<entry key="EditorPackaging.OpenFolder"
 		       text="마지막으로 성공한 패키지의 출력 폴더를 파일 탐색기에서 엽니다"
 		       sourceHash="f3ce6fad1567c1cc" />
@@ -2924,6 +2945,9 @@
 		       text="에디터에서 숨겨져 있습니다 - 클릭하면 보입니다"
 		       sourceHash="b9a5ddb967c9d069" />
 		<entry key="EditorScene.HierarchyAllTypes" text="모든 종류" sourceHash="81c540e467783095" />
+		<entry key="EditorScene.HierarchyEmptyScene"
+		       text="이 씬에는 아직 오브젝트가 없습니다. 여기서 더하거나 Content Browser 의 프리팹 · 메시를 씬 뷰로 끌어 놓으세요."
+		       sourceHash="b16da8b061cdd523" />
 		<entry key="EditorScene.HierarchyNoActiveScene" text="활성 씬이 없습니다." sourceHash="554770b7cdf6d60a" />
 		<entry key="EditorScene.HierarchySearch"
 		       text="오브젝트 이름 검색, 컴포넌트 타입(t:Mesh), 태그(tag:Player) 필터를 지원합니다"

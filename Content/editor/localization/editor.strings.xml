@@ -6075,6 +6075,12 @@
 				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EditorContentBrowser.EmptyFolder"
+		       source="This folder is empty. Import source files here, or drop them onto this window.">
+			<origins>
+				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EditorContentBrowser.FindSelected" source="Find selected">
 			<origins>
 				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
@@ -7129,6 +7135,11 @@
 				<item>Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EditorMapCheck.AllIssuesHidden" source="Every issue is hidden by the Errors and Warnings checkboxes.">
+			<origins>
+				<item>Source/Editor/Panels/MapCheck/MapCheckPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EditorMapCheck.CheckMap" source="Validate every object of the active scene again">
 			<origins>
 				<item>Source/Editor/Panels/MapCheck/MapCheckPanel.cpp</item>
@@ -7136,6 +7147,18 @@
 		</entry>
 		<entry key="EditorMapCheck.FixAllTooltip"
 		       source="Apply every safe fix in the visible rows as one undo step. Rows without a Fix button need a hand fix">
+			<origins>
+				<item>Source/Editor/Panels/MapCheck/MapCheckPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMapCheck.NextActionFix"
+		       source="Fix applies the safe change of one row and Fix All applies every one as a single undo step. Double-click a row to frame its object.">
+			<origins>
+				<item>Source/Editor/Panels/MapCheck/MapCheckPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMapCheck.NextActionInspect"
+		       source="Select a row to open its object in the Inspector and change the named property. Double-click to frame it.">
 			<origins>
 				<item>Source/Editor/Panels/MapCheck/MapCheckPanel.cpp</item>
 			</origins>
@@ -7720,7 +7743,25 @@
 				<item>Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EditorPackaging.FirstPackage"
+		       source="Nothing packaged in this session. Pick a target and a game, then press Package - the first run builds the code and cooks every asset, so it takes the longest.">
+			<origins>
+				<item>Source/Editor/Panels/Packaging/PackagingPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EditorPackaging.Game" source="Game to package">
+			<origins>
+				<item>Source/Editor/Panels/Packaging/PackagingPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorPackaging.NextActionFailed"
+		       source="Fix the red line and press Package again. Skip Build and Skip Cook keep the steps that already passed.">
+			<origins>
+				<item>Source/Editor/Panels/Packaging/PackagingPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorPackaging.NoGames"
+		       source="No game preset was found in Config/Game. Add one there, then reopen this window.">
 			<origins>
 				<item>Source/Editor/Panels/Packaging/PackagingPanel.cpp</item>
 			</origins>
@@ -8233,6 +8274,12 @@
 			</origins>
 		</entry>
 		<entry key="EditorScene.HierarchyAllTypes" source="All types">
+			<origins>
+				<item>Source/Editor/Panels/Scene/HierarchyPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorScene.HierarchyEmptyScene"
+		       source="This scene has no objects yet. Add one here, or drag a prefab or mesh from the Content Browser into the scene view.">
 			<origins>
 				<item>Source/Editor/Panels/Scene/HierarchyPanel.cpp</item>
 			</origins>

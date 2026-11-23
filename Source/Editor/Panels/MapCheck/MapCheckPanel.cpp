@@ -144,10 +144,14 @@ namespace sw::editor
             const EditorListFilter filter{ _searchBuffer.c_str() };
             if ( filter.isActive() )
                 EditorWidgets::drawNoSearchResultHint( filter.getText() );
+            else if ( _viewState._counts._errorCount + _viewState._counts._warningCount > 0 )
+                EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorMapCheck", "AllIssuesHidden" ) ); // 종류 체크칸이 다 걸렀다 — 문제가 없다고 하지 않는다
             else
                 EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorMapCheck", "NoIssues" ) );
             return;
         }
+        // 결과의 다음 행동 한 줄 — 고침이 있으면 Fix 부터, 없으면 줄에서 오브젝트로 가 인스펙터에서 고친다.
+        ImGui::TextWrapped( "%s", _viewState._fixableRowCount > 0 ? SW_LOCKEY( "EditorMapCheck", "NextActionFix" ) : SW_LOCKEY( "EditorMapCheck", "NextActionInspect" ) );
 
         constexpr ImGuiTableFlags kTableFlags =
             ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingStretchProp;

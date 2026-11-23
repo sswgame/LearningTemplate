@@ -50,6 +50,8 @@ namespace sw::editor
         void drawProgressBar();
         /** @brief 최근 로그 줄을 그립니다(오류처럼 보이는 줄은 빨강). */
         void drawLogList();
+        /** @brief 지금 상태의 다음 행동 한 줄입니다 — 첫 패키징, 게임 설정이 없을 때, 실패 뒤. 도는 중 · 성공 뒤는 그리지 않는다(진행 막대 · 폴더 단추가 있다). */
+        void drawNextAction();
 
     private:
         PackagingViewModel _model; ///< 소멸자가 도는 패키징을 끝내고 기다린다
