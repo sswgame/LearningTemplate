@@ -382,6 +382,8 @@ namespace sw
 
         /** @brief 디스크 파일의 효과를 읽습니다(도구 · 테스트용, `ReflectedXMLFile::loadDescFromDiskFile`). 실패하면 효과가 빕니다. */
         [[nodiscard]] bool loadFromDiskFile( string_view diskPath );
+        /** @brief XML 글의 효과입니다(에디터가 저장하지 않은 편집을 미리 본다 — `VFXComponent::setEffect`). 읽기 규칙은 파일과 같고 실패하면 오류를 남기고 nullptr 입니다. */
+        [[nodiscard]] static shared_ptr<const VFXEffectDef> makeFromXMLText( string_view xmlText, string_view sourceLabel );
         /** @brief 사용자 파라미터입니다. 없으면 nullptr 입니다. */
         [[nodiscard]] const VFXUserParameterDef* findUserParameter( string_view name ) const;
         /** @brief 방출기가 하나 이상이고 이름이 겹치지 않으며 방출기마다 `VFXEmitterDef::validate` 를 통과하고, 사용자 파라미터 이름이 겹치지 않고 방출기의 묶음이 있는 이름이면 true 입니다. */

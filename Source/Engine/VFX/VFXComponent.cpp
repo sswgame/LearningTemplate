@@ -242,8 +242,10 @@ namespace sw
         static const hashed_string s_effectPathName( "_effectPath" );
         static const hashed_string s_seedName( "_seed" );
         static const hashed_string s_userParameterName( "_listUserParameter" );
-        if ( propertyName == s_effectPathName || propertyName == s_seedName )
+        if ( propertyName == s_effectPathName )
             loadEffect();
+        else if ( propertyName == s_seedName )
+            rebuildSimulations();
         else if ( propertyName == s_userParameterName )
             applyUserParameters();
     }
@@ -280,10 +282,17 @@ namespace sw
         loadEffect();
     }
 
+    void VFXComponent::setEffect( shared_ptr<const VFXEffectDef> pEffect )
+    {
+        _effectPath = string{};
+        _pEffect    = std::move( pEffect );
+        rebuildSimulations();
+    }
+
     void VFXComponent::setSeed( uint32 seed )
     {
         _seed = seed;
-        loadEffect();
+        rebuildSimulations();
     }
 
     bool VFXComponent::setUserParameter( string_view name, const float4& value )
@@ -421,6 +430,14 @@ namespace sw
 
     void VFXComponent::loadEffect()
     {
+        // 효과는 공유 캐시의 한 벌이다 — 같은 효과를 쓰는 컴포넌트가 파일을 다시 읽지 않는다. 핫 리로드는 떼어 낸 새 객체를 이 자리에서 받는다(`onPropertyChanged`).
+        // 효과는 별칭 포인터를 지어 둔다 — 받은 판을 쥐고 다시 읽기 횟수로 다시 받는다. 읽지 못하면 효과 데이터가 무엇이 틀렸는지 오류를 남겼다.
+        _pEffect = _effectPath.empty() ? nullptr : _effectPath.acquire().snapshot();
+        rebuildSimulations();
+    }
+
+    void VFXComponent::rebuildSimulations()
+    {
         releaseMeshEmitters();
         _listSimulation.clear();
         _listPublished.clear();
@@ -428,14 +445,9 @@ namespace sw
         _listEmitterTexturePath.clear();
         _listGPURequest.clear();
         _listEmitterEnabled.clear();
-        _pEffect.reset();
         _bPlaying = SW_FALSE;
-        if ( _effectPath.empty() )
-            return;
-        // 효과는 공유 캐시의 한 벌이다 — 같은 효과를 쓰는 컴포넌트가 파일을 다시 읽지 않는다. 핫 리로드는 떼어 낸 새 객체를 이 자리에서 받는다(`onPropertyChanged`).
-        _pEffect = _effectPath.acquire().snapshot(); // 효과는 별칭 포인터를 지어 둔다 — 받은 판을 쥐고 다시 읽기 횟수로 다시 받는다
         if ( _pEffect == nullptr )
-            return; // 효과 데이터가 무엇이 틀렸는지 오류를 남겼다 — 방출기 없이 아무것도 그리지 않는다
+            return; // 방출기 없이 아무것도 그리지 않는다
         const VFXEffectDef& effect = *_pEffect;
         _listSimulation.reserve( effect._listEmitter.size() );
         // 이펙트 품질(사용자 설정 graphics.effectsQuality → 선택지의 targetValue)은 효과를 읽을 때 정한다 — 바꾸면 다음에 읽는 효과부터 따른다.

@@ -178,8 +178,13 @@ namespace sw::editor
     {
         if ( _model.isEditable() == false )
         {
-            EditorWidgets::drawEmptyHint( _model.isInherited() ? SW_LOCKEY( "EdVFX", "InheritedEffect" ) : SW_LOCKEY( "EdVFX", "NotEditable" ) );
+            EditorWidgets::drawEmptyHint( SW_LOCKEY( "EdVFX", "NotEditable" ) );
             return;
+        }
+        if ( _model.getBaseID().empty() == false )
+        {
+            ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdFormat", "InheritsFrom", TextArgumentList().addText( "base", _model.getBaseID().c_str() ) ).c_str() );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EdText", "InheritsFromTip" ) );
         }
         if ( _model.getSelectedEmitter().has_value() == false )
         {
@@ -198,7 +203,7 @@ namespace sw::editor
         target._pInstance = _model.editSelectedEmitter();
         target._pType     = VFXPreviewViewModel::getEmitterType();
         target._onEdited  = SW_DELEGATE_METHOD( Delegate<void( const PropertyInfo& )>, &VFXPreviewPanel::onEmitterPropertyEdited, this );
-        _grid.drawProperties( target, nullptr, {} );
+        _grid.drawProperties( target, nullptr, _model.collectHiddenProperties() );
         // 원소 주소가 바뀌는 편집은 그리드를 다 그린 뒤에 한다
         if ( bDuplicate )
             _model.duplicateSelectedEmitter();
@@ -293,7 +298,7 @@ namespace sw::editor
 
         if ( isDocumentLoadFailed() == false ) // 읽지 못한 효과는 걸지 않는다
         {
-            _model.syncEffect( getPreviewScene(), getLoadedAssetPath() );
+            _model.syncEffect( getPreviewScene(), getLoadedAssetPath(), ImGui::IsAnyItemActive() );
             _model.syncPlayback( getPreviewScene(), ImGui::GetIO().DeltaTime );
         }
         // 왼쪽은 미리보기, 오른쪽은 고른 방출기의 편집 칸 — 좁은 창에서는 편집 칸이 뷰포트 아래로 내려간다.

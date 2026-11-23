@@ -260,6 +260,12 @@ namespace sw
         return finishLoad( ReflectedXMLFile::loadDescFromDiskFile( diskPath, *this ), diskPath );
     }
 
+    shared_ptr<const VFXEffectDef> VFXEffectDef::makeFromXMLText( string_view xmlText, string_view sourceLabel )
+    {
+        const shared_ptr<VFXEffectDef> pEffect = make_shared<VFXEffectDef>();
+        return pEffect->finishLoad( ReflectedXMLFile::loadDescFromText( xmlText, sourceLabel, *pEffect ), sourceLabel ) ? pEffect : nullptr;
+    }
+
     bool VFXEffectDef::finishLoad( bool bRead, string_view sourceLabel )
     {
         // 반쯤 찬 효과를 남기지 않는다. 실패는 "아무것도 읽지 않았다" 여야 한다.
