@@ -11,6 +11,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
+#include "Engine/Object/GameObject/WorldOrigin.h"
 
 #include "GameFramework/Runtime/Character/AI/Schedule/ScheduleSaveState.h"
 #include "GameFramework/Runtime/Gameplay/Interaction/SmartObjectComponent.h"
@@ -92,6 +93,7 @@ namespace sw
                 float32   yaw{ 0.0f };
                 if ( pSmart->computeSlotTransform( slot, candidate._position, yaw ) == false )
                     continue;
+                candidate._position = _pManager->getWorldOrigin().toAbsolute( candidate._position ); // 일정은 절대 자리로 산다
                 candidate._objectID = pOwner->getObjectID();
                 candidate._slot     = slot;
                 outListCandidate.push_back( candidate );
@@ -110,7 +112,10 @@ namespace sw
             return false;
         const SmartObjectComponent* pSmart = pObject->getComponent<SmartObjectComponent>();
         float32                     yaw{ 0.0f };
-        return pSmart != nullptr && pSmart->computeSlotTransform( reservation._slot, outPosition, yaw );
+        if ( pSmart == nullptr || pSmart->computeSlotTransform( reservation._slot, outPosition, yaw ) == false )
+            return false;
+        outPosition = _pManager->getWorldOrigin().toAbsolute( outPosition );
+        return true;
     }
 
     bool SmartObjectScheduleLocator::isTakenByOther( const hashed_string& npc, uint64 objectID, int32 slot, int32 day, int32 startMinute, int32 endMinute ) const

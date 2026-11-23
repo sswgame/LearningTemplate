@@ -107,7 +107,7 @@ SW_TEST_CASE( AIPerceptionTest, RememberedPositionFollowsTheWorldOrigin )
     GameObjectManager          manager;
     AIStimulusSourceComponent* pSource = Util::makeSource( manager, "Near", float3{ 3.0f, 0.0f, 4.0f } );
     const uint64               id      = pSource->getOwner()->getObjectID();
-    manager.notifyWorldOriginShifted( float3{ -500.0f, 0.0f, 0.0f } ); // 감각이 생기기 전의 이동은 기억과 상관없다
+    manager.setWorldOrigin( double3{ 500.0, 0.0, 0.0 } ); // 감각이 생기기 전의 이동은 기억과 상관없다
 
     AIPerception perception;
     perception.sense( manager, 1, float3{}, float3{ 1.0f, 0.0f, 0.0f }, nullptr, 0.1f );
@@ -115,7 +115,7 @@ SW_TEST_CASE( AIPerceptionTest, RememberedPositionFollowsTheWorldOrigin )
     SW_EXPECT_NEAR( 3.0f, perception.findTarget( id )->_lastKnownPosition._x, 1e-4f );
 
     SW_REQUIRE_TRUE( pSource->getOwner()->removeComponent( pSource ) ); // 대상이 사라졌다 — 기억만 남는다
-    manager.notifyWorldOriginShifted( float3{ -1000.0f, 0.0f, -500.0f } );
+    manager.setWorldOrigin( double3{ 1500.0, 0.0, 500.0 } );
     perception.sense( manager, 1, float3{ -1000.0f, 0.0f, -500.0f }, float3{ 1.0f, 0.0f, 0.0f }, nullptr, 0.1f );
     const AIPerceivedTarget* pTarget = perception.findTarget( id );
     SW_REQUIRE_NOT_NULL( pTarget );

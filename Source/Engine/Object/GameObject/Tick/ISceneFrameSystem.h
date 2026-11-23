@@ -75,6 +75,15 @@ namespace sw
         virtual ISceneParallelFrameSystem* findParallelSystem() = 0;
         /** @brief 게임 스레드에서 돕니다. 병렬 시스템은 매니저가 이것을 부르지 않는다. */
         virtual void runMain( GameObjectManager& manager, float32 deltaTime ) = 0;
+        /**
+         * @brief 월드 원점이 옮겨졌습니다 — 자기 컴포넌트가 오브젝트 밖에 든 월드 자리를 @p delta 만큼 옮깁니다(게임 스레드 · 틱 밖).
+         * @details 씬 서비스는 `ISceneService::onWorldOriginShifted` 로 받는다. 이것은 GameFramework 가 붙인 시스템(조종)의 같은 자리다 — 그 층은 씬 서비스를 올리지 않는다.
+         */
+        virtual void onWorldOriginShifted( GameObjectManager& manager, const float3& delta )
+        {
+            (void)manager;
+            (void)delta;
+        }
 
     protected:
         ISceneFrameSystem()                                      = default;

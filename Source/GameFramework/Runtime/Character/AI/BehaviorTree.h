@@ -223,6 +223,8 @@ namespace sw
         BehaviorStatus tick( Blackboard& blackboard, void* pOwner, float32 deltaTime );
         /** @brief 도는 작업을 모두 중단하고 처음 상태로 돌립니다. */
         void reset();
+        /** @brief 월드 원점이 옮겨졌습니다 — 이동 노드가 요청해 둔 목적지를 @p delta 만큼 옮깁니다(블랙보드와 함께 옮겨야 다시 길을 잡지 않는다). */
+        void shiftWorldOrigin( const float3& delta );
 
         /** @brief 도는 중(Running)인 잎 노드입니다. 없으면 비어 있습니다. */
         optional<int32> getActiveLeaf() const { return _activeLeaf; }

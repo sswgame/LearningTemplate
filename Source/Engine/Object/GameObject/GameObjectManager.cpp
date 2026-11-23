@@ -27,6 +27,7 @@
 #include "Engine/Object/GameObject/Tick/ISceneFrameSystem.h"
 #include "Engine/Object/GameObject/Tick/SceneTickScheduler.h"
 #include "Engine/Object/GameObject/Tick/TickContext.h"
+#include "Engine/Object/GameObject/WorldOrigin.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
@@ -210,6 +211,7 @@ namespace sw
      */
     struct GameObjectManager::State
     {
+        WorldOrigin             _worldOrigin; ///< 오브젝트 자리가 기준한 월드 원점(`getWorldOrigin`)
         SceneTransformHierarchy _transformHierarchy;
         PrimitiveRegistry       _primitiveRegistry;
         CameraRegistry          _cameraRegistry;
@@ -223,10 +225,10 @@ namespace sw
         SubsystemScope _sceneScope;
         /** @brief 씬 서비스를 범위의 초기화 순서로 든 목록입니다. 코어는 타입을 모르고 단계마다 `update` 만 부른다. */
         vector<SceneServiceEntry> _listSceneService;
-        double3                   _worldOriginShiftTotal;
 
         State( GameObjectManager& manager, StructuralChangeBuffer& structuralChangeBuffer, ObjectIDAllocator& objectIDAllocator, const SceneEngineServices& services )
-            : _transformHierarchy{}
+            : _worldOrigin{}
+            , _transformHierarchy{}
             , _primitiveRegistry{}
             , _cameraRegistry{}
             , _tagIndex{}
@@ -235,7 +237,6 @@ namespace sw
             , _store{ manager, _tickScheduler, structuralChangeBuffer, objectIDAllocator }
             , _sceneScope{ services._pEngineSubsystems }
             , _listSceneService{}
-            , _worldOriginShiftTotal{}
         {
         }
     };
@@ -662,19 +663,26 @@ namespace sw
         }
     }
 
+    const WorldOrigin& GameObjectManager::getWorldOrigin() const
+    {
+        return _pState->_worldOrigin;
+    }
+
+    void GameObjectManager::setWorldOrigin( const double3& origin )
+    {
+        _pState->_worldOrigin._position = origin;
+    }
+
     void GameObjectManager::notifyWorldOriginShifted( const float3& delta )
     {
-        double3& total = _pState->_worldOriginShiftTotal;
-        total          = double3{ total._x + static_cast<float64>( delta._x ), total._y + static_cast<float64>( delta._y ), total._z + static_cast<float64>( delta._z ) };
+        for ( FrameSystemEntry& entry : _listFrameSystem )
+        {
+            entry._pSystem->onWorldOriginShifted( *this, delta );
+        }
         for ( SceneServiceEntry& entry : _pState->_listSceneService )
         {
             entry._pService->onWorldOriginShifted( delta );
         }
-    }
-
-    const double3& GameObjectManager::getWorldOriginShiftTotal() const
-    {
-        return _pState->_worldOriginShiftTotal;
     }
 
     const utf8* GameObjectManager::findWorldOriginShiftBlocker() const

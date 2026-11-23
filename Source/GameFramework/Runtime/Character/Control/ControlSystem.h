@@ -73,6 +73,8 @@ namespace sw
         static void releaseIfUnused( GameObjectManager& manager );
 
         void runMain( GameObjectManager& manager, float32 deltaTime ) override;
+        /** @brief AI 조종자가 든 위치(목적지 · 초점 · 블랙보드)를 옮깁니다. */
+        void onWorldOriginShifted( GameObjectManager& manager, const float3& delta ) override;
         /**
          * @brief 조종자의 판단이 하는 일입니다. 폰의 의도 · 시선 · 빙의를 쓰고(`ControlIntent`), 자동 빙의가 조종자 오브젝트를 만들며(`Structure`),
          *        AI 가 내비게이션 에이전트에 목적지를 건네고 멈추게 합니다(`Navigation`). 폰 자리(AI 의 이동 방향)와 에이전트의 이동 상태는 지난 프레임의 값을 읽습니다.

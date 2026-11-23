@@ -28,6 +28,7 @@ namespace sw
     /**
      * @class SmartObjectScheduleLocator
      * @brief 씬의 스마트 오브젝트 슬롯을 일정의 슬롯으로 나눠 주는 제공자입니다. 게임 스레드에서만 부릅니다.
+     * @details 일정의 자리(카탈로그 · 요청 · 돌려주는 위치)는 절대라, 로컬인 슬롯 자리를 월드 원점으로 옮겨 견주고 돌려줍니다(`WorldOrigin`).
      */
     class SW_GF_API SmartObjectScheduleLocator final : public IScheduleActivityLocator
     {

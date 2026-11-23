@@ -74,6 +74,8 @@ namespace sw
         void holdButton( const hashed_string& name, bool bHeld );
         /** @brief 다음에 내는 의도의 아날로그 값을 정합니다. 그 한 틱에만 쓰이며 `think` 안팎 어디서든 부를 수 있습니다. */
         void setAnalog( const hashed_string& name, float32 value );
+        /** @brief 월드 원점이 옮겨졌습니다(`ControlSystem::onWorldOriginShifted`) — 목적지 · 초점 · 블랙보드의 위치 · 트리가 요청한 목적지를 @p delta 만큼 옮깁니다. */
+        void shiftWorldOrigin( const float3& delta );
         /** @brief 이동 상태입니다. 내비 에이전트가 있으면 그 상태이고, 없으면 목적지가 있을 때 Moving, 닿았을 때 Arrived 입니다. */
         NavMoveStatus getMoveStatus() const;
         bool          hasDestination() const { return _bHasDestination == SW_TRUE; }

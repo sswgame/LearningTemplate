@@ -458,6 +458,25 @@ SW_TEST_CASE( ControlSystemTest, AutoPossessSpawnsAnAIThatDiesWithThePawn )
     SW_EXPECT_TRUE( manager.resolveGameObject( controllerObject ) == nullptr );
 }
 
+/** @brief [ControlSystemTest] 월드 원점이 옮겨지면 AI 조종자의 목적지와 블랙보드의 위치도 같은 만큼 옮겨진다 — 옛 원점 기준의 자리로 가지 않는다. 위치가 아닌 값은 그대로다 */
+SW_TEST_CASE( ControlSystemTest, AIPositionsFollowTheWorldOrigin )
+{
+    GameObjectManager      manager;
+    AIControllerComponent* pAI = manager.createGameObject( hashed_string( "AI" ) )->addComponent<AIControllerComponent>();
+    manager.update( 1.0f / 60.0f );
+    pAI->moveTo( float3{ 1010.0f, 2.0f, 5.0f } );
+    Blackboard& blackboard = pAI->getBlackboard();
+    blackboard.setVector( "Goal", float3{ 1010.0f, 2.0f, 5.0f } );
+    blackboard.setFloat( "Distance", 7.0f );
+    const uint32 revision = blackboard.getRevision();
+
+    manager.notifyWorldOriginShifted( float3{ -1000.0f, 0.0f, 0.0f } );
+    SW_EXPECT_TRUE( ( pAI->getDestination() == float3{ 10.0f, 2.0f, 5.0f } ) );
+    SW_EXPECT_TRUE( ( blackboard.getVector( "Goal" ) == sw::optional<float3>( float3{ 10.0f, 2.0f, 5.0f } ) ) );
+    SW_EXPECT_TRUE( blackboard.getFloat( "Distance" ) == sw::optional<float32>( 7.0f ) );
+    SW_EXPECT_EQUAL( revision, blackboard.getRevision() );
+}
+
 /** @brief [ControlSystemTest] 풀(`PrefabPool`)에 돌려준 폰은 자동 빙의가 세운 AI 조종자를 놓고(조종자는 지워진다) 쉬는 동안 쥐이지 않다가, 다시 꺼내면 갓 스폰한 폰처럼 다시 빙의된다 */
 SW_TEST_CASE( ControlSystemTest, PooledPawnDropsItsAIAndIsPossessedAgainWhenReused )
 {

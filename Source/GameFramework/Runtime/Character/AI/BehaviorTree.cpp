@@ -385,6 +385,14 @@ namespace sw
         _lastSucceededLeaf.reset();
     }
 
+    void BehaviorTreeRunner::shiftWorldOrigin( const float3& delta )
+    {
+        for ( float3& target : _listMoveTarget )
+        {
+            target = target + delta;
+        }
+    }
+
     const utf8* BehaviorTreeRunner::getActiveLeafName() const
     {
         const optional<int32> leaf = _activeLeaf.has_value() ? _activeLeaf : _lastSucceededLeaf;

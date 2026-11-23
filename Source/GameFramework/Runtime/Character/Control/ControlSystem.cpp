@@ -207,6 +207,15 @@ namespace sw
             ++_tick;
     }
 
+    void ControlSystem::onWorldOriginShifted( GameObjectManager& manager, const float3& delta )
+    {
+        for ( ControllerComponent* pController : manager.getComponentRegistry().getAll<ControllerComponent>() )
+        {
+            if ( pController != nullptr && isA<AIControllerComponent>( pController ) )
+                static_cast<AIControllerComponent*>( pController )->shiftWorldOrigin( delta );
+        }
+    }
+
     void ControlSystem::applyQueuedPossess( GameObjectManager& manager )
     {
         for ( size_t queuedIndex = 0; queuedIndex < _listQueuedPossess.size(); ++queuedIndex )

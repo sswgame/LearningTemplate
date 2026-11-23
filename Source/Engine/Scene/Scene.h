@@ -175,7 +175,7 @@ namespace sw
          * @brief 월드 원점입니다 — 오브젝트의 자리는 이 원점 기준 로컬이다(절대 = 로컬 + 원점). 처음은 0 이다. 서버 · 세이브 · 쿠킹본 · 셀 격자는 절대 좌표다.
          * @details 언리얼 World Origin Rebasing(`UWorld::OriginLocation`)과 같은 모델 — 큰 월드에서 카메라 둘레의 float 정밀도를 지킨다.
          */
-        const double3& getWorldOrigin() const { return _worldOrigin; }
+        const double3& getWorldOrigin() const;
         /**
          * @brief 월드 원점을 @p newOrigin 으로 옮깁니다(XZ 만 — Y 는 그대로 둔다). 모든 루트 오브젝트를 (옛 원점 − 새 원점)만큼 순간이동(속도는 잇는다)하고 씬 서비스에 알린다(`ISceneService::onWorldOriginShifted`).
          * @details 게임 스레드 · 틱 밖에서 부른다(`Scene::update` 의 앞 — 자동 옮기기, 개발 명령 `world.origin`). 떠 둔 상태 · 세이브는 엔티티마다 적힌 원점을 들어 지을 때 맞춘다(`finishNodeBuild`).
@@ -183,7 +183,7 @@ namespace sw
          */
         [[nodiscard]] bool shiftWorldOrigin( const double3& newOrigin );
         /** @brief 세이브 복원이 다시 만든 오브젝트가 적힌 원점을 그대로 들입니다(오브젝트는 옮기지 않는다 — 복원된 자리가 이미 그 원점 기준이다). */
-        void restoreWorldOrigin( const double3& origin ) { _worldOrigin = origin; }
+        void restoreWorldOrigin( const double3& origin );
 
         /** @brief 월드 설정을 바꿉니다(에디터). 다음 저장에 적힙니다 — 이미 지은 씬의 스트리밍은 바뀌지 않습니다(셀은 쿠킹이 나눈다). */
         void setSceneSettings( const SceneSettings& settings ) { _sceneSettings = settings; }
@@ -305,7 +305,6 @@ namespace sw
         string                        _sourcePath;
         string                        _defaultMaterialPath;
         SceneSettings                 _sceneSettings; ///< 씬 파일의 월드 설정(`instantiate` 가 읽고 `serializeToDocument` 가 쓴다)
-        double3                       _worldOrigin;   ///< 월드 원점(`getWorldOrigin` — 절대 = 로컬 + 원점)
         SceneEngineServices           _services;      ///< 만들 때 받은 엔진 서비스(빌림). 오브젝트 매니저도 같은 묶음으로 만든다
         unique_ptr<GameObjectManager> _objectManager;
         Material*                     _pMaterial;
