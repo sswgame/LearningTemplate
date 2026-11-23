@@ -679,16 +679,17 @@ namespace sw
             _recordingCommit = *commit;
         }
         AutomationGoldenMeta meta;
-        meta._backendTag     = string( backendTag );
-        meta._platform       = AutomationGoldenUtil::getPlatformTag().empty() ? "windows" : "linux";
-        meta._commit         = _recordingCommit;
-        meta._recordedUnixMs = WallClock::nowUnixMilliseconds().count();
-        meta._reason         = pReason;
-        meta._bMeasured      = pPrevious != nullptr;
-        meta._difference     = pPrevious != nullptr ? *pPrevious : AutomationImageDifference{};
-        meta._limits         = limits;
-        meta._width          = image._width;
-        meta._height         = image._height;
+        meta._backendTag              = string( backendTag );
+        const string_view platformTag = AutomationGoldenUtil::getPlatformTag();
+        meta._platform                = platformTag.empty() ? string( "windows" ) : string( platformTag.substr( 1 ) ); // 앞의 점을 뺀다
+        meta._commit                  = _recordingCommit;
+        meta._recordedUnixMs          = WallClock::nowUnixMilliseconds().count();
+        meta._reason                  = pReason;
+        meta._bMeasured               = pPrevious != nullptr;
+        meta._difference              = pPrevious != nullptr ? *pPrevious : AutomationImageDifference{};
+        meta._limits                  = limits;
+        meta._width                   = image._width;
+        meta._height                  = image._height;
         vector<uint8> listEncoded;
         AutomationImage::encodePpm( image, listEncoded );
         const optional<AbsolutePath> imagePath = engine::getSubsystem<AssetPaths>().toDiskPath( goldenID );

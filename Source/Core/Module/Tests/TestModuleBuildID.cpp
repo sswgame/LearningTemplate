@@ -10,12 +10,23 @@
     #include "Core/Foundation/PlatformOSHeaders.h"
 #elif defined( SW_PLATFORM_LINUX )
     #include <gnu/libc-version.h>
+#elif defined( SW_PLATFORM_ANDROID )
+    #include <android/log.h>
+#elif defined( SW_PLATFORM_WEB )
+// wasm 모듈에는 빌드 id 가 없다 — 아래 웹 케이스 하나만 본다.
 #else
     #error "Unsupported platform"
 #endif
 
 using namespace sw;
 
+#if defined( SW_PLATFORM_WEB )
+/** @brief wasm 모듈에는 ELF build-id 가 없다 — 찾기는 빈 결과다(심볼은 `-gseparate-dwarf` 파일 이름으로 찾는다). */
+SW_TEST_CASE( ModuleBuildIDTest, WebModuleHasNoBuildID )
+{
+    SW_EXPECT_FALSE( ModuleBuildID::find( nullptr ).isValid() );
+}
+#elif defined( SW_PLATFORM_WINDOWS ) || defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_ANDROID )
 namespace
 {
     bool isModuleBuildIDHex( string_view text )
@@ -42,14 +53,14 @@ SW_TEST_CASE( ModuleBuildIDTest, ExecutableHasASymbolKey )
     SW_EXPECT_FALSE( executable._modulePath.empty() );
     SW_REQUIRE_TRUE_MSG( executable.isValid(), "every configuration links with a build id (Windows /DEBUG RSDS, Linux --build-id)" );
     SW_EXPECT_TRUE_MSG( isModuleBuildIDHex( executable._id ), executable._id );
-#if defined( SW_PLATFORM_WINDOWS )
+    #if defined( SW_PLATFORM_WINDOWS )
     SW_EXPECT_TRUE( executable._id.size() >= 33 );
     SW_EXPECT_TRUE_MSG( StringUtil::endsWith( executable._debugFile, ".pdb", true ), executable._debugFile );
-    #if defined( SW_RELEASE )
+        #if defined( SW_RELEASE )
     // Release 는 PDB 이름만 적는다(/PDBALTPATH:%_PDB%) — 빌드 기계의 경로가 배포물에 새지 않는다.
     SW_EXPECT_TRUE_MSG( FileUtil::getFileNamePart( executable._debugFile ) == executable._debugFile, executable._debugFile );
+        #endif
     #endif
-#endif
 }
 
 /**
@@ -72,18 +83,25 @@ SW_TEST_CASE( ModuleBuildIDTest, AddressesInsideOneModuleShareItsKey )
 SW_TEST_CASE( ModuleBuildIDTest, AddressInsideAnotherModuleNamesThatModule )
 {
     const ModuleBuildID executable = ModuleBuildID::find( nullptr );
-#if defined( SW_PLATFORM_WINDOWS )
+    #if defined( SW_PLATFORM_WINDOWS )
     const ModuleBuildID system = ModuleBuildID::find( reinterpret_cast<const void*>( &GetTickCount64 ) );
     SW_REQUIRE_TRUE( system.isValid() );
     SW_EXPECT_TRUE( system._id != executable._id );
     SW_EXPECT_TRUE_MSG( StringUtil::contains( system._modulePath, ".dll", true ), system._modulePath );
-#elif defined( SW_PLATFORM_LINUX )
+    #elif defined( SW_PLATFORM_LINUX )
     // libc 함수 중 새니타이저가 가로채지 않는 것을 고른다 — ASan · TSan 은 fflush · malloc 같은 함수를 실행 파일에 정적으로 든 런타임에서
     // 가로채므로, 그 주소는 libc 가 아니라 실행 파일 안이다.
     const ModuleBuildID system = ModuleBuildID::find( reinterpret_cast<const void*>( &gnu_get_libc_version ) );
     SW_EXPECT_FALSE( system._modulePath.empty() );
     SW_EXPECT_FALSE( FileUtil::isSameDiskPath( system._modulePath, executable._modulePath ) );
+    #elif defined( SW_PLATFORM_ANDROID )
+    const ModuleBuildID system = ModuleBuildID::find( reinterpret_cast<const void*>( &__android_log_print ) );
+    SW_EXPECT_TRUE_MSG( StringUtil::contains( system._modulePath, "liblog", true ), system._modulePath );
+    SW_EXPECT_FALSE( FileUtil::isSameDiskPath( system._modulePath, executable._modulePath ) );
+    #else
+        #error "Unsupported platform"
+    #endif
+}
 #else
     #error "Unsupported platform"
 #endif
-}

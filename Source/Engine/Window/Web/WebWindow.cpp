@@ -12,13 +12,15 @@
 
 #include <emscripten/emscripten.h>
 
-// 숨은 글 칸의 본문은 WebTextInput.js(Emscripten JS 라이브러리)다.
+// 숨은 글 칸의 본문은 WebTextInput.js, 프레임 기다림은 WebFrame.js(Emscripten JS 라이브러리)다.
 extern "C"
 {
     int  swWebTextInputInstall( void ( *pCallback )( void*, int, const char* ), void* pUserData );
     void swWebTextInputSetWanted( int bWanted );
     void swWebTextInputSetArea( const char* pCanvasSelector, double x, double y, double lineHeight );
     void swWebCursorSet( const char* pCanvasSelector, const char* pCSSName );
+    void swWebFrameSetInterval( int milliseconds );
+    int  swWebFrameIsWaiting();
 }
 
 namespace sw
@@ -52,11 +54,13 @@ namespace sw
     WebWindow::WebWindow()
         : CallbackInputWindow{}
         , _devicePixelRatio{ 1.0f }
-        , _mainLoopIntervalMilliseconds{ 0 }
         , _cursorShape{ CursorShape::Arrow }
         , _bCallbacksBound{ SW_FALSE }
         , _bPointerLocked{ SW_FALSE }
         , _bCursorHidden{ SW_FALSE }
+        , _bCanvasSizeChanged{ SW_FALSE }
+        , _bPageHidden{ SW_FALSE }
+        , _bPageVisibilityChanged{ SW_FALSE }
         , _reserved{ 0 }
     {
     }
@@ -120,10 +124,27 @@ namespace sw
         const int64 intervalNanoseconds = deadlineNanoseconds - frameStartNanoseconds;
         const int32 intervalMilliseconds =
             intervalNanoseconds > 0 ? static_cast<int32>( ( intervalNanoseconds + constant::time::kNanosecondsPerMillisecond - 1 ) / constant::time::kNanosecondsPerMillisecond ) : 0;
-        if ( intervalMilliseconds == _mainLoopIntervalMilliseconds )
+        swWebFrameSetInterval( intervalMilliseconds );
+        applyPageVisibility(); // 프레임 도중에 숨었으면 지금 알린다 — 숨은 탭에는 다음 프레임이 오지 않는다
+    }
+
+    bool WebWindow::processMessages()
+    {
+        if ( _bCanvasSizeChanged != SW_FALSE )
+        {
+            _bCanvasSizeChanged = SW_FALSE;
+            syncCanvasSize();
+        }
+        applyPageVisibility();
+        return CallbackInputWindow::processMessages();
+    }
+
+    void WebWindow::applyPageVisibility()
+    {
+        if ( _bPageVisibilityChanged == SW_FALSE )
             return;
-        _mainLoopIntervalMilliseconds = intervalMilliseconds;
-        (void)emscripten_set_main_loop_timing( intervalMilliseconds > 0 ? EM_TIMING_SETTIMEOUT : EM_TIMING_RAF, intervalMilliseconds > 0 ? intervalMilliseconds : 1 );
+        _bPageVisibilityChanged = SW_FALSE;
+        notifyLifecycleEvent( _bPageHidden != SW_FALSE ? WindowLifecycleEvent::AppSuspended : WindowLifecycleEvent::AppResumed );
     }
 
     bool WebWindow::setCursorShape( CursorShape shape )
@@ -312,15 +333,19 @@ namespace sw
     {
         (void)eventType;
         (void)pEvent;
-        static_cast<WebWindow*>( pUserData )->syncCanvasSize(); // 창 크기 · 회전 · 확대(배율)가 모두 여기로 온다
+        // 창 크기 · 회전 · 확대(배율)가 모두 여기로 온다. 캔버스 크기는 프레임 사이에서만 바꾼다 — 프레임이 GPU 를 기다리며 멈춘(JSPI) 동안에도 이 콜백은 온다.
+        static_cast<WebWindow*>( pUserData )->_bCanvasSizeChanged = SW_TRUE;
         return EM_FALSE;
     }
 
     EM_BOOL WebWindow::onVisibility( int eventType, const EmscriptenVisibilityChangeEvent* pEvent, void* pUserData )
     {
         (void)eventType;
-        WebWindow* const pWindow = static_cast<WebWindow*>( pUserData );
-        pWindow->notifyLifecycleEvent( pEvent->hidden ? WindowLifecycleEvent::AppSuspended : WindowLifecycleEvent::AppResumed );
+        WebWindow* const pWindow         = static_cast<WebWindow*>( pUserData );
+        pWindow->_bPageHidden            = pEvent->hidden ? SW_TRUE : SW_FALSE;
+        pWindow->_bPageVisibilityChanged = SW_TRUE;
+        if ( swWebFrameIsWaiting() != 0 )
+            pWindow->applyPageVisibility(); // 프레임 사이다 — 프레임 도중이면 그 프레임의 끝(`waitForNextFrame`)이 알린다
         return EM_FALSE;
     }
 
