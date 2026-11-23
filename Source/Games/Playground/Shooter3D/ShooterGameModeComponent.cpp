@@ -119,7 +119,8 @@ namespace sw
     }
 
     ShooterGameModeComponent::ShooterGameModeComponent()
-        : _effectPrefab{}
+        : _effectPrefab{
+    }
         , _tracerPrefab{}
         , _autoPlayPrefab{}
         , _listEnemyKind{}
@@ -151,21 +152,20 @@ namespace sw
         , _listPendingReplica{}
         , _tintCache{}
         , _autoPlayController{}
-        , _playerEye{ 0.0f, 1.6f, -16.0f }
-        , _playerFeet{ 0.0f, 0.0f, -16.0f }
-        , _statusTimer{ 0.0f }
-        , _pendingHeal{ 0.0f }
-        , _spawnCursor{ 0 }
-        , _killCount{ 0 }
-        , _profileReload{}
-        , _nextEnemyNetID{ ShooterNetPawnComponent::kPawnEntityID + 1u }
-        , _appliedAutoPlay{ -1 }
-        , _bAmmoPending{ SW_FALSE }
-        , _bPacingReady{ SW_FALSE }
-        , _bPlayerAlive{ SW_TRUE }
-        , _bReplica{ SW_FALSE }
-        , _bMatchEnded{ SW_FALSE }
-        , _reserved{ 0 }
+        , _playerFeet{ float3{ 0.0f, 0.0f, -16.0f } },
+        _statusTimer{ 0.0f },
+        _pendingHeal{ 0.0f },
+        _spawnCursor{ 0 },
+        _killCount{ 0 },
+        _profileReload{},
+        _nextEnemyNetID{ ShooterNetPawnComponent::kPawnEntityID + 1u },
+        _appliedAutoPlay{ -1 },
+        _bAmmoPending{ SW_FALSE },
+        _bPacingReady{ SW_FALSE },
+        _bPlayerAlive{ SW_TRUE },
+        _bReplica{ SW_FALSE },
+        _bMatchEnded{ SW_FALSE },
+        _reserved{ 0 }
     {
     }
 
@@ -653,12 +653,12 @@ namespace sw
             const uint32          pointCount = static_cast<uint32>( _listSpawnPoint.size() );
             const GameObject*     pPoint     = manager.resolveGameObject( _listSpawnPoint[request._slot % pointCount] );
             const SceneComponent* pScene     = pPoint != nullptr ? pPoint->getPrimarySceneComponent() : nullptr;
-            const float3          base       = pScene != nullptr ? pScene->getWorldPosition() : float3{ 0.0f, 0.0f, 0.0f };
+            const float3          base       = pScene != nullptr ? manager.getWorldOrigin().toAbsolute( pScene->getWorldPosition() ) : float3{ 0.0f, 0.0f, 0.0f };
             position                         = float3{ base._x + static_cast<float32>( request._slot / pointCount % 3u ) * 1.2f, 0.0f, base._z };
         }
         // 처음에는 아레나 가운데를 본다.
         const float32 yaw = MathUtil::atan2( -position._x, -position._z );
-        if ( pEnemy->launch( getOwner()->getHandle(), position, yaw, request._health, request._speed ) == false )
+        if ( pEnemy->launch( getOwner()->getHandle(), AbsolutePosition{ position }, yaw, request._health, request._speed ) == false )
         {
             // 체력 설정이 거절됐다(이유는 HealthStateMachine 가 남겼다) — 올려서 대신 세우지 않고 정리한다.
             retireEnemy( manager, kindIndex, handle );
@@ -803,7 +803,7 @@ namespace sw
                     if ( record._spawnID != 0 )
                         (void)_director.notifyDespawned( record._spawnID );
                 }
-                getSoundQueue().queueEventAt( ShooterGameModeComponentInternal::kEventEnemyDown, pEnemy->getPosition() );
+                getSoundQueue().queueEventAt( ShooterGameModeComponentInternal::kEventEnemyDown, pManager->getWorldOrigin().toLocal( pEnemy->getPosition() ) );
             }
             const bool bGone = pEnemy == nullptr || pEnemy->isRemovable();
             if ( bGone )
@@ -831,7 +831,7 @@ namespace sw
             view._phase          = pEnemy->getPhase();
             view._kindIndex      = record._kindIndex;
             _listEnemyView.push_back( view );
-            const float3 toPlayer = view._position - _playerFeet;
+            const float3 toPlayer = view._position._value - _playerFeet._value;
             nearCount += toPlayer.getLength() < _nearEnemyDistance ? 1 : 0;
         }
         if ( _bPacingReady == SW_TRUE )
@@ -843,7 +843,6 @@ namespace sw
         const ShooterPlayerComponent* pPlayer = findOn<ShooterPlayerComponent>( _player );
         if ( pPlayer == nullptr )
             return;
-        _playerEye    = pPlayer->getEyePosition();
         _playerFeet   = pPlayer->getFeetPosition();
         _bPlayerAlive = pPlayer->isAlive() ? SW_TRUE : SW_FALSE;
         if ( _bPacingReady == SW_TRUE )

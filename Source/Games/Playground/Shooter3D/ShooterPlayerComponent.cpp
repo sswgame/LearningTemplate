@@ -379,7 +379,7 @@ namespace sw
         FirstPersonCameraComponent*   pCamera   = pOwner != nullptr ? pOwner->getComponent<FirstPersonCameraComponent>() : nullptr;
         ShooterBodyMovementComponent* pMovement = findMovement();
         if ( pMovement != nullptr )
-            pMovement->teleport( _spawnPosition );
+            pMovement->teleport( AbsolutePosition{ _spawnPosition } );
         else
             SW_LOG_ERROR_ID( "ShooterPlayer.PlayerObjectNoShooterBodyMovementComponent", "[Shooter] the player object has no ShooterBodyMovementComponent - the player cannot move" );
         if ( pCamera != nullptr )
@@ -575,19 +575,21 @@ namespace sw
 
     float3 ShooterPlayerComponent::getEyePosition() const
     {
-        return getDisplayFeetPosition() + float3{ 0.0f, _bodyEyeHeight > 0.0f ? _bodyEyeHeight + _bodyLegLift : _eyeHeight, 0.0f };
+        const GameObjectManager* const pManager = getOwner() != nullptr ? getOwner()->getManager() : nullptr;
+        const AbsolutePosition         eye      = getDisplayFeetPosition() + float3{ 0.0f, _bodyEyeHeight > 0.0f ? _bodyEyeHeight + _bodyLegLift : _eyeHeight, 0.0f };
+        return pManager != nullptr ? pManager->getWorldOrigin().toLocal( eye ) : eye._value;
     }
 
-    float3 ShooterPlayerComponent::getFeetPosition() const
+    AbsolutePosition ShooterPlayerComponent::getFeetPosition() const
     {
         const ShooterBodyMovementComponent* pMovement = findMovement();
-        return pMovement != nullptr ? pMovement->getFeetPosition() : _spawnPosition;
+        return pMovement != nullptr ? pMovement->getFeetPosition() : AbsolutePosition{ _spawnPosition };
     }
 
-    float3 ShooterPlayerComponent::getDisplayFeetPosition() const
+    AbsolutePosition ShooterPlayerComponent::getDisplayFeetPosition() const
     {
         const ShooterBodyMovementComponent* pMovement = findMovement();
-        return pMovement != nullptr ? pMovement->getDisplayFeetPosition() : _spawnPosition;
+        return pMovement != nullptr ? pMovement->getDisplayFeetPosition() : AbsolutePosition{ _spawnPosition };
     }
 
     float3 ShooterPlayerComponent::getMoveVelocity() const
@@ -759,16 +761,18 @@ namespace sw
 
     float32 ShooterPlayerComponent::traceCover( const ShooterGameModeComponent& gameMode, const Ray& ray ) const
     {
-        float32 nearest = _arrWeapon[_weaponIndex].getShot()._range;
+        float32 nearest     = _arrWeapon[_weaponIndex].getShot()._range;
+        Ray     absoluteRay = ray; // 막는 상자 · 바닥은 절대 자리다
+        absoluteRay._origin = gameMode.getOwner()->getManager()->getWorldOrigin().toAbsolute( ray._origin );
         for ( const ShooterArenaBox& box : gameMode.getBoxes() )
         {
             float32 distance = 0.0f;
-            if ( Ray::intersectAABB( ray, box._min, box._max, nearest, distance ) && distance < nearest )
+            if ( Ray::intersectAABB( absoluteRay, box._min, box._max, nearest, distance ) && distance < nearest )
                 nearest = distance;
         }
         // 바닥
         if ( ray._direction._y < -MathUtil::kLooseEpsilon )
-            nearest = MathUtil::min( nearest, -ray._origin._y / ray._direction._y );
+            nearest = MathUtil::min( nearest, -absoluteRay._origin._y / ray._direction._y );
         return nearest;
     }
 
@@ -889,7 +893,7 @@ namespace sw
                     _listPendingEffect.push_back( effect );
                 }
                 if ( distance < shot._range )
-                    bHitCover = bHitCover || ( bHitBody == false && end._y > 0.05f );
+                    bHitCover = bHitCover || ( bHitBody == false && manager.getWorldOrigin().toAbsolute( end )._y > 0.05f );
             }
             if ( bAnyHit )
             {
@@ -1060,6 +1064,15 @@ namespace sw
         pViewModel->setItemName( itemName );
     }
 
+    void ShooterPlayerComponent::onWorldOriginShifted( const float3& delta )
+    {
+        Component::onWorldOriginShifted( delta );
+        for ( float3& point : _listMeleePrevious )
+        {
+            point = point + delta; // 지난 프레임의 칼날은 씬 자리다
+        }
+    }
+
     void ShooterPlayerComponent::restartRound()
     {
         GameObject*               pOwner    = getOwner();
@@ -1078,7 +1091,7 @@ namespace sw
         _bRoundJustRestarted                    = SW_TRUE;
         ShooterBodyMovementComponent* pMovement = findMovement();
         if ( pMovement != nullptr )
-            pMovement->teleport( _spawnPosition );
+            pMovement->teleport( AbsolutePosition{ _spawnPosition } );
         for ( WeaponState& weapon : _arrWeapon )
         {
             weapon.addReserveAmmo( weapon.getDef()._maxReserveAmmo );

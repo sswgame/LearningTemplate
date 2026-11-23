@@ -81,7 +81,7 @@ namespace sw
             [[nodiscard]] static bool writeEnemy( const ShooterEnemyView& view, vector<uint8>& outBytes )
             {
                 ShooterEnemyNetState state;
-                state._position       = view._position;
+                state._position       = view._position._value;
                 state._yaw            = MathUtil::wrapAngle( view._yaw ); // 회전은 같고 범위([-π, π])에 든다
                 state._phase          = static_cast<uint8>( view._phase );
                 state._kindIndex      = view._kindIndex;
@@ -100,7 +100,7 @@ namespace sw
                 ShooterEnemyNetState state;
                 if ( ReplicatedLayout::readFull( reader, state, nullptr ) != FixedReadResult::Ok )
                     return false;
-                outEnemy._position       = state._position;
+                outEnemy._position       = AbsolutePosition{ state._position };
                 outEnemy._yaw            = state._yaw;
                 outEnemy._phase          = static_cast<ShooterEnemyPhase>( state._phase );
                 outEnemy._kindIndex      = state._kindIndex;
@@ -598,7 +598,7 @@ namespace sw
             for ( const ShooterEnemyView& view : pGameMode->getEnemyViews() )
             {
                 LagRecord& record = _listLagScratch.emplace_back();
-                record._position  = view._position;
+                record._position  = view._position._value;
                 record._radius    = view._radius;
                 record._height    = view._height;
                 record._entityID  = view._netEntityID;
@@ -606,8 +606,8 @@ namespace sw
                     _server.setEntity( view._netEntityID, kEnemyTypeID, _bytesScratch );
                 else
                     SW_LOG_ERROR_ID( "ShooterNetPawn.EnemyOutOfRange", "Enemy %# is outside the replicated range (%#, %#, %#) - not replicated this tick", view._netEntityID,
-                                     view._position._x, view._position._y, view._position._z );
-                _interest.setEntityPosition( view._netEntityID, view._position );
+                                     view._position._value._x, view._position._value._y, view._position._value._z );
+                _interest.setEntityPosition( view._netEntityID, view._position._value );
                 _listEntityScratch.push_back( view._netEntityID );
             }
         }
@@ -707,7 +707,7 @@ namespace sw
                 continue;
             }
             // 장부는 표적을 구로 본다 — 몸 가운데에 몸 전체를 덮는 구다(근접은 뼈마다 가르지 않는다).
-            const float3              center         = past._position + float3{ 0.0f, past._height * 0.5f, 0.0f };
+            const float3              center         = pManager->getWorldOrigin().toLocal( past._position + float3{ 0.0f, past._height * 0.5f, 0.0f } ); // 장부의 칼날은 씬 자리다
             const float32             radius         = MathUtil::max( past._radius, past._height * 0.5f );
             vector<GameObjectHandle>& listHit        = pPlayer->getMeleeHitTargets();
             const size_t              hitCountBefore = listHit.size();
@@ -739,7 +739,7 @@ namespace sw
             if ( ShooterNetPawnComponentInternal::readEnemy( pFrom->_buffer, from ) == false || ShooterNetPawnComponentInternal::readEnemy( pTo->_buffer, to ) == false )
                 continue;
             to._netEntityID = entityID;
-            to._position    = from._position + ( to._position - from._position ) * alpha;
+            to._position    = from._position + ( to._position._value - from._position._value ) * alpha;
             to._yaw         = from._yaw + MathUtil::wrapAngle( to._yaw - from._yaw ) * alpha;
             outListEnemy.push_back( to );
         }
@@ -760,7 +760,7 @@ namespace sw
         const float32 newestTick = static_cast<float32>( _lagHistory.getNewestTick() );
         _lastRewindTicks         = newestTick - viewTick;
         float32      distance    = 0.0f;
-        const uint32 entityID    = _lagHistory.raycastAt( viewTick, ray._origin, ray._direction, maxDistance, 0, distance );
+        const uint32 entityID    = _lagHistory.raycastAt( viewTick, manager.getWorldOrigin().toAbsolute( ray._origin ), ray._direction, maxDistance, 0, distance );
         LagRecord    past;
         LagRecord    now;
         const bool   bTracked = entityID != 0 && _lagHistory.sampleAt( viewTick, entityID, past ) && _lagHistory.sampleAt( newestTick, entityID, now );

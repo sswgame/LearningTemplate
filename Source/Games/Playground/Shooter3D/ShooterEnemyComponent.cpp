@@ -82,12 +82,12 @@ namespace sw
         setCanEverTick( true );
     }
 
-    bool ShooterEnemyComponent::launch( GameObjectHandle gameMode, const float3& position, float32 yaw, float32 health, float32 speed )
+    bool ShooterEnemyComponent::launch( GameObjectHandle gameMode, const AbsolutePosition& position, float32 yaw, float32 health, float32 speed )
     {
         if ( _healthMachine.initialize( ShooterEnemyComponentInternal::makeHealthSettings( health ) ) == false )
             return false;
         _gameMode = gameMode;
-        _position = position;
+        _position = position._value;
         _yaw      = yaw;
         _speed    = speed;
         _attackCooldown.start( _attackInterval * 0.5f );
@@ -97,7 +97,7 @@ namespace sw
         SceneComponent* pScene = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
         if ( pScene != nullptr )
         {
-            pScene->setLocalPosition( _position );
+            pScene->setZeroOriginPosition( _position );
             pScene->setLocalRotation( float3{ 0.0f, _yaw, 0.0f } );
         }
         IHealthSource::notifyHealthChanged( _healthSourcePort, getOwner(), true );
@@ -116,7 +116,7 @@ namespace sw
             pAgent->setMaxSpeed( speed );
             pAgent->setStoppingDistance( _reach * _stopFraction );
             pAgent->setRadius( _radius );
-            pAgent->warp( position );
+            pAgent->warp( pOwner->getManager()->getWorldOrigin().toLocal( position ) ); // 내비 에이전트는 씬 자리로 돈다
         }
         // 조종 회전도 처음 바라보는 쪽에서 시작한다(AI 조종자가 이어 받는다).
         PawnComponent* pPawn = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
@@ -125,12 +125,12 @@ namespace sw
         return true;
     }
 
-    void ShooterEnemyComponent::launchReplica( GameObjectHandle gameMode, const float3& position, float32 yaw )
+    void ShooterEnemyComponent::launchReplica( GameObjectHandle gameMode, const AbsolutePosition& position, float32 yaw )
     {
         (void)_healthMachine.initialize( ShooterEnemyComponentInternal::makeHealthSettings( 1.0f ) ); // 1 은 범위 안이다 — 체력은 서버 몫이고 살아 있음만 뜻한다
         _gameMode                = gameMode;
-        _position                = position;
-        _replicaPreviousPosition = position;
+        _position                = position._value;
+        _replicaPreviousPosition = position._value;
         _yaw                     = yaw;
         _bLaunched               = SW_TRUE;
         _bReplica                = SW_TRUE;
@@ -139,7 +139,7 @@ namespace sw
         SceneComponent* pScene = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
         if ( pScene != nullptr )
         {
-            pScene->setLocalPosition( _position );
+            pScene->setZeroOriginPosition( _position );
             pScene->setLocalRotation( float3{ 0.0f, _yaw, 0.0f } );
         }
         PawnComponent* pPawn = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
@@ -175,9 +175,9 @@ namespace sw
         return SpawnStateReset::Reset;
     }
 
-    void ShooterEnemyComponent::setReplicatedPose( const float3& position, float32 yaw, ShooterEnemyPhase phase )
+    void ShooterEnemyComponent::setReplicatedPose( const AbsolutePosition& position, float32 yaw, ShooterEnemyPhase phase )
     {
-        _position = position;
+        _position = position._value;
         _yaw      = yaw;
         if ( phase == _phase )
             return;
@@ -198,7 +198,7 @@ namespace sw
         SceneComponent* pScene   = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
         if ( pScene != nullptr )
         {
-            pScene->setLocalPosition( _position );
+            pScene->setZeroOriginPosition( _position );
             pScene->setLocalRotation( float3{ 0.0f, _yaw, 0.0f } );
         }
         updateAnimator( moveCode );
@@ -299,7 +299,7 @@ namespace sw
         const PawnComponent* pPawn       = pOwner->getComponent<PawnComponent>();
         const bool           bAttackHeld = pPawn != nullptr && pPawn->isButtonDown( pPawn->findButton( hashed_string( ShooterEnemyComponentInternal::kAttackButton ) ) );
         const float32        controlYaw  = pPawn != nullptr ? pPawn->getIntent()._controlYaw : _yaw;
-        const float3         target      = pGameMode->getPlayerFeet();
+        const float3         target      = pGameMode->getPlayerFeet()._value;
         const float3         toTarget    = float3{ target._x - _position._x, 0.0f, target._z - _position._z };
         const float32        distance    = toTarget.getLength();
         // 휘두르기 간격 — 쫓는 동안 Attack 이 눌려 있으면 간격마다 한 번, 지나친 몫을 잇는다(`Countdown::updateRepeat`). 쿨다운은 어느 단계에서도 흐른다.
@@ -360,7 +360,7 @@ namespace sw
         {
             pMovement->setSuspended( _phase != ShooterEnemyPhase::Chasing );
             (void)pMovement->stepMovement( pGameMode->getBoxes(), step );
-            _position              = pMovement->getFeetPosition();
+            _position              = pMovement->getFeetPosition()._value;
             const float3& velocity = pMovement->getMoveVelocity();
             const float32 speed    = MathUtil::sqrt( velocity._x * velocity._x + velocity._z * velocity._z );
             if ( speed > _walkClipSpeed )
@@ -373,7 +373,7 @@ namespace sw
         SceneComponent* pScene = pOwner->getPrimarySceneComponent();
         if ( pScene != nullptr )
         {
-            pScene->setLocalPosition( _position );
+            pScene->setZeroOriginPosition( _position );
             pScene->setLocalRotation( float3{ 0.0f, _yaw, 0.0f } );
         }
         updateAnimator( moveCode );

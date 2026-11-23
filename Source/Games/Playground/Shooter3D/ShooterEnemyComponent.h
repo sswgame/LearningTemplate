@@ -12,6 +12,7 @@
 
 #include "Engine/Character/Hit/IHitReceiver.h"
 #include "Engine/Foundation/GameObjectHandle.h"
+#include "Engine/Object/GameObject/WorldOrigin.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Runtime/Character/Combat/Health/HealthStateMachine.h"
@@ -75,14 +76,14 @@ namespace sw
          * @brief 스폰합니다 — 디렉터 · 발 위치 · 요 · 체력 · 속도(게임 스레드).
          * @return 체력이 범위 밖(1 보다 작음)이라 거절되면 false 이다. 거절하면 아무것도 바꾸지 않으므로 부르는 쪽이 오브젝트를 정리한다(체력을 올려 대신 서지 않는다).
          */
-        [[nodiscard]] bool launch( GameObjectHandle gameMode, const float3& position, float32 yaw, float32 health, float32 speed );
+        [[nodiscard]] bool launch( GameObjectHandle gameMode, const AbsolutePosition& position, float32 yaw, float32 health, float32 speed );
         /**
          * @brief 네트 클라이언트의 복제 모습으로 세웁니다(게임 스레드). 규칙은 돌지 않는다 — 판단 · 체력 · 맞음은 서버 몫이고, 자리와 단계를 서버가 보낸 값으로 받아(`setReplicatedPose`) 그리기와 히트박스만 맡는다.
          * @details 언리얼의 Simulated Proxy 자리다. 폰의 자동 빙의는 끈다(AI 조종자가 서지 않는다).
          */
-        void launchReplica( GameObjectHandle gameMode, const float3& position, float32 yaw );
+        void launchReplica( GameObjectHandle gameMode, const AbsolutePosition& position, float32 yaw );
         /** @brief 복제 모습의 이번 프레임 자리 · 요 · 단계입니다(감독이 받은 스냅샷을 보간해 부른다). */
-        void setReplicatedPose( const float3& position, float32 yaw, ShooterEnemyPhase phase );
+        void setReplicatedPose( const AbsolutePosition& position, float32 yaw, ShooterEnemyPhase phase );
 
         bool isLaunched() const { return _bLaunched == SW_TRUE; }
         bool isReplica() const { return _bReplica == SW_TRUE; }
@@ -95,9 +96,9 @@ namespace sw
         ShooterEnemyPhase getPhase() const { return _phase; }
         float32           getYaw() const { return _yaw; }
         /** @brief 발 위치입니다(몸 이동의 위치 — 틱마다 옮겨 적는다). */
-        const float3& getPosition() const { return _position; }
-        float32       getRadius() const { return _radius; }
-        float32       getHeight() const { return _height; }
+        AbsolutePosition getPosition() const { return AbsolutePosition{ _position }; }
+        float32          getRadius() const { return _radius; }
+        float32          getHeight() const { return _height; }
         /** @brief 휘두르기를 시작하고 맞히는 거리입니다(AI 조종자가 `Attack` 을 누르는 거리). */
         float32 getReach() const { return _reach; }
         /** @brief 손 닿는 거리의 이 비율 안이면 멈춰 섭니다(내비 에이전트 정지 거리와 AI 조종자가 같이 읽습니다). */
@@ -163,7 +164,7 @@ namespace sw
         PROPERTY( Category = "Enemy", DisplayName = "Walk Clip Speed", Tooltip = "Below this speed the standing clip plays", Min = 0.0, Units = "m/s" )
         float32 _walkClipSpeed;
 
-        float3                 _position; ///< 발
+        float3                 _position; ///< 발(절대)
         float32                _yaw;
         float3                 _replicaPreviousPosition; ///< 복제 모습 — 지난 틱의 자리(걷기 클립을 고르는 빠르기)
         HealthStateMachine     _healthMachine;           ///< 체력(플레이어와 같은 Base 체력 — 실드 · 회복 · 기절은 쓰지 않는다)

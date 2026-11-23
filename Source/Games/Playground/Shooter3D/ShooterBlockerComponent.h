@@ -12,7 +12,7 @@
 
 namespace sw
 {
-    /** @brief 막는 축 상자입니다(바닥 y = 0 부터 쌓인다). */
+    /** @brief 막는 축 상자입니다(절대 자리 — 바닥 y = 0 부터 쌓인다). */
     struct ShooterArenaBox
     {
         float3 _min{};

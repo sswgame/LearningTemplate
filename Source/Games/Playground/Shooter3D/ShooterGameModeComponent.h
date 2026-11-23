@@ -20,6 +20,7 @@
 #include "Engine/Asset/Cache/AssetReloadWatch.h"
 #include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Foundation/GameObjectHandle.h"
+#include "Engine/Object/GameObject/WorldOrigin.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Serializer/CatalogKey.h"
@@ -61,7 +62,7 @@ namespace sw
     struct ShooterEnemyView
     {
         GameObjectHandle  _object{};
-        float3            _position{}; ///< 발 위치.
+        AbsolutePosition  _position{}; ///< 발 위치(절대)
         float32           _radius{ 0.45f };
         float32           _height{ 2.0f };
         uint32            _netEntityID{ 0 };    ///< 복제 엔티티 번호(서버가 스폰마다 매긴다 — 씬 오브젝트 id 는 월드마다 다르다)
@@ -119,7 +120,7 @@ namespace sw
     /** @brief 네트 클라이언트가 스냅샷에서 받아 보간한 적 하나입니다(`ShooterNetPawnComponent::collectReplicatedEnemies`). */
     struct ShooterReplicatedEnemy
     {
-        float3            _position{};
+        AbsolutePosition  _position{};
         float32           _yaw{ 0.0f };
         uint32            _netEntityID{ 0 };
         uint32            _appearanceSeed{ 0 };
@@ -177,12 +178,10 @@ namespace sw
         // ---- 다른 컴포넌트가 읽는 것(PrePhysics 뒤의 그룹) ----
         const vector<ShooterArenaBox>&  getBoxes() const { return _listBox; }
         const vector<ShooterEnemyView>& getEnemyViews() const { return _listEnemyView; }
-        /** @brief 이번 프레임의 플레이어 눈 위치입니다. */
-        const float3& getPlayerEye() const { return _playerEye; }
         /** @brief 이번 프레임의 플레이어 발 위치입니다. 적이 이쪽으로 옵니다. */
-        const float3&    getPlayerFeet() const { return _playerFeet; }
-        bool             isPlayerAlive() const { return _bPlayerAlive == SW_TRUE; }
-        GameObjectHandle getPlayer() const { return _player; }
+        const AbsolutePosition& getPlayerFeet() const { return _playerFeet; }
+        bool                    isPlayerAlive() const { return _bPlayerAlive == SW_TRUE; }
+        GameObjectHandle        getPlayer() const { return _player; }
         /** @brief 스폰한 적 수입니다(쓰러져 정리를 기다리는 것 포함 — 진단 · 개발 기록이 읽는다). */
         uint32 getEnemyCount() const { return static_cast<uint32>( _listEnemy.size() ); }
         /** @brief 스폰한 적 @p index 의 오브젝트입니다(스폰 순서). */
@@ -318,8 +317,7 @@ namespace sw
         vector<ShooterReplicatedEnemy>      _listPendingReplica; ///< 틱 뒤에 세울 복제 모습
         MaterialTintCache                   _tintCache;          ///< 효과 색(같은 색은 나눠 쓴다).
         GameObjectHandle                    _autoPlayController; ///< 자동 플레이 AI 조종자 오브젝트(스폰한 것이며 정리할 목록에 들어 있다).
-        float3                              _playerEye;
-        float3                              _playerFeet;
+        AbsolutePosition                    _playerFeet;
         float32                             _statusTimer;
         float32                             _pendingHeal; ///< 감독의 수리 보상. 틱이 끝난 뒤 플레이어 체력에 반영한다.
         uint32                              _spawnCursor; ///< 다음 적의 스폰 위치 순번.
