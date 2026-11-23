@@ -1,6 +1,6 @@
 /**
  * @file MaterialXML.h
- * @brief 머티리얼 XML 의 필드 · 프로퍼티 · 블렌드 모드 · 품질 · 퍼뮤테이션 노드를 읽고 씁니다(`Material` · `MaterialInstance` 가 함께 쓴다).
+ * @brief 머티리얼 XML 의 필드 · 프로퍼티 · 블렌드 모드 · 품질 · 퍼뮤테이션 노드를 읽고 씁니다.
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -133,7 +133,7 @@ namespace sw
         bool _bShaderFeature{ true };
     };
 
-    /** @brief 멀티 컴파일(`<_multiCompiles><item name selected>`) 하나의 칸입니다 — 머티리얼과 인스턴스가 함께 쓴다. 선택지(`_options`)는 자식 목록이다. */
+    /** @brief 멀티 컴파일(`<_multiCompiles><item name selected>`) 하나의 칸입니다. 선택지(`_options`)는 자식 목록이다. */
     REFLECT()
     struct SW_API MaterialMultiCompileParams
     {
@@ -145,48 +145,11 @@ namespace sw
         string _selected{};
     };
 
-    /** @brief 머티리얼 인스턴스 루트(`<MaterialInstanceDef name parentPath quality>`)의 칸입니다. `quality` 는 적지 않음이 "덮어쓰지 않음"이라 손으로 읽는다. */
-    REFLECT()
-    struct SW_API MaterialInstanceRootParams
-    {
-        REFLECT_BODY();
-
-        PROPERTY()
-        string _name{};
-        PROPERTY()
-        string _parentPath{};
-    };
-
-    /** @brief 인스턴스의 값 덮어쓰기(`<_overrides><item name value assetPath/>`) 하나입니다. `assetPath` 가 있으면 텍스처 덮어쓰기다. */
-    REFLECT()
-    struct SW_API MaterialOverrideParams
-    {
-        REFLECT_BODY();
-
-        PROPERTY( Required )
-        string _name{};
-        PROPERTY()
-        string _value{};
-        PROPERTY( AssetPath )
-        string _assetPath{};
-    };
-
-    /** @brief 인스턴스의 정적 스위치 덮어쓰기(`<_keywords><item name bEnabled/>`) 하나입니다. */
-    REFLECT()
-    struct SW_API MaterialKeywordOverrideParams
-    {
-        REFLECT_BODY();
-
-        PROPERTY( Required )
-        string _name{};
-        PROPERTY( Name = "bEnabled" )
-        bool _bEnabled{ SW_TRUE };
-    };
 } // namespace sw
 
 namespace sw
 {
-    /** @brief 머티리얼 XML 의 필드 · 프로퍼티 · 블렌드 모드 · 품질 · 퍼뮤테이션 노드를 읽고 씁니다(`Material` · `MaterialInstance` 가 함께 쓴다). */
+    /** @brief 머티리얼 XML 의 필드 · 프로퍼티 · 블렌드 모드 · 품질 · 퍼뮤테이션 노드를 읽고 씁니다. */
     struct SW_API MaterialXML
     {
         /** @brief 프로퍼티 한 줄을 읽습니다. 읽지 못한 필드가 있으면 오류를 남기고 false 입니다. */

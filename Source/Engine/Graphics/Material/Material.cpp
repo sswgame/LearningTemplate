@@ -844,16 +844,6 @@ namespace sw
         return true;
     }
 
-    void Material::setQualityLevel( MaterialQualityLevel level )
-    {
-        if ( _desc._permutations._quality != level )
-        {
-            _desc._permutations._quality = level;
-            _bDefinesDirty               = SW_TRUE;
-            MaterialPermutation::recordPermutationChange( this );
-        }
-    }
-
     bool Material::setStaticSwitch( hashed_string name, bool bEnabled )
     {
         for ( MaterialStaticSwitch& ss : _desc._permutations._listStaticSwitch )
@@ -877,31 +867,6 @@ namespace sw
         SW_LOG_ERROR_ID( "Material.StaticSwitchUnknown", "Material '%#' has no static switch '%#' - only declared runtime switches (bShaderFeature=\"0\") can change", _desc._name.c_str(),
                          name.c_str() );
         return false;
-    }
-
-    void Material::setMultiCompile( hashed_string name, string_view selectedOption )
-    {
-        for ( MaterialMultiCompile& mc : _desc._permutations._listMultiCompile )
-        {
-            if ( hashed_string( mc._name.c_str() ) == name )
-            {
-                if ( mc._selected != selectedOption )
-                {
-                    mc._selected   = string( selectedOption );
-                    _bDefinesDirty = SW_TRUE;
-                    MaterialPermutation::recordPermutationChange( this );
-                }
-                return;
-            }
-        }
-        MaterialMultiCompile multiCompile{};
-        multiCompile._name     = name.c_str() ? name.c_str() : "";
-        multiCompile._selected = string( selectedOption );
-        if ( selectedOption.empty() == false )
-            multiCompile._listOption.push_back( string( selectedOption ) );
-        _desc._permutations._listMultiCompile.push_back( std::move( multiCompile ) );
-        _bDefinesDirty = SW_TRUE;
-        MaterialPermutation::recordPermutationChange( this );
     }
 
     bool Material::setScalarParameter( hashed_string name, float32 value )
@@ -950,7 +915,7 @@ namespace sw
     {
         if ( _bDefinesDirty != SW_FALSE )
         {
-            computeShaderDefines( _desc._permutations, {}, _listCachedDefine );
+            computeShaderDefines( _desc._permutations, _listCachedDefine );
             _previousPermutationHash = _cachedPermutationHash; // 처음 만들 때는 0 이다(직전 변형이 없다)
             _cachedPermutationHash   = computePermutationHash( _listCachedDefine );
             _bDefinesDirty           = SW_FALSE;
@@ -965,7 +930,7 @@ namespace sw
         return renderPropertiesHash != 0 ? HashUtil::combine( defineHash, renderPropertiesHash ) : defineHash;
     }
 
-    void Material::computeShaderDefines( const MaterialPermutationDef& permutationDesc, const vector<pair<hashed_string, bool>>& listKeywordValueOverride, vector<string>& outListDefine ) const
+    void Material::computeShaderDefines( const MaterialPermutationDef& permutationDesc, vector<string>& outListDefine ) const
     {
         outListDefine.clear();
         for ( const string& defineStr : permutationDesc._listAlwaysDefine )
@@ -1011,16 +976,9 @@ namespace sw
                 continue;
             if ( prop._shaderKeyword.empty() )
                 continue;
-            bool                             bKeywordOn{ false };
-            const hashed_string              propName( prop._name.c_str() );
-            const pair<hashed_string, bool>* pOverride = VectorUtil::findIf( listKeywordValueOverride, [&propName]( const pair<hashed_string, bool>& entry )
-            { return entry.first == propName; } );
-            // 인스턴스 덮어쓰기는 인스턴스가 만들 때 이미 읽어 검사했다. 부모 값을 읽지 못하면 parseBoolToken 이 오류로 남긴다(로드가 이미 거부한다).
-            if ( pOverride != nullptr )
-                bKeywordOn = pOverride->second;
-            else if ( MaterialPacking::parseBoolToken( prop._value, prop._name, "Material.BooleanKeywordUnreadable", bKeywordOn ) == false )
-                bKeywordOn = false;
-            if ( bKeywordOn )
+            // 정적 종류다 — 인스턴스는 덮지 못한다(`MaterialInstance::rejectStaticValue`). 값을 읽지 못하면 parseBoolToken 이 오류로 남긴다(로드가 이미 거부한다).
+            bool bKeywordOn{ false };
+            if ( MaterialPacking::parseBoolToken( prop._value, prop._name, "Material.BooleanKeywordUnreadable", bKeywordOn ) && bKeywordOn )
                 MaterialPermutation::appendUniqueDefine( outListDefine, prop._shaderKeyword );
         }
 
@@ -1029,20 +987,14 @@ namespace sw
 
     void Material::collectRuntimeSwitchVariants( vector<vector<string>>& outListDefine, vector<uint64>& outListPermutationHash ) const
     {
-        collectRuntimeSwitchVariants( _desc._permutations, {}, outListDefine, outListPermutationHash );
-    }
-
-    void Material::collectRuntimeSwitchVariants( const MaterialPermutationDef& basePermutations, const vector<pair<hashed_string, bool>>& listKeywordValueOverride, vector<vector<string>>& outListDefine,
-                                                 vector<uint64>& outListPermutationHash ) const
-    {
         outListDefine.clear();
         outListPermutationHash.clear();
         vector<string> listBaseDefine;
-        computeShaderDefines( basePermutations, listKeywordValueOverride, listBaseDefine );
+        computeShaderDefines( _desc._permutations, listBaseDefine );
         outListPermutationHash.push_back( computePermutationHash( listBaseDefine ) );
         outListDefine.push_back( std::move( listBaseDefine ) );
         vector<size_t>                      listRuntimeSwitch;
-        const vector<MaterialStaticSwitch>& listSwitch = basePermutations._listStaticSwitch;
+        const vector<MaterialStaticSwitch>& listSwitch = _desc._permutations._listStaticSwitch;
         for ( size_t switchIndex = 0; switchIndex < listSwitch.size(); ++switchIndex )
         {
             if ( listSwitch[switchIndex]._bShaderFeature == SW_FALSE )
@@ -1056,14 +1008,14 @@ namespace sw
                              _desc._name.c_str(), listRuntimeSwitch.size(), kMaxRuntimeStaticSwitchCount );
             return;
         }
-        MaterialPermutationDef variantDesc = basePermutations;
+        MaterialPermutationDef variantDesc = _desc._permutations;
         vector<string>         listDefine;
         const uint32           comboCount = 1u << static_cast<uint32>( listRuntimeSwitch.size() );
         for ( uint32 combo = 0; combo < comboCount; ++combo )
         {
             for ( size_t bit = 0; bit < listRuntimeSwitch.size(); ++bit )
                 variantDesc._listStaticSwitch[listRuntimeSwitch[bit]]._bEnabled = ( combo & ( 1u << bit ) ) != 0 ? 1 : 0;
-            computeShaderDefines( variantDesc, listKeywordValueOverride, listDefine );
+            computeShaderDefines( variantDesc, listDefine );
             if ( VectorUtil::contains( outListDefine, listDefine ) )
                 continue;
             outListPermutationHash.push_back( computePermutationHash( listDefine ) );

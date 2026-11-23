@@ -21,7 +21,6 @@
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Material/Material.h"
-#include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/Material/MaterialPermutation.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
@@ -438,7 +437,7 @@ namespace sw
                 appendRequestUnique( outListRequest, engineDefaultAssets._shaderProbeComputeTextureWrite.get(), "csWriteSwapped", ShaderStage::Compute, {}, {} );
             }
 
-            /** @brief 4) 머티리얼 에셋(.material)마다 런타임과 같은 define 목록으로 요청을 더하고, 패스와 곱할 머티리얼 변형 목록을 만듭니다. 인스턴스 에셋은 4-b) 가 더한다. */
+            /** @brief 4) 머티리얼 에셋(.material)마다 런타임과 같은 define 목록으로 요청을 더하고, 패스와 곱할 머티리얼 변형 목록을 만듭니다. */
             [[nodiscard]] static bool collectMaterialRequests( string_view rootDir, vector<MaterialVariantInfo>& outListMaterialVariant, RequestList& outListRequest )
             {
                 vector<string> listMaterialFile;
@@ -461,10 +460,10 @@ namespace sw
                     collectMaterialRuntimeDefines( *material, listRuntimeDefine );
                     appendMaterialVariants( *material, listRuntimeDefine, makeOriginID( matPath ), outListMaterialVariant, outListRequest );
                 }
-                return collectMaterialInstanceRequests( rootDir, outListMaterialVariant, outListRequest );
+                return true;
             }
 
-            /** @brief 머티리얼 하나(또는 인스턴스의 부모)의 define 목록마다 변형과 VS · PS 요청을 더합니다(불투명이면 등장 디더 변형도, define 없는 레이아웃 변형도). */
+            /** @brief 머티리얼 하나의 define 목록마다 변형과 VS · PS 요청을 더합니다(불투명이면 등장 디더 변형도, define 없는 레이아웃 변형도). */
             static void appendMaterialVariants( const Material& material, vector<vector<string>>& listRuntimeDefine, const string& originID, vector<MaterialVariantInfo>& outListMaterialVariant,
                                                 RequestList& outListRequest )
             {
@@ -492,51 +491,6 @@ namespace sw
                 // 매니페스트를 못 찾아 XML 순서 패킹으로 남는다.
                 appendRequestUnique( outListRequest, variant._shaderPath, getShaderStageInfo( ShaderStage::Vertex )._pEntryPoint, ShaderStage::Vertex, {}, variant._listOrigin );
                 appendRequestUnique( outListRequest, variant._shaderPath, getShaderStageInfo( ShaderStage::Pixel )._pEntryPoint, ShaderStage::Pixel, {}, variant._listOrigin );
-            }
-
-            /**
-             * @brief 4-b) 머티리얼 인스턴스 에셋(.materialinstance)마다 인스턴스가 고른 스위치 · 멀티 컴파일 · 품질 조합을 더합니다.
-             * @details 부모 `.material` 만 훑으면 인스턴스가 켠 조합은 굽지 않아 배포에서 대체 해시로 그린다. 인스턴스의 define 은 런타임과 같은 함수
-             *          (`MaterialInstance::collectRuntimeSwitchVariants` — `getCachedShaderDefines` 와 같은 퍼뮤테이션 사본)로 얻는다. 부모가 없거나 부모가
-             *          선언하지 않은 덮어쓰기는 쿠킹 실패다. 언리얼은 MIC 의 정적 스위치 덮어쓰기마다 셰이더 맵을 따로 쿠킹하고, 유니티는 머티리얼 에셋이 켠
-             *          shader_feature 키워드만 남긴다 — 여기도 인스턴스 에셋이 고른 조합을 모은다.
-             */
-            [[nodiscard]] static bool collectMaterialInstanceRequests( string_view rootDir, vector<MaterialVariantInfo>& outListMaterialVariant, RequestList& outListRequest )
-            {
-                vector<string> listInstanceFile;
-                if ( FileUtil::isDirectory( FileUtil::toDiskPath( rootDir ) ) && AssetPaths::collectContentFiles( rootDir, MaterialInstance::kExtension, listInstanceFile ) == false )
-                    return false;
-                bool bAllRead = true;
-                for ( const string& instancePath : listInstanceFile )
-                {
-                    const shared_ptr<MaterialInstance> instance = MaterialInstance::create( nullptr );
-                    if ( instance->loadFromDiskFile( instancePath ) == false )
-                    {
-                        SW_LOG_ERROR_ID( "ShaderCooker.MaterialInstanceUnreadable", "Shader cook: material instance '%#' could not be read", instancePath );
-                        bAllRead = false;
-                        continue;
-                    }
-                    const string&              parentPath = instance->getDesc()._parentPath;
-                    const shared_ptr<Material> parent     = Material::create();
-                    if ( parentPath.empty() || parent->loadFromAsset( AssetID{ parentPath } ) == false )
-                    {
-                        SW_LOG_ERROR_ID( "ShaderCooker.MaterialInstanceParentMissing", "Shader cook: material instance '%#' names no readable parent material ('%#')", instancePath, parentPath );
-                        bAllRead = false;
-                        continue;
-                    }
-                    if ( parent->getShaderPath().empty() )
-                        continue;
-                    instance->setParent( parent.get() );
-                    vector<vector<string>> listRuntimeDefine;
-                    vector<uint64>         listPermutationHash;
-                    if ( instance->collectRuntimeSwitchVariants( listRuntimeDefine, listPermutationHash ) == false )
-                    {
-                        bAllRead = false; // 모르는 덮어쓰기 — collectRuntimeSwitchVariants 가 이름과 함께 알렸다
-                        continue;
-                    }
-                    appendMaterialVariants( *parent, listRuntimeDefine, makeOriginID( instancePath ), outListMaterialVariant, outListRequest );
-                }
-                return bAllRead;
             }
 
             /**

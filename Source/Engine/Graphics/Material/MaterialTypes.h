@@ -246,46 +246,6 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 직렬화되는 인스턴스 오버라이드입니다(게임 MIC / MaterialPropertyBlock). */
-    struct MaterialInstanceDef
-    {
-        string _name;
-        string _parentPath; ///< 부모 머티리얼의 리소스 id 입니다. 런타임은 Material* 부모를 따로 받지만, 셰이더 쿠커는 이 경로로 부모를 읽어 인스턴스가 고른 조합을 굽는다(`.materialinstance` 에셋에는 필수)
-
-        /// @brief 인스턴스가 덮어쓴 프로퍼티 값입니다.
-        struct Override
-        {
-            string _name;
-            string _value;
-            string _assetPath; ///< 텍스처 오버라이드 경로(선택)
-        };
-
-        vector<Override> _listOverride;
-
-        /// @brief 인스턴스가 덮어쓴 정적 스위치입니다(부모가 선언한 스위치의 이름이나 켬 키워드 — 모르는 이름은 `MaterialInstance::makePermutations` 가 오류로 알린다).
-        struct KeywordOverride
-        {
-            string _name;
-            bool   _bEnabled{ SW_TRUE }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        };
-
-        vector<KeywordOverride> _listKeyword;
-
-        /// @brief 인스턴스가 고른 멀티 컴파일 옵션입니다.
-        struct MultiCompileOverride
-        {
-            string _name;
-            string _selected;
-        };
-
-        vector<MultiCompileOverride> _listMultiCompile;
-
-        string _quality; ///< 비어 있으면 부모를 따릅니다
-    };
-} // namespace sw
-
-namespace sw
-{
     /// @brief 런타임 머티리얼 데이터입니다(패킹 버퍼와 디스크립터).
     struct MaterialData
     {

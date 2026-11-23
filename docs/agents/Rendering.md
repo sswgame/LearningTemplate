@@ -21,8 +21,9 @@
 - 머티리얼은 **적은 칸만** 패스 위에 덮는다. 합치는 차례는 패스 → 머티리얼 → 보기 모드 → 컬 반전(`RenderStateOverride::applyTo`). 덮을 수 있는 범위는 패스 종류 표(`getMaterialStateScope`)가 정한다: GBuffer 는 블렌드를, Shadow · DepthPrepass 는 깊이 · 스텐실 · 블렌드를 받지 않는다. 깊이 테스트는 언제나 패스의 값.
 - `surfaceModel` 은 필수(`_base` 로 물려받는다). `MATERIAL_ALPHA_CUTOFF` · `MATERIAL_FORWARD_ONLY` · `MATERIAL_TWO_SIDED` define 은 직접 적지 않는다 — `alphaMode` · `surfaceModel` · `twoSidedLighting` 칸이 낸다.
 - 순서에 기대는 머티리얼에 `renderQueue` 차례를 적지 않는다 — 불투명 띠는 렌더 상태가 정한다(`OpaqueDrawBand`).
-- `MaterialInstance` 는 값 · 텍스처 · 키워드만 덮는다. 렌더 상태 · `alphaMode` · `renderQueue` 가 다르면 `parent=` 로 자식 머티리얼을 만든다 — 드로우마다 PSO 를 가르지 않는다.
-- 퍼뮤테이션을 바꾸는 값(정적 스위치 · 키워드 칸)은 `.materialinstance` 에셋에 적거나, 부모가 선언한 런타임 스위치(`bShaderFeature="0"`)를 `enableKeyword` 로 켠다. 값 API(`setParameter` 등)는 키워드 칸을 오류로 거절한다 — 런타임 값은 쿠킹하지 않은 조합이다(언리얼 MID 와 같은 경계).
+- 인스턴스 모델은 둘이다: 에셋 변형은 자식 머티리얼(`_base` — 렌더 상태 · `alphaMode` · `renderQueue` · 정적 스위치 · 멀티 컴파일 · 값), 실행 중 값은 `MaterialInstance::create`(값 · 텍스처 · 런타임 스위치만 — 드로우마다 PSO 를 가르지 않는다).
+- 자식의 `_permutations` 는 부모와 이름으로 합친다 — 더할 define · 바꿀 스위치만 적는다.
+- 퍼뮤테이션을 바꾸는 값(정적 스위치 · 키워드 칸)은 자식 머티리얼에 적거나, 부모가 선언한 런타임 스위치(`bShaderFeature="0"`)를 `enableKeyword` 로 켠다. 값 API(`setParameter` 등)는 키워드 칸을 오류로 거절한다 — 런타임 값은 쿠킹하지 않은 조합이다(언리얼 MID 와 같은 경계).
 
 ### 화면 속도 · 왜곡
 
