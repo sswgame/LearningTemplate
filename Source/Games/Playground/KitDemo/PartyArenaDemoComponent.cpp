@@ -65,7 +65,6 @@ namespace sw
         }
         const vector<int32> listRoundScore{ PartyArenaDemoComponentInternal::kFirstPlayerRoundScore, PartyArenaDemoComponentInternal::kSecondPlayerRoundScore,
                                             PartyArenaDemoComponentInternal::kThirdPlayerRoundScore };
-        _roundsPlayed = 0; // 씬 스냅숏이 옮긴 앞 판의 수에 더하지 않는다
         for ( int32 round = 0; round < PartyArenaDemoComponentInternal::kMaxRounds && series.isFinished() == false; ++round )
         {
             if ( series.reportRound( listRoundScore ) == false )
