@@ -364,9 +364,12 @@ namespace sw::editor
             }
 
             /** @brief 손으로 적는 글을 임포트 산출물 폴더에 만들려 하면(`AssetIdentityRules::isMisplacedInDerivedFolder`) 이유를 알리고 true 입니다. 규칙을 읽지 못해도 만들지 않는다. */
-            [[nodiscard]] static bool refuseDerivedFolder( const string& absPath )
+            [[nodiscard]] static bool refuseDerivedFolder( string_view folderAbs, string_view stem, string_view suffix )
             {
-                const string       assetID = editor::getSubsystem<AssetPaths>().toAssetID( absPath );
+                // 이름을 잡기(`makeUniquePath` — 빈 파일을 만든다) 전에 묻는다. 겹쳐서 번호가 붙어도 폴더와 접미사는 같다.
+                StringBuilder<constant::buffer::kMax256> fileName;
+                fileName.appendFormat( "%#%#", stem, suffix );
+                const string       assetID = editor::getSubsystem<AssetPaths>().toAssetID( FileUtil::joinPath( folderAbs, fileName.view() ) );
                 AssetIdentityRules rules;
                 if ( assetID.empty() )
                     return false;
@@ -510,9 +513,9 @@ namespace sw::editor
                 return false;
             }
         }
-        outAssetAbs = makeUniquePath( folderAbs, assetTemplate._pStem, assetTemplate._pSuffix );
-        if ( EditorAssetFileCommandsInternal::refuseDerivedFolder( outAssetAbs ) )
+        if ( EditorAssetFileCommandsInternal::refuseDerivedFolder( folderAbs, assetTemplate._pStem, assetTemplate._pSuffix ) )
             return false;
+        outAssetAbs = makeUniquePath( folderAbs, assetTemplate._pStem, assetTemplate._pSuffix );
         if ( assetTemplate._pNameAttribute != nullptr )
         {
             string uniqueStem;
@@ -537,9 +540,9 @@ namespace sw::editor
         string stem;
         string suffix;
         splitAssetName( FileUtil::getFileNamePart( sourceAbs ), stem, suffix );
-        outAssetAbs = makeUniquePath( FileUtil::getDirectoryPart( sourceAbs ), stem, suffix );
-        if ( EditorAssetFileCommandsInternal::refuseDerivedFolder( outAssetAbs ) )
+        if ( EditorAssetFileCommandsInternal::refuseDerivedFolder( FileUtil::getDirectoryPart( sourceAbs ), stem, suffix ) )
             return false;
+        outAssetAbs = makeUniquePath( FileUtil::getDirectoryPart( sourceAbs ), stem, suffix );
         // 복제는 새 에셋이다 — 베낀 머리 GUID 는 새 것으로 바꾸고, 원본이면 곁의 .meta 를 베끼지 않고 새로 쓴다(겹친 GUID 는 참조를 엉뚱한 쪽으로 푼다).
         return FileUtil::copyFile( FileUtil::toDiskPath( sourceAbs ), FileUtil::toDiskPath( outAssetAbs ) ) && EditorAssetFileCommandsInternal::assignNewIdentity( outAssetAbs );
     }
