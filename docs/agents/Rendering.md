@@ -23,6 +23,7 @@
 - 순서에 기대는 머티리얼에 `renderQueue` 차례를 적지 않는다 — 불투명 띠는 렌더 상태가 정한다(`OpaqueDrawBand`).
 - 인스턴스 모델은 둘이다: 에셋 변형은 자식 머티리얼(`_base` — 렌더 상태 · `alphaMode` · `renderQueue` · 정적 스위치 · 멀티 컴파일 · 값), 실행 중 값은 `MaterialInstance::create`(값 · 텍스처 · 런타임 스위치만 — 드로우마다 PSO 를 가르지 않는다).
 - 자식의 `_permutations` 는 부모와 이름으로 합친다 — 더할 define · 바꿀 스위치만 적는다.
+- 모든 머티리얼이 같은 값을 읽고 자주 바뀌는 것(날씨 · 환경 시간)은 머티리얼 칸에 묶지 않고 전역 값(`MaterialGlobals` → PassCB `g_MaterialGlobal*`)으로 둔다. 파라미터 묶음의 값은 `_global` 로 먹이고, 전역 값에는 프로퍼티를 묶지 않는다(오류).
 - 퍼뮤테이션을 바꾸는 값(정적 스위치 · 키워드 칸)은 자식 머티리얼에 적거나, 부모가 선언한 런타임 스위치(`bShaderFeature="0"`)를 `enableKeyword` 로 켠다. 값 API(`setParameter` 등)는 키워드 칸을 오류로 거절한다 — 런타임 값은 쿠킹하지 않은 조합이다(언리얼 MID 와 같은 경계).
 
 ### 화면 속도 · 왜곡

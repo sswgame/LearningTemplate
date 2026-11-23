@@ -391,9 +391,9 @@ namespace sw
                                               : bVector                                          ? 4u
                                                                                                  : 0u;
             }
-            if ( pValue == nullptr || count == 0 )
+            if ( pValue == nullptr || count == 0 || binding._collection->isGlobal( binding._parameter ) )
             {
-                SW_LOG_ERROR_ID( "Material.CollectionBindingInvalid", "Material '%#': property '%#' binds '%#' of '%#' - no such parameter, or the property is not a float, vector or colour", _desc._name, binding._property.c_str(), binding._parameter.c_str(), binding._path );
+                SW_LOG_ERROR_ID( "Material.CollectionBindingInvalid", "Material '%#': property '%#' binds '%#' of '%#' - no such parameter, a shader global (the shader reads it from PassCB), or the property is not a float, vector or colour", _desc._name, binding._property.c_str(), binding._parameter.c_str(), binding._path );
                 binding._bFailed = SW_TRUE;
                 continue;
             }
