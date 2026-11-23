@@ -62,10 +62,9 @@ namespace sw
         uint32 schedule( float64 now, const Candidate* pCandidate, uint32 candidateCount, uint32 maxListed, const RenderViewBudget& budget, uint8* pOutListed, uint8* pOutRender );
         /** @brief 모든 기록을 잊습니다. */
         void clear() { _listEntry.clear(); }
-        /** @brief 기억하는 뷰 수입니다(진단과 테스트용). */
-        uint32 getTrackedCount() const { return static_cast<uint32>( _listEntry.size() ); }
 
     private:
+        friend struct RenderViewSchedulerTestAccess; ///< 테스트만 안을 본다 — 배포 공개 API 에 진단 조회를 두지 않는다
         struct Entry
         {
             uint64  _viewID{ 0 };

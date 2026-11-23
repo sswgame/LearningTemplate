@@ -29,10 +29,10 @@ namespace sw
         , _localPlayer{ 0 }
         , _frame{ 0 }
         , _pendingRollbackFrame{ constant::invalid_index::kInt32 }
-        , _rollbackCount{ 0 }
-        , _resimulatedFrameCount{ 0 }
+        , _rollbackCount{}
+        , _resimulatedFrameCount{}
         , _stallCount{ 0 }
-        , _timeSyncWaitCount{ 0 }
+        , _timeSyncWaitCount{}
         , _messageWriter{}
         , _stateHashChannel{ *this }
     {
@@ -69,12 +69,12 @@ namespace sw
         peer._ackedLocalFrame = _settings._inputDelay - 1;
         _listPeer.assign( static_cast<size_t>( _playerCount ), peer );
         _listNewFrameScratch.clear();
-        _frame                 = 0;
-        _pendingRollbackFrame  = constant::invalid_index::kInt32;
-        _rollbackCount         = 0;
-        _resimulatedFrameCount = 0;
-        _stallCount            = 0;
-        _timeSyncWaitCount     = 0;
+        _frame                = 0;
+        _pendingRollbackFrame = constant::invalid_index::kInt32;
+        _rollbackCount.reset();
+        _resimulatedFrameCount.reset();
+        _stallCount = 0;
+        _timeSyncWaitCount.reset();
         moveReceiveWindows();
         const uint8 neutralInput = 0;
         for ( int32 frame = 0; frame < _settings._inputDelay; ++frame )
@@ -177,7 +177,7 @@ namespace sw
         if ( pStart == nullptr )
             return; // 기록 밖이라 고칠 수 없다. 최대 예측 안에서는 생기지 않는다
         _pGame->loadState( pStart->_listState );
-        ++_rollbackCount;
+        _rollbackCount.add();
         for ( int32 replay = frame; replay < _frame; ++replay )
         {
             FrameRecord& record = _listRecord.acquire( static_cast<uint32>( replay ) );
@@ -189,7 +189,7 @@ namespace sw
                 record._listInput[static_cast<size_t>( player )] = predictInput( player, replay );
             }
             _pGame->advanceFrame( record._listInput, true );
-            ++_resimulatedFrameCount;
+            _resimulatedFrameCount.add();
         }
     }
 
@@ -243,7 +243,7 @@ namespace sw
         }
         if ( _settings._maxFrameAdvantage > 0 && computeFrameLead() > _settings._maxFrameAdvantage )
         {
-            ++_timeSyncWaitCount;
+            _timeSyncWaitCount.add();
             return false;
         }
         FrameRecord& record = _listRecord.acquire( static_cast<uint32>( _frame ) );

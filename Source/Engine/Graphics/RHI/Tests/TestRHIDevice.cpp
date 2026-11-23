@@ -26,6 +26,15 @@
 #include <thread>
 #include <type_traits>
 
+namespace sw
+{
+    /** @brief 안을 보는 테스트 창구입니다(`friend`). */
+    struct RHIDeviceTestAccess
+    {
+        static size_t getDeferredHandleCount( const IRHIDevice& device ) { return device.getDeferredHandleCount(); }
+    };
+} // namespace sw
+
 using namespace sw;
 
 namespace
@@ -234,32 +243,32 @@ SW_TEST_CASE( RHIDeferredHandleTest, ReleasesWaitForTheRenderThreadFrame )
 
     // 렌더 스레드가 든 프레임이 없으면 바로 내린다.
     device.releaseBindlessIndex( RHIBufferSRVIndex{ 7 } );
-    SW_EXPECT_EQUAL( size_t( 0 ), device.getDeferredHandleCount() );
+    SW_EXPECT_EQUAL( size_t( 0 ), RHIDeviceTestAccess::getDeferredHandleCount( device ) );
 
     // 프레임을 넘긴 뒤 다른 스레드(렌더 스레드가 아니다)가 내리면 미룬다.
     device.notifyRenderFrameQueued();
     device.releaseBindlessIndex( RHIBufferSRVIndex{ 8 } );
     device.releaseHandle( RHIBufferHandle{ 9 } );
     device.releaseHandle( RHIBufferHandle{} ); // 빈 핸들은 무시
-    SW_EXPECT_EQUAL( size_t( 2 ), device.getDeferredHandleCount() );
+    SW_EXPECT_EQUAL( size_t( 2 ), RHIDeviceTestAccess::getDeferredHandleCount( device ) );
 
     // 프레임이 끝나도 렌더 스레드가 비우기 전까지는 남는다 — 비우면 내린다.
     device.notifyRenderFrameRetired();
-    SW_EXPECT_EQUAL( size_t( 2 ), device.getDeferredHandleCount() );
+    SW_EXPECT_EQUAL( size_t( 2 ), RHIDeviceTestAccess::getDeferredHandleCount( device ) );
     device.flushDeferredHandleReleases();
-    SW_EXPECT_EQUAL( size_t( 0 ), device.getDeferredHandleCount() );
+    SW_EXPECT_EQUAL( size_t( 0 ), RHIDeviceTestAccess::getDeferredHandleCount( device ) );
 
     // 남는 프레임 통보는 셈을 음수로 만들지 않는다.
     device.notifyRenderFrameRetired();
     device.releaseHandle( RHITextureHandle{ 10 } );
-    SW_EXPECT_EQUAL( size_t( 0 ), device.getDeferredHandleCount() );
+    SW_EXPECT_EQUAL( size_t( 0 ), RHIDeviceTestAccess::getDeferredHandleCount( device ) );
 
     // waitIdle 은 렌더 스레드를 비운 뒤 미룬 것을 내린다.
     device.notifyRenderFrameQueued();
     device.releaseBindlessIndex( RHITextureSRVIndex{ 11 } );
-    SW_EXPECT_EQUAL( size_t( 1 ), device.getDeferredHandleCount() );
+    SW_EXPECT_EQUAL( size_t( 1 ), RHIDeviceTestAccess::getDeferredHandleCount( device ) );
     device.waitIdle( RHIWaitIdleReason::Tool );
-    SW_EXPECT_EQUAL( size_t( 0 ), device.getDeferredHandleCount() );
+    SW_EXPECT_EQUAL( size_t( 0 ), RHIDeviceTestAccess::getDeferredHandleCount( device ) );
     device.notifyRenderFrameRetired(); // 위에서 넘긴 프레임을 끝낸다
 }
 
@@ -274,13 +283,13 @@ SW_TEST_CASE( RHIDeferredHandleTest, DrainRenderThreadWaitsForGPUIdle )
     device.releaseBindlessIndex( RHITextureSRVIndex{ 13 } );
 
     device.flushRenderThread();
-    SW_EXPECT_EQUAL( size_t( 1 ), device.getDeferredHandleCount() );
+    SW_EXPECT_EQUAL( size_t( 1 ), RHIDeviceTestAccess::getDeferredHandleCount( device ) );
     SW_EXPECT_EQUAL( uint64( 0 ), device.getGPUIdleWaitCount().get() );
     SW_EXPECT_TRUE( device._listShutdownStep.empty() ); // `waitIdleInternal` 이 불리지 않았다
 
     device.waitIdle( RHIWaitIdleReason::Tool );
     SW_EXPECT_EQUAL( uint64( 1 ), device.getGPUIdleWaitCount().get() );
-    SW_EXPECT_EQUAL( size_t( 0 ), device.getDeferredHandleCount() );
+    SW_EXPECT_EQUAL( size_t( 0 ), RHIDeviceTestAccess::getDeferredHandleCount( device ) );
     device.notifyRenderFrameRetired();
 }
 
@@ -297,23 +306,23 @@ SW_TEST_CASE( RHIDeferredHandleTest, ReleasesWaitForThePacketBeingBuilt )
     device.notifyRenderFrameQueued();
     device.releaseBindlessIndex( RHITextureSRVIndex{ 12 } );
     device.notifyRenderFrameRetired();
-    SW_EXPECT_EQUAL( size_t( 1 ), device.getDeferredHandleCount() );
+    SW_EXPECT_EQUAL( size_t( 1 ), RHIDeviceTestAccess::getDeferredHandleCount( device ) );
     device.notifyRenderFrameQueued();
     device.notifyRenderFrameRetired();
-    SW_EXPECT_EQUAL( size_t( 0 ), device.getDeferredHandleCount() );
+    SW_EXPECT_EQUAL( size_t( 0 ), RHIDeviceTestAccess::getDeferredHandleCount( device ) );
 
     // 렌더 스레드가 떠 있으면 든 프레임이 없어도 미룬다(짓는 중인 패킷이 있다). 다음 프레임이 끝나면 내린다.
     device.setRenderThreadFlush( []( void* ) {}, nullptr, std::thread::id{} );
     device.releaseHandle( RHITextureHandle{ 13 } );
-    SW_EXPECT_EQUAL( size_t( 1 ), device.getDeferredHandleCount() );
+    SW_EXPECT_EQUAL( size_t( 1 ), RHIDeviceTestAccess::getDeferredHandleCount( device ) );
     device.notifyRenderFrameQueued();
     device.notifyRenderFrameRetired();
-    SW_EXPECT_EQUAL( size_t( 0 ), device.getDeferredHandleCount() );
+    SW_EXPECT_EQUAL( size_t( 0 ), RHIDeviceTestAccess::getDeferredHandleCount( device ) );
 
     // 렌더 스레드를 풀면 남은 것을 모두 내린다.
     device.releaseHandle( RHITextureHandle{ 14 } );
     device.setRenderThreadFlush( nullptr, nullptr, std::thread::id{} );
-    SW_EXPECT_EQUAL( size_t( 0 ), device.getDeferredHandleCount() );
+    SW_EXPECT_EQUAL( size_t( 0 ), RHIDeviceTestAccess::getDeferredHandleCount( device ) );
 }
 
 /**

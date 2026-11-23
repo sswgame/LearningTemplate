@@ -16,7 +16,7 @@ namespace sw
         : _received{}
         , _lastIntent{}
         , _nextInputTick{ 0 }
-        , _missingTickCount{ 0 }
+        , _missingTickCount{}
         , _bHasLastIntent{ false }
     {
         _received.initialize( kReceiveCapacity );
@@ -72,7 +72,7 @@ namespace sw
         {
             const uint32 newestTick = _received.getNewestTick();
             const uint32 firstTick  = MathUtil::max( _nextInputTick, _received.computeOldestTick() );
-            _missingTickCount += firstTick - _nextInputTick; // 고리에서 밀려난 틱
+            _missingTickCount.add( firstTick - _nextInputTick ); // 고리에서 밀려난 틱
             _nextInputTick = newestTick + 1u;
             ControlIntent merged{};
             uint32        triggered    = 0;
@@ -85,7 +85,7 @@ namespace sw
                 const ControlIntent* pReceived = _received.find( tick );
                 if ( pReceived == nullptr )
                 {
-                    ++_missingTickCount;
+                    _missingTickCount.add();
                     continue;
                 }
                 merged = *pReceived;

@@ -14,15 +14,15 @@ namespace sw
         , _listActivityState{}
         , _blendSeconds{ -1.0f }
         , _playCount{ 0 }
-        , _failedPlayCount{ 0 }
+        , _failedPlayCount{}
     {
     }
 
     void ScheduleSkeletalAnimator::initialize( GameObjectManager* pManager )
     {
-        _pManager        = pManager;
-        _playCount       = 0;
-        _failedPlayCount = 0;
+        _pManager  = pManager;
+        _playCount = 0;
+        _failedPlayCount.reset();
     }
 
     void ScheduleSkeletalAnimator::setActivityState( const hashed_string& activity, const hashed_string& stateName )
@@ -56,7 +56,7 @@ namespace sw
         SkeletalAnimatorComponent* pAnimator = pObject != nullptr ? pObject->getComponent<SkeletalAnimatorComponent>() : nullptr;
         if ( pAnimator == nullptr || pAnimator->play( stateName, true, _blendSeconds ) == false )
         {
-            ++_failedPlayCount;
+            _failedPlayCount.add();
             return false;
         }
         ++_playCount;

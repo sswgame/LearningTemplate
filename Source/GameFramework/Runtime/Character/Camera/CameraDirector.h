@@ -78,8 +78,6 @@ namespace sw
          *          스택(저장 상태)에 넣지 않는다 — 출처가 프레임마다 다시 정한다. 언리얼 PostProcessVolume 의 BlendWeight · 유니티 Volume weight 와 같은 자리다.
          */
         void setPostProcessOverlay( const GameObjectHandle& source, const PostProcessValues& values, float32 weight );
-        /** @brief 지금 섞는 후처리 덧칠 수입니다(진단 · 테스트). */
-        uint32 getPostProcessOverlayCount() const { return static_cast<uint32>( _listPostProcessOverlay.size() ); }
         /**
          * @brief 다음 `step` 부터 쓸 사용자 설정(시야각, 흔들림 배율, 머리 흔들림)을 정합니다. 기본값은 바꾸지 않은 상태입니다.
          * @details 디렉터는 전역 변수를 읽지 않는다. 컴포넌트가 `CameraUserSettings::makeFromGlobalVariables` 로 읽어 넣고, 테스트는 값을 직접 넣는다.
@@ -128,6 +126,7 @@ namespace sw
         bool consumeCut();
 
     private:
+        friend struct CameraDirectorTestAccess; ///< 테스트만 안을 본다 — 배포 공개 API 에 진단 조회를 두지 않는다
         /** @brief 블렌드 스택의 층 하나입니다. 고정 층은 프리셋을 풀지 않고 `_pose` 를 그대로 냅니다. */
         struct Layer
         {

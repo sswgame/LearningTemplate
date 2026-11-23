@@ -52,8 +52,6 @@ namespace sw
          * @return 넣지 못하면(지울 예정 · 물리로 떨어짐 · 되돌아가는 중 · `SocketBindingComponent` 없음) false 이고 부르는 쪽이 지웁니다.
          */
         [[nodiscard]] bool storePart( GameObject& object, const hashed_string& assetPath );
-        /** @brief @p assetPath 의 쉬는 부품 수입니다(진단과 테스트용, 지워진 것은 세지 않는다). */
-        uint32 getRestingCount( const hashed_string& assetPath ) const;
 
         /**
          * @brief 이 씬에서 `takePart` 가 쉬는 부품을 내준 수 / 내주지 못한 수 / `storePart` 가 받은 수입니다(누적). 풀의 효과를 재는 값입니다 —
@@ -64,6 +62,7 @@ namespace sw
         const DevCounter& getStoredCount() const { return _storedCount; }
 
     private:
+        friend struct SocketPartPoolTestAccess; ///< 테스트만 안을 본다 — 배포 공개 API 에 진단 조회를 두지 않는다
         GameObjectManager*                                     _pManager;
         unordered_map<hashed_string, vector<GameObjectHandle>> _mapResting; ///< 에셋 경로마다 쉬는 부품이다
         DevCounter                                             _takeHitCount;

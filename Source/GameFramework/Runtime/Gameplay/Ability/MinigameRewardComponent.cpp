@@ -26,7 +26,7 @@ namespace sw
         , _listReputation{}
         , _listQuest{}
         , _finishedSubscription{}
-        , _appliedCount{ 0 }
+        , _appliedCount{}
     {
     }
 
@@ -109,7 +109,7 @@ namespace sw
         const auto count       = [this, &bAllApplied]( bool bApplied )
         {
             if ( bApplied )
-                ++_appliedCount;
+                _appliedCount.add();
             else
                 bAllApplied = false;
         };

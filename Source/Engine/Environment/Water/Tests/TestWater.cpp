@@ -9,6 +9,15 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
+namespace sw
+{
+    /** @brief 안을 보는 테스트 창구입니다(`friend`). */
+    struct WaterBodyComponentTestAccess
+    {
+        static bool hasSurface( const WaterBodyComponent& water ) { return water._batch != nullptr; }
+    };
+} // namespace sw
+
 // 물 — 거스트너 변위 · 노멀 · 수면 높이 질의(부력의 기반) · 호수 · 강 · 물속 판정. GPU 쪽 같은 식의 대조는 RenderPassGPUTest.WaterWaveShaderMatchesCPU.
 
 using namespace sw;
@@ -121,7 +130,7 @@ SW_TEST_CASE( WaterTest, LakeQueriesAndUnderwater )
     pWater->setMaterialPath( "" );
     pWater->rebuildSurface();
     pWater->setWaveTime( 1.5f );
-    SW_EXPECT_TRUE( pWater->getSurfaceVertexCount() > 0 );
+    SW_EXPECT_TRUE( WaterBodyComponentTestAccess::hasSurface( *pWater ) );
 
     SW_EXPECT_TRUE( pWater->containsPosition( 19.0f, -1.0f ) );
     SW_EXPECT_FALSE( pWater->containsPosition( 21.0f, -1.0f ) );
@@ -160,7 +169,7 @@ SW_TEST_CASE( WaterTest, RiverFollowsItsPath )
                           4.0f );
     pWater->setMaterialPath( "" );
     pWater->rebuildSurface();
-    SW_EXPECT_TRUE( pWater->getSurfaceVertexCount() > 0 );
+    SW_EXPECT_TRUE( WaterBodyComponentTestAccess::hasSurface( *pWater ) );
 
     float32 height{ 0.0f };
     SW_REQUIRE_TRUE( pWater->computeSurfaceHeight( 10.0f, 1.5f, height ) );

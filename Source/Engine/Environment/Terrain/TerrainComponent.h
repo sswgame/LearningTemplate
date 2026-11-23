@@ -223,8 +223,6 @@ namespace sw
         const TerrainChunkLayout& getChunkLayout() const { return _layout; }
         /** @brief 청크 (x, z) 의 지금 LOD 입니다. 범위 밖이면 0 입니다. */
         uint32 getChunkLOD( uint32 chunkX, uint32 chunkZ ) const;
-        /** @brief 청크 (x, z) 의 지금 메시 정점 수입니다(테스트). */
-        uint32 getChunkVertexCount( uint32 chunkX, uint32 chunkZ ) const;
         /** @brief 지금까지 CPU 로 새로 만든 청크 메시 수입니다(들고 있던 메시를 꺼낸 것은 세지 않는다 — 테스트 · 측정). */
         const DevCounter& getChunkMeshBuildCount() const { return _chunkMeshBuildCount; }
 
@@ -252,6 +250,7 @@ namespace sw
         const vector<TerrainLayer>& getLayers() const { return _listLayer; }
 
     private:
+        friend struct TerrainComponentTestAccess; ///< 테스트만 안을 본다 — 배포 공개 API 에 진단 조회를 두지 않는다
         /**
          * @brief 청크 하나가 들고 있는 최근 메시 수입니다. 고리 하나를 사이에 둔 왕복(LOD l ↔ l+1)과 이웃 이음매 한 번 바뀜을 덮는다.
          * @details 상용 엔진(언리얼 랜드스케이프)은 청크 정점 한 벌에 (LOD, 이웃) 공유 인덱스를 쓴다 — 여기서는 메시 구간이 인덱스 버퍼를 나누지 못하고 구멍 · 지오모프 값이

@@ -167,8 +167,6 @@ namespace sw
         uint32 pollMaterialPSOBuilds( IRHIDevice* pDevice, bool bAsync, uint32 budgetMicroseconds );
         /** @brief 빌더 줄에 있거나 만드는 중인 작업 수입니다(계측). */
         [[nodiscard]] uint32 getPendingMaterialPSOBuilds() const;
-        /** @brief 그 상태인 항목 수입니다(테스트 · 계측). */
-        [[nodiscard]] size_t countMaterialPSOs( MaterialPSOState state ) const;
 
         // ------------------------------------------------------------------------------
         // 4) 수명
@@ -192,6 +190,7 @@ namespace sw
         uint32 releasePSOsUsingShader( IRHIDevice* pDevice, string_view shaderPath );
 
     private:
+        friend struct RenderPSOCacheTestAccess; ///< 테스트만 안을 본다 — 배포 공개 API 에 진단 조회를 두지 않는다
         /**
          * @brief 덮어쓸 엔진 · 출력 · 모듈 PSO 를 놓습니다 — 비지 않았으면 장치로 해제하고, 그 핸들의 레이아웃 · desc 와 그 핸들을 그대로 가리키던 머티리얼 항목을 잊는다.
          * @details 예전에는 덮어쓰기가 옛 핸들을 잊기만 해 PSO 가 샜다(해제 경로는 `releasePSOsUsingShader` · 장치 종료뿐이었다).

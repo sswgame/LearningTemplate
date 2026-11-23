@@ -12,6 +12,19 @@
 
 #include <thread>
 
+namespace sw
+{
+    /** @brief 안을 보는 테스트 창구입니다(`friend`). */
+    struct OverflowConcurrentQueueTestAccess
+    {
+        template <typename TQueue>
+        static uint32 getOverflowCount( const TQueue& queue )
+        {
+            return queue._overflowCount.load( std::memory_order_acquire );
+        }
+    };
+} // namespace sw
+
 /**
  * @brief [OverflowConcurrentQueueTest] 링 용량의 세 배를 넣어도 모두 들어가고, 한 생산자가 넣은 차례대로 나온다
  */
@@ -23,7 +36,7 @@ SW_TEST_CASE( OverflowConcurrentQueueTest, PastRingCapacityKeepsEveryItemInOrder
     {
         queue.enqueue( index );
     }
-    SW_EXPECT_TRUE( queue.getOverflowCount() > 0u );
+    SW_EXPECT_TRUE( sw::OverflowConcurrentQueueTestAccess::getOverflowCount( queue ) > 0u );
     SW_EXPECT_FALSE( queue.empty() );
 
     uint32 expected = 0;
@@ -35,11 +48,11 @@ SW_TEST_CASE( OverflowConcurrentQueueTest, PastRingCapacityKeepsEveryItemInOrder
     }
     SW_EXPECT_EQUAL( kCount, expected );
     SW_EXPECT_TRUE( queue.empty() );
-    SW_EXPECT_EQUAL( 0u, queue.getOverflowCount() );
+    SW_EXPECT_EQUAL( 0u, sw::OverflowConcurrentQueueTestAccess::getOverflowCount( queue ) );
 
     // 넘침을 다 비운 뒤에는 다시 링으로 들어간다
     queue.enqueue( 7u );
-    SW_EXPECT_EQUAL( 0u, queue.getOverflowCount() );
+    SW_EXPECT_EQUAL( 0u, sw::OverflowConcurrentQueueTestAccess::getOverflowCount( queue ) );
     SW_REQUIRE_TRUE( queue.dequeue( item ) );
     SW_EXPECT_EQUAL( 7u, item );
 }

@@ -22,7 +22,7 @@ namespace sw
         , _settings{}
         , _pHost{ nullptr }
         , _clock{}
-        , _decodeFailureCount{ 0 }
+        , _decodeFailureCount{}
         , _messageWriter{}
     {
     }
@@ -47,7 +47,7 @@ namespace sw
 
         _listSnapshot.initialize( settings._historySize ); // 범위(4 이상)는 위에서 봤다
         _inputWindow.initialize( NetClientServerMessage::kMaxInputCount, NetClientServerMessage::kInputFormat );
-        _decodeFailureCount = 0;
+        _decodeFailureCount.reset();
         resetHistory();
         return true;
     }
@@ -100,7 +100,7 @@ namespace sw
         {
             if ( body.hasOverflowed() )
                 return NetHandleResult::Malformed; // 잘림 · 상한 넘는 길이 — 깨진 메시지다
-            ++_decodeFailureCount;                 // 기준을 이미 잃은 델타도 여기로 온다. 형식은 맞으므로 손상된 메시지로 세지 않는다
+            _decodeFailureCount.add();             // 기준을 이미 잃은 델타도 여기로 온다. 형식은 맞으므로 손상된 메시지로 세지 않는다
             return NetHandleResult::Handled;
         }
         if ( body.readEnd() == false )

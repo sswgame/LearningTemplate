@@ -15,6 +15,7 @@
  *          쉬기와 되감기는 무엇을 언제 시뮬레이션할지만 바꾼다.
  */
 #pragma once
+#include "Core/Concurrency/DevCounter.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
@@ -112,13 +113,13 @@ namespace sw
         /** @brief 롤백 입력을 받습니다(표의 메시지). 같은 영역의 락스텝 메시지는 `LockstepSession` 이 받는다. */
         NetHandleResult receive( NetLockstepMessage::RollbackInput, const NetMessageContext& context, BitReader& body );
 
-        int32 getFrame() const { return _frame; }
-        int32 getRollbackCount() const { return _rollbackCount; }
-        int32 getResimulatedFrameCount() const { return _resimulatedFrameCount; }
+        int32             getFrame() const { return _frame; }
+        const DevCounter& getRollbackCount() const { return _rollbackCount; }
+        const DevCounter& getResimulatedFrameCount() const { return _resimulatedFrameCount; }
         /** @brief 확인된 상대 입력보다 너무 앞서 멈춘 횟수입니다. */
         int32 getStallCount() const { return _stallCount; }
         /** @brief 상대보다 앞서 시간 동기로 쉰 프레임 수입니다. */
-        int32 getTimeSyncWaitCount() const { return _timeSyncWaitCount; }
+        const DevCounter& getTimeSyncWaitCount() const { return _timeSyncWaitCount; }
         /** @brief 모든 플레이어의 입력이 확인된 마지막 프레임입니다. 그 이전 프레임은 다시 바뀌지 않습니다. */
         int32 getConfirmedFrame() const;
         /**
@@ -187,10 +188,10 @@ namespace sw
         int32                         _localPlayer;
         int32                         _frame;
         int32                         _pendingRollbackFrame; ///< 예측이 틀린 가장 이른 프레임. 없으면 -1이다
-        int32                         _rollbackCount;
-        int32                         _resimulatedFrameCount;
+        DevCounter                    _rollbackCount;
+        DevCounter                    _resimulatedFrameCount;
         int32                         _stallCount;
-        int32                         _timeSyncWaitCount;
+        DevCounter                    _timeSyncWaitCount;
         NetMessageWriter              _messageWriter;    ///< 보낼 메시지. 버퍼를 재사용한다
         StateHashChannel              _stateHashChannel; ///< 해시 줄 `rollback` 의 제공자(`getStateHashProvider`)
     };

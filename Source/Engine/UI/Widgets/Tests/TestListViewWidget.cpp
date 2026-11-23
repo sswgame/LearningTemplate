@@ -8,6 +8,15 @@
 #include "Engine/UI/WidgetTree/WidgetTree.h"
 #include "Engine/UI/Widgets/ListViewWidget.h"
 
+namespace sw
+{
+    /** @brief 안을 보는 테스트 창구입니다(`friend`). */
+    struct ListViewWidgetTestAccess
+    {
+        static uint32 getCreatedRowCount( const ListViewWidget& list ) { return static_cast<uint32>( list._listRowItem.size() ); }
+    };
+} // namespace sw
+
 // ListViewWidgetTest — 가상 목록: 보이는 줄 + 1 만 만들고, 한 줄 스크롤은 한 위젯만 다시 잇고, 항목이 적으면 남는 줄을 접는다. 위젯 트리만 돈다(nogpu).
 
 using namespace sw;
@@ -47,7 +56,7 @@ SW_TEST_CASE( ListViewWidgetTest, CreatesOnlyTheVisibleRows )
     WidgetTree      tree;
     ListViewWidget& list = Util::makeList( tree, 10000 );
     (void)UITestUtil::layout( tree, Util::kViewport );
-    SW_EXPECT_EQUAL( 6u, list.getCreatedRowCount() );
+    SW_EXPECT_EQUAL( 6u, ListViewWidgetTestAccess::getCreatedRowCount( list ) );
     SW_EXPECT_EQUAL( 6u, Util::s_bindCount );
     SW_EXPECT_EQUAL( 0u, list.findItemIndex( *list.getChild( 0 ) ).value() );
     SW_EXPECT_EQUAL( 5u, list.findItemIndex( *list.getChild( 5 ) ).value() );
@@ -65,7 +74,7 @@ SW_TEST_CASE( ListViewWidgetTest, ScrollingOneRowRebindsOneWidget )
     SW_EXPECT_EQUAL( bindsBefore + 1u, Util::s_bindCount );
     SW_EXPECT_EQUAL( 6u, list.findItemIndex( *list.getChild( 0 ) ).value() ); // 항목 k 는 줄 k % 6 이 맡는다
     SW_EXPECT_EQUAL( 1u, list.findItemIndex( *list.getChild( 1 ) ).value() );
-    SW_EXPECT_EQUAL( 6u, list.getCreatedRowCount() );
+    SW_EXPECT_EQUAL( 6u, ListViewWidgetTestAccess::getCreatedRowCount( list ) );
 }
 
 /** @brief [ListViewWidgetTest] 스크롤은 끝에서 멈추고, 항목으로 옮기기는 보이게 하는 최소만 움직인다 */
@@ -93,7 +102,7 @@ SW_TEST_CASE( ListViewWidgetTest, ExtraRowsCollapseWhenItemsShrink )
     (void)UITestUtil::layout( tree, Util::kViewport );
     list.setItemCount( 2 );
     (void)UITestUtil::layout( tree, Util::kViewport );
-    SW_EXPECT_EQUAL( 6u, list.getCreatedRowCount() );
+    SW_EXPECT_EQUAL( 6u, ListViewWidgetTestAccess::getCreatedRowCount( list ) );
     SW_EXPECT_TRUE( list.getChild( 1 )->getVisibility() != WidgetVisibility::Collapsed );
     SW_EXPECT_TRUE( list.getChild( 2 )->getVisibility() == WidgetVisibility::Collapsed );
     SW_EXPECT_FALSE( list.findItemIndex( *list.getChild( 2 ) ).has_value() );

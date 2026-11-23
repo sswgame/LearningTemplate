@@ -7,6 +7,7 @@
  *          메모리는 쓰는 중인 키 수의 두 배까지이고, 쓰는 중인 키 수는 보충 창 안에 들어온 요청 수로 묶인다.
  */
 #pragma once
+#include "Core/Concurrency/DevCounter.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Foundation/Types.h"
 
@@ -28,7 +29,7 @@ namespace sw
             _refillIntervalMs   = refillIntervalMs;
             _maxTrackedKeyCount = maxTrackedKeyCount;
             _sweepThreshold     = maxTrackedKeyCount;
-            _sweepCount         = 0;
+            _sweepCount.reset();
         }
 
         /** @brief @p key 의 버킷에서 하나를 씁니다. 없으면 false 와 기다릴 시간입니다. */
@@ -51,12 +52,12 @@ namespace sw
 
         size_t getTrackedKeyCount() const { return _mapKeyToBucket.size(); }
         /** @brief 전체 훑기 횟수입니다. 상각 비용을 테스트가 본다. */
-        size_t getSweepCount() const { return _sweepCount; }
+        const DevCounter& getSweepCount() const { return _sweepCount; }
 
     private:
         void eraseFullBuckets( int64 nowMs )
         {
-            ++_sweepCount;
+            _sweepCount.add();
             for ( auto it = _mapKeyToBucket.begin(); it != _mapKeyToBucket.end(); )
             {
                 if ( it->second.isFull( nowMs ) )
@@ -72,7 +73,7 @@ namespace sw
         unordered_map<uint64, TokenBucket> _mapKeyToBucket{};
         size_t                             _maxTrackedKeyCount{ 4096 };
         size_t                             _sweepThreshold{ 4096 }; ///< 새 키가 이 수에 닿으면 청소한다. 청소마다 다시 정한다
-        size_t                             _sweepCount{ 0 };
+        DevCounter                         _sweepCount;
         int64                              _refillIntervalMs{ 1000 };
         int32                              _capacity{ 1 };
     };

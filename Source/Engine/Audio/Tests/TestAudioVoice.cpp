@@ -9,6 +9,15 @@
 #include "Engine/Audio/AudioVoice.h"
 #include "Engine/Audio/AudioVoicePool.h"
 
+namespace sw
+{
+    /** @brief 안을 보는 테스트 창구입니다(`friend`). */
+    struct AudioVoiceTestAccess
+    {
+        static const AudioStreamWindow& getStreamWindow( const AudioVoice& voice ) { return voice._stream; }
+    };
+} // namespace sw
+
 using namespace sw;
 
 namespace
@@ -587,12 +596,12 @@ SW_TEST_CASE( AudioVoiceTest, StreamedClipMatchesMemoryClip )
     AudioVoice memoryVoice;
     memoryVoice.start( Util::makeClip( listSample, 2 ), true, 0, false, 0 );
     memoryVoice.setPlaybackRate( 0.75 );
-    SW_EXPECT_FALSE( memoryVoice.getStreamWindow().isOpen() );
+    SW_EXPECT_FALSE( AudioVoiceTestAccess::getStreamWindow( memoryVoice ).isOpen() );
 
     AudioVoice streamVoice;
     streamVoice.start( pStreamed, true, 0, false, 0 );
     streamVoice.setPlaybackRate( 0.75 );
-    SW_REQUIRE_TRUE( streamVoice.getStreamWindow().isOpen() );
+    SW_REQUIRE_TRUE( AudioVoiceTestAccess::getStreamWindow( streamVoice ).isOpen() );
 
     AudioBlockBuffer memoryBuffer;
     memoryBuffer.allocate( AudioChannelLayout::Stereo );

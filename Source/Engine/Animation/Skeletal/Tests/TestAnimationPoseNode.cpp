@@ -14,6 +14,16 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
+namespace sw
+{
+    /** @brief 안을 보는 테스트 창구입니다(`friend`). */
+    struct MontagePoseNodeTestAccess
+    {
+        static uint32  getCurrentSection( const MontagePoseNode& node ) { return node._currentSection; }
+        static float32 getClipTime( const MontagePoseNode& node ) { return node._clipTime; }
+    };
+} // namespace sw
+
 using namespace sw;
 
 namespace
@@ -353,16 +363,16 @@ SW_TEST_CASE( AnimationPoseNodeTest, GraphMontageStateAdvancesSections )
     {
         SW_REQUIRE_TRUE( pNode->evaluatePose( params, time, pose ) );
     }
-    SW_EXPECT_EQUAL( 1u, montage.getCurrentSection() ); // Loop 을 돈다
+    SW_EXPECT_EQUAL( 1u, MontagePoseNodeTestAccess::getCurrentSection( montage ) ); // Loop 을 돈다
     parameter.setBool( hashed_string( "Done" ), true );
     SW_REQUIRE_TRUE( pNode->evaluatePose( params, 2.0f, pose ) );
-    SW_EXPECT_EQUAL( 2u, montage.getCurrentSection() );     // 분기로 End
-    SW_EXPECT_NEAR( 1.5f, montage.getClipTime(), 1.0e-4f ); // 끝에서 멈춘다
+    SW_EXPECT_EQUAL( 2u, MontagePoseNodeTestAccess::getCurrentSection( montage ) );     // 분기로 End
+    SW_EXPECT_NEAR( 1.5f, MontagePoseNodeTestAccess::getClipTime( montage ), 1.0e-4f ); // 끝에서 멈춘다
 
     // 다시 지으면 새 인스턴스 — 섹션 위치가 처음으로 돌아간다.
     SW_REQUIRE_TRUE( poseNodes.rebuild( graph, clipSource ) );
     const MontagePoseNode& rebuilt = static_cast<const MontagePoseNode&>( *poseNodes.findNode( hashed_string( "Reload" ) ) );
-    SW_EXPECT_EQUAL( 0u, rebuilt.getCurrentSection() );
+    SW_EXPECT_EQUAL( 0u, MontagePoseNodeTestAccess::getCurrentSection( rebuilt ) );
     poseNodes.clear();
     SW_EXPECT_NULL( poseNodes.findNode( hashed_string( "Reload" ) ) );
 }

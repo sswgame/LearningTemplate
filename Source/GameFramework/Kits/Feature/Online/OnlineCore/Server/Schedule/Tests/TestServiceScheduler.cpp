@@ -10,6 +10,15 @@
 #include "GameFramework/Runtime/Online/Store/Server/ServiceTTLRule.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
+namespace sw
+{
+    /** @brief 안을 보는 테스트 창구입니다(`friend`). */
+    struct ServiceTTLMonitorTestAccess
+    {
+        static int64 getLastDeletedCount( const ServiceTTLMonitor& monitor ) { return monitor._lastDeletedCount; }
+    };
+} // namespace sw
+
 using namespace sw;
 
 namespace
@@ -572,7 +581,7 @@ SW_TEST_CASE( ServiceTTLTest, JobSweepsOnSchedule )
     {
     }
     SW_EXPECT_FALSE( job.isRunning() );
-    SW_EXPECT_EQUAL( int64( 1 ), job.getLastDeletedCount() );
+    SW_EXPECT_EQUAL( int64( 1 ), ServiceTTLMonitorTestAccess::getLastDeletedCount( job ) );
     SW_EXPECT_EQUAL( 1, rig.count() );
     SW_EXPECT_EQUAL( 0, scheduler.getPendingJobCount() );
 

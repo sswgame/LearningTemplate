@@ -8,6 +8,15 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Physics/Scene/ScenePhysics.h"
 
+namespace sw
+{
+    /** @brief 안을 보는 테스트 창구입니다(`friend`). */
+    struct PhysicsReadScopeTestAccess
+    {
+        static uint32 getOpenReadScopeCount( const ScenePhysics& physics ) { return physics._openReadScopeCount; }
+    };
+} // namespace sw
+
 using namespace sw;
 
 // 증표는 주인만 만든다 — 아무나 만들 수 있으면 워커를 기다리지 않고 씬을 고치는 길이 컴파일된다.
@@ -22,16 +31,16 @@ SW_TEST_CASE( PhysicsReadScopeTest, ScopesAreCountedUntilClosed )
 {
     GameObjectManager manager;
     ScenePhysics&     physics = manager.getSubsystem<ScenePhysics>();
-    SW_EXPECT_EQUAL( 0u, physics.getOpenReadScopeCount() );
+    SW_EXPECT_EQUAL( 0u, PhysicsReadScopeTestAccess::getOpenReadScopeCount( physics ) );
 
     PhysicsReadScope first  = physics.openReadScope();
     PhysicsReadScope second = physics.openReadScope();
-    SW_EXPECT_EQUAL( 2u, physics.getOpenReadScopeCount() );
+    SW_EXPECT_EQUAL( 2u, PhysicsReadScopeTestAccess::getOpenReadScopeCount( physics ) );
     SW_EXPECT_NULL( first.findQuery3D() );
     SW_EXPECT_NULL( physics.findScene3D() );
 
     PhysicsReadScope moved = std::move( first );
     (void)physics.closeReadScope( std::move( moved ) );
     (void)physics.closeReadScope( std::move( second ) );
-    SW_EXPECT_EQUAL( 0u, physics.getOpenReadScopeCount() );
+    SW_EXPECT_EQUAL( 0u, PhysicsReadScopeTestAccess::getOpenReadScopeCount( physics ) );
 }
