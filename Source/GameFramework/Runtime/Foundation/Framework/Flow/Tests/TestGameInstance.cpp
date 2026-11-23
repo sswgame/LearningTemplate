@@ -4,6 +4,8 @@
 
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Input/InputManager.h"
+#include "Engine/Input/Map/InputMap.h"
 #include "Engine/Net/GameNetSession.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/Flow/GameInstance.h"
@@ -113,13 +115,16 @@ namespace
     {
         sw::SubsystemScope*       _pGameScope;
         sw::INetSecurityProvider* _pSecurity;
+        size_t                    _inputActionCount; ///< 엔진의 통합 입력 맵 — 종료한 게임의 묶음이 남으면 다음 게임 · 테스트가 그 바인딩을 본다
 
         static ProcessGameState capture()
         {
             sw::GameNetSession* const pNetSession = sw::game::findSubsystem<sw::GameNetSession>();
-            return ProcessGameState{ sw::game::findGameScope(), pNetSession != nullptr ? pNetSession->getConnectSecurity().findProvider() : nullptr };
+            sw::InputManager* const   pInput      = sw::game::findSubsystem<sw::InputManager>();
+            return ProcessGameState{ sw::game::findGameScope(), pNetSession != nullptr ? pNetSession->getConnectSecurity().findProvider() : nullptr,
+                                     pInput != nullptr ? pInput->getInputMap().getActionNames().size() : 0u };
         }
-        bool equals( const ProcessGameState& other ) const { return _pGameScope == other._pGameScope && _pSecurity == other._pSecurity; }
+        bool equals( const ProcessGameState& other ) const { return _pGameScope == other._pGameScope && _pSecurity == other._pSecurity && _inputActionCount == other._inputActionCount; }
     };
 } // namespace
 
