@@ -3,10 +3,8 @@
     "_folders": {},
     "_components": {},
     "_watches": {
-        "Audio.OutputUnderruns": "측정 장치 — 오디오 실시간 스레드의 최악 값(문턱 0)을 허브 부하 시나리오에서 판정할 때 읽는다(docs/NEXT.md 측정 오디오 실시간 스레드, 판정은 측정 뒤)",
-        "Audio.RealtimeAllocations": "측정 장치 — 오디오 실시간 스레드의 최악 값(문턱 0)을 허브 부하 시나리오에서 판정할 때 읽는다(docs/NEXT.md 측정 오디오 실시간 스레드, 판정은 측정 뒤)",
-        "Audio.RealtimeLocks": "측정 장치 — 오디오 실시간 스레드의 최악 값(문턱 0)을 허브 부하 시나리오에서 판정할 때 읽는다(docs/NEXT.md 측정 오디오 실시간 스레드, 판정은 측정 뒤)",
-        "Audio.RetireOverflows": "측정 장치 — 오디오 실시간 스레드의 최악 값(문턱 0)을 허브 부하 시나리오에서 판정할 때 읽는다(docs/NEXT.md 측정 오디오 실시간 스레드, 판정은 측정 뒤)",
+        "Audio.OutputUnderruns": "장치 진단 값 — 출력 장치가 있는 기기에서만 뜻이 있어(자동화 러너에는 장치가 없다) 시나리오가 판정하지 않고 성능 보고 때 읽는다",
+        "Audio.RetireOverflows": "진단 값 — 반납 큐가 찬 수는 평소 0 이고, 큐 계약은 단위 테스트 AudioCommandQueueTest 가 본다",
         "Editor.InspectorSkippedRows": "화면 밖 행 수는 창 높이 · 글꼴 · DPI 에 따라 달라 시나리오 값으로 흔들린다. 건너뛰기 판정은 단위 테스트 PropertyGridViewModelTest.OffscreenRowsCarryHeightOnly 가 보고, 통합 측정이 큰 그리드에서 이 값을 읽는다",
         "Editor.LoadingScreenShown": "에디터 체인에서는 앞 단계의 상태를 따라가 값으로 판정하면 흔들린다. 로딩 화면은 시나리오 loadingscreen 이 그림으로 본다",
         "Editor.NetPlayMeasuredLossPercent": "연결의 손실 값은 표본 창을 지나 부드럽게 오르고 netplay.stats 는 한 순간만 읽어 시나리오로 흔들린다. 손실 측정은 단위 테스트 NetEndpointTest 가 본다",

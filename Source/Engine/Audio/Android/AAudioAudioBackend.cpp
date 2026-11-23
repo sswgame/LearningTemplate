@@ -5,6 +5,7 @@
 #include "Core/Log/Logger.h"
 
 #include "Engine/Audio/AudioEngine.h"
+#include "Engine/Audio/AudioRenderThread.h"
 #include "Engine/Audio/AudioService.h"
 
 #include <aaudio/AAudio.h>
@@ -14,12 +15,12 @@ namespace sw
     /** @brief AAudio 백엔드의 상태 전부입니다. */
     struct AAudioAudioBackendImpl
     {
-        AAudioStream* _pStream;      /**< 열린 출력 스트림입니다(시작 전 · 닫은 뒤에는 nullptr). */
-        uint32        _channelCount; /**< 스트림의 채널 수입니다. */
+        AudioRenderThread _renderThread; /**< 엔진을 앞서 렌더하는 스레드입니다(콜백은 링만 읽는다). */
+        AAudioStream*     _pStream;      /**< 열린 출력 스트림입니다(시작 전 · 닫은 뒤에는 nullptr). */
 
-        AAudioAudioBackendImpl()
-            : _pStream{ nullptr }
-            , _channelCount{ 0 }
+        explicit AAudioAudioBackendImpl( AudioEngine& engine )
+            : _renderThread{ engine }
+            , _pStream{ nullptr }
         {
         }
     };
@@ -27,7 +28,7 @@ namespace sw
     /** @brief AAudio 의 C 콜백을 백엔드 멤버로 잇습니다(헤더의 friend). */
     struct AAudioAudioBackendCallback
     {
-        /** @brief 데이터 콜백 — 장치의 실시간 스레드에서 불린다. 엔진이 그 자리에 렌더한다(`AudioEngine::render` 는 장치 콜백용이다). */
+        /** @brief 데이터 콜백 — 장치의 실시간 스레드에서 불린다. 렌더 스레드가 채운 링에서 꺼내기만 한다(`AudioRenderThread::read`). */
         static aaudio_data_callback_result_t onData( AAudioStream* pStream, void* pUserData, void* pAudioData, int32_t frameCount )
         {
             (void)pStream;
@@ -49,7 +50,7 @@ namespace sw
 
     AAudioAudioBackend::AAudioAudioBackend( AudioService& service )
         : _service{ service }
-        , _impl{ make_unique<AAudioAudioBackendImpl>() }
+        , _impl{ make_unique<AAudioAudioBackendImpl>( service.getEngine() ) }
     {
     }
 
@@ -103,13 +104,12 @@ namespace sw
             _impl->_pStream = nullptr;
             return false;
         }
-        _impl->_channelCount = channelCount;
-        result               = AAudioStream_requestStart( _impl->_pStream );
+        _impl->_renderThread.start( channelCount ); // 첫 콜백 앞에 링을 채운다
+        result = AAudioStream_requestStart( _impl->_pStream );
         if ( result != AAUDIO_OK )
         {
             SW_LOG_WARNING_ID( "AAudioAudioBackend.StartFailed", "AAudio output stream could not start (%#). Rendering offline.", AAudio_convertResultToText( result ) );
-            (void)AAudioStream_close( _impl->_pStream );
-            _impl->_pStream = nullptr;
+            stopOutput();
             return false;
         }
         SW_LOG_INFO_ID( "AAudioAudioBackend.StreamReady", "AAudio stream ready (%# Hz, %# channels, %# frames per burst).", audio::kSampleRate, channelCount,
@@ -119,7 +119,7 @@ namespace sw
 
     void AAudioAudioBackend::renderCallback( float32* pOutput, uint32 frameCount )
     {
-        _service.getEngine().render( pOutput, frameCount );
+        _impl->_renderThread.read( pOutput, frameCount );
     }
 
     void AAudioAudioBackend::stopOutput()
@@ -130,6 +130,7 @@ namespace sw
         (void)AAudioStream_requestStop( _impl->_pStream );
         (void)AAudioStream_close( _impl->_pStream );
         _impl->_pStream = nullptr;
+        _impl->_renderThread.stop(); // 콜백이 더 오지 않는다 — 이 뒤로는 엔진을 렌더하는 스레드가 없다
     }
 
     void AAudioAudioBackend::closeDevice()
@@ -142,7 +143,8 @@ namespace sw
         if ( _impl->_pStream == nullptr )
             return 0;
         const int32_t underrunCount = AAudioStream_getXRunCount( _impl->_pStream );
-        return underrunCount > 0 ? static_cast<uint64>( underrunCount ) : 0u; // 음수는 오류 코드다
+        const uint64  deviceCount   = underrunCount > 0 ? static_cast<uint64>( underrunCount ) : 0u; // 음수는 오류 코드다
+        return deviceCount + _impl->_renderThread.getUnderrunCount();
     }
 
     SW_REGISTER_AUDIO_BACKEND( AAudioAudioBackend ); // Android 클라이언트의 장치 백엔드(`AudioService::create` 가 등록표에서 고른다)
