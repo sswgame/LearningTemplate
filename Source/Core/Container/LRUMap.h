@@ -92,6 +92,27 @@ namespace sw
             , _newest{ kNoEntry }
         {
         }
+        LRUMap( const LRUMap& )            = default;
+        LRUMap& operator=( const LRUMap& ) = default;
+        /** @brief 옮겨 온 쪽은 빈 맵이 됩니다(순서의 처음 · 끝이 사라진 엔트리를 가리키지 않게). */
+        LRUMap( LRUMap&& other ) noexcept
+            : _listEntry{ std::move( other._listEntry ) }
+            , _mapKeyToIndex{ std::move( other._mapKeyToIndex ) }
+            , _oldest{ std::exchange( other._oldest, kNoEntry ) }
+            , _newest{ std::exchange( other._newest, kNoEntry ) }
+        {
+        }
+        LRUMap& operator=( LRUMap&& other ) noexcept
+        {
+            if ( this != &other )
+            {
+                _listEntry     = std::move( other._listEntry );
+                _mapKeyToIndex = std::move( other._mapKeyToIndex );
+                _oldest        = std::exchange( other._oldest, kNoEntry );
+                _newest        = std::exchange( other._newest, kNoEntry );
+            }
+            return *this;
+        }
 
         bool   empty() const { return _listEntry.empty(); }
         size_t size() const { return _listEntry.size(); }
@@ -150,6 +171,9 @@ namespace sw
             eraseAt( found->second );
             return true;
         }
+
+        /** @brief 반복자가 가리키는 값입니다 — 걸으며 고치거나, 지우기 전에 꺼내 잠금 밖에서 놓을 때 씁니다(순서는 그대로). */
+        T& valueAt( const_iterator it ) { return _listEntry[it._index]._value; }
 
         /** @brief 반복자가 가리키는 엔트리를 지우고 쓴 순서의 다음을 돌려줍니다. */
         const_iterator erase( const_iterator it )

@@ -282,8 +282,9 @@ namespace sw
 
     void AudioClipCache::clear()
     {
-        ScopedLock<mutex> lock{ _mutex };
-        _mapPathToEntry.clear();
+        LRUMap<hashed_string, Entry, hashed_string::HashFunc> retired; // 잠금을 놓은 뒤 푼다
+        ScopedLock<mutex>                                     lock{ _mutex };
+        std::swap( retired, _mapPathToEntry );
         _cachedBytes = 0;
     }
 
@@ -316,7 +317,7 @@ namespace sw
                 continue;
             }
             _cachedBytes -= it->_value._byteCount;
-            outListEvicted.push_back( it->_value._pClip );
+            outListEvicted.push_back( std::move( _mapPathToEntry.valueAt( it )._pClip ) );
             it = _mapPathToEntry.erase( it );
         }
         // 다 걸었는데도 넘으면 남은 것은 모두 재생 중이다 — 예산을 넘긴 채 둔다

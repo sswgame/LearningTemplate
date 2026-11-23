@@ -179,17 +179,20 @@ namespace sw
         public:
             static constexpr const utf8* kSubsystemName = "AppearanceBakedMeshTable";
 
-            mutex                                                                _mutex;
-            LRUMap<uint64, AppearanceMeshAssemblyInternal::BakedEntry> _mapEntry SW_GUARDED_BY( _mutex );      ///< 쓴 순서를 함께 든다 — 넣기 · 꺼내기가 가장 최근으로 옮긴다
-            uint64 _cachedBytes                                                  SW_GUARDED_BY( _mutex ){ 0 }; ///< 항목 바이트의 합
-            DevCounter                                                           _hitCount;                    ///< `tryGet` 이 내준 횟수(감시 값만 읽는 개발 전용 칸 — 원자라 잠금 밖에서도 된다)
+            using EntryMap = LRUMap<uint64, AppearanceMeshAssemblyInternal::BakedEntry>;
+
+            mutex               _mutex;
+            EntryMap _mapEntry  SW_GUARDED_BY( _mutex );      ///< 쓴 순서를 함께 든다 — 넣기 · 꺼내기가 가장 최근으로 옮긴다
+            uint64 _cachedBytes SW_GUARDED_BY( _mutex ){ 0 }; ///< 항목 바이트의 합
+            DevCounter          _hitCount;                    ///< `tryGet` 이 내준 횟수(감시 값만 읽는 개발 전용 칸 — 원자라 잠금 밖에서도 된다)
 
             // Subsystem — 세울 것이 없다(처음 구운 차림부터 채운다). 예산은 남길 때 읽는다 — 모듈 서브시스템 초기화 때는 게임 서비스가 아직 걸리지 않았을 수 있다.
             SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
             void                shutdownSubsystem() override
             {
+                EntryMap          retired; // 메시를 엔진 서비스보다 먼저, 잠금을 놓은 뒤 놓는다
                 ScopedLock<mutex> lock{ _mutex };
-                _mapEntry.clear(); // 메시를 엔진 서비스보다 먼저 놓는다
+                std::swap( retired, _mapEntry );
                 _cachedBytes = 0;
             }
             const utf8* getSubsystemName() const override { return kSubsystemName; }
@@ -197,14 +200,18 @@ namespace sw
             /** @brief 구운 메시를 모두 놓습니다 — 자동화 단계 사이(`SW_AUTOMATION_STAGE_RESET`)에 새 프로세스처럼 비운다. */
             void clear()
             {
+                EntryMap          retired; // 잠금을 놓은 뒤 놓는다
                 ScopedLock<mutex> lock{ _mutex };
-                _mapEntry.clear();
+                std::swap( retired, _mapEntry );
                 _cachedBytes = 0;
                 _hitCount.reset();
             }
 
-            /** @brief @p budgetBytes 를 넘는 동안 그리는 쪽이 없는 항목을 가장 오래 안 쓴 것부터 뺍니다. @p keepKey 는 방금 넣은 항목이다. */
-            void evictOverBudgetLocked( uint64 keepKey, uint64 budgetBytes ) SW_REQUIRES_LOCK( _mutex )
+            /**
+             * @brief @p budgetBytes 를 넘는 동안 그리는 쪽이 없는 항목을 가장 오래 안 쓴 것부터 뺍니다. @p keepKey 는 방금 넣은 항목이다.
+             * @param outListEvicted 뺀 항목 — 부르는 쪽이 잠금을 놓은 뒤 놓는다(메시 하나가 수 MB 이고 GPU 자원까지 놓는다).
+             */
+            void evictOverBudgetLocked( uint64 keepKey, uint64 budgetBytes, vector<AppearanceMeshAssemblyInternal::BakedEntry>& outListEvicted ) SW_REQUIRES_LOCK( _mutex )
             {
                 // 가장 오래 안 쓴 것부터 한 번 걷는다 — 그리는 쪽이 있는 것만 건너뛴다.
                 auto it = _mapEntry.begin();
@@ -217,6 +224,7 @@ namespace sw
                         continue;
                     }
                     _cachedBytes -= it->_value._byteCount;
+                    outListEvicted.push_back( std::move( _mapEntry.valueAt( it ) ) );
                     it = _mapEntry.erase( it );
                 }
                 // 다 걸었는데도 넘으면 남은 것은 모두 그리는 중이다 — 예산을 넘긴 채 둔다
@@ -384,14 +392,16 @@ namespace sw
         outListMesh.clear();
         AppearanceBakedMeshTable* const pTable = game::findSubsystem<AppearanceBakedMeshTable>();
         if ( pTable == nullptr )
-            return false; // 게임 서비스가 없는 실행 — 표가 없어 매번 굽는다
-        ScopedLock<mutex>           lock{ pTable->_mutex };
-        const Internal::BakedEntry* pEntry = pTable->_mapEntry.touch( key );
+            return false;            // 게임 서비스가 없는 실행 — 표가 없어 매번 굽는다
+        Internal::BakedEntry  stale; // 잠금을 놓은 뒤 놓는다
+        ScopedLock<mutex>     lock{ pTable->_mutex };
+        Internal::BakedEntry* pEntry = pTable->_mapEntry.touch( key );
         if ( pEntry == nullptr )
             return false;
         if ( Internal::isCurrent( *pEntry ) == false )
         {
             pTable->_cachedBytes -= pEntry->_byteCount; // 원본이 다시 읽혔다 — 낡은 결과를 내주지 않고 치운다
+            stale = std::move( *pEntry );
             (void)pTable->_mapEntry.erase( key );
             return false;
         }
@@ -428,13 +438,20 @@ namespace sw
         }
         entry._listSource        = listSource;
         entry._listSourceContent = listSourceContent;
-        ScopedLock<mutex>           lock{ pTable->_mutex };
-        const Internal::BakedEntry* pReplaced = pTable->_mapEntry.find( key );
-        if ( pReplaced != nullptr )
-            pTable->_cachedBytes -= pReplaced->_byteCount; // 같은 차림을 둘이 지었다 — 뒤의 것으로 바꾼다
+        vector<Internal::BakedEntry> listEvicted; // 잠금을 놓은 뒤 놓는다(`entry` 로 나온 옛 항목도 같다)
+        ScopedLock<mutex>            lock{ pTable->_mutex };
         pTable->_cachedBytes += entry._byteCount;
-        pTable->_mapEntry.insertOrAssign( key, std::move( entry ) );
-        pTable->evictOverBudgetLocked( key, budgetBytes );
+        Internal::BakedEntry* pReplaced = pTable->_mapEntry.touch( key );
+        if ( pReplaced != nullptr )
+        {
+            pTable->_cachedBytes -= pReplaced->_byteCount; // 같은 차림을 둘이 지었다 — 뒤의 것으로 바꾼다
+            std::swap( *pReplaced, entry );
+        }
+        else
+        {
+            pTable->_mapEntry.insertOrAssign( key, std::move( entry ) );
+        }
+        pTable->evictOverBudgetLocked( key, budgetBytes, listEvicted );
     }
 
     AppearanceBakedMeshCounters AppearanceBakedMeshCache::readCounters()

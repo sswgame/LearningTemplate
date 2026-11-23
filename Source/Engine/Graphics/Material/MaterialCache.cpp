@@ -173,6 +173,8 @@ namespace sw
 
         const string key = AssetRedirect::toCacheKey( relativePath );
 
+        // 지우는 머티리얼은 잠금을 놓은 뒤 사라진다 — 소멸자가 텍스처 캐시 · 장치를 부른다(잠금은 잎 잠금). 로그도 놓은 뒤에 쓴다.
+        shared_ptr<Material>     pErased;
         UniqueLock<shared_mutex> lock{ _impl->_mutex };
         auto                     it = _impl->_mapEntry.find( key );
         if ( it == _impl->_mapEntry.end() )
@@ -184,13 +186,17 @@ namespace sw
         // 같은 구조의 `TextureCache::release` 도 같은 검사를 한다.
         if ( it->second._refCount == 0 )
         {
+            lock.unlock();
             SW_LOG_WARNING_ID( "MaterialCache.MaterialReleasedMoreTimes", "Material '%#' was released more times than acquired - ignoring.", key.c_str() );
             return;
         }
 
         --it->second._refCount;
         if ( it->second._refCount == 0 )
+        {
+            pErased = std::move( it->second._material );
             _impl->_mapEntry.erase( it );
+        }
     }
 
     size_t MaterialCache::getCachedCount() const

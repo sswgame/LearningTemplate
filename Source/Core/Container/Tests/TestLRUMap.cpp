@@ -119,3 +119,28 @@ SW_TEST_CASE( LRUMapTest, ErasesByItsOwnStringKey )
     SW_EXPECT_EQUAL( size_t( 1 ), map.size() );
     SW_EXPECT_EQUAL( 2, *map.find( "b" ) );
 }
+
+/**
+ * @brief [LRUMapTest] 옮겨 간 쪽은 순서까지 빈 맵이라 다시 쓸 수 있고, 걸으며 고친 값 · 꺼낸 값이 그대로다
+ */
+SW_TEST_CASE( LRUMapTest, MovedFromMapIsEmptyAndReusable )
+{
+    LRUMap<int32, unique_ptr<int32>> source;
+    source.insertOrAssign( 1, make_unique<int32>( 10 ) );
+    source.insertOrAssign( 2, make_unique<int32>( 20 ) );
+
+    LRUMap<int32, unique_ptr<int32>> target( std::move( source ) );
+    SW_EXPECT_TRUE( source.empty() );                 // NOLINT(bugprone-use-after-move): 옮겨 간 맵이 비었음이 계약이다
+    SW_EXPECT_TRUE( source.begin() == source.end() ); // NOLINT(bugprone-use-after-move)
+    source.insertOrAssign( 3, make_unique<int32>( 30 ) );
+    SW_EXPECT_EQUAL( 3, source.begin()->_key );
+
+    const unique_ptr<int32> pTaken = std::move( target.valueAt( target.begin() ) );
+    SW_EXPECT_EQUAL( 10, *pTaken );
+    (void)target.erase( target.begin() );
+    SW_EXPECT_EQUAL( 2, target.begin()->_key );
+
+    std::swap( source, target );
+    SW_EXPECT_EQUAL( 2, source.begin()->_key );
+    SW_EXPECT_EQUAL( 3, target.begin()->_key );
+}
