@@ -422,6 +422,7 @@ namespace sw
         Subscription _brokenRestoreBlock;
         uint8        _bStarted        : 1; ///< `initialize` 가 끝까지 섰다 — 종료 저장 · 세션 명령은 이때만
         uint8        _bDerivedEntered : 1; ///< `onInitialize` 에 들어갔다 — `onShutdown` 은 이때만(파생은 자기 부분 실패를 스스로 거둔다)
+        uint8        _bInputMapLoaded : 1; ///< 엔진의 통합 입력 맵에 이 인스턴스의 묶음을 실었다 — 종료가 비운다(다음 게임 · 하네스가 앞 게임의 바인딩을 들고 돌지 않는다)
         uint8        _bSecuritySet    : 1; ///< 넷 세션에 이 인스턴스의 보안 제공자를 넣었다 — 거둘 때 이 인스턴스가 넣은 것만 뺀다
     };
 } // namespace sw

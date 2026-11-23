@@ -76,6 +76,7 @@ SW_TEST_CASE( AutomationStepOptionsTest, ScreenshotStabilityReadsEnumeratorNames
     SW_REQUIRE_TRUE( step.readProperties( params ).has_value() );
     SW_EXPECT_TRUE( params._stability == AutomationScreenshotStability::None );
 
+    SW_EXPECT_LOG( "Serialization.UnknownEnumerator" );
     step._listAttribute.back()._value = "assets";
     SW_EXPECT_FALSE( step.readProperties( params ).has_value() );
 }
