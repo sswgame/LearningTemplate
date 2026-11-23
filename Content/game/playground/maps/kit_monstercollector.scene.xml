@@ -26,8 +26,7 @@
 			<GameObject _schemaVersion="0" _name="Director" _bActive="true">
 				<_listComponent>
 					<MonsterCollectorDemoComponent _localID="14531788674984355477" _componentName="MonsterCollectorDemoComponent"
-					                               _bActive="true"
-					                               _catalogPath="game/playground/data/kitdemo/demo.monstercollector.xml" />
+					                               _bActive="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>

@@ -131,7 +131,6 @@ namespace sw
         , _pLastSwapchainWriter{ nullptr }
         , _pMainOutputCanvasView{ nullptr }
         , _frameArena{}
-        , _indirectDrawCallCount{ 0 }
         , _pendingPSOBatchCount{ 0 }
         , _disabledInputRoleMask{ 0 }
         , _lastRenderedExtraViewCount{ 0 }
@@ -221,7 +220,6 @@ namespace sw
         _graphTransitionCount = 0;
 
         _pCmd->beginCommandList();
-        _indirectDrawCallCount.store( 0, std::memory_order_relaxed );
         _pendingPSOBatchCount.store( 0, std::memory_order_relaxed );
         _state._deform._animationTimer.updateTimer();
 

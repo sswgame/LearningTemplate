@@ -11,6 +11,7 @@
 #include "Core/Name/TagID.h"
 #include "Core/String/StringBuilder.h"
 
+#include "Editor/Common/Commands/EditorCommandIDs.h"
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Commands/Scene/EditorSceneCommands.h"
 #include "Editor/Common/Commands/Scene/EditorSiblingOrder.h"
@@ -326,7 +327,7 @@ namespace sw::editor
     }
 
     // 오브젝트 메뉴(계층 창의 행 · 빈 곳, 씬 뷰에서 오브젝트 위). 100 단위가 바뀌는 자리에 구분선이 들어간다.
-    SW_EDITOR_CONTEXT_COMMAND( ObjectCreate, "scene.object.create", &EditorSceneObjectCommandsInternal::runCreate, nullptr, Scene, nullptr );
+    SW_EDITOR_CONTEXT_COMMAND( ObjectCreate, editorcommand::kSceneObjectCreate, &EditorSceneObjectCommandsInternal::runCreate, nullptr, Scene, nullptr );
     SW_EDITOR_CONTEXT_COMMAND( ObjectCreateChild, "scene.object.createChild", &EditorSceneObjectCommandsInternal::runCreateChild, &EditorSceneObjectCommandsInternal::hasSingleTargetObject, Scene, nullptr );
     SW_EDITOR_CONTEXT_COMMAND( ObjectCreateFolder, "scene.object.createFolder", &EditorSceneObjectCommandsInternal::runCreateFolder, nullptr, Scene, nullptr );
     SW_EDITOR_CONTEXT_COMMAND( ObjectCreateFolderInside, "scene.object.createFolderInside", &EditorSceneObjectCommandsInternal::runCreateFolderInside, &EditorSceneObjectCommandsInternal::hasSingleTargetObject, Scene, nullptr );

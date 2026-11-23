@@ -29,10 +29,10 @@ namespace sw
         /** @brief 메모리 캐시에 없는 요청 @p desc 의 바이트코드를 얻습니다. 실패해도 오류 글을 담은 결과를 돌려줍니다. */
         [[nodiscard]] virtual ShaderCompileResult load( const ShaderCompileDesc& desc ) const = 0;
         /**
-         * @brief 메모리 캐시 항목의 지문입니다. 넣을 때와 꺼낼 때 같은 값이면 맞다. 0 이면 맞을 수 없다(읽지 못한 소스 · 엔진 설정 사본이 없는 요청).
-         * @details @p desc 는 지금 요청이다 — 그 엔진 설정 사본(`ShaderCompileDesc::_enginePolicy`)이 지문에 들어 설정이 바뀌면 옛 항목이 빗나간다. 로드 워커에서 불려 설정을 직접 읽지 않는다.
+         * @brief 메모리 캐시 항목 @p result 가 요청 @p desc 에 지금도 맞으면 true 입니다. 아니면 다시 얻습니다.
+         * @details @p desc 는 지금 요청이다 — 그 엔진 설정 사본(`ShaderCompileDesc::_enginePolicy`)이 판정에 들어 설정이 바뀌면 옛 항목이 빗나간다. 로드 워커에서 불려 설정을 직접 읽지 않는다.
          */
-        [[nodiscard]] virtual uint64 computeFingerprint( const ShaderCompileResult& result, const ShaderCompileDesc& desc ) const = 0;
+        [[nodiscard]] virtual bool isCurrent( const ShaderCompileResult& result, const ShaderCompileDesc& desc ) const = 0;
         /** @brief 요청 @p desc 의 바인딩 리플렉션을 구합니다. 바이트코드와 같은 출처다(섞으면 레이아웃과 바이트코드가 어긋난다). */
         [[nodiscard]] virtual bool getReflection( ShaderCache& cache, const ShaderCompileDesc& desc, ShaderReflectionData& outReflection ) const = 0;
     };
@@ -40,20 +40,20 @@ namespace sw
     /**
      * @class CookedShaderBytecodeProvider
      * @brief 쿠킹본 정책(배포 · `-cooked-content`)입니다. 바이트코드는 팩의 쿠킹본(`ShaderBinaryLocation`), 리플렉션은 쿠킹된 매니페스트만 읽는다 — 컴파일러가 없다.
-     * @details 팩은 실행 중 바뀌지 않으므로 메모리 캐시 항목은 늘 맞다(지문이 상수).
+     * @details 팩은 실행 중 바뀌지 않으므로 메모리 캐시 항목은 늘 맞다.
      */
     class CookedShaderBytecodeProvider final : public IShaderBytecodeProvider
     {
     public:
         [[nodiscard]] ShaderCompileResult load( const ShaderCompileDesc& desc ) const override;
-        [[nodiscard]] uint64              computeFingerprint( const ShaderCompileResult& result, const ShaderCompileDesc& desc ) const override;
+        [[nodiscard]] bool                isCurrent( const ShaderCompileResult& result, const ShaderCompileDesc& desc ) const override;
         [[nodiscard]] bool                getReflection( ShaderCache& cache, const ShaderCompileDesc& desc, ShaderReflectionData& outReflection ) const override;
     };
 
     /**
      * @class LiveShaderBytecodeProvider
      * @brief 소스 정책(개발 실행)입니다. 바이트코드는 실행 중 컴파일(컴파일러가 셰이더 DDC 를 먼저 본다), 리플렉션은 그 바이트코드에서 만든다 — 쿠킹본을 읽지 않는다.
-     * @details 메모리 캐시 지문은 소스와 그 컴파일이 연 헤더의 내용이다(`ShaderCookStamp::computeSourceFingerprint`) — 파일을 고치면 다음 요청이 다시 컴파일한다.
+     * @details 메모리 캐시 항목은 그 컴파일의 기록(`CookRecord`)이 새것일 때만 맞다(`ShaderCompiler::isResultCurrent`) — 파일을 고치면 다음 요청이 다시 컴파일한다.
      */
     class LiveShaderBytecodeProvider final : public IShaderBytecodeProvider
     {
@@ -61,7 +61,7 @@ namespace sw
         /** @brief @p bDebugCodegen 은 기동에서 뜬 디버그 코드젠 깃발입니다(`ShaderCache::isLiveDebugCodegen`) — 컴파일 워커가 진단 정책을 직접 읽지 않는다. */
         explicit LiveShaderBytecodeProvider( bool bDebugCodegen );
         [[nodiscard]] ShaderCompileResult load( const ShaderCompileDesc& desc ) const override;
-        [[nodiscard]] uint64              computeFingerprint( const ShaderCompileResult& result, const ShaderCompileDesc& desc ) const override;
+        [[nodiscard]] bool                isCurrent( const ShaderCompileResult& result, const ShaderCompileDesc& desc ) const override;
         [[nodiscard]] bool                getReflection( ShaderCache& cache, const ShaderCompileDesc& desc, ShaderReflectionData& outReflection ) const override;
 
     private:

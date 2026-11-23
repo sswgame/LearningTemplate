@@ -12,9 +12,10 @@
 #include "DevTools/Client/Shader/LiveShaderSubsystem.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
+#include "Engine/Content/AssetPaths.h"
+#include "Engine/Content/ContentHash.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
-#include "Engine/Graphics/Shader/Compile/ShaderCookStamp.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
 #include "Engine/Graphics/Shader/Reflection/ShaderReflectionLibrary.h"
 
@@ -73,10 +74,11 @@ namespace sw
         if ( _bInitialized.load( std::memory_order_acquire ) == false || engine::areEngineServicesBound() == false )
             return;
 
-        // 파일 내용 해시 캐시와 스탬프 읽기 결과를 한 번 버린다("전부 다시 본다" 는 약속). 컴파일 캐시는 항목마다 연 헤더의 내용을 직접 보고 낡음을 아니 이것이 없어도 편집은 반영되지만,
+        // 파일 내용 해시 캐시와 경로 캐시를 한 번 버린다("전부 다시 본다" 는 약속). 컴파일 캐시는 항목마다 연 헤더의 내용을 직접 보고 낡음을 아니 이것이 없어도 편집은 반영되지만,
         // 같은 시각 · 같은 크기로 다시 쓴 파일은 내용 해시 캐시가 놓칠 수 있다. 반대로 컴파일 캐시를 통째로 우회하지는 않는다. 그러면 이번
         // 편집과 무관한 셰이더까지 모두 다시 컴파일한다. 항목이 자기 헤더만 보고 거른다.
-        ShaderCookStamp::invalidateSharedHeaderCache();
+        ContentHash::clearCache();
+        engine::getSubsystem<AssetPaths>().clearPathCache(); // 없던 헤더가 생긴 것도 다시 본다(기록의 "없음" 입력)
 
         // 등록 목록을 따로 두지 않는다. **이 실행에서 실제로 컴파일된 셰이더**가 곧 리로드 대상이다
         // (따로 채우는 목록은 채우는 쪽을 빠뜨리면 단축키가 빈 목록을 돈다).

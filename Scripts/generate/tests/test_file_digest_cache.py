@@ -16,6 +16,7 @@ from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
+from generate.engine_abi_stamp import drop_comments  # noqa: E402
 from generate.file_digest_cache import FileDigestCache  # noqa: E402
 
 
@@ -59,6 +60,13 @@ class FileDigestCacheTest(unittest.TestCase):
             self.assertEqual(list_read, [])   # 안 바뀐 파일은 읽지 않는다
             third.save()
             self.assertEqual(set(json.loads(cache_path.read_text(encoding="utf-8"))["files"]), {"b.h"})   # 지운 a.h 의 줄은 남지 않는다
+
+    def test_engine_abi_digest_ignores_only_comments(self) -> None:
+        code = b"#pragma once\nstruct A\n{\n    int _count{ 1'000 };\n    const char* _url{ \"http://a/*b*/\" };\n    const char* _raw{ R\"x( // )x\" };\n    char _quote{ '\\'' };\n};\n"
+        commented = b"// head\n#pragma once\nstruct A // why\n{\n\n    int _count{ 1'000 }; ///< one\n    /* block\n       two */\n    const char* _url{ \"http://a/*b*/\" };\n    const char* _raw{ R\"x( // )x\" };\n    char _quote{ '\\'' }; // it's\n};\n"
+        self.assertEqual(drop_comments(code), drop_comments(commented))
+        for before, after in ((b"1'000", b"1'001"), (b"http://a", b"http://c"), (b"( // )", b"( /* )"), (b"_quote", b"_mark")):
+            self.assertNotEqual(drop_comments(code), drop_comments(code.replace(before, after)))
 
 
 if __name__ == "__main__":

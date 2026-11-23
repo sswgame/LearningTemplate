@@ -258,7 +258,7 @@ namespace sw
         const IShaderBytecodeProvider& provider = getProvider();
         string                         cacheKey = inCacheKey;
 
-        // 0) 인메모리 캐시 조회 — 넣을 때의 지문(공급자가 센다 - 실행 중 컴파일은 소스와 연 헤더의 내용)이 지금도 같아야 맞다. 파일을 읽는 계산이라 잠금 밖에서 한다(항목을 복사해 나온다).
+        // 0) 인메모리 캐시 조회 — 공급자가 지금도 맞다고 할 때만(실행 중 컴파일은 기록의 입력이 모두 그대로인지). 파일을 보는 일이라 잠금 밖에서 한다.
         ShaderCacheEntry cachedEntry{};
         bool             bCached = false;
         {
@@ -272,8 +272,7 @@ namespace sw
         }
         if ( bCached )
         {
-            const uint64 currentFingerprint = provider.computeFingerprint( cachedEntry._result, desc );
-            if ( currentFingerprint != 0 && currentFingerprint == cachedEntry._sourceFingerprint )
+            if ( provider.isCurrent( cachedEntry._result, desc ) )
             {
                 _memoryHitCount.add();
                 return cachedEntry._result;
@@ -289,7 +288,7 @@ namespace sw
         }
         if ( result._bSuccess )
         {
-            ShaderCacheEntry  entry = makeEntry( desc, result );
+            ShaderCacheEntry  entry{ desc, 0, result };
             ScopedLock<mutex> lock{ _mutexCache };
             // 읽는 동안 재컴파일이 바꾼 항목은 덮지 않는다(답은 `ShaderLoadOperation::runLoad` 가 그 항목으로 바꾼다).
             const auto iter = _mapCache.find( cacheKey );
@@ -353,7 +352,7 @@ namespace sw
             SW_LOG_ERROR_ID( "ShaderCache.ReplaceWithFailedResult", "Shader '%#' (%#): only a successful compile result can replace a cache entry", desc._source.c_str(), desc._entryPoint.c_str() );
             return false;
         }
-        ShaderCacheEntry  entry    = makeEntry( desc, result );
+        ShaderCacheEntry  entry{ desc, 0, result };
         string            cacheKey = makeCacheKey( desc );
         ScopedLock<mutex> lock{ _mutexCache };
         entry._replaceSerial = ++_replaceCount;
@@ -361,15 +360,6 @@ namespace sw
             (void)_requestLog.add( desc ); // 이미 적은 요청이면 할 일이 없다
         _mapCache.insert_or_assign( std::move( cacheKey ), std::move( entry ) );
         return true;
-    }
-
-    ShaderCacheEntry ShaderCache::makeEntry( const ShaderCompileDesc& desc, const ShaderCompileResult& result ) const
-    {
-        ShaderCacheEntry entry{};
-        entry._sourceFingerprint = getProvider().computeFingerprint( result, desc );
-        entry._desc              = desc;
-        entry._result            = result;
-        return entry;
     }
 
     void ShaderCache::writeRequestLog()

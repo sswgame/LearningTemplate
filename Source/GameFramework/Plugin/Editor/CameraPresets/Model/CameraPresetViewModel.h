@@ -53,6 +53,8 @@ namespace sw::editor
         void selectPreset( size_t presetIndex );
         /** @brief 슬라이더가 직접 고치는 대상 요(도)입니다. 고쳤으면 `markViewportDirty` 를 부릅니다. */
         float32& editTargetYawDegrees() { return _targetYawDegrees; }
+        /** @brief 대상 요의 기본값(도)입니다 — 대상이 +Z 를 본다. */
+        static constexpr float32 kDefaultTargetYawDegrees = 0.0f;
         /** @brief 다음 `takeViewportPose` 가 카메라를 다시 놓게 합니다. */
         void          markViewportDirty() { _bViewportDirty = SW_TRUE; }
         const string& getStatus() const { return _status; }

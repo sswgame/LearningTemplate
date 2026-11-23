@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="f950da7490c81a828784dcdb2cba999c"?>
-<!-- 몸 동작 무대(maps/bodycustomization)의 날씨 — skyLight 는 직사광에 곱하는 하늘 투과(CharacterBodyDynamicsComponent::_skyLightValue — 맑음 1, 흐림 · 비 · 안개는 낮다),
+<!-- 몸 동작 무대(maps/bodycustomization)의 날씨 — skyLight 는 하늘 투과(맑음 1, 흐림 · 비 · 안개는 낮다)이고 해 세기의 배율이 된다(SceneBinding SunIntensity — 0.09 는 해가 다 가려도 남는 산란광). 눈이 재는 밝기(Body.EyeLuminance)는 그 해를 읽는다,
      wetness 는 비의 세기다. 시나리오(bodydynamics)가 cheat.weather 로 바꾸므로 맑음만 고를 무게를 갖는다. -->
 <!-- 비(wetness)는 지면 머티리얼 묶음에도 간다 — Weather.x 젖음 · Rain.x 빗방울 링(판 상태가 쓴다, WeatherMaterialWriter). -->
 <WeatherCatalog transition="0.5" materialCollection="engine/materials/weather.matparams.xml">
 	<MaterialBinding parameter="Weather" valueX="wetness"/>
 	<MaterialBinding parameter="Rain" valueX="wetness"/>
+	<SceneBinding target="SunIntensity" value="skyLight" atZero="0.09" atOne="1"/>
 	<Weather id="clear" weight="1" minDuration="100000" maxDuration="100000">
 		<Values skyLight="1" wetness="0"/>
 	</Weather>

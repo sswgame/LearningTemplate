@@ -2,7 +2,6 @@
 
 #include "Editor/Panels/Catalog/CatalogPanel.h"
 
-#include "Core/Concurrency/mutex.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
@@ -17,10 +16,10 @@
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
+#include "Editor/Panels/Catalog/Model/CatalogValidation.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
-#include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Localization/LocText.h"
@@ -32,54 +31,6 @@ namespace sw::editor
 {
     namespace
     {
-        /** @brief 검증이 도는 동안 **이 호출의** 로더가 남기는 경고 · 오류 줄을 모읍니다. 다른 스레드의 줄이 섞이면 멀쩡한 파일이 실패로 보이므로 추적 id 로 가른다. */
-        class CatalogWarningCollector
-        {
-        public:
-            CatalogWarningCollector()
-                : _traceID{ LogTraceID::makeRandom() }
-                , _mutex{}
-                , _listWarning{}
-                , _subscription{}
-            {
-                _subscription = Logger::registerGlobalListener( SW_DELEGATE_METHOD( LogWrittenDelegate, &CatalogWarningCollector::onLog, this ) );
-            }
-
-            CatalogWarningCollector( const CatalogWarningCollector& )            = delete;
-            CatalogWarningCollector& operator=( const CatalogWarningCollector& ) = delete;
-
-            /** @brief 지금 스레드의 로그 문맥에 이 추적 id 를 얹은 값입니다. `ScopedLogContext` 에 넘깁니다. */
-            [[nodiscard]] LogContext makeContext() const
-            {
-                LogContext context = LogContext::getCurrent();
-                context._traceID   = _traceID;
-                return context;
-            }
-
-            vector<string> take()
-            {
-                ScopedLock<mutex> lock{ _mutex };
-                return std::move( _listWarning );
-            }
-
-        private:
-            void onLog( const LogEntry& entry )
-            {
-                if ( entry._level != LogLevel::Warning && entry._level != LogLevel::Error )
-                    return;
-                if ( entry._context._traceID != _traceID )
-                    return;
-                ScopedLock<mutex> lock{ _mutex };
-                _listWarning.push_back( entry._message );
-            }
-
-        private:
-            LogTraceID     _traceID;
-            mutex          _mutex;
-            vector<string> _listWarning;
-            Subscription   _subscription; ///< 마지막 멤버라 먼저 풀린다 — 콜백이 만지는 `_mutex` · `_listWarning` 보다 먼저
-        };
-
         struct CatalogPanelInternal
         {
             /** @brief 열린 카탈로그 편집기입니다. 닫혔으면 nullptr 입니다(감시 값이 읽는다). */
@@ -471,14 +422,8 @@ namespace sw::editor
             _session.setStatus( "No registered kind - nothing to validate with" );
             return;
         }
-        bool           bLoaded = false;
         vector<string> listWarning;
-        {
-            CatalogWarningCollector collector;
-            const ScopedLogContext  context{ collector.makeContext() };
-            bLoaded     = AssetTypeRegistry::validateLoad( *pKind, AssetID{ _session.getAssetID() } );
-            listWarning = collector.take();
-        }
+        const bool     bLoaded = CatalogValidation::validate( *pKind, _session.getAssetID(), listWarning );
         _session.onValidated( bLoaded, std::move( listWarning ) );
         if ( _session.getValidationState() == CatalogFileSession::ValidationState::Passed )
             SW_LOG_INFO_ID( "Catalog.ValidationPassed", "Catalog validation passed (%#)", kindLabel.c_str() );

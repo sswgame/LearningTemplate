@@ -1,7 +1,7 @@
 /**
  * @file ShaderRequestLog.h
  * @brief 실행이 쓴 셰이더 컴파일 요청을 대상 형식별로 중복 없이 모은 기록과, 그 기록만 다시 컴파일해 셰이더 DDC 를 데우는 길입니다.
- * @details 셰이더 · 공용 hlsli 를 고친 묶음은 다음 실행이 셰이더마다 캐시 미스로 다시 컴파일한다(헤더 의존 기록 — `ShaderCookStamp::readIncludeRecord`).
+ * @details 셰이더 · 공용 hlsli 를 고친 묶음은 다음 실행이 셰이더마다 캐시 미스로 다시 컴파일한다(헤더 의존 기록 — `CookRecord::isFresh`).
  *          시간을 재는 실행(묶음 검증의 시나리오 체인) 안에서 그 컴파일이 일어나지 않게, 지난 실행의 요청을 기록해 두고 다음 검증이 시간을 재기 전에 그것만 컴파일한다.
  *          전체 굽기(`--cook-shaders`)는 모든 퍼뮤테이션이라 수만 개지만 실행이 실제로 쓰는 것은 백엔드당 수백 개다.
  *          상용 엔진: 언리얼 Shader Pipeline Cache(실행이 PSO 를 기록하고 다음 실행 · 쿠킹이 미리 컴파일), 유니티 ShaderVariantCollection(쓴 변형을 모아 미리 워밍).

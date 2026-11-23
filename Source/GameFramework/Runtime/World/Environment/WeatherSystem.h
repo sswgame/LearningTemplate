@@ -83,11 +83,65 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 날씨가 배율로 움직이는 씬의 값입니다 — 배율은 씬 데이터에 적은 값에 곱합니다. */
+    ENUM()
+    enum class WeatherSceneTarget : uint8
+    {
+        SunIntensity = 0, ///< 켜진 방향광의 세기(`LightComponent::setIntensityScale`)
+        SkyIntensity,     ///< 하늘의 세기 — 스카이 라이트 · 간접광도 같은 값을 본다(`SkyComponent::setIntensityScale`)
+        FogDensity,       ///< 안개의 밀도(`FogComponent::setDensityScale`)
+        WindStrength,     ///< 흔들림 세기 — 식생(`WindComponent::setStrengthScale`)
+        WindSpeed,        ///< 풍속 — 돛 · 천의 힘(`WindComponent::setSpeedScale`)
+    };
+
+    /**
+     * @brief 날씨 값 하나가 씬의 값 하나를 몇 배로 만드는지입니다(`<SceneBinding target="SunIntensity" value="skyLight" atZero="0.1" atOne="1"/>`).
+     * @details 배율은 날씨 값 0 에서 `atZero`, 1 에서 `atOne` 이고 그 사이는 직선이다(0..1 밖은 자른다). 같은 대상에 여럿이면 곱한다. 언리얼의 날씨 블루프린트가 해 · 하늘 · 안개 · 바람을
+     *          한 자산의 값으로 돌리는 자리다 — 여기서는 카탈로그가 그 표다(장면마다 잇는 컴포넌트를 놓지 않는다).
+     */
+    REFLECT()
+    struct SW_GF_API WeatherSceneBinding
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required, Tooltip = "Scene value the weather scales" )
+        WeatherSceneTarget _target{ WeatherSceneTarget::SunIntensity };
+        PROPERTY( Required, Tooltip = "Weather value (<Values>) that drives the scale" )
+        hashed_string _value{};
+        PROPERTY( Min = 0.0, Tooltip = "Scale while the weather value is 0" )
+        float32 _atZero{ 1.0f };
+        PROPERTY( Min = 0.0, Tooltip = "Scale while the weather value is 1" )
+        float32 _atOne{ 1.0f };
+    };
+
+    /**
+     * @brief 날씨 값 하나가 내는 반복 소리입니다(`<SoundBinding event="Weather.Rain" value="rain" parameter="WeatherRain" opennessParameter="WeatherOpenness"/>`).
+     * @details 값이 0 보다 큰 동안 이벤트(반복, 2D)를 내고 값을 게임 파라미터(RTPC)로 건다 — 크기 · 음색은 이벤트 라이브러리의 곡선이 정한다. 듣는 자리의 하늘 열림(0 실내 .. 1 트임,
+     *          `WeatherShelter`)도 파라미터로 걸어 실내에서 작고 먹먹하게 만든다.
+     */
+    REFLECT()
+    struct SW_GF_API WeatherSoundBinding
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required, Tooltip = "Looping audio event that plays while the weather value is above 0" )
+        hashed_string _event{};
+        PROPERTY( Required, Tooltip = "Weather value (<Values>) that starts the sound and drives its parameter" )
+        hashed_string _value{};
+        PROPERTY( Required, Tooltip = "Audio parameter (RTPC) that receives the weather value" )
+        hashed_string _parameter{};
+        PROPERTY( Tooltip = "Audio parameter (RTPC) that receives the sky openness at the listener, 0 indoors .. 1 open sky (empty: the sound ignores roofs)" )
+        hashed_string _opennessParameter{};
+    };
+} // namespace sw
+
+namespace sw
+{
     /**
      * @class WeatherCatalog
      * @brief 날씨 카탈로그(`<WeatherCatalog>`)를 읽습니다.
      * @details `materialCollection` 과 `<MaterialBinding>` 은 날씨 값을 지면 머티리얼이 읽는 파라미터 묶음 칸에 잇는다 — 날씨를 연 판 상태가 늘 쓴다(`WeatherMaterialWriter`).
-     *          바인딩이 있는데 묶음이 없으면 읽기 오류다.
+     *          바인딩이 있는데 묶음이 없으면 읽기 오류다. `<SceneBinding>` 은 해 · 하늘 · 안개 · 바람을, `<SoundBinding>` 은 빗소리 · 바람 소리를 날씨에 잇는다(`WeatherSceneWriter`).
      * @code
      *     <WeatherCatalog transition="60" materialCollection="engine/materials/weather.matparams.xml">
      *         <MaterialBinding parameter="Weather" valueX="wetness"/>
@@ -124,17 +178,25 @@ namespace sw
         const string& getMaterialCollection() const { return _materialCollection; }
         /** @brief 날씨 값 → 묶음 칸 바인딩입니다(`<MaterialBinding>`). */
         const vector<WeatherMaterialBinding>& getMaterialBindings() const { return _listMaterialBinding; }
+        /** @brief 날씨 값 → 씬 값 배율 바인딩입니다(`<SceneBinding>`). */
+        const vector<WeatherSceneBinding>& getSceneBindings() const { return _listSceneBinding; }
+        /** @brief 날씨 값 → 반복 소리 바인딩입니다(`<SoundBinding>`). */
+        const vector<WeatherSoundBinding>& getSoundBindings() const { return _listSoundBinding; }
 
     private:
         static constexpr const utf8* kXMLRootName = "WeatherCatalog"; ///< 루트 원소(`XMLCatalog`)
         uint32                       loadRoot( const XMLCatalogRoot& root, string_view sourceName );
         [[nodiscard]] bool           loadWeather( const XMLNode& node, string_view sourceName );
         [[nodiscard]] bool           loadMaterialBinding( const XMLNode& node, string_view sourceName );
+        [[nodiscard]] bool           loadSceneBinding( const XMLNode& node, string_view sourceName );
+        [[nodiscard]] bool           loadSoundBinding( const XMLNode& node, string_view sourceName );
 
     private:
         float32                        _transitionTime{ 60.0f };
         string                         _materialCollection{};
         vector<WeatherMaterialBinding> _listMaterialBinding{};
+        vector<WeatherSceneBinding>    _listSceneBinding{};
+        vector<WeatherSoundBinding>    _listSoundBinding{};
     };
 
     /** @brief 공유 캐시는 이 카탈로그의 .cpp 가 인스턴스화합니다. 쓰는 쪽은 사본을 읽지 않고 `SharedAssetCache<WeatherCatalog>::acquire` 로 한 벌을 받습니다. */

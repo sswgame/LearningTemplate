@@ -30,9 +30,10 @@ namespace sw::editor
 
         PreferencesPanel();
 
-        const utf8* getPanelTitle() const override { return "Preferences"; }
-        void        drawContent() override;
-        void        shutdown() override;
+        const utf8*   getPanelTitle() const override { return "Preferences"; }
+        void          drawContent() override;
+        void          shutdown() override;
+        CommandStack* findPanelCommandStack() override { return &_model.getCommandStack(); }
 
         /** @brief 지난 프레임 목록에 보인 섹션 수입니다(감시 값 `Editor.PreferencesVisibleSections`). */
         static uint32 getVisibleSectionCount();

@@ -55,8 +55,6 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        /** @brief 공기 밀도(kg/m³, 해수면 15 °C)입니다. 돛의 동압 ½ρv² 에 씁니다. */
-        static constexpr float32 kAirDensity = 1.225f;
         /** @brief 기울기 최댓값을 모으는 창(초)입니다. 감시 값은 지난 창과 지금 창의 큰 값이라 늘 이 길이 이상 두 배 이하를 덮습니다. */
         static constexpr float32 kPeakWindowSeconds = 4.0f;
 

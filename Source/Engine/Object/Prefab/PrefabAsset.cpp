@@ -341,19 +341,21 @@ namespace sw
             }
 
             /**
-             * @brief 저장할 XML 본문입니다 — 형식 기본값과 같은 칸을 뺀 글이고, 빼고 읽은 값이 뺀 전과 같을 때만 그것을 씁니다.
+             * @brief 저장할 본문(@p format 의 글)입니다 — 형식 기본값과 같은 칸을 뺀 글이고, 빼고 읽은 값이 뺀 전과 같을 때만 그것을 씁니다.
              * @details 대조는 데이터를 지키는 자리다. 칸의 초기값이 다른 칸에 달려 있으면(접근자 칸) 뺀 글이 다르게 읽힐 수 있다 — 그때는 모든 칸을 쓰고 경고한다.
-             *          shortcut: JSON 저장은 칸을 빼지 않는다, JSON 프리팹이 생기면 같은 비교를 JSON 값에 더한다.
              */
-            static string makeBodyWithoutDefaults( const PrefabAsset& asset, const string& fullBody )
+            static string makeBodyWithoutDefaults( const PrefabAsset& asset, const string& fullBody, PrefabStateFormat format )
             {
-                string trimmedBody;
-                if ( fullBody.empty() || PrefabOverrides::omitDefaultValues( fullBody, trimmedBody ) == false )
+                if ( fullBody.empty() )
+                    return fullBody;
+                string     trimmedBody;
+                const bool bTrimmed = format == PrefabStateFormat::JSON ? PrefabOverrides::omitDefaultValuesFromJSON( fullBody, trimmedBody ) : PrefabOverrides::omitDefaultValues( fullBody, trimmedBody );
+                if ( bTrimmed == false )
                     return fullBody;
                 PrefabAsset trimmedAsset;
                 string      fullState;
                 string      trimmedState;
-                if ( trimmedAsset.setStateForCompare( asset.getName(), trimmedBody ) && PrefabOverrides::makeBaseState( asset, fullState ) && PrefabOverrides::makeBaseState( trimmedAsset, trimmedState ) && fullState == trimmedState )
+                if ( trimmedAsset.setStateForCompare( asset.getName(), trimmedBody, format ) && PrefabOverrides::makeBaseState( asset, fullState ) && PrefabOverrides::makeBaseState( trimmedAsset, trimmedState ) && fullState == trimmedState )
                     return trimmedBody;
                 SW_LOG_WARNING_ID( "PrefabAsset.DefaultOmitMismatch", "Prefab '%#' reads differently without its default values - all fields are written", asset.getName() );
                 return fullBody;
@@ -849,11 +851,11 @@ namespace sw
         return PrefabOverrides::appendPartOverrides( outOverrideXML, listPart );
     }
 
-    bool PrefabAsset::setStateForCompare( const string_view name, const string_view stateXML )
+    bool PrefabAsset::setStateForCompare( const string_view name, const string_view stateText, const PrefabStateFormat format )
     {
         _name        = string{ name };
-        _stateData   = string{ stateXML };
-        _stateFormat = PrefabStateFormat::XML;
+        _stateData   = string{ stateText };
+        _stateFormat = format;
         _bValid      = _stateData.empty() ? SW_FALSE : SW_TRUE;
         return _bValid == SW_TRUE;
     }
@@ -992,7 +994,7 @@ namespace sw
         }
 
         const string fullBody = ( _stateFormat == PrefabStateFormat::XML ) ? _stateData : convertState( PrefabStateFormat::XML );
-        const string xmlBody  = PrefabAssetInternal::makeBodyWithoutDefaults( *this, fullBody );
+        const string xmlBody  = PrefabAssetInternal::makeBodyWithoutDefaults( *this, fullBody, PrefabStateFormat::XML );
         if ( xmlBody.empty() == false )
         {
             XMLDocument bodyDoc;
@@ -1086,7 +1088,8 @@ namespace sw
             return true;
         }
 
-        string jsonStr = ( _stateFormat == PrefabStateFormat::JSON ) ? _stateData : convertState( PrefabStateFormat::JSON );
+        const string fullBody = ( _stateFormat == PrefabStateFormat::JSON ) ? _stateData : convertState( PrefabStateFormat::JSON );
+        string       jsonStr  = PrefabAssetInternal::makeBodyWithoutDefaults( *this, fullBody, PrefabStateFormat::JSON );
         if ( jsonStr.empty() )
         {
             // 상태를 읽지 못했다(타입이 빠진 본문 등). 로더가 읽을 수 없는 파일을 쓰지 않는다 — XML 로는 그대로 저장할 수 있다.
@@ -1126,7 +1129,7 @@ namespace sw
 
     bool PrefabAsset::saveToFile( const AbsolutePath& absPath ) const
     {
-        // 형식은 경로가 정한다 — 쿠커(`cookAllPrefabs`)와 로더(`loadPrefab`)가 읽는 규칙과 같다. 늘 XML 로 쓰면 `.prefab.json` 에 XML 이
+        // 형식은 경로가 정한다 — 쿠커(`PrefabCooker::cookAll`)와 로더(`loadPrefab`)가 읽는 규칙과 같다. 늘 XML 로 쓰면 `.prefab.json` 에 XML 이
         // 들어가 그 프리팹이 다시는 읽히지 않는다. 프리팹이 아닌 경로(씬 · 머티리얼)는 덮지 않는다.
         if ( StringUtil::endsWith( absPath.str(), ".prefab.json", true ) )
             return saveToJSONFile( absPath );

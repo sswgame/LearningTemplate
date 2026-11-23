@@ -335,11 +335,6 @@ namespace sw
         engine::getSubsystem<ShaderCache>().getReflectionManifests().clear();
     }
 
-    uint32 ShaderReflectionLibrary::getCachedManifestCount()
-    {
-        return engine::getSubsystem<ShaderCache>().getReflectionManifests().getCount();
-    }
-
     uint32 ShaderReflectionLibrary::getCacheGeneration()
     {
         return engine::getSubsystem<ShaderCache>().getReflectionManifests().getGeneration();
@@ -353,11 +348,5 @@ namespace sw
         ScopedLock<mutex> lock{ _mutex };
         _mapManifest = unordered_map<string, ShaderReflectionLibrary::EntryMap>{};
         _generation.fetch_add( 1u, std::memory_order_acq_rel );
-    }
-
-    uint32 ShaderReflectionManifestCache::getCount()
-    {
-        ScopedLock<mutex> lock{ _mutex };
-        return static_cast<uint32>( _mapManifest.size() );
     }
 } // namespace sw

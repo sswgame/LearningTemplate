@@ -1,0 +1,28 @@
+<?asset guid="e41d6b92c07f4f31a85be9d3720c16ab"?>
+<!-- 바람 소리(이벤트 Weather.Wind) — 흰 잡음을 낮은 대역으로 거르고, 세지면(WeatherWind) 대역이 올라간다. 받은 소리 파일이 아니라 그래프가 만든다. -->
+<AudioGraphDef _output="Level" _durationSeconds="60">
+	<_listNode>
+		<AudioGraphNodeDef _name="Source" _type="Noise" />
+		<AudioGraphNodeDef _name="Howl" _type="BandPass">
+			<_listInput>
+				<item>Source</item>
+			</_listInput>
+			<_listParameter>
+				<AudioGraphParameterDef _name="frequencyHz" _value="300" _parameter="WeatherWind">
+					<_listPoint>
+						<AudioCurvePoint _x="0" _y="180" />
+						<AudioCurvePoint _x="1" _y="620" />
+					</_listPoint>
+				</AudioGraphParameterDef>
+			</_listParameter>
+		</AudioGraphNodeDef>
+		<AudioGraphNodeDef _name="Level" _type="Gain">
+			<_listInput>
+				<item>Howl</item>
+			</_listInput>
+			<_listParameter>
+				<AudioGraphParameterDef _name="volumeDb" _value="-10" />
+			</_listParameter>
+		</AudioGraphNodeDef>
+	</_listNode>
+</AudioGraphDef>

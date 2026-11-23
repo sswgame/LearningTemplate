@@ -1,6 +1,6 @@
 /**
  * @file ContentFolderWatchService.h
- * @brief 콘텐츠 폴더 감시 확장점(`IContentFolderWatch`)의 개발 도구 구현입니다 — 감시마다 파일 감시 분배기 하나를 든다.
+ * @brief 콘텐츠 폴더 감시 확장점(`IContentFolderWatch`)의 개발 도구 구현입니다 — 파일 감시 창구(`FileWatchService`)에 폴더 구독을 건다.
  */
 #pragma once
 #include "Core/Container/IDAllocator.h"
@@ -14,7 +14,7 @@
 
 namespace sw
 {
-    class FileWatchDispatcher;
+    class FileWatchService;
     struct FileChangeEvent;
 
     /**
@@ -24,13 +24,14 @@ namespace sw
     class SW_DEVTOOLS_API ContentFolderWatchService final : public IContentFolderWatch
     {
     public:
-        ContentFolderWatchService();
+        /** @brief @p fileWatch 는 이것보다 오래 산다(호스트 개발 계층). */
+        explicit ContentFolderWatchService( FileWatchService& fileWatch );
         ~ContentFolderWatchService();
         ContentFolderWatchService( const ContentFolderWatchService& )            = delete;
         ContentFolderWatchService& operator=( const ContentFolderWatchService& ) = delete;
 
         [[nodiscard]] Subscription watchAssetFolder( string_view folderID, const vector<string>& listExtension, const ChangedDelegate& onChanged ) override;
-        /** @brief 감시마다 OS 변경을 꺼내고, 바뀐 감시의 알림을 부릅니다(게임 스레드, 프레임 끝). */
+        /** @brief 이번 프레임에 바뀐 감시의 알림을 부릅니다(게임 스레드, 프레임 끝 — `FileWatchService::update` 뒤). */
         void update();
 
     private:
@@ -38,6 +39,7 @@ namespace sw
         void releaseWatch( uint64 id );
 
     private:
+        FileWatchService&         _fileWatch;
         vector<unique_ptr<Watch>> _listWatch;
         IDAllocator<uint64>       _watchIDAllocator;
         SubscriptionList          _subscriptions{ SW_DELEGATE_METHOD( SubscriptionList::ReleaseFunction, &ContentFolderWatchService::releaseWatch, this ) }; ///< 맨 끝 — 먼저 사라져 남은 구독을 끊는다

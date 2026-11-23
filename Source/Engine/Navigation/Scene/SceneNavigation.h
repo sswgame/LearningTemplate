@@ -93,18 +93,15 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 디버그 그리기에서 무엇을 그릴지입니다(`gv_navDebugDraw` 의 비트). */
+    /** @brief 디버그 그리기에서 무엇을 그릴지입니다(디버그 HUD 범주 `navmesh` · `navagents` · `navobstacles` · `navstream` 이 고른다). */
     struct NavDebugDrawFlag
     {
         static constexpr uint32 kMesh     = 1u << 0; ///< 폴리곤 테두리
         static constexpr uint32 kPath     = 1u << 1; ///< 에이전트 경로(모퉁이)
         static constexpr uint32 kVelocity = 1u << 2; ///< 에이전트 실제 · 원한 속도
         static constexpr uint32 kObstacle = 1u << 3; ///< 장애물 발자국
-        /** @brief 걷는 면 · 에이전트 경로를 씬의 메시로(편집기 없는 게임 화면 · 스크린샷에도 보인다 — 디버그 선은 편집기 뷰포트만 그린다). */
-        static constexpr uint32 kSolidView = 1u << 4;
         /** @brief 스트리밍 월드의 대략 그래프(클러스터 · 간선, 타일이 오른 클러스터는 초록 · 읽는 중 노랑 · 내려감 회색)와 에이전트의 먼 경로(중간 목표 · 대략 점). */
-        static constexpr uint32 kCluster = 1u << 5;
-        static constexpr uint32 kAll     = kMesh | kPath | kVelocity | kObstacle | kSolidView | kCluster;
+        static constexpr uint32 kCluster = 1u << 4;
     };
 } // namespace sw
 
@@ -174,8 +171,6 @@ namespace sw
          * @details Detour 의 타일 원점은 옮길 수 없다(언리얼은 엔진 사본의 `dtNavMesh::applyWorldOffset` 으로 옮긴다). 길찾기 질의를 원점 기준으로 옮겨 받는 길이 서면 풀린다.
          */
         bool canShiftWorldOrigin() const override { return _listRuntime.empty(); }
-        /** @brief `gv_navDebugDraw` 의 비트대로 디버그 뷰를 맞추고 선을 그립니다. */
-        void drawDebug( DebugDrawQueue& queue ) override;
 
         // 컴포넌트 등록은 구독을 돌려준다. 컴포넌트가 들고 `onUnregister` 에서 놓으면 빠진다. nullptr 이거나 이미 등록했으면 빈 구독이다.
         [[nodiscard]] Subscription registerAgent( NavMeshAgentComponent* pAgent );
@@ -282,10 +277,10 @@ namespace sw
         /** @brief @p flags(`NavDebugDrawFlag`)의 것을 선으로 냅니다. */
         void drawDebug( IPhysicsDebugRenderer& renderer, uint32 flags ) const;
         /**
-         * @brief `NavDebugDrawFlag::kSolidView` 가 켜졌으면 걷는 면(영역 색 · 폴리곤마다 명암)과 에이전트 경로 띠를 메시 하나로 지어 씬의 오브젝트
-         *        (`NavMeshDebugView` — 베이크에서 빠진다)에 걸고, 꺼졌으면 그 오브젝트를 지웁니다. 게임 스레드, 씬 틱 밖에서 부릅니다(`Engine`).
+         * @brief @p bShown 이면 걷는 면(영역 색 · 폴리곤마다 명암)과 에이전트 경로 띠를 메시 하나로 지어 씬의 오브젝트(`NavMeshDebugView` — 베이크에서 빠진다)에 걸고,
+         *        아니면 그 오브젝트를 지웁니다. 게임 스레드, 씬 틱 밖에서 부릅니다(디버그 HUD 범주 `navsurface`).
          */
-        void updateDebugView( uint32 flags );
+        void updateDebugView( bool bShown );
 
         /**
          * @brief 씬의 베이크 기하를 모읍니다 — 표면의 규칙(파일 `NavMeshSurfaceComponent.h` 머리말). 표면이 없으면 기본 규칙(메시 + Static 강체)입니다.

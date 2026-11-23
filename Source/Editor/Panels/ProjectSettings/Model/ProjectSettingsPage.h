@@ -42,6 +42,10 @@ namespace sw::editor
         void refreshDirty();
         /** @brief 파일에 쓰고 호스트에 알립니다. 호스트가 반영했으면 @p outApplied 가 true 입니다. 쓰지 못하면 false 이고 표시는 그대로입니다. */
         [[nodiscard]] bool saveDocument( bool& outApplied );
+        /** @brief 저장하면 쓸 값의 글입니다(자동 저장 사본) — 반사 형식은 기본값과 다른 값의 글, 표는 파일 글입니다. 열리지 않았으면 오류입니다. */
+        [[nodiscard]] expected<string> tryMakeText() const;
+        /** @brief 사본 글 @p text(`tryMakeText`)를 저장하지 않은 편집으로 입힙니다. 열리지 않았으면 먼저 엽니다. 읽지 못하면 false 이고 값은 그대로입니다. */
+        [[nodiscard]] bool restoreText( string_view text );
         /** @brief 파일 내용으로 되돌립니다. 결과는 문서의 상태로 보입니다. */
         void revert();
         /** @brief 모든 값을 기본값으로 바꿉니다. 저장해야 파일에 씁니다. 표 페이지는 기본값이 없어 아무것도 하지 않습니다. */

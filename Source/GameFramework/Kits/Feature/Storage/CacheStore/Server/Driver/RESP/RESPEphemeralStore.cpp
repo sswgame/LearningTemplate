@@ -3,7 +3,6 @@
 #include "GameFramework/Kits/Feature/Storage/CacheStore/Server/Driver/RESP/RESPEphemeralStore.h"
 
 #include "Core/Algorithm/VectorUtil.h"
-#include "Core/Math/MathUtil.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/Time/MonotonicClock.h"
 
@@ -15,7 +14,7 @@ namespace sw
     {
         struct RESPEphemeralStoreInternal
         {
-            static constexpr int64 kFirstBackoffMs = 100; ///< 두 번째 실패부터의 첫 대기(`ExponentialBackoff`)
+            static constexpr int64 kSubscribePingPeriodMs = 15000; ///< 구독 연결이 이만큼 말이 없으면 PING 을 보낸다(방화벽 · NAT 의 유휴 시한보다 짧게)
 
             // 단계 번호다. 한 요청의 몇 번째 명령인지를 나타내며, 답 순서는 연결이 지킨다.
             static constexpr uint32 kStepFirst          = 0;
@@ -42,8 +41,8 @@ namespace sw
         , _settings{}
         , _transportSettings{}
         , _mutex{}
-        , _commandConnection{ false }
-        , _subscribeConnection{ true }
+        , _commandConnection{ false, clock }
+        , _subscribeConnection{ true, clock }
         , _messageBuffer{}
         , _listRecordScratch{}
         , _listPushScratch{}
@@ -51,13 +50,8 @@ namespace sw
         , _listOperation{}
         , _transport{}
         , _tlsContext{}
-        , _nextCommandConnectNanoseconds{ 0 }
-        , _nextSubscribeConnectNanoseconds{ 0 }
-        , _commandBackoff{ ExponentialBackoff::createWithRandomSeed( RESPEphemeralStoreInternal::kFirstBackoffMs ) }
-        , _subscribeBackoff{ ExponentialBackoff::createWithRandomSeed( RESPEphemeralStoreInternal::kFirstBackoffMs ) }
+        , _subscribeActivityNanoseconds{ 0 }
         , _requestIDAllocator{}
-        , _subscriptionAckCount{ 0 }
-        , _subscriptionSentCount{ 0 }
         , _blockingRequestID{ 0 }
         , _bInitialized{ SW_FALSE }
         , _bShutdown{ SW_FALSE }
@@ -160,7 +154,6 @@ namespace sw
         const bool bCannotSubscribe = _bInitialized == SW_FALSE || _bShutdown == SW_TRUE || EphemeralRequest::isValidKey( channel ) == false;
         if ( bCannotSubscribe )
             return;
-        uint64 targetAckCount = 0;
         {
             // 채널 목록은 다시 연결할 때 잠금 아래에서 다시 구독하며 읽는다(`ensureSubscribeConnection`) — 고치는 것도 잠금 아래에서 한다.
             ScopedLock<mutex> lock{ _mutex };
@@ -176,32 +169,23 @@ namespace sw
             }
             else
             {
-                RESPCommand command{ "SUBSCRIBE" };
-                command.addText( makeKey( channel ) );
-                if ( _subscribeConnection.sendCommand( *_transport.get(), command, RESPCommandTag{} ) )
-                    ++_subscriptionSentCount;
+                sendSubscribeCommand( RESPCommand{ "SUBSCRIBE" }.addText( makeKey( channel ) ) );
             }
-            targetAckCount = _subscriptionSentCount;
         }
-        waitForSubscriptionAck( targetAckCount );
+        waitForSubscriptionAck();
     }
 
     void RESPEphemeralStore::unsubscribe( string_view channel )
     {
-        uint64 targetAckCount = 0;
         {
             ScopedLock<mutex> lock{ _mutex };
             if ( VectorUtil::removeFirst( _listChannel, channel ) == 0 )
                 return;
             if ( _subscribeConnection.getState() == RESPConnectionState::Closed )
                 return;
-            RESPCommand command{ "UNSUBSCRIBE" };
-            command.addText( makeKey( channel ) );
-            if ( _subscribeConnection.sendCommand( *_transport.get(), command, RESPCommandTag{} ) )
-                ++_subscriptionSentCount;
-            targetAckCount = _subscriptionSentCount;
+            sendSubscribeCommand( RESPCommand{ "UNSUBSCRIBE" }.addText( makeKey( channel ) ) );
         }
-        waitForSubscriptionAck( targetAckCount );
+        waitForSubscriptionAck();
     }
 
     int32 RESPEphemeralStore::pollMessages( vector<EphemeralMessage>& outListMessage )
@@ -213,7 +197,7 @@ namespace sw
             {
                 ScopedLock<mutex> lock{ _mutex };
                 if ( _listChannel.empty() == false )
-                    (void)ensureSubscribeConnection(); // 연결 실패는 물러섬 뒤 다음 펌프가 다시 시도한다
+                    maintainSubscribeConnection();
                 _subscribeConnection.takePushValues( listValue );
             }
             for ( const RESPValue& value : listValue )
@@ -255,53 +239,24 @@ namespace sw
         (void)remote;
         (void)bAccepted;
         ScopedLock<mutex> lock{ _mutex };
-        // 물러섬은 여기서 풀지 않는다 - 연결만 받고 AUTH 를 거절하거나 바로 닫는 서버를 대기 없이 두드리게 된다. 답을 받으면(`onStreamReceived`) 푼다.
         if ( _commandConnection.handleOpened( *_transport.get(), handle ) == false )
             (void)_subscribeConnection.handleOpened( *_transport.get(), handle );
     }
 
     void RESPEphemeralStore::onStreamReceived( StreamConnectionHandle handle, const uint8* pData, int32 size )
     {
-        _ownerThread.assumeHeld(); // 저장소는 소유 스레드 하나가 부르고 펌프한다
         ScopedLock<mutex> lock{ _mutex };
-        // 받다가 연결을 끊은 경우(AUTH 거절 · 깨진 답)도 물러선다 - 닫힘 콜백은 이미 비운 손잡이로 와서 물러섬을 잡지 못한다. 안 그러면 구독 연결은 폴링마다 다시 접속한다.
-        const int64 nowNanoseconds = _clock.nowNanoseconds();
         if ( _commandConnection.handleReceived( *_transport.get(), handle, pData, size ) )
-        {
-            if ( _commandConnection.getState() == RESPConnectionState::Closed )
-                _nextCommandConnectNanoseconds = nowNanoseconds + _commandBackoff.takeDelayMs( _settings->_maxBackoffMs ) * constant::time::kNanosecondsPerMillisecond;
-            else
-                _commandBackoff.reset();
             return;
-        }
-        if ( _subscribeConnection.handleReceived( *_transport.get(), handle, pData, size ) == false )
-            return;
-        if ( _subscribeConnection.getState() == RESPConnectionState::Closed )
-        {
-            _subscriptionAckCount            = _subscriptionSentCount; // 오지 않을 확인은 기다리지 않는다
-            _nextSubscribeConnectNanoseconds = nowNanoseconds + _subscribeBackoff.takeDelayMs( _settings->_maxBackoffMs ) * constant::time::kNanosecondsPerMillisecond;
-        }
-        else
-        {
-            _subscribeBackoff.reset();
-        }
+        if ( _subscribeConnection.handleReceived( *_transport.get(), handle, pData, size ) )
+            _subscribeActivityNanoseconds = _clock.nowNanoseconds();
     }
 
     void RESPEphemeralStore::onStreamClosed( StreamConnectionHandle handle, StreamCloseReason reason )
     {
-        _ownerThread.assumeHeld(); // 저장소는 소유 스레드 하나가 부르고 펌프한다
         ScopedLock<mutex> lock{ _mutex };
-        const int64       nowNanoseconds = _clock.nowNanoseconds();
-        if ( _commandConnection.handleClosed( handle, reason ) )
-        {
-            _nextCommandConnectNanoseconds = nowNanoseconds + _commandBackoff.takeDelayMs( _settings->_maxBackoffMs ) * constant::time::kNanosecondsPerMillisecond;
-            return;
-        }
-        if ( _subscribeConnection.handleClosed( handle, reason ) )
-        {
-            _subscriptionAckCount            = _subscriptionSentCount; // 오지 않을 확인은 기다리지 않는다
-            _nextSubscribeConnectNanoseconds = nowNanoseconds + _subscribeBackoff.takeDelayMs( _settings->_maxBackoffMs ) * constant::time::kNanosecondsPerMillisecond;
-        }
+        if ( _commandConnection.handleClosed( handle, reason ) == false )
+            (void)_subscribeConnection.handleClosed( handle, reason );
     }
 
     void RESPEphemeralStore::pollTransport()
@@ -611,12 +566,19 @@ namespace sw
     void RESPEphemeralStore::handleCompareReply( Operation& operation, uint32 step, const RESPValue& value )
     {
         EphemeralReply& reply = operation._reply;
+        if ( step == RESPEphemeralStoreInternal::kStepFirst ) // WATCH 의 답이다. 지켜보지 못하면 비교와 쓰기가 한 덩어리가 아니다
+        {
+            if ( value.isText( "OK" ) == false )
+                reply._result = EphemeralResult::Invalid;
+            return;
+        }
         if ( step == RESPEphemeralStoreInternal::kStepSecond ) // GET 의 답이다. 다음 명령을 정한다
         {
             const bool bMatches = value._type == RespType::BulkString && value._bytes == operation._request._expected;
-            if ( bMatches == false )
-            {
+            if ( reply._result == EphemeralResult::Ok && bMatches == false )
                 reply._result = EphemeralResult::Conflict;
+            if ( reply._result != EphemeralResult::Ok )
+            {
                 sendCommand( operation, RESPCommand{ "UNWATCH" }, RESPEphemeralStoreInternal::kStepCompareUnwatch );
             }
             else
@@ -645,10 +607,13 @@ namespace sw
             }
             return;
         }
-        if ( step == RESPEphemeralStoreInternal::kStepCompareExec && value.isNull() )
+        if ( step != RESPEphemeralStoreInternal::kStepCompareExec )
+            return;
+        const bool bWritten = value._type == RespType::Array && value._listElement.size() == 1 && value._listElement[0].isError() == false;
+        if ( value.isNull() )
             reply._result = EphemeralResult::Conflict; // WATCH 뒤에 다른 곳에서 값을 바꿨다
-        else if ( step == RESPEphemeralStoreInternal::kStepCompareExec && value._type != RespType::Array )
-            reply._result = EphemeralResult::Invalid;
+        else if ( bWritten == false )
+            reply._result = EphemeralResult::Invalid; // 트랜잭션이 서지 않았거나 안의 쓰기가 졌다
     }
 
     void RESPEphemeralStore::finishOperation( Operation& operation, EphemeralResult result )
@@ -675,38 +640,55 @@ namespace sw
     {
         if ( _commandConnection.getState() != RESPConnectionState::Closed )
             return true;
-        if ( _clock.nowNanoseconds() < _nextCommandConnectNanoseconds )
+        if ( _commandConnection.canConnect() == false )
             return false;
         const RESPCommand authCommand = makeAuthCommand();
         const bool        bAuth       = _settings->_password.empty() == false;
-        if ( _commandConnection.beginConnect( *_transport.get(), _settings->_address, _tlsContext.get().get(), bAuth ? &authCommand : nullptr ) )
-            return true;
-        _nextCommandConnectNanoseconds = _clock.nowNanoseconds() + _commandBackoff.takeDelayMs( _settings->_maxBackoffMs ) * constant::time::kNanosecondsPerMillisecond;
-        return false;
+        return _commandConnection.beginConnect( *_transport.get(), _settings->_address, _tlsContext.get().get(), bAuth ? &authCommand : nullptr, _settings->_maxBackoffMs );
     }
 
     bool RESPEphemeralStore::ensureSubscribeConnection()
     {
         if ( _subscribeConnection.getState() != RESPConnectionState::Closed )
             return true;
-        if ( _clock.nowNanoseconds() < _nextSubscribeConnectNanoseconds )
+        if ( _subscribeConnection.canConnect() == false )
             return false;
         const RESPCommand authCommand = makeAuthCommand();
         const bool        bAuth       = _settings->_password.empty() == false;
-        if ( _subscribeConnection.beginConnect( *_transport.get(), _settings->_address, _tlsContext.get().get(), bAuth ? &authCommand : nullptr ) == false )
-        {
-            _nextSubscribeConnectNanoseconds = _clock.nowNanoseconds() + _subscribeBackoff.takeDelayMs( _settings->_maxBackoffMs ) * constant::time::kNanosecondsPerMillisecond;
+        if ( _subscribeConnection.beginConnect( *_transport.get(), _settings->_address, _tlsContext.get().get(), bAuth ? &authCommand : nullptr, _settings->_maxBackoffMs ) == false )
             return false;
-        }
+        _subscribeActivityNanoseconds = _clock.nowNanoseconds();
         // 새 연결에는 구독이 없으므로 채널을 모두 다시 구독한다. 끊긴 동안의 메시지는 받지 못하며, 배달은 최대 한 번이다.
         for ( const string& channel : _listChannel )
         {
-            RESPCommand command{ "SUBSCRIBE" };
-            command.addText( makeKey( channel ) );
-            if ( _subscribeConnection.sendCommand( *_transport.get(), command, RESPCommandTag{} ) )
-                ++_subscriptionSentCount;
+            sendSubscribeCommand( RESPCommand{ "SUBSCRIBE" }.addText( makeKey( channel ) ) ); // 연결 중이라 모아 둔다
         }
         return true;
+    }
+
+    void RESPEphemeralStore::maintainSubscribeConnection()
+    {
+        if ( _subscribeConnection.getState() != RESPConnectionState::Closed )
+        {
+            const int64 silentMs = ( _clock.nowNanoseconds() - _subscribeActivityNanoseconds ) / constant::time::kNanosecondsPerMillisecond;
+            if ( _subscribeConnection.getAwaitingCount() == 0 )
+            {
+                if ( silentMs >= RESPEphemeralStoreInternal::kSubscribePingPeriodMs )
+                    sendSubscribeCommand( RESPCommand{ "PING" } ); // 구독 중에도 받는 명령이다(RESP2 의 답은 `pong` 배열)
+            }
+            else if ( silentMs > _settings->_timeoutMs )
+            {
+                _subscribeConnection.abort( *_transport.get(), "subscription commands timed out" );
+            }
+        }
+        (void)ensureSubscribeConnection(); // 연결 실패는 물러섬 뒤 다음 펌프가 다시 시도한다
+    }
+
+    void RESPEphemeralStore::sendSubscribeCommand( const RESPCommand& command )
+    {
+        if ( _subscribeConnection.getAwaitingCount() == 0 )
+            _subscribeActivityNanoseconds = _clock.nowNanoseconds(); // 답을 기다리기 시작한다
+        (void)_subscribeConnection.sendCommand( *_transport.get(), command, RESPCommandTag{} );
     }
 
     void RESPEphemeralStore::abortTimedOutRequests()
@@ -728,8 +710,6 @@ namespace sw
             ScopedLock<mutex> lock{ _mutex };
             _commandConnection.abort( *_transport.get(), "request timed out" );
             _commandConnection.takeReplyRecords( listRecord );
-            // 시한 초과는 서버 쪽 문제이므로 바로 다시 연결하지 않는다.
-            _nextCommandConnectNanoseconds = nowNanoseconds + _commandBackoff.takeDelayMs( _settings->_maxBackoffMs ) * constant::time::kNanosecondsPerMillisecond;
         }
         for ( const RESPReplyRecord& record : listRecord )
         {
@@ -741,16 +721,7 @@ namespace sw
 
     void RESPEphemeralStore::handlePushValue( const RESPValue& value )
     {
-        _ownerThread.assumeHeld(); // 저장소는 소유 스레드 하나가 부르고 펌프한다
-        if ( value._type != RespType::Array || value._listElement.size() < 3 )
-            return;
-        const RESPValue& kind = value._listElement[0];
-        if ( kind.isText( "subscribe" ) || kind.isText( "unsubscribe" ) )
-        {
-            ++_subscriptionAckCount;
-            return;
-        }
-        if ( kind.isText( "message" ) == false )
+        if ( value._listElement.size() < 3 ) // 연결이 `message` 배열만 넘긴다
             return;
         const string_view channel = value._listElement[1].getText();
         if ( channel.substr( 0, _settings->_keyPrefix.size() ) != _settings->_keyPrefix )
@@ -761,30 +732,23 @@ namespace sw
         message._bytes            = value._listElement[2]._bytes;
     }
 
-    void RESPEphemeralStore::waitForSubscriptionAck( uint64 targetAckCount )
+    void RESPEphemeralStore::waitForSubscriptionAck()
     {
-        _ownerThread.assumeHeld(); // 저장소는 소유 스레드 하나가 부르고 펌프한다
-        const Deadline    deadline = Deadline::afterMilliseconds( _settings->_timeoutMs );
-        vector<RESPValue> listValue;
-        while ( _subscriptionAckCount < targetAckCount && deadline.isExpired() == false )
+        const Deadline deadline = Deadline::afterMilliseconds( _settings->_timeoutMs );
+        for ( ;; )
         {
             pollTransport();
-            listValue.clear();
             {
+                // 확인을 기다리는 수는 연결이 든다 — 끊기면 함께 0 이 되어 오지 않을 확인을 기다리지 않고, 옛 연결의 확인이 새 구독의 확인으로 세어지지 않는다.
                 ScopedLock<mutex> lock{ _mutex };
-                _subscribeConnection.takePushValues( listValue );
-                if ( _subscribeConnection.getState() == RESPConnectionState::Closed )
-                    _subscriptionAckCount = MathUtil::max( _subscriptionAckCount, _subscriptionSentCount );
+                if ( _subscribeConnection.getAwaitingCount() == 0 )
+                    return;
             }
-            for ( const RESPValue& value : listValue )
-            {
-                handlePushValue( value );
-            }
-            if ( _subscriptionAckCount < targetAckCount )
-                RESPEphemeralStoreInternal::sleepOneMillisecond();
+            if ( deadline.isExpired() )
+                break;
+            RESPEphemeralStoreInternal::sleepOneMillisecond();
         }
-        if ( _subscriptionAckCount < targetAckCount )
-            SW_LOG_WARNING_ID( "RespEphemeralStore.RESPSubscriptionNotConfirmed", "RESP subscription was not confirmed within %# ms", _settings->_timeoutMs );
+        SW_LOG_WARNING_ID( "RespEphemeralStore.RESPSubscriptionNotConfirmed", "RESP subscription was not confirmed within %# ms", _settings->_timeoutMs );
     }
 
     string RESPEphemeralStore::makeKey( string_view key ) const

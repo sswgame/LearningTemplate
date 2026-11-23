@@ -95,8 +95,7 @@ SW_TEST_CASE( BitStreamTest, BitReaderRejectsNonFiniteFloatsAndTruncatedVarUint3
     // 모자란 비트도 실패다.
     const uint8 arrShort[2] = { 0, 0 };
     BitReader   shortReader( arrShort, 2 );
-    float32     shortValue{ 0.0f };
-    shortValue = shortReader.readFiniteFloat();
+    SW_EXPECT_EQUAL( 0.0f, shortReader.readFiniteFloat() );
     SW_EXPECT_TRUE( shortReader.hasOverflowed() );
 
     // 10번째 묶음에 64 비트를 넘는 비트가 켜진 가변 정수 — 예전에는 시프트로 버려 UINT64_MAX 로 받았다.

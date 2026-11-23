@@ -37,6 +37,9 @@
 	<EditorWaitStable/>
 	<ExpectLog id="EditorSettings.Saved" contains="1 key(s)" atLeast="1"/>
 	<Expect watch="Editor.PreferencesSavedKeyCount" equals="1"/>
+	<!-- 저장 단추가 없는 창이라 Ctrl+Z 도 저장된다 — 되돌리면 기본과 다른 키가 없어진다 -->
+	<EditorKey key="Ctrl+Z"/>
+	<WaitUntil watch="Editor.PreferencesSavedKeyCount" equals="0" timeoutWallSeconds="10"/>
 	<EditorWaitStable/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>

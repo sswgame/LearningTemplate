@@ -63,8 +63,8 @@ function(sw_configure_app_dependencies TARGET_NAME)
 
 	# 2) 정적 모듈 구성(SW_STATIC_MODULES — Shipping · 웹 · Android 개발)은 게임을 정적으로 링크하고, App 이 서면 에셋을 쿠킹한다.
 	#    (Dev 는 delay-load 라 링크하지 않는다 — 빌드 순서는 위 1) 이 이미 걸어 두었다.)
-	#    쿠킹이 App 뒤인 이유: 씬 쿠킹이 App --cook-scenes 라서다. 반대로 걸면 깨끗한 트리에서 App 이
-	#    없는 채로 쿠커가 돌아 죽는다(리눅스 CI). 기본 빌드(all)에 넣어 `cmake --build` 한 번이면 팩까지 선다.
+	#    개발 정적 구성의 쿠킹이 App 뒤인 이유: 씬 쿠킹이 App --cook-scenes 라서다. 반대로 걸면 깨끗한 트리에서 App 이
+	#    없는 채로 쿠커가 돌아 죽는다(리눅스 CI). 기본 빌드(all)에 넣어 `cmake --build` 한 번이면 팩까지 선다(배포 · 교차는 호스트 개발 빌드가 굽는다).
 	if(SW_STATIC_MODULES)
 		get_property(active_game_target GLOBAL PROPERTY SW_ACTIVE_GAME_TARGET) # SWGame_<활성 게임>(`sw_add_game_module`)
 		if(active_game_target AND TARGET ${active_game_target})
@@ -87,10 +87,12 @@ function(sw_configure_app_dependencies TARGET_NAME)
 		list(REMOVE_DUPLICATES list_reflection_static_lib)
 		sw_link_whole_archive(${TARGET_NAME} ${list_reflection_static_lib})
 
-		# 쿠킹은 쿠커 실행 파일(App, 서버 타깃은 Server — SW_COOK_HOST_TARGET) 뒤에만 건다.
-		if(TARGET CookAssets AND TARGET_NAME STREQUAL SW_COOK_HOST_TARGET)
-			add_dependencies(CookAssets ${TARGET_NAME})
+		# 쿠킹은 기본 빌드(all)에 든다. 이 빌드의 실행 파일이 구우면(SW_COOK_HOST_TARGET) 그 뒤에만 걸고, 교차 · 배포 빌드는 호스트 빌드가 구우므로 이 빌드의 실행 파일을 기다리지 않는다.
+		if(TARGET CookAssets)
 			set_target_properties(CookAssets PROPERTIES EXCLUDE_FROM_ALL FALSE)
+			if(TARGET_NAME STREQUAL SW_COOK_HOST_TARGET)
+				add_dependencies(CookAssets ${TARGET_NAME})
+			endif()
 		endif()
 	endif()
 endfunction()

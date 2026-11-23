@@ -152,6 +152,8 @@ namespace sw
         , _bInputLayerStacked{ SW_FALSE }
         , _bHUDHidden{ SW_FALSE }
         , _bFastForwardHeld{ SW_FALSE }
+        , _bTimelineOnly{ SW_FALSE }
+        , _reserved{ 0 }
         , _player{}
         , _pendingStep{}
         , _state{}
@@ -247,16 +249,17 @@ namespace sw
     {
         // 다시 틀기는 지금 재생을 끝내고 시작한다 — 되돌릴 값은 이번 재생의 시작 상태여야 한다.
         endPlayback( SequenceHistoryKind::Stopped );
-        if ( validateBindings() == false )
+        if ( _bTimelineOnly == SW_FALSE && validateBindings() == false )
             return;
         // 속도 0 은 데이터 결함이다 — 오류를 남기고 틀지 않는다(1 배속으로 돌아가는 길은 없다).
         if ( _player.setPlayRate( _playRate ) == false || validateConfine() == false )
             return;
         _player.setFramesPerSecond( _framesPerSecond );
         _player.setLoopMode( _loopMode );
-        acquireCutsceneOptions();
+        if ( _bTimelineOnly == SW_FALSE )
+            acquireCutsceneOptions();
         GameObject* pOwner = getOwner();
-        if ( pOwner != nullptr && _player.getAsset()._whenFinished == SequenceFinishPolicy::RestoreState )
+        if ( _bTimelineOnly == SW_FALSE && pOwner != nullptr && _player.getAsset()._whenFinished == SequenceFinishPolicy::RestoreState )
         {
             SequenceTimelineUtil::captureRestoreState( pOwner->getMutableManager(), _player.getAsset(), makeBindingView(), _state._listRestore );
             _state._bRestoreCaptured = SW_TRUE;
@@ -467,6 +470,17 @@ namespace sw
                                  _bHUDHidden == SW_TRUE;
         if ( bWasPlaying == false && bHoldsState == false )
             return;
+        if ( _bTimelineOnly == SW_TRUE )
+        {
+            // 아무것도 적용하지 않았다 — 되돌리거나 풀 것이 없다. 씬의 컷은 적용하는 재생의 것이라 풀지 않는다.
+            const int32 endFrame = _player.getCurrentFrame();
+            if ( kind != SequenceHistoryKind::Finished )
+                _player.stop();
+            _history.record( kind, endFrame, kSequenceNoBinding, _sequencePath.path() );
+            if ( kind == SequenceHistoryKind::Finished )
+                _finishedMulticast.broadcast();
+            return;
+        }
         GameObject*               pOwner   = getOwner();
         GameObjectManager*        pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         const SequenceAsset&      asset    = _player.getAsset();
@@ -512,6 +526,18 @@ namespace sw
     void SequencePlayerComponent::resume()
     {
         _player.resume();
+    }
+
+    void SequencePlayerComponent::copyTimelineFrom( const SequencePlayerComponent& source )
+    {
+        setSequence( source._player.getAsset() ); // 파일 경로가 아니라 열린 시퀀스를 옮긴다 — 경로를 옮기면 시작(onBeginPlay)이 다시 열며 재생을 끝낸다
+        _listBinding.clear();
+        _framesPerSecond = source._framesPerSecond;
+        _playRate        = source._playRate;
+        _loopMode        = source._loopMode;
+        _playerMovement  = SequencePlayerMovement::Free;
+        _bAutoPlay       = SW_FALSE;
+        _bTimelineOnly   = SW_TRUE;
     }
 
     void SequencePlayerComponent::setSequence( const SequenceAsset& asset )
@@ -595,6 +621,8 @@ namespace sw
 
     void SequencePlayerComponent::applyTimeline( const SequencePlaybackStep& step )
     {
+        if ( _bTimelineOnly == SW_TRUE )
+            return;
         GameObject* pOwner = getOwner();
         if ( pOwner == nullptr )
             return;

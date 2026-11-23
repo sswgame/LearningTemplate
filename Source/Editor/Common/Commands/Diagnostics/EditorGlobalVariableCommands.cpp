@@ -12,10 +12,19 @@
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Foundation/EngineDefines.h"
+#include "Engine/Serialization/Inherit/ResourceComposer.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw::editor
 {
+    namespace
+    {
+        struct EditorGlobalVariableCommandsInternal
+        {
+            static constexpr const utf8* kSessionPresetName = "editor_session";
+        };
+    } // namespace
+
     string EditorGlobalVariableCommands::getPresetFolderPath()
     {
         // 앱이 쓰는 상태라 팩 밖이다 — 팩 안(`data/presets/globalvars`)에 두면 쿠킹이 게임 팩에 싣는다. 팩마다 폴더를 나눈다.
@@ -31,15 +40,13 @@ namespace sw::editor
         return EditorPaths::findContentFolder( FileUtil::joinPath( FileUtil::joinPath( editor::getSubsystem<const GameConfig>()._packRoot.get(), constant::path::kDataFolder ), constant::path::kPresetsFolder ) );
     }
 
-    bool EditorGlobalVariableCommands::savePreset( const string& filePath, const string& presetName )
+    string EditorGlobalVariableCommands::makePresetText( string_view presetName )
     {
-        if ( EditorContentWrite::warnIfReadOnly( filePath, EditorContentWriteKind::Save ) ) // 프리셋 단추 · 패널 저장이 모두 지나는 쓰기 입구다
-            return false;
         GlobalVariableManager& gvm = editor::getSubsystem<GlobalVariableManager>();
 
         XMLDocument doc;
         XMLNode     root = doc.appendRoot( "GlobalVariablesPreset" );
-        root.appendAttribute( "name", presetName );
+        root.appendAttribute( "name", string{ presetName } );
 
         vector<GlobalVariableInfo*> listVariable;
         gvm.collectVariables( listVariable );
@@ -57,15 +64,28 @@ namespace sw::editor
             varNode.appendAttribute( "value", pInfo->getValueAsString() );
         }
 
-        return FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( filePath ) ) && doc.saveCompleteToFile( filePath );
+        return doc.saveToString();
+    }
+
+    bool EditorGlobalVariableCommands::savePreset( const string& filePath, const string& presetName )
+    {
+        if ( EditorContentWrite::warnIfReadOnly( filePath, EditorContentWriteKind::Save ) ) // 프리셋 단추 · 패널 저장이 모두 지나는 쓰기 입구다
+            return false;
+        return FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( filePath ) ) && ResourceComposer::saveText( filePath, ResourceSaveText::makeComplete( makePresetText( presetName ) ) );
     }
 
     bool EditorGlobalVariableCommands::loadPreset( const string& filePath )
     {
+        string presetText;
+        return FileUtil::readTextFile( FileUtil::toDiskPath( filePath ), presetText ) && applyPresetText( presetText );
+    }
+
+    bool EditorGlobalVariableCommands::applyPresetText( string_view presetText )
+    {
         GlobalVariableManager& gvm = editor::getSubsystem<GlobalVariableManager>();
 
         XMLDocument doc;
-        if ( doc.loadFromFile( filePath ) == false )
+        if ( doc.parse( presetText ) == false )
             return false;
 
         XMLNode rootNode = doc.getRoot();
@@ -93,8 +113,13 @@ namespace sw::editor
         return FileUtil::joinPath( getPresetFolderPath(), "editor_session.gvpreset.xml" );
     }
 
+    string EditorGlobalVariableCommands::makeSessionPresetText()
+    {
+        return makePresetText( EditorGlobalVariableCommandsInternal::kSessionPresetName );
+    }
+
     bool EditorGlobalVariableCommands::saveSessionPreset()
     {
-        return savePreset( getSessionPresetPath(), "editor_session" );
+        return savePreset( getSessionPresetPath(), EditorGlobalVariableCommandsInternal::kSessionPresetName );
     }
 } // namespace sw::editor

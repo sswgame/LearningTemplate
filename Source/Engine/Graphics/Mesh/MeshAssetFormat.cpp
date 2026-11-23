@@ -25,8 +25,13 @@ namespace sw
         {
             /** @brief 파일 머리의 매직(`SWMS`)입니다. */
             static constexpr uint8 kArrMagic[4] = { 'S', 'W', 'M', 'S' };
-            /** @brief 정점 플래그의 비트 0 입니다 — 바이탄젠트 부호가 -1 이면 켭니다(탄젠트 w). 나머지 비트는 0 이어야 합니다. */
+            /** @brief 정점 플래그의 비트 0 입니다 — 바이탄젠트 부호가 -1 이면 켭니다(탄젠트 w). */
             static constexpr uint32 kFlagBitangentNegative = 1u;
+            /** @brief 정점 플래그의 비트 1 입니다 — 이음매 정점이면 켭니다(`RHIVertex::isOnSeam`). */
+            static constexpr uint32 kFlagSeam = 2u;
+            /** @brief 정점 플래그의 비트 2 부터 변 묶음(`RHIVertex::getSeamEdgeMask`)입니다. */
+            static constexpr uint32 kSeamEdgeMaskShift = 2u;
+            static constexpr uint32 kSeamEdgeMaskBits  = RHIVertex::kSeamEdgeMaskAll << kSeamEdgeMaskShift;
             /** @brief UV 경계(`_min` · `_max` 의 u · v)입니다 — 머리에 싣고 정점의 `unorm16x2` UV 를 이 사각형 안으로 정규화합니다. */
             struct UVBounds
             {
@@ -131,6 +136,7 @@ namespace sw
             {
                 vector<RHIVertex> listVertex = listSource;
                 Mesh::computeTangents( listVertex, listIndex );
+                Mesh::refineSeamEdges( listVertex, listIndex );
                 // 정점 하나(32 바이트): 위치 float32 3 · 노멀 옥타헤드럴 4 · 탄젠트 옥타헤드럴 4 · UV unorm16x2 4 · 색 unorm8x4 4 · 플래그 uint32 4.
                 for ( const RHIVertex& vertex : listVertex )
                 {
@@ -148,7 +154,7 @@ namespace sw
                     {
                         outBytes.push_back( unorm8::fromFloat( value ).getRaw() );
                     }
-                    LittleEndianUtil::appendUint32( outBytes, vertex._arrTangent[3] < 0.0f ? kFlagBitangentNegative : 0u );
+                    LittleEndianUtil::appendUint32( outBytes, ( vertex._arrTangent[3] < 0.0f ? kFlagBitangentNegative : 0u ) | ( vertex.isOnSeam() ? kFlagSeam : 0u ) | ( vertex.getSeamEdgeMask() << kSeamEdgeMaskShift ) );
                 }
             }
 
@@ -420,15 +426,18 @@ namespace sw
                         value = unorm8::fromRaw( reader.readUint8() ).toFloat();
                     }
                     const uint32 flags = reader.readUint32();
-                    if ( ( flags & ~kFlagBitangentNegative ) != 0u )
+                    const bool   bSeam = ( flags & kFlagSeam ) != 0u;
+                    // 모르는 비트 · 이음매가 아닌데 변 묶음이 있는 정점은 이 형식이 쓰지 않는다.
+                    if ( ( flags & ~( kFlagBitangentNegative | kFlagSeam | kSeamEdgeMaskBits ) ) != 0u || ( bSeam == false && ( flags & kSeamEdgeMaskBits ) != 0u ) )
                     {
                         SW_LOG_WARNING_ID( "MeshAssetFormat.MeshAssetUnknownVertex", "Mesh asset has unknown vertex flags %# - re-import the model", flags );
                         return false;
                     }
-                    vertex._arrTangent[0] = tangent._x;
-                    vertex._arrTangent[1] = tangent._y;
-                    vertex._arrTangent[2] = tangent._z;
-                    vertex._arrTangent[3] = ( flags & kFlagBitangentNegative ) != 0u ? -1.0f : 1.0f;
+                    vertex._arrTangent[0]    = tangent._x;
+                    vertex._arrTangent[1]    = tangent._y;
+                    vertex._arrTangent[2]    = tangent._z;
+                    const float32 handedness = ( flags & kFlagBitangentNegative ) != 0u ? -1.0f : 1.0f;
+                    vertex._arrTangent[3]    = bSeam ? RHIVertex::makeSeamTangentW( handedness, ( flags & kSeamEdgeMaskBits ) >> kSeamEdgeMaskShift ) : handedness;
                     return true;
                 } );
             }

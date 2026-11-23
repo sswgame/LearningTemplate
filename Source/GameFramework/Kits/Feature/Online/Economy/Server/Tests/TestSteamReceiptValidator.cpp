@@ -132,7 +132,7 @@ namespace
         static string makeOrder( const utf8* pOrderID, const utf8* pStatus )
         {
             StringBuilder<constant::buffer::kMax256> body;
-            body.appendFormat( R"({"response":{"result":"OK","params":{"orderid":"%#","status":"%#","time":"2023-11-14T22:13:20Z","items":[{"itemid":"100","qty":1},{"itemid":"200","qty":1}]}}})",
+            body.appendFormat( R"({"response":{"result":"OK","params":{"orderid":"%#","status":"%#","time":"2023-11-14T22:13:20Z","items":[{"itemid":"100","qty":1},{"itemid":"200","qty":3}]}}})",
                                pOrderID, pStatus );
             return string( body.view() );
         }
@@ -283,7 +283,7 @@ SW_TEST_CASE( SteamReceiptValidatorTest, MalformedReceiptNeverReachesSteam )
     SW_EXPECT_TRUE( rig._listQueryOrder.empty() );
 }
 
-/** @brief [SteamReceiptValidatorTest] 정상 주문: 거래 id 는 주문 번호, 상품은 첫 항목, 구매 시각은 응답의 것이고 표가 요청과 같다 */
+/** @brief [SteamReceiptValidatorTest] 정상 주문: 거래 id 는 주문 번호, 줄은 항목 전부와 산 수, 구매 시각은 응답의 것이고 표가 요청과 같다 */
 SW_TEST_CASE( SteamReceiptValidatorTest, SucceededOrderIsValid )
 {
     SteamFixture rig;
@@ -292,7 +292,11 @@ SW_TEST_CASE( SteamReceiptValidatorTest, SucceededOrderIsValid )
     SW_EXPECT_TRUE( result._status == ReceiptStatus::Valid );
     SW_EXPECT_EQUAL( string( "steam" ), result._storeName );
     SW_EXPECT_EQUAL( string( kOrder ), result._transactionID );
-    SW_EXPECT_EQUAL( string( "100" ), result._productID );
+    SW_REQUIRE_EQUAL( size_t( 2 ), result._listItem.size() ); // 결함: 첫 항목만 읽어 나머지를 지급하지 않았다
+    SW_EXPECT_EQUAL( string( "100" ), result._listItem[0]._productID );
+    SW_EXPECT_EQUAL( int64( 1 ), result._listItem[0]._quantity );
+    SW_EXPECT_EQUAL( string( "200" ), result._listItem[1]._productID );
+    SW_EXPECT_EQUAL( int64( 3 ), result._listItem[1]._quantity );
     SW_EXPECT_EQUAL( kNowMs, result._purchaseTimeMs );
     SW_EXPECT_EQUAL( kTicket, result._ticket );
     SW_EXPECT_EQUAL( kBuyer, result._accountID );
@@ -343,6 +347,10 @@ SW_TEST_CASE( SteamReceiptValidatorTest, CraftedAnswersGrantNothing )
               R"({"response":{"result":"OK","params":{"orderid":"1234","status":"Succeeded","items":{"itemid":"100"}}}})",
               R"({"response":{"result":"OK","params":{"orderid":"1234","status":"Succeeded","items":[{"qty":1}]}}})",
               R"({"response":{"result":"OK","params":{"orderid":"1234","status":"Succeeded","items":[7]}}})",
+              R"({"response":{"result":"OK","params":{"orderid":"1234","status":"Succeeded","items":[{"itemid":"100"}]}}})",
+              R"({"response":{"result":"OK","params":{"orderid":"1234","status":"Succeeded","items":[{"itemid":"100","qty":0}]}}})",
+              R"({"response":{"result":"OK","params":{"orderid":"1234","status":"Succeeded","items":[{"itemid":"100","qty":1},{"itemid":"200","qty":-1}]}}})",
+              R"({"response":{"result":"OK","params":{"orderid":"1234","status":"Succeeded","items":[{"itemid":"100","qty":1},{"itemid":"200","qty":"x"}]}}})",
               R"({"response":{"result":"Failure","params":{"orderid":"1234","status":"Succeeded","items":[{"itemid":"100"}]}}})",
               R"({"response":{"params":{"orderid":"1234","status":"Succeeded","items":[{"itemid":"100"}]}}})",
               R"({"response":{"result":["OK"],"params":{"orderid":"1234","status":"Succeeded"}}})",
@@ -383,15 +391,17 @@ SW_TEST_CASE( SteamReceiptValidatorTest, TruncatedBodyIsRetry )
 SW_TEST_CASE( SteamReceiptValidatorTest, LoosePropertiesStayReadable )
 {
     SteamFixture rig;
-    rig._queryBody                = R"({"response":{"result":"OK","params":{"orderid":"1234","status":"Succeeded","time":"2023-11-14T-1:13:20","items":[{"itemid":"100"}]}}})";
+    rig._queryBody                = R"({"response":{"result":"OK","params":{"orderid":"1234","status":"Succeeded","time":"2023-11-14T-1:13:20","items":[{"itemid":"100","qty":1}]}}})";
     ReceiptValidationResult first = rig.validate();
     SW_EXPECT_TRUE( first._status == ReceiptStatus::Valid );
     SW_EXPECT_EQUAL( int64( 0 ), first._purchaseTimeMs );
 
-    rig._queryBody                 = R"({"response":{"result":"OK","params":{"orderid":1234,"status":"Succeeded","items":[{"itemid":100}]}}})";
+    rig._queryBody                 = R"({"response":{"result":"OK","params":{"orderid":1234,"status":"Succeeded","items":[{"itemid":100,"qty":"2"}]}}})";
     ReceiptValidationResult second = rig.validate();
     SW_EXPECT_TRUE( second._status == ReceiptStatus::Valid );
-    SW_EXPECT_EQUAL( string( "100" ), second._productID );
+    SW_REQUIRE_EQUAL( size_t( 1 ), second._listItem.size() );
+    SW_EXPECT_EQUAL( string( "100" ), second._listItem[0]._productID );
+    SW_EXPECT_EQUAL( int64( 2 ), second._listItem[0]._quantity );
 }
 
 /** @brief [SteamReceiptValidatorTest] 상태 코드: 5xx · 429 는 Retry, 4xx 는 주문이 없다는 답이라 Invalid 다(몸이 성공처럼 보여도) */
@@ -599,7 +609,7 @@ SW_TEST_CASE( SteamReceiptValidatorTest, SteamIDBecomesTheBuyer )
 {
     SteamFixture rig( false, nullptr, ReceiptBuyerBinding::LinkedLogin );
     SW_EXPECT_TRUE( rig._pValidator->getBuyerRule()._binding == ReceiptBuyerBinding::LinkedLogin );
-    rig._queryBody                = R"({"response":{"result":"OK","params":{"orderid":"1234","steamid":"76561190000000001","status":"Succeeded","items":[{"itemid":"100"}]}}})";
+    rig._queryBody                = R"({"response":{"result":"OK","params":{"orderid":"1234","steamid":"76561190000000001","status":"Succeeded","items":[{"itemid":"100","qty":1}]}}})";
     ReceiptValidationResult first = rig.validate();
     SW_EXPECT_TRUE( first._status == ReceiptStatus::Valid );
     SW_EXPECT_EQUAL( string( "76561190000000001" ), first._storeBuyerID );

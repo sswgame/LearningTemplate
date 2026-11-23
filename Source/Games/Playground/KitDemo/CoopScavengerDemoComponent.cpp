@@ -37,8 +37,7 @@ namespace sw
     SW_AUTOMATION_GETTER_WATCH( kitDemoCoopScavengerQuota, "KitDemo.CoopScavenger.NextQuota", "Quota of the next cycle", CoopScavengerDemoComponent, &CoopScavengerDemoComponent::getNextQuota );
 
     CoopScavengerDemoComponent::CoopScavengerDemoComponent()
-        : _catalogPath{}
-        , _pCatalog{}
+        : _pCatalog{}
         , _soldValue{ 0 }
         , _credits{ 0 }
         , _nextQuota{ 0 }
@@ -108,7 +107,7 @@ namespace sw
 
     bool CoopScavengerDemoComponent::startGame()
     {
-        if ( acquireRequired( _catalogPath, _pCatalog ) == false )
+        if ( acquireBoundCatalog( _pCatalog ) == false )
             return false;
         if ( runExpedition() )
             return true;

@@ -26,8 +26,7 @@
 			<GameObject _schemaVersion="0" _name="Director" _bActive="true">
 				<_listComponent>
 					<FightingDemoComponent _localID="1936777527391987224" _componentName="FightingDemoComponent"
-					                       _bActive="true"
-					                       _catalogPath="game/playground/data/kitdemo/demo.fighters.xml" />
+					                       _bActive="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>

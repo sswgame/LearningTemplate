@@ -101,13 +101,13 @@ namespace sw
      *          기록 스트림은 두 가지다. 하나는 디바이스가 소유한 프레임 스트림(`getFrameStreamContext`)이고,
      *          다른 하나는 패스마다 만드는 커맨드 리스트(`createCommandList`)다.
      *
-     *          **완료 · 동기화 계약** — 다섯 백엔드가 모두 같은 약속을 지킨다(웹 WebGPU 의 `waitIdle` 만 아래 예외). 한 백엔드만 약하면 그 백엔드에서만 되읽기가 실패하거나 자원이 일찍 풀린다.
+     *          **완료 · 동기화 계약** — 다섯 백엔드가 모두 같은 약속을 지킨다. 한 백엔드만 약하면 그 백엔드에서만 되읽기가 실패하거나 자원이 일찍 풀린다.
      *          각 줄을 `RHIDeviceTest` 의 네 백엔드 테스트가 건다(괄호 안).
      *          - `waitIdle`: 앞서 제출한 **모든** GPU 작업이 끝난 뒤 돌아오고 해제 큐를 비운다. 돌아온 직후 읽기 버퍼를 콜백 없이 읽을 수 있다
      *            (`WaitIdleLeavesTheSubmittedCopyReadableOnEveryBackend`). 잃은 장치(DX12 제거, Vulkan 손실)는 끝나지 않을 일을 기다리지 않고 큐만 비운다.
      *            기다림을 확인했으면 남은 통지(`notifyFrameCompletion`)는 `Completed`, 못 기다렸으면(잃은 장치 · 시간 초과) `Abandoned` 다. 해제(`enqueueGPURelease`)는 어느 쪽이든 놓는다.
-     *            구현: DX11 이벤트 쿼리(상한 10 초, 넘으면 오류), DX12 펜스, Vulkan `vkDeviceWaitIdle`, GL `glFinish`, 네이티브 WebGPU(Dawn) 낸 프레임마다 프레임 펜스(`wgpuInstanceWaitAny`).
-     *            **웹 WebGPU 는 기다리지 않는다** — 브라우저는 DOM 이벤트 콜백 스택을 멈출 수 없다. 끝나지 않은 프레임의 통지는 `Abandoned` 로 가고, 돌아온 직후의 읽기는 웹에 없다.
+     *            구현: DX11 이벤트 쿼리(상한 10 초, 넘으면 오류), DX12 펜스, Vulkan `vkDeviceWaitIdle`, GL `glFinish`, WebGPU 낸 프레임마다 프레임 펜스(`wgpuInstanceWaitAny`).
+     *            브라우저는 DOM 이벤트 콜백 스택을 멈출 수 없다 — 창 콜백에서 부르지 않는다(적어 두고 프레임에서, `WebWindow`).
      *          - `enqueueGPURelease`: 맡긴 프레임의 GPU 작업이 끝난 **뒤에만** 부른다. 프레임 수를 세어 짐작하지 않는다
      *            (`EnqueuedGPUReleaseRunsOnlyAfterTheFrameGPUWorkIsDone`, `EnqueuedGPUReleaseRunsOnceAfterItsFrame`). 구현: DX12 · Vulkan 펜스, DX11 프레임 끝 이벤트 쿼리 링, GL 프레임 끝 `glFenceSync` 링,
      *            WebGPU 프레임 펜스(`onSubmittedWorkDone` 퓨처). `notifyFrameCompletion` 의 `Completed` 도 같은 자리에서만 나간다.
@@ -220,7 +220,7 @@ namespace sw
          *          엔진 바깥 모듈(에디터의 ImGui 렌더러)이 자기 네이티브 자원(디스크립터)을 엔진 자원과 같은 기준으로 해제할 때 쓰는 함수다.
          *          **프레임을 기록하는 스레드(렌더 스레드)에서 불러야 한다.** 펜스 값을 읽는 스레드가 그 값을 올리는 스레드여야 "이 프레임" 이 맞는다.
          *          콜백은 백엔드가 완료를 확인하는 스레드에서 불리고, `waitIdle` 과 `shutdown` 이 남은 콜백을 모두 부른다.
-         *          **놓기 전용이다** — 기다리지 못한 비우기(잃은 장치 · 시간 초과 · 종료 · 웹 `waitIdle`)에서도 불린다. "GPU 가 끝났다" 를 믿고 읽거나 다시 쓰는 일은 `notifyFrameCompletion` 으로 한다.
+         *          **놓기 전용이다** — 기다리지 못한 비우기(잃은 장치 · 시간 초과 · 종료)에서도 불린다. "GPU 가 끝났다" 를 믿고 읽거나 다시 쓰는 일은 `notifyFrameCompletion` 으로 한다.
          */
         virtual void enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate ) = 0;
         /**

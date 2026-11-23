@@ -20,7 +20,7 @@
 #include "GameFramework/Kits/Genre/Simulation/Farming/Component/FarmGameModeComponent.h"
 #include "GameFramework/Runtime/Character/Camera/CameraDirectorComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
-#include "GameFramework/Runtime/Foundation/Framework/Save/ComponentStateStore.h"
+#include "GameFramework/Runtime/Foundation/Framework/Save/StatefulComponentRegistrar.h"
 
 namespace sw
 {

@@ -26,8 +26,7 @@
 			<GameObject _schemaVersion="0" _name="Director" _bActive="true">
 				<_listComponent>
 					<BattleRoyaleDemoComponent _localID="11851373125911040330" _componentName="BattleRoyaleDemoComponent"
-					                           _bActive="true"
-					                           _catalogPath="game/playground/data/kitdemo/demo.battleroyale.xml" />
+					                           _bActive="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>

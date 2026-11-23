@@ -39,6 +39,13 @@
 	<EditorWaitStable/>
 	<Expect watch="Editor.DataTableRecordCount" sameAs="records"/>
 	<Expect watch="Editor.DataTableVisibleRecordCount" equals="0"/>
+	<!-- 지우기를 되돌리면 키가 돌아오고 다시 하면 사라진다(현지화 탭의 레코드 되돌리기) -->
+	<EditorKey key="Ctrl+Z"/>
+	<WaitUntil watch="Editor.DataTableVisibleRecordCount" equals="1" timeoutFrames="60"/>
+	<EditorKey key="Ctrl+Y"/>
+	<WaitUntil watch="Editor.DataTableVisibleRecordCount" equals="0" timeoutFrames="60"/>
+	<EditorWaitStable/>
+	<CaptureEditorUI file="datatablepanel/localization.png" maxMagentaFraction="0"/>
 	<!-- 다시 읽기 — 고친 것을 버린다 -->
 	<EditorClick mark="dataTable.reload"/>
 	<WaitUntil watch="Editor.PanelDirty" equals="0" timeoutFrames="10"/>

@@ -1,6 +1,7 @@
 /**
  * @file DebugHUDRegistry.h
- * @brief 디버그 HUD 섹션 레지스트리와 `SW_DEBUG_HUD_SECTION` 입니다. Shipping 에서는 등록 매크로가 꺼져 표가 비어 있습니다(`SW_SHIPPING`).
+ * @brief 디버그 HUD 섹션 레지스트리와 `SW_DEBUG_HUD_SECTION` · `SW_DEBUG_HUD_CATEGORY` 입니다. Shipping 에서는 등록 매크로가 꺼져 표가 비어 있습니다(`SW_SHIPPING`).
+ * @details 섹션 하나가 디버그 범주 하나다(언리얼 Gameplay Debugger 의 카테고리) — HUD 줄 · 월드에 그리는 도형 · 감시 값 묶음 · 비주얼 로거 분류가 같은 이름 아래 같은 스위치(`hud <이름> on`)로 켜진다.
  */
 #pragma once
 #include "Core/Concurrency/mutex.h"
@@ -19,6 +20,9 @@
 
 namespace sw
 {
+    class DebugDrawQueue;
+    class Scene;
+
     /** @brief HUD 줄 값의 색 갈래입니다. 상태만 색을 갖는다 — 보통 값은 중립이고 실패 · 경고만 경고색이다(앱 화면 규칙: 강조색은 데이터 · 상태에만). */
     enum class DebugHUDLineStyle : uint8
     {
@@ -95,6 +99,17 @@ namespace sw
     /** @brief 섹션 본문입니다 — 이미 있는 서비스에서 읽기만 하고 @p writer 에 적습니다(새 수집을 프레임에 더하지 않는다). 게임 스레드에서 부릅니다. */
     using DebugHUDSectionFunc = void ( * )( DebugHUDSectionWriter& writer );
 
+    /** @brief 섹션이 월드에 그릴 때 받는 것입니다. */
+    struct DebugHUDSectionDraw
+    {
+        Scene&          _scene; ///< 활성 씬(오브젝트 매니저가 있다)
+        DebugDrawQueue& _queue;
+        const bool      _bShown; ///< 섹션이 켜져 있다. `kDrawsWhileHidden` 이 아닌 섹션은 늘 true 다. NOLINT(sw-bool-flag): 부르는 쪽이 만드는 집합체다
+    };
+
+    /** @brief 섹션이 도형을 그리는 본문입니다(씬 틱 뒤 프레임마다, 게임 스레드). 씬 뷰와 `-gv_debugDrawGameView` 의 게임 화면에 보입니다. */
+    using DebugHUDSectionDrawFunc = void ( * )( const DebugHUDSectionDraw& draw );
+
     /** @brief 섹션 등록 줄의 플래그입니다. */
     struct DebugHUDSectionFlag
     {
@@ -106,6 +121,8 @@ namespace sw
          * 사용자 설정 파일에 아무것도 쓰지 않는다(실행 중에만 켜진다). 이 섹션만 보이는 동안 HUD 는 다른 섹션을 그리지 않는다(프로파일러를 켜지 않는다).
          */
         static constexpr uint8 kAutomationRun = 1u << 2;
+        /** 그리기가 씬에 오브젝트를 세운다 — 꺼져 있을 때도 `_bShown` false 로 불러 걷게 한다. */
+        static constexpr uint8 kDrawsWhileHidden = 1u << 3;
     };
 } // namespace sw
 
@@ -114,11 +131,13 @@ namespace sw
     /** @brief 섹션 하나의 등록 줄입니다. 문자열 · 함수는 등록한 이미지(모듈)의 정적 저장소에 있습니다. */
     struct DebugHUDSectionRegistration
     {
-        const utf8*         _pName;  ///< 명령 · 설정에 쓰는 이름(`fps` · `physics` — 공백 · 쉼표 · `-` 로 시작 금지, 대소문자 무시)
-        const utf8*         _pTitle; ///< HUD 에 보이는 제목(개발 도구라 영어 고정)
-        DebugHUDSectionFunc _pFunc;
-        int32               _order; ///< 작을수록 위(같으면 이름순)
-        uint8               _flags; ///< `DebugHUDSectionFlag`
+        const utf8*             _pName;                  ///< 명령 · 설정에 쓰는 이름(`fps` · `physics` — 공백 · 쉼표 · `-` 로 시작 금지, 대소문자 무시). 비주얼 로거의 분류 이름이기도 하다
+        const utf8*             _pTitle;                 ///< HUD 에 보이는 제목(개발 도구라 영어 고정)
+        DebugHUDSectionFunc     _pFunc;                  ///< HUD 줄 본문(그리기만 하는 섹션은 nullptr)
+        int32                   _order;                  ///< 작을수록 위(같으면 이름순)
+        uint8                   _flags;                  ///< `DebugHUDSectionFlag`
+        DebugHUDSectionDrawFunc _pDrawFunc{ nullptr };   ///< 월드에 그리는 본문(없으면 nullptr)
+        const utf8*             _pWatchGroup{ nullptr }; ///< 줄 본문 아래에 보일 감시 값 묶음 — 이름이 `<묶음>.` 으로 시작하는 씬 감시 값(없으면 nullptr)
 
         /** @brief `DebugHUDSectionFlag` 의 @p flag 가 켜져 있으면 true 입니다. */
         bool hasFlag( uint8 flag ) const { return ( _flags & flag ) != 0; }
@@ -149,7 +168,7 @@ namespace sw
         void                shutdownSubsystem() override {}
         const utf8*         getSubsystemName() const override { return kSubsystemName; }
 
-        /** @brief 섹션을 올립니다. 이름이 비었거나 · 예약어거나 · 이미 있거나 · 본문이 없으면 false 입니다. */
+        /** @brief 섹션을 올립니다. 이름이 비었거나 · 예약어거나 · 이미 있거나 · 줄 본문과 그리기가 둘 다 없으면 false 입니다. */
         [[nodiscard]] bool registerEntry( const DebugHUDSectionRegistration* pRegistration );
         /** @brief 섹션을 뺍니다(없으면 아무 일도 없습니다). */
         void unregisterEntry( const DebugHUDSectionRegistration* pRegistration );
@@ -209,25 +228,30 @@ namespace sw
 #if !defined( SW_SHIPPING )
 
 /**
- * @brief 디버그 HUD 섹션을 그 섹션의 .cpp 에서 등록합니다. Shipping 에서는 등록을 남기지 않습니다 — 본문 함수는 컴파일되지만 부르는 곳이 없어 링크에서 빠진다.
- * @param varName 파일 안에서 유일한 이름 조각(변수 이름용)
- * @param pName   명령 · 설정에 쓰는 이름(리터럴, `hud <이름> on`)
- * @param pTitle  HUD 에 보이는 제목
- * @param order   작을수록 위
- * @param flags   `DebugHUDSectionFlag` 의 조합
- * @param pFunc   `void( DebugHUDSectionWriter& )` 본문
+ * @brief 디버그 HUD 섹션(범주)을 그 섹션의 .cpp 에서 등록합니다. Shipping 에서는 등록을 남기지 않습니다 — 본문 함수는 컴파일되지만 부르는 곳이 없어 링크에서 빠진다.
+ * @param varName     파일 안에서 유일한 이름 조각(변수 이름용)
+ * @param pName       명령 · 설정에 쓰는 이름(리터럴, `hud <이름> on`)
+ * @param pTitle      HUD 에 보이는 제목
+ * @param order       작을수록 위
+ * @param flags       `DebugHUDSectionFlag` 의 조합
+ * @param pFunc       `void( DebugHUDSectionWriter& )` 줄 본문(그리기만 하면 nullptr)
+ * @param pDrawFunc   `void( const DebugHUDSectionDraw& )` 그리기 본문(없으면 nullptr)
+ * @param pWatchGroup 함께 보일 감시 값 묶음 이름(없으면 nullptr)
  */
-    #define SW_DEBUG_HUD_SECTION( varName, pName, pTitle, order, flags, pFunc )                                                                  \
-        static const ::sw::DebugHUDSectionRegistration sw_debugHUDSection_##varName{ pName, pTitle, pFunc, order, static_cast<uint8>( flags ) }; \
-        static ::sw::DebugHUDSectionRegistrar          sw_debugHUDSectionRegistrar_##varName                                                     \
-        {                                                                                                                                        \
-            &sw_debugHUDSection_##varName                                                                                                        \
+    #define SW_DEBUG_HUD_CATEGORY( varName, pName, pTitle, order, flags, pFunc, pDrawFunc, pWatchGroup )                                                                 \
+        static const ::sw::DebugHUDSectionRegistration sw_debugHUDSection_##varName{ pName, pTitle, pFunc, order, static_cast<uint8>( flags ), pDrawFunc, pWatchGroup }; \
+        static ::sw::DebugHUDSectionRegistrar          sw_debugHUDSectionRegistrar_##varName                                                                             \
+        {                                                                                                                                                                \
+            &sw_debugHUDSection_##varName                                                                                                                                \
         }
 
 #else
 
     // 인자를 평가 없이 참조한다 — 등록에만 쓰이는 순서 상수 · 본문 함수가 Shipping 에서만 '안 쓰임' 경고를 내지 않게.
-    #define SW_DEBUG_HUD_SECTION( varName, pName, pTitle, order, flags, pFunc ) \
-        static_assert( sizeof( pFunc ) > 0 && sizeof( order ) > 0 && sizeof( flags ) > 0, "SW_DEBUG_HUD_SECTION is compiled out of Shipping" )
+    #define SW_DEBUG_HUD_CATEGORY( varName, pName, pTitle, order, flags, pFunc, pDrawFunc, pWatchGroup ) \
+        static_assert( sizeof( pFunc ) > 0 && sizeof( pDrawFunc ) > 0 && sizeof( order ) > 0 && sizeof( flags ) > 0, "SW_DEBUG_HUD_CATEGORY is compiled out of Shipping" )
 
 #endif
+
+/** @brief HUD 줄만 있는 섹션입니다(`SW_DEBUG_HUD_CATEGORY`). */
+#define SW_DEBUG_HUD_SECTION( varName, pName, pTitle, order, flags, pFunc ) SW_DEBUG_HUD_CATEGORY( varName, pName, pTitle, order, flags, pFunc, nullptr, nullptr )

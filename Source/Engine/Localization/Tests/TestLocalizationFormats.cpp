@@ -10,7 +10,6 @@
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
 #include "Engine/Localization/CultureInfo.h"
 #include "Engine/Localization/LocalizationBinaryTable.h"
-#include "Engine/Localization/LocalizationCooker.h"
 #include "Engine/Localization/LocalizationDocuments.h"
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Localization/Tests/LocalizationTestUtil.h"
@@ -625,8 +624,10 @@ SW_TEST_CASE( LocalizationBinaryTableTest, CookedProjectReadsOnlyTheLookupChain 
     const sw::AssetID projectID = sw::test::ScopedScratchDomain::toID( project );
     for ( const sw::string& culture : listCulture )
     {
-        sw::vector<uint8> bytes;
-        SW_REQUIRE_TRUE( sw::LocalizationCooker::cookCulture( projectID, culture, bytes ) );
+        sw::vector<uint8>       bytes;
+        sw::LocalizationManager cookManager; // 쿠커(DevTools `LocalizationCooker::cookCulture`)와 같은 길 — 프로젝트 하나만 올린 새 관리자
+        SW_REQUIRE_TRUE( cookManager.mountProject( projectID, sw::LocalizationScope::Game ) );
+        SW_REQUIRE_TRUE( cookManager.cookBinaryTable( culture, bytes ) );
         SW_REQUIRE_TRUE( sw::FileUtil::writeFile( sw::FileUtil::toDiskPath( projectDoc.makeCookedTablePath( project, culture ) ), bytes.data(), bytes.size() ) );
     }
 

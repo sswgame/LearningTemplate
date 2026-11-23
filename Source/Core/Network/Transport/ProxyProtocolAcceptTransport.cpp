@@ -31,6 +31,19 @@ namespace sw
         return _pInner->initialize( &_innerHandler, settings );
     }
 
+    expected<vector<uint32>> ProxyProtocolAcceptTransport::parseTrustedProxies( const vector<string>& listText )
+    {
+        vector<uint32> listTrustedProxy;
+        for ( const string& text : listText )
+        {
+            NetAddress proxy;
+            if ( NetAddress::parse( text, 0, proxy ) == false || proxy.isIpv6() )
+                return unexpected( Error{ ErrorKind::InvalidArgument, "the trusted proxy list has an entry that is not an IPv4 address", text } );
+            listTrustedProxy.push_back( proxy.getIpv4() );
+        }
+        return listTrustedProxy;
+    }
+
     bool ProxyProtocolAcceptTransport::isTrustedProxy( const NetAddress& address ) const
     {
         for ( const uint32 trusted : _listTrustedProxy )

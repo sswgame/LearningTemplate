@@ -144,6 +144,10 @@ namespace sw::editor
          *          비교 결과는 스택이 바뀔 때(`markDirty` · 되돌리기 · 읽기 · 쓰기)까지 들고 있다 — 패널이 그리기마다 물어도 직렬화하지 않는다(감사 E-9, 언리얼 dirty 깃발).
          */
         bool isStackUnsaved() const;
+        /** @brief 저장하면 사이드카에 쓸 글입니다(자동 저장 사본). 대상이 없으면 오류입니다. */
+        [[nodiscard]] expected<string> tryMakeSidecarText() const;
+        /** @brief 사이드카 사본 글 @p text 를 저장하지 않은 스택으로 입힙니다(되돌리기 기록에 남긴다). 대상이 없거나 읽지 못하면 false 이고 스택은 그대로입니다. */
+        [[nodiscard]] bool restoreSidecarText( string_view text );
         /** @brief "Don't Save" — 스택을 마지막으로 읽거나 쓴 상태로 돌립니다(되돌리기 기록에 남긴다). 대상이 없으면 아무것도 하지 않습니다. */
         void revertStackToSaved();
         /**

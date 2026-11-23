@@ -26,8 +26,7 @@
 			<GameObject _schemaVersion="0" _name="Director" _bActive="true">
 				<_listComponent>
 					<CardGameDemoComponent _localID="4780454299701779862" _componentName="CardGameDemoComponent"
-					                       _bActive="true"
-					                       _catalogPath="game/playground/data/kitdemo/demo.deckbattle.xml" />
+					                       _bActive="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>

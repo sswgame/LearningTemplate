@@ -976,7 +976,7 @@ namespace sw::editor
             return true;
         // 바뀐 원본만 임포트한다(루트 전체를 훑지 않는다). 스탬프를 쓰는 길은 `importAllModels` 와 같은 `AssetImportStampUtil` 한 곳이다.
         const ModelRawImporter           importer{ assetPaths, config };
-        const expected<DerivedDataCache> derivedDataCache = DerivedDataCache::loadFromConfig();
+        const expected<DerivedDataCache> derivedDataCache = DerivedDataCache::open( DerivedDataBucket::Import );
         if ( derivedDataCache.has_value() == false )
         {
             SW_LOG_ERROR_ID( "ModelImporter.DerivedDataConfigUnreadable", "Model import skipped: %# (%#)", derivedDataCache.error().message(), derivedDataCache.error().detail() );
@@ -995,7 +995,7 @@ namespace sw::editor
     AssetImportSummary ModelImporter::importAllModels( const AssetPaths& assetPaths, string_view resourceRoot, const ModelImportConfig& config, AssetImportMode mode )
     {
         const ModelRawImporter           importer{ assetPaths, config };
-        const expected<DerivedDataCache> derivedDataCache = DerivedDataCache::loadFromConfig();
+        const expected<DerivedDataCache> derivedDataCache = DerivedDataCache::open( DerivedDataBucket::Import );
         if ( derivedDataCache.has_value() == false )
         {
             StringBuilder<constant::buffer::kMax512> problemBuilder;

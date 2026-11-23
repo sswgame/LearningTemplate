@@ -1879,7 +1879,7 @@ namespace sw
             spec.setDepth( _pDevice->_depthFormat, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL );
 
         if ( spec._colorCount == 0 && spec._depthFormat == 0 )
-            return _pDevice->_renderPassCache.addRenderPassRecord( _pDevice->_renderPass, false ); // 스왑체인 RP 별칭. 소유하지 않는다
+            return _pDevice->_renderPassCache.addRenderPassRecord( _pDevice->_swapChain.getRenderPass(), false ); // 스왑체인 RP 별칭. 소유하지 않는다
 
         VkRenderPass created = _pDevice->createRenderPassFromSpec( spec );
         if ( created == VK_NULL_HANDLE )
@@ -1894,7 +1894,7 @@ namespace sw
     bool VulkanRHIResourceFactory::destroyRenderPassNative( RHIRenderPassHandle pass )
     {
         VkRenderPass ownedRenderPass = VK_NULL_HANDLE;
-        if ( _pDevice->_renderPassCache.detachRenderPassRecord( pass, _pDevice->_renderPass, ownedRenderPass ) == false )
+        if ( _pDevice->_renderPassCache.detachRenderPassRecord( pass, _pDevice->_swapChain.getRenderPass(), ownedRenderPass ) == false )
             return false;
         if ( ownedRenderPass != VK_NULL_HANDLE )
         {

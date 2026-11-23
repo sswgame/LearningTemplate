@@ -46,9 +46,7 @@ namespace sw
         /** @brief 이 기계(127.0.0.1)에서 온 패킷만 받습니다(같은 PC 의 송신기 · 테스트). 시작 전에 정합니다. */
         void setLoopbackOnly( bool bLoopbackOnly ) { _bLoopbackOnly = bLoopbackOnly ? SW_TRUE : SW_FALSE; }
         /** @brief 실제로 연 포트입니다. 열지 못했으면 0 입니다. */
-        uint16 getBoundPort() const;
-        /** @brief 받아 적용한 패킷 수입니다(진단 · 테스트). */
-        uint32                    getAppliedPacketCount() const { return _appliedPacketCount; }
+        uint16                    getBoundPort() const;
         const LiveLinkFaceSource& getSource() const { return _source; }
 
     private:
@@ -62,7 +60,6 @@ namespace sw
         LiveLinkFaceFrame           _frame;
         vector<uint8>               _listReceive;
         unique_ptr<UDPNetTransport> _transport;
-        uint32                      _appliedPacketCount;
         Subscription                _faceRegistration; ///< 얼굴에 건 입력의 구독(`onBeginPlay` 가 받고 `onEndPlay` 가 놓는다)
         PROPERTY( Category = "Live Link Face", DisplayName = "Loopback Only", Tooltip = "Accept packets from this machine only (local sender, tests)" )
         uint8                  _bLoopbackOnly  : 1;

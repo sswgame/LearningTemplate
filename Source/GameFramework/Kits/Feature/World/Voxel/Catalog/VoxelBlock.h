@@ -87,7 +87,7 @@ namespace sw
         PROPERTY()
         bool _bBreakable{ true };
         PROPERTY( Name = "drop" )
-        hashed_string _dropID{}; ///< 부수면 얻는 블록 id(`drop`). 비면 자기 자신이다. 같은 카탈로그의 블록이어야 한다(읽을 때 본다)
+        hashed_string _dropID{}; ///< 부수면 얻는 블록 id(`drop`). 비면 자기 자신이다. 같은 카탈로그의 블록이어야 한다(참조 표가 본다)
     };
 } // namespace sw
 

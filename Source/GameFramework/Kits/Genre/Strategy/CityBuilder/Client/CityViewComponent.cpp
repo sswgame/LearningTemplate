@@ -15,7 +15,7 @@
 
 #include "GameFramework/Kits/Genre/Strategy/CityBuilder/Component/CityGameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
-#include "GameFramework/Runtime/Foundation/Framework/Save/ComponentStateStore.h"
+#include "GameFramework/Runtime/Foundation/Framework/Save/StatefulComponentRegistrar.h"
 
 namespace sw
 {

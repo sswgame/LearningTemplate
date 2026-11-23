@@ -231,7 +231,7 @@ namespace sw
             return true;
         }
 
-        if ( _offset + size > _dataSize )
+        if ( size > _dataSize - _offset )
         {
             _bError = SW_TRUE;
             outBytes.clear();
@@ -481,7 +481,7 @@ namespace sw
 
         if ( len > 0 )
         {
-            if ( _pData == nullptr || _offset + len > _dataSize )
+            if ( _pData == nullptr || len > _dataSize - _offset )
             {
                 _bError = SW_TRUE;
                 outData.clear();
@@ -509,7 +509,7 @@ namespace sw
 
         if ( len > 0 )
         {
-            if ( _pData == nullptr || _offset + len > _dataSize )
+            if ( _pData == nullptr || len > _dataSize - _offset )
             {
                 _bError = SW_TRUE;
                 outBytes.clear();

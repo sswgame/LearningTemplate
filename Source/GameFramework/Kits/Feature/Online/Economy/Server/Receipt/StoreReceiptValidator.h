@@ -4,7 +4,7 @@
  * @details 틀이 정하는 것:
  *          - **응답 분류**(`classifyResponse`): 전송 실패 · 429 · 5xx 는 Retry, 401 · 403 은 우리 자격 문제라 Retry(오류 로그는 스토어가 남긴다), 그 밖의 4xx 는 Invalid, 2xx 인데 JSON 이 아니면 Retry 다.
  *            "스토어가 없다고 답했다" 만 Invalid 이다 — 읽지 못한 답을 Invalid 로 하면 결제한 사람의 영수증이 버려진다.
- *          - **요청과의 대조**(`applyOrderInfo`): 물은 거래 · 상품 · 키와 답이 다르면 Invalid, 판정에 필요한 거래 id · 상품이 없으면 Invalid 이다. 스토어는 답이 말한 값을 옮겨 적기만 한다.
+ *          - **요청과의 대조**(`applyOrderInfo`): 물은 거래 · 상품 · 키와 답이 다르면 Invalid, 판정에 필요한 거래 id · 상품 · 산 수가 없으면 Invalid 이다. 스토어는 답이 말한 값을 옮겨 적기만 한다.
  *          - **조회 구간**(`ReceiptPollWindow`): 끝까지 읽은 조회만 구간을 옮긴다. 실패 · 읽지 못한 항목 · 잇지 못한 잘림은 그대로 둬 다음 조회가 다시 읽는다 — 구간을 지나치면 그 환불을 영영 놓친다.
  *            기준 시각은 서비스가 저장소(`econ_refund_cursor`)에 남긴다. 받기 전(`restoreRefundCursor`)에는 조회하지 않아 재시작이 구간을 비우지 않고, 스토어의 한계를 넘겨 멈춘 동안 놓친 구간은 경고한다.
  *          - **지급 알림**(`confirmDelivery`): 답이 "지급 뒤에 알려라" 고 하면(`_bNeedsDeliveryConfirm`) 결과에 키만 실어 내고, 알림은 서비스가 지급을 커밋한 뒤에 맡긴다. 2xx Confirmed, 그 밖의 4xx Refused, 닿지 못함 · 자격 거절 Retry 다.
@@ -57,16 +57,16 @@ namespace sw
     /** @brief 스토어 답이 말한 사실입니다. 파싱이 옮겨 적기만 하고 판단은 틀이 합니다. */
     struct ReceiptOrderInfo
     {
-        string        _transactionID{};
-        string        _productID{};
-        string        _answeredKey{};  ///< 답이 되풀이한 물음의 키(없으면 비어 있다)
-        string        _storeBuyerID{}; ///< 답이 말한 구매자(없으면 비어 있다)
-        string        _failureText{};  ///< `_status` 가 Valid 가 아닐 때의 까닭(영어)
-        int64         _purchaseTimeMs{ 0 };
-        int64         _deliveryDeadlineMs{ 0 }; ///< `_bNeedsDeliveryConfirm` 일 때 스토어가 결제를 되돌리는 시각
-        ReceiptStatus _status{ ReceiptStatus::Invalid };
-        uint8         _bSandbox{ SW_FALSE };
-        uint8         _bNeedsDeliveryConfirm{ SW_FALSE }; ///< Valid 면 지급한 뒤 스토어에 알려야 한다(구글의 구매 확인). 지급 전에 알리면 지급이 실패했을 때 환불도 재시도도 없다
+        string                  _transactionID{};
+        vector<ReceiptLineItem> _listItem{};     ///< 답이 말한 산 것 전부. 상품을 정해 물었으면(`ReceiptQuery::_productID`) 상품 칸은 비어도 된다
+        string                  _answeredKey{};  ///< 답이 되풀이한 물음의 키(없으면 비어 있다)
+        string                  _storeBuyerID{}; ///< 답이 말한 구매자(없으면 비어 있다)
+        string                  _failureText{};  ///< `_status` 가 Valid 가 아닐 때의 까닭(영어)
+        int64                   _purchaseTimeMs{ 0 };
+        int64                   _deliveryDeadlineMs{ 0 }; ///< `_bNeedsDeliveryConfirm` 일 때 스토어가 결제를 되돌리는 시각
+        ReceiptStatus           _status{ ReceiptStatus::Invalid };
+        uint8                   _bSandbox{ SW_FALSE };
+        uint8                   _bNeedsDeliveryConfirm{ SW_FALSE }; ///< Valid 면 지급한 뒤 스토어에 알려야 한다(구글의 구매 확인). 지급 전에 알리면 지급이 실패했을 때 환불도 재시도도 없다
     };
 
     /** @brief 환불 조회 응답 한 쪽에서 읽은 것입니다. 알림 자체는 `addRefund` 로 넘깁니다. */

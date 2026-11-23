@@ -451,6 +451,10 @@ SW_TEST_CASE( RHIAvailabilityTest, OtherBackendFitsThePlatform )
     SW_EXPECT_TRUE( other == sw::RHIBackend::OpenGL );
     SW_REQUIRE_TRUE( sw::RHIAvailability::findOtherBackend( sw::RHIBackend::OpenGL, other ) );
     SW_EXPECT_TRUE( other == sw::RHIBackend::Vulkan );
+#elif defined( SW_PLATFORM_ANDROID ) || defined( SW_PLATFORM_WEB )
+    // 백엔드가 하나뿐인 플랫폼(Android Vulkan · 웹 WebGPU)은 건너갈 곳이 없다.
+    SW_EXPECT_EQUAL( size_t{ 1 }, static_cast<size_t>( sw::RHIAvailability::getPlatformBackendOrder().size() ) );
+    SW_EXPECT_FALSE( sw::RHIAvailability::findOtherBackend( sw::RHIAvailability::getPlatformBackendOrder()[0], other ) );
 #else
     #error "Unsupported platform"
 #endif

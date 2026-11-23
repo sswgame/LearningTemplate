@@ -21,6 +21,9 @@ namespace sw
             "Shading model: Eye",
             "Shading model: ThinTranslucent",
             "Shading model: Anisotropic",
+            "Shading model: SubsurfaceCoat",
+            "Shading model: ClothCoat",
+            "Shading model: ThinTranslucentCoat",
         } );
     } // namespace
 

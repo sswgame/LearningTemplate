@@ -1234,7 +1234,7 @@ namespace sw
         if ( isDeviceLost() )
             return;
         // 앞서가기 상한(`IRHIDevice` 계약): 이 칸을 앞 프레임이 아직 쓰면 그 프레임을 기다린다. 기다리지 않으면 상수 링 · 프레임 완료가 GPU 가 뒤처진 만큼 자란다.
-        // 브라우저도 같은 대기다 — 웹 빌드는 ASYNCIFY · JSPI 로 링크해 `wgpuInstanceWaitAny` 가 이벤트 루프에 양보한다(`waitForFuture` 와 같은 길).
+        // 브라우저도 같은 대기다 — 프레임은 `main` 의 promising 스택에서 돌아 `wgpuInstanceWaitAny` 가 JSPI 로 이벤트 루프에 양보한다(`waitForFuture` 와 같은 길).
         const uint64 busySerial = _frameFenceRing.getRecordingSlotBusySerial();
         if ( busySerial != 0 )
         {
@@ -1424,12 +1424,9 @@ namespace sw
             return;
         // 열린 프레임 밖이다(렌더 스레드를 비웠다). 내지 않은 리스트가 있으면 마저 낸다.
         submitPending();
-#if defined( SW_PLATFORM_WEB )
-        // 브라우저: 기다리지 않는다(지금 동작). `waitIdle` 은 크기 변경 · 표면 놓기에서 DOM 이벤트 콜백 스택으로 올 수 있고 JSPI 는 그 스택을 멈출 수 없다 —
-        // 프레임 콜백 안인지 웹 시나리오로 확인한 뒤 `waitFrameFence` 로 바꾼다(docs/NEXT.md 웹 실행). WebGPU 는 GPU 가 쓰는 객체를 놓아도 구현이 끝날 때까지 살린다(명세) —
-        // 해제는 놓아도 되고, 끝나지 않은 프레임의 통지만 아래에서 `Abandoned` 로 간다.
-#elif defined( SW_PLATFORM_WINDOWS ) || defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_ANDROID )
-        // Dawn: 낸 프레임을 오래된 순서로 프레임 펜스까지 기다린다 — `beginFrameInternal` 의 칸 대기와 같은 길(`wgpuInstanceWaitAny`, 잠 폴링 없음). 잃은 장치는 끝나지 않을 일을 기다리지 않는다.
+        // 낸 프레임을 오래된 순서로 프레임 펜스까지 기다린다 — `beginFrameInternal` 의 칸 대기와 같은 길(`wgpuInstanceWaitAny`, 잠 폴링 없음). 잃은 장치는 끝나지 않을 일을 기다리지 않는다.
+        // 브라우저도 같다: 모든 호출 자리(크기 변경 · 표면 · 출력 바뀜 · 종료)가 프레임이나 기동 · 종료 안이고 그 스택은 `main` 의 promising 호출이라 JSPI 로 멈춘다 —
+        // DOM 콜백은 크기 · 보임을 적기만 한다(`WebWindow`).
         const uint64 lastSubmitted = _frameFenceRing.getLastSubmittedSerial();
         for ( uint64 serial = _frameFenceRing.getCompletedSerial() + 1; serial <= lastSubmitted && isDeviceLost() == false; ++serial )
         {
@@ -1439,11 +1436,8 @@ namespace sw
                 break;
             }
         }
-#else
-    #error "Unsupported platform"
-#endif
         processCompletions();
-        // 낸 프레임이 모두 끝난 것을 확인했을 때만 통지가 `Completed` 다(웹 · 대기 실패 · 잃은 장치는 `Abandoned`).
+        // 낸 프레임이 모두 끝난 것을 확인했을 때만 통지가 `Completed` 다(대기 실패 · 잃은 장치는 `Abandoned`).
         if ( _frameFenceRing.isIdle() && isDeviceLost() == false )
             _releaseQueue.releaseAllCompleted();
         else

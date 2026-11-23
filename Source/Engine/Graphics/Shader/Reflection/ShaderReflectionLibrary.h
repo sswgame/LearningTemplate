@@ -58,7 +58,7 @@ namespace sw
         [[nodiscard]] static bool loadManifest( string_view binDirectoryRelative, EntryMap& outMapEntry );
 
         /**
-         * @brief 디스크의 매니페스트 파일 하나(쿠킹 스테이징 — 리소스 트리 밖)를 통째로 읽습니다. 쿠킹본 판정(`ShaderCookStamp::verifyCookedShaders`)이 키를 견줄 때 씁니다.
+         * @brief 디스크의 매니페스트 파일 하나(쿠킹 스테이징 — 리소스 트리 밖)를 통째로 읽습니다. 쿠킹본 판정(`ShaderCookDriver::verifyCookedShaders`)이 키를 견줄 때 씁니다.
          * @return 파일이 없거나 형식이나 내용이 맞지 않으면 false 입니다(그때 `outMapEntry` 는 비어 있습니다).
          */
         [[nodiscard]] static bool loadManifestFile( string_view absManifestPath, EntryMap& outMapEntry );
@@ -74,9 +74,6 @@ namespace sw
 
         /** @brief 캐시를 비웁니다(셰이더를 다시 쿠킹한 뒤, 라이브 셰이더를 편집한 뒤, 엔진 종료 때 `ShaderCache::shutdown`). 캐시 세대가 증가합니다. */
         static void clearCache();
-
-        /** @brief 지금 캐시에 있는 매니페스트 수입니다(RHI 폴더마다 하나이고, 없는 파일도 빈 채로 하나입니다). 진단과 테스트용입니다. */
-        static uint32 getCachedManifestCount();
 
         /**
          * @brief 캐시를 비운 횟수입니다. 이 값이 바뀌면 전에 얻은 리플렉션은 낡았을 수 있습니다.
@@ -103,8 +100,6 @@ namespace sw
 
         /** @brief 매니페스트를 모두 버리고 세대를 올립니다(`ShaderReflectionLibrary::clearCache` 의 본문, 셰이더 캐시 종료). */
         void clear() SW_EXCLUDES_LOCK( _mutex );
-        /** @brief 지금 든 매니페스트 수입니다. */
-        uint32 getCount() SW_EXCLUDES_LOCK( _mutex );
         /** @brief 비운 횟수입니다. */
         uint32 getGeneration() const { return _generation.load( std::memory_order_acquire ); }
 

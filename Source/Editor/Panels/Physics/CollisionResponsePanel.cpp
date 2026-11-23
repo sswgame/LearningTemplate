@@ -8,6 +8,7 @@
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
+#include "Editor/Common/Input/EditorInputActionNames.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetTypeID.h"
@@ -140,6 +141,8 @@ namespace sw::editor
                     ImGui::PushStyleColor( ImGuiCol_Text, mutedColor );
                 const bool bClicked = ImGui::Selectable( Internal::getResponseLabel( _model.getResponse( profileIndex, channelIndex ) ) );
                 const bool bReset   = bDefault == false && EditorInputGUI::wasItemResetRequested(); // R10 — 휠클릭은 채널 기본으로
+                const bool bHovered = ImGui::IsItemHovered();
+                EditorSelfTestMarks::recordFormat( "collisionResponses.cell.%#.%#", profileIndex, channelIndex );
                 if ( bDefault )
                     ImGui::PopStyleColor();
                 ImGui::PopID();
@@ -147,6 +150,13 @@ namespace sw::editor
                     (void)_model.cycleResponse( profileIndex, channelIndex ); // 바꿨으면 모델이 되돌리기 이름으로 알린다
                 else if ( bReset )
                     (void)_model.resetResponse( profileIndex, channelIndex );
+                // R13 — 칸 위 Ctrl+C · Ctrl+V 는 응답 이름을 복사 · 붙인다. 응답으로 읽히지 않는 클립보드는 붙이지 않는다.
+                if ( bHovered && EditorInputGUI::wasActionTriggered( editorinput::kPropertyCopyValue ) )
+                    ImGui::SetClipboardText( CollisionResponseEditModel::formatResponse( _model.getResponse( profileIndex, channelIndex ) ) );
+                CollisionResponse pasted     = CollisionResponse::Block;
+                const utf8* const pClipboard = bHovered && EditorInputGUI::wasActionTriggered( editorinput::kPropertyPasteValue ) ? ImGui::GetClipboardText() : nullptr;
+                if ( pClipboard != nullptr && CollisionResponseEditModel::parseResponse( pClipboard, pasted ) )
+                    (void)_model.setResponse( profileIndex, channelIndex, pasted );
             }
         }
         ImGui::EndTable();

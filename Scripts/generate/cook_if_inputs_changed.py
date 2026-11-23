@@ -25,7 +25,13 @@ from pathlib import Path
 from typing import Sequence
 
 TAG = "CookIfInputsChanged"
+#: 쿠커 실행 파일 폴더(`--binaries`)에서 지문에 넣는 파일 — 실행 파일 · 공유 라이브러리(`.so.1` 도) · 그 설정(JSON). 개발 빌드 Bin 에는 실행 로그 · 사진이 쌓여 바뀔 때마다 다시 구웠다.
+LIST_BINARY_SUFFIX = {"", ".exe", ".dll", ".json"}
 COMMAND_SEPARATOR = "--then"
+
+
+def is_cooker_binary(name: str) -> bool:
+    return Path(name).suffix.lower() in LIST_BINARY_SUFFIX or ".so" in Path(name).suffixes
 
 
 def fingerprint(list_path: Sequence[Path], list_flat: Sequence[Path] = ()) -> str:
@@ -40,7 +46,7 @@ def fingerprint(list_path: Sequence[Path], list_flat: Sequence[Path] = ()) -> st
             digest.update(b"missing\n")
             continue
         for entry in sorted(os.scandir(folder), key=lambda item: item.name):
-            if entry.is_file():
+            if entry.is_file() and is_cooker_binary(entry.name):
                 stat = entry.stat()
                 digest.update(f"{entry.name} {stat.st_size} {stat.st_mtime_ns}\n".encode("utf-8"))
     for root in list_path:

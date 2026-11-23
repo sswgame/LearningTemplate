@@ -372,10 +372,14 @@ namespace sw
             pMesh = createGrassClump();
         else
             pMesh = createCone();
-        if ( pMesh != nullptr && vertexColor == PrimitiveVertexColor::White )
+        if ( pMesh == nullptr )
+            return pMesh;
+        vector<RHIVertex> listVertex = pMesh->getCPUView().getVertices();
+        vector<uint32>    listIndex  = pMesh->getIndices();
+        Mesh::refineSeamEdges( listVertex, listIndex ); // 내장 도형도 임포트한 메시처럼 이음매 변을 가른다
+        if ( vertexColor == PrimitiveVertexColor::White )
         {
             // 생성기는 검증 색으로 만든다. 게임이 쓰는 도형은 색을 모두 1 로 — 머티리얼 색이 그대로 보이게.
-            vector<RHIVertex> listVertex = pMesh->getCPUView().getVertices();
             for ( RHIVertex& vertex : listVertex )
             {
                 vertex._arrColor[0] = 1.0f;
@@ -383,9 +387,9 @@ namespace sw
                 vertex._arrColor[2] = 1.0f;
                 vertex._arrColor[3] = 1.0f;
             }
-            // 색은 탄젠트 묶기 키가 아니다 — 정점 · 인덱스 · 탄젠트는 생성기의 것 그대로다.
-            (void)pMesh->setGeometryWithTangents( std::move( listVertex ), vector<uint32>( pMesh->getIndices() ) );
         }
+        // 색 · 변 묶음은 탄젠트 묶기 키가 아니다 — 정점 · 인덱스 · 탄젠트 방향은 생성기의 것 그대로다.
+        (void)pMesh->setGeometryWithTangents( std::move( listVertex ), std::move( listIndex ) );
         return pMesh;
     }
 

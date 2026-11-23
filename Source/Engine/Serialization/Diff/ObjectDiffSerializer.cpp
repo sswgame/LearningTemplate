@@ -93,7 +93,7 @@ namespace sw
             offset += sizeof( uint32 );
             Memory::copy( &payload, pDiffData + offset, sizeof( uint32 ) );
             offset += sizeof( uint32 );
-            if ( offset + payload > diffSize )
+            if ( payload > diffSize - offset )
                 return false;
 
             const PropertyListView listProp     = typeInfo.getPropertiesWithBase();

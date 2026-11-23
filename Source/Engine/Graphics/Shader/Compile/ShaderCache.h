@@ -67,9 +67,8 @@ namespace sw
     {
         /** @brief 이 항목을 만든 컴파일 요청. 수동 리로드가 이것으로 다시 컴파일합니다. */
         ShaderCompileDesc _desc;
-        /** @brief 이 항목을 넣을 때의 지문입니다(`IShaderBytecodeProvider::computeFingerprint` — 실행 중 컴파일은 소스와 `_result._listIncludedFile` 의 헤더, 쿠킹본은 상수). 지금 지문과 다르면 낡았다. 0 이면 맞을 수 없다. */
-        uint64              _sourceFingerprint{ 0 };
-        uint64              _replaceSerial{ 0 }; ///< 재컴파일이 이 항목을 바꾼 번호입니다(`ShaderCache::replaceCompiled`). 로드가 넣은 항목은 0.
+        uint64            _replaceSerial{ 0 }; ///< 재컴파일이 이 항목을 바꾼 번호입니다(`ShaderCache::replaceCompiled`). 로드가 넣은 항목은 0.
+        /** @brief 컴파일 결과입니다. 지금도 맞는지는 공급자가 본다(`IShaderBytecodeProvider::isCurrent` — 실행 중 컴파일은 결과의 쿠킹 기록으로). */
         ShaderCompileResult _result;
     };
 } // namespace sw
@@ -133,7 +132,7 @@ namespace sw
          * @brief 지금까지 컴파일한 셰이더들의 요청을 모읍니다.
          * @details **"이 실행에서 실제로 쓰이는 셰이더"의 기준이 여기입니다.** 수동 리로드는 따로 등록 목록을
          *          두지 않고 이것을 씁니다(따로 채우는 목록은 채우는 쪽을 빠뜨리면 리로드 단축키가 빈 목록을 돕니다).
-         *          **컴파일 중인 요청도 든다** — 편집 앞의 소스를 읽은 컴파일이 편집 뒤에 끝나면 옛 바이트코드가 새 지문으로 캐시에 남는다. 목록에 들어야 다시 컴파일해 견준다.
+         *          **컴파일 중인 요청도 든다** — 편집 앞의 소스를 읽은 컴파일이 편집 뒤에 끝나면 옛 바이트코드가 캐시에 남는다. 목록에 들어야 다시 컴파일해 견준다.
          */
         void collectCompiledDescs( vector<ShaderCompileDesc>& outListDesc ) const;
 
@@ -192,8 +191,6 @@ namespace sw
         ShaderHandle requestWith( const ShaderCompileDesc& desc, AssetLoadStart start );
         /** @brief 로드 단계 본문입니다 — 인메모리 캐시 다음, 쿠킹본 정책은 팩의 쿠킹본만, 소스 정책은 컴파일(셰이더 DDC 를 먼저 본다)입니다(이 스레드). */
         ShaderCompileResult loadOrCompile( const ShaderCompileDesc& desc, const string& cacheKey, uint64 replaceCountAtStart );
-        /** @brief 인메모리 캐시에 넣을 항목입니다. 지문은 결과의 소스(`_sourceFile`)와 연 헤더로 셉니다(파일을 읽는다 — 잠금 밖). */
-        ShaderCacheEntry makeEntry( const ShaderCompileDesc& desc, const ShaderCompileResult& result ) const;
         /** @brief 기동 때 고른 공급자입니다. 초기화 전에 부르면 멈춘다. */
         const IShaderBytecodeProvider& getProvider() const;
         /** @brief 진행 중인 로드를 모두 기다립니다(종료 — 워커의 로드가 사라진 캐시에 쓰지 않게). */

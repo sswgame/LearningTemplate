@@ -3,6 +3,7 @@
 #include "pch.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/File/ProcessRoots.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Editor/Common/Commands/Asset/EditorDocumentAutosave.h"
@@ -13,8 +14,8 @@ namespace
     {
         static constexpr uint64 kSourceHash = 0x1234u;
 
-        static uint64 computeKeptSourceHash( sw::string_view /*documentPath*/ ) { return kSourceHash; }
-        static uint64 computeEditedSourceHash( sw::string_view /*documentPath*/ ) { return kSourceHash + 1u; }
+        static uint64 computeKeptSourceHash( const sw::editor::EditorDocumentAutosaveEntry& /*entry*/ ) { return kSourceHash; }
+        static uint64 computeEditedSourceHash( const sw::editor::EditorDocumentAutosaveEntry& /*entry*/ ) { return kSourceHash + 1u; }
 
         static sw::editor::EditorDocumentAutosaveEntry makeEntry( sw::string_view projectRoot )
         {
@@ -69,4 +70,28 @@ SW_TEST_CASE( EditorDocumentAutosaveTest, ForeignProjectAndChangedSourceAreRefus
     sw::editor::EditorDocumentAutosaveEntry::scan( listSession, sw::test::makeScratchPath( "OtherProject" ).str(), &Internal::computeKeptSourceHash, listEntry );
     SW_REQUIRE_EQUAL( size_t{ 1 }, listEntry.size() );
     SW_EXPECT_FALSE( listEntry[0]._refusal.empty() );
+}
+
+/** @brief [EditorDocumentAutosaveTest] 상태 문서의 사본은 패널 id 를 싣고, 파일 id 는 프로젝트 기준 경로로 적혀 같은 파일로 풀린다(절대 경로를 사본 이름에 쓰지 않는다) */
+SW_TEST_CASE( EditorDocumentAutosaveTest, StateDocumentCopyKeepsItsPanel )
+{
+    using Internal                             = EditorDocumentAutosaveTestInternal;
+    const sw::AbsolutePath       sessionFolder = sw::test::makeScratchPath( "DocumentAutosave" );
+    const sw::AbsolutePath       projectRoot   = sw::test::makeScratchPath( "Project" );
+    const sw::vector<sw::string> listSession{ sessionFolder.str() };
+    const sw::AbsolutePath       configPath = sw::ProcessRoots::get()._project.join( "Config/Engine/Probe.json" );
+    auto                         entry      = Internal::makeEntry( projectRoot.str() );
+    entry._documentPath                     = sw::editor::EditorDocumentAutosaveEntry::makeFileID( configPath.str() );
+    entry._panelID                          = "projectsettings";
+    SW_EXPECT_EQUAL( sw::string( "Config/Engine/Probe.json" ), entry._documentPath );
+    const sw::optional<sw::AbsolutePath> resolved = sw::editor::EditorDocumentAutosaveEntry::resolveFileID( entry._documentPath );
+    SW_REQUIRE_TRUE( resolved.has_value() );
+    SW_EXPECT_TRUE( sw::FileUtil::isSameDiskPath( resolved->str(), configPath.str() ) );
+    SW_REQUIRE_TRUE( entry.write( sessionFolder.str() ) );
+
+    sw::vector<sw::editor::EditorDocumentAutosaveEntry> listEntry;
+    sw::editor::EditorDocumentAutosaveEntry::scan( listSession, projectRoot.str(), &Internal::computeKeptSourceHash, listEntry );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, listEntry.size() );
+    SW_EXPECT_EQUAL( sw::string( "projectsettings" ), listEntry[0]._panelID );
+    SW_EXPECT_EQUAL( entry._documentPath, listEntry[0]._documentPath );
 }

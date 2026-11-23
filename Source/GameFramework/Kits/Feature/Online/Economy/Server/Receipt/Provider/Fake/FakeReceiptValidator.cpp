@@ -84,7 +84,7 @@ namespace sw
             result._failureText = "fake receipt must be fake|product|transaction|status";
             return;
         }
-        result._productID     = string( arrField[1] );
+        result._listItem.push_back( ReceiptLineItem{ string( arrField[1] ), 1 } );
         result._transactionID = string( arrField[2] );
         result._status        = FakeReceiptValidatorInternal::parseStatus( arrField[3], result._bSandbox );
     }

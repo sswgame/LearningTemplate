@@ -66,8 +66,6 @@ namespace sw
         , _asyncComputeQueue{ nullptr }
         , _frameFenceRing{}
         , _swapChain{}
-        , _renderPass{ nullptr }
-        , _renderPassLoad{ nullptr }
         , _offscreenRenderPass{ nullptr }
         , _commandPool{ nullptr }
         , _oneShotCommandPool{ nullptr }
@@ -333,10 +331,7 @@ namespace sw
             if ( _swapChain.create( _physicalDevice, _device, _width, _height ) == false )
                 return false;
 
-            if ( createRenderPass() == false )
-                return false;
-
-            if ( _swapChain.createFramebuffers( _device, _renderPass ) == false )
+            if ( _swapChain.createFramebuffers( _device ) == false )
                 return false;
             markInitPhase( "swapchain" );
         }
@@ -497,8 +492,8 @@ namespace sw
                 publishBufferReadSlot( index, false, 0 );
                 publishBufferReadSlot( index, true, 0 );
             }
-            // 합성 프레임버퍼 · PSO 호환 RP · desc RP 는 캐시가 한 번에 놓는다. 스왑체인 RP(_renderPass)는 아래에서 따로.
-            _renderPassCache.destroyAll( _device, _renderPass );
+            // 합성 프레임버퍼 · PSO 호환 RP · desc RP 는 캐시가 한 번에 놓는다. 스왑체인 RP 는 아래에서 스왑체인이 놓는다.
+            _renderPassCache.destroyAll( _device, _swapChain.getRenderPass() );
             _textureRegistry.clear();
 
             for ( VkDescriptorSet& textureSet : _arrTextureSet )
@@ -612,18 +607,16 @@ namespace sw
             for ( const unique_ptr<VulkanRHISwapChain>& pWindow : _windowSwapChains.getOwnedList() )
             {
                 pWindow->destroy( _device );
+                pWindow->destroyRenderPasses( _device );
                 pWindow->destroySemaphores( _device );
                 pWindow->destroySurface( _instance );
             }
             _windowSwapChains.clear();
             _swapChain.destroy( _device );
+            _swapChain.destroyRenderPasses( _device );
             _swapChain.destroySemaphores( _device );
             destroyFrameFences();
 
-            if ( _renderPassLoad )
-                vkDestroyRenderPass( _device, _renderPassLoad, nullptr );
-            if ( _renderPass )
-                vkDestroyRenderPass( _device, _renderPass, nullptr );
             if ( _offscreenRenderPass )
             {
                 vkDestroyRenderPass( _device, _offscreenRenderPass, nullptr );
@@ -923,46 +916,18 @@ namespace sw
         return VK_FALSE;
     }
 
-    bool VulkanRHIDevice::createRenderPass()
+    void VulkanRHIDevice::syncWindowSwapChainFormats()
     {
-        // 스왑체인 렌더패스: CLEAR 변종과 LOAD 변종. 한 프레임 안에서 백버퍼 렌더패스를 두 번 이상 여는 경우(그래프가
-        // 백버퍼에 그린 뒤 UI 를 얹는 경로)에 CLEAR 변종으로 다시 열면 앞의 내용이 통째로 지워진다. 첨부 포맷 · 개수 ·
-        // 샘플 수가 같아 프레임버퍼와 파이프라인은 두 렌더패스 모두와 호환된다(render pass compatibility).
-        // LOAD 변종은 앞선 패스의 finalLayout 인 PRESENT_SRC 에서 시작한다.
-        VulkanRHIRenderPassCache::RenderPassSpec clearSpec{};
-        clearSpec.addColor( _swapChain.getImageFormat(), VK_ATTACHMENT_LOAD_OP_CLEAR, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR );
-        _renderPass = createRenderPassFromSpec( clearSpec );
-        if ( _renderPass == VK_NULL_HANDLE )
-            return false;
-
-        VulkanRHIRenderPassCache::RenderPassSpec loadSpec{};
-        loadSpec.addColor( _swapChain.getImageFormat(), VK_ATTACHMENT_LOAD_OP_LOAD, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR );
-        _renderPassLoad        = createRenderPassFromSpec( loadSpec );
-        _renderPassImageFormat = _swapChain.getImageFormat();
-        return _renderPassLoad != VK_NULL_HANDLE;
-    }
-
-    bool VulkanRHIDevice::rebuildRenderPassIfFormatChanged()
-    {
-        if ( _swapChain.getImageFormat() == _renderPassImageFormat )
-            return true;
-        // 다시 만든 스왑체인의 형식이 바뀌었다(표면이 다른 형식만 준다 — 모니터 이동 · HDR 전환). 옛 형식의 렌더 패스로 프레임버퍼를 만들면 첨부 형식이 어긋난다(R-8).
-        // GPU 는 재생성 앞에서 쉬었다. 창 스왑체인의 프레임버퍼도 같은 렌더 패스를 쓰므로 함께 다시 짓는다.
-        SW_LOG_INFO_ID( "Vulkan.SwapChainRenderPassFormatChanged", "The swap chain format changed (VkFormat %# -> %#) - rebuilding the swap chain render passes", _renderPassImageFormat,
-                        _swapChain.getImageFormat() );
-        if ( _renderPassLoad != VK_NULL_HANDLE )
-            vkDestroyRenderPass( _device, _renderPassLoad, nullptr );
-        if ( _renderPass != VK_NULL_HANDLE )
-            vkDestroyRenderPass( _device, _renderPass, nullptr );
-        _renderPass     = VK_NULL_HANDLE;
-        _renderPassLoad = VK_NULL_HANDLE;
-        if ( createRenderPass() == false )
-            return false;
+        // 다른 창은 늘 SDR 이고 UI PSO 의 포맷(`getUITargetFormat`)을 따른다 — 주 창의 SDR 포맷이 바뀌었을 때만 그 포맷으로 다시 짓는다. HDR 전환은 창을 건드리지 않는다.
+        if ( _swapChain.getColorSpace() != RHIColorSpace::SRGBNonLinear )
+            return;
         for ( const unique_ptr<VulkanRHISwapChain>& pWindow : _windowSwapChains.getOwnedList() )
         {
+            if ( pWindow->getActualBackBufferFormat() == _swapChain.getActualBackBufferFormat() )
+                continue;
+            pWindow->setRequested( _swapChain.getActualBackBufferFormat(), 0, isVSyncEnabled() );
             (void)rebuildWindowSwapChain( *pWindow, pWindow->getExtentWidth(), pWindow->getExtentHeight() ); // 실패 알림은 안에서 남긴다. 다음 획득이 다시 본다
         }
-        return true;
     }
 
     bool VulkanRHIDevice::supportsValidationLayer()
@@ -1747,7 +1712,7 @@ namespace sw
     bool VulkanRHIDevice::setBackBufferColorSpaceInternal( RHIColorSpace colorSpace, const RHIDisplayMetadata& metadata )
     {
         // 크기 바꿈과 같은 재생성 길(GPU 대기 · 옛 스왑체인 물려주기 · 포맷이 바뀌면 렌더 패스 다시 만들기)을 지금 탄다 — 부르는 쪽이 렌더 스레드를 세웠다.
-        // shortcut: 다른 창(에디터 도구 창)은 주 창의 렌더 패스 포맷을 따르므로 HDR 인 동안 새로 열지 못한다(`createSwapChainInternal` 이 거절한다) — 도구 창을 SDR 렌더 패스로 따로 그릴 때 푼다.
+        // 다른 창(에디터 도구 창)은 자기 SDR 렌더 패스를 들어 이 전환과 무관하다(`VulkanRHISwapChain::getRenderPass`).
         const RHIColorSpace      previous         = _swapChain.getColorSpace();
         const bool               bColorSpaceExt   = _bSwapChainColorSpace != SW_FALSE;
         const RHIDisplayMetadata previousMetadata = _displayMetadata;
@@ -1795,25 +1760,22 @@ namespace sw
                                        ( desc._surfaceKind == NativeSurfaceKind::Wayland ) == ( _wsiKind == VulkanWsiKind::Wayland );
         if ( bSameWindowSystem == false || _device == nullptr || isDeviceLost() )
             return nullptr;
-        if ( _swapChain.getColorSpace() != RHIColorSpace::SRGBNonLinear )
-        {
-            SW_LOG_ERROR_ID( "Vulkan.WindowSwapChainWhileHDR", "Another window cannot open while the main window presents %# - its UI draws with the SDR render pass", getEnumName( _swapChain.getColorSpace() ) );
-            return nullptr;
-        }
-
-        unique_ptr<VulkanRHISwapChain> pSwapChain = make_unique<VulkanRHISwapChain>();
-        pSwapChain->setRequested( _swapChain.getActualBackBufferFormat(), 0, isVSyncEnabled() );
+        // 다른 창은 주 창이 HDR 이어도 SDR 이다 — 그 창의 UI PSO 는 SDR 포맷 하나다(D3D12 와 같다).
+        const RHIFormat                windowFormat = getUITargetFormat();
+        unique_ptr<VulkanRHISwapChain> pSwapChain   = make_unique<VulkanRHISwapChain>();
+        pSwapChain->setRequested( windowFormat, 0, isVSyncEnabled() );
         if ( pSwapChain->createSurface( _instance, desc._pWindowHandle, desc._pWindowDisplay, _wsiKind ) == false )
             return nullptr;
         VkBool32   bPresentSupported = VK_FALSE;
         const bool bQueried          = isVkSuccess( vkGetPhysicalDeviceSurfaceSupportKHR( _physicalDevice, _graphicsQueueFamilyIndex, pSwapChain->getSurface(), &bPresentSupported ),
                                                     "vkGetPhysicalDeviceSurfaceSupportKHR (window)" );
-        // 메인 창의 렌더 패스 · 프레임버퍼 규칙을 그대로 쓰므로 이미지 포맷이 같아야 한다 — 다르면 대신할 포맷을 고르지 않고 거절한다.
+        // 창에 그리는 UI PSO 의 포맷과 같아야 한다 — 다르면 대신할 포맷을 고르지 않고 거절한다.
         const bool bCreated = bQueried && bPresentSupported != VK_FALSE && rebuildWindowSwapChain( *pSwapChain, desc._width, desc._height ) &&
-                              pSwapChain->getImageFormat() == _swapChain.getImageFormat();
+                              pSwapChain->getActualBackBufferFormat() == windowFormat;
         if ( bCreated == false )
         {
             pSwapChain->destroy( _device );
+            pSwapChain->destroyRenderPasses( _device );
             pSwapChain->destroySemaphores( _device );
             pSwapChain->destroySurface( _instance );
             return nullptr;
@@ -1830,6 +1792,7 @@ namespace sw
     {
         VulkanRHISwapChain& window = static_cast<VulkanRHISwapChain&>( swapChain ); // 이 디바이스가 만든 것만 들어온다(`createSwapChain`)
         window.destroy( _device );
+        window.destroyRenderPasses( _device );
         window.destroySemaphores( _device );
         window.destroySurface( _instance );
         _windowSwapChains.remove( window );
@@ -1860,7 +1823,7 @@ namespace sw
         swapChain.retireForRecreate( _device ); // 같은 서피스 — 옛 스왑체인을 oldSwapchain 으로 물려준다
         if ( swapChain.create( _physicalDevice, _device, width, height ) == false )
             return false; // 서피스 크기 0(최소화)은 오류가 아니다 — 다음 획득이 다시 시도한다
-        const bool bBuilt = swapChain.createFramebuffers( _device, _renderPass ) && swapChain.createSemaphores( _device, constant::render::kMaxFrameCountInFlight );
+        const bool bBuilt = swapChain.createFramebuffers( _device ) && swapChain.createSemaphores( _device, constant::render::kMaxFrameCountInFlight );
         if ( bBuilt == false )
             SW_LOG_ERROR_ONCE_ID( "Vulkan.WindowSwapChainBuildFailed", "Failed to build the framebuffers or semaphores of a window swap chain (%#x%#)", width, height );
         return bBuilt;
@@ -1967,10 +1930,8 @@ namespace sw
                 return false;
             pFailedStep = "swapchain";
         }
-        else if ( rebuildRenderPassIfFormatChanged() == false )
-            pFailedStep = "swapchain render pass";
-        else if ( _swapChain.createFramebuffers( _device, _renderPass ) == false )
-            pFailedStep = "swapchain framebuffers";
+        else if ( _swapChain.createFramebuffers( _device ) == false )
+            pFailedStep = "swapchain render pass or framebuffers";
         else if ( _swapChain.createSemaphores( _device, constant::render::kMaxFrameCountInFlight ) == false )
             pFailedStep = "swapchain semaphores";
         else if ( createFrameFences() == false )
@@ -1984,6 +1945,7 @@ namespace sw
         }
 
         _bSwapChainRecreateFailing = SW_FALSE;
+        syncWindowSwapChainFormats();
         applyHDRMetadata(); // 새 스왑체인은 HDR10 메타데이터가 없다
         return true;
     }

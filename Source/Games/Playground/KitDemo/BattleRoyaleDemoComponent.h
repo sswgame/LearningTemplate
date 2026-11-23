@@ -7,7 +7,6 @@
 #pragma once
 #include "Core/Foundation/Types.h"
 
-#include "Engine/Asset/AssetRef.h"
 #include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -46,9 +45,6 @@ namespace sw
         [[nodiscard]] bool runMatch();
 
     private:
-        PROPERTY( Category = "Data", DisplayName = "Catalog", Tooltip = "Battle royale catalog XML (player, zone, armor)" )
-        AssetRef<BattleRoyaleCatalog> _catalogPath;
-
         SharedAssetRef<BattleRoyaleCatalog> _pCatalog;
         PROPERTY( RuntimeState )
         int32 _winningTeam; ///< 이긴 팀 번호(-1 없음)

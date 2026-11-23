@@ -54,6 +54,10 @@ namespace sw::editor
         bool cycleResponse( uint32 profileIndex, uint32 channelIndex );
         /** @brief 칸을 채널 기본 응답으로 되돌립니다(줄을 뺀다 — R10 휠클릭). 바꿨으면 true, 이미 기본이거나 범위 밖이면 false 입니다. */
         bool resetResponse( uint32 profileIndex, uint32 channelIndex );
+        /** @brief 응답의 글(열거자 이름 — 물리 설정 파일의 철자)입니다. 칸 복사가 클립보드에 쓴다. */
+        static const utf8* formatResponse( CollisionResponse response );
+        /** @brief @p text 가 응답의 글이면 @p outResponse 에 담고 true 입니다(앞뒤 공백 무시). */
+        [[nodiscard]] static bool parseResponse( string_view text, CollisionResponse& outResponse );
 
     private:
         /** @brief 원문 @p text 가 물리 설정으로 읽히면 원문과 표를 바꾸고 true 입니다. 아니면 그대로 두고 상태 줄에 까닭을 둡니다. */

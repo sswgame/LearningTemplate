@@ -9,6 +9,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
+#include "Core/Memory/Memory.h"
 
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 
@@ -16,12 +17,18 @@
 
 namespace sw
 {
+    struct PropertyInfo;
+    struct TypeInfo;
+
     class Scene;
     class VFXComponent;
 } // namespace sw
 
 namespace sw::editor
 {
+    class DocumentEditRecorder;
+    class ReflectedXMLDocument;
+
     /** @brief 방출기 하나의 요약(목록 표시용)입니다. */
     struct VFXPreviewEmitterRow
     {
@@ -57,6 +64,9 @@ namespace sw::editor
         static constexpr float32 kTargetAttachHeight = 1.0f;
 
         VFXPreviewViewModel();
+        ~VFXPreviewViewModel();
+        VFXPreviewViewModel( const VFXPreviewViewModel& )            = delete;
+        VFXPreviewViewModel& operator=( const VFXPreviewViewModel& ) = delete;
 
         /** @brief 효과 파일 @p assetPath 를 읽어 방출기 표를 다시 채우고, 다음 `syncEffect` 가 효과를 다시 걸게 합니다. */
         ToolAssetLoadResult loadAsset( string_view assetPath );
@@ -91,6 +101,34 @@ namespace sw::editor
          */
         static void applySavedAsset( string_view assetPath );
 
+        // ------------------------------------------------------------------------------
+        // 편집 — 고른 방출기의 프로퍼티를 그리드가 고치면 그 칸만 원문에 쓴다(`ReflectedXMLDocument`). 저장하면 미리보기가 다시 읽는다.
+        // ------------------------------------------------------------------------------
+        /** @brief 편집 알림 창구를 겁니다(패널이 만들 때 한 번). */
+        void bindDocumentEditRecorder( const DocumentEditRecorder& recorder );
+        /** @brief 문서 원문입니다(되돌리기 단계). 열지 않았으면 빈 글입니다. */
+        string captureText() const;
+        /** @brief 되돌리기 단계의 원문을 적용합니다. */
+        void applyText( string_view text );
+        /** @brief 원문을 읽은 자리에 씁니다. 쓰지 못하면 상태 줄에 까닭을 두고 false 입니다. */
+        [[nodiscard]] bool saveDocument();
+        /** @brief 이 효과를 고칠 수 있으면 true 입니다. 물려받은 효과(`_base`)는 카탈로그 편집기가 고친다(`isInherited`). */
+        [[nodiscard]] bool isEditable() const;
+        [[nodiscard]] bool isInherited() const;
+        /** @brief 고른 방출기 번호입니다. 고르지 않았거나 사라졌으면 비어 있습니다. */
+        optional<uint32> getSelectedEmitter() const;
+        /** @brief 방출기 @p emitterIndex 를 고릅니다(보기 상태 — 되돌리기에 남지 않는다). */
+        void selectEmitter( uint32 emitterIndex ) { _selectedEmitter = emitterIndex; }
+        /** @brief 고른 방출기의 인스턴스와 형식입니다(그리드 대상). 없으면 nullptr 입니다. */
+        void*                  editSelectedEmitter();
+        static const TypeInfo* getEmitterType();
+        /** @brief 그리드가 고른 방출기의 @p property 를 고쳤습니다 — 원문에 쓰고 알린다. */
+        void commitEmitterProperty( const PropertyInfo& property );
+        /** @brief 고른 방출기를 복사해 뒤에 놓고 그것을 고릅니다. */
+        void duplicateSelectedEmitter();
+        /** @brief 고른 방출기를 뺍니다. 마지막 하나는 빼지 않는다(방출기 없는 효과는 로드 오류다). */
+        void removeSelectedEmitter();
+
         const vector<VFXPreviewEmitterRow>& getEmitterRows() const { return _listEmitterRow; }
         const string&                       getStatus() const { return _status; }
 
@@ -120,23 +158,27 @@ namespace sw::editor
     private:
         /** @brief @p pScene 의 효과입니다. 씬이 없으면 nullptr 입니다(이 호출 안에서만 씁니다). */
         [[nodiscard]] static VFXComponent* findSubject( Scene* pScene );
+        /** @brief 편집 중인 인스턴스에서 방출기 표를 다시 채웁니다(고칠 수 없는 효과는 공유 캐시의 표 그대로다). */
+        void refreshEmitterRows();
         /** @brief 확정한 타깃 몸을 놓거나(경로가 바뀌었을 때만) 치우고, 효과 오브젝트를 몸에 붙이거나 원점으로 되돌립니다. */
         void syncTarget( Scene& scene, VFXComponent& subject );
 
     private:
-        vector<VFXPreviewEmitterRow> _listEmitterRow;
-        string                       _previewEffectPath; ///< 미리보기 효과에 건 효과 경로(비면 다음 `syncEffect` 가 다시 건다)
-        string                       _status;
-        string                       _loadedDiskPath;      ///< 읽은 효과의 디스크 경로(자동 갱신이 내용 해시를 본다). 풀지 못했으면 비어 있다
-        string                       _targetPrefabPath;    ///< 입력란의 타깃 프리팹 경로(Spawn 을 눌러야 적용한다)
-        string                       _activeTargetPath;    ///< Spawn 으로 확정한 타깃 경로(비면 타깃 없음)
-        uint64                       _loadedContentHash;   ///< 읽을 때의 내용 해시(0 = 아직 없음)
-        uint64                       _seenContentSerial;   ///< 마지막으로 해시를 비교한 때의 감시 변경 번호(`AssetHotReload::getContentChangeSerial`)
-        GameObjectHandle             _target;              ///< 놓은 타깃 몸
-        float32                      _orbitAngle;          ///< 타깃이 원을 도는 각(라디안)
-        int32                        _soloEmitter;         ///< 격리한 방출기(`kNoSolo` 면 없음)
-        uint8                        _bTargetAttached : 1; ///< 효과 오브젝트가 지금 타깃에 붙어 있다
-        uint8                        _bTargetPending  : 1; ///< 다음 `syncPlayback` 이 확정 경로로 타깃을 다시 놓는다(Spawn · 새 씬). 실패해도 내린다 — 매 프레임 다시 놓지 않는다
-        [[maybe_unused]] uint8       _reserved        : 6;
+        unique_ptr<ReflectedXMLDocument> _pDocument;       ///< 편집 사본(원문이 정본)
+        optional<uint32>                 _selectedEmitter; ///< 고른 방출기(`getSelectedEmitter` 가 범위를 본다)
+        vector<VFXPreviewEmitterRow>     _listEmitterRow;
+        string                           _previewEffectPath; ///< 미리보기 효과에 건 효과 경로(비면 다음 `syncEffect` 가 다시 건다)
+        string                           _status;
+        string                           _loadedDiskPath;      ///< 읽은 효과의 디스크 경로(자동 갱신이 내용 해시를 본다). 풀지 못했으면 비어 있다
+        string                           _targetPrefabPath;    ///< 입력란의 타깃 프리팹 경로(Spawn 을 눌러야 적용한다)
+        string                           _activeTargetPath;    ///< Spawn 으로 확정한 타깃 경로(비면 타깃 없음)
+        uint64                           _loadedContentHash;   ///< 읽을 때의 내용 해시(0 = 아직 없음)
+        uint64                           _seenContentSerial;   ///< 마지막으로 해시를 비교한 때의 감시 변경 번호(`AssetHotReload::getContentChangeSerial`)
+        GameObjectHandle                 _target;              ///< 놓은 타깃 몸
+        float32                          _orbitAngle;          ///< 타깃이 원을 도는 각(라디안)
+        int32                            _soloEmitter;         ///< 격리한 방출기(`kNoSolo` 면 없음)
+        uint8                            _bTargetAttached : 1; ///< 효과 오브젝트가 지금 타깃에 붙어 있다
+        uint8                            _bTargetPending  : 1; ///< 다음 `syncPlayback` 이 확정 경로로 타깃을 다시 놓는다(Spawn · 새 씬). 실패해도 내린다 — 매 프레임 다시 놓지 않는다
+        [[maybe_unused]] uint8           _reserved        : 6;
     };
 } // namespace sw::editor

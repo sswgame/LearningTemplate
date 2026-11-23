@@ -12,8 +12,8 @@
 #include "Editor/Common/GUI/Panel/EditorStateDocumentPanel.h"
 #include "Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.h"
 #include "Editor/Panels/ProjectSettings/Model/ProjectSettingsEntry.h"
+#include "Editor/Panels/ProjectSettings/Model/ProjectSettingsHistory.h"
 #include "Editor/Panels/ProjectSettings/Model/ProjectSettingsPage.h"
-#include "Editor/Panels/ProjectSettings/Model/ProjectSettingsTableHistory.h"
 #include "Editor/Panels/ProjectSettings/ProjectSettingsTableView.h"
 
 namespace sw
@@ -50,14 +50,19 @@ namespace sw::editor
         /** @brief 저장하지 않은 편집이 있는 파일 수입니다(감시 값 `Editor.ProjectSettingsDirtyPageCount`). */
         static uint32 getDirtyPageCount();
 
-        /** @brief 표 페이지 편집의 되돌리기 스택입니다 — 창에 포커스가 오면 Ctrl+Z 가 이리 간다(감사 E-13). 형식 페이지의 그리드 편집은 아직 단계를 올리지 않는다. */
-        CommandStack* findPanelCommandStack() override { return &_tableHistory.getStack(); }
+        /** @brief 페이지 편집(형식 페이지의 그리드 · 기본값 되돌리기, 표 페이지)의 되돌리기 스택입니다 — 창에 포커스가 오면 Ctrl+Z 가 이리 간다(감사 E-13). */
+        CommandStack* findPanelCommandStack() override { return &_history.getStack(); }
 
     protected:
         [[nodiscard]] bool saveDocument() override;
         /** @brief 고친 설정 파일들(`ProjectSettingsPage::_absolutePath`)입니다 — `saveDocument` 가 고친 페이지만 쓴다. */
         void collectFilesToSave( vector<string>& outListPath ) const override;
         void revertDocument() override;
+        /** @brief 고친 설정 파일 하나의 저장 글입니다(`ProjectSettingsPage::tryMakeText`). */
+        [[nodiscard]] expected<string> tryMakeFileText( string_view absolutePath ) const override;
+        [[nodiscard]] bool             isEditingFile( string_view absolutePath ) override;
+        /** @brief 설정 파일 하나의 사본 글을 그 페이지에 입히고 고릅니다. 되돌리기 단계는 버립니다. */
+        [[nodiscard]] bool applyFileText( string_view absolutePath, const string& text ) override;
 
     private:
         using Page = ProjectSettingsPage;
@@ -66,20 +71,24 @@ namespace sw::editor
         void reloadCatalog();
         void onPropertyEdited( const PropertyInfo& prop );
         void refreshDirtyState();
-        void drawPageList();
-        void drawPageDetail( Page& page );
-        void drawPageActions( Page& page );
-        void selectPage( Page& page );
-        /** @brief 표 단계가 @p page 의 문서를 움직인 뒤 초안 · 미저장 표시를 맞춥니다(`ProjectSettingsTableHistory`). */
-        void onTableUndoMoved( Page& page );
+        /** @brief 파일 @p absolutePath 의 페이지입니다. 목록에 없으면 nullptr 입니다. */
+        Page* findPage( string_view absolutePath ) const;
+        void  drawPageList();
+        void  drawPageDetail( Page& page );
+        void  drawPageActions( Page& page );
+        void  selectPage( Page& page );
+        /** @brief 되돌리기 단계가 @p page 의 문서를 움직인 뒤 초안 · 미저장 표시를 맞춥니다(`ProjectSettingsHistory`). */
+        void onUndoMoved( Page& page );
+        /** @brief 기록을 비우고 고른 페이지를 다시 기록 대상으로 둡니다(파일로 되돌린 뒤 — 단계가 페이지별로 섞여 있어 그 페이지 것만 뺄 수 없다). */
+        void resetHistory();
 
     private:
-        vector<unique_ptr<Page>>    _listPage;
-        EditorPropertyGrid          _grid;
-        ProjectSettingsTableView    _tableView;
-        Page*                       _pSelected;
-        string                      _statusText;
-        ProjectSettingsTableHistory _tableHistory; ///< 표 편집 단계(`findPanelCommandStack`)
-        uint8                       _bCatalogLoaded : 1;
+        vector<unique_ptr<Page>> _listPage;
+        EditorPropertyGrid       _grid;
+        ProjectSettingsTableView _tableView;
+        Page*                    _pSelected;
+        string                   _statusText;
+        ProjectSettingsHistory   _history; ///< 페이지 편집 단계(`findPanelCommandStack`)
+        uint8                    _bCatalogLoaded : 1;
     };
 } // namespace sw::editor

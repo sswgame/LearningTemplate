@@ -39,7 +39,8 @@
 
 namespace sw
 {
-    class FileWatcher;
+    class FileWatchService;
+    struct FileChangeEvent;
     /**
      * @brief 모듈을 섀도 경로에 복사해 로드하는 핫 리로드 매니저입니다.
      * @note 연쇄 교체는 의존 순서(위상 정렬)대로 합니다. 모든 모듈의 prepare 가 성공한 뒤에만 commit 합니다. 언로드는 위상 역순
@@ -68,7 +69,8 @@ namespace sw
         static constexpr uint32 kMaxDeferredUnloadBatchCount = 4;
 
         /** @brief 모듈 맵과 감시자가 빈 상태로 시작합니다. */
-        LiveReloadManager();
+        /** @brief @p fileWatch 로 모듈 폴더의 빌드 스탬프를 봅니다(호스트 개발 계층의 것 — 이것보다 오래 산다). */
+        explicit LiveReloadManager( FileWatchService& fileWatch );
         /** @brief 로드된 모듈을 언로드합니다. */
         ~LiveReloadManager() override;
 
@@ -319,16 +321,19 @@ namespace sw
         /** @brief 모든 모듈 기록과 의존 그래프를 비웁니다. */
         void clearRecords();
 
+        /** @brief 모듈 폴더 감시의 사건을 받습니다(프레임 끝, 게임 스레드). 깨우기만 한다. */
+        void onModuleFolderChanged( const FileChangeEvent& changeEvent );
         /** @brief 끝난 빌드를 게임 스레드에서 처리합니다. 빌드가 도는 중이면 true 입니다(그동안 변경을 올리지 않는다). */
         bool consumeBuildEvent();
 
     private:
-        unordered_map<string, unique_ptr<ModuleRecord>>  _mapModule;        ///< 이름 집합은 `_dependencyGraph` 와 같다(`getOrCreateRecord` · `clearRecords`). 값을 `unique_ptr` 로 들어 맵이 자라도 컨텍스트 주소가 고정이다(언리얼 `TMap<FName, TUniquePtr<…>>` 와 같은 모양)
-        ModuleDependencyGraph                            _dependencyGraph;  ///< 모듈 이름 → 의존 모듈 이름. 연쇄 교체 대상과 순서를 계산한다
-        vector<SharedLibrary>                            _listSharedModule; ///< `loadSharedModule` 로 올린 공용 모듈(올린 순서 — 리로드 대상을 모두 내린 뒤 `shutdown` 이 거꾸로 내린다)
-        unique_ptr<FileWatcher>                          _fileWatcher;      ///< 모듈 폴더(하위 폴더 없이)를 본다. 첫 `registerModule` 이 시작한다
-        string                                           _buildStampPath;   ///< 바깥 빌드의 성공 스탬프(`Bin/Modules/` + `config::kFileModuleBuildStamp`). 감시를 시작할 때 정한다
-        string                                           _seenBuildToken;   ///< 마지막으로 본 스탬프 내용(빌드마다 새 시각 글을 쓴다). 이것과 달라지면 바깥 빌드가 끝난 것이다 — 쓰기 시각이 아니라 내용으로 본다
+        unordered_map<string, unique_ptr<ModuleRecord>>  _mapModule;         ///< 이름 집합은 `_dependencyGraph` 와 같다(`getOrCreateRecord` · `clearRecords`). 값을 `unique_ptr` 로 들어 맵이 자라도 컨텍스트 주소가 고정이다(언리얼 `TMap<FName, TUniquePtr<…>>` 와 같은 모양)
+        ModuleDependencyGraph                            _dependencyGraph;   ///< 모듈 이름 → 의존 모듈 이름. 연쇄 교체 대상과 순서를 계산한다
+        vector<SharedLibrary>                            _listSharedModule;  ///< `loadSharedModule` 로 올린 공용 모듈(올린 순서 — 리로드 대상을 모두 내린 뒤 `shutdown` 이 거꾸로 내린다)
+        FileWatchService&                                _fileWatch;         ///< 파일 감시 창구(빌림)
+        Subscription                                     _moduleFolderWatch; ///< 모듈 폴더(하위 폴더 없이)의 구독. 첫 `registerModule` 이 건다
+        string                                           _buildStampPath;    ///< 바깥 빌드의 성공 스탬프(`Bin/Modules/` + `config::kFileModuleBuildStamp`). 감시를 시작할 때 정한다
+        string                                           _seenBuildToken;    ///< 마지막으로 본 스탬프 내용(빌드마다 새 시각 글을 쓴다). 이것과 달라지면 바깥 빌드가 끝난 것이다 — 쓰기 시각이 아니라 내용으로 본다
         mutable mutex                                    _buildMutex;
         BuildEvent _buildEvent                           SW_GUARDED_BY( _buildMutex ); ///< 빌드 스레드(모듈 컴파일러)가 적고 게임 스레드의 `update` 가 꺼낸다
         MulticastDelegate<bool( const vector<string>& )> _onBeforeCommitBatch;         ///< 배치 직전 콜백(더한 순서 — 부를 때는 거꾸로, `broadcastUntilReverse`)
@@ -342,8 +347,9 @@ namespace sw
         ModuleReloadPhases                               _cascadePhases;                                                                                                           ///< 지금(마지막) 연쇄의 단계별 시간 — `runCascade` 가 채우고 `reloadCascade` 가 집계에 적는다
         float64                                          _buildFinishedSeconds;                                                                                                    ///< 빌드 끝을 처음 본 시각(단조 초, 0 이면 없음) — 연쇄 시작까지의 대기 구간을 잰다
         uint32                                           _completedReloadCount;                                                                                                    ///< 끝까지 성공한 연쇄 리로드 수(`getCompletedReloadCount`)
-        uint8                                            _bReloadGraphBroken : 1;
-        uint8                                            _bBuildStampPending : 1; ///< 스탬프가 바뀌었는데 이 프로세스의 빌드가 도는 중이라 아직 보지 않았다
-        [[maybe_unused]] uint8                           _reserved           : 6;
+        uint8                                            _bReloadGraphBroken   : 1;
+        uint8                                            _bBuildStampPending   : 1; ///< 스탬프가 바뀌었는데 이 프로세스의 빌드가 도는 중이라 아직 보지 않았다
+        uint8                                            _bModuleFolderChanged : 1; ///< 모듈 폴더가 바뀌었다(`onModuleFolderChanged`) — 다음 `update` 가 스탬프를 본다
+        [[maybe_unused]] uint8                           _reserved             : 5;
     };
 } // namespace sw

@@ -38,10 +38,6 @@ namespace sw
         void apply( const vector<GPUInstance>& listSlotInstance, const vector<GPUInstanceDirtyRange>& listDirtyRange, bool bAllDirty );
         /** @brief 칸 순 사본입니다. 원소 번호가 GPUScene 칸입니다. */
         const vector<GPUInstance>& getSlots() const { return _listSlot; }
-        /** @brief 올리지 않은 바뀐 칸 수입니다(같은 칸은 한 번). */
-        uint32 getDirtySlotCount() const { return _dirty.getCount(); }
-        /** @brief 다음 업로드가 전체를 올려야 하면 true 입니다(처음 · 버퍼를 새로 만들었다). */
-        bool isFullUploadPending() const { return _dirty.isFullUploadPending(); }
         /** @brief 다음 업로드가 전체를 올리게 합니다(버퍼를 새로 만들어 GPU 내용을 모른다). */
         void markFullUpload() { _dirty.markFullUpload(); }
         /**

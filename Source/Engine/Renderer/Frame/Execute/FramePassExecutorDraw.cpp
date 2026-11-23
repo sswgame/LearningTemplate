@@ -848,7 +848,6 @@ namespace sw
         // 모든 배치보다 가까운 입자(자리 = 배치 수)를 마저 그린다.
         (void)drawParticleRun( context, state._listParticleSlot, state._particleSlotCursor, MathUtil::kMaxUInt32 );
         SW_PROFILE_COUNT( "RT.Draw.indirectCalls", state._drawCallCount );
-        _indirectDrawCallCount.fetch_add( state._drawCallCount, std::memory_order_relaxed );
     }
 
     bool FramePassExecutor::isSameDrawGroup( const BatchDrawState& state, uint32 headIndex, uint32 otherIndex ) const

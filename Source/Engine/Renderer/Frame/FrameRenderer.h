@@ -189,8 +189,6 @@ namespace sw
         /** @brief Ready 상태면 true 입니다. */
         bool isReady() const { return _status == FrameRendererStatus::Ready; }
 
-        /** @brief 마지막 프레임에서 씬이 낸 간접 드로우 호출 수입니다(모든 패스 합). 배치 수보다 작으면 묶인 호출이 있다는 뜻입니다. */
-        uint32 getLastIndirectDrawCallCount() const { return _lastIndirectDrawCallCount; }
         /** @brief 마지막 프레임에서 머티리얼 PSO 가 아직 만드는 중이라 그리지 못한 배치 묶음 수입니다. 캡처는 0 인 프레임만 읽는다(`SceneCapture`). */
         uint32 getLastPendingPSOBatchCount() const { return _lastPendingPSOBatchCount; }
         /** @brief 마지막 프레임의 볼륨 안개 상태(켜졌거나 왜 꺼졌는지)입니다. 렌더 스레드가 주 렌더러의 값을 올린다(`FrameFog::publishMainVolumeState`). */
@@ -518,8 +516,6 @@ namespace sw
         string                _argumentPipelinePath; ///< `initialize` 가 받은 파이프라인(비면 요청 · 팩 설정이 고른다) — `selectPipeline` 이 다시 읽는다
         RenderPipelineRequest _pipelineRequest;      ///< 마지막으로 받은 파이프라인 요청(게임 스레드의 사본) — 화면 밖 렌더러가 이어받는다
 
-        /// @brief 마지막 프레임의 값입니다(getLastIndirectDrawCallCount).
-        uint32           _lastIndirectDrawCallCount;
         uint32           _lastPendingPSOBatchCount; ///< 마지막 프레임의 값입니다(getLastPendingPSOBatchCount).
         uint8            _bOffscreenRenderer;       ///< 화면이 없는 미리보기 렌더러다(`initializeOffscreen`) — 화면 출력(HDR 의 두 RT)을 짓지 않는다
         vector<float4x4> _listScratchGridViewProj;  ///< 라이트 그리드를 만들 뷰의 뷰-투영(프레임마다 다시 쓴다)

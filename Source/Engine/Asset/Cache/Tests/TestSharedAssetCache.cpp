@@ -286,6 +286,30 @@ SW_TEST_CASE( SharedAssetCacheTest, RedirectedAndCanonicalIdsShareOneEntry )
     AssetRedirect::clear();
 }
 
+/** @brief [SharedAssetRefTest] 산 에셋을 같이 쥔 참조는 건 쪽이 놓은 뒤에도 살려 두고 다시 읽기를 따라간다 — 캐시에서 오지 않은 값은 빌린다 */
+SW_TEST_CASE( SharedAssetRefTest, SharedLiveAssetOutlivesItsFirstHolder )
+{
+    using Util = SharedAssetCacheTestUtil;
+    const test::ScopedScratchDomain domain;
+    const string                    id = test::ScopedScratchDomain::makeID( "live.txt" ).str();
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "live.txt" ), "first" ) );
+
+    const Util::ScopedModuleCache             scope;
+    SharedAssetRef<SharedAssetCacheTestAsset> bound = Util::Cache::acquire( id ); // 게임 범위가 쥔 쪽
+    SW_REQUIRE_TRUE( bound != nullptr );
+    const SharedAssetRef<SharedAssetCacheTestAsset> shared = SharedAssetRef<SharedAssetCacheTestAsset>::shareLive( bound.get() );
+    bound.reset();
+    SW_EXPECT_EQUAL( string( "first" ), shared->_text );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "live.txt" ), "second" ) );
+    SW_REQUIRE_TRUE( Util::Cache::reloadShared( id ) ); // 쥔 쪽이 남아 있어 다시 읽는다
+    SW_EXPECT_EQUAL( string( "second" ), shared->_text );
+
+    const SharedAssetCacheTestAsset                 local{};
+    const SharedAssetRef<SharedAssetCacheTestAsset> foreign = SharedAssetRef<SharedAssetCacheTestAsset>::shareLive( &local );
+    SW_EXPECT_TRUE( foreign.get() == &local );
+    SW_EXPECT_TRUE( SharedAssetRef<SharedAssetCacheTestAsset>::shareLive( nullptr ) == nullptr );
+}
+
 /** @brief [SharedAssetRefTest] 빌린 참조의 스냅숏은 빌린 값을 가리킨다(소유하지 않는다) — 비어 있으면 스냅숏을 쥐는 워커 일감이 null 을 읽었다 */
 SW_TEST_CASE( SharedAssetRefTest, BorrowedSnapshotPointsAtTheBorrowedValue )
 {

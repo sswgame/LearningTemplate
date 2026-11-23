@@ -21,6 +21,7 @@
 #include "GameFramework/Runtime/Foundation/Condition/IGameFlagsOwner.h"
 #include "GameFramework/Runtime/Gameplay/GameState/DeferredStateRestore.h"
 #include "GameFramework/Runtime/World/Environment/WeatherMaterialWriter.h"
+#include "GameFramework/Runtime/World/Environment/WeatherSceneWriter.h"
 #include "GameFramework/Runtime/World/Environment/WeatherSystem.h"
 #include "GameFramework/Runtime/World/Environment/WorldClock.h"
 #include "GameFramework/Runtime/World/Land/LandRegistry.h"
@@ -105,7 +106,7 @@ namespace sw
          * @details 날씨가 머티리얼 칸을 적은 카탈로그면 틱 뒤 게임 스레드에서 그 값을 묶음에 쓴다(`WeatherMaterialWriter`) — 장면마다 따로 놓지 않는다.
          */
         void onTick( TickContext& context ) override;
-        /** @brief 날씨가 쓴 머티리얼 칸을 연 때의 값으로 되돌립니다. */
+        /** @brief 날씨가 쓴 머티리얼 칸과 씬 배율을 되돌리고 날씨 소리를 멈춥니다. */
         void onEndPlay() override;
 
         /** @brief 구간 넷(플래그, 시계, 날씨, 땅)을 씁니다. `ComponentStateStore::capture` 가 부릅니다. 열리기 전이면 보관하고 있던 바이트를 그대로 씁니다. */
@@ -124,8 +125,10 @@ namespace sw
         const WorldClock&        getClock() const { return _clock; }
         WeatherSystem&           getWeather() { return _weather; }
         const WeatherSystem&     getWeather() const { return _weather; }
-        LandRegistry&            getLand() { return _land; }
-        const LandRegistry&      getLand() const { return _land; }
+        /** @brief 날씨가 씬의 빛 · 바람 · 소리에 쓰는 쪽입니다(읽기 — 감시 값). */
+        const WeatherSceneWriter& getWeatherScene() const { return _weatherScene; }
+        LandRegistry&             getLand() { return _land; }
+        const LandRegistry&       getLand() const { return _land; }
 
         /** @brief 이번 틱에 시계가 넘은 경계 목록입니다. 읽기만 하며, 다음 틱 처음에 비웁니다. */
         const vector<WorldClockEvent>& getClockEvents() const { return _listClockEvent; }
@@ -147,6 +150,12 @@ namespace sw
          * @details 씬을 훑지 않고 컴포넌트 레지스트리를 읽는다 — 잠금 없는 읽기라 병렬 틱에서도 부를 수 있고, 틱마다 불려도 할당하지 않는다.
          */
         [[nodiscard]] static GameStateComponent* findOpen( const GameObjectManager* pManager );
+        /**
+         * @brief 씬 @p manager 의 지금 날씨 값 @p valueName(카탈로그 `<Values>`)입니다. 날씨를 연 판 상태가 없는 씬은 0 입니다. 병렬 틱에서도 부를 수 있다.
+         * @details 날씨를 자기 값으로 읽는 쪽(강수 · 젖음 · 파도 · 데칼 씻김)의 한 길이다. 빛의 어둠은 읽지 않는다 — 날씨가 해 · 하늘에 배율로 쓰므로(`<SceneBinding>`) 빛의 세기를 읽으면 이미 들어 있다
+         *          (저마다 날씨 값을 곱하면 어둠이 두 번 걸린다).
+         */
+        [[nodiscard]] static float32 readWeather( const GameObjectManager& manager, const hashed_string& valueName );
 
     private:
         GameFlags                        _flags;
@@ -154,6 +163,7 @@ namespace sw
         shared_ptr<const WeatherCatalog> _pWeatherCatalog; ///< 날씨가 가리키는 카탈로그의 판(열 때의 스냅숏 — 다시 읽기 정리가 놓아도 날씨의 항목 포인터가 끊기지 않는다)
         WeatherSystem                    _weather;
         WeatherMaterialWriter            _weatherMaterial; ///< 날씨 → 지면 머티리얼 묶음(카탈로그의 바인딩). `_pWeatherCatalog` 뒤에 둔다 — 먼저 사라진다
+        WeatherSceneWriter               _weatherScene;    ///< 날씨 → 빛 · 하늘 · 안개 · 바람 · 소리(카탈로그의 바인딩). 카탈로그보다 먼저 사라진다
         LandRegistry                     _land;            ///< 공유 땅. 격자와 배치 키트가 셀을 얻어 쓴다
         vector<WorldClockEvent>          _listClockEvent;
         DeferredStateRestore             _restore;      ///< 열리기 전에 받은 복원 바이트 · 열림 · 새 판
