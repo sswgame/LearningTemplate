@@ -64,7 +64,7 @@ function(sw_add_scenario_chain test_name stage_seconds)
 		set(slot_count ${ARG_SLOTS})
 		set(list_slot_argument -scenario-backend-slots=${ARG_SLOTS})
 	endif()
-	# SPLIT: 시나리오를 백엔드에 나눠 주는 방식(`-scenario-backend-split`). 그림 · 골든 · 기록 대조의 정본은 Release(모든 게임 · 네 백엔드)다 — Debug 는 Release 가 못 잡는
+	# SPLIT: 시나리오를 백엔드에 나눠 주는 방식(`-scenario-backend-split`). 그림 · 골든 · 기록 · 렌더러 값 대조의 정본은 Release(모든 게임 · 네 백엔드)다 — Debug 는 Release 가 못 잡는
 	# 단언(`SW_ASSERT` 는 Debug 에만 있다) · 검사를 시나리오마다 한 번 지나면 되므로 모든 시나리오를 백엔드에 하나씩 나눈다(`all`, 날마다 배정이 돌아 나흘이면 모든 조합).
 	# 같은 체인을 두 구성에서 네 백엔드로 다 돌던 것이 묶음 검증 Debug ctest 29 분의 대부분이었다(2026-11-13).
 	set(list_split_argument "")
@@ -157,13 +157,16 @@ foreach(game IN LISTS list_built_game)
 	sw_glob_source_tree(list_scenario RELATIVE "${scenario_root}" ${list_chain_glob})
 	# GPU 가 무거운 미니게임의 시나리오는 제 체인에서 백엔드를 차례로 돌린다 — 넷을 함께 돌려도 빨라지지 않고(사격장 225 초 대 차례로 227 초) 프레임만 7 → 100 ms 로 느려져
 	# 시한(crowd 150 초)에 닿고 골든이 흔들렸다(2026-11-02 측정, NEXT 6.2). 다른 시나리오는 함께 도는 편이 기동을 겹쳐 빠르다.
+	# SPLIT independent: 그린 화소 · 기록 · 렌더러 값을 판정하지 않는 시나리오(게임 규칙 · UI 흐름)는 백엔드를 날마다 돌아가며 하나에서만 돈다 — 언리얼은 기능 테스트를 RHI 하나에서, 스크린샷
+	# 테스트만 RHI 마다 돈다(유니티 PlayMode 대 Graphics Test Framework 도 같다). 허브 게임 하나가 모든 시나리오를 안으면서 체인이 길이 × 백엔드 수로 자랐다.
+	# 체인을 샤드로 더 쪼개지 않는다 — 항목이 슬롯을 백엔드 수만큼 쥐어(`PROCESSORS`) 한 기계에서는 샤드가 겹쳐 돌지 못한다(나눌 러너가 있을 때의 일이다).
 	foreach(prefix IN LISTS sequential_scenario_prefixes)
 		set(list_sequential_scenario ${list_scenario})
 		list(FILTER list_sequential_scenario INCLUDE REGEX "/${prefix}_[^/]*$")
 		list(FILTER list_scenario EXCLUDE REGEX "/${prefix}_[^/]*$")
-		sw_add_scenario_chain(Scenario.${pack}.${prefix} 300 SLOTS 1 SCENARIOS ${list_sequential_scenario} ARGS ${game_argument})
+		sw_add_scenario_chain(Scenario.${pack}.${prefix} 300 SLOTS 1 SPLIT independent SCENARIOS ${list_sequential_scenario} ARGS ${game_argument})
 	endforeach()
-	sw_add_scenario_chain(Scenario.${pack} 300 SCENARIOS ${list_scenario} ARGS ${game_argument})
+	sw_add_scenario_chain(Scenario.${pack} 300 SPLIT independent SCENARIOS ${list_scenario} ARGS ${game_argument})
 
 	# 쇼케이스 — 쇼케이스 씬 하나를 정해진 시각에 찍는 시나리오. 게임 체인과 같은 길(백엔드 넷)이되 제 씬 · 제 골든(`showcase/golden/`)을 두는 묶음이라 따로 항목이 된다.
 	sw_glob_source_tree(list_showcase_scenario RELATIVE "${scenario_root}" "${automation_dir}/showcase/*.scenario.xml")

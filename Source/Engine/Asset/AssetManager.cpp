@@ -21,6 +21,7 @@
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Content/AssetRegistry.h"
+#include "Engine/Content/AssetScanCache.h"
 #include "Engine/Content/Pack/PackManager.h"
 #include "Engine/Content/Pack/PackPatchTrustSource.h"
 #include "Engine/Foundation/EngineServices.h"
@@ -472,8 +473,17 @@ namespace sw
             AssetIdentityRules  rules;
             if ( rules.load( roots._project.str() ) == false )
                 return false;
+            // 기동마다 모든 머리 글 · `.meta` 를 열지 않는다 — 크기 · 시각이 그대로인 파일은 지난 훑기의 줄을 쓴다(언리얼 `CachedAssetRegistry.bin`).
+            AssetScanCache       cache{ AssetDatabase::kScanPayloadVersion };
+            const AbsolutePath   cachePath = AssetScanCache::makeLocalPath( "AssetIdentityScan.bin" );
+            const expected<void> loaded    = cache.load( cachePath );
+            if ( loaded.has_value() == false )
+                SW_LOG_INFO_ID( "AssetManager.IdentityScanCacheDropped", "%# '%#' - scanning every source asset", loaded.error().message(), loaded.error().detail() );
             vector<AssetIdentityIssue> listIssue;
-            const AssetDatabase        database = AssetDatabase::scan( roots._content.str(), rules, listIssue );
+            const AssetDatabase        database = AssetDatabase::scan( roots._content.str(), rules, listIssue, &cache );
+            const expected<void>       saved    = cache.save( cachePath );
+            if ( saved.has_value() == false )
+                SW_LOG_INFO_ID( "AssetManager.IdentityScanCacheNotSaved", "%# '%#' - the next run scans again", saved.error().message(), saved.error().detail() );
             if ( listIssue.empty() == false )
                 SW_LOG_WARNING_ID( "AssetManager.SourceIndexIssues", "Source content: %# asset identity issues (first: %#) - their GUID references will not resolve; run py -3 -m Scripts asset-ids --fix",
                                    listIssue.size(), listIssue.front().toString() );

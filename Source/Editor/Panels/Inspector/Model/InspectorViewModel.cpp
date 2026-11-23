@@ -39,8 +39,38 @@ namespace sw::editor
     /** @brief 다중 선택의 공통 컴포넌트입니다. 명령 헤더의 형식이라 ViewModel 헤더에 두지 않는다. */
     struct InspectorViewModel::MultiEdit
     {
-        vector<GameObject*>          _listObject; ///< 이번 gather 의 선택(주 선택이 앞)
-        vector<EditorMultiEditGroup> _listCommon; ///< 공통 컴포넌트(gather 마다 다시 모은다)
+        vector<GameObject*>          _listObject;          ///< 살아 있는 선택(주 선택이 앞)
+        vector<EditorMultiEditGroup> _listCommon;          ///< 공통 컴포넌트
+        optional<uint64>             _selectionRevision;   ///< 마지막으로 모은 선택의 차례(`EditorSelection::getRevision`). 없으면 아직 모으지 않았다
+        uint64                       _structureGeneration; ///< 마지막으로 모은 오브젝트 구조 세대(`GameObjectManager::getStructureGeneration`)
+        uint8                        _bShown : 1;          ///< 이번 gather 가 여럿을 보인다 — 아니면 명령은 하나의 대상에 간다
+
+        MultiEdit()
+            : _listObject{}
+            , _listCommon{}
+            , _selectionRevision{}
+            , _structureGeneration{ 0 }
+            , _bShown{ SW_FALSE }
+        {
+        }
+
+        /**
+         * @brief 선택 · 씬 구조가 바뀌었을 때만 다시 모읍니다 — 선택 수 × 컴포넌트 수라 매 프레임 모으면 큰 선택(Ctrl+A)에서 프레임마다 든다
+         *        (언리얼 디테일 패널은 `SetObjects` 때, 유니티 인스펙터는 선택이 바뀔 때 한 번 모은다). 컴포넌트 붙이기 · 떼기 · 파괴는 구조 세대가 올린다.
+         */
+        void refresh( const EditorSelection& selection )
+        {
+            Scene* const pScene              = selection.getScene();
+            const uint64 structureGeneration = pScene != nullptr && pScene->getObjectManager() != nullptr ? pScene->getObjectManager()->getStructureGeneration() : 0;
+            if ( _selectionRevision == selection.getRevision() && _structureGeneration == structureGeneration )
+                return;
+            _selectionRevision   = selection.getRevision();
+            _structureGeneration = structureGeneration;
+            selection.getSelectedObjects( _listObject );
+            _listCommon.clear();
+            if ( _listObject.size() > 1 )
+                EditorMultiEditGroup::collectCommonComponents( _listObject, _listCommon );
+        }
     };
 
     namespace
@@ -171,10 +201,9 @@ namespace sw::editor
         outState._listFavorite.clear();
         outState._listDataLayer.clear();
         outState._listTag.clear();
-        _pMultiEdit->_listObject.clear();
-        _pMultiEdit->_listCommon.clear();
-        _shownObjectID = 0;
-        _shownScope    = EditorPropertyGridScope::None;
+        _pMultiEdit->_bShown = SW_FALSE;
+        _shownObjectID       = 0;
+        _shownScope          = EditorPropertyGridScope::None;
 
         // 미리보기 창의 선택을 겨누면 그 창 씬의 오브젝트를 보인다. 잠금은 메인 선택의 오브젝트에만 쓴다.
         const EditorSelection* pFocusedSelection = editor::getFocusedSelection();
@@ -198,9 +227,10 @@ namespace sw::editor
         }
 
         EditorWorkspace& workspace = Internal::getWorkspace();
-        editor::getMainSceneSelection().getSelectedObjects( _pMultiEdit->_listObject );
+        _pMultiEdit->refresh( editor::getMainSceneSelection() );
         if ( _pMultiEdit->_listObject.size() > 1 && _lockedObjectID == 0 )
         {
+            _pMultiEdit->_bShown                  = SW_TRUE;
             const vector<GameObject*>& listObject = _pMultiEdit->_listObject;
             GameObject*                pPrimary   = listObject[0];
             outState._content                     = InspectorContent::Multi;
@@ -213,7 +243,6 @@ namespace sw::editor
             const InspectorMultiSelection::ActiveState activeState = InspectorMultiSelection::readActiveState( listObject );
             outState._bActive                                      = activeState._bActive ? SW_TRUE : SW_FALSE;
             outState._bActiveMixed                                 = activeState._bMixed ? SW_TRUE : SW_FALSE;
-            EditorMultiEditGroup::collectCommonComponents( listObject, _pMultiEdit->_listCommon );
             for ( const EditorMultiEditGroup& common : _pMultiEdit->_listCommon )
             {
                 const Component*       pComponent = common._listComponent[0];
@@ -228,7 +257,6 @@ namespace sw::editor
         }
         else
         {
-            _pMultiEdit->_listObject.clear();
             const uint64 shownObjectID = _lockedObjectID != 0 ? _lockedObjectID : workspace.getSelectedObjectID();
             if ( shownObjectID == 0 )
             {
@@ -388,7 +416,7 @@ namespace sw::editor
 
     void InspectorViewModel::setMultiActive( bool bActive )
     {
-        if ( _pMultiEdit->_listObject.empty() == false )
+        if ( _pMultiEdit->_bShown == SW_TRUE )
             InspectorMultiSelection::applyActive( _pMultiEdit->_listObject, bActive );
     }
 
@@ -451,7 +479,7 @@ namespace sw::editor
 
     void InspectorViewModel::collectMultiEditTargets( vector<Component*>& outListComponent )
     {
-        if ( _currentMultiComponent < _pMultiEdit->_listCommon.size() )
+        if ( _pMultiEdit->_bShown == SW_TRUE && _currentMultiComponent < _pMultiEdit->_listCommon.size() )
         {
             const vector<Component*>& listComponent = _pMultiEdit->_listCommon[_currentMultiComponent]._listComponent;
             outListComponent.insert( outListComponent.end(), listComponent.begin(), listComponent.end() );
@@ -460,7 +488,7 @@ namespace sw::editor
 
     bool InspectorViewModel::isMultiEditMixed( const PropertyInfo& prop )
     {
-        return _currentMultiComponent < _pMultiEdit->_listCommon.size() &&
+        return _pMultiEdit->_bShown == SW_TRUE && _currentMultiComponent < _pMultiEdit->_listCommon.size() &&
                InspectorMultiSelection::hasMixedValues( prop, _pMultiEdit->_listCommon[_currentMultiComponent]._listComponent );
     }
 

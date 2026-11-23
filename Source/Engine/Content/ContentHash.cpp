@@ -27,18 +27,6 @@ namespace sw
             /** @brief `FileStamp::_writeTime` 의 100 ns 눈금이 1 ms 에 드는 수입니다. */
             static constexpr uint64 kWriteTicksPerMs = 10000u;
 
-            /**
-             * @brief @p stamp 가 바깥 쓰기에 대해 캐시해도 되는 도장인지 — 쓴 지 `kRacyWindowMs` 가 지났는지입니다.
-             * @details git 의 racy-git 과 같은 결함이다: 같은 틱 안에 같은 크기로 다시 쓴 파일은 (크기, 시각) 도장이 같아 옛 해시가 돌아왔다
-             *          (셰이더 쿠킹 판정 테스트가 전체 실행에서만 졌다). 바깥에서 막 쓴 파일은 매번 읽고, 자리 잡은 파일만 캐시한다.
-             */
-            static bool isCompleted( const FileStamp& stamp )
-            {
-                const int64 nowFileTimeMs = WallClock::nowUnixMilliseconds().count() + kFileTimeEpochOffsetMs;
-                const int64 writeTimeMs   = static_cast<int64>( stamp._writeTime / kWriteTicksPerMs );
-                return nowFileTimeMs - writeTimeMs > kRacyWindowMs;
-            }
-
             /** @brief 영속 캐시 파일의 머리 표지입니다. */
             static constexpr uint32 kCacheMagic = 0x43485753u; // "SWHC"
             /** @brief 영속 항목 하나가 파일에서 차지하는 최소 바이트입니다(빈 경로 길이 4 + 크기 · 시각 · 해시 24). */
@@ -58,6 +46,13 @@ namespace sw
 
 namespace sw
 {
+    bool ContentHash::isStampStable( const FileStamp& stamp )
+    {
+        const int64 nowFileTimeMs = WallClock::nowUnixMilliseconds().count() + ContentHashInternal::kFileTimeEpochOffsetMs;
+        const int64 writeTimeMs   = static_cast<int64>( stamp._writeTime / ContentHashInternal::kWriteTicksPerMs );
+        return nowFileTimeMs - writeTimeMs > ContentHashInternal::kRacyWindowMs;
+    }
+
     uint64 ContentHash::computeBytes( const uint8* pData, size_t size )
     {
         return appendBytes( kInitialState, pData, size );
@@ -164,7 +159,7 @@ namespace sw
 
         const uint64 hash = ContentHashInternal::readFileHash( absPath, _hashedByteCount );
         // 자기 쓰기도 시간 창이 지나야 남긴다 — 쓴 그 틱에 바깥 도구가 같은 크기로 다시 쓰면 도장으로 알 길이 없다(두 프로세스의 순서 없는 경합).
-        if ( bStamped == false || hash == 0 || ContentHashInternal::isCompleted( stamp ) == false )
+        if ( bStamped == false || hash == 0 || ContentHash::isStampStable( stamp ) == false )
             return hash;
         ScopedLock<mutex> lock{ _mutex };
         // 읽는 사이에 자기 쓰기가 끼었으면(번호가 바뀌었거나 새 표가 생겼다) 읽은 내용이 어느 쓰기의 것인지 모른다 — 남기지 않는다. 바깥 쓰기가 끼었으면 다음 조회의 도장이 달라 다시 읽는다.
@@ -255,7 +250,7 @@ namespace sw
             for ( const auto& [key, entry] : _mapEntry )
             {
                 // 해시가 아직 없는 자기 쓰기 표와, 저장 시각의 시간 창 안에 고쳐진 도장은 싣지 않는다 — 다음 프로세스는 도장만 믿는다.
-                if ( entry._hash == 0 || ContentHashInternal::isCompleted( entry._stamp ) == false )
+                if ( entry._hash == 0 || ContentHash::isStampStable( entry._stamp ) == false )
                     continue;
                 writer.writeString( key );
                 writer.writeUint64( entry._stamp._sizeBytes );

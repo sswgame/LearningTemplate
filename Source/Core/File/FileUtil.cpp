@@ -342,11 +342,11 @@ namespace sw
                 return PlatformFileSystem::createDirectory( path ) || bParentCreated;
             }
 
-            static bool collectChild( void* pContext, string_view name, bool bDirectory, bool bLink )
+            static bool collectChild( void* pContext, string_view name, const PlatformFileSystem::FileStatus& status )
             {
                 CollectContext& context = *static_cast<CollectContext*>( pContext );
                 context._listName.push_back( string{ name } );
-                context._listDirectory.push_back( bDirectory && bLink == false ? 1 : 0 );
+                context._listDirectory.push_back( status._kind == PlatformFileSystem::FileKind::Directory && status._bLink == false ? 1 : 0 );
                 return true;
             }
 
@@ -374,14 +374,13 @@ namespace sw
             /** @brief 폴더 바로 아래 항목 하나입니다(`walkSorted` 가 이름 순으로 줄 세운다). */
             struct WalkChild
             {
-                string _name;
-                uint8  _bDirectory{ 0 };
-                uint8  _bLink{ 0 };
+                string                         _name;
+                PlatformFileSystem::FileStatus _status{};
             };
 
-            static bool collectWalkChild( void* pContext, string_view name, bool bDirectory, bool bLink )
+            static bool collectWalkChild( void* pContext, string_view name, const PlatformFileSystem::FileStatus& status )
             {
-                static_cast<vector<WalkChild>*>( pContext )->push_back( WalkChild{ string{ name }, static_cast<uint8>( bDirectory ? 1 : 0 ), static_cast<uint8>( bLink ? 1 : 0 ) } );
+                static_cast<vector<WalkChild>*>( pContext )->push_back( WalkChild{ string{ name }, status } );
                 return true;
             }
 
@@ -399,26 +398,31 @@ namespace sw
                 { return lhs._name < rhs._name; } );
                 for ( const WalkChild& child : listChild )
                 {
-                    if ( walkChild( &walk, child._name, child._bDirectory != 0, child._bLink != 0 ) == false )
+                    if ( walkChild( &walk, child._name, child._status ) == false )
                         break;
                 }
                 return bOpened;
             }
 
-            static bool walkChild( void* pContext, string_view name, bool bDirectory, bool bLink )
+            static bool walkChild( void* pContext, string_view name, const PlatformFileSystem::FileStatus& status )
             {
-                WalkContext& walk = *static_cast<WalkContext*>( pContext );
-                string       path = walk._directory;
+                WalkContext& walk       = *static_cast<WalkContext*>( pContext );
+                const bool   bDirectory = status._kind == PlatformFileSystem::FileKind::Directory;
+                string       path       = walk._directory;
                 path.push_back( '/' );
                 path.append( name.data(), name.size() );
 
-                const DirectoryEntry entry{ string_view{ path }, bDirectory };
+                DirectoryEntry entry{};
+                entry._path       = string_view{ path };
+                entry._bDirectory = bDirectory;
+                if ( status._kind == PlatformFileSystem::FileKind::File )
+                    entry._fileStamp = FileStamp{ status._size, static_cast<uint64>( status._writeTicks ) };
                 if ( walk._visit( walk._pContext, entry ) == false )
                 {
                     walk._bStopped = SW_TRUE;
                     return false;
                 }
-                if ( walk._bRecursive && bDirectory && bLink == false )
+                if ( walk._bRecursive && bDirectory && status._bLink == false )
                 {
                     WalkContext child;
                     child._directory  = path;

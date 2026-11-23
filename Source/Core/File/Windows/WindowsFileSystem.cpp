@@ -294,10 +294,25 @@ namespace sw
             const wchar_t* pName = data.cFileName;
             if ( pName[0] == L'.' && ( pName[1] == L'\0' || ( pName[1] == L'.' && pName[2] == L'\0' ) ) )
                 continue;
-            const string name       = StringUtil::utf16ToUTF8( pName );
-            const bool   bDirectory = ( data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY ) != 0;
-            const bool   bLink      = ( data.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT ) != 0 && WindowsFileSystemInternal::isLinkTag( data.dwReserved0 );
-            if ( visit( pContext, name, bDirectory, bLink ) == false )
+            const string name = StringUtil::utf16ToUTF8( pName );
+            FileStatus   status{};
+            status._kind       = ( data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY ) != 0 ? FileKind::Directory : FileKind::File;
+            status._size       = ( static_cast<uint64>( data.nFileSizeHigh ) << 32 ) | data.nFileSizeLow;
+            status._writeTicks = WindowsFileSystemInternal::toTicks( data.ftLastWriteTime );
+            status._bLink      = ( data.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT ) != 0 && WindowsFileSystemInternal::isLinkTag( data.dwReserved0 );
+            if ( status._bLink && status._kind == FileKind::File )
+            {
+                string linkPath{ directory }; // 나열이 준 크기 · 시각은 링크 자체의 것이다 — 가리키는 파일에 묻는다
+                linkPath.push_back( '/' );
+                linkPath.append( name );
+                FileStatus target{};
+                if ( queryStatus( linkPath, target ) )
+                {
+                    status._size       = target._size;
+                    status._writeTicks = target._writeTicks;
+                }
+            }
+            if ( visit( pContext, name, status ) == false )
                 break;
         } while ( FindNextFileW( find, &data ) != FALSE );
 
