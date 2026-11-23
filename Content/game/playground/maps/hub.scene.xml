@@ -4,7 +4,8 @@
 	     플레이어가 장소 · 사물로 장르 미니게임에 들어가고 돌아온다(MinigameFlow). 바탕을 고치면 마을도 따라간다(언리얼 레벨 인스턴스 · Godot 씬 상속과 같은 자리).
 	     CardTableGate(x -6): 카드 탁자 — minigames/cardtable(SubLevel)을 하위 레벨 maps/hub_cardtable 로 더한다(마을이 보인 채로).
 	     ArcadeGate(x 6): 오락실 기계 — minigames/kitdemo_actioncombat(SceneSwitch)으로 씬을 바꾼다. 마을은 돌아올 자리로 찍어 두고 돌아올 때 복원한다.
-	     두 입구 모두 Player 태그만 받고 다시 들어갈 수 있으며(_bOnce false), 안에서 나타난 플레이어(돌아와 복원된 자리)는 세지 않는다(_spawnInside Ignore — 나갔다 들어와야 다시 들어간다).
+	     MinigamePortals: 흡수한 미니게임의 입구 — portalSlot 을 적은 정의(minigames/*.minigame.xml)마다 prefabs/minigameportal 를 자리 격자에 세운다(정의 하나가 입구 하나 — 이 맵은 고치지 않는다).
+	     입구들은 모두 Player 태그만 받고 다시 들어갈 수 있으며(_bOnce false), 안에서 나타난 플레이어(돌아와 복원된 자리)는 세지 않는다(_spawnInside Ignore — 나갔다 들어와야 다시 들어간다).
 	     Marker 는 마을 상태 표지다 — 시나리오 automation/hub 가 옮긴 자리가 미니게임에 다녀온 뒤에도 그대로인지 본다.
 	     Player(기수)는 어빌리티 시스템(세트 HubResident — 공용 전투 어트리뷰트 체력)을 더 가진다. HP 바는 체력 원천 계약(IHealthSource)으로 그것을 읽고,
 	     미니게임 결과 값(heal · haste)은 MinigameRewardComponent 가 돌아온 뒤 이펙트로 건다 — 미니게임 디렉터는 플레이어를 직접 고치지 않는다.
@@ -89,6 +90,13 @@
 					</RigidBodyComponent>
 					<MeshComponent _localID="163493842152903304" _localPosition="0,-0.95,0" _localRotation="0,0,0" _localScale="3,0.1,3" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="0.866" />
 					<MinigameTriggerComponent _localID="8526823632005175649" _activatorTag="Player" _bOnce="false" _spawnInside="Ignore" _minigame="kitdemo_actioncombat" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="304" name="MinigamePortals">
+			<GameObject _schemaVersion="0" _name="MinigamePortals" _bActive="true" _bAlwaysLoaded="true">
+				<_listComponent>
+					<MinigamePortalSpawnerComponent _localID="4824942144226795713" _localPosition="-24,1,32" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _portalPrefab="game/playground/prefabs/minigameportal.prefab.xml" _columnCount="8" _slotSpacing="7,7" />
 				</_listComponent>
 			</GameObject>
 		</entity>

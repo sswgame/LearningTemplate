@@ -12,6 +12,7 @@
 #include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/Minigame/MinigameDefinition.h"
 #include "GameFramework/Runtime/Foundation/Framework/Minigame/MinigameFlow.h"
+#include "GameFramework/Runtime/Foundation/Framework/Minigame/MinigamePortalSpawnerComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/Minigame/MinigameStack.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/SaveLock.h"
 
@@ -66,6 +67,34 @@ SW_TEST_CASE( MinigameTest, ReadsDefinition )
     SW_EXPECT_TRUE( definition._listInputContext[1] == hashed_string( "menu" ) );
     SW_REQUIRE_TRUE( definition._listUI.size() == 1 );
     SW_REQUIRE_TRUE( definition._listCatalog.size() == 1 );
+}
+
+/** @brief [MinigameTest] 허브 입구: portalSlot 을 적은 정의만 입구를 가지고, 자리 순으로 들며, 겹친 자리는 오류를 남기고 뺀다 */
+SW_TEST_CASE( MinigameTest, PortalSlotsAreOrderedAndUnique )
+{
+    MinigameDefinition plain;
+    SW_REQUIRE_TRUE( MinigameDefinition::loadFromXMLText( kValidXML, "arcade.minigame.xml", plain ) );
+    SW_EXPECT_FALSE( plain.hasPortal() );
+    MinigameDefinition second;
+    MinigameDefinition first;
+    SW_REQUIRE_TRUE( MinigameDefinition::loadFromXMLText( R"(<Minigame name="b" map="a/b.scene.xml" entry="SceneSwitch" portalSlot="9"/>)", "b.minigame.xml", second ) );
+    SW_REQUIRE_TRUE( MinigameDefinition::loadFromXMLText( R"(<Minigame name="a" map="a/a.scene.xml" entry="SceneSwitch" portalSlot="0"/>)", "a.minigame.xml", first ) );
+    SW_EXPECT_TRUE( second.hasPortal() );
+    vector<MinigameDefinition> listPortal;
+    SW_EXPECT_TRUE( MinigameDefinition::insertPortal( listPortal, second ) );
+    SW_EXPECT_TRUE( MinigameDefinition::insertPortal( listPortal, first ) );
+    SW_EXPECT_LOG( "MinigameDefinition.PortalSlotTaken" );
+    SW_EXPECT_FALSE( MinigameDefinition::insertPortal( listPortal, second ) );
+    SW_REQUIRE_TRUE( listPortal.size() == 2 );
+    SW_EXPECT_TRUE( listPortal[0]._name == hashed_string( "a" ) );
+
+    // 자리: 열(기본 8)을 넘으면 다음 줄(Z)이다.
+    const MinigamePortalSpawnerComponent spawner;
+    const float3                         firstPosition  = spawner.computeSlotPosition( listPortal[0]._portalSlot );
+    const float3                         secondPosition = spawner.computeSlotPosition( listPortal[1]._portalSlot );
+    SW_EXPECT_EQUAL( 0.0f, firstPosition._x );
+    SW_EXPECT_EQUAL( 7.0f, secondPosition._x );
+    SW_EXPECT_EQUAL( 7.0f, secondPosition._z );
 }
 
 /** @brief [MinigameTest] 필수 칸(map)이 빠진 파일은 읽지 않는다 */

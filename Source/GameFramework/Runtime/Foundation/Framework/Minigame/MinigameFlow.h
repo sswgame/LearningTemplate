@@ -131,6 +131,11 @@ namespace sw
 
         /** @brief 이름 @p name 의 미니게임 파일 리소스 id 입니다(`<팩>/minigames/<이름>.minigame.xml`). */
         static string makeAssetPath( const GamePackConfig& packConfig, string_view name );
+        /**
+         * @brief 팩의 미니게임 정의 가운데 허브 입구 자리(`portalSlot`)를 적은 것을 자리 순으로 @p outListPortal 에 모읍니다(먼저 비운다) — `MinigamePortalSpawnerComponent` 가 부른다.
+         * @details 파일마다 들어갈 때와 같은 읽기 · 검사를 한다. 못 읽은 정의와 자리가 겹친 뒤의 정의는 오류를 남기고 빼며, 나머지 입구는 그대로 선다.
+         */
+        void collectPortals( vector<MinigameDefinition>& outListPortal ) const;
         /** @brief 하위 레벨을 사물 @p anchor 의 변환(위치는 월드)에 얹는 자리입니다 — 트리거 · 개발 명령이 쓴다. 장면 컴포넌트가 없으면 nullopt 입니다. */
         static optional<SubLevelPlacement> makeAnchorPlacement( const GameObject& anchor );
         /**

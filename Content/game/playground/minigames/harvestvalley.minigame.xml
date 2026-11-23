@@ -6,4 +6,4 @@
   입력 레이어 스택에 든 레이어만 발화하므로(InputMap::isLayerActiveInternal) 걷기(Movement) · 현황(Menu)도 함께 적는다.
   시나리오 automation/harvestvalley_* 가 실행 전역 변수 gv_firstMinigame 로 들어간다.
 -->
-<Minigame name="harvestvalley" map="game/playground/harvestvalley/maps/farm.scene.xml" entry="SceneSwitch" inputContexts="Movement,Menu,Farming"/>
+<Minigame name="harvestvalley" map="game/playground/harvestvalley/maps/farm.scene.xml" entry="SceneSwitch" portalSlot="1" inputContexts="Movement,Menu,Farming"/>

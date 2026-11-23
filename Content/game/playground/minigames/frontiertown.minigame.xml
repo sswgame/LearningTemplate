@@ -6,4 +6,4 @@
   맵의 TownState 오브젝트에 GameStateComponent → WalletComponent → CityGameModeComponent → CityViewComponent(GF_Client_CityBuilder) → FrontierSkirmishGameModeComponent 가 그 순서로 붙어 시계 → 도시 → RTS 로 돈다.
   빨리 감기(FastForward, Space)는 팩 입력 묶음(data/gamesettings.xml)의 공통 파일이다. 시나리오 automation/frontiertown_* 가 실행 전역 변수 gv_firstMinigame 로 들어간다.
 -->
-<Minigame name="frontiertown" map="game/playground/frontiertown/maps/frontier.scene.xml" entry="SceneSwitch"/>
+<Minigame name="frontiertown" map="game/playground/frontiertown/maps/frontier.scene.xml" entry="SceneSwitch" portalSlot="3"/>

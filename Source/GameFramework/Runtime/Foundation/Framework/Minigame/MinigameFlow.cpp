@@ -3,6 +3,7 @@
 #include "GameFramework/Runtime/Foundation/Framework/Minigame/MinigameFlow.h"
 
 #include "Core/Diagnostics/MemoryProfiler.h"
+#include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/StringBuilder.h"
@@ -14,6 +15,7 @@
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Content/AssetID.h"
+#include "Engine/Content/AssetIO.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Net/GameNetSession.h"
@@ -308,6 +310,23 @@ namespace sw
         StringBuilder<constant::buffer::kMax256> relativeBuilder;
         relativeBuilder.appendFormat( "%#%#%#", kMinigameFolder, name, kMinigameSuffix );
         return packConfig.resolve( relativeBuilder.view() );
+    }
+
+    void MinigameFlow::collectPortals( vector<MinigameDefinition>& outListPortal ) const
+    {
+        outListPortal.clear();
+        vector<AssetID> listAsset;
+        if ( AssetIO::collectAssets( AssetID{ _packConfig.resolve( kMinigameFolder ) }, kMinigameSuffix, listAsset ) == AssetFolderListing::Failed )
+            return; // 까닭은 나열이 남겼다. 폴더가 없는 팩은 미니게임이 없다
+        for ( const AssetID& assetID : listAsset )
+        {
+            string_view fileName;
+            FileUtil::getFileNamePart( assetID.view(), fileName );
+            const string_view  name = fileName.substr( 0, fileName.size() - string_view( kMinigameSuffix ).size() );
+            MinigameDefinition definition;
+            if ( loadDefinition( name, definition ) && definition.hasPortal() )
+                (void)MinigameDefinition::insertPortal( outListPortal, std::move( definition ) ); // 겹친 자리는 알렸다
+        }
     }
 
     optional<SubLevelPlacement> MinigameFlow::makeAnchorPlacement( const GameObject& anchor )

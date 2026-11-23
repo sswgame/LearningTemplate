@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="01285eea14034d928deb4273e19b0345"?>
+<!--
+  허브의 미니게임 입구 — 정의(minigames/*.minigame.xml)의 portalSlot 하나가 입구 하나다(maps/hub 의 MinigamePortals 가 prefabs/minigameportal 를 세운다).
+  흡수한 미니게임 넷(pixeltown · harvestvalley · voxelcraft · frontiertown)의 입구에 플레이어를 세워 들어가고, minigame.leave 로 나와 마을이 복원되는지 본다.
+  돌아온 자리는 입구 안이다 — 다시 세운 입구가 나타난 플레이어를 세지 않는다(_spawnInside Ignore). 입구를 더하면 여기에 한 묶음을 더한다.
+  실행: App -scenario=game/playground/automation/hub_portals.scenario.xml -unattended (체인: ctest -R Scenario.playground)
+-->
+<Scenario name="game.playground.hub_portals" fixedDelta="0.0166667" timeoutFrames="4800" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/playground/maps/hub.scene.xml"/>
+	<Variable name="gv_playgroundAutoPlay" value="0"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<Expect watch="Minigame.Active" is="none"/>
+	<!-- 자리: 시작(-24, 32)에서 X 로 7 m 마다 -->
+	<Expect watch="Object.X" target="MinigamePortal_pixeltown" near="-24" tolerance="0.01"/>
+	<Expect watch="Object.X" target="MinigamePortal_harvestvalley" near="-17" tolerance="0.01"/>
+	<Expect watch="Object.X" target="MinigamePortal_voxelcraft" near="-10" tolerance="0.01"/>
+	<Expect watch="Object.X" target="MinigamePortal_frontiertown" near="-3" tolerance="0.01"/>
+	<Expect watch="Object.Z" target="MinigamePortal_frontiertown" near="32" tolerance="0.01"/>
+
+	<!-- pixeltown -->
+	<DevCommand line="teleport Player -24 0.05 32"/>
+	<WaitUntil watch="Minigame.Active" is="pixeltown" timeoutWallSeconds="60"/>
+	<ExpectActiveScene path="game/playground/pixeltown/maps/town.scene.xml"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<DevCommand line="minigame.leave"/>
+	<WaitUntil watch="Minigame.RestoreCount" equals="1" timeoutWallSeconds="60"/>
+	<ExpectActiveScene path="game/playground/maps/hub.scene.xml"/>
+	<Expect watch="Object.X" target="Player" near="-24" tolerance="0.05"/>
+	<AdvanceSimulation frames="30"/> <!-- 다시 세운 입구 안에 머문다 — 다시 들어가지 않음은 시간이 내용 -->
+	<Expect watch="Minigame.Active" is="none"/>
+	<Expect watch="Object.X" target="MinigamePortal_pixeltown" near="-24" tolerance="0.01"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+
+	<!-- harvestvalley -->
+	<DevCommand line="teleport Player -17 0.05 32"/>
+	<WaitUntil watch="Minigame.Active" is="harvestvalley" timeoutWallSeconds="60"/>
+	<ExpectActiveScene path="game/playground/harvestvalley/maps/farm.scene.xml"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<DevCommand line="minigame.leave"/>
+	<WaitUntil watch="Minigame.RestoreCount" equals="2" timeoutWallSeconds="60"/>
+	<ExpectActiveScene path="game/playground/maps/hub.scene.xml"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+
+	<!-- voxelcraft -->
+	<DevCommand line="teleport Player -10 0.05 32"/>
+	<WaitUntil watch="Minigame.Active" is="voxelcraft" timeoutWallSeconds="60"/>
+	<ExpectActiveScene path="game/playground/voxelcraft/maps/island.scene.xml"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<DevCommand line="minigame.leave"/>
+	<WaitUntil watch="Minigame.RestoreCount" equals="3" timeoutWallSeconds="60"/>
+	<ExpectActiveScene path="game/playground/maps/hub.scene.xml"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+
+	<!-- frontiertown -->
+	<DevCommand line="teleport Player -3 0.05 32"/>
+	<WaitUntil watch="Minigame.Active" is="frontiertown" timeoutWallSeconds="60"/>
+	<ExpectActiveScene path="game/playground/frontiertown/maps/frontier.scene.xml"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<DevCommand line="minigame.leave"/>
+	<WaitUntil watch="Minigame.RestoreCount" equals="4" timeoutWallSeconds="60"/>
+	<ExpectActiveScene path="game/playground/maps/hub.scene.xml"/>
+	<Expect watch="Minigame.Active" is="none"/>
+	<Expect watch="Minigame.LeakCount" equals="0"/>
+	<Pass/>
+</Scenario>
