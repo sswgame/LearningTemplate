@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="66089098e938d2278b77931555a77c21"?>
+<!--
+  스폰 감독(SpawnDirector) — 무대 maps/spawndirector. 예산이 닿으면 내고, 동시 상한 · 최소 시각을 지키고, 사라지면 자리를 돌려준다. 값으로 판정한다(골든 없음).
+  ① 시작 예산 2 로 grunt 둘(동시 상한)을 바로 낸다 ② 예산이 쌓여도 상한 때문에 2 초 동안 더 내지 않는다 ③ 4 초가 지나면 brute(값 3)를 낸다
+  ④ grunt 하나를 지우면 감독이 알고(셈 1), 예산이 다시 쌓이면(돌려받지 않는다) 새 번호 4 로 낸다 ⑤ 세이브 · 불러오기 뒤에도 셋이 같은 번호로 선다.
+  실행: App -scenario=game/playground/automation/spawndirector.scenario.xml -unattended (체인: ctest -R Scenario.playground)
+-->
+<Scenario name="game.playground.spawndirector" fixedDelta="0.0166667" timeoutFrames="1500" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/playground/maps/spawndirector.scene.xml"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<LoadScene path="game/playground/maps/spawndirector.scene.xml" timeoutFrames="600"/> <!-- 에셋을 기다린 프레임이 시계에 들지 않게 새로 연다 -->
+	<!-- ① 시작 예산 -->
+	<WaitUntil watch="Object.Property" target="SpawnDemo" key="SpawnDirectorDemoComponent._spawnedTotal" equals="2" timeoutFrames="10"/>
+	<WaitUntil watch="Object.Exists" target="Spawn.2" equals="1" timeoutFrames="10"/>
+	<Expect watch="Object.Exists" target="Spawn.1" equals="1"/>
+	<!-- ② 동시 상한 -->
+	<AdvanceSimulation frames="120"/> <!-- 2 초 — 예산은 쌓이지만 grunt 는 둘까지, brute 는 4 초부터다(일어나지 않음 — 시간이 내용) -->
+	<Expect watch="Object.Property" target="SpawnDemo" key="SpawnDirectorDemoComponent._spawnedTotal" equals="2"/>
+	<Expect watch="Object.Property" target="SpawnDemo" key="SpawnDirectorDemoComponent._budget" atLeast="1.5"/>
+	<!-- ③ 최소 시각 -->
+	<WaitUntil watch="Object.Property" target="SpawnDemo" key="SpawnDirectorDemoComponent._spawnedTotal" equals="3" timeoutSeconds="4"/>
+	<WaitUntil watch="Object.Exists" target="Spawn.3" equals="1" timeoutFrames="10"/>
+	<Expect watch="Object.Property" target="SpawnDemo" key="SpawnDirectorDemoComponent._aliveCount" equals="3"/>
+	<Expect watch="Object.Property" target="SpawnDemo" key="SpawnDirectorDemoComponent._budget" atMost="0.3"/> <!-- 상한 3 을 모두 썼다 -->
+	<!-- ④ 사라짐 → 다시 냄 -->
+	<DevCommand line="object.destroy Spawn.1"/>
+	<WaitUntil watch="Object.Property" target="SpawnDemo" key="SpawnDirectorDemoComponent._despawnedTotal" equals="1" timeoutFrames="10"/>
+	<Expect watch="Object.Property" target="SpawnDemo" key="SpawnDirectorDemoComponent._aliveCount" equals="2"/> <!-- 값을 돌려받지 않아 예산 1 이 쌓일 때까지 비어 있다 -->
+	<WaitUntil watch="Object.Property" target="SpawnDemo" key="SpawnDirectorDemoComponent._spawnedTotal" equals="4" timeoutSeconds="3"/>
+	<WaitUntil watch="Object.Exists" target="Spawn.4" equals="1" timeoutFrames="10"/>
+	<Expect watch="Object.Exists" target="Spawn.1" equals="0"/>
+	<Expect watch="Object.Property" target="SpawnDemo" key="SpawnDirectorDemoComponent._aliveCount" equals="3"/>
+	<!-- ⑤ 세이브 · 불러오기 -->
+	<Store watch="Save.Written" as="writtenBefore"/>
+	<DevCommand line="game.save playground/spawndirector"/>
+	<WaitUntil watch="Save.Written" differsFrom="writtenBefore" timeoutWallSeconds="10"/>
+	<LoadScene path="game/playground/maps/spawndirector.scene.xml" timeoutFrames="600"/> <!-- 새 판 — 불러오기가 정말 되돌리는지 가린다 -->
+	<WaitUntil watch="Object.Property" target="SpawnDemo" key="SpawnDirectorDemoComponent._spawnedTotal" equals="2" timeoutFrames="30"/>
+	<Store watch="Save.Loaded" as="loadedBefore"/>
+	<DevCommand line="game.load playground/spawndirector"/>
+	<WaitUntil watch="Save.Loaded" differsFrom="loadedBefore" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Object.Exists" target="Spawn.4" equals="1" timeoutFrames="30"/>
+	<Expect watch="Object.Exists" target="Spawn.2" equals="1"/>
+	<Expect watch="Object.Exists" target="Spawn.3" equals="1"/>
+	<Expect watch="Object.Exists" target="Spawn.1" equals="0"/>
+	<Expect watch="Object.Property" target="SpawnDemo" key="SpawnDirectorDemoComponent._spawnedTotal" equals="4"/>
+	<Expect watch="Object.Property" target="SpawnDemo" key="SpawnDirectorDemoComponent._despawnedTotal" equals="1"/>
+	<Expect watch="Object.Property" target="SpawnDemo" key="SpawnDirectorDemoComponent._aliveCount" equals="3"/>
+	<Pass/>
+</Scenario>
