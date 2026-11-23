@@ -1213,7 +1213,25 @@ namespace sw
 
     void WebGPURHIDevice::endFrameInternal( bool vsync, bool bPresent )
     {
-        (void)vsync;         // 스왑체인 구성이 정한다(`applyVSyncInternal`)
+        (void)vsync; // 스왑체인 구성이 정한다(`applyVSyncInternal`)
+        if ( isDeviceLost() )
+        {
+            // 잃은 장치의 beginFrame 은 칸을 기다리지 않았다 — 칸의 앞 프레임이 남았을 수 있어 내지 않고 버린다(Vulkan 이 시작하지 않은 프레임을 건너뛰는 것과 같다).
+            closeFrameEncoder();
+            for ( const WGPUCommandBuffer buffer : _listPendingCommandBuffer )
+            {
+                if ( buffer != nullptr )
+                    wgpuCommandBufferRelease( buffer );
+            }
+            _listPendingCommandBuffer.clear();
+            _swapChain.releaseCurrent();
+            for ( WebGPURHISwapChain* pSwapChain : _windowSwapChains.getFrameList() )
+            {
+                pSwapChain->releaseCurrent();
+            }
+            _windowSwapChains.clearFrame();
+            return;
+        }
         resolveTimestamps(); // 프레임 인코더는 이 프레임의 마지막 세그먼트다 — 앞서 낸 리스트의 시각까지 모두 풀린다
         closeFrameEncoder();
         submitPending();
