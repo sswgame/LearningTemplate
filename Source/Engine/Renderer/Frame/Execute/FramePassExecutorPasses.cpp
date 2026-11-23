@@ -592,12 +592,10 @@ namespace sw
             SW_LOG_ERROR_ONCE_ID( "FramePassExecutor.ComputeImplementationNoSource", "Pass '%#' compute implementation has no SourceColor view - it does not run", passDesc._name );
             return;
         }
-        // 그룹은 8x8 출력 텍셀이다(셰이더의 SW_NUMTHREADS 와 같다 — 그룹 공유 타일의 크기).
         // 입력은 레벨 콜백이 셰이더 읽기로, 출력은 이 패스의 UAV 선언으로 RW 텍스처 상태로 옮겼다(`bindPassCallbacks`). 뒤 패스의 읽기 · UAV 는 레벨 콜백이 옮기거나 기다린다.
-        constexpr uint32 kGroupSize = 8;
         context._pCmd->setComputePipelineState( pso );
         context._pCmd->setComputeRootConstants( 0, sizeof( constants ) / sizeof( uint32 ), &constants );
-        context._pCmd->dispatchCompute( FrameRendererUtil::divideRoundUp( constants._width, kGroupSize ), FrameRendererUtil::divideRoundUp( constants._height, kGroupSize ), 1 );
+        context._pCmd->dispatchThreads( constants._width, constants._height, 1 );
         (void)markAttachmentCleared( target );
     }
 
@@ -642,7 +640,7 @@ namespace sw
         }
         context._pCmd->setComputePipelineState( pso );
         context._pCmd->setComputeRootConstants( 0, sizeof( constants ) / sizeof( uint32 ), &constants );
-        context._pCmd->dispatchCompute( FrameRendererUtil::divideRoundUp( constants._width, passDesc._threadGroupSize ), FrameRendererUtil::divideRoundUp( constants._height, passDesc._threadGroupSize ), 1 );
+        context._pCmd->dispatchThreads( constants._width, constants._height, 1 );
         // 뒤 패스가 샘플하면 레벨 콜백이 셰이더 읽기로 옮긴다. 컴퓨트가 칠했으니 이번 프레임 첫 렌더 패스가 지우면 안 된다.
         (void)markAttachmentCleared( target );
     }

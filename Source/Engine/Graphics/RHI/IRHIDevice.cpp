@@ -82,6 +82,7 @@ namespace sw
             case RHIHandleKind::PipelineState:
             {
                 bLive = factory.destroyPipelineStateNative( RHIPipelineStateHandle{ packed } );
+                factory.removeThreadGroupSize( RHIPipelineStateHandle{ packed } );
                 break;
             }
             case RHIHandleKind::RenderPass:

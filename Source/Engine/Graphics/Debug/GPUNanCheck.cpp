@@ -126,7 +126,7 @@ namespace sw
         commands.setComputePipelineState( pso );
         commands.bindComputeUAV( _buffer._uav, 0 );
         commands.setComputeRootConstants( 0, sizeof( constants ) / sizeof( uint32 ), &constants );
-        commands.dispatchThreads( width, height, 1, kGroupSize, kGroupSize, 1 );
+        commands.dispatchThreads( width, height, 1 );
         _bScannedThisFrame = SW_TRUE;
     }
 

@@ -78,6 +78,7 @@ namespace sw::test
         void drawIndexedInstanced( uint32, uint32, uint32, int32, uint32 ) override {}
         void setComputePipelineState( RHIPipelineStateHandle ) override {}
         void dispatchCompute( uint32, uint32, uint32 ) override {}
+        void dispatchThreads( uint32, uint32, uint32 ) override {}
         void setComputeRootConstants( uint32, uint32, const void*, uint32 ) override {}
         void setGraphicsRootConstants( uint32, uint32, const void*, uint32 ) override {}
         void bindComputeUAV( RHIDescriptorIndex, uint32 ) override {}

@@ -308,7 +308,7 @@ namespace sw
         cmd.bindComputeShaderResource( _voxelBuffer._srv, 2 );
         cmd.bindComputeUAV( _historyBuffer._uav, 0 );
         cmd.bindComputeUAV( lightBuffer.getProbeUAV(), 1 );
-        cmd.dispatchThreads( _totalProbes, 1, 1, kThreadGroupSize, 1, 1 );
+        cmd.dispatchThreads( _totalProbes, 1, 1 );
     }
 
     void RealtimeProbeUpdater::release( IRHIDevice* pDevice )

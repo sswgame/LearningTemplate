@@ -6,6 +6,7 @@
 
 #include "Engine/Graphics/RHI/Diagnostics/RHIDrawDiagnostics.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
+#include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/RHI/RHIDescriptors.h"
 
 namespace sw
@@ -116,6 +117,19 @@ namespace sw
     {
         endRenderPassBefore( "setComputePipelineState" );
         setComputePipelineStateNative( pso );
+        _computeGroupSize = pso != 0 ? getContextDevice().getResourceFactory()->getThreadGroupSize( pso ) : RHIThreadGroupSize{};
+    }
+
+    void IRHICommandContext::dispatchThreads( uint32 threadCountX, uint32 threadCountY, uint32 threadCountZ )
+    {
+        if ( threadCountX == 0 || threadCountY == 0 || threadCountZ == 0 )
+            return;
+        const bool bNoPipeline = _computeGroupSize.isValid() == false;
+        SW_ASSERT( bNoPipeline == false && "dispatchThreads needs a bound compute PSO (its shader gives the thread group size)" );
+        if ( bNoPipeline )
+            return;
+        dispatchCompute( ( threadCountX + _computeGroupSize._x - 1u ) / _computeGroupSize._x, ( threadCountY + _computeGroupSize._y - 1u ) / _computeGroupSize._y,
+                         ( threadCountZ + _computeGroupSize._z - 1u ) / _computeGroupSize._z );
     }
 
     void IRHICommandContext::dispatchCompute( uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ )

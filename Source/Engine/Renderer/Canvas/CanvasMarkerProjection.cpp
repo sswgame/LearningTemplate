@@ -27,8 +27,7 @@ namespace sw
             static constexpr uint32 kMarkerRowCount    = 3;
             static constexpr uint32 kMarkerFlagActive  = 0x80000000u;
             /** @brief 셰이더 행에 쓰는 "인스턴스 칸 없음" 비트입니다(canvas_marker.hlsl 이 이 값이면 월드 점을 쓴다). */
-            static constexpr uint32 kNoInstanceSlot        = constant::invalid_index::kUint32;
-            static constexpr uint32 kMarkerThreadGroupSize = 64;
+            static constexpr uint32 kNoInstanceSlot = constant::invalid_index::kUint32;
         };
     } // namespace
 } // namespace sw
@@ -123,7 +122,7 @@ namespace sw
         const uint32 debugMode = bShowInstanceSlots ? 1u : 0u;
         cmd.setComputeRootConstants( 0, 1, &debugMode );
         inoutMessages.bindCompute( cmd ); // canvas_marker.hlsl 의 메시지(u4) — 메시지 변형 PSO 일 때만 버퍼가 있다
-        cmd.dispatchThreads( _markerCount, 1, 1, Internal::kMarkerThreadGroupSize, 1, 1 );
+        cmd.dispatchThreads( _markerCount, 1, 1 );
     }
 
     void CanvasMarkerProjection::release( IRHIDevice* pDevice )

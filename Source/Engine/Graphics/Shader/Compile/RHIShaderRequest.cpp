@@ -214,7 +214,14 @@ namespace sw
             SW_LOG_ERROR_ID( "RHI.ComputeShaderCompileFailed", "createComputePipelineState: compute shader compile failed '%#'", shaderPath );
             return false;
         }
-        outStage = RHICompiledShaderStage{ std::move( csResult._bytecode ), csDesc._entryPoint };
+        // 스레드 그룹 크기는 셰이더가 정본이다 — 공급자(쿠킹 매니페스트 · 실행 중 리플렉션)에서 받고, 못 읽으면 PSO 를 만들지 않는다(그룹 수를 짐작하지 않는다).
+        ShaderReflectionData reflection;
+        if ( engine::getSubsystem<ShaderCache>().getReflection( csDesc, reflection ) == false || reflection._groupSize.isValid() == false )
+        {
+            SW_LOG_ERROR_ID( "RHI.ComputeReflectionFailed", "createComputePipelineState: compute shader '%#' [%#] has no thread group size in its reflection", shaderPath, csDesc._entryPoint.c_str() );
+            return false;
+        }
+        outStage = RHICompiledShaderStage{ std::move( csResult._bytecode ), csDesc._entryPoint, reflection._groupSize };
         return true;
     }
 

@@ -1,4 +1,6 @@
 #pragma once
+#include "Core/Concurrency/mutex.h"
+#include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/EnumUtil.h"
 #include "Core/Foundation/Macros.h"
@@ -43,6 +45,8 @@ namespace sw
          * @param listDefine 컴파일 매크로("NAME" 또는 "NAME=VALUE")입니다 — 그래픽스 PSO 의 `RHIPipelineStateDesc::_listShaderDefine` 과 같은 퍼뮤테이션입니다(셰이더 assert 변형이 쓴다).
          */
         RHIPipelineStateHandle createComputePipelineState( string_view shaderPath, string_view entryPoint = {}, const vector<string>& listDefine = {} );
+        /** @brief 컴퓨트 PSO @p pso 의 셰이더가 선언한 스레드 그룹 크기입니다. 이 팩터리가 만든 컴퓨트 PSO 가 아니면 0 입니다(`IRHICommandContext::setComputePipelineState`). */
+        RHIThreadGroupSize getThreadGroupSize( RHIPipelineStateHandle pso ) const;
 
         /**
          * @brief PSO 앞단이 읽을 셰이더 형식과 능력을 묶습니다. 장치 기동이 백엔드 초기화 뒤 한 번 부른다(`IRHIDevice::initialize`).
@@ -393,6 +397,8 @@ namespace sw
         [[nodiscard]] virtual bool destroyTextureNative( RHITextureHandle texture ) = 0;
         /** @brief 파이프라인 상태 객체를 놓습니다. */
         [[nodiscard]] virtual bool destroyPipelineStateNative( RHIPipelineStateHandle pso ) = 0;
+        /** @brief 놓은 PSO 의 스레드 그룹 크기를 지웁니다(장치가 `destroyPipelineStateNative` 뒤에 부른다). */
+        void removeThreadGroupSize( RHIPipelineStateHandle pso );
         /** @brief 렌더 패스 객체를 놓습니다. */
         [[nodiscard]] virtual bool destroyRenderPassNative( RHIRenderPassHandle pass ) = 0;
         /** @brief 힙 핸들을 놓습니다. 그 위에 놓인 텍스처는 각자 힙을 붙들므로(텍스처 파괴가 끝날 때까지) 텍스처보다 먼저 불러도 된다. 힙이 없는 백엔드는 핸들을 내지 않는다. */
@@ -413,7 +419,13 @@ namespace sw
         [[nodiscard]] virtual RHIPipelineStateHandle createComputePipelineStateNative( const RHICompiledShaderStage& computeStage, string_view label ) = 0;
 
     private:
-        const RHICapabilities* _pStartupCapabilities{ nullptr }; ///< 장치가 기동 때 채운 능력(`bindPipelineFront`) — null 이면 아직 묶지 않았다
-        ShaderTargetFormat     _shaderTargetFormat{};            ///< 기동 때 묶은 셰이더 형식
+        /** @brief 만든 컴퓨트 PSO 의 스레드 그룹 크기를 적습니다(핸들 0 은 적지 않는다). */
+        void recordThreadGroupSize( RHIPipelineStateHandle pso, const RHIThreadGroupSize& groupSize );
+
+    private:
+        mutable mutex                             _groupSizeMutex;                  ///< 만드는 스레드(PSO 워커)와 기록 스레드가 함께 본다
+        unordered_map<uint64, RHIThreadGroupSize> _mapGroupSize;                    ///< 컴퓨트 PSO 핸들(packed) → 셰이더의 그룹 크기
+        const RHICapabilities*                    _pStartupCapabilities{ nullptr }; ///< 장치가 기동 때 채운 능력(`bindPipelineFront`) — null 이면 아직 묶지 않았다
+        ShaderTargetFormat                        _shaderTargetFormat{};            ///< 기동 때 묶은 셰이더 형식
     };
 } // namespace sw

@@ -346,7 +346,7 @@ namespace sw
         // AnimationParams(b0) / g_InstancesRW(u0). instance_animation.hlsl 레지스터와 1:1 로 대응한다.
         _pCmd->bindComputeConstantBuffer( _state._deform._instanceAnimationCb._index, 0 );
         _pCmd->bindComputeUAV( _state._gpuScene.getInstanceUAV(), 0 );
-        _pCmd->dispatchThreads( instanceCount, 1, 1, FrameRendererUtil::kLinearThreadGroupSize, 1, 1 );
+        _pCmd->dispatchThreads( instanceCount, 1, 1 );
     }
 
     bool FrameGraphExecutor::isDeformPassDeclared() const
@@ -533,7 +533,7 @@ namespace sw
         _pCmd->bindComputeShaderResource( programSRV, 1 );
         _pCmd->bindComputeUAV( _state._deform._meshMorphPool.getMorphBuffer()._uav, 0 );
         _state._gpuMessages.bindCompute( *_pCmd ); // mesh_morph.hlsl 의 메시지(u4) — 메시지 변형 PSO 일 때만 버퍼가 있다
-        _pCmd->dispatchThreads( morphParams._vertexCount, 1, 1, FrameRendererUtil::kLinearThreadGroupSize, 1, 1 );
+        _pCmd->dispatchThreads( morphParams._vertexCount, 1, 1 );
     }
 
     void FrameGraphExecutor::dispatchMeshSkin( const RenderGraphPassContext& graphContext )
@@ -570,7 +570,7 @@ namespace sw
         _pCmd->bindComputeShaderResource( _state._deform._meshMorphPool.getSkinPaletteBuffer()._srv, 2 );
         _pCmd->bindComputeShaderResource( _state._deform._meshMorphPool.getSkinInstanceBuffer()._srv, 3 );
         _pCmd->bindComputeUAV( _state._deform._meshMorphPool.getMorphBuffer()._uav, 0 );
-        _pCmd->dispatchThreads( skinParams._skinVertexCount, 1, 1, FrameRendererUtil::kLinearThreadGroupSize, 1, 1 );
+        _pCmd->dispatchThreads( skinParams._skinVertexCount, 1, 1 );
         _state._deform._meshMorphPool.markSkinDispatched();
     }
 
@@ -916,7 +916,7 @@ namespace sw
         _pCmd->bindComputeConstantBuffer( renderView._cullCb._index, 0 );
         _pCmd->bindComputeShaderResource( _state._gpuScene.getBatchInfoSRV(), 1 );
         _pCmd->bindComputeUAV( view._indirectArgs._uav, 0 );
-        _pCmd->dispatchThreads( cullParams._batchCount, 1, 1, FrameRendererUtil::kLinearThreadGroupSize, 1, 1 );
+        _pCmd->dispatchThreads( cullParams._batchCount, 1, 1 );
         graphContext.uavBarrier( RenderGraphBufferUAV{ FrameResource::cullArgs() }, cullViewIndex ); // 되돌린 개수 위에서 컬링이 InterlockedAdd 로 센다
         // PSO 와 바인딩은 **뷰마다** 다시 설정한다. 아래 정렬 패스가 둘 다 교체하므로 다음 뷰가 정렬 PSO 로 컬링을 돌면 안 된다.
         _pCmd->setComputePipelineState( _psoManager.getEnginePSO( RenderPassKind::GPUCull ) );
@@ -943,7 +943,7 @@ namespace sw
         _pCmd->bindComputeUAV( bEarly ? _occludedOrders._uav : view._visibleInstances._uav, 3 );
         _state._gpuMessages.bindCompute( *_pCmd ); // gpu_cull.hlsl 의 메시지(u4) — 메시지 변형 PSO 일 때만 버퍼가 있다
         // **그리는 차례마다** 스레드 하나를 쓴다(차례의 칸은 t3 에서 읽는다). 그래야 보이는 것을 골라 압축할 수 있다.
-        _pCmd->dispatchThreads( cullParams._instanceCount, 1, 1, FrameRendererUtil::kLinearThreadGroupSize, 1, 1 );
+        _pCmd->dispatchThreads( cullParams._instanceCount, 1, 1 );
         // 압축이 끝났으면 투명 배치의 순서를 CPU 가 정한 순서(인스턴스 번호 오름차순)로 되돌린다. 원자 연산이 준 슬롯 번호는
         // 완료 순서라 그대로 두면 블렌딩이 틀린다. 되돌리기가 GPU 에서 돌므로 투명도 압축과 컬링 이득을 받는다(instance_sort.hlsl).
         // 컬링이 채운 목록을 정렬이 바로 읽는다. 상태가 그대로라 전이로는 알 수 없으므로
@@ -1122,7 +1122,7 @@ namespace sw
         cmd.bindComputeUAV( bLOD ? cullView._lodState._uav : cullView._visibleInstances._uav, 2 );
         cmd.bindComputeUAV( _occludedOrders._uav, 3 );
         _state._gpuMessages.bindCompute( cmd );
-        cmd.dispatchThreads( _lateInstanceCount, 1, 1, FrameRendererUtil::kLinearThreadGroupSize, 1, 1 );
+        cmd.dispatchThreads( _lateInstanceCount, 1, 1 );
 
         // 3) 그리는 쪽이 읽는 상태(등록 접근)로 — 뒤 패스(G버퍼 · 포워드 불투명)가 더한 개수로 그린다. LOD 상태 · 차례 표시는 등록 접근이 UAV 라 그대로 둔다.
         graphContext.transition( ViewGraphResource::cullArgs(), RenderGraphAccess::IndirectArgs );

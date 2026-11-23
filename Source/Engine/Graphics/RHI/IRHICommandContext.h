@@ -64,6 +64,7 @@ namespace sw
         // ------------------------------------------------------------------------------
         void setComputePipelineState( RHIPipelineStateHandle pso ) final;
         void dispatchCompute( uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ ) final;
+        void dispatchThreads( uint32 threadCountX, uint32 threadCountY, uint32 threadCountZ ) final;
         void dispatchIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0 ) final;
         void prepareTextureForShaderRead( RHITextureHandle texture ) final;
         void prepareTextureForRenderTarget( RHITextureHandle texture ) final;
@@ -126,7 +127,8 @@ namespace sw
         [[nodiscard]] bool isTextureHandleValid( RHITextureHandle texture, const utf8* pOperation ) const;
 
     private:
-        uint8 _bRenderPassOpen         : 1;
-        uint8 _bRenderPassNoBackBuffer : 1;
+        RHIThreadGroupSize _computeGroupSize{}; ///< 걸려 있는 컴퓨트 PSO 의 그룹 크기(`setComputePipelineState`)
+        uint8              _bRenderPassOpen         : 1;
+        uint8              _bRenderPassNoBackBuffer : 1;
     };
 } // namespace sw

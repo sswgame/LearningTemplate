@@ -27,7 +27,7 @@ namespace sw
         /// @brief 'SRFM' 매니페스트 매직입니다.
         constexpr uint32 kMagic = FourCCUtil::make( "SRFM" );
         /// @brief 매니페스트 포맷 버전입니다. 쿠킹하는 쪽과 읽는 쪽이 같은 파일에 있으므로 한 곳만 올리면 됩니다.
-        constexpr uint32 kVersion = 3; ///< 2: 구조버퍼 원소 레이아웃(_listStructuredElement) 추가 · 3: 리소스 종류를 글자 대신 `ShaderBindingKind` 한 바이트로
+        constexpr uint32 kVersion = 4; ///< 4: 컴퓨트 스레드 그룹 크기(_groupSize) 추가 · 2: 구조버퍼 원소 레이아웃(_listStructuredElement) 추가 · 3: 리소스 종류를 글자 대신 `ShaderBindingKind` 한 바이트로
 
         void writeReflectionInternal( Archive& archive, const ShaderReflectionData& reflection )
         {
@@ -74,6 +74,9 @@ namespace sw
                     archive << variable._size;
                 }
             }
+            archive << reflection._groupSize._x;
+            archive << reflection._groupSize._y;
+            archive << reflection._groupSize._z;
         }
 
         [[nodiscard]] bool readReflectionInternal( Archive& archive, ShaderReflectionData& outReflection )
@@ -153,6 +156,9 @@ namespace sw
                 }
             }
 
+            archive >> outReflection._groupSize._x;
+            archive >> outReflection._groupSize._y;
+            archive >> outReflection._groupSize._z;
             return archive.isError() == false;
         }
 

@@ -26,6 +26,7 @@ namespace sw::spirv
     inline constexpr uint32 kOpExecutionModeId            = 331u;
     inline constexpr uint32 kExecutionModeOriginUpperLeft = 7u;
     inline constexpr uint32 kExecutionModeOriginLowerLeft = 8u;
+    inline constexpr uint32 kExecutionModeLocalSize       = 17u;
     inline constexpr uint32 kOpTypeBool                   = 20u;
     inline constexpr uint32 kOpTypeInt                    = 21u;
     inline constexpr uint32 kOpTypeFloat                  = 22u;

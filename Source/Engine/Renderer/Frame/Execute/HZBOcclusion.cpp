@@ -44,7 +44,6 @@ namespace sw
             static_assert( sizeof( RootConstants ) == 6 * sizeof( uint32 ), "hzb_build.hlsl 의 루트 상수와 크기가 같아야 한다" );
 
             /// 짓기 스레드 그룹 한 변입니다(hzb_build.hlsl 의 numthreads 와 같다).
-            static constexpr uint32 kGroupSize = 8;
         };
         static_assert( ( 1u << ( HZBLayout::kTileMip + 1u ) ) == FrameRendererUtil::kOcclusionTileSize, "16 px 밉의 텍셀 하나가 가림 타일 한 변이어야 한다(hzb_build.hlsl kTileMip)" );
 
@@ -180,7 +179,7 @@ namespace sw
             const uint32          countX = bTiles && target._occlusionColumns > level._width ? target._occlusionColumns : level._width;
             const uint32          countY = bTiles && target._occlusionRows > level._height ? target._occlusionRows : level._height;
             cmd.setComputeRootConstants( 0, sizeof( constants ) / sizeof( uint32 ), &constants );
-            cmd.dispatchThreads( countX, countY, 1, Internal::kGroupSize, Internal::kGroupSize, 1 );
+            cmd.dispatchThreads( countX, countY, 1 );
         }
         barriers.end();
         target._hzbLayout   = layout;

@@ -97,12 +97,11 @@ namespace sw
     class SW_API RealtimeProbeUpdater
     {
     public:
-        static constexpr uint32 kThreadGroupSize = 64;          ///< probe_update.hlsl SW_NUMTHREADS 와 같다
-        static constexpr uint32 kHeaderRowCount  = 8;           ///< 머리 행 1 + 하늘 SH 행 7 (probe_update.hlsl kRowFirstVolume)
-        static constexpr uint32 kVolumeRowCount  = 8;           ///< 볼륨마다 행 수 (probe_update.hlsl kVolumeRowCount)
-        static constexpr uint32 kSkySampleCount  = 64;          ///< 하늘 SH 투영의 방향 수
-        static constexpr uint32 kSkyRowCount     = 7;           ///< 하늘 SH 원시 계수 27 개가 float4 일곱(28 칸)에 들어간다
-        static constexpr uint32 kNoEmission      = 0xFFFFFFFFu; ///< 발광 칸이 없는 볼륨의 발광 단어 번호(probe_update.hlsl kNoEmission)
+        static constexpr uint32 kHeaderRowCount = 8;           ///< 머리 행 1 + 하늘 SH 행 7 (probe_update.hlsl kRowFirstVolume)
+        static constexpr uint32 kVolumeRowCount = 8;           ///< 볼륨마다 행 수 (probe_update.hlsl kVolumeRowCount)
+        static constexpr uint32 kSkySampleCount = 64;          ///< 하늘 SH 투영의 방향 수
+        static constexpr uint32 kSkyRowCount    = 7;           ///< 하늘 SH 원시 계수 27 개가 float4 일곱(28 칸)에 들어간다
+        static constexpr uint32 kNoEmission     = 0xFFFFFFFFu; ///< 발광 칸이 없는 볼륨의 발광 단어 번호(probe_update.hlsl kNoEmission)
 
         /** @brief 요청들의 버퍼 배치를 계산합니다. 기록 구간은 @p history(이번 프레임에 `assign` 한 것)가 매긴 자리다. */
         [[nodiscard]] static RealtimeProbeLayout planLayout( const vector<RealtimeProbeRequest>& listRequest, const RealtimeProbeHistoryAllocator& history );

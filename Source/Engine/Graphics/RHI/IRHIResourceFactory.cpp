@@ -79,7 +79,10 @@ namespace sw
         RHICompiledGraphicsStages stages;
         if ( RHIShaderRequest::buildGraphicsStages( desc, _shaderTargetFormat, *_pStartupCapabilities, stages ) == false )
             return 0;
-        return createPipelineStateNative( desc, stages );
+        const RHIPipelineStateHandle pso = createPipelineStateNative( desc, stages );
+        if ( stages._bHasComputeShader != SW_FALSE )
+            recordThreadGroupSize( pso, stages._compute._groupSize );
+        return pso;
     }
 
     RHIPipelineStateHandle IRHIResourceFactory::createComputePipelineState( string_view shaderPath, string_view entryPoint, const vector<string>& listDefine )
@@ -95,6 +98,29 @@ namespace sw
         RHICompiledShaderStage computeStage;
         if ( RHIShaderRequest::buildComputeStage( shaderPath, entryPoint, listDefine, _shaderTargetFormat, computeStage ) == false )
             return 0;
-        return createComputePipelineStateNative( computeStage, shaderPath );
+        const RHIPipelineStateHandle pso = createComputePipelineStateNative( computeStage, shaderPath );
+        recordThreadGroupSize( pso, computeStage._groupSize );
+        return pso;
+    }
+
+    RHIThreadGroupSize IRHIResourceFactory::getThreadGroupSize( RHIPipelineStateHandle pso ) const
+    {
+        ScopedLock<mutex> lock{ _groupSizeMutex };
+        const auto        it = _mapGroupSize.find( pso.getPacked() );
+        return it != _mapGroupSize.end() ? it->second : RHIThreadGroupSize{};
+    }
+
+    void IRHIResourceFactory::recordThreadGroupSize( RHIPipelineStateHandle pso, const RHIThreadGroupSize& groupSize )
+    {
+        if ( pso == 0 )
+            return;
+        ScopedLock<mutex> lock{ _groupSizeMutex };
+        _mapGroupSize[pso.getPacked()] = groupSize;
+    }
+
+    void IRHIResourceFactory::removeThreadGroupSize( RHIPipelineStateHandle pso )
+    {
+        ScopedLock<mutex> lock{ _groupSizeMutex };
+        _mapGroupSize.erase( pso.getPacked() );
     }
 } // namespace sw

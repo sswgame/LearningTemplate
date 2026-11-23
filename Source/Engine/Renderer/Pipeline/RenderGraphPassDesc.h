@@ -176,7 +176,7 @@ namespace sw
         LateOcclusion,
         /**
          * @brief 파이프라인 XML 이 고른 컴퓨트 셰이더(`_shaderPath` · `_computeEntryPoint`)를 돌립니다 — 코드 없이 데이터만으로 효과를 더하는 패스입니다(언리얼 RDG 의 컴퓨트 패스 자리).
-         *        선언한 컬러 출력 하나에 쓰고 입력(최대 둘, 깊이 형식 제외)을 읽습니다. 첨부는 RW 텍스처로 묶입니다(`compute_pass.hlsli` 의 루트 상수). 그룹 수는 첨부 크기를 `_threadGroupSize` 로 나눈 값입니다.
+         *        선언한 컬러 출력 하나에 쓰고 입력(최대 둘, 깊이 형식 제외)을 읽습니다. 첨부는 RW 텍스처로 묶입니다(`compute_pass.hlsli` 의 루트 상수). 디스패치는 출력 크기만큼의 스레드다(그룹 크기는 셰이더 리플렉션).
          */
         Compute,
 
@@ -579,10 +579,6 @@ namespace sw
         /** @brief 도메인 진입점입니다. */
         PROPERTY( SkipIfEmpty )
         string _domainEntryPoint;
-
-        /** @brief `Compute` 패스의 스레드 그룹 한 변(`numthreads` 와 같아야 한다)입니다. 그룹 수는 출력 크기를 이 값으로 나눠 올림합니다. */
-        PROPERTY( Min = 1 )
-        uint32 _threadGroupSize{ 8 };
 
         /** @brief 셰이더 매크로(퍼뮤테이션)입니다. "NAME" 또는 "NAME=VALUE" 형태로 적습니다. */
         PROPERTY( SkipIfEmpty )
