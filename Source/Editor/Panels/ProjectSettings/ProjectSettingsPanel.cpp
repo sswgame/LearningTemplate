@@ -65,7 +65,7 @@ namespace sw::editor
         , _tableView{}
         , _pSelected{ nullptr }
         , _statusText{}
-        , _tableHistory{}
+        , _history{}
         , _bCatalogLoaded{ SW_FALSE }
     {
     }
@@ -91,18 +91,28 @@ namespace sw::editor
     {
         _bCatalogLoaded = SW_TRUE;
         _pSelected      = nullptr;
-        _tableHistory.clear(); // 단계가 가리키던 페이지가 사라진다
+        _history.clear(); // 단계가 가리키던 페이지가 사라진다
         ProjectSettingsPage::collectPages( _listPage );
     }
 
-    void ProjectSettingsPanel::onTableUndoMoved( Page& /*page*/ )
+    void ProjectSettingsPanel::onUndoMoved( Page& /*page*/ )
     {
         _tableView.resetDraft();
         refreshDirtyState();
     }
 
-    void ProjectSettingsPanel::onPropertyEdited( const PropertyInfo& /*prop*/ )
+    void ProjectSettingsPanel::resetHistory()
     {
+        _history.clear();
+        if ( _pSelected != nullptr )
+            _history.selectPage( *_pSelected, SW_DELEGATE_METHOD( ProjectSettingsMovedDelegate, &ProjectSettingsPanel::onUndoMoved, this ) );
+    }
+
+    void ProjectSettingsPanel::onPropertyEdited( const PropertyInfo& prop )
+    {
+        StringBuilder<constant::buffer::kMax256> label;
+        label.appendFormat( "Edit %#", prop._name.c_str() );
+        _history.notifyEdited( label.view(), ImGui::IsAnyItemActive() );
         refreshDirtyState();
     }
 
@@ -146,7 +156,7 @@ namespace sw::editor
                 continue;
             pPage->revert();
         }
-        _tableHistory.clear(); // 되돌린 문서는 기록을 비웠다
+        resetHistory(); // 되돌린 문서는 기록을 비웠다
     }
 
     void ProjectSettingsPanel::drawPageList()
@@ -191,6 +201,7 @@ namespace sw::editor
         _tableView.resetDraft();
         if ( page._bOpened == false )
             page.open();
+        _history.selectPage( page, SW_DELEGATE_METHOD( ProjectSettingsMovedDelegate, &ProjectSettingsPanel::onUndoMoved, this ) );
     }
 
     void ProjectSettingsPanel::drawPageDetail( Page& page )
@@ -217,7 +228,7 @@ namespace sw::editor
             if ( _tableView.draw( table, _statusText ) )
                 refreshDirtyState();
             if ( table.getRecordedUndoStepCount() != recordedStepCount )
-                _tableHistory.push( page, SW_DELEGATE_METHOD( ProjectSettingsTableMovedDelegate, &ProjectSettingsPanel::onTableUndoMoved, this ) );
+                _history.pushTableStep( page, SW_DELEGATE_METHOD( ProjectSettingsMovedDelegate, &ProjectSettingsPanel::onUndoMoved, this ) );
             ImGui::EndChild();
             return;
         }
@@ -280,7 +291,7 @@ namespace sw::editor
         {
             _tableView.resetDraft();
             page.revert();
-            _tableHistory.clear(); // 다시 읽은 문서는 기록을 비웠다 — 다른 페이지의 단계도 함께 버린다(단계가 페이지별로 섞여 있어 그 페이지 것만 골라 뺄 수 없다)
+            resetHistory(); // 다시 읽은 문서는 기록을 비웠다 — 다른 페이지의 단계도 함께 버린다
             refreshDirtyState();
             _statusText = "Reverted to the file";
         }
@@ -293,6 +304,7 @@ namespace sw::editor
             if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Refresh" ), SW_LOCKEY( "EdButton", "ResetToDefault" ), "Reset to Default" ) ) )
             {
                 page.resetToDefault();
+                _history.notifyEdited( "Reset to Default", false );
                 refreshDirtyState();
                 _statusText = "Reset to the default values - Save writes the file";
             }
@@ -346,6 +358,7 @@ namespace sw::editor
         else
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EdLabel", "PickASettingsFileOnTheLeft" ) );
         ImGui::EndChild();
+        _history.flush( ImGui::IsAnyItemActive() ); // 놓은 편집을 한 단계로 올린다
     }
 
     SW_EDITOR_PANEL( ProjectSettingsPanel, ProjectSettingsPanel::kPanelID, EditorPanelCategory::Tool, 2010 );

@@ -2009,6 +2009,8 @@
     "ActionCombatDemoComponentInternal": "ActionCombatGameModeComponentInternal — 키트 셋 가르기: 시연 컴포넌트가 키트 디렉터(Component/*GameModeComponent)가 됐다(2026-11-21)",
     "ActionCombatDemoPhase": "ActionCombatPhase — 키트 셋 가르기: 시연 컴포넌트가 키트 디렉터(Component/*GameModeComponent)가 됐다(2026-11-21)",
     "ActionPlatformerDemoComponent": "ActionPlatformerGameModeComponent — 키트 셋 가르기: 시연 컴포넌트가 키트 디렉터(Component/*GameModeComponent)가 됐다(2026-11-21)",
-    "ActionPlatformerDemoComponentInternal": "ActionPlatformerGameModeComponentInternal — 키트 셋 가르기: 시연 컴포넌트가 키트 디렉터(Component/*GameModeComponent)가 됐다(2026-11-21)"
+    "ActionPlatformerDemoComponentInternal": "ActionPlatformerGameModeComponentInternal — 키트 셋 가르기: 시연 컴포넌트가 키트 디렉터(Component/*GameModeComponent)가 됐다(2026-11-21)",
+    "ProjectSettingsTableHistory": "ProjectSettingsHistory — 표 페이지만이 아니라 형식 페이지 편집 단계도 든다(2026-11-24)",
+    "ProjectSettingsTableMovedDelegate": "ProjectSettingsMovedDelegate — 표 페이지만이 아니라 형식 페이지 편집 단계도 든다(2026-11-24)"
   }
 }

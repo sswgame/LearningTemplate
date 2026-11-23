@@ -329,6 +329,25 @@ namespace sw::editor
             _readResult = ConfigReadResult::Missing;
     }
 
+    string ProjectSettingsDocument::captureText() const
+    {
+        if ( _pType == nullptr || _current.isValid() == false )
+            return {};
+        return JSONSerializer::serialize( _current.get(), *_pType ).value_or( string{} ); // 글로 못 쓰는 값(잘못된 UTF-8)은 기록하지 않는다 — 저장 길이 오류로 알린다
+    }
+
+    bool ProjectSettingsDocument::applyText( string_view text )
+    {
+        if ( _pType == nullptr || _current.isValid() == false )
+            return false;
+        // 새 인스턴스에 읽어 성공했을 때만 바꾼다(`revert` 와 같다). 범위 밖 값은 편집하던 값 그대로라 거절하지 않는다 — 저장이 거절한다.
+        ReflectedInstance fresh = ReflectedInstance::create( *_pType );
+        if ( fresh.isValid() == false || JSONSerializer::deserializeSoft( fresh.get(), *_pType, text ) == SoftReadResult::NotParsed )
+            return false;
+        _current = std::move( fresh );
+        return true;
+    }
+
     string ProjectSettingsDocument::makeDifferenceText() const
     {
         return tryMakeDifferenceText().value_or( string{} ); // 보이기 · 비교용 — 못 만들면 빈 글(저장 길은 tryMakeDifferenceText 의 오류를 본다)

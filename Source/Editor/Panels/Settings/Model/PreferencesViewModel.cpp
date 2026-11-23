@@ -7,9 +7,13 @@
 #include "Editor/Common/Config/EditorSettingsRegistry.h"
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
 #include "Editor/Common/Widgets/PropertyGrid/Model/InspectorPropertyLayout.h"
+#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/Undo/EditorStateTextHistory.h"
+#include "Editor/Common/Workspace/Undo/EditorUndoHistory.h"
 
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Reflection/TypeRegistry.h"
+#include "Engine/Serialization/Format/JSONSerializer.h"
 
 namespace sw::editor
 {
@@ -32,7 +36,8 @@ namespace sw::editor
     } // namespace
 
     PreferencesViewModel::PreferencesViewModel()
-        : _listVisibleSection{}
+        : _pHistory{ make_unique<EditorStateTextHistory>( EditorUndoHistory::readConfiguredLimit( getEditorToolDefaults() ) ) }
+        , _listVisibleSection{}
         , _sectionFilterText{}
         , _sectionListGeneration{ 0 }
         , _sectionTypeGeneration{ 0 }
@@ -42,6 +47,8 @@ namespace sw::editor
         , _pendingSaveNanoseconds{ 0 }
     {
     }
+
+    PreferencesViewModel::~PreferencesViewModel() = default;
 
     const vector<const EditorSettingsRegistration*>& PreferencesViewModel::refreshVisibleSections( const utf8* pFilterText )
     {
@@ -66,7 +73,10 @@ namespace sw::editor
         }
         // 등록 세대가 바뀌면 고른 섹션이 모듈과 함께 내려갔을 수 있다 — 목록에 남은 항목만 고른 채로 둔다(풀린 주소를 들지 않는다).
         if ( bSelectedVisible == false )
+        {
             _pSelected = _listVisibleSection.empty() ? nullptr : _listVisibleSection.front();
+            syncHistorySource();
+        }
         _sectionFilterText     = pFilterText;
         _sectionListGeneration = listGeneration;
         _sectionTypeGeneration = typeGeneration;
@@ -86,10 +96,55 @@ namespace sw::editor
         }
     }
 
-    void PreferencesViewModel::recordEdited()
+    void PreferencesViewModel::selectSection( const EditorSettingsRegistration& registration )
+    {
+        _pSelected = &registration;
+        syncHistorySource();
+    }
+
+    void PreferencesViewModel::recordEdited( string_view label, bool bInteracting )
     {
         if ( _pSelected != nullptr && _pSelected->_pfnOnChanged != nullptr )
             _pSelected->_pfnOnChanged();
+        _pHistory->notifyEdited( label, bInteracting );
+        requestSave();
+    }
+
+    void PreferencesViewModel::flushEdit( bool bInteracting )
+    {
+        _pHistory->flush( bInteracting );
+    }
+
+    CommandStack& PreferencesViewModel::getCommandStack()
+    {
+        return _pHistory->getStack();
+    }
+
+    void PreferencesViewModel::syncHistorySource()
+    {
+        using SettingsRegistry = EditorExtensionRegistry<EditorSettingsRegistration>;
+        EditorStateTextSource source;
+        if ( _pSelected != nullptr && _pSelected->_pfnGetType() != nullptr ) // 그리기 함수 페이지는 값의 주인이 따로 있다
+        {
+            const string sectionID{ _pSelected->_pID };
+            source._capture = SW_DELEGATE_LAMBDA( Delegate<string()>, [sectionID]()
+            {
+                const EditorSettingsRegistration* pSection = SettingsRegistry::find( sectionID );
+                return pSection != nullptr ? JSONSerializer::serialize( pSection->_pInstance, *pSection->_pfnGetType() ).value_or( string{} ) : string{};
+            } );
+            source._restore = SW_DELEGATE_LAMBDA( Delegate<void( string_view )>, [this, sectionID]( string_view text )
+            { restoreSection( sectionID, text ); } );
+        }
+        _pHistory->selectSource( source );
+    }
+
+    void PreferencesViewModel::restoreSection( const string& sectionID, string_view text )
+    {
+        const EditorSettingsRegistration* pSection = EditorExtensionRegistry<EditorSettingsRegistration>::find( sectionID );
+        if ( pSection == nullptr || JSONSerializer::deserializeSoft( pSection->_pInstance, *pSection->_pfnGetType(), text ) == SoftReadResult::NotParsed )
+            return;
+        if ( pSection->_pfnOnChanged != nullptr )
+            pSection->_pfnOnChanged();
         requestSave();
     }
 
@@ -98,6 +153,7 @@ namespace sw::editor
         if ( _pSelected == nullptr )
             return;
         EditorPreferencesStore::resetSection( *_pSelected );
+        _pHistory->notifyEdited( "Reset Section", false );
         requestSave();
     }
 

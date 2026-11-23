@@ -2,7 +2,7 @@
 <?asset guid="a2f189f1c31f9dd397e3369d73bc0f2a"?>
 <!--
   에디터 시나리오 — 프로젝트 설정 창: 커맨드 팔레트로 열면 읽힌 설정과 Config/ 의 나머지 JSON 표로 만든 파일 목록이 보인다.
-  EngineConfig 를 고르면 바탕 층(값이 파일에만 있다)이라 모든 키를 쓰는 문서다. _maxFrameDeltaTime 을 0.2 로 바꾸면 페이지가 바뀜 상태가 되고, Revert 를 누르면 돌아온다.
+  EngineConfig 를 고르면 바탕 층(값이 파일에만 있다)이라 모든 키를 쓰는 문서다. _maxFrameDeltaTime 을 0.2 로 바꾸면 페이지가 바뀜 상태가 되고, Ctrl+Z · Ctrl+Y 로 되돌렸다 다시 하고, Revert 를 누르면 파일 값으로 돌아온다. 표도 같은 스택으로 되돌린다.
   다음으로 활성 팩의 <Engine> 요소 페이지(PackEngineSettings)를 열어 캡처하고, 끝으로 형식 없는 격리 표에 원소를 더했다가 되돌린다.
   저장하지 않으므로 저장소의 Config 파일과 팩 파일은 건드리지 않는다. 저장과 호스트 다시 읽기는 EditorTest 의 ProjectSettingsDocument 테스트가 임시 폴더에서 본다.
   실행: App -EnableEditor -scenario=engine/automation/editor/projectconfigedit.scenario.xml -unattended
@@ -35,6 +35,12 @@
 	<WaitUntil watch="Editor.ProjectSettingsDirtyPageCount" equals="1"/>
 	<EditorWaitStable/>
 	<Expect watch="Editor.ProjectSettingsDirtyPageCount" equals="1"/>
+	<!-- 형식 페이지의 편집은 Ctrl+Z 로 되돌아오고 Ctrl+Y 로 다시 된다(되돌린 문서는 파일과 같아 바뀜 상태가 아니다) -->
+	<EditorKey key="Ctrl+Z"/>
+	<WaitUntil watch="Editor.ProjectSettingsDirtyPageCount" equals="0" timeoutFrames="60"/>
+	<EditorKey key="Ctrl+Y"/>
+	<WaitUntil watch="Editor.ProjectSettingsDirtyPageCount" equals="1" timeoutFrames="60"/>
+	<EditorWaitStable/>
 	<EditorClick mark="projectsettings.revert"/>
 	<WaitUntil watch="Editor.ProjectSettingsDirtyPageCount" equals="0" timeoutFrames="60"/>
 	<!-- 활성 팩의 <Engine> 요소(PackEngineSettings) — 팩 gamesettings.xml 안의 요소 하나를 고치는 페이지다. 창 제목은 늘 적혀 있다. -->
@@ -56,6 +62,13 @@
 	<Expect watch="Editor.ProjectSettingsKeyCount" increaseFrom="quarantineKeys" increaseBy="1"/>
 	<EditorWaitStable/>
 	<CaptureEditorUI file="projectconfigedit/quarantinetable.png"/>
+	<!-- 표 편집도 같은 스택이다 -->
+	<EditorKey key="Ctrl+Z"/>
+	<WaitUntil watch="Editor.ProjectSettingsDirtyPageCount" equals="0" timeoutFrames="60"/>
+	<Expect watch="Editor.ProjectSettingsKeyCount" sameAs="quarantineKeys"/>
+	<EditorKey key="Ctrl+Y"/>
+	<WaitUntil watch="Editor.ProjectSettingsDirtyPageCount" equals="1" timeoutFrames="60"/>
+	<EditorWaitStable/>
 	<EditorClick mark="projectsettings.revert"/>
 	<WaitUntil watch="Editor.ProjectSettingsDirtyPageCount" equals="0" timeoutFrames="60"/>
 	<Expect watch="Editor.ProjectSettingsKeyCount" sameAs="quarantineKeys"/>
