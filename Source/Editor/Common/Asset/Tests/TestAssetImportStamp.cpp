@@ -23,7 +23,7 @@ namespace
     }
 
     /** @brief `things_raw/<y>.src` 를 `things/<y>.out` 과 옆 폴더 `things/<y>/side.txt` 로 쓰는 임포터입니다. */
-    class FakeThingImporter final : public IRawAssetImporter
+    class FakeThingImporter : public IRawAssetImporter
     {
     public:
         explicit FakeThingImporter( string settings = "default" )
@@ -95,6 +95,27 @@ SW_TEST_CASE( AssetImportStampTest, RemovingASourceRemovesItsResult )
     SW_EXPECT_FALSE( FileUtil::exists( root.join( "pack/things/gone" ) ) );
     SW_EXPECT_TRUE( FileUtil::exists( root.join( "pack/things/kept.out" ) ) );
     SW_EXPECT_TRUE( AssetImportStampUtil::importAll( root.str(), importer, AssetImportMode::CheckOnly, nullptr, cache ).isClean() );
+
+    SW_EXPECT_TRUE( FileUtil::removeDirectory( root ) );
+}
+
+/**
+ * @brief [AssetImportStampTest] 원본을 지워도 임포터가 자기 결과라고 답하지 않은 파일(같은 이름 폴더의 손 데이터)은 남는지 검증
+ */
+SW_TEST_CASE( AssetImportStampTest, RemovingASourceKeepsFilesTheImporterDoesNotOwn )
+{
+    const AbsolutePath root = test::makeScratchPath( "AssetImportStampHandFile" );
+    SW_REQUIRE_TRUE( writeText( FileUtil::joinPath( root.str(), "pack/things_raw/gone.src" ), "a" ) );
+    const FakeThingImporter importer;
+    const DerivedDataCache  cache{ vector<DerivedDataLayer>{ DerivedDataLayer{ test::makeScratchPath( "ImportDDC" ), DerivedDataAccess::ReadWrite } } };
+    SW_REQUIRE_TRUE( AssetImportStampUtil::importAll( root.str(), importer, AssetImportMode::ImportStale, nullptr, cache ).isClean() );
+    SW_REQUIRE_TRUE( writeText( FileUtil::joinPath( root.str(), "pack/things/gone/hand.txt" ), "hand" ) ); // 커밋한 손 데이터 — 결과가 아니다
+
+    SW_REQUIRE_TRUE( FileUtil::removeFile( root.join( "pack/things_raw/gone.src" ) ) );
+    SW_EXPECT_TRUE( AssetImportStampUtil::importAll( root.str(), importer, AssetImportMode::ImportStale, nullptr, cache ).isClean() );
+    SW_EXPECT_FALSE( FileUtil::exists( root.join( "pack/things/gone.out" ) ) );
+    SW_EXPECT_FALSE( FileUtil::exists( root.join( "pack/things/gone/side.txt" ) ) );
+    SW_EXPECT_TRUE( FileUtil::exists( root.join( "pack/things/gone/hand.txt" ) ) );
 
     SW_EXPECT_TRUE( FileUtil::removeDirectory( root ) );
 }

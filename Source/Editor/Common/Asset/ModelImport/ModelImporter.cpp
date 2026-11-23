@@ -1167,9 +1167,9 @@ namespace sw::editor
 
     void ModelImporter::collectImportedFiles( string_view importedMeshPath, vector<string>& outListPath )
     {
-        if ( FileUtil::isRegularFile( FileUtil::toDiskPath( importedMeshPath ) ) == false )
-            return;
-        outListPath.push_back( string( importedMeshPath ) );
+        // 메시가 없어도(손으로 지웠다) 남은 옆 폴더 · 파쇄 파일은 이 원본의 결과다.
+        if ( FileUtil::isRegularFile( FileUtil::toDiskPath( importedMeshPath ) ) )
+            outListPath.push_back( string( importedMeshPath ) );
         const string fracturePath = FractureAsset::makePathForMesh( importedMeshPath );
         if ( FileUtil::isRegularFile( FileUtil::toDiskPath( fracturePath ) ) )
             outListPath.push_back( fracturePath );
