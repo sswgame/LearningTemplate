@@ -227,6 +227,25 @@ SW_TEST_CASE( SceneAssemblyTest, BaseSceneMergesAndSavesAsDelta )
     SW_EXPECT_TRUE( Util::findNode( reread, "New" ) != nullptr );
 }
 
+/** @brief [SceneAssemblyTest] 씬 상속: 자식은 물려받은 엔티티에 덮어쓰기(`<PrefabOverrides>`)만 적어 값을 바꾼다(허브가 서부 평원을 물려받는 꼴) */
+SW_TEST_CASE( SceneAssemblyTest, BaseSceneEntityTakesOverridesOnly )
+{
+    const test::ScopedScratchDomain domain;
+    Util::write( domain, "base.scene.xml", Util::makeScene( "Base", { Util::makeEntity( "3", "Move", "3,0,0" ) } ) );
+    StringBuilder<constant::buffer::kMax1024> childScene;
+    childScene.appendFormat( "<Scene _base=\"%#\" name=\"Child\"><entities><entity id=\"3\" name=\"Move\"><PrefabOverrides><Override key=\"#0000000000000001\"><SceneComponent _localPosition=\"9,0,0\" /></Override></PrefabOverrides></entity></entities></Scene>",
+                             test::ScopedScratchDomain::makeID( "base.scene.xml" ).str() );
+    Util::write( domain, "child.scene.xml", string( childScene.view() ) );
+
+    SceneDocument doc{};
+    SW_REQUIRE_TRUE( doc.loadXML( test::ScopedScratchDomain::makeID( "child.scene.xml" ) ) );
+    Scene scene{ "Child" };
+    SW_REQUIRE_TRUE( scene.instantiate( doc ) );
+    const GameObject* const pMove = scene.getObjectManager()->findGameObjectByName( hashed_string( "Move" ) );
+    SW_REQUIRE_TRUE( pMove != nullptr && pMove->getPrimarySceneComponent() != nullptr );
+    SW_EXPECT_NEAR( 9.0, pMove->getPrimarySceneComponent()->getWorldPosition()._x, 1e-4 );
+}
+
 /** @brief [SceneAssemblyTest] 끈 레이어의 엔티티는 오르지 않고 저장에 그대로 남으며, 켜면 오르고 끄면 내린다 */
 SW_TEST_CASE( SceneAssemblyTest, DataLayerLoadsOnlyWhenActive )
 {

@@ -12,7 +12,6 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/Flow/GameInstance.h"
-#include "GameFramework/Runtime/Gameplay/GameState/GameStateComponent.h"
 
 #include "Games/HarvestValley/FarmGameModeComponent.h"
 #include "Games/HarvestValley/FarmVillageGameModeComponent.h"
@@ -35,7 +34,6 @@ namespace sw
     HarvestValleyGame::HarvestValleyGame()
     {
         // 상태 스냅샷에 오르는 컴포넌트 — 저장 전에 상태를 싣고 세운 것을 걷으며, 복원 뒤 돌려준다.
-        getStateSnapshot().registerStatefulComponent<GameStateComponent>(); // 공유 상태가 디렉터보다 먼저 돌아온다
         getStateSnapshot().registerGameMode<FarmGameModeComponent>();
         getStateSnapshot().registerGameMode<FarmVillageGameModeComponent>(); // 농장 디렉터 뒤 — 같은 시계로 일정을 다시 만든다
     }
