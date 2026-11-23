@@ -12,10 +12,11 @@
 # 말뭉치: 씨앗은 `Test/Fuzz/Seeds/<이름>/`(커밋, 작은 것 몇 개 — 없으면 구성 오류), 자라는 말뭉치는 `<빌드>/Saved/Fuzz/<이름>/`(커밋하지 않는다).
 # libFuzzer 는 첫 폴더에 새 입력을 쓰므로 자라는 말뭉치를 앞에 둔다 — 씨앗 폴더(소스 트리)를 더럽히지 않는다.
 
-# sw_add_fuzz_target(<이름> SOURCES <소스…> LINK <타깃…>)
+# sw_add_fuzz_target(<이름> SOURCES <소스…> LINK <타깃…> [MODULES <모듈 타깃…>])
+#   MODULES 는 링크하지 않고 엔진 기동의 `ModuleTypes` 단계에서 순서대로 올릴 동적 모듈이다(`SW_FUZZ_MODULES`, Test/Fuzz/FuzzEngineScope.cpp).
 #   실행 파일 `Fuzz_<이름>`(`-fsanitize=fuzzer` 링크)과 CTest `Fuzz.<이름>.Smoke` 를 만든다. SW_ENABLE_FUZZING 구성에서만 부른다.
 function(sw_add_fuzz_target FUZZ_NAME)
-	cmake_parse_arguments(PARSE_ARGV 1 fuzz "" "" "SOURCES;LINK")
+	cmake_parse_arguments(PARSE_ARGV 1 fuzz "" "" "SOURCES;LINK;MODULES")
 	if(NOT SW_ENABLE_FUZZING)
 		message(FATAL_ERROR "[Fuzz] sw_add_fuzz_target(${FUZZ_NAME}) needs SW_ENABLE_FUZZING (preset Linux-Fuzz)")
 	endif()
@@ -35,6 +36,11 @@ function(sw_add_fuzz_target FUZZ_NAME)
 	target_link_libraries(${target_name} PRIVATE ${fuzz_LINK} sw_public_source_includes sw_global_options)
 	target_link_options(${target_name} PRIVATE -fsanitize=fuzzer)
 	target_compile_definitions(${target_name} PRIVATE "SW_LOG_TAG=\"${target_name}\"" "SW_REGISTRAR_MODULE=\"${target_name}\"")
+	if(fuzz_MODULES)
+		list(JOIN fuzz_MODULES "\",\"" module_text)
+		target_compile_definitions(${target_name} PRIVATE "SW_FUZZ_MODULES=\"${module_text}\"")
+		add_dependencies(${target_name} ${fuzz_MODULES}) # 이름으로 올리므로 링크 의존이 없다 — 실행 파일을 지으면 올릴 모듈도 선다
+	endif()
 	sw_configure_pch(${target_name} "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
 	set_target_properties(${target_name} PROPERTIES SW_FUZZ_TARGET TRUE FOLDER "Test/Fuzz")
 
