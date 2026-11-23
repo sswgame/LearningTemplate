@@ -17,6 +17,7 @@
 #include "Engine/Scene/SceneSubLevelSubsystem.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
+#include "Engine/Serialization/Inherit/AssetRedirect.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/Flow/IContentConfiguration.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
@@ -43,7 +44,7 @@ namespace sw
             struct Header
             {
                 uint64 _processToken{ 0 }; ///< 찍은 프로세스의 토큰 — 같으면 id 를 복원한다
-                string _sceneID;           ///< 찍을 때 활성 씬의 리소스 id(씬이 없었으면 빈 글)
+                string _sceneID;           ///< 찍을 때 활성 씬의 지금 리소스 id(옮긴 씬의 옛 id 는 읽을 때 푼다 — 씬이 없었으면 빈 글)
                 string _contentText;       ///< 찍을 때 콘텐츠 구성(켠 모드) 글
             };
 
@@ -77,7 +78,7 @@ namespace sw
                 auto loadedContentText = arch.readString();
                 if ( arch.isError() )
                     return false;
-                outHeader._sceneID     = std::move( loadedSceneID );
+                outHeader._sceneID     = AssetRedirect::toCurrentID( loadedSceneID ); // 씬을 옮긴(팩을 흡수한) 뒤에도 옛 세이브가 제 씬을 찾는다
                 outHeader._contentText = std::move( loadedContentText );
                 return arch.isError() == false;
             }
@@ -230,12 +231,12 @@ namespace sw
                 SceneManager* const pSceneManager = game::findSubsystem<SceneManager>();
                 return pSceneManager != nullptr ? pSceneManager->getActiveScene() : nullptr;
             }
-            /** @brief 활성 씬의 리소스 id(`Scene::getSourcePath`)입니다. 씬 매니저나 활성 씬이 없으면(씬 없는 스냅샷) 빈 글입니다. */
+            /** @brief 활성 씬의 지금 리소스 id(`Scene::getSourcePath` 를 리다이렉트로 푼 것 — 세이브 머리와 같은 꼴)입니다. 씬 매니저나 활성 씬이 없으면(씬 없는 스냅샷) 빈 글입니다. */
             static string findActiveSceneID()
             {
                 SceneManager* const pSceneManager = game::findSubsystem<SceneManager>();
                 const Scene* const  pScene        = pSceneManager != nullptr ? pSceneManager->getActiveScene() : nullptr;
-                return pScene != nullptr ? pScene->getSourcePath() : string{};
+                return pScene != nullptr ? AssetRedirect::toCurrentID( pScene->getSourcePath() ) : string{};
             }
         };
     } // namespace
