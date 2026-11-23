@@ -29,17 +29,16 @@ namespace sw
 
         // **값이 실제로 달라질 때만** 버전을 올린다. 같은 값을 다시 넣는 호출이 흔한데(드로우마다 g_World 를
         // 같은 항등 행렬로 다시 넣는다), 그때마다 버전을 올리면 상수버퍼를 드로우마다 새로 만들게 된다.
-        for ( Entry& entry : _listEntry )
+        const uint32 found = findIndex( name );
+        if ( found != constant::invalid_index::kUint32 )
         {
-            if ( entry._name == name )
-            {
-                if ( entry._size == byteSize && Memory::compare( entry._data.data(), pData, byteSize ) == 0 )
-                    return;
-                entry._size = byteSize;
-                Memory::copy( entry._data.data(), pData, byteSize );
-                ++_version;
+            Entry& entry = _listEntry[found];
+            if ( entry._size == byteSize && Memory::compare( entry._data.data(), pData, byteSize ) == 0 )
                 return;
-            }
+            entry._size = byteSize;
+            Memory::copy( entry._data.data(), pData, byteSize );
+            ++_version;
+            return;
         }
 
         ++_version;
@@ -48,6 +47,7 @@ namespace sw
         entry._size = byteSize;
         Memory::copy( entry._data.data(), pData, byteSize );
         _listEntry.push_back( entry );
+        insertIndex( static_cast<uint32>( _listEntry.size() - 1 ) );
     }
 
     void PassConstantValues::setMatrix( hashed_string name, const float4x4& value )
@@ -72,27 +72,63 @@ namespace sw
 
     const uint8* PassConstantValues::find( hashed_string name, uint32& outSize ) const
     {
-        for ( const Entry& entry : _listEntry )
+        const uint32 found = findIndex( name );
+        if ( found == constant::invalid_index::kUint32 )
         {
-            if ( entry._name == name )
-            {
-                outSize = entry._size;
-                return entry._data.data();
-            }
+            outSize = 0;
+            return nullptr;
         }
-        outSize = 0;
-        return nullptr;
+        outSize = _listEntry[found]._size;
+        return _listEntry[found]._data.data();
     }
 
     void PassConstantValues::remove( hashed_string name )
     {
-        for ( size_t entryIndex = 0; entryIndex < _listEntry.size(); ++entryIndex )
-        {
-            if ( _listEntry[entryIndex]._name != name )
-                continue;
-            _listEntry.erase( _listEntry.begin() + entryIndex );
-            ++_version;
+        const uint32 found = findIndex( name );
+        if ( found == constant::invalid_index::kUint32 )
             return;
+        _listEntry.erase( _listEntry.begin() + found );
+        rebuildIndex( _listIndex.size() ); // 뒤 항목의 번호가 모두 당겨졌다(드문 길 — 확장 요소가 빌린 칸을 되돌릴 때)
+        ++_version;
+    }
+
+    uint32 PassConstantValues::findIndex( const hashed_string& name ) const
+    {
+        if ( _listIndex.empty() )
+            return constant::invalid_index::kUint32;
+        const size_t mask = _listIndex.size() - 1;
+        for ( size_t slot = name.getIndex() & mask; _listIndex[slot] != 0; slot = ( slot + 1 ) & mask )
+        {
+            const uint32 entryIndex = static_cast<uint32>( _listIndex[slot] ) - 1u;
+            if ( _listEntry[entryIndex]._name == name )
+                return entryIndex;
+        }
+        return constant::invalid_index::kUint32;
+    }
+
+    void PassConstantValues::insertIndex( uint32 entryIndex )
+    {
+        constexpr size_t kMinCapacity = 256; // 엔진 상수(약 100)가 절반 아래로 든다
+        if ( _listEntry.size() * 2 > _listIndex.size() )
+        {
+            rebuildIndex( MathUtil::max( kMinCapacity, _listIndex.size() * 2 ) ); // 새 항목도 함께 들어간다
+            return;
+        }
+        const size_t mask = _listIndex.size() - 1;
+        size_t       slot = _listEntry[entryIndex]._name.getIndex() & mask;
+        while ( _listIndex[slot] != 0 )
+        {
+            slot = ( slot + 1 ) & mask;
+        }
+        _listIndex[slot] = static_cast<uint16>( entryIndex + 1u );
+    }
+
+    void PassConstantValues::rebuildIndex( size_t capacity )
+    {
+        _listIndex.assign( capacity, uint16{ 0 } );
+        for ( uint32 entryIndex = 0; entryIndex < _listEntry.size(); ++entryIndex )
+        {
+            insertIndex( entryIndex );
         }
     }
 

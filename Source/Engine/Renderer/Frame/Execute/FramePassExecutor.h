@@ -44,6 +44,7 @@ namespace sw
     class FrameFog;
     class FrameUpscale;
     class FramePSOManager;
+    struct GPUMeshBatchPSO;
     class IRHICommandList;
     class IRHIDevice;
     class RenderPipelineAsset;
@@ -188,11 +189,12 @@ namespace sw
         struct BatchDrawState
         {
             vector_reference<const GPUMeshBatch>               _batches{};
-            vector_reference<const GPUMeshBatchBinding>        _bindings{}; ///< `_batches` 와 같은 구간의 렌더 쪽 값(`GPUScene::getOpaqueBatchBindings`)
+            const GPUMeshBatchPSO*                             _pBatchPSO{ nullptr }; ///< 지금 바퀴(보기 모드)의 변형 조건별 PSO(`FramePSOManager::findBatchPSORow`)
+            span<const uint32>                                 _listVariant{};        ///< 배치 번호 → 변형 조건 번호
+            vector_reference<const GPUMeshBatchBinding>        _bindings{};           ///< `_batches` 와 같은 구간의 렌더 쪽 값(`GPUScene::getOpaqueBatchBindings`)
             vector_reference<const GPUTransparentParticleSlot> _listParticleSlot{};
             const vector<uint32>*                              _pOrder{ nullptr }; ///< 추가 뷰의 투명 패스가 도는 배치 순서(없으면 배치 번호 순서)
-            RHIPipelineStateHandle                             _pso{ 0 };
-            RHIPipelineStateHandle                             _boundPSO{ 0 }; ///< 지금 커맨드 리스트에 걸린 PSO(배치마다 다를 수 있어 바뀔 때만 다시 건다)
+            RHIPipelineStateHandle                             _boundPSO{ 0 };     ///< 지금 커맨드 리스트에 걸린 PSO(배치마다 다를 수 있어 바뀔 때만 다시 건다)
             RHIBufferHandle                                    _boundVertexBuffer{ 0 };
             RHIBufferHandle                                    _slotStream{ 0 }; ///< 인스턴스 슬롯 스트림(슬롯 1)
             RHIBufferHandle                                    _argsBuffer{ 0 }; ///< 이 패스의 뷰가 만든 간접 인자
@@ -202,6 +204,9 @@ namespace sw
             uint32                                             _particleSlotCursor{ 0 };
             uint32                                             _drawCallCount{ 0 };
             bool                                               _bMerge{ false }; ///< 연속 배치를 멀티 드로우 한 번으로 묶는지 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+
+            /** @brief @p batchIndex 배치를 그릴 PSO 입니다. */
+            const GPUMeshBatchPSO& getBatchPSO( uint32 batchIndex ) const;
         };
 
         // ------------------------------------------------------------------------------
@@ -437,21 +442,17 @@ namespace sw
          */
         void drawGPUBatches( FramePassContext& context, RHIPipelineStateHandle pso, bool bTransparentPass, const vector<GPUTransparentParticleSlot>* pParticleSlot );
         /** @brief 보기 모드 한 바퀴를 그립니다. 첫 바퀴(@p bDrawsParticles)만 배치 순서의 자기 자리에 입자를 끼웁니다. */
-        void drawBatchRound( FramePassContext& context, BatchDrawState& inoutState, RenderViewMode drawMode, bool bDrawsParticles );
+        void drawBatchRound( FramePassContext& context, BatchDrawState& inoutState, bool bDrawsParticles );
         /** @brief @p orderIndex 의 배치와 한 멀티 드로우 묶음이 되는 연속 배치 수를 셉니다(묶지 않으면 1, 다음 입자 자리가 묶음 안에 들면 그 자리에서 끊는다). */
-        uint32 countDrawGroup( const BatchDrawState& state, RenderViewMode drawMode, uint32 orderIndex, bool bDrawsParticles ) const;
-        /** @brief 그 PSO 의 레이아웃이 머티리얼 CB 슬롯을 거는지입니다. 거는 셰이더에서만 머티리얼 CB 가 멀티 드로우 병합 키다. */
-        bool layoutBindsMaterialCb( RHIPipelineStateHandle batchPSO ) const;
-        /** @brief @p other 가 @p head 와 같은 멀티 드로우 묶음에 들 수 있는지입니다(그릴 수 있고 정점 버퍼 · PSO · 머티리얼 바인딩이 같다). */
-        bool isSameDrawGroup( RHIPipelineStateHandle pso, RenderPassKind passType, RenderViewMode drawMode, const GPUMeshBatch& head, const GPUMeshBatchBinding& headBinding,
-                              const GPUMeshBatch& other, const GPUMeshBatchBinding& otherBinding ) const;
+        uint32 countDrawGroup( const BatchDrawState& state, uint32 orderIndex, bool bDrawsParticles ) const;
+        /** @brief @p otherIndex 배치가 @p headIndex 배치와 같은 멀티 드로우 묶음에 들 수 있는지입니다(그릴 수 있고 정점 버퍼 · PSO · 머티리얼 바인딩이 같다). */
+        bool isSameDrawGroup( const BatchDrawState& state, uint32 headIndex, uint32 otherIndex ) const;
         /**
          * @brief 묶음 하나를 그립니다 — 바뀐 배치 PSO 를 걸고(그때 정점 슬롯이 비므로 인스턴스 슬롯 스트림 · 메시 스트림도 다시 건다), 바뀐 정점 버퍼만 다시 걸고,
-         *        머티리얼 바인딩 뒤 간접 인자 @p argIndex 부터 @p groupCount 개를 부릅니다.
+         *        머티리얼 바인딩 뒤 배치 @p headIndex 의 간접 인자부터 @p groupCount 개를 부릅니다.
          * @return 그렸으면 true 입니다. 그 보기 모드의 머티리얼 변형이 없으면(만들 때 오류를 남겼다) 그리지 않고 false 입니다.
          */
-        bool drawBatchGroup( FramePassContext& context, BatchDrawState& inoutState, RenderViewMode drawMode, const GPUMeshBatch& head, const GPUMeshBatchBinding& headBinding,
-                             uint32 argIndex, uint32 groupCount );
+        bool drawBatchGroup( FramePassContext& context, BatchDrawState& inoutState, uint32 headIndex, uint32 groupCount );
         /** @brief 투명 큐(메시 투명 배치와 입자 그리기를 한 순서로)를 지금 열린 투명 패스에 그립니다. */
         void drawTransparentQueue( FramePassContext& context, RHIPipelineStateHandle pso );
         /** @brief 지금 그리는 뷰의 입자 자리입니다. 추가 뷰는 자기 순서가 있으면 그것, 없으면 주 시점의 것(그 뷰도 주 배치 순서로 그린다)입니다. */

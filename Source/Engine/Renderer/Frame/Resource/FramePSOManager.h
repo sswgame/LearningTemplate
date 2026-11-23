@@ -39,6 +39,17 @@ namespace sw
     class ShaderBindingLayout;
 
     /**
+     * @struct GPUMeshBatchPSO
+     * @brief 메시 배치를 그릴 PSO 하나입니다(같은 변형 조건의 배치가 나눠 쓴다).
+     */
+    struct GPUMeshBatchPSO
+    {
+        RHIPipelineStateHandle           _pso{ 0 };           ///< 변형이 `Ready` 가 아니면(만드는 중 · 실패 · 없음) 0 — 그 배치는 그리지 않는다
+        const ShaderBindingLayout*       _pLayout{ nullptr }; ///< `_pso` 의 바인딩 레이아웃
+        RenderPSOCache::MaterialPSOState _state{ RenderPSOCache::MaterialPSOState::Absent };
+    };
+
+    /**
      * @class FramePSOManager
      * @brief 렌더러 하나의 PSO 를 만드는 정책(셋업에서만 · 비동기 빌더 · 변형 키)과 그 저장소를 가집니다.
      * @details 디바이스 · 파이프라인 에셋(패스 서술 · 첨부 포맷) · GPUScene(퍼뮤테이션 · 배치)은 렌더러의 것을 읽기만 한다.
@@ -153,12 +164,14 @@ namespace sw
         void ensureParticlePSO();
         /** @brief 입자 PSO 입니다. 투명 패스 PSO 가 없거나 만들지 못했으면 0 입니다. */
         RHIPipelineStateHandle findParticlePSO() const;
+        /** @brief 이번 프레임의 (배치 변형 조건, 패스 PSO, 보기 모드) → PSO 표를 짓습니다. `ensureMaterialPSOs` 와 마지막 `pollMaterialPSOBuilds` 뒤, 기록 전에 한 번 부릅니다. */
+        void buildBatchPSOTable( uint32 viewModeMask );
         /**
-         * @brief 이 배치를 그릴 PSO 입니다. 머티리얼 퍼뮤테이션, 뷰 모드, 컬 반전을 적용한 변형이 있으면 그것을, 없으면 패스 PSO 를 그대로 반환합니다.
-         * @details 변형이 `Ready` 가 아니면(만드는 중 · 실패 · 없음) 0 이고, 이유는 @p pOutState 가 답한다.
+         * @brief 그리기 하나의 표 줄을 찾습니다 — 배치 b 의 PSO 는 `outPSO[ outListVariant[ b ] ]` 다. 이번 프레임 표에 없는 그리기(엔진 패스 PSO 가 아니거나 모으지 않은 보기 모드)면 false 입니다.
+         * @details 기록 전에 풀어 둔 값이라 잠금이 없다 — 드로우가 배치마다 저장소를 물으면 병렬 기록의 스레드가 뮤텍스 하나를 배치 × 패스만큼 다툰다(언리얼은 메시 드로우 커맨드가 PSO 번호를 들고 있다).
          */
-        RHIPipelineStateHandle psoForBatch( RHIPipelineStateHandle passPSO, const GPUMeshBatch& batch, RenderViewMode viewMode,
-                                            RenderPSOCache::MaterialPSOState* pOutState = nullptr ) const;
+        [[nodiscard]] bool findBatchPSORow( RHIPipelineStateHandle passPSO, bool bTransparentBatch, RenderViewMode viewMode, const GPUMeshBatchPSO*& outPSO,
+                                            span<const uint32>& outListVariant ) const;
 
     private:
         /** @brief 이번 프레임 배치가 쓰는 PSO 변형 하나의 조건(퍼뮤테이션, 컬 반전)입니다. 퍼뮤테이션이 없으면 kInvalidShaderPermutation 입니다. */
@@ -234,8 +247,12 @@ namespace sw
          */
         RenderPSOCache::MaterialPSOEntry createMaterialPSOVariant( RHIPipelineStateHandle passPSO, RenderPassKind passType, const GPUShaderPermutation* pPermutation,
                                                                    RenderViewMode viewMode, bool bReverseCulling, RHIMeshVertexFormat vertexFormat, RHIPipelineStateDesc* pOutDeferredDesc );
-        /** @brief 배치 목록에서 (퍼뮤테이션, 컬 반전, 정점 형식) 조합을 중복 없이 모읍니다. 퍼뮤테이션이 없는 배치도 넣습니다. */
-        static void collectMaterialPSORequests( vector_reference<const GPUMeshBatch> listBatch, vector<MaterialPSORequest>& outListRequest );
+        /** @brief 배치 목록에서 (퍼뮤테이션, 컬 반전, 정점 형식) 조합을 중복 없이 모으고, 배치마다 그 조합의 번호를 @p outListVariant 에 적습니다. 퍼뮤테이션이 없는 배치도 넣습니다. */
+        void collectMaterialPSORequests( vector_reference<const GPUMeshBatch> listBatch, vector<MaterialPSORequest>& outListRequest, vector<uint32>& outListVariant );
+        /** @brief 이 패스가 변형을 두는 보기 모드 비트입니다(보기 모드를 적용하지 않는 패스는 Lit 하나). */
+        static uint32 getPassViewModeMask( const RenderPassKindInfo& passInfo, uint32 viewModeMask );
+        /** @brief 변형 조건 하나를 @p passPSO · @p viewMode 로 그릴 PSO 입니다. 적용할 것이 없으면 패스 PSO 그대로, 만드는 중이면 직전 변형(`GPUShaderPermutation::_fallbackHash`)입니다. */
+        GPUMeshBatchPSO resolveBatchPSO( RHIPipelineStateHandle passPSO, const MaterialPSORequest& request, RenderViewMode viewMode ) const;
         /** @brief 요청 하나에 대해 이번 프레임의 보기 모드마다 변형을 만들어 둡니다. @return 새 변형을 하나라도 만들었으면 true 입니다. */
         [[nodiscard]] bool ensureRequestMaterialPSOs( RHIPipelineStateHandle passPSO, RenderPassKind passType, const MaterialPSORequest& request, uint32 viewModeMask );
         /**
@@ -258,12 +275,28 @@ namespace sw
         /// @brief `ensureMaterialPSOs` 가 이번 프레임 배치에서 모으는 변형 조건입니다. 중복이 없고, 프레임마다 다시 채웁니다.
         vector<MaterialPSORequest> _listOpaquePSORequestScratch;
         vector<MaterialPSORequest> _listTransparentPSORequestScratch;
+        /// @brief 배치 번호 → 변형 조건 번호입니다(위 두 목록의 순번).
+        vector<uint32> _listOpaqueVariant;
+        vector<uint32> _listTransparentVariant;
+        /// @brief 조건을 모으는 동안의 중복 찾기 표입니다(조건을 접은 값 → 순번). 프레임마다 비운다(저장소는 남는다).
+        unordered_map<uint64, uint32> _mapRequestIndexScratch;
+        /// @brief 배치 PSO 표의 한 줄이 시작하는 자리입니다(줄의 길이는 그 줄의 변형 조건 수).
+        struct BatchPSORowRange
+        {
+            RHIPipelineStateHandle _passPSO{ 0 };
+            uint32                 _first{ 0 };
+            RenderViewMode         _viewMode{ RenderViewMode::Lit };
+            uint8                  _bAppliesViewMode  : 1; ///< 0 이면 보기 모드와 상관없는 패스다(어느 모드로 물어도 이 줄)
+            uint8                  _bTransparentBatch : 1;
+        };
+        vector<BatchPSORowRange> _listBatchPSORow;
+        vector<GPUMeshBatchPSO>  _listBatchPSO;
         /// @brief `warmPinnedMaterialPSOs` 가 줄에서 꺼낸 미리 만들기 값입니다(게임 스레드가 머티리얼에서 읽었다). 프레임마다 비운다(저장소만 재사용한다).
         vector<MaterialPSOWarmEntry> _listPSOWarmEntryScratch;
         vector<MaterialFallback>     _listMaterialFallback;
         /// @brief 바인딩 레이아웃 정체성(`ShaderBindingLayout::getIdentity`) → `_listMaterialFallback` 순번입니다. 주소가 아니라 정체성이라 핫 리로드가 같은 자리에 다시 지은 레이아웃은 옛 폴백을 집지 않는다.
         unordered_map<IdentityToken, uint32> _mapLayoutMaterialFallback;
-        /// @brief 이번 프레임 입자 PSO 의 변형 키입니다(`ensureParticlePSO` 가 기록 전에 정한다). 입자가 없거나 투명 패스가 없으면 0 입니다.
-        uint64 _particlePSOKey{ 0 };
+        /// @brief 이번 프레임 입자 PSO 의 변형 키입니다(`ensureParticlePSO` 가 기록 전에 정한다). 입자가 없거나 투명 패스가 없으면 빈 키(`_passPSO` 0)입니다.
+        MaterialPSOKey _particlePSOKey{};
     };
 } // namespace sw

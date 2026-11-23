@@ -5,7 +5,7 @@
  *          일입니다(`FramePSOManager`). 여기는 "만든 것을 어디에 두고, 누가 소유하고, 어떤 순서로 해제하는가"만 압니다.
  *          해제 순서(변형 → 패스 PSO)도 이 타입이 지킵니다.
  *
- *          드로우 경로가 배치마다 조회하므로 조회는 락 하나로 짧게 끝납니다. 삽입은 기록 시작 전에만 일어납니다.
+ *          삽입과 조회는 기록 시작 전에만 일어납니다 — 드로우는 기록 전에 푼 표(`FramePSOManager::buildBatchPSOTable`)를 잠금 없이 읽습니다.
  */
 #pragma once
 #include "Core/Concurrency/mutex.h"
@@ -121,39 +121,31 @@ namespace sw
         [[nodiscard]] bool findExtensionProgramPSO( const hashed_string& programKey, RHIPipelineStateHandle& outPipelineState ) const;
 
         // ------------------------------------------------------------------------------
-        // 3) 머티리얼 퍼뮤테이션 변형: 키는 (패스 PSO, 퍼뮤테이션 해시, 뷰 모드, 컬 반전)
+        // 3) 머티리얼 퍼뮤테이션 변형: 키는 `MaterialPSOKey`(패스 PSO, 퍼뮤테이션 해시, 뷰 모드, 정점 형식, 컬 반전)
         // ------------------------------------------------------------------------------
-        /**
-         * @brief 변형 캐시 키입니다.
-         * @details 뷰 모드가 키의 한 축입니다. 같은 머티리얼이라도 Lit 와 Wireframe 은 다른 PSO 이고,
-         *          모드를 되돌리면 이미 만들어 둔 것이 다시 나옵니다(다시 컴파일하지 않습니다).
-         *          컬 반전(거울 변환 배치, `GPUMeshBatch::_bReverseCulling`)도 축입니다. 컬 모드만 다른 PSO 입니다.
-         *          메시 정점 형식(`Mesh::getVertexFormat`)도 축입니다 — 입력 레이아웃만 다른 PSO 입니다(언리얼에서 vertex factory 가 PSO 키에 드는 자리). `Packed` 는 키를 바꾸지 않는다.
-         */
-        static uint64 materialPSOKey( RHIPipelineStateHandle passPSO, uint64 permutationHash, RenderViewMode viewMode, bool bReverseCulling, RHIMeshVertexFormat vertexFormat );
         /** @brief 그 키의 항목이 어떤 상태로든(`Building` · `Ready` · `Failed`) 이미 있는지 반환합니다. */
-        bool hasMaterialPSO( uint64 key ) const;
+        bool hasMaterialPSO( const MaterialPSOKey& key ) const;
         /**
          * @brief 그 키가 처음이면 `Building` 항목을 올리고 true 를 반환합니다. 이미 있으면(만드는 중이든 끝났든) 아무것도 하지 않고 false 입니다.
          * @details 만드는 쪽이 "내가 만든다" 를 한 번에 정하는 자리다 — `hasMaterialPSO` 로 묻고 `setMaterialPSO` 로 넣는 두 걸음은 만드는 스레드가 둘이 되면 같은 키를 두 번 만든다.
          *          true 를 받은 쪽은 `setMaterialPSO( key, ready/failed )` 로 끝낸다.
          */
-        [[nodiscard]] bool beginMaterialPSO( uint64 key );
+        [[nodiscard]] bool beginMaterialPSO( const MaterialPSOKey& key );
         /** @brief 변형을 둡니다(있으면 덮어씁니다). `Absent` 항목은 둘 수 없습니다(assert) — 만드는 중이면 `building()`, 끝났으면 `ready` · `failed` 를 넘깁니다. */
-        void setMaterialPSO( uint64 key, const MaterialPSOEntry& entry );
+        void setMaterialPSO( const MaterialPSOKey& key, const MaterialPSOEntry& entry );
         /** @brief 그 키의 준비 상태입니다. 항목이 없으면 `Absent` 입니다. */
-        MaterialPSOState findMaterialPSOState( uint64 key ) const;
+        MaterialPSOState findMaterialPSOState( const MaterialPSOKey& key ) const;
         /**
          * @brief 그 키의 변형 PSO 입니다. `Ready` 가 아니면(없음 · 만드는 중 · 실패) 0 이고, 부르는 쪽은 그 배치를 그리지 않습니다(패스 PSO 로 바꿔 그리면 머티리얼 · 보기 모드가 다른 그림이 된다).
          * @details 0 이 "없음", "만드는 중", "실패" 중 무엇인지는 `findMaterialPSOState` 가 답합니다(`Building` 이면 `RT.PSO.pendingBatches` 로 센다).
          */
-        RHIPipelineStateHandle findMaterialPSO( uint64 key ) const;
+        RHIPipelineStateHandle findMaterialPSO( const MaterialPSOKey& key ) const;
         /**
          * @brief `Building` 키 하나의 생성을 빌더 줄에 넣습니다(`beginMaterialPSO` 가 true 를 준 쪽이 부릅니다). 렌더 스레드만 부릅니다.
          * @param bUrgent 이번 프레임 배치가 필요한 키면 true, 미리 만들기면 false 입니다.
          * @param bAsync true 이면 빌더 스레드가, false 이면 `pollMaterialPSOBuilds` 를 부른 스레드가 만듭니다.
          */
-        void requestMaterialPSO( IRHIDevice* pDevice, uint64 key, RHIPipelineStateDesc&& desc, bool bUrgent, bool bAsync );
+        void requestMaterialPSO( IRHIDevice* pDevice, const MaterialPSOKey& key, RHIPipelineStateDesc&& desc, bool bUrgent, bool bAsync );
         /**
          * @brief 빌더가 끝낸 결과를 캐시에 합칩니다(`Building` → `Ready` · `Failed`, 레이아웃 등록 포함). 렌더 스레드가 셋업 구간(기록 전)에만 부릅니다.
          * @param bAsync false 이면 먼저 줄의 작업을 @p budgetMicroseconds 안에서 이 스레드가 만듭니다(0 이면 전부).
@@ -207,9 +199,9 @@ namespace sw
         /// @brief 주 출력에 그리는 패스의 PSO 를 대상 렌더 타깃 포맷별로 둡니다(키 = makeOutputPSOKey). 백버퍼와 에디터 뷰 RT 는 포맷이 다를 수 있습니다.
         unordered_map<uint64, RHIPipelineStateHandle> _mapOutputPSO;
         /// @brief 모듈 프로그램의 PSO 입니다(키 = 프로그램 키). 모듈 패스는 셰이더가 패스마다 달라 패스 종류 하나로 둘 수 없습니다.
-        unordered_map<hashed_string, RHIPipelineStateHandle>    _mapExtensionProgramPSO;
-        unordered_map<uint64, MaterialPSOEntry> _mapMaterialPSO SW_GUARDED_BY( _materialPSOMutex );
-        mutable mutex                                           _materialPSOMutex;
+        unordered_map<hashed_string, RHIPipelineStateHandle>                                _mapExtensionProgramPSO;
+        unordered_map<MaterialPSOKey, MaterialPSOEntry, MaterialPSOKeyHash> _mapMaterialPSO SW_GUARDED_BY( _materialPSOMutex );
+        mutable mutex                                                                       _materialPSOMutex;
         /// @brief 머티리얼 변형의 생성 줄과 전용 스레드입니다. 캐시가 소유해 미리보기 렌더러와 함께 씁니다(해제는 `releaseAll` 이 스레드부터 합류합니다).
         MaterialPSOBuilder _materialPSOBuilder;
     };

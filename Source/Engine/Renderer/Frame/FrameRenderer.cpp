@@ -624,6 +624,8 @@ namespace sw
             _psoManager.warmPinnedMaterialPSOs( *_host._pPinnedMaterials, viewModeMask );
         // 빌더 스레드를 쓰지 않는 경로(GL · `-gv_psoAsync=0`)는 방금 넣은 줄을 이 자리에서 만들어 같은 프레임에 그린다.
         _psoManager.pollMaterialPSOBuilds();
+        // 이번 프레임의 PSO 가 정해졌다 — 드로우가 잠금 없이 읽을 표로 푼다.
+        _psoManager.buildBatchPSOTable( viewModeMask );
 
         // 캔버스의 아틀라스 텍스처, 사각형 버퍼, 렌더 텍스처 대상도 기록 전에 갖춘다(Canvas 패스와 대상 그리기는 그리기만 한다).
         _state._canvasRenderer.prepareFrame( *pDevice, _state._canvasFrame, _psoManager.getCache() );

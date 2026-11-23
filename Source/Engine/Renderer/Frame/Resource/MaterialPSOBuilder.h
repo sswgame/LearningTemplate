@@ -23,6 +23,35 @@
 namespace sw
 {
     class IRHIDevice;
+    enum class RenderViewMode : uint8;
+
+    /**
+     * @struct MaterialPSOKey
+     * @brief 머티리얼 변형 PSO 의 키입니다 — 축을 값으로 들고 **값으로 견준다**. 축을 섞은 해시 하나만 키로 쓰면 두 변형의 해시가 부딪힐 때 남의 PSO 로 조용히 그린다
+     *        (언리얼 PSO 캐시도 초기화 서술을 값으로 견준다).
+     * @details 뷰 모드가 한 축이다 — 같은 머티리얼이라도 Lit 와 Wireframe 은 다른 PSO 이고, 모드를 되돌리면 이미 만들어 둔 것이 다시 나온다.
+     *          컬 반전(거울 변환 배치, `GPUMeshBatch::_bReverseCulling`)과 메시 정점 형식(`Mesh::getVertexFormat` — 입력 레이아웃만 다른 PSO, 언리얼에서 vertex factory 가 PSO 키에 드는 자리)도 축이다.
+     */
+    struct MaterialPSOKey
+    {
+        RHIPipelineStateHandle _passPSO{ 0 };         ///< 물려받을 패스 PSO(0 이면 빈 키)
+        uint64                 _permutationHash{ 0 }; ///< 머티리얼 퍼뮤테이션 해시(0 = 퍼뮤테이션 없음)
+        RenderViewMode         _viewMode{};           ///< 파이프라인 보기 모드(`RenderViewModeUtil::getPipelineMode`)
+        RHIMeshVertexFormat    _vertexFormat{};
+        uint8                  _bReverseCulling{ SW_FALSE };
+
+        bool operator==( const MaterialPSOKey& other ) const
+        {
+            return _passPSO == other._passPSO && _permutationHash == other._permutationHash && _viewMode == other._viewMode && _vertexFormat == other._vertexFormat &&
+                   _bReverseCulling == other._bReverseCulling;
+        }
+    };
+
+    /** @brief `MaterialPSOKey` 의 맵 해시입니다. */
+    struct MaterialPSOKeyHash
+    {
+        size_t operator()( const MaterialPSOKey& key ) const noexcept;
+    };
 
     /**
      * @class MaterialPSOBuilder
@@ -31,17 +60,17 @@ namespace sw
     class MaterialPSOBuilder final
     {
     public:
-        /** @brief 만들 PSO 하나입니다. `_key` 는 `RenderPSOCache::materialPSOKey` 입니다. */
+        /** @brief 만들 PSO 하나입니다. */
         struct Job
         {
-            uint64               _key{ 0 };
+            MaterialPSOKey       _key{};
             RHIPipelineStateDesc _desc{};
         };
 
         /** @brief 만든 결과입니다. `_handle` 이 0 이면 실패입니다. 가져간 쪽이 소유합니다. */
         struct Result
         {
-            uint64                 _key{ 0 };
+            MaterialPSOKey         _key{};
             RHIPipelineStateDesc   _desc{};
             RHIPipelineStateHandle _handle{ 0 };
         };

@@ -3,6 +3,7 @@
 #include "Engine/Renderer/Frame/Resource/MaterialPSOBuilder.h"
 
 #include "Core/Concurrency/ScopedLock.h"
+#include "Core/Hash/HashUtil.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Graphics/RHI/IRHIDevice.h"
@@ -10,6 +11,12 @@
 
 namespace sw
 {
+    size_t MaterialPSOKeyHash::operator()( const MaterialPSOKey& key ) const noexcept
+    {
+        const uint64 axes = ( static_cast<uint64>( key._viewMode ) << 16 ) | ( static_cast<uint64>( key._vertexFormat ) << 8 ) | key._bReverseCulling;
+        return static_cast<size_t>( HashUtil::combine( HashUtil::combine( key._passPSO.getPacked() * HashUtil::kGoldenRatio64, key._permutationHash ), axes ) );
+    }
+
     MaterialPSOBuilder::~MaterialPSOBuilder()
     {
         shutdown( nullptr );

@@ -3,7 +3,6 @@
 #include "Engine/Renderer/Frame/Resource/RenderPSOCache.h"
 
 #include "Core/Algorithm/VectorUtil.h"
-#include "Core/Hash/HashUtil.h"
 
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
@@ -144,38 +143,26 @@ namespace sw
         return true;
     }
 
-    uint64 RenderPSOCache::materialPSOKey( RHIPipelineStateHandle passPSO, uint64 permutationHash, RenderViewMode viewMode, bool bReverseCulling, RHIMeshVertexFormat vertexFormat )
-    {
-        uint64 key = passPSO.getPacked() * HashUtil::kGoldenRatio64;
-        key        = HashUtil::combine( key, permutationHash );
-        key ^= ( static_cast<uint64>( viewMode ) + 1 ) * 0xff51afd7ed558ccdull;
-        if ( bReverseCulling )
-            key ^= 0xc4ceb9fe1a85ec53ull;
-        if ( vertexFormat != RHIMeshVertexFormat::Packed )
-            key = HashUtil::combine( key, static_cast<uint64>( vertexFormat ) * 0x9e3779b97f4a7c15ull );
-        return key;
-    }
-
-    bool RenderPSOCache::hasMaterialPSO( uint64 key ) const
+    bool RenderPSOCache::hasMaterialPSO( const MaterialPSOKey& key ) const
     {
         ScopedLock<mutex> lock{ _materialPSOMutex };
         return _mapMaterialPSO.find( key ) != _mapMaterialPSO.end();
     }
 
-    bool RenderPSOCache::beginMaterialPSO( uint64 key )
+    bool RenderPSOCache::beginMaterialPSO( const MaterialPSOKey& key )
     {
         ScopedLock<mutex> lock{ _materialPSOMutex };
         return _mapMaterialPSO.try_emplace( key, MaterialPSOEntry::building() ).second;
     }
 
-    void RenderPSOCache::setMaterialPSO( uint64 key, const MaterialPSOEntry& entry )
+    void RenderPSOCache::setMaterialPSO( const MaterialPSOKey& key, const MaterialPSOEntry& entry )
     {
         SW_ASSERT( entry._state != MaterialPSOState::Absent );
         ScopedLock<mutex> lock{ _materialPSOMutex };
         _mapMaterialPSO.insert_or_assign( key, entry );
     }
 
-    RenderPSOCache::MaterialPSOState RenderPSOCache::findMaterialPSOState( uint64 key ) const
+    RenderPSOCache::MaterialPSOState RenderPSOCache::findMaterialPSOState( const MaterialPSOKey& key ) const
     {
         ScopedLock<mutex> lock{ _materialPSOMutex };
         const auto        it = _mapMaterialPSO.find( key );
@@ -194,7 +181,7 @@ namespace sw
         return count;
     }
 
-    RHIPipelineStateHandle RenderPSOCache::findMaterialPSO( uint64 key ) const
+    RHIPipelineStateHandle RenderPSOCache::findMaterialPSO( const MaterialPSOKey& key ) const
     {
         ScopedLock<mutex> lock{ _materialPSOMutex };
         const auto        it     = _mapMaterialPSO.find( key );
@@ -202,7 +189,7 @@ namespace sw
         return bReady ? it->second._pso : 0;
     }
 
-    void RenderPSOCache::requestMaterialPSO( IRHIDevice* pDevice, uint64 key, RHIPipelineStateDesc&& desc, bool bUrgent, bool bAsync )
+    void RenderPSOCache::requestMaterialPSO( IRHIDevice* pDevice, const MaterialPSOKey& key, RHIPipelineStateDesc&& desc, bool bUrgent, bool bAsync )
     {
         _materialPSOBuilder.submit( pDevice, MaterialPSOBuilder::Job{ key, std::move( desc ) }, bUrgent, bAsync );
     }

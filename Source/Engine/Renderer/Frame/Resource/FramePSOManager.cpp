@@ -1051,8 +1051,8 @@ namespace sw
         // 유리 머티리얼의 변형을 그림자 패스까지 만들어 두는 낭비가 없다.
         vector<MaterialPSORequest>& listOpaqueRequest      = _listOpaquePSORequestScratch;
         vector<MaterialPSORequest>& listTransparentRequest = _listTransparentPSORequestScratch;
-        collectMaterialPSORequests( _gpuScene.getOpaqueBatches(), listOpaqueRequest );
-        collectMaterialPSORequests( _gpuScene.getTransparentBatches(), listTransparentRequest );
+        collectMaterialPSORequests( _gpuScene.getOpaqueBatches(), listOpaqueRequest, _listOpaqueVariant );
+        collectMaterialPSORequests( _gpuScene.getTransparentBatches(), listTransparentRequest, _listTransparentVariant );
         if ( listOpaqueRequest.empty() && listTransparentRequest.empty() )
             return;
 
@@ -1104,9 +1104,10 @@ namespace sw
                     const bool bSkippedPass     = passPSO == 0 || getRenderPassKindInfo( passType ).shouldDrawSceneMeshes() == false || bTransparentPass != bTransparentMaterial;
                     if ( bSkippedPass || getRenderPassKindInfo( passType ).shouldDrawMaterial( &permutation._listDefine ) == false )
                         continue;
+                    const uint32 passModeMask = getPassViewModeMask( getRenderPassKindInfo( passType ), viewModeMask );
                     for ( uint32 modeIndex = 0; modeIndex < static_cast<uint32>( RenderViewMode::Count ); ++modeIndex )
                     {
-                        if ( ( viewModeMask & ( 1u << modeIndex ) ) == 0 )
+                        if ( ( passModeMask & ( 1u << modeIndex ) ) == 0 )
                             continue;
                         if ( ensureMaterialPSOVariant( passPSO, passType, &permutation, permutation._hash, false, static_cast<RenderViewMode>( modeIndex ), RHIMeshVertexFormat::Packed, false ) )
                             bCreatedVariant = true;
@@ -1119,25 +1120,22 @@ namespace sw
             ensureMaterialFallbackBuffers();
     }
 
-    void FramePSOManager::collectMaterialPSORequests( vector_reference<const GPUMeshBatch> listBatch, vector<MaterialPSORequest>& outListRequest )
+    void FramePSOManager::collectMaterialPSORequests( vector_reference<const GPUMeshBatch> listBatch, vector<MaterialPSORequest>& outListRequest, vector<uint32>& outListVariant )
     {
         // 퍼뮤테이션이 없는 배치(머티리얼을 붙이지 않은 메시)도 모은다. Lit 이 아니거나 거울 배치면 그 배치에도
         // 변형이 필요하다. 그냥 건너뛰면 머티리얼 없는 메시만 뷰 모드와 컬 반전이 적용되지 않아 화면이 섞인다.
         outListRequest.clear();
+        outListVariant.clear();
+        outListVariant.reserve( listBatch.size() );
+        _mapRequestIndexScratch.clear();
         for ( const GPUMeshBatch& batch : listBatch )
         {
             const RHIMeshVertexFormat batchFormat = batch._mesh != nullptr ? batch._mesh->getVertexFormat() : RHIMeshVertexFormat::Packed;
-            bool                      bFound{ false };
-            for ( const MaterialPSORequest& existing : outListRequest )
-            {
-                if ( existing._shaderPermutation == batch._shaderPermutation && existing._bReverseCulling == batch._bReverseCulling && existing._vertexFormat == batchFormat )
-                {
-                    bFound = true;
-                    break;
-                }
-            }
-            if ( bFound == false )
+            const uint64              packed      = ( static_cast<uint64>( batch._shaderPermutation ) << 16 ) | ( static_cast<uint64>( batchFormat ) << 8 ) | ( batch._bReverseCulling != SW_FALSE ? 1u : 0u );
+            const auto                found       = _mapRequestIndexScratch.try_emplace( packed, static_cast<uint32>( outListRequest.size() ) );
+            if ( found.second )
                 outListRequest.push_back( MaterialPSORequest{ batch._shaderPermutation, batch._bReverseCulling, batchFormat } );
+            outListVariant.push_back( found.first->second );
         }
     }
 
@@ -1149,18 +1147,18 @@ namespace sw
             ( request._shaderPermutation == kInvalidShaderPermutation ) ? nullptr : _gpuScene.findShaderPermutation( request._shaderPermutation );
         if ( getRenderPassKindInfo( passType ).shouldDrawMaterial( pRequestPermutation != nullptr ? &pRequestPermutation->_listDefine : nullptr ) == false )
             return false;
-        bool bCreatedVariant{ false };
+        bool         bCreatedVariant{ false };
+        const uint32 passModeMask = getPassViewModeMask( getRenderPassKindInfo( passType ), viewModeMask );
         for ( uint32 modeIndex = 0; modeIndex < static_cast<uint32>( RenderViewMode::Count ); ++modeIndex )
         {
-            if ( ( viewModeMask & ( 1u << modeIndex ) ) == 0 )
+            if ( ( passModeMask & ( 1u << modeIndex ) ) == 0 )
                 continue;
             const RenderViewMode viewMode = static_cast<RenderViewMode>( modeIndex );
             if ( request._shaderPermutation == kInvalidShaderPermutation )
             {
                 // 퍼뮤테이션이 없는 배치를 위한 변형이다. 적용하는 것이 뷰 모드와 컬 반전뿐이다. Lit 이고 거울이 아니면 만들 것이 없다
-                // (그때는 패스 PSO 가 그대로 정답이고 psoForBatch 도 캐시를 보지 않는다).
-                const bool bAppliesViewMode = ( viewMode != RenderViewMode::Lit ) && getRenderPassKindInfo( passType ).shouldApplyViewMode();
-                const bool bNeedsVariant    = bAppliesViewMode || bReverseCulling || request._vertexFormat != RHIMeshVertexFormat::Packed;
+                // (그때는 패스 PSO 가 그대로 정답이고 resolveBatchPSO 도 캐시를 보지 않는다).
+                const bool bNeedsVariant = viewMode != RenderViewMode::Lit || bReverseCulling || request._vertexFormat != RHIMeshVertexFormat::Packed;
                 if ( bNeedsVariant && ensureMaterialPSOVariant( passPSO, passType, nullptr, 0, bReverseCulling, viewMode, request._vertexFormat ) )
                     bCreatedVariant = true;
                 continue;
@@ -1178,7 +1176,7 @@ namespace sw
     {
         // 키를 `Building` 으로 올린 쪽만 만든다(`beginMaterialPSO`). 셰이더 컴파일이 낄 수 있는 변형은 desc 만 정해 빌더 줄에 넣고(렌더 스레드의 임계 경로에서 뺀다),
         // 결과는 `pollMaterialPSOBuilds` 가 기록 전에 합친다. 드로우 경로는 `Building` 배치를 이번 프레임만 건너뛴다(`RT.PSO.pendingBatches`).
-        const uint64 key = RenderPSOCache::materialPSOKey( passPSO, permutationHash, viewMode, bReverseCulling, vertexFormat );
+        const MaterialPSOKey key{ passPSO, permutationHash, viewMode, vertexFormat, static_cast<uint8>( bReverseCulling ? SW_TRUE : SW_FALSE ) };
         if ( _pCache->beginMaterialPSO( key ) == false )
             return false;
         RHIPipelineStateDesc                   deferredDesc{};
@@ -1217,7 +1215,7 @@ namespace sw
 
     void FramePSOManager::ensureParticlePSO()
     {
-        _particlePSOKey                              = 0;
+        _particlePSOKey                              = MaterialPSOKey{};
         const RHIPipelineStateHandle transparentPSO  = getEnginePSO( RenderPassKind::Transparent );
         const bool                   bNoParticlePass = _pDevice == nullptr || transparentPSO == 0 || _gpuScene.getParticleBatches().empty();
         if ( bNoParticlePass )
@@ -1226,7 +1224,7 @@ namespace sw
         // 머티리얼 변형 캐시의 키 공간을 빌린다 — 퍼뮤테이션 해시 자리에 입자 셰이더 경로와 태그를 섞어 머티리얼 퍼뮤테이션과 겹치지 않게 한다.
         const string& shaderPath = engine::getSubsystem<EngineDefaultAssets>()._shaderParticle.get();
         const uint64  shaderHash = HashUtil::combine( HashUtil::computeStringHash64( shaderPath, false ), FourCCUtil::make( "VFXP" ) );
-        _particlePSOKey          = RenderPSOCache::materialPSOKey( transparentPSO, shaderHash, RenderViewMode::Lit, false, RHIMeshVertexFormat::Packed );
+        _particlePSOKey          = MaterialPSOKey{ transparentPSO, shaderHash, RenderViewMode::Lit, RHIMeshVertexFormat::Packed, SW_FALSE };
         if ( _pCache->hasMaterialPSO( _particlePSOKey ) )
             return;
 
@@ -1248,56 +1246,102 @@ namespace sw
 
     RHIPipelineStateHandle FramePSOManager::findParticlePSO() const
     {
-        return _particlePSOKey != 0 ? _pCache->findMaterialPSO( _particlePSOKey ) : RHIPipelineStateHandle{ 0 };
+        return _particlePSOKey._passPSO != 0 ? _pCache->findMaterialPSO( _particlePSOKey ) : RHIPipelineStateHandle{ 0 };
     }
 
-    RHIPipelineStateHandle FramePSOManager::psoForBatch( RHIPipelineStateHandle passPSO, const GPUMeshBatch& batch, RenderViewMode viewMode,
-                                                         RenderPSOCache::MaterialPSOState* pOutState ) const
+    GPUMeshBatchPSO FramePSOManager::resolveBatchPSO( RHIPipelineStateHandle passPSO, const MaterialPSORequest& request, RenderViewMode viewMode ) const
     {
-        if ( pOutState != nullptr )
-            *pOutState = RenderPSOCache::MaterialPSOState::Ready;
-        if ( passPSO == 0 )
-            return passPSO;
-
-        uint64 permutationHash{ 0 };
-        uint64 fallbackHash{ 0 };
-        if ( batch._shaderPermutation != kInvalidShaderPermutation )
+        const auto makeBatchPSO = [this]( RHIPipelineStateHandle pso, RenderPSOCache::MaterialPSOState state )
         {
-            const GPUShaderPermutation* pPermutation = _gpuScene.findShaderPermutation( batch._shaderPermutation );
-            if ( pPermutation != nullptr )
-            {
-                permutationHash = pPermutation->_hash;
-                fallbackHash    = pPermutation->_fallbackHash;
-            }
+            return GPUMeshBatchPSO{ pso, pso != 0 ? findLayout( pso ) : nullptr, state };
+        };
+        uint64                      permutationHash{ 0 };
+        uint64                      fallbackHash{ 0 };
+        const GPUShaderPermutation* pPermutation = ( request._shaderPermutation != kInvalidShaderPermutation ) ? _gpuScene.findShaderPermutation( request._shaderPermutation ) : nullptr;
+        if ( pPermutation != nullptr )
+        {
+            permutationHash = pPermutation->_hash;
+            fallbackHash    = pPermutation->_fallbackHash;
         }
 
         // 적용할 것이 하나도 없는 조합이다. ensureMaterialPSOs 도 이 키를 만들지 않는다.
         // (해시 0은 퍼뮤테이션 없음을 뜻한다. 실제 퍼뮤테이션 해시가 0이 되더라도 같은 키로
         //  떨어지는데, 그 둘이 만드는 디스크립터는 어차피 같으므로 해롭지 않다.)
-        viewMode                                  = RenderViewModeUtil::getPipelineMode( viewMode ); // Lit 과 같은 PSO 인 모드(MarkerSlots)는 Lit 변형을 그대로 쓴다
-        const bool                bReverseCulling = ( batch._bReverseCulling != SW_FALSE );
-        const RHIMeshVertexFormat vertexFormat    = batch._mesh != nullptr ? batch._mesh->getVertexFormat() : RHIMeshVertexFormat::Packed;
-        const bool                bDefaultPassPSO = permutationHash == 0 && viewMode == RenderViewMode::Lit && bReverseCulling == false && vertexFormat == RHIMeshVertexFormat::Packed;
+        const bool bDefaultPassPSO = permutationHash == 0 && viewMode == RenderViewMode::Lit && request._bReverseCulling == SW_FALSE && request._vertexFormat == RHIMeshVertexFormat::Packed;
         if ( bDefaultPassPSO )
-            return passPSO;
+            return makeBatchPSO( passPSO, RenderPSOCache::MaterialPSOState::Ready );
 
         // `Ready` 가 아닌 변형(만드는 중 · 실패 · 없음)은 그리지 않는다 — 패스 PSO 로 바꿔 그리면 머티리얼 · 보기 모드가 다른 그림이 된다. ensureMaterialPSOs 가 기록 전에
         // 채우므로 동기 생성에서는 항상 `Ready` 나 `Failed` 이고(`Failed` 는 그때 오류를 남겼다), `Building` 은 빌더 스레드(U12)가 아직 못 끝낸 배치다.
-        const uint64                           key   = RenderPSOCache::materialPSOKey( passPSO, permutationHash, viewMode, bReverseCulling, vertexFormat );
+        MaterialPSOKey                         key{ passPSO, permutationHash, viewMode, request._vertexFormat, request._bReverseCulling };
         const RenderPSOCache::MaterialPSOState state = _pCache->findMaterialPSOState( key );
+        if ( state != RenderPSOCache::MaterialPSOState::Building )
+            return makeBatchPSO( _pCache->findMaterialPSO( key ), state );
         // 런타임 스위치로 새 변형이 막 생긴 배치는 빌더가 끝낼 때까지 직전 변형으로 그린다(사라짐 대신 늦은 전환). 직전 변형도 `Ready` 가 아니면 그리지 않는다.
-        if ( state == RenderPSOCache::MaterialPSOState::Building && fallbackHash != 0 )
+        key._permutationHash                     = fallbackHash;
+        const RHIPipelineStateHandle fallbackPSO = fallbackHash != 0 ? _pCache->findMaterialPSO( key ) : RHIPipelineStateHandle{ 0 };
+        if ( fallbackPSO == 0 )
+            return makeBatchPSO( 0, RenderPSOCache::MaterialPSOState::Building );
+        SW_PROFILE_COUNT( "RT.PSO.fallbackVariants", 1 );
+        return makeBatchPSO( fallbackPSO, RenderPSOCache::MaterialPSOState::Ready );
+    }
+
+    void FramePSOManager::buildBatchPSOTable( uint32 viewModeMask )
+    {
+        SW_PROFILE_SCOPE( "RT.PSO.batchTable" );
+        _listBatchPSO.clear();
+        _listBatchPSORow.clear();
+        if ( _pDevice == nullptr )
+            return;
+        for ( const auto& [passType, passPSO] : _pCache->getEnginePSOs() )
         {
-            const RHIPipelineStateHandle fallbackPSO = _pCache->findMaterialPSO( RenderPSOCache::materialPSOKey( passPSO, fallbackHash, viewMode, bReverseCulling, vertexFormat ) );
-            if ( fallbackPSO != 0 )
+            const RenderPassKindInfo& passInfo = getRenderPassKindInfo( passType );
+            if ( passPSO == 0 || passInfo.shouldDrawSceneMeshes() == false )
+                continue;
+            const bool                        bTransparentPass = passInfo.hasFlag( RenderPassTraitFlag::kDrawsTransparentBatch );
+            const vector<MaterialPSORequest>& listRequest      = bTransparentPass ? _listTransparentPSORequestScratch : _listOpaquePSORequestScratch;
+            const uint32                      passModeMask     = getPassViewModeMask( passInfo, viewModeMask );
+            for ( uint32 modeIndex = 0; modeIndex < static_cast<uint32>( RenderViewMode::Count ); ++modeIndex )
             {
-                SW_PROFILE_COUNT( "RT.PSO.fallbackBatches", 1 );
-                return fallbackPSO;
+                if ( ( passModeMask & ( 1u << modeIndex ) ) == 0 )
+                    continue;
+                BatchPSORowRange row{};
+                row._passPSO           = passPSO;
+                row._first             = static_cast<uint32>( _listBatchPSO.size() );
+                row._viewMode          = static_cast<RenderViewMode>( modeIndex );
+                row._bAppliesViewMode  = passInfo.shouldApplyViewMode() ? SW_TRUE : SW_FALSE;
+                row._bTransparentBatch = bTransparentPass ? SW_TRUE : SW_FALSE;
+                _listBatchPSORow.push_back( row );
+                for ( const MaterialPSORequest& request : listRequest )
+                {
+                    _listBatchPSO.push_back( resolveBatchPSO( passPSO, request, row._viewMode ) );
+                }
             }
         }
-        if ( pOutState != nullptr )
-            *pOutState = state;
-        return _pCache->findMaterialPSO( key );
+    }
+
+    bool FramePSOManager::findBatchPSORow( RHIPipelineStateHandle passPSO, bool bTransparentBatch, RenderViewMode viewMode, const GPUMeshBatchPSO*& outPSO,
+                                           span<const uint32>& outListVariant ) const
+    {
+        const RenderViewMode pipelineMode = RenderViewModeUtil::getPipelineMode( viewMode ); // Lit 과 같은 PSO 인 모드(MarkerSlots)는 Lit 변형을 그대로 쓴다
+        for ( const BatchPSORowRange& row : _listBatchPSORow )
+        {
+            if ( row._passPSO != passPSO || ( row._bTransparentBatch != SW_FALSE ) != bTransparentBatch )
+                continue;
+            if ( row._bAppliesViewMode != SW_FALSE && row._viewMode != pipelineMode )
+                continue;
+            const vector<uint32>& listVariant = bTransparentBatch ? _listTransparentVariant : _listOpaqueVariant;
+            outPSO                            = _listBatchPSO.data() + row._first;
+            outListVariant                    = span<const uint32>( listVariant.data(), listVariant.size() );
+            return true;
+        }
+        return false;
+    }
+
+    uint32 FramePSOManager::getPassViewModeMask( const RenderPassKindInfo& passInfo, uint32 viewModeMask )
+    {
+        // 보기 모드를 적용하지 않는 패스(그림자 · 깊이)는 모드마다 같은 PSO 다 — Lit 한 벌만 둔다(모드를 키에 섞으면 같은 PSO 를 또 만들고, 머티리얼 없는 배치는 찾는 키가 없어 그려지지 않았다).
+        return passInfo.shouldApplyViewMode() ? viewModeMask : ( 1u << static_cast<uint32>( RenderViewMode::Lit ) );
     }
 
 } // namespace sw

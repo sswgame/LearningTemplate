@@ -23,6 +23,15 @@ namespace
         desc._pixelShaderPath  = pShaderPath;
         return desc;
     }
+
+    /** @brief 서로 다른 변형 키입니다(퍼뮤테이션 해시만 다르다). */
+    MaterialPSOKey makeVariantKey( uint64 permutationHash )
+    {
+        MaterialPSOKey key{};
+        key._passPSO         = RHIPipelineStateHandle{ 1 };
+        key._permutationHash = permutationHash;
+        return key;
+    }
 } // namespace
 
 /**
@@ -53,9 +62,9 @@ SW_TEST_CASE( RenderPSOCacheShaderReleaseTest, ReleasesOnlyPSOsOfTheChangedShade
     cache.setExtensionProgramPSO( &device, computePassName, kBlurPSO );
     // 머티리얼 변형: 만든 것(4 — 그림자 셰이더) · 실패한 것 · 만드는 중인 것.
     cache.registerDesc( kVariantPSO, makeGraphicsDesc( "shaders/shadow.hlsl" ) );
-    cache.setMaterialPSO( 100, RenderPSOCache::MaterialPSOEntry::ready( kVariantPSO, true ) );
-    cache.setMaterialPSO( 101, RenderPSOCache::MaterialPSOEntry::failed() );
-    cache.setMaterialPSO( 102, RenderPSOCache::MaterialPSOEntry::building() );
+    cache.setMaterialPSO( makeVariantKey( 100 ), RenderPSOCache::MaterialPSOEntry::ready( kVariantPSO, true ) );
+    cache.setMaterialPSO( makeVariantKey( 101 ), RenderPSOCache::MaterialPSOEntry::failed() );
+    cache.setMaterialPSO( makeVariantKey( 102 ), RenderPSOCache::MaterialPSOEntry::building() );
 
     // 컴퓨트 셰이더 하나 — 그 PSO 만 놓고, 실패한 변형은 다시 만들어 보게 지운다. 패스 PSO · 만든 변형 · 만드는 중인 변형은 그대로다.
     SW_EXPECT_EQUAL( 1u, cache.releasePSOsUsingShader( &device, "engine:shaders/blur_cs.hlsl" ) );
@@ -64,9 +73,9 @@ SW_TEST_CASE( RenderPSOCacheShaderReleaseTest, ReleasesOnlyPSOsOfTheChangedShade
     SW_EXPECT_FALSE( cache.findExtensionProgramPSO( computePassName, found ) );
     SW_EXPECT_EQUAL( kForwardPSO, cache.findEnginePSO( RenderPassKind::ForwardOpaque ) );
     SW_EXPECT_EQUAL( kShadowPSO, cache.findEnginePSO( RenderPassKind::Shadow ) );
-    SW_EXPECT_EQUAL( kVariantPSO, cache.findMaterialPSO( 100 ) );
-    SW_EXPECT_TRUE( cache.findMaterialPSOState( 101 ) == RenderPSOCache::MaterialPSOState::Absent );
-    SW_EXPECT_TRUE( cache.findMaterialPSOState( 102 ) == RenderPSOCache::MaterialPSOState::Building );
+    SW_EXPECT_EQUAL( kVariantPSO, cache.findMaterialPSO( makeVariantKey( 100 ) ) );
+    SW_EXPECT_TRUE( cache.findMaterialPSOState( makeVariantKey( 101 ) ) == RenderPSOCache::MaterialPSOState::Absent );
+    SW_EXPECT_TRUE( cache.findMaterialPSOState( makeVariantKey( 102 ) ) == RenderPSOCache::MaterialPSOState::Building );
 
     // 포워드 셰이더 — 그 패스 PSO 를 놓고, 변형 키에 패스 PSO 핸들이 들어 있으니 만든 변형도 놓는다. 그림자 패스 PSO 는 그대로다.
     factory._listDestroyedPipelineState.clear();
@@ -75,8 +84,8 @@ SW_TEST_CASE( RenderPSOCacheShaderReleaseTest, ReleasesOnlyPSOsOfTheChangedShade
     SW_EXPECT_TRUE( VectorUtil::contains( factory._listDestroyedPipelineState, kVariantPSO ) );
     SW_EXPECT_EQUAL( RHIPipelineStateHandle{}, cache.findEnginePSO( RenderPassKind::ForwardOpaque ) );
     SW_EXPECT_EQUAL( kShadowPSO, cache.findEnginePSO( RenderPassKind::Shadow ) );
-    SW_EXPECT_TRUE( cache.findMaterialPSOState( 100 ) == RenderPSOCache::MaterialPSOState::Absent );
-    SW_EXPECT_TRUE( cache.findMaterialPSOState( 102 ) == RenderPSOCache::MaterialPSOState::Building );
+    SW_EXPECT_TRUE( cache.findMaterialPSOState( makeVariantKey( 100 ) ) == RenderPSOCache::MaterialPSOState::Absent );
+    SW_EXPECT_TRUE( cache.findMaterialPSOState( makeVariantKey( 102 ) ) == RenderPSOCache::MaterialPSOState::Building );
     RHIPipelineStateDesc desc{};
     SW_EXPECT_FALSE( cache.findDesc( kForwardPSO, desc ) );
     SW_EXPECT_TRUE( cache.findDesc( kShadowPSO, desc ) );
@@ -109,4 +118,28 @@ SW_TEST_CASE( RenderPSOCacheShaderReleaseTest, OverwriteReleasesThePreviousPSO )
     cache.setExtensionProgramPSO( &device, programKey, kOld );
     cache.setExtensionProgramPSO( &device, programKey, RHIPipelineStateHandle{} ); // 실패(0)로 덮어도 옛 핸들은 놓는다
     SW_EXPECT_TRUE( factory._listDestroyedPipelineState == ( vector<RHIPipelineStateHandle>{ kOld, kOld } ) );
+}
+
+/**
+ * @brief [RenderPSOCacheTest] 변형 키는 축마다 값으로 견준다 — 축 하나만 달라도 다른 변형이다
+ * @details 변이: 비교에서 축 하나(보기 모드 · 정점 형식 · 컬 반전)를 빼면 그 축의 단언이 진다.
+ */
+SW_TEST_CASE( RenderPSOCacheTest, MaterialVariantKeyComparesEveryAxis )
+{
+    RenderPSOCache cache;
+    SW_EXPECT_TRUE( cache.beginMaterialPSO( makeVariantKey( 7 ) ) );
+    SW_EXPECT_FALSE( cache.beginMaterialPSO( makeVariantKey( 7 ) ) );
+    MaterialPSOKey viewMode  = makeVariantKey( 7 );
+    viewMode._viewMode       = RenderViewMode::Wireframe;
+    MaterialPSOKey vertex    = makeVariantKey( 7 );
+    vertex._vertexFormat     = RHIMeshVertexFormat::HighPrecision;
+    MaterialPSOKey culling   = makeVariantKey( 7 );
+    culling._bReverseCulling = SW_TRUE;
+    MaterialPSOKey passPSO   = makeVariantKey( 7 );
+    passPSO._passPSO         = RHIPipelineStateHandle{ 2 };
+    SW_EXPECT_TRUE( cache.beginMaterialPSO( viewMode ) );
+    SW_EXPECT_TRUE( cache.beginMaterialPSO( vertex ) );
+    SW_EXPECT_TRUE( cache.beginMaterialPSO( culling ) );
+    SW_EXPECT_TRUE( cache.beginMaterialPSO( passPSO ) );
+    SW_EXPECT_EQUAL( size_t{ 5 }, cache.countMaterialPSOs( RenderPSOCache::MaterialPSOState::Building ) );
 }
