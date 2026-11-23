@@ -176,7 +176,7 @@ namespace sw
             if ( pFactory != nullptr && pFactory->activateReservedBindlessTexture( entry._index, entry._placeholder ) )
                 continue;
             // 자리 텍스처(로드 중 · 누락 체커)는 기동이 올려 둔다 — 못 살리면 결함이다. 번호는 산 칸이 아니라 해제가 놓지 못하므로 그 번호를 쥔 쪽은 빈 번호를 그린다.
-            SW_LOG_ERROR_ID( "RHI.ReservedBindlessActivateFailed", "%#: the reserved bindless index %# could not point at texture %#", getBackendName(), entry._index, entry._placeholder.getPacked() );
+            SW_LOG_ERROR_ID( "RHI.ReservedBindlessActivateFailed", "%#: the reserved bindless index %# could not point at texture %#", getBackendName(), entry._index.getValue(), entry._placeholder.getPacked() );
         }
         queue._listScratch.clear();
     }

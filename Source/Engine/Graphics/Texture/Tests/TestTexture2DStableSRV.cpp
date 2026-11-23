@@ -45,7 +45,7 @@ namespace
 
         vector<Slot>               _listLive;     ///< 산 칸
         vector<RHIDescriptorIndex> _listReserved; ///< 예약했고 아직 살리지 않은 번호
-        RHIDescriptorIndex         _nextIndex{ 1 };
+        uint32                     _nextIndex{ 1 };
         uint64                     _nextTexture{ 1 }; ///< 다음에 낼 텍스처 핸들의 packed 값
         uint64                     _nextSerial{ 1 };
         RHITransferStatus          _finalStatus{ RHITransferStatus::Complete }; ///< 모든 전송의 결과
@@ -68,7 +68,7 @@ namespace
 
         RHIDescriptorIndex registerBindlessTexture( RHITextureHandle texture ) override
         {
-            const RHIDescriptorIndex index = _nextIndex++;
+            const RHIDescriptorIndex index{ _nextIndex++ };
             _listLive.push_back( Slot{ index, texture } );
             return index;
         }
@@ -85,7 +85,7 @@ namespace
         }
         RHIDescriptorIndex reserveBindlessTextureIndex() override
         {
-            const RHIDescriptorIndex index = _nextIndex++;
+            const RHIDescriptorIndex index{ _nextIndex++ };
             _listReserved.push_back( index );
             return index;
         }

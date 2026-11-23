@@ -864,7 +864,7 @@ namespace sw
             onlineNull.ptr += static_cast<SIZE_T>( kNullTextureBindlessIndex ) * _cbvDescriptorSize;
             _device->CreateShaderResourceView( nullptr, &nullTexture, onlineNull );
             _device->CreateShaderResourceView( nullptr, &nullTexture, offlineDescriptorAt( kNullTextureBindlessIndex ) );
-            copyBindlessDescriptorToAllRingSlots( kNullTextureBindlessIndex );
+            copyBindlessDescriptorToAllRingSlots( RHIDescriptorIndex{ kNullTextureBindlessIndex } );
             _bindlessIndexAllocator.reset( kNullTextureBindlessIndex + 1 );
         }
         {
@@ -998,7 +998,7 @@ namespace sw
         _bindlessIndexAllocator.reset( kNullTextureBindlessIndex + 1 );
         for ( uint32 index = 0; index < kBindlessDescriptorCapacity; ++index )
         {
-            retireBindlessReadSlot( index );
+            retireBindlessReadSlot( RHIDescriptorIndex{ index } );
         }
         _gpuBuffers.clear();
         _gpuTextures.clear();
@@ -2259,7 +2259,7 @@ namespace sw
     void D3D12RHIDevice::publishBindlessReadSlot( RHIDescriptorIndex index, BindlessReadRegistry registry, const BindlessResourceRecord& record )
     {
         if ( index >= kBindlessDescriptorCapacity )
-            reportFatalError( "D3D12: bindless index %# is outside the read table (%#)", index, kBindlessDescriptorCapacity );
+            reportFatalError( "D3D12: bindless index %# is outside the read table (%#)", index.getValue(), kBindlessDescriptorCapacity );
         // 텍스처는 GPU 주소가 없다(GetGPUVirtualAddress 는 버퍼만 뜻이 있다). 상수 버퍼 크기는 등록이 같은 배타 락 안에서 읽는다. 값을 다 쓴 뒤 공개한다(`RHIBindlessReadSlot::publish`).
         const BufferRecord* const pBuffer = record._buffer != 0 ? findBufferRecord( record._buffer ) : nullptr;
         _arrBindlessReadSlot.get()[index].publish( registry, record._buffer != 0 && record._resource != nullptr ? record._resource->GetGPUVirtualAddress() + record._sliceOffset : 0, record._offlineCPUHandle.ptr,

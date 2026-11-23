@@ -16,7 +16,6 @@ namespace sw
         : _bRenderPassOpen{ SW_FALSE }
         , _bRenderPassNoBackBuffer{ SW_FALSE }
     {
-        clearTrackedComputeBindings();
     }
 
     void IRHICommandContext::trackComputeBinding( RHIDescriptorIndex index, bool bUAV, uint32 slot )

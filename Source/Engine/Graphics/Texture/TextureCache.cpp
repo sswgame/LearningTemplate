@@ -347,7 +347,7 @@ namespace sw
             const bool                 bChecker  = pMissing != nullptr && pMissing->isRHIValid() && pResource != nullptr;
             if ( bChecker && pResource->rebindBindlessTexture( index, pMissing->getHandle() ) )
                 return true;
-            SW_LOG_ERROR_ID( "TextureCache.MissingCheckerRebindFailed", "TextureCache: the bindless index %# of '%#' could not point at the missing-texture checker - releasing it", index, key.c_str() );
+            SW_LOG_ERROR_ID( "TextureCache.MissingCheckerRebindFailed", "TextureCache: the bindless index %# of '%#' could not point at the missing-texture checker - releasing it", index.getValue(), key.c_str() );
             device.releaseBindlessIndex( RHIBindlessIndexSpace::Texture, index );
             return false;
         }

@@ -21,23 +21,23 @@ SW_TEST_CASE( RHIComputeBindingLogTest, DispatchRecordsTheBindingsMadeForItsPipe
     RHIComputeBindingLog&       log = device.getComputeBindingLog();
     log.setEnabled( true );
 
-    context.trackComputeBinding( 11, false, 0 );
-    context.trackComputeBinding( 11, true, 2 );
+    context.trackComputeBinding( RHIDescriptorIndex{ 11 }, false, 0 );
+    context.trackComputeBinding( RHIDescriptorIndex{ 11 }, true, 2 );
     context.setComputePipelineState( RHIPipelineStateHandle{ 100 } );
     context.dispatchCompute( 1, 1, 1 );
     context.setComputePipelineState( RHIPipelineStateHandle{ 200 } );
-    context.trackComputeBinding( 12, false, 1 );
+    context.trackComputeBinding( RHIDescriptorIndex{ 12 }, false, 1 );
     context.dispatchCompute( 1, 1, 1 );
 
-    const optional<RHIComputeBindingLog::Binding> srv = log.find( 11, false );
+    const optional<RHIComputeBindingLog::Binding> srv = log.find( RHIDescriptorIndex{ 11 }, false );
     SW_REQUIRE_TRUE( srv.has_value() );
     SW_EXPECT_TRUE( srv->_pso == RHIPipelineStateHandle{ 100 } );
     SW_EXPECT_EQUAL( 0u, srv->_slot );
-    const optional<RHIComputeBindingLog::Binding> uav = log.find( 11, true );
+    const optional<RHIComputeBindingLog::Binding> uav = log.find( RHIDescriptorIndex{ 11 }, true );
     SW_REQUIRE_TRUE( uav.has_value() );
     SW_EXPECT_EQUAL( 2u, uav->_slot );
-    SW_EXPECT_TRUE( log.find( 12, false )->_pso == RHIPipelineStateHandle{ 200 } );
+    SW_EXPECT_TRUE( log.find( RHIDescriptorIndex{ 12 }, false )->_pso == RHIPipelineStateHandle{ 200 } );
 
     log.setEnabled( false );
-    SW_EXPECT_FALSE( log.find( 11, false ).has_value() );
+    SW_EXPECT_FALSE( log.find( RHIDescriptorIndex{ 11 }, false ).has_value() );
 }

@@ -3580,7 +3580,7 @@ namespace sw
     void VulkanRHIDevice::publishBufferReadSlot( RHIDescriptorIndex index, bool bUAV, RHIBufferHandle buffer, uint32 sliceOffset, uint32 sliceSize )
     {
         if ( index >= kBindlessBufferCapacity )
-            reportFatalError( "Vulkan: bindless buffer index %# is outside the read table (%#)", index, kBindlessBufferCapacity );
+            reportFatalError( "Vulkan: bindless buffer index %# is outside the read table (%#)", index.getValue(), kBindlessBufferCapacity );
         if ( bUAV == false )
             _arrBufferReadSlice.get()[index].store( ( static_cast<uint64>( sliceOffset ) << 32u ) | sliceSize, std::memory_order_relaxed );
         ( bUAV ? _arrUAVBufferReadSlot : _arrBufferReadSlot ).get()[index].store( buffer, std::memory_order_release );

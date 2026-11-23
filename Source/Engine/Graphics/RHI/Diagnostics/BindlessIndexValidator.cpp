@@ -110,7 +110,7 @@ namespace sw
         const utf8* pPassName  = passName.empty() ? "<no pass>" : passName.c_str();
         const utf8* pFieldName = fieldName.empty() ? "<unnamed>" : fieldName.c_str();
         SW_LOG_ERROR_ID( "RHI.BindlessIndexDead", "[BindlessIndex] pass '%#' field '%#'[%#] = %# is not a live %# slot — the shader would read a freed or never-written descriptor",
-                         pPassName, pFieldName, element, index, BindlessIndexValidatorInternal::getSpaceName( space ) );
+                         pPassName, pFieldName, element, index.getValue(), BindlessIndexValidatorInternal::getSpaceName( space ) );
         return true;
     }
 

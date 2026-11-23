@@ -228,7 +228,7 @@ namespace sw
                 const RHIDescriptorIndex srv = texture.getStableSRV();
                 if ( srv == kInvalidDescriptorIndex )
                     continue;
-                const optional<uint32> textureBinding = bNativeBindless ? optional<uint32>{ srv } : findTextureSlot( texture._name );
+                const optional<uint32> textureBinding = bNativeBindless ? optional<uint32>{ srv.getValue() } : findTextureSlot( texture._name );
                 if ( textureBinding.has_value() && *textureBinding != kInvalidDescriptorIndex && _pParentMaterial->resolveProperty( texture._name, texture._handle ) != nullptr )
                     _pParentMaterial->packTextureIntoBuffer( texture._handle, *textureBinding, data->_bytes );
             }

@@ -593,7 +593,7 @@ namespace sw
         const OpenGLRHIDevice::BindlessResourceRecord record = _pDevice->findBindlessUAV( index );
         if ( record == OpenGLRHIDevice::BindlessResourceRecord{} )
         {
-            SW_LOG_WARNING_ID( "OpenGLRHICommandContext.BindComputeUAVIndexNotRegistered", "bindComputeUAV: index %# is not a registered UAV.", index );
+            SW_LOG_WARNING_ID( "OpenGLRHICommandContext.BindComputeUAVIndexNotRegistered", "bindComputeUAV: index %# is not a registered UAV.", index.getValue() );
             return;
         }
 
@@ -615,7 +615,7 @@ namespace sw
 
         if ( record._buffer == 0 )
         {
-            SW_LOG_WARNING_ID( "OpenGLRHICommandContext.BindComputeUAVUAVRecordIndex", "bindComputeUAV: the UAV record at index %# is empty.", index );
+            SW_LOG_WARNING_ID( "OpenGLRHICommandContext.BindComputeUAVUAVRecordIndex", "bindComputeUAV: the UAV record at index %# is empty.", index.getValue() );
             return;
         }
 
@@ -647,7 +647,7 @@ namespace sw
         const RHITextureHandle texture = _pDevice->findBindlessTexture( index );
         if ( texture == 0 )
         {
-            SW_LOG_WARNING_ID( "OpenGLRHICommandContext.BindShaderResourceIndexNotRegistered", "bindShaderResource: index %# is not a registered texture - use bindStructuredBuffer for a buffer.", index );
+            SW_LOG_WARNING_ID( "OpenGLRHICommandContext.BindShaderResourceIndexNotRegistered", "bindShaderResource: index %# is not a registered texture - use bindStructuredBuffer for a buffer.", index.getValue() );
             return;
         }
 
@@ -871,7 +871,7 @@ namespace sw
         const RHIBufferHandle buffer = _pDevice->findBindlessBuffer( index )._buffer;
         if ( buffer == 0 )
         {
-            SW_LOG_WARNING_ID( "OpenGLRHICommandContext.BindStructuredBufferIndexNotRegistered", "bindStructuredBuffer: index %# is not a registered buffer - use bindShaderResource for a texture.", index );
+            SW_LOG_WARNING_ID( "OpenGLRHICommandContext.BindStructuredBufferIndexNotRegistered", "bindStructuredBuffer: index %# is not a registered buffer - use bindShaderResource for a texture.", index.getValue() );
             return;
         }
 

@@ -37,7 +37,6 @@
 
 namespace sw
 {
-    static_assert( std::is_same_v<MaterialTextureIndex, RHIDescriptorIndex>, "MaterialTextureIndex must be the RHI bindless index type (MaterialTypes.h)" );
 
     MaterialProperty::MaterialProperty() noexcept
         : _type{ MaterialPropertyKind::Unknown }
@@ -241,7 +240,7 @@ namespace sw
             _listTextureLoad.push_back( std::move( load ) );
             _listBorrowedTexturePath.push_back( std::move( borrowedPath ) );
             recordSlot( ordinal, prop._name, srv );
-            setTextureParameter( hashed_string( prop._name.c_str() ), bNativeBindless ? srv : ordinal );
+            setTextureParameter( hashed_string( prop._name.c_str() ), bNativeBindless ? srv.getValue() : ordinal );
         }
         return true;
     }
@@ -763,7 +762,7 @@ namespace sw
         return setParameter( name, prop->_defaultValue );
     }
 
-    bool Material::packTextureIntoBuffer( const MaterialParameterHandle& handle, RHIDescriptorIndex descIdx, vector<uint8>& inoutBuffer ) const
+    bool Material::packTextureIntoBuffer( const MaterialParameterHandle& handle, uint32 shaderTextureIndex, vector<uint8>& inoutBuffer ) const
     {
         const MaterialProperty* pProp = findProperty( handle );
         if ( pProp == nullptr || MaterialPacking::isNonBufferType( pProp->_type ) )
@@ -773,8 +772,7 @@ namespace sw
         if ( inoutBuffer.size() < pProp->_offset + packSize )
             inoutBuffer.resize( pProp->_offset + packSize, 0 );
 
-        const uint32 uIdx = static_cast<uint32>( descIdx );
-        Memory::copy( inoutBuffer.data() + pProp->_offset, &uIdx, sizeof( uIdx ) );
+        Memory::copy( inoutBuffer.data() + pProp->_offset, &shaderTextureIndex, sizeof( shaderTextureIndex ) );
         return true;
     }
 
@@ -819,15 +817,15 @@ namespace sw
         return true;
     }
 
-    bool Material::setTextureParameter( hashed_string name, RHIDescriptorIndex descIdx )
+    bool Material::setTextureParameter( hashed_string name, uint32 shaderTextureIndex )
     {
         MaterialProperty* pProp = findProperty( name );
         if ( pProp == nullptr )
             return false;
         if ( MaterialPacking::isTextureType( pProp->_type ) == false && pProp->_shaderType != MaterialPropertyKind::Uint )
             return false;
-        pProp->_textureIndex = descIdx;
-        pProp->_value        = to_string( descIdx );
+        pProp->_textureIndex = shaderTextureIndex;
+        pProp->_value        = to_string( shaderTextureIndex );
         if ( MaterialPacking::packPropertyIntoBuffer( *pProp, _data._bytes ) == false )
             return false;
         _bufferGeneration.bump( this );

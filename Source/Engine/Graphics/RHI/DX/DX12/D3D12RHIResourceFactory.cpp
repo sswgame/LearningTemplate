@@ -1397,7 +1397,7 @@ namespace sw
         if ( target.release( index, RHIBindlessReuse::AfterFence ) == false )
         {
             SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.IndexAlreadyFreeIgnoring", "%# index %# is already free; ignoring the duplicate release.",
-                             bUAV ? "Bindless UAV" : "Bindless", index );
+                             bUAV ? "Bindless UAV" : "Bindless", index.getValue() );
             return;
         }
         _pDevice->retireBindlessReadSlot( index );
@@ -1415,7 +1415,7 @@ namespace sw
         record._sliceOffset = sliceOffset;
         // 번호는 `acquireBindlessIndex` 가 발급기에서 받았다 — 산 칸이면 발급기를 거치지 않은 번호라 멈춘다.
         if ( target.assign( index, record, link ) == false )
-            reportFatalError( "D3D12: bindless index %# was written twice without a release", index );
+            reportFatalError( "D3D12: bindless index %# was written twice without a release", index.getValue() );
         _pDevice->publishBindlessReadSlot( index, registry == BindlessRegistry::UnorderedAccess ? D3D12RHIDevice::BindlessReadRegistry::UnorderedAccess : D3D12RHIDevice::BindlessReadRegistry::ShaderResource,
                                            record );
         // 새 번호는 모든 링 사본에 바로 쓴다 — 펜스 뒤에야 다시 나간 번호라 진행 중 프레임이 읽지 않는다(R-6).

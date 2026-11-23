@@ -33,7 +33,7 @@ namespace
     public:
         vector<FactoryEvent> _listEvent;
         uint64               _nextBuffer{ 100 }; ///< 다음에 낼 버퍼 핸들의 packed 값
-        RHIDescriptorIndex   _nextIndex{ 1 };
+        uint32               _nextIndex{ 1 };
         bool                 _bFailPage{ false };     ///< NOLINT(sw-bool-flag): 테스트의 실패 주입 스위치
         bool                 _bFailRegister{ false }; ///< NOLINT(sw-bool-flag): 테스트의 실패 주입 스위치
         RHIBufferSlice       _lastRegistered;
@@ -52,9 +52,9 @@ namespace
                 return kInvalidDescriptorIndex;
             _lastRegistered = slice;
             _listEvent.push_back( FactoryEvent{ 'R', _nextIndex } );
-            return _nextIndex++;
+            return RHIDescriptorIndex{ _nextIndex++ };
         }
-        void unregisterBindlessResource( RHIDescriptorIndex index ) override { _listEvent.push_back( FactoryEvent{ 'U', index } ); }
+        void unregisterBindlessResource( RHIDescriptorIndex index ) override { _listEvent.push_back( FactoryEvent{ 'U', index.getValue() } ); }
         void updateConstantBuffer( const RHIBufferSlice&, const void*, uint32 size ) override { _listUpdateSize.push_back( size ); }
 
         RHIBufferHandle        createVertexBuffer( const void*, uint32 ) override { return 0; }

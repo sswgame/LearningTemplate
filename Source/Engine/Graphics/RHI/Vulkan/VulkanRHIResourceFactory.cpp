@@ -1340,7 +1340,7 @@ namespace sw
         // 트랜지언트 텍스처 인덱스 0 · 1 · 2 가 여기로 와서 패스 CB 슬롯 2 에 인스턴스 버퍼가 들어갔다.
         if ( _pDevice->_bufferRegistry.release( index, RHIBindlessReuse::AfterFence ) == false )
         {
-            SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.BindlessBufferIndexNot", "Bindless buffer index %# is not owned by any buffer; ignoring the release.", index );
+            SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.BindlessBufferIndexNot", "Bindless buffer index %# is not owned by any buffer; ignoring the release.", index.getValue() );
             return;
         }
         deferFreeBufferIndex( index, false );
@@ -1417,7 +1417,7 @@ namespace sw
         UniqueLock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
         if ( _pDevice->_textureRegistry.release( index, RHIBindlessReuse::AfterFence ) == false )
         {
-            SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.BindlessTextureIndexNot", "Bindless texture index %# is not owned by any texture; ignoring the release.", index );
+            SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.BindlessTextureIndexNot", "Bindless texture index %# is not owned by any texture; ignoring the release.", index.getValue() );
             return;
         }
         scheduleTextureBindlessIndexFree( index );

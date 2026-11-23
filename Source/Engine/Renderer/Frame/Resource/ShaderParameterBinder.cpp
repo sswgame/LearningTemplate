@@ -182,9 +182,9 @@ namespace sw
 
                 for ( const ShaderEngineCbMember& member : layout.getEngineCbMembers() )
                 {
-                    uint32       valueSize = 0;
-                    const uint8* pValue    = values.find( member._valueKey, valueSize );
-                    uint32       autoIndex = kInvalidDescriptorIndex;
+                    uint32             valueSize = 0;
+                    const uint8*       pValue    = values.find( member._valueKey, valueSize );
+                    RHIDescriptorIndex autoIndex;
                     if ( ( pValue == nullptr || valueSize == 0 ) && member._autoIndexKey.empty() == false )
                     {
                         RHIBindlessIndexSpace    autoSpace = RHIBindlessIndexSpace::Texture;
@@ -202,7 +202,7 @@ namespace sw
                         }
                         validateIndex( pIndexCheck, bCheckIndex, autoSpace, autoIndex, member._valueKey );
                         pValue    = reinterpret_cast<const uint8*>( &autoIndex );
-                        valueSize = sizeof( uint32 );
+                        valueSize = sizeof( autoIndex );
                     }
 
                     if ( pValue == nullptr || valueSize == 0 )

@@ -434,7 +434,7 @@ namespace sw
             _keptSRV.store( kInvalidDescriptorIndex, std::memory_order_release );
         _uploadTicket = RHITransferTicket{};
         SW_LOG_INFO_ID( "Texture2D.Texture2DReadyMipsTop", "Texture2D '%#' ready: %#×%#, %# mips (%# top mips streamed later), format %#, srv %#", _path.c_str(), _width, _height, _mipCount, _streamedMipCount,
-                        static_cast<uint32>( _format ), srv );
+                        static_cast<uint32>( _format ), srv.getValue() );
         return Texture2DUploadStatus::Ready;
     }
 

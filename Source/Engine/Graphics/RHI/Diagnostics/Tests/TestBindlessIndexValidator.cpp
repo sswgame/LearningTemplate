@@ -34,26 +34,26 @@ SW_TEST_CASE_F( BindlessIndexValidatorTest, OnlyDeadIndicesFail )
 {
     SW_EXPECT_LOG( "RHI.BindlessIndexDead" );
     test::FakeRHIDevice device;
-    device._listLiveTextureIndex.push_back( 3 );
-    device._listLiveBufferIndex.push_back( 7 );
+    device._listLiveTextureIndex.push_back( RHIDescriptorIndex{ 3 } );
+    device._listLiveBufferIndex.push_back( RHIDescriptorIndex{ 7 } );
 
     const BindlessIndexCheckSite site{ &device, hashed_string( "ForwardTransparent" ) };
     const hashed_string          shadowField{ "g_ShadowMapIndex" };
     const hashed_string          lightField{ "g_SwLightsIndex" };
 
     SW_EXPECT_TRUE( BindlessIndexValidator::validate( site, RHIBindlessIndexSpace::Texture, kInvalidDescriptorIndex, shadowField ) );
-    SW_EXPECT_TRUE( BindlessIndexValidator::validate( site, RHIBindlessIndexSpace::Texture, 3, shadowField ) );
-    SW_EXPECT_TRUE( BindlessIndexValidator::validate( site, RHIBindlessIndexSpace::Buffer, 7, lightField ) );
+    SW_EXPECT_TRUE( BindlessIndexValidator::validate( site, RHIBindlessIndexSpace::Texture, RHIDescriptorIndex{ 3 }, shadowField ) );
+    SW_EXPECT_TRUE( BindlessIndexValidator::validate( site, RHIBindlessIndexSpace::Buffer, RHIDescriptorIndex{ 7 }, lightField ) );
     SW_EXPECT_EQUAL( 0u, device.getBindlessIndexReportLog().getReportCount() );
 
     // 해제된(목록에 없는) 번호, 그리고 버퍼 번호를 텍스처 자리에 넣은 것.
-    SW_EXPECT_FALSE( BindlessIndexValidator::validate( site, RHIBindlessIndexSpace::Texture, 4, shadowField ) );
-    SW_EXPECT_FALSE( BindlessIndexValidator::validate( site, RHIBindlessIndexSpace::Texture, 7, lightField ) );
+    SW_EXPECT_FALSE( BindlessIndexValidator::validate( site, RHIBindlessIndexSpace::Texture, RHIDescriptorIndex{ 4 }, shadowField ) );
+    SW_EXPECT_FALSE( BindlessIndexValidator::validate( site, RHIBindlessIndexSpace::Texture, RHIDescriptorIndex{ 7 }, lightField ) );
     SW_EXPECT_EQUAL( 2u, device.getBindlessIndexReportLog().getReportCount() );
 
     // 디바이스가 없는 자리는 검사하지 않는다(부르는 쪽이 디바이스를 못 준 경로).
     const BindlessIndexCheckSite noDevice{};
-    SW_EXPECT_TRUE( BindlessIndexValidator::validate( noDevice, RHIBindlessIndexSpace::Texture, 4, shadowField ) );
+    SW_EXPECT_TRUE( BindlessIndexValidator::validate( noDevice, RHIBindlessIndexSpace::Texture, RHIDescriptorIndex{ 4 }, shadowField ) );
 }
 
 /**
@@ -67,17 +67,17 @@ SW_TEST_CASE_F( BindlessIndexValidatorTest, ReportsEachSiteOnce )
     const hashed_string otherPass{ "ForwardOpaque" };
     const hashed_string field{ "MaterialTexture" };
 
-    SW_EXPECT_TRUE( _reports.report( RHIBindlessIndexSpace::Texture, 9, passName, field, 0 ) );
-    SW_EXPECT_FALSE( _reports.report( RHIBindlessIndexSpace::Texture, 9, passName, field, 0 ) );
-    SW_EXPECT_FALSE_MSG( _reports.report( RHIBindlessIndexSpace::Texture, 10, passName, field, 0 ),
+    SW_EXPECT_TRUE( _reports.report( RHIBindlessIndexSpace::Texture, RHIDescriptorIndex{ 9 }, passName, field, 0 ) );
+    SW_EXPECT_FALSE( _reports.report( RHIBindlessIndexSpace::Texture, RHIDescriptorIndex{ 9 }, passName, field, 0 ) );
+    SW_EXPECT_FALSE_MSG( _reports.report( RHIBindlessIndexSpace::Texture, RHIDescriptorIndex{ 10 }, passName, field, 0 ),
                          "a different value at the same site must not log again" );
-    SW_EXPECT_TRUE( _reports.report( RHIBindlessIndexSpace::Texture, 9, passName, field, 1 ) );
-    SW_EXPECT_TRUE( _reports.report( RHIBindlessIndexSpace::Texture, 9, otherPass, field, 0 ) );
+    SW_EXPECT_TRUE( _reports.report( RHIBindlessIndexSpace::Texture, RHIDescriptorIndex{ 9 }, passName, field, 1 ) );
+    SW_EXPECT_TRUE( _reports.report( RHIBindlessIndexSpace::Texture, RHIDescriptorIndex{ 9 }, otherPass, field, 0 ) );
     SW_EXPECT_EQUAL( 3u, _reports.getReportCount() );
 
     _reports.clear();
     SW_EXPECT_EQUAL( 0u, _reports.getReportCount() );
-    SW_EXPECT_TRUE( _reports.report( RHIBindlessIndexSpace::Texture, 9, passName, field, 0 ) );
+    SW_EXPECT_TRUE( _reports.report( RHIBindlessIndexSpace::Texture, RHIDescriptorIndex{ 9 }, passName, field, 0 ) );
 }
 
 /**
@@ -108,17 +108,17 @@ SW_TEST_CASE_F( BindlessIndexValidatorTest, StrideMismatchReportsEachSiteOnce )
     const hashed_string passName{ "ForwardOpaque" };
     const hashed_string field{ "SwLights" };
 
-    device.getBindlessIndexReportLog().recordBufferStride( 5, 80 );
-    device.getBindlessIndexReportLog().recordBufferStride( 6, 64 );
-    SW_EXPECT_TRUE( BindlessIndexValidator::validateStride( &device, passName, field, 80, 5 ) );
-    SW_EXPECT_TRUE( BindlessIndexValidator::validateStride( &device, passName, field, 0, 6 ) );
-    SW_EXPECT_TRUE( BindlessIndexValidator::validateStride( &device, passName, field, 80, 9 ) ); // 적지 않은 번호
-    SW_EXPECT_FALSE( BindlessIndexValidator::validateStride( &device, passName, field, 80, 6 ) );
-    SW_EXPECT_FALSE( BindlessIndexValidator::validateStride( &device, passName, field, 80, 6 ) );
+    device.getBindlessIndexReportLog().recordBufferStride( RHIDescriptorIndex{ 5 }, 80 );
+    device.getBindlessIndexReportLog().recordBufferStride( RHIDescriptorIndex{ 6 }, 64 );
+    SW_EXPECT_TRUE( BindlessIndexValidator::validateStride( &device, passName, field, 80, RHIDescriptorIndex{ 5 } ) );
+    SW_EXPECT_TRUE( BindlessIndexValidator::validateStride( &device, passName, field, 0, RHIDescriptorIndex{ 6 } ) );
+    SW_EXPECT_TRUE( BindlessIndexValidator::validateStride( &device, passName, field, 80, RHIDescriptorIndex{ 9 } ) ); // 적지 않은 번호
+    SW_EXPECT_FALSE( BindlessIndexValidator::validateStride( &device, passName, field, 80, RHIDescriptorIndex{ 6 } ) );
+    SW_EXPECT_FALSE( BindlessIndexValidator::validateStride( &device, passName, field, 80, RHIDescriptorIndex{ 6 } ) );
     SW_EXPECT_EQUAL( 1u, device.getBindlessIndexReportLog().getStrideReportCount() );
     SW_EXPECT_EQUAL( 0u, device.getBindlessIndexReportLog().getReportCount() );
 
-    SW_EXPECT_TRUE( BindlessIndexValidator::validateStride( nullptr, passName, field, 80, 6 ) );
+    SW_EXPECT_TRUE( BindlessIndexValidator::validateStride( nullptr, passName, field, 80, RHIDescriptorIndex{ 6 } ) );
 }
 
 /**
@@ -130,7 +130,7 @@ SW_TEST_CASE_F( BindlessIndexValidatorTest, StructuredBufferRecordsItsStride )
     test::FakeRHIBufferFactory factory;
     test::FakeRHIDevice        device;
     device._pResourceFactory = &factory;
-    factory._bufferSRV       = 11;
+    factory._bufferSRV       = RHIDescriptorIndex{ 11 };
     RHIStructuredBuffer buffer;
     SW_REQUIRE_TRUE( buffer.ensureCapacity( &device, 48, 4, RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource, true, false, nullptr ) );
     const RHIDescriptorIndex first = buffer._srv;
@@ -164,7 +164,7 @@ SW_TEST_CASE_F( BindlessIndexValidatorTest, ConcurrentReportsLogOnce )
         {
             for ( uint32 repeat = 0; repeat < 64; ++repeat )
             {
-                if ( _reports.report( RHIBindlessIndexSpace::Texture, 42, passName, field, 0 ) )
+                if ( _reports.report( RHIBindlessIndexSpace::Texture, RHIDescriptorIndex{ 42 }, passName, field, 0 ) )
                     firstCount.fetch_add( 1 );
             }
         } );
