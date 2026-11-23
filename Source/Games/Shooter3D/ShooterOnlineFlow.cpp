@@ -12,8 +12,10 @@
 #include "GameFramework/Kits/Feature/Online/Economy/Runtime/EconomyShopPurchaseProvider.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Runtime/OfferCatalog.h"
 #include "GameFramework/Kits/Feature/Online/Leaderboard/Runtime/LeaderboardClient.h"
+#include "GameFramework/Kits/Feature/Online/LiveOps/Runtime/LiveOpsClient.h"
 #include "GameFramework/Kits/Feature/Online/Mailbox/Runtime/MailboxClient.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Runtime/MatchmakingClient.h"
+#include "GameFramework/Kits/Feature/Online/ServerDirectory/Runtime/ServerDirectoryClient.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Online/Service/OnlineSession.h"
 
@@ -133,6 +135,55 @@ namespace sw
                 pFlow->requestTopKills( *pSession );
                 outReply = "shooter.online: top scores sent";
                 return true;
+            }
+
+            static bool runLiveEvents( const vector<string>& listArgument, string& outReply )
+            {
+                if ( listArgument.empty() == false )
+                    return false;
+                OnlineSession*     pSession = nullptr;
+                ShooterOnlineFlow* pFlow    = nullptr;
+                if ( findParts( pSession, pFlow ) == false )
+                {
+                    outReply = kNoGameReply;
+                    return true;
+                }
+                ShooterOnlineFlow::requestLiveEvents( *pSession );
+                outReply = "shooter.online: live events sent";
+                return true;
+            }
+
+            static bool runServiceStatus( const vector<string>& listArgument, string& outReply )
+            {
+                if ( listArgument.empty() == false )
+                    return false;
+                OnlineSession*     pSession = nullptr;
+                ShooterOnlineFlow* pFlow    = nullptr;
+                if ( findParts( pSession, pFlow ) == false )
+                {
+                    outReply = kNoGameReply;
+                    return true;
+                }
+                ShooterOnlineFlow::requestServiceStatus( *pSession );
+                outReply = "shooter.online: service status sent";
+                return true;
+            }
+
+            static void onLiveEvents( const OnlineResult<LiveOpsStateReply>& result )
+            {
+                if ( result.isOk() )
+                    SW_LOG_INFO_ID( "Shooter.OnlineLiveEvents", "[Shooter] online live events: %# events", static_cast<uint32>( result._reply._listEvent.size() ) );
+                else
+                    SW_LOG_WARNING_ID( "Shooter.OnlineLiveEventsFailed", "[Shooter] online live events failed (error %#)", result._errorCode );
+            }
+
+            static void onServiceStatus( const OnlineResult<ServerDirectoryStatus>& result )
+            {
+                if ( result.isOk() )
+                    SW_LOG_INFO_ID( "Shooter.OnlineServiceStatus", "[Shooter] online service status: %# announcements, %# maintenance windows", static_cast<uint32>( result._reply._listAnnouncement.size() ),
+                                    static_cast<uint32>( result._reply._listMaintenance.size() ) );
+                else
+                    SW_LOG_WARNING_ID( "Shooter.OnlineServiceStatusFailed", "[Shooter] online service status failed (error %#)", result._errorCode );
             }
 
             [[nodiscard]] static bool readMatchFound( const GameObjectManager* pManager, float64& outValue )
@@ -360,6 +411,16 @@ namespace sw
         SW_LOG_INFO_ID( "Shooter.OnlineTopScores", "[Shooter] online top scores: %# entries", static_cast<uint32>( _listTopKills.size() ) );
     }
 
+    void ShooterOnlineFlow::requestLiveEvents( OnlineSession& session )
+    {
+        (void)session.get<LiveOpsClient>().requestLiveState( kMatchRegion, 0, SW_DELEGATE_FUNCTION( OnlineReplyDelegate<LiveOpsMethod::GetLiveState>, &ShooterOnlineFlowInternal::onLiveEvents ) );
+    }
+
+    void ShooterOnlineFlow::requestServiceStatus( OnlineSession& session )
+    {
+        (void)session.get<ServerDirectoryClient>().call<ServerDirectoryMethod::GetStatus>( SW_DELEGATE_FUNCTION( OnlineReplyDelegate<ServerDirectoryMethod::GetStatus>, &ShooterOnlineFlowInternal::onServiceStatus ) );
+    }
+
     void ShooterOnlineFlow::requestLogin( OnlineSession& session, string_view loginName, string_view password )
     {
         (void)session.get<AccountClient>().login( loginName, password );
@@ -393,6 +454,9 @@ namespace sw
     SW_DEV_COMMAND( ShooterOnlineMatch, "shooter.online.match", "shooter.online.match", "Join the matchmaking queue of the solo arena mode (shooter3d.matchmodes.xml)", &ShooterOnlineFlowInternal::runMatch );
     SW_DEV_COMMAND( ShooterOnlineSubmitKills, "shooter.online.submitkills", "shooter.online.submitkills <kills>", "Submit one round's kills to the arena_kills leaderboard", &ShooterOnlineFlowInternal::runSubmitKills );
     SW_DEV_COMMAND( ShooterOnlineTopKills, "shooter.online.topkills", "shooter.online.topkills", "Ask the arena_kills leaderboard for its top entries", &ShooterOnlineFlowInternal::runTopKills );
+
+    SW_DEV_COMMAND( ShooterOnlineLiveEvents, "shooter.online.liveevents", "shooter.online.liveevents", "Ask the live-ops kit for the open events of this account", &ShooterOnlineFlowInternal::runLiveEvents );
+    SW_DEV_COMMAND( ShooterOnlineServiceStatus, "shooter.online.servicestatus", "shooter.online.servicestatus", "Ask the server directory kit for announcements and maintenance windows", &ShooterOnlineFlowInternal::runServiceStatus );
 
     SW_AUTOMATION_WATCH( shooterOnlineLoggedIn, "Shooter3D.OnlineLoggedIn", "1 while the account kit client is logged in", &ShooterOnlineFlowInternal::readLoggedIn );
     SW_AUTOMATION_WATCH( shooterOnlineMailCount, "Shooter3D.OnlineMailCount", "Mails in the mailbox kit client's first page cache", &ShooterOnlineFlowInternal::readMailCount );
