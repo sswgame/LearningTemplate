@@ -59,6 +59,7 @@ namespace sw::editor
         /** @brief 도는 도구(`git` 과 그 손자)를 끝내고 기다립니다 — 종료 시간(`EditorContext.ShutdownMs`)에 잡히도록 소멸자가 아니라 여기서 한다. */
         void        shutdownSubsystem() override;
         const utf8* getSubsystemName() const override { return kSubsystemName; }
+        void        resetToFreshEditor() override;
 
         EditorSourceControl( const EditorSourceControl& )            = delete;
         EditorSourceControl& operator=( const EditorSourceControl& ) = delete;

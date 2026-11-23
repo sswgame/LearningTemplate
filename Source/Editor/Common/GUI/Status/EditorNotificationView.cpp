@@ -4,11 +4,10 @@
 
 #include "Core/String/fixed_string.h"
 
-#include "Editor/Common/Commands/Asset/EditorAssetFileCommands.h"
 #include "Editor/Common/GUI/EditorChrome.h"
+#include "Editor/Common/GUI/Status/Model/EditorStatusViewModel.h"
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
-#include "Editor/Common/Workspace/EditorNotificationManager.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Localization/LocText.h"
@@ -38,9 +37,8 @@ namespace sw::editor
         }
     } // namespace
 
-    void EditorNotificationView::draw( const EditorNotificationManager& manager )
+    void EditorNotificationView::draw( const vector<NotificationItem>& listNotification )
     {
-        const vector<NotificationItem>& listNotification = manager.getNotifications();
         if ( listNotification.empty() )
             return;
 
@@ -58,6 +56,7 @@ namespace sw::editor
         const float32 screenWidth  = viewportSize._x;
         const float32 screenHeight = viewportSize._y;
         float32       currentY     = viewportPos._y + screenHeight - toastMargin;
+        string        revealPath; // 명령은 목록을 다 그린 뒤에 부른다 — 실패하면 알림을 쌓아 도는 목록이 다시 할당된다
 
         for ( size_t notificationIndex = listNotification.size(); notificationIndex > 0; --notificationIndex )
         {
@@ -111,7 +110,7 @@ namespace sw::editor
                 {
                     // 콘텐츠 브라우저 메뉴와 같은 글이다(그쪽도 지역화 전 글).
                     if ( ImGui::SmallButton( SW_LOCKEY( "EdText", "ShowInExplorer" ) ) )
-                        (void)EditorAssetFileCommands::showInFileExplorer( item._revealPath );
+                        revealPath = item._revealPath;
                     EditorSelfTestMarks::record( "notification.showInExplorer" );
                 }
 
@@ -126,5 +125,7 @@ namespace sw::editor
 
             currentY -= 8.0f;
         }
+        if ( revealPath.empty() == false )
+            EditorStatusViewModel::showInFileExplorer( revealPath );
     }
 } // namespace sw::editor

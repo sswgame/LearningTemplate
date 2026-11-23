@@ -84,11 +84,11 @@ namespace sw::editor
         , _addNodeFilter{}
         , _addNodePosition{}
         , _canvasOrigin{}
-        , _listFrameNode{}
+        , _uniqueFrameNode{}
         , _listFramePin{}
         , _listMinimapRect{}
-        , _listSelectedNode{}
-        , _listAutoLinkBefore{}
+        , _uniqueSelectedNode{}
+        , _uniqueAutoLinkBefore{}
         , _viewMin{}
         , _viewMax{}
         , _viewBarSize{}
@@ -111,7 +111,7 @@ namespace sw::editor
         , _commentSize{}
         , _renameCommentID{ 0 }
         , _renameText{}
-        , _listSeededComment{}
+        , _uniqueSeededComment{}
     {
     }
 
@@ -175,7 +175,7 @@ namespace sw::editor
         // 패널 일부에서 잘린다. 같은 색의 배경을 먼저 그려 마지막 명령을 채운다 — 노드 편집기가 그 위를 다시 칠하므로 보이는 차이는 없다.
         const ImVec2 origin = ImGui::GetCursorScreenPos();
         _canvasOrigin       = float2{ origin.x, origin.y };
-        _listFrameNode.clear();
+        _uniqueFrameNode.clear();
         _listFramePin.clear();
         ImGui::GetWindowDrawList()->AddRectFilled( origin, ImVec2{ origin.x + available.x, origin.y + available.y },
                                                    ImGui::ColorConvertFloat4ToU32( ed::GetStyle().Colors[ed::StyleColor_Bg] ) );
@@ -281,7 +281,7 @@ namespace sw::editor
     void EditorNodeGraph::beginNode( int32 nodeID )
     {
         _currentNodeID = nodeID;
-        _listFrameNode.push_back( nodeID );
+        _uniqueFrameNode.insert( nodeID );
         ed::BeginNode( EditorNodeGraphID::toNodeID( nodeID ) );
     }
 
@@ -333,7 +333,7 @@ namespace sw::editor
         vector<EditorGraphNodeRect> listRect;
         for ( const EditorGraphNodeRect& rect : _listMinimapRect ) // 앞 프레임에 모은 노드 중 고른 것 — 정렬 메뉴도 그 목록으로 켜고 껐다
         {
-            if ( VectorUtil::contains( _listSelectedNode, rect._nodeID ) == false )
+            if ( _uniqueSelectedNode.contains( rect._nodeID ) == false )
                 continue;
             const ImVec2        position = ed::GetNodePosition( EditorNodeGraphID::toNodeID( rect._nodeID ) );
             const ImVec2        size     = ed::GetNodeSize( EditorNodeGraphID::toNodeID( rect._nodeID ) );
@@ -360,18 +360,18 @@ namespace sw::editor
     bool EditorNodeGraph::drawComments( vector<GraphCommentBox>& listComment, bool bSeed )
     {
         if ( bSeed )
-            _listSeededComment.clear();
+            _uniqueSeededComment.clear();
         const ImVec4 panel = EditorColorUtil::toImVec4( SW_THEME_COLOR( "Base", "PanelBg" ) );
         ed::PushStyleColor( ed::StyleColor_NodeBg, ImVec4{ panel.x, panel.y, panel.z, EditorNodeGraphInternal::kCommentFillAlpha } );
         ed::PushStyleColor( ed::StyleColor_NodeBorder, EditorColorUtil::toImVec4( SW_THEME_COLOR( "Base", "Border" ) ) );
         for ( const GraphCommentBox& comment : listComment )
         {
             const ed::NodeId nodeID{ static_cast<uintptr_t>( kCommentNodeIDBase + comment._id ) };
-            if ( VectorUtil::contains( _listSeededComment, comment._id ) == false )
+            if ( _uniqueSeededComment.contains( comment._id ) == false )
             {
                 ed::SetNodePosition( nodeID, ImVec2{ comment._position._x, comment._position._y } );
                 ed::SetGroupSize( nodeID, ImVec2{ comment._size._x, comment._size._y } );
-                _listSeededComment.push_back( comment._id );
+                _uniqueSeededComment.insert( comment._id );
             }
             ed::BeginNode( nodeID );
             ImGui::TextUnformatted( comment._text.empty() ? SW_LOCKEY( "EdCommon", "GraphCommentUntitled" ) : comment._text.c_str() );
@@ -423,7 +423,7 @@ namespace sw::editor
         bool bChanged = false;
         for ( GraphCommentBox& comment : listComment )
         {
-            if ( VectorUtil::contains( _listSeededComment, comment._id ) == false )
+            if ( _uniqueSeededComment.contains( comment._id ) == false )
                 continue; // 아직 캔버스에 넣지 않았다 — 데이터가 원본이다
             const ed::NodeId nodeID{ static_cast<uintptr_t>( kCommentNodeIDBase + comment._id ) };
             const ImVec2     position = ed::GetNodePosition( nodeID );
@@ -466,9 +466,14 @@ namespace sw::editor
 
     bool EditorNodeGraph::removeComments( vector<GraphCommentBox>& listComment, const vector<int32>& listCommentID )
     {
-        const size_t countBefore = listComment.size();
-        VectorUtil::removeIf( listComment, [&listCommentID]( const GraphCommentBox& comment )
-        { return VectorUtil::contains( listCommentID, comment._id ); } );
+        const size_t         countBefore = listComment.size();
+        unordered_set<int32> uniqueRemoved;
+        for ( const int32 commentID : listCommentID )
+        {
+            uniqueRemoved.insert( commentID );
+        }
+        VectorUtil::removeIf( listComment, [&uniqueRemoved]( const GraphCommentBox& comment )
+        { return uniqueRemoved.contains( comment._id ); } );
         return listComment.size() != countBefore;
     }
 
@@ -515,7 +520,7 @@ namespace sw::editor
 
     bool EditorNodeGraph::findDrawnNodePosition( const int32 nodeID, float2& outPosition ) const
     {
-        if ( VectorUtil::contains( _listFrameNode, nodeID ) == false )
+        if ( _uniqueFrameNode.contains( nodeID ) == false )
             return false;
         const ImVec2 position = ed::GetNodePosition( EditorNodeGraphID::toNodeID( nodeID ) );
         outPosition           = float2{ position.x, position.y };
@@ -554,7 +559,7 @@ namespace sw::editor
         float2 boundsMax = _viewMax;
         for ( const EditorGraphNodeRect& rect : _listMinimapRect )
         {
-            if ( isCommentNode( rect._nodeID ) || VectorUtil::contains( _listSelectedNode, rect._nodeID ) == false )
+            if ( isCommentNode( rect._nodeID ) || _uniqueSelectedNode.contains( rect._nodeID ) == false )
                 continue;
             boundsMin = bAny ? float2{ MathUtil::min( boundsMin._x, rect._position._x ), MathUtil::min( boundsMin._y, rect._position._y ) } : rect._position;
             boundsMax = bAny ? float2{ MathUtil::max( boundsMax._x, rect._position._x + rect._size._x ), MathUtil::max( boundsMax._y, rect._position._y + rect._size._y ) }
@@ -580,7 +585,7 @@ namespace sw::editor
     void EditorNodeGraph::collectMinimap()
     {
         _listMinimapRect.clear();
-        _listSelectedNode.clear();
+        _uniqueSelectedNode.clear();
         const int32        nodeCount = ed::GetNodeCount();
         vector<ed::NodeId> listNode( static_cast<size_t>( nodeCount > 0 ? nodeCount : 0 ) );
         const int32        filled = listNode.empty() ? 0 : ed::GetOrderedNodeIds( listNode.data(), nodeCount );
@@ -595,7 +600,7 @@ namespace sw::editor
             rect._size     = float2{ size.x, size.y };
             _listMinimapRect.push_back( rect );
             if ( ed::IsNodeSelected( nodeID ) )
-                _listSelectedNode.push_back( static_cast<int32>( nodeID.Get() ) );
+                _uniqueSelectedNode.insert( static_cast<int32>( nodeID.Get() ) );
         }
         const ImVec2 viewMin = ed::ScreenToCanvas( ImVec2{ _canvasOrigin._x, _canvasOrigin._y } );
         const ImVec2 viewMax = ed::ScreenToCanvas( ImVec2{ _canvasOrigin._x + _canvasSize._x, _canvasOrigin._y + _canvasSize._y } );
@@ -666,7 +671,7 @@ namespace sw::editor
             {SW_LOCKEY( "EdCommon",  "GraphDistributeX" ), ".view.align.distributeX", EditorGraphAlign::DistributeHorizontal, 3},
             {SW_LOCKEY( "EdCommon",  "GraphDistributeY" ), ".view.align.distributeY",   EditorGraphAlign::DistributeVertical, 3},
         };
-        const uint32 selectedCount = static_cast<uint32>( _listSelectedNode.size() );
+        const uint32 selectedCount = static_cast<uint32>( _uniqueSelectedNode.size() );
         for ( const AlignItem& item : arrItem )
         {
             if ( ImGui::MenuItem( EditorThemeUtil::makeStableLabel( item._pLabel, item._pMark ), nullptr, false, selectedCount >= item._minCount ) )
@@ -697,22 +702,23 @@ namespace sw::editor
             EditorGraphMinimapTransform transform{};
             if ( EditorNodeGraphRules::fitMinimap( _listMinimapRect, _viewMin, _viewMax, inner, transform ) )
             {
-                ImDrawList*  pDrawList = ImGui::GetWindowDrawList();
-                const ImVec4 muted     = EditorColorUtil::toImVec4( SW_THEME_COLOR( "Base", "TextMuted" ) );
-                const ImU32  nodeColor = ImGui::ColorConvertFloat4ToU32( ImVec4{ muted.x, muted.y, muted.z, 0.55f } );
-                const ImU32  pickColor = EditorColorUtil::toImU32( SW_THEME_COLOR( "Base", "Accent" ) );
-                const ImU32  failColor = EditorColorUtil::toImU32( SW_THEME_COLOR( "Signal", "Error" ) );
+                ImDrawList*          pDrawList = ImGui::GetWindowDrawList();
+                const ImVec4         muted     = EditorColorUtil::toImVec4( SW_THEME_COLOR( "Base", "TextMuted" ) );
+                const ImU32          nodeColor = ImGui::ColorConvertFloat4ToU32( ImVec4{ muted.x, muted.y, muted.z, 0.55f } );
+                const ImU32          pickColor = EditorColorUtil::toImU32( SW_THEME_COLOR( "Base", "Accent" ) );
+                const ImU32          failColor = EditorColorUtil::toImU32( SW_THEME_COLOR( "Signal", "Error" ) );
+                unordered_set<int32> uniqueIssueNode;
+                for ( const EditorGraphNodeIssue& issue : _listNodeIssue )
+                {
+                    uniqueIssueNode.insert( issue._nodeID );
+                }
                 for ( const EditorGraphNodeRect& rect : _listMinimapRect )
                 {
                     const float2 cornerA = EditorNodeGraphRules::canvasToMinimap( transform, rect._position ) + innerMin;
                     const float2 cornerB = EditorNodeGraphRules::canvasToMinimap( transform, rect._position + rect._size ) + innerMin;
-                    bool         bIssue  = false;
-                    for ( const EditorGraphNodeIssue& issue : _listNodeIssue )
-                    {
-                        bIssue = bIssue || issue._nodeID == rect._nodeID;
-                    }
+                    const bool   bIssue  = uniqueIssueNode.contains( rect._nodeID );
                     // 강조색은 고른 노드에만, 검증 오류는 캔버스의 노드 테두리와 같은 빨강이다.
-                    const bool  bSelected = VectorUtil::contains( _listSelectedNode, rect._nodeID );
+                    const bool  bSelected = _uniqueSelectedNode.contains( rect._nodeID );
                     const ImU32 color     = bIssue ? failColor : ( bSelected ? pickColor : nodeColor );
                     pDrawList->AddRectFilled( ImVec2{ cornerA._x, cornerA._y }, ImVec2{ cornerB._x, cornerB._y }, color );
                 }
@@ -802,10 +808,10 @@ namespace sw::editor
         if ( bPicked && _pinDragSource != 0 )
         {
             // 패널이 이 프레임에 노드를 넣고 다음 프레임에 그린다 — 그때 새로 나타난 노드의 맞는 핀에 잇는다(takeAutoLink).
-            _autoLinkPin        = _pinDragSource;
-            _listAutoLinkBefore = _listFrameNode;
-            _autoLinkFramesLeft = EditorNodeGraphInternal::kAutoLinkWaitFrames;
-            _pinDragSource      = 0;
+            _autoLinkPin          = _pinDragSource;
+            _uniqueAutoLinkBefore = _uniqueFrameNode;
+            _autoLinkFramesLeft   = EditorNodeGraphInternal::kAutoLinkWaitFrames;
+            _pinDragSource        = 0;
         }
         ed::Resume();
         outCanvasPosition = _addNodePosition;
@@ -890,7 +896,7 @@ namespace sw::editor
         const bool         bSourceKnown = findPin.isBound() && findPin( _autoLinkPin, sourceInfo );
         for ( const FramePin& pin : _listFramePin )
         {
-            const bool bNewNode = VectorUtil::contains( _listAutoLinkBefore, pin._nodeID ) == false;
+            const bool bNewNode = _uniqueAutoLinkBefore.contains( pin._nodeID ) == false;
             if ( bSourceKnown == false || bNewNode == false )
                 continue;
             EditorGraphPinInfo candidate{};

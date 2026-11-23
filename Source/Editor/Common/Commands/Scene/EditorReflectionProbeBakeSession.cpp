@@ -238,6 +238,13 @@ namespace sw::editor
         finish( true );
     }
 
+    void EditorReflectionProbeBakeSession::resetToFreshEditor()
+    {
+        _startRequested.store( false, std::memory_order_release );
+        cancel( "the editor was reset" );
+        _lastError.clear();
+    }
+
     void EditorReflectionProbeBakeSession::update( EditorPlaySessionWriteKey key )
     {
         if ( _startRequested.exchange( false, std::memory_order_acq_rel ) )

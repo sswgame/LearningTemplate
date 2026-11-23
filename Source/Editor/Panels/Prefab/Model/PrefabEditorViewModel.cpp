@@ -139,6 +139,14 @@ namespace sw::editor
         return true;
     }
 
+    void PrefabEditorViewModel::refusePendingNested()
+    {
+        if ( _pendingNestedPath.empty() )
+            return;
+        _pendingNestedPath.clear();
+        _status = "Save the prefab before opening a nested prefab";
+    }
+
     void PrefabEditorViewModel::enterPendingNested( Scene* pScene, EditorSelection& selection )
     {
         if ( _pendingNestedPath.empty() )

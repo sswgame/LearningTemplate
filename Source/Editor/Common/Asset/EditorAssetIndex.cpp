@@ -280,13 +280,17 @@ namespace sw::editor
             }
             inoutData._mapEntry.erase( itEntry );
         }
-        // 정체성 줄 — GUID 쪽은 아직 이 경로를 가리킬 때만 뺀다(옮긴 새 자리가 먼저 들어왔을 수 있다).
+        // 정체성 줄 — GUID 쪽은 이 경로만 뺀다(옮긴 새 자리 · 같은 GUID 를 든 복사본은 남는다).
         const auto itGUID = inoutData._mapPathToGUID.find( assetID );
         if ( itGUID == inoutData._mapPathToGUID.end() )
             return;
         const auto itPath = inoutData._mapGUIDToPath.find( itGUID->second );
-        if ( itPath != inoutData._mapGUIDToPath.end() && itPath->second == assetID )
-            inoutData._mapGUIDToPath.erase( itPath );
+        if ( itPath != inoutData._mapGUIDToPath.end() )
+        {
+            VectorUtil::removeValue( itPath->second, assetID );
+            if ( itPath->second.empty() )
+                inoutData._mapGUIDToPath.erase( itPath );
+        }
         inoutData._mapPathToGUID.erase( itGUID );
     }
 
@@ -318,7 +322,7 @@ namespace sw::editor
         if ( guid.has_value() )
         {
             inoutData._mapPathToGUID.insert_or_assign( assetID, *guid ); // AssetGUID 는 기본 생성이 없다(무효 GUID 는 optional 로만) — operator[] 대신
-            inoutData._mapGUIDToPath[*guid] = assetID;
+            inoutData._mapGUIDToPath[*guid].push_back( assetID );        // 이 경로의 옛 줄은 위 removeEntry 가 뺐다
         }
     }
 
@@ -476,7 +480,7 @@ namespace sw::editor
         const auto itPath = _data._mapGUIDToPath.find( guid );
         if ( itPath == _data._mapGUIDToPath.end() )
             return nullopt;
-        return itPath->second;
+        return itPath->second.front();
     }
 
     optional<AssetGUID> EditorAssetIndex::findGUID( string_view assetID ) const

@@ -2,19 +2,12 @@
 
 #include "Editor/Common/GUI/Theme/EditorFontSetup.h"
 
-#include "Core/File/FileUtil.h"
-#include "Core/String/StringUtil.h"
-
 #include "Editor/Common/Config/EditorAppearanceConfig.h"
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/Config/EditorSettingsRegistry.h"
 #include "Editor/Common/Config/EditorThemeConfig.h"
 #include "Editor/Common/Config/EditorToolDefaults.h"
-#include "Editor/Common/Workspace/EditorService.h"
-
-#include "Engine/Content/AssetPaths.h"
-#include "Engine/Text/FontService.h"
 
 #include <imgui.h>
 #include <imgui_freetype.h>
@@ -45,61 +38,6 @@ namespace sw::editor
                 outIconScale = *theme.findMetric( hashed_string( "Typography.IconScale" ) );
                 return true;
             }
-
-            /**
-             * @brief 폰트 파일 이름을 프로젝트 에디터 폰트 폴더 및 OS 시스템 폰트 디렉터리에서 검색하여 절대 경로를 반환합니다.
-             */
-            static string resolveFontFile( const utf8* pFileName )
-            {
-                if ( StringUtil::isNullOrEmpty( pFileName ) )
-                    return {};
-
-                // 에디터 팩의 글꼴 폴더가 먼저다(예전에는 같은 폴더를 두 길 - 도메인 폴더 · 리소스 루트 + 도메인 - 로 두 번 봤다).
-                const string fontsFolder = editor::EditorPaths::findContentFolder( FileUtil::joinPath( constant::path::kEditorPack, editor::EditorPaths::kFontsFolderName ) );
-                if ( fontsFolder.empty() == false )
-                {
-                    const string candidate = FileUtil::joinPath( fontsFolder, pFileName );
-                    if ( FileUtil::isRegularFile( FileUtil::toDiskPath( candidate ) ) )
-                        return candidate;
-                }
-
-                // 결함: OS 폴더 바로 아래만 봐 리눅스(`truetype/<패밀리>/`)에서 글꼴을 못 찾고 에디터가 서지 못했다 - 엔진의 찾기를 그대로 쓴다.
-                return editor::getSubsystem<FontService>().findSystemFontFile( pFileName );
-            }
-
-            /** @brief 글꼴 파일의 (어센더 - 디센더) / em 입니다 — ImGui FreeType 로더가 크기를 맞추는 높이다. 읽지 못하면 오류를 남기고 false 다. */
-            [[nodiscard]] static bool readEmRatio( const string& path, float32& outRatio )
-            {
-                vector<uint8> bytes;
-                if ( FileUtil::readFile( FileUtil::toDiskPath( path ), bytes ) == false )
-                    return false;
-                IFontRasterizer& rasterizer = editor::getSubsystem<FontService>().getRasterizer();
-                const FontFaceID face       = rasterizer.loadFace( std::move( bytes ), 0, path );
-                FontFaceMetrics  metrics{};
-                const bool       bRead = face != kInvalidFontFaceID && rasterizer.findFaceMetrics( face, metrics );
-                if ( face != kInvalidFontFaceID )
-                    rasterizer.unloadFace( face );
-                outRatio = metrics._ascender - metrics._descender;
-                if ( bRead == false || outRatio <= 0.0f )
-                {
-                    SW_LOG_ERROR_ID( "EditorFontSetup.FontNoUsableAscender", "Font %# has no usable ascender/descender metrics", path.c_str() );
-                    return false;
-                }
-                return true;
-            }
-
-            static string resolveFontFile( const vector<string>& listFileName )
-            {
-                for ( const string& name : listFileName )
-                {
-                    if ( name.empty() )
-                        continue;
-                    string found = resolveFontFile( name.c_str() );
-                    if ( found.empty() == false )
-                        return found;
-                }
-                return {};
-            }
         };
     } // namespace
 } // namespace sw::editor
@@ -121,11 +59,11 @@ namespace sw::editor
         if ( EditorFontSetupInternal::readTypography( fontSize, iconScale ) == false )
             return false;
         // 후보가 데이터다. 하나도 없으면 ImGui 기본 글꼴로 대신하지 않고 멈춘다 — 대신하면 한글 · 아이콘이 빈 상자로 그려져도 원인이 로그 한 줄에 묻힌다.
-        const string basePath   = EditorFontSetupInternal::resolveFontFile( data._listBaseFont );
-        const string monoPath   = EditorFontSetupInternal::resolveFontFile( data._listMonoFont );
-        const string koreanPath = EditorFontSetupInternal::resolveFontFile( data._listKoreanFont );
-        const string kanaPath   = EditorFontSetupInternal::resolveFontFile( data._listJapaneseFont );
-        const string iconPath   = EditorFontSetupInternal::resolveFontFile( EditorPaths::kIconFontFileName );
+        const string basePath   = findFontFile( data._listBaseFont );
+        const string monoPath   = findFontFile( data._listMonoFont );
+        const string koreanPath = findFontFile( data._listKoreanFont );
+        const string kanaPath   = findFontFile( data._listJapaneseFont );
+        const string iconPath   = findFontFile( vector<string>{ EditorPaths::kIconFontFileName } );
         if ( basePath.empty() )
             SW_LOG_ERROR_ID( "EditorFontSetup.NoBaseFontEditortooldefaults", "No base font from editortooldefaults.json _listBaseFont exists under editor/fonts or the OS font folders" );
         if ( monoPath.empty() )
@@ -140,7 +78,7 @@ namespace sw::editor
         if ( bFontMissing )
             return false;
         ImGui::GetIO().UserData = this; // 이 컨텍스트의 글꼴 구성 — 패널의 고정폭 글꼴 · 테마의 크기 바꾸기가 찾는다
-        if ( EditorFontSetupInternal::readEmRatio( basePath, _baseEmRatio ) == false || EditorFontSetupInternal::readEmRatio( monoPath, _monoEmRatio ) == false )
+        if ( readEmRatio( basePath, _baseEmRatio ) == false || readEmRatio( monoPath, _monoEmRatio ) == false )
             return false;
         const float32 baseSize = fontSize * _baseEmRatio;
         const float32 monoSize = fontSize * _monoEmRatio;

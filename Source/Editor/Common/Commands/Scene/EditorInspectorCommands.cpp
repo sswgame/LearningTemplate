@@ -159,8 +159,9 @@ namespace sw::editor
             SW_LOG_ERROR_ID( "EditorInspectorCommands.ApplyPrefabRefusedCould", "Apply to prefab refused: could not write '%#'", string{ prefabPath }.c_str() );
             return false;
         }
-        string newFileText;
-        (void)FileUtil::readTextFile( *filePath, newFileText ); // 방금 쓴 파일이다. 못 읽어도 다시 실행이 파일을 쓰지 않을 뿐이다
+        // 다시 실행이 쓸 글이다. 방금 쓴 파일을 못 읽으면 파일 단계를 기록하지 않는다 — 빈 글로 기록하면 다시 실행이 프리팹 파일을 비운다.
+        string     newFileText;
+        const bool bCanRedo = FileUtil::readTextFile( *filePath, newFileText ) && newFileText.empty() == false;
 
         SW_LOG_INFO_ID( "Prefab.Saved", "Saved prefab changes to %#", string{ prefabPath }.c_str() );
         if ( pPrefabCache == nullptr || pContext == nullptr )
@@ -188,7 +189,7 @@ namespace sw::editor
             } );
         }
         EditorTransaction::beginTransaction( "Apply Prefab Overrides" );
-        if ( bHadFile )
+        if ( bHadFile && bCanRedo )
         {
             const string savedPath{ prefabPath };
             transaction.push( SW_UNDO_STEP( EditorInspectorCommandsInternal::writePrefabFile, savedPath, filePath->str(), string{ oldFileText } ),

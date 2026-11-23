@@ -2,12 +2,14 @@
 #include "pch.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/Memory/Memory.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Editor/Common/Asset/ModelImport/ModelImportConfig.h"
 #include "Editor/Common/Asset/ModelImport/ModelImportMaterial.h"
 #include "Editor/Common/Asset/ModelImport/ModelImporter.h"
+#include "Editor/Common/Asset/Tests/EditorScratchDomain.h"
 
 using namespace sw;
 using namespace sw::editor;
@@ -82,35 +84,57 @@ SW_TEST_CASE( ModelImportSectionsTest, TexturedMultiMaterialGltfSplitsIntoSectio
 }
 
 /**
- * @brief [ModelImportSectionsTest] 다시 임포트하면 날 이름 · 가시성이 같은 앞 구간의 이름을 이어받는다
- * @details 원본에 머티리얼이 늘어 파일 이름 번호가 밀려도(wood → wood_1) 외형 데이터가 짚던 구간 이름이 그대로다. 날 이름이 없는 옛 구간 · 다른 새 구간이 이미 쓰는 이름은 받지 않는다.
+ * @brief [ModelImportSectionsTest] 관절 사이의 관절 아닌 노드 변환이 자식 본의 자리에 합쳐진다(glTF 는 관절 사이에 관절 아닌 노드를 허락한다)
  */
-SW_TEST_CASE( ModelImportSectionsTest, ReimportKeepsSectionNamesByRawNames )
+SW_TEST_CASE( ModelImportSectionsTest, NonJointNodeBetweenJointsKeepsTheBonePlace )
 {
-    vector<ModelImportSection> listSection( 3 );
-    listSection[0]._sectionName      = "wood_1";
-    listSection[0]._sourceMaterial   = "Wood";
-    listSection[0]._sourceNode       = "Table";
-    listSection[1]._sectionName      = "wood";
-    listSection[1]._sourceMaterial   = "WoodNew";
-    listSection[2]._sectionName      = "stone_tp";
-    listSection[2]._sourceMaterial   = "Stone";
-    listSection[2]._personVisibility = MeshPersonVisibility::ThirdPersonOnly;
+    const AbsolutePath root = test::makeScratchPath( "ModelImportJointOffset" );
+    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( root.join( "models_raw" ) ) );
+    // 위치 3 개(36 바이트) · 관절 번호 3 개(u8x4, 12 바이트) · 가중치 3 개(f32x4, 48 바이트).
+    vector<uint8> listByte( 96, 0 );
+    const float32 arrPosition[9]{ 0, 0, 0, 1, 0, 0, 0, 0, 1 };
+    const float32 arrWeight[12]{ 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0 };
+    Memory::copy( listByte.data(), arrPosition, sizeof( arrPosition ) );
+    listByte[36 + 8] = 1; // 셋째 정점은 둘째 관절
+    Memory::copy( listByte.data() + 48, arrWeight, sizeof( arrWeight ) );
+    SW_REQUIRE_TRUE( FileUtil::writeFile( root.join( "models_raw/rig.bin" ), listByte.data(), listByte.size() ) );
+    const string_view json       = R"({ "asset": { "version": "2.0" }, "scene": 0, "scenes": [ { "nodes": [ 0, 3 ] } ],
+        "nodes": [ { "name": "Hips", "children": [ 1 ] }, { "name": "Offset", "translation": [ 0, 2, 0 ], "children": [ 2 ] }, { "name": "Spine", "translation": [ 0, 1, 0 ] },
+                   { "name": "Body", "mesh": 0, "skin": 0 } ],
+        "skins": [ { "joints": [ 0, 2 ] } ],
+        "buffers": [ { "uri": "rig.bin", "byteLength": 96 } ],
+        "bufferViews": [ { "buffer": 0, "byteOffset": 0, "byteLength": 36 }, { "buffer": 0, "byteOffset": 36, "byteLength": 12 }, { "buffer": 0, "byteOffset": 48, "byteLength": 48 } ],
+        "accessors": [ { "bufferView": 0, "componentType": 5126, "count": 3, "type": "VEC3", "min": [ 0, 0, 0 ], "max": [ 1, 0, 1 ] },
+                       { "bufferView": 1, "componentType": 5121, "count": 3, "type": "VEC4" }, { "bufferView": 2, "componentType": 5126, "count": 3, "type": "VEC4" } ],
+        "meshes": [ { "primitives": [ { "attributes": { "POSITION": 0, "JOINTS_0": 1, "WEIGHTS_0": 2 } } ] } ] })";
+    const string      sourcePath = root.join( "models_raw/rig.gltf" ).str();
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( sourcePath ), json ) );
 
-    vector<MeshSection> listPrevious;
-    listPrevious.push_back( MeshSection{ hashed_string( "wood" ), 0, 3, MeshPersonVisibility::Both, hashed_string( "Wood" ), hashed_string( "Table" ) } );
-    listPrevious.push_back( MeshSection{ hashed_string( "rock" ), 3, 3, MeshPersonVisibility::Both, hashed_string( "Stone" ), hashed_string{} } ); // 가시성이 다르다
-    listPrevious.push_back( MeshSection{ hashed_string( "old" ), 6, 3, MeshPersonVisibility::Both } );                                             // 날 이름 없음
+    ModelImportResult result;
+    SW_REQUIRE_TRUE( ModelImporter::readModelAsset( sourcePath, ModelImportRule{}, result ) );
+    const optional<uint32> spine = result._skeleton.findBoneIndex( hashed_string( "Spine" ) );
+    SW_REQUIRE_TRUE( spine.has_value() );
+    SW_EXPECT_EQUAL( 0, result._skeleton.getBone( *spine )._parentIndex );
+    SW_EXPECT_NEAR( 3.0f, result._skeleton.getBone( *spine )._localTransform._translation._y, 1e-5f );
+}
 
-    // 첫 구간은 앞 이름 "wood" 를 받고 싶지만 새 둘째 구간이 이미 "wood" 다 — 겹치면 메시가 구간을 잃으므로 받지 않는다.
-    SW_EXPECT_EQUAL( uint32{ 0 }, ModelImportMaterial::keepPreviousSectionNames( listSection, listPrevious ) );
-    SW_EXPECT_EQUAL( string( "wood_1" ), listSection[0]._sectionName );
-    SW_EXPECT_EQUAL( string( "stone_tp" ), listSection[2]._sectionName );
+/**
+ * @brief [ModelImportSectionsTest] 장비 메시의 원본 해시는 몸 메시의 내용을 따른다 — 몸을 다시 임포트하면 장비도 어긋남이다(스탬프 · DDC 열쇠)
+ */
+SW_TEST_CASE( ModelImportSectionsTest, SourceHashFollowsTheBodyMesh )
+{
+    const test::EditorScratchDomain domain;
+    string                          sourcePath;
+    SW_REQUIRE_TRUE( writeTwoMaterialGltf( domain.makeDiskPath( "garment" ).str(), false, sourcePath ) );
+    ModelImportRule rule{};
+    rule._bodySurface = test::EditorScratchDomain::makeID( "body.mesh" );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "body.mesh" ), "body one" ) );
+    const uint64 before = ModelImporter::computeSourceHash( sourcePath, rule, {} );
+    SW_EXPECT_TRUE( before != 0 );
+    SW_EXPECT_EQUAL( before, ModelImporter::computeSourceHash( sourcePath, rule, {} ) );
 
-    listSection[1]._sectionName = "woodnew";
-    SW_EXPECT_EQUAL( uint32{ 1 }, ModelImportMaterial::keepPreviousSectionNames( listSection, listPrevious ) );
-    SW_EXPECT_EQUAL( string( "wood" ), listSection[0]._sectionName );
-    SW_EXPECT_EQUAL( string( "woodnew" ), listSection[1]._sectionName );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "body.mesh" ), "body two" ) );
+    SW_EXPECT_TRUE( before != ModelImporter::computeSourceHash( sourcePath, rule, {} ) );
 }
 
 /**
@@ -128,6 +152,39 @@ SW_TEST_CASE( ModelImportSectionsTest, UntexturedMultiMaterialGltfStaysOneMesh )
     SW_EXPECT_TRUE( result._listSection.empty() );
     SW_EXPECT_TRUE( result._mesh._listSection.empty() );
     SW_EXPECT_EQUAL( size_t{ 6 }, result._mesh._listVertex.size() );
+
+    SW_EXPECT_TRUE( FileUtil::removeDirectory( root ) );
+}
+
+/**
+ * @brief [ModelImportSectionsTest] 옆 폴더 아래에 결과를 두는 다른 원본의 결과는 이 모델의 것이 아니다 — 모으기 · 해시에 들지 않고, 이 모델만 다시 임포트해도 지워지지 않는다
+ */
+SW_TEST_CASE( ModelImportSectionsTest, SideFolderKeepsNestedSourceResults )
+{
+    const AbsolutePath root  = test::makeScratchPath( "ModelImportNested" );
+    const auto         write = [&root]( string_view path )
+    { return FileUtil::ensureParentDirectoryExists( root.join( path ) ) && FileUtil::writeTextFile( root.join( path ), path ); };
+    SW_REQUIRE_TRUE( write( "models_raw/hero.glb" ) && write( "models_raw/hero/sword.glb" ) && write( "models_raw/hero/readme.txt" ) );
+    SW_REQUIRE_TRUE( write( "models/hero.mesh" ) && write( "models/hero/hero.animset.xml" ) && write( "models/hero/parts/cape.mesh" ) );
+    SW_REQUIRE_TRUE( write( "models/hero/sword.mesh" ) && write( "models/hero/sword.fracture" ) && write( "models/hero/sword/materials/steel.material" ) );
+
+    const string   heroMesh = root.join( "models/hero.mesh" ).str();
+    vector<string> listSide;
+    ModelImporter::collectSideFiles( heroMesh, listSide );
+    SW_REQUIRE_EQUAL( size_t{ 2 }, listSide.size() );
+    SW_EXPECT_TRUE( listSide[0].find( "hero/hero.animset.xml" ) != string::npos );
+    SW_EXPECT_TRUE( listSide[1].find( "hero/parts/cape.mesh" ) != string::npos );
+
+    const uint64 before = ModelImporter::computeImportedHash( heroMesh );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( root.join( "models/hero/sword.mesh" ), "again" ) );
+    SW_EXPECT_EQUAL( before, ModelImporter::computeImportedHash( heroMesh ) );
+
+    SW_EXPECT_TRUE( ModelImporter::clearSideFiles( heroMesh ) );
+    SW_EXPECT_FALSE( FileUtil::exists( root.join( "models/hero/hero.animset.xml" ) ) );
+    SW_EXPECT_FALSE( FileUtil::exists( root.join( "models/hero/parts/cape.mesh" ) ) );
+    SW_EXPECT_TRUE( FileUtil::exists( root.join( "models/hero/sword.mesh" ) ) );
+    SW_EXPECT_TRUE( FileUtil::exists( root.join( "models/hero/sword.fracture" ) ) );
+    SW_EXPECT_TRUE( FileUtil::exists( root.join( "models/hero/sword/materials/steel.material" ) ) );
 
     SW_EXPECT_TRUE( FileUtil::removeDirectory( root ) );
 }

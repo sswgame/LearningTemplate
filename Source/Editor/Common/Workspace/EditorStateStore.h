@@ -33,6 +33,7 @@ namespace sw::editor
     public:
         static constexpr const utf8* kSubsystemName = "EditorStateStore";
         const utf8*                  getSubsystemName() const override { return kSubsystemName; }
+        void                         resetToFreshEditor() override { resetAll(); }
 
         EditorStateStore();
         ~EditorStateStore() override;

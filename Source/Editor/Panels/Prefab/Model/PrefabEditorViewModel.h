@@ -97,6 +97,8 @@ namespace sw::editor
 
         /** @brief 문서 프리팹 안의 @p prefabPath 중첩 프리팹을 격리하라고 요청합니다. 씬이 없을 수도 있어 `enterPendingNested` 가 쌓습니다. */
         void requestNested( string_view prefabPath ) { _pendingNestedPath = prefabPath; }
+        /** @brief 저장하지 않은 편집이 있어 중첩 프리팹에 들어가지 않는다 — 요청을 버리고 상태 줄에 까닭을 남깁니다. 요청이 없으면 아무것도 하지 않습니다. */
+        void refusePendingNested();
         /** @brief 요청한 중첩 프리팹이 있으면 격리합니다. 쌓지 못하면 상태 줄에 남깁니다. 패널이 그리기마다 부릅니다. */
         void enterPendingNested( Scene* pScene, EditorSelection& selection );
         /** @brief 중첩 프리팹 @p prefabPath 를 격리합니다. 지금 단계 아래에서 그 인스턴스를 찾고 없으면 스폰합니다. 쌓았으면 true 입니다. */

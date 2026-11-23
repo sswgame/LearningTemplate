@@ -40,6 +40,19 @@ namespace sw::editor
         _bindModuleCopy( nullptr );
     }
 
+    void EditorGraphDocumentPanelBase::placeNodeOnNextDraw( int32 nodeID, const float2& canvasPosition )
+    {
+        // 같은 노드를 다시 예약하면 자리만 바꾼다 — 예약이 둘이면 두 프레임에 걸쳐 두 번 옮겨진다.
+        for ( PendingPlacement& placement : _listPendingPlacement )
+        {
+            if ( placement._nodeID != nodeID )
+                continue;
+            placement._position = canvasPosition;
+            return;
+        }
+        _listPendingPlacement.push_back( PendingPlacement{ nodeID, canvasPosition } );
+    }
+
     void EditorGraphDocumentPanelBase::applyNodePlacement( int32 nodeID )
     {
         for ( size_t index = 0; index < _listPendingPlacement.size(); ++index )
@@ -52,12 +65,6 @@ namespace sw::editor
             _listPendingPlacement.erase( _listPendingPlacement.begin() + static_cast<std::ptrdiff_t>( index ) );
             return;
         }
-    }
-
-    float2 EditorGraphDocumentPanelBase::getCanvasNodePosition( int32 nodeID ) const
-    {
-        const ImVec2 position = ed::GetNodePosition( EditorNodeGraphID::toNodeID( nodeID ) );
-        return float2{ position.x, position.y };
     }
 
     void EditorGraphDocumentPanelBase::recordGraphEdit( string_view label ) const

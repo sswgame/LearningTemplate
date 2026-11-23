@@ -38,6 +38,7 @@ namespace sw::editor
     public:
         static constexpr const utf8* kSubsystemName = "EditorReflectionProbeBakeSession";
         const utf8*                  getSubsystemName() const override { return kSubsystemName; }
+        void                         resetToFreshEditor() override;
 
         EditorReflectionProbeBakeSession();
         ~EditorReflectionProbeBakeSession() override;

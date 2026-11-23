@@ -307,20 +307,22 @@ namespace sw::editor
         return EditorToolAssetInternal::saveToolDocument( kSequenceDocument, asset, path );
     }
 
-    void EditorToolAssetCommands::collectPrefabOverrides( GameObject* pInstance, string_view prefabPath, string& outPrefabPath,
+    string EditorToolAssetCommands::findInstancePrefabPath( const GameObject* pObject )
+    {
+        const EditorContext* pContext = editor::findSubsystem<EditorContext>();
+        return pObject != nullptr && pContext != nullptr ? string{ pContext->getSubsystem<EditorWorkspace>().findPrefabPath( pObject ) } : string{};
+    }
+
+    void EditorToolAssetCommands::collectPrefabOverrides( GameObject* pObject, string_view focusedPrefabPath, string& outPrefabPath,
                                                           string& outInstanceName, vector<PrefabOverrideItem>& outOverride,
                                                           vector<string>& outNestedPrefab )
     {
         outOverride.clear();
         outNestedPrefab.clear();
-        outPrefabPath   = string{ prefabPath };
-        outInstanceName = pInstance != nullptr ? string{ pInstance->getName().c_str() } : string{};
-
-        EditorContext* pContext             = editor::findSubsystem<EditorContext>();
-        const bool     bCanLookUpPrefabPath = outPrefabPath.empty() && pInstance != nullptr && pContext != nullptr;
-        if ( bCanLookUpPrefabPath )
-            outPrefabPath = pContext->getSubsystem<EditorWorkspace>().findPrefabPath( pInstance );
-        // 포커스된 에셋으로 넘어가지 않는다. 머티리얼이나 씬일 수 있어 프리팹으로 읽으면 [Error] 를 남긴다. 프리팹 포커스는 부르는 쪽이 종류를 보고 넘긴다.
+        const string      instancePath = findInstancePrefabPath( pObject );
+        GameObject* const pInstance    = instancePath.empty() ? nullptr : pObject; // 프리팹 인스턴스가 아닌 오브젝트는 비교할 원형이 없다
+        outInstanceName                = pInstance != nullptr ? string{ pInstance->getName().c_str() } : string{};
+        outPrefabPath                  = pInstance != nullptr ? instancePath : string{ focusedPrefabPath };
 
         if ( outPrefabPath.empty() )
             return;
@@ -378,14 +380,11 @@ namespace sw::editor
         }
     }
 
-    void EditorToolAssetCommands::revertPrefabOverride( GameObject* pInstance, PrefabOverrideItem& item, string_view prefabPath )
+    void EditorToolAssetCommands::revertPrefabOverride( GameObject* pInstance, PrefabOverrideItem& item )
     {
-        if ( pInstance == nullptr || prefabPath.empty() )
-        {
-            item._overriddenValue = item._defaultValue;
-            item._bModified       = false;
-            return;
-        }
+        const string prefabPath = findInstancePrefabPath( pInstance );
+        if ( prefabPath.empty() )
+            return; // 고른 것이 바뀌어 인스턴스가 없다 — 되돌릴 값이 없다
 
         const shared_ptr<const PrefabAsset> pLoaded = editor::getSubsystem<AssetManager>().getAssetCache<PrefabCache>().loadPrefab( prefabPath );
         if ( pLoaded == nullptr )
@@ -433,13 +432,15 @@ namespace sw::editor
         return true;
     }
 
-    bool EditorToolAssetCommands::applyPrefabOverridesToTemplate( GameObject* pInstance, const AssetID& assetID )
+    bool EditorToolAssetCommands::applyPrefabOverridesToTemplate( GameObject* pInstance )
     {
-        return EditorInspectorCommands::applyToPrefab( pInstance, assetID );
+        const string prefabPath = findInstancePrefabPath( pInstance );
+        return prefabPath.empty() == false && EditorInspectorCommands::applyToPrefab( pInstance, AssetID{ prefabPath } );
     }
 
-    bool EditorToolAssetCommands::revertAllPrefabOverrides( GameObject* pInstance, string_view prefabPath )
+    bool EditorToolAssetCommands::revertAllPrefabOverrides( GameObject* pInstance )
     {
-        return EditorInspectorCommands::revertToPrefab( pInstance, prefabPath );
+        const string prefabPath = findInstancePrefabPath( pInstance );
+        return prefabPath.empty() == false && EditorInspectorCommands::revertToPrefab( pInstance, prefabPath );
     }
 } // namespace sw::editor

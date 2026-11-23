@@ -2,7 +2,7 @@
 
 #include "Editor/Panels/ProjectSettings/Model/ProjectSettingsDocument.h"
 
-#include "Core/Algorithm/VectorUtil.h"
+#include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
 #include "Core/String/StringBuilder.h"
@@ -40,40 +40,40 @@ namespace sw::editor
                 return value.isObject() && value.getMemberNames().empty() == false;
             }
 
-            /** @brief @p source 에서 @p listEqual 에 포함된 경로를 뺀 말단의 수입니다. */
-            static uint32 countKept( const JSONValue& source, const string& prefix, const vector<string>& listEqual )
+            /** @brief @p source 에서 @p uniqueEqual 에 포함된 경로를 뺀 말단의 수입니다. */
+            static uint32 countKept( const JSONValue& source, const string& prefix, const unordered_set<string>& uniqueEqual )
             {
                 uint32 keptCount{ 0 };
                 for ( const string& key : source.getMemberNames() )
                 {
                     const string path = makePath( prefix, key );
-                    if ( VectorUtil::contains( listEqual, path ) )
+                    if ( uniqueEqual.contains( path ) )
                         continue;
                     const JSONValue child = source.get( key );
-                    keptCount += isNestedObject( child ) ? countKept( child, path, listEqual ) : 1u;
+                    keptCount += isNestedObject( child ) ? countKept( child, path, uniqueEqual ) : 1u;
                 }
                 return keptCount;
             }
 
             /**
-             * @brief @p source 의 말단을 @p destination 으로 옮기되 @p listEqual 에 포함된 경로는 뺍니다.
+             * @brief @p source 의 말단을 @p destination 으로 옮기되 @p uniqueEqual 에 포함된 경로는 뺍니다.
              * @details 말단이 하나도 남지 않는 구조체 필드는 만들지 않는다. JSONValue 핸들은 형제를 더하면 무효가 되므로, 필드 하나를 다 채운 뒤에 다음 필드를 받는다.
              */
-            static void copyDifference( const JSONValue& source, const JSONValue& destination, const string& prefix, const vector<string>& listEqual )
+            static void copyDifference( const JSONValue& source, const JSONValue& destination, const string& prefix, const unordered_set<string>& uniqueEqual )
             {
                 for ( const string& key : source.getMemberNames() )
                 {
                     const string path = makePath( prefix, key );
-                    if ( VectorUtil::contains( listEqual, path ) )
+                    if ( uniqueEqual.contains( path ) )
                         continue;
                     const JSONValue child = source.get( key );
                     if ( isNestedObject( child ) )
                     {
-                        if ( countKept( child, path, listEqual ) == 0 )
+                        if ( countKept( child, path, uniqueEqual ) == 0 )
                             continue;
                         const JSONValue nested = destination.set( key );
                         nested.setObject();
-                        copyDifference( child, nested, path, listEqual );
+                        copyDifference( child, nested, path, uniqueEqual );
                         continue;
                     }
                     destination.set( key ).assignFrom( child );
@@ -397,9 +397,13 @@ namespace sw::editor
         vector<string> listEqual;
         if ( _default.isValid() && ConfigManager::collectEqualKeys( _current.get(), _default.get(), *_pType, fullText, listEqual ) == false )
             return unexpected( Error{ ErrorKind::InvalidArgument, "the settings and their defaults could not be compared (a serialized text did not parse)" } );
+        unordered_set<string> uniqueEqual; // 칸마다 같은 경로 목록을 훑지 않는다(맵 칸이 늘면 칸 수의 제곱)
+        uniqueEqual.reserve( listEqual.size() );
+        for ( const string& path : listEqual )
+            uniqueEqual.insert( path );
         JSONDocument    document;
         const JSONValue root = document.makeObject();
-        ProjectSettingsDocumentInternal::copyDifference( fullDocument.getRoot(), root, string(), listEqual );
+        ProjectSettingsDocumentInternal::copyDifference( fullDocument.getRoot(), root, string(), uniqueEqual );
         return document.dump( 4 );
     }
 
@@ -448,7 +452,7 @@ namespace sw::editor
         JSONDocument document;
         if ( document.parse( text ) == false || document.getRoot().isObject() == false )
             return 0;
-        return ProjectSettingsDocumentInternal::countKept( document.getRoot(), string(), {} );
+        return ProjectSettingsDocumentInternal::countKept( document.getRoot(), string(), unordered_set<string>{} );
     }
 
     bool ProjectSettingsDocument::isModified() const

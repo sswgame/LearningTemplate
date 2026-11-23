@@ -25,5 +25,12 @@ namespace sw::editor
         void                       shutdownSubsystem() override {}
         SubsystemHostMask          getSubsystemHost() const override { return EngineSubsystemHost::kClient; }
         static constexpr MemoryTag kSubsystemMemoryTag = MemoryTag::Editor;
+
+        /**
+         * @brief 새로 띄운 에디터와 같은 자리로 되돌립니다 — 앞 시나리오 단계가 남긴 값(요청 줄 · 선택 · 보기 상태)을 비웁니다. 등록 · 장치 · 디스크와 맞춘 값은 둡니다.
+         * @details 자동화 체인의 단계 되돌리기가 `EditorContext::resetToFreshEditor` 로 모두 부른다. 순수 가상이라 새 서브시스템은 무엇을 되돌릴지 정해야 컴파일된다 —
+         *          되돌릴 목록을 한 파일에 손으로 적으면 새 상태가 빠져, 앞 단계의 뷰 · 기즈모 · 잠금이 다음 단계로 새었다.
+         */
+        virtual void resetToFreshEditor() = 0;
     };
 } // namespace sw::editor

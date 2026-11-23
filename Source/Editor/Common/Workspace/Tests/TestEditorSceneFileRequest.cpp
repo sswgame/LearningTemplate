@@ -52,3 +52,38 @@ SW_TEST_CASE( EditorSceneFileRequestTest, UnsavedChoiceIsARequest )
     SW_EXPECT_TRUE( listRequest[1]._choice == sw::editor::EditorUnsavedChoice::Discard );
     SW_EXPECT_TRUE( listRequest[1]._path.empty() );
 }
+
+/**
+ * @brief [EditorWorkspaceResetTest] 새로 띄운 에디터로 되돌리면 앞 단계의 기즈모 · 잠금 · 북마크 · 열기 요청 · 씬 파일 요청이 남지 않고, 편집 번호는 낮아지지 않는다
+ */
+SW_TEST_CASE( EditorWorkspaceResetTest, ForgetsViewStateAndRequests )
+{
+    sw::editor::EditorWorkspace workspace{ nullptr };
+    const sw::int32             freshGizmoOperation = workspace.getGizmoOperation();
+    const bool                  bFreshLocalSpace    = workspace.isGizmoLocalSpace();
+    workspace.setGizmoOperation( freshGizmoOperation + 1 );
+    workspace.setGizmoLocalSpace( bFreshLocalSpace == false );
+    workspace.setObjectLocked( 7, true );
+    sw::editor::CameraBookmark bookmark;
+    bookmark._bValid = true;
+    workspace.setCameraBookmark( 0, bookmark );
+    workspace.setFocusedAssetPath( "game/hub/data/a.xml" );
+    workspace.requestOpenPanelByID( "material" );
+    workspace.requestLoadScene( "game/hub/maps/a.scene.xml" );
+    workspace.setPendingSceneAction( sw::editor::EditorPendingSceneAction::New );
+    const sw::uint32 editSerial = workspace.getSceneEditSerial();
+
+    workspace.resetToFreshEditor();
+
+    SW_EXPECT_EQUAL( freshGizmoOperation, workspace.getGizmoOperation() );
+    SW_EXPECT_TRUE( workspace.isGizmoLocalSpace() == bFreshLocalSpace );
+    SW_EXPECT_FALSE( workspace.isObjectLocked( 7 ) );
+    SW_EXPECT_FALSE( workspace.hasCameraBookmark( 0 ) );
+    SW_EXPECT_TRUE( workspace.getFocusedAssetPath().empty() );
+    SW_EXPECT_TRUE( workspace.getPendingSceneAction() == sw::editor::EditorPendingSceneAction::None );
+    SW_EXPECT_EQUAL( editSerial, workspace.getSceneEditSerial() );
+    sw::editor::EditorPanelOpenRequest openRequest;
+    SW_EXPECT_FALSE( workspace.consumeOpenPanel( openRequest ) );
+    sw::vector<sw::editor::EditorSceneFileRequest> listRequest;
+    SW_EXPECT_FALSE( workspace.takeSceneFileRequests( listRequest ) );
+}

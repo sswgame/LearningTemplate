@@ -58,12 +58,12 @@ namespace sw::editor
     /** @brief 색인의 상태 전체입니다. 워커가 전체 스캔으로 짓고 UI 스레드가 `EditorAssetIndex::assign` 으로 넣는다. */
     struct EditorAssetIndexData
     {
-        unordered_map<string, EditorAssetEntry> _mapEntry;      ///< 키: 소문자 리소스 id
-        unordered_map<string, vector<string>>   _mapReferrer;   ///< 참조 대상 열쇠(`EditorAssetLink::_target`) → 그것을 적은 파일 id(겹치지 않는다) — 역방향 표
-        unordered_map<string, AssetGUID>        _mapPathToGUID; ///< 정체성이 있는 파일(머리 글 · `.meta` 를 가진 원본)
-        unordered_map<AssetGUID, string>        _mapGUIDToPath;
-        int64                                   _scanMilliseconds{ 0 }; ///< 전체 스캔에 걸린 시간(로그용)
-        uint32                                  _scannedFileCount{ 0 }; ///< 읽은 텍스트 에셋 수
+        unordered_map<string, EditorAssetEntry>  _mapEntry;              ///< 키: 소문자 리소스 id
+        unordered_map<string, vector<string>>    _mapReferrer;           ///< 참조 대상 열쇠(`EditorAssetLink::_target`) → 그것을 적은 파일 id(겹치지 않는다) — 역방향 표
+        unordered_map<string, AssetGUID>         _mapPathToGUID;         ///< 정체성이 있는 파일(머리 글 · `.meta` 를 가진 원본)
+        unordered_map<AssetGUID, vector<string>> _mapGUIDToPath;         ///< 그 정체성을 적은 파일들(들어온 순서, 맨 앞이 주인) — 복사본이 같은 GUID 를 든 동안에도 원본 줄을 잃지 않는다
+        int64                                    _scanMilliseconds{ 0 }; ///< 전체 스캔에 걸린 시간(로그용)
+        uint32                                   _scannedFileCount{ 0 }; ///< 읽은 텍스트 에셋 수
     };
 
     /**

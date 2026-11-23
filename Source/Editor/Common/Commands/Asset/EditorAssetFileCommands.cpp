@@ -3,6 +3,7 @@
 #include "Editor/Common/Commands/Asset/EditorAssetFileCommands.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/Container/unordered_map.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
@@ -147,17 +148,6 @@ namespace sw::editor
                 return string( assetID.substr( 0, secondSlash == string_view::npos ? assetID.size() : secondSlash ) );
             }
 
-            /** @brief @p id 가 옮기는 원본이면 그 새 id, 아니면 그대로입니다. */
-            static string mapMovedID( const EditorAssetMovePlan& plan, string_view id )
-            {
-                for ( size_t index = 0; index < plan._listOldID.size(); ++index )
-                {
-                    if ( plan._listOldID[index] == id )
-                        return plan._listNewID[index];
-                }
-                return string( id );
-            }
-
             /**
              * @brief 참조 파일마다 옮긴 뒤 쓸 글을 만듭니다. 경로 칸 밖에서 옮기는 에셋을 적은 곳(고칠 수 없는 참조)은 @p inoutPlan 의 목록에 남긴다.
              * @return 읽지 못한 참조 파일이 있으면 false 입니다(`_failure` 에 이유).
@@ -171,16 +161,22 @@ namespace sw::editor
                     const vector<AssetReferenceRewriteRule> listMoveRule = params.makeRewriteRules( inoutPlan._listOldID[moveIndex], inoutPlan._listNewID[moveIndex], false );
                     listRule.insert( listRule.end(), listMoveRule.begin(), listMoveRule.end() );
                 }
+                // 폴더를 옮기면 옮기는 수 · 참조 파일 수가 함께 는다 — 참조 파일마다 옮기기 목록을 훑지 않게 옛 id 로 찾는다.
+                unordered_map<string, size_t> mapMoveIndex;
+                mapMoveIndex.reserve( inoutPlan._listOldID.size() );
+                for ( size_t moveIndex = 0; moveIndex < inoutPlan._listOldID.size(); ++moveIndex )
+                    mapMoveIndex.emplace( inoutPlan._listOldID[moveIndex], moveIndex );
                 // 참조자 파일 목록(지금 id) — 파일 하나가 여러 원본을 적어도 한 번 고친다
-                vector<string> listReferrerID;
+                vector<string>        listReferrerID;
+                unordered_set<string> uniqueReferrerID;
                 for ( const string& oldID : inoutPlan._listOldID )
                 {
                     vector<EditorAssetReference> listReference;
                     index.findReferrers( oldID, listReference );
                     for ( const EditorAssetReference& reference : listReference )
                     {
-                        if ( reference._bByGUID == false ) // GUID 로 적은 참조는 옮겨도 그대로 맞다 — 고칠 글이 없다
-                            VectorUtil::addUnique( listReferrerID, reference._referrerPath );
+                        if ( reference._bByGUID == false && uniqueReferrerID.insert( reference._referrerPath ).second ) // GUID 로 적은 참조는 옮겨도 그대로 맞다 — 고칠 글이 없다
+                            listReferrerID.push_back( reference._referrerPath );
                     }
                 }
                 for ( const string& referrerID : listReferrerID )
@@ -196,20 +192,17 @@ namespace sw::editor
                         inoutPlan._failure = string( failureBuilder.view() );
                         return false;
                     }
-                    rewrite._referrerID    = mapMovedID( inoutPlan, referrerID );
-                    const bool bMovedToo   = rewrite._referrerID != referrerID;
-                    rewrite._referrerAbs   = referrerFile->str();
                     rewrite._rewrittenText = rewrite._originalText;
-                    if ( bMovedToo )
+                    const auto itMove      = mapMoveIndex.find( referrerID );
+                    if ( itMove != mapMoveIndex.end() )
                     {
-                        for ( const EditorAssetMove& move : inoutPlan._listMove )
-                        {
-                            if ( FileUtil::isSameDiskPath( move._sourceAbs, rewrite._referrerAbs ) )
-                                rewrite._referrerAbs = move._destinationAbs;
-                        }
+                        rewrite._referrerID  = inoutPlan._listNewID[itMove->second];
+                        rewrite._referrerAbs = inoutPlan._listMove[itMove->second]._destinationAbs; // 옮기기 · 옛 id · 새 id 목록은 같은 차례다(planAssetMoves)
                     }
                     else
                     {
+                        rewrite._referrerID  = referrerID;
+                        rewrite._referrerAbs = referrerFile->str();
                         VectorUtil::addUnique( inoutPlan._listOutsideDomain, getDomainOf( referrerID ) );
                     }
                     if ( params.rewrite( rewrite._rewrittenText, AssetReferenceFields::getSyntaxOf( referrerID ), listRule ) == 0 )
