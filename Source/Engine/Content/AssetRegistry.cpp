@@ -199,6 +199,32 @@ namespace sw
             return nullopt;
         return AssetGUID::tryParse( text.substr( kReferencePrefix.size() ) );
     }
+
+    expected<AssetReferenceTarget> AssetRegistry::readReferenceText( string_view text )
+    {
+        const string_view    trimmed = StringUtil::trim( text );
+        AssetReferenceTarget target;
+        if ( isReferenceText( trimmed ) == false )
+        {
+            target._path = string{ trimmed };
+            if ( trimmed.empty() == false )
+                target._guid = resolveGUID( trimmed );
+            return target;
+        }
+        target._guid = parseReferenceText( trimmed );
+        if ( target._guid.has_value() == false )
+            return unexpected( Error{ ErrorKind::InvalidArgument, "not a GUID reference (guid: and 32 lowercase hex digits)", trimmed } );
+        optional<string> resolved = resolve( *target._guid );
+        if ( resolved.has_value() == false )
+            return unexpected( Error{ ErrorKind::NotFound, "not in the asset index - the asset was deleted or the index is not installed", trimmed } );
+        target._path = std::move( *resolved );
+        return target;
+    }
+
+    string AssetRegistry::makeReferenceText( string_view path, const optional<AssetGUID>& guid )
+    {
+        return guid.has_value() ? makeReferenceText( *guid ) : string{ path };
+    }
 } // namespace sw
 
 namespace sw

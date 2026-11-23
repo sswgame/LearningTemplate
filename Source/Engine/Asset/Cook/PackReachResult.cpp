@@ -11,6 +11,7 @@
 
 #include "Engine/Asset/Cook/AssetCompanion.h"
 #include "Engine/Asset/Reference/AssetReferenceFields.h"
+#include "Engine/Content/AssetRegistry.h"
 #include "Engine/Content/Pack/PackConfig.h"
 #include "Engine/Serialization/Inherit/AssetRedirect.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
@@ -193,8 +194,8 @@ namespace sw
                 /** @brief 항목 하나가 불렸다고 적습니다. 처음 불리면 찾아볼 차례에 넣는다. */
                 void markNamed( string_view kind, string_view id )
                 {
-                    if ( id.empty() || id.find( '/' ) != string_view::npos )
-                        return; // 경로는 참조 칸이 푼다
+                    if ( id.empty() || id.find( '/' ) != string_view::npos || AssetRegistry::isReferenceText( id ) )
+                        return; // 경로 · GUID 참조는 참조 칸이 푼다
                     if ( _setNamedEntry.insert( makeTabKey( kind, id ) ).second )
                     {
                         NamedEntry& named = _listPendingEntry.emplace_back();

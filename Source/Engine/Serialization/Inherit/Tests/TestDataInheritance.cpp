@@ -4,6 +4,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Content/AssetRegistry.h"
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
@@ -553,4 +554,22 @@ SW_TEST_CASE( DataInheritanceTest, RepeatedStructFieldIsAnError )
     string flat;
     SW_EXPECT_LOG( "DataInheritance.FieldRepeated" );
     SW_EXPECT_FALSE( Util::flatten( source, R"(<Doc _base="base.xml"><_inner _a="2" /><_inner _a="3" /></Doc>)", flat ) );
+}
+
+/** @brief [DataInheritanceTest] `_base` 의 파일 부분은 GUID 로 적고 지금 경로로 읽는다 — 항목 id(`#…`)는 그대로이고, 색인에 없는 GUID 는 글 그대로 남아 "부모 없음" 이 된다 */
+SW_TEST_CASE( DataInheritanceTest, BaseFileIsWrittenAsAGUIDAndReadAsThePathItHasNow )
+{
+    const AssetGUID               guid     = *AssetGUID::tryParse( "0000000000000000000000000000ba5e" );
+    const expected<AssetRegistry> registry = AssetRegistry::merge( vector<AssetRegistryLayer>{
+        AssetRegistryLayer{ "one", { AssetRegistryEntry{ guid, "common/data/items.xml" } } }
+    } );
+    SW_REQUIRE_TRUE( registry.has_value() );
+    AssetRegistry previous = AssetRegistry::install( *registry );
+    SW_EXPECT_EQUAL( string( "guid:0000000000000000000000000000ba5e" ), DataInheritance::makeBaseText( "common/data/items.xml" ) );
+    SW_EXPECT_EQUAL( string( "guid:0000000000000000000000000000ba5e#helmet" ), DataInheritance::makeBaseText( "common/data/items.xml#helmet" ) );
+    SW_EXPECT_EQUAL( string( "helmet" ), DataInheritance::makeBaseText( "helmet" ) );
+    SW_EXPECT_EQUAL( string( "common/data/items.xml" ), DataInheritance::findBasePath( "<Doc _base=\"guid:0000000000000000000000000000ba5e\" />" ) );
+    SW_EXPECT_EQUAL( string( "common/data/items.xml#helmet" ), DataInheritance::resolveBaseText( "guid:0000000000000000000000000000ba5e#helmet" ) );
+    SW_EXPECT_EQUAL( string( "guid:0000000000000000000000000000dead#helmet" ), DataInheritance::resolveBaseText( "guid:0000000000000000000000000000dead#helmet" ) );
+    (void)AssetRegistry::install( std::move( previous ) );
 }

@@ -657,8 +657,8 @@ namespace sw
         if ( PrefabAssetInternal::readNodesFromXML( root, -1, listNode, absPath ) == false || PrefabAssetInternal::areNodesWellFormed( listNode, absPath ) == false )
             return false;
 
-        const XMLNode     bodyNode = root.findChild( PrefabAssetInternal::kGameObject );
-        const string_view basePath = root.getAttributeText( DataInheritance::kBaseAttribute );
+        const XMLNode bodyNode = root.findChild( PrefabAssetInternal::kGameObject );
+        const string  basePath = DataInheritance::resolveBaseText( root.getAttributeText( DataInheritance::kBaseAttribute ) );
         if ( basePath.empty() )
         {
             if ( bodyNode.isValid() == false )
@@ -716,7 +716,7 @@ namespace sw
         {
             if ( _name.empty() )
                 _name = FileUtil::removeExtension( FileUtil::getFileNamePart( absPath ) );
-            const string basePath  = root.get( DataInheritance::kBaseAttribute ).asString();
+            const string basePath  = DataInheritance::resolveBaseText( root.get( DataInheritance::kBaseAttribute ).asString() );
             const string overrides = root.get( PrefabAssetInternal::kVariantOverrides ).asString();
             if ( resolveVariant( basePath, overrides, std::move( listNode ), absPath ) == false )
                 return false;
@@ -866,7 +866,7 @@ namespace sw
         JSONDocument doc;
         if ( doc.parse( trimmed ) == false || doc.getRoot().isObject() == false || doc.getRoot().has( DataInheritance::kBaseAttribute ) == false )
             return {};
-        return doc.getRoot().get( DataInheritance::kBaseAttribute ).asString();
+        return DataInheritance::resolveBaseText( doc.getRoot().get( DataInheritance::kBaseAttribute ).asString() );
     }
 
     bool PrefabAsset::loadFromBinaryFile( const AssetID& assetID )
@@ -950,7 +950,7 @@ namespace sw
         XMLNode     root = xmlDoc.appendRoot( PrefabAssetInternal::kRoot );
         root.appendAttribute( "formatVersion", static_cast<uint32>( PrefabAsset::kAssetType._formatVersion ) );
         if ( _basePath.empty() == false )
-            root.appendAttribute( DataInheritance::kBaseAttribute, string_view( _basePath ) );
+            root.appendAttribute( DataInheritance::kBaseAttribute, string_view( DataInheritance::makeBaseText( _basePath ) ) );
         XMLFields::writeProperties( root, PrefabRootParams{ _name } );
 
         // 변형은 부모와 다른 점만 쓴다. 다른 점을 만들지 못하면 쓰지 않는다 — 모든 칸을 적어 부모를 끊지 않는다.
@@ -1067,7 +1067,7 @@ namespace sw
             JSONDocument    variantDoc;
             const JSONValue variantRoot = variantDoc.makeObject();
             variantRoot.set( "_name" ).setString( _name );
-            variantRoot.set( DataInheritance::kBaseAttribute ).setString( _basePath );
+            variantRoot.set( DataInheritance::kBaseAttribute ).setString( DataInheritance::makeBaseText( _basePath ) );
             if ( overrideXML.empty() == false )
                 variantRoot.set( PrefabAssetInternal::kVariantOverrides ).setString( overrideXML );
             PrefabAssetInternal::writeNodesToJSON( variantRoot, listOwnNode, PrefabAssetInternal::kRootParent );

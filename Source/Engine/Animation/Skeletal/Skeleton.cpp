@@ -220,7 +220,7 @@ namespace sw
     bool Skeleton::applyVariant( const SkeletonVariant& variant, const Skeleton& base, string_view sourceLabel )
     {
         *this = base;
-        _listBasePath.insert( _listBasePath.begin(), variant._base );
+        _listBasePath.insert( _listBasePath.begin(), DataInheritance::resolveBaseText( variant._base ) );
         _bPartial = ( base._bPartial == SW_TRUE || variant._bPartial == SW_TRUE ) ? SW_TRUE : SW_FALSE;
 
         bool bValid = true;

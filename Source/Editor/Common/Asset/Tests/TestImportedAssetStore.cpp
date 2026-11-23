@@ -17,6 +17,7 @@
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/Material/MaterialTypes.h"
+#include "Engine/Serialization/Inherit/DataInheritance.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 using namespace sw;
@@ -143,7 +144,7 @@ SW_TEST_CASE( ImportedAssetStoreTest, SharedMaterialKeepsOnlyDifferencesAndIgnor
     SW_EXPECT_FALSE( StringUtil::contains( first._text, "shaderPath" ) );
     SW_EXPECT_FALSE( StringUtil::contains( first._text, "_color" ) );
     SW_EXPECT_FALSE( StringUtil::contains( first._text, "_permutations" ) );
-    SW_EXPECT_TRUE( StringUtil::contains( first._text, "_base=\"engine/materials/pbrmaterial.material\"" ) );
+    SW_EXPECT_EQUAL( parent, DataInheritance::findBasePath( first._text ) );
 }
 
 /**

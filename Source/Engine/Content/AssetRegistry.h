@@ -26,6 +26,13 @@ namespace sw
         string    _assetID;
     };
 
+    /** @brief 참조 글 하나를 푼 것입니다(`AssetRegistry::readReferenceText`). */
+    struct AssetReferenceTarget
+    {
+        string              _path; ///< 지금 리소스 id(빈 글이면 "가리키지 않음")
+        optional<AssetGUID> _guid; ///< 정체성 — 색인에 없는 경로 글이면 없음
+    };
+
     /** @brief 합칠 층 하나입니다 — 팩 하나의 색인 또는 저작 색인. `_sourceName` 은 오류에 적는 이름이다. */
     struct AssetRegistryLayer
     {
@@ -83,6 +90,14 @@ namespace sw
         [[nodiscard]] static bool isReferenceText( string_view text );
         /** @brief GUID 참조 글 @p text 의 GUID 입니다. 머리가 없거나 뒤가 글 표기가 아니면 없음입니다(고쳐 읽지 않는다). */
         [[nodiscard]] static optional<AssetGUID> parseReferenceText( string_view text );
+        /**
+         * @brief 파일에 적힌 참조 글 @p text 를 풉니다 — GUID 참조는 지금 경로로, 경로 글은 색인에서 정체성을 찾아 둔다(없으면 경로만). 앞뒤 공백은 뺀다.
+         * @details 참조를 읽는 칸(`AssetRef<T>` · `DataPath`)이 모두 이 함수를 지난다. 빈 글은 "가리키지 않음" 이다.
+         * @return GUID 글이 틀렸으면 `InvalidArgument`, 색인에 없으면 `NotFound` 입니다(다른 에셋으로 대신하지 않는다).
+         */
+        [[nodiscard]] static expected<AssetReferenceTarget> readReferenceText( string_view text );
+        /** @brief @p path 를 파일에 적을 참조 글입니다 — 정체성이 있으면 GUID 참조, 없으면 경로 글 그대로. `readReferenceText` 의 짝이다. */
+        [[nodiscard]] static string makeReferenceText( string_view path, const optional<AssetGUID>& guid );
 
         /** @brief 한 줄을 적습니다 — 같은 GUID 의 옛 자리와 같은 자리의 다른 GUID 를 비운다(`merge` · `record` · `move` 가 함께 쓴다). */
         void put( const AssetGUID& guid, string_view assetID );

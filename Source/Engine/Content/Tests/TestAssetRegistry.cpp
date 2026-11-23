@@ -131,3 +131,34 @@ SW_TEST_CASE( AssetRegistryTest, MoveAndRecordUpdateTheInstalledTable )
 
     (void)AssetRegistry::install( std::move( previous ) );
 }
+
+/**
+ * @brief [AssetRegistryTest] 참조 글 읽기 하나 — GUID 글은 지금 경로로, 경로 글은 정체성을 찾아, 색인에 없는 경로는 경로만, 틀린 글 · 없는 GUID 는 까닭이 다른 오류다. 쓰기는 그 짝이다
+ */
+SW_TEST_CASE( AssetRegistryTest, ReferenceTextReadsAndWritesOneWay )
+{
+    using Util                             = AssetRegistryTestUtil;
+    const AssetGUID               guid     = Util::makeGUID( "0000000000000000000000000000f00d" );
+    const expected<AssetRegistry> registry = AssetRegistry::merge( vector<AssetRegistryLayer>{
+        Util::makeLayer( "one", { { guid, "engine/shaders/toon.hlsl" } }
+          )
+    } );
+    SW_REQUIRE_TRUE( registry.has_value() );
+    AssetRegistry previous = AssetRegistry::install( *registry );
+
+    const expected<AssetReferenceTarget> byGUID    = AssetRegistry::readReferenceText( " guid:0000000000000000000000000000f00d " );
+    const expected<AssetReferenceTarget> byPath    = AssetRegistry::readReferenceText( "engine/shaders/toon.hlsl" );
+    const expected<AssetReferenceTarget> unindexed = AssetRegistry::readReferenceText( "game/playground" );
+    const expected<AssetReferenceTarget> empty     = AssetRegistry::readReferenceText( "" );
+    SW_EXPECT_TRUE( AssetRegistry::readReferenceText( "guid:NOPE" ).error().kind() == ErrorKind::InvalidArgument );
+    SW_EXPECT_TRUE( AssetRegistry::readReferenceText( "guid:0000000000000000000000000000dead" ).error().kind() == ErrorKind::NotFound );
+    (void)AssetRegistry::install( std::move( previous ) );
+
+    SW_REQUIRE_TRUE( byGUID.has_value() && byPath.has_value() && unindexed.has_value() && empty.has_value() );
+    SW_EXPECT_EQUAL( string( "engine/shaders/toon.hlsl" ), byGUID->_path );
+    SW_EXPECT_TRUE( byPath->_guid == guid );
+    SW_EXPECT_FALSE( unindexed->_guid.has_value() );
+    SW_EXPECT_TRUE( empty->_path.empty() && empty->_guid.has_value() == false );
+    SW_EXPECT_EQUAL( string( "guid:0000000000000000000000000000f00d" ), AssetRegistry::makeReferenceText( byPath->_path, byPath->_guid ) );
+    SW_EXPECT_EQUAL( string( "game/playground" ), AssetRegistry::makeReferenceText( unindexed->_path, unindexed->_guid ) );
+}

@@ -326,8 +326,8 @@ namespace sw
 
         // 씬 상속: 부모 위에 차이를 얹어 한 벌로 펼친 뒤 읽는다(Godot 씬 상속 · 유니티 Prefab Variant 와 같은 모델). 부모는 `AssetIO` 로 읽으므로 쿠킹 입력이 된다.
         // 리소스 id 읽기는 규칙을 골라 이미 펼쳤다(@p flattenedBaseID 가 부모다). 디스크 파일은 `parseData` 가 카탈로그 표에 없는 이 칸을 그대로 둔다("자기 입구가 펼친다").
-        _baseScenePath = flattenedBaseID;
-        const string basePath{ root.getAttributeText( DataInheritance::kBaseAttribute ) };
+        _baseScenePath        = flattenedBaseID;
+        const string basePath = DataInheritance::resolveBaseText( root.getAttributeText( DataInheritance::kBaseAttribute ) );
         if ( basePath.empty() == false )
         {
             string flatText;

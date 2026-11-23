@@ -163,7 +163,7 @@ namespace sw
      */
     struct SW_API DataInheritance
     {
-        static constexpr const utf8* kBaseAttribute   = "_base";   ///< 루트: 부모의 리소스 id
+        static constexpr const utf8* kBaseAttribute   = "_base";   ///< 루트: 부모의 참조(`guid:<32자>` — `resolveBaseText`)
         static constexpr const utf8* kOpAttribute     = "_op";     ///< 목록 원소: 비면 합치거나 더한다
         static constexpr const utf8* kBeforeAttribute = "_before"; ///< 목록 원소: 이 열쇠 앞으로
         static constexpr const utf8* kAfterAttribute  = "_after";  ///< 목록 원소: 이 열쇠 뒤로
@@ -184,7 +184,15 @@ namespace sw
          */
         [[nodiscard]] static bool isLikelyXMLText( string_view text );
 
-        /** @brief @p text 의 루트가 `_base` 를 적었으면 그 값입니다. XML 이 아니거나 없으면 빈 글입니다. 부모를 가리키지 않는 파일은 글 검색 한 번으로 끝납니다. */
+        /**
+         * @brief `_base` 에 적힌 글 @p baseText 의 파일 부분을 리소스 id 로 푼 글입니다 — `guid:<32자>` 는 지금 경로로, `guid:<32자>#<항목 id>` 는 `<경로>#<항목 id>` 로. 경로 · 항목 id 는 그대로입니다.
+         * @details `_base` 를 읽는 곳은 모두 이것을 지난다. 색인에 없는 GUID 는 글 그대로다 — 읽는 쪽이 그 글로 "부모 없음" 오류를 낸다(다른 파일로 대신하지 않는다).
+         */
+        [[nodiscard]] static string resolveBaseText( string_view baseText );
+        /** @brief 리소스 id @p baseID(뒤에 `#<항목 id>` 가 올 수 있다)를 `_base` 에 적을 글입니다 — 정체성이 있으면 GUID 참조, 없으면 그대로. `resolveBaseText` 의 짝이다. */
+        [[nodiscard]] static string makeBaseText( string_view baseID );
+
+        /** @brief @p text 의 루트가 `_base` 를 적었으면 그 값(푼 리소스 id)입니다. XML 이 아니거나 없으면 빈 글입니다. 부모를 가리키지 않는 파일은 글 검색 한 번으로 끝납니다. */
         [[nodiscard]] static string findBasePath( string_view text );
 
         /**
