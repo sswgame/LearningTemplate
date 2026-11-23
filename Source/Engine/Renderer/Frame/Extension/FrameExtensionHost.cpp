@@ -83,20 +83,15 @@ namespace sw
         if ( _pDevice == nullptr )
             return false;
 
-        // 1) 프록시 갱신 적용 → 확장 훅 → 프록시 요소. 모두 모듈 코드이고 렌더 스레드의 모듈 구간(RenderScope) 안이다.
+        // 1) 프록시 갱신 적용 → 확장 선언 복사 → 프록시 요소. 모두 모듈 코드이고 렌더 스레드의 모듈 구간(RenderScope) 안이다.
         registry.applyPendingProxyUpdates();
         // 파이프라인이 확장 셰이더를 하나도 선언하지 않았으면 확장 패스를 받지 않는 파이프라인이다 — 이번 프레임 확장은 쉬고 오류가 아니다
         // (언리얼 SceneViewExtension 의 IsActiveThisFrame). 선언한 파이프라인에서 목록에 빠진 셰이더는 아래 2) 가 오류로 알린다(쿠킹되지 않는다).
         if ( _pipeline.getDesc()._listExtensionShader.empty() )
             return false;
-        const ExtensionFrameInfo  frameInfo{ outputWidth, outputHeight };
-        ExtensionPassBuilder      builder;
-        vector<IRenderExtension*> listExtension;
-        registry.copyExtensions( listExtension );
-        for ( IRenderExtension* pExtension : listExtension )
-        {
-            pExtension->addPasses( builder, frameInfo );
-        }
+        const ExtensionFrameInfo frameInfo{ outputWidth, outputHeight };
+        ExtensionPassBuilder     builder;
+        registry.copyDeclarations( builder ); // 등록 때 받은 선언이다 — 프레임마다 바뀌는 것은 실행 콜백과 프록시 요소뿐이다
         ExtensionDrawCollector        collector;
         vector<IExtensionSceneProxy*> listProxy;
         registry.copyProxies( listProxy );

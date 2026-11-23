@@ -290,8 +290,6 @@ namespace sw
         vector<pair<hashed_string, TrackedAccess>> _listResourceState;
         unordered_map<hashed_string, size_t>       _mapResourceToIndex;
         uint32                                     _lastTransitionCount{ 0 };
-        /** @brief 패스가 이보다 적은 레벨은 병렬로 기록하지 않고 이어 기록합니다(2 미만은 2). 부르는 쪽이 프레임 설정 사본(`RenderFrameSettings::_renderGraphParallelMinWidth`)으로 채운다. */
-        uint32 _parallelMinWidth{ 2 };
 
         /**
          * @brief 다음 execute() 호출 전에 상태를 초기화합니다(capacity 를 다시 써서 할당을 만들지 않습니다).

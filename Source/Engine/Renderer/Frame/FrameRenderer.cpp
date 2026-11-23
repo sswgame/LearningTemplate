@@ -126,6 +126,10 @@ namespace sw
             return false;
         }
 
+        // 컬링이 없는 백엔드(DX11 — 간접 인자를 구조 버퍼로 쓸 수 없다)는 인스턴스마다의 절두체 · 가림 판정 없이 CPU 개수로 그린다. 같은 장면의 GPU 시간이 다른 백엔드와 갈리는 까닭을 기동 로그에 남긴다.
+        if ( _bOffscreenRenderer == SW_FALSE && pDevice->getCapabilities()._bGPUCulling == SW_FALSE )
+            SW_LOG_INFO_ID( "FrameRenderer.NoGPUCulling", "This graphics backend (%#) has no GPU culling - instances are drawn with CPU counts, without frustum or occlusion culling", pDevice->getBackendType() );
+
         // 2D 정렬 레이어 표는 엔진 필수 데이터다. 서브시스템 Render2DSettings 가 기동 때 읽고(못 읽으면 기동이 멈춘다) 렌더러 서브시스템이 그 뒤에 선다 -
         // 주 렌더러와 미리보기 렌더러는 서비스 표의 같은 표를 읽는다. 주 출력의 보기 모드(`-gv_viewMode`)는 게임 스레드의 `FrameRendererSubsystem` 이 정한다.
         _argumentPipelinePath = pipelineXMLPath;

@@ -353,10 +353,7 @@ namespace sw
                                      pDevice->getCapabilities()._bParallelCommandRecording != SW_FALSE &&
                                      _state._graph.getExecutionOrder().size() > 1;
         if ( bCanRunParallel )
-        {
-            _graphContext._parallelMinWidth = _state._settings._renderGraphParallelMinWidth;
             return _state._graph.executeParallel( _graphContext, *_state._pTaskManager, *pDevice );
-        }
 
         // 직렬 경로도 그래프가 추론한 배리어를 쓴다. 패스가 기록하는 리스트와 **같은 것**을 넘긴다.
         if ( _state.getMainView()._commandList == nullptr )
@@ -1357,6 +1354,7 @@ namespace sw
                     mapForward[output._attachment] = pool.resolveName( output._attachment );
             }
         }
+        SW_PROFILE_COUNT( "RT.Graph.planBuilds", 1 ); // 계획을 새로 지은 수 — 켜짐 조합이 프레임마다 바뀌면 는다
         _state._graph.addPlan( _listScratchPassState, mapForward );
     }
 

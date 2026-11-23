@@ -5,11 +5,13 @@
 #include "Core/Testing/ThreadTestAccess.h"
 
 #include "Engine/Graphics/Debug/RenderDiagnostics.h"
+#include "Engine/Renderer/Frame/Packet/RenderFrameSettings.h"
 
 // 렌더 진단 정책의 스레드 모델 — 개발 변수는 게임 스레드의 `publish` 가 떠 원자 사본으로 내보내고, 다른 스레드는 사본만 읽는다.
 
 namespace sw
 {
+    SW_EXTERN_TEST_GLOBAL_VARIABLE( bool, gv_drawMerge );      // `RenderFrameSwitches.cpp` 가 정의한다
     SW_EXTERN_TEST_GLOBAL_VARIABLE( int32, gv_fogDebugSlice ); // `RenderDiagnosticsSwitches.cpp` 가 정의한다
 } // namespace sw
 
@@ -41,4 +43,18 @@ SW_TEST_CASE( RenderDiagnosticsTest, OtherThreadsReadOnlyThePublishedCopy )
 
     gv_fogDebugSlice = previous;
     RenderDiagnostics::publish();
+}
+
+/**
+ * @brief [RenderFrameSwitchesTest] 개발 도구의 진단 스위치는 사본의 칸을 덮고, 스위치가 없는 칸은 엔진이 뜬 값 그대로다
+ * @details 결함이면 런타임 파일의 일반 변수로 되돌아가 배포 실행 파일이 그 인자를 받는다. 변이: `capture` 가 덮는 함수를 부르지 않으면 첫 단언이 진다.
+ */
+SW_TEST_CASE( RenderFrameSwitchesTest, SwitchesOverrideTheCapturedSettings )
+{
+    const bool bPrevious = gv_drawMerge;
+    gv_drawMerge         = false;
+    SW_EXPECT_EQUAL( uint8{ SW_FALSE }, RenderFrameSettings::capture()._bDrawMerge );
+    gv_drawMerge = true;
+    SW_EXPECT_EQUAL( uint8{ SW_TRUE }, RenderFrameSettings::capture()._bDrawMerge );
+    gv_drawMerge = bPrevious;
 }

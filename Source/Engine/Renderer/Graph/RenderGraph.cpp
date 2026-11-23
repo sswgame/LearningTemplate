@@ -25,6 +25,8 @@ namespace sw
     {
         /// 계획 캐시의 상한입니다. 뷰 종류 · 켠 효과 조합이 이보다 많이 오가면 전체 계획만 남기고 다시 만든다.
         constexpr size_t kMaxPlanCount = 64;
+        /// 이보다 패스가 적은 레벨은 병렬로 기록하지 않고 이어 기록한다 — 패스 하나짜리 레벨은 나눌 일이 없다(언리얼 RDG `r.RDG.ParallelExecute.PassMin` 도 폭을 따로 벌리지 않는다).
+        constexpr size_t kMinParallelWidth = 2;
 
         /** @brief 패스 하나를 열린 리스트 @p pCmdList 에 기록합니다(열고 닫지 않는다). 직렬 · 병렬 · 큐 실행이 모두 이 한 함수로 패스 문맥을 만든다. @p listAccess 는 이번 계획의 접근이다. */
         void recordPassBody( RenderGraphNode& node, const vector<RenderGraphResourceAccess>& listAccess, IRHICommandList* pCmdList )
@@ -944,8 +946,7 @@ namespace sw
             device.executeCommandList( pSerialList );
             pSerialList = nullptr;
         };
-        // 레벨 폭 계측(docs/NEXT.md 측정 렌더 그래프 폭): 병렬로 기록한 레벨 · 패스 수, 이어 기록한 패스 수, 가장 넓은 레벨. 병렬 레벨의 시간은
-        // `RT.Graph.parallelLevel`(기록 · 합류 · 제출)이다. 폭이 2 근처에 머물고 그 시간이 패스 본문 합보다 크면 합류 비용이 이득을 지운다.
+        // 레벨 폭 계측: 병렬로 기록한 레벨 · 패스 수, 이어 기록한 패스 수, 가장 넓은 레벨. 병렬 레벨의 시간은 `RT.Graph.parallelLevel`(기록 · 합류 · 제출)이다.
         size_t parallelLevelCount = 0;
         size_t parallelPassCount  = 0;
         size_t serialPassCount    = 0;
@@ -956,9 +957,8 @@ namespace sw
             const vector<ParallelPassEntry>& listPassEntry = _pParallelScratch->_listPassEntry;
             if ( listPassEntry.empty() )
                 continue;
-            maxLevelWidth                 = MathUtil::max( maxLevelWidth, listPassEntry.size() );
-            const size_t parallelMinWidth = static_cast<size_t>( MathUtil::max( context._parallelMinWidth, 2u ) ); // 레벨마다 고정 비용이 좁은 레벨의 이득을 지우는지 재는 스위치(`-gv_renderGraphParallelMinWidth`)
-            const bool   bRecordSerially  = bParallelRecording == false || listPassEntry.size() < parallelMinWidth;
+            maxLevelWidth              = MathUtil::max( maxLevelWidth, listPassEntry.size() );
+            const bool bRecordSerially = bParallelRecording == false || listPassEntry.size() < kMinParallelWidth;
             if ( bRecordSerially )
             {
                 serialPassCount += listPassEntry.size();
