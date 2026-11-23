@@ -188,9 +188,7 @@ namespace sw::editor
     } // namespace
 
     AssetHotReload::AssetHotReload()
-        : _pFileWatchDispatcher{ nullptr }
-        , _pScratchWatchDispatcher{ nullptr }
-        , _pReferenceTracker{ make_unique<AssetReferenceTracker>() }
+        : _pReferenceTracker{ make_unique<AssetReferenceTracker>() }
         , _mapAppliedContentHash{}
         , _cascadeReloadCount{ 0 }
         , _pImportJob{ make_unique<EditorAssetImportJob>() }
@@ -239,31 +237,26 @@ namespace sw::editor
         if ( _pIdentityRules->load( ProcessRoots::get()._project.str() ) == false )
             _pIdentityRules.reset(); // 이유는 load 가 남겼다 — 색인은 기동 때 것 그대로다
 
-        _pFileWatchDispatcher = make_unique<FileWatchDispatcher>();
-        if ( _pFileWatchDispatcher->initialize() == false )
+        FileWatchService* const pFileWatch = findSubsystem<FileWatchService>();
+        if ( pFileWatch == nullptr )
         {
-            _pFileWatchDispatcher.reset();
+            SW_LOG_INFO_ID( "AssetHotReload.NoFileWatchService", "Asset hot reload: this host has no file watch service, not enabling it." );
             return false;
         }
-
-        FileWatchMatchDelegate fileWatchDelegate{ SW_DELEGATE_METHOD( FileWatchMatchDelegate, &AssetHotReload::onResourceFileChanged, this ) };
-        // 감시 접두어는 **절대 경로**여야 한다 — 이벤트의 `_directory` 는 감시자가 열어 둔 절대 경로(리소스 루트)이고,
-        // 접두어 비교는 그 둘을 그대로 맞춰 본다(상대 경로를 주면 비교가 항상 실패한다).
-        _resourceWatch = _pFileWatchDispatcher->registerWatch( editor::getSubsystem<AssetPaths>().getRootFolderPath(), listExtension, fileWatchDelegate );
+        const FileChangeDelegate fileWatchDelegate{ SW_DELEGATE_METHOD( FileChangeDelegate, &AssetHotReload::onResourceFileChanged, this ) };
+        const FileChangeDelegate treeWatchDelegate{ SW_DELEGATE_METHOD( FileChangeDelegate, &AssetHotReload::onResourceTreeChanged, this ) };
+        const string&            rootFolder = editor::getSubsystem<AssetPaths>().getRootFolderPath();
+        _resourceWatch                      = pFileWatch->watch( rootFolder, FileWatchDepth::Tree, listExtension, fileWatchDelegate );
+        if ( _resourceWatch.isActive() == false )
+            return false; // 감시 창구가 이유를 남겼다
         // 디스크 목록을 가진 화면(콘텐츠 브라우저)이 다시 읽을 때를 알도록, 종류와 무관하게 모든 변경을 센다.
-        FileWatchMatchDelegate treeWatchDelegate{ SW_DELEGATE_METHOD( FileWatchMatchDelegate, &AssetHotReload::onResourceTreeChanged, this ) };
-        _contentWatch = _pFileWatchDispatcher->registerWatch( editor::getSubsystem<AssetPaths>().getRootFolderPath(), {}, treeWatchDelegate );
-        // 작업 도메인(시나리오 사본 · 가져오기 · 미리보기)은 리소스 루트 밖, 실행 뿌리 아래다 — 디스패처 하나는 루트 하나만 보므로 따로 건다. 감시하려면 폴더가 있어야 한다.
+        _contentWatch = pFileWatch->watch( rootFolder, FileWatchDepth::Tree, {}, treeWatchDelegate );
+        // 작업 도메인(시나리오 사본 · 가져오기 · 미리보기)은 리소스 루트 밖, 실행 뿌리 아래라 따로 건다. 못 걸면 작업 도메인의 바깥 변경만 다시 읽지 않는다.
         const string& scratchFolder = AssetPaths::getScratchFolderPath();
-        _pScratchWatchDispatcher    = make_unique<FileWatchDispatcher>();
-        if ( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( scratchFolder ) ) && _pScratchWatchDispatcher->initialize( scratchFolder ) )
+        if ( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( scratchFolder ) ) )
         {
-            _scratchResourceWatch = _pScratchWatchDispatcher->registerWatch( scratchFolder, listExtension, fileWatchDelegate );
-            _scratchContentWatch  = _pScratchWatchDispatcher->registerWatch( scratchFolder, {}, treeWatchDelegate );
-        }
-        else
-        {
-            _pScratchWatchDispatcher.reset(); // 이유는 ensure · initialize 가 남겼다 — 작업 도메인의 바깥 변경만 다시 읽지 않는다
+            _scratchResourceWatch = pFileWatch->watch( scratchFolder, FileWatchDepth::Tree, listExtension, fileWatchDelegate );
+            _scratchContentWatch  = pFileWatch->watch( scratchFolder, FileWatchDepth::Tree, {}, treeWatchDelegate );
         }
         return _resourceWatch.isActive();
     }
@@ -285,31 +278,17 @@ namespace sw::editor
         _uniqueSetDeferredFile.clear();
         _bImportInFlight = SW_FALSE;
 
-        if ( _pFileWatchDispatcher == nullptr )
-            return;
-
         _resourceWatch.reset();
         _contentWatch.reset();
         _scratchResourceWatch.reset();
         _scratchContentWatch.reset();
-
-        if ( _pScratchWatchDispatcher != nullptr )
-        {
-            _pScratchWatchDispatcher->shutdown();
-            _pScratchWatchDispatcher.reset();
-        }
-        _pFileWatchDispatcher->shutdown();
-        _pFileWatchDispatcher.reset();
     }
 
     void AssetHotReload::update()
     {
-        if ( _pFileWatchDispatcher != nullptr )
-            _pFileWatchDispatcher->update();
-        if ( _pScratchWatchDispatcher != nullptr )
-            _pScratchWatchDispatcher->update();
+        // 감시 사건은 프레임 끝에 온다(`FileWatchService::update` — 개발 도구가 한 번 돌린다).
         pollImportJob();
-        // 감시 사건이 올린 변경 번호를 같은 프레임에 색인에 반영한다(바뀐 파일만 다시 읽거나 전체 스캔).
+        // 감시 사건이 올린 변경 번호를 다음 갱신에서 색인에 반영한다(바뀐 파일만 다시 읽거나 전체 스캔).
         _pReferenceTracker->update( _contentChangeSerial, *this );
     }
 
@@ -407,7 +386,7 @@ namespace sw::editor
     bool AssetHotReload::pollContentWatchFence()
     {
         using Internal = AssetHotReloadInternal;
-        if ( _pScratchWatchDispatcher == nullptr )
+        if ( _scratchContentWatch.isActive() == false )
             return false; // 사본(작업 도메인)을 보는 감시가 없다 — 기다릴 사건이 오지 않는다
         const string markerPath = Internal::makeFenceMarkerPath();
         if ( _bFenceWaiting == false )
