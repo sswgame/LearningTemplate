@@ -65,7 +65,9 @@ namespace sw
         /** @brief 접속한 모두의 진행 쓰기를 맡기고 라우터에서 뗍니다(맡긴 쓰기는 저장소가 끝낸다). 두 번 불러도 됩니다. */
         void shutdown() override;
         /** @brief 규칙 · 저장 · 복제를 한 틱 돌립니다. */
-        void update( float32 deltaSeconds ) override;
+        void            update( float32 deltaSeconds ) override;
+        void            collectAvatars( vector<HubAvatarSession>& outListSession ) const override;
+        HubActionResult moveAvatar( uint32 avatarID, const float3& position, bool bRiding ) override { return _world.moveAvatar( avatarID, position, bRiding ); }
 
         /**
          * @brief 연결을 계정 @p accountID 로 들입니다 — 진행 읽기를 맡기고, 읽히면 아바타를 세운다. 계정이 0 이면 받지 않고 끊습니다.

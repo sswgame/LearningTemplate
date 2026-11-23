@@ -3,7 +3,9 @@
  * @brief 허브의 서버 권위 규칙(작은 액션 MMO)입니다 — 허브에서 그림자 짐승을 치고(전투) 빛버섯을 캐며(생활) 경험 · 동전을 얻어 자라고,
  *        파티로 함께 사냥해 경험을 나눕니다. 클라이언트는 이 규칙을 돌리지 않는다 — 결과는 서버가 정해 알린다(`HubNetLink`).
  * @details 엔진 · 망 없이 도는 순수 규칙이라 단위 테스트가 그대로 부른다. 수치는 씬 데이터(`HubRules` — `game/playground/maps/hub.scene.xml`)다.
- *          - 판정: 공격은 사거리 · 재사용 대기 · 대상 생존, 채집은 거리 · 대상 생존, 이동은 한 번 걸음 상한과 허브 경계를 서버가 본다(클라이언트 값은 요청일 뿐이다).
+ *          - 판정: 공격은 사거리 · 재사용 대기 · 대상 생존, 채집은 거리 · 대상 생존을 서버가 본다(클라이언트 값은 요청일 뿐이다).
+ *          - 자리: 아바타의 자리는 서버가 움직인 폰의 자리다(`HubPawnReplicationComponent` — 클라이언트는 조종 의도만 보낸다). 규칙은 그 자리가 허브 경계 안이고 걸음 · 탑승의
+ *            속도 한도(`_moveSpeed` · `_rideSpeed`)로 갈 수 있는 거리인지 다시 본다 — 순간이동 · 발사처럼 이동기 밖에서 옮긴 자리를 규칙이 받지 않는다(심층 방어).
  *          - 보상: 짐승을 쓰러뜨리면 경험을 나눔 거리 안의 파티원에게 똑같이(올림) 나누고 동전은 마지막으로 친 사람이 갖는다. 경험이 단계표(`_listLevelExperience`)를 넘으면 레벨이 오른다.
  *          - 파티: 초대 → 수락. 초대한 쪽이 파티가 없으면 새로 만들고 이끈다. 이끄는 사람이 떠나면 남은 첫 사람이 이끈다. 한 사람만 남으면 파티가 풀린다.
  *          - 상용 MMO 의 이름 · 내용을 따르지 않는다 — 장르의 접속 → 전투/생활 → 보상 · 성장 → 저장 후 재접속 루프만 보인다.
@@ -39,7 +41,7 @@ namespace sw
         OutOfRange,     ///< 대상이 사거리 · 채집 거리 밖이다
         CoolingDown,    ///< 공격 재사용 대기 중이다
         TargetGone,     ///< 대상이 이미 쓰러졌거나 캐였다(다시 나기를 기다린다)
-        StepTooLong,    ///< 한 번에 걸을 수 있는 거리를 넘었다
+        StepTooLong,    ///< 속도 한도로 갈 수 있는 거리를 넘었거나 허브 경계 밖이다
         PartyFull,      ///< 파티 인원이 찼다
         AlreadyInParty, ///< 초대받은 쪽이 이미 다른 파티에 있다
         NotInvited,     ///< 그 사람에게 받은 초대가 없다
@@ -89,15 +91,17 @@ namespace sw
         int32 _herbExperience{ 15 };
         PROPERTY( Min = 0.0, Units = s )
         float32 _herbRespawnSeconds{ 5.0f };
-        PROPERTY( Min = 0.1, Units = m, Tooltip = "Longest walk one move request may ask for - also the most walk budget an avatar can save up" )
+        PROPERTY( Min = 0.1, Units = m, Tooltip = "Farthest an avatar may move at once - also the most move budget an avatar can save up" )
         float32 _maxMoveStep{ 12.0f };
-        PROPERTY( Required, Min = 0.1, Units = "m/s", Tooltip = "Fastest an avatar may walk - the server refills this much walk budget per second and moves spend it" )
+        PROPERTY( Required, Min = 0.1, Units = "m/s", Tooltip = "Fastest an avatar may move on foot - the server refills this much move budget per second and moves spend it" )
         float32 _moveSpeed{ 0.0f };
+        PROPERTY( Required, Min = 0.1, Units = "m/s", Tooltip = "Fastest an avatar may move while riding (not below the gallop speed of the horses)" )
+        float32 _rideSpeed{ 0.0f };
         PROPERTY( Required, Min = 1, Tooltip = "Remote calls one connection may send at once before the server starts refusing them (RemoteCallServerConfig)" )
         int32 _remoteCallBurstCount{ 0 };
         PROPERTY( Required, Min = 1, Units = ms, Tooltip = "Time for one more remote call to be allowed - the steady limit is 1000 / this per second" )
         int32 _remoteCallRefillMilliseconds{ 0 };
-        PROPERTY( Min = 1.0, Units = m, Tooltip = "The hub spans -extent..extent on X and Z" )
+        PROPERTY( Min = 1.0, Units = m, Tooltip = "The hub spans -extent..extent on X and Z - pawns and horses are kept inside" )
         float32 _worldHalfExtent{ 64.0f };
         PROPERTY( Min = 2, Max = 8 )
         int32 _partyMaxSize{ 4 };
@@ -112,6 +116,9 @@ namespace sw
         vector<int32> _listLevelExperience{};
         PROPERTY( Required )
         vector<HubPlacement> _listPlacement{};
+
+        /** @brief 점을 허브 경계(XZ) 안으로 자릅니다. 폰의 걸음이 서버 · 예측에서 같은 이 함수로 경계를 지킨다. */
+        float3 clampInside( const float3& position ) const;
     };
 
     /**
@@ -158,7 +165,8 @@ namespace sw
         uint32     _partyID{ 0 };      ///< 0 이면 파티가 없다
         uint32     _inviteFromID{ 0 }; ///< 받은 초대를 보낸 아바타. 0 이면 없다
         float32    _attackCooldown{ 0.0f };
-        float32    _moveBudget{ 0.0f };   ///< 지금 걸을 수 있는 거리(m) — 틱이 `_moveSpeed × dt` 만큼 채우고(`_maxMoveStep` 까지) 이동이 쓴다(감사 K-1)
+        float32    _moveBudget{ 0.0f };   ///< 지금 갈 수 있는 거리(m) — 틱이 속도 한도 × dt 만큼 채우고(`_maxMoveStep` 까지) 이동이 쓴다(감사 K-1)
+        uint8      _bRiding{ SW_FALSE };  ///< 타고 있다 — 속도 한도가 `_rideSpeed` 다
         uint8      _bChanged{ SW_FALSE }; ///< 알릴 진행 · 파티가 바뀌었다(`HubWorld::consumeDirtyFlag`)
     };
 
@@ -206,7 +214,8 @@ namespace sw
 
         HubActionResult attackCreature( uint32 avatarID, uint32 placementID );
         HubActionResult gatherHerb( uint32 avatarID, uint32 placementID );
-        HubActionResult moveAvatar( uint32 avatarID, float32 x, float32 z );
+        /** @brief 서버가 움직인 폰의 자리를 아바타에 옮깁니다. 경계 밖이거나 속도 한도의 예산을 넘으면 StepTooLong 이고 자리는 그대로입니다(부르는 쪽이 폰을 되돌린다). */
+        HubActionResult moveAvatar( uint32 avatarID, const float3& position, bool bRiding );
         HubActionResult inviteToParty( uint32 avatarID, uint32 targetAvatarID );
         HubActionResult acceptPartyInvite( uint32 avatarID, uint32 leaderAvatarID );
         HubActionResult leaveParty( uint32 avatarID );

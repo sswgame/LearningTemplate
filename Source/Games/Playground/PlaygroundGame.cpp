@@ -31,6 +31,7 @@
 #include "GameFramework/Runtime/Foundation/Framework/Save/GameStateSnapshot.h"
 
 #include "Games/Playground/Hub/HubNetLink.h"
+#include "Games/Playground/Hub/HubPawnReplicationComponent.h"
 
 #include "ModuleAPI/Export/GameModuleExports.h"
 
@@ -48,7 +49,7 @@ namespace sw
         /** @brief 클라이언트 부분(벤치)이 자기 장면을 띄웠으면 첫 씬을 열지 않습니다. */
         void startFirstScene() override;
         void onUpdate( float32 deltaTime ) override;
-        /** @brief 허브 엔티티 상태 칸(`HubEntityNetState`)의 복제 스키마를 종류 번호마다 핸드셰이크에 올린다 — 칸이 다른 빌드는 접속에서 갈린다. */
+        /** @brief 허브 엔티티 상태(`HubEntityNetState`)와 폰 상태 · 모습(`HubPawnState` · `HubPawnPose`)의 복제 스키마를 종류 번호마다 핸드셰이크에 올린다 — 칸이 다른 빌드는 접속에서 갈린다. */
         [[nodiscard]] bool onRegisterReplicatedTypes( NetMessageChannel& outChannel ) override;
         /** @brief 상태 스냅샷을 만들기 직전에 부릅니다. 벤치는 절차적으로 생성한 오브젝트라서 정리해 스냅샷에 싣지 않습니다. */
         void onBeforeStateSerialize() override;
@@ -113,7 +114,9 @@ namespace sw
     {
         return outChannel.registerReplicatedType<HubEntityNetState>( static_cast<uint8>( HubEntityType::kAvatar ) ) &&
                outChannel.registerReplicatedType<HubEntityNetState>( static_cast<uint8>( HubEntityType::kCreature ) ) &&
-               outChannel.registerReplicatedType<HubEntityNetState>( static_cast<uint8>( HubEntityType::kHerb ) );
+               outChannel.registerReplicatedType<HubEntityNetState>( static_cast<uint8>( HubEntityType::kHerb ) ) &&
+               outChannel.registerReplicatedType<HubPawnState>( static_cast<uint8>( HubPawnReplicationComponent::kOwnerStateSchemaID ) ) &&
+               outChannel.registerReplicatedType<HubPawnPose>( static_cast<uint8>( HubPawnReplicationComponent::kPawnTypeID ) );
     }
 
     void PlaygroundGame::onBeforeStateSerialize()

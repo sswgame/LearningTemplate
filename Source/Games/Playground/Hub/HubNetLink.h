@@ -1,9 +1,9 @@
 /**
  * @file HubNetLink.h
  * @brief 허브의 서버 · 클라이언트 망 잇기입니다 — 반사 함수 호출(`RemoteCall`)로 행동을 서버에 청하고, MMO 복제(`MMOReplicator`)로 근처의 짐승 · 버섯 · 아바타를 받습니다.
- * @details - 세션 대상: 연결마다 `HubAvatarAgent` 하나가 양쪽의 id 0 이다(언리얼 PlayerController 자리). 클라이언트는 `Server` 함수(공격 · 채집 · 이동 · 파티)를 부르고,
+ * @details - 세션 대상: 연결마다 `HubAvatarAgent` 하나가 양쪽의 id 0 이다(언리얼 PlayerController 자리). 클라이언트는 `Server` 함수(공격 · 채집 · 파티)를 부르고,
  *            서버는 그 결과와 진행을 `Client` 함수로 알린다. 행동의 판정은 서버의 `HubWorld` 가 한다 — 클라이언트는 결과를 보여 줄 뿐이다.
- *          - 검증 짝(`validate*`)은 지어낸 번호 · 경계 밖 좌표 · 자기 초대 같은 조작만 거른다(실패하면 연결을 끊는다). 사거리 · 재사용 대기 같은 게임 규칙은 결과로 알린다.
+ *          - 검증 짝(`validate*`)은 지어낸 번호 · 자기 초대 같은 조작만 거른다(실패하면 연결을 끊는다). 사거리 · 재사용 대기 같은 게임 규칙은 결과로 알린다.
  *          - 계정: 접속 인증기의 주체(`INetPeers::getConnectionPrincipal` — 게임 접속 티켓의 계정)만 쓴다. 주체가 없는 연결(자격 없이 붙은)은 경고하고 끊는다 —
  *            클라이언트가 보낸 이름으로 계정을 고르면 남의 진행을 가져갈 수 있다. 같은 계정이 다시 붙으면 앞 연결을 저장한 뒤 끊는다(재접속이 옛 연결을 기다리지 않는다).
  *          - 저장: 접속 끝 · 주기(`HubRules::_autosaveSeconds`) · 서버 내림에 쓴다. 읽기는 접속 때 한 번이다(서버 전용 `Server/HubProfileStore`).
@@ -14,6 +14,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Delegate/Subscription.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Network/Message/NetMessage.h"
@@ -76,13 +77,6 @@ namespace sw
         FUNCTION()
         bool validateGatherHerb( uint32 herbID ) const;
 
-        /** @brief 허브의 한 점으로 걷습니다. 잃어도 되는 요청이라 비신뢰다 — 다음 요청이 대신한다. */
-        FUNCTION( Server, Validate )
-        void moveTo( float32 x, float32 z );
-        /** @brief 좌표가 유한하고 허브 안인지 봅니다. */
-        FUNCTION()
-        bool validateMoveTo( float32 x, float32 z ) const;
-
         /** @brief 다른 아바타를 파티에 부릅니다. */
         FUNCTION( Server, Reliable, Validate )
         void inviteToParty( uint32 avatarID );
@@ -133,6 +127,14 @@ namespace sw
         int32 _stateValue{ 0 }; ///< 아바타는 레벨, 짐승은 체력, 버섯은 1
     };
 
+    /** @brief 들인 접속 하나의 아바타입니다(`IHubServer::collectAvatars`) — 서버의 폰이 접속마다 서고 거두어지는 기준이다. */
+    struct HubAvatarSession
+    {
+        float3 _position{};                                      ///< 아바타의 지금 자리(들일 때는 저장된 자리)
+        uint32 _avatarID{ 0 };                                   ///< 복제 엔티티 id 로도 쓴다
+        int32  _connectionID{ constant::invalid_index::kInt32 }; ///< 그 아바타를 조종하는 연결
+    };
+
     /**
      * @class IHubServer
      * @brief 서버 쪽 허브(서버 링크)의 공유 창구입니다. 구현은 서버 전용 폴더(`Server/HubServerLink`)에 있고, 씬 오브젝트는 공장(`IHubServerFactory`)으로만 만든다 —
@@ -146,6 +148,10 @@ namespace sw
         virtual void update( float32 deltaSeconds ) = 0;
         /** @brief 접속한 모두의 진행 쓰기를 맡기고 라우터에서 뗍니다. 두 번 불러도 됩니다. */
         virtual void shutdown() = 0;
+        /** @brief 들인 접속의 아바타를 아바타 번호 차례로 채웁니다(먼저 비운다). */
+        virtual void collectAvatars( vector<HubAvatarSession>& outListSession ) const = 0;
+        /** @brief 서버가 움직인 폰의 자리를 아바타에 옮깁니다(`HubWorld::moveAvatar`). 규칙이 받지 않으면 부르는 쪽이 폰을 되돌린다. */
+        virtual HubActionResult moveAvatar( uint32 avatarID, const float3& position, bool bRiding ) = 0;
     };
 
     /** @class IHubServerFactory @brief 서버 링크를 만드는 쪽입니다(서버 코드의 모듈 부분 — 클라이언트 구성에는 없다). */

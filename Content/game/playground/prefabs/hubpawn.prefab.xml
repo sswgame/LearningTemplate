@@ -1,0 +1,95 @@
+<?asset guid="827ff06a965e4f129ef50af195085978"?>
+<!-- 허브에 접속한 계정마다의 폰 — 서버가 접속마다 세우고, 클라이언트는 남의 폰 모습으로 세운다(HubPawnReplicationComponent). 혼자 하는 허브의 기수와 같은 몸이고,
+     걸음 · 캡슐 튜닝은 세운 뒤 씬의 Player 에서 옮긴다. 버튼 차례는 Player 와 같아야 한다(의도 비트가 스키마 차례다 — 다르면 세우지 않는다). -->
+<Prefab formatVersion="1" name="HubPawn">
+	<GameObject _schemaVersion="0" _name="HubPawn" _bActive="true">
+		<_listComponent>
+			<CharacterControllerComponent _localID="1851894784675401076" _componentName="CharacterControllerComponent"
+			                              _bActive="true"
+			                              _localPosition="0,0.05,0"
+			                              _localRotation="0,0,0"
+			                              _localScale="1,1,1"
+			                              _attachOwner="None"
+			                              _attachOwnerID="0"
+			                              _attachComponent="None"
+			                              _radius="0.3"
+			                              _halfHeight="0.6"
+			                              _stepHeight="0.3"
+			                              _maxSlopeAngle="45"
+			                              _gravityScale="1"
+			                              _mass="70"
+			                              _layer="Character" />
+			<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
+			               _bActive="true"
+			               _localPosition="0,0.9,0"
+			               _localRotation="0,0,0"
+			               _localScale="0.6,0.9,0.6"
+			               _attachOwner="None"
+			               _attachOwnerID="0"
+			               _attachComponent="#19b3407eb1f9cd74"
+			               _meshID="Capsule"
+			               _materialPath="game/playground/wildwest/materials/rider.material"
+			               _boundsRadius="0.866"
+			               _gpuSpinSeed="0"
+			               _bVisible="true" />
+			<MeshComponent _localID="163494941664531515" _componentName="MeshComponent"
+			               _bActive="true"
+			               _localPosition="0,1.85,0"
+			               _localRotation="0,0,0"
+			               _localScale="0.75,0.08,0.75"
+			               _attachOwner="None"
+			               _attachOwnerID="0"
+			               _attachComponent="#19b3407eb1f9cd74"
+			               _meshID="Cube"
+			               _materialPath="game/playground/wildwest/materials/hat.material"
+			               _boundsRadius="0.866"
+			               _gpuSpinSeed="0"
+			               _bVisible="true" />
+			<MeshComponent _localID="163496041176159726" _componentName="MeshComponent"
+			               _bActive="true"
+			               _localPosition="0,1.97,0"
+			               _localRotation="0,0,0"
+			               _localScale="0.42,0.2,0.42"
+			               _attachOwner="None"
+			               _attachOwnerID="0"
+			               _attachComponent="#19b3407eb1f9cd74"
+			               _meshID="Cube"
+			               _materialPath="game/playground/wildwest/materials/hat.material"
+			               _boundsRadius="0.866"
+			               _gpuSpinSeed="0"
+			               _bVisible="true" />
+			<PawnComponent _localID="11149290121538025405" _componentName="PawnComponent"
+			               _bActive="true"
+			               _moveAction="Move"
+			               _lookAction="None"
+			               _upAction="None"
+			               _inputLayer="None"
+			               _aiControllerPrefab=""
+			               _maxPitch="80.21409"
+			               _autoPossess="None"
+			               _bLockMouse="false">
+				<_listButton>
+					<item>Interact</item>
+					<item>West.Whistle</item>
+					<item>West.Use</item>
+					<item>West.Carry</item>
+				</_listButton>
+				<_listAnalog />
+			</PawnComponent>
+			<CharacterMovementComponent _localID="14594004469458933705" _componentName="CharacterMovementComponent"
+			                                _bActive="true"
+			                                _sprintButton="None"
+			                                _jumpButton="None"
+			                                _walkSpeed="3.5"
+			                                _sprintSpeed="3.5"
+			                                _acceleration="30"
+			                                _deceleration="40"
+			                                _jumpSpeed="5"
+			                                _turnRate="12"
+			                                _facingMode="MoveDirection" />
+			<MountInteractionComponent _localID="2913885659885966394" _componentName="MountInteractionComponent"
+			                           _bActive="true"
+			                           _interactButton="Interact" />
+		</_listComponent>
+	</GameObject>
+</Prefab>

@@ -21,8 +21,10 @@ namespace
     class FakeHubServer final : public IHubServer
     {
     public:
-        void update( float32 ) override {}
-        void shutdown() override {}
+        void            update( float32 ) override {}
+        void            shutdown() override {}
+        void            collectAvatars( vector<HubAvatarSession>& outListSession ) const override { outListSession.clear(); }
+        HubActionResult moveAvatar( uint32, const float3&, bool ) override { return HubActionResult::Ok; }
     };
 
     class CountingHubServerFactory final : public IHubServerFactory
@@ -43,6 +45,7 @@ namespace
         HubRules rules;
         rules._listLevelExperience          = { 100 };
         rules._moveSpeed                    = 6.0f;
+        rules._rideSpeed                    = 12.0f;
         rules._remoteCallBurstCount         = 20;
         rules._remoteCallRefillMilliseconds = 50;
         rules._listPlacement.push_back( HubPlacement{} );

@@ -2,6 +2,9 @@
 
 #include "Games/Playground/Hub/Server/HubServerLink.h"
 
+#include "Core/Algorithm/CompareUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/Network/Connection/NetEndpoint.h"
 #include "Core/Serialization/BitStream.h"
 
@@ -11,6 +14,21 @@
 namespace sw
 {
     static_assert( HubEntityType::kAvatar == 1 && HubEntityType::kHerb == 3, "HubEntityNetState::_typeID 의 Min · Max 를 엔티티 종류 번호와 맞춘다" );
+
+    namespace
+    {
+        /**
+         * @brief MMO 복제에 올리는 아바타 자리의 간격(m)입니다. 여기의 자리는 관심 영역 중심 · 보이는 목록에만 쓴다 — 걷는 동안 틱마다 다시 올리지 않게 굵게 자른다.
+         *        보이는 움직임은 폰 복제(`HubPawnReplicationComponent`)가 틱마다 싣는다.
+         */
+        constexpr float32 kAvatarInterestStep = 1.0f;
+
+        float3 makeInterestPosition( const float3& position )
+        {
+            return float3{ MathUtil::floor( position._x / kAvatarInterestStep ) * kAvatarInterestStep, position._y,
+                           MathUtil::floor( position._z / kAvatarInterestStep ) * kAvatarInterestStep };
+        }
+    } // namespace
 
     // ------------------------------------------------------------------------------
     // HubServerLink
@@ -125,6 +143,18 @@ namespace sw
         }
         publishEntities();
         _replicator.update( deltaSeconds );
+    }
+
+    void HubServerLink::collectAvatars( vector<HubAvatarSession>& outListSession ) const
+    {
+        outListSession.clear();
+        for ( const auto& entry : _mapAgent )
+        {
+            const HubAvatar* pAvatar = _world.findAvatar( entry.second->_avatarID );
+            if ( pAvatar != nullptr )
+                outListSession.push_back( HubAvatarSession{ pAvatar->_profile._position, pAvatar->_avatarID, entry.first } );
+        }
+        VectorUtil::sort( outListSession, Ascending<&HubAvatarSession::_avatarID>{} );
     }
 
     void HubServerLink::acceptConnection( int32 connectionID, uint64 accountID )
@@ -278,7 +308,7 @@ namespace sw
         // 매 틱 모두를 다시 싣지 않는다 — 위치 · 상태 값이 지난번 올린 것과 다른 엔티티만 올린다(가만히 있는 아바타 · 짐승 · 버섯은 건너뛴다).
         _world.forEachAvatar( [this]( const HubAvatar& avatar )
         {
-            publishEntity( avatar._avatarID, HubPublishedEntity{ avatar._profile._position, avatar._profile._level, HubEntityType::kAvatar }, 2.0f ); // 다른 플레이어는 짐승보다 먼저 보인다
+            publishEntity( avatar._avatarID, HubPublishedEntity{ makeInterestPosition( avatar._profile._position ), avatar._profile._level, HubEntityType::kAvatar }, 2.0f ); // 다른 플레이어는 짐승보다 먼저 보인다
         } );
         for ( const HubPlacementState& spawn : _world.getPlacements() )
         {

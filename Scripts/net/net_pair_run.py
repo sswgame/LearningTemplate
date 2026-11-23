@@ -3,7 +3,7 @@
 
   py -3 -m Scripts net-pair run --preset Ninja-Debug      # 서버 · 클라이언트를 띄워 접속이 열리는지 본다
   py -3 -m Scripts net-pair check <서버 로그> <클라이언트 로그>   # 이미 있는 두 로그만 판정한다
-  py -3 -m Scripts net-pair mmo --preset Ninja-Debug      # 허브 서버(Playground): 첫 접속 시나리오 → 나감(서버 저장) → 재접속 시나리오(같은 진행)
+  py -3 -m Scripts net-pair mmo --preset Ninja-Debug      # 허브 서버(Playground): 첫 접속 → 나감(서버 저장) → 재접속(같은 진행) → 두 클라이언트 함께(폰 복제 · 예측, 회선 흉내)
 
 준비(`run` 이 `Saved/NetPairRun/` 아래에 쓴다): 서버 설정(`NetPair.json` — 게임 포트 · 서비스 포트 · `_bGameConnectTicket`)과 옆 온라인 설정(`NetPair.online.json` —
 계정 키트의 개발용 시드 계정 설정 `_listSeedTestAccount`, 게임 접속 조립 `gameConnect`). 서버는 `-server-config=<경로>` 로 그 설정을 읽는다.
@@ -48,9 +48,9 @@ def check_logs(server_text: str, client_text: str) -> CheckResult:
     return result
 
 
-def write_configs(out_dir: Path, game_port: int, service_port: int, account: str = _ACCOUNT, password: str = _PASSWORD,
+def write_configs(out_dir: Path, game_port: int, service_port: int, accounts: tuple[tuple[str, str], ...] = ((_ACCOUNT, _PASSWORD),),
                  server_name: str = _SERVER_NAME) -> Path:
-    """서버 설정과 온라인 설정을 쓴다. 서버 설정 경로를 돌려준다."""
+    """서버 설정과 온라인 설정을 쓴다(@p accounts 는 시드 계정의 이름 · 비밀번호). 서버 설정 경로를 돌려준다."""
     server_config = {
         "_listenAddress": "127.0.0.1",
         "_gamePort": game_port,
@@ -81,7 +81,7 @@ def write_configs(out_dir: Path, game_port: int, service_port: int, account: str
                 "_loginNonceLifetimeSeconds": 300,
                 "_ticketKeySecretEnvironment": _TICKET_KEY_ENVIRONMENT,
                 "_bLightPasswordHash": True,
-                "_listSeedTestAccount": [{"_loginName": account, "_password": password}],
+                "_listSeedTestAccount": [{"_loginName": account, "_password": password} for account, password in accounts],
             }},
             {"_name": "gameConnect", "_settings": {
                 "_ticketKeySecretEnvironment": _TICKET_KEY_ENVIRONMENT,
@@ -130,6 +130,10 @@ _MMO_SERVER_NAME = "playground_hub"
 _MMO_GAME_PORT = 17877
 _MMO_SERVICE_PORT = 17880
 _MMO_SCENARIOS = ("game/playground/automation/netpair/hub_first.scenario.xml", "game/playground/automation/netpair/hub_return.scenario.xml")
+# 두 클라이언트를 함께 띄워 폰 복제 · 예측을 보는 시나리오(이름, 계정) — 계정 비밀번호는 `<계정>_pw_1` 이다. 회선 흉내(보내는 쪽)는 두 클라이언트 모두에 건다.
+_MMO_PAWN_SCENARIOS = (("game/playground/automation/netpair/hub_walk_north.scenario.xml", "hub_north"),
+                       ("game/playground/automation/netpair/hub_walk_south.scenario.xml", "hub_south"))
+_MMO_PAWN_EMULATION = {"gv_netEmulationLatencyMs": "60", "gv_netEmulationJitterMs": "10", "gv_netEmulationLossPercent": "3"}
 _MMO_ACCEPTED = re.compile(r"entered the hub as avatar \d+ on connection \d+ \(level (\d+), (new account|stored progress)\)")
 _MMO_SAVED = re.compile(r"\[Hub\] profile of account \d+ saved")
 
@@ -138,13 +142,15 @@ def check_mmo_logs(server_text: str, list_client_text: list[str]) -> CheckResult
     """MMO 두 프로세스 로그를 판정한다 — 서버가 첫 접속을 새 계정으로, 재접속을 저장된 진행(레벨 2)으로 들였고 그 사이 진행을 저장했으며, 어느 로그에도 오류 · 경고가 없다."""
     result = CheckResult()
     list_admitted = _MMO_ACCEPTED.findall(server_text)
-    if len(list_admitted) != 2:
-        result.problems.append(f"the server admitted {len(list_admitted)} sessions - expected the first login and the return")
+    expected = 2 + len(_MMO_PAWN_SCENARIOS)
+    if len(list_admitted) != expected:
+        result.problems.append(f"the server admitted {len(list_admitted)} sessions - expected {expected} (the first login, the return and the walkers)")
     else:
         if list_admitted[0][1] != "new account":
             result.problems.append(f"the first session was admitted with '{list_admitted[0][1]}' - the run must start from a fresh in-memory profile")
         if list_admitted[1] != ("2", "stored progress"):
             result.problems.append(f"the return was admitted at level {list_admitted[1][0]} with '{list_admitted[1][1]}' - expected level 2 from the stored progress")
+        result.problems += [f"a walker was admitted with '{entry[1]}' - expected a new account" for entry in list_admitted[2:] if entry[1] != "new account"]
     if _MMO_SAVED.search(server_text) is None:
         result.problems.append("the server log has no 'profile of account N saved' line - the session end did not save")
     result.problems += problem_lines("server", server_text)
@@ -159,7 +165,8 @@ def _run_mmo(argument: argparse.Namespace) -> int:
         if list_exe is None:
             return int(ExitCode.CHECK_INVALID)
         server_exe, client_exe = list_exe
-        server_config = write_configs(group.out_dir, _MMO_GAME_PORT, _MMO_SERVICE_PORT, _MMO_ACCOUNT, _MMO_PASSWORD, _MMO_SERVER_NAME)
+        accounts = ((_MMO_ACCOUNT, _MMO_PASSWORD), *((account, f"{account}_pw_1") for _, account in _MMO_PAWN_SCENARIOS))
+        server_config = write_configs(group.out_dir, _MMO_GAME_PORT, _MMO_SERVICE_PORT, accounts, _MMO_SERVER_NAME)
         # 서버 진행 저장소는 서버 설정의 온라인 저장소(`_listStore` 의 memory — 저장소 계약 `ServiceStore`)라 실행마다 새 진행으로 시작한다
         # (한 서버 실행 안의 저장 → 재접속 읽기는 같은 저장소를 지난다). 사용자 데이터 폴더도 실행마다 빈 폴더로 옮겨 다른 서버 파일이 섞이지 않게 한다.
         server_user_data = group.out_dir / "server_userdata"
@@ -179,12 +186,26 @@ def _run_mmo(argument: argparse.Namespace) -> int:
                 server.stop()
                 return group.fail(f"client {index + 1} ({scenario}) exited with code {client.return_code} (log: {client.log})")
             time.sleep(1.0)  # 서버가 나간 연결을 알아채고 진행을 저장할 틈
+        # 두 클라이언트를 함께 — 서로의 폰이 걷는 것을 보고, 회선 흉내 아래에서 어긋난 예측이 되돌아온다. 같은 파일을 쓰지 않게 사용자 데이터 폴더를 가른다.
+        list_walker = []
+        for scenario, account in _MMO_PAWN_SCENARIOS:
+            user_data = group.out_dir / f"{account}_userdata"
+            user_data.mkdir(parents=True, exist_ok=True)
+            list_walker.append(group.start(account, [client_exe, app_arguments.option("game", _MMO_GAME), app_arguments.option("scenario", scenario), app_arguments.flag("unattended"),
+                                                     *app_arguments.variables(_MMO_PAWN_EMULATION)],
+                                           environment={USER_DATA_ROOT_ENVIRONMENT: str(user_data)}, stdin=False))
+        for walker in list_walker:
+            walker.wait(_TIMEOUT_SECONDS * 4)
+            if walker.return_code != 0:
+                server.stop()
+                return group.fail(f"{walker.name} exited with code {walker.return_code} (log: {walker.log})")
+        list_client += list_walker
         server.stop()
     if server.return_code != 0:
         return group.fail(f"the server exited with code {server.return_code} (log: {server.log})")
     result = check_mmo_logs(server.text(), [client.text() for client in list_client])
     return report("net-pair", result.problems, [server.log, *(client.log for client in list_client)],
-                  "hub server login -> combat/gathering -> level 2 -> leave (saved) -> return with the same progress, no errors or warnings")
+                  "hub server login -> combat/gathering -> level 2 -> leave (saved) -> return with the same progress -> two predicted pawns see each other, no errors or warnings")
 
 
 def _print(result: CheckResult, server_log: Path, client_log: Path) -> int:
@@ -196,7 +217,7 @@ def main(list_argument: list[str]) -> int:
     sub = parser.add_subparsers(dest="mode", required=True)
     run_parser = sub.add_parser("run", help="서버와 클라이언트를 띄워 로그인 → 티켓 → 게임 접속을 돈다")
     run_parser.add_argument("--preset", default="Ninja-Debug", help="빌드 프리셋(build/<프리셋>/Bin 의 Server · App 을 쓴다)")
-    mmo_parser = sub.add_parser("mmo", help="허브 서버(Playground)와 클라이언트 둘(첫 접속 → 재접속)을 차례로 띄워 서버 권위 행동 · 저장 후 재접속을 본다")
+    mmo_parser = sub.add_parser("mmo", help="허브 서버(Playground)와 클라이언트(첫 접속 → 재접속 → 둘 함께)를 띄워 서버 권위 행동 · 저장 후 재접속 · 폰 복제와 예측을 본다")
     mmo_parser.add_argument("--preset", default="Ninja-Debug", help="빌드 프리셋(build/<프리셋>/Bin 의 Server · App 을 쓴다)")
     check_parser = sub.add_parser("check", help="이미 있는 서버 · 클라이언트 로그를 판정한다")
     check_parser.add_argument("server_log")

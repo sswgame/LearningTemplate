@@ -74,25 +74,6 @@ namespace sw
             static bool runInvite( const vector<string>& listArgument, string& outReply ) { return runIDCommand( listArgument, outReply, "inviteToParty" ); }
             static bool runAccept( const vector<string>& listArgument, string& outReply ) { return runIDCommand( listArgument, outReply, "acceptPartyInvite" ); }
 
-            static bool runMove( const vector<string>& listArgument, string& outReply )
-            {
-                float32 x = 0.0f;
-                float32 z = 0.0f;
-                if ( listArgument.size() != 2 || StringUtil::parseFloat( listArgument[0], x ) == false || StringUtil::parseFloat( listArgument[1], z ) == false )
-                    return false;
-                HubWorldComponent* const pHub = findHub();
-                if ( pHub == nullptr )
-                {
-                    outReply = kNoHubReply;
-                    return true;
-                }
-                const uint32                             sequence = pHub->getClient().callServerFunction( "moveTo", { ReflectedValue::make( x ), ReflectedValue::make( z ) } );
-                StringBuilder<constant::buffer::kMax256> replyBuilder;
-                replyBuilder.appendFormat( "hub: moveTo %# %# sent (call %#)", x, z, sequence );
-                outReply = string( replyBuilder.view() );
-                return true;
-            }
-
             static bool runLeave( const vector<string>& listArgument, string& outReply )
             {
                 if ( listArgument.empty() == false )
@@ -326,7 +307,6 @@ namespace sw
 {
     SW_DEV_COMMAND( HubAttack, "hub.attack", "hub.attack <creatureID>", "Ask the hub server to strike a creature (ids start at 100000 in spawn order)", &HubWorldComponentDevInternal::runAttack );
     SW_DEV_COMMAND( HubGather, "hub.gather", "hub.gather <herbID>", "Ask the hub server to gather a herb", &HubWorldComponentDevInternal::runGather );
-    SW_DEV_COMMAND( HubMove, "hub.move", "hub.move <x> <z>", "Ask the hub server to walk this avatar to a point (one step at most Max Move Step)", &HubWorldComponentDevInternal::runMove );
     SW_DEV_COMMAND( HubInvite, "hub.invite", "hub.invite <avatarID>", "Invite another avatar to this avatar's party", &HubWorldComponentDevInternal::runInvite );
     SW_DEV_COMMAND( HubAccept, "hub.accept", "hub.accept <leaderAvatarID>", "Accept the party invite of an avatar", &HubWorldComponentDevInternal::runAccept );
     SW_DEV_COMMAND( HubLeave, "hub.leave", "hub.leave", "Leave the party", &HubWorldComponentDevInternal::runLeave );

@@ -28,6 +28,11 @@ namespace sw
         return ReplicatedLayout::readFull( reader, *this, nullptr ) == FixedReadResult::Ok; // `Ok` 일 때만 값을 바꾼다
     }
 
+    float3 HubRules::clampInside( const float3& position ) const
+    {
+        return float3{ MathUtil::clamp( position._x, -_worldHalfExtent, _worldHalfExtent ), position._y, MathUtil::clamp( position._z, -_worldHalfExtent, _worldHalfExtent ) };
+    }
+
     // ------------------------------------------------------------------------------
     // HubWorld
     // ------------------------------------------------------------------------------
@@ -160,21 +165,21 @@ namespace sw
         return HubActionResult::Ok;
     }
 
-    HubActionResult HubWorld::moveAvatar( uint32 avatarID, float32 x, float32 z )
+    HubActionResult HubWorld::moveAvatar( uint32 avatarID, const float3& position, bool bRiding )
     {
         HubAvatar* pAvatar = findAvatarMutable( avatarID );
         if ( pAvatar == nullptr )
             return HubActionResult::UnknownTarget;
-        if ( isInsideHub( x, z ) == false )
+        pAvatar->_bRiding = bRiding ? SW_TRUE : SW_FALSE;
+        if ( isInsideHub( position._x, position._z ) == false || MathUtil::isFinite( position._y ) == false )
             return HubActionResult::StepTooLong;
-        const float3 target{ x, pAvatar->_profile._position._y, z };
-        // 걸음 길이만 보면 틱 없이 요청을 몰아 보내 아무 속도로나 갈 수 있었다(감사 K-1 — 공격에는 서버 쿨다운이 있는데 이동에는 없었다). 걸은 거리를
+        // 걸음 길이만 보면 몰아서 아무 속도로나 갈 수 있었다(감사 K-1 — 공격에는 서버 쿨다운이 있는데 이동에는 없었다). 간 거리를
         // 시간이 채우는 예산으로 막는다(언리얼 UCharacterMovementComponent 의 시간 불일치 감지 자리).
-        const float32 distance = float3::getHorizontalDistance( pAvatar->_profile._position, target );
+        const float32 distance = float3::getHorizontalDistance( pAvatar->_profile._position, position );
         if ( distance > _rules._maxMoveStep || distance > pAvatar->_moveBudget )
             return HubActionResult::StepTooLong;
         pAvatar->_moveBudget -= distance;
-        pAvatar->_profile._position = target;
+        pAvatar->_profile._position = position;
         return HubActionResult::Ok;
     }
 
@@ -240,7 +245,8 @@ namespace sw
         for ( auto& entry : _mapAvatar )
         {
             entry.second._attackCooldown = MathUtil::max( 0.0f, entry.second._attackCooldown - deltaSeconds );
-            entry.second._moveBudget     = MathUtil::min( _rules._maxMoveStep, entry.second._moveBudget + _rules._moveSpeed * deltaSeconds );
+            const float32 speedLimit     = entry.second._bRiding == SW_TRUE ? _rules._rideSpeed : _rules._moveSpeed;
+            entry.second._moveBudget     = MathUtil::min( _rules._maxMoveStep, entry.second._moveBudget + speedLimit * deltaSeconds );
         }
         for ( HubPlacementState& spawn : _listPlacement )
         {

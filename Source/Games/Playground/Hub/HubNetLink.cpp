@@ -35,17 +35,6 @@ namespace sw
         return _pWorld != nullptr && _pWorld->isPlacementOfKind( herbID, HubPlacementKind::Herb );
     }
 
-    void HubAvatarAgent::moveTo( float32 x, float32 z )
-    {
-        if ( _pWorld != nullptr )
-            _onAction( *this, _pWorld->moveAvatar( _avatarID, x, z ) );
-    }
-
-    bool HubAvatarAgent::validateMoveTo( float32 x, float32 z ) const
-    {
-        return _pWorld != nullptr && _pWorld->isInsideHub( x, z );
-    }
-
     void HubAvatarAgent::inviteToParty( uint32 avatarID )
     {
         if ( _pWorld != nullptr )

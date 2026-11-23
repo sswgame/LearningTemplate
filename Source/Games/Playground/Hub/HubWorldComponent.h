@@ -49,7 +49,9 @@ namespace sw
         /** @brief 0 혼자 · 1 서버 · 2 클라이언트입니다. */
         int32 getNetRoleValue() const;
 
-        const HubRules&      getRules() const { return _rules; }
+        const HubRules& getRules() const { return _rules; }
+        /** @brief 서버 역할로 선 서버 링크입니다. 서지 않았으면 nullptr 입니다(폰 복제가 읽는다 — `HubPawnReplicationComponent`). */
+        IHubServer*          findServer() const { return _pServer.get(); }
         HubClientLink&       getClient() { return _client; }
         const HubClientLink& getClient() const { return _client; }
 

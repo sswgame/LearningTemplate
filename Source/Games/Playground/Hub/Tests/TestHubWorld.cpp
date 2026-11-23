@@ -23,7 +23,8 @@ namespace
     {
         HubRules rules;
         rules._listLevelExperience = { 100, 250, 450, 700 };
-        rules._moveSpeed           = 6.0f; // 씬과 같다
+        rules._moveSpeed           = 6.0f;  // 씬과 같다
+        rules._rideSpeed           = 12.0f; // 씬과 같다
         HubPlacement spawn;
         spawn._kind     = HubPlacementKind::Creature;
         spawn._position = float3{ 2.0f, 0.0f, 0.0f };
@@ -98,14 +99,48 @@ SW_TEST_CASE( HubWorldTest, GatherAndMoveFollowTheServerLimits )
     SW_EXPECT_EQUAL( 15, world.findAvatar( avatarID )->_profile._experience );
     SW_EXPECT_TRUE( world.gatherHerb( avatarID, kNearHerbID ) == HubActionResult::TargetGone );
 
-    SW_EXPECT_TRUE( world.moveAvatar( avatarID, 30.0f, 0.0f ) == HubActionResult::StepTooLong );
-    SW_EXPECT_TRUE( world.moveAvatar( avatarID, 8.0f, 6.0f ) == HubActionResult::Ok );
+    SW_EXPECT_TRUE( world.moveAvatar( avatarID, float3{ 30.0f, 0.0f, 0.0f }, false ) == HubActionResult::StepTooLong );
+    SW_EXPECT_TRUE( world.moveAvatar( avatarID, float3{ 8.0f, 0.0f, 6.0f }, false ) == HubActionResult::Ok );
     SW_EXPECT_NEAR( 8.0, world.findAvatar( avatarID )->_profile._position._x, 1e-4 );
     SW_EXPECT_TRUE( world.gatherHerb( avatarID, kNearHerbID ) == HubActionResult::TargetGone );
     world.update( 5.1f );
     SW_EXPECT_TRUE( world.gatherHerb( avatarID, kNearHerbID ) == HubActionResult::OutOfRange );
     SW_EXPECT_FALSE( world.isInsideHub( 70.0f, 0.0f ) );
     SW_EXPECT_FALSE( world.isInsideHub( std::numeric_limits<float32>::quiet_NaN(), 0.0f ) );
+}
+
+/** @brief [HubWorldTest] 탄 동안의 속도 한도는 따로다 — 말의 질주(10 m/s)는 받고, 걷는 몸이 같은 거리를 가면 거절한다. 거절하면 자리는 그대로다. */
+SW_TEST_CASE( HubWorldTest, RidingHasItsOwnSpeedLimit )
+{
+    HubRules rules     = makeHubTestRules();
+    rules._maxMoveStep = 2.0f; // 모아 둔 몫이 짧게 떨어지게
+    HubWorld world;
+    SW_REQUIRE_TRUE( world.initialize( rules ) );
+    const uint32 riderID  = world.addAvatar( 1, HubProfile{} );
+    const uint32 walkerID = world.addAvatar( 2, HubProfile{} );
+    SW_EXPECT_TRUE( world.moveAvatar( riderID, float3{ 0.0f, 0.0f, 2.0f }, true ) == HubActionResult::Ok );
+    SW_EXPECT_TRUE( world.moveAvatar( walkerID, float3{ 0.0f, 0.0f, 2.0f }, false ) == HubActionResult::Ok );
+    constexpr float32 kStep   = 0.1f;
+    int32             refused = 0;
+    for ( int32 step = 1; step <= 20; ++step )
+    {
+        world.update( kStep );
+        const float32 z = 2.0f + 10.0f * kStep * static_cast<float32>( step );
+        SW_EXPECT_TRUE( world.moveAvatar( riderID, float3{ 0.0f, 0.0f, z }, true ) == HubActionResult::Ok );
+        refused += world.moveAvatar( walkerID, float3{ 0.0f, 0.0f, z }, false ) == HubActionResult::Ok ? 0 : 1;
+    }
+    SW_EXPECT_NEAR( 22.0f, world.findAvatar( riderID )->_profile._position._z, 1.0e-3f );
+    SW_EXPECT_TRUE( refused > 0 );
+    SW_EXPECT_TRUE( world.findAvatar( walkerID )->_profile._position._z < 22.0f );
+    SW_EXPECT_TRUE( world.moveAvatar( riderID, float3{ 0.0f, std::numeric_limits<float32>::quiet_NaN(), 22.0f }, true ) == HubActionResult::StepTooLong );
+}
+
+/** @brief [HubWorldTest] 폰의 걸음은 허브 경계 안으로 잘린다 — 서버와 예측이 같은 함수다. */
+SW_TEST_CASE( HubWorldTest, PositionsAreClampedInsideTheHub )
+{
+    const HubRules rules   = makeHubTestRules();
+    const float3   clamped = rules.clampInside( float3{ 100.0f, 3.0f, -100.0f } );
+    SW_EXPECT_TRUE( clamped == ( float3{ rules._worldHalfExtent, 3.0f, -rules._worldHalfExtent } ) );
 }
 
 /** @brief [HubWorldTest] 경험이 단계표를 넘은 만큼 레벨이 오른다(한 번에 둘도). */
@@ -148,12 +183,12 @@ SW_TEST_CASE( HubWorldTest, PartySharesExperience )
     SW_EXPECT_EQUAL( 0, world.findAvatar( memberID )->_profile._coins );
 
     // 나눔 거리 밖으로 간 파티원은 받지 않는다(한 걸음 12 m 씩 걸어 40 m 밖으로). 걸음 사이에는 시간이 흘러야 한다 — 틱 없이 몰아 보낸 걸음은 거절된다(감사 K-1).
-    SW_EXPECT_TRUE( world.moveAvatar( memberID, 0.0f, 12.0f ) == HubActionResult::Ok );
-    SW_EXPECT_TRUE( world.moveAvatar( memberID, 0.0f, 24.0f ) == HubActionResult::StepTooLong );
+    SW_EXPECT_TRUE( world.moveAvatar( memberID, float3{ 0.0f, 0.0f, 12.0f }, false ) == HubActionResult::Ok );
+    SW_EXPECT_TRUE( world.moveAvatar( memberID, float3{ 0.0f, 0.0f, 24.0f }, false ) == HubActionResult::StepTooLong );
     world.update( 12.0f / 6.0f ); // 걷는 속도 6 m/s 로 12 m
-    SW_EXPECT_TRUE( world.moveAvatar( memberID, 0.0f, 24.0f ) == HubActionResult::Ok );
+    SW_EXPECT_TRUE( world.moveAvatar( memberID, float3{ 0.0f, 0.0f, 24.0f }, false ) == HubActionResult::Ok );
     world.update( 12.0f / 6.0f );
-    SW_EXPECT_TRUE( world.moveAvatar( memberID, 0.0f, 36.0f ) == HubActionResult::Ok );
+    SW_EXPECT_TRUE( world.moveAvatar( memberID, float3{ 0.0f, 0.0f, 36.0f }, false ) == HubActionResult::Ok );
     attackUntilDefeated( world, leaderID, kSideCreatureID );
     SW_EXPECT_EQUAL( 90, world.findAvatar( leaderID )->_profile._experience );
     SW_EXPECT_EQUAL( 30, world.findAvatar( memberID )->_profile._experience );
