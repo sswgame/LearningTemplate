@@ -367,7 +367,7 @@ SW_TEST_CASE( HubNetLinkTest, CraftedTargetsAreDisconnected )
     SW_EXPECT_TRUE( rig._cluster.getServer().getConnectionState( connectionID ) != NetConnectionState::Connected );
 }
 
-/** @brief [HubNetLinkTest] 접속이 끝나면 진행을 저장하고, 같은 계정이 다시 들면(서버를 다시 세워도) 그 진행을 읽는다. 주체가 없는 연결은 아바타를 세우지 않는다. */
+/** @brief [HubNetLinkTest] 접속이 끝나면 진행을 저장하고, 같은 계정이 다시 들면(서버를 다시 세워도) 그 진행을 읽는다. */
 SW_TEST_CASE( HubNetLinkTest, ProgressSurvivesReconnectAndServerRestart )
 {
     HubLinkTestRig rig( 1 );
@@ -397,11 +397,28 @@ SW_TEST_CASE( HubNetLinkTest, ProgressSurvivesReconnectAndServerRestart )
     SW_EXPECT_EQUAL( uint64{ 1 }, restarted.getStats()._admittedCount );
     SW_EXPECT_EQUAL( 60, agent._shownExperience );
     SW_EXPECT_EQUAL( 1, agent._shownDefeatCount );
-
-    // 계정이 없는 연결(자격 없이 붙은)은 아바타를 세우지 않는다.
-    restarted.acceptConnection( connectionID + 1000, 0 );
-    rig.run( restarted, 0.1f );
-    SW_EXPECT_EQUAL( uint64{ 1 }, restarted.getStats()._refusedCount );
-    SW_EXPECT_EQUAL( 1, restarted.getOnlineCount() );
     restarted.shutdown();
+}
+
+/** @brief [HubNetLinkTest] 주체(티켓의 계정)가 없는 연결은 경고하고 끊는다 — 계정이 있는 연결은 그대로 든다. */
+SW_TEST_CASE( HubNetLinkTest, ConnectionWithoutAccountIsDisconnected )
+{
+    HubLinkTestRig rig( 2 );
+    const int32    accountConnectionID = rig.getConnectionID( 0 );
+    const int32    guestConnectionID   = rig.getConnectionID( 1 );
+    rig._pServerPeers->setAccount( guestConnectionID, 0 );
+    SW_EXPECT_LOG( "Hub.NoAccount" );
+    SW_REQUIRE_TRUE( rig.startServer( rig._server ) ); // 붙어 있던 연결을 들인다
+    for ( int32 step = 0; step < 8; ++step )
+    {
+        rig._cluster.step();
+        (void)rig._serverRouter.poll( *rig._pServerPeers ); // 서버만 — 끊긴 클라이언트 쪽 사건은 이 테스트가 보지 않는다
+        (void)rig._store.pollCompletions();
+        rig._server.update( 1.0f / 60.0f );
+    }
+    SW_EXPECT_EQUAL( uint64{ 1 }, rig._server.getStats()._refusedCount );
+    SW_EXPECT_EQUAL( uint64{ 1 }, rig._server.getStats()._admittedCount );
+    SW_EXPECT_EQUAL( 1, rig._server.getOnlineCount() );
+    SW_EXPECT_TRUE( rig._cluster.getServer().getConnectionState( guestConnectionID ) != NetConnectionState::Connected );
+    SW_EXPECT_TRUE( rig._cluster.getServer().getConnectionState( accountConnectionID ) == NetConnectionState::Connected );
 }

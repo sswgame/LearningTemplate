@@ -136,8 +136,9 @@ namespace sw
         if ( accountID == 0 )
         {
             ++_stats._refusedCount;
-            // 티켓 서버의 연결에는 늘 주체가 있다. 주체가 없는 것은 티켓을 받지 않는 서버(리슨 호스트 · 개발 세션)의 연결이라 끊지 않는다 — 세션 대상이 없어 허브 행동은 부르지 못한다.
-            SW_LOG_INFO_ID( "Hub.NoAccount", "[Hub] connection %# has no account (no game connect ticket - server config _bGameConnectTicket) - it gets no avatar", connectionID );
+            // 허브 서버는 티켓을 요구하는 세션에서만 선다(`HubWorldComponent`) — 여기까지 온 주체 없는 연결은 인증기가 걸렀어야 할 것이라 끊는다(심층 방어).
+            SW_LOG_WARNING_ID( "Hub.NoAccount", "[Hub] connection %# has no account - the hub needs a game connect ticket (server config _bGameConnectTicket); disconnecting it", connectionID );
+            _pPeers->disconnect( connectionID );
             return;
         }
         // 같은 계정이 이미 들어와 있거나 읽는 중이면 앞 연결을 저장하고 끊는다 — 저장이 읽기보다 먼저 맡겨지므로 새 연결은 그 진행을 읽는다.

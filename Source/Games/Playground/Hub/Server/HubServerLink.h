@@ -27,7 +27,7 @@ namespace sw
     struct HubServerStats
     {
         uint64 _admittedCount{ 0 }; ///< 들인 접속
-        uint64 _refusedCount{ 0 };  ///< 주체가 없거나 진행을 읽지 못해 아바타를 세우지 않은 접속
+        uint64 _refusedCount{ 0 };  ///< 주체가 없거나 진행을 읽지 못해 받지 않은 접속
         uint64 _replacedCount{ 0 }; ///< 같은 계정이 다시 붙어 끊은 앞 접속
         uint64 _actionCount{ 0 };   ///< 판정한 행동
         uint64 _publishCount{ 0 };  ///< 복제기에 올린 엔티티 갱신(`setEntity`) — 바뀐 엔티티만 센다
@@ -68,7 +68,7 @@ namespace sw
         void update( float32 deltaSeconds ) override;
 
         /**
-         * @brief 연결을 계정 @p accountID 로 들입니다 — 진행 읽기를 맡기고, 읽히면 아바타를 세운다. 계정이 0 이면 아바타를 세우지 않습니다(연결은 남는다 — 티켓을 받지 않는 서버의 손님이다).
+         * @brief 연결을 계정 @p accountID 로 들입니다 — 진행 읽기를 맡기고, 읽히면 아바타를 세운다. 계정이 0 이면 받지 않고 끊습니다.
          * @details 연결 열림(`onConnectionOpened`)이 주체로 부른다. 테스트는 주체 없는 루프백 연결에 계정을 직접 넘긴다.
          */
         void acceptConnection( int32 connectionID, uint64 accountID );

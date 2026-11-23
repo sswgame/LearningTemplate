@@ -276,6 +276,12 @@ namespace sw
         const NetLinkValue& link = *pLink;
         if ( link._role == NetLinkRole::Server )
         {
+            // 허브는 계정마다 진행을 저장한다 — 티켓을 요구하지 않는 세션(개발 · 리슨 호스트)에는 계정이 없어 허브 서버를 세우지 않는다. 접속한 클라이언트는 아바타 없이 같은 씬에 있다.
+            if ( link._bTicketRequired == SW_FALSE )
+            {
+                SW_LOG_INFO_ID( "Hub.NoTicketSession", "[Hub] this session does not require game connect tickets (server config _bGameConnectTicket) - the hub server does not start" );
+                return;
+            }
             if ( startServer( *link._pPeers, *link._pRouter ) == false )
                 SW_LOG_ERROR_ID( "Hub.ServerNotStarted", "[Hub] the hub server did not start - see the errors above" );
             return;
