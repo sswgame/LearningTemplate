@@ -798,6 +798,8 @@
 		<entry source="Following the selection - click to lock to this object"
 		       text="선택을 따라가는 중입니다 - 클릭하면 이 오브젝트에 고정합니다" />
 		<entry source="Forget the collected history" text="모은 기록을 지웁니다" />
+		<entry source="Found in a data file, not on an object. Double-click to show the file in the Content Browser"
+		       text="오브젝트가 아니라 데이터 파일의 문제입니다. 두 번 누르면 Content Browser 에서 보입니다" />
 		<entry source="Fraction of the screen trimmed from each edge, 0 to 0.1, as on TVs that cut off the border. The red frame shows the safe area."
 		       text="가장자리를 잘라 내는 TV 처럼 각 변에서 잘라 낼 화면 비율(0~0.1)입니다. 빨간 테두리가 안전 영역입니다." />
 		<entry source="Frame" text="맞춤" />

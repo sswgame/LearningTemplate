@@ -2481,6 +2481,9 @@
 		<entry key="EditorMapCheck.CheckMap"
 		       text="활성 씬의 모든 오브젝트를 다시 검증합니다"
 		       sourceHash="513adef7c162ddc7" />
+		<entry key="EditorMapCheck.CheckSourceTip"
+		       text="오브젝트가 아니라 데이터 파일의 문제입니다. 두 번 누르면 Content Browser 에서 보입니다"
+		       sourceHash="dc2b5fbf20f67e13" />
 		<entry key="EditorMapCheck.FixAllTooltip"
 		       text="보이는 줄의 안전한 고침을 모두 한 번의 실행 취소 단계로 적용합니다. 고치기 버튼이 없는 줄은 손으로 고쳐야 합니다"
 		       sourceHash="3778efd46b5886db" />

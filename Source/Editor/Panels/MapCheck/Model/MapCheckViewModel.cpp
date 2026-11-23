@@ -5,6 +5,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Time/MonotonicClock.h"
 
+#include "Editor/Common/Commands/Scene/EditorMapCheck.h"
 #include "Editor/Common/EditorSceneIterationAccess.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorNotificationManager.h"
@@ -150,6 +151,7 @@ namespace sw::editor
         {
             const GameObject* pObject = MapCheckViewModelInternal::findObject( row._issue._sourceID );
             row._bInActiveScene       = pObject != nullptr ? SW_TRUE : SW_FALSE;
+            row._bFromCheck           = EditorMapCheck::isCheckSource( row._issue._sourceID ) ? SW_TRUE : SW_FALSE;
             row._bSelected            = pObject != nullptr && pObject == pPrimary ? SW_TRUE : SW_FALSE;
         }
     }
@@ -211,6 +213,7 @@ namespace sw::editor
         {
             (void)ObjectValidation::reportGameObject( *pObject, false ); // 결과는 그 씬의 표(SceneValidationIssues)에 남고 테이블이 읽는다
         }
+        (void)EditorMapCheck::runAll( *pManager ); // 오브젝트 밖의 검사(카탈로그 · 키트) — 결과는 같은 표에 남는다
         SW_LOG_INFO_ID( "MapCheckPanel.MapCheckObjectChecked", "Map Check: %# object(s) checked in %# ms", listObject.size(), stopwatch.getElapsedMilliseconds() );
         return static_cast<uint32>( listObject.size() );
     }

@@ -7272,6 +7272,12 @@
 				<item>Source/Editor/Panels/MapCheck/MapCheckPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EditorMapCheck.CheckSourceTip"
+		       source="Found in a data file, not on an object. Double-click to show the file in the Content Browser">
+			<origins>
+				<item>Source/Editor/Panels/MapCheck/MapCheckPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EditorMapCheck.FixAllTooltip"
 		       source="Apply every safe fix in the visible rows as one undo step. Rows without a Fix button need a hand fix">
 			<origins>

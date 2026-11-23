@@ -5,6 +5,9 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/fixed_string.h"
 
+#include "Editor/Common/Commands/EditorCommandIDs.h"
+#include "Editor/Common/Commands/EditorCommandRegistry.h"
+#include "Editor/Common/Commands/EditorCommandTarget.h"
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
@@ -49,6 +52,18 @@ namespace sw::editor
                     const string tooltipText = SW_LOCKEYFORMAT( "EditorMapCheck", "StatusTooltip", TextArgumentList().addInteger( "errorCount", counts._errorCount ).addInteger( "warningCount", counts._warningCount ) );
                     ImGui::SetTooltip( "%s", tooltipText.c_str() );
                 }
+            }
+
+            /** @brief 검사가 적은 에셋 @p assetID 를 콘텐츠 브라우저에서 보입니다(디스크에 없는 에셋이면 명령이 꺼져 있다). */
+            static void browseTo( const string& assetID )
+            {
+                EditorCommandRegistry* pCommands = EditorCommandRegistry::findInEditorContext();
+                if ( pCommands == nullptr )
+                    return;
+                EditorCommandTarget target;
+                target._kind      = EditorCommandTargetKind::Asset;
+                target._hoveredID = EditorWidgets::registerAssetPayload( assetID );
+                (void)pCommands->execute( editorcommand::kAssetBrowseTo, target );
             }
 
             /** @brief 감시 값 `Editor.MapCheckFixableRows` — 맵 검사 창이 지난 그리기에서 안전한 고침이 있다고 본 줄 수입니다. 창이 없으면 값을 내지 않는다. */
@@ -187,10 +202,17 @@ namespace sw::editor
                 {
                     (void)MapCheckViewModel::selectObject( issue._sourceID ); // 활성 씬에 없는 오브젝트(지운 것)면 고를 것이 없다
                     if ( EditorInputGUI::wasItemDoubleClicked() )
-                        MapCheckViewModel::focusObject( issue._sourceID );
+                    {
+                        if ( row._bFromCheck != SW_FALSE )
+                            MapCheckPanelInternal::browseTo( issue._sourceLabel );
+                        else
+                            MapCheckViewModel::focusObject( issue._sourceID );
+                    }
                 }
                 EditorSelfTestMarks::recordFormat( "mapCheck.row.%#", rowIndex );
-                if ( row._bInActiveScene == SW_FALSE )
+                if ( row._bFromCheck != SW_FALSE )
+                    EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMapCheck", "CheckSourceTip" ) );
+                else if ( row._bInActiveScene == SW_FALSE )
                     EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMapCheck", "NotInActiveScene" ) );
 
                 ImGui::TableSetColumnIndex( 2 );
