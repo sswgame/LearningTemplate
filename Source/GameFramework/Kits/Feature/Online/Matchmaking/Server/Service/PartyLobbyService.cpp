@@ -157,6 +157,8 @@ namespace sw
                 {
                     if ( party._queuedTicketID != _request._expectedTicketID )
                         return _request._expectedTicketID == 0 ? MatchmakingResult::AlreadyQueued : MatchmakingResult::NotQueued; // 그사이 다른 티켓이 섰거나 이미 풀렸다
+                    if ( _request._ticketID != 0 && party._listMemberID != _request._listExpectedMember )
+                        return MatchmakingServiceResult::fail( OnlineError::kBusy ); // 파티를 찾은 뒤 멤버가 바뀌었다 — 옛 명단의 티켓을 세우지 않는다
                     party._queuedTicketID = _request._ticketID;
                     break;
                 }
@@ -481,12 +483,14 @@ namespace sw
         submitStep( EphemeralRequest::makeGet( makeAccountPartyKey( leaderID ) ), StepKind::IndexRead, request );
     }
 
-    void PartyLobbyService::setPartyTicket( uint64 partyID, uint64 ticketID )
+    void PartyLobbyService::reservePartyTicket( uint64 partyID, uint64 ticketID, const vector<AccountID>& listMember, const PartyFoundDelegate& onReserved )
     {
         Request request;
-        request._operation = PartyLobbyOperation::PartySetTicket;
-        request._partyID   = partyID;
-        request._ticketID  = ticketID;
+        request._operation          = PartyLobbyOperation::PartySetTicket;
+        request._partyID            = partyID;
+        request._ticketID           = ticketID;
+        request._listExpectedMember = listMember;
+        request._onPartyFound       = onReserved;
         startPartyMutation( request );
     }
 
@@ -787,6 +791,8 @@ namespace sw
     void PartyLobbyService::finishParty( const Request& request, MatchmakingServiceResult result, const PartySnapshot& party, AccountID removedID, uint64 brokenTicketID )
     {
         const vector<uint8> indexValue = MatchmakingProtocol::encodeID( request._partyID );
+        if ( result == MatchmakingResult::Ok )
+            refreshIndexTTL( party ); // 바꾸기는 모두 파티 기록의 수명을 늘린다 — 인덱스를 따로 두면 먼저 사라져 멤버가 파티에 든 채 찾지도 떠나지도 못한다
         switch ( request._operation )
         {
             case PartyLobbyOperation::PartyCreate:
@@ -798,10 +804,7 @@ namespace sw
                     break;
                 }
                 if ( request._operation == PartyLobbyOperation::PartyAccept )
-                {
                     submitFireAndForget( EphemeralRequest::makeErase( makeInviteKey( request._actorID, request._partyID ) ) );
-                    refreshIndexTTL( party );
-                }
                 notifyParty( party, kInvalidAccountID ); // 만든 사람에게도 보낸다. 클라이언트의 "내 파티" 는 알림이 원본이기 때문이다
                 break;
             }
@@ -817,7 +820,6 @@ namespace sw
                 notification._invite._partyID   = request._partyID;
                 notification._invite._inviterID = request._actorID;
                 _notificationBuffer.push( std::move( notification ) );
-                refreshIndexTTL( party );
                 break;
             }
             case PartyLobbyOperation::PartyLeave:
@@ -836,7 +838,6 @@ namespace sw
                 submitFireAndForget( EphemeralRequest::makeCompareAndErase( makeAccountPartyKey( removedID ), indexValue ) );
                 if ( brokenTicketID != 0 )
                     _brokenTicketBuffer.push( brokenTicketID );
-                refreshIndexTTL( party );
                 notifyParty( party, removedID );
                 break;
             }
@@ -844,7 +845,9 @@ namespace sw
             {
                 if ( result == MatchmakingResult::Ok )
                     notifyParty( party, kInvalidAccountID );
-                return; // 완료는 없다
+                if ( request._onPartyFound.isBound() )
+                    request._onPartyFound( request._ticketID, result, party ); // 잡기의 결과다. 풀기는 기다리는 쪽이 없다
+                return;                                                        // 완료는 없다
             }
             default:
             {

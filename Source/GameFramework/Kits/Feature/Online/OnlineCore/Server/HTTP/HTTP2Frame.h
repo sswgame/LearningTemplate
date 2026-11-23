@@ -58,6 +58,7 @@ namespace sw
         static constexpr uint16 kSettingsMaxConcurrentStreams = 0x3;
         static constexpr uint16 kSettingsInitialWindowSize    = 0x4;
         static constexpr uint16 kSettingsMaxFrameSize         = 0x5;
+        static constexpr uint16 kSettingsMaxHeaderListSize    = 0x6;
 
         /** @brief 빅 엔디언 32 비트 정수 하나를 읽습니다(@p pBytes 는 4 바이트 이상). */
         [[nodiscard]] static uint32 readUint32( const uint8* pBytes );

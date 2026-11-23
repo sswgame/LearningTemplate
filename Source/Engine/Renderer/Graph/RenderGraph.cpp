@@ -882,26 +882,28 @@ namespace sw
 
         // `runParallel` 로 바꾸지 않는다 — 그 티켓은 Normal 큐로 가는데 렌더 스레드가 곧바로 기다리는 기록은 High 레인이어야 한다(아래). 스테이지는 이미 TaskManager 의 것이다.
         TaskStageHandle stage = pTaskManager->createStage( "RenderGraphLevel" );
-        for ( ParallelPassEntry& entry : listPassEntry )
+        BLOCK( "Submit pass record tasks" )
         {
-            TaskHandle handle = pTaskManager->emplaceTask( "RenderPassRecord", SW_DELEGATE_METHOD( TaskDelegate, &ParallelPassEntry::record, &entry ) );
-            if ( handle.isValid() )
+            TaskManager::SubmitBatch batch{ *pTaskManager }; // 레벨의 패스를 모두 넣은 뒤 한 번만 깨운다. 패스마다 깨우면 그 시그널이 기록 시간의 대부분이었다.
+            for ( ParallelPassEntry& entry : listPassEntry )
             {
-                // 렌더 스레드는 이 스테이지를 곧바로 기다린다. 게임 스레드의 대량 잡(트랜스폼 플러시, 씬 수집)
-                // 뒤에 줄을 서면 그 줄이 그대로 프레임 지연이다. High 레인은 모든 워커가 자기 덱보다 먼저 본다.
-                handle.setPriority( TaskPriority::High );
-                stage.addTask( handle );
-                // 레벨의 패스를 모두 넣은 뒤 한 번만 깨운다. 패스마다 깨우면 그 시그널이 기록 시간의 대부분이었다.
-                pTaskManager->submitWithoutWake( handle );
-            }
-            else
-            {
-                // 작업을 넣지 못했다(풀이 바닥났거나 종료 중이다). 여기서(렌더 스레드) 직접 기록한다. 그냥 넘어가면 그 리스트가 기록 없이
-                // 아래에서 제출된다. 레벨의 첫 리스트는 **열린 채로**, 나머지는 지난 프레임의 명령 그대로 제출된다.
-                entry.record();
+                TaskHandle handle = pTaskManager->emplaceTask( "RenderPassRecord", SW_DELEGATE_METHOD( TaskDelegate, &ParallelPassEntry::record, &entry ) );
+                if ( handle.isValid() )
+                {
+                    // 렌더 스레드는 이 스테이지를 곧바로 기다린다. 게임 스레드의 대량 잡(트랜스폼 플러시, 씬 수집)
+                    // 뒤에 줄을 서면 그 줄이 그대로 프레임 지연이다. High 레인은 모든 워커가 자기 덱보다 먼저 본다.
+                    handle.setPriority( TaskPriority::High );
+                    stage.addTask( handle );
+                    batch.submit( handle );
+                }
+                else
+                {
+                    // 작업을 넣지 못했다(풀이 바닥났거나 종료 중이다). 여기서(렌더 스레드) 직접 기록한다. 그냥 넘어가면 그 리스트가 기록 없이
+                    // 아래에서 제출된다. 레벨의 첫 리스트는 **열린 채로**, 나머지는 지난 프레임의 명령 그대로 제출된다.
+                    entry.record();
+                }
             }
         }
-        pTaskManager->wakeSleepingWorkers( static_cast<uint32>( listPassEntry.size() ) );
 
         pTaskManager->waitStage( stage );
         pDevice->setParallelRecording( false );

@@ -60,7 +60,7 @@ namespace sw
 namespace sw
 {
     HTTP2Connection::HTTP2Connection( const HTTP2ConnectionConfig& settings )
-        : _decoder{}
+        : _decoder{ HPACKDecoder::kDefaultTableSize, settings._maxHeaderListBytes }
         , _settings{ settings }
         , _mapStream{}
         , _listQueued{}
@@ -95,7 +95,8 @@ namespace sw
         outBytes.insert( outBytes.end(), pPreface, pPreface + HTTP2FrameHeader::kConnectionPreface.size() );
         vector<HTTP2Setting> listSetting;
         listSetting.push_back( HTTP2Setting{ HTTP2FrameHeader::kSettingsEnablePush, 0 } ); // 푸시를 받지 않는다
-        (void)HTTP2FrameHeader::writeSettings( listSetting, false, outBytes );             // 값이 상수라 범위 안이다
+        listSetting.push_back( HTTP2Setting{ HTTP2FrameHeader::kSettingsMaxHeaderListSize, _settings._maxHeaderListBytes } );
+        (void)HTTP2FrameHeader::writeSettings( listSetting, false, outBytes ); // 항목이 둘이라 범위 안이다
     }
 
     void HTTP2Connection::submit( uint64 requestID, const HTTPClientRequest& request, const HTTPAddress& url, vector<uint8>& outBytes )

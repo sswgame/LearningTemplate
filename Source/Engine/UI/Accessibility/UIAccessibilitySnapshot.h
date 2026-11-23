@@ -50,6 +50,8 @@ namespace sw
         optional<uint32> findNode( uint32 screen, WidgetID widget ) const;
         /** @brief (화면, 위젯 토큰 키 `WidgetID::getKey`)의 노드 번호입니다 — 글자 경로에서 읽은 키로 찾는 쪽(AT-SPI)이 쓴다. 없으면 비어 있습니다. */
         optional<uint32> findNodeByWidgetKey( uint32 screen, uint64 widgetKey ) const;
+        /** @brief 점 @p position (UI 단위)을 담는 맨 위 화면의 가장 깊은 노드입니다. 화면은 위에서 아래로 놓여 있어 점을 담는 첫 화면 안에서만 고릅니다. 없으면 비어 있습니다. */
+        optional<uint32> findNodeAt( const float2& position ) const;
 
         // 접근성 트리를 뽑는 도구입니다.
         /**

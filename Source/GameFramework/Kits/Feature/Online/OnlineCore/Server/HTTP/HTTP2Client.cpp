@@ -362,43 +362,69 @@ namespace sw
             for ( auto& [sessionID, session] : _mapSession )
             {
                 (void)sessionID;
-                vector<uint64> listExpired;
-                for ( const auto& [requestID, deadline] : session->_mapDeadline )
-                {
-                    if ( now >= deadline )
-                        listExpired.push_back( requestID );
-                }
-                if ( listExpired.empty() )
+                const bool bWritten = expireRequestsLocked( *session, now );
+                if ( bWritten && isSpent( *session ) == false )
                     continue;
-                for ( const uint64 requestID : listExpired )
-                {
-                    bool bWaiting = false;
-                    for ( size_t index = 0; index < session->_listWaiting.size(); ++index )
-                    {
-                        if ( session->_listWaiting[index]._requestID != requestID )
-                            continue;
-                        session->_listWaiting.erase( session->_listWaiting.begin() + static_cast<ptrdiff_t>( index ) );
-                        failImmediately( requestID, "timed out" );
-                        session->_mapDeadline.erase( requestID );
-                        bWaiting = true;
-                        break;
-                    }
-                    if ( bWaiting == false && session->_connection != nullptr )
-                        session->_connection->cancel( requestID, "timed out", session->_outBytes ); // 응답으로 모이고 아래 poll 가 회수한다(시한도 거기서 지운다)
-                    else if ( bWaiting == false )
-                        session->_mapDeadline.erase( requestID );
-                }
-                if ( session->_connection != nullptr && pollLocked( *session ) == false )
-                {
-                    failSessionLocked( *session, "could not send the request" );
-                    listClose.push_back( session->getHandle() );
-                }
+                failSessionLocked( *session, "could not send the request" ); // 새 요청을 받지 않는다. 쓸 일이 끝난 연결에는 끝낼 요청이 없다
+                listClose.push_back( session->getHandle() );
             }
         }
         for ( const StreamConnectionHandle handle : listClose )
         {
             _transport->close( handle, StreamCloseMode::Abort );
         }
+    }
+
+    bool HTTP2Client::expireRequestsLocked( Session& session, MonotonicMilliseconds now )
+    {
+        vector<uint64> listExpired;
+        for ( const auto& [requestID, deadline] : session._mapDeadline )
+        {
+            if ( now >= deadline )
+                listExpired.push_back( requestID );
+        }
+        if ( listExpired.empty() )
+            return true;
+        for ( const uint64 requestID : listExpired )
+        {
+            bool bWaiting = false;
+            for ( size_t index = 0; index < session._listWaiting.size(); ++index )
+            {
+                if ( session._listWaiting[index]._requestID != requestID )
+                    continue;
+                session._listWaiting.erase( session._listWaiting.begin() + static_cast<ptrdiff_t>( index ) );
+                failImmediately( requestID, "timed out" );
+                session._mapDeadline.erase( requestID );
+                bWaiting = true;
+                break;
+            }
+            if ( bWaiting == false && session._connection != nullptr )
+                session._connection->cancel( requestID, "timed out", session._outBytes ); // 응답으로 모이고 아래 poll 가 회수한다(시한도 거기서 지운다)
+            else if ( bWaiting == false )
+                session._mapDeadline.erase( requestID );
+        }
+        return session._connection == nullptr || pollLocked( session );
+    }
+
+    bool HTTP2Client::isSpent( const Session& session )
+    {
+        switch ( session._state )
+        {
+            case SessionState::Resolving:
+            {
+                return false; // 연결이 없다 — `advanceResolvingLocked` 가 정리한다
+            }
+            case SessionState::Connecting:
+            case SessionState::Handshaking:
+            {
+                return session._mapDeadline.empty();
+            }
+            case SessionState::Ready:
+            {
+                return session._connection->isUsable() == false && session._connection->getActiveCount() == 0;
+            }
+        }
+        return false;
     }
 
     int32 HTTP2Client::pollResponses( vector<HTTPClientResponse>& outListResponse )

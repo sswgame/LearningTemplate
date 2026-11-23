@@ -7,6 +7,7 @@
  * - sw::make_pair: 인자 타입을 decay 해서 알맞은 sw::pair 를 만드는 팩토리 함수입니다.
  */
 #pragma once
+#include "Core/Container/BitwiseRelocatable.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Foundation/Types.h"
 
@@ -249,6 +250,11 @@ namespace sw
         else
             return std::move( p.second );
     }
+
+    template <typename T1, typename T2>
+    struct is_bitwise_relocatable<pair<T1, T2>> : std::bool_constant<is_bitwise_relocatable_v<T1> && is_bitwise_relocatable_v<T2>>
+    {
+    };
 } // namespace sw
 
 // 구조적 바인딩 · tuple 인터페이스

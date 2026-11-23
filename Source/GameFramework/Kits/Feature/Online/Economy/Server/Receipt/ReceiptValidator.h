@@ -67,22 +67,35 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 주문의 줄 하나(상품과 산 수)입니다. 수의 기본값은 0(모름)이다 — 제공자가 스토어 답에서 옮겨 적지 않으면 하나로 치지 않고 거절한다. */
+    struct ReceiptLineItem
+    {
+        string _productID{};
+        int64  _quantity{ 0 };
+
+        /** @brief 지급할 수 있는 줄(상품이 있고 1 개 이상)이면 true 입니다. */
+        [[nodiscard]] bool isValid() const { return _productID.empty() == false && _quantity >= 1; }
+    };
+} // namespace sw
+
+namespace sw
+{
     /** @brief 검증 결과입니다. */
     struct ReceiptValidationResult
     {
-        string           _storeName{};
-        string           _transactionID{}; ///< 스토어의 거래 id 이다. 원장 분개 키가 되며 96바이트 이하이다
-        string           _productID{};
-        string           _failureText{};  ///< 로그용 문자열이며 영어로 쓴다
-        string           _storeBuyerID{}; ///< 스토어 답이 말한 구매자이다(스토어 계정 id 또는 구매 때 찍은 토큰). 말하지 않았으면 비어 있다
-        string           _deliveryKey{};  ///< 비어 있지 않으면 지급한 뒤 스토어에 알려야 한다(`confirmDelivery`). 뜻은 제공자가 안다(구글은 영수증 글)
-        ReceiptBuyerRule _buyerRule{};    ///< 이 값을 지급 계정과 어떻게 대조하는가
-        uint64           _ticket{ 0 };
-        uint64           _accountID{ 0 };
-        int64            _purchaseTimeMs{ 0 };
-        int64            _deliveryDeadlineMs{ 0 }; ///< 이 시각까지 알리지 않으면 스토어가 결제를 되돌린다(`_deliveryKey` 가 있을 때)
-        ReceiptStatus    _status{ ReceiptStatus::Invalid };
-        uint8            _bSandbox{ SW_FALSE }; ///< 테스트 결제이다. 샌드박스나 테스트 카드가 해당한다
+        string                  _storeName{};
+        string                  _transactionID{}; ///< 스토어의 거래 id 이다. 원장 분개 키가 되며 96바이트 이하이다
+        vector<ReceiptLineItem> _listItem{};      ///< 이 거래로 산 것 전부이다(스팀 주문은 여러 줄이다). Valid 면 모두 지급할 수 있는 줄이다
+        string                  _failureText{};   ///< 로그용 문자열이며 영어로 쓴다
+        string                  _storeBuyerID{};  ///< 스토어 답이 말한 구매자이다(스토어 계정 id 또는 구매 때 찍은 토큰). 말하지 않았으면 비어 있다
+        string                  _deliveryKey{};   ///< 비어 있지 않으면 지급한 뒤 스토어에 알려야 한다(`confirmDelivery`). 뜻은 제공자가 안다(구글은 영수증 글)
+        ReceiptBuyerRule        _buyerRule{};     ///< 이 값을 지급 계정과 어떻게 대조하는가
+        uint64                  _ticket{ 0 };
+        uint64                  _accountID{ 0 };
+        int64                   _purchaseTimeMs{ 0 };
+        int64                   _deliveryDeadlineMs{ 0 }; ///< 이 시각까지 알리지 않으면 스토어가 결제를 되돌린다(`_deliveryKey` 가 있을 때)
+        ReceiptStatus           _status{ ReceiptStatus::Invalid };
+        uint8                   _bSandbox{ SW_FALSE }; ///< 테스트 결제이다. 샌드박스나 테스트 카드가 해당한다
     };
 } // namespace sw
 

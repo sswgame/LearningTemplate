@@ -54,7 +54,7 @@ namespace sw
          * @param poolLimit 이 효과를 한꺼번에 틀 수 있는 수(1 이상) — 넘으면 가장 오래 전에 튼 것을 옮겨 다시 튼다
          * @return 받았으면 true 입니다(전용 서버 · 빈 경로 · 상한 0 이면 false). 튼 수는 실제로 튼 때 오른다(`getPlayCount`).
          */
-        bool play( const string& effectPath, const float3& position, uint32 poolLimit ) const;
+        bool play( const hashed_string& effectPath, const float3& position, uint32 poolLimit ) const;
 
         /** @brief 효과 @p effectPath 를 이 씬에서 튼 수입니다(누적). */
         uint32 getPlayCount( const hashed_string& effectPath ) const;
@@ -63,7 +63,7 @@ namespace sw
 
     private:
         /** @brief 지금 바로 틉니다 — 구조 변경이 열린 때(틱 밖 · 틱 뒤 게임 스레드)에만 부른다(`play` 의 명령). */
-        void playNow( const string& effectPath, const float3& position, uint32 poolLimit );
+        void playNow( const hashed_string& effectPath, const float3& position, uint32 poolLimit );
 
         /** @brief 효과 하나의 풀입니다. */
         struct EffectPool
@@ -74,9 +74,9 @@ namespace sw
         };
 
         /** @brief 이번에 쓸 칸의 효과입니다. 만들지 못하면 nullptr 입니다. */
-        VFXComponent* acquireEffect( EffectPool& pool, const string& effectPath, uint32 poolLimit );
+        VFXComponent* acquireEffect( EffectPool& pool, const hashed_string& effectPath, uint32 poolLimit );
         /** @brief 풀 오브젝트 하나(효과 @p effectPath 를 읽은 `VFXComponent`)를 만듭니다. */
-        VFXComponent* createEffect( const string& effectPath );
+        VFXComponent* createEffect( const hashed_string& effectPath );
 
     private:
         GameObjectManager*                       _pManager;

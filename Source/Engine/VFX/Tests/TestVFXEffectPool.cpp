@@ -17,23 +17,21 @@ SW_TEST_CASE( VFXEffectPoolTest, PlaysUpToTheLimitThenReusesTheOldest )
 {
     GameObjectManager   manager;
     VFXEffectPool&      pool = manager.getSubsystem<VFXEffectPool>();
-    const string        splash( "engine/vfx/footstep_splash.vfx.xml" );
-    const string        other( "engine/vfx/footstep_dust.vfx.xml" );
-    const hashed_string splashKey( splash );
-    const hashed_string otherKey( other );
+    const hashed_string splashKey( "engine/vfx/footstep_splash.vfx.xml" );
+    const hashed_string otherKey( "engine/vfx/footstep_dust.vfx.xml" );
     constexpr uint32    kLimit = 2;
     if constexpr ( build::kWithClientCode == false )
     {
-        SW_EXPECT_FALSE( pool.play( splash, float3{ 0.0f, 0.0f, 0.0f }, kLimit ) );
+        SW_EXPECT_FALSE( pool.play( splashKey, float3{ 0.0f, 0.0f, 0.0f }, kLimit ) );
         SW_EXPECT_EQUAL( 0u, pool.getPoolSize( splashKey ) );
         return;
     }
-    SW_EXPECT_FALSE( pool.play( splash, float3{ 0.0f, 0.0f, 0.0f }, 0 ) ); // 상한 0 은 틀 자리가 없다
+    SW_EXPECT_FALSE( pool.play( splashKey, float3{ 0.0f, 0.0f, 0.0f }, 0 ) ); // 상한 0 은 틀 자리가 없다
     for ( uint32 index = 0; index < 4; ++index )
-        SW_EXPECT_TRUE( pool.play( splash, float3{ static_cast<float32>( index ), 0.0f, 0.0f }, kLimit ) );
+        SW_EXPECT_TRUE( pool.play( splashKey, float3{ static_cast<float32>( index ), 0.0f, 0.0f }, kLimit ) );
     SW_EXPECT_EQUAL( 4u, pool.getPlayCount( splashKey ) );
     SW_EXPECT_EQUAL( kLimit, pool.getPoolSize( splashKey ) );
-    SW_EXPECT_TRUE( pool.play( other, float3{ 0.0f, 0.0f, 0.0f }, kLimit ) );
+    SW_EXPECT_TRUE( pool.play( otherKey, float3{ 0.0f, 0.0f, 0.0f }, kLimit ) );
     SW_EXPECT_EQUAL( 1u, pool.getPoolSize( otherKey ) );
     SW_EXPECT_EQUAL( 4u, pool.getPlayCount( splashKey ) );
     pool.onSceneCleared();

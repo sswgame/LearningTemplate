@@ -27,10 +27,11 @@ namespace sw
          */
         struct ThreadTaskState
         {
-            int32                                   _helperScratchSlot = -1; ///< 워커가 아닌 스레드가 받은 도우미 스크래치 번호(0..). 아직 없으면 -1
-            uint32                                  _helperSlotOwnerID = 0;  ///< 위 번호를 준 매니저의 `_instanceID`. 매니저를 다시 만들면 옛 번호를 쓰지 않는다
-            uint32                                  _parallelBodyDepth = 0;  ///< 이 스레드에서 지금 실행 중인 병렬 본문(`ParallelTaskScope`)의 겹침 깊이. 0 이면 병렬 본문 밖
-            shared_ptr<TaskManager::HelperSlotPool> _pHelperSlotPool;        ///< 위 번호를 준 장부. 스레드가 끝날 때 여기로 돌려준다
+            int32                                   _helperScratchSlot = -1;                   ///< 워커가 아닌 스레드가 받은 도우미 스크래치 번호(0..). 아직 없으면 -1
+            uint32                                  _helperSlotOwnerID = 0;                    ///< 위 번호를 준 매니저의 `_instanceID`. 매니저를 다시 만들면 옛 번호를 쓰지 않는다
+            uint32                                  _parallelBodyDepth = 0;                    ///< 이 스레드에서 지금 실행 중인 병렬 본문(`ParallelTaskScope`)의 겹침 깊이. 0 이면 병렬 본문 밖
+            TaskPriority                            _runningPriority   = TaskPriority::Normal; ///< 지금 실행 중인 태스크 · 병렬 본문의 우선순위. 그 안의 `runParallel` 티켓이 물려받는다
+            shared_ptr<TaskManager::HelperSlotPool> _pHelperSlotPool;                          ///< 위 번호를 준 장부. 스레드가 끝날 때 여기로 돌려준다
 
             ThreadTaskState()                                    = default;
             ThreadTaskState( const ThreadTaskState& )            = delete;
@@ -86,6 +87,8 @@ namespace sw
          *          라인 하나(`_nextChunkStart`)가 코어 사이를 오갑니다. 4개가 균형점입니다.
          */
         constexpr uint32 kChunksPerThread = 4;
+        /** @brief 줄에 워커마다 이만큼 넘게 쌓였으면 `runParallel` 이 티켓을 더 내지 않는다(`limitTicketCount`). 짧은 태스크가 잠깐 몰린 것과 구별할 만큼 넉넉하다. */
+        constexpr uint32 kMaxQueuedItemPerWorker = 8;
         /** @brief 같은 스테이지를 두 번째로 기다리는 스레드가 브로드캐스트를 기다리며 잠들 때의 폴링 간격(밀리초)입니다. 드문 경로입니다. */
         constexpr uint32 kSecondWaiterPollMilli = 1;
         /** @brief 큐 항목의 태그 비트입니다. 켜져 있으면 `ParallelGroup*` 티켓, 아니면 `TaskNode*` 입니다. 둘 다 8바이트 정렬이라 하위 비트가 비어 있습니다. */
@@ -112,11 +115,15 @@ namespace sw
         struct ParallelTaskScope
         {
 
-            TaskNode* _pPreviousRunningTask;
-            ParallelTaskScope()
+            TaskNode*    _pPreviousRunningTask;
+            TaskPriority _previousPriority;
+            /** @param priority 본문의 우선순위(그룹의 줄) — 본문 안의 `runParallel` 이 물려받는다. */
+            explicit ParallelTaskScope( TaskPriority priority )
                 : _pPreviousRunningTask{ t_pCurrentRunningTask }
+                , _previousPriority{ t_threadState._runningPriority }
             {
-                t_pCurrentRunningTask = nullptr;
+                t_pCurrentRunningTask          = nullptr;
+                t_threadState._runningPriority = priority;
                 ++t_threadState._parallelBodyDepth;
                 SW_LOG_ASSERT( t_threadState._parallelBodyDepth <= kMaxParallelBodyDepth,
                                "Nested parallel bodies exceed %# - worker stack depth is unbounded (runParallel inside runParallel ...)", kMaxParallelBodyDepth );
@@ -124,7 +131,8 @@ namespace sw
             ~ParallelTaskScope()
             {
                 --t_threadState._parallelBodyDepth;
-                t_pCurrentRunningTask = _pPreviousRunningTask;
+                t_threadState._runningPriority = _previousPriority;
+                t_pCurrentRunningTask          = _pPreviousRunningTask;
             }
             ParallelTaskScope( const ParallelTaskScope& )            = delete;
             ParallelTaskScope& operator=( const ParallelTaskScope& ) = delete;
@@ -178,6 +186,7 @@ namespace sw
         struct ParallelSplit
         {
             uint32 _chunkSize{ 1 };
+            uint32 _chunkCount{ 0 };
             uint32 _ticketCount{ 0 };
 
             /**
@@ -194,7 +203,8 @@ namespace sw
                 split._chunkSize              = ( count + chunkCount - 1 ) / chunkCount;
                 if ( split._chunkSize == 0 )
                     split._chunkSize = 1;
-                chunkCount = ( count + split._chunkSize - 1 ) / split._chunkSize;
+                chunkCount        = ( count + split._chunkSize - 1 ) / split._chunkSize;
+                split._chunkCount = chunkCount;
                 // 티켓 하나는 스레드 하나 분이다. 청크가 티켓보다 적으면 남는 티켓은 가져가자마자 끝난다(헛된 깨우기).
                 const uint32 requestedTicketCount = bCallerRuns ? ( chunkCount > 0 ? chunkCount - 1 : 0 ) : chunkCount;
                 split._ticketCount                = MathUtil::min( requestedTicketCount, workerCount );
@@ -306,12 +316,12 @@ namespace sw
                 if ( slot->_thread.joinable() )
                     slot->_thread.join();
             }
+            clear(); // 데크가 사라지기 전에 비운다 — 합류가 기다리지 않는 남은 티켓이 그룹의 참조를 쥐고 있다
             _listWorkerSlot.clear();
         }
 
         BLOCK( "Cleanup Resources" )
         {
-            clear();
             _mainThreadID = {};
             _bInitialized = SW_FALSE;
         }
@@ -363,7 +373,7 @@ namespace sw
         if ( item == 0 )
             return;
         if ( TaskQueueItem::isTicket( item ) )
-            closeGroupTicket( TaskQueueItem::toGroup( item ), false ); // 실행하지 않고 닫는다. 부모는 준비되지 않은 채로 핸들이 놓일 때 풀로 돌아간다
+            releaseGroupReference( TaskQueueItem::toGroup( item ) ); // 실행하지 않고 놓는다. 끝나지 못한 그룹의 부모는 준비되지 않은 채로 핸들이 놓일 때 풀로 돌아간다
         else
             TaskQueueItem::toNode( item )->release();
     }
@@ -626,11 +636,6 @@ namespace sw
         resolveDependency( handle.getNode(), true );
     }
 
-    void TaskManager::submitWithoutWake( const TaskHandle& handle )
-    {
-        resolveDependency( handle.getNode(), false );
-    }
-
     // ------------------------------------------------------------------------------
     // 4) 병렬 그룹 — 티켓 · 청크 · 조인
     // ------------------------------------------------------------------------------
@@ -668,10 +673,10 @@ namespace sw
         pGroup->_pBlockBody = pGroup->_blockBody.isBound() ? &pGroup->_blockBody : nullptr;
         pGroup->_rangeEnd   = end;
         pGroup->_chunkSize  = split._chunkSize;
+        pGroup->_chunkCount = split._chunkCount;
         if constexpr ( kMemoryTagScopesEnabled )
             pGroup->_memoryTag = Memory::getCurrentMemoryTag();
         pGroup->_nextChunkStart.store( start, std::memory_order_relaxed );
-        pGroup->_join.reset();
 
         // 티켓은 **부모가 실행될 때** 큐에 넣는다(`launchParallelGroup`). 그래야 부모에 건 `runAfter` · 취소 · 실행 스레드 지정을 본문도 따른다.
         // 부모는 그룹이 끝나야 완료된다(그룹 = 부모의 자식 분 하나).
@@ -693,7 +698,7 @@ namespace sw
         const bool   bRunSerially = _bInitialized == false || workerCount == 0 || count < serialThreshold;
         if ( bRunSerially )
         {
-            const ParallelTaskScope bodyScope{};
+            const ParallelTaskScope bodyScope{ t_threadState._runningPriority };
             body( 0, count );
             return;
         }
@@ -712,7 +717,7 @@ namespace sw
             return;
         if ( _bInitialized == false || getWorkerCount() == 0 )
         {
-            const ParallelTaskScope bodyScope{};
+            const ParallelTaskScope bodyScope{ t_threadState._runningPriority };
             body( 0, count );
             return;
         }
@@ -725,7 +730,7 @@ namespace sw
 
         uint32 done = 0;
         {
-            const ParallelTaskScope bodyScope{};
+            const ParallelTaskScope bodyScope{ t_threadState._runningPriority };
             const int64             startNanos = pClock();
             uint32                  chunk      = 1;
             while ( true )
@@ -755,41 +760,45 @@ namespace sw
     void TaskManager::runParallelRange( uint32 start, uint32 end, const ParallelBlockDelegate& body )
     {
         const uint32        workerCount = getWorkerCount();
+        const TaskPriority  priority    = t_threadState._runningPriority;
         const ParallelSplit split       = ParallelSplit::compute( end - start, workerCount, true );
-        if ( split._ticketCount == 0 )
+        const uint32        ticketCount = limitTicketCount( priority, split._ticketCount );
+        if ( ticketCount == 0 )
         {
-            const ParallelTaskScope bodyScope{};
+            const ParallelTaskScope bodyScope{ priority };
             body( start, end );
             return;
         }
 
-        // 그룹은 이 스택에 있다. 마지막 티켓이 조인 카운터를 0 으로 만든 뒤에는 아무도 이 메모리를 건드리지 않는다.
-        ParallelGroup group{};
-        group._pBlockBody = &body;
-        group._rangeEnd   = end;
-        group._chunkSize  = split._chunkSize;
+        // 그룹은 풀에 있다 — 합류 뒤에도 큐에 남은 티켓이 참조를 쥔다(나오면 남은 청크가 없는 것을 보고 놓는다).
+        ParallelGroup* pGroup = _nodePool->allocateGroup();
+        pGroup->_pBlockBody   = &body;
+        pGroup->_rangeEnd     = end;
+        pGroup->_chunkSize    = split._chunkSize;
+        pGroup->_chunkCount   = split._chunkCount;
+        pGroup->_priority     = priority;
         if constexpr ( kMemoryTagScopesEnabled )
-            group._memoryTag = Memory::getCurrentMemoryTag();
-        group._nextChunkStart.store( start, std::memory_order_relaxed );
-        group._join.addPending( split._ticketCount );
+            pGroup->_memoryTag = Memory::getCurrentMemoryTag();
+        pGroup->_nextChunkStart.store( start, std::memory_order_relaxed );
+        pGroup->_refCount.store( ticketCount + 1, std::memory_order_relaxed );
+        pGroup->_join.addPending( split._chunkCount );
 
         // `waitAll` 에게는 그룹 하나가 태스크 하나다. 티켓마다 활성 수를 올리고 내리지 않는다.
         _activeTaskCount.fetch_add( 1, std::memory_order_relaxed );
-        pushGroupTickets( &group, split._ticketCount );
+        pushGroupTickets( pGroup, ticketCount );
 
-        // 워커가 깨어나기를 기다리지 않는다. 이 스레드가 첫 청크부터 가져간다. 남은 티켓은 이 스레드가 닿을 수 있는 큐(자기
-        // 데크 · 전역)에만 있으므로, 조인을 기다리며 다른 일을 돕다 보면 스스로 가져가게 된다.
-        runGroupChunks( &group );
+        // 워커가 깨어나기를 기다리지 않는다. 이 스레드가 첫 청크부터 가져간다. 아무도 집지 않은 티켓은 기다리지 않는다(합류는 청크를 센다).
+        runGroupChunks( pGroup );
         // 제 청크를 다 돌고도 남의 청크가 남았을 때만 합류 대기다 — 그때만 시계를 읽고 구간을 연다(곧 스핀 · 잠들 자리라 비용이 묻힌다).
-        if ( group._join.getPending() > 0 )
+        if ( pGroup->_join.getPending() > 0 )
         {
 #if !defined( SW_SHIPPING )
             const TaskProfileHook* pHook = s_profileHookSlot.get();
             const TaskProfileZone  zone  = pHook != nullptr ? pHook->_pBeginZone( "runParallel", TaskProfileZoneKind::WaitJoin ) : TaskProfileZone{};
 #endif
             const int64 waitStart = MonotonicClock::nowNanoseconds();
-            // Low 줄(백그라운드 I/O)은 돕지 않는다 — 합류는 Normal 의 자기 티켓과 남이 도는 청크만 기다린다. Low 하나를 집으면 그 태스크만큼 합류가 늦어진다.
-            waitForJoin( group._join, false );
+            // Low 줄(백그라운드 I/O)은 돕지 않는다 — 합류는 남이 도는 청크만 기다린다. Low 하나를 집으면 그 태스크만큼 합류가 늦어진다.
+            waitForJoin( pGroup->_join, false );
             _joinWaitNanos.fetch_add( static_cast<uint64>( MonotonicClock::nowNanoseconds() - waitStart ), std::memory_order_relaxed );
             _joinWaitCount.fetch_add( 1, std::memory_order_relaxed );
 #if !defined( SW_SHIPPING )
@@ -797,6 +806,8 @@ namespace sw
                 pHook->_pEndZone( zone );
 #endif
         }
+        withdrawLocalTickets( pGroup, ticketCount );
+        releaseGroupReference( pGroup );
 
         if ( _activeTaskCount.fetch_sub( 1, std::memory_order_acq_rel ) == 1 )
             _completionBroadcast.notifyAll();
@@ -814,10 +825,17 @@ namespace sw
 
     void TaskManager::pushGroupTickets( ParallelGroup* pGroup, uint32 ticketCount )
     {
-        const uintptr_t item = TaskQueueItem::fromTicket( pGroup );
+        // 줄은 그룹을 만든 태스크의 우선순위다 — 백그라운드(Low) 태스크의 청크가 프레임 일(Normal) 사이에 끼거나, High 태스크의 청크가 Normal 뒤에 서지 않는다.
+        const uintptr_t    item     = TaskQueueItem::fromTicket( pGroup );
+        const TaskPriority priority = pGroup->_priority;
         for ( uint32 index = 0; index < ticketCount; ++index )
         {
-            pushToNormalQueue( item );
+            if ( priority == TaskPriority::High )
+                _globalHighQueue.enqueue( item );
+            else if ( priority == TaskPriority::Low )
+                _globalLowQueue.enqueue( item );
+            else
+                pushToNormalQueue( item );
         }
         // 티켓을 모두 넣은 뒤 **한 번만** 세대를 올리고, 티켓 수만큼만 깨운다.
         wakeSleepingWorkers( ticketCount );
@@ -835,17 +853,57 @@ namespace sw
         }
     }
 
+    uint32 TaskManager::limitTicketCount( TaskPriority priority, uint32 ticketCount ) const
+    {
+        // 워커의 Normal 티켓은 자기 데크에 서고 합류 뒤 스스로 거둔다(`withdrawLocalTickets`) — 쌓이지 않는다.
+        if ( priority == TaskPriority::Normal && t_currentWorkerIndex >= 0 )
+            return ticketCount;
+        uint32 queuedCount = 0;
+        if ( priority == TaskPriority::High )
+            queuedCount = _globalHighQueue.getQueuedCount();
+        else if ( priority == TaskPriority::Low )
+            queuedCount = _globalLowQueue.getQueuedCount();
+        else
+            queuedCount = _globalWorkerQueue.getQueuedCount();
+        return queuedCount > getWorkerCount() * kMaxQueuedItemPerWorker ? 0 : ticketCount;
+    }
+
+    void TaskManager::withdrawLocalTickets( ParallelGroup* pGroup, uint32 ticketCount )
+    {
+        const int32 workerID = t_currentWorkerIndex;
+        if ( workerID < 0 || pGroup->_priority != TaskPriority::Normal )
+            return;
+        // 데크는 LIFO 라 이 그룹의 남은 티켓이 맨 위에 있다. 다른 항목이 나오면(본문이 넣은 일) 되돌려 놓고 멈춘다.
+        WorkerSlot&     localSlot  = *std::as_const( _listWorkerSlot )[static_cast<uint32>( workerID )];
+        const uintptr_t ticketItem = TaskQueueItem::fromTicket( pGroup );
+        for ( uint32 index = 0; index < ticketCount; ++index )
+        {
+            uintptr_t item{ 0 };
+            if ( localSlot._queue.pop( item ) == false || item == 0 )
+                return;
+            if ( item != ticketItem )
+            {
+                pushToNormalQueue( item );
+                wakeSleepingWorkers( 1 ); // 꺼낸 사이 큐를 훑고 잠든 워커가 있으면 이 항목을 놓쳤다
+                return;
+            }
+            releaseGroupReference( pGroup );
+        }
+    }
+
     void TaskManager::runGroupChunks( ParallelGroup* pGroup )
     {
-        const ParallelTaskScope bodyScope{};
+        const uint32 end       = pGroup->_rangeEnd;
+        const uint32 chunkSize = pGroup->_chunkSize;
+        // 늦게 나온 티켓 — 남은 청크가 없다. 본문(호출한 쪽의 델리게이트)은 이미 없을 수 있어 만지지 않는다.
+        if ( pGroup->_nextChunkStart.load( std::memory_order_relaxed ) >= end )
+            return;
+
+        const ParallelTaskScope bodyScope{ pGroup->_priority };
         const ScopedMemoryTag   groupMemoryTag{ pGroup->_memoryTag };
-        const uint32            end       = pGroup->_rangeEnd;
-        const uint32            chunkSize = pGroup->_chunkSize;
+        uint32                  finishedCount = 0;
         for ( ;; )
         {
-            // **High 큐는 청크 사이에 확인한다.** 티켓을 가진 워커가 그룹을 다 실행할 때까지 렌더 스레드의 패스 기록을 세워 두면
-            // 그 줄이 그대로 프레임 지연이 된다. 청크 하나(참여자당 4개)가 작으므로 기다리는 시간의 상한도 짧다.
-            runHighQueueBetweenChunks();
             const uint64 reservedStart = pGroup->_nextChunkStart.fetch_add( chunkSize, std::memory_order_relaxed );
             if ( reservedStart >= end )
                 break;
@@ -862,7 +920,46 @@ namespace sw
                     pGroup->_indexBody( elementIndex );
                 }
             }
+            ++finishedCount;
+            // **High 큐는 청크 사이에 확인한다.** 티켓을 가진 워커가 그룹을 다 실행할 때까지 렌더 스레드의 패스 기록을 세워 두면
+            // 그 줄이 그대로 프레임 지연이 된다. 청크 하나(참여자당 4개)가 작으므로 기다리는 시간의 상한도 짧다. 남은 청크가 없으면 먼저 합류에 알린다.
+            // High 그룹은 비우지 않는다 — 자기 티켓이 그 줄에 있어 같은 스레드가 제 티켓을 겹쳐 집고, 겹침이 티켓 수(워커 수)까지 자란다.
+            if ( pGroup->_priority != TaskPriority::High && pGroup->_nextChunkStart.load( std::memory_order_relaxed ) < end )
+                runHighQueueBetweenChunks();
         }
+        if ( finishedCount > 0 )
+            finishGroupChunks( pGroup, finishedCount );
+    }
+
+    void TaskManager::finishGroupChunks( ParallelGroup* pGroup, uint32 chunkCount )
+    {
+        const uint64 joinBefore = pGroup->_join.finish( chunkCount );
+        if ( JoinCounter::isLastFinish( joinBefore, chunkCount ) == false )
+            return;
+
+        // 이 스레드는 그룹의 참조를 쥐고 있다. 모든 청크가 끝났으므로 본문을 보는 스레드가 없다 — 부모가 완료되기 전에 본문을 놓는다(완료를 기다려 모듈을 내리는 쪽이 있다).
+        pGroup->_blockBody = ParallelBlockDelegate{};
+        pGroup->_indexBody = ParallelTaskDelegate{};
+        TaskNode* pParent  = pGroup->_pParent;
+        pGroup->_pParent   = nullptr;
+        if ( pParent != nullptr )
+        {
+            resolveDependency( pParent, true );
+            pParent->release();
+        }
+        const uint32 waiterPlusOne = JoinCounter::waiterSlotPlusOne( joinBefore );
+        if ( waiterPlusOne != 0 )
+            unparkSlot( waiterPlusOne - 1 );
+    }
+
+    void TaskManager::releaseGroupReference( ParallelGroup* pGroup )
+    {
+        if ( pGroup->_refCount.fetch_sub( 1, std::memory_order_acq_rel ) != 1 )
+            return;
+        // 부모가 남아 있으면 끝나지 못한 그룹이다(`clear` 가 티켓을 버렸다). 준비시키지 않고 참조만 놓는다.
+        if ( pGroup->_pParent != nullptr )
+            pGroup->_pParent->release();
+        _nodePool->deallocateGroup( pGroup );
     }
 
     void TaskManager::launchParallelGroup( TaskNode* pParent, const ParallelGroupLaunch& launch )
@@ -870,11 +967,13 @@ namespace sw
         ParallelGroup* pGroup = launch._pGroup;
         if ( pGroup == nullptr )
             return;
-        // 그룹이 부모를 잡고(참조 하나), 부모는 그룹이 끝나야 준비된다(의존 하나 — 마지막 티켓이 해제한다, `closeGroupTicket`).
+        // 그룹이 부모를 잡고(참조 하나), 부모는 그룹이 끝나야 준비된다(의존 하나 — 마지막 청크를 끝낸 스레드가 해제한다, `finishGroupChunks`).
         pParent->retain();
         pParent->_unresolvedDependencies.fetch_add( 1, std::memory_order_acq_rel );
-        pGroup->_pParent = pParent;
-        pGroup->_join.addPending( launch._ticketCount );
+        pGroup->_pParent  = pParent;
+        pGroup->_priority = pParent->_priority;
+        pGroup->_refCount.store( launch._ticketCount, std::memory_order_relaxed );
+        pGroup->_join.addPending( pGroup->_chunkCount );
         pushGroupTickets( pGroup, launch._ticketCount );
     }
 
@@ -891,31 +990,7 @@ namespace sw
     void TaskManager::runGroupTicket( ParallelGroup* pGroup )
     {
         runGroupChunks( pGroup );
-        closeGroupTicket( pGroup, true );
-    }
-
-    void TaskManager::closeGroupTicket( ParallelGroup* pGroup, bool bResolveParent )
-    {
-        // 스택 그룹은 조인 카운터가 0 이 되는 순간 사라질 수 있다. 그 뒤에 필요한 값은 모두 **미리** 읽어 둔다.
-        const bool   bPooledGroup = pGroup->isPooled();
-        const uint64 joinBefore   = pGroup->_join.finishOne();
-        if ( JoinCounter::isLastFinish( joinBefore ) == false )
-            return;
-
-        if ( bPooledGroup )
-        {
-            // 풀 그룹에서는 이 스레드가 마지막으로 만지는 쪽이다. 부모의 그룹 의존성을 풀고(준비되면 큐로 간다) 그룹을 돌려준다.
-            TaskNode* pParent = pGroup->_pParent;
-            pGroup->_pParent  = nullptr;
-            _nodePool->deallocateGroup( pGroup );
-            if ( bResolveParent )
-                resolveDependency( pParent, true );
-            pParent->release();
-        }
-
-        const uint32 waiterPlusOne = JoinCounter::waiterSlotPlusOne( joinBefore );
-        if ( waiterPlusOne != 0 )
-            unparkSlot( waiterPlusOne - 1 );
+        releaseGroupReference( pGroup );
     }
 
     // ------------------------------------------------------------------------------
@@ -1205,8 +1280,10 @@ namespace sw
         {
             // 끝나면 "지금 실행 중인 태스크" 를 되돌린다 — 남겨 두면 끝난 태스크가 이 스레드의 현재 태스크로 남아 뒤에 만드는 태스크가 그
             // 자식이 된다(영영 끝나지 않는다).
-            TaskNode* pPrevRunningTask = t_pCurrentRunningTask;
-            t_pCurrentRunningTask      = pNode;
+            TaskNode* pPrevRunningTask      = t_pCurrentRunningTask;
+            t_pCurrentRunningTask           = pNode;
+            const TaskPriority prevPriority = t_threadState._runningPriority;
+            t_threadState._runningPriority  = pNode->_priority; // 본문 안의 `runParallel` 이 물려받는다
             const ScopedMemoryTag taskMemoryTag{ pNode->_memoryTag };
 #if !defined( SW_SHIPPING )
             const TaskProfileHook* pHook = s_profileHookSlot.get();
@@ -1224,7 +1301,8 @@ namespace sw
             if ( zone._pContext != nullptr )
                 pHook->_pEndZone( zone );
 #endif
-            t_pCurrentRunningTask = pPrevRunningTask;
+            t_threadState._runningPriority = prevPriority;
+            t_pCurrentRunningTask          = pPrevRunningTask;
         }
 
         // 본문 분(1)을 차감한다. 0 이 되면 자식도 모두 끝난 것이고, 아니면 마지막 자식이 완료를 처리한다.
@@ -1261,8 +1339,8 @@ namespace sw
             pNode->_parentStage = nullptr;
             if ( pStage != nullptr )
             {
-                const uint64 joinBefore = pStage->_join.finishOne();
-                if ( JoinCounter::isLastFinish( joinBefore ) )
+                const uint64 joinBefore = pStage->_join.finish( 1 );
+                if ( JoinCounter::isLastFinish( joinBefore, 1 ) )
                 {
                     // 마지막 태스크가 끝났다. 적혀 있던 대기자만 깨우고(두 번째 대기자는 브로드캐스트로), addTask 에서 잡은 자기 참조를 놓는다.
                     const uint32 waiterPlusOne = JoinCounter::waiterSlotPlusOne( joinBefore );

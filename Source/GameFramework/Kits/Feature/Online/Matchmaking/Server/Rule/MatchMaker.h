@@ -13,7 +13,6 @@
  *          PlayFab Matchmaking 의 규칙 세 가지(실력 확장, 지역 완화, 팀 균형)를 데이터 구조체 하나(`MatchModeDef`)로 표현한 것이다.
  */
 #pragma once
-#include "Core/Container/IDAllocator.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 
@@ -32,12 +31,15 @@ namespace sw
         MatchMaker();
 
         /**
-         * @brief 규칙과 경기 id 시드로 빈 대기열을 만듭니다. 시드는 권한 서버 id 의 아래쪽 32비트이며, 권한이 넘어가도 경기 id 가 겹치지 않습니다.
+         * @brief 규칙으로 빈 대기열을 만듭니다.
          * @return 규칙이 선언된 범위 밖이면 오류를 남기고 false 입니다. 대기열은 그대로입니다.
          */
-        [[nodiscard]] bool initialize( const MatchModeDef& definition, uint64 matchIDSeed );
+        [[nodiscard]] bool initialize( const MatchModeDef& definition );
 
-        /** @brief 경기를 만듭니다. 만든 경기는 @p outListMatch 뒤에, 시한을 넘긴 티켓은 @p outListTimedOut 뒤에 덧붙입니다. */
+        /**
+         * @brief 경기를 만듭니다. 만든 경기는 @p outListMatch 뒤에, 시한을 넘긴 티켓은 @p outListTimedOut 뒤에 덧붙입니다.
+         * @details 경기 id 는 비워 둡니다(0). 대기열마다 세면 다른 모드 · 재시작 앞뒤의 id 가 겹쳐 명단 기록을 덮으므로, 서버에 하나인 발급기(`MatchQueueService`)가 매긴다.
+         */
         void process( int64 nowMs, vector<MatchFormed>& outListMatch, vector<MatchTicket>& outListTimedOut );
 
         /** @brief 빈 슬롯을 채워 @p outListBackfilled 뒤에 덧붙입니다. 다 찼거나 시한이 지난 요청은 지웁니다. `process` 보다 먼저 부릅니다. */
@@ -52,7 +54,7 @@ namespace sw
         MatchmakingServiceResult addTicket( const MatchTicket& ticket );
         [[nodiscard]] bool       removeTicket( uint64 ticketID );
         bool                     hasTicket( uint64 ticketID ) const;
-        /** @brief 티켓을 모두 뺍니다. 규칙과 다음 경기 id 는 그대로라 권한을 되찾아도 경기 id 가 겹치지 않습니다. 권한을 잃은 대기열이 씁니다. */
+        /** @brief 티켓을 모두 뺍니다. 규칙은 그대로입니다. 권한을 잃은 대기열이 씁니다. */
         void clearTickets()
         {
             _listTicket.clear();
@@ -72,6 +74,5 @@ namespace sw
         vector<MatchTicket>          _listTicket;
         vector<MatchBackfillRequest> _listBackfill; ///< 들어온 순서(오래된 것 먼저)이다
         MatchModeDef                 _definition;
-        IDAllocator<uint64>          _matchIDAllocator;
     };
 } // namespace sw

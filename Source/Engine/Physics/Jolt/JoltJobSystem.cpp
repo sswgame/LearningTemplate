@@ -87,6 +87,11 @@ namespace sw
 
     void JoltJobSystem::QueueJob( Job* pJob )
     {
+        QueueJobs( &pJob, 1 );
+    }
+
+    void JoltJobSystem::enqueueJob( Job* pJob )
+    {
         // 큐가 참조 하나를 가진다. 태스크가 실행한 뒤에 해제한다.
         pJob->AddRef();
         while ( _queuedJob.enqueue( pJob ) == false )
@@ -96,27 +101,33 @@ namespace sw
                 reportFatalError( "JoltJobSystem: the job queue is full (%# slots) - more queued jobs than maxJobCount", _queuedJob.capacity() );
             ThreadUtil::yield(); // 꺼내는 쪽이 칸을 되돌리는 중(잠깐)
         }
-        if ( _pTaskManager == nullptr )
-        {
-            runQueuedJob();
-            return;
-        }
-        TaskHandle handle = _pTaskManager->emplaceTask( "JoltJob", SW_DELEGATE_METHOD( TaskDelegate, &JoltJobSystem::runQueuedJob, this ) );
-        // 폴백 없음 — 태스크를 못 내면(풀이 바닥났거나 종료 중) 그 자리에서 몰래 돌리지 않고 멈춘다. 스텝을 부른 스레드는 장벽 · `WaitForJobs` 에서 큐를 도우므로
-        // 태스크가 늦어도 끝나지만, 태스크가 아예 없으면 잡 참조가 새고 스텝 순서가 실행마다 달라진다(언리얼 Chaos 도 태스크 그래프가 없으면 스텝을 내지 않는다).
-        if ( handle.isValid() == false )
-            reportFatalError( "JoltJobSystem: the task pool refused a physics job (pool exhausted or shutting down)" );
-        // 스텝을 호출한 스레드가 장벽에서 곧바로 기다린다. 게임 스레드의 대량 잡 뒤에 줄을 서지 않게 High 레인으로 낸다.
-        handle.setPriority( TaskPriority::High );
-        _jobTaskStage.addTask( handle ); // 제출 전에 넣는다(스테이지 계약)
-        _pTaskManager->submit( handle );
     }
 
     void JoltJobSystem::QueueJobs( Job** ppJob, JPH::uint jobCount )
     {
+        if ( _pTaskManager == nullptr )
+        {
+            for ( JPH::uint jobIndex = 0; jobIndex < jobCount; ++jobIndex )
+            {
+                enqueueJob( ppJob[jobIndex] );
+                runQueuedJob();
+            }
+            return;
+        }
+        // 모두 넣은 뒤 한 번만 깨운다(Jolt `JobSystemThreadPool::QueueJobs` 가 세마포어를 한 번 올리는 자리) — 잡마다 깨우면 작은 잡 묶음에서 깨우기가 일보다 크다.
+        TaskManager::SubmitBatch batch{ *_pTaskManager };
         for ( JPH::uint jobIndex = 0; jobIndex < jobCount; ++jobIndex )
         {
-            QueueJob( ppJob[jobIndex] );
+            enqueueJob( ppJob[jobIndex] );
+            TaskHandle handle = _pTaskManager->emplaceTask( "JoltJob", SW_DELEGATE_METHOD( TaskDelegate, &JoltJobSystem::runQueuedJob, this ) );
+            // 폴백 없음 — 태스크를 못 내면(풀이 바닥났거나 종료 중) 그 자리에서 몰래 돌리지 않고 멈춘다. 스텝을 부른 스레드는 장벽 · `WaitForJobs` 에서 큐를 도우므로
+            // 태스크가 늦어도 끝나지만, 태스크가 아예 없으면 잡 참조가 새고 스텝 순서가 실행마다 달라진다(언리얼 Chaos 도 태스크 그래프가 없으면 스텝을 내지 않는다).
+            if ( handle.isValid() == false )
+                reportFatalError( "JoltJobSystem: the task pool refused a physics job (pool exhausted or shutting down)" );
+            // 스텝을 호출한 스레드가 장벽에서 곧바로 기다린다. 게임 스레드의 대량 잡 뒤에 줄을 서지 않게 High 레인으로 낸다.
+            handle.setPriority( TaskPriority::High );
+            _jobTaskStage.addTask( handle ); // 제출 전에 넣는다(스테이지 계약)
+            batch.submit( handle );
         }
     }
 

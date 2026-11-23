@@ -12,6 +12,7 @@
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
 #include "Engine/Serialization/Format/JSONSerializer.h"
+#include "Engine/Serialization/Format/XMLSerializer.h"
 #include "Engine/Serialization/Serializer/ContainerVisitor.h"
 #include "Engine/Serialization/Serializer/DataPath.h"
 #include "Engine/Serialization/Serializer/SchemaMigrate.h"
@@ -455,6 +456,27 @@ SW_TEST_CASE( SchemaMigrateTest, WireTypeNameIsFoundOrEmpty )
     SW_EXPECT_TRUE( findWireTypeName( static_cast<uint32>( hashed_string( "int32" ).getHash() ) ) == hashed_string( "int32" ) );
     SW_EXPECT_FALSE( findWireTypeName( static_cast<uint32>( modeType.getHash() ) ).empty() );
     SW_EXPECT_TRUE( findWireTypeName( static_cast<uint32>( hashed_string::computeHash( string_view{ "SchemaMigrateTest.NoSuchType" } ) ) ).empty() );
+}
+
+/** @brief [XMLSerializerPropertyTest] 되풀이된 원소와 자리가 틀린 칸(속성 값을 원소로, 원소 칸을 속성으로)은 모르는 칸으로 알린다 — 알림 없이 초기값이 되지 않는다 */
+SW_TEST_CASE( XMLSerializerPropertyTest, RepeatedAndMisplacedPropertiesAreReported )
+{
+    const auto readOrphanCount = []( string_view text ) -> size_t
+    {
+        SerializerSampleGroup     group;
+        vector<SchemaOrphanValue> listOrphan;
+        SW_EXPECT_TRUE( XMLSerializer::deserializeSoft( &group, *SerializerSampleGroup::StaticType(), text, &listOrphan ) == SoftReadResult::Read );
+        return listOrphan.size();
+    };
+    SW_EXPECT_EQUAL( size_t{ 0 }, readOrphanCount( R"(<SerializerSampleGroup _count="3"><_listText><item>a</item></_listText><_part _count="2" /></SerializerSampleGroup>)" ) );
+    SW_EXPECT_EQUAL( size_t{ 1 }, readOrphanCount( R"(<SerializerSampleGroup><_listText><item>a</item></_listText><_listText><item>b</item></_listText></SerializerSampleGroup>)" ) ); // 둘째 목록은 읽지 않는다
+    SW_EXPECT_EQUAL( size_t{ 1 }, readOrphanCount( R"(<SerializerSampleGroup><_part _count="1" /><_part _count="2" /></SerializerSampleGroup>)" ) );
+    SW_EXPECT_EQUAL( size_t{ 1 }, readOrphanCount( R"(<SerializerSampleGroup><_count>5</_count></SerializerSampleGroup>)" ) );                // 속성이어야 할 값
+    SW_EXPECT_EQUAL( size_t{ 1 }, readOrphanCount( R"(<SerializerSampleGroup _listText="a" />)" ) );                                          // 원소여야 할 값
+    SW_EXPECT_EQUAL( size_t{ 1 }, readOrphanCount( R"(<SerializerSampleGroup><_part><_count>5</_count></_part></SerializerSampleGroup>)" ) ); // 안쪽 원소도 같다
+
+    SerializerSampleGroup group;
+    SW_EXPECT_FALSE( XMLSerializer::deserialize( &group, *SerializerSampleGroup::StaticType(), R"(<SerializerSampleGroup><_count>5</_count></SerializerSampleGroup>)" ) );
 }
 
 /** @brief [DataPathTest] 만든 직후의 칸은 읽지 않음이고, 데이터 읽기가 앞뒤 공백을 뺀 경로를 넣으며, 빈 글은 칸을 비운다 */

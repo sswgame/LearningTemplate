@@ -3,8 +3,10 @@
  * @brief PROPERTY 가 아닌 컴포넌트 런타임 상태(디렉터의 시뮬레이션)를 게임 상태 스냅샷에 실어, 핫 리로드와 세이브를 넘기는 저장소를 정의합니다.
  */
 #pragma once
+#include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Hash/HashUtil.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Name/hashed_string.h"
 
@@ -87,7 +89,11 @@ namespace sw
 
         ComponentStateStore();
 
-        void clear() { _listEntry.clear(); }
+        void clear()
+        {
+            _listEntry.clear();
+            _mapKeyToIndex.clear();
+        }
         bool isEmpty() const { return _listEntry.empty(); }
         /** @brief 상태 하나를 더합니다. 같은 (타입, id) 가 이미 있으면 바꿉니다. */
         void add( const hashed_string& typeName, uint64 componentID, vector<uint8>&& bytes );
@@ -178,6 +184,21 @@ namespace sw
         }
 
     private:
-        vector<Entry> _listEntry;
+        /** @brief 항목의 짝짓기 키(타입 이름, 컴포넌트 id)입니다. */
+        struct EntryKey
+        {
+            hashed_string _typeName{};
+            uint64        _componentID{ 0 };
+
+            bool   operator==( const EntryKey& other ) const { return _typeName == other._typeName && _componentID == other._componentID; }
+            uint64 computeHash() const { return HashUtil::makeHash( _typeName.getHash(), _componentID ); }
+        };
+
+        /** @brief `_listEntry` 의 자리를 다시 적습니다. 같은 키가 둘이면 앞 것을 찾는다. */
+        void rebuildIndex();
+
+    private:
+        vector<Entry>                   _listEntry;     ///< 더한 순서(쓰는 순서)
+        unordered_map<EntryKey, uint32> _mapKeyToIndex; ///< 키 → `_listEntry` 자리 — 짝짓기가 컴포넌트마다 목록을 훑지 않는다
     };
 } // namespace sw

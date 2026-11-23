@@ -367,24 +367,19 @@ namespace sw
              */
             [[nodiscard]] static ContainerReadResult readOwnedPointerBinary( const uint8* pData, size_t dataSize, size_t& inoutOffset, const SerializeContext& context )
             {
+                size_t nameStart{ 0 };
                 uint32 nameLen{ 0 };
-                if ( readUint32( pData, dataSize, inoutOffset, nameLen ) == false )
-                    return ContainerReadResult::StreamBroken;
-                if ( inoutOffset + nameLen > dataSize )
+                if ( readSizedBlock( pData, dataSize, inoutOffset, nameStart, nameLen ) == false )
                     return ContainerReadResult::StreamBroken;
 
                 // 스트림 위에서 그대로 intern 한다. 이름 하나 읽자고 string 을 만들지 않는다.
-                const string_view typeNameText( reinterpret_cast<const utf8*>( pData + inoutOffset ), nameLen );
-                inoutOffset += nameLen;
+                const string_view typeNameText( reinterpret_cast<const utf8*>( pData + nameStart ), nameLen );
 
+                // 어떤 경우로 빠지든 다음 원소 위치는 본문 뒤다.
+                size_t bodyStart{ 0 };
                 uint32 bodySize{ 0 };
-                if ( readUint32( pData, dataSize, inoutOffset, bodySize ) == false )
+                if ( readSizedBlock( pData, dataSize, inoutOffset, bodyStart, bodySize ) == false )
                     return ContainerReadResult::StreamBroken;
-                if ( inoutOffset + bodySize > dataSize )
-                    return ContainerReadResult::StreamBroken;
-
-                const size_t bodyStart = inoutOffset;
-                inoutOffset += bodySize; // 어떤 경우로 빠지든 다음 원소 위치는 여기다.
 
                 if ( nameLen == 0 )
                     return ContainerReadResult::Read;

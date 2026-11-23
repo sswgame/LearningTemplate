@@ -119,18 +119,13 @@ namespace sw
         _listString.reserve( kPredefinedCount + static_cast<size_t>( dynamicCount ) );
         _mapStringToID.reserve( kPredefinedCount + static_cast<size_t>( dynamicCount ) );
 
+        ByteReader reader( pData + inoutOffset, dataSize - inoutOffset ); // 위의 개수 읽기가 자리를 dataSize 안에 둔다
         for ( uint64 strIndex = 0; strIndex < dynamicCount; ++strIndex )
         {
-            if ( inoutOffset + sizeof( uint32 ) > dataSize )
+            string str = reader.readString();
+            if ( reader.hasOverflowed() )
                 return false;
-            uint32 len = 0;
-            Memory::copy( &len, pData + inoutOffset, sizeof( uint32 ) );
-            inoutOffset += sizeof( uint32 );
-
-            if ( inoutOffset + len > dataSize )
-                return false;
-            string str( reinterpret_cast<const utf8*>( pData + inoutOffset ), len );
-            inoutOffset += len;
+            inoutOffset = dataSize - reader.getRemainingByteCount();
 
             const uint32 id = static_cast<uint32>( _listString.size() );
             _listString.push_back( str );

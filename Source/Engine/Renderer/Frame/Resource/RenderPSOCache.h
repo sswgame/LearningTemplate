@@ -5,7 +5,7 @@
  *          일입니다(`FramePSOManager`). 여기는 "만든 것을 어디에 두고, 누가 소유하고, 어떤 순서로 해제하는가"만 압니다.
  *          해제 순서(변형 → 패스 PSO)도 이 타입이 지킵니다.
  *
- *          드로우 경로가 배치마다 조회하므로 조회는 락 하나로 짧게 끝납니다. 삽입은 기록 시작 전에만 일어납니다.
+ *          드로우 경로가 배치마다 조회하므로 조회는 공유 락 하나로 짧게 끝납니다(기록 워커끼리 줄을 서지 않는다). 삽입은 기록 시작 전에만 일어납니다.
  */
 #pragma once
 #include "Core/Concurrency/mutex.h"
@@ -202,7 +202,7 @@ namespace sw
         ShaderBindingLayoutCache                                                        _bindingLayoutCache;
         unordered_map<RHIPipelineStateHandle, const ShaderBindingLayout*> _mapPSOLayout SW_GUARDED_BY( _layoutMutex );
         unordered_map<RHIPipelineStateHandle, RHIPipelineStateDesc> _mapPSODesc         SW_GUARDED_BY( _layoutMutex );
-        mutable mutex                                                                   _layoutMutex;
+        mutable shared_mutex                                                            _layoutMutex; ///< 기록 워커들이 배치마다 조회만 한다 — 공유 잠금(언리얼 PSO 캐시의 `FRWLock`)
         /// @brief 엔진이 만들어 둔 패스별 PSO 입니다. 키가 enum 이라 조회에 문자열을 만들지 않습니다.
         unordered_map<RenderPassKind, RHIPipelineStateHandle> _mapEnginePSO;
         /// @brief 주 출력에 그리는 패스의 PSO 를 대상 렌더 타깃 포맷별로 둡니다(키 = makeOutputPSOKey). 백버퍼와 에디터 뷰 RT 는 포맷이 다를 수 있습니다.
@@ -210,7 +210,7 @@ namespace sw
         /// @brief 모듈 프로그램의 PSO 입니다(키 = 프로그램 키). 모듈 패스는 셰이더가 패스마다 달라 패스 종류 하나로 둘 수 없습니다.
         unordered_map<hashed_string, RHIPipelineStateHandle>    _mapExtensionProgramPSO;
         unordered_map<uint64, MaterialPSOEntry> _mapMaterialPSO SW_GUARDED_BY( _materialPSOMutex );
-        mutable mutex                                           _materialPSOMutex;
+        mutable shared_mutex                                    _materialPSOMutex; ///< `_layoutMutex` 와 같은 까닭의 공유 잠금
         /// @brief 머티리얼 변형의 생성 줄과 전용 스레드입니다. 캐시가 소유해 미리보기 렌더러와 함께 씁니다(해제는 `releaseAll` 이 스레드부터 합류합니다).
         MaterialPSOBuilder _materialPSOBuilder;
     };

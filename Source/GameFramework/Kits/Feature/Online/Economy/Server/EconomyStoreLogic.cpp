@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Feature/Online/Economy/Server/EconomyStoreLogic.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Serialization/BitStream.h"
 
 #include "GameFramework/Kits/Feature/Online/Economy/Runtime/CurrencyCatalog.h"
@@ -149,6 +150,56 @@ namespace sw
                     }
                 }
                 return EconomyResult::ReceiptInvalid;
+            }
+
+            /**
+             * @brief 주문의 모든 줄을 지급 분개로 짭니다. 하나라도 지급할 수 없으면 아무것도 지급하지 않습니다(주문 하나가 분개 하나라 나머지를 나중에 더 지급할 길이 없다).
+             * @details 다시 보내기가 같은 분개 내용이 되도록 줄을 상품 id 순으로 세우고(스토어는 항목 순서를 약속하지 않는다) 같은 자산은 한 다리로 모은다.
+             *          한 다리로 모으면 환불 회수도 남은 잔액을 자산마다 한 번만 센다. 환불 · 청약철회는 저장된 분개의 다리를 되돌리므로 곱한 수가 그대로 회수된다.
+             */
+            [[nodiscard]] static EconomyServiceResult buildRedeemRequest( const OfferCatalog& offers, const ReceiptValidationResult& receipt, const LedgerHolder& account,
+                                                                          LedgerTransferRequest& inoutRequest )
+            {
+                vector<ReceiptLineItem> listItem = receipt._listItem;
+                if ( listItem.empty() )
+                    return EconomyResult::ReceiptInvalid;
+                VectorUtil::stableSort( listItem, []( const ReceiptLineItem& left, const ReceiptLineItem& right )
+                { return left._productID < right._productID; } );
+                bool bFits = true;
+                for ( const ReceiptLineItem& item : listItem )
+                {
+                    if ( item.isValid() == false )
+                        return EconomyResult::ReceiptInvalid; // 제공자가 수를 옮기지 않았거나 틀린 수이다 — 하나로 치지 않는다
+                    const OfferDef* pOffer = offers.findOfferByProduct( receipt._storeName, item._productID );
+                    if ( pOffer == nullptr )
+                        return EconomyResult::UnknownProduct;
+                    for ( const OfferGrant& grant : pOffer->_listGrant )
+                    {
+                        if ( grant._amount > LedgerConstant::kMaxAmount / item._quantity )
+                        {
+                            bFits = false;
+                            continue;
+                        }
+                        const int64    amount   = grant._amount * item._quantity;
+                        LedgerPosting* pPosting = VectorUtil::findBy<&LedgerPosting::_assetID>( inoutRequest._listPosting, grant._assetID );
+                        if ( pPosting == nullptr )
+                            inoutRequest._listPosting.push_back( LedgerPosting{ LedgerHolder::makeMint(), account, grant._assetID, amount } );
+                        else if ( pPosting->_amount <= LedgerConstant::kMaxAmount - amount )
+                            pPosting->_amount += amount;
+                        else
+                            bFits = false;
+                    }
+                    if ( inoutRequest._memo.empty() == false )
+                        inoutRequest._memo.push_back( ',' );
+                    inoutRequest._memo.append( item._productID );
+                }
+                if ( bFits == false || inoutRequest._listPosting.size() > static_cast<size_t>( LedgerConstant::kMaxPostingCount ) )
+                {
+                    SW_LOG_ERROR_ID( "EconomyStoreLogic.ReceiptGrantTooLarge", "The %# order '%#' does not fit in one journal - nothing is granted, refund the order or change its offers", receipt._storeName, receipt._transactionID );
+                    return EconomyServiceResult::fail( OnlineError::kInvalidRequest );
+                }
+                inoutRequest._memo = inoutRequest._memo.substr( 0, static_cast<size_t>( LedgerConstant::kMaxMemoSize ) );
+                return EconomyResult::Ok;
             }
 
             static constexpr uint64 kDeliveryRecordVersion = 1;
@@ -511,7 +562,7 @@ namespace sw
     {
         outReply                               = EconomyRedeemReply{};
         const ReceiptValidationResult& receipt = input._receipt;
-        outReply._productID                    = receipt._productID;
+        outReply._productID                    = receipt._listItem.empty() ? string{} : receipt._listItem.front()._productID;
         switch ( receipt._status )
         {
             case ReceiptStatus::Valid:
@@ -532,24 +583,18 @@ namespace sw
         const EconomyServiceResult buyer = EconomyStoreLogicInternal::compareBuyer( connection, input );
         if ( buyer != EconomyResult::Ok )
             return EconomyStoreLogicInternal::finish( outReply, buyer );
-        const OfferDef* pOffer = offers.findOfferByProduct( receipt._storeName, receipt._productID );
-        if ( pOffer == nullptr )
-            return EconomyStoreLogicInternal::finish( outReply, EconomyResult::UnknownProduct );
 
         LedgerTransferRequest request;
         if ( EconomyStoreLogicInternal::makeRedeemKey( receipt._storeName, receipt._transactionID, request._journalKey ) == false )
             return EconomyStoreLogicInternal::finish( outReply, EconomyResult::ReceiptInvalid );
-        request._reason            = "iap.redeem";
-        request._memo              = receipt._productID.substr( 0, static_cast<size_t>( LedgerConstant::kMaxMemoSize ) );
-        request._pPolicy           = &currencies.getLedgerPolicy();
-        request._timeMs            = input._nowMs;
-        request._actorID           = input._accountID;
-        request._actorKind         = LedgerActorKind::Player;
-        const LedgerHolder account = LedgerHolder::makeAccount( input._accountID );
-        for ( const OfferGrant& grant : pOffer->_listGrant )
-        {
-            request._listPosting.push_back( LedgerPosting{ LedgerHolder::makeMint(), account, grant._assetID, grant._amount } );
-        }
+        request._reason                  = "iap.redeem";
+        request._pPolicy                 = &currencies.getLedgerPolicy();
+        request._timeMs                  = input._nowMs;
+        request._actorID                 = input._accountID;
+        request._actorKind               = LedgerActorKind::Player;
+        const EconomyServiceResult built = EconomyStoreLogicInternal::buildRedeemRequest( offers, receipt, LedgerHolder::makeAccount( input._accountID ), request );
+        if ( built != EconomyResult::Ok )
+            return EconomyStoreLogicInternal::finish( outReply, built );
         LedgerTransferResult       serviceResult;
         const EconomyServiceResult result = EconomyStoreLogicInternal::commitRedeem( connection, request, receipt, serviceResult );
         if ( result != EconomyResult::Ok )
