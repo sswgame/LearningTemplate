@@ -25,6 +25,7 @@
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Registry/CameraRegistry.h"
 #include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
+#include "Engine/Object/GameObject/Service/NetObjectTable.h"
 #include "Engine/Object/GameObject/WorldOrigin.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Object/Prefab/PrefabCache.h"
@@ -827,11 +828,49 @@ namespace sw
         return instantiateNodes( listNode, NodeBuild::DataLayer, &outListObjectID );
     }
 
+    void Scene::collectCellGroup( const vector<uint64>& listObjectID, vector<uint64>& outListObjectID ) const
+    {
+        outListObjectID.clear();
+        outListObjectID.reserve( listObjectID.size() );
+        unordered_set<uint64> uniqueObjectID;
+        for ( const uint64 objectID : listObjectID )
+        {
+            if ( uniqueObjectID.insert( objectID ).second )
+                outListObjectID.push_back( objectID );
+        }
+        if ( _objectManager->getSubsystem<PrefabInstanceRegistry>().getNestedPartCount() > 0 )
+            _objectManager->getSubsystem<PrefabInstanceRegistry>().collectAttachedPartsOf( uniqueObjectID, outListObjectID );
+
+        // 계층의 자손 — 부모와 함께 지워지는 것 전부다(플레이 중 붙인 것까지). 부모가 지워져도 남는 것, 세운 쪽이 다시 세우는 파생, 서버가 번호를 준 복제 스폰, 제 묶음이 따로 뜨는 것은 뺀다.
+        const NetObjectTable&          netObjects = _objectManager->getSubsystem<NetObjectTable>();
+        const SceneStreamingSubsystem& streaming  = _objectManager->getSubsystem<SceneStreamingSubsystem>();
+        const SceneDataLayerSubsystem& dataLayers = _objectManager->getSubsystem<SceneDataLayerSubsystem>();
+        const SceneSubLevelSubsystem&  subLevels  = _objectManager->getSubsystem<SceneSubLevelSubsystem>();
+        vector<GameObject*>            listChild;
+        for ( size_t index = 0; index < outListObjectID.size(); ++index )
+        {
+            const GameObject* pObject = _objectManager->findGameObjectByID( outListObjectID[index] );
+            if ( pObject == nullptr || pObject->isPendingDestroy() )
+                continue;
+            pObject->getChildren( listChild );
+            for ( const GameObject* pChild : listChild )
+            {
+                const uint64 childID   = pChild->getObjectID();
+                const bool   bSeparate = pChild->isPendingDestroy() || pChild->isTransient() || pChild->isKeptWhenParentDestroyed() || streaming.isListedObject( childID ) ||
+                                       dataLayers.isListedObject( childID ) || subLevels.isListedObject( childID ) || ( netObjects.findID( *pChild ) & NetObjectTable::kSpawnedBit ) != 0;
+                if ( bSeparate == false && uniqueObjectID.insert( childID ).second )
+                    outListObjectID.push_back( childID );
+            }
+        }
+    }
+
     void Scene::unloadCell( const vector<uint64>& listObjectID )
     {
         if ( _objectManager == nullptr )
             return;
-        for ( const uint64 objectID : listObjectID )
+        vector<uint64> listGroup;
+        collectCellGroup( listObjectID, listGroup );
+        for ( const uint64 objectID : listGroup )
         {
             _mapObjectIDToFileID.erase( objectID );
             _mapPrefabSource.erase( objectID );
@@ -839,7 +878,6 @@ namespace sw
             _mapInstanceMember.erase( objectID );
             _mapObjectDataLayer.erase( objectID );
             GameObject* pGo = _objectManager->findGameObjectByID( objectID );
-            // 자식은 같은 셀의 엔티티이거나 이 엔티티의 중첩 프리팹 부품이다 — 늘 올라 있는 오브젝트는 셀의 오브젝트에 붙지 않는다(쿠커가 검사했다).
             if ( pGo != nullptr )
                 _objectManager->destroyGameObject( pGo );
         }
@@ -850,34 +888,37 @@ namespace sw
         outListNode.clear();
         if ( _objectManager == nullptr )
             return;
-        // 셀 몫만 준비한다 — 원형 상태 · 부품 덮어쓰기를 씬 전체가 아니라 이 셀의 프리팹 엔티티로 만든다. 참조는 씬의 파일 id 표 전체로 적는다(늘 올라 있는 오브젝트를 가리킨다).
-        SceneInternal::SaveInputs     inputs;
-        unordered_map<uint64, string> mapCellPrefab;
-        for ( const uint64 objectID : listObjectID )
+        // 함께 내려가는 것을 모두 엔티티로 뜬다(중첩 프리팹 부품 · 플레이 중 붙인 것) — 파일 id 가 없으면 준다. 다시 지을 때 부착 · 핸들이 그 id 로 이어진다.
+        vector<uint64> listGroup;
+        collectCellGroup( listObjectID, listGroup );
+        uint64 nextFileID = 0;
+        for ( const uint64 objectID : listGroup )
+        {
+            const bool bNeedsFileID = _mapObjectIDToFileID.find( objectID ) == _mapObjectIDToFileID.end() && _objectManager->findGameObjectByID( objectID ) != nullptr;
+            if ( bNeedsFileID == false )
+                continue;
+            nextFileID = nextFileID == 0 ? computeNextFileID() : nextFileID + 1;
+            _mapObjectIDToFileID.emplace( objectID, nextFileID );
+        }
+
+        // 셀 몫만 준비한다 — 원형 상태를 씬 전체가 아니라 이 셀의 프리팹 엔티티로 만든다. 참조는 씬의 파일 id 표 전체로 적는다(늘 올라 있는 오브젝트를 가리킨다).
+        SceneInternal::SaveInputs inputs;
+        for ( const uint64 objectID : listGroup )
         {
             const auto fileIDIt = _mapObjectIDToFileID.find( objectID );
             if ( fileIDIt != _mapObjectIDToFileID.end() )
                 inputs._mapSavedID.emplace( objectID, fileIDIt->second );
             const auto prefabIt = _mapPrefabSource.find( objectID );
-            if ( prefabIt != _mapPrefabSource.end() )
-                mapCellPrefab.emplace( objectID, prefabIt->second );
-        }
-        AssetManager* const pAssetManager = _services._pAssetManager;
-        if ( pAssetManager != nullptr )
-        {
-            for ( const auto& [objectID, prefabPath] : mapCellPrefab )
-            {
-                (void)objectID;
-                (void)SceneInternal::findPrefabBaseState( *pAssetManager, inputs._mapPrefabBaseState, prefabPath ); // 캐시를 채운다 — 못 만든 원형은 쓰는 쪽이 전체 상태로 적는다
-            }
-            SceneInternal::collectInstancePartOverrides( *_objectManager, pAssetManager->getAssetCache<PrefabCache>(), mapCellPrefab, inputs._mapPartOverride );
+            if ( prefabIt != _mapPrefabSource.end() && _services._pAssetManager != nullptr )
+                (void)SceneInternal::findPrefabBaseState( *_services._pAssetManager, inputs._mapPrefabBaseState, prefabIt->second ); // 캐시를 채운다 — 못 만든 원형은 쓰는 쪽이 전체 상태로 적는다
         }
         // 런타임 칸(`RuntimeState` — 볼륨 발동 수 · AI 블랙보드)까지 뜬다 — 저작 목적이면 내렸다 올린 셀이 처음 상태로 돌아간다. 파생 칸(`Transient`)은 뜨지 않는다.
         ObjectSaveOptions saveOptions{ SerializePurpose::Snapshot };
         saveOptions._pSavedIDMap = &_mapObjectIDToFileID;
 
-        outListNode.reserve( listObjectID.size() );
-        for ( const uint64 objectID : listObjectID )
+        const PrefabInstanceRegistry& nestedParts = _objectManager->getSubsystem<PrefabInstanceRegistry>();
+        outListNode.reserve( listGroup.size() );
+        for ( const uint64 objectID : listGroup )
         {
             GameObject* pGo = _objectManager->findGameObjectByID( objectID );
             if ( pGo == nullptr || pGo->isPendingDestroy() )
@@ -887,8 +928,15 @@ namespace sw
             node._worldOrigin  = getWorldOrigin(); // 상태의 자리는 지금 원점 기준이다 — 원점이 옮겨진 뒤 다시 지으면 그 차이만큼 옮긴다
             if ( SceneInternal::writeEntityNode( pGo, _mapPrefabSource, inputs, saveOptions, node ) == false )
                 continue;
-            // PROPERTY 밖 상태도 함께 뜬다 — 내렸다 올린 셀 · 세이브가 지형 편집 · 시뮬레이션을 잃지 않게. shortcut: 중첩 프리팹 부품의 것은 뜨지 않는다, 부품에 이런 컴포넌트가 생기면 부품 경로로 싣는다.
+            // PROPERTY 밖 상태도 함께 뜬다 — 내렸다 올린 셀 · 세이브가 지형 편집 · 시뮬레이션을 잃지 않게.
             ComponentStateCodec::captureObject( *pGo, node._componentStateBytes );
+            if ( nestedParts.isAttachedNestedPart( pGo ) )
+            {
+                const PrefabNestedPart& part = *nestedParts.findNestedPart( objectID );
+                node._nestedOwnerFileID      = findFileID( part._ownerObjectID );
+                node._nestedPrefab           = part._prefabPath;
+                node._nestedPartKey          = part._partKey;
+            }
             const auto layerIt = _mapObjectDataLayer.find( objectID );
             if ( layerIt != _mapObjectDataLayer.end() )
                 node._listDataLayer = layerIt->second;
@@ -1006,7 +1054,8 @@ namespace sw
         if ( entity._listDataLayer.empty() == false )
             _mapObjectDataLayer[pGo->getObjectID()] = entity._listDataLayer;
         SceneInternal::applyEntityState( pGo, entity, prefabInstanceState, context._batch );
-        if ( entity._prefab.empty() == false )
+        // 떠 둔 프리팹 엔티티는 부품을 다시 스폰하지 않는다 — 부품도 엔티티로 떠 두었다(`captureCellNodes`).
+        if ( entity._prefab.empty() == false && entity._statePurpose == SerializePurpose::Authoring )
         {
             context._listPrefabObject.push_back( pGo );
             context._listPrefabNode.push_back( &entity );
@@ -1062,6 +1111,15 @@ namespace sw
                 listPrefabEntity.push_back( SceneInternal::PrefabEntity{ context._listPrefabObject[prefabIndex], context._listPrefabNode[prefabIndex] } );
             }
             SceneInternal::spawnNestedInstances( *_services._pAssetManager, listPrefabEntity );
+        }
+        // 떠 둔 부품의 기록을 다시 세운다 — 인스턴스가 사라진 부품은 제 엔티티로 남는다.
+        PrefabInstanceRegistry& nestedParts = _objectManager->getSubsystem<PrefabInstanceRegistry>();
+        for ( const SceneDocument::SceneObjectNode& entity : listNode )
+        {
+            const GameObject* pOwner = entity._nestedOwnerFileID != 0 ? batch.findBySavedID( entity._nestedOwnerFileID ) : nullptr;
+            const GameObject* pPart  = pOwner != nullptr ? batch.findBySavedID( entity._fileID ) : nullptr;
+            if ( pPart != nullptr )
+                nestedParts.registerNestedPart( pPart->getObjectID(), pOwner->getObjectID(), entity._nestedPrefab, entity._nestedPartKey );
         }
 
         _objectManager->mergePendingAdds();
@@ -1393,7 +1451,12 @@ namespace sw
                 {
                     recordHeldNode( node );
                 }
+                for ( const SceneDocument::SceneObjectNode& node : group._listHeldNode )
+                {
+                    recordHeldNode( node ); // 떠 두며 새로 준 id(묶음에 붙은 런타임 오브젝트 · 중첩 부품)
+                }
             }
+            nextFileID = MathUtil::max( nextFileID, pSubLevels->getMaxHeldFileID() + 1 );
         }
         // 스트리밍 셀이 든 엔티티(읽지 않은 쿠킹 내용 — 쿠킹본 머리의 최대값, 떠 둔 상태)와 겹치지 않는다.
         if ( _objectManager != nullptr )

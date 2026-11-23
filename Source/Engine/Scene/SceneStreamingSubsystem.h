@@ -184,6 +184,8 @@ namespace sw
         uint64 getMaxCellFileID() const;
         /** @brief 오브젝트(또는 그 조상)가 셀에 들어 있으면 true 입니다 — 세이브의 씬 섹션이 빼는 오브젝트입니다(셀 몫은 `writeSaveState` 가 싣는다). */
         bool isCellObject( uint64 objectID ) const;
+        /** @brief 오브젝트 자신이 이 서비스의 목록에 들어 있으면 true 입니다(조상은 보지 않는다) — 조상이 다른 묶음에 든 오브젝트를 두 번 뜨지 않게 가린다(`Scene::collectCellGroup`). */
+        bool isListedObject( uint64 objectID ) const;
         /**
          * @brief 월드 자리 @p position 의 셀에 있거나 경계가 그 자리를 덮는 문서의 조각(켜진 레이어)이 올라 있지 않으면 true 입니다 — 바닥이 없다(읽는 중 · 짓는 중 포함, 실패한 조각 제외).
          * @details 물리(`ScenePhysics`)가 동적 바디를 쥘지 묻는다. 스트리밍하지 않으면 false 입니다.

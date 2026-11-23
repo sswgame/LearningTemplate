@@ -95,6 +95,10 @@ namespace sw
         void collectSubLevelNames( vector<string>& outListName ) const;
         /** @brief 오브젝트(또는 그 조상)가 하위 레벨의 앵커 · 멤버면 true 입니다 — 세이브의 씬 섹션 · 씬 문서 쓰기가 빼는 오브젝트입니다. */
         bool isSubLevelObject( uint64 objectID ) const;
+        /** @brief 아직 짓지 않은 하위 레벨의 엔티티(세이브에서 되돌린 것)가 든 좁은 파일 id 의 최댓값입니다(없으면 0) — 앵커 · 멤버의 넓은 id 는 세지 않는다. 새 파일 id 는 이 위에서 고른다. */
+        uint64 getMaxHeldFileID() const;
+        /** @brief 오브젝트 자신이 이 서비스의 목록에 들어 있으면 true 입니다(조상은 보지 않는다) — 조상이 다른 묶음에 든 오브젝트를 두 번 뜨지 않게 가린다(`Scene::collectCellGroup`). */
+        bool isListedObject( uint64 objectID ) const;
         /** @brief 파일 id 가 하위 레벨 앵커의 것이면 true 입니다 — 씬이 다음 파일 id 를 셀 때 그 넓은 id 를 뺀다(앵커를 떠 둔 상태로 짓는 동안에도). */
         bool isAnchorFileID( uint64 fileID ) const;
 

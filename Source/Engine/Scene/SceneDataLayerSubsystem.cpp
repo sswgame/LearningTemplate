@@ -185,12 +185,17 @@ namespace sw
         }
     }
 
+    bool SceneDataLayerSubsystem::isListedObject( const uint64 objectID ) const
+    {
+        return _mapObjectGroup.find( objectID ) != _mapObjectGroup.end();
+    }
+
     bool SceneDataLayerSubsystem::isGroupObject( const uint64 objectID ) const
     {
         if ( _pScene == nullptr || _mapObjectGroup.empty() )
             return false;
-        // 묶음 엔티티에 붙은 자식(중첩 프리팹 부품)은 묶음이 다시 지을 때 함께 선다.
-        for ( const GameObject* pObject = _pScene->getObjectManager()->findGameObjectByID( objectID ); pObject != nullptr; pObject = pObject->getParent() )
+        // 묶음 엔티티에 붙은 자식(중첩 프리팹 부품)은 묶음이 다시 지을 때 함께 선다. 부모가 지워져도 남는 것(탑승자)은 조상의 몫이 아니다.
+        for ( const GameObject* pObject = _pScene->getObjectManager()->findGameObjectByID( objectID ); pObject != nullptr; pObject = pObject->isKeptWhenParentDestroyed() ? nullptr : pObject->getParent() )
         {
             if ( _mapObjectGroup.find( pObject->getObjectID() ) != _mapObjectGroup.end() )
                 return true;

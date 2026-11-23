@@ -161,6 +161,13 @@ namespace sw
              * @details 파일에는 쓰지 않고 세이브에 싣는다(`writeSavedNodes`).
              */
             vector<uint8> _componentStateBytes;
+            /**
+             * @brief **런타임 칸.** 떠 둔 중첩 프리팹 부품이면 그것을 스폰한 인스턴스의 파일 id 입니다(0 이면 부품이 아니다). `_nestedPrefab` · `_nestedPartKey` 와 함께 부품 기록(`PrefabNestedPart`)을 다시 세운다.
+             * @details 떠 둔 프리팹 엔티티는 부품을 다시 스폰하지 않는다 — 부품도 엔티티로 떠 두었다(런타임 칸 · PROPERTY 밖 상태 · 지운 부품이 그대로다). 세이브에 싣는다(`writeSavedNodes`).
+             */
+            uint64 _nestedOwnerFileID{ 0 };
+            string _nestedPrefab;  ///< **런타임 칸.** 떠 둔 부품의 원본 프리팹 경로(`PrefabNestedPart::_prefabPath`)
+            string _nestedPartKey; ///< **런타임 칸.** 떠 둔 부품의 노드 키(`PrefabNestedPart::_partKey`)
         };
 
         /**

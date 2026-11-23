@@ -5,6 +5,7 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/Task/TaskManager.h"
 #include "Core/Time/MonotonicClock.h"
 
@@ -359,17 +360,36 @@ namespace sw
         }
     }
 
+    bool SceneSubLevelSubsystem::isListedObject( const uint64 objectID ) const
+    {
+        return _mapObjectSubLevel.find( objectID ) != _mapObjectSubLevel.end();
+    }
+
     bool SceneSubLevelSubsystem::isSubLevelObject( const uint64 objectID ) const
     {
         if ( _pScene == nullptr || _mapObjectSubLevel.empty() )
             return false;
-        // 멤버에 붙은 자식(중첩 프리팹 부품 · 게임이 붙인 것)은 하위 레벨과 함께 선다.
-        for ( const GameObject* pObject = _pManager->findGameObjectByID( objectID ); pObject != nullptr; pObject = pObject->getParent() )
+        // 멤버에 붙은 자식(중첩 프리팹 부품 · 게임이 붙인 것)은 하위 레벨과 함께 선다. 부모가 지워져도 남는 것(탑승자)은 조상의 몫이 아니다.
+        for ( const GameObject* pObject = _pManager->findGameObjectByID( objectID ); pObject != nullptr; pObject = pObject->isKeptWhenParentDestroyed() ? nullptr : pObject->getParent() )
         {
             if ( _mapObjectSubLevel.find( pObject->getObjectID() ) != _mapObjectSubLevel.end() )
                 return true;
         }
         return false;
+    }
+
+    uint64 SceneSubLevelSubsystem::getMaxHeldFileID() const
+    {
+        uint64 maxFileID = 0;
+        for ( const unique_ptr<SubLevel>& pSubLevel : _listSubLevel )
+        {
+            for ( const SceneDocument::SceneObjectNode& node : pSubLevel->_listNode )
+            {
+                if ( node._instanceAnchorFileID == 0 && node._fileID != pSubLevel->_anchorFileID )
+                    maxFileID = MathUtil::max( maxFileID, node._fileID );
+            }
+        }
+        return maxFileID;
     }
 
     bool SceneSubLevelSubsystem::isAnchorFileID( const uint64 fileID ) const

@@ -364,12 +364,17 @@ namespace sw
         return maxFileID;
     }
 
+    bool SceneStreamingSubsystem::isListedObject( const uint64 objectID ) const
+    {
+        return _mapObjectSlot.find( objectID ) != _mapObjectSlot.end();
+    }
+
     bool SceneStreamingSubsystem::isCellObject( const uint64 objectID ) const
     {
         if ( _pScene == nullptr || _mapObjectSlot.empty() )
             return false;
-        // 셀 엔티티에 붙은 자식(중첩 프리팹 부품)은 셀이 다시 지을 때 함께 선다 — 조상이 셀에 들었으면 셀 몫이다.
-        for ( const GameObject* pObject = _pScene->getObjectManager()->findGameObjectByID( objectID ); pObject != nullptr; pObject = pObject->getParent() )
+        // 셀 엔티티에 붙은 자식(중첩 프리팹 부품)은 셀이 다시 지을 때 함께 선다 — 조상이 셀에 들었으면 셀 몫이다. 부모가 지워져도 남는 것(탑승자)은 조상의 몫이 아니다.
+        for ( const GameObject* pObject = _pScene->getObjectManager()->findGameObjectByID( objectID ); pObject != nullptr; pObject = pObject->isKeptWhenParentDestroyed() ? nullptr : pObject->getParent() )
         {
             if ( _mapObjectSlot.find( pObject->getObjectID() ) != _mapObjectSlot.end() )
                 return true;

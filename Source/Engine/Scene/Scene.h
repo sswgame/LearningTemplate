@@ -79,11 +79,13 @@ namespace sw
          *          지은 오브젝트 id(엔티티마다 하나, 부품 제외)를 @p inoutListObjectID 에 더한다 — 실패 · 버림에도 남아 부르는 쪽이 `unloadCell` 로 내린다.
          */
         [[nodiscard]] CellBuildResult continueCellBuild( CellBuild& build, const Stopwatch& stopwatch, int64 budgetNanoseconds, bool bForceProgress, vector<uint64>& inoutListObjectID );
-        /** @brief 셀 짓기(`continueCellBuild`)가 지은 오브젝트를 자식(중첩 프리팹 부품)까지 지우고 파일 id · 프리팹 기록을 뺍니다. */
+        /** @brief 셀 짓기(`continueCellBuild`)가 지은 오브젝트를 함께 내려가는 것(`collectCellGroup` — 중첩 프리팹 부품 · 붙은 자손)까지 지우고 파일 id · 프리팹 기록을 뺍니다. */
         void unloadCell( const vector<uint64>& listObjectID );
         /**
          * @brief 오브젝트(@p listObjectID — 셀 짓기가 지은 것 · 셀로 옮겨 온 것)의 지금 상태를 셀 엔티티로 씁니다(비우고 채웁니다). 스트리밍이 셀을 내리기 전 · 세이브에 실을 때 부르고, 다시 올릴 때 이것으로 짓는다(셀 상태 보존).
-         * @details 저장과 같은 길이다(`serializeToDocument` 의 엔티티 쓰기) — 프리팹 엔티티는 원형과 다른 것만(`PrefabOverrides` 델타), 그 밖은 전체 상태를 적되 목적은 `SerializePurpose::Snapshot` 이다
+         * @details 함께 내려가는 것(`collectCellGroup` — 중첩 프리팹 부품 · 플레이 중 붙인 자손)도 저마다 엔티티로 뜨고, 다시 지을 때 부품을 프리팹에서 다시 스폰하지 않는다 — 부품의 런타임 칸 · PROPERTY 밖 상태 · 지운 부품이
+         *          그대로 돌아온다(언리얼 레벨 스트리밍은 차일드 액터도 레벨의 액터로 남긴다). 파일 id 가 없던 것은 여기서 받는다.
+         *          저장과 같은 길이다(`serializeToDocument` 의 엔티티 쓰기) — 프리팹 엔티티는 원형과 다른 것만(`PrefabOverrides` 델타), 그 밖은 전체 상태를 적되 목적은 `SerializePurpose::Snapshot` 이다
          *          (런타임 칸까지 — 엔티티의 `_statePurpose` 가 그 목적으로 읽게 한다). 파일 id · 레이어 · 인스턴스 앵커를 그대로 둔다(셀에 드는 런타임 스폰은 스트리밍이 먼저 파일 id 를 준다). 상태는 이미 평평한 파일 id 라
          *          id 범위는 0 이다. 플레이 중 지운 오브젝트는 적지 않아 다시 올려도 없다(언리얼 레벨 스트리밍의 상태 보존 · 세이브 델타와 같은 생각).
          */
@@ -288,6 +290,11 @@ namespace sw
         [[nodiscard]] bool instantiateNodes( const vector<SceneDocument::SceneObjectNode>& listNode, NodeBuild build, vector<uint64>* pOutListObjectID, const StopToken& stopToken = {} );
         /** @brief 짓는 배치 하나의 상태입니다(배치 · 프리팹 원형 · 프리팹 엔티티). 정의는 Scene.cpp. */
         struct NodeBuildContext;
+        /**
+         * @brief @p listObjectID 와 함께 내려가는 오브젝트를 모읍니다(비우고 채웁니다 — 앞이 @p listObjectID, 뒤가 중첩 프리팹 부품과 붙은 자손).
+         * @details 뜨는 쪽(`captureCellNodes`)과 지우는 쪽(`unloadCell`)이 같은 것을 본다 — 뜨지 않고 지우면 그 오브젝트를 잃고, 지우지 않으면 기록이 남는다.
+         */
+        void collectCellGroup( const vector<uint64>& listObjectID, vector<uint64>& outListObjectID ) const;
         /** @brief 지금 씬의 파일 id 가진 오브젝트를 배치에 가리킴 대상으로 기록합니다 — 셀 · 레이어 묶음이 늘 올라 있는 엔티티를 파일 id 로 가리킨다. @p pExcludedObjectID 의 오브젝트(이 배치가 지은 것)는 뺍니다. */
         void addReferenceTargets( NodeBuildContext& context, const vector<uint64>* pExcludedObjectID ) const;
         /** @brief 엔티티 하나의 오브젝트를 만들고 상태를 배치에 읽습니다(연결은 `finishNodeBuild`). 프리팹을 찾지 못하면 만들지 않습니다. */
