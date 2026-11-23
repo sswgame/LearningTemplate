@@ -381,12 +381,12 @@ namespace sw
         /// @brief VkBuffer 와 메모리, 사용 플래그입니다.
         struct VulkanBufferRecord
         {
-            VkBuffer       _buffer{ nullptr };
-            VkDeviceMemory _memory{ nullptr };
-            uint64         _sizeBytes{ 0 };  ///< VkDeviceSize — 만들 때의 요청 크기(`createVulkanBuffer`)
-            uint32         _usage{ 0 };      ///< VkBufferUsageFlags
-            uint32         _cbSlotSize{ 0 }; ///< 링 상수 버퍼(`createConstantBuffer`)의 프레임 칸 크기, 아니면 0. 표에 넣기 전에 정하고 바뀌지 않아 기록 경로가 락 없이 읽는다
-            RHIBufferState _state = RHIBufferState::Common;
+            VkBuffer                        _buffer{ nullptr };
+            VkDeviceMemory                  _memory{ nullptr };
+            uint64                          _sizeBytes{ 0 };  ///< VkDeviceSize — 만들 때의 요청 크기(`createVulkanBuffer`)
+            uint32                          _usage{ 0 };      ///< VkBufferUsageFlags
+            uint32                          _cbSlotSize{ 0 }; ///< 링 상수 버퍼(`createConstantBuffer`)의 프레임 칸 크기, 아니면 0. 표에 넣기 전에 정하고 바뀌지 않아 기록 경로가 락 없이 읽는다
+            RHITrackedState<RHIBufferState> _state;           ///< 기본값은 Common 이다. 병렬 기록 워커가 함께 옮길 수 있어 원자값이다(텍스처의 `_layout` · DX12 버퍼 레코드와 같은 장치)
         };
 
         /**

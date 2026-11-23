@@ -636,7 +636,11 @@ namespace sw
         {
             const RHIBufferState                 newState = pTransition[index]._state;
             VulkanRHIDevice::VulkanBufferRecord* pRecord  = _pDevice->resolveAllocatedBuffer( pTransition[index]._buffer );
-            if ( pRecord == nullptr || pRecord->_buffer == VK_NULL_HANDLE || pRecord->_state == newState )
+            if ( pRecord == nullptr || pRecord->_buffer == VK_NULL_HANDLE )
+                continue;
+            // 확인과 기록이 한 번이다 — 같은 레벨의 두 워커가 같은 버퍼를 같은 상태로 옮기면 한쪽만 배리어를 낸다(`RHITrackedState`, DX12 와 같다).
+            RHIBufferState stateBefore{};
+            if ( pRecord->_state.transitionTo( newState, stateBefore ) == false )
                 continue;
             if ( _pState->_bRenderPassActive == SW_TRUE )
             {
@@ -647,7 +651,7 @@ namespace sw
             VkAccessFlags        dstAccess{ 0 };
             VkPipelineStageFlags srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
             VkPipelineStageFlags dstStage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
-            mapStateVal( pRecord->_state, srcAccess, srcStage );
+            mapStateVal( stateBefore, srcAccess, srcStage );
             mapStateVal( newState, dstAccess, dstStage );
 
             VkBufferMemoryBarrier& barrier = arrBarrier[barrierCount++];
@@ -662,7 +666,6 @@ namespace sw
             barrier.size                   = VK_WHOLE_SIZE;
             srcStageSum |= srcStage;
             dstStageSum |= dstStage;
-            pRecord->_state = newState;
             if ( barrierCount == kMaxBarrierPerCall )
                 flushBarriers();
         }

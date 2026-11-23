@@ -834,7 +834,6 @@ namespace sw
         record._sizeBytes  = sizeBytes;
         record._usage      = usageFlags;
         record._cbSlotSize = cbSlotSize;
-        record._state      = RHIBufferState::Common;
 
         // GPU 메모리 추적기의 Buffer 줄에 올리는 유일한 자리다. 크기는 드라이버가 요구한 할당 크기(정렬 포함)다.
         const RHIBufferHandle handle = _gpuBuffers.insert( record );
