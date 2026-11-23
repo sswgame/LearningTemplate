@@ -163,6 +163,11 @@ namespace sw
         _bRidePending = 1;
     }
 
+    void VehicleSeatComponent::onWorldOriginShifted( const float3& delta )
+    {
+        _lastSeatPosition += delta;
+    }
+
     void VehicleSeatComponent::applyPendingRide( GameObjectManager& manager )
     {
         if ( _bRidePending == 0 )

@@ -2,6 +2,7 @@
 
 #include "Engine/Environment/Water/WaterBodyComponent.h"
 
+#include "Core/Math/AABB.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 
@@ -323,6 +324,26 @@ namespace sw
         }
     }
 
+    bool WaterBodyComponent::computeStreamingBounds( AABB& outBox ) const
+    {
+        const float3 origin = getWorldPosition();
+        if ( _shape != WaterBodyShape::River )
+        {
+            const float3 half{ 0.5f * _size._x, 0.0f, 0.5f * _size._y };
+            outBox = AABB{ origin - half, origin + half };
+            return true;
+        }
+        if ( _listRiverPoint.empty() )
+            return false;
+        const float3 half{ 0.5f * _riverWidth, 0.0f, 0.5f * _riverWidth };
+        outBox = AABB::empty();
+        for ( const float3& point : _listRiverPoint )
+        {
+            outBox = outBox.unionWith( AABB{ origin + point - half, origin + point + half } );
+        }
+        return true;
+    }
+
     float32 WaterBodyComponent::computeBoundsRadius() const
     {
         float32 boundsRadius = _surfaceBoundsRadius;
@@ -397,7 +418,7 @@ namespace sw
         const string& materialPath = _materialPath.empty() ? engine::getSubsystem<EngineDefaultAssets>()._waterMaterial.get() : _materialPath.path();
         if ( _material.getInstance() == nullptr )
             (void)_material.acquire( materialPath ); // 못 잡으면 씬 기본 머티리얼로 그린다(경고는 안에서)
-        shared_ptr<Mesh> mesh = Mesh::create();
+        shared_ptr<Mesh> mesh = Mesh::create( MeshCPUAccess::Keep );
         // 호수는 평평해 탄젠트를 정점이 이미 들었다 — 정점 9 만 개의 탄젠트 구하기(Debug 0.6~1 초)를 씬 열기 · 플레이 · 백엔드 교체마다 하지 않는다.
         // 둘 다 격자라 이웃 삼각형이 나눠 쓰는 같은 정점을 합친다.
         if ( _shape == WaterBodyShape::River )

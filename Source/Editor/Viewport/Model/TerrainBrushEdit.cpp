@@ -18,6 +18,7 @@
 #include "Engine/Config/GameTimeScale.h"
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Content/AssetPaths.h"
+#include "Engine/Environment/Foliage/FoliageComponent.h"
 #include "Engine/Environment/Terrain/HeightfieldAsset.h"
 #include "Engine/Environment/Terrain/LayerWeightsAsset.h"
 #include "Engine/Environment/Terrain/TerrainComponent.h"
@@ -25,6 +26,7 @@
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 
 #include <cmath>
 
@@ -424,6 +426,20 @@ namespace sw::editor
             }
 
             /** @brief 크기 바꾸기 대상 지형의 높이장 해상도입니다(대상이 없으면 0). 시나리오가 `terrain.resize` 가 받아들여졌는지 읽는다. */
+            /** @brief 감시 값 `Editor.TerrainFoliageInstances` — 활성 씬의 폴리지 인스턴스 수입니다(칠하기 · 지우기가 배치에 닿았는지 본다). */
+            [[nodiscard]] static bool readFoliageInstances( const GameObjectManager* pManager, float64& outValue )
+            {
+                if ( pManager == nullptr )
+                    return false;
+                uint64 count = 0;
+                for ( const FoliageComponent* pFoliage : pManager->getComponentRegistry().getAll<FoliageComponent>() )
+                {
+                    count += pFoliage->getInstanceCount();
+                }
+                outValue = static_cast<float64>( count );
+                return true;
+            }
+
             [[nodiscard]] static bool readResolution( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 const TerrainComponent* pTerrain = get().findResizeTarget();
@@ -431,12 +447,12 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief `terrain.brush <raise|lower|flatten|paint|smooth|hole|fill> [radius] [strength] [layer]` — 시나리오가 브러시를 고정 값으로 맞춥니다. */
+            /** @brief `terrain.brush <raise|lower|flatten|paint|smooth|hole|fill|erase> [radius] [strength] [layer]` — 시나리오가 브러시를 고정 값으로 맞춥니다. */
             static bool runBrush( const vector<string>& listArgument, string& outReply )
             {
                 if ( listArgument.empty() || listArgument.size() > 4 )
                     return false;
-                static constexpr auto kArrModeName = makeEnumTable<TerrainBrushMode, const utf8*>( "raise", "lower", "flatten", "paint", "smooth", "hole", "fill" );
+                static constexpr auto kArrModeName = makeEnumTable<TerrainBrushMode, const utf8*>( "raise", "lower", "flatten", "paint", "smooth", "hole", "fill", "erase" );
                 TerrainBrushSettings  settings     = get()._settings;
                 bool                  bKnownMode   = false;
                 for ( const TerrainBrushMode mode : EnumRange<TerrainBrushMode>{} )
@@ -755,6 +771,28 @@ namespace sw::editor
         }
     } // namespace
 
+    void TerrainBrushEdit::collectFoliageLayers( vector<TerrainBrushFoliageLayer>& outListLayer )
+    {
+        outListLayer.clear();
+        const GameObjectManager* pManager = editor::getActiveObjectManager();
+        if ( pManager == nullptr )
+            return;
+        for ( const FoliageComponent* pFoliage : pManager->getComponentRegistry().getAll<FoliageComponent>() )
+        {
+            const GameObject* pOwner = pFoliage->getOwner();
+            for ( uint32 layerIndex = 0; layerIndex < pFoliage->getLayerCount(); ++layerIndex )
+            {
+                const FoliageLayer&                      layer = pFoliage->getLayer( layerIndex );
+                StringBuilder<constant::buffer::kMax256> label;
+                label.appendFormat( "%# / %#", pOwner != nullptr ? pOwner->getName().c_str() : "", layer._name );
+                TerrainBrushFoliageLayer& row = outListLayer.emplace_back();
+                row._label                    = string( label.view() );
+                if ( layer._rule._densityLayerIndex >= 0 )
+                    row._densityLayerIndex = static_cast<uint32>( layer._rule._densityLayerIndex );
+            }
+        }
+    }
+
     void TerrainBrushEdit::gather( const Ray* pRay, TerrainBrushViewState& outState )
     {
         TerrainBrushToolState::get().gather( pRay, outState );
@@ -817,9 +855,11 @@ namespace sw::editor
                          &TerrainBrushToolState::readStrokeCount );
     SW_AUTOMATION_WATCH( editorTerrainBrushHit, "Editor.TerrainBrushHit", "1 when the mouse ray hit a terrain in the last terrain tool frame",
                          &TerrainBrushToolState::readHit );
+    SW_AUTOMATION_WATCH( editorTerrainFoliageInstances, "Editor.TerrainFoliageInstances", "Foliage instances of the active scene (painting the density layer plants and erases them)",
+                         &TerrainBrushToolState::readFoliageInstances );
     SW_AUTOMATION_WATCH( editorTerrainResolution, "Editor.TerrainResolution", "Height samples per side of the terrain the resize control targets (0 when there is none)",
                          &TerrainBrushToolState::readResolution );
-    SW_DEV_COMMAND( TerrainBrush, "terrain.brush", "terrain.brush <raise|lower|flatten|paint|smooth|hole|fill> [radius] [strength] [layer]",
+    SW_DEV_COMMAND( TerrainBrush, "terrain.brush", "terrain.brush <raise|lower|flatten|paint|smooth|hole|fill|erase> [radius] [strength] [layer]",
                     "Set the terrain brush of the scene view terrain tool", &TerrainBrushToolState::runBrush );
     SW_DEV_COMMAND( TerrainResize, "terrain.resize", "terrain.resize <resolution>", "Resample the last edited (or hovered) terrain to a new resolution, undoable",
                     &TerrainBrushToolState::runResize );

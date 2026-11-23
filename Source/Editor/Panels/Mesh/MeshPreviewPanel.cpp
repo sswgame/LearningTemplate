@@ -138,7 +138,7 @@ namespace sw::editor
         for ( uint32 lod = 0; lod < lodCount; ++lod )
         {
             fixed_string<constant::buffer::kMax32> label;
-            formatstring( label.data(), label.capacity(), "LOD %u", lod );
+            formatstring( label.data(), label.capacity(), "LOD %#", lod );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( label.c_str() ) );
             ImGui::RadioButton( label.c_str(), &_model.editLODChoice(), static_cast<int32>( lod ) );
         }

@@ -19,7 +19,6 @@
 #include "Editor/Common/Workspace/Undo/UndoStep.h"
 
 #include "Engine/Asset/AssetDatabase.h"
-#include "Engine/Config/ConfigManager.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Serialization/Serializer/SerializerUtil.h"
@@ -114,12 +113,12 @@ namespace sw::editor
         if ( _kind == SourceKind::Model )
         {
             ModelImportConfig config;
-            if ( config.loadFromFile( ModelImportConfig::makeDefaultConfigPath() ) == ConfigReadResult::Invalid )
+            if ( config.loadFromFile( ModelImportConfig::makeDefaultConfigPath() ) == false )
                 return "The model import rules cannot be read (see the log).";
             return config.resolveRule( _assetID, listOverride )._error;
         }
         TextureImportConfig config;
-        if ( config.loadFromFile( TextureImporter::makeDefaultImportConfigPath() ) == ConfigReadResult::Invalid )
+        if ( config.loadFromFile( TextureImporter::makeDefaultImportConfigPath() ) == false )
             return "The texture import rules cannot be read (see the log).";
         return config.resolveRule( _assetID, listOverride )._error;
     }
@@ -132,7 +131,7 @@ namespace sw::editor
         if ( _kind == SourceKind::Model )
         {
             ModelImportConfig config;
-            if ( config.loadFromFile( ModelImportConfig::makeDefaultConfigPath() ) == ConfigReadResult::Invalid )
+            if ( config.loadFromFile( ModelImportConfig::makeDefaultConfigPath() ) == false )
             {
                 _error = "The model import rules cannot be read (see the log).";
                 return;
@@ -144,7 +143,7 @@ namespace sw::editor
             return;
         }
         TextureImportConfig config;
-        if ( config.loadFromFile( TextureImporter::makeDefaultImportConfigPath() ) == ConfigReadResult::Invalid )
+        if ( config.loadFromFile( TextureImporter::makeDefaultImportConfigPath() ) == false )
         {
             _error = "The texture import rules cannot be read (see the log).";
             return;

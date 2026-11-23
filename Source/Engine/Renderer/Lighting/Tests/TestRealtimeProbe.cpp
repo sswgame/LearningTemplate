@@ -7,7 +7,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Environment/Sky/SkyGradient.h"
-#include "Engine/Graphics/Lighting/SceneVoxelGrid.h"
+#include "Engine/Graphics/Lighting/SceneVoxelScene.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshUtil.h"
@@ -18,26 +18,28 @@
 #include "Engine/Renderer/Lighting/GPULightBuffer.h"
 #include "Engine/Renderer/Lighting/RealtimeProbeUpdater.h"
 #include "Engine/Renderer/Lighting/SceneVoxelizer.h"
+#include "Engine/Renderer/Lighting/Tests/SceneVoxelReference.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Visual/Component/LightProbeVolumeComponent.h"
 #include "Engine/Visual/Component/MeshComponent.h"
 
 // SceneVoxelGridTest · SceneVoxelizerTest · RealtimeProbeTest — 실시간 프로브 갱신의 CPU 쪽(결정 기록 5-5 R5 · R6). 디바이스 없음(nogpu).
 //
-// GPU 컴퓨트(probe_update.hlsl)는 여기서 돌지 않는다. 대신 컴퓨트가 읽는 두 입력 - 점유 복셀(식은 셰이더 traceVoxelRay 와 같다)과 입력 행 배치 - 를 CPU 에서 닫힌 값으로 본다.
+// GPU 컴퓨트(scene_voxelize.hlsl · probe_update.hlsl)는 여기서 돌지 않는다. 대신 컴퓨트가 읽는 입력 행(칠할 일 · 프로브 갱신)을 CPU 기준 구현(SceneVoxelReference — 셰이더와 같은 식)으로
+// 돌려 닫힌 값으로 본다.
 // 컴퓨트의 갱신 결과(방 안이 밝아지는지)는 시나리오 realtimegi 가 네 백엔드에서 본다.
 
 namespace
 {
     /** @brief y = @p height 평면의 한 변 @p size 정사각형(x, z 가 0 .. size)을 삼각형 둘로 칠합니다. */
-    void voxelizeHorizontalSquare( sw::SceneVoxelGrid& inoutGrid, float32 height, float32 size )
+    void voxelizeHorizontalSquare( sw::test::SceneVoxelReference& inoutGrid, float32 height, float32 size )
     {
         inoutGrid.voxelizeTriangle( sw::float3{ 0.0f, height, 0.0f }, sw::float3{ size, height, 0.0f }, sw::float3{ 0.0f, height, size } );
         inoutGrid.voxelizeTriangle( sw::float3{ size, height, 0.0f }, sw::float3{ size, height, size }, sw::float3{ 0.0f, height, size } );
     }
 
     /** @brief x = @p position 평면의 한 변 @p size 정사각형(y, z 가 0 .. size)을 삼각형 둘로 칠합니다. */
-    void voxelizeWallX( sw::SceneVoxelGrid& inoutGrid, float32 position, float32 size )
+    void voxelizeWallX( sw::test::SceneVoxelReference& inoutGrid, float32 position, float32 size )
     {
         inoutGrid.voxelizeTriangle( sw::float3{ position, 0.0f, 0.0f }, sw::float3{ position, size, 0.0f }, sw::float3{ position, 0.0f, size } );
         inoutGrid.voxelizeTriangle( sw::float3{ position, size, 0.0f }, sw::float3{ position, size, size }, sw::float3{ position, 0.0f, size } );
@@ -51,6 +53,26 @@ namespace
                                              sw::float3{4.0f, 4.0f, 4.0f}
         },
                                          1.0f );
+    }
+
+    /** @brief 메시가 없는 복셀 장면입니다(격자 모양만 든다). */
+    sw::shared_ptr<sw::SceneVoxelScene> makeEmptyScene( const sw::SceneVoxelGrid& grid )
+    {
+        sw::shared_ptr<sw::SceneVoxelScene> scene = sw::make_shared<sw::SceneVoxelScene>();
+        scene->_grid                              = grid;
+        return scene;
+    }
+
+    /** @brief 장면 하나를 처음부터 칠한 결과입니다(칠할 일을 CPU 기준 구현으로 돌린다). */
+    sw::test::SceneVoxelReference paintWhole( const sw::SceneVoxelScene& scene )
+    {
+        sw::vector<uint32> words( scene._grid.getWordCount(), 0xFFFFFFFFu ); // 지우기가 먼저 돈다 — 앞 내용에 기대지 않는다
+        words.back() = 0u;                                                   // 마지막 단어의 남는 비트는 칸이 아니다
+        sw::test::SceneVoxelReference::executePlan( sw::SceneVoxelizer::planPaint( {
+                                                        sw::SceneVoxelPaintTarget{ &scene, nullptr, 0u, sw::SceneVoxelizer::kNoEmission }
+        } ),
+                                                    words );
+        return sw::test::SceneVoxelReference( scene._grid, words, 0u );
     }
 
     /** @brief 반투명 머티리얼입니다 — 반투명은 머티리얼이 정한다(메시 컴포넌트에는 블렌드 칸이 없다). */
@@ -100,12 +122,12 @@ SW_TEST_CASE( SceneVoxelGridTest, MakeCapsCellsPerAxisAndRejectsBadInput )
     SW_EXPECT_FALSE( wide.isEmpty() );
     SW_EXPECT_TRUE( wide._dimX <= sw::SceneVoxelGrid::kMaxCellsPerAxis );
     SW_EXPECT_TRUE( wide._cellSize * static_cast<float32>( wide._dimX ) >= 1000.0f - 1.0e-3f ); // 상자를 덮는다
-    SW_EXPECT_EQUAL( size_t( ( wide.getCellCount() + 31u ) / 32u ), wide._listWord.size() );
+    SW_EXPECT_EQUAL( ( wide.getCellCount() + 31u ) / 32u, wide.getWordCount() );
 
     const sw::SceneVoxelGrid small = makeFourMeterGrid();
     SW_EXPECT_EQUAL( 4u, small._dimX );
     SW_EXPECT_EQUAL( 64u, small.getCellCount() );
-    SW_EXPECT_EQUAL( 0u, small.countOccupied() );
+    SW_EXPECT_EQUAL( 2u, small.getWordCount() );
 
     SW_EXPECT_TRUE( sw::SceneVoxelGrid::make( sw::AABB{
                                                   sw::float3{1.0f, 1.0f, 1.0f},
@@ -126,7 +148,7 @@ SW_TEST_CASE( SceneVoxelGridTest, MakeCapsCellsPerAxisAndRejectsBadInput )
  */
 SW_TEST_CASE( SceneVoxelGridTest, VoxelizesHorizontalTriangleIntoOneLayer )
 {
-    sw::SceneVoxelGrid grid = makeFourMeterGrid();
+    sw::test::SceneVoxelReference grid( makeFourMeterGrid() );
     grid.voxelizeTriangle( sw::float3{ 0.1f, 1.5f, 0.1f }, sw::float3{ 3.9f, 1.5f, 0.1f }, sw::float3{ 0.1f, 1.5f, 3.9f } );
     SW_EXPECT_TRUE( grid.countOccupied() > 0u );
     for ( uint32 cellZ = 0; cellZ < 4; ++cellZ )
@@ -150,7 +172,7 @@ SW_TEST_CASE( SceneVoxelGridTest, VoxelizesHorizontalTriangleIntoOneLayer )
  */
 SW_TEST_CASE( SceneVoxelGridTest, VoxelizesThinDiagonalTriangle )
 {
-    sw::SceneVoxelGrid grid = makeFourMeterGrid();
+    sw::test::SceneVoxelReference grid( makeFourMeterGrid() );
     grid.voxelizeTriangle( sw::float3{ 0.01f, 0.01f, 0.01f }, sw::float3{ 3.99f, 3.99f, 3.99f }, sw::float3{ 3.99f, 3.99f, 3.9f } );
     for ( uint32 cell = 0; cell < 4; ++cell )
     {
@@ -163,10 +185,10 @@ SW_TEST_CASE( SceneVoxelGridTest, VoxelizesThinDiagonalTriangle )
  */
 SW_TEST_CASE( SceneVoxelGridTest, TraceRayHitsTopFace )
 {
-    sw::SceneVoxelGrid grid = makeFourMeterGrid();
+    sw::test::SceneVoxelReference grid( makeFourMeterGrid() );
     voxelizeHorizontalSquare( grid, 1.5f, 4.0f ); // 칸 층 y = 1 (1 .. 2 m)
 
-    sw::SceneVoxelHit hit;
+    sw::test::SceneVoxelHit hit;
     SW_REQUIRE_TRUE( grid.traceRay( sw::float3{ 2.5f, 3.5f, 2.5f }, sw::float3{ 0.0f, -1.0f, 0.0f }, 100.0f, hit ) );
     SW_EXPECT_NEAR( 1.5f, hit._distance, 1.0e-4f ); // 3.5 → 2.0
     SW_EXPECT_NEAR( 1.0f, hit._normal._y, 0.0f );
@@ -186,11 +208,11 @@ SW_TEST_CASE( SceneVoxelGridTest, TraceRayHitsTopFace )
  */
 SW_TEST_CASE( SceneVoxelGridTest, TraceRayHitsWallAndInsideStart )
 {
-    sw::SceneVoxelGrid grid = makeFourMeterGrid();
+    sw::test::SceneVoxelReference grid( makeFourMeterGrid() );
     voxelizeWallX( grid, 3.5f, 4.0f ); // 칸 열 x = 3 (3 .. 4 m)
 
-    const sw::float3  direction = sw::float3{ 1.0f, 0.3f, 0.2f }.normalize();
-    sw::SceneVoxelHit hit;
+    const sw::float3        direction = sw::float3{ 1.0f, 0.3f, 0.2f }.normalize();
+    sw::test::SceneVoxelHit hit;
     SW_REQUIRE_TRUE( grid.traceRay( sw::float3{ 0.5f, 0.5f, 0.5f }, direction, 100.0f, hit ) );
     SW_EXPECT_NEAR( 2.5f / direction._x, hit._distance, 1.0e-3f );
     SW_EXPECT_NEAR( -1.0f, hit._normal._x, 0.0f );
@@ -216,32 +238,33 @@ SW_TEST_CASE( SceneVoxelizerTest, VoxelizesOpaqueVisibleMeshesOnly )
 
     SW_REQUIRE_NOT_NULL( addCube( pObjects, "Glass", sw::float3{ 0.0f, 0.0f, 0.0f }, glass.get(), true ) );
     SW_REQUIRE_NOT_NULL( addCube( pObjects, "Hidden", sw::float3{ 0.0f, 0.0f, 0.0f }, nullptr, false ) );
-    const sw::SceneVoxelGrid empty = sw::SceneVoxelizer::makeGrid( pObjects->getPrimitiveRegistry(), sceneOpaque.get(), bounds, 0.25f );
-    SW_REQUIRE_FALSE( empty.isEmpty() );
+    const sw::test::SceneVoxelReference empty = paintWhole( sw::SceneVoxelizer::makeScene( pObjects->getPrimitiveRegistry(), sceneOpaque.get(), bounds, 0.25f ) );
+    SW_REQUIRE_FALSE( empty._grid.isEmpty() );
     SW_EXPECT_EQUAL( 0u, empty.countOccupied() );
 
     SW_REQUIRE_NOT_NULL( addCube( pObjects, "Wall", sw::float3{ 0.0f, 0.0f, 0.0f }, nullptr, true ) );
-    const sw::SceneVoxelGrid solid = sw::SceneVoxelizer::makeGrid( pObjects->getPrimitiveRegistry(), sceneOpaque.get(), bounds, 0.25f );
+    const sw::test::SceneVoxelReference solid = paintWhole( sw::SceneVoxelizer::makeScene( pObjects->getPrimitiveRegistry(), sceneOpaque.get(), bounds, 0.25f ) );
     // 머티리얼을 비운 메시는 씬 기본으로 그려진다 — 기본이 반투명이면 렌더러처럼 가리개가 아니다(복셀러가 따로 짐작하지 않는다).
-    const sw::SceneVoxelGrid seeThrough = sw::SceneVoxelizer::makeGrid( pObjects->getPrimitiveRegistry(), glass.get(), bounds, 0.25f );
+    const sw::test::SceneVoxelReference seeThrough = paintWhole( sw::SceneVoxelizer::makeScene( pObjects->getPrimitiveRegistry(), glass.get(), bounds, 0.25f ) );
     SW_EXPECT_EQUAL( 0u, seeThrough.countOccupied() );
     SW_EXPECT_TRUE( solid.countOccupied() > 0u );
     SW_EXPECT_TRUE( solid.isOccupied( 6, 8, 8 ) );  // x = -0.5 면 근처
     SW_EXPECT_FALSE( solid.isOccupied( 8, 8, 8 ) ); // 속은 비었다
 
-    sw::SceneVoxelHit hit;
+    sw::test::SceneVoxelHit hit;
     SW_REQUIRE_TRUE( solid.traceRay( sw::float3{ -1.9f, 0.1f, 0.1f }, sw::float3{ 1.0f, 0.0f, 0.0f }, 100.0f, hit ) );
     SW_EXPECT_TRUE( hit._distance > 1.1f && hit._distance < 1.45f );
     SW_EXPECT_NEAR( -1.0f, hit._normal._x, 0.0f );
 }
 
 /**
- * @brief [SceneVoxelizerTest] 메시가 드나든 칸만 다시 칠한 격자가 처음부터 만든 격자와 같고, 격자와 상관없는 칸(반투명 · 격자 밖)의 변화로는 칠하지 않는다
+ * @brief [SceneVoxelizerTest] 메시가 드나든 구간만 다시 칠한 격자가 처음부터 칠한 격자와 같고, 격자와 상관없는 칸(반투명 · 격자 밖)의 변화로는 장면이 바뀌지 않는다
  * @details 실시간 프로브 복셀 격자는 예전에 프리미티브 집합 세대가 오를 때마다(투사체 하나가 생기고 사라져도) 씬 전체를 다시 칠했다. 이제 집합 기록(`collectMeshSetChanges`)의
- *          칸만 보고(`SceneVoxelizer::updateGrid`) 그 칸이 덮던 · 덮는 구간만 다시 칠한다.
+ *          칸만 다시 모으고(`SceneVoxelizer::updateScene`), 칠하기는 바뀐 원천이 덮던 · 덮는 구간만 지우고 다시 칠한다(`SceneVoxelizer::planPaint`).
  */
-SW_TEST_CASE( SceneVoxelizerTest, UpdateGridRepaintsOnlyChangedOccluders )
+SW_TEST_CASE( SceneVoxelizerTest, RepaintsOnlyChangedOccluders )
 {
+    using sw::test::SceneVoxelReference;
     const sw::shared_ptr<sw::Material> glass       = makeTranslucentMaterial();
     const sw::shared_ptr<sw::Material> sceneOpaque = makeOpaqueMaterial();
     sw::Scene                          scene( "SceneVoxelizerUpdate" );
@@ -254,26 +277,33 @@ SW_TEST_CASE( SceneVoxelizerTest, UpdateGridRepaintsOnlyChangedOccluders )
     };
     sw::MeshComponent* pWall = addCube( pObjects, "Wall", sw::float3{ -1.0f, 0.0f, 0.0f }, nullptr, true );
     SW_REQUIRE_NOT_NULL( pWall );
-    sw::SceneVoxelGrid grid       = sw::SceneVoxelizer::makeGrid( registry, sceneOpaque.get(), bounds, 0.25f );
-    uint64             generation = registry.getSetGeneration();
-    sw::vector<uint32> listChanged;
+    sw::SceneVoxelScene painted    = sw::SceneVoxelizer::makeScene( registry, sceneOpaque.get(), bounds, 0.25f );
+    sw::SceneVoxelScene current    = painted;
+    sw::vector<uint32>  words      = paintWhole( painted )._listWord;
+    uint64              generation = registry.getSetGeneration();
+    sw::vector<uint32>  listChanged;
 
     // 반투명 큐브와 격자 밖 큐브 — 가리개가 아니거나 닿지 않으니 칠할 것이 없다.
     SW_REQUIRE_NOT_NULL( addCube( pObjects, "Glass", sw::float3{ 0.0f, 0.0f, 0.0f }, glass.get(), true ) );
     SW_REQUIRE_NOT_NULL( addCube( pObjects, "Far", sw::float3{ 50.0f, 0.0f, 0.0f }, nullptr, true ) );
     SW_REQUIRE_TRUE( registry.collectMeshSetChanges( generation, listChanged ) );
     SW_EXPECT_EQUAL( size_t( 2 ), listChanged.size() );
-    SW_EXPECT_FALSE( sw::SceneVoxelizer::updateGrid( grid, registry, sceneOpaque.get(), listChanged ) );
+    SW_EXPECT_FALSE( sw::SceneVoxelizer::updateScene( current, registry, sceneOpaque.get(), listChanged ) );
     generation = registry.getSetGeneration();
 
-    // 격자 안 불투명 큐브 — 그 구간만 칠해도 처음부터 만든 것과 단어마다 같다.
-    sw::MeshComponent* pInside = addCube( pObjects, "Inside", sw::float3{ 1.0f, 0.5f, 0.0f }, nullptr, true );
-    SW_REQUIRE_NOT_NULL( pInside );
+    // 격자 안 불투명 큐브 — 그 구간만 칠해도 처음부터 칠한 것과 단어마다 같다.
+    SW_REQUIRE_NOT_NULL( addCube( pObjects, "Inside", sw::float3{ 1.0f, 0.5f, 0.0f }, nullptr, true ) );
     SW_REQUIRE_TRUE( registry.collectMeshSetChanges( generation, listChanged ) );
-    SW_EXPECT_TRUE( sw::SceneVoxelizer::updateGrid( grid, registry, sceneOpaque.get(), listChanged ) );
-    const sw::SceneVoxelGrid afterAdd = sw::SceneVoxelizer::makeGrid( registry, sceneOpaque.get(), bounds, 0.25f );
-    SW_EXPECT_TRUE( grid._listWord == afterAdd._listWord );
-    SW_EXPECT_TRUE( grid.countOccupied() > 0u );
+    SW_EXPECT_TRUE( sw::SceneVoxelizer::updateScene( current, registry, sceneOpaque.get(), listChanged ) );
+    const sw::SceneVoxelPaintPlan addPlan = sw::SceneVoxelizer::planPaint( {
+        sw::SceneVoxelPaintTarget{ &current, &painted, 0u, sw::SceneVoxelizer::kNoEmission }
+    } );
+    SW_EXPECT_TRUE( addPlan._clearThreadCount < current._grid.getCellCount() ); // 격자 전체가 아니다
+    SceneVoxelReference::executePlan( addPlan, words );
+    const SceneVoxelReference afterAdd = paintWhole( sw::SceneVoxelizer::makeScene( registry, sceneOpaque.get(), bounds, 0.25f ) );
+    SW_EXPECT_TRUE( words == afterAdd._listWord );
+    SW_EXPECT_TRUE( afterAdd.countOccupied() > 0u );
+    painted    = current;
     generation = registry.getSetGeneration();
 
     // 벽을 지운다 — 벽이 덮던 칸이 꺼지고 남은 큐브는 그대로다.
@@ -281,10 +311,154 @@ SW_TEST_CASE( SceneVoxelizerTest, UpdateGridRepaintsOnlyChangedOccluders )
     pObjects->destroyGameObject( pWall->getOwner() );
     pObjects->processDeferredDestruction();
     SW_REQUIRE_TRUE( registry.collectMeshSetChanges( generation, listChanged ) );
-    SW_EXPECT_TRUE( sw::SceneVoxelizer::updateGrid( grid, registry, sceneOpaque.get(), listChanged ) );
-    const sw::SceneVoxelGrid afterRemove = sw::SceneVoxelizer::makeGrid( registry, sceneOpaque.get(), bounds, 0.25f );
-    SW_EXPECT_TRUE( grid._listWord == afterRemove._listWord );
+    SW_EXPECT_TRUE( sw::SceneVoxelizer::updateScene( current, registry, sceneOpaque.get(), listChanged ) );
+    SceneVoxelReference::executePlan( sw::SceneVoxelizer::planPaint( {
+                                          sw::SceneVoxelPaintTarget{ &current, &painted, 0u, sw::SceneVoxelizer::kNoEmission }
+    } ),
+                                      words );
+    const SceneVoxelReference afterRemove = paintWhole( sw::SceneVoxelizer::makeScene( registry, sceneOpaque.get(), bounds, 0.25f ) );
+    SW_EXPECT_TRUE( words == afterRemove._listWord );
     SW_EXPECT_TRUE( afterRemove.countOccupied() < afterAdd.countOccupied() );
+
+    // 같은 장면이면 할 일이 없다.
+    SW_EXPECT_TRUE( sw::SceneVoxelizer::planPaint( {
+                                                       sw::SceneVoxelPaintTarget{ &current, &current, 0u, sw::SceneVoxelizer::kNoEmission }
+    } )
+                        .isEmpty() );
+}
+
+/**
+ * @brief [SceneVoxelizerTest] 노멀의 가장 큰 축으로 투영해 칠한 칸(셰이더의 식)이 상자 안 모든 칸을 분리축으로 본 칸(보수적 복셀화의 기준)과 같다 — 축 정렬 · 비스듬한 · 가는 삼각형
+ * @details 변이: 투영 축을 하나로 고정하거나 층 범위에서 기울기 몫(spread)을 빼면 비스듬한 삼각형에서 빠지는 칸이 생겨 진다.
+ */
+SW_TEST_CASE( SceneVoxelizerTest, DominantAxisPaintMatchesSeparatingAxis )
+{
+    const sw::SceneVoxelGrid grid = sw::SceneVoxelGrid::make( sw::AABB{
+                                                                  sw::float3{-3.0f, -3.0f, -3.0f},
+                                                                  sw::float3{ 3.0f,  3.0f,  3.0f}
+    },
+                                                              0.375f );
+    uint32                   seed = 0x9E3779B9u;
+    const auto               next = [&seed]()
+    {
+        seed ^= seed << 13u;
+        seed ^= seed >> 17u;
+        seed ^= seed << 5u;
+        return static_cast<float32>( seed >> 8u ) / 16777216.0f;
+    };
+    for ( uint32 caseIndex = 0; caseIndex < 200u; ++caseIndex )
+    {
+        sw::vector<sw::RHIVertex> listVertex( 3 );
+        sw::float3                arrCorner[3];
+        for ( uint32 corner = 0; corner < 3u; ++corner )
+        {
+            for ( uint32 axis = 0; axis < 3u; ++axis )
+            {
+                // 격자를 조금 넘는 자리까지 — 자르기도 본다. 다섯에 하나는 한 축을 눌러 축 정렬 면으로 만든다.
+                const float32 value                   = ( next() - 0.5f ) * 7.0f;
+                const bool    bFlat                   = caseIndex % 5u == 0u && axis == caseIndex % 3u && corner > 0u;
+                listVertex[corner]._arrPosition[axis] = bFlat ? listVertex[0]._arrPosition[axis] : value;
+            }
+            arrCorner[corner] = sw::float3{ listVertex[corner]._arrPosition[0], listVertex[corner]._arrPosition[1], listVertex[corner]._arrPosition[2] };
+        }
+        sw::SceneVoxelScene scene;
+        scene._grid = grid;
+        sw::SceneVoxelSource source{};
+        source._mesh = sw::Mesh::create( sw::MeshCPUAccess::Keep );
+        SW_REQUIRE_TRUE( source._mesh->setGeometry( std::move( listVertex ), sw::vector<uint32>{ 0, 1, 2 } ) );
+        source._box        = grid.getBounds();
+        source._indexCount = 3u;
+        scene._listSource.push_back( source );
+        sw::test::SceneVoxelReference expected( grid );
+        expected.voxelizeTriangle( arrCorner[0], arrCorner[1], arrCorner[2] );
+        SW_EXPECT_TRUE( paintWhole( scene )._listWord == expected._listWord );
+    }
+}
+
+/**
+ * @brief [SceneVoxelizerTest] 발광 칸은 순위를 쓰고 여러 면이 덮은 칸은 더 밝은 순위가 남는다. 발광 목록은 어두운 것부터이고 같은 값은 하나다
+ */
+SW_TEST_CASE( SceneVoxelizerTest, EmissionKeepsTheBrightestRank )
+{
+    const uint32        dim    = sw::PackUtil::packRGB9E5( sw::float3{ 0.5f, 0.5f, 0.5f } );
+    const uint32        bright = sw::PackUtil::packRGB9E5( sw::float3{ 4.0f, 2.0f, 1.0f } );
+    sw::SceneVoxelScene scene;
+    scene._grid = makeFourMeterGrid(); // 64 칸 → 점유 단어 2 + 발광 단어 64
+    // 밝은 면을 먼저 · 어두운 면을 나중에 칠해도(원천 차례) 밝은 순위가 남는다. 셋째는 밝은 것과 같은 발광이다.
+    for ( const uint32 packed : { bright, dim, bright } )
+    {
+        sw::vector<sw::RHIVertex> listVertex( 3 );
+        const float32             height = 2.5f;
+        listVertex[0]._arrPosition[0]    = 0.1f;
+        listVertex[1]._arrPosition[0]    = 3.9f;
+        listVertex[2]._arrPosition[0]    = 0.1f;
+        listVertex[2]._arrPosition[2]    = 3.9f;
+        for ( sw::RHIVertex& vertex : listVertex )
+        {
+            vertex._arrPosition[1] = height;
+        }
+        sw::SceneVoxelSource source{};
+        source._mesh = sw::Mesh::create( sw::MeshCPUAccess::Keep );
+        SW_REQUIRE_TRUE( source._mesh->setGeometry( std::move( listVertex ), sw::vector<uint32>{ 0, 1, 2 } ) );
+        source._box            = scene._grid.getBounds();
+        source._indexCount     = 3u;
+        source._packedEmission = packed;
+        scene._listSource.push_back( source );
+    }
+    scene.rebuildEmissionPalette();
+    SW_REQUIRE_EQUAL( size_t( 2 ), scene._listEmissionPalette.size() );
+    SW_EXPECT_EQUAL( dim, scene._listEmissionPalette[0] );
+    SW_EXPECT_EQUAL( 1u, scene.findEmissionRank( dim ) );
+    SW_EXPECT_EQUAL( 2u, scene.findEmissionRank( bright ) );
+    SW_EXPECT_EQUAL( 0u, scene.findEmissionRank( 0u ) );
+
+    const uint32       emissionOffset = scene._grid.getWordCount();
+    sw::vector<uint32> words( emissionOffset + scene._grid.getCellCount(), 0xFFFFFFFFu );
+    sw::test::SceneVoxelReference::executePlan( sw::SceneVoxelizer::planPaint( {
+                                                    sw::SceneVoxelPaintTarget{ &scene, nullptr, 0u, emissionOffset }
+    } ),
+                                                words );
+    SW_EXPECT_EQUAL( 2u, words[emissionOffset + scene._grid.computeCellIndex( 0, 2, 0 )] );
+    SW_EXPECT_EQUAL( 0u, words[emissionOffset + scene._grid.computeCellIndex( 0, 0, 0 )] ); // 발광하지 않는 칸
+}
+
+/**
+ * @brief [SceneVoxelizerTest] 같은 메시를 쓰는 원천들은 정점 · 인덱스를 한 번만 싣고, 격자 모양 · 발광 목록이 달라지면 격자 전체를 다시 칠한다
+ */
+SW_TEST_CASE( SceneVoxelizerTest, PlanSharesMeshesAndRepaintsWholeOnShapeChange )
+{
+    sw::SceneVoxelScene scene;
+    scene._grid                         = makeFourMeterGrid();
+    const sw::shared_ptr<sw::Mesh> cube = sw::MeshUtil::createUnitCube();
+    for ( uint32 index = 0; index < 2u; ++index )
+    {
+        sw::SceneVoxelSource source{};
+        source._mesh       = cube;
+        source._world      = sw::float4x4::makeTranslation( sw::float3{ 1.0f + static_cast<float32>( index ), 1.0f, 1.0f } );
+        source._box        = scene._grid.getBounds();
+        source._indexCount = cube->getIndexCount();
+        scene._listSource.push_back( source );
+    }
+    const sw::SceneVoxelPaintPlan plan = sw::SceneVoxelizer::planPaint( {
+        sw::SceneVoxelPaintTarget{ &scene, nullptr, 0u, sw::SceneVoxelizer::kNoEmission }
+    } );
+    SW_EXPECT_EQUAL( size_t( 1 ), plan._listMesh.size() );
+    SW_EXPECT_EQUAL( cube->getVertexCount(), plan._vertexCount );
+    SW_EXPECT_EQUAL( cube->getIndexCount(), plan._indexCount );
+    SW_EXPECT_EQUAL( 2u * ( cube->getIndexCount() / 3u ), plan._paintThreadCount );
+    SW_EXPECT_EQUAL( size_t( 1u + 2u * sw::SceneVoxelizer::kJobRowCount ), plan._listPaintRow.size() );
+    SW_EXPECT_EQUAL( scene._grid.getCellCount(), plan._clearThreadCount );
+
+    sw::vector<sw::SceneVoxelGrid::CellRange> listRange;
+    sw::SceneVoxelScene                       painted = scene;
+    painted._listEmissionPalette.push_back( 1u ); // 순위의 뜻이 달라진다
+    sw::SceneVoxelizer::collectDirtyRanges( painted, scene, listRange );
+    SW_REQUIRE_EQUAL( size_t( 1 ), listRange.size() );
+    SW_EXPECT_EQUAL( scene._grid.getCellCount(), listRange[0].getCellCount() );
+    painted                 = scene;
+    painted._grid._cellSize = 2.0f;
+    sw::SceneVoxelizer::collectDirtyRanges( painted, scene, listRange );
+    SW_EXPECT_EQUAL( size_t( 1 ), listRange.size() );
 }
 
 /**
@@ -293,16 +467,16 @@ SW_TEST_CASE( SceneVoxelizerTest, UpdateGridRepaintsOnlyChangedOccluders )
 SW_TEST_CASE( RealtimeProbeTest, PlanLayoutAccumulatesOffsets )
 {
     sw::vector<sw::RealtimeProbeRequest> listRequest( 2 );
-    listRequest[0]._volumeID   = 1;
-    listRequest[1]._volumeID   = 2;
-    listRequest[0]._probeCount = 18;
-    listRequest[0]._pVoxelGrid = sw::make_shared<sw::SceneVoxelGrid>( makeFourMeterGrid() ); // 64 칸 → 단어 2
-    listRequest[1]._probeCount = 5;
-    listRequest[1]._pVoxelGrid = sw::make_shared<sw::SceneVoxelGrid>( sw::SceneVoxelGrid::make( sw::AABB{
-                                                                                                    sw::float3{},
-                                                                                                    sw::float3{ 8.0f, 8.0f, 8.0f }
+    listRequest[0]._volumeID    = 1;
+    listRequest[1]._volumeID    = 2;
+    listRequest[0]._probeCount  = 18;
+    listRequest[0]._pVoxelScene = makeEmptyScene( makeFourMeterGrid() ); // 64 칸 → 단어 2
+    listRequest[1]._probeCount  = 5;
+    listRequest[1]._pVoxelScene = makeEmptyScene( sw::SceneVoxelGrid::make( sw::AABB{
+                                                                                sw::float3{},
+                                                                                sw::float3{ 8.0f, 8.0f, 8.0f }
     },
-                                                                                                1.0f ) ); // 512 칸 → 단어 16
+                                                                            1.0f ) ); // 512 칸 → 단어 16
 
     sw::RealtimeProbeHistoryAllocator history;
     SW_EXPECT_TRUE( history.assign( listRequest ) ); // 처음 — 용량이 생긴다
@@ -366,6 +540,36 @@ SW_TEST_CASE( RealtimeProbeTest, HistoryKeepsStandingVolumesWhenOneLeaves )
 }
 
 /**
+ * @brief [RealtimeProbeTest] 갱신을 중간에 그만둔 프레임(버퍼 할당 실패) 뒤에도 용량 늘기와 새 구간을 다시 알린다 — `advanceFrame` 이 온 뒤에만 이어진다
+ * @details 변이: 한 번만 알리면 다음 프레임이 0 으로 채우지 않은 구간 · 옛 크기 버퍼를 쓴다(예전 — 복셀 버퍼 할당이 실패한 프레임).
+ */
+SW_TEST_CASE( RealtimeProbeTest, HistoryReportsAgainUntilTheFrameIsUpdated )
+{
+    sw::vector<sw::RealtimeProbeRequest> listRequest( 1 );
+    listRequest[0]._volumeID   = 100u;
+    listRequest[0]._probeCount = 4;
+    sw::RealtimeProbeHistoryAllocator history;
+    SW_EXPECT_TRUE( history.assign( listRequest ) );
+    SW_EXPECT_TRUE( history.assign( listRequest ) ); // 앞 프레임이 그만뒀다 — 버퍼는 아직 없다
+    SW_EXPECT_TRUE( history.isFresh( 0 ) );
+    history.advanceFrame();
+    SW_EXPECT_FALSE( history.assign( listRequest ) );
+    SW_EXPECT_FALSE( history.isFresh( 0 ) );
+
+    // 새 볼륨이 들어온 프레임도 같다 — 서 있는 볼륨은 이어지고 새 볼륨만 다시 알린다.
+    sw::vector<sw::RealtimeProbeRequest> listSwapped( 1 );
+    listSwapped[0]._volumeID   = 200u;
+    listSwapped[0]._probeCount = 4;
+    SW_EXPECT_FALSE( history.assign( listSwapped ) ); // 빠진 구간에 든다
+    SW_EXPECT_TRUE( history.isFresh( 0 ) );
+    SW_EXPECT_FALSE( history.assign( listSwapped ) );
+    SW_EXPECT_TRUE( history.isFresh( 0 ) );
+    history.advanceFrame();
+    SW_EXPECT_FALSE( history.assign( listSwapped ) );
+    SW_EXPECT_FALSE( history.isFresh( 0 ) );
+}
+
+/**
  * @brief [RealtimeProbeTest] 한 색 하늘의 SH 투영은 L0 계수만 2√π × 색이다. 하늘이 없으면 0 이다(폴백 없음)
  */
 SW_TEST_CASE( RealtimeProbeTest, ProjectSkyConstantRadiance )
@@ -405,7 +609,7 @@ SW_TEST_CASE( RealtimeProbeTest, BuildParamRowsFollowShaderLayout )
     request._updatePeriod                  = 8;
     request._blend                         = 0.25f;
     request._bounceAlbedo                  = 0.5f;
-    request._pVoxelGrid                    = sw::make_shared<sw::SceneVoxelGrid>( makeFourMeterGrid() );
+    request._pVoxelScene                   = makeEmptyScene( makeFourMeterGrid() );
     sw::vector<sw::RealtimeProbeRequest> listRequest;
     listRequest.push_back( request );
 
@@ -454,33 +658,18 @@ SW_TEST_CASE( SceneVoxelGridTest, EmissionPackRoundTrips )
 }
 
 /**
- * @brief [SceneVoxelGridTest] 발광 삼각형은 칸을 켜고 칸의 발광을 둔다. 발광 없는 격자는 발광 배열이 비어 있다(칸 수만큼 0 을 두지 않는다)
- */
-SW_TEST_CASE( SceneVoxelGridTest, EmissiveTriangleWritesCellEmission )
-{
-    sw::SceneVoxelGrid grid = makeFourMeterGrid();
-    grid.voxelizeTriangle( sw::float3{ 0.1f, 0.5f, 0.1f }, sw::float3{ 3.9f, 0.5f, 0.1f }, sw::float3{ 0.1f, 0.5f, 3.9f } );
-    SW_EXPECT_TRUE( grid._listEmission.empty() );
-    grid.voxelizeEmissiveTriangle( sw::float3{ 0.1f, 2.5f, 0.1f }, sw::float3{ 3.9f, 2.5f, 0.1f }, sw::float3{ 0.1f, 2.5f, 3.9f }, sw::float3{ 4.0f, 2.0f, 1.0f } );
-    SW_REQUIRE_EQUAL( size_t( grid.getCellCount() ), grid._listEmission.size() );
-    SW_EXPECT_TRUE( grid.isOccupied( 0, 2, 0 ) );
-    SW_EXPECT_NEAR( 4.0f, grid.findEmission( 0, 2, 0 )._x, 0.05f );
-    SW_EXPECT_NEAR( 0.0f, grid.findEmission( 0, 0, 0 )._x, 0.0f ); // 발광하지 않는 면의 칸
-}
-
-/**
  * @brief [RealtimeProbeTest] 발광 칸은 그 볼륨의 점유 단어 바로 뒤에 놓이고, 갱신 행에 발광 단어 번호 · 배율이 실린다. 발광 없는 볼륨은 kNoEmission 이다
  */
 SW_TEST_CASE( RealtimeProbeTest, EmissionWordsFollowOccupancy )
 {
-    sw::SceneVoxelGrid emissive = makeFourMeterGrid(); // 64 칸 → 점유 단어 2 + 발광 단어 64
-    emissive.voxelizeEmissiveTriangle( sw::float3{ 0.1f, 2.5f, 0.1f }, sw::float3{ 3.9f, 2.5f, 0.1f }, sw::float3{ 0.1f, 2.5f, 3.9f }, sw::float3{ 1.0f, 1.0f, 1.0f } );
+    const sw::shared_ptr<sw::SceneVoxelScene> emissive = makeEmptyScene( makeFourMeterGrid() ); // 64 칸 → 점유 단어 2 + 발광 단어 64
+    emissive->_listEmissionPalette                     = { 11u, 22u, 33u, 44u, 55u };           // 다섯 → 입력 행 둘
     sw::vector<sw::RealtimeProbeRequest> listRequest( 2 );
     listRequest[0]._probeCount        = 1;
     listRequest[0]._emissiveIntensity = 2.5f;
-    listRequest[0]._pVoxelGrid        = sw::make_shared<sw::SceneVoxelGrid>( std::move( emissive ) );
+    listRequest[0]._pVoxelScene       = emissive;
     listRequest[1]._probeCount        = 1;
-    listRequest[1]._pVoxelGrid        = sw::make_shared<sw::SceneVoxelGrid>( makeFourMeterGrid() );
+    listRequest[1]._pVoxelScene       = makeEmptyScene( makeFourMeterGrid() );
     listRequest[0]._volumeID          = 1;
     listRequest[1]._volumeID          = 2;
 
@@ -490,14 +679,41 @@ SW_TEST_CASE( RealtimeProbeTest, EmissionWordsFollowOccupancy )
     SW_REQUIRE_EQUAL( size_t( 2 ), layout._listEmissionWordOffset.size() );
     SW_EXPECT_EQUAL( 2u, layout._listEmissionWordOffset[0] );
     SW_EXPECT_EQUAL( 66u, layout._listVoxelWordOffset[1] );
-    SW_EXPECT_EQUAL( sw::RealtimeProbeUpdater::kNoEmission, layout._listEmissionWordOffset[1] );
+    SW_EXPECT_EQUAL( sw::SceneVoxelizer::kNoEmission, layout._listEmissionWordOffset[1] );
     SW_EXPECT_EQUAL( 68u, layout._totalVoxelWords );
 
     const sw::vector<sw::float4> rows     = sw::RealtimeProbeUpdater::makeParamRows( listRequest, layout, {}, sw::SH9Color{}, 0u, 0u );
     const uint32                 schedule = sw::RealtimeProbeUpdater::kHeaderRowCount + 6u;
     SW_EXPECT_EQUAL( 2u, sw::BitUtil::floatToBits( rows[schedule]._z ) );
     SW_EXPECT_NEAR( 2.5f, rows[schedule]._w, 0.0f );
-    SW_EXPECT_EQUAL( sw::RealtimeProbeUpdater::kNoEmission, sw::BitUtil::floatToBits( rows[schedule + sw::RealtimeProbeUpdater::kVolumeRowCount]._z ) );
+    SW_EXPECT_EQUAL( sw::SceneVoxelizer::kNoEmission, sw::BitUtil::floatToBits( rows[schedule + sw::RealtimeProbeUpdater::kVolumeRowCount]._z ) );
+    // 발광 목록은 볼륨 행들 뒤에 행마다 넷씩 이어진다 — 순위 5 는 둘째 행의 첫 칸이다.
+    const uint32 paletteRow = sw::RealtimeProbeUpdater::kHeaderRowCount + 2u * sw::RealtimeProbeUpdater::kVolumeRowCount;
+    SW_EXPECT_EQUAL( paletteRow, sw::BitUtil::floatToBits( rows[schedule + 1u]._y ) );
+    SW_EXPECT_EQUAL( paletteRow + 2u, sw::BitUtil::floatToBits( rows[schedule + 1u + sw::RealtimeProbeUpdater::kVolumeRowCount]._y ) );
+    SW_REQUIRE_EQUAL( size_t( paletteRow + 2u ), rows.size() );
+    SW_EXPECT_EQUAL( 11u, sw::BitUtil::floatToBits( rows[paletteRow]._x ) );
+    SW_EXPECT_EQUAL( 55u, sw::BitUtil::floatToBits( rows[paletteRow + 1u]._x ) );
+}
+
+/**
+ * @brief [RealtimeProbeTest] 기록에 남은 옛 값의 몫은 갱신마다 (1 − 섞는 비율)을 곱한 값이고, 볼륨이 여럿이면 가장 큰 값이다(사진 앞 정착 조건 `RenderRealtimeGI`)
+ */
+SW_TEST_CASE( RealtimeProbeTest, ErrorDecaysPerUpdate )
+{
+    sw::vector<sw::RealtimeProbeRequest> listRequest( 1 );
+    listRequest[0]._updatePeriod = 4;
+    listRequest[0]._blend        = 0.25f;
+    SW_EXPECT_NEAR( 1.0f, sw::RealtimeProbeUpdater::computeError( listRequest, 3u ), 0.0f ); // 아직 한 바퀴도 돌지 않았다
+    SW_EXPECT_NEAR( 0.75f, sw::RealtimeProbeUpdater::computeError( listRequest, 4u ), 1.0e-6f );
+    SW_EXPECT_NEAR( 0.5625f, sw::RealtimeProbeUpdater::computeError( listRequest, 11u ), 1.0e-6f );
+    SW_EXPECT_TRUE( sw::RealtimeProbeUpdater::computeError( listRequest, 119u ) > 0.0002f ); // 문턱 — 30 번째 갱신에서 선다
+    SW_EXPECT_TRUE( sw::RealtimeProbeUpdater::computeError( listRequest, 120u ) <= 0.0002f );
+    const sw::RealtimeProbeRequest slower = listRequest[0];
+    listRequest.push_back( slower );
+    listRequest[1]._updatePeriod = 8;
+    SW_EXPECT_NEAR( 0.75f, sw::RealtimeProbeUpdater::computeError( listRequest, 8u ), 1.0e-6f ); // 느린 볼륨이 정한다
+    SW_EXPECT_NEAR( 0.0f, sw::RealtimeProbeUpdater::computeError( {}, 8u ), 0.0f );
 }
 
 /**
@@ -526,7 +742,7 @@ SW_TEST_CASE( RealtimeProbeTest, GIExtrasDefaultToOff )
     SW_REQUIRE_EQUAL( size_t( 1 ), listRequest.size() );
     SW_EXPECT_NEAR( 0.0f, listRequest[0]._volumeElement._colorIntensity._w, 0.0f );
     SW_EXPECT_NEAR( 0.0f, listRequest[0]._emissiveIntensity, 0.0f );
-    SW_EXPECT_TRUE( listRequest[0]._pVoxelGrid->_listEmission.empty() ); // 발광 머티리얼이 없다
+    SW_EXPECT_TRUE( listRequest[0]._pVoxelScene->_listEmissionPalette.empty() ); // 발광 머티리얼이 없다
 }
 
 /**
@@ -567,8 +783,8 @@ SW_TEST_CASE( RealtimeProbeTest, CollectsRealtimeVolumeWithPlaceholderAndRequest
     const sw::RealtimeProbeRequest& request = listRequest[0];
     SW_EXPECT_EQUAL( static_cast<uint32>( probeCount ), request._probeCount );
     SW_EXPECT_EQUAL( pVolume->getRealtimeRayCount(), request._rayCount );
-    SW_REQUIRE_NOT_NULL( request._pVoxelGrid.get() );
-    SW_EXPECT_TRUE( request._pVoxelGrid->countOccupied() > 0u );
+    SW_REQUIRE_NOT_NULL( request._pVoxelScene.get() );
+    SW_EXPECT_TRUE( paintWhole( *request._pVoxelScene ).countOccupied() > 0u );
     SW_EXPECT_EQUAL( listLight[0]._params._x, request._volumeElement._params._x );
 
     // 같은 집합이면 같은 격자(캐시), 메시가 하나 늘면 새 격자.
@@ -576,12 +792,12 @@ SW_TEST_CASE( RealtimeProbeTest, CollectsRealtimeVolumeWithPlaceholderAndRequest
     sw::vector<sw::RealtimeProbeRequest> again;
     collectSceneLights( &scene, listLight, nullptr, &probeElement, nullptr, &again );
     SW_REQUIRE_EQUAL( size_t( 1 ), again.size() );
-    SW_EXPECT_TRUE( again[0]._pVoxelGrid == request._pVoxelGrid );
+    SW_EXPECT_TRUE( again[0]._pVoxelScene == request._pVoxelScene );
     SW_EXPECT_TRUE( probeElement.getElements() == pProbe );
     SW_REQUIRE_NOT_NULL( addCube( pObjects, "Second", sw::float3{ 1.0f, 0.0f, 0.0f }, wall.get(), true ) );
     collectSceneLights( &scene, listLight, nullptr, &probeElement, nullptr, &again );
     SW_REQUIRE_EQUAL( size_t( 1 ), again.size() );
-    SW_EXPECT_TRUE( again[0]._pVoxelGrid != request._pVoxelGrid );
+    SW_EXPECT_TRUE( again[0]._pVoxelScene != request._pVoxelScene );
 
     // 요청 목록을 받지 않는 수집은 실시간 볼륨을 넣지 않는다.
     collectSceneLights( &scene, listLight, nullptr, &probeElement );

@@ -77,6 +77,8 @@ namespace sw
         void onRegister( GameObjectManager& manager ) override;
         void onUnregister( GameObjectManager& manager ) override;
         void onPostLoad() override;
+        /** @brief 셀 나누기가 묻는 이 컴포넌트가 덮는 월드 상자입니다 — 피벗 셀이 아니라 덮는 자리가 로딩 반경에 들면 올라 있다. */
+        bool computeStreamingBounds( AABB& outBox ) const override;
         /** @brief 로드 순서상 지형이 뒤에 서서 깊이를 못 구웠으면 틱 뒤에 수면을 다시 만듭니다. */
         void onBeginPlay() override;
         void onPropertyChanged( hashed_string propertyName ) override;
@@ -186,7 +188,7 @@ namespace sw
         float2 _size;
         PROPERTY( Category = "Water", DisplayName = "Cell Size", Min = 0.1, Units = m, Tooltip = "Surface grid spacing (waves need vertices)" )
         float32 _cellSize;
-        PROPERTY( Category = "Water", DisplayName = "River Points", Units = m, EditCondition = "!_bRiverPathDriven",
+        PROPERTY( Category = "Water", DisplayName = "River Points", Units = m, EditCondition = "!_bRiverPathDriven", Meta = "Shape=Points,ShapeAxes=World",
                   Tooltip = "River centerline relative to the owner; y is the surface height (a path adapter on the same object overwrites it)" )
         vector<float3> _listRiverPoint;
         PROPERTY( Category = "Water", DisplayName = "River Width", Min = 0.1, Units = m )

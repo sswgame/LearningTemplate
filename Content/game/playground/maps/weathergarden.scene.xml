@@ -1,0 +1,190 @@
+<?asset guid="b70f2e95d3c84a61924ae6f1c8d07b52"?>
+<Scene formatVersion="3" name="WeatherGarden">
+	<!-- 환경 마당(automation/weathergarden) — 날씨 · 바람 · 풀베기 · 피 데칼을 한 자리에서 본다. 날씨는 Weather 의 판 상태가 data/weathergarden.weather.xml 로 연다.
+	     가운데(원점) 빈 마당: 바닥은 날씨 묶음을 따르는 환경 표면(젖음 · 웅덩이 · 눈). 왼쪽 풀밭(x -8 ~ 0): Fighter(스켈레톤 전사)가 휘두르면(HitWindow — foliage 0.9) 풀이 베이고 3 초 뒤 다시 자라며,
+	     둘레의 Target 이 맞아 피 데칼을 땅에 남긴다(HitDecalComponent, 비에 씻긴다). 앞 Flag: 바람에 날리는 천. 오른쪽(x 9 ~ 15) Shelter: 지붕과 뒤 벽 — 비가 들지 않고 빗소리가 먹먹하다.
+	     왼쪽 끝 Hall: 14 m 높이의 지붕 — 강수가 태어나는 높이(시점 위 10 m)보다 높아도 안에서 비가 생기지 않는다.
+	     Rain · Snow 는 주 시점을 따라다니는 강수다(PrecipitationComponent). -->
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</SceneSettings>
+	<entities>
+		<entity id="1" name="GameCamera">
+			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localID="17709685451340727998" _localPosition="0,3,-10" _localRotation="0.18,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="57.29578" _nearZ="0.1" _farZ="200" _orthoHeight="10" _priority="0" _role="Game" _bOrthographic="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="Sun">
+			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
+				<_listComponent>
+					<DirectionalLightComponent _localID="51927904365891271" _localPosition="0,0,0" _localRotation="0.75,-0.6,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _color="1,0.96,0.9" _intensity="1.2" _ambient="0.3" _shadowExtent="24" _shadowDistance="60" _bCastShadow="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="Sky">
+			<GameObject _schemaVersion="0" _name="Sky" _bActive="true">
+				<_listComponent>
+					<SkyComponent _localID="14376368575749838118" _zenithColor="0.3,0.45,0.75" _horizonColor="0.75,0.8,0.85" _groundColor="0.18,0.16,0.14" _intensity="1" _horizonExponent="3" _mode="Gradient" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="4" name="Fog">
+			<GameObject _schemaVersion="0" _name="Fog" _bActive="true">
+				<_listComponent>
+					<FogComponent _localID="10756143758068416081" _color="0.62,0.66,0.7" _density="0.004" _heightFalloff="0.05" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="5" name="Wind">
+			<GameObject _schemaVersion="0" _name="Wind" _bActive="true">
+				<_listComponent>
+					<WindComponent _localID="486898894148715097" _direction="90" _strength="0.2" _gustStrength="0.2" _gustFrequency="0.25" _swayFrequency="1.2" _speed="1" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="6" name="Weather">
+			<GameObject _schemaVersion="0" _name="Weather" _bActive="true">
+				<_listComponent>
+					<GameStateComponent _localID="6673597520240684436" />
+					<WeatherDirectorComponent _localID="3377167033740769073" _weatherDataPath="game/playground/data/weathergarden.weather.xml" _startWeather="clear" _seed="7" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="7" name="Ground">
+			<GameObject _schemaVersion="0" _name="Ground" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _localID="7198733165449302788" _localPosition="0,-0.25,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Static" _material="Stone" _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="30,0.25,30" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="Stone">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0.25,0" _localRotation="0,0,0" _localScale="60,1,60" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Plane" _materialPath="game/playground/materials/weathergarden_ground.material" _boundsRadius="45" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="8" name="Shelter">
+			<GameObject _schemaVersion="0" _name="Shelter" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _localID="7198733165449302788" _localPosition="12,3,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Static" _material="Stone" _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="3,0.1,3" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="Stone">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="3,1.5,0.1" _radius="0.5" _halfHeight="0.5" _localPosition="0,-1.5,3" _localRotation="0,0,0" _material="Stone">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="6,0.2,6" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="4.4" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="9" name="ShelterWall">
+			<GameObject _schemaVersion="0" _name="ShelterWall" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _localPosition="12,1.5,3" _localRotation="0,0,0" _localScale="6,3,0.2" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="3.5" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="10" name="Grass">
+			<GameObject _schemaVersion="0" _name="Grass" _bActive="true">
+				<_listComponent>
+					<FoliageComponent _localID="17998239760615883236" _localPosition="-4,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _regionSize="8,8" _cellSize="8" _regrowSeconds="3">
+						<_listLayer>
+							<FoliageLayer _name="Grass" _materialPath="engine/materials/grass.material" _tint="0.42,0.7,0.26,1" _tintVariation="0.3" _fadeStart="50" _fadeEnd="70" _windResponse="1" _swayHeight="0.6" _bendStrength="1" _bAllowCut="true">
+								<_rule _density="4" _minDistance="0.3" _scaleMin="0.8" _scaleMax="1.2" _yawMin="0" _yawMax="360" _alignToNormal="0" _slopeMin="0" _slopeMax="90" _heightMin="-100" _heightMax="100" _heightOffset="0" _layerMinWeight="0" _layerIndex="-1" _densityLayerIndex="-1" _seed="11" />
+								<_listMesh>
+									<FoliageMesh _meshID="GrassClump" _weight="1" />
+								</_listMesh>
+							</FoliageLayer>
+						</_listLayer>
+					</FoliageComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="11" name="Fighter">
+			<GameObject _schemaVersion="0" _name="Fighter" _bActive="true">
+				<_listComponent>
+					<CharacterControllerComponent _localID="1851894784675401076" _localPosition="-4,0.05,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _radius="0.3" _halfHeight="0.6" _stepHeight="0.3" _maxSlopeAngle="45" _gravityScale="1" _mass="70" _layer="Character" />
+					<SkeletalMeshComponent _localID="15127961318995883145" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="#19b3407eb1f9cd74" _meshID="" _materialPath="" _boundsRadius="2" _visibilityBasedTickOption="AlwaysTickPoseAndRefreshBones" />
+					<SkeletalAnimatorComponent _localID="6157124105282015569" _animationSetPath="common/models/kaykit/skeleton_warrior/skeleton_warrior.animset.xml" _initialState="Walking_A" _bPlayOnBegin="true" />
+					<CharacterAppearanceComponent _localID="13827364293183997314" _presetID="SkeletonWarrior" _seed="0" _bMergeParts="true" _surfaceChannelsPath="engine/character/default.surfacechannels.xml" />
+					<AnimationNotifyComponent _localID="3803990792213876096" _notifyTablePath="common/characters/skeleton_warrior/skeleton_warrior.notifies.xml" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="12" name="Target">
+			<GameObject _schemaVersion="0" _name="Target" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _localID="7198733165449302788" _localPosition="-4,0.9,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Kinematic" _layer="Default" _material="Stone" _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="0.2,0.9,0.2" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,1" _localRotation="0,0,0" _material="Stone">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="0.2,0.9,0.2" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,-1" _localRotation="0,0,0" _material="Stone">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="0.2,0.9,0.2" _radius="0.5" _halfHeight="0.5" _localPosition="1,0,0" _localRotation="0,0,0" _material="Stone">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="0.2,0.9,0.2" _radius="0.5" _halfHeight="0.5" _localPosition="-1,0,0" _localRotation="0,0,0" _material="Stone">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<HitDecalComponent _localID="11640283945177203361" _decalPrefab="game/playground/prefabs/blood_decal.prefab.xml" _reach="2.5" _sizeMin="0.6" _sizeMax="1.1" _depth="0.4" _minDamage="1" _maxDecals="8" _seed="5" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="13" name="Flag">
+			<GameObject _schemaVersion="0" _name="Flag" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _localPosition="3,2.4,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="" _materialPath="game/playground/materials/toonshowcase_lit.material" _boundsRadius="2" />
+					<ClothComponent _localID="10065198837581336125" _width="1.2" _height="0.8" _columnCount="13" _rowCount="9" _pinMode="TopEdge" _mass="0.3" _stretchCompliance="0" _shearCompliance="0" _bendCompliance="0.001" _linearDamping="0.1" _friction="0.2" _gravityFactor="1" _vertexRadius="0.02" _iterationCount="6" _windDrag="1" _layer="Default" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="14" name="Rain">
+			<GameObject _schemaVersion="0" _name="Rain" _bActive="true">
+				<_listComponent>
+					<VFXComponent _localID="7647927963071728401" _localPosition="0,10,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _effectPath="engine/vfx/precipitation_rain.vfx.xml" _seed="14" _bPlayOnBegin="false" />
+					<PrecipitationComponent _localID="15928374650192837465" _weatherValue="rain" _intensityParameter="Intensity" _height="10" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="15" name="Snow">
+			<GameObject _schemaVersion="0" _name="Snow" _bActive="true">
+				<_listComponent>
+					<VFXComponent _localID="7647927963071728401" _localPosition="0,10,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _effectPath="engine/vfx/precipitation_snow.vfx.xml" _seed="15" _bPlayOnBegin="false" />
+					<PrecipitationComponent _localID="15928374650192837465" _weatherValue="snowfall" _intensityParameter="Intensity" _height="10" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="16" name="Hall">
+			<GameObject _schemaVersion="0" _name="Hall" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _localID="7198733165449302788" _localPosition="-18,14,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Static" _material="Stone" _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="5,0.1,5" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="Stone">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="10,0.2,10" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="7.2" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

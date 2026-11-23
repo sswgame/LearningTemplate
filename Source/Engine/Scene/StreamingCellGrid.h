@@ -21,6 +21,7 @@
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/Asset/StreamingSourcePriority.h"
@@ -39,6 +40,43 @@ namespace sw
 
         bool operator==( const StreamingCellCoord& other ) const { return _x == other._x && _z == other._z; }
         bool operator!=( const StreamingCellCoord& other ) const { return ( *this == other ) == false; }
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @struct StreamingCellBounds
+     * @brief 셀 조각이 덮는 XZ 사각형(절대 좌표)입니다 — 셀 사각형에 그 조각 엔티티의 경계를 더한 것입니다.
+     * @details 조각을 올릴지는 셀 사각형이 아니라 이것으로 잰다(언리얼 `UWorldPartitionRuntimeCell::GetStreamingBounds` — 내용 경계). 소속은 자리(피벗)로 정하므로 셀보다 큰 건물 · 다리 · 바닥은
+     *          피벗 셀이 반경 밖이어도 몸이 반경 안일 수 있다 — 셀 사각형으로 재면 눈앞의 몸이 사라지고 밟은 바닥이 없다.
+     */
+    struct StreamingCellBounds
+    {
+        float32 _minX{ MathUtil::kMaxFloat };
+        float32 _minZ{ MathUtil::kMaxFloat };
+        float32 _maxX{ -MathUtil::kMaxFloat };
+        float32 _maxZ{ -MathUtil::kMaxFloat };
+
+        /** @brief 아무것도 더하지 않은 빈 경계면 false 입니다. */
+        bool isValid() const { return _minX <= _maxX && _minZ <= _maxZ; }
+        /** @brief 사각형 @p other 까지 덮게 넓힙니다(빈 것은 더하지 않는다). */
+        void include( const StreamingCellBounds& other )
+        {
+            _minX = MathUtil::min( _minX, other._minX );
+            _minZ = MathUtil::min( _minZ, other._minZ );
+            _maxX = MathUtil::max( _maxX, other._maxX );
+            _maxZ = MathUtil::max( _maxZ, other._maxZ );
+        }
+        /** @brief 점과 사각형 사이의 XZ 최단 거리 제곱입니다(안이면 0). */
+        float32 computeDistanceSquared( const float3& position ) const
+        {
+            const float32 dx = MathUtil::max( MathUtil::max( _minX - position._x, 0.0f ), position._x - _maxX );
+            const float32 dz = MathUtil::max( MathUtil::max( _minZ - position._z, 0.0f ), position._z - _maxZ );
+            return dx * dx + dz * dz;
+        }
+        /** @brief 점이 사각형 안이면 true 입니다(경계 포함). */
+        bool contains( const float3& position ) const { return _minX <= position._x && position._x <= _maxX && _minZ <= position._z && position._z <= _maxZ; }
     };
 } // namespace sw
 
@@ -83,9 +121,10 @@ namespace sw
      */
     struct StreamingCellObjectRecord
     {
-        uint64             _objectID{ 0 };
-        StreamingCellCoord _cell{};
-        bool               _bAlwaysLoaded{ false }; ///< 공간 로드를 하지 않는 오브젝트(항상 올라 있다) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        uint64              _objectID{ 0 };
+        StreamingCellCoord  _cell{};
+        StreamingCellBounds _bounds{};               ///< 그 엔티티(다른 엔티티가 아닌 자식까지)의 경계 — 크기가 없으면 빈 경계다
+        bool                _bAlwaysLoaded{ false }; ///< 공간 로드를 하지 않는 오브젝트(항상 올라 있다) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw
 
@@ -116,6 +155,16 @@ namespace sw
          * @return 셀 크기가 0 이하이거나 로딩 반경이 음수이면 false 이고 outGrid 는 그대로입니다(오류 로그를 남깁니다).
          */
         [[nodiscard]] static bool tryCreate( const StreamingCellGridDef& def, StreamingCellGrid& outGrid );
+
+        /** @brief 조각 하나의 경계가 덮을 수 있는 셀 수의 상한입니다 — 넘는 엔티티는 쿠커가 늘 올라 있게 한다(언리얼도 격자 단계보다 큰 액터는 늘 올라 있다). */
+        static constexpr int64 kMaxCoveredCells = 4096;
+
+        /** @brief 셀 @p cell 의 사각형입니다. */
+        StreamingCellBounds computeCellBounds( const StreamingCellCoord& cell ) const;
+        /** @brief 사각형 @p bounds 가 덮는 셀 수입니다(빈 경계면 0). */
+        int64 countCoveredCells( const StreamingCellBounds& bounds ) const;
+        /** @brief 사각형 @p bounds 가 덮는 셀을 모두 채웁니다(비우고 채운다, z · x 오름차순). 먼저 `countCoveredCells` 로 상한을 본다. */
+        void collectCoveredCells( const StreamingCellBounds& bounds, vector<StreamingCellCoord>& outListCell ) const;
 
         /** @brief 위치가 든 셀을 반환합니다. 셀 경계는 아래쪽(작은 좌표)에 속합니다. 셀 번호는 ±2^30 에서 포화합니다(망에서 온 거대 · NaN 좌표도 정의된 셀이 된다). */
         StreamingCellCoord computeCell( const float3& position ) const;

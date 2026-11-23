@@ -183,10 +183,10 @@ namespace sw
         PROPERTY( Min = 1, Tooltip = "Most falling destruction debris bodies one scene keeps; past it the smallest, oldest pieces scene-wide fade out" )
         uint32 _maxDebrisBodyCount{ 0 };
         /**
-         * @brief 월드 스트리밍 셀이 내려간 자리의 동적 바디 · 캐릭터가 받쳐 줄 충돌을 찾는 아래 방향 광선 길이(m, 바디 자리에서)입니다. 0 이면 `validate` 가 오류다(데이터가 적는다).
-         * @details 닿으면(늘 올라 있는 지형 · 정적 바디, 땅 광선 층 `_listGroundQueryLayer`) 쥐지 않는다. 바디 자리에서 바닥까지보다 길고, 내려간 선반에서 그 아래 땅까지보다 짧게 잡는다(`ScenePhysics::updateStreamingHolds`).
+         * @brief 월드 스트리밍 셀이 내려간 자리의 동적 바디 · 캐릭터가 받쳐 줄 충돌을 찾으려고 몸 모양을 아래로 쓰는 거리(m, 몸 표면에서)입니다. 0 이면 `validate` 가 오류다(데이터가 적는다).
+         * @details 닿으면(늘 올라 있는 지형 · 정적 바디, 땅 광선 층 `_listGroundQueryLayer`) 쥐지 않는다. 몸 아래 틈보다 길고, 내려간 선반에서 그 아래 땅까지보다 짧게 잡는다(`ScenePhysics::updateStreamingHolds`).
          */
-        PROPERTY( Min = 0.01, Tooltip = "Downward ray length (m) that looks for supporting collision under a body whose streaming cell is not loaded; a hit keeps it simulated", Units = m )
+        PROPERTY( Min = 0.01, Tooltip = "Downward sweep distance (m) of the body shape that looks for supporting collision while its streaming cell is not loaded; a hit keeps it simulated", Units = m )
         float32 _streamingFloorProbeDistance{ 0.0f };
         PROPERTY( Tooltip = "Collision channels: object channels (what a body is) and trace channels (what a query looks for)" )
         vector<CollisionChannelDef> _listChannel;

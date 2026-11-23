@@ -43,7 +43,7 @@ namespace sw::editor
 namespace sw::editor
 {
     EditorThumbnailCache::EditorThumbnailCache()
-        : _listEntry{}
+        : _mapEntry{}
         , _listPendingID{}
         , _listLoading{}
         , _listFailedID{}
@@ -69,11 +69,11 @@ namespace sw::editor
 
     void EditorThumbnailCache::clear()
     {
-        for ( Entry& entry : _listEntry )
+        for ( auto it = _mapEntry.begin(); it != _mapEntry.end(); ++it )
         {
-            releaseEntry( entry );
+            releaseEntry( _mapEntry.valueAt( it ) );
         }
-        _listEntry.clear();
+        _mapEntry.clear();
         _listPendingID.clear();
         _listLoading.clear(); // 핸들만 놓는다 — 워커가 읽던 로드는 엔진이 끝내고, 참조를 쥐었다면 로드 작업이 사라질 때 스스로 놓는다
         _listFailedID.clear();
@@ -92,13 +92,12 @@ namespace sw::editor
 
     void* EditorThumbnailCache::findTexture( string_view assetID )
     {
-        const string key = FileUtil::normalizePath( assetID ).str();
-        for ( Entry& entry : _listEntry )
+        const string key    = FileUtil::normalizePath( assetID ).str();
+        Entry*       pEntry = _mapEntry.touch( key );
+        if ( pEntry != nullptr )
         {
-            if ( entry._assetID != key )
-                continue;
-            entry._lastUsedFrame = _frame;
-            return entry._pTextureID;
+            pEntry->_lastUsedFrame = _frame;
+            return pEntry->_pTextureID;
         }
         // 예약 · 읽는 중 · 실패는 한 집합에 있다 — 프레임마다 보이는 모든 칸이 부르므로 목록을 훑지 않는다.
         if ( _uniqueKnownID.insert( key ).second )
@@ -114,15 +113,17 @@ namespace sw::editor
 
         // 다시 읽기 · 디바이스 교체로 텍스처가 바뀐 썸네일은 놓고 다음 그리기가 다시 예약한다.
         const TextureCache& textures = EditorThumbnailCacheInternal::requireTextureCache();
-        for ( size_t entryIndex = _listEntry.size(); entryIndex > 0; --entryIndex )
+        for ( auto it = _mapEntry.begin(); it != _mapEntry.end(); )
         {
-            Entry&           entry    = _listEntry[entryIndex - 1];
-            const Texture2D* pTexture = textures.find( entry._assetID );
-            const bool       bValid   = pTexture != nullptr && pTexture->isRHIValid() && pTexture->getHandle().getPacked() == entry._textureHandle;
+            const Texture2D* pTexture = textures.find( it->_key );
+            const bool       bValid   = pTexture != nullptr && pTexture->isRHIValid() && pTexture->getHandle() == it->_value._textureHandle;
             if ( bValid )
+            {
+                ++it;
                 continue;
-            releaseEntry( entry );
-            _listEntry.erase( _listEntry.begin() + static_cast<std::ptrdiff_t>( entryIndex - 1 ) );
+            }
+            releaseEntry( _mapEntry.valueAt( it ) );
+            it = _mapEntry.erase( it );
         }
 
         startLoads();
@@ -184,29 +185,26 @@ namespace sw::editor
             return false;
 
         Entry entry{};
-        entry._assetID       = assetID;
         entry._pOperation    = pOperation;
-        entry._textureHandle = pTexture->getHandle().getPacked();
-        entry._pTextureID    = pBackend->registerTexture( RHITextureHandle{ entry._textureHandle } );
+        entry._textureHandle = pTexture->getHandle();
+        entry._pTextureID    = pBackend->registerTexture( entry._textureHandle );
         entry._lastUsedFrame = _frame;
         if ( entry._pTextureID == nullptr )
             return false;
-        _listEntry.push_back( std::move( entry ) );
+        _mapEntry.insertOrAssign( assetID, std::move( entry ) );
         return true;
     }
 
     void EditorThumbnailCache::evictOverCapacity()
     {
-        while ( _listEntry.size() > kCapacity )
+        while ( _mapEntry.size() > kCapacity )
         {
-            auto itOldest = std::min_element( _listEntry.begin(), _listEntry.end(),
-                                              []( const Entry& left, const Entry& right )
-            { return left._lastUsedFrame < right._lastUsedFrame; } );
+            const auto itOldest = _mapEntry.begin();
             // 이번 프레임에 그린 것은 놓지 않는다 — 화면에 보이는 수가 용량보다 많으면 잠시 넘친다.
-            if ( itOldest == _listEntry.end() || itOldest->_lastUsedFrame + 1 >= _frame )
+            if ( itOldest->_value._lastUsedFrame + 1 >= _frame )
                 return;
-            releaseEntry( *itOldest );
-            _listEntry.erase( itOldest );
+            releaseEntry( _mapEntry.valueAt( itOldest ) );
+            (void)_mapEntry.erase( itOldest );
         }
     }
 } // namespace sw::editor

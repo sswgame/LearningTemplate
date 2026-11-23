@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Concurrency/DevCounter.h"
+#include "Core/Container/LRUMap.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
@@ -68,12 +69,18 @@ namespace sw
         template <typename TPredicate>
         void releaseBusyIf( GameObjectManager& manager, TPredicate&& predicate )
         {
-            for ( size_t busyIndex = _listBusy.size(); busyIndex > 0; --busyIndex )
+            // 돌려주기가 꺼낸 목록을 바꾼다 — 베껴서 늦게 꺼낸 것부터 본다(쉬는 목록이 쌓이는 순서).
+            _listScratchHandle.clear();
+            for ( const auto& entry : _busyOrder )
             {
-                const GameObjectHandle handle  = _listBusy[busyIndex - 1];
+                _listScratchHandle.push_back( entry._key );
+            }
+            for ( size_t busyIndex = _listScratchHandle.size(); busyIndex > 0; --busyIndex )
+            {
+                const GameObjectHandle handle  = _listScratchHandle[busyIndex - 1];
                 const GameObject*      pObject = findLive( manager, handle );
                 if ( pObject == nullptr )
-                    _listBusy.erase( _listBusy.begin() + static_cast<ptrdiff_t>( busyIndex - 1 ) );
+                    (void)_busyOrder.erase( handle );
                 else if ( predicate( *pObject ) )
                     release( manager, handle );
             }
@@ -89,7 +96,7 @@ namespace sw
         /** @brief 지금 쉬는(꺼 둔) 인스턴스 수입니다. 지워진 핸들도 셉니다 — 다음 `acquire` 가 걷는다. */
         uint32 getIdleCount() const { return static_cast<uint32>( _listIdle.size() ); }
         /** @brief 지금 꺼낸 인스턴스 수입니다. 지워진 핸들도 셉니다 — 다음 `releaseBusyIf` 가 걷는다. */
-        uint32 getBusyCount() const { return static_cast<uint32>( _listBusy.size() ); }
+        uint32 getBusyCount() const { return static_cast<uint32>( _busyOrder.size() ); }
         /** @brief 이 풀이 새로 만든 인스턴스 수입니다(재사용은 세지 않는다 — 감시 값 · 테스트만 읽는 개발 전용 칸, 배포는 0). */
         const DevCounter& getCreatedCount() const { return _createdCount; }
 
@@ -102,13 +109,14 @@ namespace sw
         static GameObject* findLive( GameObjectManager& manager, GameObjectHandle handle );
 
     private:
-        string                   _prefabPath;
-        SpawnDelegate            _spawner;
-        vector<GameObjectHandle> _listIdle; ///< 꺼 둔 인스턴스(나중에 넣은 것을 먼저 꺼낸다)
-        vector<GameObjectHandle> _listBusy; ///< 꺼낸 인스턴스(오래 꺼낸 것이 앞)
-        uint32                   _maxIdleCount;
-        DevCounter               _createdCount;
-        uint8                    _bContractChecked : 1; ///< 처음 만든 인스턴스로 풀 계약을 확인했다
-        uint8                    _bRefused         : 1; ///< 풀 계약을 어긴 프리팹이다 — 더 만들지 않는다
+        string                          _prefabPath;
+        SpawnDelegate                   _spawner;
+        vector<GameObjectHandle>        _listIdle;          ///< 꺼 둔 인스턴스(나중에 넣은 것을 먼저 꺼낸다)
+        LRUMap<GameObjectHandle, uint8> _busyOrder;         ///< 꺼낸 인스턴스(오래 꺼낸 것이 앞 — 값은 쓰지 않는다). 돌려주기 · 다시 내주기가 목록을 훑지 않는다
+        vector<GameObjectHandle>        _listScratchHandle; ///< `releaseBusyIf` 가 걷는 사본(프레임마다 할당하지 않는다)
+        uint32                          _maxIdleCount;
+        DevCounter                      _createdCount;
+        uint8                           _bContractChecked : 1; ///< 처음 만든 인스턴스로 풀 계약을 확인했다
+        uint8                           _bRefused         : 1; ///< 풀 계약을 어긴 프리팹이다 — 더 만들지 않는다
     };
 } // namespace sw

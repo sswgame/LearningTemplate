@@ -32,11 +32,9 @@ namespace sw
         string _name{};
     };
 
-    struct CookJobDesc;
     struct ObjectIdentity;
 
     class AssetLoadScope;
-    class CookStore;
     class GameObject;
     class GameObjectManager;
     class JSONDocument;

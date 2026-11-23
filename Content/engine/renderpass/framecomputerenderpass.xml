@@ -37,6 +37,8 @@
 		<RenderGraphResourceDesc _name="OccludedOrders" _kind="Persistent" />
 		<RenderGraphResourceDesc _name="LightGrid" _kind="External" />
 		<RenderGraphResourceDesc _name="VolumetricFogVolume" _kind="External" />
+		<!-- 실시간 프로브가 광선을 쏘는 점유 복셀 — 장면이 바뀐 프레임에만 다시 칠하고 프레임 사이에 남는다. -->
+		<RenderGraphResourceDesc _name="SceneVoxels" _kind="Persistent" />
 		<RenderGraphResourceDesc _name="ProbeIrradiance" _kind="Persistent" />
 		<RenderGraphResourceDesc _name="ProbeHistory" _kind="Persistent" />
 		<RenderGraphResourceDesc _name="CanvasMarkers" _kind="External" />
@@ -146,8 +148,15 @@
 				<item>VolumetricFogVolume</item>
 			</_listOutput>
 		</RenderGraphPassDesc>
+		<!-- 실시간 프로브의 점유 복셀을 메시의 GPU 원본 정점에서 칠한다(scene_voxelize.hlsl) — 바뀐 구간만 지우고 다시 칠하며, 바뀐 것이 없는 프레임은 돌지 않는다. -->
+		<RenderGraphPassDesc _name="SceneVoxelize" _type="SceneVoxelize" _cullMode="None" _queue="AsyncCompute">
+			<_listOutput>
+				<item>SceneVoxels</item>
+			</_listOutput>
+		</RenderGraphPassDesc>
 		<RenderGraphPassDesc _name="ProbeUpdate" _type="ProbeUpdate" _cullMode="None" _queue="AsyncCompute">
 			<_listInput>
+				<item>SceneVoxels</item>
 				<item>LightBuffer</item>
 				<item>LightGrid</item>
 			</_listInput>

@@ -18,6 +18,7 @@
 #include "Engine/Graphics/RHI/RHIRenderResource.h"
 #include "Engine/Graphics/RHI/Tests/RHIFakeDevice.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanMemoryAccount.h"
+#include "Engine/Graphics/RHI/Vulkan/VulkanPhysicalDeviceRank.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanPipelineCacheFile.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIRequiredVersion.h"
 
@@ -232,12 +233,12 @@ SW_TEST_CASE( RHIDeferredHandleTest, ReleasesWaitForTheRenderThreadFrame )
     test::FakeRHIDevice device;
 
     // 렌더 스레드가 든 프레임이 없으면 바로 내린다.
-    device.releaseBindlessIndex( RHIBindlessIndexSpace::Buffer, 7 );
+    device.releaseBindlessIndex( RHIBufferSRVIndex{ 7 } );
     SW_EXPECT_EQUAL( size_t( 0 ), device.getDeferredHandleCount() );
 
     // 프레임을 넘긴 뒤 다른 스레드(렌더 스레드가 아니다)가 내리면 미룬다.
     device.notifyRenderFrameQueued();
-    device.releaseBindlessIndex( RHIBindlessIndexSpace::Buffer, 8 );
+    device.releaseBindlessIndex( RHIBufferSRVIndex{ 8 } );
     device.releaseHandle( RHIBufferHandle{ 9 } );
     device.releaseHandle( RHIBufferHandle{} ); // 빈 핸들은 무시
     SW_EXPECT_EQUAL( size_t( 2 ), device.getDeferredHandleCount() );
@@ -255,7 +256,7 @@ SW_TEST_CASE( RHIDeferredHandleTest, ReleasesWaitForTheRenderThreadFrame )
 
     // waitIdle 은 렌더 스레드를 비운 뒤 미룬 것을 내린다.
     device.notifyRenderFrameQueued();
-    device.releaseBindlessIndex( RHIBindlessIndexSpace::Texture, 11 );
+    device.releaseBindlessIndex( RHITextureSRVIndex{ 11 } );
     SW_EXPECT_EQUAL( size_t( 1 ), device.getDeferredHandleCount() );
     device.waitIdle( RHIWaitIdleReason::Tool );
     SW_EXPECT_EQUAL( size_t( 0 ), device.getDeferredHandleCount() );
@@ -270,7 +271,7 @@ SW_TEST_CASE( RHIDeferredHandleTest, DrainRenderThreadWaitsForGPUIdle )
 {
     test::FakeRHIDevice device;
     device.notifyRenderFrameQueued();
-    device.releaseBindlessIndex( RHIBindlessIndexSpace::Texture, 13 );
+    device.releaseBindlessIndex( RHITextureSRVIndex{ 13 } );
 
     device.flushRenderThread();
     SW_EXPECT_EQUAL( size_t( 1 ), device.getDeferredHandleCount() );
@@ -294,7 +295,7 @@ SW_TEST_CASE( RHIDeferredHandleTest, ReleasesWaitForThePacketBeingBuilt )
 
     // 프레임 A 가 든 동안 해제한다 — 게임 스레드는 다음 패킷 B 를 짓는 중이다. A 가 끝나도 B 가 남았다.
     device.notifyRenderFrameQueued();
-    device.releaseBindlessIndex( RHIBindlessIndexSpace::Texture, 12 );
+    device.releaseBindlessIndex( RHITextureSRVIndex{ 12 } );
     device.notifyRenderFrameRetired();
     SW_EXPECT_EQUAL( size_t( 1 ), device.getDeferredHandleCount() );
     device.notifyRenderFrameQueued();
@@ -450,6 +451,10 @@ SW_TEST_CASE( RHIAvailabilityTest, OtherBackendFitsThePlatform )
     SW_EXPECT_TRUE( other == sw::RHIBackend::OpenGL );
     SW_REQUIRE_TRUE( sw::RHIAvailability::findOtherBackend( sw::RHIBackend::OpenGL, other ) );
     SW_EXPECT_TRUE( other == sw::RHIBackend::Vulkan );
+#elif defined( SW_PLATFORM_ANDROID ) || defined( SW_PLATFORM_WEB )
+    // 백엔드가 하나뿐인 플랫폼(Android Vulkan · 웹 WebGPU)은 건너갈 곳이 없다.
+    SW_EXPECT_EQUAL( size_t{ 1 }, static_cast<size_t>( sw::RHIAvailability::getPlatformBackendOrder().size() ) );
+    SW_EXPECT_FALSE( sw::RHIAvailability::findOtherBackend( sw::RHIAvailability::getPlatformBackendOrder()[0], other ) );
 #else
     #error "Unsupported platform"
 #endif
@@ -478,7 +483,6 @@ SW_TEST_CASE( RHIDeviceTest, UITargetFormatStaysSDRUnderHDR )
 // 값은 `uint64` 와 같은 크기 · 복사 비용이다(성능 하락 없음).
 static_assert( std::is_convertible_v<RHITextureHandle, RHIBufferHandle> == false, "a texture handle must not pass as a buffer handle" );
 static_assert( std::is_convertible_v<RHIBufferHandle, RHITextureHandle> == false, "a buffer handle must not pass as a texture handle" );
-static_assert( std::is_convertible_v<RHIPipelineStateHandle, RHIRenderPassHandle> == false, "a PSO handle must not pass as a render pass handle" );
 static_assert( std::is_convertible_v<RHITransientHeapHandle, RHITextureHandle> == false, "a heap handle must not pass as a texture handle" );
 static_assert( std::is_convertible_v<uint64, RHIBufferHandle> == false, "an integer must not become a handle implicitly" );
 static_assert( std::is_convertible_v<RHIBufferHandle, uint64> == false, "a handle must not become an integer implicitly" );
@@ -526,4 +530,23 @@ SW_TEST_CASE( RHIReleaseHandleTest, DeferredReleaseWaitsForTheFrameFence )
     device.notifyRenderFrameRetired(); // 프레임 2 끝 — 이제 놓는다
     SW_EXPECT_TRUE( factory._listDestroyedBuffer == vector<RHIBufferHandle>{ buffer } );
     SW_EXPECT_EQUAL( 0u, assertCapture.getCount() );
+}
+
+/**
+ * @brief [VulkanPhysicalDeviceRankTest] 선호 종류가 먼저이고 CPU 구현은 늘 마지막이다 — 외장 GPU 가 없어도 내장 GPU 가 lavapipe 보다 앞선다
+ * @details 예전에는 선호 종류만 앞으로 옮기고 나머지는 열거 순서라, lavapipe 가 먼저 열거되는 내장 GPU 머신이 소프트웨어로 그렸다.
+ */
+SW_TEST_CASE( VulkanPhysicalDeviceRankTest, CPUIsAlwaysLast )
+{
+    using Rank = VulkanPhysicalDeviceRank;
+    for ( const bool bPreferMinimumPower : { false, true } )
+    {
+        for ( const uint32 type : { Rank::kOther, Rank::kIntegratedGPU, Rank::kDiscreteGPU, Rank::kVirtualGPU } )
+        {
+            SW_EXPECT_TRUE( Rank::compute( type, bPreferMinimumPower ) < Rank::compute( Rank::kCPU, bPreferMinimumPower ) );
+        }
+    }
+    SW_EXPECT_TRUE( Rank::compute( Rank::kDiscreteGPU, false ) < Rank::compute( Rank::kIntegratedGPU, false ) );
+    SW_EXPECT_TRUE( Rank::compute( Rank::kIntegratedGPU, true ) < Rank::compute( Rank::kDiscreteGPU, true ) );
+    SW_EXPECT_TRUE( Rank::compute( Rank::kIntegratedGPU, false ) < Rank::compute( Rank::kVirtualGPU, false ) );
 }

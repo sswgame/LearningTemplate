@@ -60,49 +60,60 @@ namespace sw::editor
                 return true;
             }
 
-            static bool drawBooleanWidget( GlobalVariableInfo& info )
+            static bool drawBooleanWidget( GlobalVariablesViewModel& model, GlobalVariableInfo& info )
             {
                 bool bVal = info.getValueAsBool();
                 if ( ImGui::Checkbox( "##val", &bVal ) == false )
                     return false;
+                model.beginEdit( info._name );
                 info.setValueAsBool( bVal );
                 return true;
             }
 
-            static bool drawInt32Widget( GlobalVariableInfo& info )
+            static bool drawInt32Widget( GlobalVariablesViewModel& model, GlobalVariableInfo& info )
             {
                 int32 iVal = info.getValueAsInt();
                 if ( EditorWidgets::dragInt( SW_WIDGET_ID( "##val" ), &iVal ) == false )
                     return false;
+                model.beginEdit( info._name );
                 info.setValueAsInt( iVal );
                 return true;
             }
 
-            static bool drawFloatWidget( GlobalVariableInfo& info )
+            static bool drawFloatWidget( GlobalVariablesViewModel& model, GlobalVariableInfo& info )
             {
                 float32 fVal = info.getValueAsFloat();
                 if ( EditorWidgets::dragFloat( SW_WIDGET_ID( "##val" ), &fVal, 0.1f ) == false )
                     return false;
+                model.beginEdit( info._name );
                 info.setValueAsFloat( fVal );
                 return true;
             }
 
-            static bool drawStringWidget( GlobalVariableInfo& info )
+            static bool drawStringWidget( GlobalVariablesViewModel& model, GlobalVariableInfo& info )
             {
                 string strVal = info.getValueAsString();
                 if ( EditorWidgets::drawTextField( "##val", strVal ) == false )
                     return false;
+                model.beginEdit( info._name );
                 info.setValueAsString( strVal.c_str() );
                 return true;
             }
 
+            /** @brief 비밀 값은 가린 글만 보인다. 값은 명령줄 · 콘솔로 준다(칸에서 고치면 가린 글에 이어 쓰게 된다). */
+            static bool drawSecretWidget( GlobalVariableInfo& info )
+            {
+                ImGui::TextUnformatted( info.getValueAsString().c_str() );
+                return false;
+            }
+
             /** @brief 리플렉션 enum 테이블이 있으면 열거자 콤보, 없으면 정수 드래그입니다. */
-            static bool drawEnumWidget( GlobalVariableInfo& info )
+            static bool drawEnumWidget( GlobalVariablesViewModel& model, GlobalVariableInfo& info )
             {
                 const int32     currentVal = info.getValueAsInt();
                 const EnumInfo* pEnumInfo  = GlobalVariablesViewModel::findEnumInfo( info._enumType );
                 if ( pEnumInfo == nullptr || pEnumInfo->_listEnumerator.empty() )
-                    return drawInt32Widget( info );
+                    return drawInt32Widget( model, info );
 
                 bool        bChanged{ false };
                 const utf8* pName    = GlobalVariablesViewModel::findEnumName( info._enumType, currentVal );
@@ -119,6 +130,7 @@ namespace sw::editor
                         const bool  bSelected = ( val32 == currentVal );
                         if ( ImGui::Selectable( name, bSelected ) )
                         {
+                            model.beginEdit( info._name );
                             info.setValueAsInt( val32 );
                             bChanged = true;
                         }
@@ -134,7 +146,7 @@ namespace sw::editor
             struct WidgetRow
             {
                 GlobalVariableType _type;
-                bool ( *_draw )( GlobalVariableInfo& info );
+                bool ( *_draw )( GlobalVariablesViewModel& model, GlobalVariableInfo& info );
             };
 
             /**
@@ -148,6 +160,7 @@ namespace sw::editor
                 {  GlobalVariableType::String,  &drawStringWidget},
                 {    GlobalVariableType::Enum,    &drawEnumWidget},
                 {GlobalVariableType::DiskPath,  &drawStringWidget}, // 글 칸이다 - 받을 때 절대화는 `setValueAsString` 이 한다
+                {  GlobalVariableType::Secret,  &drawSecretWidget},
             } );
 
             static constexpr bool isWidgetTableInTypeOrder()
@@ -160,7 +173,7 @@ namespace sw::editor
                 return true;
             }
 
-            static bool drawVariableWidget( GlobalVariableInfo& info )
+            static bool drawVariableWidget( GlobalVariablesViewModel& model, GlobalVariableInfo& info )
             {
                 ImGui::SetNextItemWidth( -1.0f );
                 if ( info._pData == nullptr )
@@ -169,7 +182,7 @@ namespace sw::editor
                     return false;
                 }
                 // 등록이 범위 밖 타입을 거절하므로 인덱스는 늘 행 안이다.
-                return kArrWidgetRow[info._type]._draw( info );
+                return kArrWidgetRow[info._type]._draw( model, info );
             }
         };
         static_assert( GlobalVariablesPanelInternal::isWidgetTableInTypeOrder(), "GlobalVariablesPanel widget rows must follow GlobalVariableType order" );
@@ -209,7 +222,7 @@ namespace sw::editor
 
     void GlobalVariablesPanel::revertDocument()
     {
-        GlobalVariablesViewModel::resetAllToDefault();
+        _model.revertToDefault();
     }
 
     void GlobalVariablesPanel::markSessionDirty()
@@ -219,6 +232,9 @@ namespace sw::editor
 
     void GlobalVariablesPanel::drawContent()
     {
+        _model.flushEdit( ImGui::IsAnyItemActive() ); // 놓은 편집을 한 단계로 올린다
+        if ( _model.takeUndoMoved() )
+            markSessionDirty();
         drawVariableToolbar(); // 관리자는 ViewModel 이 찾는다 — 이 창은 변수 줄 값과 명령만 본다
 
         // 2) 변수 목록 — 등록 세대나 검색 글이 바뀐 프레임에만 다시 짓는다.
@@ -256,7 +272,7 @@ namespace sw::editor
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "ResetAll" ) ) );
             if ( ImGui::Button( SW_LOCKEY( "EdText", "ResetAll" ) ) )
             {
-                GlobalVariablesViewModel::resetAllToDefault();
+                _model.resetAllToDefault();
                 markSessionDirty();
             }
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSettings", "ResetAllVariables" ) );
@@ -308,8 +324,8 @@ namespace sw::editor
             for ( const string& presetFile : _model.getPresetFiles() )
             {
                 const string displayName = GlobalVariablesViewModel::makePresetDisplayName( presetFile );
-                if ( ImGui::MenuItem( displayName.c_str() ) )
-                    GlobalVariablesViewModel::loadPreset( presetFile );
+                if ( ImGui::MenuItem( displayName.c_str() ) && _model.loadPreset( presetFile ) )
+                    markSessionDirty();
             }
         }
 
@@ -463,11 +479,14 @@ namespace sw::editor
         ImGui::TableNextColumn();
         // 값 칸 휠클릭 = 기본값으로(R10) — 아래 Reset 단추와 같은 조건 · 같은 연산이다.
         EditorWidgets::beginResetToDefaultGroup();
-        const bool bValueChanged = GlobalVariablesPanelInternal::drawVariableWidget( info );
+        const bool bValueChanged = GlobalVariablesPanelInternal::drawVariableWidget( _model, info );
         bool       bHovered      = false;
         const bool bResetByWheel = EditorWidgets::endResetToDefaultGroup( info.isAtDefault() == false, bHovered );
         if ( bValueChanged )
+        {
+            _model.recordEdited( ImGui::IsAnyItemActive() );
             markSessionDirty();
+        }
         EditorSelfTestMarks::recordFormat( "globalVariables.value.%#", info._name.c_str() ); // 시나리오가 그 변수의 값을 바꾼다
 
         // Reset 컬럼 — 기본값과 다른 줄에만 단추를 둔다(언리얼 디테일의 "기본값으로" 화살표). 모든 줄의 단추는 바뀐 줄을 찾기 어렵게 했다(uiaudit 10).
@@ -477,7 +496,9 @@ namespace sw::editor
             const bool bResetPressed = ImGui::SmallButton( SW_LOCKEY( "EdVerb", "Reset" ) );
             if ( bResetPressed || bResetByWheel )
             {
+                _model.beginEdit( info._name );
                 info.resetToDefault();
+                _model.recordEdited( false );
                 markSessionDirty();
             }
             EditorSelfTestMarks::recordFormat( "globalVariables.reset.%#", info._name.c_str() );

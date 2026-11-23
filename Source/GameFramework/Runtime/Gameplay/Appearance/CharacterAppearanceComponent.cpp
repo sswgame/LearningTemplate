@@ -46,6 +46,7 @@
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceXMLUtil.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterAppearance.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterBodyDynamicsComponent.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/CharacterEquipmentComponent.h"
 
 namespace sw
 {
@@ -598,6 +599,14 @@ namespace sw
             requestAssemble();
     }
 
+    bool CharacterAppearanceComponent::computeSpec( CharacterAppearanceSpec& outSpec )
+    {
+        (void)applyPendingState();
+        const AppearanceDatabase* pDatabase = findDatabase();
+        const bool                bChosen   = _presetID.empty() == false || _bSelectionSet == SW_TRUE;
+        return pDatabase != nullptr && bChosen && expandSpec( *pDatabase, outSpec );
+    }
+
     void CharacterAppearanceComponent::setEquipment( const Equipment* pEquipment )
     {
         _pEquipment = pEquipment;
@@ -881,6 +890,10 @@ namespace sw
         CharacterAppearanceSpec spec;
         if ( expandSpec( *pDatabase, spec ) == false )
             return;
+        // 장비의 캐릭터 조건이 새 몸을 먼저 본다 — 깨진 장비를 벗긴 뒤의 차림을 조립한다.
+        CharacterEquipmentComponent* pWorn = pOwner->getComponent<CharacterEquipmentComponent>();
+        if ( pWorn != nullptr )
+            pWorn->setCharacterSpec( spec );
         for ( const SlotOverride& slotOverride : _listSlotOverride )
         {
             AppearanceSlotRequest* pSlot = spec.findSlot( slotOverride._slot );
@@ -1597,7 +1610,7 @@ namespace sw
             const ResolvedPart& part = resolved._listPart[partIndex];
             MeshAssemblyLoad    load;
             load._partIndex             = partIndex;
-            load._mesh                  = MeshCache::request( part._asset.view() );
+            load._mesh                  = MeshCache::request( part._asset.view(), MeshCPUAccess::Keep ); // 조립이 정점을 굽고 합친다
             const bool bForeignSkeleton = part._skeleton.empty() == false && part._skeleton != pBodyPart->_skeleton;
             if ( part._fit.empty() == false && bForeignSkeleton )
                 SW_LOG_ERROR_ID( "CharacterAppearance.AppearancePartFitData", "Appearance '%#' part '%#' has fit data but its own skeleton '%#' - it is drawn unfitted", _presetID.c_str(), part._partName.c_str(), part._skeleton.c_str() );

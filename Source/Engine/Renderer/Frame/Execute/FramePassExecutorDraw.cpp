@@ -243,7 +243,7 @@ namespace sw
             cache.markRebuilt();
             // 층은 이 패스가 깊이 쓰기로 선언했고 다시 그리는 프레임에만 등록했다(`registerViewResources`) — 복원이 읽도록 셰이더 읽기로 옮긴다.
             // 다시 그리지 않는 프레임은 지난번 다시 그린 뒤의 셰이더 읽기 그대로다(전이 없음).
-            context._pGraphPass->transition( ViewGraphResource::shadowCacheLayer(), RHITextureState::ShaderResource );
+            context._pGraphPass->transition( ViewGraphResource::shadowCacheLayer(), RenderGraphAccess::ShaderRead );
         }
         return true;
     }
@@ -285,7 +285,7 @@ namespace sw
                 if ( beginShadowTile( context, shadow._arrCascadeTile[cascadeIndex] ) == false )
                     continue;
                 // 주 시점의 캐스케이드 타일은 자기 컬링 슬롯의 목록을 그린다(그 캐스케이드 절두체로만 거른 것). 추가 뷰의 캐스케이드는 합친 칸이다.
-                const bool bCascadeSlot = _pActiveView == &_state._mainView && cascadeIndex < _state._cascadeCullCount;
+                const bool bCascadeSlot = _pActiveView == &_state.getMainView() && cascadeIndex < _state._cascadeCullCount;
                 context._cullViewIndex  = bCascadeSlot ? _state._cascadeCullSlotBase + cascadeIndex : _pActiveView->_shadowCullSlot;
                 drawSceneMeshes( context, pso, bTransparentBatch );
             }
@@ -608,8 +608,8 @@ namespace sw
         context._drawMaterialCount = binding._materialCount;
     }
 
-    bool FramePassExecutor::bindForDraw( FramePassContext& context, RHIPipelineStateHandle pso, RHIDescriptorIndex materialCb,
-                                         const RHIDescriptorIndex* pMaterialTexSRV )
+    bool FramePassExecutor::bindForDraw( FramePassContext& context, RHIPipelineStateHandle pso, RHIBufferSRVIndex materialCb,
+                                         const RHITextureSRVIndex* pMaterialTexSRV )
     {
         if ( _pDevice == nullptr || context._pCmd == nullptr )
             return false;
@@ -643,7 +643,6 @@ namespace sw
                                     context._lastCbLayoutHash != cbLayoutHash;
         if ( bSlotAlreadyDrawn && bValuesChanged && acquirePassCb( context ) == false )
             return false; // 링 고갈 — 이 드로우는 그리지 않는다(앞 드로우의 슬롯을 덮지 않는다, 링이 이유를 남겼다)
-        const RHIConstantBuffer engineCb{ context._passCb, context._passCbIndex };
 
         // 엔진 상수버퍼를 이 드로우에서 다시 만들 필요가 있나. 값 · 레지스트리 버전과 버퍼가 모두 그대로면 없다.
         // **PSO 도 같아야 한다.** 이 플래그는 상수버퍼 재업로드만이 아니라 리소스 재바인딩까지 건너뛰게 하는데,
@@ -651,17 +650,17 @@ namespace sw
         const uint32 valuesVersion   = context._passValues.getVersion();
         const uint32 registryVersion = context._resourceRegistry.getVersion();
         // 버퍼의 바이트가 이미 맞나(올리기를 건너뛴다)와, 슬롯 상태까지 그대로인가(PSO 가 같아야 한다 — 리소스 재바인딩을 건너뛴다)는 따로다.
-        const bool bCbUpToDate = ( context._lastCbBuffer == engineCb._buffer ) && ( context._lastCbValuesVersion == valuesVersion ) &&
+        const bool bCbUpToDate = ( context._lastCbBuffer == context._passCb ) && ( context._lastCbValuesVersion == valuesVersion ) &&
                                  ( context._lastCbRegistryVersion == registryVersion ) && ( context._lastCbLayoutHash == cbLayoutHash );
         const bool bBindUpToDate = bCbUpToDate && ( context._lastBindPSO == pso );
 
         const BindlessIndexCheckSite  indexCheck{ _pDevice, context._passName };
         const BindlessIndexCheckSite* pIndexCheck = &indexCheck;
-        ShaderParameterBinder::bindGraphics( *context._pCmd, *pLayout, context._resourceRegistry, context._passValues, engineCb, materialCb,
+        ShaderParameterBinder::bindGraphics( *context._pCmd, *pLayout, context._resourceRegistry, context._passValues, context._passCb, context._passCbIndex, materialCb,
                                              _pDevice->supportsNativeBindlessSampling(), pMaterialTexSRV, bCbUpToDate, bBindUpToDate, pIndexCheck );
 
         context._lastBindPSO           = pso;
-        context._lastCbBuffer          = engineCb._buffer;
+        context._lastCbBuffer          = context._passCb;
         context._lastCbValuesVersion   = valuesVersion;
         context._lastCbRegistryVersion = registryVersion;
         context._lastCbLayoutHash      = cbLayoutHash;
@@ -717,15 +716,18 @@ namespace sw
         return _state._gpuScene.getParticleSlots();
     }
 
-    uint32 FramePassExecutor::countDrawGroup( const BatchDrawState& state, RenderViewMode drawMode, uint32 orderIndex, bool bDrawsParticles ) const
+    const GPUMeshBatchPSO& FramePassExecutor::BatchDrawState::getBatchPSO( uint32 batchIndex ) const
+    {
+        return _pBatchPSO[_listVariant[batchIndex]];
+    }
+
+    uint32 FramePassExecutor::countDrawGroup( const BatchDrawState& state, uint32 orderIndex, bool bDrawsParticles ) const
     {
         const uint32 batchCount = static_cast<uint32>( state._batches.size() );
         const uint32 batchIndex = ( state._pOrder != nullptr ) ? ( *state._pOrder )[orderIndex] : orderIndex;
         uint32       groupCount = 1;
         if ( state._bMerge == false )
             return groupCount;
-        const GPUMeshBatch&        head        = state._batches[batchIndex];
-        const GPUMeshBatchBinding& headBinding = state._bindings[batchIndex];
         while ( orderIndex + groupCount < batchCount )
         {
             const uint32 nextBatchIndex = ( state._pOrder != nullptr ) ? ( *state._pOrder )[orderIndex + groupCount] : orderIndex + groupCount;
@@ -734,14 +736,14 @@ namespace sw
                                          state._listParticleSlot[state._particleSlotCursor]._drawPosition <= orderIndex + groupCount;
             const bool bGroupEnds = nextBatchIndex != batchIndex + groupCount || bParticleInside;
             if ( bGroupEnds || shouldDrawCasterBatch( state._casterFilter, state._batches[nextBatchIndex] ) == false ||
-                 isSameDrawGroup( state._pso, state._passType, drawMode, head, headBinding, state._batches[nextBatchIndex], state._bindings[nextBatchIndex] ) == false )
+                 isSameDrawGroup( state, batchIndex, nextBatchIndex ) == false )
                 break;
             ++groupCount;
         }
         return groupCount;
     }
 
-    void FramePassExecutor::drawBatchRound( FramePassContext& context, BatchDrawState& inoutState, RenderViewMode drawMode, bool bDrawsParticles )
+    void FramePassExecutor::drawBatchRound( FramePassContext& context, BatchDrawState& inoutState, bool bDrawsParticles )
     {
         const uint32 batchCount = static_cast<uint32>( inoutState._batches.size() );
         uint32       orderIndex{ 0 };
@@ -762,10 +764,10 @@ namespace sw
                 ++orderIndex;
                 continue;
             }
-            const uint32 groupCount = countDrawGroup( inoutState, drawMode, orderIndex, bDrawsParticles );
+            const uint32 groupCount = countDrawGroup( inoutState, orderIndex, bDrawsParticles );
             // **이 패스의 뷰**가 만든 인자를 쓴다. 그림자 패스가 메인 카메라 인자를 쓰면 화면 밖에서
             // 화면 안으로 그림자를 드리우는 물체가 사라진다.
-            if ( drawBatchGroup( context, inoutState, drawMode, head, headBinding, inoutState._batchOffset + batchIndex, groupCount ) )
+            if ( drawBatchGroup( context, inoutState, batchIndex, groupCount ) )
                 ++inoutState._drawCallCount;
             orderIndex += groupCount;
         }
@@ -792,7 +794,6 @@ namespace sw
             registerInstanceBuffer( context );
 
         BatchDrawState state{};
-        state._pso          = pso;
         state._boundPSO     = pso;
         state._casterFilter = context._shadowCasterFilter;
         state._batches      = bTransparentPass ? _state._gpuScene.getTransparentBatches() : _state._gpuScene.getOpaqueBatches();
@@ -821,7 +822,7 @@ namespace sw
             state._pOrder = &_pActiveView->_listTransparentBatchOrder;
         // 인스턴스 슬롯 스트림(슬롯 1). 씬 드로우는 모두 이 스트림에서 자기 자리를 읽는다 — PSO 를 걸 때마다 메시 스트림과 함께 다시 건다(drawBatchGroup).
         // 컬링 없는 백엔드의 추가 뷰는 꼬리를 그 뷰 순서로 다시 놓은 자기 스트림을 쓴다(GPU 정렬 백엔드는 늘 공용 스트림).
-        state._slotStream = ( bExtraView && _pActiveView->_bUsesViewSlotStream == SW_TRUE ) ? _pActiveView->_instanceSlotStream : _state._gpuScene.getInstanceSlotStream();
+        state._slotStream = ( bExtraView && _pActiveView->_bUsesViewSlotStream == SW_TRUE ) ? _pActiveView->_instanceSlotStream._buffer : _state._gpuScene.getInstanceSlotStream();
         // 투명 큐의 입자는 배치 순서의 자기 자리(`GPUTransparentParticleSlot::_drawPosition`) 앞에 끼운다. 입자 그리기가 PSO 를 바꾸므로
         // 메시로 돌아올 때 PSO 와 정점 스트림을 다시 건다(drawBatchRound 가 걸린 PSO 를 잊고, `drawParticleRun` 이 에뮬 텍스처 슬롯을 다시 건다).
         if ( pParticleSlot != nullptr )
@@ -835,64 +836,62 @@ namespace sw
         const uint32         drawRoundCount = bOverlayDraw ? 2u : 1u;
         for ( uint32 drawRound = 0; drawRound < drawRoundCount; ++drawRound )
         {
-            drawBatchRound( context, state, arrDrawMode[drawRound], drawRound == 0 );
+            if ( _psoManager.findBatchPSORow( pso, bTransparentPass, arrDrawMode[drawRound], state._pBatchPSO, state._listVariant ) == false )
+            {
+                SW_LOG_ERROR_ONCE_ID( "FramePassExecutor.NoBatchPSORow", "Pass '%#' draws scene batches with a PSO that the frame PSO table does not have (view mode %#) - the batches are not drawn", context._passName,
+                                      RenderViewModeUtil::getInfo( arrDrawMode[drawRound] )._pName );
+                continue;
+            }
+            SW_ASSERT( state._listVariant.size() == state._batches.size() );
+            drawBatchRound( context, state, drawRound == 0 );
         }
         // 모든 배치보다 가까운 입자(자리 = 배치 수)를 마저 그린다.
         (void)drawParticleRun( context, state._listParticleSlot, state._particleSlotCursor, MathUtil::kMaxUInt32 );
         SW_PROFILE_COUNT( "RT.Draw.indirectCalls", state._drawCallCount );
-        _indirectDrawCallCount.fetch_add( state._drawCallCount, std::memory_order_relaxed );
     }
 
-    bool FramePassExecutor::layoutBindsMaterialCb( RHIPipelineStateHandle batchPSO ) const
+    bool FramePassExecutor::isSameDrawGroup( const BatchDrawState& state, uint32 headIndex, uint32 otherIndex ) const
     {
-        // 머티리얼 CB 는 그 슬롯을 실제로 거는 셰이더에서만 병합 키다(`GPUMeshBatchBinding::canShareMaterialBinding`).
-        const ShaderBindingLayout* pLayout = _psoManager.findLayout( batchPSO );
-        if ( pLayout == nullptr )
-            return false;
-        static const hashed_string s_materialCbName{ shaderslot::cbname::kMaterial };
-        for ( const ShaderBindingSlot& slot : pLayout->getSlots() )
-        {
-            if ( slot._name == s_materialCbName )
-                return true;
-        }
-        return false;
-    }
-
-    bool FramePassExecutor::isSameDrawGroup( RHIPipelineStateHandle pso, RenderPassKind passType, RenderViewMode drawMode, const GPUMeshBatch& head,
-                                             const GPUMeshBatchBinding& headBinding, const GPUMeshBatch& other, const GPUMeshBatchBinding& otherBinding ) const
-    {
-        const bool bOtherBatchNotDrawable = otherBinding.hasGeometry() == false || other.hasDrawSlots() == false || shouldDrawBatchInPass( passType, other, otherBinding ) == false;
+        const GPUMeshBatch&        other                  = state._batches[otherIndex];
+        const GPUMeshBatchBinding& otherBinding           = state._bindings[otherIndex];
+        const GPUMeshBatchBinding& headBinding            = state._bindings[headIndex];
+        const bool                 bOtherBatchNotDrawable = otherBinding.hasGeometry() == false || other.hasDrawSlots() == false || shouldDrawBatchInPass( state._passType, other, otherBinding ) == false;
         if ( bOtherBatchNotDrawable )
             return false;
         // 정점 · 인덱스 버퍼는 짝이다(풀의 둘, 아니면 메시의 둘) — 정점 버퍼가 같으면 인덱스 버퍼도 같다.
-        if ( otherBinding._vertexBuffer != headBinding._vertexBuffer || _psoManager.psoForBatch( pso, other, drawMode ) != _psoManager.psoForBatch( pso, head, drawMode ) )
+        const GPUMeshBatchPSO& headPSO = state.getBatchPSO( headIndex );
+        if ( otherBinding._vertexBuffer != headBinding._vertexBuffer || state.getBatchPSO( otherIndex )._pso != headPSO._pso )
             return false;
-        // 레이아웃을 보는 것은 CB 가 다를 때만(대부분 같다).
-        const bool bCbDiffers = otherBinding._materialCb != headBinding._materialCb;
-        if ( bCbDiffers )
-            SW_PROFILE_COUNT( "RT.PSO.batchLookups", 1 ); // W-R2 계측: 배치를 만들 때 PSO 를 한 번 풀어 두면 없어질 조회 수(`RT.Draw.gpuBatches` · `RT.PSO.ensureMaterial` 와 함께 본다)
-        return GPUMeshBatchBinding::canShareMaterialBinding( headBinding, otherBinding, bCbDiffers && layoutBindsMaterialCb( _psoManager.psoForBatch( pso, head, drawMode ) ) );
+        // 머티리얼을 읽지 않는 셰이더(깊이 · 그림자의 불투명 변형)는 머티리얼이 병합 키가 아니다.
+        if ( headPSO._pLayout != nullptr && headPSO._pLayout->usesMaterialData() == false )
+            return true;
+        // 머티리얼 CB 는 그 슬롯을 실제로 거는 셰이더에서만 병합 키다(`GPUMeshBatchBinding::canShareMaterialBinding`).
+        const bool bMaterialCbIsKey = otherBinding._materialCb != headBinding._materialCb && headPSO._pLayout != nullptr && headPSO._pLayout->usesMaterialCb();
+        return GPUMeshBatchBinding::canShareMaterialBinding( headBinding, otherBinding, bMaterialCbIsKey );
     }
 
-    bool FramePassExecutor::drawBatchGroup( FramePassContext& context, BatchDrawState& inoutState, RenderViewMode drawMode, const GPUMeshBatch& head,
-                                            const GPUMeshBatchBinding& headBinding, uint32 argIndex, uint32 groupCount )
+    bool FramePassExecutor::drawBatchGroup( FramePassContext& context, BatchDrawState& inoutState, uint32 headIndex, uint32 groupCount )
     {
         // **이 머티리얼의 퍼뮤테이션**으로 그린다. 주의: 패스 PSO 하나로 모두 그리면 머티리얼이 선언한
         // 정적 스위치(유리의 MATERIAL_BLEND_TRANSLUCENT 같은)가 쿠킹되기만 하고 한 번도 걸리지 않는다.
-        // 캐시는 ensureMaterialPSOs 가 기록 전에 채운다. 여기서는 조회만 한다.
-        RenderPSOCache::MaterialPSOState psoState = RenderPSOCache::MaterialPSOState::Ready;
-        SW_PROFILE_COUNT( "RT.PSO.batchLookups", 1 );
-        const RHIPipelineStateHandle batchPSO = _psoManager.psoForBatch( inoutState._pso, head, drawMode, &psoState );
+        // 표는 기록 전에 다 풀렸다(`FramePSOManager::buildBatchPSOTable`). 여기서는 읽기만 한다.
+        const GPUMeshBatch&          head        = inoutState._batches[headIndex];
+        const GPUMeshBatchBinding&   headBinding = inoutState._bindings[headIndex];
+        const uint32                 argIndex    = inoutState._batchOffset + headIndex;
+        const GPUMeshBatchPSO&       headPSO     = inoutState.getBatchPSO( headIndex );
+        const RHIPipelineStateHandle batchPSO    = headPSO._pso;
         // 변형이 `Ready` 가 아닌 묶음(0)은 그리지 않는다 — 앞 묶음의 PSO 로 그리면 틀린 그림이다. 실패는 만들 때 오류를 남겼고, 만드는 중이면 이번 프레임만 건너뛴다.
         if ( batchPSO == 0 )
         {
-            if ( psoState == RenderPSOCache::MaterialPSOState::Building )
+            if ( headPSO._state == RenderPSOCache::MaterialPSOState::Building )
             {
                 SW_PROFILE_COUNT( "RT.PSO.pendingBatches", 1 );
                 _pendingPSOBatchCount.fetch_add( 1, std::memory_order_relaxed );
             }
             return false;
         }
+        context._pLastLayout   = headPSO._pLayout; // 바인더 · 머티리얼 폴백이 저장소(뮤텍스)를 묻지 않는다
+        context._lastLayoutPSO = batchPSO;
         if ( batchPSO != inoutState._boundPSO )
         {
             context._pCmd->setPipelineState( batchPSO ); // 정점 슬롯을 비운다 — 스트림은 아래에서 다시 건다
@@ -917,14 +916,13 @@ namespace sw
         // 렌더링 런타임 디버그(주 시점만 — 렌더 타깃 창이 보는 풀): 프레임 디버거의 멈춤 지점 뒤 드로우는 내지 않고, 통계는 삼각형 상한(GPU 컬링 전)을 센다.
         if ( RenderDebugRegistry* const pDebug = _state._pRenderDebug; pDebug != nullptr && pDebug->isRecording() && isRenderingExtraView() == false )
         {
-            const uint32 headBatchIndex = argIndex - inoutState._batchOffset;
-            uint64       triangleCount  = 0;
+            uint64 triangleCount = 0;
             for ( uint32 groupIndex = 0; groupIndex < groupCount; ++groupIndex )
             {
-                const GPUMeshBatch& batch = inoutState._batches[headBatchIndex + groupIndex];
+                const GPUMeshBatch& batch = inoutState._batches[headIndex + groupIndex];
                 triangleCount += static_cast<uint64>( batch._indexCount / 3u ) * batch._visibleCapacity;
             }
-            if ( pDebug->allowDraw( context._passName, batchPSO.getPacked(), _psoManager.findLayout( batchPSO ), head._indexCount, groupCount, triangleCount ) == false )
+            if ( pDebug->allowDraw( context._passName, batchPSO.getPacked(), headPSO._pLayout, head._indexCount, groupCount, triangleCount ) == false )
                 return false;
         }
 #endif

@@ -84,6 +84,8 @@ namespace sw
 
         /** @brief 효과 파일을 바꾸고 바로 읽습니다. 재생은 멈춥니다. */
         void setEffectPath( string_view path );
+        /** @brief 파일이 아닌 효과 @p pEffect 를 겁니다(언리얼 `UNiagaraComponent::SetAsset` 자리 — 코드 · 에디터가 지은 효과). 효과 파일 칸은 비고 재생은 멈춥니다. nullptr 이면 효과를 뗍니다. */
+        void setEffect( shared_ptr<const VFXEffectDef> pEffect );
         /** @brief 효과 파일(리소스 id)입니다. */
         const string& getEffectPath() const { return _effectPath.path(); }
         /** @brief 씨앗을 바꿉니다. 효과를 다시 만들고 재생은 멈춥니다. */
@@ -151,8 +153,10 @@ namespace sw
             vector<uint32>                  _listSlotScratch;    ///< 이번 틱 살아 있는 입자의 칸(`VFXCPUSimulation::writeInstanceSlots`) — 틱마다 다시 쓴다
         };
 
-        /** @brief `_effectPath` 를 읽어 방출기마다 시뮬레이션 대상을 정하고 시뮬레이션을 만듭니다. 재생은 멈춥니다. 경로가 비었거나 읽지 못하면 방출기가 없습니다. */
+        /** @brief `_effectPath` 를 읽어 시뮬레이션을 다시 만듭니다. 재생은 멈춥니다. 경로가 비었거나 읽지 못하면 방출기가 없습니다. */
         void loadEffect();
+        /** @brief 쥔 효과(`_pEffect`)로 방출기마다 시뮬레이션 대상을 정하고 시뮬레이션을 만듭니다. 재생은 멈춥니다. 효과가 없으면 방출기가 없습니다. */
+        void rebuildSimulations();
         /**
          * @brief CPU 방출기는 살아 있는 입자를 새 배열로(입자가 없으면 nullptr), GPU 방출기는 재생 중일 때 요청을 냅니다. 메시 방출기는 인스턴스 배치의 항목도 고칩니다.
          */
@@ -192,6 +196,7 @@ namespace sw
         shared_ptr<const VFXEffectDef>                _pEffect;                ///< 읽은 효과(공유 캐시의 한 벌 — 사용자 파라미터의 기본값과 방출기 정의를 든다). 읽지 못했으면 nullptr
         PROPERTY( Category = "VFX", DisplayName = "User Parameters", Tooltip = "Overrides of the effect's user parameters by name" )
         vector<VFXUserParameterDef> _listUserParameter;
+        float3                      _lastOrigin;         ///< 지난 틱(또는 재생 시작)의 월드 자리 — 월드 공간 입자를 이동만큼 되돌린다
         PrimitiveRegistry*          _pPrimitiveRegistry; ///< 등록된 씬의 프리미티브 레지스트리(빌림). 등록 전이면 nullptr
         PROPERTY( Category = "VFX", DisplayName = "Seed", Tooltip = "Random seed of the emitters; the same seed replays the same particles" )
         uint32 _seed;

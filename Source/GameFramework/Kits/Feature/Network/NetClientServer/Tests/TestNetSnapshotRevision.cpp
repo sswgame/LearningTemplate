@@ -11,7 +11,7 @@
 
 #include <type_traits>
 
-// 엔티티 상태 판 번호 — 서버는 바뀐 엔티티에만 새 판을 주고, 연결별 보낸 기록은 (엔티티, 판)만 들며, 델타는 판이 바뀐 엔티티만 싣는다(와이어는 그대로).
+// 엔티티 상태 판 번호 — 서버는 바뀐 엔티티에만 새 판을 주고, 연결별 보낸 기록은 (엔티티, 판)만 들며, 델타는 판이 바뀐 엔티티의 바뀐 조각만 싣는다.
 
 using namespace sw;
 
@@ -129,7 +129,7 @@ SW_TEST_CASE( NetSnapshotRevisionTest, EndTickRevisesOnlyChangedEntities )
     SW_EXPECT_TRUE( NetSnapshotRevisionTestInternal::findRevision( server, 1 ) > first );
 }
 
-/** @brief [NetSnapshotRevisionTest] 델타는 기준과 판이 다른 엔티티만 싣고, 기록은 (엔티티, 판)만 들며, 받는 쪽은 바뀌지 않은 와이어로 같은 상태를 복원한다. */
+/** @brief [NetSnapshotRevisionTest] 델타는 기준과 판이 다른 엔티티만 싣고, 기록은 (엔티티, 판)만 들며, 받는 쪽은 같은 상태를 복원한다. */
 SW_TEST_CASE( NetSnapshotRevisionTest, WriteDeltaSendsOnlyRevisedEntities )
 {
     static_assert( std::is_trivially_copyable<NetSentEntity>::value && sizeof( NetSentEntity ) <= 16, "보낸 기록은 상태 바이트 없이 (엔티티, 판)만 든다" );
@@ -178,6 +178,80 @@ SW_TEST_CASE( NetSnapshotRevisionTest, WriteDeltaSendsOnlyRevisedEntities )
         SW_EXPECT_EQUAL( listWorld[index]._entityID, restored._listEntity[index]._entityID );
         SW_EXPECT_TRUE( listWorld[index]._buffer == restored._listEntity[index]._buffer );
     }
+}
+
+/** @brief [NetSnapshotRevisionTest] 확인한 기준이 있으면 바뀐 조각만 싣고 복원이 서버와 같다 — 여러 틱을 건너뛰어도, 크기가 바뀌면 통째로 싣는다. */
+SW_TEST_CASE( NetSnapshotRevisionTest, AckedBaselineCarriesOnlyChangedChunks )
+{
+    NetSnapshotRevisionTestRig rig;
+    vector<uint8>              bytes = NetSnapshotRevisionTestInternal::makeBytes( 5, 66 ); // 마지막 조각은 2 바이트다
+    const auto                 send  = [&rig, &bytes]( uint32 tick )
+    {
+        rig._server.beginTick( tick );
+        rig._server.setEntity( 1, 7, bytes );
+        rig._server.endTick();
+        rig._server.sendSnapshots();
+        rig.pollUntilDelivered();
+        const NetEntityState* pEntity = rig._client.getLatest() != nullptr ? rig._client.getLatest()->findEntity( 1 ) : nullptr;
+        SW_REQUIRE_NOT_NULL( pEntity );
+        SW_EXPECT_TRUE( pEntity->_buffer == bytes );
+    };
+    send( 1 );
+    send( 2 );
+    const size_t idleBytes = rig._receivedBytes;
+
+    bytes[9]  = 77; // 조각 2
+    bytes[65] = 78; // 마지막 조각(2 바이트)
+    send( 3 );
+    SW_EXPECT_TRUE( rig._receivedBytes > idleBytes );
+    SW_EXPECT_TRUE( rig._receivedBytes < idleBytes + 16 ); // id + 마스크 17 비트 + 6 바이트 — 통째(66 바이트)가 아니다
+
+    // 보내지 않은 틱 사이에 다른 조각 둘이 차례로 바뀌어도 기준 뒤에 바뀐 조각을 모두 싣는다.
+    bytes[0] = 1;
+    rig._server.beginTick( 4 );
+    rig._server.setEntity( 1, 7, bytes );
+    rig._server.endTick();
+    bytes[20] = 2;
+    send( 5 );
+
+    bytes.push_back( 3 ); // 크기가 바뀌면 조각으로 이을 수 없다
+    send( 6 );
+    SW_EXPECT_TRUE( rig._receivedBytes > idleBytes + 60 );
+}
+
+/** @brief [NetSnapshotRevisionTest] 기준에 없는 엔티티를 가리키는 조각 · 잘린 조각은 깨진 델타다. */
+SW_TEST_CASE( NetSnapshotRevisionTest, ChunkDeltaNeedsItsBaseline )
+{
+    const auto writeChunkMessage = []( BitWriter& writer, uint32 entityID, bool bTruncated )
+    {
+        writer.writeVarUint( 6 );  // 틱
+        writer.writeVarUint( 6 );  // 기준 틱 5
+        writer.writeBool( false ); // 소유자 상태 없음
+        writer.writeVarUint( 0 );  // 입력 틱
+        writer.writeVarUint( 0 );  // 사라진 엔티티 없음
+        writer.writeBool( true );
+        writer.writeVarUint( entityID );
+        writer.writeBool( true ); // 조각
+        writer.writeBool( true ); // 첫 조각이 바뀌었다
+        if ( bTruncated == false )
+            writer.writeUint32( 0x04030201u );
+        writer.writeBool( false );
+    };
+    NetSnapshot baseline;
+    baseline._tick = 5;
+    baseline._listEntity.push_back( NetSnapshotRevisionTestInternal::makeEntity( 2, 1, 9, 0 ) );
+    const auto read = [&baseline, &writeChunkMessage]( uint32 entityID, bool bTruncated, NetSnapshot& outRestored )
+    {
+        BitWriter writer;
+        writeChunkMessage( writer, entityID, bTruncated );
+        BitReader reader( writer.getBytes().data(), static_cast<int32>( writer.getBytes().size() ) );
+        return NetSnapshot::readDelta( reader, &baseline, outRestored );
+    };
+    NetSnapshot restored;
+    SW_REQUIRE_TRUE( read( 2, false, restored ) );
+    SW_EXPECT_TRUE( restored.findEntity( 2 )->_buffer == ( vector<uint8>{ 1, 2, 3, 4 } ) );
+    SW_EXPECT_FALSE( read( 3, false, restored ) );
+    SW_EXPECT_FALSE( read( 2, true, restored ) );
 }
 
 /** @brief [NetSnapshotRevisionTest] 확인을 받은 뒤에는 확인한 틱의 기록이 기준이 되어 바뀐 엔티티 하나만 싣는다. 아무것도 안 바뀌면 머리만 간다. */

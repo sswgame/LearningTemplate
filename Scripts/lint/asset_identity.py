@@ -57,6 +57,7 @@ class Rules:
     list_header_suffix: tuple[str, ...]
     list_skip_pattern: tuple[str, ...]
     list_derived_folder: tuple[str, ...]
+    list_kept_derived: tuple[str, ...]
 
 
 @dataclass(frozen=True)
@@ -76,6 +77,7 @@ class Issue:
             "missing-meta": f"{path}: 곁에 .meta 가 없다(`asset-ids --fix`)",
             "orphan-meta": f"{path}: 원본이 없다 — 원본과 함께 옮기거나 지운다(`asset-ids --fix` 가 옮긴 원본을 내용 · 이름으로 찾아 다시 붙인다)",
             "invalid-meta": f"{path}: .meta 를 읽지 못했거나 다른 원본을 적었다 — 손으로 고친다",
+            "kept-in-derived": f"{path}: 임포트 산출물 폴더에 손으로 적은 파일을 두지 않는다(산출물을 지울 때 함께 사라진다) — 산출물 폴더 밖(data/ 등)으로 옮긴다. 옮길 수 없으면 {RULES_PATH} 의 listKeptDerived 와 .gitignore 예외에 함께 올린다",
             "unreadable": f"{path}: 읽지 못했다(UTF-8 이 아니다)",
             "changed": f"{path}: HEAD 의 GUID {self.other} 가 바뀌었다 — 같은 경로를 지우고 다시 만들었나? 내용 바꾸기는 GUID 를 지킨다(`asset-ids --fix` 는 바뀐 GUID 를 되돌리지 않는다 — HEAD 의 머리 · .meta 를 되살린다)",
         }[self.kind]
@@ -84,7 +86,7 @@ class Issue:
 def load_rules(project_root: Path) -> Rules:
     document = json.loads((project_root / RULES_PATH).read_text(encoding="utf-8"))
     list_value = []
-    for key in ("listHeaderSuffix", "listSkipPattern", "listDerivedFolder"):
+    for key in ("listHeaderSuffix", "listSkipPattern", "listDerivedFolder", "listKeptDerived"):
         value = document.get(key)
         if not isinstance(value, list) or not value or not all(isinstance(item, str) and item for item in value):
             raise ValueError(f"{RULES_PATH}: '{key}' 는 빈 글이 없는 목록이어야 한다")
@@ -101,6 +103,14 @@ def classify(asset_id: str, rules: Rules) -> str:
     if lower.endswith(rules.list_header_suffix):
         return HEADER
     return SOURCE
+
+
+def is_misplaced_in_derived(asset_id: str, rules: Rules) -> bool:
+    """임포트 산출물 폴더에 있는데 허락한 손 파일(`listKeptDerived`)이 아니면 True — git 이 추적하거나 무시하지 않는 파일에만 묻는다(산출물은 무시된다)."""
+    lower = asset_id.lower()
+    if not any(f"/{folder}/" in f"/{lower}" for folder in rules.list_derived_folder):
+        return False
+    return not any(fnmatch.fnmatchcase(lower, pattern) for pattern in rules.list_kept_derived)
 
 
 def is_guid(text: str) -> bool:
@@ -240,6 +250,8 @@ def collect_issues(map_text: dict[str, str | None], rules: Rules) -> tuple[list[
         text = map_text[asset_id]
         if kind == SKIP:
             continue
+        if is_misplaced_in_derived(asset_id, rules):
+            list_issue.append(Issue("kept-in-derived", asset_id))
         if kind in (HEADER, SIDECAR) and text is None:
             list_issue.append(Issue("unreadable", asset_id))
         elif kind == HEADER:
@@ -577,6 +589,10 @@ def run_self_check(project_root: Path | None = None) -> None:
     assert set(rules.list_derived_folder) == set_imported, f"{RULES_PATH} listDerivedFolder {sorted(rules.list_derived_folder)} != {ASSET_REFERENCE_FIELDS_PATH} {sorted(set_imported)}"
     list_issue, _ = collect_issues({"a/x.prefab.xml": write_header("<P/>", sample), "a/y.prefab.xml": write_header("<P/>", sample), "a/z.ogg": "",
                                   "a/w.ogg.meta": make_meta_text("a/w.ogg", other), "a/golden/q.ppm": ""}, rules)
+    misplaced = write_header("<F/>", create_guid())
+    kept, _ = collect_issues({"game/x/models/head.facial.xml": misplaced, "game/x/data/head.facial.xml": write_header("<F/>", sample),
+                             "game/x/models/head/head.mirrortable.xml": write_header("<M/>", other), "game/x/models_raw/head.facial.xml": write_header("<F/>", create_guid())}, rules)
+    assert [(issue.kind, issue.asset_id) for issue in kept] == [("kept-in-derived", "game/x/models/head.facial.xml")], kept
     assert [(issue.kind, issue.asset_id) for issue in list_issue] == [("orphan-meta", "a/w.ogg.meta"), ("duplicate", "a/y.prefab.xml"), ("missing-meta", "a/z.ogg")], list_issue
 
 

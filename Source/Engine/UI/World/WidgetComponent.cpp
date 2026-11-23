@@ -77,7 +77,6 @@ namespace sw
         : SceneComponent{}
         , _pendingContent{}
         , _markerWidget{ kInvalidWidgetID }
-        , _lastPlacement{}
         , _worldPointer{}
         , _pUIService{ nullptr }
         , _worldTree{}
@@ -258,8 +257,6 @@ namespace sw
             }
             _gpuState = wantedState;
         }
-        _lastPlacement           = WidgetMarkerPlacement{}; // 화면 위치는 GPU 가 내고 돌려받지 않는다 — 보이는지만 CPU 의 규칙대로 적는다
-        _lastPlacement._bVisible = bMarkerHidden ? SW_FALSE : SW_TRUE;
         if ( bMarkerHidden || pScene == nullptr )
             return;
         CanvasMarkerRecord record{};
@@ -402,7 +399,6 @@ namespace sw
 
     void WidgetComponent::applyPlacement( const WidgetMarkerPlacement& placement )
     {
-        _lastPlacement  = placement;
         Widget* pMarker = _pUIService != nullptr ? _pUIService->findScreenMarker( _markerWidget ) : nullptr;
         if ( pMarker == nullptr )
             return;
@@ -483,7 +479,7 @@ namespace sw
         _worldScratch._targetSize = size;
         CanvasPainter painter( _worldScratch, 1.0f );
         (void)UIPaintContext::paint( *_worldTree, paint, painter, _worldScratch );
-        if ( _worldScratch.isSameContent( _worldCanvas ) && _worldScratch._targetSize == _worldCanvas._targetSize )
+        if ( _worldScratch.isSameContent( _worldCanvas ) )
             return;
         std::swap( _worldCanvas, _worldScratch );
         ++_worldRevision;

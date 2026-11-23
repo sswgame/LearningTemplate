@@ -28,6 +28,7 @@ namespace
     constexpr AccountID kAlice          = 11;
     constexpr AccountID kBob            = 12;
     constexpr AccountID kCarol          = 13;
+    constexpr AccountID kDave           = 14;
     constexpr uint64    kServerA        = 1;
     constexpr uint64    kServerB        = 2;
 
@@ -511,6 +512,26 @@ SW_TEST_CASE( MatchQueueServiceTest, LeaveRacingAFormedMatchYieldsToFound )
     SW_EXPECT_TRUE( world._serverB.takeCompletion()._result == MatchmakingResult::NotQueued );
 }
 
+/** @brief [MatchQueueServiceTest] 확인을 기다리는 동안 다시 빠지기를 낸 요청도 모두 답을 받는다(결함: 앞 요청의 태그를 덮어 그 호출이 답 없이 남았다) */
+SW_TEST_CASE( MatchQueueServiceTest, EveryLeaveRequestIsAnswered )
+{
+    PairWorld world;
+    world.start( vector<MatchModeDef>{ MatchQueueTestUtil::makeMode() } );
+    SW_REQUIRE_TRUE( world._serverB.join( kAlice )._result == MatchmakingResult::Ok );
+    world.updateBoth( kNowMs + 1 );
+
+    world._serverB._queue.leaveQueue( kAlice, 8 );
+    world._serverB._queue.leaveQueue( kAlice, 9 ); // 권한 서버(A)의 확인이 오기 전
+    world.updateBoth( kNowMs + 2 );
+    vector<MatchQueueCompletion> listCompletion;
+    world._serverB._queue.takeCompletions( listCompletion );
+    SW_REQUIRE_EQUAL( size_t( 2 ), listCompletion.size() );
+    SW_EXPECT_EQUAL( uint64( 8 ), listCompletion[0]._requestTag );
+    SW_EXPECT_TRUE( listCompletion[0]._result == MatchmakingResult::Ok );
+    SW_EXPECT_EQUAL( uint64( 9 ), listCompletion[1]._requestTag );
+    SW_EXPECT_TRUE( listCompletion[1]._result == MatchmakingResult::Ok );
+}
+
 /** @brief [MatchQueueServiceTest] 권한 서버의 답이 시한 안에 오지 않으면(권한이 없다) 빠진 것으로 끝낸다 */
 SW_TEST_CASE( MatchQueueServiceTest, LeaveWithoutAuthorityEndsAtTheConfirmDeadline )
 {
@@ -762,13 +783,93 @@ SW_TEST_CASE( MatchQueueServiceTest, LobbyPlacementKeepsTeams )
     SW_EXPECT_EQUAL( kGameID, listResult[0]._assignment._serverID );
     SW_EXPECT_EQUAL( 0, listResult[0]._assignment._team );
     SW_EXPECT_EQUAL( 1, listResult[1]._assignment._team );
-    SW_EXPECT_TRUE( ( listResult[0]._assignment._matchID & MatchQueueLimit::kLobbyMatchBit ) != 0 );
+    SW_EXPECT_EQUAL( kServerA, listResult[0]._assignment._matchID >> 32 );
 
     lobby._modeID = "nope";
     world._server._queue.placeLobby( lobby, UnixMilliseconds{ kNowMs + 2001 } );
     listResult = world._server.takeNotifications();
     SW_REQUIRE_EQUAL( size_t( 2 ), listResult.size() );
     SW_EXPECT_TRUE( listResult[0]._assignment._result == MatchQueueResult::NoServer );
+}
+
+/** @brief [MatchQueueServiceTest] 같은 서버의 다른 모드 경기는 id 가 다르고 명단 기록도 따로 남는다 — 게임 서버가 네 사람을 모두 받는다(결함: 대기열마다 순번을 1 부터 세어 두 모드의 첫 경기가 같은 id 였다) */
+SW_TEST_CASE( MatchQueueServiceTest, MatchesOfDifferentModesKeepTheirOwnRecords )
+{
+    SoloWorld world;
+    world.startWithGameServer( vector<MatchModeDef>{ MatchQueueTestUtil::makeMode( "duel" ), MatchQueueTestUtil::makeMode( "arena" ) } );
+    MatchServerAgent agent;
+    agent.initialize( kGameID );
+    agent.startReading( &world._server._router );
+
+    SW_EXPECT_TRUE( world._server.join( kAlice, kNowMs, "duel" )._result == MatchmakingResult::Ok );
+    SW_EXPECT_TRUE( world._server.join( kBob, kNowMs, "duel" )._result == MatchmakingResult::Ok );
+    SW_EXPECT_TRUE( world._server.join( kCarol, kNowMs, "arena" )._result == MatchmakingResult::Ok );
+    SW_EXPECT_TRUE( world._server.join( kDave, kNowMs, "arena" )._result == MatchmakingResult::Ok );
+    world._server.update( kNowMs + 1 );
+    const vector<MatchQueueNotification> listFound = world._server.takeNotifications();
+    SW_REQUIRE_EQUAL( size_t( 4 ), listFound.size() );
+    uint64 duelMatchID  = 0;
+    uint64 arenaMatchID = 0;
+    for ( const MatchQueueNotification& found : listFound )
+    {
+        SW_EXPECT_TRUE( found._assignment._result == MatchQueueResult::Found );
+        if ( found._assignment._modeID == "duel" )
+            duelMatchID = found._assignment._matchID;
+        else
+            arenaMatchID = found._assignment._matchID;
+    }
+    SW_EXPECT_TRUE( duelMatchID != arenaMatchID );
+
+    agent.update( UnixMilliseconds{ kNowMs + 1 } );
+    world._server.poll( kNowMs + 1 );
+    SW_EXPECT_TRUE( agent.isAccepted( kAlice ) );
+    SW_EXPECT_TRUE( agent.isAccepted( kBob ) );
+    SW_EXPECT_TRUE( agent.isAccepted( kCarol ) );
+    SW_EXPECT_TRUE( agent.isAccepted( kDave ) );
+    agent.shutdown();
+}
+
+/** @brief [MatchQueueServiceTest] 매칭 서버가 다시 떠도 앞 실행의 경기 id 를 다시 쓰지 않는다 — 앞 경기의 명단 기록(경기 시한까지 산다)을 덮지 않고, 게임 서버가 이미 읽은 기록으로 보고 건너뛰지 않는다. 로비 경기도 같다 */
+SW_TEST_CASE( MatchQueueServiceTest, RestartedServerDoesNotReuseMatchIDs )
+{
+    SoloWorld world;
+    world.startWithGameServer( vector<MatchModeDef>{ MatchQueueTestUtil::makeMode() } );
+    LobbySnapshot lobby;
+    lobby._lobbyID = 9;
+    lobby._modeID  = "duel";
+    lobby._listMember.push_back( LobbyMember{ kAlice, 0, SW_TRUE } );
+    lobby._listMember.push_back( LobbyMember{ kBob, 1, SW_TRUE } );
+
+    const auto placeOneMatch = []( QueueServer& server ) -> uint64
+    {
+        SW_EXPECT_TRUE( server.join( kAlice )._result == MatchmakingResult::Ok );
+        SW_EXPECT_TRUE( server.join( kBob )._result == MatchmakingResult::Ok );
+        server.update( kNowMs + 1 );
+        const vector<MatchQueueNotification> listFound = server.takeNotifications();
+        SW_EXPECT_EQUAL( size_t( 2 ), listFound.size() );
+        return listFound.empty() ? 0 : listFound[0]._assignment._matchID;
+    };
+    const auto placeOneLobby = [&lobby]( QueueServer& server ) -> uint64
+    {
+        server._queue.placeLobby( lobby, UnixMilliseconds{ kNowMs + 1 } );
+        server.poll( kNowMs + 1 );
+        const vector<MatchQueueNotification> listFound = server.takeNotifications();
+        SW_EXPECT_EQUAL( size_t( 2 ), listFound.size() );
+        return listFound.empty() ? 0 : listFound[0]._assignment._matchID;
+    };
+    const uint64 firstMatchID = placeOneMatch( world._server );
+    const uint64 firstLobbyID = placeOneLobby( world._server );
+
+    QueueServer restarted{ world._cacheData, nullptr, kServerA };
+    restarted.start( vector<MatchModeDef>{ MatchQueueTestUtil::makeMode() } );
+    restarted.update( kNowMs ); // 서버 목록 첫 읽기를 맡긴다
+    restarted.update( kNowMs ); // 답을 스냅숏에 넣는다
+    const uint64 secondMatchID = placeOneMatch( restarted );
+    const uint64 secondLobbyID = placeOneLobby( restarted );
+    SW_EXPECT_TRUE( firstMatchID != 0 && secondMatchID != 0 );
+    SW_EXPECT_TRUE( firstMatchID != secondMatchID );
+    SW_EXPECT_TRUE( firstLobbyID != 0 && secondLobbyID != 0 );
+    SW_EXPECT_TRUE( firstLobbyID != secondLobbyID );
 }
 
 namespace
@@ -844,6 +945,47 @@ SW_TEST_CASE( MatchQueueServiceTest, PartyLeaderQueuesWholeParty )
     SW_EXPECT_EQUAL( 0, party._world._server._queue.getLocalTicketCount() );
     party.poll();
     SW_EXPECT_TRUE( party.joinAndWait( kAlice )._result == MatchmakingResult::Ok ); // 파티 기록의 티켓도 지워졌다
+}
+
+/** @brief [MatchQueueServiceTest] 줄 선 바로 뒤(파티 기록에 쓰는 동안) 빠져도 기록에 없는 티켓이 남지 않아 다시 설 수 있다(결함: 지우기가 쓰기보다 먼저 읽어 아무것도 하지 않았고, 뒤에 닿은 쓰기가 파티를 "줄 섬" 에 가뒀다) */
+SW_TEST_CASE( MatchQueueServiceTest, LeavingWhileThePartyTicketIsWrittenLeavesNoTicket )
+{
+    PartyQueueWorld party( 2 );
+    (void)party.makeParty( kAlice, kBob );
+    MatchQueueService& queue = party._world._server._queue;
+    queue.joinQueue( kAlice, "duel", "kr", UnixMilliseconds{ kNowMs }, 7 );
+    (void)party._world._server._router.poll(); // 계정 → 파티
+    (void)party._world._server._router.poll(); // 파티를 읽었다 — 기록에 티켓을 쓰는 중이다
+    queue.leaveQueue( kAlice, 8 );
+    party.poll();
+    vector<MatchQueueCompletion> listCompletion;
+    queue.takeCompletions( listCompletion );
+    SW_REQUIRE_EQUAL( size_t( 2 ), listCompletion.size() );
+    SW_EXPECT_EQUAL( uint64( 8 ), listCompletion[1]._requestTag );
+    SW_EXPECT_TRUE( listCompletion[1]._result == MatchmakingResult::Ok );
+    SW_EXPECT_EQUAL( 0, queue.getLocalTicketCount() );
+    SW_EXPECT_EQUAL( 0, queue.getQueuedTicketCount( "duel" ) );
+
+    SW_EXPECT_TRUE( party.joinAndWait( kAlice )._result == MatchmakingResult::Ok );
+}
+
+/** @brief [MatchQueueServiceTest] 파티를 찾은 뒤 멤버가 떠났으면 옛 명단의 티켓이 서지 않는다(kBusy) — 떠난 사람이 경기에 묶이지 않는다. 다시 서면 남은 사람의 티켓이다 */
+SW_TEST_CASE( MatchQueueServiceTest, MemberLeavingAfterTheLookupIsNotQueued )
+{
+    PartyQueueWorld party( 2 );
+    (void)party.makeParty( kAlice, kBob );
+    MatchQueueService& queue = party._world._server._queue;
+    queue.joinQueue( kAlice, "duel", "kr", UnixMilliseconds{ kNowMs }, 7 );
+    party._party.leaveParty( kBob, 9 ); // 두 길이 함께 돈다 — 떠나기가 찾기 뒤 · 쓰기 앞에 닿는다
+    party.poll();
+    SW_EXPECT_TRUE( party._world._server.takeCompletion()._result.hasError( OnlineError::kBusy ) );
+    SW_EXPECT_EQUAL( 0, queue.getLocalTicketCount() );
+
+    SW_EXPECT_TRUE( party.joinAndWait( kAlice )._result == MatchmakingResult::Ok );
+    queue.leaveQueue( kAlice, 8 );
+    const vector<MatchQueueNotification> listCancelled = party._world._server.takeNotifications();
+    SW_REQUIRE_EQUAL( size_t( 1 ), listCancelled.size() );
+    SW_EXPECT_EQUAL( kAlice, listCancelled[0]._recipientID );
 }
 
 /** @brief [MatchQueueServiceTest] 파티 인원이 팀 인원을 넘으면 PartyTooLarge 이고 티켓이 없다 */
@@ -973,6 +1115,53 @@ SW_TEST_CASE( MatchQueueServiceTest, LeaveReleasesTicketOfDeadServer )
     SW_EXPECT_TRUE( world._pair._serverB.takeCompletion()._result == MatchmakingResult::NotQueued );
 }
 
+/**
+ * @brief [MatchQueueServiceTest] 낸 서버가 파티 기록에 잡은 티켓을 아직 대기열에 넣지 않았을 때 다른 서버의 빠지기가 닿아도 티켓이 남지 않는다
+ * @details 결함: 취소가 권한 서버에만 가 "없는 표" 로 사라지고, 낸 서버(B, 권한 아님)가 뒤늦게 넣은 티켓에 떠난 사람이 묶였다. 낸 서버에 취소와 잡기의 답 중 무엇이 먼저 닿아도 같다.
+ */
+SW_TEST_CASE( MatchQueueServiceTest, CancelFromAnotherServerReachesAReservedTicket )
+{
+    for ( const bool bCancelFirst : { true, false } )
+    {
+        PartyPairWorld world;
+        world.makePartyOnA( kAlice, kBob );
+        QueueServer& serverA = world._pair._serverA;
+        QueueServer& serverB = world._pair._serverB;
+        serverB._queue.joinQueue( kAlice, "duel", "kr", UnixMilliseconds{ kNowMs }, 7 );
+        for ( int32 step = 0; step < 3; ++step ) // 계정의 파티 → 파티 기록 → 잡기(읽고 비교해 쓰기). 쓰기의 답은 아직 받지 않았다
+        {
+            (void)serverB._router.poll();
+        }
+        SW_EXPECT_EQUAL( 0, serverB._queue.getLocalTicketCount() );
+
+        serverA._queue.leaveQueue( kAlice, 8 );
+        serverA.poll( kNowMs );
+        const MatchQueueCompletion left = serverA.takeCompletion();
+        SW_EXPECT_TRUE( left._result == MatchmakingResult::Ok );
+        SW_REQUIRE_EQUAL( kServerB, left._ticketID >> 32 ); // 기록에 잡힌 B 의 티켓이다
+
+        if ( bCancelFirst )
+        {
+            vector<ServerBusMessage> listMessage;
+            (void)serverB._transport->pollMessages( listMessage );
+            for ( const ServerBusMessage& message : listMessage )
+            {
+                serverB._queue.handleBusMessage( message, UnixMilliseconds{ kNowMs } );
+            }
+            SW_EXPECT_TRUE( serverB.takeCompletion()._result == MatchmakingResult::NotQueued );
+        }
+        world._pair.updateBoth( kNowMs );
+        SW_EXPECT_EQUAL( 0, serverA._queue.getQueuedTicketCount( "duel" ) );
+        SW_EXPECT_EQUAL( 0, serverB._queue.getLocalTicketCount() );
+
+        vector<MatchQueueCompletion> listCompletion;
+        serverB._queue.takeCompletions( listCompletion );
+        serverB._queue.joinQueue( kAlice, "duel", "kr", UnixMilliseconds{ kNowMs + 1 }, 9 );
+        serverB.poll( kNowMs + 1 );
+        SW_EXPECT_TRUE( serverB.takeCompletion()._result == MatchmakingResult::Ok ); // 다시 설 수 있다
+    }
+}
+
 /** @brief [MatchQueueServiceTest] 메모리에 통계가 없는 계정은 올려 달라고 한 뒤 기다렸다 줄을 선다 — 다른 서버의 파티원도 실력 모드에 설 수 있다. 끝나면 내려 달라고 한다 */
 SW_TEST_CASE( MatchQueueServiceTest, MissingRatingIsLoadedBeforeQueueing )
 {
@@ -1028,6 +1217,71 @@ SW_TEST_CASE( MatchQueueServiceTest, RatingWaitGivesUpOrIsDropped )
     stats._mapStat[kBob] = 1500;
     world._server.update( kNowMs + 1 );
     SW_EXPECT_EQUAL( 0, queue.getLocalTicketCount() ); // 떠난 사람의 티켓이 생기지 않는다
+}
+
+/** @brief [MatchQueueServiceTest] 버스로 먼저 받은 명단의 자리를 꺼낸 뒤 같은 명단의 기록을 읽어도 자리가 되살아나지 않는다(결함: 두 번 나간 사람의 자리를 두 번 채웠다) */
+SW_TEST_CASE( MatchQueueServiceTest, SeatTakenFromTheBusStaysTakenAfterTheRecord )
+{
+    PairWorld world;
+    world.start( vector<MatchModeDef>{ MatchQueueTestUtil::makeMode() } );
+    LocalServerBus gameBus( &world._hub, kGameID );
+    gameBus.subscribe( MatchQueueService::makeAssignTopic( kGameID ) );
+    MatchServerAgent agent;
+    agent.initialize( kGameID );
+    agent.startReading( &world._serverA._router );
+    ServerDescriptor descriptor;
+    descriptor._serverID  = kGameID;
+    descriptor._kind      = "game";
+    descriptor._region    = "kr";
+    descriptor._address   = "10.0.0.9";
+    descriptor._port      = 7000;
+    descriptor._portCount = 1;
+    MatchBackfillSender sender;
+    sender.initialize( &world._serverA._queue, &agent, descriptor );
+
+    SW_EXPECT_TRUE( world._serverA.join( kAlice )._result == MatchmakingResult::Ok );
+    SW_EXPECT_TRUE( world._serverA.join( kBob )._result == MatchmakingResult::Ok );
+    world.updateBoth( kNowMs + 1 );
+    vector<ServerBusMessage> listMessage;
+    SW_REQUIRE_EQUAL( 1, gameBus.pollMessages( listMessage ) );
+    SW_REQUIRE_TRUE( agent.handleAssign( listMessage[0], UnixMilliseconds{ kNowMs + 1 } ) );
+    SW_EXPECT_TRUE( sender.submitPlayerLeft( kAlice, UnixMilliseconds{ kNowMs + 2 } ) == MatchmakingResult::Ok );
+
+    agent.update( UnixMilliseconds{ kNowMs + 2 } ); // 이제 기록을 읽는다
+    world._serverA.poll( kNowMs + 2 );
+    SW_EXPECT_TRUE( sender.submitPlayerLeft( kAlice, UnixMilliseconds{ kNowMs + 3 } ) == MatchmakingResult::NotQueued );
+    agent.shutdown();
+}
+
+/** @brief [MatchQueueServiceTest] 두 경기에 잇따라 배정된 계정의 자리는 새 경기의 것이다(결함: 목록은 새 기록부터 나오므로 뒤에 읽은 옛 기록이 새 자리를 덮었다) */
+SW_TEST_CASE( MatchQueueServiceTest, OlderRosterDoesNotReplaceTheNewerSeat )
+{
+    SoloWorld world;
+    world.startWithGameServer( vector<MatchModeDef>{ MatchQueueTestUtil::makeMode() } );
+    MatchServerAgent agent;
+    agent.initialize( kGameID );
+    agent.startReading( &world._server._router );
+
+    SW_EXPECT_TRUE( world._server.join( kAlice )._result == MatchmakingResult::Ok );
+    SW_EXPECT_TRUE( world._server.join( kBob )._result == MatchmakingResult::Ok );
+    world._server.update( kNowMs + 1 );
+    const vector<MatchQueueNotification> listOlder = world._server.takeNotifications();
+    SW_REQUIRE_EQUAL( size_t( 2 ), listOlder.size() );
+    SW_EXPECT_TRUE( world._server.join( kAlice, kNowMs + 10 )._result == MatchmakingResult::Ok );
+    SW_EXPECT_TRUE( world._server.join( kCarol, kNowMs + 10 )._result == MatchmakingResult::Ok );
+    world._server.update( kNowMs + 10 );
+    const vector<MatchQueueNotification> listNewer = world._server.takeNotifications();
+    SW_REQUIRE_EQUAL( size_t( 2 ), listNewer.size() );
+
+    agent.update( UnixMilliseconds{ kNowMs + 11 } ); // 두 기록을 한 번에 읽는다
+    world._server.poll( kNowMs + 11 );
+    MatchSeat aliceSeat;
+    SW_REQUIRE_TRUE( agent.takeSeat( kAlice, aliceSeat ) );
+    SW_EXPECT_EQUAL( listNewer[0]._assignment._matchID, aliceSeat._matchID );
+    MatchSeat bobSeat;
+    SW_REQUIRE_TRUE( agent.takeSeat( kBob, bobSeat ) ); // 옛 경기에만 있는 계정은 그 자리 그대로다
+    SW_EXPECT_EQUAL( listOlder[0]._assignment._matchID, bobSeat._matchID );
+    agent.shutdown();
 }
 
 /** @brief [MatchQueueServiceTest] 나간 사람의 자리: 게임 서버는 계정만 넘기고 경기 · 모드 · 팀은 읽은 명단에서 찾는다. 같은 사람은 한 번만, 명단에 없는 계정은 NotQueued, 채운 사람은 그 경기의 그 팀으로 Found */

@@ -31,8 +31,6 @@ namespace sw
     public:
         /// @brief 감시할 수 있는 출력의 수입니다(슬롯 하나가 카운터 둘 — NaN · Inf).
         static constexpr uint32 kMaxSlot = 64;
-        /// @brief 스레드 그룹 한 변입니다(gpu_nan_check.hlsl 의 numthreads 와 같다).
-        static constexpr uint32 kGroupSize = 8;
 
         GPUNanCheck();
         ~GPUNanCheck();
@@ -60,7 +58,7 @@ namespace sw
          * @param pName   로그에 나올 이름(패스 이름과 첨부 이름)입니다.
          * @param srv     텍스처의 bindless 번호입니다.
          */
-        void scan( IRHICommandList& commands, RHIPipelineStateHandle pso, string_view name, RHIDescriptorIndex srv, uint32 width, uint32 height );
+        void scan( IRHICommandList& commands, RHIPipelineStateHandle pso, string_view name, RHITextureSRVIndex srv, uint32 width, uint32 height );
         /** @brief 이 프레임의 스캔이 모두 끝난 뒤 한 번 부릅니다. 카운터 전체를 읽기 버퍼로 복사하는 명령을 넣습니다(프레임 번호가 요청의 tag 다). 스캔이 없었으면 하지 않는다. */
         void requestReadback( IRHICommandList& commands );
         /** @brief 도착한 가장 최근 사본을 읽어 지난번보다 늘어난 슬롯을 로그로 냅니다. 몇 프레임 늦게 도착한다. */

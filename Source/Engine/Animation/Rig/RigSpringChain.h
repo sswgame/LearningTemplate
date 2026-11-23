@@ -99,8 +99,6 @@ namespace sw
         void reset();
         /** @brief 시뮬레이션 상태가 있는지입니다. */
         bool isSimulating() const { return _bInitialized == SW_TRUE; }
-        /** @brief 지난 시뮬레이션의 스텝 수를 반환합니다(테스트와 진단용). */
-        uint32 getLastStepCount() const { return _lastStepCount; }
         /** @brief 입자의 월드 위치입니다. */
         const vector<float3>& getParticles() const { return _listPosition; }
         /** @brief 지난 시뮬레이션의 애니메이션 자세(월드)입니다. 입자와의 차이가 흔들림이다(지글 감시 값 · 진단). */
@@ -131,7 +129,6 @@ namespace sw
         float3          _lastRootPosition;
         float32         _accumulator;
         float32         _lastStep; ///< 지난 시뮬레이션의 스텝 길이(초) — 입자 속도(`computeMaxSpeed`)를 낸다
-        uint32          _lastStepCount;
         uint8           _bInitialized;
     };
 } // namespace sw

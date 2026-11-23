@@ -13,6 +13,7 @@ namespace sw
 {
     class DevToolsHost;
     class Engine;
+    class FileWatchService;
     class SubsystemScope;
 
     /**
@@ -25,7 +26,7 @@ namespace sw
         HostDevTools() = default;
 
         /** @brief 개발 도구 호스트를 호스트 범위에 더하고 엔진 기동 확장 · 콘텐츠 폴더 감시(`IContentFolderWatch`)를 겁니다. 엔진을 세우기 전에 부릅니다. */
-        void addToHostScope( SubsystemScope& host, Engine& engine );
+        void addToHostScope( SubsystemScope& host, Engine& engine, FileWatchService& fileWatch );
         /** @brief 엔진이 선 뒤 개발 도구의 프레임 훅(씬 틱 뒤 HUD · 콘솔, 프레임 끝에 셰이더 재컴파일 · 단축키 · 설정 리로드)을 붙입니다. */
         void attachFrameHooks( Engine& engine );
         /** @brief 개발 콘솔을 세웁니다(App 의 호스트 서비스 `DevConsole`). */

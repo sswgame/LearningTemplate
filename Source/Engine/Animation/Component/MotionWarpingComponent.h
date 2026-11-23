@@ -80,6 +80,8 @@ namespace sw
 
         void onBeginPlay() override;
         void onEndPlay() override;
+        /** @brief 워프 목표의 자리를 옮깁니다. */
+        void onWorldOriginShifted( const float3& delta ) override;
 
         /** @brief 이름의 목표를 넣거나 바꿉니다(아무 때나 — 같은 오브젝트의 틱에서도). */
         void setWarpTarget( const hashed_string& name, const float3& position, float32 yaw );

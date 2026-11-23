@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="7c61d4c5b7d34c2f8c5f2fb1a0e6d913"?>
+<!--
+  에디터 시나리오 — VFX 편집기: 효과 사본(방출기 둘)을 열고 첫 방출기를 골라 Spawn Rate 를 고치면 문서가 dirty 가 되고 Ctrl+Z · Ctrl+Y 로 되돌리고 다시 한다.
+  방출기를 복사하면 셋, Ctrl+Z 로 둘이다. 저장하지 않은 편집도 미리보기가 재생하고(VFXPreview.PlayingEdit), Ctrl+S 로 저장하면 저장한 효과를 다시 건다(VFXPreview.Playing — 처음 · 첫 되돌리기 · 저장 세 번) — 문서를 다시 읽지 않아 자동 갱신 수는 0 이다.
+  실행: App -EnableEditor -scenario=engine/automation/editor/vfxeditor.scenario.xml -unattended
+-->
+<Scenario name="editor.vfxeditor" fixedDelta="0.0166667" timeoutFrames="1800" startAfter="Immediately" input="exclusive">
+	<Scratch from="engine/automation/editor/vfxautoreload" as="scratch/vfxeditor"/>
+	<ResizeWindow width="1920" height="1080"/>
+	<Variable name="gv_editorUiScale" value="1"/>
+	<Variable name="gv_editorWatchAsset" value="scratch/vfxeditor/autoreload.vfx.xml"/>
+	<DevCommand line="layout.reset"/>
+	<EditorWaitStable/>
+	<DevCommand line="panel.focus vfx_preview"/>
+	<EditorWaitStable/>
+	<DevCommand line="asset.openScratch scratch/vfxeditor/autoreload.vfx.xml"/>
+	<WaitUntil watch="Editor.VFXPreviewDocumentIsWatchAsset" equals="1" timeoutFrames="600"/>
+	<WaitUntil watch="Editor.VFXEmitterCount" equals="2" timeoutFrames="120"/>
+	<EditorWaitStable/>
+	<EditorClick mark="vfx.emitter.0" state="Down"/>
+	<AdvanceSimulation frames="3"/> <!-- 누름 · 뗌을 다른 프레임에 둔다(프레임 경계) -->
+	<EditorClick mark="vfx.emitter.0" state="Up"/>
+	<WaitUntil watch="Editor.VFXSelectedEmitter" equals="0" timeoutFrames="60"/>
+	<EditorWaitStable/>
+	<CaptureEditorUI file="vfxeditor/selected.png" maxMagentaFraction="0"/>
+	<!-- 칸은 긴 목록 아래에 있다 — 이름으로 걸러 화면 안에 둔다 -->
+	<EditorClick mark="vfx.search"/>
+	<EditorWaitStable/>
+	<EditorText value="_spawnRate"/>
+	<EditorWaitStable/>
+	<EditorClick mark="inspector.property.VFXEmitterDef._spawnRate" mods="ctrl"/>
+	<EditorWaitStable/>
+	<EditorKey key="Ctrl+A"/>
+	<EditorWaitStable/>
+	<EditorText value="20"/>
+	<EditorWaitStable/>
+	<EditorKey key="Enter"/>
+	<WaitUntil watch="Editor.DirtyDocumentCount" equals="1" timeoutFrames="60"/>
+	<EditorWaitStable/>
+	<EditorKey key="Ctrl+Z"/>
+	<WaitUntil watch="Editor.DirtyDocumentCount" equals="0" timeoutFrames="60"/>
+	<EditorWaitStable/>
+	<EditorKey key="Ctrl+Y"/>
+	<WaitUntil watch="Editor.DirtyDocumentCount" equals="1" timeoutFrames="60"/>
+	<EditorWaitStable/>
+	<EditorClick mark="vfx.duplicateEmitter" state="Down"/>
+	<AdvanceSimulation frames="3"/> <!-- 누름 · 뗌을 다른 프레임에 둔다(프레임 경계) -->
+	<EditorClick mark="vfx.duplicateEmitter" state="Up"/>
+	<WaitUntil watch="Editor.VFXEmitterCount" equals="3" timeoutFrames="60"/>
+	<EditorWaitStable/>
+	<EditorKey key="Ctrl+Z"/>
+	<WaitUntil watch="Editor.VFXEmitterCount" equals="2" timeoutFrames="60"/>
+	<EditorWaitStable/>
+	<EditorKey key="Ctrl+S"/>
+	<WaitUntil watch="Editor.DirtyDocumentCount" equals="0" timeoutFrames="120"/>
+	<EditorWaitStable/>
+	<ExpectLog id="VFXPreview.Playing" contains="'scratch/vfxeditor/autoreload.vfx.xml' (2 emitters)" count="3"/>
+	<ExpectLog id="VFXPreview.PlayingEdit" contains="(3 emitters)" count="1"/>
+	<Expect watch="Editor.VFXPreviewAutoReloadCount" equals="0"/>
+	<CaptureEditorUI file="vfxeditor/saved.png" maxMagentaFraction="0"/>
+	<Variable name="gv_editorUiScale" value="0"/>
+	<Pass/>
+</Scenario>

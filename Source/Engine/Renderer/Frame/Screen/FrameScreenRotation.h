@@ -39,7 +39,7 @@ namespace sw
         /** @brief 대기 텍스처를 놓습니다. 디바이스가 없으면 핸들만 잊습니다. */
         void release();
         /** @brief 화면에 쓰는 쪽이 쓸 대상입니다 — 0 이면 스왑체인(백버퍼) 그대로, 아니면 논리 크기 대기 텍스처(형식은 백버퍼 형식)입니다. */
-        RHITextureHandle getScreenTarget() const { return _texture != 0 ? _texture : kRHIBackBufferTexture; }
+        RHITextureHandle getScreenTarget() const { return _target.isValid() ? _target._texture : kRHIBackBufferTexture; }
         /**
          * @brief 대기 텍스처를 스왑체인 이미지로 돌려 그립니다. 프레임의 마지막 화면 쓰기(렌더 스레드의 UI 패스) 뒤, 표시 앞에 부릅니다. 대기 텍스처가 없으면 아무것도 하지 않습니다.
          * @details 끝나면 대기 텍스처를 다시 렌더 타깃 상태로 둔다 — 다음 프레임의 첫 쓰기(Present)가 그 상태를 믿는다.
@@ -49,10 +49,6 @@ namespace sw
     private:
         IRHIDevice* const&     _pDevice; ///< 렌더러의 `_pDevice` 변수를 참조합니다
         const FramePSOManager& _psoManager;
-        RHITextureHandle       _texture;
-        RHIDescriptorIndex     _srv;
-        uint32                 _width;
-        uint32                 _height;
-        RHIFormat              _format; ///< 만들 때의 백버퍼 형식 — 장치를 바꾸면 형식이 달라질 수 있어 대조한다
+        RHITextureSlot         _target; ///< 논리 크기 · 백버퍼 형식의 대기 텍스처
     };
 } // namespace sw

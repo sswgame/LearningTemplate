@@ -22,8 +22,6 @@ namespace sw
         RHIPipelineStateHandle          createPipelineStateNative( const RHIPipelineStateDesc& desc, const RHICompiledGraphicsStages& stages ) override;
         RHIPipelineStateHandle          createComputePipelineStateNative( const RHICompiledShaderStage& computeStage, string_view label ) override;
         [[nodiscard]] bool              destroyPipelineStateNative( RHIPipelineStateHandle pso ) override;
-        RHIRenderPassHandle             createRenderPass( const RHIRenderPassDesc& desc ) override;
-        [[nodiscard]] bool              destroyRenderPassNative( RHIRenderPassHandle pass ) override;
         RHIBufferHandle                 createConstantBuffer( uint32 size ) override;
         void                            updateConstantBuffer( RHIBufferHandle buffer, const void* pData, uint32 size ) override;
         RHIBufferHandle                 createConstantBufferPage( uint32 size ) override;
@@ -52,18 +50,18 @@ namespace sw
         [[nodiscard]] bool              takeTextureReadback( RHITransferTicket ticket, vector<uint8>& outBytes ) override;
         void                            discardTextureReadback( RHITransferTicket ticket ) override;
         RHIFormat                       getTextureFormat( RHITextureHandle texture ) const override;
-        RHIDescriptorIndex              registerBindlessTexture( RHITextureHandle texture ) override;
-        [[nodiscard]] bool              rebindBindlessTexture( RHIDescriptorIndex index, RHITextureHandle texture ) override;
-        RHIDescriptorIndex              reserveBindlessTextureIndex() override;
-        [[nodiscard]] bool              activateReservedBindlessTexture( RHIDescriptorIndex index, RHITextureHandle texture ) override;
+        RHITextureSRVIndex              registerBindlessTexture( RHITextureHandle texture ) override;
+        [[nodiscard]] bool              rebindBindlessTexture( RHITextureSRVIndex index, RHITextureHandle texture ) override;
+        RHITextureSRVIndex              reserveBindlessTextureIndex() override;
+        [[nodiscard]] bool              activateReservedBindlessTexture( RHITextureSRVIndex index, RHITextureHandle texture ) override;
         bool                            isTextureReadyToSample( RHITextureHandle texture ) override;
-        void                            unregisterBindlessTexture( RHIDescriptorIndex index ) override;
-        RHIDescriptorIndex              registerBindlessBufferSRV( RHIBufferHandle buffer ) override;
-        RHIDescriptorIndex              registerBindlessBufferSRV( const RHIBufferSlice& slice ) override;
-        void                            unregisterBindlessResource( RHIDescriptorIndex index ) override;
-        RHIDescriptorIndex              registerBindlessBufferUAV( RHIBufferHandle buffer ) override;
-        RHIDescriptorIndex              registerBindlessTextureUAV( RHITextureHandle texture ) override;
-        void                            unregisterBindlessUAV( RHIDescriptorIndex index ) override;
+        void                            unregisterBindlessTexture( RHITextureSRVIndex index ) override;
+        RHIBufferSRVIndex               registerBindlessBufferSRV( RHIBufferHandle buffer ) override;
+        RHIBufferSRVIndex               registerBindlessBufferSRV( const RHIBufferSlice& slice ) override;
+        void                            unregisterBindlessResource( RHIBufferSRVIndex index ) override;
+        RHIUnorderedAccessIndex         registerBindlessBufferUAV( RHIBufferHandle buffer ) override;
+        RHIUnorderedAccessIndex         registerBindlessTextureUAV( RHITextureHandle texture ) override;
+        void                            unregisterBindlessUAV( RHIUnorderedAccessIndex index ) override;
 
     private:
         /**

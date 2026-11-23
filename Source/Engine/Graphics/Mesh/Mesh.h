@@ -17,6 +17,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Name/hashed_string.h"
 
+#include "Engine/Content/AssetID.h"
 #include "Engine/Graphics/Mesh/MeshBuildVertex.h"
 #include "Engine/Graphics/Mesh/MeshVertex.h"
 
@@ -124,7 +125,7 @@ namespace sw
         uint32               _firstIndex{ 0 };
         uint32               _indexCount{ 0 };
         MeshPersonVisibility _personVisibility{ MeshPersonVisibility::Both };
-        hashed_string        _sourceMaterial{}; ///< 원본 파일의 날 머티리얼 이름(임포트가 적는다 — 다시 임포트할 때 구간 이름을 지키는 열쇠, 편집 창의 별칭 대응 표시)
+        hashed_string        _sourceMaterial{}; ///< 원본 파일의 날 머티리얼 이름(임포트가 적는다 — 구간 이름이 어느 머티리얼에서 왔는지)
         hashed_string        _sourceNode{};     ///< 원본 파일에서 이 구간의 첫 삼각형이 온 메시(노드) 이름
 
         /** @brief 날 이름(머티리얼 · 노드)이 있으면 true 입니다(옛 임포트는 없다). */
@@ -196,20 +197,19 @@ namespace sw
 
     /**
      * @enum MeshCPUAccess
-     * @brief 메시의 CPU 정점을 GPU 업로드 뒤에도 쥐는가입니다(감사 R-15 — 언리얼 `bAllowCPUAccess` 자리).
-     * @details 지금은 모든 메시가 `Keep` 이다. `ReleaseAfterUpload` 를 켜는 일(업로드 뒤 놓기 · 장치 교체 때 `.mesh` 다시 읽기)은 정점 풀 · 모프 · GI 복셀화가
-     *          GPU 원본을 쓰게 된 뒤다(docs/NEXT.md R-15 후속). CPU 정점을 읽는 길은 `MeshCPUView` 하나라, 놓기를 켤 때 고칠 자리가 그것을 부르는 곳으로 모인다.
+     * @brief 메시의 CPU 정점을 GPU 업로드 뒤에도 쥐는가입니다(언리얼 `bAllowCPUAccess` · 유니티 Read/Write 자리). 만들거나 요청하는 쪽이 정합니다(`Mesh::create` · `MeshCache::request` — 기본값이 없다). CPU 정점을 읽는 길은 `MeshCPUView` 하나이고 `Keep` 메시에서만 얻는다.
+     * @details 같은 파일의 요청이 갈리면 `Keep` 이 이긴다. 이미 놓은 메시에 `Keep` 요청이 오면 파일을 다시 읽어 되돌린다(`Mesh::retainCPUVertices`). 한 번 `Keep` 이 된 메시는 끝까지 쥔다.
      */
     enum class MeshCPUAccess : uint8
     {
-        Keep,              ///< 물리 · 레이캐스트 · 파괴 · 에디터 · 절차 메시 — CPU 정점을 쥔다
-        ReleaseAfterUpload ///< 그리기만 하는 파일 메시 — 업로드 뒤 CPU 정점을 놓는다(아직 켜지 않았다)
+        Keep,              ///< CPU 정점을 쥔다 — 절차 메시(되읽을 파일이 없다) · 조립 · 베이크 · 내비 · 에디터 픽킹의 원본. 스킨 · 모프가 있는 메시는 저절로 이것이다(휴지 자세를 CPU 정점에서 올린다)
+        ReleaseAfterUpload ///< 그리기만 하는 파일 메시 — GPU 에 올린 뒤 CPU 정점을 놓고, 장치가 바뀌면 파일을 다시 읽어 올린다
     };
 
     /**
      * @class MeshCPUView
      * @brief 메시의 CPU 정점을 읽는 접근 토큰입니다 — `Mesh::getCPUView` 만 만든다. CPU 정점(LOD 0 · 낮은 단계)을 읽는 길은 이것 하나다(R-15).
-     * @details `Keep` 이 아닌 메시에서 받은 토큰은 빈 배열을 돌려준다(`getCPUView` 가 오류를 남겼다) — 놓인 정점을 조용히 읽는 길이 없다.
+     * @details `Keep` 이 아닌 메시에서 받은 토큰은 아직 놓기 전이어도 빈 배열을 돌려준다(`getCPUView` 가 오류를 남겼다) — 놓인 정점을 조용히 읽는 길도, 놓는 때에 기대는 길도 없다.
      *          토큰은 메시를 소유하지 않는다 — 그 자리에서 쓰고 들고 다니지 않는다(돌려준 배열의 수명은 메시와 같다).
      */
     class SW_API MeshCPUView final
@@ -256,8 +256,8 @@ namespace sw
             CreateKey() = default;
             friend class Mesh;
         };
-        /** @brief create() 전용 생성자입니다. 빈 메시와 그 렌더 프록시(GPU 버퍼 없음)를 만듭니다. */
-        explicit Mesh( CreateKey ) noexcept;
+        /** @brief create() · createForAsset() 전용 생성자입니다. 빈 메시와 그 렌더 프록시(GPU 버퍼 없음)를 만듭니다. */
+        Mesh( CreateKey, MeshCPUAccess cpuAccess, AssetID sourceAsset ) noexcept;
         /** @brief 렌더 프록시를 함께 놓습니다 — 프록시 소멸자가 정점 버퍼를 디바이스에 돌려준다(`MeshRenderData`). */
         ~Mesh();
 
@@ -270,8 +270,11 @@ namespace sw
          * @brief 빈 메시를 Engine.dll 안에서 shared_ptr 로 만듭니다.
          * @details 도형을 만드는 것은 이 클래스의 일이 아니다. `MeshUtil` 이 이 함수로 메시를 만들어 정점을 채운다.
          *          Mesh 가 책임지는 것은 **정점 버퍼와 그 수명**뿐이다.
+         * @param cpuAccess CPU 정점을 업로드 뒤에도 쥐는가입니다. 되읽을 파일이 없는 메시라 `Keep` 만 된다(assert) — 놓을 수 있는 것은 `createForAsset` 의 파일 메시다
          */
-        static shared_ptr<Mesh> create();
+        static shared_ptr<Mesh> create( MeshCPUAccess cpuAccess );
+        /** @brief `.mesh` 파일 @p sourceAsset 에서 읽어 채울 빈 메시를 만듭니다. `ReleaseAfterUpload` 면 GPU 에 올린 뒤 CPU 정점을 놓고 필요할 때 이 파일을 다시 읽는다(메시 캐시가 부른다). */
+        static shared_ptr<Mesh> createForAsset( const AssetID& sourceAsset, MeshCPUAccess cpuAccess );
         /**
          * @brief 스킨 없는 모프 메시(블렌드 셰이프만 있는 소품 · 얼굴)를 본 하나에 가중치 1 로 묶은 스킨 원본을 돌려줍니다(정점 · 구간 · LOD · 모프 타깃 복사).
          * @details 모프 가중치는 GPU 스키닝 컴퓨트가 스키닝 앞에 건다. 스킨이 없으면 그 길에 들지 못하므로 고정 본 하나를 준다(임포트가 몸에 합칠 때와 같은 규칙).
@@ -337,8 +340,19 @@ namespace sw
          * @brief CPU 정점을 읽는 접근 토큰입니다(`MeshCPUView` — CPU 정점의 유일한 입구, R-15). `Keep` 이 아니면 오류를 남기고 빈 토큰을 돌려준다.
          */
         [[nodiscard]] MeshCPUView getCPUView() const;
-        /** @brief CPU 정점을 업로드 뒤에도 쥐는가입니다(지금은 늘 `Keep`). */
-        MeshCPUAccess getCPUAccess() const { return _cpuAccess; }
+        /** @brief CPU 정점을 업로드 뒤에도 쥐는가입니다. `Keep` 이면 `getCPUView` 로 읽을 수 있다. */
+        MeshCPUAccess getCPUAccess() const { return _cpuAccess.load( std::memory_order_acquire ); }
+        /** @brief 이 메시를 읽은 `.mesh` 의 리소스 id 입니다. 절차 메시는 비어 있다. */
+        const AssetID& getSourceAsset() const { return _sourceAsset; }
+        /** @brief CPU 정점을 지금 쥐고 있으면 `Keep` 으로 바꾸고 true 입니다. 이미 놓았으면 바꾸지 않고 false 입니다(파일을 다시 읽는 것은 `retainCPUVertices`). 어느 스레드에서 불러도 된다. */
+        [[nodiscard]] bool tryRetainCPUVertices();
+        /**
+         * @brief CPU 정점을 `Keep` 으로 바꿉니다 — 이미 놓았으면 원본 파일(`getSourceAsset`)을 다시 읽어 되돌립니다(디스크 읽기 — 메시 캐시의 로드 단계가 부른다).
+         * @return 파일을 읽지 못하거나 파일의 정점 수가 올린 것과 다르면(디스크에서 바뀌었고 아직 다시 읽지 않았다) 오류를 남기고 false 입니다.
+         */
+        [[nodiscard]] bool retainCPUVertices();
+        /** @brief 지금 쥔 CPU 정점(LOD 0 + 낮은 단계)의 바이트입니다(메모리 보고). 놓았으면 0 입니다. */
+        uint64 getCPUVertexBytes() const;
         /** @brief 삼각형마다 정점 번호 셋입니다(LOD 0). */
         const vector<uint32>& getIndices() const { return _listIndex; }
         /** @brief LOD 0 의 인덱스 수입니다(삼각형 수 × 3). */
@@ -351,7 +365,7 @@ namespace sw
          * @note **GPU 쪽 변형은 CPU 사본(`MeshCPUView::getVertices`)에 반영되지 않는다.** 유니티 문서도 같은 주의를 준다.
          *       CPU 는 레스트 포즈만 안다(피킹과 바운드는 그 값을 본다).
          */
-        void setGPUMorphEnabled( bool bEnabled ) { _bGPUMorph = bEnabled ? SW_TRUE : SW_FALSE; }
+        void setGPUMorphEnabled( bool bEnabled );
         /** @brief GPU 모프를 요청했는지 반환합니다. */
         bool isGPUMorphEnabled() const { return _bGPUMorph != SW_FALSE; }
 
@@ -399,7 +413,7 @@ namespace sw
         /** @brief 정점마다의 본 영향입니다. 스킨이 없으면 비어 있습니다. */
         const vector<MeshSkinVertex>& getSkinVertices() const { return _listSkinVertex; }
         /** @brief 스킨이 있으면 true 입니다. */
-        bool hasSkin() const { return getSkinBoneCount() > 0 && _listSkinVertex.size() == _listVertex.size(); }
+        bool hasSkin() const { return getSkinBoneCount() > 0 && _listSkinVertex.size() == _vertexCount; }
         /** @brief 메시가 쓰는 본 수(팔레트 길이)입니다. 스킨이 없으면 0 입니다. */
         uint32 getSkinBoneCount() const { return _skinBinding.getBoneCount(); }
         /** @brief 역 바인드와 본 배치 지문입니다. 스킨이 없으면 비어 있습니다. */
@@ -437,7 +451,7 @@ namespace sw
         /** @brief LOD 1 이상 정점의 본 영향을 `getLODVertices` 와 같은 순서로 이은 것입니다. 스킨드 메시만 가지며 아니면 비어 있습니다. GPU 스키닝이 LOD 0 의 스킨 뒤에 붙입니다. */
         const vector<MeshSkinVertex>& getLODSkinVertices() const { return _listLODSkinVertex; }
         /** @brief 그릴 정점 흐름의 길이입니다(LOD 0 + 낮은 단계). 정점 풀 · 정점 버퍼가 이만큼 올린다. */
-        uint32 getDrawVertexCount() const { return static_cast<uint32>( _listVertex.size() + _listLODVertex.size() ); }
+        uint32 getDrawVertexCount() const { return _vertexCount + _lodVertexCount; }
         /** @brief 그릴 인덱스 흐름의 길이입니다(LOD 0 + 낮은 단계). */
         uint32 getDrawIndexCount() const { return static_cast<uint32>( _listIndex.size() + _listLODIndex.size() ); }
         /** @brief 화면 크기 @p screenSize 에 맞는 LOD 단계입니다 — 임계값이 화면 크기보다 큰 단계의 수(0 이면 LOD 0)입니다. */
@@ -464,8 +478,8 @@ namespace sw
         void setVertexAnimation( shared_ptr<const MeshVertexAnimation> animation );
         /** @brief 정점 애니메이션 테이블입니다. 없으면 nullptr 입니다. */
         const MeshVertexAnimation* findVertexAnimation() const { return _vertexAnimation.get(); }
-        /** @brief 정점 개수를 반환합니다. */
-        uint32 getVertexCount() const { return static_cast<uint32>( _listVertex.size() ); }
+        /** @brief 정점 개수(LOD 0)를 반환합니다. CPU 정점을 놓았어도 그대로다. */
+        uint32 getVertexCount() const { return _vertexCount; }
         /**
          * @brief 경계 상자 중심(`getLocalBoundsCenter`)에서 가장 먼 정점까지의 거리입니다(상자 중심 경계 구의 반지름). `setVertices` 가 구합니다.
          * @details 언리얼 `FBoxSphereBounds` 처럼 구의 중심은 원점이 아니라 상자 중심이다 — 발밑 피벗 캐릭터를 원점 중심 구로 감싸면 반지름이 키만큼이라
@@ -505,11 +519,25 @@ namespace sw
         void refreshBoundingRadius();
         /** @brief 낮은 단계를 뗍니다(정점 · 스킨이 바뀌어 옛 단계가 맞지 않을 때). */
         void clearLODs();
+        /** @brief 스킨 · 모프처럼 CPU 정점이 있어야 하는 값을 걸 때 `Keep` 으로 바꿉니다. 이미 놓았으면 오류를 남깁니다. */
+        void requireCPUVertices( const utf8* pWhy );
+        /** @brief (업로드 직전) CPU 정점이 있게 합니다 — 놓았으면(장치 교체) 원본 파일을 다시 읽습니다. 읽지 못하면 오류를 남기고 false 입니다. */
+        [[nodiscard]] bool ensureCPUVertices();
+        /** @brief (업로드 뒤) `ReleaseAfterUpload` 면 CPU 정점을 놓습니다. */
+        void releaseCPUVertices();
+        /** @brief 원본 파일에서 CPU 정점을 다시 채웁니다(잠금 `_cpuVertexMutex` 안에서 부른다). */
+        [[nodiscard]] bool reloadCPUVertices();
 
     private:
-        friend class MeshCPUView; // CPU 정점은 토큰으로만 읽는다
-        vector<RHIVertex> _listVertex;
-        MeshCPUAccess     _cpuAccess{ MeshCPUAccess::Keep }; ///< 지금은 모든 메시가 `Keep` 이다 — 만드는 쪽이 정하는 칸(기본값 없이)은 놓기를 켤 때 `create` · `MeshCache::request` 에 든다
+        friend class MeshCPUView;    // CPU 정점은 토큰으로만 읽는다
+        friend class MeshRenderData; // GPU 에 올리는 쪽 — 올릴 때 읽고 올린 뒤 놓는다
+        vector<RHIVertex>     _listVertex;
+        uint32                _vertexCount{ 0 };             ///< LOD 0 정점 수 — CPU 정점을 놓아도 남는다
+        uint32                _lodVertexCount{ 0 };          ///< 낮은 단계 정점 수의 합 — CPU 정점을 놓아도 남는다
+        AssetID               _sourceAsset;                  ///< 되읽을 `.mesh`(절차 메시는 비어 있다)
+        mutable mutex         _cpuVertexMutex;               ///< 놓기 · 되돌리기 · `Keep` 으로 바꾸기를 한 번에 하나만 한다
+        atomic<MeshCPUAccess> _cpuAccess;                    ///< `Keep` 이 되면 다시 바뀌지 않는다(읽는 쪽이 잠그지 않는 까닭)
+        atomic<uint8>         _bHoldsCPUVertices{ SW_TRUE }; ///< CPU 정점을 지금 쥐고 있는가(`_cpuVertexMutex` 안에서 바꾼다)
         /// @brief getIndices 를 참고하세요. 수는 3 의 배수이고 번호는 `_listVertex` 안입니다.
         vector<uint32> _listIndex;
         /// @brief setSkin 을 참고하세요. 비어 있거나 `_listVertex` 와 길이가 같습니다.

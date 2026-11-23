@@ -157,7 +157,9 @@ namespace sw
          * @details 누적 카운터(머리 [0])는 건드리지 않는다 — GPU 만 쓴다. 업로드는 프레임 순서로 큐에 들어가 앞 프레임의 기록 뒤 · 이번 프레임의 기록 앞에 놓인다.
          */
         void updateControl( const GPUMessageSelection& selection, uint32 logBudget );
-        /** @brief 메시지가 켜진 컴퓨트 디스패치 **앞에서** 부릅니다. 버퍼를 UAV 상태로 두고 u4 에 겁니다. 꺼져 있으면 아무것도 하지 않습니다. */
+        /** @brief 링을 셰이더가 쓰는 UAV 상태로 옮깁니다. `updateControl`(업로드) 뒤 · 프레임 그래프 앞에 한 번 부릅니다 — 패스 몸통의 걸기(`bindCompute` · `bindGraphics`)는 전이하지 않는다. */
+        void transitionForWrite( IRHICommandList& commands );
+        /** @brief 메시지가 켜진 컴퓨트 디스패치 **앞에서** 부릅니다. u4 에 겁니다. 꺼져 있으면 아무것도 하지 않습니다. */
         void bindCompute( IRHIPassCommandList& commands );
         /** @brief 메시지가 켜진 그래픽스 드로우 **앞에서**(렌더 패스를 연 뒤) 부릅니다. u4 를 그래픽스 단계에 겁니다. 꺼져 있으면 아무것도 하지 않습니다. */
         void bindGraphics( IRHIPassCommandList& commands );

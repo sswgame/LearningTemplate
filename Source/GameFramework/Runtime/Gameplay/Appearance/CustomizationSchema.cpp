@@ -4,6 +4,7 @@
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Foundation/HexDigitUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringUtil.h"
 #include "Core/String/formatString.h"
@@ -660,6 +661,16 @@ namespace sw
         utf8 arrBuffer[constant::buffer::kMax16];
         FormatString::formatstring( arrBuffer, constant::buffer::kMax16, "#%#", Fmt( hash, Format().hex().width( CustomizationSchemaInternal::kHashPlaceholderDigits ).zeroPad() ) );
         return hashed_string( string_view( arrBuffer ) );
+    }
+
+    uint32 CustomizationSchemaDef::toSavedHash( const hashed_string& name )
+    {
+        const string_view text         = name.view();
+        uint64            hash         = 0;
+        const bool        bPlaceholder = static_cast<int32>( text.size() ) == 1 + CustomizationSchemaInternal::kHashPlaceholderDigits && text[0] == '#' && HexDigitUtil::tryParseFixed( text.substr( 1 ), hash );
+        if ( bPlaceholder )
+            return static_cast<uint32>( hash );
+        return name.empty() ? 0u : static_cast<uint32>( name.getHash() );
     }
 
     bool CustomizationParamDef::isActive( const CustomizationSchemaDef& schema, const CustomizationValueSet& normalizedValues ) const

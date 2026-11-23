@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="b361fabd68b3fc6127b7dd9b49be5aad"?>
+<!--
+  카메라 흔들림(CameraShakeChannel · CameraManagerComponent · CameraImpulse) — 무대 maps/camerashake. 화면 카메라의 X 로 판정한다(가만히 보는 View 는 x 0).
+  ① 충격이 카메라를 옆으로 밀었다가 ② 길이(0.4 s)가 지나면 제자리로 정확히 돌아온다 ③ 감쇠 반지름 밖의 충격은 흔들지 않는다 ④ 사용자 설정(gv_cameraShakeScale 0)이면 흔들리지 않는다
+  ⑤ 애니메이션 알림(Impact → CameraShake 처리기)도 같은 길로 흔든다.
+  실행: App -scenario=game/playground/automation/camerashake.scenario.xml -unattended (체인: ctest -R Scenario.playground)
+-->
+<Scenario name="game.playground.camerashake" fixedDelta="0.0166667" timeoutFrames="1500" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/playground/maps/camerashake.scene.xml"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Appearance.Idle" target="Fighter" equals="1" timeoutFrames="300"/>
+	<WaitUntil watch="Object.X" target="GameCamera" equals="0" timeoutFrames="30"/>
+	<!-- ① 충격 -->
+	<DevCommand line="camera.shake 0 1.5 -5 0.3 0.4"/>
+	<WaitUntil watch="Object.X" target="GameCamera" atLeast="0.03" timeoutFrames="10"/>
+	<!-- ② 끝 -->
+	<AdvanceSimulation frames="30"/> <!-- 0.5 초 — 길이 0.4 초가 지났다 -->
+	<Expect watch="Object.X" target="GameCamera" equals="0"/>
+	<Expect watch="Object.Y" target="GameCamera" near="1.5" tolerance="0.0001"/>
+	<!-- ③ 멀리서 -->
+	<DevCommand line="camera.shake 100 0 0 0.3 0.4 5"/>
+	<AdvanceSimulation frames="3"/>
+	<Expect watch="Object.X" target="GameCamera" equals="0"/>
+	<AdvanceSimulation frames="4"/>
+	<Expect watch="Object.X" target="GameCamera" equals="0"/>
+	<!-- ④ 사용자 설정 -->
+	<Variable name="gv_cameraShakeScale" value="0"/>
+	<DevCommand line="camera.shake 0 1.5 -5 0.3 0.4"/>
+	<AdvanceSimulation frames="3"/>
+	<Expect watch="Object.X" target="GameCamera" equals="0"/>
+	<AdvanceSimulation frames="30"/>
+	<Variable name="gv_cameraShakeScale" value="1"/>
+	<!-- ⑤ 알림 -->
+	<Expect watch="Object.X" target="GameCamera" equals="0"/>
+	<DevCommand line="exec Fighter play 1H_Melee_Attack_Slice_Horizontal"/>
+	<WaitUntil watch="Object.X" target="GameCamera" atLeast="0.02" timeoutSeconds="3"/>
+	<Pass/>
+</Scenario>

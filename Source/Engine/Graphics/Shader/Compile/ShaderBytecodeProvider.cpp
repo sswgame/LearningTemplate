@@ -4,7 +4,6 @@
 
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
-#include "Engine/Graphics/Shader/Compile/ShaderCookStamp.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
 #include "Engine/Graphics/Shader/Reflection/ShaderReflectionData.h"
 #include "Engine/Graphics/Shader/Reflection/ShaderReflectionLibrary.h"
@@ -51,19 +50,19 @@ namespace sw
             SW_LOG_ERROR_ID( "ShaderCache.PrecompiledShaderBinaryNot", "Precompiled shader binary not found in the cooked content: '%#' [%#] — %#", desc._source.c_str(), desc._entryPoint.c_str(), precookedID.c_str() );
             return Internal::makeFailure( "Shader binary missing in the cooked content" );
         }
-        SW_LOG_TRACE_ID( "ShaderCache.LoadedCookedShaderBinary", "Loaded cooked shader binary: %# (%zu bytes)", precookedID.c_str(), precookedBytes.size() );
+        SW_LOG_TRACE_ID( "ShaderCache.LoadedCookedShaderBinary", "Loaded cooked shader binary: %# (%# bytes)", precookedID.c_str(), precookedBytes.size() );
         ShaderCompileResult result{};
         result._bytecode = std::move( precookedBytes );
         result._bSuccess = true;
         return result;
     }
 
-    uint64 CookedShaderBytecodeProvider::computeFingerprint( const ShaderCompileResult& result, const ShaderCompileDesc& desc ) const
+    bool CookedShaderBytecodeProvider::isCurrent( const ShaderCompileResult& result, const ShaderCompileDesc& desc ) const
     {
         // 팩은 실행 중 바뀌지 않는다 - 넣은 항목은 늘 맞다(예전에는 소스 경로가 없어 지문이 0 이라 한 번도 맞지 않고 매번 팩을 다시 읽었다).
         (void)result;
         (void)desc;
-        return 1u;
+        return true;
     }
 
     bool CookedShaderBytecodeProvider::getReflection( ShaderCache& cache, const ShaderCompileDesc& desc, ShaderReflectionData& outReflection ) const
@@ -95,15 +94,13 @@ namespace sw
 
     ShaderCompileResult LiveShaderBytecodeProvider::load( const ShaderCompileDesc& desc ) const
     {
-        // 컴파일러가 이 기계의 셰이더 DDC(`<프로젝트>/Saved/ShaderCompileCache`)를 먼저 본다(언리얼 에디터의 DDC). 코드젠은 기동에서 뜬 진단 정책 사본이 정한다(makeLiveCompileDesc).
+        // 컴파일러가 셰이더 DDC(`DerivedDataCache` 의 `Shader` 버킷)를 먼저 본다(언리얼 에디터의 DDC). 코드젠은 기동에서 뜬 진단 정책 사본이 정한다(makeLiveCompileDesc).
         return ShaderCompiler::compileHLSL( ShaderCache::makeLiveCompileDesc( desc, _bDebugCodegen != SW_FALSE ) );
     }
 
-    uint64 LiveShaderBytecodeProvider::computeFingerprint( const ShaderCompileResult& result, const ShaderCompileDesc& desc ) const
+    bool LiveShaderBytecodeProvider::isCurrent( const ShaderCompileResult& result, const ShaderCompileDesc& desc ) const
     {
-        if ( result._sourceFile.empty() || desc._enginePolicy.has_value() == false )
-            return 0u;
-        return ShaderCookStamp::computeSourceFingerprint( result._sourceFile, result._listIncludedFile, *desc._enginePolicy );
+        return ShaderCompiler::isResultCurrent( result, ShaderCache::makeLiveCompileDesc( desc, _bDebugCodegen != SW_FALSE ) );
     }
 
     bool LiveShaderBytecodeProvider::getReflection( ShaderCache& cache, const ShaderCompileDesc& desc, ShaderReflectionData& outReflection ) const

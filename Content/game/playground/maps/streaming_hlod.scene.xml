@@ -2,7 +2,7 @@
 <Scene formatVersion="3" name="StreamingHLOD">
 	<!-- HLOD 시나리오(automation/streaminghlod)의 무대 — 10 m 셀 · 15 m 반경. 셀 (0,0) 에 정적 바위 둘, 셀 (6,0)(X 60 ~ 70)에 정적 바위 하나, 셀 (3,0) 에 움직이는 등불 하나.
 	     정적 메시가 있는 조각 둘만 HLOD 대리를 받는다(HLOD_0_0 · HLOD_6_0). 카메라 · 해만 늘 올라 있다. -->
-	<SceneSettings _bStreaming="true" _unloadMargin="0" _maxCellLoadsPerFrame="8" _addToWorldBudgetMicroseconds="2000">
+	<SceneSettings _bStreaming="true" _unloadMargin="0" _maxCellLoadsPerFrame="8" _addToWorldBudgetMicroseconds="2000" _hlodMergeMaxInstanceCount="4">
 		<_cellGrid _cellSize="10" _loadingRadius="15" />
 	</SceneSettings>
 	<entities>

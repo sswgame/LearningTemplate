@@ -9,6 +9,7 @@
 
 #include "Engine/Graphics/RHI/RHICapabilities.h"
 #include "Engine/Graphics/RHI/RHICompiledShaderStages.h"
+#include "Engine/Graphics/RHI/RHIPipelineState.h"
 #include "Engine/Graphics/RHI/RHIPipelineStateDesc.h"
 #include "Engine/Graphics/RHI/Tests/RHIFakeDevice.h"
 #include "Engine/Graphics/Shader/Compile/RHIShaderRequest.h"
@@ -24,10 +25,13 @@ SW_TEST_CASE( RHIPipelineFrontTest, UnboundFrontRejectsBeforeCompiling )
 {
     SW_EXPECT_LOG( "RHI.PipelineFrontUnbound" );
     test::FakeRHIBufferFactory factory;
-    RHIPipelineStateDesc       desc;
+    test::FakeRHIDevice        device;
+    device._pResourceFactory = &factory;
+    RHIPipelineStateDesc desc;
     desc._vertexShaderPath = "engine/shaders/forward_lit.hlsl";
-    SW_EXPECT_EQUAL( RHIPipelineStateHandle{ 0 }, factory.createPipelineState( desc ) );
-    SW_EXPECT_EQUAL( RHIPipelineStateHandle{ 0 }, factory.createComputePipelineState( "engine/shaders/cull.hlsl" ) );
+    RHIPipelineState pso;
+    SW_EXPECT_FALSE( pso.createGraphics( device, desc ) );
+    SW_EXPECT_FALSE( pso.createCompute( device, "engine/shaders/cull.hlsl" ) );
 }
 
 /**

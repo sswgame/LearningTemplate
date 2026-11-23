@@ -10,6 +10,7 @@
 
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
+#include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
@@ -32,6 +33,26 @@ namespace sw::editor
             static constexpr float32 kFrameRadius = 1.5f;
             /// @brief 뷰포트의 최소 높이(96 DPI 기준 픽셀)입니다. 창이 낮아도 이만큼은 그린다.
             static constexpr float32 kMinViewportHeight = 160.0f;
+            /// @brief 방출기 편집 칸의 폭(글자 수)입니다. 창 폭이 이 두 배보다 좁으면 편집 칸이 뷰포트 아래로 내려간다.
+            static constexpr float32 kEditorColumns = 48.0f;
+
+            [[nodiscard]] static bool readEmitterCount( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const VFXPreviewPanel* pPanel = findOpenPanel();
+                if ( pPanel == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pPanel->getEmitterCount() );
+                return true;
+            }
+
+            [[nodiscard]] static bool readSelectedEmitter( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const VFXPreviewPanel* pPanel = findOpenPanel();
+                if ( pPanel == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pPanel->getSelectedEmitter() );
+                return true;
+            }
 
             /** @brief 열린 VFX 미리보기 창입니다. 닫혔으면 nullptr 입니다. */
             [[nodiscard]] static const VFXPreviewPanel* findOpenPanel()
@@ -118,6 +139,8 @@ namespace sw::editor
                          &VFXPreviewPanelInternal::readAutoReloadCount );
     SW_AUTOMATION_WATCH( editorVFXPreviewSceneFrames, "Editor.VFXPreviewSceneFrames", "Frames the VFX Preview panel asked the renderer to draw its preview scene",
                          &VFXPreviewPanelInternal::readPreviewSceneFrames );
+    SW_AUTOMATION_WATCH( editorVFXEmitterCount, "Editor.VFXEmitterCount", "Emitters of the effect text the VFX Preview panel edits (fails while the panel is closed)", &VFXPreviewPanelInternal::readEmitterCount );
+    SW_AUTOMATION_WATCH( editorVFXSelectedEmitter, "Editor.VFXSelectedEmitter", "Emitter the VFX Preview panel edits (-1: none)", &VFXPreviewPanelInternal::readSelectedEmitter );
     SW_AUTOMATION_WATCH( editorVFXPreviewSoloEmitter, "Editor.VFXPreviewSoloEmitter", "Emitter the VFX Preview panel isolates (-1: none)", &VFXPreviewPanelInternal::readSoloEmitter );
     SW_AUTOMATION_WATCH( editorVFXPreviewEnabledEmitterCount, "Editor.VFXPreviewEnabledEmitterCount", "Emitters of the VFX Preview effect that are enabled (isolation turns the others off)",
                          &VFXPreviewPanelInternal::readEnabledEmitterCount );
@@ -126,8 +149,66 @@ namespace sw::editor
     VFXPreviewPanel::VFXPreviewPanel()
         : EditorPreviewPanel{ EditorAssetType{ EditorAssetTypeIDs::kData }, false }
         , _model{}
+        , _grid{}
         , _autoReloadCount{ 0 }
     {
+        _model.bindDocumentEditRecorder( getDocumentEditRecorder() );
+    }
+
+    bool VFXPreviewPanel::saveDocument()
+    {
+        if ( _model.saveDocument() == false )
+            return false;
+        syncDocumentUndoBaseline(); // 저장한 글이 새 기준이다
+        return true;
+    }
+
+    int32 VFXPreviewPanel::getSelectedEmitter() const
+    {
+        const optional<uint32> selected = _model.getSelectedEmitter();
+        return selected.has_value() ? static_cast<int32>( *selected ) : VFXPreviewViewModel::kNoSolo;
+    }
+
+    void VFXPreviewPanel::onEmitterPropertyEdited( const PropertyInfo& property )
+    {
+        _model.commitEmitterProperty( property );
+    }
+
+    void VFXPreviewPanel::drawEmitterEditor()
+    {
+        if ( _model.isEditable() == false )
+        {
+            EditorWidgets::drawEmptyHint( SW_LOCKEY( "EdVFX", "NotEditable" ) );
+            return;
+        }
+        if ( _model.getBaseID().empty() == false )
+        {
+            ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdFormat", "InheritsFrom", TextArgumentList().addText( "base", _model.getBaseID().c_str() ) ).c_str() );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EdText", "InheritsFromTip" ) );
+        }
+        if ( _model.getSelectedEmitter().has_value() == false )
+        {
+            EditorWidgets::drawEmptyHint( SW_LOCKEY( "EdVFX", "SelectEmitter" ) );
+            return;
+        }
+        const bool bDuplicate = ImGui::Button( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdVerb", "Duplicate" ), "DuplicateEmitter" ) );
+        EditorSelfTestMarks::record( "vfx.duplicateEmitter" );
+        ImGui::SameLine();
+        ImGui::BeginDisabled( _model.getEmitterRows().size() < 2 ); // 방출기 없는 효과는 로드 오류다
+        const bool bRemove = ImGui::Button( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdVerb", "Remove" ), "RemoveEmitter" ) );
+        ImGui::EndDisabled();
+        EditorSelfTestMarks::record( "vfx.removeEmitter" );
+        _grid.drawSearchBar( "vfx.search" );
+        EditorPropertyGridTarget target{};
+        target._pInstance = _model.editSelectedEmitter();
+        target._pType     = VFXPreviewViewModel::getEmitterType();
+        target._onEdited  = SW_DELEGATE_METHOD( Delegate<void( const PropertyInfo& )>, &VFXPreviewPanel::onEmitterPropertyEdited, this );
+        _grid.drawProperties( target, nullptr, _model.collectHiddenProperties() );
+        // 원소 주소가 바뀌는 편집은 그리드를 다 그린 뒤에 한다
+        if ( bDuplicate )
+            _model.duplicateSelectedEmitter();
+        else if ( bRemove )
+            _model.removeSelectedEmitter();
     }
 
     void VFXPreviewPanel::drawDocumentContent()
@@ -144,7 +225,7 @@ namespace sw::editor
         }
 
         // 효과 파일이 바뀌었으면(카탈로그 편집기의 저장) 다시 읽고 다시 건다 — Reload 를 누르지 않아도 된다.
-        if ( _model.pollFileChanged() )
+        if ( isDocumentDirty() == false && _model.pollFileChanged() ) // 고치는 중이면 바깥 저장이 편집을 덮지 않는다
         {
             VFXPreviewViewModel::applySavedAsset( getLoadedAssetPath() );
             reloadDocument();
@@ -188,11 +269,16 @@ namespace sw::editor
             EditorSelfTestMarks::recordFormat( "vfx.solo.%#", rowIndex );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EdVFX", "SoloTip" ) );
             ImGui::SameLine();
-            const string text = SW_LOCKEYFORMAT( "EdFormat", "Max", TextArgumentList().addText( "name", row._name.c_str() ).addText( "blend", row._bAdditive ? "additive" : "alpha" ).addText( "looping", row._bLooping ? "yes" : "no" ).addInteger( "maxParticles", static_cast<int64>( row._maxParticles ) ).addText( "texturePath", row._texturePath.c_str() ) );
-            if ( _model.getSoloEmitter() != VFXPreviewViewModel::kNoSolo && bSolo == false )
-                ImGui::TextDisabled( "%s", text.c_str() ); // 격리로 꺼진 방출기는 흐리게
-            else
-                ImGui::TextUnformatted( text.c_str() );
+            const string text         = SW_LOCKEYFORMAT( "EdFormat", "Max", TextArgumentList().addText( "name", row._name.c_str() ).addText( "blend", row._bAdditive ? "additive" : "alpha" ).addText( "looping", row._bLooping ? "yes" : "no" ).addInteger( "maxParticles", static_cast<int64>( row._maxParticles ) ).addText( "texturePath", row._texturePath.c_str() ) );
+            const bool   bIsolatedOut = _model.getSoloEmitter() != VFXPreviewViewModel::kNoSolo && bSolo == false;
+            if ( bIsolatedOut )
+                ImGui::PushStyleColor( ImGuiCol_Text, EditorColorUtil::toImVec4( SW_THEME_COLOR( "Base", "TextMuted" ) ) ); // 격리로 꺼진 방출기는 흐리게
+            const bool bPicked = ImGui::Selectable( text.c_str(), getSelectedEmitter() == static_cast<int32>( rowIndex ) );
+            if ( bIsolatedOut )
+                ImGui::PopStyleColor();
+            EditorSelfTestMarks::recordFormat( "vfx.emitter.%#", rowIndex );
+            if ( bPicked )
+                _model.selectEmitter( static_cast<uint32>( rowIndex ) ); // 보기 상태 — 되돌리기에 남기지 않는다
             ImGui::PopID();
         }
 
@@ -212,12 +298,24 @@ namespace sw::editor
 
         if ( isDocumentLoadFailed() == false ) // 읽지 못한 효과는 걸지 않는다
         {
-            _model.syncEffect( getPreviewScene(), getLoadedAssetPath() );
+            _model.syncEffect( getPreviewScene(), getLoadedAssetPath(), ImGui::IsAnyItemActive() );
             _model.syncPlayback( getPreviewScene(), ImGui::GetIO().DeltaTime );
         }
-        const float2 viewSize = computeViewportFillSize( VFXPreviewPanelInternal::kMinViewportHeight * EditorThemeUtil::getDPIScale() );
+        // 왼쪽은 미리보기, 오른쪽은 고른 방출기의 편집 칸 — 좁은 창에서는 편집 칸이 뷰포트 아래로 내려간다.
+        float2        viewSize    = computeViewportFillSize( VFXPreviewPanelInternal::kMinViewportHeight * EditorThemeUtil::getDPIScale() );
+        const float32 editWidth   = EditorChrome::measureTextExtent( EditorTextExtent::ofText( VFXPreviewPanelInternal::kEditorColumns, 0.0f ) ).x;
+        const bool    bSideBySide = viewSize._x > editWidth * 2.0f;
+        if ( bSideBySide )
+            viewSize._x -= editWidth + ImGui::GetStyle().ItemSpacing.x;
+        else
+            viewSize._y *= 0.5f;
         drawPreviewViewport( viewSize, false ); // 기즈모가 없다
         EditorSelfTestMarks::record( "vfx.previewScene" );
+        if ( bSideBySide )
+            ImGui::SameLine();
+        ImGui::BeginChild( "##vfxEmitterEditor", ImVec2{ 0.0f, viewSize._y }, ImGuiChildFlags_Borders );
+        drawEmitterEditor();
+        ImGui::EndChild();
         EditorWidgets::drawPanelStatus( _model.getStatus().c_str() );
     }
 

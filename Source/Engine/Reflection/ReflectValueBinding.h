@@ -20,11 +20,17 @@ namespace sw
     enum class ReflectBuiltinIndex : uint8; // 정의는 ReflectedValue.h — 이 머리는 그 표를 끌지 않는다
 
     /** @brief 형식 이름 하나의 레지스트리 사실입니다. 셋 다 비면 레지스트리가 모르는 이름입니다(처리기만 있는 형식일 수 있다). */
-    struct ReflectValueFacts
+    struct SW_API ReflectValueFacts
     {
         const TypeInfo*     _pType{ nullptr }; ///< 레지스트리의 형식(내장형의 원시 형식 포함 — 구조체인지는 `isPrimitive` 로)
         const EnumInfo*     _pEnum{ nullptr }; ///< 열거형이면 그 정보
         ReflectBuiltinIndex _builtinIndex;     ///< 내장형이면 표 안 자리, 아니면 `kNone`(별칭은 정규 이름으로 푼 뒤) — `resolve` 가 늘 채운다
+
+        /** @brief 반사 구조체(내장 타입 · 열거형이 아닌 등록 타입)면 그 타입, 아니면 nullptr 입니다. */
+        const TypeInfo* findStructType() const;
+
+        /** @brief @p name 의 사실을 묶음 없이 @p registry 에서 이름으로 찾습니다. */
+        static ReflectValueFacts find( const hashed_string& name, const TypeRegistry& registry );
     };
 
     /**

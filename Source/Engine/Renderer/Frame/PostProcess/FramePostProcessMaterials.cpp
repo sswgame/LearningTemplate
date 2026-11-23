@@ -99,7 +99,7 @@ namespace sw
         return false;
     }
 
-    void FramePostProcessMaterials::prepareChain( FrameViewTarget& view, PostProcessBlendableLocation location, PostProcessChainTexture& chain )
+    void FramePostProcessMaterials::prepareChain( FrameViewTarget& view, PostProcessBlendableLocation location, RHITextureSlot& chain )
     {
         vector<FrameViewTarget::PostProcessMaterialPass>& listDraw = view._listPostProcessMaterialPass;
         bool                                              bChained = false;
@@ -113,9 +113,20 @@ namespace sw
         // 사본은 그 자리 패스의 출력 형식 · 뷰 풀 크기다(블릿은 형식 · 크기가 같아야 한다).
         // 크기는 그 출력의 해상도 공간 크기다(톤맵 앞 · 뒤 후처리는 시간 업스케일 뒤의 출력 공간).
         const RenderPassAttachment* pOutput = findOutputAttachment( location );
-        if ( pOutput == nullptr ||
-             chain.ensure( *_pDevice, pOutput->_format, view._transientPool.getExtent( pOutput->_resolutionSpace, true ), view._transientPool.getExtent( pOutput->_resolutionSpace, false ) ) == false )
-            return; // 만들지 못했다(오류를 남겼다) — 그 자리는 모두 원본을 읽는다
+        if ( pOutput == nullptr )
+            return;
+        RHITextureDesc desc{};
+        desc._width             = view._transientPool.getExtent( pOutput->_resolutionSpace, true );
+        desc._height            = view._transientPool.getExtent( pOutput->_resolutionSpace, false );
+        desc._format            = pOutput->_format;
+        desc._bIsRenderTarget   = SW_TRUE; // 블릿 대상이다
+        desc._bIsShaderResource = SW_TRUE;
+        if ( chain.ensure( *_pDevice, desc, "PostProcessChain" ) == false )
+        {
+            SW_LOG_ERROR_ONCE_ID( "FramePostProcessMaterials.FailedCreateChain", "Failed to create the post process chain copy (%#x%#) - later materials at the same location read the original", desc._width,
+                                  desc._height );
+            return; // 그 자리는 모두 원본을 읽는다
+        }
         for ( size_t index = 0; index < listDraw.size(); ++index )
         {
             if ( listDraw[index]._location == location && isChainedDraw( listDraw, index ) )

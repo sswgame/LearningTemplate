@@ -42,7 +42,7 @@ namespace sw
         /** @brief 청해 둔 @p path 의 읽힌 텍스처입니다. 청하지 않았거나 읽는 중이거나 못 읽었으면 nullptr 입니다(상태를 바꾸지 않는다 — 기록 중에 부른다). */
         const Texture2D* findReady( const hashed_string& path ) const;
         /** @brief `findReady` 의 텍스처가 GPU 자원까지 갖췄으면 그 SRV, 아니면 kInvalidDescriptorIndex 입니다. */
-        RHIDescriptorIndex findReadySRV( const hashed_string& path ) const;
+        RHITextureSRVIndex findReadySRV( const hashed_string& path ) const;
         /** @brief 지난 `pruneUnused` 뒤로 청하지 않은 경로의 핸들을 놓고 쓰임 표시를 지웁니다(다음에 다시 쓰이면 다시 읽는다). 부르지 않는 주인은 `release` 까지 모두 쥔다. */
         void pruneUnused();
         /** @brief 모든 핸들을 놓습니다(디바이스 교체 · 종료 — 다음 프레임에 새 디바이스로 다시 청한다). */

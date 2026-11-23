@@ -17,6 +17,7 @@
 #include "DevTools/Diagnostics/ReflectionDump.h"
 #include "DevTools/Diagnostics/StateHashRecorder.h"
 #include "DevTools/File/FileReadDiagnostics.h"
+#include "DevTools/FileWatch/FileWatchService.h"
 #include "DevTools/Maintenance/SavedCleanupSubsystem.h"
 #include "DevTools/Net/NetLineEmulation.h"
 #include "DevTools/Net/NetListenLaunch.h"
@@ -48,9 +49,10 @@ namespace sw
      */
     SW_TEST_GLOBAL_VARIABLE( sw::GlobalDiskPath, gv_userSettingsFile, "", "사용자 설정 파일 경로 (비면 사용자 폴더의 usersettings.json)" );
 
-    DevToolsHost::DevToolsHost()
-        : _pConsole{}
-        , _pContentFolderWatch{ make_unique<ContentFolderWatchService>() }
+    DevToolsHost::DevToolsHost( FileWatchService& fileWatch )
+        : _fileWatch{ fileWatch }
+        , _pConsole{}
+        , _pContentFolderWatch{ make_unique<ContentFolderWatchService>( fileWatch ) }
         , _pFileReadDiagnostics{ make_unique<FileReadDiagnostics>() }
         , _frameStall{}
     {
@@ -116,7 +118,7 @@ namespace sw
         (void)startup.emplaceSubsystem<ReloadTracker>();
         // 설정 파일 리로드는 서버에도 선다.
         if ( parts._pConfigManager != nullptr )
-            (void)startup.emplaceSubsystem<ConfigReloadSubsystem>( *parts._pConfigManager );
+            (void)startup.emplaceSubsystem<ConfigReloadSubsystem>( *parts._pConfigManager, _fileWatch );
         // 회선 흉내 — 세션이 열기 전에 샤드 전송 데코레이터를 건다(실행 중 조건은 `net.emulation`).
         // 리슨 포트 덮어쓰기(`-gv_netListenPort`) — 세션이 기동 역할을 정하기 전에 건다.
         if ( parts._pNetSession != nullptr )
@@ -182,8 +184,8 @@ namespace sw
             if ( exitCode == kEngineFrameRunning )
                 exitCode = clientExit;
         }
-        if ( ConfigReloadSubsystem* const pConfigReload = engine::findSubsystem<ConfigReloadSubsystem>() )
-            pConfigReload->update();
+        // 파일 감시 — 프로세스의 감시(설정 · 데이터 폴더 · 에디터 에셋 · 모듈 빌드 스탬프)를 여기서 한 번 나눠 준다.
+        _fileWatch.update();
         _pContentFolderWatch->update(); // 기능 · 게임이 건 데이터 폴더 감시(외형 데이터 등)
         // 부모 프로세스(에디터의 멀티 프로세스 재생)가 표준 입력으로 보낸 종료 낱말 — 정상 종료다.
         if ( _pConsole != nullptr && _pConsole->pollStandardInputCommands() )

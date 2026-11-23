@@ -88,21 +88,31 @@ namespace
         struct Zone
         {
             const ProfileZoneSite* _pSite;
+            uint32                 _gpuContext;
             uint32                 _depth;
             int64                  _beginNanos;
+            int64                  _endNanos;
         };
 
-        vector<Zone> _listZone;
-        uint32       _depth{ 0 };
+        vector<Zone>   _listZone;
+        vector<size_t> _listOpenZone; ///< 열린 구간의 `_listZone` 번호(안쪽이 뒤)
+        uint32         _contextCount{ 0 };
+        uint32         _depth{ 0 };
 
-        uint32 createGPUContext( ProfilerGraphicsAPI, const utf8*, int64 ) override { return 0; }
+        uint32 createGPUContext( ProfilerGraphicsAPI, const utf8*, int64 ) override { return _contextCount++; }
         void   syncGPUClock( uint32, int64 ) override {}
-        void   beginGPUZone( uint32, const ProfileZoneSite& site, int64 gpuBeginNanos ) override
+        void   beginGPUZone( uint32 gpuContext, const ProfileZoneSite& site, int64 gpuBeginNanos ) override
         {
-            _listZone.push_back( Zone{ &site, _depth, gpuBeginNanos } );
+            _listOpenZone.push_back( _listZone.size() );
+            _listZone.push_back( Zone{ &site, gpuContext, _depth, gpuBeginNanos, gpuBeginNanos } );
             ++_depth;
         }
-        void endGPUZone( uint32, int64 ) override { --_depth; }
+        void endGPUZone( uint32, int64 gpuEndNanos ) override
+        {
+            --_depth;
+            _listZone[_listOpenZone.back()]._endNanos = gpuEndNanos;
+            _listOpenZone.pop_back();
+        }
     };
 } // namespace
 
@@ -127,7 +137,7 @@ SW_TEST_CASE( GPUPassTimelineTest, ExportNestsFramePassesUnderCompute )
 
     RecordingGPUTimeline backend;
     GPUTimelineExporter  exporter;
-    SW_EXPECT_TRUE( exporter.openContext( backend, ProfilerGraphicsAPI::Vulkan, "test", &backend, 0 ) );
+    SW_EXPECT_TRUE( exporter.openContext( backend, ProfilerGraphicsAPI::Vulkan, "test", nullptr, &backend, 0 ) );
     const vector<const ProfileZoneSite*> listPassSite{ &viewPassSite };
     const vector<const ProfileZoneSite*> listFramePassSite{ &framePassSite };
     SW_EXPECT_EQUAL( exporter.exportFrame( backend, frame, frameSite, computeSite, listPassSite, listFramePassSite ), 4u );
@@ -143,4 +153,57 @@ SW_TEST_CASE( GPUPassTimelineTest, ExportNestsFramePassesUnderCompute )
     SW_EXPECT_EQUAL( backend._listZone[2]._depth, 2u );
     SW_EXPECT_TRUE( backend._listZone[3]._pSite == &viewPassSite );
     SW_EXPECT_EQUAL( backend._listZone[3]._depth, 1u );
+}
+
+/**
+ * @brief [GPUPassTimelineTest] 비동기 컴퓨트 큐의 프레임 패스가 그래픽스 큐 패스와 겹치면 컴퓨트 큐 줄에 나가고, 두 줄 모두 제 길이를 지킨다
+ * @details 한 트리에 담으면 뒤에 시작한 그래픽스 패스가 컴퓨트 패스의 끝으로 잘려 길이 0 이 되고, 프레임 그래프 구간 뒤에 끝난 컴퓨트 패스도 그 끝에서 잘린다.
+ */
+SW_TEST_CASE( GPUPassTimelineTest, ExportKeepsOverlappingComputeQueuePass )
+{
+    const ProfileZoneSite frameSite{ "Frame", "", "", 0, 0 };
+    const ProfileZoneSite computeSite{ "Compute", "", "", 1, 0 };
+    const ProfileZoneSite asyncSite{ "Particles", "", "", 2, 0 };
+    const ProfileZoneSite cullSite{ "Culling", "", "", 3, 0 };
+
+    RHITimestampFrame frame;
+    frame._listMicro.assign( constant::render::kMaxGPUTimestampSlot, -1.0f );
+    frame._listMicro[GPUTimestampSlotLayout::kFrameBegin]   = 0.0f;
+    frame._listMicro[GPUTimestampSlotLayout::kComputeBegin] = 1.0f;
+    frame._listMicro[GPUTimestampSlotLayout::kComputeEnd]   = 10.0f;
+    const uint32 asyncSlot                                  = GPUTimestampSlotLayout::findFramePassSlot( 0 );
+    const uint32 cullSlot                                   = GPUTimestampSlotLayout::findFramePassSlot( 1 );
+    frame._listMicro[asyncSlot]                             = 2.0f; // 컴퓨트 큐 2 ~ 14 us — 프레임 그래프 구간(1 ~ 10) 뒤까지 돈다
+    frame._listMicro[asyncSlot + 1u]                        = 14.0f;
+    frame._listMicro[cullSlot]                              = 4.0f; // 그래픽스 큐 4 ~ 8 us
+    frame._listMicro[cullSlot + 1u]                         = 8.0f;
+    frame._computeQueueMask.set( asyncSlot );
+    frame._computeQueueMask.set( asyncSlot + 1u );
+
+    RecordingGPUTimeline backend;
+    GPUTimelineExporter  exporter;
+    SW_REQUIRE_TRUE( exporter.openContext( backend, ProfilerGraphicsAPI::Vulkan, "test", "test async compute", &backend, 0 ) );
+    SW_EXPECT_EQUAL( 2u, backend._contextCount );
+    const vector<const ProfileZoneSite*> listPassSite{};
+    const vector<const ProfileZoneSite*> listFramePassSite{ &asyncSite, &cullSite };
+    SW_EXPECT_EQUAL( 4u, exporter.exportFrame( backend, frame, frameSite, computeSite, listPassSite, listFramePassSite ) );
+
+    SW_REQUIRE_EQUAL( size_t{ 4 }, backend._listZone.size() );
+    const RecordingGPUTimeline::Zone& cullZone  = backend._listZone[2];
+    const RecordingGPUTimeline::Zone& asyncZone = backend._listZone[3];
+    SW_EXPECT_TRUE( cullZone._pSite == &cullSite );
+    SW_EXPECT_EQUAL( 0u, cullZone._gpuContext );
+    SW_EXPECT_EQUAL( int64{ 4000 }, cullZone._beginNanos );
+    SW_EXPECT_EQUAL( int64{ 8000 }, cullZone._endNanos );
+    SW_EXPECT_TRUE( asyncZone._pSite == &asyncSite );
+    SW_EXPECT_EQUAL( 1u, asyncZone._gpuContext );
+    SW_EXPECT_EQUAL( 0u, asyncZone._depth );
+    SW_EXPECT_EQUAL( int64{ 2000 }, asyncZone._beginNanos );
+    SW_EXPECT_EQUAL( int64{ 14000 }, asyncZone._endNanos );
+
+    // 컴퓨트 큐 줄이 없는 출력에서는 겹치는 구간을 그래픽스 큐 트리에 끼우지 않는다.
+    RecordingGPUTimeline singleBackend;
+    GPUTimelineExporter  singleExporter;
+    SW_REQUIRE_TRUE( singleExporter.openContext( singleBackend, ProfilerGraphicsAPI::Vulkan, "test", nullptr, &singleBackend, 0 ) );
+    SW_EXPECT_EQUAL( 3u, singleExporter.exportFrame( singleBackend, frame, frameSite, computeSite, listPassSite, listFramePassSite ) );
 }

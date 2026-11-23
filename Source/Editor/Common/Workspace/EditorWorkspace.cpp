@@ -89,6 +89,25 @@ namespace sw::editor
         _selectedComponentKey.clear();
     }
 
+    void EditorWorkspace::resetToFreshEditor()
+    {
+        // 씬 세대 · 편집 번호는 활성 씬을 따라가는 값이라 둔다(낮추면 지켜보는 쪽이 바뀜을 놓친다).
+        clearSelection();
+        clearPendingSceneAction();
+        clearSceneDirty();
+        _scrollToComponentID = 0;
+        _focusedAssetPath.clear();
+        _pendingOpenPanel = EditorPanelOpenRequest{};
+        _copiedComponentXML.clear();
+        _copiedComponentTypeName.clear();
+        _arrCameraBookmark = array<CameraBookmark, 9>{};
+        _uniqueLockedObjectID.clear();
+        _gizmoOperation   = 0;
+        _bGizmoLocalSpace = SW_TRUE;
+        ScopedLock<mutex> lock{ _pendingSceneMutex };
+        _listSceneFileRequest.clear();
+    }
+
     void EditorWorkspace::selectGameObject( GameObject* pObj, SelectionMode mode )
     {
         if ( _pEditorSelection != nullptr )

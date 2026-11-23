@@ -11,6 +11,7 @@
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Character/Hit/CharacterHit.h"
 #include "Engine/Character/Hit/MeleeHitWindow.h"
+#include "Engine/Environment/Foliage/FoliageComponent.h"
 #include "Engine/Environment/Surface/SurfaceFootprintSystem.h"
 #include "Engine/Environment/Surface/SurfaceKind.h"
 #include "Engine/Environment/Surface/SurfaceSample.h"
@@ -160,7 +161,7 @@ namespace sw
                     const SurfaceStepResponse* pStep = pManager->getSubsystem<SurfaceFootprintSystem>().addFootstep( sample, OrientationUtil::computeYawFromWorld( root ), context._owner.getObjectID() );
                     // 튀는 효과는 이 층(표면과 VFX 를 함께 본다)이 튼다 — 표면 층은 VFX 를 include 하지 않는다. 효과마다 동시에 트는 수는 표의 데이터다.
                     if ( pStep != nullptr && pStep->_effect.isSet() )
-                        (void)pManager->getSubsystem<VFXEffectPool>().play( pStep->_effect.get(), sample._point, pTable->_stepEffectPoolSize );
+                        (void)pManager->getSubsystem<VFXEffectPool>().play( hashed_string( pStep->_effect.get() ), sample._point, pTable->_stepEffectPoolSize );
                     record( context, sample._pKind->_name, sample._point, sample._objectID, AnimationNotifyPhase::Instant );
                 }
 
@@ -229,6 +230,7 @@ namespace sw
                     static const hashed_string s_radius( "radius" );
                     static const hashed_string s_damage( "damage" );
                     static const hashed_string s_impulse( "impulse" );
+                    static const hashed_string s_foliage( "foliage" );
                     MeleeHitParams             params;
                     params._kind      = context._fired._name;
                     params._radius    = MathUtil::max( context._entry.getFloatParam( s_radius ), 0.0f );
@@ -239,6 +241,11 @@ namespace sw
                     vector<MeleeHit> listHit;
                     (void)MeleeHit::sweep( context._owner, state._listPreviousPoint, listCurrent, params, MeleeHit::getProcessAuthority(),
                                            state._listHitTarget, listHit );
+                    // 칼날이 지난 풀을 벤다 — 보이는 효과라 권위와 상관없이 각자의 씬에서 벤다.
+                    const float32            foliageRadius = context._entry.getFloatParam( s_foliage );
+                    GameObjectManager* const pManager      = context._owner.getMutableManager();
+                    for ( size_t pointIndex = 0; foliageRadius > 0.0f && pManager != nullptr && pointIndex < listCurrent.size(); ++pointIndex )
+                        (void)FoliageComponent::cutAll( *pManager, listCurrent[pointIndex], foliageRadius );
                     for ( const MeleeHit& melee : listHit )
                     {
                         record( context, melee._hit._zone, melee._hit._point, melee._target.objectID(), context._fired._phase );
@@ -252,6 +259,7 @@ namespace sw
                     { "damage", AnimationNotifyParamKind::Float, false, 1.0f },
                     { "impulse", AnimationNotifyParamKind::Float, false },
                     { "samples", AnimationNotifyParamKind::Float, false, 3.0f },
+                    { "foliage", AnimationNotifyParamKind::Float, false },
                 };
             };
 

@@ -114,6 +114,8 @@ namespace sw
         void applySaveState( SaveState state );
         /** @brief 오브젝트(또는 그 조상)가 지은 묶음에 들어 있으면 true 입니다 — 세이브의 씬 섹션이 빼는 오브젝트입니다(묶음 몫은 `writeSaveState` 가 싣는다). */
         bool isGroupObject( uint64 objectID ) const;
+        /** @brief 오브젝트 자신이 이 서비스의 목록에 들어 있으면 true 입니다(조상은 보지 않는다) — 조상이 다른 묶음에 든 오브젝트를 두 번 뜨지 않게 가린다(`Scene::collectCellGroup`). */
+        bool isListedObject( uint64 objectID ) const;
 
         /** @brief 지금 상태를 값으로 찍습니다. */
         [[nodiscard]] State captureState() const;

@@ -42,6 +42,8 @@ namespace sw
         void onRegister( GameObjectManager& manager ) override;
         /** @brief 씬 오디오에서 뺍니다. */
         void onUnregister( GameObjectManager& manager ) override;
+        /** @brief 지난 프레임 자리를 옮깁니다 — 순간의 속도(도플러)가 튀지 않게. */
+        void onWorldOriginShifted( const float3& delta ) override;
 
         /**
          * @brief 이 리스너의 상태입니다(자리 · 앞 · 위 · 모드 · 반폭). 속도는 `SceneAudio` 가 넣습니다.

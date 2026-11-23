@@ -13,6 +13,8 @@
 #include "Editor/Common/Commands/Diagnostics/EditorGlobalVariableCommands.h"
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/Undo/EditorStateTextHistory.h"
+#include "Editor/Common/Workspace/Undo/EditorUndoHistory.h"
 
 #include "Engine/Reflection/Reflection.h"
 #include "Engine/Reflection/TypeRegistry.h"
@@ -41,7 +43,9 @@ namespace sw::editor
 namespace sw::editor
 {
     GlobalVariablesViewModel::GlobalVariablesViewModel()
-        : _uniquePinnedVar{}
+        : _pHistory{ make_unique<EditorStateTextHistory>( EditorUndoHistory::readConfiguredLimit( getEditorToolDefaults() ) ) }
+        , _editName{}
+        , _uniquePinnedVar{}
         , _pendingPinToggle{}
         , _presetJob{}
         , _listPresetFile{}
@@ -51,8 +55,11 @@ namespace sw::editor
         , _totalVariableCount{ 0 }
         , _listRebuildCount{ 0 }
         , _bPresetListDirty{ SW_TRUE }
+        , _bUndoMoved{ SW_FALSE }
     {
     }
+
+    GlobalVariablesViewModel::~GlobalVariablesViewModel() = default;
 
     const vector<GlobalVariableInfo*>& GlobalVariablesViewModel::refreshVariableList( const GlobalVariableManager& gvm, string_view filterText )
     {
@@ -118,11 +125,17 @@ namespace sw::editor
         return true;
     }
 
-    void GlobalVariablesViewModel::loadPreset( const string& presetFile )
+    bool GlobalVariablesViewModel::loadPreset( const string& presetFile )
     {
-        // 읽은 프리셋이 현재 값이 된다. 저장된 세션과 다르므로 dirty 다. 읽지 못하면 값이 그대로다.
+        // 읽은 프리셋이 현재 값이 된다. 저장된 세션과 다르므로 dirty 다(패널이 둔다). 읽지 못하면 값이 그대로다.
+        selectEdit( EditorGlobalVariableCommands::collectPresetVariables( presetFile ) );
         if ( EditorGlobalVariableCommands::loadPreset( presetFile ) == false )
+        {
             SW_LOG_ERROR_ID( "GlobalVariablesPanel.CouldNotLoadPreset", "Could not load preset '%#'", presetFile.c_str() );
+            return false;
+        }
+        _pHistory->notifyEdited( "Load Preset", false );
+        return true;
     }
 
     bool GlobalVariablesViewModel::pollPresetFiles()
@@ -163,7 +176,81 @@ namespace sw::editor
 
     void GlobalVariablesViewModel::resetAllToDefault()
     {
-        getVariableManager().resetAllToDefault();
+        vector<GlobalVariableInfo*> listVariable;
+        getVariableManager().collectVariables( listVariable );
+        // 테스트용(실행 스위치)은 이 창에 없다 — 보이지 않는 값을 바꾸지 않는다.
+        (void)VectorUtil::removeIf( listVariable, []( const GlobalVariableInfo* pInfo )
+        { return pInfo->_pData == nullptr || pInfo->_bTestOnly || pInfo->isAtDefault(); } );
+        vector<string> listName;
+        for ( const GlobalVariableInfo* pInfo : listVariable )
+        {
+            listName.push_back( pInfo->_name );
+        }
+        selectEdit( listName );
+        for ( GlobalVariableInfo* pInfo : listVariable )
+        {
+            pInfo->resetToDefault();
+        }
+        _pHistory->notifyEdited( "Reset All Variables", false );
+    }
+
+    void GlobalVariablesViewModel::revertToDefault()
+    {
+        _editName.clear();
+        resetAllToDefault();
+        _pHistory->clear();
+    }
+
+    void GlobalVariablesViewModel::beginEdit( const string& name )
+    {
+        if ( _editName == name )
+            return; // 끄는 동안 이어지는 같은 편집이다 — 처음 값이 되돌릴 값이다
+        selectEdit( { name } );
+        _editName = name;
+    }
+
+    void GlobalVariablesViewModel::recordEdited( bool bInteracting )
+    {
+        fixed_string<constant::buffer::kMax256> label;
+        formatstring( label.data(), label.capacity(), "Edit %#", _editName );
+        _pHistory->notifyEdited( label.c_str(), bInteracting );
+        if ( bInteracting == false )
+            _editName.clear();
+    }
+
+    void GlobalVariablesViewModel::flushEdit( bool bInteracting )
+    {
+        if ( bInteracting )
+            return;
+        _pHistory->flush( false );
+        _editName.clear(); // 다음 편집은 그때의 값부터다 — 그 사이 콘솔이 고쳤을 수 있다
+    }
+
+    CommandStack& GlobalVariablesViewModel::getCommandStack()
+    {
+        return _pHistory->getStack();
+    }
+
+    bool GlobalVariablesViewModel::takeUndoMoved()
+    {
+        const bool bMoved = _bUndoMoved == SW_TRUE;
+        _bUndoMoved       = SW_FALSE;
+        return bMoved;
+    }
+
+    void GlobalVariablesViewModel::selectEdit( const vector<string>& listName )
+    {
+        EditorStateTextSource source;
+        source._capture = SW_DELEGATE_LAMBDA( Delegate<string()>, [listName]()
+        { return EditorGlobalVariableCommands::captureValues( listName ); } );
+        source._restore = SW_DELEGATE_LAMBDA( Delegate<void( string_view )>, [this]( string_view text )
+        {
+            EditorGlobalVariableCommands::restoreValues( text );
+            _editName.clear();
+            _bUndoMoved = SW_TRUE;
+        } );
+        _pHistory->selectSource( source );
+        _editName.clear();
     }
 
     GlobalVariableInfo* GlobalVariablesViewModel::findVariable( string_view name )
@@ -198,7 +285,11 @@ namespace sw::editor
 
     bool GlobalVariablesViewModel::applySessionText( string_view text )
     {
-        return EditorGlobalVariableCommands::applyPresetText( text );
+        if ( EditorGlobalVariableCommands::applyPresetText( text ) == false )
+            return false;
+        _editName.clear();
+        _pHistory->clear();
+        return true;
     }
 
     const EnumInfo* GlobalVariablesViewModel::findEnumInfo( const string& enumType )

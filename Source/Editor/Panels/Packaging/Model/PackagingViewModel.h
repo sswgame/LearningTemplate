@@ -48,6 +48,11 @@ namespace sw::editor
         // ------------------------------------------------------------------------------
         // 설정 — 콤보 · 체크칸이 바로 고친다
         // ------------------------------------------------------------------------------
+        /** @brief 진입점이 받는 플랫폼 이름 수와 이름입니다(`--platform`). 0 번은 이 호스트(`Desktop`)다. */
+        static uint32      getPlatformCount();
+        static const utf8* getPlatformName( uint32 index );
+        /** @brief 고른 플랫폼이 타깃 · 백엔드를 고르게 하면 true 입니다. 웹 · Android 는 클라이언트뿐이고 백엔드가 프리셋에 묶여 있다 — 명령에 넣지 않는다. */
+        bool isDesktopPlatform() const { return _platformIndex == 0; }
         /** @brief 진입점이 받는 타깃 이름 수와 이름입니다(`--target`). */
         static uint32      getTargetCount();
         static const utf8* getTargetName( uint32 index );
@@ -62,6 +67,8 @@ namespace sw::editor
         const vector<string>& getGames() const { return _listGame; }
         uint32&               editGameIndex() { return _gameIndex; }
         uint32                getGameIndex() const { return _gameIndex; }
+        uint32&               editPlatformIndex() { return _platformIndex; }
+        uint32                getPlatformIndex() const { return _platformIndex; }
         uint32&               editTargetIndex() { return _targetIndex; }
         uint32                getTargetIndex() const { return _targetIndex; }
         uint32&               editRHIIndex() { return _rhiIndex; }
@@ -94,6 +101,7 @@ namespace sw::editor
         string                            _outputFolder;
         PackagingProgress                 _progress;
         uint32                            _gameIndex;
+        uint32                            _platformIndex;
         uint32                            _targetIndex;
         uint32                            _rhiIndex;
         bool                              _bSkipBuild; ///< NOLINT(sw-bool-flag): 참조(`bool&`)로 넘긴다

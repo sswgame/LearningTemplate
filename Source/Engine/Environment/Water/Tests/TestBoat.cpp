@@ -3,10 +3,10 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Testing/TestFramework.h"
 
-#include "Engine/Environment/Foliage/WindComponent.h"
 #include "Engine/Environment/Water/BoatComponent.h"
 #include "Engine/Environment/Water/BuoyancyComponent.h"
 #include "Engine/Environment/Water/WaterBodyComponent.h"
+#include "Engine/Environment/Wind/WindComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Physics/Collision/PhysicsShape.h"
@@ -124,7 +124,7 @@ SW_TEST_CASE( BoatTest, RudderAndSailMath )
     SW_EXPECT_NEAR( MathUtil::kPi, angle, 1.0e-4f );
     SW_EXPECT_FALSE( BoatComponent::computeSailAngle( forward, float3{ 0.0f, 2.0f, 0.0f }, angle ) );
 
-    SW_EXPECT_NEAR( 0.5f * BoatComponent::kAirDensity * 100.0f * 20.0f * 0.8f, BoatComponent::computeSailForce( 20.0f, 10.0f, 0.8f ), 1.0e-3f );
+    SW_EXPECT_NEAR( 0.5f * WindSettings::kAirDensity * 100.0f * 20.0f * 0.8f, BoatComponent::computeSailForce( 20.0f, 10.0f, 0.8f ), 1.0e-3f );
 }
 
 /**

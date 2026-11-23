@@ -539,6 +539,13 @@ namespace sw
                         info._flags          = Flag::kCompute | Flag::kRequiresGPUCulling | Flag::kRequiresNativeBindless;
                         break;
                     }
+                    case RenderPassKind::SceneVoxelize:
+                    {
+                        // 구조 버퍼의 원자 쓰기만 쓴다 — 컴퓨트 능력 하나면 된다(DX11 도 돈다).
+                        info._pDefaultShader = &EngineDefaultAssets::_shaderSceneVoxelize;
+                        info._flags          = Flag::kCompute;
+                        break;
+                    }
                     case RenderPassKind::ProbeUpdate:
                     {
                         // 구조 버퍼 UAV 와 읽기 버퍼만 쓴다 — 간접 인자 능력과 무관하다(DX11 도 돈다).

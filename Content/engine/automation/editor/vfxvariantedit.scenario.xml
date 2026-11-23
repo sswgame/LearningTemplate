@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="f41b44d06fd445b0800c53d9a3c5309d"?>
+<!--
+  에디터 시나리오 — 물려받은 효과(_base)의 편집: 변형 사본을 열면 방출기는 부모를 펼친 하나이고, 고른 방출기의 Spawn Rate 를 고치면 저장 전에도 미리보기가 그 편집을 재생한다.
+  저장하면 부모와 다른 칸만 파일에 남고(ReflectedXMLDocumentTest 가 글을 본다), 다시 읽어도 방출기는 하나다.
+  실행: App -EnableEditor -scenario=engine/automation/editor/vfxvariantedit.scenario.xml -unattended
+-->
+<Scenario name="editor.vfxvariantedit" fixedDelta="0.0166667" timeoutFrames="1500" startAfter="Immediately" input="exclusive">
+	<Scratch from="engine/vfx" as="scratch/vfxvariantedit"/>
+	<ResizeWindow width="1920" height="1080"/>
+	<Variable name="gv_editorUiScale" value="1"/>
+	<Variable name="gv_editorWatchAsset" value="scratch/vfxvariantedit/vfxsort_cpu_sorted.vfx.xml"/>
+	<DevCommand line="layout.reset"/>
+	<EditorWaitStable/>
+	<DevCommand line="panel.focus vfx_preview"/>
+	<EditorWaitStable/>
+	<DevCommand line="asset.openScratch scratch/vfxvariantedit/vfxsort_cpu_sorted.vfx.xml"/>
+	<WaitUntil watch="Editor.VFXPreviewDocumentIsWatchAsset" equals="1" timeoutFrames="600"/>
+	<WaitUntil watch="Editor.VFXEmitterCount" equals="1" timeoutFrames="120"/>
+	<EditorWaitStable/>
+	<EditorClick mark="vfx.emitter.0" state="Down"/>
+	<AdvanceSimulation frames="3"/> <!-- 누름 · 뗌을 다른 프레임에 둔다(프레임 경계) -->
+	<EditorClick mark="vfx.emitter.0" state="Up"/>
+	<WaitUntil watch="Editor.VFXSelectedEmitter" equals="0" timeoutFrames="60"/>
+	<EditorWaitStable/>
+	<CaptureEditorUI file="vfxvariantedit/selected.png" maxMagentaFraction="0"/>
+	<EditorClick mark="vfx.search"/>
+	<EditorWaitStable/>
+	<EditorText value="_spawnRate"/>
+	<EditorWaitStable/>
+	<EditorClick mark="inspector.property.VFXEmitterDef._spawnRate" mods="ctrl"/>
+	<EditorWaitStable/>
+	<EditorKey key="Ctrl+A"/>
+	<EditorWaitStable/>
+	<EditorText value="21"/>
+	<EditorWaitStable/>
+	<EditorKey key="Enter"/>
+	<WaitUntil watch="Editor.DirtyDocumentCount" equals="1" timeoutFrames="60"/>
+	<EditorWaitStable/>
+	<ExpectLog id="VFXPreview.PlayingEdit" contains="'scratch/vfxvariantedit/vfxsort_cpu_sorted.vfx.xml' (1 emitters)" count="1"/>
+	<EditorKey key="Ctrl+S"/>
+	<WaitUntil watch="Editor.DirtyDocumentCount" equals="0" timeoutFrames="120"/>
+	<EditorWaitStable/>
+	<DevCommand line="panel.reloadDocument vfx_preview"/>
+	<WaitUntil watch="Editor.VFXEmitterCount" equals="1" timeoutFrames="120"/>
+	<EditorWaitStable/>
+	<CaptureEditorUI file="vfxvariantedit/saved.png" maxMagentaFraction="0"/>
+	<Variable name="gv_editorUiScale" value="0"/>
+	<Pass/>
+</Scenario>

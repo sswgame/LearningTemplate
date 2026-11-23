@@ -560,6 +560,10 @@
 		<entry key="EdPluginVisualizer.ParkLayoutTip"
 		       text="ThemePark 배치 파일(rides.xml)의 놀이기구 발자국, 입구, 코스터 트랙"
 		       sourceHash="40b20210c0343418" />
+		<entry key="EdPluginVisualizer.SplinesLabel" text="스플라인" sourceHash="c80e88bdeab5993d" />
+		<entry key="EdPluginVisualizer.SplinesTip"
+		       text="씬의 스플라인마다 곡선 - 고른 스플라인은 조절점 손잡이를 끈다(Shapes)"
+		       sourceHash="f23fe5163d0d582d" />
 		<entry key="EdPluginWidget.Account" text="계정" sourceHash="846b3790b6e25c1c" />
 		<entry key="EdPluginWidget.AccountIdHex" text="계정 id(16진수)" sourceHash="b6db0ef22675ed05" />
 		<entry key="EdPluginWidget.ActingRole" text="맡은 역할" sourceHash="25bba11d3a172de3" />

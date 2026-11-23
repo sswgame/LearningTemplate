@@ -116,7 +116,7 @@ namespace sw
 
         /** @brief 백엔드 열거값(`RHI.Backend` 감시 값)의 골든 꼬리 — 쿠킹 표의 명령줄 이름(`dx12` · `wgpu` …)입니다. 표 밖이면 없음. */
         [[nodiscard]] static optional<string_view> findBackendTag( uint32 backendIndex );
-        /** @brief 이 플랫폼의 골든 꼬리(Windows 는 빈 글, Linux 는 `.linux`)입니다. */
+        /** @brief 이 플랫폼의 골든 꼬리(Windows 는 빈 글, 나머지는 `.linux` · `.android` · `.web`)입니다. */
         [[nodiscard]] static string_view getPlatformTag();
         /** @brief `<폴더>/<시나리오>.<이름>.<백엔드><플랫폼>.ppm` 입니다. */
         [[nodiscard]] static string makeGoldenID( string_view folderID, string_view scenarioName, string_view goldenName, string_view backendTag, string_view platformTag );

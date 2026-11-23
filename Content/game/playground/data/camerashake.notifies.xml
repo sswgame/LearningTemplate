@@ -1,0 +1,5 @@
+<?asset guid="eef7979dbc0ff750fc73cf23206f2a22"?>
+<!-- 카메라 흔들림 시나리오(automation/camerashake)의 알림 표 — 베기 클립의 Impact 알림이 카메라 충격을 낸다(거리와 상관없이). -->
+<AnimationNotifies>
+	<Notify name="Impact" handler="CameraShake" amplitude="0.2" duration="0.3" frequency="35"/>
+</AnimationNotifies>

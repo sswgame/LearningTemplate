@@ -11,6 +11,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Object/GameObject/Tick/TickContext.h"
+#include "Engine/Object/GameObject/WorldOrigin.h"
 
 namespace sw
 {
@@ -131,10 +132,11 @@ namespace sw
     void NavWanderComponent::retarget( NavMeshAgentComponent& agent )
     {
         const float3  from    = agent.getAgentPosition();
-        const float32 minX    = _homeCenter._x - _homeHalfExtent;
-        const float32 maxX    = _homeCenter._x + _homeHalfExtent;
-        const float32 minZ    = _homeCenter._z - _homeHalfExtent;
-        const float32 maxZ    = _homeCenter._z + _homeHalfExtent;
+        const float3  home    = getOwner()->getManager()->getWorldOrigin().toLocal( _homeCenter ); // 데이터가 적은 절대 자리다
+        const float32 minX    = home._x - _homeHalfExtent;
+        const float32 maxX    = home._x + _homeHalfExtent;
+        const float32 minZ    = home._z - _homeHalfExtent;
+        const float32 maxZ    = home._z + _homeHalfExtent;
         const float32 offsetX = _random.nextRange( -_wanderRadius, _wanderRadius );
         const float32 offsetZ = _random.nextRange( -_wanderRadius, _wanderRadius );
         const float3  destination{ MathUtil::clamp( from._x + offsetX, minX, maxX ), from._y, MathUtil::clamp( from._z + offsetZ, minZ, maxZ ) };

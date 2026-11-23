@@ -71,11 +71,13 @@ namespace sw
         /** @brief 아이템 id 로 모양을 얻는 함수입니다. 알 수 없는 아이템이면 false 를 반환하고, 그 아이템은 놓을 수 없습니다. */
         using ShapeDelegate = Delegate<bool( const hashed_string& itemID, GridItemShape& outShape )>;
 
+        static constexpr int32 kMaxSide = 256; ///< 한 변의 칸 수 상한. 깨진 저장이 큰 격자를 잡지 못하게 한다
+
         GridInventory();
 
-        /** @brief 칸 수가 1 미만이면 오류를 남기고 false 입니다(조용히 1 로 맞추지 않습니다). */
+        /** @brief 칸 수가 1 미만이거나 `kMaxSide` 를 넘으면 오류를 남기고 false 입니다(조용히 1 로 맞추지 않습니다). */
         [[nodiscard]] bool initialize( const ShapeDelegate& shapeLookup, int32 width, int32 height );
-        /** @brief 격자를 키웁니다(허리 가방, 가방 업그레이드). 줄이는 것은 안 되고 false 를 반환합니다. 놓인 아이템은 그대로입니다. */
+        /** @brief 격자를 키웁니다(허리 가방, 가방 업그레이드). 줄이는 것과 `kMaxSide` 를 넘는 것은 안 되고 false 를 반환합니다. 놓인 아이템은 그대로입니다. */
         [[nodiscard]] bool growGrid( int32 width, int32 height );
         void               clear();
 
@@ -108,8 +110,8 @@ namespace sw
         uint32                  getRevision() const { return _revision; }
 
         /**
-         * @brief 셀, 아이템(id, 번호, 개수, 위치, 회전 여부), 다음 번호(리플렉션 상태 칸)와 크기(손 본문 — 격자 형식이 리플렉션 밖이다)를 씁니다. 모양 조회 함수는 `initialize` 가 받은 것이므로 저장하지 않습니다.
-         *        `writeState` 가 쓴 바이트로 상태를 복원합니다. 데이터가 깨졌으면 false 를 반환하고 상태는 바뀌지 않습니다.
+         * @brief 아이템(id, 번호, 개수, 위치, 회전 여부), 다음 번호(리플렉션 상태 칸)와 크기(손 본문 — 격자 형식이 리플렉션 밖이다)를 씁니다. 모양 조회 함수는 `initialize` 가 받은 것이므로 저장하지 않습니다.
+         *        `writeState` 가 쓴 바이트로 상태를 복원합니다. 셀은 싣지 않고 아이템을 다시 놓아 만듭니다 — 모르는 아이템 · 격자 밖 · 겹침 · 같은 번호면 false 를 반환하고 상태는 바뀌지 않습니다.
          */
         SW_DECLARE_STATE_IO();
 
@@ -122,9 +124,8 @@ namespace sw
 
     private:
         PROPERTY( RuntimeState )
-        vector<int32> _listCell; ///< 셀마다 차지한 번호(-1 이면 빔), 줄 단위로 나열
-        PROPERTY( RuntimeState )
         vector<GridItem> _listItem; ///< 놓은 순서
+        vector<int32>    _listCell; ///< 셀마다 차지한 번호(-1 이면 빔), 줄 단위로 나열. 아이템에서 나오는 값이라 싣지 않는다
         ShapeDelegate    _shapeLookup;
         GridTopology     _topology; ///< 격자의 너비, 높이, 셀 번호 계산
         PROPERTY( RuntimeState, Min = 0 )

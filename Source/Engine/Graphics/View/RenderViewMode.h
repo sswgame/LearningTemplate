@@ -126,7 +126,7 @@ namespace sw
 
         /**
          * @brief 배치 PSO 를 고르는 데 쓰는 보기 모드입니다. 셰이더 define 도 채우기 · 블렌드 변경도 없는 모드(`MarkerSlots`)는 Lit 과 같은 PSO 이므로 Lit 으로 접습니다.
-         * @details 접지 않으면 같은 PSO 를 키만 달리해 하나 더 만들었다(`FrameRenderer::collectFrameViewModeMask` · `psoForBatch` 가 이 값으로 키를 만든다).
+         * @details 접지 않으면 같은 PSO 를 키만 달리해 하나 더 만들었다(`FrameRenderer::collectFrameViewModeMask` · `FramePSOManager::findBatchPSORow` 가 이 값으로 키를 만든다).
          */
         [[nodiscard]] static RenderViewMode getPipelineMode( RenderViewMode viewMode )
         {

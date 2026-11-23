@@ -8,6 +8,9 @@
         },
         "RenderAutoExposure": {
             "_maxExposureErrorEv": 0.05
+        },
+        "RenderRealtimeGI": {
+            "_maxGIError": 0.0002
         }
     }
 }

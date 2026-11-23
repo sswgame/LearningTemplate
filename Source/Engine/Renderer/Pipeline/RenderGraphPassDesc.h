@@ -176,7 +176,7 @@ namespace sw
         LateOcclusion,
         /**
          * @brief 파이프라인 XML 이 고른 컴퓨트 셰이더(`_shaderPath` · `_computeEntryPoint`)를 돌립니다 — 코드 없이 데이터만으로 효과를 더하는 패스입니다(언리얼 RDG 의 컴퓨트 패스 자리).
-         *        선언한 컬러 출력 하나에 쓰고 입력(최대 둘, 깊이 형식 제외)을 읽습니다. 첨부는 RW 텍스처로 묶입니다(`compute_pass.hlsli` 의 루트 상수). 그룹 수는 첨부 크기를 `_threadGroupSize` 로 나눈 값입니다.
+         *        선언한 컬러 출력 하나에 쓰고 입력(최대 둘, 깊이 형식 제외)을 읽습니다. 첨부는 RW 텍스처로 묶입니다(`compute_pass.hlsli` 의 루트 상수). 디스패치는 출력 크기만큼의 스레드다(그룹 크기는 셰이더 리플렉션).
          */
         Compute,
 
@@ -223,7 +223,12 @@ namespace sw
          */
         VolumetricFog,
         /**
-         * @brief 실시간 라이트 프로브 갱신 컴퓨트(probe_update.hlsl)입니다. 프로브마다 점유 복셀(`SceneVoxelGrid`)로 광선을 쏘아 SH9 기록을 갱신하고, 소비 셰이더의 프로브 원소로 바꿔
+         * @brief 실시간 프로브의 점유 복셀 칠하기 컴퓨트(scene_voxelize.hlsl)입니다. 장면(`SceneVoxelScene`)이 바뀐 프레임에 바뀐 구간의 칸을 지우고, 닿는 메시의 GPU 원본 정점을
+         *        삼각형마다 3 축 투영으로 칠한다(`RealtimeProbeUpdater::dispatchVoxelClear` · `dispatchVoxelPaint`). 프로브 갱신(`ProbeUpdate`)이 이어서 읽는다.
+         */
+        SceneVoxelize,
+        /**
+         * @brief 실시간 라이트 프로브 갱신 컴퓨트(probe_update.hlsl)입니다. 프로브마다 점유 복셀(`SceneVoxelize` 가 칠한다)로 광선을 쏘아 SH9 기록을 갱신하고, 소비 셰이더의 프로브 원소로 바꿔
          *        프로브 버퍼(t13)에 쓴다(`RealtimeProbeUpdater`). 라이트 업로드 뒤 · 조명 패스 앞에 한 번 돈다.
          */
         ProbeUpdate,
@@ -350,6 +355,7 @@ namespace sw
             case RenderPassKind::GPUCull:
             case RenderPassKind::LightGrid:
             case RenderPassKind::VolumetricFog:
+            case RenderPassKind::SceneVoxelize:
             case RenderPassKind::ProbeUpdate:
             case RenderPassKind::CanvasMarker:
                 return true;
@@ -579,10 +585,6 @@ namespace sw
         /** @brief 도메인 진입점입니다. */
         PROPERTY( SkipIfEmpty )
         string _domainEntryPoint;
-
-        /** @brief `Compute` 패스의 스레드 그룹 한 변(`numthreads` 와 같아야 한다)입니다. 그룹 수는 출력 크기를 이 값으로 나눠 올림합니다. */
-        PROPERTY( Min = 1 )
-        uint32 _threadGroupSize{ 8 };
 
         /** @brief 셰이더 매크로(퍼뮤테이션)입니다. "NAME" 또는 "NAME=VALUE" 형태로 적습니다. */
         PROPERTY( SkipIfEmpty )

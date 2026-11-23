@@ -176,6 +176,43 @@ SW_TEST_CASE( DataTableViewModelTest, KeysAreUniqueAndNeedATable )
     SW_EXPECT_TRUE( record._listState[0] == TranslationState::Missing );
 }
 
+// 지우기 · 더하기 · 번역 편집은 Ctrl+Z 로 되돌아온다 — 끌기(글 치기) 하나가 한 단계이고, 지운 키는 제자리로 돌아오며 저장이 지우지 않는다.
+SW_TEST_CASE( DataTableViewModelTest, LocalizationEditsUndoPerRecord )
+{
+    const DocumentEditRecorder recorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) };
+    DataTableViewModel         model{ recorder };
+    (void)SheetUtil::addRecord( model, "a", "에이", TranslationState::Current );
+    (void)SheetUtil::addRecord( model, "b", "비", TranslationState::Current );
+    LocalizationSheet& sheet     = model.editSheet();
+    const size_t       stepCount = model.getLocalizationStack().getCommandCount();
+
+    model.beginRecordEdit( sheet._listRecord[0] );
+    sheet._listRecord[0]._listTranslation[0] = "에";
+    model.markTranslationEdited( sheet._listRecord[0], 0 );
+    sheet._listRecord[0]._listTranslation[0] = "새 글";
+    model.markTranslationEdited( sheet._listRecord[0], 0 );
+    model.flushRecordEdit( true ); // 아직 치는 중이다
+    SW_EXPECT_EQUAL( stepCount, model.getLocalizationStack().getCommandCount() );
+    model.flushRecordEdit( false );
+    SW_EXPECT_EQUAL( stepCount + 1, model.getLocalizationStack().getCommandCount() );
+
+    model.deleteRecord( 0 );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, sheet._listRecord.size() );
+    SW_EXPECT_TRUE( model.getLocalizationStack().undo() );
+    SW_REQUIRE_EQUAL( size_t{ 2 }, sheet._listRecord.size() );
+    SW_EXPECT_TRUE( sheet._listRecord[0]._key == "a" );
+    SW_EXPECT_TRUE( sheet._listRecord[0]._listTranslation[0] == "새 글" );
+    SW_EXPECT_TRUE( sheet._listRemovedKey.empty() );
+    SW_EXPECT_TRUE( model.getLocalizationStack().undo() );
+    SW_EXPECT_TRUE( sheet._listRecord[0]._listTranslation[0] == "에이" );
+    SW_EXPECT_TRUE( model.getLocalizationStack().redo() );
+    SW_EXPECT_TRUE( sheet._listRecord[0]._listTranslation[0] == "새 글" );
+    SW_EXPECT_EQUAL( 2u, model.countCultureProgress( 0 )._currentCount );
+
+    model.reloadLocalization(); // 다시 읽으면 단계가 가리키던 표가 없다
+    SW_EXPECT_EQUAL( size_t{ 0 }, model.getLocalizationStack().getCommandCount() );
+}
+
 SW_TEST_CASE( DataTableViewModelTest, DeletedKeyIsRememberedForTheSave )
 {
     const DocumentEditRecorder recorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) };

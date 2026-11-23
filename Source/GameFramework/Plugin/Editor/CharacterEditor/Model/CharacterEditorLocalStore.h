@@ -39,6 +39,7 @@ namespace sw::editor
         /** @brief 남은 쓰기를 끝까지 마치고 닫습니다. */
         void        shutdownSubsystem() override;
         const utf8* getSubsystemName() const override { return kSubsystemName; }
+        void        resetToFreshEditor() override {} // 디스크 칸으로 가는 통로라 단계 상태가 없다
 
         LocalStoreChannel& getChannel() { return _channel; }
 

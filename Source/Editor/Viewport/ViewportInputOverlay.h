@@ -111,5 +111,6 @@ namespace sw::editor
 
         ViewportInputOverlay _overlay{};
         const utf8*          getSubsystemName() const override { return kSubsystemName; }
+        void                 resetToFreshEditor() override { _overlay = ViewportInputOverlay{}; }
     };
 } // namespace sw::editor

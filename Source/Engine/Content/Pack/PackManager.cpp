@@ -484,36 +484,41 @@ namespace sw
         if ( packFilePath.empty() )
             return false;
 
-        bool bUnmounted{ false };
+        shared_ptr<PackReader> pUnmounted;
         {
             ScopedLock<mutex> lock{ _vfsMutex };
             for ( auto it = _listMountedPack.begin(); it != _listMountedPack.end(); ++it )
             {
                 if ( it->_pReader != nullptr && FileUtil::isSameDiskPath( it->_pReader->getPackPath(), packFilePath ) )
                 {
-                    it->_pReader->close();
+                    pUnmounted = std::move( it->_pReader );
                     _listMountedPack.erase( it );
                     refreshPatchPackCount();
-                    bUnmounted = true;
                     break;
                 }
             }
         }
-        if ( bUnmounted )
-            SW_LOG_INFO_ID( "PackManager.UnmountedResourcePack", "Unmounted resource pack: %#", packFilePath ); // 잠금은 잎이다 — 로그는 놓은 뒤에 쓴다
-        return bUnmounted;
+        if ( pUnmounted == nullptr )
+            return false;
+        // 파일을 닫고 찾기 표(팩 항목 수만큼)를 푸는 일과 로그는 잠금을 놓은 뒤에 한다 — 모든 파일 찾기가 이 잠금을 지난다.
+        pUnmounted->close();
+        SW_LOG_INFO_ID( "PackManager.UnmountedResourcePack", "Unmounted resource pack: %#", packFilePath );
+        return true;
     }
 
     void PackManager::unmountAll()
     {
-        ScopedLock<mutex> lock{ _vfsMutex };
-        for ( auto& mounted : _listMountedPack )
+        vector<MountedPack> listUnmounted; // 잠금을 놓은 뒤 닫고 푼다(`unmountPack`)
+        {
+            ScopedLock<mutex> lock{ _vfsMutex };
+            listUnmounted.swap( _listMountedPack );
+            refreshPatchPackCount();
+        }
+        for ( auto& mounted : listUnmounted )
         {
             if ( mounted._pReader != nullptr )
                 mounted._pReader->close();
         }
-        _listMountedPack.clear();
-        refreshPatchPackCount();
     }
 
     bool PackManager::hasFile( string_view relativePath ) const

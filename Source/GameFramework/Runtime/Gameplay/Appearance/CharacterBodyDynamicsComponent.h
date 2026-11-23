@@ -46,8 +46,10 @@ namespace sw
         void onRegister( GameObjectManager& manager ) override;
 
         /** @brief 지글 충격(월드 속도 m/s)을 더합니다(착지 · 게임 코드). 다음 리그 준비 단계에 들어간다. */
+        FUNCTION( Category = "Dynamics", Exec )
         void addImpulse( const float3& worldVelocity );
         /** @brief 체액 방아쇠를 @p seconds 동안 @p strength 로 켭니다(편집 창 미리보기의 울기 · 침 단추, 시나리오). 애니메이터 커브와 큰 쪽을 쓴다. */
+        FUNCTION( Category = "Dynamics", Exec )
         void triggerFluid( const hashed_string& trigger, float32 seconds, float32 strength );
         /** @brief 씻기 — 화장 번짐을 지운다(체액 자국은 표면 채널의 마르기가 지운다). */
         void clearSmears();
@@ -119,8 +121,6 @@ namespace sw
         float32 _hitImpulseScale;
         PROPERTY( Category = "Eyes", DisplayName = "Sun Trace Distance", Min = 0.0, Units = m, Tooltip = "Ray length from the eye towards the sun; a hit means shade or an interior" )
         float32 _sunTraceDistance;
-        PROPERTY( Category = "Eyes", DisplayName = "Sky Light Value", Tooltip = "Weather value (WeatherCatalog <Values>) that scales direct sunlight: 1 clear, lower for overcast, rain, fog. Empty = the sun light already carries the weather (DaylightComponent)" )
-        hashed_string _skyLightValue;
         PROPERTY( Required, Category = "Smear", DisplayName = "Wipe Event", Tooltip = "Animation notify event that wipes the face (drags makeup sideways)" )
         hashed_string _wipeEvent;
         PROPERTY( Category = "Smear", DisplayName = "Tear Smear Strength", Min = 0.0, Tooltip = "Pigment transport per wet stamp of a fluid stream" )

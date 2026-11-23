@@ -28,6 +28,11 @@ namespace sw::editor
     public:
         static constexpr const utf8* kSubsystemName = "ParkLayoutPreview";
         const utf8*                  getSubsystemName() const override { return kSubsystemName; }
+        void                         resetToFreshEditor() override
+        {
+            _model   = ParkLayoutViewModel{}; // 다음 `refresh` 가 다시 읽는다
+            _bWarned = SW_FALSE;
+        }
 
         ParkLayoutPreview();
 

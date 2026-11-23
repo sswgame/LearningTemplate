@@ -88,7 +88,7 @@ namespace sw
             for ( const Item& item : listRelease )
             {
                 if ( item._resource._srv != kInvalidDescriptorIndex )
-                    pDevice->releaseBindlessIndex( RHIBindlessIndexSpace::Texture, item._resource._srv );
+                    pDevice->releaseBindlessIndex( item._resource._srv );
                 if ( item._resource._handle != 0 )
                     pDevice->releaseHandle( item._resource._handle );
             }
@@ -193,7 +193,6 @@ namespace sw
         bool _bStreamingParked                          SW_GUARDED_BY( _streamingMutex ) = false; ///< 지난 `updateStreaming` 이 풀 예산에 막혔다 — 줄은 예산이 날 때까지 쉰다(`countLoadsInFlight` 가 세지 않는다) NOLINT(sw-bool-flag): 잠금이 지키는 칸 하나다
         TextureStreamingRetireList                      _retired;                                 ///< 바꿔 끼운 옛 GPU 자원(`releaseRetiredTextures` 가 해제한다)
         atomic<int32>                                   _qualityMipDrop{ 0 };                     ///< 텍스처 품질이 버리는 위쪽 밉 수 — 게임 스레드가 뜬 사본(`refreshQualitySettings`)이라 워커 · 렌더 스레드는 이것만 읽는다
-        atomic<uint8>                                   _bStreamingEnabled{ SW_TRUE };            ///< 비동기 로드를 아래쪽 밉부터 올린다(`-gv_textureStreaming`) — 같은 사본
         vector<string> _listUpgrading                   SW_GUARDED_BY( _streamingMutex );         ///< 위쪽 밉 업로드를 제출했고 끝남 확인을 기다리는 텍스처의 키(`updateStreaming` 이 폴링한다)
         unordered_map<string, TextureStreamingDemand>   _mapStreamingDemand;                      ///< 이번 프레임에 알린 요구(`recordStreamingDemand`, `_streamingMutex`) — `updateStreaming` 이 꺼내 항목의 필요한 밉에 적고 줄을 정렬한다
 
@@ -328,10 +327,13 @@ namespace sw
                 const auto               it = _mapEntry.find( key );
                 SW_ASSERT( it != _mapEntry.end() && it->second._bLoading );
                 it->second._bLoading = false;
-                // 내리는 사이 소유자가 `releaseCPUTexture` 했으면 여기서 지운다(GPU 자원은 이미 내렸다).
+                // 내리는 사이 소유자가 `releaseCPUTexture` 했으면 여기서 지운다(GPU 자원은 이미 내렸다). 텍스처는 잠금을 놓은 뒤 사라진다.
                 const bool bOrphaned = it->second._bPinned == false && it->second._refCount == 0;
                 if ( bOrphaned )
+                {
+                    pErased = std::move( it->second._texture );
                     _mapEntry.erase( it );
+                }
             }
             _cvLoaded.notify_all();
         }
@@ -340,7 +342,7 @@ namespace sw
          * @brief 텍스처 번호 @p index 를 누락 체커로 다시 묶습니다(올리다 실패 — 그 번호를 쥔 머티리얼이 옛 텍스처 · 빈 칸을 그리지 않게, R-6).
          * @details 디바이스를 쓰는 스레드에서 부른다(등록표를 바꾼다). 체커가 없으면(엔진 서비스 없음) 오류를 남기고 번호를 놓은 뒤 false 다.
          */
-        bool pointAtMissingChecker( IRHIDevice& device, RHIDescriptorIndex index, const string& key )
+        bool pointAtMissingChecker( IRHIDevice& device, RHITextureSRVIndex index, const string& key )
         {
             device.activateReservedBindlessTextures(); // 예약만 하고 아직 살리지 않은 번호일 수 있다
             const Texture2D* const     pMissing  = _pMissingStandIn.load( std::memory_order_acquire );
@@ -348,8 +350,8 @@ namespace sw
             const bool                 bChecker  = pMissing != nullptr && pMissing->isRHIValid() && pResource != nullptr;
             if ( bChecker && pResource->rebindBindlessTexture( index, pMissing->getHandle() ) )
                 return true;
-            SW_LOG_ERROR_ID( "TextureCache.MissingCheckerRebindFailed", "TextureCache: the bindless index %# of '%#' could not point at the missing-texture checker - releasing it", index, key.c_str() );
-            device.releaseBindlessIndex( RHIBindlessIndexSpace::Texture, index );
+            SW_LOG_ERROR_ID( "TextureCache.MissingCheckerRebindFailed", "TextureCache: the bindless index %# of '%#' could not point at the missing-texture checker - releasing it", index.getValue(), key.c_str() );
+            device.releaseBindlessIndex( index );
             return false;
         }
 
@@ -396,13 +398,8 @@ namespace sw
 
     namespace
     {
-        // 텍스처 캐시가 만들 때 한 번 읽는 변수 — 익명 이름공간이라 로드 워커 · 렌더 스레드가 도는 다른 번역 단위는 이름을 볼 수 없다(사본 `Impl::_qualityMipDrop` · `_bStreamingEnabled` 만 읽는다).
+        // 텍스처 캐시가 만들 때 한 번 읽는 변수 — 익명 이름공간이라 로드 워커 · 렌더 스레드가 도는 다른 번역 단위는 이름을 볼 수 없다(사본 `Impl::_qualityMipDrop` 만 읽는다).
 
-        /**
-         * @brief `-gv_textureStreaming=0` — 비동기로 읽는 텍스처를 처음부터 밉 사슬 전부로 업로드합니다(밉 스트리밍을 끈다). 비교 측정 · 진단용입니다.
-         * @details 켜져 있으면 비동기 로드는 아래쪽 밉만 먼저 업로드하고 위쪽 밉은 렌더 스레드가 프레임 예산 안에서 뒤에 업로드한다(`TextureCache::updateStreaming`).
-         */
-        SW_GLOBAL_VARIABLE( bool, gv_textureStreaming, true, "Upload async-loaded textures with their low mips first and stream the top mips in later (false = upload every mip at once)" );
         /**
          * @brief 텍스처를 읽을 때 버리는 위쪽 밉 수입니다. 사용자 설정 `graphics.textureQuality` 선택지의 `targetValue` 가 넣는다(`engine.settings.xml`, 다시 시작해야 반영).
          * @details Graphics 가 UserSettings 보다 아래 층이라 이 변수는 읽는 쪽인 여기에 둔다(설정은 이름으로 넣는다). 언리얼 `r.Streaming.MipBias` 처럼 기동 때 정한다.
@@ -425,7 +422,6 @@ namespace sw
         if ( engine::areEngineServicesBound() )
             engine::getSubsystem<TaskManager>().ensureMainThread();
         _impl->_qualityMipDrop.store( gv_textureMipDrop, std::memory_order_relaxed );
-        _impl->_bStreamingEnabled.store( gv_textureStreaming ? SW_TRUE : SW_FALSE, std::memory_order_relaxed );
     }
 
     int32 TextureCache::getQualityMipDrop() const
@@ -568,7 +564,7 @@ namespace sw
             source = TextureLoadOperation::Source::CPUBytes;
         shared_ptr<TextureLoadOperation> pOperation = sw::make_shared<TextureLoadOperation>( key, pDevice, source, pTexture, _impl );
         // 비동기 로드(씬의 머티리얼)는 아래쪽 밉부터 — 위쪽 밉은 렌더 스레드가 뒤에 업로드한다. 동기 로드(도구 · 미리보기)는 받는 자리에서 밉 전부를 쓴다.
-        const bool bStreamed   = start == AssetLoadStart::Async && _impl->_bStreamingEnabled.load( std::memory_order_relaxed ) != SW_FALSE && _impl->_mapEntry[key]._streamingGroup == TextureStreamingGroup::Streamable;
+        const bool bStreamed   = start == AssetLoadStart::Async && _impl->_mapEntry[key]._streamingGroup == TextureStreamingGroup::Streamable;
         pOperation->_residency = bStreamed ? TextureResidency::StreamingBase : TextureResidency::Full;
         if ( source == TextureLoadOperation::Source::RenderTarget )
         {
@@ -584,7 +580,7 @@ namespace sw
         const bool bReserve = pLoadingStandIn != nullptr && pLoadingStandIn != pTexture && pLoadingStandIn->isRHIValid() && pTexture->getKeptSRV() == kInvalidDescriptorIndex;
         if ( bReserve )
         {
-            const RHIDescriptorIndex reserved = pDevice->reserveBindlessTexture( pLoadingStandIn->getHandle() );
+            const RHITextureSRVIndex reserved = pDevice->reserveBindlessTexture( pLoadingStandIn->getHandle() );
             if ( reserved != kInvalidDescriptorIndex )
                 pTexture->attachReservedSRV( reserved, pDevice );
             else
@@ -1210,6 +1206,7 @@ namespace sw
         if ( _impl == nullptr || isCPUTexturePath( relativePath ) == false )
             return;
         const string             key = AssetRedirect::toCacheKey( relativePath );
+        unique_ptr<Texture2D>    pErased; // 픽셀 바이트(수 MB)는 잠금을 놓은 뒤 푼다
         UniqueLock<shared_mutex> lock{ _impl->_mutex };
         const auto               it = _impl->_mapEntry.find( key );
         if ( it == _impl->_mapEntry.end() )
@@ -1217,7 +1214,10 @@ namespace sw
         it->second._bPinned = false;
         // 참조가 0 이면 GPU 자원도 없다(`release` 가 내렸고 `initRHI` 는 CPU 텍스처를 올리지 않는다).
         if ( it->second._refCount == 0 && it->second._bLoading == false )
+        {
+            pErased = std::move( it->second._texture );
             _impl->_mapEntry.erase( it );
+        }
     }
 
     void TextureCache::declareRenderTarget( string_view relativePath, uint32 width, uint32 height )
@@ -1276,7 +1276,7 @@ namespace sw
         {
             SW_LOG_ERROR_ID( "TextureCache.FailedResizeRenderTexture", "Failed to resize render texture %# to %#x%#", key.c_str(), width, height );
             // 지키던 번호는 해제 줄로 간 옛 타깃을 가리킨다 — 누락 체커로 다시 묶는다(그 번호를 쥔 머티리얼이 해제된 텍스처를 그리지 않게). 텍스처는 계속 그 번호를 지킨다.
-            const RHIDescriptorIndex kept = pTexture->getKeptSRV();
+            const RHITextureSRVIndex kept = pTexture->getKeptSRV();
             if ( kept != kInvalidDescriptorIndex && _impl->pointAtMissingChecker( *pDevice, kept, key ) == false )
                 (void)pTexture->takeKeptSRV(); // 놓았다
         }
@@ -1568,19 +1568,19 @@ namespace sw
         if ( pCache == nullptr )
             return;
         // 실패한 로드가 맡은 번호(누락 체커)를 놓는다 — 그 번호를 받은 디바이스가 아직 붙어 있을 때만(바뀌었으면 옛 디바이스와 함께 갔다).
-        const RHIDescriptorIndex failedSRV        = _failedSRV.load( std::memory_order_acquire );
+        const RHITextureSRVIndex failedSRV        = _failedSRV.load( std::memory_order_acquire );
         IRHIDevice* const        pFailedSRVDevice = _pFailedSRVDevice.load( std::memory_order_acquire );
         const bool               bReleaseFailed   = failedSRV != kInvalidDescriptorIndex && pFailedSRVDevice != nullptr &&
                                     pFailedSRVDevice == pCache->_pBoundDevice.load( std::memory_order_acquire );
         if ( bReleaseFailed )
-            pFailedSRVDevice->releaseBindlessIndex( RHIBindlessIndexSpace::Texture, failedSRV );
+            pFailedSRVDevice->releaseBindlessIndex( failedSRV );
         if ( _bHoldsReference )
             pCache->releaseReference( getPath(), _pDevice.load( std::memory_order_acquire ) );
     }
 
-    RHIDescriptorIndex TextureLoadOperation::getStableSRV() const
+    RHITextureSRVIndex TextureLoadOperation::getStableSRV() const
     {
-        const RHIDescriptorIndex failedSRV = _failedSRV.load( std::memory_order_acquire );
+        const RHITextureSRVIndex failedSRV = _failedSRV.load( std::memory_order_acquire );
         if ( failedSRV != kInvalidDescriptorIndex )
             return failedSRV;
         // 실패해 번호를 맡기 전이면 텍스처가 지키는 번호다 — 맡을 때 이 값을 먼저 적고 텍스처의 번호를 지우므로 그 사이에 빈 번호를 보지 않는다.
@@ -1745,7 +1745,7 @@ namespace sw
         const bool        bTakeKeptSRV = bReady == false && _pTexture != nullptr && pDevice != nullptr && _pTexture->getKeptSRV() != kInvalidDescriptorIndex;
         if ( bTakeKeptSRV )
         {
-            const RHIDescriptorIndex kept = _pTexture->getKeptSRV();
+            const RHITextureSRVIndex kept = _pTexture->getKeptSRV();
             _failedSRV.store( kept, std::memory_order_release ); // 먼저 적는다 — `getStableSRV` 가 그 사이에 빈 번호를 보지 않게
             (void)_pTexture->takeKeptSRV();
             if ( cache.pointAtMissingChecker( *pDevice, kept, getPath() ) )
@@ -1900,7 +1900,7 @@ namespace sw
         {
             SW_LOG_ERROR_ID( "TextureCache.HotReloadFailedTexture", "Hot-Reload failed for Texture %#", key.c_str() );
             // 지키던 번호는 해제 줄로 간 옛 텍스처를 가리킨다 — 누락 체커로 다시 묶는다. 텍스처는 그 번호를 계속 지키고 다음 업로드가 다시 묶는다(R-6).
-            const RHIDescriptorIndex kept = pTexture->getKeptSRV();
+            const RHITextureSRVIndex kept = pTexture->getKeptSRV();
             if ( kept != kInvalidDescriptorIndex && _impl->pointAtMissingChecker( *pDevice, kept, key ) == false )
                 (void)pTexture->takeKeptSRV(); // 놓았다
         }

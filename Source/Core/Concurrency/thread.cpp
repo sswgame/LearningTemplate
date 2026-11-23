@@ -8,6 +8,7 @@
     #include "Core/Foundation/PlatformOSHeaders.h"
 #elif defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_ANDROID ) || defined( SW_PLATFORM_WEB )
     #include <sched.h>
+    #include <sys/resource.h>
 #else
     #error "Unsupported platform"
 #endif
@@ -109,6 +110,20 @@ namespace sw
         if ( count == 0 )
             count = std::thread::hardware_concurrency();
         return count == 0 ? 1 : count;
+    }
+
+    void ThreadUtil::setCurrentThreadTimeCritical()
+    {
+#if defined( SW_PLATFORM_WINDOWS )
+        (void)SetThreadPriority( GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL ); // 힌트다(선언 설명)
+#elif defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_ANDROID )
+        constexpr int32 kAudioPriority = -16;                 // Android `THREAD_PRIORITY_AUDIO`. 0 번(자기)의 nice 는 리눅스에서 스레드마다다
+        (void)setpriority( PRIO_PROCESS, 0, kAudioPriority ); // 힌트다(선언 설명)
+#elif defined( SW_PLATFORM_WEB )
+        // 브라우저 워커에는 우선순위가 없다
+#else
+    #error "Unsupported platform"
+#endif
     }
 
     void thread::notifyStarted()

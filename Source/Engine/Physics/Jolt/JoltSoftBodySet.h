@@ -50,10 +50,13 @@ namespace sw
         void                                setPinnedTransform( PhysicsSoftBodyHandle softBody, const float3& position, const quaternion& rotation );
         void                                setSkinningPose( PhysicsSoftBodyHandle softBody, const vector<float4x4>& listJointWorld, bool bHardSkinAll );
         void                                setIterationCount( PhysicsSoftBodyHandle softBody, uint32 iterationCount );
+        void                                applyWind( PhysicsSoftBodyHandle softBody, const float3& windVelocity, float32 dragDensity, float32 seconds );
         /** @brief 소프트 바디마다 늘어남 구속을 선으로 냅니다(씬의 `drawDebug`). */
         void drawDebug( IPhysicsDebugRenderer& renderer ) const;
         /** @brief 모든 소프트 바디를 시스템에서 빼고 지웁니다(씬이 바디를 지우기 전에 부른다). */
         void clear();
+        /** @brief 천을 모두 @p delta 만큼 옮깁니다(`IPhysicsBodyScene::shiftOrigin`). 정점은 질량 중심 기준이라 함께 옮는다. */
+        void shiftOrigin( const JPH::Vec3& delta );
 
     private:
         /**
@@ -76,5 +79,6 @@ namespace sw
         JPH::PhysicsSystem&     _system;
         JPH::TempAllocator&     _tempAllocator;
         SlotHandleTable<Record> _softBodies;
+        vector<float3>          _listWindForce; ///< `applyWind` 가 정점마다 모으는 힘(몸 로컬 — 할당을 재사용한다)
     };
 } // namespace sw

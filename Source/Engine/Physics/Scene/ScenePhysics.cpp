@@ -3,6 +3,7 @@
 #include "Engine/Physics/Scene/ScenePhysics.h"
 
 #include "Core/GlobalVariable/GlobalVariableManager.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Subsystem/SubsystemScope.h"
 
@@ -40,6 +41,66 @@ namespace sw
         {
             static constexpr uint32 kPhaseCount = static_cast<uint32>( PhysicsComponentPhase::Count );
 
+            /**
+             * @brief 바닥 스윕의 몸을 줄이는 두께(m)입니다(언리얼 바닥 스윕의 캡슐 반지름 줄임).
+             * @details 옆 벽에 닿거나 바닥에 살짝 파고든(접촉 여유) 몸이 시작부터 겹쳐, 받쳐 주지 않는 벽을 바닥으로 보거나 바닥을 놓치지 않게 한다.
+             */
+            static constexpr float32 kFloorSweepSkin = 0.03f;
+            /** @brief 줄인 몸이 원래의 이 비율 아래로는 작아지지 않습니다(작은 파편). */
+            static constexpr float32 kFloorSweepMinRatio = 0.5f;
+            /** @brief 닿은 면의 법선이 위로 이만큼(cos)은 향해야 받쳐 주는 것으로 봅니다 — 벽(수평 법선)은 받쳐 주지 않는다. */
+            static constexpr float32 kFloorSupportMinNormalY = 0.15f;
+
+            /** @brief 몸 모양 @p inoutShape 를 축마다 `kFloorSweepSkin` 만큼 줄입니다(자리는 그대로). */
+            static void shrinkForFloorSweep( PhysicsShapeDesc3D& inoutShape )
+            {
+                const auto shrink = []( float32 extent )
+                { return MathUtil::max( extent - kFloorSweepSkin, extent * kFloorSweepMinRatio ); };
+                inoutShape._halfExtents = float3{ shrink( inoutShape._halfExtents._x ), shrink( inoutShape._halfExtents._y ), shrink( inoutShape._halfExtents._z ) };
+                inoutShape._radius      = shrink( inoutShape._radius );
+                if ( inoutShape._listPoint.empty() )
+                    return;
+                float3 center{};
+                for ( const float3& point : inoutShape._listPoint )
+                {
+                    center = center + point;
+                }
+                center        = center * ( 1.0f / static_cast<float32>( inoutShape._listPoint.size() ) );
+                float32 reach = 0.0f;
+                for ( const float3& point : inoutShape._listPoint )
+                {
+                    reach = MathUtil::max( reach, float3::getDistance( point, center ) );
+                }
+                const float32 ratio = reach > 0.0f ? shrink( reach ) / reach : 1.0f;
+                for ( float3& point : inoutShape._listPoint )
+                {
+                    point = center + ( point - center ) * ratio;
+                }
+            }
+
+            /** @brief @p component 의 몸(@p listShape)을 아래로 @p distance 쓸어 받쳐 줄 충돌(위를 보는 면)이 닿으면 true 입니다. */
+            [[nodiscard]] static bool hasFloorBelow( const PhysicsComponent& component, const vector<PhysicsShapeDesc3D>& listShape, const float3& position, const quaternion& rotation,
+                                                     const IPhysicsQueryScene3D& scene, uint32 layerMask, float32 distance )
+            {
+                PhysicsQueryFilter filter{};
+                filter._ignoreUserData = component.getOwner() != nullptr ? component.getOwner()->getObjectID() : 0; // 제 몸(바디 · 히트 박스)은 바닥이 아니다
+                filter._layerMask      = layerMask;
+                vector<PhysicsCastHit3D> listHit;
+                for ( PhysicsShapeDesc3D shape : listShape )
+                {
+                    shrinkForFloorSweep( shape );
+                    listHit.clear();
+                    // 처음 닿는 것 하나가 아니라 바디마다 본다 — 옆 벽에 먼저 닿아도 그 아래 바닥을 찾는다.
+                    (void)scene.shapeCastAll( shape, position, rotation, float3{ 0.0f, -1.0f, 0.0f }, distance + kFloorSweepSkin, filter, listHit );
+                    for ( const PhysicsCastHit3D& hit : listHit )
+                    {
+                        if ( hit._normal._y >= kFloorSupportMinNormalY )
+                            return true;
+                    }
+                }
+                return false;
+            }
+
             /** @brief @p owner 의 바디 칸에 그 강체 칸 번호를 적습니다(바디가 없으면 아무것도 하지 않는다). */
             template <typename TOwner>
             static void bindOwner( vector<uint32>& listPoseSlot, const TOwner& owner )
@@ -69,9 +130,6 @@ namespace sw
 {
     SW_SCENE_SERVICE( ScenePhysics, Physics, makeSceneFrameAccess( SceneDataKindSet{ SceneDataKind::Transform }, SceneDataKindSet{}, SceneDataKindSet{ SceneDataKind::Structure } ) )
     SW_SCENE_SERVICE( ScenePhysicsEvents, FlushPostPhysics, makeSceneFrameAccess( SceneDataKindSet{ SceneDataKind::Structure, SceneDataKind::Transform, SceneDataKind::AnimatorState, SceneDataKind::Navigation }, SceneDataKindSet{}, SceneDataKindSet{} ) )
-
-    /** @brief 활성 씬의 강체 물리(바디 셰이프 · 캐릭터 캡슐)를 디버그 선으로 그립니다(`ScenePhysics::drawDebug` → `DebugDrawQueue`). */
-    SW_GLOBAL_VARIABLE( bool, gv_physicsDebugDraw, false, "강체 물리 바디 · 캐릭터를 디버그 선으로 그린다" );
 
     ScenePhysics::ScenePhysics( GameObjectManager& manager )
         : _manager{ manager }
@@ -134,10 +192,11 @@ namespace sw
         const bool                     bStreaming = streaming.isStreaming();
         if ( bStreaming == false && _bStreamingHolds == false )
             return;
-        // 바닥 셀이 내려간 후보만 광선을 쏜다 — 받쳐 줄 충돌(늘 올라 있는 지형 · 정적 바디)이 몸 아래 가까이 있으면 쥐지 않는다(순간이동으로 남겨진 캐릭터가 땅 위에서 서지 않게).
+        // 바닥 셀이 내려간 후보만 몸 모양을 아래로 쓴다(비탈 · 가장자리에 걸친 큰 바디도 자기 몸으로 본다) — 받쳐 줄 충돌(늘 올라 있는 지형 · 정적 바디)이 몸 아래 가까이 있으면 쥐지 않는다(순간이동으로 남겨진 캐릭터가 땅 위에서 서지 않게).
         // 설정이나 3D 씬이 없으면 받쳐 줄 것을 알 수 없다 — 쥔다(떨어지는 것보다 안전하다).
         const PhysicsSettings* const      pSettings = findSettings();
         const IPhysicsQueryScene3D* const pQuery    = findScene3D();
+        vector<PhysicsShapeDesc3D>        listShape;
         // shortcut: 바디 · 캐릭터 단계를 프레임마다 모두 본다(셀 표 찾기 하나씩) — 수만 개가 되면 씬 공간 색인(`PhysicsComponent::getBodySpatialLayer`)으로 내려간 셀의 칸만 본다.
         for ( const PhysicsComponentPhase phase : { PhysicsComponentPhase::Body, PhysicsComponentPhase::Character } )
         {
@@ -148,16 +207,29 @@ namespace sw
                 bool         bSupported = false;
                 if ( bCandidate && pSettings != nullptr && pQuery != nullptr )
                 {
-                    PhysicsQueryFilter filter{};
-                    filter._ignoreUserData = pComponent->getOwner() != nullptr ? pComponent->getOwner()->getObjectID() : 0; // 제 몸(바디 · 히트 박스)은 바닥이 아니다
-                    filter._layerMask      = pSettings->makeGroundQueryLayerMask();
-                    PhysicsCastHit3D hit{};
-                    bSupported = pQuery->raycast( position, float3{ 0.0f, -1.0f, 0.0f }, pSettings->_streamingFloorProbeDistance, filter, hit );
+                    float3     bodyPosition{};
+                    quaternion bodyRotation{};
+                    float3     bodyScale{};
+                    if ( PhysicsComponent::readWorldPose( *pComponent, bodyPosition, bodyRotation, bodyScale ) )
+                    {
+                        listShape.clear();
+                        pComponent->collectStreamingFloorShapes( bodyScale, listShape );
+                        bSupported = ScenePhysicsInternal::hasFloorBelow( *pComponent, listShape, bodyPosition, bodyRotation, *pQuery, pSettings->makeGroundQueryLayerMask(),
+                                                                          pSettings->_streamingFloorProbeDistance );
+                    }
                 }
                 pComponent->_bStreamingHeld = bCandidate && bSupported == false;
             }
         }
         _bStreamingHolds = bStreaming ? SW_TRUE : SW_FALSE;
+    }
+
+    void ScenePhysics::onWorldOriginShifted( const float3& delta )
+    {
+        if ( _pScene3D != nullptr )
+            _pScene3D->shiftOrigin( delta );
+        if ( _pScene2D != nullptr )
+            _pScene2D->shiftOrigin( float2{ delta._x, delta._y } );
     }
 
     void ScenePhysics::onSceneCleared()
@@ -919,13 +991,5 @@ namespace sw
     void ScenePhysics::applyPreviewPolicy( const ScenePreviewPolicy& policy )
     {
         setFixedStepOverride( policy._fixedStepOverride );
-    }
-
-    void ScenePhysics::drawDebug( DebugDrawQueue& queue )
-    {
-        if ( gv_physicsDebugDraw == false )
-            return;
-        PhysicsDebugQueueRenderer renderer{ queue };
-        drawDebug( static_cast<IPhysicsDebugRenderer&>( renderer ) );
     }
 } // namespace sw

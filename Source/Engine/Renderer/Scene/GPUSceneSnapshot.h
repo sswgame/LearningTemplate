@@ -150,7 +150,7 @@ namespace sw
         /**
          * @brief 인스턴스의 월드 행렬식이 음수(거울 변환)인 배치입니다. 이 배치는 컬 모드를 뒤집은 PSO 로 그립니다(언리얼 `bReverseCulling`).
          * @details 거울 변환은 삼각형 감김 방향을 뒤집는다. 컬 모드를 그대로 두면 카메라 쪽 면이 잘리고 안쪽 면이 보인다. 컬 모드는 PSO 의 상태라
-         *          배치 키에 들어간다. 한 배치의 인스턴스는 모두 같은 부호다(`FramePSOManager::psoForBatch`).
+         *          배치 키에 들어간다. 한 배치의 인스턴스는 모두 같은 부호다(`FramePSOManager::resolveBatchPSO`).
          */
         uint8 _bReverseCulling{ SW_FALSE };
         /**
@@ -249,7 +249,7 @@ namespace sw
         uint64 _hash{ 0 };
         /**
          * @brief 이 변형을 처음 낸 머티리얼이 스위치를 바꾸기 직전에 쓰던 퍼뮤테이션 해시입니다(없으면 0). 배치 키가 아니다.
-         * @details 새 변형의 PSO 가 빌더에서 `Building` 인 동안 드로우가 직전 변형의 `Ready` PSO 로 그린다(`FramePSOManager::psoForBatch`) — 물체가 사라지지 않고 한두 프레임 늦게 바뀐다
+         * @details 새 변형의 PSO 가 빌더에서 `Building` 인 동안 드로우가 직전 변형의 `Ready` PSO 로 그린다(`FramePSOManager::resolveBatchPSO`) — 물체가 사라지지 않고 한두 프레임 늦게 바뀐다
          *          (언리얼 PSO 프리캐시의 "준비 안 된 PSO 는 기본 머티리얼로" 보다 덜 튄다). 같은 변형을 다른 머티리얼이 함께 쓰면 처음 낸 쪽의 직전 변형이다 — 경로가 같아
          *          셰이더는 같고 define 만 다르며, 그 몇 프레임의 차이만 남는다.
          */

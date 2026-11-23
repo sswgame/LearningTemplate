@@ -214,6 +214,8 @@ namespace sw
 
         vkCmdBlitImage( cmd, srcRecord._image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
                         dstImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blit, VK_FILTER_LINEAR );
+        // 계약: 원본은 셰이더 읽기로 남는다(`IRHIPassCommandList::blitTexture`).
+        _pDevice->transitionTextureLayout( cmd, srcRecord, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT );
 
         if ( dst == kRHIBackBufferTexture )
         {
@@ -230,14 +232,11 @@ namespace sw
         }
     }
 
-    void VulkanRHICommandContext::bindShaderResource( RHIDescriptorIndex index, uint32 slot )
+    void VulkanRHICommandContext::bindShaderResource( RHITextureSRVIndex index, uint32 slot )
     {
-        // 그래픽스 t# → 슬롯 세트의 t 범위. 텍스처 슬롯(엔진 t0..t3 · 머티리얼 t16..t31, 에뮬 전용)은 여기로 오지 않는다.
-        // FrameRenderer 가 supportsNativeBindlessSampling() 이면 건너뛴다.
-        slot = toRegister( slot, shaderslot::vk::kTShift );
-        if ( slot >= shaderslot::kSRVSlotCount )
-            return;
-        setSlot( false, shaderslot::vk::kTShift + slot, index, false, false );
+        // 텍스처는 네이티브 bindless 세트(set 1)를 셰이더가 번호로 읽는다 — 슬롯에 걸 것이 없다(텍스처 슬롯은 에뮬 백엔드 전용).
+        (void)index;
+        (void)slot;
     }
 
     // 단일 전이도 묶음과 같은 길(원소 하나)을 지난다 — 상태 표 · 건너뛰기 규칙이 한 벌이다(버퍼의 `transitionBufferNative` 와 같다).
@@ -635,7 +634,11 @@ namespace sw
         {
             const RHIBufferState                 newState = pTransition[index]._state;
             VulkanRHIDevice::VulkanBufferRecord* pRecord  = _pDevice->resolveAllocatedBuffer( pTransition[index]._buffer );
-            if ( pRecord == nullptr || pRecord->_buffer == VK_NULL_HANDLE || pRecord->_state == newState )
+            if ( pRecord == nullptr || pRecord->_buffer == VK_NULL_HANDLE )
+                continue;
+            // 확인과 기록이 한 번이다 — 같은 레벨의 두 워커가 같은 버퍼를 같은 상태로 옮기면 한쪽만 배리어를 낸다(`RHITrackedState`, DX12 와 같다).
+            RHIBufferState stateBefore{};
+            if ( pRecord->_state.transitionTo( newState, stateBefore ) == false )
                 continue;
             if ( _pState->_bRenderPassActive == SW_TRUE )
             {
@@ -646,7 +649,7 @@ namespace sw
             VkAccessFlags        dstAccess{ 0 };
             VkPipelineStageFlags srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
             VkPipelineStageFlags dstStage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
-            mapStateVal( pRecord->_state, srcAccess, srcStage );
+            mapStateVal( stateBefore, srcAccess, srcStage );
             mapStateVal( newState, dstAccess, dstStage );
 
             VkBufferMemoryBarrier& barrier = arrBarrier[barrierCount++];
@@ -661,7 +664,6 @@ namespace sw
             barrier.size                   = VK_WHOLE_SIZE;
             srcStageSum |= srcStage;
             dstStageSum |= dstStage;
-            pRecord->_state = newState;
             if ( barrierCount == kMaxBarrierPerCall )
                 flushBarriers();
         }
@@ -707,7 +709,7 @@ namespace sw
         vkCmdCopyBuffer( cmd, pSource->_buffer, pTarget->_buffer, 1, &region );
     }
 
-    void VulkanRHICommandContext::bindComputeUAV( RHIDescriptorIndex index, uint32 slot )
+    void VulkanRHICommandContext::bindComputeUAV( RHIUnorderedAccessIndex index, uint32 slot )
     {
         // 컴퓨트 u# → 슬롯 세트의 u 범위. 인덱스는 UAV 레지스트리(registerBindlessBufferUAV)의 것이다.
         slot = toRegister( slot, shaderslot::vk::kUShift );
@@ -716,7 +718,7 @@ namespace sw
         setSlot( true, shaderslot::vk::kUShift + slot, index, true, false );
     }
 
-    void VulkanRHICommandContext::bindGraphicsUAV( RHIDescriptorIndex index, uint32 slot )
+    void VulkanRHICommandContext::bindGraphicsUAV( RHIUnorderedAccessIndex index, uint32 slot )
     {
         // 그래픽스 u# → 그래픽스 슬롯 세트의 u 범위. 세트 레이아웃은 모든 단계에 보이고, 프래그먼트 쓰기는 fragmentStoresAndAtomics 가 켠다(능력 `_bGraphicsShaderWrites`).
         if ( _pDevice->_bFragmentStores == 0 )
@@ -727,7 +729,7 @@ namespace sw
         setSlot( false, shaderslot::vk::kUShift + slot, index, true, false );
     }
 
-    void VulkanRHICommandContext::bindComputeShaderResource( RHIDescriptorIndex index, uint32 slot )
+    void VulkanRHICommandContext::bindComputeShaderResource( RHIBufferSRVIndex index, uint32 slot )
     {
         slot = toRegister( slot, shaderslot::vk::kTShift );
         if ( slot >= shaderslot::kSRVSlotCount )
@@ -735,7 +737,7 @@ namespace sw
         setSlot( true, shaderslot::vk::kTShift + slot, index, false, false );
     }
 
-    void VulkanRHICommandContext::bindComputeConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot )
+    void VulkanRHICommandContext::bindComputeConstantBuffer( RHIBufferSRVIndex constantBufferIndex, uint32 slot )
     {
         if ( slot >= shaderslot::kConstantBufferSlotCount )
             return;
@@ -864,7 +866,6 @@ namespace sw
         }
         if ( writeCount > 0 )
             vkUpdateDescriptorSets( _pDevice->_device, writeCount, arrWrite, 0, nullptr );
-        // NEXT 5-2 측정: 드로마다 슬롯 세트를 새로 쓰는지 센다(갱신 수 ÷ 드로 수). 높으면 동적 오프셋 · 푸시 디스크립터로 옮긴다.
         SW_PROFILE_COUNT( "RT.Bind.descriptorUpdates", writeCount );
         SW_PROFILE_COUNT( "RT.Bind.descriptorSetFlushes", 1 );
 
@@ -959,7 +960,7 @@ namespace sw
             _pDevice->getResourceFactory()->updateConstantBuffer( buffer, pData, size );
     }
 
-    void VulkanRHICommandContext::bindConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot )
+    void VulkanRHICommandContext::bindConstantBuffer( RHIBufferSRVIndex constantBufferIndex, uint32 slot )
     {
         // b# → 슬롯 세트의 b 범위. 링 상수버퍼는 이번 프레임 슬롯 구간을 건다. 세트는 드로우 직전 flushSlotSet 이 굳힌다.
         if ( slot >= shaderslot::kConstantBufferSlotCount )
@@ -970,10 +971,13 @@ namespace sw
         setSlot( false, shaderslot::vk::kBShift + slot, constantBufferIndex, false, true );
     }
 
-    void VulkanRHICommandContext::bindStructuredBuffer( RHIDescriptorIndex index, uint32 slot )
+    void VulkanRHICommandContext::bindStructuredBuffer( RHIBufferSRVIndex index, uint32 slot )
     {
         // 그래픽스 구조버퍼(인스턴스 t4, 머티리얼 데이터 t5 …). 리플렉션이 준 슬롯의 t 범위에 건다.
-        bindShaderResource( index, slot );
+        slot = toRegister( slot, shaderslot::vk::kTShift );
+        if ( slot >= shaderslot::kSRVSlotCount )
+            return;
+        setSlot( false, shaderslot::vk::kTShift + slot, index, false, false );
     }
 
     void VulkanRHICommandContext::dispatchComputeNative( uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ )

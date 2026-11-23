@@ -14,6 +14,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Tick/TickContext.h"
+#include "Engine/Object/GameObject/WorldOrigin.h"
 #include "Engine/Serialization/Format/Archive.h"
 
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/Component/SkirmishGameModeComponent.h"
@@ -183,7 +184,7 @@ namespace sw
             return;
         if ( _matchRevision != pDirector->getMatchRevision() )
             applyMatch( manager, *pDirector );
-        playStepEvents( *pDirector );
+        playStepEvents( manager, *pDirector );
         _selection.prune( pDirector->getWorld() );
         const bool                bReadInput = _bInputLive == SW_TRUE && _bNamesValid == SW_TRUE;
         const InputManager* const pInput     = bReadInput ? game::findSubsystem<InputManager>() : nullptr;
@@ -219,14 +220,14 @@ namespace sw
             pRig->setPanAction( bHuman ? _playerPanAction : _spectatorPanAction ); // 플레이할 때 WASD 는 명령 단축키다.
             if ( bHuman == false )
             {
-                pRig->setFocusPoint( _watchFocus );
+                pRig->setFocusPoint( manager.getWorldOrigin().toLocal( _watchFocus ) );
                 pRig->startWithPreset( _watchCameraPreset.key() );
             }
         }
         // 2 인 대전의 클라이언트(1 번, 북동)는 씬의 카메라 초점(0 번 본진)이 아니라 자기 본진에서 시작한다.
         const RTSPlayer* pLocalPlayer = director.getWorld().findPlayer( director.getLocalPlayer() );
         if ( pRig != nullptr && bHuman && director.getLocalPlayer() != 0 && pLocalPlayer != nullptr )
-            pRig->setFocusPoint( float3{ pLocalPlayer->_startPosition._x, 0.0f, pLocalPlayer->_startPosition._z } );
+            pRig->setFocusPoint( manager.getWorldOrigin().toLocal( float3{ pLocalPlayer->_startPosition._x, 0.0f, pLocalPlayer->_startPosition._z } ) );
         if ( bHuman )
         {
             SW_LOG_INFO_ID( "RTSCommandInput.YouBlueDragSelect", "[Skirmish] you are %# - drag to select, right click to move/attack/gather, A attack-move, S stop, H hold, Q/W/E train, "
@@ -337,7 +338,7 @@ namespace sw
             const RTSUnit* const           pPrimary = world.findUnit( _selection.getPrimary() );
             CameraDirectorComponent* const pRig     = findCameraRig( manager );
             if ( pPrimary != nullptr && pRig != nullptr )
-                pRig->setFocusPoint( float3{ pPrimary->_position._x, 0.0f, pPrimary->_position._z } );
+                pRig->setFocusPoint( manager.getWorldOrigin().toLocal( float3{ pPrimary->_position._x, 0.0f, pPrimary->_position._z } ) );
         }
     }
 
@@ -492,6 +493,7 @@ namespace sw
         const CameraDirectorComponent* const pRig = findCameraRig( manager );
         if ( pRig == nullptr || pRig->findGroundPoint( input.getMousePositionNormalized(), 0.0f, outPoint ) == false )
             return false;
+        outPoint            = manager.getWorldOrigin().toAbsolute( outPoint ); // RTS 월드는 절대 자리다
         const NavGrid& grid = director.getWorld().getGrid();
         return 0.0f <= outPoint._x && outPoint._x < static_cast<float32>( grid.getWidth() ) && 0.0f <= outPoint._z && outPoint._z < static_cast<float32>( grid.getHeight() );
     }
@@ -502,7 +504,7 @@ namespace sw
         return pRigObject != nullptr ? pRigObject->getComponent<CameraDirectorComponent>() : nullptr;
     }
 
-    void RTSCommandInputComponent::playStepEvents( const SkirmishGameModeComponent& director ) const
+    void RTSCommandInputComponent::playStepEvents( const GameObjectManager& manager, const SkirmishGameModeComponent& director ) const
     {
         using Internal = RTSCommandInputComponentInternal;
         // 유닛이 부서지면 누구 것이든 그 위치에서 쇳소리를 낸다. 한 프레임에 여럿이어도 한 번만 낸다(구경하는 AI 대 AI 판에서도 들린다). 동시 재생 상한은 이벤트 데이터가 정한다.
@@ -510,7 +512,7 @@ namespace sw
         {
             if ( event._kind == RTSEvent::Kind::UnitDied )
             {
-                (void)GameSound::postEventAt( hashed_string( Internal::kSoundUnitDied ), event._position ); // 소리가 없는 구성이면 내지 않는다
+                (void)GameSound::postEventAt( hashed_string( Internal::kSoundUnitDied ), manager.getWorldOrigin().toLocal( event._position ) ); // 소리가 없는 구성이면 내지 않는다
                 break;
             }
         }

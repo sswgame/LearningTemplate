@@ -35,7 +35,7 @@ namespace sw
 
         // 뎁스만 쓰는 파이프라인(RT 0 개)도 PS 경로가 있으면 픽셀 스테이지를 둔다. 알파 컷오프 머티리얼이 그림자와 깊이 프리패스에서
         // 같은 형태로 오려지려면 픽셀에서 버려야 한다(`RenderPassKindInfo::hasMaterialDepthPixelStage`). 컬러 출력이 없는 패스 PSO 는
-        // FrameRenderer 가 PS 경로를 비운다(createPSOForPassType). 어느 쪽이든 디스크립터의 경로가 답이다.
+        // FrameRenderer 가 PS 경로를 비운다(FramePSOManager::makePassPSODesc). 어느 쪽이든 디스크립터의 경로가 답이다.
         request._bDepthOnly      = ( desc._numRenderTargets == 0 && desc._renderState._bEnableDepthTest != 0 ) ? SW_TRUE : SW_FALSE;
         request._bHasPixelShader = desc._pixelShaderPath.empty() == false ? SW_TRUE : SW_FALSE;
         request._numRenderTargets =
@@ -214,7 +214,14 @@ namespace sw
             SW_LOG_ERROR_ID( "RHI.ComputeShaderCompileFailed", "createComputePipelineState: compute shader compile failed '%#'", shaderPath );
             return false;
         }
-        outStage = RHICompiledShaderStage{ std::move( csResult._bytecode ), csDesc._entryPoint };
+        // 스레드 그룹 크기는 셰이더가 정본이다 — 공급자(쿠킹 매니페스트 · 실행 중 리플렉션)에서 받고, 못 읽으면 PSO 를 만들지 않는다(그룹 수를 짐작하지 않는다).
+        ShaderReflectionData reflection;
+        if ( engine::getSubsystem<ShaderCache>().getReflection( csDesc, reflection ) == false || reflection._groupSize.isValid() == false )
+        {
+            SW_LOG_ERROR_ID( "RHI.ComputeReflectionFailed", "createComputePipelineState: compute shader '%#' [%#] has no thread group size in its reflection", shaderPath, csDesc._entryPoint.c_str() );
+            return false;
+        }
+        outStage = RHICompiledShaderStage{ std::move( csResult._bytecode ), csDesc._entryPoint, reflection._groupSize };
         return true;
     }
 

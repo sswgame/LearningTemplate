@@ -148,11 +148,15 @@ namespace sw
 
     string_view AutomationGoldenUtil::getPlatformTag()
     {
-        // Linux 는 골든을 따로 둔다 - 편집기 기본 글꼴이 OS 마다 달라 배치가 다르고, 지금 도는 곳이 소프트웨어 렌더러(lavapipe)다.
+        // 플랫폼마다 골든을 따로 둔다(꼬리 없는 것이 Windows) - 편집기 기본 글꼴이 OS 마다 달라 배치가 다르고, 지금 도는 곳이 소프트웨어 렌더러(lavapipe)다.
 #if defined( SW_PLATFORM_LINUX )
         return ".linux";
 #elif defined( SW_PLATFORM_WINDOWS )
         return "";
+#elif defined( SW_PLATFORM_ANDROID )
+        return ".android";
+#elif defined( SW_PLATFORM_WEB )
+        return ".web";
 #else
     #error "Unsupported platform"
 #endif

@@ -136,7 +136,7 @@ namespace sw::editor
     ImGuiRenderer::ImGuiRenderer()
         : _pDevice{ nullptr }
         , _pDrawHandoff{ nullptr }
-        , _pso{ 0 }
+        , _pso{}
         , _wordBuffer{}
         , _listWord{}
         , _mapListBase{}
@@ -167,8 +167,7 @@ namespace sw::editor
         desc._depthStencilFormat             = RHIFormat::Unknown;
         desc._renderState._bEnableDepthWrite = SW_FALSE;
         desc._renderState.setAllBlendTargets( BlendTargetState::makeStraightAlpha() );
-        _pso = pRHIDevice->getResourceFactory()->createPipelineState( desc );
-        if ( _pso == 0 )
+        if ( _pso.createGraphics( *pRHIDevice, desc ) == false )
         {
             SW_LOG_ERROR_ID( "ImGuiRenderer.PSOFailed", "The editor UI pipeline (%#) could not be created - see the shader error above", Internal::kShaderPath );
             _pDevice = nullptr;
@@ -231,9 +230,7 @@ namespace sw::editor
         }
         _mapForeignSRV.clear();
         _wordBuffer.release( _pDevice );
-        if ( _pso != 0 && _pDevice->getResourceFactory() != nullptr )
-            _pDevice->releaseHandle( _pso );
-        _pso = 0;
+        _pso.release( _pDevice );
 
         if ( ImGui::GetCurrentContext() != nullptr )
         {
@@ -349,12 +346,12 @@ namespace sw::editor
         IRHICommandContext* const pCmd           = device.getFrameStreamContext();
         const float32             framebufferW   = drawData.DisplaySize.x * drawData.FramebufferScale.x;
         const float32             framebufferH   = drawData.DisplaySize.y * drawData.FramebufferScale.y;
-        const bool                bNothingToDraw = pCmd == nullptr || _pso == 0 || _wordBuffer.isValid() == false || framebufferW <= 0.0f || framebufferH <= 0.0f;
+        const bool                bNothingToDraw = pCmd == nullptr || _pso.isValid() == false || _wordBuffer.isValid() == false || framebufferW <= 0.0f || framebufferH <= 0.0f;
         if ( bNothingToDraw )
             return;
 
         // 정점은 셰이더가 구조 버퍼에서 꺼낸다 — 셰이더가 정점 입력을 받지 않아 PSO 의 입력 레이아웃이 비어 있다(정점 버퍼를 걸지 않는다).
-        pCmd->setPipelineState( _pso );
+        pCmd->setPipelineState( _pso._handle );
         pCmd->bindStructuredBuffer( _wordBuffer._srv, shaderslot::kPassBuffer ); // setPipelineState 가 슬롯 상태를 비운다 — PSO 뒤에 건다
 
         // 화면 좌표(DisplayPos 기준) → NDC. y 는 아래가 + 다(ImGui 와 RHI 의 화면 규약이 같다 — GL 은 클립 원점으로 맞춘다).
@@ -366,7 +363,7 @@ namespace sw::editor
         arrRoot[Internal::kRootOffsetX] = BitUtil::floatToBits( -1.0f - drawData.DisplayPos.x * scaleX );
         arrRoot[Internal::kRootOffsetY] = BitUtil::floatToBits( 1.0f - drawData.DisplayPos.y * scaleY );
 
-        RHIDescriptorIndex boundSRV{ kInvalidDescriptorIndex }; // 에뮬 백엔드의 t16 — 명령 대부분이 글꼴 아틀라스 하나라 바뀔 때만 다시 건다
+        RHITextureSRVIndex boundSRV{ kInvalidDescriptorIndex }; // 에뮬 백엔드의 t16 — 명령 대부분이 글꼴 아틀라스 하나라 바뀔 때만 다시 건다
         for ( const ImDrawList* pList : drawData.CmdLists )
         {
             const auto it = _mapListBase.find( pList );
@@ -399,7 +396,7 @@ namespace sw::editor
                 }
                 if ( bExcluded )
                     continue; // 캡처에서 뺀 개발 겹치기 — 화면 그리기는 빈 목록을 넘겨 그대로 그린다
-                const RHIDescriptorIndex srv = resolveTexture( textureID );
+                const RHITextureSRVIndex srv = resolveTexture( textureID );
                 if ( srv == kInvalidDescriptorIndex )
                     continue; // 아직 등록되지 않았거나(업로드 중) 해제한 텍스처 — 흰색으로 대신 그리지 않는다
 
@@ -498,21 +495,15 @@ namespace sw::editor
             ScopedLock<mutex> lock{ _textureMutex };
             if ( slotIndex >= _listTextureSlot.size() || _listTextureSlot[slotIndex]._bInUse == false )
                 return;
-            slot                        = _listTextureSlot[slotIndex];
+            slot                        = std::move( _listTextureSlot[slotIndex] );
             _listTextureSlot[slotIndex] = TextureSlot{};
             _freeSlot.push( slotIndex );
         }
-        IRHIResourceFactory* const pFactory = device.getResourceFactory();
-        if ( pFactory == nullptr )
-            return;
         // 패널이 등록한 텍스처 — 번호는 텍스처 주인의 파괴가 놓는다(IRHIResourceFactory::registerBindlessTexture). 여기서 놓으면 파괴와 순서가 엇갈려 다시 발급된 번호를 놓는다.
         if ( slot._bOwned == false )
             return;
         // 이 렌더러가 만든 텍스처(ImGui 동적 텍스처) — 렌더 스레드의 패스 기록 밖에서 부른다. 번호 · 텍스처 해제는 백엔드가 GPU 사용 뒤로 미룬다.
-        if ( slot._srv != kInvalidDescriptorIndex )
-            pFactory->unregisterBindlessTexture( slot._srv );
-        if ( slot._texture != 0 )
-            device.releaseHandle( slot._texture );
+        slot._ownedTexture.release( &device );
     }
 
     void ImGuiRenderer::queueTextureUpdates()
@@ -585,29 +576,29 @@ namespace sw::editor
         if ( op._kind == TextureOp::Kind::Create )
         {
             RHITextureDesc desc{};
-            desc._width                   = op._width;
-            desc._height                  = op._height;
-            desc._mipLevels               = 1;
-            desc._format                  = RHIFormat::R8G8B8A8_UNORM;
-            desc._bIsShaderResource       = 1;
-            const RHITextureHandle handle = pFactory->createTexture2D( desc );
-            RHITextureUploadDesc   upload{};
+            desc._width             = op._width;
+            desc._height            = op._height;
+            desc._mipLevels         = 1;
+            desc._format            = RHIFormat::R8G8B8A8_UNORM;
+            desc._bIsShaderResource = 1;
+            RHITextureSlot       created;
+            RHITextureUploadDesc upload{};
             upload._pData      = op._listByte.data();
             upload._sizeBytes  = static_cast<uint32>( op._listByte.size() );
             upload._mipLevels  = 1;
             upload._arraySlice = 0;
             // 첫 그리기 전에 다 올린다 — 반쯤 올라간 아틀라스로 그린 프레임이 UI 캡처 골든을 흔들지 않게(에디터 전용 · 기동과 아틀라스 확장 때뿐이다).
-            if ( handle == 0 || RHITransferUtil::uploadTexture2DAndWait( *pFactory, handle, upload ) == false )
+            if ( created.ensure( device, desc, "ImGuiTexture" ) == false || RHITransferUtil::uploadTexture2DAndWait( *pFactory, created._texture, upload ) == false )
             {
                 SW_LOG_ERROR_ID( "ImGuiRenderer.TextureCreateFailed", "Failed to create an editor UI texture (%#x%#) - its glyphs are not drawn", op._width, op._height );
-                if ( handle != 0 )
-                    device.releaseHandle( handle );
+                created.release( &device );
                 return true; // 칸은 텍스처 없이 남는다 — 그 ID 의 그리기는 건너뛰고, ImGui 가 파괴를 내면 비운다
             }
             ScopedLock<mutex> lock{ _textureMutex };
             TextureSlot&      slot = _listTextureSlot[op._slot];
-            slot._texture          = handle;
-            slot._srv              = pFactory->registerBindlessTexture( handle );
+            slot._ownedTexture     = std::move( created );
+            slot._texture          = slot._ownedTexture._texture;
+            slot._srv              = slot._ownedTexture._srv;
             return true;
         }
         RHITextureHandle handle{ 0 };
@@ -631,7 +622,7 @@ namespace sw::editor
         return true;
     }
 
-    RHIDescriptorIndex ImGuiRenderer::resolveTexture( uint64 textureID ) const
+    RHITextureSRVIndex ImGuiRenderer::resolveTexture( uint64 textureID ) const
     {
         uint32 slotIndex{ 0 };
         if ( ImGuiRendererInternal::tryGetSlotIndex( textureID, slotIndex ) == false || slotIndex >= _listFrameSRV.size() )

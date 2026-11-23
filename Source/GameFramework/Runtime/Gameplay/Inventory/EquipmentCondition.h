@@ -84,7 +84,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 장착 조건이 참조하는 캐릭터 쪽 정보입니다. 캐릭터의 태그나 체형이 바뀔 때 게임이 넘겨 줍니다. */
+    /** @brief 장착 조건이 참조하는 캐릭터 쪽 정보입니다. 캐릭터(장비의 주인)가 들고 장비가 빌려 봅니다. 바꾸면 `Equipment::settleCharacterChange` 를 부릅니다. */
     struct EquipmentCharacterContext
     {
         TagContainer  _tags{};

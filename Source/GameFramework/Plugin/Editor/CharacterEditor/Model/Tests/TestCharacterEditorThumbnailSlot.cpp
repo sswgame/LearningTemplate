@@ -4,6 +4,7 @@
 
 #include "GameFramework/Plugin/Editor/CharacterEditor/Model/CharacterEditorLocalStore.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/Local/LocalStore.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/AppearanceDatabase.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/UserAppearancePresetStore.h"
 
 // CharacterEditorThumbnailSlotTest — 썸네일 슬롯은 이름에서 만들지 않고 번호로 준다: 대소문자 · 규칙 밖 글자만 다른 두 프리셋도 슬롯을 나누지 않고, 이미 든 슬롯은 그대로 쓴다.
@@ -15,8 +16,8 @@ using namespace sw::editor;
 SW_TEST_CASE( CharacterEditorThumbnailSlotTest, LookAlikeNamesGetDifferentSlots )
 {
     UserAppearancePresetStore store;
-    (void)store.savePreset( "Hero", AppearanceSelection{} );
-    (void)store.savePreset( "hero", AppearanceSelection{} );
+    SW_REQUIRE_TRUE( store.savePreset( "Hero", AppearanceSelection{}, AppearanceDatabase{} ) );
+    SW_REQUIRE_TRUE( store.savePreset( "hero", AppearanceSelection{}, AppearanceDatabase{} ) );
 
     const string first = CharacterEditorLocalStore::makeThumbnailSlot( store, "Hero" );
     SW_REQUIRE_TRUE( store.setThumbnailSlot( "Hero", first ) );
@@ -30,7 +31,7 @@ SW_TEST_CASE( CharacterEditorThumbnailSlotTest, LookAlikeNamesGetDifferentSlots 
 SW_TEST_CASE( CharacterEditorThumbnailSlotTest, PresetKeepsItsSlot )
 {
     UserAppearancePresetStore store;
-    (void)store.savePreset( "Hero", AppearanceSelection{} );
+    SW_REQUIRE_TRUE( store.savePreset( "Hero", AppearanceSelection{}, AppearanceDatabase{} ) );
     const string slot = CharacterEditorLocalStore::makeThumbnailSlot( store, "Hero" );
     SW_REQUIRE_TRUE( store.setThumbnailSlot( "Hero", slot ) );
     SW_EXPECT_TRUE( slot == CharacterEditorLocalStore::makeThumbnailSlot( store, "Hero" ) );

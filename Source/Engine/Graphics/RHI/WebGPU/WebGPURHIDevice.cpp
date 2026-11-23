@@ -139,11 +139,12 @@ namespace sw
     WGPUBindGroup WebGPUBindGroupCache::getOrCreate( WGPUDevice device, WGPUBindGroupLayout layout, const vector<WGPUBindGroupEntry>& listEntry )
     {
         vector<CachedGroup>& listBucket = _mapGroup[makeKeyHash( layout, listEntry )];
-        for ( const CachedGroup& cached : listBucket )
+        for ( CachedGroup& cached : listBucket )
         {
             if ( cached._layout == layout && isSameEntryList( cached._listEntry, listEntry ) )
             {
                 ++_hitCount;
+                cached._unusedFrameCount = 0;
                 return cached._group;
             }
         }
@@ -154,22 +155,71 @@ namespace sw
         const WGPUBindGroup group = wgpuDeviceCreateBindGroup( device, &desc );
         if ( group == nullptr )
             return nullptr;
+        // 키가 된 핸들의 참조를 쥔다 — 캐시에 있는 동안 그 값이 다른 객체로 다시 나가지 않는다.
+        wgpuBindGroupLayoutAddRef( layout );
+        for ( const WGPUBindGroupEntry& entry : listEntry )
+        {
+            if ( entry.buffer != nullptr )
+                wgpuBufferAddRef( entry.buffer );
+            if ( entry.sampler != nullptr )
+                wgpuSamplerAddRef( entry.sampler );
+            if ( entry.textureView != nullptr )
+                wgpuTextureViewAddRef( entry.textureView );
+        }
         listBucket.push_back( CachedGroup{ layout, listEntry, group } );
         ++_createdCount;
         return group;
     }
 
-    void WebGPUBindGroupCache::clear()
+    void WebGPUBindGroupCache::releaseGroup( const CachedGroup& cached )
     {
-        // NEXT 5-2 측정: 프레임마다 비우는 캐시가 얼마나 다시 짓는지 센다(만든 수 ÷ 건 수). 높으면 프레임 펜스로 은퇴시키는 캐시로 바꾼다.
+        wgpuBindGroupRelease( cached._group );
+        for ( const WGPUBindGroupEntry& entry : cached._listEntry )
+        {
+            if ( entry.buffer != nullptr )
+                wgpuBufferRelease( entry.buffer );
+            if ( entry.sampler != nullptr )
+                wgpuSamplerRelease( entry.sampler );
+            if ( entry.textureView != nullptr )
+                wgpuTextureViewRelease( entry.textureView );
+        }
+        wgpuBindGroupLayoutRelease( cached._layout );
+    }
+
+    void WebGPUBindGroupCache::beginFrame()
+    {
         SW_PROFILE_COUNT( "RT.Bind.bindGroupCreates", _createdCount );
         SW_PROFILE_COUNT( "RT.Bind.bindGroupHits", _hitCount );
+        _createdCount = 0;
+        _hitCount     = 0;
+        for ( auto it = _mapGroup.begin(); it != _mapGroup.end(); )
+        {
+            vector<CachedGroup>& listBucket = it->second;
+            for ( size_t index = 0; index < listBucket.size(); )
+            {
+                if ( ++listBucket[index]._unusedFrameCount <= kRetireFrameCount )
+                {
+                    ++index;
+                    continue;
+                }
+                releaseGroup( listBucket[index] );
+                listBucket.erase( listBucket.begin() + index );
+            }
+            if ( listBucket.empty() )
+                it = _mapGroup.erase( it );
+            else
+                ++it;
+        }
+    }
+
+    void WebGPUBindGroupCache::clear()
+    {
         for ( auto& [hash, listBucket] : _mapGroup )
         {
             (void)hash;
             for ( const CachedGroup& cached : listBucket )
             {
-                wgpuBindGroupRelease( cached._group );
+                releaseGroup( cached );
             }
         }
         _mapGroup.clear();
@@ -380,7 +430,6 @@ namespace sw
         , _buffers{}
         , _textures{}
         , _pipelines{}
-        , _renderPasses{}
         , _bindlessMutex{}
         , _textureTable{}
         , _bufferTable{}
@@ -846,12 +895,13 @@ namespace sw
     void WebGPURHIDevice::collectTimestampReadback( uint32 ringSlot )
     {
         WebGPUTimestampReadback& readback = _arrTimestampReadback[ringSlot];
+        _timestampFrame._listMicro.clear(); // 읽을 것이 없는 프레임은 비운다(다른 네 백엔드와 같다) — 남기면 지난 값이 새 표본으로 다시 나간다
         if ( readback._bQueued != SW_FALSE && readback._bMapped.load( std::memory_order_acquire ) != SW_FALSE )
         {
             // 값은 나노초다(명세) — 틱 하나 = 1 ns. 적지 않은 칸은 `RHITimestampFrame::resolve` 가 음수로 둔다(마스크).
             const uint64* const pTick = static_cast<const uint64*>( wgpuBufferGetConstMappedRange( readback._buffer, 0, WebGPURHIDeviceInternal::kTimestampBytes ) );
             if ( pTick != nullptr )
-                (void)RHITimestampFrame::resolve( pTick, _timestampRing.getSlotMask( ringSlot ), 1.0, _timestampFrame );
+                (void)RHITimestampFrame::resolve( pTick, _timestampRing.getSlotMask( ringSlot ), _timestampRing.getComputeQueueMask( ringSlot ), 1.0, _timestampFrame );
             wgpuBufferUnmap( readback._buffer );
         }
         readback._bQueued = SW_FALSE;
@@ -1112,7 +1162,7 @@ namespace sw
         _listPendingCommandBuffer.clear();
     }
 
-    void WebGPURHIDevice::executeCommandList( IRHICommandList* pCmdList )
+    void WebGPURHIDevice::executeCommandListInternal( IRHICommandList* pCmdList )
     {
         WebGPURHICommandList* const pList = static_cast<WebGPURHICommandList*>( pCmdList );
         if ( pList == nullptr )
@@ -1127,7 +1177,7 @@ namespace sw
         openFrameEncoder();
     }
 
-    void WebGPURHIDevice::executeCommandListImmediate( IRHICommandList* pCmdList )
+    void WebGPURHIDevice::executeCommandListImmediateInternal( IRHICommandList* pCmdList )
     {
         WebGPURHICommandList* const pList    = static_cast<WebGPURHICommandList*>( pCmdList );
         const WGPUCommandBuffer     commands = pList != nullptr ? pList->takeFinishedCommandBuffer() : nullptr;
@@ -1137,10 +1187,10 @@ namespace sw
         submitPending();
     }
 
-    void WebGPURHIDevice::allocateConstantSlice( const void* pData, uint32 size, WGPUBuffer& outBuffer, uint64& outOffset )
+    void WebGPURHIDevice::allocateConstantSlice( const void* pData, uint32 size, uint64 sliceBytes, WGPUBuffer& outBuffer, uint64& outOffset )
     {
         using Internal           = WebGPURHIDeviceInternal;
-        const uint64 alignedSize = MathUtil::align( static_cast<uint64>( size ), Internal::kConstantAlignment );
+        const uint64 alignedSize = MathUtil::align( sliceBytes, Internal::kConstantAlignment ); // 부르는 쪽이 묶을 크기다(`size` 이상)
         const bool   bNoRoom     = _activeRingIndex >= _listConstantRing.size() || _listConstantRing[_activeRingIndex]._used + alignedSize > _listConstantRing[_activeRingIndex]._capacity;
         if ( bNoRoom )
         {
@@ -1151,6 +1201,8 @@ namespace sw
         }
         ConstantRing& ring = _listConstantRing[_activeRingIndex];
         Memory::copy( ring._staging.data() + ring._used, pData, size );
+        if ( sliceBytes > size )
+            Memory::set( ring._staging.data() + ring._used + size, 0, static_cast<size_t>( sliceBytes - size ) ); // 갱신하지 않은 꼬리는 0 — 링의 지난 값이 새지 않는다
         outBuffer = ring._buffer;
         outOffset = ring._used;
         ring._used += alignedSize;
@@ -1181,7 +1233,7 @@ namespace sw
         if ( isDeviceLost() )
             return;
         // 앞서가기 상한(`IRHIDevice` 계약): 이 칸을 앞 프레임이 아직 쓰면 그 프레임을 기다린다. 기다리지 않으면 상수 링 · 프레임 완료가 GPU 가 뒤처진 만큼 자란다.
-        // 브라우저도 같은 대기다 — 웹 빌드는 ASYNCIFY · JSPI 로 링크해 `wgpuInstanceWaitAny` 가 이벤트 루프에 양보한다(`waitForFuture` 와 같은 길).
+        // 브라우저도 같은 대기다 — 프레임은 `main` 의 promising 스택에서 돌아 `wgpuInstanceWaitAny` 가 JSPI 로 이벤트 루프에 양보한다(`waitForFuture` 와 같은 길).
         const uint64 busySerial = _frameFenceRing.getRecordingSlotBusySerial();
         if ( busySerial != 0 )
         {
@@ -1189,8 +1241,7 @@ namespace sw
                 SW_LOG_ERROR_ONCE_ID( "WebGPU.FrameFenceWaitFailed", "WebGPU: waiting for frame %# to finish failed", busySerial );
             retireFinishedFrames();
         }
-        // 지난 프레임의 그룹은 그 프레임의 커맨드가 붙들고 있다(명세) — 캐시는 놓는다. 프레임을 넘겨 들면 놓인 자원의 핸들 값이 새 객체에 다시 나갈 수 있다.
-        _bindGroupCache.clear();
+        _bindGroupCache.beginFrame(); // 오래 걸지 않은 그룹만 놓는다(`WebGPUBindGroupCache`)
         ensureTimestampQuerySet();
         collectTimestampReadback( _frameFenceRing.getRecordingSlot() ); // 이 칸의 앞 프레임은 끝났다(위 칸 대기)
         // GPU 가 끝낸 프레임의 링을 다시 쓴다 — 끝나지 않았으면 이 프레임의 첫 칸 요청이 새 링을 만든다(앞서가기 상한이 링 수를 프레임 인 플라이트 수 언저리로 묶는다).
@@ -1211,7 +1262,25 @@ namespace sw
 
     void WebGPURHIDevice::endFrameInternal( bool vsync, bool bPresent )
     {
-        (void)vsync;         // 스왑체인 구성이 정한다(`applyVSyncInternal`)
+        (void)vsync; // 스왑체인 구성이 정한다(`applyVSyncInternal`)
+        if ( isDeviceLost() )
+        {
+            // 잃은 장치의 beginFrame 은 칸을 기다리지 않았다 — 칸의 앞 프레임이 남았을 수 있어 내지 않고 버린다(Vulkan 이 시작하지 않은 프레임을 건너뛰는 것과 같다).
+            closeFrameEncoder();
+            for ( const WGPUCommandBuffer buffer : _listPendingCommandBuffer )
+            {
+                if ( buffer != nullptr )
+                    wgpuCommandBufferRelease( buffer );
+            }
+            _listPendingCommandBuffer.clear();
+            _swapChain.releaseCurrent();
+            for ( WebGPURHISwapChain* pSwapChain : _windowSwapChains.getFrameList() )
+            {
+                pSwapChain->releaseCurrent();
+            }
+            _windowSwapChains.clearFrame();
+            return;
+        }
         resolveTimestamps(); // 프레임 인코더는 이 프레임의 마지막 세그먼트다 — 앞서 낸 리스트의 시각까지 모두 풀린다
         closeFrameEncoder();
         submitPending();
@@ -1354,12 +1423,9 @@ namespace sw
             return;
         // 열린 프레임 밖이다(렌더 스레드를 비웠다). 내지 않은 리스트가 있으면 마저 낸다.
         submitPending();
-#if defined( SW_PLATFORM_WEB )
-        // 브라우저: 기다리지 않는다(지금 동작). `waitIdle` 은 크기 변경 · 표면 놓기에서 DOM 이벤트 콜백 스택으로 올 수 있고 JSPI 는 그 스택을 멈출 수 없다 —
-        // 프레임 콜백 안인지 웹 시나리오로 확인한 뒤 `waitFrameFence` 로 바꾼다(docs/NEXT.md 웹 실행). WebGPU 는 GPU 가 쓰는 객체를 놓아도 구현이 끝날 때까지 살린다(명세) —
-        // 해제는 놓아도 되고, 끝나지 않은 프레임의 통지만 아래에서 `Abandoned` 로 간다.
-#elif defined( SW_PLATFORM_WINDOWS ) || defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_ANDROID )
-        // Dawn: 낸 프레임을 오래된 순서로 프레임 펜스까지 기다린다 — `beginFrameInternal` 의 칸 대기와 같은 길(`wgpuInstanceWaitAny`, 잠 폴링 없음). 잃은 장치는 끝나지 않을 일을 기다리지 않는다.
+        // 낸 프레임을 오래된 순서로 프레임 펜스까지 기다린다 — `beginFrameInternal` 의 칸 대기와 같은 길(`wgpuInstanceWaitAny`, 잠 폴링 없음). 잃은 장치는 끝나지 않을 일을 기다리지 않는다.
+        // 브라우저도 같다: 모든 호출 자리(크기 변경 · 표면 · 출력 바뀜 · 종료)가 프레임이나 기동 · 종료 안이고 그 스택은 `main` 의 promising 호출이라 JSPI 로 멈춘다 —
+        // DOM 콜백은 크기 · 보임을 적기만 한다(`WebWindow`).
         const uint64 lastSubmitted = _frameFenceRing.getLastSubmittedSerial();
         for ( uint64 serial = _frameFenceRing.getCompletedSerial() + 1; serial <= lastSubmitted && isDeviceLost() == false; ++serial )
         {
@@ -1369,11 +1435,8 @@ namespace sw
                 break;
             }
         }
-#else
-    #error "Unsupported platform"
-#endif
         processCompletions();
-        // 낸 프레임이 모두 끝난 것을 확인했을 때만 통지가 `Completed` 다(웹 · 대기 실패 · 잃은 장치는 `Abandoned`).
+        // 낸 프레임이 모두 끝난 것을 확인했을 때만 통지가 `Completed` 다(대기 실패 · 잃은 장치는 `Abandoned`).
         if ( _frameFenceRing.isIdle() && isDeviceLost() == false )
             _releaseQueue.releaseAllCompleted();
         else

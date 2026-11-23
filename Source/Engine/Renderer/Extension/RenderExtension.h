@@ -3,8 +3,8 @@
  * @brief 모듈(게임 · 키트)이 렌더러를 확장하는 계약입니다 — 확장 객체(`IRenderExtension`), 패스 빌더(`ExtensionPassBuilder`), 패스 실행 컨텍스트(`ExtensionPassContext`),
  *        씬 프록시(`IExtensionSceneProxy`)입니다.
  * @details 언리얼의 `ISceneViewExtension` + `FRDGBuilder::AddPass` + `FPrimitiveSceneProxy` 와 같은 선입니다.
- *          - **확장 훅**: 모듈이 `IRenderExtension` 을 `RenderExtensionRegistration` 으로 등록하면 렌더 스레드가 프레임마다 `addPasses` 를 부릅니다.
- *          - **패스 추가**: `addPasses` 안에서 `ExtensionPassBuilder::addPass( 이름 · 읽는 첨부 · 쓰는 첨부 · 프로그램, 실행 콜백 )` 로 패스를 넣습니다. 패스는 파이프라인 XML 의 패스와
+ *          - **확장 훅**: 모듈이 `IRenderExtension` 을 `RenderExtensionRegistration` 으로 등록하면 그 자리에서 한 번 `declarePasses` 를 부릅니다.
+ *          - **패스 추가**: `declarePasses` 안에서 `ExtensionPassBuilder::addPass( 이름 · 읽는 첨부 · 쓰는 첨부 · 프로그램, 실행 콜백 )` 로 패스를 넣습니다. 패스는 파이프라인 XML 의 패스와
  *            **같은 `RenderGraph` 에 들어가** 같은 위상 정렬 · 배리어 추론을 탑니다 — 읽기 · 쓰기 선언이 곧 의존성이고, 상태 전이는 엔진이 넣습니다. 임시 텍스처는
  *            `createTexture` 로 요청하면 엔진이 뷰의 트랜지언트 풀에 만듭니다.
  *          - **기하**: 게임 스레드의 컴포넌트와 렌더 스레드의 `IExtensionSceneProxy` 가 갈립니다. 게임 스레드는 값을 담은 갱신 함수를 올리고(`ExtensionSceneProxyRegistration::update`),
@@ -43,7 +43,7 @@ namespace sw
         PostRenderView, ///< 출력 패스(Present) 앞 — 후처리가 끝난 뒤
     };
 
-    /** @brief 프레임 정보입니다. 렌더 스레드가 `addPasses` · `collectDrawElements` 에 넘깁니다. */
+    /** @brief 프레임 정보입니다. 렌더 스레드가 `collectDrawElements` 에 넘깁니다. */
     struct ExtensionFrameInfo
     {
         uint32 _outputWidth{ 0 };
@@ -121,7 +121,7 @@ namespace sw
 
     /**
      * @class ExtensionPassBuilder
-     * @brief `IRenderExtension::addPasses` 가 패스와 임시 텍스처를 선언하는 곳입니다(언리얼 `FRDGBuilder` 의 `AddPass` · `CreateTexture` 자리).
+     * @brief `IRenderExtension::declarePasses` 가 패스와 임시 텍스처를 선언하는 곳입니다(언리얼 `FRDGBuilder` 의 `AddPass` · `CreateTexture` 자리).
      * @details 선언을 모으기만 하고, 검사 · 그래프 편입 · PSO 만들기 · 텍스처 할당은 엔진이 기록 전에 합니다. 선언이 잘못된 패스는 이유를 오류로 남기고 그려지지 않습니다.
      */
     class ExtensionPassBuilder
@@ -139,19 +139,21 @@ namespace sw
             ExtensionTextureDesc stored = desc;
             stored._name                = "Extension.";
             stored._name += desc._name;
-            for ( ExtensionTextureDesc& existing : _listTexture )
-            {
-                if ( existing._name == stored._name )
-                {
-                    existing = stored;
-                    return stored._name;
-                }
-            }
-            _listTexture.push_back( stored );
+            storeTexture( stored );
             return stored._name;
         }
 
-        /** @brief 패스를 더합니다. 같은 프레임에 더한 순서가 같은 자리(`_stage`)의 패스끼리의 선언 순서입니다(쓰기 사슬 순서). */
+        /** @brief 다른 확장의 선언을 그 순서대로 뒤에 붙입니다(등록된 모든 확장을 한 목록으로 — `RenderExtensionRegistry::copyDeclarations`). */
+        void append( const ExtensionPassBuilder& other )
+        {
+            _listEntry.insert( _listEntry.end(), other._listEntry.begin(), other._listEntry.end() );
+            for ( const ExtensionTextureDesc& texture : other._listTexture )
+            {
+                storeTexture( texture );
+            }
+        }
+
+        /** @brief 패스를 더합니다. 더한 순서가 같은 자리(`_stage`)의 패스끼리의 선언 순서입니다(쓰기 사슬 순서). */
         void addPass( ExtensionPassParams params, ExtensionPassExecuteFn execute ) { _listEntry.push_back( Entry{ std::move( params ), std::move( execute ) } ); }
 
         const vector<Entry>&                getEntries() const { return _listEntry; }
@@ -161,6 +163,21 @@ namespace sw
         {
             _listEntry.clear();
             _listTexture.clear();
+        }
+
+    private:
+        /** @brief 같은 이름의 앞 요청을 대체하거나 새로 더합니다(@p texture 의 이름은 이미 첨부 이름이다). */
+        void storeTexture( const ExtensionTextureDesc& texture )
+        {
+            for ( ExtensionTextureDesc& existing : _listTexture )
+            {
+                if ( existing._name == texture._name )
+                {
+                    existing = texture;
+                    return;
+                }
+            }
+            _listTexture.push_back( texture );
         }
 
     private:
@@ -216,8 +233,12 @@ namespace sw
     {
     public:
         virtual ~IRenderExtension() = default;
-        /** @brief 이 프레임에 넣을 패스를 선언합니다. 렌더 스레드에서 프레임당 한 번, 기록 전에 불립니다. 이 안에서 등록을 풀거나 레지스트리 잠금을 잡지 않습니다. */
-        virtual void addPasses( ExtensionPassBuilder& builder, const ExtensionFrameInfo& frame ) = 0;
+        /**
+         * @brief 이 확장이 넣을 패스와 임시 텍스처를 선언합니다. 등록할 때(`RenderExtensionRegistry::registerExtension`) 등록한 스레드에서 한 번 불립니다.
+         * @details 패스 목록은 등록이 사는 동안 그대로다 — 그래프가 프레임마다 바뀔 수 없다(언리얼 `IRendererModule::RegisterPostOpaqueRenderDelegate` 처럼 등록이 곧 자리다).
+         *          프레임마다 달라지는 값은 실행 콜백이 정하고, 그릴 것이 없으면 콜백이 그리지 않는다.
+         */
+        virtual void declarePasses( ExtensionPassBuilder& builder ) = 0;
     };
 
     /**

@@ -25,11 +25,11 @@ namespace sw
         vector<ExtensionDrawElement> _listElement;
     };
 
-    /** @brief 확장 객체입니다. 프레임마다 두 패스를 선언합니다. */
+    /** @brief 확장 객체입니다. 등록할 때 두 패스를 선언합니다. */
     class PlaygroundRenderExtension final : public IRenderExtension
     {
     public:
-        void addPasses( ExtensionPassBuilder& builder, const ExtensionFrameInfo& frame ) override;
+        void declarePasses( ExtensionPassBuilder& builder ) override;
     };
 
     /**

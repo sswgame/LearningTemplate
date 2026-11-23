@@ -20,7 +20,6 @@
 #include "Engine/Graphics/RHI/Backend/RHIReleaseQueue.h"
 #include "Engine/Graphics/RHI/Backend/RHISwapChainSet.h"
 #include "Engine/Graphics/RHI/Backend/RHITimestampRing.h"
-#include "Engine/Graphics/RHI/Diagnostics/RHIRenderPassRegistry.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHITimestampFrame.h"
 #include "Engine/Graphics/RHI/GL/OpenGLRHISwapChain.h"
 #include "Engine/Graphics/RHI/GL/OpenGLVertexAttribShadow.h"
@@ -131,6 +130,11 @@ namespace sw
          * @details 다른 창은 `endFrame` 의 표시 목록에 오른다. 프레임 끝에는 메인 창으로 돌아간다(다음 프레임 · 다른 스레드의 바인딩이 메인 창을 본다).
          */
         OpenGLRHISwapChain* useSwapChain( IRHISwapChain* pSwapChain );
+        /**
+         * @brief @p swapChain 창에 컨텍스트를 걸고 그 창을 걸린 창으로 적습니다(표시 목록에는 올리지 않는다). 이미 걸려 있으면 할 일이 없습니다. 실패하면 false 이고 적지 않습니다.
+         * @details 창을 바꾸는 길은 이것 하나다 — 플랫폼 문맥을 바로 부르면 걸린 창의 기록(`_pCurrentSwapChain`)과 어긋나 다음 프레임의 백버퍼가 다른 창에 그려진다(GLX 는 프레임 시작에 다시 걸지 않는다).
+         */
+        [[nodiscard]] bool bindSwapChain( OpenGLRHISwapChain& swapChain );
 
         /** @brief 프레임을 엽니다(컨텍스트 되찾기, 뷰포트, 타임스탬프 수거). 백버퍼 클리어는 beginRenderPass(`kRHIBackBufferTexture`)가 합니다. */
         void beginFrameInternal() override;
@@ -220,7 +224,7 @@ namespace sw
         unique_ptr<IRHICommandList> createCommandList() override;
 
         /** @brief 커맨드 리스트를 제출합니다. GL 은 기록이 곧 실행이라 즉시 모드에서만 glFlush 합니다. */
-        void executeCommandList( IRHICommandList* pCmdList ) override;
+        void executeCommandListInternal( IRHICommandList* pCmdList ) override;
 
     private:
         /** @brief 타임스탬프 계측 능력입니다. 디바이스의 같은 이름 함수로 넘깁니다(수명은 디바이스와 같다). */
@@ -366,9 +370,9 @@ namespace sw
         };
 
         /** @brief 번호가 가리키는 버퍼 · UAV · 텍스처를 공유 잠금 아래에서 읽습니다(빈 칸이면 빈 값). */
-        BindlessResourceRecord findBindlessBuffer( RHIDescriptorIndex index ) const;
-        BindlessResourceRecord findBindlessUAV( RHIDescriptorIndex index ) const;
-        RHITextureHandle       findBindlessTexture( RHIDescriptorIndex index ) const;
+        BindlessResourceRecord findBindlessBuffer( RHIBufferSRVIndex index ) const;
+        BindlessResourceRecord findBindlessUAV( RHIUnorderedAccessIndex index ) const;
+        RHITextureHandle       findBindlessTexture( RHITextureSRVIndex index ) const;
 
         /// @brief 프로그램과 래스터, 블렌드, 깊이 상태입니다.
         struct OpenGLPipelineStateRecord
@@ -395,7 +399,7 @@ namespace sw
         void* getNativeCommandQueue() const override { return nullptr; }
 
     private:
-        /** @brief makeCurrent 를 한 번 시도하고, 성공하면 가진 스레드와 시각을 기록합니다. */
+        /** @brief 주인 칸을 잡고 makeCurrent 를 한 번 시도합니다. 다른 스레드가 쥐고 있으면 네이티브를 부르지 않고 false 입니다. */
         [[nodiscard]] bool tryMakeCurrentAndRecordOwner();
         /** @brief 타임스탬프 쿼리 객체를 한 번만 만듭니다. */
         void ensureTimestampQueries();
@@ -526,7 +530,7 @@ namespace sw
         uint32                   _materialSampler;     ///< 머티리얼 텍스처 유닛 t16..t31 (선형, 랩, shaderslot::kMaterialTextureSampler)
         uint32                   _engineSampler;       ///< 엔진 텍스처 유닛(레지스터 번호 그대로 t32..) (선형, 클램프, shaderslot::kEngineTextureSampler)
         uint32                   _defaultTexture;
-        /// @brief 지금 컨텍스트를 가진 스레드(없으면 기본값)와 가진 시각입니다. 잡기에 실패했을 때 누가 가지고 있었는지 로그에 적습니다(진단 전용).
+        /// @brief 지금 컨텍스트를 가진 스레드(없으면 기본값)와 가진 시각입니다. 주인 칸을 비교 교환으로 잡은 스레드만 컨텍스트를 건다(`tryMakeCurrentAndRecordOwner`). 잡기에 실패한 로그가 주인 · 시각을 적는다.
         atomic<std::thread::id> _contextOwnerThread;
         atomic<uint64>          _contextOwnedStartNanos;
 
@@ -565,7 +569,6 @@ namespace sw
         uint32 _arrComputeRootConstantShadow[shaderslot::kRootConstantDwords];
 
         RHIHandleTable<RHIPipelineStateHandle, OpenGLPipelineStateRecord> _pipelineStates;
-        RHIRenderPassRegistry                                             _renderPassRegistry; ///< 렌더 패스 핸들 등록부. 자기 뮤텍스로 직렬화해 어느 스레드에서나 부른다.
 
         RHIReleaseQueue _releaseQueue;
         /// @brief 프레임마다 끝에 내는 펜스 링입니다(`retireFrameOnGPU`). `GLsync` 는 불투명 포인터라 `void*` 로 둔다. 칸은 `RHIFrameFenceRing::getSlot` 이고, 비면 nullptr 입니다.

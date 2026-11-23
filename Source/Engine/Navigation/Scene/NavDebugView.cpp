@@ -10,8 +10,10 @@
 #include "Engine/Navigation/NavMeshGeometry.h"
 #include "Engine/Navigation/Scene/NavMeshRuntime.h"
 #include "Engine/Navigation/Scene/SceneNavigation.h"
+#include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/WorldOrigin.h"
 #include "Engine/Physics/PhysicsDebugDraw.h"
 #include "Engine/Visual/Component/MeshComponent.h"
 
@@ -77,25 +79,42 @@ namespace sw
                     outListVertex.push_back( makeVertex( arrCorner[index], color ) );
                 }
             }
+
+            /** @brief 내비메시 · 군중이 내는 절대 자리의 선을 로컬로 옮겨 넘깁니다(디버그 선은 오브젝트와 같은 로컬 월드다). */
+            class AbsoluteLineRenderer final : public IPhysicsDebugRenderer
+            {
+            public:
+                AbsoluteLineRenderer( IPhysicsDebugRenderer& inner, const WorldOrigin& origin )
+                    : _inner{ inner }
+                    , _origin{ origin }
+                {
+                }
+                void drawLine( const float3& from, const float3& to, const float4& color ) override { _inner.drawLine( _origin.toLocal( from ), _origin.toLocal( to ), color ); }
+
+            private:
+                IPhysicsDebugRenderer& _inner;
+                const WorldOrigin&     _origin;
+            };
         };
     } // namespace
 } // namespace sw
 
 namespace sw
 {
-    void NavDebugView::drawLines( IPhysicsDebugRenderer& renderer, uint32 flags, const vector<unique_ptr<NavMeshRuntime>>& listRuntime,
+    void NavDebugView::drawLines( IPhysicsDebugRenderer& renderer, uint32 flags, const WorldOrigin& origin, const vector<unique_ptr<NavMeshRuntime>>& listRuntime,
                                   const vector<NavMeshObstacleComponent*>& listObstacle, const vector<NavMeshAgentComponent*>& listAgent )
     {
+        NavDebugViewInternal::AbsoluteLineRenderer absoluteRenderer{ renderer, origin };
         if ( ( flags & NavDebugDrawFlag::kCluster ) != 0 )
-            drawClusterGraph( renderer, listRuntime, listAgent );
+            drawClusterGraph( renderer, origin, listRuntime, listAgent );
         const float4 meshColor{ 0.1f, 0.85f, 0.9f, 1.0f };
         const float4 obstacleColor{ 1.0f, 0.25f, 0.2f, 1.0f };
         for ( const unique_ptr<NavMeshRuntime>& pRuntime : listRuntime )
         {
             if ( ( flags & NavDebugDrawFlag::kMesh ) != 0 )
-                pRuntime->_pNavMesh->drawDebug( renderer, meshColor );
+                pRuntime->_pNavMesh->drawDebug( absoluteRenderer, meshColor );
             if ( pRuntime->_pCrowd != nullptr && ( flags & ( NavDebugDrawFlag::kPath | NavDebugDrawFlag::kVelocity ) ) != 0 )
-                pRuntime->_pCrowd->drawDebug( renderer, ( flags & NavDebugDrawFlag::kPath ) != 0, ( flags & NavDebugDrawFlag::kVelocity ) != 0 );
+                pRuntime->_pCrowd->drawDebug( absoluteRenderer, ( flags & NavDebugDrawFlag::kPath ) != 0, ( flags & NavDebugDrawFlag::kVelocity ) != 0 );
         }
         if ( ( flags & NavDebugDrawFlag::kObstacle ) == 0 )
             return;
@@ -114,7 +133,8 @@ namespace sw
         }
     }
 
-    void NavDebugView::drawClusterGraph( IPhysicsDebugRenderer& renderer, const vector<unique_ptr<NavMeshRuntime>>& listRuntime, const vector<NavMeshAgentComponent*>& listAgent )
+    void NavDebugView::drawClusterGraph( IPhysicsDebugRenderer& renderer, const WorldOrigin& origin, const vector<unique_ptr<NavMeshRuntime>>& listRuntime,
+                                         const vector<NavMeshAgentComponent*>& listAgent )
     {
         // 클러스터는 작은 십자, 간선은 중심 사이 선이다. 색은 그 클러스터 타일의 스트리밍 단계(오름 초록 · 읽는 중 노랑 · 내려감 회색 · 실패 빨강).
         using Internal = NavDebugViewInternal;
@@ -135,13 +155,13 @@ namespace sw
                     color = Internal::kClusterLoadingColor;
                 else if ( pTile != nullptr && pTile->_state == NavStreamTile::State::Failed )
                     color = Internal::kClusterFailedColor;
-                const float3 center = cluster._center + lift;
+                const float3 center = origin.toLocal( cluster._center ) + lift;
                 const float4 edgeColor{ color._x, color._y, color._z, Internal::kClusterEdgeAlpha };
                 renderer.drawLine( center - markX, center + markX, color );
                 renderer.drawLine( center - markZ, center + markZ, color );
                 for ( uint32 edgeIndex = cluster._firstEdge; edgeIndex < cluster._firstEdge + cluster._edgeCount; ++edgeIndex )
                 {
-                    renderer.drawLine( center, listCluster[listEdge[edgeIndex]._target]._center + lift, edgeColor );
+                    renderer.drawLine( center, origin.toLocal( listCluster[listEdge[edgeIndex]._target]._center ) + lift, edgeColor );
                 }
             }
         }
@@ -164,12 +184,12 @@ namespace sw
         }
     }
 
-    void NavDebugView::updateSolidView( GameObjectManager& manager, uint32 flags, const vector<unique_ptr<NavMeshRuntime>>& listRuntime,
+    void NavDebugView::updateSolidView( GameObjectManager& manager, bool bShown, const vector<unique_ptr<NavMeshRuntime>>& listRuntime,
                                         const vector<NavMeshAgentComponent*>& listAgent )
     {
         using Internal      = NavDebugViewInternal;
         GameObject* pView   = manager.resolveGameObject( _viewObject );
-        const bool  bWanted = ( flags & NavDebugDrawFlag::kSolidView ) != 0 && listRuntime.empty() == false;
+        const bool  bWanted = bShown && listRuntime.empty() == false;
         if ( bWanted == false )
         {
             if ( pView != nullptr )
@@ -188,6 +208,9 @@ namespace sw
         MeshComponent* pMeshComponent = pView->getComponent<MeshComponent>();
         if ( pMeshComponent == nullptr )
             return;
+        // 정점은 내비메시의 절대 자리이고 오브젝트가 (절대 0 의 로컬 자리)에 선다 — 원점을 옮기면 루트와 함께 옮겨진다.
+        const WorldOrigin& origin = manager.getWorldOrigin();
+        pMeshComponent->setLocalPosition( origin.toLocal( float3{} ) );
         vector<RHIVertex> listVertex;
         vector<float3>    listCorner;
         vector<uint8>     listArea;
@@ -211,10 +234,11 @@ namespace sw
                                            pAgent->_moveStatus != NavMoveStatus::Moving;
             if ( bNotFollowingPath )
                 continue;
-            Internal::appendRibbon( pAgent->_agentPosition, pAgent->_nextCorner, pathColor, listVertex );
-            Internal::appendRibbon( pAgent->_nextCorner, pAgent->_destination, pathColor, listVertex );
+            const float3 corner = origin.toAbsolute( pAgent->_nextCorner );
+            Internal::appendRibbon( origin.toAbsolute( pAgent->_agentPosition ), corner, pathColor, listVertex );
+            Internal::appendRibbon( corner, origin.toAbsolute( pAgent->_destination ), pathColor, listVertex );
         }
-        shared_ptr<Mesh> mesh = Mesh::create();
+        shared_ptr<Mesh> mesh = Mesh::create( MeshCPUAccess::Keep );
         mesh->setVertices( std::move( listVertex ) );
         pMeshComponent->setMesh( std::move( mesh ) );
     }

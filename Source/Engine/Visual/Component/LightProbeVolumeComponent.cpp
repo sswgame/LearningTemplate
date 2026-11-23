@@ -62,7 +62,7 @@ namespace sw
         , _realtimeEmissiveIntensity{ 0.0f }
         , _probeData{}
         , _probeDataRevision{ 0 }
-        , _pRealtimeVoxelGrid{}
+        , _pRealtimeVoxelScene{}
         , _realtimeVoxelSetGeneration{ 0 }
         , _realtimeVoxelBounds{}
         , _realtimeVoxelCellSize{ 0.0f }
@@ -83,22 +83,29 @@ namespace sw
         return AABB{ center - half, center + half };
     }
 
-    shared_ptr<const SceneVoxelGrid> LightProbeVolumeComponent::findRealtimeVoxelGrid( uint64& outPrimitiveSetGeneration ) const
+    shared_ptr<const SceneVoxelScene> LightProbeVolumeComponent::findRealtimeVoxelScene( uint64& outPrimitiveSetGeneration ) const
     {
         const AABB bounds = computeRealtimeVoxelBounds();
         // 상자(볼륨을 옮기거나 키웠다) · 칸 크기가 그대로여야 캐시를 쓸 수 있다. 프리미티브 집합은 부르는 쪽이 세대로 따진다(바뀐 칸만 다시 칠한다).
         const bool bSameBounds    = _realtimeVoxelBounds._min == bounds._min && _realtimeVoxelBounds._max == bounds._max;
-        const bool bUsable        = _pRealtimeVoxelGrid != nullptr && bSameBounds && MathUtil::nearEqual( _realtimeVoxelCellSize, _voxelSize );
+        const bool bUsable        = _pRealtimeVoxelScene != nullptr && bSameBounds && MathUtil::nearEqual( _realtimeVoxelCellSize, _voxelSize );
         outPrimitiveSetGeneration = _realtimeVoxelSetGeneration;
-        return bUsable ? _pRealtimeVoxelGrid : nullptr;
+        return bUsable ? _pRealtimeVoxelScene : nullptr;
     }
 
-    void LightProbeVolumeComponent::setRealtimeVoxelGrid( shared_ptr<const SceneVoxelGrid> grid, uint64 primitiveSetGeneration ) const
+    void LightProbeVolumeComponent::setRealtimeVoxelScene( shared_ptr<const SceneVoxelScene> scene, uint64 primitiveSetGeneration ) const
     {
-        _pRealtimeVoxelGrid         = std::move( grid );
+        _pRealtimeVoxelScene        = std::move( scene );
         _realtimeVoxelSetGeneration = primitiveSetGeneration;
         _realtimeVoxelBounds        = computeRealtimeVoxelBounds();
         _realtimeVoxelCellSize      = _voxelSize;
+    }
+
+    bool LightProbeVolumeComponent::computeStreamingBounds( AABB& outBox ) const
+    {
+        const float3 center = getWorldPosition();
+        outBox              = AABB{ center - _extent * 0.5f, center + _extent * 0.5f };
+        return true;
     }
 
     void LightProbeVolumeComponent::setExtent( const float3& extent )

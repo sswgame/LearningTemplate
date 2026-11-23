@@ -57,7 +57,7 @@ namespace
                 meshSection._indexCount = static_cast<uint32>( listIndex.size() ) - firstIndex;
                 listSection.push_back( meshSection );
             }
-            shared_ptr<Mesh> mesh = Mesh::create();
+            shared_ptr<Mesh> mesh = Mesh::create( MeshCPUAccess::Keep );
             SW_EXPECT_TRUE( mesh->setGeometryWithTangents( std::move( listVertex ), std::move( listIndex ) ) );
             if ( bSkin )
                 mesh->setSkin( std::move( listSkin ), MeshSkinBinding::makeIdentity( 2u ) );

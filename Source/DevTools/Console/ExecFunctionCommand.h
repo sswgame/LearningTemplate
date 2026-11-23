@@ -20,7 +20,7 @@ namespace sw
     {
         /**
          * @brief @p object 의 컴포넌트에서 `Exec` 메서드 @p functionName 을 찾아 인자 글로 부릅니다. 여러 컴포넌트에 있으면 목록의 첫 컴포넌트다.
-         * @return 불렀으면 true 이고 @p outReply 는 반환값 글이다. 그런 메서드가 없거나 인자가 틀리면 false 이고 까닭이다.
+         * @return 불렀으면 true 이고 @p outReply 는 반환값 글이다. 그런 메서드가 없거나 인자가 틀리거나 메서드가 bool false 를 돌려주면 false 이고 까닭이다.
          */
         [[nodiscard]] static bool run( GameObject& object, string_view functionName, const vector<string>& listArgument, string& outReply );
     };

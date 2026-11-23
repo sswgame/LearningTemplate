@@ -23,7 +23,7 @@ namespace
     /** @brief 삼각형 하나짜리 Packed 메시입니다. */
     shared_ptr<Mesh> makeTriangle()
     {
-        const shared_ptr<Mesh> mesh = Mesh::create();
+        const shared_ptr<Mesh> mesh = Mesh::create( MeshCPUAccess::Keep );
         vector<RHIVertex>      listVertex( 3 );
         listVertex[1]._arrPosition[0] = 1.0f;
         listVertex[2]._arrPosition[1] = 1.0f;
@@ -36,7 +36,7 @@ namespace
     /** @brief 정점 @p vertexCount 개(삼각형 하나만 그린다)짜리 Packed 메시입니다 — 풀 용량을 채우는 데 쓴다. */
     shared_ptr<Mesh> makeWideMesh( uint32 vertexCount )
     {
-        const shared_ptr<Mesh> mesh = Mesh::create();
+        const shared_ptr<Mesh> mesh = Mesh::create( MeshCPUAccess::Keep );
         const bool             bSet = mesh->setGeometry( vector<RHIVertex>( vertexCount ), vector<uint32>{ 0, 1, 2 } );
         SW_ASSERT( bSet );
         (void)bSet;

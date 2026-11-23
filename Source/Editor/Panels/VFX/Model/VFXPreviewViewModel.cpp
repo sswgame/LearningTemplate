@@ -2,6 +2,7 @@
 
 #include "Editor/Panels/VFX/Model/VFXPreviewViewModel.h"
 
+#include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
@@ -11,6 +12,7 @@
 
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/HotReload/AssetHotReload.h"
+#include "Editor/Panels/Catalog/Model/ReflectedXMLDocument.h"
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Asset/Cache/SharedAssetCache.h"
@@ -36,6 +38,23 @@ namespace sw::editor
         {
             /// @brief 미리보기 씬에 스폰하는 효과 오브젝트 이름입니다.
             static constexpr const utf8* kPreviewSubjectName = "PreviewSubject";
+            /// @brief 효과 문서의 방출기 목록 칸과 방출기의 열쇠 칸입니다(`VFXEffectDef::_listEmitter` · `VFXEmitterDef::_name`).
+            static constexpr string_view kEmitterList = "_listEmitter";
+            static constexpr string_view kEmitterKey  = "_name";
+
+            static void fillRows( const VFXEffectDef& effect, vector<VFXPreviewEmitterRow>& outListRow )
+            {
+                outListRow.clear();
+                for ( const VFXEmitterDef& emitter : effect._listEmitter )
+                {
+                    VFXPreviewEmitterRow& row = outListRow.emplace_back();
+                    row._name                 = emitter._name;
+                    row._texturePath          = emitter._texturePath.path();
+                    row._maxParticles         = emitter._maxParticles;
+                    row._bAdditive            = emitter._blendMode == VFXBlendMode::Additive;
+                    row._bLooping             = emitter._bLooping;
+                }
+            }
         };
     } // namespace
 } // namespace sw::editor
@@ -43,8 +62,11 @@ namespace sw::editor
 namespace sw::editor
 {
     VFXPreviewViewModel::VFXPreviewViewModel()
-        : _listEmitterRow{}
+        : _pDocument{ make_unique<ReflectedXMLDocument>() }
+        , _selectedEmitter{}
+        , _listEmitterRow{}
         , _previewEffectPath{}
+        , _previewText{}
         , _status{}
         , _loadedDiskPath{}
         , _targetPrefabPath{}
@@ -58,6 +80,110 @@ namespace sw::editor
         , _bTargetPending{ SW_FALSE }
         , _reserved{ 0 }
     {
+    }
+
+    VFXPreviewViewModel::~VFXPreviewViewModel() = default;
+
+    void VFXPreviewViewModel::bindDocumentEditRecorder( const DocumentEditRecorder& recorder )
+    {
+        _pDocument->bindDocumentEditRecorder( recorder );
+    }
+
+    string VFXPreviewViewModel::captureText() const
+    {
+        return _pDocument->getText();
+    }
+
+    void VFXPreviewViewModel::applyText( string_view text )
+    {
+        _pDocument->applyText( text );
+        refreshEmitterRows();
+    }
+
+    bool VFXPreviewViewModel::saveDocument()
+    {
+        if ( _loadedDiskPath.empty() || FileUtil::writeTextFile( FileUtil::toDiskPath( _loadedDiskPath ), _pDocument->getText() ) == false )
+        {
+            _status = "The effect could not be saved - see the log";
+            return false;
+        }
+        _pDocument->markSaved();
+        (void)updateContentHash( _loadedDiskPath, _loadedContentHash ); // 내가 쓴 글이다 — 자동 갱신이 문서를 다시 읽어 되돌리기를 비우지 않게
+        requestResync();                                                // 저장 뒤 공유 캐시가 다시 읽은 효과를 미리보기에 다시 건다
+        _status = "Saved";
+        return true;
+    }
+
+    bool VFXPreviewViewModel::isEditable() const
+    {
+        return _pDocument->isEditable();
+    }
+
+    const string& VFXPreviewViewModel::getBaseID() const
+    {
+        return _pDocument->getBaseID();
+    }
+
+    vector<hashed_string> VFXPreviewViewModel::collectHiddenProperties() const
+    {
+        const optional<uint32> selected = getSelectedEmitter();
+        vector<hashed_string>  listHidden;
+        if ( selected.has_value() && _pDocument->isInheritedItem( VFXPreviewViewModelInternal::kEmitterList, *selected ) )
+            listHidden.push_back( hashed_string( VFXPreviewViewModelInternal::kEmitterKey ) );
+        return listHidden;
+    }
+
+    optional<uint32> VFXPreviewViewModel::getSelectedEmitter() const
+    {
+        return _selectedEmitter.has_value() && *_selectedEmitter < _listEmitterRow.size() ? _selectedEmitter : nullopt;
+    }
+
+    void* VFXPreviewViewModel::editSelectedEmitter()
+    {
+        const optional<uint32> selected = getSelectedEmitter();
+        VFXEffectDef*          pEffect  = static_cast<VFXEffectDef*>( _pDocument->getInstance() );
+        return pEffect != nullptr && selected.has_value() && *selected < pEffect->_listEmitter.size() ? &pEffect->_listEmitter[*selected] : nullptr;
+    }
+
+    const TypeInfo* VFXPreviewViewModel::getEmitterType()
+    {
+        return VFXEmitterDef::StaticType();
+    }
+
+    void VFXPreviewViewModel::commitEmitterProperty( const PropertyInfo& property )
+    {
+        const void* pEmitter = editSelectedEmitter();
+        if ( pEmitter == nullptr )
+            return;
+        (void)_pDocument->commitItemProperty( VFXPreviewViewModelInternal::kEmitterList, *getSelectedEmitter(), pEmitter, *getEmitterType(), property ); // 같은 글이면 바뀐 것이 없다
+        refreshEmitterRows();
+    }
+
+    void VFXPreviewViewModel::duplicateSelectedEmitter()
+    {
+        const optional<uint32> selected = getSelectedEmitter();
+        if ( selected.has_value() == false || _pDocument->duplicateItem( VFXPreviewViewModelInternal::kEmitterList, *selected, VFXPreviewViewModelInternal::kEmitterKey ) == false )
+            return;
+        _selectedEmitter = *selected + 1;
+        refreshEmitterRows();
+    }
+
+    void VFXPreviewViewModel::removeSelectedEmitter()
+    {
+        const optional<uint32> selected = getSelectedEmitter();
+        if ( selected.has_value() == false || _listEmitterRow.size() < 2 )
+            return;
+        if ( _pDocument->removeItem( VFXPreviewViewModelInternal::kEmitterList, *selected ) == false )
+            return;
+        _selectedEmitter = nullopt;
+        refreshEmitterRows();
+    }
+
+    void VFXPreviewViewModel::refreshEmitterRows()
+    {
+        const VFXEffectDef* pEffect = static_cast<const VFXEffectDef*>( _pDocument->getInstance() );
+        if ( pEffect != nullptr )
+            VFXPreviewViewModelInternal::fillRows( *pEffect, _listEmitterRow );
     }
 
     void VFXPreviewViewModel::toggleSolo( int32 emitterIndex )
@@ -183,14 +309,15 @@ namespace sw::editor
             _status = "The effect could not be read - see the log";
             return ToolAssetLoadResult::Malformed;
         }
-        for ( const VFXEmitterDef& emitter : pEffect->_listEmitter )
+        VFXPreviewViewModelInternal::fillRows( *pEffect, _listEmitterRow );
+        // 편집 사본 — 읽지 못하면 공유 캐시가 이미 거절했다.
+        string text;
+        _pDocument->clear();
+        if ( _loadedDiskPath.empty() == false && FileUtil::readTextFile( FileUtil::toDiskPath( _loadedDiskPath ), text ) )
         {
-            VFXPreviewEmitterRow& row = _listEmitterRow.emplace_back();
-            row._name                 = emitter._name;
-            row._texturePath          = emitter._texturePath.path();
-            row._maxParticles         = emitter._maxParticles;
-            row._bAdditive            = emitter._blendMode == VFXBlendMode::Additive;
-            row._bLooping             = emitter._bLooping;
+            const expected<void> opened = _pDocument->load( *VFXEffectDef::StaticType(), text, assetPath );
+            if ( opened.has_value() == false )
+                SW_LOG_WARNING_ID( "VFXPreview.EditCopyNotRead", "VFX Preview cannot edit '%#': %# (%#)", assetPath, opened.error().message(), opened.error().detail() );
         }
         _status = "Loaded";
         return ToolAssetLoadResult::Loaded;
@@ -261,17 +388,34 @@ namespace sw::editor
             pSubject->stop();
     }
 
-    void VFXPreviewViewModel::syncEffect( Scene* pScene, string_view assetPath )
+    void VFXPreviewViewModel::syncEffect( Scene* pScene, string_view assetPath, bool bInteracting )
     {
-        if ( string_view{ _previewEffectPath } == assetPath )
+        const bool        bEdited  = _pDocument->isEditable() && _pDocument->isDirty();
+        const string_view editText = bEdited ? string_view{ _pDocument->getText() } : string_view{};
+        const bool        bSame    = string_view{ _previewEffectPath } == assetPath;
+        if ( bSame && ( bInteracting || string_view{ _previewText } == editText ) )
             return;
         VFXComponent* pVFX = findSubject( pScene );
         if ( pVFX == nullptr )
             return;
+        _previewEffectPath = assetPath;
+        _previewText       = string( editText ); // 틀린 글도 적어 둔다 — 고칠 때까지 프레임마다 다시 읽지 않는다
         // 미리보기 씬은 플레이하지 않는다(틱만) — 재생은 이 창이 시작한다.
+        if ( bEdited )
+        {
+            const shared_ptr<const VFXEffectDef> pEdited = VFXEffectDef::makeFromXMLText( editText, assetPath );
+            if ( pEdited == nullptr )
+            {
+                _status = "The edited effect has an invalid value - the preview keeps the last valid one (see the log)";
+                return;
+            }
+            pVFX->setEffect( pEdited );
+            pVFX->play();
+            SW_LOG_INFO_ID( "VFXPreview.PlayingEdit", "VFX Preview playing the unsaved edit of '%#' (%# emitters)", _previewEffectPath, pVFX->getEmitterCount() );
+            return;
+        }
         pVFX->setEffectPath( assetPath );
         pVFX->play();
-        _previewEffectPath = assetPath;
         SW_LOG_INFO_ID( "VFXPreview.Playing", "VFX Preview playing '%#' (%# emitters)", _previewEffectPath, pVFX->getEmitterCount() );
     }
 

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="cd6f6a69c818c5a9a1619347c10526e2"?>
+<!-- 스마트 오브젝트 시나리오(automation/smartobject)의 하루 — 두 사람이 같은 시간에 벤치(스마트 오브젝트 정의 Bench) 자리를 하나씩 예약한다. -->
+<Schedules>
+	<Calendar days="Mon,Tue,Wed,Thu,Fri,Sat,Sun"/>
+	<Place id="anna_home" position="-4 0 0"/>
+	<Place id="ben_home" position="4 0 0"/>
+	<NPC id="anna" home="anna_home" speed="60">
+		<Routine id="day">
+			<Block start="10:00" end="12:00" activity="UseObject" objectKind="Bench"/>
+			<Block start="14:00" end="15:00" activity="UseObject" objectKind="Bench"/>
+		</Routine>
+	</NPC>
+	<NPC id="ben" home="ben_home" speed="60">
+		<Routine id="day">
+			<Block start="10:00" end="12:00" activity="UseObject" objectKind="Bench"/>
+			<Block start="14:00" end="15:00" activity="UseObject" objectKind="Bench"/>
+		</Routine>
+	</NPC>
+</Schedules>

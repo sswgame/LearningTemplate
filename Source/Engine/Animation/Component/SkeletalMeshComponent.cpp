@@ -842,7 +842,7 @@ namespace sw
             if ( bUseVertexAnimation )
             {
                 shared_ptr<Mesh> vertexMesh =
-                    crowd.findVertexAnimationMesh( _skinSourceMesh, *_skeleton, *clip, request._bAnchorRootMotion == SW_TRUE, getMeshID() );
+                    crowd.findVertexAnimationMesh( _skinSourceMesh, _skeleton.snapshot(), clip, request._bAnchorRootMotion == SW_TRUE, getMeshID() );
                 if ( vertexMesh != nullptr )
                 {
                     const bool bEntering = _crowdMode != AnimationCrowdMode::VertexAnimation || _pVertexAnimationClip != clip.get();

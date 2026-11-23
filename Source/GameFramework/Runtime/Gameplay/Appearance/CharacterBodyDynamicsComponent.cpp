@@ -7,8 +7,6 @@
 #include "Core/Log/LogOnce.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
-#include "Core/String/StringBuilder.h"
-#include "Core/String/StringUtil.h"
 
 #include "Engine/Animation/Component/FacialAnimationComponent.h"
 #include "Engine/Animation/Component/SkeletalAnimatorComponent.h"
@@ -21,7 +19,6 @@
 #include "Engine/Character/Fit/SurfaceState.h"
 #include "Engine/Character/Hit/CharacterHit.h"
 #include "Engine/Character/PoseModifier/PoseModifierComponent.h"
-#include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/Component/TagSystem.h"
@@ -29,7 +26,6 @@
 #include "Engine/Object/GameObject/GameObjectEvents.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
-#include "Engine/Scene/SceneManager.h"
 #include "Engine/VFX/VFXComponent.h"
 #include "Engine/Visual/Component/DirectionalLightComponent.h"
 #include "Engine/Visual/Component/LightComponent.h"
@@ -38,7 +34,6 @@
 #include "GameFramework/Runtime/Gameplay/Appearance/BodyProfile.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterAppearanceComponent.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterSurfaceBinding.h"
-#include "GameFramework/Runtime/Gameplay/GameState/GameStateComponent.h"
 
 namespace sw
 {
@@ -65,55 +60,6 @@ namespace sw
                 outValue.setNumber( static_cast<float64>( ( pFound->*Getter )() ) );
                 return true;
             }
-
-            static CharacterBodyDynamicsComponent* findCommandTarget( const string& objectName, string& outReply )
-            {
-                GameObject*                     pObject = engine::findActiveObject( hashed_string( objectName ) );
-                CharacterBodyDynamicsComponent* pFound  = pObject != nullptr ? pObject->getComponent<CharacterBodyDynamicsComponent>() : nullptr;
-                if ( pFound == nullptr )
-                {
-                    StringBuilder<constant::buffer::kMax256> replyBuilder;
-                    replyBuilder.appendFormat( "no object named '%#' with a CharacterBodyDynamicsComponent in the active scene", objectName );
-                    outReply = string( replyBuilder.view() );
-                }
-                return pFound;
-            }
-
-            /** @brief `body.impulse <object> <x> <y> <z>` — 지글에 월드 속도 충격을 줍니다(맞음 시나리오). */
-            static bool runImpulse( const vector<string>& listArgument, string& outReply )
-            {
-                float3 velocity{};
-                if ( listArgument.size() != 4 || StringUtil::parseFloat( listArgument[1], velocity._x ) == false || StringUtil::parseFloat( listArgument[2], velocity._y ) == false ||
-                     StringUtil::parseFloat( listArgument[3], velocity._z ) == false )
-                    return false;
-                CharacterBodyDynamicsComponent* pFound = findCommandTarget( listArgument[0], outReply );
-                if ( pFound == nullptr )
-                    return true;
-                pFound->addImpulse( velocity );
-                StringBuilder<constant::buffer::kMax256> replyBuilder;
-                replyBuilder.appendFormat( "body.impulse %# (%# %# %#)", listArgument[0], velocity._x, velocity._y, velocity._z );
-                outReply = string( replyBuilder.view() );
-                return true;
-            }
-
-            /** @brief `body.fluid <object> <trigger> <seconds> [strength]` — 체액 방아쇠를 켭니다(울기 · 침 시나리오, 편집 창 미리보기). */
-            static bool runFluid( const vector<string>& listArgument, string& outReply )
-            {
-                float32 seconds  = 0.0f;
-                float32 strength = 1.0f;
-                if ( listArgument.size() < 3 || listArgument.size() > 4 || StringUtil::parseFloat( listArgument[2], seconds ) == false )
-                    return false;
-                if ( listArgument.size() == 4 && StringUtil::parseFloat( listArgument[3], strength ) == false )
-                    return false;
-                CharacterBodyDynamicsComponent* pFound = findCommandTarget( listArgument[0], outReply );
-                if ( pFound == nullptr )
-                    return true;
-                pFound->triggerFluid( hashed_string( listArgument[1] ), seconds, strength );
-                StringBuilder<constant::buffer::kMax256> replyBuilder;
-                replyBuilder.appendFormat( "body.fluid %# %# %#s x%#", listArgument[0], listArgument[1], seconds, strength );
-                outReply = string( replyBuilder.view() );
-                return true;
-            }
         };
     } // namespace
 
@@ -131,8 +77,6 @@ namespace sw
                                &CharacterBodyDynamicsInternal::readValue<&CharacterBodyDynamicsComponent::computeMaxSmearDilution>, true, false );
     SW_AUTOMATION_QUERY_WATCH( bodyFluidEffects, "Body.FluidEffects", "Tear drip / saliva strand effects emitting on the target",
                                &CharacterBodyDynamicsInternal::readValue<&CharacterBodyDynamicsComponent::computeActiveFluidEffects>, true, false );
-    SW_DEV_COMMAND( BodyImpulse, "body.impulse", "body.impulse <object> <x> <y> <z>", "Push the object's jiggle bones with a world velocity (m/s)", &CharacterBodyDynamicsInternal::runImpulse );
-    SW_DEV_COMMAND( BodyFluid, "body.fluid", "body.fluid <object> <trigger> <seconds> [strength]", "Turn on a body fluid trigger (Cry, Drool) for a while", &CharacterBodyDynamicsInternal::runFluid );
 } // namespace sw
 
 namespace sw
@@ -140,7 +84,6 @@ namespace sw
     CharacterBodyDynamicsComponent::CharacterBodyDynamicsComponent()
         : _hitImpulseScale{ 0.02f }
         , _sunTraceDistance{ 50.0f }
-        , _skyLightValue{}
         , _wipeEvent{}
         , _fluidSmearStrength{ 0.6f }
         , _listFluid{}
@@ -306,20 +249,17 @@ namespace sw
     {
         float32      luminance = 0.0f;
         const uint64 ownerID   = getOwner()->getObjectID();
-        // 날씨: 판 상태의 날씨 값(`_skyLightValue` — 맑음 1, 흐림 · 비 · 안개는 낮다)이 직사광을 줄인다. 날씨가 없는 씬은 맑은 하늘이다.
-        const GameStateComponent* pSession = _skyLightValue.empty() ? nullptr : GameStateComponent::findOpen( &manager );
-        const float32             skyLight = pSession != nullptr ? MathUtil::saturate( pSession->getWeather().computeValue( _skyLightValue ) ) : 1.0f;
         for ( LightComponent* pLight : manager.getComponentRegistry().getAll<LightComponent>( LightComponent::getRegistryIndex( LightKind::Directional ) ) )
         {
             const DirectionalLightComponent* pSun = static_cast<const DirectionalLightComponent*>( pLight );
             if ( pSun == nullptr || pSun->isActive() == false )
                 continue;
-            // 해 쪽으로 쏜 광선이 막히면 그늘 · 실내다 — 주변광만 받는다. 시간대 · 날씨는 해 세기(`DaylightComponent`)에 이미 들어 있다.
+            // 해 쪽으로 쏜 광선이 막히면 그늘 · 실내다 — 주변광만 받는다. 시간대(`DaylightComponent`) · 날씨(카탈로그의 SunIntensity 바인딩)는 해 세기에 이미 들어 있다.
             const float3    towardSun = -pSun->getLightDirection();
             CharacterRayHit blocker;
             const bool      bShaded = _sunTraceDistance > 0.0f && CharacterRayHit::raycast3D( manager, eye, towardSun, _sunTraceDistance, CharacterBodyDynamicsInternal::kAllLayers, ownerID, blocker );
             const float32   ambient = pSun->getAmbient() * pSun->getIntensity();
-            luminance += ( bShaded ? 0.0f : pSun->getIntensity() * skyLight ) + ambient;
+            luminance += ( bShaded ? 0.0f : pSun->getIntensity() ) + ambient;
         }
         for ( LightComponent* pLight : manager.getComponentRegistry().getAll<LightComponent>( LightComponent::getRegistryIndex( LightKind::Point ) ) )
         {
@@ -359,13 +299,16 @@ namespace sw
             const BodyFluidDef& def    = profile._listFluid[fluidIndex];
             FluidStream&        stream = _listFluid[fluidIndex];
             const float32       amount = computeTriggerStrength( def._trigger );
-            stream._emitAccumulator += amount * def._ratePerSecond * seconds;
+            if ( appearance.hasSurfaceState() ) // 그릴 표면이 없으면 줄기가 흐르지 않는다 — 내면 사라질 길 없이 쌓인다
+                stream._emitAccumulator += amount * def._ratePerSecond * seconds;
+            else
+                stream._listDistance.clear();
             while ( stream._emitAccumulator >= 1.0f )
             {
                 stream._listDistance.push_back( 0.0f );
                 stream._emitAccumulator -= 1.0f;
             }
-            if ( stream._listDistance.empty() || appearance.hasSurfaceState() == false )
+            if ( stream._listDistance.empty() )
             {
                 updateFluidEffect( appearance, def, stream, amount, 0, seconds );
                 continue;

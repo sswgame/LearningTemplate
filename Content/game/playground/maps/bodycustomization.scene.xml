@@ -68,7 +68,7 @@
 					<SkeletalAnimatorComponent _localID="6157124105282015569" _animationSetPath="common/models/kaykit/skeleton_warrior/skeleton_warrior.animset.xml" _initialState="Idle_Combat" _bPlayOnBegin="true" />
 					<CharacterAppearanceComponent _localID="13827364293183997314" _presetID="BodyDemoWarrior" _seed="0" _bMergeParts="true" _surfaceChannelsPath="common/characters/bodyfluid.surfacechannels.xml" />
 					<PoseModifierComponent _localID="8397761042515027675" _rigPath="common/rigs/skeleton_bodydemo.rig.xml" _bRigEnabled="true" />
-					<CharacterBodyDynamicsComponent _localID="101379428086715354" _eyeSocket="Eyes" _hitImpulseScale="0.02" _sunTraceDistance="50" _skyLightValue="skyLight" _wipeEvent="WipeFace" _fluidSmearStrength="0.6" />
+					<CharacterBodyDynamicsComponent _localID="101379428086715354" _eyeSocket="Eyes" _hitImpulseScale="0.02" _sunTraceDistance="50" _wipeEvent="WipeFace" _fluidSmearStrength="0.6" />
 				</_listComponent>
 			</GameObject>
 		</entity>

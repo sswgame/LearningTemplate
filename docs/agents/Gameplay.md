@@ -55,12 +55,12 @@ Stop at the first yes.
 ## 스트리밍 · 네트워크
 
 - 늘 있어야 하는 서버 스폰은 `_bAlwaysLoaded` 를 켜거나 복제 번호를 매긴다.
-- 원점 이동: 월드 공간 파티클 · 디버그 그리기 · `AIPerceivedTarget::_lastKnownPosition` · MMO 절대 자리를 놓는 게임 코드는 원점을 손으로 뺀다.
+- 원점 이동: 트랜스폼 밖에 쥔 씬 자리는 `Component::onWorldOriginShifted` 로 옮기고, 저장 · 데이터 · 시뮬레이션의 절대 자리는 쓸 때 `WorldOrigin` 으로 옮긴다. 디버그 그리기 · MMO 절대 자리를 놓는 게임 코드도 같다.
 - 클라이언트 → 서버 셀 상태 보고는 두지 않는다(믿을 수 없는 입력의 공격면). 스트리밍 씬 두 프로세스 짝 시나리오는 그런 게임이 생길 때 — 그때까지 `NetMMOStreamingTest`.
 - 로드 큐는 에디터 패널을 두지 않는다(개발 명령 · HUD 자리).
 
 ## 게임 기능 · 미니게임
 
-- 시험용 게임을 새로 만들지 않는다 — 기능은 Playground 장소 · 미니게임과 시나리오로 확인한다. 키트는 모두 링크하고 게임 기능(`GameFeatureRegistry`)이 등록 · 서비스 바인딩만 켜고 끈다(런타임 모듈 로드 · 언로드 금지).
+- 시험용 게임을 새로 만들지 않는다 — 기능은 Playground 장소 · 미니게임과 시나리오로 확인한다. 키트는 모두 링크하고 게임 기능(`GameFeatureRegistry`)이 등록 · 서비스 바인딩 · 컴포넌트(받는 이름 — `GameFeatureReceiverComponent`)만 켜고 끈다(런타임 모듈 로드 · 언로드 금지).
 - 미니게임 카탈로그는 `GameFeatureScope::loadCatalog<T>()` 로 받는다(키트 등록 · `catalogs` 검사 안에 들게).
 - 범용 스크립트 VM 대신 `BehaviorTreeAsset` · `ConditionExpr` · `DialogueGraphAsset` · `AnimationGraphPlayer` 에 노드 · 식을 더한다.

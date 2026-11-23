@@ -75,8 +75,8 @@ namespace sw::editor
     private:
         /** @brief 이 시퀀스를 트는 지금 씬의 플레이어입니다(고른 것이 사라졌으면 첫 것). 없으면 nullptr 입니다. */
         SequencePlayerComponent* findBindingContext( string_view documentPath ) const;
-        /** @brief 바인딩 문맥의 표를 쓰는 창입니다(문맥이 없으면 빈 표). @p asset 은 호출 동안 살아 있어야 한다. */
-        SequenceBindingView makeBindingView( const SequenceAsset& asset, string_view documentPath ) const;
+        /** @brief 바인딩 문맥 @p pContext 의 표를 쓰는 창입니다(문맥이 없으면 빈 표). @p asset 은 호출 동안 살아 있어야 한다. */
+        SequenceBindingView makeBindingView( const SequenceAsset& asset, const SequencePlayerComponent* pContext ) const;
 
     private:
         vector<SequenceSpanState>     _listPreviewSpan;  ///< 미리보기가 들어간 구간 동작(소리 · 애니메이션)

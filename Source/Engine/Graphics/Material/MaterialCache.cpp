@@ -2,11 +2,11 @@
 
 #include "Engine/Graphics/Material/MaterialCache.h"
 
-#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
+#include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
 #include "Core/Diagnostics/CacheStats.h"
 #include "Core/Foundation/StdHeaders.h"
@@ -15,7 +15,6 @@
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Asset/Cache/BuiltInAssetCache.h"
-#include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
@@ -42,10 +41,10 @@ namespace sw
         unordered_map<string, Entry> _mapEntry;
         vector<string>               _listPendingKey;          ///< `requestInitialize` 가 등록한, GPU 자원을 초기화할 경로(`_mutex` 아래)
         atomic<IRHIDevice*>          _pBoundDevice{ nullptr }; ///< 엔진이 붙인 디바이스(`bindDevice`) — 다시 로드가 쓴다
-        vector<string>               _listPSOWarmKey;          ///< 고정(`pinAsset`)이 넣은, 초기화를 기다리는 PSO 미리 만들기 경로(`_mutex` 아래)
+        unordered_set<string>        _uniquePSOWarmKey;        ///< 고정(`pinAsset`)이 넣은, 초기화를 기다리는 PSO 미리 만들기 경로(`_mutex` 아래)
         vector<MaterialPSOWarmEntry> _listPSOWarmEntry;        ///< 초기화를 마쳐 렌더 스레드가 꺼내 갈 PSO 미리 만들기 값(`_mutex` 아래)
         atomic<uint32>               _pendingCount;            ///< `_listPendingKey` 의 크기. 0 이면 `initializePending` 이 잠그지 않는다(매 프레임 불린다)
-        atomic<uint32>               _psoWarmCount;            ///< `_listPSOWarmKey` 의 크기. 0 이면 `initializePending` 이 줄을 보지 않는다
+        atomic<uint32>               _psoWarmCount;            ///< `_uniquePSOWarmKey` 의 크기. 0 이면 `initializePending` 이 줄을 보지 않는다
         atomic<uint32>               _psoWarmEntryCount;       ///< `_listPSOWarmEntry` 의 크기. 0 이면 `takePSOWarmEntries` 가 잠그지 않는다(매 프레임 불린다)
         shared_mutex                 _mutex;
         /// @brief 디바이스로 머티리얼을 초기화하는 구간(`DeviceInitScope`)을 지금 쥔 스레드입니다. 비어 있으면 아무도 안 쥐었습니다.
@@ -55,7 +54,7 @@ namespace sw
         Impl()
             : _mapEntry{}
             , _listPendingKey{}
-            , _listPSOWarmKey{}
+            , _uniquePSOWarmKey{}
             , _listPSOWarmEntry{}
             , _pendingCount{ 0 }
             , _psoWarmCount{ 0 }
@@ -174,6 +173,8 @@ namespace sw
 
         const string key = AssetRedirect::toCacheKey( relativePath );
 
+        // 지우는 머티리얼은 잠금을 놓은 뒤 사라진다 — 소멸자가 텍스처 캐시 · 장치를 부른다(잠금은 잎 잠금). 로그도 놓은 뒤에 쓴다.
+        shared_ptr<Material>     pErased;
         UniqueLock<shared_mutex> lock{ _impl->_mutex };
         auto                     it = _impl->_mapEntry.find( key );
         if ( it == _impl->_mapEntry.end() )
@@ -185,13 +186,17 @@ namespace sw
         // 같은 구조의 `TextureCache::release` 도 같은 검사를 한다.
         if ( it->second._refCount == 0 )
         {
+            lock.unlock();
             SW_LOG_WARNING_ID( "MaterialCache.MaterialReleasedMoreTimes", "Material '%#' was released more times than acquired - ignoring.", key.c_str() );
             return;
         }
 
         --it->second._refCount;
         if ( it->second._refCount == 0 )
+        {
+            pErased = std::move( it->second._material );
             _impl->_mapEntry.erase( it );
+        }
     }
 
     size_t MaterialCache::getCachedCount() const
@@ -313,14 +318,14 @@ namespace sw
         if ( _impl->_psoWarmCount.load( std::memory_order_acquire ) == 0 )
             return;
         UniqueLock<shared_mutex> lock{ _impl->_mutex };
-        size_t                   keyIndex = 0;
-        while ( keyIndex < _impl->_listPSOWarmKey.size() )
+        auto                     itKey = _impl->_uniquePSOWarmKey.begin();
+        while ( itKey != _impl->_uniquePSOWarmKey.end() )
         {
-            const auto              it    = _impl->_mapEntry.find( _impl->_listPSOWarmKey[keyIndex] );
+            const auto              it    = _impl->_mapEntry.find( *itKey );
             const MaterialInitState state = it != _impl->_mapEntry.end() ? it->second._material->getInitState() : MaterialInitState::Failed;
             if ( state == MaterialInitState::NotRequested || state == MaterialInitState::Pending )
             {
-                ++keyIndex; // 아직 초기화 전이다 — 셰이더를 모른다
+                ++itKey; // 아직 초기화 전이다 — 셰이더를 모른다
                 continue;
             }
             if ( state == MaterialInitState::Ready ) // 실패(`Failed`)한 것과 캐시에서 빠진 것은 버린다
@@ -335,9 +340,9 @@ namespace sw
                 entry._bTransparent        = material.getBlendMode() == BlendMode::Transparent;
                 _impl->_listPSOWarmEntry.push_back( std::move( entry ) );
             }
-            VectorUtil::removeAtSwap( _impl->_listPSOWarmKey, keyIndex );
+            itKey = _impl->_uniquePSOWarmKey.erase( itKey );
         }
-        _impl->_psoWarmCount.store( static_cast<uint32>( _impl->_listPSOWarmKey.size() ), std::memory_order_release );
+        _impl->_psoWarmCount.store( static_cast<uint32>( _impl->_uniquePSOWarmKey.size() ), std::memory_order_release );
         _impl->_psoWarmEntryCount.store( static_cast<uint32>( _impl->_listPSOWarmEntry.size() ), std::memory_order_release );
     }
 
@@ -362,8 +367,8 @@ namespace sw
         const string key = AssetRedirect::toCacheKey( relativePath );
         {
             UniqueLock<shared_mutex> lock{ _impl->_mutex };
-            VectorUtil::addUnique( _impl->_listPSOWarmKey, key );
-            _impl->_psoWarmCount.store( static_cast<uint32>( _impl->_listPSOWarmKey.size() ), std::memory_order_release );
+            (void)_impl->_uniquePSOWarmKey.insert( key ); // 이미 기다리면 그대로다
+            _impl->_psoWarmCount.store( static_cast<uint32>( _impl->_uniquePSOWarmKey.size() ), std::memory_order_release );
         }
         // 읽기는 게임 스레드의 초기화(`initializePending`)가 한 번 한다 — 내줄 로드가 없다.
         return AssetPin{ shared_ptr<const void>( pMaterial, MaterialCachePinRelease{ this, key } ), {} };
@@ -396,7 +401,7 @@ namespace sw
         {
             UniqueLock<shared_mutex> lock{ _impl->_mutex };
             _impl->_mapEntry.clear();
-            _impl->_listPSOWarmKey.clear();
+            _impl->_uniquePSOWarmKey.clear();
             _impl->_listPSOWarmEntry.clear();
             _impl->_psoWarmCount.store( 0, std::memory_order_release );
             _impl->_psoWarmEntryCount.store( 0, std::memory_order_release );
@@ -468,45 +473,4 @@ namespace sw
     {
         return engine::getSubsystem<AssetManager>().getAssetCache<MaterialCache>().acquire( path );
     }
-} // namespace sw
-
-namespace sw
-{
-    namespace
-    {
-        struct MaterialCacheCommandInternal
-        {
-            /** @brief `matswitch <머티리얼> <스위치> <0|1>` — 캐시에 든 머티리얼의 런타임 스위치를 바꿉니다. 시나리오가 런타임 퍼뮤테이션 전환(물체가 사라지지 않는다)을 확인할 때 쓴다. */
-            static bool runSetStaticSwitch( const vector<string>& listArgument, string& outReply )
-            {
-                const bool bBadValue = listArgument.size() == 3 && listArgument[2] != "0" && listArgument[2] != "1";
-                if ( listArgument.size() != 3 || bBadValue )
-                {
-                    outReply = "usage: matswitch <material> <switch> <0|1>";
-                    return false;
-                }
-                MaterialCache* const pCache = MaterialCache::findBound();
-                if ( pCache == nullptr || pCache->isCached( listArgument[0] ) == false )
-                {
-                    StringBuilder<constant::buffer::kMax256> builder;
-                    builder.appendFormat( "material %# is not loaded", listArgument[0] );
-                    outReply = builder.view();
-                    return false;
-                }
-                Material* const pMaterial = pCache->acquire( listArgument[0] );
-                const bool      bSet      = pMaterial != nullptr && pMaterial->setStaticSwitch( hashed_string( string_view( listArgument[1] ) ), listArgument[2] == "1" );
-                pCache->release( listArgument[0] );
-                StringBuilder<constant::buffer::kMax256> builder;
-                if ( bSet )
-                    builder.appendFormat( "set %#", listArgument[1] );
-                else
-                    builder.appendFormat( "could not set %# of %#", listArgument[1], listArgument[0] );
-                outReply = builder.view();
-                return bSet;
-            }
-        };
-    } // namespace
-
-    SW_DEV_COMMAND( MaterialStaticSwitch, "matswitch", "matswitch <material> <switch> <0|1>", "Turn a runtime static switch (bShaderFeature=\"0\") of a loaded material on or off",
-                    &MaterialCacheCommandInternal::runSetStaticSwitch );
 } // namespace sw

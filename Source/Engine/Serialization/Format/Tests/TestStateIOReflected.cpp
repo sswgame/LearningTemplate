@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/String/StringUtil.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Reflection/TypeInfo.h"
@@ -184,7 +185,7 @@ SW_TEST_CASE( StateIOReflectedTest, HandBodyAddsValuesOutsideReflection )
 }
 
 /**
- * @brief [StateIOReflectedTest] 내장 표의 State 역할 · Layout 으로 실리는 칸(실수 · 큰 정수 · 쿼터니언 · int2 시퀀스 · 오브젝트 핸들 · 이름 시퀀스)이 FATAL 없이 왕복한다
+ * @brief [StateIOReflectedTest] 내장 표의 State 역할 · Layout 으로 실리는 칸(실수 · 큰 정수 · 쿼터니언 · int2 시퀀스 · 이름 시퀀스)이 FATAL 없이 왕복한다
  */
 SW_TEST_CASE( StateIOReflectedTest, BuiltinLayoutPropertiesRoundTrip )
 {
@@ -196,7 +197,6 @@ SW_TEST_CASE( StateIOReflectedTest, BuiltinLayoutPropertiesRoundTrip )
         sw::int2{-1,   2},
         sw::int2{30, -40}
     };
-    state._target  = sw::GameObjectHandle::make( 77 );
     state._listTag = { sw::hashed_string( "Gate" ), sw::hashed_string( "Lever" ) };
 
     sw::Archive written;
@@ -212,9 +212,28 @@ SW_TEST_CASE( StateIOReflectedTest, BuiltinLayoutPropertiesRoundTrip )
     SW_REQUIRE_EQUAL( size_t{ 2 }, restored._listCell.size() );
     SW_EXPECT_EQUAL( 30, restored._listCell[1]._x );
     SW_EXPECT_EQUAL( -40, restored._listCell[1]._y );
-    SW_EXPECT_TRUE( restored._target == sw::GameObjectHandle::make( 77 ) );
     SW_REQUIRE_EQUAL( size_t{ 2 }, restored._listTag.size() );
     SW_EXPECT_TRUE( restored._listTag[1] == sw::hashed_string( "Lever" ) );
+}
+
+/** @brief 자식 역할: 오브젝트 핸들이 든 상태를 쓴다 — 여기서 멈춰야 한다(표식은 멈추지 않았을 때만 찍힌다). */
+SW_TEST_CHILD_ROLE( StateIOReflectedTest, HandleStateChild )
+{
+    sw::StateIOReflectedTestHandle state;
+    sw::Archive                    written;
+    state.writeState( written );
+    SW_EXPECT_TRUE_MSG( false, "a runtime object handle was written into state bytes" );
+}
+
+/**
+ * @brief [StateIOReflectedTest] 오브젝트 핸들 칸은 상태 바이트에 실리지 않고 멈춘다 — 세이브에 실린 런타임 id 는 다른 실행에서 남의 오브젝트를 가리킨다
+ */
+SW_TEST_CASE( StateIOReflectedTest, ObjectHandlesAreRefused, ._tags = "slow", ._timeoutSeconds = 180.0f )
+{
+    const sw::test::ChildRunResult child = sw::test::runChildRole( "StateIOReflectedTest.HandleStateChild", {}, 120.0f );
+    SW_REQUIRE_TRUE_MSG( child._exitCode.has_value(), child.getOutputTail() );
+    SW_EXPECT_FALSE_MSG( *child._exitCode == 0, child.getOutputTail() );
+    SW_EXPECT_TRUE_MSG( sw::StringUtil::contains( child._output, "StateIOReflectedTestHandle::_target" ), child.getOutputTail() );
 }
 
 /**

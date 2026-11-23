@@ -3,6 +3,8 @@
  * @brief 개발 명령(치트, 디버그 명령) 레지스트리와 `SW_DEV_COMMAND` 를 정의합니다.
  * @details 선언과 인자 도우미(`readDiskPathArgument` …)는 모든 구성에 있다 — 기능 파일의 명령 본문이 모든 구성에서 컴파일되게. 배포 구성은 `SW_DEV_COMMAND` 가
  *          등록하지 않아 레지스트리가 비어 있고, 본문은 부르는 곳이 없어 실행 파일에서 빠진다(`docs/agents/CppStyle.md "Build configuration switches"`).
+ *          엔진 기능의 명령은 공개 API 만 쓰면 `DevTools/Commands`(화면이 있어야 하는 것은 `DevTools/Client`)에 둔다. 파일 안 상태나 파일 안 함수(HUD 섹션 · 감시 값과 같이 쓰는 것)를
+ *          쓰는 명령만 그 기능의 `.cpp` 에 남는다 — 명령 하나 때문에 공개 API 를 늘리지 않는다.
  */
 #pragma once
 #include "Core/Concurrency/mutex.h"
@@ -89,6 +91,12 @@ namespace sw
         const DevCommandRegistration* findCommand( string_view name ) const;
         /** @brief @p command 의 본문을 부릅니다(씬을 도는 명령이면 순회 열쇠를 넘긴다). 본문의 답 그대로입니다 — 인자가 잘못됐으면 false. */
         [[nodiscard]] static bool run( const DevCommandRegistration& command, const vector<string>& listArgument, string& outReply );
+        /**
+         * @brief 로그 · 출력 줄 · 입력 기록에 남길 명령 줄입니다. @p command 의 사용법(`_pUsage`)이 비밀로 적은 자리(이름에 `password` · `secret` 이 든 인자)를 `***` 로 바꿉니다.
+         * @details 비밀을 받는 명령(`net.ticketconnect`)의 줄을 그대로 남기면 로그 파일 · 크래시 묶음 · 버그 보고에 비밀번호가 실린다. 사용법이 자리 이름의 기준이라 명령이 따로 가리지 않는다.
+         *          사용법보다 낱말이 많으면(따옴표 없이 공백이 든 비밀번호) 첫 비밀 자리부터 모두 가린다. 비밀 자리가 없는 명령은 @p line 그대로다.
+         */
+        [[nodiscard]] static string makeMaskedLine( const DevCommandRegistration& command, string_view line );
         /** @brief @p prefix 로 시작하는(대소문자 무시) 명령 이름을 사전순으로 채웁니다. */
         void collectNames( string_view prefix, vector<string>& outListName ) const;
         /** @brief 등록된 명령 수입니다. */

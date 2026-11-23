@@ -68,7 +68,7 @@ namespace sw::editor
      *            로그는 마음대로 남깁니다(로거는 스레드 안전입니다).
      *          - 원본 하나의 임포트는 **자기 결과 경로**(`makeImportedPath` 에서 확장자를 뗀 경로와 그 아래 옆 폴더)에만 쓰고 지웁니다. 같은 경로(또는 그 아래)를 쓰는 원본들은 일괄 임포트가
      *            한 사슬로 묶어 한 스레드가 파일 순서대로 임포트합니다.
-     *            공유 저장소(`ImportedAssetStore`)는 예외다 — 이름이 내용에서 나와 두 원본이 같은 자리를 쓰면 바이트가 같고, 쓰기는 저장소의 잠금 아래 한다.
+     *            공유 저장소(`ImportedAssetStore`)는 예외다 — 이름이 내용에서 나와 두 원본이 같은 자리를 쓰면 바이트가 같다(`writeIfAbsent`).
      *          - **다른 원본의 임포트 결과를 읽는 순서 의존**(장비 메시가 몸 메시를 읽는다)은 `hasOrderDependency` 로 드러냅니다. 그 원본은 의존이 없는 원본이 모두 끝난 뒤 이 스레드에서 직렬로 임포트합니다.
      *            의존 대상 자신은 의존이 없어야 합니다(의존끼리의 순서는 파일 순서일 뿐입니다).
      */
@@ -155,7 +155,7 @@ namespace sw::editor
          *          **어긋난 원본은 임포트하기 전에 @p derivedDataCache 를 찾고, 미스면 임포트한 뒤 넣는다**(ImportStale 만). 키 = 임포터 스탬프 머리 + 코드 지문 + 원본 해시
          *          (원본 바이트 · 규칙 · 임포터 판 · 대상 형식) + (`isImportedPathEmbedded` 면) 리소스 경로. 히트는 임포터를 부르지 않고 결과 파일을 되살린다.
          * @param pTaskManager 사슬을 나눠 돌 작업 시스템(빌림, nullptr 이면 이 스레드가 직렬로). 부르는 쪽이 찾아 넘긴다 — 워커에서 불릴 수 있어 여기서는 에디터 서비스 범위(`findEditorScope`)를 읽지 않는다.
-         * @param derivedDataCache 결과를 찾고 넣는 DDC(보통 `DerivedDataCache::loadFromConfig` — 부르는 쪽이 읽어 넘긴다, 테스트는 임시 폴더 층)
+         * @param derivedDataCache 결과를 찾고 넣는 DDC(보통 `DerivedDataCache::open` — 부르는 쪽이 읽어 넘긴다, 테스트는 임시 폴더 층)
          */
         [[nodiscard]] static AssetImportSummary importAll( string_view resourceRoot, const IRawAssetImporter& importer, AssetImportMode mode, TaskManager* pTaskManager,
                                                            const DerivedDataCache& derivedDataCache );

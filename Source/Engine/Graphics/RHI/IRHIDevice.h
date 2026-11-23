@@ -37,6 +37,7 @@ namespace sw
     class RHIMemoryTracker;
     class RHITransferSerials;
     class BindlessIndexReportLog;
+    class RHIComputeBindingLog;
     class ConstantBufferPagePool;
     enum class ShaderTargetFormat : uint8;
 
@@ -100,13 +101,13 @@ namespace sw
      *          기록 스트림은 두 가지다. 하나는 디바이스가 소유한 프레임 스트림(`getFrameStreamContext`)이고,
      *          다른 하나는 패스마다 만드는 커맨드 리스트(`createCommandList`)다.
      *
-     *          **완료 · 동기화 계약** — 다섯 백엔드가 모두 같은 약속을 지킨다(웹 WebGPU 의 `waitIdle` 만 아래 예외). 한 백엔드만 약하면 그 백엔드에서만 되읽기가 실패하거나 자원이 일찍 풀린다.
+     *          **완료 · 동기화 계약** — 다섯 백엔드가 모두 같은 약속을 지킨다. 한 백엔드만 약하면 그 백엔드에서만 되읽기가 실패하거나 자원이 일찍 풀린다.
      *          각 줄을 `RHIDeviceTest` 의 네 백엔드 테스트가 건다(괄호 안).
      *          - `waitIdle`: 앞서 제출한 **모든** GPU 작업이 끝난 뒤 돌아오고 해제 큐를 비운다. 돌아온 직후 읽기 버퍼를 콜백 없이 읽을 수 있다
      *            (`WaitIdleLeavesTheSubmittedCopyReadableOnEveryBackend`). 잃은 장치(DX12 제거, Vulkan 손실)는 끝나지 않을 일을 기다리지 않고 큐만 비운다.
      *            기다림을 확인했으면 남은 통지(`notifyFrameCompletion`)는 `Completed`, 못 기다렸으면(잃은 장치 · 시간 초과) `Abandoned` 다. 해제(`enqueueGPURelease`)는 어느 쪽이든 놓는다.
-     *            구현: DX11 이벤트 쿼리(상한 10 초, 넘으면 오류), DX12 펜스, Vulkan `vkDeviceWaitIdle`, GL `glFinish`, 네이티브 WebGPU(Dawn) 낸 프레임마다 프레임 펜스(`wgpuInstanceWaitAny`).
-     *            **웹 WebGPU 는 기다리지 않는다** — 브라우저는 DOM 이벤트 콜백 스택을 멈출 수 없다. 끝나지 않은 프레임의 통지는 `Abandoned` 로 가고, 돌아온 직후의 읽기는 웹에 없다.
+     *            구현: DX11 이벤트 쿼리(상한 10 초, 넘으면 오류), DX12 펜스, Vulkan `vkDeviceWaitIdle`, GL `glFinish`, WebGPU 낸 프레임마다 프레임 펜스(`wgpuInstanceWaitAny`).
+     *            브라우저는 DOM 이벤트 콜백 스택을 멈출 수 없다 — 창 콜백에서 부르지 않는다(적어 두고 프레임에서, `WebWindow`).
      *          - `enqueueGPURelease`: 맡긴 프레임의 GPU 작업이 끝난 **뒤에만** 부른다. 프레임 수를 세어 짐작하지 않는다
      *            (`EnqueuedGPUReleaseRunsOnlyAfterTheFrameGPUWorkIsDone`, `EnqueuedGPUReleaseRunsOnceAfterItsFrame`). 구현: DX12 · Vulkan 펜스, DX11 프레임 끝 이벤트 쿼리 링, GL 프레임 끝 `glFenceSync` 링,
      *            WebGPU 프레임 펜스(`onSubmittedWorkDone` 퓨처). `notifyFrameCompletion` 의 `Completed` 도 같은 자리에서만 나간다.
@@ -219,7 +220,7 @@ namespace sw
          *          엔진 바깥 모듈(에디터의 ImGui 렌더러)이 자기 네이티브 자원(디스크립터)을 엔진 자원과 같은 기준으로 해제할 때 쓰는 함수다.
          *          **프레임을 기록하는 스레드(렌더 스레드)에서 불러야 한다.** 펜스 값을 읽는 스레드가 그 값을 올리는 스레드여야 "이 프레임" 이 맞는다.
          *          콜백은 백엔드가 완료를 확인하는 스레드에서 불리고, `waitIdle` 과 `shutdown` 이 남은 콜백을 모두 부른다.
-         *          **놓기 전용이다** — 기다리지 못한 비우기(잃은 장치 · 시간 초과 · 종료 · 웹 `waitIdle`)에서도 불린다. "GPU 가 끝났다" 를 믿고 읽거나 다시 쓰는 일은 `notifyFrameCompletion` 으로 한다.
+         *          **놓기 전용이다** — 기다리지 못한 비우기(잃은 장치 · 시간 초과 · 종료)에서도 불린다. "GPU 가 끝났다" 를 믿고 읽거나 다시 쓰는 일은 `notifyFrameCompletion` 으로 한다.
          */
         virtual void enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate ) = 0;
         /**
@@ -298,22 +299,21 @@ namespace sw
         void releaseHandle( RHITextureHandle texture );
         /** @brief PSO 하나를 해제합니다. 시점 규칙은 버퍼와 같다. */
         void releaseHandle( RHIPipelineStateHandle pso );
-        /** @brief 렌더 패스 객체 하나를 해제합니다. 시점 규칙은 버퍼와 같다. */
-        void releaseHandle( RHIRenderPassHandle pass );
         /** @brief 겹침 힙 하나를 해제합니다. 시점 규칙은 버퍼와 같다. */
         void releaseHandle( RHITransientHeapHandle heap );
         /**
          * @brief bindless 번호 하나를 놓습니다(`registerBindlessTexture` · `registerBindlessBufferSRV` 가 준 번호). 시점 규칙은 `releaseHandle` 과 같다.
-         * @details 번호는 형식이 하나(`RHIDescriptorIndex`)라 공간(@p space)을 함께 받는다 — 버퍼 공간은 `unregisterBindlessResource`, 텍스처 공간은 `unregisterBindlessTexture` 로 간다.
+         * @details 번호 공간은 형식이 안다 — 버퍼 번호는 `unregisterBindlessResource`, 텍스처 번호는 `unregisterBindlessTexture` 로 간다.
          */
-        void releaseBindlessIndex( RHIBindlessIndexSpace space, RHIDescriptorIndex index );
+        void releaseBindlessIndex( RHITextureSRVIndex index );
+        void releaseBindlessIndex( RHIBufferSRVIndex index );
         /**
          * @brief 텍스처 번호 하나를 예약하고 @p placeholder 를 가리키게 할 일을 줄에 넣습니다. **어느 스레드에서든** 부른다(감사 R-6 — 텍스처 캐시가 로드를 시작할 때).
          * @details 번호는 곧바로 돌려주지만 산 칸은 렌더 스레드가 `activateReservedBindlessTextures` 로 디스크립터를 쓴 뒤다. 그 함수는 프레임 시작(`beginFrame`)과
-         *          텍스처 업로드 펌프가 기록 전에 부르므로, 그 번호를 실은 렌더 사본이 그려지기 전에 산다. 해제는 등록한 번호와 같다(`releaseBindlessIndex( RHIBindlessIndexSpace::Texture, … )`).
+         *          텍스처 업로드 펌프가 기록 전에 부르므로, 그 번호를 실은 렌더 사본이 그려지기 전에 산다. 해제는 등록한 번호와 같다(`releaseBindlessIndex( RHITextureSRVIndex )`).
          * @return 표가 차면 kInvalidDescriptorIndex 입니다.
          */
-        [[nodiscard]] RHIDescriptorIndex reserveBindlessTexture( RHITextureHandle placeholder );
+        [[nodiscard]] RHITextureSRVIndex reserveBindlessTexture( RHITextureHandle placeholder );
         /** @brief 예약한 번호를 모두 살립니다(렌더 스레드, 병렬 기록 밖). 살리지 못한 번호는 오류를 남긴다(자리 텍스처가 없는 결함이라 번호는 돌려받지 않는다). */
         void activateReservedBindlessTextures();
         /** @brief 미뤄 둔 핸들을 기한과 무관하게 모두 해제합니다. `waitIdle` 에서, 렌더 스레드를 세우거나 해제할 때, `shutdown` 에서 부릅니다. */
@@ -446,6 +446,8 @@ namespace sw
         }
         /** @brief 이 장치가 남긴 bindless 인덱스 보고 자리입니다(`BindlessIndexValidator` — 같은 자리는 한 번만). 병렬 기록 스레드에서 불러도 된다. */
         BindlessIndexReportLog& getBindlessIndexReportLog() const { return *_pBindlessIndexReportLog; }
+        /** @brief 컴퓨트 디스패치가 건 버퍼의 기록입니다(개발 구성만 채운다 — 버퍼 보기). 병렬 기록 스레드에서 불러도 된다. */
+        RHIComputeBindingLog& getComputeBindingLog() const { return *_pComputeBindingLog; }
 
         /**
          * @brief 그래픽스 VS 가 GPUScene 인스턴스 구조 버퍼(InstanceData)를 읽을 수 있으면 true 를 반환합니다.
@@ -564,7 +566,7 @@ namespace sw
          *          [지금까지의 세그먼트][이 리스트][새 세그먼트] 순서로 연결하고 endFrame 에서 한 번에
          *          큐로 넘긴다. 같은 큐의 제출 순서가 곧 실행 순서다. 그래픽스 실행 스레드 전용이다.
          */
-        virtual void executeCommandList( IRHICommandList* pCmdList ) = 0;
+        void executeCommandList( RHIClosedCommandList list ) { executeCommandListInternal( list.get() ); }
 
         /**
          * @brief 프레임 스트림과 무관하게 **곧바로** 큐에 제출합니다.
@@ -573,7 +575,7 @@ namespace sw
          *          프레임 중에 부르면 스트림 순서를 건너뛰므로 렌더 결과가 어긋난다.
          *          기본 구현은 executeCommandList 로 넘긴다(DX11/GL 처럼 기록이 곧 실행인 백엔드).
          */
-        virtual void executeCommandListImmediate( IRHICommandList* pCmdList ) { executeCommandList( pCmdList ); }
+        void executeCommandListImmediate( RHIClosedCommandList list ) { executeCommandListImmediateInternal( list.get() ); }
 
         /**
          * @brief 비동기 컴퓨트 큐에 낼 커맨드 리스트를 만듭니다. 컴퓨트 명령(디스패치 · 버퍼 배리어 · 복사)만 기록합니다.
@@ -586,7 +588,7 @@ namespace sw
          * @details 그래픽스 대기열과 프레임 스트림을 먼저 큐에 내고 그래픽스 큐가 신호한 값을 컴퓨트 큐가 기다린다. 돌려준 값은 `waitForAsyncCompute` 에 넘긴다.
          *          프레임 끝(`endFrame`)은 기다리지 않은 값을 모두 기다린 뒤 프레임 펜스를 신호한다 — 리스트 얼로케이터 · 지연 해제가 프레임 펜스 하나로 충분하다.
          */
-        virtual RHIQueueSyncPoint submitAsyncCompute( IRHICommandList* pCmdList );
+        RHIQueueSyncPoint submitAsyncCompute( RHIClosedCommandList list ) { return submitAsyncComputeInternal( list.get() ); }
         /**
          * @brief 그래픽스 큐가 @p point 까지의 비동기 컴퓨트 일을 기다리게 합니다(조인). 이 뒤에 넘기는 그래픽스 리스트부터 기다린다.
          * @details 그 전까지 넘긴 그래픽스 리스트는 기다리지 않도록 먼저 큐에 낸다 — 포크와 조인 사이의 그래픽스 일이 컴퓨트와 겹치는 자리다.
@@ -747,6 +749,12 @@ namespace sw
         [[nodiscard]] virtual bool restoreSurfaceInternal() { return true; }
         /** @brief `acquireSwapChainImage` 의 백엔드 훅입니다(렌더 스레드, 프레임 안). */
         [[nodiscard]] virtual bool acquireSwapChainImageInternal( IRHISwapChain& swapChain ) = 0;
+        /** @brief `executeCommandList` 의 백엔드 몸통입니다. 빈 값(nullptr)은 무시한다. */
+        virtual void executeCommandListInternal( IRHICommandList* pCmdList ) = 0;
+        /** @brief `executeCommandListImmediate` 의 백엔드 몸통입니다. 기본은 `executeCommandListInternal` 이다(기록이 곧 실행인 백엔드). */
+        virtual void executeCommandListImmediateInternal( IRHICommandList* pCmdList ) { executeCommandListInternal( pCmdList ); }
+        /** @brief `submitAsyncCompute` 의 백엔드 몸통입니다. */
+        virtual RHIQueueSyncPoint submitAsyncComputeInternal( IRHICommandList* pCmdList );
 
         /**
          * @brief `initializeInternal` 안에서 단계 하나가 끝났음을 찍습니다(이름은 문자열 상수). `initialize` 가 끝나면 단계별 ms 를 한 줄(`RHI.InitPhasesMs`)로 남긴다.
@@ -808,6 +816,8 @@ namespace sw
         unique_ptr<RHIBindlessReservationQueue> _pBindlessReservationQueue;
         /// @brief 남긴 bindless 인덱스 보고 자리입니다(getBindlessIndexReportLog 참고). 장치와 함께 생기고 사라진다.
         unique_ptr<BindlessIndexReportLog> _pBindlessIndexReportLog;
+        /// @brief 컴퓨트 디스패치가 건 버퍼의 기록입니다(getComputeBindingLog 참고).
+        unique_ptr<RHIComputeBindingLog> _pComputeBindingLog;
         /// @brief 마지막 `initialize` 의 단계별 시간입니다(`markInitPhase`).
         RHIInitPhaseTimings _initPhaseTimings;
         /// @brief 드로우 기록 진단입니다(`getDrawDiagnostics`). 장치와 함께 생기고 사라진다 — 백엔드를 바꾸면 횟수가 다시 시작한다.

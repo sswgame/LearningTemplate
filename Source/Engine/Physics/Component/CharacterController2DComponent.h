@@ -10,6 +10,7 @@
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Physics/Component/PhysicsComponent.h"
+#include "Engine/Physics/PhysicsField.h"
 #include "Engine/Physics/PhysicsTypes.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -47,8 +48,12 @@ namespace sw
         void setMoveVelocity( float32 velocity );
         /** @brief 위로 @p speed(미터/초)를 줍니다. 다음 스텝에 듭니다. */
         void jump( float32 speed );
+        /** @brief 이번 물리 프레임은 사다리를 이 속도(미터/초)로 오릅니다. 중력을 쓰지 않고 이동 방식이 `Climbing` 이 됩니다(3D `CharacterControllerComponent::applyClimbVelocity` 와 같은 계약 — 프레임마다 다시 부르고 점프가 이긴다). */
+        void applyClimbVelocity( const float2& velocity );
+        /** @brief 지난 스텝의 이동 방식입니다(걷기 · 낙하 · 오르기). */
+        CharacterMovementMode getMovementMode() const { return _movementMode; }
         /** @brief 마지막 스텝에 바닥을 딛고 있었는지입니다. */
-        bool isGrounded() const { return _state._bGrounded; }
+        bool isGrounded() const { return _bGrounded; }
         /** @brief 마지막 스텝의 바닥 법선입니다. */
         float2 getGroundNormal() const { return _state._groundNormal; }
         /** @brief 마지막 스텝에서 실제로 난 속도입니다. */
@@ -99,16 +104,28 @@ namespace sw
         float32 _gravityScale;
         PROPERTY( DefaultName, Category = "Character", DisplayName = "Collision Profile", Tooltip = "Collision profile name from the physics settings (object channel and responses)", Validate = validateLayer, Meta = "NameSource=CollisionProfile" )
         hashed_string _layer{ "Character" };
+        PROPERTY( Category = "Character", DisplayName = "Inner Body", Tooltip = "Keep an overlap-only capsule body on the character so triggers feel it (it neither blocks nor pushes)" )
+        bool _bInnerBody;
+        // 이어받는 운동 상태 — 상태 칸이라 스냅샷 복원 · 상태 해시가 싣는다(3D 컨트롤러와 같다).
+        PROPERTY( RuntimeState, Category = "Character", Tooltip = "Runtime: vertical speed" )
+        float32 _verticalSpeed;
+        PROPERTY( RuntimeState, Category = "Character", Tooltip = "Runtime: horizontal velocity kept in the air" )
+        float32 _airVelocity; ///< 떠난 바닥이 실어 나르던 수평 속도 — 땅에 다시 닿으면 0
+        PROPERTY( RuntimeState, Category = "Character", Tooltip = "Runtime: movement mode of the last step" )
+        CharacterMovementMode _movementMode;
+        PROPERTY( RuntimeState, Category = "Character", Tooltip = "Runtime: stood on a floor after the last step" )
+        bool _bGrounded;
 
         PhysicsCharacterHandle                  _character;
         PhysicsCharacterState2D                 _state;
         PhysicsCommandPage<CharacterCommand2D>* _pCommandPage; ///< 입력 칸이 든 페이지 — 이동 요청 · 점프 대기(`PhysicsPoseStore::getCommandStore`)
         uint32                                  _commandSlot;  ///< 입력 칸 번호(컴포넌트 수명 동안 그대로)
         float2                                  _previousPosition;
-        float3                                  _worldPosition; ///< 트랜스폼에서 마지막으로 읽은 월드 자리(Z 를 쓴다). 변경 번호가 같으면 그대로다
-        quaternion                              _worldRotation; ///< 마지막으로 읽은 월드 회전(캐릭터는 회전을 바꾸지 않는다)
-        float3                                  _worldScale;    ///< 마지막으로 읽은 월드 배율
-        float32                                 _verticalSpeed;
-        float32                                 _airVelocity; ///< 떠난 바닥이 실어 나르던 수평 속도 — 땅에 다시 닿으면 0
+        float3                                  _worldPosition;      ///< 트랜스폼에서 마지막으로 읽은 월드 자리(Z 를 쓴다). 변경 번호가 같으면 그대로다
+        quaternion                              _worldRotation;      ///< 마지막으로 읽은 월드 회전(캐릭터는 회전을 바꾸지 않는다)
+        float3                                  _worldScale;         ///< 마지막으로 읽은 월드 배율
+        float2                                  _frameClimbVelocity; ///< 이번 물리 프레임의 오르기 속도(`_bFrameClimb` 일 때)
+        uint8                                   _bFrameClimb : 1;    ///< 이번 물리 프레임에 오르기 요청이 있다
+        [[maybe_unused]] uint8                  _reserved    : 7;
     };
 } // namespace sw

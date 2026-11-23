@@ -48,14 +48,15 @@ namespace sw
             if ( pFunction == nullptr || pFunction->_metadata->getEditor()._bExec == SW_FALSE )
                 continue;
             ReflectedValue          returned;
-            const ReflectCallResult result = ReflectionInvoke::callWithText( *pFunction, pComponent, listArgument, &returned );
-            const bool              bOk    = result == ReflectCallResult::Ok;
-            if ( bOk )
+            const ReflectCallResult result     = ReflectionInvoke::callWithText( *pFunction, pComponent, listArgument, &returned );
+            const bool* const       pbReturned = returned.findValue<bool>(); // bool 을 돌려주는 메서드의 false 는 하지 못했다는 답이다 — 명령도 실패다
+            const bool              bCalled    = result == ReflectCallResult::Ok;
+            if ( bCalled )
                 reply.appendFormat( "%#.%# %#", pType->_name.c_str(), functionName, returned.toText() );
             else
                 reply.appendFormat( "%#.%# takes %# argument(s): %#", pType->_name.c_str(), functionName, pFunction->getParameterCount(), getEnumName( result ) );
             outReply.assign( reply.view() );
-            return bOk;
+            return bCalled && ( pbReturned == nullptr || *pbReturned );
         }
         reply.appendFormat( "no component of '%#' has a FUNCTION( Exec ) named '%#'", object.getName().c_str(), functionName );
         outReply.assign( reply.view() );

@@ -3,7 +3,6 @@
 #include "Engine/Navigation/Scene/SceneNavigation.h"
 
 #include "Core/Algorithm/VectorUtil.h"
-#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/StringUtil.h"
@@ -15,7 +14,6 @@
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Console/DebugHUDRegistry.h"
 #include "Engine/Console/DebugHUDSectionFormat.h"
-#include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Foundation/DeterministicRun.h"
 #include "Engine/Foundation/EngineServices.h"
@@ -34,8 +32,10 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Service/SceneServiceRegistry.h"
+#include "Engine/Object/GameObject/WorldOrigin.h"
 #include "Engine/Physics/PhysicsDebugDraw.h"
 #include "Engine/Profiling/FrameProfiler.h"
+#include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Scene/SceneStreamingSubsystem.h"
 
@@ -52,18 +52,6 @@ namespace sw
     // 군중 진행(⑤)은 `Navigation` 단계 끝에 워커로 가고 `FlushPostAnimation` 본문 앞에서 마친다(⑥) — 그 사이 `Animation` 단계와 겹친다.
     // 그 일이 만지는 씬 데이터는 내비게이션(군중 · 에이전트 이동 상태)뿐이다. 오브젝트 자리 · 컨트롤러 속도는 ⑥ 이 게임 스레드에서 쓴다.
     SW_SCENE_SERVICE_WITH_FRAME_JOB( SceneNavigation, Navigation, makeSceneFrameAccess( SceneDataKindSet{ SceneDataKind::Navigation, SceneDataKind::Transform }, SceneDataKindSet{}, SceneDataKindSet{ SceneDataKind::Structure } ), FlushPostAnimation, makeSceneFrameAccess( SceneDataKindSet{ SceneDataKind::Navigation }, SceneDataKindSet{}, SceneDataKindSet{} ) )
-
-    SW_GLOBAL_VARIABLE( int32, gv_navDebugDraw, 0, "내비메시 디버그 — 선(편집기 뷰포트): 1 폴리곤 테두리 · 2 에이전트 경로 · 4 에이전트 속도 · 8 장애물, 16 걷는 면 · 경로를 게임 화면의 메시로, 32 대략 그래프 · 셀별 내비 청크(타일) 로드 상태 · 먼 경로 (63 = 모두, 0 = 끔)" );
-
-    void SceneNavigation::drawDebug( DebugDrawQueue& queue )
-    {
-        // 선은 물리 디버그와 같은 출구로(편집기 뷰포트가 그린다), 비트 16 은 게임 화면에 보이는 메시로.
-        updateDebugView( static_cast<uint32>( gv_navDebugDraw ) );
-        if ( gv_navDebugDraw == 0 )
-            return;
-        PhysicsDebugQueueRenderer renderer{ queue };
-        drawDebug( renderer, static_cast<uint32>( gv_navDebugDraw ) );
-    }
 
     SceneNavigation::SceneNavigation( GameObjectManager& manager )
         : _settings{}
@@ -121,6 +109,33 @@ namespace sw
         _listRuntime.clear();
         _tileRebaker.clear();
         _listAreaCostOverride.clear(); // 지역 프로필이 정한 비용은 그 씬의 것이다
+    }
+
+    void SceneNavigation::onWorldOriginShifted( const float3& delta )
+    {
+        for ( NavMeshAgentComponent* pAgent : _listAgent )
+        {
+            pAgent->shiftOrigin( delta );
+        }
+        for ( NavMeshLinkComponent* pLink : _listLink )
+        {
+            if ( pLink->_reportedBounds.isValid() )
+                pLink->_reportedBounds = AABB{ pLink->_reportedBounds._min + delta, pLink->_reportedBounds._max + delta };
+        }
+    }
+
+    void SceneNavigation::makePathLocal( NavPath& inoutPath ) const
+    {
+        const WorldOrigin& origin = _pManager->getWorldOrigin();
+        if ( origin.isZero() )
+            return;
+        for ( vector<float3>* pListPoint : { &inoutPath._listPoint, &inoutPath._listCoarsePoint } )
+        {
+            for ( float3& point : *pListPoint )
+            {
+                point = origin.toLocal( point );
+            }
+        }
     }
 
     void SceneNavigation::setSettings( const NavMeshSettings& settings )
@@ -279,7 +294,7 @@ namespace sw
 
     void SceneNavigation::invalidateArea( const AABB& bounds, bool bGeometryChanged )
     {
-        _tileRebaker.invalidateArea( bounds, bGeometryChanged );
+        _tileRebaker.invalidateArea( _pManager->getWorldOrigin().toAbsolute( bounds ), bGeometryChanged );
     }
 
     const NavAgentTypeDef* SceneNavigation::resolveAgentType( const hashed_string& agentType )
@@ -653,7 +668,7 @@ namespace sw
             outPath = NavPath{};
             return NavPathStatus::Failed;
         }
-        return pRuntime->_pNavMesh->findPath( start, end, pRuntime->_searchExtent, pRuntime->_filter, outPath );
+        return findPath( agentType, start, end, pRuntime->_filter, outPath );
     }
 
     NavPathStatus SceneNavigation::findPath( const hashed_string& agentType, const float3& start, const float3& end, const NavQueryFilter& filter,
@@ -665,7 +680,10 @@ namespace sw
             outPath = NavPath{};
             return NavPathStatus::Failed;
         }
-        return pRuntime->_pNavMesh->findPath( start, end, pRuntime->_searchExtent, filter, outPath );
+        const WorldOrigin&  origin = _pManager->getWorldOrigin();
+        const NavPathStatus status = pRuntime->_pNavMesh->findPath( origin.toAbsolute( start ), origin.toAbsolute( end ), pRuntime->_searchExtent, filter, outPath );
+        makePathLocal( outPath );
+        return status;
     }
 
     NavPathStatus SceneNavigation::findStreamingPath( const hashed_string& agentType, const float3& start, const float3& end, NavPath& outPath ) const
@@ -676,7 +694,10 @@ namespace sw
             outPath = NavPath{};
             return NavPathStatus::Failed;
         }
-        return NavStreamRoute::findPath( *pRuntime, start, end, pRuntime->_searchExtent, pRuntime->_filter, outPath );
+        const WorldOrigin&  origin = _pManager->getWorldOrigin();
+        const NavPathStatus status = NavStreamRoute::findPath( *pRuntime, origin.toAbsolute( start ), origin.toAbsolute( end ), pRuntime->_searchExtent, pRuntime->_filter, outPath );
+        makePathLocal( outPath );
+        return status;
     }
 
     void SceneNavigation::collectStreamStats( vector<NavStreamStats>& outListStats ) const
@@ -712,8 +733,8 @@ namespace sw
     {
         NavPathJob job;
         job._agentType = agentType;
-        job._start     = start;
-        job._end       = end;
+        job._start     = _pManager->getWorldOrigin().toAbsolute( start ); // 풀이는 절대 자리에서 한다 — 원점이 그 사이 옮겨져도 같은 길이다
+        job._end       = _pManager->getWorldOrigin().toAbsolute( end );
         return _pathQueue.request( std::move( job ) );
     }
 
@@ -721,8 +742,8 @@ namespace sw
     {
         NavPathJob job;
         job._agentType     = agentType;
-        job._start         = start;
-        job._end           = end;
+        job._start         = _pManager->getWorldOrigin().toAbsolute( start );
+        job._end           = _pManager->getWorldOrigin().toAbsolute( end );
         job._filter        = filter;
         job._bCustomFilter = true;
         return _pathQueue.request( std::move( job ) );
@@ -733,7 +754,10 @@ namespace sw
         NavPathJob             job;
         const PathRequestState state = _pathQueue.takeResult( inoutTicket, job );
         if ( state == PathRequestState::Ready )
+        {
             outPath = std::move( job._path );
+            makePathLocal( outPath );
+        }
         return state;
     }
 
@@ -742,7 +766,11 @@ namespace sw
         const NavMeshRuntime* pRuntime = findRuntime( agentType );
         if ( pRuntime == nullptr )
             return false;
-        return pRuntime->_pNavMesh->findNearestPoint( position, pRuntime->_searchExtent, pRuntime->_filter, outLocation );
+        const WorldOrigin& origin = _pManager->getWorldOrigin();
+        if ( pRuntime->_pNavMesh->findNearestPoint( origin.toAbsolute( position ), pRuntime->_searchExtent, pRuntime->_filter, outLocation ) == false )
+            return false;
+        outLocation._position = origin.toLocal( outLocation._position );
+        return true;
     }
 
     bool SceneNavigation::raycast( const hashed_string& agentType, const float3& start, const float3& end, NavRaycastHit& outHit ) const
@@ -750,7 +778,11 @@ namespace sw
         const NavMeshRuntime* pRuntime = findRuntime( agentType );
         if ( pRuntime == nullptr )
             return false;
-        return pRuntime->_pNavMesh->raycast( start, end, pRuntime->_searchExtent, pRuntime->_filter, outHit );
+        const WorldOrigin& origin = _pManager->getWorldOrigin();
+        if ( pRuntime->_pNavMesh->raycast( origin.toAbsolute( start ), origin.toAbsolute( end ), pRuntime->_searchExtent, pRuntime->_filter, outHit ) == false )
+            return false;
+        outHit._position = origin.toLocal( outHit._position );
+        return true;
     }
 
     uint32 SceneNavigation::getPendingTileCount() const
@@ -836,21 +868,18 @@ namespace sw
         const span<const StreamingSource> listSource       = streaming.getActiveSources();
         const float32                     unloadMargin     = streaming.getUnloadMargin();
         const bool                        bFinishEachFrame = engine::getSubsystem<DeterministicRun>().getPolicy()._bFinishAssetJobsEachFrame == SW_TRUE;
-        const float32                     cellSize         = streaming.getGrid().getCellSize();
 
         // 셀이 오르내렸으면 그 구역의 입력이 바뀌었다 — 기하를 다시 모으고 닿은 타일의 입력 해시를 다시 잰다(언리얼 내비 타일 무효화).
-        vector<StreamingCellCoord> listChangedCell;
-        const uint64               changeSerial = streaming.getChangeSerial();
+        vector<StreamingCellBounds> listChangedBounds;
+        const uint64                changeSerial = streaming.getChangeSerial();
         if ( changeSerial != _streamingChangeSerial )
-            streaming.collectCellsChangedSince( _streamingChangeSerial, listChangedCell );
+            streaming.collectBoundsChangedSince( _streamingChangeSerial, listChangedBounds );
         bool       bChangeConsumed     = true;
-        const auto overlapsChangedCell = [&listChangedCell, cellSize]( const AABB& region )
+        const auto overlapsChangedCell = [&listChangedBounds]( const AABB& region )
         {
-            for ( const StreamingCellCoord& cell : listChangedCell )
+            for ( const StreamingCellBounds& bounds : listChangedBounds )
             {
-                const float32 minX = static_cast<float32>( cell._x ) * cellSize;
-                const float32 minZ = static_cast<float32>( cell._z ) * cellSize;
-                if ( minX <= region._max._x && minX + cellSize >= region._min._x && minZ <= region._max._z && minZ + cellSize >= region._min._z )
+                if ( bounds._minX <= region._max._x && bounds._maxX >= region._min._x && bounds._minZ <= region._max._z && bounds._maxZ >= region._min._z )
                     return true;
             }
             return false;
@@ -864,7 +893,7 @@ namespace sw
             const NavTileGrid& grid = runtime._pNavMesh->getTileGrid();
 
             bool bGeometryRefreshed = false;
-            if ( listChangedCell.empty() == false )
+            if ( listChangedBounds.empty() == false )
             {
                 shared_ptr<NavMeshGeometry> pGeometry        = make_shared<NavMeshGeometry>();
                 const uint32                pendingMeshCount = NavGeometryCollector::collectGeometry( SceneIterationKey{}, *_pManager, runtime._pSurface, _settings, _listGeometrySource.getItems(),
@@ -909,9 +938,10 @@ namespace sw
                 return true;
             };
             // 타일의 입력이 쿠킹 때와 같으면 쿠킹본 타일을 읽고, 다르면 그 타일만 지금 기하로 다시 굽는다(이웃 타일은 쿠킹본 그대로).
-            const auto resolveTileInput = [&runtime, &startCookedRead, &streaming]( NavStreamTile& tile, const AABB& region )
+            const WorldOrigin& worldOrigin      = _pManager->getWorldOrigin();
+            const auto         resolveTileInput = [&runtime, &startCookedRead, &streaming, &worldOrigin]( NavStreamTile& tile, const AABB& region )
             {
-                const StreamingSourcePriority priority = streaming.computePriorityAt( region.getCenter() ); // 내비메시가 있는 씬은 원점을 옮기지 않아 타일 자리가 곧 로컬 자리다
+                const StreamingSourcePriority priority = streaming.computePriorityAt( worldOrigin.toLocal( region.getCenter() ) ); // 타일은 절대, 묻는 자리는 로컬이다
                 tile._geometryHash                     = runtime._pGeometry != nullptr ? runtime._pGeometry->computeRegionHash( region ) : 0;
                 if ( tile._cookedInputHash != 0 && tile._geometryHash == tile._cookedInputHash )
                 {
@@ -1127,14 +1157,14 @@ namespace sw
 
     void SceneNavigation::drawDebug( IPhysicsDebugRenderer& renderer, uint32 flags ) const
     {
-        NavDebugView::drawLines( renderer, flags, _listRuntime, _listObstacle, _listAgent );
+        NavDebugView::drawLines( renderer, flags, _pManager->getWorldOrigin(), _listRuntime, _listObstacle, _listAgent );
     }
 
-    void SceneNavigation::updateDebugView( uint32 flags )
+    void SceneNavigation::updateDebugView( bool bShown )
     {
         if ( _pManager == nullptr )
             return;
-        _debugView.updateSolidView( *_pManager, flags, _listRuntime, _listAgent );
+        _debugView.updateSolidView( *_pManager, bShown, _listRuntime, _listAgent );
     }
 
     AABB SceneNavigation::computeBakeBounds( const NavMeshSurfaceComponent* pSurface, const NavMeshGeometry& geometry )
@@ -1342,6 +1372,24 @@ namespace sw
             /** @brief HUD 섹션 순서 — NPC 섹션(230) 바로 아래다(대상 NPC 의 판단 다음에 그 길찾기를 읽는다). */
             static constexpr int32 kStreamSectionOrder = 231;
 
+            // 내비 범주(선 · 걷는 면) — 스트리밍 섹션 아래에 이어 놓는다.
+            static constexpr int32 kMeshSectionOrder     = 232;
+            static constexpr int32 kAgentSectionOrder    = 233;
+            static constexpr int32 kObstacleSectionOrder = 234;
+            static constexpr int32 kSurfaceSectionOrder  = 235;
+
+            static void drawFlags( const DebugHUDSectionDraw& draw, const utf8* pCategory, uint32 flags )
+            {
+                PhysicsDebugQueueRenderer renderer{ draw._queue, hashed_string( pCategory ) };
+                draw._scene.getObjectManager()->getSubsystem<SceneNavigation>().drawDebug( renderer, flags );
+            }
+
+            static void drawStream( const DebugHUDSectionDraw& draw ) { drawFlags( draw, "navstream", NavDebugDrawFlag::kCluster ); }
+            static void drawMesh( const DebugHUDSectionDraw& draw ) { drawFlags( draw, "navmesh", NavDebugDrawFlag::kMesh ); }
+            static void drawAgents( const DebugHUDSectionDraw& draw ) { drawFlags( draw, "navagents", NavDebugDrawFlag::kPath | NavDebugDrawFlag::kVelocity ); }
+            static void drawObstacles( const DebugHUDSectionDraw& draw ) { drawFlags( draw, "navobstacles", NavDebugDrawFlag::kObstacle ); }
+            static void drawSurface( const DebugHUDSectionDraw& draw ) { draw._scene.getObjectManager()->getSubsystem<SceneNavigation>().updateDebugView( draw._bShown ); }
+
             /** @brief 디버그 HUD `navstream` — 종류마다 타일(내비 데이터 청크) 로드 상태 · 대략 그래프 · 먼 경로 수, 대상 에이전트의 먼 경로 상태입니다. */
             static void writeStreamSection( DebugHUDSectionWriter& writer )
             {
@@ -1374,6 +1422,8 @@ namespace sw
                     formatstring( label.data(), label.capacity(), "%# routes", name );
                     writer.addLineFormat( label, "%# coarse, %# virtual, %# replans", stats._coarseRouteAgentCount, stats._virtualAgentCount, stats._replanCount );
                 }
+                const uint32 pendingPathCount = pManager->getSubsystem<SceneNavigation>().getPendingPathRequestCount();
+                writer.addLineFormat( "path requests waiting", "%#", pendingPathCount );
                 const DebugHUDRegistry*      pRegistry = engine::findSubsystem<DebugHUDRegistry>();
                 const GameObjectHandle       target    = pRegistry != nullptr ? pRegistry->getTarget() : GameObjectHandle{};
                 const GameObject*            pTarget   = target.isValid() ? pManager->findGameObjectByID( target.objectID() ) : nullptr;
@@ -1385,53 +1435,16 @@ namespace sw
                 writer.addLine( "agent route", pMode );
                 writer.addLineFormat( "agent replans", "%# (%# coarse points)", pAgent->getRouteReplanCount(), static_cast<uint32>( pAgent->getCoarseRoutePoints().size() ) );
             }
-
-            /** @brief 개발 명령 `nav.moveto <agent> <target>` · `nav.moveto <agent> <x> <y> <z>` — 이름 붙은 오브젝트의 내비메시 에이전트에 목적지를 겁니다(시나리오가 NPC 를 먼 셀로 보낸다). */
-            static bool runMoveTo( const vector<string>& listArgument, string& outReply )
-            {
-                if ( listArgument.size() != 2 && listArgument.size() != 4 )
-                    return false;
-                GameObject*            pObject = engine::findActiveObject( hashed_string( listArgument[0] ) );
-                NavMeshAgentComponent* pAgent  = pObject != nullptr ? pObject->getComponent<NavMeshAgentComponent>() : nullptr;
-                if ( pAgent == nullptr )
-                {
-                    StringBuilder<constant::buffer::kMax256> reply;
-                    reply.appendFormat( "no object named '%#' with a navmesh agent in the active scene", listArgument[0] );
-                    outReply.assign( reply.view() );
-                    return false;
-                }
-                float3 destination{};
-                if ( listArgument.size() == 4 )
-                {
-                    const bool bParsed = StringUtil::parseFloat( listArgument[1], destination._x ) && StringUtil::parseFloat( listArgument[2], destination._y ) &&
-                                         StringUtil::parseFloat( listArgument[3], destination._z );
-                    if ( bParsed == false )
-                        return false;
-                }
-                else
-                {
-                    const GameObject*     pGoal  = engine::findActiveObject( hashed_string( listArgument[1] ) );
-                    const SceneComponent* pScene = pGoal != nullptr ? pGoal->getPrimarySceneComponent() : nullptr;
-                    if ( pScene == nullptr )
-                    {
-                        StringBuilder<constant::buffer::kMax256> reply;
-                        reply.appendFormat( "no object named '%#' with a scene component in the active scene", listArgument[1] );
-                        outReply.assign( reply.view() );
-                        return false;
-                    }
-                    destination = pScene->getWorldPosition();
-                }
-                pAgent->setDestination( destination );
-                StringBuilder<constant::buffer::kMax128> reply;
-                reply.appendFormat( "moving %#", listArgument[0] );
-                outReply.assign( reply.view() );
-                return true;
-            }
         };
     } // namespace
 
-    SW_DEBUG_HUD_SECTION( navstream, "navstream", "Navigation streaming (tiles, coarse graph, routes)", SceneNavigationDebugInternal::kStreamSectionOrder, DebugHUDSectionFlag::kNone,
-                          &SceneNavigationDebugInternal::writeStreamSection );
-    SW_DEV_COMMAND( NavMoveTo, "nav.moveto", "nav.moveto <agent> <target object> | nav.moveto <agent> <x> <y> <z>",
-                    "Send a named navmesh agent of the active scene to an object or a world position (long routes over streamed-out cells)", &SceneNavigationDebugInternal::runMoveTo );
+    SW_DEBUG_HUD_CATEGORY( navstream, "navstream", "Navigation streaming (tiles, coarse graph, routes)", SceneNavigationDebugInternal::kStreamSectionOrder, DebugHUDSectionFlag::kNone,
+                           &SceneNavigationDebugInternal::writeStreamSection, &SceneNavigationDebugInternal::drawStream, "Nav" );
+    SW_DEBUG_HUD_CATEGORY( navmesh, "navmesh", "Navigation mesh polygons", SceneNavigationDebugInternal::kMeshSectionOrder, DebugHUDSectionFlag::kNone, nullptr, &SceneNavigationDebugInternal::drawMesh, nullptr );
+    SW_DEBUG_HUD_CATEGORY( navagents, "navagents", "Navigation agents (path, velocity)", SceneNavigationDebugInternal::kAgentSectionOrder, DebugHUDSectionFlag::kNone, nullptr,
+                           &SceneNavigationDebugInternal::drawAgents, nullptr );
+    SW_DEBUG_HUD_CATEGORY( navobstacles, "navobstacles", "Navigation obstacles", SceneNavigationDebugInternal::kObstacleSectionOrder, DebugHUDSectionFlag::kNone, nullptr,
+                           &SceneNavigationDebugInternal::drawObstacles, nullptr );
+    SW_DEBUG_HUD_CATEGORY( navsurface, "navsurface", "Navigation walkable surface (mesh in the game view)", SceneNavigationDebugInternal::kSurfaceSectionOrder, DebugHUDSectionFlag::kDrawsWhileHidden, nullptr,
+                           &SceneNavigationDebugInternal::drawSurface, nullptr );
 } // namespace sw

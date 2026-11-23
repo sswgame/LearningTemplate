@@ -24,6 +24,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/CameraRegistry.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
+#include "Engine/Object/GameObject/WorldOrigin.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Serialization/Format/Archive.h"
@@ -201,6 +202,8 @@ namespace sw
         , _photoAppliedHiddenLayers{ UILayerMask::None }
         , _pCatalog{ make_shared<CameraPresetCatalog>() }
         , _director{}
+        , _channelImpulse{}
+        , _shakeSubscription{}
         , _pendingStateBytes{}
         , _pExternalProbe{ nullptr }
         , _inputCheckedPresetID{}
@@ -253,6 +256,11 @@ namespace sw
         Component::onBeginPlay();
         // 대상이 앞 그룹에서 움직인 뒤 입력을 읽고, 포즈는 틱 뒤에 쓴다. 뷰 타깃으로 읽는 매니저(PostUpdate)보다 앞 그룹이다.
         setTickGroup( TickGroup::PostPhysics );
+        GameObject*        pOwner   = getOwner();
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
+        if ( pManager != nullptr )
+            _shakeSubscription = pManager->getCameraRegistry().getShakeChannel().add(
+                SW_DELEGATE_METHOD( CameraShakeRequestCallback, &CameraDirectorComponent::onCameraShakeRequested, this ) );
         if ( _catalogPath.empty() == false )
         {
             // 프리셋 표는 공유 캐시의 한 벌이다 — 같은 표를 쓰는 디렉터 · 에디터가 같은 객체를 읽고, 다시 읽은 판이 이 참조에 닿는다.
@@ -433,6 +441,18 @@ namespace sw
         if ( bRead == false )
             SW_LOG_WARNING_ID( "CameraDirectorComponent.CameraDirectorStateDid", "Camera director state of '%#' did not read - starting fresh", getOwner() != nullptr ? getOwner()->getName().c_str() : "?" );
         return bRead;
+    }
+
+    void CameraDirectorComponent::onEndPlay()
+    {
+        _shakeSubscription.reset();
+        _channelImpulse.clear();
+        Component::onEndPlay();
+    }
+
+    void CameraDirectorComponent::onCameraShakeRequested( const CameraShakeRequest& request )
+    {
+        _channelImpulse.addRequest( request );
     }
 
     hashed_string CameraDirectorComponent::resolveStartPreset() const
@@ -686,9 +706,13 @@ namespace sw
             (void)_director.step( deltaTime, target );
         }
         _director.setCollisionProbe( nullptr );
+        CameraPose pose = _director.getPose();
+        _channelImpulse.step( deltaTime );
+        const bool bManagerView = pManager != nullptr && CameraManagerComponent::isViewTarget( *pManager, pOwner->getHandle() );
+        if ( _channelImpulse.isActive() && bManagerView == false )
+            pose = applyCameraShake( pose, _channelImpulse.computeOffset( pose._position ) * CameraUserSettings::makeFromGlobalVariables()._shakeScale );
         // 시퀀서 값 트랙(프로퍼티 트랙 `CameraDirectorComponent._fieldOfViewOverride` 등)이 키로 모는 값을 프리셋 포즈 위에 적용한다.
         // 시퀀서는 PostUpdate 틱에서 쓰고 이 계산은 틱 뒤라 같은 프레임에 보인다.
-        CameraPose pose = _director.getPose();
         if ( _fieldOfViewOverride > Radians{} )
             pose._fieldOfViewY = _fieldOfViewOverride.radians();
         if ( _focusDistanceOverride > 0.0f )
@@ -705,6 +729,14 @@ namespace sw
         _bPhotoModeCut = false;
     }
 
+    void CameraDirectorComponent::onWorldOriginShifted( const float3& delta )
+    {
+        _focusPoint += delta;
+        _director.applyWorldOffset( delta );
+        _photoMode.applyWorldOffset( delta );
+        _channelImpulse.applyWorldOffset( delta );
+    }
+
     CameraTarget CameraDirectorComponent::computeTarget() const
     {
         CameraTarget target;
@@ -716,6 +748,7 @@ namespace sw
             target._aspectRatio = CameraPose::computeAspectRatio( *pCamera );
         if ( pManager == nullptr )
             return target;
+        target._worldOrigin = pManager->getWorldOrigin();
         if ( _listGroupTarget.empty() == false )
         {
             vector<float3> listPoint;
@@ -731,7 +764,8 @@ namespace sw
             }
             if ( listPoint.empty() == false )
             {
-                target = makeGroupCameraTarget( listPoint.data(), static_cast<uint32>( listPoint.size() ) );
+                target              = makeGroupCameraTarget( listPoint.data(), static_cast<uint32>( listPoint.size() ) );
+                target._worldOrigin = pManager->getWorldOrigin();
                 return target;
             }
         }

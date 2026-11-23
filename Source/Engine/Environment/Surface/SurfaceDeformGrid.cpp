@@ -214,6 +214,14 @@ namespace sw
         _dirtyRect.merge( stamped );
     }
 
+    void SurfaceDeformGrid::shiftOrigin( float32 deltaX, float32 deltaZ )
+    {
+        if ( isReady() == false )
+            return;
+        _originCellX += static_cast<int32>( MathUtil::round( deltaX / _texelSize ) );
+        _originCellZ += static_cast<int32>( MathUtil::round( deltaZ / _texelSize ) );
+    }
+
     void SurfaceDeformGrid::fill( float32 deltaTime )
     {
         if ( deltaTime <= 0.0f || _activeRect.isEmpty() )

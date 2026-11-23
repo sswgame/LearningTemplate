@@ -107,7 +107,7 @@ SW_TEST_CASE( RenderDebugRegistryTest, BufferReadRequestIsReplaced )
     RenderBufferContent content{};
     SW_EXPECT_FALSE( registry.copyBufferContent( content ) );
     registry.publishBufferContent( RenderBufferContent{
-        RenderBufferEntry{ "OcclusionTiles", 1, 4, 2 },
+        RenderBufferEntry{ "OcclusionTiles", 1, 4, 2, {} },
         { 1, 2, 3, 4, 5, 6, 7, 8 },
         serial
     } );

@@ -8,6 +8,7 @@
                     _faceMesh="game/playground/models/testhead.mesh"
                     _faceSkeleton="game/playground/models/testhead/testhead.skeleton.xml"
                     _faceClips="game/playground/models/testhead/testhead.animset.xml"
+                    _faceRig="game/playground/data/testhead.facial.xml"
                     _faceVoice="game/playground/voice/testline.wav"
                     _faceTalkClip="Talk"
                     _faceExpression="Happy"

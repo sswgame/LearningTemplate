@@ -16,6 +16,7 @@
 #include "Editor/Common/Widgets/EditableAssetPath.h"
 #include "Editor/Panels/UIPreview/Model/UIPreviewLogic.h"
 
+#include "Engine/Graphics/RHI/RHIHandles.h"
 #include "Engine/UI/Layout/UIResolutionPresetTable.h"
 #include "Engine/UI/Screen/UIScreenTypes.h"
 #include "Engine/UI/WidgetTree/UIFocusManager.h"
@@ -120,7 +121,7 @@ namespace sw::editor
         /** @brief 지금 렌더 텍스처 경로입니다. */
         const string& getTargetPath() const { return _targetPath; }
         /** @brief 미리보기 렌더 텍스처(`getTargetPath`)의 RHI 핸들입니다. 아직 없거나 GPU 에 올라가지 않았으면 0 입니다. */
-        uint64 findTargetTexture() const;
+        RHITextureHandle findTargetTexture() const;
         /** @brief UI 테마 고르기(툴바의 테마 콤보)입니다. 없으면 멈춘다. */
         static UIThemeController& getThemeController();
         /** @brief 화면 밖 UI 화면(미리보기가 그리는 자리)입니다. 없으면 멈춘다. */

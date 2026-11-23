@@ -510,7 +510,7 @@ namespace sw
                     const expected<string>     partState = ObjectStateSerializer::saveToXMLString( pPart, options );
                     const expected<void>       overrides = partState.has_value() ? PrefabOverrides::computeOverrides( *partState, baseState, node._overrideXML ) : expected<void>{ unexpected( partState.error() ) };
                     const bool                 bOverridesMade =
-                        overrides.has_value() && pPrefabs->collectPartOverrides( *pPart, *pSource, listDeepPart ) && PrefabOverrides::appendPartOverrides( node._overrideXML, listDeepPart );
+                        overrides.has_value() && pPrefabs->collectPartOverrides( *pPart, *pSource, nullptr, listDeepPart ) && PrefabOverrides::appendPartOverrides( node._overrideXML, listDeepPart );
                     if ( bOverridesMade == false )
                     {
                         SW_LOG_WARNING_ID( "PrefabAsset.OverridesNestedPrefabInstance", "Overrides of nested prefab instance '%#' could not be computed (%#) - it is not written to the prefab", node._name,
@@ -1129,7 +1129,7 @@ namespace sw
 
     bool PrefabAsset::saveToFile( const AbsolutePath& absPath ) const
     {
-        // 형식은 경로가 정한다 — 쿠커(`cookAllPrefabs`)와 로더(`loadPrefab`)가 읽는 규칙과 같다. 늘 XML 로 쓰면 `.prefab.json` 에 XML 이
+        // 형식은 경로가 정한다 — 쿠커(`PrefabCooker::cookAll`)와 로더(`loadPrefab`)가 읽는 규칙과 같다. 늘 XML 로 쓰면 `.prefab.json` 에 XML 이
         // 들어가 그 프리팹이 다시는 읽히지 않는다. 프리팹이 아닌 경로(씬 · 머티리얼)는 덮지 않는다.
         if ( StringUtil::endsWith( absPath.str(), ".prefab.json", true ) )
             return saveToJSONFile( absPath );

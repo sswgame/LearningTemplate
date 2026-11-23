@@ -14,7 +14,6 @@
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 #include "Editor/SelfTest/EditorStabilityWait.h"
 
-#include "Engine/Automation/Scenario/AutomationStageReset.h"
 #include "Engine/Foundation/QuitRequest.h"
 
 #include "sw/config/ProcessExitCodes.gen.h"
@@ -296,11 +295,10 @@ namespace sw::editor
              * @brief 시나리오 체인의 다음 단계 앞에서 끝난 실행의 결과를 비웁니다(새 프로세스처럼). 도는 실행과 명령줄 소비 표시는 둔다 - 비우면 `-gv_editorSelfTest` 가 다시 돈다.
              * @details 앞 단계(`selftests`)의 결과가 남아 Test Runner 를 다루는 단계(`testrunner`)가 통과 수 0 에서 시작하지 못했다.
              */
-            static void resetFinishedRun()
+            void resetToFreshEditor() override
             {
-                EditorSelfTestSession* pSession = find(); // 선택: 편집기를 켜지 않은 체인에는 없다
-                if ( pSession != nullptr && pSession->_run.isActive() == false )
-                    pSession->_run = EditorSelfTestRun{};
+                if ( _run.isActive() == false )
+                    _run = EditorSelfTestRun{};
             }
 
         private:
@@ -391,8 +389,3 @@ namespace sw::editor
     // 이 종류의 등록 목록 — EditorModule 이미지에 하나(확장 DLL 의 등록자도 내보낸 이 함수로 오른다).
     SW_DEFINE_EDITOR_EXTENSION_KIND( EditorSelfTestRegistration )
 } // namespace sw::editor
-
-namespace sw
-{
-    SW_AUTOMATION_STAGE_RESET( editorSelfTestResults, "editor self test results", &editor::EditorSelfTestSession::resetFinishedRun );
-} // namespace sw

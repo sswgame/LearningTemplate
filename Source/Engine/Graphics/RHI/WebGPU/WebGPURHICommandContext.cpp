@@ -347,44 +347,44 @@ namespace sw
         writeRootConstants( _state._graphics, num32BitValues, pData, destOffsetIn32BitValues );
     }
 
-    void WebGPURHICommandContext::bindComputeUAV( RHIDescriptorIndex index, uint32 slot )
+    void WebGPURHICommandContext::bindComputeUAV( RHIUnorderedAccessIndex index, uint32 slot )
     {
         if ( slot < shaderslot::wgpu::kURange )
             _state._compute._arrUnorderedAccess[slot] = index;
     }
 
-    void WebGPURHICommandContext::bindGraphicsUAV( RHIDescriptorIndex index, uint32 slot )
+    void WebGPURHICommandContext::bindGraphicsUAV( RHIUnorderedAccessIndex index, uint32 slot )
     {
         // 그래픽스 단계 u 바인딩은 구현하지 않았다(`RHICapabilities::_bGraphicsShaderWrites` 가 거짓) — 셰이더 메시지 채널은 이 백엔드에서 켜지지 않아 여기에 오지 않는다.
         (void)index;
         (void)slot;
     }
 
-    void WebGPURHICommandContext::bindShaderResource( RHIDescriptorIndex index, uint32 slot )
+    void WebGPURHICommandContext::bindShaderResource( RHITextureSRVIndex index, uint32 slot )
     {
         if ( slot < shaderslot::wgpu::kTRange )
             _state._graphics._arrShaderResource[slot] = index;
     }
 
-    void WebGPURHICommandContext::bindStructuredBuffer( RHIDescriptorIndex index, uint32 slot )
+    void WebGPURHICommandContext::bindStructuredBuffer( RHIBufferSRVIndex index, uint32 slot )
     {
         if ( slot < shaderslot::wgpu::kTRange )
             _state._graphics._arrShaderResource[slot] = index;
     }
 
-    void WebGPURHICommandContext::bindConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot )
+    void WebGPURHICommandContext::bindConstantBuffer( RHIBufferSRVIndex constantBufferIndex, uint32 slot )
     {
         if ( slot < shaderslot::wgpu::kBRange )
             _state._graphics._arrConstantBuffer[slot] = constantBufferIndex;
     }
 
-    void WebGPURHICommandContext::bindComputeConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot )
+    void WebGPURHICommandContext::bindComputeConstantBuffer( RHIBufferSRVIndex constantBufferIndex, uint32 slot )
     {
         if ( slot < shaderslot::wgpu::kBRange )
             _state._compute._arrConstantBuffer[slot] = constantBufferIndex;
     }
 
-    void WebGPURHICommandContext::bindComputeShaderResource( RHIDescriptorIndex index, uint32 slot )
+    void WebGPURHICommandContext::bindComputeShaderResource( RHIBufferSRVIndex index, uint32 slot )
     {
         if ( slot < shaderslot::wgpu::kTRange )
             _state._compute._arrShaderResource[slot] = index;
@@ -399,7 +399,8 @@ namespace sw
             return;
         WGPUBuffer ringBuffer = nullptr;
         uint64     ringOffset = 0;
-        _pDevice->allocateConstantSlice( pData, size, ringBuffer, ringOffset );
+        // 묶음은 버퍼 크기만큼 건다(`findBindGroup`) — 일부만 갱신해도 칸은 버퍼 크기를 잡는다. 작게 잡으면 다음 칸을 읽고, 링 끝에서는 범위를 넘어 묶음 생성이 검증 오류다.
+        _pDevice->allocateConstantSlice( pData, size, MathUtil::max( static_cast<uint64>( size ), pRecord->_sizeBytes ), ringBuffer, ringOffset );
         pRecord->_overrideSerial = _pDevice->getFrameSerial();
         pRecord->_overrideBuffer = ringBuffer;
         pRecord->_overrideOffset = ringOffset;
@@ -483,7 +484,7 @@ namespace sw
                 const bool bNeedSlice = slots._bRootSliceDirty != SW_FALSE || slots._rootSliceSerial != _pDevice->getFrameSerial() || slots._rootSliceBuffer == nullptr;
                 if ( bNeedSlice )
                 {
-                    _pDevice->allocateConstantSlice( slots._arrRootConstant, sizeof( slots._arrRootConstant ), slots._rootSliceBuffer, slots._rootSliceOffset );
+                    _pDevice->allocateConstantSlice( slots._arrRootConstant, sizeof( slots._arrRootConstant ), sizeof( slots._arrRootConstant ), slots._rootSliceBuffer, slots._rootSliceOffset );
                     slots._rootSliceSerial = _pDevice->getFrameSerial();
                     slots._bRootSliceDirty = SW_FALSE;
                 }
@@ -507,7 +508,7 @@ namespace sw
             listEntry.push_back( bRenamed ? Internal::makeBufferEntry( binding, pBuffer->_overrideBuffer, pBuffer->_overrideOffset, pBuffer->_sizeBytes )
                                           : Internal::makeBufferEntry( binding, pBuffer->_buffer, 0, pBuffer->_sizeBytes ) );
         }
-        // 같은 (레이아웃, 항목) 은 프레임 안에서 한 번만 짓는다 — 브라우저에서 그룹 하나는 JS 객체 하나라 그리기마다 지으면 GC 압력이 그리기 수만큼 는다.
+        // 같은 (레이아웃, 항목) 은 한 번만 짓는다(프레임을 넘겨 든다) — 브라우저에서 그룹 하나는 JS 객체 하나라 그리기마다 지으면 GC 압력이 그리기 수만큼 는다.
         return _pDevice->_bindGroupCache.getOrCreate( _pDevice->_device, pipeline._groupLayout, listEntry );
     }
 
@@ -765,24 +766,30 @@ namespace sw
 
     void WebGPURHICommandContext::beginEventMarker( const utf8* pName )
     {
-        const WGPUCommandEncoder encoder = getEncoder();
+        // 표지는 연 곳에서 닫아야 한다(https://www.w3.org/TR/webgpu/#dom-gpudebugcommandsmixin-popdebuggroup — 빈 스택의 pop 은 인코더를 무효로 만든다).
+        // 계산 패스는 디스패치가 처음 나올 때 이 컨텍스트가 연다 — 표지를 연 쪽은 그 경계를 모른다. 그래서 렌더 패스 밖의 표지는 늘 **인코더**에 걸고, 열린 계산 패스는 먼저 닫는다.
         if ( _state._renderPass != nullptr )
+        {
             wgpuRenderPassEncoderPushDebugGroup( _state._renderPass, WebGPURHIUtil::toStringView( pName ) );
-        else if ( _state._computePass != nullptr )
-            wgpuComputePassEncoderPushDebugGroup( _state._computePass, WebGPURHIUtil::toStringView( pName ) );
-        else if ( encoder != nullptr )
+            return;
+        }
+        endComputePass();
+        const WGPUCommandEncoder encoder = getEncoder();
+        if ( encoder != nullptr )
             wgpuCommandEncoderPushDebugGroup( encoder, WebGPURHIUtil::toStringView( pName ) );
     }
 
     void WebGPURHICommandContext::endEventMarker()
     {
-        // 표지는 연 곳에서 닫아야 한다(검증 규칙) — 패스가 표지 사이에 열리고 닫히면 짝이 어긋나 검증 오류로 드러난다. 엔진은 표지를 패스 안에서 열고 닫는다.
-        const WGPUCommandEncoder encoder = getEncoder();
+        // 여는 쪽과 같은 규칙이다 — 렌더 패스를 걸쳐 열고 닫는 표지만 짝이 어긋난다(부르는 쪽의 결함, 검증 오류로 드러난다).
         if ( _state._renderPass != nullptr )
+        {
             wgpuRenderPassEncoderPopDebugGroup( _state._renderPass );
-        else if ( _state._computePass != nullptr )
-            wgpuComputePassEncoderPopDebugGroup( _state._computePass );
-        else if ( encoder != nullptr )
+            return;
+        }
+        endComputePass();
+        const WGPUCommandEncoder encoder = getEncoder();
+        if ( encoder != nullptr )
             wgpuCommandEncoderPopDebugGroup( encoder );
     }
 

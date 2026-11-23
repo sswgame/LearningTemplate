@@ -5,6 +5,7 @@
 
 #include "Engine/Renderer/Scene/GPUInstanceMotionHistory.h"
 #include "Engine/Renderer/Scene/GPUMeshMorphPool.h"
+#include "Engine/Renderer/Scene/GPUSceneSlotBuffer.h"
 
 using namespace sw;
 
@@ -21,6 +22,15 @@ namespace
             instance._world._41 = x;
             return instance;
         }
+
+        /** @brief 칸 순 사본(`GPUSceneSlotBuffer`)이 바뀐 칸을 넘기는 것까지 한 프레임입니다. */
+        static bool update( GPUInstanceMotionHistory& history, GPUSceneSlotBuffer& slots, const vector<GPUInstance>& listInstance )
+        {
+            vector<uint32> listChanged;
+            slots.apply( listInstance, {}, true );
+            slots.takeChangedSlots( listChanged );
+            return history.update( slots.getSlots(), listChanged );
+        }
     };
 } // namespace
 
@@ -29,20 +39,21 @@ SW_TEST_CASE( GPUInstanceMotionHistoryTest, FirstFrameHasNoHistoryThenFollows )
 {
     using Util = MotionHistoryTestUtil;
     GPUInstanceMotionHistory history;
-    vector<float4x4>         listPrev;
+    GPUSceneSlotBuffer       slots;
+    const vector<float4x4>&  listPrev = history.getPreviousWorlds();
     vector<GPUInstance>      listInstance{ Util::makeInstance( 7u << 16, 1.0f ) };
 
-    SW_EXPECT_FALSE( history.update( listInstance, listPrev ) ); // 처음 — 비교할 것이 없다
+    SW_EXPECT_FALSE( Util::update( history, slots, listInstance ) ); // 처음 — 비교할 것이 없다
     SW_REQUIRE_EQUAL( 1u, static_cast<uint32>( listPrev.size() ) );
     SW_EXPECT_TRUE( GPUInstanceMotionHistory::isNoHistory( listPrev[0] ) );
 
     listInstance[0]._world._41 = 3.0f; // 움직였다
-    SW_EXPECT_TRUE( history.update( listInstance, listPrev ) );
+    SW_EXPECT_TRUE( Util::update( history, slots, listInstance ) );
     SW_EXPECT_FALSE( GPUInstanceMotionHistory::isNoHistory( listPrev[0] ) );
     SW_EXPECT_NEAR( 1.0f, listPrev[0]._41, 1.0e-6f );
 
     // 멈췄다 — 지난 것(3)이 이번 것과 같아 움직임이 없다. 게임 스레드가 다시 싣지 않은 같은 배열이어도 기록은 나아간다.
-    SW_EXPECT_FALSE( history.update( listInstance, listPrev ) );
+    SW_EXPECT_FALSE( Util::update( history, slots, listInstance ) );
     SW_EXPECT_NEAR( 3.0f, listPrev[0]._41, 1.0e-6f );
 }
 
@@ -51,13 +62,16 @@ SW_TEST_CASE( GPUInstanceMotionHistoryTest, TeleportResetsHistory )
 {
     using Util = MotionHistoryTestUtil;
     GPUInstanceMotionHistory history;
-    vector<float4x4>         listPrev;
+    GPUSceneSlotBuffer       slots;
+    const vector<float4x4>&  listPrev = history.getPreviousWorlds();
     vector<GPUInstance>      listInstance{ Util::makeInstance( ( 9u << 16 ) | 0u, 0.0f ) };
-    (void)history.update( listInstance, listPrev );
+    (void)Util::update( history, slots, listInstance );
     listInstance[0] = Util::makeInstance( ( 9u << 16 ) | 1u, 500.0f ); // 같은 컴포넌트, 다음 차례
-    SW_EXPECT_FALSE( history.update( listInstance, listPrev ) );
+    SW_EXPECT_FALSE( Util::update( history, slots, listInstance ) );
     SW_EXPECT_TRUE( GPUInstanceMotionHistory::isNoHistory( listPrev[0] ) );
-    SW_EXPECT_EQUAL( 1u, static_cast<uint32>( history.getKeyCount() ) ); // 옛 차례는 그리지 않아 버려졌다
+    listInstance[0] = Util::makeInstance( ( 9u << 16 ) | 0u, 1.0f ); // 옛 차례로 돌아와도 그리지 않은 프레임이 있었다 — 기록이 없다
+    (void)Util::update( history, slots, listInstance );
+    SW_EXPECT_TRUE( GPUInstanceMotionHistory::isNoHistory( listPrev[0] ) );
 }
 
 /** @brief [GPUInstanceMotionHistoryTest] 열쇠 0(인스턴스 배치 항목) · GPU 회전 인스턴스는 늘 기록이 없고, 그리지 않은 프레임 뒤에 다시 보인 물체도 기록이 없다 */
@@ -65,27 +79,28 @@ SW_TEST_CASE( GPUInstanceMotionHistoryTest, UntrackedAndReappearingInstancesHave
 {
     using Util = MotionHistoryTestUtil;
     GPUInstanceMotionHistory history;
-    vector<float4x4>         listPrev;
+    GPUSceneSlotBuffer       slots;
+    const vector<float4x4>&  listPrev = history.getPreviousWorlds();
     GPUInstance              spinning = Util::makeInstance( 5u << 16, 0.0f );
     spinning._spinSeed                = 42u;
     vector<GPUInstance> listInstance{ Util::makeInstance( 0u, 0.0f ), spinning, Util::makeInstance( 6u << 16, 0.0f ) };
-    (void)history.update( listInstance, listPrev );
+    (void)Util::update( history, slots, listInstance );
     listInstance[0]._world._41 = 1.0f;
     listInstance[1]._world._41 = 1.0f;
-    SW_EXPECT_FALSE( history.update( listInstance, listPrev ) ); // 기록 있는 셋째는 멈춰 있다
+    SW_EXPECT_FALSE( Util::update( history, slots, listInstance ) ); // 기록 있는 셋째는 멈춰 있다
     SW_EXPECT_TRUE( GPUInstanceMotionHistory::isNoHistory( listPrev[0] ) );
     SW_EXPECT_TRUE( GPUInstanceMotionHistory::isNoHistory( listPrev[1] ) );
     SW_EXPECT_FALSE( GPUInstanceMotionHistory::isNoHistory( listPrev[2] ) );
 
     // 셋째를 한 프레임 그리지 않았다가 다른 자리에 다시 그린다 — 오래된 행렬로 긴 속도를 내지 않는다.
     vector<GPUInstance> listWithout{ listInstance[0], listInstance[1] };
-    (void)history.update( listWithout, listPrev );
+    (void)Util::update( history, slots, listWithout );
     listInstance[2]._world._41 = 100.0f;
-    (void)history.update( listInstance, listPrev );
+    (void)Util::update( history, slots, listInstance );
     SW_EXPECT_TRUE( GPUInstanceMotionHistory::isNoHistory( listPrev[2] ) );
 
     history.reset();
-    SW_EXPECT_EQUAL( 0u, static_cast<uint32>( history.getKeyCount() ) );
+    SW_EXPECT_TRUE( history.getPreviousWorlds().empty() );
 }
 
 /** @brief [GPUInstanceMotionHistoryTest] 기록은 인스턴스 번호가 아니라 열쇠로 찾는다 — 배치를 다시 나눠 순서가 바뀌어도 지난 행렬이 제 물체를 따라간다 */
@@ -93,11 +108,12 @@ SW_TEST_CASE( GPUInstanceMotionHistoryTest, HistoryFollowsKeysNotSlots )
 {
     using Util = MotionHistoryTestUtil;
     GPUInstanceMotionHistory history;
-    vector<float4x4>         listPrev;
+    GPUSceneSlotBuffer       slots;
+    const vector<float4x4>&  listPrev = history.getPreviousWorlds();
     vector<GPUInstance>      listInstance{ Util::makeInstance( 1u << 16, 10.0f ), Util::makeInstance( 2u << 16, 20.0f ) };
-    (void)history.update( listInstance, listPrev );
+    (void)Util::update( history, slots, listInstance );
     vector<GPUInstance> listSwapped{ Util::makeInstance( 2u << 16, 21.0f ), Util::makeInstance( 1u << 16, 11.0f ) };
-    SW_EXPECT_TRUE( history.update( listSwapped, listPrev ) );
+    SW_EXPECT_TRUE( Util::update( history, slots, listSwapped ) );
     SW_EXPECT_NEAR( 20.0f, listPrev[0]._41, 1.0e-6f );
     SW_EXPECT_NEAR( 10.0f, listPrev[1]._41, 1.0e-6f );
 }
@@ -111,14 +127,47 @@ SW_TEST_CASE( GPUInstanceMotionHistoryTest, ReusedSlotDoesNotInheritHistory )
 {
     using Util = MotionHistoryTestUtil;
     GPUInstanceMotionHistory history;
-    vector<float4x4>         listPrev;
+    GPUSceneSlotBuffer       slots;
+    const vector<float4x4>&  listPrev = history.getPreviousWorlds();
     vector<GPUInstance>      listSlot{ Util::makeInstance( 3u << 16, 0.0f ), Util::makeInstance( 4u << 16, 50.0f ) };
-    (void)history.update( listSlot, listPrev );
+    (void)Util::update( history, slots, listSlot );
     listSlot[0]._world._41 = 1.0f;                                  // 칸 0 은 같은 물체가 움직였다
     listSlot[1]            = Util::makeInstance( 8u << 16, 51.0f ); // 칸 1 은 지우고 다른 물체가 받았다
-    SW_EXPECT_TRUE( history.update( listSlot, listPrev ) );
+    SW_EXPECT_TRUE( Util::update( history, slots, listSlot ) );
     SW_EXPECT_NEAR( 0.0f, listPrev[0]._41, 1.0e-6f );
     SW_EXPECT_TRUE( GPUInstanceMotionHistory::isNoHistory( listPrev[1] ) );
+}
+
+/**
+ * @brief [GPUInstanceMotionHistoryTest] 올릴 칸은 움직인 칸과 막 멈춘 칸뿐이다 — 인스턴스 수와 무관하고, 멈춘 다음 프레임에는 없다
+ * @details 변이: 멈춘 칸을 맞추지 않으면 둘째 프레임의 수가, 모든 칸을 다시 적으면 첫 수가 진다.
+ */
+SW_TEST_CASE( GPUInstanceMotionHistoryTest, UploadsOnlyMovedAndSettledSlots )
+{
+    using Util = MotionHistoryTestUtil;
+    GPUInstanceMotionHistory history;
+    GPUSceneSlotBuffer       slots;
+    vector<GPUInstance>      listInstance;
+    for ( uint32 index = 0; index < 100; ++index )
+    {
+        listInstance.push_back( Util::makeInstance( static_cast<uint64>( index + 1 ) << 16, static_cast<float32>( index ) ) );
+    }
+    (void)Util::update( history, slots, listInstance );
+    (void)Util::update( history, slots, listInstance ); // 기록 없음 → 이번 행렬
+    history.getDirtySlots().clear();
+
+    listInstance[40]._world._41 += 1.0f;
+    SW_EXPECT_TRUE( Util::update( history, slots, listInstance ) );
+    SW_EXPECT_EQUAL( 0u, history.getDirtySlots().getCount() ); // 지난 행렬은 어제 것 그대로다 — 이번 행렬만 바뀌었다
+    listInstance[40]._world._41 += 1.0f;
+    SW_EXPECT_TRUE( Util::update( history, slots, listInstance ) );
+    SW_EXPECT_EQUAL( 1u, history.getDirtySlots().getCount() );
+    history.getDirtySlots().clear();
+    SW_EXPECT_FALSE( Util::update( history, slots, listInstance ) ); // 멈췄다 — 그 칸만 맞춘다
+    SW_EXPECT_EQUAL( 1u, history.getDirtySlots().getCount() );
+    history.getDirtySlots().clear();
+    SW_EXPECT_FALSE( Util::update( history, slots, listInstance ) );
+    SW_EXPECT_EQUAL( 0u, history.getDirtySlots().getCount() );
 }
 
 /**

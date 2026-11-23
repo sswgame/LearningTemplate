@@ -58,6 +58,8 @@ namespace sw
         , _freeOnlineBlock{}
         , _frameRing{}
         , _timestampFrequency{ 0 }
+        , _computeClockOffsetTick{ 0 }
+        , _computeClockAgeFrames{ 0 }
         , _bComputeTimestampComparable{ SW_FALSE }
         , _timestampRing{}
         , _gpuBuffers{}
@@ -67,11 +69,8 @@ namespace sw
         , _nextOffscreenDSVIndex{ 0 }
         , _freeOffscreenRTV{}
         , _freeOffscreenDSV{}
-        , _mapCbAlignedSize{}
-        , _mapCbMapped{}
         , _constantBufferMirror{}
         , _pipelineStates{}
-        , _renderPassRegistry{}
         , _swapChain{}
         , _bBindlessRootSignature{ SW_FALSE }
         , _bValidationLayer{ SW_FALSE }
@@ -864,7 +863,7 @@ namespace sw
             onlineNull.ptr += static_cast<SIZE_T>( kNullTextureBindlessIndex ) * _cbvDescriptorSize;
             _device->CreateShaderResourceView( nullptr, &nullTexture, onlineNull );
             _device->CreateShaderResourceView( nullptr, &nullTexture, offlineDescriptorAt( kNullTextureBindlessIndex ) );
-            copyBindlessDescriptorToAllRingSlots( kNullTextureBindlessIndex );
+            copyBindlessDescriptorToAllRingSlots( RHIDescriptorIndex{ kNullTextureBindlessIndex } );
             _bindlessIndexAllocator.reset( kNullTextureBindlessIndex + 1 );
         }
         {
@@ -988,7 +987,6 @@ namespace sw
             track = BreadcrumbTrack{};
         }
         _pipelineStates.clear();
-        _renderPassRegistry.clear();
         _srvRegistry.clear();
         _uavRegistry.clear();
         {
@@ -998,7 +996,7 @@ namespace sw
         _bindlessIndexAllocator.reset( kNullTextureBindlessIndex + 1 );
         for ( uint32 index = 0; index < kBindlessDescriptorCapacity; ++index )
         {
-            retireBindlessReadSlot( index );
+            retireBindlessReadSlot( RHIDescriptorIndex{ index } );
         }
         _gpuBuffers.clear();
         _gpuTextures.clear();
@@ -1253,7 +1251,7 @@ namespace sw
         return pList;
     }
 
-    void D3D12RHIDevice::executeCommandListImmediate( IRHICommandList* pCmdList )
+    void D3D12RHIDevice::executeCommandListImmediateInternal( IRHICommandList* pCmdList )
     {
         auto* pNative = static_cast<D3D12RHICommandList*>( pCmdList );
         if ( pNative == nullptr || _commandQueue == nullptr )
@@ -1272,7 +1270,7 @@ namespace sw
         _commandQueue->ExecuteCommandLists( 1, arr );
     }
 
-    void D3D12RHIDevice::executeCommandList( IRHICommandList* pCmdList )
+    void D3D12RHIDevice::executeCommandListInternal( IRHICommandList* pCmdList )
     {
         auto*      pNative                  = static_cast<D3D12RHICommandList*>( pCmdList );
         const bool bCannotSubmitCommandList = pNative == nullptr || _commandQueue == nullptr || _pActiveFrameList == nullptr;
@@ -1386,11 +1384,11 @@ namespace sw
         return list;
     }
 
-    RHIQueueSyncPoint D3D12RHIDevice::submitAsyncCompute( IRHICommandList* pCmdList )
+    RHIQueueSyncPoint D3D12RHIDevice::submitAsyncComputeInternal( IRHICommandList* pCmdList )
     {
         auto* pNative = static_cast<D3D12RHICommandList*>( pCmdList );
         if ( _computeQueue == nullptr )
-            return IRHIDevice::submitAsyncCompute( pCmdList );
+            return IRHIDevice::submitAsyncComputeInternal( pCmdList );
         if ( pNative == nullptr || pNative->getNativeCommandList() == nullptr )
             return RHIQueueSyncPoint{};
         // 포크: 지금까지 넘긴 그래픽스 일(프레임 스트림 · 리스트 · 구조 버퍼 복사)을 큐에 내고 그 끝을 신호한다. 컴퓨트 큐는 그 신호를 기다린 뒤 이 리스트를 실행한다.
@@ -1758,16 +1756,20 @@ namespace sw
             _timestampHeap.Reset();
             return;
         }
-        _timestampFrequency = frequency;
-        _bComputeTimestampComparable.store( compareComputeQueueClock( frequency ) ? SW_TRUE : SW_FALSE, std::memory_order_relaxed );
+        _timestampFrequency    = frequency;
+        const bool bComparable = measureComputeQueueClock( frequency );
+        if ( bComparable )
+            SW_LOG_INFO_ID( "D3D12.ComputeTimestampClock", "Async compute pass timings are on: compute queue ticks move by %# to the direct queue clock (%# ticks/s)", _computeClockOffsetTick, frequency );
+        _bComputeTimestampComparable.store( bComparable ? SW_TRUE : SW_FALSE, std::memory_order_relaxed );
     }
 
-    bool D3D12RHIDevice::compareComputeQueueClock( uint64 directFrequency ) const
+    bool D3D12RHIDevice::measureComputeQueueClock( uint64 directFrequency )
     {
         if ( _computeQueue == nullptr || _commandQueue == nullptr || directFrequency == 0 )
             return false;
-        // 두 표본을 붙여 찍는 사이의 시간 · 호출 잡음보다 넉넉하고, 패스 하나(수십 µs 이상)보다 작은 어긋남만 같은 시계로 본다.
-        constexpr float64 kComputeClockSkewToleranceMicros = 100.0;
+        // 표본의 중앙값에 남는 호출 잡음보다 넉넉한 어긋남은 같은 시계로 본다 — 잡음을 패스 시간에 더하지 않는다.
+        constexpr float64 kSameClockToleranceMicros = 100.0;
+        constexpr uint32  kSampleCount              = 5; // 중앙값 — 한 표본이 두 호출 사이에 선점돼도 남는다
         UINT64            computeFrequency{ 0 };
         if ( FAILED( _computeQueue->GetTimestampFrequency( &computeFrequency ) ) || computeFrequency != directFrequency )
         {
@@ -1775,23 +1777,26 @@ namespace sw
                             computeFrequency, directFrequency );
             return false;
         }
-        UINT64        directGPUTick{ 0 };
-        UINT64        directCPUTick{ 0 };
-        UINT64        computeGPUTick{ 0 };
-        UINT64        computeCPUTick{ 0 };
         LARGE_INTEGER cpuFrequency{};
-        const bool    bSampled = SUCCEEDED( _commandQueue->GetClockCalibration( &directGPUTick, &directCPUTick ) ) &&
-                              SUCCEEDED( _computeQueue->GetClockCalibration( &computeGPUTick, &computeCPUTick ) ) && QueryPerformanceFrequency( &cpuFrequency ) != FALSE &&
-                              cpuFrequency.QuadPart > 0;
-        if ( bSampled == false )
+        if ( QueryPerformanceFrequency( &cpuFrequency ) == FALSE || cpuFrequency.QuadPart <= 0 )
             return false;
-        const float64 gpuDeltaMicros = static_cast<float64>( static_cast<int64>( computeGPUTick - directGPUTick ) ) * constant::time::kMicrosecondsPerSecond / static_cast<float64>( directFrequency );
-        const float64 cpuDeltaMicros = static_cast<float64>( static_cast<int64>( computeCPUTick - directCPUTick ) ) * constant::time::kMicrosecondsPerSecond / static_cast<float64>( cpuFrequency.QuadPart );
-        const float64 skewMicros     = MathUtil::abs( gpuDeltaMicros - cpuDeltaMicros );
-        const bool    bComparable    = skewMicros <= kComputeClockSkewToleranceMicros;
-        SW_LOG_INFO_ID( "D3D12.ComputeTimestampClock", "Async compute pass timings are %#: compute and direct queue clocks differ by %# us (tolerance %# us, %# ticks/s)",
-                        bComparable ? "on" : "off", skewMicros, kComputeClockSkewToleranceMicros, directFrequency );
-        return bComparable;
+        vector<RHIQueueClockSample> listSample;
+        listSample.reserve( kSampleCount );
+        for ( uint32 sampleIndex = 0; sampleIndex < kSampleCount; ++sampleIndex )
+        {
+            UINT64     directGPUTick{ 0 };
+            UINT64     directCPUTick{ 0 };
+            UINT64     computeGPUTick{ 0 };
+            UINT64     computeCPUTick{ 0 };
+            const bool bSampled = SUCCEEDED( _commandQueue->GetClockCalibration( &directGPUTick, &directCPUTick ) ) &&
+                                  SUCCEEDED( _computeQueue->GetClockCalibration( &computeGPUTick, &computeCPUTick ) );
+            if ( bSampled == false )
+                return false;
+            listSample.push_back( RHIQueueClockSample{ directGPUTick, directCPUTick, computeGPUTick, computeCPUTick } );
+        }
+        _computeClockOffsetTick = RHITimestampFrame::computeComputeQueueTickOffset( listSample, directFrequency, static_cast<uint64>( cpuFrequency.QuadPart ), kSameClockToleranceMicros );
+        _computeClockAgeFrames  = 0;
+        return true;
     }
 
     void D3D12RHIDevice::collectTimestampsForSlot()
@@ -1813,9 +1818,24 @@ namespace sw
 
         // DX12 는 쿼리 힙을 리셋하지 않는다. 안 적은 칸에는 **지난 사이클의 값**이 그대로 남는다.
         // 그래서 어느 칸이 이번 것인지 비트로 가려야 한다. 안 그러면 건너뛴 패스가 0us 로 보고된다.
-        const uint64* pTicks = reinterpret_cast<const uint64*>( static_cast<const uint8*>( pMapped ) + byteOffset );
+        uint64 arrTick[constant::render::kMaxGPUTimestampSlot]{};
+        Memory::copy( arrTick, static_cast<const uint8*>( pMapped ) + byteOffset, sizeof( arrTick ) );
+        // 컴퓨트 큐의 시계가 다른 장치는 그 큐의 틱을 직접 큐 시계로 옮긴다(같은 장치는 0 이라 할 일이 없다).
+        const GPUTimestampSlotMask& computeQueueMask = _timestampRing.getComputeQueueMask( _frameRing.currentIndex() );
+        if ( _computeClockOffsetTick != 0 && computeQueueMask.any() )
+        {
+            constexpr uint32 kResyncFrameInterval = 240; // 시계가 흐르는 속도에 비해 드물고, 호출 비용(커널 열 번)이 프레임에 묻히는 간격
+            if ( ++_computeClockAgeFrames >= kResyncFrameInterval )
+                (void)measureComputeQueueClock( _timestampFrequency ); // 못 재면 지난 값을 그대로 쓴다
+            for ( uint32 slotIndex = 0; slotIndex < constant::render::kMaxGPUTimestampSlot; ++slotIndex )
+            {
+                if ( computeQueueMask.test( slotIndex ) )
+                    arrTick[slotIndex] += static_cast<uint64>( _computeClockOffsetTick ); // 부호는 2 의 보수 덧셈이 지킨다
+            }
+        }
         // 그래서 writtenMask 가 곧 준비 비트다. 이 슬롯은 방금 펜스를 통과했다.
-        RHITimestampFrame::resolve( pTicks, writtenMask, constant::time::kNanosecondsPerSecond / static_cast<float64>( _timestampFrequency ), _timestampFrame );
+        RHITimestampFrame::resolve( arrTick, writtenMask, _timestampRing.getComputeQueueMask( _frameRing.currentIndex() ), constant::time::kNanosecondsPerSecond / static_cast<float64>( _timestampFrequency ),
+                                    _timestampFrame );
 
         const D3D12_RANGE emptyRange{ 0, 0 };
         _timestampReadback->Unmap( 0, &emptyRange );
@@ -2044,20 +2064,17 @@ namespace sw
 
     void D3D12RHIDevice::writeConstantBufferSlot( RHIBufferHandle buffer, uint32 slot, uint32 offset, const void* pData, uint32 size )
     {
-        const auto sizeIt                      = _mapCbAlignedSize.find( buffer );
-        const auto mapIt                       = _mapCbMapped.find( buffer );
-        const bool bCannotUpdateConstantBuffer = sizeIt == _mapCbAlignedSize.end() || mapIt == _mapCbMapped.end() || mapIt->second == nullptr || pData == nullptr || offset >= sizeIt->second;
+        const BufferRecord* const pRecord                     = findBufferRecord( buffer );
+        const uint32              alignedSize                 = pRecord != nullptr ? pRecord->_constantAlignedSize : 0u;
+        const bool                bCannotUpdateConstantBuffer = pRecord == nullptr || pRecord->_pConstantMapped == nullptr || pData == nullptr || offset >= alignedSize;
         if ( bCannotUpdateConstantBuffer )
             return;
-        const uint32 alignedSize = sizeIt->second;
-        const uint32 copyBytes   = MathUtil::min( size, alignedSize - offset ); // 페이지 구간이면 그 칸 안에서 자른다
-        Memory::copy( static_cast<uint8*>( mapIt->second ) + static_cast<size_t>( slot ) * alignedSize + offset, pData, copyBytes );
+        const uint32 copyBytes = MathUtil::min( size, alignedSize - offset ); // 페이지 구간이면 그 칸 안에서 자른다
+        Memory::copy( static_cast<uint8*>( pRecord->_pConstantMapped ) + static_cast<size_t>( slot ) * alignedSize + offset, pData, copyBytes );
     }
 
     void D3D12RHIDevice::fillConstantBufferSlot()
     {
-        // 맵 조회가 게임 스레드의 만들기 · 부수기와 겹치지 않게 읽기 락을 쥔다(락 순서: 레지스트리 → 그림자).
-        ScopedSharedLock<shared_mutex> registryLock{ _bindlessMutex };
         _constantBufferMirror.fillSlot( _frameRing.currentIndex(), [this]( RHIBufferHandle buffer, uint32 slot, uint32 offset, const void* pData, uint32 size )
         { writeConstantBufferSlot( buffer, slot, offset, pData, size ); } );
     }
@@ -2193,7 +2210,7 @@ namespace sw
         if ( FAILED( D3D12SerializeRootSignature( &rootSigDesc, D3D_ROOT_SIGNATURE_VERSION_1_0, &signatureBlob, &errorBlob ) ) )
         {
             if ( errorBlob )
-                SW_LOG_ERROR_ID( "D3D12.RootSignatureSerializeError", "Root Signature Serialize Error: %s", static_cast<const utf8*>( errorBlob->GetBufferPointer() ) );
+                SW_LOG_ERROR_ID( "D3D12.RootSignatureSerializeError", "Root Signature Serialize Error: %#", static_cast<const utf8*>( errorBlob->GetBufferPointer() ) );
             return false;
         }
         if ( isHrSuccess( _device->CreateRootSignature( 0, signatureBlob->GetBufferPointer(), signatureBlob->GetBufferSize(), IID_PPV_ARGS( _rootSignature.GetAddressOf() ) ), "CreateRootSignature" ) == false )
@@ -2240,11 +2257,11 @@ namespace sw
     void D3D12RHIDevice::publishBindlessReadSlot( RHIDescriptorIndex index, BindlessReadRegistry registry, const BindlessResourceRecord& record )
     {
         if ( index >= kBindlessDescriptorCapacity )
-            reportFatalError( "D3D12: bindless index %# is outside the read table (%#)", index, kBindlessDescriptorCapacity );
+            reportFatalError( "D3D12: bindless index %# is outside the read table (%#)", index.getValue(), kBindlessDescriptorCapacity );
         // 텍스처는 GPU 주소가 없다(GetGPUVirtualAddress 는 버퍼만 뜻이 있다). 상수 버퍼 크기는 등록이 같은 배타 락 안에서 읽는다. 값을 다 쓴 뒤 공개한다(`RHIBindlessReadSlot::publish`).
-        const auto sizeIt = record._buffer != 0 ? _mapCbAlignedSize.find( record._buffer ) : _mapCbAlignedSize.end();
+        const BufferRecord* const pBuffer = record._buffer != 0 ? findBufferRecord( record._buffer ) : nullptr;
         _arrBindlessReadSlot.get()[index].publish( registry, record._buffer != 0 && record._resource != nullptr ? record._resource->GetGPUVirtualAddress() + record._sliceOffset : 0, record._offlineCPUHandle.ptr,
-                                                   sizeIt != _mapCbAlignedSize.end() ? sizeIt->second : 0u, record._texture != 0 );
+                                                   pBuffer != nullptr ? pBuffer->_constantAlignedSize : 0u, record._texture != 0 );
     }
 
     const D3D12RHIDevice::BindlessReadSlot* D3D12RHIDevice::findBindlessReadSlot( RHIDescriptorIndex index, bool bUAV ) const

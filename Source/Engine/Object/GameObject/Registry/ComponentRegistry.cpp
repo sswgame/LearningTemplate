@@ -13,6 +13,8 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/TypeInfo.h"
 
+#include <algorithm>
+
 namespace sw
 {
     namespace
@@ -26,7 +28,7 @@ namespace sw
     } // namespace
 
     ComponentRegistry::ComponentRegistry()
-        : _listBucket{}
+        : _mapBucket{}
         , _mutex{}
     {
     }
@@ -67,12 +69,8 @@ namespace sw
 
     ComponentRegistry::Bucket* ComponentRegistry::findBucket( uint32 typeKey, uint32 channel ) const
     {
-        for ( const unique_ptr<Bucket>& bucket : _listBucket )
-        {
-            if ( bucket->_typeKey == typeKey && bucket->_channel == channel )
-                return bucket.get();
-        }
-        return nullptr;
+        const auto found = _mapBucket.find( makeBucketKey( typeKey, channel ) );
+        return found != _mapBucket.end() ? found->second.get() : nullptr;
     }
 
     void ComponentRegistry::addEntry( uint32 typeKey, uint32 channel, Component* pComponent )
@@ -82,13 +80,12 @@ namespace sw
         ScopedLock<mutex> lock{ _mutex };
         Bucket*           pBucket = findBucket( typeKey, channel );
         if ( pBucket == nullptr )
-        {
-            _listBucket.push_back( sw::make_unique<Bucket>( Bucket{ typeKey, channel, {} } ) );
-            pBucket = _listBucket.back().get();
-        }
-        if ( VectorUtil::containsBy<&Entry::_pComponent>( pBucket->_listEntry, pComponent ) )
+            pBucket = _mapBucket.try_emplace( makeBucketKey( typeKey, channel ), sw::make_unique<Bucket>() ).first->second.get();
+        if ( pBucket->_mapComponentToSerial.try_emplace( pComponent, pBucket->_nextSerial ).second == false )
             return; // 이미 있다(멱등)
         pBucket->_listEntry.push_back( Entry{ pComponent, pComponent->getHandle() } );
+        pBucket->_listSerial.push_back( pBucket->_nextSerial );
+        ++pBucket->_nextSerial;
     }
 
     void ComponentRegistry::removeEntry( uint32 typeKey, uint32 channel, const Component* pComponent )
@@ -99,10 +96,15 @@ namespace sw
         Bucket*           pBucket = findBucket( typeKey, channel );
         if ( pBucket == nullptr )
             return;
-        vector<Entry>& listEntry = pBucket->_listEntry;
-        // 순서를 지키며 뺀다 — 모두 도는 순회의 차례가 실행마다 같다.
-        if ( const optional<size_t> index = VectorUtil::findIndexBy<&Entry::_pComponent>( listEntry, pComponent ) )
-            listEntry.erase( listEntry.begin() + static_cast<ptrdiff_t>( *index ) );
+        const auto found = pBucket->_mapComponentToSerial.find( pComponent );
+        if ( found == pBucket->_mapComponentToSerial.end() )
+            return;
+        // 순서를 지키며 뺀다 — 모두 도는 순회의 차례가 실행마다 같다. 순번이 오름차순이라 자리는 이분 검색이고, 뒤쪽은 바이트로 당긴다.
+        const auto      itSerial = std::lower_bound( pBucket->_listSerial.begin(), pBucket->_listSerial.end(), found->second );
+        const ptrdiff_t index    = itSerial - pBucket->_listSerial.begin();
+        pBucket->_listSerial.erase( itSerial );
+        pBucket->_listEntry.erase( pBucket->_listEntry.begin() + index );
+        pBucket->_mapComponentToSerial.erase( found );
     }
 
     const vector<ComponentRegistry::Entry>& ComponentRegistry::findEntries( uint32 typeKey, uint32 channel ) const

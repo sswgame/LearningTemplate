@@ -72,11 +72,11 @@ namespace sw::editor
         /** @brief 시퀀서 JSON 을 씁니다. */
         [[nodiscard]] static bool saveSequence( const sw::SequenceAsset& asset, string_view path );
         /**
-         * @brief 선택한 인스턴스와 프리팹 CDO 를 비교해 오버라이드 목록을 채웁니다.
-         * @details 프리팹 경로는 @p prefabPath 이고, 비어 있으면 인스턴스가 온 프리팹이다. 둘 다 없으면 목록이 빈다. 포커스된 에셋은 보지 않는다.
-         *          종류가 다를 수 있기 때문이다. Prefab Editor 는 포커스가 프리팹일 때만 경로를 넘긴다.
+         * @brief 선택한 오브젝트가 프리팹 인스턴스면 그 프리팹의 CDO 와 비교해 오버라이드 목록을 채웁니다.
+         * @details 인스턴스의 프리팹은 인스턴스가 정한다 — 포커스된 에셋(@p focusedPrefabPath)은 인스턴스가 없을 때 그 프리팹의 중첩 목록을 보이는 데만 쓰고 비교하지 않는다.
+         *          포커스된 프리팹과 다른 오브젝트를 비교하면 "모두 적용" 이 그 오브젝트로 프리팹 파일을 덮는다.
          */
-        static void collectPrefabOverrides( sw::GameObject* pInstance, string_view prefabPath, string& outPrefabPath,
+        static void collectPrefabOverrides( sw::GameObject* pObject, string_view focusedPrefabPath, string& outPrefabPath,
                                             string& outInstanceName, vector<PrefabOverrideItem>& outOverride,
                                             vector<string>& outNestedPrefab );
 
@@ -87,16 +87,18 @@ namespace sw::editor
          */
         static void collectComponentOverrides( GameObject* pInstance, GameObject* pCdo, vector<PrefabOverrideItem>& outListOverride );
         /** @brief 오버라이드 하나를 템플릿 기본값으로 되돌립니다. 원형(CDO)은 프리팹에서 만듭니다(`revertComponentOverride`). */
-        static void revertPrefabOverride( sw::GameObject* pInstance, PrefabOverrideItem& item, string_view prefabPath );
+        static void revertPrefabOverride( sw::GameObject* pInstance, PrefabOverrideItem& item );
         /**
          * @brief 오버라이드 하나를 원형(CDO)의 값으로 되돌리고 되돌리기 기록을 남깁니다. 값을 옮기지 못하면 false 이고 항목은 그대로입니다.
          * @details 그 프로퍼티만 옮기고(비트필드는 그 비트만, 컨테이너는 원소째) 컴포넌트에 알린다(`onPropertyChanged`). 알리지 않으면
          *          되돌린 값이 화면에 반영되지 않는다.
          */
         [[nodiscard]] static bool revertComponentOverride( GameObject* pInstance, GameObject* pCdo, PrefabOverrideItem& item );
-        /** @brief 인스턴스 상태를 프리팹 템플릿에 저장합니다. */
-        [[nodiscard]] static bool applyPrefabOverridesToTemplate( sw::GameObject* pInstance, const AssetID& assetID );
-        /** @brief 인스턴스를 프리팹 CDO 로 되돌립니다. */
-        [[nodiscard]] static bool revertAllPrefabOverrides( sw::GameObject* pInstance, string_view prefabPath );
+        /** @brief 인스턴스 상태를 **그 인스턴스의** 프리팹 템플릿에 저장합니다. 쓸 프리팹을 부르는 쪽이 고르지 못한다. 프리팹 인스턴스가 아니면 false 입니다. */
+        [[nodiscard]] static bool applyPrefabOverridesToTemplate( sw::GameObject* pInstance );
+        /** @brief 인스턴스를 그 프리팹의 CDO 로 되돌립니다. 프리팹 인스턴스가 아니면 false 입니다. */
+        [[nodiscard]] static bool revertAllPrefabOverrides( sw::GameObject* pInstance );
+        /** @brief @p pObject 가 인스턴스인 프리팹의 경로입니다(`EditorWorkspace::findPrefabPath`). 프리팹 인스턴스가 아니거나 작업 공간이 없으면 빈 글입니다. */
+        [[nodiscard]] static string findInstancePrefabPath( const sw::GameObject* pObject );
     };
 } // namespace sw::editor

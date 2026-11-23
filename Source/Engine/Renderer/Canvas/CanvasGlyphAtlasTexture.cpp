@@ -64,7 +64,7 @@ namespace sw
         }
     }
 
-    RHIDescriptorIndex CanvasGlyphAtlasTexture::findPageSRV( uint32 page ) const
+    RHITextureSRVIndex CanvasGlyphAtlasTexture::findPageSRV( uint32 page ) const
     {
         if ( page >= _listPage.size() )
             return kInvalidDescriptorIndex;
@@ -227,7 +227,7 @@ namespace sw
         desc._bIsRenderTarget    = SW_FALSE;
         desc._bIsDepthStencil    = SW_FALSE;
         desc._bIsUnorderedAccess = SW_FALSE;
-        page._texture            = factory.createTexture2D( desc );
+        page._texture            = factory.createTexture2D( RHIResourceCreateKey{}, desc );
         if ( page._texture == 0 )
         {
             failPage( page, "could not be created" );

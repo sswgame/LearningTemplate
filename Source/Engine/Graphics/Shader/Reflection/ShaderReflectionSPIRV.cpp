@@ -67,6 +67,7 @@ namespace sw
                 unordered_map<uint32, uint32>                        _mapBinding;
                 unordered_map<uint32, uint32>                        _mapDescriptorSet;
                 unordered_map<uint32, uint32>                        _mapLocation; ///< OpDecorate Location. 정점 입력 변수
+                RHIThreadGroupSize                                   _groupSize{}; ///< OpExecutionMode LocalSize(컴퓨트)
                 uint32                                               _executionModel{ constant::invalid_index::kUint32 };
                 unordered_map<uint32, uint32>                        _mapArrayStride;
                 unordered_map<uint32, uint32>                        _mapConstantValue;      ///< OpConstant(32비트 정수). 배열 길이 해석용
@@ -400,6 +401,10 @@ namespace sw
                 {
                     module._executionModel = pInst[1];
                 }
+                else if ( opcode == spirv::kOpExecutionMode && wordCount >= 6 && pInst[2] == spirv::kExecutionModeLocalSize )
+                {
+                    module._groupSize = RHIThreadGroupSize{ pInst[3], pInst[4], pInst[5] };
+                }
                 else if ( opcode == spirv::kOpName && wordCount >= 3 )
                 {
                     const utf8*  pStr         = reinterpret_cast<const utf8*>( &pInst[2] );
@@ -574,6 +579,7 @@ namespace sw
         }
         if ( module._executionModel == spirv::kExecutionModelVertex )
             module.appendVertexInputs( data );
+        data._groupSize = module._groupSize;
 
         SW_LOG_TRACE_ID( "ShaderReflection.ConstantBuffersBoundResourcesVertexInputs", "ConstantBuffers: %# BoundResources: %# VertexInputs: %#",
                          data._listConstantBuffer.size(), data._listResource.size(), data._listVertexInput.size() );

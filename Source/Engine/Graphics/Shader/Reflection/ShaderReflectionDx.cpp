@@ -338,6 +338,11 @@ namespace sw
                     data._listResource.push_back( std::move( resourceBinding ) );
                 }
 
+                UINT groupX{ 0 };
+                UINT groupY{ 0 };
+                UINT groupZ{ 0 };
+                (void)pReflection->GetThreadGroupSize( &groupX, &groupY, &groupZ ); // 컴퓨트가 아니면 0 이다(돌려주는 값은 세 축의 곱)
+                data._groupSize = RHIThreadGroupSize{ groupX, groupY, groupZ };
                 return data;
             }
 

@@ -17,22 +17,22 @@ namespace sw
         ~OpenGLRHICommandContext() override = default;
 
         void blitTextureNative( RHITextureHandle src, RHITextureHandle dst ) override;
-        void bindShaderResource( RHIDescriptorIndex index, uint32 slot ) override;
+        void bindShaderResource( RHITextureSRVIndex index, uint32 slot ) override;
         void prepareTextureForShaderReadNative( RHITextureHandle texture ) override;
         /** @brief OpenGL 은 리소스 상태를 추적하지 않습니다. 의도적으로 아무것도 하지 않습니다. */
         void prepareTextureForRenderTargetNative( RHITextureHandle texture ) override { (void)texture; }
         void prepareTextureForUnorderedAccessNative( RHITextureHandle texture ) override;
-        void bindComputeUAV( RHIDescriptorIndex index, uint32 slot ) override;
-        void bindGraphicsUAV( RHIDescriptorIndex index, uint32 slot ) override;
+        void bindComputeUAV( RHIUnorderedAccessIndex index, uint32 slot ) override;
+        void bindGraphicsUAV( RHIUnorderedAccessIndex index, uint32 slot ) override;
         void setVertexBuffer( uint32 slot, RHIBufferHandle buffer, uint32 stride, uint32 offset = 0 ) override;
         void drawNative( uint32 vertexCount, uint32 startVertex = 0 ) override;
         void drawInstancedNative( uint32 vertexCount, uint32 instanceCount, uint32 startVertex = 0, uint32 startInstance = 0 ) override;
-        void bindConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot ) override;
+        void bindConstantBuffer( RHIBufferSRVIndex constantBufferIndex, uint32 slot ) override;
         /** @brief 버퍼의 이번 프레임 슬롯에 씁니다. `IRHIResourceFactory::updateConstantBuffer` 와 같은 일이며, 이 백엔드의 커맨드 스트림은 버퍼 버전을 갖지 않습니다. */
         void                     updateConstantBufferNative( RHIBufferHandle buffer, const void* pData, uint32 size ) override;
-        void                     bindStructuredBuffer( RHIDescriptorIndex index, uint32 slot ) override;
-        void                     bindComputeConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot ) override;
-        void                     bindComputeShaderResource( RHIDescriptorIndex index, uint32 slot ) override;
+        void                     bindStructuredBuffer( RHIBufferSRVIndex index, uint32 slot ) override;
+        void                     bindComputeConstantBuffer( RHIBufferSRVIndex constantBufferIndex, uint32 slot ) override;
+        void                     bindComputeShaderResource( RHIBufferSRVIndex index, uint32 slot ) override;
         void                     dispatchComputeNative( uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ ) override;
         void                     setViewport( const RHIViewport& viewport ) override;
         void                     setScissorRect( const RHIScissorRect& rect ) override;
@@ -61,7 +61,7 @@ namespace sw
 
     private:
         /** @brief 번호 @p index 의 상수 버퍼를 UBO 바인딩 @p slot 에 겁니다. 페이지 구간이면 `glBindBufferRange`, 아니면 `glBindBufferBase` 입니다(감사 R-4). */
-        void bindUniformBuffer( RHIDescriptorIndex index, uint32 slot );
+        void bindUniformBuffer( RHIBufferSRVIndex index, uint32 slot );
         /**
          * @brief 건 PSO 가 읽는 정점 슬롯만 VAO 로 겁니다(정점 입력이 없으면 빈 VAO). 읽는 슬롯에 버퍼가 없거나 건 버퍼가 부서졌으면 알리고 false 이며, 드로우를 버립니다(네 백엔드가 같다).
          * @details 모든 드로우 진입점이 이것을 씁니다. draw 뒤의 언바인드는 부르는 쪽이 각자 맡습니다.

@@ -11,6 +11,7 @@
 
 #include "Engine/EngineMinimal.h"
 #include "Engine/Graphics/Mesh/MeshVertex.h"
+#include "Engine/Graphics/RHI/RHIGeometryBuffer.h"
 #include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
 #include "Engine/Presentation/InstanceHighlight.h"
 #include "Engine/Renderer/Frame/View/RenderView.h"
@@ -165,6 +166,8 @@ namespace sw
          * @brief 프레임 업로드 단계 — 정점 풀이 쌓은 GPU 복사(렌더 프록시 → 풀, 옛 풀 → 새 풀)를 @p cmd 에 기록합니다(R-15). 실행기가 파이프라인과 무관하게 첫 리스트 앞에서 부른다(`FramePassExecutor::submitGraph`).
          */
         void recordFrameUploads( IRHICommandList& cmd, IRHIDevice& device );
+        /** @brief 지금 스냅샷의 메시(동적 메시 밖)를 게임 스레드가 넘기기 전에 만들었는지입니다(`GPUSceneSnapshot::_bMeshesCreatedBeforeHandoff`) — 렌더 스레드는 다시 만들지 않는다. */
+        bool areMeshesCreatedBeforeHandoff() const { return _snapshot._bMeshesCreatedBeforeHandoff == SW_TRUE; }
         /** @brief GPU 버퍼를 해제합니다. */
         void releaseGPU( IRHIDevice* pDevice );
 
@@ -265,16 +268,14 @@ namespace sw
         /** @brief 인스턴스 구조 버퍼(핸들 · 크기)입니다 — 프레임 그래프 표가 크기와 함께 등록한다(`FrameBufferTable::registerBuffer`). */
         const RHIStructuredBuffer& getInstanceStructuredBuffer() const { return _instances; }
         /** @brief 인스턴스 SRV 인덱스를 반환합니다. */
-        RHIDescriptorIndex getInstanceSRV() const { return _instances._srv; }
+        RHIBufferSRVIndex getInstanceSRV() const { return _instances._srv; }
         /**
          * @brief 인스턴스 버퍼의 UAV 인덱스입니다. 컴퓨트가 월드 행렬을 **고쳐 쓰는** 경로입니다.
          * @details instance_animation.hlsl 이 인스턴스마다 다른 각속도로 회전을 더한다. 백엔드가 구조 버퍼 UAV 를
          *          만들지 못하면 kInvalidDescriptorIndex 이고, 그러면 애니메이션 패스가 통째로 생략된다(그리기는 그대로).
          */
-        RHIDescriptorIndex getInstanceUAV() const { return _instances._uav; }
-        /** @brief 뷰 하나의 컬링 산출물(간접 인자와 가시 목록)을 반환합니다. */
-        const GPUCullViewResources& getCullView( RenderViewKind view ) const { return _listCullView[static_cast<uint32>( view )]; }
-        /** @brief 컬링 슬롯 @p cullViewIndex 의 산출물입니다. 0은 주 시점, 1은 그림자이고, `kFirstExtraCullView` 부터는 추가 뷰입니다. */
+        RHIUnorderedAccessIndex getInstanceUAV() const { return _instances._uav; }
+        /** @brief 컬링 슬롯 @p cullViewIndex 의 산출물(간접 인자와 가시 목록)입니다. 뷰 번호 n 의 시점이 2n, 그림자가 2n + 1 이다(`kCullSlotsPerView` — 주 시점이 뷰 0 번). */
         const GPUCullViewResources& getCullView( uint32 cullViewIndex ) const { return _listCullView[cullViewIndex]; }
         uint32                      getCullViewCount() const { return static_cast<uint32>( _listCullView.size() ); }
         /**
@@ -283,11 +284,11 @@ namespace sw
          */
         void setCullViewCount( IRHIDevice* pDevice, uint32 count );
         /** @brief 배치 테이블 버퍼의 SRV 를 반환합니다(컬링 컴퓨트 t1, 그래픽스 t9 g_SwBatches). */
-        RHIDescriptorIndex getBatchInfoSRV() const { return _batchInfo._srv; }
+        RHIBufferSRVIndex getBatchInfoSRV() const { return _batchInfo._srv; }
         /** @brief 배치 테이블 버퍼 핸들을 반환합니다. */
         RHIBufferHandle getBatchInfoBuffer() const { return _batchInfo._buffer; }
         /** @brief 인스턴스 슬롯 스트림 정점 버퍼(슬롯 1)를 반환합니다. 0이면 아직 없습니다. */
-        RHIBufferHandle getInstanceSlotStream() const { return _instanceSlotStream; }
+        RHIBufferHandle getInstanceSlotStream() const { return _instanceSlotStream._buffer; }
         /**
          * @brief 정점 풀을 쓸지 정합니다(기본 켬). 끄면 배치가 자기 정점 버퍼로 그립니다(startVertex 0). 진단과 A/B 비교용입니다.
          * @details 풀을 켠 이미지와 끈 이미지는 같아야 한다. 다르면 백엔드가 간접 인자의 startVertex 나 SV_VertexID 를 다르게
@@ -318,7 +319,7 @@ namespace sw
          */
         bool areIndirectCountsGPUFilled() const { return _bGPUFillsIndirectCounts != SW_FALSE; }
         /** @brief 메인 뷰의 간접 인자 버퍼를 반환합니다. 뷰를 가리지 않는 검사(upload 의 재업로드 판정과 반환값)에 씁니다. */
-        RHIBufferHandle getIndirectArgsBuffer() const { return _listCullView[static_cast<uint32>( RenderViewKind::Main )]._indirectArgs._buffer; }
+        RHIBufferHandle getIndirectArgsBuffer() const { return _listCullView[kMainCullSlot]._indirectArgs._buffer; }
         /** @brief 간접 커맨드 개수를 반환합니다. */
         uint32 getIndirectCommandCount() const { return _indirectCommandCount; }
         /** @brief 인스턴스 버퍼가 GPU 에 올라갔는지 반환합니다. */
@@ -329,7 +330,7 @@ namespace sw
          */
         const RHIStructuredBuffer& getPrevInstanceWorldBuffer() const { return _prevInstanceWorlds; }
         /** @brief 지난 월드 행렬 버퍼의 원소 수(인스턴스 수)입니다. */
-        uint32 getPrevInstanceWorldCount() const { return static_cast<uint32>( _listUploadedPrevWorld.size() ); }
+        uint32 getPrevInstanceWorldCount() const { return _prevInstanceWorldCount; }
         /** @brief 마지막 upload 에서 기록이 있는 물체가 하나라도 움직였으면 true 입니다. 카메라가 서 있어도 모션 블러를 끄지 않는 근거다(`FrameViewResources::applyViewPassSelection`). */
         bool hasObjectMotion() const { return _bObjectMotion != SW_FALSE; }
         /**
@@ -344,9 +345,9 @@ namespace sw
         /// @brief 그룹에서 (버퍼, SRV, 원소 수)를 찾는 테이블입니다. 배치 루프가 조회 대신 읽습니다. 프레임마다 다시 채웁니다.
         struct ResolvedGroup
         {
-            RHIBufferHandle    _buffer{ 0 };
-            RHIDescriptorIndex _srv{ kInvalidDescriptorIndex };
-            uint32             _elementCount{ 0 };
+            RHIBufferHandle   _buffer{ 0 };
+            RHIBufferSRVIndex _srv{ kInvalidDescriptorIndex };
+            uint32            _elementCount{ 0 };
         };
         /**
          * @brief 그룹마다 머티리얼 패킹 바이트를 원소 stride 로 이어 붙여 구조 버퍼에 올리고, 배치에 버퍼와 SRV 를 기록합니다(RT).
@@ -446,7 +447,7 @@ namespace sw
          *          개수만 줄일 수 있어 **뒤쪽 인스턴스가 통째로 사라진다**(보이는 것을 고를 수 없기 때문이다).
          *          목록은 절두체에 종속이므로 메인 카메라, 그림자 라이트, 추가 뷰가 **각자** 가진다(슬롯 0과 1은 항상 있다).
          */
-        vector<GPUCullViewResources> _listCullView = vector<GPUCullViewResources>( static_cast<size_t>( RenderViewKind::Count ) );
+        vector<GPUCullViewResources> _listCullView = vector<GPUCullViewResources>( static_cast<size_t>( kCullSlotsPerView ) );
         RHIStructuredBuffer          _batchInfo;
         /**
          * @brief 씬 메시 정점을 모은 풀입니다(RT 소유) — 정점 형식마다 하나(속성 원소 크기가 다르다). 배치는 자기 형식의 풀 버퍼와 자기 시작 오프셋으로 그립니다.
@@ -462,8 +463,8 @@ namespace sw
          * @details 간접 인자의 startInstance 가 배치 시작이므로 입력 어셈블러가 인스턴스마다 `startInstance + i` 를 준다. 그것이
          *          곧 가시 목록 슬롯이다. 인스턴스 수만큼 커지면 다시 만든다(내용은 항등이라 그대로 늘리기만 한다).
          */
-        RHIBufferHandle _instanceSlotStream{ 0 };
-        uint32          _instanceSlotStreamCapacity{ 0 };
+        RHIGeometryBuffer _instanceSlotStream;
+        uint32            _instanceSlotStreamCapacity{ 0 };
         /**
          * @brief 배치 테이블과 간접 인자를 다시 올려야 하는지 나타냅니다. 스냅샷은 그대로인데 풀 오프셋(정점, 모프)이 바뀌었을 때 켜집니다.
          * @details 스냅샷 dirty 와는 별개다. 모프 풀은 메시가 모프를 켜고 끌 때, 정점 풀은 메시 집합이 바뀔 때 다시 만들어지는데
@@ -480,10 +481,10 @@ namespace sw
         GPUInstanceMotionHistory _motionHistory;
         /// @brief 지난 월드 행렬 버퍼(t15)입니다.
         RHIStructuredBuffer _prevInstanceWorlds;
-        /// @brief 이번 프레임에 기록이 낸 지난 월드 행렬입니다(스크래치).
-        vector<float4x4> _listScratchPrevWorld;
-        /// @brief 마지막으로 올린 지난 월드 행렬입니다. 같으면 다시 올리지 않는다.
-        vector<float4x4> _listUploadedPrevWorld;
+        /// @brief 그 버퍼에 올려 둔 원소 수입니다(만들지 못했으면 0).
+        uint32 _prevInstanceWorldCount{ 0 };
+        /// @brief 지난 업로드 뒤 바뀐 칸입니다(스크래치 — `GPUSceneSlotBuffer::takeChangedSlots`).
+        vector<uint32> _listScratchChangedSlot;
         /// @brief 마지막 upload 에서 물체가 움직였는지입니다(`hasObjectMotion`).
         uint8 _bObjectMotion{ SW_FALSE };
         /// @brief 배치에 화면 왜곡 머티리얼이 있는지입니다(`hasDistortionBatches`).

@@ -8,6 +8,21 @@
 using namespace sw;
 using namespace sw::editor;
 
+/** @brief [CollisionResponseEditModelTest] 칸 복사 · 붙여넣기(R13) — 응답의 글은 왕복하고, 응답이 아닌 글은 읽지 않는다 */
+SW_TEST_CASE( CollisionResponseEditModelTest, ResponseTextRoundTrips )
+{
+    for ( const CollisionResponse response : { CollisionResponse::Ignore, CollisionResponse::Overlap, CollisionResponse::Block } )
+    {
+        CollisionResponse parsed = response == CollisionResponse::Block ? CollisionResponse::Ignore : CollisionResponse::Block;
+        SW_EXPECT_TRUE( CollisionResponseEditModel::parseResponse( CollisionResponseEditModel::formatResponse( response ), parsed ) );
+        SW_EXPECT_TRUE( parsed == response );
+    }
+    CollisionResponse parsed = CollisionResponse::Overlap;
+    SW_EXPECT_TRUE( CollisionResponseEditModel::parseResponse( " Block\n", parsed ) );
+    SW_EXPECT_FALSE( CollisionResponseEditModel::parseResponse( "3.5", parsed ) );
+    SW_EXPECT_TRUE( parsed == CollisionResponse::Block );
+}
+
 namespace
 {
     struct TestCollisionResponseEditModelInternal

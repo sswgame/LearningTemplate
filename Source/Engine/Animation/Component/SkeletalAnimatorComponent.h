@@ -228,6 +228,7 @@ namespace sw
          * @brief 상태(또는 그래프 밖 클립)를 재생합니다. @p blendSeconds 가 음수면 `_blendSeconds` 입니다. 클립을 찾았으면 true 입니다.
          * @details 시작 때 요청한 클립을 아직 읽는 중이면(`isWaitingForAnimationAssets`) 재생을 미루고 true 를 반환한다 — 다 읽히면 그때 재생하고, 클립이 없으면 그때 오류를 남긴다.
          */
+        FUNCTION( Category = "Playback", Exec )
         bool play( const hashed_string& stateName, bool bLoop = true, float32 blendSeconds = -1.0f );
         FUNCTION( Category = "Playback", DisplayName = "Stop", CallInEditor )
         void stop();

@@ -8,7 +8,6 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/Prefab/PrefabCache.h"
-#include "Engine/Physics/Component/RigidBodyComponent.h"
 
 #include "GameFramework/Runtime/Foundation/Condition/GameConditions.h"
 
@@ -90,10 +89,8 @@ namespace sw
                 SceneComponent* const   pScene       = pTarget->getPrimarySceneComponent();
                 if ( pDestination == nullptr || pScene == nullptr )
                     return ActionResult::Failed;
-                // 트랜스폼을 옮기면 물리 컴포넌트가 순간이동으로 받는다(벽을 쓸고 가지 않는다). 강체는 남은 속도도 버린다 — 빠진 열쇠가 제자리에서 다시 떨어지지 않게.
-                pScene->setWorldPosition( findPosition( *pDestination ) );
-                if ( RigidBodyComponent* const pBody = pTarget->getComponent<RigidBodyComponent>() )
-                    pBody->setLinearVelocity( float3{} );
+                // 경로를 쓸지 않고 옮기며 남은 운동(강체 · 캐릭터)도 버린다 — 빠진 열쇠가 제자리에서 다시 떨어지지 않게. 볼륨(`TeleportTriggerComponent`)과 같은 길이다.
+                pScene->teleportTo( findPosition( *pDestination ), TeleportType::ResetPhysics );
                 return ActionResult::Succeeded;
             }
         };

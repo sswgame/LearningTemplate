@@ -10,6 +10,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Object/GameObject/Tick/TickContext.h"
+#include "Engine/Object/GameObject/WorldOrigin.h"
 #include "Engine/Visual/Component/MeshComponent.h"
 
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/Client/RTSBattlefieldViewComponent.h"
@@ -110,7 +111,7 @@ namespace sw
         const RTSUnit*              pUnit     = pGameMode != nullptr ? pGameMode->getWorld().findUnit( _unitID ) : nullptr;
         if ( pUnit == nullptr )
             return -1.0f;
-        const float3  shown = pMesh->getLocalPosition();
+        const float3  shown = pManager->getWorldOrigin().toAbsolute( pMesh->getLocalPosition() ); // RTS 월드는 절대 자리다
         const float32 dx    = shown._x - pUnit->_position._x;
         const float32 dz    = shown._z - pUnit->_position._z;
         return MathUtil::sqrt( dx * dx + dz * dz );
@@ -158,7 +159,7 @@ namespace sw
         if ( bMovingUnit && moveX * moveX + moveZ * moveZ > MathUtil::kEpsilon )
             _yaw = MathUtil::atan2( moveX, moveZ );
         _lastPosition = position;
-        pMesh->setLocalPosition( position );
+        pMesh->setLocalPosition( context.getManager().getWorldOrigin().toLocal( position ) ); // RTS 월드는 절대 자리다
         pMesh->setLocalScale( scale );
         pMesh->setLocalRotation( float3{ 0.0f, _yaw, 0.0f } );
         const RTSCommandInputComponent* const pCommandInput = pDirectorObject->getTickSafeComponent<RTSCommandInputComponent>(); // 사람 명령이 없는 디렉터에는 없다

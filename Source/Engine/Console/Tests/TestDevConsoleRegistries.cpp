@@ -30,6 +30,20 @@ namespace
     }
 } // namespace
 
+/** @brief [DevConsoleRegistryTest] 남길 줄은 사용법이 비밀로 적은 자리만 가린다 — 낱말이 밀리면 그 자리부터 모두 가리고, 비밀이 없는 명령의 줄은 그대로다 */
+SW_TEST_CASE( DevConsoleRegistryTest, MaskedLineHidesSecretArguments )
+{
+    // 틀리면: 가리지 않으면 비밀번호가 로그 파일에 남고, 자리를 하나 어긋나 세면 계정 이름이 가려지고 비밀번호가 남는다.
+    const DevCommandRegistration login{ "net.login", "net.login <host:port> <account> <password> [build]", "help", &doNothingCommand, nullptr };
+    SW_EXPECT_EQUAL( string( "net.login 127.0.0.1:1 alice *** 1.0.0" ), DevCommandRegistry::makeMaskedLine( login, "net.login 127.0.0.1:1 alice hunter2 1.0.0" ) );
+    SW_EXPECT_EQUAL( string( "net.login 127.0.0.1:1 alice ***" ), DevCommandRegistry::makeMaskedLine( login, "net.login 127.0.0.1:1 alice \"two words\"" ) );
+    SW_EXPECT_EQUAL( string( "net.login 127.0.0.1:1 alice *** *** ***" ), DevCommandRegistry::makeMaskedLine( login, "net.login 127.0.0.1:1 alice two words 1.0.0" ) );
+    SW_EXPECT_EQUAL( string( "net.login 127.0.0.1:1" ), DevCommandRegistry::makeMaskedLine( login, "net.login 127.0.0.1:1" ) );
+
+    const DevCommandRegistration plain{ "teleport", "teleport <object> <x>", "help", &doNothingCommand, nullptr };
+    SW_EXPECT_EQUAL( string( "teleport  Player  \"1\"" ), DevCommandRegistry::makeMaskedLine( plain, "teleport  Player  \"1\"" ) );
+}
+
 /** @brief [DevConsoleRegistryTest] 명령: 이름은 대소문자를 가리지 않고 둘째 등록은 거절한다. 이름이나 본문이 없으면 받지 않는다. 뺀 뒤에는 찾지 못한다 */
 SW_TEST_CASE( DevConsoleRegistryTest, CommandRegistration )
 {
@@ -144,6 +158,17 @@ SW_TEST_CASE( DevConsoleRegistryTest, HUDSectionRegistration )
     registry.unregisterEntry( &bravo );
     SW_EXPECT_TRUE( registry.findSection( "bravo" ) == nullptr );
     SW_EXPECT_EQUAL( revision + 1, registry.getRevision() );
+}
+
+/** @brief [DevConsoleRegistryTest] HUD 범주: 줄 본문 없이 그리기만 해도 받고, 둘 다 없으면 받지 않는다 */
+SW_TEST_CASE( DevConsoleRegistryTest, HUDCategoryDrawOnly )
+{
+    DebugHUDRegistry                  registry;
+    const DebugHUDSectionRegistration drawOnly{ "navmesh", "Title", nullptr, 0, DebugHUDSectionFlag::kNone, []( const DebugHUDSectionDraw& /*draw*/ ) {}, "Nav" };
+    const DebugHUDSectionRegistration empty{ "empty", "Title", nullptr, 0, DebugHUDSectionFlag::kNone };
+    SW_EXPECT_TRUE( registry.registerEntry( &drawOnly ) );
+    SW_EXPECT_FALSE( registry.registerEntry( &empty ) );
+    SW_EXPECT_TRUE( registry.findSection( "navmesh" ) == &drawOnly );
 }
 
 /** @brief [DevConsoleRegistryTest] HUD 상태 글: 없으면 기본값, 낱말이 정하고 마지막이 이긴다. 고쳐 쓰기는 기본값과 같으면 낱말을 빼고 다른 낱말은 둔다 */

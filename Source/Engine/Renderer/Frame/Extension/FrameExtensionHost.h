@@ -55,7 +55,7 @@ namespace sw
         FrameExtensionHost& operator=( const FrameExtensionHost& ) = delete;
 
         /**
-         * @brief 모듈 구간의 첫 일입니다. 대기 중인 프록시 갱신을 적용하고, 확장의 `addPasses` 와 프록시의 `collectDrawElements` 를 부르고,
+         * @brief 모듈 구간의 첫 일입니다. 대기 중인 프록시 갱신을 적용하고, 확장이 등록 때 낸 선언을 복사하고 프록시의 `collectDrawElements` 를 부르고,
          *        패스 선언을 검사해 프로그램 PSO 를 기록 전에 만듭니다(임시 텍스처는 뷰마다 `allocateTextures`).
          * @return 이번 프레임 선언이 그래프에 묶인 것(`markBound`)과 달라 그래프를 다시 묶어야 하면 true 입니다.
          */

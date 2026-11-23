@@ -30,8 +30,6 @@ namespace sw
         static constexpr const utf8* kFrameSystemKey = "DecalRainWashSystem";
         /** @brief 씻김을 넣는 간격(초)입니다. */
         static constexpr float32 kWashIntervalSeconds = 0.5f;
-        /** @brief 지붕을 찾는 광선 길이(m)입니다 — 캐릭터 노출의 기본 지붕 거리와 같다. */
-        static constexpr float32 kShelterDistance = 20.0f;
 
         DecalRainWashSystem();
 

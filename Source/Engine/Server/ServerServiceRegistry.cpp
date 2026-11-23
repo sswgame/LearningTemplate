@@ -32,9 +32,4 @@ namespace sw
     {
         ServiceFactoryNode::collectAs( ServerServiceRegistryInternal::getList(), outListFactory );
     }
-
-    int32 ServerServiceRegistry::getFactoryCount()
-    {
-        return static_cast<int32>( ServerServiceRegistryInternal::getList().getCount() );
-    }
 } // namespace sw

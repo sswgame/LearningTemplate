@@ -19,7 +19,7 @@ namespace
     /** @brief 삼각형 하나짜리 Packed 메시입니다(만들 때마다 내용 토큰이 새것이다). */
     shared_ptr<Mesh> makeTriangle()
     {
-        const shared_ptr<Mesh> mesh = Mesh::create();
+        const shared_ptr<Mesh> mesh = Mesh::create( MeshCPUAccess::Keep );
         const bool             bSet = mesh->setGeometry( vector<RHIVertex>( 3 ), vector<uint32>{ 0, 1, 2 } ); // 값 셋 · 인덱스 셋 — 늘 맞다
         SW_ASSERT( bSet );
         (void)bSet;

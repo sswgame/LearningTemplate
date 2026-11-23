@@ -70,6 +70,7 @@ namespace sw::editor
         EditorExtensionSubsystems& operator=( const EditorExtensionSubsystems& ) = delete;
 
         const utf8* getSubsystemName() const override { return kSubsystemName; }
+        void        resetToFreshEditor() override;
         /** @brief 기여받은 서브시스템을 모두 역순으로 종료합니다. */
         void shutdownSubsystem() override { releaseAll(); }
 

@@ -82,7 +82,7 @@ namespace sw
         /** @brief 씬 데이터가 준 이름(입력 액션 · 건설 단축키 표 · 관전 프리셋)이 입력 맵과 유닛 카탈로그에 모두 있는지 봅니다. 빠진 것은 모두 오류로 남기고 false 다 — 입력을 읽지 않는다. */
         [[nodiscard]] bool hasValidNames( const SkirmishGameModeComponent& director ) const;
         /** @brief 디렉터의 이번 걸음 알림을 소리 · 로그로 냅니다. 유닛이 부서지는 소리는 구경에서도 나고, 나머지는 이 화면 사람의 것만 알린다. */
-        void playStepEvents( const SkirmishGameModeComponent& director ) const;
+        void playStepEvents( const GameObjectManager& manager, const SkirmishGameModeComponent& director ) const;
         void updateHumanCommands( GameObjectManager& manager, SkirmishGameModeComponent& director, const InputManager& input, const GameInputView& inputMap );
         void updateDrag( SkirmishGameModeComponent& director, const GameInputView& inputMap, const float3& point, bool bPointValid );
         /** @brief 명령 액션(`_orderAction`, 오른쪽 클릭)입니다. 선택한 유닛에 커서 위치로 상황에 맞는 명령(이동, 공격, 채취, 집결)을 냅니다. */

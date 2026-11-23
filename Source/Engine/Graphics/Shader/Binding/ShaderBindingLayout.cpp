@@ -159,17 +159,24 @@ namespace sw
     {
         _engineCbSize       = 0;
         _engineCbLayoutHash = 0;
+        _bUsesMaterialCb    = SW_FALSE;
+        _bUsesMaterialData  = SW_FALSE;
         _listEngineCbMember.clear();
         _listResourceBindOp.clear();
 
         const hashed_string materialCbName{ shaderslot::cbname::kMaterial };
+        const hashed_string materialsName{ shaderslot::resname::kMaterials };
 
         for ( const ShaderBindingSlot& slot : _listSlot )
         {
             if ( slot._kind == ShaderBindingKind::ConstantBuffer )
             {
                 if ( slot._name == materialCbName )
+                {
+                    _bUsesMaterialCb   = SW_TRUE;
+                    _bUsesMaterialData = SW_TRUE;
                     continue;
+                }
 
                 uint32 slotEnd = slot._cbTotalSize;
                 for ( const ShaderVariableInfo& member : slot._listCbMember )
@@ -198,6 +205,9 @@ namespace sw
 
             if ( slot._kind == ShaderBindingKind::Texture || slot._kind == ShaderBindingKind::StructuredBuffer )
             {
+                // 텍스처는 무엇이든 머티리얼로 본다 — 번호가 머티리얼 데이터에서 오는지 리플렉션으로 가를 수 없고, 에뮬 백엔드는 칸 순번으로 읽는다(틀려도 덜 묶일 뿐이다).
+                if ( slot._kind == ShaderBindingKind::Texture || slot._name == materialsName )
+                    _bUsesMaterialData = SW_TRUE;
                 ShaderResourceBindOp planned{};
                 planned._lookupKey     = hashed_string( canonicalResourceView( slot._name.c_str(), false ) );
                 planned._registerIndex = slot._registerIndex;

@@ -81,6 +81,11 @@ namespace sw::editor
         /** @brief 타입이 바탕 층(`REFLECT( Meta = "ConfigBaseLayer" )` — 값이 파일에만 있다)이면 true 입니다. 그때 저장은 모든 키를 쓰고 되돌리기는 파일 값입니다. */
         [[nodiscard]] bool isBaseLayer() const;
 
+        /** @brief 되돌리기 단계가 쥘 지금 값 전체의 글입니다(차이 글이 아니다 — 필수 칸이 기본값인 중간 상태도 그대로 담는다). 열려 있지 않으면 빈 글입니다. */
+        [[nodiscard]] string captureText() const;
+        /** @brief `captureText` 의 글 @p text 를 현재 값으로 둡니다. 읽지 못하면 현재 값을 두고 false 입니다. 저장한 글(미저장 판정)은 그대로다. */
+        [[nodiscard]] bool applyText( string_view text );
+
         static constexpr const utf8* kBaseLayerMeta = "ConfigBaseLayer"; ///< 바탕 층 표시 메타
 
         /** @brief 편집할 현재 값입니다. 그리드가 직접 고친다. 열려 있지 않으면 nullptr 입니다. */

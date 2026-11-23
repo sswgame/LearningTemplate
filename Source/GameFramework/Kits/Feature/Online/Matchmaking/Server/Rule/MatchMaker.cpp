@@ -72,11 +72,10 @@ namespace sw
         : _listTicket{}
         , _listBackfill{}
         , _definition{}
-        , _matchIDAllocator{}
     {
     }
 
-    bool MatchMaker::initialize( const MatchModeDef& definition, uint64 matchIDSeed )
+    bool MatchMaker::initialize( const MatchModeDef& definition )
     {
         // 값을 범위 안으로 맞춰 돌지 않는다. 팀 수 20 을 준 모드가 16 으로 돌면 아무도 모른다.
         const string rangeError = ConfigRangeUtil::describeRangeErrors( definition );
@@ -86,7 +85,6 @@ namespace sw
             return false;
         }
         _definition = definition;
-        _matchIDAllocator.restore( ( matchIDSeed << 32 ) | 1u );
         _listTicket.clear();
         _listBackfill.clear();
         return true;
@@ -222,7 +220,6 @@ namespace sw
             MatchFormed match;
             if ( tryFormMatch( anchorIndex, nowMs, listUsed, match ) == false )
                 continue;
-            match._matchID = _matchIDAllocator.allocate();
             outListMatch.push_back( std::move( match ) );
         }
 

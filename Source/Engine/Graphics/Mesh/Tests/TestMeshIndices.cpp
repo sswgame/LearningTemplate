@@ -42,7 +42,7 @@ namespace
  */
 SW_TEST_CASE( MeshIndicesTest, SetGeometryKeepsSharedVerticesAndRejectsBadIndices )
 {
-    sw::shared_ptr<sw::Mesh> mesh = sw::Mesh::create();
+    sw::shared_ptr<sw::Mesh> mesh = sw::Mesh::create( sw::MeshCPUAccess::Keep );
     SW_REQUIRE_TRUE( mesh->setGeometry( makeQuadVertices(), makeQuadIndices() ) );
     SW_EXPECT_EQUAL( 4u, mesh->getVertexCount() );
     SW_EXPECT_EQUAL( 6u, mesh->getIndexCount() );
@@ -66,7 +66,7 @@ SW_TEST_CASE( MeshIndicesTest, SetGeometryKeepsSharedVerticesAndRejectsBadIndice
  */
 SW_TEST_CASE( MeshIndicesTest, LODIndicesFollowTheVertexStream )
 {
-    sw::shared_ptr<sw::Mesh> mesh = sw::Mesh::create();
+    sw::shared_ptr<sw::Mesh> mesh = sw::Mesh::create( sw::MeshCPUAccess::Keep );
     SW_REQUIRE_TRUE( mesh->setGeometry( makeQuadVertices(), makeQuadIndices() ) );
     sw::MeshLODLevel level{};
     level._listVertex = makeQuadVertices();
@@ -149,7 +149,7 @@ SW_TEST_CASE( MeshIndicesTest, WeldTriangleListMergesOnlyBitIdenticalVertices )
     SW_EXPECT_TRUE( listIndex == ( sw::vector<uint32>{ 0, 1, 2, 0, 3, 4 } ) );
 
     // 탄젠트를 구한 뒤 합치는 메시는 그림이 같다 — 모서리마다 다시 풀면 원래 정점(탄젠트 포함)과 비트까지 같다.
-    sw::shared_ptr<sw::Mesh> welded = sw::Mesh::create();
+    sw::shared_ptr<sw::Mesh> welded = sw::Mesh::create( sw::MeshCPUAccess::Keep );
     welded->setTriangleListWelded( sw::vector<sw::RHIVertex>( listTriangle ) );
     sw::vector<sw::RHIVertex> listExpected = listTriangle;
     sw::Mesh::computeTangents( listExpected );
@@ -161,12 +161,12 @@ SW_TEST_CASE( MeshIndicesTest, WeldTriangleListMergesOnlyBitIdenticalVertices )
 }
 
 /**
- * @brief [MeshIndicesTest] CPU 정점은 접근 토큰(`MeshCPUView`)으로만 읽고, 지금 모든 메시는 `Keep` 이라 토큰이 정점 · 낮은 단계 정점을 준다(R-15)
+ * @brief [MeshIndicesTest] CPU 정점은 접근 토큰(`MeshCPUView`)으로만 읽고, `Keep` 으로 만든 메시의 토큰은 정점 · 낮은 단계 정점을 준다(R-15)
  * @details 변이: `getCPUView` 가 `Keep` 메시에도 빈 토큰을 주면 정점 수 단언이 진다.
  */
 SW_TEST_CASE( MeshIndicesTest, CPUViewReadsKeptVertices )
 {
-    const sw::shared_ptr<sw::Mesh> mesh = sw::Mesh::create();
+    const sw::shared_ptr<sw::Mesh> mesh = sw::Mesh::create( sw::MeshCPUAccess::Keep );
     sw::vector<sw::RHIVertex>      listVertex( 3 );
     listVertex[1]._arrPosition[0] = 1.0f;
     listVertex[2]._arrPosition[1] = 1.0f;

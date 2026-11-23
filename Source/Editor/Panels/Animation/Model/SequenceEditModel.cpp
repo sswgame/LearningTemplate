@@ -324,6 +324,12 @@ namespace sw::editor
             return unexpected( Error{ ErrorKind::InvalidArgument, "no binding is selected or the frame is outside the timeline" } );
         vector<int32> listCut;
         collectCutLane( listCut );
+        // 거절은 문서를 고치기 전에 한다 — 겹친 컷(파일에서 온 항목)이 있으면 앞 컷을 줄인 뒤에 거절해 되돌리기 없는 편집이 남았다.
+        for ( const int32 cutIndex : listCut )
+        {
+            if ( _asset._listItem[static_cast<size_t>( cutIndex )]._start == frame )
+                return unexpected( Error{ ErrorKind::InvalidArgument, "a cut already starts at this frame" } ); // 둘이 같은 프레임에서 시작할 수 없다
+        }
         int32 end = _asset._frameMax;
         for ( const int32 cutIndex : listCut )
         {
@@ -333,11 +339,9 @@ namespace sw::editor
                 end = MathUtil::min( end, cut._start - 1 );
                 continue;
             }
-            // 이 프레임을 덮던 컷은 여기 앞에서 끝난다(컷이 시작 프레임에 있으면 새 컷이 그 자리를 갖고 앞 컷은 그대로 — 둘이 같은 프레임에서 시작할 수 없다).
-            if ( cut._start < frame && frame <= cut._end )
+            // 이 프레임을 덮던 컷은 여기 앞에서 끝난다.
+            if ( frame <= cut._end )
                 cut._end = frame - 1;
-            else if ( cut._start == frame )
-                return unexpected( Error{ ErrorKind::InvalidArgument, "a cut already starts at this frame" } );
         }
         SequenceTrackItem item{};
         item._kind    = SequenceItemKind::CameraCut;

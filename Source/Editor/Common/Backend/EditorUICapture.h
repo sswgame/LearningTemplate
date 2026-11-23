@@ -26,7 +26,7 @@
 
 #include "Editor/Common/EditorSubsystem.h"
 
-#include "Engine/Graphics/RHI/RHIHandles.h"
+#include "Engine/Graphics/RHI/RHITextureSlot.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 
 struct ImDrawData;
@@ -100,6 +100,7 @@ namespace sw::editor
     public:
         static constexpr const utf8* kSubsystemName = "EditorUICapture";
         const utf8*                  getSubsystemName() const override { return kSubsystemName; }
+        void                         resetToFreshEditor() override {} // 캡처 요청은 번호로 묶이고 낸 쪽이 결과를 기다린다 — 남은 요청을 버리면 쓰는 중인 파일만 잃는다
 
         // ------------------------------------------------------------------------------
         // UI 스레드
@@ -146,9 +147,7 @@ namespace sw::editor
         vector<EditorUICaptureWrite> _listWriteReady SW_GUARDED_BY( _resultMutex );                         ///< 렌더 스레드가 넣고 UI 스레드가 워커에 넘긴다
         shared_ptr<atomic<uint32>>                   _pWritesInFlight{ make_shared<atomic<uint32>>( 0u ) }; ///< 워커가 쓰는 중인 수(잡이 같이 들어 서브시스템보다 오래 살 수 있다)
         EditorUICaptureJob                           _renderedJob{};                                        ///< 렌더 스레드 전용 — 이번 프레임에 그린 것
-        RHITextureHandle                             _texture{ 0 };                                         ///< 렌더 스레드 전용
-        uint32                                       _textureWidth{ 0 };
-        uint32                                       _textureHeight{ 0 };
+        RHITextureSlot                               _texture{};                                            ///< 렌더 스레드 전용
         uint32                                       _nextTicket{ 1 };
         uint32                                       _uiFrameCount{ 0 };     ///< `-gv_screenshotEditor` 대기 프레임 수
         uint8                                        _bRendered{ SW_FALSE }; ///< 렌더 스레드 전용

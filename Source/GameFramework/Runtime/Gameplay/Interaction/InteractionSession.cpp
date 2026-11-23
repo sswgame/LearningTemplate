@@ -2,9 +2,11 @@
 
 #include "GameFramework/Runtime/Gameplay/Interaction/InteractionSession.h"
 
+#include "Core/Hash/HashUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/DepletingValue.h"
+#include "GameFramework/Runtime/Foundation/Random/GameRandom.h"
 
 namespace sw
 {
@@ -14,8 +16,11 @@ namespace sw
         , _eventBuffer{}
         , _listHoldEvent{}
         , _actorID{ 0 }
+        , _beginCount{ 0 }
         , _stepIndex{ 0 }
         , _mashProgress{ 0.0f }
+        , _reactionTime{ 0.0f }
+        , _reactionOpenTime{ 0.0f }
         , _state{ InteractionSessionState::Idle }
     {
     }
@@ -28,6 +33,7 @@ namespace sw
         _actorID   = actorID;
         _stepIndex = 0;
         _state     = InteractionSessionState::Active;
+        ++_beginCount;
         _eventBuffer.push( InteractionSessionEvent::Started );
         beginStep();
         return true;
@@ -62,6 +68,13 @@ namespace sw
             }
             case InteractionInputMode::Mash:
             {
+                break;
+            }
+            case InteractionInputMode::Reaction:
+            {
+                GameRandom random( HashUtil::hashCoord( static_cast<int32>( _beginCount ), _stepIndex, _actorID ) );
+                _reactionTime     = 0.0f;
+                _reactionOpenTime = random.nextRange( step._delayMin, step._delayMax );
                 break;
             }
         }
@@ -119,6 +132,15 @@ namespace sw
                     completeStep();
                 break;
             }
+            case InteractionInputMode::Reaction:
+            {
+                _reactionTime += deltaTime;
+                if ( bPressed && isReactionOpen() )
+                    completeStep();
+                else if ( bPressed || _reactionTime > _reactionOpenTime + step._window )
+                    cancel(); // 먼저 눌렀거나 놓쳤다
+                break;
+            }
         }
     }
 
@@ -143,8 +165,16 @@ namespace sw
                 return _holdProgress.getProgress();
             case InteractionInputMode::Mash:
                 return MathUtil::saturate( _mashProgress );
+            case InteractionInputMode::Reaction:
+                return isReactionOpen() ? 1.0f - MathUtil::saturate( ( _reactionTime - _reactionOpenTime ) / pStep->_window ) : 0.0f;
         }
         return 0.0f;
+    }
+
+    bool InteractionSession::isReactionOpen() const
+    {
+        const InteractionStepDef* pStep = getStep();
+        return pStep != nullptr && pStep->_mode == InteractionInputMode::Reaction && _reactionOpenTime <= _reactionTime && _reactionTime <= _reactionOpenTime + pStep->_window;
     }
 
     const InteractionStepDef* InteractionSession::getStep() const

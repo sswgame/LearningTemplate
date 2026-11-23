@@ -358,7 +358,7 @@ namespace sw::editor
                     SW_LOG_WARNING_ID( "Editor.ApplyOverridesNeedsSelected", "Apply Overrides needs a selected prefab instance - nothing was written" );
                     return;
                 }
-                if ( EditorToolAssetCommands::applyPrefabOverridesToTemplate( pObj, AssetID{ path } ) == false )
+                if ( EditorToolAssetCommands::applyPrefabOverridesToTemplate( pObj ) == false )
                     SW_LOG_ERROR_ID( "Editor.ApplyOverridesCouldNot", "Apply Overrides could not write '%#'", path.c_str() );
             }
 
@@ -432,8 +432,8 @@ namespace sw::editor
              *          Exit 는 단축키를 적지 않는다 — Alt+F4 는 OS 가 창 닫기로 먼저 가로채는 조합이라 입력 맵이 처리하지 않는다.
              */
             inline static const CommandRow _s_arrCommandRow[] = {
-                {                    "scene.new",                                  &commandNewScene,               nullptr,         EditorCommandEdit::NoScene},
-                {                   "scene.open",                                 &commandOpenScene,               nullptr,         EditorCommandEdit::NoScene},
+                {       editorcommand::kSceneNew,                                  &commandNewScene,               nullptr,         EditorCommandEdit::NoScene},
+                {      editorcommand::kSceneOpen,                                 &commandOpenScene,               nullptr,         EditorCommandEdit::NoScene},
                 {                   "asset.save",      &EditorSceneFileCommands::saveFocusedOrScene,               nullptr,         EditorCommandEdit::NoScene},
                 {              "scene.saveScene", &EditorSceneFileCommands::saveActiveSceneOrPrompt,               nullptr,         EditorCommandEdit::NoScene},
                 {             "editor.quickOpen",                       &QuickLauncherPopup::toggle,               nullptr,         EditorCommandEdit::NoScene},

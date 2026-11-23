@@ -202,7 +202,7 @@ namespace sw
         PROPERTY( MaxCount = OnlineLimit::kMaxBalanceCount )
         vector<LedgerBalance> _listBalance{}; ///< 바뀐 잔액만 담는다. 상한은 `OnlineLimit::kMaxBalanceCount` 와 같다
         PROPERTY( MaxCount = EconomyProtocol::kMaxProductIDSize )
-        string _productID{}; ///< 영수증에 포함된 스토어 상품이다
+        string _productID{}; ///< 영수증에 포함된 스토어 상품이다. 여럿이면 첫 상품이며 지급한 것은 `_listBalance` 로 안다
         PROPERTY()
         EconomyResult _result{ EconomyResult::Ok };
         PROPERTY( Min = 0, Max = 1 )

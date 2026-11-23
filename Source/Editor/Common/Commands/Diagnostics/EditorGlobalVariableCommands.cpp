@@ -22,6 +22,35 @@ namespace sw::editor
         struct EditorGlobalVariableCommandsInternal
         {
             static constexpr const utf8* kSessionPresetName = "editor_session";
+            static constexpr const utf8* kRootName          = "GlobalVariablesPreset";
+
+            static void appendVariable( XMLNode& root, const GlobalVariableInfo& info )
+            {
+                XMLNode varNode = root.appendChild( "Var" );
+                varNode.appendAttribute( "name", info._name );
+                varNode.appendAttribute( "type", info.getTypeName() );
+                varNode.appendAttribute( "value", info.getValueAsString() );
+            }
+
+            /** @brief 문서의 변수 줄마다 `func( info, value )` 를 부릅니다. 등록되지 않은 이름은 건너뜁니다. */
+            template <typename TFunc>
+            static void forEachVariable( const XMLDocument& doc, TFunc&& func )
+            {
+                const XMLNode root = doc.getRoot();
+                if ( root.isValid() == false )
+                    return;
+                GlobalVariableManager& gvm = editor::getSubsystem<GlobalVariableManager>();
+                for ( XMLNode varNode = root.findChild( "Var" ); varNode.isValid(); varNode = varNode.findNextSibling( "Var" ) )
+                {
+                    const utf8* pName  = varNode.findAttribute( "name" );
+                    const utf8* pValue = varNode.findAttribute( "value" );
+                    if ( pName == nullptr || pValue == nullptr )
+                        continue;
+                    GlobalVariableInfo* pInfo = gvm.findVariable( pName );
+                    if ( pInfo != nullptr )
+                        func( *pInfo, pValue );
+                }
+            }
         };
     } // namespace
 
@@ -45,7 +74,7 @@ namespace sw::editor
         GlobalVariableManager& gvm = editor::getSubsystem<GlobalVariableManager>();
 
         XMLDocument doc;
-        XMLNode     root = doc.appendRoot( "GlobalVariablesPreset" );
+        XMLNode     root = doc.appendRoot( EditorGlobalVariableCommandsInternal::kRootName );
         root.appendAttribute( "name", string{ presetName } );
 
         vector<GlobalVariableInfo*> listVariable;
@@ -58,10 +87,7 @@ namespace sw::editor
             if ( bSkipVariable )
                 continue;
 
-            XMLNode varNode = root.appendChild( "Var" );
-            varNode.appendAttribute( "name", pInfo->_name );
-            varNode.appendAttribute( "type", pInfo->getTypeName() );
-            varNode.appendAttribute( "value", pInfo->getValueAsString() );
+            EditorGlobalVariableCommandsInternal::appendVariable( root, *pInfo );
         }
 
         return doc.saveToString();
@@ -82,30 +108,54 @@ namespace sw::editor
 
     bool EditorGlobalVariableCommands::applyPresetText( string_view presetText )
     {
-        GlobalVariableManager& gvm = editor::getSubsystem<GlobalVariableManager>();
-
         XMLDocument doc;
-        if ( doc.parse( presetText ) == false )
+        if ( doc.parse( presetText ) == false || doc.getRoot().isValid() == false )
             return false;
-
-        XMLNode rootNode = doc.getRoot();
-        if ( rootNode.isValid() == false )
-            return false;
-
-        for ( XMLNode varNode = rootNode.findChild( "Var" ); varNode.isValid(); varNode = varNode.findNextSibling( "Var" ) )
+        EditorGlobalVariableCommandsInternal::forEachVariable( doc, []( GlobalVariableInfo& info, const utf8* pValue )
         {
-            const utf8* pName = varNode.findAttribute( "name" );
-            const utf8* pVal  = varNode.findAttribute( "value" );
-            if ( pName == nullptr || pVal == nullptr )
-                continue;
-
             // 프리셋 파일에 테스트용 변수가 들어 있어도 그 값은 적용하지 않는다.
-            GlobalVariableInfo* pInfo = gvm.findVariable( pName );
-            if ( pInfo == nullptr || pInfo->_bTestOnly )
-                continue;
-            pInfo->setValueFromString( pVal );
-        }
+            if ( info._bTestOnly == false )
+                info.setValueFromString( pValue );
+        } );
         return true;
+    }
+
+    vector<string> EditorGlobalVariableCommands::collectPresetVariables( const string& filePath )
+    {
+        vector<string> listName;
+        XMLDocument    doc;
+        if ( doc.loadFromFile( filePath ) )
+        {
+            EditorGlobalVariableCommandsInternal::forEachVariable( doc, [&listName]( const GlobalVariableInfo& info, const utf8* /*pValue*/ )
+            {
+                if ( info._bTestOnly == false )
+                    listName.push_back( info._name );
+            } );
+        }
+        return listName;
+    }
+
+    string EditorGlobalVariableCommands::captureValues( const vector<string>& listName )
+    {
+        GlobalVariableManager& gvm = editor::getSubsystem<GlobalVariableManager>();
+        XMLDocument            doc;
+        XMLNode                root = doc.appendRoot( EditorGlobalVariableCommandsInternal::kRootName );
+        for ( const string& name : listName )
+        {
+            const GlobalVariableInfo* pInfo = gvm.findVariable( name );
+            if ( pInfo != nullptr )
+                EditorGlobalVariableCommandsInternal::appendVariable( root, *pInfo );
+        }
+        return doc.saveToString();
+    }
+
+    void EditorGlobalVariableCommands::restoreValues( string_view text )
+    {
+        XMLDocument doc;
+        if ( doc.parse( text, "global variable undo" ) == false )
+            return;
+        EditorGlobalVariableCommandsInternal::forEachVariable( doc, []( GlobalVariableInfo& info, const utf8* pValue )
+        { info.setValueFromString( pValue ); } );
     }
 
     string EditorGlobalVariableCommands::getSessionPresetPath()

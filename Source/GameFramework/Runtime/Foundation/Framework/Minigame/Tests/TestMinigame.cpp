@@ -7,6 +7,11 @@
 
 #define SW_TEST_INTERNAL // 임시 리소스 도메인 픽스처(`ScopedScratchDomain`)가 엔진 서비스를 직접 쓴다
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
+#include "Engine/Object/Component/SceneComponent.h"
+#include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Scene/Scene.h"
+#include "Engine/Scene/SceneSubLevelTypes.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameFeature/GameFeatureRegistry.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
@@ -236,12 +241,12 @@ SW_TEST_CASE( MinigameTest, ResultReachesSubscribers )
     stack.push( MinigameFrame{ makeMinigame( "fishing", MinigameEntry::SceneSwitch ), MinigameReturnPoint{ MinigameEntranceReturn{} } } );
     MinigameFrame popped;
     SW_REQUIRE_TRUE( stack.pop( popped ) );
-    finished.broadcast( MinigameResult{ popped._definition._name, hashed_string( "win" ) } );
+    finished.broadcast( MinigameResult{ popped._definition._name, hashed_string( "win" ), {} } );
     SW_REQUIRE_TRUE( listReceived.size() == 1 );
     SW_EXPECT_TRUE( listReceived[0]._minigame == hashed_string( "fishing" ) );
     SW_EXPECT_TRUE( listReceived[0]._resultName == hashed_string( "win" ) );
     subscription.reset();
-    finished.broadcast( MinigameResult{ hashed_string( "fishing" ), hashed_string( "lose" ) } );
+    finished.broadcast( MinigameResult{ hashed_string( "fishing" ), hashed_string( "lose" ), {} } );
     SW_EXPECT_TRUE( listReceived.size() == 1 );
 }
 
@@ -278,4 +283,20 @@ SW_TEST_CASE( MinigameTest, SceneSwitchIsRefusedInANetSession )
     SW_EXPECT_FALSE( MinigameFlow::validateEntry( makeMinigame( "arcade", MinigameEntry::SceneSwitch ), true ) );
     SW_EXPECT_TRUE( MinigameFlow::validateEntry( makeMinigame( "cardtable", MinigameEntry::SubLevel ), true ) );
     SW_EXPECT_TRUE( MinigameFlow::validateEntry( makeMinigame( "arcade", MinigameEntry::SceneSwitch ), false ) );
+}
+
+/** @brief [MinigameTest] 하위 레벨을 얹는 자리는 절대 자리다 — 원점을 옮긴 월드에서도 입구 사물의 절대 자리에 선다(하위 레벨 서비스가 지금 원점을 뺀다) */
+SW_TEST_CASE( MinigameTest, AnchorPlacementIsAbsolute )
+{
+    Scene       scene{ "Hub" };
+    GameObject* pAnchor = scene.getObjectManager()->createGameObject( hashed_string( "Arcade" ) );
+    SW_REQUIRE_NOT_NULL( pAnchor );
+    pAnchor->addComponent<SceneComponent>()->setWorldPosition( float3{ 1010.0f, 2.0f, 520.0f } );
+    SW_REQUIRE_TRUE( scene.shiftWorldOrigin( double3{ 1000.0, 0.0, 500.0 } ) );
+    SW_EXPECT_EQUAL( 10.0f, pAnchor->getPrimarySceneComponent()->getWorldPosition()._x );
+    const optional<SubLevelPlacement> placement = MinigameFlow::makeAnchorPlacement( *pAnchor );
+    SW_REQUIRE_TRUE( placement.has_value() );
+    SW_EXPECT_EQUAL( 1010.0f, placement->_position._x );
+    SW_EXPECT_EQUAL( 2.0f, placement->_position._y );
+    SW_EXPECT_EQUAL( 520.0f, placement->_position._z );
 }

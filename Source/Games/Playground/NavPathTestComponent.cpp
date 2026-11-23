@@ -113,6 +113,11 @@ namespace sw
             updateProbe();
     }
 
+    void NavPathTestComponent::onWorldOriginShifted( const float3& delta )
+    {
+        _origin += delta;
+    }
+
     void NavPathTestComponent::updateProbe()
     {
         NavMeshAgentComponent* pAgent    = getOwner()->getComponent<NavMeshAgentComponent>();

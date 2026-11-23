@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="898a8be1dea64e0493015028c8c39f22"?>
+<!--
+  수영장 — 유체(밀도 1 — 사람은 뜨지도 가라앉지도 않는다)와 저항. 흐름 · 젖음이 없어 헤엄(이동 방식 Swimming)만 본다(maps/outdoors).
+-->
+<ZoneProfile>
+	<_listModule>
+		<ZoneModuleDef _name="water" _kind="PhysicsField">
+			<_listParam>
+				<ZoneParamDef _name="drag" _value="2" />
+				<ZoneParamDef _name="fluidDensity" _value="1" />
+			</_listParam>
+		</ZoneModuleDef>
+	</_listModule>
+</ZoneProfile>

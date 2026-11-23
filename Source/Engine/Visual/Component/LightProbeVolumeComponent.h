@@ -11,13 +11,13 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Graphics/Lighting/LightProbeGrid.h"
-#include "Engine/Graphics/Lighting/SceneVoxelGrid.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
 {
     class ValidationContext;
+    struct SceneVoxelScene;
 
     /**
      * @class LightProbeVolumeComponent
@@ -40,6 +40,8 @@ namespace sw
 
         /** @brief 상자 크기(축마다 전체 길이, m)입니다. */
         const float3& getExtent() const { return _extent; }
+        /** @brief 셀 나누기가 묻는 이 컴포넌트가 덮는 월드 상자입니다 — 피벗 셀이 아니라 덮는 자리가 로딩 반경에 들면 올라 있다. */
+        bool computeStreamingBounds( AABB& outBox ) const override;
         /** @brief 상자 크기를 설정합니다. 음수는 0 으로 자릅니다. */
         void setExtent( const float3& extent );
         /** @brief 프로브 사이 목표 간격(m)입니다. 축마다 실제 간격은 상자를 고르게 나눈 값입니다(`computeLayout`). */
@@ -57,7 +59,7 @@ namespace sw
 
         /**
          * @brief 켜져 있으면 베이크 대신 GPU 가 프로브를 프레임마다 조금씩 다시 계산합니다. 베이크 데이터는 쓰지 않는다.
-         * @details 장면은 정적 메시의 점유 복셀(`SceneVoxelGrid`)이다 — 움직이는 물체와 스킨 메시, 반투명은 빛을 가리지 않는다. 직접광이 닿은 면이 한 번 튕긴 빛(반사율 = `getBounceAlbedo`)과
+         * @details 장면은 정적 메시의 점유 복셀(`SceneVoxelScene`)이다 — 움직이는 물체와 스킨 메시, 반투명은 빛을 가리지 않는다. 직접광이 닿은 면이 한 번 튕긴 빛(반사율 = `getBounceAlbedo`)과
          *          하늘만 담는다(베이커와 같은 규칙).
          */
         bool isRealtime() const { return _bRealtime == SW_TRUE; }
@@ -84,12 +86,12 @@ namespace sw
         AABB computeRealtimeVoxelBounds() const;
         /**
          * @brief 지금 상자 · 칸 크기에 맞는 복셀 격자 캐시와 그것을 만들 때의 프리미티브 집합 세대(@p outPrimitiveSetGeneration)를 돌려줍니다. 없거나 상자 · 칸 크기가 바뀌었으면 nullptr 입니다.
-         * @details 세대가 지금과 다르면 부르는 쪽이 그 사이 바뀐 메시 칸만 다시 칠하거나(`SceneVoxelizer::updateGrid`) 다시 만들어 `setRealtimeVoxelGrid` 로 넣는다.
+         * @details 세대가 지금과 다르면 부르는 쪽이 그 사이 바뀐 메시 칸만 다시 모으거나(`SceneVoxelizer::updateScene`) 다시 만들어 `setRealtimeVoxelScene` 로 넣는다.
          *          수집 경로(`collectSceneLights`, 게임 스레드)에서만 부른다 — 캐시는 const 수집 길에서 채우므로 mutable 이다.
          */
-        shared_ptr<const SceneVoxelGrid> findRealtimeVoxelGrid( uint64& outPrimitiveSetGeneration ) const;
-        /** @brief `findRealtimeVoxelGrid` 의 캐시를 채웁니다. @p primitiveSetGeneration 은 만들 때의 프리미티브 집합 세대입니다. */
-        void setRealtimeVoxelGrid( shared_ptr<const SceneVoxelGrid> grid, uint64 primitiveSetGeneration ) const;
+        shared_ptr<const SceneVoxelScene> findRealtimeVoxelScene( uint64& outPrimitiveSetGeneration ) const;
+        /** @brief `findRealtimeVoxelScene` 의 캐시를 채웁니다. @p primitiveSetGeneration 은 만들 때의 프리미티브 집합 세대입니다. */
+        void setRealtimeVoxelScene( shared_ptr<const SceneVoxelScene> scene, uint64 primitiveSetGeneration ) const;
 
         /**
          * @brief 지금 트랜스폼과 칸으로 격자의 모양을 구합니다. 축마다 프로브 수는 floor(크기 / 간격) + 1 이고, 상자의 양 끝에 프로브가 놓입니다.
@@ -150,10 +152,10 @@ namespace sw
 
         LightProbeGrid _probeData;         ///< 읽은 베이크 데이터(비었으면 베이크하지 않았거나 읽지 못했다)
         uint32         _probeDataRevision; ///< `_probeData` 를 바꿀 때마다 오른다(`getProbeDataRevision`)
-        /// @brief 실시간 갱신의 복셀 격자 캐시입니다(`findRealtimeVoxelGrid`). 게임 스레드의 수집 경로만 만진다.
-        mutable shared_ptr<const SceneVoxelGrid> _pRealtimeVoxelGrid;
-        mutable uint64                           _realtimeVoxelSetGeneration; ///< 캐시를 만들 때의 프리미티브 집합 세대
-        mutable AABB                             _realtimeVoxelBounds;        ///< 캐시를 만들 때의 상자
-        mutable float32                          _realtimeVoxelCellSize;      ///< 캐시를 만들 때의 목표 칸 크기
+        /// @brief 실시간 갱신의 복셀 장면 캐시입니다(`findRealtimeVoxelScene`). 게임 스레드의 수집 경로만 만진다.
+        mutable shared_ptr<const SceneVoxelScene> _pRealtimeVoxelScene;
+        mutable uint64                            _realtimeVoxelSetGeneration; ///< 캐시를 만들 때의 프리미티브 집합 세대
+        mutable AABB                              _realtimeVoxelBounds;        ///< 캐시를 만들 때의 상자
+        mutable float32                           _realtimeVoxelCellSize;      ///< 캐시를 만들 때의 목표 칸 크기
     };
 } // namespace sw

@@ -109,7 +109,6 @@ namespace sw
         , _textureRegistry{}
         , _uavRegistry{}
         , _pipelineStates{}
-        , _renderPassRegistry{}
         , _arrStaticSampler{}
         , _pHWnd{ nullptr }
         , _releaseQueue{}
@@ -247,32 +246,32 @@ namespace sw
         return pRecord != nullptr ? pRecord->_srv.Get() : nullptr;
     }
 
-    RHIBufferHandle D3D11RHIDevice::bindlessBufferAt( RHIDescriptorIndex index ) const
+    RHIBufferHandle D3D11RHIDevice::bindlessBufferAt( RHIBufferSRVIndex index ) const
     {
         ScopedSharedLock<shared_mutex> lock{ _bindlessMutex };
         return _bufferRegistry.get( index )._buffer;
     }
 
-    RHIBufferSlice D3D11RHIDevice::bindlessBufferSliceAt( RHIDescriptorIndex index ) const
+    RHIBufferSlice D3D11RHIDevice::bindlessBufferSliceAt( RHIBufferSRVIndex index ) const
     {
         ScopedSharedLock<shared_mutex> lock{ _bindlessMutex };
         const BufferEntry              entry = _bufferRegistry.get( index );
         return RHIBufferSlice{ entry._buffer, entry._sliceOffset, entry._sliceSize };
     }
 
-    RHITextureHandle D3D11RHIDevice::bindlessTextureAt( RHIDescriptorIndex index ) const
+    RHITextureHandle D3D11RHIDevice::bindlessTextureAt( RHITextureSRVIndex index ) const
     {
         ScopedSharedLock<shared_mutex> lock{ _bindlessMutex };
         return _textureRegistry.get( index );
     }
 
-    Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView> D3D11RHIDevice::bindlessUAVAt( RHIDescriptorIndex index ) const
+    Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView> D3D11RHIDevice::bindlessUAVAt( RHIUnorderedAccessIndex index ) const
     {
         ScopedSharedLock<shared_mutex> lock{ _bindlessMutex };
         return _uavRegistry.get( index )._uav;
     }
 
-    RHIBufferHandle D3D11RHIDevice::uavSourceBufferAt( RHIDescriptorIndex index ) const
+    RHIBufferHandle D3D11RHIDevice::uavSourceBufferAt( RHIUnorderedAccessIndex index ) const
     {
         ScopedSharedLock<shared_mutex> lock{ _bindlessMutex };
         return _uavRegistry.get( index )._sourceBuffer;
@@ -1032,7 +1031,7 @@ namespace sw
             readyMask.set( slotIndex );
         }
         _lastTimestampFrequency = disjointData.Frequency;
-        RHITimestampFrame::resolve( arrTick, readyMask, constant::time::kNanosecondsPerSecond / static_cast<float64>( disjointData.Frequency ), _timestampFrame );
+        RHITimestampFrame::resolve( arrTick, readyMask, _timestampRing.getComputeQueueMask( ringSlot ), constant::time::kNanosecondsPerSecond / static_cast<float64>( disjointData.Frequency ), _timestampFrame );
     }
 
     void D3D11RHIDevice::beginFrameInternal()
@@ -1295,7 +1294,7 @@ namespace sw
         (void)VectorUtil::removeSingleSwap( _listLiveCmd, pCmdList ); // 등록되지 않은 리스트면 뺄 것이 없다
     }
 
-    void D3D11RHIDevice::executeCommandList( IRHICommandList* pCmdList )
+    void D3D11RHIDevice::executeCommandListInternal( IRHICommandList* pCmdList )
     {
         if ( pCmdList == nullptr || _immediateContext.isValid() == false )
             return;

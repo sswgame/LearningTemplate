@@ -18,6 +18,7 @@ namespace sw
     class ContentFolderWatchService;
     class DevConsoleHost;
     class FileReadDiagnostics;
+    class FileWatchService;
 
     /**
      * @class DevToolsHost
@@ -35,7 +36,8 @@ namespace sw
         /** @brief 서브시스템 이름입니다. */
         static constexpr const utf8* kSubsystemName = "DevTools";
 
-        DevToolsHost();
+        /** @brief @p fileWatch 는 호스트 개발 계층의 파일 감시 창구입니다(이것보다 오래 산다). */
+        explicit DevToolsHost( FileWatchService& fileWatch );
         ~DevToolsHost() override;
         DevToolsHost( const DevToolsHost& )            = delete;
         DevToolsHost& operator=( const DevToolsHost& ) = delete;
@@ -74,8 +76,9 @@ namespace sw
 
     public:
     private:
-        unique_ptr<DevConsoleHost>            _pConsole;
-        unique_ptr<ContentFolderWatchService> _pContentFolderWatch;  ///< `startConsole` 이 세운 콘솔(App 만 — 서버는 자기 명령 채널이 있다)
+        FileWatchService&                     _fileWatch;
+        unique_ptr<DevConsoleHost>            _pConsole; ///< `startConsole` 이 세운 콘솔(App 만 — 서버는 자기 명령 채널이 있다)
+        unique_ptr<ContentFolderWatchService> _pContentFolderWatch;
         unique_ptr<FileReadDiagnostics>       _pFileReadDiagnostics; ///< 파일 읽기 관찰자(디스크 흉내 · 읽기 기록) — 만들 때 걸고 소멸할 때 뗀다
         FrameStall                            _frameStall;           ///< `profile.stall` 이 건 지연(`onAfterSceneTick` 이 소비한다)
     };

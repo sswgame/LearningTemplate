@@ -156,6 +156,18 @@ namespace sw
              *          세이브에 실을 때는 스트리밍이 엔티티마다 따로 적는다(`SceneStreamingSubsystem::writeSaveState`).
              */
             SerializePurpose _statePurpose{ SerializePurpose::Authoring };
+            /**
+             * @brief **런타임 칸.** 컴포넌트의 PROPERTY 밖 상태(지형 편집 · 시뮬레이션)를 뜬 바이트입니다(`ComponentStateCodec::captureObject`) — 떠 둔 엔티티(`Scene::captureCellNodes`)에만 있고 다시 지은 뒤 컴포넌트에 돌려준다.
+             * @details 파일에는 쓰지 않고 세이브에 싣는다(`writeSavedNodes`).
+             */
+            vector<uint8> _componentStateBytes;
+            /**
+             * @brief **런타임 칸.** 떠 둔 중첩 프리팹 부품이면 그것을 스폰한 인스턴스의 파일 id 입니다(0 이면 부품이 아니다). `_nestedPrefab` · `_nestedPartKey` 와 함께 부품 기록(`PrefabNestedPart`)을 다시 세운다.
+             * @details 떠 둔 프리팹 엔티티는 부품을 다시 스폰하지 않는다 — 부품도 엔티티로 떠 두었다(런타임 칸 · PROPERTY 밖 상태 · 지운 부품이 그대로다). 세이브에 싣는다(`writeSavedNodes`).
+             */
+            uint64 _nestedOwnerFileID{ 0 };
+            string _nestedPrefab;  ///< **런타임 칸.** 떠 둔 부품의 원본 프리팹 경로(`PrefabNestedPart::_prefabPath`)
+            string _nestedPartKey; ///< **런타임 칸.** 떠 둔 부품의 노드 키(`PrefabNestedPart::_partKey`)
         };
 
         /**
@@ -171,8 +183,10 @@ namespace sw
             uint64                  _contentOffset{ 0 };  ///< 쿠킹본 안 셀 내용(엔티티 목록)의 시작 바이트(`readStreamingCellContent` 로 푼다)
             uint64                  _contentSize{ 0 };    ///< 셀 내용의 바이트 수. 0 이면 내용이 `_listSceneObjectNode` 에 있다(메모리에서 나눈 문서)
             /// 이 조각의 HLOD 대리 엔티티(기본 목록 `_listSceneObjectNode` 에 든 늘 올라 있는 엔티티)의 파일 id — 쿠커가 조각의 정적 메시를 인스턴스 메시로 모아 굽는다
-            /// (`SceneCooker::splitStreamingCells`). 0 이면 대리가 없다(정적 메시가 없는 조각). 스트리밍은 조각이 올라 있지 않을 때만 대리를 켠다
+            /// (`SceneCellSplitter::split`). 0 이면 대리가 없다(정적 메시가 없는 조각). 스트리밍은 조각이 올라 있지 않을 때만 대리를 켠다
             uint64 _hlodFileID{ 0 };
+            /// 이 조각 엔티티들의 경계(셀 사각형은 넣지 않은 값) — 쿠커가 나눌 때 잰다. 크기 있는 엔티티가 없으면 빈 경계이고, 스트리밍은 셀 사각형과 합쳐 쓴다
+            StreamingCellBounds _contentBounds{};
 
             /** @brief 내용이 쿠킹본의 구간에 있으면(색인만 읽은 셀) true 입니다. */
             bool hasFileContent() const { return _contentSize != 0; }
@@ -187,7 +201,7 @@ namespace sw
         /**
          * @brief 셀 엔티티(인스턴스 멤버 제외)의 가장 큰 파일 id 입니다 — 쿠킹본 머리에 실린다(`saveBinary` 가 셀 내용에서 세고 `loadBinary` 가 읽는다).
          * @details 색인만 읽은 셀은 내용을 모른다. 씬이 새 오브젝트에 줄 파일 id(`Scene::computeNextFileID`)가 내려간 셀의 엔티티와 겹치지 않게 이 값 위에서 고른다.
-         *          메모리에 든 셀(쿠커가 나눈 문서 · 테스트)은 0 이어도 된다 — 스트리밍이 내용에서 다시 센다(`SceneStreamingSubsystem::getMaxCellFileID`).
+         *          메모리에 든 셀(쿠커가 나눈 문서 · 테스트)은 0 이어도 된다 — 스트리밍이 내용에서 다시 센다(`SceneStreamingSubsystem::beginWorld`).
          */
         uint64 _maxCellFileID{ 0 };
         bool   _bValid{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
@@ -233,7 +247,7 @@ namespace sw
         /** @brief 엔티티 목록을 셀 내용 형식으로 씁니다(`readStreamingCellContent` 의 짝 — 비우고 채운다). 읽을 목적(`_statePurpose`)은 쓰지 않습니다. */
         SW_API static void writeStreamingCellContent( const vector<SceneObjectNode>& listNode, vector<uint8>& outBytes );
         /**
-         * @brief 세이브에 싣는 엔티티 목록을 씁니다(비우고 채운다) — 셀 내용 형식에 엔티티마다 런타임 칸(읽을 목적 `_statePurpose` · 쿠킹 상태 범위 · 월드 원점)을 더한다. 떠 둔 상태(스냅숏)와 문서 내용(저작)이 섞여도 제 목적으로 읽힌다.
+         * @brief 세이브에 싣는 엔티티 목록을 씁니다(비우고 채운다) — 셀 내용 형식에 엔티티마다 런타임 칸(읽을 목적 `_statePurpose` · 쿠킹 상태 범위 · 월드 원점 · 컴포넌트 상태)을 더한다. 떠 둔 상태(스냅숏)와 문서 내용(저작)이 섞여도 제 목적으로 읽힌다.
          * @details 스트리밍 셀(`SceneStreamingSubsystem::writeSaveState`)과 데이터 레이어 묶음(`SceneDataLayerSubsystem::writeSaveState`)이 같은 형식을 쓴다.
          */
         SW_API static void writeSavedNodes( const vector<SceneObjectNode>& listNode, vector<uint8>& outBytes );

@@ -58,10 +58,20 @@ namespace sw
     /** @brief 그래프 밖 버퍼 하나입니다(`FrameBufferTable` 등록 — 늘 크기가 있다). */
     struct RenderBufferEntry
     {
-        string _name;
-        uint32 _slot{ 0 };         ///< 뷰 칸(주 시점 0)
-        uint32 _elementSize{ 0 };  ///< 원소 바이트(표는 크기 있는 등록만 받는다)
-        uint32 _elementCount{ 0 }; ///< 원소 수
+        /** @brief 원소 안의 멤버 하나입니다(그 버퍼를 거는 컴퓨트 셰이더의 리플렉션). */
+        struct Member
+        {
+            string _name;
+            string _type; ///< 리플렉션 형식 라벨(`ShaderVariableInfo::_type` — Float4 · Uint)
+            uint32 _offset{ 0 };
+            uint32 _sizeBytes{ 0 };
+        };
+
+        string         _name;
+        uint32         _slot{ 0 };         ///< 뷰 칸(주 시점 0)
+        uint32         _elementSize{ 0 };  ///< 원소 바이트(표는 크기 있는 등록만 받는다)
+        uint32         _elementCount{ 0 }; ///< 원소 수
+        vector<Member> _listMember;        ///< 원소 배치 — 컴퓨트가 이 버퍼를 건 것을 본 뒤에 찬다(원소 크기가 셰이더 선언과 다르면 비운다)
     };
 
     /** @brief 버퍼 하나를 CPU 로 읽은 결과입니다. */

@@ -1942,6 +1942,17 @@
 				<item>Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutVisualizer.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EdPluginVisualizer.SplinesLabel" source="Splines">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/World/SplineVisualizer.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginVisualizer.SplinesTip"
+		       source="Curve of every spline in the scene - drag the control point handles of the selected one (Shapes)">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/World/SplineVisualizer.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EdPluginWidget.Account" source="Account">
 			<origins>
 				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>

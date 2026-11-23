@@ -15,7 +15,7 @@
   문서 글이 아니라 창 안 기록(카탈로그 · 어빌리티 카탈로그)이나 모델 명령(UI 미리보기)으로 되돌리는 패널은 글 왕복이 없어 이 단계가 아니다.
   실행: App -EnableEditor -scenario=engine/automation/editor/undocoverage.scenario.xml -unattended
 -->
-<Scenario name="editor.undocoverage" fixedDelta="0.0166667" timeoutFrames="3600" startAfter="Immediately" input="exclusive">
+<Scenario name="editor.undocoverage" fixedDelta="0.0166667" timeoutFrames="5400" startAfter="Immediately" input="exclusive">
 	<Scratch from="engine/automation/editor/materialpreview" as="scratch/undocoveragematerial"/>
 	<Scratch from="engine/automation/editor/sequencerkeys" as="scratch/undocoveragesequencer"/>
 	<Scratch from="engine/automation/editor/spriteclipregion" as="scratch/undocoveragespriteclip"/>
@@ -24,6 +24,12 @@
 	<Scratch from="game/playground/audio" as="scratch/undocoverageaudioevents"/>
 	<Scratch from="engine/input" as="scratch/undocoverageinputmap"/>
 	<Scratch from="engine/environment" as="scratch/undocoveragedatatable"/>
+	<Scratch from="engine/physics" as="scratch/undocoveragephysics"/>
+	<Scratch from="engine/physics/samples" as="scratch/undocoveragephysicsasset"/>
+	<Scratch from="engine/automation/editor/tilesetedit" as="scratch/tilesetedit"/>
+	<Scratch from="game/playground/materials/matgraph" as="scratch/materials/undocoveragematgraph"/>
+	<Scratch from="common/rigs" as="scratch/undocoverageretarget"/>
+	<Scratch from="engine/automation/editor/vfxautoreload" as="scratch/undocoveragevfx"/>
 	<DevCommand line="scene.open game/playground/maps/editortest.scene.xml"/>
 	<EditorWaitStable/>
 	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
@@ -109,6 +115,46 @@
 	<EditorWaitStable/>
 	<WaitUntil watch="Editor.DataTableGameDataRowCount" atLeast="1" timeoutWallSeconds="10"/>
 	<DevCommand line="panel.expectUndoRoundTrip data_table"/>
+	<DevCommand line="panel.focus collision_responses"/>
+	<EditorWaitStable/>
+	<DevCommand line="asset.openScratch scratch/undocoveragephysics/physicssettings.xml"/>
+	<EditorWaitStable/>
+	<DevCommand line="panel.expectUndoRoundTrip collision_responses"/>
+	<DevCommand line="panel.focus tileset_editor"/>
+	<EditorWaitStable/>
+	<DevCommand line="asset.openScratch scratch/tilesetedit/town.tileset.xml"/>
+	<WaitUntil watch="Editor.TileSetBrushCount" equals="3" timeoutFrames="120"/>
+	<EditorWaitStable/>
+	<DevCommand line="panel.expectUndoRoundTrip tileset_editor"/>
+	<!-- 맵이 가리키는 타일셋이 scratch/tilesetedit 의 것이라 사본 폴더 이름이 정해져 있다 -->
+	<DevCommand line="panel.focus tile_map"/>
+	<EditorWaitStable/>
+	<DevCommand line="asset.openScratch scratch/tilesetedit/town.tilemap.xml"/>
+	<EditorWaitStable/>
+	<DevCommand line="panel.expectUndoRoundTrip tile_map"/>
+	<DevCommand line="panel.focus materialgraph"/>
+	<EditorWaitStable/>
+	<DevCommand line="asset.openScratch scratch/materials/undocoveragematgraph/rim_glow.matgraph.xml"/>
+	<EditorWaitStable/>
+	<DevCommand line="panel.expectUndoRoundTrip materialgraph"/>
+	<DevCommand line="panel.focus charactereditor.retarget"/>
+	<EditorWaitStable/>
+	<DevCommand line="asset.openScratch scratch/undocoverageretarget/knight_to_minion.retarget.xml"/>
+	<WaitUntil watch="Editor.RetargetChainCount" atLeast="6" timeoutFrames="195"/>
+	<EditorWaitStable/>
+	<DevCommand line="panel.expectUndoRoundTrip charactereditor.retarget"/>
+	<DevCommand line="panel.focus vfx_preview"/>
+	<EditorWaitStable/>
+	<DevCommand line="asset.openScratch scratch/undocoveragevfx/autoreload.vfx.xml"/>
+	<WaitUntil watch="Editor.VFXEmitterCount" equals="2" timeoutFrames="120"/>
+	<EditorWaitStable/>
+	<DevCommand line="panel.expectUndoRoundTrip vfx_preview"/>
+	<DevCommand line="panel.focus ragdoll_preview"/>
+	<EditorWaitStable/>
+	<DevCommand line="asset.openScratch scratch/undocoveragephysicsasset/chain.physics.xml"/>
+	<WaitUntil watch="Editor.RagdollPreviewDocumentBodies" equals="3" timeoutFrames="600"/>
+	<EditorWaitStable/>
+	<DevCommand line="panel.expectUndoRoundTrip ragdoll_preview"/>
 	<Expect watch="Editor.DirtyDocumentCount" equals="0"/>
 	<Pass/>
 </Scenario>

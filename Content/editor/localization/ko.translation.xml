@@ -563,6 +563,7 @@
 		<entry key="EdField.Falloff" text="감쇠" sourceHash="cb90668223a1ad85" />
 		<entry key="EdField.FarPlane" text="먼 평면" sourceHash="32b2cfb94b6a25dc" />
 		<entry key="EdField.FirstFrame" text="첫 프레임" sourceHash="548bbd6d1029e318" />
+		<entry key="EdField.Foliage" text="폴리지" sourceHash="18a7838d97ce9e68" />
 		<entry key="EdField.FrameCount" text="프레임 수" sourceHash="63fef9115f7dacf9" />
 		<entry key="EdField.FrameRounding" text="칸 둥글기" sourceHash="ae92ce359b95a0ee" />
 		<entry key="EdField.HUDOpacity" text="HUD 불투명도" sourceHash="5e6bfaa28872f983" />
@@ -670,6 +671,7 @@
 		<entry key="EdFormat.GameObjectID" text="GameObject  ID: {objectID}" sourceHash="f68ebd5b37309415" />
 		<entry key="EdFormat.ID" text="ID: {componentID}" sourceHash="73e4e2bde40d573a" />
 		<entry key="EdFormat.If" text="조건({condition})" sourceHash="54375bb3db4dff02" />
+		<entry key="EdFormat.InheritsFrom" text="{base} 에서 물려받음" sourceHash="0de1ab51422d933e" />
 		<entry key="EdFormat.KeepDisplaySettings"
 		       text="이 화면 설정을 유지할까요? {seconds} 초 뒤 되돌립니다"
 		       sourceHash="0022217cb6ebd09c" />
@@ -950,6 +952,15 @@
 		<entry key="EdNetMode.DedicatedServer" text="전용 서버" sourceHash="38824ee8fe1f00e1" />
 		<entry key="EdNetMode.ListenHost" text="리슨 호스트" sourceHash="45aa92f0c4a42f5c" />
 		<entry key="EdNetMode.Standalone" text="단독" sourceHash="31bf1464d6e1e996" />
+		<entry key="EdPhysicsAsset.DuplicateBodyTip"
+		       text="이 바디를 아래에 복사합니다. 복사본은 스켈레톤의 본 이름을 적어야 섭니다."
+		       sourceHash="7cf451138bc634ae" />
+		<entry key="EdPhysicsAsset.NotEditable"
+		       text="에셋 원문을 편집용으로 열지 못했습니다. 로그를 보세요."
+		       sourceHash="2c965150f4ed3e63" />
+		<entry key="EdPhysicsAsset.SelectBody"
+		       text="표에서 바디를 고르면 고칠 수 있습니다. 몸을 놓으면 네모 손잡이로 셰이프 크기를 끌 수 있습니다."
+		       sourceHash="dcb2c83952c5f878" />
 		<entry key="EdSection.Actions" text="액션" sourceHash="8af61807443f32a4" />
 		<entry key="EdSection.ActiveSceneComponentDistribution"
 		       text="활성 씬과 컴포넌트 분포"
@@ -1114,6 +1125,9 @@
 		<entry key="EdText.HeldKeys" text="누른 키:" sourceHash="18a2f1991c417254" />
 		<entry key="EdText.Import" text="가져오기..." sourceHash="b6edf2b86255f94a" />
 		<entry key="EdText.Impulse" text="충격" sourceHash="7c74babe20065df4" />
+		<entry key="EdText.InheritsFromTip"
+		       text="부모와 다른 값만 이 파일에 씁니다. 부모 값으로 되돌리면 파일에서 빠집니다."
+		       sourceHash="cf53b3029d94e783" />
 		<entry key="EdText.InjectKeyDown" text="키 누름 넣기" sourceHash="20f9bb68fd6f00c7" />
 		<entry key="EdText.InjectKeyUp" text="키 뗌 넣기" sourceHash="fac30e7628de309e" />
 		<entry key="EdText.InjectStickTilt" text="스틱 기울임 넣기" sourceHash="f05eb4987959a983" />
@@ -1354,6 +1368,12 @@
 		<entry key="EdTip.TargetsOnOtherUnitsOrObjectsAre"
 		       text="다른 단위 · 오브젝트의 목표는 호스트가 놓습니다 — 그 오브젝트를 옮기세요"
 		       sourceHash="7cbe5f899889f043" />
+		<entry key="EdTip.TerrainFoliage"
+		       text="폴리지는 밀도 레이어를 칠한 곳에 자랍니다. 고르면 그 레이어를 칠하고 Erase Layer 로 지웁니다"
+		       sourceHash="14413d519990ae19" />
+		<entry key="EdTip.TerrainFoliageNoDensity"
+		       text="이 폴리지는 지형 레이어를 보지 않습니다. Inspector 에서 규칙의 Density Layer 를 정하면 칠할 수 있습니다"
+		       sourceHash="9a8e1e1f6941c30c" />
 		<entry key="EdTip.TerrainResample"
 		       text="마지막으로 고친 지형의 높이와 구멍을 새 해상도로 다시 표본합니다(되돌릴 수 있음)"
 		       sourceHash="0b1baced59071c3a" />
@@ -1372,6 +1392,12 @@
 		<entry key="EdTip.WriteTheWeightsAndOnOffOf"
 		       text="이 인스턴스 노드의 가중치 · 켜짐을 리그 에셋(*.rig.xml)에 씁니다. 다른 키는 그대로입니다"
 		       sourceHash="0d8da0706fc03658" />
+		<entry key="EdVFX.NotEditable"
+		       text="효과 원문을 편집용으로 열지 못했습니다. 로그를 보세요."
+		       sourceHash="1726e45c8cd75b1a" />
+		<entry key="EdVFX.SelectEmitter"
+		       text="위에서 방출기를 고르면 고칠 수 있습니다. 저장(Ctrl+S)하면 미리보기가 바뀐 효과를 재생합니다."
+		       sourceHash="16941ed94d0aecce" />
 		<entry key="EdVFX.Solo" text="솔로" sourceHash="8ac6d324f22e6d8a" />
 		<entry key="EdVFX.SoloTip"
 		       text="미리보기에서 이 방출기만 재생합니다. 효과 파일은 바뀌지 않습니다. 다시 누르면 모든 방출기를 재생합니다."
@@ -1387,6 +1413,7 @@
 		<entry key="EdVerb.Cancel" text="취소" sourceHash="2ceb11be2290bb1b" />
 		<entry key="EdVerb.Clear" text="지우기" sourceHash="b4f1dffbb6be6302" />
 		<entry key="EdVerb.Delete" text="삭제" sourceHash="dc673e73b5c13aea" />
+		<entry key="EdVerb.Duplicate" text="복제" sourceHash="fac15b89e0668996" />
 		<entry key="EdVerb.Load" text="불러오기" sourceHash="4f20edb48a6287c9" />
 		<entry key="EdVerb.Move" text="옮기기" sourceHash="379c18aec5654894" />
 		<entry key="EdVerb.Play" text="재생" sourceHash="cd105819b5a10243" />
@@ -1482,10 +1509,12 @@
 		<entry key="EdWidget.NewActionName" text="새 액션 이름" sourceHash="6ee3a452443a26a8" />
 		<entry key="EdWidget.NewLayerName" text="새 레이어 이름" sourceHash="8c7fe68b86632b3f" />
 		<entry key="EdWidget.NoFileDefaults" text="파일 없음 - 기본값" sourceHash="ccc95153c036563f" />
+		<entry key="EdWidget.NoFoliageOnLayer" text="(이 레이어에 폴리지 없음)" sourceHash="4bf8d612d83a5100" />
 		<entry key="EdWidget.OutputFolder" text="출력 폴더" sourceHash="9d7d1af4a632c558" />
 		<entry key="EdWidget.Panel" text="패널" sourceHash="1e85480db1ab92e5" />
 		<entry key="EdWidget.PatternNumpadNotation" text="패턴(숫자 패드 표기)" sourceHash="a5681696100c2b01" />
 		<entry key="EdWidget.Paused" text="일시 정지됨" sourceHash="95bc8722b2708f8b" />
+		<entry key="EdWidget.Platform" text="플랫폼" sourceHash="5c67b6c66029e5b2" />
 		<entry key="EdWidget.PlayMode" text="플레이 모드" sourceHash="7363b52b83fee3b6" />
 		<entry key="EdWidget.Playing" text="플레이 중" sourceHash="308604b3ae13fbb5" />
 		<entry key="EdWidget.Prefab" text="프리팹" sourceHash="a2d5fac94c77c683" />
@@ -1919,6 +1948,9 @@
 		<entry key="EditorContentBrowser.EmptyCollection"
 		       text="이 컬렉션은 비었습니다. 에셋을 이름 위에 놓으면 더해집니다."
 		       sourceHash="7b266442dc624f84" />
+		<entry key="EditorContentBrowser.EmptyFolder"
+		       text="폴더가 비어 있습니다. 여기로 원본 파일을 임포트하거나 이 창에 끌어 놓으세요."
+		       sourceHash="c3731b80c4475501" />
 		<entry key="EditorContentBrowser.FindSelected" text="선택 항목 찾기" sourceHash="418d11f7640d60f7" />
 		<entry key="EditorContentBrowser.FindSelectedTip"
 		       text="메인 씬에서 고른 오브젝트의 에셋으로 가서 여기서 고릅니다. 미리보기 창의 선택은 따라가지 않습니다."
@@ -1995,13 +2027,32 @@
 		<entry key="EditorDataTable.AddKeyTip"
 		       text="왼쪽에 입력한 키로 문자열을 추가합니다. 테이블에 이미 있는 키는 무시합니다."
 		       sourceHash="e4ce1f6fbf06f1a3" />
+		<entry key="EditorDataTable.CheckText" text="원문 확인" sourceHash="c7ae5088cd6e18fe" />
+		<entry key="EditorDataTable.CheckTextTip"
+		       text="표가 최신인지, 출시 문화권의 번역이 빠지거나 낡지 않았는지 본다. 파일은 고치지 않는다"
+		       sourceHash="25a4a2998ea16dd3" />
 		<entry key="EditorDataTable.ConfirmTranslation" text="확인" sourceHash="091d3d07b5b3076f" />
 		<entry key="EditorDataTable.ConfirmTranslationTip"
 		       text="이 글을 그대로 둡니다. 지금 원문의 번역이 되고 저장할 때 낡음 · 검토 표시가 사라집니다."
 		       sourceHash="121bdeeff5430a67" />
+		<entry key="EditorDataTable.CultureProgress"
+		       text="낡음 {stale}, 검토 {review}, 없음 {missing}"
+		       sourceHash="602d94c2aa4fc315" />
 		<entry key="EditorDataTable.DeleteKeyTip"
 		       text="저장할 때 이 키를 원문 테이블과 모든 번역 테이블에서 지웁니다."
 		       sourceHash="9ae9ac16bec83b09" />
+		<entry key="EditorDataTable.ExportPo" text="PO 내보내기" sourceHash="1b29a28572e5917c" />
+		<entry key="EditorDataTable.ExportPoTip"
+		       text="번역가에게 줄 po 파일을 문화권마다 프로젝트 곁에 쓴다"
+		       sourceHash="5925ac6d0b8760a8" />
+		<entry key="EditorDataTable.GatherText" text="원문 수집" sourceHash="413e819928ced1dd" />
+		<entry key="EditorDataTable.GatherTextTip"
+		       text="이 프로젝트의 원문을 코드와 에셋에서 모아 표를 고친다"
+		       sourceHash="48367a653dba2a14" />
+		<entry key="EditorDataTable.ImportPo" text="PO 가져오기" sourceHash="835b5db8453d3751" />
+		<entry key="EditorDataTable.ImportPoTip"
+		       text="이 문화권의 po 파일을 번역 표로 읽어 들인다"
+		       sourceHash="d881434766b3ace5" />
 		<entry key="EditorDataTable.KeyTip"
 		       text="컨텍스트: {context}&#10;주석: {comment}&#10;최대 길이: {maxLength}"
 		       sourceHash="3270e0426b5c2d53" />
@@ -2034,6 +2085,9 @@
 		<entry key="EditorDataTable.SaveBeforeSwitchingTip"
 		       text="다른 파일을 열기 전에 이 파일을 저장하거나 되돌립니다."
 		       sourceHash="2e6714349a0b9409" />
+		<entry key="EditorDataTable.SaveBeforeTools"
+		       text="표를 먼저 저장하세요. 도구가 같은 파일을 씁니다."
+		       sourceHash="d8153fcfbe9fc417" />
 		<entry key="EditorDataTable.SaveFileTip"
 		       text="고친 XML 글을 이 파일에 씁니다. 올바른 XML 이 아닌 글은 저장하지 않습니다."
 		       sourceHash="04294fe1a00c05e2" />
@@ -2419,12 +2473,24 @@
 		<entry key="EditorInspector.ViewOptions"
 		       text="보기 옵션: 바뀐 프로퍼티만 보기, 모든 영역 펼치기 또는 접기"
 		       sourceHash="890de6ef869bfc26" />
+		<entry key="EditorMapCheck.AllIssuesHidden"
+		       text="Errors · Warnings 체크칸이 결과를 모두 가렸습니다."
+		       sourceHash="565fff4c1441f9e9" />
 		<entry key="EditorMapCheck.CheckMap"
 		       text="활성 씬의 모든 오브젝트를 다시 검증합니다"
 		       sourceHash="513adef7c162ddc7" />
+		<entry key="EditorMapCheck.CheckSourceTip"
+		       text="오브젝트가 아니라 데이터 파일의 문제입니다. 두 번 누르면 Content Browser 에서 보입니다"
+		       sourceHash="dc2b5fbf20f67e13" />
 		<entry key="EditorMapCheck.FixAllTooltip"
 		       text="보이는 줄의 안전한 고침을 모두 한 번의 실행 취소 단계로 적용합니다. 고치기 버튼이 없는 줄은 손으로 고쳐야 합니다"
 		       sourceHash="3778efd46b5886db" />
+		<entry key="EditorMapCheck.NextActionFix"
+		       text="Fix 는 그 줄의 안전한 고침을, Fix All 은 모두를 되돌리기 한 단계로 적용합니다. 줄을 두 번 누르면 오브젝트를 화면에 맞춥니다."
+		       sourceHash="cd5e9b0e04b9bdac" />
+		<entry key="EditorMapCheck.NextActionInspect"
+		       text="줄을 고르면 오브젝트가 Inspector 에 열립니다. 적힌 프로퍼티를 고치세요. 두 번 누르면 화면에 맞춥니다."
+		       sourceHash="c67a89c58392eafc" />
 		<entry key="EditorMapCheck.NoIssues"
 		       text="검증 문제가 없습니다. Check Map 은 활성 씬의 모든 오브젝트를 검증합니다."
 		       sourceHash="a042e68eb738c2fe" />
@@ -2691,7 +2757,16 @@
 		<entry key="EditorMultiplayer.WindowSize"
 		       text="App 창마다의 클라이언트 영역 크기(픽셀)"
 		       sourceHash="9328b054689ddf9d" />
+		<entry key="EditorPackaging.FirstPackage"
+		       text="이번 세션에 패키징한 것이 없습니다. 타깃과 게임을 고르고 Package 를 누르세요. 첫 실행은 코드를 짓고 에셋을 모두 쿠킹하므로 가장 오래 걸립니다."
+		       sourceHash="8c76bfea54389df3" />
 		<entry key="EditorPackaging.Game" text="패키징할 게임입니다" sourceHash="a713beed8fb43944" />
+		<entry key="EditorPackaging.NextActionFailed"
+		       text="빨간 줄을 고치고 Package 를 다시 누르세요. Skip Build 와 Skip Cook 은 이미 통과한 단계를 건너뜁니다."
+		       sourceHash="3b89c04d56677cc5" />
+		<entry key="EditorPackaging.NoGames"
+		       text="Config/Game 에 게임 설정이 없습니다. 하나 더한 뒤 창을 다시 여세요."
+		       sourceHash="8585232a1dbd569d" />
 		<entry key="EditorPackaging.OpenFolder"
 		       text="마지막으로 성공한 패키지의 출력 폴더를 파일 탐색기에서 엽니다"
 		       sourceHash="f3ce6fad1567c1cc" />
@@ -2701,6 +2776,9 @@
 		<entry key="EditorPackaging.Package"
 		       text="고른 게임을 구성 · 빌드 · 쿠킹해 출력 폴더에 스테이징합니다"
 		       sourceHash="d61b9c9910edb9c2" />
+		<entry key="EditorPackaging.Platform"
+		       text="패키지를 돌릴 곳. Desktop 은 이 컴퓨터, Web 은 브라우저 폴더, Android 는 서명한 디버그 APK 를 만든다. 둘은 클라이언트뿐이고 백엔드는 그 프리셋이 정한다"
+		       sourceHash="6d4f6a4660452bc2" />
 		<entry key="EditorPackaging.RHIBackend"
 		       text="Shipping 이 정적으로 링크할 백엔드입니다(클라이언트만). 서버는 그리지 않는다"
 		       sourceHash="12bb0ab96cd5aadf" />
@@ -2924,6 +3002,9 @@
 		       text="에디터에서 숨겨져 있습니다 - 클릭하면 보입니다"
 		       sourceHash="b9a5ddb967c9d069" />
 		<entry key="EditorScene.HierarchyAllTypes" text="모든 종류" sourceHash="81c540e467783095" />
+		<entry key="EditorScene.HierarchyEmptyScene"
+		       text="이 씬에는 아직 오브젝트가 없습니다. 여기서 더하거나 Content Browser 의 프리팹 · 메시를 씬 뷰로 끌어 놓으세요."
+		       sourceHash="b16da8b061cdd523" />
 		<entry key="EditorScene.HierarchyNoActiveScene" text="활성 씬이 없습니다." sourceHash="554770b7cdf6d60a" />
 		<entry key="EditorScene.HierarchySearch"
 		       text="오브젝트 이름 검색, 컴포넌트 타입(t:Mesh), 태그(tag:Player) 필터를 지원합니다"

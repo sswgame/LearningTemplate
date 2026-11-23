@@ -13,6 +13,7 @@
 #include "Core/Foundation/StdHeaders.h"
 
 #include "Engine/Object/Component/Component.h"
+#include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Object/GameObject/GameObject.h"
 
 namespace sw
@@ -45,6 +46,8 @@ namespace sw
         MulticastDelegate<void( const HitInfo& )> _hitReceived;
         /** @brief 이 오브젝트의 애니메이션이 게임플레이 이벤트 알림을 울렸다(알림 테이블의 `AbilityEvent`). 애니메이션 알림 처리기가 낸다. */
         MulticastDelegate<void( const AnimationNotifyInfo& )> _animationNotify;
+        /** @brief 이 오브젝트의 태그가 바뀌었다(인자는 바뀐 뒤의 태그). `TagComponent` 가 게임 스레드의 틱 밖에서 낸다. */
+        MulticastDelegate<void( const TagContainer& )> _tagsChanged;
 
         /**
          * @brief @p listener 의 멤버 함수 @p Method 를 소유 오브젝트의 사건 @p pEvent 에 겁니다. 돌려받은 구독을 @p listener 의 멤버로 듭니다.

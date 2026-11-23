@@ -243,6 +243,8 @@ namespace sw
         PROPERTY( Required )
         DataPath _shaderVolumetricFog; ///< 볼륨 안개(컴퓨트) — froxel 마다 라이트 산란을 구해 깊이 방향으로 누적한다
         PROPERTY( Required )
+        DataPath _shaderSceneVoxelize; ///< 실시간 프로브의 점유 복셀 칠하기(컴퓨트) — 메시의 GPU 원본 정점을 삼각형마다 3 축 투영으로 칠한다
+        PROPERTY( Required )
         DataPath _shaderProbeUpdate; ///< 실시간 라이트 프로브 갱신(컴퓨트) — 프로브마다 복셀로 광선을 쏘아 SH9 를 갱신한다
         PROPERTY( Required )
         DataPath _shaderNanCheck; ///< 패스 출력 NaN · Inf 감시(컴퓨트, `-gv_nanCheck`) — 부동소수 출력 텍스처를 훑어 슬롯별로 센다

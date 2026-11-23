@@ -17,6 +17,11 @@
 
 namespace sw
 {
+    struct CameraShakeRequest;
+} // namespace sw
+
+namespace sw
+{
     struct CameraNoiseDef;
 
     /** @brief 포즈에 더할 흔들림입니다. 위치는 카메라의 오른쪽, 위, 앞(m) 방향이고, 회전은 피치, 요, 롤(rad)입니다. */
@@ -96,12 +101,16 @@ namespace sw
 
         /** @brief 충격을 더합니다. 원점과 모양을 받으며, 진행 중인 것과 겹쳐 더해집니다. */
         void addImpulse( const CameraImpulseDef& def, const float3& origin );
+        /** @brief 씬의 흔들림 채널(`CameraRegistry::getShakeChannel`)이 낸 요청을 충격으로 더합니다. */
+        void addRequest( const CameraShakeRequest& request );
         /** @brief 시간을 흘리고 끝난 것을 뺍니다. */
         void step( float32 deltaTime );
         /** @brief 충격을 받는 위치의 흔들림 합을 반환합니다. */
         CameraShakeOffset computeOffset( const float3& listenerPosition ) const;
         bool              isActive() const { return _listImpulse.empty() == false; }
-        void              clear() { _listImpulse.clear(); }
+        /** @brief 진행 중인 충격의 자리를 @p delta 만큼 옮깁니다(월드 원점 이동). */
+        void applyWorldOffset( const float3& delta );
+        void clear() { _listImpulse.clear(); }
 
     private:
         vector<CameraImpulse> _listImpulse;

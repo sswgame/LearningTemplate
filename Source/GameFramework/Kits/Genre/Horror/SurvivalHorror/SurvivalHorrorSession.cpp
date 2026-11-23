@@ -225,36 +225,26 @@ namespace sw
             return false;
         if ( firstInstanceID == secondInstanceID && pFirst->_count < 2 )
             return false;
-        const hashed_string firstItem  = pFirst->_itemID;
-        const hashed_string secondItem = pSecond->_itemID;
-        const RecipeDef*    pRecipe    = _pCatalog->findCombine( firstItem, secondItem );
+        const RecipeDef* pRecipe = _pCatalog->findCombine( pFirst->_itemID, pSecond->_itemID );
         if ( pRecipe == nullptr || pRecipe->_outputs.isEmpty() )
             return false;
 
+        const GridInventory before = *_pInventory;
         (void)_pInventory->takeFromInstance( firstInstanceID, 1 );
         (void)_pInventory->takeFromInstance( secondInstanceID, 1 );
         vector<hashed_string> listOutput;
         pRecipe->_outputs.getItemIDs( listOutput );
-        vector<int32> listAdded;
-        bool          bAllFit = true;
+        bool bAllFit = true;
         for ( const hashed_string& outputID : listOutput )
         {
             const int32 wanted = pRecipe->_outputs.getItemCount( outputID );
-            const int32 added  = _pInventory->addItem( outputID, wanted );
-            listAdded.push_back( added );
-            if ( added < wanted )
+            if ( _pInventory->addItem( outputID, wanted ) < wanted )
                 bAllFit = false;
         }
         if ( bAllFit == false )
         {
-            // 결과가 다 들어가지 않으면 없던 일로 한다. 넣은 결과를 빼고 재료를 돌려놓는다(재료가 비운 슬롯이므로 항상 들어간다).
-            for ( size_t outputIndex = 0; outputIndex < listOutput.size(); ++outputIndex )
-            {
-                if ( listAdded[outputIndex] > 0 )
-                    (void)_pInventory->removeItem( listOutput[outputIndex], listAdded[outputIndex] ); // 방금 넣은 수이므로 항상 빠진다
-            }
-            (void)_pInventory->addItem( firstItem, 1 );
-            (void)_pInventory->addItem( secondItem, 1 );
+            // 결과가 다 들어가지 않으면 없던 일로 한다. 재료를 다시 넣지 않고 가방을 통째로 되돌린다 — 작은 재료가 먼저 큰 재료의 자리에 들어가 큰 재료를 잃었다.
+            *_pInventory = before;
             return false;
         }
         for ( const hashed_string& outputID : listOutput )

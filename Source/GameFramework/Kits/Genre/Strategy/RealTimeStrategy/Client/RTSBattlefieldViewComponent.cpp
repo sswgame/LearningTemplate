@@ -8,11 +8,13 @@
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
+#include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshCache.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Tick/TickContext.h"
+#include "Engine/Object/GameObject/WorldOrigin.h"
 #include "Engine/Object/Prefab/PrefabCache.h"
 #include "Engine/Visual/Component/MeshComponent.h"
 
@@ -218,7 +220,7 @@ namespace sw
         _unitModels.clear();
         for ( const string& path : _pUnitModelCatalog->makeAllMeshPaths() )
         {
-            _unitModels.add( MeshCache::request( path ) );
+            _unitModels.add( MeshCache::request( path, MeshCPUAccess::ReleaseAfterUpload ) );
         }
         return true;
     }
@@ -249,7 +251,7 @@ namespace sw
                     _listCliff.push_back( pCliff->getHandle() );
                 if ( pRoot == nullptr )
                     continue;
-                pRoot->setLocalPosition( float3{ static_cast<float32>( x ) + 0.5f, 0.0f, static_cast<float32>( y ) + 0.5f } );
+                pRoot->setLocalPosition( manager.getWorldOrigin().toLocal( float3{ static_cast<float32>( x ) + 0.5f, 0.0f, static_cast<float32>( y ) + 0.5f } ) ); // RTS 월드는 절대 자리다
                 pRoot->setLocalRotation( float3{ 0.0f, XorShift32::toUnit24( hash ) * MathUtil::kTwoPi, 0.0f } );
             }
         }

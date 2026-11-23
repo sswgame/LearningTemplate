@@ -5,6 +5,7 @@
 #include "Core/Delegate/Delegate.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Task/TaskManager.h"
 
 #include "Engine/Animation/AnimationClip.h"
 #include "Engine/Animation/Scene/MeshVertexAnimationBaker.h"
@@ -12,7 +13,9 @@
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetTypeRegistry.h"
+#include "Engine/Foundation/DeterministicRun.h"
 #include "Engine/Foundation/EngineParallel.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshVertexAnimation.h"
 #include "Engine/Profiling/FrameProfiler.h"
@@ -177,14 +180,18 @@ namespace sw
         , _listBucket{}
         , _mapBucket{}
         , _listScratchEvaluate{}
-        , _listVertexAnimation{}
+        , _mapVertexAnimation{}
+        , _vertexAnimationStage{}
         , _clock{ 0.0 }
         , _frameIndex{ 0 }
         , _evaluatedBucketCount{ 0 }
     {
     }
 
-    AnimationCrowd::~AnimationCrowd() = default;
+    AnimationCrowd::~AnimationCrowd()
+    {
+        waitForVertexAnimations();
+    }
 
     void AnimationCrowd::beginFrame( float32 deltaSeconds )
     {
@@ -382,50 +389,84 @@ namespace sw
         }
     }
 
-    shared_ptr<Mesh> AnimationCrowd::findVertexAnimationMesh( const shared_ptr<Mesh>& sourceMesh, const Skeleton& skeleton, const AnimationClip& clip, bool bAnchorRootMotion,
-                                                              string_view meshPath )
+    void AnimationCrowd::VertexAnimationBake::run()
     {
-        if ( sourceMesh == nullptr )
+        SW_PROFILE_SCOPE( "Task.Animation.bakeVertexAnimation" );
+        const bool bCookedBinaryFound = _cookedPath.empty() == false && AssetIO::hasAsset( AssetID{ _cookedPath } ) && _animation->loadFromAsset( AssetID{ _cookedPath } );
+        // 쿠킹본은 같은 조건(정점 수 · 루트 묶기)일 때만 쓴다 — 아니면 베이크한다.
+        if ( bCookedBinaryFound && _animation->_vertexCount == _skinMesh->getVertexCount() && _animation->_bAnchorRootMotion == _bAnchorRootMotion )
+            _bReady = SW_TRUE;
+        else
+            _bReady = MeshVertexAnimationBaker::bake( *_skinMesh, *_skeleton, *_clip, _framesPerSecond, _bAnchorRootMotion == SW_TRUE, *_animation ) ? SW_TRUE : SW_FALSE;
+    }
+
+    shared_ptr<Mesh> AnimationCrowd::findVertexAnimationMesh( const shared_ptr<Mesh>& sourceMesh, const shared_ptr<const Skeleton>& skeleton, const shared_ptr<const AnimationClip>& clip,
+                                                              bool bAnchorRootMotion, string_view meshPath )
+    {
+        if ( sourceMesh == nullptr || skeleton == nullptr || clip == nullptr )
             return nullptr;
-        const IdentityToken& skinDataID = sourceMesh->getSkinDataID();
-        const uint8          anchor     = bAnchorRootMotion ? SW_TRUE : SW_FALSE;
-        for ( const VertexAnimationEntry& entry : _listVertexAnimation )
+        AnimationCrowdBucketKey key{};
+        key._pSkeleton               = skeleton.get();
+        key._skinDataID              = sourceMesh->getSkinDataID();
+        key._pClip                   = clip.get();
+        key._bAnchorRootMotion       = bAnchorRootMotion ? SW_TRUE : SW_FALSE;
+        const auto [entryIter, bNew] = _mapVertexAnimation.try_emplace( key );
+        VertexAnimationEntry& entry  = entryIter->second;
+        if ( bNew == false )
         {
-            const bool bCachedVertexAnimation = entry._skinDataID == skinDataID && entry._pSkeleton == &skeleton && entry._pClip == &clip && entry._bAnchorRootMotion == anchor;
-            if ( bCachedVertexAnimation )
-                return entry._mesh;
+            if ( entry._bake != nullptr && entry._bake->_task.isCompleted() )
+                finishVertexAnimation( entry );
+            return entry._mesh; // 굽는 중이거나 베이크하지 못한 조합(다시 베이크하지 않는다)이면 비어 있다
         }
+
         // 쿠킹본이 있으면(배포본의 팩) 읽고, 없으면 처음 쓸 때 베이크한다 — 같은 원본 · 클립의 먼 캐릭터는 이 메시 하나를 나눈다.
-        // 베이크하지 못한 조합도 적어 두어 매 프레임 다시 베이크하지 않는다.
-        SW_PROFILE_SCOPE( "GT.Animation.bakeVertexAnimation" );
-        shared_ptr<MeshVertexAnimation> animation = make_shared<MeshVertexAnimation>();
-        VertexAnimationEntry            entry{};
-        entry._skinDataID               = skinDataID;
-        entry._pSkeleton                = &skeleton;
-        entry._pClip                    = &clip;
-        entry._bAnchorRootMotion        = anchor;
-        const string cookedPath         = MeshVertexAnimation::makeCookedPath( meshPath, clip.getName() );
-        bool         bReady             = false;
-        const bool   bCookedBinaryFound = cookedPath.empty() == false && AssetIO::hasAsset( AssetID{ cookedPath } ) && animation->loadFromAsset( AssetID{ cookedPath } );
-        if ( bCookedBinaryFound )
+        entry._skeleton           = skeleton;
+        entry._clip               = clip;
+        entry._bake               = make_unique<VertexAnimationBake>();
+        VertexAnimationBake& bake = *entry._bake;
+        bake._skeleton            = skeleton;
+        bake._clip                = clip;
+        bake._cookedPath          = MeshVertexAnimation::makeCookedPath( meshPath, clip->getName() );
+        bake._framesPerSecond     = _settings._vertexAnimationFramesPerSecond;
+        bake._bAnchorRootMotion   = key._bAnchorRootMotion;
+        bake._animation           = make_shared<MeshVertexAnimation>();
+        bake._skinMesh            = Mesh::create( MeshCPUAccess::Keep );
+        // 원본에서 이미 검사한 정점 · 인덱스 · 스킨이다. 정점 순서가 원본과 같아 VAT 표(정점 번호)와 구간(인덱스 범위)도 그대로다.
+        (void)bake._skinMesh->setGeometryWithTangents( vector<RHIVertex>( sourceMesh->getCPUView().getVertices() ), vector<uint32>( sourceMesh->getIndices() ) );
+        (void)bake._skinMesh->setSections( sourceMesh->getSections() );
+        bake._skinMesh->setSkin( sourceMesh->getSkinVertices(), sourceMesh->getSkinBinding() );
+        // 결정적 실행은 이번 프레임에 끝낸다 — 언제 넘어가느냐가 워커 도착에 달리지 않게. 작업 풀이 없으면(테스트 · 도구) 지금 한다.
+        const bool bRunNow = engine::areEngineServicesBound() == false || engine::getSubsystem<DeterministicRun>().getPolicy()._bFinishAssetJobsEachFrame == SW_TRUE;
+        if ( bRunNow )
         {
-            // 쿠킹본은 같은 조건(정점 수 · 루트 묶기)일 때만 쓴다 — 아니면 베이크한다.
-            bReady = animation->_vertexCount == sourceMesh->getVertexCount() && animation->_bAnchorRootMotion == anchor;
+            bake.run();
+            finishVertexAnimation( entry );
+            return entry._mesh;
         }
-        if ( bReady == false )
-            bReady = MeshVertexAnimationBaker::bake( *sourceMesh, skeleton, clip, _settings._vertexAnimationFramesPerSecond, bAnchorRootMotion, *animation );
-        if ( bReady )
-        {
-            entry._mesh = Mesh::create();
-            // 원본에서 이미 검사한 정점 · 인덱스다. 정점 순서가 원본과 같아 VAT 표(정점 번호)와 구간(인덱스 범위)도 그대로다.
-            (void)entry._mesh->setGeometryWithTangents( vector<RHIVertex>( sourceMesh->getCPUView().getVertices() ), vector<uint32>( sourceMesh->getIndices() ) );
-            (void)entry._mesh->setSections( sourceMesh->getSections() );
-            entry._mesh->setVertexAnimation( std::move( animation ) );
-            SW_LOG_INFO_ID( "AnimationCrowd.VertexAnimationReadyFrames", "Vertex animation '%#' ready (%# frames x %# vertices)", clip.getName().c_str(), entry._mesh->findVertexAnimation()->_frameCount,
-                            entry._mesh->getVertexCount() );
-        }
-        _listVertexAnimation.push_back( entry );
-        return entry._mesh;
+        TaskManager& taskManager = engine::getSubsystem<TaskManager>();
+        bake._task               = taskManager.emplaceTask( "VertexAnimationBake", SW_DELEGATE_METHOD( TaskDelegate, &VertexAnimationBake::run, &bake ) );
+        taskManager.addToStage( _vertexAnimationStage, bake._task, "VertexAnimationBake" );
+        bake._task.submit();
+        return nullptr;
+    }
+
+    void AnimationCrowd::finishVertexAnimation( VertexAnimationEntry& inoutEntry )
+    {
+        const unique_ptr<VertexAnimationBake> bake = std::move( inoutEntry._bake );
+        if ( bake->_bReady == SW_FALSE )
+            return;
+        inoutEntry._mesh = Mesh::create( MeshCPUAccess::Keep );
+        (void)inoutEntry._mesh->setGeometryWithTangents( vector<RHIVertex>( bake->_skinMesh->getCPUView().getVertices() ), vector<uint32>( bake->_skinMesh->getIndices() ) );
+        (void)inoutEntry._mesh->setSections( bake->_skinMesh->getSections() );
+        inoutEntry._mesh->setVertexAnimation( std::move( bake->_animation ) );
+        SW_LOG_INFO_ID( "AnimationCrowd.VertexAnimationReadyFrames", "Vertex animation '%#' ready (%# frames x %# vertices)", inoutEntry._clip->getName().c_str(),
+                        inoutEntry._mesh->findVertexAnimation()->_frameCount, inoutEntry._mesh->getVertexCount() );
+    }
+
+    void AnimationCrowd::waitForVertexAnimations()
+    {
+        if ( engine::areEngineServicesBound() )
+            engine::getSubsystem<TaskManager>().waitStage( _vertexAnimationStage, "AnimationCrowd::waitForVertexAnimations" );
     }
 
     void AnimationCrowd::clear()
@@ -433,7 +474,8 @@ namespace sw
         _mapBucket.clear();
         _listBucket.clear();
         _listScratchEvaluate.clear();
-        _listVertexAnimation.clear();
+        waitForVertexAnimations();
+        _mapVertexAnimation.clear();
         _evaluatedBucketCount = 0;
     }
 

@@ -9,6 +9,7 @@
 
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/EngineConfig.h"
+#include "Engine/Config/GameConfig.h"
 #include "Engine/Config/PlatformConfigOverride.h"
 #include "Engine/Reflection/TypeInfo.h"
 
@@ -53,6 +54,65 @@ namespace
         }
     };
 } // namespace
+
+/**
+ * @brief [ProjectSettingsDocumentTest] 저장소의 게임 설정(`Config/Game/*.json`)마다 열어 고치고 저장하면 엄격한 읽기로 고친 값이 돌아오고, 고치지 않은 칸은 그대로다(손 확인 "게임 설정 열어 저장" 을 대신한다 — 파일은 사본)
+ */
+SW_TEST_CASE( ProjectSettingsDocumentTest, EveryGamePresetOpensEditsAndSaves )
+{
+    vector<string> listPath;
+    SW_REQUIRE_TRUE( FileUtil::collectFiles( ProcessRoots::get()._project.join( "Config/Game" ), ".json", listPath, false ) );
+    SW_REQUIRE_FALSE( listPath.empty() );
+    const string root = FileUtil::normalizeSeparators( test::makeScratchPath( "settings_game_presets" ).str() );
+    for ( const string& sourcePath : listPath )
+    {
+        string text;
+        SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::toDiskPath( sourcePath ), text ) );
+        const string copyPath = FileUtil::joinPath( root, FileUtil::getFileNamePart( sourcePath ) );
+        SW_REQUIRE_TRUE( FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( copyPath ) ) && FileUtil::writeTextFile( FileUtil::toDiskPath( copyPath ), text ) );
+
+        ProjectSettingsDocument document;
+        SW_REQUIRE_TRUE( document.open( *GameConfig::StaticType(), copyPath ) == ConfigReadResult::Loaded );
+        SW_EXPECT_FALSE( document.isModified() );
+        GameConfig* const pConfig    = static_cast<GameConfig*>( document.getInstance() );
+        const DataPath    packRoot   = pConfig->_packRoot;
+        const size_t      fieldCount = pConfig->_cookRules._listEntryIDField.size();
+        pConfig->_packRoot           = DataPath{ "game/savedpack" };
+        SW_EXPECT_TRUE( document.isModified() );
+        SW_REQUIRE_TRUE( document.saveDocument() );
+        SW_EXPECT_FALSE( document.isModified() );
+
+        ProjectSettingsDocument reopened;
+        SW_REQUIRE_TRUE( reopened.open( *GameConfig::StaticType(), copyPath ) == ConfigReadResult::Loaded );
+        GameConfig* const pSaved = static_cast<GameConfig*>( reopened.getInstance() );
+        SW_EXPECT_EQUAL( string{ "game/savedpack" }, pSaved->_packRoot.get() );
+        SW_EXPECT_EQUAL( fieldCount, pSaved->_cookRules._listEntryIDField.size() );
+        SW_EXPECT_TRUE( packRoot.get() != pSaved->_packRoot.get() );
+    }
+}
+
+/**
+ * @brief [ProjectSettingsDocumentTest] 되돌리기 단계의 글을 적용하면 값이 그대로 돌아오고 저장한 글 기준의 미저장 판정도 따라온다
+ */
+SW_TEST_CASE( ProjectSettingsDocumentTest, UndoTextRestoresTheEditedInstance )
+{
+    const ProjectSettingsDocumentTestUtil::OverriddenProject project = ProjectSettingsDocumentTestUtil::makeProject( "ProjectSettingsUndoText" );
+    ProjectSettingsDocument                                  document;
+    SW_REQUIRE_TRUE( document.open( *EngineConfig::StaticType(), project._basePath ) == ConfigReadResult::Loaded );
+    const string before = document.captureText();
+    SW_EXPECT_FALSE( before.empty() );
+
+    static_cast<EngineConfig*>( document.getInstance() )->_maxFixedStepPerFrame += 1;
+    const string after = document.captureText();
+    SW_EXPECT_TRUE( before != after );
+    SW_EXPECT_TRUE( document.isModified() );
+
+    SW_REQUIRE_TRUE( document.applyText( before ) );
+    SW_EXPECT_EQUAL( before, document.captureText() );
+    SW_EXPECT_FALSE( document.isModified() );
+    SW_REQUIRE_TRUE( document.applyText( after ) );
+    SW_EXPECT_TRUE( document.isModified() );
+}
 
 /**
  * @brief [ProjectSettingsDocumentTest] 덮어쓰기가 있는 엔진 설정을 열면 바탕 값을 보이고, 고쳐 저장하면 바탕 파일에는 고친 키만 바뀌며 덮어쓰기 값은 가지 않고 덮어쓰기 파일은 그대로인지 검증

@@ -2,6 +2,7 @@
 
 #include "Editor/Panels/ContentBrowser/Model/ContentBrowserCollectionStore.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
 #include "Core/Log/Logger.h"
@@ -49,9 +50,30 @@ namespace sw::editor
         };
     } // namespace
 
+    bool ContentBrowserCollection::add( string_view assetID )
+    {
+        const string key{ assetID };
+        if ( _uniqueAssetID.insert( key ).second == false )
+            return false;
+        _listAssetID.push_back( key );
+        return true;
+    }
+
+    bool ContentBrowserCollection::remove( string_view assetID )
+    {
+        const string key{ assetID };
+        if ( _uniqueAssetID.erase( key ) == 0 )
+            return false;
+        (void)VectorUtil::removeValue( _listAssetID, key ); // 색인에 있었으니 목록에도 있다
+        return true;
+    }
+
     ContentBrowserCollectionStore::ContentBrowserCollectionStore()
         : _listSavedSearch{}
         , _listCollection{}
+        , _bLocalUnread{ SW_FALSE }
+        , _bSharedUnread{ SW_FALSE }
+        , _reserved{ 0 }
     {
     }
 
@@ -84,10 +106,7 @@ namespace sw::editor
     {
         if ( name.empty() || findCollection( name, bShared ) != nullptr )
             return false;
-        ContentBrowserCollection collection{};
-        collection._name    = ContentBrowserCollectionStoreInternal::sanitize( name );
-        collection._bShared = bShared;
-        _listCollection.push_back( std::move( collection ) );
+        _listCollection.push_back( ContentBrowserCollection{ ContentBrowserCollectionStoreInternal::sanitize( name ), bShared } );
         return true;
     }
 
@@ -95,49 +114,36 @@ namespace sw::editor
     {
         const size_t sizeBefore = _listCollection.size();
         _listCollection.erase( std::remove_if( _listCollection.begin(), _listCollection.end(), [name, bShared]( const ContentBrowserCollection& collection )
-        { return collection._name == name && collection._bShared == bShared; } ),
+        { return collection.getName() == name && collection.isShared() == bShared; } ),
                                _listCollection.end() );
         return _listCollection.size() != sizeBefore;
     }
 
     bool ContentBrowserCollectionStore::addToCollection( string_view name, bool bShared, string_view assetID )
     {
-        for ( ContentBrowserCollection& collection : _listCollection )
-        {
-            if ( collection._name != name || collection._bShared != bShared )
-                continue;
-            for ( const string& existing : collection._listAssetID )
-            {
-                if ( existing == assetID )
-                    return false;
-            }
-            collection._listAssetID.push_back( string( assetID ) );
-            return true;
-        }
-        return false;
+        ContentBrowserCollection* const pCollection = findCollectionMutable( name, bShared );
+        return pCollection != nullptr && pCollection->add( assetID );
     }
 
     bool ContentBrowserCollectionStore::removeFromCollection( string_view name, bool bShared, string_view assetID )
     {
-        for ( ContentBrowserCollection& collection : _listCollection )
-        {
-            if ( collection._name != name || collection._bShared != bShared )
-                continue;
-            const size_t sizeBefore = collection._listAssetID.size();
-            collection._listAssetID.erase( std::remove( collection._listAssetID.begin(), collection._listAssetID.end(), string( assetID ) ), collection._listAssetID.end() );
-            return collection._listAssetID.size() != sizeBefore;
-        }
-        return false;
+        ContentBrowserCollection* const pCollection = findCollectionMutable( name, bShared );
+        return pCollection != nullptr && pCollection->remove( assetID );
     }
 
     const ContentBrowserCollection* ContentBrowserCollectionStore::findCollection( string_view name, bool bShared ) const
     {
         for ( const ContentBrowserCollection& collection : _listCollection )
         {
-            if ( collection._name == name && collection._bShared == bShared )
+            if ( collection.getName() == name && collection.isShared() == bShared )
                 return &collection;
         }
         return nullptr;
+    }
+
+    ContentBrowserCollection* ContentBrowserCollectionStore::findCollectionMutable( string_view name, bool bShared )
+    {
+        return const_cast<ContentBrowserCollection*>( findCollection( name, bShared ) );
     }
 
     string ContentBrowserCollectionStore::toText( bool bShared ) const
@@ -152,26 +158,27 @@ namespace sw::editor
         }
         for ( const ContentBrowserCollection& collection : _listCollection )
         {
-            if ( collection._bShared != bShared )
+            if ( collection.isShared() != bShared )
                 continue;
             // 빈 컬렉션도 남도록 머리 줄을 하나 둔다(에셋 칸이 빈 줄)
-            const string name = Internal::sanitize( collection._name );
+            const string name = Internal::sanitize( collection.getName() );
             text.appendFormat( "collection\t%#\t\n", name );
-            for ( const string& assetID : collection._listAssetID )
+            for ( const string& assetID : collection.getAssetIDs() )
                 text.appendFormat( "collection\t%#\t%#\n", name, Internal::sanitize( assetID ) );
         }
         return string( text.view() );
     }
 
-    void ContentBrowserCollectionStore::fromText( string_view text, bool bShared )
+    bool ContentBrowserCollectionStore::fromText( string_view text, bool bShared )
     {
         _listSavedSearch.erase( std::remove_if( _listSavedSearch.begin(), _listSavedSearch.end(), [bShared]( const ContentBrowserSavedSearch& search )
         { return search._bShared == bShared; } ),
                                 _listSavedSearch.end() );
         _listCollection.erase( std::remove_if( _listCollection.begin(), _listCollection.end(), [bShared]( const ContentBrowserCollection& collection )
-        { return collection._bShared == bShared; } ),
+        { return collection.isShared() == bShared; } ),
                                _listCollection.end() );
         vector<string_view> listField;
+        bool                bAllKnown = true;
         size_t              lineStart = 0;
         while ( lineStart < text.size() )
         {
@@ -182,6 +189,8 @@ namespace sw::editor
             lineStart        = lineEnd + 1;
             if ( line.empty() == false && line.back() == '\r' )
                 line = line.substr( 0, line.size() - 1 );
+            if ( line.empty() )
+                continue;
             ContentBrowserCollectionStoreInternal::splitProperties( line, listField );
             if ( listField.size() == 4 && listField[0] == "search" && listField[1].empty() == false )
             {
@@ -194,22 +203,38 @@ namespace sw::editor
                     (void)createCollection( listField[1], bShared );
                 if ( listField[2].empty() == false )
                     (void)addToCollection( listField[1], bShared, listField[2] );
+                continue;
             }
+            bAllKnown = false;
         }
+        return bAllKnown;
     }
 
     void ContentBrowserCollectionStore::loadFiles( string_view localFilePath, string_view sharedFilePath )
     {
-        string text;
-        if ( localFilePath.empty() == false && FileUtil::readOptionalTextFile( FileUtil::toDiskPath( localFilePath ), text ) == OptionalFileRead::Read )
-            fromText( FileUtil::skipUTF8Bom( text ), false );
-        text.clear();
-        if ( sharedFilePath.empty() == false && FileUtil::readOptionalTextFile( FileUtil::toDiskPath( sharedFilePath ), text ) == OptionalFileRead::Read )
-            fromText( FileUtil::skipUTF8Bom( text ), true );
+        _bLocalUnread  = loadFile( localFilePath, false ) ? SW_FALSE : SW_TRUE;
+        _bSharedUnread = loadFile( sharedFilePath, true ) ? SW_FALSE : SW_TRUE;
+    }
+
+    bool ContentBrowserCollectionStore::loadFile( string_view filePath, bool bShared )
+    {
+        if ( filePath.empty() )
+            return true;
+        string                 text;
+        const OptionalFileRead read  = FileUtil::readOptionalTextFile( FileUtil::toDiskPath( filePath ), text );
+        const bool             bRead = read == OptionalFileRead::Missing || ( read == OptionalFileRead::Read && fromText( FileUtil::skipUTF8Bom( text ), bShared ) );
+        if ( bRead == false )
+            SW_LOG_ERROR_ID( "ContentBrowserCollectionStore.NotRead", "Content Browser collections '%#' could not be read completely - it is not written back until it is fixed and the editor is reopened", string( filePath ).c_str() );
+        return bRead;
     }
 
     bool ContentBrowserCollectionStore::saveFile( string_view filePath, bool bShared ) const
     {
+        if ( ( bShared ? _bSharedUnread : _bLocalUnread ) == SW_TRUE )
+        {
+            SW_LOG_ERROR_ID( "ContentBrowserCollectionStore.NotOverwritten", "Content Browser collections were not saved: '%#' was not read completely and writing would lose the rest of it", string( filePath ).c_str() );
+            return false;
+        }
         if ( filePath.empty() || FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( filePath ) ) == false || FileUtil::writeTextFile( FileUtil::toDiskPath( filePath ), toText( bShared ) ) == false )
         {
             SW_LOG_WARNING_ID( "ContentBrowserCollectionStore.NotSaved", "Content Browser collections could not be saved to %#", string( filePath ).c_str() );

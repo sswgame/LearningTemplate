@@ -124,9 +124,10 @@ namespace sw
 
     /**
      * @class WebGPUBindGroupCache
-     * @brief 프레임 안의 바인드 그룹 캐시입니다. 키는 (레이아웃, 항목 전부)이고, 같은 키의 그리기는 지은 그룹을 다시 겁니다.
-     * @details 프레임마다 비운다 — 자원은 지연 해제라 프레임 안에서는 항목의 네이티브 핸들이 다른 객체로 다시 쓰이지 않는다(그래서 핸들 값이 곧 정체다).
-     *          프레임을 넘겨 들고 있으면 놓인 자원의 핸들 값이 새 객체에 다시 나갈 수 있다.
+     * @brief 바인드 그룹 캐시입니다. 키는 (레이아웃, 항목 전부)이고, 같은 키의 그리기는 지은 그룹을 다시 겁니다 — 프레임을 넘겨 든다.
+     * @details 프레임마다 비우면 장면이 그대로여도 그룹(브라우저에서는 JS 객체)을 프레임마다 그리기 조합 수만큼 다시 짓는다(유니티 · Babylon 의 WebGPU 도 프레임을 넘겨 든다).
+     *          항목의 네이티브 핸들은 캐시가 참조를 하나 더 쥔다 — 놓인 자원의 핸들 값이 새 객체에 다시 나가 다른 자원이 걸리는 일이 없다.
+     *          `kRetireFrameCount` 프레임 동안 걸지 않은 그룹은 놓는다(프레임 링의 구간은 링 한 바퀴 뒤에 같은 키로 돌아온다 — 그보다 조금 길다).
      */
     class WebGPUBindGroupCache
     {
@@ -135,7 +136,9 @@ namespace sw
 
         /** @brief @p layout · @p listEntry 의 그룹입니다. 없으면 지어 넣습니다(지은 그룹은 캐시가 가진다 — 부르는 쪽은 놓지 않는다). 짓지 못하면 nullptr 입니다. */
         [[nodiscard]] WGPUBindGroup getOrCreate( WGPUDevice device, WGPUBindGroupLayout layout, const vector<WGPUBindGroupEntry>& listEntry );
-        /** @brief 지은 그룹을 모두 놓습니다(프레임 시작 · 종료). 기록한 커맨드는 그룹을 구현이 끝날 때까지 살린다(명세). */
+        /** @brief 프레임을 넘깁니다 — `kRetireFrameCount` 프레임 동안 걸지 않은 그룹을 놓습니다. 기록한 커맨드는 그룹을 구현이 끝날 때까지 살린다(명세). */
+        void beginFrame();
+        /** @brief 지은 그룹을 모두 놓습니다(종료). */
         void clear();
 
         /** @brief 항목 목록의 해시입니다(레이아웃 포함). 장치 없이 돌아 단위 테스트가 본다. */
@@ -149,7 +152,12 @@ namespace sw
             WGPUBindGroupLayout        _layout{ nullptr };
             vector<WGPUBindGroupEntry> _listEntry{};
             WGPUBindGroup              _group{ nullptr };
+            uint32                     _unusedFrameCount{ 0 }; ///< 걸지 않고 지난 프레임 수
         };
+        static constexpr uint32 kRetireFrameCount = constant::render::kMaxFrameCountInFlight + 1;
+
+        /** @brief 그룹과 그 항목 · 레이아웃의 참조를 놓습니다. */
+        static void releaseGroup( const CachedGroup& cached );
 
         unordered_map<uint64, vector<CachedGroup>> _mapGroup;
         uint32                                     _createdCount; ///< 이번 프레임에 지은 그룹 수(진단)
@@ -311,8 +319,8 @@ namespace sw
         bool                        supportsInstancedSceneDraw() const override { return true; }
         const utf8*                 getBackendName() const override { return "WebGPU"; }
         unique_ptr<IRHICommandList> createCommandList() override;
-        void                        executeCommandList( IRHICommandList* pCmdList ) override;
-        void                        executeCommandListImmediate( IRHICommandList* pCmdList ) override;
+        void                        executeCommandListInternal( IRHICommandList* pCmdList ) override;
+        void                        executeCommandListImmediateInternal( IRHICommandList* pCmdList ) override;
 
         /** @brief 타임스탬프 계측을 켜고 끕니다(`IRHITimestampProvider` — 어느 스레드에서나 부른다). 쿼리 세트는 켠 뒤 첫 프레임 시작에 만든다. */
         void setTimestampEnabled( bool bEnabled ) { _bTimestampEnabled.store( bEnabled ? SW_TRUE : SW_FALSE, std::memory_order_relaxed ); }
@@ -396,10 +404,10 @@ namespace sw
         static void onDeviceLost( const WGPUDevice* pDevice, WGPUDeviceLostReason reason, WGPUStringView message, void* pUserdata1, void* pUserdata2 );
 
         /**
-         * @brief 상수 링에서 @p size 바이트(256 정렬)를 받아 @p pData 를 담고 그 칸을 돌려줍니다. 링은 이 프레임 제출 전에 올라간다.
-         * @details 링은 프레임마다 하나이고 그 프레임이 GPU 에서 끝나면 다시 쓴다. 끝나지 않았으면 새 링을 만든다(브라우저는 기다릴 수 없다).
+         * @brief 상수 링에서 @p sliceBytes 바이트(256 정렬, @p size 이상 — 묶음이 거는 크기)를 받아 @p pData 를 담고 그 칸을 돌려줍니다. 링은 이 프레임 제출 전에 올라간다.
+         * @details 링은 프레임마다 하나이고 그 프레임이 GPU 에서 끝나면 다시 쓴다. 끝나지 않았으면 새 링을 만든다(프레임 시작은 앞서가기 칸만 기다린다).
          */
-        void allocateConstantSlice( const void* pData, uint32 size, WGPUBuffer& outBuffer, uint64& outOffset );
+        void allocateConstantSlice( const void* pData, uint32 size, uint64 sliceBytes, WGPUBuffer& outBuffer, uint64& outOffset );
         /** @brief @p capacity 바이트의 상수 링을 하나 더 두고 지금 링으로 삼습니다. */
         void appendConstantRing( uint64 capacity );
 
@@ -472,7 +480,6 @@ namespace sw
         RHIHandleTable<RHIBufferHandle, WebGPUBufferRecord>          _buffers;
         RHIHandleTable<RHITextureHandle, WebGPUTextureRecord>        _textures;
         RHIHandleTable<RHIPipelineStateHandle, WebGPUPipelineRecord> _pipelines;
-        RHIHandleTable<RHIRenderPassHandle, RHIRenderPassDesc>       _renderPasses;
 
         /// @brief 세 번호 공간을 지킨다. 등록은 게임 스레드, 읽기는 기록 스레드 · 진단(`isBindlessIndexLive`)이라 읽기는 공유 잠금이다.
         mutable shared_mutex _bindlessMutex;

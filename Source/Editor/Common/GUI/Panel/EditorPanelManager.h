@@ -89,6 +89,7 @@ namespace sw::editor
         EditorPanelManager();
         ~EditorPanelManager() override;
         const utf8* getSubsystemName() const override { return kSubsystemName; }
+        void        resetToFreshEditor() override {} // 패널은 하위 객체를 모두 되돌린 뒤 `resetAllPanels` 가 새로 만든다 — 새 패널이 되돌린 값을 읽는다
         EditorPanelManager( const EditorPanelManager& )            = delete;
         EditorPanelManager& operator=( const EditorPanelManager& ) = delete;
 

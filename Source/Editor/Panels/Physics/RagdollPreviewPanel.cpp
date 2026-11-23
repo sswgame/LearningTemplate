@@ -3,15 +3,21 @@
 #include "Editor/Panels/Physics/RagdollPreviewPanel.h"
 
 #include "Core/Log/Logger.h"
+#include "Core/Math/MatrixMath.h"
+#include "Core/Math/Ray.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
+#include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
+#include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 #include "Editor/Viewport/EditorProjectedLineRenderer.h"
+#include "Editor/Viewport/EditorViewportProjection.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Localization/LocText.h"
@@ -40,6 +46,32 @@ namespace sw::editor
             static constexpr float32 kMaxImpulse = 400.0f;
             /// @brief 물리의 고정 스텝(초)입니다 — 엔진 기본보다 촘촘해 관절 한계가 덜 뚫린다(정책 `_fixedStepOverride`).
             static constexpr float32 kFixedStepSeconds = 1.0f / 120.0f;
+            /// @brief 바디 편집 칸의 폭(글자 수)입니다. 창 폭이 이 두 배보다 좁으면 편집 칸이 뷰포트 아래로 내려간다.
+            static constexpr float32 kEditorColumns = 48.0f;
+            /// @brief 셰이프 손잡이 사각형의 반 변과 집을 수 있는 마우스 거리(픽셀)입니다 — 씬 뷰 콜라이더 손잡이와 같다.
+            static constexpr float32 kHandleHalfSize   = 4.0f;
+            static constexpr float32 kHandlePickRadius = 9.0f;
+
+            /** @brief 시나리오가 손잡이를 누를 수 있도록 화면 사각형을 기록합니다(`ragdoll.shapeHandle.<자리>`). */
+            static void recordHandle( size_t handleIndex, const ImVec2& screen )
+            {
+                if ( EditorSelfTestMarks::isEnabled() == false )
+                    return;
+                StringBuilder<constant::buffer::kMax64> key;
+                key.appendFormat( "ragdoll.shapeHandle.%#", handleIndex );
+                const string keyText{ key.view() };
+                EditorSelfTestMarks::recordRect( keyText.c_str(), float2{ screen.x - kHandleHalfSize, screen.y - kHandleHalfSize }, float2{ screen.x + kHandleHalfSize, screen.y + kHandleHalfSize } );
+            }
+
+            [[nodiscard]] static bool readShapeHandleCount( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const RagdollPreviewPanel* pPanel = findOpenPanel();
+                if ( pPanel == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pPanel->getShapeHandleCount() );
+                return true;
+            }
+
             /// @brief 겹침 선 색입니다.
             /** @brief 열린 래그돌 미리보기 창입니다. 닫혔으면 nullptr 입니다. */
             [[nodiscard]] static const RagdollPreviewPanel* findOpenPanel()
@@ -98,6 +130,8 @@ namespace sw::editor
     SW_AUTOMATION_WATCH( editorRagdollPreviewBuiltBodies, "Editor.RagdollPreviewBuiltBodies",
                          "Bodies the preview body's ragdoll built (fails while the panel is closed, there is no body or the ragdoll is not up yet)",
                          &RagdollPreviewPanelInternal::readBuiltBodies );
+    SW_AUTOMATION_WATCH( editorRagdollShapeHandleCount, "Editor.RagdollShapeHandleCount", "Shape size handles of the body picked in the Ragdoll Preview panel (fails while the panel is closed)",
+                         &RagdollPreviewPanelInternal::readShapeHandleCount );
     SW_AUTOMATION_WATCH( editorRagdollPreviewState, "Editor.RagdollPreviewState", "RagdollState number of the preview body (0 Animated, 1 Ragdoll, 2 Partial, 3 BlendingBack; fails while there is no body)",
                          &RagdollPreviewPanelInternal::readRagdollState );
     SW_AUTOMATION_WATCH( editorRagdollPreviewSceneFrames, "Editor.RagdollPreviewSceneFrames", "Frames the Ragdoll Preview panel asked the renderer to draw its preview scene",
@@ -107,7 +141,114 @@ namespace sw::editor
         : EditorPreviewPanel{ EditorAssetType{ EditorAssetTypeIDs::kData }, false }
         , _model{}
         , _ragdollState{}
+        , _grid{}
+        , _handleTracker{}
+        , _listShapeHandle{}
+        , _listHandleCommand{}
+        , _bHandleCapturing{ false }
     {
+        _model.bindDocumentEditRecorder( getDocumentEditRecorder() );
+    }
+
+    bool RagdollPreviewPanel::saveDocument()
+    {
+        if ( _model.saveDocument() == false )
+            return false;
+        syncDocumentUndoBaseline(); // 저장한 글이 새 기준이다
+        return true;
+    }
+
+    void RagdollPreviewPanel::onBodyPropertyEdited( const PropertyInfo& property )
+    {
+        _model.commitBodyProperty( property );
+    }
+
+    void RagdollPreviewPanel::drawBodyEditor()
+    {
+        if ( _model.isEditable() == false )
+        {
+            EditorWidgets::drawEmptyHint( SW_LOCKEY( "EdPhysicsAsset", "NotEditable" ) );
+            return;
+        }
+        if ( _model.getBaseID().empty() == false )
+        {
+            ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdFormat", "InheritsFrom", TextArgumentList().addText( "base", _model.getBaseID().c_str() ) ).c_str() );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EdText", "InheritsFromTip" ) );
+        }
+        if ( _model.editSelectedBody() == nullptr )
+        {
+            EditorWidgets::drawEmptyHint( SW_LOCKEY( "EdPhysicsAsset", "SelectBody" ) );
+            return;
+        }
+        const bool bDuplicate = ImGui::Button( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdVerb", "Duplicate" ), "DuplicateBody" ) );
+        EditorSelfTestMarks::record( "ragdoll.duplicateBody" );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EdPhysicsAsset", "DuplicateBodyTip" ) );
+        ImGui::SameLine();
+        ImGui::BeginDisabled( _model.getBodyRows().size() < 2 );
+        const bool bRemove = ImGui::Button( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdVerb", "Remove" ), "RemoveBody" ) );
+        ImGui::EndDisabled();
+        EditorSelfTestMarks::record( "ragdoll.removeBody" );
+        _grid.drawSearchBar( "ragdoll.search" );
+        EditorPropertyGridTarget target{};
+        target._pInstance = _model.editSelectedBody();
+        target._pType     = RagdollPreviewViewModel::getBodyType();
+        target._onEdited  = SW_DELEGATE_METHOD( Delegate<void( const PropertyInfo& )>, &RagdollPreviewPanel::onBodyPropertyEdited, this );
+        _grid.drawProperties( target, nullptr, _model.collectHiddenProperties() );
+        // 원소 주소가 바뀌는 편집은 그리드를 다 그린 뒤에 한다
+        if ( bDuplicate )
+            _model.duplicateSelectedBody();
+        else if ( bRemove )
+            _model.removeSelectedBody();
+    }
+
+    void RagdollPreviewPanel::drawShapeHandles( const float4x4& viewProjection, const float2& imagePosition, const float2& imageSize )
+    {
+        using Internal = RagdollPreviewPanelInternal;
+        _model.gatherShapeHandles( getPreviewScene(), _listShapeHandle );
+        const bool bAvailable = _handleTracker.isDragging() || _listShapeHandle.empty() == false;
+        Ray        ray{};
+        const bool bRay = bAvailable && EditorViewportProjectionUtil::makeMouseRay( viewProjection.invert(), imagePosition, imageSize, ray );
+        _listHandleCommand.clear();
+        const bool bWasDragging = _handleTracker.isDragging();
+        (void)_handleTracker.step( bAvailable, ImGui::IsMouseDown( ImGuiMouseButton_Left ), bRay ? &ray : nullptr, _listHandleCommand ); // 이어지는지는 isDragging 이 답한다
+        for ( const EditorHandleDragCommand<ColliderHandle>& command : _listHandleCommand )
+        {
+            if ( command._kind == EditorHandleDragCommandKind::Drag )
+                _model.dragShapeHandle( command._handle, command._ray );
+        }
+        if ( bWasDragging && _handleTracker.isDragging() == false )
+            _model.commitShapeDrag(); // 끌기 하나가 되돌리기 하나다(바뀌지 않았으면 기록이 없다)
+
+        const ImVec2          mouse           = ImGui::GetMousePos();
+        const ColliderHandle& active          = _handleTracker.getActive();
+        const ColliderHandle* pHovered        = nullptr;
+        float32               hoveredDistance = Internal::kHandlePickRadius;
+        for ( size_t handleIndex = 0; handleIndex < _listShapeHandle.size(); ++handleIndex )
+        {
+            const ColliderHandle& handle = _listShapeHandle[handleIndex];
+            ImVec2                screen;
+            if ( EditorViewportProjectionUtil::projectPoint( viewProjection, handle._position, imagePosition, imageSize, screen ) == false )
+                continue;
+            Internal::recordHandle( handleIndex, screen );
+            const bool    bActive  = _handleTracker.isDragging() && handle._shapeIndex == active._shapeIndex && handle._axis == active._axis && handle._sign == active._sign;
+            const float32 dx       = mouse.x - screen.x;
+            const float32 dy       = mouse.y - screen.y;
+            const float32 distance = ::sqrtf( dx * dx + dy * dy );
+            if ( _handleTracker.isDragging() == false && bRay && ImGui::IsWindowHovered() && distance <= hoveredDistance )
+            {
+                hoveredDistance = distance;
+                pHovered        = &handle;
+            }
+            const bool   bHighlight = bActive || pHovered == &handle;
+            const float2 half{ Internal::kHandleHalfSize, Internal::kHandleHalfSize };
+            const ImVec2 min{ screen.x - half._x, screen.y - half._y };
+            const ImVec2 max{ screen.x + half._x, screen.y + half._y };
+            ImGui::GetWindowDrawList()->AddRectFilled( min, max, EditorColorUtil::toImU32( bHighlight ? SW_THEME_COLOR( "Viewport", "SelectionOutline" ) : SW_THEME_COLOR( "Base", "Text" ) ) );
+            ImGui::GetWindowDrawList()->AddRect( min, max, EditorColorUtil::toImU32( SW_THEME_COLOR( "Viewport", "HandleOutline" ) ) );
+        }
+        _bHandleCapturing = _handleTracker.isDragging() || pHovered != nullptr;
+        if ( pHovered != nullptr && EditorInputGUI::readPointer().wasPressed( EditorMouseButton::Left ) )
+            _handleTracker.press( GameObjectHandle{}, *pHovered, _listHandleCommand );
     }
 
     ScenePreviewPolicy RagdollPreviewPanel::getPreviewPolicy() const
@@ -204,10 +345,22 @@ namespace sw::editor
         (void)ImGui::Checkbox( SW_LOCKEY( "EdLabel", "Joints" ), &_model.editDrawJoints() );
         drawBodyTable();
 
-        const float2 viewSize = computeViewportFillSize( RagdollPreviewPanelInternal::kMinViewportHeight * EditorThemeUtil::getDPIScale() );
-        drawPreviewViewport( viewSize, false ); // 기즈모가 없다
+        // 왼쪽은 미리보기, 오른쪽은 고른 바디의 편집 칸 — 좁은 창에서는 편집 칸이 뷰포트 아래로 내려간다.
+        float2        viewSize    = computeViewportFillSize( RagdollPreviewPanelInternal::kMinViewportHeight * EditorThemeUtil::getDPIScale() );
+        const float32 editWidth   = EditorChrome::measureTextExtent( EditorTextExtent::ofText( RagdollPreviewPanelInternal::kEditorColumns, 0.0f ) ).x;
+        const bool    bSideBySide = viewSize._x > editWidth * 2.0f;
+        if ( bSideBySide )
+            viewSize._x -= editWidth + ImGui::GetStyle().ItemSpacing.x;
+        else
+            viewSize._y *= 0.5f;
+        drawPreviewViewport( viewSize, _bHandleCapturing ); // 손잡이 위에서는 궤도 카메라가 물러난다
         drawOverlay();
         EditorSelfTestMarks::record( "ragdoll.previewScene" );
+        if ( bSideBySide )
+            ImGui::SameLine();
+        ImGui::BeginChild( "##ragdollBodyEditor", ImVec2{ 0.0f, viewSize._y }, ImGuiChildFlags_Borders );
+        drawBodyEditor();
+        ImGui::EndChild();
         EditorWidgets::drawPanelStatus( _model.getStatus().c_str() );
     }
 
@@ -237,6 +390,7 @@ namespace sw::editor
                 const bool bSelected = _model.getSelectedBody() == static_cast<int32>( rowIndex );
                 if ( ImGui::Selectable( row._bone.c_str(), bSelected, ImGuiSelectableFlags_SpanAllColumns ) )
                     _model.toggleSelectedBody( static_cast<int32>( rowIndex ) );
+                EditorSelfTestMarks::recordFormat( "ragdoll.body.%#", rowIndex );
                 ImGui::PopID();
                 ImGui::TableSetColumnIndex( 1 );
                 ImGui::TextUnformatted( row._shapes.c_str() );
@@ -281,6 +435,7 @@ namespace sw::editor
         colors._joint         = SW_THEME_COLOR( "Viewport", "Joint" ).toFloat4();
         colors._selectedJoint = SW_THEME_COLOR( "Viewport", "BoneSelected" ).toFloat4();
         _model.drawOverlay( getPreviewScene(), renderer, colors );
+        drawShapeHandles( viewProjection, imagePosition, imageSize );
         pDrawList->PopClipRect();
     }
 

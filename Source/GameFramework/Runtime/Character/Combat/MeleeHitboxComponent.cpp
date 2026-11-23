@@ -82,6 +82,14 @@ namespace sw
         requestSweep();
     }
 
+    void MeleeHitboxComponent::onWorldOriginShifted( const float3& delta )
+    {
+        for ( float3& point : _listPreviousPoint )
+        {
+            point += delta;
+        }
+    }
+
     GameObject* MeleeHitboxComponent::findAttackerRoot() const
     {
         GameObject* pRoot = getOwner();

@@ -44,7 +44,7 @@ namespace
                 section._indexCount = 6u;
                 listSection.push_back( section );
             }
-            shared_ptr<Mesh> mesh = Mesh::create();
+            shared_ptr<Mesh> mesh = Mesh::create( MeshCPUAccess::Keep );
             SW_EXPECT_TRUE( mesh->setGeometry( std::move( listVertex ), std::move( listIndex ) ) );
             if ( listSection.empty() == false )
                 SW_EXPECT_TRUE( mesh->setSections( std::move( listSection ) ) );

@@ -28,6 +28,7 @@ namespace sw::editor
         explicit EditorModuleUnloadListener( EditorContext& context );
         ~EditorModuleUnloadListener() override;
         const utf8*             getSubsystemName() const override { return kSubsystemName; }
+        void                    resetToFreshEditor() override {} // 구독뿐이다
         span<const utf8* const> getSubsystemDependencies() const override;
         SubsystemInitResult     initializeSubsystem() override;
         void                    shutdownSubsystem() override;

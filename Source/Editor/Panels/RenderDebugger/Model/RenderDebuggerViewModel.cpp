@@ -84,12 +84,14 @@ namespace sw::editor
             pRegistry->copyBufferList( _state._listBuffer );
             if ( _state._selectedBuffer.has_value() && *_state._selectedBuffer >= _state._listBuffer.size() )
                 _state._selectedBuffer = nullopt;
+            // 읽은 뒤에 원소 배치가 도착할 수 있다.
+            _state._bufferLayout = BufferViewLayout::make( _state._bufferContent._entry._elementSize, _scalar, findSelectedMembers() );
         }
         // 기다리던 읽기가 도착했으면 받는다(다른 요청의 결과는 버린다 — 고르기를 바꾼 사이 도착).
         if ( _pendingBufferSerial != 0 && pRegistry->getBufferContentSerial() == _pendingBufferSerial && pRegistry->copyBufferContent( _state._bufferContent ) )
         {
             _pendingBufferSerial = 0;
-            _state._bufferLayout = BufferViewLayout::make( _state._bufferContent._entry._elementSize, _scalar );
+            _state._bufferLayout = BufferViewLayout::make( _state._bufferContent._entry._elementSize, _scalar, findSelectedMembers() );
         }
         _state._bBufferReading = _pendingBufferSerial != 0 ? SW_TRUE : SW_FALSE;
     }
@@ -202,9 +204,20 @@ namespace sw::editor
         _state._bBufferReading         = SW_TRUE;
     }
 
+    vector<RenderBufferEntry::Member> RenderDebuggerViewModel::findSelectedMembers() const
+    {
+        // 원소 배치는 목록 항목에 있다 — 읽기 결과는 바이트만 싣고, 배치는 기록이 켜진 동안의 디스패치로 목록에 찬다.
+        for ( const RenderBufferEntry& entry : _state._listBuffer )
+        {
+            if ( entry._name == _state._bufferContent._entry._name && entry._slot == _state._bufferContent._entry._slot )
+                return entry._listMember;
+        }
+        return {};
+    }
+
     void RenderDebuggerViewModel::setBufferScalar( BufferViewScalar scalar )
     {
         _scalar              = scalar;
-        _state._bufferLayout = BufferViewLayout::make( _state._bufferContent._entry._elementSize, scalar );
+        _state._bufferLayout = BufferViewLayout::make( _state._bufferContent._entry._elementSize, scalar, findSelectedMembers() );
     }
 } // namespace sw::editor

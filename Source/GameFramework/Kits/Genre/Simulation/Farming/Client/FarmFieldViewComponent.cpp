@@ -6,11 +6,13 @@
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
+#include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Tick/TickContext.h"
+#include "Engine/Object/GameObject/WorldOrigin.h"
 #include "Engine/Object/Prefab/PrefabCache.h"
 #include "Engine/Visual/Component/MeshComponent.h"
 
@@ -204,7 +206,7 @@ namespace sw
             for ( int32 x = 0; x < field.getWidth(); ++x )
             {
                 const int32  tileIndex = field.getTopology().toIndex( x, y );
-                const float3 center    = FarmGameModeComponent::computeTileCenter( x, y );
+                const float3 center    = manager.getWorldOrigin().toLocal( FarmGameModeComponent::computeTileCenter( x, y ) );
                 GameObject*  pSoil     = spawnTile( manager, _soilPrefab, "FarmSoil" );
                 GameObject*  pCrop     = spawnTile( manager, _cropPrefab, "FarmCrop" );
                 if ( pSoil == nullptr || pCrop == nullptr )
@@ -276,7 +278,7 @@ namespace sw
         // 읽지 못한 모델은 캐시가 경로마다 한 번 경고한다.
         for ( const string& path : listModelPath )
         {
-            _listCropMesh.push_back( MeshCache::request( path ) );
+            _listCropMesh.push_back( MeshCache::request( path, MeshCPUAccess::ReleaseAfterUpload ) );
         }
     }
 
@@ -289,6 +291,6 @@ namespace sw
             return;
         const FarmField& field = director.getField();
         const float3     fieldCenter{ static_cast<float32>( field.getWidth() ) * 0.5f, 0.0f, static_cast<float32>( field.getHeight() ) * 0.5f };
-        pRig->setFocusPoint( fieldCenter + ( director.getPlayerPosition() - fieldCenter ) * _cameraFollow );
+        pRig->setFocusPoint( manager.getWorldOrigin().toLocal( fieldCenter + ( director.getPlayerPosition() - fieldCenter ) * _cameraFollow ) );
     }
 } // namespace sw

@@ -38,7 +38,10 @@ namespace sw
         /** @brief 자리를 낼 서브틱입니다. */
         static constexpr uint32 kApplySubTickID = 1;
 
+        /** @brief 시작 자리를 잡습니다(되돌린 상태가 이미 들고 있으면 그대로). */
         void onBeginPlay() override;
+        /** @brief 시작 자리를 버립니다 — 다시 시작하면(풀) 그때 놓인 자리에서 잰다. */
+        void onEndPlay() override;
         /** @brief 이 씬의 서버 틱 자리로 옮깁니다(`kApplySubTickID`). 서버 틱을 알리는 틱이 바뀌었으면 선행 조건을 바꿉니다. */
         void onSubTick( uint32 subTickID, TickContext& context ) override;
 
@@ -53,7 +56,7 @@ namespace sw
         void applyTick( uint32 tick );
 
     private:
-        PROPERTY( Category = "Path", DisplayName = "Waypoints", Tooltip = "Offsets from the start position, visited in order", Units = m )
+        PROPERTY( Category = "Path", DisplayName = "Waypoints", Tooltip = "Offsets from the start position, visited in order", Units = m, Meta = "Shape=Points,ShapeAxes=World" )
         vector<float3> _listWaypoint;
         PROPERTY( Category = "Path", DisplayName = "Segment Time", Min = 0.01, Tooltip = "Seconds between two waypoints", Units = s )
         float32 _segmentSeconds;
@@ -62,9 +65,12 @@ namespace sw
         PROPERTY( Category = "Path", DisplayName = "Ping Pong", Tooltip = "Go back along the path instead of looping to the start" )
         bool _bPingPong;
 
-        float3        _startPosition;
+        PROPERTY( RuntimeState, Category = "Path", DisplayName = "Start Position", Tooltip = "Runtime: absolute position the path starts from", Units = m )
+        float3 _startPosition; ///< 절대 자리 — 지나던 중에 내렸다 올린 바닥(스트리밍 셀 · 세이브)도 처음 자리에서 잰다
+        PROPERTY( RuntimeState, Category = "Path", DisplayName = "Started", Tooltip = "Runtime" )
+        bool _bStarted;
+
         SubTickHandle _boundTickSource; ///< 지금 선행 조건으로 건 서버 틱 알림 틱(없으면 빈 핸들)
-        bool          _bStarted;
         bool          _bWarnedNoTick;
     };
 } // namespace sw

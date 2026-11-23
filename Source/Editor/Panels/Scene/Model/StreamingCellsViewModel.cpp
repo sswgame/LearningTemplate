@@ -9,7 +9,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Scene/Scene.h"
-#include "Engine/Scene/SceneCooker.h"
+#include "Engine/Scene/SceneCellSplitter.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Scene/SceneSettings.h"
 #include "Engine/Scene/SceneStreamingSubsystem.h"
@@ -105,7 +105,7 @@ namespace sw::editor
         SceneManager& sceneManager = editor::getSubsystem<SceneManager>();
         if ( pScene == nullptr )
             return false; // 활성 씬이 없을 수 있다 — 패널이 빈 안내를 그린다
-        const bool bSplit = SceneCooker::previewStreamingCells( *pScene, *_pPreview );
+        const bool bSplit = StreamingCellPreview::build( *pScene, *_pPreview );
         _bLastFailed      = bSplit ? SW_FALSE : SW_TRUE;
         if ( bSplit == false )
             return false;

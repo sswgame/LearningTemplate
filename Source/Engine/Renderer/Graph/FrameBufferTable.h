@@ -34,9 +34,12 @@ namespace sw
             uint32                  _slot{ 0 };
             uint64                  _handle{ 0 }; ///< packed 값(종류는 `_viewable`)
             RenderGraphViewableKind _viewable{ RenderGraphViewableKind::Buffer };
-            RenderGraphAccess       _initialAccess{ RenderGraphAccess::ShaderRead }; ///< 프레임 시작이자 끝의 접근 — 그래프가 이 접근을 심고(`RenderGraph::importResource`) 끝에 되돌린다(`forEachChangedAccess`)
+            RenderGraphAccess       _initialAccess{ RenderGraphAccess::ShaderRead }; ///< 그래프 실행의 시작이자 끝의 접근 — 그래프가 들이고 끝에 되돌린다(`RenderGraph::importResources`)
             uint32                  _elementSize{ 0 };                               ///< 버퍼 원소 바이트(텍스처는 0)
             uint32                  _elementCount{ 0 };                              ///< 원소 수(버퍼 용량, 텍스처는 0)
+            RHIBufferSRVIndex       _srv{ kInvalidDescriptorIndex };                 ///< 버퍼의 SRV 번호(버퍼 보기가 읽는 셰이더를 찾는다)
+            RHIUnorderedAccessIndex _uav{ kInvalidDescriptorIndex };                 ///< 버퍼의 UAV 번호
+            bool                    _bAttachment{ false };                           ///< NOLINT(sw-bool-flag): 집합체다(중괄호 초기화) — 그래프 첨부의 핸들만 알린다(`registerAttachment`)
 
             /** @brief 버퍼 등록이면 그 버퍼, 아니면 0 입니다. */
             RHIBufferHandle getBuffer() const { return _viewable == RenderGraphViewableKind::Buffer ? RHIBufferHandle{ _handle } : RHIBufferHandle{}; }
@@ -51,12 +54,17 @@ namespace sw
          * @brief 구조 버퍼 @p buffer 를 크기(원소 바이트 · 용량)와 함께 이름 @p name 의 칸 @p slot 으로 등록합니다 — 핸들만 받는 판은 없다(버퍼 보기 `RenderBufferInspector` 가 늘 읽을 길이를 안다).
          * @details 거절하고 오류를 남기는 것: 핸들 0, 크기 0(원소 바이트 · 용량), 같은 이름 · 칸을 두 번, 같은 이름의 다른 칸이 다른 처음 접근이나 종류(그래프는 이름마다 상태 하나를 든다).
          *          결과를 돌려주지 않는다 — 거절은 오류 로그가 알리고, 부르는 쪽이 할 일이 없다(등록이 없으면 패스 몸통이 `RenderGraphPassContext::isRegistered` 로 보고 건너뛴다).
-         * @param initialAccess 프레임 시작에 이 버퍼가 있는 상태이자 프레임 그래프가 끝에 되돌려 둘 상태입니다(뷰 그래프 · 다음 프레임이 이 상태를 믿는다 — `forEachChangedAccess`).
+         * @param initialAccess 그래프 실행의 시작에 이 버퍼가 있는 상태이자 그래프가 끝에 되돌려 둘 상태입니다(뒤 그래프 · 다음 프레임이 이 상태를 믿는다 — `RenderGraph::importResources`).
          *        그래서 늘 맞다 — 그래프 밖의 다른 사용자(뷰 그래프의 그리기 · 프레임 끝 되읽기)가 바꾸면 쓰고 나서 이 상태로 되돌린다.
          */
         void registerBuffer( hashed_string name, uint32 slot, const RHIStructuredBuffer& buffer, RenderGraphAccess initialAccess );
         /** @brief 텍스처 @p texture 를 이름 @p name 의 칸 @p slot 으로 등록합니다. 거절 규칙은 `registerBuffer` 와 같다. */
         void registerTexture( hashed_string name, uint32 slot, RHITextureHandle texture, RenderGraphAccess initialAccess );
+        /**
+         * @brief 그래프가 스스로 추적하는 첨부 @p texture 를 칸 0 으로 등록합니다 — 패스 안 전이(`RenderGraphPassContext::transition`)가 핸들을 찾게 할 뿐, 들이지 않는다.
+         * @details 첨부의 시작 · 끝 상태는 그래프의 쓰기 사슬이 정한다 — 들이면 처음 쓰기의 전이가 사라지거나 끝에 되돌려진다.
+         */
+        void registerAttachment( hashed_string name, RHITextureHandle texture );
 
         /** @brief 이름 @p name 칸 @p slot 의 버퍼입니다. 없으면 0 입니다. */
         RHIBufferHandle findBuffer( hashed_string name, uint32 slot ) const { return RHIBufferHandle{ findHandle( name, slot, RenderGraphViewableKind::Buffer ) }; }
@@ -64,22 +72,6 @@ namespace sw
         RHITextureHandle findTexture( hashed_string name, uint32 slot ) const { return RHITextureHandle{ findHandle( name, slot, RenderGraphViewableKind::Texture ) }; }
         /** @brief 등록 전부입니다(등록 순서). 레벨 콜백이 이름의 모든 칸을 한 묶음으로 옮긴다. */
         const vector<Entry>& getEntries() const { return _listEntry; }
-        /**
-         * @brief 프레임 그래프가 등록 접근(`Entry::_initialAccess`)과 다른 접근에 둔 등록마다 @p visit( entry ) 를 부릅니다 — 실행기가 그 등록을 등록 접근으로 되돌린다.
-         * @details 언리얼 RDG 외부 자원의 끝 접근(`SetBufferAccessFinal` · 추출 접근) 자리다. 등록 접근 하나가 프레임 시작이자 끝이라 주인이 따로 적을 끝 상태가 없다 —
-         *          뷰 그래프가 읽는 입자 인자(간접 인자)를 프레임 그래프가 셰이더 읽기로 남겨도 형식이 되돌린다. 이번 프레임 그래프가 보지 않은 이름은 부르지 않는다.
-         * @param context 프레임 그래프를 돌린 실행 문맥(`RenderGraphExecutionContext::findAccess` — 이름마다 마지막 접근)입니다.
-         */
-        template <typename Visit>
-        void forEachChangedAccess( const RenderGraphExecutionContext& context, Visit&& visit ) const
-        {
-            for ( const Entry& entry : _listEntry )
-            {
-                const optional<RenderGraphAccess> lastAccess = context.findAccess( entry._name );
-                if ( lastAccess.has_value() && *lastAccess != entry._initialAccess )
-                    visit( entry );
-            }
-        }
 
     private:
         void   registerEntry( const Entry& entry );

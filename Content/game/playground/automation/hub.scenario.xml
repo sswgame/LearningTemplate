@@ -70,6 +70,7 @@
 	<Expect watch="Minigame.Active" is="none"/>
 	<Expect watch="Object.Property" target="ArcadeGate" key="MinigameTriggerComponent._fireCount" equals="1"/>
 	<Expect watch="Minigame.LeakCount" equals="0"/>
+	<Expect watch="GameFeature.AddedComponents" equals="0"/> <!-- 미니게임 기능이 붙인 컴포넌트가 남지 않는다 -->
 	<ExpectLog id="MinigameFlow.Restored" count="1"/>
 	<Expect watch="Western.Honor" target="Ranch" equals="25"/> <!-- 서부극 판(명예 · 지갑)도 찍은 대로 돌아왔다 -->
 	<Expect watch="Western.Money" target="Ranch" equals="20"/>

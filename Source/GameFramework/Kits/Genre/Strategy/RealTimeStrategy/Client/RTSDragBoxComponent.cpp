@@ -5,6 +5,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Tick/TickContext.h"
+#include "Engine/Object/GameObject/WorldOrigin.h"
 #include "Engine/Visual/Component/MeshComponent.h"
 
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/Client/RTSCommandInputComponent.h"
@@ -39,7 +40,7 @@ namespace sw
             pMesh->setVisible( bShown );
         if ( bShown == false )
             return;
-        pMesh->setLocalPosition( center );
+        pMesh->setLocalPosition( context.getManager().getWorldOrigin().toLocal( center ) ); // 끌기 자리는 RTS 월드의 절대 자리다
         pMesh->setLocalScale( scale );
     }
 } // namespace sw

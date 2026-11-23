@@ -58,6 +58,16 @@ namespace sw::editor
             return readAnimationGraphCount( &AnimationGraphPanel::countBoneMaskEntries, outValue );
         }
 
+        [[nodiscard]] bool readAnimationGraphBranchSectionCount( const GameObjectManager* /*pManager*/, float64& outValue )
+        {
+            return readAnimationGraphCount( &AnimationGraphPanel::countBranchSections, outValue );
+        }
+
+        [[nodiscard]] bool readAnimationGraphSectionStartMs( const GameObjectManager* /*pManager*/, float64& outValue )
+        {
+            return readAnimationGraphCount( &AnimationGraphPanel::computeLastSectionStartMs, outValue );
+        }
+
         [[nodiscard]] bool readAnimationGraphMaskBoneRowCount( const GameObjectManager* /*pManager*/, float64& outValue )
         {
             return readAnimationGraphCount( &AnimationGraphPanel::getMaskBoneRowCount, outValue );
@@ -234,6 +244,10 @@ namespace sw::editor
                          &readAnimationGraphBoneMaskCount );
     SW_AUTOMATION_WATCH( editorAnimationGraphMaskEntryCount, "Editor.AnimationGraphMaskEntryCount", "Entries of every bone mask in the open animation graph document",
                          &readAnimationGraphMaskEntryCount );
+    SW_AUTOMATION_WATCH( editorAnimationGraphBranchSectionCount, "Editor.AnimationGraphBranchSectionCount", "Montage sections with a branch in the open animation graph document",
+                         &readAnimationGraphBranchSectionCount );
+    SW_AUTOMATION_WATCH( editorAnimationGraphSectionStartMs, "Editor.AnimationGraphSectionStartMs", "Start (milliseconds) of the latest montage section in the open animation graph document",
+                         &readAnimationGraphSectionStartMs );
     SW_AUTOMATION_WATCH( editorAnimationGraphMaskBoneRowCount, "Editor.AnimationGraphMaskBoneRowCount",
                          "Bones the Layers tab skeleton view laid out for the selected bone mask (0 without a skeleton)", &readAnimationGraphMaskBoneRowCount );
     SW_AUTOMATION_WATCH( editorObjectPositionX, "Editor.ObjectPositionX", "Local position X of the object named by gv_editorWatchObject",

@@ -56,6 +56,7 @@ namespace sw::editor
         EditorNetSimSession& operator=( const EditorNetSimSession& ) = delete;
 
         const utf8* getSubsystemName() const override { return kSubsystemName; }
+        void        resetToFreshEditor() override { stop(); }
         /** @brief 확장이 내려가거나 에디터가 닫힐 때 하니스를 내립니다. */
         void shutdownSubsystem() override { stop(); }
 

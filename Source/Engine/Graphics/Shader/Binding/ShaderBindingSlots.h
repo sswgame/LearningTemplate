@@ -623,6 +623,7 @@ namespace sw
             {         "mesh_skin", 1},
             {         "hzb_build", 2},
             {      "probe_update", 2},
+            {    "scene_voxelize", 1},
             {     "canvas_marker", 1},
             { "vfx_mesh_instance", 1},
             {      "vfx_simulate", 4},

@@ -8,12 +8,43 @@
 
 namespace sw::editor
 {
-    BufferViewLayout BufferViewLayout::make( uint32 elementSize, BufferViewScalar scalar )
+    BufferViewLayout BufferViewLayout::make( uint32 elementSize, BufferViewScalar scalar, const vector<RenderBufferEntry::Member>& listMember )
     {
         BufferViewLayout layout{};
         layout._stride      = elementSize;
         layout._columnCount = MathUtil::min( elementSize / kCellBytes, kMaxColumnCount );
         layout._scalar      = scalar;
+        for ( uint32 column = 0; column < layout._columnCount; ++column )
+        {
+            const uint32                     offset  = column * kCellBytes;
+            const RenderBufferEntry::Member* pMember = nullptr;
+            for ( const RenderBufferEntry::Member& member : listMember )
+            {
+                if ( member._offset <= offset && offset < member._offset + member._sizeBytes )
+                    pMember = &member;
+            }
+            StringBuilder<constant::buffer::kMax64> name;
+            BufferViewScalar                        columnScalar = BufferViewScalar::Hex;
+            if ( pMember == nullptr )
+            {
+                name.appendFormat( "+%#", offset );
+            }
+            else
+            {
+                name.append( pMember->_name );
+                if ( pMember->_sizeBytes > kCellBytes )
+                    name.appendFormat( "[%#]", ( offset - pMember->_offset ) / kCellBytes );
+                const string_view type{ pMember->_type };
+                if ( type.find( "Float" ) == 0 )
+                    columnScalar = BufferViewScalar::Float;
+                else if ( type.find( "Int" ) == 0 )
+                    columnScalar = BufferViewScalar::Int;
+                else if ( type.find( "Uint" ) == 0 || type.find( "Bool" ) == 0 )
+                    columnScalar = BufferViewScalar::Uint;
+            }
+            layout._listColumnName.emplace_back( name.view() );
+            layout._listColumnScalar.push_back( columnScalar );
+        }
         return layout;
     }
 
@@ -35,7 +66,7 @@ namespace sw::editor
             uint32 bits = 0;
             Memory::copy( &bits, byte.data() + rowOffset + static_cast<size_t>( column ) * kCellBytes, kCellBytes );
             StringBuilder<constant::buffer::kMax32> cell;
-            switch ( _scalar )
+            switch ( _scalar == BufferViewScalar::Shader ? _listColumnScalar[column] : _scalar )
             {
                 case BufferViewScalar::Float:
                 {
@@ -57,6 +88,7 @@ namespace sw::editor
                     break;
                 }
                 case BufferViewScalar::Uint:
+                case BufferViewScalar::Shader:
                 case BufferViewScalar::Count:
                 {
                     cell.appendFormat( "%#", bits );
@@ -72,6 +104,8 @@ namespace sw::editor
     {
         switch ( scalar )
         {
+            case BufferViewScalar::Shader:
+                return "shader";
             case BufferViewScalar::Float:
                 return "float";
             case BufferViewScalar::Uint:

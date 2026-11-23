@@ -165,7 +165,7 @@ namespace sw
         _pInputMap->setInputManager( this );
 
         _bInitialized = SW_TRUE;
-        SW_LOG_INFO_ID( "InputManager.InputManagerInitializedDevices", "InputManager initialized with %d devices.", static_cast<int32>( _listDevice.size() ) );
+        SW_LOG_INFO_ID( "InputManager.InputManagerInitializedDevices", "InputManager initialized with %# devices.", static_cast<int32>( _listDevice.size() ) );
         return true;
     }
 
@@ -378,7 +378,7 @@ namespace sw
         ++_beginFrameCount;
         const uint32 droppedCount = _droppedRawEventCount.exchange( 0, std::memory_order_relaxed );
         if ( droppedCount > 0 )
-            SW_LOG_WARNING_ID( "InputManager.RawInputEventQueue", "Raw input event queue full (capacity=%d). %d event(s) dropped in previous frame.", static_cast<int32>( _queueRawEvent.capacity() ), droppedCount );
+            SW_LOG_WARNING_ID( "InputManager.RawInputEventQueue", "Raw input event queue full (capacity=%#). %# event(s) dropped in previous frame.", static_cast<int32>( _queueRawEvent.capacity() ), droppedCount );
 
         // 지난 프레임까지 뗀 패드 컨트롤은 가림을 푼다(폴링 전이라 지난 프레임의 상태다 — 키와 같은 규칙).
         releaseCapturedGamepadControls();

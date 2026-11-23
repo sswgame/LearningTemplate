@@ -5,7 +5,8 @@
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
 #include "Core/Process/Process.h"
-#include "Core/String/StringUtil.h"
+#include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 
 #include "Engine/Content/Pack/PackReader.h"
 
@@ -14,8 +15,12 @@ namespace
     /** @brief 이 프로세스의 입력 파일 경로입니다 — 여러 퍼저 작업(`-jobs`)이 같은 파일을 쓰지 않게 pid 를 넣는다. */
     const sw::string& getInputPath()
     {
-        static const sw::string path = sw::FileUtil::joinPath( sw::ProcessRoots::get()._saved.str(),
-                                                               "Fuzz/PackReader." + sw::to_string( sw::Process::getCurrentProcessID() ) + ".pack" );
+        static const sw::string path = []
+        {
+            sw::fixed_string<sw::constant::buffer::kMax64> name;
+            sw::formatstring( name.data(), name.capacity(), "Fuzz/PackReader.%#.pack", sw::Process::getCurrentProcessID() );
+            return sw::FileUtil::joinPath( sw::ProcessRoots::get()._saved.str(), name.view() );
+        }();
         return path;
     }
 } // namespace

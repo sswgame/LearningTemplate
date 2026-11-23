@@ -49,7 +49,7 @@ namespace sw
      *
      *          난수는 **방출기 씨앗과 입자 번호**로만 정해집니다(`HashUtil::mix64` · `splitMix64Next`). 풀 안의 자리나 프레임 시간과 무관해서,
      *          같은 씨앗 · 같은 단계 수면 입자가 같습니다(GPU 시뮬레이션이 같은 해시로 같은 초기값을 냅니다 — `VFXGPUSimulation` 이 해시 상수를 올린다).
-     *          입자 번호는 만든 순서이고, 한 입자는 수명 → 속도 x → y → z 순으로 난수를 하나씩 씁니다.
+     *          입자 번호는 만든 순서이고, 한 입자는 수명 → 속도 x → y → z 순으로(생성 상자가 있으면 이어서 자리 x → y → z) 난수를 하나씩 씁니다.
      *          좌표는 방출기 로컬입니다. 회전은 지금 0 입니다(회전 모듈은 데이터 형식에 없다).
      *
      *          충돌(`VFXCollisionDef`)은 적분 뒤 그 단계에 움직인 선분을 `IVFXCollisionScene` 에 묻는다. 튀기는 법선 성분을 `_restitution` 만큼 뒤집고
@@ -74,6 +74,8 @@ namespace sw
         void update( float32 deltaSeconds, const IVFXCollisionScene* pCollision );
         /** @brief 단계 하나: 생성, 적분(충돌), 수명 제거. @p stepSeconds 는 0 보다 커야 합니다. */
         void step( float32 stepSeconds, const IVFXCollisionScene* pCollision );
+        /** @brief 방출기가 로컬로 @p localOffset 만큼 옮겨 갔습니다 — 월드 공간(`VFXSimulationSpace::World`) 입자는 그만큼 되돌려 월드 자리를 지킵니다. 로컬 공간이면 아무것도 하지 않습니다. */
+        void moveEmitter( const float3& localOffset );
         /** @brief 사용자 값을 정합니다. 다음 `writeParticles` 부터 색 · 크기에 곱합니다(시뮬레이션 상태는 그대로다). */
         void setUserValues( const VFXEmitterUserValues& values ) { _userValues = values; }
         /** @brief 입자를 모두 지우고 방출기 시간을 0 으로 되돌려 처음부터 다시 방출합니다(같은 씨앗이라 같은 입자가 나옵니다). */
@@ -114,8 +116,8 @@ namespace sw
         /** @brief 빈 칸 목록을 모든 칸으로 채웁니다. 끝에서 꺼내므로 작은 칸부터 나간다(같은 씨앗이면 같은 칸). */
         void resetFreeSlots();
 
-        /** @brief 시계가 정한 이번 단계의 입자를 만듭니다. 풀이 차면 만들지 않고 한 번 경고합니다(번호는 시계가 이미 썼다). */
-        void spawnParticles( const VFXSpawnStep& spawn );
+        /** @brief 시계가 정한 이번 단계의 입자를 만듭니다. `_collision._openSkyDistance` 가 있으면 위가 막힌 자리의 입자는 태어나지 않습니다(번호는 쓴다). 풀이 차면 만들지 않고 한 번 경고합니다(번호는 시계가 이미 썼다). */
+        void spawnParticles( const VFXSpawnStep& spawn, const IVFXCollisionScene* pCollision );
         /** @brief 살아 있는 입자를 적분하고(충돌 포함) 수명이 다했거나 닿아 사라질 입자를 마지막 입자와 바꿔 지웁니다. */
         void integrateStep( float32 stepSeconds, const IVFXCollisionScene* pCollision );
         /** @brief 입자 하나가 이번 단계에 @p from 에서 움직인 선분의 충돌을 처리합니다. 사라져야 하면 false 입니다. */

@@ -17,10 +17,10 @@ namespace
     /** @brief 한 프레임의 색인 몫(넘기기 → 마치기)을 돌리고 그동안 고쳐 넣은 항목 수를 돌려줍니다. */
     uint64 runGridFrame( SceneSpatialGrid& grid )
     {
-        const uint64 before = grid.getAppliedChangeCount();
+        const uint64 before = grid.getAppliedChangeCount().get();
         grid.update( 1.0f / 60.0f );
         grid.completeFrameJob();
-        return grid.getAppliedChangeCount() - before;
+        return grid.getAppliedChangeCount().get() - before;
     }
 
     SceneComponent* makePoint( GameObjectManager& manager, const char* pName, const float3& position )

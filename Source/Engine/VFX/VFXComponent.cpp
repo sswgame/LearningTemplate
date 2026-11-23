@@ -8,8 +8,11 @@
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Asset/Cache/SharedAssetRef.h"
+#include "Engine/Automation/Watch/AutomationWatch.h"
+#include "Engine/Automation/Watch/AutomationWatchComponent.h"
 #include "Engine/Environment/EnvironmentUtil.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
@@ -103,7 +106,7 @@ namespace sw
             /** @brief 메시 id 의 로드입니다(`.mesh` 경로는 메시 캐시가 워커에서 읽고, 내장 도형은 메모리에서 바로 만들므로 빈 핸들이다 — `MeshComponent` 와 같은 규칙). */
             static MeshHandle requestMesh( const string& meshID )
             {
-                return MeshAssetFormat::isMeshAssetPath( meshID ) ? MeshCache::request( meshID ) : MeshHandle{};
+                return MeshAssetFormat::isMeshAssetPath( meshID ) ? MeshCache::request( meshID, MeshCPUAccess::ReleaseAfterUpload ) : MeshHandle{};
             }
 
             /**
@@ -119,7 +122,48 @@ namespace sw
                 return VFXSimulationTarget::GPU;
             }
         };
+
+        struct VFXComponentWatchesInternal
+        {
+            /** @brief 감시 값 `VFX.ParticlesInBox` 입니다. 대상 효과의 CPU 입자 가운데 월드 상자 key("최소 x y z 최대 x y z") 안에 있는 수입니다. */
+            [[nodiscard]] static bool readParticlesInBox( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
+            {
+                const VFXComponent* pEffect = query.findTargetComponent<VFXComponent>( "VFXComponent", outValue );
+                if ( pEffect == nullptr )
+                    return false;
+                float32                   arrBound[6]{};
+                const vector<string_view> listToken = StringUtil::split( query._key, " " );
+                bool                      bParsed   = listToken.size() == SW_COUNT_OF( arrBound );
+                for ( size_t index = 0; bParsed && index < listToken.size(); ++index )
+                    bParsed = StringUtil::parseFloat( listToken[index], arrBound[index] );
+                if ( bParsed == false )
+                {
+                    outValue.setText( "key must be 'minX minY minZ maxX maxY maxZ'" );
+                    return false;
+                }
+                const float4x4 world = pEffect->getWorldMatrix();
+                uint32         count = 0;
+                for ( uint32 emitterIndex = 0; emitterIndex < pEffect->getEmitterCount(); ++emitterIndex )
+                {
+                    const shared_ptr<const vector<GPUParticle>>& pListParticle = pEffect->getEmitterParticles( emitterIndex );
+                    if ( pListParticle == nullptr )
+                        continue;
+                    for ( const GPUParticle& particle : *pListParticle )
+                    {
+                        const float3 position = float3::transform( float3{ particle._positionSize._x, particle._positionSize._y, particle._positionSize._z }, world );
+                        const bool   bAbove   = position._x >= arrBound[0] && position._y >= arrBound[1] && position._z >= arrBound[2];
+                        const bool   bBelow   = position._x <= arrBound[3] && position._y <= arrBound[4] && position._z <= arrBound[5];
+                        count += bAbove && bBelow ? 1u : 0u;
+                    }
+                }
+                outValue.setNumber( static_cast<float64>( count ) );
+                return true;
+            }
+        };
     } // namespace
+
+    SW_AUTOMATION_QUERY_WATCH( vfxParticlesInBox, "VFX.ParticlesInBox", "CPU particles of the target's effect inside the world box key 'minX minY minZ maxX maxY maxZ'",
+                               &VFXComponentWatchesInternal::readParticlesInBox, true, true );
 } // namespace sw
 
 namespace sw
@@ -135,6 +179,7 @@ namespace sw
         , _listEmitterEnabled{}
         , _pEffect{}
         , _listUserParameter{}
+        , _lastOrigin{}
         , _pPrimitiveRegistry{ nullptr }
         , _seed{ 0 }
         , _bPlayOnBegin{ true }
@@ -193,6 +238,13 @@ namespace sw
         if ( pPhysicsScene != nullptr )
             pCollision = sw::make_unique<VFXPhysicsCollisionScene>( *pPhysicsScene, getWorldMatrix() );
 
+        // 월드 공간 방출기는 지난 틱 뒤의 이동을 되돌려 입자를 제자리에 둔다.
+        const float3 origin      = getWorldPosition();
+        const float3 worldOffset = origin - _lastOrigin;
+        _lastOrigin              = origin;
+        const bool   bMoved      = worldOffset != float3::Zero;
+        const float3 localOffset = bMoved ? float3::transformVector( worldOffset, getWorldMatrix().invert() ) : float3{};
+
         bool bAllFinished = true;
         for ( uint32 emitterIndex = 0; emitterIndex < static_cast<uint32>( _listSimulation.size() ); ++emitterIndex )
         {
@@ -203,6 +255,8 @@ namespace sw
             VFXGPUEmitter*     pGPUEmitter    = std::get_if<VFXGPUEmitter>( &simulation );
             if ( pCPUSimulation != nullptr )
             {
+                if ( bMoved )
+                    pCPUSimulation->moveEmitter( localOffset );
                 pCPUSimulation->update( context.getDeltaTime(), pCollision.get() );
                 bAllFinished = bAllFinished && pCPUSimulation->isFinished();
             }
@@ -242,8 +296,10 @@ namespace sw
         static const hashed_string s_effectPathName( "_effectPath" );
         static const hashed_string s_seedName( "_seed" );
         static const hashed_string s_userParameterName( "_listUserParameter" );
-        if ( propertyName == s_effectPathName || propertyName == s_seedName )
+        if ( propertyName == s_effectPathName )
             loadEffect();
+        else if ( propertyName == s_seedName )
+            rebuildSimulations();
         else if ( propertyName == s_userParameterName )
             applyUserParameters();
     }
@@ -251,7 +307,8 @@ namespace sw
     void VFXComponent::play()
     {
         restartSimulations();
-        _bPlaying = _listSimulation.empty() == false;
+        _lastOrigin = getWorldPosition();
+        _bPlaying   = _listSimulation.empty() == false;
         publishParticles();
     }
 
@@ -280,10 +337,17 @@ namespace sw
         loadEffect();
     }
 
+    void VFXComponent::setEffect( shared_ptr<const VFXEffectDef> pEffect )
+    {
+        _effectPath = string{};
+        _pEffect    = std::move( pEffect );
+        rebuildSimulations();
+    }
+
     void VFXComponent::setSeed( uint32 seed )
     {
         _seed = seed;
-        loadEffect();
+        rebuildSimulations();
     }
 
     bool VFXComponent::setUserParameter( string_view name, const float4& value )
@@ -421,6 +485,14 @@ namespace sw
 
     void VFXComponent::loadEffect()
     {
+        // 효과는 공유 캐시의 한 벌이다 — 같은 효과를 쓰는 컴포넌트가 파일을 다시 읽지 않는다. 핫 리로드는 떼어 낸 새 객체를 이 자리에서 받는다(`onPropertyChanged`).
+        // 효과는 별칭 포인터를 지어 둔다 — 받은 판을 쥐고 다시 읽기 횟수로 다시 받는다. 읽지 못하면 효과 데이터가 무엇이 틀렸는지 오류를 남겼다.
+        _pEffect = _effectPath.empty() ? nullptr : _effectPath.acquire().snapshot();
+        rebuildSimulations();
+    }
+
+    void VFXComponent::rebuildSimulations()
+    {
         releaseMeshEmitters();
         _listSimulation.clear();
         _listPublished.clear();
@@ -428,14 +500,9 @@ namespace sw
         _listEmitterTexturePath.clear();
         _listGPURequest.clear();
         _listEmitterEnabled.clear();
-        _pEffect.reset();
         _bPlaying = SW_FALSE;
-        if ( _effectPath.empty() )
-            return;
-        // 효과는 공유 캐시의 한 벌이다 — 같은 효과를 쓰는 컴포넌트가 파일을 다시 읽지 않는다. 핫 리로드는 떼어 낸 새 객체를 이 자리에서 받는다(`onPropertyChanged`).
-        _pEffect = _effectPath.acquire().snapshot(); // 효과는 별칭 포인터를 지어 둔다 — 받은 판을 쥐고 다시 읽기 횟수로 다시 받는다
         if ( _pEffect == nullptr )
-            return; // 효과 데이터가 무엇이 틀렸는지 오류를 남겼다 — 방출기 없이 아무것도 그리지 않는다
+            return; // 방출기 없이 아무것도 그리지 않는다
         const VFXEffectDef& effect = *_pEffect;
         _listSimulation.reserve( effect._listEmitter.size() );
         // 이펙트 품질(사용자 설정 graphics.effectsQuality → 선택지의 targetValue)은 효과를 읽을 때 정한다 — 바꾸면 다음에 읽는 효과부터 따른다.

@@ -104,13 +104,12 @@ namespace sw
          */
         virtual const IBehaviorTreeDebugSource* findBehaviorTreeDebugSource() const { return nullptr; }
         /**
-         * @brief 판에 하루의 시각이 있는 디렉터가 재정의해 지금 시각(0~24)과 강수를 답합니다. 시각이 없는 판은 false 입니다.
+         * @brief 판에 하루의 시각이 있는 디렉터가 재정의해 지금 시각(0~24)을 답합니다. 시각이 없는 판은 false 입니다.
          * @details 방향광을 해처럼 움직이는 `DaylightComponent` 가 묻는다 — 시각을 쥔 쪽은 디렉터라(게임마다 달력이 다르다) 같은 RTTI 없는 가상 함수로 묻는다.
          */
-        [[nodiscard]] virtual bool readDaylight( float32& outHourOfDay, bool& outbPrecipitating ) const
+        [[nodiscard]] virtual bool readHourOfDay( float32& outHourOfDay ) const
         {
             (void)outHourOfDay;
-            (void)outbPrecipitating;
             return false;
         }
         /**
@@ -137,6 +136,8 @@ namespace sw
          * @details 시작 전이면 보관했다가 `onBeginPlay` 가 판을 시작한 뒤 적용한다. 읽지 못하면 `onStateRestored( false )` 가 알리고 새 판으로 간다.
          */
         void restoreState( vector<uint8>&& bytes );
+        /** @brief 시작 전에 받아 보관한 상태입니다(`ComponentStateStore` 계약 — 있으면 그것이 곧 상태다). */
+        const vector<uint8>& getPendingStateBytes() const { return _pendingStateBytes; }
         /** @brief 스폰한 런타임 오브젝트를 모두 지웁니다. 상태를 저장하기 전에 부르며, 판은 그대로이고 다음 틱이 그 상태대로 다시 스폰합니다. */
         void despawnViews();
 

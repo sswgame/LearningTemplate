@@ -29,9 +29,10 @@ namespace sw::editor
         Circle,   ///< float32 반지름 — 로컬 XY 평면의 원 하나(2D 빛 · 2D 범위)
         Capsule,  ///< float32 반지름 + `ShapeRange=` 가 가리키는 float32 원기둥 반 높이 — 축은 로컬 +Y(`ShapeOrigin=Base` 면 바닥이 원점, 캐릭터 컨트롤러)
         Cylinder, ///< float3 하나 — x 반지름 · y 반 높이(z 는 쓰지 않는다), 축은 로컬 +Y 이고 가운데가 원점(내비 장애물 원기둥)
+        Points,   ///< `vector<float3>` 로컬 점 목록 — 점을 이은 꺾은선과 점마다의 손잡이(스플라인 조절점 · 강 경로 · 흐름 경로, 언리얼 `MakeEditWidget` 배열 · Godot Path3D 자리)
     };
 
-    /** @brief @p kind 의 값이 float3 이면(상자 · 화살표 · 원기둥) true, float32 · 각이면 false 입니다. */
+    /** @brief @p kind 의 값이 float3 하나이면(상자 · 화살표 · 원기둥) true, float32 · 각 · 점 목록이면 false 입니다. */
     constexpr bool isVectorShapeKind( PropertyShapeKind kind )
     {
         return kind == PropertyShapeKind::Box || kind == PropertyShapeKind::Arrow || kind == PropertyShapeKind::Cylinder;
@@ -69,6 +70,7 @@ namespace sw::editor
         ArrowTip,       ///< 화살표 끝 — 끈 자리 쪽으로 방향을 돌린다(길이는 지킨다)
         CapsuleHeight,  ///< 캡슐 원기둥 반 높이 — 축(±Y) 끝의 반구 꼭대기까지의 거리로 끈다
         CylinderRadius, ///< 원기둥 반지름(float3 의 x) — 옆(±X · ±Z)으로 끈다
+        Point,          ///< 점 목록의 점 하나(`_elementIndex`) — 잡은 점을 지나 레이에 수직인 평면(보는 면) 위로 끈다
     };
 
     /**
@@ -91,16 +93,17 @@ namespace sw::editor
         float32                 _numberScale{ 1.0f };             ///< float32 값의 저장 → 월드 배율(끈 거리를 나눠 저장 값으로 되쓴다)
         float32                 _rangeScale{ 1.0f };              ///< 둘째 값의 저장 → 월드 배율
         float32                 _heightSpan{ 1.0f };              ///< `CapsuleHeight` — 축 시작점에서 꼭대기까지가 (반 높이 + 반지름)의 몇 배인지(가운데 원점 1, 바닥 원점 2)
+        uint32                  _elementIndex{ 0 };               ///< `Point` — 점 목록에서의 자리
         uint32                  _axis{ 0 };                       ///< 로컬 축(0 X, 1 Y, 2 Z)
         float32                 _sign{ 1.0f };                    ///< 로컬 축의 양(+1)과 음(-1)
         PropertyShapeHandleKind _kind{ PropertyShapeHandleKind::Radius };
 
-        /** @brief 값이 float3 이면(상자 반 크기 · 화살표 · 원기둥) true, float32 이면 false 입니다. */
+        /** @brief 값이 float3 하나이면(상자 반 크기 · 화살표 · 원기둥) true, float32 · 점 목록의 원소이면 false 입니다. */
         bool isVectorValue() const
         {
             return _kind == PropertyShapeHandleKind::BoxExtent || _kind == PropertyShapeHandleKind::ArrowTip || _kind == PropertyShapeHandleKind::CylinderRadius;
         }
-        /** @brief 같은 손잡이(같은 컴포넌트 · 프로퍼티 · 종류 · 축 · 부호)이면 true 입니다 — 도구가 끄는 손잡이를 강조할 때 본다. */
+        /** @brief 같은 손잡이(같은 컴포넌트 · 프로퍼티 · 종류 · 점 자리 · 축 · 부호)이면 true 입니다 — 도구가 끄는 손잡이를 강조할 때 본다. */
         bool isSameHandle( const PropertyShapeHandle& other ) const;
         /**
          * @brief 레이 @p ray 가 가리키는 자리로 끈 float32 저장 값입니다(반지름 · 반각 · 길이 — 월드 거리를 그 값의 배율로 나눈다).
@@ -110,7 +113,7 @@ namespace sw::editor
         float32 computeDraggedNumber( const Ray& ray ) const;
         /**
          * @brief 레이 @p ray 가 가리키는 자리로 끈 float3 저장 값입니다(상자 반 크기는 그 축만 — 배율로 나눈다, 화살표는 잡은 길이를 지킨 새 방향 — 잡은 길이가 0 이면 단위 길이).
-         * @details 원기둥 반지름은 옆 축 어느 쪽에서 끌어도 x 에, 원기둥 반 높이(`BoxExtent` 축 Y)는 y 에 쓴다.
+         * @details 원기둥 반지름은 옆 축 어느 쪽에서 끌어도 x 에, 원기둥 반 높이(`BoxExtent` 축 Y)는 y 에 쓴다. 점(`Point`)은 잡은 점을 지나 레이에 수직인 평면 위의 자리다(배율로 나눈 로컬 점).
          */
         float3 computeDraggedVector( const Ray& ray ) const;
     };
@@ -136,6 +139,7 @@ namespace sw::editor
         static constexpr float32 kMinScale = 1.0e-4f;
 
         PropertyShapeFrame _frame{};
+        vector<float3>     _listPoint{}; ///< `Points` 의 저장 값(로컬)
         float3             _vector{};
         float32            _number{ 0.0f };
         float32            _range{ 0.0f };
@@ -150,7 +154,7 @@ namespace sw::editor
         /**
          * @brief 모양의 손잡이를 @p outListHandle 뒤에 붙입니다(비우지 않는다). 원뿔 길이 · 캡슐 반 높이 손잡이는 @p rangeProperty 를 쓴다.
          * @details 값의 배율이 `kMinScale` 보다 작으면 손잡이가 없다. 구 6, 상자 6, 원뿔 5(반각 4 · 길이 1 — 길이가 `kMinExtent` 보다 짧으면 반각 손잡이는 없다), 화살표 1, 원 4, 캡슐 6(바닥 원점이면 5 — 바닥 쪽 높이 손잡이는 없다),
-         *          원기둥 6(반지름 4 · 반 높이 2)이다.
+         *          원기둥 6(반지름 4 · 반 높이 2), 점 목록은 점마다 1 이다.
          */
         void collectHandles( uint64 componentID, const hashed_string& property, const hashed_string& rangeProperty, vector<PropertyShapeHandle>& outListHandle ) const;
         /** @brief 화살표가 가리키는 월드 단위 방향입니다(로컬 방향이 0 이면 로컬 +Z). */
@@ -161,6 +165,8 @@ namespace sw::editor
         float32 getWorldRange() const { return _range * _rangeScale; }
         /** @brief 월드 벡터 값(축마다 배율을 곱한다)입니다. */
         float3 getWorldVector() const { return float3::multiply( _vector, _vectorScale ); }
+        /** @brief 점 목록의 @p index 번째 점(월드)입니다. */
+        float3 computeWorldPoint( uint32 index ) const;
         /** @brief 캡슐 가운데(월드)입니다 — 바닥 원점이면 원점에서 +Y 로 (반 높이 + 반지름). */
         float3 computeCapsuleCenter() const;
     };

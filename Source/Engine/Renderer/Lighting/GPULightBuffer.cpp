@@ -78,45 +78,45 @@ namespace sw
             }
 
             /**
-             * @brief 프리미티브 집합이 바뀐 뒤의 복셀 격자입니다 — 그 사이 등록 · 해제된 메시 칸만 다시 칠하고(`SceneVoxelizer::updateGrid`), 기록이 모자라면 다시 만듭니다.
-             * @details 가리개가 아니거나 격자 밖인 칸의 변화(움직이는 투사체 스폰 · 소멸, 반투명, 먼 곳)는 격자를 그대로 둔다 — 같은 포인터라 GPU 로 다시 올리지도 않는다.
-             *          칠한 칸이 바뀌면 사본에 칠해 새 포인터로 넣는다(지난 격자는 렌더 스레드가 아직 들 수 있다).
+             * @brief 프리미티브 집합이 바뀐 뒤의 복셀 장면입니다 — 그 사이 등록 · 해제된 메시 칸만 다시 모으고(`SceneVoxelizer::updateScene`), 기록이 모자라면 다시 만듭니다.
+             * @details 가리개가 아니거나 격자 밖인 칸의 변화(움직이는 투사체 스폰 · 소멸, 반투명, 먼 곳)는 장면을 그대로 둔다 — 같은 포인터라 GPU 가 다시 칠하지도 않는다.
+             *          모은 것이 바뀌면 사본을 고쳐 새 포인터로 넣는다(지난 장면은 렌더 스레드가 칠한 장면으로 들고 있다).
              */
-            static shared_ptr<const SceneVoxelGrid> refreshVoxelGrid( shared_ptr<const SceneVoxelGrid> pCached, const PrimitiveRegistry& primitives, Material* pSceneDefault,
-                                                                      const LightProbeVolumeComponent& volume, uint64 cacheGeneration, uint64 generation )
+            static shared_ptr<const SceneVoxelScene> refreshVoxelScene( shared_ptr<const SceneVoxelScene> pCached, const PrimitiveRegistry& primitives, Material* pSceneDefault,
+                                                                        const LightProbeVolumeComponent& volume, uint64 cacheGeneration, uint64 generation )
             {
                 vector<uint32> listChangedSlot;
                 if ( primitives.collectMeshSetChanges( cacheGeneration, listChangedSlot ) == false )
                 {
-                    shared_ptr<const SceneVoxelGrid> pRebuilt = make_shared<SceneVoxelGrid>( SceneVoxelizer::makeGrid( primitives, pSceneDefault, volume.computeRealtimeVoxelBounds(), volume.getVoxelSize() ) );
-                    volume.setRealtimeVoxelGrid( pRebuilt, generation );
+                    shared_ptr<const SceneVoxelScene> pRebuilt = make_shared<SceneVoxelScene>( SceneVoxelizer::makeScene( primitives, pSceneDefault, volume.computeRealtimeVoxelBounds(), volume.getVoxelSize() ) );
+                    volume.setRealtimeVoxelScene( pRebuilt, generation );
                     return pRebuilt;
                 }
-                SceneVoxelGrid updated = *pCached;
-                if ( SceneVoxelizer::updateGrid( updated, primitives, pSceneDefault, listChangedSlot ) )
-                    pCached = make_shared<SceneVoxelGrid>( std::move( updated ) );
-                volume.setRealtimeVoxelGrid( pCached, generation );
+                SceneVoxelScene updated = *pCached;
+                if ( SceneVoxelizer::updateScene( updated, primitives, pSceneDefault, listChangedSlot ) )
+                    pCached = make_shared<SceneVoxelScene>( std::move( updated ) );
+                volume.setRealtimeVoxelScene( pCached, generation );
                 return pCached;
             }
 
             /**
-             * @brief 실시간 볼륨 하나를 라이트 목록 · 프로브 자리 · 갱신 요청 목록에 넣습니다. 복셀 격자 캐시가 낡았으면(상자 · 칸 크기 · 프리미티브 집합이 바뀜) 여기서 다시 만든다.
+             * @brief 실시간 볼륨 하나를 라이트 목록 · 프로브 자리 · 갱신 요청 목록에 넣습니다. 복셀 장면 캐시가 낡았으면(상자 · 칸 크기 · 프리미티브 집합이 바뀜) 여기서 다시 만든다.
              */
             static void appendRealtimeVolume( const Scene& scene, const GameObjectManager& manager, const LightProbeVolumeComponent& volume, vector<GPULight>& inoutList, LightProbeElementBuilder& inoutProbeElement,
                                               vector<RealtimeProbeRequest>& inoutListRequest )
             {
-                const PrimitiveRegistry&         primitives      = manager.getPrimitiveRegistry();
-                const uint64                     generation      = primitives.getSetGeneration();
-                uint64                           cacheGeneration = 0;
-                shared_ptr<const SceneVoxelGrid> pGrid           = volume.findRealtimeVoxelGrid( cacheGeneration );
-                if ( pGrid == nullptr )
+                const PrimitiveRegistry&          primitives      = manager.getPrimitiveRegistry();
+                const uint64                      generation      = primitives.getSetGeneration();
+                uint64                            cacheGeneration = 0;
+                shared_ptr<const SceneVoxelScene> pVoxelScene     = volume.findRealtimeVoxelScene( cacheGeneration );
+                if ( pVoxelScene == nullptr )
                 {
-                    pGrid = make_shared<SceneVoxelGrid>( SceneVoxelizer::makeGrid( primitives, scene.getMaterial(), volume.computeRealtimeVoxelBounds(), volume.getVoxelSize() ) );
-                    volume.setRealtimeVoxelGrid( pGrid, generation );
+                    pVoxelScene = make_shared<SceneVoxelScene>( SceneVoxelizer::makeScene( primitives, scene.getMaterial(), volume.computeRealtimeVoxelBounds(), volume.getVoxelSize() ) );
+                    volume.setRealtimeVoxelScene( pVoxelScene, generation );
                 }
                 else if ( cacheGeneration != generation )
-                    pGrid = refreshVoxelGrid( std::move( pGrid ), primitives, scene.getMaterial(), volume, cacheGeneration, generation );
-                if ( pGrid->isEmpty() )
+                    pVoxelScene = refreshVoxelScene( std::move( pVoxelScene ), primitives, scene.getMaterial(), volume, cacheGeneration, generation );
+                if ( pVoxelScene->_grid.isEmpty() )
                     return; // 상자가 유효하지 않다 — 갱신할 장면이 없다
 
                 const LightProbeGridLayout layout = volume.computeLayout();
@@ -132,7 +132,7 @@ namespace sw
                 request._blend             = volume.getRealtimeBlend();
                 request._bounceAlbedo      = volume.getBounceAlbedo();
                 request._emissiveIntensity = volume.getRealtimeEmissiveIntensity();
-                request._pVoxelGrid        = std::move( pGrid );
+                request._pVoxelScene       = std::move( pVoxelScene );
                 inoutList.push_back( request._volumeElement );
                 inoutListRequest.push_back( std::move( request ) );
             }
@@ -161,10 +161,11 @@ namespace sw
                 const float3 center     = probe.getWorldPosition();
                 const float3 halfExtent = probe.getExtent() * 0.5f;
                 const uint32 firstTexel = inoutProbeElement.appendReflectionProbe( probe.getComponentID(), probe.getProbeDataRevision(), data );
+                const float3 captured   = probe.computeLocalCapturePosition( data );
                 GPULight     element{};
                 element._positionRadius = float4{ center._x, center._y, center._z, halfExtent.getLength() };
                 element._colorIntensity = float4{ halfExtent._x, halfExtent._y, halfExtent._z, probe.getBlendDistance() };
-                element._directionType  = float4{ data._capturePosition._x, data._capturePosition._y, data._capturePosition._z, static_cast<float32>( shaderslot::kLightTypeReflectionProbe ) };
+                element._directionType  = float4{ captured._x, captured._y, captured._z, static_cast<float32>( shaderslot::kLightTypeReflectionProbe ) };
                 element._params         = float4{ static_cast<float32>( data._resolution ), static_cast<float32>( data._levelCount ), static_cast<float32>( firstTexel ), 0.0f };
                 return element;
             }

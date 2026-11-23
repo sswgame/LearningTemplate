@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="9c1e7d52b6f04a83a2d95e1f7b3c6048"?>
+<!--
+  에디터 시나리오 — 애니메이션 그래프의 몽타주 섹션 편집: Montage 노드를 더하고 섹션을 하나 더한 뒤 둘째 섹션의 시작 칸을 끌면 그만큼 늦어지고
+  (감시 값 Editor.AnimationGraphSectionStartMs — 프레임마다 새 사본에서 끌기를 시작해 값이 쌓이지 않았다), 분기 파라미터와 분기를 한 칸씩 적어도 짝이 차면 들어간다
+  (Editor.AnimationGraphBranchSectionCount — 한 칸만 적은 사이의 계약 위반으로 늘 버려졌다).
+  문서: animgraphedit 시나리오의 테스트 그래프를 실행마다 새 사본(scratch/animgraphmontage)으로 연다.
+  실행: App -EnableEditor -scenario=engine/automation/editor/animgraphmontage.scenario.xml -unattended
+-->
+<Scenario name="editor.animgraphmontage" fixedDelta="0.0166667" timeoutFrames="900" startAfter="Immediately" input="exclusive">
+	<Scratch from="engine/automation/editor/animgraphedit" as="scratch/animgraphmontage"/>
+	<EditorWaitStable/>
+	<ResizeWindow width="1920" height="1080"/>
+	<Variable name="gv_editorUiScale" value="1"/>
+	<DevCommand line="layout.reset"/>
+	<EditorWaitStable/>
+	<DevCommand line="panel.focus animation_graph"/>
+	<EditorWaitStable/>
+	<DevCommand line="asset.openScratch scratch/animgraphmontage/animgraphedit.animgraph.xml"/>
+	<EditorWaitStable/>
+	<WaitUntil watch="Editor.AnimationGraphLinkCount" equals="2"/>
+	<WaitUntil watch="Editor.GraphNodeCount" equals="2" timeoutFrames="90"/>
+	<EditorWaitStable/>
+	<EditorClick mark="animationGraph.addMenu"/>
+	<EditorWaitStable/>
+	<EditorClick mark="animationGraph.add.Montage"/>
+	<WaitUntil watch="Editor.GraphNodeCount" equals="3" timeoutFrames="75"/>
+	<EditorWaitStable/>
+	<EditorClick mark="animationGraph.pose.addSection"/>
+	<WaitUntil watch="Editor.AnimationGraphSectionStartMs" atLeast="99" timeoutFrames="60"/>
+	<EditorWaitStable/>
+	<EditorDrag mark="animationGraph.pose.sectionStart.1" dx="120"/>
+	<WaitUntil watch="Editor.AnimationGraphSectionStartMs" atLeast="500" timeoutFrames="60"/>
+	<EditorWaitStable/>
+	<EditorClick mark="animationGraph.pose.sectionBranchParam.1"/>
+	<EditorWaitStable/>
+	<EditorText value="Go"/>
+	<EditorWaitStable/>
+	<EditorKey key="Enter"/>
+	<EditorWaitStable/>
+	<EditorClick mark="animationGraph.pose.sectionBranch.1"/>
+	<EditorWaitStable/>
+	<EditorText value="Default"/>
+	<EditorWaitStable/>
+	<EditorKey key="Enter"/>
+	<WaitUntil watch="Editor.AnimationGraphBranchSectionCount" equals="1" timeoutFrames="60"/>
+	<EditorWaitStable/>
+	<Variable name="gv_editorUiScale" value="0"/>
+	<Pass/>
+</Scenario>

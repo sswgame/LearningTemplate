@@ -12,11 +12,8 @@
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Asset/Cache/BuiltInAssetCache.h"
-#include "Engine/Asset/Cook/CookStore.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetPaths.h"
-#include "Engine/Content/CookCodeFingerprint.h"
-#include "Engine/Content/CookJob.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Object/Component/ComponentStableKey.h"
 #include "Engine/Object/Component/SceneComponent.h"
@@ -35,7 +32,7 @@
 
 /**
  * @file PrefabCache.cpp
- * @brief 프리팹 로드 캐시, 스폰 · 중첩 스폰, 펼치기, 쿠킹, 핫 리로드를 구현합니다.
+ * @brief 프리팹 로드 캐시, 스폰 · 중첩 스폰, 펼치기, 핫 리로드를 구현합니다.
  * @details 형식 셋 읽기 · 쓰기는 `PrefabAsset.cpp` 다.
  */
 
@@ -360,7 +357,7 @@ namespace sw
 
         shared_ptr<PrefabAsset> asset = sw::make_shared<PrefabAsset>();
 
-        // 쿠킹본 이름은 쿠커(`cookAllPrefabs`)와 같은 규칙 하나다(`AssetCookPath`).
+        // 쿠킹본 이름은 쿠커(`PrefabCooker::cookAll`)와 같은 규칙 하나다(`AssetCookPath`).
         string binPath = AssetCookPath::toCookedPath( resolvedPath );
         if ( binPath.empty() )
             binPath = resolvedPath;
@@ -522,7 +519,7 @@ namespace sw
             }
             pGameObject->setName( hashed_string( string( instanceName ).c_str() ) );
         }
-        (void)spawnNestedInstances( pGameObject, asset, {} ); // 건너뛴 노드는 노드마다 경고했다 — 바깥 인스턴스는 남는다
+        (void)spawnNestedInstances( pGameObject, asset, {}, nullptr, 0 ); // 건너뛴 노드는 노드마다 경고했다 — 바깥 인스턴스는 남는다
         return true;
     }
 
@@ -563,13 +560,14 @@ namespace sw
         return true;
     }
 
-    uint32 PrefabCache::spawnNestedInstances( GameObject* pRoot, const PrefabAsset& asset, const vector<PrefabPartOverride>& listPartOverride )
+    uint32 PrefabCache::spawnNestedInstances( GameObject* pRoot, const PrefabAsset& asset, const vector<PrefabPartOverride>& listPartOverride, const ObjectStateBatch* pOwnerBatch,
+                                              const uint64 savedIDScope )
     {
         // 변형이 물려받은 부품에 덮어쓴 것이 앞이다 — 인스턴스가 덮어쓴 것이 나중에 얹혀 이긴다.
         vector<PrefabPartOverride> listAllPart = asset.getVariantPartOverrides();
         listAllPart.insert( listAllPart.end(), listPartOverride.begin(), listPartOverride.end() );
         vector<string> listSpawnedPath;
-        const uint32   createdCount = spawnNestedInstancesUnder( pRoot, asset, {}, listAllPart, listSpawnedPath );
+        const uint32   createdCount = spawnNestedInstancesUnder( pRoot, asset, {}, listAllPart, pOwnerBatch, savedIDScope, listSpawnedPath );
         for ( const PrefabPartOverride& part : listAllPart )
         {
             if ( PrefabCacheInternal::isNodeKeyPath( part._partPath ) == false )
@@ -586,7 +584,7 @@ namespace sw
     }
 
     uint32 PrefabCache::spawnNestedInstancesUnder( GameObject* pRoot, const PrefabAsset& asset, string_view rootPath, const vector<PrefabPartOverride>& listPartOverride,
-                                                   vector<string>& inoutListSpawnedPath )
+                                                   const ObjectStateBatch* pOwnerBatch, const uint64 savedIDScope, vector<string>& inoutListSpawnedPath )
     {
         const vector<PrefabInstanceNode>& listNode = asset.getNestedInstances();
         GameObjectManager*                pManager = pRoot != nullptr ? pRoot->getMutableManager() : nullptr;
@@ -641,7 +639,24 @@ namespace sw
                 continue;
             ObjectLoadContext context{ SerializePurpose::Authoring };
             context._bExternalParentAllowed = false; // 부모는 노드의 자리가 정한다(아래에서 붙인다)
-            const bool bStateRead           = bUseTemplate ? asset.applyNestedSpawnTemplateTo( pPart, index ) : ObjectStateSerializer::loadFromXMLString( pPart, state, context );
+            // 덮어쓴 것이 씬의 다른 오브젝트를 가리키면(부품의 핸들) 저장된 id 로 적혀 있다 — 바깥 인스턴스를 읽은 배치에 묻는다. 원형은 바깥 참조가 없다.
+            ObjectStateBatch partBatch( ObjectIDSpace::Saved );
+            const bool       bLinkOutside = bUseTemplate == false && pOwnerBatch != nullptr;
+            if ( bLinkOutside )
+            {
+                partBatch.setExternalResolver( SW_DELEGATE_LAMBDA( SavedObjectResolver, [pOwnerBatch]( uint64 savedID, hashed_string savedName ) -> GameObject*
+                {
+                    (void)savedName;
+                    return savedID != 0 ? pOwnerBatch->findBySavedID( savedID ) : nullptr;
+                } ) );
+                context._pBatch       = &partBatch;
+                context._savedIDScope = savedIDScope;
+            }
+            bool bStateRead = bUseTemplate ? asset.applyNestedSpawnTemplateTo( pPart, index ) : ObjectStateSerializer::loadFromXMLString( pPart, state, context );
+            if ( bLinkOutside && bStateRead )
+                bStateRead = partBatch.finish();
+            else
+                partBatch.abandon();
             if ( bStateRead == false )
             {
                 SW_LOG_WARNING_ID( "PrefabAsset.NestedPrefabInstanceState", "Nested prefab instance '%#' (%#) state could not be applied - it is skipped", node._name, node._prefabPath );
@@ -665,17 +680,17 @@ namespace sw
                 const PrefabPathStack::Scope scope{ spawnStack, sourceKey };
                 if ( listInnerPart.empty() )
                 {
-                    createdCount += spawnNestedInstancesUnder( pPart, *pSource, partPath, listPartOverride, inoutListSpawnedPath );
+                    createdCount += spawnNestedInstancesUnder( pPart, *pSource, partPath, listPartOverride, pOwnerBatch, savedIDScope, inoutListSpawnedPath );
                     continue;
                 }
                 PrefabCacheInternal::prependInnerParts( partPath, listInnerPart, listPartOverride );
-                createdCount += spawnNestedInstancesUnder( pPart, *pSource, partPath, listInnerPart, inoutListSpawnedPath );
+                createdCount += spawnNestedInstancesUnder( pPart, *pSource, partPath, listInnerPart, pOwnerBatch, savedIDScope, inoutListSpawnedPath );
             }
         }
         return createdCount;
     }
 
-    bool PrefabCache::collectPartOverrides( const GameObject& root, const PrefabAsset& asset, vector<PrefabPartOverride>& outListPartOverride )
+    bool PrefabCache::collectPartOverrides( const GameObject& root, const PrefabAsset& asset, const unordered_map<uint64, uint64>* pSavedIDMap, vector<PrefabPartOverride>& outListPartOverride )
     {
         outListPartOverride.clear();
         GameObjectManager* pManager = root.getMutableManager();
@@ -722,8 +737,13 @@ namespace sw
             const auto baseIt = mapBaseState.find( partPath );
             if ( baseIt == mapBaseState.end() )
                 continue; // 프리팹이 더는 스폰하지 않는 부품 — 다음 로드에 다시 생기지 않는다
-            PrefabPartOverride     part{ partPath, {} };
-            const expected<string> partState = ObjectStateSerializer::saveToXMLString( pPart, options );
+            PrefabPartOverride part{ partPath, {} };
+            ObjectSaveOptions  partOptions{ SerializePurpose::Authoring };
+            partOptions._pSavedIDMap         = pSavedIDMap;
+            partOptions._bOmitExternalParent = pSavedIDMap == nullptr ? SW_TRUE : SW_FALSE;
+            if ( pPart->getParent() != nullptr )
+                partOptions._omitAttachToObjectID = pPart->getParent()->getObjectID(); // 부모는 노드의 자리가 정한다
+            const expected<string> partState = ObjectStateSerializer::saveToXMLString( pPart, partOptions );
             if ( const expected<void> overrides = partState.has_value() ? PrefabOverrides::computeOverrides( *partState, baseIt->second, part._overrideXML ) : expected<void>{ unexpected( partState.error() ) };
                  overrides.has_value() == false )
             {
@@ -813,91 +833,6 @@ namespace sw
                 return false;
         }
         return true;
-    }
-
-    uint32 PrefabCache::cookAllPrefabs( string_view sourceRoot, string_view cookedDir, const CookStore& store, uint32& outFailedCount )
-    {
-        outFailedCount = 0;
-        if ( sourceRoot.empty() || cookedDir.empty() )
-        {
-            SW_LOG_ERROR_ID( "PrefabAsset.PrefabCookNeedsSource", "Prefab cook needs a source root and an output directory (--cooked-dir)." );
-            return 0;
-        }
-
-        vector<string> listFile;
-        if ( AssetPaths::collectContentFiles( sourceRoot, {}, listFile ) == false )
-        {
-            SW_LOG_ERROR_ID( "PrefabAsset.PrefabCookCouldNot", "Prefab cook could not list '%#' - nothing is cooked", sourceRoot );
-            ++outFailedCount;
-            return 0;
-        }
-        // 순서를 정한다 — 같은 쿠킹본을 쓰는 두 소스 가운데 어느 것이 먼저인지가 실행마다 같아야 한다.
-        VectorUtil::sort( listFile );
-
-        const string root = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( sourceRoot ) );
-        string       out  = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( cookedDir ) );
-        out += '/';
-
-        unordered_set<string> uniqueSetWrittenKey; // 중복 판정만 한다 — 출력 순서는 정렬된 `listFile` 가 정한다
-        CookStats             stats;
-        const CookJobDesc     desc = makeCookJobDesc();
-        for ( const string& filePath : listFile )
-        {
-            const string normalized = FileUtil::normalizeSeparators( filePath );
-            const bool   bXML       = StringUtil::endsWith( normalized, ".prefab.xml", true );
-            const bool   bJSON      = StringUtil::endsWith( normalized, ".prefab.json", true );
-            if ( ( bXML || bJSON ) == false || normalized.size() <= root.size() + 1 )
-                continue;
-
-            // 출력은 `<cookedDir>/<소스 루트 기준 상대 경로>` 의 쿠킹본 이름이다 — 런타임 `loadPrefab` 과 같은 규칙 하나(`AssetCookPath`).
-            const string                             outputID = AssetCookPath::toCookedPath( normalized.substr( root.size() + 1 ) );
-            StringBuilder<constant::buffer::kMax512> outputPathBuilder;
-            outputPathBuilder.appendFormat( "%#%#", out, outputID );
-            const string outputPath = string( outputPathBuilder.view() );
-            const string outputKey  = StringUtil::toLower( outputPath.c_str() );
-            if ( uniqueSetWrittenKey.contains( outputKey ) )
-            {
-                SW_LOG_WARNING_ID( "PrefabAsset.PrefabCookWouldOverwrite", "Prefab cook: '%#' would overwrite the cooked file another source already wrote ('%#') - skipped", normalized, outputPath );
-                ++outFailedCount;
-                continue;
-            }
-
-            const CookResult result = store.cookFile( desc, outputID, outputPath, [&]()
-            {
-                // 중첩 인스턴스의 원본을 읽는 캐시는 작업마다 새로 둔다 — 앞 작업이 읽어 둔 원본을 쓰면 그 읽기가 이 작업의 입력에서 빠진다.
-                PrefabCache nestedPrefabs;
-                PrefabAsset asset;
-                // 디스크로 훑은 원본이다 — 디스크 입구로 읽는다(리소스 id 입구는 팩 전용 구성에서 리소스 루트 안 절대 경로를 거절한다).
-                const bool                   bLoaded    = asset.loadFromDiskFile( normalized );
-                const bool                   bFlattened = bLoaded && asset.isValid() && nestedPrefabs.flattenNestedInstances( asset );
-                const optional<AbsolutePath> outputFile = FileUtil::requireAbsolutePath( outputPath );
-                if ( outputFile.has_value() == false || bFlattened == false || asset.saveToBinaryFile( *outputFile ) == false )
-                {
-                    SW_LOG_WARNING_ID( "PrefabAsset.PrefabCookFailed", "Prefab cook failed for '%#'", normalized );
-                    return CookStep::Failed;
-                }
-                return CookStep::Written;
-            } );
-            if ( result == CookResult::Failed )
-            {
-                ++outFailedCount;
-                continue;
-            }
-            uniqueSetWrittenKey.insert( outputKey );
-            stats.add( result );
-        }
-        SW_LOG_INFO_ID( "PrefabAsset.PrefabCookReusedDDC", "Prefab cook: %# reused from the DDC, %# cooked", stats._reusedCount, stats._cookedCount );
-        return stats.getWrittenCount();
-    }
-
-    CookJobDesc PrefabCache::makeCookJobDesc()
-    {
-        CookJobDesc desc;
-        desc._cookerName      = "Prefab";
-        desc._codeFingerprint = CookCodeFingerprint::find( "Prefab" );
-        desc._target          = "Any";
-        desc._settingsHash    = 0; // 프리팹 쿠킹에는 설정이 없다
-        return desc;
     }
 
     string PrefabCache::findFieldOrigin( string_view assetRelativePath, string_view componentKey, string_view fieldName )
