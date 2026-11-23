@@ -4,6 +4,7 @@
 
 #include "Engine/Serialization/XML/XMLDocument.h"
 
+#include "GameFramework/Runtime/Foundation/Framework/Save/ComponentStateStore.h"
 #include "GameFramework/Runtime/Foundation/GameData/StatBlock.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceTypes.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterEquipmentComponent.h"
@@ -224,6 +225,19 @@ SW_TEST_CASE( InventoryCommandTest, CharacterConditionFollowsTheBorrowedContext 
     character._bodyShape = sw::hashed_string( "Average" );
     equipment.settleCharacterChange( bag );
     SW_EXPECT_FALSE( equipment.isSuppressed( sw::hashed_string( "Waist" ) ) );
+}
+
+/**
+ * @brief [InventoryCommandTest] 시작 전에 받은 상태는 다시 떠도 그대로다 — 불러온 직후의 저장이 장비를 기본값으로 덮지 않는다
+ */
+SW_TEST_CASE( InventoryCommandTest, StateHeldBeforePlaySurvivesAnotherCapture )
+{
+    sw::CharacterEquipmentComponent character;
+    const sw::vector<uint8>         saved{ 1, 2, 3, 4, 5 }; // 걸지 않은 바이트라 뜻은 상관없다
+    character.restoreState( sw::vector<uint8>( saved ) );
+    sw::vector<uint8> captured;
+    sw::ComponentStateStore::writeComponent<sw::CharacterEquipmentComponent>( character, captured );
+    SW_EXPECT_TRUE( captured == saved );
 }
 
 /**

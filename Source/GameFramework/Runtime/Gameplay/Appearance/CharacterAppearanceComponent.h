@@ -290,6 +290,8 @@ namespace sw
         void serializeState( StateIO& io );
         /** @brief 저장한 상태를 받습니다. 시작 전이면 보관했다가 `onBeginPlay` 가 겁니다. 읽지 못하면 알리고 지금 모습을 그대로 둡니다. */
         void restoreState( vector<uint8>&& bytes );
+        /** @brief 시작 전에 받아 보관한 상태입니다(`ComponentStateStore` 계약 — 있으면 그것이 곧 상태다). */
+        const vector<uint8>& getPendingStateBytes() const { return _pendingStateBytes; }
 
         /** @brief 지금 스폰해 둔 부품 오브젝트입니다. */
         void collectPartObjects( vector<GameObjectHandle>& outListObject ) const;

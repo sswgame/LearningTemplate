@@ -22,7 +22,21 @@ namespace sw
 {
     struct ObjectIdentity;
 
+    class Component;
     class GameObject;
+
+    namespace ComponentStateStoreTraits
+    {
+        /** @brief @p T 가 시작 전에 받은 상태를 보이는 `getPendingStateBytes()` 를 가졌는지 봅니다(C++17 이라 `requires` 를 쓰지 않는다). */
+        template <typename T, typename = void>
+        struct HasPendingState : std::false_type
+        {
+        };
+        template <typename T>
+        struct HasPendingState<T, std::void_t<decltype( std::declval<const T&>().getPendingStateBytes() )>> : std::true_type
+        {
+        };
+    } // namespace ComponentStateStoreTraits
 
     /**
      * @class ComponentStateStore
@@ -36,6 +50,8 @@ namespace sw
      *            손으로 짝지은 `writeState( Archive& )` 는 여기에 꽂을 수 없다 — 쓰기와 읽기의 칸 순서는 본문 하나가 정한다.
      *          - `void restoreState( vector<uint8>&& bytes )`: 다시 만든 컴포넌트가 받는다. 아직 `onBeginPlay` 전이면 보관했다가 시작할 때 적용한다.
      *            읽지 못하면(버전이나 길이가 맞지 않음) 알리고 새 판으로 시작한다.
+     *          - `const vector<uint8>& getPendingStateBytes() const`: 시작 전에 보관한 바이트다(보관하는 컴포넌트만 둔다 — `DeferredStateRestore` 를 쓰면 그 틀이 대신한다).
+     *            보관한 동안은 그 바이트가 곧 상태라 다시 뜰 때 그대로 싣는다 — 지금 값을 쓰면 세이브를 기본값으로 덮는다.
      *
      *          짝짓기는 언제나 컴포넌트 id 다. 같은 프로세스(핫 리로드)에서는 컴포넌트 id 가 복원된다.
      *          다른 실행의 세이브는 id 가 새로 나가므로, 씬 섹션을 읽은 쪽이 "저장된 id → 새 id" 표를 만들어 `remapComponentIDs` 로 바꾼다
@@ -102,10 +118,8 @@ namespace sw
             uint32               count    = 0;
             manager.template forEachComponentOfType<TComponent>( key, [this, &typeName, &count]( TComponent* pComponent )
             {
-                Archive archive;
-                StateIO::writeObject( *pComponent, archive );
                 vector<uint8> bytes;
-                archive.writeData( bytes );
+                writeComponent<TComponent>( *pComponent, bytes );
                 add( typeName, pComponent->getComponentID(), std::move( bytes ) );
                 ++count;
             } );
@@ -134,6 +148,24 @@ namespace sw
                 ++count;
             }
             return count;
+        }
+
+        /** @brief 컴포넌트 하나의 상태를 뜹니다. 시작 전에 받아 보관한 바이트(`getPendingStateBytes`)가 있으면 그것입니다. */
+        template <typename TComponent>
+        static void writeComponent( Component& component, vector<uint8>& outBytes )
+        {
+            TComponent& typed = static_cast<TComponent&>( component );
+            if constexpr ( ComponentStateStoreTraits::HasPendingState<TComponent>::value )
+            {
+                if ( typed.getPendingStateBytes().empty() == false )
+                {
+                    outBytes = typed.getPendingStateBytes();
+                    return;
+                }
+            }
+            Archive archive;
+            StateIO::writeObject( typed, archive );
+            archive.writeData( outBytes );
         }
 
     private:
