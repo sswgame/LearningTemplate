@@ -1,0 +1,22 @@
+{
+    "_name": "GF_Client_CreatureLife",
+    "_version": "1.0.0",
+    "_kind": "Kit",
+    "_description": "생물 생활 키트(클라이언트) — 디렉터의 마을 오브젝트 · 생물을 모습으로 세우고 대화 입력을 디렉터 명령으로 바꾼다(뷰 · 입력). 규칙 · 디렉터는 GF_CreatureLife",
+    "_listDependency": [
+        {
+            "_name": "GameFramework"
+        },
+        {
+            "_name": "GF_CreatureLife"
+        }
+    ],
+    "_listConfiguration": [
+        "Dev",
+        "Shipping"
+    ],
+    "_listTarget": [
+        "Client"
+    ],
+    "_bEnabledByDefault": true
+}

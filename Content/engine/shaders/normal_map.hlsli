@@ -22,7 +22,7 @@ float3 applyNormalMap( uint normalMap, float normalScale, float2 uv, float3 norm
     if ( tangentLength < 1e-5f )
         return normal;
     const float3 unitTangent = orthogonalTangent / tangentLength;
-    const float3 bitangent   = cross( normal, unitTangent ) * ( tangent.w < 0.0f ? -1.0f : 1.0f );
+    const float3 bitangent   = cross( normal, unitTangent ) * CommonMath::computeBitangentSign( tangent.w );
     return normalize( unitTangent * tangentNormal.x + bitangent * tangentNormal.y + normal * tangentNormal.z );
 }
 

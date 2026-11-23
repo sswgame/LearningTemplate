@@ -29,7 +29,7 @@ namespace sw
     /** @brief 엔진 노드 등록 함수 모음입니다(`RigNodeRegistry` 의 생성자가 부릅니다). */
     struct RigNodeLibrary
     {
-        /** @brief 엔진 노드 종류를 모두 등록합니다. 늘 true 입니다(정적 초기화에 쓰려고 값을 돌려줍니다). */
+        /** @brief 엔진 노드 종류를 모두 등록합니다. 겹친 이름이 있으면 레지스트리가 알리고 false 입니다. */
         [[nodiscard]] static bool registerEngineNodes( RigNodeRegistry& registry );
     };
 } // namespace sw
@@ -38,11 +38,7 @@ namespace sw
 {
     bool RigNodeLibrary::registerEngineNodes( RigNodeRegistry& registry )
     {
-        RigIKNodes::registerNodes( registry );
-        RigConstraintNodes::registerNodes( registry );
-        RigSecondaryNodes::registerNodes( registry );
-        RigJiggleNode::registerNodes( registry );
-        return true;
+        return RigIKNodes::registerNodes( registry ) && RigConstraintNodes::registerNodes( registry ) && RigSecondaryNodes::registerNodes( registry ) && RigJiggleNode::registerNodes( registry );
     }
 } // namespace sw
 
@@ -70,14 +66,14 @@ namespace sw
     RigNodeRegistry::RigNodeRegistry()
         : _registry{}
     {
-        (void)RigNodeLibrary::registerEngineNodes( *this );
+        (void)RigNodeLibrary::registerEngineNodes( *this ); // 빈 표의 엔진 이름이다 — 겹치면 레지스트리가 오류로 알린다
     }
 
     SW_ENGINE_SERVICE_SUBSYSTEM( RigNodeRegistry, GameVisible, Services, (), SW_ENGINE_DEFAULT_FACTORY( RigNodeRegistry ) );
 
-    void RigNodeRegistry::registerNode( const hashed_string& typeName, RigNodeFactory factory )
+    bool RigNodeRegistry::registerNode( const hashed_string& typeName, RigNodeFactory factory )
     {
-        _registry.addOrReplace( typeName, factory, "Rig node type" );
+        return _registry.addLogged( typeName, factory, "Rig node type" );
     }
 
     unique_ptr<RigNode> RigNodeRegistry::createNode( const hashed_string& typeName ) const

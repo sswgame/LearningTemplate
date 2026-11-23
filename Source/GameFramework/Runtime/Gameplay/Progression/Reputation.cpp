@@ -223,5 +223,5 @@ namespace sw
 namespace sw
 {
     /** @brief `ReputationCatalog` 의 데이터 파일 종류입니다(스키마 테스트와 카탈로그 편집기가 이 줄로 어떤 파일을 어떻게 읽는지 압니다). */
-    SW_MODULE_SHARED_ASSET_CACHE( Friendship, ReputationCatalog, SW_GF_API, AssetTypeDef::makeDataFile( ReputationCatalog::kDataKind, AssetPathRule{ "game/", {}, "/data/friendship.xml" }, AssetTypeLoader::of<ReputationCatalog>( MemoryTag::Game ) ) );
+    SW_MODULE_SHARED_ASSET_CACHE( Friendship, ReputationCatalog, SW_GF_API, ReputationCatalog::kAssetType.withLoader( AssetTypeLoader::of<ReputationCatalog>( MemoryTag::Game ) ) );
 } // namespace sw

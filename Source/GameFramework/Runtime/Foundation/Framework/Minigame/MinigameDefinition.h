@@ -6,7 +6,7 @@
  *          정의에 게임 모드 칸을 두지 않는다(어디에도 적용되지 않던 `<GameMode>` 원소를 지웠다). 읽기는 루트 속성을 리플렉션 스키마로(`XMLFields::readProperties`), 자식 원소는 없다.
  * @code
  *     <Minigame name="kitdemo_actionplatformer" map="game/playground/maps/kitdemo_actionplatformer.scene.xml" entry="SceneSwitch" portalSlot="3"
- *               features="ActionPlatformer" inputContexts="platformer" ui="game/playground/ui/platformer_hud.ui.xml" catalogs="actionplatformer"/>
+ *               features="ActionPlatformer" inputContexts="platformer" ui="game/playground/ui/platformer_hud.ui.xml" catalogs="ActionPlatformerCatalog"/>
  * @endcode
  */
 #pragma once
@@ -74,12 +74,12 @@ namespace sw
         vector<hashed_string> _listCatalog{}; ///< 기능이 읽을 데이터 종류(`kDataKind`). 기능이 적지 않은 종류를 읽거나 적은 종류를 아무도 읽지 않으면 켜기가 진다
         PROPERTY( Name = "save" )
         MinigameSavePolicy _savePolicy{ MinigameSavePolicy::Allowed }; ///< 안에서 세이브를 허락하는지
-        PROPERTY()
-        float3 _subLevelOffset{}; ///< 하위 레벨을 얹을 자리(입구 사물)에서 맵 원점까지의 어긋남(미터). 맵의 정문이 원점이 아닐 때 적는다
         PROPERTY( Name = "localPlayers", Min = 1, Max = 4 )
         int32 _localPlayerCount{ 1 }; ///< 한 화면에서 함께 하는 사람 수. 2 이상이면 켜는 동안 입력 사용자를 연다(`InputManager::openLocalUsers`)
         PROPERTY( Min = -1 )
         int32 _portalSlot{ kNoPortalSlot }; ///< 허브 입구 자리 번호(0 부터, 팩에서 겹치지 않는다) — 적으면 허브의 `MinigamePortalSpawnerComponent` 가 그 자리에 입구를 세운다
+        PROPERTY()
+        float3 _portalOffset{}; ///< 허브 입구에서 하위 레벨 맵 원점까지의 어긋남(미터) — 맵의 정문이 원점이 아닐 때 정문을 입구 앞에 맞춘다. 씬 전환 미니게임은 보지 않는다
 
         /** @brief 허브 입구를 가지면 true 입니다(`_portalSlot` 을 적었다). */
         bool hasPortal() const { return _portalSlot >= 0; }

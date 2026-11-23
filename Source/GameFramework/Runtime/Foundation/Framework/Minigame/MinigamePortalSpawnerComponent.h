@@ -51,9 +51,9 @@ namespace sw
         float3 computeSlotPosition( int32 slot ) const;
 
     private:
-        /** @brief 프리팹 @p prefab 을 이름 @p pName 으로 @p position 에 세우고 그 트리거 @p TTrigger 에 @p definition 의 이름을 넣습니다. 지면 오류를 남기고 false 입니다. */
+        /** @brief 프리팹 @p prefab 을 이름 @p pName 으로 @p position 에 세우고 그 트리거 @p TTrigger 에 @p definition 의 이름을 넣고 그 트리거를 돌려줍니다. 지면 오류를 남기고 nullptr 입니다. */
         template <typename TTrigger>
-        [[nodiscard]] bool spawnVolume( GameObjectManager& manager, const AssetRef<PrefabAsset>& prefab, const utf8* pName, const MinigameDefinition& definition );
+        [[nodiscard]] TTrigger* spawnVolume( GameObjectManager& manager, const AssetRef<PrefabAsset>& prefab, const utf8* pName, const MinigameDefinition& definition );
         /** @brief 정의마다 입구(와 미리 읽기 볼륨)를 세웁니다. */
         void spawnPortals( GameObjectManager& manager, const MinigameFlow& flow );
 

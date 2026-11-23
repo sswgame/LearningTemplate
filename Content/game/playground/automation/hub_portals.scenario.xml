@@ -2,11 +2,11 @@
 <?asset guid="01285eea14034d928deb4273e19b0345"?>
 <!--
   허브의 미니게임 입구 — 정의(minigames/*.minigame.xml)의 portalSlot 하나가 입구 하나다(maps/hub 의 MinigamePortals 가 prefabs/minigameportal 를 세운다).
-  흡수한 미니게임 넷(pixeltown · harvestvalley · voxelcraft · frontiertown)의 입구에 플레이어를 세워 들어가고, minigame.leave 로 나와 마을이 복원되는지 본다.
+  흡수한 미니게임 일곱(pixeltown · harvestvalley · voxelcraft · frontiertown · meadowvillage · themepark · abilityarena)의 입구에 플레이어를 세워 들어가고, minigame.leave 로 나와 마을이 복원되는지 본다.
   돌아온 자리는 입구 안이다 — 다시 세운 입구가 나타난 플레이어를 세지 않는다(_spawnInside Ignore). 입구를 더하면 여기에 한 묶음을 더한다.
   실행: App -scenario=game/playground/automation/hub_portals.scenario.xml -unattended (체인: ctest -R Scenario.playground)
 -->
-<Scenario name="game.playground.hub_portals" fixedDelta="0.0166667" timeoutFrames="4800" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+<Scenario name="game.playground.hub_portals" fixedDelta="0.0166667" timeoutFrames="7200" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<Launch variable="gv_firstScene" value="game/playground/maps/hub.scene.xml"/>
 	<Variable name="gv_playgroundAutoPlay" value="0"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
@@ -64,6 +64,39 @@
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<DevCommand line="minigame.leave"/>
 	<WaitUntil watch="Minigame.RestoreCount" equals="4" timeoutWallSeconds="60"/>
+	<ExpectActiveScene path="game/playground/maps/hub.scene.xml"/>
+
+	<!-- meadowvillage -->
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<DevCommand line="teleport Player 4 0.05 32"/>
+	<WaitUntil watch="Minigame.Active" is="meadowvillage" timeoutWallSeconds="60"/>
+	<ExpectActiveScene path="game/playground/meadowvillage/maps/meadow.scene.xml"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<DevCommand line="minigame.leave"/>
+	<WaitUntil watch="Minigame.RestoreCount" equals="5" timeoutWallSeconds="60"/>
+	<ExpectActiveScene path="game/playground/maps/hub.scene.xml"/>
+
+	<!-- themepark — 하위 레벨이다. 마을이 보인 채로 얹히고 정문(공원 좌표 20, -40)이 입구 앞 6 m 에 선다(portalOffset) -->
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<DevCommand line="teleport Player 11 0.05 32"/>
+	<WaitUntil watch="Minigame.Active" is="themepark" timeoutFrames="60"/>
+	<WaitUntil watch="Scene.LoadedSubLevelCount" equals="1" timeoutWallSeconds="60"/>
+	<ExpectActiveScene path="game/playground/maps/hub.scene.xml"/>
+	<Expect watch="Object.X" target="themepark/ParkGate" near="11" tolerance="0.05"/>
+	<Expect watch="Object.Z" target="themepark/ParkGate" near="38" tolerance="0.05"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<DevCommand line="minigame.leave"/>
+	<WaitUntil watch="Scene.SubLevelCount" equals="0" timeoutFrames="30"/>
+	<Expect watch="Minigame.Active" is="none"/>
+
+	<!-- abilityarena -->
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<DevCommand line="teleport Player 18 0.05 32"/>
+	<WaitUntil watch="Minigame.Active" is="abilityarena" timeoutWallSeconds="60"/>
+	<ExpectActiveScene path="game/playground/abilityarena/maps/arena.scene.xml"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<DevCommand line="minigame.leave"/>
+	<WaitUntil watch="Minigame.RestoreCount" equals="6" timeoutWallSeconds="60"/>
 	<ExpectActiveScene path="game/playground/maps/hub.scene.xml"/>
 	<Expect watch="Minigame.Active" is="none"/>
 	<Expect watch="Minigame.LeakCount" equals="0"/>

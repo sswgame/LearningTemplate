@@ -27,7 +27,6 @@
 				<_listComponent>
 					<SRPGGameModeComponent _localID="8552409527683663359" _componentName="SRPGGameModeComponent"
 					                       _bActive="true"
-					                       _catalogPath="game/playground/data/kitdemo/demo.srpg.xml"
 					                       _width="6"
 					                       _height="3"
 					                       _defaultTerrain="plain"

@@ -1,0 +1,454 @@
+<?asset guid="d23c8112e4cd8e4e73bdbb3575df4281"?>
+<Scene formatVersion="3" name="ThemePark">
+	<!-- 테마파크 하위 레벨(minigames/themepark, entry SubLevel) — 들어갈 때의 활성 씬에 진입을 건 사물의 변환으로 얹는다. 자리는 모두 공원 원점(ParkGameMode) 기준이다.
+	     해 · 하늘은 바탕 씬의 것을 쓴다. 카메라는 바탕 카메라(우선순위 0)보다 앞서 화면을 맡고, 나가면 하위 레벨과 함께 사라져 바탕 카메라가 돌아온다. -->
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</SceneSettings>
+	<entities>
+		<entity id="1" name="GameCamera">
+			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localID="17709685451340727998" _componentName="CameraComponent"
+					                 _bActive="true"
+					                 _localPosition="-133.0931,125,-133.0931"
+					                 _localRotation="0.5235988,0.7853982,0"
+					                 _localScale="1,1,1"
+					                 _attachOwner="None"
+					                 _attachOwnerID="0"
+					                 _attachComponent="None"
+					                 _fovY="40.107045"
+					                 _nearZ="0.1"
+					                 _farZ="625"
+					                 _orthoHeight="110"
+					                 _priority="10"
+					                 _role="Game"
+					                 _bOrthographic="true" />
+					<CameraDirectorComponent _localID="17954231826208681790" _componentName="CameraDirectorComponent"
+					                         _bActive="true"
+					                         _catalogPath="game/playground/themepark/data/park.cameras.xml"
+					                         _initialPreset="park"
+					                         _target="19"
+					                         _bReadInput="true">
+						<_listGroupTarget />
+					</CameraDirectorComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="Grass">
+			<GameObject _schemaVersion="0" _name="Grass" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="20,-0.02,110"
+					               _localRotation="0,0,0"
+					               _localScale="260,1,340"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="Plane"
+					               _materialPath="game/playground/themepark/materials/grass.material"
+					               _boundsRadius="0.866"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="4" name="ParkGate">
+			<GameObject _schemaVersion="0" _name="ParkGate" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="20,0,-40"
+					               _localRotation="0,0,0"
+					               _localScale="2.6,2.6,2.6"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="game/playground/themepark/models/park_entrance.mesh"
+					               _materialPath="game/playground/themepark/materials/palette.material"
+					               _boundsRadius="0.866"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="5" name="FoodStall">
+			<GameObject _schemaVersion="0" _name="FoodStall" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="13,0,-34"
+					               _localRotation="0,-1.5707964,0"
+					               _localScale="2.4,2.4,2.4"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="game/playground/themepark/models/stall_food.mesh"
+					               _materialPath="game/playground/themepark/materials/palette.material"
+					               _boundsRadius="0.866"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="6" name="StressTest1">
+			<GameObject _schemaVersion="0" _name="StressTest1" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="16,0,-31.5"
+					               _localRotation="0,-1.5708,0"
+					               _localScale="1.8435,1.8435,1.8435"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="common/models/quaternius/props/bench.mesh"
+					               _materialPath="common/models/quaternius/props/bench/materials/mi_trim_furniture.material"
+					               _boundsRadius="0.866"
+					               _gpuSpinSeed="0"
+					               _bVisible="true"
+					               _sectionName="mi_trim_furniture" />
+					<MeshSectionComponent _localID="2542659449416077965" _componentName="MeshSectionComponent"
+					                      _bActive="true"
+					                      _attachComponent="#0244d8c8807cd288"
+					                      _materialPath="common/models/quaternius/props/bench/materials/mi_trim_metal.material"
+					                      _sectionName="mi_trim_metal" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="7" name="TrashCan1">
+			<GameObject _schemaVersion="0" _name="TrashCan1" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="16,0,-35.5"
+					               _localRotation="0,0,0"
+					               _localScale="2,2,2"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="game/playground/themepark/models/trash.mesh"
+					               _materialPath="game/playground/themepark/materials/palette.material"
+					               _boundsRadius="0.866"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="8" name="DrinksStall">
+			<GameObject _schemaVersion="0" _name="DrinksStall" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="27,0,-34"
+					               _localRotation="0,1.5707964,0"
+					               _localScale="2.4,2.4,2.4"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="game/playground/themepark/models/stall_drinks.mesh"
+					               _materialPath="game/playground/themepark/materials/palette.material"
+					               _boundsRadius="0.866"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="9" name="StressTest2">
+			<GameObject _schemaVersion="0" _name="StressTest2" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="24,0,-31.5"
+					               _localRotation="0,1.5708,0"
+					               _localScale="1.8435,1.8435,1.8435"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="common/models/quaternius/props/bench.mesh"
+					               _materialPath="common/models/quaternius/props/bench/materials/mi_trim_furniture.material"
+					               _boundsRadius="0.866"
+					               _gpuSpinSeed="0"
+					               _bVisible="true"
+					               _sectionName="mi_trim_furniture" />
+					<MeshSectionComponent _localID="2542659449416077965" _componentName="MeshSectionComponent"
+					                      _bActive="true"
+					                      _attachComponent="#0244d8c8807cd288"
+					                      _materialPath="common/models/quaternius/props/bench/materials/mi_trim_metal.material"
+					                      _sectionName="mi_trim_metal" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="10" name="TrashCan2">
+			<GameObject _schemaVersion="0" _name="TrashCan2" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="24,0,-35.5"
+					               _localRotation="0,0,0"
+					               _localScale="2,2,2"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="game/playground/themepark/models/trash.mesh"
+					               _materialPath="game/playground/themepark/materials/palette.material"
+					               _boundsRadius="0.866"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="11" name="InformationStall">
+			<GameObject _schemaVersion="0" _name="InformationStall" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="13,0,-29"
+					               _localRotation="0,-1.5707964,0"
+					               _localScale="2.4,2.4,2.4"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="game/playground/themepark/models/stall_information.mesh"
+					               _materialPath="game/playground/themepark/materials/palette.material"
+					               _boundsRadius="0.866"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="12" name="StressTest3">
+			<GameObject _schemaVersion="0" _name="StressTest3" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="16,0,-26.5"
+					               _localRotation="0,-1.5708,0"
+					               _localScale="1.8435,1.8435,1.8435"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="common/models/quaternius/props/bench.mesh"
+					               _materialPath="common/models/quaternius/props/bench/materials/mi_trim_furniture.material"
+					               _boundsRadius="0.866"
+					               _gpuSpinSeed="0"
+					               _bVisible="true"
+					               _sectionName="mi_trim_furniture" />
+					<MeshSectionComponent _localID="2542659449416077965" _componentName="MeshSectionComponent"
+					                      _bActive="true"
+					                      _attachComponent="#0244d8c8807cd288"
+					                      _materialPath="common/models/quaternius/props/bench/materials/mi_trim_metal.material"
+					                      _sectionName="mi_trim_metal" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="13" name="TrashCan3">
+			<GameObject _schemaVersion="0" _name="TrashCan3" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="16,0,-30.5"
+					               _localRotation="0,0,0"
+					               _localScale="2,2,2"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="game/playground/themepark/models/trash.mesh"
+					               _materialPath="game/playground/themepark/materials/palette.material"
+					               _boundsRadius="0.866"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="14" name="ToiletStall">
+			<GameObject _schemaVersion="0" _name="ToiletStall" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="27,0,-29"
+					               _localRotation="0,1.5707964,0"
+					               _localScale="2.4,2.4,2.4"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="game/playground/themepark/models/stall_toilets.mesh"
+					               _materialPath="game/playground/themepark/materials/palette.material"
+					               _boundsRadius="0.866"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="15" name="StressTest4">
+			<GameObject _schemaVersion="0" _name="StressTest4" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="24,0,-26.5"
+					               _localRotation="0,1.5708,0"
+					               _localScale="1.8435,1.8435,1.8435"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="common/models/quaternius/props/bench.mesh"
+					               _materialPath="common/models/quaternius/props/bench/materials/mi_trim_furniture.material"
+					               _boundsRadius="0.866"
+					               _gpuSpinSeed="0"
+					               _bVisible="true"
+					               _sectionName="mi_trim_furniture" />
+					<MeshSectionComponent _localID="2542659449416077965" _componentName="MeshSectionComponent"
+					                      _bActive="true"
+					                      _attachComponent="#0244d8c8807cd288"
+					                      _materialPath="common/models/quaternius/props/bench/materials/mi_trim_metal.material"
+					                      _sectionName="mi_trim_metal" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="16" name="TrashCan4">
+			<GameObject _schemaVersion="0" _name="TrashCan4" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="24,0,-30.5"
+					               _localRotation="0,0,0"
+					               _localScale="2,2,2"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="game/playground/themepark/models/trash.mesh"
+					               _materialPath="game/playground/themepark/materials/palette.material"
+					               _boundsRadius="0.866"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="17" name="EdgeTrees">
+			<GameObject _schemaVersion="0" _name="EdgeTrees" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localID="12574257654564749349" _componentName="SceneComponent"
+					                _bActive="true"
+					                _localPosition="0,0,0"
+					                _localRotation="0,0,0"
+					                _localScale="1,1,1"
+					                _attachOwner="None"
+					                _attachOwnerID="0"
+					                _attachComponent="None" />
+					<PropScatterComponent _localID="13818770567693632230" _componentName="PropScatterComponent"
+					                      _bActive="true"
+					                      _materialPath=""
+					                      _propName="ParkTree"
+					                      _regionMin="-100,0,-45"
+					                      _regionMax="140,0,265"
+					                      _spacing="9"
+					                      _alongJitter="3"
+					                      _inwardJitter="4"
+					                      _scaleMin="1.1"
+					                      _scaleMax="1.5"
+					                      _seed="2654435769"
+					                      _mode="Edge">
+						<_listModel>
+							<PropScatterModel _meshID="common/models/quaternius/nature/commontree_1.mesh" _weight="0.25">
+								<_listSection>
+									<PropScatterSection _sectionName="bark_normaltree" _materialPath="common/models/quaternius/nature/commontree_1/materials/bark_normaltree.material" />
+									<PropScatterSection _sectionName="leaves_normaltree" _materialPath="common/models/quaternius/nature/commontree_1/materials/leaves_normaltree.material" />
+								</_listSection>
+							</PropScatterModel>
+							<PropScatterModel _meshID="common/models/quaternius/nature/commontree_2.mesh" _weight="0.2">
+								<_listSection>
+									<PropScatterSection _sectionName="bark_normaltree" _materialPath="common/models/quaternius/nature/commontree_2/materials/bark_normaltree.material" />
+									<PropScatterSection _sectionName="leaves_normaltree" _materialPath="common/models/quaternius/nature/commontree_2/materials/leaves_normaltree.material" />
+								</_listSection>
+							</PropScatterModel>
+							<PropScatterModel _meshID="common/models/quaternius/nature/commontree_3.mesh" _weight="0.15">
+								<_listSection>
+									<PropScatterSection _sectionName="bark_normaltree" _materialPath="common/models/quaternius/nature/commontree_3/materials/bark_normaltree.material" />
+									<PropScatterSection _sectionName="leaves_normaltree" _materialPath="common/models/quaternius/nature/commontree_3/materials/leaves_normaltree.material" />
+								</_listSection>
+							</PropScatterModel>
+							<PropScatterModel _meshID="common/models/quaternius/nature/pine_1.mesh" _weight="0.1">
+								<_listSection>
+									<PropScatterSection _sectionName="bark_normaltree" _materialPath="common/models/quaternius/nature/pine_1/materials/bark_normaltree.material" />
+									<PropScatterSection _sectionName="leaves_pine" _materialPath="common/models/quaternius/nature/pine_1/materials/leaves_pine.material" />
+								</_listSection>
+							</PropScatterModel>
+							<PropScatterModel _meshID="common/models/quaternius/nature/bush_common_flowers.mesh" _weight="0.3">
+								<_listSection>
+									<PropScatterSection _sectionName="leaves_normaltree" _materialPath="common/models/quaternius/nature/bush_common_flowers/materials/leaves_normaltree.material" />
+									<PropScatterSection _sectionName="flowers" _materialPath="common/models/quaternius/nature/bush_common_flowers/materials/flowers.material" />
+								</_listSection>
+							</PropScatterModel>
+						</_listModel>
+						<_listExclusion>
+							<PropScatterExclusion _center="20,0,-40" _radius="14" />
+						</_listExclusion>
+						<_listSpawned />
+					</PropScatterComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<!-- 공원 원점은 ParkGameMode 의 씬 컴포넌트다 — 배치 데이터(rides.xml)는 이 자리 기준이고, 하위 레벨로 얹으면 앵커를 따라간다. 모습 · 입력은 뒤의 ParkViewComponent(GF_Client_ThemePark). -->
+		<entity id="18" name="ParkGameMode">
+			<GameObject _schemaVersion="0" _name="ParkGameMode" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localID="12574257654564749349" _componentName="SceneComponent"
+					                _bActive="true"
+					                _localPosition="0,0,0"
+					                _localRotation="0,0,0"
+					                _localScale="1,1,1"
+					                _attachOwner="None"
+					                _attachOwnerID="0"
+					                _attachComponent="None" />
+					<ParkGameModeComponent _localID="7846510615290749096" _componentName="ParkGameModeComponent"
+					                       _bActive="true"
+					                       _parkDataPath="game/playground/data/rides.xml"
+					                       _gate="4"
+					                       _autoBuildInterval="20"
+					                       _bAutoPlay="false" />
+					<ParkViewComponent _localID="6184027395518830417" _componentName="ParkViewComponent"
+					                   _bActive="true"
+					                   _guestPrefab="game/playground/themepark/prefabs/guest.prefab.xml"
+					                   _carFrontPrefab="game/playground/themepark/prefabs/coastercarfront.prefab.xml"
+					                   _carPrefab="game/playground/themepark/prefabs/coastercar.prefab.xml"
+					                   _railPrefab="game/playground/themepark/prefabs/coasterrail.prefab.xml"
+					                   _supportPrefab="game/playground/themepark/prefabs/coastersupport.prefab.xml"
+					                   _stationPrefab="game/playground/themepark/prefabs/coasterstation.prefab.xml"
+					                   _rideEntrancePrefab="game/playground/themepark/prefabs/rideentrance.prefab.xml"
+					                   _pathPrefab="game/playground/themepark/prefabs/path.prefab.xml"
+					                   _flatRidePrefab="game/playground/themepark/prefabs/flatride.prefab.xml"
+					                   _happyColor="0.3,0.85,0.35,1"
+					                   _contentColor="0.95,0.85,0.25,1"
+					                   _unhappyColor="0.9,0.25,0.2,1"
+					                   _cameraRig="1"
+					                   _nextRideAction="Park.NextRide"
+					                   _toggleOpenAction="Park.ToggleOpen"
+					                   _priceDownAction="Park.PriceDown"
+					                   _priceUpAction="Park.PriceUp"
+					                   _feeDownAction="Park.FeeDown"
+					                   _feeUpAction="Park.FeeUp"
+					                   _buildAction="Park.Build"
+					                   _rideAction="Park.Ride"
+					                   _thoughtsAction="Park.Thoughts"
+					                   _statusAction="Park.Status" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<!-- 카메라 초점 — 공원 가운데 -->
+		<entity id="19" name="ParkCenter">
+			<GameObject _schemaVersion="0" _name="ParkCenter" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localID="12574257654564749349" _componentName="SceneComponent"
+					                _bActive="true"
+					                _localPosition="20,0,20"
+					                _localRotation="0,0,0"
+					                _localScale="1,1,1"
+					                _attachOwner="None"
+					                _attachOwnerID="0"
+					                _attachComponent="None" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

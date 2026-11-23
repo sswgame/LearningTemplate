@@ -94,6 +94,35 @@ SW_TEST_CASE( SequenceTriggerTest, RepeatableVolumeDoesNotRestartWhilePlaying )
     SW_EXPECT_EQUAL( 2u, pPlayer->getHistory().countKind( SequenceHistoryKind::Started ) );
 }
 
+/** @brief [SequenceTriggerTest] 혼자 도는 월드는 화면이 하나라 Activator 여도 재생은 하나다 — 다른 활성자가 들어와도 따로 틀지 않는다 */
+SW_TEST_CASE( SequenceTriggerTest, ActivatorAudienceSharesThePlayerWithoutANetLink )
+{
+    GameObjectManager manager;
+    GameObject*       pDirector = manager.createGameObject( hashed_string( "Director" ) );
+    SW_REQUIRE_NOT_NULL( pDirector );
+    SequencePlayerComponent* pPlayer = pDirector->addComponent<SequencePlayerComponent>();
+    SW_REQUIRE_NOT_NULL( pPlayer );
+    pPlayer->setSequence( SequenceAsset{} );
+
+    GameObject* pVolumeObject = manager.createGameObject( hashed_string( "Gate" ) );
+    SW_REQUIRE_NOT_NULL( pVolumeObject );
+    SequenceTriggerComponent* pTrigger = pVolumeObject->addComponent<SequenceTriggerComponent>();
+    SW_REQUIRE_NOT_NULL( pTrigger );
+    pTrigger->setSequence( pDirector->getHandle() );
+    pTrigger->setAudience( SequenceTriggerAudience::Activator );
+    pTrigger->setOnce( false );
+
+    GameObject* pRider = manager.createGameObject( hashed_string( "Rider" ) );
+    GameObject* pOther = manager.createGameObject( hashed_string( "Other" ) );
+    SW_REQUIRE_NOT_NULL( pRider );
+    SW_REQUIRE_NOT_NULL( pOther );
+    SW_EXPECT_TRUE( pTrigger->activate( pRider ) );
+    SW_EXPECT_FALSE( pTrigger->activate( pOther ) );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, pTrigger->getPlays().size() );
+    SW_EXPECT_TRUE( pTrigger->getPlays()[0]._activator == pRider->getHandle() );
+    SW_EXPECT_TRUE( pTrigger->getPlays()[0]._director == pDirector->getHandle() );
+}
+
 /** @brief [SequenceTriggerTest] 플레이어가 데이터 결함(범위 제한 칸 없음)으로 틀지 못하면 발동하지 않은 것으로 남는다 */
 SW_TEST_CASE( SequenceTriggerTest, PlayerThatCannotPlayDoesNotCountAsFired )
 {

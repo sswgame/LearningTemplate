@@ -99,7 +99,6 @@ namespace sw
 
         WesternOutlaw                  _outlaw;
         SharedAssetRef<WesternCatalog> _pWesternCatalog;
-        SharedAssetRef<WeatherCatalog> _pWeatherCatalog;
         vector<WesternWitness>         _listWitness;             ///< `updateLawSight` 가 프레임마다 다시 채우는 목격자 목록(용량을 다시 쓴다 — 상태가 아니다)
         uint8                          _bAutoMountRequested : 1; ///< 자동 플레이가 기수를 태우라고 한 번 청했다
         [[maybe_unused]] uint8         _reserved            : 7;

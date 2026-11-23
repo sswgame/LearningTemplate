@@ -1,0 +1,13 @@
+<?asset guid="1398b8b51d5579e4e7be1c2909714447"?>
+<Prefab formatVersion="1" name="ArenaCasterAI">
+	<GameObject _schemaVersion="0" _name="ArenaCasterAI" _bActive="true">
+		<_listComponent>
+			<ArenaEnemyAIComponent _localID="16931571332573933122" _componentName="ArenaEnemyAIComponent"
+			                       _bActive="true"
+			                       _possessAtStart="0"
+			                       _turnRate="20"
+			                       _arriveDistance="0.3"
+			                       _behaviorTree="game/playground/abilityarena/data/ai/caster.bt.xml" />
+		</_listComponent>
+	</GameObject>
+</Prefab>

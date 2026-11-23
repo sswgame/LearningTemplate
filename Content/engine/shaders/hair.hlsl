@@ -98,7 +98,7 @@ float3 computeStrandTangent( PixelContext context, float texelLuminance )
 {
     const MaterialData material  = context._material;
     const float3       tangentU  = context._tangent.xyz;
-    const float3       tangentV  = -cross( context._normal, tangentU ) * context._tangent.w;
+    const float3       tangentV  = -cross( context._normal, tangentU ) * CommonMath::computeBitangentSign( context._tangent.w );
     const float3       alongUV   = material._strandAxis > 0.5f ? tangentV : tangentU;
     const float        direction = material._strandTipUV >= material._strandRootUV ? 1.0f : -1.0f;
     return HairShading::shiftTangent( normalize( alongUV * direction ), context._normal, ( texelLuminance - 0.5f ) * material._shiftJitter );

@@ -139,6 +139,11 @@ SW_TEST_CASE( HousingPartCatalogTest, RefusesBadSnapPointsAndVersions )
     HousingPartCatalog badVersion;
     SW_EXPECT_LOG( "HousingPartCatalog.PartInvalid" );
     SW_EXPECT_FALSE( badVersion.loadFromXMLText( R"(<HousingPartCatalog currency="Gold"><Part id="bed" name="Bed" prefab="b.prefab.xml" version="1" minLoadVersion="2"/></HousingPartCatalog>)", "test" ) );
+
+    HousingPartCatalog stillPresent; // 이어받은 부품이 아직 있다 — 참조 표가 읽기를 막는다
+    SW_EXPECT_LOG( "XMLCatalog.RemovedIDStillPresent" );
+    SW_EXPECT_FALSE( stillPresent.loadFromXMLText(
+        R"(<HousingPartCatalog currency="Gold"><Part id="bed" name="Bed" prefab="b.prefab.xml" replaces="cot"/><Part id="cot" name="Cot" prefab="c.prefab.xml"/></HousingPartCatalog>)", "test" ) );
 }
 
 // ---- 스냅 · 회전 ----

@@ -11,9 +11,24 @@
 	<Setting id="controls.farmBuy" category="controls" type="KeyBinding" action="Farm.Buy" bindIndex="0" default=""/>
 	<Setting id="controls.farmSleep" category="controls" type="KeyBinding" action="Farm.Sleep" bindIndex="0" default=""/>
 	<Setting id="controls.farmStatus" category="controls" type="KeyBinding" action="Status" bindIndex="0" default=""/>
+	<Setting id="controls.townTalk" category="controls" type="KeyBinding" action="CreatureTown.Talk" bindIndex="0" default=""/>
 	<Setting id="controls.voxelJump" category="controls" type="KeyBinding" action="Voxel.Jump" bindIndex="0" default=""/>
 	<Setting id="controls.voxelSprint" category="controls" type="KeyBinding" action="Sprint" bindIndex="0" default=""/>
 	<Setting id="controls.voxelBreak" category="controls" type="KeyBinding" action="Voxel.Break" bindIndex="0" default=""/>
 	<Setting id="controls.voxelPlace" category="controls" type="KeyBinding" action="Voxel.Place" bindIndex="0" default=""/>
 	<Setting id="controls.frontierFastForward" category="controls" type="KeyBinding" action="FastForward" bindIndex="0" default=""/>
+	<Setting id="controls.parkNextRide" category="controls" type="KeyBinding" action="Park.NextRide" bindIndex="0" default=""/>
+	<Setting id="controls.parkToggleOpen" category="controls" type="KeyBinding" action="Park.ToggleOpen" bindIndex="0" default=""/>
+	<Setting id="controls.parkPriceDown" category="controls" type="KeyBinding" action="Park.PriceDown" bindIndex="0" default=""/>
+	<Setting id="controls.parkPriceUp" category="controls" type="KeyBinding" action="Park.PriceUp" bindIndex="0" default=""/>
+	<Setting id="controls.parkFeeDown" category="controls" type="KeyBinding" action="Park.FeeDown" bindIndex="0" default=""/>
+	<Setting id="controls.parkFeeUp" category="controls" type="KeyBinding" action="Park.FeeUp" bindIndex="0" default=""/>
+	<Setting id="controls.parkBuild" category="controls" type="KeyBinding" action="Park.Build" bindIndex="0" default=""/>
+	<Setting id="controls.parkRide" category="controls" type="KeyBinding" action="Park.Ride" bindIndex="0" default=""/>
+	<Setting id="controls.parkThoughts" category="controls" type="KeyBinding" action="Park.Thoughts" bindIndex="0" default=""/>
+	<Setting id="controls.parkStatus" category="controls" type="KeyBinding" action="Park.Status" bindIndex="0" default=""/>
+	<Setting id="controls.arenaMelee" category="controls" type="KeyBinding" action="Arena.Melee" bindIndex="0" default=""/>
+	<Setting id="controls.arenaFireball" category="controls" type="KeyBinding" action="Arena.Fireball" bindIndex="0" default=""/>
+	<Setting id="controls.arenaHeal" category="controls" type="KeyBinding" action="Arena.Heal" bindIndex="0" default=""/>
+	<Setting id="controls.arenaDash" category="controls" type="KeyBinding" action="Arena.Dash" bindIndex="0" default=""/>
 </UserSettingsSchema>

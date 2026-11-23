@@ -406,6 +406,26 @@ namespace sw::editor
         return _bUnsavedCached;
     }
 
+    expected<string> MeshModifierSession::tryMakeSidecarText() const
+    {
+        if ( hasTarget() == false )
+            return unexpected( Error{ ErrorKind::NotFound, "no mesh is picked" } );
+        return _stack.makeJSONText();
+    }
+
+    bool MeshModifierSession::restoreSidecarText( string_view text )
+    {
+        MeshModifierStack restored;
+        if ( hasTarget() == false || restored.readJSONText( text ) == false )
+            return false;
+        recordUndo();
+        if ( _stack.readJSONText( text ) == false )
+            return false; // 같은 글을 방금 읽었다 — 되돌리기가 앞 스택을 돌려준다
+        _selectedIndex = MathUtil::min( _selectedIndex, _stack.getModifierCount() - 1 );
+        markDirty();
+        return true;
+    }
+
     void MeshModifierSession::revertStackToSaved()
     {
         if ( hasTarget() == false || isStackUnsaved() == false )

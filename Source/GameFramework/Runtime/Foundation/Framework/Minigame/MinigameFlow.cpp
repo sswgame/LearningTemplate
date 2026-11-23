@@ -489,9 +489,8 @@ namespace sw
             activateTop(); // 만든 돌아올 자리(저장 막기 포함)는 여기서 버려진다
             return false;
         }
-        const string mapPath        = definition._map.get();
-        const bool   bSub           = definition._entry == MinigameEntry::SubLevel;
-        const float3 subLevelOffset = definition._subLevelOffset;
+        const string mapPath = definition._map.get();
+        const bool   bSub    = definition._entry == MinigameEntry::SubLevel;
         _stack.push( MinigameFrame{ std::move( definition ), std::move( returnPoint ) } );
         _stack.findTop()->updateSaveBlock( _owner.getSaveLock() );
         _pActive            = std::move( pScope );
@@ -505,10 +504,8 @@ namespace sw
         if ( bSub )
         {
             // 하위 레벨 이름은 미니게임 이름이다 — 나올 때 그 이름으로 뺀다. 자리는 진입을 건 사물의 변환이다(언리얼 레벨 인스턴스 액터).
-            SceneSubLevelSubsystem& subLevels    = pScene->getObjectManager()->getSubsystem<SceneSubLevelSubsystem>();
-            SubLevelPlacement       mapPlacement = *placement;
-            mapPlacement._position               = mapPlacement._position + subLevelOffset;
-            if ( subLevels.addSubLevel( *pScene, name, mapPath, mapPlacement ) == false )
+            SceneSubLevelSubsystem& subLevels = pScene->getObjectManager()->getSubsystem<SceneSubLevelSubsystem>();
+            if ( subLevels.addSubLevel( *pScene, name, mapPath, *placement ) == false )
             {
                 SW_LOG_ERROR_ID( "MinigameFlow.SubLevelRefused", "Minigame '%#': the map '%#' could not be added to the active scene (see the messages above)", name, mapPath.c_str() );
                 rollback();

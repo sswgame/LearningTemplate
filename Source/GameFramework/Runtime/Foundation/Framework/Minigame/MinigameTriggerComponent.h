@@ -3,6 +3,7 @@
  * @brief 활성자가 들어오면 미니게임으로 들어가는 볼륨입니다 — 맵의 장소 · 사물(오락실 기계 · 카드 탁자)이 미니게임으로 들어가는 자리입니다.
  */
 #pragma once
+#include "Core/Math/VectorMath.h"
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -33,6 +34,8 @@ namespace sw
         /** @brief 들어갈 미니게임 이름을 정합니다. 코드로 만든 볼륨 · 테스트가 씁니다. 씬에 놓은 볼륨은 PROPERTY 가 채웁니다. */
         void                 setMinigame( const hashed_string& minigame ) { _minigame = minigame; }
         const hashed_string& getMinigame() const { return _minigame; }
+        /** @brief 하위 레벨을 얹을 자리를 이 볼륨에서 얼마나 옮길지 정합니다(월드 축, 미터). 입구를 세우는 코드가 쓴다. 씬에 놓은 볼륨은 PROPERTY 가 채웁니다. */
+        void setSubLevelOffset( const float3& offset ) { _subLevelOffset = offset; }
 
     protected:
         [[nodiscard]] bool onVolumeActivated( const GameObject& activator ) override;
@@ -40,5 +43,7 @@ namespace sw
     private:
         PROPERTY( Category = "Minigame", DisplayName = "Minigame", Tooltip = "Minigame to enter (<pack>/minigames/<name>.minigame.xml)" )
         hashed_string _minigame;
+        PROPERTY( Category = "Minigame", DisplayName = "Sub-Level Offset", Tooltip = "Where a sub-level minigame's map origin goes, from this volume (world axes)", Units = m )
+        float3 _subLevelOffset;
     };
 } // namespace sw

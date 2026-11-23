@@ -238,15 +238,15 @@ namespace sw
         AnimationNotifyHandlerRegistry( const AnimationNotifyHandlerRegistry& )            = delete;
         AnimationNotifyHandlerRegistry& operator=( const AnimationNotifyHandlerRegistry& ) = delete;
 
-        /** @brief 내장 처리기를 @p registry 에 추가합니다. 레지스트리의 기본 테이블이 처음 만들어질 때 호출합니다(정의는 `AnimationNotifyHandlers.cpp`). */
+        /** @brief 내장 처리기를 @p registry 에 추가합니다. 레지스트리의 기본 테이블이 처음 만들어질 때 호출합니다(정의는 `AnimationNotifyHandlers.cpp`). 겹친 이름이 있으면 레지스트리가 알리고 false 입니다. */
         [[nodiscard]] static bool registerBuiltInHandlers( AnimationNotifyHandlerRegistry& registry );
 
         SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
         void                shutdownSubsystem() override {}
         const utf8*         getSubsystemName() const override { return kSubsystemName; }
 
-        /** @brief 처리기를 이름으로 추가합니다. 같은 이름이 있으면 교체하며, 그 처리기를 가리키던 테이블은 다시 읽어야 합니다. */
-        void registerHandler( const hashed_string& name, unique_ptr<IAnimationNotifyHandler> handler );
+        /** @brief 처리기를 이름으로 추가합니다. 이름이 비었거나 같은 이름이 이미 있으면 알리고(`Registration.*`) false 입니다(먼저 것을 둔다 — 읽은 테이블이 가리키는 처리기가 사라지지 않는다). */
+        [[nodiscard]] bool registerHandler( const hashed_string& name, unique_ptr<IAnimationNotifyHandler> handler );
         /** @brief 이름의 처리기입니다. 없으면 nullptr 입니다. */
         const IAnimationNotifyHandler* findHandler( const hashed_string& name ) const;
 

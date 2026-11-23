@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="1a6c65a0e50f1e743583554a102a5de8"?>
+<!--
+  테마파크(하위 레벨 미니게임 themepark — 옛 게임 ThemeParkTycoon) 손님 풀과 자동 건설 — 같은 이름 오브젝트를 번호로 고르는 규칙(target="Name[N]")을 실제 게임에서 단언한다.
+  공원 뷰(ParkViewComponent)는 손님 뷰를 최대 손님 수만큼 미리 모두 ParkGuest 로 스폰한다(저장소가 ParkGuest, ParkGuest_2, ... 로 번호를 붙인다). Name[N] 은 만든 순서이므로
+  N 번째 뷰가 시뮬레이션의 N 번 손님을 따른다(ParkGuestComponent._guestIndex = N). 손님이 들어오면 0 번 뷰가 정문에서 걸어 나가고,
+  자동 건설(gv_playgroundAutoPlay)이 첫 놀이기구를 지으면 입구(RideEntrance)가 선다. 시나리오 시한은 조건 대기 프레임도 세므로 세 대기의 시한(80 초)보다 길다.
+  실행: ctest -R Scenario.playground · App -scenario=game/playground/automation/themepark_guests.scenario.xml -unattended
+-->
+<Scenario name="game.playground.themepark_guests" fixedDelta="0.0166667" timeoutFrames="5000" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/playground/automation/themepark_stage/stage.scene.xml"/>
+	<Variable name="gv_playgroundAutoPlay" value="1"/>
+	<!-- 무대의 ParkEntrance(원점)에 공원을 하위 레벨로 얹는다 -->
+	<DevCommand line="minigame.enter themepark ParkEntrance"/>
+	<WaitUntil watch="Scene.LoadedSubLevelCount" equals="1" timeoutFrames="60"/>
+	<Expect watch="Minigame.Active" is="themepark"/>
+	<WaitUntil watch="Object.Exists" target="ParkGuest[3]" equals="1" timeoutFrames="60"/>
+	<Expect watch="Object.Property" target="ParkGuest[0]" key="ParkGuestComponent._guestIndex" equals="0"/>
+	<Expect watch="Object.Property" target="ParkGuest[3]" key="ParkGuestComponent._guestIndex" equals="3"/>
+	<Expect watch="Object.Property" target="ParkGuest_2" key="ParkGuestComponent._guestIndex" equals="1"/>
+	<Store watch="Object.X" target="ParkGuest[0]" as="gateX"/>
+	<!-- 첫 손님이 들어와 0 번 뷰가 정문에서 움직인다. -->
+	<WaitUntil watch="ThemePark.GuestCount" atLeast="1" timeoutSeconds="30"/>
+	<WaitUntil watch="Object.X" target="ParkGuest[0]" differsFrom="gateX" timeoutSeconds="20"/>
+	<!-- 자동 건설이 첫 놀이기구를 짓는다. -->
+	<WaitUntil watch="Object.Exists" target="RideEntrance[0]" equals="1" timeoutSeconds="30"/>
+	<Record watch="ThemePark.GuestCount"/>
+	<Pass/>
+</Scenario>

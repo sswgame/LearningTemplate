@@ -1,0 +1,22 @@
+{
+    "_name": "GF_Client_ThemePark",
+    "_version": "1.0.0",
+    "_kind": "Kit",
+    "_description": "테마파크 키트(클라이언트) — 디렉터의 손님 · 놀이기구 · 코스터를 모습으로 세우고 입력을 디렉터 명령으로 바꾸며 코스터 탑승 시점을 건다(뷰 · 입력 · 카메라). 규칙 · 디렉터는 GF_ThemePark",
+    "_listDependency": [
+        {
+            "_name": "GameFramework"
+        },
+        {
+            "_name": "GF_ThemePark"
+        }
+    ],
+    "_listConfiguration": [
+        "Dev",
+        "Shipping"
+    ],
+    "_listTarget": [
+        "Client"
+    ],
+    "_bEnabledByDefault": true
+}

@@ -111,11 +111,11 @@ namespace sw
         return nullptr;
     }
 
-    bool SequenceReplicationServer::makePlay( const SequenceTriggerComponent& trigger, Play& outPlay )
+    bool SequenceReplicationServer::makePlay( const SequenceTriggerComponent& trigger, const SequenceTriggerPlay& triggerPlay, Play& outPlay )
     {
         const NetObjectTable& table      = _pManager->getSubsystem<NetObjectTable>();
         const GameObject*     pDirector  = _pManager->resolveGameObject( trigger.getSequence() );
-        const GameObject*     pActivator = _pManager->resolveGameObject( trigger.getLastActivator() );
+        const GameObject*     pActivator = _pManager->resolveGameObject( triggerPlay._activator );
         const NetObjectID     director   = pDirector != nullptr ? table.findID( *pDirector ) : NetObjectID{ 0 };
         const NetObjectID     activator  = pActivator != nullptr ? table.findID( *pActivator ) : NetObjectID{ 0 };
         if ( director == 0 || activator == 0 )
@@ -125,8 +125,8 @@ namespace sw
             return false;
         }
         outPlay                 = Play{};
-        outPlay._director       = trigger.getSequence();
-        outPlay._activator      = trigger.getLastActivator();
+        outPlay._director       = triggerPlay._director;
+        outPlay._activator      = triggerPlay._activator;
         outPlay._directorNetID  = director;
         outPlay._activatorNetID = activator;
         outPlay._audience       = trigger.getAudience();
@@ -202,6 +202,21 @@ namespace sw
         }
     }
 
+    void SequenceReplicationServer::startPlay( const SequenceTriggerComponent& trigger, const SequenceTriggerPlay& triggerPlay )
+    {
+        Play play{};
+        if ( makePlay( trigger, triggerPlay, play ) == false )
+        {
+            ++_stats._unreplicableCount;
+            return;
+        }
+        play._playID = _nextPlayID++;
+        if ( writeStart( play ) == false )
+            return; // 같은 프레임에 끝났다(건너뛰기) — 보낼 재생이 없다
+        _stats._startSentCount += sendToAudience( play );
+        _listPlay.push_back( play );
+    }
+
     void SequenceReplicationServer::sendNewPlays()
     {
         for ( SequenceTriggerComponent* pTrigger : _pManager->getComponentRegistry().getAll<SequenceTriggerComponent>() )
@@ -220,18 +235,14 @@ namespace sw
             }
             if ( pTrigger->getActivationCount() == pSeen->_activationCount )
                 continue;
+            // 한 갱신 사이에 여러 플레이어가 들어올 수 있다 — 본 번호 뒤의 재생을 모두 보낸다(이미 거둔 재생은 끝난 것이라 보낼 것이 없다).
+            const uint32 seenCount  = pSeen->_activationCount;
             pSeen->_activationCount = pTrigger->getActivationCount();
-            Play play{};
-            if ( makePlay( *pTrigger, play ) == false )
+            for ( const SequenceTriggerPlay& triggerPlay : pTrigger->getPlays() )
             {
-                ++_stats._unreplicableCount;
-                continue;
+                if ( triggerPlay._serial > seenCount )
+                    startPlay( *pTrigger, triggerPlay );
             }
-            play._playID = _nextPlayID++;
-            if ( writeStart( play ) == false )
-                continue; // 같은 프레임에 끝났다(건너뛰기) — 보낼 재생이 없다
-            _stats._startSentCount += sendToAudience( play );
-            _listPlay.push_back( play );
         }
         // 사라진 트리거(셀이 내려감 · 파괴)의 기록은 지운다 — 다시 올라오면 0 부터 센다(트리거의 발동 수도 다시 0 이다).
         VectorUtil::removeIf( _listSeenTrigger, [this]( const SeenTrigger& seen )

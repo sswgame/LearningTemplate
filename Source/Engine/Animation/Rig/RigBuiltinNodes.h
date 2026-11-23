@@ -12,8 +12,8 @@ namespace sw
     /** @brief IK 노드(`TwoBoneIK`, `FABRIKChain`, `CCDChain`, `Aim`, `FootPlacement`, `StrideWarping`, `FullBodyIK`)의 등록입니다(`RigNodeLibrary::registerEngineNodes` 가 부른다). */
     struct RigIKNodes
     {
-        /** @brief 이 종류의 노드를 @p registry 에 등록합니다. */
-        static void registerNodes( RigNodeRegistry& registry );
+        /** @brief 이 종류의 노드를 @p registry 에 등록합니다. 겹친 이름이 있으면 레지스트리가 알리고 false 입니다. */
+        [[nodiscard]] static bool registerNodes( RigNodeRegistry& registry );
     };
 } // namespace sw
 
@@ -27,8 +27,8 @@ namespace sw
     /** @brief 제약 노드(`CopyTransform`, `Position`, `Rotation`, `ParentSwitch`, `Distance`, `LimitRotation`, `TwistDistribution`)의 등록입니다(`RigNodeLibrary::registerEngineNodes` 가 부른다). */
     struct RigConstraintNodes
     {
-        /** @brief 이 종류의 노드를 @p registry 에 등록합니다. */
-        static void registerNodes( RigNodeRegistry& registry );
+        /** @brief 이 종류의 노드를 @p registry 에 등록합니다. 겹친 이름이 있으면 레지스트리가 알리고 false 입니다. */
+        [[nodiscard]] static bool registerNodes( RigNodeRegistry& registry );
     };
 } // namespace sw
 
@@ -42,7 +42,7 @@ namespace sw
     /** @brief 2 차 움직임과 보정 노드(`SpringChain`, `PoseDriver`)의 등록입니다(`RigNodeLibrary::registerEngineNodes` 가 부른다). */
     struct RigSecondaryNodes
     {
-        /** @brief 이 종류의 노드를 @p registry 에 등록합니다. */
-        static void registerNodes( RigNodeRegistry& registry );
+        /** @brief 이 종류의 노드를 @p registry 에 등록합니다. 겹친 이름이 있으면 레지스트리가 알리고 false 입니다. */
+        [[nodiscard]] static bool registerNodes( RigNodeRegistry& registry );
     };
 } // namespace sw

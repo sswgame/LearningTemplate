@@ -67,6 +67,25 @@ namespace sw::editor
         return true;
     }
 
+    expected<string> ProjectSettingsPage::tryMakeText() const
+    {
+        if ( _entry.isTable() == false )
+            return _document.tryMakeDifferenceText();
+        string text = _tableDocument.makeText();
+        if ( text.empty() )
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the table has no text (not open, or a value cannot be written)", _absolutePath.c_str() } );
+        return text;
+    }
+
+    bool ProjectSettingsPage::restoreText( string_view text )
+    {
+        if ( _bOpened == false )
+            open();
+        const bool bRestored = _entry.isTable() ? _tableDocument.restoreText( text ) : _document.restoreDifferenceText( text );
+        refreshDirty();
+        return bRestored;
+    }
+
     void ProjectSettingsPage::revert()
     {
         if ( _entry.isTable() )

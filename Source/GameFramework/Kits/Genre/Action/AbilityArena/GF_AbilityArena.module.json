@@ -1,0 +1,20 @@
+{
+    "_name": "GF_AbilityArena",
+    "_version": "1.0.0",
+    "_kind": "Kit",
+    "_description": "아레나 키트(웨이브를 막는 탑다운 전투, 어빌리티 시스템) — 디렉터 · 유닛 폰 · AI 감각 · 어빌리티 클래스. 투사체 모습 · 색 · 쓰러짐 연출은 GF_Client_AbilityArena",
+    "_listDependency": [
+        {
+            "_name": "GameFramework"
+        }
+    ],
+    "_listConfiguration": [
+        "Dev",
+        "Shipping"
+    ],
+    "_listTarget": [
+        "Client",
+        "Server"
+    ],
+    "_bEnabledByDefault": true
+}

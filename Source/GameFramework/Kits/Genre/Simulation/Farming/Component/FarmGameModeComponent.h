@@ -140,6 +140,8 @@ namespace sw
         bool               hasPendingSpawn() const override { return _bPossessionDirty == SW_TRUE; }
 
     private:
+        /** @brief 지금 작물 카탈로그로 가방의 아이템 목록과 가게 씨앗 목록을 채웁니다(시작 · 다시 읽힌 카탈로그). */
+        void applyCropCatalog();
         /** @brief 농부 폰의 이번 틱 의도를 처리합니다. 이동 축으로 걷고, 발동한 버튼(도구, 씨앗, 사용, 출하, 구매, 수면, 상태)을 규칙대로 실행합니다. */
         void applyFarmerIntent( float32 deltaTime, const PawnComponent& pawn );
         /** @brief 농부를 @p direction 방향으로 움직이고 바라보는 방향을 네 방향으로 맞춥니다. 벡터 길이 1 이 걷는 속도의 최대치이며, 길이가 곧 속도 비율입니다. */
@@ -218,12 +220,11 @@ namespace sw
         PROPERTY( Category = "Economy", DisplayName = "Item Stack Size", Tooltip = "Most seeds or produce one bag slot holds", Min = 1 )
         int32 _itemStackSize;
 
-        SharedAssetRef<CropCatalog>    _pCropCatalog;
-        SharedAssetRef<WeatherCatalog> _pWeatherCatalog;
-        ItemCatalog                    _itemCatalog; ///< 작물 카탈로그가 채운 씨앗과 수확물(공유 가방의 겹침 수).
-        FarmField                      _field;
-        FarmShippingBin                _shipment; ///< 출하함에 든 것(하루 끝에 팔린다).
-        vector<hashed_string>          _listSeed; ///< 카탈로그 순서의 씨앗 아이템(가게 진열).
+        SharedAssetRef<CropCatalog> _pCropCatalog;
+        ItemCatalog                 _itemCatalog; ///< 작물 카탈로그가 채운 씨앗과 수확물(공유 가방의 겹침 수).
+        FarmField                   _field;
+        FarmShippingBin             _shipment; ///< 출하함에 든 것(하루 끝에 팔린다).
+        vector<hashed_string>       _listSeed; ///< 카탈로그 순서의 씨앗 아이템(가게 진열).
         PROPERTY( RuntimeState )
         float3 _playerPosition;
         PROPERTY( RuntimeState )

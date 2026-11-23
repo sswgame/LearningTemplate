@@ -14,7 +14,9 @@
 
 namespace sw::editor
 {
-    /** @brief 문서 자동 저장 사본을 꺼낸 결과입니다(`EditorDocumentPanelBase::takeAutosaveCopy`). */
+    struct EditorDocumentAutosaveEntry;
+
+    /** @brief 문서 자동 저장 사본을 꺼낸 결과입니다(`EditorDocumentPanelBase::takeAutosaveCopies`). */
     enum class DocumentAutosaveResult : uint8
     {
         Nothing,  ///< 쓸 것이 없다(깨끗하다 · 지난 사본과 같다 · 사본을 두지 않는 문서)
@@ -100,11 +102,11 @@ namespace sw::editor
          */
         [[nodiscard]] virtual expected<void> validateUndoRoundTrip() = 0;
         /**
-         * @brief 자동 저장 사본으로 쓸 문서 id 와 글을 꺼냅니다(감사 E-1 — 문서 패널 자동 저장). 꺼냈으면 같은 글은 다시 내지 않는다.
-         * @details 두 기반이 정한다(순수 가상) — 에셋 문서는 연 문서의 글(문서 되돌리기와 같은 `captureDocumentText`), 상태 문서는 기록을 자기 모델에 두어 사본이 없다고 답한다.
+         * @brief 자동 저장 사본으로 쓸 문서 id 와 글을 @p inoutListEntry 끝에 더합니다(감사 E-1 — 문서 패널 자동 저장). 꺼냈으면 같은 글은 다시 내지 않는다.
+         * @details 두 기반이 정한다(순수 가상) — 에셋 문서는 연 문서의 글(문서 되돌리기와 같은 `captureDocumentText`), 상태 문서는 지금 저장하면 쓸 파일마다 그 글이다.
          *          언리얼 `FPackageAutoSaver` 가 dirty 패키지를 모두 사본으로 두고, 끌기 같은 상호작용 중이면 미루는 것과 같은 자리다.
          */
-        [[nodiscard]] virtual DocumentAutosaveResult takeAutosaveCopy( string& outDocumentPath, string& outText ) = 0;
+        [[nodiscard]] virtual DocumentAutosaveResult takeAutosaveCopies( vector<EditorDocumentAutosaveEntry>& inoutListEntry ) = 0;
 
     private:
         friend class EditorPanel; // 셸(`draw` · `requestClose`)이 문서 상태를 묻고 확인을 띄운다

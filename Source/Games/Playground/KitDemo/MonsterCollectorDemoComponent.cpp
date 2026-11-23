@@ -41,8 +41,7 @@ namespace sw
                                 &MonsterCollectorDemoComponent::getCaptureShakes );
 
     MonsterCollectorDemoComponent::MonsterCollectorDemoComponent()
-        : _catalogPath{}
-        , _pCatalog{}
+        : _pCatalog{}
         , _wonExp{ 0 }
         , _captured{ 0 }
         , _captureShakes{ 0 }
@@ -120,7 +119,7 @@ namespace sw
 
     bool MonsterCollectorDemoComponent::startGame()
     {
-        if ( acquireRequired( _catalogPath, _pCatalog ) == false )
+        if ( acquireBoundCatalog( _pCatalog ) == false )
             return false;
         return runBattleAndCapture();
     }

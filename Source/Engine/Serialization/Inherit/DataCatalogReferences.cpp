@@ -21,15 +21,16 @@ namespace sw
     {
         struct DataCatalogReferencesInternal
         {
-            static constexpr const utf8* kCatalogElement   = "Catalog";    ///< 표: 카탈로그 루트 하나
-            static constexpr const utf8* kReferenceElement = "Reference";  ///< 표: 참조 한 줄
-            static constexpr const utf8* kUniqueElement    = "Unique";     ///< 표: 한 파일 안에서 겹치면 안 되는 값 한 줄
-            static constexpr const utf8* kKeyTargetElement = "CatalogKey"; ///< 표: 항목 종류 한 줄(`CatalogKey<Tag>` 의 Tag → 카탈로그 루트 · 원소)
-            static constexpr const utf8* kKeyFieldElement  = "Field";      ///< 표: 카탈로그 키 칸 한 줄(씬 · 프리팹 원소의 칸)
-            static constexpr const utf8* kKeyStructElement = "Struct";     ///< 표: 구조체 칸 한 줄(칸 이름으로 적힌 자식 원소의 형식)
-            static constexpr const utf8* kKeyTypeElement   = "Element";    ///< 표: 정의 형식 ↔ 카탈로그 원소 한 줄
-            static constexpr const utf8* kListItemElement  = "item";       ///< 리플렉션 XML 이 목록 원소를 적는 원소 이름(`<_listX><item>…</item></_listX>`)
-            static constexpr const utf8* kDefaultTargetKey = "id";         ///< 가리키는 원소의 id 속성(적지 않으면)
+            static constexpr const utf8* kCatalogElement    = "Catalog";    ///< 표: 카탈로그 루트 하나
+            static constexpr const utf8* kReferenceElement  = "Reference";  ///< 표: 참조 한 줄
+            static constexpr const utf8* kUniqueElement     = "Unique";     ///< 표: 한 파일 안에서 겹치면 안 되는 값 한 줄
+            static constexpr const utf8* kKeyTargetElement  = "CatalogKey"; ///< 표: 항목 종류 한 줄(`CatalogKey<Tag>` 의 Tag → 카탈로그 루트 · 원소)
+            static constexpr const utf8* kKeyFieldElement   = "Field";      ///< 표: 카탈로그 키 칸 한 줄(씬 · 프리팹 원소의 칸)
+            static constexpr const utf8* kKeyStructElement  = "Struct";     ///< 표: 구조체 칸 한 줄(칸 이름으로 적힌 자식 원소의 형식)
+            static constexpr const utf8* kKeyTypeElement    = "Element";    ///< 표: 정의 형식 ↔ 카탈로그 원소 한 줄
+            static constexpr const utf8* kKeyDerivedElement = "Derived";    ///< 표: 물려받은 형식 한 줄(바탕의 칸 줄을 따라간다)
+            static constexpr const utf8* kListItemElement   = "item";       ///< 리플렉션 XML 이 목록 원소를 적는 원소 이름(`<_listX><item>…</item></_listX>`)
+            static constexpr const utf8* kDefaultTargetKey  = "id";         ///< 가리키는 원소의 id 속성(적지 않으면)
 
             /** @brief 표 줄 하나의 불리언 속성을 읽습니다. 없으면 false, 틀린 글이면 오류입니다. */
             [[nodiscard]] static bool readFlag( const XMLNode& row, const utf8* pName, string_view sourceName, bool& outValue )
@@ -46,7 +47,7 @@ namespace sw
             [[nodiscard]] static bool readRule( const XMLNode& row, string_view rootName, string_view sourceName, DataCatalogReferenceRule& outRule )
             {
                 const bool                   bUnique           = StringUtil::equals( row.getName(), kUniqueElement );
-                static constexpr const utf8* kArrKnown[]       = { "owner", "attribute", "target", "targetKey", "named", "optional", "inEntry", "defaultAttribute", "file" };
+                static constexpr const utf8* kArrKnown[]       = { "owner", "attribute", "target", "targetKey", "named", "optional", "inEntry", "defaultAttribute", "file", "absent" };
                 static constexpr const utf8* kArrUniqueKnown[] = { "owner", "attribute" };
                 bool                         bValid            = true;
                 for ( XMLAttribute attribute = row.getFirstAttribute(); attribute; attribute = attribute.getNext() )
@@ -81,6 +82,13 @@ namespace sw
                 bValid = readFlag( row, "named", sourceName, outRule._bNamed ) && bValid;
                 bValid = readFlag( row, "optional", sourceName, outRule._bOptional ) && bValid;
                 bValid = readFlag( row, "inEntry", sourceName, outRule._bInEntry ) && bValid;
+                bValid = readFlag( row, "absent", sourceName, outRule._bAbsent ) && bValid;
+                // 지운 id 는 "없음" 을 요구한다 — 없어도 된다(optional)는 뜻을 함께 적을 자리가 없다.
+                if ( outRule._bAbsent && outRule._bOptional )
+                {
+                    SW_LOG_ERROR_ID( "DataCatalogReferences.RuleInvalid", "%#: a <%#> of <%#> has both absent and optional", sourceName, row.getName(), rootName );
+                    bValid = false;
+                }
                 // 다른 파일의 원소는 그 파일 루트의 자식이다 — 같은 항목 안(`inEntry`)과 함께 적을 자리가 없다.
                 if ( outRule._bInEntry && outRule._fileAttribute.empty() == false )
                 {
@@ -204,6 +212,7 @@ namespace sw
         , _listKeyField{}
         , _listKeyStruct{}
         , _listKeyElement{}
+        , _listKeyDerived{}
     {
     }
 
@@ -226,6 +235,7 @@ namespace sw
         _listKeyField.clear();
         _listKeyStruct.clear();
         _listKeyElement.clear();
+        _listKeyDerived.clear();
         XMLDocument doc;
         if ( doc.parse( tableText, sourceName ) == false || doc.getRoot().isValid() == false )
         {
@@ -238,6 +248,7 @@ namespace sw
         const vector<string_view> listKeyFieldOptional{ "attribute" };
         const vector<string_view> listKeyStructRequired{ "owner", "field", "type" };
         const vector<string_view> listKeyTypeRequired{ "type", "catalog", "path" };
+        const vector<string_view> listKeyDerivedRequired{ "type", "base" };
         bool                      bValid = true;
         for ( XMLNode catalog = doc.getRoot().findChild(); catalog.isValid(); catalog = catalog.findNextSibling() )
         {
@@ -314,11 +325,28 @@ namespace sw
                 _listKeyElement.push_back( std::move( row ) );
                 continue;
             }
+            if ( StringUtil::equals( catalog.getName(), Internal::kKeyDerivedElement ) )
+            {
+                if ( Internal::validateKeyRowAttributes( catalog, listKeyDerivedRequired, {}, sourceName ) == false )
+                {
+                    bValid = false;
+                    continue;
+                }
+                DataCatalogKeyDerived row{ string( catalog.getAttributeText( "type" ) ), string( catalog.getAttributeText( "base" ) ) };
+                if ( findKeyDerived( row._type ) != nullptr )
+                {
+                    SW_LOG_ERROR_ID( "DataCatalogReferences.RuleInvalid", "%#: <%# type=\"%#\"> is written twice", sourceName, Internal::kKeyDerivedElement, row._type );
+                    bValid = false;
+                    continue;
+                }
+                _listKeyDerived.push_back( std::move( row ) );
+                continue;
+            }
             const string_view rootName = catalog.getAttributeText( "root" );
             if ( StringUtil::equals( catalog.getName(), Internal::kCatalogElement ) == false || rootName.empty() )
             {
-                SW_LOG_ERROR_ID( "DataCatalogReferences.TableInvalid2", "%#: <%#> is not a <%# root=\"...\">, <%#>, <%#>, <%#> or <%#> row", sourceName, catalog.getName(),
-                                 Internal::kCatalogElement, Internal::kKeyTargetElement, Internal::kKeyFieldElement, Internal::kKeyStructElement, Internal::kKeyTypeElement );
+                SW_LOG_ERROR_ID( "DataCatalogReferences.TableInvalid2", "%#: <%#> is not a <%# root=\"...\">, <%#>, <%#>, <%#>, <%#> or <%#> row", sourceName, catalog.getName(),
+                                 Internal::kCatalogElement, Internal::kKeyTargetElement, Internal::kKeyFieldElement, Internal::kKeyStructElement, Internal::kKeyTypeElement, Internal::kKeyDerivedElement );
                 bValid = false;
                 continue;
             }
@@ -348,6 +376,20 @@ namespace sw
                 bValid = false;
             }
         }
+        // 바탕을 따라가다 자기에게 돌아오면 대조가 끝나지 않는다 — 형식마다 바탕은 하나라 줄 수만큼 올라가면 끝나야 한다.
+        for ( const DataCatalogKeyDerived& row : _listKeyDerived )
+        {
+            const DataCatalogKeyDerived* pStep = &row;
+            for ( size_t step = 0; pStep != nullptr && step < _listKeyDerived.size(); ++step )
+            {
+                pStep = findKeyDerived( pStep->_base );
+            }
+            if ( pStep != nullptr )
+            {
+                SW_LOG_ERROR_ID( "DataCatalogReferences.RuleInvalid", "%#: <%# type=\"%#\"> derives from itself", sourceName, Internal::kKeyDerivedElement, row._type );
+                bValid = false;
+            }
+        }
         if ( bValid == false )
         {
             _listRule.clear(); // 깨진 표로 반만 검사하지 않는다
@@ -355,6 +397,7 @@ namespace sw
             _listKeyField.clear();
             _listKeyStruct.clear();
             _listKeyElement.clear();
+            _listKeyDerived.clear();
         }
         return bValid;
     }
@@ -363,6 +406,12 @@ namespace sw
     {
         return VectorUtil::findIf( _listKeyStruct, [owner, field]( const DataCatalogKeyStruct& row )
         { return row._owner == owner && row._field == field; } );
+    }
+
+    const DataCatalogKeyDerived* DataCatalogReferenceRules::findKeyDerived( string_view type ) const
+    {
+        return VectorUtil::findIf( _listKeyDerived, [type]( const DataCatalogKeyDerived& row )
+        { return row._type == type; } );
     }
 
     const DataCatalogKeyElement* DataCatalogReferenceRules::findKeyElement( string_view type ) const
@@ -483,7 +532,17 @@ namespace sw
                         value = owner.getAttributeText( rule._defaultAttribute.c_str() );
                     Internal::visitIDs( value, rule._bNamed, [&]( string_view id )
                     {
-                        if ( std::binary_search( listTargetID.begin(), listTargetID.end(), id ) )
+                        const bool bFound = std::binary_search( listTargetID.begin(), listTargetID.end(), id );
+                        if ( rule._bAbsent )
+                        {
+                            if ( bFound == false )
+                                return; // 지운 id 다 — 그래야 한다
+                            SW_LOG_ERROR_ID( "XMLCatalog.RemovedIDStillPresent", "%#: <%#> '%#' %#=\"%#\" must name a removed <%#>, but this catalog still has it - the catalog does not load", sourceName,
+                                             owner.getName(), ownerName, rule._attribute.c_str(), id, rule._target.c_str() );
+                            bValid = false;
+                            return;
+                        }
+                        if ( bFound )
                             return;
                         if ( rule._bOptional )
                         {
@@ -563,6 +622,11 @@ namespace sw
             if ( DataCatalogReferencesInternal::isElementMentioned( text, row._owner ) )
                 return true;
         }
+        for ( const DataCatalogKeyDerived& row : _rules.getDerivedRows() )
+        {
+            if ( DataCatalogReferencesInternal::isElementMentioned( text, row._type ) )
+                return true;
+        }
         for ( const DataCatalogKeyElement& row : _rules.getElementRows() )
         {
             if ( DataCatalogReferencesInternal::isElementMentioned( text, row._catalog ) )
@@ -632,6 +696,10 @@ namespace sw
             else
                 Internal::visitFieldValues( node, field._field, addUse );
         }
+        // 물려받은 형식이면 바탕의 칸 줄도 이 원소의 것이다(원소 이름은 가장 아래 형식이다).
+        const DataCatalogKeyDerived* pDerived = _rules.findKeyDerived( typeName );
+        if ( pDerived != nullptr )
+            collectTypedUses( node, pDerived->_base, bCatalogElement, sourceName );
         // 구조체 칸 하나는 칸 이름의 원소로 적힌다 — 그 원소를 칸 형식으로 다시 본다(일반 순회는 원소 이름이 칸 이름이라 주인을 못 찾는다).
         if ( bCatalogElement )
             return;

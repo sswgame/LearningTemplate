@@ -23,9 +23,11 @@
 		<entity id="3" name="Director">
 			<GameObject _schemaVersion="0" _name="Director" _bActive="true">
 				<_listComponent>
-					<SurvivalHorrorDemoComponent _localID="3506037313902174496" _componentName="SurvivalHorrorDemoComponent"
-					                             _bActive="true"
-					                             _catalogPath="game/playground/automation/desktop/editor/playreload/demo.horror.xml" />
+					<InventoryShopDemoComponent _localID="3506037313902174496" _componentName="InventoryShopDemoComponent"
+					                            _bActive="true"
+					                            _shopsPath="game/playground/automation/desktop/editor/playreload/shop.shops.xml"
+					                            _shopID="general"
+					                            _startingGold="75" />
 				</_listComponent>
 			</GameObject>
 		</entity>

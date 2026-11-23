@@ -36,7 +36,6 @@ namespace sw
         , _startingMoney{ 0 }
         , _outlaw{}
         , _pWesternCatalog{}
-        , _pWeatherCatalog{}
         , _listWitness{}
         , _bAutoMountRequested{ SW_FALSE }
         , _reserved{ 0 }
@@ -51,8 +50,21 @@ namespace sw
         io.header( kStateTag, kStateVersion );
         if ( io.isOk() == false )
             return;
-        io.valueAtomic( _outlaw );
+        if ( io.isWriting() )
+        {
+            io.value( _outlaw );
+            io.end();
+            return;
+        }
+        // 사본에 읽는다 — 다시 읽힌 카탈로그면 새 판으로 다시 묶고, 거절하면 앞 판에 묶인 무법자가 그대로다.
+        if ( io.check( _pWesternCatalog != nullptr && _pWesternCatalog->findRegion( _regionID.key() ) != nullptr ) == false )
+            return;
+        WesternOutlaw restoredOutlaw = _outlaw;
+        restoredOutlaw.rebindCatalog( *_pWesternCatalog );
+        io.value( restoredOutlaw );
         io.end();
+        if ( io.isOk() )
+            _outlaw = std::move( restoredOutlaw );
     }
 
     bool WesternGameModeComponent::startGame()
@@ -75,11 +87,12 @@ namespace sw
             SW_LOG_ERROR_ID( "WesternGameMode.RiderPawnNoUse", "[Western] the rider pawn has no use button '%#' - the game cannot open", _useButton.c_str() );
             return false;
         }
-        if ( acquireRequired( _weatherDataPath, _pWeatherCatalog ) == false )
+        shared_ptr<const WeatherCatalog> pWeatherCatalog; // 판 상태가 연 때의 판을 쥔다 — 디렉터가 따라가지 않는다
+        if ( acquireRequiredSnapshot( _weatherDataPath, pWeatherCatalog ) == false )
             return false;
         GameStateSettings settings{};
         settings._clock._secondsPerDay = _secondsPerDay;
-        settings._pWeatherCatalog      = _pWeatherCatalog.snapshot();
+        settings._pWeatherCatalog      = std::move( pWeatherCatalog );
         GameStateComponent* pState     = GameStateComponent::openOnOwner( *this, settings );
         if ( pState == nullptr )
             return false; // 까닭은 판 상태가 남겼다

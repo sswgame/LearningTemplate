@@ -141,8 +141,9 @@ namespace sw
             _calls.warnUnknownCall( callID );
             return;
         }
-        const AdminCallRecord pending              = recordIt->second; // 알림 · 넘기기가 표를 건드려도 칸이 남게 복사한다
-        const bool            bLookupWithDirectory = pending._method == AdminMethod::LookupAccount::kID && serviceResult == AdminResult::Ok && _settings._pDirectory != nullptr;
+        const AdminCallRecord pending   = recordIt->second;  // 알림 · 넘기기가 표를 건드려도 칸이 남게 복사한다
+        inoutReply._targetAccountID     = pending._targetID; // 다시 보낸 명령의 답(저장 기록은 결과 한 바이트)도 대상을 안다
+        const bool bLookupWithDirectory = pending._method == AdminMethod::LookupAccount::kID && serviceResult == AdminResult::Ok && _settings._pDirectory != nullptr;
         if ( bLookupWithDirectory ) // 신원은 저장소 조회가 채웠다(이름으로 찾았으면 계정 id 도). 접속 여부만 이 프로세스로 본다
             inoutReply._bOnline = _settings._pDirectory->isAccountOnline( inoutReply._identity._accountID ) ? SW_TRUE : SW_FALSE;
         const bool bRevoke = serviceResult == AdminResult::Ok && inoutReply._bRevokeSessions == SW_TRUE && inoutReply._bReplayed == SW_FALSE;

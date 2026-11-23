@@ -66,7 +66,7 @@ SW_TEST_CASE( SharedAssetTableTest, ReloadLeavesSnapshotAndRefFollows )
     sw::SharedAssetTable<FakeAsset> table;
     sw::shared_ptr<const FakeAsset> held;
     SW_REQUIRE_TRUE( table.loadAndIntern( "game/x/b.clip", &loadFake, held ) );
-    const sw::SharedAssetRef<FakeAsset> ref{ held, table.findVersion( held ) };
+    const sw::SharedAssetRef<FakeAsset> ref{ held, table.findVersion( held.get() ) };
     const uint32                        reloadsBefore = table.getReloadCount();
 
     s_bLoadFails = true;
@@ -100,7 +100,7 @@ SW_TEST_CASE( SharedAssetTableTest, ReloadsCollapseToOneVersion )
     sw::SharedAssetTable<FakeAsset> table;
     sw::shared_ptr<const FakeAsset> first;
     SW_REQUIRE_TRUE( table.loadAndIntern( "game/x/d.clip", &loadFake, first ) );
-    const sw::SharedAssetRef<FakeAsset> ref{ first, table.findVersion( first ) };
+    const sw::SharedAssetRef<FakeAsset> ref{ first, table.findVersion( first.get() ) };
     const sw::SharedAssetRef<FakeAsset> copy      = ref; // 복사도 목록에 오른다
     const sw::weak_ptr<const FakeAsset> weakFirst = first;
     first.reset();
@@ -130,7 +130,7 @@ SW_TEST_CASE( SharedAssetTableTest, RefReleaseAndBorrow )
     sw::SharedAssetTable<FakeAsset> table;
     sw::shared_ptr<const FakeAsset> first;
     SW_REQUIRE_TRUE( table.loadAndIntern( "game/x/e.clip", &loadFake, first ) );
-    sw::SharedAssetRef<FakeAsset> ref{ first, table.findVersion( first ) };
+    sw::SharedAssetRef<FakeAsset> ref{ first, table.findVersion( first.get() ) };
     first.reset();
     SW_REQUIRE_TRUE( table.reloadShared( "game/x/e.clip", &loadFake ) );
     ref.reset();
@@ -155,7 +155,7 @@ SW_TEST_CASE( SharedAssetTableTest, ReloadWhileWorkerReads )
     sw::SharedAssetTable<FakeAsset> table;
     sw::shared_ptr<const FakeAsset> held;
     SW_REQUIRE_TRUE( table.loadAndIntern( "game/x/c.clip", &loadFake, held ) );
-    const sw::SharedAssetRef<FakeAsset> ref{ held, table.findVersion( held ) };
+    const sw::SharedAssetRef<FakeAsset> ref{ held, table.findVersion( held.get() ) };
     const int32                         seenGeneration = held->_generation;
     sw::atomic<bool>                    bStop{ false };
     sw::atomic<int32>                   changedCount{ 0 };

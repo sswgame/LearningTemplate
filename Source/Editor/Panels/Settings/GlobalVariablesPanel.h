@@ -59,6 +59,11 @@ namespace sw::editor
         /** @brief 보일 변수 목록을 다시 지은 횟수입니다. 감시 값 `Editor.GlobalVariablesRebuildCount` 가 읽습니다(등록 · 검색 글이 그대로면 늘지 않는다). */
         uint32 getListRebuildCount() const { return _model.getListRebuildCount(); }
 
+    protected:
+        [[nodiscard]] expected<string> tryMakeFileText( string_view /*absolutePath*/ ) const override { return GlobalVariablesViewModel::makeSessionText(); } // 저장할 파일은 세션 문서 하나다
+        [[nodiscard]] bool             isEditingFile( string_view absolutePath ) override { return GlobalVariablesViewModel::isSessionFile( absolutePath ); }
+        [[nodiscard]] bool             applyFileText( string_view /*absolutePath*/, const string& text ) override { return GlobalVariablesViewModel::applySessionText( text ); }
+
     private:
         /** @brief 단일 전역 변수의 편집 컨트롤을 그립니다. */
         void drawVariableRow( GlobalVariableInfo& info, bool bShowPin );

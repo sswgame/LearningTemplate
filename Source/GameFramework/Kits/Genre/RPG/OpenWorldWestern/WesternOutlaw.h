@@ -89,6 +89,8 @@ namespace sw
         [[nodiscard]] bool initialize( const WesternCatalog* pCatalog, const LootCatalog* pLoot, Wallet& wallet, ReputationState& reputation, WorldClock& clock, GameFlags* pFlags,
                                        WeatherSystem* pWeather, Inventory* pInventory, const hashed_string& regionID, float32 regionBaseTemperature,
                                        const AIPerceptionSettings& sight );
+        /** @brief 빌린 카탈로그만 @p catalog 로 바꿉니다(지갑 · 평판 · 시계는 그대로). 법 · 생존 · 동물은 이어 읽는 `readState` 가 새 판으로 다시 연다 — 읽기 앞에서만 부른다. */
+        void rebindCatalog( const WesternCatalog& catalog );
         /** @brief 실제 @p deltaTime 초와 빌린 시계가 지난번 뒤로 흐른 만큼 흘립니다. 대사 플래그를 맞춥니다. */
         void update( float32 deltaTime );
         /** @brief 행동을 규칙에 넘깁니다. @p listCandidate 는 범죄를 볼 수 있는 후보입니다. 받아들였으면 true 입니다(모르는 id · 벗길 사체 없음 · 낼 현상금 없음 · 돈 모자람은 false). */

@@ -59,7 +59,7 @@ namespace sw
     }
 
     template <typename TTrigger>
-    bool MinigamePortalSpawnerComponent::spawnVolume( GameObjectManager& manager, const AssetRef<PrefabAsset>& prefab, const utf8* pName, const MinigameDefinition& definition )
+    TTrigger* MinigamePortalSpawnerComponent::spawnVolume( GameObjectManager& manager, const AssetRef<PrefabAsset>& prefab, const utf8* pName, const MinigameDefinition& definition )
     {
         GameObject* const     pVolume  = game::getSubsystem<AssetManager>().getAssetCache<PrefabCache>().spawn( &manager, prefab.path(), pName );
         TTrigger* const       pTrigger = pVolume != nullptr ? pVolume->getComponent<TTrigger>() : nullptr;
@@ -70,13 +70,13 @@ namespace sw
                              TTrigger::StaticType()->_name.c_str() );
             if ( pVolume != nullptr )
                 manager.destroyGameObject( pVolume );
-            return false;
+            return nullptr;
         }
         pVolume->setTransient( true ); // 정의에서 다시 세우는 파생 — 스냅샷에 실으면 복원 뒤 다시 세운 것과 겹친다
         pTrigger->setMinigame( definition._name );
         pRoot->setWorldPosition( computeSlotPosition( definition._portalSlot ) );
         _listPortal.push_back( pVolume->getHandle() );
-        return true;
+        return pTrigger;
     }
 
     void MinigamePortalSpawnerComponent::spawnPortals( GameObjectManager& manager, const MinigameFlow& flow )
@@ -93,13 +93,15 @@ namespace sw
         {
             StringBuilder<constant::buffer::kMax256> nameBuilder;
             nameBuilder.appendFormat( "%#%#", kPortalNamePrefix, definition._name.c_str() );
-            if ( spawnVolume<MinigameTriggerComponent>( manager, _portalPrefab, nameBuilder.c_str(), definition ) == false )
+            MinigameTriggerComponent* const pTrigger = spawnVolume<MinigameTriggerComponent>( manager, _portalPrefab, nameBuilder.c_str(), definition );
+            if ( pTrigger == nullptr )
                 return; // 같은 프리팹이라 나머지도 진다
+            pTrigger->setSubLevelOffset( definition._portalOffset );
             if ( _preloadPrefab.empty() )
                 continue;
             nameBuilder.clear();
             nameBuilder.appendFormat( "%#%#", kPreloadNamePrefix, definition._name.c_str() );
-            if ( spawnVolume<MinigamePreloadTriggerComponent>( manager, _preloadPrefab, nameBuilder.c_str(), definition ) == false )
+            if ( spawnVolume<MinigamePreloadTriggerComponent>( manager, _preloadPrefab, nameBuilder.c_str(), definition ) == nullptr )
                 return;
         }
     }

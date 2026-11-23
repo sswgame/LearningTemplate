@@ -39,6 +39,7 @@ namespace sw
     struct CharacterAppearanceDef;
     class Archive;
     class GameObjectManager;
+    class WorldClock;
 
     /**
      * @class FarmVillageGameModeComponent
@@ -73,6 +74,10 @@ namespace sw
     private:
         /** @brief 내비 격자를 세우고 장애물 이름 목록의 씬 오브젝트 자리를 막습니다. 격자 크기가 없으면 false 입니다. */
         [[nodiscard]] bool rebuildNavGrid();
+        /** @brief 지금 일정표로 일정을 세우고 자리 · 속도 목록을 NPC 수에 맞춥니다(시작 · 다시 읽힌 일정표). 범위 밖 설정이면 일정 시스템이 오류를 남기고 false 입니다. */
+        [[nodiscard]] bool openSchedule( const WorldClock& clock );
+        /** @brief NPC 를 모두 가까운 단계로 두고 일정상 자리를 적습니다. */
+        void showAllNPCs();
 
         PROPERTY( Category = "Data", DisplayName = "Schedule Data", Tooltip = "Schedule catalog XML (places, routines, NPCs)" )
         AssetRef<ScheduleCatalog> _scheduleDataPath;

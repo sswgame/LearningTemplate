@@ -667,10 +667,10 @@ namespace sw
         return weapon.loadProjectile( *pProjectile, {} ); // 부착물은 아직 없다 — 장전만 바꾼다
     }
 
-    void ShooterPlayerComponent::applyWeaponIntent( const PawnComponent& pawn )
+    int32 ShooterPlayerComponent::chooseWeaponSlot( const PawnComponent& pawn, int32 currentSlot )
     {
         using Internal   = ShooterPlayerComponentInternal;
-        int32 nextWeapon = -1;
+        int32 nextWeapon = currentSlot;
         for ( int32 weaponIndex = 0; weaponIndex < kWeaponCount; ++weaponIndex )
         {
             if ( pawn.wasButtonTriggered( pawn.findButton( hashed_string( Internal::kArrWeaponAction[weaponIndex] ) ) ) )
@@ -685,13 +685,17 @@ namespace sw
         {
             const float32 direction = pawn.getIntent()._arrAnalog[*analogIndex];
             if ( direction > 0.0f )
-                nextWeapon = ( _weaponIndex + 1 ) % kWeaponCount;
+                nextWeapon = ( currentSlot + 1 ) % kWeaponCount;
             else if ( direction < 0.0f )
-                nextWeapon = ( _weaponIndex + kWeaponCount - 1 ) % kWeaponCount;
+                nextWeapon = ( currentSlot + kWeaponCount - 1 ) % kWeaponCount;
         }
-        if ( nextWeapon >= 0 )
-            switchWeapon( nextWeapon );
-        if ( pawn.wasButtonTriggered( pawn.findButton( hashed_string( Internal::kReloadButton ) ) ) && _arrWeapon[_weaponIndex].startReload() )
+        return nextWeapon;
+    }
+
+    void ShooterPlayerComponent::applyWeaponIntent( const PawnComponent& pawn )
+    {
+        switchWeapon( chooseWeaponSlot( pawn, _weaponIndex ) );
+        if ( pawn.wasButtonTriggered( pawn.findButton( hashed_string( ShooterPlayerComponentInternal::kReloadButton ) ) ) && _arrWeapon[_weaponIndex].startReload() )
             SW_LOG_INFO_ID( "ShooterPlayer.Reloading", "[Shooter] reloading %#", _arrWeapon[_weaponIndex].getDef()._name.c_str() );
     }
 

@@ -159,6 +159,16 @@ SW_TEST_CASE( VoxelBlockCatalogTest, IndexStartsAfterAirAndDuplicateIsRefused )
     SW_EXPECT_FALSE( rig._catalog.isOpaque( rig._glass ) );
 }
 
+/** @brief [VoxelBlockCatalogTest] 얻는 블록(`drop`)은 같은 카탈로그의 블록이어야 한다 — 참조 표가 읽기를 막는다(쿠킹도 같은 표로 실패한다) */
+SW_TEST_CASE( VoxelBlockCatalogTest, UnknownDropFailsTheLoad )
+{
+    VoxelBlockCatalog known;
+    SW_EXPECT_TRUE( known.loadFromXMLText( R"(<VoxelBlockCatalog><Block id="grass" name="Grass" tile="0" drop="dirt"/><Block id="dirt" name="Dirt" tile="2"/></VoxelBlockCatalog>)", "known" ) );
+    VoxelBlockCatalog unknown;
+    SW_EXPECT_LOG( "XMLCatalog.UnknownReference" );
+    SW_EXPECT_FALSE( unknown.loadFromXMLText( R"(<VoxelBlockCatalog><Block id="grass" name="Grass" tile="0" drop="dirt"/></VoxelBlockCatalog>)", "unknown" ) );
+}
+
 // 블록 머티리얼의 아틀라스 칸(_atlasGrid)은 카탈로그를 따라야 한다 — 메셔는 카탈로그 열 수로 타일 칸 UV 를 싣고 셰이더는 머티리얼 값으로 푼다.
 // 검사는 월드당 한 번: 머티리얼이 준비되기 전에는 그리지 않고, 다르면 오류 한 줄 뒤 계속 그리지 않는다(맞춰 쓰지 않는다).
 SW_TEST_CASE( VoxelBlockCatalogTest, MaterialAtlasGridMustMatchTheCatalog )
@@ -456,6 +466,29 @@ SW_TEST_CASE( VoxelWorldTest, SaveSurvivesCatalogReorder )
     SW_EXPECT_TRUE( world.getBlock( 3, 4, 5 ) == water );
     SW_EXPECT_EQUAL( uint32( 32 * 32 ), world.countBlocks( stone ) );
     SW_EXPECT_EQUAL( uint32( 0 ), world.countBlocks( sand ) );
+}
+
+// 도는 월드의 카탈로그가 다시 읽히면 디렉터가 상태를 왕복시킨다 — 새 카탈로그에 묶고 읽으면 올라와 있던 청크의 블록 번호도 id 로 다시 짝지어진다.
+SW_TEST_CASE( VoxelWorldTest, RebindingTheCatalogKeepsTheBlocksByID )
+{
+    VoxelFixture rig;
+    rig.layFloor( 2 );
+    SW_REQUIRE_TRUE( rig._world.setBlock( 20, 9, 20, rig._glass ) );
+    const vector<uint8> listSaved = VoxelFixture::save( rig._world );
+
+    VoxelBlockCatalog reordered;
+    for ( const utf8* pID : { "sand", "glass", "water", "stone" } )
+    {
+        VoxelBlockDef block;
+        block._id   = hashed_string( pID );
+        block._name = pID;
+        SW_REQUIRE_TRUE( reordered.addBlock( block ).has_value() );
+    }
+    rig._world.rebindCatalog( reordered );
+    Archive reading( listSaved.data(), listSaved.size() );
+    SW_REQUIRE_TRUE( rig._world.readState( reading ) );
+    SW_EXPECT_TRUE( rig._world.getBlock( 20, 9, 20 ) == reordered.findBlockIndex( hashed_string( "glass" ) ).value() );
+    SW_EXPECT_EQUAL( uint32( 32 * 32 ), rig._world.countBlocks( reordered.findBlockIndex( hashed_string( "stone" ) ).value() ) );
 }
 
 // 지금 카탈로그에 없는 블록 id 는 공기로 바꾸지 않고 세이브를 거절한다.
