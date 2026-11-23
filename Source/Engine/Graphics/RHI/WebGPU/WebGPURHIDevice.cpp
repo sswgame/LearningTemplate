@@ -1137,10 +1137,10 @@ namespace sw
         submitPending();
     }
 
-    void WebGPURHIDevice::allocateConstantSlice( const void* pData, uint32 size, WGPUBuffer& outBuffer, uint64& outOffset )
+    void WebGPURHIDevice::allocateConstantSlice( const void* pData, uint32 size, uint64 sliceBytes, WGPUBuffer& outBuffer, uint64& outOffset )
     {
         using Internal           = WebGPURHIDeviceInternal;
-        const uint64 alignedSize = MathUtil::align( static_cast<uint64>( size ), Internal::kConstantAlignment );
+        const uint64 alignedSize = MathUtil::align( sliceBytes, Internal::kConstantAlignment ); // 부르는 쪽이 묶을 크기다(`size` 이상)
         const bool   bNoRoom     = _activeRingIndex >= _listConstantRing.size() || _listConstantRing[_activeRingIndex]._used + alignedSize > _listConstantRing[_activeRingIndex]._capacity;
         if ( bNoRoom )
         {
@@ -1151,6 +1151,8 @@ namespace sw
         }
         ConstantRing& ring = _listConstantRing[_activeRingIndex];
         Memory::copy( ring._staging.data() + ring._used, pData, size );
+        if ( sliceBytes > size )
+            Memory::set( ring._staging.data() + ring._used + size, 0, static_cast<size_t>( sliceBytes - size ) ); // 갱신하지 않은 꼬리는 0 — 링의 지난 값이 새지 않는다
         outBuffer = ring._buffer;
         outOffset = ring._used;
         ring._used += alignedSize;

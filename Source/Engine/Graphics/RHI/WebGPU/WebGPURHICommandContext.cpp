@@ -399,7 +399,8 @@ namespace sw
             return;
         WGPUBuffer ringBuffer = nullptr;
         uint64     ringOffset = 0;
-        _pDevice->allocateConstantSlice( pData, size, ringBuffer, ringOffset );
+        // 묶음은 버퍼 크기만큼 건다(`findBindGroup`) — 일부만 갱신해도 칸은 버퍼 크기를 잡는다. 작게 잡으면 다음 칸을 읽고, 링 끝에서는 범위를 넘어 묶음 생성이 검증 오류다.
+        _pDevice->allocateConstantSlice( pData, size, MathUtil::max( static_cast<uint64>( size ), pRecord->_sizeBytes ), ringBuffer, ringOffset );
         pRecord->_overrideSerial = _pDevice->getFrameSerial();
         pRecord->_overrideBuffer = ringBuffer;
         pRecord->_overrideOffset = ringOffset;
@@ -483,7 +484,7 @@ namespace sw
                 const bool bNeedSlice = slots._bRootSliceDirty != SW_FALSE || slots._rootSliceSerial != _pDevice->getFrameSerial() || slots._rootSliceBuffer == nullptr;
                 if ( bNeedSlice )
                 {
-                    _pDevice->allocateConstantSlice( slots._arrRootConstant, sizeof( slots._arrRootConstant ), slots._rootSliceBuffer, slots._rootSliceOffset );
+                    _pDevice->allocateConstantSlice( slots._arrRootConstant, sizeof( slots._arrRootConstant ), sizeof( slots._arrRootConstant ), slots._rootSliceBuffer, slots._rootSliceOffset );
                     slots._rootSliceSerial = _pDevice->getFrameSerial();
                     slots._bRootSliceDirty = SW_FALSE;
                 }
