@@ -51,7 +51,10 @@ namespace sw
             if ( forwardLength > 1.0e-5f && toTarget.dot( flatForward ) / ( distance * forwardLength ) < MathUtil::cos( _settings._sightHalfAngle ) )
                 return false;
         }
-        return pGrid == nullptr || pGrid->hasLineOfSight( pGrid->computeCell( eyePosition ), pGrid->computeCell( target ) );
+        if ( pGrid == nullptr )
+            return true;
+        const WorldOrigin origin{ _worldOrigin }; // 격자는 절대 자리다(눈 · 대상은 씬 자리)
+        return pGrid->hasLineOfSight( pGrid->computeCell( origin.toAbsolute( eyePosition ) ), pGrid->computeCell( origin.toAbsolute( target ) ) );
     }
 
     void AIPerception::sense( const float3& eyePosition, const float3& forward, const vector<AIStimulus>& listCandidate, const NavGrid* pGrid, float32 deltaTime )

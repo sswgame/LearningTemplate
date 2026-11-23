@@ -48,7 +48,7 @@ namespace sw
         const bool                          bFollowsAVillager = pGameMode != nullptr && 0 <= _npcIndex && _npcIndex < pGameMode->getVillagerCount();
         if ( bFollowsAVillager == false )
             return;
-        const float3 goal     = pGameMode->getVillagerPosition( _npcIndex );
+        const float3 goal     = pGameMode->getVillagerPosition( _npcIndex )._value; // 몸(`NavAgent`)도 절대 자리다
         const bool   bTooFar  = float3::getHorizontalDistance( _agent.getPosition(), goal ) > pGameMode->getBodySnapDistance();
         const bool   bJumpsTo = _bPlaced == false || bTooFar;
         if ( bJumpsTo )

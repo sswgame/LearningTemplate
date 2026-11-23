@@ -11,6 +11,7 @@
 #include "Core/Math/Math.h"
 #include "Core/Name/hashed_string.h"
 
+#include "Engine/Object/GameObject/WorldOrigin.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -40,9 +41,7 @@ namespace sw
         LandRegistry();
 
         /** @brief 땅을 초기화합니다. 모든 셀이 빈 땅이 되고 주인 등록도 비웁니다. 셀 크기는 0 보다 커야 합니다(전제 조건이며 맞추지 않습니다. 판 상태는 `GameStateSettings::_landCellSize` 의 `Min` 으로 받을 때 거절합니다). */
-        void initialize( int32 width, int32 height, float32 cellSize, const float3& origin );
-        /** @brief 격자의 원점을 @p delta 만큼 옮깁니다(월드 원점 이동). 셀은 그대로입니다. */
-        void applyWorldOffset( const float3& delta ) { _origin += delta; }
+        void initialize( int32 width, int32 height, float32 cellSize, const AbsolutePosition& origin );
         /** @brief 주인(키트) 하나를 등록하고 번호를 줍니다. 같은 이름이면 같은 번호이며, 빈 이름이거나 땅이 안 열렸으면 `kNoOwner` 입니다. */
         uint16 registerOwner( const hashed_string& ownerName );
 
@@ -51,9 +50,9 @@ namespace sw
         /** @brief 내 셀만 반납합니다. 다른 주인의 셀과 빈 셀은 그대로 두고, 밖은 잘라 냅니다. */
         void releaseRect( uint16 owner, int32 minX, int32 minY, int32 maxX, int32 maxY );
         /** @brief 월드 사각(가운데와 크기, XZ)을 덮는 셀을 차지합니다. 셀 격자가 없는 키트(공원 놀이기구)가 씁니다. */
-        [[nodiscard]] bool claimWorldRect( uint16 owner, const float3& center, const float3& size, bool bBlocking );
+        [[nodiscard]] bool claimWorldRect( uint16 owner, const AbsolutePosition& center, const float3& size, bool bBlocking );
         /** @brief 월드 사각(가운데와 크기, XZ)을 덮는 내 셀을 반납합니다. */
-        void releaseWorldRect( uint16 owner, const float3& center, const float3& size );
+        void releaseWorldRect( uint16 owner, const AbsolutePosition& center, const float3& size );
 
         bool   isInitialized() const { return _topology.getCellCount() > 0; }
         bool   isInside( int32 x, int32 y ) const { return _topology.isInside( x, y ); }
@@ -64,11 +63,10 @@ namespace sw
         bool isUsableBy( uint16 owner, int32 x, int32 y ) const;
         /** @brief 다른 주인이 막아 둔 셀이면 true 입니다. @p owner 의 셀은 막힘이 아니며, 밖이면 false 입니다. */
         bool                isBlockedFor( uint16 owner, int32 x, int32 y ) const;
-        int2                computeCell( const float3& worldPosition ) const;
+        int2                computeCell( const AbsolutePosition& position ) const;
         uint32              getRevision() const { return _revision; }
         const GridTopology& getTopology() const { return _topology; }
         float32             getCellSize() const { return _cellSize; }
-        const float3&       getOrigin() const { return _origin; }
 
         /**
          * @brief 크기, 주인 이름 목록, 셀마다 (주인 번호, 막힘)을 씁니다.
@@ -86,13 +84,13 @@ namespace sw
         };
 
         /** @brief 월드 사각을 셀 사각(양 끝 포함)으로 바꿉니다. */
-        void computeWorldRect( const float3& center, const float3& size, int2& outMin, int2& outMax ) const;
+        void computeWorldRect( const AbsolutePosition& center, const float3& size, int2& outMin, int2& outMax ) const;
 
     private:
         vector<Cell>          _listCell;
         vector<hashed_string> _listOwnerName; ///< 인덱스 (번호 - 1) 에 둔 이름
         GridTopology          _topology;
-        float3                _origin;
+        float3                _origin; ///< 절대 자리 — 월드 원점을 옮겨도 땅은 제자리다(시뮬레이션 · 세이브와 같은 공간)
         float32               _cellSize;
         uint32                _revision;
     };

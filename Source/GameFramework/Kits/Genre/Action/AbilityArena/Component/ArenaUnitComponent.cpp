@@ -150,7 +150,7 @@ namespace sw
             const ArenaUnitView& other = pView[viewIndex];
             if ( other._object == self || other._kind == ArenaUnitKind::Player )
                 continue;
-            const float3  apart    = inoutPosition - other._position;
+            const float3  apart    = inoutPosition - other._position._value;
             const float32 distance = apart.getLength();
             const float32 overlap  = _unitRadius * 2.0f - distance;
             if ( overlap <= 0.0f || distance < MathUtil::kLooseEpsilon )
