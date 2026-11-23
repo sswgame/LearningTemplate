@@ -53,6 +53,8 @@ namespace sw
          * @details 창이 움직이면 텍스처 전부를 다시 보내므로 부르는 쪽이 문턱을 둔다(`SurfaceDeformSystem` — 창 너비의 일부만큼 벗어났을 때).
          */
         bool recenter( float32 centerX, float32 centerZ );
+        /** @brief 칸의 내용은 그대로 두고 칸의 월드 자리만 옮깁니다(월드 원점 이동). 칸 단위로 옮겨 자국이 반 칸까지 어긋난다. */
+        void shiftOrigin( float32 deltaX, float32 deltaZ );
 
         /**
          * @brief 도장 @p def 를 월드 (@p centerX, @p centerZ) 에 요 @p yaw(라디안, +Z 앞)로 찍습니다. 창 밖 칸은 버린다.

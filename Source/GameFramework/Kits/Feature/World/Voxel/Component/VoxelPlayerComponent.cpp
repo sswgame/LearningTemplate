@@ -10,6 +10,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
+#include "Engine/Object/GameObject/WorldOrigin.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
@@ -292,7 +293,7 @@ namespace sw
         // 월드 밖으로 떨어지면 처음 위치로 되돌립니다.
         if ( _body.getPosition()._y < -10.0f )
             _body.setPosition( pGameMode->findSpawnPosition() );
-        pCamera->setEyePosition( _body.getEyePosition() );
+        pCamera->setEyePosition( getOwner()->getManager()->getWorldOrigin().toLocal( _body.getEyePosition() ) ); // 복셀 월드는 절대 자리다
 
         updateTarget( *pGameMode, *pCamera );
         updateBreaking( step, *pCatalog, bBreak );
@@ -322,7 +323,7 @@ namespace sw
         GameObject*                 pOwner  = getOwner();
         FirstPersonCameraComponent* pCamera = pOwner != nullptr ? pOwner->getComponent<FirstPersonCameraComponent>() : nullptr;
         if ( pCamera != nullptr )
-            pCamera->setEyePosition( _body.getEyePosition() );
+            pCamera->setEyePosition( getOwner()->getManager()->getWorldOrigin().toLocal( _body.getEyePosition() ) ); // 복셀 월드는 절대 자리다
     }
 
     bool VoxelPlayerComponent::resolveIntentSlots( const PawnComponent& pawn )

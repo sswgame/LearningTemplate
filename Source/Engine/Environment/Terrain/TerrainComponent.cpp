@@ -265,6 +265,21 @@ namespace sw
             _bOriginDirty.store( true, std::memory_order_relaxed );
     }
 
+    void TerrainComponent::onWorldOriginShifted( const float3& delta )
+    {
+        (void)delta;
+        if ( _heightfield.isValid() == false )
+            return;
+        _bOriginDirty.store( false, std::memory_order_relaxed ); // 다시 읽지 않는다 — 모양은 그대로고 자리만 옮는다
+        _heightfield.setOrigin( getWorldPosition() );            // 루트는 이미 옮겨졌다
+        for ( uint32 chunkIndex = 0; chunkIndex < _listChunk.size(); ++chunkIndex )
+        {
+            const float3 translation = TerrainMeshBuilder::computeChunkTranslation( _heightfield, _layout, chunkIndex % _layout._chunkCountX, chunkIndex / _layout._chunkCountX );
+            if ( _listChunk[chunkIndex]._batch != nullptr )
+                _listChunk[chunkIndex]._batch->setWorld( 0, float4x4::makeTranslation( translation ) );
+        }
+    }
+
     void TerrainComponent::onTick( TickContext& context )
     {
         SceneComponent::onTick( context );

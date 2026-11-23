@@ -151,6 +151,8 @@ namespace sw
         void onUnregister( GameObjectManager& manager ) override;
 
         void onBeginPlay() override;
+        /** @brief 쪼갤 때의 자세와 그룹 자세를 옮깁니다(바디는 물리 씬이 옮긴다). */
+        void onWorldOriginShifted( const float3& delta ) override;
 
         /** @brief 메시 공간 피해 사건 하나를 쌓습니다. 다음 물리 프레임에 적용하며, 어느 틱에서든 부를 수 있습니다. */
         void applyDamage( const DestructionDamageEvent& event );

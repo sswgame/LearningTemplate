@@ -138,6 +138,8 @@ namespace sw
         bool computeStreamingBounds( AABB& outBox ) const override;
         /** @brief 소유 오브젝트를 켜고 끄면 셀 배치를 더티로 표시합니다. 빌더가 다시 확인합니다. */
         void onOwnerActiveInHierarchyChanged() override;
+        /** @brief 지은 셀의 인스턴스와 영역을 옮깁니다. */
+        void onWorldOriginShifted( const float3& delta ) override;
         void onTick( TickContext& context ) override;
 
         /**
@@ -212,6 +214,8 @@ namespace sw
 
         /** @brief 배치를 계산할 평면 사각형을 반환합니다. 크기가 0 이면 아래 지형 전체이고, 지형도 없으면 빈 사각형입니다. */
         PlacementRegion computeRegion() const;
+        /** @brief 제외 영역을 지금 월드 원점 기준으로 옮긴 것입니다(데이터는 절대 자리다). */
+        vector<PlacementExclusion> makeLocalExclusions() const;
         /** @brief 셀 배치 모두를 더티로 표시합니다. 활성 상태가 바뀌었을 때 호출합니다. */
         void markCellsDirty();
         /**

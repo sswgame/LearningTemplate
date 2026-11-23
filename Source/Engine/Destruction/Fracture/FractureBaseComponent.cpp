@@ -1684,6 +1684,16 @@ namespace sw
         _collisionSubscription = GameObjectEvents::listen<&FractureBaseComponent::handleCollisionBegin>( *this, &GameObjectEvents::_collisionBegin );
     }
 
+    void FractureBaseComponent::onWorldOriginShifted( const float3& delta )
+    {
+        _objectPosition += delta;
+        for ( FractureGroupRuntime& runtime : _listRuntime )
+        {
+            runtime._position += delta; // 바디는 물리 씬이 옮겼다
+            runtime._drivePosition += delta;
+        }
+    }
+
     void FractureBaseComponent::onUnregister( GameObjectManager& manager )
     {
         manager.getComponentRegistry().remove<FractureBaseComponent>( this );

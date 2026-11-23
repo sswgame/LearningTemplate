@@ -925,6 +925,13 @@ namespace sw
             b2Body_SetAwake( pRecord->_bodyID, true );
     }
 
+    void Box2DPhysicsScene::shiftOrigin( const float2& delta )
+    {
+        const b2Vec2 offset = Box2DUtil::toBox2D( delta );
+        _bodies.forEach( [&offset]( BodyRecord& record )
+        { b2Body_SetTransform( record._bodyID, b2Add( b2Body_GetPosition( record._bodyID ), offset ), b2Body_GetRotation( record._bodyID ) ); } );
+    }
+
     void Box2DPhysicsScene::moveKinematic( PhysicsBodyHandle body, const float2& targetPosition, const float32& targetRotation, float32 deltaTime )
     {
         const BodyRecord* pRecord             = findBody( body );

@@ -110,6 +110,8 @@ namespace sw
         void onTick( TickContext& context ) override;
         /** @brief 오너가 움직였다고 표시만 합니다(여러 스레드에서 불린다). 다음 틱이 틱 뒤로 다시 읽기를 미룹니다. */
         void onWorldTransformUpdated() override;
+        /** @brief 높이장과 청크를 그 자리에서 옮깁니다 — 높이장 에셋을 다시 읽지 않는다. */
+        void onWorldOriginShifted( const float3& delta ) override;
 
         /**
          * @brief 높이장과 스플랫을 다시 읽고 청크를 다시 만듭니다. 등록 전이면 데이터만 읽습니다.

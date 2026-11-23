@@ -1053,6 +1053,15 @@ namespace sw
             bodies.ActivateBodiesInAABox( oldBounds, JPH::BroadPhaseLayerFilter{}, JPH::ObjectLayerFilter{} );
     }
 
+    void JoltPhysicsScene::shiftOrigin( const float3& delta )
+    {
+        JPH::BodyInterface& bodies = _system.GetBodyInterface();
+        const JPH::Vec3     offset = JoltUtil::toJolt( delta );
+        _bodies.forEach( [&bodies, &offset]( BodyRecord& record )
+        { bodies.SetPosition( record._bodyID, bodies.GetPosition( record._bodyID ) + offset, JPH::EActivation::DontActivate ); } );
+        _softBodies.shiftOrigin( offset );
+    }
+
     void JoltPhysicsScene::moveKinematic( PhysicsBodyHandle body, const float3& targetPosition, const quaternion& targetRotation, float32 deltaTime )
     {
         const BodyRecord* pRecord           = findBody( body );

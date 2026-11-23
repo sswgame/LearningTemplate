@@ -162,6 +162,8 @@ namespace sw
 
         /** @brief 물리 씬을 모두 내립니다(바디 · 관절 · 캐릭터가 함께 사라진다). 매니저가 비울 때 부릅니다. */
         void onSceneCleared() override;
+        /** @brief 바디를 모두 옮깁니다(`IPhysicsBodyScene::shiftOrigin`) — 컴포넌트가 주인이 아닌 래그돌 · 파편 · 천 바디까지. */
+        void onWorldOriginShifted( const float3& delta ) override;
         /** @brief 물리를 진행합니다(`Physics` 단계, 게임 스레드). */
         void update( float32 deltaTime ) override;
         /** @brief 미리보기 정책의 고정 스텝(`ScenePreviewPolicy::_fixedStepOverride`)을 적용합니다. */

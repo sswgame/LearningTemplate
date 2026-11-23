@@ -120,6 +120,16 @@ namespace sw
         _end = end;
     }
 
+    void KillcamShot::applyWorldOffset( const float3& delta )
+    {
+        for ( KillcamHit& hit : _listHit )
+        {
+            hit._position += delta;
+        }
+        _origin += delta;
+        _end += delta;
+    }
+
     bool KillcamShot::hasKill() const
     {
         for ( const KillcamHit& hit : _listHit )

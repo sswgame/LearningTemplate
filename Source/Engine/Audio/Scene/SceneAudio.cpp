@@ -272,6 +272,13 @@ namespace sw
         updateReverbZones( *pEngine );
     }
 
+    void SceneAudio::onWorldOriginShifted( const float3& delta )
+    {
+        ScopedLock<mutex> lock{ _mutex };
+        _primaryListenerPosition += delta;
+        _lastCameraPosition += delta;
+    }
+
     float32 SceneAudio::findZoneIntensity( const hashed_string& snapshot ) const
     {
         ScopedLock<mutex> lock{ _mutex };

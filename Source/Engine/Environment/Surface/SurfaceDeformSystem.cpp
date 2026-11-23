@@ -197,6 +197,13 @@ namespace sw
             environment.clearSurfaceDeform();
     }
 
+    void SurfaceDeformSystem::onWorldOriginShifted( const float3& delta )
+    {
+        _grid.shiftOrigin( delta._x, delta._z );
+        _persistentStampTable.forEach( [&delta]( PersistentStamp& held )
+        { held._point += delta; } );
+    }
+
     void SurfaceDeformSystem::onSceneCleared()
     {
         _pManager->getSubsystem<SceneEnvironment>().clearSurfaceDeform(); // 놓을 텍스처를 칸이 쥐고 있지 않게 먼저 비운다

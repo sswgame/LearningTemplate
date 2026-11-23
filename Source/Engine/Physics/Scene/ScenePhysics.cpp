@@ -227,6 +227,14 @@ namespace sw
         _bStreamingHolds = bStreaming ? SW_TRUE : SW_FALSE;
     }
 
+    void ScenePhysics::onWorldOriginShifted( const float3& delta )
+    {
+        if ( _pScene3D != nullptr )
+            _pScene3D->shiftOrigin( delta );
+        if ( _pScene2D != nullptr )
+            _pScene2D->shiftOrigin( float2{ delta._x, delta._y } );
+    }
+
     void ScenePhysics::onSceneCleared()
     {
         // 남은 컴포넌트가 들고 있는 핸들은 씬과 함께 무효가 된다 — 먼저 놓게 한다.
