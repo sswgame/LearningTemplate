@@ -203,9 +203,11 @@ namespace sw
             sample._exposureErrorEv       = _state.getMainView()._exposureErrorEv;
             sample._exposureAdaptationEv  = _state.getMainView()._exposureAdaptationEv;
             sample._giAccumulatedFrames   = _state._probeUpdater.getAccumulatedFrames();
+            sample._giError               = _state._probeUpdater.getError();
             sample._cameraStillFrameCount = _state.getMainView()._cameraStillFrameCount;
             sample._bTemporalAccumulation = _state.getMainView()._bTAAHistoryWritten;
             sample._bAutoExposure         = _state.getMainView()._bAutoExposureThisFrame;
+            sample._bRealtimeGI           = _state._probeUpdater.isActive() ? SW_TRUE : SW_FALSE;
             return sample;
         }
         /**

@@ -443,7 +443,6 @@
     "Source/Engine/Graphics/2D/SlicedSpriteDef.cpp": {"integer": 1},
     "Source/Engine/Graphics/Canvas/CanvasDrawList.h": {"integer": 1},
     "Source/Engine/Graphics/Lighting/ReflectionProbeAsset.cpp": {"float": 5, "hex": 8},
-    "Source/Engine/Graphics/Lighting/SceneVoxelGrid.cpp": {"minus-one": 1, "integer": 4},
     "Source/Engine/Graphics/Material/Material.cpp": {"integer": 2},
     "Source/Engine/Graphics/Material/MaterialPacking.cpp": {"integer": 10},
     "Source/Engine/Graphics/Material/MaterialRenderProxy.h": {"integer": 1},

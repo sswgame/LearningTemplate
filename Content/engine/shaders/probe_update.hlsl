@@ -12,16 +12,16 @@
  *   (2) 기록(원시 SH9 계수 27 개 → float4 일곱)을 소비 셰이더가 읽는 프로브 원소(SH9Color::makeGPUElement 와 같은 배치)로 바꿔 프로브 버퍼에 쓴다.
  *       프로브 버퍼는 CPU 가 프레임마다 0 으로 올리므로 갱신하지 않는 프레임에도 모든 프로브를 쓴다.
  *
- * 광선은 점유 복셀(SceneVoxelGrid — traceVoxelRay 가 C++ SceneVoxelGrid::traceRay 와 같은 식)을 걷는다. 닿으면 그 면이 받는 직접광(방향광 · 점광 · 스폿 — 라이트 버퍼의 앞 몇 개,
+ * 광선은 점유 복셀(scene_voxelize.hlsl 이 칠한다 — traceVoxelRay 가 CPU 기준 구현 SceneVoxelReference::traceRay 와 같은 식)을 걷는다. 닿으면 그 면이 받는 직접광(방향광 · 점광 · 스폿 — 라이트 버퍼의 앞 몇 개,
  * 감쇠는 LightProbeBaker::computeLightIncidence 와 같다, 가림은 같은 복셀로 본다) × 볼륨의 반사율이 그 방향의 복사휘도다. 닿지 않으면 하늘 SH 를 읽는다 — 베이커와 같은 규칙(한 번 튐 + 하늘).
  * 방향은 프로브 · 프레임마다 회전한 피보나치 구라서 갱신마다 달라 기록과 섞이며 잡음이 평균된다.
- * 닿은 칸이 발광 칸(SceneVoxelGrid::_listEmission, RGB9E5)이면 그 빛 × 볼륨의 발광 배율을 더한다(배율 0 이면 읽지 않는다 — 이전 그림).
+ * 닿은 칸이 발광 칸(발광 순위 — SceneVoxelScene::_listEmissionPalette)이면 그 순위의 빛(입력 행 끝의 RGB9E5 목록) × 볼륨의 발광 배율을 더한다(배율 0 이면 읽지 않는다 — 이전 그림).
  * 하늘로 나간 광선의 몫(하늘 보임)을 기록의 남는 칸(원시 계수 뒤 28 번째)에 함께 섞고 프로브 원소 6 의 w 에 싣는다 — 소비 셰이더가 볼륨의 하늘 가림 세기로 반사 앰비언트를 가린다.
  * 빛샘 막기(DDGI 의 거리 모먼트): 광선마다 닿은 거리(칸 하나 너머까지, 닿지 않거나 멀면 셀 대각선. 칸 안에서 떠난 광선은 적지 않는다)의 (d, d²) 를 그 방향의 옥타헤드럴 텍셀(binding_slots.hlsli 8 절 SW_PROBE_VISIBILITY_*)에
  * 기록과 같은 비율로 섞는다. 기록은 프로브마다 SH9 일곱 뒤에 모먼트 묶음이 붙고, 프레임마다 모먼트 묶음을 프로브 버퍼의 볼륨 모먼트 자리(kVolVisibility)로 옮긴다.
  * 소비 셰이더(lighting.hlsli LightData::sampleProbeVolume)가 체비쇼프 가시성으로 벽 너머 프로브를 줄인다. 거리²가 0 인 텍셀은 아직 모르는 것이다.
  *
- * 바인딩 계약: 읽기 t0 라이트(g_SwLights 와 같은 버퍼) · t1 입력 행(g_ProbeParams) · t2 복셀 단어(볼륨들의 비트 격자를 이어 붙임), 쓰기 u0 기록(float4, 프로브마다 kHistoryFloat4Count) · u1 프로브 버퍼.
+ * 바인딩 계약: 읽기 t0 라이트(g_SwLights 와 같은 버퍼) · t1 입력 행(g_ProbeParams) · t2 복셀 단어(볼륨들의 비트 격자와 발광 순위를 이어 붙임), 쓰기 u0 기록(float4, 프로브마다 kHistoryFloat4Count) · u1 프로브 버퍼.
  * 입력 행 배치는 아래 kRow*, C++: FrameRenderer::dispatchProbeUpdate(RealtimeProbeUpdater) — dispatchCompute( ceil(총 프로브 수 / 64), 1, 1 ).
  */
 
@@ -43,7 +43,7 @@ static const uint kVolVoxelOrigin = 3u;          // 복셀 시작점 xyz, 칸 �
 static const uint kVolVoxelDim    = 4u;          // asuint( 복셀 칸 수 X, Y, Z, 복셀 단어 버퍼 안의 첫 단어 )
 static const uint kVolHistory     = 5u;          // asuint( 기록의 첫 float4 번호, 첫 스레드 번호, 프로브 수, 광선 수 )
 static const uint kVolSchedule    = 6u;          // asuint( 갱신 주기, 기록이 쌓인 프레임 수, 발광 단어의 첫 단어(없으면 kNoEmission), asuint( 발광 배율 ) )
-static const uint kVolVisibility  = 7u;          // asuint( 프로브 버퍼 안의 모먼트 첫 float4 번호, 0, 0, 0 )
+static const uint kVolVisibility  = 7u;          // asuint( 프로브 버퍼 안의 모먼트 첫 float4 번호, 발광 목록의 첫 행(순위 1 부터 행마다 RGB9E5 넷), 0, 0 )
 static const uint kNoEmission     = 0xFFFFFFFFu; // RealtimeProbeUpdater::kNoEmission 과 같다
 
 static const uint kProbeFloat4Count   = SW_LIGHT_PROBE_FLOAT4_COUNT;
@@ -100,7 +100,7 @@ bool isVoxelOccupied( VoxelGrid grid, int3 cell )
     return ( ( g_ProbeVoxels[grid._wordOffset + ( index >> 5u )] >> ( index & 31u ) ) & 1u ) != 0u;
 }
 
-/** @brief 광선이 처음 만나는 켜진 칸입니다. C++ SceneVoxelGrid::traceRay 와 같은 식이다(식을 고치면 두 곳을 함께 고친다). */
+/** @brief 광선이 처음 만나는 켜진 칸입니다. CPU 기준 구현(테스트 SceneVoxelReference::traceRay)과 같은 식이다(식을 고치면 두 곳을 함께 고친다). */
 bool traceVoxelRay( VoxelGrid grid, float3 origin, float3 direction, float maxDistance, out float outHitDistance, out float3 outHitNormal )
 {
     outHitDistance         = 0.0f;
@@ -200,7 +200,7 @@ bool traceVoxelRay( VoxelGrid grid, float3 origin, float3 direction, float maxDi
 }
 
 /** @brief 닿은 칸(면 바로 안쪽 점 @p insidePoint)의 발광입니다. 발광 칸이 없는 볼륨은 0 이다. */
-float3 findEmission( VoxelGrid grid, uint emissionOffset, float3 insidePoint )
+float3 findEmission( VoxelGrid grid, uint emissionOffset, uint paletteRow, float3 insidePoint )
 {
     float3 emission = float3( 0.0f, 0.0f, 0.0f );
     if ( emissionOffset != kNoEmission )
@@ -209,7 +209,12 @@ float3 findEmission( VoxelGrid grid, uint emissionOffset, float3 insidePoint )
         if ( all( cell >= int3( 0, 0, 0 ) ) && all( cell < (int3)grid._dimension ) )
         {
             const uint index = ( (uint)cell.z * grid._dimension.y + (uint)cell.y ) * grid._dimension.x + (uint)cell.x;
-            emission         = PackUtil::unpackRGB9E5( g_ProbeVoxels[emissionOffset + index] );
+            const uint rank  = g_ProbeVoxels[emissionOffset + index]; // 0 이면 발광하지 않는 칸
+            if ( rank != 0u )
+            {
+                const uint4 palette = asuint( g_ProbeParams[paletteRow + ( ( rank - 1u ) >> 2u )] );
+                emission            = PackUtil::unpackRGB9E5( palette[( rank - 1u ) & 3u] );
+            }
         }
     }
     return emission;
@@ -438,7 +443,7 @@ void CSMain( uint3 dispatchID : SV_DispatchThreadID )
                 const float3 surface = position + direction * hitDistance + hitNormal * ( grid._cellSize * kSurfaceOffset );
                 radiance             = computeDirectLight( grid, lightCount, surface, hitNormal ) * albedo;
                 if ( emissiveIntensity > 0.0f )
-                    radiance += findEmission( grid, emissionOffset, position + direction * hitDistance - hitNormal * ( grid._cellSize * 0.5f ) ) * emissiveIntensity;
+                    radiance += findEmission( grid, emissionOffset, visibility.y, position + direction * hitDistance - hitNormal * ( grid._cellSize * 0.5f ) ) * emissiveIntensity;
             }
             else
             {

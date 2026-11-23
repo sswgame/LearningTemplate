@@ -23,7 +23,6 @@
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Graphics/Debug/RenderDiagnostics.h"
-#include "Engine/Graphics/Lighting/SceneVoxelGrid.h"
 #include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
 #include "Engine/Graphics/Shader/Binding/GPULight.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
@@ -37,6 +36,7 @@ namespace sw
     class Scene;
     struct LightProbeGrid;
     struct ReflectionProbeAsset;
+    struct SceneVoxelScene;
     struct SkyLightData;
 
     /** @brief 쿠키(빛 텍스처)를 쓰는 빛 하나입니다 — 라이트 목록의 원소 번호와 텍스처 경로입니다. 렌더러가 칸을 나눠 그 원소의 `_extra.w` 에 적습니다(`Light2DCookieAtlas`). */
@@ -52,19 +52,19 @@ namespace sw
     /**
      * @brief 실시간으로 갱신할 라이트 프로브 볼륨 하나의 요청입니다(`collectSceneLights` 가 만들고 렌더 스레드의 `RealtimeProbeUpdater` 가 읽는다).
      * @details 볼륨 원소(`_volumeElement`)가 격자 모양(시작점 · 간격 · 수)과 프로브 버퍼 안의 자리를 이미 담고 있어 여기에는 갱신에만 필요한 값을 둔다.
-     *          복셀 격자는 불변 공유 값이다 — 컴포넌트의 캐시와 같은 것을 가리키고, 렌더 스레드는 포인터가 바뀐 프레임에만 다시 올린다.
+     *          복셀 장면은 불변 공유 값이다 — 컴포넌트의 캐시와 같은 것을 가리키고, 렌더 스레드는 포인터가 바뀐 프레임에만 바뀐 구간을 다시 칠한다.
      */
     struct RealtimeProbeRequest
     {
-        GPULight                         _volumeElement{};           ///< 라이트 목록에 넣은 볼륨 원소의 사본 - 격자 모양(시작점 `_colorIntensity.xyz` · 간격 `_directionType.xyz` · 수 `_params.xyz`)과 프로브 버퍼 안의 첫 프로브 번호(`_params.w`)
-        uint64                           _volumeID{ 0 };             ///< 컴포넌트 번호 — 프레임을 넘는 기록(history)의 열쇠
-        uint32                           _probeCount{ 0 };           ///< 볼륨의 프로브 수
-        uint32                           _rayCount{ 0 };             ///< 프로브 하나를 한 번 갱신할 때 쏘는 광선 수
-        uint32                           _updatePeriod{ 1 };         ///< 모든 프로브가 한 번씩 갱신되는 프레임 수
-        float32                          _blend{ 1.0f };             ///< 새 값이 기록에 섞이는 비율
-        float32                          _bounceAlbedo{ 0.5f };      ///< 닿은 면의 반사율
-        float32                          _emissiveIntensity{ 0.0f }; ///< 광선이 닿은 발광 칸(`SceneVoxelGrid::_listEmission`)의 빛에 곱하는 배율 — 0 이면 발광을 보지 않는다(이전 그림)
-        shared_ptr<const SceneVoxelGrid> _pVoxelGrid;                ///< 광선이 걷는 점유 복셀
+        GPULight                          _volumeElement{};           ///< 라이트 목록에 넣은 볼륨 원소의 사본 - 격자 모양(시작점 `_colorIntensity.xyz` · 간격 `_directionType.xyz` · 수 `_params.xyz`)과 프로브 버퍼 안의 첫 프로브 번호(`_params.w`)
+        uint64                            _volumeID{ 0 };             ///< 컴포넌트 번호 — 프레임을 넘는 기록(history)의 열쇠
+        uint32                            _probeCount{ 0 };           ///< 볼륨의 프로브 수
+        uint32                            _rayCount{ 0 };             ///< 프로브 하나를 한 번 갱신할 때 쏘는 광선 수
+        uint32                            _updatePeriod{ 1 };         ///< 모든 프로브가 한 번씩 갱신되는 프레임 수
+        float32                           _blend{ 1.0f };             ///< 새 값이 기록에 섞이는 비율
+        float32                           _bounceAlbedo{ 0.5f };      ///< 닿은 면의 반사율
+        float32                           _emissiveIntensity{ 0.0f }; ///< 광선이 닿은 발광 칸(`SceneVoxelScene::_listEmissionPalette`)의 빛에 곱하는 배율 — 0 이면 발광을 보지 않는다(이전 그림)
+        shared_ptr<const SceneVoxelScene> _pVoxelScene;               ///< 광선이 걷는 점유 복셀
     };
 } // namespace sw
 

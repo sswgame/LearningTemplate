@@ -214,7 +214,7 @@ namespace sw
             Internal::appendRibbon( pAgent->_agentPosition, pAgent->_nextCorner, pathColor, listVertex );
             Internal::appendRibbon( pAgent->_nextCorner, pAgent->_destination, pathColor, listVertex );
         }
-        shared_ptr<Mesh> mesh = Mesh::create();
+        shared_ptr<Mesh> mesh = Mesh::create( MeshCPUAccess::Keep );
         mesh->setVertices( std::move( listVertex ) );
         pMeshComponent->setMesh( std::move( mesh ) );
     }

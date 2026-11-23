@@ -223,7 +223,12 @@ namespace sw
          */
         VolumetricFog,
         /**
-         * @brief 실시간 라이트 프로브 갱신 컴퓨트(probe_update.hlsl)입니다. 프로브마다 점유 복셀(`SceneVoxelGrid`)로 광선을 쏘아 SH9 기록을 갱신하고, 소비 셰이더의 프로브 원소로 바꿔
+         * @brief 실시간 프로브의 점유 복셀 칠하기 컴퓨트(scene_voxelize.hlsl)입니다. 장면(`SceneVoxelScene`)이 바뀐 프레임에 바뀐 구간의 칸을 지우고, 닿는 메시의 GPU 원본 정점을
+         *        삼각형마다 3 축 투영으로 칠한다(`RealtimeProbeUpdater::dispatchVoxelClear` · `dispatchVoxelPaint`). 프로브 갱신(`ProbeUpdate`)이 이어서 읽는다.
+         */
+        SceneVoxelize,
+        /**
+         * @brief 실시간 라이트 프로브 갱신 컴퓨트(probe_update.hlsl)입니다. 프로브마다 점유 복셀(`SceneVoxelize` 가 칠한다)로 광선을 쏘아 SH9 기록을 갱신하고, 소비 셰이더의 프로브 원소로 바꿔
          *        프로브 버퍼(t13)에 쓴다(`RealtimeProbeUpdater`). 라이트 업로드 뒤 · 조명 패스 앞에 한 번 돈다.
          */
         ProbeUpdate,
@@ -350,6 +355,7 @@ namespace sw
             case RenderPassKind::GPUCull:
             case RenderPassKind::LightGrid:
             case RenderPassKind::VolumetricFog:
+            case RenderPassKind::SceneVoxelize:
             case RenderPassKind::ProbeUpdate:
             case RenderPassKind::CanvasMarker:
                 return true;

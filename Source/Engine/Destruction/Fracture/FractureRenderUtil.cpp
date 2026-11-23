@@ -46,7 +46,7 @@ namespace sw
         }
         if ( listVertex.empty() )
             return nullptr;
-        shared_ptr<Mesh> mesh = Mesh::create();
+        shared_ptr<Mesh> mesh = Mesh::create( MeshCPUAccess::Keep );
         mesh->setVertices( std::move( listVertex ) );
         // 조각 뼈의 레퍼런스가 조각 중심이므로 역 바인드는 중심을 원점으로 옮긴다.
         MeshSkinBinding skinBinding{};
@@ -92,7 +92,7 @@ namespace sw
         }
         if ( listVertex.empty() )
             return nullptr;
-        shared_ptr<Mesh> mesh = Mesh::create();
+        shared_ptr<Mesh> mesh = Mesh::create( MeshCPUAccess::Keep );
         mesh->setVertices( std::move( listVertex ) );
         return mesh;
     }

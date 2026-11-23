@@ -499,7 +499,7 @@ namespace sw
             return;
         }
         // 렌더 스냅샷이 옛 메시를 쥐고 있으므로 정점을 제자리에서 바꾸지 않고 새 메시를 건다.
-        shared_ptr<Mesh> mesh = Mesh::create();
+        shared_ptr<Mesh> mesh = Mesh::create( MeshCPUAccess::Keep );
         mesh->setDynamic( true );
         mesh->setVertices( std::move( listVertex ) );
         pMesh->setMesh( std::move( mesh ) );

@@ -371,7 +371,7 @@ namespace sw
             // 언리얼 · 유니티도 메시 스트리밍이 끝나기 전 프레임은 그 드로를 빼거나 낮은 LOD 로 둔다). 메시 캐시는 약한 참조라 렌더러가 쥔다.
             auto loadIt = _mapMeshLoad.find( meshID );
             if ( loadIt == _mapMeshLoad.end() )
-                loadIt = _mapMeshLoad.insert_or_assign( meshID, MeshCache::request( meshID.view() ) ).first;
+                loadIt = _mapMeshLoad.insert_or_assign( meshID, MeshCache::request( meshID.view(), MeshCPUAccess::ReleaseAfterUpload ) ).first;
             const MeshHandle& load = loadIt->second;
             if ( load.isLoading() )
                 return nullptr;

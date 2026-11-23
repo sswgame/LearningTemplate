@@ -83,10 +83,29 @@ namespace sw
 
 namespace sw
 {
-    MeshLoadOperation::MeshLoadOperation( string_view path )
+    MeshLoadOperation::MeshLoadOperation( string_view path, MeshCPUAccess cpuAccess )
         : AssetLoadOperation{ MeshCache::kAssetKindName, path, MemoryTag::Mesh }
         , _pMesh{}
+        , _cpuAccess{ cpuAccess }
     {
+    }
+
+    bool MeshLoadOperation::createFromData( const string& key, MeshAssetData&& data, AssetLoadScope& loadScope )
+    {
+        loadScope.setBytes( data._listVertex.size() * sizeof( RHIVertex ) + data._listIndex.size() * sizeof( uint32 ) + data._listSkinVertex.size() * sizeof( MeshSkinVertex ) );
+        shared_ptr<Mesh> loaded = Mesh::createForAsset( MeshCacheInternal::toAssetID( getPath() ), _cpuAccess.load( std::memory_order_acquire ) );
+        // 읽기가 인덱스 범위를 이미 봤다 — 실패는 깨진 파일 하나뿐이고 아래 판정이 함께 진다. 스킨 · 모프가 있으면 메시가 저절로 `Keep` 이 된다.
+        const bool bGeometry = loaded->setGeometryWithTangents( std::move( data._listVertex ), std::move( data._listIndex ) );
+        if ( data._skinBinding.getBoneCount() > 0 )
+            loaded->setSkin( std::move( data._listSkinVertex ), std::move( data._skinBinding ) );
+        if ( data._listMorphTarget.empty() == false )
+            loaded->setMorphTargets( std::move( data._listMorphTarget ) );
+        // 구간 · LOD 가 정점과 맞지 않으면 파일이 깨진 것이다 — 구간 · LOD 없는 메시로 두지 않고 읽기 실패로 알린다.
+        if ( bGeometry == false || loaded->setSections( std::move( data._listSection ) ) == false || loaded->setLODs( std::move( data._listLOD ) ) == false )
+            return false;
+        loadScope.setSucceeded();
+        _pMesh = MeshCacheInternal::getState()._sharedTable.insertOrGetLive( key, std::move( loaded ) );
+        return true;
     }
 
     expected<void> MeshLoadOperation::runLoad()
@@ -94,27 +113,17 @@ namespace sw
         const string_view path = getPath();
         const string      key  = MeshCacheInternal::makeKey( path );
 
-        // 읽기는 잠금 밖에서 한다(파일 IO). 다른 길(`reloadShared` 뒤의 새 요청)이 먼저 넣었으면 그것을 받는다.
-        MeshAssetData  data{};
-        AssetLoadScope loadScope( "Mesh", path );
-        bool           bLoaded = MeshAssetFormat::loadFromAsset( MeshCacheInternal::toAssetID( path ), data );
-        if ( bLoaded )
+        // 이미 누가 쥔 메시면(CPU 정점을 놓은 메시에 온 `Keep` 요청, 다른 길이 먼저 넣음) 새로 만들지 않는다 — 놓은 정점은 아래에서 되돌린다.
+        _pMesh       = MeshCacheInternal::getState()._sharedTable.findLive( key );
+        bool bLoaded = _pMesh != nullptr;
+        if ( bLoaded == false )
         {
-            loadScope.setBytes( data._listVertex.size() * sizeof( RHIVertex ) + data._listIndex.size() * sizeof( uint32 ) + data._listSkinVertex.size() * sizeof( MeshSkinVertex ) );
-            shared_ptr<Mesh> loaded = Mesh::create();
-            // 읽기가 인덱스 범위를 이미 봤다 — 실패는 깨진 파일 하나뿐이고 아래 판정이 함께 진다.
-            bLoaded = loaded->setGeometryWithTangents( std::move( data._listVertex ), std::move( data._listIndex ) );
-            if ( data._skinBinding.getBoneCount() > 0 )
-                loaded->setSkin( std::move( data._listSkinVertex ), std::move( data._skinBinding ) );
-            if ( data._listMorphTarget.empty() == false )
-                loaded->setMorphTargets( std::move( data._listMorphTarget ) );
-            // 구간 · LOD 가 정점과 맞지 않으면 파일이 깨진 것이다 — 구간 · LOD 없는 메시로 두지 않고 읽기 실패로 알린다.
-            bLoaded = bLoaded && loaded->setSections( std::move( data._listSection ) ) && loaded->setLODs( std::move( data._listLOD ) );
+            // 읽기는 잠금 밖에서 한다(파일 IO).
+            MeshAssetData  data{};
+            AssetLoadScope loadScope( "Mesh", path );
+            bLoaded = MeshAssetFormat::loadFromAsset( MeshCacheInternal::toAssetID( path ), data );
             if ( bLoaded )
-            {
-                loadScope.setSucceeded();
-                _pMesh = MeshCacheInternal::getState()._sharedTable.insertOrGetLive( key, std::move( loaded ) );
-            }
+                bLoaded = createFromData( key, std::move( data ), loadScope );
         }
 
         // 결과가 캐시에 든 **뒤에** 진행 중 표에서 뺀다 — 그 사이에 온 요청은 진행 중 로드 작업이나 캐시 둘 중 하나를 반드시 본다.
@@ -127,6 +136,12 @@ namespace sw
         {
             MeshCacheInternal::warnLoadFailureOnce( path );
             return unexpected( Error{ ErrorKind::InvalidArgument, "the mesh asset could not be read", path } );
+        }
+        // 표에서 뺀 뒤의 값이 이 로드가 받은 모든 요청의 합이다(요청은 잠금 안에서 올린다). 놓은 정점은 여기서 파일을 다시 읽어 되돌린다.
+        if ( _cpuAccess.load( std::memory_order_acquire ) == MeshCPUAccess::Keep && _pMesh->retainCPUVertices() == false )
+        {
+            _pMesh.reset();
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the mesh CPU vertices could not be read again", path } );
         }
         return {};
     }
@@ -142,16 +157,16 @@ namespace sw
 
     MeshCache::~MeshCache() = default;
 
-    MeshHandle MeshCache::request( string_view path )
+    MeshHandle MeshCache::request( string_view path, MeshCPUAccess cpuAccess )
     {
-        return requestWith( path, AssetLoadStart::Async );
+        return requestWith( path, cpuAccess, AssetLoadStart::Async );
     }
 
-    MeshHandle MeshCache::requestWith( string_view path, AssetLoadStart start )
+    MeshHandle MeshCache::requestWith( string_view path, MeshCPUAccess cpuAccess, AssetLoadStart start )
     {
         if ( path.empty() )
         {
-            shared_ptr<MeshLoadOperation> pFailed = sw::make_shared<MeshLoadOperation>( path );
+            shared_ptr<MeshLoadOperation> pFailed = sw::make_shared<MeshLoadOperation>( path, cpuAccess );
             pFailed->markFailedWithoutLoad( "the mesh path is empty" );
             return MeshHandle{ std::move( pFailed ) };
         }
@@ -166,14 +181,17 @@ namespace sw
                 pOperation = it->second.lock();
             if ( pOperation != nullptr )
             {
+                if ( cpuAccess == MeshCPUAccess::Keep )
+                    pOperation->_cpuAccess.store( MeshCPUAccess::Keep, std::memory_order_release ); // 로드가 표에서 뺄 때 이 값을 본다
                 MeshCacheInternal::getStats().recordHit();
                 return MeshHandle{ std::move( pOperation ) };
             }
 
             // 진행 중 표를 잡은 채 캐시를 본다 — 로드는 캐시에 넣은 뒤 표에서 빼므로, 여기서 둘 다 없으면 정말 아무도 읽지 않았다.
-            pOperation            = sw::make_shared<MeshLoadOperation>( path );
+            // 이미 CPU 정점을 놓은 메시에 `Keep` 요청이 오면 파일을 다시 읽는 로드로 간다(디스크를 여기서 기다리지 않는다).
+            pOperation            = sw::make_shared<MeshLoadOperation>( path, cpuAccess );
             shared_ptr<Mesh> live = MeshCacheInternal::getState()._sharedTable.findLive( key );
-            if ( live != nullptr )
+            if ( live != nullptr && ( cpuAccess == MeshCPUAccess::ReleaseAfterUpload || live->tryRetainCPUVertices() ) )
             {
                 pOperation->_pMesh = std::move( live );
                 pOperation->markReadyWithoutLoad();
@@ -187,10 +205,10 @@ namespace sw
         return MeshHandle{ std::move( pOperation ) };
     }
 
-    shared_ptr<Mesh> MeshCache::acquire( string_view path )
+    shared_ptr<Mesh> MeshCache::acquire( string_view path, MeshCPUAccess cpuAccess )
     {
         // 기다림이 계약이다 — 호출자(쿠킹 · 도구의 내비 수집 `NavMeshArrival::Wait` · 사본의 원본 · 에디터 도구)는 메시를 그 자리에서 쓴다. 기다리지 않을 곳은 `request` 핸들을 든다.
-        return requestWith( path, AssetLoadStart::OnCallingThread ).wait();
+        return requestWith( path, cpuAccess, AssetLoadStart::OnCallingThread ).wait();
     }
 
     shared_ptr<Mesh> MeshCache::findLiveMesh( string_view path )
@@ -212,9 +230,9 @@ namespace sw
     {
         _pState->_sharedTable.forEachLive( [&outListEntry]( const string& key, const Mesh& mesh, uint32 referenceCount )
         {
-            // 그리는 흐름(LOD 0 + 낮은 단계)의 정점 · 인덱스가 GPU 버퍼이고, CPU 사본은 LOD 0 이다(물리 · 내비 · 피킹이 읽는다).
+            // 그리는 흐름(LOD 0 + 낮은 단계)의 정점 · 인덱스가 GPU 버퍼이고, CPU 는 인덱스와 쥔 정점(`MeshCPUAccess`)이다.
             const uint64 gpuBytes = static_cast<uint64>( mesh.getDrawVertexCount() ) * sizeof( RHIVertex ) + static_cast<uint64>( mesh.getDrawIndexCount() ) * sizeof( uint32 );
-            const uint64 cpuBytes = sizeof( Mesh ) + static_cast<uint64>( mesh.getVertexCount() ) * sizeof( RHIVertex ) + static_cast<uint64>( mesh.getIndexCount() ) * sizeof( uint32 );
+            const uint64 cpuBytes = sizeof( Mesh ) + mesh.getCPUVertexBytes() + static_cast<uint64>( mesh.getDrawIndexCount() ) * sizeof( uint32 );
             outListEntry.push_back( AssetMemoryEntry{ key, cpuBytes, gpuBytes, referenceCount } );
         } );
     }
@@ -223,7 +241,8 @@ namespace sw
     {
         if ( MeshAssetFormat::isMeshAssetPath( relativePath ) == false )
             return {};
-        const shared_ptr<MeshLoadOperation> pOperation = request( relativePath ).getOperation();
+        // 프리로드는 정점을 읽지 않는다 — 읽을 쪽이 `Keep` 으로 요청한다.
+        const shared_ptr<MeshLoadOperation> pOperation = request( relativePath, MeshCPUAccess::ReleaseAfterUpload ).getOperation();
         return AssetPin{ pOperation, pOperation };
     }
 
@@ -298,18 +317,18 @@ namespace sw
 
 namespace sw
 {
-    shared_ptr<Mesh> AssetRefCache<MeshAssetFormat>::acquire( string_view path )
+    shared_ptr<Mesh> AssetRefCache<MeshAssetFormat>::acquire( string_view path, MeshCPUAccess cpuAccess )
     {
-        return MeshAssetFormat::kAssetType.isBuiltinName( path ) ? MeshUtil::acquirePrimitive( path ) : MeshCache::acquire( path );
+        return MeshAssetFormat::kAssetType.isBuiltinName( path ) ? MeshUtil::acquirePrimitive( path ) : MeshCache::acquire( path, cpuAccess );
     }
 
-    MeshHandle AssetRefCache<MeshAssetFormat>::request( string_view path )
+    MeshHandle AssetRefCache<MeshAssetFormat>::request( string_view path, MeshCPUAccess cpuAccess )
     {
         if ( MeshAssetFormat::kAssetType.isBuiltinName( path ) )
         {
             SW_LOG_ERROR_ID( "MeshCache.BuiltinRequested", "Built-in mesh '%#' has no file to request - acquire it instead", path );
             return {};
         }
-        return MeshCache::request( path );
+        return MeshCache::request( path, cpuAccess );
     }
 } // namespace sw

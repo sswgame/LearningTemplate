@@ -416,7 +416,7 @@ namespace sw
             bReady = MeshVertexAnimationBaker::bake( *sourceMesh, skeleton, clip, _settings._vertexAnimationFramesPerSecond, bAnchorRootMotion, *animation );
         if ( bReady )
         {
-            entry._mesh = Mesh::create();
+            entry._mesh = Mesh::create( MeshCPUAccess::Keep );
             // 원본에서 이미 검사한 정점 · 인덱스다. 정점 순서가 원본과 같아 VAT 표(정점 번호)와 구간(인덱스 범위)도 그대로다.
             (void)entry._mesh->setGeometryWithTangents( vector<RHIVertex>( sourceMesh->getCPUView().getVertices() ), vector<uint32>( sourceMesh->getIndices() ) );
             (void)entry._mesh->setSections( sourceMesh->getSections() );

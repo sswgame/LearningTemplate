@@ -3,6 +3,7 @@
  * @brief 메시 에셋(`.mesh`)을 경로로 공유하는 캐시와, 그 캐시를 에셋 캐시 레지스트리에 노출하는 함수입니다.
  */
 #pragma once
+#include "Core/Concurrency/atomic.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
@@ -16,8 +17,11 @@
 
 namespace sw
 {
+    struct MeshAssetData;
+    class AssetLoadScope;
     class IRHIDevice;
     class Mesh;
+    enum class MeshCPUAccess : uint8; // 값은 Mesh.h
 
     /**
      * @class MeshLoadOperation
@@ -28,17 +32,20 @@ namespace sw
     public:
         using AssetType = Mesh;
 
-        explicit MeshLoadOperation( string_view path );
+        MeshLoadOperation( string_view path, MeshCPUAccess cpuAccess );
 
         /** @brief 읽은 메시입니다. `Ready` 일 때만 값이 있습니다(`AssetHandle::get` 이 상태를 본다). */
         const shared_ptr<Mesh>& getAsset() const { return _pMesh; }
 
     private:
         [[nodiscard]] expected<void> runLoad() override;
+        /** @brief 읽은 내용으로 메시를 만들어 캐시에 넣습니다(`_pMesh`). 구간 · LOD 가 정점과 맞지 않는 깨진 파일이면 false 입니다. */
+        [[nodiscard]] bool createFromData( const string& key, MeshAssetData&& data, AssetLoadScope& loadScope );
 
     private:
         friend class MeshCache; // 캐시 적중은 읽지 않고 메시를 채워 `Ready` 로 만든다
-        shared_ptr<Mesh> _pMesh;
+        shared_ptr<Mesh>      _pMesh;
+        atomic<MeshCPUAccess> _cpuAccess; ///< 읽은 메시의 CPU 정점 — 읽는 동안 온 `Keep` 요청이 올린다(진행 중 표의 잠금 안)
     };
 } // namespace sw
 
@@ -75,14 +82,16 @@ namespace sw
          * @brief 경로의 메시 로드를 요청합니다. 이미 보관 중이면 `Ready` 핸들, 같은 경로를 읽는 중이면 그 로드의 핸들, 아니면 워커에서 새로 읽는 핸들입니다.
          * @details 읽지 못한 경로는 경로마다 한 번만 경고합니다(같은 메시를 쓰는 컴포넌트 수백 개가 같은 줄을 찍지 않게). 실패는 기억하지
          *          않으므로 파일이 생기면 다음 요청이 읽습니다. 캐시는 약한 참조이므로 준비된 메시는 핸들(또는 그 메시를 받은 쪽)이 쥐는 동안만 남습니다.
+         * @param cpuAccess CPU 정점을 읽을 것이면 `Keep`, 그리기만 하면 `ReleaseAfterUpload` 입니다. 요청이 갈리면 `Keep` 이고, 이미 놓은 메시의 `Keep` 요청은 파일을 다시 읽는 로드다
          */
-        static MeshHandle request( string_view path );
+        static MeshHandle request( string_view path, MeshCPUAccess cpuAccess );
 
         /**
          * @brief 경로의 메시를 **공유받습니다**. `request` 와 같은 로드 작업을 기다립니다 — 아직 아무도 읽지 않았으면 이 스레드가 읽습니다(`AssetLoadStart::OnCallingThread`).
+         * @param cpuAccess `request` 와 같다
          * @return 읽을 수 없으면 nullptr 입니다.
          */
-        static shared_ptr<Mesh> acquire( string_view path );
+        static shared_ptr<Mesh> acquire( string_view path, MeshCPUAccess cpuAccess );
 
         /**
          * @brief 사용 중인 메시를 파일에서 **제자리에서** 다시 읽습니다. 그 메시를 가진 컴포넌트 모두가 새 정점을 봅니다.
@@ -113,7 +122,7 @@ namespace sw
 
     private:
         /** @brief `request` 와 `acquire` 의 본문입니다. 새 로드를 @p start 대로 시작합니다(동기 API 는 이 자리에서 읽는다 — `AssetLoadStart`). */
-        static MeshHandle requestWith( string_view path, AssetLoadStart start );
+        static MeshHandle requestWith( string_view path, MeshCPUAccess cpuAccess, AssetLoadStart start );
         /** @brief 지금 누가 쥔 @p path 의 메시입니다(없으면 nullptr). 핫 리로드(`MeshCache.cpp`)가 같은 표를 본다. */
         static shared_ptr<Mesh> findLiveMesh( string_view path );
         /** @brief 메시에서 기하를 만든 위 층 캐시(엔진 범위의 `IMeshDerivedCache`)를 비웁니다. 걸린 것이 없으면(물리 없는 실행) 할 일이 없다. */
@@ -127,13 +136,16 @@ namespace sw
 {
     struct MeshAssetFormat;
 
-    /** @brief `AssetRef<MeshAssetFormat>` 은 메시 캐시로 간다(GPU 수명 때문에 공유 캐시와 합치지 않았다 — `SharedAssetCache.h` 머리말). */
+    /**
+     * @brief `AssetRef<MeshAssetFormat>` 은 메시 캐시로 간다(GPU 수명 때문에 공유 캐시와 합치지 않았다 — `SharedAssetCache.h` 머리말).
+     * @details CPU 정점을 쥐는지를 받으므로 인자 없는 `AssetRef::acquire()` · `request()` 는 컴파일되지 않는다 — 쓰는 쪽이 `MeshCPUAccess` 를 정해 여기나 `MeshCache` 를 부른다.
+     */
     template <>
     struct SW_API AssetRefCache<MeshAssetFormat>
     {
         /** @brief `.mesh` 경로는 메시 캐시, 내장 도형 이름(`MeshAssetFormat::kArrBuiltinName`)은 공유 내장 도형(`MeshUtil::acquirePrimitive`)입니다. */
-        static shared_ptr<Mesh> acquire( string_view path );
+        static shared_ptr<Mesh> acquire( string_view path, MeshCPUAccess cpuAccess );
         /** @brief `.mesh` 경로를 비동기로 요청합니다. 내장 도형은 읽을 파일이 없어 요청하지 않는다 — 오류를 남기고 빈 핸들이다(`acquire` 로 받는다). */
-        static MeshHandle request( string_view path );
+        static MeshHandle request( string_view path, MeshCPUAccess cpuAccess );
     };
 } // namespace sw

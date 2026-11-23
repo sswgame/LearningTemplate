@@ -132,7 +132,8 @@ namespace sw
         }
         // 에셋은 워커에서 읽는다. 다 읽을 때까지 그리지 않고, 도착하면 `AssetArrival` 단계가 넣는다. 읽지 못한 에셋은 메시 없이 남는다(그리지 않는다) —
         // 캐시가 경로마다 한 번 경고하고, 핫 리로드 알림이 다시 해석한다.
-        _meshLoad = MeshCache::request( meshID );
+        // 그리기만 한다 — CPU 정점을 읽는 쪽(내비 · 에디터 픽킹)은 자기가 `Keep` 으로 요청한다. 스킨 · 모프 메시는 저절로 쥔다.
+        _meshLoad = MeshCache::request( meshID, MeshCPUAccess::ReleaseAfterUpload );
         if ( _meshLoad.isLoading() == false )
         {
             applyMeshLoad();

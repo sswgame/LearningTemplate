@@ -378,6 +378,7 @@ namespace sw
                 case RenderPassKind::NanCheck:
                 case RenderPassKind::IndirectArgsReset:
                 case RenderPassKind::ScreenRotation:
+                case RenderPassKind::SceneVoxelize:
                 case RenderPassKind::ProbeUpdate:
                 case RenderPassKind::DeferredTileClassify:
                 case RenderPassKind::AutoExposureHistogram:

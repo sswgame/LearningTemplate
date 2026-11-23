@@ -57,7 +57,7 @@ SW_TEST_CASE( MeshUVDensityTest, MeshWithoutUVsHasZeroDensity )
     SW_EXPECT_NEAR( 0.0, Mesh::computeUVDensity( listVertex, listIndex ), 1e-9 );
 
     MeshUVDensityTestUtil::makeQuad( 3.0f, 1.0f, listVertex, listIndex );
-    const shared_ptr<Mesh> mesh = Mesh::create();
+    const shared_ptr<Mesh> mesh = Mesh::create( MeshCPUAccess::Keep );
     SW_REQUIRE_TRUE( mesh->setGeometryWithTangents( vector<RHIVertex>( listVertex ), vector<uint32>( listIndex ) ) );
     SW_EXPECT_NEAR( 3.0, mesh->getUVDensity(), 1e-5 );
 }

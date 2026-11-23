@@ -153,7 +153,7 @@ namespace sw::editor
                 outListMesh.clear();
                 for ( const OutfitAtlasPartSpec& part : spec._listPart )
                 {
-                    shared_ptr<Mesh> mesh = MeshCache::acquire( part._mesh );
+                    shared_ptr<Mesh> mesh = MeshCache::acquire( part._mesh, MeshCPUAccess::Keep );
                     if ( mesh == nullptr )
                     {
                         SW_LOG_ERROR_ID( "OutfitAtlasBaker.OutfitAtlasPartMesh", "Outfit atlas part '%#': mesh '%#' could not be read", part._name.c_str(), part._mesh.c_str() );
