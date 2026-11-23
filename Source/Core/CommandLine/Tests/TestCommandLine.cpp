@@ -584,7 +584,7 @@ SW_TEST_CASE( CommandLineTest, UsageColumnIsReadPerArgument )
 {
     SW_EXPECT_EQUAL( static_cast<size_t>( sw::CommandLineArgument::Count ), sizeof( sw::kArrCommandLineArgumentUsage ) / sizeof( sw::kArrCommandLineArgumentUsage[0] ) );
     SW_EXPECT_TRUE( sw::getCommandLineArgumentUsage( sw::CommandLineArgument::LOG_FILE ) == sw::CommandLineArgumentUsage::All );
-    SW_EXPECT_TRUE( sw::getCommandLineArgumentUsage( sw::CommandLineArgument::COOK_ALL ) == sw::CommandLineArgumentUsage::All ); // 배포 App · Server 가 스스로 굽는다
+    SW_EXPECT_TRUE( sw::getCommandLineArgumentUsage( sw::CommandLineArgument::COOK_ALL ) == sw::CommandLineArgumentUsage::Dev ); // 배포 팩은 호스트 개발 빌드가 굽는다 — 배포 실행 파일은 쿠킹 인자를 모른다
     SW_EXPECT_TRUE( sw::getCommandLineArgumentUsage( sw::CommandLineArgument::ENABLE_EDITOR ) == sw::CommandLineArgumentUsage::Dev );
     SW_EXPECT_TRUE( sw::getCommandLineArgumentUsage( sw::CommandLineArgument::TEST ) == sw::CommandLineArgumentUsage::Test );
     SW_EXPECT_TRUE( sw::getCommandLineArgumentUsage( sw::CommandLineArgument::SCENARIO ) == sw::CommandLineArgumentUsage::Test );

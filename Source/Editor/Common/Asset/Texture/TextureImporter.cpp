@@ -603,7 +603,7 @@ namespace sw::editor
     {
         TaskManager* const               pTaskManager = editor::findSubsystem<TaskManager>(); // 선택: 없으면 이 스레드가 직렬로 굽는다(`importAllTextures` 와 같다)
         const TextureVariantRawImporter  importer{ config, pTaskManager, family };
-        const expected<DerivedDataCache> derivedDataCache = DerivedDataCache::loadFromConfig();
+        const expected<DerivedDataCache> derivedDataCache = DerivedDataCache::open( DerivedDataBucket::Import );
         if ( derivedDataCache.has_value() == false )
         {
             StringBuilder<constant::buffer::kMax512> problemBuilder;
@@ -717,7 +717,7 @@ namespace sw::editor
             return true;
         // 핫 리로드의 임포트 잡이 워커에서 부르므로 작업 시스템을 찾지 않는다(워커는 에디터 서비스 범위를 읽지 않는다) — 밴드 압축도 이 워커가 차례로 한다.
         const TextureRawImporter         importer{ config, nullptr };
-        const expected<DerivedDataCache> derivedDataCache = DerivedDataCache::loadFromConfig();
+        const expected<DerivedDataCache> derivedDataCache = DerivedDataCache::open( DerivedDataBucket::Import );
         if ( derivedDataCache.has_value() == false )
         {
             SW_LOG_ERROR_ID( "TextureImporter.DerivedDataConfigUnreadable", "Texture import skipped: %# (%#)", derivedDataCache.error().message(), derivedDataCache.error().detail() );
@@ -738,7 +738,7 @@ namespace sw::editor
         // 작업 시스템은 여기(호출 스레드)서 한 번 찾아 값으로 넘긴다 — 임포트는 워커에서 도는데 워커는 에디터 서비스 범위를 읽지 않는다(`findEditorScope`).
         TaskManager* const               pTaskManager = editor::findSubsystem<TaskManager>(); // 선택: 없으면 이 스레드가 직렬로 임포트한다(계약)
         const TextureRawImporter         importer{ config, pTaskManager };
-        const expected<DerivedDataCache> derivedDataCache = DerivedDataCache::loadFromConfig();
+        const expected<DerivedDataCache> derivedDataCache = DerivedDataCache::open( DerivedDataBucket::Import );
         if ( derivedDataCache.has_value() == false )
         {
             StringBuilder<constant::buffer::kMax512> problemBuilder;

@@ -12,6 +12,7 @@
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
 
+#include "DevTools/Console/DebugHUDSectionLines.h"
 #include "DevTools/Diagnostics/DevSceneIterationAccess.h"
 
 #include "Engine/Automation/AutomationRuntime.h"
@@ -20,9 +21,13 @@
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Canvas/CanvasPainter.h"
+#include "Engine/Graphics/Debug/DebugDrawQueue.h"
+#include "Engine/Graphics/Debug/VisualLogger.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Reflection/TypeRegistry.h"
+#include "Engine/Scene/Scene.h"
+#include "Engine/Scene/SceneManager.h"
 #include "Engine/UI/Layout/BoxPanel.h"
 #include "Engine/UI/Layout/CanvasPanel.h"
 #include "Engine/UI/Screen/UIScreen.h"
@@ -468,7 +473,7 @@ namespace sw
                 for ( size_t index = 0; index < _listShownScratch.size(); ++index )
                 {
                     _writer.reset();
-                    _listShownScratch[index]->_pFunc( _writer );
+                    DebugHUDSectionLines::write( *_listShownScratch[index], _writer );
                     writeSectionView( _listView[index], *_listShownScratch[index] );
                 }
                 _listShownScratch.clear(); // 등록 포인터는 이 호출 안에서만 쓴다. 다음 갱신 전에 모듈이 언로드될 수 있기 때문이다
@@ -689,12 +694,15 @@ namespace sw
         , _toggleAction{ kToggleActionName }
         , _screen{ kInvalidUIScreenHandle }
         , _window{ kInvalidUIScreenHandle }
-        , _profilerSeenState{}
-        , _profilerSeenRevision{ ~uint64{ 0 } }
+        , _seenSectionState{}
+        , _seenSectionRevision{ ~uint64{ 0 } }
+        , _listShownSection{}
+        , _listHiddenSection{}
         , _bProfilerEnabledByHUD{ SW_FALSE }
         , _bSectionsNeedProfiler{ SW_FALSE }
         , _bRunVisibilityRead{ SW_FALSE }
         , _bOffScreenRun{ SW_FALSE }
+        , _bSectionsDrawn{ SW_FALSE }
         , _reserved{ 0 }
     {
     }
@@ -743,6 +751,7 @@ namespace sw
             syncScreen( bShowScreen );
         if ( _screen != kInvalidUIScreenHandle || _bProfilerEnabledByHUD == SW_TRUE )
             syncFrameProfiler();
+        drawSections();
         // 창이 닫혔다(닫기 단추나 뒤로 가기). 창의 설정 바인딩이 넣은 보류 값을 확정해 사용자 파일에 남긴다.
         if ( _window != kInvalidUIScreenHandle && _pUI->findScreen( _window ) == nullptr )
         {
@@ -936,28 +945,67 @@ namespace sw
         _screen = kInvalidUIScreenHandle;
     }
 
-    void DebugHUD::syncFrameProfiler()
+    void DebugHUD::refreshSectionCache()
     {
         // HUD 가 떠 있으면 프레임마다 온다. 섹션 목록 복사(할당)는 레지스트리 판 번호나 켜짐 글이 바뀐 프레임에만 한다.
         // 잠금 안에서 콜백을 부르는 순회는 섹션 쪽이 레지스트리를 다시 부르면 교착하므로 쓰지 않는다.
-        if ( _screen != kInvalidUIScreenHandle )
+        const DebugHUDRegistry& registry     = engine::getSubsystem<DebugHUDRegistry>();
+        const uint64            revision     = registry.getRevision();
+        string                  sectionState = gv_debugHUDSections.get();
+        if ( revision == _seenSectionRevision && sectionState == _seenSectionState )
+            return;
+        _listShownSection.clear();
+        _listHiddenSection.clear();
+        bool bNeedsProfiler = false;
+        for ( const DebugHUDSectionRegistration* pRegistration : registry.getSections() )
         {
-            const DebugHUDRegistry& registry     = engine::getSubsystem<DebugHUDRegistry>();
-            const uint64            revision     = registry.getRevision();
-            string                  sectionState = gv_debugHUDSections.get();
-            if ( revision != _profilerSeenRevision || sectionState != _profilerSeenState )
+            if ( pRegistration->isUserSection() == false )
+                continue;
+            if ( isSectionShown( *pRegistration ) )
             {
-                bool bNeedsProfilerNow = false;
-                for ( const DebugHUDSectionRegistration* pRegistration : registry.getSections() )
-                {
-                    const bool bUsesProfiler = ( pRegistration->_flags & DebugHUDSectionFlag::kUsesFrameProfiler ) != 0;
-                    bNeedsProfilerNow        = bNeedsProfilerNow || ( bUsesProfiler && isSectionShown( *pRegistration ) );
-                }
-                _bSectionsNeedProfiler = bNeedsProfilerNow ? SW_TRUE : SW_FALSE;
-                _profilerSeenRevision  = revision;
-                _profilerSeenState     = std::move( sectionState );
+                _listShownSection.push_back( pRegistration );
+                bNeedsProfiler = bNeedsProfiler || pRegistration->hasFlag( DebugHUDSectionFlag::kUsesFrameProfiler );
             }
+            else if ( pRegistration->hasFlag( DebugHUDSectionFlag::kDrawsWhileHidden ) )
+                _listHiddenSection.push_back( pRegistration );
         }
+        _bSectionsNeedProfiler = bNeedsProfiler ? SW_TRUE : SW_FALSE;
+        _seenSectionRevision   = revision;
+        _seenSectionState      = std::move( sectionState );
+    }
+
+    void DebugHUD::drawSections()
+    {
+        const bool bShown = isShown();
+        if ( bShown == false && _bSectionsDrawn == SW_FALSE )
+            return;
+        SceneManager* const   pSceneManager  = engine::findSubsystem<SceneManager>();
+        Scene* const          pScene         = pSceneManager != nullptr ? pSceneManager->getActiveScene() : nullptr;
+        DebugDrawQueue* const pQueue         = engine::findSubsystem<DebugDrawQueue>();
+        const bool            bNothingToDraw = pScene == nullptr || pScene->getObjectManager() == nullptr || pQueue == nullptr;
+        _bSectionsDrawn                      = bShown && bNothingToDraw == false ? SW_TRUE : SW_FALSE;
+        if ( bNothingToDraw )
+            return;
+        refreshSectionCache();
+        const VisualLogger& visualLogger = engine::getSubsystem<VisualLogger>();
+        for ( const DebugHUDSectionRegistration* pSection : _listShownSection )
+        {
+            if ( pSection->_pDrawFunc != nullptr && ( bShown || pSection->hasFlag( DebugHUDSectionFlag::kDrawsWhileHidden ) ) )
+                pSection->_pDrawFunc( DebugHUDSectionDraw{ *pScene, *pQueue, bShown } );
+            if ( bShown && visualLogger.isEnabled() )
+                (void)visualLogger.replayFrame( *pQueue, visualLogger.getFrame(), 0, hashed_string( pSection->_pName ) );
+        }
+        for ( const DebugHUDSectionRegistration* pSection : _listHiddenSection )
+        {
+            if ( pSection->_pDrawFunc != nullptr )
+                pSection->_pDrawFunc( DebugHUDSectionDraw{ *pScene, *pQueue, false } );
+        }
+    }
+
+    void DebugHUD::syncFrameProfiler()
+    {
+        if ( _screen != kInvalidUIScreenHandle )
+            refreshSectionCache();
         // 실행 상태만으로 띄운 화면(사용자 HUD 꺼짐)은 프로파일러를 켜지 않는다 — 보이는 실행과 숨김 실행의 프로파일러 상태가 같다.
         const bool     bNeedsProfiler = _screen != kInvalidUIScreenHandle && isShown() && _bSectionsNeedProfiler == SW_TRUE;
         FrameProfiler& profiler       = engine::getSubsystem<FrameProfiler>();

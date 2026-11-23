@@ -19,7 +19,6 @@ namespace sw
         , _frame{}
         , _listReceive{}
         , _transport{}
-        , _appliedPacketCount{ 0 }
         , _bLoopbackOnly{ SW_FALSE }
         , _bReportedError{ SW_FALSE }
         , _reserved{ 0 }
@@ -84,7 +83,6 @@ namespace sw
         if ( bApplied == false )
             return;
         _source.applyFrame( _frame );
-        ++_appliedPacketCount;
     }
 
     uint16 LiveLinkFaceComponent::getBoundPort() const

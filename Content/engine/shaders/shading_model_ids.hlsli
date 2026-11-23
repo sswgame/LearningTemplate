@@ -13,29 +13,37 @@
  * | CLOTH             | 시엔 색 R         | 시엔 색 G         | 시엔 색 B         | 거칠기 · 무게 4 비트씩(SurfaceShading::packPair) |
  * | CLEAR_COAT        | 코트 무게         | 코트 거칠기       | —                 | —                    |
  * | HAIR              | W13 이 정한다(탄젠트 옥타헤드럴 · 옮김) — 병합 지점                                         |
- * | EYE               | 코트(각막 젖음)   | 코트 거칠기       | 공막 감쌈         | 홍채 마스크          |
+ * | EYE(공막, a = 0)  | 코트(각막 젖음)   | 코트 거칠기       | 공막 감쌈         | 0                    |
+ * | EYE(홍채, a > 0)  | 코트 무게 · 거칠기(packCoat) | 홍채 노멀 옥타 u | 홍채 노멀 옥타 v | 홍채 마스크   |
  * | THIN_TRANSLUCENT  | 투과 색 R         | 투과 색 G         | 투과 색 B         | 감쌈                 |
- * | ANISOTROPIC       | 탄젠트 옥타 u     | 탄젠트 옥타 v     | 비등방 (0..1 → -1..1) | —                |
+ * | ANISOTROPIC       | 탄젠트 옥타 u     | 탄젠트 옥타 v     | 비등방 (0..1 → -1..1) | 코트 무게 · 거칠기(packCoat) |
+ * | SUBSURFACE_COAT   | 감쌈(밝은 채널)   | 감쌈 색조(packChroma) | 코트 무게     | 코트 거칠기(제곱근) · 투과 세기 4 비트씩 |
+ * | CLOTH_COAT        | 시엔 색(밝은 채널) | 시엔 색조(packChroma) | 시엔 거칠기 · 무게 4 비트씩 | 코트 무게 · 거칠기(packCoat) |
+ * | THIN_TRANSLUCENT_COAT | 투과 색(밝은 채널) | 투과 색조(packChroma) | 코트 무게 · 거칠기(packCoat) | 감쌈 |
  *
- * 번호 하나에 엽 하나다. 코트를 칸에 싣지 않는 번호(SUBSURFACE · CLOTH · THIN_TRANSLUCENT · ANISOTROPIC)의 젖음 · 기름막은 G버퍼 거칠기에 접는다
- * (appearance_lit.hlsl AppearanceSurface::computeStoredRoughness — 언리얼도 Clear Coat 는 따로 된 번호라 피부 위 코트를 같은 픽셀에 싣지 못한다).
+ * 번호 하나에 엽 하나, 젖음 · 기름막(코트)은 그 위에 얹힌다 — 코트가 있는 픽셀만 _COAT 번호를 쓰고, 색을 밝은 채널 + 색조(4 비트씩)로 줄여 코트 칸을 만든다
+ * (appearance_lit.hlsl AppearanceSurface::computeShadingModel). 코트 없는 픽셀의 칸은 그대로라 마른 면의 그림이 바뀌지 않는다.
+ * 언리얼은 피부 위 코트를 따로 된 번호로 두지 않아 같은 픽셀에 싣지 못한다(Substrate 는 싣는다 — 기억에 의존).
  * 엽이 둘 이상 겹치는 머티리얼(박막 · 털 · 그물 아래층 · 시엔 + 비등방/산란)은 칸이 넷을 넘어 포워드 전용이다.
  */
 
 #ifndef SW_ENGINE_SHADINGMODELIDS_HLSLI
 #define SW_ENGINE_SHADINGMODELIDS_HLSLI
 
-#define SW_SHADING_MODEL_ID_NONE             0 // 클리어 — 그리지 않았다
-#define SW_SHADING_MODEL_ID_UNLIT            1 // 알베도 그대로(보기 모드 Unlit · 조명 없는 머티리얼)
-#define SW_SHADING_MODEL_ID_DEFAULT_LIT      2 // 금속도 · 거칠기 PBR
-#define SW_SHADING_MODEL_ID_SUBSURFACE       3 // 피부 — 채널마다 감싼 확산 + 투과
-#define SW_SHADING_MODEL_ID_CLOTH            4 // 천 — Charlie 시엔
-#define SW_SHADING_MODEL_ID_CLEAR_COAT       5 // 코트 — 기름막 · 니스 · 젖음
-#define SW_SHADING_MODEL_ID_HAIR             6 // 머리카락(W13)
-#define SW_SHADING_MODEL_ID_EYE              7 // 눈 — 각막 젖음 + 공막 감쌈
-#define SW_SHADING_MODEL_ID_THIN_TRANSLUCENT 8 // 얇은 면 — 뒤에서 오는 빛
-#define SW_SHADING_MODEL_ID_ANISOTROPIC      9 // 비등방 GGX — 솔질 금속 · 비단
-#define SW_SHADING_MODEL_ID_COUNT            10
-#define SW_SHADING_MODEL_ID_SCALE            255.0f // 8 비트 UNORM 에 번호를 그대로 싣는다(번호 / 255)
+#define SW_SHADING_MODEL_ID_NONE                  0  // 클리어 — 그리지 않았다
+#define SW_SHADING_MODEL_ID_UNLIT                 1  // 알베도 그대로(보기 모드 Unlit · 조명 없는 머티리얼)
+#define SW_SHADING_MODEL_ID_DEFAULT_LIT           2  // 금속도 · 거칠기 PBR
+#define SW_SHADING_MODEL_ID_SUBSURFACE            3  // 피부 — 채널마다 감싼 확산 + 투과
+#define SW_SHADING_MODEL_ID_CLOTH                 4  // 천 — Charlie 시엔
+#define SW_SHADING_MODEL_ID_CLEAR_COAT            5  // 코트 — 기름막 · 니스 · 젖음
+#define SW_SHADING_MODEL_ID_HAIR                  6  // 머리카락(W13)
+#define SW_SHADING_MODEL_ID_EYE                   7  // 눈 — 각막 젖음 + 공막 감쌈 · 홍채 노멀
+#define SW_SHADING_MODEL_ID_THIN_TRANSLUCENT      8  // 얇은 면 — 뒤에서 오는 빛
+#define SW_SHADING_MODEL_ID_ANISOTROPIC           9  // 비등방 GGX — 솔질 금속 · 비단
+#define SW_SHADING_MODEL_ID_SUBSURFACE_COAT       10 // 젖은 · 기름진 피부 — 피부 + 코트
+#define SW_SHADING_MODEL_ID_CLOTH_COAT            11 // 젖은 천 — 천 + 코트
+#define SW_SHADING_MODEL_ID_THIN_TRANSLUCENT_COAT 12 // 젖은 얇은 면 — 얇은 면 + 코트
+#define SW_SHADING_MODEL_ID_COUNT                 13
+#define SW_SHADING_MODEL_ID_SCALE                 255.0f // 8 비트 UNORM 에 번호를 그대로 싣는다(번호 / 255)
 
 #endif // SW_ENGINE_SHADINGMODELIDS_HLSLI

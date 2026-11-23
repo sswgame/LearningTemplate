@@ -41,7 +41,7 @@ namespace
     MatchMaker makeMaker( int32 teamCount, int32 teamSize )
     {
         MatchMaker maker;
-        SW_EXPECT_TRUE( maker.initialize( makeMode( teamCount, teamSize ), 7 ) );
+        SW_EXPECT_TRUE( maker.initialize( makeMode( teamCount, teamSize ) ) );
         return maker;
     }
 } // namespace
@@ -71,7 +71,7 @@ SW_TEST_CASE( MatchMakerTest, TicketsWithinTheWindowFormAMatch )
     SW_REQUIRE_EQUAL( size_t( 1 ), listMatch.size() );
     SW_EXPECT_EQUAL( size_t( 2 ), listMatch[0]._listTeam.size() );
     SW_EXPECT_EQUAL( string( "eu" ), listMatch[0]._region );
-    SW_EXPECT_TRUE( listMatch[0]._matchID != 0 );
+    SW_EXPECT_EQUAL( uint64( 0 ), listMatch[0]._matchID ); // 경기 id 는 서버에 하나인 발급기(`MatchQueueService`)가 매긴다
     SW_EXPECT_TRUE( maker.hasTicket( 3 ) );
     SW_EXPECT_FALSE( maker.hasTicket( 1 ) || maker.hasTicket( 2 ) );
     SW_EXPECT_TRUE( listTimedOut.empty() );

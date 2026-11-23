@@ -432,8 +432,8 @@ namespace sw::editor
              *          Exit 는 단축키를 적지 않는다 — Alt+F4 는 OS 가 창 닫기로 먼저 가로채는 조합이라 입력 맵이 처리하지 않는다.
              */
             inline static const CommandRow _s_arrCommandRow[] = {
-                {                    "scene.new",                                  &commandNewScene,               nullptr,         EditorCommandEdit::NoScene},
-                {                   "scene.open",                                 &commandOpenScene,               nullptr,         EditorCommandEdit::NoScene},
+                {       editorcommand::kSceneNew,                                  &commandNewScene,               nullptr,         EditorCommandEdit::NoScene},
+                {      editorcommand::kSceneOpen,                                 &commandOpenScene,               nullptr,         EditorCommandEdit::NoScene},
                 {                   "asset.save",      &EditorSceneFileCommands::saveFocusedOrScene,               nullptr,         EditorCommandEdit::NoScene},
                 {              "scene.saveScene", &EditorSceneFileCommands::saveActiveSceneOrPrompt,               nullptr,         EditorCommandEdit::NoScene},
                 {             "editor.quickOpen",                       &QuickLauncherPopup::toggle,               nullptr,         EditorCommandEdit::NoScene},

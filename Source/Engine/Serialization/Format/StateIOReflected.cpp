@@ -398,18 +398,15 @@ namespace sw
                 {
                     count( 1, elementCount );
                     if ( isOk() && isReading() )
-                    {
                         pSequence->clear( pContainer );
-                        pSequence->reserve( pContainer, elementCount );
-                        for ( uint32 index = 0; index < elementCount; ++index )
-                        {
-                            pSequence->addElementDefault( pContainer );
-                        }
-                    }
                 }
                 const LeafKind elementKind = Internal::classify( registry, prop._elementTypeName );
+                // 원소는 읽는 만큼만 만든다 — 개수를 먼저 믿고 다 만들면 망가진 개수 하나가 남은 바이트 × 원소 크기만큼 메모리를 잡는다(원소의 최소 바이트를 손으로 적던 자리).
+                const bool bGrowWhileReading = isReading() && pSequence->isFixedSize() == false;
                 for ( uint32 index = 0; index < elementCount && isOk(); ++index )
                 {
+                    if ( bGrowWhileReading )
+                        pSequence->addElementDefault( pContainer );
                     valueLeaf( prop, prop._elementTypeName, elementKind, pSequence->getElement( pContainer, index ) );
                 }
             }

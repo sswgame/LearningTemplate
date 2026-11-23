@@ -6,6 +6,7 @@
  *          쓴 값은 에셋 파일에 들어가지 않는다. 저장 명령이 원래 경로에 쓴다. 도구는 시각화 등록 줄의 정적 함수라 상태는 에디터 범위의 상태 저장소가 든다.
  */
 #pragma once
+#include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
@@ -31,6 +32,13 @@ namespace sw::editor
         bool           _bStrokeTargetAlive{ false }; ///< NOLINT(sw-bool-flag): 값 집합체 — 붓질 중인 지형이 아직 있다
         bool           _bCanSave{ false };           ///< NOLINT(sw-bool-flag): 값 집합체 — 마지막으로 고친 지형이 있다
         bool           _bUnsaved{ false };           ///< NOLINT(sw-bool-flag): 값 집합체 — 저장하지 않은 편집이 있다
+    };
+
+    /** @brief 씬의 폴리지 레이어 하나입니다(`TerrainBrushEdit::collectFoliageLayers`) — 밀도 레이어를 칠하면 그 자리에 심기고 지우면 사라진다. */
+    struct TerrainBrushFoliageLayer
+    {
+        string           _label{};             ///< `<오브젝트> / <레이어>`
+        optional<uint32> _densityLayerIndex{}; ///< 밀도를 정하는 지형 레이어. 비면 칠할 수 없다(규칙이 지형 레이어를 보지 않는다)
     };
 
     /** @brief 도구가 보내는 명령의 종류입니다. */
@@ -83,6 +91,11 @@ namespace sw::editor
         static void setResizeResolution( uint32 resolution );
         /** @brief 크기 바꾸기 대상이 받는 해상도(청크 칸의 배수 + 1)를 모읍니다. 대상이 없으면 비었다. */
         static void collectUsableResolutions( vector<uint32>& outListResolution );
+        /**
+         * @brief 활성 씬의 폴리지 레이어를 모읍니다(비우고 채운다). 폴리지 칠하기는 그 레이어의 밀도 지형 레이어를 칠하는 것이다 — 배치는 지형을 따라 다시 계산된다(`FoliageTerrainFollower`).
+         * @details 인스턴스를 따로 찍어 저장하지 않는다 — 배치는 규칙에서 나온다(언리얼 Landscape Grass 가 레이어 가중치를 따르는 것과 같다).
+         */
+        static void collectFoliageLayers( vector<TerrainBrushFoliageLayer>& outListLayer );
         /** @brief 도구가 UI 프레임 @p uiFrame 에 돌았다고 적습니다(감시 값 `Editor.TerrainBrushToolActive` — 프레임 번호는 View 가 준다). */
         static void markActive( int32 uiFrame );
         /** @brief 도구가 마지막으로 돈 UI 프레임입니다. 돈 적이 없으면 비어 있다. */

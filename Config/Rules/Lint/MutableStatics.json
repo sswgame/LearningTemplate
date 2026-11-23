@@ -1,7 +1,6 @@
 {
     "_comment": "Scripts/lint/mutable_statics.py 의 예외입니다. 주인 객체의 멤버로 둘 수 없는 가변 정적 저장소(정적 등록 틀과 서비스 표의 뿌리 · OS 와 외부 라이브러리 콜백이 문맥 없이 부르는 프로세스 바닥)와 그 까닭입니다. 키는 `경로|변수 이름`, 값은 까닭(필수)입니다.",
     "_statics": {
-        "Source/App/AppEntry.cpp|s_app": "웹(Emscripten) 주 루프 콜백은 문맥 없이 불린다 — main 이 끝난 뒤에도 앱이 살아야 해 프로세스 수명 자리에 둔다.",
         "Source/Core/Compression/CompressionCodecRegistry.cpp|s_pActiveRegistry": "압축 바닥 — CompressionStream 의 문맥 없는 정적 입구가 읽는 활성 코덱 레지스트리 칸이다(Engine · 테스트 호스트가 건다).",
         "Source/Core/Compression/CompressionStream.cpp|s_nullCodec": "정적 등록 항목 — 칸이 없는(상태 없는) 내장 코덱이다. 레지스트리가 없는 실행(Core 만 링크하는 도구)의 기본 코덱으로 이미지 수명 동안 하나다.",
         "Source/Core/Compression/CompressionStream.cpp|s_rleCodec": "정적 등록 항목 — 칸이 없는(상태 없는) 내장 코덱이다. 레지스트리가 없는 실행(Core 만 링크하는 도구)의 기본 코덱으로 이미지 수명 동안 하나다.",
@@ -119,7 +118,7 @@
         "Source/DevTools/Profiling/Tracy/TracyProfilerBackend.cpp|s_tracy": "프로파일러 바닥 — 계측 지점(SW_PROFILE_SCOPE)은 모든 스레드 · 층에서 문맥 없이 불리고 엔진이 내려간 뒤 닫히는 구간도 받는다. Tracy 는 프로세스 전역 라이브러리이고 지점 표 · 이름 저장소는 그 지점이 가리키는 정적 저장소다.",
         "Source/Engine/Reflection/TypeRegistry.cpp|_s_typeIDCounter": "리플렉션 바닥 — 타입 등록은 정적 초기화(침입형 등록 머리와 같은 경로)에서 엔진보다 먼저 돈다. 타입 번호 발급과 타입 표 세대는 그 등록과 인라인 캐시(TypeCacheSlot)가 읽는 프로세스 칸이다.",
         "Source/Engine/Reflection/TypeRegistry.cpp|s_typeTableGeneration": "리플렉션 바닥 — 타입 등록은 정적 초기화(침입형 등록 머리와 같은 경로)에서 엔진보다 먼저 돈다. 타입 번호 발급과 타입 표 세대는 그 등록과 인라인 캐시(TypeCacheSlot)가 읽는 프로세스 칸이다.",
-        "Source/Engine/Renderer/Cook/ShaderCookService.cpp|s_shaderCookService": "정적 등록 항목 — 칸이 없는(상태 없는) 구현 객체다. 정적 등록 틀(RegistrationSlot · RegistrationList 등록자)이 이 객체를 가리키고 이미지와 수명이 같다(언리얼 compiled-in 등록 항목 자리).",
+        "Source/DevTools/Client/Cook/ShaderCookService.cpp|s_shaderCookService": "정적 등록 항목 — 칸이 없는(상태 없는) 구현 객체다. 정적 등록 틀(RegistrationSlot · RegistrationList 등록자)이 이 객체를 가리키고 이미지와 수명이 같다(언리얼 compiled-in 등록 항목 자리).",
         "Source/Engine/Window/Android/AndroidJNIScope.cpp|s_detachKey": "OS 바닥 — 엔진이 JVM 에 붙인 스레드를 그 스레드가 끝날 때 떼는 pthread 키(소멸자는 문맥 없이 OS 가 부른다)와 그 한 번 만들기 표지다. 프로세스에 하나다(언리얼 AndroidJavaEnv 의 TlsKey 자리).",
         "Source/Engine/Window/Android/AndroidJNIScope.cpp|s_detachKeyOnce": "OS 바닥 — 엔진이 JVM 에 붙인 스레드를 그 스레드가 끝날 때 떼는 pthread 키(소멸자는 문맥 없이 OS 가 부른다)와 그 한 번 만들기 표지다. 프로세스에 하나다(언리얼 AndroidJavaEnv 의 TlsKey 자리).",
         "Source/Engine/Window/Android/AndroidWindow.cpp|s_pApp": "android_main · 네이티브 앱 콜백은 문맥 없이 불린다 — 프로세스에 하나인 앱 · 창 포인터다.",

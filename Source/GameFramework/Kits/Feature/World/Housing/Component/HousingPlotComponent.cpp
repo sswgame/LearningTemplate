@@ -218,26 +218,6 @@ namespace sw
                 return true;
             }
 
-            /** @brief `housing.undo <plot>` */
-            static bool runUndo( const vector<string>& listArgument, string& outReply )
-            {
-                if ( listArgument.size() != 1 )
-                    return false;
-                HousingPlotComponent* pPlot = findPlot( listArgument[0] );
-                outReply                    = pPlot != nullptr ? string( describe( *pPlot, pPlot->undo() ) ) : makeNoPlotReply( listArgument[0] );
-                return true;
-            }
-
-            /** @brief `housing.redo <plot>` */
-            static bool runRedo( const vector<string>& listArgument, string& outReply )
-            {
-                if ( listArgument.size() != 1 )
-                    return false;
-                HousingPlotComponent* pPlot = findPlot( listArgument[0] );
-                outReply                    = pPlot != nullptr ? string( describe( *pPlot, pPlot->redo() ) ) : makeNoPlotReply( listArgument[0] );
-                return true;
-            }
-
             /** @brief `housing.save <plot> <file>` — 부지 상태를 절대 경로(시나리오의 `{out}/…`)에 쓴다. */
             static bool runSave( const vector<string>& listArgument, string& outReply )
             {
@@ -388,8 +368,6 @@ namespace sw
     SW_DEV_COMMAND( HousingFill, "housing.fill", "housing.fill <plot> <part> <level>", "Try a part at the centre of every cell of one level (bulk furniture load)", &HousingPlotInternal::runFill );
     SW_DEV_COMMAND( HousingRemove, "housing.remove", "housing.remove <plot> <placementID>", "Remove a placement from a housing plot and refund it", &HousingPlotInternal::runRemove );
     SW_DEV_COMMAND( HousingMove, "housing.move", "housing.move <plot> <placementID> <x> <z> <level> <yawDegrees> [free]", "Move a placement on a housing plot", &HousingPlotInternal::runMove );
-    SW_DEV_COMMAND( HousingUndo, "housing.undo", "housing.undo <plot>", "Undo the last housing edit", &HousingPlotInternal::runUndo );
-    SW_DEV_COMMAND( HousingRedo, "housing.redo", "housing.redo <plot>", "Redo the last undone housing edit", &HousingPlotInternal::runRedo );
     SW_DEV_COMMAND( HousingSave, "housing.save", "housing.save <plot> <file>", "Write a housing plot's layout and funds to a file", &HousingPlotInternal::runSave );
     SW_DEV_COMMAND( HousingLoad, "housing.load", "housing.load <plot> <file>", "Replace a housing plot's layout and funds from a file and rebuild its parts", &HousingPlotInternal::runLoad );
 
@@ -515,6 +493,8 @@ namespace sw
         uint64        owner  = HousingOwnerID::kNone;
         HousingLayout layout = _layout;
         Wallet        wallet = _wallet;
+        if ( _pCatalog != nullptr )
+            layout.rebindCatalog( *_pCatalog ); // 다시 읽힌 카탈로그면 새 판으로 읽는다
         io.value( owner );
         io.check( owner == HousingOwnerID::kNone || HousingOwnerID::isPersistent( owner ) );
         io.value( layout );

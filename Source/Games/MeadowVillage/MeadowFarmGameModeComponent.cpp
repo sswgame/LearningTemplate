@@ -88,12 +88,9 @@ namespace sw
 
     bool MeadowFarmGameModeComponent::startGame()
     {
-        const CropCatalog* pCrops = game::findSubsystem<const CropCatalog>();
-        if ( pCrops == nullptr )
-        {
-            SW_LOG_ERROR_ID( "MeadowFarm.FarmCannotStart", "[Meadow] the farm cannot start - the crop catalog is not loaded" );
+        SharedAssetRef<CropCatalog> pCrops;
+        if ( acquireBoundCatalog( pCrops ) == false )
             return false;
-        }
         // 이 오브젝트의 첫 디렉터가 판을 연다. 시작 돈은 새 판일 때만(복원한 판 위에 덧쌓이지 않게).
         GameStateComponent* pState = GameStateComponent::openOnOwner( *this, MeadowVillageData::makeStateSettings() );
         if ( pState == nullptr )
@@ -103,7 +100,7 @@ namespace sw
             return false;
         if ( pWallet->isFreshGame() )
             pWallet->getWallet().add( Wallet::getDefaultCurrency(), _startingGold );
-        _field.initialize( kFieldWidth, kFieldHeight, pCrops );
+        _field.initialize( kFieldWidth, kFieldHeight, pCrops.get() );
         const hashed_string season = pState->getClock().getSeasonName();
         for ( int32 y = 0; y < kFieldHeight; ++y )
         {

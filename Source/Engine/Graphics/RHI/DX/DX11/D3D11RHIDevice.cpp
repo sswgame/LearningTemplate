@@ -1032,7 +1032,7 @@ namespace sw
             readyMask.set( slotIndex );
         }
         _lastTimestampFrequency = disjointData.Frequency;
-        RHITimestampFrame::resolve( arrTick, readyMask, constant::time::kNanosecondsPerSecond / static_cast<float64>( disjointData.Frequency ), _timestampFrame );
+        RHITimestampFrame::resolve( arrTick, readyMask, _timestampRing.getComputeQueueMask( ringSlot ), constant::time::kNanosecondsPerSecond / static_cast<float64>( disjointData.Frequency ), _timestampFrame );
     }
 
     void D3D11RHIDevice::beginFrameInternal()

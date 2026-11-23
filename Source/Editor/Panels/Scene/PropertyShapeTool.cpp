@@ -37,14 +37,17 @@ namespace sw::editor
             /** @brief 시각화 토글의 툴바 순서입니다(물리 셰이프 110 곁). */
             static constexpr int32 kVisualizerOrder = 115;
 
-            /** @brief 시나리오가 손잡이를 누를 수 있도록 화면 사각형을 기록합니다(`propertyshape.handle.<프로퍼티>.<축><부호>`). */
+            /** @brief 시나리오가 손잡이를 누를 수 있도록 화면 사각형을 기록합니다(`propertyshape.handle.<프로퍼티>.<축><부호>`, 점 목록은 `propertyshape.handle.<프로퍼티>.<자리>`). */
             static void recordHandle( const PropertyShapeHandle& handle, const ImVec2& screen )
             {
                 if ( EditorSelfTestMarks::isEnabled() == false )
                     return;
                 static const utf8* const                 arrAxisName[3] = { "x", "y", "z" };
                 StringBuilder<constant::buffer::kMax256> keyBuilder;
-                keyBuilder.appendFormat( "propertyshape.handle.%#.%#%#", handle._property.c_str(), arrAxisName[handle._axis], ( handle._sign > 0.0f ? "+" : "-" ) );
+                if ( handle._kind == PropertyShapeHandleKind::Point )
+                    keyBuilder.appendFormat( "propertyshape.handle.%#.%#", handle._property.c_str(), handle._elementIndex );
+                else
+                    keyBuilder.appendFormat( "propertyshape.handle.%#.%#%#", handle._property.c_str(), arrAxisName[handle._axis], ( handle._sign > 0.0f ? "+" : "-" ) );
                 const string key{ keyBuilder.view() };
                 EditorSelfTestMarks::recordRect( key.c_str(), float2{ screen.x - kHandleHalfSize, screen.y - kHandleHalfSize }, float2{ screen.x + kHandleHalfSize, screen.y + kHandleHalfSize } );
             }

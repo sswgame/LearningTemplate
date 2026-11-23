@@ -26,8 +26,7 @@
 			<GameObject _schemaVersion="0" _name="Director" _bActive="true">
 				<_listComponent>
 					<SideScrollConquestDemoComponent _localID="10641623383400482534" _componentName="SideScrollConquestDemoComponent"
-					                           _bActive="true"
-					                           _catalogPath="game/playground/data/kitdemo/demo.conquest.xml" />
+					                           _bActive="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>

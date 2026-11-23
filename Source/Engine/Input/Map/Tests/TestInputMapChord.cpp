@@ -37,6 +37,16 @@ namespace
             _map.update( kFrameSeconds );
             _input.endFrame();
         }
+        /** @brief 한 프레임 안에 키를 눌렀다 뗀다(긴 프레임의 짧은 누름). 수정 키는 @p bShift 대로 누른 채다. */
+        void tapWithinFrame( Key key, bool bShift )
+        {
+            _input.beginFrame( kFrameSeconds );
+            _input.getKeyboard()->setKeyDown( Key::LeftShift, bShift );
+            _input.getKeyboard()->setKeyDown( key, true );
+            _input.getKeyboard()->setKeyDown( key, false );
+            _map.update( kFrameSeconds );
+            _input.endFrame();
+        }
         void press( Key key, bool bShift )
         {
             _input.getKeyboard()->setKeyDown( Key::LeftShift, bShift );
@@ -68,6 +78,24 @@ SW_TEST_CASE( InputMapChordTest, MatchingChordBlocksTheBareKey )
     scene.press( Key::Z, false );
     SW_EXPECT_TRUE( scene._map.wasActionPressed( scene._forward ) );
     SW_EXPECT_FALSE( scene._map.wasActionPressed( scene._back ) );
+}
+
+/** @brief [InputMapChordTest] 한 프레임 안에 눌렀다 뗀 단축키 · 조합 키도 한 번 눌린 것이다(결함: 끝 상태만 봐서 긴 프레임의 짧은 누름이 사라졌다 — 단일 키는 받았다) */
+SW_TEST_CASE( InputMapChordTest, TapWithinOneFrameTriggersChords )
+{
+    ChordScene          scene;
+    const hashed_string chord{ "ChordAction" };
+    scene._map.bindChord( chord, Key::LeftShift, Key::W );
+
+    scene.tapWithinFrame( Key::Z, true );
+    SW_EXPECT_TRUE( scene._map.wasActionPressed( scene._back ) );
+    SW_EXPECT_FALSE( scene._map.wasActionPressed( scene._forward ) );
+    scene.runFrame();
+    SW_EXPECT_TRUE( scene._map.wasActionReleased( scene._back ) ); // 다음 프레임에 떼인다
+    SW_EXPECT_FALSE( scene._map.isActionDown( scene._back ) );
+
+    scene.tapWithinFrame( Key::W, true );
+    SW_EXPECT_TRUE( scene._map.wasActionPressed( chord ) );
 }
 
 /** @brief [InputMapChordTest] 같은 키의 조합이 없으면 Shift 는 맨 키를 막지 않는다(Shift 달리기 + WASD) */

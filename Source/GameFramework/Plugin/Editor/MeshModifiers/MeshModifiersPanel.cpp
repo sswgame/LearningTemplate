@@ -7,6 +7,7 @@
 #include "GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.h"
 
 #include "Core/Container/vector.h"
+#include "Core/File/FileUtil.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 
@@ -274,6 +275,27 @@ namespace sw::editor
         const optional<string>     sidecar  = pSession != nullptr ? pSession->findSidecarPath() : nullopt;
         if ( sidecar.has_value() )
             outListPath.push_back( *sidecar );
+    }
+
+    expected<string> MeshModifiersPanel::tryMakeFileText( string_view /*absolutePath*/ ) const
+    {
+        const MeshModifierSession* pSession = MeshModifierSession::find(); // 저장할 파일은 고른 메시의 사이드카 하나다
+        if ( pSession == nullptr )
+            return unexpected( Error{ ErrorKind::NotFound, "no mesh modifier session" } );
+        return pSession->tryMakeSidecarText();
+    }
+
+    bool MeshModifiersPanel::isEditingFile( string_view absolutePath )
+    {
+        const MeshModifierSession* pSession = MeshModifierSession::find();
+        const optional<string>     sidecar  = pSession != nullptr ? pSession->findSidecarPath() : nullopt;
+        return sidecar.has_value() && FileUtil::isSameDiskPath( *sidecar, absolutePath );
+    }
+
+    bool MeshModifiersPanel::applyFileText( string_view /*absolutePath*/, const string& text )
+    {
+        MeshModifierSession* pSession = MeshModifierSession::find();
+        return pSession != nullptr && pSession->restoreSidecarText( text );
     }
 
     bool MeshModifiersPanel::canSaveDocument() const

@@ -26,8 +26,7 @@
 			<GameObject _schemaVersion="0" _name="Director" _bActive="true">
 				<_listComponent>
 					<SurvivalHorrorDemoComponent _localID="3506037313902174496" _componentName="SurvivalHorrorDemoComponent"
-					                             _bActive="true"
-					                             _catalogPath="game/playground/data/kitdemo/demo.horror.xml" />
+					                             _bActive="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>

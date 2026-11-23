@@ -89,6 +89,8 @@ namespace sw::editor
                                                                   const vector<CatalogXMLNewAttribute>& listAttribute );
         /** @brief @p parent 의 마지막 자식으로 원문 @p childText(원소 하나)를 그대로 넣은 새 원문입니다. 실패하지 않습니다. 나머지는 `appendChildElement` 와 같습니다. */
         [[nodiscard]] static string appendChildText( string_view text, const CatalogXMLElement& parent, const vector<CatalogXMLElement>& listElement, string_view childText );
+        /** @brief 원소를 통째로 @p elementText(원소 하나 — 들여쓰기는 부르는 쪽이 맞춘다)로 바꾼 새 원문입니다. 실패하지 않습니다. */
+        [[nodiscard]] static string replaceElement( string_view text, const CatalogXMLElement& element, string_view elementText );
         /** @brief 원소를 통째로 뺍니다. 그 원소만 있던 줄이면 줄째 뺍니다. 루트는 오류입니다. */
         [[nodiscard]] static expected<string> removeElement( string_view text, const CatalogXMLElement& element );
         /** @brief 원소의 원문(자식 · 주석 포함)을 그대로 복사해 바로 뒤 새 줄에 놓습니다. 루트는 오류입니다. 복사본은 다시 훑은 문서에서 다음 형제입니다. */

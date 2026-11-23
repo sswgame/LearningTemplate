@@ -6,6 +6,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Delegate.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/Memory/Memory.h"
@@ -18,6 +19,7 @@
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/Framework/PrefabPool.h"
 #include "GameFramework/Runtime/Foundation/Framework/Presentation/GameSound.h"
 
@@ -51,6 +53,9 @@ namespace sw
      *            씬을 나눠 디렉터를 다른 오브젝트에 두면 PROPERTY `_tickAfter` 로 그 오브젝트의 첫 디렉터 뒤에 규칙을 돌린다.
      *            주 틱은 선행 조건을 받지 못하므로 그때만 규칙을 서브틱(`kRuleSubTick`)으로 옮기고, 그 디렉터의 규칙 틱(`getRuleTickHandle`)을 선행 조건으로 등록한다.
      *            걸지 않은 디렉터는 주 틱 그대로이다.
+     *          - **다시 읽힌 카탈로그**: 규칙 객체는 카탈로그를 날 포인터로 빌린다. `acquireRequired` · `acquireBoundCatalog` 로 받은 에셋은 베이스가 연 판부터 쥐어 끊기지 않고,
+     *            다시 읽히면 규칙 틱 앞에서 상태를 왕복(`writeState` → `readState`)시켜 규칙 객체를 새 판에 다시 묶는다(세이브를 읽는 길 하나 — 항목은 id 로 다시 찾는다).
+     *            언리얼 DataTable 행 핸들이 다시 읽힌 표에서 행 이름으로 찾는 자리이다. 왕복이 지면(새 판에 없는 항목) 디렉터의 복원 실패 처리(`onStateRestored( false )`)를 따르고 알린다.
      *
      *          - **디렉터 계약 셋**(모든 미니게임 · 허브 디렉터가 같은 셋만 적는다 — 키트 규칙 객체에는 계약을 더하지 않는다):
      *            ① 걸음 `updateGame`(틱 뒤 게임 스레드) — 베이스가 프로파일러 구간(`kStepScopeName`)으로 감싸 감시 값 `GameMode.StepMs` · `GameMode.StepPeakMs` 가 그 구간을 읽는다(줄 추가 없이 모든 미니게임이 값을 낸다).
@@ -99,13 +104,12 @@ namespace sw
          */
         virtual const IBehaviorTreeDebugSource* findBehaviorTreeDebugSource() const { return nullptr; }
         /**
-         * @brief 판에 하루의 시각이 있는 디렉터가 재정의해 지금 시각(0~24)과 강수를 답합니다. 시각이 없는 판은 false 입니다.
+         * @brief 판에 하루의 시각이 있는 디렉터가 재정의해 지금 시각(0~24)을 답합니다. 시각이 없는 판은 false 입니다.
          * @details 방향광을 해처럼 움직이는 `DaylightComponent` 가 묻는다 — 시각을 쥔 쪽은 디렉터라(게임마다 달력이 다르다) 같은 RTTI 없는 가상 함수로 묻는다.
          */
-        [[nodiscard]] virtual bool readDaylight( float32& outHourOfDay, bool& outbPrecipitating ) const
+        [[nodiscard]] virtual bool readHourOfDay( float32& outHourOfDay ) const
         {
             (void)outHourOfDay;
-            (void)outbPrecipitating;
             return false;
         }
         /**
@@ -248,12 +252,31 @@ namespace sw
         }
         /** @brief `acquireRequired` 와 같고 멤버로 쥐어 다시 읽힌 판을 따라갑니다(`SharedAssetRef`). 받은 때의 판을 일부러 쥘 종류(번호를 지어 둔 떼어 내는 종류)는 `acquireRequiredSnapshot` 이다. */
         template <typename TAsset>
-        [[nodiscard]] bool acquireRequired( string_view path, SharedAssetRef<TAsset>& outAsset ) const
+        [[nodiscard]] bool acquireRequired( string_view path, SharedAssetRef<TAsset>& outAsset )
         {
             outAsset = path.empty() ? SharedAssetRef<TAsset>{} : SharedAssetCache<TAsset>::acquire( path );
             if ( outAsset != nullptr )
+            {
+                followAsset( outAsset );
                 return true;
+            }
             reportMissingAsset( path );
+            return false;
+        }
+        /**
+         * @brief 게임 기능 범위가 건 카탈로그(`GameFeatureScope::loadCatalog`)를 같이 쥡니다. 걸려 있지 않으면 오류를 남기고 false 입니다 — 경로 칸으로 따로 읽지 않는다.
+         * @details 씬을 나가는 동안(범위를 끈 뒤 새 씬이 서기 전) 디렉터가 더 돈다 — 날 포인터 대신 참조로 쥐어 그동안 끊기지 않는다.
+         */
+        template <typename TCatalog>
+        [[nodiscard]] bool acquireBoundCatalog( SharedAssetRef<TCatalog>& outCatalog )
+        {
+            outCatalog = SharedAssetRef<TCatalog>::shareLive( game::findSubsystem<const TCatalog>() );
+            if ( outCatalog != nullptr )
+            {
+                followAsset( outCatalog );
+                return true;
+            }
+            reportMissingCatalog( TCatalog::kDataKind );
             return false;
         }
         /** @brief 입력 맵의 동작이 눌려 있으면 true 입니다. 위젯이 받은 입력은 게임으로 새지 않습니다(`UIInputMapView`). */
@@ -272,10 +295,31 @@ namespace sw
         GameObjectManager* getObjectManager();
 
     private:
+        /** @brief 판을 열며 받은 에셋 하나입니다. 다시 읽힌 판을 알아채고, 규칙 객체가 날 포인터로 빌린 판들을 다음 판을 열 때까지 쥔다. */
+        struct FollowedAsset
+        {
+            Delegate<shared_ptr<const void>()> _takeLatest{}; ///< 지금 최신 판
+            vector<shared_ptr<const void>>     _listHeld{};   ///< 연 판부터 지금 판까지(뒤가 지금 판)
+        };
+
+        /** @brief 판을 열며 받은 @p asset 을 쥐고 다시 읽히는지 봅니다. */
+        template <typename TAsset>
+        void followAsset( const SharedAssetRef<TAsset>& asset )
+        {
+            FollowedAsset followed;
+            followed._takeLatest = SW_DELEGATE_LAMBDA( Delegate<shared_ptr<const void>()>, [asset]()
+            { return shared_ptr<const void>( asset.snapshot() ); } );
+            followed._listHeld.push_back( asset.snapshot() );
+            _listFollowedAsset.push_back( std::move( followed ) );
+        }
+        /** @brief 받은 에셋이 다시 읽혔으면 상태를 왕복시켜 규칙 객체를 새 판에 다시 묶습니다(게임 스레드, 규칙 틱 앞). */
+        void applyReloadedAssets();
         /** @brief 상태 칸(`PROPERTY( RuntimeState )`)을 이 형식의 기본 생성자 값으로 되돌립니다. 되돌리지 못하는 칸이면 프로세스를 멈춥니다. */
         void resetRuntimeState();
         /** @brief 필수 에셋을 받지 못했다는 오류를 남깁니다(`GameMode.RequiredAssetMissing`). 템플릿 밖에 두어 헤더가 로그를 끌어오지 않게 한다. */
         static void reportMissingAsset( string_view path );
+        /** @brief 게임 범위에 카탈로그가 걸려 있지 않다는 오류를 남깁니다(`GameMode.BoundCatalogMissing`). */
+        static void reportMissingCatalog( string_view kind );
         /** @brief 걷혀 있으면 다시 세울 플러시를 잡고 `tickGame` 을 부릅니다. 끝에 쌓인 스폰이나 소리가 있으면 플러시를 잡습니다. */
         void runRules( float32 deltaTime );
         /** @brief 틱은 시간만 쌓고 규칙(`runRules`)은 틱 뒤에 돌게 겁니다 — `updateGame` 은 틱 밖(게임 스레드)에서 돈다. */
@@ -301,6 +345,7 @@ namespace sw
 
         vector<GameObjectHandle> _listSpawned;
         vector<PrefabPool>       _listPool;             ///< 풀 정책으로 꺼낸 프리팹의 풀(경로마다 하나). 꺼낸 것은 `_listSpawned` 밖이라 `despawnViews` 가 풀째 지운다
+        vector<FollowedAsset>    _listFollowedAsset;    ///< 이 판을 열며 받은 에셋(`followAsset`)
         vector<uint8>            _pendingStateBytes;    ///< 플레이 시작 전에 받은 복원 바이트(`restoreState`)
         GameSoundQueue           _soundQueue;           ///< 낼 소리. 오디오는 게임 스레드에서 다루므로 틱 뒤에 낸다
         uint32                   _compactThreshold;     ///< 이 수를 넘으면 사라진 핸들을 덜어 낸다

@@ -4,6 +4,6 @@
 <AnimationNotifies>
     <Notify name="FootL" handler="Footstep" socket="foot.l" distance="0.5"/>
     <Notify name="FootR" handler="Footstep" socket="foot.r" distance="0.5"/>
-    <Notify name="Swing" handler="HitWindow" socketA="handslot.r" socketB="SwordTip" radius="0.05" damage="25" impulse="60"/>
+    <Notify name="Swing" handler="HitWindow" socketA="handslot.r" socketB="SwordTip" radius="0.05" damage="25" impulse="60" foliage="0.9"/>
     <Notify name="Impact" handler="CameraShake" amplitude="0.05" duration="0.25" frequency="35" socket="SwordTip"/>
 </AnimationNotifies>

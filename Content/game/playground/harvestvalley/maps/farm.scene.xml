@@ -56,7 +56,6 @@
 					<DaylightComponent _localID="2725634274623067929" _componentName="DaylightComponent"
 					                  _bActive="true"
 					                  _gameMode="35"
-					                  _rainDimming="0.55"
 					                  _nightIntensity="0.2"
 					                  _sunriseHour="6"
 					                  _sunsetHour="20"

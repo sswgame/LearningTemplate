@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Container/string.h"
+#include "Core/Container/vector.h"
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -189,6 +190,8 @@ namespace sw
         static void               unregisterWatch( const AutomationWatchRegistration* pRegistration );
         /** @brief 이름으로 찾습니다. 없으면 nullptr 입니다. */
         static const AutomationWatchRegistration* find( string_view name );
+        /** @brief 이름이 `<group>.` 으로 시작하는 씬 감시 값(대상이 필요 없고 바깥 일을 따르지 않는 것)을 등록 순서로 모읍니다 — 디버그 HUD 범주가 보인다. */
+        static void collectSceneWatches( string_view group, vector<const AutomationWatchRegistration*>& outListWatch );
         /** @brief 감시 값 하나를 읽습니다. 씬 감시 값은 `_pManager` 만 쓰고 수를 냅니다. 값이 없으면 false 입니다. */
         [[nodiscard]] static bool read( const AutomationWatchRegistration& registration, const AutomationWatchQuery& query, AutomationWatchValue& outValue );
     };

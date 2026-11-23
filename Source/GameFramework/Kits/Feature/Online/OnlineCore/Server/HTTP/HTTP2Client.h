@@ -5,6 +5,7 @@
  *          - `https://` 만 받는다(평문 h2c 는 없다). 그 호스트에 `registerTLSContext` 한 컨텍스트(`TLSContextConfig::_alpnProtocol` = `kALPNProtocol`)가 있어야 하고, 핸드셰이크 뒤 협상된 프로토콜이 `h2` 가 아니면 그 연결은 실패다.
  *          - 이름 해석 · 시한 · 응답 상한은 `HTTPClient` 와 같다(해석은 전용 스레드, 시한은 요청한 때부터, 상한을 넘으면 전송 실패). 시한이 넘은 스트림은 RST_STREAM(CANCEL)으로 취소하고 연결은 둔다.
  *          - 프로토콜 상태(스트림 · 흐름 제어 · SETTINGS · GOAWAY)는 `HTTP2Connection` 이 맡고 이 클래스는 전송 · TLS · 요청 id · 시한을 잇는다. GOAWAY 를 받은 연결은 새 요청을 받지 않고 남은 스트림이 끝나면 닫는다.
+ *          - HTTP/2 가 서기 전(연결 · 핸드셰이크)에 기다리던 요청이 모두 시한을 넘긴 연결은 닫는다 — 말없이 멎은 상대의 연결을 남기면 그 호스트의 뒤 요청이 모두 같은 연결에서 시한을 넘긴다.
  *          I/O 스레드가 없는 전송(루프백 테스트)은 `update` 가 `pollIO` 를 돈다. 콜백은 I/O 스레드라 상태는 잠금 하나로 지킨다.
  */
 #pragma once
@@ -127,6 +128,10 @@ namespace sw
         void resolveSession( uint64& sessionID, bool bStopping );
         /** @brief 잠금 안에서 부릅니다. 핸드셰이크가 끝난 연결에서 HTTP/2 를 세우고 기다리던 요청을 보냅니다. false 면 연결이 실패했다(부르는 쪽이 닫는다). */
         [[nodiscard]] bool establishLocked( Session& session ) SW_REQUIRES_LOCK( _mutex );
+        /** @brief 잠금 안에서 부릅니다. 시한이 지난 요청을 실패로 끝냅니다. false 면 취소(RST_STREAM) 쓰기가 실패했다. */
+        [[nodiscard]] bool expireRequestsLocked( Session& session, MonotonicMilliseconds now ) SW_REQUIRES_LOCK( _mutex );
+        /** @brief 잠금 안에서 부릅니다. 쓸 일이 끝난 연결(서지 못한 채 요청이 모두 끝났거나, 더 쓸 수 없고 남은 스트림이 없다)이면 true 입니다. */
+        [[nodiscard]] static bool isSpent( const Session& session );
         /** @brief 잠금 안에서 부릅니다. 쌓인 보낼 바이트를 쓰고 끝난 응답을 회수합니다. false 면 쓰기가 실패했다. */
         [[nodiscard]] bool pollLocked( Session& session ) SW_REQUIRES_LOCK( _mutex );
         /** @brief 잠금 안에서 부릅니다. 기다리던 요청을 연결에 맡기고 `pollLocked` 합니다. */

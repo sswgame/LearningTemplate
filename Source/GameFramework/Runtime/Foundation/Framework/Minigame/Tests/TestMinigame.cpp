@@ -236,12 +236,12 @@ SW_TEST_CASE( MinigameTest, ResultReachesSubscribers )
     stack.push( MinigameFrame{ makeMinigame( "fishing", MinigameEntry::SceneSwitch ), MinigameReturnPoint{ MinigameEntranceReturn{} } } );
     MinigameFrame popped;
     SW_REQUIRE_TRUE( stack.pop( popped ) );
-    finished.broadcast( MinigameResult{ popped._definition._name, hashed_string( "win" ) } );
+    finished.broadcast( MinigameResult{ popped._definition._name, hashed_string( "win" ), {} } );
     SW_REQUIRE_TRUE( listReceived.size() == 1 );
     SW_EXPECT_TRUE( listReceived[0]._minigame == hashed_string( "fishing" ) );
     SW_EXPECT_TRUE( listReceived[0]._resultName == hashed_string( "win" ) );
     subscription.reset();
-    finished.broadcast( MinigameResult{ hashed_string( "fishing" ), hashed_string( "lose" ) } );
+    finished.broadcast( MinigameResult{ hashed_string( "fishing" ), hashed_string( "lose" ), {} } );
     SW_EXPECT_TRUE( listReceived.size() == 1 );
 }
 

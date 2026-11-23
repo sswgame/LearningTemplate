@@ -1,0 +1,31 @@
+<?asset guid="5a0c7be1f2e84d8f9b3a6c2d417e90f3"?>
+<!-- 빗소리(이벤트 Weather.Rain) — 흰 잡음을 높은 대역으로 거른다(잔 빗방울). 받은 소리 파일이 아니라 그래프가 만든다. -->
+<AudioGraphDef _output="Level" _durationSeconds="60">
+	<_listNode>
+		<AudioGraphNodeDef _name="Source" _type="Noise" />
+		<AudioGraphNodeDef _name="Body" _type="HighPass">
+			<_listInput>
+				<item>Source</item>
+			</_listInput>
+			<_listParameter>
+				<AudioGraphParameterDef _name="frequencyHz" _value="900" />
+			</_listParameter>
+		</AudioGraphNodeDef>
+		<AudioGraphNodeDef _name="Tone" _type="LowPass">
+			<_listInput>
+				<item>Body</item>
+			</_listInput>
+			<_listParameter>
+				<AudioGraphParameterDef _name="frequencyHz" _value="7000" />
+			</_listParameter>
+		</AudioGraphNodeDef>
+		<AudioGraphNodeDef _name="Level" _type="Gain">
+			<_listInput>
+				<item>Tone</item>
+			</_listInput>
+			<_listParameter>
+				<AudioGraphParameterDef _name="volumeDb" _value="-14" />
+			</_listParameter>
+		</AudioGraphNodeDef>
+	</_listNode>
+</AudioGraphDef>

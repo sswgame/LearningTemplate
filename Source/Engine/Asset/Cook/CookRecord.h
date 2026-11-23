@@ -3,7 +3,7 @@
  * @brief 쿠킹 작업 하나의 기록(`<출력>.cookrec`)과 파생 데이터 캐시(DDC)입니다. 다음 쿠킹은 기록의 입력만 다시 해시해 같으면 DDC 의 출력을 그대로 씁니다.
  * @details 기록은 키, 출력 해시, 입력(리소스 id 와 내용 해시) 목록을 글로 적는다. 판정은 파일 시각이 아니라 내용 해시다(`ContentHash`).
  *          기록이 없거나 형식이 다르거나(머리 줄) 깨졌으면 다시 베이크한다 — 옛 형식을 읽지 않는다.
- *          DDC 는 키의 내용 주소 폴더(`<루트>/<키 앞 두 글자>/<키>`)의 층 목록이다(`Config/Dev/DerivedData.json` — 로컬 `<프로젝트>/Saved/DDC`, 공유는 환경 변수 `SW_SHARED_DDC`).
+ *          DDC 는 버킷마다 키의 내용 주소 폴더(`<층 루트>/<버킷>/<키 앞 두 글자>/<키>`)의 층 목록이다(`Config/Dev/DerivedData.json` — 로컬 `<프로젝트>/Saved/DDC`, 공유는 환경 변수 `SW_SHARED_DDC`).
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -52,6 +52,15 @@ namespace sw
 
 namespace sw
 {
+    /** @enum DerivedDataBucket @brief DDC 를 여는 칸입니다(언리얼 `FCacheBucket`) — 칸마다 폴더와 크기 상한이 따로라 한 종류가 다른 종류의 자리를 밀어내지 않는다. 폴더 이름은 열거자 이름이다. */
+    enum class DerivedDataBucket : uint8
+    {
+        Cook,   ///< 쿠킹 출력(`CookStore`)
+        Import, ///< 원본 임포트 결과 묶음
+        Shader, ///< 셰이더 바이트코드와 컴파일 기록
+        Count
+    };
+
     /** @enum DerivedDataAccess @brief DDC 층에 이 머신이 쓸 수 있는지입니다. */
     enum class DerivedDataAccess : uint8
     {
@@ -85,7 +94,7 @@ namespace sw
     /** @struct DerivedDataLayer @brief DDC 층 하나(폴더 루트와 쓰기 권한, 정리 규칙)입니다. */
     struct DerivedDataLayer
     {
-        AbsolutePath                        _rootPath; ///< 디스크 폴더(형식 — 항목 경로를 글로 잇고 다시 올리지 않는다)
+        AbsolutePath                        _rootPath; ///< 버킷 폴더(형식 — 항목 경로를 글로 잇고 다시 올리지 않는다)
         DerivedDataAccess                   _access{ DerivedDataAccess::ReadOnly };
         optional<DerivedDataEvictionPolicy> _evictionPolicy{}; ///< 없으면 이 프로세스가 지우지 않는다(읽기 전용 층 · 테스트 층)
     };
@@ -99,7 +108,8 @@ namespace sw
      *          폴더가 아닌 백엔드(HTTP · 버킷)는 호스팅이 정해질 때 가상 인터페이스로 낸다 — 지금은 층이 모두 폴더다.
      *          쓰기는 임시 파일 + 원자 교체(`AtomicFileWriter` — 본문을 조각으로 흘린다)이고, 같은 서술 · 같은 본문의 항목이 이미 있으면 그대로 둔다 — 같은 내용의 원본 둘(병렬 임포트) ·
      *          같은 셰이더를 함께 컴파일하는 프로세스가 한 파일을 다투지 않고, 교체를 진 쪽도 이긴 쪽의 같은 항목을 보면 성공이다.
-     *          셰이더 디스크 캐시(`<프로젝트>/Saved/ShaderCompileCache`)도 이 항목 형식을 쓴다(층 하나).
+     *          여는 길은 `open( 버킷 )` 하나다 — 쿠킹 · 임포트 · 셰이더 컴파일이 같은 층 설정 · 같은 정리 규칙을 쓴다. 예전에는 셰이더가 자기 폴더로 층을 손으로 지어 정리 규칙 · 공유 층이 없었다.
+     *          기록(`readRecord` · `writeRecord`)은 입력을 컴파일해야 아는 작업(셰이더)의 "동작 키 → 기록" 이다 — 기록의 입력이 새것이면 그 키로 항목을 찾는다.
      */
     class SW_API DerivedDataCache
     {
@@ -109,17 +119,19 @@ namespace sw
         /** @brief 층 목록 설정 파일(프로젝트 루트 기준)입니다. */
         static constexpr const utf8* kConfigFile = "Config/Dev/DerivedData.json";
 
-        explicit DerivedDataCache( vector<DerivedDataLayer> listLayer );
-
-        /** @brief 로컬 DDC 루트(`<프로젝트>/Saved/DDC`)입니다. */
-        static AbsolutePath makeLocalRootPath();
         /**
-         * @brief `Config/Dev/DerivedData.json` 의 층 목록으로 만듭니다. 파일이 없거나 칸이 틀리면 오류입니다(폴백 없음).
+         * @brief @p bucket 칸을 `Config/Dev/DerivedData.json` 의 층 목록으로 엽니다. 파일이 없거나 칸이 틀리면 오류입니다(폴백 없음).
          * @details 층은 `_root`(파생 데이터 루트 `<프로젝트>/Saved` 기준 폴더)나 `_rootEnvironment`(머신마다 다른 절대 경로를 담은 환경 변수) 중 하나를 쓴다.
          *          환경 변수가 없거나 비었으면 그 층은 없는 것이다(로그 `DDC.SharedLayerOff` — 층은 선택 항목이지 필수 값이 아니다).
-         *          쓰기 가능 층은 정리 규칙 `_unusedFileAgeDays` · `_maxSizeGB`(둘 다 1 이상)가 필수다.
+         *          쓰기 가능 층은 정리 나이 `_unusedFileAgeDays`, 버킷은 크기 상한 `_maxSizeGB` 가 필수다(둘 다 1 이상).
+         *          `-ddc-dir=<폴더>` 를 주면 층 목록 대신 그 폴더 하나(쓰기 가능, 정리 없음)다 — 빈 캐시에서 굽는 테스트가 함께 쓰는 캐시를 건드리지 않게.
          */
-        [[nodiscard]] static expected<DerivedDataCache> loadFromConfig();
+        [[nodiscard]] static expected<DerivedDataCache> open( DerivedDataBucket bucket );
+        /**
+         * @brief 모든 버킷을 정리합니다(`evictUnusedEntries`) — 쿠킹 시작에 한 번. 정리 규칙이 있는 층 루트에서 버킷이 아닌 폴더(옛 배치의 항목)도 지웁니다.
+         * @return 지운 항목 수(옛 배치의 폴더는 하나로 센다)
+         */
+        static uint32 evictAllBuckets();
 
         /**
          * @brief 키의 출력을 앞 층부터 찾아 @p outBytes 에 담습니다. 머리의 서술이 @p keyDescription 과 같고 본문 해시가 맞을 때만 true 이고, 뒤 층 히트는 앞의 쓰기 가능 층에 채웁니다.
@@ -141,11 +153,22 @@ namespace sw
          * @return 지운 항목 수
          */
         uint32 evictUnusedEntries() const;
+        /** @brief 동작 키 @p actionKey 의 기록을 앞 층부터 찾아 읽습니다(뒤 층 히트는 채우지 않는다 — 다음 쓰기가 채운다). 새것인지는 부르는 쪽이 `CookRecord::isFresh` 로 봅니다. */
+        [[nodiscard]] bool readRecord( uint64 actionKey, CookRecord& outRecord ) const;
+        /** @brief 동작 키의 기록을 쓰기 가능 층 모두에 씁니다. 하나라도 못 쓰면 false 입니다. */
+        [[nodiscard]] bool writeRecord( uint64 actionKey, const CookRecord& record ) const;
         /** @brief 항목 파일 @p path 를 검증합니다. Valid 면 @p outBytes 에 본문을 담습니다. 로그를 남기지 않습니다. */
         [[nodiscard]] static DerivedDataEntryState validateEntry( const AbsolutePath& path, string_view keyDescription, vector<uint8>& outBytes );
         /** @brief 층 @p layerIndex 의 키 파일 경로입니다. */
         [[nodiscard]] AbsolutePath      makePath( size_t layerIndex, uint64 key ) const;
         const vector<DerivedDataLayer>& getLayers() const { return _listLayer; }
+
+    private:
+        friend struct DerivedDataCacheTestAccess; // 테스트는 임시 폴더 층으로 만든다(`Tests/DerivedDataCacheTestAccess.h`)
+
+        explicit DerivedDataCache( vector<DerivedDataLayer> listLayer );
+        /** @brief 층 @p layerIndex 의 기록 파일 경로입니다(항목 옆 `<키>.cookrec`). */
+        [[nodiscard]] AbsolutePath makeRecordPath( size_t layerIndex, uint64 actionKey ) const;
 
     private:
         vector<DerivedDataLayer> _listLayer;

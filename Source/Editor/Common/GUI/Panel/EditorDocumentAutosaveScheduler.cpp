@@ -94,15 +94,18 @@ namespace sw::editor
             const bool                     bAsked    = listRetry.empty() || std::find( listRetry.begin(), listRetry.end(), pPanel ) != listRetry.end();
             if ( pDocument == nullptr || bAsked == false )
                 continue;
-            EditorDocumentAutosaveEntry  entry{};
-            const DocumentAutosaveResult take = pDocument->takeAutosaveCopy( entry._documentPath, entry._text );
+            const size_t                 firstIndex = batch._listEntry.size();
+            const DocumentAutosaveResult take       = pDocument->takeAutosaveCopies( batch._listEntry );
             if ( take == DocumentAutosaveResult::Deferred )
                 state._listDeferred.push_back( pPanel );
-            if ( take != DocumentAutosaveResult::Ready )
-                continue;
-            entry._projectRoot       = ProcessRoots::get()._project.str();
-            entry._sourceContentHash = EditorAutosaveCommands::computeSourceHash( entry._documentPath );
-            batch._listEntry.push_back( std::move( entry ) );
+            for ( size_t index = firstIndex; index < batch._listEntry.size(); ++index )
+            {
+                EditorDocumentAutosaveEntry& entry = batch._listEntry[index];
+                if ( pDocument->getDocumentAssetPath().empty() )
+                    entry._panelID = panelEntry._id; // 연 에셋이 없는 상태 문서다 — 복원이 이 패널을 연다
+                entry._projectRoot       = ProcessRoots::get()._project.str();
+                entry._sourceContentHash = EditorAutosaveCommands::computeDocumentSourceHash( entry );
+            }
         }
         // 끄는 중인 문서가 있으면 주기를 다시 재지 않는다 — 구간이 끝난 첫 프레임에 그 문서가 나온다(감사 E-1 "끌기 중이면 한 프레임 미루기")
         if ( state._listDeferred.empty() )

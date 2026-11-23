@@ -10,6 +10,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
+#include "Core/Memory/Memory.h"
 
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 
@@ -18,6 +19,10 @@
 
 namespace sw
 {
+    struct PropertyInfo;
+    struct Ray;
+    struct TypeInfo;
+
     class IPhysicsDebugRenderer;
     class RagdollComponent;
     class Scene;
@@ -25,6 +30,11 @@ namespace sw
 
 namespace sw::editor
 {
+    struct ColliderHandle;
+
+    class DocumentEditRecorder;
+    class ReflectedXMLDocument;
+
     /** @brief 물리 에셋의 바디 하나의 요약(표시용)입니다. 순서는 에셋 바디 순서이고 래그돌 바디 번호와 같다. */
     struct RagdollPreviewBodyRow
     {
@@ -70,7 +80,13 @@ namespace sw::editor
         /// @brief 충격의 처음 값(N*s)입니다.
         static constexpr float32 kDefaultImpulse = 120.0f;
 
+        /// @brief 고른 바디가 없음을 뜻하는 번호입니다.
+        static constexpr int32 kNoBody = -1;
+
         RagdollPreviewViewModel();
+        ~RagdollPreviewViewModel();
+        RagdollPreviewViewModel( const RagdollPreviewViewModel& )            = delete;
+        RagdollPreviewViewModel& operator=( const RagdollPreviewViewModel& ) = delete;
 
         /** @brief 물리 에셋 @p assetPath 를 읽어 바디 표를 다시 채웁니다. 고른 바디는 지웁니다. */
         ToolAssetLoadResult loadAsset( string_view assetPath );
@@ -103,7 +119,37 @@ namespace sw::editor
         /** @brief 부분 래그돌을 끝내고 애니메이션으로 섞어 돌아갑니다. */
         void stopPartialRagdoll( Scene* pScene ) const;
         /** @brief 켠 겹쳐 그리기(뼈대 · 바디 · 관절)를 @p renderer 로 냅니다. 몸이나 물리 씬이 없으면 아무것도 하지 않습니다. */
-        void drawOverlay( Scene* pScene, IPhysicsDebugRenderer& renderer, const RagdollPreviewOverlayColors& colors ) const;
+        void drawOverlay( Scene* pScene, IPhysicsDebugRenderer& renderer, const RagdollPreviewOverlayColors& colors );
+
+        // ------------------------------------------------------------------------------
+        // 편집 — 고른 바디의 프로퍼티를 그리드가, 셰이프 크기를 뷰포트 손잡이가 고치면 그 칸만 원문에 쓴다(`ReflectedXMLDocument`).
+        // ------------------------------------------------------------------------------
+        /** @brief 편집 알림 창구를 겁니다(패널이 만들 때 한 번). */
+        void bindDocumentEditRecorder( const DocumentEditRecorder& recorder );
+        /** @brief 문서 원문입니다(되돌리기 단계). 열지 않았으면 빈 글입니다. */
+        string captureText() const;
+        /** @brief 되돌리기 단계의 원문을 적용합니다. */
+        void applyText( string_view text );
+        /** @brief 원문을 읽은 자리에 쓰고 다음 `syncBody` 가 몸을 다시 놓게 합니다. 쓰지 못하면 상태 줄에 까닭을 두고 false 입니다. */
+        [[nodiscard]] bool saveDocument();
+        /** @brief 이 에셋을 고칠 수 있으면 true 입니다. 물려받은 에셋(`_base`)은 카탈로그 편집기가 고친다(`isInherited`). */
+        [[nodiscard]] bool isEditable() const;
+        [[nodiscard]] bool isInherited() const;
+        /** @brief 고른 바디의 인스턴스와 형식입니다(그리드 대상). 없으면 nullptr 입니다. */
+        void*                  editSelectedBody();
+        static const TypeInfo* getBodyType();
+        /** @brief 그리드가 고른 바디의 @p property 를 고쳤습니다 — 원문에 쓰고 알린다. */
+        void commitBodyProperty( const PropertyInfo& property );
+        /** @brief 고른 바디를 복사해 뒤에 놓고 그것을 고릅니다. 복사본의 본 이름(`<본>_copy`)은 스켈레톤의 본으로 바꿔야 선다 — 없는 본은 래그돌이 오류로 알린다. */
+        void duplicateSelectedBody();
+        /** @brief 고른 바디를 뺍니다. 마지막 하나는 빼지 않는다. */
+        void removeSelectedBody();
+        /** @brief 고른 바디의 편집 중인 셰이프 크기 손잡이를 @p outListHandle 에 모읍니다(비우고 채운다). 몸이 없거나 본이 스켈레톤에 없으면 비어 있다. */
+        void gatherShapeHandles( Scene* pScene, vector<ColliderHandle>& outListHandle );
+        /** @brief 손잡이 @p handle 을 레이 @p ray 가 가리키는 자리로 끕니다 — 인스턴스만 고친다(끄는 동안은 원문에 쓰지 않는다). */
+        void dragShapeHandle( const ColliderHandle& handle, const Ray& ray );
+        /** @brief 끌기를 마쳤습니다 — 고친 셰이프 목록을 원문에 쓰고 되돌리기 한 단계로 알린다. */
+        void commitShapeDrag();
 
         const vector<RagdollPreviewBodyRow>& getBodyRows() const { return _listBodyRow; }
         const string&                        getStatus() const { return _status; }
@@ -121,17 +167,25 @@ namespace sw::editor
         bool& editDrawJoints() { return _bDrawJoints; }
 
     private:
-        vector<RagdollPreviewBodyRow> _listBodyRow;
-        string                        _bodyPrefabPath;    ///< 입력란의 몸 프리팹 경로(Spawn 을 눌러야 적용한다)
-        string                        _activePrefabPath;  ///< Spawn 으로 확정한 몸 프리팹 경로
-        string                        _spawnedPrefabPath; ///< 미리보기 씬에 놓은 몸의 프리팹 경로(비면 아직 놓지 않았다 — Reset 도 이것을 비운다)
-        string                        _spawnedAssetPath;  ///< 몸의 래그돌에 건 물리 에셋 경로
-        string                        _status;
-        GameObjectHandle              _body;
-        float32                       _impulse;
-        int32                         _selectedBody;  ///< 표에서 고른 바디 번호(-1 이면 없음)
-        bool                          _bDrawSkeleton; ///< NOLINT(sw-bool-flag): 참조(`bool&`)로 넘긴다
-        bool                          _bDrawBodies;   ///< NOLINT(sw-bool-flag): 참조(`bool&`)로 넘긴다
-        bool                          _bDrawJoints;   ///< NOLINT(sw-bool-flag): 참조(`bool&`)로 넘긴다
+        /** @brief 편집 중인 인스턴스에서 바디 표를 다시 채웁니다(고칠 수 없는 에셋은 공유 캐시의 표 그대로다). */
+        void refreshBodyRows();
+        /** @brief 고른 바디의 본이 지금 놓인 월드 자세입니다. 몸 · 본이 없으면 false 입니다. */
+        [[nodiscard]] bool findSelectedBodyPose( Scene* pScene, float3& outPosition, quaternion& outRotation );
+
+    private:
+        unique_ptr<ReflectedXMLDocument> _pDocument;      ///< 편집 사본(원문이 정본)
+        string                           _loadedDiskPath; ///< 읽은 에셋의 디스크 경로. 풀지 못했으면 비어 있다
+        vector<RagdollPreviewBodyRow>    _listBodyRow;
+        string                           _bodyPrefabPath;    ///< 입력란의 몸 프리팹 경로(Spawn 을 눌러야 적용한다)
+        string                           _activePrefabPath;  ///< Spawn 으로 확정한 몸 프리팹 경로
+        string                           _spawnedPrefabPath; ///< 미리보기 씬에 놓은 몸의 프리팹 경로(비면 아직 놓지 않았다 — Reset 도 이것을 비운다)
+        string                           _spawnedAssetPath;  ///< 몸의 래그돌에 건 물리 에셋 경로
+        string                           _status;
+        GameObjectHandle                 _body;
+        float32                          _impulse;
+        int32                            _selectedBody;  ///< 표에서 고른 바디 번호(-1 이면 없음)
+        bool                             _bDrawSkeleton; ///< NOLINT(sw-bool-flag): 참조(`bool&`)로 넘긴다
+        bool                             _bDrawBodies;   ///< NOLINT(sw-bool-flag): 참조(`bool&`)로 넘긴다
+        bool                             _bDrawJoints;   ///< NOLINT(sw-bool-flag): 참조(`bool&`)로 넘긴다
     };
 } // namespace sw::editor

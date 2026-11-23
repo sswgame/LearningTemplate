@@ -3,6 +3,8 @@
  * @brief 개발 명령(치트, 디버그 명령) 레지스트리와 `SW_DEV_COMMAND` 를 정의합니다.
  * @details 선언과 인자 도우미(`readDiskPathArgument` …)는 모든 구성에 있다 — 기능 파일의 명령 본문이 모든 구성에서 컴파일되게. 배포 구성은 `SW_DEV_COMMAND` 가
  *          등록하지 않아 레지스트리가 비어 있고, 본문은 부르는 곳이 없어 실행 파일에서 빠진다(`docs/agents/CppStyle.md "Build configuration switches"`).
+ *          엔진 기능의 명령은 공개 API 만 쓰면 `DevTools/Commands`(화면이 있어야 하는 것은 `DevTools/Client`)에 둔다. 파일 안 상태나 파일 안 함수(HUD 섹션 · 감시 값과 같이 쓰는 것)를
+ *          쓰는 명령만 그 기능의 `.cpp` 에 남는다 — 명령 하나 때문에 공개 API 를 늘리지 않는다.
  */
 #pragma once
 #include "Core/Concurrency/mutex.h"

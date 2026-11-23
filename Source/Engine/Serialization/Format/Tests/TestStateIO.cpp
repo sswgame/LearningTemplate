@@ -416,3 +416,24 @@ SW_TEST_CASE( StateIOTest, HeaderTagMismatchSaysTheVersionIsUnknown )
     SW_EXPECT_FALSE( state.readState( reading ) );
     SW_EXPECT_EQUAL( 11, state._health );
 }
+
+/**
+ * @brief [StateIOTest] 틀린 개수는 읽은 만큼만 원소를 만든다 — 최소 바이트가 실제보다 작아 개수 검사를 지나도 남은 바이트에서 멈춘다
+ */
+SW_TEST_CASE( StateIOTest, ListGrowsOnlyAsItReads )
+{
+    constexpr uint32 kFakeCount = 64; // 최소 1 바이트로 세면 남은 64 바이트에 들어가지만 원소는 8 바이트다
+    sw::Archive      archive;
+    archive << kFakeCount;
+    for ( uint32 index = 0; index < kFakeCount; ++index )
+    {
+        archive << uint8{ 1 };
+    }
+    sw::Archive        reading( archive.getData(), archive.getSize() );
+    sw::StateIO        io( reading );
+    sw::vector<uint64> listValue;
+    io.list( listValue, 1, [&io]( uint64& value )
+    { io.value( value ); } );
+    SW_EXPECT_FALSE( io.isOk() );
+    SW_EXPECT_EQUAL( size_t{ 9 }, listValue.size() ); // 8 개를 읽고 아홉째에서 모자라 멈췄다
+}

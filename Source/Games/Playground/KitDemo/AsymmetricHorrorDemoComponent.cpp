@@ -39,8 +39,7 @@ namespace sw
                                 &AsymmetricHorrorDemoComponent::getWinningTeam );
 
     AsymmetricHorrorDemoComponent::AsymmetricHorrorDemoComponent()
-        : _catalogPath{}
-        , _pCatalog{}
+        : _pCatalog{}
         , _completedGenerators{ 0 }
         , _escapedCount{ 0 }
         , _winningTeam{ AsymmetricHorrorDemoComponentInternal::kNoWinningTeam }
@@ -108,7 +107,7 @@ namespace sw
 
     bool AsymmetricHorrorDemoComponent::startGame()
     {
-        if ( acquireRequired( _catalogPath, _pCatalog ) == false )
+        if ( acquireBoundCatalog( _pCatalog ) == false )
             return false;
         return runMatch();
     }

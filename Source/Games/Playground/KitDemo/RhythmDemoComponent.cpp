@@ -34,7 +34,7 @@ namespace sw
     SW_AUTOMATION_GETTER_WATCH( kitDemoRhythmCleared, "KitDemo.Rhythm.Cleared", "1 when the song ended cleared", RhythmDemoComponent, &RhythmDemoComponent::getCleared );
 
     RhythmDemoComponent::RhythmDemoComponent()
-        : _catalogPath{}
+        : _chart{}
         , _pChart{}
         , _score{ 0 }
         , _maxCombo{ 0 }
@@ -70,7 +70,7 @@ namespace sw
 
     bool RhythmDemoComponent::startGame()
     {
-        if ( acquireRequired( _catalogPath, _pChart ) == false )
+        if ( acquireRequired( _chart, _pChart ) == false )
             return false;
         return runChart();
     }

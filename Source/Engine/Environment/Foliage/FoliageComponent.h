@@ -19,6 +19,7 @@
 #include "Engine/Graphics/Mesh/MeshCache.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 namespace sw
 {
@@ -95,6 +96,8 @@ namespace sw
         float32 _navBlockRadius{ 0.0f }; ///< 0 보다 크면 인스턴스마다 이 반지름의 걷지 않는 상자를 베이크 기하에 넣는다(`FoliageNavGeometry.cpp`)
         PROPERTY( Min = 0.01, Units = m, Tooltip = "Height of the navmesh block above the root (before instance scale)" )
         float32 _navBlockHeight{ 2.0f };
+        PROPERTY( Tooltip = "Blades cut the instances (grass, crops); layers left off (trees, rocks) are never cut" )
+        bool _bAllowCut{ false };
     };
 } // namespace sw
 
@@ -158,14 +161,33 @@ namespace sw
         /** @brief 셀 거리 컬링과 머티리얼 값(바람, 시간, 카메라, 휘게 하는 구)을 @p viewPosition 기준으로 갱신합니다. 틱이 호출하고 테스트가 직접 호출합니다. */
         void updateView( const float3& viewPosition );
 
+        /**
+         * @brief 구 @p center · @p radius 에 닿는 인스턴스를 벱니다(벨 수 있는 레이어만 — `FoliageLayer::_bAllowCut`). 게임 스레드, 틱 밖에서 부릅니다.
+         * @details 벤 인스턴스는 숨긴다(인스턴스 배치의 항목 하나씩 — 배치를 다시 만들지 않는다). `_regrowSeconds` 뒤에 다시 자라고, 배치를 다시 계산해도(지형 편집) 벤 자리는 벤 채다.
+         *          벤 자리는 PROPERTY 밖 상태라 상태 스냅샷(세이브 · 핫 리로드 · 스트리밍 셀)이 싣는다(`serializeState`). 언리얼 폴리지의 인스턴스 제거, 유니티 지형 디테일 맵 지우기 자리다.
+         * @return 이번에 새로 벤 인스턴스 수입니다.
+         */
+        uint32 cut( const float3& center, float32 radius );
+        /** @brief 씬의 켜진 식생을 모두 벱니다(`cut`). @return 새로 벤 인스턴스 수입니다. */
+        static uint32 cutAll( GameObjectManager& manager, const float3& center, float32 radius );
+        /** @brief 뿌리 @p root · 키 @p height 인 식물이 구 @p center · @p radius 에 닿는지입니다 — 수평 거리와 키 구간으로 본다. */
+        [[nodiscard]] static bool isTouchedByCut( const float3& root, float32 height, const float3& center, float32 radius );
+        /**
+         * @brief 벤 자리들(이 컴포넌트 기준 자리 · 반지름 · 남은 시간)을 씁니다 · 읽습니다(`TerrainComponent` 의 편집과 같은 자리 — 등록은 GameFramework 의 `StatefulComponentRegistrar`).
+         * @details 컴포넌트 기준이라 월드 원점 옮기기 · 다른 판 번호의 배치에서도 맞는다. 배치는 규칙에서 다시 계산하므로 싣지 않는다.
+         */
+        SW_DECLARE_STATE_IO_IN_PLACE();
+        /** @brief `writeState` 의 바이트로 벤 자리를 되돌리고 셀 보이기를 맞춥니다. 맞지 않는 바이트는 알리고 지금 값으로 둡니다. 게임 스레드, 틱 밖에서 부릅니다. */
+        void restoreState( vector<uint8>&& bytes );
+        /** @brief 지금 베여 숨은 인스턴스 수입니다. */
+        uint32 getCutInstanceCount() const { return _cutInstanceCount; }
+
         /** @brief 만든 인스턴스 수(모든 레이어)를 반환합니다. */
         uint32 getInstanceCount() const { return _instanceCount; }
         /** @brief 인스턴스 배치 수입니다(셀마다 메시 구간 수 — 구간 없는 메시는 하나). */
         uint32 getBatchCount() const;
         /** @brief 지금 보이는 셀 배치 수입니다. */
         uint32 getVisibleBatchCount() const;
-        /** @brief 마지막 배치 계산(통째 또는 지형 편집 뒤의 부분)이 새로 만든 인스턴스 배치 수입니다. 바뀌지 않은 셀을 다시 만들지 않는지 테스트가 봅니다. */
-        uint32 getLastRebuiltBatchCount() const { return _lastRebuiltBatchCount; }
 
         /**
          * @brief @p foliageMesh 의 구간 목록이 @p mesh 를 그릴 수 있는 모양인지 봅니다. 문제가 있으면 첫 문제를 @p outError 에 담고 false 입니다.
@@ -207,6 +229,23 @@ namespace sw
             unique_ptr<EnvironmentMaterial>                 _layer;
             vector<vector<unique_ptr<EnvironmentMaterial>>> _listMeshSection;
         };
+
+        /** @brief 벤 자리 하나입니다. */
+        struct CutArea
+        {
+            float3  _offset{}; ///< 이 컴포넌트의 월드 자리에서 잰 구 중심
+            float32 _radius{ 0.0f };
+            float32 _remaining{ 0.0f }; ///< 다시 자라기까지 남은 시간(초, `_regrowSeconds` 가 0 이면 쓰지 않는다)
+        };
+
+        static constexpr uint32 kStateVersion = 1;
+
+        /** @brief 셀 @p cell 의 항목 보이기를 지금 벤 자리들에 맞춥니다. 새로 만든 셀과 다시 자란 뒤에 부릅니다. */
+        void applyCuts( Cell& cell ) const;
+        /** @brief 벤 자리의 시간을 흘리고, 다시 자란 자리가 있으면 셀 보이기를 맞춥니다. 자기 배치만 쓰므로 틱에서 부른다. */
+        void updateRegrow( float32 deltaTime );
+        /** @brief 셀들에서 숨은 항목을 다시 셉니다. */
+        void countCutInstances();
 
         /** @brief 배치를 계산할 평면 사각형을 반환합니다. 크기가 0 이면 아래 지형 전체이고, 지형도 없으면 빈 사각형입니다. */
         PlacementRegion computeRegion() const;
@@ -257,7 +296,10 @@ namespace sw
         float2 _regionSize;
         PROPERTY( Category = "Foliage", DisplayName = "Cell Size", Min = 4.0, Units = m, Tooltip = "Culling cell (one instance batch per mesh and cell)" )
         float32 _cellSize;
+        PROPERTY( Category = "Foliage", DisplayName = "Regrow Time", Min = 0.0, Units = s, Tooltip = "Seconds until cut instances grow back; 0 leaves them cut" )
+        float32 _regrowSeconds;
 
+        vector<CutArea>                    _listCutArea; ///< 벤 자리들(상태 스냅샷이 싣는다)
         vector<Cell>                       _listCell;
         vector<LayerMaterials>             _listLayerMaterial;      ///< 레이어마다 하나다(바람 값을 레이어마다 싣는다).
         vector<vector<PlacementCandidate>> _listLayerCandidate;     ///< 레이어마다 후보의 표면 판정(지형 위일 때만, 지형 편집 뒤 부분 계산용)
@@ -266,7 +308,8 @@ namespace sw
         PrimitiveRegistry*                 _pPrimitiveRegistry;     ///< 등록된 매니저의 레지스트리다(구조 링크라 생포인터를 쓴다).
         uint32                             _terrainStabilityFrames; ///< 지형 세대가 마지막으로 바뀐 뒤 지난 프레임 수 — 칠하는 동안 다시 계산하지 않는다
         uint32                             _instanceCount;
-        uint32                             _lastRebuiltBatchCount;  ///< `getLastRebuiltBatchCount`
+        uint32                             _cutInstanceCount;       ///< `getCutInstanceCount`
+        uint32                             _lastRebuiltBatchCount;  ///< 마지막 배치 계산이 새로 만든 인스턴스 배치 수(로그)
         uint32                             _builtTerrainGeneration; ///< 배치를 계산할 때 지형의 높이장 세대(`TerrainComponent::getHeightfieldGeneration`)
         uint32                             _builtSplatRevision;     ///< 배치를 계산할 때 지형의 스플랫 세대(`TerrainComponent::getSplatRevision`)
         uint32                             _seenTerrainGeneration;  ///< 지난 틱에 본 높이장 세대

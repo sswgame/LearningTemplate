@@ -2,10 +2,12 @@
 
 #include "Engine/Window/Linux/Wayland/WaylandWindow.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/String/StringUtil.h"
 #include "Core/String/formatString.h"
+#include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Window/Linux/Wayland/WaylandInputEvent.h"
 #include "Engine/Window/Linux/Wayland/WaylandShell.h"
@@ -130,6 +132,7 @@ namespace sw
         vector<WaylandOutput>      _listOutput;                   ///< 바인드한 출력과 그 값
         bool                       _bOutputsChanged{ false };     ///< 출력 값이 바뀌었다 - `processMessages` 가 세대를 올린다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         vector<WaylandQueuedInput> _listPendingInput;             ///< 리스너가 쌓고 `processMessages` 가 넘긴다
+        vector<uint32>             _listPressedButton;            ///< 누름을 넘기고 뗌을 아직 넘기지 않은 버튼(리눅스 이벤트 버튼 번호)
         uint32                     _inputSerial{ 0 };             ///< 마지막 키 · 버튼 · 들어옴의 일련번호(선택을 내놓을 때 컴포지터가 요구한다)
         bool                       _bIntroducedHasUTF8{ false };  ///< `_pIntroducedOffer` 가 text/plain;charset=utf-8 을 내놓는지 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         bool                       _bIntroducedHasPlain{ false }; ///< 위와 같이 text/plain NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
@@ -237,6 +240,63 @@ namespace sw
             _bPointerLocked   = false;
         }
 
+        /** @brief 자리에서 키보드가 사라졌습니다. 능력을 잃은 장치의 객체에는 더 사건이 오지 않으므로 놓고, 다시 오면 새로 만듭니다(`onSeatCapabilities`). */
+        void releaseKeyboard()
+        {
+            if ( _pKeyboard == nullptr )
+                return;
+            wl_keyboard_destroy( _pKeyboard );
+            _pKeyboard = nullptr;
+            WaylandInputEvent event;
+            event._kind = WaylandInputKind::FocusLost; // `leave` 도 오지 않는다 — 눌린 키가 남지 않게 여기서 놓는다
+            pushInput( event );
+        }
+
+        /** @brief 버튼 사건을 넘기고 눌린 버튼을 기억합니다. */
+        void pushPointerButton( uint32 button, bool bDown )
+        {
+            if ( bDown )
+                (void)VectorUtil::addUnique( _listPressedButton, button );
+            else
+                (void)VectorUtil::removeFirst( _listPressedButton, button );
+            WaylandInputEvent event;
+            event._kind   = bDown ? WaylandInputKind::PointerDown : WaylandInputKind::PointerUp;
+            event._button = button;
+            pushInput( event );
+        }
+
+        /** @brief 포인터가 표면을 떠났습니다. 눌린 버튼의 뗌은 이 표면에 더 오지 않으므로(장치가 사라짐 · 컴포지터의 창 끌기) 나감보다 먼저 넘긴다. */
+        void pushPointerLeave()
+        {
+            while ( _listPressedButton.empty() == false )
+            {
+                pushPointerButton( _listPressedButton.back(), false );
+            }
+            WaylandInputEvent event;
+            event._kind = WaylandInputKind::PointerLeave;
+            pushInput( event );
+        }
+
+        /** @brief 자리에서 포인터가 사라졌습니다. 걸어 둔 잠금의 방식은 남겨 다시 생긴 포인터에 잇습니다. */
+        void releasePointer()
+        {
+            if ( _pPointer == nullptr )
+                return;
+            const WindowPointerLock lock = _pointerLock;
+            releasePointerConstraint();
+            _pointerLock = lock;
+            if ( _pCursorShapeDevice != nullptr )
+                wp_cursor_shape_device_v1_destroy( _pCursorShapeDevice );
+            if ( _pRelativePointer != nullptr )
+                zwp_relative_pointer_v1_destroy( _pRelativePointer );
+            wl_pointer_destroy( _pPointer );
+            _pCursorShapeDevice = nullptr;
+            _pRelativePointer   = nullptr;
+            _pPointer           = nullptr;
+            _pointerSerial      = 0; // 새 포인터가 들어올 때의 번호로만 커서를 바꾼다
+            pushPointerLeave();
+        }
+
         void dropSelectionOffer()
         {
             if ( _pSelectionOffer != nullptr )
@@ -304,6 +364,8 @@ namespace sw
             static constexpr const utf8* kMimeURIList = "text/uri-list";
             /** @brief 클립보드 읽기 · 쓰기가 상대를 기다리는 한 번의 한도(ms)입니다(X11 의 200 ms 와 같다). */
             static constexpr int32 kClipboardWaitMs = 200;
+            /** @brief 한 번의 주고받기 전체의 한도(ms)입니다. 한 번 기다림만 재면 한 바이트씩 흘리는 상대가 주 스레드를 끝없이 붙든다. */
+            static constexpr int32 kClipboardTransferMs = 1000;
             /** @brief 클립보드 글 한 번에 받는 최대 바이트입니다(끝없이 보내는 상대를 끊는다). */
             static constexpr size_t kClipboardMaxBytes = 16u * constant::memory::kBytesPerMegabyte;
             /** @brief 휠 한 칸에 해당하는 축 값입니다(컴포지터 관례 — 마우스 휠 한 칸이 10). */
@@ -322,7 +384,7 @@ namespace sw
                     state._pShm = static_cast<wl_shm*>( wl_registry_bind( pRegistry, name, &wl_shm_interface, kShmVersion ) );
                 else if ( StringUtil::equals( pInterface, xdg_wm_base_interface.name ) )
                     state._pWmBase = static_cast<xdg_wm_base*>( wl_registry_bind( pRegistry, name, &xdg_wm_base_interface, kWmBaseVersion ) );
-                else if ( StringUtil::equals( pInterface, wl_seat_interface.name ) )
+                else if ( StringUtil::equals( pInterface, wl_seat_interface.name ) && state._pSeat == nullptr ) // 자리는 하나만 쓴다 — 뒤에 생긴 자리가 쓰던 자리를 덮지 않는다
                     state._pSeat = static_cast<wl_seat*>( wl_registry_bind( pRegistry, name, &wl_seat_interface, version < kSeatVersion ? version : kSeatVersion ) );
                 else if ( StringUtil::equals( pInterface, wl_data_device_manager_interface.name ) )
                     state._pDataDeviceManager = static_cast<wl_data_device_manager*>( wl_registry_bind( pRegistry, name, &wl_data_device_manager_interface, kDataDeviceManagerVersion ) );
@@ -495,7 +557,7 @@ namespace sw
 
             /**
              * @brief 제안 @p pOffer 의 @p pMime 형식 글을 파이프로 받아 @p outBytes 에 담습니다. 상대가 끝까지 보냈으면 true 입니다(클립보드 · 끌어 놓기가 같이 쓴다).
-             * @details 상대가 느리면 주 스레드가 오래 서지 않도록 한 번 기다림을 `kClipboardWaitMs` 로, 전체를 `kClipboardMaxBytes` 로 끊는다.
+             * @details 상대가 느리면 주 스레드가 오래 서지 않도록 한 번 기다림을 `kClipboardWaitMs` 로, 전체를 `kClipboardTransferMs` 와 `kClipboardMaxBytes` 로 끊는다.
              */
             static bool receiveOfferText( wl_display* pDisplay, wl_data_offer* pOffer, const utf8* pMime, string& outBytes )
             {
@@ -509,9 +571,10 @@ namespace sw
                 wl_data_offer_receive( pOffer, pMime, arrPipeEnd[1] );
                 close( arrPipeEnd[1] ); // 보내기 요청이 쓰기 끝을 복제해 들고 있다
                 wl_display_flush( pDisplay );
-                bool bCompleted = false;
-                utf8 arrBuffer[4096];
-                while ( outBytes.size() <= kClipboardMaxBytes )
+                bool           bCompleted = false;
+                const Deadline deadline   = Deadline::afterMilliseconds( kClipboardTransferMs );
+                utf8           arrBuffer[4096];
+                while ( outBytes.size() <= kClipboardMaxBytes && deadline.isExpired() == false )
                 {
                     pollfd waitEntry{ arrPipeEnd[0], POLLIN, 0 };
                     if ( poll( &waitEntry, 1, kClipboardWaitMs ) <= 0 )
@@ -560,15 +623,16 @@ namespace sw
                     close( fd );
                     return;
                 }
-                // 상대가 느리면 주 스레드가 오래 서지 않도록 막지 않는 쓰기로 `kClipboardWaitMs` 안에 못 쓰면 포기한다.
+                // 상대가 느리면 주 스레드가 오래 서지 않도록 막지 않는 쓰기로 한 번에 `kClipboardWaitMs`, 전체 `kClipboardTransferMs` 안에 못 쓰면 포기한다.
                 // 상대가 읽기를 닫았으면 쓰기가 SIGPIPE 로 프로세스를 죽인다 — 오류 코드로 받도록 무시로 둔다(프로세스 전역, `PosixProcess.cpp` 와 같다).
                 (void)signal( SIGPIPE, SIG_IGN );
                 const int32 flags = fcntl( fd, F_GETFL, 0 );
                 if ( flags != -1 )
                     fcntl( fd, F_SETFL, flags | O_NONBLOCK );
-                const utf8* pCursor    = state._clipboardText.data();
-                size_t      remaining  = state._clipboardText.size();
-                bool        bCompleted = true;
+                const Deadline deadline   = Deadline::afterMilliseconds( kClipboardTransferMs );
+                const utf8*    pCursor    = state._clipboardText.data();
+                size_t         remaining  = state._clipboardText.size();
+                bool           bCompleted = true;
                 while ( remaining > 0 )
                 {
                     const ssize_t written = write( fd, pCursor, remaining );
@@ -579,7 +643,7 @@ namespace sw
                         continue;
                     }
                     pollfd     waitEntry{ fd, POLLOUT, 0 };
-                    const bool bWouldBlock = written == -1 && ( errno == EAGAIN || errno == EWOULDBLOCK );
+                    const bool bWouldBlock = written == -1 && ( errno == EAGAIN || errno == EWOULDBLOCK ) && deadline.isExpired() == false;
                     if ( bWouldBlock == false || poll( &waitEntry, 1, kClipboardWaitMs ) <= 0 )
                     {
                         bCompleted = false;
@@ -855,9 +919,7 @@ namespace sw
                 (void)pPointer;
                 (void)serial;
                 (void)pSurface;
-                WaylandInputEvent event;
-                event._kind = WaylandInputKind::PointerLeave;
-                static_cast<State*>( pData )->pushInput( event );
+                static_cast<State*>( pData )->pushPointerLeave();
             }
 
             static void onPointerMotion( void* pData, wl_pointer* pPointer, uint32 time, wl_fixed_t x, wl_fixed_t y )
@@ -875,11 +937,9 @@ namespace sw
             {
                 (void)pPointer;
                 (void)time;
-                static_cast<State*>( pData )->_inputSerial = serial;
-                WaylandInputEvent event;
-                event._kind   = buttonState == WL_POINTER_BUTTON_STATE_PRESSED ? WaylandInputKind::PointerDown : WaylandInputKind::PointerUp;
-                event._button = button;
-                static_cast<State*>( pData )->pushInput( event );
+                State& state       = *static_cast<State*>( pData );
+                state._inputSerial = serial;
+                state.pushPointerButton( button, buttonState == WL_POINTER_BUTTON_STATE_PRESSED );
             }
 
             static void onPointerAxis( void* pData, wl_pointer* pPointer, uint32 time, uint32 axis, wl_fixed_t value )
@@ -927,6 +987,8 @@ namespace sw
             }
 
             static void onSeatCapabilities( void* pData, wl_seat* pSeat, uint32 capabilities );
+            /** @brief 걸어 둔 방식(`_pointerLock`)의 잠금 · 가둠을 지금 포인터에 겁니다. */
+            static void createPointerConstraint( State& state );
 
             static void onSeatName( void* pData, wl_seat* pSeat, const utf8* pName )
             {
@@ -1118,6 +1180,10 @@ namespace sw
             State&     state     = *static_cast<State*>( pData );
             const bool bKeyboard = ( capabilities & WL_SEAT_CAPABILITY_KEYBOARD ) != 0;
             const bool bPointer  = ( capabilities & WL_SEAT_CAPABILITY_POINTER ) != 0;
+            if ( bKeyboard == false )
+                state.releaseKeyboard();
+            if ( bPointer == false )
+                state.releasePointer();
             if ( bKeyboard && state._pKeyboard == nullptr )
             {
                 state._pKeyboard = wl_seat_get_keyboard( pSeat );
@@ -1134,6 +1200,32 @@ namespace sw
                 }
                 if ( state._pCursorShapeManager != nullptr )
                     state._pCursorShapeDevice = wp_cursor_shape_manager_v1_get_pointer( state._pCursorShapeManager, state._pPointer );
+                createPointerConstraint( state ); // 장치를 뺐다 꽂아도 걸어 둔 잠금이 이어진다
+            }
+        }
+
+        void WaylandWindowInternal::createPointerConstraint( State& state )
+        {
+            if ( state._pPointerConstraints == nullptr || state._pSurface == nullptr )
+                return;
+            switch ( state._pointerLock )
+            {
+                case WindowPointerLock::Released:
+                {
+                    break;
+                }
+                case WindowPointerLock::Locked:
+                {
+                    state._pLockedPointer = zwp_pointer_constraints_v1_lock_pointer( state._pPointerConstraints, state._pSurface, state._pPointer, nullptr, ZWP_POINTER_CONSTRAINTS_V1_LIFETIME_PERSISTENT );
+                    zwp_locked_pointer_v1_add_listener( state._pLockedPointer, &s_lockedPointerListener, &state );
+                    break;
+                }
+                case WindowPointerLock::Confined:
+                {
+                    state._pConfinedPointer = zwp_pointer_constraints_v1_confine_pointer( state._pPointerConstraints, state._pSurface, state._pPointer, nullptr, ZWP_POINTER_CONSTRAINTS_V1_LIFETIME_PERSISTENT );
+                    zwp_confined_pointer_v1_add_listener( state._pConfinedPointer, &s_confinedPointerListener, &state );
+                    break;
+                }
             }
         }
     } // namespace
@@ -1244,6 +1336,7 @@ namespace sw
     void WaylandWindow::destroy()
     {
         State& state = *_pState;
+        state.dropDragOffer(); // 끌리는 중에 닫은 창의 제안도 놓는다(소개된 제안을 넘겨받은 것이라 아래가 놓지 않는다)
         state.dropIntroducedOffer();
         state.dropSelectionOffer();
         if ( state._pDataSource != nullptr )
@@ -1359,7 +1452,7 @@ namespace sw
             if ( input._kind == WaylandInputKind::FocusGained || input._kind == WaylandInputKind::FocusLost )
                 setFocusState( input._kind == WaylandInputKind::FocusGained );
             if ( _customHandler.isBound() == false )
-                break;
+                continue; // 뒤에 줄 선 글 · 포커스 바뀜은 처리기가 없어도 넘긴다
             NativeWindowEvent windowEvent{};
             windowEvent.setNativeWindow( NativeSurfaceKind::Wayland, state._pSurface );
             windowEvent._message = NativeWindowEvent::kMessageWayland;
@@ -1513,18 +1606,8 @@ namespace sw
         const bool bSupported = lock == WindowPointerLock::Locked ? supportsPointerLock() : ( state._pPointerConstraints != nullptr && state._pPointer != nullptr );
         if ( bSupported == false )
             return false;
-        using Internal = WaylandWindowInternal;
-        if ( lock == WindowPointerLock::Locked )
-        {
-            state._pLockedPointer = zwp_pointer_constraints_v1_lock_pointer( state._pPointerConstraints, state._pSurface, state._pPointer, nullptr, ZWP_POINTER_CONSTRAINTS_V1_LIFETIME_PERSISTENT );
-            zwp_locked_pointer_v1_add_listener( state._pLockedPointer, &Internal::s_lockedPointerListener, &state );
-        }
-        else
-        {
-            state._pConfinedPointer = zwp_pointer_constraints_v1_confine_pointer( state._pPointerConstraints, state._pSurface, state._pPointer, nullptr, ZWP_POINTER_CONSTRAINTS_V1_LIFETIME_PERSISTENT );
-            zwp_confined_pointer_v1_add_listener( state._pConfinedPointer, &Internal::s_confinedPointerListener, &state );
-        }
         state._pointerLock = lock;
+        WaylandWindowInternal::createPointerConstraint( state );
         wl_display_flush( state._pDisplay );
         return true;
     }

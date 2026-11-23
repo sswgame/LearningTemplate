@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="27e8b5f04c914e0fa1d36c5b9f7280ed"?>
+<!-- 환경 마당(weathergarden.scene.xml)의 바닥 — 환경 표면 마스터의 흙빛 값. 날씨 묶음(젖음 · 웅덩이 · 눈 · 빗방울 링)을 따른다. -->
+<MaterialDef formatVersion="0" name="WeatherGardenGround" _base="engine/materials/environmentsurface.material">
+	<_properties>
+		<item name="_baseColor" defaultValue="0.36 0.31 0.25 1" />
+		<item name="_roughness" defaultValue="0.85" />
+		<item name="_macroVariation" defaultValue="0.4" />
+		<item name="_patternShape" defaultValue="0 0 0 1" />
+	</_properties>
+</MaterialDef>

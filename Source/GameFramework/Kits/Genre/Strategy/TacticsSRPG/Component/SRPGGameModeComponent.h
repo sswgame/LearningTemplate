@@ -14,7 +14,6 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Name/hashed_string.h"
 
-#include "Engine/Asset/AssetRef.h"
 #include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Serializer/CatalogKey.h"
@@ -98,8 +97,6 @@ namespace sw
         void settle();
 
     private:
-        PROPERTY( Category = "Data", DisplayName = "Catalog", Tooltip = "SRPG catalog XML (terrain, weapons, units, pilots)" )
-        AssetRef<SRPGCatalog> _catalogPath;
         PROPERTY( Category = "Field", DisplayName = "Width", Min = 1 )
         int32 _width;
         PROPERTY( Category = "Field", DisplayName = "Height", Min = 1 )

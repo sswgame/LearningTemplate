@@ -159,12 +159,15 @@ namespace sw
         friend class XMLCatalog<RestaurantCatalog>;
 
     public:
+        /** @brief 데이터 종류 이름입니다. 게임 기능이 팩의 `data/restaurant.xml` 을 게임 범위에 건다(`GameFeatureScope::loadCatalog`). */
+        static constexpr const utf8* kDataKind = "RestaurantCatalog";
         /** @brief 이 에셋 종류의 접미사입니다(종류 표 `AssetTypeRegistry`). 타입 있는 참조 `AssetRef<RestaurantCatalog>` 가 접미사로 가른다. */
         static constexpr AssetSuffix kArrAssetSuffix[] = {
             { ".restaurant.xml", AssetSuffixRole::Plain },
         };
-        /** @brief 이 에셋 종류입니다(등록은 `RestaurantCatalog.cpp` 의 줄이 로더를 더한다). */
-        static constexpr AssetTypeDef kAssetType{ "RestaurantCatalog", kArrAssetSuffix, static_cast<uint32>( SW_COUNT_OF( kArrAssetSuffix ) ), {}, 0, {} };
+        /** @brief 이 에셋 종류입니다(등록은 `RestaurantCatalog.cpp` 의 줄이 로더를 더한다). 팩의 `data/restaurant.xml` 은 경로 규칙으로 가른다. */
+        static constexpr AssetTypeDef kAssetType =
+            AssetTypeDef{ kDataKind, kArrAssetSuffix, static_cast<uint32>( SW_COUNT_OF( kArrAssetSuffix ) ), {}, 0, {} }.withPathRule( AssetPathRule{ "game/", {}, "/data/restaurant.xml" } );
 
         static constexpr int32 kHoursPerDay = 24;
 

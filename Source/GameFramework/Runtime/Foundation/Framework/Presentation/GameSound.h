@@ -51,6 +51,10 @@ namespace sw
          * @details 게임 스레드에서 부른다. 창구가 없으면(전용 서버 · 헤드리스) 아무것도 하지 않는다.
          */
         static void setObjectParameter( const GameObject& object, const hashed_string& name, float32 value );
+        /** @brief 전역 파라미터(RTPC) 값을 겁니다 — 날씨처럼 자리 없는 값이 2D 반복 소리를 움직입니다. 게임 스레드에서 부릅니다. */
+        static void setParameter( const hashed_string& name, float32 value );
+        /** @brief 낸 소리를 멈춥니다. @p fadeSeconds 가 음수면 이벤트의 페이드입니다. */
+        static void stop( SoundPlayingID playingID, float32 fadeSeconds );
     };
 } // namespace sw
 

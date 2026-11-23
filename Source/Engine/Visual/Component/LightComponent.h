@@ -64,10 +64,12 @@ namespace sw
         /** @brief 빛 색을 설정합니다. */
         void setColor( const float3& color );
 
-        /** @brief 빛 세기입니다. */
-        float32 getIntensity() const { return _intensity; }
+        /** @brief 지금 빛 세기입니다 — 적은 세기에 배율(`setIntensityScale`)을 곱한 것이라 그리기와 빛을 재는 쪽이 같은 값을 봅니다. */
+        float32 getIntensity() const { return _intensity * _intensityScale; }
         /** @brief 빛 세기를 설정합니다. 음수는 0 으로 자릅니다. */
         void setIntensity( float32 intensity );
+        /** @brief 적은 세기에 곱할 배율입니다(날씨 — 흐리면 해가 어둡다). 저장하지 않고, 시간대 · 깜빡임이 쓰는 `setIntensity` 와 섞이지 않습니다. 음수는 0 으로 자릅니다. */
+        void setIntensityScale( float32 scale );
 
         /**
          * @brief 3D 빛(방향광 · 스폿)이 나아갈 방향(부모 공간)으로 로컬 회전을 정합니다. 롤은 0 입니다.
@@ -133,7 +135,8 @@ namespace sw
         PROPERTY( Category = "Light", DisplayName = "Intensity", Min = 0.0, Tooltip = "Light intensity" )
         float32 _intensity;
         PROPERTY( Category = "Light", DisplayName = "Lens Flare", Tooltip = "Lens flare data (.lensflare.xml) drawn for this 3D light - empty draws none" )
-        string _lensFlarePath;
-        uint32 _lightType; ///< `shaderslot::kLightType*`. 만들 때 파생이 정하고 바뀌지 않습니다
+        string  _lensFlarePath;
+        float32 _intensityScale; ///< 날씨 같은 실행 중 배율(저장하지 않는다)
+        uint32  _lightType;      ///< `shaderslot::kLightType*`. 만들 때 파생이 정하고 바뀌지 않습니다
     };
 } // namespace sw

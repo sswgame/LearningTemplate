@@ -38,9 +38,11 @@ namespace sw
         bool isContextOpenFor( const void* pDeviceIdentity, const IProfilerGPUTimeline* pBackend ) const;
         /**
          * @brief 컨텍스트를 엽니다. @p gpuNowNanos 는 **지금** GPU 시계(타임스탬프와 같은 영역)입니다.
+         * @param pComputeQueueName 비동기 컴퓨트 큐 줄의 이름입니다. nullptr 이면 그 줄을 열지 않습니다(컴퓨트 큐 슬롯은 내지 않는다).
          * @return 출력이 컨텍스트를 만들었으면 true 입니다.
          */
-        [[nodiscard]] bool openContext( IProfilerGPUTimeline& backend, ProfilerGraphicsAPI api, const utf8* pName, const void* pDeviceIdentity, int64 gpuNowNanos );
+        [[nodiscard]] bool openContext( IProfilerGPUTimeline& backend, ProfilerGraphicsAPI api, const utf8* pName, const utf8* pComputeQueueName, const void* pDeviceIdentity,
+                                        int64 gpuNowNanos );
         /** @brief 디바이스가 사라졌을 때 잊습니다(출력 쪽 컨텍스트는 Tracy 가 닫지 않습니다. 다음 디바이스는 새 번호를 씁니다). */
         void removeContext();
 
@@ -55,7 +57,8 @@ namespace sw
          * @param listFramePassSite 프레임 패스 번호 → 지점(`GPUTimestampSlotLayout::findFramePassSlot`). 프레임 패스는 프레임 그래프(`computeSite`) 안이라 그 구간의 자식으로 낸다.
          * @return 낸 구간 수(프레임 구간 포함)입니다. 컨텍스트가 없거나 기록된 슬롯이 없으면 0 입니다.
          * @details 형제 구간이 겹치거나(같은 큐라 실제로는 순서대로이며, 슬롯 해상도 차이로 겹칩니다) 부모 밖으로 나가면 뷰어의 트리가 깨지므로 시작 순으로
-         *          정렬하고 앞 형제의 끝과 부모의 범위로 자릅니다.
+         *          정렬하고 앞 형제의 끝과 부모의 범위로 자릅니다. 비동기 컴퓨트 큐의 구간(`RHITimestampFrame::_computeQueueMask`)은 그래픽스 큐와 **실제로** 겹치므로
+         *          같은 트리에 넣지 않고 따로 연 컴퓨트 큐 컨텍스트(뷰어의 다른 줄)로 냅니다 — 같은 트리에서 자르면 뒤에 시작한 그래픽스 패스가 길이 0 으로 접힌다.
          */
         uint32 exportFrame( IProfilerGPUTimeline& backend, const RHITimestampFrame& frame, const ProfileZoneSite& frameSite,
                             const ProfileZoneSite& computeSite, const vector<const ProfileZoneSite*>& listPassSite,
@@ -70,12 +73,17 @@ namespace sw
             const ProfileZoneSite* _pSite;
         };
 
+        /** @brief 시작 순으로 선 형제 구간을 [@p beginNanos, @p endNanos] 와 앞 형제의 끝으로 잘라 냅니다. 낸 수를 돌려준다. */
+        static uint32 exportSiblings( IProfilerGPUTimeline& backend, uint32 gpuContext, const vector<Span>& listSpan, int64 beginNanos, int64 endNanos );
+
     private:
-        vector<Span>                _listScratchSpan;      ///< 프레임마다 다시 쓴다(할당을 되풀이하지 않게 보관한다)
-        vector<Span>                _listScratchChildSpan; ///< 프레임 그래프 구간의 자식(프레임 패스)이다. 프레임마다 다시 쓴다
-        const void*                 _pDeviceIdentity;      ///< 컨텍스트를 연 디바이스(비교만 한다)
-        const IProfilerGPUTimeline* _pBackend;             ///< 컨텍스트를 연 출력(비교만 한다)
-        uint32                      _gpuContext;           ///< 출력의 컨텍스트 번호
-        uint32                      _framesSinceSync;      ///< 마지막 시계 맞추기 뒤 프레임 수
+        vector<Span>                _listScratchSpan;        ///< 프레임마다 다시 쓴다(할당을 되풀이하지 않게 보관한다)
+        vector<Span>                _listScratchChildSpan;   ///< 프레임 그래프 구간의 자식(그래픽스 큐의 프레임 패스)이다. 프레임마다 다시 쓴다
+        vector<Span>                _listScratchComputeSpan; ///< 비동기 컴퓨트 큐의 프레임 패스다. 프레임마다 다시 쓴다
+        const void*                 _pDeviceIdentity;        ///< 컨텍스트를 연 디바이스(비교만 한다)
+        const IProfilerGPUTimeline* _pBackend;               ///< 컨텍스트를 연 출력(비교만 한다)
+        uint32                      _gpuContext;             ///< 출력의 컨텍스트 번호(그래픽스 큐)
+        uint32                      _computeQueueContext;    ///< 비동기 컴퓨트 큐의 컨텍스트 번호(없으면 `kInvalidGPUContext`)
+        uint32                      _framesSinceSync;        ///< 마지막 시계 맞추기 뒤 프레임 수
     };
 } // namespace sw

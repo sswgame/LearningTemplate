@@ -197,8 +197,14 @@ namespace sw
         outInfo._storeBuyerID  = readText( root, "response.params.steamid" );
         outInfo._bSandbox      = _settings._bSandbox;
         const JSONValue items  = root.get( "response" ).get( "params" ).get( "items" );
-        if ( items.isArray() && items.size() > 0 )
-            outInfo._productID = readText( items.at( 0 ), "itemid" );
+        for ( size_t index = 0; items.isArray() && index < items.size(); ++index )
+        {
+            const JSONValue  itemValue = items.at( index );
+            ReceiptLineItem& item      = outInfo._listItem.emplace_back();
+            item._productID            = readText( itemValue, "itemid" );
+            if ( StringUtil::parseInt64( readText( itemValue, "qty" ), item._quantity ) == false )
+                item._quantity = 0; // 읽지 못한 수다 — 틀이 거절한다
+        }
         int64 purchaseMs = 0;
         if ( parseTime( readText( root, "response.params.time" ), purchaseMs ) )
             outInfo._purchaseTimeMs = purchaseMs;

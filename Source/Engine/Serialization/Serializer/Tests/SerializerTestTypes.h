@@ -5,6 +5,7 @@
  */
 #pragma once
 #include "Core/Container/string.h"
+#include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 
 #include "Engine/EngineMinimal.h"
@@ -79,5 +80,21 @@ namespace sw
 
         PROPERTY()
         float32 _extra = 1.5f;
+    };
+
+    /** @brief 원소로 적히는 칸(글 목록 · 중첩 구조체)과 속성으로 적히는 칸이 함께 있는 샘플입니다. */
+    REFLECT()
+    struct SerializerSampleGroup
+    {
+        REFLECT_BODY();
+
+        PROPERTY()
+        vector<string> _listText;
+
+        PROPERTY()
+        SerializerSamplePart _part;
+
+        PROPERTY()
+        int32 _count = 0;
     };
 } // namespace sw

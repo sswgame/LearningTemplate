@@ -116,7 +116,7 @@ namespace sw
         float3 _halfExtents;
         PROPERTY( Category = "Shape", DisplayName = "Pull Center", Units = m, Tooltip = "Offset of the pull center from the owner (zone values distanceToCenter, ToCenter and Swirl fields)" )
         float3 _pullCenterOffset;
-        PROPERTY( Category = "Shape", DisplayName = "Flow Points", Units = m, Tooltip = "Path of the flow relative to the owner (Flow fields follow the nearest segment)" )
+        PROPERTY( Category = "Shape", DisplayName = "Flow Points", Units = m, Tooltip = "Path of the flow relative to the owner (Flow fields follow the nearest segment)", Meta = "Shape=Points,ShapeScale=Transform" )
         vector<float3> _listFlowPoint;
         PROPERTY( Category = "Zone", DisplayName = "Spawn Inside", Tooltip = "A body that appears already inside (spawn, login, respawn, load, the volume turning on): Activate counts it as entering, Ignore waits until it leaves and comes back" )
         TriggerSpawnInside _spawnInside;

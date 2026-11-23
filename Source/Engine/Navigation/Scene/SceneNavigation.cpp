@@ -3,7 +3,6 @@
 #include "Engine/Navigation/Scene/SceneNavigation.h"
 
 #include "Core/Algorithm/VectorUtil.h"
-#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/StringUtil.h"
@@ -15,7 +14,6 @@
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Console/DebugHUDRegistry.h"
 #include "Engine/Console/DebugHUDSectionFormat.h"
-#include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Foundation/DeterministicRun.h"
 #include "Engine/Foundation/EngineServices.h"
@@ -36,6 +34,7 @@
 #include "Engine/Object/GameObject/Service/SceneServiceRegistry.h"
 #include "Engine/Physics/PhysicsDebugDraw.h"
 #include "Engine/Profiling/FrameProfiler.h"
+#include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Scene/SceneStreamingSubsystem.h"
 
@@ -52,18 +51,6 @@ namespace sw
     // 군중 진행(⑤)은 `Navigation` 단계 끝에 워커로 가고 `FlushPostAnimation` 본문 앞에서 마친다(⑥) — 그 사이 `Animation` 단계와 겹친다.
     // 그 일이 만지는 씬 데이터는 내비게이션(군중 · 에이전트 이동 상태)뿐이다. 오브젝트 자리 · 컨트롤러 속도는 ⑥ 이 게임 스레드에서 쓴다.
     SW_SCENE_SERVICE_WITH_FRAME_JOB( SceneNavigation, Navigation, makeSceneFrameAccess( SceneDataKindSet{ SceneDataKind::Navigation, SceneDataKind::Transform }, SceneDataKindSet{}, SceneDataKindSet{ SceneDataKind::Structure } ), FlushPostAnimation, makeSceneFrameAccess( SceneDataKindSet{ SceneDataKind::Navigation }, SceneDataKindSet{}, SceneDataKindSet{} ) )
-
-    SW_GLOBAL_VARIABLE( int32, gv_navDebugDraw, 0, "내비메시 디버그 — 선(편집기 뷰포트): 1 폴리곤 테두리 · 2 에이전트 경로 · 4 에이전트 속도 · 8 장애물, 16 걷는 면 · 경로를 게임 화면의 메시로, 32 대략 그래프 · 셀별 내비 청크(타일) 로드 상태 · 먼 경로 (63 = 모두, 0 = 끔)" );
-
-    void SceneNavigation::drawDebug( DebugDrawQueue& queue )
-    {
-        // 선은 물리 디버그와 같은 출구로(편집기 뷰포트가 그린다), 비트 16 은 게임 화면에 보이는 메시로.
-        updateDebugView( static_cast<uint32>( gv_navDebugDraw ) );
-        if ( gv_navDebugDraw == 0 )
-            return;
-        PhysicsDebugQueueRenderer renderer{ queue };
-        drawDebug( renderer, static_cast<uint32>( gv_navDebugDraw ) );
-    }
 
     SceneNavigation::SceneNavigation( GameObjectManager& manager )
         : _settings{}
@@ -1130,11 +1117,11 @@ namespace sw
         NavDebugView::drawLines( renderer, flags, _listRuntime, _listObstacle, _listAgent );
     }
 
-    void SceneNavigation::updateDebugView( uint32 flags )
+    void SceneNavigation::updateDebugView( bool bShown )
     {
         if ( _pManager == nullptr )
             return;
-        _debugView.updateSolidView( *_pManager, flags, _listRuntime, _listAgent );
+        _debugView.updateSolidView( *_pManager, bShown, _listRuntime, _listAgent );
     }
 
     AABB SceneNavigation::computeBakeBounds( const NavMeshSurfaceComponent* pSurface, const NavMeshGeometry& geometry )
@@ -1342,6 +1329,24 @@ namespace sw
             /** @brief HUD 섹션 순서 — NPC 섹션(230) 바로 아래다(대상 NPC 의 판단 다음에 그 길찾기를 읽는다). */
             static constexpr int32 kStreamSectionOrder = 231;
 
+            // 내비 범주(선 · 걷는 면) — 스트리밍 섹션 아래에 이어 놓는다.
+            static constexpr int32 kMeshSectionOrder     = 232;
+            static constexpr int32 kAgentSectionOrder    = 233;
+            static constexpr int32 kObstacleSectionOrder = 234;
+            static constexpr int32 kSurfaceSectionOrder  = 235;
+
+            static void drawFlags( const DebugHUDSectionDraw& draw, const utf8* pCategory, uint32 flags )
+            {
+                PhysicsDebugQueueRenderer renderer{ draw._queue, hashed_string( pCategory ) };
+                draw._scene.getObjectManager()->getSubsystem<SceneNavigation>().drawDebug( renderer, flags );
+            }
+
+            static void drawStream( const DebugHUDSectionDraw& draw ) { drawFlags( draw, "navstream", NavDebugDrawFlag::kCluster ); }
+            static void drawMesh( const DebugHUDSectionDraw& draw ) { drawFlags( draw, "navmesh", NavDebugDrawFlag::kMesh ); }
+            static void drawAgents( const DebugHUDSectionDraw& draw ) { drawFlags( draw, "navagents", NavDebugDrawFlag::kPath | NavDebugDrawFlag::kVelocity ); }
+            static void drawObstacles( const DebugHUDSectionDraw& draw ) { drawFlags( draw, "navobstacles", NavDebugDrawFlag::kObstacle ); }
+            static void drawSurface( const DebugHUDSectionDraw& draw ) { draw._scene.getObjectManager()->getSubsystem<SceneNavigation>().updateDebugView( draw._bShown ); }
+
             /** @brief 디버그 HUD `navstream` — 종류마다 타일(내비 데이터 청크) 로드 상태 · 대략 그래프 · 먼 경로 수, 대상 에이전트의 먼 경로 상태입니다. */
             static void writeStreamSection( DebugHUDSectionWriter& writer )
             {
@@ -1374,6 +1379,8 @@ namespace sw
                     formatstring( label.data(), label.capacity(), "%# routes", name );
                     writer.addLineFormat( label, "%# coarse, %# virtual, %# replans", stats._coarseRouteAgentCount, stats._virtualAgentCount, stats._replanCount );
                 }
+                const uint32 pendingPathCount = pManager->getSubsystem<SceneNavigation>().getPendingPathRequestCount();
+                writer.addLineFormat( "path requests waiting", "%#", pendingPathCount );
                 const DebugHUDRegistry*      pRegistry = engine::findSubsystem<DebugHUDRegistry>();
                 const GameObjectHandle       target    = pRegistry != nullptr ? pRegistry->getTarget() : GameObjectHandle{};
                 const GameObject*            pTarget   = target.isValid() ? pManager->findGameObjectByID( target.objectID() ) : nullptr;
@@ -1385,53 +1392,16 @@ namespace sw
                 writer.addLine( "agent route", pMode );
                 writer.addLineFormat( "agent replans", "%# (%# coarse points)", pAgent->getRouteReplanCount(), static_cast<uint32>( pAgent->getCoarseRoutePoints().size() ) );
             }
-
-            /** @brief 개발 명령 `nav.moveto <agent> <target>` · `nav.moveto <agent> <x> <y> <z>` — 이름 붙은 오브젝트의 내비메시 에이전트에 목적지를 겁니다(시나리오가 NPC 를 먼 셀로 보낸다). */
-            static bool runMoveTo( const vector<string>& listArgument, string& outReply )
-            {
-                if ( listArgument.size() != 2 && listArgument.size() != 4 )
-                    return false;
-                GameObject*            pObject = engine::findActiveObject( hashed_string( listArgument[0] ) );
-                NavMeshAgentComponent* pAgent  = pObject != nullptr ? pObject->getComponent<NavMeshAgentComponent>() : nullptr;
-                if ( pAgent == nullptr )
-                {
-                    StringBuilder<constant::buffer::kMax256> reply;
-                    reply.appendFormat( "no object named '%#' with a navmesh agent in the active scene", listArgument[0] );
-                    outReply.assign( reply.view() );
-                    return false;
-                }
-                float3 destination{};
-                if ( listArgument.size() == 4 )
-                {
-                    const bool bParsed = StringUtil::parseFloat( listArgument[1], destination._x ) && StringUtil::parseFloat( listArgument[2], destination._y ) &&
-                                         StringUtil::parseFloat( listArgument[3], destination._z );
-                    if ( bParsed == false )
-                        return false;
-                }
-                else
-                {
-                    const GameObject*     pGoal  = engine::findActiveObject( hashed_string( listArgument[1] ) );
-                    const SceneComponent* pScene = pGoal != nullptr ? pGoal->getPrimarySceneComponent() : nullptr;
-                    if ( pScene == nullptr )
-                    {
-                        StringBuilder<constant::buffer::kMax256> reply;
-                        reply.appendFormat( "no object named '%#' with a scene component in the active scene", listArgument[1] );
-                        outReply.assign( reply.view() );
-                        return false;
-                    }
-                    destination = pScene->getWorldPosition();
-                }
-                pAgent->setDestination( destination );
-                StringBuilder<constant::buffer::kMax128> reply;
-                reply.appendFormat( "moving %#", listArgument[0] );
-                outReply.assign( reply.view() );
-                return true;
-            }
         };
     } // namespace
 
-    SW_DEBUG_HUD_SECTION( navstream, "navstream", "Navigation streaming (tiles, coarse graph, routes)", SceneNavigationDebugInternal::kStreamSectionOrder, DebugHUDSectionFlag::kNone,
-                          &SceneNavigationDebugInternal::writeStreamSection );
-    SW_DEV_COMMAND( NavMoveTo, "nav.moveto", "nav.moveto <agent> <target object> | nav.moveto <agent> <x> <y> <z>",
-                    "Send a named navmesh agent of the active scene to an object or a world position (long routes over streamed-out cells)", &SceneNavigationDebugInternal::runMoveTo );
+    SW_DEBUG_HUD_CATEGORY( navstream, "navstream", "Navigation streaming (tiles, coarse graph, routes)", SceneNavigationDebugInternal::kStreamSectionOrder, DebugHUDSectionFlag::kNone,
+                           &SceneNavigationDebugInternal::writeStreamSection, &SceneNavigationDebugInternal::drawStream, "Nav" );
+    SW_DEBUG_HUD_CATEGORY( navmesh, "navmesh", "Navigation mesh polygons", SceneNavigationDebugInternal::kMeshSectionOrder, DebugHUDSectionFlag::kNone, nullptr, &SceneNavigationDebugInternal::drawMesh, nullptr );
+    SW_DEBUG_HUD_CATEGORY( navagents, "navagents", "Navigation agents (path, velocity)", SceneNavigationDebugInternal::kAgentSectionOrder, DebugHUDSectionFlag::kNone, nullptr,
+                           &SceneNavigationDebugInternal::drawAgents, nullptr );
+    SW_DEBUG_HUD_CATEGORY( navobstacles, "navobstacles", "Navigation obstacles", SceneNavigationDebugInternal::kObstacleSectionOrder, DebugHUDSectionFlag::kNone, nullptr,
+                           &SceneNavigationDebugInternal::drawObstacles, nullptr );
+    SW_DEBUG_HUD_CATEGORY( navsurface, "navsurface", "Navigation walkable surface (mesh in the game view)", SceneNavigationDebugInternal::kSurfaceSectionOrder, DebugHUDSectionFlag::kDrawsWhileHidden, nullptr,
+                           &SceneNavigationDebugInternal::drawSurface, nullptr );
 } // namespace sw

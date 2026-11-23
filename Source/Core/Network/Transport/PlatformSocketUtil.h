@@ -41,6 +41,15 @@ namespace sw
     {
         static constexpr uint64 kInvalidSocket = ~0ull;
 
+        /** @brief 이 플랫폼에 UDP 소켓이 있습니다. 브라우저에는 없다 — 게임 세션 클라이언트가 스트림(`StreamNetTransport`)으로 붙는다. */
+#if defined( SW_PLATFORM_WEB )
+        static constexpr bool kbHasUDP = false;
+#elif defined( SW_PLATFORM_WINDOWS ) || defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_ANDROID )
+        static constexpr bool kbHasUDP = true;
+#else
+    #error "Unsupported platform"
+#endif
+
         /** @brief 소켓 라이브러리를 엽니다(Windows 만 실제로 한다). 여러 번 불러도 됩니다. */
         [[nodiscard]] static bool initialize();
         /**

@@ -156,6 +156,8 @@ namespace sw
         PROPERTY()
         uint64 _matchID{ 0 };
         PROPERTY()
+        int64 _placedMs{ 0 }; ///< 이 명단을 서버에 배정한 시각(UTC 밀리초)이다. 게임 서버가 같은 계정의 두 명단 중 새것을 고른다. 이 칸이 없는 빌드의 명단은 0 이라 가장 오래된 것이 된다
+        PROPERTY()
         int32 _averageRating{ 0 };
     };
 } // namespace sw

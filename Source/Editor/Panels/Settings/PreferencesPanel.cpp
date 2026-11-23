@@ -2,6 +2,8 @@
 
 #include "Editor/Panels/Settings/PreferencesPanel.h"
 
+#include "Core/String/StringBuilder.h"
+
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
 #include "Editor/Common/Config/EditorSettingsRegistry.h"
@@ -81,8 +83,10 @@ namespace sw::editor
         _grid.drawProperties( target, nullptr, _listHidden ); // 고른 섹션은 왼쪽 목록이 보인다 — 같은 이름을 머리글로 다시 쓰지 않는다
         if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Refresh" ), SW_LOCKEY( "EdButton", "ResetSection" ), "Reset Section" ) ) )
             _model.resetSelectedSection();
+        EditorSelfTestMarks::record( "preferences.resetSection" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSettings", "ResetSection" ) );
         ImGui::EndChild();
+        _model.flushEdit( ImGui::IsAnyItemActive() ); // 놓은 편집을 한 단계로 올린다
         _model.savePendingChanges( false );
     }
 
@@ -97,9 +101,11 @@ namespace sw::editor
         return pPanel != nullptr ? pPanel->_model.getVisibleSectionCount() : 0u;                                 // 패널이 없으면 보인 섹션도 없다
     }
 
-    void PreferencesPanel::onPropertyEdited( const PropertyInfo& /*prop*/ )
+    void PreferencesPanel::onPropertyEdited( const PropertyInfo& prop )
     {
-        _model.recordEdited();
+        StringBuilder<constant::buffer::kMax256> label;
+        label.appendFormat( "Edit %#", prop._name.c_str() );
+        _model.recordEdited( label.view(), ImGui::IsAnyItemActive() );
     }
 
     SW_EDITOR_PANEL( PreferencesPanel, PreferencesPanel::kPanelID, EditorPanelCategory::Tool, 2000 );

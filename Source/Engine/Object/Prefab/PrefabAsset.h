@@ -32,11 +32,9 @@ namespace sw
         string _name{};
     };
 
-    struct CookJobDesc;
     struct ObjectIdentity;
 
     class AssetLoadScope;
-    class CookStore;
     class GameObject;
     class GameObjectManager;
     class JSONDocument;
@@ -136,8 +134,8 @@ namespace sw
         const string& getBasePath() const { return _basePath; }
         /** @brief 저장을 변형으로 할지 정합니다(에디터가 `setFromGameObject` 뒤에 파일의 부모를 되돌려 놓는다 — `readBasePathFromSource`). */
         void setBasePath( string_view basePath ) { _basePath = string{ basePath }; }
-        /** @brief 이름과 XML 상태만 채운 자산으로 만듭니다(저장이 기본값을 뺀 글이 같게 읽히는지 맞대는 데 쓴다). 상태가 비면 false 입니다. */
-        [[nodiscard]] bool setStateForCompare( string_view name, string_view stateXML );
+        /** @brief 이름과 상태 글만 채운 자산으로 만듭니다(저장이 기본값을 뺀 글이 같게 읽히는지 맞대는 데 쓴다). 상태가 비면 false 입니다. */
+        [[nodiscard]] bool setStateForCompare( string_view name, string_view stateText, PrefabStateFormat format );
         /** @brief 파일 글(XML · JSON)에 적힌 부모 경로입니다. 없으면 빈 글입니다. */
         [[nodiscard]] static string readBasePathFromSource( string_view sourceText );
         /** @brief 변형 파일이 적은 다른 점입니다(`PrefabCache::findFieldOrigin`). 변형이 아니면 빈 글입니다. */

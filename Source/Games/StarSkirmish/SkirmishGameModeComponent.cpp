@@ -422,6 +422,8 @@ namespace sw
         io.header( SkirmishGameModeComponentInternal::kStateTag, SkirmishGameModeComponentInternal::kStateVersion );
         if ( io.isOk() == false )
             return;
+        if ( io.isReading() && _pCatalog != nullptr )
+            _match.getWorld().rebindCatalog( *_pCatalog ); // 다시 읽힌 카탈로그면 새 판으로 읽는다
         io.value( _match );
         io.valueAtomic( _selection );
         float32 timeScale = _speed.getTimeScale();

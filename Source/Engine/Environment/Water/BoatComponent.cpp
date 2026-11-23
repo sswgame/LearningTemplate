@@ -7,9 +7,9 @@
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Automation/Watch/AutomationWatchComponent.h"
-#include "Engine/Environment/Foliage/WindComponent.h"
 #include "Engine/Environment/Water/BuoyancyComponent.h"
 #include "Engine/Environment/Water/WaterBodyComponent.h"
+#include "Engine/Environment/Wind/WindComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Tick/FixedStepContext.h"
@@ -88,7 +88,7 @@ namespace sw
 
     float32 BoatComponent::computeSailForce( float32 sailArea, float32 apparentWindSpeed, float32 efficiency )
     {
-        return 0.5f * kAirDensity * apparentWindSpeed * apparentWindSpeed * sailArea * efficiency;
+        return 0.5f * WindSettings::kAirDensity * apparentWindSpeed * apparentWindSpeed * sailArea * efficiency;
     }
 
     void BoatComponent::recordTilt( float32 roll, float32 pitch, float32 deltaTime )

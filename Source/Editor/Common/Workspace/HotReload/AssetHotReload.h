@@ -11,7 +11,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
-#include "DevTools/AssetReload/FileWatchDispatcher.h"
+#include "DevTools/FileWatch/FileWatchService.h"
 
 #include "Editor/Common/EditorSubsystem.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
@@ -239,11 +239,9 @@ namespace sw::editor
         void flushDeferredFiles();
 
     private:
-        unique_ptr<FileWatchDispatcher>   _pFileWatchDispatcher;
-        unique_ptr<FileWatchDispatcher>   _pScratchWatchDispatcher; ///< 작업 도메인 폴더(실행 뿌리 아래 — `AssetPaths::getScratchFolderPath`)의 감시. 리소스 루트 밖이라 따로 건다
-        unique_ptr<AssetReferenceTracker> _pReferenceTracker;       ///< 에디터 전역의 참조 역색인(연쇄 리로드 · 콘텐츠 브라우저)
-        unordered_map<string, uint64>     _mapAppliedContentHash;   ///< `applySavedAsset` 이 반영한 파일(루트 기준 경로, 소문자)의 내용 해시
-        uint64                            _cascadeReloadCount;      ///< 연쇄로 다시 읽은 에셋의 누적 수
+        unique_ptr<AssetReferenceTracker> _pReferenceTracker;     ///< 에디터 전역의 참조 역색인(연쇄 리로드 · 콘텐츠 브라우저)
+        unordered_map<string, uint64>     _mapAppliedContentHash; ///< `applySavedAsset` 이 반영한 파일(루트 기준 경로, 소문자)의 내용 해시
+        uint64                            _cascadeReloadCount;    ///< 연쇄로 다시 읽은 에셋의 누적 수
         unique_ptr<EditorAssetImportJob>  _pImportJob;
         vector<ImportRequest>             _listQueuedImport;               ///< 아직 잡에 싣지 않은 원본(중복 없음)
         vector<ImportRequest>             _listRunningImport;              ///< 지금 도는 잡의 원본

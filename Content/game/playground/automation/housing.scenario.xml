@@ -76,22 +76,22 @@
 	<WaitUntil watch="Housing.Funds" target="HousingPlot" equals="382" timeoutFrames="10"/>
 	<Expect watch="Housing.Funds" target="HousingPlot" equals="382"/>
 	<Expect watch="Housing.PlacementCount" target="HousingPlot" equals="14"/>
-	<DevCommand line="housing.undo HousingPlot"/>
+	<DevCommand line="exec HousingPlot undo"/>
 	<WaitUntil watch="Housing.Funds" target="HousingPlot" equals="380" timeoutFrames="10"/>
 	<Expect watch="Housing.Funds" target="HousingPlot" equals="380"/>
 	<Expect watch="Housing.PlacementCount" target="HousingPlot" equals="15"/>
-	<DevCommand line="housing.undo HousingPlot"/>
+	<DevCommand line="exec HousingPlot undo"/>
 	<WaitUntil watch="Housing.Funds" target="HousingPlot" equals="400" timeoutFrames="10"/>
 	<Expect watch="Housing.Funds" target="HousingPlot" equals="400"/>
 	<Expect watch="Housing.PlacementCount" target="HousingPlot" equals="14"/>
-	<DevCommand line="housing.redo HousingPlot"/>
+	<DevCommand line="exec HousingPlot redo"/>
 	<WaitUntil watch="Housing.Funds" target="HousingPlot" equals="380" timeoutFrames="10"/>
 	<Expect watch="Housing.Funds" target="HousingPlot" equals="380"/>
 	<Expect watch="Housing.Placement" target="HousingPlot" key="15" is="150 250 0 0"/>
 	<DevCommand line="housing.move HousingPlot 13 1.3 0.6 0 90"/>
 	<WaitUntil watch="Housing.Placement" target="HousingPlot" key="13" is="150 100 0 90" timeoutFrames="10"/>
 	<Expect watch="Housing.Placement" target="HousingPlot" key="13" is="150 100 0 90"/>
-	<DevCommand line="housing.undo HousingPlot"/>
+	<DevCommand line="exec HousingPlot undo"/>
 	<WaitUntil watch="Housing.Placement" target="HousingPlot" key="13" is="250 100 0 90" timeoutFrames="10"/>
 	<Expect watch="Housing.Placement" target="HousingPlot" key="13" is="250 100 0 90"/>
 

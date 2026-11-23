@@ -100,6 +100,18 @@ namespace sw
         return AutomationWatchInternal::getRegistrations().findByName( name );
     }
 
+    void AutomationWatchRegistry::collectSceneWatches( string_view group, vector<const AutomationWatchRegistration*>& outListWatch )
+    {
+        outListWatch.clear();
+        for ( const AutomationWatchRegistration* pRegistration : AutomationWatchInternal::getRegistrations().getItems() )
+        {
+            const string_view name     = pRegistration->_pName;
+            const bool        bInGroup = name.size() > group.size() && name.substr( 0, group.size() ) == group && name[group.size()] == '.';
+            if ( bInGroup && pRegistration->_pQueryFunction == nullptr && pRegistration->_bWallClock == false )
+                outListWatch.push_back( pRegistration );
+        }
+    }
+
     bool AutomationWatchRegistry::read( const AutomationWatchRegistration& registration, const AutomationWatchQuery& query, AutomationWatchValue& outValue )
     {
         if ( registration._pQueryFunction != nullptr )

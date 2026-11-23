@@ -30,7 +30,7 @@ namespace sw
             /**
              * @brief @p stamp 가 바깥 쓰기에 대해 캐시해도 되는 도장인지 — 쓴 지 `kRacyWindowMs` 가 지났는지입니다.
              * @details git 의 racy-git 과 같은 결함이다: 같은 틱 안에 같은 크기로 다시 쓴 파일은 (크기, 시각) 도장이 같아 옛 해시가 돌아왔다
-             *          (`ShaderCookStampTest` 가 전체 실행에서만 졌다). 바깥에서 막 쓴 파일은 매번 읽고, 자리 잡은 파일만 캐시한다.
+             *          (셰이더 쿠킹 판정 테스트가 전체 실행에서만 졌다). 바깥에서 막 쓴 파일은 매번 읽고, 자리 잡은 파일만 캐시한다.
              */
             static bool isCompleted( const FileStamp& stamp )
             {

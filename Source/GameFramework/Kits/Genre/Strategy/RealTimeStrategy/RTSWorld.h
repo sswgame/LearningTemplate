@@ -202,7 +202,7 @@ namespace sw
      *          5. 전투: 피해는 max(최소 피해, 공격 - 방어)이다. 맞은 쪽 주인에게는 "공격받고 있다" 를 간격을 두고 알린다.
      *          6. 안개: 팀마다 시야를 칠한다(본 셀은 Explored 로 남는다). 건물이 남지 않은 플레이어는 진다.
      *
-     *          카탈로그는 빌려 쓴다. 월드보다 오래 살아야 하고 바뀌지 않아야 한다.
+     *          카탈로그는 빌려 쓴다. 월드보다 오래 살아야 하고, 다시 읽힌 판으로는 `rebindCatalog` 뒤에 상태를 다시 읽어 옮긴다.
      */
     class SW_KIT_API RTSWorld
     {
@@ -216,6 +216,8 @@ namespace sw
          * @details 카탈로그가 없거나 크기가 1 보다 작으면 오류를 남기고 false 를 반환하며 판은 그대로입니다(1 로 올려 받지 않는다).
          */
         [[nodiscard]] bool initialize( const RTSCatalog* pCatalog, int32 width, int32 height );
+        /** @brief 빌린 카탈로그만 @p catalog 로 바꿉니다. 유닛 · 명령의 정의는 이어 읽는 `readState` 가 id 로 다시 찾는다 — 읽기 앞에서만 부른다. 규칙 수치(고정 걸음)는 연 판의 것이다. */
+        void rebindCatalog( const RTSCatalog& catalog ) { _pCatalog = &catalog; }
         /** @brief 지형이 막힌 곳(절벽, 물)을 지정합니다. 유닛을 놓기 전에 칠합니다. */
         void setTerrainBlocked( int32 x, int32 y, bool bBlocked );
         /**

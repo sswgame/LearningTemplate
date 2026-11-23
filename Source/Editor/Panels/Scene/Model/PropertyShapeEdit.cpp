@@ -60,6 +60,8 @@ namespace sw::editor
                     return PropertyShapeKind::Capsule;
                 if ( text == "Cylinder" )
                     return PropertyShapeKind::Cylinder;
+                if ( text == "Points" )
+                    return PropertyShapeKind::Points;
                 return nullopt;
             }
 
@@ -122,6 +124,8 @@ namespace sw::editor
                     return PropertyShapeScaleRule::Physics;
                 if ( text == "Physics2D" )
                     return PropertyShapeScaleRule::Physics2D;
+                if ( text == "Transform" )
+                    return PropertyShapeScaleRule::Transform;
                 return nullopt;
             }
 
@@ -133,6 +137,11 @@ namespace sw::editor
             {
                 if ( rule == PropertyShapeScaleRule::None )
                     return;
+                if ( rule == PropertyShapeScaleRule::Transform )
+                {
+                    inoutValue._vectorScale = scale;
+                    return;
+                }
                 const bool bPhysics2D = rule == PropertyShapeScaleRule::Physics2D;
                 switch ( inoutValue._kind )
                 {
@@ -154,6 +163,7 @@ namespace sw::editor
                         break;
                     case PropertyShapeKind::Cone:
                     case PropertyShapeKind::Arrow:
+                    case PropertyShapeKind::Points:
                         break;
                 }
             }
@@ -165,11 +175,14 @@ namespace sw::editor
                 return s_radians;
             }
 
-            /** @brief 모양 @p kind 가 받는 값 형식이면 true 입니다(상자 · 화살표 · 원기둥은 float3, 원뿔은 Radians, 나머지는 float32). */
+            /** @brief 모양 @p kind 가 받는 값 형식이면 true 입니다(상자 · 화살표 · 원기둥은 float3, 원뿔은 Radians, 점 목록은 vector<float3>, 나머지는 float32). */
             static bool isValueTypeAccepted( PropertyShapeKind kind, const PropertyInfo& prop )
             {
                 static const hashed_string s_float32( "float32" );
                 static const hashed_string s_float3( "float3" );
+                static const hashed_string s_listFloat3( "vector<float3>" );
+                if ( kind == PropertyShapeKind::Points )
+                    return prop._typeName == s_listFloat3;
                 if ( prop._bIsContainer == SW_TRUE || prop._bIsBitField == SW_TRUE )
                     return false;
                 if ( kind == PropertyShapeKind::Cone )
@@ -237,11 +250,33 @@ namespace sw::editor
                 bool                      bFound = false;
                 forEachShape( *pObject, PropertyShapeHandleSession::get(), listDecl, [&]( const Component& /*component*/, const PropertyShapeDecl& /*decl*/, const PropertyShapeValue& value )
                 {
-                    const bool bNumber = isVectorShapeKind( value._kind ) == false;
+                    const bool bNumber = isVectorShapeKind( value._kind ) == false && value._kind != PropertyShapeKind::Points;
                     if ( bFound || bNumber == false )
                         return;
                     outValue = static_cast<float64>( value._number );
                     bFound   = true;
+                } );
+                return true;
+            }
+
+            /** @brief 감시 값 `Editor.PropertyShapePointSum` — 메인 선택(하나)의 첫 점 목록의 저장 값 성분 합입니다. 없으면 0 입니다. */
+            [[nodiscard]] static bool readFirstPointSum( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                outValue                  = 0.0;
+                const GameObject* pObject = editor::findSubsystem<EditorContext>() != nullptr ? editor::getMainSceneSelection().getPrimaryObject() : nullptr;
+                if ( pObject == nullptr )
+                    return true;
+                vector<PropertyShapeDecl> listDecl;
+                bool                      bFound = false;
+                forEachShape( *pObject, PropertyShapeHandleSession::get(), listDecl, [&]( const Component& /*component*/, const PropertyShapeDecl& /*decl*/, const PropertyShapeValue& value )
+                {
+                    if ( bFound || value._kind != PropertyShapeKind::Points )
+                        return;
+                    for ( const float3& point : value._listPoint )
+                    {
+                        outValue += static_cast<float64>( point._x + point._y + point._z );
+                    }
+                    bFound = true;
                 } );
                 return true;
             }
@@ -282,9 +317,9 @@ namespace sw::editor
             {
                 const optional<PropertyShapeKind> kind = Internal::findKind( string( StringUtil::trim( part ) ) );
                 if ( kind.has_value() == false )
-                    return unexpected( Error{ ErrorKind::InvalidArgument, "unknown Shape (Sphere, Box, Cone, Arrow, Circle, Capsule, Cylinder)", prop._name.view() } );
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "unknown Shape (Sphere, Box, Cone, Arrow, Circle, Capsule, Cylinder, Points)", prop._name.view() } );
                 if ( Internal::isValueTypeAccepted( *kind, prop ) == false )
-                    return unexpected( Error{ ErrorKind::InvalidArgument, "Shape value type mismatch (Box/Arrow/Cylinder: float3, Cone: Radians, the others: float32)", prop._name.view() } );
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "Shape value type mismatch (Box/Arrow/Cylinder: float3, Cone: Radians, Points: vector<float3>, the others: float32)", prop._name.view() } );
                 listKind.push_back( *kind );
             }
             PropertyShapeDecl decl{};
@@ -342,8 +377,10 @@ namespace sw::editor
                 const optional<PropertyShapeScaleRule> rule      = Internal::findScaleRule( *pScale );
                 const bool                             bScalable = VectorUtil::containsIf( listKind, []( PropertyShapeKind kind ) // 반각 · 방향은 배율과 상관없다
                                             { return kind == PropertyShapeKind::Cone || kind == PropertyShapeKind::Arrow; } ) == false;
-                if ( rule.has_value() == false || bScalable == false )
-                    return unexpected( Error{ ErrorKind::InvalidArgument, "ShapeScale is None, Physics or Physics2D, not for Shape=Cone/Arrow", prop._name.view() } );
+                const bool                             bPoints   = VectorUtil::contains( listKind, PropertyShapeKind::Points );
+                const bool                             bFits     = rule.has_value() && ( *rule == PropertyShapeScaleRule::None || ( *rule == PropertyShapeScaleRule::Transform ) == bPoints );
+                if ( bFits == false || bScalable == false )
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "ShapeScale is None, Physics or Physics2D, not for Shape=Cone/Arrow; Shape=Points takes None or Transform", prop._name.view() } );
                 decl._scaleRule = *rule;
             }
             outListDecl.push_back( decl );
@@ -385,6 +422,12 @@ namespace sw::editor
         {
             const Radians* pAngle = _pProperty->getValuePtr<Radians>( pInstance );
             value._number         = pAngle != nullptr ? pAngle->radians() : 0.0f;
+        }
+        else if ( value._kind == PropertyShapeKind::Points )
+        {
+            const vector<float3>* pListPoint = _pProperty->getValuePtr<vector<float3>>( pInstance );
+            if ( pListPoint != nullptr )
+                value._listPoint = *pListPoint;
         }
         else
         {
@@ -453,6 +496,17 @@ namespace sw::editor
             request._value      = TaskValue{ dragged };
             const float3 before = *pCurrent;
             bChanged            = request.applyTo( MutableObjectAddress{ &component }, *pType, registry ) && *pProp->getValuePtr<float3>( &component ) != before;
+        }
+        else if ( handle._kind == PropertyShapeHandleKind::Point )
+        {
+            const vector<float3>* pListPoint = pProp->getValuePtr<vector<float3>>( &component );
+            const float3          dragged    = handle.computeDraggedVector( ray );
+            if ( pListPoint == nullptr || handle._elementIndex >= pListPoint->size() || ( *pListPoint )[handle._elementIndex] == dragged )
+                return false; // 끄는 사이 점이 사라졌다
+            request._kind  = PropertyEditKind::SetValue;
+            request._value = TaskValue{ dragged };
+            request._path._listNode.push_back( PropertyPathNode{ hashed_string{}, handle._elementIndex, PropertyPathStep::Element } );
+            bChanged = request.applyTo( MutableObjectAddress{ &component }, *pType, registry );
         }
         else if ( pProp->_typeName == PropertyShapeEditInternal::getAngleTypeName() )
         {
@@ -587,4 +641,6 @@ namespace sw::editor
                          &PropertyShapeEditInternal::readDrawnHandleCount );
     SW_AUTOMATION_WATCH( editorPropertyShapeNumber, "Editor.PropertyShapeNumber", "First float32 declared shape value (radius, half angle) of the single selected object (0 when none)",
                          &PropertyShapeEditInternal::readFirstNumber );
+    SW_AUTOMATION_WATCH( editorPropertyShapePointSum, "Editor.PropertyShapePointSum", "Sum of the stored components of the first declared point list of the single selected object (0 when none)",
+                         &PropertyShapeEditInternal::readFirstPointSum );
 } // namespace sw::editor

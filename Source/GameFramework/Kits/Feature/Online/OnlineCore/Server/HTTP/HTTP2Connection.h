@@ -41,8 +41,9 @@ namespace sw
     /** @brief 연결 설정입니다. */
     struct HTTP2ConnectionConfig
     {
-        int32 _maxResponseBodyBytes{ HTTPConstant::kDefaultMaxBodyBytes };
-        int32 _maxHeaderBlockBytes{ 64 * 1024 }; ///< 받는 헤더 블록(HEADERS + CONTINUATION)의 합 상한 — 넘으면 연결 오류
+        int32  _maxResponseBodyBytes{ HTTPConstant::kDefaultMaxBodyBytes };
+        int32  _maxHeaderBlockBytes{ 64 * 1024 };                            ///< 받는 헤더 블록(HEADERS + CONTINUATION)의 합 상한 — 넘으면 연결 오류
+        uint32 _maxHeaderListBytes{ HPACKDecoder::kDefaultHeaderListBytes }; ///< 푼 헤더 목록의 상한(SETTINGS_MAX_HEADER_LIST_SIZE 로 알린다) — 넘으면 연결 오류
     };
 } // namespace sw
 

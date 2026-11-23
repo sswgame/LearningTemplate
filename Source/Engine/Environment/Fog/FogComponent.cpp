@@ -23,6 +23,7 @@ namespace sw
         , _volumeDistance{ 64.0f }
         , _scattering{ 1.0f }
         , _anisotropy{ 0.3f }
+        , _densityScale{ 1.0f }
     {
     }
 
@@ -30,7 +31,7 @@ namespace sw
     {
         FogSettings settings;
         settings._color              = _color;
-        settings._density            = _density;
+        settings._density            = _density * _densityScale;
         settings._heightFalloff      = _heightFalloff;
         settings._baseHeight         = _baseHeight;
         settings._startDistance      = _startDistance;

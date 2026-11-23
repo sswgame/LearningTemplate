@@ -20,6 +20,7 @@ namespace sw::editor
     {
         ValidationIssue _issue{};
         uint8           _bInActiveScene{ SW_FALSE }; ///< 출처 오브젝트가 활성 씬에 있다(지운 오브젝트 · 다른 씬의 결과면 거짓)
+        uint8           _bFromCheck{ SW_FALSE };     ///< 등록된 검사의 결과다(출처가 오브젝트가 아니라 파일 — `SW_EDITOR_MAP_CHECK`)
         uint8           _bSelected{ SW_FALSE };      ///< 출처 오브젝트가 메인 씬 선택의 첫 오브젝트다
         uint8           _bFixable{ SW_FALSE };       ///< 안전한 고침이 있다(`MapCheckFixCommands::canFix`)
     };

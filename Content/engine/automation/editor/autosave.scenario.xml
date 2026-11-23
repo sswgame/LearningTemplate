@@ -12,10 +12,11 @@
   ⑥ 저장한 적 없는 새 씬(editor scene.new)도 고치면 사본을 쓴다(untitled-<씬 세대> 칸 — 언리얼 Untitled 패키지 · 유니티 씬 백업). 옛 코드는 원본 없는 씬을 건너뛰어 사본 수가 늘지 않는다.
   ④-2 Play 중에는 복원을 거절한다. ⑦ 문서 패널(입력 맵 편집기)도 dirty 면 사본을 쓰고(autosave.documentsNow), Recovered Work 의 문서 줄 Restore 가 사본 글을
   되돌릴 수 있는 편집으로 적용한다(감사 E-1). ⑧ dirty 원본에서 복원하며 미저장 확인에 Save 를 골라도 사본이 열린다.
+  ⑨ 상태 문서(프로젝트 설정)도 고친 파일의 사본을 쓰고, 복원이 그 창을 열어 사본 값을 저장하지 않은 편집으로 적용한다.
   볼 그림: autosave/recovered.png(후보 한 줄, Restore · Discard 단추). 볼 값: Editor.AutosaveSnapshotCount 1 → 2 → 3, Editor.AutosaveRestoredCount 1.
   실행: App -EnableEditor -scenario=engine/automation/editor/autosave.scenario.xml -unattended
 -->
-<Scenario name="editor.autosave" fixedDelta="0.0166667" timeoutFrames="1800" startAfter="Immediately" input="exclusive">
+<Scenario name="editor.autosave" fixedDelta="0.0166667" timeoutFrames="2400" startAfter="Immediately" input="exclusive">
 	<Scratch from="engine/input" as="scratch/autosaveinputmap"/>
 	<Scratch from="engine/automation/editor/lightprobebake" as="scratch/autosavesave"/>
 	<ResizeWindow width="1920" height="1080"/>
@@ -191,6 +192,39 @@
 	<DevCommand line="scene.open game/playground/maps/editortest.scene.xml"/>
 	<EditorWaitStable/>
 	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
+	<!-- ⑨ 상태 문서(연 에셋이 없는 창 — 프로젝트 설정)도 고친 파일마다 사본을 쓰고 복원한다. 옛 코드는 상태 문서의 사본을 두지 않아 사본 수가 늘지 않는다. 저장하지 않는다 -->
+	<DevCommand line="panel.focus projectsettings"/>
+	<WaitUntil watch="Editor.ProjectSettingsPageCount" atLeast="3" timeoutFrames="60"/>
+	<EditorWaitStable/>
+	<EditorClick mark="projectsettings.page.EngineConfig"/>
+	<WaitUntil watch="Editor.ProjectSettingsKeyCount" atLeast="7" timeoutFrames="60"/>
+	<EditorWaitStable/>
+	<EditorClick mark="inspector.property.EngineConfig._maxFrameDeltaTime" mods="ctrl"/>
+	<EditorWaitStable/>
+	<EditorKey key="Ctrl+A"/>
+	<EditorWaitStable/>
+	<EditorText value="0.2"/>
+	<EditorWaitStable/>
+	<EditorKey key="Enter"/>
+	<WaitUntil watch="Editor.ProjectSettingsDirtyPageCount" equals="1" timeoutFrames="60"/>
+	<Store watch="Editor.AutosaveDocumentCopyCount" as="copiesBeforeSettings"/>
+	<DevCommand line="autosave.documentsNow"/>
+	<WaitUntil watch="Editor.AutosaveDocumentCopyCount" differsFrom="copiesBeforeSettings" timeoutFrames="300"/>
+	<DevCommand line="autosave.rescan"/>
+	<EditorWaitStable/>
+	<Expect watch="Editor.AutosaveDocumentRecoverableCount" equals="1"/>
+	<DevCommand line="panel.focus recovered_work"/>
+	<EditorWaitStable/>
+	<EditorClick mark="recoveredWork.restoreDocument.0" state="Down"/>
+	<AdvanceSimulation frames="3"/> <!-- 누름 · 뗌을 다른 프레임에 둔다(프레임 경계) -->
+	<EditorClick mark="recoveredWork.restoreDocument.0" state="Up"/>
+	<WaitUntil watch="Editor.AutosaveDocumentRestoredCount" equals="2" timeoutFrames="120"/>
+	<Expect watch="Editor.AutosaveDocumentRecoverableCount" equals="0"/>
+	<DevCommand line="panel.focus projectsettings"/>
+	<EditorWaitStable/>
+	<Expect watch="Editor.ProjectSettingsDirtyPageCount" equals="1"/>
+	<EditorClick mark="projectsettings.revert"/>
+	<WaitUntil watch="Editor.ProjectSettingsDirtyPageCount" equals="0" timeoutFrames="60"/>
 	<!-- ⑧ dirty 원본에서 복원 → 미저장 확인 → Save(감사 E-1): 원본 저장이 먼저 와도 복원할 사본은 남아 사본이 열린다.
 	     옛 코드는 원본 저장(onSceneSaved)이 그 씬의 사본을 지워 곧 열 사본이 없어 씬 읽기가 졌다(Editor.AutosaveRestoredCount 가 늘지 않는다). 원본은 실행마다 새 사본 씬이다. -->
 	<DevCommand line="scene.open scratch/autosavesave/bake_cancel.scene.xml"/>

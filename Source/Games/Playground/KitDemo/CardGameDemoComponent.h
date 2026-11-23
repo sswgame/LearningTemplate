@@ -8,7 +8,6 @@
 #pragma once
 #include "Core/Foundation/Types.h"
 
-#include "Engine/Asset/AssetRef.h"
 #include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -47,9 +46,6 @@ namespace sw
         [[nodiscard]] bool runBattle();
 
     private:
-        PROPERTY( Category = "Data", DisplayName = "Catalog", Tooltip = "Deck battle card catalog XML" )
-        AssetRef<CardBattleCatalog> _catalogPath;
-
         SharedAssetRef<CardBattleCatalog> _pCatalog;
         PROPERTY( RuntimeState )
         int32 _phase; ///< 끝난 단계(`CardBattlePhase` 0 내 턴, 1 승리, 2 패배)
