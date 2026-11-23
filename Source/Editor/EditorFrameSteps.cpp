@@ -164,7 +164,7 @@ namespace sw::editor
                 context.getSubsystem<EditorPopupManager>().drawOpenPopups();
                 EditorNotificationManager& notificationManager = context.getSubsystem<EditorNotificationManager>();
                 notificationManager.update( ImGui::GetIO().DeltaTime );
-                EditorNotificationView::draw( notificationManager );
+                EditorNotificationView::draw( notificationManager.getNotifications() );
             }
 
             /** @brief 4) 자체 테스트(-gv_editorSelfTest, Test Runner 창)의 한 단계를 돌립니다. 실행이 없으면 아무것도 하지 않는다. */

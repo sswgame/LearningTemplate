@@ -7,10 +7,9 @@
 
 #include "Core/String/fixed_string.h"
 
-#include "Editor/Common/Commands/Scene/EditorLightProbeBakeSession.h"
 #include "Editor/Common/GUI/Status/EditorStatusBar.h"
+#include "Editor/Common/GUI/Status/Model/EditorStatusViewModel.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
-#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Localization/LocText.h"
@@ -23,16 +22,15 @@ namespace sw::editor
     {
         void drawLightProbeBakeStatus()
         {
-            EditorLightProbeBakeSession* pSession = editor::findSubsystem<EditorLightProbeBakeSession>();
-            if ( pSession == nullptr || pSession->isRunning() == false )
+            EditorProbeBakeStatus status;
+            if ( EditorStatusViewModel::gatherLightProbeBake( status ) == false )
                 return;
             fixed_string<constant::buffer::kMax128> label;
-            formatstring( label.data(), label.capacity(), "Baking probes %#/%# (%# / 100)", pSession->getVolumeIndex() + 1, pSession->getVolumeCount(),
-                          static_cast<uint32>( pSession->getVolumeProgress() * 100.0f ) );
+            formatstring( label.data(), label.capacity(), "Baking probes %#/%# (%# / 100)", status._done, status._total, static_cast<uint32>( status._itemProgress * 100.0f ) );
             ImGui::TextUnformatted( label.c_str() );
             ImGui::SameLine();
             if ( ImGui::SmallButton( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdVerb", "Cancel" ), "Cancel##lightProbeBake" ) ) )
-                pSession->cancel( "canceled" );
+                EditorStatusViewModel::cancelLightProbeBake();
             EditorSelfTestMarks::record( "statusBar.lightProbeBakeCancel" ); // 시나리오 lightprobebakecancel 이 누른다
         }
     } // namespace

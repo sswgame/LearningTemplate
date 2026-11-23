@@ -8,8 +8,7 @@
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/GUI/Status/EditorStatusBar.h"
-#include "Editor/Common/Workspace/EditorService.h"
-#include "Editor/Common/Workspace/HotReload/AssetHotReload.h"
+#include "Editor/Common/GUI/Status/Model/EditorStatusViewModel.h"
 
 #include <imgui.h>
 
@@ -19,13 +18,11 @@ namespace sw::editor
     {
         void drawAssetImportStatus()
         {
-            // 상태줄은 에디터 컨텍스트가 활성일 때만 그려지고 AssetHotReload 는 그 범위의 서브시스템이다 — 없으면 버그.
-            const AssetHotReload* pHotReload = &editor::getSubsystem<AssetHotReload>();
-            if ( pHotReload->isImportBusy() == false )
+            EditorAssetImportStatus status;
+            if ( EditorStatusViewModel::gatherAssetImport( status ) == false )
                 return;
             fixed_string<constant::buffer::kMax128> label;
-            formatstring( label.data(), label.capacity(), "Importing assets: %# running, %# queued", static_cast<uint32>( pHotReload->getRunningImportCount() ),
-                          static_cast<uint32>( pHotReload->getQueuedImportCount() ) );
+            formatstring( label.data(), label.capacity(), "Importing assets: %# running, %# queued", status._runningCount, status._queuedCount );
             ImGui::TextUnformatted( label.c_str() );
         }
     } // namespace

@@ -62,6 +62,7 @@ views = [
     "Common/GUI/Panel/EditorDocumentPanel.cpp",
     "Common/GUI/Panel/EditorPreviewPanel.cpp",
     "Common/GUI/Panel/EditorPreviewViewport.cpp",
+    "Common/GUI/Status",
     "Common/GUI/Theme",
     "Common/Widgets/PropertyGrid",
     "Common/Input/CommandPalettePopup.cpp",
@@ -117,6 +118,7 @@ defaultBan = [
 "Editor/Common/Commands/EditorCommandIDs.h" = "명령 id 상수(Types.h 만 포함) — View 가 EditorCommandRegistry 로 부를 때 쓴다"
 "Editor/Common/Commands/EditorCommandTarget.h" = "명령이 받는 대상 값(종류 · 선택 스냅숏 · id) — 포인터가 없다"
 "Editor/Common/Commands/EditorDragPayload.h" = "끌어 놓기 페이로드 값({종류, id})"
+"Editor/Common/Workspace/EditorNotificationItem.h" = "토스트 알림 하나의 값(글 · 종류 · 남은 시간) — 목록의 주인은 EditorNotificationManager 다"
 "Editor/Common/Workspace/EditorPanelID.h" = "패널 id 형식과 상수 — 값"
 "Editor/Common/Workspace/EditorPanelOpenRequest.h" = "패널 열기 요청 값(id · 문서 종류 · 띄우기) — 메뉴 막대 View 가 꺼내 연다"
 "Editor/Common/Workspace/EditorPanelVisibility.h" = "패널 보임 표(리플렉션 설정 값) — 도킹 레이아웃(EditorDockLayout)이 값으로 든다"
