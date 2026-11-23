@@ -1865,6 +1865,68 @@ SW_TEST_CASE( TaskManagerTest, RunParallelDoesNotWaitForUnclaimedTickets )
 }
 
 /**
+ * @brief High 태스크 안의 `runParallel` 은 자기 티켓을 같은 스레드에서 겹쳐 집지 않는다 — 워커가 많고 모두 붙들려 있어도 병렬 본문의 겹침이 한 겹이다
+ * @details 예전에는 High 그룹의 청크 사이에서 High 줄을 비워, 아무도 집지 않은 자기 티켓을 본문 안에서 하나씩 겹쳐 돌았다(워커 수만큼 — 겹침 상한 단언 16). 워커 하나만 남기고
+ *          모두 붙든 뒤 남은 하나가 High 태스크를 돈다. 겹침은 본문이 자기 스레드에서 다시 불린 수로 잰다.
+ */
+SW_TEST_CASE( TaskManagerTest, RunParallelInHighTaskDoesNotNestItsOwnTickets )
+{
+    constexpr uint32 kManyWorkerCount = 24; // 겹침 상한(16)보다 많다
+    sw::TaskManager  manager;
+    SW_REQUIRE_TRUE( manager.initialize( kManyWorkerCount ) );
+
+    sw::atomic<uint32> heldCount{ 0 };
+    sw::atomic<bool>   bReleaseWorkers{ false };
+    for ( uint32 index = 0; index + 1 < kManyWorkerCount; ++index )
+    {
+        sw::TaskHandle holder = manager.emplaceTask( "HoldWorker", SW_DELEGATE_LAMBDA( sw::TaskDelegate, [&heldCount, &bReleaseWorkers]()
+        {
+            heldCount.fetch_add( 1, std::memory_order_acq_rel );
+            while ( bReleaseWorkers.load( std::memory_order_acquire ) == false )
+            {
+                sw::ThreadUtil::sleepForMicroseconds( 100 ); // 코어보다 많은 워커가 서로를 굶기지 않게
+            }
+        } ) );
+        holder.submit();
+    }
+    while ( heldCount.load( std::memory_order_acquire ) + 1 < kManyWorkerCount )
+    {
+        sw::ThreadUtil::yield();
+    }
+
+    sw::atomic<uint32> coveredCount{ 0 };
+    sw::atomic<int32>  depth{ 0 };
+    sw::atomic<int32>  maxDepth{ 0 };
+    sw::atomic<bool>   bHighDone{ false };
+    sw::TaskHandle     high = manager.emplaceTask( "HighParallel", SW_DELEGATE_LAMBDA( sw::TaskDelegate, [&manager, &coveredCount, &depth, &maxDepth, &bHighDone]()
+        {
+        manager.runParallel( 1024, 1, SW_DELEGATE_LAMBDA( sw::ParallelBlockDelegate, [&coveredCount, &depth, &maxDepth]( uint32 start, uint32 end )
+            {
+            // 남은 워커는 하나라 본문은 이 스레드에서만 돈다 — 동시에 둘이면 겹친 것이다.
+            const int32 now = depth.fetch_add( 1, std::memory_order_acq_rel ) + 1;
+            if ( now > maxDepth.load( std::memory_order_relaxed ) )
+                maxDepth.store( now, std::memory_order_relaxed );
+            coveredCount.fetch_add( end - start, std::memory_order_relaxed );
+            depth.fetch_sub( 1, std::memory_order_acq_rel );
+        } ) );
+        bHighDone.store( true, std::memory_order_release );
+    } ) );
+    high.setPriority( sw::TaskPriority::High );
+    high.submit();
+    while ( bHighDone.load( std::memory_order_acquire ) == false )
+    {
+        sw::ThreadUtil::yield();
+    }
+    SW_EXPECT_EQUAL( 1024u, coveredCount.load() );
+    SW_EXPECT_EQUAL( 1, maxDepth.load() );
+
+    bReleaseWorkers.store( true, std::memory_order_release );
+    manager.waitAll( "TaskManagerTest" );
+    SW_EXPECT_EQUAL( 0u, manager.getActiveTaskCount() );
+    manager.shutdown();
+}
+
+/**
  * @brief 어느 우선순위의 태스크 안에서 부른 `runParallel` 이든 구간을 빠짐없이 한 번씩 덮고 돌아온다(티켓은 그 태스크의 줄에 선다 — 세 줄 모두 다른 길이다)
  */
 SW_TEST_CASE( TaskManagerTest, RunParallelInsideEachPriorityCoversEveryIndex )

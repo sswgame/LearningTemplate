@@ -923,7 +923,8 @@ namespace sw
             ++finishedCount;
             // **High 큐는 청크 사이에 확인한다.** 티켓을 가진 워커가 그룹을 다 실행할 때까지 렌더 스레드의 패스 기록을 세워 두면
             // 그 줄이 그대로 프레임 지연이 된다. 청크 하나(참여자당 4개)가 작으므로 기다리는 시간의 상한도 짧다. 남은 청크가 없으면 먼저 합류에 알린다.
-            if ( pGroup->_nextChunkStart.load( std::memory_order_relaxed ) < end )
+            // High 그룹은 비우지 않는다 — 자기 티켓이 그 줄에 있어 같은 스레드가 제 티켓을 겹쳐 집고, 겹침이 티켓 수(워커 수)까지 자란다.
+            if ( pGroup->_priority != TaskPriority::High && pGroup->_nextChunkStart.load( std::memory_order_relaxed ) < end )
                 runHighQueueBetweenChunks();
         }
         if ( finishedCount > 0 )

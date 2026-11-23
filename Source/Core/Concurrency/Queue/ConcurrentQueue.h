@@ -212,12 +212,16 @@ namespace sw
             while ( dequeue( dummy ) ) {}
         }
 
-        /** @brief 현재 요소 수의 근삿값을 반환합니다. 다른 스레드가 동시에 넣고 빼므로 정확하지 않습니다. */
+        /**
+         * @brief 현재 요소 수의 근삿값을 반환합니다. 다른 스레드가 동시에 넣고 빼므로 정확하지 않습니다.
+         * @details 두 위치를 따로 읽는다 — 순서가 바뀐 읽기(ARM)나 두 읽기 사이의 넣고 꺼내기로 꼬리가 머리보다 뒤처져 보일 수 있고, 그때는 0 이다(부호 없는 뺄셈이면 42억이 된다).
+         */
         SW_INLINE uint32 size() const
         {
-            const uint32 head = _dequeuePos.load( std::memory_order_relaxed );
-            const uint32 tail = _enqueuePos.load( std::memory_order_relaxed );
-            return ( tail - head );
+            const uint32 head  = _dequeuePos.load( std::memory_order_relaxed );
+            const uint32 tail  = _enqueuePos.load( std::memory_order_relaxed );
+            const int32  count = static_cast<int32>( tail - head );
+            return count > 0 ? static_cast<uint32>( count ) : 0u;
         }
 
         /** @brief 비어 있는지 반환합니다. */
