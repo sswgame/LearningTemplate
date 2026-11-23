@@ -65,6 +65,13 @@ namespace sw
                 return pNetSession != nullptr && pNetSession->isActive();
             }
 
+            /** @brief 지금 씬을 바꾸면 세션의 피어가 갈리는지입니다. 씬이 서기 전 첫 진입(`gv_firstMinigame`)은 피어마다 처음 여는 씬이라 `gv_firstScene` 과 같다 — 갈리지 않는다. */
+            static bool wouldSceneSwitchSplitSession()
+            {
+                const Scene* const pScene = findActivePlayScene();
+                return pScene != nullptr && pScene->getSourcePath().empty() == false && isNetSessionActive();
+            }
+
             /** @brief 활성 씬의 사물 @p objectName 의 변환을 하위 레벨 자리로 만듭니다. 없으면 nullopt 입니다. */
             static optional<SubLevelPlacement> findAnchorPlacement( string_view objectName )
             {
@@ -420,7 +427,7 @@ namespace sw
             return false;
         }
         MinigameDefinition definition;
-        if ( loadDefinition( name, definition ) == false || validateEntry( definition, MinigameFlowInternal::isNetSessionActive() ) == false || validateDepth( name ) == false )
+        if ( loadDefinition( name, definition ) == false || validateEntry( definition, MinigameFlowInternal::wouldSceneSwitchSplitSession() ) == false || validateDepth( name ) == false )
             return false;
         Scene* const pScene = MinigameFlowInternal::findActivePlayScene();
         if ( definition._entry == MinigameEntry::SubLevel && ( pScene == nullptr || placement.has_value() == false ) )
