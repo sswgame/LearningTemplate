@@ -109,21 +109,32 @@
 				</_listComponent>
 			</GameObject>
 		</entity>
-		<!-- 디렉터 — 판 상태(퀘스트 일지 · 깃발 · 지갑)를 맨 앞에 둔다. 새 판은 난롯마을의 일어설 자리(0, 0)에서 시작한다. -->
+		<!-- 디렉터 — 판 상태(퀘스트 일지 · 깃발 · 지갑)를 맨 앞에 두고 지역 디렉터 → 지역 전투 → 입력 · 그리기(클라이언트) 순서로 붙인다. 새 판은 난롯마을의 일어설 자리(0, 0)에서 시작한다. -->
 		<entity id="10" name="Valley">
 			<GameObject _schemaVersion="0" _name="Valley" _bActive="true">
 				<_listComponent>
 					<GameStateComponent _localID="6673597520240684436" _componentName="GameStateComponent" _bActive="true" />
 					<WalletComponent _localID="5369660221649138481" _componentName="WalletComponent" _bActive="true" />
 					<QuestLogComponent _localID="8809746743272749268" _componentName="QuestLogComponent" _bActive="true" />
-					<VelmoraGameModeComponent _localID="1556202676166432652" _componentName="VelmoraGameModeComponent"
-					                          _bActive="true"
-					                          _startRegion="hearth"
-					                          _moveSpeed="6"
-					                          _useRadius="1.5"
-					                          _bossDelaySeconds="1">
+					<AdventureGameModeComponent _localID="1556202676166432652" _componentName="AdventureGameModeComponent"
+					                            _bActive="true"
+					                            _startRegion="hearth"
+					                            _flagPrefix="velmora"
+					                            _moveSpeed="6"
+					                            _useRadius="1.5">
 						<_vitalsSettings _maxHeartCount="10" _startHeartCount="3" />
-					</VelmoraGameModeComponent>
+					</AdventureGameModeComponent>
+					<VelmoraEncounterGameModeComponent _localID="4127093356280147511" _componentName="VelmoraEncounterGameModeComponent"
+					                                   _bActive="true"
+					                                   _bossDelaySeconds="1" />
+					<AdventureAvatarComponent _localID="2290617745103849062" _componentName="AdventureAvatarComponent"
+					                          _bActive="true"
+					                          _moveAction="Move"
+					                          _useAction="Velmora.Use" />
+					<VelmoraEncounterViewComponent _localID="5883340216079361947" _componentName="VelmoraEncounterViewComponent"
+					                               _bActive="true"
+					                               _attackAction="Velmora.Attack"
+					                               _dashAction="Velmora.Dash" />
 				</_listComponent>
 			</GameObject>
 		</entity>

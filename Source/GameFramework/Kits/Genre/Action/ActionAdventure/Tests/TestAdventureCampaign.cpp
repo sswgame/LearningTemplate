@@ -1,4 +1,4 @@
-// VelmoraCampaignTest — 벨모라 한 판의 규칙(nogpu): 지역 표 읽기와 거절, 진입 → 봉화 → 클리어 → 퀘스트 보상(지갑 · 하트), 야영지 · 쓰러짐, 저장 왕복,
+// AdventureCampaignTest — 액션 어드벤처 한 판의 규칙(nogpu): 지역 표 읽기와 거절, 진입 → 봉화 → 클리어 → 퀘스트 보상(지갑 · 하트), 야영지 · 쓰러짐, 저장 왕복,
 // 확장 팩 퀘스트가 든 일지를 확장 팩 없는 표로 불러도 기본 진행이 이어지는 승계.
 #include "pch.h"
 
@@ -6,22 +6,21 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
+#include "GameFramework/Kits/Genre/Action/ActionAdventure/AdventureCampaign.h"
+#include "GameFramework/Kits/Genre/Action/ActionAdventure/AdventureRegionCatalog.h"
 #include "GameFramework/Runtime/Foundation/Condition/GameFlags.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Wallet.h"
 #include "GameFramework/Runtime/Gameplay/Quest/QuestCatalog.h"
 #include "GameFramework/Runtime/Gameplay/Quest/QuestLog.h"
 
-#include "Games/Velmora/VelmoraCampaign.h"
-#include "Games/Velmora/VelmoraRegionCatalog.h"
-
 using namespace sw;
 
 namespace
 {
-    constexpr const utf8* kRegionXML = R"(<VelmoraRegionCatalog>
+    constexpr const utf8* kRegionXML = R"(<AdventureRegionCatalog>
   <Region id="hearth" min="-10,-10" max="10,10" respawn="0,0" startQuest="oath"><Camp id="hearth_camp" at="0,2"/></Region>
   <Region id="ridge" min="10,-10" max="30,10" respawn="12,0"><Beacon id="ridge_beacon" at="20,6"/><Hall monster="imp" at="22,0"/><Boss monster="warden" at="26,0"/></Region>
-</VelmoraRegionCatalog>)";
+</AdventureRegionCatalog>)";
 
     constexpr const utf8* kBaseQuestXML = R"(<QuestCatalog>
   <Quest id="oath">
@@ -46,7 +45,7 @@ namespace
   </Quest>
 </QuestCatalog>)";
 
-    struct TestVelmoraCampaignInternal
+    struct TestAdventureCampaignInternal
     {
         static AdventureVitalsSettings makeVitals()
         {
@@ -58,53 +57,53 @@ namespace
     };
 } // namespace
 
-/** @brief [VelmoraCampaignTest] 지역 표: 경계 · 자리 · 전투를 읽고, 자리로 지역을 찾는다. 겹치거나 자리가 경계 밖인 지역은 넣지 않는다 */
-SW_TEST_CASE( VelmoraCampaignTest, RegionCatalogReadsAndRejects )
+/** @brief [AdventureCampaignTest] 지역 표: 경계 · 자리 · 전투를 읽고, 자리로 지역을 찾는다. 겹치거나 자리가 경계 밖인 지역은 넣지 않는다 */
+SW_TEST_CASE( AdventureCampaignTest, RegionCatalogReadsAndRejects )
 {
-    VelmoraRegionCatalog regions;
-    SW_REQUIRE_TRUE( regions.loadFromXMLText( kRegionXML, "VelmoraCampaignTest" ) );
+    AdventureRegionCatalog regions;
+    SW_REQUIRE_TRUE( regions.loadFromXMLText( kRegionXML, "AdventureCampaignTest" ) );
     SW_REQUIRE_EQUAL( size_t{ 2 }, regions.getCount() );
-    const VelmoraRegionDef* pRidge = regions.find( hashed_string( "ridge" ) );
+    const AdventureRegionDef* pRidge = regions.find( hashed_string( "ridge" ) );
     SW_REQUIRE_TRUE( pRidge != nullptr );
     SW_EXPECT_TRUE( pRidge->hasEncounter() );
-    SW_EXPECT_EQUAL( size_t{ 1 }, pRidge->makeLayout()._listBossSpawn.size() );
+    SW_EXPECT_EQUAL( size_t{ 1 }, pRidge->_listBossSpawn.size() );
     SW_EXPECT_TRUE( regions.findAt( float2{ 25.0f, 0.0f } ) == pRidge );
     SW_EXPECT_TRUE( regions.findAt( float2{ 40.0f, 0.0f } ) == nullptr );
     SW_EXPECT_TRUE( regions.find( hashed_string( "hearth" ) )->_listStartQuest.size() == 1 );
 
-    VelmoraRegionCatalog overlapping;
-    SW_EXPECT_LOG( "Velmora.RegionOverlap" );
-    SW_EXPECT_LOG( "Velmora.RegionSkipped" );
-    SW_EXPECT_TRUE( overlapping.loadFromXMLText( R"(<VelmoraRegionCatalog>
+    AdventureRegionCatalog overlapping;
+    SW_EXPECT_LOG( "Adventure.RegionOverlap" );
+    SW_EXPECT_LOG( "Adventure.RegionSkipped" );
+    SW_EXPECT_TRUE( overlapping.loadFromXMLText( R"(<AdventureRegionCatalog>
       <Region id="a" min="0,0" max="10,10" respawn="1,1"/>
       <Region id="b" min="5,5" max="20,20" respawn="15,15"/>
-    </VelmoraRegionCatalog>)",
-                                                 "VelmoraCampaignTest" ) );
+    </AdventureRegionCatalog>)",
+                                                 "AdventureCampaignTest" ) );
     SW_EXPECT_EQUAL( size_t{ 1 }, overlapping.getCount() );
 
-    VelmoraRegionCatalog outside;
-    SW_EXPECT_LOG( "Velmora.RegionPointOutside" );
-    SW_EXPECT_LOG( "Velmora.RegionSkipped" );
+    AdventureRegionCatalog outside;
+    SW_EXPECT_LOG( "Adventure.RegionPointOutside" );
+    SW_EXPECT_LOG( "Adventure.RegionSkipped" );
     // 하나도 못 읽은 표는 실패다 — 틀린 원소의 오류가 까닭을 말했으므로 빈 표 경고(XMLCatalog.NoEntries)는 따로 내지 않는다(XMLCatalogReadResult::reportIfEmpty)
-    SW_EXPECT_FALSE( outside.loadFromXMLText( R"(<VelmoraRegionCatalog><Region id="a" min="0,0" max="10,10" respawn="1,1"><Camp id="c" at="50,50"/></Region></VelmoraRegionCatalog>)",
-                                              "VelmoraCampaignTest" ) );
+    SW_EXPECT_FALSE( outside.loadFromXMLText( R"(<AdventureRegionCatalog><Region id="a" min="0,0" max="10,10" respawn="1,1"><Camp id="c" at="50,50"/></Region></AdventureRegionCatalog>)",
+                                              "AdventureCampaignTest" ) );
 }
 
-/** @brief [VelmoraCampaignTest] 진입이 퀘스트를 받고 세고, 봉화 · 클리어가 단계를 넘겨 끝내며, 끝 단계의 보상이 지갑과 하트 그릇으로 간다 */
-SW_TEST_CASE( VelmoraCampaignTest, RegionLoopCompletesTheQuest )
+/** @brief [AdventureCampaignTest] 진입이 퀘스트를 받고 세고, 봉화 · 클리어가 단계를 넘겨 끝내며, 끝 단계의 보상이 지갑과 하트 그릇으로 간다 */
+SW_TEST_CASE( AdventureCampaignTest, RegionLoopCompletesTheQuest )
 {
-    VelmoraRegionCatalog regions;
-    QuestCatalog         quests;
-    SW_REQUIRE_TRUE( regions.loadFromXMLText( kRegionXML, "VelmoraCampaignTest" ) );
-    SW_REQUIRE_TRUE( quests.loadFromXMLText( kBaseQuestXML, "VelmoraCampaignTest" ) );
+    AdventureRegionCatalog regions;
+    QuestCatalog           quests;
+    SW_REQUIRE_TRUE( regions.loadFromXMLText( kRegionXML, "AdventureCampaignTest" ) );
+    SW_REQUIRE_TRUE( quests.loadFromXMLText( kBaseQuestXML, "AdventureCampaignTest" ) );
     QuestLog  log;
     GameFlags flags;
     Wallet    wallet;
     log.initialize( &quests );
-    VelmoraCampaign campaign;
-    SW_REQUIRE_TRUE( campaign.initialize( TestVelmoraCampaignInternal::makeVitals(), hashed_string( "hearth" ) ) );
-    const VelmoraRegionDef& hearth = *regions.find( hashed_string( "hearth" ) );
-    const VelmoraRegionDef& ridge  = *regions.find( hashed_string( "ridge" ) );
+    AdventureCampaign campaign;
+    SW_REQUIRE_TRUE( campaign.initialize( TestAdventureCampaignInternal::makeVitals(), hashed_string( "hearth" ), hashed_string( "velmora" ) ) );
+    const AdventureRegionDef& hearth = *regions.find( hashed_string( "hearth" ) );
+    const AdventureRegionDef& ridge  = *regions.find( hashed_string( "ridge" ) );
 
     SW_EXPECT_TRUE( campaign.enterRegion( hearth, log, flags ) ); // 받는다
     SW_EXPECT_TRUE( log.getStatus( hashed_string( "oath" ) ) == QuestStatus::Active );
@@ -113,10 +112,10 @@ SW_TEST_CASE( VelmoraCampaignTest, RegionLoopCompletesTheQuest )
     SW_EXPECT_FALSE( campaign.lightBeacon( hearth, log, flags ) ); // 봉화가 없는 지역
     SW_EXPECT_TRUE( campaign.lightBeacon( ridge, log, flags ) );
     SW_EXPECT_FALSE( campaign.lightBeacon( ridge, log, flags ) ); // 이미 켰다
-    SW_EXPECT_TRUE( VelmoraCampaign::isBeaconLit( ridge, flags ) );
-    SW_EXPECT_FALSE( VelmoraCampaign::isEncounterCleared( ridge, flags ) );
+    SW_EXPECT_TRUE( campaign.isBeaconLit( ridge, flags ) );
+    SW_EXPECT_FALSE( campaign.isEncounterCleared( ridge, flags ) );
     campaign.clearEncounter( ridge, log, flags );
-    SW_EXPECT_TRUE( VelmoraCampaign::isEncounterCleared( ridge, flags ) );
+    SW_EXPECT_TRUE( campaign.isEncounterCleared( ridge, flags ) );
     SW_EXPECT_TRUE( log.getStatus( hashed_string( "oath" ) ) == QuestStatus::Completed );
 
     vector<QuestEvent> listEvent;
@@ -126,13 +125,38 @@ SW_TEST_CASE( VelmoraCampaignTest, RegionLoopCompletesTheQuest )
     SW_EXPECT_EQUAL( 4, campaign.getVitals().getHeartCount() );
 }
 
-/** @brief [VelmoraCampaignTest] 야영지에서 쉬면 체력이 차고 일어설 지역이 그곳이 된다. 쓰러진 뒤 일어서면 체력이 다시 찬다. 몸 · 일어설 지역은 저장 왕복한다 */
-SW_TEST_CASE( VelmoraCampaignTest, CampFallAndStateRoundTrip )
+/** @brief [AdventureCampaignTest] 깃발 이름은 판의 접두로 시작한다 — 한 월드 상태를 나눠 쓰는 다른 판의 같은 지역이 깬 것으로 보이지 않는다. 접두가 비면 판을 열지 않는다 */
+SW_TEST_CASE( AdventureCampaignTest, FlagPrefixSeparatesCampaigns )
 {
-    VelmoraRegionCatalog regions;
-    SW_REQUIRE_TRUE( regions.loadFromXMLText( kRegionXML, "VelmoraCampaignTest" ) );
-    VelmoraCampaign campaign;
-    SW_REQUIRE_TRUE( campaign.initialize( TestVelmoraCampaignInternal::makeVitals(), hashed_string( "ridge" ) ) );
+    AdventureRegionCatalog regions;
+    QuestCatalog           quests;
+    SW_REQUIRE_TRUE( regions.loadFromXMLText( kRegionXML, "AdventureCampaignTest" ) );
+    SW_REQUIRE_TRUE( quests.loadFromXMLText( kBaseQuestXML, "AdventureCampaignTest" ) );
+    QuestLog  log;
+    GameFlags flags;
+    log.initialize( &quests );
+    AdventureCampaign first;
+    AdventureCampaign second;
+    SW_REQUIRE_TRUE( first.initialize( TestAdventureCampaignInternal::makeVitals(), hashed_string( "hearth" ), hashed_string( "velmora" ) ) );
+    SW_REQUIRE_TRUE( second.initialize( TestAdventureCampaignInternal::makeVitals(), hashed_string( "hearth" ), hashed_string( "other" ) ) );
+    const AdventureRegionDef& ridge = *regions.find( hashed_string( "ridge" ) );
+    first.clearEncounter( ridge, log, flags );
+    SW_EXPECT_TRUE( flags.hasFlag( hashed_string( "velmora.cleared.ridge" ) ) );
+    SW_EXPECT_TRUE( first.isEncounterCleared( ridge, flags ) );
+    SW_EXPECT_FALSE( second.isEncounterCleared( ridge, flags ) );
+
+    AdventureCampaign unnamed;
+    SW_EXPECT_LOG( "Adventure.NoFlagPrefix" );
+    SW_EXPECT_FALSE( unnamed.initialize( TestAdventureCampaignInternal::makeVitals(), hashed_string( "hearth" ), hashed_string{} ) );
+}
+
+/** @brief [AdventureCampaignTest] 야영지에서 쉬면 체력이 차고 일어설 지역이 그곳이 된다. 쓰러진 뒤 일어서면 체력이 다시 찬다. 몸 · 일어설 지역은 저장 왕복한다 */
+SW_TEST_CASE( AdventureCampaignTest, CampFallAndStateRoundTrip )
+{
+    AdventureRegionCatalog regions;
+    SW_REQUIRE_TRUE( regions.loadFromXMLText( kRegionXML, "AdventureCampaignTest" ) );
+    AdventureCampaign campaign;
+    SW_REQUIRE_TRUE( campaign.initialize( TestAdventureCampaignInternal::makeVitals(), hashed_string( "ridge" ), hashed_string( "velmora" ) ) );
     const int32 fullQuarters = campaign.getVitals().getMaxHealthQuarters();
     SW_EXPECT_FALSE( campaign.takeDamage( 5 ) );
     SW_EXPECT_EQUAL( fullQuarters - 5, campaign.getVitals().computeHealthQuarters() );
@@ -149,8 +173,8 @@ SW_TEST_CASE( VelmoraCampaignTest, CampFallAndStateRoundTrip )
 
     Archive archive;
     campaign.writeState( archive );
-    VelmoraCampaign restored;
-    SW_REQUIRE_TRUE( restored.initialize( TestVelmoraCampaignInternal::makeVitals(), hashed_string( "ridge" ) ) );
+    AdventureCampaign restored;
+    SW_REQUIRE_TRUE( restored.initialize( TestAdventureCampaignInternal::makeVitals(), hashed_string( "ridge" ), hashed_string( "velmora" ) ) );
     Archive reading( archive.getData(), archive.getSize() );
     SW_REQUIRE_TRUE( restored.readState( reading ) );
     SW_EXPECT_EQUAL( fullQuarters - 3, restored.getVitals().computeHealthQuarters() );
@@ -158,15 +182,15 @@ SW_TEST_CASE( VelmoraCampaignTest, CampFallAndStateRoundTrip )
 }
 
 /**
- * @brief [VelmoraCampaignTest] 승계: 기본 판의 일지를 확장 팩이 더한 표로 열면 기본 진행이 그대로이고 확장 퀘스트는 처음부터 받을 수 있다.
+ * @brief [AdventureCampaignTest] 승계: 기본 판의 일지를 확장 팩이 더한 표로 열면 기본 진행이 그대로이고 확장 퀘스트는 처음부터 받을 수 있다.
  *        확장 판의 일지를 확장 팩 없는 표로 열면 확장 퀘스트만 경고와 함께 버리고 기본 진행은 이어진다(일지 전체를 막지 않는다).
  */
-SW_TEST_CASE( VelmoraCampaignTest, QuestLogCarriesAcrossTheExpansion )
+SW_TEST_CASE( AdventureCampaignTest, QuestLogCarriesAcrossTheExpansion )
 {
     QuestCatalog baseQuests;
     QuestCatalog expandedQuests;
-    SW_REQUIRE_TRUE( baseQuests.loadFromXMLText( kBaseQuestXML, "VelmoraCampaignTest" ) );
-    SW_REQUIRE_TRUE( expandedQuests.loadFromXMLText( kExpandedQuestXML, "VelmoraCampaignTest" ) );
+    SW_REQUIRE_TRUE( baseQuests.loadFromXMLText( kBaseQuestXML, "AdventureCampaignTest" ) );
+    SW_REQUIRE_TRUE( expandedQuests.loadFromXMLText( kExpandedQuestXML, "AdventureCampaignTest" ) );
 
     QuestLog baseLog;
     baseLog.initialize( &baseQuests );

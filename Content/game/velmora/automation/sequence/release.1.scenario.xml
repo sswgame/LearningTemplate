@@ -8,11 +8,11 @@
 <Scenario name="game.velmora.release.1" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<Launch variable="gv_modList" value="velmora_tidecaves"/>
 	<WaitUntil watch="Mods.ActiveCount" equals="1" timeoutWallSeconds="10"/>
-	<WaitUntil watch="Velmora.Region" is="hearth" timeoutFrames="120"/>
+	<WaitUntil watch="Adventure.Region" is="hearth" timeoutFrames="120"/>
 	<ActionAxis name="Move" x="-1" seconds="2"/>
-	<WaitUntil watch="Velmora.PlayerX" near="-12" tolerance="0.05" timeoutSeconds="3"/> <!-- 누른 이동이 끝나 그 자리에 섰다 -->
-	<Expect watch="Velmora.Region" is="tidecaves"/>
-	<Expect watch="Velmora.PlayerX" near="-12" tolerance="0.2"/>
+	<WaitUntil watch="Adventure.PlayerX" near="-12" tolerance="0.05" timeoutSeconds="3"/> <!-- 누른 이동이 끝나 그 자리에 섰다 -->
+	<Expect watch="Adventure.Region" is="tidecaves"/>
+	<Expect watch="Adventure.PlayerX" near="-12" tolerance="0.2"/>
 	<DevCommand line="game.save velmora/release"/>
 	<WaitUntil watch="Save.Written" atLeast="1" timeoutWallSeconds="10"/>
 	<Pass/>

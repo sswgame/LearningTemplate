@@ -1,61 +1,67 @@
 #include "pch.h"
 
-#include "Games/Velmora/VelmoraCampaign.h"
+#include "GameFramework/Kits/Genre/Action/ActionAdventure/AdventureCampaign.h"
 
 #include "Core/Log/Logger.h"
 #include "Core/String/StringBuilder.h"
 
 #include "Engine/Reflection/TypeFqn.h"
 
+#include "GameFramework/Kits/Genre/Action/ActionAdventure/AdventureRegionCatalog.h"
 #include "GameFramework/Runtime/Foundation/Condition/GameFlags.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Wallet.h"
 #include "GameFramework/Runtime/Gameplay/Quest/QuestCatalog.h"
 #include "GameFramework/Runtime/Gameplay/Quest/QuestLog.h"
 
-#include "Games/Velmora/VelmoraRegionCatalog.h"
-
 namespace sw
 {
     namespace
     {
-        struct VelmoraCampaignInternal
+        struct AdventureCampaignInternal
         {
-            static constexpr const utf8* kVisitedPrefix = "velmora.visited.";
-            static constexpr const utf8* kBeaconPrefix  = "velmora.beacon.";
-            static constexpr const utf8* kClearedPrefix = "velmora.cleared.";
+            static constexpr const utf8* kVisited = "visited";
+            static constexpr const utf8* kBeacon  = "beacon";
+            static constexpr const utf8* kCleared = "cleared";
 
             static constexpr const utf8* kEventEnter  = "Enter";
             static constexpr const utf8* kEventLight  = "Light";
             static constexpr const utf8* kEventClear  = "Clear";
             static constexpr const utf8* kEventDefeat = "Defeat";
 
-            /** @brief 지역 깃발 이름입니다. 일이 일어날 때만 만든다(프레임마다 만들지 않는다). */
-            static hashed_string makeFlag( const utf8* pPrefix, const VelmoraRegionDef& region )
+            /** @brief 지역 깃발 이름 `<접두>.<일>.<지역>` 입니다. 일이 일어날 때만 만든다(프레임마다 만들지 않는다). */
+            static hashed_string makeFlag( const hashed_string& prefix, const utf8* pDeed, const AdventureRegionDef& region )
             {
                 fixed_string<constant::buffer::kMax128> flag;
-                formatstring( flag.data(), flag.capacity(), "%#%#", pPrefix, region._id.c_str() );
+                formatstring( flag.data(), flag.capacity(), "%#.%#.%#", prefix.c_str(), pDeed, region._id.c_str() );
                 return hashed_string( flag.c_str() );
             }
         };
     } // namespace
 
-    VelmoraCampaign::VelmoraCampaign()
+    AdventureCampaign::AdventureCampaign()
         : _vitals{}
         , _respawnRegion{}
+        , _flagPrefix{}
     {
     }
 
-    bool VelmoraCampaign::initialize( const AdventureVitalsSettings& settings, const hashed_string& startRegion )
+    bool AdventureCampaign::initialize( const AdventureVitalsSettings& settings, const hashed_string& startRegion, const hashed_string& flagPrefix )
     {
+        if ( flagPrefix.empty() )
+        {
+            SW_LOG_ERROR_ID( "Adventure.NoFlagPrefix", "Adventure: the flag prefix is empty - region progress flags need a name of their own in the shared world state" );
+            return false;
+        }
         if ( _vitals.initialize( settings ) == false )
             return false;
         _respawnRegion = startRegion;
+        _flagPrefix    = flagPrefix;
         return true;
     }
 
-    bool VelmoraCampaign::enterRegion( const VelmoraRegionDef& region, QuestLog& quests, GameFlags& flags ) const
+    bool AdventureCampaign::enterRegion( const AdventureRegionDef& region, QuestLog& quests, GameFlags& flags ) const
     {
-        using Internal = VelmoraCampaignInternal;
+        using Internal = AdventureCampaignInternal;
         // 받기를 먼저 한다 — 이 지역에 들어서는 것이 첫 목표인 퀘스트도 같은 진입으로 센다.
         for ( const hashed_string& questID : region._listStartQuest )
         {
@@ -64,25 +70,25 @@ namespace sw
         }
         static const hashed_string s_enter( Internal::kEventEnter );
         (void)quests.notify( s_enter, region._id );
-        const hashed_string visited = Internal::makeFlag( Internal::kVisitedPrefix, region );
+        const hashed_string visited = Internal::makeFlag( _flagPrefix, Internal::kVisited, region );
         if ( flags.hasFlag( visited ) )
             return false;
         flags.setFlag( visited );
         return true;
     }
 
-    bool VelmoraCampaign::lightBeacon( const VelmoraRegionDef& region, QuestLog& quests, GameFlags& flags ) const
+    bool AdventureCampaign::lightBeacon( const AdventureRegionDef& region, QuestLog& quests, GameFlags& flags ) const
     {
-        using Internal = VelmoraCampaignInternal;
+        using Internal = AdventureCampaignInternal;
         if ( region._beacon.isSet() == false || isBeaconLit( region, flags ) )
             return false;
-        flags.setFlag( Internal::makeFlag( Internal::kBeaconPrefix, region ) );
+        flags.setFlag( Internal::makeFlag( _flagPrefix, Internal::kBeacon, region ) );
         static const hashed_string s_light( Internal::kEventLight );
         (void)quests.notify( s_light, region._beacon._id );
         return true;
     }
 
-    bool VelmoraCampaign::restAtCamp( const VelmoraRegionDef& region )
+    bool AdventureCampaign::restAtCamp( const AdventureRegionDef& region )
     {
         if ( region._camp.isSet() == false )
             return false;
@@ -92,10 +98,10 @@ namespace sw
         return true;
     }
 
-    void VelmoraCampaign::clearEncounter( const VelmoraRegionDef& region, QuestLog& quests, GameFlags& flags ) const
+    void AdventureCampaign::clearEncounter( const AdventureRegionDef& region, QuestLog& quests, GameFlags& flags ) const
     {
-        using Internal = VelmoraCampaignInternal;
-        flags.setFlag( Internal::makeFlag( Internal::kClearedPrefix, region ) );
+        using Internal = AdventureCampaignInternal;
+        flags.setFlag( Internal::makeFlag( _flagPrefix, Internal::kCleared, region ) );
         static const hashed_string s_clear( Internal::kEventClear );
         static const hashed_string s_defeat( Internal::kEventDefeat );
         (void)quests.notify( s_clear, region._id );
@@ -105,7 +111,7 @@ namespace sw
         }
     }
 
-    int32 VelmoraCampaign::applyQuestEvents( const vector<QuestEvent>& listEvent, Wallet& wallet )
+    int32 AdventureCampaign::applyQuestEvents( const vector<QuestEvent>& listEvent, Wallet& wallet )
     {
         static const hashed_string s_gold( kRewardGold );
         static const hashed_string s_heart( kRewardHeart );
@@ -126,33 +132,33 @@ namespace sw
                     for ( int32 index = 0; index < amount; ++index )
                     {
                         if ( _vitals.addHeartContainer() == false )
-                            SW_LOG_WARNING_ID( "Velmora.HeartAtLimit", "Quest '%#' gives a heart container, but the hearts are already at the limit", event._questID.c_str() );
+                            SW_LOG_WARNING_ID( "Adventure.HeartAtLimit", "Quest '%#' gives a heart container, but the hearts are already at the limit", event._questID.c_str() );
                     }
                 }
                 else
-                    SW_LOG_WARNING_ID( "Velmora.UnknownReward", "Quest '%#' stage '%#' gives '%#', which Velmora does not know (gold, heart)", event._questID.c_str(), event._stageID.c_str(),
+                    SW_LOG_WARNING_ID( "Adventure.UnknownReward", "Quest '%#' stage '%#' gives '%#', which the adventure does not know (gold, heart)", event._questID.c_str(), event._stageID.c_str(),
                                        reward._name.c_str() );
             }
         }
         return completedCount;
     }
 
-    bool VelmoraCampaign::isBeaconLit( const VelmoraRegionDef& region, const GameFlags& flags )
+    bool AdventureCampaign::isBeaconLit( const AdventureRegionDef& region, const GameFlags& flags ) const
     {
-        return flags.hasFlag( VelmoraCampaignInternal::makeFlag( VelmoraCampaignInternal::kBeaconPrefix, region ) );
+        return flags.hasFlag( AdventureCampaignInternal::makeFlag( _flagPrefix, AdventureCampaignInternal::kBeacon, region ) );
     }
 
-    bool VelmoraCampaign::isEncounterCleared( const VelmoraRegionDef& region, const GameFlags& flags )
+    bool AdventureCampaign::isEncounterCleared( const AdventureRegionDef& region, const GameFlags& flags ) const
     {
-        return flags.hasFlag( VelmoraCampaignInternal::makeFlag( VelmoraCampaignInternal::kClearedPrefix, region ) );
+        return flags.hasFlag( AdventureCampaignInternal::makeFlag( _flagPrefix, AdventureCampaignInternal::kCleared, region ) );
     }
 
-    bool VelmoraCampaign::isVisited( const VelmoraRegionDef& region, const GameFlags& flags )
+    bool AdventureCampaign::isVisited( const AdventureRegionDef& region, const GameFlags& flags ) const
     {
-        return flags.hasFlag( VelmoraCampaignInternal::makeFlag( VelmoraCampaignInternal::kVisitedPrefix, region ) );
+        return flags.hasFlag( AdventureCampaignInternal::makeFlag( _flagPrefix, AdventureCampaignInternal::kVisited, region ) );
     }
 
-    void VelmoraCampaign::serializeState( StateIO& io )
+    void AdventureCampaign::serializeState( StateIO& io )
     {
         io.reflected( *this );
         io.value( _vitals ); // 판 상태 안에 실리는 본문이다 — 끝 검사(`end`)는 바깥 디렉터가 한다

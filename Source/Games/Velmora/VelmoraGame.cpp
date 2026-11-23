@@ -15,13 +15,14 @@
 #include "Engine/Config/GameConfig.h"
 
 #include "GameFramework/Kits/Feature/Content/ModSupport/ModSession.h"
+#include "GameFramework/Kits/Genre/Action/ActionAdventure/AdventureRegionCatalog.h"
+#include "GameFramework/Kits/Genre/Action/ActionAdventure/Component/AdventureGameModeComponent.h"
 #include "GameFramework/Kits/Genre/Action/ActionCombat/MonsterCatalog.h"
 #include "GameFramework/Runtime/Foundation/Framework/Flow/GameInstance.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Gameplay/Quest/QuestCatalog.h"
 
-#include "Games/Velmora/VelmoraGameModeComponent.h"
-#include "Games/Velmora/VelmoraRegionCatalog.h"
+#include "Games/Velmora/VelmoraEncounterGameModeComponent.h"
 
 #include "ModuleAPI/Export/GameModuleExports.h"
 
@@ -43,10 +44,10 @@ namespace sw
          * @brief 이 세션의 확장 팩 · 모드(`-gv_modList`)입니다. 카탈로그를 읽기 전에 적용한다 — 확장 팩은 지역 · 퀘스트 · 몬스터 표에 층으로 항목을 더하므로(`<Layer>`)
          *        먼저 읽은 표가 층 없는 내용을 쥐지 않게. 요청한 팩을 올리지 못하면 게임을 띄우지 않는다(요청과 다른 구성으로 조용히 돌지 않는다).
          */
-        unique_ptr<ModSession>               _mods;
-        SharedAssetRef<VelmoraRegionCatalog> _pRegionCatalog;
-        SharedAssetRef<QuestCatalog>         _pQuestCatalog;
-        shared_ptr<const MonsterCatalog>     _pMonsterCatalog;
+        unique_ptr<ModSession>                 _mods;
+        SharedAssetRef<AdventureRegionCatalog> _pRegionCatalog;
+        SharedAssetRef<QuestCatalog>           _pQuestCatalog;
+        shared_ptr<const MonsterCatalog>       _pMonsterCatalog;
     };
 } // namespace sw
 
@@ -59,7 +60,8 @@ namespace sw
         , _pMonsterCatalog{ nullptr }
     {
         // 판 상태(퀘스트 일지 · 깃발 · 지갑)는 판 상태 컴포넌트가, 몸 · 자리 · 일어설 지역은 디렉터가 싣는다.
-        getStateSnapshot().registerGameMode<VelmoraGameModeComponent>();
+        getStateSnapshot().registerGameMode<AdventureGameModeComponent>();
+        getStateSnapshot().registerGameMode<VelmoraEncounterGameModeComponent>();
     }
 
     VelmoraGame::~VelmoraGame() = default;

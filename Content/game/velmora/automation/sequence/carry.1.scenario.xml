@@ -7,21 +7,21 @@
   길은 automation/vale 과 같다(자리 · 공격 수는 그 머리말).
 -->
 <Scenario name="game.velmora.carry.1" fixedDelta="0.0166667" timeoutFrames="2400" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
-	<WaitUntil watch="Velmora.Region" is="hearth" timeoutFrames="120"/>
+	<WaitUntil watch="Adventure.Region" is="hearth" timeoutFrames="120"/>
 	<Expect watch="Mods.ActiveCount" equals="0"/>
 	<ActionAxis name="Move" x="1" seconds="3.3333"/>
-	<WaitUntil watch="Velmora.PlayerX" near="20" tolerance="0.05" timeoutSeconds="4.5"/> <!-- 누른 이동이 끝나 그 자리에 섰다 -->
+	<WaitUntil watch="Adventure.PlayerX" near="20" tolerance="0.05" timeoutSeconds="4.5"/> <!-- 누른 이동이 끝나 그 자리에 섰다 -->
 	<ActionAxis name="Move" y="1" seconds="0.6667"/>
-	<WaitUntil watch="Velmora.PlayerZ" near="4" tolerance="0.05" timeoutSeconds="1.5"/> <!-- 누른 이동이 끝나 그 자리에 섰다 -->
+	<WaitUntil watch="Adventure.PlayerZ" near="4" tolerance="0.05" timeoutSeconds="1.5"/> <!-- 누른 이동이 끝나 그 자리에 섰다 -->
 	<Action name="Velmora.Use"/>
 	<WaitUntil watch="Session.Flag" key="velmora.beacon.fernwood" atLeast="1" timeoutFrames="10"/> <!-- 봉화가 켜졌다 -->
-	<ExpectLog id="Velmora.BeaconLit" count="1"/>
+	<ExpectLog id="Adventure.BeaconLit" count="1"/>
 	<ActionAxis name="Move" y="-1" seconds="0.6667"/>
-	<WaitUntil watch="Velmora.PlayerZ" near="0" tolerance="0.05" timeoutSeconds="1.5"/> <!-- 누른 이동이 끝나 그 자리에 섰다 -->
+	<WaitUntil watch="Adventure.PlayerZ" near="0" tolerance="0.05" timeoutSeconds="1.5"/> <!-- 누른 이동이 끝나 그 자리에 섰다 -->
 	<ActionAxis name="Move" x="1" seconds="1.75"/>
-	<WaitUntil watch="Velmora.PlayerX" near="30.5" tolerance="0.05" timeoutSeconds="3"/> <!-- 누른 이동이 끝나 그 자리에 섰다 -->
+	<WaitUntil watch="Adventure.PlayerX" near="30.5" tolerance="0.05" timeoutSeconds="3"/> <!-- 누른 이동이 끝나 그 자리에 섰다 -->
 	<Expect watch="Velmora.Phase" equals="1"/>
-	<Expect watch="Velmora.PlayerX" near="30.5" tolerance="0.2"/>
+	<Expect watch="Adventure.PlayerX" near="30.5" tolerance="0.2"/>
 	<Action name="Velmora.Attack"/>
 	<WaitUntil watch="Velmora.AttackReady" equals="1" timeoutSeconds="1"/> <!-- 공격 쿨다운이 끝났다 -->
 	<Action name="Velmora.Attack"/>

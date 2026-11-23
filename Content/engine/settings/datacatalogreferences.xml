@@ -164,8 +164,8 @@
 	<Field owner="WesternHorseComponent" field="_breed" tag="WesternHorseDef"/>
 	<Field owner="WesternDeedComponent" field="_weapon" tag="WesternHuntWeaponDef"/>
 	<Field owner="WesternDeedComponent" field="_zone" tag="WesternHitZoneDef"/>
-	<CatalogKey tag="VelmoraRegionDef" catalog="VelmoraRegionCatalog" entry="Region"/>
-	<Field owner="VelmoraGameModeComponent" field="_startRegion" tag="VelmoraRegionDef"/>
+	<CatalogKey tag="AdventureRegionDef" catalog="AdventureRegionCatalog" entry="Region"/>
+	<Field owner="AdventureGameModeComponent" field="_startRegion" tag="AdventureRegionDef"/>
 	<CatalogKey tag="NPCScheduleDef" catalog="Schedules" entry="NPC"/>
 	<Field owner="NPCScheduleComponent" field="_npcID" tag="NPCScheduleDef"/>
 	<CatalogKey tag="InteractionDef" catalog="Interactions" entry="Interaction"/>

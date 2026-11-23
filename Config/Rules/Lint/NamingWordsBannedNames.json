@@ -2056,6 +2056,15 @@
     "FrontierCityGameModeComponent": "CityGameModeComponent — FrontierTown 을 Playground 미니게임으로 흡수하며 도시 디렉터를 CityBuilder 키트로 옮겼다(NEXT 7 절 6 단계)(2026-11-24)",
     "FrontierTownGame": "PlaygroundGame — 게임 FrontierTown 을 Playground 미니게임 frontiertown 으로 흡수했다(NEXT 7 절 6 단계)(2026-11-24)",
     "FrontierTownData": "CityGameModeComponent 의 씬 데이터(_landSize · _secondsPerDay · _startHour) — 게임 FrontierTown 을 Playground 미니게임 frontiertown 으로 흡수했다(NEXT 7 절 6 단계)(2026-11-24)",
-    "gv_frontierAutoPlay": "gv_playgroundAutoPlay — 게임 FrontierTown 을 Playground 미니게임 frontiertown 으로 흡수했다(NEXT 7 절 6 단계)(2026-11-24)"
+    "gv_frontierAutoPlay": "gv_playgroundAutoPlay — 게임 FrontierTown 을 Playground 미니게임 frontiertown 으로 흡수했다(NEXT 7 절 6 단계)(2026-11-24)",
+    "VelmoraGameModeComponent": "AdventureGameModeComponent — Velmora 흡수로 디렉터 · 규칙을 ActionAdventure 키트로 옮겼다(NEXT 7 절 12 단계)(2026-11-24)",
+    "VelmoraCampaignTest": "AdventureCampaignTest — Velmora 흡수로 디렉터 · 규칙을 ActionAdventure 키트로 옮겼다(NEXT 7 절 12 단계)(2026-11-24)",
+    "VelmoraCampaign": "AdventureCampaign — Velmora 흡수로 디렉터 · 규칙을 ActionAdventure 키트로 옮겼다(NEXT 7 절 12 단계)(2026-11-24)",
+    "VelmoraRegionCatalog": "AdventureRegionCatalog — Velmora 흡수로 디렉터 · 규칙을 ActionAdventure 키트로 옮겼다(NEXT 7 절 12 단계)(2026-11-24)",
+    "VelmoraRegionDef": "AdventureRegionDef — Velmora 흡수로 디렉터 · 규칙을 ActionAdventure 키트로 옮겼다(NEXT 7 절 12 단계)(2026-11-24)",
+    "VelmoraSiteDef": "AdventureSiteDef — Velmora 흡수로 디렉터 · 규칙을 ActionAdventure 키트로 옮겼다(NEXT 7 절 12 단계)(2026-11-24)",
+    "VelmoraRegionAttributeDef": "AdventureRegionAttributeDef — Velmora 흡수로 디렉터 · 규칙을 ActionAdventure 키트로 옮겼다(NEXT 7 절 12 단계)(2026-11-24)",
+    "VelmoraSiteAttributeDef": "AdventureSiteAttributeDef — Velmora 흡수로 디렉터 · 규칙을 ActionAdventure 키트로 옮겼다(NEXT 7 절 12 단계)(2026-11-24)",
+    "VelmoraSpawnAttributeDef": "AdventureSpawnAttributeDef — Velmora 흡수로 디렉터 · 규칙을 ActionAdventure 키트로 옮겼다(NEXT 7 절 12 단계)(2026-11-24)"
   }
 }

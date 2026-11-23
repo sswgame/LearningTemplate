@@ -20,7 +20,7 @@ namespace sw
 {
     namespace
     {
-        /** @brief 룸 디버그 그리기 색 · 높이입니다(Velmora 디렉터와 같은 값). */
+        /** @brief 룸 디버그 그리기 색 · 높이입니다(벨모라 전투 뷰 `VelmoraEncounterViewComponent` 와 같은 값). */
         struct ActionCombatAvatarComponentInternal
         {
             static constexpr float4  kRoomActorColor       = float4( 1.0f, 0.55f, 0.2f, 1.0f ); ///< 홀 적
