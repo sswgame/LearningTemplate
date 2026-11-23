@@ -57,6 +57,8 @@ namespace sw
         static unique_ptr<INetSimGame> create();
         /** @brief 서버 월드에서 @p triggerName 트리거에 폰 @p playerNumber(1 부터)가 들어온 것으로 칩니다. 튼 재생이면 true 입니다. */
         static bool activateTrigger( NetSimWorld& world, const utf8* triggerName, int32 playerNumber );
+        /** @brief 서버 월드에서 @p triggerName 트리거가 튼 재생이 하나라도 돌고 있으면 true 입니다(원격 플레이어만의 재생은 씬의 디렉터가 아니라 시간만 재는 디렉터가 돈다). */
+        static bool isTriggerPlaying( NetSimWorld& world, const utf8* triggerName );
         /** @brief 월드의 디렉터 @p directorName 의 시퀀스 플레이어입니다. 없으면 nullptr 입니다. */
         static SequencePlayerComponent* findDirector( NetSimWorld& world, const utf8* directorName );
         /** @brief 월드의 세션 컴포넌트입니다. 없으면 nullptr 입니다. */

@@ -43,7 +43,7 @@ namespace sw
      *          스크립트에 해당한다(둘 다 게임마다 손으로 적는다). 오브젝트에 시퀀스 플레이어가 없으면 오류를 남기고 발동한 것으로 치지 않는다.
      *          들어옴은 트리거 계약의 오브젝트 쌍 진입(겹침 사건 `GameObjectEvents::_overlapBegin`)이라 유지(Stay) · 몸 여럿에서 다시 틀지 않는다. 한 번만 · 다시 재생은 바탕의 `_bOnce`(블루프린트 `DoOnce` 자리)이고,
      *          발동 수(`_fireCount`)는 상태 칸이라 세이브 · 재접속 뒤에도 한 번만 하는 컷씬을 다시 틀지 않는다. 재생 중 다시 들어오면 처음부터 다시 틀지 않는다(발동 아님 —
-     *          멀티플레이 서버의 `Activator` 는 활성자마다 따로 센다: 다른 플레이어의 재생이 도는 동안 들어온 플레이어는 자기 디렉터로 튼다),
+     *          멀티플레이 서버의 `Activator` 는 원격 플레이어마다 시간만 재는 자기 디렉터로 세고, 서버의 씬 디렉터 · 묶인 오브젝트는 건드리지 않는다),
      *          플레이어가 데이터 결함으로 틀지 못하면 발동 아님이다.
      *          진입만 받으므로 재생 중 트리거 밖으로 밀려나거나 트리거의 스트리밍 셀이 내려가도(파괴 길의 이탈) 재생은 이어진다 — 시퀀스 오브젝트는 늘 올라 있는 자리에 둔다.
      *          멀티플레이: 판정은 서버만 한다(언리얼 `HasAuthority`) — 클라이언트 월드의 트리거는 틀지 않고, 서버가 튼 재생을 넷 키트(`GF_NetSequence`)가 `_audience` 대로
@@ -85,11 +85,13 @@ namespace sw
         [[nodiscard]] GameFlags* findProgressFlags( const GameObject* pActivator ) const override;
 
     private:
-        /** @brief @p activator 가 이미 도는 다른 재생과 따로 틀 수 있으면 true 입니다 — 여러 연결을 맡는 월드의 `Activator` 이고 자기 재생이 없을 때입니다. */
-        [[nodiscard]] bool canUsePrivateDirector( const GameObjectManager& manager, const GameObject& activator ) const;
+        /** @brief @p activator 의 재생을 이 월드가 보지 않으면 true 입니다 — 연결을 맡은 월드의 `Activator` 이고 원격 연결이 가진 폰일 때입니다. */
+        [[nodiscard]] bool isRemotePlay( const GameObjectManager& manager, const GameObject& activator ) const;
+        /** @brief @p activator 의 재생이 돌고 있으면 true 입니다(끝난 재생을 거둔 뒤에 부른다). */
+        [[nodiscard]] bool hasPlayOf( const GameObject& activator ) const;
         /**
-         * @brief 쉬는 플레이어만의 디렉터를 찾거나 세워 @p source 의 시퀀스를 옮깁니다. 못 세우면 nullptr 입니다.
-         * @details 화면에 닿는 컴포넌트(컷 카메라 · 외형)는 옮기지 않는다 — 서버는 다른 플레이어가 보는 재생의 시간과 묶인 오브젝트만 돌린다(언리얼 `Client` RPC 는 서버가 아예 틀지 않는다).
+         * @brief 쉬는 플레이어만의 디렉터를 찾거나 세워 @p source 의 시간만 재게 합니다(`SequencePlayerComponent::copyTimelineFrom`). 못 세우면 nullptr 입니다.
+         * @details 서버는 다른 플레이어만 보는 재생의 끝 · 건너뛰기만 판정한다 — 묶인 오브젝트는 씬의 디렉터 재생 하나만 움직인다(언리얼 `Client` RPC 는 서버가 아예 틀지 않는다).
          */
         [[nodiscard]] SequencePlayerComponent* preparePrivateDirector( GameObjectManager& manager, const SequencePlayerComponent& source );
 

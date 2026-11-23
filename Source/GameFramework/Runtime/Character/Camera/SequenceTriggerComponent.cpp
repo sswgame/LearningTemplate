@@ -89,10 +89,12 @@ namespace sw
             const SequencePlayerComponent* pDone     = pDirector != nullptr ? pDirector->getComponent<SequencePlayerComponent>() : nullptr;
             return pDone == nullptr || pDone->isPlaying() == false;
         } ); // 지운 수는 쓰지 않는다
+        // 원격 플레이어만 보는 재생은 서버가 시간만 잰다 — 씬의 디렉터와 묶인 오브젝트는 그 플레이어의 월드가 움직인다.
         // 재생 중 다시 들어오면 처음부터 다시 틀지 않는다(언리얼 `UMovieSceneSequencePlayer::Play` 는 재생 중이면 그대로다) — 발동으로 치지 않는다.
-        // 멀티플레이 서버에서 다른 플레이어만 보는 재생이 도는 것이면 이 활성자의 디렉터로 따로 튼다.
-        if ( pPlayer->isPlaying() )
-            pPlayer = canUsePrivateDirector( *pManager, activator ) ? preparePrivateDirector( *pManager, *pPlayer ) : nullptr;
+        if ( isRemotePlay( *pManager, activator ) )
+            pPlayer = hasPlayOf( activator ) ? nullptr : preparePrivateDirector( *pManager, *pPlayer );
+        else if ( pPlayer->isPlaying() )
+            pPlayer = nullptr;
         if ( pPlayer == nullptr )
             return false;
         pPlayer->play();
@@ -104,17 +106,23 @@ namespace sw
         return true;
     }
 
-    bool SequenceTriggerComponent::canUsePrivateDirector( const GameObjectManager& manager, const GameObject& activator ) const
+    bool SequenceTriggerComponent::isRemotePlay( const GameObjectManager& manager, const GameObject& activator ) const
     {
-        // 혼자 도는 월드는 화면이 하나라 재생도 하나다 — 연결을 맡은 월드만 플레이어마다 튼다.
+        // 혼자 도는 월드 · 리슨 서버 호스트의 폰은 이 월드의 화면이 본다 — 씬의 디렉터가 튼다.
         if ( _audience != SequenceTriggerAudience::Activator || manager.getSubsystem<SceneNetLink>().isBound() == false )
             return false;
+        const PawnComponent* pPawn = activator.getComponent<PawnComponent>();
+        return pPawn != nullptr && pPawn->findInputConnection().has_value();
+    }
+
+    bool SequenceTriggerComponent::hasPlayOf( const GameObject& activator ) const
+    {
         for ( const SequenceTriggerPlay& play : _listPlay )
         {
             if ( play._activator == activator.getHandle() )
-                return false; // 이 플레이어의 재생이 돈다
+                return true;
         }
-        return true;
+        return false;
     }
 
     SequencePlayerComponent* SequenceTriggerComponent::preparePrivateDirector( GameObjectManager& manager, const SequencePlayerComponent& source )

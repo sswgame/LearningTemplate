@@ -198,7 +198,8 @@ SW_TEST_CASE( SequenceNetSimTest, SkipRequestIsCheckedAgainstTheOwningConnection
     SW_REQUIRE_TRUE( writer.sendMessage( pSecond->getPeers(), 0 ) );
     harness.stepTicks( 5 );
     SW_EXPECT_EQUAL( 1.0, SequenceNetSimTestUtil::readServerValue( harness, "SkipRejected" ) );
-    SW_EXPECT_TRUE( SequenceNetSimTestUtil::isPlaying( harness.getServer(), SequenceNetSimGame::kPlayerDirector ) );
+    SW_EXPECT_TRUE( SequenceNetSimGame::isTriggerPlaying( harness.getServer(), SequenceNetSimGame::kPlayerTrigger ) );
+    SW_EXPECT_FALSE( SequenceNetSimTestUtil::isPlaying( harness.getServer(), SequenceNetSimGame::kPlayerDirector ) ); // 원격 플레이어만의 재생은 서버의 씬 디렉터를 쓰지 않는다
 
     // 그 플레이어의 로컬 건너뛰기 — 클라이언트가 요청하고 서버가 소유 연결을 확인해 끝낸다.
     NetSimWorld* pFirst = harness.findClient( fixture._firstClient );
@@ -206,11 +207,11 @@ SW_TEST_CASE( SequenceNetSimTest, SkipRequestIsCheckedAgainstTheOwningConnection
     SequencePlayerComponent* pFirstPlayer = SequenceNetSimGame::findDirector( *pFirst, SequenceNetSimGame::kPlayerDirector );
     SW_REQUIRE_NOT_NULL( pFirstPlayer );
     SW_EXPECT_TRUE( pFirstPlayer->skipToEnd() );
-    for ( uint32 tick = 0; tick < 30 && SequenceNetSimTestUtil::isPlaying( harness.getServer(), SequenceNetSimGame::kPlayerDirector ); ++tick )
+    for ( uint32 tick = 0; tick < 30 && SequenceNetSimGame::isTriggerPlaying( harness.getServer(), SequenceNetSimGame::kPlayerTrigger ); ++tick )
     {
         harness.step();
     }
-    SW_EXPECT_FALSE( SequenceNetSimTestUtil::isPlaying( harness.getServer(), SequenceNetSimGame::kPlayerDirector ) );
+    SW_EXPECT_FALSE( SequenceNetSimGame::isTriggerPlaying( harness.getServer(), SequenceNetSimGame::kPlayerTrigger ) );
     SW_EXPECT_EQUAL( 1.0, SequenceNetSimTestUtil::readServerValue( harness, "SkipAccepted" ) );
     SW_EXPECT_EQUAL( 1.0, SequenceNetSimTestUtil::readServerValue( harness, "SkipRejected" ) );
 }
