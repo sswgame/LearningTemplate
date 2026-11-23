@@ -62,6 +62,7 @@ views = [
     "Common/GUI/Panel/EditorDocumentPanel.cpp",
     "Common/GUI/Panel/EditorPreviewPanel.cpp",
     "Common/GUI/Panel/EditorPreviewViewport.cpp",
+    "Common/GUI/Theme",
     "Common/Widgets/PropertyGrid",
     "Common/Input/CommandPalettePopup.cpp",
     "Common/Input/EditorCommandGUI.cpp",

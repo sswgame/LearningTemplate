@@ -89,6 +89,9 @@ namespace sw::editor
         static constexpr const utf8* kSubsystemName = "EditorTheme";
         const utf8*                  getSubsystemName() const override { return kSubsystemName; }
 
+        /** @brief 지금 에디터 범위의 테마입니다. 범위가 없으면 멈춥니다 — 그리는 쪽(테마 View)은 서비스 창구를 보지 않고 이것으로 찾는다. */
+        static EditorTheme& getActive();
+
         EditorThemeConfig&       getConfig() { return _config; }
         const EditorThemeConfig& getConfig() const { return _config; }
         /** @brief 폴더에서 읽어 둔 토큰 벌입니다(`EditorThemeUtil` 이 처음 쓸 때 채운다). */
