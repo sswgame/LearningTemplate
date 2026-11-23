@@ -8,7 +8,7 @@
   ④ 물: 이동 방식 Swimming — R 로 떠오르고 F 로 가라앉는다(키를 놓으면 그 높이 둘레에 머문다).
   ⑤ 짝 텔레포트: PortalA 에 들면 PortalB 로 옮기고 되돌아오지 않는다. 나갔다 다시 들면 돌아온다.
   ⑥ 이모트: 환호(되풀이)를 틀고 걸으면 그친다, 인사(한 번)는 끝나면 돌아간다.
-  ⑦ 미니맵: 표시 넷의 자리(보는 쪽이 위, 범위 밖 포털은 가장자리).
+  ⑦ 미니맵: 표시 넷의 자리(보는 쪽이 위, 범위 밖 포털은 가장자리), 캡처 카메라가 따라오고 그림이 세상을 보인다(점 없는 벽을 치우면 오른쪽 위 그림이 바뀐다).
   값으로 판정한다(골든 없음). 실행: App -scenario=game/playground/automation/outdoors.scenario.xml -unattended (체인: ctest -R Scenario.playground)
 -->
 <Scenario name="game.playground.outdoors" fixedDelta="0.0166667" timeoutFrames="3600" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
@@ -22,6 +22,16 @@
 	<Expect watch="Minimap.MarkerY" target="Player" key="Chest" near="0.3" tolerance="0.01"/>
 	<Expect watch="Minimap.MarkerX" target="Player" key="PortalA" near="-1" tolerance="0.01"/>
 	<Expect watch="Minimap.MarkerX" target="Player" key="Tree" near="0.6" tolerance="0.01"/>
+	<AdvanceSimulation frames="20"/> <!-- 캡처는 초당 열 번(시간이 내용) -->
+	<Screenshot file="outdoors_map.ppm" stability="Assets"/>
+	<DevCommand line="object.place Cliff 10 -60 8.25"/>
+	<DevCommand line="object.place Platform 0 -60 8.25"/>
+	<AdvanceSimulation frames="20"/>
+	<Screenshot file="outdoors_mapcleared.ppm" stability="None"/>
+	<ExpectImagesDiffer first="outdoors_map.ppm" second="outdoors_mapcleared.ppm" region="0.82,0.03,0.99,0.24" minDiffering="0.004"/>
+	<DevCommand line="object.place Cliff 10 2.5 8.25"/>
+	<DevCommand line="object.place Platform 0 1.5 8.25"/>
+	<AdvanceSimulation frames="2"/>
 
 	<!-- ⑥ 이모트 -->
 	<Tap slot="Key.G" hold="2"/>
@@ -94,6 +104,7 @@
 	<DevCommand line="object.place Player -30 0.05 0"/>
 	<WaitUntil watch="Object.Property" target="PortalA" key="TeleportTriggerComponent._fireCount" equals="1" timeoutFrames="20"/>
 	<WaitUntil watch="Object.Z" target="Player" near="20" tolerance="0.2" timeoutFrames="20"/>
+	<WaitUntil watch="Object.Z" target="MinimapCamera" near="20" tolerance="0.2" timeoutFrames="5"/> <!-- 그림도 따라왔다 -->
 	<AdvanceSimulation frames="30"/> <!-- 도착 진입으로 되돌아가지 않음은 시간이 내용 -->
 	<Expect watch="Object.Z" target="Player" near="20" tolerance="0.2"/>
 	<Expect watch="Object.Property" target="PortalB" key="TeleportTriggerComponent._fireCount" equals="0"/>

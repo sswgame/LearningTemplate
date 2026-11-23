@@ -6,9 +6,10 @@
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Automation/Watch/AutomationWatchComponent.h"
+#include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Object/GameObject/Tick/TickContext.h"
 #include "Engine/UI/Layout/CanvasPanel.h"
@@ -102,6 +103,7 @@ namespace sw
         : _panelName{ "Minimap" }
         , _range{ 30.0f }
         , _bRotateWithView{ false }
+        , _captureCamera{}
         , _listDotMarker{}
     {
     }
@@ -143,9 +145,27 @@ namespace sw
             outside._bInRange = SW_FALSE;
             return outside;
         }
-        const PawnComponent* pPawn = _bRotateWithView ? pOwner->getComponent<PawnComponent>() : nullptr;
-        const float32        yaw   = pPawn != nullptr ? pPawn->getIntent()._controlYaw : 0.0f;
-        return computePlacement( pRoot->getWorldPosition(), yaw, _range, float2{ 1.0f, 1.0f }, pTarget->getWorldPosition() );
+        return computePlacement( pRoot->getWorldPosition(), computeYaw(), _range, float2{ 1.0f, 1.0f }, pTarget->getWorldPosition() );
+    }
+
+    float32 MinimapComponent::computeYaw() const
+    {
+        const PawnComponent* pPawn = _bRotateWithView && getOwner() != nullptr ? getOwner()->getComponent<PawnComponent>() : nullptr;
+        return pPawn != nullptr ? pPawn->getIntent()._controlYaw : 0.0f;
+    }
+
+    void MinimapComponent::placeCaptureCamera( GameObjectManager& manager ) const
+    {
+        GameObject* const     pCameraObject = manager.resolveGameObject( _captureCamera );
+        CameraComponent*      pCamera       = pCameraObject != nullptr ? pCameraObject->getComponent<CameraComponent>() : nullptr;
+        const SceneComponent* pRoot         = getOwner() != nullptr ? getOwner()->getPrimarySceneComponent() : nullptr;
+        if ( pCamera == nullptr || pRoot == nullptr )
+            return; // 카메라가 파괴되었다
+        const float3 center = pRoot->getWorldPosition();
+        const float3 eye{ center._x, pCamera->getWorldPosition()._y, center._z };
+        pCamera->setWorldTransform( float4x4::makeTrs( eye, quaternion::makeFromYawPitchRoll( computeYaw(), MathUtil::kHalfPi, 0.0f ), float3{ 1.0f, 1.0f, 1.0f } ) );
+        pCamera->setOrthographic( true );
+        pCamera->setOrthoHeight( _range * 2.0f );
     }
 
     CanvasPanel* MinimapComponent::findPanel() const
@@ -159,6 +179,11 @@ namespace sw
     {
         using Internal = MinimapComponentInternal;
         Component::onTick( context );
+        if ( _captureCamera.isValid() )
+        {
+            context.deferPostTickOnComponent( *this, []( MinimapComponent& minimap, GameObjectManager& manager )
+            { minimap.placeCaptureCamera( manager ); } ); // 남의 카메라를 옮기는 일이라 틱 뒤다
+        }
         CanvasPanel* pPanel = findPanel();
         if ( pPanel == nullptr )
             return; // 화면이 아직 없거나(로드 중) UI 시스템이 없다(헤드리스)

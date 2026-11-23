@@ -8,6 +8,7 @@
 #include "Core/Math/Math.h"
 #include "Core/Name/hashed_string.h"
 
+#include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -16,6 +17,7 @@
 namespace sw
 {
     class CanvasPanel;
+    class GameObjectManager;
     class MinimapMarkerComponent;
 
     /** @brief 표시 하나가 미니맵에 놓일 자리입니다(패널 가운데 기준, 오른쪽 · 아래가 +). */
@@ -29,7 +31,8 @@ namespace sw
      * @class MinimapComponent
      * @brief HUD 문서(`HUDControllerComponent`)의 패널 `_panelName` 에 반지름 `_range`(m) 안의 표시를 원으로 놓습니다. 위는 월드 +Z 또는 보는 쪽(`_bRotateWithView`)입니다.
      * @details 점은 패널의 자식 위젯이고 자리는 렌더 변환만 바꾼다(배치를 다시 하지 않는다). 위젯은 표시 수만큼 한 번 만들고 남는 것은 숨긴다. 문서를 다시 읽어 패널이 새로 생기면 다시 만든다.
-     *          그림 지도(렌더 텍스처 · 타일)는 없다 — 패널의 배경을 HUD 문서가 정한다. 언리얼 · 유니티 게임들이 직접 만드는 레이더형 미니맵 자리다.
+     *          그림 지도는 캡처 카메라(`_captureCamera`)가 찍는다 — 점과 같은 가운데 · 범위 · 방향으로 위에서 내려다보게 맞춰 주므로 그 렌더 텍스처를 HUD 문서가 패널 뒤의
+     *          `ImageWidget` 에 같은 자리로 놓으면 점과 그림이 겹친다(언리얼 SceneCapture2D, 유니티 `Camera.targetTexture` 미니맵). 카메라가 없으면 점만 있는 레이더다.
      */
     REFLECT( TickMode = Main, Category = "UI", DisplayName = "Minimap", Tooltip = "Places the minimap markers around this object as dots on a canvas panel of the HUD document" )
     class SW_GF_API MinimapComponent : public Component
@@ -51,12 +54,20 @@ namespace sw
         CanvasPanel* findPanel() const;
 
     private:
+        /** @brief 위로 둘 방향(라디안, 0 = +Z)입니다. */
+        [[nodiscard]] float32 computeYaw() const;
+        /** @brief 캡처 카메라를 이 오브젝트 위에서 내려다보게 놓습니다(높이는 카메라의 것). */
+        void placeCaptureCamera( GameObjectManager& manager ) const;
+
+    private:
         PROPERTY( Category = "Minimap", DisplayName = "Panel", Tooltip = "Name of the canvas panel in the HUD document" )
         hashed_string _panelName;
         PROPERTY( Category = "Minimap", DisplayName = "Range", Min = 1.0, Tooltip = "World radius shown", Units = m )
         float32 _range;
         PROPERTY( Category = "Minimap", DisplayName = "Rotate With View", Tooltip = "Up is the pawn's control yaw; off: up is world +Z" )
-        bool           _bRotateWithView;
-        vector<uint64> _listDotMarker; ///< 점(패널의 자식 차례)마다 마지막으로 보인 표시의 컴포넌트 id — 바뀐 때만 크기 · 색을 다시 쓴다
+        bool _bRotateWithView;
+        PROPERTY( Category = "Minimap", DisplayName = "Capture Camera", Tooltip = "Object with a capture camera that paints the map picture; kept above this object, its height is authored on the camera" )
+        GameObjectHandle _captureCamera;
+        vector<uint64>   _listDotMarker; ///< 점(패널의 자식 차례)마다 마지막으로 보인 표시의 컴포넌트 id — 바뀐 때만 크기 · 색을 다시 쓴다
     };
 } // namespace sw

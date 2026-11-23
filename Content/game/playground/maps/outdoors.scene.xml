@@ -217,7 +217,6 @@
 					<MeshComponent _localID="163493842152903304" _localPosition="0,2,0" _localRotation="0,0,0" _localScale="0.5,4,0.5" _attachOwner="None" _attachComponent="#ae80bcb72e918025" _meshID="Cube" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="3" />
 					<MeshComponent _localID="163494941664531515" _localPosition="0,4.2,0" _localRotation="0,0,0" _localScale="2,1.6,2" _attachOwner="None" _attachComponent="#ae80bcb72e918025" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="2" />
 					<InteractableComponent _localID="10644522701805113517" _interactionID="Chop" _catalogPath="game/playground/data/outdoors.interactions.xml" _priority="0" _bEnabled="true" />
-					<GimmickSensorComponent _localID="5906677949702648734" _defaultWeight="1" _bCountTriggers="false" />
 					<GatheringNodeComponent _localID="17749173230493077954" _item="wood_log" _count="2" _uses="2" _respawnDelay="2" _fallDuration="1" />
 					<MinimapMarkerComponent _localID="15882014908331153694" _color="0.4,0.9,0.4,1" _size="8" _bClampToEdge="false" />
 				</_listComponent>
@@ -270,7 +269,7 @@
 						</_tags>
 					</TagComponent>
 					<HUDControllerComponent _localID="17122754535480611078" _documentPath="game/playground/ui/outdoors.ui.xml" />
-					<MinimapComponent _localID="14348804441869400080" _panelName="Minimap" _range="20" _bRotateWithView="false" />
+					<MinimapComponent _localID="14348804441869400080" _panelName="Minimap" _range="20" _bRotateWithView="false" _captureCamera="19" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -279,6 +278,15 @@
 				<_listComponent>
 					<PlayerControllerComponent _localID="4811566279812111972" _playerIndex="0" />
 					<InventoryComponent _localID="14102407417471272785" _openSlotCount="12" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="19" name="MinimapCamera">
+			<GameObject _schemaVersion="0" _name="MinimapCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localID="17709685451340727998" _localPosition="0,40,0" _localRotation="1.5707964,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="40.107045" _nearZ="0.1" _farZ="80" _orthoHeight="40" _priority="0" _role="Capture" _bOrthographic="true">
+						<_renderOutput _screenRect="0,0,1,1" _renderTexture="rendertarget/outdoors_minimap" _renderTextureWidth="256" _renderTextureHeight="256" _resolutionScale="1" _updateRate="10" _target="RenderTexture" _bShadows="false" _bPostProcess="false" />
+					</CameraComponent>
 				</_listComponent>
 			</GameObject>
 		</entity>
