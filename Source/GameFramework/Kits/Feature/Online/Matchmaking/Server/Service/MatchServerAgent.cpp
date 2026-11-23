@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Service/MatchServerAgent.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Serialization/BitStream.h"
 
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Runtime/MatchmakingProtocol.h"
@@ -75,9 +76,18 @@ namespace sw
         {
             for ( const MatchMember& member : match._listTeam[team]._listMember )
             {
-                MatchSeat& seat     = _mapAccountToSeat[member._accountID]; // 백필 기록도 같은 경기 id · 팀 수를 싣는다
+                uint64 ticketID = 0;
+                for ( const MatchTicket& ticket : match._listTicket )
+                {
+                    if ( VectorUtil::containsBy<&MatchMember::_accountID>( ticket._listMember, member._accountID ) )
+                        ticketID = ticket._ticketID;
+                }
+                MatchSeat& seat = _mapAccountToSeat[member._accountID]; // 백필 기록도 같은 경기 id · 팀 수를 싣는다
+                if ( seat._matchID != match._matchID || seat._ticketID != ticketID )
+                    seat._bTaken = SW_FALSE; // 새 자리다
                 seat._modeID        = match._modeID;
                 seat._matchID       = match._matchID;
+                seat._ticketID      = ticketID;
                 seat._expiresMs     = seat._expiresMs > expiresMs ? seat._expiresMs : expiresMs;
                 seat._team          = static_cast<int32>( team );
                 seat._teamCount     = static_cast<int32>( match._listTeam.size() );
@@ -97,11 +107,12 @@ namespace sw
 
     bool MatchServerAgent::takeSeat( AccountID accountID, MatchSeat& outSeat )
     {
-        const auto seatIt = _mapAccountToSeat.find( accountID );
-        if ( seatIt == _mapAccountToSeat.end() || seatIt->second._expiresMs <= _nowMs )
+        const auto seatIt  = _mapAccountToSeat.find( accountID );
+        const bool bNoSeat = seatIt == _mapAccountToSeat.end() || seatIt->second._expiresMs <= _nowMs || seatIt->second._bTaken != SW_FALSE;
+        if ( bNoSeat )
             return false;
-        outSeat = std::move( seatIt->second );
-        _mapAccountToSeat.erase( seatIt );
+        seatIt->second._bTaken = SW_TRUE; // 지우지 않고 표시한다 — 지우면 뒤에 온 같은 명단이 자리를 되살린다
+        outSeat                = seatIt->second;
         return true;
     }
 

@@ -1172,6 +1172,40 @@ SW_TEST_CASE( MatchQueueServiceTest, RatingWaitGivesUpOrIsDropped )
     SW_EXPECT_EQUAL( 0, queue.getLocalTicketCount() ); // 떠난 사람의 티켓이 생기지 않는다
 }
 
+/** @brief [MatchQueueServiceTest] 버스로 먼저 받은 명단의 자리를 꺼낸 뒤 같은 명단의 기록을 읽어도 자리가 되살아나지 않는다(결함: 두 번 나간 사람의 자리를 두 번 채웠다) */
+SW_TEST_CASE( MatchQueueServiceTest, SeatTakenFromTheBusStaysTakenAfterTheRecord )
+{
+    PairWorld world;
+    world.start( vector<MatchModeDef>{ MatchQueueTestUtil::makeMode() } );
+    LocalServerBus gameBus( &world._hub, kGameID );
+    gameBus.subscribe( MatchQueueService::makeAssignTopic( kGameID ) );
+    MatchServerAgent agent;
+    agent.initialize( kGameID );
+    agent.startReading( &world._serverA._router );
+    ServerDescriptor descriptor;
+    descriptor._serverID  = kGameID;
+    descriptor._kind      = "game";
+    descriptor._region    = "kr";
+    descriptor._address   = "10.0.0.9";
+    descriptor._port      = 7000;
+    descriptor._portCount = 1;
+    MatchBackfillSender sender;
+    sender.initialize( &world._serverA._queue, &agent, descriptor );
+
+    SW_EXPECT_TRUE( world._serverA.join( kAlice )._result == MatchmakingResult::Ok );
+    SW_EXPECT_TRUE( world._serverA.join( kBob )._result == MatchmakingResult::Ok );
+    world.updateBoth( kNowMs + 1 );
+    vector<ServerBusMessage> listMessage;
+    SW_REQUIRE_EQUAL( 1, gameBus.pollMessages( listMessage ) );
+    SW_REQUIRE_TRUE( agent.handleAssign( listMessage[0], UnixMilliseconds{ kNowMs + 1 } ) );
+    SW_EXPECT_TRUE( sender.submitPlayerLeft( kAlice, UnixMilliseconds{ kNowMs + 2 } ) == MatchmakingResult::Ok );
+
+    agent.update( UnixMilliseconds{ kNowMs + 2 } ); // 이제 기록을 읽는다
+    world._serverA.poll( kNowMs + 2 );
+    SW_EXPECT_TRUE( sender.submitPlayerLeft( kAlice, UnixMilliseconds{ kNowMs + 3 } ) == MatchmakingResult::NotQueued );
+    agent.shutdown();
+}
+
 /** @brief [MatchQueueServiceTest] 나간 사람의 자리: 게임 서버는 계정만 넘기고 경기 · 모드 · 팀은 읽은 명단에서 찾는다. 같은 사람은 한 번만, 명단에 없는 계정은 NotQueued, 채운 사람은 그 경기의 그 팀으로 Found */
 SW_TEST_CASE( MatchQueueServiceTest, LeftPlayerSeatIsBackfilledOnce )
 {
