@@ -248,7 +248,7 @@ SW_TEST_CASE( PartyLobbyServiceTest, QueuedPartyLocksMembership )
     SW_EXPECT_TRUE( rig.invite( kAlice, kCarol ) == MatchmakingResult::Ok );
 
     constexpr uint64 kTicket = 0x100000001ull;
-    rig._service.setPartyTicket( partyID, kTicket );
+    rig._service.reservePartyTicket( partyID, kTicket, vector<AccountID>{ kAlice, kBob }, PartyLobbyService::PartyFoundDelegate{} );
     rig.poll();
     SW_EXPECT_EQUAL( kTicket, rig.find( kAlice )._party._queuedTicketID );
     SW_EXPECT_TRUE( rig.accept( kCarol, partyID ) == MatchmakingResult::AlreadyQueued );
@@ -262,6 +262,20 @@ SW_TEST_CASE( PartyLobbyServiceTest, QueuedPartyLocksMembership )
     SW_REQUIRE_EQUAL( size_t( 1 ), listBroken.size() );
     SW_EXPECT_EQUAL( kTicket, listBroken[0] );
     SW_EXPECT_EQUAL( uint64( 0 ), rig.find( kAlice )._party._queuedTicketID );
+}
+
+/** @brief [PartyLobbyServiceTest] 줄을 서면 파티 기록과 함께 계정 인덱스의 수명도 늘어난다 — 앞 수명이 지나도 멤버가 자기 파티를 찾고 떠날 수 있다(결함: 기록만 늘어 줄 선 파티에 갇혔다) */
+SW_TEST_CASE( PartyLobbyServiceTest, QueueingExtendsTheAccountIndex )
+{
+    PartyFixture rig;
+    const uint64 partyID = rig.makeParty( kAlice );
+    rig._clock.advanceMilliseconds( PartyLobbyLimit::kPartyTTLMs - 1000 );
+    rig._service.reservePartyTicket( partyID, 0x100000001ull, vector<AccountID>{ kAlice }, PartyLobbyService::PartyFoundDelegate{} );
+    rig.poll();
+    rig._clock.advanceMilliseconds( 2000 );
+    SW_EXPECT_TRUE( rig.find( kAlice )._result == MatchmakingResult::Ok );
+    rig._service.leaveParty( kAlice, 2 );
+    SW_EXPECT_TRUE( rig.take( 2 )._result == MatchmakingResult::Ok );
 }
 
 /** @brief [PartyLobbyServiceTest] 떠나기: 파티장이 떠나면 다음 사람이 파티장이고, 떠난 사람은 멤버가 빈 알림을 받으며 다시 파티를 만들 수 있다. 마지막 사람이 떠나면 파티가 사라진다 */

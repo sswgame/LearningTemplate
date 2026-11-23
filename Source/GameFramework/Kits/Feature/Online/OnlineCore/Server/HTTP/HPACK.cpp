@@ -120,11 +120,12 @@ namespace sw
         return true;
     }
 
-    HPACKDecoder::HPACKDecoder( uint32 maxDynamicTableSize )
+    HPACKDecoder::HPACKDecoder( uint32 maxDynamicTableSize, uint32 maxHeaderListBytes )
         : _listDynamic{}
         , _dynamicSize{ 0 }
         , _currentLimit{ maxDynamicTableSize }
         , _maxLimit{ maxDynamicTableSize }
+        , _maxHeaderListBytes{ maxHeaderListBytes }
     {
     }
 
@@ -252,8 +253,17 @@ namespace sw
     expected<void> HPACKDecoder::decode( const uint8* pBlock, size_t size, vector<HTTPHeader>& outListHeader )
     {
         outListHeader.clear();
-        const uint8* pCursor = pBlock;
-        const uint8* pEnd    = pBlock + size;
+        expected<void> decoded = decodeHeaders( pBlock, size, outListHeader );
+        if ( decoded.has_value() == false )
+            outListHeader.clear();
+        return decoded;
+    }
+
+    expected<void> HPACKDecoder::decodeHeaders( const uint8* pBlock, size_t size, vector<HTTPHeader>& outListHeader )
+    {
+        const uint8* pCursor   = pBlock;
+        const uint8* pEnd      = pBlock + size;
+        uint64       listBytes = 0; // 푼 목록의 크기(항목마다 이름 + 값 + 32)
         while ( pCursor < pEnd )
         {
             const uint8 first = *pCursor;
@@ -263,26 +273,20 @@ namespace sw
                 const expected<uint32> index = readInteger( pCursor, pEnd, 7 );
                 expected<void>         found = index.has_value() ? findEntry( *index, header ) : expected<void>{ unexpected( index.error() ) };
                 if ( found.has_value() == false )
-                {
-                    outListHeader.clear();
                     return found;
-                }
-                outListHeader.push_back( header );
+                listBytes += HPACKInternal::entrySize( header );
+                if ( listBytes > _maxHeaderListBytes )
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "HPACK header list is larger than the limit" } );
+                outListHeader.push_back( std::move( header ) );
                 continue;
             }
             if ( ( first & 0xE0u ) == 0x20u ) // 동적 표 크기 갱신
             {
                 const expected<uint32> newLimit = readInteger( pCursor, pEnd, 5 );
                 if ( newLimit.has_value() == false )
-                {
-                    outListHeader.clear();
                     return unexpected( newLimit.error() );
-                }
                 if ( *newLimit > _maxLimit )
-                {
-                    outListHeader.clear();
                     return unexpected( Error{ ErrorKind::InvalidArgument, "HPACK table size update is above the limit we announced" } );
-                }
                 _currentLimit = *newLimit;
                 shrinkTo( *newLimit );
                 continue;
@@ -291,21 +295,18 @@ namespace sw
             const int32            prefixBits   = bIncremental ? 6 : 4;
             const expected<uint32> nameIndex    = readInteger( pCursor, pEnd, prefixBits );
             if ( nameIndex.has_value() == false )
-            {
-                outListHeader.clear();
                 return unexpected( nameIndex.error() );
-            }
             expected<void> read = *nameIndex == 0 ? readString( pCursor, pEnd, header._name ) : findEntry( *nameIndex, header );
             if ( read.has_value() )
                 read = readString( pCursor, pEnd, header._value );
             if ( read.has_value() == false )
-            {
-                outListHeader.clear();
                 return read;
-            }
+            listBytes += HPACKInternal::entrySize( header );
+            if ( listBytes > _maxHeaderListBytes )
+                return unexpected( Error{ ErrorKind::InvalidArgument, "HPACK header list is larger than the limit" } );
             if ( bIncremental )
                 insert( header );
-            outListHeader.push_back( header );
+            outListHeader.push_back( std::move( header ) );
         }
         return {};
     }
