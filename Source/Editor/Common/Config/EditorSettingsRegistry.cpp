@@ -233,7 +233,7 @@ namespace sw::editor
     bool EditorPreferencesStore::isPropertyModified( const PropertyInfo& prop, const ObjectAddress current, const ObjectAddress defaultInstance )
     {
         const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring );
-        return SerializerUtil::formatPropertyText( prop, current, context ) != SerializerUtil::formatPropertyText( prop, defaultInstance, context );
+        return SerializerUtil::canCarryProperty( prop, context ) && SerializerUtil::arePropertyValuesEqual( prop, current, defaultInstance, context ) == false;
     }
 
     void EditorPreferencesStore::resetSection( const EditorSettingsRegistration& registration )

@@ -6,11 +6,13 @@
 #include "Core/Container/InlineAllocator.h"
 #include "Core/Log/LogOnce.h"
 #include "Core/Log/Logger.h"
+#include "Core/Memory/Memory.h"
 #include "Core/Serialization/ByteStream.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Reflection/ReflectValueBinding.h"
+#include "Engine/Reflection/ReflectVisit.h"
 #include "Engine/Reflection/ReflectedValue.h"
 #include "Engine/Reflection/ReflectionContainers.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
@@ -220,6 +222,76 @@ namespace sw
                 }
                 if ( unnamedBits != 0 )
                     appendEnumEntry( buffer, 0, unnamedBits );
+            }
+
+            /**
+             * @brief 값 둘(같은 형식 @p typeName)이 같은지입니다(`arePropertyValuesEqual` 의 값 하나).
+             * @details 언리얼 `FProperty::Identical` 처럼 형식이 정한 길로 값을 바로 견준다 — 성분 배치가 정해진 내장 타입(`ReflectBuiltinLayout`, 상태 직렬화 · 상태 해시와 같은 표)은
+             *          메모리, 글 · 이름은 철자, 열거형은 값, 반사 구조체는 칸마다다. 처리기만 아는 잎(핸들 · 자산 참조 · 압축 타입 …)만 바이트로 옮겨 견준다.
+             */
+            static bool areValuesEqual( const ValueAddress a, const ValueAddress b, const hashed_string& typeName, const ReflectValueBinding* pBinding, const SerializeContext& context )
+            {
+                const SerializerUtil::ValueCodecs codecs = SerializerUtil::findValueCodecs( typeName, pBinding, context );
+                switch ( codecs._builtinIndex )
+                {
+                    case ReflectBuiltinIndex::kbool:
+                        return *static_cast<const bool*>( a.get() ) == *static_cast<const bool*>( b.get() );
+                    case ReflectBuiltinIndex::kstring:
+                        return *static_cast<const string*>( a.get() ) == *static_cast<const string*>( b.get() );
+                    case ReflectBuiltinIndex::khashed_string: // `==` 는 대소문자를 무시한다 — 저장하는 글은 철자다
+                        return static_cast<const hashed_string*>( a.get() )->isEqual( *static_cast<const hashed_string*>( b.get() ), NameCase::CaseSensitive );
+                    default:
+                        break;
+                }
+                const bool bPlainMemory = ReflectBuiltinTraitTable::get( codecs._builtinIndex )._layout != ReflectBuiltinLayout::None && codecs._pType != nullptr;
+                if ( bPlainMemory )
+                    return Memory::compare( a.get(), b.get(), codecs._pType->_size ) == 0;
+                if ( codecs.findBinaryWriter( context ) == nullptr ) // 처리기가 먼저다(`serializeValueBinary` 와 같은 순서)
+                {
+                    if ( const EnumInfo* pEnumInfo = codecs.findEnum( context ) )
+                        return pEnumInfo->readValueFromMemory( a.get() ) == pEnumInfo->readValueFromMemory( b.get() );
+                    if ( const TypeInfo* pStructInfo = codecs.findStructType( context ) )
+                    {
+                        const ReflectPropertyVisitor propertyVisitor{ ReflectVisitOptions{} };
+                        return propertyVisitor.visitProperties( *pStructInfo, a.get(), [&]( const ReflectVisitConstField& field )
+                        {
+                            const bool bSame = SerializerUtil::shouldSerializeProperty( *pStructInfo, field._property, context ) == false ||
+                                               SerializerUtil::arePropertyValuesEqual( field._property, ObjectAddress{ a.get() }, ObjectAddress{ b.get() }, context );
+                            return bSame ? ReflectVisitFlow::Continue : ReflectVisitFlow::Stop;
+                        } );
+                    }
+                }
+                vector<uint8> bytesA;
+                vector<uint8> bytesB;
+                // 바이트로 옮기지 못한 값은 같은지 알 수 없다. 같다고 하면 바뀐 값을 놓치므로 다르다고 본다.
+                return SerializerUtil::serializeValueBinary( a, typeName, pBinding, bytesA, context ) && SerializerUtil::serializeValueBinary( b, typeName, pBinding, bytesB, context ) &&
+                       bytesA == bytesB;
+            }
+
+            /** @brief 컨테이너 둘이 같은지입니다. 값 원소의 시퀀스는 원소마다, 맵 · 중첩 컨테이너 · 소유 포인터 원소는 바이트로 옮겨 견준다. */
+            static bool areContainersEqual( const ValueAddress a, const ValueAddress b, const NestedContainerInfo& shape, const SerializeContext& context )
+            {
+                const bool                       bValueElement = shape._elementNested == nullptr && SerializerUtil::isOwnedPointerElementType( shape._elementTypeName ) == false;
+                const ISequenceContainerWrapper* pSequence     = shape._wrapper != nullptr && bValueElement ? shape._wrapper->asSequence() : nullptr;
+                if ( pSequence == nullptr )
+                {
+                    vector<uint8> bytesA;
+                    vector<uint8> bytesB;
+                    return SerializerUtil::serializeNestedContainerBinary( a, shape, bytesA, context ) && SerializerUtil::serializeNestedContainerBinary( b, shape, bytesB, context ) &&
+                           bytesA == bytesB;
+                }
+                const size_t elementCount = pSequence->getSize( a.get() );
+                if ( pSequence->getSize( b.get() ) != elementCount )
+                    return false;
+                const ReflectValueBinding* pBinding = shape.findBinding( shape._elementTypeName );
+                for ( size_t elementIndex = 0; elementIndex < elementCount; ++elementIndex )
+                {
+                    const ValueAddress elementA{ pSequence->getElementConst( a.get(), elementIndex ) };
+                    const ValueAddress elementB{ pSequence->getElementConst( b.get(), elementIndex ) };
+                    if ( areValuesEqual( elementA, elementB, shape._elementTypeName, pBinding, context ) == false )
+                        return false;
+                }
+                return true;
             }
 
             /** @brief 모르는 열거자 이름을 알립니다. enum 과 이름마다 한 번만 알립니다(같은 세이브의 오브젝트 천 개가 천 줄을 쓰지 않게 하려는 것입니다). */
@@ -976,21 +1048,9 @@ namespace sw
         const void* pB = prop.getRawPtr( pInstanceB );
         if ( pA == nullptr || pB == nullptr )
             return pA == pB;
-        vector<uint8> bytesA;
-        vector<uint8> bytesB;
-        bool          bWritten = false;
         if ( prop._bIsContainer == SW_TRUE && prop.hasContainerWrapper() )
-        {
-            bWritten = serializeNestedContainerBinary( ValueAddress{ pA }, prop.getContainerShape(), bytesA, context ) &&
-                       serializeNestedContainerBinary( ValueAddress{ pB }, prop.getContainerShape(), bytesB, context );
-        }
-        else
-        {
-            bWritten = serializeValueBinary( ValueAddress{ pA }, prop._typeName, prop.findValueBinding(), bytesA, context ) &&
-                       serializeValueBinary( ValueAddress{ pB }, prop._typeName, prop.findValueBinding(), bytesB, context );
-        }
-        // 바이트로 옮기지 못한 값은 같은지 알 수 없다. 같다고 하면 바뀐 값을 놓치므로 다르다고 본다.
-        return bWritten && bytesA == bytesB;
+            return SerializerUtilInternal::areContainersEqual( ValueAddress{ pA }, ValueAddress{ pB }, prop.getContainerShape(), context );
+        return SerializerUtilInternal::areValuesEqual( ValueAddress{ pA }, ValueAddress{ pB }, prop._typeName, prop.findValueBinding(), context );
     }
 
     bool SerializerUtil::applyPropertyText( const PropertyInfo& prop, MutableObjectAddress instance, string_view text, const SerializeContext& context )

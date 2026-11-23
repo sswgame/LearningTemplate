@@ -139,6 +139,50 @@ SW_TEST_CASE( SerializerUtilTest, KeysMatchExactlyAndUnknownNamesAreNotFound )
     SW_EXPECT_TRUE( listProp[*countIndex]._name == hashed_string( "_count" ) );
 }
 
+/** @brief [SerializerUtilTest] 값 비교는 형식대로 견준다 — 숫자 · 글(철자까지) · 열거형 · 처리기 값 · 구조체 안의 칸 · 개수가 같은 목록의 원소가 다르면 다르다 */
+SW_TEST_CASE( SerializerUtilTest, PropertyValuesCompareByType )
+{
+    const auto isEqualField = []( const utf8* pName, const SerializerSample& a, const SerializerSample& b )
+    { return SerializerUtil::arePropertyValuesEqual( getSampleProperty( pName ), ObjectAddress{ &a }, ObjectAddress{ &b }, getContext() ); };
+    const SerializerSample base;
+    SerializerSample       changed;
+    for ( const utf8* pName : { "_count", "_ratio", "_name", "_small", "_mode", "_bFirst", "_path" } )
+    {
+        SW_EXPECT_TRUE_MSG( isEqualField( pName, base, changed ), pName );
+    }
+    changed._count  = 1;
+    changed._ratio  = 0.5f;
+    changed._name   = "a";
+    changed._small  = 2;
+    changed._mode   = SerializerSampleMode::Fast;
+    changed._bFirst = 1;
+    SW_REQUIRE_TRUE( SerializerUtil::applyPropertyText( getSampleProperty( "_path" ), MutableObjectAddress{ &changed }, "Game/A.xml", getContext() ) );
+    for ( const utf8* pName : { "_count", "_ratio", "_name", "_small", "_mode", "_bFirst", "_path" } )
+    {
+        SW_EXPECT_FALSE_MSG( isEqualField( pName, base, changed ), pName );
+    }
+    SerializerSample upper = changed;
+    upper._name            = "A";
+    SW_EXPECT_FALSE( isEqualField( "_name", changed, upper ) );
+
+    const TypeInfo&     groupType = *SerializerSampleGroup::StaticType();
+    const PropertyInfo* pList     = groupType.findProperty( hashed_string( "_listText" ) );
+    const PropertyInfo* pPart     = groupType.findProperty( hashed_string( "_part" ) );
+    SW_REQUIRE_NOT_NULL( pList );
+    SW_REQUIRE_NOT_NULL( pPart );
+    SerializerSampleGroup left;
+    left._listText = { "a", "b" };
+    SerializerSampleGroup right{ left };
+    SW_EXPECT_TRUE( SerializerUtil::arePropertyValuesEqual( *pList, ObjectAddress{ &left }, ObjectAddress{ &right }, getContext() ) );
+    SW_EXPECT_TRUE( SerializerUtil::arePropertyValuesEqual( *pPart, ObjectAddress{ &left }, ObjectAddress{ &right }, getContext() ) );
+    right._listText[1] = "c"; // 개수는 같다
+    right._part._extra = 2.0f;
+    SW_EXPECT_FALSE( SerializerUtil::arePropertyValuesEqual( *pList, ObjectAddress{ &left }, ObjectAddress{ &right }, getContext() ) );
+    SW_EXPECT_FALSE( SerializerUtil::arePropertyValuesEqual( *pPart, ObjectAddress{ &left }, ObjectAddress{ &right }, getContext() ) );
+    right._listText = { "a" };
+    SW_EXPECT_FALSE( SerializerUtil::arePropertyValuesEqual( *pList, ObjectAddress{ &left }, ObjectAddress{ &right }, getContext() ) );
+}
+
 /** @brief [SerializerUtilTest] 비트필드 하나를 글로 쓰거나 옮겨도 같은 바이트의 이웃 비트는 그대로이고, 불리언이 아닌 글은 거절한다 */
 SW_TEST_CASE( SerializerUtilTest, BitFieldHelpersTouchOnlyTheirOwnBit )
 {
