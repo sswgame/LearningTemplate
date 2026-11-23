@@ -92,7 +92,7 @@ namespace sw
     private:
         PROPERTY( DefaultName, Category = "Collision", DisplayName = "Collision Profile", Tooltip = "Collision profile name from the physics settings (object channel and responses)", Validate = validateLayer, Meta = "NameSource=CollisionProfile" )
         hashed_string _layer{ "Default" };
-        PROPERTY( Category = "Collision", Tooltip = "Physics material name (empty: the first material)", Validate = validateMaterial )
+        PROPERTY( Category = "Collision", Tooltip = "Physics material name (empty: the first material)", Validate = validateMaterial, Meta = "NameSource=PhysicsMaterial" )
         hashed_string _material;
 
         vector<PhysicsBodyHandle> _listBody;            ///< 청크마다 바디 하나(모두 구멍인 청크는 무효 핸들)

@@ -214,7 +214,7 @@
 					<ElementStatusComponent _localID="11244445018458652199" _componentName="ElementStatusComponent"
 					                        _bActive="true"
 					                        _tablePath="common/data/elements/default.elements.xml"
-					                        _material="Torch"
+					                        _elementMaterial="Torch"
 					                        _signalStatus="Burning"
 					                        _startStimulus="Fire" />
 					<PointLightComponent _localID="6048688584444471341" _componentName="PointLightComponent"
@@ -280,7 +280,7 @@
 					<ElementStatusComponent _localID="11244445018458652199" _componentName="ElementStatusComponent"
 					                        _bActive="true"
 					                        _tablePath="common/data/elements/default.elements.xml"
-					                        _material="Torch"
+					                        _elementMaterial="Torch"
 					                        _signalStatus="Burning"
 					                        _startStimulus="None" />
 					<PointLightComponent _localID="6048688584444471341" _componentName="PointLightComponent"

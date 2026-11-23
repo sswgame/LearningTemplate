@@ -180,7 +180,7 @@ namespace sw
         vector<PhysicsShapeDesc3D> _listShape;
         PROPERTY( DefaultName, Category = "Body", DisplayName = "Collision Profile", Tooltip = "Collision profile name from the physics settings (object channel and responses)", Validate = validateLayer, Meta = "NameSource=CollisionProfile" )
         hashed_string _layer{ "Default" };
-        PROPERTY( Category = "Body", Tooltip = "Physics material name (empty: the first material)", Validate = validateMaterial )
+        PROPERTY( Category = "Body", Tooltip = "Physics material name (empty: the first material)", Validate = validateMaterial, Meta = "NameSource=PhysicsMaterial" )
         hashed_string _material;
         PROPERTY( Category = "Body", Tooltip = "Hit zone of this body for weapon traces (name and damage multiplier); empty name is no zone" )
         PhysicsHitZoneDef _hitZone;

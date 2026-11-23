@@ -7,8 +7,10 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
+#include "GameFramework/Kits/Feature/Online/Leaderboard/Server/LeaderboardCatalog.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerConfig.h"
 
 namespace sw
@@ -18,9 +20,9 @@ namespace sw
     struct LeaderboardKitConfig
     {
         REFLECT_BODY();
-        /** @brief 보드 · 업적 정의입니다(리소스 경로, `<LeaderboardCatalog>`). */
+        /** @brief 보드 · 업적 정의(`<LeaderboardCatalog>`)입니다 — 글 칸이었을 때는 같은 이름의 참조 칸과 GUID 이전 도구가 가르지 못했다. */
         PROPERTY()
-        string _catalog{};
+        AssetRef<LeaderboardCatalog> _catalog{};
         /** @brief 기본 정의(내림차순 · Best · 초기화 없음 · 서버만 제출)로 올릴 보드 id 입니다. 데이터 파일 없이 도는 도구 · 테스트용입니다. */
         PROPERTY()
         vector<string> _listBoardID{};

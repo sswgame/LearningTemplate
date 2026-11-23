@@ -54,7 +54,7 @@ namespace sw
         string                  _sourcePath;
         vector<string>          _listTypeFqn;
         vector<string>          _listFixedSchema; ///< 고정 배치형 코덱 판정 줄(`FixedCodecGenerator::makeSchemaLine`)
-        vector<string>          _listAssetField;  ///< 칸 줄 `<이름>\t<대상>\t<ref|path|text>`(`AssetReferenceFields.list`). 대상을 모르면 `-`, `AssetRef<T>` 칸이면 `ref`, 경로가 아닌 글 칸이면 `text` 다
+        vector<string>          _listAssetField;  ///< 칸 줄 `<이름>\t<대상>\t<ref|data|path|text>`(`AssetReferenceFields.list`). 대상을 모르면 `-`, `AssetRef<T>` 칸이면 `ref`, `DataPath` 칸이면 `data`, 경로가 아닌 글 칸이면 `text` 다
         vector<StampDependency> _listDependency;
         uint64                  _inputWriteTime{ 0 };
         uint64                  _argsHash{ 0 }; ///< 산출물을 정한 명령줄의 해시. 다르면 최신이 아니다(UBT 가 UHT 매니페스트 변경으로 무효화하는 자리)

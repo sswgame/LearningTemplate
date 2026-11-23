@@ -36,11 +36,17 @@ namespace sw
             /**
              * @brief 경로 칸이 아닌 글 칸(`string` · `hashed_string`, 그 한 겹 시퀀스)이면 true 입니다 — 생성 목록에 `text` 줄로 낸다.
              * @details 글 칸만 경로를 담을 수 있다. GUID 이전 도구가 같은 이름의 참조 칸과 겹치는지 이 줄로 본다(파서 픽스처 `Test/ReflectionParser/Fixtures/AssetRefParams.h`).
+             *          이름 출처를 선언한 칸(`Meta = "NameSource=PhysicsMaterial"`)은 그 표의 이름만 담으므로 경로를 담는 글 칸이 아니다.
              */
             static bool isTextFieldType( const ParsedPropertyInfo& prop )
             {
                 const auto isText = []( const string& typeName )
                 { return typeName == "string" || typeName == "hashed_string"; };
+                for ( const auto& [key, value] : prop._listCustomMeta )
+                {
+                    if ( key == "NameSource" )
+                        return false;
+                }
                 return isText( prop._typeName ) || isText( prop._elementTypeName );
             }
 
@@ -635,8 +641,14 @@ namespace sw
                 if ( bPathField == false && bTextField == false )
                     continue;
                 const string target = prop._assetType.empty() ? string( "-" ) : prop._assetType;
-                // 저장 꼴 — `AssetRef<T>` 는 GUID 참조로 쓴다(`AssetRefBase`), 나머지 경로 칸은 경로 글, 경로가 아닌 글 칸은 `text` 다.
-                const utf8* const                        pKind = bTextField ? "text" : ( prop._typeName == "AssetRef" || prop._elementTypeName == "AssetRef" ? "ref" : "path" );
+                // 저장 꼴 — `AssetRef<T>`(ref) · `DataPath`(data)는 GUID 참조로 쓴다, `PROPERTY( AssetPath )` 글은 경로 글(path), 경로가 아닌 글 칸은 `text` 다.
+                const utf8* pKind = "path";
+                if ( bTextField )
+                    pKind = "text";
+                else if ( prop._typeName == "AssetRef" || prop._elementTypeName == "AssetRef" )
+                    pKind = "ref";
+                else if ( prop._typeName == "DataPath" || prop._elementTypeName == "DataPath" )
+                    pKind = "data";
                 StringBuilder<constant::buffer::kMax256> textBuilder3;
                 textBuilder3.appendFormat( "%#\t%#\t%#", prop._name, target, pKind );
                 stamp._listAssetField.push_back( string( textBuilder3.view() ) );

@@ -3,7 +3,7 @@
 """
 Scripts/generate/asset_reference_field_list.py
 
-리플렉션 파서가 대상마다 쓴 칸 목록(`AssetReferenceFields.list`, `<이름>\\t<대상>\\t<ref|path|text>` 줄)을 저장소의 표 `Config/Dev/AssetReferenceFields.generated.json` 으로 모은다.
+리플렉션 파서가 대상마다 쓴 칸 목록(`AssetReferenceFields.list`, `<이름>\\t<대상>\\t<ref|data|path|text>` 줄)을 저장소의 표 `Config/Dev/AssetReferenceFields.generated.json` 으로 모은다.
 
 - 표를 저장소에 두는 까닭: 커밋 전 린트(`Scripts/lint/asset_references.py`)와 `move-asset` 은 빌드 없이 돈다.
 - 표는 주인(`CONTENT_OWNER` — 엔진은 빈 글, 게임은 `game:<폴더>`)별이다. 한 구성은 게임 하나만 지으므로 이 구성이 짓는 주인의 줄만 갈아 끼우고 나머지는 그대로 둔다.
@@ -27,13 +27,14 @@ from common.shared_file_update import update_shared_text_file  # noqa: E402
 
 
 KIND_REF = "ref"     # `AssetRef<T>` — GUID 참조(`guid:<32자>`)로 쓰는 칸
-KIND_PATH = "path"   # `DataPath` · `PROPERTY( AssetPath )` 글 — 경로 글로 쓰는 칸
+KIND_DATA = "data"   # `DataPath` — GUID 참조로 쓰는 칸(종류를 가르지 않는 데이터 경로)
+KIND_PATH = "path"   # `PROPERTY( AssetPath )` 글 — 경로 글로 쓰는 칸
 KIND_TEXT = "text"   # 경로 칸이 아닌 글 칸(`string` · `hashed_string`) — 같은 이름의 ref 칸과 겹치는지 GUID 이전 도구가 본다
-LIST_KIND = (KIND_REF, KIND_PATH, KIND_TEXT)
+LIST_KIND = (KIND_REF, KIND_DATA, KIND_PATH, KIND_TEXT)
 
 
 def read_built_owners(inputs_path: Path) -> dict[str, dict[str, set[str]]]:
-    """이 구성이 짓는 주인 → 칸 이름 → 저장 꼴들입니다. `inputs_path` 의 줄은 `<주인>TAB<목록>`(CMake), 목록의 줄은 `<이름>TAB<대상>TAB<ref|path|text>`(파서)입니다.
+    """이 구성이 짓는 주인 → 칸 이름 → 저장 꼴들입니다. `inputs_path` 의 줄은 `<주인>TAB<목록>`(CMake), 목록의 줄은 `<이름>TAB<대상>TAB<ref|data|path|text>`(파서)입니다.
     목록이 없거나 줄 꼴이 틀리면 예외입니다 — 옛 파서의 두 열 줄을 경로 칸으로 짐작하지 않는다(스탬프 머리가 바뀌어 다시 파싱된다)."""
     map_owner: dict[str, dict[str, set[str]]] = {}
     for input_line in inputs_path.read_text(encoding="utf-8").splitlines():
@@ -46,21 +47,22 @@ def read_built_owners(inputs_path: Path) -> dict[str, dict[str, set[str]]]:
         for field_line in Path(list_path).read_text(encoding="utf-8").splitlines():
             list_column = field_line.split("\t")
             if len(list_column) != 3 or not list_column[0] or not list_column[1] or list_column[2] not in LIST_KIND:
-                raise ValueError(f"{list_path}: '<이름>TAB<대상>TAB<ref|path|text>' 꼴이 아닌 줄: {field_line!r}")
+                raise ValueError(f"{list_path}: '<이름>TAB<대상>TAB<ref|data|path|text>' 꼴이 아닌 줄: {field_line!r}")
             map_field.setdefault(list_column[0], set()).add(list_column[2])
     return map_owner
 
 
 def merge_owners(list_existing: list[dict], map_built: dict[str, dict[str, set[str]]]) -> list[dict]:
     """있던 표에 이 구성의 주인 줄을 갈아 끼웁니다. 주인 순으로 정렬합니다.
-    줄마다 `listField`(모든 경로 칸 — 검사 · 옮기기가 읽는다)와 저장 꼴별 `listAssetRefField` · `listPathTextField`, 경로가 아닌 글 칸 `listTextField`(GUID 이전 도구가 읽는다)를 적는다.
+    줄마다 `listField`(모든 경로 칸 — 검사 · 옮기기가 읽는다)와 저장 꼴별 `listAssetRefField` · `listDataPathField` · `listPathTextField`, 경로가 아닌 글 칸 `listTextField`(GUID 이전 도구가 읽는다)를 적는다.
     이 구성이 짓지 않은 주인의 줄은 그대로 둔다(옛 줄에 꼴별 칸이 없으면 이전 도구가 그 주인을 지으라고 멈춘다)."""
     map_merged = {entry["owner"]: entry for entry in list_existing}
     for owner, map_field in map_built.items():
         map_merged[owner] = {
             "owner": owner,
-            "listField": sorted(name for name, set_kind in map_field.items() if set_kind & {KIND_REF, KIND_PATH}),
+            "listField": sorted(name for name, set_kind in map_field.items() if set_kind & {KIND_REF, KIND_DATA, KIND_PATH}),
             "listAssetRefField": sorted(name for name, set_kind in map_field.items() if KIND_REF in set_kind),
+            "listDataPathField": sorted(name for name, set_kind in map_field.items() if KIND_DATA in set_kind),
             "listPathTextField": sorted(name for name, set_kind in map_field.items() if KIND_PATH in set_kind),
             "listTextField": sorted(name for name, set_kind in map_field.items() if KIND_TEXT in set_kind),
         }

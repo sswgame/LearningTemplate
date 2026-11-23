@@ -95,7 +95,7 @@ namespace sw
         vector<PhysicsShapeDesc3D> _listShape;
         PROPERTY( Min = 0.0, Tooltip = "Mass in kg; 0 computes it from the shapes and material density", Units = kg )
         float32 _mass{ 0.0f };
-        PROPERTY( Tooltip = "Physics material name (empty: the first material)" )
+        PROPERTY( Tooltip = "Physics material name (empty: the first material)", Meta = "NameSource=PhysicsMaterial" )
         hashed_string _material{};
         PROPERTY( Tooltip = "Collision layer name (empty: the asset's default layer)" )
         hashed_string _layer{};
