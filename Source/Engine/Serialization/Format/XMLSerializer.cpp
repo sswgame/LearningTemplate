@@ -553,10 +553,11 @@ namespace sw
             {
                 XMLReadState state{ instance, typeInfo, backend, context, pOutListOrphan, pOutListRestored, pOutListOrphan != nullptr };
 
-                typeInfo.forEachProperty( [&]( const PropertyInfo& prop )
+                // 쓰기(`writeXMLProperties`)와 같은 걷기다. 되돌리지 못한 칸이 나오면 남은 칸은 읽지 않는다.
+                const ReflectPropertyVisitor propertyVisitor{ context.getTypeRegistry(), ReflectVisitOptions{} };
+                (void)propertyVisitor.visitProperties( typeInfo, instance.get(), [&]( const ReflectVisitField& field )
                 {
-                    if ( state._bObjectFailed )
-                        return;
+                    const PropertyInfo& prop = field._property;
                     // 이 목적이 다루지 않는 필드는 지금 값 그대로다(기본값을 채우지 않는다). 저작 파일의 런타임 상태는 로드 오류다.
                     if ( SerializerUtil::shouldSerializeProperty( typeInfo, prop, context ) == false )
                     {
@@ -565,19 +566,22 @@ namespace sw
                             SerializerUtil::reportForbiddenProperty( typeInfo, prop );
                             state._bForbiddenField = true;
                         }
-                        return;
+                        return ReflectVisitFlow::Continue;
                     }
                     if ( prop._bIsContainer && prop.hasContainerWrapper() )
                     {
                         state.readContainerProperty( prop );
-                        return;
                     }
-                    const TypeInfo* pNestedType = SerializerUtil::findNestedObjectType( prop._typeName, context );
-                    if ( pNestedType != nullptr )
-                        state.readNestedProperty( prop, *pNestedType );
                     else
-                        state.readScalarProperty( prop );
-                }, true /* 상속 PROPERTY 포함 */ );
+                    {
+                        const TypeInfo* pNestedType = SerializerUtil::findNestedObjectType( prop._typeName, context );
+                        if ( pNestedType != nullptr )
+                            state.readNestedProperty( prop, *pNestedType );
+                        else
+                            state.readScalarProperty( prop );
+                    }
+                    return state._bObjectFailed ? ReflectVisitFlow::Stop : ReflectVisitFlow::Continue;
+                } );
 
                 // 이 깊이에서 되돌린 칸을 루트의 목록에 더한다 — 범위 검사는 루트에서 한 번, 모든 깊이를 본다.
                 if ( pOutListRestored != nullptr )
