@@ -48,15 +48,16 @@ namespace sw
     class SceneNetLinkTestBinding
     {
     public:
-        SceneNetLinkTestBinding( GameObjectManager& manager, NetLinkRole role )
+        SceneNetLinkTestBinding( GameObjectManager& manager, NetLinkRole role, bool bTicketRequired = false )
             : _peers{ role }
             , _router{}
             , _manager{ manager }
         {
             NetLinkValue link;
-            link._pPeers  = &_peers;
-            link._pRouter = &_router;
-            link._role    = role;
+            link._pPeers          = &_peers;
+            link._pRouter         = &_router;
+            link._role            = role;
+            link._bTicketRequired = bTicketRequired ? SW_TRUE : SW_FALSE;
             SW_REQUIRE_TRUE( _manager.getSubsystem<SceneNetLink>().bind( link ) );
         }
         ~SceneNetLinkTestBinding() { _manager.getSubsystem<SceneNetLink>().unbind(); }

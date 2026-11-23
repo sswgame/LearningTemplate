@@ -10,6 +10,7 @@
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Object/Component/Component.h"
+#include "Engine/Physics/Component/CharacterControllerComponent.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -18,7 +19,6 @@ namespace sw
 {
     struct ControlIntent;
     struct MovementConstraint;
-    class CharacterControllerComponent;
 
     /** @brief 몸이 어디를 보는가입니다. */
     ENUM()
@@ -26,6 +26,34 @@ namespace sw
     {
         ControlYaw = 0, ///< 조종 요(1인칭과 슈터의 옆걸음)
         MoveDirection,  ///< 움직이는 쪽으로 돈다(3인칭 액션 · NPC)
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @brief 폰 이동이 다음 걸음으로 이어 가는 것 전부입니다 — 컨트롤러의 운동과 이동기의 가감속 · 몸 요 · 매달림. 같은 (상태, 의도, 세계)면 같은 다음 상태다(`CharacterMovementComponent::simulate`).
+     * @details 언리얼 `FSavedMove_Character` · 유니티 Netcode 의 예측 고스트 칸 자리다. 칸 선언이 네트워크 바이트이고(`ReplicatedLayout`), 예측이 서버와 같은 값에서 시작해야 하므로 양자화하지 않는다.
+     */
+    REFLECT()
+    struct SW_GF_API CharacterMoveState
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Replicated )
+        CharacterMotionState _motion{};
+
+        PROPERTY( Replicated, Min = -10000, Max = 10000 )
+        float3 _velocity{}; ///< 이동기의 수평 속도(가감속)
+
+        PROPERTY( Replicated, Min = 0, Max = 1000 )
+        float32 _climbReleaseLeft{ 0.0f };
+
+        PROPERTY( Replicated, Min = -3.2, Max = 3.2 )
+        float32 _facingYaw{ 0.0f }; ///< 몸의 요([-π, π] 로 감은 값)
+
+        PROPERTY( Replicated, Min = 0, Max = 1 )
+        uint8 _bClimbing{ SW_FALSE };
     };
 } // namespace sw
 
@@ -41,6 +69,8 @@ namespace sw
      *          PrePhysics 틱에서 폰의 의도를 읽고 `setMoveVelocity` · `jump` 를 부릅니다(컨트롤러 요청은 틱 안에서 불러도 된다). 수평 속도는 목표 속도로
      *          `_acceleration`(목표가 있을 때) · `_deceleration`(멈출 때)만큼 다가갑니다. 그래서 의도가 0/1 로 끊겨도 부드럽게 움직입니다.
      *          탑승 중(`setSuspended( true )`)에는 아무것도 하지 않습니다(컨트롤러 속도도 0 으로 둔다).
+     *          **네트워크 예측**(`setNetDriven`): 켜면 틱이 아무것도 하지 않고, 고정 넷 틱의 걸음(`simulate`)이 컨트롤러까지 움직인다 — 서버 시뮬레이션 · 클라이언트 예측 · 되감아 다시 돌리기가
+     *          이 한 함수다(`ShooterBodyMovementComponent::simulate` 와 같은 계약, `ClientPrediction` 이 쓴다). 틱과 걸음이 의도를 이동 입력으로 바꾸는 계산(`advance`)도 하나다.
      */
     REFLECT( Category = "Control", DisplayName = "Character Pawn Movement", Tooltip = "Control intent -> character controller: walk, sprint, jump, facing" )
     class SW_GF_API CharacterMovementComponent : public Component
@@ -76,14 +106,37 @@ namespace sw
         PawnFacingMode getFacingMode() const { return _facingMode; }
         void           setFacingMode( PawnFacingMode facingMode ) { _facingMode = facingMode; }
 
-    private:
+        /** @brief 고정 넷 틱이 이 몸을 움직이는가입니다. 컨트롤러도 함께 손으로 돌린다(`CharacterControllerComponent::setManualSimulation`). 게임 스레드, 틱 밖에서 부릅니다. */
+        void setNetDriven( bool bNetDriven );
+        bool isNetDriven() const { return _bNetDriven == SW_TRUE; }
+        /** @brief 지금 이동 상태입니다. */
+        CharacterMoveState getState() const;
+        /** @brief 이동 상태를 바꿉니다(서버가 정한 상태 · 재조정 결과) — 컨트롤러의 자리와 몸 요까지. 게임 스레드, 틱 밖에서 부릅니다. */
+        void setState( const CharacterMoveState& state );
         /**
-         * @brief 오르기 구역에 있고 매달려야 하면 이번 프레임의 오르기 속도를 컨트롤러에 넘기고 true 를 반환합니다.
+         * @brief @p state 에서 의도 @p intent 로 한 걸음(@p deltaTime)의 다음 상태를 냅니다. 네트가 움직이는 몸만 부릅니다(게임 스레드, 틱 · 물리 스텝 밖).
+         * @details 컨트롤러는 끝 상태에 남고 이 컴포넌트의 멤버는 바꾸지 않는다 — 실제 걸음이든 다시 돌린 걸음이든 끝에 `setState` 로 한 번 정한다.
+         *          이동 제약(이펙트) · 오르기 구역 · 물리 필드는 지금 값이다(`CharacterControllerComponent::simulateMotion` 과 같은 결정).
+         */
+        CharacterMoveState simulate( const CharacterMoveState& state, const ControlIntent& intent, float32 deltaTime, CharacterMotionPass pass );
+        /** @brief 이동 튜닝(빠르기 · 가감속 · 점프 · 오르기 · 조향 · 버튼)을 @p source 에서 옮깁니다 — 서버가 접속마다 세운 폰이 그 플레이어의 몸과 같은 걸음을 내게 한다. 버튼 번호도 다시 찾는다. */
+        void copyTuning( const CharacterMovementComponent& source );
+
+    private:
+        /** @brief 의도 한 걸음을 이동 입력으로 바꾸며 @p inoutState 의 가감속 · 매달림 · 몸 요를 나아갑니다. 컨트롤러의 운동(`_motion`)은 읽기만 합니다. 멤버는 바꾸지 않습니다. */
+        CharacterMotionInput advance( CharacterMoveState& inoutState, const ControlIntent& intent, const MovementConstraint& constraint, const CharacterControllerComponent& controller,
+                                      float32 deltaTime ) const;
+        /**
+         * @brief 오르기 구역에 있고 매달려야 하면 이번 걸음의 오르기 입력을 @p outInput 에 채우고 true 를 반환합니다.
          * @details 벽 쪽으로 미는 의도 + 위아래 의도가 오르는 세기다. 땅에 선 채 내려가는 쪽이면 매달리지 않는다(걸어 나간다). 점프는 벽을 차고 놓으며(밧줄은 가는 쪽으로) `_climbReleaseSeconds` 동안 다시 잡지 않는다.
          */
-        [[nodiscard]] bool updateClimb( const TickContext& context, const ControlIntent& intent, const MovementConstraint& constraint, CharacterControllerComponent& controller );
-        /** @brief 몸 요를 @p targetYaw 쪽으로 `_turnRate` 만큼 돌려 트랜스폼에 씁니다. */
-        void turnToward( GameObject& owner, float32 targetYaw, float32 deltaTime );
+        [[nodiscard]] bool advanceClimb( CharacterMoveState& inoutState, const ControlIntent& intent, const MovementConstraint& constraint, float32 deltaTime, CharacterMotionInput& outInput ) const;
+        /** @brief 몸 요 @p facingYaw 를 @p targetYaw 쪽으로 `_turnRate` 만큼 돌린 값입니다. 거의 같으면 그대로입니다. */
+        float32 turnToward( float32 facingYaw, float32 targetYaw, float32 deltaTime ) const;
+        /** @brief 몸 요를 바꾸고 바뀌었으면 트랜스폼에 씁니다. */
+        void applyFacingYaw( float32 facingYaw );
+        /** @brief 버튼 이름의 번호를 폰 스키마에서 찾아 둡니다. */
+        void resolveButtons();
 
     private:
         PROPERTY( Category = "Movement", DisplayName = "Sprint Button", Tooltip = "Intent button that sprints while held (empty: no sprint)" )
@@ -122,6 +175,7 @@ namespace sw
         optional<int32>        _sprintIndex;
         optional<int32>        _jumpIndex;
         uint8                  _bSuspended : 1;
-        [[maybe_unused]] uint8 _reserved   : 7;
+        uint8                  _bNetDriven : 1; ///< 고정 넷 틱이 움직인다(`setNetDriven`)
+        [[maybe_unused]] uint8 _reserved   : 6;
     };
 } // namespace sw

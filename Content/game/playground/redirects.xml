@@ -93,4 +93,10 @@
 	<Redirect from="game/playground/data/kitdemo/demo.monsterhunt.xml" to="game/playground/data/monsterhunt.xml" />
 	<Redirect from="game/playground/data/kitdemo/demo.partyrounds.xml" to="game/playground/data/partyrounds.xml" />
 	<Redirect from="game/playground/data/kitdemo/demo.horror.xml" to="game/playground/data/horror.xml" />
+	<PrefixRedirect from="game/lanternvale" to="game/playground/lanternvale" />
+	<Redirect from="game/playground/lanternvale/automation/rules.scenario.xml" to="game/playground/automation/hubserver_rules.scenario.xml" />
+	<Redirect from="game/playground/lanternvale/automation/slice.scenario.xml" to="game/playground/automation/hubserver_slice.scenario.xml" />
+	<Redirect from="game/playground/lanternvale/automation/netpair/first.scenario.xml" to="game/playground/automation/netpair/hub_first.scenario.xml" />
+	<Redirect from="game/playground/lanternvale/automation/netpair/return.scenario.xml" to="game/playground/automation/netpair/hub_return.scenario.xml" />
+	<Redirect from="game/playground/lanternvale/maps/vale.scene.xml" to="game/playground/maps/hub.scene.xml" />
 </Redirects>

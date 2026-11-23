@@ -116,5 +116,80 @@
 				</_listComponent>
 			</GameObject>
 		</entity>
+		<!-- 허브 서버(Games/Playground/Hub) — 전용 서버가 이 맵을 열면 계정마다 진행을 저장하는 공유 월드가 선다(짐승 · 버섯 · 파티, NetMMO 복제). 혼자 띄우면 규칙만 확인하고 쉰다.
+		     시나리오 automation/hubserver_rules · hubserver_slice, 두 프로세스는 py -3 -m Scripts net-pair mmo(automation/netpair). -->
+		<entity id="310" name="HubServer">
+			<GameObject _schemaVersion="0" _name="HubServer" _bActive="true" _bAlwaysLoaded="true">
+				<_listComponent>
+					<!-- 허브 규칙(서버 권위) — 짐승 100000 · 100001 은 나는 자리 곁(사거리 3 m 안), 버섯 100002 는 채집 거리 2 m 안, 나머지는 걸어가야 닿는다.
+					     단계표: 레벨 2 는 경험 100(짐승 둘), 3 은 250, 4 는 450, 5 는 700.
+					     경계 · 속도: 평원 바닥은 ±80 이고 보안관이 X 70 에 있어 경계는 76, 걷는 몸은 3.5 m/s(한도 6), 말은 질주 10 m/s(한도 12)다. -->
+					<HubWorldComponent _localID="18207458685461171959" _componentName="HubWorldComponent"
+					                   _bActive="true">
+						<_rules _attackRange="3"
+						        _attackCooldownSeconds="0.5"
+						        _attackPower="10"
+						        _creatureHealth="30"
+						        _creatureExperience="60"
+						        _creatureCoins="5"
+						        _creatureRespawnSeconds="3"
+						        _gatherRange="2"
+						        _herbExperience="15"
+						        _herbRespawnSeconds="5"
+						        _maxMoveStep="12"
+						        _moveSpeed="6"
+						        _rideSpeed="12"
+						        _remoteCallBurstCount="20"
+						        _remoteCallRefillMilliseconds="50"
+						        _worldHalfExtent="76"
+						        _partyMaxSize="4"
+						        _partyShareRange="30"
+						        _autosaveSeconds="30"
+						        _startClearance="1">
+							<!-- 시작 자리 — 앞 자리부터 빈 곳에 선다. 모두 나는 자리 곁이라 첫 짐승 둘 · 버섯에 걸어가지 않고 닿는 것은 첫 자리뿐이다. -->
+							<_listAvatarStart>
+								<RespawnSpawnPoint _id="hub_0" _position="0,0,0" _yaw="0" _team="-1" />
+								<RespawnSpawnPoint _id="hub_1" _position="1.5,0,-1.5" _yaw="0" _team="-1" />
+								<RespawnSpawnPoint _id="hub_2" _position="-1.5,0,-1.5" _yaw="0" _team="-1" />
+								<RespawnSpawnPoint _id="hub_3" _position="0,0,-3" _yaw="0" _team="-1" />
+							</_listAvatarStart>
+							<_listLevelExperience>
+								<item>100</item>
+								<item>250</item>
+								<item>450</item>
+								<item>700</item>
+							</_listLevelExperience>
+							<_listPlacement>
+								<HubPlacement _kind="Creature" _position="2,0,0" />
+								<HubPlacement _kind="Creature" _position="-2,0,1" />
+								<HubPlacement _kind="Herb" _position="0,0,1.5" />
+								<HubPlacement _kind="Creature" _position="20,0,18" />
+								<HubPlacement _kind="Herb" _position="-18,0,22" />
+								<HubPlacement _kind="Creature" _position="40,0,-30" />
+							</_listPlacement>
+						</_rules>
+						<_interestGrid _cellSize="32" _loadingRadius="96" />
+					</HubWorldComponent>
+					<!-- 접속한 계정마다의 폰 — 자기 폰은 씬의 Player(4), 말은 Bessie(5) · Shadow(6). 서버의 폰 · 남의 모습은 프리팹이고 걸음 튜닝은 Player 에서 옮긴다. -->
+					<HubPawnReplicationComponent _localID="7316402985517324461" _componentName="HubPawnReplicationComponent"
+					                             _bActive="true"
+					                             _pawnPrefab="game/playground/prefabs/hubpawn.prefab.xml"
+					                             _localPawn="4"
+					                             _tickInterval="0.0333333"
+					                             _smoothingHalfLife="0.05"
+					                             _smoothingSnapDistance="2"
+					                             _reconcileTolerance="0.01"
+					                             _spawnSearchRadius="3"
+					                             _interestCellSize="16"
+					                             _interestEnterRadius="60"
+					                             _interestLeaveRadius="70">
+						<_listMount>
+							<item>5</item>
+							<item>6</item>
+						</_listMount>
+					</HubPawnReplicationComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
 	</entities>
 </Scene>

@@ -29,13 +29,20 @@ namespace sw
     class HealthStateMachine;
     class Wallet;
 
-    /** @brief 스폰 지점 하나입니다(언리얼 `APlayerStart`). 팀이 −1 이면 모든 팀의 지점입니다. */
-    struct RespawnSpawnPoint
+    /** @brief 스폰 지점 하나입니다(언리얼 `APlayerStart`). 팀이 −1 이면 모든 팀의 지점입니다. 씬 · 카탈로그 데이터에 그대로 둘 수 있다. */
+    REFLECT()
+    struct SW_GF_API RespawnSpawnPoint
     {
+        REFLECT_BODY();
+
+        PROPERTY( Tooltip = "Name of the point (respawn choices and logs)" )
         hashed_string _id{};
-        float3        _position{};
-        float32       _yaw{ 0.0f };
-        int32         _team{ constant::invalid_index::kInt32 };
+        PROPERTY()
+        float3 _position{};
+        PROPERTY( Tooltip = "Facing (radians)" )
+        float32 _yaw{ 0.0f };
+        PROPERTY( Min = -1, Tooltip = "Team that uses the point; -1 = every team" )
+        int32 _team{ constant::invalid_index::kInt32 };
     };
 
     /**
