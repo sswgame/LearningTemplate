@@ -31,8 +31,11 @@ namespace sw
     public:
         /** @brief 한 번에 렌더해 넣는 프레임 수입니다(믹서 블록 하나, 5.3 ms). */
         static constexpr uint32 kRenderFrameCount = 256;
-        /** @brief 링이 담는 프레임 수입니다(21.3 ms) — 믹스가 늦을 때 받아 내는 여유이자 더해지는 지연이다(언리얼 `NumBuffers` 자리). */
-        static constexpr uint32 kRingFrameCount = 1024;
+        /**
+         * @brief 장치가 한꺼번에 당길 수 있는 프레임 위에 더 채워 두는 프레임 수입니다(10.7 ms) — 믹스가 늦을 때 받아 내는 여유이자 더해지는 지연이다(언리얼 `NumBuffers` 자리).
+         * @details 블록 하나보다 커야 한다: 렌더 스레드는 자리가 블록보다 적으면 쉬므로 차 있는 양은 목표보다 최대 블록 하나 − 1 만큼 적다.
+         */
+        static constexpr uint32 kSpareFrameCount = 2 * kRenderFrameCount;
 
         explicit AudioRenderThread( AudioEngine& engine );
         /** @brief 멈추고 합류합니다. */
@@ -41,8 +44,11 @@ namespace sw
         AudioRenderThread( const AudioRenderThread& )            = delete;
         AudioRenderThread& operator=( const AudioRenderThread& ) = delete;
 
-        /** @brief 링을 채우고(부르는 스레드에서 렌더한다) 렌더 스레드를 띄웁니다. 장치 콜백을 시작하기 전에 부릅니다. */
-        void start( uint32 channelCount );
+        /**
+         * @brief 링을 채우고(부르는 스레드에서 렌더한다) 렌더 스레드를 띄웁니다. 장치 콜백을 시작하기 전에 부릅니다.
+         * @param maxReadFrameCount 장치가 렌더 스레드에 틈을 주지 않고 잇달아 당길 수 있는 프레임 수입니다(한 콜백이 크거나 버스트 하나에 콜백이 여럿). 링은 이것 + `kSpareFrameCount` 를 채운다.
+         */
+        void start( uint32 channelCount, uint32 maxReadFrameCount );
         /** @brief 렌더 스레드를 멈추고 합류합니다. 장치 콜백이 더 오지 않게 한 뒤에 부릅니다. */
         void stop();
         /** @brief (장치 콜백) @p frameCount 프레임을 꺼냅니다. 모자라면 나머지를 0 으로 채우고 언더런을 셉니다. 기다리지 않습니다. */
@@ -54,7 +60,8 @@ namespace sw
         void run( const StopToken& stopToken );
         /** @brief 블록 하나를 렌더해 링에 넣습니다. 자리가 있을 때만 부릅니다. */
         void renderNext();
-        bool hasRoom() const { return _pRing->getRemainder() >= static_cast<uint32>( _listRender.size() ); }
+        /** @brief 블록 하나를 더 넣어도 목표를 넘지 않으면 true 입니다. 링 용량(2 의 거듭제곱으로 올린 값)까지 채우지 않는다 — 올린 만큼 지연이 는다. */
+        bool hasRoom() const { return _pRing->getNum() + static_cast<uint32>( _listRender.size() ) <= _targetSampleCount; }
 
     private:
         AudioEngine&                    _engine;
@@ -64,6 +71,7 @@ namespace sw
         atomic<uint32>                  _wakeWord;           ///< 콜백이 꺼낼 때마다 오른다 — 자리를 기다리는 렌더 스레드가 여기서 잠든다
         atomic<uint64>                  _underrunCount;      ///< 링이 모자랐던 콜백 수
         uint32                          _channelCount;       ///< 스트림의 채널 수
+        uint32                          _targetSampleCount;  ///< 채워 두는 샘플 수(잇달아 당길 수 있는 양 + 여유)
         RealtimeViolationCounters       _realtimeViolations; ///< 콜백 구간의 할당 · 해제 · 잠금(검사 구성) — 하나라도 있으면 단언한다
     };
 } // namespace sw

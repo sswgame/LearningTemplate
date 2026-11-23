@@ -431,7 +431,7 @@ namespace sw
                                          XAudio2AudioBackendInternal::kStreamBufferCount,
                                      0.0f );
         // 렌더 스레드가 링을 채우고 이어 간다. 처음 버퍼들은 여기서 링에서 꺼내고, 이후는 버퍼가 끝날 때마다 콜백이 하나씩 꺼낸다.
-        _impl->_renderThread.start( channelCount );
+        _impl->_renderThread.start( channelCount, XAudio2AudioBackendInternal::kStreamBufferFrameCount );
         for ( uint32 bufferIndex = 0; bufferIndex < XAudio2AudioBackendInternal::kStreamBufferCount; ++bufferIndex )
         {
             callback.submitNext();

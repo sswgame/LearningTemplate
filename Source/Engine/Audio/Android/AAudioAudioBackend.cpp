@@ -104,7 +104,20 @@ namespace sw
             _impl->_pStream = nullptr;
             return false;
         }
-        _impl->_renderThread.start( channelCount ); // 첫 콜백 앞에 링을 채운다
+        // 콜백 크기는 정해져 있지 않다 — 프레임 수가 콜백마다 달라질 수 있고, AAudio 는 내부 버퍼를 "크기" 까지 버스트 단위로 채운다(블루투스는 버스트 하나가 960 프레임). 그래서 잇달아 당길 수
+        // 있는 양은 버퍼 크기이고 링을 그만큼 + 여유로 둔다. 크기를 버스트 둘로 맞춘다 — 콜백 크기를 고정(`setFramesPerDataCallback`)하면 버스트 하나에 콜백이 잇달아 오고 변환 버퍼가 더해져
+        // 같은 양이 필요하고 지연만 는다.
+        // https://developer.android.com/ndk/guides/audio/aaudio/aaudio#tuning-buffers · https://developer.android.com/ndk/reference/group/audio#aaudiostreambuilder_setframesperdatacallback
+        constexpr int32_t kBurstCount    = 2;
+        const int32_t     framesPerBurst = AAudioStream_getFramesPerBurst( _impl->_pStream );
+        const int32_t     bufferFrames   = AAudioStream_setBufferSizeInFrames( _impl->_pStream, framesPerBurst * kBurstCount ); // 실제로 잡힌 크기를 돌려준다(음수는 오류)
+        if ( framesPerBurst <= 0 || bufferFrames < framesPerBurst )
+        {
+            SW_LOG_ERROR_ID( "AAudioAudioBackend.BufferSizeFailed", "AAudio reported %# frames per burst and a buffer of %# frames. Rendering offline.", framesPerBurst, bufferFrames );
+            stopOutput();
+            return false;
+        }
+        _impl->_renderThread.start( channelCount, static_cast<uint32>( bufferFrames ) ); // 첫 콜백 앞에 링을 채운다
         result = AAudioStream_requestStart( _impl->_pStream );
         if ( result != AAUDIO_OK )
         {

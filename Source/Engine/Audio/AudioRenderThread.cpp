@@ -18,6 +18,7 @@ namespace sw
         , _wakeWord{ 0 }
         , _underrunCount{ 0 }
         , _channelCount{ 0 }
+        , _targetSampleCount{ 0 }
         , _realtimeViolations{}
     {
         _realtimeViolations._bAssertOnViolation.store( true, std::memory_order_relaxed );
@@ -28,11 +29,12 @@ namespace sw
         stop();
     }
 
-    void AudioRenderThread::start( uint32 channelCount )
+    void AudioRenderThread::start( uint32 channelCount, uint32 maxReadFrameCount )
     {
         stop();
-        _channelCount = channelCount;
-        _pRing        = make_unique<CircularAudioBuffer>( kRingFrameCount * channelCount );
+        _channelCount      = channelCount;
+        _targetSampleCount = ( maxReadFrameCount + kSpareFrameCount ) * channelCount;
+        _pRing             = make_unique<CircularAudioBuffer>( _targetSampleCount );
         _listRender.assign( static_cast<size_t>( kRenderFrameCount ) * channelCount, 0.0f );
         _underrunCount.store( 0, std::memory_order_relaxed );
         // 첫 콜백이 빈 링을 보지 않게 여기서 채운다. 그 뒤로는 렌더 스레드가 오디오 스레드 역할을 맡는다(첫 렌더가 역할을 받는다).
