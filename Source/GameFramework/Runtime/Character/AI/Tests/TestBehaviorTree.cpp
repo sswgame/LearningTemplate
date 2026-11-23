@@ -406,6 +406,27 @@ SW_TEST_CASE( BehaviorTreeTest, LowerPriorityAbortLetsAHigherBranchIn )
     SW_EXPECT_TRUE( string_view( rig._runner.getActiveLeafName() ) == "Fight" );
 }
 
+// 바로 끝나는 작업을 되풀이하는 뒤 가지는 도는 잎이 없다 — 그래도 앞 가지의 조건이 참이 되면 멈춘다.
+SW_TEST_CASE( BehaviorTreeTest, LowerPriorityAbortStopsARepeatOfInstantTasks )
+{
+    BehaviorFixture     rig;
+    const hashed_string key( "Enemy" );
+    const int32         root   = rig._tree.addSelector( nullopt ).value();
+    const int32         guard  = rig._tree.addBlackboardCondition( root, key, BlackboardCompare::IsSet, 0.0f, BehaviorAbortMode::Both ).value();
+    const int32         fight  = rig.addAction( guard, BehaviorStatus::Running, "Fight" );
+    const int32         repeat = rig._tree.addRepeat( root, 0 ).value();
+    const int32         patrol = rig.addAction( repeat, BehaviorStatus::Success, "Patrol" );
+    rig.build();
+    SW_EXPECT_TRUE( rig.tick() == BehaviorStatus::Running );
+    SW_EXPECT_EQUAL( 1u, rig._probe._arrTick[patrol] );
+
+    rig._blackboard.setBool( key, true );
+    SW_EXPECT_TRUE( rig.tick() == BehaviorStatus::Running );
+    SW_EXPECT_EQUAL( 1u, rig._probe._arrStart[fight] );
+    SW_EXPECT_EQUAL( 1u, rig._probe._arrTick[patrol] );
+    SW_EXPECT_FALSE( rig._runner.isNodeActive( repeat ) );
+}
+
 SW_TEST_CASE( BehaviorTreeTest, ResetAbortsWhatIsRunning )
 {
     BehaviorFixture rig;

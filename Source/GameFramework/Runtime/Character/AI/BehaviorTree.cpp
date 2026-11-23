@@ -410,6 +410,14 @@ namespace sw
 
     bool BehaviorTreeRunner::pollHigherPriorityTrigger()
     {
+        // 틱이 끝난 뒤 켜져 있는 노드는 도는(Running) 가지뿐이고 번호가 가장 뒤인 것이 그 끝이다.
+        // 도는 잎(`_activeLeaf`)으로 보면 바로 끝나는 작업을 되풀이하는 가지(`Repeat`)는 도는 잎이 없어 영영 멈추지 못한다.
+        optional<int32> lastActive;
+        for ( int32 index = 0; index < _pTree->getNodeCount(); ++index )
+        {
+            if ( _listActive[static_cast<size_t>( index )] != SW_FALSE )
+                lastActive = index;
+        }
         bool bTriggered = false;
         for ( int32 index = 0; index < _pTree->getNodeCount(); ++index )
         {
@@ -420,7 +428,7 @@ namespace sw
             const bool  bRisen                               = bNow != SW_FALSE && _listLastCondition[static_cast<size_t>( index )] == SW_FALSE;
             _listLastCondition[static_cast<size_t>( index )] = bNow;
             // 노드 번호가 앞 = 깊이 우선 순서가 앞 = 우선순위가 높다. 도는 가지 안의 조건(자기 조상)은 Self 쪽 일이다.
-            const bool bHigherPriorityRisen = bRisen && _activeLeaf.has_value() && index < *_activeLeaf && _listActive[static_cast<size_t>( index )] == SW_FALSE;
+            const bool bHigherPriorityRisen = bRisen && lastActive.has_value() && index < *lastActive && _listActive[static_cast<size_t>( index )] == SW_FALSE;
             if ( bHigherPriorityRisen )
                 bTriggered = true;
         }
