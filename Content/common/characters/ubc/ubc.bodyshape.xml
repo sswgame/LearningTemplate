@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="f549d6ea71184b4db8d07a439514d4a8"?>
-<!-- Quaternius UBC 리그(65 관절, 뼈 길이 축 +y)의 몸 채널 매핑 — 마을 사람 남녀 몸(body_ubc_male · body_ubc_female)과 Shooter3D 플레이어 몸이 쓴다.
+<!-- Quaternius UBC 리그(65 관절, 뼈 길이 축 +y)의 몸 채널 매핑 — 마을 사람 남녀 몸(body_ubc_male · body_ubc_female)과 사격장 플레이어 몸이 쓴다.
      다리 길이는 발 디딤(ubc_player_body.rig.xml 의 Feet)이 다리 길이 비만큼 골반을 옮겨 발을 땅에 세운다. 팔 길이는 손 IK(TwoBoneIK)가 지금 포즈의 마디 길이로 푼다 —
-     시나리오 shooter3d/bodyshapehands 가 팔 · 다리 극값에서 Shooter3D.HandReachError 와 발바닥 틈(Feet.sole_gap_peak)을 본다.
+     시나리오 shooter3d_bodyshapehands 가 팔 · 다리 극값에서 Shooter.HandReachError 와 발바닥 틈(Feet.sole_gap_peak)을 본다.
      Hair.Length 는 머리 부품의 머티리얼 채널이다(두건이 머리카락을 감추면 몸 축으로 남는다 — 이 리그는 받지 않는다). -->
 <BodyShapeSet>
   <!-- 어깨 폭 — 쇄골을 부모(spine_03) 공간 x 로 벌린다. spine_03 을 키우면 목 · 머리까지 넓어진다. 넓은 쪽 2.5 cm 는 짧은 팔(-1)과 겹쳐도 3인칭 두 손 견착이 총에 닿는 범위다(bodyshapehands ③). -->

@@ -65,19 +65,6 @@ namespace sw
             _listStatefulType.push_back( type );
             addCodec( TComponent::StaticType()->_name.c_str(), &TComponent::StaticType, &ComponentStateStore::writeComponent<TComponent>, &ComponentStateStore::restoreComponent<TComponent> );
         }
-        /**
-         * @brief 상태 저장 전에 세운 런타임 오브젝트를 걷을 컴포넌트 타입 하나를 올립니다(`despawnViews()` 를 부른다).
-         * @details 세운 것은 상태에서 파생된 결과일 뿐이라, 스냅샷에 실으면 복원된 것이 다시 세운 것과 겹친다.
-         *          걷어 두면(삭제 대기는 스냅샷이 건너뛴다) 다시 만든 컴포넌트가 시작하면서 세우고, 남은 컴포넌트는 다음 틱에 다시 세운다.
-         *          걷기는 모든 타입의 상태를 실은 뒤에 돈다.
-         */
-        template <typename TComponent>
-        void registerViewOwner()
-        {
-            StatefulComponentType type;
-            type._pDespawn = &GameStateSnapshot::despawnComponentViews<TComponent>;
-            _listStatefulType.push_back( type );
-        }
         /** @brief 디렉터(`GameModeComponent` 파생) 하나를 올립니다. 상태를 싣고 돌려주며, 저장하기 전에 세운 것을 걷습니다. */
         template <typename TDirector>
         void registerGameMode()

@@ -45,7 +45,7 @@
     </Equip>
   </CharacterAppearance>
 
-  <!-- Shooter3D 적 생물 — 몸 하나뿐이고 장비 칸이 없다(arena.scene.xml 의 ShooterGameMode 가 프리팹과 함께 고른다). -->
+  <!-- 사격장 적 생물 — 몸 하나뿐이고 장비 칸이 없다(arena.scene.xml 의 ShooterGameMode 가 프리팹과 함께 고른다). -->
   <CharacterAppearance id="QuadShell" body="body_quadshell" tags="Race.Machine"/>
   <CharacterAppearance id="Trilobite" body="body_trilobite" tags="Race.Machine"/>
 

@@ -162,7 +162,7 @@ namespace sw
     /** @struct AutomationWatchRegistration @brief 등록 항목 하나입니다. 문자열과 함수는 등록한 이미지의 정적 저장소에 있습니다. 세 함수 중 하나만 있습니다. */
     struct AutomationWatchRegistration
     {
-        const utf8*                  _pName;          ///< `<게임>.<값>` (예: `Shooter3D.WeaponIndex`)
+        const utf8*                  _pName;          ///< `<기능>.<값>` (예: `Shooter.WeaponIndex`)
         const utf8*                  _pTooltip;       ///< 무엇을 측정하는지 설명합니다.
         AutomationWatchFunction      _pFunction;      ///< 씬 감시 값(인자 없음, 수)
         AutomationQueryWatchFunction _pQueryFunction; ///< 질의 감시 값(`target` · `key`, 수 또는 글)

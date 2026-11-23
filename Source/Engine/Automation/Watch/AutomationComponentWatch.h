@@ -64,7 +64,7 @@ namespace sw
  * @brief 씬의 첫 @p TComponent 에서 수를 읽는 감시 값을 등록합니다(.cpp 의 파일 범위, `namespace sw` 안). @p pRead 는 `bool ( const TComponent&, float64& )` 입니다.
  * @code
  *     static bool readStrideScale( const ShooterAvatarComponent& avatar, float64& outValue ) { if ( avatar.getStrideAppliedCount() == 0 ) return false; outValue = avatar.getLastStrideScale(); return true; }
- *     SW_AUTOMATION_COMPONENT_WATCH( shooterStrideScale, "Shooter3D.StrideScale", "Stride scale; absent until the rig is bound", ShooterAvatarComponent, &readStrideScale );
+ *     SW_AUTOMATION_COMPONENT_WATCH( shooterStrideScale, "Shooter.StrideScale", "Stride scale; absent until the rig is bound", ShooterAvatarComponent, &readStrideScale );
  * @endcode
  */
 #define SW_AUTOMATION_COMPONENT_WATCH( id, pName, pTooltip, TComponent, pRead ) SW_AUTOMATION_SCENE_WATCH( id, pName, pTooltip, (&::sw::AutomationComponentWatch::read<TComponent, pRead>))

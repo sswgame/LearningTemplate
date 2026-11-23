@@ -355,7 +355,7 @@ SW_TEST_CASE( MeshPrimitiveTest, SpriteQuadReadsTheSameFromBothSides )
 /**
  * @brief [MeshPrimitiveTest] 이름으로 받는 내장 도형(게임 · 씬 · 에디터)은 정점 색이 흰색이고, 검증 색은 따로 고를 때만 온다
  * @details 셰이더는 정점 색에 머티리얼 색을 곱한다. 생성기의 검증 색(큐브의 면별 색 · 곡면의 노멀 음영 · 평면의 바둑판)이 게임으로 새면
- *          회색으로 칠한 벽이 면마다 초록 · 주황으로 그려진다(Shooter3D 의 벽이 그랬다).
+ *          회색으로 칠한 벽이 면마다 초록 · 주황으로 그려진다(사격장의 벽이 그랬다).
  */
 SW_TEST_CASE( MeshPrimitiveTest, NamedPrimitivesAreWhiteUnlessDiagnosticIsAsked )
 {

@@ -12,6 +12,8 @@
  *          도시 건설 미니게임(`FrontierTown/` — 키트 둘의 디렉터를 한 씬에 섞는다)의 도시 쪽은 키트, RTS 쪽(일꾼 · 순찰)은 이 게임의 디렉터다.
  *          마을(`maps/hub`)은 팩의 시작 맵이다. 지역 효과 시연 · 마을의 이펙트 · 세트(`data/abilities.xml`)와 기본 어빌리티 클래스는 gamesettings `gameFeatures` 의
  *          게임 기능(`PlaygroundAbilitiesGameFeature.cpp`)이 게임 범위에 건다.
+ *          사격장 미니게임(`Shooter3D/`)의 무기는 게임 기능 `Shooter3D` 가 건다. 온라인(`Online/PlaygroundOnlineFlow` — 로그인 · 우편 · 상점 · 매치 세션 · 순위표)은 이 게임이 멤버로 들고
+ *          게임 범위에 건다 — 매치형 미니게임(사격장 온라인 매치)의 매칭 창구이기도 하다. 연결은 세션(`OnlineSession`)이 맡고 게임이 열기 전에는 혼자 하는 허브다.
  */
 #include "pch.h"
 
@@ -19,6 +21,7 @@
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Config/GameConfig.h"
+#include "Engine/Net/NetMessageChannel.h"
 
 #include "GameFramework/Kits/Feature/Content/ModSupport/ModSession.h"
 #include "GameFramework/Runtime/Foundation/Framework/Flow/GameInstance.h"
@@ -26,7 +29,13 @@
 #include "GameFramework/Runtime/Foundation/Framework/Flow/IGameClientPart.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
+#include "GameFramework/Runtime/Foundation/Framework/Minigame/MinigameFlow.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/GameStateSnapshot.h"
+#include "GameFramework/Runtime/Online/Service/OnlineSession.h"
+
+#include "Games/Playground/Online/PlaygroundOnlineFlow.h"
+#include "Games/Playground/Shooter3D/ShooterBodyMovementComponent.h"
+#include "Games/Playground/Shooter3D/ShooterNetPawnComponent.h"
 
 #include "ModuleAPI/Export/GameModuleExports.h"
 
@@ -41,6 +50,9 @@ namespace sw
 
     protected:
         bool onPrepareContent( const ContentPreparationToken& token ) override;
+        bool onInitialize() override;
+        /** @brief 사격장의 복제 칸(걸음 · 적 · 소유자 상태)을 핸드셰이크에 올린다 — 칸이 다른 빌드는 접속에서 갈린다. */
+        [[nodiscard]] bool onRegisterReplicatedTypes( NetMessageChannel& outChannel ) override;
         /** @brief 클라이언트 부분(벤치)이 자기 장면을 띄웠으면 첫 씬을 열지 않습니다. */
         void startFirstScene() override;
         void onUpdate( float32 deltaTime ) override;
@@ -57,6 +69,7 @@ namespace sw
         unique_ptr<ModSession> _mods;
         /** @brief 클라이언트 전용 개발 부분(벤치 · 렌더 확장 시연, `Client/Dev/PlaygroundClientPart.cpp`)입니다. 공장이 없는 구성(전용 서버 · 배포)에는 nullptr 이다. */
         unique_ptr<IGameClientPart> _clientPart;
+        PlaygroundOnlineFlow        _onlineFlow; ///< 온라인 흐름(게임 범위 서비스 — 매치형 미니게임의 매칭 창구이기도 하다). 연결은 세션(`OnlineSession`)이 맡는다
     };
 } // namespace sw
 
@@ -65,6 +78,7 @@ namespace sw
     PlaygroundGame::PlaygroundGame()
         : _mods{ nullptr }
         , _clientPart{ nullptr }
+        , _onlineFlow{}
     {
         // 키트 시연 디렉터(GameModeComponent 파생 — KitDemoComponent · ActionPlatformerGameModeComponent …)의 판 상태를 세이브 · 핫 리로드에 싣는다. 바탕 형식 하나로 올리면
         // 파생이 모두 실린다(순회는 파생을 포함하고 상태는 가상 serializeState). 올리지 않으면 game.save · game.load 가 판을 조용히 새로 연다(kitdemo_respawn 4).
@@ -83,6 +97,19 @@ namespace sw
                getGameScope().bind<IContentConfiguration>( _mods.get() );
     }
 
+    bool PlaygroundGame::onInitialize()
+    {
+        _onlineFlow.initialize( getSubsystem<MinigameFlow>() );
+        return bindScopedService( &_onlineFlow ) && bindScopedService<IMinigameMatchmaking>( &_onlineFlow );
+    }
+
+    bool PlaygroundGame::onRegisterReplicatedTypes( NetMessageChannel& outChannel )
+    {
+        return outChannel.registerReplicatedType<ShooterMoveState>( static_cast<uint8>( ShooterNetPawnComponent::kPawnTypeID ) ) &&
+               outChannel.registerReplicatedType<ShooterEnemyNetState>( static_cast<uint8>( ShooterNetPawnComponent::kEnemyTypeID ) ) &&
+               outChannel.registerReplicatedType<ShooterOwnerNetState>( static_cast<uint8>( ShooterNetPawnComponent::kOwnerStateSchemaID ) );
+    }
+
     void PlaygroundGame::startFirstScene()
     {
         if ( IGameClientPartFactory* const pFactory = game::findSubsystem<IGameClientPartFactory>() )
@@ -98,6 +125,7 @@ namespace sw
     void PlaygroundGame::onUpdate( float32 deltaTime )
     {
         GameInstance::onUpdate( deltaTime );
+        _onlineFlow.update( getSubsystem<OnlineSession>() );
 
         if ( _clientPart != nullptr )
             _clientPart->update( deltaTime );

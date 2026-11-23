@@ -7,7 +7,7 @@
 
 using namespace sw;
 
-/** @brief [AutomationStepArgsTest] 열거형 변수는 열거자 이름으로 견준다 — 명령줄이 이름만 받으므로 `<Launch>` 의 이름 값이 "다르다" 로 읽히면 기동을 멈췄다(Scenario.shooter3d.desktop.devicelost) */
+/** @brief [AutomationStepArgsTest] 열거형 변수는 열거자 이름으로 견준다 — 명령줄이 이름만 받으므로 `<Launch>` 의 이름 값이 "다르다" 로 읽히면 기동을 멈췄다(Scenario.playground.desktop.devicelost) */
 SW_TEST_CASE( AutomationStepArgsTest, EnumVariableComparesByEnumeratorName )
 {
     GlobalVariableManager manager;

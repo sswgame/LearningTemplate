@@ -1,0 +1,20 @@
+<?asset guid="733bde459aac46ecb522d2386485ff2a"?>
+<!--
+	사격장 의 덮어쓰기 층 — 엔진 표면 종류 표(engine/environment/default.surfacekinds.xml)의 발걸음 반응에 소리 이벤트만 얹는다(종류 이름이 열쇠, 적은 칸만 바뀐다).
+	이벤트 라이브러리(audio/shooter3d.audioevents.xml)가 이 게임 것이라 엔진 표가 아니라 게임 층에 둔다. 효과 · 발자국 · 발 적시기는 엔진 표 그대로다 —
+	반응 한 벌(_step · _wetStep)을 통째로 다시 적으면 엔진 표의 칸이 사라지므로, 여기서는 반응 안의 _sound 한 칸만 적는다.
+-->
+<SurfaceKindTable>
+	<_listKind>
+		<SurfaceKindDef _name="Default"><_step _sound="Footstep.Stone" /></SurfaceKindDef>
+		<SurfaceKindDef _name="Stone"><_step _sound="Footstep.Stone" /><_wetStep _sound="Footstep.StoneWet" /></SurfaceKindDef>
+		<SurfaceKindDef _name="Wood"><_step _sound="Footstep.Wood" /><_wetStep _sound="Footstep.StoneWet" /></SurfaceKindDef>
+		<SurfaceKindDef _name="Metal"><_step _sound="Footstep.Stone" /><_wetStep _sound="Footstep.StoneWet" /></SurfaceKindDef>
+		<SurfaceKindDef _name="Dirt"><_step _sound="Footstep.Dirt" /><_wetStep _sound="Footstep.DirtWet" /></SurfaceKindDef>
+		<SurfaceKindDef _name="Grass"><_step _sound="Footstep.Grass" /><_wetStep _sound="Footstep.DirtWet" /></SurfaceKindDef>
+		<SurfaceKindDef _name="Snow"><_step _sound="Footstep.Snow" /><_wetStep _sound="Footstep.Mud" /></SurfaceKindDef>
+		<SurfaceKindDef _name="Sand"><_step _sound="Footstep.Sand" /><_wetStep _sound="Footstep.DirtWet" /></SurfaceKindDef>
+		<SurfaceKindDef _name="Mud"><_step _sound="Footstep.Mud" /><_wetStep _sound="Footstep.Mud" /></SurfaceKindDef>
+		<SurfaceKindDef _name="Water"><_step _sound="Footstep.Water" /></SurfaceKindDef>
+	</_listKind>
+</SurfaceKindTable>

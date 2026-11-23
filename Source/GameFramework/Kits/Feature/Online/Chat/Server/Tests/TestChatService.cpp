@@ -95,7 +95,7 @@ namespace
         void releaseSubscription( uint64 /*id*/ ) override {}
     };
 
-    /** @brief 운영 견본(`Shooter3D.online.json` 의 채팅 `_spam`)과 같은 도배 한도를 채운 설정입니다 — 한도는 필수라 빈 설정은 서지 않는다. */
+    /** @brief 운영 견본(`Playground.online.json` 의 채팅 `_spam`)과 같은 도배 한도를 채운 설정입니다 — 한도는 필수라 빈 설정은 서지 않는다. */
     ChatServiceConfig makeChatSettings()
     {
         ChatServiceConfig settings;

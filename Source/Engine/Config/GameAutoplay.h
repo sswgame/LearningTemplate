@@ -19,7 +19,7 @@ namespace sw
     {
         const utf8* _pGameName;     ///< 게임 이름(툴팁)
         const utf8* _pDescription;  ///< 무엇을 자동으로 하는가(툴팁)
-        const utf8* _pVariableName; ///< 켜짐을 든 전역 변수 이름(`gv_shooterAutoPlay`)
+        const utf8* _pVariableName; ///< 켜짐을 든 전역 변수 이름(`gv_playgroundAutoPlay`)
         int32*      _pValue;        ///< 그 전역 변수(0 = 꺼짐)
     };
 } // namespace sw

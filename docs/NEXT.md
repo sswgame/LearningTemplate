@@ -191,7 +191,7 @@
 줄 앞은 감사 ID 와 옛 번호 `[n]`(주석이 가리킨다 — 다시 매기지 않는다).
 
 - **P-4 [14] Android IME 조합:** `WindowTextInputTest` Android 케이스, `web-check` `compositionend`, 실기기.
-- **O-12 [30] 원장 경로 부하(통합):** PostgreSQL · RESP 로 `OnlineLoadBot` `ledger_mix`(`--store-config=Config/Server/Online/Shooter3D.external.json`) — 재시도 · busy · 버린 도착 수를 여기 적는다. 종료 코드 5 는 재화 보존 깨짐.
+- **O-12 [30] 원장 경로 부하(통합):** PostgreSQL · RESP 로 `OnlineLoadBot` `ledger_mix`(`--store-config=Config/Server/Online/Playground.external.json`) — 재시도 · busy · 버린 도착 수를 여기 적는다. 종료 코드 5 는 재화 보존 깨짐.
 - **R-4 [31]:** 6 절 "자원 구간 할당 ④".
 - **RN-6 [34] GPUScene 부분 수집:** `31f2492dc8` 대 지금 `instancechurn` 의 `build.collect` · `build.batches` p50.
 - **A-13 [36] 씬 스트리밍 측정 길:** 쿠킹본 실행 ctest(지금은 `engine.en.locres` · dx12 셰이더가 팩에 없어 멈춤) 위에서 `SceneStreaming` 최대 프레임.

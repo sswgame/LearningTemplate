@@ -1,10 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="205bc24e5aeb8cf8106f6a9acc69929a"?>
-<!-- Playground 의 탄 — 아레나 미니게임(minigames/abilityarena — 게임 기능 AbilityArena 가 미니게임 범위에 건다)의 것이다. 속성 이름은 ProjectileDef 의 필드 이름이다(빠진 것은 기본값). 거리는 m, 시간은 초.
-     어빌리티(abilities.xml)의 <Param name="projectile"> 이 이 id 를 가리키고, damage 는 피해 이펙트의 SetByCaller "Damage" 로 간다.
-     탄은 디렉터의 발사체 시뮬레이션이 아레나 바닥 평면에서 돌린다 — 중력은 쓰지 않고, 벽이 없어 날아야(speed) 하고 사거리(range)가 있어야 한다.
-     radius 는 맞음 반지름이다(유닛 몸 반지름은 디렉터의 _unitRadius). 적 화염탄은 화염구의 차이만 적는다(_base). -->
+<!-- Playground 의 탄 — 미니게임이 나눠 쓰는 한 표다(게임 기능 PlaygroundAbilities 가 게임 범위 한 곳에서 건다). 속성 이름은 ProjectileDef · ProjectileImpactDef 의 필드 이름이다(빠진 것은 기본값).
+     거리는 m, 시간은 초. 탄은 _base 로 다른 탄을 물려받고 다른 칸만 적는다. id 는 팩에서 하나다 — 아레나는 arena_ 접두, 사격장은 탄 이름 그대로다.
+     아레나(minigames/abilityarena): 어빌리티(abilities.xml)의 <Param name="projectile"> 이 이 id 를 가리키고, damage 는 피해 이펙트의 SetByCaller "Damage" 로 간다.
+     탄은 디렉터의 발사체 시뮬레이션이 아레나 바닥 평면에서 돌린다 — 중력은 쓰지 않고, 벽이 없어 날아야(speed) 하고 사거리(range)가 있어야 한다. radius 는 맞음 반지름이다(유닛 몸 반지름은 디렉터의 _unitRadius).
+     사격장(minigames/shooter3d): speed 0 은 광선(히트스캔)이다. 무기(weapons.xml)는 tags 에 대한 accepts 조건으로 받는 탄을 고른다 — 무기 N 종과 탄 M 종이 N + M 줄로 조합된다.
+     tracerColor · tracerWidth 는 탄도선(1 을 넘는 색은 빛난다)이다. <Impact> 는 탄과 표면의 맞음 표다. 위에서 처음 맞는 줄이 이기므로 조건(when, 탄 태그) 있는 줄을 일반 줄보다 위에 둔다.
+     표면은 사격장이 정한다: Body(적의 몸) · Cover(상자 · 바닥). 소이탄(incendiary_round)은 치트 cheat.shooter.projectile 로 소총에 넣는다(시나리오 game.playground.shooter3d_projectilecombo). -->
 <ProjectileCatalog>
   <Projectile id="arena_fireball" tags="Ammo.Fireball" damage="18" speed="14" range="16" radius="0.25" gravityScale="0"/>
   <Projectile id="arena_bolt" _base="arena_fireball" tags="Ammo.Bolt" damage="8" speed="8" range="14"/>
+
+  <Projectile id="rifle_round" tags="Ammo.Rifle" damage="14" range="90" speed="0" tracerColor="3,2.2,0.6,1" tracerWidth="0.025"/>
+  <Projectile id="buckshot" _base="rifle_round" tags="Ammo.Shell" damage="9" range="28"/>
+  <Projectile id="pistol_round" _base="rifle_round" tags="Ammo.Pistol" damage="22" range="60"/>
+  <Projectile id="incendiary_round" _base="rifle_round" tags="Ammo.Rifle,Ammo.Incendiary" damage="11" tracerColor="8,1.2,0.15,1" tracerWidth="0.08"/>
+  <!-- 관통탄: 한 발이 앞의 적을 꿰뚫고 뒤의 적까지 둘을 더 맞힌다(광선이라 맞은 몸 뒤에서 남은 선분을 다시 묻는다). 킬캠 시나리오(game.playground.shooter3d_pierce_killcam)가 치트로 넣는다. -->
+  <Projectile id="piercing_round" _base="rifle_round" damage="60" pierceCount="2" tracerColor="1.2,2.4,3,1" tracerWidth="0.04"/>
+
+  <Impact id="body_incendiary" surface="Body" when="Ammo.Incendiary" color="4,0.8,0.1,1" size="0.32"/>
+  <Impact id="body" surface="Body" color="1,0.45,0.2,1" size="0.18"/>
+  <Impact id="cover" surface="Cover" color="0.9,0.85,0.6,1" size="0.1"/>
 </ProjectileCatalog>

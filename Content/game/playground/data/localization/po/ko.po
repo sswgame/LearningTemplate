@@ -8,11 +8,35 @@ msgstr ""
 "X-Message-Format: ICU\n"
 "X-Generator: SWEngine LocalizationTools\n"
 
+#. Context: TextWidget._text
+#: game/playground/shooter3d/ui/hud.ui.xml
+msgctxt "/"
+msgid "/"
+msgstr "/"
+
 #. Context: SequenceBinding._name
 #: game/playground/data/cinematic.seq.xml
 msgctxt "Actor"
 msgid "Actor"
 msgstr "배우"
+
+#. Context: Weapon name
+#: common/data/items.xml
+msgctxt "Assault Rifle"
+msgid "Assault Rifle"
+msgstr "돌격 소총"
+
+#. Context: Item name
+#: common/data/items.xml
+msgctxt "Bone Axe"
+msgid "Bone Axe"
+msgstr "뼈 도끼"
+
+#. Context: Item name
+#: common/data/items.xml
+msgctxt "Bone Shield"
+msgid "Bone Shield"
+msgstr "뼈 방패"
 
 #. Context: SequenceBinding._name
 #: game/playground/data/cinematic.seq.xml
@@ -31,6 +55,84 @@ msgstr "컷 B"
 msgctxt "GateCut"
 msgid "GateCut"
 msgstr ""
+
+#. Context: Item name
+#: common/data/items.xml
+msgctxt "Gilded Knight Helmet"
+msgid "Gilded Knight Helmet"
+msgstr "금박 기사 투구"
+
+#. Context: Item name
+#: common/data/items.xml
+msgctxt "Heraldic Cape"
+msgid "Heraldic Cape"
+msgstr "문장 망토"
+
+#. Context: Item name
+#: common/data/items.xml
+msgctxt "Knight Helmet"
+msgid "Knight Helmet"
+msgstr "기사 투구"
+
+#. Context: Item name
+#: common/data/items.xml
+msgctxt "Knight Helmet (Dyeable)"
+msgid "Knight Helmet (Dyeable)"
+msgstr "기사 투구(염색 가능)"
+
+#. Context: Item name
+#: common/data/items.xml
+msgctxt "Knight Helmet (Merged)"
+msgid "Knight Helmet (Merged)"
+msgstr "기사 투구(병합)"
+
+#. Context: Item name
+#: common/data/items.xml
+msgctxt "Knight Sword (Merged)"
+msgid "Knight Sword (Merged)"
+msgstr "기사 검(병합)"
+
+#. Context: Item name
+#: common/data/items.xml
+msgctxt "Longbow"
+msgid "Longbow"
+msgstr "장궁"
+
+#. Context: Item name
+#: common/data/items.xml
+msgctxt "Notched Blade"
+msgid "Notched Blade"
+msgstr "이 빠진 칼"
+
+#. Context: Weapon name
+#: common/data/items.xml
+msgctxt "Pistol"
+msgid "Pistol"
+msgstr "권총"
+
+#. Context: Weapon name
+#: common/data/items.xml
+msgctxt "Pump Shotgun"
+msgid "Pump Shotgun"
+msgstr "펌프 산탄총"
+
+#. Context: Item name
+#: common/data/items.xml
+msgctxt "Round Shield"
+msgid "Round Shield"
+msgstr "둥근 방패"
+
+#. Context: Item name
+#: common/data/items.xml
+msgctxt "Round Shield (Merged)"
+msgid "Round Shield (Merged)"
+msgstr "둥근 방패(병합)"
+
+#. Context: Item name
+#: common/data/items.xml
+msgctxt "Rusted Helm"
+msgid "Rusted Helm"
+msgstr "녹슨 투구"
 
 #. Context: Subtitle speaker (audio event SubtitleGuideLine)
 #: game/playground/audio/playground.audioevents.xml
@@ -62,8 +164,20 @@ msgctxt "Subtitle.ScoutLine"
 msgid "Movement on the ridge. Stay low."
 msgstr "능선에 움직임이 있다. 몸을 낮춰."
 
+#. Context: Item name
+#: common/data/items.xml
+msgctxt "Tattered Cape"
+msgid "Tattered Cape"
+msgstr "해진 망토"
+
 #. Context: SequenceTrackItem._text
 #: game/playground/data/cinematic.seq.xml
 msgctxt "The warrior wakes."
 msgid "The warrior wakes."
 msgstr "전사가 깨어난다."
+
+#. Context: Item name
+#: common/data/items.xml
+msgctxt "Travel Cape"
+msgid "Travel Cape"
+msgstr "여행 망토"

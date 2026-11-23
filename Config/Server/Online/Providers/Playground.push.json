@@ -1,0 +1,16 @@
+{
+    "providers": [
+        {
+            "kind": "fcm",
+            "serviceAccountEnvironment": "SW_PLAYGROUND_FCM_SERVICE_ACCOUNT"
+        },
+        {
+            "kind": "apns",
+            "keyEnvironment": "SW_PLAYGROUND_APNS_KEY",
+            "keyId": "PLAYGRDKEY",
+            "teamId": "PLAYGRDTEAM",
+            "topic": "com.example.playground",
+            "tokenRefreshMinSeconds": 1200
+        }
+    ]
+}

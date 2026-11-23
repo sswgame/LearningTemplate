@@ -1,0 +1,143 @@
+/**
+ * @file ShooterAvatarComponent.h
+ * @brief 플레이어의 보이는 몸 — 플레이어 컴포넌트의 상태를 읽어 자기 자리 · 요 · 애니메이터 파라미터 · 상체 레이어를 맞춥니다.
+ */
+#pragma once
+#include "Core/Container/string.h"
+#include "Core/Container/unordered_map.h"
+#include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
+#include "Core/Math/Math.h"
+#include "Core/Name/hashed_string.h"
+
+#include "Engine/Foundation/GameObjectHandle.h"
+#include "Engine/Object/Component/Component.h"
+#include "Engine/Reflection/ReflectionMacros.h"
+
+#include "GameFramework/Runtime/Character/Movement/LocomotionMath.h"
+
+namespace sw
+{
+    class AnimationClip;
+    class GameObject;
+    class SkeletalAnimatorComponent;
+
+    /**
+     * @class ShooterAvatarComponent
+     * @brief 몸 프리팹(`prefabs/player_body.prefab.xml` — 스킨드 메시 · 애니메이터 · 외형과 같은 오브젝트)의 컴포넌트입니다. 플레이어가 세우고 `setPlayer` 로 잇습니다.
+     * @details `TickGroup::PostPhysics` 에서 플레이어(`DuringPhysics` 에서 움직인 뒤)의 발 · 보는 요 · 수평 속도 · 땅 위 · 사격 · 맞음 · 쓰러짐을 **읽기만** 하고
+     *          자기 오브젝트에만 씁니다. 그래프(`data/anim/adventurer.animgraph.xml`) 파라미터는 `Move`(0 서기 · 1 걷기 · 2 달리기 · 3 뒷걸음 · 4 왼쪽 ·
+     *          5 오른쪽 옆걸음 · 6 공중) · `Hit`(트리거) · `Dead` · `AimWeight` · `ShootWeight` 입니다. 상체는 그래프 데이터의 레이어 둘(`Aim` · `Shoot`,
+     *          마스크 `data/anim/masks/upper_body.bonemask.xml`)이 덮고, 이 컴포넌트는 두 가중치 파라미터만 씁니다 — 겨눈 자세는 늘, 쏘는 동작은 막 쏜 동안.
+     *          맞음 · 쓰러짐 동안은 가중치를 내려 온몸 클립이 보이게 합니다. 이동 방향은 히스테리시스 +
+     *          최소 유지 시간(`LocomotionDirectionFilter`)으로 골라 대각선에서 상태가 오가지 않습니다.
+     *          발 미끄러짐은 재생 속도 매칭으로 줄입니다. 지금 이동 클립의 발 속도(`LocomotionSpeedUtil::computeFootSpeed`, 클립마다 한 번 측정)로 실제 수평 속도를 나눠
+     *          [`_minPlayRate`, `_maxPlayRate`] 로 자른 값을 애니메이터 재생 속도로 씁니다. 범위를 넘는 몫은 같은 오브젝트의 `PoseModifierComponent` 리그
+     *          (`rigs/player_body.rig.xml`)의 보폭 워핑 노드(`_strideNode`)에 `stride_scale` · 모델 공간 이동 방향으로 넣습니다. 노드가 없으면 오류입니다.
+     *          왼손을 총에 붙이는 손 IK · 맞은 부위 · 래그돌은 PoseModifier · 물리 쪽이 들어오면 그 자리(무기 소켓 `MainHand.SupportHand`)를 씁니다.
+     *          **Main 모드(게임 스레드에서 차례로)로 돈다.** 플레이어(남의 오브젝트)의 상태를 그 프레임 값 그대로 많이 읽는데, 플레이어 오브젝트도 이 그룹에
+     *          틱 항목이 있어 병렬 틱의 남 읽기 검사(`GameObject::assertParallelTickRead`)에 걸린다. Main 모드는 그룹의 병렬 일이 모두 끝난 뒤라 같은 순간
+     *          쓰는 워커가 없다 — 사본으로 바꾸면 몸이 한 프레임 늦게 따라간다. 플레이어마다 하나라 게임 스레드 비용은 작다(언리얼 게임 스레드 틱과 같은 자리).
+     */
+    REFLECT( TickMode = Main, Category = "Shooter", DisplayName = "Shooter Avatar", Tooltip = "Visible player body: follows the player and drives the animator from its movement and firing" )
+    class ShooterAvatarComponent : public Component
+    {
+    public:
+        REFLECT_BODY();
+
+        ShooterAvatarComponent();
+        virtual ~ShooterAvatarComponent() override = default;
+
+        void onBeginPlay() override;
+        void onTick( TickContext& context ) override;
+
+        /**
+         * @brief 따라갈 플레이어(`ShooterPlayerComponent` 를 가진 오브젝트)입니다. 몸 리그의 시선 원천(`_lookSourceObject` — 리그 대상의 `object`)에도 그 오브젝트를 겁니다.
+         * @details 플레이어의 주 장면 컴포넌트가 1인칭 카메라라 리그 대상의 오프셋(카메라 앞)이 보는 곳이다. 리그가 없으면 걸지 않는다(시선 없이 몸만 따른다).
+         */
+        void setPlayer( GameObject* pPlayer );
+        /**
+         * @brief 1인칭이면 몸은 보이고 머리만 숨깁니다 — 같은 오브젝트의 리그(`PoseModifierComponent`)의 슬롯 `_firstPersonHeadSlot`(머리 `ScaleBone`)을 켜고,
+         *        외형의 칸 `_listFirstPersonHiddenSlot`(머리 장비 · 손 무기) 부품을 숨깁니다. 3인칭이면 둘 다 되돌립니다.
+         *        손 IK 도 바꿉니다: 1인칭은 슬롯 `_firstPersonHandsSlot`(보이는 시점 총을 잡는 노드), 3인칭은 슬롯 `_thirdPersonHandsSlot`(몸의 무기를 잡는 노드)입니다.
+         * @details 몸 무기는 1인칭에서 숨기고 시점 무기(플레이어의 `ViewWeapon`)가 보인다 — 조준선과 총구가 카메라 기준이어야 하기 때문이다.
+         *          리그나 슬롯이 없으면 오류로 알린다(머리를 숨기지 못하면 눈이 머리 안에 있다).
+         */
+        void setFirstPerson( bool bFirstPerson );
+
+        /** @brief 보폭 워핑 노드에 마지막으로 넣은 배율입니다(1 = 클립 그대로). 시나리오 프로브 `Shooter.StrideScale` 이 읽습니다. */
+        float32 getLastStrideScale() const { return _lastStrideScale; }
+        /** @brief 리그가 준비돼 보폭 워핑 값을 실제로 넣은 프레임 수입니다. 0 이면 리그가 메시에 아직 묶이지 않았다(`isRigReady` 전 프레임은 넣지 않는다). */
+        uint32 getStrideAppliedCount() const { return _strideAppliedCount; }
+        /**
+         * @brief 이번 걸음 동안(서면 비운다) 몸 무기(외형 `MainHand` 부품)의 몸 공간 위치 2 차 차분 |p(t) - 2p(t-1) + p(t-2)| 의 최댓값입니다(미터). 시나리오 감시 `Shooter.GunJerkMax` 가 읽습니다.
+         * @details 걷기 클립 · 리그가 주는 매끄러운 흔들림은 프레임당 수 mm 아래이고, 프레임마다 오가는 떨림은 진폭의 4 배로 드러난다. 몸 공간이라 몸이 걷는 속도는 들지 않는다.
+         */
+        float32 getGunJerkMax() const { return _gunJerkMax; }
+
+    private:
+        /** @brief 지금 상태 클립의 발 속도(m/s)입니다. 서 있거나 공중이거나 이동 클립이 아니면 0 입니다(재생 속도 · 보폭을 바꾸지 않는다). */
+        float32 computeLocomotionFootSpeed( const SkeletalAnimatorComponent& animator, LocomotionDirection direction );
+        /** @brief 보폭 워핑 노드에 배율과 모델 공간 이동 방향(+Z 앞, +X 오른쪽)을 넣습니다. */
+        void applyStrideWarping( float32 strideScale, const float2& localVelocity );
+        /** @brief 지난 프레임에 그려진 몸 무기 위치(몸 공간)로 2 차 차분을 쌓습니다. 몸 자리를 이번 프레임 값으로 옮기기 전에 불러야 둘이 같은 프레임이다. */
+        void sampleGunJerk( bool bMoving );
+
+    private:
+        PROPERTY( Category = "Avatar", DisplayName = "Player", Tooltip = "Object with the ShooterPlayerComponent this body follows" )
+        GameObjectHandle _player;
+        PROPERTY( Category = "Avatar", DisplayName = "Walk Threshold", Tooltip = "Below this speed the body stands", Min = 0.0, Units = "m/s" )
+        float32 _walkThreshold;
+        PROPERTY( Category = "Avatar", DisplayName = "Run Threshold", Tooltip = "At or above this forward speed the run clip plays", Min = 0.0, Units = "m/s" )
+        float32 _runThreshold;
+        PROPERTY( Category = "Avatar", DisplayName = "Hit Pause", Tooltip = "Seconds the upper-body layers step aside for the hit reaction", Min = 0.0, Units = s )
+        float32 _hitPause;
+        PROPERTY( Category = "Avatar", DisplayName = "Turn Rate", Tooltip = "Fastest the body turns to the view direction", Min = 0.0, Units = "rad/s" )
+        float32 _turnRate;
+        PROPERTY( Category = "Avatar", DisplayName = "Layer Blend Rate", Tooltip = "How fast the aim and shoot layer weights follow their target", Min = 0.0 )
+        float32 _layerBlendRate;
+        PROPERTY( Required, Category = "Avatar", DisplayName = "Left Foot Bone", Tooltip = "Bone used to measure the foot speed of locomotion clips" )
+        hashed_string _leftFootBone;
+        PROPERTY( Required, Category = "Avatar", DisplayName = "Right Foot Bone", Tooltip = "Bone used to measure the foot speed of locomotion clips" )
+        hashed_string _rightFootBone;
+        PROPERTY( Category = "Avatar", DisplayName = "Min Play Rate", Tooltip = "Slowest play rate speed matching may choose", Min = 0.0 )
+        float32 _minPlayRate;
+        PROPERTY( Category = "Avatar", DisplayName = "Max Play Rate", Tooltip = "Fastest play rate speed matching may choose", Min = 0.0 )
+        float32 _maxPlayRate;
+        PROPERTY( Category = "Avatar", DisplayName = "Min Locomotion Foot Speed", Tooltip = "A clip whose feet move slower than this is not a locomotion clip and keeps its play rate", Min = 0.0, Units = "m/s" )
+        float32 _minLocomotionFootSpeed;
+        PROPERTY( Category = "First Person", DisplayName = "Head Rig Slot", Tooltip = "Rig weight slot of the ScaleBone node that hides the head in first person" )
+        hashed_string _firstPersonHeadSlot;
+        PROPERTY( Category = "First Person", DisplayName = "First Person Hands Slot", Tooltip = "Rig weight slot of the IK nodes that hold the view weapon; on only in first person" )
+        hashed_string _firstPersonHandsSlot;
+        PROPERTY( Category = "First Person", DisplayName = "Third Person Hands Slot", Tooltip = "Rig weight slot of the IK nodes that hold the body's weapon; on only in third person" )
+        hashed_string _thirdPersonHandsSlot;
+        PROPERTY( Required, Category = "Avatar", DisplayName = "Two Hand Hold Slot", Tooltip = "Rig weight slot of the IK node that puts the right hand at the shouldered two-handed hold; on while aiming a two-handed weapon" )
+        hashed_string _twoHandHoldSlot;
+        PROPERTY( Category = "First Person", DisplayName = "Hidden Appearance Slots", Tooltip = "Appearance slots whose parts are hidden in first person (head gear, the body's weapon)" )
+        vector<hashed_string> _listFirstPersonHiddenSlot;
+        PROPERTY( Required, Category = "Avatar", DisplayName = "Stride Node", Tooltip = "StrideWarping node of this body's pose modifier rig that takes the rest of the speed matching" )
+        string _strideNode;
+        PROPERTY( Required, Category = "Avatar", DisplayName = "Look Source Object", Tooltip = "Object name of the rig target the player object is bound to (its camera drives the look-at)" )
+        hashed_string _lookSourceObject;
+
+        LocomotionDirectionFilter                    _locomotion;
+        unordered_map<const AnimationClip*, float32> _mapClipFootSpeed; ///< 클립마다 한 번 측정한 레퍼런스 스켈레톤의 발 속도(m/s) — 쓸 때 다리 길이 비를 곱한다
+
+        float32                _aimWeight;
+        float32                _shootWeight;
+        float32                _hitTimer;
+        float32                _bodyYaw; ///< 몸이 보는 요 — 시점을 각속도 상한으로 따라간다
+        float32                _lastStrideScale;
+        uint32                 _strideAppliedCount;
+        uint32                 _lastHitReaction;
+        float3                 _gunPrevious;       ///< 지난 표본의 몸 무기 위치(몸 공간)
+        float3                 _gunBeforePrevious; ///< 그 앞 표본
+        uint32                 _gunSampleCount;    ///< 이번 걸음의 표본 수(2 차 차분은 셋째부터)
+        float32                _gunJerkMax;        ///< 이번 걸음의 2 차 차분 최댓값(`getGunJerkMax`)
+        uint8                  _bYawReady         : 1;
+        uint8                  _bStrideErrorShown : 1; ///< 노드가 없다는 오류를 한 번만 남긴다
+        [[maybe_unused]] uint8 _reserved          : 6;
+    };
+} // namespace sw

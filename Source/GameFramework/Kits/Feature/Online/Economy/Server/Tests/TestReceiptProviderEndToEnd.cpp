@@ -421,13 +421,13 @@ SW_TEST_CASE( ReceiptKitAssemblyTest, KitOptionsSelectTheProviders )
     SW_EXPECT_EQUAL( 1, endpoint._tokenRequestCount );
 }
 
-/** @brief [ReceiptKitAssemblyTest] 저장소에 든 견본(`Shooter3D.external.*`)이 같은 읽기를 지난다 - 견본이 코드와 어긋나 낡지 않게 한다 */
+/** @brief [ReceiptKitAssemblyTest] 저장소에 든 견본(`Playground.external.*`)이 같은 읽기를 지난다 - 견본이 코드와 어긋나 낡지 않게 한다 */
 SW_TEST_CASE( ReceiptKitAssemblyTest, ExternalSampleConfigReads )
 {
     ServerConfig       serverConfig;
     OnlineServerConfig onlineConfig;
-    SW_REQUIRE_TRUE( ConfigManager::readConfigFileInto( "Config/Server/Online/Shooter3D.external.json", serverConfig ) == ConfigReadResult::Loaded );
-    SW_REQUIRE_TRUE( ConfigManager::readConfigFileInto( "Config/Server/Online/Shooter3D.external.online.json", onlineConfig ) == ConfigReadResult::Loaded );
+    SW_REQUIRE_TRUE( ConfigManager::readConfigFileInto( "Config/Server/Online/Playground.external.json", serverConfig ) == ConfigReadResult::Loaded );
+    SW_REQUIRE_TRUE( ConfigManager::readConfigFileInto( "Config/Server/Online/Playground.external.online.json", onlineConfig ) == ConfigReadResult::Loaded );
     SW_REQUIRE_EQUAL( size_t( 1 ), serverConfig._listStore.size() );
     SW_EXPECT_EQUAL( string( "postgres" ), serverConfig._listStore[0]._driver );
     SW_REQUIRE_EQUAL( size_t( 1 ), serverConfig._listCache.size() );
@@ -435,7 +435,7 @@ SW_TEST_CASE( ReceiptKitAssemblyTest, ExternalSampleConfigReads )
     SW_EXPECT_EQUAL( serverConfig._listStore[0]._name, onlineConfig._storeName );
     SW_EXPECT_EQUAL( serverConfig._listCache[0]._name, onlineConfig._cacheName );
 
-    const optional<AbsolutePath> providersFile = AbsolutePath::tryResolve( "Config/Server/Online/Providers/Shooter3D.receipts.json", ProcessRoots::get()._project );
+    const optional<AbsolutePath> providersFile = AbsolutePath::tryResolve( "Config/Server/Online/Providers/Playground.receipts.json", ProcessRoots::get()._project );
     SW_REQUIRE_TRUE( providersFile.has_value() );
     vector<ReceiptProviderConfig> listConfig;
     const expected<void>          read = OnlineProviderFile::read<ReceiptProviderConfig>( providersFile, sw::nullopt, "receiptProvidersFile", "receiptTrustFile", &ReceiptProviderManager::readEntry, listConfig );

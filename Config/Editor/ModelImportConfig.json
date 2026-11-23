@@ -10,7 +10,7 @@
       "translation": [-2.0, 0.0, -1.5]
     },
     {
-      "name": "Shooter3D_KayKitDungeon",
+      "name": "Shooter_KayKitDungeon",
       "filter": { "includePatterns": ["*/shooter3d/models_raw/kaykit_dungeon/**"] },
       "importMaterials": false
     },

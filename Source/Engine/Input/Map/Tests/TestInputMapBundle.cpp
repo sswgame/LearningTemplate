@@ -67,8 +67,8 @@ SW_TEST_CASE( InputMapBundleTest, SettingsFileStacksMapsInOrder )
  */
 SW_TEST_CASE( InputMapBundleTest, SettingsFileIsRecognizedByItsPlace )
 {
-    SW_EXPECT_TRUE( InputMapBundle::isSettingsFile( "game/shooter3d/data/gamesettings.xml" ) );
-    SW_EXPECT_FALSE( InputMapBundle::isSettingsFile( "game/shooter3d/data/shooter.input.xml" ) );
+    SW_EXPECT_TRUE( InputMapBundle::isSettingsFile( "game/playground/data/gamesettings.xml" ) );
+    SW_EXPECT_FALSE( InputMapBundle::isSettingsFile( "game/playground/shooter3d/data/shooter.input.xml" ) );
     SW_EXPECT_FALSE( InputMapBundle::isSettingsFile( "gamesettings.xml" ) );
 }
 

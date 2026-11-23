@@ -1,0 +1,26 @@
+{
+    "providers": [
+        {
+            "kind": "steam",
+            "appId": "480",
+            "keySecretEnvironment": "SW_PLAYGROUND_STEAM_KEY",
+            "buyerBinding": "linkedLogin",
+            "buyerLoginProvider": "steam"
+        },
+        {
+            "kind": "google",
+            "packageName": "com.example.playground",
+            "serviceAccountEnvironment": "SW_PLAYGROUND_GOOGLE_SERVICE_ACCOUNT",
+            "buyerBinding": "accountToken"
+        },
+        {
+            "kind": "apple",
+            "issuerId": "00000000-0000-0000-0000-000000000000",
+            "keyId": "PLAYGRDKEY",
+            "bundleId": "com.example.playground",
+            "signingKeySecretEnvironment": "SW_PLAYGROUND_APPLE_SIGNING_KEY",
+            "rootCertificateFile": "Config/Server/Online/AppleRootCA-G3.pem",
+            "buyerBinding": "accountToken"
+        }
+    ]
+}
