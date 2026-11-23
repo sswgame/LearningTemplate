@@ -941,7 +941,7 @@
     "Source/Games/AbilityArena/ArenaAbilities.cpp": {"float": 1},
     "Source/Games/AbilityArena/ArenaGameModeComponent.cpp": {"float": 2},
     "Source/Games/AbilityArena/ArenaUnitComponent.cpp": {"float": 1},
-    "Source/Games/FrontierTown/FrontierSkirmishGameModeComponent.cpp": {"float": 7},
+    "Source/Games/Playground/FrontierTown/FrontierSkirmishGameModeComponent.cpp": {"float": 7},
     "Source/Games/HarvestValley/FarmAutoFarmerAIComponent.cpp": {"minus-one": 1, "float": 1},
     "Source/Games/HarvestValley/FarmCropComponent.cpp": {"minus-one": 3, "float": 3, "integer": 2},
     "Source/Games/HarvestValley/FarmGameModeComponent.cpp": {"minus-one": 4, "float": 7},

@@ -7,4 +7,9 @@
 	<PrefixRedirect from="game/pixeltown" to="game/playground/pixeltown" />
 	<Redirect from="game/playground/pixeltown/automation/talk.scenario.xml" to="game/playground/automation/pixeltown_talk.scenario.xml" />
 	<Redirect from="game/playground/pixeltown/automation/slice.scenario.xml" to="game/playground/automation/pixeltown_slice.scenario.xml" />
+	<PrefixRedirect from="game/frontiertown" to="game/playground/frontiertown" />
+	<Redirect from="game/playground/frontiertown/automation/month.scenario.xml" to="game/playground/automation/frontiertown_month.scenario.xml" />
+	<Redirect from="game/playground/frontiertown/automation/autoplayclock.scenario.xml" to="game/playground/automation/frontiertown_autoplayclock.scenario.xml" />
+	<Redirect from="game/playground/frontiertown/automation/slice.scenario.xml" to="game/playground/automation/frontiertown_slice.scenario.xml" />
+	<Redirect from="game/playground/frontiertown/data/frontier.settings.xml" to="game/playground/data/playground.settings.xml" />
 </Redirects>

@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Games/FrontierTown/FrontierSkirmishGameModeComponent.h"
+#include "Games/Playground/FrontierTown/FrontierSkirmishGameModeComponent.h"
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Object/GameObject/GameObject.h"

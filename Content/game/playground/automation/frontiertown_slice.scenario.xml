@@ -1,12 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="350350d9fb694f95c3d001438de02c54"?>
 <!--
-  장르 수직 슬라이스(G1) — 시작 → 목표(month.scenario.xml 의 단계 그대로) → 결과 → 저장 · 복원 해시 동일.
+  장르 수직 슬라이스(G1, 개척 마을 미니게임 frontiertown) — 시작 → 목표(frontiertown_month.scenario.xml 의 단계 그대로) → 결과 → 저장 · 복원 해시 동일.
   목표 단계는 그 시나리오가 정본이다 — 거기를 고치면 이 파일도 맞춘다. 저장 슬롯은 frontiertown/slice.
 -->
-<Scenario name="game.frontiertown.slice" fixedDelta="0.0166667" timeoutFrames="1500" startAfter="ScenePlaying" input="exclusive">
-	<Variable name="gv_frontierAutoPlay" value="0"/>
-	<!-- 시계는 6 시에 시작하고 하루가 실제 24 초다(FrontierTownData) — 시작 전 프레임까지 합쳐 한 시간이 지나기 전이다. -->
+<Scenario name="game.playground.frontiertown_slice" fixedDelta="0.0166667" timeoutFrames="1500" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstMinigame" value="frontiertown"/>
+	<Variable name="gv_playgroundAutoPlay" value="0"/>
+	<!-- 시계는 6 시에 시작하고 하루가 실제 24 초다(씬의 CityGameModeComponent) — 시작 전 프레임까지 합쳐 한 시간이 지나기 전이다. -->
 	<WaitUntil watch="Clock.Hour" atLeast="6" timeoutFrames="10"/> <!-- 시계가 첫 틱을 돌았다 -->
 	<Expect watch="Clock.Day" equals="0"/>
 	<Expect watch="Clock.Hour" atLeast="6"/>

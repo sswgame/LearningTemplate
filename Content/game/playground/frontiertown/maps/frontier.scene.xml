@@ -24,7 +24,7 @@
 					                 _bOrthographic="true" />
 					<CameraDirectorComponent _localID="17954231826208681790" _componentName="CameraDirectorComponent"
 					                         _bActive="true"
-					                         _catalogPath="game/frontiertown/data/frontier.cameras.xml"
+					                         _catalogPath="game/playground/frontiertown/data/frontier.cameras.xml"
 					                         _initialPreset="frontier"
 					                         _focusPoint="16,0,16"
 					                         _bReadInput="false">
@@ -61,7 +61,7 @@
 					<CityGameModeComponent _localID="3335784716462595506" _componentName="CityGameModeComponent"
 					                       _bActive="true"
 					                       _bAutoPlay="false"
-					                       _cityDataPath="game/frontiertown/data/city.xml"
+					                       _cityDataPath="game/playground/frontiertown/data/city.xml"
 					                       _landSize="32"
 					                       _secondsPerDay="24"
 					                       _startHour="6"
@@ -76,16 +76,16 @@
 					                       _fastTimeScale="8" />
 					<CityViewComponent _localID="7240113358861402917" _componentName="CityViewComponent"
 					                   _bActive="true"
-					                   _tilePrefab="game/frontiertown/prefabs/tile.prefab.xml"
+					                   _tilePrefab="game/playground/frontiertown/prefabs/tile.prefab.xml"
 					                   _fastForwardAction="FastForward"
 					                   _buildingColor="0.85,0.72,0.45,1"
 					                   _roadColor="0.45,0.42,0.38,1" />
 					<FrontierSkirmishGameModeComponent _localID="2994829835520867295" _componentName="FrontierSkirmishGameModeComponent"
 					                                   _bActive="true"
 					                                   _bAutoPlay="false"
-					                                   _unitDataPath="game/frontiertown/data/units.xml"
+					                                   _unitDataPath="game/playground/frontiertown/data/units.xml"
 					                                   _startMinerals="500"
-					                                   _unitPrefab="game/frontiertown/prefabs/tile.prefab.xml"
+					                                   _unitPrefab="game/playground/frontiertown/prefabs/tile.prefab.xml"
 					                                   _workerUnit="worker"
 					                                   _soldierUnit="marine"
 					                                   _barracksUnit="barracks"
