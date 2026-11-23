@@ -66,19 +66,29 @@ namespace sw
         UIAccessibilitySnapshot::appendTree( screen.getTree(), screen.getHandle(), focusedWidget, inoutSnapshot );
     }
 
+    void UIAccessibilityService::collectInteractiveScreens( const vector<unique_ptr<UIScreen>>& listScreen, vector<UIScreen*>& outListScreen )
+    {
+        outListScreen.clear();
+        for ( size_t index = listScreen.size(); index > 0; --index )
+        {
+            UIScreen& screen = *listScreen[index - 1];
+            if ( screen.isClosing() || screen.receivesPointer() == false )
+                continue;
+            outListScreen.push_back( &screen );
+            if ( screen.shouldBlockLowerInput() )
+                break;
+        }
+    }
+
     void UIAccessibilityService::populateSnapshot( const UISystem& ui, UIAccessibilitySnapshot& outSnapshot )
     {
         outSnapshot.clear();
         const vector<unique_ptr<UIScreen>>& listScreen = ui.getScreens();
-        // 입력을 받는 화면: 위에서 아래로 읽는다. 입력을 막는 화면(모달) 아래는 읽지 않는다.
-        for ( size_t index = listScreen.size(); index > 0; --index )
+        vector<UIScreen*>                   listInteractive;
+        collectInteractiveScreens( listScreen, listInteractive );
+        for ( const UIScreen* pScreen : listInteractive )
         {
-            const UIScreen& screen = *listScreen[index - 1];
-            if ( screen.isClosing() || screen.receivesPointer() == false )
-                continue;
-            appendScreen( ui, screen, outSnapshot );
-            if ( screen.shouldBlockLowerInput() )
-                break;
+            appendScreen( ui, *pScreen, outSnapshot );
         }
         // 오버레이(알림, 자막): 입력을 받지 않지만 읽을 글이다. 맨 뒤에 둔다.
         for ( size_t index = listScreen.size(); index > 0; --index )

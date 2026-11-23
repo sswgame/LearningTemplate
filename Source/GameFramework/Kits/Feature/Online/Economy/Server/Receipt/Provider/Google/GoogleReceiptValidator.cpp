@@ -163,7 +163,6 @@ namespace sw
     void GoogleReceiptValidator::parseOrder( const JSONValue& root, const ReceiptCall& /*call*/, UnixMilliseconds now, ReceiptOrderInfo& outInfo )
     {
         outInfo._transactionID = readText( root, "orderId" );
-        outInfo._productID     = readText( root, "productId" );                   // 구글 문서: 없을 수 있다. 없으면 주소에 넣은 상품이다
         outInfo._answeredKey   = readText( root, "purchaseToken" );               // 구글 문서: 없을 수 있다
         outInfo._storeBuyerID  = readText( root, "obfuscatedExternalAccountId" ); // 클라이언트가 구매 때 찍은 값(`ReceiptBuyerToken`)
         int64 purchaseMs       = 0;
@@ -171,17 +170,20 @@ namespace sw
             outInfo._purchaseTimeMs = purchaseMs;
         int32      purchaseState        = constant::invalid_index::kInt32;
         int32      purchaseType         = constant::invalid_index::kInt32;
-        int32      acknowledgementState = 1;
+        int32      quantity             = 1; // 구글 문서: 없으면 1 이다
+        int32      acknowledgementState = 0; // 말하지 않으면 확인 전으로 본다 — 확인된 구매를 다시 알리면 스토어가 거절할 뿐이지만, 알리지 않은 구매는 사흘 뒤 환불되고 지급한 재화를 거둔다
         const bool bPurchaseStateOk     = root.readOptionalInto( "purchaseState", purchaseState );
         const bool bPurchaseTypeOk      = root.readOptionalInto( "purchaseType", purchaseType );
         const bool bAcknowledgementOk   = root.readOptionalInto( "acknowledgementState", acknowledgementState );
-        const bool bPropertiesOk        = bPurchaseStateOk && bPurchaseTypeOk && bAcknowledgementOk;
+        const bool bQuantityOk          = root.readOptionalInto( "quantity", quantity );
+        const bool bPropertiesOk        = bPurchaseStateOk && bPurchaseTypeOk && bAcknowledgementOk && bQuantityOk;
         if ( bPropertiesOk == false )
         {
             outInfo._status      = ReceiptStatus::Invalid; // 구글이 이런 칸을 이렇게 주지 않는다 — 읽을 수 없는 응답이다(오류는 JSON 읽기가 남겼다)
             outInfo._failureText = "google purchase has fields of the wrong type";
             return;
         }
+        outInfo._listItem.push_back( ReceiptLineItem{ readText( root, "productId" ), quantity } ); // 구글 문서: 상품은 없을 수 있다. 없으면 주소에 넣은 상품이다
         outInfo._status   = mapPurchaseState( purchaseState );
         outInfo._bSandbox = purchaseType == 0 ? SW_TRUE : SW_FALSE; // 라이선스 테스트 구매
         if ( outInfo._status != ReceiptStatus::Valid )

@@ -152,8 +152,13 @@ namespace sw
         inoutResult._storeBuyerID   = info._storeBuyerID;
         inoutResult._purchaseTimeMs = info._purchaseTimeMs;
         inoutResult._bSandbox       = info._bSandbox;
-        if ( info._productID.empty() == false )
-            inoutResult._productID = info._productID;
+        if ( info._listItem.empty() == false )
+            inoutResult._listItem = info._listItem;
+        for ( ReceiptLineItem& item : inoutResult._listItem )
+        {
+            if ( item._productID.empty() )
+                item._productID = query._productID; // 상품을 정해 물었으면 답은 상품을 되풀이하지 않을 수 있다
+        }
         if ( inoutResult._transactionID.empty() )
             inoutResult._transactionID = info._transactionID;
         const bool bDecided = info._status == ReceiptStatus::Valid || info._status == ReceiptStatus::Refunded;
@@ -171,13 +176,28 @@ namespace sw
             Internal::reject( inoutResult, "the store answered for another order" ); // 묻지 않은 주문의 답으로 지급하지 않는다
             return;
         }
-        if ( query._productID.empty() == false && info._productID.empty() == false && info._productID != query._productID )
+        for ( const ReceiptLineItem& item : inoutResult._listItem )
         {
-            Internal::reject( inoutResult, "the store answered for another product" );
+            if ( query._productID.empty() == false && item._productID != query._productID )
+            {
+                Internal::reject( inoutResult, "the store answered for another product" );
+                return;
+            }
+        }
+        if ( info._status != ReceiptStatus::Valid )
+            return; // 환불은 지급할 것을 고르지 않는다
+        if ( info._listItem.empty() )
+        {
+            Internal::reject( inoutResult, "the store order has no product" ); // 상품이 없는 주문은 지급할 것이 없다
             return;
         }
-        if ( info._status == ReceiptStatus::Valid && inoutResult._productID.empty() )
-            Internal::reject( inoutResult, "the store order has no product" ); // 상품이 없는 주문은 지급할 것이 없다
+        for ( const ReceiptLineItem& item : inoutResult._listItem )
+        {
+            if ( item.isValid() )
+                continue;
+            Internal::reject( inoutResult, item._productID.empty() ? "the store order has an item without a product" : "the store order has an item without a quantity" ); // 한 줄이라도 모르면 주문 전체를 지급하지 않는다 — 나머지만 지급하면 그 줄을 영영 잃는다
+            return;
+        }
     }
 
     void StoreReceiptValidator::addRefund( string_view transactionID, int64 refundedMs )
@@ -203,8 +223,9 @@ namespace sw
         result._ticket        = call._request._ticket;
         result._accountID     = call._request._accountID;
         result._transactionID = call._query._transactionID;
-        result._productID     = call._query._productID;
         result._buyerRule     = _buyerRule;
+        if ( call._query._productID.empty() == false )
+            result._listItem.push_back( ReceiptLineItem{ call._query._productID, 0 } ); // 수는 답이 정한다
         return result;
     }
 
@@ -226,7 +247,7 @@ namespace sw
             // 요청에 실을 수 없는 영수증은 스토어에 묻지 않고 거절한다(다른 인자를 끼워 넣는 길을 막는다).
             ReceiptValidationResult result = makeResult( call );
             result._transactionID.clear();
-            result._productID.clear();
+            result._listItem.clear();
             result._status      = ReceiptStatus::Invalid;
             result._failureText = string( read.error().message() );
             _completionBuffer.push( std::move( result ) );

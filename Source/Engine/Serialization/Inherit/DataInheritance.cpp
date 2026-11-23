@@ -91,7 +91,7 @@ namespace sw
             };
 
             /**
-             * @brief 합치는 동안의 목록입니다 — 차례는 배열, 찾기는 열쇠 색인. 열쇠가 겹치면 앞 것을 찾는다.
+             * @brief 합치는 동안의 목록입니다 — 차례는 배열, 찾기는 열쇠 색인. 열쇠는 겹치지 않는다(넣는 쪽이 먼저 찾아 오류로 멈춘다).
              * @details 카탈로그 하나가 원소 수천 개이고 자식 파일의 원소마다 한 번 찾는다 — 훑어 찾으면 원소 수의 제곱이다. 자리를 옮기는 지움 · 자리 지정(드물다)만 색인을 다시 짓는다.
              */
             struct KeyedEntryList
@@ -236,7 +236,7 @@ namespace sw
                 return true;
             }
 
-            /** @brief 부모의 목록 원소를 차례로 모읍니다. 열쇠가 없는 원소는 오류입니다. */
+            /** @brief 목록 원소를 차례로 모읍니다. 열쇠가 없거나 겹치는 원소는 오류입니다 — 겹치면 합치기는 첫 원소만 고치고, 차이 적기는 목록 밖 자리를 읽는다. */
             [[nodiscard]] static bool collectParentEntries( const XMLNode& parent, const DataInheritanceSchema& schema, KeyedEntryList& outListEntry, string_view sourceName )
             {
                 if ( parent.isValid() == false )
@@ -249,6 +249,11 @@ namespace sw
                     if ( key.has_value() == false )
                     {
                         SW_LOG_ERROR_ID( "DataInheritance.ListKeyMissing", "'%#': an element of list '%#' in its base has no key '%#'", sourceName, schema._name, schema._keyAttribute );
+                        return false;
+                    }
+                    if ( outListEntry.find( *key ) != nullptr )
+                    {
+                        SW_LOG_ERROR_ID( "DataInheritance.DuplicateKey", "'%#': element '%#' is written twice in list '%#'", sourceName, *key, schema._name );
                         return false;
                     }
                     outListEntry.append( ListEntry{ std::move( *key ), element, XMLNode{} } );
@@ -575,11 +580,6 @@ namespace sw
                 if ( collectParentEntries( full, schema, fullEntries, "delta" ) == false )
                     return false;
                 const vector<ListEntry>& listFull = fullEntries._listEntry;
-                if ( fullEntries._mapKeyToIndex.size() != listFull.size() )
-                {
-                    SW_LOG_ERROR_ID( "DataInheritance.DeltaDuplicateKey", "List '%#' writes a key twice - the difference to its base cannot be written", schema._name );
-                    return false;
-                }
                 if ( writeWhenDelta( full, parent, out ) == false )
                     return false;
                 for ( size_t index = parentEntries._listEntry.size(); index > 0; --index )
