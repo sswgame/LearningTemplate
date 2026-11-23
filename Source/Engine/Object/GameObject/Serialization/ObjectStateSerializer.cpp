@@ -554,6 +554,7 @@ namespace sw
                     , _context{ makeGameObjectContext( const_cast<GameObject*>( pGameObject ), options.getPurpose(),
                                                        SW_DELEGATE_METHOD( SerializeContext::TextWriteFn, &ReferenceWriter::writeComponent, &_writer ), nullptr ) }
                 {
+                    _context.setSchemaLayout( options._bSchemaLayout == SW_TRUE );
                     const SerializeContext::BinaryReadFn* pComponentBinaryReader = _context.findBinaryReader( getComponentHandleTypeName() );
                     if ( pComponentBinaryReader != nullptr )
                         _context.registerBinaryHandler( getComponentHandleTypeName(), SW_DELEGATE_METHOD( SerializeContext::BinaryWriteFn, &ReferenceWriter::writeComponentBinary, &_writer ),

@@ -354,7 +354,8 @@ namespace sw
         ObjectSavedIDMap mapSourceSavedID;
         source.collectSavedIDMap( mapSourceSavedID );
         ObjectSaveOptions saveOptions{ SerializePurpose::Authoring };
-        saveOptions._pSavedIDMap = &mapSourceSavedID;
+        saveOptions._pSavedIDMap   = &mapSourceSavedID;
+        saveOptions._bSchemaLayout = SW_TRUE; // 쿠킹 키가 리플렉션 지문을 들어(`makeCookJobDesc`) 배치가 바뀌면 다시 굽는다
 
         SceneDocument cooked = inoutDoc;
         for ( SceneDocument::SceneObjectNode& entity : cooked._listSceneObjectNode )

@@ -458,6 +458,66 @@ SW_TEST_CASE( SchemaMigrateTest, WireTypeNameIsFoundOrEmpty )
     SW_EXPECT_TRUE( findWireTypeName( static_cast<uint32>( hashed_string::computeHash( string_view{ "SchemaMigrateTest.NoSuchType" } ) ) ).empty() );
 }
 
+/** @brief [BinarySerializerTest] 쿠킹 배치 스트림은 태그 스트림과 같은 값을 읽고 더 작으며, 이어 쓴 Archive 에서 끝을 알고, 다른 목적의 읽기는 하나도 쓰지 않고 거절한다 */
+SW_TEST_CASE( BinarySerializerTest, SchemaLayoutStreamMatchesTheTaggedValues )
+{
+    SerializerSampleGroup source;
+    source._listText    = { "alpha", "beta" };
+    source._part._count = 11;
+    source._part._name  = "part";
+    source._part._extra = 2.25f;
+    source._count       = 42;
+
+    const TypeInfo&  type        = *SerializerSampleGroup::StaticType();
+    SerializeContext cookContext = SerializeContext::deriveFromDefault( SerializePurpose::Authoring );
+    cookContext.setSchemaLayout( true );
+
+    vector<uint8> taggedBytes;
+    vector<uint8> layoutBytes;
+    SW_REQUIRE_TRUE( BinarySerializer::serialize( &source, type, taggedBytes ) );
+    SW_REQUIRE_TRUE( BinarySerializer::serialize( &source, type, layoutBytes, cookContext ) );
+    SW_EXPECT_TRUE( layoutBytes.size() < taggedBytes.size() );
+
+    const auto expectSame = [&source]( const SerializerSampleGroup& read )
+    {
+        SW_EXPECT_TRUE( read._listText == source._listText );
+        SW_EXPECT_EQUAL( source._part._count, read._part._count );
+        SW_EXPECT_EQUAL( source._part._name, read._part._name );
+        SW_EXPECT_EQUAL( source._part._extra, read._part._extra );
+        SW_EXPECT_EQUAL( source._count, read._count );
+    };
+    // 읽기는 머리로 가린다 — 문맥에 배치를 켤 필요가 없다. 소프트 읽기도 모르는 칸이 없다.
+    SerializerSampleGroup strictRead;
+    SW_REQUIRE_TRUE( BinarySerializer::deserialize( &strictRead, type, layoutBytes.data(), layoutBytes.size() ) );
+    expectSame( strictRead );
+    SerializerSampleGroup     softRead;
+    vector<SchemaOrphanValue> listOrphan;
+    SW_EXPECT_TRUE( BinarySerializer::deserializeSoft( &softRead, type, layoutBytes.data(), layoutBytes.size(), &listOrphan ) == SoftReadResult::Read );
+    SW_EXPECT_TRUE( listOrphan.empty() );
+    expectSame( softRead );
+
+    // 한 Archive 에 배치 스트림과 태그 스트림을 이어 써도 스스로 끝을 안다.
+    Archive archive;
+    SW_REQUIRE_TRUE( BinarySerializer::serialize( &source, type, archive, cookContext ) );
+    SW_REQUIRE_TRUE( BinarySerializer::serialize( &source, type, archive ) );
+    Archive               reader( archive.getData(), archive.getSize() );
+    SerializerSampleGroup first;
+    SerializerSampleGroup second;
+    SW_REQUIRE_TRUE( BinarySerializer::deserialize( &first, type, reader ) );
+    SW_REQUIRE_TRUE( BinarySerializer::deserialize( &second, type, reader ) );
+    expectSame( first );
+    expectSame( second );
+
+    // 다른 목적은 싣는 칸이 달라 배치가 다르다 — 값을 하나도 쓰지 않는다.
+    SW_EXPECT_LOG( "BinarySerializer.SchemaLayoutMismatch" );
+    SerializerSampleGroup untouched;
+    SW_EXPECT_FALSE( BinarySerializer::deserialize( &untouched, type, layoutBytes.data(), layoutBytes.size(), SerializeContext::getDefault( SerializePurpose::Snapshot ) ) );
+    SW_EXPECT_EQUAL( 0, untouched._count );
+    SW_EXPECT_TRUE( untouched._listText.empty() );
+    // 잘린 스트림은 읽지 않는다.
+    SW_EXPECT_FALSE( BinarySerializer::deserialize( &untouched, type, layoutBytes.data(), layoutBytes.size() - 1 ) );
+}
+
 /** @brief [XMLSerializerPropertyTest] 되풀이된 원소와 자리가 틀린 칸(속성 값을 원소로, 원소 칸을 속성으로)은 모르는 칸으로 알린다 — 알림 없이 초기값이 되지 않는다 */
 SW_TEST_CASE( XMLSerializerPropertyTest, RepeatedAndMisplacedPropertiesAreReported )
 {
