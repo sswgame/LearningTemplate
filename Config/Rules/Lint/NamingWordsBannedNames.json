@@ -2065,6 +2065,7 @@
     "VelmoraSiteDef": "AdventureSiteDef — Velmora 흡수로 디렉터 · 규칙을 ActionAdventure 키트로 옮겼다(NEXT 7 절 12 단계)(2026-11-24)",
     "VelmoraRegionAttributeDef": "AdventureRegionAttributeDef — Velmora 흡수로 디렉터 · 규칙을 ActionAdventure 키트로 옮겼다(NEXT 7 절 12 단계)(2026-11-24)",
     "VelmoraSiteAttributeDef": "AdventureSiteAttributeDef — Velmora 흡수로 디렉터 · 규칙을 ActionAdventure 키트로 옮겼다(NEXT 7 절 12 단계)(2026-11-24)",
-    "VelmoraSpawnAttributeDef": "AdventureSpawnAttributeDef — Velmora 흡수로 디렉터 · 규칙을 ActionAdventure 키트로 옮겼다(NEXT 7 절 12 단계)(2026-11-24)"
+    "VelmoraSpawnAttributeDef": "AdventureSpawnAttributeDef — Velmora 흡수로 디렉터 · 규칙을 ActionAdventure 키트로 옮겼다(NEXT 7 절 12 단계)(2026-11-24)",
+    "VelmoraGame": "PlaygroundGame — 게임 Velmora 를 Playground 미니게임 velmora 로 흡수했다(NEXT 7 절 12 단계)(2026-11-24)"
   }
 }
