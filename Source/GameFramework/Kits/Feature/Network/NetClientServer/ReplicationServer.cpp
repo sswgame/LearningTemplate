@@ -382,7 +382,7 @@ namespace sw
         return true;
     }
 
-    bool ReplicationServer::popIntent( int32 connectionID, uint32 tick, ControlIntent& outIntent, bool& outbExact, vector<MeleeHitClaim>& outListClaim )
+    bool ReplicationServer::popIntent( int32 connectionID, uint32 tick, ControlIntent& outIntent, bool& outbExact, vector<MeleeHitClaim>& outListClaim, uint32* pOutPawnEntityID )
     {
         outListClaim.clear();
         vector<uint8> listInput;
@@ -406,6 +406,8 @@ namespace sw
             if ( bClaimsOk )
                 listClaim.push_back( claim );
         }
+        const uint32 pawnEntityID = bClaimsOk ? reader.readVarUint32() : 0u;
+        bClaimsOk                 = bClaimsOk && reader.hasOverflowed() == false;
         if ( bClaimsOk == false )
         {
             SW_LOG_WARNING_ID( "ReplicationServer.ReplicationServerConnectionSentMalformedClaims", "ReplicationServer: connection %# sent malformed melee claims for tick %# (%# claim(s))", connectionID, tick, claimCount );
@@ -422,7 +424,37 @@ namespace sw
         }
         outIntent    = received;
         outListClaim = std::move( listClaim );
+        if ( pOutPawnEntityID != nullptr )
+            *pOutPawnEntityID = pawnEntityID;
         return true;
+    }
+
+    void ReplicationServer::accumulateInputBudget( float32 elapsedSeconds )
+    {
+        if ( elapsedSeconds <= 0.0f )
+            return;
+        const float32 gained  = elapsedSeconds / _settings._tickInterval * ( 1.0f + _settings._inputRateTolerance );
+        const float32 ceiling = static_cast<float32>( _settings._maxInputCatchUpTicks );
+        for ( ClientState& client : _listClient )
+        {
+            if ( client._bActive == SW_TRUE )
+                client._inputBudget = MathUtil::min( ceiling, client._inputBudget + gained );
+        }
+    }
+
+    optional<uint32> ReplicationServer::popNextIntent( int32 connectionID, ControlIntent& outIntent, uint32& outPawnEntityID, vector<MeleeHitClaim>& outListClaim )
+    {
+        const optional<uint32> oldestTick = findOldestInputTick( connectionID );
+        if ( oldestTick.has_value() == false )
+            return nullopt;
+        ClientState& client = _listClient[static_cast<size_t>( connectionID )];
+        if ( client._inputBudget < 1.0f )
+            return nullopt;
+        client._inputBudget -= 1.0f;
+        bool bExact = false;
+        if ( popIntent( connectionID, *oldestTick, outIntent, bExact, outListClaim, &outPawnEntityID ) == false )
+            return nullopt; // 깨진 입력 — 그 틱은 지나갔다(`popInput` 이 창을 밀었다)
+        return oldestTick;
     }
 
     bool ReplicationServer::setOwnerState( int32 connectionID, uint32 inputTick, const vector<uint8>& buffer )

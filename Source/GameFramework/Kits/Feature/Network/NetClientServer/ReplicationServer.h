@@ -133,6 +133,10 @@ namespace sw
         PROPERTY( Min = 0, Max = 256 )
         int32 _maxViewLagTicks{ 32 }; ///< 입력 스탬프의 보던 틱을 꺼내는 틱에서 이만큼 뒤까지만 받는다(서버 클램프). 랙 보정 기록(`LagCompensationHistory`)보다 길게 잡지 않는다
         PROPERTY( Min = 1 )
+        int32 _maxInputCatchUpTicks{ 15 }; ///< 한 연결이 모아 둘 수 있는 입력 몫(틱 수). 늦게 몰려 온 입력(끊김 · 손실 재전송)을 이만큼까지 한 번에 따라잡는다(`popNextIntent`)
+        PROPERTY( Min = 0, Max = 1 )
+        float32 _inputRateTolerance{ 0.05f }; ///< 입력 몫을 채우는 빠르기의 여유(비율). 두 시계의 어긋남과 서버 멈춤 뒤의 밀린 입력을 이만큼 빠르게 소화한다(언리얼 이동 시간 어긋남 감지의 drift 허용 자리)
+        PROPERTY( Min = 1 )
         int32 _dormancyTicks{ 60 }; ///< 이만큼 틱 동안 판이 오르지 않고 깨워지지도 않은 엔티티는 휴면이다 — 연결마다의 관련성 · 우선도 평가에서 빠진다(머리말)
     };
 } // namespace sw
@@ -198,7 +202,19 @@ namespace sw
          * @details 되풀이한 입력(@p outbExact 가 false)이면 발동 비트 · 발동 순간의 시선 · 주장을 지웁니다 — 한 번 누름 · 한 번 맞음이 두 번 되지 않게. 받은 입력이 없거나 깨졌으면 false 이고
          *          @p outIntent 는 그대로입니다. @p outListClaim 은 늘 비우고 시작합니다. 주장의 `_frame` 은 입력 틱입니다.
          */
-        [[nodiscard]] bool popIntent( int32 connectionID, uint32 tick, ControlIntent& outIntent, bool& outbExact, vector<MeleeHitClaim>& outListClaim );
+        [[nodiscard]] bool popIntent( int32 connectionID, uint32 tick, ControlIntent& outIntent, bool& outbExact, vector<MeleeHitClaim>& outListClaim, uint32* pOutPawnEntityID = nullptr );
+        /**
+         * @brief 흐른 실제 시간 @p elapsedSeconds 만큼 연결마다 꺼낼 수 있는 입력 몫을 채웁니다(`_maxInputCatchUpTicks` 까지). `popNextIntent` 를 쓰는 게임이 프레임마다 한 번 부릅니다.
+         */
+        void accumulateInputBudget( float32 elapsedSeconds );
+        /**
+         * @brief 이 연결에서 받아 둔 가장 오래된 입력 하나를 꺼냅니다 — 서버 틱에 묶지 않고 도착한 입력만큼, 다만 흐른 시간의 몫 안에서 꺼낸다.
+         * @details 언리얼 `ServerMove` 의 모양이다: 클라이언트의 입력이 올 때 그만큼 움직이고(늦으면 기다렸다가 몰아서), 걸음 수는 시간의 몫이 막는다(속도 치트 — 빠른 시계로 입력을 더 보내도
+         *          몫을 넘은 입력은 창에서 밀려나 서버의 자리는 그대로고, 그 클라이언트가 되돌아온다). 서버 틱마다 하나씩 꺼내며 늦은 입력을 버리는 `popIntent` 는 클라이언트가 한 번 멈추면
+         *          그 뒤의 입력이 영영 늦어 조종이 듣지 않았다.
+         * @return 꺼낸 입력 틱입니다. 받은 입력이 없거나 몫이 없거나 깨진 입력이면 비어 있습니다.
+         */
+        [[nodiscard]] optional<uint32> popNextIntent( int32 connectionID, ControlIntent& outIntent, uint32& outPawnEntityID, vector<MeleeHitClaim>& outListClaim );
         /**
          * @brief 이 클라이언트가 조종하는 엔티티의 상태를, 그 상태를 만든 마지막 입력 틱과 함께 정합니다. 다음 스냅샷부터 예산과 관련 정책에 상관없이 통째로 싣습니다.
          * @details 틱과 상태는 늘 한 번에 정한다. 상태가 `NetSnapshot::kMaxEntityBytes` 를 넘으면 오류를 남기고 정하지 않으며 false 를 반환한다.
@@ -231,6 +247,7 @@ namespace sw
             vector<uint8>                   _lastInput{};
             NetOwnerState                   _ownerState{}; ///< 이 클라이언트가 조종하는 엔티티의 상태와 그 입력 틱. 스냅샷마다 싣는다
             float32                         _viewTick{ 0.0f };
+            float32                         _inputBudget{ 0.0f };      ///< 지금 꺼낼 수 있는 입력 수(`accumulateInputBudget` 이 채우고 `popNextIntent` 가 쓴다)
             int32                           _snapshotBudgetBytes{ 0 }; ///< 이번 `sendSnapshots` 의 예산(그 연결의 지금 송신 속도에서). 나눠 실행하기 전에 정하며 워커는 읽기만 한다
             uint32                          _ackedTick{ 0 };
             vector<RelevantRecord>          _listLastRelevant{}; ///< 지난 스냅샷의 관련 엔티티(id 오름차순). 휴면 엔티티의 판단을 이어 간다

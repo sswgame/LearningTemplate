@@ -8,11 +8,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
-#include "Engine/Physics/Collision/PhysicsQuery.h"
-#include "Engine/Physics/Collision/PhysicsShape.h"
 #include "Engine/Physics/Component/CharacterControllerComponent.h"
-#include "Engine/Physics/IPhysicsScene.h"
-#include "Engine/Physics/Scene/ScenePhysics.h"
 
 #include "GameFramework/Runtime/Character/Control/Controller/ControllerComponent.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/CharacterMovementComponent.h"
@@ -29,8 +25,6 @@ namespace sw
         {
             /** @brief 하차 위치가 막혔을 때 둘러보는 방향 수입니다. 45° 간격입니다. */
             static constexpr int32 kExitProbeCount = 8;
-            /** @brief 겹침을 측정할 때 발을 바닥에서 띄우는 높이입니다. 단위는 미터이며 바닥과 겹치지 않게 하기 위한 값입니다. */
-            static constexpr float32 kGroundClearance = 0.05f;
 
             static GameObjectManager* findManager( const Component& component )
             {
@@ -59,27 +53,20 @@ namespace sw
                     pController->setActive( bSuspended == false );
             }
 
-            /** @brief 탑승자 캡슐을 @p feet 에 두었을 때 무엇과 겹치는지 구합니다. 물리 씬이나 컨트롤러가 없으면 비어 있는 것으로 봅니다. */
-            static bool isSpotFree( GameObjectManager& manager, const GameObject& rider, const float3& feet )
+            /** @brief 탑승자 캡슐을 @p feet 에 두어도 겹치지 않는지 봅니다. 컨트롤러가 없으면 비어 있는 것으로 봅니다. */
+            static bool isSpotFree( const GameObject& rider, const float3& feet )
             {
-                const IPhysicsQueryScene3D*         pScene      = manager.getSubsystem<sw::ScenePhysics>().findScene3D();
                 const CharacterControllerComponent* pController = rider.getComponent<CharacterControllerComponent>();
-                if ( pScene == nullptr || pController == nullptr )
-                    return true;
-                const PhysicsShapeDesc3D  capsule = pController->getScaledCapsule();
-                const float3              center{ feet._x, feet._y + kGroundClearance + capsule._radius + capsule._halfHeight, feet._z };
-                PhysicsQueryFilter        filter;
-                vector<PhysicsBodyHandle> listBody;
-                return pScene->overlapShape( capsule, center, quaternion{}, filter, listBody ) == 0;
+                return pController == nullptr || pController->isSpotFree( feet );
             }
 
             /** @brief 내릴 위치를 구합니다. 좌석의 하차 위치를 쓰고, 막혀 있으면 탈것 둘레 여덟 방향(같은 거리) 중 처음 빈 곳을 쓰고, 다 막혀 있으면 하차 위치를 그대로 씁니다. */
-            static float3 findExitSpot( GameObjectManager& manager, const GameObject& rider, const VehicleSeatComponent& seat, const SceneComponent& vehicleRoot )
+            static float3 findExitSpot( const GameObject& rider, const VehicleSeatComponent& seat, const SceneComponent& vehicleRoot )
             {
                 const float4x4 vehicleWorld = vehicleRoot.getWorldMatrix();
                 const float3   preferred    = float3::transform( seat.getExitOffset(), vehicleWorld );
                 float3         result       = preferred;
-                if ( isSpotFree( manager, rider, preferred ) )
+                if ( isSpotFree( rider, preferred ) )
                     return result;
                 const float3  offset   = seat.getExitOffset();
                 const float32 distance = MathUtil::sqrt( offset._x * offset._x + offset._z * offset._z );
@@ -89,7 +76,7 @@ namespace sw
                     const float32 yaw = baseYaw + MathUtil::kTwoPi * static_cast<float32>( probeIndex ) / static_cast<float32>( kExitProbeCount );
                     const float3  probe{ MathUtil::sin( yaw ) * distance, offset._y, MathUtil::cos( yaw ) * distance };
                     const float3  spot = float3::transform( probe, vehicleWorld );
-                    if ( isSpotFree( manager, rider, spot ) )
+                    if ( isSpotFree( rider, spot ) )
                     {
                         result = spot;
                         return result;
@@ -188,7 +175,7 @@ namespace sw
         const bool bPlaceRiderAtExit = bForced == false && pVehicleRoot != nullptr && pRiderRoot != nullptr;
         if ( bPlaceRiderAtExit )
         {
-            const float3 exitSpot = Internal::findExitSpot( *pManager, *pRider, *pSeat, *pVehicleRoot );
+            const float3 exitSpot = Internal::findExitSpot( *pRider, *pSeat, *pVehicleRoot );
             pRiderRoot->teleportTo( exitSpot );
             float3 rotation = pRiderRoot->getLocalRotation();
             rotation._x     = 0.0f;

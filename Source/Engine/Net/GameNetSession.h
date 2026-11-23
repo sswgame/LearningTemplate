@@ -345,7 +345,11 @@ namespace sw
          * @brief 이 세션의 창구 · 라우터 · 역할을 씬의 넷 링크 값(`SceneNetLink`)으로 묶습니다. 게임 인스턴스가 씬 매니저에 건다(`SceneManager::setNetLink`) —
          *        네트워크 컴포넌트는 전역 세션이 아니라 자기 씬의 링크를 읽는다. 세션이 열려 있지 않으면(`isActive` 거짓) 쓰면 안 됩니다.
          */
-        [[nodiscard]] NetLinkValue makeNetLink() { return NetLinkValue{ &_peers, &_router, _role == GameNetRole::Server ? NetLinkRole::Server : NetLinkRole::Client }; }
+        [[nodiscard]] NetLinkValue makeNetLink()
+        {
+            const bool bServer = _role == GameNetRole::Server;
+            return NetLinkValue{ &_peers, &_router, bServer ? NetLinkRole::Server : NetLinkRole::Client, bServer ? _bTicketBound : uint8{ SW_FALSE } };
+        }
         /** @brief 키트와 게임이 메시지 처리기를 다는 라우터입니다. `update` 가 모든 샤드를 poll 합니다. */
         NetMessageRouter& getRouter() { return _router; }
         /**
@@ -533,7 +537,7 @@ namespace sw
         GameNetWireContent                _wireContent;      ///< 열린 세션에 섞은 와이어 내용(닫으면 비운다)
         uint16                            _listenPort;
         GameNetRole                       _role;
-        uint8                             _bTicketBound;            ///< 클라이언트 — 티켓을 내미는 세션이다(티켓이 지워진 뒤에는 새 티켓 없이 다시 붙지 않는다)
+        uint8                             _bTicketBound;            ///< 티켓에 묶인 세션이다 — 서버는 모든 연결에 티켓을 요구하고, 클라이언트는 티켓을 내민다(티켓이 지워진 뒤에는 새 티켓 없이 다시 붙지 않는다)
         uint8                             _bConnectFailureReported; ///< 클라이언트 — 연결 실패를 한 번 알렸다(다시 시도하는 시간 초과는 처음만 알린다)
         MetricRegistry*                   _pMetricRegistry;         ///< 서버 — 운영 지표(`bindMetricRegistry`, 전용 서버가 소유). nullptr 이면 세지 않는다
         ResourceDigestComparer            _digestComparer;          ///< 서버 — 클라이언트마다 받은 합성 줄과 자기 합성을 맞댄다

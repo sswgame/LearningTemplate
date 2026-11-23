@@ -11,7 +11,8 @@
  *          미니게임이 게임 기능으로 켜고 끈다(`SW_GAME_FEATURE`, 들어갈 때 걸고 나올 때 거둔다).
  *          도시 건설 미니게임(`FrontierTown/` — 키트 둘의 디렉터를 한 씬에 섞는다)의 도시 쪽은 키트, RTS 쪽(일꾼 · 순찰)은 이 게임의 디렉터다.
  *          초원 마을 미니게임(`MeadowVillage/`)은 하우징 · 생물 · 농장 키트를 한 씬에 섞는다 — 밭 · 집 자동 짓기 디렉터와 한 프로세스 재생(`MeadowNetSimGame`)이 이 게임의 몫이다.
- *          마을(`maps/hub`)은 팩의 시작 맵이다. 지역 효과 시연 · 마을의 이펙트 · 세트(`data/abilities.xml`)와 기본 어빌리티 클래스는 gamesettings `gameFeatures` 의
+ *          마을(`maps/hub`)은 팩의 시작 맵이다 — 전용 서버가 띄우면 허브 서버(`Hub/` — 계정마다 진행을 저장하는 공유 월드, NetMMO 복제)가 서고, 클라이언트는
+ *          `net.ticketconnect <로그인 주소> <계정> <비밀번호> <서버 이름> <게임 주소>` 로 붙는다(`py -3 -m Scripts net-pair mmo`). 지역 효과 시연 · 마을의 이펙트 · 세트(`data/abilities.xml`)와 기본 어빌리티 클래스는 gamesettings `gameFeatures` 의
  *          게임 기능(`PlaygroundAbilitiesGameFeature.cpp`)이 게임 범위에 건다.
  *          사격장 미니게임(`Shooter3D/`)의 무기는 게임 기능 `Shooter3D` 가 건다. 온라인(`Online/PlaygroundOnlineFlow` — 로그인 · 우편 · 상점 · 매치 세션 · 순위표)은 이 게임이 멤버로 들고
  *          게임 범위에 건다 — 매치형 미니게임(사격장 온라인 매치)의 매칭 창구이기도 하다. 연결은 세션(`OnlineSession`)이 맡고 게임이 열기 전에는 혼자 하는 허브다.
@@ -34,6 +35,8 @@
 #include "GameFramework/Runtime/Foundation/Framework/Save/GameStateSnapshot.h"
 #include "GameFramework/Runtime/Online/Service/OnlineSession.h"
 
+#include "Games/Playground/Hub/HubNetLink.h"
+#include "Games/Playground/Hub/HubPawnReplicationComponent.h"
 #include "Games/Playground/Online/PlaygroundOnlineFlow.h"
 #include "Games/Playground/Shooter3D/ShooterBodyMovementComponent.h"
 #include "Games/Playground/Shooter3D/ShooterNetPawnComponent.h"
@@ -52,11 +55,11 @@ namespace sw
     protected:
         bool onPrepareContent( const ContentPreparationToken& token ) override;
         bool onInitialize() override;
-        /** @brief 사격장의 복제 칸(걸음 · 적 · 소유자 상태)을 핸드셰이크에 올린다 — 칸이 다른 빌드는 접속에서 갈린다. */
-        [[nodiscard]] bool onRegisterReplicatedTypes( NetMessageChannel& outChannel ) override;
         /** @brief 클라이언트 부분(벤치)이 자기 장면을 띄웠으면 첫 씬을 열지 않습니다. */
         void startFirstScene() override;
         void onUpdate( float32 deltaTime ) override;
+        /** @brief 허브 엔티티 상태(`HubEntityNetState`)와 폰 상태 · 모습(`HubPawnState` · `HubPawnPose`), 사격장의 걸음 · 적 · 소유자 상태의 복제 스키마를 종류 번호마다 핸드셰이크에 올린다 — 칸이 다른 빌드는 접속에서 갈린다. */
+        [[nodiscard]] bool onRegisterReplicatedTypes( NetMessageChannel& outChannel ) override;
         /** @brief 상태 스냅샷을 만들기 직전에 부릅니다. 벤치는 절차적으로 생성한 오브젝트라서 정리해 스냅샷에 싣지 않습니다. */
         void onBeforeStateSerialize() override;
         /** @brief 상태 복원이 씬을 교체한 뒤에 부릅니다. 벤치는 스냅샷에 없으므로 다시 만듭니다. */
@@ -104,13 +107,6 @@ namespace sw
         return bindScopedService( &_onlineFlow ) && bindScopedService<IMinigameMatchmaking>( &_onlineFlow );
     }
 
-    bool PlaygroundGame::onRegisterReplicatedTypes( NetMessageChannel& outChannel )
-    {
-        return outChannel.registerReplicatedType<ShooterMoveState>( static_cast<uint8>( ShooterNetPawnComponent::kPawnTypeID ) ) &&
-               outChannel.registerReplicatedType<ShooterEnemyNetState>( static_cast<uint8>( ShooterNetPawnComponent::kEnemyTypeID ) ) &&
-               outChannel.registerReplicatedType<ShooterOwnerNetState>( static_cast<uint8>( ShooterNetPawnComponent::kOwnerStateSchemaID ) );
-    }
-
     void PlaygroundGame::startFirstScene()
     {
         if ( IGameClientPartFactory* const pFactory = game::findSubsystem<IGameClientPartFactory>() )
@@ -130,6 +126,18 @@ namespace sw
 
         if ( _clientPart != nullptr )
             _clientPart->update( deltaTime );
+    }
+
+    bool PlaygroundGame::onRegisterReplicatedTypes( NetMessageChannel& outChannel )
+    {
+        return outChannel.registerReplicatedType<HubEntityNetState>( static_cast<uint8>( HubEntityType::kAvatar ) ) &&
+               outChannel.registerReplicatedType<HubEntityNetState>( static_cast<uint8>( HubEntityType::kCreature ) ) &&
+               outChannel.registerReplicatedType<HubEntityNetState>( static_cast<uint8>( HubEntityType::kHerb ) ) &&
+               outChannel.registerReplicatedType<HubPawnState>( static_cast<uint8>( HubPawnReplicationComponent::kOwnerStateSchemaID ) ) &&
+               outChannel.registerReplicatedType<HubPawnPose>( static_cast<uint8>( HubPawnReplicationComponent::kPawnTypeID ) ) &&
+               outChannel.registerReplicatedType<ShooterMoveState>( static_cast<uint8>( ShooterNetPawnComponent::kPawnTypeID ) ) &&
+               outChannel.registerReplicatedType<ShooterEnemyNetState>( static_cast<uint8>( ShooterNetPawnComponent::kEnemyTypeID ) ) &&
+               outChannel.registerReplicatedType<ShooterOwnerNetState>( static_cast<uint8>( ShooterNetPawnComponent::kOwnerStateSchemaID ) );
     }
 
     void PlaygroundGame::onBeforeStateSerialize()

@@ -108,7 +108,9 @@ namespace sw
         void                    destroyCharacter( PhysicsCharacterHandle character ) override;
         PhysicsCharacterState2D moveCharacter( PhysicsCharacterHandle character, const float2& velocity, float32 deltaTime ) override;
         void                    moveCharacters( span<const PhysicsCharacterMove2D> listMove, float32 deltaTime ) override;
+        PhysicsCharacterState2D replayCharacterMove( PhysicsCharacterHandle character, const float2& velocity, float32 deltaTime ) override;
         void                    setCharacterPosition( PhysicsCharacterHandle character, const float2& position ) override;
+        void                    refreshCharacterContacts( PhysicsCharacterHandle character ) override;
         bool                    setCharacterSize( PhysicsCharacterHandle character, float32 radius, float32 halfHeight ) override;
         bool                    getCharacterState( PhysicsCharacterHandle character, PhysicsCharacterState2D& outState ) const override;
 

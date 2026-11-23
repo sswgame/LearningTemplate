@@ -52,8 +52,18 @@ namespace sw
          * @details 씬이 스텝마다 캐릭터 이동을 모아 한 번 부른다(`ScenePhysics::queueCharacterMove`, 감사 S-8) — 유니티 DOTS 캐릭터 컨트롤러 잡 · 언리얼 Mover 의
          *          일괄 갱신 자리다. 구현이 레인으로 나눠 돌 수 있게 한 호출에 모은다(지금 구현은 차례로 돈다).
          */
-        virtual void moveCharacters( span<const CharacterMove> listMove, float32 deltaTime )          = 0;
-        virtual void setCharacterPosition( PhysicsCharacterHandle character, const Vector& position ) = 0;
+        virtual void moveCharacters( span<const CharacterMove> listMove, float32 deltaTime ) = 0;
+        /**
+         * @brief `moveCharacter` 와 같은 이동이되 닿은 동적 바디를 밀거나 디딘 바디를 누르지 않습니다 — 되감은 입력을 다시 돌리는 이동(네트워크 예측)이 세계를 여러 번 밀지 않게 한다.
+         * @details 언리얼 `UCharacterMovementComponent` 가 저장한 이동을 다시 돌리는 동안(`bClientUpdating`) 물리 충격을 주지 않는 자리다.
+         */
+        virtual CharacterState replayCharacterMove( PhysicsCharacterHandle character, const Vector& velocity, float32 deltaTime ) = 0;
+        virtual void           setCharacterPosition( PhysicsCharacterHandle character, const Vector& position )                   = 0;
+        /**
+         * @brief 지금 자리에서 닿은 것 · 디딘 바닥을 새로 찾고 속도를 지웁니다(옮기지 않는다). `setCharacterPosition` 뒤에 부르면 그 자리의 상태가 (자리, 세계)만의 함수가 된다.
+         * @details 이동은 직전 이동의 접촉(디딤)을 이어 쓰므로, 상태를 되돌린 뒤 이것을 불러야 "되감아 다시 돌리기 = 이어 돌리기" 다(Jolt `CharacterVirtual::RefreshContacts`).
+         */
+        virtual void refreshCharacterContacts( PhysicsCharacterHandle character ) = 0;
         /**
          * @brief 캐릭터를 지우지 않고 캡슐 크기를 바꿉니다 — 자리 · 디딘 바닥 · 속 바디(`_bInnerBody`)의 핸들과 접촉이 이어집니다.
          * @details 배율이 바뀐 컨트롤러가 쓴다(다시 만들면 속 바디의 쌍마다 끝 → 시작이 난다, 감사 S-4). 커진 캡슐이 벽에 묻혀도 바꾼다 — 다음 이동이 밀어낸다.

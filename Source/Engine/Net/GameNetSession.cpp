@@ -463,6 +463,9 @@ namespace sw
                 }
             }
             _listenPort = _listShard.front()->_transport->getLocalAddress()._port;
+            // 엔드포인트의 토큰 결속 규칙(`NetEndpoint::computeFeatureMask`)과 같다 — 암호화된 세션에 인증기가 끼워졌으면 자격 없는 연결은 들어오지 못한다.
+            const NetSecurityConfig& security = params._hostSettings._security;
+            _bTicketBound                     = security._mode == NetSecurityMode::Encrypted && security._pAuthenticator != nullptr ? SW_TRUE : SW_FALSE;
             for ( int32 shardIndex = 0; shardIndex < getShardCount(); ++shardIndex )
             {
                 _listShard[static_cast<size_t>( shardIndex )]->_metrics = registerShardMetrics( shardIndex );

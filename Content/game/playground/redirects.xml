@@ -157,4 +157,10 @@
 	<Redirect from="game/playground/shooter3d/data/localization/shooter3d.locproject.xml" to="game/playground/data/localization/playground.locproject.xml" />
 	<Redirect from="game/playground/shooter3d/data/localization/shooter3d.strings.xml" to="game/playground/data/localization/playground.strings.xml" />
 	<Redirect from="game/playground/shooter3d/data/localization/ko.translation.xml" to="game/playground/data/localization/ko.translation.xml" />
+	<PrefixRedirect from="game/lanternvale" to="game/playground/lanternvale" />
+	<Redirect from="game/playground/lanternvale/automation/rules.scenario.xml" to="game/playground/automation/hubserver_rules.scenario.xml" />
+	<Redirect from="game/playground/lanternvale/automation/slice.scenario.xml" to="game/playground/automation/hubserver_slice.scenario.xml" />
+	<Redirect from="game/playground/lanternvale/automation/netpair/first.scenario.xml" to="game/playground/automation/netpair/hub_first.scenario.xml" />
+	<Redirect from="game/playground/lanternvale/automation/netpair/return.scenario.xml" to="game/playground/automation/netpair/hub_return.scenario.xml" />
+	<Redirect from="game/playground/lanternvale/maps/vale.scene.xml" to="game/playground/maps/hub.scene.xml" />
 </Redirects>
