@@ -25,7 +25,6 @@
 #include "Core/Network/NetTypes.h"
 #include "Core/Network/Transport/IStreamTransport.h"
 #include "Core/Time/Clock.h"
-#include "Core/Time/ExponentialBackoff.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Storage/CacheStore/Server/Driver/RESP/RESPConnection.h"
@@ -162,14 +161,11 @@ namespace sw
         deque<Operation>                       _listOperation;
         OnceInit<unique_ptr<IStreamTransport>> _transport;
         OnceInit<unique_ptr<ITLSContext>>      _tlsContext;
-        int64 _nextCommandConnectNanoseconds   SW_GUARDED_BY( _mutex );
-        int64 _nextSubscribeConnectNanoseconds SW_GUARDED_BY( _mutex );
         int64 _subscribeActivityNanoseconds    SW_GUARDED_BY( _mutex ); ///< 구독 연결이 마지막으로 받았거나, 기다리는 것 없이 명령을 보낸 시각
-        ExponentialBackoff _commandBackoff     SW_GUARDED_BY( _mutex );
-        ExponentialBackoff _subscribeBackoff   SW_GUARDED_BY( _mutex );
-        IDAllocator<uint64>                    _requestIDAllocator;
-        uint64                                 _blockingRequestID; ///< 비교 후 쓰기가 GET 답을 기다리는 요청이다. 0이면 없다
-        uint8                                  _bInitialized;
-        uint8                                  _bShutdown;
+
+        IDAllocator<uint64> _requestIDAllocator;
+        uint64              _blockingRequestID; ///< 비교 후 쓰기가 GET 답을 기다리는 요청이다. 0이면 없다
+        uint8               _bInitialized;
+        uint8               _bShutdown;
     };
 } // namespace sw

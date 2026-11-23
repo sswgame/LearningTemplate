@@ -438,6 +438,24 @@ SW_TEST_CASE_F( RESPStoreTest, RejectedAuthBacksOffBeforeReconnecting )
     SW_EXPECT_TRUE( _server._openedCount > opened ); // 물러섬이 지나면 다시 해 본다
 }
 
+// 결함: 온전한 답이 아닌 바이트(잘린 답 · TLS 핸드셰이크)도 물러섬을 풀어, 답하다 마는 서버를 물러서지 않고 두드렸다. 보내기가 져서 끊긴 연결은 물러섬이 아예 없었다.
+SW_TEST_CASE_F( RESPStoreTest, PartialAnswersDoNotResetTheBackoff )
+{
+    start();
+    SW_EXPECT_LOG( "RespConnection.RESPConnectionClosed" );
+    for ( int32 round = 0; round < 16; ++round )
+    {
+        (void)_store.submit( EphemeralRequest::makeGet( "k" ) );
+        (void)poll();
+        _server.send( _server._lastHandle, "+" );
+        (void)poll();
+        _server._transport->close( _server._lastHandle, StreamCloseMode::Abort );
+        (void)poll();
+        _clock.advanceMilliseconds( 100 );
+    }
+    SW_EXPECT_TRUE( _server._openedCount <= 8 ); // 100 ms 마다 시도해도 두 배씩 늘어난 물러섬이 1.6 초 동안 여섯 번쯤만 받는다
+}
+
 // 구독: 접두어를 붙여 구독하고, 받은 메시지는 접두어를 떼어 준다. 다른 접두어의 메시지는 버린다.
 SW_TEST_CASE_F( RESPStoreTest, SubscribeDeliversMessagesWithoutPrefix )
 {
@@ -496,8 +514,14 @@ namespace
     class SubscribePeer final : public IStreamHandler
     {
     public:
-        RESPConnection               _connection{ true };
-        unique_ptr<IStreamTransport> _transport{};
+        RESPConnection               _connection;
+        unique_ptr<IStreamTransport> _transport;
+
+        explicit SubscribePeer( const IClock& clock )
+            : _connection{ true, clock }
+            , _transport{}
+        {
+        }
 
         void onStreamOpened( StreamConnectionHandle handle, const NetAddress& /*remote*/, bool /*bAccepted*/ ) override { (void)_connection.handleOpened( *_transport, handle ); }
         void onStreamReceived( StreamConnectionHandle handle, const uint8* pData, int32 size ) override { (void)_connection.handleReceived( *_transport, handle, pData, size ); }
@@ -512,7 +536,8 @@ SW_TEST_CASE( RESPConnectionTest, SubscribeConnectionHoldsItsUnconfirmedCommands
     LoopbackStreamNetwork network;
     FakeRESPServer        server;
     server.start( network );
-    SubscribePeer         peer;
+    ManualClock           clock{ MonotonicMilliseconds{ 1000 } };
+    SubscribePeer         peer{ clock };
     StreamTransportConfig settings;
     settings._ioThreadCount = 0;
     peer._transport         = network.createTransport();
@@ -526,7 +551,7 @@ SW_TEST_CASE( RESPConnectionTest, SubscribeConnectionHoldsItsUnconfirmedCommands
         }
     };
 
-    SW_REQUIRE_TRUE( peer._connection.beginConnect( *peer._transport, NetAddress::makeLoopback( FakeRESPServer::kPort ), nullptr, nullptr ) );
+    SW_REQUIRE_TRUE( peer._connection.beginConnect( *peer._transport, NetAddress::makeLoopback( FakeRESPServer::kPort ), nullptr, nullptr, 5000 ) );
     SW_EXPECT_TRUE( peer._connection.sendCommand( *peer._transport, RESPCommand{ "SUBSCRIBE" }.addText( "a" ), RESPCommandTag{} ) );
     SW_EXPECT_TRUE( peer._connection.sendCommand( *peer._transport, RESPCommand{ "SUBSCRIBE" }.addText( "b" ), RESPCommandTag{} ) );
     poll();

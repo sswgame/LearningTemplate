@@ -7,8 +7,14 @@
 
 namespace sw
 {
-    RESPConnection::RESPConnection( bool bPushMode )
-        : _parser{}
+    namespace
+    {
+        constexpr int64 kRESPFirstBackoffMs = 100; ///< 두 번째 실패부터의 첫 대기(`ExponentialBackoff`)
+    } // namespace
+
+    RESPConnection::RESPConnection( bool bPushMode, const IClock& clock )
+        : _clock{ clock }
+        , _parser{}
         , _listAwaitTag{}
         , _replyRecordBuffer{}
         , _pushValueBuffer{}
@@ -17,7 +23,11 @@ namespace sw
         , _cipherBytes{}
         , _tlsSession{}
         , _handle{}
+        , _backoff{ ExponentialBackoff::createWithRandomSeed( kRESPFirstBackoffMs ) }
+        , _nextConnectNanoseconds{ 0 }
+        , _maxBackoffMs{ 0 }
         , _state{ RESPConnectionState::Closed }
+        , _bAnswered{ SW_FALSE }
         , _bPushMode{ static_cast<uint8>( bPushMode ? SW_TRUE : SW_FALSE ) }
         , _bAuthRejected{ SW_FALSE }
     {
@@ -25,8 +35,10 @@ namespace sw
 
     RESPConnection::~RESPConnection() = default;
 
-    bool RESPConnection::beginConnect( IStreamTransport& transport, const NetAddress& address, ITLSContext* pTLSContext, const RESPCommand* pAuthCommand )
+    bool RESPConnection::beginConnect( IStreamTransport& transport, const NetAddress& address, ITLSContext* pTLSContext, const RESPCommand* pAuthCommand, int64 maxBackoffMs )
     {
+        _maxBackoffMs = maxBackoffMs;
+        _bAnswered    = SW_FALSE;
         _parser.reset();
         _listAwaitTag.clear();
         _pendingSendBytes.clear();
@@ -37,7 +49,10 @@ namespace sw
         {
             _tlsSession = pTLSContext->createSession();
             if ( _tlsSession == nullptr )
+            {
+                holdReconnect();
                 return false;
+            }
         }
         if ( pAuthCommand != nullptr )
         {
@@ -50,6 +65,7 @@ namespace sw
             _listAwaitTag.clear();
             _pendingSendBytes.clear();
             _state = RESPConnectionState::Closed;
+            holdReconnect();
             return false;
         }
         _state = RESPConnectionState::Connecting;
@@ -92,6 +108,7 @@ namespace sw
         _handle                             = StreamConnectionHandle{};
         _state                              = RESPConnectionState::Closed;
         failAwaitingTags();
+        holdReconnect();
         transport.close( handle, StreamCloseMode::Abort );
     }
 
@@ -148,6 +165,7 @@ namespace sw
         _handle = StreamConnectionHandle{};
         _state  = RESPConnectionState::Closed;
         failAwaitingTags();
+        holdReconnect();
         return true;
     }
 
@@ -204,8 +222,10 @@ namespace sw
                     _bAuthRejected = SW_TRUE;
                     return true;
                 }
+                _bAnswered = SW_TRUE;
                 continue;
             }
+            _bAnswered          = SW_TRUE;
             const bool bMessage = _bPushMode == SW_TRUE && value._type == RespType::Array && value._listElement.empty() == false && value._listElement[0].isText( "message" );
             if ( bMessage )
             {
@@ -227,6 +247,13 @@ namespace sw
             record._value           = std::move( value );
             _listAwaitTag.pop_front();
         }
+    }
+
+    void RESPConnection::holdReconnect()
+    {
+        if ( _bAnswered == SW_TRUE )
+            _backoff.reset();
+        _nextConnectNanoseconds = _clock.nowNanoseconds() + _backoff.takeDelayMs( _maxBackoffMs ) * constant::time::kNanosecondsPerMillisecond;
     }
 
     void RESPConnection::failAwaitingTags()
