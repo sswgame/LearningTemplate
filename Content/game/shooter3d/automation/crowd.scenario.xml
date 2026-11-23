@@ -18,10 +18,10 @@
 	<!-- 쫓는 상태(혼자 평가하는 유닛이 없고 일하는 유닛이 둘 이상)가 선 뒤에 사진을 찍는다. -->
 	<WaitUntil watch="Animation.CrowdSoloMeshes" equals="0" timeoutSeconds="60"/>
 	<WaitUntil watch="Animation.ActiveSkeletalMeshes" atLeast="2" timeoutSeconds="60"/>
-	<Screenshot file="chase.ppm" stability="assets"/>
+	<Screenshot file="chase.ppm" stability="Assets"/>
 	<!-- 싸우는 모습 — 결정적 시뮬레이션에서 몰려온 뒤 4 초의 장면이 사진 내용이다 -->
 	<AdvanceSimulation frames="240"/>
-	<Screenshot file="fight.ppm" stability="assets"/>
+	<Screenshot file="fight.ppm" stability="Assets"/>
 	<!-- 소켓 부품 풀: 첫 적은 쉬는 부품이 없어 새로 스폰하고, 사라진 적의 부품은 풀이 받는다 -->
 	<Expect watch="SocketPartPool.TakeMisses" atLeast="1"/>
 	<WaitUntil watch="SocketPartPool.Stored" atLeast="1" timeoutSeconds="60"/>
