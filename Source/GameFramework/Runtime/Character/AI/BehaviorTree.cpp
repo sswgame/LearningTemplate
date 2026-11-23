@@ -348,6 +348,9 @@ namespace sw
         , _listActive{}
         , _listLastCondition{}
         , _listMoveTarget{}
+        , _listMoveSerial{}
+        , _pMoveSerial{ &_ownMoveSerial }
+        , _ownMoveSerial{ 0 }
         , _elapsedTime{ 0.0f }
         , _tickCount{ 0 }
         , _activeLeaf{}
@@ -366,6 +369,7 @@ namespace sw
         _listActive.assign( nodeCount, SW_FALSE );
         _listLastCondition.assign( nodeCount, SW_FALSE );
         _listMoveTarget.assign( nodeCount, float3{} );
+        _listMoveSerial.assign( nodeCount, 0 );
         _elapsedTime = 0.0f;
         _activeLeaf.reset();
         _lastSucceededLeaf.reset();
@@ -469,8 +473,8 @@ namespace sw
             if ( pSlotRunner != nullptr )
                 pSlotRunner->reset();
         }
-        if ( node._type == BehaviorNodeKind::MoveTo && _context._pMover != nullptr )
-            _context._pMover->stopMoving();
+        if ( node._type == BehaviorNodeKind::MoveTo )
+            stopOwnMove( index );
         finishNode( index );
     }
 
@@ -653,6 +657,7 @@ namespace sw
                 }
                 pSlotRunner->_world           = _world;
                 pSlotRunner->_context._pMover = _context._pMover;
+                pSlotRunner->_pMoveSerial     = _pMoveSerial;
                 status                        = pSlotRunner->tick( *_context._pBlackboard, _context._pOwner, _context._deltaTime );
                 if ( status == BehaviorStatus::Running )
                     _activeLeaf = index;
@@ -725,6 +730,12 @@ namespace sw
         return function( context );
     }
 
+    void BehaviorTreeRunner::stopOwnMove( int32 index )
+    {
+        if ( _context._pMover != nullptr && _listMoveSerial[static_cast<size_t>( index )] == *_pMoveSerial )
+            _context._pMover->stopMoving();
+    }
+
     BehaviorStatus BehaviorTreeRunner::tickMoveTo( int32 index, bool bFirst )
     {
         const BehaviorNode&    node   = _pTree->getNode( index );
@@ -736,7 +747,7 @@ namespace sw
         {
             // 도는 중에 목적지가 사라졌다. 트리만 실패로 넘어가면 몸은 옛 목적지로 계속 간다.
             if ( bFirst == false )
-                pMover->stopMoving();
+                stopOwnMove( index );
             return BehaviorStatus::Failure;
         }
         const float3 destination = *target;
@@ -744,7 +755,8 @@ namespace sw
         const bool   bRepath     = bFirst || ( destination - issued ).getLength() > node._repathDistance;
         if ( bRepath )
         {
-            issued = destination;
+            issued                                        = destination;
+            _listMoveSerial[static_cast<size_t>( index )] = ++*_pMoveSerial;
             if ( pMover->moveTo( destination ) == false )
                 return BehaviorStatus::Failure;
             // 요청이 다음 갱신에 풀리는 구현(내비메시 에이전트)이 있다 — 이번 틱의 상태는 옛 요청의 것이라 읽지 않는다.
