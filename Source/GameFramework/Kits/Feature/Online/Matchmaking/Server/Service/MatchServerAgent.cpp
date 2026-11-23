@@ -83,12 +83,15 @@ namespace sw
                         ticketID = ticket._ticketID;
                 }
                 MatchSeat& seat = _mapAccountToSeat[member._accountID]; // 백필 기록도 같은 경기 id · 팀 수를 싣는다
+                if ( match._placedMs < seat._placedMs )
+                    continue; // 늦게 읽은 옛 명단이다(목록은 새 기록부터 나온다)
                 if ( seat._matchID != match._matchID || seat._ticketID != ticketID )
                     seat._bTaken = SW_FALSE; // 새 자리다
                 seat._modeID        = match._modeID;
                 seat._matchID       = match._matchID;
                 seat._ticketID      = ticketID;
                 seat._expiresMs     = seat._expiresMs > expiresMs ? seat._expiresMs : expiresMs;
+                seat._placedMs      = match._placedMs;
                 seat._team          = static_cast<int32>( team );
                 seat._teamCount     = static_cast<int32>( match._listTeam.size() );
                 seat._averageRating = match._averageRating;

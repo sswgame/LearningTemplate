@@ -115,8 +115,8 @@ namespace sw
             failPlacement( placement ); // encode 가 오류 로그를 남겼다
             return;
         }
-        const int64 ttlMs = modeIt->second._matchTimeLimitMs;
-        placement._expiresMs += ttlMs;
+        const int64 ttlMs      = modeIt->second._matchTimeLimitMs;
+        placement._expiresMs   = placement._match._placedMs + ttlMs;
         const uint64 requestID = _dependencies._pRouter->submit( EphemeralRequest::makeSet( makeMatchRecordKey( placement._serverID, placement._recordName ), std::move( bytes ), ttlMs ),
                                                                  SW_DELEGATE_METHOD( EphemeralStoreRouter::ReplyDelegate, &MatchQueueService::onMatchRecordReply, this ), _replyOwner );
         if ( requestID == 0 )
@@ -696,9 +696,9 @@ namespace sw
         placement._match = std::move( joined );              // 게임 서버의 배정 주제로 가면 같은 경기 id 에 더해진다
         StringBuilder<constant::buffer::kMax128> recordName; // 경기의 첫 명단 기록은 그대로 두고 더한 사람만 따로 남긴다
         recordName.appendFormat( "%#.%#", ServiceKeyUtil::makeHex64( request._matchID ), ServiceKeyUtil::makeHex64( backfilled._ticket._ticketID ) );
-        placement._recordName = string( recordName.view() );
-        placement._serverID   = request._serverID;
-        placement._expiresMs  = nowMs.count();
+        placement._recordName      = string( recordName.view() );
+        placement._serverID        = request._serverID;
+        placement._match._placedMs = nowMs.count();
         placement._listDelivery.push_back( PendingDelivery{ std::move( assignment ), backfilled._ticket._originServerID, kInvalidAccountID } );
         storeMatchRecord( std::move( placement ) );
     }
@@ -786,10 +786,10 @@ namespace sw
             SW_LOG_WARNING_ID( "MatchQueueService.MatchQueueNoServerMatch", "MatchQueue: no '%#' server for match %# in region '%#' — gave up", mode._serverKind, match._matchID, match._region );
             return false;
         }
-        placement._match      = match;
-        placement._recordName = ServiceKeyUtil::makeHex64( match._matchID );
-        placement._serverID   = picked._descriptor._serverID;
-        placement._expiresMs  = nowMs.count();
+        placement._match           = match;
+        placement._recordName      = ServiceKeyUtil::makeHex64( match._matchID );
+        placement._serverID        = picked._descriptor._serverID;
+        placement._match._placedMs = nowMs.count();
         storeMatchRecord( std::move( placement ) ); // 게임 서버가 수락을 판정하는 원본이다. Found 는 기록이 남은 뒤에 간다
         return true;
     }
@@ -845,11 +845,11 @@ namespace sw
                 _dependencies._pPartyLobby->reopenLobby( lobby._lobbyID ); // 다시 시작할 수 있게 한다
             return;
         }
-        placement._match      = std::move( match );
-        placement._recordName = ServiceKeyUtil::makeHex64( placement._match._matchID );
-        placement._serverID   = picked._descriptor._serverID;
-        placement._lobbyID    = lobby._lobbyID;
-        placement._expiresMs  = nowMs.count();
+        placement._match           = std::move( match );
+        placement._recordName      = ServiceKeyUtil::makeHex64( placement._match._matchID );
+        placement._serverID        = picked._descriptor._serverID;
+        placement._lobbyID         = lobby._lobbyID;
+        placement._match._placedMs = nowMs.count();
         storeMatchRecord( std::move( placement ) ); // 게임 서버가 수락을 판정하는 원본이다. Found 는 기록이 남은 뒤에 간다
     }
 

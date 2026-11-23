@@ -1253,6 +1253,37 @@ SW_TEST_CASE( MatchQueueServiceTest, SeatTakenFromTheBusStaysTakenAfterTheRecord
     agent.shutdown();
 }
 
+/** @brief [MatchQueueServiceTest] 두 경기에 잇따라 배정된 계정의 자리는 새 경기의 것이다(결함: 목록은 새 기록부터 나오므로 뒤에 읽은 옛 기록이 새 자리를 덮었다) */
+SW_TEST_CASE( MatchQueueServiceTest, OlderRosterDoesNotReplaceTheNewerSeat )
+{
+    SoloWorld world;
+    world.startWithGameServer( vector<MatchModeDef>{ MatchQueueTestUtil::makeMode() } );
+    MatchServerAgent agent;
+    agent.initialize( kGameID );
+    agent.startReading( &world._server._router );
+
+    SW_EXPECT_TRUE( world._server.join( kAlice )._result == MatchmakingResult::Ok );
+    SW_EXPECT_TRUE( world._server.join( kBob )._result == MatchmakingResult::Ok );
+    world._server.update( kNowMs + 1 );
+    const vector<MatchQueueNotification> listOlder = world._server.takeNotifications();
+    SW_REQUIRE_EQUAL( size_t( 2 ), listOlder.size() );
+    SW_EXPECT_TRUE( world._server.join( kAlice, kNowMs + 10 )._result == MatchmakingResult::Ok );
+    SW_EXPECT_TRUE( world._server.join( kCarol, kNowMs + 10 )._result == MatchmakingResult::Ok );
+    world._server.update( kNowMs + 10 );
+    const vector<MatchQueueNotification> listNewer = world._server.takeNotifications();
+    SW_REQUIRE_EQUAL( size_t( 2 ), listNewer.size() );
+
+    agent.update( UnixMilliseconds{ kNowMs + 11 } ); // 두 기록을 한 번에 읽는다
+    world._server.poll( kNowMs + 11 );
+    MatchSeat aliceSeat;
+    SW_REQUIRE_TRUE( agent.takeSeat( kAlice, aliceSeat ) );
+    SW_EXPECT_EQUAL( listNewer[0]._assignment._matchID, aliceSeat._matchID );
+    MatchSeat bobSeat;
+    SW_REQUIRE_TRUE( agent.takeSeat( kBob, bobSeat ) ); // 옛 경기에만 있는 계정은 그 자리 그대로다
+    SW_EXPECT_EQUAL( listOlder[0]._assignment._matchID, bobSeat._matchID );
+    agent.shutdown();
+}
+
 /** @brief [MatchQueueServiceTest] 나간 사람의 자리: 게임 서버는 계정만 넘기고 경기 · 모드 · 팀은 읽은 명단에서 찾는다. 같은 사람은 한 번만, 명단에 없는 계정은 NotQueued, 채운 사람은 그 경기의 그 팀으로 Found */
 SW_TEST_CASE( MatchQueueServiceTest, LeftPlayerSeatIsBackfilledOnce )
 {
