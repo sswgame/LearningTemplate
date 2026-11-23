@@ -47,7 +47,9 @@ namespace sw
                 attributes._arrNormal[axis]  = snorm8::fromFloat( vertex._arrNormal[axis] ).getRaw();
                 attributes._arrTangent[axis] = snorm8::fromFloat( vertex._arrTangent[axis] ).getRaw();
             }
-            attributes._arrTangent[3] = vertex._arrTangent[3] < 0.0f ? int8{ -127 } : int8{ 127 }; // 바이탄젠트 부호 — 0 은 +로 둔다(MikkTSpace 가 0 을 내지 않는다)
+            // 바이탄젠트 부호(0 은 + 로 둔다 — MikkTSpace 가 0 을 내지 않는다) × 이음매 표시 크기(`RHIVertex::isOnSeam`).
+            const float32 seamWeight  = vertex.isOnSeam() ? RHIVertex::kSeamTangentWeight : 1.0f;
+            attributes._arrTangent[3] = snorm8::fromFloat( vertex._arrTangent[3] < 0.0f ? -seamWeight : seamWeight ).getRaw();
             Memory::copy( attributes._arrUV, vertex._arrUV, sizeof( attributes._arrUV ) );
             for ( uint32 channel = 0; channel < 4; ++channel )
                 attributes._arrColor[channel] = half::fromFloat( vertex._arrColor[channel] ); // R-15 — 정점 색은 half(65504 넘는 값은 무한대가 된다)

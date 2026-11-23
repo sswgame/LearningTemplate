@@ -257,7 +257,7 @@ void AppearanceSurface::perturbNormal( float2 slope, PixelContext context )
     const float3 orthogonal = context._tangent.xyz - _normal * dot( _normal, context._tangent.xyz );
     const float  lengthSq   = dot( orthogonal, orthogonal );
     const float3 tangent    = lengthSq > 1e-8f ? orthogonal * rsqrt( lengthSq ) : float3( 0.0f, 0.0f, 0.0f );
-    const float3 bitangent  = cross( _normal, tangent ) * ( context._tangent.w < 0.0f ? -1.0f : 1.0f );
+    const float3 bitangent  = cross( _normal, tangent ) * CommonMath::computeBitangentSign( context._tangent.w );
     _normal                 = normalize( _normal - tangent * slope.x - bitangent * slope.y );
 }
 #else

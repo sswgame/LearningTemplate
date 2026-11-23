@@ -112,6 +112,23 @@ SW_TEST_CASE( MeshAssetFormatBytesTest, SectionSourceNamesRoundTrip )
     SW_EXPECT_TRUE( read._listSection[1].hasSourceNames() == false );
 }
 
+/** @brief [MeshAssetFormatBytesTest] 이음매 정점(같은 위치, 다른 UV)의 표시가 왕복한다 — 나머지 정점은 표시가 없다 */
+SW_TEST_CASE( MeshAssetFormatBytesTest, SeamMarkRoundTrips )
+{
+    MeshAssetData data = XTestUtil::makeQuad();
+    data._listVertex.push_back( data._listVertex[0] ); // 정점 0 과 같은 위치 · 노멀, 다른 UV
+    data._listVertex[4]._arrUV[0] = 1.0f;
+    data._listIndex               = vector<uint32>{ 0, 1, 2, 4, 2, 3 };
+    const vector<uint8> bytes     = XTestUtil::makeBytes( data );
+    MeshAssetData       read{};
+    SW_REQUIRE_TRUE( MeshAssetFormat::readFromBytes( bytes.data(), bytes.size(), read ) );
+    SW_REQUIRE_EQUAL( size_t{ 5 }, read._listVertex.size() );
+    SW_EXPECT_TRUE( read._listVertex[0].isOnSeam() );
+    SW_EXPECT_TRUE( read._listVertex[4].isOnSeam() );
+    SW_EXPECT_FALSE( read._listVertex[1].isOnSeam() );
+    SW_EXPECT_FALSE( read._listVertex[2].isOnSeam() );
+}
+
 /** @brief [MeshAssetFormatBytesTest] 모든 덩어리가 왕복한다 — 읽기를 공통 도구로 옮겨도 형식은 그대로다 */
 SW_TEST_CASE( MeshAssetFormatBytesTest, EveryChunkRoundTrips )
 {

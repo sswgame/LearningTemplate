@@ -16,7 +16,7 @@ namespace sw
     struct RHIPackedMeshAttributes
     {
         int8    _arrNormal[4];  ///< snorm8 — w 는 0
-        int8    _arrTangent[4]; ///< snorm8 — w 는 바이탄젠트 부호(±127 = ±1)
+        int8    _arrTangent[4]; ///< snorm8 — w 는 바이탄젠트 부호 × 이음매 크기(±127, 이음매는 그 절반 — RHIVertex::kSeamTangentWeight)
         float32 _arrUV[2];      ///< 물이 월드 좌표를 싣는다 — half 로 줄이지 않는다
         /// half — 감사 R-15(float4 16 B → 8 B). 8 비트 unorm(언리얼 `FColor`)이 아닌 까닭: 물이 정점 색에 깊이(1 넘음)와 부호 있는 흐름을 싣는다. 색은 half 의 11 비트 가수로 충분하다
         half _arrColor[4];

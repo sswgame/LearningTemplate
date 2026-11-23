@@ -55,6 +55,10 @@ namespace sw
                                SW_OFFSET_OF( RHIVertex, _arrUV ) == sizeof( float32 ) * 6 && kWeldKeyBytes == sizeof( float32 ) * 8,
                            "탄젠트 묶기 키는 RHIVertex 앞쪽의 위치 · 노멀 · UV 다 — 멤버 순서를 바꾸면 키를 다시 정한다" );
 
+            /** @brief 묶는 키의 앞쪽 — 위치만의 바이트 수입니다. */
+            static constexpr size_t kPositionKeyBytes = SW_OFFSET_OF( RHIVertex, _arrNormal );
+
+            static bool isSamePosition( const RHIVertex& lhs, const RHIVertex& rhs ) { return Memory::compare( &lhs, &rhs, kPositionKeyBytes ) == 0; }
             static bool isSameWeldKey( const RHIVertex& lhs, const RHIVertex& rhs ) { return Memory::compare( &lhs, &rhs, kWeldKeyBytes ) == 0; }
 
             /** @brief 정점 번호를 묶는 키(바이트) 순서로 세웁니다. 같은 키가 이웃하게 됩니다. */
@@ -503,6 +507,23 @@ namespace sw
                 const uint32 vertexIndex = listOrder[orderIndex];
                 const uint32 side        = MeshInternal::computeHandednessSide( inoutListVertex[vertexIndex], listTangent[vertexIndex], listBitangent[vertexIndex] );
                 MeshInternal::storeTangent( inoutListVertex[vertexIndex], arrGroupTangent[side], arrGroupBitangent[side] );
+            }
+            groupStart = groupEnd;
+        }
+
+        // 3) 이음매 — 같은 위치에 키(노멀 · UV)가 다른 정점이 있으면 그 위치의 정점 모두에 표시한다. 키가 위치로 시작하므로 위치가 같은 정점은 정렬 순서에서 이웃한다.
+        groupStart = 0;
+        while ( groupStart < vertexCount )
+        {
+            uint32 groupEnd = groupStart + 1;
+            while ( groupEnd < vertexCount && MeshInternal::isSamePosition( inoutListVertex[listOrder[groupStart]], inoutListVertex[listOrder[groupEnd]] ) )
+            {
+                ++groupEnd;
+            }
+            const bool bSeam = MeshInternal::isSameWeldKey( inoutListVertex[listOrder[groupStart]], inoutListVertex[listOrder[groupEnd - 1]] ) == false;
+            for ( uint32 orderIndex = groupStart; bSeam && orderIndex < groupEnd; ++orderIndex )
+            {
+                inoutListVertex[listOrder[orderIndex]]._arrTangent[3] *= RHIVertex::kSeamTangentWeight;
             }
             groupStart = groupEnd;
         }

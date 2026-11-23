@@ -53,6 +53,16 @@ SW_TEST_CASE( RHIMeshVertexStreamsTest, PackedSplitsPositionAndAttributes )
     SW_EXPECT_NEAR( 16.0f, pAttributes[0]._arrColor[0].toFloat(), 0.0f ); // half 가 정확히 담는 값(1 넘는 데이터 — 물의 깊이)
 }
 
+SW_TEST_CASE( RHIMeshVertexStreamsTest, PackedKeepsTheSeamMark )
+{
+    const RHIVertex arrVertex[2] = { makeVertex( 1.0f, 1.0f, -RHIVertex::kSeamTangentWeight, 0.5f ), makeVertex( 4.0f, 1.0f, RHIVertex::kSeamTangentWeight, 0.0f ) };
+    vector<uint8>   listByte( RHIMeshVertexStreams::computeBufferBytes( RHIMeshVertexFormat::Packed, 2 ) );
+    RHIMeshVertexStreams::write( RHIMeshVertexFormat::Packed, arrVertex, 2, 0, 2, listByte.data() );
+    const RHIPackedMeshAttributes* pAttributes = reinterpret_cast<const RHIPackedMeshAttributes*>( listByte.data() + RHIMeshVertexStreams::computeAttributeOffset( 2 ) );
+    SW_EXPECT_EQUAL( int8{ -64 }, pAttributes[0]._arrTangent[3] );
+    SW_EXPECT_EQUAL( int8{ 64 }, pAttributes[1]._arrTangent[3] );
+}
+
 SW_TEST_CASE( RHIMeshVertexStreamsTest, FullKeepsDataCarriedInTangent )
 {
     const RHIVertex vertex = makeVertex( 1.0f, 1.0f, 1.0f, 4096.0f ); // 지형 형태 변환이 탄젠트에 싣는 경계 좌표

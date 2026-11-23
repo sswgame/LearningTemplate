@@ -27,6 +27,8 @@ namespace sw
             static constexpr uint8 kArrMagic[4] = { 'S', 'W', 'M', 'S' };
             /** @brief 정점 플래그의 비트 0 입니다 — 바이탄젠트 부호가 -1 이면 켭니다(탄젠트 w). 나머지 비트는 0 이어야 합니다. */
             static constexpr uint32 kFlagBitangentNegative = 1u;
+            /** @brief 정점 플래그의 비트 1 입니다 — 이음매 정점이면 켭니다(`RHIVertex::isOnSeam`). */
+            static constexpr uint32 kFlagSeam = 2u;
             /** @brief UV 경계(`_min` · `_max` 의 u · v)입니다 — 머리에 싣고 정점의 `unorm16x2` UV 를 이 사각형 안으로 정규화합니다. */
             struct UVBounds
             {
@@ -148,7 +150,7 @@ namespace sw
                     {
                         outBytes.push_back( unorm8::fromFloat( value ).getRaw() );
                     }
-                    LittleEndianUtil::appendUint32( outBytes, vertex._arrTangent[3] < 0.0f ? kFlagBitangentNegative : 0u );
+                    LittleEndianUtil::appendUint32( outBytes, ( vertex._arrTangent[3] < 0.0f ? kFlagBitangentNegative : 0u ) | ( vertex.isOnSeam() ? kFlagSeam : 0u ) );
                 }
             }
 
@@ -420,7 +422,7 @@ namespace sw
                         value = unorm8::fromRaw( reader.readUint8() ).toFloat();
                     }
                     const uint32 flags = reader.readUint32();
-                    if ( ( flags & ~kFlagBitangentNegative ) != 0u )
+                    if ( ( flags & ~( kFlagBitangentNegative | kFlagSeam ) ) != 0u )
                     {
                         SW_LOG_WARNING_ID( "MeshAssetFormat.MeshAssetUnknownVertex", "Mesh asset has unknown vertex flags %# - re-import the model", flags );
                         return false;
@@ -428,7 +430,7 @@ namespace sw
                     vertex._arrTangent[0] = tangent._x;
                     vertex._arrTangent[1] = tangent._y;
                     vertex._arrTangent[2] = tangent._z;
-                    vertex._arrTangent[3] = ( flags & kFlagBitangentNegative ) != 0u ? -1.0f : 1.0f;
+                    vertex._arrTangent[3] = ( ( flags & kFlagBitangentNegative ) != 0u ? -1.0f : 1.0f ) * ( ( flags & kFlagSeam ) != 0u ? RHIVertex::kSeamTangentWeight : 1.0f );
                     return true;
                 } );
             }
