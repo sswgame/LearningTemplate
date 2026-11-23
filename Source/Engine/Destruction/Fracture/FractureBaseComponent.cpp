@@ -20,6 +20,7 @@
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Object/GameObject/Tick/FixedStepContext.h"
+#include "Engine/Object/GameObject/WorldOrigin.h"
 #include "Engine/Physics/Collision/PhysicsShape.h"
 #include "Engine/Physics/Component/RigidBody2DComponent.h"
 #include "Engine/Physics/Component/RigidBodyComponent.h"
@@ -846,13 +847,13 @@ namespace sw
         }
     }
 
-    optional<FractureGroupPose> FractureBaseComponent::makeEventGroupPose( const FractureGroupRuntime* pHit )
+    optional<FractureGroupPose> FractureBaseComponent::makeEventGroupPose( const FractureGroupRuntime* pHit, const WorldOrigin& origin )
     {
         if ( pHit == nullptr || pHit->_bAnchored != SW_FALSE )
             return nullopt;
         FractureGroupPose pose;
         pose._groupID  = pHit->_groupID;
-        pose._position = pHit->_position;
+        pose._position = origin.toAbsolute( pHit->_position );
         pose._rotation = pHit->_rotation;
         pose._volume   = pHit->_volume;
         return pose;
@@ -866,17 +867,17 @@ namespace sw
         {
             if ( pGroupPose != nullptr && pGroupPose->_groupID == event._groupID )
             {
-                pHit->_position = pGroupPose->_position;
+                pHit->_position = getManagerWorldOrigin().toLocal( pGroupPose->_position );
                 pHit->_rotation = pGroupPose->_rotation;
                 if ( pHit->_bDriven == SW_TRUE )
                 {
-                    pHit->_drivePosition = pGroupPose->_position;
+                    pHit->_drivePosition = pHit->_position;
                     pHit->_driveRotation = pGroupPose->_rotation;
                 }
                 _bPoseDirty = SW_TRUE;
             }
         }
-        _listEventGroupPose.push_back( makeEventGroupPose( pHit ) );
+        _listEventGroupPose.push_back( makeEventGroupPose( pHit, getManagerWorldOrigin() ) );
         DestructionChange change;
         // 흩기 시드는 상태의 사건 수다. 스냅샷을 받은 쪽은 기록이 짧아도 서버와 같은 번호가 된다.
         const uint32 eventIndex = _state.getEventCount();
@@ -1461,24 +1462,31 @@ namespace sw
         return _pendingDamage.isEmpty() == false;
     }
 
+    WorldOrigin FractureBaseComponent::getManagerWorldOrigin() const
+    {
+        const GameObjectManager* const pManager = getOwner() != nullptr ? getOwner()->getManager() : nullptr;
+        return pManager != nullptr ? pManager->getWorldOrigin() : WorldOrigin{};
+    }
+
     void FractureBaseComponent::collectGroupPoses( vector<FractureGroupPose>& outListPose ) const
     {
         outListPose.clear();
+        const WorldOrigin origin = getManagerWorldOrigin();
         for ( const FractureGroupRuntime& runtime : _listRuntime )
         {
             if ( runtime._bAnchored == SW_TRUE )
                 continue;
             FractureGroupPose pose;
-            pose._position                 = runtime._position;
+            pose._position                 = origin.toAbsolute( runtime._position );
             pose._rotation                 = runtime._rotation;
-            pose._center                   = runtime._position;
+            pose._center                   = pose._position;
             pose._groupID                  = runtime._groupID;
             const DestructionGroup* pGroup = _state.findGroup( runtime._groupID );
             if ( pGroup != nullptr )
             {
                 float3 localCenter{};
                 (void)_state.computeGroupMass( *pGroup, localCenter );
-                pose._center = runtime._position + float3::transform( localCenter * _objectScale, runtime._rotation );
+                pose._center = pose._position + float3::transform( localCenter * _objectScale, runtime._rotation );
             }
             pose._volume   = runtime._volume;
             pose._bResting = ( runtime._body.isValid() == false || runtime._sleepTime > 0.0f ) ? SW_TRUE : SW_FALSE;
@@ -1509,11 +1517,11 @@ namespace sw
         _pendingDamage.push( std::move( pending ) );
     }
 
-    void FractureBaseComponent::driveGroup( uint32 groupID, const float3& worldCenter, const quaternion& rotation )
+    void FractureBaseComponent::driveGroup( uint32 groupID, const float3& absoluteCenter, const quaternion& rotation )
     {
         FractureGroupPose target;
         target._groupID  = groupID;
-        target._center   = worldCenter;
+        target._center   = absoluteCenter;
         target._rotation = rotation;
         _networkSync.queueDriveTarget( target );
     }
@@ -1524,6 +1532,7 @@ namespace sw
         _networkSync.takeDriveTargets( listDrive );
         if ( _physics == nullptr )
             return;
+        const WorldOrigin origin = getManagerWorldOrigin();
         for ( const FractureGroupPose& target : listDrive )
         {
             FractureGroupRuntime* pRuntime         = findRuntime( target._groupID );
@@ -1539,7 +1548,7 @@ namespace sw
             if ( pRuntime->_bDriven == SW_FALSE && pRuntime->_body.isValid() )
                 _physics->setBodyKinematic( pRuntime->_body );
             pRuntime->_bDriven       = SW_TRUE;
-            pRuntime->_drivePosition = target._center - float3::transform( localCenter * _objectScale, target._rotation );
+            pRuntime->_drivePosition = origin.toLocal( target._center - float3::transform( localCenter * _objectScale, target._rotation ) );
             pRuntime->_driveRotation = target._rotation;
             if ( pRuntime->_body.isValid() == false )
             {
@@ -1630,7 +1639,7 @@ namespace sw
                 {
                     if ( pPose != nullptr )
                     {
-                        runtime._position = pPose->_position;
+                        runtime._position = getManagerWorldOrigin().toLocal( pPose->_position );
                         runtime._rotation = pPose->_rotation;
                     }
                     spawnGroup( runtime, group, float3{}, float3{} );

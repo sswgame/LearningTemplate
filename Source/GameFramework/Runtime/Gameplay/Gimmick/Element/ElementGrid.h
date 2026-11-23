@@ -131,14 +131,14 @@ namespace sw
         void applyStepChanges();
 
     private:
-        vector<Cell>              _listCell;
-        EventBuffer<ElementEvent> _eventBuffer;
-        vector<PendingChange>     _listPending; ///< 스텝 안에서 다시 쓰는 버퍼
-        GridSearchScratch         _floodSearch; ///< 번짐(`Flood` 규칙)에 쓰는 버퍼. 셀 표시와 큐를 규칙마다 다시 쓴다
-        const ElementRuleCatalog* _pTable;
-        FixedStepTimer            _timer;
-        int2                      _wind;
-        GridTopology              _topology; ///< 셀 격자의 너비, 높이, 셀 번호 계산
-        uint32                    _stepCount;
+        vector<Cell>                     _listCell;
+        NotificationBuffer<ElementEvent> _eventBuffer;
+        vector<PendingChange>            _listPending; ///< 스텝 안에서 다시 쓰는 버퍼
+        GridSearchScratch                _floodSearch; ///< 번짐(`Flood` 규칙)에 쓰는 버퍼. 셀 표시와 큐를 규칙마다 다시 쓴다
+        const ElementRuleCatalog*        _pTable;
+        FixedStepTimer                   _timer;
+        int2                             _wind;
+        GridTopology                     _topology; ///< 셀 격자의 너비, 높이, 셀 번호 계산
+        uint32                           _stepCount;
     };
 } // namespace sw

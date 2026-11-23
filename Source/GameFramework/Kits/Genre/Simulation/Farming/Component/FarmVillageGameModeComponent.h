@@ -20,6 +20,7 @@
 
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Asset/Cache/SharedAssetRef.h"
+#include "Engine/Object/GameObject/WorldOrigin.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Serializer/CatalogKey.h"
@@ -57,8 +58,8 @@ namespace sw
         void serializeGameState( StateIO& io ) override;
 
         /** @brief 마을 사람 @p npcIndex 의 일정상 위치(지면)입니다. 뷰가 PostUpdate 에서 읽습니다. 범위 밖이면 원점입니다. */
-        float3 getVillagerPosition( int32 npcIndex ) const;
-        int32  getVillagerCount() const { return static_cast<int32>( _listPosition.size() ); }
+        AbsolutePosition getVillagerPosition( int32 npcIndex ) const;
+        int32            getVillagerCount() const { return static_cast<int32>( _listPosition.size() ); }
         /** @brief 마을 사람 @p npcIndex 의 몸이 이번 틱에 쓸 걸음 설정입니다. 최고 속도는 일정의 걷는 속도를 지금 시계 빠르기로 바꾼 값 × `_bodyCatchUpScale` 입니다. */
         NavAgentSettings makeBodySettings( int32 npcIndex ) const;
         /** @brief @p npcIndex 를 뺀 마을 사람들의 일정상 위치입니다(몸의 떨어지기에 쓴다 — 다른 몸은 같은 틱에 병렬로 움직이므로 읽지 않는다). */

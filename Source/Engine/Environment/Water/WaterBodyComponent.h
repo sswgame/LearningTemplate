@@ -76,6 +76,8 @@ namespace sw
 
         void onRegister( GameObjectManager& manager ) override;
         void onUnregister( GameObjectManager& manager ) override;
+        /** @brief 수면 원점과 그린 자리를 옮깁니다 — 다시 짓지 않고, 다음 틱 전의 질의(부력)도 옮긴 자리를 본다. */
+        void onWorldOriginShifted( const float3& delta ) override;
         void onPostLoad() override;
         /** @brief 셀 나누기가 묻는 이 컴포넌트가 덮는 월드 상자입니다 — 피벗 셀이 아니라 덮는 자리가 로딩 반경에 들면 올라 있다. */
         bool computeStreamingBounds( AABB& outBox ) const override;

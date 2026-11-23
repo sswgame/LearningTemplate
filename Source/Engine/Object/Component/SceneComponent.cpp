@@ -14,6 +14,7 @@
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
 #include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
+#include "Engine/Object/GameObject/WorldOrigin.h"
 #include "Engine/Reflection/ReflectionCast.h"
 
 namespace sw
@@ -239,6 +240,18 @@ namespace sw
         }
         // 로컬 → 월드는 `로컬 TRS × 부모 월드`(행 벡터)다. 점 하나를 거꾸로 옮긴다.
         setLocalPosition( float3::transform( worldPosition, _pParent->getWorldMatrix().invert() ) );
+    }
+
+    float3 SceneComponent::getZeroOriginPosition() const
+    {
+        const GameObjectManager* const pManager = _pParent == nullptr && getOwner() != nullptr ? getOwner()->getManager() : nullptr;
+        return pManager != nullptr ? pManager->getWorldOrigin().toAbsolute( getLocalPosition() ) : getLocalPosition();
+    }
+
+    void SceneComponent::setZeroOriginPosition( const float3& position )
+    {
+        const GameObjectManager* const pManager = _pParent == nullptr && getOwner() != nullptr ? getOwner()->getManager() : nullptr;
+        setLocalPosition( pManager != nullptr ? pManager->getWorldOrigin().toLocal( position ) : position );
     }
 
     void SceneComponent::teleportTo( const float3& worldPosition, TeleportType type )

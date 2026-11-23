@@ -376,13 +376,13 @@ namespace sw
         PROPERTY( RuntimeState )
         vector<StationSlot> _listStation;
         PROPERTY( RuntimeState, Min = 0, Max = 1 )
-        vector<float32>              _listSatisfaction; ///< 최근 N 손님이며 오래된 것이 앞이다
-        EventBuffer<RestaurantEvent> _eventBuffer;
-        vector<IngredientSpoilage>   _listSpoilageScratch;
-        IngredientStock              _stock;
-        Crafter                      _crafter;
-        ShopManager                  _market;
-        RestaurantSettings           _settings;
+        vector<float32>                     _listSatisfaction; ///< 최근 N 손님이며 오래된 것이 앞이다
+        NotificationBuffer<RestaurantEvent> _eventBuffer;
+        vector<IngredientSpoilage>          _listSpoilageScratch;
+        IngredientStock                     _stock;
+        Crafter                             _crafter;
+        ShopManager                         _market;
+        RestaurantSettings                  _settings;
         PROPERTY( RuntimeState )
         RestaurantDaySummary _today;
         FixedStepTimer       _stepTimer;

@@ -13,9 +13,11 @@ namespace
     {
         ArenaUnitView view;
         view._unitID   = unitID;
-        view._position = float3{ x, 0.0f, 0.0f };
-        view._kind     = ArenaUnitKind::Grunt;
-        view._bAlive   = SW_TRUE;
+        view._position = AbsolutePosition{
+            float3{ x, 0.0f, 0.0f }
+        };
+        view._kind   = ArenaUnitKind::Grunt;
+        view._bAlive = SW_TRUE;
         return view;
     }
 } // namespace
@@ -38,6 +40,6 @@ SW_TEST_CASE( ArenaProjectileQueryTest, PierceMemoryFollowsUnitIDNotSnapshotInde
     SW_EXPECT_EQUAL( 2, hit._other );
     const ArenaUnitView* pVictim = query.findView( hit._other );
     SW_REQUIRE_TRUE( pVictim != nullptr );
-    SW_EXPECT_EQUAL( 4.0f, pVictim->_position._x );
+    SW_EXPECT_EQUAL( 4.0f, pVictim->_position._value._x );
     SW_EXPECT_TRUE( query.findView( 0 ) == nullptr ); // 빠진 A 는 찾지 않는다
 }

@@ -134,13 +134,13 @@ namespace sw
         void               pushEvent( ActionPlatformerCombatEventKind type, const hashed_string& id, int32 value );
 
     private:
-        const ActionPlatformerCatalog*           _pCatalog;
-        const MoveCatalog*                       _pMoves;
-        const ActionComboDef*                    _pCombo;
-        MoveTimeline                             _timeline;
-        WeaponState                              _gun;
-        ProjectileSimulation                     _projectiles;
-        EventBuffer<ActionPlatformerCombatEvent> _eventBuffer;
+        const ActionPlatformerCatalog*                  _pCatalog;
+        const MoveCatalog*                              _pMoves;
+        const ActionComboDef*                           _pCombo;
+        MoveTimeline                                    _timeline;
+        WeaponState                                     _gun;
+        ProjectileSimulation                            _projectiles;
+        NotificationBuffer<ActionPlatformerCombatEvent> _eventBuffer;
         PROPERTY( RuntimeState, Min = -1 )
         int32 _comboIndex; ///< 지금 기술의 콤보 인덱스(−1이면 쉬는 중)
         PROPERTY( RuntimeState, Min = 0 )

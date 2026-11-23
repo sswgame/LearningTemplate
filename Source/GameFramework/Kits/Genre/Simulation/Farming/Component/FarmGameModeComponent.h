@@ -18,6 +18,7 @@
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Foundation/GameObjectHandle.h"
+#include "Engine/Object/GameObject/WorldOrigin.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -90,7 +91,8 @@ namespace sw
         /** @brief 공유 시계의 시각(0~24)입니다. 디렉터가 틱마다 옮겨 적으며, 뷰는 PostUpdate 에서 이것만 읽습니다. */
         float32          getHourOfDay() const { return _hourOfDay; }
         const FarmField& getField() const { return _field; }
-        const float3&    getPlayerPosition() const { return _playerPosition; }
+        /** @brief 농부 자리입니다(절대 — 뷰 · AI 는 `WorldOrigin::toLocal` 로 옮겨 쓴다). */
+        AbsolutePosition getPlayerPosition() const { return AbsolutePosition{ _playerPosition }; }
         bool             isRaining() const { return _bRaining == SW_TRUE; }
         /** @brief 지난 틱에 농부가 걸었으면(이동 의도가 있었으면) true 입니다. 농부는 물리 없이 위치를 옮겨 `Object.Speed` 로는 볼 수 없다. */
         bool               isFarmerWalking() const { return _bFarmerWalking == SW_TRUE; }
@@ -114,8 +116,8 @@ namespace sw
         const vector<hashed_string>& getSeeds() const { return _listSeed; }
         const CropCatalog&           getCropCatalog() const { return *_pCropCatalog; }
         const hashed_string&         getCurrency() const { return _shipment.getCurrency(); }
-        const float3&                getShippingBinPosition() const { return _shippingBinPosition; }
-        const float3&                getShopPosition() const { return _shopPosition; }
+        AbsolutePosition             getShippingBinPosition() const { return AbsolutePosition{ _shippingBinPosition }; }
+        AbsolutePosition             getShopPosition() const { return AbsolutePosition{ _shopPosition }; }
         bool                         isNearShippingBin() const;
         bool                         isNearShop() const;
         /** @brief 농부 폰을 지금 자동 농부 AI 가 조종하고 있으면 true 를 반환합니다(시나리오 프로브). */
@@ -126,7 +128,7 @@ namespace sw
         /** @brief 농부가 바라보는 타일을 반환합니다. 밭 밖이면 false 입니다. */
         [[nodiscard]] bool findTargetTile( int32& outX, int32& outY ) const;
         /** @brief 타일 중심(땅 높이)을 반환합니다. 밭은 원점에서 +X, +Z 방향으로 1m 타일입니다. */
-        static float3 computeTileCenter( int32 x, int32 y );
+        static AbsolutePosition computeTileCenter( int32 x, int32 y );
 
     protected:
         /** @brief 작물 카탈로그를 읽고 밭과 출하함을 새로 만들며, 같은 오브젝트의 판 상태와 플레이어 상태(조종자)의 가방 · 지갑을 엽니다(새 판일 때만 시작 돈과 씨앗을 줍니다). */

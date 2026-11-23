@@ -72,13 +72,13 @@ namespace sw
             pOwner->forEachComponentOfType<MeshComponent>( [this]( MeshComponent* pMesh )
             {
                 if ( hasMeshAncestor( *pMesh ) == false )
-                    _listVisual.push_back( SunkVisual{ TComponentHandle<MeshComponent>{ pMesh }, pMesh->getLocalPosition() } );
+                    _listVisual.push_back( SunkVisual{ TComponentHandle<MeshComponent>{ pMesh }, pMesh->getZeroOriginPosition() } );
             } );
         }
         for ( const SunkVisual& visual : _listVisual )
         {
             if ( MeshComponent* pMesh = SinkOffsetInternal::findOwnMesh( *pOwner, visual._mesh ) )
-                pMesh->setLocalPosition( visual._localPosition - float3{ 0.0f, depth, 0.0f } );
+                pMesh->setZeroOriginPosition( visual._restPosition - float3{ 0.0f, depth, 0.0f } );
         }
         // 판정 캡슐도 깊이를 따른다 — 단계로 내려 가라앉는 동안 프레임마다 캡슐을 다시 짓지 않는다.
         if ( CharacterControllerComponent* pController = pOwner->getComponent<CharacterControllerComponent>() )
@@ -93,7 +93,7 @@ namespace sw
         {
             MeshComponent* const pMesh = pOwner != nullptr ? SinkOffsetInternal::findOwnMesh( *pOwner, visual._mesh ) : nullptr;
             if ( pMesh != nullptr )
-                pMesh->setLocalPosition( visual._localPosition );
+                pMesh->setZeroOriginPosition( visual._restPosition );
         }
         _listVisual.clear();
         if ( _appliedDepth > 0.0f && pOwner != nullptr )

@@ -393,7 +393,7 @@ namespace sw
         vector<uint32>                   _listGeneration; ///< 슬롯마다의 세대
         IndexFreeList                    _freeSlot;
         vector<RTSPlayer>                _listPlayer;
-        EventBuffer<RTSEvent>            _eventBuffer;
+        NotificationBuffer<RTSEvent>     _eventBuffer;
         vector<uint8>                    _listTerrainBlocked;
         FogOfWar                         _vision;  ///< 팀 시야(안개)와 다시 칠하기 타이머
         RTSUnitBuckets                   _buckets; ///< 이웃 탐색 버킷(버킷 하나는 `_settings._bucketSize` 셀)

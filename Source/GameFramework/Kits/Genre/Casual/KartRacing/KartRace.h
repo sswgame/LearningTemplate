@@ -258,18 +258,18 @@ namespace sw
         void            pushEvent( KartRaceEvent::Kind kind, optional<int32> racer, optional<int32> other, int32 value, float32 time );
 
     private:
-        vector<KartRacer>          _listRacer;
-        ProjectileSimulation       _projectiles;
-        EventBuffer<KartRaceEvent> _eventBuffer;
-        vector<Countdown>          _listItemBoxTimer; ///< 끝나 있으면 상자가 놓여 있는 것이다
-        vector<int32>              _listPlaceOrder;   ///< 순위 순서로 나열한 차 번호
-        KartRaceSettings           _settings;
-        GameRandom                 _random;
-        FixedStepTimer             _timer;
-        const KartTrack*           _pTrack;
-        const KartItemCatalog*     _pItemCatalog;
-        const ProjectileCatalog*   _pProjectileCatalog;
-        KartGhost*                 _pGhost;
+        vector<KartRacer>                 _listRacer;
+        ProjectileSimulation              _projectiles;
+        NotificationBuffer<KartRaceEvent> _eventBuffer;
+        vector<Countdown>                 _listItemBoxTimer; ///< 끝나 있으면 상자가 놓여 있는 것이다
+        vector<int32>                     _listPlaceOrder;   ///< 순위 순서로 나열한 차 번호
+        KartRaceSettings                  _settings;
+        GameRandom                        _random;
+        FixedStepTimer                    _timer;
+        const KartTrack*                  _pTrack;
+        const KartItemCatalog*            _pItemCatalog;
+        const ProjectileCatalog*          _pProjectileCatalog;
+        KartGhost*                        _pGhost;
         PROPERTY( RuntimeState, Min = 0 )
         float32   _raceTime;
         Countdown _countdown;

@@ -10,6 +10,7 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/WorldOrigin.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Character/AI/AIStimulusSourceComponent.h"
@@ -127,7 +128,7 @@ namespace sw
             const SceneComponent* pScene = pWall->getPrimarySceneComponent();
             if ( pScene == nullptr )
                 continue;
-            const int2 cell = _sightGrid.computeCell( pScene->getWorldPosition() );
+            const int2 cell = _sightGrid.computeCell( getObjectManager()->getWorldOrigin().toAbsolute( pScene->getWorldPosition() ) ); // 격자는 절대 자리다
             if ( _sightGrid.isInside( cell ) )
                 _sightGrid.setBlocked( cell._x, cell._y, true );
         }

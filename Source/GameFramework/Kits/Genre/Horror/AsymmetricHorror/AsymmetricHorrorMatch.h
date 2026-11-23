@@ -396,21 +396,21 @@ namespace sw
         void               pushEvent( AsymmetricHorrorEvent::Kind kind, optional<int32> actor, optional<int32> target, float32 value, const float3& position );
 
     private:
-        AsymmetricHorrorMatchSettings      _settings;
-        AsymmetricHorrorKiller             _killer;
-        vector<AsymmetricHorrorSurvivor>   _listSurvivor;
-        vector<AsymmetricHorrorGenerator>  _listGenerator;
-        vector<AsymmetricHorrorGate>       _listGate;
-        vector<AsymmetricHorrorWindow>     _listWindow;
-        vector<float3>                     _listHook;
-        vector<float3>                     _listPallet;
-        vector<PalletState>                _listPalletState;
-        vector<float3>                     _listLocker;
-        vector<int32>                      _listLockerOccupant;
-        EventBuffer<AsymmetricHorrorEvent> _eventBuffer;
-        vector<InteractionEvent>           _listInteractionScratch;
-        MatchState                         _match;
-        FixedStepTimer                     _timer;
+        AsymmetricHorrorMatchSettings             _settings;
+        AsymmetricHorrorKiller                    _killer;
+        vector<AsymmetricHorrorSurvivor>          _listSurvivor;
+        vector<AsymmetricHorrorGenerator>         _listGenerator;
+        vector<AsymmetricHorrorGate>              _listGate;
+        vector<AsymmetricHorrorWindow>            _listWindow;
+        vector<float3>                            _listHook;
+        vector<float3>                            _listPallet;
+        vector<PalletState>                       _listPalletState;
+        vector<float3>                            _listLocker;
+        vector<int32>                             _listLockerOccupant;
+        NotificationBuffer<AsymmetricHorrorEvent> _eventBuffer;
+        vector<InteractionEvent>                  _listInteractionScratch;
+        MatchState                                _match;
+        FixedStepTimer                            _timer;
         PROPERTY( RuntimeState )
         float3                              _hatchPosition;
         const AsymmetricHorrorRulesCatalog* _pCatalog;

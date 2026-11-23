@@ -65,7 +65,7 @@ namespace sw
 
         [[nodiscard]] bool readFarmerX( const FarmGameModeComponent& gameMode, float64& outValue )
         {
-            outValue = static_cast<float64>( gameMode.getPlayerPosition()._x );
+            outValue = static_cast<float64>( gameMode.getPlayerPosition()._value._x );
             return true;
         }
 
@@ -246,9 +246,11 @@ namespace sw
         return _field.findTile( outX, outY ) != nullptr;
     }
 
-    float3 FarmGameModeComponent::computeTileCenter( int32 x, int32 y )
+    AbsolutePosition FarmGameModeComponent::computeTileCenter( int32 x, int32 y )
     {
-        return float3{ static_cast<float32>( x ) + 0.5f, 0.0f, static_cast<float32>( y ) + 0.5f };
+        return AbsolutePosition{
+            float3{ static_cast<float32>( x ) + 0.5f, 0.0f, static_cast<float32>( y ) + 0.5f }
+        };
     }
 
     // ------------------------------------------------------------------------------

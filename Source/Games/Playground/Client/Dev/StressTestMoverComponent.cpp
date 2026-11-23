@@ -38,7 +38,7 @@ namespace sw
         // StressTestScene::update 의 배치 쓰기와 같은 사인파입니다. 두 경로가 같은 이미지를 만들어야 비교할 수 있습니다.
         const float32 wave  = MathUtil::sin( _elapsed + _phase );
         const float32 scale = 0.6f + 0.4f * MathUtil::abs( wave );
-        _pTarget->setLocalPosition( float3{ _basePosition._x, wave * 0.75f, _basePosition._z } );
+        _pTarget->setZeroOriginPosition( float3{ _basePosition._x, wave * 0.75f, _basePosition._z } );
         _pTarget->setLocalScale( float3{ scale, scale, scale } );
     }
 } // namespace sw

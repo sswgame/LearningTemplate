@@ -260,11 +260,11 @@ namespace sw
         void               setResult( MonsterBattleResult result );
 
     private:
-        Side                            _arrSide[kSideCount];
-        EventBuffer<MonsterBattleEvent> _eventBuffer;
-        TurnOrder                       _turnOrder;
-        GameRandom                      _random;
-        MonsterInstance                 _captured;
+        Side                                   _arrSide[kSideCount];
+        NotificationBuffer<MonsterBattleEvent> _eventBuffer;
+        TurnOrder                              _turnOrder;
+        GameRandom                             _random;
+        MonsterInstance                        _captured;
         PROPERTY( RuntimeState )
         hashed_string                  _weatherID;
         const MonsterCollectorCatalog* _pCatalog;
