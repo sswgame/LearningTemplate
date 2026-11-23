@@ -236,7 +236,7 @@ namespace sw
     const IShaderBytecodeProvider& ShaderCache::getProvider() const
     {
         if ( _pProvider == nullptr )
-            SW_FATAL( "ShaderCache is used before initialize chose the bytecode provider (cooked or live)" );
+            reportFatalError( "ShaderCache is used before initialize chose the bytecode provider (cooked or live)" );
         return *_pProvider;
     }
 

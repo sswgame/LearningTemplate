@@ -21,7 +21,7 @@ namespace sw
             {
                 const optional<AbsolutePath> absolute = AbsolutePath::tryMake( path );
                 if ( absolute.has_value() == false )
-                    SW_FATAL( "ProcessRoots: the %# path '%#' is not absolute", pWhat, path );
+                    reportFatalError( "ProcessRoots: the %# path '%#' is not absolute", pWhat, path );
                 return *absolute;
             }
 
@@ -47,7 +47,7 @@ namespace sw
             {
                 string appFolder;
                 if ( ProcessEnvironment::tryReadNonEmpty( kAndroidAppFolderVariable, appFolder ) == false )
-                    SW_FATAL( "ProcessRoots: %# is not set - AndroidMain must pass the app folder before anything asks for the roots", kAndroidAppFolderVariable );
+                    reportFatalError( "ProcessRoots: %# is not set - AndroidMain must pass the app folder before anything asks for the roots", kAndroidAppFolderVariable );
                 return appFolder;
             }
 #elif defined( SW_PLATFORM_WINDOWS ) || defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_WEB )
@@ -86,7 +86,7 @@ namespace sw
                 if ( project.empty() && FileUtil::isDirectory( FileUtil::toDiskPath( FileUtil::joinPath( binary, constant::path::kPacksFolder ) ) ) )
                     project = binary;
                 if ( project.empty() )
-                    SW_FATAL( "ProcessRoots: no '%#' folder above the binaries '%#' and no '%#' beside them", constant::path::kContentFolder, binary, constant::path::kPacksFolder );
+                    reportFatalError( "ProcessRoots: no '%#' folder above the binaries '%#' and no '%#' beside them", constant::path::kContentFolder, binary, constant::path::kPacksFolder );
 
                 bool         bRunFromParent = false;
                 const string run            = findRunRoot( binary, bRunFromParent );

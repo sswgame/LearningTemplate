@@ -2,6 +2,8 @@
 
 #include "Engine/Behavior/BehaviorTreeSchema.h"
 
+#include "Engine/Serialization/Inherit/DataInheritanceSchemaRegistry.h"
+
 namespace sw
 {
     DataInheritanceSchema BehaviorTreeSchema::make()

@@ -33,10 +33,10 @@
 ### Registries and failure
 
 - Static registration tables are `RegistrationList` · `RegistrationSlot<T>` with `SW_DEFINE_*` / `SW_STATIC_REGISTRATION` registrars, removed at module unload; a cached reader compares `getGeneration()`.
-- A name-keyed registry does not check empty or duplicate names with its own `if`: `RegistrationList` (`bRequireName`) or `NameRegistry`, and the caller reports `add`. Duplicate ids of one kind in XML are errors.
+- A name-keyed registry does not check empty or duplicate names with its own `if`: `RegistrationList` (`bRequireName`), `NamedEntryRegistry<T>` (named static entries found across modules) or `NameRegistry`, and the caller reports `add`. Duplicate ids of one kind in XML are errors.
 - Subscriptions go through `RegistrationList::addSubscribed`, `ItemSubscriptionList<T>` or a `MulticastDelegate`; never turn an id back into an address.
 - 델리게이트는 `SW_DELEGATE_FUNCTION` · `SW_DELEGATE_METHOD` · `SW_DELEGATE_LAMBDA` 로 붙인다(린트 `cpp-shape` 강제, `py -3 -m Scripts delegate-macros`). 꺾쇠 안 쉼표가 있으면 `SW_DECLARE_DELEGATE` 별칭.
-- Cannot go on: `SW_FATAL( "...%#", value )` (below the log tier `SW_LOW_LEVEL_FATAL`), never `std::abort()`.
+- Cannot go on: `reportFatalError( "...%#", value )` (below the log tier `SW_LOW_LEVEL_FATAL`), never `std::abort()`.
 - Never discard a graphics device result: `isVkSuccess` / `isHrSuccess`, `requireVk` / `requireHr`, or `FAILED()` with a comment (SDK types cannot be `[[nodiscard]]` — review keeps this).
 
 ## Constants

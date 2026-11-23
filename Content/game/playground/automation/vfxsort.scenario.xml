@@ -16,14 +16,14 @@
 	<Variable name="gv_timeScale" value="1"/>
 	<AdvanceSimulation frames="150"/>
 	<Variable name="gv_timeScale" value="0"/>
-	<Screenshot file="vfxsort_unsorted.ppm" stability="assets"/>
+	<Screenshot file="vfxsort_unsorted.ppm" stability="Assets"/>
 	<!-- 정렬한 무대 — 같은 입자(시드 · 진행 프레임 수가 같다) -->
 	<Variable name="gv_timeScale" value="1"/>
 	<LoadScene path="game/playground/maps/vfxsort.scene.xml" timeoutFrames="600"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<AdvanceSimulation frames="150"/>
 	<Variable name="gv_timeScale" value="0"/>
-	<Screenshot file="vfxsort_sorted.ppm" stability="assets"/>
+	<Screenshot file="vfxsort_sorted.ppm" stability="Assets"/>
 	<ExpectImagesDiffer first="vfxsort_unsorted.ppm" second="vfxsort_sorted.ppm" region="0,0.3,0.5,1" minDiffering="0.01"/>
 	<ExpectImagesDiffer first="vfxsort_unsorted.ppm" second="vfxsort_sorted.ppm" region="0.5,0.45,1,1" minDiffering="0.01"/>
 	<ExpectImage file="vfxsort_sorted.ppm" golden="vfxsort_sorted"/>

@@ -201,22 +201,29 @@ namespace sw
 } // namespace sw
 
 /**
- * @brief 에셋 종류의 정의를 적고(@p ... 는 `AssetTypeDef` 값) `SharedAssetCache<AssetType>` 을 Engine.dll 에서 내보내도록 인스턴스화해 내장 캐시로 등록하며, 같은 정의로 종류를 등록합니다(`SW_ASSET_TYPE`).
- * @details 인스턴스화하는 .cpp, `namespace sw` 안에 둔다. @p id 는 정적 이름을 만드는 식별자다. 예:
- * @code
- *     SW_SHARED_ASSET_CACHE( Skeleton, Skeleton, Skeleton::kAssetType.withLoader( AssetTypeLoader::of<Skeleton>( MemoryTag::Animation ) ) );
- * @endcode
+ * @brief 에셋 종류의 정의(@p ... 는 `AssetTypeDef` 값)를 적고 `SharedAssetCache<AssetType>` 을 @p ExportMacro 로 내보내도록 인스턴스화하며 종류를 등록합니다(`SW_ASSET_TYPE`).
+ * @details 아래 `SW_SHARED_ASSET_CACHE`(엔진)와 `SW_MODULE_SHARED_ASSET_CACHE`(모듈)의 공통 몫이다 — 직접 쓰지 않는다(캐시의 주인이 서지 않는다).
  */
-#define SW_SHARED_ASSET_CACHE( id, AssetType, ... )                                                                                                              \
+#define SW_SHARED_ASSET_CACHE_TYPE( id, AssetType, ExportMacro, ... )                                                                                            \
     static_assert( SharedAssetCacheDecl<AssetType>::kValue, "declare the cache in the asset header: SW_DECLARE_SHARED_ASSET_CACHE( <extern macro>, <asset> )" ); \
     template <>                                                                                                                                                  \
     struct SharedAssetCacheTraits<AssetType>                                                                                                                     \
     {                                                                                                                                                            \
         static constexpr AssetTypeDef kType = __VA_ARGS__;                                                                                                       \
     };                                                                                                                                                           \
-    template class SW_API SharedAssetCache<AssetType>;                                                                                                           \
-    SW_BUILT_IN_ASSET_CACHE_WITH_ID( id, ::sw::SharedAssetCache<AssetType> );                                                                                    \
+    template class ExportMacro SharedAssetCache<AssetType>;                                                                                                      \
     SW_ASSET_TYPE( id, SharedAssetCacheTraits<AssetType>::kType )
+
+/**
+ * @brief 에셋 종류의 정의를 적고(@p ... 는 `AssetTypeDef` 값) `SharedAssetCache<AssetType>` 을 Engine.dll 에서 내보내도록 인스턴스화해 내장 캐시로 등록하며, 같은 정의로 종류를 등록합니다(`SW_ASSET_TYPE`).
+ * @details 인스턴스화하는 .cpp, `namespace sw` 안에 둔다. @p id 는 정적 이름을 만드는 식별자다. 예:
+ * @code
+ *     SW_SHARED_ASSET_CACHE( Skeleton, Skeleton, Skeleton::kAssetType.withLoader( AssetTypeLoader::of<Skeleton>( MemoryTag::Animation ) ) );
+ * @endcode
+ */
+#define SW_SHARED_ASSET_CACHE( id, AssetType, ... )                   \
+    SW_SHARED_ASSET_CACHE_TYPE( id, AssetType, SW_API, __VA_ARGS__ ); \
+    SW_BUILT_IN_ASSET_CACHE( id, ::sw::SharedAssetCache<AssetType> )
 
 namespace sw
 {
@@ -237,7 +244,7 @@ namespace sw
 
         SubsystemInitResult initializeSubsystem() override
         {
-            _registration = SharedAssetCacheLookup::registerModuleCache( _cache, SW_ASSET_CACHE_RELOAD_FUNCTION( SharedAssetCache<AssetType> ) );
+            _registration = SharedAssetCacheLookup::registerModuleCache( _cache, getAssetCacheReloadFunction<SharedAssetCache<AssetType>>() );
             return _registration.isActive() ? SubsystemInitResult::Succeeded : SubsystemInitResult::Failed;
         }
         /** @brief 레지스트리에서 내립니다. 쥔 쪽의 에셋은 그 `shared_ptr` 가 놓을 때까지 산다. */

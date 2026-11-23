@@ -41,8 +41,9 @@ namespace sw
     /** @struct OnlineClientRegistry @brief 키트 클라이언트 팩토리의 레지스트리입니다. GameFramework 에 하나 있습니다. */
     struct SW_GF_API OnlineClientRegistry
     {
-        static void registerFactory( OnlineClientFactory* pFactory );
-        static void unregisterFactory( OnlineClientFactory* pFactory );
+        /** @brief 팩토리를 올립니다. 만들기 함수가 없거나 같은 이름이 있으면(오류 로그) 올리지 않고 false 입니다. */
+        [[nodiscard]] static bool registerFactory( OnlineClientFactory* pFactory );
+        static void               unregisterFactory( OnlineClientFactory* pFactory );
         /** @brief 이름 순으로 @p outListFactory 에 담습니다. 비운 뒤 채웁니다. */
         static void collectFactories( vector<OnlineClientFactory*>& outListFactory );
     };
@@ -58,20 +59,16 @@ namespace sw
     class OnlineClientRegistrar
     {
     public:
-        explicit OnlineClientRegistrar( const utf8* pName )
-            : OnlineClientRegistrar( pName, &OnlineClientRegistrar::create )
+        explicit OnlineClientRegistrar( const utf8* pName, SourceLocation site = SourceLocation::current() )
+            : OnlineClientRegistrar( pName, &OnlineClientRegistrar::create, site )
         {
         }
         /** @param pCreate `initialize( &client )` 하나로 묶이지 않는 클라이언트(계정 — 빌드 글을 받는다)의 만듦 함수입니다. */
-        OnlineClientRegistrar( const utf8* pName, OnlineClientFactory::CreateFunction pCreate )
-            : _factory{}
+        OnlineClientRegistrar( const utf8* pName, OnlineClientFactory::CreateFunction pCreate, SourceLocation site = SourceLocation::current() )
+            : _factory{ makeFactory( pName, pCreate ) }
+            , _registrar{ &_factory, &OnlineClientRegistry::registerFactory, &OnlineClientRegistry::unregisterFactory, site }
         {
-            _factory._pName    = pName;
-            _factory._pCreate  = pCreate;
-            _factory._typeHash = getSubsystemTypeHash<TClient>();
-            OnlineClientRegistry::registerFactory( &_factory );
         }
-        ~OnlineClientRegistrar() { OnlineClientRegistry::unregisterFactory( &_factory ); }
 
         OnlineClientRegistrar( const OnlineClientRegistrar& )            = delete;
         OnlineClientRegistrar& operator=( const OnlineClientRegistrar& ) = delete;
@@ -84,8 +81,17 @@ namespace sw
             pClient->initialize( &client );
             return pClient;
         }
+        static OnlineClientFactory makeFactory( const utf8* pName, OnlineClientFactory::CreateFunction pCreate )
+        {
+            OnlineClientFactory factory;
+            factory._pName    = pName;
+            factory._pCreate  = pCreate;
+            factory._typeHash = getSubsystemTypeHash<TClient>();
+            return factory;
+        }
 
-        OnlineClientFactory _factory;
+        OnlineClientFactory                   _factory;   ///< 목록에 오르는 줄(이 등록자와 수명이 같다)
+        StaticRegistrar<OnlineClientFactory*> _registrar; ///< 줄 다음에 만들어 줄보다 먼저 사라진다
     };
 } // namespace sw
 

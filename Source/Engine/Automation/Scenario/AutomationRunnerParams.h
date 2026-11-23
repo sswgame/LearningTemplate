@@ -223,10 +223,19 @@ namespace sw
     };
 
     /**
-     * @brief `Screenshot` 의 인자입니다.
-     * @details `stability` 는 찍기 전에 무엇을 기다리는지다 — `render`(기본: 에셋 일 · 화면 덮개 + 렌더 정착 조건 `SW_AUTOMATION_STABILITY_CONDITION`), `assets`(에셋 일 · 화면 덮개만 —
-     *          카메라가 움직이는 장면), `none`(그 프레임 그대로 — 디더 등장의 중간 단계처럼 찍는 프레임이 정해져야 할 때). 값 검사는 단계의 검사 함수가 한다.
+     * @brief `<Screenshot stability>` 의 값입니다 — 찍기 전에 무엇을 기다리는가.
+     * @details `None` 은 찍는 프레임이 정해져야 하는 시나리오(디더 등장의 중간 단계, 프레임마다 움직이는 카메라)가 쓴다 — 자리 잡기를 기다리면 등장이 끝나거나 카메라가 멈춘 뒤를 찍는다.
+     *          그런 시나리오는 앞에서 `<WaitRenderStable/>` · `<WaitUntil watch="Assets.Pending" equals="0">` 로 자리를 잡아 둔다.
      */
+    ENUM()
+    enum class AutomationScreenshotStability : uint8
+    {
+        Render, ///< 에셋 일 · 화면 덮개 + 렌더 정착 조건(`SW_AUTOMATION_STABILITY_CONDITION` — TAA 기록 · 노출 적응). 기본
+        Assets, ///< 에셋 일 · 화면 덮개만(카메라가 움직이는 장면 — TAA 조건은 끝내 서지 않는다)
+        None,   ///< 그 프레임 그대로
+    };
+
+    /** @brief `Screenshot` 의 인자입니다. */
     REFLECT()
     struct SW_API AutomationScreenshotParams
     {
@@ -234,8 +243,8 @@ namespace sw
 
         PROPERTY( Required )
         string _file{};
-        PROPERTY( DefaultName )
-        string _stability{ "render" };
+        PROPERTY()
+        AutomationScreenshotStability _stability{ AutomationScreenshotStability::Render };
     };
 
     /** @brief `ExpectImage` 의 인자입니다. */

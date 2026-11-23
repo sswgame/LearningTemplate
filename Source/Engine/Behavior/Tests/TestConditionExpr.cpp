@@ -5,6 +5,7 @@
 
 #include "Engine/Behavior/ActionRegistry.h"
 #include "Engine/Behavior/ConditionExpr.h"
+#include "Engine/Behavior/ConditionRegistry.h"
 #include "Engine/Behavior/RegisteredParams.h"
 
 #include <cstddef>
@@ -342,8 +343,8 @@ SW_TEST_CASE( ConditionExprTest, ParamsOfAnUnregisteredEntryAreNotReleased )
         const uint32                 generation = ActionRegistry::getRemovalGeneration();
         const shared_ptr<const void> pAlive( &value, CountingDeleter{ &deleteCount }, BufferAllocator<uint8>( arrAliveBlock, kBlockSize ) );
         const shared_ptr<const void> pStale( &value, CountingDeleter{ &deleteCount }, BufferAllocator<uint8>( arrStaleBlock, kBlockSize ) );
-        RegisteredParams             alive{ pAlive, &s_heldAction, ActionRegistry::getEntryOps(), generation };
-        RegisteredParams             stale{ pStale, &s_heldAction, ActionRegistry::getEntryOps(), generation };
+        RegisteredParams             alive{ pAlive, &s_heldAction, ActionEntry::getEntries(), generation };
+        RegisteredParams             stale{ pStale, &s_heldAction, ActionEntry::getEntries(), generation };
         RegisteredParams             aliveCopy = alive;
         SW_EXPECT_TRUE( alive.get() == &value );
         SW_EXPECT_EQUAL( 3, static_cast<int32>( pAlive.use_count() ) ); // 원본 · 보관자 · 사본
@@ -356,4 +357,27 @@ SW_TEST_CASE( ConditionExprTest, ParamsOfAnUnregisteredEntryAreNotReleased )
         SW_EXPECT_EQUAL( 2, static_cast<int32>( pStale.use_count() ) );
     } // 원본 둘(살아 있는 줄의 것)은 놓이고, 빠진 줄의 보관자는 놓지 않는다
     SW_EXPECT_EQUAL( 1, deleteCount ); // pAlive 하나만 해제됐다 — pStale 은 보관자가 일부러 남겼다
+}
+
+/**
+ * @brief [ConditionExprTest] 이름이 겹친 등록은 먼저 것을 두고 거절하며, 거절된 줄을 빼도 먼저 것은 남는다. 동작은 대소문자를 보지 않고 조건은 본다.
+ */
+SW_TEST_CASE( ConditionExprTest, DuplicateEntryNameKeepsTheFirst )
+{
+    SW_EXPECT_LOG( "Registration.DuplicateName" );
+    static const ActionEntry s_firstAction{ "test.duplicate", &InstancedStructOps::of<VocabularyNoParams>(), &ActionThunk<VocabularyNoParams, &XTestUtil::runCount>::call };
+    static const ActionEntry s_secondAction{ "TEST.Duplicate", &InstancedStructOps::of<VocabularyNoParams>(), &ActionThunk<VocabularyNoParams, &XTestUtil::runCount>::call };
+    const ActionRegistrar    firstAction{ &s_firstAction };
+    SW_EXPECT_FALSE( ActionRegistry::registerEntry( &s_secondAction ) ); // 등록자로 올리면 정적 등록 거절로 세어 시작 검사를 흔든다 — 손으로 올린다
+    SW_EXPECT_TRUE( ActionRegistry::find( "Test.Duplicate" ) == &s_firstAction );
+    SW_EXPECT_FALSE( ActionRegistry::isRegistered( &s_secondAction ) );
+    ActionRegistry::unregisterEntry( &s_secondAction );
+    SW_EXPECT_TRUE( ActionRegistry::isRegistered( &s_firstAction ) );
+
+    static const ConditionEntry s_lowerCondition{ "testDuplicate", &InstancedStructOps::of<VocabularyNoParams>(), &ConditionThunk<VocabularyNoParams, &XTestUtil::readFixed>::call };
+    static const ConditionEntry s_upperCondition{ "TestDuplicate", &InstancedStructOps::of<VocabularyNoParams>(), &ConditionThunk<VocabularyNoParams, &XTestUtil::readFixed>::call };
+    const ConditionRegistrar    lowerCondition{ &s_lowerCondition };
+    const ConditionRegistrar    upperCondition{ &s_upperCondition };
+    SW_EXPECT_TRUE( ConditionRegistry::find( "testDuplicate" ) == &s_lowerCondition );
+    SW_EXPECT_TRUE( ConditionRegistry::find( "TestDuplicate" ) == &s_upperCondition );
 }

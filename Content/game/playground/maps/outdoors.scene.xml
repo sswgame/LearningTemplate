@@ -244,7 +244,7 @@
 					<CharacterControllerComponent _localID="1851894784675401076" _localPosition="0,0.05,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _radius="0.3" _halfHeight="0.6" _stepHeight="0.3" _maxSlopeAngle="45" _gravityScale="1" _mass="70" _layer="Character" />
 					<SkeletalMeshComponent _localID="15127961318995883145" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="#19b3407eb1f9cd74" _meshID="common/models/kaykit/knight.mesh" _materialPath="common/materials/kaykit_knight.material" _boundsRadius="2" _skeletonPath="common/models/kaykit/knight/knight.skeleton.xml" _visibilityBasedTickOption="AlwaysTickPoseAndRefreshBones" />
 					<SkeletalAnimatorComponent _localID="6157124105282015569" _animationGraphPath="common/data/anim/adventurer.animgraph.xml" _animationSetPath="common/models/kaykit/knight/knight.animset.xml" _initialState="Idle" _playRate="1" _blendSeconds="0.2" _bExtractRootMotion="false" _bPlayOnBegin="true" />
-					<PawnComponent _localID="11149290121538025405" _moveAction="Move" _lookAction="None" _upAction="Playground.MoveUp" _inputLayer="None" _aiControllerPrefab="" _maxPitch="80.21409" _autoPossess="Player0" _bLockMouse="false">
+					<PawnComponent _localID="11149290121538025405" _moveAction="Move" _lookAction="None" _upAction="Playground.MoveUp" _inputLayer="Outdoors" _aiControllerPrefab="" _maxPitch="80.21409" _autoPossess="Player0" _bLockMouse="false">
 						<_listButton>
 							<item>Jump</item>
 							<item>Interact</item>

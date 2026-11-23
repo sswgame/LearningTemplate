@@ -89,7 +89,7 @@ namespace sw
         };
 
         /** @brief `파일(줄)` 글입니다. 모르는 자리는 `(unknown site)` 입니다. */
-        string describeRegistrationSite( const optional<RegistrationSite>& site )
+        string describeRegistrationSite( const optional<SourceLocation>& site )
         {
             if ( site.has_value() == false || site->_pFile == nullptr )
                 return "(unknown site)";
@@ -111,7 +111,7 @@ namespace sw
         }
 
         /** @brief 겹친 이름 하나를 두 자리와 함께 알립니다. @p bStatic 이면 정적 등록 거절로 센다(시작 단계가 로드 오류로 멈춘다). */
-        void reportDuplicateName( const utf8* pWhat, string_view name, const optional<RegistrationSite>& existing, const optional<RegistrationSite>& rejected, bool bStatic )
+        void reportDuplicateName( const utf8* pWhat, string_view name, const optional<SourceLocation>& existing, const optional<SourceLocation>& rejected, bool bStatic )
         {
             StringBuilder<constant::buffer::kMax1024> line;
             line.appendFormat( "%# '%#' is registered twice - first at %#, again at %# (keeping the first)", pWhat, name, describeRegistrationSite( existing ),
@@ -122,7 +122,7 @@ namespace sw
         }
     } // namespace
 
-    StaticRegistrarSite::StaticRegistrarSite( const void* pItem, RegistrationSite site )
+    StaticRegistrarSite::StaticRegistrarSite( const void* pItem, SourceLocation site )
         : _pItem{ pItem }
         , _site{ site }
         , _pPrev{ nullptr }
@@ -159,14 +159,14 @@ namespace sw
             t_pActiveRegistrar = nullptr;
     }
 
-    optional<RegistrationSite> StaticRegistrarSite::findActiveRegistrationSite()
+    optional<SourceLocation> StaticRegistrarSite::findActiveRegistrationSite()
     {
         if ( t_pActiveRegistrar == nullptr )
             return nullopt;
         return t_pActiveRegistrar->_site;
     }
 
-    optional<RegistrationSite> StaticRegistrarSite::findSiteOf( const void* pItem )
+    optional<SourceLocation> StaticRegistrarSite::findSiteOf( const void* pItem )
     {
         if ( pItem == nullptr )
             return nullopt;
@@ -179,7 +179,7 @@ namespace sw
         return nullopt;
     }
 
-    void reportDuplicateRegistration( const utf8* pWhat, string_view name, RegistrationSite existing, RegistrationSite rejected )
+    void reportDuplicateRegistration( const utf8* pWhat, string_view name, SourceLocation existing, SourceLocation rejected )
     {
         reportDuplicateName( pWhat, name, existing, rejected, true );
     }
@@ -216,7 +216,7 @@ namespace sw
             case RegistrationResult::DuplicateName:
             {
                 // 정적 등록자가 올리는 중이면 시작 때의 겹침이다 — 두 자리를 찍고 센다. 실행 중 손으로 부른 등록(테스트가 일부러 겹치는 것)은 세지 않는다.
-                const optional<RegistrationSite> rejected = StaticRegistrarSite::findActiveRegistrationSite();
+                const optional<SourceLocation> rejected = StaticRegistrarSite::findActiveRegistrationSite();
                 reportDuplicateName( pWhat, name, StaticRegistrarSite::findSiteOf( pExistingItem ), rejected, rejected.has_value() );
                 return;
             }

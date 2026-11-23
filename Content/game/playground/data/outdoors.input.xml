@@ -1,14 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="3540b4e29d394c97aa8bd78a7959cc72"?>
-<!-- 야외 활동 장소(maps/outdoors)의 입력 — 걷기 · 점프 · 상호작용은 공용 액션이고, 위아래(헤엄 · 사다리)와 이모트만 여기 있다. -->
+<!-- 야외 활동 장소(maps/outdoors)의 입력 — 걷기 · 점프 · 상호작용은 공용 액션이고, 위아래(헤엄 · 사다리)와 이모트만 여기 있다.
+     꺼진 레이어 Outdoors 이고 플레이어 폰의 입력 레이어(_inputLayer)가 쥔 동안 켠다 — 평원(West.*)의 같은 키(F · G · R)와 함께 발화하지 않는다. -->
 <InputMap>
-	<action name="Playground.MoveUp" layer="Gameplay">
+	<layers>
+		<layer name="Outdoors" enabled="0" blockLower="0"/>
+	</layers>
+	<action name="Playground.MoveUp" layer="Outdoors">
 		<axis1d negative="F" positive="R"/>
 	</action>
-	<action name="Playground.Cheer" layer="Gameplay" trigger="Pressed">
+	<action name="Playground.Cheer" layer="Outdoors" trigger="Pressed">
 		<bind source="Key" code="G"/>
 	</action>
-	<action name="Playground.Greet" layer="Gameplay" trigger="Pressed">
+	<action name="Playground.Greet" layer="Outdoors" trigger="Pressed">
 		<bind source="Key" code="H"/>
 	</action>
 </InputMap>

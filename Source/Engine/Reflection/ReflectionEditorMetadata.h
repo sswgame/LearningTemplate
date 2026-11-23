@@ -75,7 +75,8 @@ namespace sw
         string                               _editorPreview; ///< `FUNCTION( EditorPreview = "..." )` 의 값이다. 에디터 뷰포트 미리보기가 이 값으로 메서드를 찾는다
         unordered_map<hashed_string, string> _mapCustomMeta;
         uint8                                _bCallInEditor : 1; ///< 에디터 인스펙터에 실행 버튼을 보여 준다
-        [[maybe_unused]] uint8               _reserved      : 7;
+        uint8                                _bExec         : 1; ///< 콘솔 명령 `exec` 로 부를 수 있다(`ExecFunctionCommand`)
+        [[maybe_unused]] uint8               _reserved      : 6;
 
         FunctionEditorMetadata() noexcept;
 

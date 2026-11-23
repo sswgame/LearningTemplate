@@ -87,7 +87,7 @@ namespace sw
         {
             T* const pClient = find<T>();
             if ( pClient == nullptr )
-                SW_FATAL( "The kit of this online client is not in the game's module manifest" );
+                reportFatalError( "The kit of this online client is not in the game's module manifest" );
             return *pClient;
         }
 

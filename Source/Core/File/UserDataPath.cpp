@@ -37,7 +37,7 @@ namespace sw
             /** @brief OS 사용자 폴더를 모를 때 멈춥니다 - 작업 폴더의 `Saved` 로 대신하면(옛 폴백) 세이브 · 설정이 띄운 자리마다 갈렸다. */
             [[noreturn]] static void failUnknownUserFolder()
             {
-                SW_FATAL( "The user data folder is unknown (no LOCALAPPDATA / XDG_*_HOME / HOME) - set %# to choose it", kUserDataRootVariable );
+                reportFatalError( "The user data folder is unknown (no LOCALAPPDATA / XDG_*_HOME / HOME) - set %# to choose it", kUserDataRootVariable );
             }
 
             /** @brief 환경 변수 `kUserDataRootVariable` 이 값을 가지면 그 아래 `<game>` 폴더, 아니면 빈 글입니다(그때는 OS 의 사용자 폴더 규칙을 따른다). */
@@ -150,7 +150,7 @@ namespace sw
     string LocalStoreLocation::resolveDiskPath( string_view gameName ) const
     {
         if ( _kind == Kind::Memory )
-            SW_FATAL( "A memory local store location has no disk path - check getKind() first" );
+            reportFatalError( "A memory local store location has no disk path - check getKind() first" );
         if ( _kind == Kind::UnderUserData )
             return FileUtil::joinPath( UserDataPath::getDataDirectory( gameName ), _path );
         return _path;

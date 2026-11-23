@@ -294,12 +294,12 @@ namespace sw
     SW_TEST_GLOBAL_VARIABLE( int32, gv_stressTestMaterialChurnAdd, 0, "프레임당 새로 붙이거나 떼어낼 머티리얼 인스턴스 수 (0=사용 안 함)" );
 
     /**
-     * @brief `-gv_stressTestMaterialChurnKeyword=N`: N 프레임마다 키워드와 멀티컴파일을 하나 바꿉니다.
+     * @brief `-gv_stressTestMaterialChurnKeyword=N`: N 프레임마다 인스턴스 하나의 런타임 스위치를 바꿉니다. 큐브는 스위치를 선언한 머티리얼(`_permutationMaterial`)을 씁니다.
      * @warning **셰이더가 다시 컴파일됩니다.** 퍼뮤테이션 해시가 바뀌면 배치 키가 갈리고 PSO 가 새로
      *          만들어지므로 프레임 시간이 크게 튑니다. 성능 측정용이 아니라 **퍼뮤테이션 경로가 살아 있는지**
      *          확인하는 스위치입니다. 값은 크게 줍니다(예: 60 은 1초에 한 번).
      */
-    SW_TEST_GLOBAL_VARIABLE( int32, gv_stressTestMaterialChurnKeyword, 0, "N 프레임마다 키워드·멀티컴파일을 흔듭니다 (0=사용 안 함)" );
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_stressTestMaterialChurnKeyword, 0, "N 프레임마다 런타임 스위치를 흔듭니다 (0=사용 안 함)" );
 
     /**
      * @brief `-gv_stressTestMaterialChurnSwap=N`: 매 프레임 큐브 N 개의 머티리얼 인스턴스를 **이미 있는** 다른 인스턴스로 바꿉니다(메시 컴포넌트의 머티리얼 교체).
@@ -679,6 +679,8 @@ namespace sw
             MeshComponent* pMesh = spawnCube( pObjects, pSceneMaterial, index, side, origin );
             if ( pMesh == nullptr )
                 continue;
+            if ( gv_stressTestMaterialChurnKeyword > 0 )
+                pMesh->setMaterialPath( _settings._permutationMaterial.path() ); // 흔들 런타임 스위치를 선언한 머티리얼
             _listBenchMesh.push_back( TComponentHandle<MeshComponent>{ pMesh } );
 
             // 큐브마다 자기 머티리얼 인스턴스를 줍니다. 색이 달라지는 것도 목적이지만, 배치 키가
@@ -1799,34 +1801,20 @@ namespace sw
             const Material*   pParent   = pInstance != nullptr ? pInstance->getParent() : nullptr;
             if ( pParent != nullptr )
             {
-                // 부모가 선언한 런타임 스위치 · 멀티 컴파일만 흔든다 — 선언하지 않은 키워드는 인스턴스가 거절한다(쿠킹하지 않은 조합이라 배포에서 대체 해시로 그린다).
-                const MaterialPermutationDef&       permutations = pParent->getPermutations();
+                // 부모가 선언한 런타임 스위치만 흔든다 — 인스턴스는 그것만 받는다(그 밖의 퍼뮤테이션은 쿠킹하지 않은 조합이라 배포에서 대체 해시로 그린다).
                 vector<const MaterialStaticSwitch*> listRuntimeSwitch;
-                for ( const MaterialStaticSwitch& entry : permutations._listStaticSwitch )
+                for ( const MaterialStaticSwitch& entry : pParent->getPermutations()._listStaticSwitch )
                 {
                     if ( entry._bShaderFeature == SW_FALSE )
                         listRuntimeSwitch.push_back( &entry );
                 }
-                // 난수를 뽑는 차례는 예전(키워드 켬/끔 · 안개 선택지)과 같다 — 고를 것이 하나뿐이면 뽑지 않아 벤치의 뒤 단계가 같은 수열을 받는다.
-                const auto pickIndex = [this]( size_t count ) -> size_t
-                { return count > 1 ? _churnRandom.nextUint() % count : 0; };
-                bool bAccepted = true;
-                if ( ( _churnRandom.nextUint() & 1u ) != 0u )
+                if ( listRuntimeSwitch.empty() == false )
                 {
-                    const bool bEnable = ( _churnRandom.nextUint() & 1u ) != 0u;
-                    if ( listRuntimeSwitch.empty() == false )
-                    {
-                        const hashed_string switchName( listRuntimeSwitch[pickIndex( listRuntimeSwitch.size() )]->_name.c_str() );
-                        bAccepted = bEnable ? pInstance->enableKeyword( switchName ) : pInstance->disableKeyword( switchName );
-                    }
+                    const hashed_string switchName( listRuntimeSwitch[_churnRandom.nextUint() % listRuntimeSwitch.size()]->_name.c_str() );
+                    const bool          bEnable   = ( _churnRandom.nextUint() & 1u ) != 0u;
+                    const bool          bAccepted = bEnable ? pInstance->enableKeyword( switchName ) : pInstance->disableKeyword( switchName );
+                    SW_ASSERT( bAccepted ); // 부모가 선언한 것만 골랐다
                 }
-                else if ( permutations._listMultiCompile.empty() == false )
-                {
-                    const MaterialMultiCompile& multiCompile = permutations._listMultiCompile[pickIndex( permutations._listMultiCompile.size() )];
-                    if ( multiCompile._listOption.empty() == false )
-                        bAccepted = pInstance->setMultiCompile( hashed_string( multiCompile._name.c_str() ), multiCompile._listOption[_churnRandom.nextUint() % multiCompile._listOption.size()] );
-                }
-                SW_ASSERT( bAccepted ); // 부모가 선언한 것만 골랐다
             }
         }
     }

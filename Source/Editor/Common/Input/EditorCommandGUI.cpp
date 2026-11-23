@@ -123,7 +123,7 @@ namespace sw::editor
         const EditorCommandRegistry& registry = EditorCommandRegistry::getInEditorContext();
         const EditorCommandDesc*     pDesc    = registry.find( commandID );
         if ( pDesc == nullptr )
-            SW_FATAL( "Toolbar button names command '%#' which is not registered", string( commandID ).c_str() );
+            reportFatalError( "Toolbar button names command '%#' which is not registered", string( commandID ).c_str() );
         EditorInputActions& inputActions = EditorInputActions::getInEditorContext();
 
         const bool bEnabled = registry.isEnabledInSnapshot( static_cast<uint32>( pDesc - registry.getCommands().data() ) );

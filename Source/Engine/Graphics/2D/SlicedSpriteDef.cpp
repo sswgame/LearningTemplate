@@ -230,5 +230,5 @@ namespace sw
 namespace sw
 {
     using SlicedSpriteMeshCache = SpriteMeshBuilderInternal::SlicedMeshCache;
-    SW_BUILT_IN_ASSET_CACHE_WITHOUT_RELOAD( SlicedSpriteMeshCache );
+    SW_BUILT_IN_ASSET_CACHE( SlicedSpriteMeshCache, SlicedSpriteMeshCache );
 } // namespace sw
