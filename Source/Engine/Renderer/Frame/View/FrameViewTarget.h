@@ -45,8 +45,8 @@ namespace sw
         {
             RHIPipelineStateHandle       _pso{ 0 }; ///< 0 이면 PSO 를 만들지 못했다(그 그리기만 빠진다)
             RHIBufferHandle              _buffer{ 0 };
-            RHIDescriptorIndex           _srv{ kInvalidDescriptorIndex };
-            const RHIDescriptorIndex*    _pTextureSRV{ nullptr }; ///< 에뮬 백엔드의 머티리얼 텍스처 칸(t16..t31) — 뷰 설정의 사본이 프레임 동안 쥔다
+            RHIBufferSRVIndex            _srv{ kInvalidDescriptorIndex };
+            const RHITextureSRVIndex*    _pTextureSRV{ nullptr }; ///< 에뮬 백엔드의 머티리얼 텍스처 칸(t16..t31) — 뷰 설정의 사본이 프레임 동안 쥔다
             float32                      _weight{ 0.0f };
             PostProcessBlendableLocation _location{ PostProcessBlendableLocation::None };
             const RHITextureSlot*        _pChainSource{ nullptr }; ///< 같은 자리의 앞 머티리얼 결과 사본 — 있으면 원본 대신 읽는다(둘째부터). 뷰가 가진다

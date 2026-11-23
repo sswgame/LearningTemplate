@@ -29,8 +29,8 @@ namespace sw
      */
     struct RHIConstantBuffer
     {
-        RHIBufferHandle    _buffer{ 0 };
-        RHIDescriptorIndex _index{ kInvalidDescriptorIndex };
+        RHIBufferHandle   _buffer{ 0 };
+        RHIBufferSRVIndex _index{ kInvalidDescriptorIndex };
 
         RHIConstantBuffer() = default;
         RHIConstantBuffer( RHIConstantBuffer&& other ) noexcept { swap( other ); }

@@ -180,7 +180,7 @@ namespace sw
         struct FrameDecalDraw
         {
             GPUDecal           _element{};
-            RHIDescriptorIndex _arrTextureSRV[shaderslot::kMaterialTextureCount] = {
+            RHITextureSRVIndex _arrTextureSRV[shaderslot::kMaterialTextureCount] = {
                 kInvalidDescriptorIndex, kInvalidDescriptorIndex, kInvalidDescriptorIndex, kInvalidDescriptorIndex, kInvalidDescriptorIndex, kInvalidDescriptorIndex,
                 kInvalidDescriptorIndex, kInvalidDescriptorIndex, kInvalidDescriptorIndex, kInvalidDescriptorIndex, kInvalidDescriptorIndex, kInvalidDescriptorIndex,
                 kInvalidDescriptorIndex, kInvalidDescriptorIndex, kInvalidDescriptorIndex, kInvalidDescriptorIndex };

@@ -518,15 +518,15 @@ namespace sw
         // 기록끼리는 서로를 막지 않는다.
         // ------------------------------------------------------------------------------
         /** @brief 인덱스의 버퍼 핸들입니다. 범위 밖이면 0 입니다. */
-        RHIBufferHandle bindlessBufferAt( RHIDescriptorIndex index ) const;
+        RHIBufferHandle bindlessBufferAt( RHIBufferSRVIndex index ) const;
         /** @brief 인덱스의 버퍼와 구간입니다(구간 등록이 아니면 오프셋 · 크기 0 — 버퍼 전체). 범위 밖이면 빈 구간입니다. */
-        RHIBufferSlice bindlessBufferSliceAt( RHIDescriptorIndex index ) const;
+        RHIBufferSlice bindlessBufferSliceAt( RHIBufferSRVIndex index ) const;
         /** @brief 인덱스의 텍스처 핸들입니다. 범위 밖이면 0 입니다. */
-        RHITextureHandle bindlessTextureAt( RHIDescriptorIndex index ) const;
+        RHITextureHandle bindlessTextureAt( RHITextureSRVIndex index ) const;
         /** @brief 인덱스의 UAV 입니다(참조를 하나 올려 반환합니다). 범위 밖이면 nullptr 입니다. */
-        Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView> bindlessUAVAt( RHIDescriptorIndex index ) const;
+        Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView> bindlessUAVAt( RHIUnorderedAccessIndex index ) const;
         /** @brief UAV 인덱스가 가리키는 원본 버퍼 핸들입니다(없으면 0). SRV/UAV 해저드를 해소할 때 씁니다. */
-        RHIBufferHandle uavSourceBufferAt( RHIDescriptorIndex index ) const;
+        RHIBufferHandle uavSourceBufferAt( RHIUnorderedAccessIndex index ) const;
 
         /** @brief 이 기록 스트림의 루트 상수 CB 를 확보합니다(없으면 만듭니다). */
         [[nodiscard]] bool ensureRootConstantCb( D3D11RecordingState& state );

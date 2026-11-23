@@ -347,44 +347,44 @@ namespace sw
         writeRootConstants( _state._graphics, num32BitValues, pData, destOffsetIn32BitValues );
     }
 
-    void WebGPURHICommandContext::bindComputeUAV( RHIDescriptorIndex index, uint32 slot )
+    void WebGPURHICommandContext::bindComputeUAV( RHIUnorderedAccessIndex index, uint32 slot )
     {
         if ( slot < shaderslot::wgpu::kURange )
             _state._compute._arrUnorderedAccess[slot] = index;
     }
 
-    void WebGPURHICommandContext::bindGraphicsUAV( RHIDescriptorIndex index, uint32 slot )
+    void WebGPURHICommandContext::bindGraphicsUAV( RHIUnorderedAccessIndex index, uint32 slot )
     {
         // 그래픽스 단계 u 바인딩은 구현하지 않았다(`RHICapabilities::_bGraphicsShaderWrites` 가 거짓) — 셰이더 메시지 채널은 이 백엔드에서 켜지지 않아 여기에 오지 않는다.
         (void)index;
         (void)slot;
     }
 
-    void WebGPURHICommandContext::bindShaderResource( RHIDescriptorIndex index, uint32 slot )
+    void WebGPURHICommandContext::bindShaderResource( RHITextureSRVIndex index, uint32 slot )
     {
         if ( slot < shaderslot::wgpu::kTRange )
             _state._graphics._arrShaderResource[slot] = index;
     }
 
-    void WebGPURHICommandContext::bindStructuredBuffer( RHIDescriptorIndex index, uint32 slot )
+    void WebGPURHICommandContext::bindStructuredBuffer( RHIBufferSRVIndex index, uint32 slot )
     {
         if ( slot < shaderslot::wgpu::kTRange )
             _state._graphics._arrShaderResource[slot] = index;
     }
 
-    void WebGPURHICommandContext::bindConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot )
+    void WebGPURHICommandContext::bindConstantBuffer( RHIBufferSRVIndex constantBufferIndex, uint32 slot )
     {
         if ( slot < shaderslot::wgpu::kBRange )
             _state._graphics._arrConstantBuffer[slot] = constantBufferIndex;
     }
 
-    void WebGPURHICommandContext::bindComputeConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot )
+    void WebGPURHICommandContext::bindComputeConstantBuffer( RHIBufferSRVIndex constantBufferIndex, uint32 slot )
     {
         if ( slot < shaderslot::wgpu::kBRange )
             _state._compute._arrConstantBuffer[slot] = constantBufferIndex;
     }
 
-    void WebGPURHICommandContext::bindComputeShaderResource( RHIDescriptorIndex index, uint32 slot )
+    void WebGPURHICommandContext::bindComputeShaderResource( RHIBufferSRVIndex index, uint32 slot )
     {
         if ( slot < shaderslot::wgpu::kTRange )
             _state._compute._arrShaderResource[slot] = index;

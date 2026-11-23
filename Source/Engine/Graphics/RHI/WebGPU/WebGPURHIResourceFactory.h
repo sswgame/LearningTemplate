@@ -51,18 +51,18 @@ namespace sw
         [[nodiscard]] bool              takeTextureReadback( RHITransferTicket ticket, vector<uint8>& outBytes ) override;
         void                            discardTextureReadback( RHITransferTicket ticket ) override;
 
-        RHIDescriptorIndex registerBindlessTexture( RHITextureHandle texture ) override;
-        [[nodiscard]] bool rebindBindlessTexture( RHIDescriptorIndex index, RHITextureHandle texture ) override;
-        RHIDescriptorIndex reserveBindlessTextureIndex() override;
-        [[nodiscard]] bool activateReservedBindlessTexture( RHIDescriptorIndex index, RHITextureHandle texture ) override;
-        [[nodiscard]] bool isTextureReadyToSample( RHITextureHandle texture ) override;
-        void               unregisterBindlessTexture( RHIDescriptorIndex index ) override;
-        RHIDescriptorIndex registerBindlessBufferSRV( RHIBufferHandle buffer ) override;
-        RHIDescriptorIndex registerBindlessBufferSRV( const RHIBufferSlice& slice ) override;
-        void               unregisterBindlessResource( RHIDescriptorIndex index ) override;
-        RHIDescriptorIndex registerBindlessBufferUAV( RHIBufferHandle buffer ) override;
-        RHIDescriptorIndex registerBindlessTextureUAV( RHITextureHandle texture ) override;
-        void               unregisterBindlessUAV( RHIDescriptorIndex index ) override;
+        RHITextureSRVIndex      registerBindlessTexture( RHITextureHandle texture ) override;
+        [[nodiscard]] bool      rebindBindlessTexture( RHITextureSRVIndex index, RHITextureHandle texture ) override;
+        RHITextureSRVIndex      reserveBindlessTextureIndex() override;
+        [[nodiscard]] bool      activateReservedBindlessTexture( RHITextureSRVIndex index, RHITextureHandle texture ) override;
+        [[nodiscard]] bool      isTextureReadyToSample( RHITextureHandle texture ) override;
+        void                    unregisterBindlessTexture( RHITextureSRVIndex index ) override;
+        RHIBufferSRVIndex       registerBindlessBufferSRV( RHIBufferHandle buffer ) override;
+        RHIBufferSRVIndex       registerBindlessBufferSRV( const RHIBufferSlice& slice ) override;
+        void                    unregisterBindlessResource( RHIBufferSRVIndex index ) override;
+        RHIUnorderedAccessIndex registerBindlessBufferUAV( RHIBufferHandle buffer ) override;
+        RHIUnorderedAccessIndex registerBindlessTextureUAV( RHITextureHandle texture ) override;
+        void                    unregisterBindlessUAV( RHIUnorderedAccessIndex index ) override;
 
     private:
         /** @brief 용도 @p usage 의 버퍼를 만들고 @p pData 가 있으면 담습니다(크기는 4 의 배수로 올린다 — 명세의 쓰기 정렬). */

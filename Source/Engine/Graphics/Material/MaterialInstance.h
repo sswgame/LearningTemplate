@@ -141,7 +141,7 @@ namespace sw
              * @brief 덮어쓴 텍스처의 bindless 번호입니다 — 읽는 중이면 로드 중 텍스처를, 끝나면 진짜 텍스처를 가리키는 같은 번호다(R-6, `TextureLoadOperation::getStableSRV`).
              *        요청이 없거나 번호가 없으면 kInvalidDescriptorIndex 이고 부모의 텍스처가 보인다.
              */
-            RHIDescriptorIndex getStableSRV() const { return _load.isValid() ? _load.getOperation()->getStableSRV() : kInvalidDescriptorIndex; }
+            RHITextureSRVIndex getStableSRV() const { return _load.isValid() ? _load.getOperation()->getStableSRV() : kInvalidDescriptorIndex; }
         };
 
         /** @brief 값 덮어쓰기의 모양입니다. 스칼라 · 벡터는 이진으로 들고 글은 조회 때만 만든다. */
@@ -191,7 +191,7 @@ namespace sw
          * @brief 이 인스턴스로 그릴 때의 텍스처 슬롯(DX11 과 GL 의 t16..)에 바인딩할 SRV 를 채웁니다. 부모의 슬롯 위에 덮어쓴 텍스처를 적용합니다.
          * @details 슬롯 바인딩 백엔드는 배치마다 슬롯을 바인딩하고, 인스턴스가 있는 배치는 그 인스턴스의 것이다(합치기는 네이티브 bindless 에서만 켜진다).
          */
-        void fillTextureSlots( RHIDescriptorIndex* pOutSlot, uint32 slotCount ) const;
+        void fillTextureSlots( RHITextureSRVIndex* pOutSlot, uint32 slotCount ) const;
         /**
          * @brief 텍스처 덮어쓰기를 원하는 상태로 맞춥니다(`getRenderBinding`). 바뀐 경로는 반환하고 새로 빌리며, 지운 것은 뺍니다.
          * @return 다시 패킹해야 하면 true 입니다(빌린 것이 바뀌었거나 텍스처가 다시 올라왔습니다).

@@ -99,7 +99,7 @@ namespace sw
         /** @brief 이번 프레임에 컬링 컴퓨트가 실제로 돌았는지입니다 — 드로우가 가시 목록을 바인딩할지 정한다(돌지 않았는데 묶으면 갱신되지 않은 목록을 읽는다). */
         bool isGPUCullingActive() const { return _bGPUCullingActive != 0; }
         /** @brief 순번 테이블이 없는 뷰의 정렬 · 마커 · 안개 디스패치가 t2 에 묶는 자리표의 SRV 입니다. */
-        RHIDescriptorIndex getTransparentRankPlaceholderSRV() const { return _transparentRankPlaceholder._srv; }
+        RHIBufferSRVIndex getTransparentRankPlaceholderSRV() const { return _transparentRankPlaceholder._srv; }
         /** @brief 주 시점 가림 타일을 몇 프레임 늦게 되읽은 가장 최근 사본입니다. 어느 스레드에서 불러도 됩니다. */
         shared_ptr<const OcclusionTileSnapshot> getOcclusionSnapshot() const { return _occlusion.getSnapshot(); }
 

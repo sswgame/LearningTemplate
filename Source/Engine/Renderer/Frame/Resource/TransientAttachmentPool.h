@@ -36,19 +36,19 @@ namespace sw
          */
         struct Attachment
         {
-            RHITextureHandle      _texture{ 0 };
-            RHIDescriptorIndex    _srv{ kInvalidDescriptorIndex };
-            RHIDescriptorIndex    _uav{ kInvalidDescriptorIndex }; ///< RW 텍스처 번호입니다. 컴퓨트 패스가 쓰는 첨부만 있습니다
-            uint32                _width{ 0 };                     ///< 이 첨부의 실제 크기(풀 크기를 나눗수로 나눈 값, 올림)
-            uint32                _height{ 0 };
-            RHIFormat             _format{ RHIFormat::Unknown };                   ///< 만들 때의 포맷(파이프라인 XML 의 선언)
-            RHIAttachmentOps      _ops{};                                          ///< 초기값 · 로드 · 저장 동작 — 파이프라인 XML 의 선언
-            uint32                _idleFrames{ 0 };                                ///< 쓰는 패스가 이어서 돌지 않은 프레임 수(`releaseIfIdle`)
-            uint32                _leaseIndex{ constant::invalid_index::kUint32 }; ///< 텍스처를 빌렸으면 빌린 번호(`TransientTextureLeases`). 무효면 자기 텍스처다
-            hashed_string         _aliasOwner{};                                   ///< 텍스처를 빌린 별칭이면 주인 첨부 이름(`allocateAlias`). 비면 자기 텍스처다
-            uint8                 _bPlaced{ 0 };                                   ///< 텍스처가 풀의 힙에 겹쳐 놓였다(`allocatePlaced`) — 쓰기 전이 앞에 앨리어싱 배리어가 든다
-            uint8                 _bViewSized{ 0 };                                ///< 풀 크기(나눗수)를 따르는 첨부다 — 뷰 사각형 안에 그린다. 그림자 맵처럼 크기를 따로 준 첨부(`allocateSized`)는 0
-            RenderResolutionSpace _space{ RenderResolutionSpace::Render };         ///< 크기를 따르는 공간(렌더 · 출력 — 파이프라인 XML 의 선언). 크기를 따로 준 첨부는 렌더
+            RHITextureHandle        _texture{ 0 };
+            RHITextureSRVIndex      _srv{ kInvalidDescriptorIndex };
+            RHIUnorderedAccessIndex _uav{ kInvalidDescriptorIndex }; ///< RW 텍스처 번호입니다. 컴퓨트 패스가 쓰는 첨부만 있습니다
+            uint32                  _width{ 0 };                     ///< 이 첨부의 실제 크기(풀 크기를 나눗수로 나눈 값, 올림)
+            uint32                  _height{ 0 };
+            RHIFormat               _format{ RHIFormat::Unknown };                   ///< 만들 때의 포맷(파이프라인 XML 의 선언)
+            RHIAttachmentOps        _ops{};                                          ///< 초기값 · 로드 · 저장 동작 — 파이프라인 XML 의 선언
+            uint32                  _idleFrames{ 0 };                                ///< 쓰는 패스가 이어서 돌지 않은 프레임 수(`releaseIfIdle`)
+            uint32                  _leaseIndex{ constant::invalid_index::kUint32 }; ///< 텍스처를 빌렸으면 빌린 번호(`TransientTextureLeases`). 무효면 자기 텍스처다
+            hashed_string           _aliasOwner{};                                   ///< 텍스처를 빌린 별칭이면 주인 첨부 이름(`allocateAlias`). 비면 자기 텍스처다
+            uint8                   _bPlaced{ 0 };                                   ///< 텍스처가 풀의 힙에 겹쳐 놓였다(`allocatePlaced`) — 쓰기 전이 앞에 앨리어싱 배리어가 든다
+            uint8                   _bViewSized{ 0 };                                ///< 풀 크기(나눗수)를 따르는 첨부다 — 뷰 사각형 안에 그린다. 그림자 맵처럼 크기를 따로 준 첨부(`allocateSized`)는 0
+            RenderResolutionSpace   _space{ RenderResolutionSpace::Render };         ///< 크기를 따르는 공간(렌더 · 출력 — 파이프라인 XML 의 선언). 크기를 따로 준 첨부는 렌더
         };
 
         /**

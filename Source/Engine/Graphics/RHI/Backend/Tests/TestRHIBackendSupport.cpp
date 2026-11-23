@@ -156,6 +156,8 @@ SW_TEST_CASE( RHIBindlessRegistryTest, DefersReuseAndRejectsDoubleRelease )
 {
     // 번호는 정수에서 암시로 만들어지지 않는다 — 슬롯 · 개수를 번호 자리에 넘기면 컴파일되지 않는다.
     static_assert( std::is_convertible_v<uint32, RHIDescriptorIndex> == false && std::is_convertible_v<RHIDescriptorIndex, uint32> );
+    static_assert( std::is_constructible_v<RHITextureSRVIndex, RHIBufferSRVIndex> == false && std::is_constructible_v<RHIBufferSRVIndex, RHIUnorderedAccessIndex> == false );
+    static_assert( std::is_convertible_v<RHIDescriptorIndex, RHITextureSRVIndex> == false && std::is_convertible_v<RHIInvalidDescriptorIndex, RHITextureSRVIndex> );
     static_assert( sizeof( RHIDescriptorIndex ) == sizeof( uint32 ) && std::is_trivially_copyable_v<RHIDescriptorIndex> );
     RHIBindlessRegistry<RHIBufferHandle, RHIBindlessBufferOwnerOf> registry( 2 );
     const RHIDescriptorIndex                                       first  = registry.allocate( RHIBufferHandle{ 11 } );

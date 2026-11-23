@@ -67,7 +67,7 @@ namespace sw
         /** @brief RT 하나를 갖춥니다. 실패하면 멈춘다(prepare 머리말). */
         void ensureTarget( RHITextureSlot& target, RHIFormat format, uint32 width, uint32 height, const utf8* pDebugName ) const;
         /** @brief 원본 @p srv 를 읽는 풀스크린 한 장을 @p pso 로 그립니다(열린 렌더 패스 안). */
-        void drawFullscreen( IRHICommandList& cmd, RHIPipelineStateHandle pso, RHIDescriptorIndex srv, float32 scale ) const;
+        void drawFullscreen( IRHICommandList& cmd, RHIPipelineStateHandle pso, RHITextureSRVIndex srv, float32 scale ) const;
 
     private:
         IRHIDevice* const&     _pDevice; ///< 렌더러의 `_pDevice` 변수를 참조합니다

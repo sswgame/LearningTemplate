@@ -532,7 +532,7 @@ namespace sw
         }
 
         const RHIPipelineStateHandle morphPSO         = _psoManager.getEnginePSO( RenderPassKind::MeshMorph );
-        const RHIDescriptorIndex     programSRV       = _state._deform._meshMorphPool.getDeformProgramBuffer()._srv;
+        const RHIBufferSRVIndex      programSRV       = _state._deform._meshMorphPool.getDeformProgramBuffer()._srv;
         const bool                   bMissingResource = morphPSO == 0 || _state._deform._meshMorphCb.isValid() == false || programSRV == kInvalidDescriptorIndex;
         if ( bMissingResource )
             return;
@@ -916,12 +916,12 @@ namespace sw
         fillCullParams( cullViewIndex, renderView, instanceCount, pView, bResetState, cullParams );
         const bool bHasLODState = _state._gpuScene.hasLODState( cullViewIndex );
         // 가림 판정은 장면을 그리는 뷰의 슬롯만 본다(fillCullParams). 주 시점은 2 단계 가림이면 앞 단계로 돌아 빠진 차례를 적는다 — 지난 HZB 가 있어야 적을 것이 있다.
-        const bool               bOccludes    = cullParams._arrHZBControl[3] != 0u;
-        const RHIDescriptorIndex occlusionSRV = bOccludes ? pView->_hzb._srv : _occlusion.getPlaceholderSRV();
-        const bool               bMainView    = pView == &_state.getMainView();
-        const bool               bOrdersReady = _occludedOrders._uav != kInvalidDescriptorIndex && _occludedOrders._capacityElements >= instanceCount;
-        const bool               bEarly       = bMainView && bOccludes && isTwoPhaseOcclusionEnabled() && bOrdersReady && _lateCullCb.isValid();
-        cullParams._arrCullPhase[0]           = bEarly ? FrameRendererUtil::kCullPhaseEarly : FrameRendererUtil::kCullPhaseSingle;
+        const bool              bOccludes    = cullParams._arrHZBControl[3] != 0u;
+        const RHIBufferSRVIndex occlusionSRV = bOccludes ? pView->_hzb._srv : _occlusion.getPlaceholderSRV();
+        const bool              bMainView    = pView == &_state.getMainView();
+        const bool              bOrdersReady = _occludedOrders._uav != kInvalidDescriptorIndex && _occludedOrders._capacityElements >= instanceCount;
+        const bool              bEarly       = bMainView && bOccludes && isTwoPhaseOcclusionEnabled() && bOrdersReady && _lateCullCb.isValid();
+        cullParams._arrCullPhase[0]          = bEarly ? FrameRendererUtil::kCullPhaseEarly : FrameRendererUtil::kCullPhaseSingle;
         if ( bMainView )
         {
             _bLatePhasePending = bEarly ? 1u : 0u;
@@ -980,15 +980,15 @@ namespace sw
             FrameRendererUtil::GPUSortParams sortParams{};
             // 셰이더는 인스턴스 번호로 정렬한다(정렬 기준은 CPU 한 곳이며 정렬 레이어와 시선 축을 쓴다). 추가 뷰는 CPU 가 그 뷰의 시점으로 다시 정한 순번(t2)으로 정렬한다.
             // 카메라 위치는 상수 버퍼 레이아웃을 지키려고 그대로 싣는다.
-            const bool bViewRank             = pView != nullptr && pView->_bHasTransparentRank == SW_TRUE;
-            sortParams._arrCameraPos[0]      = renderView._position._x;
-            sortParams._arrCameraPos[1]      = renderView._position._y;
-            sortParams._arrCameraPos[2]      = renderView._position._z;
-            sortParams._instanceCount        = instanceCount;
-            sortParams._batchCount           = cullParams._batchCount;
-            sortParams._bUseViewRank         = bViewRank ? 1u : 0u;
-            sortParams._transparentTailBase  = bViewRank ? pView->_transparentTailBase : 0u;
-            const RHIDescriptorIndex rankSRV = bViewRank ? pView->_transparentRank._srv : _transparentRankPlaceholder._srv;
+            const bool bViewRank            = pView != nullptr && pView->_bHasTransparentRank == SW_TRUE;
+            sortParams._arrCameraPos[0]     = renderView._position._x;
+            sortParams._arrCameraPos[1]     = renderView._position._y;
+            sortParams._arrCameraPos[2]     = renderView._position._z;
+            sortParams._instanceCount       = instanceCount;
+            sortParams._batchCount          = cullParams._batchCount;
+            sortParams._bUseViewRank        = bViewRank ? 1u : 0u;
+            sortParams._transparentTailBase = bViewRank ? pView->_transparentTailBase : 0u;
+            const RHIBufferSRVIndex rankSRV = bViewRank ? pView->_transparentRank._srv : _transparentRankPlaceholder._srv;
             // 정렬 상수 버퍼도 **뷰마다 자기 것**이다. 뷰마다 다른 값(눈 위치)을 싣으므로 나눠 쓰면 뒤 업로드가 앞 디스패치의 내용을 덮어쓴다.
             renderView._sortCb.update( *_pCmd, &sortParams, sizeof( sortParams ) );
 
@@ -1127,8 +1127,8 @@ namespace sw
         const bool                       bLOD          = graphContext.isRegistered( ViewGraphResource::cullLODState() );
         FrameRendererUtil::GPUCullParams params{};
         fillCullParams( cullViewIndex, renderView, _lateInstanceCount, &view, _bLateLODReset != 0, params );
-        params._arrCullPhase[0]         = FrameRendererUtil::kCullPhaseLate;
-        const RHIDescriptorIndex hzbSRV = params._arrHZBControl[3] != 0u ? view._hzb._srv : _occlusion.getPlaceholderSRV();
+        params._arrCullPhase[0]        = FrameRendererUtil::kCullPhaseLate;
+        const RHIBufferSRVIndex hzbSRV = params._arrHZBControl[3] != 0u ? view._hzb._srv : _occlusion.getPlaceholderSRV();
         _lateCullCb.update( cmd, &params, sizeof( params ) );
         // 바인딩은 앞 단계와 같은 자리다(dispatchCullView 의 표).
         cmd.setComputePipelineState( _psoManager.getEnginePSO( RenderPassKind::GPUCull ) );

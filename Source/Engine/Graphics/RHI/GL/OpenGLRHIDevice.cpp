@@ -308,19 +308,19 @@ namespace sw
         return _bufferRegistry.isLive( index );
     }
 
-    OpenGLRHIDevice::BindlessResourceRecord OpenGLRHIDevice::findBindlessBuffer( RHIDescriptorIndex index ) const
+    OpenGLRHIDevice::BindlessResourceRecord OpenGLRHIDevice::findBindlessBuffer( RHIBufferSRVIndex index ) const
     {
         ScopedSharedLock<shared_mutex> lock{ _bindlessMutex };
         return _bufferRegistry.get( index );
     }
 
-    OpenGLRHIDevice::BindlessResourceRecord OpenGLRHIDevice::findBindlessUAV( RHIDescriptorIndex index ) const
+    OpenGLRHIDevice::BindlessResourceRecord OpenGLRHIDevice::findBindlessUAV( RHIUnorderedAccessIndex index ) const
     {
         ScopedSharedLock<shared_mutex> lock{ _bindlessMutex };
         return _uavRegistry.get( index );
     }
 
-    RHITextureHandle OpenGLRHIDevice::findBindlessTexture( RHIDescriptorIndex index ) const
+    RHITextureHandle OpenGLRHIDevice::findBindlessTexture( RHITextureSRVIndex index ) const
     {
         ScopedSharedLock<shared_mutex> lock{ _bindlessMutex };
         return _textureRegistry.get( index )._texture;

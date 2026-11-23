@@ -65,7 +65,7 @@ namespace sw
         if ( handle == 0 )
             return false;
         factory.setTextureDebugName( handle, name.c_str() );
-        const RHIDescriptorIndex srv = factory.registerBindlessTexture( handle );
+        const RHITextureSRVIndex srv = factory.registerBindlessTexture( handle );
         Attachment               attachment{ handle, srv, kInvalidDescriptorIndex, desc._width, desc._height, format, ops };
         attachment._bPlaced    = 1;
         attachment._bViewSized = 1;
@@ -126,8 +126,8 @@ namespace sw
             return false;
         }
         pDevice->getResourceFactory()->setTextureDebugName( handle, name.c_str() ); // 캡처 · DRED 가 파이프라인 XML 의 첨부 이름으로 보인다
-        const RHIDescriptorIndex srv = pDevice->getResourceFactory()->registerBindlessTexture( handle );
-        const RHIDescriptorIndex uav = bUnorderedAccess ? pDevice->getResourceFactory()->registerBindlessTextureUAV( handle ) : kInvalidDescriptorIndex;
+        const RHITextureSRVIndex      srv = pDevice->getResourceFactory()->registerBindlessTexture( handle );
+        const RHIUnorderedAccessIndex uav = bUnorderedAccess ? pDevice->getResourceFactory()->registerBindlessTextureUAV( handle ) : kInvalidDescriptorIndex;
         _mapAttachment.emplace( name, Attachment{ handle, srv, uav, desc._width, desc._height, format, ops } );
         SW_PROFILE_COUNT( "RT.Frame.transientAllocations", 1 ); // 새 첨부를 만들었다 — 풀이 재사용하지 못한 횟수
         return true;

@@ -150,12 +150,13 @@ namespace sw
             }
 
             /** @brief 넘기는 bindless 인덱스가 살아 있는 슬롯인지 봅니다. 죽은 번호는 DX12 · Vulkan 에서 디바이스 손실로 끝나므로 검사가 로그로 남긴다. */
-            static void validateIndex( const BindlessIndexCheckSite* pIndexCheck, bool bCheck, RHIBindlessIndexSpace space, RHIDescriptorIndex index,
+            template <typename Index>
+            static void validateIndex( const BindlessIndexCheckSite* pIndexCheck, bool bCheck, Index index,
                                        const hashed_string& name, uint32 elementIndex = 0 )
             {
                 if ( bCheck == false )
                     return;
-                (void)BindlessIndexValidator::validate( *pIndexCheck, space, index, name, elementIndex ); // 죽은 번호는 검사가 로그로 남긴다
+                (void)pIndexCheck->validate( index, name, elementIndex ); // 죽은 번호는 검사가 로그로 남긴다
             }
 
             /**
@@ -182,25 +183,24 @@ namespace sw
 
                 for ( const ShaderEngineCbMember& member : layout.getEngineCbMembers() )
                 {
-                    uint32             valueSize = 0;
-                    const uint8*       pValue    = values.find( member._valueKey, valueSize );
-                    RHIDescriptorIndex autoIndex;
+                    uint32       valueSize = 0;
+                    const uint8* pValue    = values.find( member._valueKey, valueSize );
+                    uint32       autoIndex = kInvalidDescriptorIndex;
                     if ( ( pValue == nullptr || valueSize == 0 ) && member._autoIndexKey.empty() == false )
                     {
-                        RHIBindlessIndexSpace    autoSpace = RHIBindlessIndexSpace::Texture;
-                        const RegisteredTexture* pTex      = registry.findTexture( member._autoIndexKey );
+                        const RegisteredTexture* pTex = registry.findTexture( member._autoIndexKey );
                         if ( pTex != nullptr )
                         {
+                            validateIndex( pIndexCheck, bCheckIndex, pTex->_srv, member._valueKey );
                             autoIndex = pTex->_srv;
                         }
                         else
                         {
-                            const RegisteredBuffer* pBuffer = registry.findBuffer( member._autoIndexKey );
-                            if ( pBuffer != nullptr )
-                                autoIndex = pBuffer->_index;
-                            autoSpace = RHIBindlessIndexSpace::Buffer;
+                            const RegisteredBuffer* pBuffer     = registry.findBuffer( member._autoIndexKey );
+                            const RHIBufferSRVIndex bufferIndex = pBuffer != nullptr ? pBuffer->_index : kInvalidDescriptorIndex;
+                            validateIndex( pIndexCheck, bCheckIndex, bufferIndex, member._valueKey );
+                            autoIndex = bufferIndex;
                         }
-                        validateIndex( pIndexCheck, bCheckIndex, autoSpace, autoIndex, member._valueKey );
                         pValue    = reinterpret_cast<const uint8*>( &autoIndex );
                         valueSize = sizeof( autoIndex );
                     }
@@ -220,8 +220,8 @@ namespace sw
              * @details 리플렉션이 주는 `_registerIndex` 는 백엔드마다 뜻이 다를 수 있다(세트 · 시프트 규약). 그대로 넘기면 한 CB 가 다른 CB 자리를
              *          덮어쓰거나 어느 슬롯에도 안 걸리는데, 같은 UNIFORM_BUFFER 라 검증 에러도 안 난다. 텍스처 · 구조버퍼는 3) 의 표가 맡는다.
              */
-            static void bindReservedConstantBuffers( IRHIPassCommandList& cmd, const ShaderBindingLayout& layout, RHIDescriptorIndex engineCbIndex,
-                                                     RHIDescriptorIndex materialCb, const BindlessIndexCheckSite* pIndexCheck, bool bCheckIndex )
+            static void bindReservedConstantBuffers( IRHIPassCommandList& cmd, const ShaderBindingLayout& layout, RHIBufferSRVIndex engineCbIndex,
+                                                     RHIBufferSRVIndex materialCb, const BindlessIndexCheckSite* pIndexCheck, bool bCheckIndex )
             {
                 // 이 함수는 드로우마다 불린다. 리터럴이라도 hashed_string 을 여기서 만들면 드로우마다
                 // 전역 레지스트리 intern(FNV + 샤드 뮤텍스)이 붙는다. 함수 지역 static 으로 한 번만 만든다.
@@ -230,9 +230,9 @@ namespace sw
                 {
                     if ( slot._kind != ShaderBindingKind::ConstantBuffer )
                         continue;
-                    const bool               bMaterialCb = slot._name == s_materialCbName;
-                    const RHIDescriptorIndex cbIndex     = bMaterialCb ? materialCb : engineCbIndex;
-                    validateIndex( pIndexCheck, bCheckIndex, RHIBindlessIndexSpace::Buffer, cbIndex, slot._name );
+                    const bool              bMaterialCb = slot._name == s_materialCbName;
+                    const RHIBufferSRVIndex cbIndex     = bMaterialCb ? materialCb : engineCbIndex;
+                    validateIndex( pIndexCheck, bCheckIndex, cbIndex, slot._name );
                     if ( cbIndex != kInvalidDescriptorIndex )
                         cmd.bindConstantBuffer( cbIndex, bMaterialCb ? shaderslot::kMaterialConstantBuffer : shaderslot::kPassConstantBuffer );
                 }
@@ -242,7 +242,7 @@ namespace sw
              * @brief 머티리얼 텍스처 인덱스를 검사하고, 에뮬 백엔드(DX11 · GL)면 t16..t31 에 서수대로 겁니다.
              * @details 네이티브 bindless 백엔드는 인덱스가 이미 MaterialCB 에 있어 걸 필요가 없지만, 같은 번호가 머티리얼 데이터에 들어가 있어 검사는 네 백엔드 모두 한다.
              */
-            static void bindMaterialTextures( IRHIPassCommandList& cmd, bool bNativeBindless, const RHIDescriptorIndex* pMaterialTexSRV,
+            static void bindMaterialTextures( IRHIPassCommandList& cmd, bool bNativeBindless, const RHITextureSRVIndex* pMaterialTexSRV,
                                               const BindlessIndexCheckSite* pIndexCheck, bool bCheckIndex )
             {
                 if ( pMaterialTexSRV == nullptr )
@@ -250,7 +250,7 @@ namespace sw
                 static const hashed_string s_materialTextureName{ "MaterialTexture" };
                 for ( uint32 texIndex = 0; texIndex < shaderslot::kMaterialTextureCount; ++texIndex )
                 {
-                    validateIndex( pIndexCheck, bCheckIndex, RHIBindlessIndexSpace::Texture, pMaterialTexSRV[texIndex], s_materialTextureName, texIndex );
+                    validateIndex( pIndexCheck, bCheckIndex, pMaterialTexSRV[texIndex], s_materialTextureName, texIndex );
                 }
                 if ( bNativeBindless )
                     return;
@@ -278,7 +278,7 @@ namespace sw
                         const RegisteredTexture* pTex = registry.findTexture( bind._lookupKey );
                         if ( pTex != nullptr && pTex->_srv != kInvalidDescriptorIndex )
                         {
-                            validateIndex( pIndexCheck, bCheckIndex, RHIBindlessIndexSpace::Texture, pTex->_srv, bind._lookupKey );
+                            validateIndex( pIndexCheck, bCheckIndex, pTex->_srv, bind._lookupKey );
                             cmd.bindShaderResource( pTex->_srv, bind._registerIndex );
                         }
                         continue;
@@ -286,7 +286,7 @@ namespace sw
                     const RegisteredBuffer* pBuffer = registry.findBuffer( bind._lookupKey );
                     if ( pBuffer != nullptr && pBuffer->_index != kInvalidDescriptorIndex )
                     {
-                        validateIndex( pIndexCheck, bCheckIndex, RHIBindlessIndexSpace::Buffer, pBuffer->_index, bind._lookupKey );
+                        validateIndex( pIndexCheck, bCheckIndex, pBuffer->_index, bind._lookupKey );
                         if ( bCheckIndex )
                             (void)BindlessIndexValidator::validateStride( pIndexCheck->_pDevice, pIndexCheck->_passName, bind._lookupKey, bind._elementStride, pBuffer->_index ); // 어긋남은 검사가 로그로 남긴다
                         cmd.bindStructuredBuffer( pBuffer->_index, bind._registerIndex );
@@ -301,10 +301,10 @@ namespace sw
                                               const FrameResourceRegistry&  registry,
                                               const PassConstantValues&     values,
                                               RHIBufferHandle               engineCb,
-                                              RHIDescriptorIndex            engineCbIndex,
-                                              RHIDescriptorIndex            materialCb,
+                                              RHIBufferSRVIndex             engineCbIndex,
+                                              RHIBufferSRVIndex             materialCb,
                                               bool                          bNativeBindless,
-                                              const RHIDescriptorIndex*     pMaterialTexSRV,
+                                              const RHITextureSRVIndex*     pMaterialTexSRV,
                                               bool                          bEngineCbUpToDate,
                                               bool                          bResourcesUpToDate,
                                               const BindlessIndexCheckSite* pIndexCheck )

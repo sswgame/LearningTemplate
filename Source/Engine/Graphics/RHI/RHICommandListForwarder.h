@@ -64,19 +64,19 @@ namespace sw
         {
             _pContext->setComputeRootConstants( rootParameterIndex, num32BitValues, pData, destOffsetIn32BitValues );
         }
-        void bindComputeUAV( RHIDescriptorIndex index, uint32 slot ) override
+        void bindComputeUAV( RHIUnorderedAccessIndex index, uint32 slot ) override
         {
             if constexpr ( build::kShipping == false )
                 _pContext->trackComputeBinding( index, true, slot );
             _pContext->bindComputeUAV( index, slot );
         }
-        void bindGraphicsUAV( RHIDescriptorIndex index, uint32 slot ) override { _pContext->bindGraphicsUAV( index, slot ); }
-        void bindShaderResource( RHIDescriptorIndex index, uint32 slot ) override { _pContext->bindShaderResource( index, slot ); }
-        void bindConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot ) override { _pContext->bindConstantBuffer( constantBufferIndex, slot ); }
+        void bindGraphicsUAV( RHIUnorderedAccessIndex index, uint32 slot ) override { _pContext->bindGraphicsUAV( index, slot ); }
+        void bindShaderResource( RHITextureSRVIndex index, uint32 slot ) override { _pContext->bindShaderResource( index, slot ); }
+        void bindConstantBuffer( RHIBufferSRVIndex constantBufferIndex, uint32 slot ) override { _pContext->bindConstantBuffer( constantBufferIndex, slot ); }
         void updateConstantBuffer( RHIBufferHandle buffer, const void* pData, uint32 size ) override { _pContext->updateConstantBuffer( buffer, pData, size ); }
-        void bindStructuredBuffer( RHIDescriptorIndex index, uint32 slot ) override { _pContext->bindStructuredBuffer( index, slot ); }
-        void bindComputeConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot ) override { _pContext->bindComputeConstantBuffer( constantBufferIndex, slot ); }
-        void bindComputeShaderResource( RHIDescriptorIndex index, uint32 slot ) override
+        void bindStructuredBuffer( RHIBufferSRVIndex index, uint32 slot ) override { _pContext->bindStructuredBuffer( index, slot ); }
+        void bindComputeConstantBuffer( RHIBufferSRVIndex constantBufferIndex, uint32 slot ) override { _pContext->bindComputeConstantBuffer( constantBufferIndex, slot ); }
+        void bindComputeShaderResource( RHIBufferSRVIndex index, uint32 slot ) override
         {
             if constexpr ( build::kShipping == false )
                 _pContext->trackComputeBinding( index, false, slot );

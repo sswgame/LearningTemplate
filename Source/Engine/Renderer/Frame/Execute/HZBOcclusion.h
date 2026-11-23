@@ -91,7 +91,7 @@ namespace sw
         static void fillCullParams( const FrameViewTarget& view, const OcclusionCullingConfig& config, FrameRendererUtil::GPUCullParams& inoutParams );
 
         /** @brief 가림 판정을 보지 않는 컬링이 t2 에 묶는 자리표의 SRV 입니다. */
-        RHIDescriptorIndex getPlaceholderSRV() const { return _placeholder._srv; }
+        RHIBufferSRVIndex getPlaceholderSRV() const { return _placeholder._srv; }
         /** @brief 주 시점 가림 타일을 몇 프레임 늦게 되읽은 가장 최근 사본입니다. 어느 스레드에서 불러도 됩니다. */
         shared_ptr<const OcclusionTileSnapshot> getSnapshot() const { return _mailbox.getLatest(); }
 

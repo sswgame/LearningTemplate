@@ -61,12 +61,12 @@ namespace sw
         {
             case RHIHandleKind::BindlessResource:
             {
-                factory.unregisterBindlessResource( static_cast<RHIDescriptorIndex>( packed ) );
+                factory.unregisterBindlessResource( RHIBufferSRVIndex{ packed } );
                 return;
             }
             case RHIHandleKind::BindlessTexture:
             {
-                factory.unregisterBindlessTexture( static_cast<RHIDescriptorIndex>( packed ) );
+                factory.unregisterBindlessTexture( RHITextureSRVIndex{ packed } );
                 return;
             }
             case RHIHandleKind::Buffer:
@@ -130,7 +130,7 @@ namespace sw
     {
         struct Entry
         {
-            RHIDescriptorIndex _index{ kInvalidDescriptorIndex };
+            RHITextureSRVIndex _index{ kInvalidDescriptorIndex };
             RHITextureHandle   _placeholder{ 0 };
         };
 
@@ -142,12 +142,12 @@ namespace sw
 
 namespace sw
 {
-    RHIDescriptorIndex IRHIDevice::reserveBindlessTexture( RHITextureHandle placeholder )
+    RHITextureSRVIndex IRHIDevice::reserveBindlessTexture( RHITextureHandle placeholder )
     {
         IRHIResourceFactory* const pFactory = getResourceFactory();
         if ( pFactory == nullptr || placeholder == 0 )
             return kInvalidDescriptorIndex;
-        const RHIDescriptorIndex index = pFactory->reserveBindlessTextureIndex();
+        const RHITextureSRVIndex index = pFactory->reserveBindlessTextureIndex();
         if ( index == kInvalidDescriptorIndex )
             return kInvalidDescriptorIndex;
         ScopedLock<mutex> lock{ _pBindlessReservationQueue->_mutex };
@@ -428,9 +428,14 @@ namespace sw
         releaseHandleInternal( RHIHandleKind::TransientHeap, heap.getPacked() );
     }
 
-    void IRHIDevice::releaseBindlessIndex( RHIBindlessIndexSpace space, RHIDescriptorIndex index )
+    void IRHIDevice::releaseBindlessIndex( RHITextureSRVIndex index )
     {
-        releaseHandleInternal( space == RHIBindlessIndexSpace::Texture ? RHIHandleKind::BindlessTexture : RHIHandleKind::BindlessResource, index );
+        releaseHandleInternal( RHIHandleKind::BindlessTexture, index );
+    }
+
+    void IRHIDevice::releaseBindlessIndex( RHIBufferSRVIndex index )
+    {
+        releaseHandleInternal( RHIHandleKind::BindlessResource, index );
     }
 
     void IRHIDevice::releaseHandleInternal( RHIHandleKind kind, uint64 packed )

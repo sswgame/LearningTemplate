@@ -65,7 +65,7 @@ namespace sw
         _bExhaustedLogged.store( SW_FALSE );
     }
 
-    bool PassConstantRing::acquire( RHIBufferHandle& outBuffer, RHIDescriptorIndex& outIndex )
+    bool PassConstantRing::acquire( RHIBufferHandle& outBuffer, RHIBufferSRVIndex& outIndex )
     {
         if ( _listSlot.empty() )
             return false;
@@ -116,7 +116,7 @@ namespace sw
         }
     }
 
-    bool PassConstantRing::getSeedSlot( RHIBufferHandle& outBuffer, RHIDescriptorIndex& outIndex ) const
+    bool PassConstantRing::getSeedSlot( RHIBufferHandle& outBuffer, RHIBufferSRVIndex& outIndex ) const
     {
         if ( _listSlot.empty() )
             return false;

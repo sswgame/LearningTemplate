@@ -100,7 +100,7 @@ SW_TEST_CASE( RHITextureSlotTest, MoveLeavesTheSourceEmpty )
 
     RHITextureSlot slot;
     slot._texture = RHITextureHandle{ 5 };
-    slot._srv     = RHIDescriptorIndex{ 3 };
+    slot._srv     = RHITextureSRVIndex{ 3 };
     RHITextureSlot moved{ std::move( slot ) };
     SW_EXPECT_FALSE( slot.isValid() );
     SW_EXPECT_EQUAL( kInvalidDescriptorIndex, slot._srv );

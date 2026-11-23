@@ -67,34 +67,34 @@ namespace
         }
         void discardTextureReadback( RHITransferTicket ) override { ++_discardCount; }
 
-        RHIPipelineStateHandle createPipelineStateNative( const RHIPipelineStateDesc&, const RHICompiledGraphicsStages& ) override { return 0; }
-        RHIPipelineStateHandle createComputePipelineStateNative( const RHICompiledShaderStage&, string_view ) override { return 0; }
-        RHIBufferHandle        createConstantBuffer( uint32 ) override { return 0; }
-        void                   updateConstantBuffer( RHIBufferHandle, const void*, uint32 ) override {}
-        RHIBufferHandle        createConstantBufferPage( uint32 ) override { return 0; }
-        void                   updateConstantBuffer( const RHIBufferSlice&, const void*, uint32 ) override {}
-        RHIBufferHandle        createStructuredBuffer( uint32, uint32 ) override { return 0; }
-        void                   updateStructuredBufferRegions( RHIBufferHandle, const void*, const RHIBufferCopyRegion*, uint32 ) override {}
-        RHIBufferHandle        createVertexBuffer( const void*, uint32 ) override { return 0; }
-        RHIBufferHandle        createGPUVertexBuffer( uint32 ) override { return 0; }
-        void                   updateGeometryBufferRegions( RHIBufferHandle, const void*, const RHIBufferCopyRegion*, uint32 ) override {}
-        RHIBufferHandle        createIndexBuffer( const void*, uint32 ) override { return 0; }
-        RHIBufferHandle        createReadbackBuffer( uint32, uint32 ) override { return 0; }
-        [[nodiscard]] bool     readReadbackBuffer( RHIBufferHandle, uint32, void* ) override { return false; }
-        RHITextureHandle       createTexture2D( const RHITextureDesc& ) override { return 0; }
-        RHIFormat              getTextureFormat( RHITextureHandle ) const override { return RHIFormat::Unknown; }
-        RHIDescriptorIndex     registerBindlessTexture( RHITextureHandle ) override { return kInvalidDescriptorIndex; }
-        bool                   rebindBindlessTexture( RHIDescriptorIndex, RHITextureHandle ) override { return false; }
-        RHIDescriptorIndex     reserveBindlessTextureIndex() override { return kInvalidDescriptorIndex; }
-        bool                   activateReservedBindlessTexture( RHIDescriptorIndex, RHITextureHandle ) override { return false; }
-        bool                   isTextureReadyToSample( RHITextureHandle ) override { return false; }
-        void                   unregisterBindlessTexture( RHIDescriptorIndex ) override {}
-        RHIDescriptorIndex     registerBindlessBufferSRV( RHIBufferHandle ) override { return kInvalidDescriptorIndex; }
-        RHIDescriptorIndex     registerBindlessBufferSRV( const RHIBufferSlice& ) override { return kInvalidDescriptorIndex; }
-        void                   unregisterBindlessResource( RHIDescriptorIndex ) override {}
-        RHIDescriptorIndex     registerBindlessBufferUAV( RHIBufferHandle ) override { return kInvalidDescriptorIndex; }
-        RHIDescriptorIndex     registerBindlessTextureUAV( RHITextureHandle ) override { return kInvalidDescriptorIndex; }
-        void                   unregisterBindlessUAV( RHIDescriptorIndex ) override {}
+        RHIPipelineStateHandle  createPipelineStateNative( const RHIPipelineStateDesc&, const RHICompiledGraphicsStages& ) override { return 0; }
+        RHIPipelineStateHandle  createComputePipelineStateNative( const RHICompiledShaderStage&, string_view ) override { return 0; }
+        RHIBufferHandle         createConstantBuffer( uint32 ) override { return 0; }
+        void                    updateConstantBuffer( RHIBufferHandle, const void*, uint32 ) override {}
+        RHIBufferHandle         createConstantBufferPage( uint32 ) override { return 0; }
+        void                    updateConstantBuffer( const RHIBufferSlice&, const void*, uint32 ) override {}
+        RHIBufferHandle         createStructuredBuffer( uint32, uint32 ) override { return 0; }
+        void                    updateStructuredBufferRegions( RHIBufferHandle, const void*, const RHIBufferCopyRegion*, uint32 ) override {}
+        RHIBufferHandle         createVertexBuffer( const void*, uint32 ) override { return 0; }
+        RHIBufferHandle         createGPUVertexBuffer( uint32 ) override { return 0; }
+        void                    updateGeometryBufferRegions( RHIBufferHandle, const void*, const RHIBufferCopyRegion*, uint32 ) override {}
+        RHIBufferHandle         createIndexBuffer( const void*, uint32 ) override { return 0; }
+        RHIBufferHandle         createReadbackBuffer( uint32, uint32 ) override { return 0; }
+        [[nodiscard]] bool      readReadbackBuffer( RHIBufferHandle, uint32, void* ) override { return false; }
+        RHITextureHandle        createTexture2D( const RHITextureDesc& ) override { return 0; }
+        RHIFormat               getTextureFormat( RHITextureHandle ) const override { return RHIFormat::Unknown; }
+        RHITextureSRVIndex      registerBindlessTexture( RHITextureHandle ) override { return kInvalidDescriptorIndex; }
+        bool                    rebindBindlessTexture( RHITextureSRVIndex, RHITextureHandle ) override { return false; }
+        RHITextureSRVIndex      reserveBindlessTextureIndex() override { return kInvalidDescriptorIndex; }
+        bool                    activateReservedBindlessTexture( RHITextureSRVIndex, RHITextureHandle ) override { return false; }
+        bool                    isTextureReadyToSample( RHITextureHandle ) override { return false; }
+        void                    unregisterBindlessTexture( RHITextureSRVIndex ) override {}
+        RHIBufferSRVIndex       registerBindlessBufferSRV( RHIBufferHandle ) override { return kInvalidDescriptorIndex; }
+        RHIBufferSRVIndex       registerBindlessBufferSRV( const RHIBufferSlice& ) override { return kInvalidDescriptorIndex; }
+        void                    unregisterBindlessResource( RHIBufferSRVIndex ) override {}
+        RHIUnorderedAccessIndex registerBindlessBufferUAV( RHIBufferHandle ) override { return kInvalidDescriptorIndex; }
+        RHIUnorderedAccessIndex registerBindlessTextureUAV( RHITextureHandle ) override { return kInvalidDescriptorIndex; }
+        void                    unregisterBindlessUAV( RHIUnorderedAccessIndex ) override {}
 
     protected:
         [[nodiscard]] bool destroyBufferNative( RHIBufferHandle ) override { return true; }

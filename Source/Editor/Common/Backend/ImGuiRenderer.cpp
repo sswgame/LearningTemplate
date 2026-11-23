@@ -363,7 +363,7 @@ namespace sw::editor
         arrRoot[Internal::kRootOffsetX] = BitUtil::floatToBits( -1.0f - drawData.DisplayPos.x * scaleX );
         arrRoot[Internal::kRootOffsetY] = BitUtil::floatToBits( 1.0f - drawData.DisplayPos.y * scaleY );
 
-        RHIDescriptorIndex boundSRV{ kInvalidDescriptorIndex }; // 에뮬 백엔드의 t16 — 명령 대부분이 글꼴 아틀라스 하나라 바뀔 때만 다시 건다
+        RHITextureSRVIndex boundSRV{ kInvalidDescriptorIndex }; // 에뮬 백엔드의 t16 — 명령 대부분이 글꼴 아틀라스 하나라 바뀔 때만 다시 건다
         for ( const ImDrawList* pList : drawData.CmdLists )
         {
             const auto it = _mapListBase.find( pList );
@@ -396,7 +396,7 @@ namespace sw::editor
                 }
                 if ( bExcluded )
                     continue; // 캡처에서 뺀 개발 겹치기 — 화면 그리기는 빈 목록을 넘겨 그대로 그린다
-                const RHIDescriptorIndex srv = resolveTexture( textureID );
+                const RHITextureSRVIndex srv = resolveTexture( textureID );
                 if ( srv == kInvalidDescriptorIndex )
                     continue; // 아직 등록되지 않았거나(업로드 중) 해제한 텍스처 — 흰색으로 대신 그리지 않는다
 
@@ -622,7 +622,7 @@ namespace sw::editor
         return true;
     }
 
-    RHIDescriptorIndex ImGuiRenderer::resolveTexture( uint64 textureID ) const
+    RHITextureSRVIndex ImGuiRenderer::resolveTexture( uint64 textureID ) const
     {
         uint32 slotIndex{ 0 };
         if ( ImGuiRendererInternal::tryGetSlotIndex( textureID, slotIndex ) == false || slotIndex >= _listFrameSRV.size() )

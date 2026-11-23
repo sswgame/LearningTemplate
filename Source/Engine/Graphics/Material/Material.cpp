@@ -183,7 +183,7 @@ namespace sw
         const bool    bNativeBindless = pRHI->supportsNativeBindlessSampling();
         TextureCache& textures        = engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>();
         uint32        nextOrdinal     = 0;
-        auto          recordSlot      = [this]( uint32 slot, const string& name, RHIDescriptorIndex srv )
+        auto          recordSlot      = [this]( uint32 slot, const string& name, RHITextureSRVIndex srv )
         {
             if ( _listMaterialTextureSRV.size() <= slot )
             {
@@ -218,7 +218,7 @@ namespace sw
             // 기본 텍스처를 그린다(초기화하는 스레드가 디스크를 기다리지 않는다).
             TextureHandle      load = textures.request( prop._assetPath, AssetLoadStart::Async, TextureStreamingGroup::Streamable );
             string             borrowedPath;
-            RHIDescriptorIndex srv = load.isValid() ? load.getOperation()->getStableSRV() : kInvalidDescriptorIndex;
+            RHITextureSRVIndex srv = load.isValid() ? load.getOperation()->getStableSRV() : kInvalidDescriptorIndex;
             if ( srv == kInvalidDescriptorIndex )
             {
                 // 시작 전에 실패했거나(경로 · 디바이스 없음) 번호를 예약하지 못했다 — 마젠타 체커를 빌린다. 흰색이면 화면에서 빠진 것을 알 수 없다(Shipping 도 같다).

@@ -121,7 +121,7 @@ namespace sw::editor
         {
             RHITextureSlot     _ownedTexture{}; ///< `_bOwned` 일 때 이 렌더러가 만든 텍스처(`_texture` · `_srv` 가 이것을 가리킨다)
             RHITextureHandle   _texture{ 0 };
-            RHIDescriptorIndex _srv{ kInvalidDescriptorIndex }; ///< 렌더 스레드가 등록한 bindless 번호(아직이면 무효)
+            RHITextureSRVIndex _srv{ kInvalidDescriptorIndex }; ///< 렌더 스레드가 등록한 bindless 번호(아직이면 무효)
             bool               _bInUse{ false };                ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
             bool               _bOwned{ SW_FALSE };             ///< ImGui 동적 텍스처라 RHI 텍스처도 이 렌더러가 만들고 놓는다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         };
@@ -152,7 +152,7 @@ namespace sw::editor
         /** @brief 보조 창의 스왑체인을 만들거나 바꾸거나 부수기 전에 낸 스냅샷이 다 그려지기를 기다립니다(UI 스레드, ImGui 창 훅). */
         void waitDrawnBeforeWindowChange() const;
         /** @brief 그리기 명령의 텍스처 ID 를 이번 프레임의 bindless 번호로 풉니다. 아직 없으면 무효입니다. */
-        RHIDescriptorIndex resolveTexture( uint64 textureID ) const;
+        RHITextureSRVIndex resolveTexture( uint64 textureID ) const;
 
         // ImGui 플랫폼 창 훅(UI 스레드) — 창마다 RHI 스왑체인 하나(`ImGuiViewport::RendererUserData`).
         static void createWindowSwapChain( ImGuiViewport* pViewport );
@@ -166,11 +166,11 @@ namespace sw::editor
         RHIStructuredBuffer                        _wordBuffer;          ///< 이번 프레임의 정점 · 인덱스(uint 칸)
         vector<uint32>                             _listWord;            ///< 올릴 칸 모으기(프레임마다 비운다)
         unordered_map<const ImDrawList*, ListBase> _mapListBase;         ///< 이번 프레임에 올린 목록의 시작 칸
-        vector<RHIDescriptorIndex>                 _listFrameSRV;        ///< 이번 프레임의 칸별 bindless 번호(그리기가 잠금 없이 읽는다 — `prepareFrame` 이 채운다)
+        vector<RHITextureSRVIndex>                 _listFrameSRV;        ///< 이번 프레임의 칸별 bindless 번호(그리기가 잠금 없이 읽는다 — `prepareFrame` 이 채운다)
         uint8                                      _bNativeBindless : 1; ///< DX12 · Vulkan 이면 bindless 번호로, 아니면 서수로 텍스처를 건다
         /// @brief 패널이 등록한(이 렌더러가 만들지 않은) 텍스처마다 한 번 받은 bindless 번호입니다(렌더 스레드 전용). 번호는 텍스처 주인의 파괴가 놓는다 — 이 렌더러는
         ///        해제하지 않는다(늦은 해제가 다시 발급된 번호를 놓지 않게). 핸들은 세대가 있어 다시 쓰이지 않으므로 사라진 텍스처의 항목은 읽히지 않는다.
-        unordered_map<RHITextureHandle, RHIDescriptorIndex> _mapForeignSRV;
+        unordered_map<RHITextureHandle, RHITextureSRVIndex> _mapForeignSRV;
         atomic<uint32>                                      _platformWindowFrames{ 0 }; ///< 보조 창에 그린 횟수(감시 값 `Editor.PlatformWindowFrames`) — 렌더 스레드가 올리고 게임 스레드가 읽는다
 
         mutable mutex                        _textureMutex; ///< 칸 표 — UI 스레드(등록 · 해제 예약)와 렌더 스레드(번호 등록 · 반환)가 함께 쓴다

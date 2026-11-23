@@ -130,15 +130,15 @@ namespace sw
          *          DX12 는 루트 상수, Vulkan 은 푸시 상수를 쓰고, DX11 과 GL 은 계약 슬롯 b2 의 상수 버퍼로 흉내 낸다.
          */
         virtual void setGraphicsRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues = 0 ) = 0;
-        virtual void bindComputeUAV( RHIDescriptorIndex index, uint32 slot )                                                                             = 0;
+        virtual void bindComputeUAV( RHIUnorderedAccessIndex index, uint32 slot )                                                                        = 0;
         /**
          * @brief 그래픽스(픽셀) 단계에 쓰기 버퍼 u# 를 겁니다(UAV 레지스트리의 인덱스). 렌더 패스를 연 **뒤** 드로우 앞에서 부릅니다 — 셰이더 메시지 채널(`GPUMessageChannel::bindGraphics`)이 쓴다.
          * @details DX12 는 슬롯 테이블의 u 범위(모든 단계에 보인다), Vulkan 은 슬롯 세트의 u 바인딩, GL 은 SSBO `kUAVBinding0 + slot`, DX11 은 `OMSetRenderTargetsAndUnorderedAccessViews` 의
          *          렌더 타깃 유지 형식이다. DX11 픽셀 셰이더의 u 번호는 렌더 타깃 칸과 같은 자리라 @p slot 이 지금 건 렌더 타깃 수보다 작으면 걸지 않는다(오류를 한 번 남긴다 — 셰이더의 쓰기는 버려진다).
          *          `RHICapabilities::_bGraphicsShaderWrites` 가 거짓인 백엔드는 아무것도 하지 않는다.
          */
-        virtual void bindGraphicsUAV( RHIDescriptorIndex index, uint32 slot )    = 0;
-        virtual void bindShaderResource( RHIDescriptorIndex index, uint32 slot ) = 0;
+        virtual void bindGraphicsUAV( RHIUnorderedAccessIndex index, uint32 slot ) = 0;
+        virtual void bindShaderResource( RHITextureSRVIndex index, uint32 slot )   = 0;
 
         // ------------------------------------------------------------------------------
         // 4-1) 리플렉션 기반 바인딩: 셰이더가 선언한 레지스터로 CB/SRV 버퍼를 바인딩한다.
@@ -149,7 +149,7 @@ namespace sw
          * @param constantBufferIndex bindless 디스크립터 인덱스입니다(엔진 CB, 머티리얼 CB).
          * @param slot                HLSL `register(bN)` 의 N 입니다.
          */
-        virtual void bindConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot ) = 0;
+        virtual void bindConstantBuffer( RHIBufferSRVIndex constantBufferIndex, uint32 slot ) = 0;
 
         /**
          * @brief 기록 중에 상수 버퍼 내용을 갱신합니다. 이 리스트의 드로우와 디스패치가 이 값을 봅니다(언리얼 `RHIUpdateUniformBuffer( RHICmdList, … )`).
@@ -166,7 +166,7 @@ namespace sw
          * @param index bindless 디스크립터 인덱스입니다.
          * @param slot  HLSL `register(tN)` 의 N 입니다.
          */
-        virtual void bindStructuredBuffer( RHIDescriptorIndex index, uint32 slot ) = 0;
+        virtual void bindStructuredBuffer( RHIBufferSRVIndex index, uint32 slot ) = 0;
 
         /**
          * @brief 컴퓨트 스테이지에 상수 버퍼를 지정한 레지스터 슬롯(bN)에 바인딩합니다.
@@ -174,14 +174,14 @@ namespace sw
          * @param constantBufferIndex bindless 디스크립터 인덱스입니다.
          * @param slot                HLSL `register(bN)` 의 N 입니다.
          */
-        virtual void bindComputeConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot ) = 0;
+        virtual void bindComputeConstantBuffer( RHIBufferSRVIndex constantBufferIndex, uint32 slot ) = 0;
 
         /**
          * @brief 컴퓨트 스테이지에 읽기 전용 구조화 SRV 버퍼를 지정한 레지스터 슬롯(tN)에 바인딩합니다.
          * @param index bindless 디스크립터 인덱스입니다.
          * @param slot  HLSL `register(tN)` 의 N 입니다.
          */
-        virtual void bindComputeShaderResource( RHIDescriptorIndex index, uint32 slot ) = 0;
+        virtual void bindComputeShaderResource( RHIBufferSRVIndex index, uint32 slot ) = 0;
 
         // ------------------------------------------------------------------------------
         // 5) blit: 컬러 복사 (`kRHIBackBufferTexture` 는 스왑체인, 0 은 오류). 텍스처 상태 전이는 `IRHICommandList` 에만 있다

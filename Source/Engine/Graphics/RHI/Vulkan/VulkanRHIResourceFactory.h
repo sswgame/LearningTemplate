@@ -47,18 +47,18 @@ namespace sw
         [[nodiscard]] bool              takeTextureReadback( RHITransferTicket ticket, vector<uint8>& outBytes ) override;
         void                            discardTextureReadback( RHITransferTicket ticket ) override;
         RHIFormat                       getTextureFormat( RHITextureHandle texture ) const override;
-        RHIDescriptorIndex              registerBindlessTexture( RHITextureHandle texture ) override;
-        [[nodiscard]] bool              rebindBindlessTexture( RHIDescriptorIndex index, RHITextureHandle texture ) override;
-        RHIDescriptorIndex              reserveBindlessTextureIndex() override;
-        [[nodiscard]] bool              activateReservedBindlessTexture( RHIDescriptorIndex index, RHITextureHandle texture ) override;
+        RHITextureSRVIndex              registerBindlessTexture( RHITextureHandle texture ) override;
+        [[nodiscard]] bool              rebindBindlessTexture( RHITextureSRVIndex index, RHITextureHandle texture ) override;
+        RHITextureSRVIndex              reserveBindlessTextureIndex() override;
+        [[nodiscard]] bool              activateReservedBindlessTexture( RHITextureSRVIndex index, RHITextureHandle texture ) override;
         bool                            isTextureReadyToSample( RHITextureHandle texture ) override;
-        void                            unregisterBindlessTexture( RHIDescriptorIndex index ) override;
-        RHIDescriptorIndex              registerBindlessBufferSRV( RHIBufferHandle buffer ) override;
-        RHIDescriptorIndex              registerBindlessBufferSRV( const RHIBufferSlice& slice ) override;
-        void                            unregisterBindlessResource( RHIDescriptorIndex index ) override;
-        RHIDescriptorIndex              registerBindlessBufferUAV( RHIBufferHandle buffer ) override;
-        RHIDescriptorIndex              registerBindlessTextureUAV( RHITextureHandle texture ) override;
-        void                            unregisterBindlessUAV( RHIDescriptorIndex index ) override;
+        void                            unregisterBindlessTexture( RHITextureSRVIndex index ) override;
+        RHIBufferSRVIndex               registerBindlessBufferSRV( RHIBufferHandle buffer ) override;
+        RHIBufferSRVIndex               registerBindlessBufferSRV( const RHIBufferSlice& slice ) override;
+        void                            unregisterBindlessResource( RHIBufferSRVIndex index ) override;
+        RHIUnorderedAccessIndex         registerBindlessBufferUAV( RHIBufferHandle buffer ) override;
+        RHIUnorderedAccessIndex         registerBindlessTextureUAV( RHITextureHandle texture ) override;
+        void                            unregisterBindlessUAV( RHIUnorderedAccessIndex index ) override;
 
     private:
         /** @brief @p desc 의 이미지 생성 서술을 채웁니다. 형태 · 형식 · 깊이 형식이 맞지 않으면 이유를 남기고 false 입니다(`createTexture2D` 와 할당 크기 묻기가 같은 서술을 쓴다). */

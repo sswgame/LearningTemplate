@@ -340,7 +340,7 @@ namespace sw
          *          다른 쪽이 쓰는 번호를 놓는다(Vulkan 이 그랬다, 2026-11-02 에디터 RHI 렌더러). **텍스처 해제(`IRHIDevice::releaseHandle`)는 그 텍스처의 번호를 모두 놓는다**(네 백엔드가 같다 —
          *          DX12 만 번호를 남겨 늦은 해제가 다시 발급된 번호를 놓았다). 텍스처 주인이 아닌 쪽은 번호를 해제하지 않고 파괴에 맡긴다.
          */
-        virtual RHIDescriptorIndex registerBindlessTexture( RHITextureHandle texture ) = 0;
+        virtual RHITextureSRVIndex registerBindlessTexture( RHITextureHandle texture ) = 0;
         /**
          * @brief 산 텍스처 번호 @p index 가 @p texture 를 가리키게 합니다. 번호는 그대로다(감사 R-6 — 밉 올리기 · 내리기 · 크기 변경 · 핫 리로드가 머티리얼을 다시 묶지 않는다).
          * @details 조건은 등록과 같다(첫 업로드가 끝난 Texture2D, 병렬 기록 밖). 번호와 주인별 번호 목록의 자리만 옮기고 옛 텍스처는 부르는 쪽이 부순다(그 파괴는 이 번호를 놓지 않는다).
@@ -349,18 +349,18 @@ namespace sw
          *          언리얼 `RHIUpdateTextureReference` · Godot `texture_replace` 자리다.
          * @return 산 번호가 아니거나 텍스처가 조건에 맞지 않으면 false 이고 아무것도 바꾸지 않는다.
          */
-        [[nodiscard]] virtual bool rebindBindlessTexture( RHIDescriptorIndex index, RHITextureHandle texture ) = 0;
+        [[nodiscard]] virtual bool rebindBindlessTexture( RHITextureSRVIndex index, RHITextureHandle texture ) = 0;
         /**
          * @brief 텍스처 번호 하나만 예약합니다. **어느 스레드에서든** 부른다(병렬 기록 중에도 — 번호 발급기만 짧은 잠금으로 건드리고 기록 경로가 읽는 칸은 바꾸지 않는다).
          * @details 예약한 번호는 아직 산 칸이 아니다 — `activateReservedBindlessTexture` 가 렌더 스레드에서 디스크립터를 쓰고 살린다(`IRHIDevice::reserveBindlessTexture` 가 둘을 잇는다).
          *          텍스처 캐시가 로드를 시작할 때 번호를 정해 두어, 로드가 끝나도 번호가 바뀌지 않게 한다(감사 R-6 — 언리얼 `FD3D12BindlessDescriptorManager` 도 할당은 스레드 안전이고 갱신은 뒤에 한다).
          * @return 표가 차면 kInvalidDescriptorIndex 입니다.
          */
-        [[nodiscard]] virtual RHIDescriptorIndex reserveBindlessTextureIndex() = 0;
+        [[nodiscard]] virtual RHITextureSRVIndex reserveBindlessTextureIndex() = 0;
         /**
          * @brief 예약한 번호 @p index 에 @p texture 를 등록해 산 칸으로 만듭니다(렌더 스레드, 병렬 기록 밖 — 등록과 같은 조건). 실패하면 false 이고 번호는 예약된 채 남는다.
          */
-        [[nodiscard]] virtual bool activateReservedBindlessTexture( RHIDescriptorIndex index, RHITextureHandle texture ) = 0;
+        [[nodiscard]] virtual bool activateReservedBindlessTexture( RHITextureSRVIndex index, RHITextureHandle texture ) = 0;
         /**
          * @brief 살아 있는 텍스처의 첫 업로드가 끝나 등록 · 샘플해도 되는지 묻습니다(전송한 적이 없으면 true, 없는 핸들이면 false). 오류를 남기지 않습니다.
          * @details 받은 핸들의 내력을 모르는 쪽(에디터 UI 가 패널에서 받는 텍스처)이 등록 전에 묻는다 — 끝날 때까지 그 텍스처를 그리지 않고 다음 프레임에 다시 묻는다.
@@ -376,26 +376,26 @@ namespace sw
          *          등록된 인스턴스 구조 버퍼가 슬롯 2 를 차지해 Vulkan set 0 에 STORAGE 세트가 바인딩되었다.
          *          텍스처 해제는 등록을 스스로 정리하므로 파괴 직전이라면 이 호출은 생략해도 된다.
          */
-        virtual void unregisterBindlessTexture( RHIDescriptorIndex index ) = 0;
+        virtual void unregisterBindlessTexture( RHITextureSRVIndex index ) = 0;
 
         /** @brief Bindless 테이블에 버퍼를 등록하고 인덱스를 발급합니다. */
-        virtual RHIDescriptorIndex registerBindlessBufferSRV( RHIBufferHandle buffer ) = 0;
+        virtual RHIBufferSRVIndex registerBindlessBufferSRV( RHIBufferHandle buffer ) = 0;
         /**
          * @brief 상수 버퍼 페이지의 구간 하나를 상수 버퍼로 등록합니다(감사 R-4). 셰이더는 버퍼 하나를 등록한 것과 같은 상수 버퍼를 읽는다.
          * @details DX12 루트 CBV 주소 + 오프셋, Vulkan 디스크립터 offset · range, GL `glBindBufferRange`, WebGPU 바인딩 오프셋, DX11 `*SetConstantBuffers1`.
          *          해제는 `unregisterBindlessResource` 이고, 페이지를 부수면 그 구간 번호가 모두 함께 놓인다.
          */
-        virtual RHIDescriptorIndex registerBindlessBufferSRV( const RHIBufferSlice& slice ) = 0;
+        virtual RHIBufferSRVIndex registerBindlessBufferSRV( const RHIBufferSlice& slice ) = 0;
 
         /**
          * @brief registerBindlessBufferSRV 가 발급한 **버퍼** 인덱스를 해제합니다.
          * @details 이미 비어 있는 슬롯(다른 종류의 인덱스, 이중 해제)은 프리리스트에 다시 넣지 않는다.
          *          한 번이라도 넣으면 같은 인덱스가 두 리소스에 발급되어 조용히 엉뚱한 버퍼가 바인딩된다.
          */
-        virtual void unregisterBindlessResource( RHIDescriptorIndex index ) = 0;
+        virtual void unregisterBindlessResource( RHIBufferSRVIndex index ) = 0;
 
         /** @brief bindless UAV 를 등록하고 인덱스를 발급합니다. */
-        virtual RHIDescriptorIndex registerBindlessBufferUAV( RHIBufferHandle buffer ) = 0;
+        virtual RHIUnorderedAccessIndex registerBindlessBufferUAV( RHIBufferHandle buffer ) = 0;
 
         /**
          * @brief 텍스처(생성 시 _bIsUnorderedAccess)를 컴퓨트 RW 텍스처로 등록하고 인덱스를 발급합니다.
@@ -403,10 +403,10 @@ namespace sw
          *          DX11 과 GL 은 bindComputeUAV( index, shaderslot::kComputeTextureUAV0 + 서수 ) 로 슬롯에 바인딩하고 셰이더는 서수를 쓴다.
          *          해제는 unregisterBindlessUAV 이고, 버퍼 UAV 와 같은 인덱스 공간을 쓴다.
          */
-        virtual RHIDescriptorIndex registerBindlessTextureUAV( RHITextureHandle texture ) = 0;
+        virtual RHIUnorderedAccessIndex registerBindlessTextureUAV( RHITextureHandle texture ) = 0;
 
         /** @brief bindless UAV 등록을 해제합니다. */
-        virtual void unregisterBindlessUAV( RHIDescriptorIndex index ) = 0;
+        virtual void unregisterBindlessUAV( RHIUnorderedAccessIndex index ) = 0;
 
     protected:
         // ------------------------------------------------------------------------------

@@ -41,19 +41,19 @@ SW_TEST_CASE_F( BindlessIndexValidatorTest, OnlyDeadIndicesFail )
     const hashed_string          shadowField{ "g_ShadowMapIndex" };
     const hashed_string          lightField{ "g_SwLightsIndex" };
 
-    SW_EXPECT_TRUE( BindlessIndexValidator::validate( site, RHIBindlessIndexSpace::Texture, kInvalidDescriptorIndex, shadowField ) );
-    SW_EXPECT_TRUE( BindlessIndexValidator::validate( site, RHIBindlessIndexSpace::Texture, RHIDescriptorIndex{ 3 }, shadowField ) );
-    SW_EXPECT_TRUE( BindlessIndexValidator::validate( site, RHIBindlessIndexSpace::Buffer, RHIDescriptorIndex{ 7 }, lightField ) );
+    SW_EXPECT_TRUE( site.validate( RHITextureSRVIndex{}, shadowField ) );
+    SW_EXPECT_TRUE( site.validate( RHITextureSRVIndex{ 3 }, shadowField ) );
+    SW_EXPECT_TRUE( site.validate( RHIBufferSRVIndex{ 7 }, lightField ) );
     SW_EXPECT_EQUAL( 0u, device.getBindlessIndexReportLog().getReportCount() );
 
     // 해제된(목록에 없는) 번호, 그리고 버퍼 번호를 텍스처 자리에 넣은 것.
-    SW_EXPECT_FALSE( BindlessIndexValidator::validate( site, RHIBindlessIndexSpace::Texture, RHIDescriptorIndex{ 4 }, shadowField ) );
-    SW_EXPECT_FALSE( BindlessIndexValidator::validate( site, RHIBindlessIndexSpace::Texture, RHIDescriptorIndex{ 7 }, lightField ) );
+    SW_EXPECT_FALSE( site.validate( RHITextureSRVIndex{ 4 }, shadowField ) );
+    SW_EXPECT_FALSE( site.validate( RHITextureSRVIndex{ 7 }, lightField ) );
     SW_EXPECT_EQUAL( 2u, device.getBindlessIndexReportLog().getReportCount() );
 
     // 디바이스가 없는 자리는 검사하지 않는다(부르는 쪽이 디바이스를 못 준 경로).
     const BindlessIndexCheckSite noDevice{};
-    SW_EXPECT_TRUE( BindlessIndexValidator::validate( noDevice, RHIBindlessIndexSpace::Texture, RHIDescriptorIndex{ 4 }, shadowField ) );
+    SW_EXPECT_TRUE( noDevice.validate( RHITextureSRVIndex{ 4 }, shadowField ) );
 }
 
 /**
@@ -108,17 +108,17 @@ SW_TEST_CASE_F( BindlessIndexValidatorTest, StrideMismatchReportsEachSiteOnce )
     const hashed_string passName{ "ForwardOpaque" };
     const hashed_string field{ "SwLights" };
 
-    device.getBindlessIndexReportLog().recordBufferStride( RHIDescriptorIndex{ 5 }, 80 );
-    device.getBindlessIndexReportLog().recordBufferStride( RHIDescriptorIndex{ 6 }, 64 );
-    SW_EXPECT_TRUE( BindlessIndexValidator::validateStride( &device, passName, field, 80, RHIDescriptorIndex{ 5 } ) );
-    SW_EXPECT_TRUE( BindlessIndexValidator::validateStride( &device, passName, field, 0, RHIDescriptorIndex{ 6 } ) );
-    SW_EXPECT_TRUE( BindlessIndexValidator::validateStride( &device, passName, field, 80, RHIDescriptorIndex{ 9 } ) ); // 적지 않은 번호
-    SW_EXPECT_FALSE( BindlessIndexValidator::validateStride( &device, passName, field, 80, RHIDescriptorIndex{ 6 } ) );
-    SW_EXPECT_FALSE( BindlessIndexValidator::validateStride( &device, passName, field, 80, RHIDescriptorIndex{ 6 } ) );
+    device.getBindlessIndexReportLog().recordBufferStride( RHIBufferSRVIndex{ 5 }, 80 );
+    device.getBindlessIndexReportLog().recordBufferStride( RHIBufferSRVIndex{ 6 }, 64 );
+    SW_EXPECT_TRUE( BindlessIndexValidator::validateStride( &device, passName, field, 80, RHIBufferSRVIndex{ 5 } ) );
+    SW_EXPECT_TRUE( BindlessIndexValidator::validateStride( &device, passName, field, 0, RHIBufferSRVIndex{ 6 } ) );
+    SW_EXPECT_TRUE( BindlessIndexValidator::validateStride( &device, passName, field, 80, RHIBufferSRVIndex{ 9 } ) ); // 적지 않은 번호
+    SW_EXPECT_FALSE( BindlessIndexValidator::validateStride( &device, passName, field, 80, RHIBufferSRVIndex{ 6 } ) );
+    SW_EXPECT_FALSE( BindlessIndexValidator::validateStride( &device, passName, field, 80, RHIBufferSRVIndex{ 6 } ) );
     SW_EXPECT_EQUAL( 1u, device.getBindlessIndexReportLog().getStrideReportCount() );
     SW_EXPECT_EQUAL( 0u, device.getBindlessIndexReportLog().getReportCount() );
 
-    SW_EXPECT_TRUE( BindlessIndexValidator::validateStride( nullptr, passName, field, 80, RHIDescriptorIndex{ 6 } ) );
+    SW_EXPECT_TRUE( BindlessIndexValidator::validateStride( nullptr, passName, field, 80, RHIBufferSRVIndex{ 6 } ) );
 }
 
 /**
@@ -130,16 +130,16 @@ SW_TEST_CASE_F( BindlessIndexValidatorTest, StructuredBufferRecordsItsStride )
     test::FakeRHIBufferFactory factory;
     test::FakeRHIDevice        device;
     device._pResourceFactory = &factory;
-    factory._bufferSRV       = RHIDescriptorIndex{ 11 };
+    factory._bufferSRV       = RHIBufferSRVIndex{ 11 };
     RHIStructuredBuffer buffer;
     SW_REQUIRE_TRUE( buffer.ensureCapacity( &device, 48, 4, RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource, true, false, nullptr ) );
-    const RHIDescriptorIndex first = buffer._srv;
+    const RHIBufferSRVIndex first = buffer._srv;
     SW_REQUIRE_TRUE( first != kInvalidDescriptorIndex );
     SW_EXPECT_EQUAL( 48u, device.getBindlessIndexReportLog().getBufferStride( first ) );
 
     // 원소 크기가 바뀌면 다시 만들고 새 크기를 적는다.
     SW_REQUIRE_TRUE( buffer.ensureCapacity( &device, 64, 4, RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource, true, false, nullptr ) );
-    const RHIDescriptorIndex second = buffer._srv;
+    const RHIBufferSRVIndex second = buffer._srv;
     SW_EXPECT_EQUAL( 64u, device.getBindlessIndexReportLog().getBufferStride( second ) );
 
     buffer.release( &device );

@@ -246,7 +246,7 @@ namespace sw
         /** @brief 이번 프레임에 받은 GPU 구간의 슬롯 수입니다. 0 이면 GPU 라이트를 쓰지 않는 프레임(또는 생산자가 GPU 가 아니라 거절한 프레임)입니다. */
         uint32 getGPULightCount() const { return _gpuLightCount; }
         /** @brief GPU 구간을 쓰는 컴퓨트의 UAV 입니다. 구간이 없거나 UAV 를 만들지 못했으면 `kInvalidDescriptorIndex` 입니다. */
-        RHIDescriptorIndex getGPULightUAV() const { return _gpuLightCount > 0 ? _buffer._uav : kInvalidDescriptorIndex; }
+        RHIUnorderedAccessIndex getGPULightUAV() const { return _gpuLightCount > 0 ? _buffer._uav : kInvalidDescriptorIndex; }
         /** @brief `update` 에 준 뷰 @p gridIndex 의 그리드 첫 단어입니다(PassCB `g_SwLightGridBase`). 그리드가 없으면 `constant::invalid_index::kUint32` 입니다. */
         uint32 getGridBase( uint32 gridIndex ) const { return gridIndex < _listGridBase.size() ? _listGridBase[gridIndex] : constant::invalid_index::kUint32; }
         /** @brief 이번 프레임의 그리드 버퍼(t12)입니다. 생산자가 CPU 면 동적 버퍼, GPU 면 기본 힙 버퍼입니다. 그리드가 없으면 nullptr 입니다. */
@@ -256,7 +256,7 @@ namespace sw
         /** @brief 라이트 프로브 SH9 · 반사 프로브 · 스카이 라이트 버퍼(t13)입니다. 이번 프레임에 올린 원소가 없으면 nullptr 입니다(볼륨 원소도 목록에 없고 스카이 라이트도 없다). */
         const RHIStructuredBuffer* findProbeBuffer() const;
         /** @brief 프로브 갱신 컴퓨트가 프로브 버퍼를 쓰는 UAV 입니다. 이번 프레임에 쓸 수 없으면(실시간 볼륨이 없다 · 버퍼가 없다 · 백엔드가 UAV 를 거절했다) `kInvalidDescriptorIndex` 입니다. */
-        RHIDescriptorIndex getProbeUAV() const { return ( _bProbeWritable == SW_TRUE && _probeElementCount > 0 ) ? _probeBuffer._uav : kInvalidDescriptorIndex; }
+        RHIUnorderedAccessIndex getProbeUAV() const { return ( _bProbeWritable == SW_TRUE && _probeElementCount > 0 ) ? _probeBuffer._uav : kInvalidDescriptorIndex; }
 
         /** @brief GPU 생산자가 이번 프레임에 채울 뷰 수입니다. 0 이면 디스패치할 것이 없습니다. */
         uint32 getGPUGridViewCount() const { return _gpuGridViewCount; }

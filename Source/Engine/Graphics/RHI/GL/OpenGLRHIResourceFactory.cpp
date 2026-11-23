@@ -906,7 +906,7 @@ namespace sw
         return pRecord != nullptr && _pDevice->_transferSerials.isFirstUploadComplete( pRecord->_transferSerials );
     }
 
-    RHIDescriptorIndex OpenGLRHIResourceFactory::registerBindlessTexture( RHITextureHandle texture )
+    RHITextureSRVIndex OpenGLRHIResourceFactory::registerBindlessTexture( RHITextureHandle texture )
     {
         if ( texture == 0 )
             return kInvalidDescriptorIndex;
@@ -928,10 +928,10 @@ namespace sw
             return kInvalidDescriptorIndex;
 
         UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
-        return _pDevice->_textureRegistry.allocate( OpenGLRHIDevice::BindlessTextureRecord{ texture } );
+        return RHITextureSRVIndex{ _pDevice->_textureRegistry.allocate( OpenGLRHIDevice::BindlessTextureRecord{ texture } ) };
     }
 
-    RHIDescriptorIndex OpenGLRHIResourceFactory::registerBindlessBufferSRV( RHIBufferHandle buffer )
+    RHIBufferSRVIndex OpenGLRHIResourceFactory::registerBindlessBufferSRV( RHIBufferHandle buffer )
     {
         if ( buffer == 0 )
             return kInvalidDescriptorIndex;
@@ -941,10 +941,10 @@ namespace sw
         if ( ubo == 0 )
             return kInvalidDescriptorIndex;
         UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
-        return _pDevice->_bufferRegistry.allocate( OpenGLRHIDevice::BindlessResourceRecord{ buffer } );
+        return RHIBufferSRVIndex{ _pDevice->_bufferRegistry.allocate( OpenGLRHIDevice::BindlessResourceRecord{ buffer } ) };
     }
 
-    RHIDescriptorIndex OpenGLRHIResourceFactory::registerBindlessBufferSRV( const RHIBufferSlice& slice )
+    RHIBufferSRVIndex OpenGLRHIResourceFactory::registerBindlessBufferSRV( const RHIBufferSlice& slice )
     {
         _pDevice->requireRegistryMutableNow( "registerBindlessBufferSRV(slice)" );
         if ( slice._buffer == 0 || slice._size == 0 )
@@ -964,10 +964,10 @@ namespace sw
         record._sliceOffset = slice._offset;
         record._sliceSize   = slice._size;
         UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
-        return _pDevice->_bufferRegistry.allocate( record );
+        return RHIBufferSRVIndex{ _pDevice->_bufferRegistry.allocate( record ) };
     }
 
-    void OpenGLRHIResourceFactory::unregisterBindlessResource( RHIDescriptorIndex index )
+    void OpenGLRHIResourceFactory::unregisterBindlessResource( RHIBufferSRVIndex index )
     {
         ScopedOpenGLContext contextScope( _pDevice );
         // 이중 해제 · 다른 공간 번호는 `RHIBindlessRegistry::release` 가 거절한다.
@@ -975,7 +975,7 @@ namespace sw
         (void)_pDevice->_bufferRegistry.release( index, RHIBindlessReuse::Immediately );
     }
 
-    bool OpenGLRHIResourceFactory::rebindBindlessTexture( RHIDescriptorIndex index, RHITextureHandle texture )
+    bool OpenGLRHIResourceFactory::rebindBindlessTexture( RHITextureSRVIndex index, RHITextureHandle texture )
     {
         if ( texture == 0 )
             return false;
@@ -990,14 +990,14 @@ namespace sw
         return _pDevice->_textureRegistry.rebind( index, OpenGLRHIDevice::BindlessTextureRecord{ texture } );
     }
 
-    RHIDescriptorIndex OpenGLRHIResourceFactory::reserveBindlessTextureIndex()
+    RHITextureSRVIndex OpenGLRHIResourceFactory::reserveBindlessTextureIndex()
     {
         // 번호 발급기만 건드린다(어느 스레드든 — GL 컨텍스트가 필요 없다).
         UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
-        return _pDevice->_textureRegistry.reserveIndex();
+        return RHITextureSRVIndex{ _pDevice->_textureRegistry.reserveIndex() };
     }
 
-    bool OpenGLRHIResourceFactory::activateReservedBindlessTexture( RHIDescriptorIndex index, RHITextureHandle texture )
+    bool OpenGLRHIResourceFactory::activateReservedBindlessTexture( RHITextureSRVIndex index, RHITextureHandle texture )
     {
         if ( texture == 0 )
             return false;
@@ -1011,14 +1011,14 @@ namespace sw
         return _pDevice->_textureRegistry.assign( index, OpenGLRHIDevice::BindlessTextureRecord{ texture }, RHIBindlessLink::Borrowed ); // 예약한 번호는 받은 쪽의 것이다
     }
 
-    void OpenGLRHIResourceFactory::unregisterBindlessTexture( RHIDescriptorIndex index )
+    void OpenGLRHIResourceFactory::unregisterBindlessTexture( RHITextureSRVIndex index )
     {
         ScopedOpenGLContext      contextScope( _pDevice );
         UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
         (void)_pDevice->_textureRegistry.release( index, RHIBindlessReuse::Immediately );
     }
 
-    RHIDescriptorIndex OpenGLRHIResourceFactory::registerBindlessBufferUAV( RHIBufferHandle buffer )
+    RHIUnorderedAccessIndex OpenGLRHIResourceFactory::registerBindlessBufferUAV( RHIBufferHandle buffer )
     {
         if ( buffer == 0 )
             return kInvalidDescriptorIndex;
@@ -1028,10 +1028,10 @@ namespace sw
         if ( ssbo == 0 )
             return kInvalidDescriptorIndex;
         UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
-        return _pDevice->_uavRegistry.allocate( OpenGLRHIDevice::BindlessResourceRecord{ buffer } );
+        return RHIUnorderedAccessIndex{ _pDevice->_uavRegistry.allocate( OpenGLRHIDevice::BindlessResourceRecord{ buffer } ) };
     }
 
-    RHIDescriptorIndex OpenGLRHIResourceFactory::registerBindlessTextureUAV( RHITextureHandle texture )
+    RHIUnorderedAccessIndex OpenGLRHIResourceFactory::registerBindlessTextureUAV( RHITextureHandle texture )
     {
         if ( texture == 0 )
             return kInvalidDescriptorIndex;
@@ -1042,10 +1042,10 @@ namespace sw
         OpenGLRHIDevice::BindlessResourceRecord record{};
         record._texture = texture;
         UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
-        return _pDevice->_uavRegistry.allocate( record );
+        return RHIUnorderedAccessIndex{ _pDevice->_uavRegistry.allocate( record ) };
     }
 
-    void OpenGLRHIResourceFactory::unregisterBindlessUAV( RHIDescriptorIndex index )
+    void OpenGLRHIResourceFactory::unregisterBindlessUAV( RHIUnorderedAccessIndex index )
     {
         ScopedOpenGLContext contextScope( _pDevice );
         // 이중 해제는 등록표가 막는다. 막지 않으면 같은 인덱스가 프리리스트에 두 번 들어간다.

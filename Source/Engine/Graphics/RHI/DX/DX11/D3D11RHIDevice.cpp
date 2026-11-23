@@ -246,32 +246,32 @@ namespace sw
         return pRecord != nullptr ? pRecord->_srv.Get() : nullptr;
     }
 
-    RHIBufferHandle D3D11RHIDevice::bindlessBufferAt( RHIDescriptorIndex index ) const
+    RHIBufferHandle D3D11RHIDevice::bindlessBufferAt( RHIBufferSRVIndex index ) const
     {
         ScopedSharedLock<shared_mutex> lock{ _bindlessMutex };
         return _bufferRegistry.get( index )._buffer;
     }
 
-    RHIBufferSlice D3D11RHIDevice::bindlessBufferSliceAt( RHIDescriptorIndex index ) const
+    RHIBufferSlice D3D11RHIDevice::bindlessBufferSliceAt( RHIBufferSRVIndex index ) const
     {
         ScopedSharedLock<shared_mutex> lock{ _bindlessMutex };
         const BufferEntry              entry = _bufferRegistry.get( index );
         return RHIBufferSlice{ entry._buffer, entry._sliceOffset, entry._sliceSize };
     }
 
-    RHITextureHandle D3D11RHIDevice::bindlessTextureAt( RHIDescriptorIndex index ) const
+    RHITextureHandle D3D11RHIDevice::bindlessTextureAt( RHITextureSRVIndex index ) const
     {
         ScopedSharedLock<shared_mutex> lock{ _bindlessMutex };
         return _textureRegistry.get( index );
     }
 
-    Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView> D3D11RHIDevice::bindlessUAVAt( RHIDescriptorIndex index ) const
+    Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView> D3D11RHIDevice::bindlessUAVAt( RHIUnorderedAccessIndex index ) const
     {
         ScopedSharedLock<shared_mutex> lock{ _bindlessMutex };
         return _uavRegistry.get( index )._uav;
     }
 
-    RHIBufferHandle D3D11RHIDevice::uavSourceBufferAt( RHIDescriptorIndex index ) const
+    RHIBufferHandle D3D11RHIDevice::uavSourceBufferAt( RHIUnorderedAccessIndex index ) const
     {
         ScopedSharedLock<shared_mutex> lock{ _bindlessMutex };
         return _uavRegistry.get( index )._sourceBuffer;

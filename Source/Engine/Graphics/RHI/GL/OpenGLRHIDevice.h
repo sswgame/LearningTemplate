@@ -370,9 +370,9 @@ namespace sw
         };
 
         /** @brief 번호가 가리키는 버퍼 · UAV · 텍스처를 공유 잠금 아래에서 읽습니다(빈 칸이면 빈 값). */
-        BindlessResourceRecord findBindlessBuffer( RHIDescriptorIndex index ) const;
-        BindlessResourceRecord findBindlessUAV( RHIDescriptorIndex index ) const;
-        RHITextureHandle       findBindlessTexture( RHIDescriptorIndex index ) const;
+        BindlessResourceRecord findBindlessBuffer( RHIBufferSRVIndex index ) const;
+        BindlessResourceRecord findBindlessUAV( RHIUnorderedAccessIndex index ) const;
+        RHITextureHandle       findBindlessTexture( RHITextureSRVIndex index ) const;
 
         /// @brief 프로그램과 래스터, 블렌드, 깊이 상태입니다.
         struct OpenGLPipelineStateRecord

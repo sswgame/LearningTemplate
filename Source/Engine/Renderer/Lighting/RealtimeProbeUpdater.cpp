@@ -467,7 +467,7 @@ namespace sw
         _bPaintPending = SW_FALSE;
     }
 
-    void RealtimeProbeUpdater::dispatch( IRHIPassCommandList& cmd, RHIPipelineStateHandle pso, const GPULightBuffer& lightBuffer, RHIDescriptorIndex placeholderSRV )
+    void RealtimeProbeUpdater::dispatch( IRHIPassCommandList& cmd, RHIPipelineStateHandle pso, const GPULightBuffer& lightBuffer, RHIBufferSRVIndex placeholderSRV )
     {
         if ( _bActive == SW_FALSE || pso == 0 )
             return;
@@ -475,7 +475,7 @@ namespace sw
         if ( pProbeBuffer == nullptr || lightBuffer.getProbeUAV() == kInvalidDescriptorIndex )
             return;
         // t0 라이트는 라이트 버퍼가 없는 프레임에 자리표를 건다(라이트 수 0 이면 셰이더가 읽지 않는다 - DX12 는 빈 디스크립터를 읽으면 폴트).
-        const RHIDescriptorIndex lights = lightBuffer.isBindable() ? lightBuffer.getBuffer()._srv : placeholderSRV;
+        const RHIBufferSRVIndex lights = lightBuffer.isBindable() ? lightBuffer.getBuffer()._srv : placeholderSRV;
 
         // 두 쓰기 버퍼의 UAV 전이와 조명 패스(그래프, t13) 앞 셰이더 읽기는 프레임 그래프가 낸다(`ProbeIrradiance` · `ProbeHistory` — `FrameGraphExecutor::beginFrame` 이 등록한다).
         cmd.setComputePipelineState( pso );

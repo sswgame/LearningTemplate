@@ -22,12 +22,12 @@ namespace sw
      */
     struct SW_API RHITextureSlot
     {
-        RHITextureHandle   _texture{ 0 };
-        RHIDescriptorIndex _srv{ kInvalidDescriptorIndex }; ///< 서술이 셰이더 리소스면 있다
-        RHIDescriptorIndex _uav{ kInvalidDescriptorIndex }; ///< 서술이 UAV 면 있다
-        RHIFormat          _format{ RHIFormat::Unknown };
-        uint32             _width{ 0 };
-        uint32             _height{ 0 };
+        RHITextureHandle        _texture{ 0 };
+        RHITextureSRVIndex      _srv{ kInvalidDescriptorIndex }; ///< 서술이 셰이더 리소스면 있다
+        RHIUnorderedAccessIndex _uav{ kInvalidDescriptorIndex }; ///< 서술이 UAV 면 있다
+        RHIFormat               _format{ RHIFormat::Unknown };
+        uint32                  _width{ 0 };
+        uint32                  _height{ 0 };
 
         RHITextureSlot() = default;
         RHITextureSlot( RHITextureSlot&& other ) noexcept { swap( other ); }

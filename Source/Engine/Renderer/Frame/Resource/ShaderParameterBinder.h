@@ -50,10 +50,10 @@ namespace sw
                                   const FrameResourceRegistry&  registry,
                                   const PassConstantValues&     values,
                                   RHIBufferHandle               engineCb,
-                                  RHIDescriptorIndex            engineCbIndex,
-                                  RHIDescriptorIndex            materialCb,
+                                  RHIBufferSRVIndex             engineCbIndex,
+                                  RHIBufferSRVIndex             materialCb,
                                   bool                          bNativeBindless,
-                                  const RHIDescriptorIndex*     pMaterialTexSRV    = nullptr,
+                                  const RHITextureSRVIndex*     pMaterialTexSRV    = nullptr,
                                   bool                          bEngineCbUpToDate  = false,
                                   bool                          bResourcesUpToDate = false,
                                   const BindlessIndexCheckSite* pIndexCheck        = nullptr );

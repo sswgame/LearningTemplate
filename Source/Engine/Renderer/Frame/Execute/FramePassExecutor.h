@@ -411,8 +411,8 @@ namespace sw
          * @details 이 패스의 앞 드로우가 이미 올린 상수 슬롯에 바뀐 값을 쓰게 되면 새 슬롯을 받는다(같은 슬롯을 덮으면 앞 드로우도 새 값으로 그려진다).
          * @return 그려도 되면 true 입니다. 장치가 없거나 링이 고갈되면 false — 부르는 쪽은 그 드로우를 내지 않습니다.
          */
-        [[nodiscard]] bool bindForDraw( FramePassContext& context, RHIPipelineStateHandle pso, RHIDescriptorIndex materialCb,
-                                        const RHIDescriptorIndex* pMaterialTexSRV = nullptr );
+        [[nodiscard]] bool bindForDraw( FramePassContext& context, RHIPipelineStateHandle pso, RHIBufferSRVIndex materialCb,
+                                        const RHITextureSRVIndex* pMaterialTexSRV = nullptr );
         /** @brief GPUScene 인스턴스 구조 버퍼를 리소스 레지스트리에 "SwInstances" 이름으로 등록합니다. */
         void registerInstanceBuffer( FramePassContext& context );
         /**

@@ -150,7 +150,7 @@ namespace sw
         cmd.endRenderPass();
     }
 
-    void FrameDisplayEncode::drawFullscreen( IRHICommandList& cmd, RHIPipelineStateHandle pso, RHIDescriptorIndex srv, float32 scale ) const
+    void FrameDisplayEncode::drawFullscreen( IRHICommandList& cmd, RHIPipelineStateHandle pso, RHITextureSRVIndex srv, float32 scale ) const
     {
         cmd.setPipelineState( pso );
         const bool                                bNativeBindless = _pDevice->supportsNativeBindlessSampling();

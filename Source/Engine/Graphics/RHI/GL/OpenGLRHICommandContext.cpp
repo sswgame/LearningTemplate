@@ -579,7 +579,7 @@ namespace sw
         glBindBuffer( GL_COPY_WRITE_BUFFER, 0 );
     }
 
-    void OpenGLRHICommandContext::bindComputeUAV( RHIDescriptorIndex index, uint32 slot )
+    void OpenGLRHICommandContext::bindComputeUAV( RHIUnorderedAccessIndex index, uint32 slot )
     {
         // 인덱스는 **UAV 레지스트리의 것**이다. 그 레지스트리는 RW 텍스처와 버퍼를 함께 담으므로 어느 쪽인지는
         // 레코드가 말해 준다. 다른 레지스트리를 넘겨짚지 않는다.
@@ -626,13 +626,13 @@ namespace sw
         glBindBufferBase( GL_SHADER_STORAGE_BUFFER, shaderslot::gl::kUAVBinding0 + slot, ssbo );
     }
 
-    void OpenGLRHICommandContext::bindGraphicsUAV( RHIDescriptorIndex index, uint32 slot )
+    void OpenGLRHICommandContext::bindGraphicsUAV( RHIUnorderedAccessIndex index, uint32 slot )
     {
         // GL 의 SSBO · 이미지 유닛 번호는 단계를 가리지 않는다 — 컴퓨트와 같은 자리(SSBO kUAVBinding0 + slot)에 건다.
         bindComputeUAV( index, slot );
     }
 
-    void OpenGLRHICommandContext::bindShaderResource( RHIDescriptorIndex index, uint32 slot )
+    void OpenGLRHICommandContext::bindShaderResource( RHITextureSRVIndex index, uint32 slot )
     {
         // **텍스처 전용이다.** 버퍼는 `bindStructuredBuffer` 가 건다.
         //
@@ -665,7 +665,7 @@ namespace sw
             _pDevice->_recordingState._boundTextureUnitMask |= ( uint64{ 1 } << unit );
     }
 
-    void OpenGLRHICommandContext::bindComputeConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot )
+    void OpenGLRHICommandContext::bindComputeConstantBuffer( RHIBufferSRVIndex constantBufferIndex, uint32 slot )
     {
         // 그래픽스 bindConstantBuffer 와 같은 근거다. 명시 [[vk::binding]] 이 있으면 -fvk-b-shift 는 적용되지
         // 않으므로 b# 는 SPIR-V binding # 그대로다(gpu_cull 의 CullParams b0 = binding 0).
@@ -675,7 +675,7 @@ namespace sw
         bindUniformBuffer( constantBufferIndex, slot );
     }
 
-    void OpenGLRHICommandContext::bindUniformBuffer( RHIDescriptorIndex index, uint32 slot )
+    void OpenGLRHICommandContext::bindUniformBuffer( RHIBufferSRVIndex index, uint32 slot )
     {
         const OpenGLRHIDevice::BindlessResourceRecord record = _pDevice->findBindlessBuffer( index );
         const GLuint                                  ubo    = record._buffer != 0 ? _pDevice->resolveGlBuffer( record._buffer ) : 0;
@@ -688,7 +688,7 @@ namespace sw
             glBindBufferBase( GL_UNIFORM_BUFFER, slot, ubo );
     }
 
-    void OpenGLRHICommandContext::bindComputeShaderResource( RHIDescriptorIndex index, uint32 slot )
+    void OpenGLRHICommandContext::bindComputeShaderResource( RHIBufferSRVIndex index, uint32 slot )
     {
         // HLSL t# 는 시프트 없이 그대로 GL SSBO 바인딩 # 에 매핑된다(gpu_cull 의 g_Instances 등).
         const bool bInvalidBufferIndex = _pDevice->_bInitialized == SW_FALSE || index == kInvalidDescriptorIndex;
@@ -848,7 +848,7 @@ namespace sw
             _pDevice->getResourceFactory()->updateConstantBuffer( buffer, pData, size );
     }
 
-    void OpenGLRHICommandContext::bindConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot )
+    void OpenGLRHICommandContext::bindConstantBuffer( RHIBufferSRVIndex constantBufferIndex, uint32 slot )
     {
         // 상수버퍼는 HLSL b# 가 **SPIR-V binding #** 로 그대로 나온다.
         // `-fvk-b-shift 16 0` 은 명시 `[[vk::binding]]` 이 있으면 적용되지 않는다(common.hlsli 가 항상 명시한다).
@@ -861,7 +861,7 @@ namespace sw
         bindUniformBuffer( constantBufferIndex, slot );
     }
 
-    void OpenGLRHICommandContext::bindStructuredBuffer( RHIDescriptorIndex index, uint32 slot )
+    void OpenGLRHICommandContext::bindStructuredBuffer( RHIBufferSRVIndex index, uint32 slot )
     {
         // **버퍼 전용이다.** 텍스처는 `bindShaderResource` 가 건다(그쪽 주의 참고).
         // t# 는 시프트 없이 그대로 GL SSBO binding # 이다(common.hlsli SW_GL_BINDING).

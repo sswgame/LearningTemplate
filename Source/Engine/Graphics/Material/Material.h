@@ -206,7 +206,7 @@ namespace sw
          * @details 네이티브 bindless 가 없는 백엔드(DX11, GL, WebGPU)에서 엔진이 이 순서대로 t16..t31 에 바인딩한다.
          *          그 백엔드에서 MaterialCB 에 실리는 값은 SRV 인덱스가 아니라 이 배열의 **서수**다. 셰이더 변형은 그 칸 수(`getTextureSlotCount`)만 선언한다(웹).
          */
-        const vector<RHIDescriptorIndex>& getMaterialTextureSRVs() const { return _listMaterialTextureSRV; }
+        const vector<RHITextureSRVIndex>& getMaterialTextureSRVs() const { return _listMaterialTextureSRV; }
         /**
          * @brief 텍스처 프로퍼티 `name` 이 슬롯 목록(`getMaterialTextureSRVs`)의 몇 번째인지 반환합니다. 텍스처가 비어 있는 프로퍼티도 자리를 가진다.
          *        그런 텍스처 프로퍼티가 없으면(또는 텍스처를 아직 풀지 않았으면) 비어 있습니다.
@@ -393,7 +393,7 @@ namespace sw
         vector<string>                       _listAcquiredTexturePath; ///< resolveTextureAssets 가 해석한 요청 경로(프로퍼티의 assetPath)
         vector<TextureHandle>                _listTextureLoad;         ///< 위와 같은 순서의 텍스처 로드(`TextureCache::request`). 준비되면 참조를, 실패하면 누락 체커를 가리키는 번호를 쥔다(R-6)
         vector<string>                       _listBorrowedTexturePath; ///< 위와 같은 순서로 대신 빌린 경로(`acquire` · `release` 짝) — 로드가 번호를 내지 못했으면 누락 텍스처, 아니면 빈 문자열
-        vector<RHIDescriptorIndex>           _listMaterialTextureSRV;  ///< 위 경로와 같은 순서의 백엔드 SRV 인덱스(에뮬레이션 백엔드의 슬롯 바인딩용)
+        vector<RHITextureSRVIndex>           _listMaterialTextureSRV;  ///< 위 경로와 같은 순서의 백엔드 SRV 인덱스(에뮬레이션 백엔드의 슬롯 바인딩용)
         vector<hashed_string>                _listMaterialTextureName; ///< 위와 같은 순서의 프로퍼티 이름(인스턴스가 같은 슬롯을 덮어쓴다)
         vector<CollectionBinding>            _listCollectionBinding;   ///< 묶음을 가리키는 프로퍼티(`MaterialParameterCollection`)
         vector<hashed_string>                _listPropertyName;        ///< `_data._listProperty` 와 같은 순서의 이름. `findProperty` 가 프로퍼티마다 intern 하지 않고 정수로 비교한다

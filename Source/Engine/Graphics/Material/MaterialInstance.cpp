@@ -225,7 +225,7 @@ namespace sw
             const bool bNativeBindless = pDevice != nullptr && pDevice->supportsNativeBindlessSampling();
             for ( TextureOverride& texture : _listTextureOverride )
             {
-                const RHIDescriptorIndex srv = texture.getStableSRV();
+                const RHITextureSRVIndex srv = texture.getStableSRV();
                 if ( srv == kInvalidDescriptorIndex )
                     continue;
                 const optional<uint32> textureBinding = bNativeBindless ? optional<uint32>{ srv.getValue() } : findTextureSlot( texture._name );
@@ -399,18 +399,18 @@ namespace sw
         return parentSlot.has_value() && *parentSlot < shaderslot::kMaterialTextureCount ? parentSlot : nullopt;
     }
 
-    void MaterialInstance::fillTextureSlots( RHIDescriptorIndex* pOutSlot, uint32 slotCount ) const
+    void MaterialInstance::fillTextureSlots( RHITextureSRVIndex* pOutSlot, uint32 slotCount ) const
     {
         if ( pOutSlot == nullptr || _pParentMaterial == nullptr )
             return;
-        const vector<RHIDescriptorIndex>& listParentSRV = _pParentMaterial->getMaterialTextureSRVs();
+        const vector<RHITextureSRVIndex>& listParentSRV = _pParentMaterial->getMaterialTextureSRVs();
         for ( uint32 slot = 0; slot < slotCount; ++slot )
         {
             pOutSlot[slot] = slot < listParentSRV.size() ? listParentSRV[slot] : kInvalidDescriptorIndex;
         }
         for ( const TextureOverride& texture : _listTextureOverride )
         {
-            const RHIDescriptorIndex srv = texture.getStableSRV();
+            const RHITextureSRVIndex srv = texture.getStableSRV();
             if ( srv == kInvalidDescriptorIndex )
                 continue;
             const optional<uint32> slot = findTextureSlot( texture._name );

@@ -303,16 +303,17 @@ namespace sw
         void releaseHandle( RHITransientHeapHandle heap );
         /**
          * @brief bindless 번호 하나를 놓습니다(`registerBindlessTexture` · `registerBindlessBufferSRV` 가 준 번호). 시점 규칙은 `releaseHandle` 과 같다.
-         * @details 번호는 형식이 하나(`RHIDescriptorIndex`)라 공간(@p space)을 함께 받는다 — 버퍼 공간은 `unregisterBindlessResource`, 텍스처 공간은 `unregisterBindlessTexture` 로 간다.
+         * @details 번호 공간은 형식이 안다 — 버퍼 번호는 `unregisterBindlessResource`, 텍스처 번호는 `unregisterBindlessTexture` 로 간다.
          */
-        void releaseBindlessIndex( RHIBindlessIndexSpace space, RHIDescriptorIndex index );
+        void releaseBindlessIndex( RHITextureSRVIndex index );
+        void releaseBindlessIndex( RHIBufferSRVIndex index );
         /**
          * @brief 텍스처 번호 하나를 예약하고 @p placeholder 를 가리키게 할 일을 줄에 넣습니다. **어느 스레드에서든** 부른다(감사 R-6 — 텍스처 캐시가 로드를 시작할 때).
          * @details 번호는 곧바로 돌려주지만 산 칸은 렌더 스레드가 `activateReservedBindlessTextures` 로 디스크립터를 쓴 뒤다. 그 함수는 프레임 시작(`beginFrame`)과
-         *          텍스처 업로드 펌프가 기록 전에 부르므로, 그 번호를 실은 렌더 사본이 그려지기 전에 산다. 해제는 등록한 번호와 같다(`releaseBindlessIndex( RHIBindlessIndexSpace::Texture, … )`).
+         *          텍스처 업로드 펌프가 기록 전에 부르므로, 그 번호를 실은 렌더 사본이 그려지기 전에 산다. 해제는 등록한 번호와 같다(`releaseBindlessIndex( RHITextureSRVIndex )`).
          * @return 표가 차면 kInvalidDescriptorIndex 입니다.
          */
-        [[nodiscard]] RHIDescriptorIndex reserveBindlessTexture( RHITextureHandle placeholder );
+        [[nodiscard]] RHITextureSRVIndex reserveBindlessTexture( RHITextureHandle placeholder );
         /** @brief 예약한 번호를 모두 살립니다(렌더 스레드, 병렬 기록 밖). 살리지 못한 번호는 오류를 남긴다(자리 텍스처가 없는 결함이라 번호는 돌려받지 않는다). */
         void activateReservedBindlessTextures();
         /** @brief 미뤄 둔 핸들을 기한과 무관하게 모두 해제합니다. `waitIdle` 에서, 렌더 스레드를 세우거나 해제할 때, `shutdown` 에서 부릅니다. */

@@ -1167,7 +1167,7 @@ namespace sw
         return _pDevice->resolveTexture( texture ) != nullptr && _pDevice->isTextureFirstUploadComplete( texture );
     }
 
-    RHIDescriptorIndex D3D12RHIResourceFactory::registerBindlessTexture( RHITextureHandle texture )
+    RHITextureSRVIndex D3D12RHIResourceFactory::registerBindlessTexture( RHITextureHandle texture )
     {
         _pDevice->requireRegistryMutableNow( "registerBindlessTexture" );
         if ( texture == 0 || _pDevice->_cbvHeap == nullptr )
@@ -1215,10 +1215,10 @@ namespace sw
         _pDevice->_device->CreateShaderResourceView( pResource, &srvDesc, handle._offline );
 
         writeBindlessRecord( BindlessRegistry::ShaderResource, index, pResource, handle, 0, texture, RHIBindlessLink::Owned );
-        return index;
+        return RHITextureSRVIndex{ index };
     }
 
-    RHIDescriptorIndex D3D12RHIResourceFactory::registerBindlessBufferSRV( RHIBufferHandle buffer )
+    RHIBufferSRVIndex D3D12RHIResourceFactory::registerBindlessBufferSRV( RHIBufferHandle buffer )
     {
         _pDevice->requireRegistryMutableNow( "registerBindlessBufferSRV" );
         if ( buffer == 0 || _pDevice->_cbvHeap == nullptr )
@@ -1254,7 +1254,7 @@ namespace sw
             _pDevice->_device->CreateShaderResourceView( pResource, &srvDesc, handle._offline );
 
             writeBindlessRecord( BindlessRegistry::ShaderResource, index, pResource, handle, buffer, 0, RHIBindlessLink::Owned );
-            return index;
+            return RHIBufferSRVIndex{ index };
         }
 
         // 상수 버퍼는 루트 CBV 로만 건다(resolveBufferAddress 가 이번 링 슬롯 주소를 낸다). 힙에는 뷰를 만들지 않는다 — 셰이더는 힙에서 CBV 를 읽지 않고
@@ -1272,10 +1272,10 @@ namespace sw
         }
 
         writeBindlessRecord( BindlessRegistry::ShaderResource, index, pResource, handle, buffer, 0, RHIBindlessLink::Owned );
-        return index;
+        return RHIBufferSRVIndex{ index };
     }
 
-    RHIDescriptorIndex D3D12RHIResourceFactory::registerBindlessBufferSRV( const RHIBufferSlice& slice )
+    RHIBufferSRVIndex D3D12RHIResourceFactory::registerBindlessBufferSRV( const RHIBufferSlice& slice )
     {
         _pDevice->requireRegistryMutableNow( "registerBindlessBufferSRV(slice)" );
         if ( slice._buffer == 0 || _pDevice->_cbvHeap == nullptr )
@@ -1300,16 +1300,16 @@ namespace sw
         if ( index == kInvalidDescriptorIndex )
             return kInvalidDescriptorIndex;
         writeBindlessRecord( BindlessRegistry::ShaderResource, index, pResource, bindlessHandlesAt( index ), slice._buffer, 0, RHIBindlessLink::Owned, slice._offset );
-        return index;
+        return RHIBufferSRVIndex{ index };
     }
 
-    void D3D12RHIResourceFactory::unregisterBindlessResource( RHIDescriptorIndex index )
+    void D3D12RHIResourceFactory::unregisterBindlessResource( RHIBufferSRVIndex index )
     {
         _pDevice->requireRegistryMutableNow( "unregisterBindlessResource" );
         releaseBindlessSlot( index );
     }
 
-    bool D3D12RHIResourceFactory::rebindBindlessTexture( RHIDescriptorIndex index, RHITextureHandle texture )
+    bool D3D12RHIResourceFactory::rebindBindlessTexture( RHITextureSRVIndex index, RHITextureHandle texture )
     {
         _pDevice->requireRegistryMutableNow( "rebindBindlessTexture" );
         ID3D12Resource* const pResource = texture != 0 ? _pDevice->resolveTexture( texture ) : nullptr;
@@ -1345,14 +1345,14 @@ namespace sw
         return true;
     }
 
-    RHIDescriptorIndex D3D12RHIResourceFactory::reserveBindlessTextureIndex()
+    RHITextureSRVIndex D3D12RHIResourceFactory::reserveBindlessTextureIndex()
     {
         // 힙 번호 발급기만 건드린다 — 뷰 · 읽기 칸은 그대로라 기록 경로가 읽는 상태를 바꾸지 않는다(어느 스레드든).
         UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
-        return acquireBindlessIndex( lock );
+        return RHITextureSRVIndex{ acquireBindlessIndex( lock ) };
     }
 
-    bool D3D12RHIResourceFactory::activateReservedBindlessTexture( RHIDescriptorIndex index, RHITextureHandle texture )
+    bool D3D12RHIResourceFactory::activateReservedBindlessTexture( RHITextureSRVIndex index, RHITextureHandle texture )
     {
         _pDevice->requireRegistryMutableNow( "activateReservedBindlessTexture" );
         ID3D12Resource* const pResource = texture != 0 && _pDevice->_cbvHeap != nullptr ? _pDevice->resolveTexture( texture ) : nullptr;
@@ -1380,7 +1380,7 @@ namespace sw
         return true;
     }
 
-    void D3D12RHIResourceFactory::unregisterBindlessTexture( RHIDescriptorIndex index )
+    void D3D12RHIResourceFactory::unregisterBindlessTexture( RHITextureSRVIndex index )
     {
         // DX12 는 텍스처와 버퍼가 같은 셰이더 가시 힙을 나눠 쓰므로 인덱스 공간이 하나다.
         _pDevice->requireRegistryMutableNow( "unregisterBindlessTexture" );
@@ -1440,7 +1440,7 @@ namespace sw
                                                    _pDevice->_fenceValue );
     }
 
-    RHIDescriptorIndex D3D12RHIResourceFactory::registerBindlessBufferUAV( RHIBufferHandle buffer )
+    RHIUnorderedAccessIndex D3D12RHIResourceFactory::registerBindlessBufferUAV( RHIBufferHandle buffer )
     {
         _pDevice->requireRegistryMutableNow( "registerBindlessBufferUAV" );
         if ( buffer == 0 || _pDevice->_cbvHeap == nullptr )
@@ -1483,10 +1483,10 @@ namespace sw
         _pDevice->_device->CreateUnorderedAccessView( pResource, nullptr, &uavDesc, handle._offline );
 
         writeBindlessRecord( BindlessRegistry::UnorderedAccess, index, pResource, handle, buffer, 0, RHIBindlessLink::Owned );
-        return index;
+        return RHIUnorderedAccessIndex{ index };
     }
 
-    RHIDescriptorIndex D3D12RHIResourceFactory::registerBindlessTextureUAV( RHITextureHandle texture )
+    RHIUnorderedAccessIndex D3D12RHIResourceFactory::registerBindlessTextureUAV( RHITextureHandle texture )
     {
         _pDevice->requireRegistryMutableNow( "registerBindlessTextureUAV" );
         if ( texture == 0 || _pDevice->_cbvHeap == nullptr )
@@ -1512,10 +1512,10 @@ namespace sw
         _pDevice->_device->CreateUnorderedAccessView( pResource, nullptr, &uavDesc, handle._offline );
 
         writeBindlessRecord( BindlessRegistry::UnorderedAccess, index, pResource, handle, 0, texture, RHIBindlessLink::Owned );
-        return index;
+        return RHIUnorderedAccessIndex{ index };
     }
 
-    void D3D12RHIResourceFactory::unregisterBindlessUAV( RHIDescriptorIndex index )
+    void D3D12RHIResourceFactory::unregisterBindlessUAV( RHIUnorderedAccessIndex index )
     {
         _pDevice->requireRegistryMutableNow( "unregisterBindlessUAV" );
         releaseBindlessRecord( BindlessRegistry::UnorderedAccess, index );

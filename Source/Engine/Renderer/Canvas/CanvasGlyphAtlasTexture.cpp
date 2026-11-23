@@ -64,7 +64,7 @@ namespace sw
         }
     }
 
-    RHIDescriptorIndex CanvasGlyphAtlasTexture::findPageSRV( uint32 page ) const
+    RHITextureSRVIndex CanvasGlyphAtlasTexture::findPageSRV( uint32 page ) const
     {
         if ( page >= _listPage.size() )
             return kInvalidDescriptorIndex;

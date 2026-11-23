@@ -451,9 +451,14 @@ namespace sw
             transitionTexture( dst, dstStateAfter );
     }
 
-    void D3D12RHICommandContext::bindShaderResource( RHIDescriptorIndex index, uint32 slot )
+    void D3D12RHICommandContext::bindShaderResource( RHITextureSRVIndex index, uint32 slot )
     {
-        // 그래픽스 t# → 슬롯 테이블 상태에 오프라인 뷰를 적는다. 테이블은 드로우 직전 flushSlotTables 가 굳힌다.
+        bindSRVView( false, index, slot );
+    }
+
+    void D3D12RHICommandContext::bindSRVView( bool bCompute, RHIDescriptorIndex index, uint32 slot )
+    {
+        // t# → 슬롯 테이블 상태에 오프라인 뷰를 적는다. 테이블은 드로우 · 디스패치 직전 flushSlotTables 가 굳힌다.
         // 뷰라서 버퍼든 텍스처든 같은 경로다(루트 SRV 는 raw/구조 버퍼만 받는다).
         const bool bCannotBindShaderResource = _pCmdList == nullptr || _pDevice->_rootSignature == nullptr || slot >= shaderslot::kSRVSlotCount;
         if ( bCannotBindShaderResource )
@@ -465,7 +470,7 @@ namespace sw
         // (인스턴스 버퍼·머티리얼 버퍼는 배치가 바뀌어도 대개 그대로다) 무조건 표시하면 드로우마다
         // 디스크립터 10 개를 온라인 힙에 복사하고 테이블을 다시 걸게 된다.
         // 언리얼 FD3D12DescriptorCache 도 테이블 내용이 그대로면 이미 건 테이블을 그대로 쓴다.
-        D3D12SlotTableState& state = _pState->_arrSlotState[0];
+        D3D12SlotTableState& state = _pState->_arrSlotState[bCompute ? 1 : 0];
         if ( state._arrSRV[slot].ptr == view.ptr )
             return;
         state._arrSRV[slot] = view;
@@ -491,7 +496,7 @@ namespace sw
         transitionTexturesNative( &transition, 1 );
     }
 
-    void D3D12RHICommandContext::bindComputeUAV( RHIDescriptorIndex index, uint32 slot )
+    void D3D12RHICommandContext::bindComputeUAV( RHIUnorderedAccessIndex index, uint32 slot )
     {
         // 컴퓨트 u# → 컴퓨트 슬롯 테이블 상태. 인덱스는 UAV 레지스트리(registerBindlessBufferUAV)의 것. 디스패치 직전 굳힌다.
         const bool bCannotBindUnorderedAccess = _pCmdList == nullptr || _pDevice->_rootSignature == nullptr || slot >= shaderslot::kComputeUAVSlotCount;
@@ -507,7 +512,7 @@ namespace sw
         state._bUAVDirty    = SW_TRUE;
     }
 
-    void D3D12RHICommandContext::bindGraphicsUAV( RHIDescriptorIndex index, uint32 slot )
+    void D3D12RHICommandContext::bindGraphicsUAV( RHIUnorderedAccessIndex index, uint32 slot )
     {
         // 그래픽스 u# → 그래픽스 슬롯 테이블 상태. 루트 시그니처의 u 테이블은 모든 단계에 보인다(SHADER_VISIBILITY_ALL). 드로우 직전 flushSlotTables( false ) 가 굳힌다.
         const bool bCannotBindUnorderedAccess = _pCmdList == nullptr || _pDevice->_rootSignature == nullptr || slot >= shaderslot::kComputeUAVSlotCount;
@@ -523,7 +528,7 @@ namespace sw
         state._bUAVDirty    = SW_TRUE;
     }
 
-    void D3D12RHICommandContext::bindComputeConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot )
+    void D3D12RHICommandContext::bindComputeConstantBuffer( RHIBufferSRVIndex constantBufferIndex, uint32 slot )
     {
         const bool bCannotBindComputeConstantBuffer = _pCmdList == nullptr || _pDevice->_rootSignature == nullptr || slot >= shaderslot::kConstantBufferSlotCount;
         if ( bCannotBindComputeConstantBuffer )
@@ -534,19 +539,9 @@ namespace sw
         commandListForRecord()->SetComputeRootConstantBufferView( D3D12RHIDevice::kCBVRootParam0 + slot, address );
     }
 
-    void D3D12RHICommandContext::bindComputeShaderResource( RHIDescriptorIndex index, uint32 slot )
+    void D3D12RHICommandContext::bindComputeShaderResource( RHIBufferSRVIndex index, uint32 slot )
     {
-        const bool bCannotBindComputeShaderResource = _pCmdList == nullptr || _pDevice->_rootSignature == nullptr || slot >= shaderslot::kSRVSlotCount;
-        if ( bCannotBindComputeShaderResource )
-            return;
-        const D3D12_CPU_DESCRIPTOR_HANDLE view = resolveOfflineView( index, false );
-        if ( view.ptr == 0 )
-            return;
-        D3D12SlotTableState& state = _pState->_arrSlotState[1];
-        if ( state._arrSRV[slot].ptr == view.ptr )
-            return;
-        state._arrSRV[slot] = view;
-        state._bSRVDirty    = SW_TRUE;
+        bindSRVView( true, index, slot );
     }
 
     void D3D12RHICommandContext::setVertexBuffer( uint32 slot, RHIBufferHandle buffer, uint32 stride, uint32 offset )
@@ -610,7 +605,7 @@ namespace sw
             _pDevice->getResourceFactory()->updateConstantBuffer( buffer, pData, size );
     }
 
-    void D3D12RHICommandContext::bindConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot )
+    void D3D12RHICommandContext::bindConstantBuffer( RHIBufferSRVIndex constantBufferIndex, uint32 slot )
     {
         // 상수버퍼는 디스크립터 테이블이 아니라 루트 CBV(GPU 주소)다. 힙에 쓸 일이 없고 슬롯 b# 이 곧 루트 파라미터다.
         if ( slot >= shaderslot::kConstantBufferSlotCount )
@@ -626,10 +621,10 @@ namespace sw
         commandListForRecord()->SetGraphicsRootConstantBufferView( D3D12RHIDevice::kCBVRootParam0 + slot, address );
     }
 
-    void D3D12RHICommandContext::bindStructuredBuffer( RHIDescriptorIndex index, uint32 slot )
+    void D3D12RHICommandContext::bindStructuredBuffer( RHIBufferSRVIndex index, uint32 slot )
     {
-        // 그래픽스 구조버퍼(인스턴스 t4, 머티리얼 데이터 t5 …)도 텍스처와 같은 슬롯 테이블 경로다(bindShaderResource).
-        bindShaderResource( index, slot );
+        // 그래픽스 구조버퍼(인스턴스 t4, 머티리얼 데이터 t5 …)도 텍스처와 같은 슬롯 테이블 경로다.
+        bindSRVView( false, index, slot );
     }
 
     void D3D12RHICommandContext::dispatchComputeNative( uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ )

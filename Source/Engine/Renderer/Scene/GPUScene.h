@@ -268,13 +268,13 @@ namespace sw
         /** @brief 인스턴스 구조 버퍼(핸들 · 크기)입니다 — 프레임 그래프 표가 크기와 함께 등록한다(`FrameBufferTable::registerBuffer`). */
         const RHIStructuredBuffer& getInstanceStructuredBuffer() const { return _instances; }
         /** @brief 인스턴스 SRV 인덱스를 반환합니다. */
-        RHIDescriptorIndex getInstanceSRV() const { return _instances._srv; }
+        RHIBufferSRVIndex getInstanceSRV() const { return _instances._srv; }
         /**
          * @brief 인스턴스 버퍼의 UAV 인덱스입니다. 컴퓨트가 월드 행렬을 **고쳐 쓰는** 경로입니다.
          * @details instance_animation.hlsl 이 인스턴스마다 다른 각속도로 회전을 더한다. 백엔드가 구조 버퍼 UAV 를
          *          만들지 못하면 kInvalidDescriptorIndex 이고, 그러면 애니메이션 패스가 통째로 생략된다(그리기는 그대로).
          */
-        RHIDescriptorIndex getInstanceUAV() const { return _instances._uav; }
+        RHIUnorderedAccessIndex getInstanceUAV() const { return _instances._uav; }
         /** @brief 컬링 슬롯 @p cullViewIndex 의 산출물(간접 인자와 가시 목록)입니다. 뷰 번호 n 의 시점이 2n, 그림자가 2n + 1 이다(`kCullSlotsPerView` — 주 시점이 뷰 0 번). */
         const GPUCullViewResources& getCullView( uint32 cullViewIndex ) const { return _listCullView[cullViewIndex]; }
         uint32                      getCullViewCount() const { return static_cast<uint32>( _listCullView.size() ); }
@@ -284,7 +284,7 @@ namespace sw
          */
         void setCullViewCount( IRHIDevice* pDevice, uint32 count );
         /** @brief 배치 테이블 버퍼의 SRV 를 반환합니다(컬링 컴퓨트 t1, 그래픽스 t9 g_SwBatches). */
-        RHIDescriptorIndex getBatchInfoSRV() const { return _batchInfo._srv; }
+        RHIBufferSRVIndex getBatchInfoSRV() const { return _batchInfo._srv; }
         /** @brief 배치 테이블 버퍼 핸들을 반환합니다. */
         RHIBufferHandle getBatchInfoBuffer() const { return _batchInfo._buffer; }
         /** @brief 인스턴스 슬롯 스트림 정점 버퍼(슬롯 1)를 반환합니다. 0이면 아직 없습니다. */
@@ -345,9 +345,9 @@ namespace sw
         /// @brief 그룹에서 (버퍼, SRV, 원소 수)를 찾는 테이블입니다. 배치 루프가 조회 대신 읽습니다. 프레임마다 다시 채웁니다.
         struct ResolvedGroup
         {
-            RHIBufferHandle    _buffer{ 0 };
-            RHIDescriptorIndex _srv{ kInvalidDescriptorIndex };
-            uint32             _elementCount{ 0 };
+            RHIBufferHandle   _buffer{ 0 };
+            RHIBufferSRVIndex _srv{ kInvalidDescriptorIndex };
+            uint32            _elementCount{ 0 };
         };
         /**
          * @brief 그룹마다 머티리얼 패킹 바이트를 원소 stride 로 이어 붙여 구조 버퍼에 올리고, 배치에 버퍼와 SRV 를 기록합니다(RT).

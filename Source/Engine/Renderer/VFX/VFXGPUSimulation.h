@@ -34,12 +34,12 @@ namespace sw
      */
     struct VFXDepthHistoryInput
     {
-        RHITextureHandle   _texture{ 0 };                   ///< R32 실수 RT · RW 텍스처
-        RHIDescriptorIndex _uav{ kInvalidDescriptorIndex }; ///< RW 텍스처 번호(네이티브는 셰이더가 이 번호로, 에뮬은 슬롯 0 에 건다)
-        uint32             _width{ 0 };
-        uint32             _height{ 0 };
-        float4x4           _viewProj{}; ///< 히스토리를 그린 프레임의 뷰-투영
-        float3             _eye{};      ///< 그 프레임의 눈 위치
+        RHITextureHandle        _texture{ 0 };                   ///< R32 실수 RT · RW 텍스처
+        RHIUnorderedAccessIndex _uav{ kInvalidDescriptorIndex }; ///< RW 텍스처 번호(네이티브는 셰이더가 이 번호로, 에뮬은 슬롯 0 에 건다)
+        uint32                  _width{ 0 };
+        uint32                  _height{ 0 };
+        float4x4                _viewProj{}; ///< 히스토리를 그린 프레임의 뷰-투영
+        float3                  _eye{};      ///< 그 프레임의 눈 위치
     };
 } // namespace sw
 
@@ -48,17 +48,17 @@ namespace sw
     /** @brief `VFXGPUSimulation::prepareFrame` 이 이번 프레임에 받는 렌더러 쪽 입력입니다. */
     struct VFXSimulationFrameInput
     {
-        VFXDepthHistoryInput _depth{};
-        RHIBufferHandle      _instanceBuffer{ 0 }; ///< GPUScene 인스턴스 버퍼(메시 입자가 쓴다)
-        RHIDescriptorIndex   _instanceUAV{ kInvalidDescriptorIndex };
-        RHIBufferHandle      _lightBuffer{ 0 };                    ///< 라이트 버퍼(`GPULightBuffer`) — 파티클 라이트가 GPU 구간에 쓴다
-        RHIDescriptorIndex   _lightUAV{ kInvalidDescriptorIndex }; ///< 라이트 버퍼의 UAV. GPU 구간이 없는 프레임은 invalid 다
-        uint32               _lightBase{ 0 };                      ///< GPU 구간의 첫 라이트 번호(`GPULightBuffer::getGPULightBase`)
-        uint32               _lightSlotCount{ 0 };                 ///< 받은 GPU 구간의 슬롯 수 — 0 이면 이번 프레임에 파티클 라이트를 쓰지 않는다
-        bool                 _bSimulationPipelineReady{ false };   ///< vfx_simulate.hlsl PSO 가 있다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool                 _bMeshPipelineReady{ false };         ///< vfx_mesh_instance.hlsl PSO 가 있다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool                 _bSortPipelineReady{ false };         ///< vfx_particle_sort.hlsl PSO 가 있다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool                 _bNativeBindless{ SW_FALSE };         ///< DX12 · Vulkan 이면 true(RW 텍스처를 번호로 고른다) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        VFXDepthHistoryInput    _depth{};
+        RHIBufferHandle         _instanceBuffer{ 0 }; ///< GPUScene 인스턴스 버퍼(메시 입자가 쓴다)
+        RHIUnorderedAccessIndex _instanceUAV{ kInvalidDescriptorIndex };
+        RHIBufferHandle         _lightBuffer{ 0 };                    ///< 라이트 버퍼(`GPULightBuffer`) — 파티클 라이트가 GPU 구간에 쓴다
+        RHIUnorderedAccessIndex _lightUAV{ kInvalidDescriptorIndex }; ///< 라이트 버퍼의 UAV. GPU 구간이 없는 프레임은 invalid 다
+        uint32                  _lightBase{ 0 };                      ///< GPU 구간의 첫 라이트 번호(`GPULightBuffer::getGPULightBase`)
+        uint32                  _lightSlotCount{ 0 };                 ///< 받은 GPU 구간의 슬롯 수 — 0 이면 이번 프레임에 파티클 라이트를 쓰지 않는다
+        bool                    _bSimulationPipelineReady{ false };   ///< vfx_simulate.hlsl PSO 가 있다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool                    _bMeshPipelineReady{ false };         ///< vfx_mesh_instance.hlsl PSO 가 있다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool                    _bSortPipelineReady{ false };         ///< vfx_particle_sort.hlsl PSO 가 있다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool                    _bNativeBindless{ SW_FALSE };         ///< DX12 · Vulkan 이면 true(RW 텍스처를 번호로 고른다) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw
 
@@ -102,9 +102,9 @@ namespace sw
         /** @brief GPU 방출기 하나를 그릴 자원입니다. */
         struct DrawSource
         {
-            RHIDescriptorIndex _particleSRV{ kInvalidDescriptorIndex }; ///< 렌더 입력(GPUParticle) 구조 버퍼 — t11
-            RHIBufferHandle    _argsBuffer{ 0 };                        ///< 간접 인자(RHIDrawIndirectCommand 가 맨 앞)
-            uint32             _particleCount{ 0 };                     ///< 렌더 입력 버퍼의 원소 수 — 셰이더가 그 밖을 읽지 않는다(particle.hlsl g_SwParticleCount)
+            RHIBufferSRVIndex _particleSRV{ kInvalidDescriptorIndex }; ///< 렌더 입력(GPUParticle) 구조 버퍼 — t11
+            RHIBufferHandle   _argsBuffer{ 0 };                        ///< 간접 인자(RHIDrawIndirectCommand 가 맨 앞)
+            uint32            _particleCount{ 0 };                     ///< 렌더 입력 버퍼의 원소 수 — 셰이더가 그 밖을 읽지 않는다(particle.hlsl g_SwParticleCount)
         };
 
         /** @brief 이번 프레임 GPU 메시 방출기 하나의 되읽기 출처입니다(`VFXGPUMeshReadback` — 자동화 감시 값). */
@@ -164,7 +164,7 @@ namespace sw
         /** @brief 프레임 자원 `InstanceBuffer`(파이프라인 XML — `VFXMeshInstance` 출력)입니다. */
         static RenderGraphBufferUAV getInstanceBufferUAV();
         /** @brief GPU 순서 버퍼(정렬 일이 쓴 입자 번호)의 SRV 입니다. 이번 프레임에 정렬 일이 없으면 무효일 수 있습니다. */
-        RHIDescriptorIndex getOrderSRV() const { return _orderBuffer._srv; }
+        RHIBufferSRVIndex getOrderSRV() const { return _orderBuffer._srv; }
         /** @brief 배치 @p batchIndex 의 정렬 일이 이번 프레임에 모두 기록됩니다 — 아니면 그리기는 순서 없이 그린다(옛 순서 칸을 읽지 않는다). */
         bool isBatchSorted( uint32 batchIndex ) const { return batchIndex < _listBatchSorted.size() && _listBatchSorted[batchIndex] != SW_FALSE; }
         /** @brief 배치 @p batchIndex(`prepareFrame` 에 넘긴 목록의 번호)를 그릴 자원입니다. GPU 배치가 아니거나 준비하지 못했으면 nullptr 입니다. */

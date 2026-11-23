@@ -44,9 +44,9 @@ namespace sw
         /** @brief 엔진 PassCB 값입니다(이름 기반). ShaderParameterBinder 가 리플렉션 오프셋에 기록합니다. */
         PassConstantValues _passValues{};
         /** @brief `g_World` 입니다. 인스턴스 버퍼가 없는 드로우(풀스크린, 픽스처)의 월드 행렬이며, 씬 메시는 인스턴스 버퍼에서 읽습니다. */
-        float4x4           _world{};
-        RHIBufferHandle    _passCb{ 0 };
-        RHIDescriptorIndex _passCbIndex{ kInvalidDescriptorIndex };
+        float4x4          _world{};
+        RHIBufferHandle   _passCb{ 0 };
+        RHIBufferSRVIndex _passCbIndex{ kInvalidDescriptorIndex };
         /** @brief 패스 스코프 이름에서 리소스를 찾는 레지스트리입니다. 패스를 시작할 때마다 reset 합니다.
          *         병렬 기록에서는 패스마다 독립이어야 하므로 FrameRenderer 의 공유 멤버가 아니라 여기에 둡니다. */
         FrameResourceRegistry _resourceRegistry{};

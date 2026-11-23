@@ -49,8 +49,8 @@ namespace sw
         unordered_set<BindlessSiteKey> _uniqueAbsentSite   SW_GUARDED_BY( _mutex );
         unordered_set<BindlessSiteKey> _uniqueStrideSite   SW_GUARDED_BY( _mutex );
 
-        mutable shared_mutex                                       _strideMutex;                  ///< 병렬 기록 스레드가 바인드마다 읽으므로 보고 기록과 잠금을 나눈다
-        unordered_map<RHIDescriptorIndex, uint32> _mapBufferStride SW_GUARDED_BY( _strideMutex ); ///< 구조 버퍼 SRV → 원소 바이트 수
+        mutable shared_mutex                                      _strideMutex;                  ///< 병렬 기록 스레드가 바인드마다 읽으므로 보고 기록과 잠금을 나눈다
+        unordered_map<RHIBufferSRVIndex, uint32> _mapBufferStride SW_GUARDED_BY( _strideMutex ); ///< 구조 버퍼 SRV → 원소 바이트 수
     };
 
     bool BindlessIndexValidator::isEnabled()
@@ -63,24 +63,33 @@ namespace sw
         return RenderDiagnostics::get()._bindlessIndexCheck >= BindlessIndexCheck::TraceAbsent;
     }
 
-    bool BindlessIndexValidator::validate( const BindlessIndexCheckSite& site, RHIBindlessIndexSpace space, RHIDescriptorIndex index,
-                                           const hashed_string& fieldName, uint32 element )
+    bool BindlessIndexCheckSite::validate( RHITextureSRVIndex index, const hashed_string& fieldName, uint32 element ) const
     {
-        if ( site._pDevice == nullptr )
+        return validateInSpace( RHIBindlessIndexSpace::Texture, index, fieldName, element );
+    }
+
+    bool BindlessIndexCheckSite::validate( RHIBufferSRVIndex index, const hashed_string& fieldName, uint32 element ) const
+    {
+        return validateInSpace( RHIBindlessIndexSpace::Buffer, index, fieldName, element );
+    }
+
+    bool BindlessIndexCheckSite::validateInSpace( RHIBindlessIndexSpace space, RHIDescriptorIndex index, const hashed_string& fieldName, uint32 element ) const
+    {
+        if ( _pDevice == nullptr )
             return true;
         if ( index == kInvalidDescriptorIndex )
         {
-            if ( isTracingAbsent() )
-                (void)site._pDevice->getBindlessIndexReportLog().recordAbsent( site._passName, fieldName, element ); // 위치마다 한 번만 남긴다
+            if ( BindlessIndexValidator::isTracingAbsent() )
+                (void)_pDevice->getBindlessIndexReportLog().recordAbsent( _passName, fieldName, element ); // 위치마다 한 번만 남긴다
             return true;
         }
-        if ( site._pDevice->isBindlessIndexLive( space, index ) )
+        if ( _pDevice->isBindlessIndexLive( space, index ) )
             return true;
-        (void)site._pDevice->getBindlessIndexReportLog().report( space, index, site._passName, fieldName, element ); // 같은 위치를 두 번째 본 것이면 이미 로그가 있다
+        (void)_pDevice->getBindlessIndexReportLog().report( space, index, _passName, fieldName, element ); // 같은 위치를 두 번째 본 것이면 이미 로그가 있다
         return false;
     }
 
-    bool BindlessIndexValidator::validateStride( const IRHIDevice* pDevice, const hashed_string& passName, const hashed_string& fieldName, uint32 shaderStride, RHIDescriptorIndex buffer )
+    bool BindlessIndexValidator::validateStride( const IRHIDevice* pDevice, const hashed_string& passName, const hashed_string& fieldName, uint32 shaderStride, RHIBufferSRVIndex buffer )
     {
         if ( pDevice == nullptr || shaderStride == 0 )
             return true;
@@ -140,19 +149,19 @@ namespace sw
         return true;
     }
 
-    void BindlessIndexReportLog::recordBufferStride( RHIDescriptorIndex buffer, uint32 stride )
+    void BindlessIndexReportLog::recordBufferStride( RHIBufferSRVIndex buffer, uint32 stride )
     {
         ScopedLock<shared_mutex> lock{ _pState->_strideMutex };
         _pState->_mapBufferStride[buffer] = stride;
     }
 
-    void BindlessIndexReportLog::removeBufferStride( RHIDescriptorIndex buffer )
+    void BindlessIndexReportLog::removeBufferStride( RHIBufferSRVIndex buffer )
     {
         ScopedLock<shared_mutex> lock{ _pState->_strideMutex };
         _pState->_mapBufferStride.erase( buffer );
     }
 
-    uint32 BindlessIndexReportLog::getBufferStride( RHIDescriptorIndex buffer ) const
+    uint32 BindlessIndexReportLog::getBufferStride( RHIBufferSRVIndex buffer ) const
     {
         ScopedSharedLock<shared_mutex> lock{ _pState->_strideMutex };
         const auto                     it = _pState->_mapBufferStride.find( buffer );

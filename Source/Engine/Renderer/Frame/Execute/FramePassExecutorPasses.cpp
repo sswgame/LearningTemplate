@@ -1118,8 +1118,8 @@ namespace sw
         const bool bNativeBindless = _pDevice != nullptr && _pDevice->supportsNativeBindlessSampling();
         for ( const LensFlareDrawRange& range : sprites.getDrawRanges() )
         {
-            RHIDescriptorIndex arrTextureSRV[shaderslot::kMaterialTextureCount];
-            for ( RHIDescriptorIndex& srv : arrTextureSRV )
+            RHITextureSRVIndex arrTextureSRV[shaderslot::kMaterialTextureCount];
+            for ( RHITextureSRVIndex& srv : arrTextureSRV )
             {
                 srv = kInvalidDescriptorIndex;
             }

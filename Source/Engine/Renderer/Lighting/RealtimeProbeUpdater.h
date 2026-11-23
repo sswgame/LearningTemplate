@@ -159,7 +159,7 @@ namespace sw
          */
         [[nodiscard]] static float32 computeError( const vector<RealtimeProbeRequest>& listRequest, uint32 accumulatedFrames );
         /** @brief 컴퓨트를 기록합니다(라이트 업로드 뒤 · 조명 패스 앞). @p placeholderSRV 는 라이트가 없는 프레임에 t0 에 거는 자리표입니다. */
-        void dispatch( IRHIPassCommandList& cmd, RHIPipelineStateHandle pso, const GPULightBuffer& lightBuffer, RHIDescriptorIndex placeholderSRV );
+        void dispatch( IRHIPassCommandList& cmd, RHIPipelineStateHandle pso, const GPULightBuffer& lightBuffer, RHIBufferSRVIndex placeholderSRV );
         /** @brief 버퍼를 놓습니다. */
         void release( IRHIDevice* pDevice );
 

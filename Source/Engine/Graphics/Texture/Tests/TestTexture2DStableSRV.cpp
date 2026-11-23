@@ -39,12 +39,12 @@ namespace
     public:
         struct Slot
         {
-            RHIDescriptorIndex _index{ kInvalidDescriptorIndex };
+            RHITextureSRVIndex _index{ kInvalidDescriptorIndex };
             RHITextureHandle   _texture{ 0 };
         };
 
         vector<Slot>               _listLive;     ///< 산 칸
-        vector<RHIDescriptorIndex> _listReserved; ///< 예약했고 아직 살리지 않은 번호
+        vector<RHITextureSRVIndex> _listReserved; ///< 예약했고 아직 살리지 않은 번호
         uint32                     _nextIndex{ 1 };
         uint64                     _nextTexture{ 1 }; ///< 다음에 낼 텍스처 핸들의 packed 값
         uint64                     _nextSerial{ 1 };
@@ -52,7 +52,7 @@ namespace
         uint32                     _unregisterCount{ 0 };
 
         /** @brief 번호 @p index 가 가리키는 텍스처입니다(산 칸이 아니면 0). */
-        RHITextureHandle findTexture( RHIDescriptorIndex index ) const
+        RHITextureHandle findTexture( RHITextureSRVIndex index ) const
         {
             for ( const Slot& slot : _listLive )
             {
@@ -66,13 +66,13 @@ namespace
         RHITransferSubmit submitTextureUpload( RHITextureHandle, const RHITextureUploadDesc& ) override { return RHITransferSubmit::accepted( _nextSerial++, kFakeDeviceGeneration ); }
         RHITransferStatus pollTransfer( RHITransferTicket ) override { return _finalStatus; }
 
-        RHIDescriptorIndex registerBindlessTexture( RHITextureHandle texture ) override
+        RHITextureSRVIndex registerBindlessTexture( RHITextureHandle texture ) override
         {
-            const RHIDescriptorIndex index{ _nextIndex++ };
+            const RHITextureSRVIndex index{ _nextIndex++ };
             _listLive.push_back( Slot{ index, texture } );
             return index;
         }
-        bool rebindBindlessTexture( RHIDescriptorIndex index, RHITextureHandle texture ) override
+        bool rebindBindlessTexture( RHITextureSRVIndex index, RHITextureHandle texture ) override
         {
             for ( Slot& slot : _listLive )
             {
@@ -83,13 +83,13 @@ namespace
             }
             return false;
         }
-        RHIDescriptorIndex reserveBindlessTextureIndex() override
+        RHITextureSRVIndex reserveBindlessTextureIndex() override
         {
-            const RHIDescriptorIndex index{ _nextIndex++ };
+            const RHITextureSRVIndex index{ _nextIndex++ };
             _listReserved.push_back( index );
             return index;
         }
-        bool activateReservedBindlessTexture( RHIDescriptorIndex index, RHITextureHandle texture ) override
+        bool activateReservedBindlessTexture( RHITextureSRVIndex index, RHITextureHandle texture ) override
         {
             for ( size_t at = 0; at < _listReserved.size(); ++at )
             {
@@ -101,7 +101,7 @@ namespace
             }
             return false;
         }
-        void unregisterBindlessTexture( RHIDescriptorIndex index ) override
+        void unregisterBindlessTexture( RHITextureSRVIndex index ) override
         {
             for ( size_t at = 0; at < _listLive.size(); ++at )
             {
@@ -113,32 +113,32 @@ namespace
             }
         }
 
-        RHITransferSubmit      submitTextureRegionUpload( RHITextureHandle, const RHITextureRegionUploadDesc& ) override { return RHITransferSubmit::rejected(); }
-        RHITransferSubmit      submitTextureReadback( RHITextureHandle, uint32, uint32, RHITextureMipSpan& ) override { return RHITransferSubmit::rejected(); }
-        bool                   takeTextureReadback( RHITransferTicket, vector<uint8>& ) override { return false; }
-        void                   discardTextureReadback( RHITransferTicket ) override {}
-        RHIPipelineStateHandle createPipelineStateNative( const RHIPipelineStateDesc&, const RHICompiledGraphicsStages& ) override { return 0; }
-        RHIPipelineStateHandle createComputePipelineStateNative( const RHICompiledShaderStage&, string_view ) override { return 0; }
-        RHIBufferHandle        createConstantBuffer( uint32 ) override { return 0; }
-        void                   updateConstantBuffer( RHIBufferHandle, const void*, uint32 ) override {}
-        RHIBufferHandle        createConstantBufferPage( uint32 ) override { return 0; }
-        void                   updateConstantBuffer( const RHIBufferSlice&, const void*, uint32 ) override {}
-        RHIBufferHandle        createStructuredBuffer( uint32, uint32 ) override { return 0; }
-        void                   updateStructuredBufferRegions( RHIBufferHandle, const void*, const RHIBufferCopyRegion*, uint32 ) override {}
-        RHIBufferHandle        createVertexBuffer( const void*, uint32 ) override { return 0; }
-        RHIBufferHandle        createGPUVertexBuffer( uint32 ) override { return 0; }
-        void                   updateGeometryBufferRegions( RHIBufferHandle, const void*, const RHIBufferCopyRegion*, uint32 ) override {}
-        RHIBufferHandle        createIndexBuffer( const void*, uint32 ) override { return 0; }
-        RHIBufferHandle        createReadbackBuffer( uint32, uint32 ) override { return 0; }
-        [[nodiscard]] bool     readReadbackBuffer( RHIBufferHandle, uint32, void* ) override { return false; }
-        RHIFormat              getTextureFormat( RHITextureHandle ) const override { return RHIFormat::Unknown; }
-        bool                   isTextureReadyToSample( RHITextureHandle ) override { return true; }
-        RHIDescriptorIndex     registerBindlessBufferSRV( RHIBufferHandle ) override { return kInvalidDescriptorIndex; }
-        RHIDescriptorIndex     registerBindlessBufferSRV( const RHIBufferSlice& ) override { return kInvalidDescriptorIndex; }
-        void                   unregisterBindlessResource( RHIDescriptorIndex ) override {}
-        RHIDescriptorIndex     registerBindlessBufferUAV( RHIBufferHandle ) override { return kInvalidDescriptorIndex; }
-        RHIDescriptorIndex     registerBindlessTextureUAV( RHITextureHandle ) override { return kInvalidDescriptorIndex; }
-        void                   unregisterBindlessUAV( RHIDescriptorIndex ) override {}
+        RHITransferSubmit       submitTextureRegionUpload( RHITextureHandle, const RHITextureRegionUploadDesc& ) override { return RHITransferSubmit::rejected(); }
+        RHITransferSubmit       submitTextureReadback( RHITextureHandle, uint32, uint32, RHITextureMipSpan& ) override { return RHITransferSubmit::rejected(); }
+        bool                    takeTextureReadback( RHITransferTicket, vector<uint8>& ) override { return false; }
+        void                    discardTextureReadback( RHITransferTicket ) override {}
+        RHIPipelineStateHandle  createPipelineStateNative( const RHIPipelineStateDesc&, const RHICompiledGraphicsStages& ) override { return 0; }
+        RHIPipelineStateHandle  createComputePipelineStateNative( const RHICompiledShaderStage&, string_view ) override { return 0; }
+        RHIBufferHandle         createConstantBuffer( uint32 ) override { return 0; }
+        void                    updateConstantBuffer( RHIBufferHandle, const void*, uint32 ) override {}
+        RHIBufferHandle         createConstantBufferPage( uint32 ) override { return 0; }
+        void                    updateConstantBuffer( const RHIBufferSlice&, const void*, uint32 ) override {}
+        RHIBufferHandle         createStructuredBuffer( uint32, uint32 ) override { return 0; }
+        void                    updateStructuredBufferRegions( RHIBufferHandle, const void*, const RHIBufferCopyRegion*, uint32 ) override {}
+        RHIBufferHandle         createVertexBuffer( const void*, uint32 ) override { return 0; }
+        RHIBufferHandle         createGPUVertexBuffer( uint32 ) override { return 0; }
+        void                    updateGeometryBufferRegions( RHIBufferHandle, const void*, const RHIBufferCopyRegion*, uint32 ) override {}
+        RHIBufferHandle         createIndexBuffer( const void*, uint32 ) override { return 0; }
+        RHIBufferHandle         createReadbackBuffer( uint32, uint32 ) override { return 0; }
+        [[nodiscard]] bool      readReadbackBuffer( RHIBufferHandle, uint32, void* ) override { return false; }
+        RHIFormat               getTextureFormat( RHITextureHandle ) const override { return RHIFormat::Unknown; }
+        bool                    isTextureReadyToSample( RHITextureHandle ) override { return true; }
+        RHIBufferSRVIndex       registerBindlessBufferSRV( RHIBufferHandle ) override { return kInvalidDescriptorIndex; }
+        RHIBufferSRVIndex       registerBindlessBufferSRV( const RHIBufferSlice& ) override { return kInvalidDescriptorIndex; }
+        void                    unregisterBindlessResource( RHIBufferSRVIndex ) override {}
+        RHIUnorderedAccessIndex registerBindlessBufferUAV( RHIBufferHandle ) override { return kInvalidDescriptorIndex; }
+        RHIUnorderedAccessIndex registerBindlessTextureUAV( RHITextureHandle ) override { return kInvalidDescriptorIndex; }
+        void                    unregisterBindlessUAV( RHIUnorderedAccessIndex ) override {}
 
     protected:
         [[nodiscard]] bool destroyBufferNative( RHIBufferHandle ) override { return true; }
@@ -173,7 +173,7 @@ SW_TEST_CASE( Texture2DStableSRVTest, PromotionKeepsSRV )
     Texture2D          texture;
     SW_REQUIRE_TRUE( texture.loadFromImage( &device, "textures/streamed.dds", image, TextureResidency::StreamingBase, 0 ) );
     SW_REQUIRE_FALSE( texture.isFullyResident() );
-    const RHIDescriptorIndex srv     = texture.getSRV();
+    const RHITextureSRVIndex srv     = texture.getSRV();
     const RHITextureHandle   lowMips = texture.getHandle();
     // 올리기 줄은 바이트를 쥐지 않고 밉 범위를 다시 읽는다(MR-2) — 여기서는 그 범위를 이미지에서 잘라 넘긴다.
     const TextureMipLayout layout   = Texture2D::makeMipLayout( image );
@@ -208,7 +208,7 @@ SW_TEST_CASE( Texture2DStableSRVTest, ReservedIndexIsReboundOnUpload )
     test::FakeRHIDevice device;
     device._pResourceFactory             = &factory;
     const RHITextureHandle   placeholder = factory.createTexture2D( RHITextureDesc{} ); // 로드 중 텍스처
-    const RHIDescriptorIndex reserved    = device.reserveBindlessTexture( placeholder );
+    const RHITextureSRVIndex reserved    = device.reserveBindlessTexture( placeholder );
     SW_REQUIRE_TRUE( reserved != kInvalidDescriptorIndex );
     Texture2D texture;
     texture.attachReservedSRV( reserved, &device );
@@ -234,7 +234,7 @@ SW_TEST_CASE( Texture2DStableSRVTest, ResizeKeepsSRV )
     device._pResourceFactory = &factory;
     Texture2D texture;
     SW_REQUIRE_TRUE( texture.createRenderTarget( &device, "rendertarget/resized", kRenderTargetExtent, kRenderTargetExtent, RHIFormat::R8G8B8A8_UNORM ) );
-    const RHIDescriptorIndex srv = texture.getSRV();
+    const RHITextureSRVIndex srv = texture.getSRV();
     Texture2DRetiredResource retired{};
     texture.detachRHIKeepingSRV( &device, retired );
     SW_EXPECT_EQUAL( srv, texture.getStableSRV() ); // 다시 만드는 동안에도 같은 번호다
@@ -257,7 +257,7 @@ SW_TEST_CASE( Texture2DStableSRVTest, FailedUploadKeepsReservedSRV )
     test::FakeRHIDevice device;
     device._pResourceFactory             = &factory;
     const RHITextureHandle   placeholder = factory.createTexture2D( RHITextureDesc{} );
-    const RHIDescriptorIndex reserved    = device.reserveBindlessTexture( placeholder );
+    const RHITextureSRVIndex reserved    = device.reserveBindlessTexture( placeholder );
     SW_REQUIRE_TRUE( reserved != kInvalidDescriptorIndex );
     Texture2D texture;
     texture.attachReservedSRV( reserved, &device );
@@ -284,7 +284,7 @@ SW_TEST_CASE( Texture2DStableSRVTest, DemotionKeepsSRV )
     Texture2D          texture;
     SW_REQUIRE_TRUE( texture.loadFromImage( &device, "textures/demoted.dds", image, TextureResidency::Full, 0 ) );
     SW_REQUIRE_TRUE( texture.isFullyResident() );
-    const RHIDescriptorIndex srv      = texture.getSRV();
+    const RHITextureSRVIndex srv      = texture.getSRV();
     const RHITextureHandle   fullMips = texture.getHandle();
     const TextureMipLayout   layout   = Texture2D::makeMipLayout( image );
     const uint32             target   = kStreamedTextureMipCount - 1u; // 가장 작은 밉만 남긴다
@@ -336,7 +336,7 @@ SW_TEST_CASE( Texture2DStableSRVTest, FirstLoadReadsTailOnly )
     SW_EXPECT_EQUAL( mipCount - tailMip, texture.getMipCount() );
     SW_EXPECT_EQUAL( tailMip, texture.getStreamedMipCount() );
     SW_EXPECT_FALSE( texture.isFullyResident() );
-    const RHIDescriptorIndex srv = texture.getSRV();
+    const RHITextureSRVIndex srv = texture.getSRV();
 
     vector<uint8> topBytes = copyMipRange( 0, mipCount );
     SW_REQUIRE_TRUE( texture.beginUploadMips( &device, layout, 0, topBytes, 0, true ) == Texture2DUploadStep::Submitted );

@@ -111,7 +111,7 @@ namespace sw
         return static_cast<uint32>( _listSlotName.size() - 1 );
     }
 
-    void GPUNanCheck::scan( IRHICommandList& commands, RHIPipelineStateHandle pso, string_view name, RHIDescriptorIndex srv, uint32 width, uint32 height )
+    void GPUNanCheck::scan( IRHICommandList& commands, RHIPipelineStateHandle pso, string_view name, RHITextureSRVIndex srv, uint32 width, uint32 height )
     {
         if ( isActive() == false || pso == 0 || srv == kInvalidDescriptorIndex || width == 0 || height == 0 )
             return;

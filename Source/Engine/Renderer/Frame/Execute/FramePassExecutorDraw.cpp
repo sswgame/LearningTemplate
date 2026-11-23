@@ -608,8 +608,8 @@ namespace sw
         context._drawMaterialCount = binding._materialCount;
     }
 
-    bool FramePassExecutor::bindForDraw( FramePassContext& context, RHIPipelineStateHandle pso, RHIDescriptorIndex materialCb,
-                                         const RHIDescriptorIndex* pMaterialTexSRV )
+    bool FramePassExecutor::bindForDraw( FramePassContext& context, RHIPipelineStateHandle pso, RHIBufferSRVIndex materialCb,
+                                         const RHITextureSRVIndex* pMaterialTexSRV )
     {
         if ( _pDevice == nullptr || context._pCmd == nullptr )
             return false;

@@ -818,14 +818,14 @@ namespace sw
     // ------------------------------------------------------------------------------
     // bindless
     // ------------------------------------------------------------------------------
-    RHIDescriptorIndex WebGPURHIResourceFactory::registerBindlessTexture( RHITextureHandle texture )
+    RHITextureSRVIndex WebGPURHIResourceFactory::registerBindlessTexture( RHITextureHandle texture )
     {
         _pDevice->requireRegistryMutableNow( "WebGPU.registerBindlessTexture" );
         const WebGPUTextureRecord* const pRecord = _pDevice->findTexture( texture );
         if ( pRecord == nullptr || _pDevice->_transferSerials.isTextureReadyToRegister( *pRecord->_pUploadSerials, texture ) == false )
             return kInvalidDescriptorIndex;
         UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
-        return _pDevice->_textureTable.allocate( WebGPUBindlessEntry{ 0, texture } );
+        return RHITextureSRVIndex{ _pDevice->_textureTable.allocate( WebGPUBindlessEntry{ 0, texture } ) };
     }
 
     bool WebGPURHIResourceFactory::isTextureReadyToSample( RHITextureHandle texture )
@@ -835,7 +835,7 @@ namespace sw
         return pRecord != nullptr && _pDevice->_transferSerials.isFirstUploadComplete( *pRecord->_pUploadSerials );
     }
 
-    bool WebGPURHIResourceFactory::rebindBindlessTexture( RHIDescriptorIndex index, RHITextureHandle texture )
+    bool WebGPURHIResourceFactory::rebindBindlessTexture( RHITextureSRVIndex index, RHITextureHandle texture )
     {
         _pDevice->requireRegistryMutableNow( "WebGPU.rebindBindlessTexture" );
         const WebGPUTextureRecord* const pRecord = _pDevice->findTexture( texture );
@@ -846,13 +846,13 @@ namespace sw
         return _pDevice->_textureTable.rebind( index, WebGPUBindlessEntry{ 0, texture } );
     }
 
-    RHIDescriptorIndex WebGPURHIResourceFactory::reserveBindlessTextureIndex()
+    RHITextureSRVIndex WebGPURHIResourceFactory::reserveBindlessTextureIndex()
     {
         UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
-        return _pDevice->_textureTable.reserveIndex();
+        return RHITextureSRVIndex{ _pDevice->_textureTable.reserveIndex() };
     }
 
-    bool WebGPURHIResourceFactory::activateReservedBindlessTexture( RHIDescriptorIndex index, RHITextureHandle texture )
+    bool WebGPURHIResourceFactory::activateReservedBindlessTexture( RHITextureSRVIndex index, RHITextureHandle texture )
     {
         _pDevice->requireRegistryMutableNow( "WebGPU.activateReservedBindlessTexture" );
         const WebGPUTextureRecord* const pRecord = _pDevice->findTexture( texture );
@@ -862,23 +862,23 @@ namespace sw
         return _pDevice->_textureTable.assign( index, WebGPUBindlessEntry{ 0, texture }, RHIBindlessLink::Borrowed ); // 예약한 번호는 받은 쪽의 것이다
     }
 
-    void WebGPURHIResourceFactory::unregisterBindlessTexture( RHIDescriptorIndex index )
+    void WebGPURHIResourceFactory::unregisterBindlessTexture( RHITextureSRVIndex index )
     {
         _pDevice->requireRegistryMutableNow( "WebGPU.unregisterBindlessTexture" );
         UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
         (void)_pDevice->_textureTable.release( index, RHIBindlessReuse::Immediately );
     }
 
-    RHIDescriptorIndex WebGPURHIResourceFactory::registerBindlessBufferSRV( RHIBufferHandle buffer )
+    RHIBufferSRVIndex WebGPURHIResourceFactory::registerBindlessBufferSRV( RHIBufferHandle buffer )
     {
         _pDevice->requireRegistryMutableNow( "WebGPU.registerBindlessBufferSRV" );
         if ( _pDevice->findBuffer( buffer ) == nullptr )
             return kInvalidDescriptorIndex;
         UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
-        return _pDevice->_bufferTable.allocate( WebGPUBindlessEntry{ buffer } );
+        return RHIBufferSRVIndex{ _pDevice->_bufferTable.allocate( WebGPUBindlessEntry{ buffer } ) };
     }
 
-    RHIDescriptorIndex WebGPURHIResourceFactory::registerBindlessBufferSRV( const RHIBufferSlice& slice )
+    RHIBufferSRVIndex WebGPURHIResourceFactory::registerBindlessBufferSRV( const RHIBufferSlice& slice )
     {
         _pDevice->requireRegistryMutableNow( "WebGPU.registerBindlessBufferSRV(slice)" );
         const WebGPUBufferRecord* const pRecord = _pDevice->findBuffer( slice._buffer );
@@ -898,36 +898,36 @@ namespace sw
         entry._sliceOffset = slice._offset;
         entry._sliceSize   = slice._size;
         UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
-        return _pDevice->_bufferTable.allocate( entry );
+        return RHIBufferSRVIndex{ _pDevice->_bufferTable.allocate( entry ) };
     }
 
-    void WebGPURHIResourceFactory::unregisterBindlessResource( RHIDescriptorIndex index )
+    void WebGPURHIResourceFactory::unregisterBindlessResource( RHIBufferSRVIndex index )
     {
         _pDevice->requireRegistryMutableNow( "WebGPU.unregisterBindlessResource" );
         UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
         (void)_pDevice->_bufferTable.release( index, RHIBindlessReuse::Immediately );
     }
 
-    RHIDescriptorIndex WebGPURHIResourceFactory::registerBindlessBufferUAV( RHIBufferHandle buffer )
+    RHIUnorderedAccessIndex WebGPURHIResourceFactory::registerBindlessBufferUAV( RHIBufferHandle buffer )
     {
         _pDevice->requireRegistryMutableNow( "WebGPU.registerBindlessBufferUAV" );
         if ( _pDevice->findBuffer( buffer ) == nullptr )
             return kInvalidDescriptorIndex;
         UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
-        return _pDevice->_uavTable.allocate( WebGPUBindlessEntry{ buffer } );
+        return RHIUnorderedAccessIndex{ _pDevice->_uavTable.allocate( WebGPUBindlessEntry{ buffer } ) };
     }
 
-    RHIDescriptorIndex WebGPURHIResourceFactory::registerBindlessTextureUAV( RHITextureHandle texture )
+    RHIUnorderedAccessIndex WebGPURHIResourceFactory::registerBindlessTextureUAV( RHITextureHandle texture )
     {
         _pDevice->requireRegistryMutableNow( "WebGPU.registerBindlessTextureUAV" );
         const WebGPUTextureRecord* const pRecord = _pDevice->findTexture( texture );
         if ( pRecord == nullptr || pRecord->_desc._bIsUnorderedAccess == SW_FALSE )
             return kInvalidDescriptorIndex;
         UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
-        return _pDevice->_uavTable.allocate( WebGPUBindlessEntry{ 0, texture } );
+        return RHIUnorderedAccessIndex{ _pDevice->_uavTable.allocate( WebGPUBindlessEntry{ 0, texture } ) };
     }
 
-    void WebGPURHIResourceFactory::unregisterBindlessUAV( RHIDescriptorIndex index )
+    void WebGPURHIResourceFactory::unregisterBindlessUAV( RHIUnorderedAccessIndex index )
     {
         _pDevice->requireRegistryMutableNow( "WebGPU.unregisterBindlessUAV" );
         UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };

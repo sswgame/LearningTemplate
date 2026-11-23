@@ -28,9 +28,9 @@ namespace sw
      */
     struct SW_API RHIStructuredBuffer
     {
-        RHIBufferHandle    _buffer{ 0 };
-        RHIDescriptorIndex _srv = kInvalidDescriptorIndex;
-        RHIDescriptorIndex _uav = kInvalidDescriptorIndex;
+        RHIBufferHandle         _buffer{ 0 };
+        RHIBufferSRVIndex       _srv = kInvalidDescriptorIndex;
+        RHIUnorderedAccessIndex _uav = kInvalidDescriptorIndex;
         /// @brief 지금 버퍼가 담을 수 있는 원소 수입니다. 요청이 이보다 크면 다시 만듭니다.
         uint32 _capacityElements{ 0 };
         uint32 _elementSize{ 0 };

@@ -1234,7 +1234,7 @@ namespace sw
         return pRecord != nullptr && _pDevice->_transferSerials.isFirstUploadComplete( pRecord->_transferSerials );
     }
 
-    RHIDescriptorIndex VulkanRHIResourceFactory::registerBindlessTexture( RHITextureHandle texture )
+    RHITextureSRVIndex VulkanRHIResourceFactory::registerBindlessTexture( RHITextureHandle texture )
     {
         _pDevice->requireRegistryMutableNow( "registerBindlessTexture" );
         const bool bCannotRegisterTexture = texture == 0 || _pDevice->hasTextureSet() == false || _pDevice->_defaultSampler == VK_NULL_HANDLE;
@@ -1282,10 +1282,10 @@ namespace sw
             SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.BindlessTextureTableFull", "Bindless texture table full." );
             return kInvalidDescriptorIndex;
         }
-        return descriptorIndex;
+        return RHITextureSRVIndex{ descriptorIndex };
     }
 
-    RHIDescriptorIndex VulkanRHIResourceFactory::registerBindlessBufferSRV( RHIBufferHandle buffer )
+    RHIBufferSRVIndex VulkanRHIResourceFactory::registerBindlessBufferSRV( RHIBufferHandle buffer )
     {
         _pDevice->requireRegistryMutableNow( "registerBindlessBufferSRV" );
         if ( _pDevice->resolveAllocatedBuffer( buffer ) == nullptr )
@@ -1301,10 +1301,10 @@ namespace sw
             return kInvalidDescriptorIndex;
         }
         _pDevice->publishBufferReadSlot( index, false, buffer );
-        return index;
+        return RHIBufferSRVIndex{ index };
     }
 
-    RHIDescriptorIndex VulkanRHIResourceFactory::registerBindlessBufferSRV( const RHIBufferSlice& slice )
+    RHIBufferSRVIndex VulkanRHIResourceFactory::registerBindlessBufferSRV( const RHIBufferSlice& slice )
     {
         _pDevice->requireRegistryMutableNow( "registerBindlessBufferSRV(slice)" );
         const VulkanRHIDevice::VulkanBufferRecord* const pRecord = _pDevice->resolveAllocatedBuffer( slice._buffer );
@@ -1328,10 +1328,10 @@ namespace sw
         }
         // 슬롯 세트를 쓰는 순간(setSlot)에 프레임 칸 오프셋 + 구간 오프셋, range = 구간 크기로 푼다.
         _pDevice->publishBufferReadSlot( index, false, slice._buffer, slice._offset, slice._size );
-        return index;
+        return RHIBufferSRVIndex{ index };
     }
 
-    void VulkanRHIResourceFactory::unregisterBindlessResource( RHIDescriptorIndex index )
+    void VulkanRHIResourceFactory::unregisterBindlessResource( RHIBufferSRVIndex index )
     {
         _pDevice->requireRegistryMutableNow( "unregisterBindlessResource" );
         UniqueLock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
@@ -1363,7 +1363,7 @@ namespace sw
                                                    _pDevice->_frameFenceRing.getRecordingSerial() );
     }
 
-    bool VulkanRHIResourceFactory::rebindBindlessTexture( RHIDescriptorIndex index, RHITextureHandle texture )
+    bool VulkanRHIResourceFactory::rebindBindlessTexture( RHITextureSRVIndex index, RHITextureHandle texture )
     {
         _pDevice->requireRegistryMutableNow( "rebindBindlessTexture" );
         VulkanRHIDevice::VulkanTextureRecord* const pResolved = texture != 0 ? _pDevice->resolveTexture( texture ) : nullptr;
@@ -1382,14 +1382,14 @@ namespace sw
         return true;
     }
 
-    RHIDescriptorIndex VulkanRHIResourceFactory::reserveBindlessTextureIndex()
+    RHITextureSRVIndex VulkanRHIResourceFactory::reserveBindlessTextureIndex()
     {
         // 번호 발급기만 건드린다 — 세트 원소는 쓰지 않는다(활성화가 렌더 스레드에서 쓴다). 어느 스레드든.
         UniqueLock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
-        return _pDevice->_textureRegistry.reserveIndex();
+        return RHITextureSRVIndex{ _pDevice->_textureRegistry.reserveIndex() };
     }
 
-    bool VulkanRHIResourceFactory::activateReservedBindlessTexture( RHIDescriptorIndex index, RHITextureHandle texture )
+    bool VulkanRHIResourceFactory::activateReservedBindlessTexture( RHITextureSRVIndex index, RHITextureHandle texture )
     {
         _pDevice->requireRegistryMutableNow( "activateReservedBindlessTexture" );
         VulkanRHIDevice::VulkanTextureRecord* const pResolved = texture != 0 ? _pDevice->resolveTexture( texture ) : nullptr;
@@ -1408,7 +1408,7 @@ namespace sw
         return _pDevice->_textureRegistry.assign( index, texture, RHIBindlessLink::Borrowed ); // 예약한 번호는 받은 쪽(텍스처 캐시)의 것이다
     }
 
-    void VulkanRHIResourceFactory::unregisterBindlessTexture( RHIDescriptorIndex index )
+    void VulkanRHIResourceFactory::unregisterBindlessTexture( RHITextureSRVIndex index )
     {
         _pDevice->requireRegistryMutableNow( "unregisterBindlessTexture" );
         if ( index == kInvalidDescriptorIndex )
@@ -1438,7 +1438,7 @@ namespace sw
                                                    _pDevice->_frameFenceRing.getRecordingSerial() );
     }
 
-    RHIDescriptorIndex VulkanRHIResourceFactory::registerBindlessBufferUAV( RHIBufferHandle buffer )
+    RHIUnorderedAccessIndex VulkanRHIResourceFactory::registerBindlessBufferUAV( RHIBufferHandle buffer )
     {
         _pDevice->requireRegistryMutableNow( "registerBindlessBufferUAV" );
         if ( _pDevice->resolveAllocatedBuffer( buffer ) == nullptr )
@@ -1453,10 +1453,10 @@ namespace sw
             return kInvalidDescriptorIndex;
         }
         _pDevice->publishBufferReadSlot( index, true, buffer );
-        return index;
+        return RHIUnorderedAccessIndex{ index };
     }
 
-    RHIDescriptorIndex VulkanRHIResourceFactory::registerBindlessTextureUAV( RHITextureHandle texture )
+    RHIUnorderedAccessIndex VulkanRHIResourceFactory::registerBindlessTextureUAV( RHITextureHandle texture )
     {
         _pDevice->requireRegistryMutableNow( "registerBindlessTextureUAV" );
         if ( texture == 0 || _pDevice->hasTextureSet() == false )
@@ -1482,10 +1482,10 @@ namespace sw
         } );
         if ( index == kInvalidDescriptorIndex )
             SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.RWTextureArrayFull", "The RW texture array (%#) is full.", _pDevice->kBindlessStorageImageCount );
-        return index;
+        return RHIUnorderedAccessIndex{ index };
     }
 
-    void VulkanRHIResourceFactory::unregisterBindlessUAV( RHIDescriptorIndex index )
+    void VulkanRHIResourceFactory::unregisterBindlessUAV( RHIUnorderedAccessIndex index )
     {
         _pDevice->requireRegistryMutableNow( "unregisterBindlessUAV" );
         UniqueLock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
