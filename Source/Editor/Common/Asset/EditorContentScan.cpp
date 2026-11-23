@@ -3,8 +3,10 @@
 #include "Editor/Common/Asset/EditorContentScan.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/Container/unordered_map.h"
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
+#include "Core/Log/Logger.h"
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Asset/AssetDatabase.h"
@@ -24,6 +26,38 @@ namespace sw::editor
             {
                 static const AbsolutePath s_leftoverFolder = ProcessRoots::get()._content.join( AssetPaths::kScratchDomain );
                 return FileUtil::isPathAtOrUnderRoot( s_leftoverFolder.str(), path );
+            }
+
+            /** @brief 폴더 하나를 하위까지 훑어 목록의 파일을 @p outListFile 에 더합니다. 폴더가 없으면 false 입니다. */
+            [[nodiscard]] static bool collectFolderFiles( string_view folder, vector<EditorContentFile>& outListFile, const StopToken& stopToken )
+            {
+                const AbsolutePath folderPath = FileUtil::toDiskPath( folder );
+                if ( FileUtil::isDirectory( folderPath ) == false )
+                    return false;
+                const size_t                     firstFile = outListFile.size();
+                unordered_map<string, FileStamp> mapSidecarStamp; // 키: 원본의 디스크 경로
+                auto                             collectEntry = [&outListFile, &mapSidecarStamp, &stopToken]( const DirectoryEntry& entry )
+                {
+                    if ( stopToken.isStopRequested() )
+                        return false;
+                    if ( entry._bDirectory || isLeftoverScratch( entry._path ) )
+                        return true;
+                    if ( EditorContentScan::isListedFile( entry._path ) )
+                        outListFile.push_back( EditorContentFile{ string( entry._path ), entry._fileStamp, {} } );
+                    else
+                        mapSidecarStamp.emplace( string( entry._path.substr( 0, entry._path.size() - AssetMeta::kExtension.size() ) ), entry._fileStamp );
+                    return true;
+                };
+                const bool bListed = FileUtil::forEachDirectoryEntry( folderPath, true, collectEntry );
+                if ( bListed == false )
+                    SW_LOG_WARNING_ID( "EditorContentScan.FolderUnreadable", "Content folder '%#' could not be walked - the list is incomplete", folder );
+                for ( size_t index = firstFile; index < outListFile.size(); ++index )
+                {
+                    const auto itSidecar = mapSidecarStamp.find( outListFile[index]._path );
+                    if ( itSidecar != mapSidecarStamp.end() )
+                        outListFile[index]._sidecarStamp = itSidecar->second;
+                }
+                return bListed;
             }
         };
     } // namespace
@@ -58,15 +92,11 @@ namespace sw::editor
         return bListed;
     }
 
-    bool EditorContentScan::collectTreeFiles( string_view contentRoot, string_view scratchFolder, string_view extension, vector<string>& outListFilePath, const StopToken& stopToken )
+    bool EditorContentScan::collectTreeFiles( string_view contentRoot, string_view scratchFolder, vector<EditorContentFile>& outListFile, const StopToken& stopToken )
     {
-        bool bListed = contentRoot.empty() || collectFiles( contentRoot, extension, outListFilePath, true, stopToken );
+        bool bListed = contentRoot.empty() || EditorContentScanInternal::collectFolderFiles( contentRoot, outListFile, stopToken );
         if ( scratchFolder.empty() == false && FileUtil::isDirectory( FileUtil::toDiskPath( scratchFolder ) ) )
-        {
-            vector<string> listScratchFile;
-            bListed = collectFiles( scratchFolder, extension, listScratchFile, true, stopToken ) && bListed;
-            outListFilePath.insert( outListFilePath.end(), listScratchFile.begin(), listScratchFile.end() );
-        }
+            bListed = EditorContentScanInternal::collectFolderFiles( scratchFolder, outListFile, stopToken ) && bListed;
         return bListed;
     }
 } // namespace sw::editor

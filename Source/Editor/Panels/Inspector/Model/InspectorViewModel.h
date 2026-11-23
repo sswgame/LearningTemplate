@@ -204,7 +204,7 @@ namespace sw::editor
         InspectorFavorites      _favorites;
         InspectorFavorites      _actionFavorites; ///< 메서드 액션 즐겨찾기(프로퍼티 즐겨찾기와 다른 파일)
         InspectorImportSettings _importSettings;  ///< 오브젝트를 고르지 않았을 때 고른 임포트 원본의 설정
-        unique_ptr<MultiEdit>   _pMultiEdit;      ///< 다중 선택의 공통 컴포넌트(gather 마다 다시 모은다)
+        unique_ptr<MultiEdit>   _pMultiEdit;      ///< 다중 선택의 공통 컴포넌트(선택 · 씬 구조가 바뀌면 다시 모은다)
         EditorFileCollectJob    _presetJob;
         vector<string>          _listPresetFile;
         uint64                  _lockedObjectID;        ///< 자물쇠로 잠근 오브젝트. 0 이면 선택을 따라간다

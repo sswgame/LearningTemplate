@@ -6,6 +6,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Asset/AssetDatabase.h"
+#include "Engine/Content/AssetScanCache.h"
 
 using namespace sw;
 
@@ -367,4 +368,77 @@ SW_TEST_CASE( AssetMetaTest, UnknownAttributeIsStillAnError )
                                      "<AssetImportOverride _key=\"animationCodec\" _value=\"raw\" _note=\"x\"/></_listImportOverride></AssetMeta>",
                                      "inner.meta" )
                          .has_value() );
+}
+
+/** @brief [AssetDatabaseTest] 훑기 캐시는 크기 · 시각이 그대로인 파일을 열지 않고, 시각이 바뀐 파일 · 사라진 파일은 다시 본다 */
+SW_TEST_CASE( AssetDatabaseTest, ScanCacheReopensOnlyChangedFiles )
+{
+    const AssetIdentityRules rules      = AssetDatabaseTestUtil::makeRules();
+    const AbsolutePath       root       = sw::test::makeScratchPath( "content" );
+    const AbsolutePath       cachePath  = sw::test::makeScratchPath( "scan.bin" );
+    const AbsolutePath       prefabPath = root.join( "common/prefabs/bow.prefab.xml" );
+    const AbsolutePath       gonePath   = root.join( "common/prefabs/gone.prefab.xml" );
+    const AssetGUID          first      = AssetGUID::create();
+    const AssetGUID          second     = AssetGUID::create();
+    const AssetGUID          gone       = AssetGUID::create();
+    const int64              stable     = FileUtil::getCurrentFileWriteTime() - 3600 * FileUtil::kFileTimeTicksPerSecond;
+    const auto               write      = []( const AbsolutePath& path, const AssetGUID& guid, int64 ticks )
+    {
+        SW_REQUIRE_TRUE( FileUtil::ensureParentDirectoryExists( path ) && FileUtil::writeTextFile( path, AssetDatabaseTestUtil::makeHeaderText( guid ) ) );
+        SW_REQUIRE_TRUE( FileUtil::setFileWriteTime( path, ticks ) );
+    };
+    const auto scan = [&rules, &root, &cachePath]()
+    {
+        AssetScanCache cache{ AssetDatabase::kScanPayloadVersion };
+        SW_EXPECT_TRUE( cache.load( cachePath ).has_value() );
+        vector<AssetIdentityIssue> listIssue;
+        AssetDatabase              database = AssetDatabase::scan( root.str(), rules, listIssue, &cache );
+        SW_EXPECT_TRUE( listIssue.empty() );
+        SW_EXPECT_TRUE( cache.save( cachePath ).has_value() );
+        return database;
+    };
+    write( prefabPath, first, stable );
+    write( gonePath, gone, stable );
+    SW_EXPECT_EQUAL( size_t{ 2 }, scan().getCount() );
+
+    write( prefabPath, second, stable ); // 크기 · 시각이 같다 — 열지 않았으니 앞 정체성이 보인다
+    SW_REQUIRE_TRUE( FileUtil::removeFile( gonePath ) );
+    const AssetDatabase cached = scan();
+    SW_EXPECT_EQUAL( size_t{ 1 }, cached.getCount() );
+    SW_EXPECT_TRUE( cached.findPath( first ).has_value() );
+
+    write( prefabPath, second, stable + FileUtil::kFileTimeTicksPerSecond );
+    SW_EXPECT_TRUE( scan().findPath( second ).has_value() );
+}
+
+/** @brief [AssetScanCacheTest] 막 쓴 파일은 캐시에 두지 않고, 다른 판은 빈 캐시, 깨진 파일은 오류다 */
+SW_TEST_CASE( AssetScanCacheTest, KeepsStableRowsOfItsOwnVersion )
+{
+    const AbsolutePath path = sw::test::makeScratchPath( "cache.bin" );
+    const FileStamp    stable{ 4u, static_cast<uint64>( FileUtil::getCurrentFileWriteTime() - 3600 * FileUtil::kFileTimeTicksPerSecond ) };
+    const FileStamp    fresh{ 4u, static_cast<uint64>( FileUtil::getCurrentFileWriteTime() ) };
+    {
+        AssetScanCache cache{ 1u };
+        cache.record( "a.xml", stable, { uint8{ 7 } } );
+        cache.record( "b.xml", fresh, { uint8{ 8 } } );
+        SW_EXPECT_TRUE( cache.find( "b.xml", fresh ) == nullptr );
+        SW_REQUIRE_TRUE( cache.save( path ).has_value() );
+    }
+    AssetScanCache sameVersion{ 1u };
+    SW_REQUIRE_TRUE( sameVersion.load( path ).has_value() );
+    const vector<uint8>* pPayload = sameVersion.find( "a.xml", stable );
+    SW_REQUIRE_TRUE( pPayload != nullptr );
+    SW_EXPECT_TRUE( *pPayload == ( vector<uint8>{ uint8{ 7 } } ) );
+    SW_EXPECT_TRUE( sameVersion.find( "a.xml", fresh ) == nullptr );
+
+    AssetScanCache otherVersion{ 2u };
+    SW_EXPECT_TRUE( otherVersion.load( path ).has_value() );
+    SW_EXPECT_TRUE( otherVersion.find( "a.xml", stable ) == nullptr );
+
+    vector<uint8> bytes;
+    SW_REQUIRE_TRUE( FileUtil::readFile( path, bytes ) );
+    bytes.back() ^= uint8{ 0xFF };
+    SW_REQUIRE_TRUE( FileUtil::writeFile( path, bytes.data(), bytes.size() ) );
+    SW_EXPECT_FALSE( sameVersion.load( path ).has_value() );
+    SW_EXPECT_TRUE( sameVersion.find( "a.xml", stable ) == nullptr );
 }

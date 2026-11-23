@@ -93,3 +93,19 @@ SW_TEST_CASE( AutomationPerBackendTest, BackendSplitTakesIndependentOrAll )
     SW_EXPECT_FALSE( sw::AutomationPerBackend::parseBackendSplit( "" ).has_value() );
     SW_EXPECT_FALSE( sw::AutomationPerBackend::parseBackendSplit( "true" ).has_value() );
 }
+
+/**
+ * @brief [AutomationPerBackendTest] 나누면 렌더러 감시 값(`Render.*`)을 보는 시나리오는 모두에게, CPU 값만 보는 시나리오는 하나에게 간다
+ */
+SW_TEST_CASE( AutomationPerBackendTest, IndependentSplitKeepsRendererWatchesOnEveryBackend )
+{
+    sw::AutomationPerBackendOptions options;
+    options._listBackend                      = { "dx11", "dx12" };
+    options._scenarioPath                     = "engine/automation/isolation.scenario.xml,engine/automation/windowpresent.scenario.xml";
+    options._split                            = sw::AutomationBackendSplit::Independent;
+    options._splitOffset                      = 1;
+    const sw::vector<sw::string> listAssigned = sw::AutomationPerBackend::assignScenarios( options );
+    SW_REQUIRE_EQUAL( size_t{ 2 }, listAssigned.size() );
+    SW_EXPECT_EQUAL( sw::string( "engine/automation/windowpresent.scenario.xml" ), listAssigned[0] );
+    SW_EXPECT_EQUAL( options._scenarioPath, listAssigned[1] );
+}

@@ -12,6 +12,7 @@
 
 #include "Engine/Asset/AssetDatabase.h"
 #include "Engine/Content/AssetRegistry.h"
+#include "Engine/Content/AssetScanCache.h"
 
 using namespace sw;
 using namespace sw::editor;
@@ -230,4 +231,52 @@ SW_TEST_CASE( EditorAssetIndexTest, CopiedIdentityDoesNotLoseTheOriginal )
     vector<EditorAssetReference> listDependency;
     index.findDependencies( "game/a/map.scene.xml", listDependency );
     SW_EXPECT_EQUAL( size_t{ 1 }, listDependency.size() );
+}
+
+/**
+ * @brief [EditorAssetIndexTest] 훑기 캐시는 도장이 그대로인 파일의 참조 · 정체성을 열지 않고 내고, 곁 서술만 바뀌어도 원본의 정체성을 다시 읽는다
+ */
+SW_TEST_CASE( EditorAssetIndexTest, ScanCacheReopensOnlyChangedFiles )
+{
+    using Internal               = EditorAssetIndexTestInternal;
+    const AbsolutePath root      = sw::test::makeScratchPath( "cached" );
+    const AbsolutePath cachePath = sw::test::makeScratchPath( "cached.bin" );
+    const string       sceneID   = "game/a/scene.scene.xml";
+    const string       spriteID  = "game/a/now.png";
+    const AssetGUID    first     = AssetGUID::create();
+    const AssetGUID    second    = AssetGUID::create();
+    const int64        stable    = FileUtil::getCurrentFileWriteTime() - 3600 * FileUtil::kFileTimeTicksPerSecond;
+    const auto         write     = [&root]( string_view assetID, string_view text, int64 ticks )
+    {
+        Internal::write( root.str(), assetID, text );
+        SW_REQUIRE_TRUE( FileUtil::setFileWriteTime( root.join( assetID ), ticks ) );
+    };
+    const auto scan = [&root, &cachePath]()
+    {
+        AssetScanCache cache{ EditorAssetIndex::kScanPayloadVersion };
+        SW_EXPECT_TRUE( cache.load( cachePath ).has_value() );
+        EditorAssetIndexData data{};
+        EditorAssetIndex::scan( root.str(), {}, data, nullptr, {}, &cache );
+        SW_EXPECT_TRUE( cache.save( cachePath ).has_value() );
+        EditorAssetIndex index;
+        index.assign( std::move( data ) );
+        return index;
+    };
+    const string_view sceneText = "<Scene>\n  <Sprite _texture=\"game/a/now.png\"/>\n</Scene>\n";
+    const string_view otherText = "<Scene>\n  <Sprite _texture=\"game/a/new.png\"/>\n</Scene>\n";
+    write( sceneID, sceneText, stable );
+    write( spriteID, "png", stable );
+    write( AssetMeta::makePath( spriteID ), AssetMeta::makeText( spriteID, first ), stable );
+    SW_EXPECT_EQUAL( size_t{ 1 }, Internal::findReferrerIDs( scan(), spriteID ).size() );
+
+    write( sceneID, otherText, stable ); // 크기 · 시각이 같다 — 열지 않았으니 앞 참조가 보인다
+    const EditorAssetIndex cached = scan();
+    SW_EXPECT_EQUAL( size_t{ 1 }, Internal::findReferrerIDs( cached, spriteID ).size() );
+    SW_EXPECT_TRUE( cached.findGUID( spriteID ) == optional<AssetGUID>{ first } );
+
+    write( sceneID, otherText, stable + FileUtil::kFileTimeTicksPerSecond );
+    write( AssetMeta::makePath( spriteID ), AssetMeta::makeText( spriteID, second ), stable + FileUtil::kFileTimeTicksPerSecond );
+    const EditorAssetIndex changed = scan();
+    SW_EXPECT_TRUE( Internal::findReferrerIDs( changed, spriteID ).empty() );
+    SW_EXPECT_TRUE( changed.findGUID( spriteID ) == optional<AssetGUID>{ second } );
 }

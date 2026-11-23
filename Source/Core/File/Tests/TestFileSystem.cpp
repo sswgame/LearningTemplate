@@ -67,6 +67,32 @@ SW_TEST_CASE( FileSystemTest, WriteTimeRoundTrips )
     SW_EXPECT_EQUAL( ticks / FileUtil::kFileTimeTicksPerSecond, readTicks / FileUtil::kFileTimeTicksPerSecond );
 }
 
+// 순회가 준 도장은 파일에 물은 도장과 같다 — 트리 훑기의 캐시(`AssetScanCache`)가 파일마다 다시 묻지 않고 이 값으로 바뀐 파일을 가린다.
+SW_TEST_CASE( FileSystemTest, DirectoryEntryCarriesTheFileStamp )
+{
+    const AbsolutePath root = test::makeScratchPath( "walkstamp" );
+    const AbsolutePath file = root.join( "sub/stamp.txt" );
+    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( root.join( "sub" ) ) && FileUtil::writeTextFile( file, "stamp" ) );
+    SW_REQUIRE_TRUE( FileUtil::setFileWriteTime( file, FileUtil::getCurrentFileWriteTime() - 3600 * FileUtil::kFileTimeTicksPerSecond ) );
+    FileStamp expected{};
+    SW_REQUIRE_TRUE( FileUtil::getFileStamp( file, expected ) );
+
+    uint32     fileCount = 0;
+    const bool bWalked   = FileUtil::forEachDirectoryEntry( root, true, [&fileCount, &expected]( const DirectoryEntry& entry )
+      {
+        if ( entry._bDirectory )
+        {
+            SW_EXPECT_TRUE( entry._fileStamp == FileStamp{} );
+            return true;
+        }
+        ++fileCount;
+        SW_EXPECT_TRUE( entry._fileStamp == expected );
+        return true;
+    } );
+    SW_EXPECT_TRUE( bWalked );
+    SW_EXPECT_EQUAL( 1u, fileCount );
+}
+
 SW_TEST_CASE( FileSystemTest, RelativePathIsTextual )
 {
     const AbsolutePath root = test::makeScratchPath( "rel" );

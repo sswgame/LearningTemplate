@@ -1744,6 +1744,7 @@
 		       text="서버의 계층을 다시 읽습니다(scene.tree). 이름을 누르면 그 컴포넌트 값을 읽습니다(object.dump) - 서버가 일시 정지 중이어도 됩니다" />
 		<entry source="Read this client's state hash history (the latest ticks it recorded under the server tick numbers)"
 		       text="이 클라이언트의 상태 해시 기록을 읽습니다(서버 틱 번호로 기록한 최근 틱)" />
+		<entry source="Reading modules..." text="모듈을 읽는 중..." />
 		<entry source="Reading the buffer..." text="버퍼를 읽는 중..." />
 		<entry source="Reading the target..." text="타깃을 읽는 중..." />
 		<entry source="Ready to restore" text="되살릴 수 있음" />
