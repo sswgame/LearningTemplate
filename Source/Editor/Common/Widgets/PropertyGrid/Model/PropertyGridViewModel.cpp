@@ -518,13 +518,14 @@ namespace sw::editor
                 row._markName         = type._name.c_str();
                 row._markName += ".";
                 row._markName += prop._name.c_str();
-                row._bMixed          = isMixed( prop ) ? SW_TRUE : SW_FALSE;
-                row._favoriteKey     = item._pDisplay->_favoriteKey; // 묶음을 지을 때 만든 키
-                row._bFavoriteTarget = bFavoriteTarget ? SW_TRUE : SW_FALSE;
-                row._bFavorite       = ( bFavoriteTarget && isFavorite( row._favoriteKey ) ) ? SW_TRUE : SW_FALSE;
-                row._bModified       = EditorDefaultObjects::isDefaultValue( prop, instance, defaultInstance ) ? SW_FALSE : SW_TRUE;
-                row._bCanReset       = ( defaultInstance.get() != nullptr || prop._metadata->_defaultValue.empty() == false ) ? SW_TRUE : SW_FALSE;
-                row._bTransient      = prop._metadata->_bTransient == SW_TRUE ? SW_TRUE : SW_FALSE;
+                row._bMixed            = isMixed( prop ) ? SW_TRUE : SW_FALSE;
+                row._favoriteKey       = item._pDisplay->_favoriteKey; // 묶음을 지을 때 만든 키
+                row._bFavoriteTarget   = bFavoriteTarget ? SW_TRUE : SW_FALSE;
+                row._bFavorite         = ( bFavoriteTarget && isFavorite( row._favoriteKey ) ) ? SW_TRUE : SW_FALSE;
+                row._bModified         = EditorDefaultObjects::isDefaultValue( prop, instance, defaultInstance ) ? SW_FALSE : SW_TRUE;
+                const bool bHasDefault = defaultInstance.get() != nullptr || prop._metadata->_defaultValue.empty() == false;
+                row._bCanReset         = ( bHasDefault && prop._bIsContainer == SW_FALSE ) ? SW_TRUE : SW_FALSE; // 되돌리기는 값 글을 넣는 편집이라 컨테이너에는 길이 없다(`PropertyEditKind::SetText`)
+                row._bTransient        = prop._metadata->_bTransient == SW_TRUE ? SW_TRUE : SW_FALSE;
                 // 타입 핸들은 선택기만이 입력 길이다. 글로 붙이면 대상 타입을 확인하지 않은 값이 들어간다.
                 row._bPasteAllowed = prop._handleTargetTypeName.empty() ? SW_TRUE : SW_FALSE;
             }
