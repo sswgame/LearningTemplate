@@ -561,6 +561,9 @@ SW_TEST_CASE( ReflectionTypeInfoTest, DynamicMethodInvoke )
     sw::FunctionInfo funcInfo;
     funcInfo._name     = "addScore";
     funcInfo._hashName = sw::hashed_string( "addScore" );
+    // 인자 타입의 갈래는 컴파일 때 정해진다 — 원격 호출 · 이벤트 배선이 부를 때마다 이름으로 찾지 않는다.
+    static_assert( sw::ReflectTypeOpsOf<int32>::kOps._builtinIndex == sw::ReflectBuiltinIndex::kint32 && sw::ReflectTypeOpsOf<int32>::kOps._bEnum == SW_FALSE );
+    static_assert( sw::ReflectTypeOpsOf<sw::ReflectBuiltinClass>::kOps._builtinIndex == sw::ReflectBuiltinIndex::kNone && sw::ReflectTypeOpsOf<sw::ReflectBuiltinClass>::kOps._bEnum == SW_TRUE );
     funcInfo._listParameter.push_back( sw::FunctionParameterInfo( "delta", "int32", {}, &sw::ReflectTypeOpsOf<int32>::kOps ) );
     funcInfo._invoker = SW_DELEGATE_LAMBDA( sw::Delegate<sw::TaskValue( void*, const sw::TaskArgs& )>, []( void* pObjPtr, const sw::TaskArgs& args ) -> sw::TaskValue
     {

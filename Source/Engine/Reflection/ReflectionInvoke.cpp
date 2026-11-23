@@ -42,12 +42,10 @@ namespace sw
             {
                 if ( from._pType == nullptr || to._pType == nullptr )
                     return false;
-                const hashed_string fromName = from._pType->_pGetTypeName();
-                const hashed_string toName   = to._pType->_pGetTypeName();
-                if ( fromName == toName )
+                if ( from._pType->_pGetTypeName() == to._pType->_pGetTypeName() )
                     return true;
-                const ReflectBuiltinIndex fromBuiltin = ReflectedValueUtil::findBuiltinIndex( fromName );
-                const ReflectBuiltinIndex toBuiltin   = ReflectedValueUtil::findBuiltinIndex( toName );
+                const ReflectBuiltinIndex fromBuiltin = from._pType->_builtinIndex;
+                const ReflectBuiltinIndex toBuiltin   = to._pType->_builtinIndex;
                 if ( fromBuiltin == ReflectBuiltinIndex::kNone || toBuiltin == ReflectBuiltinIndex::kNone )
                     return false; // 이름이 다른 열거형 · 구조체끼리는 넘기지 않는다
                 if ( toBuiltin == ReflectBuiltinIndex::kstring )

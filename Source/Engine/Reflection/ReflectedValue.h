@@ -321,7 +321,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 타입 하나의 이름과 값 변환입니다. 함수 인자 · 반환 · 이벤트 인자의 자리마다 하나를 가리킵니다. */
+    /** @brief 타입 하나의 이름 · 갈래와 값 변환입니다. 함수 인자 · 반환 · 이벤트 인자의 자리마다 하나를 가리킵니다. */
     struct ReflectTypeOps
     {
         /** @brief 정규 이름(`getReflectTypeName<T>`)입니다. */
@@ -332,6 +332,9 @@ namespace sw
          * @return 바꿀 수 없으면 false
          */
         bool ( *_pConvert )( const ReflectedValue& in, TaskValue& outValue );
+        /** @brief 내장 타입이면 표 안 자리입니다(아니면 `kNone`). 컴파일 때 정해져 부를 때마다 이름으로 찾지 않는다(언리얼 `FProperty` 가 형식을 스스로 아는 자리). */
+        ReflectBuiltinIndex _builtinIndex;
+        uint8               _bEnum : 1; ///< C++ 열거형입니다. 등록(`ENUM()`)했는지는 `TypeRegistry` 가 안다
     };
 } // namespace sw
 
@@ -372,6 +375,6 @@ namespace sw
                 return false;
         }
 
-        static constexpr ReflectTypeOps kOps{ &getReflectTypeName<T>, &convert };
+        static constexpr ReflectTypeOps kOps{ &getReflectTypeName<T>, &convert, ReflectBuiltinOf<T>::kIndex, std::is_enum_v<T> ? SW_TRUE : SW_FALSE };
     };
 } // namespace sw
