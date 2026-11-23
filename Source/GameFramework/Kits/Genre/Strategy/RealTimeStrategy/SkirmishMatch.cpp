@@ -1,0 +1,360 @@
+#include "pch.h"
+
+#include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/SkirmishMatch.h"
+
+#include "Core/Hash/HashUtil.h"
+#include "Core/Math/MathUtil.h"
+
+#include "Engine/Reflection/TypeFqn.h"
+#include "Engine/Serialization/Format/Archive.h"
+
+#include "GameFramework/Runtime/Character/AI/BehaviorTreeAsset.h"
+
+namespace sw
+{
+    namespace
+    {
+        struct SkirmishMatchInternal
+        {
+            /** @brief 성향 @p style(씬 데이터)과 판의 유닛 id 로 AI 설정을 만듭니다. 생각 주기 · 방어 반경은 키트의 값이다. */
+            static RTSCommanderAISettings makeAISettings( const SkirmishAIStyle& style, const SkirmishMatchSettings& matchSettings )
+            {
+                RTSCommanderAISettings settings;
+                settings._workerID         = matchSettings._workerID;
+                settings._depotID          = matchSettings._depotID;
+                settings._supplyID         = matchSettings._supplyID;
+                settings._productionID     = matchSettings._productionID;
+                settings._armyUnitID       = matchSettings._armyUnitID;
+                settings._workerTarget     = style._workerTarget;
+                settings._productionTarget = style._productionTarget;
+                settings._attackArmySize   = style._attackArmySize;
+                settings._supplyMargin     = style._supplyMargin;
+                return settings;
+            }
+
+            /** @brief 맵 배치가 놓는 자원 유닛의 카탈로그 id 입니다(units.xml). 없으면 판을 열지 않습니다. */
+            static constexpr const utf8* kMineralID     = "minerals";
+            static constexpr const utf8* kRichMineralID = "rich_minerals";
+            static constexpr const utf8* kGeyserID      = "geyser";
+
+            static bool isArmy( const RTSUnit& unit ) { return unit.isMobile() && unit._pDef->_bWorker == SW_FALSE && unit._pDef->canAttack(); }
+        };
+    } // namespace
+} // namespace sw
+
+namespace sw
+{
+    SkirmishMatch::SkirmishMatch()
+        : _world{}
+        , _arrAI{}
+        , _arrWallet{}
+        , _listEvent{}
+        , _listFrameEvent{}
+        , _settings{}
+        , _statusTimer{ 0.0f }
+        , _huntTimer{ 0.0f }
+        , _arrAIActive{ SW_FALSE, SW_FALSE }
+        , _humanMask{ 0 }
+        , _bReportedOver{ SW_FALSE }
+    {
+    }
+
+    bool SkirmishMatch::initialize( const RTSCatalog* pCatalog, uint8 humanMask, const SkirmishMatchSettings& matchSettings )
+    {
+        if ( _world.initialize( pCatalog, kMapSize, kMapSize ) == false )
+            return false;
+        if ( _world.claimEvents( _eventLease ) == false )
+            return false; // 이 매치의 표뿐이라 일어날 수 없다 — 둘째 소비자가 생기면 게이트가 어서션을 남긴다
+        _settings = matchSettings;
+        // 맵 배치가 놓는 유닛이 카탈로그에 없으면 조용히 건너뛰지 않고 판을 열지 않는다. 본진 건물 · 일꾼은 디렉터 데이터의 id 를 쓰고, 자원 id 는 맵 배치의 일부다.
+        bool bLayoutKnown = true;
+        for ( const hashed_string& layoutID : { _settings._depotID, _settings._workerID, hashed_string( SkirmishMatchInternal::kMineralID ),
+                                                hashed_string( SkirmishMatchInternal::kRichMineralID ), hashed_string( SkirmishMatchInternal::kGeyserID ) } )
+        {
+            if ( pCatalog->find( layoutID ) != nullptr )
+                continue;
+            SW_LOG_ERROR_ID( "SkirmishMatch.MapLayoutPlacesBut", "[Skirmish] the map layout places '%#' but the unit catalog has no such unit - the match cannot start", layoutID.c_str() );
+            bLayoutKnown = false;
+        }
+        if ( bLayoutKnown == false )
+            return false;
+        _listEvent.clear();
+        _listFrameEvent.clear();
+        _statusTimer   = 0.0f;
+        _huntTimer     = 0.0f;
+        _humanMask     = static_cast<uint8>( humanMask & ( kHumanPlayer0 | kHumanPlayer1 ) );
+        _bReportedOver = SW_FALSE;
+        paintMap();
+
+        // 0 번은 남서(본진 가운데 10, 10), 1 번은 점 대칭인 북동. 팀이 달라 서로 적이다.
+        const float32      farCenter = static_cast<float32>( kMapSize ) - 10.0f;
+        const RTSSettings& settings  = _world.getSettings();
+        for ( Wallet& wallet : _arrWallet )
+        {
+            wallet.clear();
+            wallet.add( settings._mineralCurrency, _settings._startMinerals );
+        }
+        (void)_world.addPlayer( 0, &_arrWallet[0], float3{ 10.0f, 0.0f, 10.0f } );
+        (void)_world.addPlayer( 1, &_arrWallet[1], float3{ farCenter, 0.0f, farCenter } );
+        spawnBase( 0, false );
+        spawnBase( 1, true );
+        // 가운데 길목의 확장 광물(누구 것도 아니다).
+        for ( int32 index = 0; index < 5; ++index )
+        {
+            spawnResource( SkirmishMatchInternal::kRichMineralID, 3, 38 + index, false );
+            spawnResource( SkirmishMatchInternal::kRichMineralID, 3, 38 + index, true );
+        }
+        spawnResource( SkirmishMatchInternal::kGeyserID, 6, 45, false );
+        spawnResource( SkirmishMatchInternal::kGeyserID, 6, 45, true );
+
+        for ( int32 player = 0; player < kPlayerCount; ++player )
+        {
+            const bool bAI               = isHumanPlayer( player ) == false;
+            _arrAIActive[player]         = bAI ? SW_TRUE : SW_FALSE;
+            const SkirmishAIStyle& style = hasHumanPlayer() ? _settings._opponentAI : player == 0 ? _settings._rushAI
+                                                                                                  : _settings._macroAI;
+            if ( bAI )
+            {
+                SW_ASSERT( _settings._pCommanderTree != nullptr && "the game mode must read the commander behavior tree before starting a match with a computer opponent" );
+                _arrAI[player].initialize( &_world, player, SkirmishMatchInternal::makeAISettings( style, _settings ), _settings._pCommanderTree->getTree() );
+            }
+        }
+        SW_LOG_INFO_ID( "SkirmishMatch.MatchStart", "[Skirmish] match start - %#", _humanMask == ( kHumanPlayer0 | kHumanPlayer1 ) ? "blue (host) vs red (client)" : _humanMask != 0 ? "you (blue, south-west) vs computer (red)"
+                                                                                                                                                                                     : "computer (rush, blue) vs computer (macro, red)" );
+        return true;
+    }
+
+    void SkirmishMatch::serializeState( StateIO& io )
+    {
+        io.expect( _humanMask ); // 설정 값 — 같은 사람 여부로 `initialize` 한 판에만 읽는다(무엇을 바꾸기 전에 본다)
+        io.reflected( *this );
+        io.value( _world );
+        if ( io.isOk() == false )
+            return;
+        for ( Wallet& wallet : _arrWallet )
+        {
+            io.value( wallet );
+        }
+        for ( int32 player = 0; player < kPlayerCount; ++player )
+        {
+            if ( _arrAIActive[player] == SW_TRUE )
+            {
+                io.value( _arrAI[player] );
+            }
+        }
+        if ( io.isReading() )
+        {
+            _listEvent.clear();
+            _listFrameEvent.clear();
+        }
+    }
+
+    void SkirmishMatch::paintMap()
+    {
+        for ( int32 y = 0; y < kMapSize; ++y )
+        {
+            for ( int32 x = 0; x < kMapSize; ++x )
+            {
+                // 반대각선 능선(두 기지를 가른다) — 가운데와 양쪽에 비탈길.
+                const int32 diagonal = x + y - ( kMapSize - 1 );
+                const int32 across   = x - y;
+                const bool  bRidge   = MathUtil::abs( diagonal ) <= 1;
+                const bool  bRamp    = MathUtil::abs( across ) <= 3 || MathUtil::abs( across - 34 ) <= 2 || MathUtil::abs( across + 34 ) <= 2;
+                // 고지 둘(점 대칭) — 확장 앞을 가린다.
+                const bool bPlateau = ( x >= 20 && x <= 23 && y >= 38 && y <= 41 ) || ( x >= kMapSize - 24 && x <= kMapSize - 21 && y >= kMapSize - 42 && y <= kMapSize - 39 );
+                if ( ( bRidge && bRamp == false ) || bPlateau )
+                    _world.setTerrainBlocked( x, y, true );
+            }
+        }
+    }
+
+    RTSUnitID SkirmishMatch::spawnAt( const utf8* pDefID, int32 owner, int32 x, int32 y, bool bMirror )
+    {
+        const RTSUnitDef* pDef = _world.getCatalog()->find( hashed_string( pDefID ) );
+        if ( pDef == nullptr )
+        {
+            SW_LOG_WARNING_ID( "SkirmishMatch.UnitsXmlNoNot", "[Skirmish] units.xml has no '%#' - not placed", pDefID );
+            return RTSUnitID{};
+        }
+        // 점 대칭 — 건물 · 자원은 왼쪽 아래 칸이 기준이라 자리 폭만큼 더 민다.
+        const int32 footprint = pDef->isMobile() ? 1 : pDef->_footprint;
+        const int32 cellX     = bMirror ? kMapSize - x - footprint : x;
+        const int32 cellY     = bMirror ? kMapSize - y - footprint : y;
+        return _world.spawnUnit( pDef->_id, owner, float3{ static_cast<float32>( cellX ) + 0.5f, 0.0f, static_cast<float32>( cellY ) + 0.5f } );
+    }
+
+    void SkirmishMatch::spawnResource( const utf8* pDefID, int32 x, int32 y, bool bMirror )
+    {
+        (void)spawnAt( pDefID, RTSWorld::kNoOwner, x, y, bMirror ); // id 는 쓰지 않는다 — 정의가 없으면 spawnAt 이 경고한다
+    }
+
+    void SkirmishMatch::spawnBase( int32 player, bool bMirror )
+    {
+        // 본진(8..11, 8..11) · 뒤쪽 광물 줄(x 3, y 6..13) · 아래 간헐천(8..9, 2..3) · 사이에 일꾼 넷.
+        (void)spawnAt( _settings._depotID.c_str(), player, 8, 8, bMirror );
+        for ( int32 y = 6; y <= 13; ++y )
+        {
+            spawnResource( SkirmishMatchInternal::kMineralID, 3, y, bMirror );
+        }
+        spawnResource( SkirmishMatchInternal::kGeyserID, 8, 2, bMirror );
+        for ( int32 index = 0; index < 4; ++index )
+        {
+            (void)spawnAt( _settings._workerID.c_str(), player, 6, 8 + index, bMirror ); // id 는 쓰지 않는다 — 카탈로그에 있음은 initialize 가 본다
+        }
+
+        // 사람 쪽 일꾼도 놀지 않게 처음 한 번 캐러 보낸다(AI 쪽은 AI 가 보낸다).
+        const RTSPlayer*  pPlayer = _world.findPlayer( player );
+        vector<RTSUnitID> listWorker;
+        _world.forEachUnit( [&]( const RTSUnit& unit )
+        {
+            if ( unit._owner == player && unit._pDef->_bWorker != SW_FALSE )
+                listWorker.push_back( unit._id );
+        } );
+        for ( const RTSUnitID workerID : listWorker )
+        {
+            const RTSUnitID mineralID = _world.findNearestResource( pPlayer->_startPosition, RTSResourceKind::Minerals, 16.0f );
+            if ( mineralID.isValid() )
+                (void)_world.issueGather( workerID, mineralID );
+        }
+    }
+
+    void SkirmishMatch::update( float32 deltaTime, float32 timeScale )
+    {
+        // AI 는 월드가 실제로 진행한 시간으로 돈다 — 자르지 않은 델타를 받으면 배속 · 히치에서 AI 시계가 월드보다 앞선다(감사 K-6).
+        const float32 worldDelta = _world.update( deltaTime, timeScale );
+        for ( int32 player = 0; player < kPlayerCount; ++player )
+        {
+            if ( _arrAIActive[player] != SW_FALSE )
+                _arrAI[player].update( worldDelta );
+        }
+        // `RTSWorld::pollEvents` 는 뒤에 붙인다(바꿔 넣지 않는다) — 비우지 않으면 지난 알림을 AI 에 다시 넘긴다.
+        _listFrameEvent.clear();
+        _world.pollEvents( _eventLease, _listFrameEvent );
+        for ( const RTSEvent& event : _listFrameEvent )
+        {
+            for ( int32 player = 0; player < kPlayerCount; ++player )
+            {
+                if ( _arrAIActive[player] != SW_FALSE )
+                    _arrAI[player].notify( event );
+            }
+            if ( event._kind == RTSEvent::Kind::PlayerDefeated )
+                SW_LOG_INFO_ID( "SkirmishMatch.TPlayerLostEvery", "[Skirmish] t=%#s player %# lost every building and is defeated", static_cast<int32>( _world.getTime() ), *event._player );
+        }
+        _listEvent.insert( _listEvent.end(), _listFrameEvent.begin(), _listFrameEvent.end() );
+
+        if ( isOver() )
+        {
+            if ( _bReportedOver == SW_FALSE )
+            {
+                _bReportedOver                            = SW_TRUE;
+                [[maybe_unused]] const int32 winner       = _world.getWinningTeam();
+                [[maybe_unused]] const bool  bHumanResult = _humanMask == kHumanPlayer0; // 혼자 하는 판만 "승리 · 패배" 다(2 인 대전은 두 사람이다)
+                logStatus();
+                SW_LOG_INFO_ID( "SkirmishMatch.GameOverTPlayer", "[Skirmish] game over at t=%#s - player %# wins%#", static_cast<int32>( _world.getTime() ), winner,
+                                bHumanResult ? ( winner == 0 ? " (victory!)" : " (defeat)" ) : "" );
+            }
+            return;
+        }
+        _huntTimer += deltaTime;
+        if ( _huntTimer >= _settings._huntIntervalSeconds )
+        {
+            _huntTimer = 0.0f;
+            for ( int32 player = 0; player < kPlayerCount; ++player )
+            {
+                if ( _arrAIActive[player] != SW_FALSE )
+                    huntRemaining( player );
+            }
+        }
+        _statusTimer += deltaTime;
+        if ( _statusTimer >= _settings._statusIntervalSeconds )
+        {
+            _statusTimer = 0.0f;
+            logStatus();
+        }
+    }
+
+    void SkirmishMatch::pollEvents( vector<RTSEvent>& outListEvent )
+    {
+        outListEvent.insert( outListEvent.end(), _listEvent.begin(), _listEvent.end() );
+        _listEvent.clear();
+    }
+
+    void SkirmishMatch::huntRemaining( int32 player )
+    {
+        const int32      enemy  = 1 - player;
+        const RTSPlayer* pEnemy = _world.findPlayer( enemy );
+        if ( pEnemy == nullptr || pEnemy->_bDefeated != SW_FALSE )
+            return;
+        vector<RTSUnitID> listArrived;
+        float3            groupPosition{};
+        _world.forEachUnit( [&]( const RTSUnit& unit )
+        {
+            const bool bNotIdleArmyUnit = unit._owner != player || SkirmishMatchInternal::isArmy( unit ) == false || unit.isIdle() == false || unit._attackTarget.isValid();
+            if ( bNotIdleArmyUnit )
+                return;
+            if ( float3::getHorizontalDistance( unit._position, pEnemy->_startPosition ) > _settings._arrivedRadius )
+                return;
+            listArrived.push_back( unit._id );
+            groupPosition = unit._position;
+        } );
+        if ( listArrived.empty() )
+            return;
+        float32 bestDistance = MathUtil::kMaxFloat;
+        float3  target{};
+        _world.forEachUnit( [&]( const RTSUnit& unit )
+        {
+            if ( unit._owner != enemy || unit.isBuilding() == false )
+                return;
+            const float32 distance = float3::getHorizontalDistance( unit._position, groupPosition );
+            if ( distance < bestDistance )
+            {
+                bestDistance = distance;
+                target       = unit._position;
+            }
+        } );
+        if ( bestDistance < MathUtil::kMaxFloat )
+            (void)_world.issueGroupMove( listArrived, target, true );
+    }
+
+    uint32 SkirmishMatch::computeChecksum() const
+    {
+        // 세이브 바이트를 해시한다 - 월드 · 지갑 · AI 진행 · 시계가 모두 들어 어긋난 칸을 빠뜨리지 않는다(칸을 골라 섞으면 새 칸을 잊는다).
+        Archive archive;
+        writeState( archive );
+        return HashUtil::appendBytes32( HashUtil::kFNVOffset32, archive.getData(), static_cast<size_t>( archive.getSize() ) );
+    }
+
+    SkirmishPlayerSummary SkirmishMatch::makeSummary( int32 player ) const
+    {
+        SkirmishPlayerSummary summary;
+        _world.forEachUnit( [&]( const RTSUnit& unit )
+        {
+            if ( unit._owner != player )
+                return;
+            if ( unit._pDef->_bWorker != SW_FALSE )
+                ++summary._workers;
+            else if ( SkirmishMatchInternal::isArmy( unit ) )
+                ++summary._army;
+            else if ( unit.isBuilding() )
+                ++summary._buildings;
+        } );
+        const RTSPlayer* pPlayer = _world.findPlayer( player );
+        if ( pPlayer != nullptr )
+        {
+            summary._minerals   = static_cast<int32>( _world.getMinerals( player ) );
+            summary._gas        = static_cast<int32>( _world.getGas( player ) );
+            summary._supplyUsed = pPlayer->_supplyUsed;
+            summary._supplyCap  = pPlayer->_supplyCap;
+        }
+        return summary;
+    }
+
+    void SkirmishMatch::logStatus() const
+    {
+        [[maybe_unused]] const SkirmishPlayerSummary first  = makeSummary( 0 );
+        [[maybe_unused]] const SkirmishPlayerSummary second = makeSummary( 1 );
+        SW_LOG_INFO_ID( "SkirmishMatch.TP0WorkersArmy", "[Skirmish] t=%#s p0 workers %# army %# buildings %# minerals %# supply %#/%# | p1 workers %# army %# buildings %# minerals %# supply %#/%#",
+                        static_cast<int32>( _world.getTime() ), first._workers, first._army, first._buildings, first._minerals, first._supplyUsed, first._supplyCap,
+                        second._workers, second._army, second._buildings, second._minerals, second._supplyUsed, second._supplyCap );
+    }
+} // namespace sw

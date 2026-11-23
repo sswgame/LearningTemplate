@@ -408,7 +408,11 @@ namespace sw
             return false;
         }
         // 등록부는 GameFramework 의 모듈 서브시스템이다 — 없으면 호스트가 모듈을 올리지 않은 것이라 멈춘다.
-        return outDefinition.validate( game::getSubsystem<GameFeatureRegistry>(), assetPath );
+        if ( outDefinition.validate( game::getSubsystem<GameFeatureRegistry>(), assetPath ) == false )
+            return false;
+        // 입력 서비스가 없는 실행(전용 서버)은 켤 입력이 없다.
+        const InputManager* const pInput = game::findSubsystem<InputManager>();
+        return pInput == nullptr || outDefinition.validateInputLayers( pInput->getInputMap(), assetPath );
     }
 
     bool MinigameFlow::validateDepth( string_view name ) const
@@ -998,7 +1002,7 @@ namespace sw
         {
             MinigameDefinition definition;
             const bool         bSameMap = MinigameDefinition::loadFromAsset( AssetID{ makeAssetPath( _packConfig, name ) }, definition ) && definition._entry == MinigameEntry::SceneSwitch &&
-                                  definition._map.isSet() && definition._map.get() == sceneID;
+                                  definition.isMatch() == false && definition._map.isSet() && definition._map.get() == sceneID; // 매치는 배정으로만 들어간다 — 혼자 하는 미니게임과 맵을 나눠도 이 씬은 하나로 정해진다
             if ( bSameMap == false )
                 continue;
             if ( found.empty() == false )

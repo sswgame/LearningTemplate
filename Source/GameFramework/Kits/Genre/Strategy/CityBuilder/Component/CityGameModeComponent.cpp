@@ -2,7 +2,7 @@
 
 #include "GameFramework/Kits/Genre/Strategy/CityBuilder/Component/CityGameModeComponent.h"
 
-#include "Engine/Asset/Cache/SharedAssetCache.h"
+#include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
@@ -13,11 +13,9 @@
 namespace sw
 {
     CityGameModeComponent::CityGameModeComponent()
-        : _cityDataPath{}
-        , _landSize{ 0 }
+        : _landSize{ 0 }
         , _secondsPerDay{ 0.0f }
         , _startHour{ 0.0f }
-        , _startingMoney{ 0 }
         , _landmarkBuilding{}
         , _landmarkX{ 0 }
         , _landmarkY{ 0 }
@@ -26,10 +24,6 @@ namespace sw
         , _roadToX{ 0 }
         , _roadToY{ 0 }
         , _fastTimeScale{ 1.0f }
-        , _pCatalog{}
-        , _city{}
-        , _speed{}
-        , _layoutRevision{ 0 }
         , _bLaidOut{ SW_FALSE }
         , _bFastForward{ SW_FALSE }
         , _reserved{ 0 }
@@ -50,19 +44,19 @@ namespace sw
         CitySimulation restoredCity;
         if ( io.isReading() && io.check( initializeCity( restoredCity, *pState, *pWallet ) ) == false )
             return;
-        CitySimulation& city = io.isWriting() ? _city : restoredCity;
+        CitySimulation& city = io.isWriting() ? getMutableCity() : restoredCity;
         io.section( CitySimulation::kStateTag, CitySimulation::kStateVersion, [&city]( StateIO& bodyIO )
         { bodyIO.value( city ); } );
         io.end();
         if ( io.isWriting() || io.isOk() == false )
             return;
-        _city = std::move( restoredCity );
-        ++_layoutRevision;
+        getMutableCity() = std::move( restoredCity );
+        markLayoutChanged();
     }
 
     bool CityGameModeComponent::initializeCity( CitySimulation& outCity, GameStateComponent& state, WalletComponent& wallet ) const
     {
-        const CityCatalog* const pCatalog = _pCatalog.get();
+        const CityCatalog* const pCatalog = findCatalog();
         if ( pCatalog == nullptr || outCity.initialize( pCatalog, _landSize, _landSize, wallet.getWallet() ) == false )
             return false;
         // 땅은 놓기 전에 빌린다 — 이미 놓인 도로 · 건물은 땅을 얻지 않는다(CitySimulation::bindLand).
@@ -72,7 +66,7 @@ namespace sw
 
     bool CityGameModeComponent::startGame()
     {
-        if ( acquireRequired( _cityDataPath, _pCatalog ) == false )
+        if ( acquireCatalog() == false )
             return false;
         // 이 오브젝트의 첫 디렉터가 판을 연다. 시작 돈은 새 판일 때만(복원한 판 위에 덧쌓이지 않게).
         GameStateSettings settings;
@@ -88,12 +82,11 @@ namespace sw
         if ( pWallet == nullptr )
             return false; // 까닭은 찾기가 남겼다
         if ( pWallet->isFreshGame() )
-            pWallet->getWallet().add( _pCatalog->getRules()._currency, _startingMoney );
-        if ( initializeCity( _city, *pState, *pWallet ) == false )
+            pWallet->getWallet().add( findCatalog()->getRules()._currency, getStartingMoney() );
+        if ( initializeCity( getMutableCity(), *pState, *pWallet ) == false )
             return false; // 범위 밖 도시 설정은 도시가 오류를 남겼다
         _bFastForward = SW_FALSE;
-        ++_layoutRevision;
-        return true;
+        return beginCity();
     }
 
     void CityGameModeComponent::onGameStarted()
@@ -109,25 +102,39 @@ namespace sw
         return true;
     }
 
+    bool CityGameModeComponent::submitTimeInput( bool bPause, bool bFaster, bool bSlower )
+    {
+        (void)bPause;
+        (void)bFaster;
+        (void)bSlower;
+        return false;
+    }
+
+    const Wallet* CityGameModeComponent::findCityWallet() const
+    {
+        const GameObject* const      pPlayerState = findPlayerState();
+        const WalletComponent* const pWallet      = pPlayerState != nullptr ? pPlayerState->getComponent<WalletComponent>() : nullptr;
+        return pWallet != nullptr ? &pWallet->getWallet() : nullptr;
+    }
+
     void CityGameModeComponent::layOutTown()
     {
         _bLaidOut                    = SW_TRUE;
-        const CityPlaceResult result = _city.placeBuilding( _landmarkBuilding.key(), _landmarkX, _landmarkY );
+        const CityPlaceResult result = getMutableCity().placeBuilding( _landmarkBuilding.key(), _landmarkX, _landmarkY );
         if ( result != CityPlaceResult::Ok )
             SW_LOG_ERROR_ID( "City.LandmarkRefused", "[City] landmark '%#' at (%#, %#) was refused (%#) - check the scene layout and the city catalog", _landmarkBuilding.c_str(), _landmarkX, _landmarkY,
                              static_cast<int32>( result ) );
-        const int32 roadCount = _city.placeRoadLine( int2{ _roadFromX, _roadFromY }, int2{ _roadToX, _roadToY } );
+        const int32 roadCount = getMutableCity().placeRoadLine( int2{ _roadFromX, _roadFromY }, int2{ _roadToX, _roadToY } );
         if ( roadCount == 0 )
             SW_LOG_ERROR_ID( "City.RoadLaidNoTile", "[City] the road (%#, %#) -> (%#, %#) laid no tile - check the scene layout", _roadFromX, _roadFromY, _roadToX, _roadToY );
-        ++_layoutRevision;
+        markLayoutChanged();
     }
 
     void CityGameModeComponent::collectMinigameResult( vector<MinigameResultValue>& outListValue ) const
     {
-        const GameObject* const      pPlayerState = findPlayerState();
-        const WalletComponent* const pWallet      = pPlayerState != nullptr ? pPlayerState->getComponent<WalletComponent>() : nullptr;
-        if ( pWallet != nullptr )
-            addMoneyResult( outListValue, pWallet->getWallet().getBalance( _pCatalog->getRules()._currency ) - _startingMoney );
+        const Wallet* const pCityWallet = findCityWallet();
+        if ( pCityWallet != nullptr )
+            addMoneyResult( outListValue, pCityWallet->getBalance( getCity().getCurrency() ) - getStartingMoney() );
     }
 
     void CityGameModeComponent::updateGame( float32 deltaTime )
@@ -139,14 +146,15 @@ namespace sw
         if ( _bLaidOut == SW_FALSE )
             layOutTown();
         const bool bFastForward = isAutoPlayOn() || _bFastForward == SW_TRUE;
-        if ( _speed.setTimeScale( bFastForward ? _fastTimeScale : 1.0f ) == false || pState->getClock().setTimeScale( _speed.getTimeScale() ) == false )
+        if ( getMutableSpeed().setTimeScale( bFastForward ? _fastTimeScale : 1.0f ) == false || pState->getClock().setTimeScale( getSpeed().getTimeScale() ) == false )
             return;
-        (void)_city.update( deltaTime, _speed.getTimeScale() ); // 시계와 같은 배율 — 시계만 밀면 빨리 감는 동안 결산만 잦고 생산 · 일꾼은 1 배속이다(감사 K-2 · K-10, 유니티 Time.timeScale 자리)
+        (void)getMutableCity().update( deltaTime, getSpeed().getTimeScale() ); // 시계와 같은 배율 — 시계만 밀면 빨리 감는 동안 결산만 잦고 생산 · 일꾼은 1 배속이다(감사 K-2 · K-10, 유니티 Time.timeScale 자리)
         for ( const WorldClockEvent& clockEvent : pState->getClockEvents() )
         {
             if ( clockEvent._kind == WorldClockEvent::Kind::DayChanged )
-                _city.settleMonth( false );
+                getMutableCity().settleMonth( false );
         }
+        collectStepEvents();
     }
 
     void CityGameModeComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )

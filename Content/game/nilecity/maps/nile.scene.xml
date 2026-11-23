@@ -72,7 +72,7 @@
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="false" />
-					<NileCursorComponent _localID="14598015409775632575" _componentName="NileCursorComponent"
+					<CityBuildCursorComponent _localID="14598015409775632575" _componentName="CityBuildCursorComponent"
 					                     _bActive="true"
 					                     _gameMode="4"
 					                     _height="0.1"
@@ -86,16 +86,30 @@
 					<NileGameModeComponent _localID="3793514620491349462" _componentName="NileGameModeComponent"
 					                       _bActive="true"
 					                       _cityDataPath="game/nilecity/data/city.xml"
-					                       _buildingViewPath="game/nilecity/data/buildings.views.xml"
 					                       _autoPlanPath="game/nilecity/data/autoplan.xml"
-					                       _groundPrefab="game/nilecity/prefabs/ground.prefab.xml"
-					                       _roadPrefab="game/nilecity/prefabs/road.prefab.xml"
-					                       _modelBuildingPrefab="game/nilecity/prefabs/modelbuilding.prefab.xml"
-					                       _blockBuildingPrefab="game/nilecity/prefabs/blockbuilding.prefab.xml"
-					                       _walkerPrefab="game/nilecity/prefabs/walker.prefab.xml"
-					                       _cameraRig="1"
 					                       _startingMoney="1500"
 					                       _bAutoPlay="false" />
+					<CityBuildInputComponent _localID="8074901273520097621" _componentName="CityBuildInputComponent"
+					                         _bActive="true"
+					                         _cameraRig="1"
+					                         _placeAction="Nile.Place"
+					                         _demolishAction="Nile.Demolish"
+					                         _nextToolAction="Nile.NextTool"
+					                         _prevToolAction="Nile.PrevTool"
+					                         _roadToolAction="Nile.RoadTool"
+					                         _autoPlanAction="Nile.ToggleAutoPlan"
+					                         _pauseAction="Pause"
+					                         _fasterAction="Faster"
+					                         _slowerAction="Slower"
+					                         _statusAction="Status" />
+					<CityViewComponent _localID="8729144825244003241" _componentName="CityViewComponent"
+					                   _bActive="true"
+					                   _buildingViewPath="game/nilecity/data/buildings.views.xml"
+					                   _groundPrefab="game/nilecity/prefabs/ground.prefab.xml"
+					                   _roadPrefab="game/nilecity/prefabs/road.prefab.xml"
+					                   _modelBuildingPrefab="game/nilecity/prefabs/modelbuilding.prefab.xml"
+					                   _blockBuildingPrefab="game/nilecity/prefabs/blockbuilding.prefab.xml"
+					                   _walkerPrefab="game/nilecity/prefabs/walker.prefab.xml" />
 				</_listComponent>
 			</GameObject>
 		</entity>

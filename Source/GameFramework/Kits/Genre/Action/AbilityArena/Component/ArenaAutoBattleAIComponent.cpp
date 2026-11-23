@@ -55,10 +55,11 @@ namespace sw
             blackboard.clearValue( "TargetDistance" );
         }
 
-        int32 nearbyEnemyCount = 0;
+        int32                      nearbyEnemyCount = 0;
+        const ArenaUnitView* const pSelfView        = pGameMode->findUnitView( pOwner->getHandle() ); // 스냅샷끼리 견준다(절대 자리 — 블랙보드 자리는 로컬이다)
         for ( const ArenaUnitView& view : pGameMode->getUnitViews() )
         {
-            const bool bNearby = view._kind != ArenaUnitKind::Player && view._bAlive == SW_TRUE && float3::getDistance( view._position, selfPosition ) < _crowdRadius;
+            const bool bNearby = pSelfView != nullptr && view._kind != ArenaUnitKind::Player && view._bAlive == SW_TRUE && float3::getDistance( view._position, pSelfView->_position ) < _crowdRadius;
             if ( bNearby )
                 ++nearbyEnemyCount;
         }

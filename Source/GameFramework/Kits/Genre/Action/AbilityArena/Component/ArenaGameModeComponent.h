@@ -91,7 +91,7 @@ namespace sw
         /** @brief @p from 과 적대 관계이고 살아 있는 가장 가까운 유닛의 스냅샷을 반환합니다. @p maxRange 밖이면 nullptr 입니다. */
         const ArenaUnitView* findNearestHostileView( GameObjectHandle from, float32 maxRange ) const;
         /**
-         * @brief @p object 유닛의 현재 위치(메시의 월드 위치)를 반환합니다. 스냅샷에 없으면 false 를 반환합니다.
+         * @brief @p object 유닛의 현재 위치(메시의 월드 위치 — 월드 원점 기준 로컬, 스냅샷의 절대 자리와 섞지 않는다)를 반환합니다. 스냅샷에 없으면 false 를 반환합니다.
          * @details 틱 밖(조종자의 판단, 게임 스레드)에서 부른다. 스냅샷의 위치는 지난 PrePhysics 의 틱 전 위치라 한 프레임 늦다.
          */
         [[nodiscard]] bool findUnitPosition( GameObjectHandle object, float3& outPosition ) const;
@@ -115,7 +115,7 @@ namespace sw
         const vector<ProjectileState>& getProjectiles() const { return _projectiles.getProjectiles(); }
         /** @brief 스폰한 유닛 전부입니다(쓰러져 정리를 기다리는 것 포함). 이번 프레임에 스폰한 것도 있다 — 뷰가 처음 보는 유닛에 색을 입힙니다(틱 밖). */
         const vector<ArenaUnit>& getUnits() const { return _listUnit; }
-        /** @brief 이번 프레임 스냅샷의 플레이어 위치(틱 전)를 반환합니다. 없으면 아레나 중앙입니다. */
+        /** @brief 이번 프레임의 플레이어 자리(틱 전, 월드 원점 기준 로컬 — 카메라가 쓴다)를 반환합니다. 없으면 아레나 중앙입니다. */
         const float3& getPlayerFocus() const { return _playerFocus; }
         /** @brief 이번 프레임 스냅샷의 플레이어 오브젝트를 반환합니다(없으면 빈 핸들). PostPhysics 이후 단계는 이것의 트랜스폼으로 이번 프레임 위치를 읽습니다. */
         GameObjectHandle   getPlayerObject() const { return _playerObject; }

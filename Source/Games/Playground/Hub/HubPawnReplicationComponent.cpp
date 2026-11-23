@@ -90,6 +90,7 @@ namespace sw
         , _smoothingHalfLife{ 0.05f }
         , _smoothingSnapDistance{ 2.0f }
         , _reconcileTolerance{ 0.01f }
+        , _spawnSearchRadius{ 3.0f }
         , _interestCellSize{ 16.0f }
         , _interestEnterRadius{ 60.0f }
         , _interestLeaveRadius{ 70.0f }
@@ -329,12 +330,14 @@ namespace sw
             {
                 bStanding = bStanding || pawn._avatarID == session._avatarID;
             }
-            if ( bStanding == false )
-                spawnServerPawn( manager, session );
+            if ( bStanding )
+                continue;
+            spawnServerPawn( manager, hub, session );
+            return; // 프레임마다 하나 — 막 세운 폰의 캡슐은 이번 물리 프레임에 서므로, 다음 폰은 그것을 보고 빈 자리를 고른다
         }
     }
 
-    void HubPawnReplicationComponent::spawnServerPawn( GameObjectManager& manager, const HubAvatarSession& session )
+    void HubPawnReplicationComponent::spawnServerPawn( GameObjectManager& manager, const HubWorldComponent& hub, const HubAvatarSession& session )
     {
         ServerPawn pawn;
         pawn._acceptedPosition = session._position;
@@ -351,6 +354,13 @@ namespace sw
             pawn._object     = pObject->getHandle();
             pawn._controller = pRemote->getOwner()->getHandle();
             pRemote->getOwner()->setAlwaysLoaded( true );
+            // 저장된 자리 · 시작 자리에 다른 몸이 서 있으면 곁의 빈 자리에 세운다(언리얼 `FindTeleportSpot`). 빈 자리가 없거나 규칙이 받지 않으면 그 자리 그대로다(서로 밀려난다).
+            const optional<float3> spot = pObject->getComponent<CharacterControllerComponent>()->findFreeSpot( session._position, _spawnSearchRadius );
+            if ( spot.has_value() && hub.findServer()->moveAvatar( session._avatarID, *spot, false ) == HubActionResult::Ok )
+            {
+                pawn._acceptedPosition = *spot;
+                pObject->getPrimarySceneComponent()->teleportTo( *spot );
+            }
         }
         // 세우지 못한 접속도 목록에 둔다 — 프레임마다 다시 시도해 같은 오류를 되풀이하지 않는다(오류는 위에서 알렸다). 그 접속은 나는 자리에 서 있기만 한다.
         _listServerPawn.push_back( pawn );

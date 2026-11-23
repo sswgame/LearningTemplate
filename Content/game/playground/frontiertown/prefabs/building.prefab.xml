@@ -1,0 +1,21 @@
+<?asset guid="6ffbb9e47d363839f0cb28b54880c9d6"?>
+<Prefab formatVersion="1" name="FrontierBuilding">
+	<GameObject _schemaVersion="0" _name="FrontierBuilding" _bActive="true">
+		<_listComponent>
+			<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
+			               _bActive="true"
+			               _localPosition="0,0,0"
+			               _localRotation="0,0,0"
+			               _localScale="1,1,1"
+			               _attachOwner="None"
+			               _attachOwnerID="0"
+			               _attachComponent="None"
+			               _meshID="Cube"
+			               _materialPath="engine/materials/defaultmaterial.material"
+			               _boundsRadius="0.866"
+			               _gpuSpinSeed="0"
+			               _bVisible="false" />
+			<CityBuildingViewComponent _localID="1593519265945852497" _componentName="CityBuildingViewComponent" _bActive="true" _gameMode="0" _buildingIndex="-1" />
+		</_listComponent>
+	</GameObject>
+</Prefab>

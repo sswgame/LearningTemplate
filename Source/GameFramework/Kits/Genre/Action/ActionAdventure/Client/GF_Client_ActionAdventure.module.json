@@ -1,0 +1,22 @@
+{
+    "_name": "GF_Client_ActionAdventure",
+    "_version": "1.0.0",
+    "_kind": "Kit",
+    "_description": "액션 어드벤처 키트(클라이언트) — 입력 맵 액션을 디렉터 명령으로 바꾸고 지역 · 봉화 · 야영지 · 플레이어를 그린다(뷰 · 입력). 규칙 · 디렉터는 GF_ActionAdventure",
+    "_listDependency": [
+        {
+            "_name": "GameFramework"
+        },
+        {
+            "_name": "GF_ActionAdventure"
+        }
+    ],
+    "_listConfiguration": [
+        "Dev",
+        "Shipping"
+    ],
+    "_listTarget": [
+        "Client"
+    ],
+    "_bEnabledByDefault": true
+}

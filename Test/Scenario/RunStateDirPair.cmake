@@ -7,7 +7,7 @@ if(NOT USER_DATA_DIR)
 endif()
 file(REMOVE_RECURSE "${STATE_DIR}" "${USER_DATA_DIR}")
 file(MAKE_DIRECTORY "${STATE_DIR}")
-# 세이브 · 로컬 저장을 묶음 단위로 잇는다(velmora carry · release) — 프로세스마다 새 뿌리(`run_p<pid>`)면 .2 가 .1 의 세이브를 못 본다. 자식 App 이 이 환경을 물려받는다.
+# 세이브 · 로컬 저장을 묶음 단위로 잇는다(playground velmora_carry · velmora_release) — 프로세스마다 새 뿌리(`run_p<pid>`)면 .2 가 .1 의 세이브를 못 본다. 자식 App 이 이 환경을 물려받는다.
 set(ENV{SW_USER_DATA_ROOT} "${USER_DATA_DIR}")
 get_filename_component(pair_name "${PAIR}" NAME)
 set(list_editor_argument "")

@@ -1,10 +1,9 @@
 /**
  * @file TestEditorAssetIndexCost.cpp
- * @brief 에디터 에셋 색인의 비용을 잽니다 — 합성 트리 크기별 전체 스캔과 파일 하나 바뀜(UI 스레드)의 ns. 에디터 에셋 색인 디스크 캐시(docs/NEXT.md R3)의 판정 자료입니다.
+ * @brief 에디터 에셋 색인의 비용을 잽니다 — 합성 트리 크기별 전체 스캔과 파일 하나 바뀜(UI 스레드)의 ns. 전체 스캔은 캐시 없는 첫 스캔이다(다음부터는 훑기 캐시 `AssetScanCache`).
  *
  * 재는 법(통합 담당): `App --test --test-filter=EditorAssetIndexTest.ScanCostBySize` 를 Release 로 5 번 돌려 로그 `EditorAssetIndexTest.ScanCost` 의
- * 크기별 중앙값을 본다. 옛 참조 역색인 값은 R0 커밋(`EditorReferenceIndexTest.ScanCostBySize`)에서 잰다. 판정: 바뀜 1 ms 미만이 목표,
- * 10 만 트리 전체 스캔이 2 초를 넘으면 디스크 캐시(R3).
+ * 크기별 중앙값을 본다. 옛 참조 역색인 값은 R0 커밋(`EditorReferenceIndexTest.ScanCostBySize`)에서 잰다. 바뀜 1 ms 미만이 목표다.
  */
 #include "pch.h"
 

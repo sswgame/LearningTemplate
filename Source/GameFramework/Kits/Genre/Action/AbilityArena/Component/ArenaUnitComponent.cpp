@@ -7,6 +7,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Tick/TickContext.h"
+#include "Engine/Object/GameObject/WorldOrigin.h"
 #include "Engine/Visual/Component/MeshComponent.h"
 
 #include "GameFramework/Kits/Genre/Action/AbilityArena/Component/ArenaGameModeComponent.h"
@@ -92,8 +93,10 @@ namespace sw
         pressAbilityButtons( *pPawn, *pAbilitySystem );
 
         // (3) 이동 — 이동 속도는 어트리뷰트의 current 다(대시 ×3 · 둔화 이펙트가 그대로 반영된다).
-        float3       position  = pMesh->getLocalPosition();
-        const float3 direction = pAbilitySystem->getOwnedTagCounts().hasMatchingTag( "State.Dashing"_tag ) ? _facing : move;
+        // 경계 · 유닛 스냅샷은 절대 자리다 — 월드 원점이 옮겨져도 아레나가 따라 밀리지 않는다.
+        const WorldOrigin& worldOrigin = pOwner->getManager()->getWorldOrigin();
+        float3             position    = worldOrigin.toAbsolute( pMesh->getLocalPosition() );
+        const float3       direction   = pAbilitySystem->getOwnedTagCounts().hasMatchingTag( "State.Dashing"_tag ) ? _facing : move;
         // 이동 속도 어트리뷰트가 없는 유닛은 움직이지 않는다(0 을 지어내지 않고 그 뜻을 여기서 정한다).
         const optional<float32> speed = pAbilitySystem->getAttributeValue( CombatAttributes::moveSpeed() );
         // 속박 · 기절 · 둔화 배율은 공용 이동기와 같은 계약으로 읽는다(`MovementConstraint`).
@@ -105,7 +108,7 @@ namespace sw
         const float32 halfSize = pGameMode->getArenaHalfSize();
         position._x            = MathUtil::clamp( position._x, -halfSize, halfSize );
         position._z            = MathUtil::clamp( position._z, -halfSize, halfSize );
-        pMesh->setLocalPosition( position );
+        pMesh->setLocalPosition( worldOrigin.toLocal( position ) );
         // 모델의 앞(+Z)을 바라보는 쪽으로 — AI 는 움직이지 않고도 몸을 돌린다.
         pMesh->setLocalRotation( float3{ 0.0f, MathUtil::atan2( _facing._x, _facing._z ), 0.0f } );
     }

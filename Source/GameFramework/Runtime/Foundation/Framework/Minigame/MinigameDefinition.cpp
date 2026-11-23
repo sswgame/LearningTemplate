@@ -7,6 +7,7 @@
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetIO.h"
+#include "Engine/Input/Map/InputMap.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLNameCheck.h"
 
@@ -104,5 +105,13 @@ namespace sw
             bValid = false;
         }
         return bValid;
+    }
+
+    bool MinigameDefinition::validateInputLayers( const InputMap& inputMap, string_view sourceName ) const
+    {
+        if ( inputMap.canStackLayers( _listInputContext, sourceName ) )
+            return true;
+        SW_LOG_ERROR_ID( "MinigameDefinition.InputContextsConflict", "%#: the input contexts cannot be on together - a virtual cursor layer and a layer that binds the same stick or buttons (listed above)", sourceName );
+        return false;
     }
 } // namespace sw

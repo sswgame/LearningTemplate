@@ -28,6 +28,7 @@ namespace sw::editor
 
         const utf8*      getPanelTitle() const override { return "Modules"; }
         void             drawContent() override;
+        void             onPanelOpened() override;
         EditorTextExtent getInitialPanelSize() const override { return EditorTextExtent::ofText( 96.0f, 33.0f ); }
 
         /** @brief 지금 묻고 있는 미리보기에서 새로 꺼지는 모듈 수입니다(감시 값 `Editor.ModulePreviewNewlyInactive`). 묻지 않으면 0 입니다. */

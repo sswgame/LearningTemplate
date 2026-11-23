@@ -15,7 +15,7 @@
 			               _boundsRadius="0.866"
 			               _gpuSpinSeed="0"
 			               _bVisible="false" />
-			<NileBuildingComponent _localID="1593519265945852497" _componentName="NileBuildingComponent" _bActive="true" _gameMode="0" _buildingIndex="-1" />
+			<CityBuildingViewComponent _localID="1593519265945852497" _componentName="CityBuildingViewComponent" _bActive="true" _gameMode="0" _buildingIndex="-1" />
 		</_listComponent>
 	</GameObject>
 </Prefab>

@@ -67,11 +67,22 @@ namespace sw
                 {    "EditorSelfTest",                   {}},
                 {            "Record",                   {}}
             };
+            /**
+             * @brief 값이 렌더러 · 백엔드에서 나오는 감시 값의 이름 묶음입니다(`<묶음>.<값>`) — 그 값을 보는 단계(`Expect` · `WaitUntil` · `SkipUnless` …)가 있는 시나리오도 백엔드마다 다를 수 있다.
+             *        게임 · 물리 · UI 값은 CPU 에서만 정해지므로 백엔드 하나에서 보면 된다(같아야 하는 값은 `Record` 로 남긴다).
+             */
+            static constexpr string_view kArrBackendWatchGroup[] = { "RHI", "GPU", "Render", "RenderView", "RenderQuality", "VFX", "Texture", "Display", "Shader", "Window" };
 
             static bool isEvaluatedPerBackend( const AutomationStep& step )
             {
-                return std::any_of( std::begin( kArrBackendEvaluationStep ), std::end( kArrBackendEvaluationStep ), [&step]( const BackendEvaluationStep& evaluation )
-                { return step._kind == evaluation._kind && ( evaluation._attribute.empty() || step.findAttribute( evaluation._attribute ) != nullptr ); } );
+                if ( std::any_of( std::begin( kArrBackendEvaluationStep ), std::end( kArrBackendEvaluationStep ), [&step]( const BackendEvaluationStep& evaluation )
+                { return step._kind == evaluation._kind && ( evaluation._attribute.empty() || step.findAttribute( evaluation._attribute ) != nullptr ); } ) )
+                    return true;
+                const string* pWatch = step.findAttribute( "watch" );
+                if ( pWatch == nullptr )
+                    return false;
+                const string_view watch{ *pWatch };
+                return std::find( std::begin( kArrBackendWatchGroup ), std::end( kArrBackendWatchGroup ), watch.substr( 0, watch.find( '.' ) ) ) != std::end( kArrBackendWatchGroup );
             }
 
             /** @brief 자식 하나의 상태입니다. 출력 파이프는 스레드 하나가 끝까지 비운다 — 비우지 않으면 파이프가 찬 자식이 멈춘다. */

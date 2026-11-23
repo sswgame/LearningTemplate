@@ -27,15 +27,27 @@ namespace sw::editor
     {
     }
 
+    void ModulesPanel::onPanelOpened()
+    {
+        // 카탈로그는 처음 열 때 한 번 읽는다. 다시 연 패널은 앞 결과를 그대로 쓴다(새로 고침은 단추).
+        if ( _model.isReady() == false )
+            _model.requestReload();
+    }
+
     void ModulesPanel::drawContent()
     {
-        _model.ensureLoaded();
+        _model.pollReload();
+        if ( _model.isReady() == false )
+        {
+            EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorSettings", "ReadingModules" ) );
+            return;
+        }
         if ( _model.getLoadError().empty() == false )
         {
             EditorThemeUtil::textError( _model.getLoadError().c_str() );
             // 매니페스트를 고친 뒤 다시 읽을 길이 있어야 한다 — 없으면 오류가 다시 시작할 때까지 남는다.
             if ( ImGui::SmallButton( SW_LOCKEY( "EdVerb", "Refresh" ) ) )
-                _model.reload();
+                _model.requestReload();
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSettings", "RefreshModules" ) );
             return;
         }
@@ -48,7 +60,7 @@ namespace sw::editor
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSettings", "BuildModules" ) );
         }
         if ( ImGui::SmallButton( SW_LOCKEY( "EdVerb", "Refresh" ) ) )
-            _model.reload();
+            _model.requestReload();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSettings", "RefreshModules" ) );
         ImGui::SameLine();
         EditorWidgets::drawSearchField( "##ModuleFilter", _filter, SW_LOCKEY( "EditorSettings", "SearchModulesHint" ), 0.0f, false, "modules.search" );

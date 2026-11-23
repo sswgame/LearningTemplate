@@ -4,6 +4,8 @@
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Foundation/StdHeaders.h"
+#include "Core/Log/Logger.h"
+#include "Core/Serialization/ByteStream.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 #include "Core/Task/TaskManager.h"
@@ -15,6 +17,8 @@
 #include "Engine/Asset/AssetDatabase.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Content/AssetRegistry.h"
+#include "Engine/Content/AssetScanCache.h"
+#include "Engine/Content/ContentHash.h"
 #include "Engine/Serialization/Inherit/AssetRedirect.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
 
@@ -154,19 +158,27 @@ namespace sw::editor
                 return left._line < right._line;
             }
 
+            /** @brief 전체 스캔의 파일 하나입니다(목록 순서 — 표시 경로 순). */
+            struct ScanFile
+            {
+                string    _displayPath;
+                FileStamp _fileStamp{};
+                FileStamp _sidecarStamp{};
+            };
+
             /** @brief 파일 하나의 읽기 결과입니다 — 워커가 자기 칸에 쓰고 호출 스레드가 차례로 합친다. */
             struct FileRead
             {
-                FileStamp              _fileStamp{};
-                string                 _text;
-                string                 _metaText;
-                uint8                  _bText    : 1; ///< 텍스트 에셋의 글을 읽었다
-                uint8                  _bMeta    : 1; ///< 원본 곁 `.meta` 를 읽었다
-                [[maybe_unused]] uint8 _reserved : 6;
+                EditorAssetContent     _content;
+                uint8                  _bTextAsset : 1; ///< 텍스트 에셋이다(나머지는 원본 — 곁 `.meta` 를 읽는다)
+                uint8                  _bRead      : 1; ///< 내용을 얻었다(디스크 · 캐시). 목록 뒤에 사라진 파일은 아니다
+                uint8                  _bCached    : 1; ///< 캐시에서 얻었다
+                [[maybe_unused]] uint8 _reserved   : 5;
 
                 FileRead()
-                    : _bText{ SW_FALSE }
-                    , _bMeta{ SW_FALSE }
+                    : _bTextAsset{ SW_FALSE }
+                    , _bRead{ SW_FALSE }
+                    , _bCached{ SW_FALSE }
                     , _reserved{ 0 }
                 {
                 }
@@ -175,25 +187,70 @@ namespace sw::editor
             /** @brief 전체 스캔의 병렬 본문입니다. 파일마다 **자기 칸**에만 쓰므로 잠금이 없다. */
             struct ScanJob
             {
-                string_view          _resourceRoot;
-                const string* const* _ppDisplayPath{ nullptr };
-                StopToken            _stopToken{};
+                string_view     _resourceRoot;
+                const ScanFile* _pFile{ nullptr };
+                StopToken       _stopToken{};
 
-                /** @brief 파일 @p index 의 시각 · 글을 읽어 제 칸 @p outRead 에 씁니다(`runParallelInto` 본문). */
+                /** @brief 파일 @p index 의 글을 읽어 제 칸 @p outRead 에 씁니다(`runParallelInto` 본문). 캐시가 채운 칸은 그대로 둡니다. */
                 void operator()( uint32 index, FileRead& outRead ) const
                 {
-                    if ( _stopToken.isStopRequested() )
-                        return; // 결과는 불완전하니 부른 쪽이 신호를 다시 읽고 버린다
-                    const string& displayPath = *_ppDisplayPath[index];
-                    const string  absPath     = makeDiskPath( _resourceRoot, displayPath );
-                    (void)FileUtil::getFileStamp( FileUtil::toDiskPath( absPath ), outRead._fileStamp ); // 목록 뒤에 사라진 파일은 시각이 비어 다음 바뀜에서 다시 읽는다
+                    if ( outRead._bCached == SW_TRUE || _stopToken.isStopRequested() )
+                        return; // 멈추면 결과는 불완전하니 부른 쪽이 신호를 다시 읽고 버린다
+                    const string absPath = makeDiskPath( _resourceRoot, _pFile[index]._displayPath );
+                    string       text;
                     // 목록을 모은 뒤 지워진 파일(에디터가 옮기는 중)은 읽지 않는다 — readTextFile 은 없는 파일을 오류로 남긴다.
-                    if ( EditorAssetIndex::isTextAsset( displayPath ) )
-                        outRead._bText = FileUtil::readOptionalTextFile( FileUtil::toDiskPath( absPath ), outRead._text ) == OptionalFileRead::Read ? SW_TRUE : SW_FALSE;
-                    else
-                        outRead._bMeta = readMetaText( absPath, outRead._metaText ) ? SW_TRUE : SW_FALSE;
+                    const bool bText = outRead._bTextAsset == SW_TRUE;
+                    const bool bRead = bText ? FileUtil::readOptionalTextFile( FileUtil::toDiskPath( absPath ), text ) == OptionalFileRead::Read : readMetaText( absPath, text );
+                    if ( bRead )
+                        outRead._content = EditorAssetIndex::makeContent( bText ? &text : nullptr, bText ? nullptr : &text );
+                    outRead._bRead = bRead || bText == false ? SW_TRUE : SW_FALSE; // 원본은 `.meta` 가 없어도 정체성이 없는 파일로 안다
                 }
             };
+
+            /** @brief 훑기 캐시에 둘 바이트입니다 — 곁 서술의 도장(원본은 서술이 바뀌면 다시 읽는다) · 정체성 · 참조 줄. */
+            [[nodiscard]] static vector<uint8> encodeContent( const FileStamp& sidecarStamp, const EditorAssetContent& content )
+            {
+                vector<uint8> bytes;
+                ByteWriter    writer{ bytes };
+                writer.writeUint64( sidecarStamp._sizeBytes );
+                writer.writeUint64( sidecarStamp._writeTime );
+                writer.writeString( content._guid.has_value() ? content._guid->toString() : string{} );
+                writer.writeUint32( static_cast<uint32>( content._listLink.size() ) );
+                for ( const EditorAssetLink& link : content._listLink )
+                {
+                    writer.writeString( link._target );
+                    writer.writeUint32( link._line );
+                    writer.writeUint8( link._bInlined ? uint8{ 1 } : uint8{ 0 } );
+                }
+                return bytes;
+            }
+
+            /** @brief `encodeContent` 의 짝입니다. 곁 서술의 도장이 다르거나 바이트가 그 꼴이 아니면 없음입니다. */
+            [[nodiscard]] static optional<EditorAssetContent> decodeContent( const vector<uint8>& bytes, const FileStamp& sidecarStamp )
+            {
+                /** @brief 참조 줄 하나의 최소 바이트입니다(빈 글 길이 4 + 줄 4 + 깃발 1). */
+                constexpr size_t   kMinLinkBytes = 9;
+                ByteReader         reader{ bytes.data(), bytes.size() };
+                const uint64       sidecarSize = reader.readUint64();
+                const uint64       sidecarTime = reader.readUint64();
+                const string       guidText    = reader.readString();
+                EditorAssetContent content;
+                const bool         bLinks = reader.readCountedList( content._listLink, kMinLinkBytes, [&reader]( EditorAssetLink& outLink )
+                        {
+                    outLink._target   = reader.readString();
+                    outLink._line     = reader.readUint32();
+                    outLink._bInlined = reader.readUint8() != 0;
+                } );
+                if ( bLinks == false || reader.isFullyRead() == false || FileStamp{ sidecarSize, sidecarTime } != sidecarStamp )
+                    return nullopt;
+                if ( guidText.empty() == false )
+                {
+                    content._guid = AssetGUID::tryParse( guidText );
+                    if ( content._guid.has_value() == false )
+                        return nullopt;
+                }
+                return content;
+            }
         };
     } // namespace
 } // namespace sw::editor
@@ -294,35 +351,39 @@ namespace sw::editor
         inoutData._mapPathToGUID.erase( itGUID );
     }
 
-    void EditorAssetIndex::insertEntry( EditorAssetIndexData& inoutData, string_view displayPath, const FileStamp& fileStamp, const string* pText, const string* pMetaText,
-                                        const vector<string>& listMountedDomain )
+    EditorAssetContent EditorAssetIndex::makeContent( const string* pText, const string* pMetaText, const vector<string>& listMountedDomain )
+    {
+        EditorAssetContent content;
+        if ( pText != nullptr )
+        {
+            content._guid = AssetGUIDHeader::read( *pText )._guid;
+            extractLinks( *pText, content._listLink, listMountedDomain );
+        }
+        else if ( pMetaText != nullptr )
+        {
+            content._guid = EditorAssetIndexInternal::readMetaGUID( *pMetaText );
+        }
+        return content;
+    }
+
+    void EditorAssetIndex::insertEntry( EditorAssetIndexData& inoutData, string_view displayPath, const FileStamp& fileStamp, EditorAssetContent&& content )
     {
         const string assetID = EditorAssetIndexInternal::makeKey( displayPath );
         removeEntry( inoutData, assetID );
         EditorAssetEntry& entry = inoutData._mapEntry[assetID];
         entry._displayPath      = string( displayPath );
         entry._fileStamp        = fileStamp;
-
-        optional<AssetGUID> guid;
-        if ( pText != nullptr )
+        entry._listLink         = std::move( content._listLink );
+        for ( const EditorAssetLink& link : entry._listLink )
         {
-            guid = AssetGUIDHeader::read( *pText )._guid;
-            extractLinks( *pText, entry._listLink, listMountedDomain );
-            for ( const EditorAssetLink& link : entry._listLink )
-            {
-                vector<string>& listReferrer = inoutData._mapReferrer[link._target];
-                if ( listReferrer.empty() || listReferrer.back() != assetID ) // 이 파일의 줄은 방금 넣은 것이 맨 뒤다 — 같은 대상을 여러 번 적어도 한 번만
-                    listReferrer.push_back( assetID );
-            }
+            vector<string>& listReferrer = inoutData._mapReferrer[link._target];
+            if ( listReferrer.empty() || listReferrer.back() != assetID ) // 이 파일의 줄은 방금 넣은 것이 맨 뒤다 — 같은 대상을 여러 번 적어도 한 번만
+                listReferrer.push_back( assetID );
         }
-        else if ( pMetaText != nullptr )
+        if ( content._guid.has_value() )
         {
-            guid = EditorAssetIndexInternal::readMetaGUID( *pMetaText );
-        }
-        if ( guid.has_value() )
-        {
-            inoutData._mapPathToGUID.insert_or_assign( assetID, *guid ); // AssetGUID 는 기본 생성이 없다(무효 GUID 는 optional 로만) — operator[] 대신
-            inoutData._mapGUIDToPath[*guid].push_back( assetID );        // 이 경로의 옛 줄은 위 removeEntry 가 뺐다
+            inoutData._mapPathToGUID.insert_or_assign( assetID, *content._guid ); // AssetGUID 는 기본 생성이 없다(무효 GUID 는 optional 로만) — operator[] 대신
+            inoutData._mapGUIDToPath[*content._guid].push_back( assetID );        // 이 경로의 옛 줄은 위 removeEntry 가 뺐다
         }
     }
 
@@ -343,48 +404,60 @@ namespace sw::editor
         if ( isTextAsset( assetID ) )
         {
             const bool bRead = FileUtil::readOptionalTextFile( FileUtil::toDiskPath( absPath ), text ) == OptionalFileRead::Read;
-            insertEntry( inoutData, displayPath, stamp, bRead ? &text : nullptr, nullptr ); // 읽지 못한 글은 참조가 없는 것과 같다
+            insertEntry( inoutData, displayPath, stamp, makeContent( bRead ? &text : nullptr, nullptr ) ); // 읽지 못한 글은 참조가 없는 것과 같다
             return;
         }
         const bool bMeta = EditorAssetIndexInternal::readMetaText( absPath, text );
-        insertEntry( inoutData, displayPath, stamp, nullptr, bMeta ? &text : nullptr );
+        insertEntry( inoutData, displayPath, stamp, makeContent( nullptr, bMeta ? &text : nullptr ) );
     }
 
-    void EditorAssetIndex::scan( string_view resourceRoot, string_view scratchFolder, EditorAssetIndexData& outData, TaskManager* pTaskManager, const StopToken& stopToken )
+    void EditorAssetIndex::scan( string_view resourceRoot, string_view scratchFolder, EditorAssetIndexData& outData, TaskManager* pTaskManager, const StopToken& stopToken, AssetScanCache* pCache )
     {
+        using Internal = EditorAssetIndexInternal;
         const Stopwatch stopwatch;
         outData = EditorAssetIndexData{};
-        vector<string> listFile;
+        vector<EditorContentFile> listFile;
         // `.meta` 는 목록의 파일이 아니다(EditorContentScan::isListedFile — 한 파일 갱신과 같은 규칙). 작업 도메인(시나리오 사본)은 실행 뿌리 아래라 따로 훑는다.
-        if ( resourceRoot.empty() || EditorContentScan::collectTreeFiles( resourceRoot, scratchFolder, "", listFile, stopToken ) == false )
+        if ( resourceRoot.empty() || EditorContentScan::collectTreeFiles( resourceRoot, scratchFolder, listFile, stopToken ) == false )
             return;
 
-        vector<string> listDisplayPath;
-        listDisplayPath.reserve( listFile.size() );
-        for ( const string& filePath : listFile )
+        vector<Internal::ScanFile> listScan;
+        listScan.reserve( listFile.size() );
+        for ( const EditorContentFile& file : listFile )
         {
-            string displayPath = EditorAssetIndexInternal::makeDisplayPath( resourceRoot, filePath );
+            string displayPath = Internal::makeDisplayPath( resourceRoot, file._path );
             if ( displayPath.empty() == false )
-                listDisplayPath.push_back( std::move( displayPath ) );
+                listScan.push_back( Internal::ScanFile{ std::move( displayPath ), file._fileStamp, file._sidecarStamp } );
         }
-        VectorUtil::sort( listDisplayPath ); // 같은 GUID 를 든 두 파일(복사본)의 승자가 실행마다 같게 — 파일 순서로 합친다
+        // 같은 GUID 를 든 두 파일(복사본)의 승자가 실행마다 같게 — 파일 순서로 합친다
+        VectorUtil::sort( listScan, []( const Internal::ScanFile& left, const Internal::ScanFile& right )
+        { return left._displayPath < right._displayPath; } );
 
-        vector<const string*> listPointer;
-        listPointer.reserve( listDisplayPath.size() );
-        for ( const string& displayPath : listDisplayPath )
+        const uint32               fileCount = static_cast<uint32>( listScan.size() );
+        vector<Internal::FileRead> listRead( fileCount );
+        for ( uint32 fileIndex = 0; fileIndex < fileCount; ++fileIndex )
         {
-            listPointer.push_back( &displayPath );
+            const Internal::ScanFile& file = listScan[fileIndex];
+            Internal::FileRead&       read = listRead[fileIndex];
+            read._bTextAsset               = isTextAsset( file._displayPath ) ? SW_TRUE : SW_FALSE;
+            const vector<uint8>* pCached   = pCache != nullptr ? pCache->find( file._displayPath, file._fileStamp ) : nullptr;
+            if ( pCached == nullptr )
+                continue;
+            optional<EditorAssetContent> content = Internal::decodeContent( *pCached, file._sidecarStamp );
+            if ( content.has_value() == false )
+                continue; // 곁 서술이 바뀌었다 — 다시 읽어 줄을 새로 적는다
+            read._content = std::move( *content );
+            read._bRead   = SW_TRUE;
+            read._bCached = SW_TRUE;
         }
-        const uint32                               fileCount = static_cast<uint32>( listDisplayPath.size() );
-        vector<EditorAssetIndexInternal::FileRead> listRead( fileCount );
-        EditorAssetIndexInternal::ScanJob          job{};
-        job._resourceRoot  = resourceRoot;
-        job._ppDisplayPath = listPointer.data();
-        job._stopToken     = stopToken;
+        Internal::ScanJob job{};
+        job._resourceRoot = resourceRoot;
+        job._pFile        = listScan.data();
+        job._stopToken    = stopToken;
         if ( pTaskManager != nullptr )
         {
             // 호출 스레드가 워커여도 된다: `runParallel` 은 호출 스레드가 첫 청크부터 직접 돌고, 합류를 기다리는 동안 다른 일을 돕는다.
-            pTaskManager->runParallelInto<EditorAssetIndexInternal::FileRead>( listRead, EditorAssetIndexInternal::kSerialFileThreshold, job );
+            pTaskManager->runParallelInto<Internal::FileRead>( listRead, Internal::kSerialFileThreshold, job );
         }
         else
         {
@@ -395,10 +468,15 @@ namespace sw::editor
         outData._mapEntry.reserve( fileCount );
         for ( uint32 fileIndex = 0; fileIndex < fileCount; ++fileIndex )
         {
-            const EditorAssetIndexInternal::FileRead& read = listRead[fileIndex];
-            if ( read._bText == SW_TRUE )
+            const Internal::ScanFile& file = listScan[fileIndex];
+            Internal::FileRead&       read = listRead[fileIndex];
+            if ( read._bTextAsset == SW_TRUE && read._bRead == SW_TRUE )
                 ++outData._scannedFileCount;
-            insertEntry( outData, listDisplayPath[fileIndex], read._fileStamp, read._bText == SW_TRUE ? &read._text : nullptr, read._bMeta == SW_TRUE ? &read._metaText : nullptr );
+            // 읽는 동안 멈춘 스캔의 칸은 비어 있다 — 캐시에 빈 줄을 적지 않는다. 작업 도메인은 실행마다 새 사본이고, 막 쓴 서술은 도장으로 가릴 수 없다(파일 자신의 도장은 `record` 가 본다).
+            const bool bNewRow = pCache != nullptr && read._bRead == SW_TRUE && read._bCached == SW_FALSE && ContentHash::isStampStable( file._sidecarStamp );
+            if ( bNewRow && FileUtil::startsWithPathComponent( FileUtil::normalizePath( file._displayPath ), AssetPaths::kScratchDomain ) == false )
+                pCache->record( file._displayPath, file._fileStamp, Internal::encodeContent( file._sidecarStamp, read._content ) );
+            insertEntry( outData, file._displayPath, file._fileStamp, std::move( read._content ) );
         }
         outData._scanMilliseconds = stopwatch.getElapsedMilliseconds();
     }
@@ -466,7 +544,7 @@ namespace sw::editor
         // 붙인 디스크 도메인(테스트 · 도구)의 글도 넣으므로 그 도메인 이름을 참조 앞머리로 함께 본다 — 이 함수는 에디터 스레드에서만 부른다.
         vector<string> listMountedDomain;
         editor::getSubsystem<AssetPaths>().collectMountedDiskDomains( listMountedDomain );
-        insertEntry( _data, displayPath, fileStamp, isTextAsset( displayPath ) ? &copy : nullptr, nullptr, listMountedDomain );
+        insertEntry( _data, displayPath, fileStamp, makeContent( isTextAsset( displayPath ) ? &copy : nullptr, nullptr, listMountedDomain ) );
     }
 
     const EditorAssetEntry* EditorAssetIndex::find( string_view assetID ) const
@@ -592,9 +670,18 @@ namespace sw::editor
 
         EditorAssetIndexData data{};
         const StopToken      stopToken = readStopSignal( pState );
-        EditorAssetIndex::scan( resourceRoot, AssetPaths::getScratchFolderPath(), data, pTasks, stopToken );
+        // 에디터를 열 때마다 모든 글 에셋 · `.meta` 를 다시 읽지 않는다(언리얼 AssetRegistry 캐시 · Godot `filesystem_cache`).
+        AssetScanCache       cache{ EditorAssetIndex::kScanPayloadVersion };
+        const AbsolutePath   cachePath = AssetScanCache::makeLocalPath( "EditorAssetIndex.bin" );
+        const expected<void> loaded    = cache.load( cachePath );
+        if ( loaded.has_value() == false )
+            SW_LOG_INFO_ID( "EditorAssetIndex.ScanCacheDropped", "%# '%#' - reading every asset", loaded.error().message(), loaded.error().detail() );
+        EditorAssetIndex::scan( resourceRoot, AssetPaths::getScratchFolderPath(), data, pTasks, stopToken, &cache );
         if ( stopToken.isStopRequested() )
-            return; // 종료가 시작돼 스캔이 중간에 멈췄다 — 불완전한 색인을 싣지 않는다
+            return; // 종료가 시작돼 스캔이 중간에 멈췄다 — 불완전한 색인 · 캐시를 싣지 않는다
+        const expected<void> saved = cache.save( cachePath );
+        if ( saved.has_value() == false )
+            SW_LOG_INFO_ID( "EditorAssetIndex.ScanCacheNotSaved", "%# '%#' - the next start reads again", saved.error().message(), saved.error().detail() );
 
         publish( pState, generation, std::move( data ) );
     }

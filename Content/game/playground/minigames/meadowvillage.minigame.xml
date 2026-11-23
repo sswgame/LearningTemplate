@@ -4,7 +4,7 @@
   초원 마을 미니게임(하우징 · 생물) — Housing · CreatureLife · Farming 키트를 한 씬 · 한 공유 상태(시계 · 지갑 · 땅)에 섞는다. 옛 게임 MeadowVillage 를 미니게임으로 흡수했다.
   키트는 게임 기능으로 걸 것이 없다(등록하지 않는다) — 카탈로그(작물 · 생물 · 부탁 · 호감도 · 하우징 부품)는 맵의 디렉터가 씬 참조로 받는다. 한 프로세스 재생(NetSimulation,
   Source/Games/Playground/MeadowVillage/MeadowNetSimGame.cpp)의 월드는 미니게임에 들어가지 않고 같은 맵만 풀어 넣으므로 미니게임 범위의 카탈로그를 보지 못한다.
-  맵의 VillageState 오브젝트에 GameStateComponent → MeadowFarmGameModeComponent → CreatureTownGameModeComponent →
+  맵의 VillageState 오브젝트에 GameStateComponent → FarmPlotGameModeComponent → FarmPlotViewComponent(GF_Client_Farming) → CreatureTownGameModeComponent →
   CreatureTownViewComponent(GF_Client_CreatureLife) → HousingPlotComponent → MeadowHomeGameModeComponent → HousingNetSessionComponent 가 그 순서로 붙어 시계 → 밭 → 마을 → 집 부지 → 집 짓기로 돈다.
   대화(CreatureTown.Talk)는 꺼진 입력 레이어 CreatureTown(meadowvillage/data/town.input.xml)이고 미니게임이 켠다 — 빨리 감기 Space 와 타일 마을 말 걸기(Interact)의 Space 가 함께 발화하지 않는다.
   걷는 폰이 없어 Movement 는 켜지 않는다. 시나리오 automation/meadowvillage_* 가 실행 전역 변수 gv_firstMinigame 로, 하우징 서버 권위는 automation/editor/meadowvillage_nethousing 이 본다.

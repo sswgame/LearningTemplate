@@ -37,8 +37,11 @@ namespace sw
             bool     _bLink{ false };     ///< 경로 자체가 링크(심볼릭 링크 · Windows 정션)다. 나머지 필드는 가리키는 쪽의 것이다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         };
 
-        /** @brief `forEachChild` 의 콜백입니다. @p name 은 폴더 안의 이름이고, 링크이면 @p bLink 입니다(@p bDirectory 는 링크를 따라간 결과). false 를 돌려주면 멈춥니다. */
-        using ChildVisitFn = bool ( * )( void* pContext, string_view name, bool bDirectory, bool bLink );
+        /**
+         * @brief `forEachChild` 의 콜백입니다. @p name 은 폴더 안의 이름이고 @p status 는 그 항목의 상태(링크는 가리키는 쪽, `_bLink` 는 항목 자체)입니다. false 를 돌려주면 멈춥니다.
+         * @details 크기 · 시각은 나열이 함께 준 값이라 파일마다 다시 묻지 않는다(언리얼 `IterateDirectoryStat`). 폴더의 크기 · 시각과 `_bReadOnly` 는 채우지 않는다.
+         */
+        using ChildVisitFn = bool ( * )( void* pContext, string_view name, const FileStatus& status );
 
         /** @brief 이 플랫폼의 경로 비교가 대소문자를 가리지 않으면 true 입니다(Windows). */
         static constexpr bool kPathsAreCaseInsensitive =

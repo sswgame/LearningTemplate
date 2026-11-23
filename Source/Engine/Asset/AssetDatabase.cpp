@@ -11,6 +11,7 @@
 
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Content/AssetPaths.h"
+#include "Engine/Content/AssetScanCache.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
 #include "Engine/Serialization/Inherit/AssetRedirect.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
@@ -53,6 +54,31 @@ namespace sw
                 inoutMapGUIDToPath.emplace( guid, string( assetID ) );
                 inoutMapPathToGUID.emplace( toLowerID( assetID ), guid );
             }
+
+            /** @brief 정체성을 드는 파일의 글 @p text 에서 `AssetDatabase::build` 가 보는 것만 남긴 글입니다(훑기 캐시에 둔다). 결함이 있는 글은 없음입니다 — 다음 훑기가 다시 읽는다. */
+            [[nodiscard]] static optional<string> makeScanPayload( AssetIdentityKind kind, string_view assetID, const string& text )
+            {
+                if ( kind == AssetIdentityKind::Sidecar || AssetRedirect::isTable( assetID ) )
+                    return text;
+                const AssetGUIDHeader header = AssetGUIDHeader::read( text );
+                switch ( header._state )
+                {
+                    case AssetGUIDHeaderState::Found:
+                        return AssetGUIDHeader::write( {}, *header._guid );
+                    case AssetGUIDHeaderState::Missing:
+                        return string{}; // 머리 없는 글(임포트 산출물)은 빈 글과 같다
+                    case AssetGUIDHeaderState::Invalid:
+                        break;
+                }
+                return nullopt;
+            }
+
+            /** @brief 훑은 파일 하나입니다. */
+            struct ScannedFile
+            {
+                string    _assetID;
+                FileStamp _fileStamp{};
+            };
         };
     } // namespace
 
@@ -491,40 +517,54 @@ namespace sw
         return database;
     }
 
-    AssetDatabase AssetDatabase::scan( string_view contentRoot, const AssetIdentityRules& rules, vector<AssetIdentityIssue>& outListIssue )
+    AssetDatabase AssetDatabase::scan( string_view contentRoot, const AssetIdentityRules& rules, vector<AssetIdentityIssue>& outListIssue, AssetScanCache* pCache )
     {
-        const string   root = FileUtil::normalizeSeparators( contentRoot );
-        vector<string> listAbs;
-        if ( FileUtil::collectFiles( FileUtil::toDiskPath( root ), "", listAbs, true ) == false )
+        using Internal                         = AssetDatabaseInternal;
+        const string                  root     = FileUtil::normalizeSeparators( contentRoot );
+        const AbsolutePath            rootPath = FileUtil::toDiskPath( root );
+        vector<Internal::ScannedFile> listScanned;
+        auto                          collectEntry = [&rootPath, &listScanned]( const DirectoryEntry& entry )
+        {
+            if ( entry._bDirectory || entry._path.size() <= rootPath.str().size() + 1 )
+                return true;
+            string assetID{ entry._path.substr( rootPath.str().size() + 1 ) };
+            // 작업 도메인(시나리오 · 테스트 사본 — 실행이 쓰고 지운다)은 기동 색인에 넣지 않는다: 원본을 머리째 복사해 GUID 가 겹친다. 정체성 규칙(`classify`)은
+            // 그 안도 보통 에셋으로 본다 — 사본 안의 가져오기 · 내용 바꾸기가 GUID 를 주고 읽어야 한다(editor.assetidentity).
+            if ( FileUtil::startsWithPathComponent( FileUtil::normalizePath( assetID ), AssetPaths::kScratchDomain ) == false )
+                listScanned.push_back( Internal::ScannedFile{ std::move( assetID ), entry._fileStamp } );
+            return true;
+        };
+        if ( FileUtil::isDirectory( rootPath ) == false || FileUtil::forEachDirectoryEntry( rootPath, true, collectEntry ) == false )
         {
             outListIssue.push_back( AssetIdentityIssue{ AssetIdentityIssueKind::Unreadable, root, {} } );
             return AssetDatabase{};
         }
-        vector<string> listID;
-        for ( const string& abs : listAbs )
-        {
-            const string normalized = FileUtil::normalizeSeparators( abs );
-            if ( normalized.size() <= root.size() + 1 )
-                continue;
-            const string assetID = normalized.substr( root.size() + 1 );
-            // 작업 도메인(시나리오 · 테스트 사본 — 실행이 쓰고 지운다)은 기동 색인에 넣지 않는다: 원본을 머리째 복사해 GUID 가 겹친다. 정체성 규칙(`classify`)은
-            // 그 안도 보통 에셋으로 본다 — 사본 안의 가져오기 · 내용 바꾸기가 GUID 를 주고 읽어야 한다(editor.assetidentity).
-            if ( FileUtil::startsWithPathComponent( FileUtil::normalizePath( assetID ), AssetPaths::kScratchDomain ) )
-                continue;
-            listID.push_back( assetID );
-        }
         vector<AssetIdentityFile> listFile;
-        for ( const string& assetID : listID )
+        for ( const Internal::ScannedFile& scanned : listScanned )
         {
-            const AssetIdentityKind kind = rules.classify( assetID );
+            const string&           assetID = scanned._assetID;
+            const AssetIdentityKind kind    = rules.classify( assetID );
             if ( kind == AssetIdentityKind::Skipped )
                 continue;
             AssetIdentityFile file{ assetID, {} };
-            const bool        bCarriesIdentity = kind == AssetIdentityKind::Header || kind == AssetIdentityKind::Sidecar;
-            if ( bCarriesIdentity && FileUtil::readTextFile( FileUtil::toDiskPath( FileUtil::joinPath( root, assetID ) ), file._text ) == false )
+            if ( kind == AssetIdentityKind::Header || kind == AssetIdentityKind::Sidecar )
             {
-                outListIssue.push_back( AssetIdentityIssue{ AssetIdentityIssueKind::Unreadable, assetID, {} } );
-                continue;
+                const vector<uint8>* pCached = pCache != nullptr ? pCache->find( assetID, scanned._fileStamp ) : nullptr;
+                if ( pCached != nullptr )
+                {
+                    file._text.assign( pCached->begin(), pCached->end() );
+                }
+                else if ( FileUtil::readTextFile( FileUtil::toDiskPath( FileUtil::joinPath( root, assetID ) ), file._text ) == false )
+                {
+                    outListIssue.push_back( AssetIdentityIssue{ AssetIdentityIssueKind::Unreadable, assetID, {} } );
+                    continue;
+                }
+                else if ( pCache != nullptr )
+                {
+                    const optional<string> payload = Internal::makeScanPayload( kind, assetID, file._text );
+                    if ( payload.has_value() )
+                        pCache->record( assetID, scanned._fileStamp, vector<uint8>( payload->begin(), payload->end() ) );
+                }
             }
             listFile.push_back( std::move( file ) );
         }

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="f85f9ae486412b408ca264fd51f3f773"?>
+<!--
+  액션 어드벤처 미니게임(벨모라 골짜기 — 지역 · 봉화 · 야영지 · 지역 전투 · 퀘스트 보상 · 확장 팩 세이브 승계) — ActionAdventure · ActionCombat 키트. 옛 게임 Velmora 를 미니게임으로 흡수했다.
+  지역 표(data/regions.xml) · 퀘스트(data/quests.xml)는 게임 기능 ActionAdventure 가, 몬스터 표(data/monsters.xml)는 ActionCombat 가 미니게임 범위에 건다.
+  맵의 Valley 오브젝트에 GameStateComponent → AdventureGameModeComponent(지역 · 몸 · 퀘스트 — 지갑 · 일지는 PlayerController 가 쥔다) → VelmoraEncounterGameModeComponent(지역 전투 — 두 키트를 섞는 게임 몫)가
+  그 순서로 붙고, 입력 · 그리기는 클라이언트 쪽 AdventureAvatarComponent(GF_Client_ActionAdventure) · VelmoraEncounterViewComponent 다.
+  입력은 걷기 공통 레이어와 Velmora 레이어(velmora/data/velmora.input.xml)만 켠다. 확장 팩은 선택이다 — `-gv_modList=velmora_tidecaves`(Test/Mods/velmora_tidecaves)가 표 셋에 층으로 더하고 세이브를 깨지 않는다.
+  시나리오 automation/velmora_vale 와 두 번 기동 쌍 automation/sequence/velmora_carry · velmora_release 가 실행 전역 변수 gv_firstMinigame 로 들어간다.
+-->
+<Minigame name="velmora" map="game/playground/velmora/maps/vale.scene.xml" entry="SceneSwitch" portalSlot="7" features="ActionCombat,ActionAdventure" inputContexts="Movement,Velmora" catalogs="MonsterCatalog,adventureregions,quests"/>

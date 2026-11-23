@@ -47,7 +47,7 @@ SW_TEST_CASE( AutomationUserDataRootTest, OnlyRootsUnderTheAutomationFolderPass 
     const sw::string base = sw::AutomationUserDataRoot::getBaseFolder();
     // 판정할 뿌리를 `<base><꼬리>` 로 만든다 — 경로라 잘리지 않게 StringBuilder 를 쓴다.
     sw::StringBuilder<sw::constant::buffer::kMax1024> root;
-    for ( const sw::string_view tail : { "/Runs/12-34/userdata", "/Runs/12-34/dx12/userdata", "/UserData/sequence.velmora.carry/" } )
+    for ( const sw::string_view tail : { "/Runs/12-34/userdata", "/Runs/12-34/dx12/userdata", "/UserData/sequence.playground.velmora_carry/" } )
     {
         root.clear();
         root.appendFormat( "%#%#", base, tail );

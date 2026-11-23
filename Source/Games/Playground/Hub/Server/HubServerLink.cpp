@@ -243,7 +243,7 @@ namespace sw
         }
         HubProfile profile = load._profile;
         if ( load._bFound == SW_FALSE )
-            profile._position = _world.getRules()._avatarSpawn; // 새 계정은 나는 자리에서 시작한다
+            profile._position = _world.chooseAvatarStart(); // 새 계정은 빈 시작 자리에서 시작한다
         unique_ptr<HubAvatarAgent> pAgent = make_unique<HubAvatarAgent>();
         pAgent->_pWorld                   = &_world;
         pAgent->_onAction                 = SW_DELEGATE_METHOD( decltype( pAgent->_onAction ), &HubServerLink::reportAction, this );
