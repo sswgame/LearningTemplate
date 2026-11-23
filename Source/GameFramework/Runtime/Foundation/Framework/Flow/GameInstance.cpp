@@ -99,6 +99,7 @@ namespace sw
         , _listFollowedService{}
         , _bStarted{ SW_FALSE }
         , _bDerivedEntered{ SW_FALSE }
+        , _bInputMapLoaded{ SW_FALSE }
         , _bSecuritySet{ SW_FALSE }
     {
         // 인스턴스 서브시스템 — initialize 가 onInitialize 앞에 초기화하고 shutdown 이 onShutdown 뒤에 역순으로 종료한다.
@@ -317,7 +318,11 @@ namespace sw
         GameNetSession* const pNetSession = game::findSubsystem<GameNetSession>();
         if ( _bSecuritySet == SW_TRUE && pNetSession != nullptr )
             pNetSession->getConnectSecurity().setProvider( nullptr );
-        _bSecuritySet = SW_FALSE;
+        _bSecuritySet              = SW_FALSE;
+        InputManager* const pInput = game::findSubsystem<InputManager>();
+        if ( _bInputMapLoaded == SW_TRUE && pInput != nullptr )
+            pInput->getInputMap().clear();
+        _bInputMapLoaded = SW_FALSE;
         detachGameScope();
         // 범위를 뗀 뒤에 놓는다 — 걸어 둔 서비스(외형 · 아이템)를 찾는 쪽이 이제 없다.
         _pAppearanceWatcher.reset();
@@ -375,6 +380,7 @@ namespace sw
                              settingsAssetID.c_str() );
             return false;
         }
+        _bInputMapLoaded = SW_TRUE; // 읽다 만 맵도 이 인스턴스 것이다
         return pInput->getInputMap().loadBundle( listInputMap );
     }
 
