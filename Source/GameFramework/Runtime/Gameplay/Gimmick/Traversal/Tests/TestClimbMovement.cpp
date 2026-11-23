@@ -7,11 +7,14 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Physics/Collision/PhysicsShape.h"
+#include "Engine/Physics/Component/CharacterController2DComponent.h"
 #include "Engine/Physics/Component/CharacterControllerComponent.h"
+#include "Engine/Physics/Component/RigidBody2DComponent.h"
 #include "Engine/Physics/Component/RigidBodyComponent.h"
 
 #include "GameFramework/Runtime/Character/Control/Controller/IntentTrackControllerComponent.h"
 #include "GameFramework/Runtime/Character/Control/Intent/ControlIntent.h"
+#include "GameFramework/Runtime/Character/Control/Pawn/CharacterMovement2DComponent.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/CharacterMovementComponent.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/Traversal/ClimbZoneComponent.h"
@@ -82,6 +85,65 @@ namespace
             }
         }
     };
+
+    /** @brief 윗면 y 0 인 2D 바닥과 그 위 사다리 구역(x -0.5 ~ 0.5, y 0 ~ 5), 그 안에 선 2D 폰 하나입니다. */
+    struct TestClimbMovement2DWorld
+    {
+        static constexpr float32 kFrame = 1.0f / 60.0f;
+
+        GameObjectManager               _manager{};
+        CharacterController2DComponent* _pController{ nullptr };
+        CharacterMovement2DComponent*   _pMovement{ nullptr };
+        PawnComponent*                  _pPawn{ nullptr };
+        IntentTrackControllerComponent* _pTrack{ nullptr };
+
+        GameObject* addBox( const utf8* pName, const float3& position, const float2& halfExtents, bool bTrigger )
+        {
+            GameObject*           pObject = _manager.createGameObject( hashed_string( pName ) );
+            RigidBody2DComponent* pBody   = pObject->addComponent<RigidBody2DComponent>();
+            PhysicsShapeDesc2D    box;
+            box._type        = PhysicsShapeType2D::Box;
+            box._halfExtents = halfExtents;
+            pBody->setShape( box );
+            pBody->setBodyType( PhysicsBodyType::Static );
+            pBody->setLocalPosition( position );
+            if ( bTrigger )
+            {
+                pBody->setTrigger( true );
+                pBody->setLayer( hashed_string( "Trigger" ) );
+            }
+            return pObject;
+        }
+
+        void build()
+        {
+            (void)addBox( "Floor2D", float3{ 0.0f, -0.5f, 0.0f }, float2{ 20.0f, 0.5f }, false );
+            GameObject* pLadder = addBox( "Ladder2D", float3{ 0.0f, 2.5f, 0.0f }, float2{ 0.5f, 2.5f }, true );
+            (void)pLadder->addComponent<GimmickSensorComponent>();
+            (void)pLadder->addComponent<ClimbZoneComponent>();
+            GameObject* pHero = _manager.createGameObject( hashed_string( "Hero2D" ) );
+            _pController      = pHero->addComponent<CharacterController2DComponent>();
+            _pController->setLocalPosition( float3{ 0.0f, 0.05f, 0.0f } );
+            _pPawn = pHero->addComponent<PawnComponent>();
+            _pPawn->setAutoPossess( PawnAutoPossess::None );
+            _pMovement = pHero->addComponent<CharacterMovement2DComponent>();
+            _pTrack    = _manager.createGameObject( hashed_string( "Track2D" ) )->addComponent<IntentTrackControllerComponent>();
+            _manager.beginPlay();
+            drive( float2{}, 10 ); // 바디 · 속 바디가 서고 사다리 센서가 겹침을 안다
+        }
+
+        /** @brief 의도의 이동 @p move 를 @p frameCount 프레임 동안 냅니다. */
+        void drive( const float2& move, uint32 frameCount )
+        {
+            ControlIntent intent;
+            intent._move = move;
+            _pTrack->play( *_pPawn, vector<ControlIntent>( frameCount, intent ), false );
+            for ( uint32 frame = 0; frame < frameCount; ++frame )
+            {
+                _manager.update( kFrame );
+            }
+        }
+    };
 } // namespace
 
 /** @brief [ClimbMovementTest] 사다리 쪽으로 계속 밀면 올라가 발판 위에 선다 — 이동 방식은 오르는 동안 Climbing, 선 뒤 Walking 이다 */
@@ -139,4 +201,29 @@ SW_TEST_CASE( ClimbMovementTest, SameIntentsGiveTheSamePath )
         SW_EXPECT_EQUAL( a._y, b._y );
         SW_EXPECT_EQUAL( a._z, b._z );
     }
+}
+
+/** @brief [ClimbMovementTest] 2D 캐릭터도 사다리에서 위를 누르면 오르고, 놓으면 머물고, 옆으로 벗어나면 떨어져 땅에 선다 */
+SW_TEST_CASE( ClimbMovementTest, LadderIn2DHoldsAndReleasesSideways )
+{
+    TestClimbMovement2DWorld world;
+    world.build();
+    SW_REQUIRE_TRUE( world._pController->isGrounded() );
+    SW_EXPECT_FALSE( world._pMovement->isClimbing() ); // 겹친 것만으로는 매달리지 않는다
+
+    world.drive( float2{ 0.0f, 1.0f }, 40 );
+    SW_EXPECT_TRUE( world._pMovement->isClimbing() );
+    SW_EXPECT_TRUE( world._pController->getMovementMode() == CharacterMovementMode::Climbing );
+    SW_EXPECT_TRUE( world._pController->getSimulatedPosition()._y > 0.5f );
+
+    world.drive( float2{}, 2 ); // 오르던 마지막 스텝을 넘긴다
+    const float32 held = world._pController->getSimulatedPosition()._y;
+    world.drive( float2{}, 60 );
+    SW_EXPECT_TRUE( world._pMovement->isClimbing() );
+    SW_EXPECT_NEAR( held, world._pController->getSimulatedPosition()._y, 1.0e-3f );
+
+    world.drive( float2{ 1.0f, 0.0f }, 90 );
+    SW_EXPECT_FALSE( world._pMovement->isClimbing() );
+    SW_EXPECT_TRUE( world._pController->isGrounded() );
+    SW_EXPECT_TRUE( world._pController->getSimulatedPosition()._x > 0.8f );
 }

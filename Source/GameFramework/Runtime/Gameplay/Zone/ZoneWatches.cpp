@@ -16,6 +16,7 @@
 #include "Engine/Console/DebugHUDSectionFormat.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
+#include "Engine/Physics/Component/CharacterController2DComponent.h"
 #include "Engine/Physics/Component/CharacterControllerComponent.h"
 #include "Engine/Physics/Component/RigidBodyComponent.h"
 #include "Engine/Reflection/EnumName.h"
@@ -206,9 +207,16 @@ namespace sw
                 return true;
             }
 
-            /** @brief 감시 값 `Character.MovementMode` 입니다. 대상 캐릭터가 필드로 고른 이동 방식(`Walking` · `Falling` · `Swimming` · `Floating`)입니다. */
+            /** @brief 감시 값 `Character.MovementMode` 입니다. 대상 캐릭터(3D · 2D)의 이동 방식(`Walking` · `Falling` · `Swimming` · `Floating` · `Climbing`)입니다. */
             [[nodiscard]] static bool readMovementMode( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
+                const GameObject*                     pTarget       = query.findTargetObject();
+                const CharacterController2DComponent* pController2D = pTarget != nullptr ? pTarget->getComponent<CharacterController2DComponent>() : nullptr;
+                if ( pController2D != nullptr )
+                {
+                    outValue.setText( getEnumName( pController2D->getMovementMode() ) );
+                    return true;
+                }
                 const CharacterControllerComponent* pController = query.findTargetComponent<CharacterControllerComponent>( "CharacterControllerComponent", outValue );
                 if ( pController == nullptr )
                     return false;

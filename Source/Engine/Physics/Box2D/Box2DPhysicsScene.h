@@ -156,6 +156,7 @@ namespace sw
         {
             PhysicsCharacterDesc2D  _desc{};
             PhysicsCharacterState2D _state{};
+            PhysicsBodyHandle       _innerBody{}; ///< 속 바디의 핸들이다(없으면 무효). 사용자 값은 캐릭터의 것이다.
         };
 
         struct ShapeRecord
@@ -198,6 +199,8 @@ namespace sw
         void flushEvents();
         /** @brief 두 바디 사이 접촉이 이번 스텝에 받은 법선 충격량입니다(마지막 서브 스텝 × 서브 스텝 수). */
         float32 computePairImpulse( PhysicsBodyHandle bodyA, PhysicsBodyHandle bodyB ) const;
+        /** @brief 속 바디의 셰이프입니다 — 발(바디 원점) 위에 선 캡슐. */
+        static PhysicsShapeDesc2D makeInnerShape( const PhysicsCharacterDesc2D& desc );
         /** @brief 무버 캡슐(월드)입니다. */
         b2Capsule makeMoverCapsule( const CharacterRecord& record, const float2& position ) const;
 
