@@ -211,6 +211,7 @@ namespace sw
         , _serverAddress{}
         , _credentials{}
         , _latestServerTick{ 0 }
+        , _runWireContent{}
         , _wireContent{}
         , _listenPort{ 0 }
         , _role{ GameNetRole::None }
@@ -407,7 +408,8 @@ namespace sw
         shutdown();
         if ( requested._role == GameNetRole::None )
             return false;
-        GameNetSessionParams params = requested;
+        GameNetSessionParams params       = requested;
+        params._hostSettings._wireVersion = combineWireContent( params._hostSettings._wireVersion, _runWireContent ); // 여는 길(기동 인자 · 서버 설정 · 접속 티켓)마다 빠뜨릴 수 없게 여기 한 곳에서 섞는다
         if ( NetSendThrottleSettings::loadInto( params._hostSettings ) == false )
             return false; // 고정 속도로 대신 열지 않는다 — 막힌 회선에서 재전송을 키우는 것이 고정 버킷이다(감사 N-11)
         if ( GameNetSessionInternal::isValidShardLayout( params ) == false )
@@ -491,7 +493,8 @@ namespace sw
                 return false;
             }
         }
-        _role = params._role;
+        _role        = params._role;
+        _wireContent = _runWireContent; // 위의 shutdown 이 앞 세션 것을 지웠다 — 연 뒤에 적는다
         if ( _role == GameNetRole::Client )
             SW_LOG_INFO_ID( "GameNetSession.NetSessionConnecting", "Net session connecting to %#", _serverAddress.toString() );
         else if ( params._shardCount == 1 )
@@ -529,6 +532,7 @@ namespace sw
                              _wireContent._contentConfigHash, _wireContent._replicatedSchemaHash, wireContent._contentConfigHash, wireContent._replicatedSchemaHash );
             return false;
         }
+        _runWireContent = wireContent; // 지금 열지 않아도 적는다 — 나중에 티켓으로 여는 세션도 같은 내용을 섞는다
         GameNetSessionParams params;
         switch ( makeLaunchParams( params ) )
         {
@@ -536,10 +540,8 @@ namespace sw
                 return true;
             case GameNetLaunch::Open:
             {
-                params._hostSettings._wireVersion = combineWireContent( params._hostSettings._wireVersion, wireContent );
                 if ( initialize( params ) == false )
-                    return false;           // 실패는 initialize 가 알린다
-                _wireContent = wireContent; // initialize 가 앞 세션을 닫으며 지웠다 — 연 뒤에 적는다
+                    return false; // 실패는 initialize 가 알린다
                 if ( wireContent._contentConfigHash != 0 )
                     SW_LOG_INFO_ID( "GameNetSession.ContentConfigFolded", "Net session wire version carries content config %#", wireContent._contentConfigHash );
                 if ( wireContent._replicatedSchemaHash != 0 )
