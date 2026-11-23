@@ -169,6 +169,10 @@ namespace sw
         void activateTop();
         /** @brief 켜진 미니게임의 범위를 끕니다(칸은 그대로 둔다). 없으면 할 일이 없다. */
         void deactivateScope();
+        /** @brief 맨 위 칸을 결과 없이 버리고(범위를 끄고 저장 막기를 푼다) 덮였던 미니게임을 다시 켭니다 — 진입이 진 뒤의 되돌리기입니다. */
+        void dropTop();
+        /** @brief 맨 위 미니게임의 하위 레벨을 읽지 · 짓지 못했으면(`SubLevelState::Failed`) 오류를 남기고 진입을 되돌립니다. */
+        void dropFailedSubLevel();
         /** @brief 하위 레벨 @p returnPoint 를 바탕 씬이 아직 활성이면 뺍니다. */
         static void removeSubLevel( const MinigameSubLevelReturn& returnPoint );
         /** @brief 결과를 넘깁니다(`onFinished`). */

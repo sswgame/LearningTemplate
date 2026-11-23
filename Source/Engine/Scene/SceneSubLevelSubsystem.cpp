@@ -2,8 +2,10 @@
 
 #include "Engine/Scene/SceneSubLevelSubsystem.h"
 
+#include "Core/Concurrency/atomic.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/Task/TaskManager.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Content/AssetID.h"
@@ -21,6 +23,19 @@ namespace sw
     // 짓는 일은 파괴를 처리한 뒤(`DestroyPost`)다 — 스트리밍 셀 · 데이터 레이어와 같은 자리다. 만든 오브젝트는 다음 프레임 병합에서 틱에 든다.
     SW_SCENE_SERVICE( SceneSubLevelSubsystem, DestroyPost, makeSceneFrameAccess( SceneDataKindSet{ SceneDataKind::Structure }, SceneDataKindSet{}, SceneDataKindSet{} ) )
 
+    /** @brief 워커가 채우는 읽기 결과입니다. 워커는 `_listNode` 를 채운 뒤 `_state` 를 release 로 올리고, 게임 스레드는 acquire 로 본 뒤에만 `_listNode` 를 가져간다. */
+    struct SceneSubLevelSubsystem::DocumentRead
+    {
+        enum class State : uint8
+        {
+            Reading,
+            Read,
+            Failed,
+        };
+        atomic<uint8>                          _state{ static_cast<uint8>( State::Reading ) };
+        vector<SceneDocument::SceneObjectNode> _listNode;
+    };
+
     namespace
     {
         struct SceneSubLevelInternal
@@ -33,9 +48,18 @@ namespace sw
     SceneSubLevelSubsystem::SceneSubLevelSubsystem( GameObjectManager& manager )
         : _pScene{ nullptr }
         , _pManager{ &manager }
+        , _readStage{}
         , _listSubLevel{}
         , _mapObjectSubLevel{}
     {
+    }
+
+    SceneSubLevelSubsystem::~SceneSubLevelSubsystem()
+    {
+        // 빼거나 씬을 내려 놓은 읽기도 스테이지에 남아 있을 수 있다 — 낸 적이 있으면 기다린다(이미 끝났으면 바로 돌아온다).
+        TaskManager* const pTaskManager = _readStage.isValid() ? engine::findSubsystem<TaskManager>() : nullptr;
+        if ( pTaskManager != nullptr )
+            pTaskManager->waitStage( _readStage, "SceneSubLevelSubsystem" );
     }
 
     uint64 SceneSubLevelSubsystem::computeAnchorFileID( string_view name )
@@ -78,27 +102,8 @@ namespace sw
             SW_LOG_ERROR_ID( "SceneSubLevels.NameTaken", "Sub-level name '%#' is empty or already used - it is not added", name );
             return false;
         }
-        SceneDocument doc{};
-        if ( doc.load( AssetID{ scenePath } ) == false )
-        {
-            SW_LOG_ERROR_ID( "SceneSubLevels.SceneNotLoaded", "Sub-level '%#' could not load scene '%#' - it is not added", name, scenePath );
-            return false;
-        }
-        // 하위 레벨은 한 묶음으로 오르내린다 — 안을 셀 · 레이어로 다시 나누는 씬은 받지 않는다(그 상태를 들 곳이 없다).
-        bool bLayered = doc._sceneSettings._listDataLayer.empty() == false;
-        for ( const SceneDocument::SceneObjectNode& node : doc._listSceneObjectNode )
-        {
-            bLayered = bLayered || node._listDataLayer.empty() == false;
-        }
-        if ( doc._sceneSettings._bStreaming || doc._listStreamingCell.empty() == false || bLayered )
-        {
-            SW_LOG_ERROR_ID( "SceneSubLevels.SceneNotAddable", "Sub-level '%#': scene '%#' streams cells or uses data layers - add it as a scene of its own instead", name, scenePath );
-            return false;
-        }
-        vector<SceneDocument::SceneObjectNode> listNode;
-        makeMemberNodes( doc, name, computeAnchorFileID( name ), listNode );
         _pScene = &scene;
-        pushSubLevel( name, scenePath, placement, std::move( listNode ) );
+        requestDocument( pushSubLevel( name, scenePath, placement, {} ) );
         return true;
     }
 
@@ -139,7 +144,7 @@ namespace sw
         return nullptr;
     }
 
-    void SceneSubLevelSubsystem::pushSubLevel( string_view name, string_view scenePath, const Placement& placement, vector<SceneDocument::SceneObjectNode> listNode )
+    SceneSubLevelSubsystem::SubLevel& SceneSubLevelSubsystem::pushSubLevel( string_view name, string_view scenePath, const Placement& placement, vector<SceneDocument::SceneObjectNode> listNode )
     {
         unique_ptr<SubLevel> pSubLevel = make_unique<SubLevel>();
         pSubLevel->_name               = name;
@@ -148,6 +153,59 @@ namespace sw
         pSubLevel->_anchorFileID       = computeAnchorFileID( name );
         pSubLevel->_listNode           = std::move( listNode );
         _listSubLevel.push_back( std::move( pSubLevel ) );
+        return *_listSubLevel.back();
+    }
+
+    void SceneSubLevelSubsystem::requestDocument( SubLevel& subLevel )
+    {
+        subLevel._state                 = SubLevelState::Loading;
+        subLevel._pRead                 = sw::make_shared<DocumentRead>();
+        TaskArgs           args         = MakeTaskArgs( subLevel._pRead, subLevel._name, subLevel._scenePath, subLevel._anchorFileID );
+        TaskManager* const pTaskManager = engine::findSubsystem<TaskManager>();
+        if ( pTaskManager == nullptr )
+        {
+            readDocumentJob( args );
+            return;
+        }
+        TaskHandle task = pTaskManager->emplaceTask( "SubLevelRead", SW_DELEGATE_FUNCTION( TaskArgsDelegate, SceneSubLevelSubsystem::readDocumentJob ), std::move( args ) );
+        pTaskManager->addToStage( _readStage, task, "SubLevelRead" ); // 제출 전에 넣는다
+        task.submit();
+    }
+
+    void SceneSubLevelSubsystem::readDocumentJob( const TaskArgs& args )
+    {
+        const shared_ptr<DocumentRead> pRead        = args.get<shared_ptr<DocumentRead>>( 0 );
+        const string                   name         = args.get<string>( 1 );
+        const string                   scenePath    = args.get<string>( 2 );
+        const uint64                   anchorFileID = args.get<uint64>( 3 );
+        SceneDocument                  doc{};
+        bool                           bUsable = doc.load( AssetID{ scenePath } );
+        if ( bUsable == false )
+            SW_LOG_ERROR_ID( "SceneSubLevels.SceneNotLoaded", "Sub-level '%#' could not load scene '%#' - it is not added", name, scenePath );
+        // 하위 레벨은 한 묶음으로 오르내린다 — 안을 셀 · 레이어로 다시 나누는 씬은 받지 않는다(그 상태를 들 곳이 없다).
+        bool bSplit = doc._sceneSettings._bStreaming || doc._listStreamingCell.empty() == false || doc._sceneSettings._listDataLayer.empty() == false;
+        for ( const SceneDocument::SceneObjectNode& node : doc._listSceneObjectNode )
+        {
+            bSplit = bSplit || node._listDataLayer.empty() == false;
+        }
+        if ( bUsable && bSplit )
+        {
+            SW_LOG_ERROR_ID( "SceneSubLevels.SceneNotAddable", "Sub-level '%#': scene '%#' streams cells or uses data layers - add it as a scene of its own instead", name, scenePath );
+            bUsable = false;
+        }
+        if ( bUsable )
+            makeMemberNodes( doc, name, anchorFileID, pRead->_listNode );
+        pRead->_state.store( static_cast<uint8>( bUsable ? DocumentRead::State::Read : DocumentRead::State::Failed ), std::memory_order_release );
+    }
+
+    void SceneSubLevelSubsystem::collectDocument( SubLevel& subLevel )
+    {
+        const DocumentRead::State state = static_cast<DocumentRead::State>( subLevel._pRead->_state.load( std::memory_order_acquire ) );
+        if ( state == DocumentRead::State::Reading )
+            return;
+        subLevel._listNode = std::move( subLevel._pRead->_listNode );
+        subLevel._state    = state == DocumentRead::State::Read ? SubLevelState::Queued : SubLevelState::Failed; // 까닭은 읽은 쪽이 남겼다
+        subLevel._pRead.reset();
     }
 
     void SceneSubLevelSubsystem::update( float32 deltaTime )
@@ -175,6 +233,12 @@ namespace sw
         for ( const unique_ptr<SubLevel>& pSubLevel : _listSubLevel )
         {
             SubLevel& subLevel = *pSubLevel;
+            if ( subLevel._state == SubLevelState::Loading )
+            {
+                if ( bFinishEachFrame && _readStage.isValid() )
+                    engine::getSubsystem<TaskManager>().waitStage( _readStage, "SceneSubLevelSubsystem (deterministic run)" );
+                collectDocument( subLevel );
+            }
             if ( subLevel._state == SubLevelState::Queued )
                 beginBuild( subLevel );
             if ( subLevel._state != SubLevelState::Building )
@@ -340,6 +404,7 @@ namespace sw
             vector<uint8> bytes;
             SceneDocument::writeSavedNodes( bLoaded ? listCaptured : pSubLevel->_listNode, bytes );
             arch.writeSection( bytes.data(), static_cast<uint32>( bytes.size() ) );
+            arch << static_cast<uint8>( pSubLevel->_state != SubLevelState::Loading ? 1u : 0u ); // 읽는 중이면 지을 엔티티가 아직 없다 — 복원이 문서를 다시 읽는다
         }
         outBytes.assign( arch.getData(), arch.getData() + arch.getSize() );
     }
@@ -359,8 +424,11 @@ namespace sw
         {
             arch >> saved._name >> saved._scenePath >> saved._placement._position >> saved._placement._rotation;
             vector<uint8> bytes;
-            if ( arch.readSection( bytes ) == false || arch.isError() || saved._name.empty() ||
-                 SceneDocument::readSavedNodes( bytes.data(), bytes.size(), saved._listNode, "save game (sub-levels)" ) == false )
+            uint8         read{ 0 };
+            const bool    bSection = arch.readSection( bytes );
+            arch >> read;
+            saved._bRead = read != 0;
+            if ( bSection == false || arch.isError() || saved._name.empty() || SceneDocument::readSavedNodes( bytes.data(), bytes.size(), saved._listNode, "save game (sub-levels)" ) == false )
             {
                 SW_LOG_ERROR_ID( "SceneSubLevels.SaveCorrupted", "Save game sub-levels could not be read - the save is not used" );
                 outState = SaveState{};
@@ -391,7 +459,9 @@ namespace sw
                 SW_LOG_ERROR_ID( "SceneSubLevels.SaveNameTwice", "The save carries sub-level '%#' twice - the later one is not restored", saved._name );
                 continue;
             }
-            pushSubLevel( saved._name, saved._scenePath, saved._placement, std::move( saved._listNode ) );
+            SubLevel& subLevel = pushSubLevel( saved._name, saved._scenePath, saved._placement, std::move( saved._listNode ) );
+            if ( saved._bRead == false )
+                requestDocument( subLevel );
         }
     }
 
@@ -413,8 +483,7 @@ namespace sw
         _pScene = state._listSubLevel.empty() ? nullptr : &scene;
         for ( CapturedSubLevel& captured : state._listSubLevel )
         {
-            pushSubLevel( captured._name, captured._scenePath, captured._placement, {} );
-            SubLevel& subLevel       = *_listSubLevel.back();
+            SubLevel& subLevel       = pushSubLevel( captured._name, captured._scenePath, captured._placement, {} );
             subLevel._anchorObjectID = captured._anchorObjectID;
             subLevel._listObjectID   = std::move( captured._listObjectID );
             subLevel._state          = SubLevelState::Loaded;

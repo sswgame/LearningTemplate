@@ -6,6 +6,8 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
+#include "Engine/Foundation/DeterministicRun.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
@@ -149,7 +151,12 @@ SW_TEST_CASE( WorldOriginTest, SubLevelPlacementIsAbsolute )
                                                 float3{ 1010.0f, 0.0f, 0.0f },
                                                 float3{}
     } ) );
+    const DeterministicRunPolicy previous = engine::getSubsystem<DeterministicRun>().getPolicy();
+    DeterministicRunPolicy       finish   = previous;
+    finish._bFinishAssetJobsEachFrame     = SW_TRUE; // 갱신이 걸린 문서 읽기를 기다린다
+    engine::getSubsystem<DeterministicRun>().setPolicy( finish );
     subLevels.update( 0.0f );
+    engine::getSubsystem<DeterministicRun>().setPolicy( previous );
     objects.mergePendingAdds();
     const SceneComponent* pBox = Util::findScene( objects, "Shop/Box" );
     SW_REQUIRE_NOT_NULL( pBox );

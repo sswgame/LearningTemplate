@@ -451,14 +451,7 @@ namespace sw
         const string mapPath = definition._map.get();
         const bool   bSub    = definition._entry == MinigameEntry::SubLevel;
         _stack.push( MinigameFrame{ std::move( definition ), std::move( returnPoint ) } );
-        _pActive            = std::move( pScope );
-        const auto rollback = [this]()
-        {
-            deactivateScope();
-            MinigameFrame dropped;
-            (void)_stack.pop( dropped ); // 방금 쌓은 칸이다 — 그 돌아올 자리(저장 막기)도 버린다
-            activateTop();
-        };
+        _pActive = std::move( pScope );
         if ( bSub )
         {
             // 하위 레벨 이름은 미니게임 이름이다 — 나올 때 그 이름으로 뺀다. 자리는 진입을 건 사물의 변환이다(언리얼 레벨 인스턴스 액터).
@@ -466,7 +459,7 @@ namespace sw
             if ( subLevels.addSubLevel( *pScene, name, mapPath, *placement ) == false )
             {
                 SW_LOG_ERROR_ID( "MinigameFlow.SubLevelRefused", "Minigame '%#': the map '%#' could not be added to the active scene (see the messages above)", name, mapPath.c_str() );
-                rollback();
+                dropTop();
                 return false;
             }
             return true;
@@ -474,7 +467,7 @@ namespace sw
         if ( requestScene( mapPath, SW_DELEGATE_METHOD( GameSceneFlow::SceneLoadedFunction, &MinigameFlow::onMapLoaded, this ) ) == false )
         {
             SW_LOG_ERROR_ID( "MinigameFlow.MapRequestRefused", "Minigame '%#': the map '%#' could not be requested", name, mapPath.c_str() );
-            rollback();
+            dropTop();
             return false;
         }
         _bEntering = SW_TRUE;
@@ -608,6 +601,7 @@ namespace sw
             _pendingRestoredResult  = nullopt;
             deliverResult( restored );
         }
+        dropFailedSubLevel(); // 하위 레벨 맵은 비동기로 읽는다 — 읽지 못했으면 진입을 되돌린다
         // 다시 읽힌 카탈로그를 먼저 건다 — 이 프레임의 진입 · 컴포넌트가 새 판을 찾는다.
         if ( _pActive != nullptr )
             _pActive->rebindReloadedCatalogs();
@@ -654,6 +648,30 @@ namespace sw
         _leakCount += leakCount;
         SW_LOG_INFO_ID( "MinigameFlow.Deactivated", "Minigame '%#' is deactivated (%# left behind)", _pActive->getName().c_str(), leakCount );
         _pActive.reset();
+    }
+
+    void MinigameFlow::dropTop()
+    {
+        deactivateScope();
+        MinigameFrame dropped;
+        (void)_stack.pop( dropped ); // 부르는 쪽이 칸이 있는 것을 안다 — 그 돌아올 자리(저장 막기)도 버린다
+        activateTop();
+    }
+
+    void MinigameFlow::dropFailedSubLevel()
+    {
+        const MinigameFrame* const          pTop      = _stack.findTop();
+        const MinigameSubLevelReturn* const pSubLevel = pTop != nullptr ? std::get_if<MinigameSubLevelReturn>( &pTop->_returnPoint ) : nullptr;
+        Scene* const                        pScene    = pSubLevel != nullptr ? MinigameFlowInternal::findActivePlayScene() : nullptr;
+        if ( pScene == nullptr || pScene->getSourcePath() != pSubLevel->_scenePath )
+            return;
+        SubLevelState state{ SubLevelState::Loading };
+        const bool    bFailed = pScene->getObjectManager()->getSubsystem<SceneSubLevelSubsystem>().findSubLevelState( pSubLevel->_subLevelName.view(), state ) && state == SubLevelState::Failed;
+        if ( bFailed == false )
+            return;
+        SW_LOG_ERROR_ID( "MinigameFlow.SubLevelFailed", "Minigame '%#': its map could not be loaded as a sub-level (see the messages above) - the entry is undone", pTop->_definition._name.c_str() );
+        removeSubLevel( *pSubLevel ); // 실패한 칸을 목록에서 지운다 — 같은 이름으로 다시 들어갈 수 있게
+        dropTop();
     }
 
     void MinigameFlow::removeSubLevel( const MinigameSubLevelReturn& returnPoint )

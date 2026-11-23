@@ -481,7 +481,7 @@ namespace sw
                 SceneSubLevelSubsystem& subLevels = pScene->getObjectManager()->getSubsystem<SceneSubLevelSubsystem>();
                 if ( listArgument.empty() )
                 {
-                    static constexpr const utf8* kArrStateName[] = { "queued", "building", "loaded", "failed", "removing" };
+                    static constexpr const utf8* kArrStateName[] = { "loading", "queued", "building", "loaded", "failed", "removing" };
                     vector<string>               listName;
                     subLevels.collectSubLevelNames( listName );
                     StringBuilder<constant::buffer::kMax512> reply;
