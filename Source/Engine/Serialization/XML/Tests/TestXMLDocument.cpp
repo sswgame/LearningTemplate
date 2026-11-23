@@ -48,6 +48,40 @@ SW_TEST_CASE( XMLDocumentTest, WrappedLinesRoundTrip )
 }
 
 /**
+ * @brief [XMLDocumentTest] 원소 글의 양 끝 공백이 저장 · 읽기를 지나도 남고, 여러 줄 글 속의 `<` 줄은 접히지 않는다(결함: 읽기가 양 끝을 다듬어 글 목록의 공백이 사라졌다)
+ */
+SW_TEST_CASE( XMLDocumentTest, ElementTextKeepsEdgeSpaces )
+{
+    const sw::string longTagLine( 100, 'x' );
+    sw::string       multiLine = "first\n<tag a=\"1\" b=\"";
+    multiLine.append( longTagLine );
+    multiLine.append( "\">\n" );
+    const sw::string arrText[] = { "  lead", "tail \t", " ", "\n", "plain", "a <b> & \"c\" ", "ends ]]> here", multiLine };
+
+    sw::XMLDocument   document;
+    const sw::XMLNode root = document.appendRoot( "Root" );
+    for ( const sw::string& text : arrText )
+    {
+        root.appendChild( "item" ).setValue( sw::string_view( text ) );
+    }
+    const sw::string saved = document.saveToString();
+    sw::XMLDocument  reread;
+    SW_REQUIRE_TRUE( reread.parse( saved ) );
+    sw::XMLNode item = reread.getRoot( "Root" ).findChild( "item" );
+    for ( const sw::string& text : arrText )
+    {
+        SW_REQUIRE_TRUE( item.isValid() );
+        SW_EXPECT_EQUAL( text, sw::string( item.getText() ) );
+        item = item.findNextSibling( "item" );
+    }
+    SW_EXPECT_EQUAL( saved, reread.saveToString() ); // 다시 저장해도 같다
+
+    const sw::XMLNode first = reread.getRoot( "Root" ).findChild( "item" );
+    first.setValue( "short" ); // CDATA 였던 글을 바꿔도 하나다
+    SW_EXPECT_EQUAL( sw::string( "short" ), sw::string( first.getText() ) );
+}
+
+/**
  * @brief [XMLDocumentTest] 실수 묶음은 정확히 그 개수만 읽고, 쓴 글을 다시 읽으면 같은 값이다
  */
 SW_TEST_CASE( XMLDocumentTest, FloatListRules )

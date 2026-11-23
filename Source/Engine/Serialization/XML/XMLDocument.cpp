@@ -20,6 +20,35 @@ namespace sw
         /// @brief 에셋 XML 저장 포맷입니다. 줄 접기는 pugixml 이 아니라 wrapLongElementLines 가 합니다.
         inline constexpr uint32 kXMLSaveFormat = pugi::format_default | pugi::format_no_declaration;
 
+        inline constexpr string_view kRawTextBegin = "<![CDATA[";
+        inline constexpr string_view kRawTextEnd   = "]]>";
+
+        /**
+         * @brief 원소의 글을 씁니다. 양 끝에 공백이 있는 글은 CDATA 로 씁니다.
+         * @details 읽기는 글의 양 끝 공백을 다듬는다(`parse_trim_pcdata` — 보기 좋게 들여 쓴 글을 값으로 읽지 않게). 그래서 값에 든 공백은 다듬지 않는 CDATA 에만 남는다.
+         *          shortcut: `]]>` 가 든 글은 CDATA 하나에 담지 못해 양 끝 공백을 잃는다, 그런 글을 원소에 쓰는 형식이 생기면 나눠 담고 읽기가 잇는다.
+         */
+        void setElementText( pugi::xml_node node, const utf8* pText )
+        {
+            const string_view text{ pText };
+            const auto        isSpace = []( utf8 character )
+            { return character == ' ' || character == '\t' || character == '\n' || character == '\r'; };
+            const bool bEdgeSpace = text.empty() == false && ( isSpace( text.front() ) || isSpace( text.back() ) );
+            if ( bEdgeSpace == false || text.find( kRawTextEnd ) != string_view::npos )
+            {
+                node.text().set( pText );
+                return;
+            }
+            for ( pugi::xml_node child = node.first_child(); child.empty() == false; )
+            {
+                const pugi::xml_node next = child.next_sibling();
+                if ( child.type() == pugi::node_pcdata || child.type() == pugi::node_cdata )
+                    (void)node.remove_child( child );
+                child = next;
+            }
+            (void)node.prepend_child( pugi::node_cdata ).set_value( pText );
+        }
+
         /// @brief 이 길이를 넘는 요소 줄만 속성 단위로 접습니다.
         inline constexpr size_t kXMLWrapColumn = 120;
 
@@ -83,7 +112,8 @@ namespace sw
             result.reserve( xml.size() + xml.size() / 4 );
 
             vector<size_t> listAttrEnd;
-            size_t         lineStart = 0;
+            size_t         lineStart  = 0;
+            bool           bInRawText = false; // CDATA 의 글은 `<` 를 이스케이프하지 않는다 — 글 속 줄을 시작 태그로 보고 접지 않는다
             while ( lineStart <= xml.size() )
             {
                 size_t lineEnd = xml.find( '\n', lineStart );
@@ -100,8 +130,11 @@ namespace sw
                 }
 
                 // 접을 대상: 충분히 길고, 여는 태그이며, 속성이 둘 이상인 줄.
-                const bool bOpenTag = ( indentLen + 1 < line.size() ) && line[indentLen] == '<' &&
+                const bool bOpenTag = bInRawText == false && ( indentLen + 1 < line.size() ) && line[indentLen] == '<' &&
                                       line[indentLen + 1] != '/' && line[indentLen + 1] != '!' && line[indentLen + 1] != '?';
+                const size_t rawBegin = bInRawText ? 0 : line.find( kRawTextBegin );
+                if ( rawBegin != string_view::npos )
+                    bInRawText = line.find( kRawTextEnd, rawBegin ) == string_view::npos;
                 const size_t firstSpace = line.find( ' ', indentLen );
                 const size_t tagEnd     = bOpenTag ? findStartTagEnd( line, indentLen ) : string_view::npos;
 
@@ -571,7 +604,7 @@ namespace sw
         pugi::xml_node pNode = XMLDocumentInternal::asNode( _pNode );
         if ( pNode.empty() )
             return;
-        pNode.text().set( pValue != nullptr ? pValue : "" );
+        setElementText( pNode, pValue != nullptr ? pValue : "" );
     }
 
     void XMLNode::setValue( string_view value ) const
@@ -580,7 +613,7 @@ namespace sw
         if ( pNode.empty() )
             return;
         const string valStr( value );
-        pNode.text().set( valStr.c_str() );
+        setElementText( pNode, valStr.c_str() );
     }
 
     void XMLNode::setValue( bool value ) const
