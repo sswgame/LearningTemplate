@@ -30,7 +30,7 @@
 #include "Engine/Object/Prefab/PrefabInstanceRegistry.h"
 #include "Engine/Object/Prefab/PrefabOverrides.h"
 #include "Engine/Reflection/EnumName.h"
-#include "Engine/Scene/SceneCooker.h"
+#include "Engine/Scene/SceneCellSplitter.h"
 #include "Engine/Scene/SceneDataLayerSubsystem.h"
 #include "Engine/Scene/SceneDocument.h"
 #include "Engine/Scene/SceneManager.h"
@@ -603,7 +603,7 @@ namespace sw
                     return true;
                 }
                 StreamingCellPreview preview{};
-                if ( SceneCooker::previewStreamingCells( *pScene, preview ) == false )
+                if ( StreamingCellPreview::build( *pScene, preview ) == false )
                 {
                     outReply = "the active scene could not be split into cells - see the log";
                     return false;
@@ -1347,6 +1347,21 @@ namespace sw
             (void)anchorFileID;
             VectorUtil::sort( listPart, []( const PrefabPartOverride& lhs, const PrefabPartOverride& rhs )
             { return lhs._partPath < rhs._partPath; } );
+        }
+    }
+
+    void Scene::collectObjectsByFileID( unordered_map<uint64, GameObject*>& outMap ) const
+    {
+        outMap.clear();
+        if ( _objectManager == nullptr )
+            return;
+        ObjectSavedIDMap mapSavedID;
+        collectSavedIDMap( mapSavedID );
+        for ( const auto& [objectID, fileID] : mapSavedID )
+        {
+            GameObject* const pObject = _objectManager->findGameObjectByID( objectID );
+            if ( pObject != nullptr )
+                outMap.emplace( fileID, pObject );
         }
     }
 

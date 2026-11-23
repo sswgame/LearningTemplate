@@ -2009,6 +2009,9 @@
     "ActionCombatDemoComponentInternal": "ActionCombatGameModeComponentInternal — 키트 셋 가르기: 시연 컴포넌트가 키트 디렉터(Component/*GameModeComponent)가 됐다(2026-11-21)",
     "ActionCombatDemoPhase": "ActionCombatPhase — 키트 셋 가르기: 시연 컴포넌트가 키트 디렉터(Component/*GameModeComponent)가 됐다(2026-11-21)",
     "ActionPlatformerDemoComponent": "ActionPlatformerGameModeComponent — 키트 셋 가르기: 시연 컴포넌트가 키트 디렉터(Component/*GameModeComponent)가 됐다(2026-11-21)",
-    "ActionPlatformerDemoComponentInternal": "ActionPlatformerGameModeComponentInternal — 키트 셋 가르기: 시연 컴포넌트가 키트 디렉터(Component/*GameModeComponent)가 됐다(2026-11-21)"
+    "ActionPlatformerDemoComponentInternal": "ActionPlatformerGameModeComponentInternal — 키트 셋 가르기: 시연 컴포넌트가 키트 디렉터(Component/*GameModeComponent)가 됐다(2026-11-21)",
+    "previewStreamingCells": "StreamingCellPreview::build — 쿠커를 DevTools 로 옮기며 셀 나누기를 엔진 SceneCellSplitter 로 갈랐다(2026-11-24)",
+    "splitStreamingCells": "SceneCellSplitter::split — 쿠커를 DevTools 로 옮기며 셀 나누기를 엔진에 남겼다(2026-11-24)",
+    "cookAllPrefabs": "PrefabCooker::cookAll — 프리팹 쿠킹은 DevTools/Cook 이다(2026-11-24)"
   }
 }

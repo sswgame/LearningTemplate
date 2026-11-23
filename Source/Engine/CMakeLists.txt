@@ -140,6 +140,8 @@ sw_glob_source_tree(cook_code_inputs RECURSE
 	"${CMAKE_SOURCE_DIR}/Source/Engine/*.cpp"
 	"${CMAKE_SOURCE_DIR}/Source/Engine/*.inl"
 	"${CMAKE_SOURCE_DIR}/Source/Engine/*.xxx"
+	"${CMAKE_SOURCE_DIR}/Source/DevTools/Cook/*.h" # 쿠커는 DevTools 에 있다 — 지문은 소스 글만 읽는다
+	"${CMAKE_SOURCE_DIR}/Source/DevTools/Cook/*.cpp"
 )
 set(cook_code_header "${CMAKE_BINARY_DIR}/generated/engineabi/CookCodeFingerprint.gen.h")
 # 쿠커 도구 판은 쿠킹하는 쪽의 vcpkg 기록이다 — 교차 빌드는 호스트 빌드의 것(HostTools.cmake), 아니면 이 빌드의 것.

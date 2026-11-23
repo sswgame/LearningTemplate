@@ -210,7 +210,7 @@ namespace sw
         float32 _autoExposureHistogramLogMax; ///< `SW_AUTO_EXPOSURE_HISTOGRAM_LOG_MAX` — `_render._autoExposureHistogramLogMax`
 
         /** @brief 엔진 설정에서 사본을 뜹니다. 설정 덮기와 겹치지 않는 스레드(게임 스레드 · 렌더 스레드)에서만 부른다. */
-        [[nodiscard]] static ShaderEnginePolicy capture();
+        [[nodiscard]] SW_API static ShaderEnginePolicy capture();
     };
 
     /**
