@@ -262,40 +262,6 @@ namespace sw::editor
             ModelImportGeometry::optimizeTriangleRange( inoutBody, begin, triangleCount );
     }
 
-    uint32 ModelImportMaterial::keepPreviousSectionNames( vector<ModelImportSection>& inoutListSection, const vector<MeshSection>& listPrevious )
-    {
-        uint32 keptCount = 0;
-        // 지금 구간 이름마다 그 이름인 구간 수 — 이름이 쓰였는지 볼 때 구간 목록을 훑지 않는다(구간 수 × 앞 구간 수 × 구간 수). 이름을 바꿀 때 함께 고친다.
-        unordered_map<string, uint32> mapNameCount;
-        for ( const ModelImportSection& section : inoutListSection )
-        {
-            ++mapNameCount[section._sectionName];
-        }
-        for ( ModelImportSection& section : inoutListSection )
-        {
-            if ( section._sourceMaterial.empty() )
-                continue;
-            for ( const MeshSection& previous : listPrevious )
-            {
-                // 날 이름 · 가시성이 같은 앞 구간 — 머티리얼 파일 이름(번호)이 바뀌어도 같은 구간이다.
-                const bool bSameSource = previous.hasSourceNames() && previous._personVisibility == section._personVisibility &&
-                                         StringUtil::equals( previous._sourceMaterial.c_str(), section._sourceMaterial ) && StringUtil::equals( previous._sourceNode.c_str(), section._sourceNode );
-                if ( bSameSource == false || StringUtil::equals( previous._name.c_str(), section._sectionName ) )
-                    continue;
-                const string previousName( previous._name.c_str() );
-                const auto   takenIter = mapNameCount.find( previousName );
-                if ( takenIter != mapNameCount.end() && takenIter->second > 0 )
-                    continue; // 다른 새 구간이 이미 그 이름이다 — 이름이 겹치는 메시는 구간이 없어진다(`Mesh::setSections`)
-                --mapNameCount[section._sectionName];
-                ++mapNameCount[previousName];
-                section._sectionName = previousName;
-                ++keptCount;
-                break;
-            }
-        }
-        return keptCount;
-    }
-
     bool ModelImportMaterial::collectSectionTextures( const cgltf_data& data, string_view sourcePath, ModelImportResult& inoutResult )
     {
         vector<uint8> listUsed( data.textures_count, SW_FALSE );

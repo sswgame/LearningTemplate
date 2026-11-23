@@ -124,7 +124,7 @@ namespace sw
         uint32               _firstIndex{ 0 };
         uint32               _indexCount{ 0 };
         MeshPersonVisibility _personVisibility{ MeshPersonVisibility::Both };
-        hashed_string        _sourceMaterial{}; ///< 원본 파일의 날 머티리얼 이름(임포트가 적는다 — 다시 임포트할 때 구간 이름을 지키는 열쇠, 편집 창의 별칭 대응 표시)
+        hashed_string        _sourceMaterial{}; ///< 원본 파일의 날 머티리얼 이름(임포트가 적는다 — 구간 이름이 어느 머티리얼에서 왔는지)
         hashed_string        _sourceNode{};     ///< 원본 파일에서 이 구간의 첫 삼각형이 온 메시(노드) 이름
 
         /** @brief 날 이름(머티리얼 · 노드)이 있으면 true 입니다(옛 임포트는 없다). */
