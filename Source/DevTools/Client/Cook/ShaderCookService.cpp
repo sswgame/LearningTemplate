@@ -6,7 +6,6 @@
 #include "DevTools/Client/Cook/ShaderCookDriver.h"
 #include "DevTools/Cook/IShaderCookService.h"
 
-#include "Engine/Graphics/Shader/Compile/ShaderCookStamp.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
 
 namespace sw
@@ -19,8 +18,7 @@ namespace sw
         public:
             bool cookAllShaders( string_view cookedDir, ShaderTargetFormat format, ShaderCookScope scope ) override
             {
-                const ShaderCookSummary summary = ShaderCookDriver::cookAllShaders( cookedDir, {}, format, false, scope );
-                ShaderCookStamp::invalidateSharedHeaderCache();
+                const ShaderCookSummary summary = ShaderCookDriver::cookAllShaders( cookedDir, {}, format, scope );
                 return summary.isClean();
             }
 

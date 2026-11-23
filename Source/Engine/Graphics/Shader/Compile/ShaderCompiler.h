@@ -7,6 +7,7 @@
 #include "Core/Math/BitUtil.h"
 #include "Core/String/StringUtil.h"
 
+#include "Engine/Asset/Cook/CookRecord.h"
 #include "Engine/EngineMinimal.h"
 #include "Engine/Graphics/Shader/Compile/ShaderSource.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -251,16 +252,13 @@ namespace sw
         vector<uint8> _bytecode;     ///< 컴파일된 바이트코드
         string        _errorMessage; ///< 실패했을 때의 컴파일러 오류 메시지
         /**
-         * @brief 컴파일러의 `#include` 해석이 기댄 파일입니다(해석된 경로, `/` 구분자, 중복 없이 정렬). 실제로 연 헤더와, **찾아봤지만 없던 후보**가 함께 든다. 주 소스 파일은 넣지 않습니다.
-         * @details 쿠킹 최신 판정과 컴파일 캐시가 "이 셰이더가 어느 파일의 상태에 기대는가" 를 이 목록으로 안다. 바이트코드의 리플렉션은 바인딩 정보라
-         *          어느 헤더를 열었는지 담지 못해서, 소스를 읽는 순간 include 처리기가 적는다. 없던 후보는 검색 순서의 앞자리다 — 거기에 같은 이름의 헤더가 생기면
-         *          다음 컴파일은 그것을 연다(가림). 그래서 "없음" 도 의존이다(빌드 도구의 부재 의존과 같다). 판정은 경로의 지금 상태로 본다: 있으면 내용 해시, 없으면 없어야 한다.
-         *          디스크 캐시에 맞았을 때는 캐시와 함께 저장해 둔 목록이 담긴다. 컴파일에 실패한 결과의 목록은 믿지 않는다(비어 있을 수 있다).
+         * @brief 이 바이트코드의 쿠킹 기록입니다 — 작업(`CookJob`)이 기록한 입력(주 소스 · 연 헤더 · **찾아봤지만 없던 앞자리 후보**)과 그 키, 바이트코드 해시.
+         * @details "이 바이트코드가 지금도 맞는가" 는 이 기록 하나로 본다(`CookRecord::isFresh`) — 셰이더 DDC · 메모리 캐시 · 쿠킹본 판정이 같은 답을 낸다.
+         *          어느 헤더를 열었는지는 바이트코드의 리플렉션에 없어 include 처리기가 소스를 읽는 순간 작업에 적는다. 없던 후보도 입력이다 — 거기에 같은 이름의 헤더가 생기면
+         *          다음 컴파일은 그것을 연다(가림). 쿠킹본에서 온 결과와 실패한 결과에는 입력이 없다.
          */
-        vector<string> _listIncludedFile;
-        /** @brief 컴파일한 주 소스의 절대 경로입니다(해석기 `ShaderSourceResolver` 의 답). 메모리 캐시가 이것과 `_listIncludedFile` 로 낡음을 본다. 쿠킹본에서 읽은 결과는 비어 있다. */
-        string _sourceFile;
-        bool   _bSuccess{ false }; ///< 컴파일 성공 여부 NOLINT(sw-bool-flag): 참조(`bool&`)로 넘긴다
+        CookRecord _record;
+        bool       _bSuccess{ false }; ///< 컴파일 성공 여부 NOLINT(sw-bool-flag): 참조(`bool&`)로 넘긴다
     };
 } // namespace sw
 
@@ -274,7 +272,7 @@ namespace sw
     {
     public:
         /**
-         * @brief HLSL 셰이더를 컴파일합니다. 이 기계의 셰이더 DDC(`<프로젝트>/Saved/ShaderCompileCache` — 구성이 함께 쓰는 셰이더 디스크 캐시는 이것 하나다)에 맞으면 컴파일하지 않습니다.
+         * @brief HLSL 셰이더를 컴파일합니다. 셰이더 DDC(`DerivedDataCache` 의 `Shader` 버킷 — 구성이 함께 쓰는 셰이더 디스크 캐시는 이것 하나다)에 맞으면 컴파일하지 않습니다.
          * @param desc 컴파일 디스크립터. `_enginePolicy` 가 없으면 컴파일하지 않고 실패를 돌려준다(엔진 설정을 이 스레드에서 읽지 않는다).
          * @return 컴파일 결과(성공 여부와 바이트코드)
          * @details 스레드 계약: 워커에서 동시에 불린다(병렬 쿠킹). 공유 상태는 읽기 전용(`AssetPaths` 읽기)이거나 원자값이다.
@@ -286,11 +284,28 @@ namespace sw
          * @brief 엔진이 모든 컴파일에 넣는 define(엔진 텍스처 칸 표 `SW_EMU_SLOT_<이름>=<칸>` · `SW_ENGINE_TEXTURE_INDEX_<칸>=g_<이름>Index`, 렌더 정책 `SW_TAA_*` · `SW_PROBE_*` · `SW_AUTO_EXPOSURE_*`)을 @p inoutList 뒤에 더합니다.
          * @details 렌더 정책 값은 `EngineConfig::_render`(Config/Engine/EngineConfig.json)가 정본이다 — 셰이더가 읽는 정책 값은 이 한 경로로만 간다(셰이더에 기본값이 없다).
          *          값은 요청이 실어 온 사본 @p enginePolicy 다 — 컴파일 워커에서 불리므로 설정을 직접 읽지 않는다.
-         * @details 요청에 없고 엔진 바이너리가 정하는 컴파일 입력이라 도구 지문(`ShaderCookStamp::getToolchainFingerprint`)이 이 목록을 섞는다 —
-         *          그래야 표가 바뀌면 모든 셰이더 캐시(실행 캐시 · 컴파일 캐시 · 쿠킹 도장)가 함께 낡는다. 요청 desc 로 키를 만드는 캐시가 이 값을 몰라
+         * @details 요청에 없고 엔진 바이너리가 정하는 컴파일 입력이라 도구 지문(`getToolchainFingerprint`)이 이 목록을 섞는다 —
+         *          그래야 표가 바뀌면 모든 셰이더 캐시(실행 캐시 · 컴파일 캐시 · 쿠킹본)가 함께 낡는다. 요청 desc 로 키를 만드는 캐시가 이 값을 몰라
          *          옛 칸 번호의 바이트를 새것으로 돌려준 결함(DX11 · GL 검정 화면)이 있었다.
          */
         static void appendEngineDefines( vector<ShaderMacroDefine>& inoutList, const ShaderEnginePolicy& enginePolicy );
+
+        /**
+         * @brief 요청 @p desc 의 컴파일 기록이 지금 소스 · 헤더 · 도구와 맞으면 그 기록입니다 — 없거나 낡았으면 빈 값입니다. 컴파일하지 않습니다(쿠킹본 판정).
+         * @details @p desc 는 `compileHLSL` 에 넣는 것과 같다(엔진 define 은 안에서 더한다).
+         */
+        [[nodiscard]] static optional<CookRecord> findCurrentRecord( const ShaderCompileDesc& desc );
+        /** @brief 컴파일 결과 @p result 가 요청 @p desc 에 지금도 맞으면 true 입니다(메모리 캐시). 입력을 기록하지 않은 결과는 맞을 수 없습니다. */
+        [[nodiscard]] static bool isResultCurrent( const ShaderCompileResult& result, const ShaderCompileDesc& desc );
+
+        /**
+         * @brief 컴파일러 도구의 지문입니다. 컴파일러를 부르는 코드의 지문(`CookCodeFingerprint` "ShaderCompiler" — 인자 · 플래그를 고치면 저절로 바뀐다), Vulkan 타깃 버전, 설치된 컴파일러 버전(vcpkg 설치 기록)을 섞는다.
+         * @details 소스 내용 해시만 보면 DXC 를 바꾸거나 옵션을 고쳐도 아무것도 다시 쿠킹하지 않는다. 슬롯 계약 숫자(시프트 포함)는 `binding_slots.hlsli` 에 있고 그 파일은 입력이다.
+         *          엔진 define(`appendEngineDefines`)도 섞는다 — 그 값은 요청이 실어 온 사본 @p enginePolicy 다(워커가 설정을 직접 읽지 않는다). 작업 키의 코드 지문 칸이다.
+         */
+        static uint64 getToolchainFingerprint( const ShaderEnginePolicy& enginePolicy );
+        /** @brief 지문 계산의 본체입니다. 입력만으로 정해집니다(테스트가 상수만으로 같은 값이 나오는지 확인합니다). */
+        static uint64 makeToolchainFingerprint( uint64 compilerCodeFingerprint, uint32 vulkanTargetVersion, string_view compilerVersion );
 
         /**
          * @brief DXC 의 `DxcCreateInstance` 주소입니다(`DxcCreateInstanceProc` 로 바꿔 쓴다). 라이브러리는 처음 부를 때 실행 파일 옆에서 한 번 로드한다. 없으면 nullptr 입니다.

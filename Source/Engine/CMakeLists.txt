@@ -300,7 +300,7 @@ endif()
 # 유니티가 꺼져 있어 CI 에서만 터진다.
 #
 # "익명 네임스페이스가 합쳐져 이름이 부딪친다" 는 **이름 규칙으로 막혀 있다**. 익명 네임스페이스의 도우미는
-# 클래스가 아니라 **TU 이름**을 딴다(`ShaderCookStampInternal` 등, docs/agents/CppStyle.md "Helpers"). 이름 규칙이 그것을 정한다.
+# 클래스가 아니라 **TU 이름**을 딴다(`ShaderCompilerInternal` 등, docs/agents/CppStyle.md "Helpers"). 이름 규칙이 그것을 정한다.
 #
 # 다시 넣고 싶어지면 먼저 `SW_ENABLE_UNITY_BUILD` 를 켠 빌드로 **무엇이 실제로 부딪치는지** 보고, 목록이 아니라 그 이름을 고칠 것.
 #

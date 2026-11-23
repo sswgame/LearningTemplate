@@ -12,7 +12,7 @@ using namespace sw;
 namespace
 {
     /**
-     * @brief 쿠킹본 공급자의 지문 규칙(`CookedShaderBytecodeProvider::computeFingerprint` — 팩은 실행 중 바뀌지 않아 상수)을 그대로 쓰고, 읽기만 팩 대신 고정 바이트로 답하는 공급자입니다.
+     * @brief 쿠킹본 공급자의 지문 규칙(`CookedShaderBytecodeProvider::isCurrent` — 팩은 실행 중 바뀌지 않아 상수)을 그대로 쓰고, 읽기만 팩 대신 고정 바이트로 답하는 공급자입니다.
      * @details 지문 규칙은 진짜 쿠킹본 공급자에 맡긴다 — 테스트가 규칙을 따로 적으면 그 규칙이 지문 0(늘 빗나감)으로 돌아가도 모른다(예전 결함).
      */
     class CookedRuleFakeProvider final : public IShaderBytecodeProvider
@@ -26,8 +26,8 @@ namespace
             (void)desc;
             return result;
         }
-        [[nodiscard]] uint64 computeFingerprint( const ShaderCompileResult& result, const ShaderCompileDesc& desc ) const override { return _cooked.computeFingerprint( result, desc ); }
-        [[nodiscard]] bool   getReflection( ShaderCache& cache, const ShaderCompileDesc& desc, ShaderReflectionData& outReflection ) const override
+        [[nodiscard]] bool isCurrent( const ShaderCompileResult& result, const ShaderCompileDesc& desc ) const override { return _cooked.isCurrent( result, desc ); }
+        [[nodiscard]] bool getReflection( ShaderCache& cache, const ShaderCompileDesc& desc, ShaderReflectionData& outReflection ) const override
         {
             (void)cache;
             (void)desc;
@@ -114,11 +114,10 @@ namespace
             result._bSuccess = true;
             return result;
         }
-        [[nodiscard]] uint64 computeFingerprint( const ShaderCompileResult& result, const ShaderCompileDesc& desc ) const override
+        [[nodiscard]] bool isCurrent( const ShaderCompileResult& result, const ShaderCompileDesc& desc ) const override
         {
-            (void)result;
             (void)desc;
-            return _revision;
+            return result._bytecode == vector<uint8>{ static_cast<uint8>( _revision ) };
         }
         [[nodiscard]] bool getReflection( ShaderCache& cache, const ShaderCompileDesc& desc, ShaderReflectionData& outReflection ) const override
         {

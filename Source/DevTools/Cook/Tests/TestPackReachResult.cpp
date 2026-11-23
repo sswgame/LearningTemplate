@@ -464,7 +464,7 @@ SW_TEST_CASE( PackReachabilityTest, StagedOutputsFollowTheirSource )
     SW_EXPECT_TRUE( staged.isSelected( "engine", "shaders/bin/dx12/post_bloom_ps_0076c9bf.dxil" ) );
     SW_EXPECT_FALSE( staged.isSelected( "engine", "shaders/bin/dx12/post_vs.dxil" ) );
     SW_EXPECT_FALSE( staged.isSelected( "engine", "shaders/bin/dx12/fog_ps.dxil" ) );
-    SW_EXPECT_TRUE( staged.isSelected( "engine", "shaders/bin/dx12/cook.stamp" ) );
+    SW_EXPECT_TRUE( staged.isSelected( "engine", "shaders/bin/dx12/reflection.manifest" ) );
     SW_EXPECT_TRUE( staged.isSelected( "engine", "shaders/bin/dx12/reflection.manifest" ) );
 }
 

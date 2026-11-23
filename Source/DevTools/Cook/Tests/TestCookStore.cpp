@@ -6,6 +6,7 @@
 #include "DevTools/Cook/CookStore.h"
 
 #include "Engine/Asset/Cook/CookRecord.h"
+#include "Engine/Asset/Cook/Tests/DerivedDataCacheTestAccess.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/CookJob.h"
 
@@ -27,7 +28,10 @@ namespace
         /** @brief 같은 기록 · DDC 폴더의 새 저장소입니다(다음 쿠킹 실행). */
         CookStore makeNextRun() const
         {
-            return CookStore{ _root.join( "Record" ).str(), DerivedDataCache{ vector<DerivedDataLayer>{ DerivedDataLayer{ _root.join( "DDC" ), DerivedDataAccess::ReadWrite } } } };
+            return CookStore{
+                _root.join( "Record" ).str(), DerivedDataCacheTestAccess::make( vector<DerivedDataLayer>{ DerivedDataLayer{ _root.join( "DDC" ), DerivedDataAccess::ReadWrite } }
+                    )
+            };
         }
 
         string makeOutputPath( string_view outputID ) const { return FileUtil::joinPath( _cookedDir, outputID ); }

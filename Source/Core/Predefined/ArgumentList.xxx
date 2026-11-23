@@ -71,8 +71,8 @@ SW_REGISTER_ARGUMENT( COOK_ALL, Dev, false, "cook-all" )
 // `-cook-scenes` · `-cook-packs` · `-cook-all` 이 쿠킹 결과를 쓸 스테이징 폴더
 SW_REGISTER_ARGUMENT( COOKED_DIR, Dev, CommandLineDiskPath{}, "cooked-dir" )
 
-// 셰이더 DDC 폴더(기본은 구성이 함께 쓰는 `<프로젝트>/Saved/ShaderCompileCache`) — 빈 캐시에서 굽기를 보는 테스트가 빌드 폴더가 함께 쓰는 DDC 를 지우지 않게 제 폴더를 준다
-SW_REGISTER_ARGUMENT( SHADER_DDC_DIR, Dev, CommandLineDiskPath{}, "shader-ddc-dir" )
+// DDC 폴더 — 층 설정(`Config/Dev/DerivedData.json`) 대신 이 폴더 하나(쓰기 가능, 정리 없음)를 쓴다. 빈 캐시에서 굽는 길의 테스트가 함께 쓰는 캐시를 건드리지 않게
+SW_REGISTER_ARGUMENT( DDC_DIR, Dev, CommandLineDiskPath{}, "ddc-dir" )
 
 // 이 실행이 컴파일 · 캐시에서 얻은 셰이더 요청을 끝날 때 이 파일(`*.shaderrequests`)에 적는다 — 다음 묶음 검증이 시간을 재기 전에 그 목록만 컴파일한다(언리얼 Shader Pipeline Cache 기록). 백엔드별 부모는 자식마다 `.<백엔드>` 를 붙여 넘긴다
 SW_REGISTER_ARGUMENT( SHADER_REQUEST_LOG, Dev, CommandLineDiskPath{}, "shader-request-log" )
@@ -108,7 +108,7 @@ SW_REGISTER_ARGUMENT( PATCH_DIR, Dev, CommandLineDiskPath{}, "patch-dir" )
 // `-make-patch` 가 패치 목록에 서명할 개인 키(ES256 P-256, PKCS#8 PEM) 파일 경로. 개인 키는 저장소에 두지 않고 이 인자로만 받는다. 비우면 서명하지 않는다(서명 없는 패치)
 SW_REGISTER_ARGUMENT( PATCH_SIGN_KEY, Dev, CommandLineDiskPath{}, "patch-sign-key" )
 
-// 쿠킹 스테이징(`-cooked-dir`)의 셰이더 바이너리가 지금 소스에서 나온 것인지(`cook.stamp` · 매니페스트) 쿠킹 표의 모든 백엔드로 보고, 문제가 있으면 실패로 끝난다.
+// 쿠킹 스테이징(`-cooked-dir`)의 셰이더 바이너리가 지금 소스에서 나온 것인지(컴파일 기록 · 매니페스트) 쿠킹 표의 모든 백엔드로 보고, 문제가 있으면 실패로 끝난다.
 // 팩을 구울 때(`-cook-all` · `-cook-packs`)는 이 인자 없이도 셰이더를 굽고 같은 판정을 한다
 SW_REGISTER_ARGUMENT( VERIFY_SHADERS, Dev, false, "verify-shaders" )
 

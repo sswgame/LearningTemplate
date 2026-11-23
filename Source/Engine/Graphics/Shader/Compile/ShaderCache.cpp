@@ -252,7 +252,7 @@ namespace sw
         const IShaderBytecodeProvider& provider = getProvider();
         string                         cacheKey = inCacheKey;
 
-        // 0) 인메모리 캐시 조회 — 넣을 때의 지문(공급자가 센다 - 실행 중 컴파일은 소스와 연 헤더의 내용)이 지금도 같아야 맞다. 파일을 읽는 계산이라 잠금 밖에서 한다(항목을 복사해 나온다).
+        // 0) 인메모리 캐시 조회 — 공급자가 지금도 맞다고 할 때만(실행 중 컴파일은 기록의 입력이 모두 그대로인지). 파일을 보는 일이라 잠금 밖에서 한다.
         ShaderCacheEntry cachedEntry{};
         bool             bCached = false;
         {
@@ -266,8 +266,7 @@ namespace sw
         }
         if ( bCached )
         {
-            const uint64 currentFingerprint = provider.computeFingerprint( cachedEntry._result, desc );
-            if ( currentFingerprint != 0 && currentFingerprint == cachedEntry._sourceFingerprint )
+            if ( provider.isCurrent( cachedEntry._result, desc ) )
             {
                 _memoryHitCount.add();
                 return cachedEntry._result;
@@ -338,11 +337,9 @@ namespace sw
 
     void ShaderCache::storeEntry( string&& cacheKey, const ShaderCompileDesc& desc, const ShaderCompileResult& result )
     {
-        // 지문은 파일을 읽는 계산이라 잠금 밖에서 한다.
         ShaderCacheEntry entry{};
-        entry._sourceFingerprint = getProvider().computeFingerprint( result, desc );
-        entry._desc              = desc;
-        entry._result            = result;
+        entry._desc   = desc;
+        entry._result = result;
 
         ScopedLock<mutex> lock{ _mutexCache };
         if ( _requestLogPath.empty() == false )

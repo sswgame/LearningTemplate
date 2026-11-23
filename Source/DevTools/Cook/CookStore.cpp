@@ -23,7 +23,7 @@ namespace sw
 
     expected<CookStore> CookStore::makeLocal()
     {
-        expected<DerivedDataCache> derivedDataCache = DerivedDataCache::loadFromConfig();
+        expected<DerivedDataCache> derivedDataCache = DerivedDataCache::open( DerivedDataBucket::Cook );
         if ( derivedDataCache.has_value() == false )
             return unexpected( derivedDataCache.error() );
         return CookStore{ FileUtil::joinPath( ProcessRoots::get()._derivedData.str(), "CookRecord" ), std::move( *derivedDataCache ) };
