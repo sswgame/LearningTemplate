@@ -3,10 +3,10 @@
 #include "Engine/Behavior/ConditionExpr.h"
 
 #include "Core/Log/Logger.h"
-#include "Core/Registry/RegistrationList.h"
 #include "Core/String/StringUtil.h"
 #include "Core/String/formatString.h"
 
+#include "Engine/Behavior/ConditionRegistry.h"
 #include "Engine/Reflection/ReflectedValue.h"
 #include "Engine/Reflection/ReflectionValidation.h"
 #include "Engine/Reflection/TypeInfo.h"
@@ -18,10 +18,7 @@ namespace sw
     /** @brief 식 파서입니다. 읽으면서 후위 배열을 짓고, 틀리면 `_error` 에 첫 까닭을 적습니다. */
     struct ConditionExprInternal
     {
-        /** @brief 등록 목록입니다(함수 정적 — 다른 TU · DLL 의 정적 등록자가 먼저 쓴다). 워커가 읽으므로 자기 잠금을 든 목록이다. */
-        static SW_DEFINE_LOCKED_REGISTRATION_LIST( getRegistrations, const ConditionEntry, "ConditionRegistry", RegistrationOrder::Insertion, true )
-
-            static constexpr float64 kMaxLiteral = 100000000.0;
+        static constexpr float64 kMaxLiteral = 100000000.0;
 
         string_view    _text{};
         const utf8*    _pBareCondition{ nullptr };
@@ -105,7 +102,7 @@ namespace sw
             instruction._pEntry    = &entry;
             instruction._pArgs     = args.getInstance();
             instruction._callIndex = static_cast<uint32>( _pExpr->_listArgs.size() ); // 호출마다 인자 하나를 쥐므로 쥔 수가 곧 글 순서다
-            _pExpr->_listArgs.push_back( RegisteredParams{ args.share(), &entry, ConditionRegistry::getEntryOps(), _pExpr->_registryGeneration } );
+            _pExpr->_listArgs.push_back( RegisteredParams{ args.share(), &entry, ConditionEntry::getEntries(), _pExpr->_registryGeneration } );
             _pExpr->_listInstruction.push_back( instruction );
         }
 
@@ -457,54 +454,7 @@ namespace sw
 
 namespace sw
 {
-    void ConditionRegistry::registerCondition( const ConditionEntry* pEntry )
-    {
-        (void)ConditionExprInternal::getRegistrations().addLogged( pEntry, "Condition", pEntry->_pName ); // 거절은 공용 오류 로그가 알린다
-    }
-
-    void ConditionRegistry::unregisterCondition( const ConditionEntry* pEntry )
-    {
-        (void)ConditionExprInternal::getRegistrations().remove( pEntry ); // 올라 있지 않은 줄을 빼는 것은 할 일이 없다
-    }
-
-    uint32 ConditionRegistry::getRemovalGeneration()
-    {
-        return ConditionExprInternal::getRegistrations().getRemovalGeneration(); // 잠금 없이 읽는다 — 빠질 때만 오른다
-    }
-
-    bool ConditionRegistry::isRegistered( const ConditionEntry* pEntry )
-    {
-        return ConditionExprInternal::getRegistrations().contains( pEntry );
-    }
-
-    const RegistryEntryOps& ConditionRegistry::getEntryOps()
-    {
-        static const RegistryEntryOps s_entryOps{ &ConditionRegistry::getRemovalGeneration,
-                                                  []( const void* pEntry )
-        { return ConditionRegistry::isRegistered( static_cast<const ConditionEntry*>( pEntry ) ); } };
-        return s_entryOps;
-    }
-
-    const ConditionEntry* ConditionRegistry::find( string_view name )
-    {
-        return ConditionExprInternal::getRegistrations().findByName( name );
-    }
-
-    void ConditionRegistry::collectNames( vector<string>& outListName )
-    {
-        ConditionExprInternal::getRegistrations().collectNames( outListName );
-    }
-
-    ConditionRegistrar::ConditionRegistrar( const ConditionEntry* pEntry )
-        : _pEntry{ pEntry }
-    {
-        ConditionRegistry::registerCondition( pEntry );
-    }
-
-    ConditionRegistrar::~ConditionRegistrar()
-    {
-        ConditionRegistry::unregisterCondition( _pEntry );
-    }
+    SW_DEFINE_LOCKED_REGISTRATION_LIST( ConditionEntry::getEntries, const ConditionEntry, "ConditionRegistry", RegistrationOrder::Insertion, true )
 } // namespace sw
 
 namespace sw

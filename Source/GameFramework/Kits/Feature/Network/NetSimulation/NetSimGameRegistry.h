@@ -10,6 +10,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Registry/RegistrationList.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -45,5 +46,32 @@ namespace sw
         static const vector<const NetSimGameEntry*>& getGames();
         /** @brief 이름으로 찾습니다. 없으면 nullptr 입니다. */
         static const NetSimGameEntry* findGame( string_view name );
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @class NetSimGameRegistrar
+     * @brief 게임 하나를 모듈이 로드된 동안 한 프로세스 재생의 게임 목록에 올리는 정적 등록자입니다(그 게임의 .cpp 에 하나). 항목을 제가 든다.
+     */
+    class NetSimGameRegistrar
+    {
+    public:
+        NetSimGameRegistrar( const utf8* pName, unique_ptr<INetSimGame> ( *pfnCreate )(), SourceLocation site = SourceLocation::current() )
+            : _entry{ string( pName ), pfnCreate }
+            , _registrar{ &_entry, &NetSimGameRegistrar::add, &NetSimGameRegistrar::remove, site }
+        {
+        }
+
+        NetSimGameRegistrar( const NetSimGameRegistrar& )            = delete;
+        NetSimGameRegistrar& operator=( const NetSimGameRegistrar& ) = delete;
+
+    private:
+        [[nodiscard]] static bool add( const NetSimGameEntry* pEntry ) { return NetSimGameRegistry::registerGame( *pEntry ); }
+        static void               remove( const NetSimGameEntry* pEntry ) { (void)NetSimGameRegistry::unregisterGame( *pEntry ); }
+
+        NetSimGameEntry                         _entry;     ///< 목록에 오르는 줄(이 등록자와 수명이 같다)
+        StaticRegistrar<const NetSimGameEntry*> _registrar; ///< 줄 다음에 만들어 줄보다 먼저 사라진다
     };
 } // namespace sw

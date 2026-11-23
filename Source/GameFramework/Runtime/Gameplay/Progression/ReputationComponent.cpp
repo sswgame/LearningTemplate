@@ -6,7 +6,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 
-#include "GameFramework/Runtime/Foundation/Framework/Save/ComponentStateStore.h"
+#include "GameFramework/Runtime/Foundation/Framework/Save/StatefulComponentRegistrar.h"
 #include "GameFramework/Runtime/Gameplay/GameState/GameStateComponent.h"
 
 namespace sw

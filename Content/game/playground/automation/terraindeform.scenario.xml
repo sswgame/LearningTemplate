@@ -12,7 +12,7 @@
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<WaitRenderStable/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
 	<Expect watch="Surface.DeformHeld" equals="0"/>
-	<Screenshot file="terraindeform_off.ppm" stability="assets"/>
+	<Screenshot file="terraindeform_off.ppm" stability="Assets"/>
 
 	<DevCommand line="scene.layer Stamp on"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>

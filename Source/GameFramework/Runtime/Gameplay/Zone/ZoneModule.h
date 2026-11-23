@@ -15,9 +15,10 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/Name/hashed_string.h"
+#include "Core/Registry/NamedEntryRegistry.h"
 
-#include "Engine/Behavior/ActionRegistry.h"
 #include "Engine/Behavior/ConditionExpr.h"
+#include "Engine/Behavior/GameActionCall.h"
 #include "Engine/Behavior/GameplayContext.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -179,7 +180,13 @@ namespace sw
     class SW_GF_API IZoneModuleProcessor
     {
     public:
+        static constexpr const utf8* kEntryKind = "ZoneModule";
+
         virtual ~IZoneModuleProcessor() = default;
+
+        const utf8* getEntryName() const { return getKindName(); }
+        /** @brief 종류 이름 → 처리기 목록입니다(GameFramework 이미지의 함수 정적). */
+        static LockedRegistrationList<const IZoneModuleProcessor>& getEntries();
 
         /** @brief 데이터가 적는 종류 이름입니다(`_kind`). */
         virtual const utf8* getKindName() const = 0;
@@ -221,41 +228,15 @@ namespace sw
         virtual void onExit( ZoneEventContext& context ) const { (void)context; }
     };
 
-    /**
-     * @struct ZoneModuleRegistry
-     * @brief 종류 이름 → 처리기 표입니다. 등록은 모듈을 올리는 스레드에서, 찾기는 프로필을 읽는 스레드에서 오므로 잠금으로 지킵니다(`ConditionRegistry` 와 같은 규칙).
-     */
-    struct SW_GF_API ZoneModuleRegistry
-    {
-        static void registerProcessor( const IZoneModuleProcessor* pProcessor );
-        static void unregisterProcessor( const IZoneModuleProcessor* pProcessor );
-        /** @brief 종류 이름의 처리기입니다. 없으면 nullptr 입니다. */
-        static const IZoneModuleProcessor* find( string_view kindName );
-        /** @brief 등록된 종류 이름을 ", " 로 이은 글입니다(모르는 종류 오류 · 편집기). */
-        static string joinNames();
-    };
+    /** @brief 종류 이름 → 처리기 표입니다. */
+    using ZoneModuleRegistry = NamedEntryRegistry<IZoneModuleProcessor>;
 
     /** @brief `SW_ZONE_MODULE` 이 두는 정적 등록자입니다. */
-    class SW_GF_API ZoneModuleRegistrar
-    {
-    public:
-        explicit ZoneModuleRegistrar( const IZoneModuleProcessor* pProcessor );
-        ~ZoneModuleRegistrar();
-        ZoneModuleRegistrar( const ZoneModuleRegistrar& )            = delete;
-        ZoneModuleRegistrar& operator=( const ZoneModuleRegistrar& ) = delete;
-
-    private:
-        const IZoneModuleProcessor* _pProcessor;
-    };
+    SW_DEFINE_NAMED_ENTRY_REGISTRAR( ZoneModuleRegistrar, IZoneModuleProcessor );
 } // namespace sw
 
 /**
  * @brief 처리기 @p TProcessor(기본 생성자 · `IZoneModuleProcessor` 파생)를 그 .cpp 에서 등록합니다(`namespace sw` 안, 파일 범위).
  * @param varName 파일 안에서 유일한 이름 조각
  */
-#define SW_ZONE_MODULE( varName, TProcessor )                               \
-    static const TProcessor                sw_zoneModule_##varName{};       \
-    static const ::sw::ZoneModuleRegistrar sw_zoneModuleRegistrar_##varName \
-    {                                                                       \
-        &sw_zoneModule_##varName                                            \
-    }
+#define SW_ZONE_MODULE( varName, TProcessor ) SW_STATIC_REGISTRATION( zoneModule, TProcessor, ::sw::ZoneModuleRegistrar, varName, )

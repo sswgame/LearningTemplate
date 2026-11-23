@@ -16,46 +16,46 @@
 	<Variable name="gv_shooterAutoPlay" value="0"/>
 	<AdvanceSimulation frames="40"/>
 	<Expect watch="Shooter3D.StrideAppliedCount" atLeast="10"/>
-	<Screenshot file="firstperson_level.ppm" stability="assets"/>
+	<Screenshot file="firstperson_level.ppm" stability="Assets"/>
 	<Expect watch="Shooter3D.HandReachError" atMost="0.03"/>
 	<AdvanceSimulation frames="10"/>
 	<MouseDelta x="0" y="300"/>
 	<AdvanceSimulation frames="20"/>
-	<Screenshot file="firstperson_down_a.ppm" stability="assets"/>
+	<Screenshot file="firstperson_down_a.ppm" stability="Assets"/>
 	<AdvanceSimulation frames="5"/>
 	<MouseDelta x="0" y="-600"/>
 	<AdvanceSimulation frames="20"/>
-	<Screenshot file="firstperson_down_b.ppm" stability="assets"/>
+	<Screenshot file="firstperson_down_b.ppm" stability="Assets"/>
 	<AdvanceSimulation frames="5"/>
 	<MouseDelta x="0" y="300"/>
 	<!-- 3인칭으로 돌린다(C = CycleCamera: 프리셋 순서대로) — 머리와 투구가 돌아온다 -->
 	<AdvanceSimulation frames="10"/>
 	<Tap slot="Key.C" hold="1"/>
 	<AdvanceSimulation frames="30"/>
-	<Screenshot file="cycled_a.ppm" stability="assets"/>
+	<Screenshot file="cycled_a.ppm" stability="Assets"/>
 	<AdvanceSimulation frames="5"/>
 	<Tap slot="Key.C" hold="1"/>
 	<AdvanceSimulation frames="30"/>
-	<Screenshot file="cycled_b.ppm" stability="assets"/>
+	<Screenshot file="cycled_b.ppm" stability="Assets"/>
 	<!-- 무기마다 왼손: 1 소총 · 2 산탄총 · 3 권총 -->
 	<AdvanceSimulation frames="5"/>
 	<Tap slot="Key.Digit1" hold="1"/>
 	<AdvanceSimulation frames="25"/>
-	<Screenshot file="hand_rifle.ppm" stability="assets"/>
+	<Screenshot file="hand_rifle.ppm" stability="Assets"/>
 	<AdvanceSimulation frames="5"/>
 	<Tap slot="Key.Digit2" hold="1"/>
 	<AdvanceSimulation frames="25"/>
-	<Screenshot file="hand_shotgun.ppm" stability="assets"/>
+	<Screenshot file="hand_shotgun.ppm" stability="Assets"/>
 	<AdvanceSimulation frames="5"/>
 	<Tap slot="Key.Digit3" hold="1"/>
 	<AdvanceSimulation frames="25"/>
 	<Expect watch="Shooter3D.WeaponIndex" equals="2"/>
-	<Screenshot file="hand_pistol.ppm" stability="assets"/>
+	<Screenshot file="hand_pistol.ppm" stability="Assets"/>
 	<!-- 걷는 동안 -->
 	<AdvanceSimulation frames="5"/>
 	<Press slot="Key.W"/>
 	<AdvanceSimulation frames="60"/>
-	<Screenshot file="walk.ppm" stability="assets"/>
+	<Screenshot file="walk.ppm" stability="Assets"/>
 	<AdvanceSimulation frames="5"/>
 	<Release slot="Key.W"/>
 	<!-- 걷는 동안 떨림 · 손 닿음 — 소총(두 손 견착)을 3인칭에서, 다시 1인칭에서 -->

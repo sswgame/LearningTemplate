@@ -16,11 +16,11 @@ namespace sw
 
 namespace sw
 {
-    void ServerServiceRegistry::registerFactory( ServerServiceFactory* pFactory )
+    bool ServerServiceRegistry::registerFactory( ServerServiceFactory* pFactory )
     {
         if ( pFactory == nullptr || pFactory->_pCreate == nullptr )
-            return;
-        (void)ServiceFactoryNode::addTo( ServerServiceRegistryInternal::getList(), pFactory );
+            return false;
+        return ServiceFactoryNode::addTo( ServerServiceRegistryInternal::getList(), pFactory );
     }
 
     void ServerServiceRegistry::unregisterFactory( ServerServiceFactory* pFactory )

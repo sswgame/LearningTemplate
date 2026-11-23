@@ -14,6 +14,7 @@
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Reflection/ReflectionContainers.h"
+#include "Engine/Serialization/Inherit/DataInheritanceSchemaRegistry.h"
 #include "Engine/Serialization/Inherit/ResourceComposition.h"
 #include "Engine/Serialization/Serializer/SerializerUtil.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
@@ -594,9 +595,6 @@ namespace sw
             }
         };
 
-        /** @brief 손 형식 규칙 표입니다. 정적 등록 공통 틀(잠금을 든 함수 정적 목록)이라 다른 TU 의 정적 등록자가 먼저 와도 서 있다. */
-        SW_DEFINE_LOCKED_REGISTRATION_LIST( getSchemaRegistrars, const DataInheritanceSchemaRegistrar, "DataInheritanceSchemaRegistry" )
-
         /** @brief `makeFromType` 의 재귀 단계입니다. @p inoutStack 은 지나온 형식이고, 자기 자신을 담는 칸은 통째로 바꾸는 칸으로 둡니다. */
         struct DataInheritanceSchemaBuilder
         {
@@ -883,57 +881,7 @@ namespace sw
         return true;
     }
 
-    DataInheritanceSchemaRegistrar::DataInheritanceSchemaRegistrar( const utf8* pRootName, DataInheritance::MakeSchemaFunction pfnMakeSchema )
-        : _pRootName{ pRootName }
-        , _pfnMakeSchema{ pfnMakeSchema }
-        , _pfnMerge{ nullptr }
-    {
-        getSchemaRegistrars().withLock( [this]( RegistrationList<const DataInheritanceSchemaRegistrar>& list )
-        { (void)list.add( this ); } );
-    }
-
-    DataInheritanceSchemaRegistrar::DataInheritanceSchemaRegistrar( const utf8* pRootName, DataInheritance::MergeFunction pfnMerge )
-        : _pRootName{ pRootName }
-        , _pfnMakeSchema{ nullptr }
-        , _pfnMerge{ pfnMerge }
-    {
-        getSchemaRegistrars().withLock( [this]( RegistrationList<const DataInheritanceSchemaRegistrar>& list )
-        { (void)list.add( this ); } );
-    }
-
-    DataInheritanceSchemaRegistrar::~DataInheritanceSchemaRegistrar()
-    {
-        (void)getSchemaRegistrars().remove( this ); // 올라 있지 않으면 할 일이 없다
-    }
-
-    DataInheritance::MakeSchemaFunction DataInheritanceSchemaRegistrar::find( string_view rootName )
-    {
-        return getSchemaRegistrars().withLock( [rootName]( const RegistrationList<const DataInheritanceSchemaRegistrar>& list ) -> DataInheritance::MakeSchemaFunction
-        {
-            // 나중에 올린 것이 먼저다(예전 사슬과 같은 순서) — 같은 루트의 규칙 함수 · 합치기 함수가 따로 오를 수 있어 이름 찾기 대신 훑는다.
-            const vector<const DataInheritanceSchemaRegistrar*>& listItem = list.getItems();
-            for ( size_t index = listItem.size(); index > 0; --index )
-            {
-                if ( rootName == listItem[index - 1]->_pRootName && listItem[index - 1]->_pfnMakeSchema != nullptr )
-                    return listItem[index - 1]->_pfnMakeSchema;
-            }
-            return nullptr;
-        } );
-    }
-
-    DataInheritance::MergeFunction DataInheritanceSchemaRegistrar::findMerge( string_view rootName )
-    {
-        return getSchemaRegistrars().withLock( [rootName]( const RegistrationList<const DataInheritanceSchemaRegistrar>& list ) -> DataInheritance::MergeFunction
-        {
-            const vector<const DataInheritanceSchemaRegistrar*>& listItem = list.getItems();
-            for ( size_t index = listItem.size(); index > 0; --index )
-            {
-                if ( rootName == listItem[index - 1]->_pRootName && listItem[index - 1]->_pfnMerge != nullptr )
-                    return listItem[index - 1]->_pfnMerge;
-            }
-            return nullptr;
-        } );
-    }
+    SW_DEFINE_LOCKED_REGISTRATION_LIST( DataInheritanceSchemaEntry::getEntries, const DataInheritanceSchemaEntry, "DataInheritanceSchemaRegistry", RegistrationOrder::Insertion, true )
 
     bool DataInheritance::makeDelta( string_view fullText, string_view parentFullText, const DataInheritanceSchema& schema, string_view baseID, string& outText )
     {

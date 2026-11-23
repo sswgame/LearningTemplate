@@ -8,7 +8,7 @@
 #include "Core/Math/Math.h"
 #include "Core/Name/hashed_string.h"
 
-#include "Engine/Behavior/ActionRegistry.h"
+#include "Engine/Behavior/GameActionCall.h"
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 

@@ -244,6 +244,6 @@ namespace sw
         return reloadLive( AssetID{ relativePath } );
     }
 
-    SW_BUILT_IN_ASSET_CACHE( MaterialParameterCollectionCache );
+    SW_BUILT_IN_ASSET_CACHE( MaterialParameterCollectionCache, MaterialParameterCollectionCache );
     SW_ASSET_TYPE( MaterialParameterCollection, MaterialParameterCollectionDef::kAssetType );
 } // namespace sw

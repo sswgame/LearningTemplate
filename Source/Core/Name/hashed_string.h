@@ -710,7 +710,7 @@ namespace sw
         if ( newIndex >= kMaxChunks * kChunkSize )
         {
             // 멈춘다 — None 을 돌려주면 그 뒤 모든 새 이름이 서로 같아져 조용히 틀린다(감사 C-17, 언리얼 FName 도 넘치면 치명 오류)
-            SW_FATAL( "hashed_string pool capacity (%# entries) exceeded - every new name would collapse to None", kMaxChunks * kChunkSize );
+            reportFatalError( "hashed_string pool capacity (%# entries) exceeded - every new name would collapse to None", kMaxChunks * kChunkSize );
         }
 
         const uint32 chunkIndex = newIndex >> kChunkShift;

@@ -421,8 +421,8 @@ namespace sw
     {
         const TypeInheritedPropertySlot::Snapshot* const pSnapshot = _derived._inheritedProperties.load();
         if ( pSnapshot == nullptr )
-            SW_FATAL( "TypeInfo %# has a parent but its inherited property list was not built - only TypeRegistry-owned types (rebuildDerivedCaches) can list inherited properties",
-                      _fullyQualifiedName.c_str() );
+            reportFatalError( "TypeInfo %# has a parent but its inherited property list was not built - only TypeRegistry-owned types (rebuildDerivedCaches) can list inherited properties",
+                              _fullyQualifiedName.c_str() );
         return *pSnapshot;
     }
 

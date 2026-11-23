@@ -82,7 +82,7 @@ namespace sw::editor
         for ( const EditorFolderListingEntry& entry : outList )
         {
             if ( entry._bIsDirectory == false )
-                AssetCompanionRegistry::appendCompanionPaths( entry._relativePath, listCompanion );
+                AssetCompanionRule::appendCompanionPaths( entry._relativePath, listCompanion );
         }
         unordered_set<string> uniqueCompanion; // 파일마다 곁 파일 목록을 훑지 않는다(폴더 파일 수 × 곁 파일 후보 수)
         for ( const string& companion : listCompanion )
