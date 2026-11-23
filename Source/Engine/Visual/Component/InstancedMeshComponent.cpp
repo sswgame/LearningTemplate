@@ -3,6 +3,7 @@
 #include "Engine/Visual/Component/InstancedMeshComponent.h"
 
 #include "Core/Log/Logger.h"
+#include "Core/Math/AABB.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Task/TaskManager.h"
 

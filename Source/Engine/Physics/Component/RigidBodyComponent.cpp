@@ -2,6 +2,7 @@
 
 #include "Engine/Physics/Component/RigidBodyComponent.h"
 
+#include "Core/Math/AABB.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Foundation/EngineServices.h"

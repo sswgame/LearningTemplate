@@ -58,7 +58,7 @@
  * [우선순위 공유] 셀 읽기 차례 · IO 우선순위와 텍스처 밉 차례 · IO 우선순위가 같은 값이다(`computePriorityAt` — 그 자리 셀을 덮는 원점 중 가장 급한 것, `toAsyncIOPriority`).
  * 메시는 셀을 지을 때 컴포넌트가 읽기를 거므로 셀 짓기 차례(같은 키)를 따른다 — 메시 LOD 스트리밍은 없다.
  *
- * [로드 큐 디버그] 지난 갱신의 올릴 셀 줄(우선순위 → 거리 차례)을 `collectLoadQueue` 가 돌려준다 — 개발 명령 `world.streamqueue` · 감시 값 `Scene.PendingCellCount` 가 읽는다.
+ * [로드 큐 디버그] 지난 갱신의 올릴 셀 줄(`_listScratchLoadKey` — 우선순위 → 거리 차례)을 개발 도구가 읽는다(개발 명령 `world.streamqueue` · 감시 값 `Scene.PendingCellCount` — DevTools 의 `DevSceneStreamingAccess`).
  *
  * [셀 내용]
  * 쿠킹본에서 읽은 셀은 색인(좌표 · 레이어 · 내용 구간)만 들고(`SceneDocument::StreamingCell::hasFileContent`), 지은 뒤에는 읽은 엔티티를 버린다 — 다시 올리면 다시 읽는다.
@@ -85,11 +85,13 @@
 
 namespace sw
 {
+    struct DevSceneStreamingAccess;
+
     class GameObject;
     class GameObjectManager;
     class Scene;
 
-    /** @brief 셀 조각 하나의 단계입니다(언리얼 World Partition 셀의 Unloaded → Loading → Loaded → Activated 자리). 이름은 `getEnumName` 으로 읽는다(로드 큐 디버그). */
+    /** @brief 셀 조각 하나의 단계입니다(언리얼 World Partition 셀의 Unloaded → Loading → Loaded → Activated 자리). 이름은 `getEnumName` 으로 읽는다(개발 도구의 로드 큐). */
     ENUM()
     enum class StreamingCellState : uint8
     {
@@ -223,29 +225,9 @@ namespace sw
          */
         StreamingSourcePriority computePriorityAt( const float3& position ) const;
 
-        /** @brief HLOD 대리가 있는 조각 수입니다. */
-        uint32 getHLODCount() const;
-        /** @brief 지금 켜진(조각이 올라 있지 않아 대신 그리는) HLOD 대리 수입니다. 레이어가 꺼져 대리가 없는 조각은 세지 않습니다. */
-        uint32 getShownHLODCount() const;
-
-        /** @brief 로드 큐의 한 줄입니다(`collectLoadQueue`). */
-        struct LoadQueueEntry
-        {
-            StreamingCellCoord      _cell{};
-            vector<string>          _listDataLayer;
-            StreamingSourcePriority _priority{ StreamingSourcePriority::Lowest };
-            float32                 _distance{ 0.0f };                      ///< 가장 가까운 원점까지 셀 거리(m)
-            StreamingCellState      _state{ StreamingCellState::Unloaded }; ///< Unloaded · Loading · Ready · Building 가운데 하나
-        };
-        /**
-         * @brief 지난 갱신에서 원점 반경 안이라 올리려는 조각 가운데 아직 오르지 않은 것을 줄 차례(우선순위 → 거리)로 @p outListEntry 에 채웁니다(비우고 채운다).
-         * @details 다 지었거나 실패한 조각 · 그 뒤 레이어가 꺼진 조각은 뺀다. 개발 명령 · 감시 값용이다 — 갱신이 쓰는 줄을 그대로 읽으므로 따로 재지 않는다.
-         */
-        void collectLoadQueue( vector<LoadQueueEntry>& outListEntry ) const;
-        /** @brief `collectLoadQueue` 의 줄 수입니다(채우지 않고 센다). */
-        uint32 getPendingCellCount() const;
-
     private:
+        friend struct DevSceneStreamingAccess; ///< 개발 도구의 로드 큐 · HLOD 세기(`DevTools/Diagnostics/DevSceneStreamingAccess.h`) — 런타임 공개 API 로 두지 않는다
+
         using CellState = StreamingCellState;
 
         /** @brief 워커와 나누는 읽기 결과입니다(정의는 .cpp). 워커가 엔티티를 채운 뒤 상태를 올리고, 게임 스레드는 상태를 본 뒤에만 엔티티를 가져간다. */
@@ -342,10 +324,6 @@ namespace sw
          * @details 대리가 없거나(파일 id 0) 레이어가 꺼져 대리가 없으면 nullptr 이고 풀지 않는다 — 파일 id 찾기는 대리가 다시 설 때만 돈다.
          */
         GameObject* resolveHLODObject( CellSlot& slot );
-        /** @brief 풀어 둔 대리 오브젝트입니다(풀지 않는다 — 감시 값 · 개발 명령). 아직 풀지 않았거나 사라졌으면 nullptr 입니다. */
-        const GameObject* findResolvedHLODObject( const CellSlot& slot ) const;
-        /** @brief 조각이 로드 큐에 남아 있으면(오르지 않았고 실패하지 않았고 레이어가 켜졌다) true 입니다. */
-        bool isSlotPending( const CellSlot& slot ) const;
         /** @brief 조각의 데이터 레이어가 모두 켜져 있으면 true 입니다. */
         bool areSlotLayersActive( const CellSlot& slot ) const;
         /** @brief 같은 좌표에서 @p slotIndex 앞의 조각 가운데 켜진 것이 모두 지어졌으면(또는 실패했으면) true 입니다 — 뒤 조각은 앞 조각을 가리킬 수 있다. */

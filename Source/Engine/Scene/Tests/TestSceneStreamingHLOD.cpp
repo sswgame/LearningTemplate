@@ -1,5 +1,5 @@
 // SceneStreamingHLODTest — 씬 스트리밍 (라): 셀 조각의 HLOD 대리는 조각이 올라 있지 않을 때만 켜지고, 자리의 스트리밍 우선순위는 셀 읽기 차례와 같은 값이며,
-// 로드 큐(`collectLoadQueue`)는 아직 오르지 않은 조각을 줄 차례로 돌려준다.
+// 로드 큐는 개발 도구가 본다(`DevSceneStreamingAccessTest`).
 #include "pch.h"
 
 #include "Core/Testing/TestFramework.h"
@@ -111,14 +111,12 @@ SW_TEST_CASE( SceneStreamingHLODTest, ProxyShownOnlyWhileFragmentIsNotLoaded )
     Scene scene{ "HLOD" };
     SW_REQUIRE_TRUE( scene.instantiate( Internal::makeDocument( Internal::kWholeBudgetMicroseconds ) ) );
     SceneStreamingSubsystem& streaming = scene.getObjectManager()->getSubsystem<SceneStreamingSubsystem>();
-    SW_EXPECT_EQUAL( 2u, streaming.getHLODCount() );
 
     Internal::setSource( streaming, float3{ 5.0f, 0.0f, 5.0f }, StreamingSourcePriority::Normal );
     streaming.update( 0.0f );
     SW_REQUIRE_TRUE( streaming.isCellLoaded( StreamingCellCoord{ 0, 0 } ) );
     SW_EXPECT_FALSE( Internal::isProxyActive( scene, 0 ) );
     SW_EXPECT_TRUE( Internal::isProxyActive( scene, 2 ) );
-    SW_EXPECT_EQUAL( 1u, streaming.getShownHLODCount() );
 
     Internal::setSource( streaming, float3{ 25.0f, 0.0f, 5.0f }, StreamingSourcePriority::Normal );
     streaming.update( 0.0f ); // 같은 갱신에서 셀 0 을 내리고 셀 2 를 짓는다 — 대리도 같은 프레임에 맞춘다
@@ -126,7 +124,6 @@ SW_TEST_CASE( SceneStreamingHLODTest, ProxyShownOnlyWhileFragmentIsNotLoaded )
     SW_EXPECT_FALSE( streaming.isCellLoaded( StreamingCellCoord{ 0, 0 } ) );
     SW_EXPECT_TRUE( Internal::isProxyActive( scene, 0 ) );
     SW_EXPECT_FALSE( Internal::isProxyActive( scene, 2 ) );
-    SW_EXPECT_EQUAL( 1u, streaming.getShownHLODCount() );
 }
 
 /** @brief [SceneStreamingHLODTest] 다 짓기 전의 조각은 대리가 켜진 채다 — 예산이 엔티티 하나라 셀 0 이 지어지기 전에는 대리가 그린다(구멍이 나지 않는다) */
@@ -168,33 +165,4 @@ SW_TEST_CASE( SceneStreamingHLODTest, PriorityAtMatchesCellLoadPriority )
 
     const Scene flat{ "HLODPlain" }; // 셀을 받지 않았다
     SW_EXPECT_TRUE( flat.getObjectManager()->getSubsystem<SceneStreamingSubsystem>().computePriorityAt( float3{} ) == StreamingSourcePriority::Normal );
-}
-
-/** @brief [SceneStreamingHLODTest] 로드 큐는 아직 오르지 않은 조각을 줄 차례(우선순위 → 거리)로 우선순위 · 거리 · 단계와 함께 돌려주고, 다 오르면 빈다 */
-SW_TEST_CASE( SceneStreamingHLODTest, LoadQueueListsPendingFragmentsInOrder )
-{
-    const ScopedHLODFreeRunningPolicy policy;
-    Scene                             scene{ "HLODQueue" };
-    SW_REQUIRE_TRUE( scene.instantiate( Internal::makeDocument( Internal::kTinyBudgetMicroseconds ) ) );
-    SceneStreamingSubsystem& streaming   = scene.getObjectManager()->getSubsystem<SceneStreamingSubsystem>();
-    const StreamingSource    arrSource[] = {
-        StreamingSource{ float3{ 5.0f, 0.0f, 5.0f }, 0.0f,     StreamingSourcePriority::Low},
-        StreamingSource{float3{ 55.0f, 0.0f, 5.0f }, 0.0f, StreamingSourcePriority::Highest}
-    };
-    SW_REQUIRE_TRUE( streaming.setExternalSources( span<const StreamingSource>( arrSource, 2 ) ) );
-    streaming.update( 0.0f ); // 셀 5 만 짓는다 — 셀 0 은 내용을 든 채 짓기를 기다린다
-
-    vector<SceneStreamingSubsystem::LoadQueueEntry> listEntry;
-    streaming.collectLoadQueue( listEntry );
-    SW_REQUIRE_EQUAL( size_t{ 1 }, listEntry.size() );
-    SW_EXPECT_TRUE( listEntry[0]._cell == ( StreamingCellCoord{ 0, 0 } ) );
-    SW_EXPECT_TRUE( listEntry[0]._priority == StreamingSourcePriority::Low );
-    SW_EXPECT_EQUAL( 0.0f, listEntry[0]._distance );
-    SW_EXPECT_TRUE( listEntry[0]._state == StreamingCellState::Ready );
-    SW_EXPECT_EQUAL( 1u, streaming.getPendingCellCount() );
-
-    streaming.update( 0.0f );
-    streaming.collectLoadQueue( listEntry );
-    SW_EXPECT_TRUE( listEntry.empty() );
-    SW_EXPECT_EQUAL( 0u, streaming.getPendingCellCount() );
 }

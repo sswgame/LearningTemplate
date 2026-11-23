@@ -589,71 +589,11 @@ namespace sw
         return slot._hlodObjectID != 0 ? objects.findGameObjectByID( slot._hlodObjectID ) : nullptr;
     }
 
-    const GameObject* SceneStreamingSubsystem::findResolvedHLODObject( const CellSlot& slot ) const
-    {
-        return slot._hlodObjectID != 0 && _pScene != nullptr ? _pScene->getObjectManager()->findGameObjectByID( slot._hlodObjectID ) : nullptr;
-    }
-
-    uint32 SceneStreamingSubsystem::getHLODCount() const
-    {
-        uint32 count = 0;
-        for ( const unique_ptr<CellSlot>& pSlot : _listCell )
-        {
-            count += pSlot->_hlodFileID != 0 ? 1u : 0u;
-        }
-        return count;
-    }
-
-    uint32 SceneStreamingSubsystem::getShownHLODCount() const
-    {
-        uint32 count = 0;
-        for ( const unique_ptr<CellSlot>& pSlot : _listCell )
-        {
-            const GameObject* pProxy = findResolvedHLODObject( *pSlot );
-            count += pProxy != nullptr && pProxy->isActive() ? 1u : 0u;
-        }
-        return count;
-    }
-
     StreamingSourcePriority SceneStreamingSubsystem::computePriorityAt( const float3& position ) const
     {
         if ( _pScene == nullptr )
             return StreamingSourcePriority::Normal; // 스트리밍하지 않는다 — 모두 같은 차례(화면 크기만 본다)
         return computeBoundsPriority( _grid.computeCellBounds( _grid.computeCell( toAbsolute( position ) ) ) );
-    }
-
-    bool SceneStreamingSubsystem::isSlotPending( const CellSlot& slot ) const
-    {
-        return slot._state != CellState::Loaded && slot._state != CellState::Failed && areSlotLayersActive( slot );
-    }
-
-    void SceneStreamingSubsystem::collectLoadQueue( vector<LoadQueueEntry>& outListEntry ) const
-    {
-        outListEntry.clear();
-        if ( _pScene == nullptr )
-            return;
-        // 지난 갱신의 정렬 키를 그대로 읽는다 — 줄 차례 · 우선순위 · 거리가 갱신이 쓴 값과 같다.
-        for ( const LoadOrderKey& key : _listScratchLoadKey )
-        {
-            if ( key._slotIndex >= _listCell.size() )
-                continue; // 그 뒤 월드를 바꿨다(복원이 조각을 다시 만들었다)
-            const CellSlot& slot = getSlot( key._slotIndex );
-            if ( isSlotPending( slot ) == false )
-                continue;
-            outListEntry.push_back( LoadQueueEntry{ slot._cell, slot._listDataLayer, key._priority, MathUtil::sqrt( key._distanceSquared ), slot._state } );
-        }
-    }
-
-    uint32 SceneStreamingSubsystem::getPendingCellCount() const
-    {
-        if ( _pScene == nullptr )
-            return 0;
-        uint32 count = 0;
-        for ( const LoadOrderKey& key : _listScratchLoadKey )
-        {
-            count += key._slotIndex < _listCell.size() && isSlotPending( getSlot( key._slotIndex ) ) ? 1u : 0u;
-        }
-        return count;
     }
 
     void SceneStreamingSubsystem::collectBoundsChangedSince( const uint64 serial, vector<StreamingCellBounds>& outListBounds ) const
