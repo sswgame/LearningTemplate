@@ -3,7 +3,7 @@
  * @brief RESP 연결 하나입니다. 스트림 핸들, 증분 파서, 보낸 명령의 답을 기다리는 FIFO 큐, 선택 사항인 TLS 세션, 처음에 보낼 AUTH 를 가집니다.
  * @details - 스레드 안전하지 않다. 소유자(`RESPEphemeralStore`)가 락을 잡고 호출해야 한다. 전송 콜백은 I/O 스레드에서, 송신과 회수는 서비스 스레드에서 실행된다.
  *          - 명령 연결은 답을 보낸 순서대로 태그에 짝짓는다. RESP 는 답의 순서가 곧 명령의 순서이기 때문이다.
- *            구독 연결(`_bPushMode`)은 태그 없이 받은 값을 모두 넘긴다.
+ *            구독 연결(`_bPushMode`)도 보낸 명령마다 태그 하나를 두고 확인(subscribe · unsubscribe)이 오면 떼며, `message` 만 넘긴다 — 확인을 기다리는 수가 연결과 함께 사라져 옛 연결의 확인을 새 연결의 것으로 세지 않는다.
  *          - 연결이 열리기 전에 보낸 명령은 모아 두었다가 열리면 AUTH 다음에 보낸다. 연결이 닫히면 기다리던 태그마다 정확히 한 번 실패 답을 낸다.
  */
 #pragma once
@@ -85,7 +85,7 @@ namespace sw
         bool handleReceived( IStreamTransport& transport, StreamConnectionHandle handle, const uint8* pData, int32 size );
         bool handleClosed( StreamConnectionHandle handle, StreamCloseReason reason );
 
-        /** @brief 명령 연결은 짝지은 답을, 구독 연결은 받은 값을 꺼냅니다. */
+        /** @brief 명령 연결은 짝지은 답을, 구독 연결은 받은 메시지(`message` 배열)를 꺼냅니다. */
         void takeReplyRecords( vector<RESPReplyRecord>& outListRecord );
         void takePushValues( vector<RESPValue>& outListValue );
 

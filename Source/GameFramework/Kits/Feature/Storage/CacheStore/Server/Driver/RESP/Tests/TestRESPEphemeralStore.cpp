@@ -490,6 +490,79 @@ SW_TEST_CASE_F( RESPStoreTest, ReconnectResubscribes )
     SW_EXPECT_EQUAL( takeCommands(), string( "SUBSCRIBE g:a | SUBSCRIBE g:b" ) );
 }
 
+namespace
+{
+    /** @brief 구독 연결 하나를 루프백 전송에 잇습니다. */
+    class SubscribePeer final : public IStreamHandler
+    {
+    public:
+        RESPConnection               _connection{ true };
+        unique_ptr<IStreamTransport> _transport{};
+
+        void onStreamOpened( StreamConnectionHandle handle, const NetAddress& /*remote*/, bool /*bAccepted*/ ) override { (void)_connection.handleOpened( *_transport, handle ); }
+        void onStreamReceived( StreamConnectionHandle handle, const uint8* pData, int32 size ) override { (void)_connection.handleReceived( *_transport, handle, pData, size ); }
+        void onStreamClosed( StreamConnectionHandle handle, StreamCloseReason reason ) override { (void)_connection.handleClosed( handle, reason ); }
+    };
+} // namespace
+
+// 결함: 구독 연결이 확인을 기다리는 수를 들지 않아 저장소가 따로 셌다. I/O 스레드가 잠금 밖의 수를 맞췄고, 끊긴 연결의 늦은 확인이 새 구독의 확인으로 세어졌다.
+SW_TEST_CASE( RESPConnectionTest, SubscribeConnectionHoldsItsUnconfirmedCommands )
+{
+    SW_EXPECT_LOG( "RespConnection.RESPConnectionClosed" );
+    LoopbackStreamNetwork network;
+    FakeRESPServer        server;
+    server.start( network );
+    SubscribePeer         peer;
+    StreamTransportConfig settings;
+    settings._ioThreadCount = 0;
+    peer._transport         = network.createTransport();
+    SW_REQUIRE_TRUE( peer._transport->initialize( &peer, settings ) );
+    const auto poll = [&peer, &server]()
+    {
+        for ( int32 round = 0; round < 4; ++round )
+        {
+            (void)peer._transport->pollIO( 0 );
+            (void)server._transport->pollIO( 0 );
+        }
+    };
+
+    SW_REQUIRE_TRUE( peer._connection.beginConnect( *peer._transport, NetAddress::makeLoopback( FakeRESPServer::kPort ), nullptr, nullptr ) );
+    SW_EXPECT_TRUE( peer._connection.sendCommand( *peer._transport, RESPCommand{ "SUBSCRIBE" }.addText( "a" ), RESPCommandTag{} ) );
+    SW_EXPECT_TRUE( peer._connection.sendCommand( *peer._transport, RESPCommand{ "SUBSCRIBE" }.addText( "b" ), RESPCommandTag{} ) );
+    poll();
+    SW_EXPECT_EQUAL( 2, peer._connection.getAwaitingCount() );
+
+    server.send( server._lastHandle, "*3
+$9
+subscribe
+$1
+a
+:1
+*3
+$7
+message
+$1
+a
+$2
+hi
+" );
+    poll();
+    SW_EXPECT_EQUAL( 1, peer._connection.getAwaitingCount() ); // 메시지는 확인이 아니다
+    vector<RESPValue> listValue;
+    peer._connection.takePushValues( listValue );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, listValue.size() ); // 확인은 넘기지 않는다
+    SW_EXPECT_TRUE( listValue[0]._listElement[0].isText( "message" ) );
+
+    server._transport->close( server._lastHandle, StreamCloseMode::Abort );
+    poll();
+    SW_EXPECT_EQUAL( 0, peer._connection.getAwaitingCount() ); // 끊긴 연결의 확인은 기다리지 않고, 다음 연결로 넘어가지도 않는다
+    vector<RESPReplyRecord> listRecord;
+    peer._connection.takeReplyRecords( listRecord );
+    SW_EXPECT_TRUE( listRecord.empty() );
+    peer._transport->shutdown();
+    server._transport->shutdown();
+}
+
 // 끝내면 기다리던 요청은 실패로 끝나고, 뒤 요청은 바로 실패다. 두 번 끝내도 된다.
 SW_TEST_CASE_F( RESPStoreTest, ShutdownFailsEverything )
 {

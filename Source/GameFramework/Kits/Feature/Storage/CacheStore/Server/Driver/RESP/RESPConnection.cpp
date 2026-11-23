@@ -60,8 +60,7 @@ namespace sw
     {
         if ( _state == RESPConnectionState::Closed )
             return false;
-        if ( _bPushMode == SW_FALSE )
-            _listAwaitTag.push_back( tag );
+        _listAwaitTag.push_back( tag );
         if ( _state == RESPConnectionState::Connecting )
         {
             command.appendTo( _pendingSendBytes );
@@ -194,7 +193,7 @@ namespace sw
                 return true;
             if ( result == RESPParseResult::Error )
                 return false;
-            // AUTH 답은 두 모드 모두 첫 태그이다. 구독 연결도 AUTH 는 태그로 짝짓는다.
+            // AUTH 답은 두 모드 모두 첫 태그이다.
             const bool bAuthReply = _listAwaitTag.empty() == false && _listAwaitTag.front()._step == kAuthStep;
             if ( bAuthReply )
             {
@@ -207,13 +206,21 @@ namespace sw
                 }
                 continue;
             }
-            if ( _bPushMode == SW_TRUE )
+            const bool bMessage = _bPushMode == SW_TRUE && value._type == RespType::Array && value._listElement.empty() == false && value._listElement[0].isText( "message" );
+            if ( bMessage )
             {
                 _pushValueBuffer.push( std::move( value ) );
                 continue;
             }
             if ( _listAwaitTag.empty() )
-                return false; // 보낸 적 없는 답이므로 순서가 어긋난 것이다
+                return false;            // 보낸 적 없는 답이므로 순서가 어긋난 것이다
+            if ( _bPushMode == SW_TRUE ) // 구독 · 해지 확인(또는 거절)이다
+            {
+                _listAwaitTag.pop_front();
+                if ( value.isError() )
+                    SW_LOG_ERROR_ID( "RespConnection.RESPSubscriptionRefused", "RESP server refused a subscription command: %#", string( value.getText() ).c_str() );
+                continue;
+            }
             _replyRecordBuffer.push( RESPReplyRecord{} );
             RESPReplyRecord& record = _replyRecordBuffer.getLast();
             record._tag             = _listAwaitTag.front();
@@ -226,8 +233,8 @@ namespace sw
     {
         for ( const RESPCommandTag& tag : _listAwaitTag )
         {
-            if ( tag._step == kAuthStep )
-                continue;
+            if ( tag._step == kAuthStep || _bPushMode == SW_TRUE )
+                continue; // 구독 확인은 답을 내지 않는다 — 다시 연결하면 채널을 모두 다시 구독한다
             _replyRecordBuffer.push( RESPReplyRecord{} );
             RESPReplyRecord& record = _replyRecordBuffer.getLast();
             record._tag             = tag;

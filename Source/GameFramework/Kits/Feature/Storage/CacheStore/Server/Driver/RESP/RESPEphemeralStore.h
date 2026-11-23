@@ -136,8 +136,8 @@ namespace sw
         [[nodiscard]] bool ensureSubscribeConnection() SW_REQUIRES_LOCK( _mutex );
         void               abortTimedOutRequests();
         void               handlePushValue( const RESPValue& value );
-        /** @brief 구독 연결이 @p channel 확인을 낼 때까지 기다립니다. 전송이 별도 스레드 없이 돌면 직접 돌립니다. */
-        void        waitForSubscriptionAck( uint64 targetAckCount );
+        /** @brief 구독 연결이 보낸 명령의 확인을 모두 받을 때까지(또는 끊길 때까지) 기다립니다. 전송이 별도 스레드 없이 돌면 직접 돌립니다. */
+        void        waitForSubscriptionAck();
         string      makeKey( string_view key ) const;
         RESPCommand makeAuthCommand() const SW_REQUIRES_LOCK( _mutex );
 
@@ -146,7 +146,7 @@ namespace sw
         StreamEvents                           _streamEvents; ///< 전송에 넘기는 처리기(`initialize`)
         OnceInit<RESPStoreConfig>              _settings;
         OnceInit<StreamTransportConfig>        _transportSettings;
-        mutable mutex                          _mutex; ///< 두 연결, 받은 메시지, 확인 수를 보호한다. I/O 스레드와 함께 쓴다
+        mutable mutex                          _mutex; ///< 두 연결과 받은 메시지를 보호한다. I/O 스레드와 함께 쓴다
         RESPConnection _commandConnection      SW_GUARDED_BY( _mutex );
         RESPConnection _subscribeConnection    SW_GUARDED_BY( _mutex );
         EventBuffer<EphemeralMessage>          _messageBuffer;
@@ -161,9 +161,6 @@ namespace sw
         ExponentialBackoff _commandBackoff     SW_GUARDED_BY( _mutex );
         ExponentialBackoff _subscribeBackoff   SW_GUARDED_BY( _mutex );
         IDAllocator<uint64>                    _requestIDAllocator;
-        ThreadRole                             _ownerThread;                  ///< 소유 스레드 역할 — 구독 확인 수는 저장소를 부르는 스레드(펌프 · 구독)만 만진다(잠금이 아니라 분석용 능력)
-        uint64 _subscriptionAckCount           SW_GUARDED_BY( _ownerThread ); ///< 구독 연결이 받은 subscribe 와 unsubscribe 확인 수
-        uint64 _subscriptionSentCount          SW_GUARDED_BY( _mutex );
         uint64                                 _blockingRequestID; ///< 비교 후 쓰기가 GET 답을 기다리는 요청이다. 0이면 없다
         uint8                                  _bInitialized;
         uint8                                  _bShutdown;
