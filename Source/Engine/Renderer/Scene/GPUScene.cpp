@@ -553,19 +553,17 @@ namespace sw
     void GPUScene::ensureInstanceSlotStream( IRHIDevice* pDevice, uint32 slotCount )
     {
         // 인스턴스 슬롯 스트림: 항등 배열이다. 가시 칸 수(`GPUSceneSnapshot::getVisibleSlotCount`)만큼 커지면 다시 만든다.
-        if ( _instanceSlotStreamCapacity >= slotCount && _instanceSlotStream != 0 )
+        if ( _instanceSlotStreamCapacity >= slotCount && _instanceSlotStream.isValid() )
             return;
-        if ( _instanceSlotStream != 0 )
-            pDevice->releaseHandle( _instanceSlotStream );
         const uint32   capacity = MathUtil::max( slotCount, 256u );
         vector<uint32> listSlot( capacity );
         for ( uint32 slotIndex = 0; slotIndex < capacity; ++slotIndex )
         {
             listSlot[slotIndex] = slotIndex;
         }
-        _instanceSlotStream         = pDevice->getResourceFactory()->createVertexBuffer( listSlot.data(), capacity * static_cast<uint32>( sizeof( uint32 ) ) );
-        _instanceSlotStreamCapacity = ( _instanceSlotStream != 0 ) ? capacity : 0;
-        if ( _instanceSlotStream == 0 )
+        const bool bCreated         = _instanceSlotStream.createVertex( *pDevice, listSlot.data(), capacity * static_cast<uint32>( sizeof( uint32 ) ) );
+        _instanceSlotStreamCapacity = bCreated ? capacity : 0;
+        if ( bCreated == false )
             SW_LOG_ERROR_ID( "GPUScene.FailedCreateInstanceSlot", "Failed to create the instance slot stream (%# instances) - scene draws cannot find their instances.", capacity );
     }
 
@@ -677,10 +675,7 @@ namespace sw
         {
             pool.release( pDevice );
         }
-        const bool bReleasableSlotStream = _instanceSlotStream != 0 && pDevice != nullptr && pDevice->getResourceFactory() != nullptr;
-        if ( bReleasableSlotStream )
-            pDevice->releaseHandle( _instanceSlotStream );
-        _instanceSlotStream         = 0;
+        _instanceSlotStream.release( pDevice );
         _instanceSlotStreamCapacity = 0;
         for ( GPUMeshBatchBinding& gpu : _listBatchBinding )
         {

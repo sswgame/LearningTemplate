@@ -56,12 +56,12 @@ namespace sw
             return false;
         IRHIResourceFactory& factory = *pDevice->getResourceFactory();
         if ( _heap == 0 )
-            _heap = factory.createTransientHeap( heapBytes );
+            _heap = factory.createTransientHeap( RHIResourceCreateKey{}, heapBytes );
         if ( _heap == 0 )
             return false;
         const RHITextureDesc   desc   = makeTextureDesc( format, false, ops, computeScaledExtent( getExtent( space, true ), resolutionDivisor ),
                                                          computeScaledExtent( getExtent( space, false ), resolutionDivisor ), false );
-        const RHITextureHandle handle = factory.createPlacedTexture2D( desc, _heap, offsetBytes );
+        const RHITextureHandle handle = factory.createPlacedTexture2D( RHIResourceCreateKey{}, desc, _heap, offsetBytes );
         if ( handle == 0 )
             return false;
         factory.setTextureDebugName( handle, name.c_str() );
@@ -119,7 +119,7 @@ namespace sw
             _mapAttachment.emplace( name, attachment );
             return true;
         }
-        const RHITextureHandle handle = pDevice->getResourceFactory()->createTexture2D( desc );
+        const RHITextureHandle handle = pDevice->getResourceFactory()->createTexture2D( RHIResourceCreateKey{}, desc );
         if ( handle == 0 )
         {
             SW_LOG_WARNING_ID( "TransientAttachmentPool.FailedAllocateTransient", "Failed to allocate transient '%#'", name.c_str() );

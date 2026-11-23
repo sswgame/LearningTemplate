@@ -39,6 +39,7 @@
 #include "Engine/Graphics/Mesh/MeshVertex.h"
 #include "Engine/Graphics/RHI/RHIDescriptors.h"
 #include "Engine/Graphics/RHI/RHIFence.h"
+#include "Engine/Graphics/RHI/RHIGeometryBuffer.h"
 
 namespace sw
 {
@@ -86,13 +87,13 @@ namespace sw
         Placement getPlacementOf( const Mesh* pMesh ) const;
 
         /** @brief 풀 정점 버퍼를 반환합니다. 0 이면 풀이 비어 있습니다. */
-        RHIBufferHandle getVertexBuffer() const { return _vertexBuffer; }
+        RHIBufferHandle getVertexBuffer() const { return _vertexBuffer._buffer; }
         /** @brief 풀 정점 버퍼에서 속성 구간이 시작하는 바이트입니다(용량 × 12 B). 슬롯 2 를 여기서 건다. */
         uint32 getAttributeOffset() const;
         /** @brief 이 풀이 담는 정점 형식입니다. */
         RHIMeshVertexFormat getFormat() const { return _format; }
         /** @brief 풀 인덱스 버퍼(uint32)를 반환합니다. 정점 버퍼와 함께 만들고 함께 놓습니다. */
-        RHIBufferHandle getIndexBuffer() const { return _indexBuffer; }
+        RHIBufferHandle getIndexBuffer() const { return _indexBuffer._buffer; }
         /** @brief 풀에 든(구간을 받은) 메시의 정점 수 합을 반환합니다. */
         uint32 getVertexCount() const { return _liveVertexCount; }
         /** @brief 풀 정점 버퍼의 용량(정점 수)을 반환합니다. */
@@ -165,8 +166,8 @@ namespace sw
         RHIMeshVertexFormat _format;
         SpanAllocator       _allocator;
         SpanAllocator       _indexAllocator;
-        RHIBufferHandle     _vertexBuffer;
-        RHIBufferHandle     _indexBuffer;
+        RHIGeometryBuffer   _vertexBuffer;
+        RHIGeometryBuffer   _indexBuffer;
         /// @brief 메시 내용 토큰 → 기록입니다. 키가 토큰을 들어 지운 메시의 주소가 새 메시의 키로 다시 쓰이지 않는다(언리얼 `FObjectKey`, Godot `RID` 의 세대와 같은 자리).
         unordered_map<IdentityToken, Entry> _mapEntry;
         /// @brief 이번 `update` 에 새로 구간이 필요한 메시입니다. 프레임마다 할당하지 않습니다.
@@ -183,6 +184,6 @@ namespace sw
         RHIFence                    _gpuFence;    ///< 돌려받은 구간의 대기 키(펜스 값)를 내고 GPU 가 끝낸 값을 안다
         uint32                      _liveVertexCount;
         vector<PendingCopy>         _listPendingCopy;   ///< 다음 프레임 업로드 단계가 기록할 GPU 복사(쌓인 순서)
-        vector<RHIBufferHandle>     _listRetiredBuffer; ///< 다시 꾸려 비운 옛 풀 정점 버퍼 — 그것을 읽는 복사를 기록한 뒤 지연 해제한다
+        vector<RHIGeometryBuffer>   _listRetiredBuffer; ///< 다시 꾸려 비운 옛 풀 정점 버퍼 — 그것을 읽는 복사를 기록한 뒤 지연 해제한다
     };
 } // namespace sw

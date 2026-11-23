@@ -659,7 +659,7 @@ namespace sw
                 buffer.upload( _pDevice, bytes.data(), stride );
                 MaterialFallback& fallback = _listMaterialFallback.emplace_back();
                 fallback._bytes            = std::move( bytes );
-                fallback._buffer           = buffer;
+                fallback._buffer           = std::move( buffer );
             }
             _mapLayoutMaterialFallback.insert_or_assign( pLayout->getIdentity(), fallbackIndex );
         }

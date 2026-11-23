@@ -1466,7 +1466,7 @@ namespace sw
         // 내용이 지난 프레임과 같으면 버퍼를 그대로 쓴다(뷰 카메라 · 투명 물체가 서 있으면 순서가 같다).
         GPUTransparentSorter::computeViewTailSlots( vector_reference<const uint32>( *pOrder->_pListRank ), pOrder->_tailBase, _state._gpuScene.getTransparentBatches(), _listScratchTailSlot );
         const uint32 instanceCount = pOrder->_tailBase + tailCount;
-        const bool   bSameContent  = view._instanceSlotStream != 0 && view._listInstanceSlot.size() == instanceCount &&
+        const bool   bSameContent  = view._instanceSlotStream.isValid() && view._listInstanceSlot.size() == instanceCount &&
                                   Memory::compare( view._listInstanceSlot.data() + pOrder->_tailBase, _listScratchTailSlot.data(), tailCount * sizeof( uint32 ) ) == 0;
         if ( bSameContent == false )
         {
@@ -1477,10 +1477,7 @@ namespace sw
             }
             Memory::copy( view._listInstanceSlot.data() + pOrder->_tailBase, _listScratchTailSlot.data(), tailCount * sizeof( uint32 ) );
             // 지난 프레임 기록이 이 버퍼를 읽었을 수 있다 — 반환은 디바이스가 미룬다(releaseHandle).
-            if ( view._instanceSlotStream != 0 )
-                _pDevice->releaseHandle( view._instanceSlotStream );
-            view._instanceSlotStream = _pDevice->getResourceFactory()->createVertexBuffer( view._listInstanceSlot.data(), instanceCount * static_cast<uint32>( sizeof( uint32 ) ) );
-            if ( view._instanceSlotStream == 0 )
+            if ( view._instanceSlotStream.createVertex( *_pDevice, view._listInstanceSlot.data(), instanceCount * static_cast<uint32>( sizeof( uint32 ) ) ) == false )
             {
                 view._listInstanceSlot.clear();
                 return;
@@ -1492,9 +1489,7 @@ namespace sw
     void FrameRenderer::releaseViewTransparentOrder( FrameViewTarget& view )
     {
         view._transparentRank.release( _pDevice );
-        if ( view._instanceSlotStream != 0 && _pDevice != nullptr )
-            _pDevice->releaseHandle( view._instanceSlotStream );
-        view._instanceSlotStream = 0;
+        view._instanceSlotStream.release( _pDevice );
         view._listInstanceSlot.clear();
         view._listTransparentBatchOrder.clear();
         view._listParticleSlot.clear();

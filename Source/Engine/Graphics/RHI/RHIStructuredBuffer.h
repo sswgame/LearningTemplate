@@ -5,7 +5,7 @@
 #pragma once
 #include "Core/Container/vector.h"
 
-#include "Engine/Graphics/RHI/IRHIResourceFactory.h"
+#include "Engine/Graphics/RHI/RHIDescriptors.h"
 
 namespace sw
 {
@@ -21,6 +21,8 @@ namespace sw
      *
      *          **뷰를 먼저 등록 해제하고 버퍼를 지우는 순서**가 중요합니다. 반대로 하면 bindless
      *          레지스트리에 죽은 핸들을 가리키는 항목이 남습니다.
+     *
+     *          옮기기만 된다 — 사본이 있으면 같은 버퍼를 두 번 놓거나 다시 만든 뒤의 옛 번호를 쓴다.
      *
      * @note 이 타입은 RHI ABI 가 아니라 그 위의 편의 계층입니다. 백엔드 모듈이 아니라 엔진이 씁니다.
      */
@@ -39,6 +41,18 @@ namespace sw
          */
         uint64 _generation{ 0 };
 
+        RHIStructuredBuffer() = default;
+        RHIStructuredBuffer( RHIStructuredBuffer&& other ) noexcept { swap( other ); }
+        RHIStructuredBuffer& operator=( RHIStructuredBuffer&& other ) noexcept
+        {
+            swap( other );
+            return *this;
+        }
+        RHIStructuredBuffer( const RHIStructuredBuffer& )            = delete;
+        RHIStructuredBuffer& operator=( const RHIStructuredBuffer& ) = delete;
+
+        /** @brief 두 칸의 내용을 맞바꿉니다. 옮기기가 쓴다 — 대입한 쪽의 옛 내용은 @p other 에 남는다(임시면 잊는다). */
+        void swap( RHIStructuredBuffer& other ) noexcept;
         /** @brief 버퍼가 만들어져 있는지 확인합니다. */
         bool isValid() const { return _buffer != 0; }
 

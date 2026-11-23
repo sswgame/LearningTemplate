@@ -150,7 +150,7 @@ namespace sw
         if ( bNewPage )
         {
             // 새 페이지의 칸은 지금 이것 하나라 다른 스레드가 이 번호를 만지지 않는다 — 만들기는 잠금 밖에서 하고 표에만 잠가 넣는다.
-            page = pFactory->createConstantBufferPage( ConstantBufferSlotAllocator::kPageBytes );
+            page = pFactory->createConstantBufferPage( RHIResourceCreateKey{}, ConstantBufferSlotAllocator::kPageBytes );
             if ( page == 0 )
             {
                 {
@@ -189,7 +189,7 @@ namespace sw
         // 가장 큰 등급보다 큰 머티리얼은 드물다 — 페이지 꼴의 전용 버퍼 하나와 그 전체 구간이다(셰이더 계약은 같다).
         IRHIResourceFactory* const pFactory = device.getResourceFactory();
         const uint32               byteSize = MathUtil::align( sizeBytes, constant::render::kConstantBufferAlignment );
-        const RHIBufferHandle      buffer   = pFactory->createConstantBufferPage( byteSize );
+        const RHIBufferHandle      buffer   = pFactory->createConstantBufferPage( RHIResourceCreateKey{}, byteSize );
         if ( buffer == 0 )
         {
             SW_LOG_ERROR_ONCE_ID( "ConstantBufferPagePool.CouldNotCreateDedicated", "Could not create a dedicated constant buffer of %# bytes", byteSize );

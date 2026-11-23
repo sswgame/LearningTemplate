@@ -73,8 +73,8 @@ namespace sw
             pIndexBytes = listShortIndex.data();
         }
         const uint32          indexBytes   = indexCount * indexStride;
-        const RHIBufferHandle vertexBuffer = pResource->createVertexBuffer( listStreamByte.data(), static_cast<uint32>( listStreamByte.size() ) );
-        const RHIBufferHandle indexBuffer  = indexBytes > 0 ? pResource->createIndexBuffer( pIndexBytes, indexBytes ) : 0;
+        const RHIBufferHandle vertexBuffer = pResource->createVertexBuffer( RHIResourceCreateKey{}, listStreamByte.data(), static_cast<uint32>( listStreamByte.size() ) );
+        const RHIBufferHandle indexBuffer  = indexBytes > 0 ? pResource->createIndexBuffer( RHIResourceCreateKey{}, pIndexBytes, indexBytes ) : 0;
         if ( vertexBuffer == 0 || indexBuffer == 0 )
         {
             SW_LOG_ERROR_ID( "Mesh.CreateVertexBufferFailedVerts", "createVertexBuffer / createIndexBuffer failed (%# verts, %# indices)", listVertex.size(), listIndex.size() );

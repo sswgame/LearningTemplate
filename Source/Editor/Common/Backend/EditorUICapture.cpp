@@ -279,7 +279,7 @@ namespace sw::editor
             return;
         }
         ensureTexture( device, width, height );
-        if ( _texture == 0 )
+        if ( _texture.isValid() == false )
         {
             EditorUICaptureResult failed{};
             failed._job = job;
@@ -292,7 +292,7 @@ namespace sw::editor
         RHIRenderPassBeginInfo capturePass{};
         capturePass._bBindColor        = SW_TRUE;
         capturePass._colorTargetCount  = 1;
-        capturePass._arrColorTarget[0] = _texture;
+        capturePass._arrColorTarget[0] = _texture._texture;
         capturePass._arrLoadOp[0]      = RHIRenderPassLoadOp::Clear;
         capturePass._arrClearColor[0]  = float4{ 0.0f, 0.0f, 0.0f, 1.0f };
         pStream->beginRenderPass( capturePass );
@@ -300,7 +300,7 @@ namespace sw::editor
         // 연 패스는 이 함수 안에서 닫는다. OpenGL 은 패스를 닫아야 기본 프레임버퍼가 다시 묶이는데, 닫지 않으면 이 뒤에 패스 없이 직접 그리는 코드(렌더 스레드가 그리는 플로팅 뷰포트 창)가
         // 캡처 텍스처에 그려 플로팅 창이 캡처에 두 번 나오고 제 창에는 그려지지 않는다. 읽기 전이는 패스 밖의 일이라 닫은 뒤에 낸다(열린 채로 내면 RHI.RenderPassInterrupted).
         pStream->endRenderPass();
-        pStream->prepareTextureForShaderRead( _texture );
+        pStream->prepareTextureForShaderRead( _texture._texture );
 
         _renderedJob = job;
         _bRendered   = SW_TRUE;
@@ -314,13 +314,13 @@ namespace sw::editor
 
         EditorUICaptureResult result{};
         result._job    = std::move( _renderedJob );
-        result._width  = _textureWidth;
-        result._height = _textureHeight;
+        result._width  = _texture._width;
+        result._height = _texture._height;
 
         // GPU 읽기만 이 스레드(디바이스 스레드)에서 한다. 풀기 · 뒤집기 · 마젠타 비율 · 쓰기는 워커의 일이다(`runWriteJob`).
         IRHIResourceFactory* const pFactory = device.getResourceFactory();
         EditorUICaptureWrite       write{};
-        const bool                 bRead = pFactory != nullptr && RHITransferUtil::readbackTexture2DAndWait( *pFactory, _texture, 0, 0, write._bytes, write._layout );
+        const bool                 bRead = pFactory != nullptr && RHITransferUtil::readbackTexture2DAndWait( *pFactory, _texture._texture, 0, 0, write._bytes, write._layout );
         if ( bRead )
         {
             write._layout._pData     = nullptr; // `_bytes` 를 옮기면 가리킬 곳이 바뀔 수 있다 - 워커는 `_bytes` 로 읽는다
@@ -341,27 +341,14 @@ namespace sw::editor
 
     void EditorUICapture::releaseRHI( IRHIDevice* pDevice )
     {
-        const bool bCanDestroy = _texture != 0 && pDevice != nullptr && pDevice->getResourceFactory() != nullptr;
-        if ( bCanDestroy )
-            pDevice->releaseHandle( _texture );
-        _texture       = 0;
-        _textureWidth  = 0;
-        _textureHeight = 0;
-        _bRendered     = SW_FALSE;
+        _texture.release( pDevice );
+        _bRendered = SW_FALSE;
     }
 
     void EditorUICapture::ensureTexture( IRHIDevice& device, uint32 width, uint32 height )
     {
         const uint32 clampedWidth  = width < EditorUICaptureInternal::kMaxTextureSide ? width : EditorUICaptureInternal::kMaxTextureSide;
         const uint32 clampedHeight = height < EditorUICaptureInternal::kMaxTextureSide ? height : EditorUICaptureInternal::kMaxTextureSide;
-        const bool   bSameTexture  = _texture != 0 && _textureWidth == clampedWidth && _textureHeight == clampedHeight;
-        if ( bSameTexture )
-            return;
-        IRHIResourceFactory* const pFactory = device.getResourceFactory();
-        if ( pFactory == nullptr )
-            return;
-        if ( _texture != 0 )
-            device.releaseHandle( _texture );
 
         // ImGui 렌더러 백엔드의 파이프라인은 백버퍼 포맷으로 만들어져 있다. 같은 포맷이어야 Vulkan 렌더 패스가 호환되고 DX12 PSO 의 RTV 포맷이 맞는다.
         RHITextureDesc desc{};
@@ -370,10 +357,7 @@ namespace sw::editor
         desc._format            = device.getUITargetFormat(); // 에디터 UI PSO 와 같은 포맷이어야 그 PSO 로 그린다
         desc._bIsRenderTarget   = SW_TRUE;
         desc._bIsShaderResource = SW_TRUE;
-        _texture                = pFactory->createTexture2D( desc );
-        _textureWidth           = _texture != 0 ? clampedWidth : 0u;
-        _textureHeight          = _texture != 0 ? clampedHeight : 0u;
-        if ( _texture == 0 )
+        if ( _texture.ensure( device, desc, "EditorUICapture" ) == false )
             SW_LOG_ERROR_ID( "EditorUICapture.EditorUICaptureTexture", "Editor UI capture texture (%#x%#) could not be created", clampedWidth, clampedHeight );
     }
 

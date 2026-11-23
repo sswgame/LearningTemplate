@@ -643,7 +643,6 @@ namespace sw
                                     context._lastCbLayoutHash != cbLayoutHash;
         if ( bSlotAlreadyDrawn && bValuesChanged && acquirePassCb( context ) == false )
             return false; // 링 고갈 — 이 드로우는 그리지 않는다(앞 드로우의 슬롯을 덮지 않는다, 링이 이유를 남겼다)
-        const RHIConstantBuffer engineCb{ context._passCb, context._passCbIndex };
 
         // 엔진 상수버퍼를 이 드로우에서 다시 만들 필요가 있나. 값 · 레지스트리 버전과 버퍼가 모두 그대로면 없다.
         // **PSO 도 같아야 한다.** 이 플래그는 상수버퍼 재업로드만이 아니라 리소스 재바인딩까지 건너뛰게 하는데,
@@ -651,17 +650,17 @@ namespace sw
         const uint32 valuesVersion   = context._passValues.getVersion();
         const uint32 registryVersion = context._resourceRegistry.getVersion();
         // 버퍼의 바이트가 이미 맞나(올리기를 건너뛴다)와, 슬롯 상태까지 그대로인가(PSO 가 같아야 한다 — 리소스 재바인딩을 건너뛴다)는 따로다.
-        const bool bCbUpToDate = ( context._lastCbBuffer == engineCb._buffer ) && ( context._lastCbValuesVersion == valuesVersion ) &&
+        const bool bCbUpToDate = ( context._lastCbBuffer == context._passCb ) && ( context._lastCbValuesVersion == valuesVersion ) &&
                                  ( context._lastCbRegistryVersion == registryVersion ) && ( context._lastCbLayoutHash == cbLayoutHash );
         const bool bBindUpToDate = bCbUpToDate && ( context._lastBindPSO == pso );
 
         const BindlessIndexCheckSite  indexCheck{ _pDevice, context._passName };
         const BindlessIndexCheckSite* pIndexCheck = &indexCheck;
-        ShaderParameterBinder::bindGraphics( *context._pCmd, *pLayout, context._resourceRegistry, context._passValues, engineCb, materialCb,
+        ShaderParameterBinder::bindGraphics( *context._pCmd, *pLayout, context._resourceRegistry, context._passValues, context._passCb, context._passCbIndex, materialCb,
                                              _pDevice->supportsNativeBindlessSampling(), pMaterialTexSRV, bCbUpToDate, bBindUpToDate, pIndexCheck );
 
         context._lastBindPSO           = pso;
-        context._lastCbBuffer          = engineCb._buffer;
+        context._lastCbBuffer          = context._passCb;
         context._lastCbValuesVersion   = valuesVersion;
         context._lastCbRegistryVersion = registryVersion;
         context._lastCbLayoutHash      = cbLayoutHash;
@@ -823,7 +822,7 @@ namespace sw
             state._pOrder = &_pActiveView->_listTransparentBatchOrder;
         // 인스턴스 슬롯 스트림(슬롯 1). 씬 드로우는 모두 이 스트림에서 자기 자리를 읽는다 — PSO 를 걸 때마다 메시 스트림과 함께 다시 건다(drawBatchGroup).
         // 컬링 없는 백엔드의 추가 뷰는 꼬리를 그 뷰 순서로 다시 놓은 자기 스트림을 쓴다(GPU 정렬 백엔드는 늘 공용 스트림).
-        state._slotStream = ( bExtraView && _pActiveView->_bUsesViewSlotStream == SW_TRUE ) ? _pActiveView->_instanceSlotStream : _state._gpuScene.getInstanceSlotStream();
+        state._slotStream = ( bExtraView && _pActiveView->_bUsesViewSlotStream == SW_TRUE ) ? _pActiveView->_instanceSlotStream._buffer : _state._gpuScene.getInstanceSlotStream();
         // 투명 큐의 입자는 배치 순서의 자기 자리(`GPUTransparentParticleSlot::_drawPosition`) 앞에 끼운다. 입자 그리기가 PSO 를 바꾸므로
         // 메시로 돌아올 때 PSO 와 정점 스트림을 다시 건다(drawBatchRound 가 걸린 PSO 를 잊고, `drawParticleRun` 이 에뮬 텍스처 슬롯을 다시 건다).
         if ( pParticleSlot != nullptr )

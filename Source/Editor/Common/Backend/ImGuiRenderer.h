@@ -23,6 +23,7 @@
 #include "Editor/Common/Backend/Model/EditorDrawReleaseQueue.h"
 
 #include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
+#include "Engine/Graphics/RHI/RHITextureSlot.h"
 
 namespace sw
 {
@@ -117,6 +118,7 @@ namespace sw::editor
         /** @brief 텍스처 칸 하나입니다. ImGui 텍스처 ID 는 칸 번호 + 1 이다(0 은 ImGui 의 무효 ID). */
         struct TextureSlot
         {
+            RHITextureSlot     _ownedTexture{}; ///< `_bOwned` 일 때 이 렌더러가 만든 텍스처(`_texture` · `_srv` 가 이것을 가리킨다)
             RHITextureHandle   _texture{ 0 };
             RHIDescriptorIndex _srv{ kInvalidDescriptorIndex }; ///< 렌더 스레드가 등록한 bindless 번호(아직이면 무효)
             bool               _bInUse{ false };                ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다

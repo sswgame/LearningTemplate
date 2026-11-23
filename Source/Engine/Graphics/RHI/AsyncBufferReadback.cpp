@@ -98,7 +98,7 @@ namespace sw
         RHIBufferHandle arrBuffer[kSlotCount]{};
         for ( uint32 slot = 0; slot < kSlotCount; ++slot )
         {
-            arrBuffer[slot] = pDevice->getResourceFactory()->createReadbackBuffer( elementSize, elementCount );
+            arrBuffer[slot] = pDevice->getResourceFactory()->createReadbackBuffer( RHIResourceCreateKey{}, elementSize, elementCount );
             if ( arrBuffer[slot] != 0 )
                 continue;
             SW_LOG_ERROR_ID( "AsyncBufferReadback.FailedCreateReadbackBuffer", "Failed to create readback buffer %# (%# x %# bytes)", slot, elementSize, elementCount );

@@ -22,7 +22,7 @@ namespace sw
         RHIConstantBuffer slot{};
         if ( slot.create( pDevice, kSlotBytes ) == false )
             return false;
-        _listSlot.push_back( slot );
+        _listSlot.push_back( std::move( slot ) );
         return true;
     }
 

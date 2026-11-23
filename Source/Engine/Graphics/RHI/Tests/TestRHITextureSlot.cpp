@@ -7,7 +7,11 @@
 #include "Core/Container/vector.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Graphics/RHI/IRHIResourceFactory.h"
+#include "Engine/Graphics/RHI/RHIConstantBuffer.h"
 #include "Engine/Graphics/RHI/RHIDescriptors.h"
+#include "Engine/Graphics/RHI/RHIGeometryBuffer.h"
+#include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
 #include "Engine/Graphics/RHI/RHITextureSlot.h"
 #include "Engine/Graphics/RHI/Tests/RHIFakeDevice.h"
 
@@ -83,4 +87,21 @@ SW_TEST_CASE( RHITextureSlotTest, PartialViewFailureLeavesNothing )
     device._pResourceFactory = &failing;
     SW_EXPECT_FALSE( slot.ensure( device, makeDesc( 32 ), "Slot" ) );
     SW_EXPECT_FALSE( slot.isValid() );
+}
+
+/** @brief [RHITextureSlotTest] 소유 형식은 옮기기만 되고, 옮긴 원본은 비어 두 번 놓지 않는다. 변이: 옮기기가 원본을 비우지 않으면 놓기가 두 번 불려 진다. */
+SW_TEST_CASE( RHITextureSlotTest, MoveLeavesTheSourceEmpty )
+{
+    static_assert( std::is_copy_constructible_v<RHITextureSlot> == false && std::is_copy_constructible_v<RHIStructuredBuffer> == false );
+    static_assert( std::is_copy_constructible_v<RHIConstantBuffer> == false && std::is_copy_constructible_v<RHIGeometryBuffer> == false );
+    static_assert( std::is_default_constructible_v<RHIResourceCreateKey> == false && std::is_aggregate_v<RHIResourceCreateKey> == false );
+
+    RHITextureSlot slot;
+    slot._texture = RHITextureHandle{ 5 };
+    slot._srv     = 3;
+    RHITextureSlot moved{ std::move( slot ) };
+    SW_EXPECT_FALSE( slot.isValid() );
+    SW_EXPECT_EQUAL( kInvalidDescriptorIndex, slot._srv );
+    SW_EXPECT_TRUE( moved._texture == RHITextureHandle{ 5 } );
+    moved.release( nullptr ); // 디바이스가 없으면 값만 잊는다
 }

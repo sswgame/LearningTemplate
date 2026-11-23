@@ -24,6 +24,10 @@ namespace sw
     class SW_API TransientTextureLeases
     {
     public:
+        TransientTextureLeases()                                           = default;
+        TransientTextureLeases( const TransientTextureLeases& )            = delete;
+        TransientTextureLeases& operator=( const TransientTextureLeases& ) = delete;
+
         /**
          * @brief @p pHolder 가 @p desc 텍스처 하나를 빌립니다. 같은 서술이고 @p pHolder 가 아직 빌리지 않은 것이 있으면 그것을, 없으면 새로 만듭니다.
          * @return 만들지 못하면 무효 번호(`constant::invalid_index::kUint32`)입니다. 번호는 돌려줄 때까지 바뀌지 않는다.

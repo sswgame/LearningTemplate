@@ -541,7 +541,7 @@ namespace sw
         outDesc._format                = format;
         outDesc._bIsShaderResource     = SW_TRUE;
         IRHIResourceFactory* pResource = device.getResourceFactory();
-        outHandle                      = pResource->createTexture2D( outDesc );
+        outHandle                      = pResource->createTexture2D( RHIResourceCreateKey{}, outDesc );
         if ( outHandle == 0 )
         {
             SW_LOG_ERROR_ID( "Texture.CreateFailed", "Texture2D: createTexture2D failed for '%#' (%#×%#, %# mips)", relativePath, outDesc._width, outDesc._height, outDesc._mipLevels );
@@ -583,7 +583,7 @@ namespace sw
         desc._bIsRenderTarget            = SW_TRUE;
         desc._bIsShaderResource          = SW_TRUE;
         IRHIResourceFactory*   pResource = pDevice->getResourceFactory();
-        const RHITextureHandle handle    = pResource->createTexture2D( desc );
+        const RHITextureHandle handle    = pResource->createTexture2D( RHIResourceCreateKey{}, desc );
         if ( handle == 0 )
         {
             SW_LOG_ERROR_ID( "Texture.CreateFailed", "Texture2D: createTexture2D failed for render target '%#' (%#×%#)", name, width, height );
@@ -687,7 +687,7 @@ namespace sw
         desc._format                     = _format;
         desc._bIsShaderResource          = SW_TRUE;
         IRHIResourceFactory*   pResource = pDevice->getResourceFactory();
-        const RHITextureHandle handle    = pResource->createTexture2D( desc );
+        const RHITextureHandle handle    = pResource->createTexture2D( RHIResourceCreateKey{}, desc );
         if ( handle == 0 )
         {
             SW_LOG_ERROR_ID( "Texture.CreateFailed", "Texture2D: createTexture2D failed for CPU texture '%#' (%#×%#)", _path.c_str(), _width, _height );

@@ -384,11 +384,12 @@ namespace sw::test
         RHIPipelineStateHandle createPipelineStateNative( const RHIPipelineStateDesc&, const RHICompiledGraphicsStages& ) override { return 0; }
         RHIPipelineStateHandle createComputePipelineStateNative( const RHICompiledShaderStage&, string_view ) override { return 0; }
         RHIRenderPassHandle    createRenderPass( const RHIRenderPassDesc& ) override { return 0; }
-        RHIBufferHandle        createConstantBuffer( uint32 ) override { return 0; }
-        void                   updateConstantBuffer( RHIBufferHandle, const void*, uint32 ) override {}
-        RHIBufferHandle        createConstantBufferPage( uint32 ) override { return 0; }
-        void                   updateConstantBuffer( const RHIBufferSlice&, const void*, uint32 ) override {}
-        RHIBufferHandle        createStructuredBuffer( uint32, uint32 elementCount ) override
+        using IRHIResourceFactory::createBuffer; // 백엔드 구현 판(보호)을 테스트가 직접 부른다
+        RHIBufferHandle createConstantBuffer( uint32 ) override { return 0; }
+        void            updateConstantBuffer( RHIBufferHandle, const void*, uint32 ) override {}
+        RHIBufferHandle createConstantBufferPage( uint32 ) override { return 0; }
+        void            updateConstantBuffer( const RHIBufferSlice&, const void*, uint32 ) override {}
+        RHIBufferHandle createStructuredBuffer( uint32, uint32 elementCount ) override
         {
             ++_structuredCreateCount;
             _lastStructuredElementCount = elementCount;

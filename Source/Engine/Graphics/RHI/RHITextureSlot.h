@@ -18,7 +18,7 @@ namespace sw
      * @struct RHITextureSlot
      * @brief 텍스처 핸들과 서술이 요청한 뷰의 번호입니다. 값이 있으면 요청한 뷰가 모두 있다(반쪽 상태가 없다).
      * @details 손으로 적으면 자리마다 뷰 하나가 실패했을 때 남는 것이 다르고(텍스처만 · SRV 만), 놓는 순서(뷰 등록 해제 → 텍스처)가 어긋나면 bindless 표에 죽은 핸들이 남는다.
-     *          언리얼 `IPooledRenderTarget`(텍스처 + 뷰 한 벌) 자리다. 렌더 스레드에서만 쓴다.
+     *          언리얼 `IPooledRenderTarget`(텍스처 + 뷰 한 벌) 자리다. 렌더 스레드에서만 쓴다. 옮기기만 된다 — 사본이 있으면 같은 텍스처를 두 번 놓거나 놓은 번호를 쓴다.
      */
     struct SW_API RHITextureSlot
     {
@@ -29,6 +29,18 @@ namespace sw
         uint32             _width{ 0 };
         uint32             _height{ 0 };
 
+        RHITextureSlot() = default;
+        RHITextureSlot( RHITextureSlot&& other ) noexcept { swap( other ); }
+        RHITextureSlot& operator=( RHITextureSlot&& other ) noexcept
+        {
+            swap( other );
+            return *this;
+        }
+        RHITextureSlot( const RHITextureSlot& )            = delete;
+        RHITextureSlot& operator=( const RHITextureSlot& ) = delete;
+
+        /** @brief 두 칸의 내용을 맞바꿉니다. 옮기기가 쓴다 — 대입한 쪽의 옛 내용은 @p other 에 남는다(임시면 잊는다). */
+        void swap( RHITextureSlot& other ) noexcept;
         /** @brief 텍스처와 요청한 뷰가 모두 있으면 true 입니다. */
         bool isValid() const { return _texture != 0; }
         /**

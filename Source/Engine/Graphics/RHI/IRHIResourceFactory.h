@@ -10,11 +10,47 @@
 
 namespace sw
 {
+    class AsyncBufferReadback;
+    class CanvasGlyphAtlasTexture;
+    class ConstantBufferPagePool;
+    class MeshRenderData;
+    class Texture2D;
+    class TransientAttachmentPool;
+    struct RHIConstantBuffer;
+    struct RHIGeometryBuffer;
+    struct RHIStructuredBuffer;
+    struct RHITextureSlot;
+
     struct RHICapabilities;
     struct RHICompiledGraphicsStages;
     struct RHICompiledShaderStage;
     struct RHIPipelineStateDesc;
     enum class ShaderTargetFormat : uint8;
+
+    /**
+     * @class RHIResourceCreateKey
+     * @brief `IRHIResourceFactory` 의 자원 생성이 받는 빈 값입니다 — 아래 소유 형식만 만들 수 있습니다.
+     * @details 생성이 날 핸들을 돌려주므로, 아무나 부르면 자리마다 놓는 순서(뷰 등록 해제 → 자원) · 실패 때 되돌리기 · 다시 만들기를 손으로 적는다(빠뜨리면 자원이 새거나 bindless 표에
+     *          죽은 번호가 남는다). 새 자리는 소유 형식(`RHITextureSlot` · `RHIStructuredBuffer` · `RHIConstantBuffer` · `RHIGeometryBuffer`)을 쓰고, 이 목록에는 수명 규칙이 다른
+     *          풀 · 에셋만 더한다. 생성자를 본문과 함께 적는 것은 `= default` 면 C++17 에서 집합체라 누구나 `{}` 로 만들기 때문이다.
+     */
+    class RHIResourceCreateKey
+    {
+    private:
+        RHIResourceCreateKey() {}
+
+    private:
+        friend class AsyncBufferReadback;
+        friend class CanvasGlyphAtlasTexture;
+        friend class ConstantBufferPagePool;
+        friend class MeshRenderData;
+        friend class Texture2D;
+        friend class TransientAttachmentPool;
+        friend struct RHIConstantBuffer;
+        friend struct RHIGeometryBuffer;
+        friend struct RHIStructuredBuffer;
+        friend struct RHITextureSlot;
+    };
 
     /**
      * @class IRHIResourceFactory
@@ -59,7 +95,7 @@ namespace sw
         [[nodiscard]] virtual RHIRenderPassHandle createRenderPass( const RHIRenderPassDesc& desc ) = 0;
 
         /** @brief 상수 버퍼를 만듭니다. */
-        [[nodiscard]] virtual RHIBufferHandle createConstantBuffer( uint32 size ) = 0;
+        [[nodiscard]] RHIBufferHandle createConstantBuffer( RHIResourceCreateKey, uint32 size ) { return createConstantBuffer( size ); }
 
         /**
          * @brief 상수 버퍼 데이터를 갱신합니다.
@@ -78,7 +114,7 @@ namespace sw
          * @details 프레임 칸 복제는 `createConstantBuffer` 와 같고, 구간마다 따로 갱신 · 등록한다. 넷(DX12 · Vulkan · GL · WebGPU)은 `createConstantBuffer` 와 같은 버퍼이고,
          *          DX11 은 구간 갱신(`UpdateSubresource1`)이 되는 기본 용도 버퍼다(동적 버퍼의 WRITE_DISCARD 는 페이지 전체를 버린다).
          */
-        [[nodiscard]] virtual RHIBufferHandle createConstantBufferPage( uint32 size ) = 0;
+        [[nodiscard]] RHIBufferHandle createConstantBufferPage( RHIResourceCreateKey, uint32 size ) { return createConstantBufferPage( size ); }
         /**
          * @brief 페이지 구간 @p slice 의 이번 프레임 칸에 씁니다. 나머지 칸은 링이 그 칸으로 돌아올 때 같은 오프셋에 채웁니다(`RHIConstantBufferMirror`).
          * @param size `slice._size` 이하여야 합니다 — 부르는 쪽(`ConstantBufferPagePool::update`)이 지킨다.
@@ -86,7 +122,7 @@ namespace sw
         virtual void updateConstantBuffer( const RHIBufferSlice& slice, const void* pData, uint32 size ) = 0;
 
         /** @brief 구조화(Structured) 버퍼나 스토리지(Storage) 버퍼를 만듭니다. */
-        [[nodiscard]] virtual RHIBufferHandle createStructuredBuffer( uint32 elementSize, uint32 elementCount ) = 0;
+        [[nodiscard]] RHIBufferHandle createStructuredBuffer( RHIResourceCreateKey, uint32 elementSize, uint32 elementCount ) { return createStructuredBuffer( elementSize, elementCount ); }
 
         /**
          * @brief 구조화 버퍼나 스토리지 버퍼의 **여러 조각**을 한 번에 갱신합니다.
@@ -115,14 +151,14 @@ namespace sw
         }
 
         /** @brief 내용을 담아 정점 버퍼를 만듭니다. 레이아웃은 PSO 의 입력 레이아웃(`constant::render::getMeshVertexAttributes`)이 정합니다. */
-        [[nodiscard]] virtual RHIBufferHandle createVertexBuffer( const void* pData, uint32 sizeBytes ) = 0;
+        [[nodiscard]] RHIBufferHandle createVertexBuffer( RHIResourceCreateKey, const void* pData, uint32 sizeBytes ) { return createVertexBuffer( pData, sizeBytes ); }
         /**
          * @brief 내용 없이 GPU 쪽에만 있는 정점 버퍼를 만듭니다 — GPU 복사(`IRHICommandList::copyBufferRegion`)의 도착이 되는 버퍼다(감사 R-15 — 정점 풀이 CPU 정점 대신 GPU 원본에서 채운다).
          * @details `createVertexBuffer` 의 버퍼는 DX12 업로드 힙이라 복사 도착이 될 수 없다. 이 버퍼는 CPU 가 쓰지 않는다(`updateGeometryBufferRegions` 를 받지 않는다) — 내용은 복사로만 들어온다.
          *          백엔드: DX12 default 힙(상태 추적, COMMON 으로 시작) · Vulkan 전송 도착 · 원본 용도(호스트 보임 메모리 — 엔진의 모든 Vulkan 버퍼와 같다) · DX11 DEFAULT ·
          *          GL 빈 `glBufferData` · WebGPU CopyDst · CopySrc. 처음 내용은 0 이다(DX12 · Vulkan 은 정해지지 않아 복사 전에는 읽지 않는다).
          */
-        [[nodiscard]] virtual RHIBufferHandle createGPUVertexBuffer( uint32 sizeBytes ) = 0;
+        [[nodiscard]] RHIBufferHandle createGPUVertexBuffer( RHIResourceCreateKey, uint32 sizeBytes ) { return createGPUVertexBuffer( sizeBytes ); }
 
         /**
          * @brief `createVertexBuffer` · `createIndexBuffer` 로 만든 정점 · 인덱스 버퍼의 **여러 조각**을 갱신합니다. 메시 풀(`GPUMeshVertexPool`)의 부분 갱신용입니다.
@@ -141,7 +177,7 @@ namespace sw
          * @details 서술체는 `isValidBufferDesc` 를 지켜야 한다 — 원소 크기 · 원소 수가 0 이 아니고 바이트 수가 그 곱이다. 예전 기본 구현은 비면 값을 지어냈다(바이트 0 → 256, 원소 0 → 4 바이트 · 1 개).
          *          기본 구현은 구조 버퍼(`createStructuredBuffer`)로 만들고 처음 내용을 올린다. 다른 버퍼 종류가 필요한 백엔드(DX11 인다이렉트 인자 · GL SSBO)가 덮는다.
          */
-        [[nodiscard]] virtual RHIBufferHandle createBuffer( const RHIBufferDesc& desc );
+        [[nodiscard]] RHIBufferHandle createBuffer( RHIResourceCreateKey, const RHIBufferDesc& desc ) { return createBuffer( desc ); }
         /** @brief @p desc 가 범용 버퍼 서술로 맞으면 true, 아니면 무엇이 틀렸는지 @p pCaller 와 함께 오류로 남기고 false 입니다. 값을 대신 채우지 않는다. */
         [[nodiscard]] static bool isValidBufferDesc( const RHIBufferDesc& desc, const utf8* pCaller );
 
@@ -151,14 +187,14 @@ namespace sw
          *          주의: 구조화 버퍼로 대신하면 안 된다(D3D11 은 BUFFER_STRUCTURED 에 BIND_INDEX_BUFFER 를 붙일 수 없고, Vulkan 은
          *          검증 레이어가 용도 위반으로 잡는다). 드라이버가 받아 줘서 그려지는 백엔드도 있어 이미지만으로는 드러나지 않는다.
          */
-        [[nodiscard]] virtual RHIBufferHandle createIndexBuffer( const void* pData, uint32 sizeBytes ) = 0;
+        [[nodiscard]] RHIBufferHandle createIndexBuffer( RHIResourceCreateKey, const void* pData, uint32 sizeBytes ) { return createIndexBuffer( pData, sizeBytes ); }
 
         /**
          * @brief GPU 에서 CPU 로 되읽을 읽기 전용 버퍼(@p elementSize x @p elementCount 바이트)를 만듭니다. 만들지 못하면 0 입니다.
          * @details 비동기 되읽기의 도착지다 — `IRHICommandList::copyBufferToReadback` 이 채우고, 그 프레임이 끝난 뒤(`IRHIDevice::notifyFrameCompletion` 의 `Completed`) `readReadbackBuffer` 로 읽는다.
          *          원본이 구조화 버퍼면 같은 원소 크기로 만든다(DX11 은 구조화 버퍼끼리만 복사한다). 지우는 것은 `IRHIDevice::releaseHandle` 이다.
          */
-        [[nodiscard]] virtual RHIBufferHandle createReadbackBuffer( uint32 elementSize, uint32 elementCount ) = 0;
+        [[nodiscard]] RHIBufferHandle createReadbackBuffer( RHIResourceCreateKey, uint32 elementSize, uint32 elementCount ) { return createReadbackBuffer( elementSize, elementCount ); }
 
         /**
          * @brief 읽기 버퍼의 앞쪽 @p sizeBytes 를 @p pDestination 에 복사합니다. 끝난 작업을 기다리지 않습니다(DX11 은 드라이버의 사용 추적을 맞추려 짧게 기다리는 Map 이다).
@@ -170,7 +206,7 @@ namespace sw
         [[nodiscard]] virtual bool readReadbackBuffer( RHIBufferHandle readback, uint32 sizeBytes, void* pDestination ) = 0;
 
         /** @brief 2D 텍스처(렌더 타깃 포함)를 만듭니다. */
-        [[nodiscard]] virtual RHITextureHandle createTexture2D( const RHITextureDesc& desc ) = 0;
+        [[nodiscard]] RHITextureHandle createTexture2D( RHIResourceCreateKey, const RHITextureDesc& desc ) { return createTexture2D( desc ); }
 
         /**
          * @brief @p desc 텍스처를 힙에 놓을 때의 크기 · 정렬입니다(DX12 `GetResourceAllocationInfo`). 능력 `_bPlacedTextures` 가 없으면 {0, 0} 이다.
@@ -182,22 +218,12 @@ namespace sw
             return {};
         }
         /** @brief 렌더 타깃 · 깊이 텍스처를 겹쳐 놓을 힙을 만듭니다. 능력이 없거나 못 만들면 0 입니다(오류는 백엔드가 남긴다). */
-        [[nodiscard]] virtual RHITransientHeapHandle createTransientHeap( uint64 sizeBytes )
-        {
-            (void)sizeBytes;
-            return 0;
-        }
+        [[nodiscard]] RHITransientHeapHandle createTransientHeap( RHIResourceCreateKey, uint64 sizeBytes ) { return createTransientHeap( sizeBytes ); }
         /**
          * @brief 힙 @p heap 의 @p offsetBytes 에 텍스처를 놓습니다. 서술 · 뷰 · 파괴 규칙은 `createTexture2D` 와 같다. 능력이 없으면 0 입니다.
          * @details 같은 바이트를 쓰는 다른 텍스처가 앞서 쓰였을 수 있으므로 프레임의 첫 쓰기 앞에 `IRHICommandList::beginTextureAlias` 를 부르고, 첫 쓰기는 지우기여야 한다(내용이 정해져 있지 않다).
          */
-        [[nodiscard]] virtual RHITextureHandle createPlacedTexture2D( const RHITextureDesc& desc, RHITransientHeapHandle heap, uint64 offsetBytes )
-        {
-            (void)desc;
-            (void)heap;
-            (void)offsetBytes;
-            return 0;
-        }
+        [[nodiscard]] RHITextureHandle createPlacedTexture2D( RHIResourceCreateKey, const RHITextureDesc& desc, RHITransientHeapHandle heap, uint64 offsetBytes ) { return createPlacedTexture2D( desc, heap, offsetBytes ); }
 
         /**
          * @brief 텍스처에 디버그 이름을 붙입니다 — RenderDoc · PIX 캡처, DRED 페이지 폴트, 검증 레이어 메시지가 이 이름으로 리소스를 보여 준다(파이프라인 XML 의 첨부 이름).
@@ -384,6 +410,31 @@ namespace sw
         virtual void unregisterBindlessUAV( RHIDescriptorIndex index ) = 0;
 
     protected:
+        // ------------------------------------------------------------------------------
+        // 자원 생성 — 백엔드 구현. 부르는 쪽은 키를 받는 공개 판이다(`RHIResourceCreateKey` — 설명도 거기 있다)
+        // ------------------------------------------------------------------------------
+        [[nodiscard]] virtual RHIBufferHandle        createConstantBuffer( uint32 size )                               = 0;
+        [[nodiscard]] virtual RHIBufferHandle        createConstantBufferPage( uint32 size )                           = 0;
+        [[nodiscard]] virtual RHIBufferHandle        createStructuredBuffer( uint32 elementSize, uint32 elementCount ) = 0;
+        [[nodiscard]] virtual RHIBufferHandle        createVertexBuffer( const void* pData, uint32 sizeBytes )         = 0;
+        [[nodiscard]] virtual RHIBufferHandle        createGPUVertexBuffer( uint32 sizeBytes )                         = 0;
+        [[nodiscard]] virtual RHIBufferHandle        createBuffer( const RHIBufferDesc& desc );
+        [[nodiscard]] virtual RHIBufferHandle        createIndexBuffer( const void* pData, uint32 sizeBytes )        = 0;
+        [[nodiscard]] virtual RHIBufferHandle        createReadbackBuffer( uint32 elementSize, uint32 elementCount ) = 0;
+        [[nodiscard]] virtual RHITextureHandle       createTexture2D( const RHITextureDesc& desc )                   = 0;
+        [[nodiscard]] virtual RHITransientHeapHandle createTransientHeap( uint64 sizeBytes )
+        {
+            (void)sizeBytes;
+            return 0;
+        }
+        [[nodiscard]] virtual RHITextureHandle createPlacedTexture2D( const RHITextureDesc& desc, RHITransientHeapHandle heap, uint64 offsetBytes )
+        {
+            (void)desc;
+            (void)heap;
+            (void)offsetBytes;
+            return 0;
+        }
+
         // ------------------------------------------------------------------------------
         // 자원 해제 — 백엔드 구현. 부르는 쪽은 `IRHIDevice::releaseHandle( 핸들 )` 하나다(종류는 핸들 형식이 고른다).
         // 장치가 해제 시점(렌더 스레드 · 넘긴 프레임)을 정하고, 백엔드는 GPU 펜스가 지난 뒤 네이티브 객체를 놓는다(`RHIReleaseQueue`).

@@ -17,7 +17,7 @@ namespace sw
             return true;
         release( &device );
         IRHIResourceFactory& factory = *device.getResourceFactory();
-        _texture                     = factory.createTexture2D( desc );
+        _texture                     = factory.createTexture2D( RHIResourceCreateKey{}, desc );
         if ( _texture == 0 )
             return false;
         factory.setTextureDebugName( _texture, pDebugName );
@@ -34,6 +34,16 @@ namespace sw
         _width  = desc._width;
         _height = desc._height;
         return true;
+    }
+
+    void RHITextureSlot::swap( RHITextureSlot& other ) noexcept
+    {
+        std::swap( _texture, other._texture );
+        std::swap( _srv, other._srv );
+        std::swap( _uav, other._uav );
+        std::swap( _format, other._format );
+        std::swap( _width, other._width );
+        std::swap( _height, other._height );
     }
 
     void RHITextureSlot::release( IRHIDevice* pDevice )

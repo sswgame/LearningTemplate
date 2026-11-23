@@ -11,6 +11,7 @@
 
 #include "Engine/EngineMinimal.h"
 #include "Engine/Graphics/Mesh/MeshVertex.h"
+#include "Engine/Graphics/RHI/RHIGeometryBuffer.h"
 #include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
 #include "Engine/Presentation/InstanceHighlight.h"
 #include "Engine/Renderer/Frame/View/RenderView.h"
@@ -285,7 +286,7 @@ namespace sw
         /** @brief 배치 테이블 버퍼 핸들을 반환합니다. */
         RHIBufferHandle getBatchInfoBuffer() const { return _batchInfo._buffer; }
         /** @brief 인스턴스 슬롯 스트림 정점 버퍼(슬롯 1)를 반환합니다. 0이면 아직 없습니다. */
-        RHIBufferHandle getInstanceSlotStream() const { return _instanceSlotStream; }
+        RHIBufferHandle getInstanceSlotStream() const { return _instanceSlotStream._buffer; }
         /**
          * @brief 정점 풀을 쓸지 정합니다(기본 켬). 끄면 배치가 자기 정점 버퍼로 그립니다(startVertex 0). 진단과 A/B 비교용입니다.
          * @details 풀을 켠 이미지와 끈 이미지는 같아야 한다. 다르면 백엔드가 간접 인자의 startVertex 나 SV_VertexID 를 다르게
@@ -460,8 +461,8 @@ namespace sw
          * @details 간접 인자의 startInstance 가 배치 시작이므로 입력 어셈블러가 인스턴스마다 `startInstance + i` 를 준다. 그것이
          *          곧 가시 목록 슬롯이다. 인스턴스 수만큼 커지면 다시 만든다(내용은 항등이라 그대로 늘리기만 한다).
          */
-        RHIBufferHandle _instanceSlotStream{ 0 };
-        uint32          _instanceSlotStreamCapacity{ 0 };
+        RHIGeometryBuffer _instanceSlotStream;
+        uint32            _instanceSlotStreamCapacity{ 0 };
         /**
          * @brief 배치 테이블과 간접 인자를 다시 올려야 하는지 나타냅니다. 스냅샷은 그대로인데 풀 오프셋(정점, 모프)이 바뀌었을 때 켜집니다.
          * @details 스냅샷 dirty 와는 별개다. 모프 풀은 메시가 모프를 켜고 끌 때, 정점 풀은 메시 집합이 바뀔 때 다시 만들어지는데

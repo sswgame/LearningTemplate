@@ -165,7 +165,7 @@ namespace sw
              *          채운다 — 0 으로 두면 셰이더가 힙 0번을 잘못 읽는다(InstanceData::loadWorld / Bindless::sampleIndex 는 kInvalidIndex 비교로 폴백).
              */
             static void uploadEngineConstantBuffer( IRHIPassCommandList& cmd, const ShaderBindingLayout& layout, const FrameResourceRegistry& registry,
-                                                    const PassConstantValues& values, const RHIConstantBuffer& engineCb,
+                                                    const PassConstantValues& values, RHIBufferHandle engineCb,
                                                     const BindlessIndexCheckSite* pIndexCheck, bool bCheckIndex )
             {
                 const uint32 alignedSize = MathUtil::align( layout.getEngineCbSize(), 16u );
@@ -212,7 +212,7 @@ namespace sw
                         Memory::copy( cbBytes.data() + member._offset, pValue, writeSize );
                 }
 
-                cmd.updateConstantBuffer( engineCb._buffer, cbBytes.data(), static_cast<uint32>( cbBytes.size() ) );
+                cmd.updateConstantBuffer( engineCb, cbBytes.data(), static_cast<uint32>( cbBytes.size() ) );
             }
 
             /**
@@ -220,7 +220,7 @@ namespace sw
              * @details 리플렉션이 주는 `_registerIndex` 는 백엔드마다 뜻이 다를 수 있다(세트 · 시프트 규약). 그대로 넘기면 한 CB 가 다른 CB 자리를
              *          덮어쓰거나 어느 슬롯에도 안 걸리는데, 같은 UNIFORM_BUFFER 라 검증 에러도 안 난다. 텍스처 · 구조버퍼는 3) 의 표가 맡는다.
              */
-            static void bindReservedConstantBuffers( IRHIPassCommandList& cmd, const ShaderBindingLayout& layout, const RHIConstantBuffer& engineCb,
+            static void bindReservedConstantBuffers( IRHIPassCommandList& cmd, const ShaderBindingLayout& layout, RHIDescriptorIndex engineCbIndex,
                                                      RHIDescriptorIndex materialCb, const BindlessIndexCheckSite* pIndexCheck, bool bCheckIndex )
             {
                 // 이 함수는 드로우마다 불린다. 리터럴이라도 hashed_string 을 여기서 만들면 드로우마다
@@ -231,7 +231,7 @@ namespace sw
                     if ( slot._kind != ShaderBindingKind::ConstantBuffer )
                         continue;
                     const bool               bMaterialCb = slot._name == s_materialCbName;
-                    const RHIDescriptorIndex cbIndex     = bMaterialCb ? materialCb : engineCb._index;
+                    const RHIDescriptorIndex cbIndex     = bMaterialCb ? materialCb : engineCbIndex;
                     validateIndex( pIndexCheck, bCheckIndex, RHIBindlessIndexSpace::Buffer, cbIndex, slot._name );
                     if ( cbIndex != kInvalidDescriptorIndex )
                         cmd.bindConstantBuffer( cbIndex, bMaterialCb ? shaderslot::kMaterialConstantBuffer : shaderslot::kPassConstantBuffer );
@@ -300,7 +300,8 @@ namespace sw
                                               const ShaderBindingLayout&    layout,
                                               const FrameResourceRegistry&  registry,
                                               const PassConstantValues&     values,
-                                              const RHIConstantBuffer&      engineCb,
+                                              RHIBufferHandle               engineCb,
+                                              RHIDescriptorIndex            engineCbIndex,
                                               RHIDescriptorIndex            materialCb,
                                               bool                          bNativeBindless,
                                               const RHIDescriptorIndex*     pMaterialTexSRV,
@@ -315,10 +316,10 @@ namespace sw
 
         // 1) 값 · 레지스트리가 그대로면 버퍼 내용도 그대로다. 다시 만들지도, 올리지도 않는다.
         //    배치마다 바뀌는 값은 루트 상수로 나가므로(binding.hlsli) 한 패스의 두 번째 드로우부터는 늘 여기로 온다.
-        const bool bUploadEngineCb = layout.getEngineCbSize() > 0 && engineCb._buffer != 0 && bEngineCbUpToDate == false;
+        const bool bUploadEngineCb = layout.getEngineCbSize() > 0 && engineCb != 0 && bEngineCbUpToDate == false;
         if ( bUploadEngineCb )
             Internal::uploadEngineConstantBuffer( cmd, layout, registry, values, engineCb, pIndexCheck, bCheckIndex );
-        Internal::bindReservedConstantBuffers( cmd, layout, engineCb, materialCb, pIndexCheck, bCheckIndex );
+        Internal::bindReservedConstantBuffers( cmd, layout, engineCbIndex, materialCb, pIndexCheck, bCheckIndex );
         Internal::bindMaterialTextures( cmd, bNativeBindless, pMaterialTexSRV, pIndexCheck, bCheckIndex );
 
         // 3) 등록 내용이 그대로면 이미 걸린 것과 같은 자원을 다시 거는 셈이라 건너뛴다(같은 패스 안의 두 번째
