@@ -23,6 +23,7 @@
 #include "Core/Task/TaskManager.h"
 
 #include "Editor/Common/Asset/AssetImportStamp.h"
+#include "Editor/Common/Asset/AssetSourceLocator.h"
 #include "Editor/Common/Asset/EditorContentScan.h"
 #include "Editor/Common/Asset/ImportedAssetStore.h"
 #include "Editor/Common/Asset/ModelImport/MeshFracture.h"
@@ -490,7 +491,7 @@ namespace sw::editor
              */
             [[nodiscard]] static bool parseGltf( string_view sourcePath, vector<uint8>& inoutBytes, GltfData& outData )
             {
-                if ( FileUtil::readFile( FileUtil::toDiskPath( sourcePath ), inoutBytes ) == false || inoutBytes.empty() )
+                if ( AssetSourceLocator::readBytes( sourcePath, inoutBytes ) == false )
                 {
                     SW_LOG_ERROR_ID( "ModelImporter.FailedReadGlTF", "Failed to read glTF '%#'", sourcePath );
                     return false;
@@ -1085,7 +1086,7 @@ namespace sw::editor
     uint64 ModelImporter::computeSourceHash( string_view sourcePath, const ModelImportRule& rule )
     {
         vector<uint8> bytes;
-        if ( FileUtil::readFile( FileUtil::toDiskPath( sourcePath ), bytes ) == false || bytes.empty() )
+        if ( AssetSourceLocator::readBytes( sourcePath, bytes ) == false )
             return 0;
 
         StringBuilder<constant::buffer::kMax64> versionText;

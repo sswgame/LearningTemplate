@@ -16,6 +16,7 @@
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
 
+#include "Editor/Common/Asset/AssetSourceLocator.h"
 #include "Editor/Common/Asset/ImportedAssetStore.h"
 #include "Editor/Common/Asset/ModelImport/ModelImportGeometry.h"
 #include "Editor/Common/Asset/ModelImport/ModelImportUtil.h"
@@ -431,7 +432,7 @@ namespace sw::editor
         if ( FileUtil::makeCanonicalPath( FileUtil::toDiskPath( imagePath ), canonicalPath ) ) // `../` 을 푼다 — 원본 옆이 아닌 textures_raw 의 이미지를 가리키는 glTF
             imagePath = FileUtil::normalizeSeparators( canonicalPath );
         outTexture._sourcePath = imagePath;
-        if ( FileUtil::readFile( FileUtil::toDiskPath( imagePath ), outTexture._bytes ) == false )
+        if ( AssetSourceLocator::readBytes( imagePath, outTexture._bytes ) == false )
         {
             SW_LOG_ERROR_ID( "ModelImport.ImageFileMissing", "glTF '%#': cannot read its image file %#", sourcePath, imagePath.c_str() );
             return false;

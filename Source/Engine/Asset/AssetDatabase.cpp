@@ -161,6 +161,36 @@ namespace sw
         }
     }
 
+    optional<AssetSourceAddress> AssetSourceAddress::tryParse( string_view text )
+    {
+        AssetSourceAddress address;
+        if ( StringUtil::startsWith( text, kStoreScheme ) )
+        {
+            const string_view rest = text.substr( kStoreScheme.size() );
+            if ( rest.size() <= kContentHashLength || rest[kContentHashLength] != '/' )
+                return nullopt;
+            address._contentHash = rest.substr( 0, kContentHashLength );
+            text                 = rest.substr( kContentHashLength + 1 );
+            const bool bHex      = std::all_of( address._contentHash.begin(), address._contentHash.end(), []( utf8 character )
+                 { return ( '0' <= character && character <= '9' ) || ( 'a' <= character && character <= 'f' ); } );
+            if ( bHex == false )
+                return nullopt;
+        }
+        if ( text.empty() || text == "." || text == ".." || text.find_first_of( "/\\:" ) != string_view::npos )
+            return nullopt;
+        address._name = text;
+        return address;
+    }
+
+    string AssetSourceAddress::toText() const
+    {
+        if ( isStored() == false )
+            return _name;
+        StringBuilder<constant::buffer::kMax256> builder;
+        builder.appendFormat( "%#%#/%#", kStoreScheme, _contentHash, _name );
+        return string( builder.view() );
+    }
+
     string AssetMeta::toXML() const
     {
         // 저장소의 서술(.meta)과 `Scripts/lint/asset_identity.py` 의 make_meta_text 는 끝 줄바꿈이 없다 — 같은 바이트여야 저장 → 다시 읽기 → 저장이 같고
@@ -180,7 +210,22 @@ namespace sw
         optional<AssetGUID> guid = AssetGUID::tryParse( _guid );
         if ( guid.has_value() == false )
             SW_LOG_ERROR_ID( "AssetMeta.InvalidGUID", "%# has guid '%#' - a GUID is 32 lowercase hex digits", label, _guid );
+        if ( AssetSourceAddress::tryParse( _source ).has_value() == false )
+        {
+            SW_LOG_ERROR_ID( "AssetMeta.InvalidSource", "%# has source '%#' - a source is a file name or store:<SHA-256>/<file name>", label, _source );
+            return nullopt;
+        }
         return guid;
+    }
+
+    void AssetMeta::renameSource( string_view sourcePath )
+    {
+        optional<AssetSourceAddress> address = AssetSourceAddress::tryParse( _source );
+        SW_ASSERT( address.has_value() ); // 읽은 서술이면 늘 있다(`parseXML`)
+        if ( address.has_value() == false )
+            return;
+        address->_name = FileUtil::getFileNamePart( sourcePath );
+        _source        = address->toText();
     }
 
     string AssetMeta::makePath( string_view sourcePath )
@@ -373,15 +418,23 @@ namespace sw
                 case AssetIdentityKind::Sidecar:
                 {
                     const string_view sourceID = Internal::toSourceID( assetID );
-                    if ( setSourceID.contains( Internal::toLowerID( sourceID ) ) == false )
+                    if ( rules.classify( sourceID ) != AssetIdentityKind::Source )
                     {
-                        // 원본이 없거나, 곁의 파일이 정체성을 스스로 드는 종류다(머리 글 · 건너뛰는 파일의 .meta 는 짝이 아니다)
+                        // 곁의 파일이 정체성을 스스로 드는 종류다(머리 글 · 건너뛰는 파일의 .meta 는 짝이 아니다)
                         outListIssue.push_back( AssetIdentityIssue{ AssetIdentityIssueKind::OrphanMeta, assetID, {} } );
                         break;
                     }
-                    AssetMeta                 meta;
-                    const optional<AssetGUID> guid = meta.parseXML( pFile->_text, assetID );
-                    if ( guid.has_value() == false || meta._source != FileUtil::getFileNamePart( sourceID ) )
+                    AssetMeta                          meta;
+                    const optional<AssetGUID>          guid    = meta.parseXML( pFile->_text, assetID );
+                    const optional<AssetSourceAddress> address = AssetSourceAddress::tryParse( meta._source );
+                    const bool                         bBeside = setSourceID.contains( Internal::toLowerID( sourceID ) );
+                    if ( guid.has_value() && address->isStored() == false && bBeside == false )
+                    {
+                        outListIssue.push_back( AssetIdentityIssue{ AssetIdentityIssueKind::OrphanMeta, assetID, {} } );
+                        break;
+                    }
+                    // 곁에 파일이 있는데 저장소 주소를 적었으면 어느 쪽이 원본인지 둘이 된다 — 고르지 않고 결함이다
+                    if ( guid.has_value() == false || address->_name != FileUtil::getFileNamePart( sourceID ) || address->isStored() == bBeside )
                     {
                         outListIssue.push_back( AssetIdentityIssue{ AssetIdentityIssueKind::InvalidMeta, assetID, {} } );
                         break;

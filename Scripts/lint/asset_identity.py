@@ -11,7 +11,7 @@ Scripts/lint/asset_identity.py
   py -3 -m Scripts asset-ids --self-check # 머리 읽기 · 쓰기 규칙(C++ AssetGUIDTest 와 같은 사례)과 규칙 파일 대조
 
 - 우리 형식 글(`listHeaderSuffix` — XML)은 맨 앞 처리 지시 `<?asset guid="…"?>`(XML 선언 바로 뒤)에, 원본(png · ogg · glb …)은 곁의 `<파일>.meta`
-  (`<AssetMeta _guid="…" _source="<파일 이름>" />`, 그 에셋만의 임포트 예외는 자식 `<_listImportOverride>` 의 `<AssetImportOverride _key _value/>`)에 정체성을 든다. GUID 는 소문자 16진 32 자 하나의 철자다.
+  (`<AssetMeta _guid="…" _source="<파일 이름>" />`, 원본이 저장소 밖에 있으면 `_source="store:<SHA-256>/<파일 이름>"`, 그 에셋만의 임포트 예외는 자식 `<_listImportOverride>` 의 `<AssetImportOverride _key _value/>`)에 정체성을 든다. GUID 는 소문자 16진 32 자 하나의 철자다.
 - `--fix` 는 조용히 새 GUID 를 만들지 않는다: 머리를 잃은 글은 HEAD 의 같은 경로에 있던 GUID 를 되살리고, 짝 잃은 `.meta` 는 원본을 내용(HEAD 의 블롭 해시)
   · 이름으로 찾아 다시 붙인다. 붙일 곳이 하나로 정해지지 않으면 오류다. 새 GUID 는 정체성이 처음 생기는 파일(새 글 · 새 원본)과 복사본에만 준다.
 - 커밋 훅(린트 규칙 `asset-ids` — `check_asset_identity` 가 `check_staged_asset_identity` 를 부른다): 바뀐 파일과 그 짝의 머리 없음 · 짝 없음, 새 GUID 와 인덱스의 겹침(`git grep`), 그리고 HEAD 에 있던
@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import fnmatch
 import json
+import re
 import secrets
 import sys
 import tempfile
@@ -265,10 +266,22 @@ def write_header(text: str, guid: str) -> str:
 
 Overrides = tuple[tuple[str, str], ...]   # 임포트 예외 (칸 이름, 값 글) — C++ `AssetImportOverride`
 
+# 원본의 자리 — C++ `AssetSourceAddress` 와 같은 두 꼴: 곁의 파일 이름, 저장소 밖 원본의 내용 주소 `store:<SHA-256>/<이름>`.
+SOURCE_ADDRESS = re.compile(r"(store:[0-9a-f]{64}/)?([^/\\:]+)")
 
-def make_meta_text(source_id: str, guid: str, overrides: Overrides = ()) -> str:
-    """C++ `AssetMeta::makeText`(리플렉션 직렬화)와 같은 글. 예외가 없으면 칸을 쓰지 않는다(`SkipIfEmpty`)."""
-    head = f"<AssetMeta _guid={quoteattr(guid)} _source={quoteattr(source_id.rsplit('/', 1)[-1])}"
+
+def split_source(source: str) -> tuple[str, str] | None:
+    """(내용 주소 머리 — 곁의 파일이면 빈 글, 파일 이름). 두 꼴이 아니면 None."""
+    match = SOURCE_ADDRESS.fullmatch(source)
+    if match is None or match.group(2) in (".", ".."):
+        return None
+    return match.group(1) or "", match.group(2)
+
+
+def make_meta_text(source_id: str, guid: str, overrides: Overrides = (), old_source: str = "") -> str:
+    """C++ `AssetMeta::toXML`(리플렉션 직렬화)과 같은 글. 예외가 없으면 칸을 쓰지 않는다(`SkipIfEmpty`). `old_source` 를 주면 그 내용 주소를 지키고 이름만 바꾼다(C++ `renameSource`)."""
+    address = split_source(old_source) if old_source else None
+    head = f"<AssetMeta _guid={quoteattr(guid)} _source={quoteattr((address[0] if address else '') + source_id.rsplit('/', 1)[-1])}"
     if not overrides:
         return head + " />"
     items = "".join(f"\t\t<AssetImportOverride _key={quoteattr(key)} _value={quoteattr(value)} />\n" for key, value in overrides)
@@ -276,12 +289,12 @@ def make_meta_text(source_id: str, guid: str, overrides: Overrides = ()) -> str:
 
 
 def parse_meta(text: str) -> tuple[str, str, Overrides] | None:
-    """(GUID, 원본, 임포트 예외) — 다른 꼴(모르는 속성 · 자식 · 틀린 GUID)이면 None(C++ 은 엄격한 리플렉션 읽기)."""
+    """(GUID, 원본, 임포트 예외) — 다른 꼴(모르는 속성 · 자식 · 틀린 GUID · 틀린 원본 자리)이면 None(C++ 은 엄격한 리플렉션 읽기)."""
     try:
         root = ElementTree.fromstring(text)
     except ElementTree.ParseError:
         return None
-    if root.tag != "AssetMeta" or set(root.attrib) != {"_guid", "_source"} or not is_guid(root.attrib["_guid"]):
+    if root.tag != "AssetMeta" or set(root.attrib) != {"_guid", "_source"} or not is_guid(root.attrib["_guid"]) or split_source(root.attrib["_source"]) is None:
         return None
     if len(root) == 0:
         return root.attrib["_guid"], root.attrib["_source"], ()
@@ -335,11 +348,13 @@ def collect_issues(map_text: dict[str, str | None], rules: Rules) -> tuple[list[
                 list_issue.append(Issue("missing-header" if state == MISSING else "invalid-header", asset_id))
         elif kind == SIDECAR:
             source_id = asset_id[:-len(META_EXTENSION)]
-            if source_id.lower() not in set_source:
+            beside = source_id.lower() in set_source
+            meta = parse_meta(text) if classify(source_id, rules) == SOURCE else None
+            address = split_source(meta[1]) if meta else None
+            if classify(source_id, rules) != SOURCE or (address is not None and not address[0] and not beside):
                 list_issue.append(Issue("orphan-meta", asset_id))
                 continue
-            meta = parse_meta(text)
-            if meta is None or meta[1] != source_id.rsplit("/", 1)[-1]:
+            if meta is None or address is None or address[1] != source_id.rsplit("/", 1)[-1] or bool(address[0]) == beside:
                 list_issue.append(Issue("invalid-meta", asset_id))
                 continue
             register(meta[0], source_id)
@@ -552,7 +567,7 @@ def fix_worktree(project_root: Path) -> int:
             map_text[asset_id] = text
         else:
             copied = parse_meta(map_text.get(asset_id + META_EXTENSION) or "")   # 복사본은 베낀 임포트 예외를 지킨다(C++ `assignNewIdentity` 와 같다)
-            _write(content_root / (asset_id + META_EXTENSION), make_meta_text(asset_id, guid, copied[2] if copied else ()))
+            _write(content_root / (asset_id + META_EXTENSION), make_meta_text(asset_id, guid, copied[2] if copied else (), copied[1] if copied else ""))
         set_used.add(guid)
 
     # ① 겹친 GUID — HEAD 에서 그 GUID 를 들던 경로가 원본이고 나머지가 복사본이다. 원본을 가를 수 없으면(둘 다 새 파일) 정렬 순서로 먼저인 쪽이 남는다.
@@ -655,6 +670,12 @@ def run_self_check(project_root: Path | None = None) -> None:
     assert parse_meta(make_meta_text("a/horse.glb", sample, overrides).replace('_value="raw"', '_value="raw" _note="x"')) is None
     assert parse_meta(f'<AssetMeta _guid="{sample}" _source="hit.ogg"><Other /></AssetMeta>') is None
     assert parse_meta(f'<AssetMeta _guid="{sample}" _source="hit.ogg" _extra="1" />') is None
+    stored_source = f"store:{'0a' * 32}/horse.glb"   # 저장소 밖 원본 — C++ AssetMetaTest.StoredSourceAddressIsOneOfTwoForms 와 같은 사례
+    stored = make_meta_text("a/horse.glb", sample, overrides, stored_source)
+    assert parse_meta(stored) == (sample, stored_source, overrides)
+    assert parse_meta(make_meta_text("b/pony.glb", sample, overrides, stored_source)) == (sample, f"store:{'0a' * 32}/pony.glb", overrides)
+    for wrong in (f"store:{'0A' * 32}/horse.glb", "store:0a/horse.glb", f"store:{'0a' * 32}/", f"store:{'0a' * 32}/a/horse.glb", "a/horse.glb", "..", "C:horse.glb", ""):
+        assert parse_meta(f'<AssetMeta _guid="{sample}" _source="{wrong}" />') is None, wrong
 
     rules = load_rules(project_root)
     assert make_output_guid("0123456789abcdef0011223344556677", ".MESH") == "28016f06802dfbf1a257d90c3347b2fb"   # C++ AssetGUIDTest.OutputIdentityComesFromSourceAndOutputName 과 같은 글
@@ -670,6 +691,10 @@ def run_self_check(project_root: Path | None = None) -> None:
     list_issue, _ = collect_issues({"a/x.prefab.xml": write_header("<P/>", sample), "a/y.prefab.xml": write_header("<P/>", sample), "a/z.ogg": "",
                                   "a/w.ogg.meta": make_meta_text("a/w.ogg", other), "a/golden/q.ppm": ""}, rules)
     assert [(issue.kind, issue.asset_id) for issue in list_issue] == [("orphan-meta", "a/w.ogg.meta"), ("duplicate", "a/y.prefab.xml"), ("missing-meta", "a/z.ogg")], list_issue
+    list_issue, map_guid = collect_issues({"a/horse.glb.meta": stored}, rules)   # 원본이 저장소 밖에 있다 — 짝 잃은 서술이 아니다
+    assert not list_issue and map_guid == {sample: "a/horse.glb"}, list_issue
+    list_issue, _ = collect_issues({"a/horse.glb.meta": stored, "a/horse.glb": ""}, rules)   # 곁에도 있으면 어느 쪽이 원본인지 둘이다
+    assert [issue.kind for issue in list_issue] == ["invalid-meta"], list_issue
 
 
 IDENTITY_REDIRECT_ELEMENT = "IdentityRedirect"   # C++ `AssetRedirect` 의 정체성 대체 줄

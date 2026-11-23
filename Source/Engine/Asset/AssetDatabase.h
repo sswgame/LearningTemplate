@@ -126,9 +126,33 @@ namespace sw
     };
 
     /**
+     * @struct AssetSourceAddress
+     * @brief 서술이 적는 원본의 자리(`AssetMeta::_source`)입니다 — 곁의 파일 이름 `x.glb`, 또는 원본을 저장소 밖에 둔 내용 주소 `store:<SHA-256>/x.glb`. 다른 꼴은 없다.
+     * @details 이름은 늘 서술의 짝(서술 이름에서 `.meta` 를 뗀 것)이다 — 임포트 규칙 · 결과 자리 · 종류가 이름에서 나오고 내용만 주소로 찾는다(언리얼 Virtual Assets). SHA-256 인 까닭은
+     *          Git LFS 의 oid 와 같은 값이라 저장소를 새로 만들지 않고 옮길 수 있어서다. 내용을 여는 곳은 에디터의 `AssetSourceLocator` 하나다.
+     */
+    struct SW_API AssetSourceAddress
+    {
+        /** @brief 내용 주소 꼴의 머리입니다. */
+        static constexpr string_view kStoreScheme = "store:";
+        /** @brief SHA-256 글(소문자 16진)의 길이입니다. */
+        static constexpr size_t kContentHashLength = 64;
+
+        string _name;        ///< 원본 파일 이름
+        string _contentHash; ///< 내용의 SHA-256(소문자 16진). 비면 곁의 파일이다
+
+        /** @brief @p text 를 읽습니다. 두 꼴이 아니면(폴더가 든 이름 · 다른 머리 · 대문자 16진) 없음입니다. */
+        [[nodiscard]] static optional<AssetSourceAddress> tryParse( string_view text );
+        /** @brief 서술에 적는 글입니다. */
+        string toText() const;
+        /** @brief 원본이 저장소 밖(내용 주소)에 있습니까. */
+        bool isStored() const { return _contentHash.empty() == false; }
+    };
+
+    /**
      * @struct AssetMeta
      * @brief 원본 곁의 서술 `<파일>.meta` 한 장입니다 — `<AssetMeta _guid="…" _source="…"/>`. 읽고 쓰는 곳은 이 구조체 하나입니다.
-     * @details `_source` 는 원본 파일의 자리(서술 폴더 기준 상대 경로)다 — 지금은 곁의 파일 이름이고, 원본을 LFS · 별도 저장소로 뗄 때(3 단계) 그 자리를 가리킨다.
+     * @details `_source` 는 원본의 자리(`AssetSourceAddress`)다 — 곁의 파일 이름이거나, 원본을 저장소 밖에 두면 그 내용 주소다.
      *          그 에셋만의 임포트 예외는 `_listImportOverride` 에 차이만 든다(기본값은 폴더 규칙 — 우선순위는 프리셋 < 규칙 < 서술). 모르는 속성 · 빠진 칸은 오류다(엄격한 읽기).
      */
     REFLECT()
@@ -142,19 +166,21 @@ namespace sw
         PROPERTY( Required )
         string _guid; ///< 정체성(`AssetGUID` 글 표기)
         PROPERTY( Required )
-        string _source; ///< 원본 파일(서술 폴더 기준 상대 경로)
+        string _source; ///< 원본의 자리(`AssetSourceAddress` 글 표기)
         PROPERTY( SkipIfEmpty )
         vector<AssetImportOverride> _listImportOverride; ///< 이 에셋만의 임포트 예외(비면 쓰지 않는다)
 
         /** @brief XML 글로 씁니다. */
         string toXML() const;
-        /** @brief @p text 를 엄격하게 읽고 GUID 를 돌려줍니다. 읽지 못하거나 GUID 가 글 표기가 아니면 @p sourceLabel 과 이유를 오류로 남기고 없음입니다. */
+        /** @brief @p text 를 엄격하게 읽고 GUID 를 돌려줍니다. 읽지 못하거나 GUID · 원본 자리가 글 표기가 아니면 @p sourceLabel 과 이유를 오류로 남기고 없음입니다. */
         [[nodiscard]] optional<AssetGUID> parseXML( string_view text, string_view sourceLabel );
+        /** @brief 원본을 @p sourcePath 로 옮긴 서술로 고칩니다 — 이름만 바꾸고 GUID · 내용 주소 · 임포트 예외는 그대로입니다(읽은 서술에만 부른다). */
+        void renameSource( string_view sourcePath );
         /** @brief 원본 리소스 id @p sourcePath 의 서술 id(`<id>.meta`)입니다 — 색인 키 · 오류 표시용 글. 디스크 자리는 `AbsolutePath` 판입니다. */
         static string makePath( string_view sourcePath );
         /** @brief 원본 디스크 경로 @p sourcePath 의 서술 디스크 경로(`<경로>.meta`)입니다 — 글로 잇고 다시 올리지 않는다(`AbsolutePath::appendSuffix`). */
         [[nodiscard]] static AbsolutePath makePath( const AbsolutePath& sourcePath ) { return sourcePath.appendSuffix( kExtension ); }
-        /** @brief 원본 @p sourcePath 에 @p guid 를 주는 서술 글입니다. 임포트 예외 @p listOverride 를 함께 든다(복사 · 옮기기는 예외를 지킨다). */
+        /** @brief 곁의 원본 @p sourcePath 에 @p guid 를 주는 서술 글입니다. 임포트 예외 @p listOverride 를 함께 든다(복사는 예외를 지킨다 — 옮기기는 `renameSource`). */
         static string makeText( string_view sourcePath, const AssetGUID& guid, const vector<AssetImportOverride>& listOverride = {} );
     };
 
@@ -165,8 +191,8 @@ namespace sw
         MissingHeader,   ///< 우리 형식 글에 머리가 없다
         InvalidHeader,   ///< 머리를 읽지 못했다 · 자리가 틀렸다
         MissingMeta,     ///< 원본 곁에 `.meta` 가 없다
-        OrphanMeta,      ///< `.meta` 곁에 원본이 없다(원본만 옮기거나 지웠다)
-        InvalidMeta,     ///< `.meta` 를 읽지 못했다 · 원본 자리가 맞지 않는다
+        OrphanMeta,      ///< `.meta` 곁에 원본이 없고 저장소 주소도 아니다(원본만 옮기거나 지웠다)
+        InvalidMeta,     ///< `.meta` 를 읽지 못했다 · 원본 이름이 맞지 않는다 · 곁에 원본이 있는데 저장소 주소를 적었다
         InvalidRedirect, ///< 리다이렉트 표(`redirects.xml`)의 정체성 대체 줄이 틀렸다
         Unreadable,      ///< 파일을 읽지 못했다
     };

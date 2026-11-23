@@ -29,7 +29,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 
 import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
 from common.git import run_git, run_git_bytes  # noqa: E402
-from lint.asset_identity import RULES_PATH, ImportedFolder, iterate_imported_sources, load_rules  # noqa: E402
+from lint.asset_identity import META_EXTENSION, RULES_PATH, ImportedFolder, iterate_imported_sources, load_rules  # noqa: E402
 from lint.index_cache import Facts, get_index_keys, open_facts  # noqa: E402
 from lint.lint_scope import LintScope  # noqa: E402
 
@@ -262,8 +262,8 @@ class AssetSet:
 
 
 def is_imported_from_source(asset_id: str, assets: AssetSet, config: FieldConfig) -> bool:
-    """임포트 산출물 자리(`<…>/models/a/b/c.mesh`)면 같은 자리의 원본이 있는지 봅니다(`iterate_imported_sources`)."""
-    return any(assets.contains(source_id) for source_id, _ in iterate_imported_sources(asset_id, config.list_imported))
+    """임포트 산출물 자리(`<…>/models/a/b/c.mesh`)면 같은 자리의 원본이 있는지 봅니다(`iterate_imported_sources`). 저장소 밖 원본은 서술만 있다(짝 잃은 서술은 `asset_identity` 가 잡는다)."""
+    return any(assets.contains(source_id) or assets.contains(source_id + META_EXTENSION) for source_id, _ in iterate_imported_sources(asset_id, config.list_imported))
 
 
 def resolves(asset_id: str, assets: AssetSet, config: FieldConfig) -> bool:

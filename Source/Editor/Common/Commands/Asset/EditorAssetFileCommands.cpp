@@ -249,7 +249,7 @@ namespace sw::editor
             }
 
             /**
-             * @brief 옮기는 `.meta` 마다 원본 이름 칸(`_source`)을 새 이름으로 쓴 글을 @p inoutListRewrite 끝에 더합니다(GUID 는 그대로). 이름이 같으면 더하지 않는다.
+             * @brief 옮기는 `.meta` 마다 원본 이름(`AssetMeta::renameSource`)을 새 이름으로 쓴 글을 @p inoutListRewrite 끝에 더합니다(GUID · 내용 주소 · 임포트 예외는 그대로). 이름이 같으면 더하지 않는다.
              * @return `.meta` 를 읽지 못하면 false 입니다(`_failure` 에 이유 — 아무것도 옮기지 않는다).
              */
             [[nodiscard]] static bool prepareSidecarRewrites( EditorAssetMovePlan& inoutPlan, vector<PreparedRewrite>& inoutListRewrite )
@@ -272,7 +272,8 @@ namespace sw::editor
                         return false;
                     }
                     const string_view newSourceAbs = string_view{ move._destinationAbs }.substr( 0, move._destinationAbs.size() - AssetMeta::kExtension.size() );
-                    rewrite._rewrittenText         = AssetMeta::makeText( newSourceAbs, *guid );
+                    meta.renameSource( newSourceAbs );
+                    rewrite._rewrittenText = meta.toXML();
                     if ( rewrite._rewrittenText == rewrite._originalText )
                         continue;
                     rewrite._referrerID  = inoutPlan._listNewID[moveIndex];

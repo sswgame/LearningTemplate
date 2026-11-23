@@ -15,6 +15,7 @@
 #include "Core/Time/MonotonicClock.h"
 
 #include "Editor/Common/Asset/AssetImportStamp.h"
+#include "Editor/Common/Asset/AssetSourceLocator.h"
 #include "Editor/Common/Asset/Texture/RawImageData.h"
 #include "Editor/Common/Asset/Texture/TextureBlockEncoder.h"
 #include "Editor/Common/Asset/Texture/TextureImportConfig.h"
@@ -322,13 +323,18 @@ namespace sw::editor
                 SW_LOG_ERROR_ID( "TextureImporter.HDRSourceNeedsFormat", "HDR source needs format bc6h or rgba16f (rule format '%#'): %#", TextureImportFormatUtil::getName( rule._format ), sourcePath );
                 return false;
             }
-            const wstring         wSourcePath = StringUtil::utf8ToUTF16( string( sourcePath ).c_str() );
+            vector<uint8> bytes;
+            if ( AssetSourceLocator::readBytes( sourcePath, bytes ) == false )
+            {
+                SW_LOG_ERROR_ID( "TextureImporter.HDRSourceUnreadable", "Failed to read HDR source: %#", sourcePath );
+                return false;
+            }
             DirectX::TexMetadata  metadata{};
             DirectX::ScratchImage sourceImage;
-            HRESULT               hr = DirectX::LoadFromHDRFile( wSourcePath.c_str(), &metadata, sourceImage );
+            HRESULT               hr = DirectX::LoadFromHDRMemory( bytes.data(), bytes.size(), &metadata, sourceImage );
             if ( FAILED( hr ) )
             {
-                SW_LOG_ERROR_ID( "TextureImporter.DirectXLoadFromHDRFileFailedHr", "DirectX::LoadFromHDRFile failed (hr=0x%#) for %#", Fmt( static_cast<uint32>( hr ), Format( 8, Format::Padding::Zero ).hex() ),
+                SW_LOG_ERROR_ID( "TextureImporter.DirectXLoadFromHDRMemoryFailedHr", "DirectX::LoadFromHDRMemory failed (hr=0x%#) for %#", Fmt( static_cast<uint32>( hr ), Format( 8, Format::Padding::Zero ).hex() ),
                                  sourcePath );
                 return false;
             }
@@ -779,7 +785,7 @@ namespace sw::editor
     uint64 TextureImporter::computeSourceHash( string_view sourcePath, const TextureImportRule& rule )
     {
         vector<uint8> bytes;
-        if ( FileUtil::readFile( FileUtil::toDiskPath( sourcePath ), bytes ) == false || bytes.empty() )
+        if ( AssetSourceLocator::readBytes( sourcePath, bytes ) == false )
             return 0;
 
         // 규칙은 해석한 결과로 섞는다. "bc7" 과 "BC7_UNORM", BGRA 와 ARGB 처럼 같은 결과를 내는 표기는 같은 해시가 된다.

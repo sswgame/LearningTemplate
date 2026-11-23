@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 #include "Core/Testing/TestFramework.h"
 
@@ -25,6 +26,22 @@ namespace
         }
 
         static string makeHeaderText( const AssetGUID& guid ) { return AssetGUIDHeader::write( "<Prefab formatVersion=\"0\"/>\n", guid ); }
+
+        /** @brief 내용 주소 글(`store:<@p hashDigit 64 자><tail>`)입니다. */
+        static string makeStoredText( utf8 hashDigit, string_view tail )
+        {
+            StringBuilder<constant::buffer::kMax256> builder;
+            builder.appendFormat( "store:%#%#", string( AssetSourceAddress::kContentHashLength, hashDigit ), tail );
+            return string( builder.view() );
+        }
+
+        /** @brief 원본 자리 @p source 를 적은 서술 글입니다. */
+        static string makeMetaText( string_view source, string_view children )
+        {
+            StringBuilder<constant::buffer::kMax512> builder;
+            builder.appendFormat( "<AssetMeta _guid=\"0123456789abcdef0011223344556677\" _source=\"%#\">%#</AssetMeta>", source, children );
+            return string( builder.view() );
+        }
 
         static bool hasIssue( const vector<AssetIdentityIssue>& listIssue, AssetIdentityIssueKind kind, string_view assetID )
         {
@@ -272,6 +289,58 @@ SW_TEST_CASE( AssetMetaTest, TextMatchesTheRepositoryForm )
     const optional<AssetGUID> guid = AssetGUID::tryParse( "6bf1c6b3381eb58dd5e456b5cb4f5b77" );
     SW_REQUIRE_TRUE( guid.has_value() );
     SW_EXPECT_EQUAL( string( "<AssetMeta _guid=\"6bf1c6b3381eb58dd5e456b5cb4f5b77\" _source=\"splash.png\" />" ), AssetMeta::makeText( "editor/textures_raw/splash.png", *guid ) );
+}
+
+/** @brief [AssetMetaTest] 원본의 자리는 곁의 파일 이름과 `store:<SHA-256>/<이름>` 두 꼴뿐이고(파이썬 self-check 와 같은 사례), 옮긴 서술은 내용 주소 · 임포트 예외를 지킨다 */
+SW_TEST_CASE( AssetMetaTest, StoredSourceAddressIsOneOfTwoForms )
+{
+    using Util                                    = AssetDatabaseTestUtil;
+    const string                       storedText = Util::makeStoredText( 'a', "/horse.glb" );
+    const optional<AssetSourceAddress> stored     = AssetSourceAddress::tryParse( storedText );
+    SW_REQUIRE_TRUE( stored.has_value() );
+    SW_EXPECT_TRUE( stored->isStored() );
+    SW_EXPECT_EQUAL( string( "horse.glb" ), stored->_name );
+    SW_EXPECT_EQUAL( storedText, stored->toText() );
+    const optional<AssetSourceAddress> beside = AssetSourceAddress::tryParse( "horse.glb" );
+    SW_REQUIRE_TRUE( beside.has_value() );
+    SW_EXPECT_FALSE( beside->isStored() );
+    SW_EXPECT_EQUAL( string( "horse.glb" ), beside->toText() );
+    SW_EXPECT_FALSE( AssetSourceAddress::tryParse( Util::makeStoredText( 'A', "/horse.glb" ) ).has_value() );
+    SW_EXPECT_FALSE( AssetSourceAddress::tryParse( Util::makeStoredText( 'a', "/" ) ).has_value() );
+    SW_EXPECT_FALSE( AssetSourceAddress::tryParse( Util::makeStoredText( 'a', "/a/horse.glb" ) ).has_value() );
+    for ( const string_view wrong : { "store:0a/horse.glb", "a/horse.glb", "..", "C:horse.glb", "" } )
+        SW_EXPECT_FALSE( AssetSourceAddress::tryParse( wrong ).has_value() );
+
+    AssetMeta    meta;
+    const string text = Util::makeMetaText( storedText, "<_listImportOverride><AssetImportOverride _key=\"generateMips\" _value=\"false\"/></_listImportOverride>" );
+    SW_REQUIRE_TRUE( meta.parseXML( text, "horse.glb.meta" ).has_value() );
+    meta.renameSource( "b/pony.glb" );
+    AssetMeta moved;
+    SW_REQUIRE_TRUE( moved.parseXML( meta.toXML(), "pony.glb.meta" ).has_value() );
+    SW_EXPECT_EQUAL( Util::makeStoredText( 'a', "/pony.glb" ), moved._source );
+    SW_EXPECT_EQUAL( size_t{ 1 }, moved._listImportOverride.size() );
+
+    SW_EXPECT_LOG( "AssetMeta.InvalidSource" );
+    AssetMeta wrongSource;
+    SW_EXPECT_FALSE( wrongSource.parseXML( Util::makeMetaText( "a/horse.glb", {} ), "horse.glb.meta" ).has_value() );
+}
+
+/** @brief [AssetDatabaseTest] 저장소 밖 원본은 서술만으로 색인에 오르고(짝 잃은 서술이 아니다), 곁에 파일도 있으면 결함이다 */
+SW_TEST_CASE( AssetDatabaseTest, StoredSourceIsIndexedWithoutAFile )
+{
+    using Util                      = AssetDatabaseTestUtil;
+    const AssetIdentityRules  rules = Util::makeRules();
+    vector<AssetIdentityFile> listFile;
+    listFile.push_back( AssetIdentityFile{ "common/a/horse.glb.meta", Util::makeMetaText( Util::makeStoredText( 'a', "/horse.glb" ), {} ) } );
+    vector<AssetIdentityIssue> listIssue;
+    const AssetDatabase        database = AssetDatabase::build( listFile, rules, listIssue );
+    SW_EXPECT_TRUE( listIssue.empty() );
+    SW_EXPECT_TRUE( database.findGUID( "common/a/horse.glb" ).has_value() );
+
+    listFile.push_back( AssetIdentityFile{ "common/a/horse.glb", {} } );
+    const AssetDatabase both = AssetDatabase::build( listFile, rules, listIssue );
+    SW_EXPECT_FALSE( both.findGUID( "common/a/horse.glb" ).has_value() );
+    SW_EXPECT_TRUE( AssetDatabaseTestUtil::hasIssue( listIssue, AssetIdentityIssueKind::InvalidMeta, "common/a/horse.glb.meta" ) );
 }
 
 SW_TEST_CASE( AssetMetaTest, UnknownAttributeIsStillAnError )
