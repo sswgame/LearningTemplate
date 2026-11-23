@@ -144,6 +144,8 @@ namespace sw
         void resetMotion() override;
         /** @brief 동적 바디만 바닥 없이 떨어진다. */
         bool needsStreamingFloor() const override { return _bodyType == PhysicsBodyType::Dynamic; }
+        /** @brief 바디의 셰이프 전부입니다(동적 바디가 쓰지 못하는 삼각 메시는 빼고). */
+        void collectStreamingFloorShapes( const float3& scale, vector<PhysicsShapeDesc3D>& outListShape ) const override;
         /** @brief 쓰는 고정 스텝 그룹마다 메서드를 등록합니다(`registerFixedStep`). */
         void onRegister( GameObjectManager& manager ) override;
         void onPhysicsFrameBegin( const FixedStepContext& context );

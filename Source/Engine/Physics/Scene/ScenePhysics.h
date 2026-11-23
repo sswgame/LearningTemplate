@@ -359,7 +359,7 @@ namespace sw
         void applyPoseWrites();
         /**
          * @brief 바닥(스트리밍 셀)이 없는 자리의 동적 바디 · 캐릭터를 쥐고, 셀이 오른 자리의 것을 풉니다(`PhysicsComponent::isStreamingHeld`, `SceneStreamingSubsystem::isFloorMissing`).
-         *        셀이 내려간 후보만 몸 아래로 광선(`PhysicsSettings::_streamingFloorProbeDistance`, 땅 광선 층)을 쏴 받쳐 줄 충돌이 있으면 쥐지 않는다.
+         *        셀이 내려간 후보만 몸 모양을 아래로 쓸어(`PhysicsSettings::_streamingFloorProbeDistance`, 땅 질의 층) 받쳐 줄 충돌(위를 보는 면)이 있으면 쥐지 않는다.
          * @details 스트리밍은 물리보다 아래 층이라 물리가 묻는다. 셀을 스트리밍하지 않는 씬은 쥔 것이 없으면 아무것도 하지 않는다.
          */
         void updateStreamingHolds();

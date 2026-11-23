@@ -72,7 +72,7 @@ namespace sw
         // 3D 씬 용량은 데이터가 정한다 — 코드 기본값으로 채우지 않는다(감사 S-2).
         if ( _streamingFloorProbeDistance <= 0.0f )
         {
-            SW_LOG_ERROR_ID( "PhysicsSettings.StreamingFloorProbeMissing", "Physics settings need a positive _streamingFloorProbeDistance (%#) - the ray that finds support under bodies over unloaded streaming cells",
+            SW_LOG_ERROR_ID( "PhysicsSettings.StreamingFloorProbeMissing", "Physics settings need a positive _streamingFloorProbeDistance (%#) - the sweep that finds support under bodies over unloaded streaming cells",
                              _streamingFloorProbeDistance );
             bValid = false;
         }

@@ -244,6 +244,15 @@ namespace sw
         inoutBuilder.addFloat3( getAngularVelocity() );
     }
 
+    void RigidBodyComponent::collectStreamingFloorShapes( const float3& scale, vector<PhysicsShapeDesc3D>& outListShape ) const
+    {
+        for ( const PhysicsShapeDesc3D& shape : _listShape )
+        {
+            if ( shape._type != PhysicsShapeType3D::TriangleMesh )
+                outListShape.push_back( PhysicsComponent::makeScaledShape( shape, scale ) );
+        }
+    }
+
     PhysicsBodyDesc3D RigidBodyComponent::makeBodyDesc( const ScenePhysics& physics, const float3& position, const quaternion& rotation, const float3& scale ) const
     {
         PhysicsBodyDesc3D desc;

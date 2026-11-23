@@ -152,6 +152,8 @@ namespace sw
         void resetMotion() override { stopMovementImmediately(); }
         /** @brief 캐릭터는 바닥 없이 떨어진다. */
         bool needsStreamingFloor() const override { return true; }
+        /** @brief 발이 원점인 캡슐 하나입니다. */
+        void collectStreamingFloorShapes( const float3& scale, vector<PhysicsShapeDesc3D>& outListShape ) const override;
         /** @brief 쓰는 고정 스텝 그룹마다 메서드를 등록합니다(`registerFixedStep`). */
         void onRegister( GameObjectManager& manager ) override;
         void onPhysicsFrameBegin( const FixedStepContext& context );

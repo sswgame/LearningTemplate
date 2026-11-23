@@ -508,6 +508,17 @@ namespace sw
         physics.queuePoseWrite( *this, position, _worldRotation, _worldScale );
     }
 
+    void CharacterControllerComponent::collectStreamingFloorShapes( const float3& scale, vector<PhysicsShapeDesc3D>& outListShape ) const
+    {
+        PhysicsShapeDesc3D capsule;
+        capsule._type             = PhysicsShapeType3D::Capsule;
+        capsule._radius           = _radius;
+        capsule._halfHeight       = _halfHeight;
+        capsule                   = PhysicsComponent::makeScaledShape( capsule, scale );
+        capsule._localPosition._y = capsule._halfHeight + capsule._radius; // 자리가 발이다
+        outListShape.push_back( std::move( capsule ) );
+    }
+
     PhysicsShapeDesc3D CharacterControllerComponent::getScaledCapsule() const
     {
         PhysicsShapeDesc3D capsule;
