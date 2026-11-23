@@ -56,7 +56,7 @@ namespace sw
          * @details 커서는 원자적이라 병렬 기록에서도 안전합니다. 슬롯 배열은 기록 시작 전에 잡아 두고 병렬 구간에서
          *          크기가 변하지 않습니다. 모자라면 앞 슬롯을 공유하지 않고 false 를 돌려주며 프레임당 한 번 오류를 남깁니다(다음 프레임이 키운다).
          */
-        [[nodiscard]] bool acquire( RHIBufferHandle& outBuffer, RHIDescriptorIndex& outIndex );
+        [[nodiscard]] bool acquire( RHIBufferHandle& outBuffer, RHIBufferSRVIndex& outIndex );
         /**
          * @brief 슬롯 수를 `needed` 이상으로 늘립니다. **기록 시작 전에만** 부릅니다.
          * @details 버퍼 생성과 bindless 등록은 레지스트리를 바꾸므로 병렬 기록 중에는 할 수 없습니다
@@ -65,7 +65,7 @@ namespace sw
         void ensureCapacity( IRHIDevice* pDevice, uint32 needed );
 
         /** @brief 0 번 슬롯입니다. 프레임 시드 전용이고, 없으면 false 입니다. */
-        bool getSeedSlot( RHIBufferHandle& outBuffer, RHIDescriptorIndex& outIndex ) const;
+        bool getSeedSlot( RHIBufferHandle& outBuffer, RHIBufferSRVIndex& outIndex ) const;
         /** @brief 지금 만들어 둔 슬롯 수입니다. */
         uint32 getSlotCount() const { return static_cast<uint32>( _listSlot.size() ); }
         /** @brief 지금까지 한 프레임에서 쓴 슬롯 수의 최댓값입니다. 다음 프레임 용량 산정의 바닥값입니다(단조 증가). */

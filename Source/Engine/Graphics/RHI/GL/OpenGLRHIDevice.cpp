@@ -46,7 +46,6 @@ namespace sw
         , _timestampFrame{}
         , _arrComputeRootConstantShadow{}
         , _pipelineStates{}
-        , _renderPassRegistry{}
         , _releaseQueue{}
         , _arrFrameDoneSync{}
         , _frameFenceRing{}
@@ -309,19 +308,19 @@ namespace sw
         return _bufferRegistry.isLive( index );
     }
 
-    OpenGLRHIDevice::BindlessResourceRecord OpenGLRHIDevice::findBindlessBuffer( RHIDescriptorIndex index ) const
+    OpenGLRHIDevice::BindlessResourceRecord OpenGLRHIDevice::findBindlessBuffer( RHIBufferSRVIndex index ) const
     {
         ScopedSharedLock<shared_mutex> lock{ _bindlessMutex };
         return _bufferRegistry.get( index );
     }
 
-    OpenGLRHIDevice::BindlessResourceRecord OpenGLRHIDevice::findBindlessUAV( RHIDescriptorIndex index ) const
+    OpenGLRHIDevice::BindlessResourceRecord OpenGLRHIDevice::findBindlessUAV( RHIUnorderedAccessIndex index ) const
     {
         ScopedSharedLock<shared_mutex> lock{ _bindlessMutex };
         return _uavRegistry.get( index );
     }
 
-    RHITextureHandle OpenGLRHIDevice::findBindlessTexture( RHIDescriptorIndex index ) const
+    RHITextureHandle OpenGLRHIDevice::findBindlessTexture( RHITextureSRVIndex index ) const
     {
         ScopedSharedLock<shared_mutex> lock{ _bindlessMutex };
         return _textureRegistry.get( index )._texture;
@@ -834,7 +833,6 @@ namespace sw
             }
         } );
         _pipelineStates.clear();
-        _renderPassRegistry.clear();
 
         _gpuBuffers.forEach( []( OpenGLBufferRecord& record )
         {
@@ -1425,7 +1423,7 @@ namespace sw
         return make_unique<OpenGLRHICommandList>( this );
     }
 
-    void OpenGLRHIDevice::executeCommandList( IRHICommandList* pCmdList )
+    void OpenGLRHIDevice::executeCommandListInternal( IRHICommandList* pCmdList )
     {
         // 기록이 이미 GL 호출로 즉시 나갔으므로(beginCommandList 에서 컨텍스트 재바인딩까지 마침)
         // 순서를 맞출 일은 없다. 다만 GL 도 커맨드를 모아 뒀다가 보내므로, 즉시 모드에서는

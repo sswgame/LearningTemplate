@@ -47,7 +47,7 @@ namespace
         /** @brief 단계 셋(원본 + 화면 크기 0.2 · 0.02 의 거친 단계 둘)을 가진 메시입니다. */
         static shared_ptr<Mesh> makeLODMesh()
         {
-            shared_ptr<Mesh> mesh = Mesh::create();
+            shared_ptr<Mesh> mesh = Mesh::create( MeshCPUAccess::Keep );
             if ( mesh->setGeometry( makeQuadVertices(), vector<uint32>{ 0, 1, 2, 0, 2, 3 } ) == false )
                 return nullptr;
             vector<MeshLODLevel> listLevel;

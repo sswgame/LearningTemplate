@@ -1610,7 +1610,7 @@ namespace sw
             const ResolvedPart& part = resolved._listPart[partIndex];
             MeshAssemblyLoad    load;
             load._partIndex             = partIndex;
-            load._mesh                  = MeshCache::request( part._asset.view() );
+            load._mesh                  = MeshCache::request( part._asset.view(), MeshCPUAccess::Keep ); // 조립이 정점을 굽고 합친다
             const bool bForeignSkeleton = part._skeleton.empty() == false && part._skeleton != pBodyPart->_skeleton;
             if ( part._fit.empty() == false && bForeignSkeleton )
                 SW_LOG_ERROR_ID( "CharacterAppearance.AppearancePartFitData", "Appearance '%#' part '%#' has fit data but its own skeleton '%#' - it is drawn unfitted", _presetID.c_str(), part._partName.c_str(), part._skeleton.c_str() );

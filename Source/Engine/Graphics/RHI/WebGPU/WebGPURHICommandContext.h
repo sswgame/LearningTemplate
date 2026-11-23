@@ -77,14 +77,14 @@ namespace sw
         void setIndexBuffer( RHIBufferHandle buffer, uint32 indexStride = 4, uint32 offset = 0 ) override;
         void setComputeRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues = 0 ) override;
         void setGraphicsRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues = 0 ) override;
-        void bindComputeUAV( RHIDescriptorIndex index, uint32 slot ) override;
-        void bindGraphicsUAV( RHIDescriptorIndex index, uint32 slot ) override;
-        void bindShaderResource( RHIDescriptorIndex index, uint32 slot ) override;
-        void bindConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot ) override;
+        void bindComputeUAV( RHIUnorderedAccessIndex index, uint32 slot ) override;
+        void bindGraphicsUAV( RHIUnorderedAccessIndex index, uint32 slot ) override;
+        void bindShaderResource( RHITextureSRVIndex index, uint32 slot ) override;
+        void bindConstantBuffer( RHIBufferSRVIndex constantBufferIndex, uint32 slot ) override;
         void updateConstantBufferNative( RHIBufferHandle buffer, const void* pData, uint32 size ) override;
-        void bindStructuredBuffer( RHIDescriptorIndex index, uint32 slot ) override;
-        void bindComputeConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot ) override;
-        void bindComputeShaderResource( RHIDescriptorIndex index, uint32 slot ) override;
+        void bindStructuredBuffer( RHIBufferSRVIndex index, uint32 slot ) override;
+        void bindComputeConstantBuffer( RHIBufferSRVIndex constantBufferIndex, uint32 slot ) override;
+        void bindComputeShaderResource( RHIBufferSRVIndex index, uint32 slot ) override;
         void beginEventMarker( const utf8* pName ) override;
         void endEventMarker() override;
         /** @brief WebGPU 에는 GPU 브레드크럼이 없다(`_bGPUBreadcrumbs` 거짓) — 디버그 표지만 남긴다. */

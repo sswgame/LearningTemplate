@@ -233,12 +233,12 @@ SW_TEST_CASE( RHIDeferredHandleTest, ReleasesWaitForTheRenderThreadFrame )
     test::FakeRHIDevice device;
 
     // 렌더 스레드가 든 프레임이 없으면 바로 내린다.
-    device.releaseBindlessIndex( RHIBindlessIndexSpace::Buffer, 7 );
+    device.releaseBindlessIndex( RHIBufferSRVIndex{ 7 } );
     SW_EXPECT_EQUAL( size_t( 0 ), device.getDeferredHandleCount() );
 
     // 프레임을 넘긴 뒤 다른 스레드(렌더 스레드가 아니다)가 내리면 미룬다.
     device.notifyRenderFrameQueued();
-    device.releaseBindlessIndex( RHIBindlessIndexSpace::Buffer, 8 );
+    device.releaseBindlessIndex( RHIBufferSRVIndex{ 8 } );
     device.releaseHandle( RHIBufferHandle{ 9 } );
     device.releaseHandle( RHIBufferHandle{} ); // 빈 핸들은 무시
     SW_EXPECT_EQUAL( size_t( 2 ), device.getDeferredHandleCount() );
@@ -256,7 +256,7 @@ SW_TEST_CASE( RHIDeferredHandleTest, ReleasesWaitForTheRenderThreadFrame )
 
     // waitIdle 은 렌더 스레드를 비운 뒤 미룬 것을 내린다.
     device.notifyRenderFrameQueued();
-    device.releaseBindlessIndex( RHIBindlessIndexSpace::Texture, 11 );
+    device.releaseBindlessIndex( RHITextureSRVIndex{ 11 } );
     SW_EXPECT_EQUAL( size_t( 1 ), device.getDeferredHandleCount() );
     device.waitIdle( RHIWaitIdleReason::Tool );
     SW_EXPECT_EQUAL( size_t( 0 ), device.getDeferredHandleCount() );
@@ -271,7 +271,7 @@ SW_TEST_CASE( RHIDeferredHandleTest, DrainRenderThreadWaitsForGPUIdle )
 {
     test::FakeRHIDevice device;
     device.notifyRenderFrameQueued();
-    device.releaseBindlessIndex( RHIBindlessIndexSpace::Texture, 13 );
+    device.releaseBindlessIndex( RHITextureSRVIndex{ 13 } );
 
     device.flushRenderThread();
     SW_EXPECT_EQUAL( size_t( 1 ), device.getDeferredHandleCount() );
@@ -295,7 +295,7 @@ SW_TEST_CASE( RHIDeferredHandleTest, ReleasesWaitForThePacketBeingBuilt )
 
     // 프레임 A 가 든 동안 해제한다 — 게임 스레드는 다음 패킷 B 를 짓는 중이다. A 가 끝나도 B 가 남았다.
     device.notifyRenderFrameQueued();
-    device.releaseBindlessIndex( RHIBindlessIndexSpace::Texture, 12 );
+    device.releaseBindlessIndex( RHITextureSRVIndex{ 12 } );
     device.notifyRenderFrameRetired();
     SW_EXPECT_EQUAL( size_t( 1 ), device.getDeferredHandleCount() );
     device.notifyRenderFrameQueued();
@@ -483,7 +483,6 @@ SW_TEST_CASE( RHIDeviceTest, UITargetFormatStaysSDRUnderHDR )
 // 값은 `uint64` 와 같은 크기 · 복사 비용이다(성능 하락 없음).
 static_assert( std::is_convertible_v<RHITextureHandle, RHIBufferHandle> == false, "a texture handle must not pass as a buffer handle" );
 static_assert( std::is_convertible_v<RHIBufferHandle, RHITextureHandle> == false, "a buffer handle must not pass as a texture handle" );
-static_assert( std::is_convertible_v<RHIPipelineStateHandle, RHIRenderPassHandle> == false, "a PSO handle must not pass as a render pass handle" );
 static_assert( std::is_convertible_v<RHITransientHeapHandle, RHITextureHandle> == false, "a heap handle must not pass as a texture handle" );
 static_assert( std::is_convertible_v<uint64, RHIBufferHandle> == false, "an integer must not become a handle implicitly" );
 static_assert( std::is_convertible_v<RHIBufferHandle, uint64> == false, "a handle must not become an integer implicitly" );

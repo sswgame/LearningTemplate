@@ -39,25 +39,13 @@ namespace sw
     FrameScreenRotation::FrameScreenRotation( IRHIDevice* const& pDevice, const FramePSOManager& psoManager )
         : _pDevice{ pDevice }
         , _psoManager{ psoManager }
-        , _texture{ 0 }
-        , _srv{ kInvalidDescriptorIndex }
-        , _width{ 0 }
-        , _height{ 0 }
-        , _format{ RHIFormat::Unknown }
+        , _target{}
     {
     }
 
     void FrameScreenRotation::release()
     {
-        if ( _pDevice != nullptr && _srv != kInvalidDescriptorIndex )
-            _pDevice->getResourceFactory()->unregisterBindlessTexture( _srv );
-        if ( _pDevice != nullptr && _texture != 0 )
-            _pDevice->releaseHandle( _texture );
-        _texture = 0;
-        _srv     = kInvalidDescriptorIndex;
-        _width   = 0;
-        _height  = 0;
-        _format  = RHIFormat::Unknown;
+        _target.release( _pDevice );
     }
 
     void FrameScreenRotation::prepare( uint32 logicalWidth, uint32 logicalHeight )
@@ -66,45 +54,31 @@ namespace sw
         const bool bRotates = _pDevice != nullptr && _pDevice->getSurfaceTransform() != RHISurfaceTransform::Identity && logicalWidth > 0 && logicalHeight > 0;
         if ( bRotates == false )
         {
-            if ( _texture != 0 )
-                release();
+            release();
             return;
         }
         const RHIFormat format = _pDevice->getUITargetFormat(); // 회전하는 기기는 SDR 만이라 백버퍼 포맷과 같다
-        if ( _texture != 0 && _width == logicalWidth && _height == logicalHeight && _format == format )
-            return;
-        release();
         // 백버퍼 형식이다 — 화면에 쓰는 PSO(Present · Canvas · 개발 겹치기 · UI)가 모두 그 형식으로 만들어져 있다.
         RHITextureDesc desc{};
-        desc._width                   = logicalWidth;
-        desc._height                  = logicalHeight;
-        desc._format                  = format;
-        desc._bIsRenderTarget         = SW_TRUE;
-        desc._bIsShaderResource       = SW_TRUE;
-        IRHIResourceFactory* pFactory = _pDevice->getResourceFactory();
-        _texture                      = pFactory->createTexture2D( desc );
-        if ( _texture != 0 )
-        {
-            pFactory->setTextureDebugName( _texture, "ScreenRotationTarget" );
-            _srv = pFactory->registerBindlessTexture( _texture );
-        }
-        if ( _srv == kInvalidDescriptorIndex )
+        desc._width             = logicalWidth;
+        desc._height            = logicalHeight;
+        desc._format            = format;
+        desc._bIsRenderTarget   = SW_TRUE;
+        desc._bIsShaderResource = SW_TRUE;
+        if ( _target.ensure( *_pDevice, desc, "ScreenRotationTarget" ) == false )
             reportFatalError( "Failed to create the screen rotation target (%#x%#, format %#) - the rotated screen cannot be presented", logicalWidth, logicalHeight, static_cast<uint32>( format ) );
-        _width  = logicalWidth;
-        _height = logicalHeight;
-        _format = format;
     }
 
     void FrameScreenRotation::recordToSwapchain( IRHICommandList& cmd ) const
     {
-        if ( _texture == 0 )
+        if ( _target.isValid() == false )
             return;
         // 장치가 이번 프레임에 알린 회전으로 돌린다. 대기 텍스처 크기가 장치의 논리 크기와 잠깐 어긋나도(크기 바뀜 직후) UV 로 읽으므로 화면 전체를 덮는다.
         const RHISurfaceRotation     rotation = _pDevice->getSurfaceRotation();
         const RHIPipelineStateHandle pso      = _psoManager.findOutputPSO( RenderPassKind::ScreenRotation, _pDevice->getBackBufferFormat() ); // 셋업에 없으면 멈춘다
         const RHISurfaceRect         viewRect = rotation.mapLogicalRect( RHISurfaceRect{ 0, 0, rotation._logicalWidth, rotation._logicalHeight } );
 
-        cmd.prepareTextureForShaderRead( _texture );
+        cmd.prepareTextureForShaderRead( _target._texture );
         RHIRenderPassBeginInfo beginInfo{};
         beginInfo._bBindColor        = SW_TRUE;
         beginInfo._colorTargetCount  = 1;
@@ -125,9 +99,9 @@ namespace sw
         const RHISurfaceUVMapping                  mapping         = rotation.computeLogicalUVMapping();
         const bool                                 bNativeBindless = _pDevice->supportsNativeBindlessSampling();
         FrameScreenRotationInternal::RootConstants constants{};
-        constants._source            = bNativeBindless ? static_cast<uint32>( _srv ) : 0u;
-        constants._logicalWidth      = static_cast<float32>( _width );
-        constants._logicalHeight     = static_cast<float32>( _height );
+        constants._source            = bNativeBindless ? static_cast<uint32>( _target._srv ) : 0u;
+        constants._logicalWidth      = static_cast<float32>( _target._width );
+        constants._logicalHeight     = static_cast<float32>( _target._height );
         constants._m00               = mapping._m00;
         constants._m01               = mapping._m01;
         constants._m10               = mapping._m10;
@@ -136,10 +110,10 @@ namespace sw
         constants._offsetV           = mapping._offsetV;
         constexpr uint32 kSourceSlot = shaderslot::emulated::getSlot( "SourceColor" );
         if ( bNativeBindless == false )
-            cmd.bindShaderResource( _srv, kSourceSlot );
+            cmd.bindShaderResource( _target._srv, kSourceSlot );
         cmd.setGraphicsRootConstants( 0, sizeof( constants ) / sizeof( uint32 ), &constants );
         cmd.draw( 3, 0 );
         cmd.endRenderPass();
-        cmd.prepareTextureForRenderTarget( _texture );
+        cmd.prepareTextureForRenderTarget( _target._texture );
     }
 } // namespace sw

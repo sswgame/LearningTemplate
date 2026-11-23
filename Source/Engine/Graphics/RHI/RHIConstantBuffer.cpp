@@ -16,7 +16,7 @@ namespace sw
         if ( _buffer != 0 )
             return isValid();
 
-        _buffer = pDevice->getResourceFactory()->createConstantBuffer( byteSize );
+        _buffer = pDevice->getResourceFactory()->createConstantBuffer( RHIResourceCreateKey{}, byteSize );
         if ( _buffer == 0 )
             return false;
         _index = pDevice->getResourceFactory()->registerBindlessBufferSRV( _buffer );

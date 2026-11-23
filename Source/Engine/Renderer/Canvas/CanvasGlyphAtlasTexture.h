@@ -45,7 +45,7 @@ namespace sw
          */
         void uploadPages( IRHIDevice& device );
         /** @brief 페이지 @p page 의 SRV 입니다. 첫 업로드가 끝나기 전(SRV 없음)이거나 멈춘 페이지, 없는 페이지면 kInvalidDescriptorIndex 입니다. */
-        RHIDescriptorIndex findPageSRV( uint32 page ) const;
+        RHITextureSRVIndex findPageSRV( uint32 page ) const;
         /** @brief GPU 자원을 해제합니다(디바이스가 없으면 핸들만 잊습니다). 미러는 남겨 다음 `uploadPages` 가 텍스처를 다시 만들고 전체를 올립니다. */
         void release( IRHIDevice* pDevice );
 
@@ -72,7 +72,7 @@ namespace sw
             vector<GlyphAtlasRect> _listDirty{};        ///< 아직 내지 못한 구간(미러 기준). `Busy` 로 못 낸 것은 다음 프레임까지 남는다
             RHITextureHandle       _texture{ 0 };
             RHITransferTicket      _registerTicket{}; ///< 새 텍스처의 첫 전체 업로드 티켓. `Complete` 가 된 프레임에 SRV 를 등록하고 비운다
-            RHIDescriptorIndex     _srv{ kInvalidDescriptorIndex };
+            RHITextureSRVIndex     _srv{ kInvalidDescriptorIndex };
             uint8                  _bWholePageDirty{ SW_FALSE }; ///< 페이지 전체를 업로드해야 한다(새 텍스처이거나 비운 페이지)
             uint8                  _bFailed{ SW_FALSE };         ///< 생성 · 업로드 · 등록이 다시 시도해도 안 되는 이유로 실패했다(오류를 남겼다). `release` 가 푼다
         };
@@ -103,7 +103,7 @@ namespace sw
         struct RetiredTexture
         {
             RHITextureHandle   _texture{ 0 };
-            RHIDescriptorIndex _srv{ kInvalidDescriptorIndex };
+            RHITextureSRVIndex _srv{ kInvalidDescriptorIndex };
         };
 
     private:

@@ -44,7 +44,6 @@ namespace sw
             static_assert( sizeof( RootConstants ) == 6 * sizeof( uint32 ), "hzb_build.hlsl 의 루트 상수와 크기가 같아야 한다" );
 
             /// 짓기 스레드 그룹 한 변입니다(hzb_build.hlsl 의 numthreads 와 같다).
-            static constexpr uint32 kGroupSize = 8;
         };
         static_assert( ( 1u << ( HZBLayout::kTileMip + 1u ) ) == FrameRendererUtil::kOcclusionTileSize, "16 px 밉의 텍셀 하나가 가림 타일 한 변이어야 한다(hzb_build.hlsl kTileMip)" );
 
@@ -69,8 +68,8 @@ namespace sw
             void end() const
             {
                 // 컬링(t2) · 화면 공간 반사(t11)가 같은 패스 안에서 읽는다. 쓰기가 끝났음을 알린다(빠지면 DX12 · Vulkan 에서 지난 피라미드를 읽는다).
-                _context.transition( ViewGraphResource::hzb(), RHIBufferState::ShaderResource );
-                _context.transition( ViewGraphResource::occlusionTiles(), RHIBufferState::ShaderResource );
+                _context.transition( ViewGraphResource::hzb(), RenderGraphAccess::ShaderRead );
+                _context.transition( ViewGraphResource::occlusionTiles(), RenderGraphAccess::ShaderRead );
             }
         };
     } // namespace
@@ -144,7 +143,7 @@ namespace sw
         using Internal         = HZBOcclusionInternal;
         target._bHZBValid      = SW_FALSE;
         const HZBLayout layout = HZBLayout::make( depthWidth, depthHeight );
-        const bool      bReady = pso != 0 && target._hzb.isValid() && target._occlusionTiles.isValid() && target._depthHistory != 0 && target._depthHistoryUAV != kInvalidDescriptorIndex;
+        const bool      bReady = pso != 0 && target._hzb.isValid() && target._occlusionTiles.isValid() && target._depthHistory.isValid();
         if ( bReady == false || layout._mipCount == 0 )
             return false;
         if ( layout._texelCount > target._hzb._capacityElements )
@@ -161,10 +160,10 @@ namespace sw
         // g_HZBRW(u0) / g_OcclusionTilesRW(u1) / 깊이 사본(RW 슬롯 0 — 에뮬만). hzb_build.hlsl 레지스터와 1:1 이다.
         cmd.bindComputeUAV( target._hzb._uav, 0 );
         cmd.bindComputeUAV( target._occlusionTiles._uav, 1 );
-        cmd.bindComputeUAV( target._depthHistoryUAV, shaderslot::kComputeTextureUAV0 );
+        cmd.bindComputeUAV( target._depthHistory._uav, shaderslot::kComputeTextureUAV0 );
         Internal::RootConstants constants{};
         // 네이티브는 RW 텍스처 배열의 번호로, 에뮬은 RW 슬롯 0 의 서수로 고른다(Bindless::loadRwTexture2D — GPU 입자와 같다).
-        constants._depthIndex  = device.supportsNativeBindlessSampling() ? static_cast<uint32>( target._depthHistoryUAV ) : 0u;
+        constants._depthIndex  = device.supportsNativeBindlessSampling() ? static_cast<uint32>( target._depthHistory._uav ) : 0u;
         constants._depthWidth  = depthWidth;
         constants._depthHeight = depthHeight;
         constants._tileColumns = bWriteTiles ? target._occlusionColumns : 0u;
@@ -180,7 +179,7 @@ namespace sw
             const uint32          countX = bTiles && target._occlusionColumns > level._width ? target._occlusionColumns : level._width;
             const uint32          countY = bTiles && target._occlusionRows > level._height ? target._occlusionRows : level._height;
             cmd.setComputeRootConstants( 0, sizeof( constants ) / sizeof( uint32 ), &constants );
-            cmd.dispatchThreads( countX, countY, 1, Internal::kGroupSize, Internal::kGroupSize, 1 );
+            cmd.dispatchThreads( countX, countY, 1 );
         }
         barriers.end();
         target._hzbLayout   = layout;
@@ -189,10 +188,10 @@ namespace sw
         return true;
     }
 
-    void HZBOcclusion::requestReadback( IRHIPassCommandList* pCmd, IRHIDevice* pDevice, bool bEnabled, const FrameViewTarget& view )
+    void HZBOcclusion::requestReadback( IRHICommandList& cmd, IRHIDevice* pDevice, bool bEnabled, const FrameViewTarget& view )
     {
         // 켜져 있지 않으면 고리를 비워 둔다(읽기 버퍼를 만들지 않는다). 켰다 끄면 남은 사본도 치운다.
-        const bool bReadable = bEnabled && pDevice != nullptr && pCmd != nullptr;
+        const bool bReadable = bEnabled && pDevice != nullptr;
         if ( bReadable == false )
         {
             if ( _readback.isInitialized() )
@@ -253,8 +252,8 @@ namespace sw
         meta._depthWidth   = static_cast<float32>( view._hzbLayout._depthWidth ); // 타일을 지은 사각형과 같다(지난 사각형)
         meta._depthHeight  = static_cast<float32>( view._hzbLayout._depthHeight );
         meta._bValid       = view._bHistoryReset == SW_FALSE ? SW_TRUE : SW_FALSE;
-        // 타일은 프레임 패스 `HZBBuild` 가 UAV 로 썼고 그래프에서 읽는 패스가 없다 — 복사 뒤에도 그 상태로 되돌린다(그래프가 아는 상태 그대로).
-        if ( _readback.request( *pCmd, view._occlusionTiles._buffer, RHIBufferState::UnorderedAccess, next ) )
+        // 프레임 그래프가 끝나 타일은 등록 접근(셰이더 읽기 — `registerFrameResources`)이다 — 복사 뒤에도 그 상태로 되돌린다.
+        if ( _readback.request( cmd, view._occlusionTiles._buffer, RHIBufferState::ShaderResource, next ) )
             _readbackSerial = next;
     }
 

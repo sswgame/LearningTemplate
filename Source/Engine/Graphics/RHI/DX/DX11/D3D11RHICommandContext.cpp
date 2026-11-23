@@ -323,7 +323,7 @@ namespace sw
         _pContext->CopySubresourceRegion( pTarget, 0, static_cast<UINT>( destinationOffset ), 0, 0, pSource, 0, &region );
     }
 
-    void D3D11RHICommandContext::bindGraphicsUAV( RHIDescriptorIndex index, uint32 slot )
+    void D3D11RHICommandContext::bindGraphicsUAV( RHIUnorderedAccessIndex index, uint32 slot )
     {
         Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView> uav = _pDevice->bindlessUAVAt( index );
         if ( _pContext == nullptr || uav == nullptr || _pState == nullptr )
@@ -343,7 +343,7 @@ namespace sw
             _pState->_arrComputeUAVBuffer[slot] = 0; // CS 쪽 기록은 런타임이 뗐다
     }
 
-    void D3D11RHICommandContext::bindComputeUAV( RHIDescriptorIndex index, uint32 slot )
+    void D3D11RHICommandContext::bindComputeUAV( RHIUnorderedAccessIndex index, uint32 slot )
     {
         Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView> uav = _pDevice->bindlessUAVAt( index );
         if ( _pContext != nullptr && uav != nullptr )
@@ -358,7 +358,7 @@ namespace sw
         }
     }
 
-    void D3D11RHICommandContext::bindShaderResource( RHIDescriptorIndex index, uint32 slot )
+    void D3D11RHICommandContext::bindShaderResource( RHITextureSRVIndex index, uint32 slot )
     {
         const RHITextureHandle texture = _pDevice->bindlessTextureAt( index );
         if ( _pContext == nullptr || texture == 0 )
@@ -496,12 +496,12 @@ namespace sw
         }
     }
 
-    void D3D11RHICommandContext::bindConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot )
+    void D3D11RHICommandContext::bindConstantBuffer( RHIBufferSRVIndex constantBufferIndex, uint32 slot )
     {
         bindConstantBufferAt( constantBufferIndex, slot, false );
     }
 
-    void D3D11RHICommandContext::bindConstantBufferAt( RHIDescriptorIndex index, uint32 slot, bool bCompute )
+    void D3D11RHICommandContext::bindConstantBufferAt( RHIBufferSRVIndex index, uint32 slot, bool bCompute )
     {
         const bool bInvalidConstantBufferIndex = _pContext == nullptr || index == kInvalidDescriptorIndex;
         if ( bInvalidConstantBufferIndex )
@@ -580,7 +580,7 @@ namespace sw
         }
     }
 
-    ID3D11ShaderResourceView* D3D11RHICommandContext::findBindlessBufferSRV( RHIDescriptorIndex index ) const
+    ID3D11ShaderResourceView* D3D11RHICommandContext::findBindlessBufferSRV( RHIBufferSRVIndex index ) const
     {
         if ( index == kInvalidDescriptorIndex )
             return nullptr;
@@ -588,7 +588,7 @@ namespace sw
         return _pDevice->resolveBufferSRV( _pDevice->bindlessBufferAt( index ) );
     }
 
-    void D3D11RHICommandContext::bindStructuredBuffer( RHIDescriptorIndex index, uint32 slot )
+    void D3D11RHICommandContext::bindStructuredBuffer( RHIBufferSRVIndex index, uint32 slot )
     {
         // 그래픽스 VS/PS 가 읽는 구조버퍼(InstanceData 등). createStructuredBuffer 에서 만든 SRV 를
         // 리플렉션 t 슬롯에 바인딩한다.
@@ -607,12 +607,12 @@ namespace sw
             _pState->_arrPixelSRVTexture[slot] = 0;
     }
 
-    void D3D11RHICommandContext::bindComputeConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot )
+    void D3D11RHICommandContext::bindComputeConstantBuffer( RHIBufferSRVIndex constantBufferIndex, uint32 slot )
     {
         bindConstantBufferAt( constantBufferIndex, slot, true );
     }
 
-    void D3D11RHICommandContext::bindComputeShaderResource( RHIDescriptorIndex index, uint32 slot )
+    void D3D11RHICommandContext::bindComputeShaderResource( RHIBufferSRVIndex index, uint32 slot )
     {
         // gpu_cull 등 컴퓨트 셰이더가 읽는 구조버퍼(g_Instances 등)를 CS 스테이지에 바인딩한다.
         if ( _pContext == nullptr )

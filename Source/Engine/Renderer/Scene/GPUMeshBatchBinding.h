@@ -42,17 +42,17 @@ namespace sw
          */
         uint8 _bDeformRefused{ SW_FALSE };
         /** @brief 배치 머리 원소(`GPUMeshBatch::_materialIndex`)의 머티리얼 상수 버퍼 bindless 인덱스입니다(`MaterialRenderProxy::sync`). 원소 배열(g_SwMaterials)을 읽는 셰이더면 무효입니다. */
-        RHIDescriptorIndex _materialCb = kInvalidDescriptorIndex;
+        RHIBufferSRVIndex _materialCb = kInvalidDescriptorIndex;
         /** @brief 그룹의 GPU 구조 버퍼(g_SwMaterials, t5)와 SRV 인덱스입니다. 인스턴스의 _materialIndex 가 이 버퍼의 원소를 고른다. */
-        RHIBufferHandle    _materialBuffer{ 0 };
-        RHIDescriptorIndex _materialSRV = kInvalidDescriptorIndex;
+        RHIBufferHandle   _materialBuffer{ 0 };
+        RHIBufferSRVIndex _materialSRV = kInvalidDescriptorIndex;
         /** @brief 그룹 버퍼의 원소 수입니다. 드로우 루트 상수 g_SwMaterialCount 로 넘겨 셰이더가 인덱스를 클램프하게 합니다. */
         uint32 _materialCount{ 0 };
         /**
          * @brief 머티리얼 텍스처의 백엔드 SRV 인덱스(서수 순서)입니다. 네이티브 bindless 가 아닌 백엔드(DX11 · GL — t16..t31 에 직접 건다)에서만 씁니다.
          * @note 초기값은 칸마다 적는다 — 빠진 칸은 0(유효한 SRV 번호)이 되어 다른 텍스처를 건다. 칸 수가 바뀌면 아래 static_assert 가 먼저 멈춘다.
          */
-        RHIDescriptorIndex _arrMaterialTexSRV[shaderslot::kMaterialTextureCount] = {
+        RHITextureSRVIndex _arrMaterialTexSRV[shaderslot::kMaterialTextureCount] = {
             kInvalidDescriptorIndex, kInvalidDescriptorIndex, kInvalidDescriptorIndex, kInvalidDescriptorIndex,
             kInvalidDescriptorIndex, kInvalidDescriptorIndex, kInvalidDescriptorIndex, kInvalidDescriptorIndex,
             kInvalidDescriptorIndex, kInvalidDescriptorIndex, kInvalidDescriptorIndex, kInvalidDescriptorIndex,

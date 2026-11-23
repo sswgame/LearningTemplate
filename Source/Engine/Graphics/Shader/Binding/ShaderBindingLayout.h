@@ -108,6 +108,14 @@ namespace sw
         const vector<ShaderEngineCbMember>& getEngineCbMembers() const { return _listEngineCbMember; }
         /** @brief 엔진 CB 배치(멤버 키 · 오프셋 · 크기)의 해시입니다. 같으면 같은 값에서 같은 바이트가 나온다 — 한 패스에서 PSO 가 바뀌어도 슬롯을 다시 쓸지 가른다. */
         uint64 getEngineCbLayoutHash() const { return _engineCbLayoutHash; }
+        /** @brief 머티리얼 CB 슬롯을 거는 셰이더인지입니다. 거는 셰이더에서만 머티리얼 CB 가 멀티 드로우 병합 키다. */
+        bool usesMaterialCb() const { return _bUsesMaterialCb == SW_TRUE; }
+        /**
+         * @brief 머티리얼 데이터(구조 버퍼 · CB)나 텍스처를 읽는 셰이더인지입니다.
+         * @details 읽지 않는 셰이더(깊이 · 그림자의 불투명 변형)는 머티리얼이 달라도 같은 그리기다 — 멀티 드로우가 머티리얼을 병합 키에서 뺀다
+         *          (언리얼이 깊이 패스에서 불투명 머티리얼을 기본 머티리얼로 바꿔 커맨드를 합치는 자리).
+         */
+        bool usesMaterialData() const { return _bUsesMaterialData == SW_TRUE; }
         /** @brief 텍스처와 구조 버퍼 슬롯 바인딩 목록입니다. */
         const vector<ShaderResourceBindOp>& getResourceBindOps() const { return _listResourceBindOp; }
 
@@ -121,6 +129,8 @@ namespace sw
         unordered_map<hashed_string, uint32> _mapNameToSlot;
 
         uint32                       _engineCbSize{ 0 };
+        uint8                        _bUsesMaterialCb{ SW_FALSE };
+        uint8                        _bUsesMaterialData{ SW_FALSE };
         uint64                       _engineCbLayoutHash{ 0 };
         vector<ShaderEngineCbMember> _listEngineCbMember;
         vector<ShaderResourceBindOp> _listResourceBindOp;

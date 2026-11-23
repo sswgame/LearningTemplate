@@ -15,9 +15,9 @@ namespace sw
 {
     /**
      * @class IRHIPassCommandList
-     * @brief 패스 몸통이 받는 기록 면입니다 — 그리기 · 바인딩 · 디스패치 · 렌더 패스 · 버퍼 전이는 있고 **텍스처 상태 전이와 기록 범위(열기 · 닫기)는 없다**.
-     * @details 뷰 그래프 패스 몸통(`FramePassContext::_pCmd`)이 이 형식을 받는다. 텍스처 전이는 그래프가 선언에서 내고(레벨 프롤로그), 패스 안 왕복은
-     *          쓰기로 선언한 자원만 `RenderGraphPassContext::transition` 으로 한다 — 병렬 기록에서 선언하지 않은 자원의 추적 상태를 워커가 바꾸던 모양(RHI 검토 S1)을
+     * @brief 패스 몸통이 받는 기록 면입니다 — 그리기 · 바인딩 · 디스패치 · 렌더 패스는 있고 **자원 상태 전이 · UAV 배리어 · 버퍼 복사와 기록 범위(열기 · 닫기)는 없다**.
+     * @details 그래프 패스 몸통(뷰 · 프레임)이 이 형식을 받는다. 전이는 그래프가 선언에서 내고(레벨 프롤로그 · 실행 끝의 되돌림), 패스 안 왕복과 연속 디스패치의 UAV 배리어는
+     *          쓰기로 선언한 자원만 `RenderGraphPassContext::transition` · `uavBarrier` 로 한다 — 병렬 기록에서 선언하지 않은 자원의 추적 상태를 워커가 바꾸던 모양(RHI 검토 S1)을
      *          쓸 수 없게 한다. wgpu 의 `RenderPassEncoder` 가 전이 · 복사를 받지 않고 언리얼 RDG 패스가 전이를 선언에서 받는 것과 같은 자리다.
      *          전이까지 하는 전체 리스트는 이것을 넓힌 `IRHICommandList` 다(그래프 · 프레임 단위 일 · 백엔드).
      */
@@ -110,17 +110,10 @@ namespace sw
         virtual void dispatchCompute( uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ ) = 0;
         /**
          * @brief 일의 크기(스레드 수)로 디스패치합니다 — 그룹 수는 축마다 올림( 스레드 / 그룹 크기 )이고, 일이 없는 축(0)이 있으면 디스패치하지 않습니다.
-         * @details 디스패치마다 손으로 적던 `( n + g - 1 ) / g` 와 "0 그룹이면 건너뛰기" 를 한 곳에 둔다(언리얼 `FComputeShaderUtils::GetGroupCount` 자리).
-         *          그룹 크기는 셰이더의 `[numthreads]` 와 같아야 하고 0 이 아니어야 한다(0 이면 assert 뒤 건너뛴다).
+         * @details 그룹 크기는 **걸려 있는 컴퓨트 PSO 의 셰이더**(`[numthreads]` 리플렉션, `IRHIResourceFactory::getThreadGroupSize`)가 정한다 — 부르는 쪽이 같은 수를 다시 적으면 셰이더만 고쳤을 때
+         *          조용히 덜 · 더 돈다(유니티 `GetKernelThreadGroupSizes` 자리). 컴퓨트 PSO 가 걸려 있지 않으면 assert 뒤 건너뛴다.
          */
-        void dispatchThreads( uint32 threadCountX, uint32 threadCountY, uint32 threadCountZ, uint32 groupSizeX, uint32 groupSizeY, uint32 groupSizeZ )
-        {
-            const bool bInvalidGroupSize = groupSizeX == 0 || groupSizeY == 0 || groupSizeZ == 0;
-            SW_ASSERT( bInvalidGroupSize == false );
-            if ( bInvalidGroupSize || threadCountX == 0 || threadCountY == 0 || threadCountZ == 0 )
-                return;
-            dispatchCompute( ( threadCountX + groupSizeX - 1u ) / groupSizeX, ( threadCountY + groupSizeY - 1u ) / groupSizeY, ( threadCountZ + groupSizeZ - 1u ) / groupSizeZ );
-        }
+        virtual void dispatchThreads( uint32 threadCountX, uint32 threadCountY, uint32 threadCountZ ) = 0;
         /**
          * @brief 컴퓨트 루트 상수(푸시 상수)를 씁니다.
          * @details 백엔드마다 실제 용량(dword)이 다르다. DX11 은 64, OpenGL 은 64, DX12 와 Vulkan 은 16이다(루트 상수와 푸시 상수,
@@ -137,15 +130,15 @@ namespace sw
          *          DX12 는 루트 상수, Vulkan 은 푸시 상수를 쓰고, DX11 과 GL 은 계약 슬롯 b2 의 상수 버퍼로 흉내 낸다.
          */
         virtual void setGraphicsRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues = 0 ) = 0;
-        virtual void bindComputeUAV( RHIDescriptorIndex index, uint32 slot )                                                                             = 0;
+        virtual void bindComputeUAV( RHIUnorderedAccessIndex index, uint32 slot )                                                                        = 0;
         /**
          * @brief 그래픽스(픽셀) 단계에 쓰기 버퍼 u# 를 겁니다(UAV 레지스트리의 인덱스). 렌더 패스를 연 **뒤** 드로우 앞에서 부릅니다 — 셰이더 메시지 채널(`GPUMessageChannel::bindGraphics`)이 쓴다.
          * @details DX12 는 슬롯 테이블의 u 범위(모든 단계에 보인다), Vulkan 은 슬롯 세트의 u 바인딩, GL 은 SSBO `kUAVBinding0 + slot`, DX11 은 `OMSetRenderTargetsAndUnorderedAccessViews` 의
          *          렌더 타깃 유지 형식이다. DX11 픽셀 셰이더의 u 번호는 렌더 타깃 칸과 같은 자리라 @p slot 이 지금 건 렌더 타깃 수보다 작으면 걸지 않는다(오류를 한 번 남긴다 — 셰이더의 쓰기는 버려진다).
          *          `RHICapabilities::_bGraphicsShaderWrites` 가 거짓인 백엔드는 아무것도 하지 않는다.
          */
-        virtual void bindGraphicsUAV( RHIDescriptorIndex index, uint32 slot )    = 0;
-        virtual void bindShaderResource( RHIDescriptorIndex index, uint32 slot ) = 0;
+        virtual void bindGraphicsUAV( RHIUnorderedAccessIndex index, uint32 slot ) = 0;
+        virtual void bindShaderResource( RHITextureSRVIndex index, uint32 slot )   = 0;
 
         // ------------------------------------------------------------------------------
         // 4-1) 리플렉션 기반 바인딩: 셰이더가 선언한 레지스터로 CB/SRV 버퍼를 바인딩한다.
@@ -156,7 +149,7 @@ namespace sw
          * @param constantBufferIndex bindless 디스크립터 인덱스입니다(엔진 CB, 머티리얼 CB).
          * @param slot                HLSL `register(bN)` 의 N 입니다.
          */
-        virtual void bindConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot ) = 0;
+        virtual void bindConstantBuffer( RHIBufferSRVIndex constantBufferIndex, uint32 slot ) = 0;
 
         /**
          * @brief 기록 중에 상수 버퍼 내용을 갱신합니다. 이 리스트의 드로우와 디스패치가 이 값을 봅니다(언리얼 `RHIUpdateUniformBuffer( RHICmdList, … )`).
@@ -173,7 +166,7 @@ namespace sw
          * @param index bindless 디스크립터 인덱스입니다.
          * @param slot  HLSL `register(tN)` 의 N 입니다.
          */
-        virtual void bindStructuredBuffer( RHIDescriptorIndex index, uint32 slot ) = 0;
+        virtual void bindStructuredBuffer( RHIBufferSRVIndex index, uint32 slot ) = 0;
 
         /**
          * @brief 컴퓨트 스테이지에 상수 버퍼를 지정한 레지스터 슬롯(bN)에 바인딩합니다.
@@ -181,14 +174,14 @@ namespace sw
          * @param constantBufferIndex bindless 디스크립터 인덱스입니다.
          * @param slot                HLSL `register(bN)` 의 N 입니다.
          */
-        virtual void bindComputeConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot ) = 0;
+        virtual void bindComputeConstantBuffer( RHIBufferSRVIndex constantBufferIndex, uint32 slot ) = 0;
 
         /**
          * @brief 컴퓨트 스테이지에 읽기 전용 구조화 SRV 버퍼를 지정한 레지스터 슬롯(tN)에 바인딩합니다.
          * @param index bindless 디스크립터 인덱스입니다.
          * @param slot  HLSL `register(tN)` 의 N 입니다.
          */
-        virtual void bindComputeShaderResource( RHIDescriptorIndex index, uint32 slot ) = 0;
+        virtual void bindComputeShaderResource( RHIBufferSRVIndex index, uint32 slot ) = 0;
 
         // ------------------------------------------------------------------------------
         // 5) blit: 컬러 복사 (`kRHIBackBufferTexture` 는 스왑체인, 0 은 오류). 텍스처 상태 전이는 `IRHICommandList` 에만 있다
@@ -199,12 +192,13 @@ namespace sw
          * @details 둘 다 백버퍼면 아무것도 하지 않는다. 0 은 오류로 알리고 버린다. 백버퍼에서 텍스처로 복사할 때는 크기가 백버퍼와 같아야 하고, D3D 는 포맷도 같아야 한다(`getBackBufferFormat` 으로 만든다.
          *          Vulkan 은 블릿이라 변환한다). GL 은 창의 0행이 아래쪽이라 읽을 때 뒤집으므로, 결과 텍스처의 0행은 항상 화면 위쪽이다.
          *          주의: 백버퍼는 Present 뒤에 내용이 버려지므로(플립 모델) Present 전에 프레임 스트림에 기록한다.
+         *          끝 상태(텍스처끼리 · 텍스처 → 백버퍼): **원본은 셰이더 읽기, 대상 텍스처는 렌더 타깃**이다 — 그래프는 원본을 읽기로 선언했으므로 복사 뒤의 다른 읽기가 전이를 다시 받지 않는다.
          */
         virtual void blitTexture( RHITextureHandle src, RHITextureHandle dst ) = 0;
 
         // ------------------------------------------------------------------------------
-        // 6) 인디렉트 — 드로우/디스패치, 버퍼 상태 전이
-        // 6) 인디렉트: 드로우, 디스패치, 버퍼 상태 전이
+        // 6) 인디렉트: 드로우, 디스패치
+        // ------------------------------------------------------------------------------
         /**
          * @brief 간접 인자로 그립니다. **한 번 그리는 것은 drawCount == 1 인 멀티 드로우입니다.**
          * @details 단일 드로우와 멀티 드로우를 한 함수로 둔다. 개수만 다른 두 경로로 나누면 안 쓰이는 쪽이 조용히 틀린다
@@ -225,6 +219,135 @@ namespace sw
          * @param argumentBufferOffset 그 버퍼 안의 바이트 오프셋입니다.
          */
         virtual void dispatchIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0 ) = 0;
+        /**
+         * @brief 인덱스 버퍼를 쓰는 드로우를 GPU 가 기록해 둔 인자로 발행합니다(`drawIndirect` 와 같은 모양 — 여러 개 · 개수 버퍼).
+         * @param argumentBuffer `RHIDrawIndexedIndirectCommand` 가 이어 놓인 버퍼입니다. 위와 같은 이유로 그 구조체가 레이아웃 기준입니다.
+         * @param argumentBufferOffset 그 버퍼 안의 바이트 오프셋입니다.
+         * @param drawCount 그릴 커맨드 수(개수 버퍼가 있으면 상한)입니다.
+         * @param countBuffer 실제 개수를 GPU 가 기록해 두는 버퍼입니다(0 이면 drawCount 그대로). 지원하지 않는 백엔드는 drawCount 를 쓴다.
+         */
+        virtual void drawIndexedIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0, uint32 drawCount = 1, RHIBufferHandle countBuffer = 0,
+                                          uint32 countBufferOffset = 0 ) = 0;
+        // ------------------------------------------------------------------------------
+        // 7) GPU 디버그 마커
+        // ------------------------------------------------------------------------------
+        virtual void beginEventMarker( const utf8* pName ) = 0;
+        virtual void endEventMarker()                      = 0;
+        /**
+         * @brief GPU 브레드크럼 — 이 지점에 GPU 가 닿으면 @p markerID 를 디바이스 소실 뒤에도 읽을 수 있는 자리에 남깁니다(`GPUBreadcrumbs::beginPass` · `endPass` 가 패스 이름 표의 id 로 부른다).
+         * @details 백엔드마다 방법이 다르다: DX12 는 `WriteBufferImmediate`(MARKER_IN), Vulkan 은 `vkCmdSetCheckpointNV`(`VK_NV_device_diagnostic_checkpoints`), 없으면 `vkCmdWriteBufferMarkerAMD`(`VK_AMD_buffer_marker`). DX11 · OpenGL 은 GPU 쪽 표지 수단이 없어
+         *          아무것도 하지 않는다(`RHICapabilities::_bGPUBreadcrumbs` 가 거짓). 소실 뒤 읽는 쪽은 `IRHIDevice::readLastBreadcrumbs` 다. 0 은 표지가 아니다. 최상위 비트가 선 값은 패스의 끝 표지다(`GPUBreadcrumbs::kEndMarkerBit` — DX12 는 끝 칸에 MARKER_OUT 으로 쓴다).
+         */
+        virtual void writeBreadcrumb( uint32 markerID ) = 0;
+    };
+
+    class IRHICommandList;
+
+    /**
+     * @class RHIClosedCommandList
+     * @brief 닫은 커맨드 리스트 하나입니다 — 제출 입구(`IRHIDevice::executeCommandList` · `submitAsyncCompute`)가 받는 유일한 값이고 `IRHICommandList::closeCommandList` 만 만듭니다.
+     * @details 리스트 포인터를 그대로 받으면 닫지 않은 리스트 · 이미 낸 리스트를 내도 컴파일된다(DX12 는 장치가 죽고 Vulkan 은 검증 오류, GL 은 조용하다). 옮기기만 되므로 한 번 닫은 것을 두 번 낼 수 없다.
+     *          기본값은 빈 값이고 제출이 무시한다(기록하지 못한 패스).
+     */
+    class RHIClosedCommandList
+    {
+    public:
+        RHIClosedCommandList() = default;
+        RHIClosedCommandList( RHIClosedCommandList&& other ) noexcept
+            : _pList{ other._pList }
+        {
+            other._pList = nullptr;
+        }
+        RHIClosedCommandList& operator=( RHIClosedCommandList&& other ) noexcept
+        {
+            _pList       = other._pList;
+            other._pList = nullptr;
+            return *this;
+        }
+        RHIClosedCommandList( const RHIClosedCommandList& )            = delete;
+        RHIClosedCommandList& operator=( const RHIClosedCommandList& ) = delete;
+
+        /** @brief 닫은 리스트입니다. 빈 값이면 nullptr 입니다. */
+        IRHICommandList* get() const { return _pList; }
+
+    private:
+        friend class IRHICommandList;
+        explicit RHIClosedCommandList( IRHICommandList& list )
+            : _pList{ &list }
+        {
+        }
+
+    private:
+        IRHICommandList* _pList{ nullptr };
+    };
+
+    /**
+     * @class IRHICommandList
+     * @brief GPU 그래픽스 명령과 컴퓨트 명령을 기록하는 커맨드 리스트입니다 — 패스 기록 면(`IRHIPassCommandList`)에 기록 범위와 자원 상태 전이 · 버퍼 복사를 더한다.
+     * @details 그래프(레벨 프롤로그 · `RenderGraphPassContext::transition`), 프레임 단위 일(프리패스 · 화면 출력), 백엔드가 이 형식을 쓴다.
+     */
+    class SW_API IRHICommandList : public IRHIPassCommandList
+    {
+    public:
+        ~IRHICommandList() override = default;
+        IRHICommandList()           = default;
+
+        // ------------------------------------------------------------------------------
+        // 기록 범위
+        // ------------------------------------------------------------------------------
+        virtual void beginCommandList() = 0;
+        /** @brief 기록을 닫고 제출할 값을 돌려줍니다. 다시 기록하려면 `beginCommandList` 다(돌려받은 값을 낸 뒤). */
+        [[nodiscard]] RHIClosedCommandList closeCommandList()
+        {
+            endCommandList();
+            return RHIClosedCommandList{ *this };
+        }
+
+        // ------------------------------------------------------------------------------
+        // 텍스처 상태 전이 (`kRHIBackBufferTexture` 는 스왑체인, 0 은 오류)
+        // ------------------------------------------------------------------------------
+        virtual void prepareTextureForShaderRead( RHITextureHandle texture ) = 0;
+
+        /**
+         * @brief 텍스처를 렌더 타깃(또는 뎁스)으로 쓸 수 있는 상태로 만듭니다.
+         * @details `prepareTextureForShaderRead` 와 짝을 이룬다. 그래프가 레벨을 **병렬로 기록하기 전에**
+         *          단일 스레드에서 미리 불러 두는 용도다. 그러면 패스 콜백이 이미 맞는 상태를 보므로
+         *          기록 중에 리소스 상태 같은 공유 데이터를 바꾸지 않는다. 배리어를 기록
+         *          스레드에서 결정하던 구조는 이 프로젝트에서 실제로 여러 번 깨졌다.
+         * @note 컬러인지 뎁스인지는 **백엔드가 자기 텍스처 레코드를 보고 판단한다.** 호출하는 쪽이
+         *       그것을 알아내려면 첨부 포맷을 다시 뒤져야 하고, 그러다 틀리면 배리어가 어긋난다.
+         * @note GL 은 상태가 없어 아무 일도 하지 않는다. DX11 은 전이가 없지만 이 텍스처가 바인딩된 PS SRV 슬롯을 해제한다. 그대로 두면
+         *       첨부로 바인딩할 때 런타임이 SRV 를 NULL 로 강제하고 해저드 경고를 낸다.
+         */
+        virtual void prepareTextureForRenderTarget( RHITextureHandle texture ) = 0;
+
+        /**
+         * @brief 텍스처를 컴퓨트가 쓰는 RW 텍스처(UAV) 상태로 만듭니다. 디스패치 전에 부릅니다.
+         * @details DX12 는 UNORDERED_ACCESS 전이이고, Vulkan 은 GENERAL 레이아웃 전이다. DX11 은 할 일이 없고, GL 은 이미지 접근 배리어다.
+         *          다시 샘플링하려면 prepareTextureForShaderRead 를 부른다.
+         */
+        virtual void prepareTextureForUnorderedAccess( RHITextureHandle texture ) = 0;
+
+        /**
+         * @brief 힙에 겹쳐 놓은 텍스처(`IRHIResourceFactory::createPlacedTexture2D`)를 이제부터 이 텍스처로 쓴다고 알립니다 — 같은 바이트의 앞 텍스처 쓰기가 끝난 뒤에 이 텍스처를 쓴다.
+         * @details DX12 는 앨리어싱 배리어(앞 리소스를 특정하지 않는 형태)다. 겹쳐 놓기가 없는 백엔드(능력 `_bPlacedTextures` 거짓)는 그런 텍스처가 없어 할 일이 없다 — 기본 구현이 그것이다.
+         *          첫 쓰기 전이(`prepareTextureForRenderTarget`) 앞에 부른다.
+         */
+        virtual void beginTextureAlias( RHITextureHandle texture ) { (void)texture; }
+
+        /**
+         * @brief 여러 텍스처의 전이를 한 번에 냅니다. 상태마다 같은 이름의 단일 함수(`prepareTextureFor*`)와 같은 일이고, 이미 그 상태인 텍스처는 건너뛴다.
+         * @details DX12 는 `ResourceBarrier` 한 번, Vulkan 은 `vkCmdPipelineBarrier` 한 번(단계는 모든 전이의 합)으로 낸다 — 둘 다 배리어 배열 하나로 여러 자원을
+         *          옮길 수 있다(https://learn.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12graphicscommandlist-resourcebarrier ·
+         *          https://docs.vulkan.org/refpages/latest/refpages/source/vkCmdPipelineBarrier.html). DX11 · GL · WebGPU 는 텍스처마다 단일 함수의 일을 한다.
+         *          렌더 타깃 상태의 `kRHIBackBufferTexture` 는 스왑체인이고 핸들 0 은 오류로 알리고 그 원소만 버린다. 같은 텍스처가 둘 들면 안 된다. 앨리어싱 시작(`beginTextureAlias`)은 이 묶음 앞에 따로 낸다.
+         *          그래프 레벨 프롤로그(`FramePassExecutor::onGraphLevelPrologue`)가 레벨마다 한 번 부른다(언리얼 RDG 가 패스 앞 전이를 한 배치로 내는 자리).
+         */
+        virtual void transitionTextures( const RHITextureTransition* pTransition, uint32 count ) = 0;
+
+        // ------------------------------------------------------------------------------
+        // 버퍼 상태 전이 · UAV 배리어 · 버퍼 복사(원본 · 도착의 상태를 부르는 쪽이 옮긴다)
+        // ------------------------------------------------------------------------------
         /**
          * @brief 버퍼를 @p newState 로 쓰기 전에 앞선 접근이 끝나고 보이게 합니다.
          * @details 백엔드마다 상태를 이렇게 옮긴다. 네 백엔드의 `switch` 는 `default:` 없이 모든 `RHIBufferState` 를 다뤄(DX11 은 UAV 를 뗄지, 나머지는 아래 값) 새 상태를 더하면
@@ -282,85 +405,9 @@ namespace sw
          *          DX11 · WebGPU 는 디스패치 · 패스가 순서를 지켜 할 일이 없다.
          */
         virtual void uavBarrierTexture( RHITextureHandle texture ) = 0;
-        /**
-         * @brief 인덱스 버퍼를 쓰는 드로우를 GPU 가 기록해 둔 인자로 발행합니다(`drawIndirect` 와 같은 모양 — 여러 개 · 개수 버퍼).
-         * @param argumentBuffer `RHIDrawIndexedIndirectCommand` 가 이어 놓인 버퍼입니다. 위와 같은 이유로 그 구조체가 레이아웃 기준입니다.
-         * @param argumentBufferOffset 그 버퍼 안의 바이트 오프셋입니다.
-         * @param drawCount 그릴 커맨드 수(개수 버퍼가 있으면 상한)입니다.
-         * @param countBuffer 실제 개수를 GPU 가 기록해 두는 버퍼입니다(0 이면 drawCount 그대로). 지원하지 않는 백엔드는 drawCount 를 쓴다.
-         */
-        virtual void drawIndexedIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0, uint32 drawCount = 1, RHIBufferHandle countBuffer = 0,
-                                          uint32 countBufferOffset = 0 ) = 0;
-        // ------------------------------------------------------------------------------
-        // 7) GPU 디버그 마커
-        // ------------------------------------------------------------------------------
-        virtual void beginEventMarker( const utf8* pName ) = 0;
-        virtual void endEventMarker()                      = 0;
-        /**
-         * @brief GPU 브레드크럼 — 이 지점에 GPU 가 닿으면 @p markerID 를 디바이스 소실 뒤에도 읽을 수 있는 자리에 남깁니다(`GPUBreadcrumbs::beginPass` · `endPass` 가 패스 이름 표의 id 로 부른다).
-         * @details 백엔드마다 방법이 다르다: DX12 는 `WriteBufferImmediate`(MARKER_IN), Vulkan 은 `vkCmdSetCheckpointNV`(`VK_NV_device_diagnostic_checkpoints`), 없으면 `vkCmdWriteBufferMarkerAMD`(`VK_AMD_buffer_marker`). DX11 · OpenGL 은 GPU 쪽 표지 수단이 없어
-         *          아무것도 하지 않는다(`RHICapabilities::_bGPUBreadcrumbs` 가 거짓). 소실 뒤 읽는 쪽은 `IRHIDevice::readLastBreadcrumbs` 다. 0 은 표지가 아니다. 최상위 비트가 선 값은 패스의 끝 표지다(`GPUBreadcrumbs::kEndMarkerBit` — DX12 는 끝 칸에 MARKER_OUT 으로 쓴다).
-         */
-        virtual void writeBreadcrumb( uint32 markerID ) = 0;
-    };
 
-    /**
-     * @class IRHICommandList
-     * @brief GPU 그래픽스 명령과 컴퓨트 명령을 기록하는 커맨드 리스트입니다 — 패스 기록 면(`IRHIPassCommandList`)에 기록 범위와 텍스처 상태 전이를 더한다.
-     * @details 그래프(레벨 프롤로그 · `RenderGraphPassContext::transition`), 프레임 단위 일(프리패스 · 화면 출력), 백엔드가 이 형식을 쓴다.
-     */
-    class SW_API IRHICommandList : public IRHIPassCommandList
-    {
-    public:
-        ~IRHICommandList() override = default;
-        IRHICommandList()           = default;
-
-        // ------------------------------------------------------------------------------
-        // 기록 범위
-        // ------------------------------------------------------------------------------
-        virtual void beginCommandList() = 0;
-        virtual void endCommandList()   = 0;
-
-        // ------------------------------------------------------------------------------
-        // 텍스처 상태 전이 (`kRHIBackBufferTexture` 는 스왑체인, 0 은 오류)
-        // ------------------------------------------------------------------------------
-        virtual void prepareTextureForShaderRead( RHITextureHandle texture ) = 0;
-
-        /**
-         * @brief 텍스처를 렌더 타깃(또는 뎁스)으로 쓸 수 있는 상태로 만듭니다.
-         * @details `prepareTextureForShaderRead` 와 짝을 이룬다. 그래프가 레벨을 **병렬로 기록하기 전에**
-         *          단일 스레드에서 미리 불러 두는 용도다. 그러면 패스 콜백이 이미 맞는 상태를 보므로
-         *          기록 중에 리소스 상태 같은 공유 데이터를 바꾸지 않는다. 배리어를 기록
-         *          스레드에서 결정하던 구조는 이 프로젝트에서 실제로 여러 번 깨졌다.
-         * @note 컬러인지 뎁스인지는 **백엔드가 자기 텍스처 레코드를 보고 판단한다.** 호출하는 쪽이
-         *       그것을 알아내려면 첨부 포맷을 다시 뒤져야 하고, 그러다 틀리면 배리어가 어긋난다.
-         * @note GL 은 상태가 없어 아무 일도 하지 않는다. DX11 은 전이가 없지만 이 텍스처가 바인딩된 PS SRV 슬롯을 해제한다. 그대로 두면
-         *       첨부로 바인딩할 때 런타임이 SRV 를 NULL 로 강제하고 해저드 경고를 낸다.
-         */
-        virtual void prepareTextureForRenderTarget( RHITextureHandle texture ) = 0;
-
-        /**
-         * @brief 텍스처를 컴퓨트가 쓰는 RW 텍스처(UAV) 상태로 만듭니다. 디스패치 전에 부릅니다.
-         * @details DX12 는 UNORDERED_ACCESS 전이이고, Vulkan 은 GENERAL 레이아웃 전이다. DX11 은 할 일이 없고, GL 은 이미지 접근 배리어다.
-         *          다시 샘플링하려면 prepareTextureForShaderRead 를 부른다.
-         */
-        virtual void prepareTextureForUnorderedAccess( RHITextureHandle texture ) = 0;
-
-        /**
-         * @brief 힙에 겹쳐 놓은 텍스처(`IRHIResourceFactory::createPlacedTexture2D`)를 이제부터 이 텍스처로 쓴다고 알립니다 — 같은 바이트의 앞 텍스처 쓰기가 끝난 뒤에 이 텍스처를 쓴다.
-         * @details DX12 는 앨리어싱 배리어(앞 리소스를 특정하지 않는 형태)다. 겹쳐 놓기가 없는 백엔드(능력 `_bPlacedTextures` 거짓)는 그런 텍스처가 없어 할 일이 없다 — 기본 구현이 그것이다.
-         *          첫 쓰기 전이(`prepareTextureForRenderTarget`) 앞에 부른다.
-         */
-        virtual void beginTextureAlias( RHITextureHandle texture ) { (void)texture; }
-
-        /**
-         * @brief 여러 텍스처의 전이를 한 번에 냅니다. 상태마다 같은 이름의 단일 함수(`prepareTextureFor*`)와 같은 일이고, 이미 그 상태인 텍스처는 건너뛴다.
-         * @details DX12 는 `ResourceBarrier` 한 번, Vulkan 은 `vkCmdPipelineBarrier` 한 번(단계는 모든 전이의 합)으로 낸다 — 둘 다 배리어 배열 하나로 여러 자원을
-         *          옮길 수 있다(https://learn.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12graphicscommandlist-resourcebarrier ·
-         *          https://docs.vulkan.org/refpages/latest/refpages/source/vkCmdPipelineBarrier.html). DX11 · GL · WebGPU 는 텍스처마다 단일 함수의 일을 한다.
-         *          렌더 타깃 상태의 `kRHIBackBufferTexture` 는 스왑체인이고 핸들 0 은 오류로 알리고 그 원소만 버린다. 같은 텍스처가 둘 들면 안 된다. 앨리어싱 시작(`beginTextureAlias`)은 이 묶음 앞에 따로 낸다.
-         *          그래프 레벨 프롤로그(`FramePassExecutor::onGraphLevelPrologue`)가 레벨마다 한 번 부른다(언리얼 RDG 가 패스 앞 전이를 한 배치로 내는 자리).
-         */
-        virtual void transitionTextures( const RHITextureTransition* pTransition, uint32 count ) = 0;
+    protected:
+        /** @brief 네이티브 기록을 닫습니다. 부르는 쪽은 `closeCommandList` 를 쓴다. */
+        virtual void endCommandList() = 0;
     };
 } // namespace sw

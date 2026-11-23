@@ -113,7 +113,7 @@ namespace sw
     bool InstancedMeshComponent::computeStreamingBounds( AABB& outBox ) const
     {
         const string&          meshID = _meshID.path();
-        const shared_ptr<Mesh> mesh   = MeshAssetFormat::isMeshAssetPath( meshID ) ? MeshCache::acquire( meshID ) : MeshUtil::acquirePrimitive( meshID );
+        const shared_ptr<Mesh> mesh   = MeshAssetFormat::isMeshAssetPath( meshID ) ? MeshCache::acquire( meshID, MeshCPUAccess::ReleaseAfterUpload ) : MeshUtil::acquirePrimitive( meshID );
         if ( mesh == nullptr || mesh->getVertexCount() == 0 || _listInstance.empty() )
             return false;
         const AABB     local{ mesh->getLocalBoundsMin(), mesh->getLocalBoundsMax() };
@@ -193,7 +193,7 @@ namespace sw
         const string& meshID = _meshID.path();
         if ( MeshAssetFormat::isMeshAssetPath( meshID ) )
         {
-            _meshLoad = MeshCache::request( meshID );
+            _meshLoad = MeshCache::request( meshID, MeshCPUAccess::ReleaseAfterUpload );
             if ( _meshLoad.isLoading() )
                 return MeshArrival::Loading;
             outMesh = _meshLoad.isValid() ? _meshLoad.get() : nullptr;

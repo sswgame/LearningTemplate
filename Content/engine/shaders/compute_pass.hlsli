@@ -2,7 +2,7 @@
 // 첨부는 RW 텍스처로 묶인다 — 에뮬 백엔드(DX11 · GL)의 컴퓨트는 샘플 텍스처를 읽지 못한다. 쓰는 쪽(슬롯 0)이 출력, 그 뒤가 선언한 입력 순서다.
 // GL 은 묶은 포맷과 셰이더 선언이 같아야 하므로, 이 파일을 include 하기 전에 슬롯 포맷을 적는다:
 //     #define SW_RW_SLOT0_GL_FORMAT "rgba16f"
-// numthreads 는 XML 의 `_threadGroupSize` 와 같아야 한다.
+// 디스패치는 출력 크기만큼의 스레드다 — 그룹 크기는 이 셰이더의 numthreads 를 리플렉션으로 읽는다.
 #ifndef SW_COMPUTE_PASS_HLSLI
 #define SW_COMPUTE_PASS_HLSLI
 

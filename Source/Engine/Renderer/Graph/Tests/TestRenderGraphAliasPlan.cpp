@@ -1,12 +1,11 @@
 /**
  * @file TestRenderGraphAliasPlan.cpp
- * @brief 트랜지언트 앨리어싱 계획(`RenderGraphAliasPlan::make`) · 대여 풀(`TransientLeasePool`) 테스트 — 레벨 구간 겹침, 서술 키, 대여 · 반납 · 쉰 칸 놓기(nogpu).
+ * @brief 트랜지언트 앨리어싱 계획(`RenderGraphAliasPlan::make`) 테스트 — 레벨 구간 겹침, 서술 키(nogpu).
  */
 #include "pch.h"
 
 #include "Core/Testing/TestFramework.h"
 
-#include "Engine/Renderer/Frame/Resource/TransientLeasePool.h"
 #include "Engine/Renderer/Graph/RenderGraphAliasPlan.h"
 
 using namespace sw;
@@ -92,53 +91,6 @@ SW_TEST_CASE( RenderGraphAliasPlanTest, PlanIsDeterministic )
     SW_EXPECT_EQUAL( string( "A" ), string( first.findOwner( hashed_string( "B" ) ).c_str() ) );
     SW_EXPECT_TRUE( first.findOwner( hashed_string( "C" ) ).empty() );
     SW_EXPECT_EQUAL( string( "A" ), string( first.findOwner( hashed_string( "D" ) ).c_str() ) );
-}
-
-/**
- * @brief [TransientLeasePoolTest] 같은 서술은 반납한 칸을 다시 빌리고(다음 뷰 · 다음 프레임), 빌려 나간 칸은 같은 서술이어도 다른 대여에 나가지 않는다
- */
-SW_TEST_CASE( TransientLeasePoolTest, ReturnedSlotsAreLeasedAgain )
-{
-    TransientLeasePool              pool;
-    const TransientLeasePool::Lease first  = pool.lease( 11 );
-    const TransientLeasePool::Lease second = pool.lease( 11 );
-    SW_EXPECT_TRUE( first._bCreated != 0 && second._bCreated != 0 );
-    SW_EXPECT_TRUE( first._slot != second._slot ); // 빌려 나간 칸은 겹치지 않는다
-    SW_EXPECT_EQUAL( uint32( 2 ), pool.getLeasedSlotCount() );
-
-    pool.returnLeases(); // 뷰 하나를 다 그렸다 — 다음 뷰가 같은 크기 · 형식이면 다시 쓴다
-    const TransientLeasePool::Lease again = pool.lease( 11 );
-    SW_EXPECT_TRUE( again._bCreated == 0 );
-    SW_EXPECT_TRUE( again._slot == first._slot || again._slot == second._slot );
-
-    const TransientLeasePool::Lease other = pool.lease( 22 ); // 서술이 다르면 새 칸
-    SW_EXPECT_TRUE( other._bCreated != 0 );
-    SW_EXPECT_EQUAL( uint32( 3 ), pool.getLiveSlotCount() );
-}
-
-/**
- * @brief [TransientLeasePoolTest] 이어서 빌리지 않은 칸은 정한 프레임 뒤에 한 번 놓을 차례로 나오고, 그 칸 번호는 다음 대여가 새 칸으로 다시 쓴다
- */
-SW_TEST_CASE( TransientLeasePoolTest, IdleSlotsAreReleasedOnce )
-{
-    TransientLeasePool              pool;
-    const TransientLeasePool::Lease kept   = pool.lease( 1 );
-    const TransientLeasePool::Lease unused = pool.lease( 2 );
-    vector<uint32>                  listReleased;
-    pool.advanceFrame( listReleased ); // 첫 프레임은 둘 다 썼다
-    for ( uint32 frame = 0; frame < TransientLeasePool::kIdleFramesBeforeRelease; ++frame )
-    {
-        (void)pool.lease( 1 ); // 1 만 계속 쓴다
-        pool.advanceFrame( listReleased );
-    }
-    SW_REQUIRE_EQUAL( size_t( 1 ), listReleased.size() );
-    SW_EXPECT_EQUAL( unused._slot, listReleased[0] );
-    SW_EXPECT_EQUAL( uint32( 1 ), pool.getLiveSlotCount() );
-
-    const TransientLeasePool::Lease reused = pool.lease( 3 ); // 놓은 칸 번호를 새 칸으로 쓴다
-    SW_EXPECT_EQUAL( unused._slot, reused._slot );
-    SW_EXPECT_TRUE( reused._bCreated != 0 );
-    SW_EXPECT_TRUE( kept._slot != reused._slot );
 }
 
 /**

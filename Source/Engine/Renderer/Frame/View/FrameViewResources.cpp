@@ -221,11 +221,12 @@ namespace sw
         , _frameSettings{ frameSettings }
         , _autoExposure{ autoExposure }
         , _upscale{ upscale }
+        , _transientLeases{}
         , _listScratchNeededAttachment{}
     {
     }
 
-    bool FrameViewResources::updateViewTransients( FrameViewTarget& view, uint32 width, uint32 height, const RenderGraphAliasPlan& aliasPlan, uint32 aliasGeneration )
+    bool FrameViewResources::updateViewTransients( FrameViewTarget& view, uint32 width, uint32 height, const RenderGraphAliasPlan& aliasPlan, uint32 aliasGeneration, bool bMainView )
     {
         TransientAttachmentPool& pool             = view._transientPool;
         const uint32             shadowResolution = _frameSettings._shadowMapResolution; // 게임 스레드가 뜬 사본(텍스처를 만들 수 있는 범위로 잘랐다) — 그림자 행렬의 텍셀 스냅과 같은 값
@@ -239,6 +240,7 @@ namespace sw
             return false;
 
         releaseViewTransients( view );
+        pool.setLeases( bMainView ? nullptr : &_transientLeases );
         pool.setSize( renderWidth, renderHeight, width, height );
         view._shadowMapResolution      = shadowResolution;
         view._transientAliasGeneration = aliasGeneration;
@@ -264,10 +266,10 @@ namespace sw
             if ( aliasOwner.empty() == false && pool.allocateAlias( attachmentName, aliasOwner, attachment.getOps() ) )
                 continue;
             if ( bShadowAtlas )
-                (void)pool.allocateSized( _pDevice, hashed_string( attachment._name.c_str() ), format, bDepth, attachment.getOps(), shadowResolution, shadowResolution );
+                (void)pool.allocateSized( _pDevice, hashed_string( attachment._name.c_str() ), format, bDepth, attachment.getOps(), shadowResolution, shadowResolution, false, true );
             else
                 pool.allocate( _pDevice, hashed_string( attachment._name.c_str() ), format, bDepth, attachment.getOps(), attachment._resolutionSpace, attachment._resolutionDivisor,
-                               FrameRendererUtil::isComputeOutputOrInput( _pipeline.getGraphPass(), attachment._name ) );
+                               FrameRendererUtil::isComputeOutputOrInput( _pipeline.getGraphPass(), attachment._name ), attachmentName != attachmentNames()._sceneDepth ); // 장면 깊이는 다음 프레임의 깊이 기록이 읽는다
         }
 
         // 패스가 쓰는 첨부는 모두 위에서 만들었다 — 파이프라인 로드가 선언하지 않은 입출력을 거절한다(`RenderPipelineAsset::validate`).
@@ -343,7 +345,7 @@ namespace sw
 
     void FrameViewResources::ensureDepthHistory( FrameViewTarget& view )
     {
-        if ( _pDevice == nullptr || view._depthHistory != 0 )
+        if ( _pDevice == nullptr || view._depthHistory.isValid() )
             return;
         const TransientAttachmentPool::Attachment depth = view._transientPool.find( attachmentNames()._sceneDepth );
         if ( depth._texture == 0 )
@@ -356,17 +358,13 @@ namespace sw
         historyDesc._bIsRenderTarget    = SW_TRUE;
         historyDesc._bIsShaderResource  = SW_TRUE;
         historyDesc._bIsUnorderedAccess = SW_TRUE;
-        view._depthHistory              = _pDevice->getResourceFactory()->createTexture2D( historyDesc );
-        _pDevice->getResourceFactory()->setTextureDebugName( view._depthHistory, "DepthHistory" );
-        if ( view._depthHistory != 0 )
-            view._depthHistoryUAV = _pDevice->getResourceFactory()->registerBindlessTextureUAV( view._depthHistory );
-        if ( view._depthHistoryUAV == kInvalidDescriptorIndex )
-            SW_LOG_ERROR_ID( "FrameViewResources.FailedCreateDepthHistory", "Failed to create the depth history (%#x%#, R32 float RT + UAV) - GPU particles do not collide with the scene depth", depth._width, depth._height );
+        if ( view._depthHistory.ensure( *_pDevice, historyDesc, "DepthHistory" ) == false )
+            SW_LOG_ERROR_ONCE_ID( "FrameViewResources.FailedCreateDepthHistory", "Failed to create the depth history (%#x%#, R32 float RT + UAV) - GPU particles do not collide with the scene depth", depth._width, depth._height );
     }
 
     void FrameViewResources::ensureTAAHistory( FrameViewTarget& view )
     {
-        if ( _pDevice == nullptr || view._taaHistory != 0 )
+        if ( _pDevice == nullptr || view._taaHistory.isValid() )
             return;
 
         // 파이프라인에 TAA 패스가 없으면 히스토리도 필요 없다.
@@ -406,15 +404,13 @@ namespace sw
         historyDesc._bIsRenderTarget   = SW_TRUE;
         historyDesc._bIsShaderResource = SW_TRUE;
 
-        view._taaHistory = _pDevice->getResourceFactory()->createTexture2D( historyDesc );
-        _pDevice->getResourceFactory()->setTextureDebugName( view._taaHistory, "TAAHistory" );
-        if ( view._taaHistory != 0 )
-            view._taaHistorySRV = _pDevice->getResourceFactory()->registerBindlessTexture( view._taaHistory );
+        if ( view._taaHistory.ensure( *_pDevice, historyDesc, "TAAHistory" ) == false )
+            SW_LOG_ERROR_ONCE_ID( "FrameViewResources.FailedCreateTAAHistory", "Failed to create the TAA history (%#x%#) - TAA does not accumulate on this view", historyDesc._width, historyDesc._height );
     }
 
     void FrameViewResources::ensureHZB( FrameViewTarget& view )
     {
-        const bool bNotNeeded = _pDevice == nullptr || view._depthHistory == 0 || ( view._hzb.isValid() && view._occlusionTiles.isValid() );
+        const bool bNotNeeded = _pDevice == nullptr || view._depthHistory.isValid() == false || ( view._hzb.isValid() && view._occlusionTiles.isValid() );
         if ( bNotNeeded )
             return;
         const TransientAttachmentPool::Attachment depth = view._transientPool.find( attachmentNames()._sceneDepth );
@@ -487,10 +483,8 @@ namespace sw
             view._deferredTileArgs     = RHIStructuredBuffer{};
             view._deferredTileCapacity = 0;
             view._transientPool.clear();
-            view._taaHistory           = 0;
-            view._taaHistorySRV        = kInvalidDescriptorIndex;
-            view._depthHistory         = 0;
-            view._depthHistoryUAV      = kInvalidDescriptorIndex;
+            view._taaHistory.release( nullptr );
+            view._depthHistory.release( nullptr );
             view._bLastFrameDepthValid = SW_FALSE;
             return;
         }
@@ -501,27 +495,13 @@ namespace sw
         view._deferredTileList.release( _pDevice );
         view._deferredTileArgs.release( _pDevice );
         view._deferredTileCapacity = 0;
-        // 깊이 히스토리도 풀 크기를 따른다. UAV 등록을 먼저 놓고 텍스처를 지운다(버퍼 슬롯과 같은 순서 — 레지스트리에 죽은 핸들을 남기지 않는다).
-        if ( view._depthHistoryUAV != kInvalidDescriptorIndex )
-            _pDevice->getResourceFactory()->unregisterBindlessUAV( view._depthHistoryUAV );
-        if ( view._depthHistory != 0 )
-            _pDevice->releaseHandle( view._depthHistory );
-        view._depthHistory         = 0;
-        view._depthHistoryUAV      = kInvalidDescriptorIndex;
+        // 깊이 히스토리도 풀 크기를 따른다.
+        view._depthHistory.release( _pDevice );
         view._bLastFrameDepthValid = SW_FALSE;
 
         // 히스토리는 TAA 출력의 복사본이라 크기가 정확히 같아야 한다(CopyResource 제약). 트랜지언트가
         // 새 크기로 다시 잡히면 이것도 같이 버려야 ensureTAAHistory 가 새 크기로 다시 만든다.
-        if ( view._taaHistorySRV != kInvalidDescriptorIndex )
-        {
-            _pDevice->getResourceFactory()->unregisterBindlessTexture( view._taaHistorySRV );
-            view._taaHistorySRV = kInvalidDescriptorIndex;
-        }
-        if ( view._taaHistory != 0 )
-        {
-            _pDevice->releaseHandle( view._taaHistory );
-            view._taaHistory = 0;
-        }
+        view._taaHistory.release( _pDevice );
         view._transientPool.release( _pDevice );
     }
 
@@ -561,7 +541,7 @@ namespace sw
                     continue;
                 const RHIFormat format = attachment._format;
                 pool.allocate( _pDevice, hashed_string( attachment._name.c_str() ), format, FrameRendererUtil::isDepthFormat( format ), attachment.getOps(), attachment._resolutionSpace,
-                               attachment._resolutionDivisor, FrameRendererUtil::isComputeOutputOrInput( _pipeline.getGraphPass(), attachment._name ) );
+                               attachment._resolutionDivisor, FrameRendererUtil::isComputeOutputOrInput( _pipeline.getGraphPass(), attachment._name ), name != attachmentNames()._sceneDepth );
                 bAllocated = true;
             }
         };

@@ -90,12 +90,12 @@ namespace sw::editor
             EditorScreenshotCommands::captureSceneView();
     }
 
-    void* EditorViewSurface::registerImage( uint64 rhiTexture )
+    void* EditorViewSurface::registerImage( RHITextureHandle texture )
     {
         EditorRenderViews* const pViews = EditorViewSurfaceInternal::findRenderViews();
-        if ( rhiTexture == 0 || pViews == nullptr || pViews->getRenderer() == nullptr )
+        if ( texture == 0 || pViews == nullptr || pViews->getRenderer() == nullptr )
             return nullptr; // 렌더 스레드가 아직 만들지 않았다(다음 프레임)
-        return pViews->getRenderer()->registerTexture( RHITextureHandle{ rhiTexture } );
+        return pViews->getRenderer()->registerTexture( texture );
     }
 
     void EditorViewSurface::unregisterImage( void* pTextureID )
@@ -105,9 +105,9 @@ namespace sw::editor
             pViews->getRenderer()->unregisterTexture( pTextureID );
     }
 
-    void* EditorViewSurface::registerOverlayTexture( uint64 rhiTexture )
+    void* EditorViewSurface::registerOverlayTexture( RHITextureHandle texture )
     {
-        void* const          pTextureID = registerImage( rhiTexture );
+        void* const          pTextureID = registerImage( texture );
         EditorContext* const pContext   = editor::findSubsystem<EditorContext>();
         if ( pTextureID != nullptr && pContext != nullptr )
             pContext->getSubsystem<EditorUICapture>().setTextureExcluded( pTextureID, true );

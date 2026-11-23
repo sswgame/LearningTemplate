@@ -2,6 +2,7 @@
 
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/thread.h"
+#include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Name/hashed_string.h"
@@ -14,10 +15,30 @@ using namespace sw;
 
 namespace
 {
+    /** @brief 이름 하나짜리 패스와 임시 텍스처를 선언하고, 선언이 몇 번 불렸는지 세는 확장입니다. */
     class FakeRenderExtension final : public IRenderExtension
     {
     public:
-        void addPasses( ExtensionPassBuilder& /*builder*/, const ExtensionFrameInfo& /*frame*/ ) override {}
+        uint32 _declareCount;
+
+        explicit FakeRenderExtension( const utf8* pName )
+            : _declareCount{ 0 }
+            , _pName{ pName }
+        {
+        }
+        void declarePasses( ExtensionPassBuilder& builder ) override
+        {
+            ++_declareCount;
+            ExtensionTextureDesc texture;
+            texture._name = _pName;
+            ExtensionPassParams params;
+            params._name      = _pName;
+            params._listWrite = { builder.createTexture( texture ) };
+            builder.addPass( std::move( params ), ExtensionPassExecuteFn{} );
+        }
+
+    private:
+        const utf8* _pName;
     };
 
     /** @brief 소멸을 세고, 갱신 함수가 넣은 값을 기록하는 프록시입니다. */
@@ -51,6 +72,19 @@ namespace
             { static_cast<FakeSceneProxy&>( proxy )._listAppliedValue.push_back( value ); } );
         }
 
+        /** @brief 레지스트리가 내는 선언의 패스 이름들(등록 순서)입니다. */
+        static vector<string> collectPassNames( const RenderExtensionRegistry& registry )
+        {
+            ExtensionPassBuilder builder;
+            registry.copyDeclarations( builder );
+            vector<string> listName;
+            for ( const ExtensionPassBuilder::Entry& entry : builder.getEntries() )
+            {
+                listName.push_back( entry._params._name );
+            }
+            return listName;
+        }
+
         static ExtensionDrawElement makeElement()
         {
             ExtensionDrawElement element;
@@ -65,27 +99,46 @@ namespace
 SW_TEST_CASE( RenderExtensionRegistryTest, RegisterRejectsNullAndDuplicates )
 {
     RenderExtensionRegistry registry;
-    FakeRenderExtension     first;
-    FakeRenderExtension     second;
+    FakeRenderExtension     first( "First" );
+    FakeRenderExtension     second( "Second" );
     SW_EXPECT_FALSE( registry.registerExtension( nullptr ) );
     SW_EXPECT_TRUE( registry.registerExtension( &first ) );
     SW_EXPECT_TRUE( registry.registerExtension( &second ) );
     SW_EXPECT_FALSE( registry.registerExtension( &first ) );
 
-    vector<IRenderExtension*> listExtension;
-    registry.copyExtensions( listExtension );
-    SW_REQUIRE_EQUAL( 2u, static_cast<uint32>( listExtension.size() ) );
-    SW_EXPECT_TRUE( listExtension[0] == &first );
-    SW_EXPECT_TRUE( listExtension[1] == &second );
+    const vector<string> listName = Util::collectPassNames( registry );
+    SW_REQUIRE_EQUAL( 2u, static_cast<uint32>( listName.size() ) );
+    SW_EXPECT_EQUAL( string( "First" ), listName[0] );
+    SW_EXPECT_EQUAL( string( "Second" ), listName[1] );
+}
+
+/**
+ * @brief [RenderExtensionRegistryTest] 패스 선언은 등록할 때 한 번 받고, 프레임마다의 복사는 확장을 다시 부르지 않는다(임시 텍스처도 선언에 든다)
+ * @details 결함이면 그래프의 모듈 노드가 프레임마다 바뀔 수 있어 컴파일 · 계획 캐시가 매 프레임 버려진다. 변이: 복사가 `declarePasses` 를 부르면 횟수 단언이 진다.
+ */
+SW_TEST_CASE( RenderExtensionRegistryTest, DeclarationIsTakenOnceAtRegistration )
+{
+    RenderExtensionRegistry registry;
+    FakeRenderExtension     extension( "Pass" );
+    SW_REQUIRE_TRUE( registry.registerExtension( &extension ) );
+    SW_EXPECT_EQUAL( 1u, extension._declareCount );
+    ExtensionPassBuilder builder;
+    registry.copyDeclarations( builder );
+    registry.copyDeclarations( builder );
+    SW_EXPECT_EQUAL( 1u, extension._declareCount );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, builder.getEntries().size() );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, builder.getTextures().size() );
+    SW_EXPECT_EQUAL( string( "Extension.Pass" ), builder.getTextures()[0]._name );
+    SW_EXPECT_EQUAL( string( "Extension.Pass" ), builder.getEntries()[0]._params._listWrite[0] );
 }
 
 /** @brief [RenderExtensionRegistryTest] 풀면 빠지고 다시 올릴 수 있다. 없는 객체를 풀어도 아무 일 없다 */
 SW_TEST_CASE( RenderExtensionRegistryTest, UnregisterRemovesOnlyThatExtension )
 {
     RenderExtensionRegistry registry;
-    FakeRenderExtension     first;
-    FakeRenderExtension     second;
-    FakeRenderExtension     stranger;
+    FakeRenderExtension     first( "First" );
+    FakeRenderExtension     second( "Second" );
+    FakeRenderExtension     stranger( "Stranger" );
     SW_REQUIRE_TRUE( registry.registerExtension( &first ) );
     SW_REQUIRE_TRUE( registry.registerExtension( &second ) );
 
@@ -93,10 +146,9 @@ SW_TEST_CASE( RenderExtensionRegistryTest, UnregisterRemovesOnlyThatExtension )
     registry.unregisterExtension( nullptr );
     registry.unregisterExtension( &first );
 
-    vector<IRenderExtension*> listExtension;
-    registry.copyExtensions( listExtension );
-    SW_REQUIRE_EQUAL( 1u, static_cast<uint32>( listExtension.size() ) );
-    SW_EXPECT_TRUE( listExtension[0] == &second );
+    const vector<string> listName = Util::collectPassNames( registry );
+    SW_REQUIRE_EQUAL( 1u, static_cast<uint32>( listName.size() ) );
+    SW_EXPECT_EQUAL( string( "Second" ), listName[0] );
     SW_EXPECT_TRUE( registry.registerExtension( &first ) );
 }
 
@@ -104,13 +156,6 @@ SW_TEST_CASE( RenderExtensionRegistryTest, UnregisterRemovesOnlyThatExtension )
 SW_TEST_CASE( RenderExtensionRegistryTest, CopiesReplaceTheOutput )
 {
     RenderExtensionRegistry registry;
-    FakeRenderExtension     extension;
-    SW_REQUIRE_TRUE( registry.registerExtension( &extension ) );
-    vector<IRenderExtension*> listExtension;
-    registry.copyExtensions( listExtension );
-    registry.copyExtensions( listExtension );
-    SW_EXPECT_EQUAL( 1u, static_cast<uint32>( listExtension.size() ) );
-
     SW_EXPECT_TRUE( registry.addProxy( sw::make_unique<FakeSceneProxy>() ) != 0u );
     vector<IExtensionSceneProxy*> listProxy;
     registry.copyProxies( listProxy );
@@ -219,7 +264,7 @@ SW_TEST_CASE( RenderExtensionRegistryTest, RemovingAProxyDropsItsUpdates )
 SW_TEST_CASE( RenderExtensionRegistryTest, UnregisterFlushesTheRenderScope )
 {
     RenderExtensionRegistry registry;
-    FakeRenderExtension     extension;
+    FakeRenderExtension     extension( "Pass" );
     SW_REQUIRE_TRUE( registry.registerExtension( &extension ) );
 
     atomic<bool> bStarted{ false };
@@ -243,15 +288,11 @@ SW_TEST_CASE( RenderExtensionRegistryTest, UnregisterFlushesTheRenderScope )
             ThreadUtil::yield();
         }
         SW_EXPECT_FALSE( bReturned.load() );
-        vector<IRenderExtension*> listExtension;
-        registry.copyExtensions( listExtension );
-        SW_EXPECT_EQUAL( 1u, static_cast<uint32>( listExtension.size() ) );
+        SW_EXPECT_EQUAL( 1u, static_cast<uint32>( Util::collectPassNames( registry ).size() ) );
     }
     other.join();
     SW_EXPECT_TRUE( bReturned.load() );
-    vector<IRenderExtension*> listExtension;
-    registry.copyExtensions( listExtension );
-    SW_EXPECT_TRUE( listExtension.empty() );
+    SW_EXPECT_TRUE( Util::collectPassNames( registry ).empty() );
 }
 
 /** @brief [RenderExtensionRegistryTest] 실패 알림은 키마다 처음 한 번만 참이다 */
@@ -269,17 +310,14 @@ SW_TEST_CASE( RenderExtensionRegistryTest, NoteFailureOncePerKey )
 /** @brief [RenderExtensionRegistryTest] 확장 등록은 수명이다 — 만들 때 올리고 소멸할 때 푼다 */
 SW_TEST_CASE( RenderExtensionRegistryTest, ExtensionRegistrationFollowsItsLifetime )
 {
-    RenderExtensionRegistry   registry;
-    FakeRenderExtension       extension;
-    vector<IRenderExtension*> listExtension;
+    RenderExtensionRegistry registry;
+    FakeRenderExtension     extension( "Pass" );
     {
         const RenderExtensionRegistration registration{ registry, extension };
         SW_EXPECT_TRUE( registration.isRegistered() );
-        registry.copyExtensions( listExtension );
-        SW_EXPECT_EQUAL( 1u, static_cast<uint32>( listExtension.size() ) );
+        SW_EXPECT_EQUAL( 1u, static_cast<uint32>( Util::collectPassNames( registry ).size() ) );
     }
-    registry.copyExtensions( listExtension );
-    SW_EXPECT_TRUE( listExtension.empty() );
+    SW_EXPECT_TRUE( Util::collectPassNames( registry ).empty() );
 }
 
 /** @brief [RenderExtensionRegistryTest] 같은 확장의 두 번째 등록은 오류이고, 그것이 소멸해도 첫 등록을 풀지 않는다 */
@@ -287,16 +325,14 @@ SW_TEST_CASE( RenderExtensionRegistryTest, DuplicateRegistrationDoesNotUnregiste
 {
     SW_EXPECT_LOG( "ExtensionRenderPass.ModuleRenderExtensionAlready" );
     RenderExtensionRegistry           registry;
-    FakeRenderExtension               extension;
+    FakeRenderExtension               extension( "Pass" );
     const RenderExtensionRegistration first{ registry, extension };
     {
         const RenderExtensionRegistration second{ registry, extension };
         SW_EXPECT_FALSE( second.isRegistered() );
     }
     SW_EXPECT_TRUE( first.isRegistered() );
-    vector<IRenderExtension*> listExtension;
-    registry.copyExtensions( listExtension );
-    SW_EXPECT_EQUAL( 1u, static_cast<uint32>( listExtension.size() ) );
+    SW_EXPECT_EQUAL( 1u, static_cast<uint32>( Util::collectPassNames( registry ).size() ) );
 }
 
 /** @brief [RenderExtensionRegistryTest] 프록시 등록은 수명이다 — 소멸하면 프록시가 소멸하고, 대기 중인 갱신도 사라진다 */

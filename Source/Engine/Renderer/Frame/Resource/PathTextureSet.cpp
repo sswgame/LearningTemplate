@@ -43,7 +43,7 @@ namespace sw
         return pEntry != nullptr && pEntry->_load.isReady() ? pEntry->_load.getOperation()->getTexture() : nullptr;
     }
 
-    RHIDescriptorIndex PathTextureSet::findReadySRV( const hashed_string& path ) const
+    RHITextureSRVIndex PathTextureSet::findReadySRV( const hashed_string& path ) const
     {
         const Texture2D* pTexture = findReady( path );
         return pTexture != nullptr && pTexture->isRHIValid() ? pTexture->getSRV() : kInvalidDescriptorIndex;

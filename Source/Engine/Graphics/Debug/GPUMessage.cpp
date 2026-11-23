@@ -334,11 +334,16 @@ namespace sw
         _buffer.upload( _pDevice, arrControl, sizeof( arrControl ), sizeof( uint32 ) * SW_GPU_MESSAGE_HEADER_SELECT_X );
     }
 
+    void GPUMessageChannel::transitionForWrite( IRHICommandList& commands )
+    {
+        if ( isActive() )
+            commands.transitionBuffer( _buffer._buffer, RHIBufferState::UnorderedAccess );
+    }
+
     void GPUMessageChannel::bindCompute( IRHIPassCommandList& commands )
     {
         if ( isActive() == false )
             return;
-        commands.transitionBuffer( _buffer._buffer, RHIBufferState::UnorderedAccess );
         commands.bindComputeUAV( _buffer._uav, SW_SLOT_GPU_MESSAGE_UAV );
     }
 
@@ -346,7 +351,7 @@ namespace sw
     {
         if ( isActive() == false )
             return;
-        // 상태 전이는 렌더 패스 밖에서 한다 — 링은 프리패스(컴퓨트)가 이미 UAV 상태로 두었고 되읽기 복사도 UAV 상태로 돌려 둔다(`requestReadback`).
+        // 상태 전이는 렌더 패스 밖에서 한다 — 링은 프레임 시작(`transitionForWrite`)이 UAV 상태로 두었고 되읽기 복사도 UAV 상태로 돌려 둔다(`requestReadback`).
         commands.bindGraphicsUAV( _buffer._uav, SW_SLOT_GPU_MESSAGE_UAV );
     }
 

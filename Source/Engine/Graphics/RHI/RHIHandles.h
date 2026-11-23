@@ -1,6 +1,6 @@
 /**
  * @file RHIHandles.h
- * @brief RHI 자원 핸들(버퍼, 텍스처, 힙, PSO, 렌더 패스), bindless 디스크립터 인덱스, 해제 · 네이티브 문맥 콜백 별칭입니다.
+ * @brief RHI 자원 핸들(버퍼, 텍스처, 힙, PSO), bindless 디스크립터 인덱스, 해제 · 네이티브 문맥 콜백 별칭입니다.
  * @details 핸들 값 형식과 별칭만 담는다. 핸들을 들고 다니기만 하는 헤더(머티리얼, 캔버스)가 서술체 전체(`RHIDescriptors.h`)를 끌지 않게 따로 둔다.
  */
 #pragma once
@@ -16,7 +16,7 @@ namespace sw
     /**
      * @class RHIHandle
      * @brief 자원 종류(@p Tag)마다 다른 64비트 핸들 값 형식입니다. 크기 · 복사 비용은 `uint64` 와 같다.
-     * @details 예전에는 다섯 핸들이 모두 `uint64` 별칭이라 텍스처 핸들을 버퍼 자리에, 개수 · 인덱스를 핸들 자리에 넘겨도 컴파일됐다.
+     * @details 예전에는 핸들이 모두 `uint64` 별칭이라 텍스처 핸들을 버퍼 자리에, 개수 · 인덱스를 핸들 자리에 넘겨도 컴파일됐다.
      *          지금은 종류 사이 · 정수와 핸들 사이에 암묵 변환이 없다. 정수에서 만들 때는 명시(`RHIBufferHandle{ packed }`)로만,
      *          값을 꺼낼 때는 `getPacked()` 로만 한다(백엔드 핸들 표 · 메모리 추적 키 · 로그).
      *          무효 값은 0 하나다 — 기본 생성 · 리터럴 0 · `nullptr` 가 모두 무효이고(포인터의 널 상수와 같은 규칙), 변수에 든 정수는 들어오지 못한다.
@@ -56,7 +56,6 @@ namespace sw
     struct RHITextureHandleTag;
     struct RHITransientHeapHandleTag;
     struct RHIPipelineStateHandleTag;
-    struct RHIRenderPassHandleTag;
 
     /** @brief GPU 버퍼 리소스의 64비트 핸들입니다. */
     using RHIBufferHandle = RHIHandle<RHIBufferHandleTag>;
@@ -117,6 +116,17 @@ namespace sw
     /** @brief 파이프라인 상태 객체(PSO)의 64비트 핸들입니다. */
     using RHIPipelineStateHandle = RHIHandle<RHIPipelineStateHandleTag>;
 
-    /** @brief 렌더 패스 객체의 64비트 핸들입니다. */
-    using RHIRenderPassHandle = RHIHandle<RHIRenderPassHandleTag>;
+    /**
+     * @struct RHIThreadGroupSize
+     * @brief 축마다의 스레드 수입니다. 셰이더 리플렉션이 채우고 컴퓨트 PSO 가 들고 있다 — C++ 에 같은 수를 다시 적지 않는다(유니티 `GetKernelThreadGroupSizes`).
+     */
+    struct RHIThreadGroupSize
+    {
+        uint32 _x{ 0 };
+        uint32 _y{ 0 };
+        uint32 _z{ 0 };
+
+        /** @brief 컴퓨트 셰이더의 크기면 true 입니다(다른 스테이지는 0). */
+        bool isValid() const { return _x > 0 && _y > 0 && _z > 0; }
+    };
 } // namespace sw

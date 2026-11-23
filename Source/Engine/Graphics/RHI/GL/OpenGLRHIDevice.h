@@ -20,7 +20,6 @@
 #include "Engine/Graphics/RHI/Backend/RHIReleaseQueue.h"
 #include "Engine/Graphics/RHI/Backend/RHISwapChainSet.h"
 #include "Engine/Graphics/RHI/Backend/RHITimestampRing.h"
-#include "Engine/Graphics/RHI/Diagnostics/RHIRenderPassRegistry.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHITimestampFrame.h"
 #include "Engine/Graphics/RHI/GL/OpenGLRHISwapChain.h"
 #include "Engine/Graphics/RHI/GL/OpenGLVertexAttribShadow.h"
@@ -225,7 +224,7 @@ namespace sw
         unique_ptr<IRHICommandList> createCommandList() override;
 
         /** @brief 커맨드 리스트를 제출합니다. GL 은 기록이 곧 실행이라 즉시 모드에서만 glFlush 합니다. */
-        void executeCommandList( IRHICommandList* pCmdList ) override;
+        void executeCommandListInternal( IRHICommandList* pCmdList ) override;
 
     private:
         /** @brief 타임스탬프 계측 능력입니다. 디바이스의 같은 이름 함수로 넘깁니다(수명은 디바이스와 같다). */
@@ -371,9 +370,9 @@ namespace sw
         };
 
         /** @brief 번호가 가리키는 버퍼 · UAV · 텍스처를 공유 잠금 아래에서 읽습니다(빈 칸이면 빈 값). */
-        BindlessResourceRecord findBindlessBuffer( RHIDescriptorIndex index ) const;
-        BindlessResourceRecord findBindlessUAV( RHIDescriptorIndex index ) const;
-        RHITextureHandle       findBindlessTexture( RHIDescriptorIndex index ) const;
+        BindlessResourceRecord findBindlessBuffer( RHIBufferSRVIndex index ) const;
+        BindlessResourceRecord findBindlessUAV( RHIUnorderedAccessIndex index ) const;
+        RHITextureHandle       findBindlessTexture( RHITextureSRVIndex index ) const;
 
         /// @brief 프로그램과 래스터, 블렌드, 깊이 상태입니다.
         struct OpenGLPipelineStateRecord
@@ -570,7 +569,6 @@ namespace sw
         uint32 _arrComputeRootConstantShadow[shaderslot::kRootConstantDwords];
 
         RHIHandleTable<RHIPipelineStateHandle, OpenGLPipelineStateRecord> _pipelineStates;
-        RHIRenderPassRegistry                                             _renderPassRegistry; ///< 렌더 패스 핸들 등록부. 자기 뮤텍스로 직렬화해 어느 스레드에서나 부른다.
 
         RHIReleaseQueue _releaseQueue;
         /// @brief 프레임마다 끝에 내는 펜스 링입니다(`retireFrameOnGPU`). `GLsync` 는 불투명 포인터라 `void*` 로 둔다. 칸은 `RHIFrameFenceRing::getSlot` 이고, 비면 nullptr 입니다.

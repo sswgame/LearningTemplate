@@ -42,7 +42,7 @@ namespace
                 }
                 listIndex.insert( listIndex.end(), { first, first + 1u, first + 2u, first, first + 2u, first + 3u } );
             }
-            shared_ptr<Mesh> mesh = Mesh::create();
+            shared_ptr<Mesh> mesh = Mesh::create( MeshCPUAccess::Keep );
             SW_EXPECT_TRUE( mesh->setGeometryWithTangents( std::move( listVertex ), std::move( listIndex ) ) );
             mesh->setSkin( std::move( listSkin ), MeshSkinBinding::makeIdentity( 4u ) );
             return mesh;

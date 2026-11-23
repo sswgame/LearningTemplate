@@ -44,6 +44,7 @@ namespace sw
     class FrameFog;
     class FrameUpscale;
     class FramePSOManager;
+    struct GPUMeshBatchPSO;
     class IRHICommandList;
     class IRHIDevice;
     class RenderPipelineAsset;
@@ -106,7 +107,7 @@ namespace sw
          * @brief 파이프라인 패스 번호 @p passIndex(`getGraphPass` 의 차례)가 이번 뷰에서 비활성이면 true 입니다(꺼진 효과 · 그릴 것 없는 덧그리기 · 읽는 쪽이 없는 패스)
          *        — 뷰 패스 고르기의 결과(`FrameViewTarget::_listPassDisabled`)를 그대로 읽는다.
          * @details 덧그리는 패스(SSR · 왜곡 누적 · 왜곡 적용)의 실행이 따로 판정하지 않는다 — 판정이 둘이면 고르기가 뺀 사본을 실행이 읽거나, 실행이 쉬는데 사본을 만든다.
-         *          그래프 콜백(`onGraphPassExecute`)이 패스 문맥을 만들기 전에 맨 앞에서 본다.
+         *          실행 계획(`selectGraphPlan`)이 이 판정으로 패스를 뺀다.
          */
         bool isPassDisabledInView( uint32 passIndex ) const;
         /** @brief 종류가 @p type 인 파이프라인 패스 하나라도 이번 뷰에서 켜져 있으면 true 입니다(뷰 자원 등록 — 그 종류가 쓰는 엔진 자원을 등록할지). */
@@ -186,11 +187,12 @@ namespace sw
         struct BatchDrawState
         {
             vector_reference<const GPUMeshBatch>               _batches{};
-            vector_reference<const GPUMeshBatchBinding>        _bindings{}; ///< `_batches` 와 같은 구간의 렌더 쪽 값(`GPUScene::getOpaqueBatchBindings`)
+            const GPUMeshBatchPSO*                             _pBatchPSO{ nullptr }; ///< 지금 바퀴(보기 모드)의 변형 조건별 PSO(`FramePSOManager::findBatchPSORow`)
+            span<const uint32>                                 _listVariant{};        ///< 배치 번호 → 변형 조건 번호
+            vector_reference<const GPUMeshBatchBinding>        _bindings{};           ///< `_batches` 와 같은 구간의 렌더 쪽 값(`GPUScene::getOpaqueBatchBindings`)
             vector_reference<const GPUTransparentParticleSlot> _listParticleSlot{};
             const vector<uint32>*                              _pOrder{ nullptr }; ///< 추가 뷰의 투명 패스가 도는 배치 순서(없으면 배치 번호 순서)
-            RHIPipelineStateHandle                             _pso{ 0 };
-            RHIPipelineStateHandle                             _boundPSO{ 0 }; ///< 지금 커맨드 리스트에 걸린 PSO(배치마다 다를 수 있어 바뀔 때만 다시 건다)
+            RHIPipelineStateHandle                             _boundPSO{ 0 };     ///< 지금 커맨드 리스트에 걸린 PSO(배치마다 다를 수 있어 바뀔 때만 다시 건다)
             RHIBufferHandle                                    _boundVertexBuffer{ 0 };
             RHIBufferHandle                                    _slotStream{ 0 }; ///< 인스턴스 슬롯 스트림(슬롯 1)
             RHIBufferHandle                                    _argsBuffer{ 0 }; ///< 이 패스의 뷰가 만든 간접 인자
@@ -200,6 +202,9 @@ namespace sw
             uint32                                             _particleSlotCursor{ 0 };
             uint32                                             _drawCallCount{ 0 };
             bool                                               _bMerge{ false }; ///< 연속 배치를 멀티 드로우 한 번으로 묶는지 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+
+            /** @brief @p batchIndex 배치를 그릴 PSO 입니다. */
+            const GPUMeshBatchPSO& getBatchPSO( uint32 batchIndex ) const;
         };
 
         // ------------------------------------------------------------------------------
@@ -207,7 +212,7 @@ namespace sw
         // ------------------------------------------------------------------------------
         /**
          * @brief 뷰 그래프가 패스를 실행할 때 부르는 콜백입니다. 패스 번호는 문맥의 `_payload` 다(파이프라인 패스는 차례, 모듈 확장 패스는 그 뒤 — 이름으로 다시 찾지 않는다).
-         * @details 이번 뷰에서 꺼진 패스는 맨 앞에서 돌려보낸다(문맥 복사 · 상수 칸 잡기보다 먼저). 패스 몸통은 뷰 자원 표(`_viewResourceTable`)를 실은 그래프 문맥을 받는다.
+         * @details 이번 뷰에서 꺼진 패스는 실행 계획에 없어 오지 않는다(`selectGraphPlan`). 패스 몸통은 뷰 자원 표(`_viewResourceTable`)를 실은 그래프 문맥을 받는다.
          */
         void onGraphPassExecute( const RenderGraphPassContext& context );
         /** @brief 프레임 그래프가 프레임 패스를 실행할 때 부르는 콜백입니다. 패스 번호(`_payload`)의 서술 종류로 `FrameGraphExecutor::executePass` 를 부릅니다. */
@@ -218,6 +223,11 @@ namespace sw
          * @details 그 프레임 · 뷰에 일하는 자원만 등록한다 — 등록이 없으면 레벨 콜백이 전이를 내지 않고 패스 몸통은 그 일을 건너뛴다(등록 조건이 곧 실행 조건).
          */
         void registerViewResources( FrameViewTarget& view );
+        /**
+         * @brief 지금 뷰에서 빠진 패스(`FrameViewTarget::_listPassDisabled`)를 뺀 실행 계획을 뷰 그래프에서 고릅니다(없으면 만든다 — `RenderGraph::selectPlan` · `addPlan`).
+         * @details 빠진 패스는 전이도 기록도 없다. 꺼진 효과의 출력을 읽는 패스는 가리키는 원본 이름을 읽는다(`TransientAttachmentPool::resolveName`).
+         */
+        void selectGraphPlan();
         /**
          * @brief 컴파일한 뷰 그래프의 수명(레벨)으로 트랜지언트 앨리어싱 계획을 세워 `FrameRenderState::_transientAliasPlan` 에 두고 세대를 올립니다.
          * @details 깊이 · `Load` 첨부 · TAA 출력은 나누지 않고, 꺼지면 원본을 가리키는 효과(`kBypassesToSource`)는 원본과 출력을 한 구간으로 묶는다. NaN 감시를 켠 실행은 나누지 않는다.
@@ -233,11 +243,6 @@ namespace sw
         [[nodiscard]] bool bindFramePassCallbacks();
         /** @brief 프레임 그래프를 프리패스 리스트(`_pCmd`)에 기록합니다. 뷰 그래프보다 먼저 큐에 내는 리스트다. */
         void recordFrameGraph( IRHIDevice* pDevice );
-        /**
-         * @brief 프레임 그래프가 등록 접근과 다른 접근에 둔 등록 자원을 등록 접근(프레임 시작이자 끝의 상태)으로 되돌립니다(`FrameBufferTable::forEachChangedAccess`).
-         * @details 그래프 뒤, 뷰 그래프 앞의 그래픽스 리스트(`_pCmd`)에 버퍼 한 묶음 · 텍스처 한 묶음으로 낸다. 전이 수는 `_graphTransitionCount` 에 더한다.
-         */
-        void returnFrameResourcesToInitialAccess();
         /**
          * @brief 레벨을 기록하기 **직전에** 그 레벨이 만질 자원의 배리어를 미리 발행합니다. 직렬 경로에서는 패스마다 발행합니다.
          * @details 등록한 프레임 자원(`FrameBufferTable` — 이름의 모든 뷰 칸)의 버퍼 전이는 `transitionBuffers` 한 번, UAV → UAV 는 UAV 배리어로 낸다. 이것은 뷰 그래프 판이다(등록 자원 = 지금 뷰의 `_viewResourceTable`) — 프레임 그래프는 `onFrameGraphLevelPrologue`.
@@ -276,6 +281,8 @@ namespace sw
          * @return 타일로 그렸으면 true 입니다. 분류를 쓸 수 없으면(에뮬 백엔드 · 버퍼 · PSO 없음) false 이고 부르는 쪽이 풀스크린 한 장(모든 엽 — 같은 그림)으로 그린다.
          */
         [[nodiscard]] bool executeTiledLighting( const PassExecuteInput& input, const hashed_string& target );
+        /** @brief @p view 의 디퍼드 조명을 타일 분류로 그릴 수 있으면 true 입니다(네이티브 bindless · 버퍼 · 분류와 종류마다의 PSO) — 뷰 자원 등록이 본다. */
+        bool isTiledLightingReady( const FrameViewTarget& view ) const;
         /** @brief 파이프라인 컴퓨트 패스입니다. 첨부를 RW 텍스처로 묶고 출력 크기만큼 디스패치합니다(`compute_pass.hlsli` 의 루트 상수). */
         void executeComputePass( const PassExecuteInput& input );
         /** @brief ForwardOpaque · ForwardOnlyOpaque 입니다. 그림자 맵 입력을 바인딩하고 선언한 첫 컬러 출력에 그립니다. */
@@ -404,8 +411,8 @@ namespace sw
          * @details 이 패스의 앞 드로우가 이미 올린 상수 슬롯에 바뀐 값을 쓰게 되면 새 슬롯을 받는다(같은 슬롯을 덮으면 앞 드로우도 새 값으로 그려진다).
          * @return 그려도 되면 true 입니다. 장치가 없거나 링이 고갈되면 false — 부르는 쪽은 그 드로우를 내지 않습니다.
          */
-        [[nodiscard]] bool bindForDraw( FramePassContext& context, RHIPipelineStateHandle pso, RHIDescriptorIndex materialCb,
-                                        const RHIDescriptorIndex* pMaterialTexSRV = nullptr );
+        [[nodiscard]] bool bindForDraw( FramePassContext& context, RHIPipelineStateHandle pso, RHIBufferSRVIndex materialCb,
+                                        const RHITextureSRVIndex* pMaterialTexSRV = nullptr );
         /** @brief GPUScene 인스턴스 구조 버퍼를 리소스 레지스트리에 "SwInstances" 이름으로 등록합니다. */
         void registerInstanceBuffer( FramePassContext& context );
         /**
@@ -433,21 +440,17 @@ namespace sw
          */
         void drawGPUBatches( FramePassContext& context, RHIPipelineStateHandle pso, bool bTransparentPass, const vector<GPUTransparentParticleSlot>* pParticleSlot );
         /** @brief 보기 모드 한 바퀴를 그립니다. 첫 바퀴(@p bDrawsParticles)만 배치 순서의 자기 자리에 입자를 끼웁니다. */
-        void drawBatchRound( FramePassContext& context, BatchDrawState& inoutState, RenderViewMode drawMode, bool bDrawsParticles );
+        void drawBatchRound( FramePassContext& context, BatchDrawState& inoutState, bool bDrawsParticles );
         /** @brief @p orderIndex 의 배치와 한 멀티 드로우 묶음이 되는 연속 배치 수를 셉니다(묶지 않으면 1, 다음 입자 자리가 묶음 안에 들면 그 자리에서 끊는다). */
-        uint32 countDrawGroup( const BatchDrawState& state, RenderViewMode drawMode, uint32 orderIndex, bool bDrawsParticles ) const;
-        /** @brief 그 PSO 의 레이아웃이 머티리얼 CB 슬롯을 거는지입니다. 거는 셰이더에서만 머티리얼 CB 가 멀티 드로우 병합 키다. */
-        bool layoutBindsMaterialCb( RHIPipelineStateHandle batchPSO ) const;
-        /** @brief @p other 가 @p head 와 같은 멀티 드로우 묶음에 들 수 있는지입니다(그릴 수 있고 정점 버퍼 · PSO · 머티리얼 바인딩이 같다). */
-        bool isSameDrawGroup( RHIPipelineStateHandle pso, RenderPassKind passType, RenderViewMode drawMode, const GPUMeshBatch& head, const GPUMeshBatchBinding& headBinding,
-                              const GPUMeshBatch& other, const GPUMeshBatchBinding& otherBinding ) const;
+        uint32 countDrawGroup( const BatchDrawState& state, uint32 orderIndex, bool bDrawsParticles ) const;
+        /** @brief @p otherIndex 배치가 @p headIndex 배치와 같은 멀티 드로우 묶음에 들 수 있는지입니다(그릴 수 있고 정점 버퍼 · PSO · 머티리얼 바인딩이 같다). */
+        bool isSameDrawGroup( const BatchDrawState& state, uint32 headIndex, uint32 otherIndex ) const;
         /**
          * @brief 묶음 하나를 그립니다 — 바뀐 배치 PSO 를 걸고(그때 정점 슬롯이 비므로 인스턴스 슬롯 스트림 · 메시 스트림도 다시 건다), 바뀐 정점 버퍼만 다시 걸고,
-         *        머티리얼 바인딩 뒤 간접 인자 @p argIndex 부터 @p groupCount 개를 부릅니다.
+         *        머티리얼 바인딩 뒤 배치 @p headIndex 의 간접 인자부터 @p groupCount 개를 부릅니다.
          * @return 그렸으면 true 입니다. 그 보기 모드의 머티리얼 변형이 없으면(만들 때 오류를 남겼다) 그리지 않고 false 입니다.
          */
-        bool drawBatchGroup( FramePassContext& context, BatchDrawState& inoutState, RenderViewMode drawMode, const GPUMeshBatch& head, const GPUMeshBatchBinding& headBinding,
-                             uint32 argIndex, uint32 groupCount );
+        bool drawBatchGroup( FramePassContext& context, BatchDrawState& inoutState, uint32 headIndex, uint32 groupCount );
         /** @brief 투명 큐(메시 투명 배치와 입자 그리기를 한 순서로)를 지금 열린 투명 패스에 그립니다. */
         void drawTransparentQueue( FramePassContext& context, RHIPipelineStateHandle pso );
         /** @brief 지금 그리는 뷰의 입자 자리입니다. 추가 뷰는 자기 순서가 있으면 그것, 없으면 주 시점의 것(그 뷰도 주 배치 순서로 그린다)입니다. */
@@ -574,15 +577,17 @@ namespace sw
          * @details 병렬 기록 중에는 읽기만 한다(등록은 그 뷰 그래프 앞에 끝났다). 첨부는 넣지 않는다 — 첨부는 풀(`activePool`)이 이름으로 준다.
          */
         FrameBufferTable _viewResourceTable;
+        /// @brief 지금 뷰의 패스 상태입니다(`selectGraphPlan` 의 실행 계획 열쇠). 용량을 뷰 · 프레임 사이에 다시 쓴다.
+        vector<uint8> _listScratchPassState;
         /// @brief 버퍼 보기(에디터 렌더 디버거 · 개발 명령)가 요청한 `_frameBufferTable` 버퍼를 프레임 그래프 끝에서 읽는다(`RenderDebugRegistry`). 읽기 버퍼는 장치 자원이라 여기서 놓는다.
         RenderBufferInspector _bufferInspector;
         /// @brief 레벨 콜백이 모은 버퍼 전이입니다(`transitionBuffers` 한 번). 레벨 콜백은 한 스레드에서만 돈다 — 용량을 프레임 사이에 다시 쓴다.
         RHIBufferTransitionBatch _levelBufferTransitions;
         /// @brief 이번 프레임에 레벨 콜백이 낸 전이 · UAV 배리어 수입니다(지표 `RT.Graph.transitions` — 그래프로 옮긴 단계가 이 수를 늘리지 않아야 한다).
         uint32 _graphTransitionCount{ 0 };
-        /// @brief 지금 그리는 뷰입니다. 프레임 밖에서는 항상 `FrameRenderState::_mainView` 입니다. 바꾸는 곳은 `renderExtraView` 하나다.
+        /// @brief 지금 그리는 뷰입니다. 프레임 밖에서는 항상 주 시점(`FrameRenderState::getMainView`)입니다. 바꾸는 곳은 `renderExtraView` 하나다.
         FrameViewTarget* _pActiveView;
-        /// @brief `FrameRenderState::_mainView` 입니다 — 인라인 판정(`isRenderingExtraView`)이 FrameRenderState.h 없이 견준다.
+        /// @brief 주 시점(`FrameRenderState::getMainView`)입니다 — 인라인 판정(`isRenderingExtraView`)이 FrameRenderState.h 없이 견준다.
         FrameViewTarget* const _pMainView;
         /// @brief 프레임 그래프 리스트와 그것을 만든 디바이스입니다. `_pCmd` 는 프리패스를 기록하는 동안만 그 리스트를 가리킨다.
         IRHIDevice*                 _pCmdOwnerDevice;

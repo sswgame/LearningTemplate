@@ -908,7 +908,7 @@ namespace sw::editor
     {
         // 디스크에서 바로 읽는다 — 공유 캐시(`MeshCache`)는 열린 에디터가 쥔 옛 몸일 수 있어, 새 몸의 내용으로 적은 원본 해시와 다른 몸의 가중치가 결과에 남았다.
         MeshAssetData    bodyData{};
-        shared_ptr<Mesh> body      = Mesh::create();
+        shared_ptr<Mesh> body      = Mesh::create( MeshCPUAccess::Keep );
         const bool       bBodyRead = MeshAssetFormat::loadFromAsset( AssetID{ rule._bodySurface }, bodyData ) && body->setGeometryWithTangents( std::move( bodyData._listVertex ), std::move( bodyData._listIndex ) );
         if ( bBodyRead == false )
         {
@@ -918,7 +918,7 @@ namespace sw::editor
         if ( bodyData._skinBinding.getBoneCount() > 0 )
             body->setSkin( std::move( bodyData._listSkinVertex ), std::move( bodyData._skinBinding ) );
         body->setMorphTargets( std::move( bodyData._listMorphTarget ) );
-        shared_ptr<Mesh> garment = Mesh::create();
+        shared_ptr<Mesh> garment = Mesh::create( MeshCPUAccess::Keep );
         if ( garment->setGeometryWithTangents( vector<RHIVertex>( inoutMesh._listVertex ), vector<uint32>( inoutMesh._listIndex ) ) == false )
             return false; // 메시가 까닭을 남겼다(임포트가 만든 번호라 생기지 않아야 한다)
         if ( inoutMesh._listSkinVertex.empty() == false )

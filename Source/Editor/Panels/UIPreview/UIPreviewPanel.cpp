@@ -325,12 +325,12 @@ namespace sw::editor
 
     void UIPreviewPanel::syncTexture()
     {
-        const uint64 texture = _model.findTargetTexture();
+        const RHITextureHandle texture = _model.findTargetTexture();
         if ( texture == _texture && _pTextureID != nullptr )
             return;
         releaseTexture();
         _pTextureID = EditorViewSurface::registerImage( texture ); // 렌더 스레드가 아직 만들지 않았으면 nullptr(다음 프레임)
-        _texture    = _pTextureID != nullptr ? texture : 0;
+        _texture    = _pTextureID != nullptr ? texture : RHITextureHandle{ 0 };
     }
 
     bool UIPreviewPanel::canSaveDocument() const

@@ -21,7 +21,7 @@
 		<RenderPassAttachment _name="DBufferC" _format="R8G8B8A8_UNORM" _clearColor="0,0,0,1" _loadOp="Clear" />
 	</_listAttachment>
 	<_listPass>
-		<RenderGraphPassDesc _name="DepthPrepass" _after="Shadow" _type="DepthPrepass" _depthAttachment="SceneDepth" _shaderPath="engine/shaders/shadow_depth.hlsl" _vertexEntryPoint="VSMain" _pixelEntryPoint="PSMain" _computeEntryPoint="" _geometryEntryPoint="" _hullEntryPoint="" _domainEntryPoint="" _threadGroupSize="8" _cullMode="Back" _bEnableDepthTest="true" _bEnableDepthWrite="true" _minPostQuality="0">
+		<RenderGraphPassDesc _name="DepthPrepass" _after="Shadow" _type="DepthPrepass" _depthAttachment="SceneDepth" _shaderPath="engine/shaders/shadow_depth.hlsl" _vertexEntryPoint="VSMain" _pixelEntryPoint="PSMain" _computeEntryPoint="" _geometryEntryPoint="" _hullEntryPoint="" _domainEntryPoint="" _cullMode="Back" _bEnableDepthTest="true" _bEnableDepthWrite="true" _minPostQuality="0">
 			<_listInput />
 			<_listOutput>
 				<item>SceneDepth</item>

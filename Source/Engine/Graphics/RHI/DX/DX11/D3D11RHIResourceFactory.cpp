@@ -837,7 +837,7 @@ namespace sw
         return pRecord != nullptr && _pDevice->_transferSerials.isFirstUploadComplete( pRecord->_transferSerials );
     }
 
-    RHIDescriptorIndex D3D11RHIResourceFactory::registerBindlessTexture( RHITextureHandle texture )
+    RHITextureSRVIndex D3D11RHIResourceFactory::registerBindlessTexture( RHITextureHandle texture )
     {
         _pDevice->requireRegistryMutableNow( "registerBindlessTexture" );
         if ( texture == 0 )
@@ -858,10 +858,10 @@ namespace sw
         }
 
         UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
-        return _pDevice->_textureRegistry.allocate( texture );
+        return RHITextureSRVIndex{ _pDevice->_textureRegistry.allocate( texture ) };
     }
 
-    RHIDescriptorIndex D3D11RHIResourceFactory::registerBindlessBufferSRV( RHIBufferHandle buffer )
+    RHIBufferSRVIndex D3D11RHIResourceFactory::registerBindlessBufferSRV( RHIBufferHandle buffer )
     {
         _pDevice->requireRegistryMutableNow( "registerBindlessBufferSRV" );
         if ( buffer == 0 )
@@ -871,10 +871,10 @@ namespace sw
         if ( pResource == nullptr )
             return kInvalidDescriptorIndex;
         UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
-        return _pDevice->_bufferRegistry.allocate( D3D11RHIDevice::BufferEntry{ buffer } );
+        return RHIBufferSRVIndex{ _pDevice->_bufferRegistry.allocate( D3D11RHIDevice::BufferEntry{ buffer } ) };
     }
 
-    RHIDescriptorIndex D3D11RHIResourceFactory::registerBindlessBufferSRV( const RHIBufferSlice& slice )
+    RHIBufferSRVIndex D3D11RHIResourceFactory::registerBindlessBufferSRV( const RHIBufferSlice& slice )
     {
         _pDevice->requireRegistryMutableNow( "registerBindlessBufferSRV(slice)" );
         if ( slice._buffer == 0 || _pDevice->resolveBuffer( slice._buffer ) == nullptr )
@@ -887,10 +887,10 @@ namespace sw
             return kInvalidDescriptorIndex;
         }
         UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
-        return _pDevice->_bufferRegistry.allocate( D3D11RHIDevice::BufferEntry{ slice._buffer, slice._offset, slice._size } );
+        return RHIBufferSRVIndex{ _pDevice->_bufferRegistry.allocate( D3D11RHIDevice::BufferEntry{ slice._buffer, slice._offset, slice._size } ) };
     }
 
-    void D3D11RHIResourceFactory::unregisterBindlessResource( RHIDescriptorIndex index )
+    void D3D11RHIResourceFactory::unregisterBindlessResource( RHIBufferSRVIndex index )
     {
         _pDevice->requireRegistryMutableNow( "unregisterBindlessResource" );
         UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
@@ -898,7 +898,7 @@ namespace sw
         (void)_pDevice->_bufferRegistry.release( index, RHIBindlessReuse::Immediately );
     }
 
-    bool D3D11RHIResourceFactory::rebindBindlessTexture( RHIDescriptorIndex index, RHITextureHandle texture )
+    bool D3D11RHIResourceFactory::rebindBindlessTexture( RHITextureSRVIndex index, RHITextureHandle texture )
     {
         _pDevice->requireRegistryMutableNow( "rebindBindlessTexture" );
         D3D11RHIDevice::TextureRecord* pRecord       = texture != 0 ? _pDevice->resolveTexture( texture ) : nullptr;
@@ -911,14 +911,14 @@ namespace sw
         return _pDevice->_textureRegistry.rebind( index, texture );
     }
 
-    RHIDescriptorIndex D3D11RHIResourceFactory::reserveBindlessTextureIndex()
+    RHITextureSRVIndex D3D11RHIResourceFactory::reserveBindlessTextureIndex()
     {
         // 번호 발급기만 건드린다 — 칸 값은 그대로라 기록 경로의 풀이에 닿지 않는다(어느 스레드든).
         UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
-        return _pDevice->_textureRegistry.reserveIndex();
+        return RHITextureSRVIndex{ _pDevice->_textureRegistry.reserveIndex() };
     }
 
-    bool D3D11RHIResourceFactory::activateReservedBindlessTexture( RHIDescriptorIndex index, RHITextureHandle texture )
+    bool D3D11RHIResourceFactory::activateReservedBindlessTexture( RHITextureSRVIndex index, RHITextureHandle texture )
     {
         _pDevice->requireRegistryMutableNow( "activateReservedBindlessTexture" );
         D3D11RHIDevice::TextureRecord* pRecord         = texture != 0 ? _pDevice->resolveTexture( texture ) : nullptr;
@@ -930,14 +930,14 @@ namespace sw
         return _pDevice->_textureRegistry.assign( index, texture, RHIBindlessLink::Borrowed ); // 예약한 번호는 받은 쪽(텍스처 캐시)의 것이다
     }
 
-    void D3D11RHIResourceFactory::unregisterBindlessTexture( RHIDescriptorIndex index )
+    void D3D11RHIResourceFactory::unregisterBindlessTexture( RHITextureSRVIndex index )
     {
         _pDevice->requireRegistryMutableNow( "unregisterBindlessTexture" );
         UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
         (void)_pDevice->_textureRegistry.release( index, RHIBindlessReuse::Immediately );
     }
 
-    RHIDescriptorIndex D3D11RHIResourceFactory::registerBindlessBufferUAV( RHIBufferHandle buffer )
+    RHIUnorderedAccessIndex D3D11RHIResourceFactory::registerBindlessBufferUAV( RHIBufferHandle buffer )
     {
         _pDevice->requireRegistryMutableNow( "registerBindlessBufferUAV" );
         if ( buffer == 0 )
@@ -973,7 +973,7 @@ namespace sw
         return registerUAVView( uav.Get(), RHIBindlessOwner{ buffer, 0 } );
     }
 
-    RHIDescriptorIndex D3D11RHIResourceFactory::registerBindlessTextureUAV( RHITextureHandle texture )
+    RHIUnorderedAccessIndex D3D11RHIResourceFactory::registerBindlessTextureUAV( RHITextureHandle texture )
     {
         _pDevice->requireRegistryMutableNow( "registerBindlessTextureUAV" );
         if ( texture == 0 )
@@ -990,17 +990,17 @@ namespace sw
         return registerUAVView( uav.Get(), RHIBindlessOwner{ 0, texture } );
     }
 
-    RHIDescriptorIndex D3D11RHIResourceFactory::registerUAVView( ID3D11UnorderedAccessView* pUAV, const RHIBindlessOwner& owner )
+    RHIUnorderedAccessIndex D3D11RHIResourceFactory::registerUAVView( ID3D11UnorderedAccessView* pUAV, const RHIBindlessOwner& owner )
     {
         UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
         D3D11RHIDevice::UAVEntry entry{};
         entry._uav           = pUAV;
         entry._sourceBuffer  = owner._buffer;
         entry._sourceTexture = owner._texture;
-        return _pDevice->_uavRegistry.allocate( entry );
+        return RHIUnorderedAccessIndex{ _pDevice->_uavRegistry.allocate( entry ) };
     }
 
-    void D3D11RHIResourceFactory::unregisterBindlessUAV( RHIDescriptorIndex index )
+    void D3D11RHIResourceFactory::unregisterBindlessUAV( RHIUnorderedAccessIndex index )
     {
         _pDevice->requireRegistryMutableNow( "unregisterBindlessUAV" );
         UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
@@ -1141,16 +1141,6 @@ namespace sw
         const bool bLive = _pDevice->_pipelineStates.erase( pso );
         _pDevice->removePipelineStateInRecordingStates( pso );
         return bLive;
-    }
-
-    RHIRenderPassHandle D3D11RHIResourceFactory::createRenderPass( const RHIRenderPassDesc& desc )
-    {
-        return _pDevice->_renderPassRegistry.add( desc );
-    }
-
-    bool D3D11RHIResourceFactory::destroyRenderPassNative( RHIRenderPassHandle pass )
-    {
-        return _pDevice->_renderPassRegistry.retire( pass );
     }
 } // namespace sw
 #endif

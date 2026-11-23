@@ -12,13 +12,16 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
+#include "Engine/Graphics/RHI/RHIHandles.h"
+
 namespace sw
 {
     /** @brief 컴파일된 스테이지 하나입니다(바이트코드와 그 진입점). 바이트코드가 비면 그 스테이지가 없다. */
     struct RHICompiledShaderStage
     {
-        vector<uint8> _bytecode;   ///< 백엔드 형식의 바이트코드(DXBC · DXIL · SPIR-V · WebGPU 꾸러미)
-        string        _entryPoint; ///< 컴파일에 쓴 진입점(GL `glSpecializeShader` · Vulkan `pName` · WebGPU `entryPoint` 가 같은 이름을 쓴다)
+        vector<uint8>      _bytecode;    ///< 백엔드 형식의 바이트코드(DXBC · DXIL · SPIR-V · WebGPU 꾸러미)
+        string             _entryPoint;  ///< 컴파일에 쓴 진입점(GL `glSpecializeShader` · Vulkan `pName` · WebGPU `entryPoint` 가 같은 이름을 쓴다)
+        RHIThreadGroupSize _groupSize{}; ///< 컴퓨트 스테이지의 스레드 그룹 크기(리플렉션)
 
         [[nodiscard]] bool isPresent() const { return _bytecode.empty() == false; }
     };

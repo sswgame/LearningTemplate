@@ -19,6 +19,7 @@
 #include "Engine/Graphics/RHI/Backend/RHIRetireList.h"
 #include "Engine/Graphics/RHI/ConstantBufferPagePool.h"
 #include "Engine/Graphics/RHI/Diagnostics/BindlessIndexValidator.h"
+#include "Engine/Graphics/RHI/Diagnostics/RHIComputeBindingLog.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIDrawDiagnostics.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
 #include "Engine/Graphics/RHI/IRHICommandContext.h"
@@ -44,7 +45,6 @@ namespace sw
         Buffer,               ///< `RHIBufferHandle`
         Texture,              ///< `RHITextureHandle`
         PipelineState,        ///< `RHIPipelineStateHandle`
-        RenderPass,           ///< `RHIRenderPassHandle`
         TransientHeap         ///< `RHITransientHeapHandle`
     };
 
@@ -61,12 +61,12 @@ namespace sw
         {
             case RHIHandleKind::BindlessResource:
             {
-                factory.unregisterBindlessResource( static_cast<RHIDescriptorIndex>( packed ) );
+                factory.unregisterBindlessResource( RHIBufferSRVIndex{ packed } );
                 return;
             }
             case RHIHandleKind::BindlessTexture:
             {
-                factory.unregisterBindlessTexture( static_cast<RHIDescriptorIndex>( packed ) );
+                factory.unregisterBindlessTexture( RHITextureSRVIndex{ packed } );
                 return;
             }
             case RHIHandleKind::Buffer:
@@ -82,11 +82,7 @@ namespace sw
             case RHIHandleKind::PipelineState:
             {
                 bLive = factory.destroyPipelineStateNative( RHIPipelineStateHandle{ packed } );
-                break;
-            }
-            case RHIHandleKind::RenderPass:
-            {
-                bLive = factory.destroyRenderPassNative( RHIRenderPassHandle{ packed } );
+                factory.removeThreadGroupSize( RHIPipelineStateHandle{ packed } );
                 break;
             }
             case RHIHandleKind::TransientHeap:
@@ -134,7 +130,7 @@ namespace sw
     {
         struct Entry
         {
-            RHIDescriptorIndex _index{ kInvalidDescriptorIndex };
+            RHITextureSRVIndex _index{ kInvalidDescriptorIndex };
             RHITextureHandle   _placeholder{ 0 };
         };
 
@@ -146,12 +142,12 @@ namespace sw
 
 namespace sw
 {
-    RHIDescriptorIndex IRHIDevice::reserveBindlessTexture( RHITextureHandle placeholder )
+    RHITextureSRVIndex IRHIDevice::reserveBindlessTexture( RHITextureHandle placeholder )
     {
         IRHIResourceFactory* const pFactory = getResourceFactory();
         if ( pFactory == nullptr || placeholder == 0 )
             return kInvalidDescriptorIndex;
-        const RHIDescriptorIndex index = pFactory->reserveBindlessTextureIndex();
+        const RHITextureSRVIndex index = pFactory->reserveBindlessTextureIndex();
         if ( index == kInvalidDescriptorIndex )
             return kInvalidDescriptorIndex;
         ScopedLock<mutex> lock{ _pBindlessReservationQueue->_mutex };
@@ -174,7 +170,7 @@ namespace sw
             if ( pFactory != nullptr && pFactory->activateReservedBindlessTexture( entry._index, entry._placeholder ) )
                 continue;
             // 자리 텍스처(로드 중 · 누락 체커)는 기동이 올려 둔다 — 못 살리면 결함이다. 번호는 산 칸이 아니라 해제가 놓지 못하므로 그 번호를 쥔 쪽은 빈 번호를 그린다.
-            SW_LOG_ERROR_ID( "RHI.ReservedBindlessActivateFailed", "%#: the reserved bindless index %# could not point at texture %#", getBackendName(), entry._index, entry._placeholder.getPacked() );
+            SW_LOG_ERROR_ID( "RHI.ReservedBindlessActivateFailed", "%#: the reserved bindless index %# could not point at texture %#", getBackendName(), entry._index.getValue(), entry._placeholder.getPacked() );
         }
         queue._listScratch.clear();
     }
@@ -191,7 +187,7 @@ namespace sw
         return nullptr;
     }
 
-    RHIQueueSyncPoint IRHIDevice::submitAsyncCompute( [[maybe_unused]] IRHICommandList* pCmdList )
+    RHIQueueSyncPoint IRHIDevice::submitAsyncComputeInternal( [[maybe_unused]] IRHICommandList* pCmdList )
     {
         SW_LOG_ERROR_ONCE_ID( "RHI.AsyncComputeUnsupported", "%# has no async compute queue (_bAsyncCompute is false) - the caller must check the capability", getBackendName() );
         return RHIQueueSyncPoint{};
@@ -427,19 +423,19 @@ namespace sw
         releaseHandleInternal( RHIHandleKind::PipelineState, pso.getPacked() );
     }
 
-    void IRHIDevice::releaseHandle( RHIRenderPassHandle pass )
-    {
-        releaseHandleInternal( RHIHandleKind::RenderPass, pass.getPacked() );
-    }
-
     void IRHIDevice::releaseHandle( RHITransientHeapHandle heap )
     {
         releaseHandleInternal( RHIHandleKind::TransientHeap, heap.getPacked() );
     }
 
-    void IRHIDevice::releaseBindlessIndex( RHIBindlessIndexSpace space, RHIDescriptorIndex index )
+    void IRHIDevice::releaseBindlessIndex( RHITextureSRVIndex index )
     {
-        releaseHandleInternal( space == RHIBindlessIndexSpace::Texture ? RHIHandleKind::BindlessTexture : RHIHandleKind::BindlessResource, index );
+        releaseHandleInternal( RHIHandleKind::BindlessTexture, index );
+    }
+
+    void IRHIDevice::releaseBindlessIndex( RHIBufferSRVIndex index )
+    {
+        releaseHandleInternal( RHIHandleKind::BindlessResource, index );
     }
 
     void IRHIDevice::releaseHandleInternal( RHIHandleKind kind, uint64 packed )
@@ -558,6 +554,7 @@ namespace sw
         , _pDeferredHandleQueue{ make_unique<RHIDeferredHandleQueue>() }
         , _pBindlessReservationQueue{ make_unique<RHIBindlessReservationQueue>() }
         , _pBindlessIndexReportLog{ make_unique<BindlessIndexReportLog>() }
+        , _pComputeBindingLog{ make_unique<RHIComputeBindingLog>() }
         , _initPhaseTimings{}
         , _drawDiagnostics{ *this }
     {

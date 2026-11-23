@@ -84,7 +84,7 @@ namespace
                 listVertex[index]._arrNormal[2]   = 1.0f;
             }
             vector<uint32>   listIndex{ 0, 1, 2, 3, 4, 5 };
-            shared_ptr<Mesh> mesh = Mesh::create();
+            shared_ptr<Mesh> mesh = Mesh::create( MeshCPUAccess::Keep );
             SW_EXPECT_TRUE( mesh->setGeometryWithTangents( std::move( listVertex ), std::move( listIndex ) ) );
             mesh->setSkin( { makeSkin( kSpine ), makeSkin( kHead ), makeSkin( kHand ), makeSkin( kFinger ), makeSkin( kFinger ), makeSkin( kFinger ) }, MeshSkinBinding::makeIdentity( kBoneCount ) );
             MeshLODLevel level{};

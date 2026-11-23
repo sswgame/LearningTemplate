@@ -103,7 +103,7 @@ SW_TEST_CASE( MeshSkinBindingTest, SetSkinRequiresInverseBinds )
 {
     using Util            = MeshSkinBindingTestUtil;
     MeshAssetData    data = Util::makeData();
-    shared_ptr<Mesh> mesh = Mesh::create();
+    shared_ptr<Mesh> mesh = Mesh::create( MeshCPUAccess::Keep );
     SW_REQUIRE_TRUE( mesh->setGeometryWithTangents( std::move( data._listVertex ), std::move( data._listIndex ) ) );
 
     mesh->setSkin( vector<MeshSkinVertex>( 3 ), MeshSkinBinding{} );

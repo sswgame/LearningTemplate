@@ -19,8 +19,6 @@ namespace sw
         RHIPipelineStateHandle          createPipelineStateNative( const RHIPipelineStateDesc& desc, const RHICompiledGraphicsStages& stages ) override;
         RHIPipelineStateHandle          createComputePipelineStateNative( const RHICompiledShaderStage& computeStage, string_view label ) override;
         [[nodiscard]] bool              destroyPipelineStateNative( RHIPipelineStateHandle pso ) override;
-        RHIRenderPassHandle             createRenderPass( const RHIRenderPassDesc& desc ) override;
-        [[nodiscard]] bool              destroyRenderPassNative( RHIRenderPassHandle pass ) override;
         RHIBufferHandle                 createConstantBuffer( uint32 size ) override;
         void                            updateConstantBuffer( RHIBufferHandle buffer, const void* pData, uint32 size ) override;
         RHIBufferHandle                 createConstantBufferPage( uint32 size ) override;
@@ -46,24 +44,24 @@ namespace sw
         [[nodiscard]] bool              takeTextureReadback( RHITransferTicket ticket, vector<uint8>& outBytes ) override;
         void                            discardTextureReadback( RHITransferTicket ticket ) override;
         RHIFormat                       getTextureFormat( RHITextureHandle texture ) const override;
-        RHIDescriptorIndex              registerBindlessTexture( RHITextureHandle texture ) override;
-        [[nodiscard]] bool              rebindBindlessTexture( RHIDescriptorIndex index, RHITextureHandle texture ) override;
-        RHIDescriptorIndex              reserveBindlessTextureIndex() override;
-        [[nodiscard]] bool              activateReservedBindlessTexture( RHIDescriptorIndex index, RHITextureHandle texture ) override;
+        RHITextureSRVIndex              registerBindlessTexture( RHITextureHandle texture ) override;
+        [[nodiscard]] bool              rebindBindlessTexture( RHITextureSRVIndex index, RHITextureHandle texture ) override;
+        RHITextureSRVIndex              reserveBindlessTextureIndex() override;
+        [[nodiscard]] bool              activateReservedBindlessTexture( RHITextureSRVIndex index, RHITextureHandle texture ) override;
         bool                            isTextureReadyToSample( RHITextureHandle texture ) override;
-        void                            unregisterBindlessTexture( RHIDescriptorIndex index ) override;
-        RHIDescriptorIndex              registerBindlessBufferSRV( RHIBufferHandle buffer ) override;
-        RHIDescriptorIndex              registerBindlessBufferSRV( const RHIBufferSlice& slice ) override;
-        void                            unregisterBindlessResource( RHIDescriptorIndex index ) override;
-        RHIDescriptorIndex              registerBindlessBufferUAV( RHIBufferHandle buffer ) override;
-        RHIDescriptorIndex              registerBindlessTextureUAV( RHITextureHandle texture ) override;
-        void                            unregisterBindlessUAV( RHIDescriptorIndex index ) override;
+        void                            unregisterBindlessTexture( RHITextureSRVIndex index ) override;
+        RHIBufferSRVIndex               registerBindlessBufferSRV( RHIBufferHandle buffer ) override;
+        RHIBufferSRVIndex               registerBindlessBufferSRV( const RHIBufferSlice& slice ) override;
+        void                            unregisterBindlessResource( RHIBufferSRVIndex index ) override;
+        RHIUnorderedAccessIndex         registerBindlessBufferUAV( RHIBufferHandle buffer ) override;
+        RHIUnorderedAccessIndex         registerBindlessTextureUAV( RHITextureHandle texture ) override;
+        void                            unregisterBindlessUAV( RHIUnorderedAccessIndex index ) override;
 
     private:
         /** @brief 내용을 채워 바인드 용도 하나(정점 또는 인덱스)의 기본 버퍼를 만듭니다. 정점 버퍼와 인덱스 버퍼가 같은 경로를 씁니다. */
         RHIBufferHandle createFilledBuffer( const void* pData, uint32 sizeBytes, uint32 bindFlags );
         /** @brief UAV 를 레지스트리에 넣고 인덱스를 반환합니다. 반납된 슬롯을 먼저 씁니다. 버퍼 UAV 와 텍스처 UAV 가 같은 경로를 씁니다. @p owner 는 원본 자원입니다(부술 때 이 번호를 놓는다). */
-        RHIDescriptorIndex registerUAVView( ID3D11UnorderedAccessView* pUAV, const RHIBindlessOwner& owner );
+        RHIUnorderedAccessIndex registerUAVView( ID3D11UnorderedAccessView* pUAV, const RHIBindlessOwner& owner );
 
     private:
         D3D11RHIDevice* _pDevice;

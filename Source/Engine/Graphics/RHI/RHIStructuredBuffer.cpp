@@ -9,6 +9,7 @@
 
 #include "Engine/Graphics/RHI/Diagnostics/BindlessIndexValidator.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
+#include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 
 namespace sw
 {
@@ -58,7 +59,7 @@ namespace sw
         desc._pInitialData = bExactSize ? pInitialData : nullptr;
 
         // 한 번만 만든다 — UAV 를 뺀 버퍼나 다른 생성 함수로 대신 만들지 않는다. 컴퓨트(UAV)를 못 쓰는 백엔드는 부르는 쪽이 능력(`RHICapabilities::_bCompute`)으로 가린다.
-        _buffer = pDevice->getResourceFactory()->createBuffer( desc );
+        _buffer = pDevice->getResourceFactory()->createBuffer( RHIResourceCreateKey{}, desc );
         if ( _buffer == 0 )
         {
             // 프레임마다 다시 묻는 슬롯(GPUScene)이 있어 한 번만 남긴다 — 어느 슬롯인지는 부르는 쪽이 알린다.
@@ -148,6 +149,16 @@ namespace sw
         }
         if ( currentCount > comparedCount )
             addRun( comparedCount, currentCount );
+    }
+
+    void RHIStructuredBuffer::swap( RHIStructuredBuffer& other ) noexcept
+    {
+        std::swap( _buffer, other._buffer );
+        std::swap( _srv, other._srv );
+        std::swap( _uav, other._uav );
+        std::swap( _capacityElements, other._capacityElements );
+        std::swap( _elementSize, other._elementSize );
+        std::swap( _generation, other._generation );
     }
 
     void RHIStructuredBuffer::release( IRHIDevice* pDevice )

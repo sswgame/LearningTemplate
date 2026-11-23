@@ -85,7 +85,7 @@ namespace sw
          * @brief 볼륨 안개 컴퓨트를 @p cmd 에 기록합니다(라이트 그리드 디스패치 뒤). `isFogVolumeActive` 일 때만 돕니다. 볼륨 버퍼의 전이는 프레임 그래프가 낸다(`VolumetricFogVolume`).
          * @param placeholderSRV 라이트 버퍼 · 그리드가 없는 프레임에 t0 · t2 에 거는 자리표(DX12 는 빈 디스크립터를 읽으면 폴트)
          */
-        void dispatchVolumetricFog( IRHIPassCommandList& cmd, const GPULightBuffer& lightBuffer, RHIDescriptorIndex placeholderSRV ) const;
+        void dispatchVolumetricFog( IRHIPassCommandList& cmd, const GPULightBuffer& lightBuffer, RHIBufferSRVIndex placeholderSRV ) const;
         /** @brief 이번 프레임에 안개(`FogComponent` · 물속)가 있으면 true 입니다. 기록 전에 정하고 패스는 읽기만 합니다. */
         bool hasFrameFog() const { return _bHasFrameFog == SW_TRUE; }
         /** @brief 이번 프레임의 안개 상수입니다. `hasFrameFog` 가 false 면 값이 비어 있습니다. */

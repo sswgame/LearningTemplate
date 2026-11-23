@@ -62,7 +62,7 @@ namespace sw
         /** @brief 그 자리 패스의 출력 첨부 선언(형식 · 해상도 공간)입니다. 그 자리 패스가 없으면 nullptr 입니다. */
         const RenderPassAttachment* findOutputAttachment( PostProcessBlendableLocation location ) const;
         /** @brief @p location 에 이어 읽는 그리기가 있으면 사본 @p chain 을 갖추고 그 그리기들에 겁니다. 없으면 사본을 놓는다. */
-        void prepareChain( FrameViewTarget& view, PostProcessBlendableLocation location, PostProcessChainTexture& chain );
+        void prepareChain( FrameViewTarget& view, PostProcessBlendableLocation location, RHITextureSlot& chain );
         /** @brief @p data 를 @p materialPath 의 원소 버퍼에 올립니다. 못 만들면 nullptr 입니다(오류를 남긴다). */
         const RHIStructuredBuffer* ensureElementBuffer( const hashed_string& materialPath, const shared_ptr<const MaterialRenderData>& data );
 

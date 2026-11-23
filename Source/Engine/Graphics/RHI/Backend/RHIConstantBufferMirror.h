@@ -26,8 +26,10 @@ namespace sw
      *          모든 슬롯이 채워진 버퍼는 목록에서 빠지므로 프레임당 비용은 최근에 바뀐 버퍼 수에 비례합니다.
      *          열쇠는 (버퍼, 오프셋)이다 — 상수 버퍼 페이지(`createConstantBufferPage`)는 구간마다 따로 쓰고 채운다(감사 R-4). 버퍼 하나를 통째로 쓰면 오프셋 0 이다.
      *
-     *          스레드 안전합니다. 쓰기(게임 스레드, 렌더 스레드)와 채우기(렌더 스레드의 프레임 시작)가 같은 락을 지나고, 슬롯에 쓰는 콜백도 그 락
-     *          안에서 불립니다. 그래서 같은 버퍼의 두 쓰기가 겹치지 않습니다(Vulkan 은 같은 메모리를 두 스레드가 동시에 매핑할 수 없습니다).
+     *          스레드 안전합니다. 쓰기(게임 스레드, 기록 워커)와 채우기(렌더 스레드의 프레임 시작)가 같은 잠금을 지나고, 슬롯에 쓰는 일도 그 잠금
+     *          안에서 불립니다. 그래서 같은 버퍼의 두 쓰기가 겹치지 않습니다(Vulkan 은 같은 메모리를 두 스레드가 동시에 매핑할 수 없다).
+     *          **잠금은 버퍼 핸들로 나눈 칸마다 하나다** — 병렬 기록은 패스마다 다른 버퍼에 쓰므로 칸이 갈려 서로 기다리지 않는다. 장치에 잠금 하나를 두면 기록 스레드 수만큼 쓰기가 줄을 선다
+     *          (언리얼은 유니폼 버퍼를 리스트마다의 빠른 할당기에서 받아 공용 잠금이 없다).
      */
     class SW_API RHIConstantBufferMirror
     {
@@ -39,14 +41,10 @@ namespace sw
         template <typename WriteSlotFunction>
         void write( RHIBufferHandle buffer, uint32 offset, uint32 slot, const void* pData, uint32 size, WriteSlotFunction&& writeSlot )
         {
-            UniqueLock<mutex> lock{ _mutex, std::defer_lock };
-            {
-                // 장치 전역 락을 기다린 시간이다 — 병렬 기록에서 이 대기가 레벨 시간의 2 % 를 넘으면 값을 버퍼 레코드로 옮긴다(설계 L-2 의 문턱).
-                SW_PROFILE_SCOPE( "RT.Bind.mirrorLockWait" );
-                lock.lock();
-            }
+            Shard&            shard = getShard( buffer );
+            ScopedLock<mutex> lock{ shard._mutex };
             writeSlot( buffer, slot, offset, pData, size );
-            rememberWrite( Key{ buffer, offset }, slot, pData, size );
+            rememberWrite( shard, Key{ buffer, offset }, slot, pData, size );
         }
 
         /**
@@ -56,29 +54,42 @@ namespace sw
         template <typename WriteSlotFunction>
         void fillSlot( uint32 slot, WriteSlotFunction&& writeSlot )
         {
-            ScopedLock<mutex> lock{ _mutex };
-            if ( _mapPendingWrite.empty() )
-                return;
             const uint32 slotBit = getSlotBitOf( slot );
-            _listFilledScratch.clear();
-            for ( auto& [key, pending] : _mapPendingWrite )
+            for ( Shard& shard : _arrShard )
             {
-                if ( ( pending._staleSlotMask & slotBit ) == 0 )
-                    continue;
-                writeSlot( key._buffer, slot, key._offset, pending._bytes.data(), static_cast<uint32>( pending._bytes.size() ) );
-                pending._staleSlotMask &= ~slotBit;
-                if ( pending._staleSlotMask == 0 )
-                    _listFilledScratch.push_back( key );
-            }
-            // 지우기는 순회가 끝난 뒤에 한다. 이 맵의 erase 는 마지막 원소를 빈 위치로 옮기므로 순회 도중에 지우면 원소를 건너뛴다.
-            for ( const Key& key : _listFilledScratch )
-            {
-                _mapPendingWrite.erase( key );
+                ScopedLock<mutex> lock{ shard._mutex };
+                shard._listFilledScratch.clear();
+                for ( auto& [key, pending] : shard._mapPendingWrite )
+                {
+                    if ( ( pending._staleSlotMask & slotBit ) == 0 )
+                        continue;
+                    writeSlot( key._buffer, slot, key._offset, pending._bytes.data(), static_cast<uint32>( pending._bytes.size() ) );
+                    pending._staleSlotMask &= ~slotBit;
+                    if ( pending._staleSlotMask == 0 )
+                        shard._listFilledScratch.push_back( key );
+                }
+                // 지우기는 순회가 끝난 뒤에 한다. 이 맵의 erase 는 마지막 원소를 빈 위치로 옮기므로 순회 도중에 지우면 원소를 건너뛴다.
+                for ( const Key& key : shard._listFilledScratch )
+                {
+                    shard._mapPendingWrite.erase( key );
+                }
             }
         }
 
         /** @brief 버퍼를 잊습니다(`destroyBuffer` — 페이지면 모든 구간). */
         void remove( RHIBufferHandle buffer );
+        /**
+         * @brief 버퍼를 잊고, 같은 잠금 안에서 @p releaseRecord 를 부릅니다 — 백엔드가 쓰기 콜백이 읽는 레코드를 여기서 거두면 진행 중인 쓰기와 겹치지 않는다.
+         * @param releaseRecord `void()` 형태입니다. 이 미러를 다시 부르면 안 됩니다.
+         */
+        template <typename ReleaseRecordFunction>
+        void remove( RHIBufferHandle buffer, ReleaseRecordFunction&& releaseRecord )
+        {
+            Shard&            shard = getShard( buffer );
+            ScopedLock<mutex> lock{ shard._mutex };
+            removeKeys( shard, buffer );
+            releaseRecord();
+        }
         /** @brief 모두 잊습니다(장치 종료). */
         void clear();
         /** @brief 아직 채울 슬롯이 남은 (버퍼, 오프셋) 수를 반환합니다. */
@@ -107,12 +118,23 @@ namespace sw
 
         /** @brief 슬롯 번호의 비트를 반환합니다. */
         static uint32 getSlotBitOf( uint32 slot ) { return 1u << ( slot % constant::render::kMaxFrameCountInFlight ); }
-        /** @brief 쓴 값을 기억하고 나머지 슬롯을 옛 값으로 표시합니다. 락 안에서 부릅니다. */
-        void rememberWrite( const Key& key, uint32 slot, const void* pData, uint32 size ) SW_REQUIRES_LOCK( _mutex );
+        /** @brief 버퍼 핸들로 나눈 칸 하나입니다. 잠금 · 대기 목록이 칸마다 따로다. */
+        struct Shard
+        {
+            unordered_map<Key, PendingWrite> _mapPendingWrite SW_GUARDED_BY( _mutex );
+            vector<Key> _listFilledScratch                    SW_GUARDED_BY( _mutex ); ///< 지울 자리를 모으는 임시 목록(프레임마다 다시 쓴다)
+            mutable mutex                                     _mutex;
+        };
+        static constexpr uint32 kShardCount = 16; ///< 2 의 거듭제곱 — 기록 워커 수보다 넉넉하다
+
+        /** @brief @p buffer 가 드는 칸입니다(핸들 번호의 아래 비트라 이웃 버퍼가 갈린다). */
+        Shard& getShard( RHIBufferHandle buffer ) { return _arrShard[static_cast<size_t>( buffer.getPacked() & ( kShardCount - 1u ) )]; }
+        /** @brief 쓴 값을 기억하고 나머지 슬롯을 옛 값으로 표시합니다. 칸의 잠금 안에서 부릅니다. */
+        static void rememberWrite( Shard& shard, const Key& key, uint32 slot, const void* pData, uint32 size ) SW_REQUIRES_LOCK( shard._mutex );
+        /** @brief 칸에서 @p buffer 의 열쇠를 모두 지웁니다. 칸의 잠금 안에서 부릅니다. */
+        static void removeKeys( Shard& shard, RHIBufferHandle buffer ) SW_REQUIRES_LOCK( shard._mutex );
 
     private:
-        unordered_map<Key, PendingWrite> _mapPendingWrite SW_GUARDED_BY( _mutex );
-        vector<Key> _listFilledScratch                    SW_GUARDED_BY( _mutex ); ///< fillSlot 이 다 채운 자리를 모으는 임시 목록(프레임마다 다시 쓴다)
-        mutable mutex                                     _mutex;
+        Shard _arrShard[kShardCount];
     };
 } // namespace sw

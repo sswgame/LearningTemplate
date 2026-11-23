@@ -2,7 +2,6 @@
 
 #include "Engine/Renderer/Scene/GPUSceneSlotBuffer.h"
 
-#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 
@@ -22,24 +21,13 @@ namespace sw
         if ( slotCount != oldCount )
         {
             _listSlot.resize( slotCount, makeHole() );
-            _listDirtyFlag.resize( slotCount, 0u );
-            if ( slotCount < oldCount )
-            {
-                // 버린 꼬리의 바뀐 칸 기록을 걷어 낸다.
-                size_t keptCount = 0;
-                for ( const uint32 slot : _listDirtySlot )
-                {
-                    if ( slot < slotCount )
-                        _listDirtySlot[keptCount++] = slot;
-                }
-                _listDirtySlot.resize( keptCount );
-            }
+            _dirty.resize( slotCount ); // 줄면 버린 꼬리의 기록을 걷어 낸다
             // 새 칸의 GPU 내용은 모른다 — 바뀐 칸으로 세고 내용을 받는다(구간에 없어도).
             for ( uint32 slot = oldCount; slot < slotCount; ++slot )
             {
-                _listSlot[slot]      = listSlotInstance[slot];
-                _listDirtyFlag[slot] = 1u;
-                _listDirtySlot.push_back( slot );
+                _listSlot[slot] = listSlotInstance[slot];
+                _dirty.mark( slot );
+                _listChangedSlot.push_back( slot );
             }
         }
 
@@ -66,52 +54,20 @@ namespace sw
         if ( Memory::compare( &stored, &instance, sizeof( GPUInstance ) ) == 0 )
             return;
         stored = instance;
-        if ( _listDirtyFlag[slot] != 0u )
-            return;
-        _listDirtyFlag[slot] = 1u;
-        _listDirtySlot.push_back( slot );
+        _dirty.mark( slot );
+        _listChangedSlot.push_back( slot );
     }
 
-    bool GPUSceneSlotBuffer::collectRuns( uint32 maxRunCount, vector<GPUInstanceDirtyRange>& outListRun )
+    void GPUSceneSlotBuffer::takeChangedSlots( vector<uint32>& outListSlot )
     {
-        outListRun.clear();
-        if ( _bFullUploadPending != SW_FALSE )
-            return false;
-        VectorUtil::sort( _listDirtySlot );
-        for ( const uint32 slot : _listDirtySlot )
-        {
-            const bool bContinuesRun = outListRun.empty() == false && outListRun.back()._start + outListRun.back()._count == slot;
-            if ( bContinuesRun )
-            {
-                ++outListRun.back()._count;
-                continue;
-            }
-            if ( outListRun.size() >= maxRunCount )
-            {
-                outListRun.clear();
-                return false;
-            }
-            outListRun.push_back( GPUInstanceDirtyRange{ slot, 1u } );
-        }
-        return true;
-    }
-
-    void GPUSceneSlotBuffer::clearPending()
-    {
-        for ( const uint32 slot : _listDirtySlot )
-        {
-            if ( slot < _listDirtyFlag.size() )
-                _listDirtyFlag[slot] = 0u;
-        }
-        _listDirtySlot.clear();
-        _bFullUploadPending = SW_FALSE;
+        outListSlot.clear();
+        outListSlot.swap( _listChangedSlot );
     }
 
     void GPUSceneSlotBuffer::reset()
     {
         _listSlot.clear();
-        _listDirtySlot.clear();
-        _listDirtyFlag.clear();
-        _bFullUploadPending = SW_TRUE;
+        _listChangedSlot.clear();
+        _dirty.reset();
     }
 } // namespace sw

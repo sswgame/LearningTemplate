@@ -441,38 +441,6 @@ namespace sw
         RHIRenderPassLoadOp  _loadOp{ RHIRenderPassLoadOp::Clear };
         RHIRenderPassStoreOp _storeOp{ RHIRenderPassStoreOp::Store };
     };
-
-    /**
-     * @struct RHIRenderPassAttachment
-     * @brief 렌더 패스의 컬러 어태치먼트와 깊이 어태치먼트입니다.
-     */
-    struct RHIRenderPassAttachment
-    {
-        float4               _clearColor = kDefaultClearColor;          ///< 초기화 색상 (RGBA)
-        RHIFormat            _format     = RHIFormat::R8G8B8A8_UNORM;   ///< 어태치먼트 포맷
-        RHIRenderPassLoadOp  _loadOp     = RHIRenderPassLoadOp::Clear;  ///< 로드 동작
-        RHIRenderPassStoreOp _storeOp    = RHIRenderPassStoreOp::Store; ///< 저장 동작
-    };
-} // namespace sw
-
-namespace sw
-{
-    /**
-     * @struct RHIRenderPassDesc
-     * @brief 렌더 패스를 만들 때 쓰는 정보입니다.
-     */
-    struct SW_API RHIRenderPassDesc
-    {
-        vector<RHIRenderPassAttachment> _listColorAttachment;  ///< 색상 어태치먼트 목록 (24 bytes)
-        float32                         _clearDepth;           ///< 깊이 초기화 값 (4 bytes)
-        uint8                           _clearStencil;         ///< 스텐실 초기화 값 (1 byte)
-        uint8                           _bHasDepthStencil : 1; ///< 깊이/스텐실 어태치먼트 포함 (1 byte)
-        [[maybe_unused]] uint8          _reservedFlags    : 7;
-        uint8                           _arrReserved[2]; ///< 8바이트 정렬 패딩 (2 bytes)
-
-        /** @brief 깊이 클리어 기본값으로 만듭니다. */
-        RHIRenderPassDesc() noexcept;
-    };
 } // namespace sw
 
 namespace sw
@@ -695,7 +663,6 @@ namespace sw
      */
     struct SW_API RHIRenderPassBeginInfo
     {
-        RHIRenderPassHandle    _renderPass;                                ///< 렌더 패스 핸들 (8 bytes)
         IRHISwapChain*         _pSwapChain;                                ///< 컬러 타깃 `kRHIBackBufferTexture` 가 가리킬 백버퍼의 스왑체인. nullptr 이면 메인 창이다 (8 bytes)
         RHITextureHandle       _arrColorTarget[kMaxColorAttachments];      ///< RT별 핸들. 백버퍼는 `kRHIBackBufferTexture`, 0 은 오류(패스를 열지 않는다) (32 bytes)
         RHITextureHandle       _depthTarget;                               ///< 깊이/스텐실 핸들. 0 이면 깊이 없음 (8 bytes)

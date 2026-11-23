@@ -121,13 +121,17 @@ namespace sw::editor
         void rebuildGraphLayout();
 
     private:
+        /** @brief 읽은 버퍼의 원소 멤버입니다(목록 항목 — 모르면 비어 있다). */
+        vector<RenderBufferEntry::Member> findSelectedMembers() const;
+
+    private:
         RenderDebuggerSources _sources{};
         RenderDebuggerState   _state{};
         uint64                _eventSerial{ 0 };
         uint64                _graphSerial{ 0 };
         uint64                _bufferListSerial{ 0 };
         uint32                _pendingBufferSerial{ 0 }; ///< 기다리는 읽기 요청 번호(0 이면 없음)
-        BufferViewScalar      _scalar{ BufferViewScalar::Float };
+        BufferViewScalar      _scalar{ BufferViewScalar::Shader };
         uint8                 _bGraphRequested{ SW_FALSE };
         uint8                 _bBufferListRequested{ SW_FALSE };
     };

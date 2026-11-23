@@ -430,7 +430,7 @@ namespace sw
         bake._framesPerSecond     = _settings._vertexAnimationFramesPerSecond;
         bake._bAnchorRootMotion   = key._bAnchorRootMotion;
         bake._animation           = make_shared<MeshVertexAnimation>();
-        bake._skinMesh            = Mesh::create();
+        bake._skinMesh            = Mesh::create( MeshCPUAccess::Keep );
         // 원본에서 이미 검사한 정점 · 인덱스 · 스킨이다. 정점 순서가 원본과 같아 VAT 표(정점 번호)와 구간(인덱스 범위)도 그대로다.
         (void)bake._skinMesh->setGeometryWithTangents( vector<RHIVertex>( sourceMesh->getCPUView().getVertices() ), vector<uint32>( sourceMesh->getIndices() ) );
         (void)bake._skinMesh->setSections( sourceMesh->getSections() );
@@ -455,7 +455,7 @@ namespace sw
         const unique_ptr<VertexAnimationBake> bake = std::move( inoutEntry._bake );
         if ( bake->_bReady == SW_FALSE )
             return;
-        inoutEntry._mesh = Mesh::create();
+        inoutEntry._mesh = Mesh::create( MeshCPUAccess::Keep );
         (void)inoutEntry._mesh->setGeometryWithTangents( vector<RHIVertex>( bake->_skinMesh->getCPUView().getVertices() ), vector<uint32>( bake->_skinMesh->getIndices() ) );
         (void)inoutEntry._mesh->setSections( bake->_skinMesh->getSections() );
         inoutEntry._mesh->setVertexAnimation( std::move( bake->_animation ) );
