@@ -46,4 +46,14 @@
 	<Redirect from="game/playground/frontiertown/automation/autoplayclock.scenario.xml" to="game/playground/automation/frontiertown_autoplayclock.scenario.xml" />
 	<Redirect from="game/playground/frontiertown/automation/slice.scenario.xml" to="game/playground/automation/frontiertown_slice.scenario.xml" />
 	<Redirect from="game/playground/frontiertown/data/frontier.settings.xml" to="game/playground/data/playground.settings.xml" />
+	<PrefixRedirect from="game/themepark" to="game/playground/themepark" />
+	<Redirect from="game/playground/themepark/automation/guests.scenario.xml" to="game/playground/automation/themepark_guests.scenario.xml" />
+	<Redirect from="game/playground/themepark/automation/shadow.scenario.xml" to="game/playground/automation/themepark_shadow.scenario.xml" />
+	<Redirect from="game/playground/themepark/automation/slice.scenario.xml" to="game/playground/automation/themepark_slice.scenario.xml" />
+	<Redirect from="game/playground/themepark/automation/editor/audioevents.scenario.xml" to="game/playground/automation/editor/themepark_audioevents.scenario.xml" />
+	<Redirect from="game/playground/themepark/automation/editor/parklayout.scenario.xml" to="game/playground/automation/editor/themepark_parklayout.scenario.xml" />
+	<Redirect from="game/playground/themepark/data/rides.xml" to="game/playground/data/rides.xml" />
+	<Redirect from="game/playground/themepark/data/coasters.xml" to="game/playground/data/coasters.xml" />
+	<Redirect from="game/playground/themepark/audio/themepark.audioevents.xml" to="game/playground/audio/playground.audioevents.xml" />
+	<Redirect from="game/playground/themepark/data/park.settings.xml" to="game/playground/data/playground.settings.xml" />
 </Redirects>

@@ -1,14 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="8dd3ad60cb90ca841dc7a1d2b61d6f5d"?>
 <!--
-  ThemeParkTycoon 그림자 — 직교 카메라가 화면 끝까지 그림자를 받는가(그림자 볼륨이 화면에 맞는가). 고정 카메라(카메라 디렉터의 직교 프리셋, 배타 입력이라 아무도 움직이지 않는다) ·
+  테마파크(하위 레벨 미니게임 themepark — 옛 게임 ThemeParkTycoon) 그림자 — 직교 카메라가 화면 끝까지 그림자를 받는가(그림자 볼륨이 화면에 맞는가). 고정 카메라(카메라 디렉터의 직교 프리셋, 배타 입력이라 아무도 움직이지 않는다) ·
   고정 해(Sun) · 고정 프레임 시간 · 자동 짓기 끔.
   화면 띠 · 나무 줄 · 가운데 다섯 영역을 백엔드별 골든과 견준다(예전의 darkFraction 문턱 대신) — 그림자가 화면 어느 띠에서 통째로 사라지면 그 영역이 진다.
   아래 · 오른쪽 띠는 지도 밖 빈 곳(어두운 배경)이 커서 쓰지 않는다. 180 프레임은 옛 시나리오의 찍는 프레임 그대로다(공원이 돌아가는 시뮬레이션 시간).
-  실행: ctest -R Scenario.themepark (SW_ACTIVE_GAME=ThemeParkTycoon) · App -scenario=game/themepark/automation/shadow.scenario.xml -unattended
+  실행: ctest -R Scenario.playground · App -scenario=game/playground/automation/themepark_shadow.scenario.xml -unattended
 -->
-<Scenario name="game.themepark.shadow" fixedDelta="0.0166667" timeoutFrames="400" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
-	<Variable name="gv_parkAutoBuild" value="0"/>
+<Scenario name="game.playground.themepark_shadow" fixedDelta="0.0166667" timeoutFrames="400" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/playground/automation/themepark_stage/stage.scene.xml"/>
+	<Variable name="gv_playgroundAutoPlay" value="0"/>
+	<!-- 무대의 ParkEntrance(원점)에 공원을 하위 레벨로 얹는다 -->
+	<DevCommand line="minigame.enter themepark ParkEntrance"/>
+	<WaitUntil watch="Scene.LoadedSubLevelCount" equals="1" timeoutFrames="60"/>
+	<Expect watch="Minigame.Active" is="themepark"/>
 	<AdvanceSimulation frames="180"/> <!-- 공원이 돌아가는 시뮬레이션 시간이 사진 내용이다(손님 자리 · 그림자) -->
 	<Screenshot file="park.ppm" stability="Assets"/>
 	<ExpectImage file="park.ppm" golden="shadow_top" region="0.0,0.0,1.0,0.12"/>

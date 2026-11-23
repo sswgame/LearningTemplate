@@ -427,8 +427,10 @@ namespace sw
         if ( pAssetManager == nullptr || prefab.empty() )
             return nullptr;
         GameObject* const pObject = pAssetManager->getAssetCache<PrefabCache>().spawn( &manager, prefab.path(), pName );
-        if ( pObject != nullptr )
-            _listViewObject.push_back( pObject->getHandle() );
+        if ( pObject == nullptr )
+            return nullptr;
+        pObject->setAlwaysLoaded( true ); // 하위 레벨로 얹은 공원의 모습이다 — 스트리밍하는 바탕 씬의 셀이 삼키지 않는다(하위 레벨 앵커와 같다)
+        _listViewObject.push_back( pObject->getHandle() );
         return pObject;
     }
 

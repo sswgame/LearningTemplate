@@ -434,7 +434,7 @@ namespace sw
         deactivateScope();
         MinigameReturnPoint returnPoint{ MinigameEntranceReturn{} };
         if ( definition._entry == MinigameEntry::SubLevel )
-            returnPoint = MinigameSubLevelReturn{ pScene->getSourcePath(), definition._name };
+            returnPoint = MinigameSubLevelReturn{ pScene->getSourcePath(), definition._name, _owner.getSaveLock().block( hashed_string( kSaveBlockReason ) ) };
         else if ( makeSceneReturn( name, returnPoint ) == false )
         {
             activateTop();

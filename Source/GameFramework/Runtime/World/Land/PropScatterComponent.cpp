@@ -9,6 +9,7 @@
 #include "Core/String/StringBuilder.h"
 
 #include "Engine/Environment/Terrain/TerrainComponent.h"
+#include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Visual/Component/MeshComponent.h"
@@ -290,7 +291,9 @@ namespace sw
             PropScatterPlacement::computePlacements( params, listPlacement );
         }
         _listSpawned.reserve( listPlacement.size() );
-        const hashed_string propName( _propName.c_str() );
+        // 이 오브젝트에 씬 컴포넌트가 있으면 영역은 그 기준이다 — 하위 레벨로 얹은 씬의 장식이 얹은 자리에 선다. 없으면 월드 좌표다.
+        SceneComponent* const pFrame = pOwner->getPrimarySceneComponent();
+        const hashed_string   propName( _propName.c_str() );
         for ( const PropScatterPlacement& placement : listPlacement )
         {
             GameObject* pProp = pManager->createGameObject( propName );
@@ -308,6 +311,8 @@ namespace sw
             pMesh->setLocalPosition( placement._position );
             pMesh->setLocalRotation( float3{ 0.0f, placement._yaw, 0.0f } );
             pMesh->setLocalScale( float3{ placement._scale, placement._scale, placement._scale } );
+            if ( pFrame != nullptr && pMesh->attachToComponent( pFrame ) == false )
+                SW_LOG_ERROR_ID( "PropScatter.PropNotAttached", "Prop scatter '%#' could not attach a prop to its own object - the prop stays at the region coordinates", _propName.c_str() );
             if ( model._listSection.empty() )
             {
                 if ( _materialPath.empty() == false )

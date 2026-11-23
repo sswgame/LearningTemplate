@@ -1,11 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="326982e337dab550112c0311edd3b0d0"?>
 <!--
-  장르 수직 슬라이스(G1) — 시작 → 목표(guests.scenario.xml 의 단계 그대로) → 결과 → 저장 · 복원 해시 동일.
+  장르 수직 슬라이스(G1, 테마파크) — 시작 → 목표(themepark_guests.scenario.xml 의 단계 그대로) → 결과 → 저장 · 복원 해시 동일.
   목표 단계는 그 시나리오가 정본이다 — 거기를 고치면 이 파일도 맞춘다. 저장 슬롯은 themepark/slice.
+  공원 맵을 씬으로 바로 연다 — 하위 레벨 미니게임 안에서는 저장이 막힌다(`MinigameFlow`).
 -->
-<Scenario name="game.themepark.slice" fixedDelta="0.0166667" timeoutFrames="5600" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
-	<Variable name="gv_parkAutoBuild" value="1"/>
+<Scenario name="game.playground.themepark_slice" fixedDelta="0.0166667" timeoutFrames="5600" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/playground/themepark/maps/park.scene.xml"/>
+	<Variable name="gv_playgroundAutoPlay" value="1"/>
 	<WaitUntil watch="Object.Exists" target="ParkGuest[3]" equals="1" timeoutFrames="60"/>
 	<Expect watch="Object.Property" target="ParkGuest[0]" key="ParkGuestComponent._guestIndex" equals="0"/>
 	<Expect watch="Object.Property" target="ParkGuest[3]" key="ParkGuestComponent._guestIndex" equals="3"/>
