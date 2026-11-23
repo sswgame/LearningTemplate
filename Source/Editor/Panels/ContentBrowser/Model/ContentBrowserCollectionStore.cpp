@@ -71,6 +71,9 @@ namespace sw::editor
     ContentBrowserCollectionStore::ContentBrowserCollectionStore()
         : _listSavedSearch{}
         , _listCollection{}
+        , _bLocalUnread{ SW_FALSE }
+        , _bSharedUnread{ SW_FALSE }
+        , _reserved{ 0 }
     {
     }
 
@@ -166,7 +169,7 @@ namespace sw::editor
         return string( text.view() );
     }
 
-    void ContentBrowserCollectionStore::fromText( string_view text, bool bShared )
+    bool ContentBrowserCollectionStore::fromText( string_view text, bool bShared )
     {
         _listSavedSearch.erase( std::remove_if( _listSavedSearch.begin(), _listSavedSearch.end(), [bShared]( const ContentBrowserSavedSearch& search )
         { return search._bShared == bShared; } ),
@@ -175,6 +178,7 @@ namespace sw::editor
         { return collection.isShared() == bShared; } ),
                                _listCollection.end() );
         vector<string_view> listField;
+        bool                bAllKnown = true;
         size_t              lineStart = 0;
         while ( lineStart < text.size() )
         {
@@ -185,6 +189,8 @@ namespace sw::editor
             lineStart        = lineEnd + 1;
             if ( line.empty() == false && line.back() == '\r' )
                 line = line.substr( 0, line.size() - 1 );
+            if ( line.empty() )
+                continue;
             ContentBrowserCollectionStoreInternal::splitProperties( line, listField );
             if ( listField.size() == 4 && listField[0] == "search" && listField[1].empty() == false )
             {
@@ -197,22 +203,38 @@ namespace sw::editor
                     (void)createCollection( listField[1], bShared );
                 if ( listField[2].empty() == false )
                     (void)addToCollection( listField[1], bShared, listField[2] );
+                continue;
             }
+            bAllKnown = false;
         }
+        return bAllKnown;
     }
 
     void ContentBrowserCollectionStore::loadFiles( string_view localFilePath, string_view sharedFilePath )
     {
-        string text;
-        if ( localFilePath.empty() == false && FileUtil::readOptionalTextFile( FileUtil::toDiskPath( localFilePath ), text ) == OptionalFileRead::Read )
-            fromText( FileUtil::skipUTF8Bom( text ), false );
-        text.clear();
-        if ( sharedFilePath.empty() == false && FileUtil::readOptionalTextFile( FileUtil::toDiskPath( sharedFilePath ), text ) == OptionalFileRead::Read )
-            fromText( FileUtil::skipUTF8Bom( text ), true );
+        _bLocalUnread  = loadFile( localFilePath, false ) ? SW_FALSE : SW_TRUE;
+        _bSharedUnread = loadFile( sharedFilePath, true ) ? SW_FALSE : SW_TRUE;
+    }
+
+    bool ContentBrowserCollectionStore::loadFile( string_view filePath, bool bShared )
+    {
+        if ( filePath.empty() )
+            return true;
+        string                 text;
+        const OptionalFileRead read  = FileUtil::readOptionalTextFile( FileUtil::toDiskPath( filePath ), text );
+        const bool             bRead = read == OptionalFileRead::Missing || ( read == OptionalFileRead::Read && fromText( FileUtil::skipUTF8Bom( text ), bShared ) );
+        if ( bRead == false )
+            SW_LOG_ERROR_ID( "ContentBrowserCollectionStore.NotRead", "Content Browser collections '%#' could not be read completely - it is not written back until it is fixed and the editor is reopened", string( filePath ).c_str() );
+        return bRead;
     }
 
     bool ContentBrowserCollectionStore::saveFile( string_view filePath, bool bShared ) const
     {
+        if ( ( bShared ? _bSharedUnread : _bLocalUnread ) == SW_TRUE )
+        {
+            SW_LOG_ERROR_ID( "ContentBrowserCollectionStore.NotOverwritten", "Content Browser collections were not saved: '%#' was not read completely and writing would lose the rest of it", string( filePath ).c_str() );
+            return false;
+        }
         if ( filePath.empty() || FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( filePath ) ) == false || FileUtil::writeTextFile( FileUtil::toDiskPath( filePath ), toText( bShared ) ) == false )
         {
             SW_LOG_WARNING_ID( "ContentBrowserCollectionStore.NotSaved", "Content Browser collections could not be saved to %#", string( filePath ).c_str() );
