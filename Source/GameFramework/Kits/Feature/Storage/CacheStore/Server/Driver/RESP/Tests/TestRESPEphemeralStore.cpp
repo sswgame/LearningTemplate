@@ -256,6 +256,21 @@ SW_TEST_CASE_F( RESPStoreTest, CompareAndSetUsesWatchAndExec )
     SW_EXPECT_TRUE( run( EphemeralRequest::makeCompareAndErase( "k", bytes( "a" ) ) )._result == EphemeralResult::Conflict ); // 없는 키
 }
 
+// 결함: WATCH 가 거절돼도(권한 · 프록시) 비교 후 쓰기를 이어 가, 지켜보지 않은 채 쓴 값을 Ok 로 답했다. EXEC 안의 쓰기 오류도 Ok 였다.
+SW_TEST_CASE_F( RESPStoreTest, CompareWithoutWatchDoesNotWrite )
+{
+    start();
+    _server.pushAll( { "-NOPERM no WATCH\r\n", "$1\r\na\r\n", "+OK\r\n" } );
+    SW_EXPECT_TRUE( run( EphemeralRequest::makeCompareAndSet( "k", bytes( "a" ), bytes( "b" ), 0 ) )._result == EphemeralResult::Invalid );
+    SW_EXPECT_EQUAL( takeCommands(), string( "WATCH g:k | GET g:k | UNWATCH" ) );
+
+    _server.pushAll( { "+OK\r\n", "$1\r\na\r\n", "+OK\r\n", "+QUEUED\r\n", "*1\r\n-ERR write failed\r\n" } );
+    SW_EXPECT_TRUE( run( EphemeralRequest::makeCompareAndSet( "k", bytes( "a" ), bytes( "b" ), 0 ) )._result == EphemeralResult::Invalid );
+
+    _server.pushAll( { "$1\r\nv\r\n" } ); // 뒤 요청은 막히지 않는다
+    SW_EXPECT_TRUE( run( EphemeralRequest::makeGet( "later" ) )._result == EphemeralResult::Ok );
+}
+
 // WATCH 사이에는 다른 명령이 끼지 않는다 - 뒤 요청은 GET 답을 본 뒤에 나가고, 답은 맡긴 순서다.
 SW_TEST_CASE_F( RESPStoreTest, RequestsWaitBehindACompare )
 {
@@ -423,6 +438,42 @@ SW_TEST_CASE_F( RESPStoreTest, RejectedAuthBacksOffBeforeReconnecting )
     SW_EXPECT_TRUE( _server._openedCount > opened ); // 물러섬이 지나면 다시 해 본다
 }
 
+// 결함: 온전한 답이 아닌 바이트(잘린 답 · TLS 핸드셰이크)도 물러섬을 풀어, 답하다 마는 서버를 물러서지 않고 두드렸다. 보내기가 져서 끊긴 연결은 물러섬이 아예 없었다.
+SW_TEST_CASE_F( RESPStoreTest, PartialAnswersDoNotResetTheBackoff )
+{
+    start();
+    SW_EXPECT_LOG( "RespConnection.RESPConnectionClosed" );
+    for ( int32 round = 0; round < 16; ++round )
+    {
+        (void)_store.submit( EphemeralRequest::makeGet( "k" ) );
+        (void)poll();
+        _server.send( _server._lastHandle, "+" );
+        (void)poll();
+        _server._transport->close( _server._lastHandle, StreamCloseMode::Abort );
+        (void)poll();
+        _clock.advanceMilliseconds( 100 );
+    }
+    SW_EXPECT_TRUE( _server._openedCount <= 8 ); // 100 ms 마다 시도해도 두 배씩 늘어난 물러섬이 1.6 초 동안 여섯 번쯤만 받는다
+}
+
+// 결함: 오류 답(-ERR max number of clients · -DENIED)도 물러섬을 풀어, 거절하고 끊는 서버를 물러서지 않고 두드렸다.
+SW_TEST_CASE_F( RESPStoreTest, ErrorRepliesDoNotResetTheBackoff )
+{
+    start();
+    SW_EXPECT_LOG( "RespConnection.RESPConnectionClosed" );
+    for ( int32 round = 0; round < 16; ++round )
+    {
+        (void)_store.submit( EphemeralRequest::makeGet( "k" ) );
+        (void)poll();
+        _server.send( _server._lastHandle, "-ERR max number of clients reached\r\n" );
+        (void)poll();
+        _server._transport->close( _server._lastHandle, StreamCloseMode::Abort );
+        (void)poll();
+        _clock.advanceMilliseconds( 100 );
+    }
+    SW_EXPECT_TRUE( _server._openedCount <= 8 ); // 100 ms 마다 시도해도 두 배씩 늘어난 물러섬이 1.6 초 동안 여섯 번쯤만 받는다
+}
+
 // 구독: 접두어를 붙여 구독하고, 받은 메시지는 접두어를 떼어 준다. 다른 접두어의 메시지는 버린다.
 SW_TEST_CASE_F( RESPStoreTest, SubscribeDeliversMessagesWithoutPrefix )
 {
@@ -473,6 +524,126 @@ SW_TEST_CASE_F( RESPStoreTest, ReconnectResubscribes )
     _clock.advanceMilliseconds( 6000 );
     (void)collectMessages();
     SW_EXPECT_EQUAL( takeCommands(), string( "SUBSCRIBE g:a | SUBSCRIBE g:b" ) );
+}
+
+namespace
+{
+    /** @brief 구독 연결 하나를 루프백 전송에 잇습니다. */
+    class SubscribePeer final : public IStreamHandler
+    {
+    public:
+        RESPConnection               _connection;
+        unique_ptr<IStreamTransport> _transport;
+
+        explicit SubscribePeer( const IClock& clock )
+            : _connection{ true, clock }
+            , _transport{}
+        {
+        }
+
+        void onStreamOpened( StreamConnectionHandle handle, const NetAddress& /*remote*/, bool /*bAccepted*/ ) override { (void)_connection.handleOpened( *_transport, handle ); }
+        void onStreamReceived( StreamConnectionHandle handle, const uint8* pData, int32 size ) override { (void)_connection.handleReceived( *_transport, handle, pData, size ); }
+        void onStreamClosed( StreamConnectionHandle handle, StreamCloseReason reason ) override { (void)_connection.handleClosed( handle, reason ); }
+    };
+} // namespace
+
+// 결함: 구독 연결이 확인을 기다리는 수를 들지 않아 저장소가 따로 셌다. I/O 스레드가 잠금 밖의 수를 맞췄고, 끊긴 연결의 늦은 확인이 새 구독의 확인으로 세어졌다.
+SW_TEST_CASE( RESPConnectionTest, SubscribeConnectionHoldsItsUnconfirmedCommands )
+{
+    SW_EXPECT_LOG( "RespConnection.RESPConnectionClosed" );
+    LoopbackStreamNetwork network;
+    FakeRESPServer        server;
+    server.start( network );
+    ManualClock           clock{ MonotonicMilliseconds{ 1000 } };
+    SubscribePeer         peer{ clock };
+    StreamTransportConfig settings;
+    settings._ioThreadCount = 0;
+    peer._transport         = network.createTransport();
+    SW_REQUIRE_TRUE( peer._transport->initialize( &peer, settings ) );
+    const auto poll = [&peer, &server]()
+    {
+        for ( int32 round = 0; round < 4; ++round )
+        {
+            (void)peer._transport->pollIO( 0 );
+            (void)server._transport->pollIO( 0 );
+        }
+    };
+
+    SW_REQUIRE_TRUE( peer._connection.beginConnect( *peer._transport, NetAddress::makeLoopback( FakeRESPServer::kPort ), nullptr, nullptr, 5000 ) );
+    SW_EXPECT_TRUE( peer._connection.sendCommand( *peer._transport, RESPCommand{ "SUBSCRIBE" }.addText( "a" ), RESPCommandTag{} ) );
+    SW_EXPECT_TRUE( peer._connection.sendCommand( *peer._transport, RESPCommand{ "SUBSCRIBE" }.addText( "b" ), RESPCommandTag{} ) );
+    poll();
+    SW_EXPECT_EQUAL( 2, peer._connection.getAwaitingCount() );
+
+    server.send( server._lastHandle, "*3\r\n$9\r\nsubscribe\r\n$1\r\na\r\n:1\r\n*3\r\n$7\r\nmessage\r\n$1\r\na\r\n$2\r\nhi\r\n" );
+    poll();
+    SW_EXPECT_EQUAL( 1, peer._connection.getAwaitingCount() ); // 메시지는 확인이 아니다
+    vector<RESPValue> listValue;
+    peer._connection.takePushValues( listValue );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, listValue.size() ); // 확인은 넘기지 않는다
+    SW_EXPECT_TRUE( listValue[0]._listElement[0].isText( "message" ) );
+
+    server._transport->close( server._lastHandle, StreamCloseMode::Abort );
+    poll();
+    SW_EXPECT_EQUAL( 0, peer._connection.getAwaitingCount() ); // 끊긴 연결의 확인은 기다리지 않고, 다음 연결로 넘어가지도 않는다
+    vector<RESPReplyRecord> listRecord;
+    peer._connection.takeReplyRecords( listRecord );
+    SW_EXPECT_TRUE( listRecord.empty() );
+    peer._transport->shutdown();
+    server._transport->shutdown();
+}
+
+// 결함: 구독 확인에 시한이 없어, 답하지 않는 서버(핸드셰이크 · 프록시에서 멎음)에 붙은 구독 연결이 그대로 남아 메시지를 영영 잃었다.
+SW_TEST_CASE_F( RESPStoreTest, UnconfirmedSubscriptionReconnects )
+{
+    RESPStoreConfig config;
+    config._timeoutMs = 1;
+    start( config );
+    SW_EXPECT_LOG( "RespEphemeralStore.RESPSubscriptionNotConfirmed" );
+    SW_EXPECT_LOG( "RespConnection.RESPConnectionAborted" );
+    _store.subscribe( "a" );
+    (void)collectMessages();
+    const int32 opened = _server._openedCount;
+    SW_EXPECT_EQUAL( takeCommands(), string( "SUBSCRIBE g:a" ) );
+
+    _clock.advanceMilliseconds( 2 ); // 확인 시한을 넘긴다
+    (void)collectMessages();
+    _clock.advanceMilliseconds( 6000 ); // 물러섬이 지난다
+    (void)collectMessages();
+    SW_EXPECT_EQUAL( _server._openedCount, opened + 1 );
+    SW_EXPECT_EQUAL( takeCommands(), string( "SUBSCRIBE g:a" ) );
+}
+
+// 결함: 말이 없는 구독 연결을 묻지 않아, 반쯤 끊긴 연결을 알아채지 못했다.
+SW_TEST_CASE_F( RESPStoreTest, SilentSubscriptionIsPingedAndReplaced )
+{
+    RESPStoreConfig config;
+    config._timeoutMs = 1;
+    start( config );
+    SW_EXPECT_LOG( "RespEphemeralStore.RESPSubscriptionNotConfirmed" );
+    SW_EXPECT_LOG( "RespConnection.RESPConnectionAborted" );
+    _store.subscribe( "a" );
+    (void)collectMessages();
+    const StreamConnectionHandle subscribed = _server._lastHandle;
+    _server.send( subscribed, "*3\r\n$9\r\nsubscribe\r\n$3\r\ng:a\r\n:1\r\n" );
+    (void)collectMessages();
+    (void)takeCommands();
+
+    _server.pushAll( { "*2\r\n$4\r\npong\r\n$0\r\n\r\n" } );
+    _clock.advanceMilliseconds( 15000 );
+    (void)collectMessages();
+    SW_EXPECT_EQUAL( takeCommands(), string( "PING" ) ); // 한 번 묻고, 답이 왔으니 그대로 쓴다
+    const int32 opened = _server._openedCount;
+
+    _clock.advanceMilliseconds( 15000 );
+    (void)collectMessages();
+    SW_EXPECT_EQUAL( takeCommands(), string( "PING" ) ); // 이번에는 답이 없다
+    _clock.advanceMilliseconds( 2 );
+    (void)collectMessages();
+    _clock.advanceMilliseconds( 6000 );
+    (void)collectMessages();
+    SW_EXPECT_EQUAL( _server._openedCount, opened + 1 );
+    SW_EXPECT_EQUAL( takeCommands(), string( "SUBSCRIBE g:a" ) );
 }
 
 // 끝내면 기다리던 요청은 실패로 끝나고, 뒤 요청은 바로 실패다. 두 번 끝내도 된다.

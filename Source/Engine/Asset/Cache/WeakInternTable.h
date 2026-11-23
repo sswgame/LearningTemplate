@@ -240,12 +240,12 @@ namespace sw
          * @brief 이 표가 나눠 준 @p pValue 의 판입니다. 이 표에서 오지 않은 포인터면 nullptr 입니다. 워커에서 불러도 됩니다(잠급니다).
          * @details 판은 @p pValue 가 사는 동안 산다(칸 주인이 판이다). 따라가는 참조(`SharedAssetRef`)가 받을 때 한 번 찾는다.
          */
-        WeakInternVersion<ValueType>* findVersion( const shared_ptr<ValueType>& pValue ) const
+        WeakInternVersion<ValueType>* findVersion( const ValueType* pValue ) const
         {
             if ( pValue == nullptr )
                 return nullptr;
             ScopedLock<mutex> lock{ _pState->_mutex };
-            const auto        it = _pState->_mapVersion.find( pValue.get() );
+            const auto        it = _pState->_mapVersion.find( pValue );
             return it != _pState->_mapVersion.end() ? it->second : nullptr;
         }
 

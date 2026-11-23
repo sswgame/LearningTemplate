@@ -255,7 +255,7 @@ namespace sw
                         const float2    motion = Win32RawMouseUtil::readMotion( mouse, Win32RawMouseUtil::getAbsoluteArea( mouse ), _lastRawMouseAbsolute );
                         if ( motion._x != 0.0f || motion._y != 0.0f )
                         {
-                            ++_rawMouseEventCount;
+                            _rawMouseEventCount.add();
                             postRawEvent( RawInputEvent::makeMouseRawDelta( motion._x, motion._y ) );
                         }
                     }

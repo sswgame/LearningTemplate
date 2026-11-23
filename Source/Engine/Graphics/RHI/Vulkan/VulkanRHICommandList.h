@@ -30,8 +30,12 @@ namespace sw
     public:
         /** @brief 디바이스 풀에서 커맨드 풀과 버퍼 쌍을 빌립니다. */
         explicit VulkanRHICommandList( VulkanRHIDevice* pDevice );
-        /** @brief 브레드크럼 칸 시작을 정합니다(비동기 컴퓨트 리스트 — `VulkanRHIDevice::createAsyncComputeCommandList`). */
-        void setBreadcrumbSlotBase( uint32 slotBase ) { _context.setBreadcrumbSlotBase( slotBase ); }
+        /** @brief 비동기 컴퓨트 큐에 내는 리스트로 정합니다(`VulkanRHIDevice::createAsyncComputeCommandList`). 브레드크럼 칸과 타임스탬프 슬롯의 큐 표시가 따라온다. */
+        void setComputeQueueList( uint32 breadcrumbSlotBase )
+        {
+            _bComputeQueueList = SW_TRUE;
+            _context.setBreadcrumbSlotBase( breadcrumbSlotBase );
+        }
         /** @brief 빌린 쌍을 GPU 펜스 통과 후 풀로 돌려보냅니다. */
         ~VulkanRHICommandList() override;
 
@@ -51,8 +55,9 @@ namespace sw
 
     private:
         VulkanRHIDevice*        _pDevice;
-        VulkanCommandListEntry  _entry;       ///< 이 리스트 전용 커맨드 풀과 커맨드 버퍼
-        uint8                   _bEntryDirty; ///< 현재 쌍에 이미 기록했는가(있으면 다음 begin 때 교체합니다)
+        VulkanCommandListEntry  _entry;             ///< 이 리스트 전용 커맨드 풀과 커맨드 버퍼
+        uint8                   _bEntryDirty;       ///< 현재 쌍에 이미 기록했는가(있으면 다음 begin 때 교체합니다)
+        uint8                   _bComputeQueueList; ///< 비동기 컴퓨트 큐에 내는 리스트인가(setComputeQueueList)
         VulkanRecordingState    _state;
         VulkanRHICommandContext _context;
     };

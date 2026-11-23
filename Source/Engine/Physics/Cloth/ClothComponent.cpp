@@ -5,6 +5,8 @@
 #include "Engine/Animation/Component/SkeletalMeshComponent.h"
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
+#include "Engine/Automation/Watch/AutomationWatchComponent.h"
+#include "Engine/Environment/Wind/WindComponent.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/Tick/FixedStepContext.h"
@@ -36,7 +38,29 @@ namespace sw
             vertex._arrColor[3]    = 1.0f;
             return vertex;
         }
+
+        /** @brief 감시 값 `Cloth.HorizontalOffset` 입니다. 대상 천의 아랫줄 가운데가 윗줄 가운데에서 수평으로 벗어난 거리(m)입니다 — 바람에 날린 정도. */
+        [[nodiscard]] bool readClothHorizontalOffset( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
+        {
+            const ClothComponent* pCloth = query.findTargetComponent<ClothComponent>( "Cloth", outValue );
+            if ( pCloth == nullptr )
+                return false;
+            const vector<float3>& listVertex = pCloth->getVertices();
+            const size_t          columns    = pCloth->getColumnCount();
+            if ( columns == 0 || listVertex.size() < columns * 2 )
+            {
+                outValue.setText( "cloth not created" );
+                return false;
+            }
+            float3 offset{};
+            for ( size_t column = 0; column < columns; ++column )
+                offset += listVertex[listVertex.size() - columns + column] - listVertex[column];
+            outValue.setNumber( static_cast<float64>( float2{ offset._x, offset._z }.getLength() / static_cast<float32>( columns ) ) );
+            return true;
+        }
     } // namespace
+
+    SW_AUTOMATION_QUERY_WATCH( clothHorizontalOffset, "Cloth.HorizontalOffset", "Horizontal distance (m) from the top edge centre to the bottom edge centre of the target's cloth", &readClothHorizontalOffset, true, false );
 
     // 천 LOD 감시 값(시나리오 `game/playground/automation/clothlod`) — 씬의 첫 천을 읽는다.
     SW_AUTOMATION_GETTER_WATCH( clothIterationCount, "Cloth.IterationCount", "Solver iterations given to the first cloth's soft body (0: no soft body, e.g. suspended by LOD)", ClothComponent, &ClothComponent::getAppliedIterationCount );
@@ -63,12 +87,14 @@ namespace sw
         , _gravityFactor{ 1.0f }
         , _vertexRadius{ 0.01f }
         , _iterationCount{ 5 }
+        , _windDrag{ 1.0f }
         , _layer{}
         , _maxLOD{ -1 }
         , _listLODIterationCount{}
         , _listVertex{}
         , _listPinBoneWorld{}
         , _softBody{}
+        , _windTime{ 0.0f }
         , _appliedIterationCount{ 0 }
         , _bPinBoneErrorReported{ SW_FALSE }
         , _bLODSuspended{ SW_FALSE }
@@ -328,6 +354,7 @@ namespace sw
     {
         PhysicsComponent::onRegister( manager );
         registerFixedStep<&ClothComponent::onPhysicsFrameBegin>( manager, FixedStepGroup::FrameBegin );
+        registerFixedStep<&ClothComponent::onPrePhysicsStep>( manager, FixedStepGroup::PreStep );
         registerFixedStep<&ClothComponent::onPhysicsFrameEnd>( manager, FixedStepGroup::FrameEnd );
     }
 
@@ -385,6 +412,22 @@ namespace sw
             return;
         }
         pScene->setSoftBodyPinnedTransform( _softBody, position, rotation );
+    }
+
+    void ClothComponent::onPrePhysicsStep( const FixedStepContext& context )
+    {
+        const GameObject* const        pOwner   = getOwner();
+        const GameObjectManager* const pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        IPhysicsScene3D* const         pScene   = context.getPhysics().getScene3D();
+        const bool                     bNoAir   = _windDrag <= 0.0f || _softBody.isValid() == false || pScene == nullptr || pManager == nullptr;
+        if ( bNoAir )
+            return;
+        // 바람 컴포넌트가 없으면 바람이 없다 — 식생 · 돛의 엔진 기본 바람은 쓰지 않는다(실내 커튼이 저절로 날리지 않게).
+        WindSettings wind;
+        if ( WindComponent::findWind( *pManager, wind ) == false )
+            return;
+        _windTime += context.getFixedDeltaTime();
+        pScene->applySoftBodyWind( _softBody, wind.computeVelocity( getWorldPosition(), _windTime ), WindSettings::kAirDensity * _windDrag, context.getFixedDeltaTime() );
     }
 
     void ClothComponent::applySkinningPose( ScenePhysics& physics, bool bHardSkinAll )

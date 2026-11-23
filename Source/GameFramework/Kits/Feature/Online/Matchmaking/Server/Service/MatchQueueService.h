@@ -7,6 +7,7 @@
  *          - 티켓 흐름: 계정이 접속한 서버가 티켓을 만든다. 파티장이면 파티 전체의 티켓이며 실력은 모드의 실력 통계를 순위표 키트의 통계 창(`IAccountStatSource`)에서 읽는다.
  *            메모리에 없는 계정(다른 서버의 파티원, 막 접속한 사람)은 올려 달라고 한 뒤 3초까지 기다리고, 그래도 없으면 RatingUnavailable 이다.
  *            권한이 있으면 바로 매처에 넣고, 없으면 버스 `mm.queue.<모드>` 로 보낸다. 빠지기는 `mm.cancel.<모드>` 로 보낸다.
+ *            다른 서버가 낸 파티 티켓의 빠지기는 낸 서버에도 `mm.origincancel.<서버>` 로 보낸다 — 파티 기록에 잡혔지만 아직 대기열에 넣지 않은 티켓은 낸 서버만 안다.
  *          - 배정: 경기가 만들어지면 기반 계층의 `ServerRegistryReader` 로 모드의 서버 종류, 경기 지역, 인원 슬롯에 맞는 서버를 고른다.
  *            게임 서버에는 명단을 캐시 기록 `mm/match/<서버>/<경기>`(수명은 모드의 경기 시한, 목록은 정렬 집합 `mm/matches/<서버>`, 점수는 끝나는 시각)으로 남기고
  *            `mm.assign.<서버>` 로도 알린다. 버스 배정과 Found 는 기록 · 목록 쓰기가 Ok 를 받은 뒤에 나가고, 쓰기가 지면 NoServer 로 끝난다. 버스는 "최대 한 번" 이라 잃을 수 있으므로 게임 서버(`MatchServerAgent`)는 기록을 주기적으로 읽어 수락을 판정한다(Agones Allocation · PlayFab MPS 의 영속 배정).
@@ -65,12 +66,11 @@ namespace sw
     /** @brief 대기열 상수입니다. 다른 모듈이 값으로 읽으므로 내보내는 클래스 밖에 둡니다. */
     struct MatchQueueLimit
     {
-        static constexpr int64  kLeaseTTLMs       = 10000;
-        static constexpr int64  kLeaseRenewMs     = 3000; ///< 임대를 연장하거나 잡아 보는 주기이다
-        static constexpr int64  kNoServerGiveUpMs = 30000;
-        static constexpr int64  kResultGraceMs    = 10000;
-        static constexpr int64  kRatingWaitMs     = 3000;          ///< 줄 서는 사람의 통계를 읽기를 기다리는 시간이다. 넘으면 RatingUnavailable 이다
-        static constexpr uint64 kLobbyMatchBit    = 0x80000000ull; ///< 로비 경기 id 의 아래쪽 32비트 중 첫 비트이다. 매처의 순번과 겹치지 않게 한다
+        static constexpr int64 kLeaseTTLMs       = 10000;
+        static constexpr int64 kLeaseRenewMs     = 3000; ///< 임대를 연장하거나 잡아 보는 주기이다
+        static constexpr int64 kNoServerGiveUpMs = 30000;
+        static constexpr int64 kResultGraceMs    = 10000;
+        static constexpr int64 kRatingWaitMs     = 3000; ///< 줄 서는 사람의 통계를 읽기를 기다리는 시간이다. 넘으면 RatingUnavailable 이다
     };
 } // namespace sw
 
@@ -159,6 +159,7 @@ namespace sw
         static string makeCancelTopic( string_view modeID );
         static string makeBackfillTopic( string_view modeID );
         static string makeResultTopic( uint64 serverID );
+        static string makeOriginCancelTopic( uint64 serverID );
         static string makeAssignTopic( uint64 serverID );
         /** @brief 게임 서버 하나에 배정된 명단 기록의 키입니다. @p recordName 은 경기 id 16진이고, 백필은 뒤에 `.<티켓 id 16진>` 이 붙습니다. */
         static string makeMatchRecordKey( uint64 serverID, string_view recordName );
@@ -191,11 +192,13 @@ namespace sw
             uint64            _partyID{ 0 };
             int64             _deadlineMs{ 0 };
             int64             _cancelDeadlineMs{ 0 }; ///< 빠지기를 보낸 뒤 권한 서버의 답을 기다리는 시한(0 이면 빠지는 중이 아니다)
-            uint64            _leaveRequestTag{ 0 };  ///< 이 티켓을 뺀 `leaveQueue` 요청이다. 끝날 때(Cancelled · Found · Timeout) 답한다
+            vector<uint64>    _listLeaveRequestTag{}; ///< 이 티켓을 뺀 `leaveQueue` 요청들이다(파티원마다 낼 수 있다). 끝날 때(Cancelled · Found · Timeout) 모두 답한다
         };
 
         /** @brief 이 서버가 낸 티켓을 빼 달라고 권한 서버에 맡깁니다. 확인 답(Cancelled)이 와야 끝나며, 그 전에 Found 가 오면 경기가 이긴다(감사 O-18). */
         void requestCancel( uint64 ticketID, uint64 leaveRequestTag );
+        /** @brief 이 서버가 낸 티켓을 뺍니다. 넣은 티켓은 권한 서버의 확인을 기다리고, 파티 기록의 답을 기다리는 티켓은 NotQueued 로 끝냅니다. 이 서버의 티켓이 아니면 false 입니다. */
+        [[nodiscard]] bool cancelOwnTicket( uint64 ticketID );
         /** @brief 권한 서버가 티켓을 매처에서 실제로 뺐으면 낸 서버에 Cancelled 를 알립니다. 이미 짝지어졌으면 아무것도 하지 않습니다(Found 가 간다). */
         void confirmCancel( ModeState& state, uint64 ticketID );
 
@@ -224,6 +227,14 @@ namespace sw
             uint64            _partyID{ 0 };
         };
 
+        /** @brief 파티 기록에 티켓 잡기를 기다리는 줄 서기입니다. 잡은 뒤에만 티켓이 대기열에 들어갑니다. */
+        struct PartyReservation
+        {
+            PendingJoin _join{};
+            MatchTicket _ticket{};
+            uint8       _bDropped{ SW_FALSE }; ///< 기다리는 동안 빠졌다. 잡히면 바로 푼다
+        };
+
         /** @brief 명단 기록 쓰기를 기다리는 결과 하나입니다. `_recipientID` 가 있으면(로비 멤버) 그 계정에 바로 알리고, 없으면 티켓을 낸 서버로 보냅니다. */
         struct PendingDelivery
         {
@@ -243,7 +254,9 @@ namespace sw
             int64                   _expiresMs{ 0 };
         };
 
-        void onPartyFound( uint64 lookupTag, MatchmakingServiceResult result, const PartySnapshot& party );
+        /** @brief 티켓과 경기(모드 · 로비 모두)의 새 id 입니다. 위 32 비트가 이 서버, 아래가 순번 하나라 모드 · 로비끼리, 재시작 앞뒤로 겹치지 않는다(명단 기록의 이름이 경기 id 다). */
+        uint64 allocateID();
+        void   onPartyFound( uint64 lookupTag, MatchmakingServiceResult result, const PartySnapshot& party );
         /** @brief 파티 기록에 남은 다른 서버의 티켓을 권한 매처와 낸 서버에서 빼고 기록에서 지웁니다. */
         void onLeavePartyFound( uint64 lookupTag, MatchmakingServiceResult result, const PartySnapshot& party );
         /** @brief 통계가 모두 있으면 티켓을 내고, 아니면 올려 달라고 한 뒤 기다립니다. */
@@ -253,9 +266,14 @@ namespace sw
         [[nodiscard]] bool isRatingLoaded( const MatchModeDef& mode, AccountID accountID ) const;
         void               releaseRetained( const RatingWait& wait );
         [[nodiscard]] bool isJoinPending( AccountID accountID ) const;
-        /** @brief 파티 찾기나 통계 읽기를 기다리는, 그 계정이 든 줄 서기를 NotQueued 로 끝냅니다. 있었으면 true 입니다. */
+        /** @brief 파티 찾기 · 통계 읽기 · 파티 기록 잡기를 기다리는, 그 계정이 든 줄 서기를 NotQueued 로 끝냅니다. 있었으면 true 입니다. */
         [[nodiscard]] bool dropPendingJoin( AccountID accountID );
-        void               submitTicket( const PendingJoin& join, const vector<AccountID>& listAccount, uint64 partyID );
+        /** @brief 파티 기록의 답을 기다리는 티켓을 버립니다. 요청은 NotQueued 로 한 번만 끝나고, 답이 오면 기록을 풉니다. */
+        void dropReservation( PartyReservation& reservation );
+        /** @brief 티켓을 만듭니다. 파티면 파티 기록에 먼저 잡고(`onPartyTicketReserved`), 혼자면 바로 대기열에 넣습니다. */
+        void submitTicket( const PendingJoin& join, const vector<AccountID>& listAccount, uint64 partyID );
+        void onPartyTicketReserved( uint64 ticketID, MatchmakingServiceResult result, const PartySnapshot& party );
+        void enqueueTicket( const PendingJoin& join, const MatchTicket& ticket );
         /** @brief 백필로 채운 티켓을 게임 서버(배정)와 티켓을 낸 서버(결과)에 알립니다. */
         void deliverBackfill( const MatchBackfilled& backfilled, UnixMilliseconds nowMs );
         /**
@@ -290,6 +308,7 @@ namespace sw
         unordered_map<uint64, PendingJoin>      _mapLookupToJoin;  ///< 파티 찾기를 기다리는 줄 서기 요청이다
         unordered_map<uint64, LeaveRequest>     _mapLookupToLeave; ///< 파티 찾기를 기다리는 빠지기 요청이다
         vector<RatingWait>                      _listRatingWait;
+        unordered_map<uint64, PartyReservation> _mapTicketToReservation; ///< 파티 기록에 잡히기를 기다리는 티켓이다
         unordered_map<uint64, string>           _mapLeaseRequestToMode;
         unordered_map<uint64, PendingPlacement> _mapRecordWrite; ///< 명단 기록 쓰기의 답을 기다리는 배정이다(요청 id 열쇠)
         unordered_map<uint64, PendingPlacement> _mapListWrite;   ///< 기록은 남았고 목록 쓰기의 답을 기다리는 배정이다(요청 id 열쇠)
@@ -299,9 +318,8 @@ namespace sw
         MatchQueueDependencies                  _dependencies;
         Subscription                            _replyOwner; ///< 라우터 답의 주인 몫(`initialize` 가 열고 `shutdown` 이 놓는다)
         uint64                                  _nextLookupTag;
-        int64                                   _nowMs; ///< 마지막 `update` 의 시각이다(빠지기의 확인 시한을 센다)
-        uint32                                  _sequence;
-        uint32                                  _lobbySequence;
+        int64                                   _nowMs;    ///< 마지막 `update` 의 시각이다(빠지기의 확인 시한을 센다)
+        uint32                                  _sequence; ///< `allocateID` 의 순번이다
     };
 } // namespace sw
 
@@ -310,10 +328,11 @@ namespace sw
     /** @brief 매칭의 서버 버스 주제입니다. 내보내는 클래스의 정적 멤버로 두지 않습니다(지연 로드 모듈은 데이터를 가져올 수 없습니다). */
     struct MatchQueueBus
     {
-        static constexpr ServerBusTopicFamily<MatchTicket>          kQueueTopic{ "mm.queue." };       ///< 뒤에 모드 id. 권한 서버로 가는 티켓이다
-        static constexpr ServerBusTopicFamily<MatchTicketCancel>    kCancelTopic{ "mm.cancel." };     ///< 뒤에 모드 id. 권한 서버로 가는 티켓 취소이다
-        static constexpr ServerBusTopicFamily<MatchAssignment>      kResultTopic{ "mm.result." };     ///< 뒤에 서버 16진. 티켓을 낸 서버로 가는 결과이다
-        static constexpr ServerBusTopicFamily<MatchFormed>          kAssignTopic{ "mm.assign." };     ///< 뒤에 게임 서버 16진. 게임 서버로 가는 접속 예정자 목록이다
-        static constexpr ServerBusTopicFamily<MatchBackfillRequest> kBackfillTopic{ "mm.backfill." }; ///< 뒤에 모드 id. 게임 서버가 권한 서버로 보내는 경기 중 빈 슬롯이다
+        static constexpr ServerBusTopicFamily<MatchTicket>          kQueueTopic{ "mm.queue." };               ///< 뒤에 모드 id. 권한 서버로 가는 티켓이다
+        static constexpr ServerBusTopicFamily<MatchTicketCancel>    kCancelTopic{ "mm.cancel." };             ///< 뒤에 모드 id. 권한 서버로 가는 티켓 취소이다
+        static constexpr ServerBusTopicFamily<MatchTicketCancel>    kOriginCancelTopic{ "mm.origincancel." }; ///< 뒤에 서버 16진. 티켓을 낸 서버로 가는 다른 서버의 취소이다
+        static constexpr ServerBusTopicFamily<MatchAssignment>      kResultTopic{ "mm.result." };             ///< 뒤에 서버 16진. 티켓을 낸 서버로 가는 결과이다
+        static constexpr ServerBusTopicFamily<MatchFormed>          kAssignTopic{ "mm.assign." };             ///< 뒤에 게임 서버 16진. 게임 서버로 가는 접속 예정자 목록이다
+        static constexpr ServerBusTopicFamily<MatchBackfillRequest> kBackfillTopic{ "mm.backfill." };         ///< 뒤에 모드 id. 게임 서버가 권한 서버로 보내는 경기 중 빈 슬롯이다
     };
 } // namespace sw

@@ -53,7 +53,7 @@ namespace sw::editor
          * @brief 연 문서가 dirty 이고 지난 사본과 글이 다르면 그 id 와 글을 꺼냅니다. 상호작용 구간 중이면 미룹니다. 읽지 못한 문서 · 문서 글이 없는 패널은 사본이 없다.
          * @details 글은 주기(`EditorToolDefaults::_documentAutosaveSeconds`)마다 한 번만 만든다 — 편집 알림마다 직렬화하지 않는다(감사 E-9).
          */
-        [[nodiscard]] DocumentAutosaveResult takeAutosaveCopy( string& outDocumentPath, string& outText ) final;
+        [[nodiscard]] DocumentAutosaveResult takeAutosaveCopies( vector<EditorDocumentAutosaveEntry>& inoutListEntry ) final;
 
     private:
         static constexpr uint32 kMaxRecentDocumentCount = 8;
@@ -231,7 +231,7 @@ namespace sw::editor
         vector<string>                           _listRecentPath;
         vector<string>                           _listOpenCandidate; ///< 열기 팝업을 열 때 모은 이 종류의 에셋(리소스 id)
         fixed_string<constant::buffer::kMax128>  _openFilter;
-        uint64                                   _lastCopyTextHash; ///< 지난 자동 저장 사본의 글 해시(`takeAutosaveCopy`). 0 은 사본 없음 — 읽기 · 저장이 비운다
+        uint64                                   _lastCopyTextHash; ///< 지난 자동 저장 사본의 글 해시(`takeAutosaveCopies`). 0 은 사본 없음 — 읽기 · 저장이 비운다
         uint8                                    _bLoaded        : 1;
         uint8                                    _bConfirmSwitch : 1;
         uint8                                    _bLoadFailed    : 1;

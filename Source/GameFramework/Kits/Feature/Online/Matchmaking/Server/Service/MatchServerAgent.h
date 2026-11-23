@@ -28,10 +28,13 @@ namespace sw
     {
         string _modeID{};
         uint64 _matchID{ 0 };
+        uint64 _ticketID{ 0 }; ///< 이 자리를 준 티켓이다(로비 경기는 0). 같은 경기에 백필로 다시 들어온 사람은 티켓이 다르다
         int64  _expiresMs{ 0 };
+        int64  _placedMs{ 0 }; ///< 이 자리를 준 명단의 배정 시각(`MatchFormed::_placedMs`)이다. 버스와 기록은 순서 없이 온다 — 더 오래된 명단은 자리를 바꾸지 않는다
         int32  _team{ 0 };
         int32  _teamCount{ 0 };
         int32  _averageRating{ 0 };
+        uint8  _bTaken{ SW_FALSE }; ///< 꺼냈다(`takeSeat`). 같은 명단이 버스와 기록으로 두 번 와도 다시 채우지 않는다
     };
 } // namespace sw
 

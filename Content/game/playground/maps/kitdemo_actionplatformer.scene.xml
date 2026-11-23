@@ -27,7 +27,6 @@
 				<_listComponent>
 					<ActionPlatformerGameModeComponent _localID="4169608954724604248" _componentName="ActionPlatformerGameModeComponent"
 					                                   _bActive="true"
-					                                   _catalogPath="game/playground/data/kitdemo/demo.actionplatformer.xml"
 					                                   _stageID="demo-1"
 					                                   _startPosition="1.5,1.6"
 					                                   _goalX="27"

@@ -74,6 +74,8 @@ namespace sw::editor
          *        설정 파일이 비워집니다.
          */
         [[nodiscard]] expected<string> tryMakeDifferenceText() const;
+        /** @brief `tryMakeDifferenceText` 의 글 @p differenceText 를 저장하지 않은 값으로 입힙니다(자동 저장 사본 복원). 읽지 못하면 false 이고 값은 그대로입니다. */
+        [[nodiscard]] bool restoreDifferenceText( string_view differenceText );
         /** @brief 요소 모드(XML 파일 안의 설정 요소 하나)면 true 입니다. */
         [[nodiscard]] bool isElementMode() const { return _elementName.empty() == false; }
         /** @brief 타입이 바탕 층(`REFLECT( Meta = "ConfigBaseLayer" )` — 값이 파일에만 있다)이면 true 입니다. 그때 저장은 모든 키를 쓰고 되돌리기는 파일 값입니다. */

@@ -18,6 +18,7 @@
  *          - **순서:** 질의 결과는 항목을 올린 순서다(격자 칸 번호를 다시 쓰므로 번호 순서는 뜻이 없다).
  */
 #pragma once
+#include "Core/Concurrency/DevCounter.h"
 #include "Core/Container/SlotHandle.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
@@ -107,7 +108,7 @@ namespace sw
         void onWorldOriginShifted( const float3& delta ) override;
 
         /** @brief 지금까지 뒤 버퍼에 고쳐 넣은 항목 수입니다(증분을 보는 테스트 · 진단). */
-        uint64 getAppliedChangeCount() const { return _appliedChangeCount; }
+        const DevCounter& getAppliedChangeCount() const { return _appliedChangeCount; }
 
     private:
         /** @brief 항목 하나입니다. 핸들의 인덱스가 `_listEntry` 의 번호입니다. */
@@ -172,7 +173,7 @@ namespace sw
         uint32          _jobLayerCount; ///< 위 배열의 수
         TaskStageHandle _jobStage;
         uint64          _nextSequence;
-        uint64          _appliedChangeCount;
+        DevCounter      _appliedChangeCount;
         uint8           _frontIndex;
         uint8           _bJobLaunched  : 1;
         uint8           _bJobOnWorkers : 1;

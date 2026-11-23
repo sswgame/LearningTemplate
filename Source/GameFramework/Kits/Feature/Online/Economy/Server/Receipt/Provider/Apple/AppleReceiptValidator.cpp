@@ -183,8 +183,10 @@ namespace sw
         }
         const JWTVerified& token = *verified;
         (void)token.findText( "transactionId", outInfo._transactionID );  // 없으면 틀이 거절한다
-        (void)token.findText( "productId", outInfo._productID );          // 없으면 틀이 거절한다(환불이면 상관없다)
         (void)token.findText( "appAccountToken", outInfo._storeBuyerID ); // 클라이언트가 구매 때 찍은 값(`ReceiptBuyerToken`)
+        ReceiptLineItem& item = outInfo._listItem.emplace_back();         // 거래 하나에 상품 하나다. 상품 · 수가 없으면 틀이 거절한다(환불이면 상관없다)
+        (void)token.findText( "productId", item._productID );
+        (void)token.findInteger( "quantity", item._quantity ); // 애플 문서: 산 상품의 수
         int64 purchaseMs = 0;
         if ( token.findInteger( "purchaseDate", purchaseMs ) )
             outInfo._purchaseTimeMs = purchaseMs; // 이 숫자는 밀리초다(findInteger 가 초 클레임용으로 쓰지만 값은 그대로 읽는다)

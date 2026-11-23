@@ -1723,9 +1723,14 @@ namespace sw
         colorBlending.attachmentCount = blendCount;
         colorBlending.pAttachments    = blendCount > 0 ? arrColorBlendAttachment : nullptr;
 
-        VkRenderPass pipelineRp = _pDevice->ensurePipelineRenderPass( desc );
+        // 이 PSO 의 첨부 형식으로 만든 렌더 패스다. 못 만들면 스왑체인 렌더 패스로 대신하지 않는다 — 형식이 달라 그릴 때 호환되지 않는 PSO 가 조용히 선다.
+        const VkRenderPass pipelineRp = _pDevice->ensurePipelineRenderPass( desc );
         if ( pipelineRp == VK_NULL_HANDLE )
-            pipelineRp = _pDevice->_renderPass;
+        {
+            SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.CreatePipelineStateNoRenderPass", "createPipelineState: could not create the render pass for the PSO's attachment formats '%#'", desc._vertexShaderPath );
+            destroyShaderModules();
+            return 0;
+        }
 
         VkPipelineDepthStencilStateCreateInfo depthStencil{};
         depthStencil.sType                 = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
@@ -1883,7 +1888,7 @@ namespace sw
             spec.setDepth( _pDevice->_depthFormat, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL );
 
         if ( spec._colorCount == 0 && spec._depthFormat == 0 )
-            return _pDevice->_renderPassCache.addRenderPassRecord( _pDevice->_renderPass, false ); // 스왑체인 RP 별칭. 소유하지 않는다
+            return _pDevice->_renderPassCache.addRenderPassRecord( _pDevice->_swapChain.getRenderPass(), false ); // 스왑체인 RP 별칭. 소유하지 않는다
 
         VkRenderPass created = _pDevice->createRenderPassFromSpec( spec );
         if ( created == VK_NULL_HANDLE )
@@ -1898,7 +1903,7 @@ namespace sw
     bool VulkanRHIResourceFactory::destroyRenderPassNative( RHIRenderPassHandle pass )
     {
         VkRenderPass ownedRenderPass = VK_NULL_HANDLE;
-        if ( _pDevice->_renderPassCache.detachRenderPassRecord( pass, _pDevice->_renderPass, ownedRenderPass ) == false )
+        if ( _pDevice->_renderPassCache.detachRenderPassRecord( pass, _pDevice->_swapChain.getRenderPass(), ownedRenderPass ) == false )
             return false;
         if ( ownedRenderPass != VK_NULL_HANDLE )
         {

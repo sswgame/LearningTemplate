@@ -320,17 +320,6 @@ namespace sw
         _listChunkBatch.clear();
     }
 
-    uint32 TileMapComponent::getBuiltChunkCount() const
-    {
-        uint32 builtCount{ 0 };
-        for ( const unique_ptr<SpriteInstanceBatch>& pBatch : _listChunkBatch )
-        {
-            if ( pBatch != nullptr )
-                ++builtCount;
-        }
-        return builtCount;
-    }
-
     void TileMapComponent::refreshChunkCells( int32 chunkIndex )
     {
         if ( _listChunkBatch[static_cast<size_t>( chunkIndex )] == nullptr )

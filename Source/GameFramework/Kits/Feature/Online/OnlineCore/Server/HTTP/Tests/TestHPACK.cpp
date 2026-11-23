@@ -105,6 +105,30 @@ SW_TEST_CASE( HPACKTest, EncoderRoundTrips )
 }
 
 /**
+ * @brief [HPACKTest] 작은 블록이 큰 목록으로 풀리면 거절한다 — 표의 큰 항목 하나를 색인 한 바이트로 되풀이하면 블록 상한(64 KiB) 안에서 수백 메가가 풀린다(RFC 9113 6.5.2)
+ */
+SW_TEST_CASE( HPACKTest, RefusesAHeaderListThatExpandsPastTheLimit )
+{
+    constexpr uint32  kEntryValueBytes = 4000;
+    constexpr uint32  kRepeatCount     = 60000;
+    sw::vector<uint8> block;
+    block.push_back( 0x40 ); // 색인에 더하는 글자 그대로, 이름도 글자
+    block.push_back( 0x01 );
+    block.push_back( 'x' );
+    sw::HPACKEncoder::writeInteger( kEntryValueBytes, 7, 0x00, block );
+    block.insert( block.end(), kEntryValueBytes, static_cast<uint8>( 'v' ) );
+    sw::vector<sw::HTTPHeader> listHeader;
+    sw::HPACKDecoder           oneEntry;
+    SW_REQUIRE_TRUE( oneEntry.decode( block.data(), block.size(), listHeader ).has_value() ); // 항목 하나는 받는다
+    SW_EXPECT_EQUAL( size_t( 1 ), oneEntry.getDynamicTableCount() );
+
+    block.insert( block.end(), kRepeatCount, static_cast<uint8>( 0xBE ) ); // 색인 62 — 방금 더한 항목
+    sw::HPACKDecoder bomb;
+    SW_EXPECT_FALSE( bomb.decode( block.data(), block.size(), listHeader ).has_value() );
+    SW_EXPECT_TRUE( listHeader.empty() );
+}
+
+/**
  * @brief [HPACKTest] 표 밖 색인, 알린 상한보다 큰 표 크기 갱신, 끝이 잘린 문자열, 틀린 허프만 패딩을 거절하고 목록을 비운다
  */
 SW_TEST_CASE( HPACKTest, RefusesMalformedBlocks )

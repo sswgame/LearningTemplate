@@ -18,7 +18,7 @@
 	<WaitUntil watch="Object.DistanceTo" target="Crate" key="Hand" atMost="0.05" timeoutFrames="10"/>
 	<Expect watch="Gimmick.OccupantWeight" target="Plate" equals="0"/>
 
-	<DevCommand line="grab.throw Hand 0 0 0"/>
+	<DevCommand line='exec Hand throwHeld "0 0 0"'/>
 	<Expect watch="Grab.Held" target="Hand" is="none"/>
 	<WaitUntil watch="Gimmick.OccupantWeight" target="Plate" near="40" tolerance="0.01" timeoutSeconds="3"/>
 	<WaitUntil watch="Object.Y" target="Crate" atMost="0.3" timeoutSeconds="3"/>

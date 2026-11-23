@@ -48,6 +48,13 @@ struct SurfaceShading
     static uint resolveViewMode( uint shadingModel ); // 보기 모드가 조명을 끄면 Unlit
     static float packPair( float high, float low );   // 0..1 둘을 8 비트 칸 하나에(4 비트씩 — 천의 시엔 거칠기 · 무게)
     static float2 unpackPair( float packed );         // packPair 의 역 — (high, low)
+    static float packCoat( float weight, float roughness );
+    static float2 unpackCoat( float packed );          // packCoat 의 역 — (무게, 거칠기)
+    static float packCoatRoughness( float roughness ); // 코트 거칠기의 0..1 칸 값(제곱근) — unpackCoatRoughness 가 푼다
+    static float unpackCoatRoughness( float packed );
+    static float findBrightest( float3 color ); // 가장 밝은 채널
+    static float packChroma( float3 color );    // 색조를 8 비트 칸 하나에 — 밝기는 findBrightest 가 따로 든다
+    static float3 unpackColor( float brightest, float packedChroma );
 };
 
 struct SurfaceOutput
@@ -361,6 +368,48 @@ static float2 SurfaceShading::unpackPair( float packed )
 {
     const uint bits = (uint)round( saturate( packed ) * 255.0f );
     return float2( (float)( bits >> 4u ), (float)( bits & 15u ) ) / 15.0f;
+}
+
+/** @brief 코트 거칠기 칸 — 제곱근으로 싣는다. 물 · 눈물 · 기름막은 0.02 ~ 0.3 이라 4 비트 단계를 매끈한 쪽에 몰아야 하이라이트 크기가 튀지 않는다. */
+static float SurfaceShading::packCoatRoughness( float roughness )
+{
+    return sqrt( saturate( roughness ) );
+}
+
+static float SurfaceShading::unpackCoatRoughness( float packed )
+{
+    return packed * packed;
+}
+
+static float SurfaceShading::packCoat( float weight, float roughness )
+{
+    return SurfaceShading::packPair( weight, SurfaceShading::packCoatRoughness( roughness ) );
+}
+
+static float2 SurfaceShading::unpackCoat( float packed )
+{
+    const float2 pair = SurfaceShading::unpackPair( packed );
+    return float2( pair.x, SurfaceShading::unpackCoatRoughness( pair.y ) );
+}
+
+static float SurfaceShading::findBrightest( float3 color )
+{
+    return max( color.r, max( color.g, color.b ) );
+}
+
+/** @brief 색조 — 합 1 로 나눈 빨강 · 초록의 몫을 4 비트씩. 산란 색 · 시엔 색은 머티리얼 상수에 마스크 하나를 곱한 값이라 색조가 픽셀마다 흔들리지 않는다. */
+static float SurfaceShading::packChroma( float3 color )
+{
+    const float  sum   = color.r + color.g + color.b;
+    const float2 share = sum > 1e-5f ? color.rg / sum : float2( 1.0f / 3.0f, 1.0f / 3.0f );
+    return SurfaceShading::packPair( share.x, share.y );
+}
+
+static float3 SurfaceShading::unpackColor( float brightest, float packedChroma )
+{
+    const float2 share  = SurfaceShading::unpackPair( packedChroma );
+    const float3 chroma = float3( share, max( 1.0f - share.x - share.y, 0.0f ) );
+    return chroma * ( brightest / max( SurfaceShading::findBrightest( chroma ), 1e-3f ) );
 }
 
 #if SW_VIEWMODE_SKIPS_LIGHTING

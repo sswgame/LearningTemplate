@@ -37,7 +37,7 @@ namespace sw
         PartyAccept,
         PartyLeave,
         PartyKick,
-        PartySetTicket, ///< 대기열이 쓰며 완료는 없다. 기록의 티켓이 `_expectedTicketID` 일 때만 바꾼다
+        PartySetTicket, ///< 대기열이 쓰며 완료는 없다(잡기의 결과는 델리게이트). 기록의 티켓이 `_expectedTicketID` 일 때만 바꾼다
         PartyFind,      ///< 대기열이 쓰며 결과는 델리게이트로 전달한다
         LobbyCreate,
         LobbyList,
@@ -101,6 +101,7 @@ namespace sw
         {
             LobbySnapshot       _lobby{}; ///< LobbyCreate 의 요청이다
             PartyFoundDelegate  _onPartyFound{};
+            vector<AccountID>   _listExpectedMember{}; ///< PartySetTicket 으로 티켓을 잡을 때 기록의 멤버가 이것과 같아야 한다
             string              _modeID{};
             AccountID           _actorID{ kInvalidAccountID };
             AccountID           _targetID{ kInvalidAccountID };
@@ -135,8 +136,12 @@ namespace sw
         void acceptPartyInvite( AccountID accountID, uint64 partyID, uint64 requestTag );
         void leaveParty( AccountID accountID, uint64 requestTag );
         void kickFromParty( AccountID leaderID, AccountID targetID, uint64 requestTag );
-        /** @brief 줄 서지 않은 파티에 대기열 티켓을 기록합니다. 기록에 이미 티켓이 있으면 바꾸지 않습니다. 완료는 없습니다. */
-        void setPartyTicket( uint64 partyID, uint64 ticketID );
+        /**
+         * @brief 줄 서지 않은 파티에 대기열 티켓을 잡습니다. 결과는 나중에 @p onReserved( @p ticketID, 결과, 파티 )로 한 번 전달합니다.
+         * @details 기록이 "누가 줄 섰는가" 의 원본이라 티켓은 이 답이 Ok 인 뒤에만 대기열에 들어간다 — 먼저 넣으면 빠지기의 정리가 잡기보다 먼저 닿아 기록에 없는 티켓이 남는다.
+         *          이미 티켓이 있으면 AlreadyQueued, 멤버가 @p listMember 와 다르면(찾은 뒤 들어오거나 떠났다) kBusy 이다. 떠난 사람이 든 티켓이 서지 않는다.
+         */
+        void reservePartyTicket( uint64 partyID, uint64 ticketID, const vector<AccountID>& listMember, const PartyFoundDelegate& onReserved );
         /**
          * @brief 기록의 티켓이 @p ticketID 일 때만 지웁니다. 완료는 없습니다.
          * @details 비교 후 지우기라 늦게 온 정리(죽은 서버의 티켓을 다른 서버가 풀었고, 낸 서버도 뒤늦게 지우는 경우)가 그사이 새로 선 티켓을 지우지 않는다.

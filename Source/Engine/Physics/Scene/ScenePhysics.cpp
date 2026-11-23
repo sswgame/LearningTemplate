@@ -70,9 +70,6 @@ namespace sw
     SW_SCENE_SERVICE( ScenePhysics, Physics, makeSceneFrameAccess( SceneDataKindSet{ SceneDataKind::Transform }, SceneDataKindSet{}, SceneDataKindSet{ SceneDataKind::Structure } ) )
     SW_SCENE_SERVICE( ScenePhysicsEvents, FlushPostPhysics, makeSceneFrameAccess( SceneDataKindSet{ SceneDataKind::Structure, SceneDataKind::Transform, SceneDataKind::AnimatorState, SceneDataKind::Navigation }, SceneDataKindSet{}, SceneDataKindSet{} ) )
 
-    /** @brief 활성 씬의 강체 물리(바디 셰이프 · 캐릭터 캡슐)를 디버그 선으로 그립니다(`ScenePhysics::drawDebug` → `DebugDrawQueue`). */
-    SW_GLOBAL_VARIABLE( bool, gv_physicsDebugDraw, false, "강체 물리 바디 · 캐릭터를 디버그 선으로 그린다" );
-
     ScenePhysics::ScenePhysics( GameObjectManager& manager )
         : _manager{ manager }
         , _pPhysicsSystem{ locateSubsystem<PhysicsSystem>( manager.getSceneEngineServices()._pEngineSubsystems ) }
@@ -919,13 +916,5 @@ namespace sw
     void ScenePhysics::applyPreviewPolicy( const ScenePreviewPolicy& policy )
     {
         setFixedStepOverride( policy._fixedStepOverride );
-    }
-
-    void ScenePhysics::drawDebug( DebugDrawQueue& queue )
-    {
-        if ( gv_physicsDebugDraw == false )
-            return;
-        PhysicsDebugQueueRenderer renderer{ queue };
-        drawDebug( static_cast<IPhysicsDebugRenderer&>( renderer ) );
     }
 } // namespace sw

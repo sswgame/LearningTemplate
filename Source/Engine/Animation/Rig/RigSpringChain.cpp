@@ -97,7 +97,6 @@ namespace sw
         , _lastRootPosition{}
         , _accumulator{ 0.0f }
         , _lastStep{ 0.0f }
-        , _lastStepCount{ 0 }
         , _bInitialized{ SW_FALSE }
     {
     }
@@ -148,7 +147,6 @@ namespace sw
                                    const float4x4& worldFromModel, const float3& worldGravity, float32 deltaSeconds, const RigSolveSpace& space )
     {
         const uint32 count = static_cast<uint32>( listBone.size() );
-        _lastStepCount     = 0;
         if ( count < 2 )
             return;
         _listAnimated.resize( count );
@@ -222,7 +220,6 @@ namespace sw
             }
         }
         _lastRootPosition = root;
-        _lastStepCount    = stepCount;
         _lastStep         = step;
 
         // 본을 루트부터 입자 쪽으로 돌린다(부모를 돌리면 자식 위치가 바뀌므로 차례로 돌린다).

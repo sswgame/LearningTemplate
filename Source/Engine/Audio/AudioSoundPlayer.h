@@ -36,6 +36,7 @@ namespace sw
         SoundPlayingID     postEventAt( const hashed_string& eventName, const float3& position ) override;
         SoundPlayingID     postEventOn( GameObject& target, const hashed_string& eventName ) override;
         void               setObjectParameter( const GameObject& object, const hashed_string& name, float32 value ) override;
+        void               setParameter( const hashed_string& name, float32 value ) override;
         void               stop( SoundPlayingID playingID, float32 fadeSeconds ) override;
 
     private:

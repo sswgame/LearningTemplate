@@ -144,6 +144,40 @@ SW_TEST_CASE( SequencePlaybackTest, FinishAndReplayRestore )
     SW_EXPECT_FALSE( pHero->isActive() );
 }
 
+/** @brief [SequencePlaybackTest] 시간만 재는 재생(`copyTimelineFrom`)은 같은 시퀀스의 적용하는 재생과 함께 돌아도 묶인 오브젝트를 건드리지 않고, 끝 · 멈춤이 그 재생의 상태를 풀지 않는다 */
+SW_TEST_CASE( SequencePlaybackTest, TimelineOnlyPlayTouchesNothing )
+{
+    using Util = SequencePlaybackTestUtil;
+    GameObjectManager        manager;
+    GameObject*              pHero   = nullptr;
+    SequencePlayerComponent* pPlayer = Util::makeScene( manager, pHero );
+    SW_REQUIRE_NOT_NULL( pPlayer );
+    pPlayer->setSequence( Util::makeMoveSequence( SequenceFinishPolicy::RestoreState ) );
+    pPlayer->setBinding( 1, pHero->getHandle() );
+    SequencePlayerComponent* pTimer = manager.createGameObject( hashed_string( "Timer" ) )->addComponent<SequencePlayerComponent>();
+    SW_REQUIRE_NOT_NULL( pTimer );
+    pTimer->copyTimelineFrom( *pPlayer );
+    SW_EXPECT_TRUE( pTimer->getBindings().empty() );
+
+    pTimer->play(); // 바인딩이 없어도 돈다 — 적용하지 않는다
+    Util::update( manager, *pTimer, 0.1f );
+    SW_REQUIRE_TRUE( pTimer->isPlaying() );
+    SW_EXPECT_NEAR( 1.0f, Util::readX( *pHero ), 1e-4f );
+    SW_EXPECT_FALSE( pHero->isActive() );
+
+    pPlayer->play();
+    Util::update( manager, *pPlayer, 0.1f );
+    SW_EXPECT_NEAR( 5.0f, Util::readX( *pHero ), 1e-4f );
+    SW_EXPECT_TRUE( pTimer->skipToEnd() );
+    SW_EXPECT_FALSE( pTimer->isPlaying() );
+    SW_EXPECT_EQUAL( 1u, pTimer->getHistory().countKind( SequenceHistoryKind::Finished ) );
+    SW_EXPECT_TRUE( pPlayer->isPlaying() ); // 적용하는 재생은 그대로다
+    SW_EXPECT_NEAR( 5.0f, Util::readX( *pHero ), 1e-4f );
+    SW_EXPECT_TRUE( pHero->isActive() );
+    pPlayer->stop();
+    SW_EXPECT_NEAR( 1.0f, Util::readX( *pHero ), 1e-4f );
+}
+
 /** @brief [SequencePlaybackTest] 재생에 필요한 바인딩이 묶이지 않았으면 오류를 남기고 틀지 않는다 — 이름이 같은 오브젝트가 있어도 찾지 않는다 */
 SW_TEST_CASE( SequencePlaybackTest, UnboundBindingDoesNotPlay )
 {

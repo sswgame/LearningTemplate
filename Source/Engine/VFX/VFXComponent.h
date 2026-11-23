@@ -192,6 +192,7 @@ namespace sw
         shared_ptr<const VFXEffectDef>                _pEffect;                ///< 읽은 효과(공유 캐시의 한 벌 — 사용자 파라미터의 기본값과 방출기 정의를 든다). 읽지 못했으면 nullptr
         PROPERTY( Category = "VFX", DisplayName = "User Parameters", Tooltip = "Overrides of the effect's user parameters by name" )
         vector<VFXUserParameterDef> _listUserParameter;
+        float3                      _lastOrigin;         ///< 지난 틱(또는 재생 시작)의 월드 자리 — 월드 공간 입자를 이동만큼 되돌린다
         PrimitiveRegistry*          _pPrimitiveRegistry; ///< 등록된 씬의 프리미티브 레지스트리(빌림). 등록 전이면 nullptr
         PROPERTY( Category = "VFX", DisplayName = "Seed", Tooltip = "Random seed of the emitters; the same seed replays the same particles" )
         uint32 _seed;

@@ -48,6 +48,53 @@ SW_TEST_CASE( XMLDocumentTest, WrappedLinesRoundTrip )
 }
 
 /**
+ * @brief [XMLDocumentTest] 원소 글의 양 끝 공백이 저장 · 읽기를 지나도 남고, 여러 줄 글 속의 `<` 줄은 접히지 않는다(결함: 읽기가 양 끝을 다듬어 글 목록의 공백이 사라졌다)
+ */
+SW_TEST_CASE( XMLDocumentTest, ElementTextKeepsEdgeSpaces )
+{
+    const sw::string longTagLine( 100, 'x' );
+    sw::string       multiLine = "first\n<tag a=\"1\" b=\"";
+    multiLine.append( longTagLine );
+    multiLine.append( "\">\n" );
+    // 결함: `\r` 은 어느 글에서도 읽을 때 `\n` 이 되고, 양 끝에 공백이 있고 `]]>` 가 든 글은 공백을 잃었다.
+    const sw::string arrText[] = { "  lead", "tail \t", " ", "\n", "plain", "a <b> & \"c\" ", "ends ]]> here", multiLine, " both ]]> ends ", "]]>", "a\r\nb", "tail\r", "\r", " \r\n", " a]]\r>b " };
+
+    sw::XMLDocument   document;
+    const sw::XMLNode root = document.appendRoot( "Root" );
+    for ( const sw::string& text : arrText )
+    {
+        root.appendChild( "item" ).setValue( sw::string_view( text ) );
+    }
+    const sw::string saved = document.saveToString();
+    sw::XMLDocument  reread;
+    SW_REQUIRE_TRUE( reread.parse( saved ) );
+    sw::XMLNode item = reread.getRoot( "Root" ).findChild( "item" );
+    for ( const sw::string& text : arrText )
+    {
+        SW_REQUIRE_TRUE( item.isValid() );
+        SW_EXPECT_EQUAL( text, sw::string( item.getText() ) );
+        item = item.findNextSibling( "item" );
+    }
+    SW_EXPECT_EQUAL( saved, reread.saveToString() ); // 다시 저장해도 같다
+
+    const sw::XMLNode first = reread.getRoot( "Root" ).findChild( "item" );
+    first.setValue( "short" ); // CDATA 였던 글을 바꿔도 하나다
+    SW_EXPECT_EQUAL( sw::string( "short" ), sw::string( first.getText() ) );
+
+    // 결함: CDATA 였던 원소에 `]]>` 가 든 글을 쓰면 CDATA 가 둘로 나뉘어 저장되고 읽기는 앞의 것만 돌려주었다.
+    const sw::XMLNode second = first.findNextSibling( "item" );
+    second.setValue( "was ]]> raw" );
+    SW_EXPECT_EQUAL( sw::string( "was ]]> raw" ), sw::string( second.getText() ) );
+    first.setValue( " raw" );
+    first.setValue( first.getText() ); // 제 글을 다시 쓴다
+    sw::XMLDocument rewritten;
+    SW_REQUIRE_TRUE( rewritten.parse( reread.saveToString() ) );
+    const sw::XMLNode rewrittenFirst = rewritten.getRoot( "Root" ).findChild( "item" );
+    SW_EXPECT_EQUAL( sw::string( " raw" ), sw::string( rewrittenFirst.getText() ) );
+    SW_EXPECT_EQUAL( sw::string( "was ]]> raw" ), sw::string( rewrittenFirst.findNextSibling( "item" ).getText() ) );
+}
+
+/**
  * @brief [XMLDocumentTest] 실수 묶음은 정확히 그 개수만 읽고, 쓴 글을 다시 읽으면 같은 값이다
  */
 SW_TEST_CASE( XMLDocumentTest, FloatListRules )

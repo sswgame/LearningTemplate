@@ -43,8 +43,7 @@ namespace sw
                                 &MechArenaDemoComponent::getLoserGauge );
 
     MechArenaDemoComponent::MechArenaDemoComponent()
-        : _catalogPath{}
-        , _pCatalog{}
+        : _pCatalog{}
         , _winningTeam{ MechArenaDemoComponentInternal::kNoWinningTeam }
         , _winnerKills{ 0 }
         , _loserGauge{ 0 }
@@ -102,7 +101,7 @@ namespace sw
 
     bool MechArenaDemoComponent::startGame()
     {
-        if ( acquireRequired( _catalogPath, _pCatalog ) == false )
+        if ( acquireBoundCatalog( _pCatalog ) == false )
             return false;
         return runMatch();
     }

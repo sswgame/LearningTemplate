@@ -21,7 +21,6 @@
 #include "Engine/Audio/Graph/AudioGraphDef.h"
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/EngineConfig.h"
-#include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/Pack/AssetCookRoot.h"
 #include "Engine/Foundation/EngineServices.h"
@@ -676,39 +675,6 @@ namespace sw
         SW_ASSERT( bExposed );
         (void)bExposed;
     } );
-} // namespace sw
-
-namespace sw
-{
-    namespace
-    {
-        /**
-         * @brief 개발 명령 `audio.post <event>` — 읽은 이벤트 라이브러리의 소리 이벤트를 화면 소리(2D)로 냅니다.
-         * @details 대사 음성의 자막(이벤트의 자막 키 → 자막 서비스)과 믹스를 시나리오 · 콘솔에서 게임 코드 없이 확인한다(언리얼 콘솔 `PlaySoundCue` 자리). 배포본에는 등록되지 않는다.
-         */
-        struct AudioDevCommandInternal
-        {
-            static bool runPost( const vector<string>& listArgument, string& outReply )
-            {
-                if ( listArgument.size() != 1 )
-                    return false;
-                AudioService* const pAudio = engine::findSubsystem<AudioService>();
-                if ( pAudio == nullptr || pAudio->isInitialized() == false )
-                {
-                    outReply = "audio.post: no audio service";
-                    return true;
-                }
-                const AudioPlayingID                     playingID = pAudio->getEngine().postEvent( hashed_string( listArgument[0] ) ); // 모르는 이벤트는 엔진이 알린다
-                StringBuilder<constant::buffer::kMax256> replyBuilder;
-                replyBuilder.appendFormat( "audio.post '%#': playing id %#", listArgument[0].c_str(), playingID );
-                outReply = string( replyBuilder.view() );
-                return true;
-            }
-        };
-    } // namespace
-
-    SW_DEV_COMMAND( AudioPost, "audio.post", "audio.post <event>", "Post a sound event of the loaded event library as a 2D sound (dialogue lines with subtitles, mix checks)",
-                    &AudioDevCommandInternal::runPost );
 } // namespace sw
 
 // 기본 믹서 그래프는 상수로 읽는다 - 쓰는 것만 담는 팩 쿠킹의 뿌리다(`AssetCookRoot.h`).

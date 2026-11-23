@@ -132,7 +132,7 @@ namespace sw
         /** @brief 다시 읽기 정리가 남긴 옛 판을 프레임 경계에서 놓습니다(`SharedAssetTable::collectRetired`). */
         size_t collectRetiredVersions() override;
         /** @brief 이 캐시가 나눠 준 @p pAsset 의 판입니다(`SharedAssetRef` 가 받을 때 한 번 찾는다). 이 캐시에서 오지 않았거나 비었으면 nullptr 입니다. 워커에서 불러도 됩니다. */
-        [[nodiscard]] static const WeakInternVersion<const AssetType>* findVersion( const shared_ptr<const AssetType>& pAsset );
+        [[nodiscard]] static const WeakInternVersion<const AssetType>* findVersion( const AssetType* pAsset );
         /** @brief 지금 누가 쥔 에셋 수입니다. */
         size_t getCachedCount() const override;
         /** @brief 쥔 에셋마다 경로 · 객체 크기 · 쥔 쪽 수 한 줄입니다(`AssetCacheBase::collectMemoryEntries`). */

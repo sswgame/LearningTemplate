@@ -68,6 +68,8 @@ namespace sw
     {
         // 적지 않은 칸은 초기값이다. 깨진 값 · 범위 밖 값은 오류다(자르지 않는다). 날씨는 그 원소를, 전환 시간은 표 전체를 넣지 않는다.
         _listMaterialBinding.clear(); // 다시 읽기는 같은 카탈로그에 읽는다 — 옛 바인딩을 남기지 않는다
+        _listSceneBinding.clear();
+        _listSoundBinding.clear();
         WeatherCatalogRootParams rootParams{ _transitionTime, _materialCollection };
         if ( root.readProperties( rootParams, sourceName ) == false )
             return 0;
@@ -77,6 +79,8 @@ namespace sw
         static constexpr Element kArrElement[] = {
             Element::of<&WeatherCatalog::loadWeather>( "Weather" ),
             Element::of<&WeatherCatalog::loadMaterialBinding>( "MaterialBinding" ),
+            Element::of<&WeatherCatalog::loadSceneBinding>( "SceneBinding" ),
+            Element::of<&WeatherCatalog::loadSoundBinding>( "SoundBinding" ),
         };
         const XMLCatalogReadResult result = XMLCatalogReadResult::readInDocumentOrder( *this, root, sourceName, kArrElement );
         return result._loadedCount;
@@ -132,6 +136,24 @@ namespace sw
             return false;
         }
         _listMaterialBinding.push_back( binding );
+        return true;
+    }
+
+    bool WeatherCatalog::loadSceneBinding( const XMLNode& node, string_view sourceName )
+    {
+        WeatherSceneBinding binding;
+        if ( XMLFields::readProperties( node, binding, sourceName ) == false )
+            return false;
+        _listSceneBinding.push_back( binding );
+        return true;
+    }
+
+    bool WeatherCatalog::loadSoundBinding( const XMLNode& node, string_view sourceName )
+    {
+        WeatherSoundBinding binding;
+        if ( XMLFields::readProperties( node, binding, sourceName ) == false )
+            return false;
+        _listSoundBinding.push_back( binding );
         return true;
     }
 

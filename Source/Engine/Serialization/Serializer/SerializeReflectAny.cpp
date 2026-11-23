@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/Encoding/HexUtil.h"
+#include "Core/Serialization/ByteStream.h"
 #include "Core/String/StringBuilder.h"
 
 #include "Engine/Reflection/ReflectedAny.h"
@@ -35,25 +36,17 @@ namespace sw
             {
                 ReflectedAny& any = *static_cast<ReflectedAny*>( pPtr );
                 any               = ReflectedAny{};
-                if ( offset + sizeof( uint32 ) > size )
+                if ( offset > size )
                     return false;
-                uint32 nameLen{ 0 };
-                Memory::copy( &nameLen, pData + offset, sizeof( uint32 ) );
-                offset += sizeof( uint32 );
-                if ( offset + nameLen > size )
+                ByteReader        reader( pData + offset, size - offset );
+                const string_view typeName = reader.readStringView();
+                vector<uint8>     bytes    = reader.readByteVector();
+                if ( reader.hasOverflowed() )
                     return false;
                 // 찾기만 한다. 모르는 타입이면 None 으로 남는다(그 값은 어차피 풀 수 없다) — 파일의 이름을 intern 하지 않는다.
-                any._typeFqn = hashed_string::findInterned( string_view{ reinterpret_cast<const utf8*>( pData + offset ), nameLen } );
-                offset += nameLen;
-                if ( offset + sizeof( uint32 ) > size )
-                    return false;
-                uint32 blobLen{ 0 };
-                Memory::copy( &blobLen, pData + offset, sizeof( uint32 ) );
-                offset += sizeof( uint32 );
-                if ( offset + blobLen > size )
-                    return false;
-                any._bytes.assign( pData + offset, pData + offset + blobLen );
-                offset += blobLen;
+                any._typeFqn = hashed_string::findInterned( typeName );
+                any._bytes   = std::move( bytes );
+                offset       = size - reader.getRemainingByteCount();
                 return true;
             }
 

@@ -117,5 +117,5 @@ namespace sw
         };
     } // namespace
 
-    SW_DEBUG_HUD_SECTION( npc, "npc", "NPC (schedule, AI, blackboard)", 230, DebugHUDSectionFlag::kNone, &AIDebugSectionsInternal::writeNPC );
+    SW_DEBUG_HUD_SECTION( npc, AIControllerComponent::kDebugCategoryName, "NPC (schedule, AI, blackboard)", 230, DebugHUDSectionFlag::kNone, &AIDebugSectionsInternal::writeNPC );
 } // namespace sw

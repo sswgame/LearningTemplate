@@ -36,8 +36,7 @@ namespace sw
     SW_AUTOMATION_GETTER_WATCH( kitDemoCardGamePlayerHP, "KitDemo.CardGame.PlayerHP", "Player HP after the deck battle", CardGameDemoComponent, &CardGameDemoComponent::getPlayerHP );
 
     CardGameDemoComponent::CardGameDemoComponent()
-        : _catalogPath{}
-        , _pCatalog{}
+        : _pCatalog{}
         , _phase{ 0 }
         , _turn{ 0 }
         , _playerHP{ 0 }
@@ -84,7 +83,7 @@ namespace sw
 
     bool CardGameDemoComponent::startGame()
     {
-        if ( acquireRequired( _catalogPath, _pCatalog ) == false )
+        if ( acquireBoundCatalog( _pCatalog ) == false )
             return false;
         return runBattle();
     }

@@ -54,12 +54,6 @@ namespace sw
             textBuilder3.appendFormat( "part '%#' has minLoadVersion %# above its version %#", part._id.c_str(), part._minLoadVersion, part._version );
             outListProblem.push_back( string( textBuilder3.view() ) );
         }
-        if ( part._replacedID.empty() == false && findPart( part._replacedID ) != nullptr )
-        {
-            StringBuilder<constant::buffer::kMax256> textBuilder2;
-            textBuilder2.appendFormat( "part '%#' replaces '%#', which is still a part of this catalog", part._id.c_str(), part._replacedID.c_str() );
-            outListProblem.push_back( string( textBuilder2.view() ) );
-        }
         // 소켓은 점유 상자(회전 0) 안이다 — 밖의 소켓에 붙은 부품은 자기 칸 밖에 놓여 겹침 검사와 어긋난다.
         const float32 halfX = static_cast<float32>( part._sizeX ) * _root._cellSize * 0.5f + Internal::kBoundsEpsilon;
         const float32 halfZ = static_cast<float32>( part._sizeZ ) * _root._cellSize * 0.5f + Internal::kBoundsEpsilon;
@@ -103,7 +97,7 @@ namespace sw
             Element::of<&HousingPartCatalog::loadPart>( "Part" ),
         };
         const XMLCatalogReadResult result = XMLCatalogReadResult::readInDocumentOrder( *this, root, sourceName, kArrElement );
-        // 스냅 지점 · 판 · 이어받기는 모든 부품을 읽은 뒤에 본다(앞 부품이 뒤 부품의 소켓 종류를 가리킬 수 있다). 하나라도 틀리면 파일 전체를 거절한다 — 틀린 부품을 빼고 쓰면 그 부품의 세이브가 조용히 사라진다.
+        // 스냅 지점 · 판은 모든 부품을 읽은 뒤에 본다(앞 부품이 뒤 부품의 소켓 종류를 가리킬 수 있다). 이어받기(`replaces`)는 참조 표(`datacatalogreferences.xml`)가 본다. 하나라도 틀리면 파일 전체를 거절한다 — 틀린 부품을 빼고 쓰면 그 부품의 세이브가 조용히 사라진다.
         vector<string> listProblem;
         for ( const HousingPartDef& part : getParts() )
             (void)validatePart( part, listProblem );

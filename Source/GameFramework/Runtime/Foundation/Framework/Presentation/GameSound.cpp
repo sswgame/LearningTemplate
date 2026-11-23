@@ -49,6 +49,20 @@ namespace sw
         if ( pPlayer != nullptr )
             pPlayer->setObjectParameter( object, name, value );
     }
+
+    void GameSound::setParameter( const hashed_string& name, float32 value )
+    {
+        ISoundPlayer* pPlayer = game::findSubsystem<ISoundPlayer>();
+        if ( pPlayer != nullptr )
+            pPlayer->setParameter( name, value );
+    }
+
+    void GameSound::stop( SoundPlayingID playingID, float32 fadeSeconds )
+    {
+        ISoundPlayer* pPlayer = game::findSubsystem<ISoundPlayer>();
+        if ( pPlayer != nullptr )
+            pPlayer->stop( playingID, fadeSeconds );
+    }
 } // namespace sw
 
 namespace sw

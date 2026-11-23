@@ -14,24 +14,18 @@ include("${CMAKE_CURRENT_LIST_DIR}/../Environment/PythonUtils.cmake")
 set(pack_output_dir "${CMAKE_BINARY_DIR}/Bin/Packs")
 
 # 배포 빌드는 런타임 셰이더 컴파일이 없다 — 쿠킹해 둔 바이너리가 소스와 어긋나 있으면 화면이
-# 통째로 비고, 그 사실이 실행해 보기 전까지 드러나지 않는다. 그래서 Shipping 쿠킹에서만
-# 검증을 켠다: cook.stamp 의 내용 해시로 확인하고, 쿠커(App.exe)가 있으면 스스로 다시
-# 쿠킹하고, 그래도 어긋나면 패킹하지 않고 빌드를 세운다. Dev 빌드는 런타임 컴파일이 있으므로
-# 이 검사를 걸 이유가 없다.
+# 통째로 비고, 그 사실이 실행해 보기 전까지 드러나지 않는다. 그래서 팩을 구울 때 셰이더를 함께 굽고 판정하며, 어긋나면 패킹하지 않고 빌드를 세운다.
 # 프리팹·씬 쿠킹 산출물은 소스 트리(Content/)가 아니라 빌드 폴더에 스테이징한다 — 소스 옆에 두면
 # 낡은 .bin 이 남아 Dev 런타임이 그것으로 물러나 실패를 가린다. 팩 안 경로는 같다(cookPack 이 병합).
-# 씬 쿠킹은 엔진 안(App --cook-scenes)에서 돈다 — 리플렉션이 필요해서다. 그래서 이 타겟은 App **뒤**에
-# 와야 하고, App 경로는 빌드 폴더를 뒤지지 않고 CMake 가 그대로 넘긴다. 주의: 방향을 거꾸로(App 이 CookAssets 에
-# 의존) 걸면 깨끗한 트리(CI)에서 아직 없는 App 을 찾다가 죽는다 — 로컬에서는 다른 프리셋의 낡은 App.exe 가
-# 우연히 있어 지나간다. 의존 방향은 sw_configure_app_dependencies 가 건다.
-# 씬 쿠킹을 돌리는 엔진 실행 파일 — 전용 서버 타깃에는 App 이 없어 Server 가 쿠킹한다(같은 Headless 단계가 씬을 쿠킹한다).
+# 씬 쿠킹은 리플렉션이 필요해 엔진 실행 파일(App · Server 의 DevTools/Cook)이 한다 — 전용 서버 타깃에는 App 이 없어 Server 가 쿠킹한다(같은 Headless 단계).
 # 서버는 셰이더를 쿠킹 · 검증하지 않는다(DXC 가 없고, 그릴 것이 없다).
+# 누가 굽는가: 개발 구성은 그 빌드의 실행 파일, 교차 빌드와 배포 빌드는 호스트 개발 빌드의 실행 파일이다 — 쿠커(DevTools)는 배포 구성에 없다(언리얼도 에디터 빌드가 배포본을 굽는다).
 if(SW_TARGET_TYPE STREQUAL "Server")
-	set(SW_COOK_HOST_TARGET Server)
+	set(cook_host_name Server)
 else()
-	set(SW_COOK_HOST_TARGET App)
+	set(cook_host_name App)
 endif()
-# 쿠킹은 엔진 한 곳이다(`App --cook-all`: 씬 · 프리팹 · 레지스트리 · VAT · 내비메시를 스테이징하고 팩을 굽는다 — `PackCooker`).
+# 쿠킹은 DevTools/Cook 한 곳이다(`App --cook-all`: 씬 · 프리팹 · 레지스트리 · VAT · 내비메시를 스테이징하고 팩을 굽는다 — `PackCooker`).
 # 빌드 타깃이 빼는 에셋 종류(Config/Engine/CookContract.json 의 target_excluded_asset_kinds — 서버: 텍스처 · 셰이더 바이너리 · 오디오)는
 # 쿠킹하는 호스트가 정한다(Server 가 구우면 서버 팩이다). 팩 설정은 Config/Engine/PackConfig.json 이다.
 # 셰이더도 같은 스테이징에 굽고(바뀐 것만) 소스와 맞는지 본 뒤 팩에 담는다(`cookShadersForPack`) — 따로 주는 인자가 없다.
@@ -68,47 +62,54 @@ function(sw_cook_command_prefix COOKER_DIR OUT_VAR)
 		-- PARENT_SCOPE)
 endfunction()
 
-if(CMAKE_CROSSCOMPILING)
-	# 교차 빌드(Android · 웹)의 App 은 이 기계에서 돌지 않는다 — 호스트 개발 빌드의 App 이 굽는다(ReflectionParser 와 같은 호스트 도구, cmake/Modules/Build/HostTools.cmake).
+if(CMAKE_CROSSCOMPILING OR SW_SHIPPING_BUILD)
+	# 교차 빌드(Android · 웹)의 App 은 이 기계에서 돌지 않고 배포 구성에는 쿠커가 없다 — 호스트 개발 빌드의 App(서버 타깃은 Server)이 굽는다(cmake/Modules/Build/HostTools.cmake).
 	# 팩 내용은 다른 배포 대상과 같다. 대상마다 다른 것은 둘뿐이다:
 	#   - 셰이더 바이너리: 이 빌드의 배포 백엔드(SW_SHIPPING_RHI_BACKEND — Android Vulkan, 웹 WebGPU)를 명령줄 이름(CookContract.json command_line_name)으로 넘긴다.
-	#   - 텍스처: 모든 배포 대상의 형식 변형(ASTC · ETC2 — EngineConfig.json _textureFormats)을 먼저 굽는다(--cook-texture-variants, 에디터 모듈이 있는 개발 빌드의 일).
+	#   - 텍스처(교차 빌드만): 모든 배포 대상의 형식 변형(ASTC · ETC2 — EngineConfig.json _textureFormats)을 먼저 굽는다(--cook-texture-variants, 에디터 모듈이 있는 개발 빌드의 일).
 	#     팩은 곁 파일 규칙으로 변형을 함께 담고, 실행이 플랫폼의 대상(_listPlatform)에서 장치가 지원하는 첫 묶음을 고른다.
 	# shortcut: 같은 작업 트리의 데스크톱 팩도 구워 둔 변형을 곁 파일로 담는다(배포 크기), 크기가 문제가 되면 PackCooker 가 굽는 대상의 묶음 변형만 담게 한다.
 	if(CMAKE_HOST_WIN32)
-		set(host_cook_app_name "App.exe")
+		set(host_exe_suffix ".exe")
 	elseif(CMAKE_HOST_UNIX)
-		set(host_cook_app_name "App")
+		set(host_exe_suffix "")
 	else()
 		message(FATAL_ERROR "[Cook] unsupported host (Windows or Unix)")
 	endif()
-	# 굽는 App 은 호스트 빌드(SW_HOST_BUILD_DIR — HostTools.cmake)의 것이고, 굽기 앞에 그 빌드를 다시 짓는다 — 형식(EngineConfig 스키마 등)이 바뀐 소스로
-	# 낡은 App 이 돌면 설정 읽기부터 멈췄다. 게임 모듈 · 에디터 모듈(텍스처 변형 굽기)도 함께라 대상 하나가 아니라 빌드 전체를 짓는다.
+	# 굽는 실행 파일은 호스트 빌드(SW_HOST_BUILD_DIR — HostTools.cmake)의 것이고, 굽기 앞에 그 빌드를 다시 짓는다 — 형식(EngineConfig 스키마 등)이 바뀐 소스로
+	# 낡은 쿠커가 돌면 설정 읽기부터 멈췄다. 게임 모듈 · 에디터 모듈(텍스처 변형 굽기)도 함께라 대상 하나가 아니라 빌드 전체를 짓는다.
+	# 같은 호스트 빌드 폴더를 다른 빌드가 동시에 짓지 않게 하는 것은 부르는 쪽(preflight.sh `job_shipping_build`)이다 — ninja 는 폴더 잠금이 없다.
 	if(NOT SW_HOST_BUILD_DIR)
 		message(FATAL_ERROR "[Cook] SW_HOST_BUILD_DIR is empty - include cmake/Modules/Build/HostTools.cmake before this file (CMakeLists.txt)")
 	endif()
-	set(host_cook_app "${SW_HOST_BUILD_DIR}/Bin/${host_cook_app_name}")
-	unset(host_cook_app_name)
+	set(host_cooker "${SW_HOST_BUILD_DIR}/Bin/${cook_host_name}${host_exe_suffix}")
+	unset(host_exe_suffix)
 	sw_check_rhi_backend_name("${SW_SHIPPING_RHI_BACKEND}")
-	set(cross_backend_flag "-${SW_RHI_BACKEND_${SW_SHIPPING_RHI_BACKEND}_COMMAND_LINE_NAME}")
+	set(shipping_backend_flag "-${SW_RHI_BACKEND_${SW_SHIPPING_RHI_BACKEND}_COMMAND_LINE_NAME}")
 	if(NOT SW_STATIC_MODULES)
-		message(FATAL_ERROR "[Cook] cross builds link modules statically (SW_STATIC_MODULES) - the cook command chain below needs the input fingerprint wrapper")
+		message(FATAL_ERROR "[Cook] cross and shipping builds link modules statically (SW_STATIC_MODULES) - the cook command chain below needs the input fingerprint wrapper")
+	endif()
+	set(import_steps "")
+	if(CMAKE_CROSSCOMPILING)
+		# 원본(`textures_raw/`)을 `textures/*.dds` 로 먼저 임포트한다(바뀐 것만 — 내용 해시). 임포트 산출물은 저장소에 없어(.gitignore) 깨끗한 트리에서는 팩이 참조를 못 찾고 멈춘다.
+		set(import_steps "${host_cooker}" --import-textures --then "${host_cooker}" --cook-texture-variants --then)
 	endif()
 	sw_cook_command_prefix("${SW_HOST_BUILD_DIR}/Bin" cook_prefix)
 	add_custom_target(CookAssets
 		COMMAND "${CMAKE_COMMAND}" --build "${SW_HOST_BUILD_DIR}"
 		COMMAND ${customization_release_check}
-		# 원본(`textures_raw/`)을 `textures/*.dds` 로 먼저 임포트한다(바뀐 것만 — 내용 해시). 임포트 산출물은 저장소에 없어(.gitignore) 깨끗한 트리에서는 팩이 참조를 못 찾고 멈춘다.
-		COMMAND ${cook_prefix} "${host_cook_app}" --import-textures
-			--then "${host_cook_app}" --cook-texture-variants
-			--then "${host_cook_app}" ${cook_args} ${cross_backend_flag}
+		COMMAND ${cook_prefix} ${import_steps} "${host_cooker}" ${cook_args} ${shipping_backend_flag}
 		WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
-		COMMENT "Cooking texture variants and Resource packs for ${SW_SHIPPING_RHI_BACKEND} with the host App (${host_cook_app} --cook-all ${cross_backend_flag})..."
+		COMMENT "Cooking Resource packs for ${SW_SHIPPING_RHI_BACKEND} with the host development build (${host_cooker} --cook-all ${shipping_backend_flag})..."
 		VERBATIM
 	)
-	unset(cross_backend_flag)
-	unset(host_cook_app)
+	unset(import_steps)
+	unset(shipping_backend_flag)
+	unset(host_cooker)
 else()
+	# 이 빌드의 실행 파일이 굽는다 — 씬 쿠킹이 그 실행 파일이라 **뒤**에 와야 하고(의존은 sw_configure_app_dependencies 가 건다), 경로는 빌드 폴더를 뒤지지 않고 CMake 가 그대로 넘긴다.
+	# 방향을 거꾸로(App 이 CookAssets 에 의존) 걸면 깨끗한 트리(CI)에서 아직 없는 App 을 찾다가 죽는다 — 로컬에서는 다른 프리셋의 낡은 App.exe 가 우연히 있어 지나간다.
+	set(SW_COOK_HOST_TARGET ${cook_host_name})
 	sw_cook_command_prefix("$<TARGET_FILE_DIR:${SW_COOK_HOST_TARGET}>" cook_prefix)
 	add_custom_target(CookAssets
 		COMMAND ${customization_release_check}
@@ -118,6 +119,7 @@ else()
 		VERBATIM
 	)
 endif()
+unset(cook_host_name)
 unset(customization_release_check)
 unset(cook_prefix)
 set_target_properties(CookAssets PROPERTIES FOLDER "Engine/Scripts")

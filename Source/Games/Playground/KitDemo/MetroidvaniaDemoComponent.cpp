@@ -46,8 +46,7 @@ namespace sw
                                 &MetroidvaniaDemoComponent::getRespawnAtRest );
 
     MetroidvaniaDemoComponent::MetroidvaniaDemoComponent()
-        : _catalogPath{}
-        , _pCatalog{}
+        : _pCatalog{}
         , _corpseCurrency{ 0 }
         , _recoveredBalance{ 0 }
         , _respawnAtRest{ 0 }
@@ -96,7 +95,7 @@ namespace sw
 
     bool MetroidvaniaDemoComponent::startGame()
     {
-        if ( acquireRequired( _catalogPath, _pCatalog ) == false )
+        if ( acquireBoundCatalog( _pCatalog ) == false )
             return false;
         return runLoop();
     }

@@ -13,7 +13,8 @@ addToLibrary({
         if (error) console.error('IDBFS save failed', error);
     }),
     swMountWebPersistentRoot__deps: ['$FS', '$IDBFS', '$UTF8ToString', '$swFlushPersistentRoot'],
-    swMountWebPersistentRoot__async: true,
+    // 'auto' 는 본문을 handleAsync 로 감싼다(emscripten_sleep 과 같다) — 감싸지 않으면 멈춘 동안 온 브라우저 콜백의 끝이 런타임을 끝난 것으로 보고 내릴 수 있다(EXIT_RUNTIME).
+    swMountWebPersistentRoot__async: 'auto',
     swMountWebPersistentRoot: async (pRoot) => {
         const root = UTF8ToString(pRoot);
         FS.mkdirTree(root);

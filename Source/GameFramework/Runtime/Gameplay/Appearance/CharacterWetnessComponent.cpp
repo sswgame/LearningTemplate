@@ -10,7 +10,6 @@
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Automation/Watch/AutomationWatchComponent.h"
 #include "Engine/Character/Fit/SurfaceState.h"
-#include "Engine/Character/Hit/CharacterHit.h"
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Environment/Water/WaterBodyComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
@@ -23,6 +22,7 @@
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterAppearanceComponent.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterWetnessSystem.h"
 #include "GameFramework/Runtime/Gameplay/GameState/GameStateComponent.h"
+#include "GameFramework/Runtime/World/Environment/WeatherShelter.h"
 
 namespace sw
 {
@@ -30,8 +30,6 @@ namespace sw
     {
         struct CharacterWetnessComponentInternal
         {
-            static constexpr uint32 kAllLayers = 0xFFFFFFFFu;
-
             /** @brief 감시 값 대상의 노출 컴포넌트입니다. 없으면 까닭을 적고 nullptr 입니다. */
             static const CharacterWetnessComponent* findTarget( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
@@ -168,15 +166,10 @@ namespace sw
         _submersion                      = MathUtil::saturate( _waterDepth / _bodyHeight );
 
         // 비: 날씨 값 × 하늘이 열렸는지. 날씨가 없는 씬은 비가 없다(판 상태가 날씨를 열지 않았다).
-        const GameStateComponent* pSession      = GameStateComponent::findOpen( &manager );
-        const float32             precipitation = pSession != nullptr ? MathUtil::max( 0.0f, pSession->getWeather().computeValue( _precipitationValue ) ) : 0.0f;
-        bool                      bSheltered    = false;
+        const float32 precipitation = MathUtil::max( 0.0f, GameStateComponent::readWeather( manager, _precipitationValue ) );
+        bool          bSheltered    = false;
         if ( precipitation > 0.0f && _shelterDistance > 0.0f )
-        {
-            CharacterRayHit roof;
-            const float3    head = feet + float3{ 0.0f, _bodyHeight, 0.0f };
-            bSheltered           = CharacterRayHit::raycast3D( manager, head, float3{ 0.0f, 1.0f, 0.0f }, _shelterDistance, CharacterWetnessComponentInternal::kAllLayers, pOwner->getObjectID(), roof );
-        }
+            bSheltered = WeatherShelter::isSheltered( manager, feet + float3{ 0.0f, _bodyHeight, 0.0f }, _shelterDistance, pOwner->getObjectID() );
         _rainExposure = bSheltered ? 0.0f : precipitation;
 
         const float32 wetGain = ( _rainExposure * _rainWetPerSecond + _submersion * _immersionWetPerSecond ) * seconds;

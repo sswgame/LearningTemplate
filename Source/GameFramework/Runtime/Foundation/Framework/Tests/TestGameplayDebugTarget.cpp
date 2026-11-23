@@ -2,7 +2,7 @@
 
 #include "Core/Testing/TestFramework.h"
 
-#include "Engine/Environment/Foliage/WindComponent.h"
+#include "Engine/Environment/Wind/WindComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Tests/SceneIterationTestAccess.h"

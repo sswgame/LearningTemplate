@@ -14,6 +14,7 @@
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/Backend/RHILiveCommandListUtil.h"
+#include "Engine/Graphics/RHI/Vulkan/VulkanPhysicalDeviceRank.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanPipelineCacheFile.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHICommandContext.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHICommandList.h"
@@ -65,8 +66,6 @@ namespace sw
         , _asyncComputeQueue{ nullptr }
         , _frameFenceRing{}
         , _swapChain{}
-        , _renderPass{ nullptr }
-        , _renderPassLoad{ nullptr }
         , _offscreenRenderPass{ nullptr }
         , _commandPool{ nullptr }
         , _oneShotCommandPool{ nullptr }
@@ -314,8 +313,6 @@ namespace sw
                 return false;
             }
 
-            if ( verifyRequiredColorAttachmentFormats() == false )
-                return false;
             {
                 VkPhysicalDeviceProperties limitProperties{};
                 vkGetPhysicalDeviceProperties( _physicalDevice, &limitProperties );
@@ -334,10 +331,7 @@ namespace sw
             if ( _swapChain.create( _physicalDevice, _device, _width, _height ) == false )
                 return false;
 
-            if ( createRenderPass() == false )
-                return false;
-
-            if ( _swapChain.createFramebuffers( _device, _renderPass ) == false )
+            if ( _swapChain.createFramebuffers( _device ) == false )
                 return false;
             markInitPhase( "swapchain" );
         }
@@ -506,8 +500,8 @@ namespace sw
                 publishBufferReadSlot( index, false, 0 );
                 publishBufferReadSlot( index, true, 0 );
             }
-            // 합성 프레임버퍼 · PSO 호환 RP · desc RP 는 캐시가 한 번에 놓는다. 스왑체인 RP(_renderPass)는 아래에서 따로.
-            _renderPassCache.destroyAll( _device, _renderPass );
+            // 합성 프레임버퍼 · PSO 호환 RP · desc RP 는 캐시가 한 번에 놓는다. 스왑체인 RP 는 아래에서 스왑체인이 놓는다.
+            _renderPassCache.destroyAll( _device, _swapChain.getRenderPass() );
             _textureRegistry.clear();
 
             for ( VkDescriptorSet& textureSet : _arrTextureSet )
@@ -621,18 +615,16 @@ namespace sw
             for ( const unique_ptr<VulkanRHISwapChain>& pWindow : _windowSwapChains.getOwnedList() )
             {
                 pWindow->destroy( _device );
+                pWindow->destroyRenderPasses( _device );
                 pWindow->destroySemaphores( _device );
                 pWindow->destroySurface( _instance );
             }
             _windowSwapChains.clear();
             _swapChain.destroy( _device );
+            _swapChain.destroyRenderPasses( _device );
             _swapChain.destroySemaphores( _device );
             destroyFrameFences();
 
-            if ( _renderPassLoad )
-                vkDestroyRenderPass( _device, _renderPassLoad, nullptr );
-            if ( _renderPass )
-                vkDestroyRenderPass( _device, _renderPass, nullptr );
             if ( _offscreenRenderPass )
             {
                 vkDestroyRenderPass( _device, _offscreenRenderPass, nullptr );
@@ -835,7 +827,6 @@ namespace sw
         record._sizeBytes  = sizeBytes;
         record._usage      = usageFlags;
         record._cbSlotSize = cbSlotSize;
-        record._state      = RHIBufferState::Common;
 
         // GPU 메모리 추적기의 Buffer 줄에 올리는 유일한 자리다. 크기는 드라이버가 요구한 할당 크기(정렬 포함)다.
         const RHIBufferHandle handle = _gpuBuffers.insert( record );
@@ -938,46 +929,18 @@ namespace sw
         return VK_FALSE;
     }
 
-    bool VulkanRHIDevice::createRenderPass()
+    void VulkanRHIDevice::syncWindowSwapChainFormats()
     {
-        // 스왑체인 렌더패스: CLEAR 변종과 LOAD 변종. 한 프레임 안에서 백버퍼 렌더패스를 두 번 이상 여는 경우(그래프가
-        // 백버퍼에 그린 뒤 UI 를 얹는 경로)에 CLEAR 변종으로 다시 열면 앞의 내용이 통째로 지워진다. 첨부 포맷 · 개수 ·
-        // 샘플 수가 같아 프레임버퍼와 파이프라인은 두 렌더패스 모두와 호환된다(render pass compatibility).
-        // LOAD 변종은 앞선 패스의 finalLayout 인 PRESENT_SRC 에서 시작한다.
-        VulkanRHIRenderPassCache::RenderPassSpec clearSpec{};
-        clearSpec.addColor( _swapChain.getImageFormat(), VK_ATTACHMENT_LOAD_OP_CLEAR, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR );
-        _renderPass = createRenderPassFromSpec( clearSpec );
-        if ( _renderPass == VK_NULL_HANDLE )
-            return false;
-
-        VulkanRHIRenderPassCache::RenderPassSpec loadSpec{};
-        loadSpec.addColor( _swapChain.getImageFormat(), VK_ATTACHMENT_LOAD_OP_LOAD, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR );
-        _renderPassLoad        = createRenderPassFromSpec( loadSpec );
-        _renderPassImageFormat = _swapChain.getImageFormat();
-        return _renderPassLoad != VK_NULL_HANDLE;
-    }
-
-    bool VulkanRHIDevice::rebuildRenderPassIfFormatChanged()
-    {
-        if ( _swapChain.getImageFormat() == _renderPassImageFormat )
-            return true;
-        // 다시 만든 스왑체인의 형식이 바뀌었다(표면이 다른 형식만 준다 — 모니터 이동 · HDR 전환). 옛 형식의 렌더 패스로 프레임버퍼를 만들면 첨부 형식이 어긋난다(R-8).
-        // GPU 는 재생성 앞에서 쉬었다. 창 스왑체인의 프레임버퍼도 같은 렌더 패스를 쓰므로 함께 다시 짓는다.
-        SW_LOG_INFO_ID( "Vulkan.SwapChainRenderPassFormatChanged", "The swap chain format changed (VkFormat %# -> %#) - rebuilding the swap chain render passes", _renderPassImageFormat,
-                        _swapChain.getImageFormat() );
-        if ( _renderPassLoad != VK_NULL_HANDLE )
-            vkDestroyRenderPass( _device, _renderPassLoad, nullptr );
-        if ( _renderPass != VK_NULL_HANDLE )
-            vkDestroyRenderPass( _device, _renderPass, nullptr );
-        _renderPass     = VK_NULL_HANDLE;
-        _renderPassLoad = VK_NULL_HANDLE;
-        if ( createRenderPass() == false )
-            return false;
+        // 다른 창은 늘 SDR 이고 UI PSO 의 포맷(`getUITargetFormat`)을 따른다 — 주 창의 SDR 포맷이 바뀌었을 때만 그 포맷으로 다시 짓는다. HDR 전환은 창을 건드리지 않는다.
+        if ( _swapChain.getColorSpace() != RHIColorSpace::SRGBNonLinear )
+            return;
         for ( const unique_ptr<VulkanRHISwapChain>& pWindow : _windowSwapChains.getOwnedList() )
         {
+            if ( pWindow->getActualBackBufferFormat() == _swapChain.getActualBackBufferFormat() )
+                continue;
+            pWindow->setRequested( _swapChain.getActualBackBufferFormat(), 0, isVSyncEnabled() );
             (void)rebuildWindowSwapChain( *pWindow, pWindow->getExtentWidth(), pWindow->getExtentHeight() ); // 실패 알림은 안에서 남긴다. 다음 획득이 다시 본다
         }
-        return true;
     }
 
     bool VulkanRHIDevice::supportsValidationLayer()
@@ -1174,14 +1137,20 @@ namespace sw
                       { return vkEnumeratePhysicalDevices( _instance, pCount, pData ); } );
         if ( bEnumerated == false || listDevice.empty() )
             return false;
-        // 외장 GPU(저전력 선호면 내장 GPU)를 먼저 본다 — 열거 순서는 드라이버 마음이라 하이브리드 노트북에서 내장 GPU 가 먼저 나온다(DX 의 OS 선호 순서 · RHIDxgiAdapter.h 와 같은 규칙, 제조사와 무관).
-        const VkPhysicalDeviceType preferredType = bPreferMinimumPower ? VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU : VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU;
-        std::stable_partition( listDevice.begin(), listDevice.end(), [preferredType]( VkPhysicalDevice device )
+        // 외장 GPU(저전력 선호면 내장 GPU)를 먼저, CPU 구현을 마지막에 본다 — 열거 순서는 드라이버 마음이라 하이브리드 노트북에서 내장 GPU 가, 리눅스에서 lavapipe 가 먼저 나온다
+        // (DX 의 OS 선호 순서 · RHIDxgiAdapter.h 와 같은 규칙, 제조사와 무관).
+        static_assert( VulkanPhysicalDeviceRank::kOther == VK_PHYSICAL_DEVICE_TYPE_OTHER && VulkanPhysicalDeviceRank::kIntegratedGPU == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU &&
+                           VulkanPhysicalDeviceRank::kDiscreteGPU == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU && VulkanPhysicalDeviceRank::kVirtualGPU == VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU &&
+                           VulkanPhysicalDeviceRank::kCPU == VK_PHYSICAL_DEVICE_TYPE_CPU,
+                       "VulkanPhysicalDeviceRank 의 종류 값이 VkPhysicalDeviceType 과 다르다" );
+        const auto computeRank = [bPreferMinimumPower]( VkPhysicalDevice device ) -> uint32
         {
             VkPhysicalDeviceProperties properties{};
             vkGetPhysicalDeviceProperties( device, &properties );
-            return properties.deviceType == preferredType;
-        } );
+            return VulkanPhysicalDeviceRank::compute( static_cast<uint32>( properties.deviceType ), bPreferMinimumPower );
+        };
+        VectorUtil::stableSort( listDevice, [&computeRank]( VkPhysicalDevice left, VkPhysicalDevice right )
+        { return computeRank( left ) < computeRank( right ); } );
 
         for ( const VkPhysicalDevice& device : listDevice )
         {
@@ -1202,6 +1171,9 @@ namespace sw
             // 셰이더는 네이티브 bindless(SW_BINDLESS)로만 쿠킹한다 — 기능 · 한도가 모자란 장치(모바일에 흔하다)는 텍스처 세트를 만들지 못하고 그리지 못한다.
             if ( isBindlessCapable( device, candidateProperties.deviceName ) == false )
                 continue;
+            // 장치 확장 · 고정 첨부 형식이 모자란 장치도 여기서 건너뛴다 — 고른 뒤에 알면 다음 장치를 볼 길이 없다(장치 생성이 멈춘다).
+            if ( hasRequiredDeviceExtensions( device, candidateProperties.deviceName ) == false || hasRequiredColorAttachments( device, candidateProperties.deviceName, candidateProperties.limits.maxColorAttachments ) == false )
+                continue;
 
             uint32 queueFamilyCount{ 0 };
             vkGetPhysicalDeviceQueueFamilyProperties( device, &queueFamilyCount, nullptr );
@@ -1212,7 +1184,10 @@ namespace sw
             bool   bFound{ false };
             for ( const VkQueueFamilyProperties& queueFamily : queueFamilies )
             {
-                if ( queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT )
+                // 프레임의 컴퓨트 패스를 그래픽스 큐에 내므로 둘 다 되는 패밀리여야 한다(명세: 그래픽스를 하는 장치에 둘 다 되는 패밀리가 하나 이상 있지만, 모든 그래픽스 패밀리가 그런 것은 아니다).
+                // https://docs.vulkan.org/spec/latest/chapters/devsandqueues.html#VkQueueFlagBits
+                constexpr VkQueueFlags kNeededQueueFlags = VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT;
+                if ( ( queueFamily.queueFlags & kNeededQueueFlags ) == kNeededQueueFlags )
                 {
                     VkBool32   presentSupport{ false };
                     const bool bQueried = isVkSuccess( vkGetPhysicalDeviceSurfaceSupportKHR( device, queueFamilyIndex, _swapChain.getSurface(), &presentSupport ),
@@ -1251,7 +1226,7 @@ namespace sw
             _initResult = RHIInitResult::DriverUnsupported;
         }
         else if ( _physicalDevice == nullptr )
-            SW_LOG_ERROR_ID( "Vulkan.NoVulkanDeviceGraphics", "No Vulkan %#.%# device with a graphics queue that can present to this surface", constant::render::kVulkanRequiredMajor,
+            SW_LOG_ERROR_ID( "Vulkan.NoVulkanDeviceGraphics", "No Vulkan %#.%# device meets the renderer's requirements and has a graphics and compute queue that can present to this surface", constant::render::kVulkanRequiredMajor,
                              constant::render::kVulkanRequiredMinor );
         return _physicalDevice != nullptr;
     }
@@ -1314,15 +1289,29 @@ namespace sw
         return false;
     }
 
-    bool VulkanRHIDevice::verifyRequiredColorAttachmentFormats() const
+    bool VulkanRHIDevice::hasRequiredDeviceExtensions( VkPhysicalDevice device, const utf8* pDeviceName )
+    {
+        vector<VkExtensionProperties> listAvailableExt;
+        if ( enumerateVk( listAvailableExt, "vkEnumerateDeviceExtensionProperties", [device]( uint32* pCount, VkExtensionProperties* pData )
+        { return vkEnumerateDeviceExtensionProperties( device, nullptr, pCount, pData ); } ) == false )
+            return false;
+        for ( const utf8* pExtension : s_listDeviceExtensions )
+        {
+            if ( VulkanRHIUtil::hasExtension( listAvailableExt, pExtension ) )
+                continue;
+            SW_LOG_WARNING_ID( "Vulkan.SkippingDeviceExtension", "Skipping Vulkan device '%#': it has no %#", pDeviceName, pExtension );
+            return false;
+        }
+        return true;
+    }
+
+    bool VulkanRHIDevice::hasRequiredColorAttachments( VkPhysicalDevice device, const utf8* pDeviceName, uint32 maxColorAttachments )
     {
         // MRT 한도 — G버퍼(판 3)가 여섯 장을 함께 쓴다. Vulkan 의 최소 보장은 4 라 장치마다 확인한다(DX · GL · WebGPU 는 8 을 보장한다).
-        VkPhysicalDeviceProperties deviceProperties{};
-        vkGetPhysicalDeviceProperties( _physicalDevice, &deviceProperties );
-        if ( deviceProperties.limits.maxColorAttachments < kMaxColorAttachments )
+        if ( maxColorAttachments < kMaxColorAttachments )
         {
-            SW_LOG_ERROR_ID( "Vulkan.GPUColorAttachmentLimit", "This GPU binds %# color attachments at once, the renderer needs %# (G-buffer)", deviceProperties.limits.maxColorAttachments,
-                             kMaxColorAttachments );
+            SW_LOG_WARNING_ID( "Vulkan.GPUColorAttachmentLimit", "Skipping Vulkan device '%#': it binds %# color attachments at once, the renderer needs %# (G-buffer)", pDeviceName, maxColorAttachments,
+                               kMaxColorAttachments );
             return false;
         }
         // 화면 속도 · 왜곡 첨부(R16G16 실수)도 G버퍼 노멀(R16G16 부호 정규화)처럼 샘플 가능한 컬러 첨부여야 한다.
@@ -1330,11 +1319,12 @@ namespace sw
         for ( const VkFormat format : arrRequired )
         {
             VkFormatProperties props{};
-            vkGetPhysicalDeviceFormatProperties( _physicalDevice, format, &props );
+            vkGetPhysicalDeviceFormatProperties( device, format, &props );
             const VkFormatFeatureFlags kNeeded = VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT | VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT;
             if ( ( props.optimalTilingFeatures & kNeeded ) != kNeeded )
             {
-                SW_LOG_ERROR_ID( "Vulkan.GPUCannotUseVulkan", "This GPU cannot use Vulkan format %# as a sampled color attachment (G-buffer normal)", static_cast<uint32>( format ) );
+                SW_LOG_WARNING_ID( "Vulkan.GPUCannotUseVulkan", "Skipping Vulkan device '%#': it cannot use format %# as a sampled color attachment (G-buffer normal)", pDeviceName,
+                                   static_cast<uint32>( format ) );
                 return false;
             }
         }
@@ -1735,7 +1725,7 @@ namespace sw
     bool VulkanRHIDevice::setBackBufferColorSpaceInternal( RHIColorSpace colorSpace, const RHIDisplayMetadata& metadata )
     {
         // 크기 바꿈과 같은 재생성 길(GPU 대기 · 옛 스왑체인 물려주기 · 포맷이 바뀌면 렌더 패스 다시 만들기)을 지금 탄다 — 부르는 쪽이 렌더 스레드를 세웠다.
-        // shortcut: 다른 창(에디터 도구 창)은 주 창의 렌더 패스 포맷을 따르므로 HDR 인 동안 새로 열지 못한다(`createSwapChainInternal` 이 거절한다) — 도구 창을 SDR 렌더 패스로 따로 그릴 때 푼다.
+        // 다른 창(에디터 도구 창)은 자기 SDR 렌더 패스를 들어 이 전환과 무관하다(`VulkanRHISwapChain::getRenderPass`).
         const RHIColorSpace      previous         = _swapChain.getColorSpace();
         const bool               bColorSpaceExt   = _bSwapChainColorSpace != SW_FALSE;
         const RHIDisplayMetadata previousMetadata = _displayMetadata;
@@ -1783,25 +1773,22 @@ namespace sw
                                        ( desc._surfaceKind == NativeSurfaceKind::Wayland ) == ( _wsiKind == VulkanWsiKind::Wayland );
         if ( bSameWindowSystem == false || _device == nullptr || isDeviceLost() )
             return nullptr;
-        if ( _swapChain.getColorSpace() != RHIColorSpace::SRGBNonLinear )
-        {
-            SW_LOG_ERROR_ID( "Vulkan.WindowSwapChainWhileHDR", "Another window cannot open while the main window presents %# - its UI draws with the SDR render pass", getEnumName( _swapChain.getColorSpace() ) );
-            return nullptr;
-        }
-
-        unique_ptr<VulkanRHISwapChain> pSwapChain = make_unique<VulkanRHISwapChain>();
-        pSwapChain->setRequested( _swapChain.getActualBackBufferFormat(), 0, isVSyncEnabled() );
+        // 다른 창은 주 창이 HDR 이어도 SDR 이다 — 그 창의 UI PSO 는 SDR 포맷 하나다(D3D12 와 같다).
+        const RHIFormat                windowFormat = getUITargetFormat();
+        unique_ptr<VulkanRHISwapChain> pSwapChain   = make_unique<VulkanRHISwapChain>();
+        pSwapChain->setRequested( windowFormat, 0, isVSyncEnabled() );
         if ( pSwapChain->createSurface( _instance, desc._pWindowHandle, desc._pWindowDisplay, _wsiKind ) == false )
             return nullptr;
         VkBool32   bPresentSupported = VK_FALSE;
         const bool bQueried          = isVkSuccess( vkGetPhysicalDeviceSurfaceSupportKHR( _physicalDevice, _graphicsQueueFamilyIndex, pSwapChain->getSurface(), &bPresentSupported ),
                                                     "vkGetPhysicalDeviceSurfaceSupportKHR (window)" );
-        // 메인 창의 렌더 패스 · 프레임버퍼 규칙을 그대로 쓰므로 이미지 포맷이 같아야 한다 — 다르면 대신할 포맷을 고르지 않고 거절한다.
+        // 창에 그리는 UI PSO 의 포맷과 같아야 한다 — 다르면 대신할 포맷을 고르지 않고 거절한다.
         const bool bCreated = bQueried && bPresentSupported != VK_FALSE && rebuildWindowSwapChain( *pSwapChain, desc._width, desc._height ) &&
-                              pSwapChain->getImageFormat() == _swapChain.getImageFormat();
+                              pSwapChain->getActualBackBufferFormat() == windowFormat;
         if ( bCreated == false )
         {
             pSwapChain->destroy( _device );
+            pSwapChain->destroyRenderPasses( _device );
             pSwapChain->destroySemaphores( _device );
             pSwapChain->destroySurface( _instance );
             return nullptr;
@@ -1818,6 +1805,7 @@ namespace sw
     {
         VulkanRHISwapChain& window = static_cast<VulkanRHISwapChain&>( swapChain ); // 이 디바이스가 만든 것만 들어온다(`createSwapChain`)
         window.destroy( _device );
+        window.destroyRenderPasses( _device );
         window.destroySemaphores( _device );
         window.destroySurface( _instance );
         _windowSwapChains.remove( window );
@@ -1848,7 +1836,7 @@ namespace sw
         swapChain.retireForRecreate( _device ); // 같은 서피스 — 옛 스왑체인을 oldSwapchain 으로 물려준다
         if ( swapChain.create( _physicalDevice, _device, width, height ) == false )
             return false; // 서피스 크기 0(최소화)은 오류가 아니다 — 다음 획득이 다시 시도한다
-        const bool bBuilt = swapChain.createFramebuffers( _device, _renderPass ) && swapChain.createSemaphores( _device, constant::render::kMaxFrameCountInFlight );
+        const bool bBuilt = swapChain.createFramebuffers( _device ) && swapChain.createSemaphores( _device, constant::render::kMaxFrameCountInFlight );
         if ( bBuilt == false )
             SW_LOG_ERROR_ONCE_ID( "Vulkan.WindowSwapChainBuildFailed", "Failed to build the framebuffers or semaphores of a window swap chain (%#x%#)", width, height );
         return bBuilt;
@@ -1955,10 +1943,8 @@ namespace sw
                 return false;
             pFailedStep = "swapchain";
         }
-        else if ( rebuildRenderPassIfFormatChanged() == false )
-            pFailedStep = "swapchain render pass";
-        else if ( _swapChain.createFramebuffers( _device, _renderPass ) == false )
-            pFailedStep = "swapchain framebuffers";
+        else if ( _swapChain.createFramebuffers( _device ) == false )
+            pFailedStep = "swapchain render pass or framebuffers";
         else if ( _swapChain.createSemaphores( _device, constant::render::kMaxFrameCountInFlight ) == false )
             pFailedStep = "swapchain semaphores";
         else if ( createFrameFences() == false )
@@ -1972,6 +1958,7 @@ namespace sw
         }
 
         _bSwapChainRecreateFailing = SW_FALSE;
+        syncWindowSwapChainFormats();
         applyHDRMetadata(); // 새 스왑체인은 HDR10 메타데이터가 없다
         return true;
     }
@@ -2433,7 +2420,7 @@ namespace sw
             arrTick[index] = arrResult[index * 2];
             readyMask.set( index );
         }
-        RHITimestampFrame::resolve( arrTick, readyMask, static_cast<float64>( _timestampPeriod ), _timestampFrame );
+        RHITimestampFrame::resolve( arrTick, readyMask, _timestampRing.getComputeQueueMask( getFrameSlot() ), static_cast<float64>( _timestampPeriod ), _timestampFrame );
     }
 
     // 길이 유지(긴 함수 정리 기준): 펜스 대기 · 이미지 획득 · 기록 시작의 프레임 순서가 곧 의미라 나누지 않는다.
@@ -3192,7 +3179,7 @@ namespace sw
             return IRHIDevice::createAsyncComputeCommandList(); // 능력이 거짓인 길 — 오류를 남기고 nullptr
         // 같은 패밀리라 일반 리스트(같은 패밀리의 풀 · 같은 바인딩)를 그대로 두 번째 큐에 낸다. 브레드크럼만 제 칸에 쓴다(큐 사이 쓰기 경합이 없게).
         unique_ptr<VulkanRHICommandList> list = make_unique<VulkanRHICommandList>( this );
-        list->setBreadcrumbSlotBase( kComputeBreadcrumbSlotBase );
+        list->setComputeQueueList( kComputeBreadcrumbSlotBase );
         return list;
     }
 
@@ -4326,9 +4313,9 @@ namespace sw
         if ( oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL )
         {
             barrier.srcAccessMask = 0;
-            barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+            barrier.dstAccessMask = VulkanRHIUtil::kColorAttachmentAccess;
             srcStage              = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-            dstStage              = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+            dstStage              = VulkanRHIUtil::kColorAttachmentStages;
         }
         else if ( oldLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL )
         {
@@ -4340,9 +4327,9 @@ namespace sw
         else if ( oldLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL )
         {
             barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
-            barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+            barrier.dstAccessMask = VulkanRHIUtil::kColorAttachmentAccess; // 이어 그리는 패스(LOAD · 블렌드)는 앞 그림을 읽는다
             srcStage              = kShaderReadStages;
-            dstStage              = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+            dstStage              = VulkanRHIUtil::kColorAttachmentStages;
         }
         else if ( oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL )
         {
@@ -4353,18 +4340,18 @@ namespace sw
         }
         else if ( oldLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL )
         {
-            // 그림자맵: 깊이 쓰기(late fragment tests) 가 끝난 뒤 프래그먼트 셰이더가 샘플한다.
+            // 그림자맵: 깊이 쓰기(이른 · 늦은 프래그먼트 테스트)가 끝난 뒤 셰이더가 샘플한다.
             barrier.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
             barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-            srcStage              = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+            srcStage              = VulkanRHIUtil::kDepthAttachmentStages;
             dstStage              = kShaderReadStages;
         }
         else if ( oldLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL )
         {
             barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
-            barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+            barrier.dstAccessMask = VulkanRHIUtil::kDepthAttachmentAccess;
             srcStage              = kShaderReadStages;
-            dstStage              = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+            dstStage              = VulkanRHIUtil::kDepthAttachmentStages;
         }
         else
         {

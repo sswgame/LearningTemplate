@@ -5,7 +5,7 @@
      BodyChannel: 몸 채널 기본 층(굽 높이 · 체형 보정). 매핑은 몸 부품의 *.bodyshape.xml 이다 — 뼈 이름을 적지 않는다.
      Jiggle: 리그(*.rig.xml)의 Jiggle 노드 group 의 물성 — 리그는 어느 본이 흔들리는지만, 여기는 얼마나 흔들리는지만 적는다.
      ActionScale: 상태 태그가 흔들림 배율을 정한다(맞는 태그 중 큰 값, 없으면 1). Wrinkle: 표정 → 주름 마스크 채널(0..7). Pupil: 눈에 닿는 빛으로 동공 순응.
-     Fluid: 눈물 · 침 줄기 — trigger 는 애니메이터 커브(또는 body.fluid), path 는 얼굴 UV 위 흐름 길("u v; u v; …"), 채널은 표면 채널 표의 이름이다.
+     Fluid: 눈물 · 침 줄기 — trigger 는 애니메이터 커브(또는 exec … triggerFluid), path 는 얼굴 UV 위 흐름 길("u v; u v; …"), 채널은 표면 채널 표의 이름이다.
      effect · socket: 표면 밖으로 떨어지는 효과 — 눈물은 줄기가 경로 끝(턱)에 닿으면 dripSeconds 동안 방울, strand="true"(침)는 방아쇠가 켜진 동안 가닥. -->
 <BodyProfileCatalog>
   <BodyProfile id="HumanoidBase">

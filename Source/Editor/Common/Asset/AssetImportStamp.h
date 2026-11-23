@@ -155,7 +155,7 @@ namespace sw::editor
          *          **어긋난 원본은 임포트하기 전에 @p derivedDataCache 를 찾고, 미스면 임포트한 뒤 넣는다**(ImportStale 만). 키 = 임포터 스탬프 머리 + 코드 지문 + 원본 해시
          *          (원본 바이트 · 규칙 · 임포터 판 · 대상 형식) + (`isImportedPathEmbedded` 면) 리소스 경로. 히트는 임포터를 부르지 않고 결과 파일을 되살린다.
          * @param pTaskManager 사슬을 나눠 돌 작업 시스템(빌림, nullptr 이면 이 스레드가 직렬로). 부르는 쪽이 찾아 넘긴다 — 워커에서 불릴 수 있어 여기서는 에디터 서비스 범위(`findEditorScope`)를 읽지 않는다.
-         * @param derivedDataCache 결과를 찾고 넣는 DDC(보통 `DerivedDataCache::loadFromConfig` — 부르는 쪽이 읽어 넘긴다, 테스트는 임시 폴더 층)
+         * @param derivedDataCache 결과를 찾고 넣는 DDC(보통 `DerivedDataCache::open` — 부르는 쪽이 읽어 넘긴다, 테스트는 임시 폴더 층)
          */
         [[nodiscard]] static AssetImportSummary importAll( string_view resourceRoot, const IRawAssetImporter& importer, AssetImportMode mode, TaskManager* pTaskManager,
                                                            const DerivedDataCache& derivedDataCache );

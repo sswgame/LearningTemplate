@@ -40,9 +40,11 @@ namespace sw
         /** @brief 지금 값입니다. */
         FogSettings makeSettings() const;
         void        setDensity( float32 density ) { _density = density; }
-        void        setHeightFalloff( float32 heightFalloff ) { _heightFalloff = heightFalloff; }
-        void        setColor( const float3& color ) { _color = color; }
-        void        setVolumetric( bool bVolumetric ) { _bVolumetric = bVolumetric; }
+        /** @brief 적은 밀도에 곱할 배율입니다(날씨 — 짙은 안개). 저장하지 않습니다. 음수는 0 으로 자릅니다. */
+        void setDensityScale( float32 scale ) { _densityScale = scale > 0.0f ? scale : 0.0f; }
+        void setHeightFalloff( float32 heightFalloff ) { _heightFalloff = heightFalloff; }
+        void setColor( const float3& color ) { _color = color; }
+        void setVolumetric( bool bVolumetric ) { _bVolumetric = bVolumetric; }
 
         /**
          * @brief @p manager 의 안개를 @p outSettings 에 구합니다. @p viewPosition(주 시점의 눈)이 어떤 물의 물속이면 그 물의 안개가 컴포넌트의 값을 덮습니다.
@@ -77,5 +79,7 @@ namespace sw
         float32 _scattering;
         PROPERTY( Category = "Volumetric", DisplayName = "Anisotropy", Min = -0.95, Max = 0.95, EditCondition = "_bVolumetric", Tooltip = "Phase function: above 0 scatters toward the light, below 0 away" )
         float32 _anisotropy;
+
+        float32 _densityScale; ///< 날씨 같은 실행 중 배율(저장하지 않는다)
     };
 } // namespace sw

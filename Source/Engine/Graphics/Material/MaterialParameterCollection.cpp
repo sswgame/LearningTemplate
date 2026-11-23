@@ -4,64 +4,13 @@
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Log/Logger.h"
-#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Asset/Cache/BuiltInAssetCache.h"
-#include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Serialization/Format/ReflectedXMLFile.h"
 #include "Engine/Serialization/Serializer/ReloadResult.h"
-
-namespace sw
-{
-    namespace
-    {
-        struct MaterialParameterCollectionInternal
-        {
-            /** @brief `matparam <경로> <이름> <x> [y] [z] [w]` — 묶음의 값을 바꿉니다. 시나리오가 런타임 변경을 확인할 때 쓴다. */
-            static bool runSetValue( const vector<string>& listArgument, string& outReply )
-            {
-                if ( listArgument.size() < 3 || listArgument.size() > 6 )
-                {
-                    outReply = "usage: matparam <collection> <name> <x> [y] [z] [w]";
-                    return false;
-                }
-                float4 value{};
-                for ( size_t index = 2; index < listArgument.size(); ++index )
-                {
-                    float32 component{ 0.0f };
-                    if ( StringUtil::parseFloat( listArgument[index], component ) == false )
-                    {
-                        StringBuilder<constant::buffer::kMax256> builder;
-                        builder.appendFormat( "not a number: %#", listArgument[index] );
-                        outReply = builder.view();
-                        return false;
-                    }
-                    ( index == 2 ? value._x : index == 3 ? value._y
-                                          : index == 4   ? value._z
-                                                         : value._w ) = component;
-                }
-                const shared_ptr<MaterialParameterCollection> pCollection = MaterialParameterCollection::acquire( AssetID{ listArgument[0] } );
-                if ( pCollection == nullptr || pCollection->setValue( hashed_string( string_view( listArgument[1] ) ), value ) == false )
-                {
-                    StringBuilder<constant::buffer::kMax256> builder;
-                    builder.appendFormat( "could not set %# of %#", listArgument[1], listArgument[0] );
-                    outReply = builder.view();
-                    return false;
-                }
-                StringBuilder<constant::buffer::kMax256> builder;
-                builder.appendFormat( "set %#", listArgument[1] );
-                outReply = builder.view();
-                return true;
-            }
-        };
-    } // namespace
-
-    SW_DEV_COMMAND( MaterialParameter, "matparam", "matparam <collection> <name> <x> [y] [z] [w]", "Set a value of a material parameter collection; every material bound to it follows",
-                    &MaterialParameterCollectionInternal::runSetValue );
-} // namespace sw
 
 namespace sw
 {

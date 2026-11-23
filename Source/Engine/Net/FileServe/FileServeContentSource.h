@@ -8,7 +8,7 @@
  *          전송은 엔진의 `IHTTPClient` 계약이다(장치는 개발 전용 평문 클라이언트 `PlainHTTPClient` — `Net/Dev`, 테스트는 가짜). 기동(`AndroidMain`)이 `-fileserve=<주소>` 일 때만 건다(배포 구성에는 없다).
  */
 #pragma once
-#include "Core/Concurrency/atomic.h"
+#include "Core/Concurrency/DevCounter.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
@@ -57,7 +57,7 @@ namespace sw
                                         const AsyncReadCompleteDelegate& onComplete ) const override;
 
         /** @brief 이 소스가 받은 구간 수입니다(진단 · 테스트 — 도장이 맞으면 늘지 않는다). */
-        uint32 getReceivedChunkCount() const { return _receivedChunkCount.load(); }
+        const DevCounter& getReceivedChunkCount() const { return _receivedChunkCount; }
 
     private:
         /** @brief 서버가 답한 자원의 종류입니다. */
@@ -96,6 +96,6 @@ namespace sw
         mutable mutex                                            _mutex;
         mutable unordered_map<string, RemoteStat> _mapRemoteStat SW_GUARDED_BY( _mutex ); ///< shortcut: 실행 동안 PC 쪽 변경을 다시 묻지 않는다 — 실행 중 다시 굽기를 받으려면 핫 리로드 신호로 지운다
         mutable unordered_map<string, string> _mapMirrored       SW_GUARDED_BY( _mutex ); ///< 상대 경로 → 받아 둔 거울 경로
-        mutable atomic<uint32>                                   _receivedChunkCount{ 0 };
+        mutable DevCounter                                       _receivedChunkCount;
     };
 } // namespace sw
