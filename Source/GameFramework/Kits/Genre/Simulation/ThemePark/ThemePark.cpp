@@ -23,10 +23,8 @@ namespace sw
     {
         struct ThemeParkInternal
         {
-            static constexpr uint32  kMinRideStateBytes  = 64;      ///< 놀이기구 하나의 상태가 최소한 차지하는 바이트 수(개수 상한 계산용)
-            static constexpr uint32  kMinGuestStateBytes = 80;      ///< 손님 하나의 상태가 최소한 차지하는 바이트 수(개수 상한 계산용)
-            static constexpr float32 kMinDivisor         = 1.0e-3f; ///< 걷는 시간 · 줄 방향 길이를 나눌 때 0 나누기를 막는 하한
-            static constexpr float32 kMinWalkSpeed       = 0.1f;    ///< 설정의 걷기 속도가 0 이어도 걷는 시간이 무한이 되지 않게 하는 하한(m/s)
+            static constexpr float32 kMinDivisor   = 1.0e-3f; ///< 걷는 시간 · 줄 방향 길이를 나눌 때 0 나누기를 막는 하한
+            static constexpr float32 kMinWalkSpeed = 0.1f;    ///< 설정의 걷기 속도가 0 이어도 걷는 시간이 무한이 되지 않게 하는 하한(m/s)
 
             static float3 lerpPosition( const float3& from, const float3& to, float32 alpha )
             {
