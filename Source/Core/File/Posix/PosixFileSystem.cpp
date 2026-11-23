@@ -307,22 +307,22 @@ namespace sw
             if ( pName[0] == '.' && ( pName[1] == '\0' || ( pName[1] == '.' && pName[2] == '\0' ) ) )
                 continue;
 
-            bool bLink      = pEntry->d_type == DT_LNK;
-            bool bDirectory = pEntry->d_type == DT_DIR;
-            if ( pEntry->d_type == DT_UNKNOWN || bLink ) // 파일 시스템이 종류를 주지 않거나 링크이면 묻는다(링크는 가리키는 쪽의 종류)
+            FileStatus status{};
+            status._kind  = pEntry->d_type == DT_DIR ? FileKind::Directory : FileKind::Other;
+            status._bLink = pEntry->d_type == DT_LNK;
+            if ( pEntry->d_type != DT_DIR ) // 나열은 크기 · 시각을 주지 않는다 — 파일 · 링크 · 종류를 모르는 항목은 묻는다(링크는 가리키는 쪽의 것)
             {
-                string full{ native };
-                full.push_back( '/' );
-                full.append( pName );
                 struct stat info;
                 if ( pEntry->d_type == DT_UNKNOWN )
+                    status._bLink = fstatat( dirfd( pDir ), pName, &info, AT_SYMLINK_NOFOLLOW ) == 0 && S_ISLNK( info.st_mode );
+                if ( fstatat( dirfd( pDir ), pName, &info, 0 ) == 0 )
                 {
-                    struct stat linkInfo;
-                    bLink = lstat( full.c_str(), &linkInfo ) == 0 && S_ISLNK( linkInfo.st_mode );
+                    status._kind       = S_ISDIR( info.st_mode ) ? FileKind::Directory : ( S_ISREG( info.st_mode ) ? FileKind::File : FileKind::Other );
+                    status._size       = static_cast<uint64>( info.st_size );
+                    status._writeTicks = PosixFileSystemInternal::toTicks( info.st_mtim );
                 }
-                bDirectory = stat( full.c_str(), &info ) == 0 && S_ISDIR( info.st_mode );
             }
-            if ( visit( pContext, string_view{ pName }, bDirectory, bLink ) == false )
+            if ( visit( pContext, string_view{ pName }, status ) == false )
                 break;
         }
         closedir( pDir );

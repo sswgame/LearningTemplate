@@ -24,6 +24,8 @@
 
 namespace sw
 {
+    class AssetScanCache;
+
     /** @brief 콘텐츠 파일 하나가 정체성을 어디에 드는가입니다(`AssetIdentityRules::classify`). */
     enum class AssetIdentityKind : uint8
     {
@@ -240,9 +242,11 @@ namespace sw
         static AssetDatabase build( const vector<AssetIdentityFile>& listFile, const AssetIdentityRules& rules, vector<AssetIdentityIssue>& outListIssue );
         /**
          * @brief 디스크 폴더 @p contentRoot(리소스 id 의 뿌리, `Content`)를 훑어 색인을 짓습니다. 정체성을 드는 파일만 읽는다.
-         * @details 폴더를 훑지 못하면 `Unreadable` 하나를 낸다.
+         * @details 폴더를 훑지 못하면 `Unreadable` 하나를 낸다. @p pCache(판 `kScanPayloadVersion`)를 주면 크기 · 시각이 그대로인 파일은 열지 않고 그 줄을 쓴다.
          */
-        static AssetDatabase scan( string_view contentRoot, const AssetIdentityRules& rules, vector<AssetIdentityIssue>& outListIssue );
+        static AssetDatabase scan( string_view contentRoot, const AssetIdentityRules& rules, vector<AssetIdentityIssue>& outListIssue, AssetScanCache* pCache = nullptr );
+        /** @brief 훑기 캐시에 두는 글(머리 글 한 줄 · `.meta` 글)의 판입니다. 남기는 글의 규칙이나 머리 글의 읽기 규칙을 바꾸면 올린다. */
+        static constexpr uint32 kScanPayloadVersion = 1;
 
         /** @brief @p guid 의 리소스 id 입니다(복사). 없으면 없음입니다. */
         [[nodiscard]] optional<string> findPath( const AssetGUID& guid ) const;
