@@ -306,7 +306,7 @@ namespace sw::editor
         , _pFavorites{ nullptr }
         , _pActionFavorites{ nullptr }
         , _layoutCache{}
-        , _scratchDisplay{}
+        , _scratchUnitFormat{}
         , _listFilteredGroup{}
         , _listBinding{}
         , _listElementProp{}
@@ -478,9 +478,9 @@ namespace sw::editor
             if ( bCategoryOpen == false )
                 continue;
 
-            for ( const PropertyInfo* pProp : group._listProperty )
+            for ( const InspectorPropertyItem& item : group._listItem )
             {
-                const PropertyInfo& prop = *pProp;
+                const PropertyInfo& prop = *item._pProperty;
                 // `EditCondition` 이 거짓이면 숨기거나(EditConditionHides) 막는다. 판정은 ImGui 에 의존하지 않는 `PropertyEditConditionExpr` 이 한다.
                 const PropertyEditState editState = PropertyEditConditionExpr::getEditState( prop, instance );
                 if ( editState == PropertyEditState::Hidden )
@@ -504,14 +504,14 @@ namespace sw::editor
                 }
 
                 const uint32 rowID = outState._rowCount;
-                appendValueRow( outState, instance, prop, 0, constant::invalid_index::kUint32, rowKey, PropertyRowChild::None, editState == PropertyEditState::Disabled );
+                appendValueRow( outState, instance, prop, 0, constant::invalid_index::kUint32, rowKey, PropertyRowChild::None, editState == PropertyEditState::Disabled, item._pDisplay );
                 // 깊이 0 행만의 값: 이름 칸(혼합 · 즐겨찾기 · 되돌리기 단추 · 표식). 자식이 행을 더했어도 번호로 다시 찾는다.
                 PropertyValueRow& row = outState._listRow[rowID];
                 row._markName         = type._name.c_str();
                 row._markName += ".";
                 row._markName += prop._name.c_str();
                 row._bMixed          = isMixed( prop ) ? SW_TRUE : SW_FALSE;
-                row._favoriteKey     = _layoutCache.getLaidOutDisplay( prop )._favoriteKey; // 묶음을 지을 때 만든 키
+                row._favoriteKey     = item._pDisplay->_favoriteKey; // 묶음을 지을 때 만든 키
                 row._bFavoriteTarget = bFavoriteTarget ? SW_TRUE : SW_FALSE;
                 row._bFavorite       = ( bFavoriteTarget && isFavorite( row._favoriteKey ) ) ? SW_TRUE : SW_FALSE;
                 row._bModified       = EditorDefaultObjects::isDefaultValue( prop, instance, defaultInstance ) ? SW_FALSE : SW_TRUE;
@@ -546,7 +546,7 @@ namespace sw::editor
     }
 
     void PropertyGridViewModel::appendValueRow( PropertyGridViewState& outState, const MutableObjectAddress instance, const PropertyInfo& prop, uint16 depth, uint32 rootRowID, uint64 key,
-                                                PropertyRowChild child, bool bDisabled )
+                                                PropertyRowChild child, bool bDisabled, InspectorPropertyDisplay* pDisplay )
     {
         using Internal = PropertyGridViewModelInternal;
 
@@ -555,6 +555,7 @@ namespace sw::editor
         RowBinding&       bind  = _listBinding.back();
         bind._instance          = instance;
         bind._pProp             = &prop;
+        bind._pDisplay          = pDisplay;
         bind._rootRowID         = rootRowID == constant::invalid_index::kUint32 ? rowID : rootRowID;
         bind._child             = child;
 
@@ -571,7 +572,7 @@ namespace sw::editor
         const InspectorBuiltinValue* pBuiltin = InspectorBuiltinValue::findBuiltin( prop._typeName.c_str() );
         if ( pBuiltin != nullptr )
         {
-            fillBuiltinRow( row, instance, prop, *pBuiltin );
+            fillBuiltinRow( row, instance, prop, *pBuiltin, pDisplay );
             return;
         }
         if ( getPropertyManager().find( prop._typeName.c_str() ) != nullptr )
@@ -695,7 +696,7 @@ namespace sw::editor
                     return;
                 const uint32 childRowID = outState._rowCount;
                 appendValueRow( outState, MutableObjectAddress{ pNestedPtr }, nestedProp, childDepth, rootRowID, HashUtil::combine( parentKey, static_cast<uint64>( nestedProp._name.getHash() ) ),
-                                PropertyRowChild::Field, bDisabled || editState == PropertyEditState::Disabled );
+                                PropertyRowChild::Field, bDisabled || editState == PropertyEditState::Disabled, nullptr );
                 setParent( childRowID );
                 _listBinding[childRowID]._parentRowID = rowID;
             }, true ); // 구조체의 기반 필드도 그린다(컴포넌트와 같은 규칙)
@@ -721,7 +722,7 @@ namespace sw::editor
             {
                 const uint32 childRowID = outState._rowCount;
                 appendValueRow( outState, MutableObjectAddress{ pValue }, valueProp, childDepth, rootRowID, HashUtil::combine( parentKey, static_cast<uint64>( ordinal ) ),
-                                PropertyRowChild::MapEntry, bElementDisabled );
+                                PropertyRowChild::MapEntry, bElementDisabled, nullptr );
                 PropertyValueRow& entry               = outState._listRow[childRowID];
                 entry._parentRowID                    = rowID;
                 entry._ordinal                        = ordinal;
@@ -767,7 +768,7 @@ namespace sw::editor
             // 원소 프로퍼티는 오프셋 0 이라 원소의 값 주소가 곧 그 프로퍼티를 가진 객체 주소다.
             const uint32 childRowID = outState._rowCount;
             appendValueRow( outState, MutableObjectAddress{ pElem }, elemProp, childDepth, rootRowID, HashUtil::combine( parentKey, static_cast<uint64>( elemIndex ) ), PropertyRowChild::Element,
-                            bElementDisabled );
+                            bElementDisabled, nullptr );
             PropertyValueRow&                      element = outState._listRow[childRowID];
             fixed_string<constant::buffer::kMax32> label;
             formatstring( label.data(), label.capacity(), "[%#]", elemIndex );
@@ -779,7 +780,8 @@ namespace sw::editor
         }
     }
 
-    void PropertyGridViewModel::fillBuiltinRow( PropertyValueRow& row, const MutableObjectAddress instance, const PropertyInfo& prop, const InspectorBuiltinValue& builtin )
+    void PropertyGridViewModel::fillBuiltinRow( PropertyValueRow& row, const MutableObjectAddress instance, const PropertyInfo& prop, const InspectorBuiltinValue& builtin,
+                                                const InspectorPropertyDisplay* pDisplay )
     {
         // 비트필드는 포인터를 잡을 수 없으므로 값으로 읽는다. 정수 계열과 bool 이 같은 체크박스를 쓴다.
         if ( prop._bIsBitField == SW_TRUE )
@@ -798,9 +800,9 @@ namespace sw::editor
         row._builtinIndex = builtin._index;
         row._value        = builtin._pReadValue( pValue );
 
-        const InspectorDisplayUnit& unit = getDisplayUnit( prop );
-        row._scale                       = unit._scale;
-        row._dragSpeed                   = unit._dragSpeed;
+        const InspectorDisplayUnit unit = pDisplay != nullptr ? pDisplay->_unit : InspectorPropertyLayout::getDisplayUnit( prop );
+        row._scale                      = unit._scale;
+        row._dragSpeed                  = unit._dragSpeed;
         if ( builtin._widget == InspectorValueWidget::Number )
             row._range = InspectorPropertyLayout::getNumericRange( prop, ObjectAddress{ instance } ); // 필드 이름 형태 경계는 이 객체의 그 필드 값이다
         else if ( builtin._widget == InspectorValueWidget::Vector3 || builtin._widget == InspectorValueWidget::Vector4 )
@@ -841,16 +843,6 @@ namespace sw::editor
         return *_listElementProp.back();
     }
 
-    const InspectorDisplayUnit& PropertyGridViewModel::getDisplayUnit( const PropertyInfo& prop )
-    {
-        const InspectorPropertyDisplay* pDisplay = _layoutCache.findDisplay( prop );
-        if ( pDisplay != nullptr )
-            return pDisplay->_unit;
-        // 묶음 밖 — 컨테이너 원소 · 맵 값 · 구조체 필드는 캐시에 없다.
-        _scratchDisplay._unit = InspectorPropertyLayout::getDisplayUnit( prop );
-        return _scratchDisplay._unit;
-    }
-
     bool PropertyGridViewModel::findRowValue( uint32 rowID, MutableObjectAddress& outInstance, const PropertyInfo*& outProp ) const
     {
         const RowBinding* pBinding = findValueBinding( rowID );
@@ -877,13 +869,12 @@ namespace sw::editor
         const RowBinding* pBinding = findValueBinding( rowID );
         if ( pBinding == nullptr )
             return pNumberFormat;
-        const PropertyInfo&       prop     = *pBinding->_pProp;
-        InspectorPropertyDisplay* pDisplay = _layoutCache.findDisplay( prop );
+        InspectorPropertyDisplay* const pDisplay = pBinding->_pDisplay;
         if ( pDisplay == nullptr )
         {
-            // 묶음 밖 임시 프로퍼티 — `getDisplayUnit` 과 같은 까닭으로 부를 때마다 짓는다.
-            _scratchDisplay._unitFormat = InspectorPropertyLayout::appendUnitSuffix( pNumberFormat, InspectorPropertyLayout::getDisplayUnit( prop )._suffix );
-            return _scratchDisplay._unitFormat.c_str();
+            // 묶음 밖(컨테이너 원소 · 맵 값 · 중첩 필드)은 표시 정보가 없다 — 부를 때마다 짓는다.
+            _scratchUnitFormat = InspectorPropertyLayout::appendUnitSuffix( pNumberFormat, InspectorPropertyLayout::getDisplayUnit( *pBinding->_pProp )._suffix );
+            return _scratchUnitFormat.c_str();
         }
         if ( pDisplay->_pUnitFormatBase != pNumberFormat )
         {
@@ -946,14 +937,14 @@ namespace sw::editor
         favoriteGroup._category = type.getDisplayName();
         for ( const InspectorPropertyGroup& group : inoutListGroup )
         {
-            for ( const PropertyInfo* pProp : group._listProperty )
+            for ( const InspectorPropertyItem& item : group._listItem )
             {
-                if ( isFavorite( InspectorFavorites::makePropertyKey( type, *pProp ) ) )
-                    favoriteGroup._listProperty.push_back( pProp );
+                if ( isFavorite( item._pDisplay->_favoriteKey ) )
+                    favoriteGroup._listItem.push_back( item );
             }
         }
         inoutListGroup.clear();
-        if ( favoriteGroup._listProperty.empty() == false )
+        if ( favoriteGroup._listItem.empty() == false )
             inoutListGroup.push_back( std::move( favoriteGroup ) );
     }
 
@@ -982,11 +973,11 @@ namespace sw::editor
     {
         for ( InspectorPropertyGroup& group : inoutListGroup )
         {
-            VectorUtil::removeIf( group._listProperty, [this, instance, defaultInstance]( const PropertyInfo* pProp )
-            { return isMixed( *pProp ) == false && EditorDefaultObjects::isDefaultValue( *pProp, instance, defaultInstance ); } );
+            VectorUtil::removeIf( group._listItem, [this, instance, defaultInstance]( const InspectorPropertyItem& item )
+            { return isMixed( *item._pProperty ) == false && EditorDefaultObjects::isDefaultValue( *item._pProperty, instance, defaultInstance ); } );
         }
         VectorUtil::removeIf( inoutListGroup, []( const InspectorPropertyGroup& group )
-        { return group._listProperty.empty(); } );
+        { return group._listItem.empty(); } );
     }
 
     // ------------------------------------------------------------------------------

@@ -65,7 +65,7 @@ namespace sw::editor
                 outListGroup.push_back( InspectorPropertyGroup{ string{ category }, {} } );
                 pGroup = &outListGroup.back();
             }
-            pGroup->_listProperty.push_back( &prop );
+            pGroup->_listItem.push_back( InspectorPropertyItem{ &prop, nullptr } );
             return ReflectVisitFlow::Continue;
         } );
     }
