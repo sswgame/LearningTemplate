@@ -2039,6 +2039,8 @@
     "FrontierTownData": "CityGameModeComponent 의 씬 데이터(_landSize · _secondsPerDay · _startHour) — 게임 FrontierTown 을 Playground 미니게임 frontiertown 으로 흡수했다(NEXT 7 절 6 단계)(2026-11-24)",
     "gv_frontierAutoPlay": "gv_playgroundAutoPlay — 게임 FrontierTown 을 Playground 미니게임 frontiertown 으로 흡수했다(NEXT 7 절 6 단계)(2026-11-24)",
     "SkirmishUnitComponent": "RTSUnitViewComponent — RTS 유닛 뷰는 키트 클라이언트(GF_Client_RealTimeStrategy)의 것이다 — 게임 접두를 뗀다(2026-11-24)",
-    "SkirmishDragComponent": "RTSDragBoxComponent — 끌어 고르기 상자는 키트 클라이언트(GF_Client_RealTimeStrategy)의 것이다 — 게임 접두를 뗀다(2026-11-24)"
+    "SkirmishDragComponent": "RTSDragBoxComponent — 끌어 고르기 상자는 키트 클라이언트(GF_Client_RealTimeStrategy)의 것이다 — 게임 접두를 뗀다(2026-11-24)",
+    "StarSkirmishGame": "PlaygroundGame — 게임 StarSkirmish 를 Playground 미니게임 starskirmish 로 흡수했다(NEXT 7 절 13 단계)(2026-11-24)",
+    "gv_skirmishAutoPlay": "gv_playgroundAutoPlay — 게임 StarSkirmish 를 Playground 미니게임 starskirmish 로 흡수했다(NEXT 7 절 13 단계)(2026-11-24)"
   }
 }
