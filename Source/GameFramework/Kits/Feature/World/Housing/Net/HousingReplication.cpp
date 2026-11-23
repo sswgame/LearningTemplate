@@ -33,14 +33,14 @@ namespace sw
             static uint64 computeIDHash( const hashed_string& id ) { return static_cast<uint64>( id.getHash() ); }
 
             /** @brief 부지 목록에서 id 해시가 같은 부지의 자리입니다. 없으면 목록 크기입니다. */
-            static size_t findPlotIndex( const vector<HousingNetPlotRef>& listPlot, uint64 plotHash )
+            static optional<size_t> findPlotIndex( const vector<HousingNetPlotRef>& listPlot, uint64 plotHash )
             {
                 for ( size_t index = 0; index < listPlot.size(); ++index )
                 {
                     if ( computeIDHash( listPlot[index]._pLayout->getSettings()._plotID ) == plotHash )
                         return index;
                 }
-                return listPlot.size();
+                return nullopt;
             }
 
             /** @brief 카탈로그에서 id 해시가 같은 부품입니다. 받은 글을 인턴하지 않으려고 해시로 찾는다. */
@@ -453,11 +453,11 @@ namespace sw
 
     HousingPlaceResult HousingReplicationServer::evaluateEdit( const PendingEdit& edit, const vector<HousingNetPlotRef>& listPlot, uint32& outPlacementID )
     {
-        using Internal         = HousingReplicationInternal;
-        const size_t plotIndex = Internal::findPlotIndex( listPlot, edit._plotHash );
-        if ( plotIndex == listPlot.size() )
+        using Internal                   = HousingReplicationInternal;
+        const optional<size_t> plotIndex = Internal::findPlotIndex( listPlot, edit._plotHash );
+        if ( plotIndex.has_value() == false )
             return HousingPlaceResult::UnknownPlot;
-        const HousingNetPlotRef& plot        = listPlot[plotIndex];
+        const HousingNetPlotRef& plot        = listPlot[*plotIndex];
         HousingLayout&           layout      = *plot._pLayout;
         PlotEntry&               entry       = getOrCreateEntry( edit._plotHash );
         const uint64             callerOwner = findCallerOwner( edit._connectionID );
@@ -814,13 +814,13 @@ namespace sw
         vector<PendingOp> listKept;
         for ( PendingOp& op : _listOp )
         {
-            const size_t plotIndex = Internal::findPlotIndex( listPlot, op._plotHash );
-            if ( plotIndex == listPlot.size() )
+            const optional<size_t> plotIndex = Internal::findPlotIndex( listPlot, op._plotHash );
+            if ( plotIndex.has_value() == false )
             {
                 listKept.push_back( std::move( op ) );
                 continue;
             }
-            const HousingNetPlotRef& plot = listPlot[plotIndex];
+            const HousingNetPlotRef& plot = listPlot[*plotIndex];
             if ( op._kind == OpKind::Snapshot )
             {
                 Archive archive( op._snapshotBytes.data(), op._snapshotBytes.size() );
@@ -854,11 +854,11 @@ namespace sw
         // 판정 — 모르는 부지의 답은 버린다(그 부지에 요청을 보낸 적이 없다).
         for ( const ReceivedReply& received : _listReply )
         {
-            const size_t plotIndex = Internal::findPlotIndex( listPlot, received._plotHash );
-            if ( plotIndex == listPlot.size() )
+            const optional<size_t> plotIndex = Internal::findPlotIndex( listPlot, received._plotHash );
+            if ( plotIndex.has_value() == false )
                 continue;
             HousingEditReply reply;
-            reply._plotIndex   = plotIndex;
+            reply._plotIndex   = *plotIndex;
             reply._requestID   = received._requestID;
             reply._placementID = received._placementID;
             reply._result      = received._result;

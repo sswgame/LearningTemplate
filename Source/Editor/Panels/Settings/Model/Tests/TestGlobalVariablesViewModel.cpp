@@ -167,39 +167,39 @@ SW_TEST_CASE_F( GlobalVariablesViewModelTest, PresetSavedDuringScanIsListed )
 SW_TEST_CASE( GlobalVariablesViewModelUndoTest, EditsPresetAndResetAllUndoAsOneStepEach )
 {
     GlobalVariablesViewModel model;
-    GlobalVariableInfo*      pDraw  = GlobalVariablesViewModel::findVariable( "gv_physicsDebugDraw" );
-    GlobalVariableInfo*      pOther = GlobalVariablesViewModel::findVariable( "gv_textureStreaming" );
-    SW_REQUIRE_TRUE( pDraw != nullptr && pOther != nullptr );
-    const bool bDraw  = pDraw->getValueAsBool();
-    const bool bOther = pOther->getValueAsBool();
+    GlobalVariableInfo*      pCulling = GlobalVariablesViewModel::findVariable( "gv_shadowCascadeCulling" );
+    GlobalVariableInfo*      pOther   = GlobalVariablesViewModel::findVariable( "gv_textureStreaming" );
+    SW_REQUIRE_TRUE( pCulling != nullptr && pOther != nullptr );
+    const bool bCulling = pCulling->getValueAsBool();
+    const bool bOther   = pOther->getValueAsBool();
 
-    model.beginEdit( pDraw->_name );
-    pDraw->setValueAsBool( !bDraw );
+    model.beginEdit( pCulling->_name );
+    pCulling->setValueAsBool( !bCulling );
     model.recordEdited( true );
     SW_EXPECT_FALSE( model.getCommandStack().undo() ); // 끄는 동안은 거절한다
     model.flushEdit( false );
     pOther->setValueAsBool( !bOther ); // 창 밖(콘솔)에서 고쳤다
     SW_EXPECT_TRUE( model.getCommandStack().undo() );
-    SW_EXPECT_TRUE( pDraw->getValueAsBool() == bDraw );
+    SW_EXPECT_TRUE( pCulling->getValueAsBool() == bCulling );
     SW_EXPECT_TRUE( pOther->getValueAsBool() != bOther );
     SW_EXPECT_TRUE( model.takeUndoMoved() );
     SW_EXPECT_FALSE( model.takeUndoMoved() );
 
     const AbsolutePath presetPath = test::makeScratchPath( "undo.gvpreset.xml" );
     SW_REQUIRE_TRUE( FileUtil::ensureParentDirectoryExists( presetPath ) );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( presetPath, bDraw ? R"(<GlobalVariablesPreset><Var name="gv_physicsDebugDraw" value="false"/></GlobalVariablesPreset>)"
-                                                                : R"(<GlobalVariablesPreset><Var name="gv_physicsDebugDraw" value="true"/></GlobalVariablesPreset>)" ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( presetPath, bCulling ? R"(<GlobalVariablesPreset><Var name="gv_shadowCascadeCulling" value="false"/></GlobalVariablesPreset>)"
+                                                                   : R"(<GlobalVariablesPreset><Var name="gv_shadowCascadeCulling" value="true"/></GlobalVariablesPreset>)" ) );
     SW_REQUIRE_TRUE( model.loadPreset( presetPath.str() ) );
-    SW_EXPECT_TRUE( pDraw->getValueAsBool() != bDraw );
+    SW_EXPECT_TRUE( pCulling->getValueAsBool() != bCulling );
 
     model.resetAllToDefault();
-    SW_EXPECT_TRUE( pDraw->isAtDefault() );
+    SW_EXPECT_TRUE( pCulling->isAtDefault() );
     SW_EXPECT_TRUE( pOther->isAtDefault() );
     SW_EXPECT_TRUE( model.getCommandStack().undo() ); // Reset All
-    SW_EXPECT_TRUE( pDraw->getValueAsBool() != bDraw );
+    SW_EXPECT_TRUE( pCulling->getValueAsBool() != bCulling );
     SW_EXPECT_TRUE( pOther->getValueAsBool() != bOther );
     SW_EXPECT_TRUE( model.getCommandStack().undo() ); // 프리셋
-    SW_EXPECT_TRUE( pDraw->getValueAsBool() == bDraw );
+    SW_EXPECT_TRUE( pCulling->getValueAsBool() == bCulling );
 
     pOther->setValueAsBool( bOther );
 }

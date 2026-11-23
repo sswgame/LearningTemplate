@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="f92d8433047835e2493a2b3986c589f5"?>
+<!--
+  초원 마을 미니게임(meadowvillage — 옛 게임 MeadowVillage) 목표 마커 — 부탁(quest meadow_request)을 받으면 목표 자리(OrchardSite 의 QuestObjectiveMarkerComponent)에 화면 마커가 뜨고,
+  과수원이 서서 부탁이 끝나면 사라지는지 본다. meadowvillage_day.scenario 와 같은 흐름(날 단위로 시계를 감는다)에서 마커 가시성(UI.MarkerVisible)의 이력이 0 → 1 → 0 인지,
+  부탁 상태의 이력이 NotStarted → Active → Completed 인지 단언한다. 마커는 UI 갱신이 놓으므로 프레임마다 읽어 이력으로 본다.
+  시작의 10 프레임은 부탁 전에 마커가 뜨지 않는 것을 보는 자리라 고정 대기다.
+  실행: ctest -R Scenario.playground · App -scenario=game/playground/automation/meadowvillage_questmarker.scenario.xml -unattended
+-->
+<Scenario name="game.playground.meadowvillage_questmarker" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstMinigame" value="meadowvillage"/>
+	<Variable name="gv_playgroundAutoPlay" value="0"/>
+	<WaitUntil watch="Object.Exists" target="OrchardSite" equals="1" timeoutFrames="30"/> <!-- 과수원 자리가 섰다 -->
+	<Expect watch="Quest.Status" target="meadow_request" is="NotStarted"/>
+	<Expect watch="UI.MarkerVisible" target="OrchardSite" equals="0"/>
+	<AdvanceGameTime hours="24"/>
+	<WaitUntil watch="Clock.Day" equals="1" timeoutFrames="10"/> <!-- 감은 날이 넘어갔다 -->
+	<AdvanceGameTime hours="24"/>
+	<WaitUntil watch="Clock.Day" equals="2" timeoutFrames="10"/> <!-- 감은 날이 넘어갔다 -->
+	<AdvanceGameTime hours="24"/>
+	<WaitUntil watch="Clock.Day" equals="3" timeoutFrames="10"/> <!-- 감은 날이 넘어갔다 -->
+	<AdvanceGameTime hours="24"/>
+	<WaitUntil watch="Clock.Day" equals="4" timeoutFrames="10"/> <!-- 감은 날이 넘어갔다 -->
+	<AdvanceGameTime hours="24"/>
+	<WaitUntil watch="Clock.Day" equals="5" timeoutFrames="10"/> <!-- 감은 날이 넘어갔다 -->
+	<AdvanceGameTime hours="24"/>
+	<WaitUntil watch="Clock.Day" equals="6" timeoutFrames="10"/> <!-- 감은 날이 넘어갔다 -->
+	<AdvanceGameTime hours="24"/>
+	<WaitUntil watch="Clock.Day" equals="7" timeoutFrames="10"/> <!-- 감은 날이 넘어갔다 -->
+	<AdvanceGameTime hours="24"/>
+	<WaitUntil watch="Quest.Status" target="meadow_request" is="Completed" timeoutFrames="30"/>
+	<WaitUntil watch="UI.MarkerVisible" target="OrchardSite" equals="0" timeoutFrames="30"/>
+	<ExpectVisited watch="Quest.Status" target="meadow_request" sequence="NotStarted, Active, Completed"/>
+	<ExpectVisited watch="UI.MarkerVisible" target="OrchardSite" sequence="0, 1, 0"/>
+	<!-- 런타임 퀘스트 · 진행 조건 디버거(HUD 섹션 quest · progress)를 HUD 없이 한 번 돌려 줄을 로그로 본다 — 끝난 부탁이 Completed 로 적힌다 -->
+	<DevCommand line="debug.target clear"/>
+	<DevCommand line="hud.print quest"/>
+	<ExpectLog id="DebugHUD.PrintLine" contains="[quest] meadow_request: Completed x1" atLeast="1"/>
+	<DevCommand line="hud.print progress"/>
+	<ExpectLog id="DebugHUD.PrintLine" contains="[progress] target: " atLeast="1"/>
+	<Pass/>
+</Scenario>

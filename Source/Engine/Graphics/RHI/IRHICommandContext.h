@@ -64,7 +64,13 @@ namespace sw
         // ------------------------------------------------------------------------------
         void setComputePipelineState( RHIPipelineStateHandle pso ) final;
         void dispatchCompute( uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ ) final;
+        void dispatchThreads( uint32 threadCountX, uint32 threadCountY, uint32 threadCountZ ) final;
         void dispatchIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0 ) final;
+        /**
+         * @brief 컴퓨트 슬롯에 건 버퍼 번호를 기억합니다 — 다음 디스패치가 걸린 PSO 와 함께 `RHIComputeBindingLog` 에 적는다(버퍼 보기). 개발 구성에서만 부른다(`RHICommandListForwarder`).
+         * @details 번호를 걸 때 적지 않는 것은 PSO 를 뒤에 거는 자리가 있어서다 — 디스패치 순간의 PSO 가 그 번호를 읽는 셰이더다. 디스패치가 적으면 비운다(앞 셰이더가 건 번호를 다음 PSO 의 것으로 적지 않게).
+         */
+        void trackComputeBinding( RHIDescriptorIndex index, bool bUAV, uint32 slot );
         void prepareTextureForShaderRead( RHITextureHandle texture ) final;
         void prepareTextureForRenderTarget( RHITextureHandle texture ) final;
         void prepareTextureForUnorderedAccess( RHITextureHandle texture ) final;
@@ -126,7 +132,17 @@ namespace sw
         [[nodiscard]] bool isTextureHandleValid( RHITextureHandle texture, const utf8* pOperation ) const;
 
     private:
-        uint8 _bRenderPassOpen         : 1;
-        uint8 _bRenderPassNoBackBuffer : 1;
+        static constexpr uint32 kTrackedComputeSlotCount = 8; ///< 슬롯 종류마다 기억하는 칸(binding_slots.hlsli 의 컴퓨트 슬롯보다 넉넉하다)
+
+        /** @brief 앞 디스패치 뒤에 건 컴퓨트 버퍼를 지금 PSO 와 함께 기록하고(기록이 켜져 있을 때만) 비웁니다. */
+        void recordComputeBindings();
+        void clearTrackedComputeBindings();
+
+    private:
+        RHIDescriptorIndex     _arrTrackedCompute[2][kTrackedComputeSlotCount]; ///< [0] SRV · [1] UAV 슬롯에 걸린 번호
+        RHIPipelineStateHandle _computePSO{ 0 };                                ///< 걸려 있는 컴퓨트 PSO
+        RHIThreadGroupSize     _computeGroupSize{};                             ///< 걸려 있는 컴퓨트 PSO 의 그룹 크기(`setComputePipelineState`)
+        uint8                  _bRenderPassOpen         : 1;
+        uint8                  _bRenderPassNoBackBuffer : 1;
     };
 } // namespace sw

@@ -55,7 +55,7 @@ namespace sw
         PROPERTY( Category = "Element", DisplayName = "Rule Table", Tooltip = "Element rule table (required)" )
         AssetRef<ElementRuleCatalog> _tablePath;
         PROPERTY( Required, Category = "Element", DisplayName = "Material", Tooltip = "Material name in the table" )
-        hashed_string _material;
+        hashed_string _elementMaterial;
         PROPERTY( Required, Category = "Element", DisplayName = "Signal Status", Tooltip = "Status that sets the gimmick sensor signal (Burning for torches)" )
         hashed_string _signalStatus;
         PROPERTY( Category = "Element", DisplayName = "Start Status", Tooltip = "Stimulus applied at play start (Fire for a lit torch)" )

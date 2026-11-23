@@ -36,19 +36,35 @@ namespace sw
     {
         if ( pExtension == nullptr )
             return false;
+        // 선언은 모듈 코드라 잠금 밖에서 부른다.
+        ExtensionEntry entry;
+        entry._pExtension = pExtension;
+        pExtension->declarePasses( entry._declaration );
         ScopedLock<mutex> lock{ _mutex };
-        if ( VectorUtil::contains( _listExtension, pExtension ) )
+        if ( VectorUtil::containsIf( _listExtension, [pExtension]( const ExtensionEntry& existing )
+        { return existing._pExtension == pExtension; } ) )
             return false;
-        _listExtension.push_back( pExtension );
+        _listExtension.push_back( std::move( entry ) );
         return true;
     }
 
     void RenderExtensionRegistry::unregisterExtension( IRenderExtension* pExtension )
     {
         // flush: 렌더 스레드가 모듈 구간 안이면 그 구간이 끝나기를 기다린다. 이 잠금을 쥔 채 목록에서 빼므로, 뺀 뒤에는 렌더 스레드가 이 확장을 부르지 않는다.
-        ScopedLock<mutex> runLock{ _runMutex };
-        ScopedLock<mutex> lock{ _mutex };
-        (void)VectorUtil::removeValue( _listExtension, pExtension );
+        vector<ExtensionEntry> listRemoved;
+        {
+            ScopedLock<mutex> runLock{ _runMutex };
+            ScopedLock<mutex> lock{ _mutex };
+            for ( size_t index = 0; index < _listExtension.size(); ++index )
+            {
+                if ( _listExtension[index]._pExtension != pExtension )
+                    continue;
+                listRemoved.push_back( std::move( _listExtension[index] ) );
+                _listExtension.erase( _listExtension.begin() + static_cast<ptrdiff_t>( index ) );
+                break;
+            }
+        }
+        listRemoved.clear(); // 실행 콜백의 소멸 코드는 이 함수를 부른 모듈 안에 있다 — 잠금 밖에서, 모듈이 내려가기 전에 놓는다
     }
 
     ExtensionSceneProxyID RenderExtensionRegistry::addProxy( unique_ptr<IExtensionSceneProxy> pProxy )
@@ -141,10 +157,14 @@ namespace sw
         }
     }
 
-    void RenderExtensionRegistry::copyExtensions( vector<IRenderExtension*>& outList ) const
+    void RenderExtensionRegistry::copyDeclarations( ExtensionPassBuilder& outBuilder ) const
     {
+        outBuilder.clear();
         ScopedLock<mutex> lock{ _mutex };
-        outList = _listExtension;
+        for ( const ExtensionEntry& entry : _listExtension )
+        {
+            outBuilder.append( entry._declaration );
+        }
     }
 
     void RenderExtensionRegistry::copyProxies( vector<IExtensionSceneProxy*>& outList ) const

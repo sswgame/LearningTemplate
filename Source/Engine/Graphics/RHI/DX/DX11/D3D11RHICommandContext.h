@@ -29,7 +29,7 @@ namespace sw
         ~D3D11RHICommandContext() override = default;
 
         void blitTextureNative( RHITextureHandle src, RHITextureHandle dst ) override;
-        void bindShaderResource( RHIDescriptorIndex index, uint32 slot ) override;
+        void bindShaderResource( RHITextureSRVIndex index, uint32 slot ) override;
         void prepareTextureForShaderReadNative( RHITextureHandle texture ) override;
         /**
          * @brief D3D11 에 상태 전이는 없지만 바인딩 해저드는 있습니다. 이 텍스처가 바인딩된 PS SRV 슬롯을 해제합니다.
@@ -39,17 +39,17 @@ namespace sw
         void prepareTextureForRenderTargetNative( RHITextureHandle texture ) override;
         /** @brief D3D11 은 UAV 해저드를 런타임이 풀어 의도적으로 아무것도 하지 않습니다. */
         void prepareTextureForUnorderedAccessNative( RHITextureHandle texture ) override { (void)texture; }
-        void bindComputeUAV( RHIDescriptorIndex index, uint32 slot ) override;
-        void bindGraphicsUAV( RHIDescriptorIndex index, uint32 slot ) override;
+        void bindComputeUAV( RHIUnorderedAccessIndex index, uint32 slot ) override;
+        void bindGraphicsUAV( RHIUnorderedAccessIndex index, uint32 slot ) override;
         void setVertexBuffer( uint32 slot, RHIBufferHandle buffer, uint32 stride, uint32 offset = 0 ) override;
         void drawNative( uint32 vertexCount, uint32 startVertex = 0 ) override;
         void drawInstancedNative( uint32 vertexCount, uint32 instanceCount, uint32 startVertex = 0, uint32 startInstance = 0 ) override;
-        void bindConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot ) override;
+        void bindConstantBuffer( RHIBufferSRVIndex constantBufferIndex, uint32 slot ) override;
         /** @brief 이 컨텍스트에 `Map(WRITE_DISCARD)` 합니다. Deferred Context 면 런타임이 리스트 단위로 버저닝하고, 즉시 컨텍스트(프레임 스트림)면 다른 스레드의 팩토리 갱신과 같은 버퍼를 다툴 수 있어 `D3D11ImmediateContext::lock()` 으로 묶습니다. */
         void updateConstantBufferNative( RHIBufferHandle buffer, const void* pData, uint32 size ) override;
-        void bindStructuredBuffer( RHIDescriptorIndex index, uint32 slot ) override;
-        void bindComputeConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot ) override;
-        void bindComputeShaderResource( RHIDescriptorIndex index, uint32 slot ) override;
+        void bindStructuredBuffer( RHIBufferSRVIndex index, uint32 slot ) override;
+        void bindComputeConstantBuffer( RHIBufferSRVIndex constantBufferIndex, uint32 slot ) override;
+        void bindComputeShaderResource( RHIBufferSRVIndex index, uint32 slot ) override;
         void dispatchComputeNative( uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ ) override;
         void setViewport( const RHIViewport& viewport ) override;
         void setScissorRect( const RHIScissorRect& rect ) override;
@@ -96,7 +96,7 @@ namespace sw
         /** @brief beginEventMarker 와 endEventMarker 용 어노테이션 인터페이스를 처음 한 번만 QueryInterface 해 캐시합니다. */
         ID3DUserDefinedAnnotation* getAnnotation();
         /** @brief bindless 인덱스가 가리키는 구조 버퍼의 SRV 를 반환합니다. 범위 밖이거나 미등록이면 nullptr 입니다. 그래픽스와 컴퓨트 바인딩이 같은 조회를 씁니다. */
-        ID3D11ShaderResourceView* findBindlessBufferSRV( RHIDescriptorIndex index ) const;
+        ID3D11ShaderResourceView* findBindlessBufferSRV( RHIBufferSRVIndex index ) const;
         /**
          * @brief 루트 상수를 흉내 냅니다. 그림자 배열에 쓰고 계약 슬롯의 작은 상수 버퍼를 다시 채워 바인딩합니다.
          * @details DX11 에는 루트 상수가 없습니다. 그래픽스와 컴퓨트 진입점이 이것을 함께 쓰고, 다른 점은 어느
@@ -106,7 +106,7 @@ namespace sw
         /**
          * @brief 번호 @p index 의 상수 버퍼를 @p slot 에 겁니다(그래픽스면 VS · PS · CS · HS · DS, 컴퓨트면 CS). 페이지 구간이면 `*SetConstantBuffers1` 오프셋으로 겁니다(감사 R-4).
          */
-        void bindConstantBufferAt( RHIDescriptorIndex index, uint32 slot, bool bCompute );
+        void bindConstantBufferAt( RHIBufferSRVIndex index, uint32 slot, bool bCompute );
         /**
          * @brief 스테이지 @p stage(`D3D11ConstantBufferBindings` 순서)의 @p slot 에 상수 버퍼를 겁니다. @p firstConstant 가 `kWholeBuffer` 면 버퍼 전체, 아니면 구간입니다.
          * @details 그림자와 같으면 건너뛴다. 같은 버퍼를 오프셋만 바꿔 걸 때, 드라이버가 커맨드 리스트를 지원하지 않는 지연 컨텍스트에서만 빈 칸을 먼저 건다

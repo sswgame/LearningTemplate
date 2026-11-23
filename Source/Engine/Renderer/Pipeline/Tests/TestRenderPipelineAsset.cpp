@@ -228,15 +228,14 @@ namespace
     };
 } // namespace
 
-/** @brief [RenderPipelineAssetTest] 컴퓨트 패스: 셰이더 · 입력 · 출력 하나면 읽힌다. 진입점 · 그룹 크기는 적은 값이다 */
+/** @brief [RenderPipelineAssetTest] 컴퓨트 패스: 셰이더 · 입력 · 출력 하나면 읽힌다. 진입점은 적은 값이다 */
 SW_TEST_CASE( RenderPipelineAssetTest, ComputePassLoads )
 {
     RenderPipelineAsset asset;
-    SW_REQUIRE_TRUE( RenderPipelineTestUtil::load( asset, ComputePassTestUtil::makeXML( ComputePassTestUtil::withShader( "_computeEntryPoint=\"MyCS\" _threadGroupSize=\"4\"" ), "<item>A</item>", "<item>B</item>" ) ) );
+    SW_REQUIRE_TRUE( RenderPipelineTestUtil::load( asset, ComputePassTestUtil::makeXML( ComputePassTestUtil::withShader( "_computeEntryPoint=\"MyCS\"" ), "<item>A</item>", "<item>B</item>" ) ) );
     const RenderGraphPassDesc& pass = asset.getGraphPass()[0];
     SW_EXPECT_TRUE( pass._type == RenderPassKind::Compute );
     SW_EXPECT_EQUAL( string( "MyCS" ), pass._computeEntryPoint );
-    SW_EXPECT_EQUAL( 4u, pass._threadGroupSize );
     SW_EXPECT_TRUE( getRenderPassKindInfo( RenderPassKind::Compute ).hasFlag( RenderPassTraitFlag::kPipelineCompute ) );
 }
 
@@ -987,7 +986,7 @@ SW_TEST_CASE( RenderPipelineAssetTest, ShippedPipelinesDeclareFramePasses )
         SW_REQUIRE_TRUE_MSG( asset.loadFromXMLFile( AssetID{ string_view( pPath ) } ), pPath );
         for ( const RenderPassKind type : { RenderPassKind::DepthHistory, RenderPassKind::HZBBuild, RenderPassKind::VFXSimulation, RenderPassKind::VFXParticleSort, RenderPassKind::VFXMeshInstance,
                                             RenderPassKind::InstanceAnimation, RenderPassKind::MeshMorph, RenderPassKind::MeshSkin, RenderPassKind::GPUCull, RenderPassKind::LightGrid,
-                                            RenderPassKind::VolumetricFog, RenderPassKind::ProbeUpdate, RenderPassKind::CanvasMarker } )
+                                            RenderPassKind::VolumetricFog, RenderPassKind::SceneVoxelize, RenderPassKind::ProbeUpdate, RenderPassKind::CanvasMarker } )
         {
             SW_EXPECT_TRUE_MSG( asset.hasFramePass( type ), pPath );
         }

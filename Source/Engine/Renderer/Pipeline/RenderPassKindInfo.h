@@ -326,7 +326,7 @@ namespace sw
 
         /**
          * @brief 패스 서술 없이 이 표만으로 만든 엔진 PSO 에 픽셀 스테이지가 있는지 반환합니다.
-         * @details 파이프라인에 그 종류의 패스가 없으면 `createPSOForPassType` 은 표의 컬러 타깃 수로 PSO 를 만들고, 0이면 PS 를
+         * @details 파이프라인에 그 종류의 패스가 없으면 `FramePSOManager::makePassPSODesc` 은 표의 컬러 타깃 수로 PSO 를 만들고, 0이면 PS 를
          *          붙이지 않는다. 쿠커가 같은 판정으로 쿠킹한다. 서술이 있는 패스는 `FrameRendererUtil::hasPixelStage( pass, listAttachment )` 를 쓴다.
          */
         constexpr bool hasPixelStage() const { return _colorTargetCount > 0; }

@@ -411,9 +411,9 @@ namespace sw
         _wallSide = 0;
         if ( bWasGrounded == false )
         {
-            if ( bWallLeft && moveX < -0.1f )
+            if ( bWallLeft && moveX < -_settings._moveDeadzone )
                 _wallSide = -1;
-            else if ( bWallRight && moveX > 0.1f )
+            else if ( bWallRight && moveX > _settings._moveDeadzone )
                 _wallSide = 1;
         }
 
@@ -460,9 +460,9 @@ namespace sw
         }
         const float32 moveX = MathUtil::clamp( input._move._x, -1.0f, 1.0f );
         const float32 moveY = MathUtil::clamp( input._move._y, -1.0f, 1.0f );
-        if ( moveX > 0.1f )
+        if ( moveX > _settings._moveDeadzone )
             _facing = 1;
-        else if ( moveX < -0.1f )
+        else if ( moveX < -_settings._moveDeadzone )
             _facing = -1;
 
         tryStartDash( input, moveX, moveY, bWasGrounded );
@@ -490,13 +490,13 @@ namespace sw
         if ( _dash.isActive() )
         {
             if ( _dash.update( deltaTime ) )
-                _velocity = _velocity * 0.4f; // 대시 끝에 속도를 꺾는다
+                _velocity = _velocity * _settings._dashEndSpeedScale; // 대시 끝에 속도를 꺾는다
         }
         else if ( _bClimbing )
         {
-            _velocity = float2{ moveX * _settings._climbSpeed * 0.5f, moveY * _settings._climbSpeed };
+            _velocity = float2{ moveX * _settings._climbSpeed * _settings._climbSideScale, moveY * _settings._climbSpeed };
             if ( _jumpBuffer.isActive() )
-                startJump( getJumpSpeed() * 0.8f, PlatformerEvent::kJumped );
+                startJump( getJumpSpeed() * _settings._climbJumpScale, PlatformerEvent::kJumped );
         }
         else
         {

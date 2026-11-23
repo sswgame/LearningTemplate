@@ -115,6 +115,14 @@ namespace sw
         float32 _climbSpeed{ 4.0f };
         PROPERTY( Required, Min = 0.0 )
         float32 _dropThroughTime{ 0.25f };
+        PROPERTY( Required, Min = 0.0, Max = 1.0 )
+        float32 _dashEndSpeedScale{ 0.4f }; ///< 대시 끝에 남기는 속도 비율
+        PROPERTY( Required, Min = 0.0 )
+        float32 _climbJumpScale{ 0.8f }; ///< 사다리에서 뛸 때의 점프 속도 비율
+        PROPERTY( Required, Min = 0.0 )
+        float32 _climbSideScale{ 0.5f }; ///< 사다리에서 옆으로 움직이는 속도 비율(`_climbSpeed` 에 곱한다)
+        PROPERTY( Required, Min = 0.0, Max = 1.0 )
+        float32 _moveDeadzone{ 0.1f }; ///< 좌우 입력이 이보다 커야 바라보는 쪽 · 벽 붙기가 바뀐다
         PROPERTY( Required, Min = 0 )
         int32 _extraJumpCount{ 0 }; ///< 공중 점프 수(2단 점프 = 1)
         PROPERTY( Required, Min = 0 )

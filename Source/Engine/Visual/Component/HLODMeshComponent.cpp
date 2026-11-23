@@ -107,7 +107,7 @@ namespace sw
         {
             const string& meshID = _listPart[partIndex]._meshID.path();
             if ( MeshAssetFormat::isMeshAssetPath( meshID ) )
-                listLoad[partIndex] = MeshCache::request( meshID );
+                listLoad[partIndex] = MeshCache::request( meshID, MeshCPUAccess::Keep );
         }
         _listPartLoad = std::move( listLoad );
         if ( isMeshPending() )
@@ -131,7 +131,7 @@ namespace sw
         _listPartLoad.clear(); // 합친 것은 사본이다 — 부품 메시를 쥐지 않는다
         if ( mergedCount == 0 )
             return MeshArrival::Failed;
-        shared_ptr<Mesh> merged = Mesh::create();
+        shared_ptr<Mesh> merged = Mesh::create( MeshCPUAccess::Keep );
         if ( merged->setGeometry( std::move( listVertex ), std::move( listIndex ) ) == false )
             return MeshArrival::Failed; // 까닭은 메시가 남겼다
         outMesh = std::move( merged );

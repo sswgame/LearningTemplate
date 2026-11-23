@@ -17,7 +17,7 @@ namespace
 {
     /** @brief 몸 테스트의 규칙 자산이다 — 움직임 규칙은 데이터에만 있고 몸 설정은 `ActionBodyDef` 초기값을 쓴다. */
     constexpr const utf8* kBodyCatalogXML = R"(<ActionPlatformer>
-  <Motor halfExtents="0.35,0.45" runSpeed="7" groundAcceleration="70" airAcceleration="40" jumpHeight="3.2" timeToApex="0.38" fallGravityScale="1.6" jumpCutRatio="0.45" maxFallSpeed="18" coyoteTime="0.1" jumpBufferTime="0.12" wallSlideSpeed="2.5" wallJumpSpeedX="7.5" wallJumpSpeedY="12" wallJumpLockTime="0.15" dashSpeed="18" dashDuration="0.15" dashCooldown="0.3" climbSpeed="4" dropThroughTime="0.25" extraJumpCount="0" airDashCount="1" wallJump="true"/>
+  <Motor halfExtents="0.35,0.45" runSpeed="7" groundAcceleration="70" airAcceleration="40" jumpHeight="3.2" timeToApex="0.38" fallGravityScale="1.6" jumpCutRatio="0.45" maxFallSpeed="18" coyoteTime="0.1" jumpBufferTime="0.12" wallSlideSpeed="2.5" wallJumpSpeedX="7.5" wallJumpSpeedY="12" wallJumpLockTime="0.15" dashSpeed="18" dashDuration="0.15" dashCooldown="0.3" climbSpeed="4" dropThroughTime="0.25" dashEndSpeedScale="0.4" climbJumpScale="0.8" climbSideScale="0.5" moveDeadzone="0.1" extraJumpCount="0" airDashCount="1" wallJump="true"/>
   <Grading><Grade id="S" min="90"/></Grading>
 </ActionPlatformer>)";
 

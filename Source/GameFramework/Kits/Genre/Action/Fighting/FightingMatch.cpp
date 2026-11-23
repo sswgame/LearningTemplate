@@ -411,8 +411,8 @@ namespace sw
                 fighter._guard = GuardStance::Standing;
                 enterState( opponent, FighterState::Blockstun, _settings._throwBreakRecovery );
                 _arrFighter[opponent]._guard = GuardStance::Standing;
-                fighter._x += _arrFighter[opponent]._dirX * 0.3f;
-                fighter._z += _arrFighter[opponent]._dirZ * 0.3f;
+                fighter._x += _arrFighter[opponent]._dirX * _settings._throwBreakPushDistance;
+                fighter._z += _arrFighter[opponent]._dirZ * _settings._throwBreakPushDistance;
                 clampToStage( player );
                 pushEvent( FightingEvent::Kind::ThrowBroken, player, 0 );
                 return;

@@ -3,7 +3,7 @@
  * @brief 장치 · 기믹 표면의 마스터 셰이더 — 상호작용 강조, 네온, 켜진 화면, 용암, 얼음(불투명), 홀로그램 · 역장(반투명), 녹아 사라짐 · 나타남(알파 컷오프).
  * @details 효과 종류(`_effect`)는 머티리얼 값 분기다(environment_surface.hlsl 의 무늬와 같은 까닭 — 프리셋마다 셰이더가 늘지 않는다). 렌더 상태가 다른 셋은 부모가 셋이다:
  *          gimmicksurface.material(불투명) · gimmicksurface_translucent.material(반투명, MATERIAL_BLEND_TRANSLUCENT) · gimmicksurface_dissolve.material(alphaMode Mask).
- *          자체 발광은 `SW_MATERIAL_EMISSIVE` 훅으로 더한다 — G버퍼에 칸이 없어 세 부모 모두 MATERIAL_FORWARD_ONLY 를 적는다(툰 · 그래프 발광과 같은 길).
+ *          자체 발광은 `SW_MATERIAL_EMISSIVE` 훅으로 더한다 — 디퍼드는 G버퍼 패스가 장면 색에 쓴다(표면 모델 Emissive).
  *          표면 훅과 발광 훅이 같은 평가(`evaluateGimmick`)를 부른다(material_graph_main.hlsli 와 같은 모양 — 인라인 뒤 컴파일러가 겹친 식을 합친다).
  *          외곽선은 이 셰이더가 아니라 하이라이트 컴포넌트의 외곽선 패스(post_outline · highlight_outline)가 그린다 — 강조 프리셋은 그 위의 테두리 맥동만 낸다
  *          (언리얼은 CustomDepth 외곽선 + 머티리얼 프레넬을 함께 쓰는 것과 같다).

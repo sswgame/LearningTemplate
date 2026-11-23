@@ -77,7 +77,7 @@ namespace sw
         /** @brief 행동 @p action 이 이번 틱 발동했고 UI 가 먹은 입력이 아니면 true 입니다. */
         static bool wasActionTriggeredForGame( const InputMap& inputMap, const IInputCaptureQuery* pCapture, const hashed_string& action );
         /** @brief 폰 스키마의 이름 중 입력 맵에 없는 것을 경고합니다. 폰마다 한 번만 경고합니다. */
-        void warnMissingActions( const PawnComponent& pawn, const InputManager& input );
+        void warnMissingActions( const PawnComponent& pawn, const InputMap& inputMap );
         /** @brief "game" 채널에 빙의 이벤트를 냅니다. */
         void sendPossessionChanged( const GameObjectHandle& pawnObject );
         /** @brief 잠금과 커서 숨김을 @p bLocked 로 맞춥니다. 이 조종자가 건 것만 풉니다. */

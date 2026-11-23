@@ -15,6 +15,8 @@ namespace sw
     /**
      * @class PassConstantValues
      * @brief 이름 기반 값 저장소입니다(float4x4/float4/float/uint). 대형 미러 struct 를 대신합니다.
+     * @details 조회는 이름 번호의 표라 값의 수와 무관하다 — 상수 버퍼를 올릴 때 셰이더 멤버마다, 패스를 시작할 때 값마다 부르므로 차례로 찾으면 상수 수의 제곱으로 는다
+     *          (유니티 프로퍼티 시트의 이름 id → 칸 표 자리).
      */
     class SW_API PassConstantValues
     {
@@ -25,6 +27,7 @@ namespace sw
         void clear()
         {
             _listEntry.clear();
+            _listIndex.clear();
             ++_version;
         }
 
@@ -61,7 +64,16 @@ namespace sw
             array<uint8, kMaxValueBytes> _data{};
         };
 
-        vector<Entry> _listEntry;
-        uint32        _version{ 0 };
+        /** @brief @p name 의 항목 번호입니다(없으면 `constant::invalid_index::kUint32`). */
+        uint32 findIndex( const hashed_string& name ) const;
+        /** @brief 표에 항목 하나를 넣습니다. 표가 절반 넘게 차면 먼저 두 배로 늘린다. */
+        void insertIndex( uint32 entryIndex );
+        /** @brief 표를 @p capacity 칸(2 의 거듭제곱)으로 다시 짓습니다. */
+        void rebuildIndex( size_t capacity );
+
+    private:
+        vector<Entry>  _listEntry;
+        vector<uint16> _listIndex; ///< 열린 주소 표 — 이름 번호(`hashed_string::getIndex`) → 항목 번호 + 1(0 = 빈 칸)
+        uint32         _version{ 0 };
     };
 } // namespace sw

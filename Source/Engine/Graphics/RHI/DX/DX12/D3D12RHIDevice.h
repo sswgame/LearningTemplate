@@ -28,7 +28,6 @@
 #include "Engine/Graphics/RHI/DX/DXGIFormat.h"
 #include "Engine/Graphics/RHI/DX/RHIDxResultCheck.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
-#include "Engine/Graphics/RHI/Diagnostics/RHIRenderPassRegistry.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHITimestampFrame.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHITimestampProvider.h"
@@ -314,12 +313,12 @@ namespace sw
         void                         destroySwapChainInternal( IRHISwapChain& swapChain ) override;
         [[nodiscard]] bool           acquireSwapChainImageInternal( IRHISwapChain& swapChain ) override { return useSwapChain( &swapChain ).isBackBufferReady(); }
 
-        void executeCommandList( IRHICommandList* pCmdList ) override;
-        void executeCommandListImmediate( IRHICommandList* pCmdList ) override;
+        void executeCommandListInternal( IRHICommandList* pCmdList ) override;
+        void executeCommandListImmediateInternal( IRHICommandList* pCmdList ) override;
         /** @brief COMPUTE 종류의 리스트를 만듭니다. 컴퓨트 큐가 없으면(만들지 못한 장치) 오류를 남기고 nullptr 입니다. */
         unique_ptr<IRHICommandList> createAsyncComputeCommandList() override;
         /** @brief 그래픽스 일을 큐에 내고 신호 → 컴퓨트 큐가 기다리고 실행 → 컴퓨트 펜스 신호. 그 값을 돌려준다. */
-        RHIQueueSyncPoint submitAsyncCompute( IRHICommandList* pCmdList ) override;
+        RHIQueueSyncPoint submitAsyncComputeInternal( IRHICommandList* pCmdList ) override;
         /** @brief 그 전 그래픽스 일을 큐에 낸 뒤 그래픽스 큐가 컴퓨트 펜스 값을 기다리게 합니다. */
         void waitForAsyncCompute( RHIQueueSyncPoint point ) override;
         /**
@@ -423,6 +422,9 @@ namespace sw
             Microsoft::WRL::ComPtr<ID3D12Resource> _resource;
             TrackedState                           _state;
             uint8                                  _bTrackedState{ SW_FALSE };
+            /// @brief 링 상수 버퍼의 매핑 주소 · 프레임 칸 크기입니다(다른 버퍼는 null · 0). 만들 때 정하고 바뀌지 않는다 — 쓰기(`updateConstantBuffer`)가 등록표 잠금 없이 읽는다.
+            void*  _pConstantMapped{ nullptr };
+            uint32 _constantAlignedSize{ 0 };
             /// @brief 스테이징 업로드(`updateStructuredBufferRegions`)가 끝낸 뒤 둘 읽기 상태입니다 — 구조 버퍼는 셰이더 읽기, 정점 버퍼는 정점 + 셰이더 읽기, 인덱스 버퍼는 인덱스 읽기.
             D3D12_RESOURCE_STATES _uploadReadState{ D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE };
         };
@@ -697,7 +699,7 @@ namespace sw
         /** @brief 프레임 스트림의 새 조각을 열고 바인딩 캐시 · 뷰포트 · 시저를 다시 깝니다(`executeCommandList` · `submitFrameJobNow` 가 함께 쓴다). */
         void openNextFrameSegment();
         /**
-         * @brief 링 상수 버퍼의 `slot` 슬롯에 씁니다. `_bindlessMutex` 를 (읽기로라도) 잡고 부릅니다.
+         * @brief 링 상수 버퍼의 `slot` 슬롯에 씁니다. 미러의 잠금 안에서 부릅니다(파괴가 같은 잠금 안에서 레코드를 거둔다 — `RHIConstantBufferMirror::remove`).
          * @details 만들 때 크기를 넘는 쓰기는 자른다. 그대로 복사하면 다음 슬롯(다음 프레임의 값)까지 덮어쓴다.
          */
         void writeConstantBufferSlot( RHIBufferHandle buffer, uint32 slot, uint32 offset, const void* pData, uint32 size );
@@ -900,13 +902,10 @@ namespace sw
         /// @brief 오프스크린 RTV · DSV 힙 쪽입니다(쪽마다 `kOffscreenViewPageSize` 칸). 늘기만 하고 장치 종료가 비운다. 기록 경로는 레코드의 핸들만 읽는다.
         vector<Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>> _listOffscreenRTVPage SW_GUARDED_BY( _offscreenViewMutex );
         vector<Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>> _listOffscreenDSVPage SW_GUARDED_BY( _offscreenViewMutex );
-        unordered_map<RHIBufferHandle, uint32>                                     _mapCbAlignedSize;
-        unordered_map<RHIBufferHandle, void*>                                      _mapCbMapped;
         RHIDescriptorRingMirror _bindlessRingMirror                                SW_GUARDED_BY( _bindlessMutex ); ///< 산 번호 다시 쓰기를 링 슬롯마다 그 차례에 쓰도록 예약한다(R-6)
-        RHIConstantBufferMirror _constantBufferMirror                              SW_GUARDED_BY( _bindlessMutex ); ///< 한 번 쓴 상수 버퍼를 나머지 링 슬롯에도 채운다.
+        RHIConstantBufferMirror                                                    _constantBufferMirror;           ///< 한 번 쓴 상수 버퍼를 나머지 링 슬롯에도 채운다.
 
         RHIHandleTable<RHIPipelineStateHandle, D3D12PipelineStateRecord> _pipelineStates;
-        RHIRenderPassRegistry                                            _renderPassRegistry; ///< 렌더 패스 핸들 등록부. 자기 뮤텍스로 직렬화해 어느 스레드에서나 부른다.
 
         /// @brief 메인 창의 백버퍼 묶음입니다. 백버퍼, 인덱스, 리소스 상태, Present 가 모두 여기 모여 있습니다.
         D3D12RHISwapChain _swapChain;

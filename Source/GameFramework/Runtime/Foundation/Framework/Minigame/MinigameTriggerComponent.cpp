@@ -16,6 +16,7 @@ namespace sw
     MinigameTriggerComponent::MinigameTriggerComponent()
         : TriggerComponent( TriggerAuthority::Local ) // 매치형은 닿은 클라이언트가 줄을 서고, 나머지는 서버(와 혼자 하는 게임)만 판정한다 — `canEnterHere` 가 가른다
         , _minigame{}
+        , _subLevelOffset{}
     {
     }
 
@@ -48,6 +49,8 @@ namespace sw
         optional<SubLevelPlacement> placement = nullopt;
         if ( pOwner != nullptr )
             placement = MinigameFlow::makeAnchorPlacement( *pOwner );
+        if ( placement.has_value() )
+            placement->_position = placement->_position + _subLevelOffset;
         pFlow->requestEnter( _minigame.view(), placement ); // 틱 뒤 작업이다 — 스냅숏 · 씬 요청은 다음 게임 프레임 앞에서 한다
         return true;
     }

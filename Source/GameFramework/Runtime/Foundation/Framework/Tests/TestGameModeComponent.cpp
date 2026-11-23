@@ -59,6 +59,17 @@ SW_TEST_CASE( GameModeTest, RestoredStateIsAppliedAfterTheReset )
     manager.endPlay();
 }
 
+/** @brief [GameModeTest] 플레이어 상태 오브젝트를 가리키지 않은 디렉터는 찾을 때 오류다 — 디렉터 오브젝트의 것으로 대신하지 않는다 */
+SW_TEST_CASE( GameModeTest, MissingPlayerStateIsAnError )
+{
+    SW_EXPECT_LOG( "GameMode.PlayerStateMissing" );
+    GameObjectManager            manager;
+    const GameModeTestComponent* pGameMode = manager.createGameObject( hashed_string( "Director" ) )->addComponent<GameModeTestComponent>();
+    SW_REQUIRE_NOT_NULL( pGameMode );
+    SW_EXPECT_NULL( pGameMode->findPlayerState() );
+    SW_EXPECT_NULL( pGameMode->requirePlayerStateForTest() );
+}
+
 /**
  * @brief [GameModeTest] 받은 카탈로그가 다시 읽히면 상태를 왕복시켜 규칙 객체를 새 판에 묶는다 — 판은 새로 열지 않고(라운드 · 우승자 그대로) 앞 판의 날 포인터도 끊기지 않는다
  * @details 새 판이 지금 판에 맞지 않으면(빌린 항목이 없다) 복원 실패로 알리고 앞 판에 묶인 채로 돈다.

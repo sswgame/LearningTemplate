@@ -285,7 +285,11 @@ namespace sw::editor
 
     bool GlobalVariablesViewModel::applySessionText( string_view text )
     {
-        return EditorGlobalVariableCommands::applyPresetText( text );
+        if ( EditorGlobalVariableCommands::applyPresetText( text ) == false )
+            return false;
+        _editName.clear();
+        _pHistory->clear();
+        return true;
     }
 
     const EnumInfo* GlobalVariablesViewModel::findEnumInfo( const string& enumType )

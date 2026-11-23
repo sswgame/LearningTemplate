@@ -1011,13 +1011,15 @@ namespace sw
         {
             case LeaderboardReset::Daily:
             {
-                schedule._kind = ScheduleKind::Daily;
-                return static_cast<uint64>( MathUtil::max<int64>( 0, ServiceScheduler::computeLatestOccurrence( schedule, nowMs.count() ) ) );
+                schedule._kind                     = ScheduleKind::Daily;
+                const optional<int64> occurrenceMs = ServiceScheduler::computeLatestOccurrence( schedule, nowMs.count() );
+                return occurrenceMs.has_value() ? static_cast<uint64>( *occurrenceMs ) : uint64{ 0 };
             }
             case LeaderboardReset::Weekly:
             {
-                schedule._kind = ScheduleKind::Weekly;
-                return static_cast<uint64>( MathUtil::max<int64>( 0, ServiceScheduler::computeLatestOccurrence( schedule, nowMs.count() ) ) );
+                schedule._kind                     = ScheduleKind::Weekly;
+                const optional<int64> occurrenceMs = ServiceScheduler::computeLatestOccurrence( schedule, nowMs.count() );
+                return occurrenceMs.has_value() ? static_cast<uint64>( *occurrenceMs ) : uint64{ 0 };
             }
             case LeaderboardReset::Season:
             {

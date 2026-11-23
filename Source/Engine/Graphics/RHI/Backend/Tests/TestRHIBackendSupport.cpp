@@ -154,6 +154,11 @@ SW_TEST_CASE( RHIReleaseQueueTest, ConcurrentTicksRunEachCallbackOnce )
  */
 SW_TEST_CASE( RHIBindlessRegistryTest, DefersReuseAndRejectsDoubleRelease )
 {
+    // 번호는 정수에서 암시로 만들어지지 않는다 — 슬롯 · 개수를 번호 자리에 넘기면 컴파일되지 않는다.
+    static_assert( std::is_convertible_v<uint32, RHIDescriptorIndex> == false && std::is_convertible_v<RHIDescriptorIndex, uint32> );
+    static_assert( std::is_constructible_v<RHITextureSRVIndex, RHIBufferSRVIndex> == false && std::is_constructible_v<RHIBufferSRVIndex, RHIUnorderedAccessIndex> == false );
+    static_assert( std::is_convertible_v<RHIDescriptorIndex, RHITextureSRVIndex> == false && std::is_convertible_v<RHIInvalidDescriptorIndex, RHITextureSRVIndex> );
+    static_assert( sizeof( RHIDescriptorIndex ) == sizeof( uint32 ) && std::is_trivially_copyable_v<RHIDescriptorIndex> );
     RHIBindlessRegistry<RHIBufferHandle, RHIBindlessBufferOwnerOf> registry( 2 );
     const RHIDescriptorIndex                                       first  = registry.allocate( RHIBufferHandle{ 11 } );
     const RHIDescriptorIndex                                       second = registry.allocate( RHIBufferHandle{ 22 } );
@@ -263,8 +268,8 @@ SW_TEST_CASE( RHIBindlessRegistryTest, RebindKeepsIndexAndMovesOwner )
     SW_EXPECT_EQUAL( 0u, registry.getTextureIndexCount( RHITextureHandle{ 5 } ) );
     SW_EXPECT_EQUAL( 1u, registry.getTextureIndexCount( RHITextureHandle{ 6 } ) );
 
-    SW_EXPECT_FALSE( registry.rebind( index, RHITextureHandle{ 0 } ) );      // 빈 값
-    SW_EXPECT_FALSE( registry.rebind( index + 1u, RHITextureHandle{ 7 } ) ); // 산 칸이 아니다
+    SW_EXPECT_FALSE( registry.rebind( index, RHITextureHandle{ 0 } ) );                            // 빈 값
+    SW_EXPECT_FALSE( registry.rebind( RHIDescriptorIndex{ index + 1u }, RHITextureHandle{ 7 } ) ); // 산 칸이 아니다
     SW_EXPECT_TRUE( registry.release( index, RHIBindlessReuse::AfterFence ) );
     SW_EXPECT_FALSE( registry.rebind( index, RHITextureHandle{ 7 } ) ); // 해제 대기 칸
 }
@@ -337,9 +342,9 @@ SW_TEST_CASE( BindlessReadSlotTest, RetiredIndexIsNotLive )
 SW_TEST_CASE( RHIDescriptorRingMirrorTest, RewriteReachesEverySlotOnce )
 {
     RHIDescriptorRingMirror mirror;
-    mirror.recordRewrite( 9 );
-    mirror.recordRewrite( 9 );
-    mirror.recordRewrite( 4 );
+    mirror.recordRewrite( RHIDescriptorIndex{ 9 } );
+    mirror.recordRewrite( RHIDescriptorIndex{ 9 } );
+    mirror.recordRewrite( RHIDescriptorIndex{ 4 } );
     for ( uint32 slot = 0; slot < constant::render::kMaxFrameCountInFlight; ++slot )
     {
         vector<RHIDescriptorIndex> listWritten;
@@ -585,6 +590,35 @@ SW_TEST_CASE( RHIConstantBufferMirrorTest, FillsStaleSlotsOnceAndForgets )
         shadow.fillSlot( slot, writeSlot );
     }
     SW_EXPECT_EQUAL( writeCountBeforeRemove, writeCount );
+}
+
+/**
+ * @brief [RHIConstantBufferMirrorTest] 칸이 다른 버퍼들도 채우기 한 번에 모두 채우고, 부수는 쪽의 레코드 거두기는 그 버퍼만 잊은 뒤 같은 잠금 안에서 돈다
+ * @details 변이: 채우기가 첫 칸만 돌면 쓴 수가, 지우기가 다른 버퍼까지 잊으면 남은 수가 진다.
+ */
+SW_TEST_CASE( RHIConstantBufferMirrorTest, EveryShardFillsAndRemoveRunsTheRelease )
+{
+    constexpr uint32        kBufferCount = 40;
+    RHIConstantBufferMirror mirror;
+    uint32                  writeCount{ 0 };
+    const auto              writeSlot = [&writeCount]( RHIBufferHandle, uint32, uint32, const void*, uint32 )
+    { ++writeCount; };
+    const uint32 value{ 5 };
+    for ( uint32 index = 1; index <= kBufferCount; ++index )
+    {
+        mirror.write( RHIBufferHandle{ index }, 0, 0, &value, sizeof( value ), writeSlot );
+    }
+    SW_EXPECT_EQUAL( kBufferCount, mirror.getPendingBufferCount() );
+    writeCount = 0;
+    mirror.fillSlot( 1, writeSlot );
+    SW_EXPECT_EQUAL( kBufferCount, writeCount );
+    uint32 releaseCount{ 0 };
+    mirror.remove( RHIBufferHandle{ 17 }, [&releaseCount]()
+    { ++releaseCount; } );
+    SW_EXPECT_EQUAL( 1u, releaseCount );
+    SW_EXPECT_EQUAL( kBufferCount - 1u, mirror.getPendingBufferCount() );
+    mirror.clear();
+    SW_EXPECT_EQUAL( 0u, mirror.getPendingBufferCount() );
 }
 
 /**

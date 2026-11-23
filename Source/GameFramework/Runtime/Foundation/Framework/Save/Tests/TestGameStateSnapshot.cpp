@@ -4,6 +4,7 @@
 #include "Core/Subsystem/SubsystemScope.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Content/AssetRegistry.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Tests/SceneIterationTestAccess.h"
 #include "Engine/Scene/Scene.h"
@@ -21,7 +22,7 @@ namespace
     {
         sw::vector<uint8> bytes;
         snapshot.beginCapture();
-        if ( snapshot.writeEnvelope( sw::SerializePurpose::Snapshot, nullptr, nullptr, bytes ) == false )
+        if ( snapshot.writeEnvelope( sw::SerializePurpose::Snapshot, nullptr, nullptr, sw::vector<uint8>{ 7, 8, 9 }, bytes ) == false )
             bytes.clear();
         return bytes;
     }
@@ -95,6 +96,35 @@ SW_TEST_CASE( GameStateSnapshotTest, RejectsForeignHeaderAndOtherVersion )
     SW_EXPECT_LOG( "GameStateSnapshot.StateSnapshotVersionNot" );
     SW_EXPECT_FALSE( snapshot.readEnvelope( SerializePurpose::Snapshot, nullptr, nullptr, otherVersion.data(), static_cast<uint32>( otherVersion.size() ) ) );
     SW_EXPECT_TRUE( snapshot.getComponentStateStore().isEmpty() );
+}
+
+/**
+ * @brief [GameStateSnapshotTest] 옛 판 봉투는 판 올림 사슬이 이 판으로 올린 뒤 읽힌다(판 11 은 배치가 같다) — 단계가 없는 더 옛 판은 올리지 못하고, 머리가 다른 바이트는 건드리지 않는다
+ */
+SW_TEST_CASE( GameStateSnapshotTest, OldEnvelopesAreUpgradedOnceBeforeReading )
+{
+    constexpr size_t    kVersionOffset = 4; // 매직 다음 칸의 낮은 바이트
+    GameStateSnapshot   snapshot;
+    const vector<uint8> bytes = captureEmptyEnvelope( snapshot );
+    SW_REQUIRE_TRUE( bytes.size() >= 16 );
+
+    vector<uint8> previous   = bytes;
+    previous[kVersionOffset] = 11;
+    SW_EXPECT_TRUE( GameStateSnapshot::upgradeEnvelope( previous ) );
+    SW_EXPECT_TRUE( previous == bytes );
+    SW_EXPECT_TRUE( snapshot.readEnvelope( SerializePurpose::Snapshot, nullptr, nullptr, previous.data(), static_cast<uint32>( previous.size() ) ) );
+    snapshot.endRestore();
+
+    vector<uint8> oldest   = bytes;
+    oldest[kVersionOffset] = 10;
+    SW_EXPECT_LOG( "FormatUpgrade.StepMissing" );
+    SW_EXPECT_FALSE( GameStateSnapshot::upgradeEnvelope( oldest ) );
+
+    vector<uint8> foreign         = bytes;
+    foreign[0]                    = static_cast<uint8>( foreign[0] ^ 0xFFu );
+    const vector<uint8> untouched = foreign;
+    SW_EXPECT_TRUE( GameStateSnapshot::upgradeEnvelope( foreign ) );
+    SW_EXPECT_TRUE( foreign == untouched );
 }
 
 /** @brief [GameStateSnapshotTest] 잘린 버퍼는 어디서 잘렸든 거절하고 실어 둔 상태를 남기지 않는다 */
@@ -182,7 +212,7 @@ SW_TEST_CASE( GameStateSnapshotTest, RestoreInAnotherSceneDoesNotMix )
     SW_EXPECT_TRUE( snapshot.getComponentStateStore().isEmpty() );
 }
 
-/** @brief [GameStateSnapshotTest] 씬을 옮긴(팩을 흡수한) 뒤에도 옛 id 로 찍은 세이브는 새 id 의 씬에서 읽힌다 — 머리의 씬 정체를 리다이렉트로 푼다 */
+/** @brief [GameStateSnapshotTest] 팩을 흡수한 뒤에도 경로를 적던 때의 세이브는 새 경로의 씬에서 읽힌다 — 옛 경로 표의 접두 줄(`AssetRedirect::readSavedReference`)로 한 번 푼다 */
 SW_TEST_CASE( GameStateSnapshotTest, SceneIDFollowsRedirects )
 {
     SubsystemScope scope;
@@ -227,6 +257,8 @@ SW_TEST_CASE( GameStateSnapshotTest, ReadSceneIDPeeksTheHeaderOnly )
     const optional<string> sceneID = GameStateSnapshot::readSceneID( saveA.data(), static_cast<uint32>( saveA.size() ) );
     SW_REQUIRE_TRUE( sceneID.has_value() );
     SW_EXPECT_TRUE( *sceneID == "scenes/a.scene" );
+    const optional<vector<uint8>> minigameBytes = GameStateSnapshot::readMinigameBytes( saveA.data(), static_cast<uint32>( saveA.size() ) );
+    SW_EXPECT_TRUE( minigameBytes.has_value() && *minigameBytes == vector<uint8>{ 7, 8, 9 } ); // 찍은 미니게임 칸 스택도 머리에서 읽는다
     SW_EXPECT_EQUAL( 1u, countObjects( *pSceneB ) );
 
     // 머리가 없는 버퍼 · 머리 앞에서 잘린 버퍼는 없음이다.
@@ -270,4 +302,37 @@ SW_TEST_CASE( GameStateSnapshotTest, FailedRestoreKeepsScene )
     snapshot.endRestore();
     SW_EXPECT_EQUAL( 1u, countObjects( *pScene ) );
     SW_EXPECT_NULL( pScene->findGameObjectByName( hashed_string( "AfterSave" ) ) );
+}
+
+/**
+ * @brief [GameStateSnapshotTest] 세이브는 찍은 씬을 GUID 로 적는다 — 저장한 뒤 씬을 옮겨도 지금 경로로 풀리고, 색인에서 사라진 씬의 세이브는 까닭을 대며 거절한다
+ */
+SW_TEST_CASE( GameStateSnapshotTest, SavedSceneFollowsTheAssetWhenItMoves )
+{
+    const AssetGUID guid    = *AssetGUID::tryParse( "0000000000000000000000000005ce4e" );
+    const auto      makeOne = [&guid]( const utf8* pAssetID )
+    { return std::move( *AssetRegistry::merge( vector<AssetRegistryLayer>{
+          AssetRegistryLayer{ "one", { AssetRegistryEntry{ guid, pAssetID } } }
+ } ) ); };
+    AssetRegistry previous = AssetRegistry::install( makeOne( "scenes/a.scene.xml" ) );
+
+    SubsystemScope scope;
+    SceneManager&  sceneManager = scope.emplaceSubsystem<SceneManager>();
+    SW_REQUIRE_TRUE( sceneManager.initializeSubsystem() == SubsystemInitResult::Succeeded );
+    vector<uint8> bytes;
+    {
+        const game::ScopedGameScope scoped{ scope };
+        SW_REQUIRE_NOT_NULL( openSceneWithOneObject( sceneManager, "scenes/a.scene.xml" ) );
+        GameStateSnapshot snapshot;
+        bytes = captureEmptyEnvelope( snapshot );
+        SW_REQUIRE_TRUE( bytes.empty() == false );
+    }
+    (void)AssetRegistry::install( makeOne( "scenes/moved/b.scene.xml" ) );
+    const optional<string> moved = GameStateSnapshot::readSceneID( bytes.data(), static_cast<uint32>( bytes.size() ) );
+    (void)AssetRegistry::install( AssetRegistry{} );
+    SW_EXPECT_LOG( "GameStateSnapshot.SceneNotInIndex" );
+    const optional<string> gone = GameStateSnapshot::readSceneID( bytes.data(), static_cast<uint32>( bytes.size() ) );
+    (void)AssetRegistry::install( std::move( previous ) );
+    SW_EXPECT_EQUAL( string( "scenes/moved/b.scene.xml" ), moved.value_or( string{} ) );
+    SW_EXPECT_FALSE( gone.has_value() );
 }

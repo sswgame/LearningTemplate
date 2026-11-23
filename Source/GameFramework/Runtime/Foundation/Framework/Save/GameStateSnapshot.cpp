@@ -5,6 +5,7 @@
 #include "Core/Encoding/FourCCUtil.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Content/AssetRegistry.h"
 #include "Engine/Environment/Terrain/TerrainComponent.h"
 #include "Engine/Object/Component/ComponentStateCodec.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -18,6 +19,7 @@
 #include "Engine/Scene/SceneSubLevelSubsystem.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
+#include "Engine/Serialization/Format/FormatUpgrade.h"
 #include "Engine/Serialization/Inherit/AssetRedirect.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/Flow/IContentConfiguration.h"
@@ -38,16 +40,21 @@ namespace sw
              *          섹션은 씬 오브젝트, 파생의 리플렉션 상태, 컴포넌트 상태(`ComponentStateStore`), 씬 몫(늘 올라 있는 오브젝트의 파일 id · 스트리밍 셀 상태 · 데이터 레이어 상태) 넷이다.
              *          토큰이 지금 프로세스와 같으면(핫 리로드) id 를 복원하고, 다르면(다른 실행의 세이브 파일) id 를 읽고 버린다.
              *          다른 실행에서 나간 id 를 복원하면 이 실행에서 이미 나간 id 와 겹칠 수 있기 때문이다.
-             *          머리의 씬 정체는 찍을 때 활성 씬의 리소스 id(`Scene::getSourcePath`)다 — 읽을 때 지금 활성 씬과 다르면 섞지 않고 거절한다.
+             *          머리의 씬 정체는 찍을 때 활성 씬의 GUID 참조(`AssetRegistry::makeReferenceText`)다 — 읽을 때 지금 경로로 풀고, 지금 활성 씬과 다르면 섞지 않고 거절한다.
+             *          옛 판은 판 올림 사슬(`upgradeEnvelope`)이 한 번 올린다. 판 11 은 머리 · 하위 레벨 · 미니게임 칸에 경로를 적었고 배치가 같아, 읽기가 옛 경로를 한 번 푼다(`AssetRedirect::readSavedReference`).
              */
-            static constexpr uint32 kVersion = 10; // 5: 머리에 콘텐츠 구성(켠 모드) 글이 실린다, 6: 머리에 씬 정체(활성 씬 리소스 id)가 실린다, 7: 넷째 섹션 씬 몫(파일 id · 스트리밍 셀), 8: 씬 몫에 런타임 하위 레벨, 9: 하위 레벨에 읽음 표시(읽는 중에 저장한 것은 복원이 문서를 다시 읽는다), 10: 씬 몫의 엔티티마다 PROPERTY 밖 컴포넌트 상태
+            static constexpr uint32 kVersion = 12; // 5: 머리에 콘텐츠 구성(켠 모드) 글이 실린다, 6: 머리에 씬 정체(활성 씬 리소스 id)가 실린다, 7: 넷째 섹션 씬 몫(파일 id · 스트리밍 셀), 8: 씬 몫에 런타임 하위 레벨, 9: 하위 레벨에 읽음 표시(읽는 중에 저장한 것은 복원이 문서를 다시 읽는다), 10: 씬 몫의 엔티티마다 PROPERTY 밖 컴포넌트 상태, 11: 머리에 미니게임 칸 스택, 12: 머리 · 하위 레벨 · 미니게임 칸의 씬이 GUID 참조 글
+
+            static constexpr uint32 kScenePathVersion      = 11; ///< 씬을 경로 글로 적던 마지막 판
+            static constexpr uint32 kSceneReferenceVersion = 12; ///< 씬을 GUID 참조 글로 적는 첫 판
 
             /** @brief 봉투 머리(매직 · 판 뒤의 칸)입니다. */
             struct Header
             {
-                uint64 _processToken{ 0 }; ///< 찍은 프로세스의 토큰 — 같으면 id 를 복원한다
-                string _sceneID;           ///< 찍을 때 활성 씬의 지금 리소스 id(옮긴 씬의 옛 id 는 읽을 때 푼다 — 씬이 없었으면 빈 글)
-                string _contentText;       ///< 찍을 때 콘텐츠 구성(켠 모드) 글
+                uint64        _processToken{ 0 }; ///< 찍은 프로세스의 토큰 — 같으면 id 를 복원한다
+                string        _sceneID;           ///< 찍을 때 활성 씬의 지금 리소스 id(읽을 때 GUID 를 푼다 — 씬이 없었으면 빈 글)
+                string        _contentText;       ///< 찍을 때 콘텐츠 구성(켠 모드) 글
+                vector<uint8> _minigameBytes;     ///< 찍을 때의 미니게임 칸 스택(`MinigameStack::writeSaveState`, 밖이면 빈 바이트)
             };
 
             /**
@@ -76,13 +83,31 @@ namespace sw
                     return false;
                 }
                 arch >> outHeader._processToken;
-                auto loadedSceneID     = arch.readString();
-                auto loadedContentText = arch.readString();
-                if ( arch.isError() )
+                const string  sceneReference = arch.readString();
+                string        contentText    = arch.readString();
+                vector<uint8> minigameBytes;
+                if ( arch.isError() || arch.readSection( minigameBytes ) == false )
                     return false;
-                outHeader._sceneID     = AssetRedirect::toCurrentID( loadedSceneID ); // 씬을 옮긴(팩을 흡수한) 뒤에도 옛 세이브가 제 씬을 찾는다
-                outHeader._contentText = std::move( loadedContentText );
-                return arch.isError() == false;
+                expected<AssetReferenceTarget> scene = AssetRedirect::readSavedReference( sceneReference );
+                if ( scene.has_value() == false )
+                {
+                    SW_LOG_ERROR_ID( "GameStateSnapshot.SceneNotInIndex", "This save was made in scene '%#', which is %# - it is not loaded", sceneReference.c_str(), scene.error().message() );
+                    return false;
+                }
+                outHeader._sceneID       = std::move( scene->_path );
+                outHeader._contentText   = std::move( contentText );
+                outHeader._minigameBytes = std::move( minigameBytes );
+                return true;
+            }
+
+            /** @brief 판 11 → 12 — 배치는 같다. 판 11 의 경로 글은 읽기(`AssetRedirect::readSavedReference`)가 받으므로 머리의 판만 올린다. 다음 저장이 GUID 로 적는다. */
+            static bool upgradeScenePathsToReferences( FormatUpgradePayload& payload )
+            {
+                constexpr size_t kVersionOffset = sizeof( uint32 ); // 매직 다음 칸
+                if ( payload._pBytes == nullptr || payload._pBytes->size() < kVersionOffset + sizeof( uint32 ) )
+                    return false;
+                Memory::copy( payload._pBytes->data() + kVersionOffset, &kSceneReferenceVersion, sizeof( uint32 ) );
+                return true;
             }
 
             /**
@@ -233,12 +258,12 @@ namespace sw
                 SceneManager* const pSceneManager = game::findSubsystem<SceneManager>();
                 return pSceneManager != nullptr ? pSceneManager->getActiveScene() : nullptr;
             }
-            /** @brief 활성 씬의 지금 리소스 id(`Scene::getSourcePath` 를 리다이렉트로 푼 것 — 세이브 머리와 같은 꼴)입니다. 씬 매니저나 활성 씬이 없으면(씬 없는 스냅샷) 빈 글입니다. */
+            /** @brief 활성 씬의 리소스 id(`Scene::getSourcePath`)입니다. 씬 매니저나 활성 씬이 없으면(씬 없는 스냅샷) 빈 글입니다. */
             static string findActiveSceneID()
             {
                 SceneManager* const pSceneManager = game::findSubsystem<SceneManager>();
                 const Scene* const  pScene        = pSceneManager != nullptr ? pSceneManager->getActiveScene() : nullptr;
-                return pScene != nullptr ? AssetRedirect::toCurrentID( pScene->getSourcePath() ) : string{};
+                return pScene != nullptr ? pScene->getSourcePath() : string{};
             }
         };
     } // namespace
@@ -246,6 +271,9 @@ namespace sw
 
 namespace sw
 {
+    SW_SAVE_FORMAT_UPGRADE( gameStateSceneReferences, GameStateSnapshot::kFormatKind, StateEnvelopeInternal::kScenePathVersion, StateEnvelopeInternal::kSceneReferenceVersion,
+                            &StateEnvelopeInternal::upgradeScenePathsToReferences );
+
     GameStateSnapshot::GameStateSnapshot()
         : _listStatefulType{}
         , _listCodec{}
@@ -301,17 +329,21 @@ namespace sw
         }
     }
 
-    bool GameStateSnapshot::writeEnvelope( SerializePurpose purpose, const TypeInfo* pStateType, const void* pStateInstance, vector<uint8>& outBytes )
+    bool GameStateSnapshot::writeEnvelope( SerializePurpose purpose, const TypeInfo* pStateType, const void* pStateInstance, const vector<uint8>& minigameBytes,
+                                           vector<uint8>& outBytes )
     {
         Archive arch;
         arch << StateEnvelopeInternal::kMagic;
         arch << StateEnvelopeInternal::kVersion;
         arch << ObjectStateSerializer::getProcessToken();
-        // 이 세이브를 찍은 씬 — 읽는 쪽이 같은 씬 위인지 봉투를 풀기 전에 본다(씬이 없으면 빈 글).
-        arch.writeString( GameStateSnapshotInternal::findActiveSceneID() );
+        // 이 세이브를 찍은 씬 — 읽는 쪽이 같은 씬 위인지 봉투를 풀기 전에 본다(씬이 없으면 빈 글). 세이브가 남은 뒤 씬을 옮겨도 풀리게 GUID 로 적는다.
+        const string sceneID = GameStateSnapshotInternal::findActiveSceneID();
+        arch.writeString( AssetRegistry::makeReferenceText( sceneID, AssetRegistry::resolveGUID( sceneID ) ) );
         // 이 세이브를 만든 콘텐츠 구성(켠 모드) — 읽는 쪽이 같은 구성인지 봉투를 풀기 전에 본다(없으면 빈 글).
         const IContentConfiguration* const pContent = StateEnvelopeInternal::findContent();
         arch.writeString( pContent != nullptr ? pContent->makeContentConfigText() : string{} );
+        // 이 세이브를 찍은 미니게임 — 읽는 쪽이 씬을 열기 전에 켠다(미니게임 밖이면 빈 섹션).
+        arch.writeSection( minigameBytes.data(), static_cast<uint32>( minigameBytes.size() ) );
 
         // 1) 씬 오브젝트 바이너리 스냅샷
         //
@@ -465,6 +497,19 @@ namespace sw
         return {};
     }
 
+    bool GameStateSnapshot::upgradeEnvelope( vector<uint8>& inoutBytes )
+    {
+        uint32 arrHead[2]{}; // 매직 · 판
+        if ( inoutBytes.size() < sizeof( arrHead ) )
+            return true; // 잘린 봉투 · 머리 없는 바이트는 읽기가 까닭을 남긴다
+        Memory::copy( arrHead, inoutBytes.data(), sizeof( arrHead ) );
+        if ( arrHead[0] != StateEnvelopeInternal::kMagic || arrHead[1] >= StateEnvelopeInternal::kVersion )
+            return true;
+        FormatUpgradePayload payload;
+        payload._pBytes = &inoutBytes;
+        return FormatUpgradeStep::upgrade( FormatUpgradeDomain::SaveBytes, kFormatKind, arrHead[1], StateEnvelopeInternal::kVersion, payload );
+    }
+
     optional<string> GameStateSnapshot::readSceneID( const void* pInBuffer, uint32 size )
     {
         Archive                       arch( static_cast<const uint8*>( pInBuffer ), size );
@@ -472,6 +517,15 @@ namespace sw
         if ( StateEnvelopeInternal::readHeader( pInBuffer, size, arch, header ) == false )
             return nullopt;
         return header._sceneID;
+    }
+
+    optional<vector<uint8>> GameStateSnapshot::readMinigameBytes( const void* pInBuffer, uint32 size )
+    {
+        Archive                       arch( static_cast<const uint8*>( pInBuffer ), size );
+        StateEnvelopeInternal::Header header;
+        if ( StateEnvelopeInternal::readHeader( pInBuffer, size, arch, header ) == false )
+            return nullopt;
+        return std::move( header._minigameBytes );
     }
 
     void GameStateSnapshot::endRestore()

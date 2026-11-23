@@ -5,4 +5,4 @@
   플레이어가 쓰러지면 판이 끝나 처치 수(결과 값 kills)를 순위표(data/playground.leaderboards.xml)에 내고 허브로 돌아온다. 로그인 전이면 들어가지 않는다.
   시나리오 automation/shooter3d_onlinematch 와 online-local run 이 본다.
 -->
-<Minigame name="shooter3d_match" map="game/playground/shooter3d/maps/arena.scene.xml" entry="SceneSwitch" portalSlot="10" matchMode="arena_solo" matchBoard="arena_kills" matchScore="kills" inputContexts="Movement,Traversal,Look,Camera,CameraOrbit,Shooter"/>
+<Minigame name="shooter3d_match" map="game/playground/shooter3d/maps/arena.scene.xml" entry="SceneSwitch" portalSlot="10" save="Blocked" matchMode="arena_solo" matchBoard="arena_kills" matchScore="kills" inputContexts="Movement,Traversal,Look,Camera,CameraOrbit,Shooter"/>

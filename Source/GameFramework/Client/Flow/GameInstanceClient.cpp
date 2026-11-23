@@ -2,7 +2,9 @@
 
 #include "GameFramework/Client/Flow/GameInstanceClient.h"
 
+#include "Core/Delegate/Subscription.h"
 #include "Core/Log/Logger.h"
+#include "Core/Memory/Memory.h"
 #include "Core/Name/hashed_string.h"
 #include "Core/Subsystem/SubsystemScope.h"
 
@@ -15,6 +17,7 @@
 #include "GameFramework/Runtime/Foundation/Framework/GameFeature/GameFeatureScope.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/Framework/Minigame/MinigameDefinition.h"
+#include "GameFramework/Runtime/Foundation/Framework/Minigame/MinigameFlow.h"
 
 namespace sw
 {
@@ -48,8 +51,14 @@ namespace sw
             bool openMinigameUI( GameFeatureScope& scope, const MinigameDefinition& definition ) override
             {
                 UISystem* const pUI = game::findSubsystem<UISystem>();
-                if ( pUI == nullptr || definition._listUI.empty() ) // 창이 없는 클라이언트 호스트(헤드리스)에는 열 화면이 없다
+                if ( pUI == nullptr ) // 창이 없는 클라이언트 호스트(헤드리스)에는 열 화면이 없다
                     return true;
+                // 미니게임이 켜진 동안만 일시정지 메뉴에 "미니게임 나가기" 가 보인다 — 덮이면 덮은 미니게임의 것이 걸린다.
+                const shared_ptr<Subscription> pLeaveCommand = sw::make_shared<Subscription>( game::getSubsystem<UIGlobalCommandRegistry>().registerCommand(
+                    hashed_string( UIGlobalCommandRegistry::kLeaveMinigame ), SW_DELEGATE_LAMBDA( UICommandDelegate, []( const hashed_string&, Widget& )
+                { game::getSubsystem<MinigameFlow>().requestQuit(); } ) ) );
+                scope.addCleanup( SW_DELEGATE_LAMBDA( Delegate<void()>, [pLeaveCommand]()
+                { pLeaveCommand->reset(); } ) );
                 for ( const string& document : definition._listUI )
                 {
                     const UIScreenHandle handle = pUI->openScreen( document );

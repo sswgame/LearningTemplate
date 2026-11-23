@@ -28,14 +28,14 @@ namespace sw
         };
     } // namespace
 
-    int32 RespawnRules::findPolicyIndex( RespawnPolicyKind kind ) const
+    optional<int32> RespawnRules::findPolicyIndex( RespawnPolicyKind kind ) const
     {
         for ( size_t index = 0; index < _listPolicy.size(); ++index )
         {
             if ( _listPolicy[index]._kind == kind )
                 return static_cast<int32>( index );
         }
-        return constant::invalid_index::kInt32;
+        return nullopt;
     }
 
     string RespawnRules::describeErrors() const

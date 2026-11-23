@@ -1,3 +1,4 @@
+<?asset guid="23267bc32729c612b7d0ab7681cded9a"?>
 <SourceStringTable culture="en">
 	<entries>
 		<entry key="/" source="/" context="TextWidget._text">
@@ -8,6 +9,16 @@
 		<entry key="Actor" source="Actor" context="SequenceBinding._name">
 			<origins>
 				<item>game/playground/data/cinematic.seq.xml</item>
+			</origins>
+		</entry>
+		<entry key="ArrivalCutA" source="ArrivalCutA" context="SequenceBinding._name">
+			<origins>
+				<item>game/playground/wildwest/data/arrival.seq.xml</item>
+			</origins>
+		</entry>
+		<entry key="ArrivalCutB" source="ArrivalCutB" context="SequenceBinding._name">
+			<origins>
+				<item>game/playground/wildwest/data/arrival.seq.xml</item>
 			</origins>
 		</entry>
 		<entry key="Assault Rifle" source="Assault Rifle" context="Weapon name">
@@ -95,6 +106,13 @@
 				<item>common/data/items.xml</item>
 			</origins>
 		</entry>
+		<entry key="Press [action=Farm.Use] to work the soil with your tool"
+		       source="Press [action=Farm.Use] to work the soil with your tool"
+		       context="TutorialHintTriggerComponent._text">
+			<origins>
+				<item>game/playground/harvestvalley/maps/farm.scene.xml</item>
+			</origins>
+		</entry>
 		<entry key="Pump Shotgun" source="Pump Shotgun" context="Weapon name">
 			<origins>
 				<item>common/data/items.xml</item>
@@ -113,6 +131,11 @@
 		<entry key="Rusted Helm" source="Rusted Helm" context="Item name">
 			<origins>
 				<item>common/data/items.xml</item>
+			</origins>
+		</entry>
+		<entry key="Stamina" source="Stamina" context="TextWidget._text">
+			<origins>
+				<item>game/playground/wildwest/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
 		<entry key="Subtitle.Guide" source="Guide" context="Subtitle speaker (audio event SubtitleGuideLine)">
@@ -155,6 +178,11 @@
 		<entry key="Travel Cape" source="Travel Cape" context="Item name">
 			<origins>
 				<item>common/data/items.xml</item>
+			</origins>
+		</entry>
+		<entry key="Welcome to Dry Gulch." source="Welcome to Dry Gulch." context="SequenceTrackItem._text">
+			<origins>
+				<item>game/playground/wildwest/data/arrival.seq.xml</item>
 			</origins>
 		</entry>
 		<entry key="Welcome to Pixel Town, traveller." source="Welcome to Pixel Town, traveller." context="Dialogue line">

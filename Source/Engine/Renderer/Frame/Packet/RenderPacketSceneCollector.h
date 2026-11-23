@@ -121,6 +121,8 @@ namespace sw
     private:
         /** @brief 스냅샷을 짓고(추가 뷰의 투명 순서 포함) 업로드를 요청한 뒤 패킷에 내보냅니다. 인스턴스 LOD 설정은 부르는 쪽이 먼저 정한다. */
         void populateSnapshot( RenderFramePacket& packet, Scene* pScene, GPUUploadQueue* pUploadQueue );
+        /** @brief 실시간 프로브의 복셀에 칠할 메시(패킷의 `_listRealtimeProbe`)의 GPU 버퍼 만들기를 요청합니다. 장면이 바뀐 볼륨만 훑는다. */
+        void requestVoxelMeshUploads( const RenderFramePacket& packet, GPUUploadQueue& queue );
 
     private:
         /** @brief GT 쪽 씬 스냅샷 빌더입니다. populateFromScene 의 재구축 판단 캐시가 프레임을 넘어 유지되도록 여기서 소유합니다. */
@@ -133,6 +135,8 @@ namespace sw
         LocalShadowAtlas _localShadowAtlas;
         /** @brief 프로브 버퍼 원소 묶음입니다(`collectSceneLights`). 내용이 그대로면 지난 묶음을 다시 주도록 프레임을 넘어 유지합니다. */
         LightProbeElementBuilder _lightProbeElement;
+        /** @brief 지난번에 GPU 버퍼 만들기를 요청한 복셀 장면들(실시간 프로브 요청 차례)입니다(`requestVoxelMeshUploads`). */
+        vector<shared_ptr<const SceneVoxelScene>> _listVoxelUploadScene;
         /** @brief 이 수집기가 보는 씬의 스카이 라이트입니다. 하늘이 바뀔 때만 다시 거르도록 프레임을 넘어 유지합니다(`collectLights`). */
         SkyLightCache _skyLight;
         /** @brief 읽은 렌즈 플레어 파일(경로 → 데이터, 못 읽은 경로는 nullptr)입니다. 프레임을 넘어 유지한다. */

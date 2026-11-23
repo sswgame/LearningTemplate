@@ -101,8 +101,8 @@ namespace sw::editor
         [[nodiscard]] static bool isSessionFile( string_view absolutePath );
         /** @brief 세션 문서 글입니다(자동 저장 사본 — 저장할 글과 같다). */
         [[nodiscard]] static string makeSessionText();
-        /** @brief 세션 문서의 사본 글 @p text 를 지금 값으로 둡니다. 읽지 못하면 false 이고 값은 그대로입니다. */
-        [[nodiscard]] static bool applySessionText( string_view text );
+        /** @brief 세션 문서의 사본 글 @p text 를 지금 값으로 두고 되돌리기 단계를 비웁니다(갈아 끼운 값의 단계는 남지 않는다). 읽지 못하면 false 이고 값은 그대로입니다. */
+        [[nodiscard]] bool applySessionText( string_view text );
         /** @brief 열거형 전역 변수의 리플렉션 열거 정보입니다. @p enumType 이 비었거나 등록되지 않았으면 nullptr 입니다. */
         static const EnumInfo* findEnumInfo( const string& enumType );
         /** @brief 열거형 @p enumType 의 값 @p value 의 이름입니다. 없으면 nullptr 입니다. */

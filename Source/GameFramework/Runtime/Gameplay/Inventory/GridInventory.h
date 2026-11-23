@@ -85,8 +85,8 @@ namespace sw
         bool canPlace( const hashed_string& itemID, int32 x, int32 y, bool bRotated, int32 ignoreInstanceID = constant::invalid_index::kInt32 ) const;
         /** @brief 빈 위치를 찾습니다. 회전하지 않은 쪽을 먼저, 위에서 아래로, 왼쪽에서 오른쪽으로 찾습니다. */
         [[nodiscard]] bool findFreeSpot( const hashed_string& itemID, int32& outX, int32& outY, bool& outRotated ) const;
-        /** @brief 이 위치에 새로 놓습니다. 겹치지 않으며, 받은 번호를 반환합니다. 못 놓으면 -1 입니다. */
-        int32 placeItem( const hashed_string& itemID, int32 count, int32 x, int32 y, bool bRotated );
+        /** @brief 이 위치에 새로 놓습니다. 겹치지 않으며, 받은 번호를 반환합니다. 못 놓으면 없음입니다. */
+        optional<int32> placeItem( const hashed_string& itemID, int32 count, int32 x, int32 y, bool bRotated );
         /** @brief 넣고 넣은 개수를 반환합니다. 덜 찬 위치를 먼저 채우고, 남으면 빈 위치에 둡니다. 위치가 모자라면 일부만 넣습니다. */
         int32 addItem( const hashed_string& itemID, int32 count );
         /** @brief @p count 개가 모두 있으면 뺍니다. 나중에 놓은 위치부터 뺍니다. */

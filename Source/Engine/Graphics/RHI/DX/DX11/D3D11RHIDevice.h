@@ -22,7 +22,6 @@
 #include "Engine/Graphics/RHI/DX/DX11/D3D11RHISwapChain.h"
 #include "Engine/Graphics/RHI/DX/DXGIFormat.h"
 #include "Engine/Graphics/RHI/DX/RHIDxResultCheck.h"
-#include "Engine/Graphics/RHI/Diagnostics/RHIRenderPassRegistry.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHITimestampFrame.h"
 #include "Engine/Graphics/RHI/IRHIContextThreadBinding.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
@@ -262,7 +261,7 @@ namespace sw
         unique_ptr<IRHICommandList> createCommandList() override;
 
         /** @brief 커맨드 리스트를 즉시 컨텍스트의 현재 위치에서 실행합니다(ExecuteCommandList). */
-        void executeCommandList( IRHICommandList* pCmdList ) override;
+        void executeCommandListInternal( IRHICommandList* pCmdList ) override;
 
         /** @brief 살아 있는 커맨드 리스트를 등록합니다(소유하지 않는 참조). */
         void registerCommandList( D3D11RHICommandList* pCmdList );
@@ -519,15 +518,15 @@ namespace sw
         // 기록끼리는 서로를 막지 않는다.
         // ------------------------------------------------------------------------------
         /** @brief 인덱스의 버퍼 핸들입니다. 범위 밖이면 0 입니다. */
-        RHIBufferHandle bindlessBufferAt( RHIDescriptorIndex index ) const;
+        RHIBufferHandle bindlessBufferAt( RHIBufferSRVIndex index ) const;
         /** @brief 인덱스의 버퍼와 구간입니다(구간 등록이 아니면 오프셋 · 크기 0 — 버퍼 전체). 범위 밖이면 빈 구간입니다. */
-        RHIBufferSlice bindlessBufferSliceAt( RHIDescriptorIndex index ) const;
+        RHIBufferSlice bindlessBufferSliceAt( RHIBufferSRVIndex index ) const;
         /** @brief 인덱스의 텍스처 핸들입니다. 범위 밖이면 0 입니다. */
-        RHITextureHandle bindlessTextureAt( RHIDescriptorIndex index ) const;
+        RHITextureHandle bindlessTextureAt( RHITextureSRVIndex index ) const;
         /** @brief 인덱스의 UAV 입니다(참조를 하나 올려 반환합니다). 범위 밖이면 nullptr 입니다. */
-        Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView> bindlessUAVAt( RHIDescriptorIndex index ) const;
+        Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView> bindlessUAVAt( RHIUnorderedAccessIndex index ) const;
         /** @brief UAV 인덱스가 가리키는 원본 버퍼 핸들입니다(없으면 0). SRV/UAV 해저드를 해소할 때 씁니다. */
-        RHIBufferHandle uavSourceBufferAt( RHIDescriptorIndex index ) const;
+        RHIBufferHandle uavSourceBufferAt( RHIUnorderedAccessIndex index ) const;
 
         /** @brief 이 기록 스트림의 루트 상수 CB 를 확보합니다(없으면 만듭니다). */
         [[nodiscard]] bool ensureRootConstantCb( D3D11RecordingState& state );
@@ -675,7 +674,6 @@ namespace sw
         RHIBindlessRegistry<UAVEntry>                                    _uavRegistry;
 
         RHIHandleTable<RHIPipelineStateHandle, D3D11PipelineStateRecord> _pipelineStates;
-        RHIRenderPassRegistry                                            _renderPassRegistry; ///< 렌더 패스 핸들 등록부. 자기 뮤텍스로 직렬화해 어느 스레드에서나 부른다.
 
         /// @brief 정적 샘플러 세트입니다(binding_slots.hlsli 4, DX12 와 같은 테이블). s9..s15 에 바인딩합니다. 셰이더가 Bindless::sampleIndexWith 의 samplerID 로 고릅니다.
         Microsoft::WRL::ComPtr<ID3D11SamplerState> _arrStaticSampler[shaderslot::kStaticSamplerArrayCount];

@@ -139,11 +139,12 @@ namespace sw
     WGPUBindGroup WebGPUBindGroupCache::getOrCreate( WGPUDevice device, WGPUBindGroupLayout layout, const vector<WGPUBindGroupEntry>& listEntry )
     {
         vector<CachedGroup>& listBucket = _mapGroup[makeKeyHash( layout, listEntry )];
-        for ( const CachedGroup& cached : listBucket )
+        for ( CachedGroup& cached : listBucket )
         {
             if ( cached._layout == layout && isSameEntryList( cached._listEntry, listEntry ) )
             {
                 ++_hitCount;
+                cached._unusedFrameCount = 0;
                 return cached._group;
             }
         }
@@ -154,22 +155,71 @@ namespace sw
         const WGPUBindGroup group = wgpuDeviceCreateBindGroup( device, &desc );
         if ( group == nullptr )
             return nullptr;
+        // 키가 된 핸들의 참조를 쥔다 — 캐시에 있는 동안 그 값이 다른 객체로 다시 나가지 않는다.
+        wgpuBindGroupLayoutAddRef( layout );
+        for ( const WGPUBindGroupEntry& entry : listEntry )
+        {
+            if ( entry.buffer != nullptr )
+                wgpuBufferAddRef( entry.buffer );
+            if ( entry.sampler != nullptr )
+                wgpuSamplerAddRef( entry.sampler );
+            if ( entry.textureView != nullptr )
+                wgpuTextureViewAddRef( entry.textureView );
+        }
         listBucket.push_back( CachedGroup{ layout, listEntry, group } );
         ++_createdCount;
         return group;
     }
 
-    void WebGPUBindGroupCache::clear()
+    void WebGPUBindGroupCache::releaseGroup( const CachedGroup& cached )
     {
-        // NEXT 5-2 측정: 프레임마다 비우는 캐시가 얼마나 다시 짓는지 센다(만든 수 ÷ 건 수). 높으면 프레임 펜스로 은퇴시키는 캐시로 바꾼다.
+        wgpuBindGroupRelease( cached._group );
+        for ( const WGPUBindGroupEntry& entry : cached._listEntry )
+        {
+            if ( entry.buffer != nullptr )
+                wgpuBufferRelease( entry.buffer );
+            if ( entry.sampler != nullptr )
+                wgpuSamplerRelease( entry.sampler );
+            if ( entry.textureView != nullptr )
+                wgpuTextureViewRelease( entry.textureView );
+        }
+        wgpuBindGroupLayoutRelease( cached._layout );
+    }
+
+    void WebGPUBindGroupCache::beginFrame()
+    {
         SW_PROFILE_COUNT( "RT.Bind.bindGroupCreates", _createdCount );
         SW_PROFILE_COUNT( "RT.Bind.bindGroupHits", _hitCount );
+        _createdCount = 0;
+        _hitCount     = 0;
+        for ( auto it = _mapGroup.begin(); it != _mapGroup.end(); )
+        {
+            vector<CachedGroup>& listBucket = it->second;
+            for ( size_t index = 0; index < listBucket.size(); )
+            {
+                if ( ++listBucket[index]._unusedFrameCount <= kRetireFrameCount )
+                {
+                    ++index;
+                    continue;
+                }
+                releaseGroup( listBucket[index] );
+                listBucket.erase( listBucket.begin() + index );
+            }
+            if ( listBucket.empty() )
+                it = _mapGroup.erase( it );
+            else
+                ++it;
+        }
+    }
+
+    void WebGPUBindGroupCache::clear()
+    {
         for ( auto& [hash, listBucket] : _mapGroup )
         {
             (void)hash;
             for ( const CachedGroup& cached : listBucket )
             {
-                wgpuBindGroupRelease( cached._group );
+                releaseGroup( cached );
             }
         }
         _mapGroup.clear();
@@ -380,7 +430,6 @@ namespace sw
         , _buffers{}
         , _textures{}
         , _pipelines{}
-        , _renderPasses{}
         , _bindlessMutex{}
         , _textureTable{}
         , _bufferTable{}
@@ -1113,7 +1162,7 @@ namespace sw
         _listPendingCommandBuffer.clear();
     }
 
-    void WebGPURHIDevice::executeCommandList( IRHICommandList* pCmdList )
+    void WebGPURHIDevice::executeCommandListInternal( IRHICommandList* pCmdList )
     {
         WebGPURHICommandList* const pList = static_cast<WebGPURHICommandList*>( pCmdList );
         if ( pList == nullptr )
@@ -1128,7 +1177,7 @@ namespace sw
         openFrameEncoder();
     }
 
-    void WebGPURHIDevice::executeCommandListImmediate( IRHICommandList* pCmdList )
+    void WebGPURHIDevice::executeCommandListImmediateInternal( IRHICommandList* pCmdList )
     {
         WebGPURHICommandList* const pList    = static_cast<WebGPURHICommandList*>( pCmdList );
         const WGPUCommandBuffer     commands = pList != nullptr ? pList->takeFinishedCommandBuffer() : nullptr;
@@ -1192,8 +1241,7 @@ namespace sw
                 SW_LOG_ERROR_ONCE_ID( "WebGPU.FrameFenceWaitFailed", "WebGPU: waiting for frame %# to finish failed", busySerial );
             retireFinishedFrames();
         }
-        // 지난 프레임의 그룹은 그 프레임의 커맨드가 붙들고 있다(명세) — 캐시는 놓는다. 프레임을 넘겨 들면 놓인 자원의 핸들 값이 새 객체에 다시 나갈 수 있다.
-        _bindGroupCache.clear();
+        _bindGroupCache.beginFrame(); // 오래 걸지 않은 그룹만 놓는다(`WebGPUBindGroupCache`)
         ensureTimestampQuerySet();
         collectTimestampReadback( _frameFenceRing.getRecordingSlot() ); // 이 칸의 앞 프레임은 끝났다(위 칸 대기)
         // GPU 가 끝낸 프레임의 링을 다시 쓴다 — 끝나지 않았으면 이 프레임의 첫 칸 요청이 새 링을 만든다(앞서가기 상한이 링 수를 프레임 인 플라이트 수 언저리로 묶는다).

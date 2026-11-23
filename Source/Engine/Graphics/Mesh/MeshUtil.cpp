@@ -276,7 +276,7 @@ namespace sw
 
     shared_ptr<Mesh> MeshUtil::createUnitCube()
     {
-        auto              mesh = Mesh::create();
+        auto              mesh = Mesh::create( MeshCPUAccess::Keep );
         vector<RHIVertex> listVert;
         listVert.reserve( 36 );
 
@@ -410,7 +410,7 @@ namespace sw
         stackCount = MathUtil::max( stackCount, 2u );
         sliceCount = MathUtil::max( sliceCount, 3u );
 
-        auto              mesh = Mesh::create();
+        auto              mesh = Mesh::create( MeshCPUAccess::Keep );
         vector<RHIVertex> listVert;
         listVert.reserve( static_cast<size_t>( stackCount ) * sliceCount * 6 );
 
@@ -440,7 +440,7 @@ namespace sw
     {
         sliceCount = MathUtil::max( sliceCount, 3u );
 
-        auto              mesh = Mesh::create();
+        auto              mesh = Mesh::create( MeshCPUAccess::Keep );
         vector<RHIVertex> listVert;
         listVert.reserve( static_cast<size_t>( sliceCount ) * 12 );
 
@@ -465,7 +465,7 @@ namespace sw
         stackCount = MathUtil::max( stackCount, 2u );
         sliceCount = MathUtil::max( sliceCount, 3u );
 
-        auto              mesh = Mesh::create();
+        auto              mesh = Mesh::create( MeshCPUAccess::Keep );
         vector<RHIVertex> listVert;
         listVert.reserve( static_cast<size_t>( stackCount ) * sliceCount * 12 );
 
@@ -513,7 +513,7 @@ namespace sw
     {
         sliceCount = MathUtil::max( sliceCount, 3u );
 
-        auto              mesh = Mesh::create();
+        auto              mesh = Mesh::create( MeshCPUAccess::Keep );
         vector<RHIVertex> listVert;
         listVert.reserve( static_cast<size_t>( sliceCount ) * 6 );
 
@@ -548,7 +548,7 @@ namespace sw
 
     shared_ptr<Mesh> MeshUtil::createRectMesh()
     {
-        auto              mesh     = Mesh::create();
+        auto              mesh     = Mesh::create( MeshCPUAccess::Keep );
         vector<RHIVertex> listVert = {
             makeRectVertex( -0.5f, -0.5f ),
             makeRectVertex( 0.5f, -0.5f ),
@@ -563,7 +563,7 @@ namespace sw
 
     shared_ptr<Mesh> MeshUtil::createSpriteQuad()
     {
-        auto mesh = Mesh::create();
+        auto mesh = Mesh::create( MeshCPUAccess::Keep );
         // 감김은 이 엔진의 앞면 규약((b - a) x (c - a) 가 그 면의 노멀)을 따른다. 앞 · 뒷면의 u 방향은 `makeSpriteVertex` 주석.
         vector<RHIVertex> listVert = {
             makeSpriteVertex( -0.5f, -0.5f, -1.0f ),
@@ -587,7 +587,7 @@ namespace sw
     {
         segmentCount = MathUtil::max( segmentCount, 1u );
 
-        auto              mesh = Mesh::create();
+        auto              mesh = Mesh::create( MeshCPUAccess::Keep );
         vector<RHIVertex> listVert;
         listVert.reserve( static_cast<size_t>( segmentCount ) * segmentCount * 6 );
 
@@ -675,7 +675,7 @@ namespace sw
                 pushGrassVertex( listVertex, normal, arrRight[node + 1], 1.0f, v1 );
             }
         }
-        shared_ptr<Mesh> mesh = Mesh::create();
+        shared_ptr<Mesh> mesh = Mesh::create( MeshCPUAccess::Keep );
         mesh->setTriangleListWelded( std::move( listVertex ) );
         return mesh;
     }

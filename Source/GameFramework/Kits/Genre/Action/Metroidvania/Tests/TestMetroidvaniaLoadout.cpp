@@ -16,7 +16,7 @@
 
 namespace
 {
-    constexpr const utf8* kLoadoutXML = R"(<Metroidvania currency="soul"><BaseMotor halfExtents="0.35,0.45" runSpeed="7" groundAcceleration="70" airAcceleration="40" jumpHeight="3.2" timeToApex="0.38" fallGravityScale="1.6" jumpCutRatio="0.45" maxFallSpeed="18" coyoteTime="0.1" jumpBufferTime="0.12" wallSlideSpeed="2.5" wallJumpSpeedX="7.5" wallJumpSpeedY="12" wallJumpLockTime="0.15" dashSpeed="18" dashDuration="0.15" dashCooldown="0.3" climbSpeed="4" dropThroughTime="0.25" extraJumpCount="0" airDashCount="1" wallJump="true"/>
+    constexpr const utf8* kLoadoutXML = R"(<Metroidvania currency="soul"><BaseMotor halfExtents="0.35,0.45" runSpeed="7" groundAcceleration="70" airAcceleration="40" jumpHeight="3.2" timeToApex="0.38" fallGravityScale="1.6" jumpCutRatio="0.45" maxFallSpeed="18" coyoteTime="0.1" jumpBufferTime="0.12" wallSlideSpeed="2.5" wallJumpSpeedX="7.5" wallJumpSpeedY="12" wallJumpLockTime="0.15" dashSpeed="18" dashDuration="0.15" dashCooldown="0.3" climbSpeed="4" dropThroughTime="0.25" dashEndSpeedScale="0.4" climbJumpScale="0.8" climbSideScale="0.5" moveDeadzone="0.1" extraJumpCount="0" airDashCount="1" wallJump="true"/>
   <Rules charmNotches="3" overcharmDamageScale="2.5"/>
   <Health max="80" poise="30"/>
   <Stamina max="60" regenRate="5" regenDelay="0.5" exhaustThreshold="10"/>
@@ -104,7 +104,7 @@ SW_TEST_CASE( MetroidvaniaCatalogTest, ParryWindowIsRequired )
 {
     SW_EXPECT_LOG( "MetroidvaniaCatalog.NeedsParryLeastOne" );
     sw::MetroidvaniaCatalog catalog;
-    SW_EXPECT_FALSE( catalog.loadFromXMLText( R"(<Metroidvania><BaseMotor halfExtents="0.35,0.45" runSpeed="7" groundAcceleration="70" airAcceleration="40" jumpHeight="3.2" timeToApex="0.38" fallGravityScale="1.6" jumpCutRatio="0.45" maxFallSpeed="18" coyoteTime="0.1" jumpBufferTime="0.12" wallSlideSpeed="2.5" wallJumpSpeedX="7.5" wallJumpSpeedY="12" wallJumpLockTime="0.15" dashSpeed="18" dashDuration="0.15" dashCooldown="0.3" climbSpeed="4" dropThroughTime="0.25" extraJumpCount="0" airDashCount="1" wallJump="true"/><Enemy id="a"/></Metroidvania>)", "noParry" ) );
+    SW_EXPECT_FALSE( catalog.loadFromXMLText( R"(<Metroidvania><BaseMotor halfExtents="0.35,0.45" runSpeed="7" groundAcceleration="70" airAcceleration="40" jumpHeight="3.2" timeToApex="0.38" fallGravityScale="1.6" jumpCutRatio="0.45" maxFallSpeed="18" coyoteTime="0.1" jumpBufferTime="0.12" wallSlideSpeed="2.5" wallJumpSpeedX="7.5" wallJumpSpeedY="12" wallJumpLockTime="0.15" dashSpeed="18" dashDuration="0.15" dashCooldown="0.3" climbSpeed="4" dropThroughTime="0.25" dashEndSpeedScale="0.4" climbJumpScale="0.8" climbSideScale="0.5" moveDeadzone="0.1" extraJumpCount="0" airDashCount="1" wallJump="true"/><Enemy id="a"/></Metroidvania>)", "noParry" ) );
     SW_EXPECT_TRUE( catalog.findEnemy( sw::hashed_string( "a" ) ) == nullptr );
 }
 
@@ -117,7 +117,7 @@ SW_TEST_CASE( MetroidvaniaCatalogTest, BrokenElementsAreSkipped )
     SW_EXPECT_LOG( "MetroidvaniaCatalog.BossNeedsFlagSet" );
 
     sw::MetroidvaniaCatalog catalog;
-    SW_REQUIRE_TRUE( catalog.loadFromXMLText( R"(<Metroidvania><BaseMotor halfExtents="0.35,0.45" runSpeed="7" groundAcceleration="70" airAcceleration="40" jumpHeight="3.2" timeToApex="0.38" fallGravityScale="1.6" jumpCutRatio="0.45" maxFallSpeed="18" coyoteTime="0.1" jumpBufferTime="0.12" wallSlideSpeed="2.5" wallJumpSpeedX="7.5" wallJumpSpeedY="12" wallJumpLockTime="0.15" dashSpeed="18" dashDuration="0.15" dashCooldown="0.3" climbSpeed="4" dropThroughTime="0.25" extraJumpCount="0" airDashCount="1" wallJump="true"/>
+    SW_REQUIRE_TRUE( catalog.loadFromXMLText( R"(<Metroidvania><BaseMotor halfExtents="0.35,0.45" runSpeed="7" groundAcceleration="70" airAcceleration="40" jumpHeight="3.2" timeToApex="0.38" fallGravityScale="1.6" jumpCutRatio="0.45" maxFallSpeed="18" coyoteTime="0.1" jumpBufferTime="0.12" wallSlideSpeed="2.5" wallJumpSpeedX="7.5" wallJumpSpeedY="12" wallJumpLockTime="0.15" dashSpeed="18" dashDuration="0.15" dashCooldown="0.3" climbSpeed="4" dropThroughTime="0.25" dashEndSpeedScale="0.4" climbJumpScale="0.8" climbSideScale="0.5" moveDeadzone="0.1" extraJumpCount="0" airDashCount="1" wallJump="true"/>
   <Parry><Window grade="Perfect"/></Parry>
   <Ability id="typo" name="t" flag="f"><Motor jumpp="1"/></Ability>
   <Ability id="fine" name="f" flag="g"><Motor runSpeed="1"/></Ability>
@@ -140,7 +140,7 @@ SW_TEST_CASE( MetroidvaniaCatalogTest, PickupNamingAnUnknownGrantFailsTheLoad )
 {
     SW_EXPECT_LOG( "XMLCatalog.UnknownReference" );
     sw::MetroidvaniaCatalog catalog;
-    SW_EXPECT_FALSE( catalog.loadFromXMLText( R"(<Metroidvania><BaseMotor halfExtents="0.35,0.45" runSpeed="7" groundAcceleration="70" airAcceleration="40" jumpHeight="3.2" timeToApex="0.38" fallGravityScale="1.6" jumpCutRatio="0.45" maxFallSpeed="18" coyoteTime="0.1" jumpBufferTime="0.12" wallSlideSpeed="2.5" wallJumpSpeedX="7.5" wallJumpSpeedY="12" wallJumpLockTime="0.15" dashSpeed="18" dashDuration="0.15" dashCooldown="0.3" climbSpeed="4" dropThroughTime="0.25" extraJumpCount="0" airDashCount="1" wallJump="true"/>
+    SW_EXPECT_FALSE( catalog.loadFromXMLText( R"(<Metroidvania><BaseMotor halfExtents="0.35,0.45" runSpeed="7" groundAcceleration="70" airAcceleration="40" jumpHeight="3.2" timeToApex="0.38" fallGravityScale="1.6" jumpCutRatio="0.45" maxFallSpeed="18" coyoteTime="0.1" jumpBufferTime="0.12" wallSlideSpeed="2.5" wallJumpSpeedX="7.5" wallJumpSpeedY="12" wallJumpLockTime="0.15" dashSpeed="18" dashDuration="0.15" dashCooldown="0.3" climbSpeed="4" dropThroughTime="0.25" dashEndSpeedScale="0.4" climbJumpScale="0.8" climbSideScale="0.5" moveDeadzone="0.1" extraJumpCount="0" airDashCount="1" wallJump="true"/>
   <Parry><Window grade="Perfect"/></Parry>
   <Ability id="fine" name="f" flag="g"/>
   <Pickup id="badAbility" area="a" ability="ghost"/>
@@ -148,7 +148,7 @@ SW_TEST_CASE( MetroidvaniaCatalogTest, PickupNamingAnUnknownGrantFailsTheLoad )
 </Metroidvania>)",
                                               "broken" ) );
     sw::MetroidvaniaCatalog clean;
-    SW_EXPECT_TRUE( clean.loadFromXMLText( R"(<Metroidvania><BaseMotor halfExtents="0.35,0.45" runSpeed="7" groundAcceleration="70" airAcceleration="40" jumpHeight="3.2" timeToApex="0.38" fallGravityScale="1.6" jumpCutRatio="0.45" maxFallSpeed="18" coyoteTime="0.1" jumpBufferTime="0.12" wallSlideSpeed="2.5" wallJumpSpeedX="7.5" wallJumpSpeedY="12" wallJumpLockTime="0.15" dashSpeed="18" dashDuration="0.15" dashCooldown="0.3" climbSpeed="4" dropThroughTime="0.25" extraJumpCount="0" airDashCount="1" wallJump="true"/>
+    SW_EXPECT_TRUE( clean.loadFromXMLText( R"(<Metroidvania><BaseMotor halfExtents="0.35,0.45" runSpeed="7" groundAcceleration="70" airAcceleration="40" jumpHeight="3.2" timeToApex="0.38" fallGravityScale="1.6" jumpCutRatio="0.45" maxFallSpeed="18" coyoteTime="0.1" jumpBufferTime="0.12" wallSlideSpeed="2.5" wallJumpSpeedX="7.5" wallJumpSpeedY="12" wallJumpLockTime="0.15" dashSpeed="18" dashDuration="0.15" dashCooldown="0.3" climbSpeed="4" dropThroughTime="0.25" dashEndSpeedScale="0.4" climbJumpScale="0.8" climbSideScale="0.5" moveDeadzone="0.1" extraJumpCount="0" airDashCount="1" wallJump="true"/>
   <Parry><Window grade="Perfect"/></Parry>
   <Ability id="fine" name="f" flag="g"/>
   <Charm id="later" name="c"/>

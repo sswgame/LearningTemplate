@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="722c553da79840a7ae89db2a96ec64ac"?>
+<!--
+  에디터 시나리오 — 미니게임 맵을 열어 놓고 플레이하면 그 미니게임 안으로 시작한다(MinigameFlow::onWorldPlayChanged). 카탈로그 · 게임 기능 · 입력 레이어가 켜져 맵의 디렉터가 열린다.
+  멈추면 미니게임이 비고(다음 플레이에 남지 않는다), 다시 플레이하면 다시 들어간다.
+  실행: App -EnableEditor -scenario=game/playground/automation/editor/minigameplay.scenario.xml -unattended
+-->
+<Scenario name="editor.minigameplay" fixedDelta="0.0166667" timeoutFrames="1800" startAfter="Immediately" input="exclusive">
+	<EditorWaitStable/>
+	<DevCommand line="scene.open game/playground/voxelcraft/maps/island.scene.xml"/>
+	<EditorWaitStable/>
+	<Expect watch="Minigame.Active" is="none"/>
+	<DevCommand line="play"/>
+	<EditorWaitStable/>
+	<WaitUntil watch="Editor.PlayState" equals="1" timeoutFrames="600"/>
+	<Expect watch="Minigame.Active" is="voxelcraft"/>
+	<ExpectLog id="MinigameFlow.EnteredOfScene" contains="'voxelcraft'" count="1"/>
+	<DevCommand line="stop"/>
+	<EditorWaitStable/>
+	<WaitUntil watch="Editor.PlayState" equals="0" timeoutFrames="600"/>
+	<Expect watch="Minigame.Active" is="none"/>
+	<Expect watch="Minigame.Depth" equals="0"/>
+	<Expect watch="Minigame.LeakCount" equals="0"/>
+	<DevCommand line="play"/>
+	<EditorWaitStable/>
+	<WaitUntil watch="Editor.PlayState" equals="1" timeoutFrames="600"/>
+	<Expect watch="Minigame.Active" is="voxelcraft"/>
+	<DevCommand line="stop"/>
+	<EditorWaitStable/>
+	<WaitUntil watch="Editor.PlayState" equals="0" timeoutFrames="600"/>
+	<Pass/>
+</Scenario>

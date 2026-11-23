@@ -7,11 +7,13 @@
 #include "Core/Container/vector.h"
 #include "Core/Encoding/FourCCUtil.h"
 #include "Core/Event/EventBuffer.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
+#include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
@@ -91,6 +93,8 @@ namespace sw
     public:
         /** @brief 데이터 종류 이름입니다(`SW_ASSET_TYPE` 등록 줄과 팩 경로 `GamePackDataUtil::tryMakeKindPath` 가 이것을 쓴다). */
         static constexpr const utf8* kDataKind = "friendship";
+        /** @brief 이 데이터 종류입니다(등록은 `Reputation.cpp` 의 공유 캐시 줄이 로더를 더한다). 접미사가 없어 타입 있는 참조 `AssetRef<ReputationCatalog>` 는 경로 규칙으로 가른다. */
+        static constexpr AssetTypeDef kAssetType = AssetTypeDef::makeDataFile( kDataKind, AssetPathRule{ "game/", {}, "/data/friendship.xml" }, {} );
 
     private:
         static constexpr const utf8* kXMLRootName = "ReputationCatalog"; ///< 루트 원소(`XMLCatalog`)
@@ -156,11 +160,11 @@ namespace sw
         int32         getValue( const hashed_string& factionID ) const;
         hashed_string getTierName( const hashed_string& factionID ) const;
         /**
-         * @brief 단계 번호입니다. 0 이 가장 낮은 단계이고, 단계가 없으면 -1 입니다.
+         * @brief 단계 번호입니다. 0 이 가장 낮은 단계이고, 단계가 없으면 없음입니다.
          * @details 값이 가장 낮은 단계의 `min` 보다 작아도 0 이다. 단계에는 하한이 없어서 가장 낮은 단계로 떨어지며, "단계 밖" 은 없다.
          */
-        int32 getTierIndex( const hashed_string& factionID ) const;
-        void  pollEvents( vector<ReputationEvent>& outListEvent );
+        optional<int32> getTierIndex( const hashed_string& factionID ) const;
+        void            pollEvents( vector<ReputationEvent>& outListEvent );
         /**
          * @brief 세력마다 id 와 값을 처음 만난 순서로 씁니다(리플렉션 상태 칸).
          *        `writeState` 가 쓴 바이트로 모두 복원합니다. 알림은 없습니다. 세력 id 가 비어 있으면 false 를 반환하고 상태는 바뀌지 않습니다.
@@ -172,8 +176,8 @@ namespace sw
 
         Entry& acquireEntry( const hashed_string& factionID );
         int32  applyDelta( const hashed_string& factionID, int32 delta );
-        /** @brief `getTierIndex` 의 계산입니다. 값 이하인 마지막 단계를 고르고, 그런 단계가 없으면 0(가장 낮은 단계)이며, 단계가 아예 없으면 -1 입니다. */
-        static int32 computeTierIndex( const FactionDef* pFaction, int32 value );
+        /** @brief `getTierIndex` 의 계산입니다. 값 이하인 마지막 단계를 고르고, 그런 단계가 없으면 0(가장 낮은 단계)이며, 단계가 아예 없으면 없음입니다. */
+        static optional<int32> computeTierIndex( const FactionDef* pFaction, int32 value );
 
     private:
         PROPERTY( RuntimeState )

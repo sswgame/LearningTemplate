@@ -64,7 +64,7 @@ namespace sw::editor
     protected:
         [[nodiscard]] expected<string> tryMakeFileText( string_view /*absolutePath*/ ) const override { return GlobalVariablesViewModel::makeSessionText(); } // 저장할 파일은 세션 문서 하나다
         [[nodiscard]] bool             isEditingFile( string_view absolutePath ) override { return GlobalVariablesViewModel::isSessionFile( absolutePath ); }
-        [[nodiscard]] bool             applyFileText( string_view /*absolutePath*/, const string& text ) override { return GlobalVariablesViewModel::applySessionText( text ); }
+        [[nodiscard]] bool             applyFileText( string_view /*absolutePath*/, const string& text ) override { return _model.applySessionText( text ); }
 
     private:
         /** @brief 단일 전역 변수의 편집 컨트롤을 그립니다. */

@@ -79,10 +79,10 @@ namespace sw
                                const float4x4& viewProj, FrameViewTarget& target ) const;
         /**
          * @brief 주 시점 가림 타일을 되읽는 복사를 프레임 그래프 리스트에 넣고, 이미 도착한 사본이 있으면 우편함에 올립니다(`getSnapshot`).
-         * @details 프레임 처음 짓기 직후에 부른다. 이번 프레임에 타일을 짓지 않았거나 기록을 버리는 프레임이면 우편함을 비운다(그 타일은 지난 장면의 것이라 맞지 않는다).
+         * @details 프레임 그래프가 끝난 뒤(`FrameGraphExecutor::endFrame`) 부른다. 이번 프레임에 타일을 짓지 않았거나 기록을 버리는 프레임이면 우편함을 비운다(그 타일은 지난 장면의 것이라 맞지 않는다).
          *          요청 때의 뷰-투영 · 격자는 메타 고리에 적어 두었다가 사본이 도착하면 붙인다.
          */
-        void requestReadback( IRHIPassCommandList* pCmd, IRHIDevice* pDevice, bool bEnabled, const FrameViewTarget& view );
+        void requestReadback( IRHICommandList& cmd, IRHIDevice* pDevice, bool bEnabled, const FrameViewTarget& view );
         /**
          * @brief 컬링 상수에 뷰 @p view 의 지금 피라미드로 가림 판정 값을 채웁니다. 피라미드가 없으면(`_bHZBValid` 가 아님) 판정을 끈다(발자국 0).
          * @details 프레임 처음 피라미드는 지난 프레임 깊이로 이번 경계를 보므로 그 사이에 드러난 물체는 한 프레임 늦게 나온다 — 2 단계 가림의 뒤 단계가 그것을 이번 프레임 깊이로
@@ -91,7 +91,7 @@ namespace sw
         static void fillCullParams( const FrameViewTarget& view, const OcclusionCullingConfig& config, FrameRendererUtil::GPUCullParams& inoutParams );
 
         /** @brief 가림 판정을 보지 않는 컬링이 t2 에 묶는 자리표의 SRV 입니다. */
-        RHIDescriptorIndex getPlaceholderSRV() const { return _placeholder._srv; }
+        RHIBufferSRVIndex getPlaceholderSRV() const { return _placeholder._srv; }
         /** @brief 주 시점 가림 타일을 몇 프레임 늦게 되읽은 가장 최근 사본입니다. 어느 스레드에서 불러도 됩니다. */
         shared_ptr<const OcclusionTileSnapshot> getSnapshot() const { return _mailbox.getLatest(); }
 

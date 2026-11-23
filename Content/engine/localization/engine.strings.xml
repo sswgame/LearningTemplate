@@ -1,3 +1,4 @@
+<?asset guid="677a31127f3a7022fa0dc01abf527074"?>
 <SourceStringTable culture="en">
 	<entries>
 		<entry key="Already used by" source="Already used by" context="TextWidget._text">
@@ -2323,6 +2324,11 @@
 		<entry key="Keep these display settings?" source="Keep these display settings?" context="TextWidget._text">
 			<origins>
 				<item>engine/ui/confirm_countdown.ui.xml</item>
+			</origins>
+		</entry>
+		<entry key="Leave Minigame" source="Leave Minigame" context="TextWidget._text">
+			<origins>
+				<item>engine/ui/pause.ui.xml</item>
 			</origins>
 		</entry>
 		<entry key="Loading" source="Loading" context="TextWidget._text">

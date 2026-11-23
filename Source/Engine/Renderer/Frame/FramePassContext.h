@@ -36,7 +36,7 @@ namespace sw
     {
         /**
          * @brief 이 패스의 기록 면입니다 — 텍스처 상태 전이 · 기록 범위가 없는 형식이다(`IRHIPassCommandList`).
-         * @details 텍스처 전이는 그래프가 선언에서 낸다. 패스 안 왕복은 쓰기로 선언한 자원만 `_pGraphPass->transition` 으로 한다.
+         * @details 전이는 그래프가 선언에서 낸다. 패스 안 왕복은 쓰기로 선언한 자원만 `_pGraphPass->transition` 으로 한다.
          */
         IRHIPassCommandList* _pCmd{ nullptr };
         /** @brief 이 패스의 그래프 문맥입니다(선언한 접근 · 뷰 자원 표 · 리스트) — 뷰 그래프 패스를 기록하는 동안만 가리킨다(`FramePassExecutor::onGraphPassExecute`). 그 밖에서는 nullptr 이다. */
@@ -44,9 +44,9 @@ namespace sw
         /** @brief 엔진 PassCB 값입니다(이름 기반). ShaderParameterBinder 가 리플렉션 오프셋에 기록합니다. */
         PassConstantValues _passValues{};
         /** @brief `g_World` 입니다. 인스턴스 버퍼가 없는 드로우(풀스크린, 픽스처)의 월드 행렬이며, 씬 메시는 인스턴스 버퍼에서 읽습니다. */
-        float4x4           _world{};
-        RHIBufferHandle    _passCb{ 0 };
-        RHIDescriptorIndex _passCbIndex{ kInvalidDescriptorIndex };
+        float4x4          _world{};
+        RHIBufferHandle   _passCb{ 0 };
+        RHIBufferSRVIndex _passCbIndex{ kInvalidDescriptorIndex };
         /** @brief 패스 스코프 이름에서 리소스를 찾는 레지스트리입니다. 패스를 시작할 때마다 reset 합니다.
          *         병렬 기록에서는 패스마다 독립이어야 하므로 FrameRenderer 의 공유 멤버가 아니라 여기에 둡니다. */
         FrameResourceRegistry _resourceRegistry{};
@@ -66,7 +66,7 @@ namespace sw
          */
         RHIPipelineStateHandle _lastBindPSO{ 0 };
         /**
-         * @brief 이 패스가 어느 컬링 슬롯의 결과를 쓸지 정합니다. 0은 주 시점, 1은 그림자이고, `kFirstExtraCullView` 부터는 추가 뷰입니다.
+         * @brief 이 패스가 어느 컬링 슬롯의 결과를 쓸지 정합니다. 뷰 번호 n 의 시점이 2n, 그림자가 2n + 1 입니다(`kCullSlotsPerView`).
          * @details 그림자 패스만 그림자 슬롯을 쓰고, 나머지는 지금 그리는 뷰의 슬롯을 쓴다. 컬링 결과는 절두체에 종속되므로
          *          뷰를 잘못 고르면 그림자 캐스터가 사라지거나 화면 밖 물체를 그린다.
          */

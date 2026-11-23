@@ -11,6 +11,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Graphics/RHI/RHIHandles.h"
+
 namespace sw
 {
     class TextureLoadOperation;
@@ -63,7 +65,7 @@ namespace sw::editor
         {
             shared_ptr<TextureLoadOperation> _pOperation; ///< 끝난 로드 — 텍스처 참조 하나를 쥔다(놓으면 엔진이 참조를 놓는다)
             void*                            _pTextureID{ nullptr };
-            uint64                           _textureHandle{ 0 }; ///< 등록한 RHI 텍스처 — 바뀌면(다시 읽기, 디바이스 교체) 다시 등록한다
+            RHITextureHandle                 _textureHandle{ 0 }; ///< 등록한 RHI 텍스처 — 바뀌면(다시 읽기, 디바이스 교체) 다시 등록한다
             uint64                           _lastUsedFrame{ 0 };
         };
 

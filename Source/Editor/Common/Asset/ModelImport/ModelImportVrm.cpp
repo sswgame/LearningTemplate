@@ -163,7 +163,7 @@ namespace sw::editor
             SW_LOG_WARNING_ID( "ModelImporter.VRMAvatarNamesNodes", "VRM '%#': avatar names nodes that are not skin joints (%# bones): %#", sourcePath, listMissing.size(), Internal::joinNames( listMissing ).c_str() );
     }
 
-    bool ModelImportVrm::writeVrmAvatar( const AssetPaths& assetPaths, const ModelImportResult& result, string_view sourcePath, string_view sideFolder, string_view stem )
+    bool ModelImportVrm::writeVrmAvatar( const ModelImportResult& result, string_view sourcePath, string_view sideFolder, string_view stem )
     {
         using Internal = ModelImportVrmInternal;
         if ( result._avatar.isEmpty() )
@@ -173,7 +173,7 @@ namespace sw::editor
         StringBuilder<constant::buffer::kMax256> fileNameBuilder;
         fileNameBuilder.appendFormat( "%#%#", stem, VrmAvatarDef::kExtension );
         const string avatarPath = FileUtil::joinPath( sideFolder, fileNameBuilder.view() );
-        if ( ImportedAssetStore::writeTextWithIdentity( assetPaths, avatarPath, VrmAvatarDef::makeAvatarXML( result._avatar ) ) == false )
+        if ( ImportedAssetStore::writeResultText( avatarPath, VrmAvatarDef::makeAvatarXML( result._avatar ) ) == false )
         {
             SW_LOG_ERROR_ID( "ModelImporter.FailedWriteAvatar", "Failed to write avatar %#", avatarPath.c_str() );
             return false;
@@ -188,7 +188,7 @@ namespace sw::editor
             fileNameBuilder.clear();
             fileNameBuilder.appendFormat( "%#%#", stem, FacialRig::kExtension );
             const string facialPath = FileUtil::joinPath( sideFolder, fileNameBuilder.view() );
-            if ( ImportedAssetStore::writeTextWithIdentity( assetPaths, facialPath, VrmRuntimeAssets::makeFacialRigXML( result._avatar, &listNotConverted ) ) == false )
+            if ( ImportedAssetStore::writeResultText( facialPath, VrmRuntimeAssets::makeFacialRigXML( result._avatar, &listNotConverted ) ) == false )
             {
                 SW_LOG_ERROR_ID( "ModelImporter.FailedWriteFacialRig", "Failed to write facial rig %#", facialPath.c_str() );
                 return false;
@@ -201,7 +201,7 @@ namespace sw::editor
             fileNameBuilder.clear();
             fileNameBuilder.appendFormat( "%#%#", stem, RigAsset::kExtension );
             const string rigPath = FileUtil::joinPath( sideFolder, fileNameBuilder.view() );
-            if ( ImportedAssetStore::writeTextWithIdentity( assetPaths, rigPath, VrmRuntimeAssets::makeSpringRigXML( result._avatar, result._skeleton, &listNotConverted ) ) == false )
+            if ( ImportedAssetStore::writeResultText( rigPath, VrmRuntimeAssets::makeSpringRigXML( result._avatar, result._skeleton, &listNotConverted ) ) == false )
             {
                 SW_LOG_ERROR_ID( "ModelImporter.FailedWriteSpringRig", "Failed to write spring rig %#", rigPath.c_str() );
                 return false;
@@ -290,7 +290,7 @@ namespace sw::editor
         StringBuilder<constant::buffer::kMax256> prefabNameBuilder;
         prefabNameBuilder.appendFormat( "%#.prefab.xml", stem );
         const string prefabPath = FileUtil::joinPath( sideFolder, prefabNameBuilder.view() );
-        const bool   bWritten   = ImportedAssetStore::writeTextWithIdentity( assetPaths, prefabPath, prefabDocument.saveToString() );
+        const bool   bWritten   = ImportedAssetStore::writeResultText( prefabPath, prefabDocument.saveToString() );
         if ( bWritten == false )
         {
             SW_LOG_ERROR_ID( "ModelImporter.FailedWriteCharacterPrefab", "Failed to write section prefab %#", prefabPath.c_str() );

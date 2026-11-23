@@ -134,3 +134,22 @@ SW_TEST_CASE( ShaderReflectionSPIRVTest, ReflectFailsInsteadOfReturningEmpty )
     SW_EXPECT_FALSE( ShaderReflectionData::reflect( vector<uint8>( 64, 0 ), ShaderTargetFormat::Count ).has_value() );
     SW_EXPECT_TRUE( ShaderReflectionData::reflect( makeConstantBufferModule().toBytes(), ShaderTargetFormat::SPIRV_Vulkan ).has_value() );
 }
+
+/**
+ * @brief [ShaderReflectionSPIRVTest] 컴퓨트의 스레드 그룹 크기는 OpExecutionMode LocalSize 다 — 없는 모듈(다른 스테이지)은 0 이다
+ * @details 변이: LocalSize 를 읽지 않으면 첫 단언이, 실행 모드 번호를 보지 않으면(다른 모드의 피연산자를 읽으면) 둘째 단언이 진다.
+ */
+SW_TEST_CASE( ShaderReflectionSPIRVTest, ReadsComputeThreadGroupSize )
+{
+    SPIRVBuilder compute = makeConstantBufferModule();
+    compute.add( spirv::kOpExecutionMode, { 50u, spirv::kExecutionModeLocalSize, 8u, 4u, 2u } );
+    const expected<ShaderReflectionData> reflected = ShaderReflectionData::reflect( compute.toBytes(), ShaderTargetFormat::SPIRV_Vulkan );
+    SW_REQUIRE_TRUE( reflected.has_value() );
+    SW_EXPECT_TRUE( reflected->_groupSize._x == 8u && reflected->_groupSize._y == 4u && reflected->_groupSize._z == 2u );
+
+    SPIRVBuilder pixel = makeConstantBufferModule();
+    pixel.add( spirv::kOpExecutionMode, { 50u, spirv::kExecutionModeOriginUpperLeft } );
+    const expected<ShaderReflectionData> reflectedPixel = ShaderReflectionData::reflect( pixel.toBytes(), ShaderTargetFormat::SPIRV_Vulkan );
+    SW_REQUIRE_TRUE( reflectedPixel.has_value() );
+    SW_EXPECT_FALSE( reflectedPixel->_groupSize.isValid() );
+}

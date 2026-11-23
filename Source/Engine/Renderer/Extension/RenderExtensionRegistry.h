@@ -66,7 +66,7 @@ namespace sw
         const utf8*                getSubsystemName() const override { return kSubsystemName; }
         static constexpr MemoryTag kSubsystemMemoryTag = MemoryTag::RenderCPU;
 
-        /** @brief 확장 객체를 올립니다(소유하지 않는다 — 객체는 등록을 풀 때까지 살아 있어야 한다). nullptr 이거나 이미 있으면 false 입니다. */
+        /** @brief 확장 객체를 올리고(소유하지 않는다 — 객체는 등록을 풀 때까지 살아 있어야 한다) 그 자리에서 패스 선언을 받습니다(`IRenderExtension::declarePasses`). nullptr 이거나 이미 있으면 false 입니다. */
         [[nodiscard]] bool registerExtension( IRenderExtension* pExtension );
         /** @brief 확장 객체를 풉니다. 렌더 스레드의 모듈 구간이 끝나기를 기다린 뒤 뺍니다(flush). 없으면 아무것도 하지 않습니다. */
         void unregisterExtension( IRenderExtension* pExtension );
@@ -82,14 +82,20 @@ namespace sw
 
         /** @brief 대기 중인 프록시 갱신을 올린 순서대로 적용하고 비웁니다. */
         void applyPendingProxyUpdates();
-        /** @brief 등록된 확장 포인터를 복사합니다(`RenderScope` 가 살아 있는 동안 유효하다). */
-        void copyExtensions( vector<IRenderExtension*>& outList ) const;
+        /** @brief 등록된 확장들의 선언(등록 순서)을 @p outBuilder 에 채웁니다. 실행 콜백은 `RenderScope` 가 살아 있는 동안만 부르고 그 안에서 놓습니다. */
+        void copyDeclarations( ExtensionPassBuilder& outBuilder ) const;
         /** @brief 등록된 프록시 포인터를 번호 순서로 복사합니다(`RenderScope` 가 살아 있는 동안 유효하다). */
         void copyProxies( vector<IExtensionSceneProxy*>& outList ) const;
         /** @brief 그릴 수 없는 모듈 패스 · 요소의 오류를 키마다 한 번만 남기게 합니다. 처음이면 true 입니다. 키는 호출한 쪽이 정한 글입니다. */
         bool recordFailureOnce( string_view key );
 
     private:
+        /** @brief 등록된 확장 하나와 그 선언입니다. */
+        struct ExtensionEntry
+        {
+            IRenderExtension*    _pExtension{ nullptr };
+            ExtensionPassBuilder _declaration;
+        };
         struct ProxyEntry
         {
             ExtensionSceneProxyID            _id{ 0 };
@@ -103,7 +109,7 @@ namespace sw
 
         mutable mutex                            _runMutex;
         mutable mutex                            _mutex;
-        vector<IRenderExtension*> _listExtension SW_GUARDED_BY( _mutex );
+        vector<ExtensionEntry> _listExtension    SW_GUARDED_BY( _mutex );
         vector<ProxyEntry> _listProxy            SW_GUARDED_BY( _mutex );
         vector<PendingUpdate> _listPendingUpdate SW_GUARDED_BY( _mutex );
         ExtensionSceneProxyID _nextProxyID       SW_GUARDED_BY( _mutex ) = 1;

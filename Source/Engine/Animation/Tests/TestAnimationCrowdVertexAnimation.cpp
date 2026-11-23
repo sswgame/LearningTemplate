@@ -46,7 +46,7 @@ namespace
         AnimationCrowdVertexAnimationRig()
             : _skeleton{ make_shared<Skeleton>( test::makeChainSkeleton( 2u ) ) }
             , _clip{}
-            , _mesh{ Mesh::create() }
+            , _mesh{ Mesh::create( MeshCPUAccess::Keep ) }
         {
             const IAnimationCodec* pCodec = AnimationCodecRegistry::findCodecByName( "raw" );
             SW_REQUIRE_TRUE( pCodec != nullptr );

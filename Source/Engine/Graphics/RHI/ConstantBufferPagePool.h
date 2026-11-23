@@ -43,7 +43,7 @@ namespace sw
         /** @brief 버퍼 안의 구간입니다. */
         const RHIBufferSlice& getRange() const { return _range; }
         /** @brief 구간의 bindless 인덱스입니다. */
-        RHIDescriptorIndex getDescriptorIndex() const { return _descriptorIndex; }
+        RHIBufferSRVIndex getDescriptorIndex() const { return _descriptorIndex; }
         /** @brief 등급 칸입니다(전용 버퍼면 무효). */
         const ConstantBufferSlot& getSlot() const { return _slot; }
 
@@ -58,7 +58,7 @@ namespace sw
         IRHIDevice*        _pDevice{ nullptr };
         ConstantBufferSlot _slot;
         RHIBufferSlice     _range;
-        RHIDescriptorIndex _descriptorIndex{ kInvalidDescriptorIndex };
+        RHIBufferSRVIndex  _descriptorIndex{ kInvalidDescriptorIndex };
     };
 
     /**

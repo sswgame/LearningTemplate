@@ -302,11 +302,11 @@ namespace sw
         return true;
     }
 
-    int32 Inventory::splitSlot( int32 slot, int32 count )
+    optional<int32> Inventory::splitSlot( int32 slot, int32 count )
     {
         const bool bInvalidSplitRequest = isValidSlot( slot ) == false || count <= 0 || _listSlot[static_cast<size_t>( slot )]._count <= count;
         if ( bInvalidSplitRequest )
-            return constant::invalid_index::kInt32;
+            return nullopt;
         for ( size_t index = 0; index < _listSlot.size(); ++index )
         {
             if ( _listSlot[index].isEmpty() )
@@ -318,7 +318,7 @@ namespace sw
                 return static_cast<int32>( index );
             }
         }
-        return constant::invalid_index::kInt32;
+        return nullopt;
     }
 
     void Inventory::sortSlots()

@@ -17,9 +17,7 @@ namespace sw
         : _pDevice{ pDevice }
         , _mainPool{ mainPool }
         , _pipeline{ pipeline }
-        , _texture{ 0 }
-        , _width{ 0 }
-        , _height{ 0 }
+        , _texture{}
         , _outputWidth{ 0 }
         , _outputHeight{ 0 }
         , _bEnabled{ SW_FALSE }
@@ -35,11 +33,7 @@ namespace sw
             ensurePresent( _outputWidth, _outputHeight );
             return;
         }
-        if ( _texture != 0 && _pDevice != nullptr )
-        {
-            _pDevice->releaseHandle( _texture );
-            _texture = 0;
-        }
+        releasePresent();
     }
 
     void FrameCapture::ensurePresent( uint32 outputWidth, uint32 outputHeight )
@@ -51,13 +45,6 @@ namespace sw
         // 캡처는 주 출력과 크기가 같아야 한다(주 시점과 화면 사각형 뷰가 그 안에 그린다). 출력 크기가 바뀌었으면 다시 만든다.
         const uint32 width  = outputWidth != 0 ? outputWidth : FrameRendererUtil::kDefaultTransientSize;
         const uint32 height = outputHeight != 0 ? outputHeight : FrameRendererUtil::kDefaultTransientSize;
-        if ( _texture != 0 )
-        {
-            if ( _width == width && _height == height )
-                return;
-            _pDevice->releaseHandle( _texture );
-            _texture = 0;
-        }
 
         // 포맷은 **계약값**이다. 백버퍼가 실제로 무엇을 채택했든(Vulkan 은 서피스 협상 결과) 캡처는
         // 늘 같은 포맷이라 PPM 으로 푸는 쪽이 한 가지만 알면 된다. Present PSO 변종에도 이 포맷이 있다.
@@ -67,22 +54,19 @@ namespace sw
         captureDesc._format            = constant::render::kBackBufferFormat;
         captureDesc._bIsRenderTarget   = SW_TRUE;
         captureDesc._bIsShaderResource = SW_TRUE;
-        _texture                       = _pDevice->getResourceFactory()->createTexture2D( captureDesc );
-        _width                         = width;
-        _height                        = height;
+        if ( _texture.ensure( *_pDevice, captureDesc, "PresentCapture" ) == false )
+            SW_LOG_ERROR_ID( "FrameRenderer.PresentCaptureTexture", "Present capture texture (%#x%#) could not be created - the present is not captured", width, height );
     }
 
     void FrameCapture::releasePresent()
     {
-        if ( _texture != 0 && _pDevice != nullptr )
-            _pDevice->releaseHandle( _texture );
-        _texture = 0;
+        _texture.release( _pDevice );
     }
 
     bool FrameCapture::matchesOutput( uint32 width, uint32 height, RHIFormat format )
     {
         // 캡처는 계약 포맷(kBackBufferFormat)으로 출력 크기에 맞춰 만든다(ensurePresent). 게임 뷰 RT 도 같은 포맷이라 그대로 복사된다.
-        const bool bSameSize   = _width == width && _height == height;
+        const bool bSameSize   = _texture._width == width && _texture._height == height;
         const bool bSameFormat = format == constant::render::kBackBufferFormat;
         if ( bSameSize && bSameFormat )
             return true;
@@ -91,21 +75,21 @@ namespace sw
             return false;
         if ( _bMismatchLogged.exchange( 1 ) == 0 )
             SW_LOG_WARNING_ID( "FrameRenderer.PresentCaptureSkippedOutput", "Present capture skipped - the output render target (%#x%#, format %#) does not match the capture (%#x%#, format %#)",
-                               width, height, static_cast<uint32>( format ), _width, _height, static_cast<uint32>( constant::render::kBackBufferFormat ) );
+                               width, height, static_cast<uint32>( format ), _texture._width, _texture._height, static_cast<uint32>( constant::render::kBackBufferFormat ) );
         return false;
     }
 
     void FrameCapture::copyPresentFromOutput( IRHIPassCommandList& cmd, RHITextureHandle output, uint32 width, uint32 height, RHIFormat format )
     {
         if ( matchesOutput( width, height, format ) )
-            cmd.blitTexture( output, _texture );
+            cmd.blitTexture( output, _texture._texture );
     }
 
     bool FrameCapture::readbackPresent( vector<uint8>& outBytes, RHITextureMipSpan& outLayout ) const
     {
         if ( _pDevice == nullptr || isPresentActive() == false )
             return false;
-        if ( RHITransferUtil::readbackTexture2DAndWait( *_pDevice->getResourceFactory(), _texture, 0, 0, outBytes, outLayout ) == false )
+        if ( RHITransferUtil::readbackTexture2DAndWait( *_pDevice->getResourceFactory(), _texture._texture, 0, 0, outBytes, outLayout ) == false )
         {
             SW_LOG_ERROR_ID( "FrameRenderer.ReadbackPresentReadbackTexture2DAndWaitFailed", "readbackPresent: readbackTexture2DAndWait failed." );
             return false;

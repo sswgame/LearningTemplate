@@ -20,10 +20,21 @@ namespace sw
     class IRHIDevice;
 
     /** @brief 바인드 시점 검사에 필요한 정보입니다. 묻는 디바이스와 보고에 적을 패스 이름을 담습니다. 디바이스가 nullptr 이면 검사하지 않습니다. */
-    struct BindlessIndexCheckSite
+    struct SW_API BindlessIndexCheckSite
     {
         const IRHIDevice* _pDevice{ nullptr };
         hashed_string     _passName;
+
+        /**
+         * @brief @p index 가 `kInvalidDescriptorIndex` 이거나 그 공간에서 살아 있으면 true 입니다. 아니면 한 번 오류 로그를 남기고 false 입니다.
+         * @param fieldName 셰이더 쪽 이름(`g_ShadowMapIndex`, `SwMaterials`)이며 로그에 그대로 적힌다
+         * @param element   같은 이름의 몇 번째인가(머티리얼 텍스처 서수). 하나뿐이면 0
+         */
+        bool validate( RHITextureSRVIndex index, const hashed_string& fieldName, uint32 element = 0 ) const;
+        bool validate( RHIBufferSRVIndex index, const hashed_string& fieldName, uint32 element = 0 ) const;
+
+    private:
+        bool validateInSpace( RHIBindlessIndexSpace space, RHIDescriptorIndex index, const hashed_string& fieldName, uint32 element ) const;
     };
 } // namespace sw
 
@@ -43,20 +54,12 @@ namespace sw
         static bool isTracingAbsent();
 
         /**
-         * @brief @p index 가 `kInvalidDescriptorIndex` 이거나 @p space 에서 살아 있으면 true 입니다. 아니면 한 번 오류 로그를 남기고 false 입니다.
-         * @param fieldName 셰이더 쪽 이름(`g_ShadowMapIndex`, `SwMaterials`)이며 로그에 그대로 적힌다
-         * @param element   같은 이름의 몇 번째인가(머티리얼 텍스처 서수). 하나뿐이면 0
-         */
-        static bool validate( const BindlessIndexCheckSite& site, RHIBindlessIndexSpace space, RHIDescriptorIndex index, const hashed_string& fieldName,
-                              uint32 element = 0 );
-
-        /**
          * @brief 구조 버퍼 슬롯의 셰이더 원소 크기(@p shaderStride, 리플렉션)와 건 버퍼 SRV @p buffer 의 원소 크기가 같으면 true 입니다. 아니면 자리마다 한 번 오류 로그를 남기고 false 입니다.
          * @details 버퍼의 원소 크기는 만든 쪽(`RHIStructuredBuffer::ensureCapacity`)이 디바이스에 적은 값이다(`BindlessIndexReportLog::recordBufferStride`) — 등록하는 쪽이 넘기지 않아
          *          핸들로 건 버퍼(인스턴스 · 배치 · 모프 · 머티리얼)도 검사에서 빠지지 않는다. @p pDevice 가 nullptr 이거나 둘 중 하나라도 0(모름)이면 묻지 않고 true 다. 보고 기록은 @p pDevice 가 든다. 다르면 셰이더가 원소 경계를 어긋나게 읽는다 — DX11 디버그 레이어만 드로우마다 알리고, DX12 루트 SRV · Vulkan · GL 은 조용히 틀린 값을 낸다.
          *          켜짐은 `validate` 와 같다(`isEnabled` — 배포는 접힌다).
          */
-        static bool validateStride( const IRHIDevice* pDevice, const hashed_string& passName, const hashed_string& fieldName, uint32 shaderStride, RHIDescriptorIndex buffer );
+        static bool validateStride( const IRHIDevice* pDevice, const hashed_string& passName, const hashed_string& fieldName, uint32 shaderStride, RHIBufferSRVIndex buffer );
     };
 } // namespace sw
 
@@ -78,7 +81,7 @@ namespace sw
 
         /**
          * @brief 죽은 번호 하나를 보고합니다. 같은 위치(패스, 필드, 원소)를 처음 볼 때만 로그를 남기고 true 를 돌려줍니다.
-         * @details `BindlessIndexValidator::validate` 가 생존 질의 뒤에 부른다. 디바이스 없이 보고 규칙만 확인하는 테스트도 이것을 직접 부른다.
+         * @details `BindlessIndexCheckSite::validate` 가 생존 질의 뒤에 부른다. 디바이스 없이 보고 규칙만 확인하는 테스트도 이것을 직접 부른다.
          */
         bool report( RHIBindlessIndexSpace space, RHIDescriptorIndex index, const hashed_string& passName, const hashed_string& fieldName, uint32 element );
         /**
@@ -90,11 +93,11 @@ namespace sw
         /** @brief 구조 버퍼 원소 크기 어긋남 하나를 보고합니다(`BindlessIndexValidator::validateStride`). 같은 자리(패스, 필드)를 처음 볼 때만 오류 로그를 남기고 true 입니다. */
         bool reportStride( const hashed_string& passName, const hashed_string& fieldName, uint32 shaderStride, uint32 bufferStride );
         /** @brief 구조 버퍼 SRV @p buffer 의 원소 바이트 수를 적습니다. 구조 버퍼를 만드는 한 곳(`RHIStructuredBuffer`)만 부른다. */
-        void recordBufferStride( RHIDescriptorIndex buffer, uint32 stride );
+        void recordBufferStride( RHIBufferSRVIndex buffer, uint32 stride );
         /** @brief 구조 버퍼 SRV @p buffer 를 놓았습니다 — 번호가 다른 버퍼에 다시 쓰이기 전에 원소 크기를 잊는다. */
-        void removeBufferStride( RHIDescriptorIndex buffer );
+        void removeBufferStride( RHIBufferSRVIndex buffer );
         /** @brief 적어 둔 원소 바이트 수입니다. 적지 않은 번호(상수 버퍼 · 구조 버퍼가 아닌 것)면 0 입니다. */
-        uint32 getBufferStride( RHIDescriptorIndex buffer ) const;
+        uint32 getBufferStride( RHIBufferSRVIndex buffer ) const;
         /** @brief 지금까지 원소 크기 어긋남을 남긴 자리 수입니다(테스트와 진단용). */
         uint32 getStrideReportCount() const;
         /** @brief 지금까지 오류 로그를 남긴(죽은 번호) 자리 수입니다(테스트와 진단용). */

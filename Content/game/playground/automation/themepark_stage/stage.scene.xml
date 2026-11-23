@@ -1,0 +1,80 @@
+<?asset guid="f947709c4342f28d37ed4bf6089d2700"?>
+<Scene formatVersion="3" name="ThemeParkStage">
+	<!-- 테마파크 하위 레벨 시나리오(automation/themepark_guests · themepark_shadow · themepark_sublevel)의 바탕 — 해 · 바탕 카메라와 얹을 자리 둘뿐이다.
+	     ParkEntrance 는 원점(그림자 골든이 옛 공원 맵과 같은 자리에 선다), FarEntrance 는 옮기고 요 90 도로 돌린 자리다. -->
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</SceneSettings>
+	<entities>
+		<entity id="1" name="Sun">
+			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
+				<_listComponent>
+					<DirectionalLightComponent _localID="51927904365891271" _componentName="DirectionalLightComponent"
+					                           _bActive="true"
+					                           _localPosition="0,0,0"
+					                           _localRotation="0.356582,-1.938715,0"
+					                           _localScale="1,1,1"
+					                           _attachOwner="None"
+					                           _attachOwnerID="0"
+					                           _attachComponent="None"
+					                           _color="1,0.82,0.62"
+					                           _intensity="1.5"
+					                           _ambient="0.28"
+					                           _shadowExtent="180"
+					                           _shadowDistance="120"
+					                           _shadowViewDistance="1000"
+					                           _shadowReceiverMinHeight="-2"
+					                           _shadowReceiverMaxHeight="40"
+					                           _bCastShadow="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="StageCamera">
+			<GameObject _schemaVersion="0" _name="StageCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localID="17709685451340727998" _componentName="CameraComponent"
+					                 _bActive="true"
+					                 _localPosition="0,10,-40"
+					                 _localRotation="0.2,0,0"
+					                 _localScale="1,1,1"
+					                 _attachOwner="None"
+					                 _attachOwnerID="0"
+					                 _attachComponent="None"
+					                 _fovY="60"
+					                 _nearZ="0.1"
+					                 _farZ="600"
+					                 _priority="0"
+					                 _role="Game" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="ParkEntrance">
+			<GameObject _schemaVersion="0" _name="ParkEntrance" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localID="12574257654564749349" _componentName="SceneComponent"
+					                _bActive="true"
+					                _localPosition="0,0,0"
+					                _localRotation="0,0,0"
+					                _localScale="1,1,1"
+					                _attachOwner="None"
+					                _attachOwnerID="0"
+					                _attachComponent="None" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="4" name="FarEntrance">
+			<GameObject _schemaVersion="0" _name="FarEntrance" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localID="12574257654564749349" _componentName="SceneComponent"
+					                _bActive="true"
+					                _localPosition="500,2,-300"
+					                _localRotation="0,1.5707964,0"
+					                _localScale="1,1,1"
+					                _attachOwner="None"
+					                _attachOwnerID="0"
+					                _attachComponent="None" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

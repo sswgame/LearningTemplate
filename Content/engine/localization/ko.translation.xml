@@ -1,3 +1,4 @@
+<?asset guid="d0a03631886efa70ccc8ebc6eecc954e"?>
 <TranslationTable culture="ko">
 	<entries>
 		<entry key="Already used by" text="이미 사용 중:" sourceHash="cbdae832bc5ce48d" />
@@ -654,6 +655,7 @@
 		<entry key="Keep these display settings?"
 		       text="이 디스플레이 설정을 유지할까요?"
 		       sourceHash="0048bd736e33dcdf" />
+		<entry key="Leave Minigame" text="미니게임 나가기" sourceHash="c1b0982e831bcd25" />
 		<entry key="Loading" text="로딩 중" sourceHash="b59d68ed12d46377" />
 		<entry key="Main Menu" text="메인 메뉴" sourceHash="76813002d9c586bf" />
 		<entry key="Notification.ClipboardWriteFailed"

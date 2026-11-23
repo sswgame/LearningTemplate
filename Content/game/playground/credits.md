@@ -18,8 +18,12 @@
 | `harvestvalley/models_raw/crops_dirt_*.glb` | Kenney "Nature Kit" 2.1 — 밭 흙(`crops_dirt_single` · `crops_dirt_row`, 밭 `FarmSoil` 자리). 묶음 <https://kenney.nl/media/pages/assets/nature-kit/37ac38a37b-1677698939/kenney_nature-kit.zip> (SHA-256 `fa7974a0d342bfe63c38664ba9f8ec1a4aab8ea25f099bdc56870e33588c4d9d`), `License.txt` 원문 "License: (Creative Commons Zero, CC0)" | CC0 1.0 |
 | `harvestvalley/models_raw/crops_corn_*.glb` · `harvestvalley/models_raw/crops_leafs_*.glb` · `harvestvalley/models_raw/crop_*.glb` · `harvestvalley/models_raw/tent_*.glb` · `harvestvalley/models_raw/log.glb` · `harvestvalley/models_raw/stump_*.glb` | Kenney "Nature Kit" (<https://kenney.nl/assets/nature-kit>) — 작물 단계(옥수수 · 잎) · 다 자란 작물(순무 · 당근 · 호박) · 천막 · 장작 · 그루터기 | CC0 1.0 |
 | `harvestvalley/sounds/*.ogg` | Kenney "Interface Sounds" (<https://kenney.nl/assets/interface-sounds>) — `confirmation_001` · `drop_002` · `pluck_001` · `select_002` | CC0 1.0 |
+| `meadowvillage/models_raw/*.glb` | Kenney "Nature Kit" 2.1 (<https://kenney.nl/assets/nature-kit>) — 땅 타일 넷(`ground_grass` · `ground_path_tile` · `ground_river_tile` · `crops_dirt_single`). 묶음 <https://kenney.nl/media/pages/assets/nature-kit/37ac38a37b-1677698939/kenney_nature-kit.zip> (SHA-256 `fa7974a0d342bfe63c38664ba9f8ec1a4aab8ea25f099bdc56870e33588c4d9d`) 의 `Models/GLTF format/<원본 이름>.glb`, `License.txt` 원문 "License: (Creative Commons Zero, CC0)" | CC0 1.0 |
+| `meadowvillage/prefabs/tree` · `grass` · `sprout`(마을 오브젝트 · 생물 모습) | Quaternius "Stylized Nature MegaKit" — 공용 원본 `common/models_raw/quaternius/nature/` 의 CommonTree_1 · Grass_Common_Tall · Plant_1(출처는 `common/credits.md`) | CC0 1.0 |
 | `voxelcraft/textures_raw/blocks.png` | Kenney "Voxel Pack" (<https://kenney.nl/assets/voxel-pack>) — 128 px 타일 열여섯을 4 × 4 아틀라스로 모은 것(칸 순서와 블록의 짝은 `data/blocks.xml`) | CC0 1.0 |
 | `voxelcraft/sounds/*.ogg` | Kenney "Impact Sounds" (<https://kenney.nl/assets/impact-sounds>) — `footstep_grass_000` · `impactPlank_medium_001` · `impactSoft_medium_000`(파일 이름은 소문자 `_` 로) | CC0 1.0 |
+| `themepark/models_raw/*.glb` · `themepark/textures_raw/coaster_colormap.png` | Kenney "Coaster Kit" (<https://kenney.nl/assets/coaster-kit>) — 강철 레일 · 열차 · 승강장 · 기둥 · 매점 · 길 · 입구 · 휴지통. 모델은 모두 한 장의 팔레트 텍스처(`coaster_colormap`)에서 색을 읽는다(`themepark/materials/palette.material`) | CC0 1.0 |
+| `themepark/sounds/*.ogg` | Kenney "Interface Sounds" (<https://kenney.nl/assets/interface-sounds>) — `confirmation_001` · `error_001` · `select_001` | CC0 1.0 |
 | `abilityarena/models_raw/*.glb` · `abilityarena/textures_raw/dungeon_colormap.png` | Kenney "Mini Dungeon" (<https://kenney.nl/assets/mini-dungeon>) — 사람 · 오크 · 바닥 · 벽 · 기둥 · 함정(모두 한 장의 팔레트 텍스처에서 색을 읽는다, 파일 이름은 소문자 `_` 로) | CC0 1.0 |
 | `abilityarena/sounds/impact_punch_*.ogg` | Kenney "Impact Sounds" (<https://kenney.nl/assets/impact-sounds>) — `impactPunch_medium_000` · `impactPunch_heavy_000` | CC0 1.0 |
 | `abilityarena/sounds/error_004.ogg` · `abilityarena/sounds/maximize_001.ogg` | Kenney "Interface Sounds" (<https://kenney.nl/assets/interface-sounds>) | CC0 1.0 |
@@ -43,3 +47,4 @@
   읽는다. 맵(`shooter3d/maps/arena.scene.xml`)은 이 메시를 경기장 밖 전시 줄(`Cc0.*`)에만 둔다.
 - 사격장 아레나의 바닥 · 벽 · 엄폐물(블로커 크기 큐브)은 Poly Haven 스캔 텍스처(`materials/floor` · `wall` · `cover.material` — 월드 좌표 타일링), 소품(`Ph.*`)은
   Poly Haven 스캔 모델이다 — 원본과 출처는 공용 팩(`common/credits.md`)에 있다.
+- 테마파크 가장자리 나무 · 꽃 덤불(`themepark/maps/park.scene.xml` 의 PropScatter)은 공용 Quaternius "Stylized Nature MegaKit" 의 구간 모델이다(출처는 `common/credits.md`).

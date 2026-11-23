@@ -7,4 +7,4 @@
   입력은 걷기 공통 레이어와 Arena 레이어(abilityarena/data/arena.input.xml)만 켠다 — 입력 레이어 스택에 든 레이어만 발화한다.
   시나리오 automation/abilityarena_ai · abilityarena_control · abilityarena_slice · editor/abilityarena_abilitydebugger 가 실행 전역 변수 gv_firstMinigame 로 들어간다.
 -->
-<Minigame name="abilityarena" map="game/playground/abilityarena/maps/arena.scene.xml" entry="SceneSwitch" features="AbilityArena" inputContexts="Movement,Arena"/>
+<Minigame name="abilityarena" map="game/playground/abilityarena/maps/arena.scene.xml" entry="SceneSwitch" portalSlot="6" features="AbilityArena" inputContexts="Movement,Arena"/>

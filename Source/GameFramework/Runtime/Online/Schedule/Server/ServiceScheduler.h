@@ -12,6 +12,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
 #include "Core/Time/TimePoint.h"
@@ -97,8 +98,8 @@ namespace sw
         /** @brief 저장소에 요청해 아직 회수하지 않은 작업의 수입니다. */
         int32 getPendingJobCount() const { return _store.getOpenCount(); }
 
-        /** @brief @p nowMs 직전(포함)의 회차 시각입니다(테스트 · 표시). 없으면 -1. */
-        static int64                computeLatestOccurrence( const ScheduleDef& definition, int64 nowMs );
+        /** @brief @p nowMs 직전(포함)의 회차 시각입니다(테스트 · 표시). 없으면 없음입니다. */
+        static optional<int64>      computeLatestOccurrence( const ScheduleDef& definition, int64 nowMs );
         static bool                 isValidDefinition( const ScheduleDef& definition );
         static const hashed_string& getTable(); ///< "service_schedule"
         /**

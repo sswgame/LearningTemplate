@@ -241,8 +241,8 @@ SW_TEST_CASE_F( RestaurantReadStateTest, RealAndCraftedStatesRead )
     _simulation.setStationCount( "stove", 2 );
     SW_EXPECT_TRUE( _simulation.setMenuPrice( "ramen", 55 ) );
     _simulation.openDay( "rain" );
-    const int32 customerID = _simulation.admitCustomer( "student" );
-    SW_REQUIRE_EQUAL( 1, customerID );
+    const sw::optional<int32> customerID = _simulation.admitCustomer( "student" );
+    SW_REQUIRE_TRUE( customerID == 1 );
 
     sw::Archive written;
     _simulation.writeState( written );

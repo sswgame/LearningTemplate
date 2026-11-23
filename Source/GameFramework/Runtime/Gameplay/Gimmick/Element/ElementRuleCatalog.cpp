@@ -199,7 +199,7 @@ namespace sw
     {
         ElementStimulusRuleParams params;
         bool                      bValid = XMLFields::readProperties( node, params, sourceName );
-        bValid                           = readIndex( params._material, node, "material", &ElementRuleCatalog::findMaterial, outRule._material, sourceName ) && bValid;
+        bValid                           = readIndex( params._elementMaterial, node, "elementMaterial", &ElementRuleCatalog::findMaterial, outRule._material, sourceName ) && bValid;
         bValid                           = readIndex( params._flag, node, "flag", &ElementRuleCatalog::findFlag, outRule._flag, sourceName ) && bValid;
         bValid                           = readIndex( params._status, node, "status", &ElementRuleCatalog::findStatus, outRule._status, sourceName ) && bValid;
         bValid                           = readIndex( params._without, node, "without", &ElementRuleCatalog::findStatus, outRule._without, sourceName ) && bValid;

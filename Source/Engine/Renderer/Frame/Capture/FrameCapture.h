@@ -20,6 +20,7 @@
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Graphics/RHI/RHIDescriptors.h"
+#include "Engine/Graphics/RHI/RHITextureSlot.h"
 
 namespace sw
 {
@@ -59,9 +60,9 @@ namespace sw
         /** @brief 켜져 있으면 true 입니다. 텍스처가 아직 없을 수 있습니다. */
         bool isPresentEnabled() const { return _bEnabled != SW_FALSE; }
         /** @brief 켜져 있고 텍스처도 있으면 true 입니다. 이때만 Present 가 캡처에 그리거나 복사합니다. */
-        bool isPresentActive() const { return _bEnabled != SW_FALSE && _texture != 0; }
+        bool isPresentActive() const { return _bEnabled != SW_FALSE && _texture.isValid(); }
         /** @brief 캡처 텍스처입니다. 없으면 0 입니다. */
-        RHITextureHandle getPresentTexture() const { return _texture; }
+        RHITextureHandle getPresentTexture() const { return _texture._texture; }
         /**
          * @brief 주 출력 크기를 받아 두고, 켜져 있으면 캡처 텍스처를 그 크기로 맞춥니다. 크기가 같으면 그대로 두고, 다르면 놓고 다시 만듭니다.
          * @details 캡처는 주 출력과 크기가 같아야 합니다(주 시점과 화면 사각형 뷰가 그 안에 그립니다). 0 이면 기본 트랜지언트 크기를 씁니다.
@@ -104,10 +105,7 @@ namespace sw
         IRHIDevice* const&             _pDevice; ///< 렌더러의 `_pDevice` 변수를 참조합니다(생성자 참고).
         const TransientAttachmentPool& _mainPool;
         const RenderPipelineAsset&     _pipeline;
-        RHITextureHandle               _texture;
-        /// @brief 캡처 텍스처의 크기입니다. 출력 크기가 바뀌면 다시 만듭니다.
-        uint32 _width;
-        uint32 _height;
+        RHITextureSlot                 _texture;
         /// @brief 마지막으로 받은 주 출력 크기입니다(`ensurePresent`). 켜는 순간(`setPresentEnabled`) 이 크기로 만듭니다.
         uint32 _outputWidth;
         uint32 _outputHeight;

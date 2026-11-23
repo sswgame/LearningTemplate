@@ -19,12 +19,21 @@ namespace sw
         Entry entry{ name, slot, buffer._buffer.getPacked(), RenderGraphViewableKind::Buffer, initialAccess };
         entry._elementSize  = buffer._elementSize;
         entry._elementCount = buffer._capacityElements;
+        entry._srv          = buffer._srv;
+        entry._uav          = buffer._uav;
         registerEntry( entry );
     }
 
     void FrameBufferTable::registerTexture( hashed_string name, uint32 slot, RHITextureHandle texture, RenderGraphAccess initialAccess )
     {
         registerEntry( Entry{ name, slot, texture.getPacked(), RenderGraphViewableKind::Texture, initialAccess } );
+    }
+
+    void FrameBufferTable::registerAttachment( hashed_string name, RHITextureHandle texture )
+    {
+        Entry entry{ name, 0, texture.getPacked(), RenderGraphViewableKind::Texture };
+        entry._bAttachment = true;
+        registerEntry( entry );
     }
 
     void FrameBufferTable::registerEntry( const Entry& entry )

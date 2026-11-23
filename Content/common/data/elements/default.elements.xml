@@ -16,12 +16,12 @@
   <Material id="Ice"/>
   <Material id="Torch" flags="Flammable"/>
   <Stimulus id="Fire">
-    <On material="Ice" setMaterial="Water" event="Melted"/>
+    <On elementMaterial="Ice" setMaterial="Water" event="Melted"/>
     <On flag="Flammable" without="Burning" addStatus="Burning" event="Ignited"/>
   </Stimulus>
   <Stimulus id="Ice">
     <On status="Burning" removeStatus="Burning" event="Extinguished"/>
-    <On material="Water" setMaterial="Ice" removeStatus="Charged" event="Frozen"/>
+    <On elementMaterial="Water" setMaterial="Ice" removeStatus="Charged" event="Frozen"/>
   </Stimulus>
   <Stimulus id="Water">
     <On status="Burning" removeStatus="Burning" event="Extinguished"/>

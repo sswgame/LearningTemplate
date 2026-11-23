@@ -37,15 +37,20 @@
   <!-- 허브 농장 미니게임(minigames/harvestvalley) — 현황(Status)은 공통 메뉴, 농사 키는 꺼진 레이어 Farming(미니게임이 켠다). -->
   <inputMap path="common/input/menu.input.xml"/>
   <inputMap path="game/playground/harvestvalley/data/farm.input.xml"/>
+  <!-- 초원 마을 미니게임(minigames/meadowvillage)의 대화 — 꺼진 레이어 CreatureTown(미니게임이 켠다) -->
+  <inputMap path="game/playground/meadowvillage/data/town.input.xml"/>
   <!-- 복셀 광산 미니게임(minigames/voxelcraft) — 달리기 · 시선은 공통, 부수기 · 놓기 · 핫바는 Voxel 레이어(미니게임이 켠다) -->
   <inputMap path="common/input/look.input.xml"/>
   <inputMap path="game/playground/voxelcraft/data/voxel.input.xml"/>
   <!-- 도시 건설 미니게임(minigames/frontiertown)의 빨리 감기 — 제 레이어(FastForward)라 시연 점프 · 말 걸기의 Space 와 겹치지 않는다. -->
   <inputMap path="common/input/fastforward.input.xml"/>
+  <!-- 테마파크 미니게임(minigames/themepark) — 내려다보는 카메라는 공통, 공원 액션은 ThemePark 레이어(미니게임이 켠다) -->
+  <inputMap path="common/input/camera.input.xml"/>
+  <inputMap path="common/input/camerapan.input.xml"/>
+  <inputMap path="game/playground/themepark/data/park.input.xml"/>
   <!-- 아레나 미니게임(minigames/abilityarena)의 근접 · 화염구 · 회복 · 대시 — 꺼진 레이어 Arena(미니게임이 켠다). -->
   <inputMap path="game/playground/abilityarena/data/arena.input.xml"/>
   <!-- 사격장 미니게임(minigames/shooter3d)의 사격 · 재장전 · 무기 고르기 · 시점 — 꺼진 레이어 Shooter(미니게임이 켠다). 시점 확대 · 궤도는 공통. -->
-  <inputMap path="common/input/camera.input.xml"/>
   <inputMap path="common/input/cameraorbit.input.xml"/>
   <inputMap path="game/playground/shooter3d/data/shooter.input.xml"/>
   <!-- 온라인 세션(OnlineSession) — 연결은 게임이 connect 로 연다(접속하지 않으면 혼자 하는 허브다). 서버 설정은 Config/Server/Online/Playground.json.

@@ -81,4 +81,13 @@ namespace sw
             outListName.push_back( channel._name );
         }
     }
+
+    void PhysicsNameValidation::collectMaterialNames( vector<hashed_string>& outListName )
+    {
+        outListName.clear();
+        for ( const PhysicsMaterialDef& material : PhysicsNameValidationInternal::getSettings()._listMaterial )
+        {
+            outListName.push_back( material._name );
+        }
+    }
 } // namespace sw

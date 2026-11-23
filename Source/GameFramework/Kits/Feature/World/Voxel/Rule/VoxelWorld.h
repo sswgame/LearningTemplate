@@ -71,6 +71,8 @@ namespace sw
 
         /** @brief 크기를 정하고 올라온 청크 · 저장본을 비웁니다. 청크 수가 1 미만이면 오류를 남기고 false 입니다(조용히 1 로 맞추지 않습니다). */
         [[nodiscard]] bool initialize( int32 chunkCountX, int32 chunkCountZ, const VoxelBlockCatalog* pCatalog );
+        /** @brief 빌린 카탈로그만 @p catalog 로 바꿉니다. 블록 번호는 이어 읽는 `readState` 가 id 로 다시 짝짓는다 — 읽기 앞에서만 부르고, 읽기가 거절하면 앞 카탈로그로 되돌린다. */
+        void rebindCatalog( const VoxelBlockCatalog& catalog ) { _pCatalog = &catalog; }
         /** @brief 저장본이 없는 청크를 채울 생성 훅을 정합니다. 훅 없이 저장본도 없는 청크는 올리지 않습니다(`loadChunk` 가 오류). */
         void setChunkGenerator( VoxelChunkGenerator generator ) { _generator = std::move( generator ); }
         /**

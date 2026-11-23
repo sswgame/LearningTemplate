@@ -7,11 +7,14 @@
 #pragma once
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/string.h"
+#include "Core/Container/unordered_map.h"
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Subsystem/Subsystem.h"
 
 #include "DevTools/DevToolsAPI.h"
+
+#include "Engine/Content/AssetGUID.h"
 
 namespace sw
 {
@@ -38,8 +41,9 @@ namespace sw
     struct SW_DEVTOOLS_API AutomationScratchWorkspace
     {
         /**
-         * @brief 사본 폴더를 지우고 원본을 복사합니다. 글 파일의 원본 id 는 사본 id 로 바꿉니다.
-         * @details 사본은 이 프로세스의 실행 뿌리 아래(`AssetPaths::getScratchFolderPath`)라 남의 실행 사본과 겹치지 않는다. 끝난 실행의 사본은 그 실행 뿌리째 `SavedCleanup` 이 거둔다.
+         * @brief 사본 폴더를 지우고 원본을 복사합니다. 글 파일의 원본 id 는 사본 id 로, 원본의 GUID(머리 · `.meta` · 참조 글)는 사본의 GUID 로 바꿉니다.
+         * @details 사본은 새 에셋이다 — 원본의 GUID 를 그대로 들면 색인에서 겹치고, 사본끼리 GUID 로 가리킨 참조가 원본을 가리킨다. 사본의 GUID 는 원본 GUID 와 사본 폴더 id 에서 나온다
+         *          (`AssetGUID::fromName` — 다시 만들어도 같다). 사본은 이 프로세스의 실행 뿌리 아래(`AssetPaths::getScratchFolderPath`)라 남의 실행 사본과 겹치지 않는다. 끝난 실행의 사본은 그 실행 뿌리째 `SavedCleanup` 이 거둔다.
          * @return 선언이 틀렸거나 원본이 없거나 지우기 · 복사 · 쓰기가 실패하면 오류입니다(시나리오는 시작하지 않는다 — 원본에 쓰는 길로 돌아가지 않는다).
          */
         [[nodiscard]] static expected<void> prepare( const AutomationScratchFolder& folder );
@@ -61,5 +65,7 @@ namespace sw
          *          프로젝트 루트의 추적 폴더 `docs/` · `Config/` 도 같은 문이 막는다(`Config/Editor/` 만 허용 목록 — 에디터 설정 저장 길). 사본(작업 도메인)은 리소스 루트 밖이라 열려 있다.
          */
         [[nodiscard]] static FileUtil::WriteFilterRegistration acquireWriteFilter();
+        /** @brief 글 @p text 안의 GUID 글 표기(앞뒤가 글자 · 숫자가 아닌 소문자 16진 32 자) 가운데 @p mapGUID 에 있는 것을 바꿉니다. */
+        static string rebaseIdentities( string_view text, const unordered_map<AssetGUID, AssetGUID>& mapGUID );
     };
 } // namespace sw

@@ -9,8 +9,9 @@
 -->
 <Scenario name="game.playground.realtimegi" fixedDelta="0.0166667" timeoutFrames="400" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<Launch variable="gv_firstScene" value="game/playground/maps/realtimegi.scene.xml"/>
-	<WaitUntil watch="Render.GIAccumulatedFrames" atLeast="120" timeoutFrames="300"/> <!-- 프로브 GI 가 30 번(주기 4, 섞기 0.25 — 남은 몫 0.75^30) 쌓였다 -->
-	<Screenshot file="realtimegi.ppm" stability="Assets"/>
+	<WaitUntil watch="Render.GIError" atMost="1" timeoutFrames="300"/> <!-- 실시간 프로브가 돌기 시작했다(그 전에는 값이 없다 — 정착 조건이 해당 없음으로 지나가지 않게) -->
+	<Screenshot file="realtimegi.ppm" stability="Render"/>
+	<Expect watch="Render.GIError" atMost="0.0002"/> <!-- 사진이 실시간 GI 정착(RenderRealtimeGI — 30 번 갱신, 주기 4 · 섞기 0.25 의 남은 몫 0.75^30)을 기다렸다 -->
 	<ExpectImage file="realtimegi.ppm" golden="realtimegi" region="0.4,0.4,0.6,0.55"/>
 	<Pass/>
 </Scenario>

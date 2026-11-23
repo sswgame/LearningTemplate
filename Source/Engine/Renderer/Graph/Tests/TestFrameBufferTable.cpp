@@ -1,15 +1,19 @@
 /**
  * @file TestFrameBufferTable.cpp
  * @brief 프레임 그래프 자원 표(`FrameBufferTable`) 테스트 — 등록 · 찾기, 같은 이름 · 칸 두 번과 칸마다 다른 처음 접근 거절, 패스 문맥이 선언한 접근 핸들로만 핸들을 주는지,
- *        그래프 끝에 등록 접근으로 되돌릴 등록을 고르는지(GPU 없음).
+ *        그래프가 끝에 등록 접근으로 되돌리는지(GPU 없음).
  */
 #include "pch.h"
 
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
 #include "Engine/Graphics/RHI/Tests/RHIFakeDevice.h"
 #include "Engine/Renderer/Graph/FrameBufferTable.h"
+
+#include <type_traits>
+#include <utility>
 
 using namespace sw;
 
@@ -24,6 +28,44 @@ namespace
         buffer._capacityElements = 16;
         return buffer;
     }
+
+    /** @brief 형식 @p T 로 버퍼 · 텍스처 전이, UAV 배리어, 버퍼 복사를 부를 수 있는지 하나씩 봅니다. */
+    template <typename T, typename = void>
+    struct HasBufferTransition : std::false_type
+    {
+    };
+    template <typename T>
+    struct HasBufferTransition<T, std::void_t<decltype( std::declval<T&>().transitionBuffer( RHIBufferHandle{}, RHIBufferState::Common ) )>> : std::true_type
+    {
+    };
+    template <typename T, typename = void>
+    struct HasTextureTransition : std::false_type
+    {
+    };
+    template <typename T>
+    struct HasTextureTransition<T, std::void_t<decltype( std::declval<T&>().prepareTextureForShaderRead( RHITextureHandle{} ) )>> : std::true_type
+    {
+    };
+    template <typename T, typename = void>
+    struct HasUAVBarrier : std::false_type
+    {
+    };
+    template <typename T>
+    struct HasUAVBarrier<T, std::void_t<decltype( std::declval<T&>().uavBarrier( RHIBufferHandle{} ) )>> : std::true_type
+    {
+    };
+    template <typename T, typename = void>
+    struct HasBufferCopy : std::false_type
+    {
+    };
+    template <typename T>
+    struct HasBufferCopy<T, std::void_t<decltype( std::declval<T&>().copyBufferToReadback( RHIBufferHandle{}, RHIBufferHandle{}, 0u ) )>> : std::true_type
+    {
+    };
+    // 패스 몸통이 보는 형식에는 전이 · 배리어 · 복사가 없다 — 그래프가 모르는 상태 변화를 몸통이 쓸 수 없다.
+    static_assert( HasBufferTransition<IRHIPassCommandList>::value == false && HasTextureTransition<IRHIPassCommandList>::value == false );
+    static_assert( HasUAVBarrier<IRHIPassCommandList>::value == false && HasBufferCopy<IRHIPassCommandList>::value == false );
+    static_assert( HasBufferTransition<IRHICommandList>::value && HasTextureTransition<IRHICommandList>::value && HasUAVBarrier<IRHICommandList>::value && HasBufferCopy<IRHICommandList>::value );
 } // namespace
 
 /**
@@ -135,7 +177,7 @@ SW_TEST_CASE( FrameBufferTableTest, StructuredRegistrationCarriesSize )
 }
 
 /**
- * @brief [FrameBufferTableTest] 그래프가 등록 접근과 다른 접근에 둔 이름의 모든 칸만 되돌릴 대상이다 — 같은 접근으로 끝난 이름 · 그래프가 보지 않은 이름은 아니다
+ * @brief [FrameBufferTableTest] 그래프는 등록 접근과 다른 접근에 둔 이름만 끝에 되돌린다(이름마다 전이 하나 — 레벨 콜백이 모든 칸에 낸다) — 같은 접근으로 끝난 이름 · 그래프가 보지 않은 이름은 아니다
  * @details 결함이면 정렬 · 메시 쓰기가 셰이더 읽기로 남긴 입자 인자를 투명 패스가 간접 인자로 읽거나(DX12 · Vulkan 검증 오류), 이미 맞는 버퍼에 전이를 다시 낸다.
  *          입자 패스 셋(시뮬레이션 UAV → 정렬 · 메시 쓰기 셰이더 읽기)의 모양을 그대로 쓴다.
  */
@@ -153,34 +195,33 @@ SW_TEST_CASE( FrameBufferTableTest, ChangedAccessesReturnToTheirInitialAccess )
     table.registerBuffer( order, 0, makeBuffer( 14 ), RenderGraphAccess::ShaderRead ); // 이 그래프의 어느 패스도 선언하지 않는다
 
     RenderGraph graph;
-    for ( const FrameBufferTable::Entry& entry : table.getEntries() )
-    {
-        graph.importResource( entry._name, entry._viewable, entry._initialAccess );
-    }
+    graph.importResources( table );
     SW_REQUIRE_TRUE( graph.addPass( hashed_string( "ParticleSimulation" ), { RenderGraphBufferUAV{ state }, RenderGraphBufferUAV{ particles }, RenderGraphBufferUAV{ args } } ) );
     SW_REQUIRE_TRUE( graph.addPass( hashed_string( "ParticleSort" ), { RenderGraphBufferSRV{ particles }, RenderGraphBufferSRV{ args } } ) );
     SW_REQUIRE_TRUE( graph.compile() );
+    vector<RenderGraphBarrier> listLastBarrier;
+    graph.setLevelPrologue( SW_DELEGATE_LAMBDA( RenderGraphLevelPrologueFn, [&listLastBarrier]( const RenderGraphLevelContext& levelContext )
+    { listLastBarrier = *levelContext._pListBarrier; } ) );
     RenderGraphExecutionContext context;
     SW_REQUIRE_TRUE( graph.execute( context ) );
 
-    vector<RHIBufferHandle> listReturned;
-    table.forEachChangedAccess( context, [&listReturned]( const FrameBufferTable::Entry& entry )
-    { listReturned.push_back( entry.getBuffer() ); } );
-    // 상태(UAV 로 시작 · 끝) · 렌더 입력(셰이더 읽기로 끝) · 순서(그래프가 보지 않았다)는 그대로, 인자는 두 칸 모두 간접 인자로 되돌린다.
-    SW_REQUIRE_EQUAL( size_t{ 2 }, listReturned.size() );
-    SW_EXPECT_EQUAL( RHIBufferHandle{ 12 }, listReturned[0] );
-    SW_EXPECT_EQUAL( RHIBufferHandle{ 13 }, listReturned[1] );
+    // 상태(UAV 로 시작 · 끝) · 렌더 입력(셰이더 읽기로 끝) · 순서(그래프가 보지 않았다)는 그대로, 인자만 간접 인자로 되돌린다.
+    SW_REQUIRE_EQUAL( size_t{ 1 }, listLastBarrier.size() );
+    SW_EXPECT_TRUE( listLastBarrier[0]._resource == args );
+    SW_EXPECT_TRUE( listLastBarrier[0]._access == RenderGraphAccess::IndirectArgs );
+    SW_EXPECT_TRUE( context.findAccess( args ) == RenderGraphAccess::IndirectArgs );
 }
 
 /**
  * @brief [FrameBufferTableTest] 패스 안 전이(`transition`)는 쓰기로 선언한 등록 자원만 이 패스의 리스트에 낸다 — 선언하지 않은 이름은 오류이고 아무것도 내지 않는다
- * @details 패스 기록 면(`IRHIPassCommandList`)에는 텍스처 전이가 없어 이 길 하나다. 읽기 접근 핸들로 부르는 코드는 컴파일되지 않는다(static_assert — 그래프가 레벨 앞에서 옮긴다).
+ * @details 패스 기록 면(`IRHIPassCommandList`)에는 전이가 없어 이 길 하나다(아래 static_assert). 읽기 접근 핸들로 부르는 코드는 컴파일되지 않는다(static_assert — 그래프가 레벨 앞에서 옮긴다).
  *          결함이면 병렬 레벨의 워커가 선언하지 않은 자원의 추적 상태를 바꾼다(앞 리스트가 배리어 없이 먼저 실행된다 — RHI 검토 S1).
  *          변이: 선언 검사를 빼면 선언 안 한 전이가 리스트에 들어가 개수 단언이, 버퍼 판을 텍스처로 내면 버퍼 단언이 진다.
  */
 SW_TEST_CASE( FrameBufferTableTest, PassTransitionsOnlyDeclaredWrites )
 {
     SW_EXPECT_LOG( "Renderer.GraphUndeclaredAccess" );
+    SW_EXPECT_LOG( "Renderer.GraphTransitionWithoutState" );
     const hashed_string target( "AutoExposureTarget" );
     const hashed_string hzb( "HZB" );
     FrameBufferTable    table;
@@ -195,17 +236,19 @@ SW_TEST_CASE( FrameBufferTableTest, PassTransitionsOnlyDeclaredWrites )
     context.setCommandList( &cmd );
     context._pResourceTable = &table;
 
-    context.transition( RenderGraphTextureUAV{ target }, RHITextureState::ShaderResource );
+    context.transition( RenderGraphTextureUAV{ target }, RenderGraphAccess::ShaderRead );
     SW_REQUIRE_EQUAL( size_t{ 1 }, cmd._listTextureTransition.size() );
     SW_EXPECT_EQUAL( RHITextureHandle{ 41 }, cmd._listTextureTransition[0]._texture );
     SW_EXPECT_TRUE( cmd._listTextureTransition[0]._state == RHITextureState::ShaderResource );
 
-    context.transition( RenderGraphBufferUAV{ hzb }, RHIBufferState::ShaderResource );
+    context.transition( RenderGraphBufferUAV{ hzb }, RenderGraphAccess::ShaderRead );
     SW_REQUIRE_EQUAL( size_t{ 1 }, cmd._listBufferTransition.size() );
     SW_EXPECT_EQUAL( RHIBufferHandle{ 42 }, cmd._listBufferTransition[0]._buffer );
+    SW_EXPECT_TRUE( cmd._listBufferTransition[0]._state == RHIBufferState::ShaderResource );
 
-    context.transition( RenderGraphTextureUAV{ hashed_string( "Undeclared" ) }, RHITextureState::ShaderResource ); // 선언하지 않았다 — 오류, 전이 없음
-    context.transition( RenderGraphRenderTarget{ target }, RHITextureState::ShaderResource );                      // 다른 접근으로 선언했다 — 오류, 전이 없음
+    context.transition( RenderGraphTextureUAV{ hashed_string( "Undeclared" ) }, RenderGraphAccess::ShaderRead ); // 선언하지 않았다 — 오류, 전이 없음
+    context.transition( RenderGraphRenderTarget{ target }, RenderGraphAccess::ShaderRead );                      // 다른 접근으로 선언했다 — 오류, 전이 없음
+    context.transition( RenderGraphTextureUAV{ target }, RenderGraphAccess::IndirectArgs );                      // 텍스처에 없는 접근 — 오류, 전이 없음
     SW_EXPECT_EQUAL( size_t{ 1 }, cmd._listTextureTransition.size() );
 }
 

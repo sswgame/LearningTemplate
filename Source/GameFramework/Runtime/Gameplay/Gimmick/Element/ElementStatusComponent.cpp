@@ -14,7 +14,7 @@ namespace sw
 {
     ElementStatusComponent::ElementStatusComponent()
         : _tablePath{}
-        , _material{}
+        , _elementMaterial{}
         , _signalStatus{}
         , _startStimulus{}
         , _grid{}
@@ -28,7 +28,7 @@ namespace sw
         _tableReload.markSeen();
         if ( _tablePath.empty() )
         {
-            SW_LOG_ERROR_ID( "ElementStatusComponent.ElementStatusNoRule", "Element status '%#' has no rule table path - set Rule Table", _material.c_str() );
+            SW_LOG_ERROR_ID( "ElementStatusComponent.ElementStatusNoRule", "Element status '%#' has no rule table path - set Rule Table", _elementMaterial.c_str() );
             return;
         }
         // 새 테이블을 받기 전에 격자를 옛 테이블과 함께 쥔 채 둔다 — 받지 못하면 옛 상태 그대로다.
@@ -41,10 +41,10 @@ namespace sw
         if ( _grid.initialize( 1, 1, pTable.get() ) == false )
             return; // 이유는 ElementGrid 가 남겼다
         _pTable                        = std::move( pTable );
-        const optional<int32> material = _pTable->findMaterial( _material );
+        const optional<int32> material = _pTable->findMaterial( _elementMaterial );
         if ( material.has_value() == false )
         {
-            SW_LOG_ERROR_ID( "ElementStatusComponent.ElementMaterialNotRule", "Element material '%#' is not in the rule table", _material.c_str() );
+            SW_LOG_ERROR_ID( "ElementStatusComponent.ElementMaterialNotRule", "Element material '%#' is not in the rule table", _elementMaterial.c_str() );
             return; // 0 번 재질로 대신 서지 않는다
         }
         _grid.setMaterial( int2{ 0, 0 }, *material );
@@ -97,7 +97,7 @@ namespace sw
 
     void ElementStatusComponent::setMaterial( const hashed_string& material )
     {
-        _material = material;
+        _elementMaterial = material;
         rebuild();
         publishSignal();
     }

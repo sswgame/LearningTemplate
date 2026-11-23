@@ -104,7 +104,7 @@ LIST_SHARED_PACK_NAME: tuple[str, ...] = ("engine.pack", "common.pack")
 def list_pack_name_of_game(project_root: Path, game: str) -> list[str]:
     """그 게임의 배포 패키지가 담는 팩 파일 이름들입니다 — 공용 팩과 그 게임의 팩 하나.
 
-    팩 폴더는 게임 프리셋(`Config/Game/<게임>.json`)의 `_packRoot`(`game/<폴더>`)에서 읽는다 — 게임 이름과 폴더 이름이 다를 수 있다(ThemeParkTycoon → themepark).
+    팩 폴더는 게임 프리셋(`Config/Game/<게임>.json`)의 `_packRoot`(`game/<폴더>`)에서 읽는다 — 게임 이름과 폴더 이름이 다를 수 있다.
     프리셋이나 키가 없으면 ConfigError.
     """
     preset_path = project_root / DIR_RUNTIME_GAME_PRESET / f"{game}.json"

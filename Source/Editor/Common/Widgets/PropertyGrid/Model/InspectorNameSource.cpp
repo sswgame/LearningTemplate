@@ -21,8 +21,9 @@ namespace sw::editor
 
             // 엔진 DLL 에서 들인 함수의 주소는 상수식이 아니다(dllimport) — constexpr 이 아니라 inline const 다.
             static inline const Entry kArrEntry[] = {
-                {"CollisionProfile", &PhysicsNameValidation::collectProfileNames},
-                {"CollisionChannel", &PhysicsNameValidation::collectChannelNames},
+                {"CollisionProfile",  &PhysicsNameValidation::collectProfileNames},
+                {"CollisionChannel",  &PhysicsNameValidation::collectChannelNames},
+                { "PhysicsMaterial", &PhysicsNameValidation::collectMaterialNames},
             };
         };
     } // namespace

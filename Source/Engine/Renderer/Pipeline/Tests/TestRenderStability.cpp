@@ -52,17 +52,35 @@ SW_TEST_CASE( RenderStabilityTest, TemporalAccumulationLooksAtTheCameraOnly )
 {
     RenderStabilitySample sample{};
     sample._bTemporalAccumulation = SW_FALSE;
-    SW_EXPECT_TRUE( RenderStabilityUtil::evaluateTemporalAccumulation( sample, 16 ).isNotApplicable() );
+    SW_EXPECT_TRUE( sample.evaluateTemporalAccumulation( 16 ).isNotApplicable() );
     sample._bTemporalAccumulation   = SW_TRUE;
     sample._stillFrameCount         = 0; // 캐릭터가 숨 쉰다
     sample._cameraStillFrameCount   = 16;
-    const AutomationReadiness ready = RenderStabilityUtil::evaluateTemporalAccumulation( sample, 16 );
+    const AutomationReadiness ready = sample.evaluateTemporalAccumulation( 16 );
     SW_EXPECT_FALSE( ready.isWaiting() );
     SW_EXPECT_FALSE( ready.isNotApplicable() );
     sample._cameraStillFrameCount     = 5;
-    const AutomationReadiness waiting = RenderStabilityUtil::evaluateTemporalAccumulation( sample, 16 );
+    const AutomationReadiness waiting = sample.evaluateTemporalAccumulation( 16 );
     SW_EXPECT_TRUE( waiting.isWaiting() );
     SW_EXPECT_EQUAL( 5ull, static_cast<unsigned long long>( waiting.getProgress() ) ); // 진척은 쌓인 정지 프레임 수 — 카메라가 계속 움직이면 0 에 머문다
+}
+
+/** @brief [RenderStabilityTest] 실시간 GI 조건은 실시간 볼륨이 없으면 해당 없음, 오차가 문턱 이하면 준비됨, 위면 진행 중이고 프레임이 쌓이면 진척이 바뀐다 */
+SW_TEST_CASE( RenderStabilityTest, RealtimeGIWaitsForTheHistory )
+{
+    RenderStabilitySample sample{};
+    sample._giError = 0.5f;
+    SW_EXPECT_TRUE( sample.evaluateRealtimeGI( 0.0002f ).isNotApplicable() );
+    sample._bRealtimeGI             = SW_TRUE;
+    sample._giAccumulatedFrames     = 8;
+    const AutomationReadiness early = sample.evaluateRealtimeGI( 0.0002f );
+    sample._giAccumulatedFrames     = 9; // 갱신 주기 안에서는 오차가 그대로여도 프레임은 쌓인다 — 정지로 보지 않는다
+    const AutomationReadiness later = sample.evaluateRealtimeGI( 0.0002f );
+    SW_EXPECT_TRUE( early.isWaiting() );
+    SW_EXPECT_TRUE( later.isWaiting() );
+    SW_EXPECT_TRUE( early.getProgress() != later.getProgress() );
+    sample._giError = 0.0002f;
+    SW_EXPECT_FALSE( sample.evaluateRealtimeGI( 0.0002f ).isWaiting() );
 }
 
 /** @brief [RenderStabilityTest] 노출 조건은 재지 않는 뷰에서 해당 없음, 오차 상한이 문턱 이하면 준비됨, 위면 진행 중이고 상한이 줄면 진척이 바뀐다 */
@@ -70,14 +88,14 @@ SW_TEST_CASE( RenderStabilityTest, AutoExposureWaitsForTheErrorBound )
 {
     RenderStabilitySample sample{};
     sample._exposureErrorEv = 8.0f;
-    SW_EXPECT_TRUE( RenderStabilityUtil::evaluateAutoExposure( sample, 0.05f ).isNotApplicable() );
+    SW_EXPECT_TRUE( sample.evaluateAutoExposure( 0.05f ).isNotApplicable() );
     sample._bAutoExposure                  = SW_TRUE;
-    const AutomationReadiness wideError    = RenderStabilityUtil::evaluateAutoExposure( sample, 0.05f );
+    const AutomationReadiness wideError    = sample.evaluateAutoExposure( 0.05f );
     sample._exposureErrorEv                = 4.0f;
-    const AutomationReadiness smallerError = RenderStabilityUtil::evaluateAutoExposure( sample, 0.05f );
+    const AutomationReadiness smallerError = sample.evaluateAutoExposure( 0.05f );
     SW_EXPECT_TRUE( wideError.isWaiting() );
     SW_EXPECT_TRUE( smallerError.isWaiting() );
     SW_EXPECT_TRUE( wideError.getProgress() != smallerError.getProgress() );
     sample._exposureErrorEv = 0.04f;
-    SW_EXPECT_FALSE( RenderStabilityUtil::evaluateAutoExposure( sample, 0.05f ).isWaiting() );
+    SW_EXPECT_FALSE( sample.evaluateAutoExposure( 0.05f ).isWaiting() );
 }

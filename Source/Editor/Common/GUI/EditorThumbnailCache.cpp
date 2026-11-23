@@ -116,7 +116,7 @@ namespace sw::editor
         for ( auto it = _mapEntry.begin(); it != _mapEntry.end(); )
         {
             const Texture2D* pTexture = textures.find( it->_key );
-            const bool       bValid   = pTexture != nullptr && pTexture->isRHIValid() && pTexture->getHandle().getPacked() == it->_value._textureHandle;
+            const bool       bValid   = pTexture != nullptr && pTexture->isRHIValid() && pTexture->getHandle() == it->_value._textureHandle;
             if ( bValid )
             {
                 ++it;
@@ -186,8 +186,8 @@ namespace sw::editor
 
         Entry entry{};
         entry._pOperation    = pOperation;
-        entry._textureHandle = pTexture->getHandle().getPacked();
-        entry._pTextureID    = pBackend->registerTexture( RHITextureHandle{ entry._textureHandle } );
+        entry._textureHandle = pTexture->getHandle();
+        entry._pTextureID    = pBackend->registerTexture( entry._textureHandle );
         entry._lastUsedFrame = _frame;
         if ( entry._pTextureID == nullptr )
             return false;

@@ -2,7 +2,6 @@
 
 #include "Engine/Graphics/Upload/GPUUploadQueue.h"
 
-#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Foundation/EngineServices.h"
@@ -13,17 +12,11 @@
 
 namespace sw
 {
-    /**
-     * @brief `-gv_gpuUploadQueue=0` 이면 업로드를 워커로 앞당기지 않고 렌더 스레드가 그 자리에서 만듭니다.
-     * @details 이 최적화가 무엇을 바꿨는지 측정하려면 같은 실행에서 끄고 켜 비교할 수 있어야 합니다(A/B). 스레딩을 건드리는
-     *          기능이라 의심스러울 때 끌 수 있는 스위치이기도 합니다. gv_useRenderThread, gv_gpuCulling 과 같은 종류입니다.
-     */
-    SW_GLOBAL_VARIABLE( bool, gv_gpuUploadQueue, true, "GPU 업로드를 워커로 앞당긴다 (false=렌더 스레드가 그 자리에서 만든다)" );
-
     void GPUUploadQueue::bindDevice( IRHIDevice* pDevice, TaskManager* pTaskManager )
     {
         // 쌓여 있던 요청은 옛 디바이스의 것이므로 버린다. 필요한 메시는 다음 프레임 GT 가 다시 요청한다.
         _listPendingMesh.clear();
+        _uniquePendingMesh.clear();
 
         _pDevice      = pDevice;
         _pTaskManager = pTaskManager;
@@ -40,7 +33,7 @@ namespace sw
 
     bool GPUUploadQueue::shouldCreateMeshes() const
     {
-        return _bParallel == SW_TRUE && _pDevice != nullptr && gv_gpuUploadQueue;
+        return _bParallel == SW_TRUE && _pDevice != nullptr;
     }
 
     void GPUUploadQueue::requestMesh( const shared_ptr<Mesh>& mesh )
@@ -58,18 +51,14 @@ namespace sw
 
         // 같은 프레임에 같은 메시가 여러 배치로 들어온다(메시 하나를 여러 오브젝트가 쓴다). 중복은 여기서 거른다.
         // 안 거르면 워커 둘이 같은 메시를 동시에 만들어 한쪽 버퍼가 누수된다.
-        for ( const shared_ptr<Mesh>& pending : _listPendingMesh )
-        {
-            if ( pending == mesh )
-                return;
-        }
-        _listPendingMesh.push_back( mesh );
+        if ( _uniquePendingMesh.insert( mesh.get() ).second )
+            _listPendingMesh.push_back( mesh );
     }
 
     uint32 GPUUploadQueue::flush()
     {
-        const bool bNothingToFlush = _listPendingMesh.empty() || _pDevice == nullptr || gv_gpuUploadQueue == false;
-        if ( bNothingToFlush )
+        _uniquePendingMesh.clear();
+        if ( _listPendingMesh.empty() || _pDevice == nullptr )
         {
             _listPendingMesh.clear();
             return 0;

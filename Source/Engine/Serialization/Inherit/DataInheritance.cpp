@@ -13,8 +13,10 @@
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetPaths.h"
+#include "Engine/Content/AssetRegistry.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Reflection/ReflectionContainers.h"
+#include "Engine/Serialization/Inherit/DataCatalogInheritance.h"
 #include "Engine/Serialization/Inherit/DataInheritanceSchemaRegistry.h"
 #include "Engine/Serialization/Inherit/ResourceComposition.h"
 #include "Engine/Serialization/Serializer/SerializerUtil.h"
@@ -421,7 +423,7 @@ namespace sw
                     SW_LOG_ERROR_ID( "DataInheritance.NoRoot", "'%#' has no root element", sourceName );
                     return false;
                 }
-                const string baseID{ childRoot.getAttributeText( DataInheritance::kBaseAttribute ) };
+                const string baseID = DataInheritance::resolveBaseText( childRoot.getAttributeText( DataInheritance::kBaseAttribute ) );
                 if ( baseID.empty() )
                 {
                     outText = string{ text };
@@ -886,7 +888,33 @@ namespace sw
         XMLDocument doc;
         if ( doc.parse( text ) == false )
             return {};
-        return string{ doc.getRoot().getAttributeText( kBaseAttribute ) };
+        return resolveBaseText( doc.getRoot().getAttributeText( kBaseAttribute ) );
+    }
+
+    string DataInheritance::resolveBaseText( string_view baseText )
+    {
+        if ( AssetRegistry::isReferenceText( baseText ) == false )
+            return string{ baseText };
+        const size_t              separator = baseText.find( DataCatalogInheritance::kFileSeparator );
+        const optional<AssetGUID> guid      = AssetRegistry::parseReferenceText( baseText.substr( 0, separator ) );
+        optional<string>          path      = guid.has_value() ? AssetRegistry::resolve( *guid ) : optional<string>{};
+        if ( path.has_value() == false )
+            return string{ baseText };
+        if ( separator != string_view::npos )
+            path->append( baseText.substr( separator ) );
+        return std::move( *path );
+    }
+
+    string DataInheritance::makeBaseText( string_view baseID )
+    {
+        const size_t              separator = baseID.find( DataCatalogInheritance::kFileSeparator );
+        const optional<AssetGUID> guid      = AssetRegistry::resolveGUID( baseID.substr( 0, separator ) );
+        if ( guid.has_value() == false )
+            return string{ baseID };
+        string baseText = AssetRegistry::makeReferenceText( *guid );
+        if ( separator != string_view::npos )
+            baseText.append( baseID.substr( separator ) );
+        return baseText;
     }
 
     bool DataInheritance::flatten( string_view text, string_view sourceName, const DataInheritanceSchema& schema, DataInheritanceSource& source, string& outText, DataInheritanceProvenance* pOutProvenance )
@@ -953,7 +981,7 @@ namespace sw
         XMLDocument   deltaDoc;
         const XMLNode deltaRoot = deltaDoc.appendRoot( fullRoot.getName() );
         if ( baseID.empty() == false )
-            deltaRoot.setAttribute( kBaseAttribute, baseID );
+            deltaRoot.setAttribute( kBaseAttribute, string_view( makeBaseText( baseID ) ) );
         DataInheritanceInternal::writeAttributeDelta( fullRoot, parentRoot, schema, deltaRoot );
         const bool bWritten = schema._keyAttribute.empty() ? DataInheritanceInternal::writeFieldDelta( fullRoot, parentRoot, schema, deltaRoot )
                                                            : DataInheritanceInternal::writeKeyedListDelta( fullRoot, parentRoot, schema, deltaRoot );

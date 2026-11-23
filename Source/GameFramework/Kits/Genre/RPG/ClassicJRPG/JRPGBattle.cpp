@@ -177,13 +177,13 @@ namespace sw
         const int32 roundBefore = _turnOrder.getRound();
         while ( _result == JRPGBattleResult::Ongoing )
         {
-            const int32 actor = _turnOrder.next();
-            if ( actor < 0 || _turnOrder.getRound() != roundBefore + 1 )
+            const optional<int32> actor = _turnOrder.next();
+            if ( actor.has_value() == false || _turnOrder.getRound() != roundBefore + 1 )
                 break; // 이번 라운드의 차례가 다 돌았다(남은 큐는 다음 라운드의 restartRound 가 버린다)
-            if ( actor >= kEnemyActorBase )
-                executeEnemy( actor - kEnemyActorBase );
+            if ( *actor >= kEnemyActorBase )
+                executeEnemy( *actor - kEnemyActorBase );
             else
-                executeMember( actor );
+                executeMember( *actor );
             finishIfDecided();
         }
         for ( size_t memberIndex = 0; memberIndex < _listCommand.size(); ++memberIndex )
@@ -243,15 +243,15 @@ namespace sw
         const float32 averageGap = ( partyCount > 0 ? partyAgility / static_cast<float32>( partyCount ) : 0.0f ) -
                                    ( enemyCount > 0 ? enemyAgility / static_cast<float32>( enemyCount ) : 0.0f );
         const float32 chance = _settings._fleeBase + averageGap * _settings._fleePerAgility + static_cast<float32>( _fleeAttempts ) * _settings._fleePerAttempt;
-        return MathUtil::clamp( chance, 0.05f, 0.95f );
+        return MathUtil::clamp( chance, _settings._fleeChanceMin, _settings._fleeChanceMax );
     }
 
-    int32 JRPGBattle::computePhysicalDamage( int32 attack, int32 defense, GameRandom& random )
+    int32 JRPGBattle::computePhysicalDamage( const JRPGBattleSettings& settings, int32 attack, int32 defense, GameRandom& random )
     {
         const int32 base = attack / 2 - defense / 4;
         if ( base < 1 )
             return random.nextInt( 0, 1 );
-        return MathUtil::max( 1, JRPGBattleInternal::applyVariance( base, 875, 1125, random ) );
+        return MathUtil::max( 1, JRPGBattleInternal::applyVariance( base, settings._physicalVarianceMin, settings._physicalVarianceMax, random ) );
     }
 
     void JRPGBattle::syncActors()
@@ -335,7 +335,7 @@ namespace sw
             listType.push_back( pClass->_attackType );
 
         pushEvent( JRPGBattleEvent::Kind::Attack, false, memberIndex, target );
-        const int32 damage = computePhysicalDamage( _pParty->computeAttack( memberIndex ), defense, _random );
+        const int32 damage = computePhysicalDamage( _settings, _pParty->computeAttack( memberIndex ), defense, _random );
         hitEnemy( memberIndex, target, damage, listType );
         addComboPoints( _settings._comboPerHit );
         addInner( memberIndex, _settings._innerPerAttack );
@@ -389,14 +389,14 @@ namespace sw
                 for ( int32 enemyIndex = 0; enemyIndex < static_cast<int32>( _listEnemy.size() ); ++enemyIndex )
                 {
                     if ( _listEnemy[static_cast<size_t>( enemyIndex )].isAlive() )
-                        hitEnemy( memberIndex, enemyIndex, JRPGBattleInternal::applyVariance( base, 900, 1100, _random ), listType );
+                        hitEnemy( memberIndex, enemyIndex, JRPGBattleInternal::applyVariance( base, _settings._skillVarianceMin, _settings._skillVarianceMax, _random ), listType );
                 }
             }
             else
             {
                 const optional<int32> target = findLivingEnemy( command._target );
                 if ( target.has_value() )
-                    hitEnemy( memberIndex, *target, JRPGBattleInternal::applyVariance( base, 900, 1100, _random ), listType );
+                    hitEnemy( memberIndex, *target, JRPGBattleInternal::applyVariance( base, _settings._skillVarianceMin, _settings._skillVarianceMax, _random ), listType );
             }
         }
         else
@@ -458,13 +458,13 @@ namespace sw
             for ( int32 enemyIndex = 0; enemyIndex < static_cast<int32>( _listEnemy.size() ); ++enemyIndex )
             {
                 if ( _listEnemy[static_cast<size_t>( enemyIndex )].isAlive() )
-                    hitEnemy( memberIndex, enemyIndex, JRPGBattleInternal::applyVariance( base, 900, 1100, _random ), pCombo->_listDamageType );
+                    hitEnemy( memberIndex, enemyIndex, JRPGBattleInternal::applyVariance( base, _settings._skillVarianceMin, _settings._skillVarianceMax, _random ), pCombo->_listDamageType );
             }
             return;
         }
         const optional<int32> target = findLivingEnemy( command._target );
         if ( target.has_value() )
-            hitEnemy( memberIndex, *target, JRPGBattleInternal::applyVariance( base, 900, 1100, _random ), pCombo->_listDamageType );
+            hitEnemy( memberIndex, *target, JRPGBattleInternal::applyVariance( base, _settings._skillVarianceMin, _settings._skillVarianceMax, _random ), pCombo->_listDamageType );
     }
 
     void JRPGBattle::executeEnemy( int32 enemyIndex )
@@ -491,7 +491,7 @@ namespace sw
             for ( int32 memberIndex = 0; memberIndex < _pParty->getMemberCount(); ++memberIndex )
             {
                 if ( _pParty->getMember( memberIndex ).isAlive() )
-                    hitMember( enemyIndex, memberIndex, JRPGBattleInternal::applyVariance( scaled, 900, 1100, _random ) );
+                    hitMember( enemyIndex, memberIndex, JRPGBattleInternal::applyVariance( scaled, _settings._skillVarianceMin, _settings._skillVarianceMax, _random ) );
             }
             return;
         }
@@ -516,7 +516,7 @@ namespace sw
             return;
         const int32 target = listAlive[static_cast<size_t>( _random.nextInt( 0, static_cast<int32>( listAlive.size() ) - 1 ) )];
         pushEvent( JRPGBattleEvent::Kind::Attack, true, enemyIndex, target );
-        hitMember( enemyIndex, target, computePhysicalDamage( pEnemy->_arrStat[static_cast<size_t>( JRPGStat::Strength )], _pParty->computeDefense( target ), _random ) );
+        hitMember( enemyIndex, target, computePhysicalDamage( _settings, pEnemy->_arrStat[static_cast<size_t>( JRPGStat::Strength )], _pParty->computeDefense( target ), _random ) );
     }
 
     void JRPGBattle::hitEnemy( int32 memberIndex, int32 enemyIndex, int32 damage, const vector<hashed_string>& listDamageType )

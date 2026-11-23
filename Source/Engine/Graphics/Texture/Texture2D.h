@@ -61,7 +61,7 @@ namespace sw
     struct Texture2DRetiredResource
     {
         RHITextureHandle   _handle{ 0 };
-        RHIDescriptorIndex _srv{ kInvalidDescriptorIndex };
+        RHITextureSRVIndex _srv{ kInvalidDescriptorIndex };
     };
 } // namespace sw
 
@@ -217,26 +217,26 @@ namespace sw
         /** @brief GPU 텍스처 핸들입니다. 스트리밍이 렌더 스레드에서 바꿔 끼우므로 원자값으로 읽는다(`upgradeResidency`). */
         RHITextureHandle getHandle() const { return _handle.load( std::memory_order_acquire ); }
         /** @brief bindless SRV 번호입니다. 게임 스레드(머티리얼)가 읽는 동안 렌더 스레드가 바꿔 끼울 수 있어 원자값으로 읽는다. */
-        RHIDescriptorIndex getSRV() const { return _srv.load( std::memory_order_acquire ); }
+        RHITextureSRVIndex getSRV() const { return _srv.load( std::memory_order_acquire ); }
         /**
          * @brief 수명 내내 같은 SRV 번호입니다 — 올라왔으면 그 번호, 올리는 중이면 지키는 번호(로드 중 텍스처 · 옛 텍스처 · 누락 체커를 가리킨다)입니다(R-6).
          * @details 머티리얼은 이 번호를 한 번 받아 쥔다 — 첫 업로드 · 밉 올리기 · 크기 변경 · 핫 리로드가 같은 번호를 다시 묶으므로 다시 받지 않는다.
          */
-        RHIDescriptorIndex getStableSRV() const
+        RHITextureSRVIndex getStableSRV() const
         {
-            const RHIDescriptorIndex srv = getSRV();
+            const RHITextureSRVIndex srv = getSRV();
             return srv != kInvalidDescriptorIndex ? srv : _keptSRV.load( std::memory_order_acquire );
         }
         /** @brief @p pDevice 에서 로드를 시작할 때 예약한 번호 @p index 를 맡습니다(`IRHIDevice::reserveBindlessTexture` — 로드 중 텍스처를 가리킨다). 업로드가 끝나면 이 번호로 다시 묶는다. */
-        void attachReservedSRV( RHIDescriptorIndex index, IRHIDevice* pDevice )
+        void attachReservedSRV( RHITextureSRVIndex index, IRHIDevice* pDevice )
         {
             _pKeptSRVDevice.store( pDevice, std::memory_order_release );
             _keptSRV.store( index, std::memory_order_release );
         }
         /** @brief 지키던 번호를 넘겨줍니다(실패한 로드의 번호를 로드 작업이 맡는다). */
-        RHIDescriptorIndex takeKeptSRV() { return _keptSRV.exchange( kInvalidDescriptorIndex, std::memory_order_acq_rel ); }
+        RHITextureSRVIndex takeKeptSRV() { return _keptSRV.exchange( kInvalidDescriptorIndex, std::memory_order_acq_rel ); }
         /** @brief 지키는 번호입니다(없으면 kInvalidDescriptorIndex). */
-        RHIDescriptorIndex getKeptSRV() const { return _keptSRV.load( std::memory_order_acquire ); }
+        RHITextureSRVIndex getKeptSRV() const { return _keptSRV.load( std::memory_order_acquire ); }
         uint32             getWidth() const { return _width; }
         uint32             getHeight() const { return _height; }
         RHIFormat          getFormat() const { return _format; }
@@ -296,10 +296,10 @@ namespace sw
         IRHIDevice*                _pDevice;
         string                     _path;
         atomic<RHITextureHandle>   _handle;
-        atomic<RHIDescriptorIndex> _srv;
+        atomic<RHITextureSRVIndex> _srv;
         /// @brief 올리는 동안 지키는 SRV 번호입니다 — 로드를 시작할 때 예약한 번호(`attachReservedSRV`)이거나 다시 만드는 텍스처의 번호(`detachRHIKeepingSRV`)다.
         ///        다음 `finishUpload` 가 새 텍스처로 다시 묶는다(R-6). 게임 스레드가 `getStableSRV` 로 읽으므로 원자값이다.
-        atomic<RHIDescriptorIndex> _keptSRV{ kInvalidDescriptorIndex };
+        atomic<RHITextureSRVIndex> _keptSRV{ kInvalidDescriptorIndex };
         /// @brief `_keptSRV` 를 낸 디바이스입니다 — 다시 만드는 동안은 `_pDevice` 가 비므로 따로 둔다. 그 디바이스가 내려가면(`clearRHI` · `releaseRHI`) 번호도 버린다.
         atomic<IRHIDevice*>      _pKeptSRVDevice{ nullptr };
         RHITransferTicket        _uploadTicket{}; ///< 제출했고 `finishUpload` 가 끝내지 않은 업로드의 티켓(무효면 없음). 디바이스를 쓰는 스레드만 만지는 값이다
