@@ -61,7 +61,7 @@ namespace sw
         DataPath _entranceScene; ///< 타이틀 다음 씬. 없으면 시작 맵이다
 
         PROPERTY()
-        string _defaultSaveSlot; ///< 기본 세이브 슬롯 이름(`save/slot0` - 슬롯 이름 없는 `GameInstance::saveGameToSlot` · `loadGameFromSlot`). 자리는 로컬 저장소가 정한다. 없으면 슬롯 없는 저장은 오류다
+        string _defaultSaveSlot; ///< 기본 세이브 슬롯 이름(`save/slot0` - 슬롯 이름 없는 `GameSaveSlots::save` · `load`). 자리는 로컬 저장소가 정한다. 없으면 슬롯 없는 저장은 오류다
 
         PROPERTY()
         DataPath _localizationProject; ///< 로컬라이제이션 프로젝트(`*.locproject.xml`, 리소스 경로) — 원문 표 · 문화권 번역 표가 그 옆에 있다. 없으면 게임 문자열 표 없음
