@@ -318,7 +318,7 @@ namespace
             return string( history.view() );
         }
 
-        static constexpr const utf8* kGoodTransaction = R"({"transactionId":"1234","bundleId":"com.x.game","environment":"Production","productId":"gem100","purchaseDate":1700000000000,"appAccountToken":"tok"})";
+        static constexpr const utf8* kGoodTransaction = R"({"transactionId":"1234","bundleId":"com.x.game","environment":"Production","productId":"gem100","quantity":2,"purchaseDate":1700000000000,"appAccountToken":"tok"})";
     };
 } // namespace
 
@@ -355,7 +355,6 @@ SW_TEST_CASE( StoreReceiptValidatorTest, ApplyOrderFactsComparesWithTheAsk )
     {
         ReceiptValidationResult result;
         result._transactionID = query._transactionID;
-        result._productID     = query._productID;
         StoreReceiptValidator::applyOrderInfo( query, info, result );
         return result;
     };
@@ -365,8 +364,8 @@ SW_TEST_CASE( StoreReceiptValidatorTest, ApplyOrderFactsComparesWithTheAsk )
     ReceiptOrderInfo info;
     info._status        = ReceiptStatus::Valid;
     info._transactionID = "1";
-    info._productID     = "p";
     info._storeBuyerID  = "b";
+    info._listItem.push_back( ReceiptLineItem{ "p", 1 } );
     SW_EXPECT_TRUE( apply( queryOrder, info )._status == ReceiptStatus::Valid );
     SW_EXPECT_EQUAL( string( "b" ), apply( queryOrder, info )._storeBuyerID );
 
@@ -384,8 +383,14 @@ SW_TEST_CASE( StoreReceiptValidatorTest, ApplyOrderFactsComparesWithTheAsk )
     SW_EXPECT_TRUE( apply( queryOrder, noOrder )._status == ReceiptStatus::Invalid );
 
     ReceiptOrderInfo noProduct = info;
-    noProduct._productID.clear();
+    noProduct._listItem.clear();
     SW_EXPECT_TRUE( apply( queryOrder, noProduct )._status == ReceiptStatus::Invalid );
+    ReceiptOrderInfo oneBadItem = info;
+    oneBadItem._listItem.push_back( ReceiptLineItem{ "q", 0 } ); // 수를 모르는 줄 하나가 주문 전체를 거절한다
+    SW_EXPECT_TRUE( apply( queryOrder, oneBadItem )._status == ReceiptStatus::Invalid );
+    ReceiptOrderInfo oneNameless = info;
+    oneNameless._listItem.push_back( ReceiptLineItem{ "", 1 } );
+    SW_EXPECT_TRUE( apply( queryOrder, oneNameless )._status == ReceiptStatus::Invalid );
     ReceiptOrderInfo refundedNoProduct = noProduct;
     refundedNoProduct._status          = ReceiptStatus::Refunded;
     SW_EXPECT_TRUE( apply( queryOrder, refundedNoProduct )._status == ReceiptStatus::Refunded ); // 환불은 지급할 것을 고르지 않는다
@@ -396,11 +401,13 @@ SW_TEST_CASE( StoreReceiptValidatorTest, ApplyOrderFactsComparesWithTheAsk )
     ReceiptOrderInfo silent;
     silent._status        = ReceiptStatus::Valid;
     silent._transactionID = "9";
+    silent._listItem.push_back( ReceiptLineItem{ "", 2 } );
     SW_EXPECT_TRUE( apply( queryProduct, silent )._status == ReceiptStatus::Valid );
-    SW_EXPECT_EQUAL( string( "p" ), apply( queryProduct, silent )._productID );
+    SW_EXPECT_EQUAL( string( "p" ), apply( queryProduct, silent )._listItem[0]._productID );
+    SW_EXPECT_EQUAL( int64( 2 ), apply( queryProduct, silent )._listItem[0]._quantity );
     SW_EXPECT_EQUAL( string( "9" ), apply( queryProduct, silent )._transactionID );
-    ReceiptOrderInfo otherProduct = silent;
-    otherProduct._productID       = "q";
+    ReceiptOrderInfo otherProduct        = silent;
+    otherProduct._listItem[0]._productID = "q";
     SW_EXPECT_TRUE( apply( queryProduct, otherProduct )._status == ReceiptStatus::Invalid );
     ReceiptOrderInfo otherKey = silent;
     otherKey._answeredKey     = "x";
@@ -558,7 +565,9 @@ SW_TEST_CASE( GoogleReceiptValidatorTest, PurchasedIsValidAndWaitsForTheGrant )
     SW_EXPECT_TRUE( result._status == ReceiptStatus::Valid );
     SW_EXPECT_EQUAL( string( "google" ), result._storeName );
     SW_EXPECT_EQUAL( string( "GPA.1" ), result._transactionID );
-    SW_EXPECT_EQUAL( string( "gem100" ), result._productID );
+    SW_REQUIRE_EQUAL( size_t( 1 ), result._listItem.size() );
+    SW_EXPECT_EQUAL( string( "gem100" ), result._listItem[0]._productID );
+    SW_EXPECT_EQUAL( int64( 1 ), result._listItem[0]._quantity ); // 구글 문서: 수를 말하지 않으면 하나다
     SW_EXPECT_EQUAL( string( "tok" ), result._storeBuyerID );
     SW_EXPECT_EQUAL( kNowMs, result._purchaseTimeMs );
     SW_EXPECT_EQUAL( kTicket, result._ticket );
@@ -627,7 +636,8 @@ SW_TEST_CASE( GoogleReceiptValidatorTest, BodyThatIsNotJSONIsRetry )
         rig._productBody                     = pBody;
         const ReceiptValidationResult result = rig.validate();
         SW_EXPECT_TRUE_MSG( result._status == ReceiptStatus::Retry, pBody );
-        SW_EXPECT_EQUAL( string( "gem100" ), result._productID );
+        SW_REQUIRE_EQUAL( size_t( 1 ), result._listItem.size() ); // 물은 상품이다
+        SW_EXPECT_EQUAL( string( "gem100" ), result._listItem[0]._productID );
     }
     SW_EXPECT_EQUAL( 0, rig._acknowledgeCount );
 }
@@ -642,7 +652,14 @@ SW_TEST_CASE( GoogleReceiptValidatorTest, StateAndEchoDecideTheResult )
     SW_EXPECT_TRUE( rig.validate()._status == ReceiptStatus::Retry );
     rig._productBody = R"({"orderId":"GPA.1","purchaseState":0,"purchaseType":0})";
     SW_EXPECT_TRUE( rig.validate()._bSandbox == SW_TRUE );
+    rig._productBody                           = R"({"orderId":"GPA.1","purchaseState":0,"quantity":3})";
+    const ReceiptValidationResult multipleItem = rig.validate();
+    SW_EXPECT_TRUE( multipleItem._status == ReceiptStatus::Valid );
+    SW_REQUIRE_EQUAL( size_t( 1 ), multipleItem._listItem.size() );
+    SW_EXPECT_EQUAL( int64( 3 ), multipleItem._listItem[0]._quantity );
     for ( const utf8* pBody : {
+              R"({"orderId":"GPA.1","purchaseState":0,"quantity":0})",
+              R"({"orderId":"GPA.1","purchaseState":0,"quantity":-1})",
               R"({"orderId":"GPA.1","purchaseState":0,"productId":"other"})",
               R"({"orderId":"GPA.1","purchaseState":0,"purchaseToken":"OTHER"})",
               R"({"purchaseState":0})",
@@ -752,7 +769,9 @@ SW_TEST_CASE( AppleReceiptValidatorTest, SignedTransactionIsValid )
     SW_EXPECT_TRUE( result._status == ReceiptStatus::Valid );
     SW_EXPECT_EQUAL( string( "apple" ), result._storeName );
     SW_EXPECT_EQUAL( string( "1234" ), result._transactionID );
-    SW_EXPECT_EQUAL( string( "gem100" ), result._productID );
+    SW_REQUIRE_EQUAL( size_t( 1 ), result._listItem.size() );
+    SW_EXPECT_EQUAL( string( "gem100" ), result._listItem[0]._productID );
+    SW_EXPECT_EQUAL( int64( 2 ), result._listItem[0]._quantity );
     SW_EXPECT_EQUAL( string( "tok" ), result._storeBuyerID );
     SW_EXPECT_EQUAL( kNowMs, result._purchaseTimeMs );
     SW_EXPECT_TRUE( result._bSandbox == SW_FALSE );
@@ -786,7 +805,9 @@ SW_TEST_CASE( AppleReceiptValidatorTest, SignedPropertiesAreCompared )
               R"({"bundleId":"com.x.game","environment":"Production","productId":"gem100"})",
               R"({"transactionId":"1234","bundleId":"com.other","environment":"Production","productId":"gem100"})",
               R"({"transactionId":"1234","environment":"Production","productId":"gem100"})",
-              R"({"transactionId":"1234","bundleId":"com.x.game","environment":"Production"})",
+              R"({"transactionId":"1234","bundleId":"com.x.game","environment":"Production","quantity":1})",
+              R"({"transactionId":"1234","bundleId":"com.x.game","environment":"Production","productId":"gem100"})",
+              R"({"transactionId":"1234","bundleId":"com.x.game","environment":"Production","productId":"gem100","quantity":0})",
               R"({"transactionId":"1234","bundleId":"com.x.game","productId":"gem100"})",
           } )
     {
@@ -806,7 +827,7 @@ SW_TEST_CASE( AppleReceiptValidatorTest, OnlyProductionIsNotSandbox )
     for ( const utf8* pEnvironment : { "Sandbox", "Xcode", "production" } )
     {
         StringBuilder<constant::buffer::kMax256> transaction;
-        transaction.appendFormat( R"({"transactionId":"1234","bundleId":"com.x.game","productId":"gem100","environment":"%#"})", pEnvironment );
+        transaction.appendFormat( R"({"transactionId":"1234","bundleId":"com.x.game","productId":"gem100","quantity":1,"environment":"%#"})", pEnvironment );
         rig.setTransaction( transaction.view() );
         const ReceiptValidationResult result = rig.validate();
         SW_EXPECT_TRUE( result._status == ReceiptStatus::Valid );
