@@ -144,6 +144,7 @@
 	<Field owner="SkirmishGameModeComponent" field="_watchCameraPreset" tag="CameraPresetDef"/>
 	<CatalogKey tag="CropDef" catalog="CropCatalog" entry="Crop"/>
 	<Field owner="FarmCropModel" field="_cropID" tag="CropDef"/>
+	<Field owner="MeadowFarmGameModeComponent" field="_crop" tag="CropDef"/>
 	<CatalogKey tag="HousingPartDef" catalog="HousingPartCatalog" entry="Part"/>
 	<Field owner="MeadowBuildStep" field="_partID" tag="HousingPartDef"/>
 	<CatalogKey tag="WesternRegionDef" catalog="WesternCatalog" entry="Region"/>
@@ -195,10 +196,14 @@
 	<Field owner="WesternDeedComponent" field="_food" tag="WesternFoodDef"/>
 	<Field owner="WesternDeedComponent" field="_clothing" tag="WesternClothingDef"/>
 	<!-- 서식지 키의 오브젝트는 항목 id 가 아니라 <Habitat><Key object> 값이다. -->
+	<CatalogKey tag="HabitatDef" catalog="CreatureLifeCatalog" entry="Habitat"/>
 	<CatalogKey tag="HabitatCell" catalog="CreatureLifeCatalog" entry="Habitat/Key" targetKey="object"/>
 	<CatalogKey tag="CreatureSpeciesDef" catalog="CreatureLifeCatalog" entry="Species"/>
-	<Field owner="MeadowTownObjectView" field="_object" tag="HabitatCell"/>
-	<Field owner="MeadowTownCreatureView" field="_species" tag="CreatureSpeciesDef"/>
+	<Field owner="CreatureTownGameModeComponent" field="_upgradeHabitat" tag="HabitatDef"/>
+	<Field owner="CreatureTownPlacement" field="_object" tag="HabitatCell"/>
+	<Field owner="CreatureTownObjectView" field="_object" tag="HabitatCell"/>
+	<Field owner="CreatureTownCreatureView" field="_species" tag="CreatureSpeciesDef"/>
+	<Field owner="CreatureTownViewComponent" field="_talkSpecies" tag="CreatureSpeciesDef"/>
 	<!-- 카탈로그 정의 사이의 키 칸(무기 → 탄 · 아이템, 메크 무기 → 무기 · 탄 · 기술 등). 정의는 형식 이름이 아니라 원소 이름으로 적혀 <Element> 가 정의 형식과 원소 경로를 잇는다.
 	     field 는 리플렉션 칸 이름이다 — PROPERTY( Name = "projectile" ) 으로 바꾼 칸은 그 이름(멤버 이름이 아니다). 카탈로그 속성 이름도 같은 이름이다. -->
 	<CatalogKey tag="ItemDef" catalog="ItemCatalog" entry="Item"/>

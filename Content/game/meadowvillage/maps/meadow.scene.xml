@@ -68,21 +68,56 @@
 					<WalletComponent _localID="7280284032837436068" _componentName="WalletComponent" _bActive="true" />
 					<QuestLogComponent _localID="6142667033349566711" _componentName="QuestLogComponent" _bActive="true" />
 					<ReputationComponent _localID="7241694008514979400" _componentName="ReputationComponent" _bActive="true" />
+					<!-- _stateSettings: 하루 2 분(1 초 = 게임 12 분), 계절 넷 × 28 일, 공유 땅 40 x 40 칸(칸 1 m — 하우징 카탈로그의 칸과 같다, 밭 · 마을 · 집 부지를 덮는다) -->
 					<MeadowFarmGameModeComponent _localID="8448271495034838971" _componentName="MeadowFarmGameModeComponent"
 					                             _bActive="true"
 					                             _bAutoPlay="false"
-					                             _tilePrefab="game/meadowvillage/prefabs/tile.prefab.xml" />
-					<MeadowTownGameModeComponent _localID="5244519647496677059" _componentName="MeadowTownGameModeComponent"
-					                             _bActive="true"
-					                             _bAutoPlay="false">
+					                             _cropDataPath="game/meadowvillage/data/crops.xml"
+					                             _crop="turnip"
+					                             _tilePrefab="game/meadowvillage/prefabs/tile.prefab.xml">
+						<_stateSettings _landWidth="40" _landHeight="40" _landCellSize="1" _landOrigin="-20,0,-20">
+							<_clock _secondsPerDay="120" _startHour="6" _daysPerSeason="28">
+								<_listSeason>
+									<item>Spring</item>
+									<item>Summer</item>
+									<item>Fall</item>
+									<item>Winter</item>
+								</_listSeason>
+							</_clock>
+						</_stateSettings>
+					</MeadowFarmGameModeComponent>
+					<CreatureTownGameModeComponent _localID="5244519647496677059" _componentName="CreatureTownGameModeComponent"
+					                               _bActive="true"
+					                               _bAutoPlay="false"
+					                               _creatureDataPath="game/meadowvillage/data/creatures.xml"
+					                               _questDataPath="game/meadowvillage/data/quests.xml"
+					                               _friendshipDataPath="game/meadowvillage/data/friendship.xml"
+					                               _townSize="6"
+					                               _fixedWeatherID="sunny"
+					                               _upgradeHabitat="orchard"
+					                               _upgradePrice="50">
+						<_listStartObject>
+							<CreatureTownPlacement _object="grass" _x="0" _y="0" />
+							<CreatureTownPlacement _object="grass" _x="1" _y="0" />
+						</_listStartObject>
+						<_listUpgradeObject>
+							<CreatureTownPlacement _object="tree" _x="0" _y="2" />
+							<CreatureTownPlacement _object="tree" _x="1" _y="2" />
+						</_listUpgradeObject>
+					</CreatureTownGameModeComponent>
+					<CreatureTownViewComponent _localID="3650821947715502638" _componentName="CreatureTownViewComponent"
+					                           _bActive="true"
+					                           _townOrigin="6,0,0"
+					                           _talkAction="Interact"
+					                           _talkSpecies="sprout">
 						<_listObjectView>
-							<MeadowTownObjectView _object="grass" _prefab="game/meadowvillage/prefabs/grass.prefab.xml" />
-							<MeadowTownObjectView _object="tree" _prefab="game/meadowvillage/prefabs/tree.prefab.xml" />
+							<CreatureTownObjectView _object="grass" _prefab="game/meadowvillage/prefabs/grass.prefab.xml" />
+							<CreatureTownObjectView _object="tree" _prefab="game/meadowvillage/prefabs/tree.prefab.xml" />
 						</_listObjectView>
 						<_listCreatureView>
-							<MeadowTownCreatureView _species="sprout" _prefab="game/meadowvillage/prefabs/sprout.prefab.xml" />
+							<CreatureTownCreatureView _species="sprout" _prefab="game/meadowvillage/prefabs/sprout.prefab.xml" />
 						</_listCreatureView>
-					</MeadowTownGameModeComponent>
+					</CreatureTownViewComponent>
 					<HousingPlotComponent _localID="9951375036076253157" _componentName="HousingPlotComponent"
 					                      _bActive="true"
 					                      _bAutoPlay="false"

@@ -949,7 +949,6 @@
     "Source/Games/LanternVale/Server/ValeServerLink.cpp": {"minus-one": 2},
     "Source/Games/LanternVale/ValeNetLink.h": {"minus-one": 1},
     "Source/Games/LanternVale/ValeWorldComponent.cpp": {"float": 2},
-    "Source/Games/MeadowVillage/MeadowVillageData.h": {"float": 2, "integer": 1},
     "Source/Games/NileCity/NileBuildingComponent.cpp": {"minus-one": 3, "float": 10},
     "Source/Games/NileCity/NileCityPlanner.cpp": {"integer": 1},
     "Source/Games/NileCity/NileGameModeComponent.cpp": {"minus-one": 2, "float": 13},

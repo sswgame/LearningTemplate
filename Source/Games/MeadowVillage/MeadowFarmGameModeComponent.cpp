@@ -2,6 +2,8 @@
 
 #include "Games/MeadowVillage/MeadowFarmGameModeComponent.h"
 
+#include "Engine/Asset/Cache/SharedAssetCache.h"
+#include "Engine/Input/Map/CommonInputActions.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -9,19 +11,13 @@
 #include "Engine/Serialization/Format/StateIO.h"
 #include "Engine/Visual/Component/MeshComponent.h"
 
-#include "GameFramework/Kits/Genre/Simulation/Farming/CropCatalog.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
-#include "GameFramework/Runtime/Gameplay/GameState/GameStateComponent.h"
 #include "GameFramework/Runtime/Gameplay/GameState/PlayerComponentUtil.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/WalletComponent.h"
-
-#include "Games/MeadowVillage/MeadowVillageData.h"
 
 namespace sw
 {
     namespace
     {
-        /** @brief 칸 상태의 색입니다 — 다 자람 · 물 줌 · 갈았음 · 갈지 않음 순서로 먼저 맞는 것(값은 디렉터의 PROPERTY). */
         /** @brief 밭 칸의 모습입니다(뷰 동기화의 규칙 id — 바뀐 칸만 다시 칠한다). 0 은 "칸 없음" 이다. */
         enum TileLook : uint8
         {
@@ -46,7 +42,10 @@ namespace sw
 namespace sw
 {
     MeadowFarmGameModeComponent::MeadowFarmGameModeComponent()
-        : _tilePrefab{}
+        : _cropDataPath{}
+        , _crop{}
+        , _stateSettings{}
+        , _tilePrefab{}
         , _startingGold{ 20 }
         , _fastTimeScale{ 8.0f }
         , _readyColor{ 1.60f, 1.35f, 0.55f, 1.0f } // 메시 정점 색이 이미 흙색이라 상태 색은 그 위에 곱하는 틴트다
@@ -54,6 +53,7 @@ namespace sw
         , _tilledColor{ 1.0f, 1.0f, 1.0f, 1.0f }
         , _grassColor{ 0.80f, 1.30f, 0.60f, 1.0f }
         , _tileSpacing{ 1.0f }
+        , _pCropCatalog{}
         , _field{}
         , _tintCache{}
         , _tileViews{}
@@ -73,7 +73,7 @@ namespace sw
         FarmField restoredField;
         if ( io.isReading() )
         {
-            restoredField.initialize( kFieldWidth, kFieldHeight, game::findSubsystem<const CropCatalog>() );
+            restoredField.initialize( kFieldWidth, kFieldHeight, _pCropCatalog.get() );
         }
         FarmField& field = io.isWriting() ? _field : restoredField;
         io.section( FarmField::kStateTag, FarmField::kStateVersion, [&field]( StateIO& bodyIO )
@@ -88,22 +88,23 @@ namespace sw
 
     bool MeadowFarmGameModeComponent::startGame()
     {
-        const CropCatalog* pCrops = game::findSubsystem<const CropCatalog>();
-        if ( pCrops == nullptr )
+        if ( acquireRequired( _cropDataPath, _pCropCatalog ) == false )
+            return false;
+        if ( _pCropCatalog->findCrop( _crop.key() ) == nullptr )
         {
-            SW_LOG_ERROR_ID( "MeadowFarm.FarmCannotStart", "[Meadow] the farm cannot start - the crop catalog is not loaded" );
+            SW_LOG_ERROR_ID( "MeadowFarm.CropUnknown", "[Meadow] the farm cannot start - crop '%#' is not in the crop catalog", _crop.c_str() );
             return false;
         }
         // 이 오브젝트의 첫 디렉터가 판을 연다. 시작 돈은 새 판일 때만(복원한 판 위에 덧쌓이지 않게).
-        GameStateComponent* pState = GameStateComponent::openOnOwner( *this, MeadowVillageData::makeStateSettings() );
+        GameStateComponent* pState = GameStateComponent::openOnOwner( *this, _stateSettings );
         if ( pState == nullptr )
             return false;
         WalletComponent* pWallet = PlayerComponentUtil::requireOnOwner<WalletComponent>( *this );
-        if ( pWallet == nullptr || MeadowVillageData::openPlayerState( *this ) == false )
+        if ( pWallet == nullptr )
             return false;
         if ( pWallet->isFreshGame() )
             pWallet->getWallet().add( Wallet::getDefaultCurrency(), _startingGold );
-        _field.initialize( kFieldWidth, kFieldHeight, pCrops );
+        _field.initialize( kFieldWidth, kFieldHeight, _pCropCatalog.get() );
         const hashed_string season = pState->getClock().getSeasonName();
         for ( int32 y = 0; y < kFieldHeight; ++y )
         {
@@ -118,7 +119,7 @@ namespace sw
 
     void MeadowFarmGameModeComponent::onGameStarted()
     {
-        SW_LOG_INFO_ID( "MeadowFarm.VillageOpenHoldSpace", "[Meadow] the village is open - hold Space to fast-forward, E to talk to a visitor" );
+        SW_LOG_INFO_ID( "MeadowFarm.VillageOpenHoldSpace", "[Meadow] the village is open - hold fast forward to speed up the clock, use the talk action to talk to a visitor" );
     }
 
     void MeadowFarmGameModeComponent::updateGame( float32 deltaTime )
@@ -129,7 +130,7 @@ namespace sw
         if ( pState == nullptr || pWallet == nullptr )
             return;
         // 키는 입력 맵(`data/gamesettings.xml` 의 입력 맵 묶음)이 정한다. 시계를 미는 것은 밭 디렉터 하나다(마을은 읽기만).
-        const bool bFastForward = isAutoPlayOn() || isActionDown( hashed_string( MeadowVillageData::kFastForwardAction ) );
+        const bool bFastForward = isAutoPlayOn() || isActionDown( hashed_string( CommonInputActions::kFastForward ) );
         if ( _speed.setTimeScale( bFastForward ? _fastTimeScale : 1.0f ) == false || pState->getClock().setTimeScale( _speed.getTimeScale() ) == false )
             return; // 배속은 디렉터의 GameSpeedControl 이 쥐고 공유 시계가 받는다(감사 K-10)
         for ( const WorldClockEvent& clockEvent : pState->getClockEvents() )
@@ -143,8 +144,7 @@ namespace sw
     {
         const hashed_string season = state.getClock().getSeasonName(); // 계절은 공유 시계의 데이터
         _field.advanceDay( season, false );
-        const CropCatalog* pCrops = game::findSubsystem<const CropCatalog>();
-        int32              earned = 0;
+        int32 earned = 0;
         for ( int32 y = 0; y < kFieldHeight; ++y )
         {
             for ( int32 x = 0; x < kFieldWidth; ++x )
@@ -157,11 +157,11 @@ namespace sw
                 }
                 hashed_string produce;
                 int32         count           = 0;
-                const bool    bHarvestedCrops = _field.harvest( x, y, produce, count ) == FarmActionResult::Done && 0 < count && pCrops != nullptr;
+                const bool    bHarvestedCrops = _field.harvest( x, y, produce, count ) == FarmActionResult::Done && 0 < count;
                 if ( bHarvestedCrops )
                 {
-                    earned += pCrops->findSellPrice( produce ) * count;
-                    (void)state.getFlags().addFlag( hashed_string( MeadowVillageData::kHarvestedFlag ), count );
+                    earned += _pCropCatalog->findSellPrice( produce ) * count;
+                    (void)state.getFlags().addFlag( hashed_string( kHarvestedFlag ), count );
                 }
                 replant( x, y, season );
             }
@@ -179,7 +179,9 @@ namespace sw
     {
         (void)_field.till( x, y );
         (void)_field.water( x, y );
-        (void)_field.plant( x, y, "turnip_seed", season );
+        const CropDef* const pCrop = _pCropCatalog->findCrop( _crop.key() ); // 판을 열 때 보았다 — 다시 읽은 카탈로그가 지웠으면 심지 않는다
+        if ( pCrop != nullptr )
+            (void)_field.plant( x, y, pCrop->_seedItem, season );
     }
 
     void MeadowFarmGameModeComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
