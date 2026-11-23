@@ -6,11 +6,11 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Spatial/PositionWelder.h"
 
+#include "Engine/Content/AssetRegistry.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Physics/Collision/PhysicsShape.h"
-#include "Engine/Serialization/Inherit/AssetRedirect.h"
 
 namespace sw
 {
@@ -47,8 +47,8 @@ namespace sw
                 return true;
             }
 
-            /** @brief 표의 키입니다 — 소문자로 접은 지금 id 라 다른 철자 · 옮긴 메시의 옛 id 도 같은 칸에 닿습니다(`AssetRedirect::toCacheKey`). */
-            static string makeKey( string_view path ) { return AssetRedirect::toCacheKey( path ); }
+            /** @brief 표의 키입니다 — 소문자로 접은 지금 경로라 다른 철자 · GUID 참조 글도 같은 칸에 닿습니다(`AssetRegistry::toCacheKey`). */
+            static string makeKey( string_view path ) { return AssetRegistry::toCacheKey( path ); }
         };
     } // namespace
 } // namespace sw

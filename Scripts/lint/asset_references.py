@@ -3,8 +3,8 @@
 """
 Scripts/lint/asset_references.py
 
-에셋 참조 검사 — 참조 칸은 아직 경로로 가리키므로(언리얼 소프트 경로와 같다 — GUID 로 바꾸는 일은 docs/NEXT.md 의 2 단계) 끊어진 경로를 커밋 전에 잡는다.
-정체성(GUID · `.meta`)의 짝은 `asset_identity.py`(`asset-ids`)가 본다.
+에셋 참조 검사 — 경로 글로 적은 참조(`PROPERTY( AssetPath )` 칸 · CMake · 아직 옮기지 않은 파일)가 끊어지면 커밋 전에 잡는다.
+GUID 로 적은 참조(`guid:<32자>`)는 색인을 짓는 쪽(`App --check-asset-refs` · 쿠킹)이 본다. 정체성(GUID · `.meta`)의 짝은 `asset_identity.py`(`asset-ids`)가 본다.
 
 - 어떤 칸이 경로인지는 리플렉션 선언이 정하고 파서가 낸 표(`Config/Dev/AssetReferenceFields.generated.json`) 한 곳에 모인다. 도메인 · 확장자는
   `Config/Dev/AssetReferenceFields.json`, 임포트 폴더는 `Config/Dev/AssetIdentity.json` 이다. 같은 파일을 C++ 검사(`App --check-asset-refs`,
@@ -12,8 +12,6 @@ Scripts/lint/asset_references.py
   글 모양을 짐작하는 정규식으로 찾지 않는다 — 칸 이름이 목록에 있는 속성 · 요소 글 · JSON 키의 값만, 그 안에서도 도메인(`engine/` …)으로 시작하는 낱말만 경로다.
 - 있음 판정은 **스테이지(인덱스)** 기준이다. 커밋하지 않은 파일은 없는 것으로 본다(작업 트리에만 있는 파일을 가리킨 커밋은 다른 체크아웃에서 끊긴다).
   임포트 산출물(`models/` · `textures/` · `heightfields/`)은 커밋하지 않으므로 같은 자리의 원본(`models_raw/<이름>.glb` 등)이 있으면 있다.
-- 옮긴 에셋의 옛 id(도메인 뿌리의 `redirects.xml`, 런타임 `AssetRedirect`)는 엔진이 풀어 읽지만, 저장소 안의 참조는 새 id 로 고친다 — 남은 옛 참조를
-  보고한다(언리얼 "Fix Up Redirectors" 자리). 리다이렉트는 저장소 밖(세이브 · 서버 · 배포된 팩)에 적힌 옛 경로를 살리려고 있다.
 - 검사 범위는 인덱스의 모든 참조 파일(Content 의 글 에셋 + `listCMakeFile`)이다 — 지우거나 옮긴 에셋을 가리키던 다른 파일(역참조)도 같은 판정에서 잡힌다.
   참조 파일마다 뽑은 경로는 블롭 id 키 색인(`index_cache`)에 두어 커밋마다 바뀐 파일만 다시 읽는다. 저장소가 깨끗해야 하므로(ctest 가 지킨다) 걸린 것은 모두 이 커밋이 고칠 몫이다.
 """
@@ -23,7 +21,6 @@ from __future__ import annotations
 import json
 import re
 import sys
-import xml.etree.ElementTree as ElementTree
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Iterable
@@ -290,7 +287,7 @@ def is_referrer(relative_path: str, config: FieldConfig) -> bool:
     if not lowered.startswith(CONTENT_FOLDER.lower() + "/") or not lowered.endswith(config.list_text_extension):
         return False
     if lowered.rsplit("/", 1)[-1] == REDIRECT_FILE_NAME:
-        return False   # 리다이렉트 표는 옛 id 를 적는 글이다 — 참조가 아니다(`from` 은 다른 형식의 경로 칸 이름이기도 하다, C++ `AssetReferenceFields::isReferrer` 와 같다)
+        return False   # 리다이렉트 표는 저장된 기록의 옛 경로를 적는 글이다 — 참조가 아니다(`from` 은 다른 형식의 경로 칸 이름이기도 하다, C++ `AssetReferenceFields::isReferrer` 와 같다)
     asset_id = lowered[len(CONTENT_FOLDER) + 1:]
     if any(asset_id.startswith(domain + "/") for domain in config.list_unchecked_domain):
         return False
@@ -329,27 +326,6 @@ def read_index_blobs(project_root: Path, list_relative_path: list[str]) -> dict[
 
 
 
-def is_redirect_table(relative_path: str) -> bool:
-    """`Content/<도메인>/redirects.xml`(게임 팩은 `Content/game/<팩>/redirects.xml`)인지."""
-    parts = relative_path.replace("\\", "/").split("/")
-    return parts[0] == CONTENT_FOLDER and parts[-1] == REDIRECT_FILE_NAME and len(parts) in (3, 4)
-
-
-def parse_redirects(map_text: dict[str, str]) -> dict[str, str]:
-    """리다이렉트 표들의 옛 id → 새 id 입니다. 틀린 표는 런타임이 기동을 멈추므로 여기서는 읽히는 줄만 모은다."""
-    map_old_to_new: dict[str, str] = {}
-    for relative_path, text in map_text.items():
-        try:
-            root = ElementTree.fromstring(text)
-        except ElementTree.ParseError:
-            continue
-        for node in root.iter("Redirect"):
-            source, target = node.get("from"), node.get("to")
-            if source and target:
-                map_old_to_new[source] = target
-    return map_old_to_new
-
-
 def make_redirect_table_id(asset_id: str) -> str:
     """리소스 id 가 속한 도메인의 표 id(`<도메인>/redirects.xml`) — 도메인은 첫 마디, `game/<팩>` · `dlc/<묶음>` 은 두 마디(C++ `AssetRedirect::makeTableID`)."""
     parts = asset_id.split("/")
@@ -357,64 +333,18 @@ def make_redirect_table_id(asset_id: str) -> str:
     return f"{domain}/{REDIRECT_FILE_NAME}"
 
 
-REDIRECT_ID_CHARACTERS = frozenset("abcdefghijklmnopqrstuvwxyz0123456789_.-/")
+def collect_problems(list_relative_path: list[str], map_text: dict[str, str], assets: AssetSet, config: FieldConfig) -> list[str]:
+    """참조 파일들에서 없는 경로를 `파일:줄: 칸 = '경로'` 로 모읍니다."""
+    return collect_reference_problems({path: extract_references(path, map_text[path], config) for path in list_relative_path}, assets, config)
 
 
-REDIRECT_ELEMENT = "Redirect"
-PREFIX_REDIRECT_ELEMENT = "PrefixRedirect"   # 폴더 접두 줄(C++ `kPrefixRedirectElement`) — 팩을 통째로 옮기면 파일마다가 아니라 한 줄
-
-
-def add_redirects(table_text: str | None, list_move: list[tuple[str, str]], list_prefix_move: list[tuple[str, str]] = ()) -> str:
-    """표 글(없으면 None)에 옮기기(옛 id, 새 id)와 폴더 접두 옮기기(옛 폴더, 새 폴더)를 더한 글을 돌려준다 — C++ `AssetRedirect::addToXMLText` 와 같은 규칙 · 같은 글 모양.
-
-    옮긴 자리(새 id)를 옛 id 로 둔 줄은 뺀다(그 id 에 다시 에셋이 산다 — 남기면 되돌린 옮기기가 순환이 된다). 같은 옛 id 의 줄은 새 줄로 바꾼다. 사슬은 둔다.
-    접두 줄은 접두 줄끼리 같은 규칙이고 파일 옮기기가 건드리지 않는다(런타임은 정확한 줄을 먼저 본다).
-    틀린 표 · 맞춤 꼴이 아닌 id · 순환이면 ValueError — 런타임이 기동을 멈출 표를 쓰지 않는다.
-    """
-    list_entry: list[tuple[str, str, str]] = []   # (원소, from, to) — 글 순서 그대로
-    if table_text is not None:
-        root = ElementTree.fromstring(table_text)   # 틀린 XML 은 ParseError(ValueError 가 아니다 — 부른 쪽이 그대로 멈춘다)
-        if root.tag != "Redirects":
-            raise ValueError(f"리다이렉트 표의 뿌리가 <Redirects> 가 아니다: <{root.tag}>")
-        for node in root:
-            if node.tag not in (REDIRECT_ELEMENT, PREFIX_REDIRECT_ELEMENT) or not node.get("from") or not node.get("to"):
-                raise ValueError(f"리다이렉트 표에 틀린 줄이 있다: <{node.tag} {node.attrib}>")
-            list_entry.append((node.tag, node.get("from"), node.get("to")))
-    for tag, list_pair in ((REDIRECT_ELEMENT, list_move), (PREFIX_REDIRECT_ELEMENT, list_prefix_move)):
-        for old_id, new_id in list_pair:
-            for asset_id in (old_id, new_id):
-                if not asset_id or not set(asset_id) <= REDIRECT_ID_CHARACTERS or asset_id.startswith("/") or asset_id.endswith("/") or "//" in asset_id or "/../" in f"/{asset_id}/":
-                    raise ValueError(f"'{asset_id}' 는 맞춤 꼴 리소스 id 가 아니다")
-            if old_id == new_id:
-                raise ValueError(f"'{old_id}' 를 자기 자신으로 옮긴다")
-            list_entry = [entry for entry in list_entry if entry[0] != tag or entry[1] not in (old_id, new_id)] + [(tag, old_id, new_id)]
-    map_old_to_new = {source: target for tag, source, target in list_entry if tag == REDIRECT_ELEMENT}
-    if len(map_old_to_new) + len({source for tag, source, _ in list_entry if tag == PREFIX_REDIRECT_ELEMENT}) != len(list_entry):
-        raise ValueError("리다이렉트 표에 같은 옛 id 가 두 번 있다")
-    for start in map_old_to_new:
-        target, steps = map_old_to_new[start], 0
-        while target in map_old_to_new:
-            target, steps = map_old_to_new[target], steps + 1
-            if steps > len(map_old_to_new):
-                raise ValueError(f"리다이렉트가 '{start}' 에서 순환한다")
-    return "<Redirects>\n" + "".join(f'\t<{tag} from="{source}" to="{target}" />\n' for tag, source, target in list_entry) + "</Redirects>\n"
-
-
-def collect_problems(list_relative_path: list[str], map_text: dict[str, str], assets: AssetSet, config: FieldConfig, map_redirect: dict[str, str] | None = None) -> list[str]:
-    """참조 파일들에서 없는 경로와 옮긴 에셋의 옛 id 를 `파일:줄: 칸 = '경로'` 로 모읍니다."""
-    return collect_reference_problems({path: extract_references(path, map_text[path], config) for path in list_relative_path}, assets, config, map_redirect)
-
-
-def collect_reference_problems(map_reference: dict[str, list[Reference]], assets: AssetSet, config: FieldConfig, map_redirect: dict[str, str] | None = None) -> list[str]:
+def collect_reference_problems(map_reference: dict[str, list[Reference]], assets: AssetSet, config: FieldConfig) -> list[str]:
     list_problem: list[str] = []
-    map_redirect = map_redirect or {}
     for relative_path, list_reference in map_reference.items():
         for reference in list_reference:
             if not is_checked(reference, config):
                 continue
-            if reference.path in map_redirect:
-                list_problem.append(f"{relative_path}:{reference.line}: {reference.field} = '{reference.path}' 는 옮긴 에셋의 옛 id 다 — '{map_redirect[reference.path]}' 로 고친다")
-            elif not resolves(reference.path, assets, config):
+            if not resolves(reference.path, assets, config):
                 list_problem.append(f"{relative_path}:{reference.line}: {reference.field} = '{reference.path}' 가 없습니다")
     return list_problem
 
@@ -433,24 +363,18 @@ def check_asset_references(project_root: Path, scope: LintScope) -> list[str]:
     prefix = CONTENT_FOLDER + "/"
     assets = AssetSet(path[len(prefix):] for path in list_index if path.startswith(prefix))
     list_referrer = [path for path in list_index if is_referrer(path, config)]
-    list_redirect = [path for path in list_index if is_redirect_table(path)]
-    # 리다이렉트 표도 사실 색인에 둔다 — 스테이지 파일 하나를 볼 때마다 표 전체를 다시 읽지 않는다(요약 토큰이 `옛 id\t새 id` 쌍이다).
-    redirects = open_facts(project_root, "asset-redirects", [__file__], list_redirect, lambda path, text: sorted(parse_redirects({path: text}).items()),
-                           map_key=map_key, read_texts=lambda list_path: read_index_blobs(project_root, list_path),
-                           contribute=lambda _, list_pair: [f"{old}\t{new}" for old, new in list_pair])
-    map_redirect = dict(token.split("\t", 1) for token in redirects.summary)
     def open_references(**options: Any) -> Facts:
         return open_facts(project_root, "asset-refs", [__file__, str(project_root / CONFIG_PATH), str(project_root / GENERATED_PATH), str(project_root / RULES_PATH)], list_referrer,
                          lambda path, text: [[reference.line, reference.field, reference.start, reference.end, reference.path] for reference in extract_references(path, text, config)],
                          map_key=map_key, read_texts=lambda list_path: read_index_blobs(project_root, list_path), contribute=lambda _, list_row: [row[4] for row in list_row], **options)
 
-    # 판정은 참조한 경로만으로 난다(옮긴 옛 id · 없는 경로) — 요약(경로마다 참조 수)으로 거르고, 걸린 것이 있을 때만 사실 전체를 읽어 줄 번호를 낸다.
-    list_failing = [path for path in open_references().summary if is_checked_path(path, config) and (path in map_redirect or not resolves(path, assets, config))]
+    # 판정은 참조한 경로만으로 난다(없는 경로) — 요약(경로마다 참조 수)으로 거르고, 걸린 것이 있을 때만 사실 전체를 읽어 줄 번호를 낸다.
+    list_failing = [path for path in open_references().summary if is_checked_path(path, config) and not resolves(path, assets, config)]
     if not list_failing:
         return []
     map_fact = open_references(want=list_referrer).map_fact   # 걸린 때만 — 줄 번호를 내려고 모든 조각을 읽는다
     map_reference = {path: [Reference(*row) for row in list_row] for path, list_row in map_fact.items()}
-    return collect_reference_problems(map_reference, assets, config, map_redirect)
+    return collect_reference_problems(map_reference, assets, config)
 
 
 def check_working_tree(project_root: Path) -> list[str]:
@@ -461,31 +385,7 @@ def check_working_tree(project_root: Path) -> list[str]:
     assets = AssetSet(path[len(prefix):] for path in list_index if path.startswith(prefix))
     list_referrer = [path for path in list_index if is_referrer(path, config)]
     map_text = {path: (project_root / path).read_text(encoding="utf-8", errors="replace") for path in list_referrer}
-    map_redirect = parse_redirects({path: (project_root / path).read_text(encoding="utf-8", errors="replace") for path in list_index if is_redirect_table(path)})
-    return collect_problems(list_referrer, map_text, assets, config, map_redirect)
-
-
-def run_self_check() -> None:
-    """리다이렉트 표 쓰기 규칙 — C++ `AssetRedirectTest.MovesAddLinesAndMovingBackReplacesThem` 과 같은 사례 · 같은 글."""
-    assert make_redirect_table_id("game/playground/maps/a.scene.xml") == "game/playground/redirects.xml"
-    assert make_redirect_table_id("common/data/a.xml") == "common/redirects.xml"
-    first = add_redirects(None, [("common/data/a.xml", "common/data/b.xml")])
-    assert first == '<Redirects>\n\t<Redirect from="common/data/a.xml" to="common/data/b.xml" />\n</Redirects>\n', first
-    chained = add_redirects(first, [("common/data/b.xml", "common/data/c.xml")])
-    assert parse_redirects({"t": chained}) == {"common/data/a.xml": "common/data/b.xml", "common/data/b.xml": "common/data/c.xml"}
-    back = add_redirects(chained, [("common/data/c.xml", "common/data/a.xml")])
-    assert parse_redirects({"t": back}) == {"common/data/b.xml": "common/data/c.xml", "common/data/c.xml": "common/data/a.xml"}, back
-    prefixed = add_redirects(None, [], [("game/oldpack", "game/newpack")])   # C++ `AssetRedirectTest.PrefixRedirectsMoveWholeFolders` 와 같은 글
-    assert prefixed == '<Redirects>\n\t<PrefixRedirect from="game/oldpack" to="game/newpack" />\n</Redirects>\n', prefixed
-    kept = add_redirects(prefixed, [("game/newpack/a.xml", "game/newpack/b.xml")])
-    assert kept == prefixed.replace("</Redirects>", '\t<Redirect from="game/newpack/a.xml" to="game/newpack/b.xml" />\n</Redirects>'), kept
-    for bad in (lambda: add_redirects("<Moves/>", [("common/a.xml", "common/b.xml")]), lambda: add_redirects(None, [("Common/A.xml", "common/b.xml")]),
-                lambda: add_redirects(None, [("common/a.xml", "common/a.xml")]), lambda: add_redirects(None, [], [("game/a/", "game/b")])):
-        try:
-            bad()
-        except ValueError:
-            continue
-        raise AssertionError("틀린 표 · id 를 받았다")
+    return collect_problems(list_referrer, map_text, assets, config)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -493,11 +393,7 @@ def main(argv: list[str] | None = None) -> int:
     from common.exit_code import ExitCode
     from common.paths import get_project_root
     parser = argparse.ArgumentParser(description="작업 트리의 에셋 참조(Config/Dev/AssetReferenceFields.json 의 칸)가 모두 있는지 본다")
-    parser.add_argument("--self-check", action="store_true", help="리다이렉트 표 쓰기 규칙만 본다")
-    if parser.parse_args(argv).self_check:
-        run_self_check()
-        print("[AssetReferences] self-check OK")
-        return ExitCode.PASSED
+    parser.parse_args(argv)
     list_problem = check_working_tree(get_project_root())
     for problem in list_problem:
         print(f"  - {problem}")

@@ -15,11 +15,14 @@ namespace sw
     {
         struct AssetPackIndexInternal
         {
-            static constexpr const utf8* kRootName    = "AssetIndex";
-            static constexpr const utf8* kEntryName   = "Asset";
-            static constexpr const utf8* kVersionAttr = "formatVersion";
-            static constexpr const utf8* kGUIDAttr    = "guid";
-            static constexpr const utf8* kPathAttr    = "path";
+            static constexpr const utf8* kRootName     = "AssetIndex";
+            static constexpr const utf8* kEntryName    = "Asset";
+            static constexpr const utf8* kVersionAttr  = "formatVersion";
+            static constexpr const utf8* kGUIDAttr     = "guid";
+            static constexpr const utf8* kPathAttr     = "path";
+            static constexpr const utf8* kRedirectName = "IdentityRedirect";
+            static constexpr const utf8* kFromAttr     = "from";
+            static constexpr const utf8* kToAttr       = "to";
 
             /** @brief 줄들에 겹친 GUID · 경로(대소문자 무시)가 없으면 빈 결과, 있으면 그 까닭입니다. 정렬된 목록을 받는다. */
             [[nodiscard]] static expected<void> validateUnique( const vector<AssetPackIndexEntry>& listSorted )
@@ -59,6 +62,12 @@ namespace sw
             line.appendAttribute( Internal::kGUIDAttr, string_view{ entry._guid.toString() } );
             line.appendAttribute( Internal::kPathAttr, string_view{ entry._path } );
         }
+        for ( const AssetIdentityRedirect& redirect : _listRedirect ) // 표의 글 순서다 — 같은 입력은 같은 바이트
+        {
+            const XMLNode line = root.appendChild( Internal::kRedirectName );
+            line.appendAttribute( Internal::kFromAttr, string_view{ redirect._from.toString() } );
+            line.appendAttribute( Internal::kToAttr, string_view{ redirect._to.toString() } );
+        }
         return document.saveToString();
     }
 
@@ -74,6 +83,15 @@ namespace sw
         AssetPackIndex index;
         for ( XMLNode line = root.findChild(); line.isValid(); line = line.findNextSibling() )
         {
+            if ( string_view{ line.getName() } == Internal::kRedirectName )
+            {
+                const optional<AssetGUID> from = AssetGUID::tryParse( line.getAttributeText( Internal::kFromAttr ) );
+                const optional<AssetGUID> to   = AssetGUID::tryParse( line.getAttributeText( Internal::kToAttr ) );
+                if ( from.has_value() == false || to.has_value() == false )
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "an asset index line is not <IdentityRedirect from to>", sourceName } );
+                index._listRedirect.push_back( AssetIdentityRedirect{ *from, *to } );
+                continue;
+            }
             const optional<AssetGUID> guid = AssetGUID::tryParse( line.getAttributeText( Internal::kGUIDAttr ) );
             if ( string_view{ line.getName() } != Internal::kEntryName || guid.has_value() == false )
                 return unexpected( Error{ ErrorKind::InvalidArgument, "an asset index line is not <Asset guid path>", sourceName } );

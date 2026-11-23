@@ -16,9 +16,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 from common.git import run_git_or_raise  # noqa: E402
 from dev.move_asset import (PackAbsorb, PackRename, get_pack_absorb, get_pack_rename, is_domain_root, is_pack_string_file, list_golden_renames,  # noqa: E402
-                            list_leftover_patterns, rewrite_absorbed_strings, rewrite_pack_strings, rewrite_table_targets, write_redirects)
-from lint.asset_identity import FOUND, read_header  # noqa: E402
-from lint.asset_references import add_redirects  # noqa: E402
+                            list_leftover_patterns, rewrite_absorbed_strings, rewrite_pack_strings, rewrite_redirect_tables, rewrite_table_targets)
 
 RENAME = PackRename("oldpack", "newpack")
 
@@ -112,28 +110,20 @@ class MoveAssetPackAbsorbTest(unittest.TestCase):
 
 
 class MoveAssetRedirectTest(unittest.TestCase):
-    def test_prefix_line_survives_later_file_moves(self) -> None:
-        prefixed = add_redirects(None, [], [("game/oldpack", "game/newpack")])
-        self.assertEqual(prefixed, '<Redirects>\n\t<PrefixRedirect from="game/oldpack" to="game/newpack" />\n</Redirects>\n')
-        moved = add_redirects(prefixed, [("game/newpack/a.xml", "game/newpack/b.xml")])
-        self.assertIn('<PrefixRedirect from="game/oldpack" to="game/newpack" />', moved)
-        self.assertIn('<Redirect from="game/newpack/a.xml" to="game/newpack/b.xml" />', moved)
-        with self.assertRaises(ValueError):
-            add_redirects(prefixed, [], [("game/oldpack", "game/oldpack")])
-
-    def test_root_move_writes_one_prefix_line_in_the_new_domain_table(self) -> None:
+    def test_moves_only_fix_where_saved_paths_point_and_add_no_lines(self) -> None:
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
             run_git_or_raise(["init", "-q"], cwd=root)
-            written = write_redirects(root, [], ("game/oldpack", "game/newpack"))
-            self.assertEqual(written, ["Content/game/newpack/redirects.xml"])
-            text = (root / "Content/game/newpack/redirects.xml").read_text(encoding="utf-8")
-            state, guid = read_header(text)
-            self.assertEqual(state, FOUND)   # 새 표도 정체성 머리를 단다(asset-ids 검사)
-            self.assertEqual(text, f'<?asset guid="{guid}"?>\n<Redirects>\n\t<PrefixRedirect from="game/oldpack" to="game/newpack" />\n</Redirects>\n')
-            write_redirects(root, [("game/newpack/a.xml", "game/newpack/b.xml")])
-            self.assertEqual(read_header((root / "Content/game/newpack/redirects.xml").read_text(encoding="utf-8")), (FOUND, guid))   # 있던 표는 머리를 지킨다
-            self.assertFalse((root / "Content/game/oldpack").exists())   # 옛 팩 폴더를 표 하나로 되살리지 않는다
+            table_path = root / "Content/game/pack/redirects.xml"
+            table_path.parent.mkdir(parents=True)
+            guid = "0123456789abcdef0123456789abcdef"
+            identity = '\t<IdentityRedirect from="00000000000000000000000000000001" to="00000000000000000000000000000002" />\n'
+            table_path.write_text(f'<?asset guid="{guid}"?>\n<Redirects>\n\t<Redirect from="game/old/a.xml" to="game/pack/a.xml" />\n{identity}</Redirects>\n', encoding="utf-8", newline="\n")
+            run_git_or_raise(["add", "Content"], cwd=root)
+            self.assertEqual(rewrite_redirect_tables(root, [("game/pack/a.xml", "game/pack/sub/b.xml", False)]), ["Content/game/pack/redirects.xml"])
+            self.assertEqual(table_path.read_text(encoding="utf-8"),
+                             f'<?asset guid="{guid}"?>\n<Redirects>\n\t<Redirect from="game/old/a.xml" to="game/pack/sub/b.xml" />\n{identity}</Redirects>\n')
+            self.assertEqual(rewrite_redirect_tables(root, [("game/pack/other.xml", "game/pack/x.xml", False)]), [])
 
 
 if __name__ == "__main__":

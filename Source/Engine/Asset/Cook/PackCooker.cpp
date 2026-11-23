@@ -35,6 +35,7 @@
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Serialization/Format/JSONSerializer.h"
+#include "Engine/Serialization/Inherit/AssetRedirect.h"
 #include "Engine/Serialization/Inherit/DataCatalogReferences.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
 #include "Engine/Serialization/Inherit/ResourceComposer.h"
@@ -725,6 +726,19 @@ namespace sw
                 return true;
             }
 
+            /** @brief 도메인 리다이렉트 표의 정체성 대체 줄을 팩 색인에 더합니다. 읽지 못했거나 틀렸으면 이유가 남고 false 입니다. */
+            [[nodiscard]] static bool addIdentityRedirects( const PackItem& item, AssetPackIndex& inoutIndex )
+            {
+                string text;
+                if ( AssetIO::readTextFile( item._absPath, text ) == false )
+                    return false;
+                const expected<vector<AssetIdentityRedirect>> rows = AssetRedirect::parseIdentityRows( text, item._absPath );
+                if ( rows.has_value() == false )
+                    return false;
+                inoutIndex._listRedirect.insert( inoutIndex._listRedirect.end(), rows->begin(), rows->end() );
+                return true;
+            }
+
             /**
              * @brief 팩 쿠킹 요약 한 줄을 남깁니다 — 단계별 ms 로 병렬 압축의 효과를 잰다.
              * @details `compress` 는 `벽시계 / CPU 합` 이다(CPU 합이 직렬로 돌았다면 든 시간이라 둘의 비가 병렬 효과). `hash` 는 입력 내용 해시(`readSourceFile` · `readStagedFile`)와 출력 내용 해시(`CookStore` 의 재사용 판정 · 기록)에 쓴 시간이고,
@@ -986,6 +1000,9 @@ namespace sw
                     for ( const PackItem& item : listing._listItem ) // 색인은 도메인 전체다 — 다른 몫에 담긴 원본도 센다
                     {
                         if ( item._source == PackItemSource::Source && addPackedIdentity( identityRules, domain, item, identityIndex ) == false )
+                            return kFailed;
+                        // 정체성 대체 줄은 색인이 나른다 — 런타임은 색인만 합친다.
+                        if ( item._source == PackItemSource::Source && item._relativePath == AssetRedirect::kFileName && addIdentityRedirects( item, identityIndex ) == false )
                             return kFailed;
                     }
                     // 닿았지만 이 대상이 싣지 않는 원본(셰이더 원본, 전용 서버의 텍스처)도 줄은 싣는다 — 줄이 없으면 그것을 가리키는 GUID 참조가 풀리지 않아 읽기가 진다.

@@ -14,13 +14,13 @@
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Asset/Cache/BuiltInAssetCache.h"
 #include "Engine/Asset/Cache/WeakInternTable.h"
+#include "Engine/Content/AssetRegistry.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Mesh/IMeshDerivedCache.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Graphics/Mesh/MeshUtil.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
-#include "Engine/Serialization/Inherit/AssetRedirect.h"
 #include "Engine/Serialization/Serializer/ReloadResult.h"
 
 namespace sw
@@ -62,8 +62,8 @@ namespace sw
                 return s_stats;
             }
 
-            /** @brief 테이블의 키입니다 — 소문자로 접은 지금 id 라 핫 리로드가 넘긴 철자 · 옮긴 에셋의 옛 id 도 같은 항목에 닿습니다(`AssetRedirect::toCacheKey`). */
-            static string makeKey( string_view path ) { return AssetRedirect::toCacheKey( path ); }
+            /** @brief 테이블의 키입니다 — 소문자로 접은 지금 경로라 핫 리로드가 넘긴 철자 · GUID 참조 글도 같은 항목에 닿습니다(`AssetRegistry::toCacheKey`). */
+            static string makeKey( string_view path ) { return AssetRegistry::toCacheKey( path ); }
 
             /** @brief 그 경로를 지금 보관 중인 메시입니다. 없으면 nullptr 입니다. */
             static shared_ptr<Mesh> findLive( string_view path ) { return getState()._sharedTable.findLive( makeKey( path ) ); }

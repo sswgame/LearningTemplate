@@ -162,3 +162,42 @@ SW_TEST_CASE( AssetRegistryTest, ReferenceTextReadsAndWritesOneWay )
     SW_EXPECT_EQUAL( string( "guid:0000000000000000000000000000f00d" ), AssetRegistry::makeReferenceText( byPath->_path, byPath->_guid ) );
     SW_EXPECT_EQUAL( string( "game/playground" ), AssetRegistry::makeReferenceText( unindexed->_path, unindexed->_guid ) );
 }
+
+/**
+ * @brief [AssetRegistryTest] 정체성 대체 줄은 그 GUID 의 에셋이 없을 때만 따라간다(사슬은 접는다) — 살아 있는 에셋이 먼저이고, 푼 참조는 남은 쪽의 GUID 로 다시 쓰인다. 순환은 합치기 오류다
+ */
+SW_TEST_CASE( AssetRegistryTest, IdentityRedirectsFollowOnlyMissingAssets )
+{
+    using Util              = AssetRegistryTestUtil;
+    const AssetGUID merged  = Util::makeGUID( "0000000000000000000000000000fe01" );
+    const AssetGUID between = Util::makeGUID( "0000000000000000000000000000fe02" );
+    const AssetGUID kept    = Util::makeGUID( "0000000000000000000000000000fe03" );
+    const AssetGUID alive   = Util::makeGUID( "0000000000000000000000000000fe04" );
+
+    AssetRegistryLayer layer = Util::makeLayer( "one", {
+                                                           { kept,  "common/kept.xml"},
+                                                           {alive, "common/alive.xml"}
+    } );
+    layer._listRedirect      = {
+        AssetIdentityRedirect{ merged, between},
+        AssetIdentityRedirect{between,    kept},
+        AssetIdentityRedirect{  alive,    kept}
+    };
+    const expected<AssetRegistry> registry = AssetRegistry::merge( vector<AssetRegistryLayer>{ layer } );
+    SW_REQUIRE_TRUE( registry.has_value() );
+    SW_EXPECT_EQUAL( string( "common/kept.xml" ), registry->findPath( merged ).value_or( string{} ) );
+    SW_EXPECT_EQUAL( string( "common/alive.xml" ), registry->findPath( alive ).value_or( string{} ) );
+
+    AssetRegistry                        previous = AssetRegistry::install( *registry );
+    const expected<AssetReferenceTarget> target   = AssetRegistry::readReferenceText( AssetRegistry::makeReferenceText( merged ) );
+    (void)AssetRegistry::install( std::move( previous ) );
+    SW_REQUIRE_TRUE( target.has_value() );
+    SW_EXPECT_TRUE( target->_guid == kept );
+
+    AssetRegistryLayer loop = Util::makeLayer( "loop", {} );
+    loop._listRedirect      = {
+        AssetIdentityRedirect{ merged, between},
+        AssetIdentityRedirect{between,  merged}
+    };
+    SW_EXPECT_FALSE( AssetRegistry::merge( vector<AssetRegistryLayer>{ loop } ).has_value() );
+}

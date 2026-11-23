@@ -20,7 +20,6 @@
 #include "Engine/Asset/Cache/SharedAssetLoadOperation.h"
 #include "Engine/Asset/Cache/WeakInternTable.h"
 #include "Engine/Content/AssetID.h"
-#include "Engine/Serialization/Inherit/AssetRedirect.h"
 
 namespace sw
 {
@@ -149,11 +148,10 @@ namespace sw
 
     private:
         /**
-         * @brief 표의 키입니다 — 핫 리로드가 같은 칸을 찾도록 구분자를 맞추고, 옮긴 에셋의 옛 id 는 지금 id 로 풉니다(`AssetRedirect`).
-         * @details 요청 글을 그대로 키로 쓰면 옛 id 와 지금 id 가 같은 파일을 두 칸에 두 벌 올렸다(A-20) — 리소스 입구가 읽을 때 푸는 것과 같은 표로 키를 정한다.
-         *          언리얼도 리다이렉터를 따라간 뒤의 패키지 이름으로 로드된 객체를 찾는다.
+         * @brief 표의 키입니다 — 핫 리로드가 같은 칸을 찾도록 구분자를 맞춥니다.
+         * @details 참조는 GUID 를 지금 경로로 풀어 온다(`AssetRefBase` · `DataPath`) — 한 에셋의 경로는 하나라 옮긴 에셋이 두 칸에 오르지 않는다.
          */
-        static string makeKey( string_view path ) { return AssetRedirect::toCurrentID( FileUtil::normalizeSeparators( path ) ); }
+        static string makeKey( string_view path ) { return FileUtil::normalizeSeparators( path ); }
         /** @brief 캐시 키(획득 · 리로드가 넘긴 경로)를 로더에 넘길 리소스 id 로 바꾸는 한 곳입니다. 공유 캐시의 키는 리소스 id 만 담는다. */
         static AssetID toAssetID( string_view path ) { return AssetID{ path }; }
 

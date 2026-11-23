@@ -41,7 +41,7 @@ namespace sw
         ResourceRemap::clear();
         if ( _settings->_resourceRemap.isSet() && ResourceRemap::loadFromAsset( AssetID{ _settings->_resourceRemap.get() } ) == false )
             return SubsystemInitResult::Failed;
-        // 옮긴 에셋의 리다이렉트 표(도메인마다 `redirects.xml`) — 게임 데이터 · 세이브를 읽기 전에 선다. 틀린 표는 기동을 멈춘다.
+        // 저장된 기록의 옛 경로 표(도메인마다 `redirects.xml`) — 세이브를 읽기 전에 선다. 틀린 표는 기동을 멈춘다.
         AssetRedirect::clear();
         if ( AssetRedirect::loadFromSearchDomains() == false )
             return SubsystemInitResult::Failed;

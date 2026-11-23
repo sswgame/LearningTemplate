@@ -12,6 +12,7 @@
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
+#include "Engine/Serialization/Inherit/AssetRedirect.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 #include "Engine/Serialization/JSON/JSONFields.h"
 
@@ -312,6 +313,9 @@ namespace sw
             case AssetIdentityIssueKind::InvalidMeta:
                 builder.appendFormat( "%#: the .meta is unreadable or names another source file", _assetID );
                 return string( builder.view() );
+            case AssetIdentityIssueKind::InvalidRedirect:
+                builder.appendFormat( "%#: an <IdentityRedirect> row of the redirect table is malformed (see the log)", _assetID );
+                return string( builder.view() );
             case AssetIdentityIssueKind::Unreadable:
                 builder.appendFormat( "%#: could not be read", _assetID );
                 return string( builder.view() );
@@ -349,6 +353,14 @@ namespace sw
                     break;
                 case AssetIdentityKind::Header:
                 {
+                    if ( AssetRedirect::isTable( assetID ) && AssetRedirect::makeTableID( assetID ) == assetID )
+                    {
+                        const expected<vector<AssetIdentityRedirect>> rows = AssetRedirect::parseIdentityRows( pFile->_text, assetID );
+                        if ( rows.has_value() )
+                            database._listRedirect.insert( database._listRedirect.end(), rows->begin(), rows->end() );
+                        else
+                            outListIssue.push_back( AssetIdentityIssue{ AssetIdentityIssueKind::InvalidRedirect, assetID, {} } );
+                    }
                     const AssetGUIDHeader header = AssetGUIDHeader::read( pFile->_text );
                     if ( header._state == AssetGUIDHeaderState::Found )
                         Internal::registerGUID( database._mapGUIDToPath, database._mapPathToGUID, *header._guid, assetID, outListIssue );
@@ -499,7 +511,7 @@ namespace sw
 
     AssetRegistryLayer AssetDatabase::makeRegistryLayer( string_view sourceName ) const
     {
-        AssetRegistryLayer layer{ string( sourceName ), {} };
+        AssetRegistryLayer layer{ string( sourceName ), {}, _listRedirect };
         layer._listEntry.reserve( _mapGUIDToPath.size() );
         for ( const auto& [guid, assetID] : _mapGUIDToPath )
         {

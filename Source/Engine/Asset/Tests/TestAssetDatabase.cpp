@@ -112,6 +112,33 @@ SW_TEST_CASE( AssetDatabaseTest, ImportedOutputsGetLinesFromTheirSource )
     SW_EXPECT_FALSE( database.findGUID( "common/models/_shared/materials/00ff.material" ).has_value() );
 }
 
+/** @brief [AssetDatabaseTest] 도메인 리다이렉트 표의 정체성 대체 줄은 색인 층에 실리고, 틀린 줄은 결함이다 */
+SW_TEST_CASE( AssetDatabaseTest, IdentityRedirectRowsJoinTheRegistryLayer )
+{
+    const AssetIdentityRules                 rules = AssetDatabaseTestUtil::makeRules();
+    const AssetGUID                          from  = AssetGUID::create();
+    const AssetGUID                          to    = AssetGUID::create();
+    StringBuilder<constant::buffer::kMax256> table;
+    table.appendFormat( "<Redirects><IdentityRedirect from=\"%#\" to=\"%#\"/></Redirects>", from.toString(), to.toString() );
+    vector<AssetIdentityIssue> listIssue;
+    const AssetRegistryLayer   layer =
+        AssetDatabase::build( vector<AssetIdentityFile>{
+                                  { "common/redirects.xml", AssetGUIDHeader::write( table.view(), AssetGUID::create() ) }
+    },
+                              rules, listIssue )
+            .makeRegistryLayer( "test" );
+    SW_EXPECT_TRUE( listIssue.empty() );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, layer._listRedirect.size() );
+    SW_EXPECT_TRUE( layer._listRedirect[0]._from == from && layer._listRedirect[0]._to == to );
+
+    SW_EXPECT_LOG( "AssetRedirect.IdentityRowInvalid" );
+    (void)AssetDatabase::build( vector<AssetIdentityFile>{
+                                    { "game/x/redirects.xml", AssetGUIDHeader::write( "<Redirects><IdentityRedirect from=\"x\" to=\"y\"/></Redirects>", AssetGUID::create() ) }
+    },
+                                rules, listIssue );
+    SW_EXPECT_TRUE( AssetDatabaseTestUtil::hasIssue( listIssue, AssetIdentityIssueKind::InvalidRedirect, "game/x/redirects.xml" ) );
+}
+
 /** @brief [AssetDatabaseTest] 디스크의 산출물 하나의 정체성(파일 감시 · 쿠킹)도 색인의 줄과 같다 */
 SW_TEST_CASE( AssetDatabaseTest, OutputOnDiskReadsTheIdentityOfItsSource )
 {

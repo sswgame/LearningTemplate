@@ -131,7 +131,6 @@ namespace sw::editor
                 string _referrerAbs; ///< 옮긴 뒤의 디스크 경로
                 string _originalText;
                 string _rewrittenText;
-                bool   _bNewFile{ false }; ///< 쓰기 전에 없던 파일(새 리다이렉트 표) — 되돌릴 때 원래 글을 쓰지 않고 지운다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
             };
 
             /** @brief 리소스 id 의 도메인입니다(`game/<팩>` · `common` · `engine` …). 옮기기 미리보기가 바깥 참조를 도메인별로 묶는다. */
@@ -186,7 +185,7 @@ namespace sw::editor
                 for ( const string& referrerID : listReferrerID )
                 {
                     if ( AssetRedirect::isTable( referrerID ) )
-                        continue;                                                                                               // 리다이렉트 표는 옛 id 를 적는 글이다 — 고칠 참조가 아니고, 줄은 prepareRedirectTables 가 더한다
+                        continue;                                                                                               // 리다이렉트 표의 옛 경로 줄은 고칠 참조가 아니다
                     const optional<AbsolutePath> referrerFile = editor::getSubsystem<AssetPaths>().findLooseFile( referrerID ); // 해석 하나(붙인 도메인 · 대소문자 규칙)
                     PreparedRewrite              rewrite{};
                     if ( referrerFile.has_value() == false || FileUtil::readTextFile( *referrerFile, rewrite._originalText ) == false )
@@ -220,73 +219,6 @@ namespace sw::editor
                     }
                     inoutPlan._listReferrerID.push_back( referrerID );
                     outListRewrite.push_back( std::move( rewrite ) );
-                }
-                return true;
-            }
-
-            /**
-             * @brief 옮기기마다 옛 id 도메인의 리다이렉트 표(`redirects.xml`)에 줄을 더한 글을 @p inoutListRewrite 끝에 더합니다(NEXT 5-5 R1).
-             * @details 저장소 안의 참조는 prepareRewrites 가 새 id 로 고치고, 표는 저장소 밖(세이브 · 서버 · 배포된 팩)에 적힌 옛 id 를 살린다 — 언리얼이 옮긴 자리에
-             *          리다이렉터를 남기는 것과 같다. 규칙(되돌린 옮기기 · 사슬)은 `AssetRedirect::addToXMLText` 한 곳이고 `move-asset` 도 같은 규칙으로 쓴다.
-             * @return 표를 읽지 못했거나 더한 표가 런타임에서 읽히지 않으면 false 입니다(`_failure` 에 이유 — 아무것도 옮기지 않는다).
-             */
-            [[nodiscard]] static bool prepareRedirectTables( const AssetReferenceFields& params, EditorAssetMovePlan& inoutPlan, vector<PreparedRewrite>& inoutListRewrite )
-            {
-                vector<string>         listTableID;
-                vector<string>         listTableAbs;
-                vector<vector<string>> listFrom;
-                vector<vector<string>> listTo;
-                for ( size_t moveIndex = 0; moveIndex < inoutPlan._listOldID.size(); ++moveIndex )
-                {
-                    const string& oldID = inoutPlan._listOldID[moveIndex];
-                    if ( AssetRedirect::isTable( oldID ) || isSidecar( oldID ) )
-                        continue; // 표 자신 · 원본 곁의 .meta(원본과 함께 간다)를 옮기는 일은 리다이렉트할 것이 아니다
-                    // 참조 검사 밖 도메인(임시 사본 scratch — `listUncheckedDomain`)은 배포되지 않아 옛 id 가 밖에 남지 않는다. 쓰면 실행마다 줄이 쌓였다.
-                    if ( params.isChecked( oldID ) == false )
-                        continue;
-                    const string tableID = AssetRedirect::makeTableID( oldID );
-                    // 표 자리는 옮기는 파일의 디스크 경로에서 잰다 — 옛 id 에서 도메인 뒤 꼬리를 떼면 도메인 폴더다(붙인 디스크 도메인 · 사본 도메인도 같다).
-                    const size_t  domainLength = tableID.size() - string_view{ AssetRedirect::kFileName }.size() - 1;
-                    const size_t  tailLength   = oldID.size() - domainLength;
-                    const string& sourceAbs    = inoutPlan._listMove[moveIndex]._sourceAbs;
-                    SW_ASSERT( sourceAbs.size() > tailLength );
-                    size_t tableIndex = 0;
-                    while ( tableIndex < listTableID.size() && listTableID[tableIndex] != tableID )
-                        ++tableIndex;
-                    if ( tableIndex == listTableID.size() )
-                    {
-                        listTableID.push_back( tableID );
-                        listTableAbs.push_back( FileUtil::joinPath( string_view{ sourceAbs }.substr( 0, sourceAbs.size() - tailLength ), AssetRedirect::kFileName ) );
-                        listFrom.emplace_back();
-                        listTo.emplace_back();
-                    }
-                    listFrom[tableIndex].push_back( oldID );
-                    listTo[tableIndex].push_back( inoutPlan._listNewID[moveIndex] );
-                }
-                for ( size_t tableIndex = 0; tableIndex < listTableID.size(); ++tableIndex )
-                {
-                    PreparedRewrite table{};
-                    table._referrerID  = listTableID[tableIndex];
-                    table._referrerAbs = listTableAbs[tableIndex];
-                    table._bNewFile    = FileUtil::exists( FileUtil::toDiskPath( table._referrerAbs ) ) == false;
-                    if ( table._bNewFile == false && FileUtil::readTextFile( FileUtil::toDiskPath( table._referrerAbs ), table._originalText ) == false )
-                    {
-                        StringBuilder<constant::buffer::kMax256> failureBuilder;
-                        failureBuilder.appendFormat( "could not read the asset redirect table '%#'", table._referrerID );
-                        inoutPlan._failure = string( failureBuilder.view() );
-                        return false;
-                    }
-                    const string_view      currentText = table._bNewFile ? string_view{ AssetRedirect::kEmptyTableText } : string_view{ table._originalText };
-                    const expected<string> rewritten   = AssetRedirect::addToXMLText( currentText, table._referrerID, listFrom[tableIndex], listTo[tableIndex] );
-                    if ( rewritten.has_value() == false )
-                    {
-                        StringBuilder<constant::buffer::kMax256> failureBuilder;
-                        failureBuilder.appendFormat( "%# '%#' - nothing was moved", rewritten.error().message(), rewritten.error().detail() );
-                        inoutPlan._failure = string( failureBuilder.view() );
-                        return false;
-                    }
-                    table._rewrittenText = *rewritten;
-                    inoutListRewrite.push_back( std::move( table ) );
                 }
                 return true;
             }
@@ -610,7 +542,7 @@ namespace sw::editor
         }
         for ( const EditorAssetFileCommandsInternal::PreparedRewrite& rewrite : listRewrite )
         {
-            if ( rewrite._bNewFile == false && EditorAssetFileCommandsInternal::failOnReadOnly( rewrite._referrerAbs, outPlan ) )
+            if ( EditorAssetFileCommandsInternal::failOnReadOnly( rewrite._referrerAbs, outPlan ) )
                 return false;
         }
         // 미저장 참조 문서는 옛 id 를 들고 있다 — 고친 디스크 글을 다음 저장이 덮지 않게 먼저 저장을 요구한다(감사 P0-4).
@@ -685,10 +617,9 @@ namespace sw::editor
             SW_LOG_WARNING_ID( "EditorAssetFileCommands.NothingMoved", "Nothing was moved - %#", outPlan._failure );
             return false;
         }
-        // 리다이렉트 표도 같은 트랜잭션으로 쓴다(참조 글 뒤에 붙인다 — 고친 참조 파일 수에는 세지 않는다).
+        // 원본 곁 `.meta` 도 같은 트랜잭션으로 쓴다(참조 글 뒤에 붙인다 — 고친 참조 파일 수에는 세지 않는다).
         const size_t referrerRewriteCount = listRewrite.size();
-        if ( EditorAssetFileCommandsInternal::prepareRedirectTables( params, outPlan, listRewrite ) == false ||
-             EditorAssetFileCommandsInternal::prepareSidecarRewrites( outPlan, listRewrite ) == false )
+        if ( EditorAssetFileCommandsInternal::prepareSidecarRewrites( outPlan, listRewrite ) == false )
         {
             SW_LOG_WARNING_ID( "EditorAssetFileCommands.NothingMoved", "Nothing was moved - %#", outPlan._failure );
             return false;
@@ -734,10 +665,8 @@ namespace sw::editor
             vector<string> listStuck;
             for ( size_t index = 0; index < writtenCount; ++index )
             {
-                const EditorAssetFileCommandsInternal::PreparedRewrite& rewrite   = listRewrite[index];
-                const bool                                              bRestored = rewrite._bNewFile ? FileUtil::removeFile( FileUtil::toDiskPath( rewrite._referrerAbs ) )
-                                                                                                      : FileUtil::writeTextFile( FileUtil::toDiskPath( rewrite._referrerAbs ), rewrite._originalText );
-                if ( bRestored == false )
+                const EditorAssetFileCommandsInternal::PreparedRewrite& rewrite = listRewrite[index];
+                if ( FileUtil::writeTextFile( FileUtil::toDiskPath( rewrite._referrerAbs ), rewrite._originalText ) == false )
                     listStuck.push_back( rewrite._referrerID );
             }
             for ( size_t index = movedCount; index > 0; --index )
@@ -780,7 +709,7 @@ namespace sw::editor
         EditorWorkspace* const pWorkspace = editor::findSubsystem<EditorWorkspace>();
         if ( pWorkspace != nullptr )
         {
-            // 열린 문서 · 씬 · 포커스 · 선택이 새 id 를 따르고, 깨끗한 참조 문서는 고친 글을 다시 읽는다. 리다이렉트 표(`referrerRewriteCount` 뒤)는 문서가 아니다.
+            // 열린 문서 · 씬 · 포커스 · 선택이 새 id 를 따르고, 깨끗한 참조 문서는 고친 글을 다시 읽는다. `.meta`(`referrerRewriteCount` 뒤)는 문서가 아니다.
             EditorAssetMoveEvent event{ outPlan._listOldID, outPlan._listNewID, {} };
             event._listRewrittenID.reserve( referrerRewriteCount );
             for ( size_t index = 0; index < referrerRewriteCount; ++index )

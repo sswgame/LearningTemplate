@@ -477,7 +477,7 @@ namespace sw
 
                 /**
                  * @brief 도메인 뿌리의 리다이렉트 표(`AssetRedirect::makeTableID` 자리의 `redirects.xml`)를 담습니다. 뿌리 수를 돌려준다.
-                 * @details 런타임이 이름으로 읽어(`AssetRedirect::loadFromSearchDomains`) 참조 칸으로는 닿지 않는다 — 빠지면 배포 팩에서 세이브 · 서버의 옛 id 가 죽는다.
+                 * @details 런타임이 이름으로 읽어(`AssetRedirect::loadFromSearchDomains`) 참조 칸으로는 닿지 않는다 — 빠지면 배포 팩에서 경로를 적던 때의 세이브가 죽는다.
                  *          훑지 않는다: `from` 은 이제 없는 옛 id 라 따라가면 빠진 참조다(참조 검사도 표를 보지 않는다 — `AssetReferenceFields::isReferrer`).
                  *          언리얼은 리다이렉터가 패키지(`UObjectRedirector`)라 그 경로를 참조하는 쪽이 쿠킹에 끌고 오고, 여기는 도메인마다 표 하나라 뿌리로 둔다.
                  */
@@ -485,7 +485,7 @@ namespace sw
                 {
                     uint32 rootCount = 0;
                     // 디스크에 있는 도메인 표를 본다 — 담을 수 있는 집합만 보면 제외 규칙(`PackConfig.json`)이 뺀 표가 조용히 빠지고, 런타임은 "표가 없는 도메인" 을
-                    // 정상으로 봐 옛 경로가 찾지 못한 에셋이 된다(설계 2026-11-17 X1). 그 표는 쿠킹 오류다.
+                    // 정상으로 봐 옛 세이브의 씬을 찾지 못한다(설계 2026-11-17 X1). 그 표는 쿠킹 오류다.
                     for ( const string& assetID : _files._setExisting )
                     {
                         if ( AssetRedirect::isTable( assetID ) == false || AssetRedirect::makeTableID( assetID ) != assetID )

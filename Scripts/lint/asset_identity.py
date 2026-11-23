@@ -7,6 +7,7 @@ Scripts/lint/asset_identity.py
 
   py -3 -m Scripts asset-ids              # 작업 트리 검사(결함을 찍는다)
   py -3 -m Scripts asset-ids --fix        # 없는 GUID 를 만들고, 짝 잃은 .meta 를 새 자리 원본에 다시 붙이고, 복사본에 새 GUID 를 준다
+  py -3 -m Scripts asset-ids --redirect <지울 id> <남길 id>  # 두 에셋을 합친다 — 지울 쪽을 가리키던 참조가 남길 쪽으로 풀리는 줄을 리다이렉트 표에 적는다(그 뒤 지울 쪽을 지운다)
   py -3 -m Scripts asset-ids --self-check # 머리 읽기 · 쓰기 규칙(C++ AssetGUIDTest 와 같은 사례)과 규칙 파일 대조
 
 - 우리 형식 글(`listHeaderSuffix` — XML)은 맨 앞 처리 지시 `<?asset guid="…"?>`(XML 선언 바로 뒤)에, 원본(png · ogg · glb …)은 곁의 `<파일>.meta`
@@ -663,9 +664,42 @@ def run_self_check(project_root: Path | None = None) -> None:
     assert find_output_guid("common/models/a.mesh", map_source, rules.list_imported) == make_output_guid(sample, ".mesh")
     assert find_output_guid("common/models/_shared/x.material", map_source, rules.list_imported) is None
     assert find_output_guid("common/prefabs/a.prefab.xml", map_source, rules.list_imported) is None
+    table = add_identity_redirect('<?asset guid="x"?>\n<Redirects>\n\t<Redirect from="a/b.xml" to="a/c.xml" />\n</Redirects>\n', sample, other)
+    assert table == f'<?asset guid="x"?>\n<Redirects>\n\t<Redirect from="a/b.xml" to="a/c.xml" />\n\t<IdentityRedirect from="{sample}" to="{other}" />\n</Redirects>\n', table
+    assert add_identity_redirect(table, sample, "0" * 31 + "1").count("IdentityRedirect") == 1   # 같은 옛 GUID 의 줄은 바꾼다
     list_issue, _ = collect_issues({"a/x.prefab.xml": write_header("<P/>", sample), "a/y.prefab.xml": write_header("<P/>", sample), "a/z.ogg": "",
                                   "a/w.ogg.meta": make_meta_text("a/w.ogg", other), "a/golden/q.ppm": ""}, rules)
     assert [(issue.kind, issue.asset_id) for issue in list_issue] == [("orphan-meta", "a/w.ogg.meta"), ("duplicate", "a/y.prefab.xml"), ("missing-meta", "a/z.ogg")], list_issue
+
+
+IDENTITY_REDIRECT_ELEMENT = "IdentityRedirect"   # C++ `AssetRedirect` 의 정체성 대체 줄
+
+
+def add_identity_redirect(table_text: str, from_guid: str, to_guid: str) -> str:
+    """리다이렉트 표 글에 정체성 대체 줄을 더한 글(같은 옛 GUID 의 줄은 바꾼다). 자기 자신으로면 ValueError. 있던 다른 줄은 글 그대로다."""
+    if from_guid == to_guid:
+        raise ValueError("자기 자신으로 대신할 수 없다")
+    list_line = [line for line in table_text.splitlines() if not (f"<{IDENTITY_REDIRECT_ELEMENT} " in line and f'from="{from_guid}"' in line)]
+    if not list_line or list_line[-1].strip() != "</Redirects>":
+        raise ValueError("리다이렉트 표의 끝이 </Redirects> 줄이 아니다")
+    list_line.insert(len(list_line) - 1, f'\t<{IDENTITY_REDIRECT_ELEMENT} from="{from_guid}" to="{to_guid}" />')
+    return "\n".join(list_line) + "\n"
+
+
+def redirect_identity(project_root: Path, from_id: str, to_id: str) -> str:
+    """`--redirect` — 지울 에셋의 도메인 표에 줄을 더하고 그 표의 리소스 id 를 돌려준다."""
+    rules = load_rules(project_root)
+    _, map_guid = collect_issues(read_worktree_texts(project_root, list_worktree_ids(project_root), rules), rules)
+    map_path_to_guid = {asset_id.lower(): guid for guid, asset_id in map_guid.items()}
+    for asset_id in (from_id, to_id):
+        if asset_id.lower() not in map_path_to_guid:
+            raise ValueError(f"'{asset_id}' 는 정체성 색인에 없다")
+    parts = from_id.split("/")
+    table_id = "/".join(parts[:2] if parts[0] in ("game", "dlc") else parts[:1]) + "/redirects.xml"
+    table_path = project_root / CONTENT_FOLDER / table_id
+    text = table_path.read_text(encoding="utf-8") if table_path.is_file() else write_header("<Redirects>\n</Redirects>\n", create_guid())
+    _write(table_path, add_identity_redirect(text, map_path_to_guid[from_id.lower()], map_path_to_guid[to_id.lower()]))
+    return table_id
 
 
 def check_asset_identity(project_root: Path, scope: LintScope) -> list[str]:
@@ -683,12 +717,17 @@ def main(argv: list[str] | None = None) -> int:
     from common.paths import get_project_root
     parser = argparse.ArgumentParser(description="에셋 정체성(GUID — 우리 형식 글의 머리 · 원본의 .meta)을 검사하고 --fix 로 채운다")
     parser.add_argument("--fix", action="store_true", help="없는 GUID 를 만들고, 짝 잃은 .meta 를 다시 붙이고, 복사본에 새 GUID 를 준다")
+    parser.add_argument("--redirect", nargs=2, metavar=("지울_id", "남길_id"), help="지울 에셋을 가리키던 참조가 남길 에셋으로 풀리는 줄을 리다이렉트 표에 적는다")
     parser.add_argument("--self-check", action="store_true", help="머리 읽기 · 쓰기 규칙과 규칙 파일 대조만 본다")
     arguments = parser.parse_args(argv)
     project_root = get_project_root()
     if arguments.self_check:
         run_self_check(project_root)
         print("[asset-ids] self-check OK")
+        return ExitCode.PASSED
+    if arguments.redirect:
+        table_id = redirect_identity(project_root, *arguments.redirect)
+        print(f"[asset-ids] {CONTENT_FOLDER}/{table_id} 에 정체성 대체 줄을 적었다 — 이제 '{arguments.redirect[0]}' 를 지운다")
         return ExitCode.PASSED
     if arguments.fix:
         left = fix_worktree(project_root)

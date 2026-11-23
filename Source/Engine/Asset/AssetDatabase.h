@@ -161,13 +161,14 @@ namespace sw
     /** @brief 색인을 짓다 만난 결함의 종류입니다. */
     enum class AssetIdentityIssueKind : uint8
     {
-        DuplicateGUID, ///< 두 파일이 같은 GUID 를 든다(복사)
-        MissingHeader, ///< 우리 형식 글에 머리가 없다
-        InvalidHeader, ///< 머리를 읽지 못했다 · 자리가 틀렸다
-        MissingMeta,   ///< 원본 곁에 `.meta` 가 없다
-        OrphanMeta,    ///< `.meta` 곁에 원본이 없다(원본만 옮기거나 지웠다)
-        InvalidMeta,   ///< `.meta` 를 읽지 못했다 · 원본 자리가 맞지 않는다
-        Unreadable,    ///< 파일을 읽지 못했다
+        DuplicateGUID,   ///< 두 파일이 같은 GUID 를 든다(복사)
+        MissingHeader,   ///< 우리 형식 글에 머리가 없다
+        InvalidHeader,   ///< 머리를 읽지 못했다 · 자리가 틀렸다
+        MissingMeta,     ///< 원본 곁에 `.meta` 가 없다
+        OrphanMeta,      ///< `.meta` 곁에 원본이 없다(원본만 옮기거나 지웠다)
+        InvalidMeta,     ///< `.meta` 를 읽지 못했다 · 원본 자리가 맞지 않는다
+        InvalidRedirect, ///< 리다이렉트 표(`redirects.xml`)의 정체성 대체 줄이 틀렸다
+        Unreadable,      ///< 파일을 읽지 못했다
     };
 
     /** @brief 결함 하나입니다. `_otherAssetID` 는 겹친 GUID 의 다른 쪽입니다. */
@@ -219,5 +220,6 @@ namespace sw
     private:
         unordered_map<AssetGUID, string> _mapGUIDToPath;
         unordered_map<string, AssetGUID> _mapPathToGUID; ///< 키는 소문자 리소스 id
+        vector<AssetIdentityRedirect>    _listRedirect;  ///< 도메인 리다이렉트 표의 정체성 대체 줄
     };
 } // namespace sw

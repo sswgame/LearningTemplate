@@ -16,11 +16,11 @@
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Asset/Cache/BuiltInAssetCache.h"
 #include "Engine/Console/DevCommandRegistry.h"
+#include "Engine/Content/AssetRegistry.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Profiling/FrameProfiler.h"
-#include "Engine/Serialization/Inherit/AssetRedirect.h"
 #include "Engine/Serialization/Serializer/ReloadResult.h"
 
 #include <thread>
@@ -148,7 +148,7 @@ namespace sw
         if ( relativePath.empty() || _impl == nullptr )
             return nullptr;
 
-        const string key = AssetRedirect::toCacheKey( relativePath );
+        const string key = AssetRegistry::toCacheKey( relativePath );
 
         UniqueLock<shared_mutex> lock{ _impl->_mutex };
         Impl::Entry&             entry = _impl->_mapEntry[key];
@@ -172,7 +172,7 @@ namespace sw
         if ( relativePath.empty() || _impl == nullptr )
             return;
 
-        const string key = AssetRedirect::toCacheKey( relativePath );
+        const string key = AssetRegistry::toCacheKey( relativePath );
 
         UniqueLock<shared_mutex> lock{ _impl->_mutex };
         auto                     it = _impl->_mapEntry.find( key );
@@ -219,7 +219,7 @@ namespace sw
         if ( relativePath.empty() || _impl == nullptr )
             return;
 
-        const string             key = AssetRedirect::toCacheKey( relativePath );
+        const string             key = AssetRegistry::toCacheKey( relativePath );
         UniqueLock<shared_mutex> lock{ _impl->_mutex };
         const auto               it = _impl->_mapEntry.find( key );
         // 이미 올라갔거나(`Ready`) 올리려다 실패했거나(`Failed`, 핫 리로드만 다시 시도한다) 줄에 든(`Pending`) 것은 다시 넣지 않는다.
@@ -346,7 +346,7 @@ namespace sw
         if ( relativePath.empty() || _impl == nullptr )
             return false;
 
-        const string                   key = AssetRedirect::toCacheKey( relativePath );
+        const string                   key = AssetRegistry::toCacheKey( relativePath );
         ScopedSharedLock<shared_mutex> lock{ _impl->_mutex };
         return _impl->_mapEntry.find( key ) != _impl->_mapEntry.end();
     }
@@ -359,7 +359,7 @@ namespace sw
         const Material* pMaterial = acquire( relativePath );
         SW_ASSERT( pMaterial != nullptr );
         requestInitialize( relativePath );
-        const string key = AssetRedirect::toCacheKey( relativePath );
+        const string key = AssetRegistry::toCacheKey( relativePath );
         {
             UniqueLock<shared_mutex> lock{ _impl->_mutex };
             VectorUtil::addUnique( _impl->_listPSOWarmKey, key );
@@ -422,7 +422,7 @@ namespace sw
         if ( relativePath.empty() || _impl == nullptr )
             return ReloadResult::NotTracked;
 
-        const string key = AssetRedirect::toCacheKey( relativePath );
+        const string key = AssetRegistry::toCacheKey( relativePath );
 
         // 대기와 초기화는 잠금 밖에서 한다. `flushRenderThread` 는 렌더 스레드가 받은 일을 끝내길 기다리는데 렌더 스레드는 프레임 안에서
         // `takePSOWarmEntries` 로 이 잠금을 잡는다. 잠금을 쥔 채 기다리면 서로 영영 기다린다. 소유를 하나 빌려 그 사이 항목이 지워져도 머티리얼이 살아 있게 한다.
