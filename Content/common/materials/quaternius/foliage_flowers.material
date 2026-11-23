@@ -6,10 +6,4 @@
 		<item name="_alphaCutoff" defaultValue="0.2" />
 		<item name="_albedoMap" assetPath="common/textures/quaternius/nature/flowers.dds" />
 	</_properties>
-	<_permutations quality="High" shaderLOD="300" usage="StaticMesh">
-		<_alwaysDefines>
-			<item>MATERIAL_DOMAIN_SURFACE</item>
-			<item>MATERIAL_VERTEX_DEFORM</item>
-		</_alwaysDefines>
-	</_permutations>
 </MaterialDef>

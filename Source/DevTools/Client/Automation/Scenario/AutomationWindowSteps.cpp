@@ -29,6 +29,13 @@
 
 #if defined( SW_PLATFORM_WINDOWS )
     #include "Engine/Foundation/EnginePlatformHeaders.h"
+#elif defined( SW_PLATFORM_WEB )
+// 본문은 DevTools/Client/Automation/Web/AutomationDOMEvent.js(Emscripten JS 라이브러리)다.
+extern "C" int swAutomationDispatchDOMEvent( int kind, const char* pValue, double x, double y );
+#elif defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_ANDROID )
+// 창 시스템 헤더를 읽지 않는다 — 구현이 없는 단계는 건너뜀이다.
+#else
+    #error "Unsupported platform"
 #endif
 
 namespace sw
@@ -78,6 +85,23 @@ namespace sw
                     runner.recordFailure( step, "there is no window to suspend" );
                 else
                     pWindow->simulateAppInterruption( step.readValidatedProperties<AutomationAppSuspendParams>()._ticks );
+                return true;
+            }
+
+            /** @brief 브라우저 페이지에 DOM 이벤트를 냅니다 — 창의 DOM 콜백과 숨은 글 칸이 사람의 입력처럼 받는다. 웹 밖에서는 시나리오를 건너뜀으로 끝냅니다. */
+            static bool runDOMEvent( IAutomationStepContext& runner, const AutomationStep& step )
+            {
+#if defined( SW_PLATFORM_WEB )
+                const AutomationDOMEventParams params = step.readValidatedProperties<AutomationDOMEventParams>();
+                if ( swAutomationDispatchDOMEvent( static_cast<int>( params._kind ), params._value.c_str(), static_cast<double>( params._x ), static_cast<double>( params._y ) ) == 0 )
+                    runner.recordFailure( step, "the page has no focused text field (or canvas) to receive the event" );
+#elif defined( SW_PLATFORM_WINDOWS ) || defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_ANDROID )
+                StringBuilder<constant::buffer::kMax256> reason;
+                reason.appendFormat( "%#: DOM events exist in a browser page only", step.describe() );
+                runner.endScenario( AutomationStepEnd::Skip, reason.view() );
+#else
+    #error "Unsupported platform"
+#endif
                 return true;
             }
 
@@ -427,6 +451,7 @@ namespace sw
     SW_AUTOMATION_STEP( windowAppSuspend, "SimulateAppSuspend", &AutomationWindowStepsInternal::runAppSuspend, &AutomationWindowStepsInternal::validateAppSuspend, AutomationStepOptions{} );
     SW_AUTOMATION_STEP( windowMessage, "PostWindowMessage", &AutomationWindowStepsInternal::runMessage, &AutomationStep::validateProperties<AutomationWindowMessageParams>, AutomationStepOptions{} );
     SW_AUTOMATION_STEP( windowSendInput, "SendInput", &AutomationWindowStepsInternal::runSendInput, &AutomationWindowStepsInternal::validateSendInput, AutomationStepOptions{}.withDesktop() );
+    SW_AUTOMATION_STEP( windowDOMEvent, "DispatchDOMEvent", &AutomationWindowStepsInternal::runDOMEvent, &AutomationStep::validateProperties<AutomationDOMEventParams>, AutomationStepOptions{} );
     SW_AUTOMATION_STEP( windowCursorClip, "ExpectCursorClip", &AutomationWindowStepsInternal::runClip, &AutomationStep::validateProperties<AutomationCursorClipParams>, AutomationStepOptions{}.withDesktop() );
     SW_AUTOMATION_STEP( windowCapture, "CaptureWindow", &AutomationWindowStepsInternal::runCapture, &AutomationWindowStepsInternal::validateCapture, AutomationStepOptions{}.withDesktop() );
 } // namespace sw

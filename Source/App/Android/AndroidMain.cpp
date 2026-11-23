@@ -65,7 +65,7 @@ namespace
                                                            baseURL ) == false )
             return mount;
         if ( sw::PlainHTTPClient::isServerRootURL( baseURL ) == false )
-            SW_FATAL( "AndroidMain: -fileserve='%#' is not http://<host>:<port> (no path, query or trailing slash, printable ASCII)", baseURL );
+            sw::reportFatalError( "AndroidMain: -fileserve='%#' is not http://<host>:<port> (no path, query or trailing slash, printable ASCII)", baseURL );
         // 엔진 설정 전체가 아니라 `_fileServe` 하위만 읽는다 — 다른 칸의 오류가 이 개발 전송을 막지 않고, 읽기 비용이 작다.
         sw::string          engineJSON;
         sw::JSONDocument    document;
@@ -81,10 +81,10 @@ namespace
             }
         }
         if ( bRead == false )
-            SW_FATAL( "AndroidMain: -fileserve needs the baked EngineConfig _fileServe limits (the log above names the key)" );
+            sw::reportFatalError( "AndroidMain: -fileserve needs the baked EngineConfig _fileServe limits (the log above names the key)" );
         if ( settings._maxResponseBodyBytes < sw::FileServeContentSource::kChunkBytes )
-            SW_FATAL( "AndroidMain: EngineConfig _fileServe._maxResponseBodyBytes %# is below the Fileserve chunk (%# bytes)", settings._maxResponseBodyBytes,
-                      sw::FileServeContentSource::kChunkBytes );
+            sw::reportFatalError( "AndroidMain: EngineConfig _fileServe._maxResponseBodyBytes %# is below the Fileserve chunk (%# bytes)", settings._maxResponseBodyBytes,
+                                  sw::FileServeContentSource::kChunkBytes );
         mount._pClient = sw::make_unique<sw::PlainHTTPClient>( settings );
         sw::StringBuilder<sw::constant::buffer::kMax1024> mirrorRoot;
         mirrorRoot.appendFormat( "%#/%#", pInternalDataPath, kFileServeMirrorFolder );
@@ -114,7 +114,7 @@ extern "C" void android_main( android_app* pApp )
 
     // 루트와 콘텐츠 소스는 무엇이 읽기 전에 건다 — 앱 전용 폴더가 바이너리 폴더를 대신하고(ProcessRoots), 팩 폴더 경로는 APK 의 assets/Packs 로 옮겨 읽는다.
     if ( pApp->activity->internalDataPath == nullptr || setenv( sw::kAndroidAppFolderVariable, pApp->activity->internalDataPath, 1 ) != 0 )
-        SW_FATAL( "AndroidMain: the activity has no internal data path - the process roots cannot be set" );
+        sw::reportFatalError( "AndroidMain: the activity has no internal data path - the process roots cannot be set" );
     const sw::AndroidAssetFileReader   assetReader{ pApp->activity->assetManager };
     const sw::BundledContentFileSource packSource{ assetReader, sw::ProcessRoots::get()._packs.str(), sw::constant::path::kPacksFolder };
     const sw::IContentFileSource*      pPackSource = &packSource;

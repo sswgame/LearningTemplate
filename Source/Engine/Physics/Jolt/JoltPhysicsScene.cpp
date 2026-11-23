@@ -1029,7 +1029,7 @@ namespace sw
             const BodyRecord* pRecord = findBody( listBody[index] );
             const JPH::Body*  pBody   = pRecord != nullptr ? bodies.TryGetBody( pRecord->_bodyID ) : nullptr;
             if ( pBody == nullptr )
-                SW_FATAL( "JoltPhysicsScene::readBodyStates: the body handle is not live (pass only moved bodies whose owner matched)" );
+                reportFatalError( "JoltPhysicsScene::readBodyStates: the body handle is not live (pass only moved bodies whose owner matched)" );
             PhysicsBodyState3D& state = outListState[index];
             state._position           = JoltUtil::toEngine( pBody->GetPosition() );
             state._rotation           = JoltUtil::toEngine( pBody->GetRotation() );

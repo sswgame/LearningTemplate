@@ -112,8 +112,8 @@ namespace sw
      */
     struct SW_API ServerServiceRegistry
     {
-        /** @brief 팩토리를 올립니다. 같은 이름이 있으면 오류 로그를 남기고 올리지 않습니다. */
-        static void registerFactory( ServerServiceFactory* pFactory );
+        /** @brief 팩토리를 올립니다. 만들기 함수가 없거나 같은 이름이 있으면(오류 로그) 올리지 않고 false 입니다. */
+        [[nodiscard]] static bool registerFactory( ServerServiceFactory* pFactory );
         /** @brief 팩토리를 내립니다. 없으면 아무것도 하지 않습니다. */
         static void unregisterFactory( ServerServiceFactory* pFactory );
         /** @brief 올라온 팩토리를 시작 순서(같으면 이름 순)로 @p outListFactory 에 담습니다. 비운 뒤 채웁니다. */
@@ -133,23 +133,28 @@ namespace sw
     class ServerServiceRegistrar
     {
     public:
-        ServerServiceRegistrar( const utf8* pName, int32 startOrder )
-            : _factory{}
+        ServerServiceRegistrar( const utf8* pName, int32 startOrder, SourceLocation site = SourceLocation::current() )
+            : _factory{ makeFactory( pName, startOrder ) }
+            , _registrar{ &_factory, &ServerServiceRegistry::registerFactory, &ServerServiceRegistry::unregisterFactory, site }
         {
-            _factory._pName   = pName;
-            _factory._order   = startOrder;
-            _factory._pCreate = &ServerServiceRegistrar::create;
-            ServerServiceRegistry::registerFactory( &_factory );
         }
-        ~ServerServiceRegistrar() { ServerServiceRegistry::unregisterFactory( &_factory ); }
 
         ServerServiceRegistrar( const ServerServiceRegistrar& )            = delete;
         ServerServiceRegistrar& operator=( const ServerServiceRegistrar& ) = delete;
 
     private:
         static unique_ptr<IServerService> create() { return make_unique<TService>(); }
+        static ServerServiceFactory       makeFactory( const utf8* pName, int32 startOrder )
+        {
+            ServerServiceFactory factory;
+            factory._pName   = pName;
+            factory._order   = startOrder;
+            factory._pCreate = &ServerServiceRegistrar::create;
+            return factory;
+        }
 
-        ServerServiceFactory _factory;
+        ServerServiceFactory                   _factory;   ///< 목록에 오르는 줄(이 등록자와 수명이 같다)
+        StaticRegistrar<ServerServiceFactory*> _registrar; ///< 줄 다음에 만들어 줄보다 먼저 사라진다
     };
 } // namespace sw
 

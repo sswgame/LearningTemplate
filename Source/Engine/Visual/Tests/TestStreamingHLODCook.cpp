@@ -10,7 +10,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Object/GameObject/Service/SceneEngineServices.h"
 #include "Engine/Scene/Scene.h"
-#include "Engine/Scene/SceneCooker.h"
+#include "Engine/Scene/SceneCellSplitter.h"
 #include "Engine/Scene/SceneDocument.h"
 #include "Engine/Visual/Component/InstancedMeshComponent.h"
 
@@ -70,7 +70,7 @@ SW_TEST_CASE( StreamingHLODCookTest, SplitBuildsProxyPerFragmentWithStaticMeshes
     Util::writeScene( domain );
     SceneDocument doc{};
     SW_REQUIRE_TRUE( doc.loadXMLFromDiskFile( domain.makeDiskPath( "hlod.scene.xml" ).str() ) );
-    SW_REQUIRE_TRUE( SceneCooker::splitStreamingCells( SceneEngineServices::makeFromBoundEngine(), doc, "hlod.scene.xml" ) );
+    SW_REQUIRE_TRUE( SceneCellSplitter::split( SceneEngineServices::makeFromBoundEngine(), doc, "hlod.scene.xml" ) );
 
     SW_REQUIRE_EQUAL( size_t{ 3 }, doc._listStreamingCell.size() );
     const SceneDocument::StreamingCell* pFirst      = Util::findCell( doc, 0 );
@@ -101,7 +101,7 @@ SW_TEST_CASE( StreamingHLODCookTest, ProxyInstancesUseWorldPlacement )
     Util::writeScene( domain );
     SceneDocument doc{};
     SW_REQUIRE_TRUE( doc.loadXMLFromDiskFile( domain.makeDiskPath( "hlod.scene.xml" ).str() ) );
-    SW_REQUIRE_TRUE( SceneCooker::splitStreamingCells( SceneEngineServices::makeFromBoundEngine(), doc, "hlod.scene.xml" ) );
+    SW_REQUIRE_TRUE( SceneCellSplitter::split( SceneEngineServices::makeFromBoundEngine(), doc, "hlod.scene.xml" ) );
 
     Scene scene{ "HLODCook" };
     SW_REQUIRE_TRUE( scene.instantiate( doc ) );

@@ -344,6 +344,7 @@ namespace sw::test
         uint32                         _lastStructuredElementCount{ 0 };                                                             /**< 마지막으로 만든 구조 버퍼의 원소 수 */
         uint32                         _readbackReadCount{ 0 };                                                                      /**< `readReadbackBuffer` 호출 수 */
         bool                           _bReadbackReadable{ true }; /**< `readReadbackBuffer` 가 돌려줄 값(내용은 건드리지 않는다) */ ///< NOLINT(sw-bool-flag): 테스트가 바꾸는 답
+        RHIDescriptorIndex             _bufferSRV{ kInvalidDescriptorIndex };                                                        /**< `registerBindlessBufferSRV` 가 낼 번호 */
         vector<RHIPipelineStateHandle> _listDestroyedPipelineState;                                                                  /**< `destroyPipelineStateNative` 로 받은 PSO(받은 순서) */
 
         /** @brief 새 버퍼 핸들을 내고 산 목록에 올립니다. */
@@ -397,7 +398,7 @@ namespace sw::test
         bool               activateReservedBindlessTexture( RHIDescriptorIndex, RHITextureHandle ) override { return false; }
         bool               isTextureReadyToSample( RHITextureHandle ) override { return false; }
         void               unregisterBindlessTexture( RHIDescriptorIndex ) override {}
-        RHIDescriptorIndex registerBindlessBufferSRV( RHIBufferHandle ) override { return kInvalidDescriptorIndex; }
+        RHIDescriptorIndex registerBindlessBufferSRV( RHIBufferHandle ) override { return _bufferSRV; }
         RHIDescriptorIndex registerBindlessBufferSRV( const RHIBufferSlice& ) override { return kInvalidDescriptorIndex; }
         void               unregisterBindlessResource( RHIDescriptorIndex ) override {}
         RHIDescriptorIndex registerBindlessBufferUAV( RHIBufferHandle ) override { return kInvalidDescriptorIndex; }

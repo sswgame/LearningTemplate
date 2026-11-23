@@ -230,3 +230,16 @@ SW_TEST_CASE( ProxyProtocolAcceptTransportTest, UntrustedSourceAndBadHeaderAreCl
         SW_EXPECT_TRUE( rig._serverRecorder.copyRemoteList().empty() );
     }
 }
+
+/** @brief [ProxyProtocolTest] 신뢰 프록시 목록은 IPv4 글만 받는다 — 이름 · IPv6 · 빈 글은 그 항목을 대상으로 오류다 */
+SW_TEST_CASE( ProxyProtocolTest, TrustedProxyListAcceptsOnlyIpv4 )
+{
+    const expected<vector<uint32>> parsed = ProxyProtocolAcceptTransport::parseTrustedProxies( vector<string>{ "127.0.0.1", "10.0.0.5" } );
+    SW_REQUIRE_TRUE( parsed.has_value() );
+    SW_REQUIRE_TRUE( parsed->size() == 2 );
+    SW_EXPECT_EQUAL( 0x7F000001u, ( *parsed )[0] );
+    for ( const utf8* pBad : { "proxy.example", "::1", "" } )
+    {
+        SW_EXPECT_FALSE( ProxyProtocolAcceptTransport::parseTrustedProxies( vector<string>{ "10.0.0.5", pBad } ).has_value() );
+    }
+}

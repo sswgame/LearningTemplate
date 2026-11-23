@@ -6,6 +6,7 @@
 #include "Core/String/StringUtil.h"
 #include "Core/String/formatString.h"
 
+#include "Engine/Behavior/ConditionRegistry.h"
 #include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Serialization/XML/XMLDocument.h"

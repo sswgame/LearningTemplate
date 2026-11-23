@@ -23,12 +23,25 @@ TAG = "ProcessExitCodes"
 CONFIG_RELATIVE = "Config/Engine/ProcessExitCodes.json"
 
 
-def load_rows() -> list[tuple[str, int, str]]:
-    """(name, code, label) 줄 목록입니다. 이름 · 코드 · 라벨이 겹치거나 칸이 틀리면 오류로 멈춘다."""
-    path = get_project_root() / CONFIG_RELATIVE
+#: 쓸 수 있는 코드 — POSIX 종료 상태(8 비트)에서 셸(126 · 127)과 시그널(128 이상)의 몫을 뺀 것이다.
+CODE_RANGE = range(0, 126)
+
+
+def _read_code(row: dict[str, object]) -> int:
+    code = row["code"]
+    if not isinstance(code, int) or isinstance(code, bool):
+        raise GeneratorError(f"{CONFIG_RELATIVE}: code must be an integer: {code!r}")
+    if code not in CODE_RANGE:
+        raise GeneratorError(f"{CONFIG_RELATIVE}: code {code} is outside {CODE_RANGE.start}..{CODE_RANGE.stop - 1} (shell and signal codes follow)")
+    return code
+
+
+def load_rows(path: Path) -> list[tuple[str, int, str]]:
+    """(name, code, label) 줄 목록입니다. 겹침 · 범위 밖 · 예약된 코드 · 0 이 Passed 가 아닌 표는 오류로 멈춘다."""
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
-        list_row = [(str(row["name"]), int(row["code"]), str(row["label"])) for row in data["exit_codes"]]
+        list_row = [(str(row["name"]), _read_code(row), str(row["label"])) for row in data["exit_codes"]]
+        reserved = {_read_code(row): str(row["reason"]) for row in data["reserved_codes"]}
     except (OSError, KeyError, TypeError, ValueError) as exception:
         raise GeneratorError(f"{CONFIG_RELATIVE}: {exception}") from exception
     for column, kind in ((0, "name"), (1, "code"), (2, "label")):
@@ -37,6 +50,13 @@ def load_rows() -> list[tuple[str, int, str]]:
             raise GeneratorError(f"{CONFIG_RELATIVE}: duplicate {kind} in exit_codes")
     if any(not name.isidentifier() for name, _, _ in list_row):
         raise GeneratorError(f"{CONFIG_RELATIVE}: every name must be a C++ identifier")
+    for name, code, _ in list_row:
+        if code in reserved:
+            raise GeneratorError(f"{CONFIG_RELATIVE}: {name} uses the reserved code {code} ({reserved[code]})")
+        if (code == 0) != (name == "Passed"):
+            raise GeneratorError(f"{CONFIG_RELATIVE}: code 0 is Passed and only Passed ({name} = {code})")
+    if not any(code == 0 for _, code, _ in list_row):
+        raise GeneratorError(f"{CONFIG_RELATIVE}: Passed = 0 is missing")
     return list_row
 
 
@@ -76,7 +96,7 @@ def make_cmake_text(list_row: list[tuple[str, int, str]]) -> str:
 
 
 def generate_process_exit_codes(header_path: Path, cmake_path: Path) -> None:
-    list_row = load_rows()
+    list_row = load_rows(get_project_root() / CONFIG_RELATIVE)
     write_generated_file(header_path, make_header_text(list_row), tag=TAG)
     write_generated_file(cmake_path, make_cmake_text(list_row), tag=TAG)
 

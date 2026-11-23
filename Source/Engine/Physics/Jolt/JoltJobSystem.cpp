@@ -98,7 +98,7 @@ namespace sw
         {
             // 용량이 살아 있는 잡 상한이라 정말 가득 찼다면 잡 수 계약이 깨진 것이다 — 조용히 버리거나 그 자리에서 돌리지 않고 멈춘다.
             if ( _queuedJob.size() >= _queuedJob.capacity() )
-                SW_FATAL( "JoltJobSystem: the job queue is full (%# slots) - more queued jobs than maxJobCount", _queuedJob.capacity() );
+                reportFatalError( "JoltJobSystem: the job queue is full (%# slots) - more queued jobs than maxJobCount", _queuedJob.capacity() );
             ThreadUtil::yield(); // 꺼내는 쪽이 칸을 되돌리는 중(잠깐)
         }
     }
@@ -123,7 +123,7 @@ namespace sw
             // 폴백 없음 — 태스크를 못 내면(풀이 바닥났거나 종료 중) 그 자리에서 몰래 돌리지 않고 멈춘다. 스텝을 부른 스레드는 장벽 · `WaitForJobs` 에서 큐를 도우므로
             // 태스크가 늦어도 끝나지만, 태스크가 아예 없으면 잡 참조가 새고 스텝 순서가 실행마다 달라진다(언리얼 Chaos 도 태스크 그래프가 없으면 스텝을 내지 않는다).
             if ( handle.isValid() == false )
-                SW_FATAL( "JoltJobSystem: the task pool refused a physics job (pool exhausted or shutting down)" );
+                reportFatalError( "JoltJobSystem: the task pool refused a physics job (pool exhausted or shutting down)" );
             // 스텝을 호출한 스레드가 장벽에서 곧바로 기다린다. 게임 스레드의 대량 잡 뒤에 줄을 서지 않게 High 레인으로 낸다.
             handle.setPriority( TaskPriority::High );
             _jobTaskStage.addTask( handle ); // 제출 전에 넣는다(스테이지 계약)

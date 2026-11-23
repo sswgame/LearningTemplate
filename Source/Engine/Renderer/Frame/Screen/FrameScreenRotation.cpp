@@ -89,7 +89,7 @@ namespace sw
             _srv = pFactory->registerBindlessTexture( _texture );
         }
         if ( _srv == kInvalidDescriptorIndex )
-            SW_FATAL( "Failed to create the screen rotation target (%#x%#, format %#) - the rotated screen cannot be presented", logicalWidth, logicalHeight, static_cast<uint32>( format ) );
+            reportFatalError( "Failed to create the screen rotation target (%#x%#, format %#) - the rotated screen cannot be presented", logicalWidth, logicalHeight, static_cast<uint32>( format ) );
         _width  = logicalWidth;
         _height = logicalHeight;
         _format = format;

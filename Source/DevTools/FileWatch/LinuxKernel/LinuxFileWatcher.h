@@ -30,7 +30,7 @@ namespace sw
     {
     public:
         /** @brief fd 와 큐가 빈 상태로 만듭니다. */
-        LinuxFileWatcher();
+        explicit LinuxFileWatcher( FileWatcherKey key );
         /** @brief 감시를 멈추고 워커 스레드를 조인합니다. */
         ~LinuxFileWatcher() override;
 

@@ -9,8 +9,10 @@
  */
 #pragma once
 #include "Core/Concurrency/mutex.h"
+#include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Network/Transport/IStreamTransport.h"
@@ -31,6 +33,11 @@ namespace sw
         // 덮어쓰지 않은 함수(shutdown · listen · connect · send · close · pollIO · getStats …)는 기반이 안쪽 전송에 그대로 넘긴다.
         [[nodiscard]] bool initialize( IStreamHandler* pHandler, const StreamTransportConfig& settings ) override;
         NetAddress         getRemoteAddress( StreamConnectionHandle handle ) const override;
+
+        /**
+         * @brief 설정의 프록시 주소 글들을 신뢰 목록으로 읽습니다. IPv4 주소가 아닌 항목이 있으면 오류(대상은 그 항목)입니다 — PROXY v2 해석기는 TCP over IPv4 만 받는다.
+         */
+        static expected<vector<uint32>> parseTrustedProxies( const vector<string>& listText );
 
         /** @brief @p address 가 신뢰 프록시면 true 입니다. */
         [[nodiscard]] bool isTrustedProxy( const NetAddress& address ) const;

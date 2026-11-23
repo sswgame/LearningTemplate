@@ -15,7 +15,6 @@
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Asset/Cache/BuiltInAssetCache.h"
-#include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
@@ -91,7 +90,7 @@ namespace sw
                     ++_impl._initDepth;
                     return;
                 }
-                SW_FATAL( "Materials are initialized on two threads at once - initialize them on the game thread (MaterialCache::acquire with a device, reload, initializePending)" );
+                reportFatalError( "Materials are initialized on two threads at once - initialize them on the game thread (MaterialCache::acquire with a device, reload, initializePending)" );
             }
 
             ~DeviceInitScope()
@@ -407,7 +406,7 @@ namespace sw
 
 namespace sw
 {
-    SW_BUILT_IN_ASSET_CACHE( MaterialCache );
+    SW_BUILT_IN_ASSET_CACHE( MaterialCache, MaterialCache );
     SW_ASSET_TYPE( Material, Material::kAssetType );
 
     void MaterialCache::bindDevice( IRHIDevice* pDevice )
@@ -468,45 +467,4 @@ namespace sw
     {
         return engine::getSubsystem<AssetManager>().getAssetCache<MaterialCache>().acquire( path );
     }
-} // namespace sw
-
-namespace sw
-{
-    namespace
-    {
-        struct MaterialCacheCommandInternal
-        {
-            /** @brief `matswitch <머티리얼> <스위치> <0|1>` — 캐시에 든 머티리얼의 런타임 스위치를 바꿉니다. 시나리오가 런타임 퍼뮤테이션 전환(물체가 사라지지 않는다)을 확인할 때 쓴다. */
-            static bool runSetStaticSwitch( const vector<string>& listArgument, string& outReply )
-            {
-                const bool bBadValue = listArgument.size() == 3 && listArgument[2] != "0" && listArgument[2] != "1";
-                if ( listArgument.size() != 3 || bBadValue )
-                {
-                    outReply = "usage: matswitch <material> <switch> <0|1>";
-                    return false;
-                }
-                MaterialCache* const pCache = MaterialCache::findBound();
-                if ( pCache == nullptr || pCache->isCached( listArgument[0] ) == false )
-                {
-                    StringBuilder<constant::buffer::kMax256> builder;
-                    builder.appendFormat( "material %# is not loaded", listArgument[0] );
-                    outReply = builder.view();
-                    return false;
-                }
-                Material* const pMaterial = pCache->acquire( listArgument[0] );
-                const bool      bSet      = pMaterial != nullptr && pMaterial->setStaticSwitch( hashed_string( string_view( listArgument[1] ) ), listArgument[2] == "1" );
-                pCache->release( listArgument[0] );
-                StringBuilder<constant::buffer::kMax256> builder;
-                if ( bSet )
-                    builder.appendFormat( "set %#", listArgument[1] );
-                else
-                    builder.appendFormat( "could not set %# of %#", listArgument[1], listArgument[0] );
-                outReply = builder.view();
-                return bSet;
-            }
-        };
-    } // namespace
-
-    SW_DEV_COMMAND( MaterialStaticSwitch, "matswitch", "matswitch <material> <switch> <0|1>", "Turn a runtime static switch (bShaderFeature=\"0\") of a loaded material on or off",
-                    &MaterialCacheCommandInternal::runSetStaticSwitch );
 } // namespace sw

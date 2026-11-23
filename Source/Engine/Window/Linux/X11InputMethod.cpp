@@ -58,7 +58,7 @@ namespace sw
             static void onDestroyed( XIM /*pIM*/, XPointer pClient, XPointer /*pCall*/ ) { getSelf( pClient ).onInputMethodDestroyed(); }
 
             /** @brief 조합 시작입니다. 반환값은 조합 글의 최대 길이이고 -1 은 제한 없음이다(XIM 규약). */
-            static int32 onPreeditStart( XIM /*pIM*/, XPointer pClient, XPointer /*pCall*/ )
+            static int32 onPreeditStart( XIC /*pIC*/, XPointer pClient, XPointer /*pCall*/ )
             {
                 getSelf( pClient ).onPreeditFinished(); // 전 조합이 남았으면 지운다
                 return -1;
@@ -74,8 +74,9 @@ namespace sw
              * @details 다중 바이트 글은 로캘 인코딩이다 — 로캘 변환으로 UTF-8 로 바꾼다(`appendLocaleText`). 예전에는 UTF-8 로 가정해 EUC-KR 같은 로캘의 조합 글이 깨졌다
              *          (확정 글은 `Xutf8LookupString` 이라 처음부터 UTF-8 이다).
              */
-            static void onPreeditDraw( XIM /*pIM*/, XPointer pClient, XIMPreeditDrawCallbackStruct* pCall )
+            static void onPreeditDraw( XIM /*pIM*/, XPointer pClient, XPointer pCallData )
             {
+                const XIMPreeditDrawCallbackStruct* const pCall = reinterpret_cast<const XIMPreeditDrawCallbackStruct*>( pCallData );
                 if ( pCall == nullptr )
                     return;
                 string inserted;
@@ -97,12 +98,21 @@ namespace sw
                 getSelf( pClient ).onPreeditEdited( first, count, inserted );
             }
 
-            template <typename TFunction>
-            static XIMCallback makeCallback( X11InputMethod* pSelf, TFunction function )
+            /** @brief 값을 돌려주지 않는 콜백입니다. 함수 형식이 `XIMProc` 그대로라 형변환으로 시그니처가 어긋날 수 없다. */
+            static XIMCallback makeCallback( X11InputMethod* pSelf, XIMProc pFunction )
             {
                 XIMCallback callback{};
                 callback.client_data = reinterpret_cast<XPointer>( pSelf );
-                callback.callback    = reinterpret_cast<XIMProc>( function );
+                callback.callback    = pFunction;
+                return callback;
+            }
+
+            /** @brief 값을 돌려주는 콜백(`XNPreeditStartCallback`)입니다. Xlib 이 같은 배치의 `XICCallback` 으로 받는다. */
+            static XICCallback makeCallback( X11InputMethod* pSelf, XICProc pFunction )
+            {
+                XICCallback callback{};
+                callback.client_data = reinterpret_cast<XPointer>( pSelf );
+                callback.callback    = pFunction;
                 return callback;
             }
         };
@@ -232,7 +242,7 @@ namespace sw
         XIC pContext{ nullptr };
         if ( bHasCallback )
         {
-            XIMCallback   start   = Internal::makeCallback( this, &Internal::onPreeditStart );
+            XICCallback   start   = Internal::makeCallback( this, &Internal::onPreeditStart );
             XIMCallback   done    = Internal::makeCallback( this, &Internal::onPreeditDone );
             XIMCallback   draw    = Internal::makeCallback( this, &Internal::onPreeditDraw );
             XIMCallback   caret   = Internal::makeCallback( this, &Internal::onPreeditCaret );

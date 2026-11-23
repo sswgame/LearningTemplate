@@ -1,6 +1,6 @@
 # 셰이더 데우기 — 요청 기록(`*.shaderrequests`, `ShaderRequestLog`)만 컴파일하는 길(`App --cook-shaders -shader-request-dir=`)이 셰이더 DDC 를 채워, 같은 요청의 다음 컴파일이
 # 캐시에 맞는지 본다. 묶음 검증은 지난 시나리오 체인의 기록으로 이 길을 cpu 단계에서 돌려 GPU 단계가 캐시 미스 컴파일을 떠안지 않게 한다(Scripts/dev/preflight.sh 의 shader warm).
-# 이 테스트의 DDC(DDC_DIR — `-shader-ddc-dir`)와 기록 폴더(REQUEST_DIR)는 비우고 시작한다 — 빌드 폴더가 함께 쓰는 DDC 는 건드리지 않는다.
+# 이 테스트의 DDC(DDC_DIR — `-ddc-dir`)와 기록 폴더(REQUEST_DIR)는 비우고 시작한다 — 빌드 폴더가 함께 쓰는 DDC 는 건드리지 않는다.
 # 첫 실행은 기록의 요청을 캐시 미스로 컴파일하고(`ShaderCompiler.CompiledOnCacheMiss`), 둘째 실행은 같은 기록을 한 번도 컴파일하지 않아야 한다(모두 DDC 적중).
 # 소스가 없어진 요청을 건너뛰는 규칙은 단위 테스트(`ShaderRequestLogTest`)가 본다 — 여기서 경고 줄을 내지 않는다.
 # 입력: APP · DDC_DIR · REQUEST_DIR · LOG_DIR(모두 절대 경로).
@@ -10,7 +10,7 @@ file(WRITE "${REQUEST_DIR}/warm.shaderrequests" "SW shader request log 1\ndx12\t
 foreach(pass first second)
 	set(log_path "${LOG_DIR}/ShaderCache.warm.${pass}.log")
 	execute_process(
-		COMMAND "${APP}" --cook-shaders "-shader-request-dir=${REQUEST_DIR}" "-shader-ddc-dir=${DDC_DIR}" -unattended "-log-file=${log_path}"
+		COMMAND "${APP}" --cook-shaders "-shader-request-dir=${REQUEST_DIR}" "-ddc-dir=${DDC_DIR}" -unattended "-log-file=${log_path}"
 		RESULT_VARIABLE exit_code)
 	if(NOT exit_code EQUAL 0)
 		message(FATAL_ERROR "the ${pass} shader warm-up exited ${exit_code} - see ${log_path}")

@@ -15,6 +15,7 @@
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Reflection/ReflectionContainers.h"
+#include "Engine/Serialization/Inherit/DataInheritanceSchemaRegistry.h"
 #include "Engine/Serialization/Inherit/ResourceComposition.h"
 #include "Engine/Serialization/Serializer/SerializerUtil.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
@@ -244,13 +245,13 @@ namespace sw
                 {
                     if ( element.isElement() == false || DataInheritance::isWhenElement( element ) )
                         continue; // 조건 원소는 목록 원소가 아니다 — 목록 원소 자신에 얹는 차이다(`appendWhenElements`)
-                    const utf8* pKey = element.findAttribute( schema._keyAttribute.c_str() );
-                    if ( pKey == nullptr )
+                    optional<string> key = schema.findElementKey( element );
+                    if ( key.has_value() == false )
                     {
                         SW_LOG_ERROR_ID( "DataInheritance.ListKeyMissing", "'%#': an element of list '%#' in its base has no key '%#'", sourceName, schema._name, schema._keyAttribute );
                         return false;
                     }
-                    outListEntry.append( ListEntry{ string{ pKey }, element, XMLNode{} } );
+                    outListEntry.append( ListEntry{ std::move( *key ), element, XMLNode{} } );
                 }
                 return true;
             }
@@ -292,13 +293,13 @@ namespace sw
             /** @brief 자식의 목록 원소 하나를 얹습니다. */
             [[nodiscard]] static bool applyChildEntry( const XMLNode& element, const DataInheritanceSchema& schema, KeyedEntryList& inoutListEntry, string_view sourceName )
             {
-                const utf8* pKey = element.findAttribute( schema._keyAttribute.c_str() );
-                if ( pKey == nullptr )
+                const optional<string> elementKey = schema.findElementKey( element );
+                if ( elementKey.has_value() == false )
                 {
                     SW_LOG_ERROR_ID( "DataInheritance.ListKeyMissing2", "'%#': an element of list '%#' has no key '%#'", sourceName, schema._name, schema._keyAttribute );
                     return false;
                 }
-                const string_view key      = pKey;
+                const string_view key      = *elementKey;
                 const string_view op       = element.getAttributeText( DataInheritance::kOpAttribute );
                 ListEntry*        pEntry   = inoutListEntry.find( key );
                 const bool        bRemove  = op == DataInheritance::kOpRemove;
@@ -367,6 +368,7 @@ namespace sw
                     }
                     const XMLNode item = out.appendChild( entry._childNode.getName() );
                     mergeAttributes( entry._parentNode, entry._childNode, item );
+                    schema.writeElementKey( item, entry._key ); // 열쇠가 글이면 속성 합치기가 옮기지 않는다
                     if ( schema._bSelfNested != SW_FALSE )
                     {
                         if ( entry._parentNode.isValid() == false )
@@ -586,7 +588,7 @@ namespace sw
                     if ( fullEntries.find( entry._key ) != nullptr )
                         continue;
                     const XMLNode removed = out.appendChild( entry._parentNode.getName() );
-                    removed.setAttribute( schema._keyAttribute.c_str(), string_view( entry._key ) );
+                    schema.writeElementKey( removed, entry._key );
                     removed.setAttribute( DataInheritance::kOpAttribute, DataInheritance::kOpRemove );
                 }
                 // 작업 목록은 열쇠의 차례만 든다 — 원소는 부모 쪽 색인에서 찾는다(자리를 옮겨도 색인을 다시 짓지 않는다).
@@ -638,17 +640,14 @@ namespace sw
                         const auto itCurrent = bNew ? listWorking.end() - 1 : std::find( listWorking.begin() + static_cast<ptrdiff_t>( index ), listWorking.end(), fullEntry._key );
                         std::rotate( listWorking.begin() + static_cast<ptrdiff_t>( index ), itCurrent, itCurrent + 1 );
                     }
-                    if ( hasContent( item ) == false )
-                        continue;
-                    item.setAttribute( schema._keyAttribute.c_str(), string_view( fullEntry._key ) );
+                    if ( hasContent( item ) == false && bNew == false )
+                        continue; // 새 원소는 열쇠(글)만으로도 차이다
+                    schema.writeElementKey( item, fullEntry._key );
                     (void)out.appendClone( item );
                 }
                 return true;
             }
         };
-
-        /** @brief 손 형식 규칙 표입니다. 정적 등록 공통 틀(잠금을 든 함수 정적 목록)이라 다른 TU 의 정적 등록자가 먼저 와도 서 있다. */
-        SW_DEFINE_LOCKED_REGISTRATION_LIST( getSchemaRegistrars, const DataInheritanceSchemaRegistrar, "DataInheritanceSchemaRegistry" )
 
         /** @brief `makeFromType` 의 재귀 단계입니다. @p inoutStack 은 지나온 형식이고, 자기 자신을 담는 칸은 통째로 바꾸는 칸으로 둡니다. */
         struct DataInheritanceSchemaBuilder
@@ -731,6 +730,25 @@ namespace sw
         , _bSelfNested{ SW_FALSE }
         , _reserved{ 0 }
     {
+    }
+
+    optional<string> DataInheritanceSchema::findElementKey( const XMLNode& element ) const
+    {
+        if ( _keyAttribute == kTextKey )
+        {
+            const string_view text = StringUtil::trim( element.getText() );
+            return text.empty() ? optional<string>{} : optional<string>{ string{ text } };
+        }
+        const utf8* pKey = element.findAttribute( _keyAttribute.c_str() );
+        return pKey != nullptr ? optional<string>{ string{ pKey } } : optional<string>{};
+    }
+
+    void DataInheritanceSchema::writeElementKey( const XMLNode& element, string_view key ) const
+    {
+        if ( _keyAttribute == kTextKey )
+            element.setValue( key );
+        else
+            element.setAttribute( _keyAttribute.c_str(), key );
     }
 
     DataInheritanceSchema DataInheritanceSchema::makeKeyedList( string_view name, string_view keyAttribute )
@@ -825,7 +843,7 @@ namespace sw
                 if ( item.isElement() == false || DataInheritance::isWhenElement( item ) )
                     continue;
                 StringBuilder<constant::buffer::kMax256> itemPathBuilder;
-                itemPathBuilder.appendFormat( "%#[%#]", path, item.getAttributeText( pField->_keyAttribute.c_str() ) );
+                itemPathBuilder.appendFormat( "%#[%#]", path, pField->findElementKey( item ).value_or( string{} ) ); // 열쇠 없는 원소는 펼치기가 이미 거절했다
                 const string_view op = item.getAttributeText( DataInheritance::kOpAttribute );
                 if ( op == DataInheritance::kOpRemove || op == DataInheritance::kOpReplace )
                     eraseUnder( string( itemPathBuilder.view() ) );
@@ -917,57 +935,7 @@ namespace sw
         return true;
     }
 
-    DataInheritanceSchemaRegistrar::DataInheritanceSchemaRegistrar( const utf8* pRootName, DataInheritance::MakeSchemaFunction pfnMakeSchema )
-        : _pRootName{ pRootName }
-        , _pfnMakeSchema{ pfnMakeSchema }
-        , _pfnMerge{ nullptr }
-    {
-        getSchemaRegistrars().withLock( [this]( RegistrationList<const DataInheritanceSchemaRegistrar>& list )
-        { (void)list.add( this ); } );
-    }
-
-    DataInheritanceSchemaRegistrar::DataInheritanceSchemaRegistrar( const utf8* pRootName, DataInheritance::MergeFunction pfnMerge )
-        : _pRootName{ pRootName }
-        , _pfnMakeSchema{ nullptr }
-        , _pfnMerge{ pfnMerge }
-    {
-        getSchemaRegistrars().withLock( [this]( RegistrationList<const DataInheritanceSchemaRegistrar>& list )
-        { (void)list.add( this ); } );
-    }
-
-    DataInheritanceSchemaRegistrar::~DataInheritanceSchemaRegistrar()
-    {
-        (void)getSchemaRegistrars().remove( this ); // 올라 있지 않으면 할 일이 없다
-    }
-
-    DataInheritance::MakeSchemaFunction DataInheritanceSchemaRegistrar::find( string_view rootName )
-    {
-        return getSchemaRegistrars().withLock( [rootName]( const RegistrationList<const DataInheritanceSchemaRegistrar>& list ) -> DataInheritance::MakeSchemaFunction
-        {
-            // 나중에 올린 것이 먼저다(예전 사슬과 같은 순서) — 같은 루트의 규칙 함수 · 합치기 함수가 따로 오를 수 있어 이름 찾기 대신 훑는다.
-            const vector<const DataInheritanceSchemaRegistrar*>& listItem = list.getItems();
-            for ( size_t index = listItem.size(); index > 0; --index )
-            {
-                if ( rootName == listItem[index - 1]->_pRootName && listItem[index - 1]->_pfnMakeSchema != nullptr )
-                    return listItem[index - 1]->_pfnMakeSchema;
-            }
-            return nullptr;
-        } );
-    }
-
-    DataInheritance::MergeFunction DataInheritanceSchemaRegistrar::findMerge( string_view rootName )
-    {
-        return getSchemaRegistrars().withLock( [rootName]( const RegistrationList<const DataInheritanceSchemaRegistrar>& list ) -> DataInheritance::MergeFunction
-        {
-            const vector<const DataInheritanceSchemaRegistrar*>& listItem = list.getItems();
-            for ( size_t index = listItem.size(); index > 0; --index )
-            {
-                if ( rootName == listItem[index - 1]->_pRootName && listItem[index - 1]->_pfnMerge != nullptr )
-                    return listItem[index - 1]->_pfnMerge;
-            }
-            return nullptr;
-        } );
-    }
+    SW_DEFINE_LOCKED_REGISTRATION_LIST( DataInheritanceSchemaEntry::getEntries, const DataInheritanceSchemaEntry, "DataInheritanceSchemaRegistry", RegistrationOrder::Insertion, true )
 
     bool DataInheritance::makeDelta( string_view fullText, string_view parentFullText, const DataInheritanceSchema& schema, string_view baseID, string& outText )
     {

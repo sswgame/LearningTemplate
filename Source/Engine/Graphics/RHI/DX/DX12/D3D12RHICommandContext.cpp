@@ -559,7 +559,7 @@ namespace sw
         // 부르는 쪽이 드로우를 건너뛰는 것이 렌더러의 규칙이라, 여기 닿은 것은 부르는 쪽의 결함이다(지운 핸들 · PSO 를 걸지 않은 드로우).
         const D3D12RHIDevice::D3D12PipelineStateRecord* pPSORecord = _pDevice->_pipelineStates.get( _pState->_activeGraphicsPSO );
         if ( pPSORecord == nullptr || pPSORecord->_pso == nullptr )
-            SW_FATAL( "D3D12 draw without a registered graphics PSO (handle %#)", _pState->_activeGraphicsPSO.getPacked() );
+            reportFatalError( "D3D12 draw without a registered graphics PSO (handle %#)", _pState->_activeGraphicsPSO.getPacked() );
 
         if ( _pState->_boundNativeGraphicsPSO != _pState->_activeGraphicsPSO )
         {
@@ -867,7 +867,7 @@ namespace sw
         // 부르는 쪽이 디스패치를 건너뛰는 것이 렌더러의 규칙이라, 여기 닿은 것은 부르는 쪽의 결함이다(지운 핸들 · 컴퓨트 PSO 를 걸지 않은 디스패치).
         const D3D12RHIDevice::D3D12PipelineStateRecord* pRecord = _pDevice->_pipelineStates.get( _pState->_activeComputePSO );
         if ( pRecord == nullptr || pRecord->_pso == nullptr )
-            SW_FATAL( "D3D12 dispatch without a registered compute PSO (handle %#)", _pState->_activeComputePSO.getPacked() );
+            reportFatalError( "D3D12 dispatch without a registered compute PSO (handle %#)", _pState->_activeComputePSO.getPacked() );
     }
 
     // 길이 유지(긴 함수 정리 기준): 상태 전이 · 시작 접근 채우기 · 패스 시작 · 뷰포트의 순서가 곧 의미라 나누지 않는다.

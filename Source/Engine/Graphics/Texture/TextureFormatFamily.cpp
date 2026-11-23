@@ -11,7 +11,7 @@
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
-#include "Engine/Reflection/TypeRegistry.h"
+#include "Engine/Reflection/EnumName.h"
 
 namespace sw
 {
@@ -22,12 +22,15 @@ namespace sw
             static constexpr string_view kDDSExtension = ".dds";
 
             /** @brief @p settings 의 묶음 하나를 형식 이름까지 풉니다. 모르는 이름이면 오류를 남기고 false 입니다. */
-            [[nodiscard]] static bool resolveFamily( const TextureFormatFamilySettings& settings, const TypeRegistry& types, TextureFormatFamily& outFamily )
+            [[nodiscard]] static bool resolveFamily( const TextureFormatFamilySettings& settings, TextureFormatFamily& outFamily )
             {
                 const auto resolveFormat = [&]( const string& name, RHIFormat& outFormat )
                 {
-                    if ( types.enumFromString( name, outFormat ) )
+                    if ( const optional<RHIFormat> format = tryParseEnum<RHIFormat>( name ) )
+                    {
+                        outFormat = *format;
                         return true;
+                    }
                     SW_LOG_ERROR_ID( "TextureFormats.UnknownFormat", "Texture format family '%#' names format '%#' which RHIFormat does not have", settings._name, name );
                     return false;
                 };
@@ -67,7 +70,7 @@ namespace sw
         return RHIFormat::Unknown;
     }
 
-    bool TextureFormatFamily::resolveTarget( const TextureFormatSettings& settings, string_view targetName, const TypeRegistry& types, vector<TextureFormatFamily>& outListFamily )
+    bool TextureFormatFamily::resolveTarget( const TextureFormatSettings& settings, string_view targetName, vector<TextureFormatFamily>& outListFamily )
     {
         outListFamily.clear();
         const TextureFormatTargetSettings* pTarget = nullptr;
@@ -92,7 +95,7 @@ namespace sw
             TextureFormatFamily resolved;
             if ( pFamily == nullptr )
                 SW_LOG_ERROR_ID( "TextureFormats.UnknownFamily", "Texture format target '%#' lists family '%#' which the table does not have", targetName, familyName );
-            if ( pFamily == nullptr || TextureFormatSelectionInternal::resolveFamily( *pFamily, types, resolved ) == false )
+            if ( pFamily == nullptr || TextureFormatSelectionInternal::resolveFamily( *pFamily, resolved ) == false )
             {
                 outListFamily.clear();
                 return false;
@@ -124,13 +127,13 @@ namespace sw
         return targetName;
     }
 
-    bool TextureFormatFamily::resolveCookFamilies( const TextureFormatSettings& settings, const TypeRegistry& types, vector<TextureFormatFamily>& outListFamily )
+    bool TextureFormatFamily::resolveCookFamilies( const TextureFormatSettings& settings, vector<TextureFormatFamily>& outListFamily )
     {
         outListFamily.clear();
         for ( const TextureFormatTargetSettings& target : settings._listTarget )
         {
             vector<TextureFormatFamily> listTargetFamily;
-            if ( resolveTarget( settings, target._name, types, listTargetFamily ) == false )
+            if ( resolveTarget( settings, target._name, listTargetFamily ) == false )
             {
                 outListFamily.clear();
                 return false; // 까닭은 resolveTarget 이 남겼다
@@ -166,13 +169,12 @@ namespace sw
         if ( engine::areEngineServicesBound() == false )
             return {};
         const EngineConfig* const pConfig = engine::findSubsystem<EngineConfig>();
-        const TypeRegistry* const pTypes  = engine::findSubsystem<TypeRegistry>();
-        if ( pConfig == nullptr || pTypes == nullptr )
+        if ( pConfig == nullptr )
             return {};
         const TextureFormatSettings& settings   = pConfig->_textureFormats;
         const string                 targetName = findPlatformTarget( settings, build::kPlatformName );
         vector<TextureFormatFamily>  listFamily;
-        if ( targetName.empty() || resolveTarget( settings, targetName, *pTypes, listFamily ) == false )
+        if ( targetName.empty() || resolveTarget( settings, targetName, listFamily ) == false )
             return {}; // 까닭은 위에서 남겼다
         const TextureFormatFamily* const pFamily = selectFamily( listFamily, device );
         if ( pFamily == nullptr )

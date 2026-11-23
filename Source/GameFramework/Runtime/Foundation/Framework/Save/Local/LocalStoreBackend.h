@@ -14,6 +14,7 @@
 #include "Core/File/UserDataPath.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Registry/RegistrationList.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/Local/LocalSealContext.h"
@@ -46,26 +47,17 @@ namespace sw
         LocalSlotStorageCreateFunction _createFunction;
 
         // 로컬 저장 공장 · 바닥 레지스트리입니다. 바닥 테이블은 잠금으로 지키므로 모듈 로더 스레드에서 등록해도 된다.
-        friend class LocalStoreBackendRegistration;
-
         static constexpr const utf8* kFileBackendName   = "file";
         static constexpr const utf8* kMemoryBackendName = "memory";
 
         /** @brief 프런트를 만듭니다. 봉인 인터페이스(@p sealContext)는 빌려 쓰므로 프런트보다 오래 살아야 합니다. */
         [[nodiscard]] static expected<unique_ptr<ILocalStore>> createLocalStore( string_view gameName, const LocalStoreConfig& settings, const LocalSealContext& sealContext );
 
-    private:
-        /** @brief 바닥을 올립니다. 기반 이름("file" · "memory")이거나 같은 이름이 이미 있으면 오류다(앞 것을 덮지 않는다). */
-        static void registerBackend( const LocalStoreBackend& backend );
-        /** @brief @p backend 로 올린 항목만 내립니다. 언로드 리스너가 이미 지웠거나 새 이미지의 같은 이름 항목은 건드리지 않는다. */
-        static void unregisterBackend( const LocalStoreBackend& backend );
+        /** @brief 바닥을 올립니다. 기반 이름("file" · "memory")이거나 같은 이름이 이미 있으면 오류 로그를 남기고 false 입니다(앞 것을 덮지 않는다). 등록은 `LocalStoreBackendRegistration` 으로 한다. */
+        [[nodiscard]] static bool registerBackend( const LocalStoreBackend* pBackend );
+        /** @brief @p pBackend 로 올린 항목만 내립니다. 새 이미지의 같은 이름 항목은 건드리지 않는다. */
+        static void unregisterBackend( const LocalStoreBackend* pBackend );
     };
-} // namespace sw
-
-namespace sw
-{
-    class LocalStoreBackendRegistration;
-
 } // namespace sw
 
 namespace sw
@@ -79,17 +71,17 @@ namespace sw
     {
     public:
         /** @param pBackendName 설정 `_backend` 에 쓰는 이름(정적 문자열) */
-        LocalStoreBackendRegistration( const utf8* pBackendName, LocalSlotStorageCreateSignature& createFunction )
+        LocalStoreBackendRegistration( const utf8* pBackendName, LocalSlotStorageCreateSignature& createFunction, SourceLocation site = SourceLocation::current() )
             : _backend{ pBackendName, &createFunction }
+            , _registrar{ &_backend, &LocalStoreBackend::registerBackend, &LocalStoreBackend::unregisterBackend, site }
         {
-            LocalStoreBackend::registerBackend( _backend );
         }
-        ~LocalStoreBackendRegistration() { LocalStoreBackend::unregisterBackend( _backend ); }
 
         LocalStoreBackendRegistration( const LocalStoreBackendRegistration& )            = delete;
         LocalStoreBackendRegistration& operator=( const LocalStoreBackendRegistration& ) = delete;
 
     private:
-        LocalStoreBackend _backend;
+        LocalStoreBackend                         _backend;   ///< 표에 오르는 줄(이 등록과 수명이 같다)
+        StaticRegistrar<const LocalStoreBackend*> _registrar; ///< 줄 다음에 만들어 줄보다 먼저 사라진다
     };
 } // namespace sw

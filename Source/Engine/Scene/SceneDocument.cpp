@@ -20,6 +20,7 @@
 #include "Engine/Serialization/Format/BinarySerializer.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
+#include "Engine/Serialization/Inherit/DataInheritanceSchemaRegistry.h"
 #include "Engine/Serialization/Inherit/ResourceComposer.h"
 #include "Engine/Serialization/Inherit/ResourceComposition.h"
 #include "Engine/Serialization/XML/XMLDocument.h"

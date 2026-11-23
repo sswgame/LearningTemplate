@@ -56,6 +56,9 @@ class CookIfInputsChangedTest(unittest.TestCase):
         self.assertEqual(self.cook(), 0)
         self.assertEqual(self.cook(), 0)
         self.assertEqual(self.runs(), 1)   # 두 번째는 건너뛴다
+        (self.root / "Bin" / "run.log").write_text("log", encoding="utf-8")
+        self.cook()
+        self.assertEqual(self.runs(), 1)   # 실행 파일 폴더의 로그는 쿠커가 아니다
         touch_later(self.root / "Content" / "a.xml", "changed")
         self.cook()
         self.assertEqual(self.runs(), 2)   # 입력이 바뀌었다

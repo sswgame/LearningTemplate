@@ -13,7 +13,7 @@
 	<Launch variable="gv_renderScale" value="1"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Render.GIAccumulatedFrames" atLeast="120" timeoutFrames="300"/> <!-- 프로브 GI 가 30 번(주기 4, 섞기 0.25 — 남은 몫 0.75^30) 쌓였다 -->
-	<Screenshot file="screenspacegi.ppm" stability="assets"/>
+	<Screenshot file="screenspacegi.ppm" stability="Assets"/>
 	<ExpectImage file="screenspacegi.ppm" golden="screenspacegi"/>
 	<Pass/>
 </Scenario>

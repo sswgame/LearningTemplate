@@ -21,16 +21,15 @@ namespace sw
      */
     struct ShaderCookResult
     {
-        string             _sourcePath;
-        string             _outputPath;
-        string             _entryPoint;
-        ShaderStage        _stage;
-        ShaderTargetFormat _targetFormat;
-        /// @brief 컴파일이 실제로 연 `#include` 파일입니다(`ShaderCompileResult::_listIncludedFile` 그대로). 성공했을 때만 믿는다. 쿠킹 스탬프가 소스별 의존 목록으로 적는다.
-        vector<string>         _listIncludedFile;
-        uint64                 _byteCodeSize{ 0 };
+        string                 _sourcePath;
+        string                 _outputPath;
+        string                 _entryPoint;
+        ShaderStage            _stage;
+        ShaderTargetFormat     _targetFormat;
+        vector<uint8>          _bytecode; ///< 쓴(또는 이미 같은 내용인) 바이너리의 바이트 — 부르는 쪽이 다시 읽지 않고 리플렉션을 뽑는다
         uint8                  _bSuccess : 1;
-        [[maybe_unused]] uint8 _reserved : 7;
+        uint8                  _bWritten : 1; ///< 출력 파일이 다른 내용이라 새로 썼다(거짓이면 이미 같은 내용이다)
+        [[maybe_unused]] uint8 _reserved : 6;
 
         ShaderCookResult()
             : _sourcePath{}
@@ -38,9 +37,9 @@ namespace sw
             , _entryPoint{}
             , _stage{ ShaderStage::Vertex }
             , _targetFormat{ ShaderTargetFormat::SPIRV_Vulkan }
-            , _listIncludedFile{}
-            , _byteCodeSize{ 0 }
+            , _bytecode{}
             , _bSuccess{ SW_FALSE }
+            , _bWritten{ SW_FALSE }
             , _reserved{ 0 }
         {
         }
@@ -92,36 +91,33 @@ namespace sw
      */
     struct SW_API ShaderCooker
     {
-        /** @brief 쿠킹한 셰이더 산출물의 접미사입니다(백엔드 바이너리 셋, 리플렉션 매니페스트, 쿠킹 스탬프). 쿠킹 스테이징에만 있다 — 소스 트리에 있으면 낡은 잔재라 팩에 넣지 않는다. */
+        /** @brief 쿠킹한 셰이더 산출물의 접미사입니다(백엔드 바이너리 셋, 리플렉션 매니페스트). 쿠킹 스테이징에만 있다 — 소스 트리에 있으면 낡은 잔재라 팩에 넣지 않는다. */
         static constexpr AssetSuffix kArrAssetSuffix[] = {
             {              ".dxil", AssetSuffixRole::Cooked},
             {              ".dxbc", AssetSuffixRole::Cooked},
             {               ".spv", AssetSuffixRole::Cooked},
             {"reflection.manifest", AssetSuffixRole::Cooked},
-            {         "cook.stamp", AssetSuffixRole::Cooked},
         };
 
         /** @brief 셰이더 바이너리 에셋 종류입니다(등록은 `ShaderCooker.cpp` 의 `SW_ASSET_TYPE`). 전용 서버 패키지가 빼는 묶음 `ShaderBinary` 다. */
         static constexpr AssetTypeDef kAssetType{ "ShaderBinary", kArrAssetSuffix, static_cast<uint32>( SW_COUNT_OF( kArrAssetSuffix ) ), {}, 0, "ShaderBinary" };
 
         /**
-         * @brief 셰이더 하나를 지정한 포맷과 스테이지로 컴파일해 디스크에 바이너리로 저장합니다.
-         * @param source 원본 HLSL 소스의 리소스 경로(컴파일러가 해석한다 — 디스크 경로를 넣지 않는다)
+         * @brief 쿠킹 요청 하나의 컴파일 요청입니다(굽기와 쿠킹본 판정이 같은 요청으로 기록을 찾는다).
+         * @param enginePolicy 쿠킹 시작에 뜬 엔진 설정 사본
+         */
+        [[nodiscard]] static ShaderCompileDesc makeCompileDesc( const ShaderSourceID& source, string_view entryPoint, ShaderStage stage, ShaderTargetFormat targetFormat,
+                                                                const ShaderEnginePolicy& enginePolicy, const vector<string>& listPermutation );
+        /**
+         * @brief 컴파일 요청 @p desc 를 컴파일해 @p outputPath 에 둡니다. 이미 같은 내용이면 다시 쓰지 않습니다.
          * @param outputPath 출력 바이너리 파일 경로
-         * @param entryPoint 셰이더 진입점 함수 이름(예: "VSMain", "PSMain", "CSMain")
-         * @param stage 셰이더 스테이지(Vertex, Pixel, Compute)
-         * @param targetFormat 대상 포맷(DXIL_D3D12, SPIRV_Vulkan, DXBC_D3D11)
-         * @param enginePolicy 쿠킹 시작에 뜬 엔진 설정 사본(`ShaderCookStampCache::getEnginePolicy`) — 쿠킹 워커에서 불려 설정을 직접 읽지 않는다
-         * @param pOutResult 쿠킹 결과 상세 정보(선택)
+         * @param outResult 바이트 · 새로 썼는지
          * @return 성공하면 true 입니다.
          */
-        [[nodiscard]] static bool cookShader( const ShaderSourceID& source, string_view outputPath, string_view entryPoint,
-                                              ShaderStage stage, ShaderTargetFormat targetFormat, const ShaderEnginePolicy& enginePolicy,
-                                              const vector<string>* pListPermutation = nullptr,
-                                              ShaderCookResult*     pOutResult       = nullptr );
+        [[nodiscard]] static bool cookShader( const ShaderCompileDesc& desc, string_view outputPath, ShaderCookResult& outResult );
 
         // "무엇을 쿠킹할지"와 "모두 쿠킹"은 여기 없다. 파이프라인 XML 과 패스 종류를 아는 렌더러의 정책이라 `Renderer/Cook/ShaderCookDriver` 에 있다.
-        // 산출물이 최신인지(스탬프 · 의존 기록 · 도구 지문)는 `ShaderCookStamp` 가 판정한다. 여기는 셰이더 하나를 쿠킹하는 법과 이름 짓기만 둔다.
+        // 산출물이 최신인지는 컴파일의 쿠킹 기록(`ShaderCompiler::findCurrentRecord`) 하나로 본다 — 최신이면 컴파일은 DDC 적중이라 쿠커가 따로 판정하지 않는다.
 
         /** @brief 셰이더 파일의 스템을 소문자로 반환합니다. 쿠킹된 파일 이름의 앞부분입니다(`computeBinaryFileName` 의 짝). */
         static string getStemLower( string_view filePath );
@@ -151,10 +147,10 @@ namespace sw
         static string computeBinaryFileName( string_view stemLower, ShaderStage stage,
                                              string_view entryPoint, uint64 permutationHash, string_view ext );
 
-        /** @brief 타깃 포맷의 바이너리 서브폴더 이름(쿠킹 테이블의 `shader_folder`)입니다. 모르는 값(`Count` · 범위 밖)은 `SW_FATAL` 입니다. */
+        /** @brief 타깃 포맷의 바이너리 서브폴더 이름(쿠킹 테이블의 `shader_folder`)입니다. 모르는 값(`Count` · 범위 밖)은 `reportFatalError` 입니다. */
         static string_view getSubfolderForFormat( ShaderTargetFormat format );
 
-        /** @brief 타깃 포맷에 해당하는 확장자(".dxbc", ".dxil", ".spv")를 반환합니다. 모르는 값은 `SW_FATAL` 입니다. */
+        /** @brief 타깃 포맷에 해당하는 확장자(".dxbc", ".dxil", ".spv")를 반환합니다. 모르는 값은 `reportFatalError` 입니다. */
         static string_view getExtensionForFormat( ShaderTargetFormat format );
 
         /** @brief 쿠킹 테이블의 셰이더 폴더 이름(`dx11`, `dx12`, `vulkan`, `opengl`)으로 ShaderTargetFormat 을 역으로 구합니다. 모르면 Count 입니다. */

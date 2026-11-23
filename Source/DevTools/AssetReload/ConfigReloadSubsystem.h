@@ -22,7 +22,7 @@
 namespace sw
 {
     class ConfigManager;
-    class FileWatchDispatcher;
+    class FileWatchService;
     struct FileChangeEvent;
 
     /** @brief 설정 파일 하나를 맡는 처리기입니다. 맡은 파일이 아니면 `NotTracked` 를 돌려준다. */
@@ -36,7 +36,7 @@ namespace sw
         static constexpr SubsystemModuleVisibility kModuleVisibility = SubsystemModuleVisibility::HostModules; ///< 에디터 도구 시드 · 프로젝트 설정 창이 리로드를 건다
 
         /** @param configManager 호스트 설정의 주인 — 이 서브시스템보다 먼저 서고 늦게 사라진다(의존 칸). */
-        explicit ConfigReloadSubsystem( ConfigManager& configManager );
+        ConfigReloadSubsystem( ConfigManager& configManager, FileWatchService& fileWatch );
         ~ConfigReloadSubsystem() override;
         ConfigReloadSubsystem( const ConfigReloadSubsystem& )            = delete;
         ConfigReloadSubsystem& operator=( const ConfigReloadSubsystem& ) = delete;
@@ -46,9 +46,6 @@ namespace sw
         void                    shutdownSubsystem() override;
         const utf8*             getSubsystemName() const override { return kSubsystemName; }
         span<const utf8* const> getSubsystemDependencies() const override;
-
-        /** @brief 프레임마다 부릅니다(바뀐 파일을 다시 읽는다). */
-        void update();
 
         /** @brief 호스트 설정 밖의 파일을 맡는 처리기를 겁니다. 구독이 사라지면 빠진다. */
         [[nodiscard]] Subscription registerFileHandler( const ConfigFileReloadDelegate& handler );
@@ -63,9 +60,9 @@ namespace sw
         void onConfigFileChanged( const FileChangeEvent& changeEvent );
 
     private:
-        ConfigManager&                  _configManager;
-        unique_ptr<FileWatchDispatcher> _pFileWatchDispatcher;
-        Subscription                    _configWatch; ///< 설정 폴더 감시 구독
+        ConfigManager&    _configManager;
+        FileWatchService& _fileWatch;
+        Subscription      _configWatch; ///< 설정 폴더 감시 구독
         /** @brief 처리기 목록입니다 — 공용 멀티캐스트라 처리기가 순회 중 자기 구독을 놓아도 순회가 끝난 뒤 빠진다. 먼저 맡은 처리기에서 멈춘다(`broadcastUntil`). */
         MulticastDelegate<ReloadResult( string_view )> _fileHandlers;
     };

@@ -40,7 +40,7 @@
 #include "Engine/Visual/Component/MeshSectionComponent.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
-#include "GameFramework/Runtime/Foundation/Framework/Save/ComponentStateStore.h"
+#include "GameFramework/Runtime/Foundation/Framework/Save/StatefulComponentRegistrar.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceDatabase.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceMeshPart.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceXMLUtil.h"

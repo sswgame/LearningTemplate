@@ -18,8 +18,8 @@ PCH 사용 플래그(/Yu · /Fp)는 뺀다 — clang-tidy 가 남이 짓는 중�
 바뀐 줄만 보는 진단 필터(clang-tidy-diff 의 -line-filter)는 두지 않는다 — 분석은 TU 전체를 그대로 해 시간이 줄지 않고, 판정은 진단이 아니라 실패한 TU 수다.
 
 결과 캐시(ccache direct 모드 꼴): 통과한 TU 의 출력을 본 트리 `Saved/TidyCache/` 에 둔다(본 트리 · 워크트리가 나눈다). 키는 clang-tidy 실행 파일 ·
-`.clang-tidy` · 검사 인자 · 컴파일 명령 · vcpkg 설치 상태 · TU 와 그 포함 닫힘(-I · /FI 로 찾은 모든 헤더의 경로와 내용 해시 — 조건부 포함도 넣어
-넘치게 잡는다)이다. 하나라도 바뀌면 다시 돈다. 풀지 못하는 매크로 포함(`#include MACRO`)이 닫힘에 있는 TU 는 캐시하지 않는다.
+`.clang-tidy` · 검사 인자 · 컴파일 명령 · vcpkg 설치 상태 · 컴파일러의 시스템 포함 폴더(MSVC STL · Windows SDK 판) · TU 와 그 포함 닫힘(-I · /FI 로 찾은 모든 헤더의 경로와 내용 해시 — 조건부 포함도 넣어
+넘치게 잡는다)이다. 하나라도 바뀌면 다시 돈다. 오래 쓰지 않은 항목은 실행 끝에 지운다(`prune_cache`). 풀지 못하는 매크로 포함(`#include MACRO`)이 닫힘에 있는 TU 는 캐시하지 않는다.
 clang-tidy 는 낮은 우선순위로 돈다 — 묶음 검증이 changed · cpu 단계와 겹쳐 띄운다(Scripts/dev/preflight.sh).
 
 종료 코드: clang-tidy 오류(WarningsAsErrors 로 오른 검사 · 컴파일 오류)가 하나라도 있으면 VIOLATION.
@@ -69,6 +69,10 @@ INCLUDE_DIR_PATTERN = re.compile(r'(?:^|\s)[-/](?:external:)?I("[^"]+"|\S+)')
 FORCE_INCLUDE_PATTERN = re.compile(r'(?:^|\s)[-/]FI("[^"]+"|\S+)')
 #: 결과 캐시 — 본 트리 기준.
 CACHE_DIR = Path("Saved") / "TidyCache"
+#: 이 날 수 넘게 쓰이지 않은(적중은 시각을 올린다) 캐시 항목은 지운다 — TU 출력 몇 KB 가 키마다 쌓이기만 했다.
+CACHE_MAX_AGE_DAYS = 14
+#: `-###` 이 찍는 cc1 인자에서 시스템 포함 폴더와 대상(MSVC 판이 든다).
+SYSTEM_INCLUDE_PATTERN = re.compile(r'"-(?:internal-isystem|internal-externc-isystem|triple)" "([^"]+)"')
 #: 캐시한 출력 · 키 안의 이 트리 경로 자리 — 본 트리 · 워크트리가 같은 캐시를 나눈다.
 TREE_PLACEHOLDER = "<SW_TREE>"
 
@@ -264,14 +268,33 @@ class IncludeClosure:
         return sorted((path, self._map_digest[path]) for path in seen)
 
 
-def make_base_digest(clang_tidy: Path, tree_root: Path, main_root: Path, list_extra: list[str]) -> str:
-    """모든 TU 가 나누는 키 재료: clang-tidy 실행 파일 · `.clang-tidy` · 검사 인자 · vcpkg 설치 상태(꺾쇠 시스템 헤더의 판)."""
-    # shortcut: MSVC STL · Windows SDK 판은 키에 없다(그 헤더의 진단은 세지 않고, 컴파일 오류는 빌드가 먼저 낸다), 판 올림 뒤 Saved/TidyCache 를 비운다.
+def make_base_digest(clang_tidy: Path, compiler: str, tree_root: Path, main_root: Path, list_extra: list[str]) -> str:
+    """모든 TU 가 나누는 키 재료: clang-tidy 실행 파일 · `.clang-tidy` · 검사 인자 · vcpkg 설치 상태 · STL · SDK 판(꺾쇠 시스템 헤더)."""
     digest = hashlib.sha256()
     for path in (clang_tidy, tree_root / ".clang-tidy", main_root / "build" / "vcpkg_installed" / "vcpkg" / "status"):
         digest.update(hashlib.sha256(path.read_bytes()).hexdigest().encode() if path.is_file() else b"-")
     digest.update(json.dumps(list_extra).encode())
+    digest.update(json.dumps(list_system_include(compiler)).encode())
     return digest.hexdigest()
+
+
+def list_system_include(compiler: str) -> list[str]:
+    """컴파일러 드라이버가 정한 시스템 포함 폴더와 대상 — MSVC STL · Windows SDK · libstdc++ 의 판이 폴더 이름에 든다(`14.51.36231` · `10.0.26100.0`).
+
+    꺾쇠 시스템 헤더는 빌드 폴더 밖이라 포함 닫힘에 들지 않아, 판이 올라도 키가 같았다. `-###` 은 컴파일하지 않고 cc1 명령줄만 찍는다."""
+    result = run_process([compiler, "-###", "-c", "-x", "c++", os.devnull])
+    list_found = SYSTEM_INCLUDE_PATTERN.findall(result.stdout + result.stderr)
+    if not list_found:
+        raise RuntimeError(f"{compiler} -### 가 시스템 포함 폴더를 찍지 않았다(종료 코드 {result.return_code})")
+    return list_found
+
+
+def find_compiler(entry: dict) -> str:
+    """컴파일 DB 항목의 컴파일러 경로(명령의 첫 낱말)."""
+    match = re.match(r'\s*(?:"([^"]+)"|(\S+))', entry["command"])
+    if match is None:
+        raise RuntimeError(f"컴파일 DB 의 명령에서 컴파일러를 찾지 못했다: {entry['command'][:200]}")
+    return match.group(1) or match.group(2)
 
 
 def make_cache_key(base_digest: str, entry: dict, closure: IncludeClosure, tree_root: Path) -> str | None:
@@ -296,16 +319,31 @@ def cache_path(cache_dir: Path, key: str) -> Path:
 
 def read_cache(cache_dir: Path, key: str, tree_root: Path) -> str | None:
     path = cache_path(cache_dir, key)
-    return path.read_text(encoding="utf-8").replace(TREE_PLACEHOLDER, str(tree_root)) if path.is_file() else None
+    if path.is_file() is False:
+        return None
+    os.utime(path)   # 정리(`prune_cache`)의 "마지막 사용"
+    return path.read_text(encoding="utf-8").replace(TREE_PLACEHOLDER, str(tree_root))
 
 
 def write_cache(cache_dir: Path, key: str, output: str, tree_root: Path) -> None:
-    # shortcut: 항목(TU 출력 몇 KB)을 지우지 않고 쌓는다, Saved/TidyCache 가 커지면 오래된 것부터 지우는 정리를 둔다.
     path = cache_path(cache_dir, key)
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_suffix(f".{os.getpid()}.tmp")
     temporary.write_text(output.replace(str(tree_root), TREE_PLACEHOLDER).replace(tree_root.as_posix(), TREE_PLACEHOLDER), encoding="utf-8")
     os.replace(temporary, path)   # 두 실행이 같은 키를 써도 반쯤 쓴 파일을 읽지 않는다
+
+
+def prune_cache(cache_dir: Path, now: float) -> int:
+    """`CACHE_MAX_AGE_DAYS` 넘게 쓰이지 않은 항목을 지우고 그 수를 돌려준다. 다른 실행이 먼저 지운 것은 세지 않는다."""
+    removed = 0
+    for path in cache_dir.glob("*/*") if cache_dir.is_dir() else ():
+        try:
+            if path.is_file() and now - path.stat().st_mtime > CACHE_MAX_AGE_DAYS * 86400:
+                path.unlink()
+                removed += 1
+        except FileNotFoundError:
+            continue
+    return removed
 
 
 def lower_priority() -> None:
@@ -340,6 +378,7 @@ def main(argv: list[str] | None = None) -> int:
     main_root = main_tree_root(tree_root)
     clang_tidy = clang_tidy_path(main_root)
     list_entry = load_database(main_root, tree_root, DEFAULT_PRESET)
+    compiler = find_compiler(list_entry[0])
 
     list_skipped: list[Path] = []
     if args.changed is not None:
@@ -356,7 +395,7 @@ def main(argv: list[str] | None = None) -> int:
     lower_priority()
     started = time.monotonic()
     cache_dir = main_root / CACHE_DIR
-    base_digest = make_base_digest(clang_tidy, tree_root, main_root, list_extra) if use_cache else ""
+    base_digest = make_base_digest(clang_tidy, compiler, tree_root, main_root, list_extra) if use_cache else ""
     closure = IncludeClosure()
     list_result: list[tuple[str, int, str]] = []
     list_run: list[tuple[dict, str | None]] = []
@@ -379,6 +418,9 @@ def main(argv: list[str] | None = None) -> int:
                 list_result.append(result)
                 if index % 100 == 0:
                     print(f"[tidy] {index}/{len(futures)} TU", flush=True)
+
+    if use_cache and (removed := prune_cache(cache_dir, time.time())) > 0:
+        print(f"[tidy] 캐시 정리 {removed} 항목({CACHE_MAX_AGE_DAYS} 일 넘게 쓰지 않음)", flush=True)
 
     diagnostics: dict[tuple[str, int, int, str], dict] = {}
     error_count = 0

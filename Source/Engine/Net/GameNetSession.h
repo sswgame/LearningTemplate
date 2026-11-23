@@ -14,6 +14,8 @@
  *            샤드 여럿에 포트 0 은 받지 않는다(연이은 포트가 배정의 계약이다).
  *          - 서버(개발 덮어쓰기): 개발 도구가 건 기동 덮어쓰기(`setLaunchOverride` — `DevTools/Net/NetListenLaunch` 의 `-gv_netListenPort`)로 연다. 리슨 호스트(`App`)는
  *            이 길뿐이고, 전용 서버에서는 설정보다 우선한다. 배포에는 개발 도구가 없어 이 길도 없다 — 평문 리슨은 루프백 · 개발 빌드로만 남긴다(U4).
+ *          - 브라우저 클라이언트: UDP 소켓이 없어 스트림(WebSocket)으로 붙는다(`GameNetSessionParams::_bStreamLink` — UDP 없는 플랫폼의 기본값). 서버는 `ServerConfig::_gameStreamPort` 를
+ *            켜면 UDP 샤드 뒤에 스트림 샤드(`StreamNetTransport`)를 더 세운다 — 엔드포인트 · 키트 · 접속 티켓은 UDP 와 같은 길이다. WebTransport 는 서버에 HTTP/3 가 없어 두지 않는다.
  *          - 클라이언트: `-gv_netConnectAddress=<호스트:포트>` 로 붙는다(Shipping 에도 있다). 호스트는 이름이어도 된다(`PlatformSocketUtil::resolveAddress` — HTTP 클라이언트와 같은 해석기,
  *            기동 때 한 번 막고 푼다). 포트를 빼면 `kDefaultPort` 를 쓴다. 풀리지 않으면 기동 오류다. 이 길은 자격 없이 붙는다 — 접속 티켓을 요구하는 서버
  *            (`ServerConfig::_bGameConnectTicket`)는 거절한다. 그 서버에는 로그인 뒤 `makeTicketClientParams` 의 인자로 `initialize` 해 붙는다.
@@ -59,6 +61,7 @@
 #include "Core/Network/Message/NetStatsReport.h"
 #include "Core/Network/NetTypes.h"
 #include "Core/Network/Transport/NetEmulation.h"
+#include "Core/Network/Transport/PlatformSocketUtil.h"
 #include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Subsystem/Subsystem.h"
 #include "Core/Task/TaskFuture.h"
@@ -103,13 +106,17 @@ namespace sw
     struct GameNetSessionParams
     {
         NetEndpointConfig _hostSettings{};
-        NetAddress        _serverAddress{}; ///< 클라이언트 — 붙을 서버
-        int32             _shardCount{ 1 }; ///< 서버 — 포트 샤드 수(샤드마다 소켓 · 호스트 · 스레드). 클라이언트는 1
-        uint16            _listenPort{ 0 }; ///< 서버 — 열 UDP 포트(샤드 여럿이면 첫 샤드의 포트, 나머지는 이어서)
+        NetAddress        _serverAddress{};                    ///< 클라이언트 — 붙을 서버
+        int32             _shardCount{ 1 };                    ///< 서버 — 포트 샤드 수(샤드마다 소켓 · 호스트 · 스레드). 클라이언트는 1
+        vector<uint32>    _listStreamTrustedProxy{};           ///< 서버 — 스트림 포트의 신뢰 프록시(`ServerConfig::_listGameStreamTrustedProxy`). 비면 프록시 없이 받는다
+        int32             _maxStreamConnectionsPerRemote{ 0 }; ///< 서버 — 스트림 포트에 한 호스트가 열 수 있는 연결 수
+        uint16            _listenPort{ 0 };                    ///< 서버 — 열 UDP 포트(샤드 여럿이면 첫 샤드의 포트, 나머지는 이어서)
+        uint16            _streamListenPort{ 0 };              ///< 서버 — 열 스트림(TCP · WebSocket) 포트(0 = 열지 않는다). UDP 샤드와 같은 배치로 스트림 샤드가 선다
         GameNetRole       _role{ GameNetRole::None };
-        NetAddressFamily  _listenFamily{ NetAddressFamily::Ipv4 }; ///< 서버 — 리슨 소켓의 주소군(설정 `_listenAddress` 가 정한다). IPv6 는 이중 스택이라 IPv4 클라이언트도 받는다. 클라이언트는 서버 주소의 군을 쓴다
-        bool              _bLoopbackOnly{ true };                  ///< 서버 — 이 기계의 상대만 받는다(설정 `_listenAddress` 또는 `gv_netLoopbackOnly`). 클라이언트는 서버 주소가 정해 읽지 않는다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool              _bShardsSharePort{ false };              ///< 서버(리눅스) — 샤드가 연이은 포트 대신 한 포트를 `SO_REUSEPORT` 로 나눈다(`ServerConfig::_bGamePortReuse`) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        NetAddressFamily  _listenFamily{ NetAddressFamily::Ipv4 };               ///< 서버 — 리슨 소켓의 주소군(설정 `_listenAddress` 가 정한다). IPv6 는 이중 스택이라 IPv4 클라이언트도 받는다. 클라이언트는 서버 주소의 군을 쓴다
+        bool              _bLoopbackOnly{ true };                                ///< 서버 — 이 기계의 상대만 받는다(설정 `_listenAddress` 또는 `gv_netLoopbackOnly`). 클라이언트는 서버 주소가 정해 읽지 않는다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool              _bShardsSharePort{ false };                            ///< 서버(리눅스) — 샤드가 연이은 포트 대신 한 포트를 `SO_REUSEPORT` 로 나눈다(`ServerConfig::_bGamePortReuse`) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool              _bStreamLink{ PlatformSocketUtil::kbHasUDP == false }; ///< 클라이언트 — UDP 대신 스트림(TCP · WebSocket)으로 붙는다. 기본은 UDP 가 없는 플랫폼(웹)만 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         /**
          * @brief 클라이언트 — 연결 때 내미는 접속 티켓입니다. 비어 있지 않으면 `_hostSettings._security` 가 암호화여야 합니다(`GameNetSession::makeTicketClientParams` 가 둘을 함께 채운다).
          * @details 티켓을 내미는 클라이언트와 받는 서버는 프로토콜 id 의 기능 비트가 같아야 붙는다 — 자격 없이 붙는 클라이언트는 티켓 서버에 `SecurityMismatch` 로 거절된다.
@@ -478,8 +485,10 @@ namespace sw
         /** @brief 합성 대조의 프레임 일입니다 — 클라이언트는 바뀐 줄을 보내고, 서버는 유예가 지나도 어긋난 연결을 끊는다. */
         void updateResourceDigest();
 
-        /** @brief 샤드 하나의 소켓을 열고 (건 데코레이터로 감싼) 호스트를 세웁니다. 실패하면 로그를 남기고 nullptr 입니다. */
-        unique_ptr<Shard> createShard( const GameNetSessionParams& params, uint16 transportPort, int32 shardIndex );
+        /** @brief UDP 소켓을 엽니다. 실패하면 로그를 남기고 nullptr 입니다. */
+        static unique_ptr<INetTransport> createUDPTransport( const GameNetSessionParams& params, uint16 transportPort );
+        /** @brief @p transport 위에 (건 데코레이터로 감싼) 호스트를 세웁니다. @p transport 가 없거나 호스트를 세우지 못하면 nullptr 입니다(까닭은 만든 쪽 · 호스트가 남긴다). */
+        unique_ptr<Shard> createShard( const GameNetSessionParams& params, unique_ptr<INetTransport> transport, int32 shardIndex );
         /** @brief 클라이언트 연결이 끝났으면 로그에 남깁니다. 시간 초과면 다시 시도하는데, 같이 띄운 서버가 아직 기동 중일 수 있기 때문입니다. */
         void reportConnectResult();
         /** @brief 클라이언트의 유일한 호스트입니다(클라이언트는 샤드가 하나다). */

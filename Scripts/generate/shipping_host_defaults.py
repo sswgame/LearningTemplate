@@ -120,13 +120,12 @@ def generate_shipping_host_defaults(output_path: Path, game_output_path: Path, g
         raise GeneratorError(f"Failed to parse engine config {engine_path}: {exception}") from exception
 
     try:
-        game_json = game_path.read_text(encoding="utf-8").strip()
-        game_data = json.loads(game_json)
+        game_data = json.loads(game_path.read_text(encoding="utf-8"))
     except (OSError, ValueError) as exception:
         raise GeneratorError(f"Failed to parse game config {game_path}: {exception}") from exception
-    # 프리셋은 팩 루트 하나다 — 나머지 설정은 팩의 gamesettings.xml 이 가진다. 다른 키가 구워지면 읽는 쪽이 없는 값이 Shipping 에만 남는다.
-    if not isinstance(game_data, dict) or set(game_data) != {"_packRoot"}:
-        raise GeneratorError(f"Game preset {game_path} must contain only `_packRoot` (other settings belong in the pack's data/gamesettings.xml)")
+    # 프리셋은 팩 루트와 쿠킹만 읽는 규칙(`GameConfig::_cookRules`)뿐이다 — 나머지 설정은 팩의 gamesettings.xml 이 가진다.
+    if not isinstance(game_data, dict) or "_packRoot" not in game_data or set(game_data) - {"_packRoot", "_cookRules"}:
+        raise GeneratorError(f"Game preset {game_path} must contain `_packRoot` and optionally `_cookRules` (other settings belong in the pack's data/gamesettings.xml)")
 
     platform_lines = _platform_override_lines(collect_platform_overrides(project_root))
     render_quality_json = load_render_quality(project_root)
@@ -149,7 +148,7 @@ namespace sw::shipping_host
 
 namespace sw::shipping_host
 {{
-	inline constexpr const char* kGameConfigJSON = {_escape_raw_string(game_json)};
+	inline constexpr const char* kGameConfigJSON = {_escape_raw_string(json.dumps({"_packRoot": game_data["_packRoot"]}))};
 }}
 """
 

@@ -10,8 +10,10 @@
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Asset/Cache/AssetCacheBase.h"
+#include "Engine/Asset/Cache/BuiltInAssetCache.h"
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Asset/Cache/SharedAssetRef.h"
+#include "Engine/Asset/Cache/WeakInternCache.h"
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Material/Material.h"
@@ -106,4 +108,13 @@ SW_TEST_CASE( AssetCacheReloadResultTest, UnheldPathIsNotTracked )
     const AssetID                   id = test::ScopedScratchDomain::makeID( "unheld.tileset.xml" );
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "unheld.tileset.xml" ), kBrokenCatalogXML ) );
     SW_EXPECT_TRUE( reloadThroughRegistry( SharedAssetCache<TileSetAsset>::kAssetKindName, id ) == ReloadResult::NotTracked );
+}
+
+/** @brief [AssetCacheReloadResultTest] 파일에서 읽지 않는 값 표(WeakInternCache)는 리로드 함수가 없고, 파일 캐시는 있다 — 등록 줄이 적지 않고 형식이 정한다 */
+SW_TEST_CASE( AssetCacheReloadResultTest, ValueTablesHaveNoReloadFunction )
+{
+    using ValueTable = WeakInternCache<int32, float32>; // 매크로 인자에 쉼표를 두지 않는다
+    SW_EXPECT_TRUE( getAssetCacheReloadFunction<ValueTable>() == nullptr );
+    SW_EXPECT_TRUE( MaterialCache::kReloadable );
+    SW_EXPECT_TRUE( engine::getSubsystem<AssetManager>().findReloadFunction( engine::getSubsystem<AssetManager>().findAssetCache( MaterialCache::kAssetKindName ) ) != nullptr );
 }

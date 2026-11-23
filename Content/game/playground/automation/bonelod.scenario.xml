@@ -21,12 +21,12 @@
 	<WaitRenderStable/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
 	<Expect watch="Animation.PoseEvaluatedSkeletalMeshes" atLeast="1"/>
 	<Store watch="Animation.EvaluatedBones" as="full"/>
-	<Screenshot file="bonelod_full.ppm" stability="assets"/>
+	<Screenshot file="bonelod_full.ppm" stability="Assets"/>
 	<Variable name="gv_animationBoneLOD" value="1"/>
 	<AdvanceSimulation frames="1"/> <!-- 제자리 변화 뒤 그리지 않는 한 프레임 — 다음 그림이 TAA · 노출 기록을 버리고 새로 쌓는다 -->
 	<WaitRenderStable/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
 	<Expect watch="Animation.EvaluatedBones" differsFrom="full"/>
-	<Screenshot file="bonelod_on.ppm" stability="assets"/>
+	<Screenshot file="bonelod_on.ppm" stability="Assets"/>
 	<ExpectImagesDiffer first="bonelod_full.ppm" second="bonelod_on.ppm" minDiffering="0" maxDiffering="0.02"/>
 	<Pass/>
 </Scenario>

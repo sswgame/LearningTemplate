@@ -426,7 +426,7 @@ namespace sw
             // 넘치면 멈춘다 — 마지막 슬롯을 나눠 쓰면 스크래치 벡터가 겹치고(힙 손상) 깨우기가 엉뚱한 스레드로 간다(감사 C-17). 끝나는 스레드가 슬롯을
             // 돌려주므로(`ThreadTaskState` 소멸) 동시에 살아 있는 비워커 스레드가 이만큼일 때만 닿는다.
             if ( assigned >= kMaxHelperThreadCount )
-                SW_FATAL( "More than %# non-worker threads execute tasks at once - scratch slots would collide (raise kMaxHelperThreadCount)", kMaxHelperThreadCount );
+                reportFatalError( "More than %# non-worker threads execute tasks at once - scratch slots would collide (raise kMaxHelperThreadCount)", kMaxHelperThreadCount );
             t_threadState._helperScratchSlot = static_cast<int32>( assigned );
         }
         return getWorkerCount() + static_cast<uint32>( t_threadState._helperScratchSlot );
