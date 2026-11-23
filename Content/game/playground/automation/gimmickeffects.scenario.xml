@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="0f382758c2ce4958ae9169b322f31235"?>
+<!--
+  기믹 효과(maps/gimmickeffects) — 기믹이 실제 대상에 닿는지 값으로 본다(단위 테스트는 조각만 본다).
+  ① 발사: 동적 상자가 발사대에 떨어지면 쏘여 4 m 위로 오른다. ② 부스트: 바디 없는 탈것(카트)이 부스트 판을 지나면 판 앞 최고 속도(30 m/s 아래)를 넘는다.
+  ③ 소리: 삐걱 바닥을 밟으면 등 뒤 6 m 의 경비가 듣고(Investigate) 그 자리로 와 살핀 뒤 기억이 다하면 다시 선다(Idle). ④ 연출 신호: 트리거가 한 번만 난다(소리 한 번).
+  값으로 판정한다(골든 없음). 실행: App -scenario=game/playground/automation/gimmickeffects.scenario.xml -unattended
+-->
+<Scenario name="game.playground.gimmickeffects" fixedDelta="0.0166667" timeoutFrames="2400" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/playground/maps/gimmickeffects.scene.xml"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<WaitUntil watch="AI.State" target="GuardBrain" is="Idle" timeoutFrames="30"/>
+
+	<!-- ① 발사 -->
+	<Expect watch="Object.Property" target="LaunchPad" key="LaunchPadComponent._launchCount" equals="0"/>
+	<DevCommand line="object.place Crate -6 2 0"/>
+	<WaitUntil watch="Object.Property" target="LaunchPad" key="LaunchPadComponent._launchCount" atLeast="1" timeoutFrames="120"/>
+	<WaitUntil watch="Object.Y" target="Crate" atLeast="4" timeoutFrames="90"/>
+
+	<!-- ② 부스트 -->
+	<Intent pawn="Kart" move="0,1" frames="360"/>
+	<WaitUntil watch="Object.Property" target="BoostPad" key="BoostPadComponent._boostCount" equals="1" timeoutFrames="300"/>
+	<WaitUntil watch="Vehicle.ForwardSpeed" target="Kart" atLeast="31" timeoutFrames="90"/>
+
+	<!-- ③ 소리 → 경비 -->
+	<Expect watch="AI.State" target="GuardBrain" is="Idle"/>
+	<DevCommand line="object.place Stepper 10 0.05 -6"/>
+	<WaitUntil watch="Object.Property" target="SqueakyFloor" key="NoiseEmitterComponent._emitCount" equals="1" timeoutFrames="30"/>
+	<WaitUntil watch="AI.State" target="GuardBrain" is="Investigate" timeoutFrames="10"/>
+	<DevCommand line="object.place Stepper 30 0.05 -6"/> <!-- 소리 자리만 남는다 -->
+	<WaitUntil watch="Object.DistanceTo" target="Guard" key="SqueakyFloor" atMost="1.5" timeoutSeconds="3"/>
+	<WaitUntil watch="AI.State" target="GuardBrain" is="Idle" timeoutSeconds="5"/>
+
+	<!-- ④ 연출 신호 -->
+	<DevCommand line="object.place Stepper 20 0.05 -6"/>
+	<WaitUntil watch="Object.Property" target="CueTrigger" key="CueTriggerComponent._fireCount" equals="1" timeoutFrames="20"/>
+	<DevCommand line="object.place Stepper 30 0.05 -6"/>
+	<WaitUntil watch="Physics.OverlapCount" target="CueTrigger" equals="0" timeoutFrames="20"/>
+	<DevCommand line="object.place Stepper 20 0.05 -6"/>
+	<WaitUntil watch="Physics.OverlapCount" target="CueTrigger" equals="1" timeoutFrames="20"/>
+	<AdvanceSimulation frames="5"/>
+	<Expect watch="Object.Property" target="CueTrigger" key="CueTriggerComponent._fireCount" equals="1"/> <!-- 한 번만 -->
+	<Pass/>
+</Scenario>
