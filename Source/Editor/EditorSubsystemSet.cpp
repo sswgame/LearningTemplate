@@ -54,40 +54,40 @@ namespace sw::editor
         const EditorToolDefaults& toolDefaults = *pToolDefaults;
         // 하위 객체는 목록이 소유한다. 넣는 순서는 뜻이 없고, 초기화 순서는 각자 선언한 의존이 정하며 종료 · 소멸은 그 역순이다.
         // 애셋 · 설정 핫 리로드(개발 기능)는 에디터가 켜져 있을 때만 감시하고, 버전 관리는 git LFS 를 비동기로 묻는다(각 initializeSubsystem).
-        scope.emplaceSubsystem<EditorStateStore>(); // 한 파일 안의 상태(감시 값이 읽는 값 · 캐시)의 주인 — 컨텍스트와 함께 생기고 사라진다
-        EditorSelection&    selection    = scope.emplaceSubsystem<EditorSelection>();
-        EditorPanelManager& panelManager = scope.emplaceSubsystem<EditorPanelManager>();
-        EditorPanelService& panelService = scope.emplaceSubsystem<EditorPanelService>( context, panelManager );
+        context.emplaceSubsystem<EditorStateStore>(); // 한 파일 안의 상태(감시 값이 읽는 값 · 캐시)의 주인 — 컨텍스트와 함께 생기고 사라진다
+        EditorSelection&    selection    = context.emplaceSubsystem<EditorSelection>();
+        EditorPanelManager& panelManager = context.emplaceSubsystem<EditorPanelManager>();
+        EditorPanelService& panelService = context.emplaceSubsystem<EditorPanelService>( context, panelManager );
         (void)scope.expose<IEditorPanelService>( panelService ); // 패널 매니저(GUI)를 모르는 레이어가 인터페이스로 찾는다 — 새 범위라 겹치지 않는다
-        scope.emplaceSubsystem<EditorWorkspace>( &selection );
-        scope.emplaceSubsystem<EditorNotificationManager>();
-        scope.emplaceSubsystem<EditorCommandRegistry>();
+        context.emplaceSubsystem<EditorWorkspace>( &selection );
+        context.emplaceSubsystem<EditorNotificationManager>();
+        context.emplaceSubsystem<EditorCommandRegistry>();
         // 메인 되돌리기 기록과 복사 버퍼 — 인스턴스가 내려갈 때 호스트의 맡김 칸에 맡기고 새 인스턴스가 되찾는다(리로드 · 백엔드 교체).
-        EditorUndoHistory& undoHistory = scope.emplaceSubsystem<EditorUndoHistory>( EditorUndoHistory::readConfiguredLimit( toolDefaults ) );
+        EditorUndoHistory& undoHistory = context.emplaceSubsystem<EditorUndoHistory>( EditorUndoHistory::readConfiguredLimit( toolDefaults ) );
         const bool         bStackBound = scope.exposeMember( undoHistory, undoHistory.getStack() ); // `findSubsystem<CommandStack>()` 이 찾는다 — 주인과 함께 지워진다
         SW_ASSERT( bStackBound );
         (void)bStackBound;
-        scope.emplaceSubsystem<ObjectCopyBuffer>();
-        scope.emplaceSubsystem<EditorSelectionSync>();      // 선택 동기화 채널 — 문맥마다 고른 애셋 한 칸(선택은 옮기지 않는다)
-        scope.emplaceSubsystem<EditorObjectEditBindings>(); // 커맨드 스택 알림 칸의 주인 — 컨텍스트와 함께 놓는다
-        scope.emplaceSubsystem<EditorInputActions>();       // 에디터 단축키의 입력 맵(editor.input.xml) — 명령 등록부 · 패널 매니저 뒤
-        scope.emplaceSubsystem<EditorPopupManager>();
-        scope.emplaceSubsystem<AssetHotReload>();
-        scope.emplaceSubsystem<EditorToolDefaultsReload>(); // `Config/` 감시는 엔진(ConfigReloadSubsystem)이 한다 — 편집기는 도구 기본값 처리기만 건다
-        scope.emplaceSubsystem<EditorSourceControl>( ProcessRoots::get()._project.str() );
-        scope.emplaceSubsystem<InspectorComponentManager>();
-        scope.emplaceSubsystem<PropertyDrawerRegistry>();
-        scope.emplaceSubsystem<EditorDefaultObjects>();
-        scope.emplaceSubsystem<EditorNetPlaySession>();
-        scope.emplaceSubsystem<EditorRenderViews>();
-        scope.emplaceSubsystem<EditorUICommandQueue>();
-        scope.emplaceSubsystem<EditorPlaySession>();
-        scope.emplaceSubsystem<EditorTheme>();
-        scope.emplaceSubsystem<EditorUICapture>();
-        scope.emplaceSubsystem<SceneViewOverlayLayoutStore>();      // 씬 뷰 오버레이 바 배치 — 씬 뷰 창이 그리지 않아도 명령이 고친다
-        scope.emplaceSubsystem<EditorExtensionSubsystems>( scope ); // 확장이 기여한 서브시스템(SW_EDITOR_SUBSYSTEM) — 프레임 앞 syncExtensionRegistrations 가 만든다
+        context.emplaceSubsystem<ObjectCopyBuffer>();
+        context.emplaceSubsystem<EditorSelectionSync>();      // 선택 동기화 채널 — 문맥마다 고른 애셋 한 칸(선택은 옮기지 않는다)
+        context.emplaceSubsystem<EditorObjectEditBindings>(); // 커맨드 스택 알림 칸의 주인 — 컨텍스트와 함께 놓는다
+        context.emplaceSubsystem<EditorInputActions>();       // 에디터 단축키의 입력 맵(editor.input.xml) — 명령 등록부 · 패널 매니저 뒤
+        context.emplaceSubsystem<EditorPopupManager>();
+        context.emplaceSubsystem<AssetHotReload>();
+        context.emplaceSubsystem<EditorToolDefaultsReload>(); // `Config/` 감시는 엔진(ConfigReloadSubsystem)이 한다 — 편집기는 도구 기본값 처리기만 건다
+        context.emplaceSubsystem<EditorSourceControl>( ProcessRoots::get()._project.str() );
+        context.emplaceSubsystem<InspectorComponentManager>();
+        context.emplaceSubsystem<PropertyDrawerRegistry>();
+        context.emplaceSubsystem<EditorDefaultObjects>();
+        context.emplaceSubsystem<EditorNetPlaySession>();
+        context.emplaceSubsystem<EditorRenderViews>();
+        context.emplaceSubsystem<EditorUICommandQueue>();
+        context.emplaceSubsystem<EditorPlaySession>();
+        context.emplaceSubsystem<EditorTheme>();
+        context.emplaceSubsystem<EditorUICapture>();
+        context.emplaceSubsystem<SceneViewOverlayLayoutStore>();      // 씬 뷰 오버레이 바 배치 — 씬 뷰 창이 그리지 않아도 명령이 고친다
+        context.emplaceSubsystem<EditorExtensionSubsystems>( scope ); // 확장이 기여한 서브시스템(SW_EDITOR_SUBSYSTEM) — 프레임 앞 syncExtensionRegistrations 가 만든다
         // 확장 모듈이 언로드되기 전에 그 모듈의 등록 줄로 만든 인스턴스를 지운다 — 훑는 매니저들에 의존하므로 그들보다 먼저 종료된다.
-        scope.emplaceSubsystem<EditorModuleUnloadListener>( context );
+        context.emplaceSubsystem<EditorModuleUnloadListener>( context );
     }
 
     void EditorSubsystemSet::syncExtensionRegistrations( EditorContext& context )

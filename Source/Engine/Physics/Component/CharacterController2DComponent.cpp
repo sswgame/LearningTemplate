@@ -22,6 +22,11 @@ namespace sw
         , _halfHeight{ 0.4f }
         , _maxSlopeAngle{ Radians::fromRadians( MathUtil::kHalfPi * 0.5f ) }
         , _gravityScale{ 1.0f }
+        , _bInnerBody{ true }
+        , _verticalSpeed{ 0.0f }
+        , _airVelocity{ 0.0f }
+        , _movementMode{ CharacterMovementMode::Walking }
+        , _bGrounded{ false }
         , _character{}
         , _state{}
         , _pCommandPage{ nullptr }
@@ -30,8 +35,9 @@ namespace sw
         , _worldPosition{}
         , _worldRotation{}
         , _worldScale{ 1.0f, 1.0f, 1.0f }
-        , _verticalSpeed{ 0.0f }
-        , _airVelocity{ 0.0f }
+        , _frameClimbVelocity{}
+        , _bFrameClimb{ SW_FALSE }
+        , _reserved{ 0 }
     {
         _commandSlot = engine::getSubsystem<PhysicsPoseStore>().getCommandStore<CharacterCommand2D>().allocateSlot( this, _pCommandPage );
     }
@@ -65,6 +71,15 @@ namespace sw
     {
         editCommand( [speed]( CharacterCommand2D& command )
         { command._pendingJumpSpeed = speed; } );
+    }
+
+    void CharacterController2DComponent::applyClimbVelocity( const float2& velocity )
+    {
+        editCommand( [&velocity]( CharacterCommand2D& command )
+        {
+            command._pendingClimbVelocity = velocity;
+            command._bPendingClimb        = true;
+        } );
     }
 
     void CharacterController2DComponent::setRadius( float32 radius )
@@ -111,6 +126,17 @@ namespace sw
         IPhysicsScene2D* pScene = physics.getScene2D();
         if ( pScene == nullptr )
             return;
+        // 이번 게임 프레임의 오르기 요청을 이 물리 프레임의 것으로 옮긴다 — 부르지 않은 프레임은 오르지 않는다(3D 와 같다).
+        float2 climbVelocity{};
+        bool   bClimb = false;
+        editCommand( [&climbVelocity, &bClimb]( CharacterCommand2D& command )
+        {
+            climbVelocity          = command._pendingClimbVelocity;
+            bClimb                 = command._bPendingClimb;
+            command._bPendingClimb = false;
+        } );
+        _frameClimbVelocity = climbVelocity;
+        _bFrameClimb        = bClimb ? SW_TRUE : SW_FALSE;
         if ( consumeRebuild() )
             releasePhysics( physics );
 
@@ -149,12 +175,14 @@ namespace sw
             desc._halfHeight    = capsule._halfHeight;
             desc._maxSlopeAngle = _maxSlopeAngle.radians();
             desc._layer         = physics.resolveLayer( _layer );
+            desc._bInnerBody    = _bInnerBody;
             _character          = pScene->createCharacter( desc );
             if ( _character.isValid() )
                 markBodyCreated();
             markShapeScale( _worldScale );
+            // 이어받는 운동은 지우지 않는다 — 스냅샷에서 돌아온 값이면 잇고, 앞 캐릭터를 놓은 것이면 놓을 때 지웠다(`releasePhysics`, 3D 와 같다).
             _state            = PhysicsCharacterState2D{};
-            _verticalSpeed    = 0.0f;
+            _state._bGrounded = _bGrounded;
             _state._position  = position;
             _previousPosition = position;
             return;
@@ -186,9 +214,22 @@ namespace sw
         _verticalSpeed += pScene->getGravity()._y * _gravityScale * fixedDeltaTime;
         if ( jumpSpeed > 0.0f )
             _verticalSpeed = jumpSpeed;
+        // 오르기: 중력 · 공중 관성 없이 이동기가 준 속도만 쓴다. 이 스텝의 점프는 매달림을 놓는 것이라 이긴다(3D 와 같다).
+        const bool bClimb = _bFrameClimb == SW_TRUE && jumpSpeed <= 0.0f;
+        if ( bClimb )
+        {
+            _airVelocity   = 0.0f;
+            moveVelocity   = _frameClimbVelocity._x;
+            _verticalSpeed = _frameClimbVelocity._y;
+        }
 
-        _previousPosition = _state._position;
-        _state            = pScene->moveCharacter( _character, float2{ moveVelocity + _airVelocity, _verticalSpeed }, fixedDeltaTime );
+        _previousPosition                   = _state._position;
+        _state                              = pScene->moveCharacter( _character, float2{ moveVelocity + _airVelocity, _verticalSpeed }, fixedDeltaTime );
+        _bGrounded                          = _state._bGrounded;
+        const CharacterMovementMode walking = _state._bGrounded ? CharacterMovementMode::Walking : CharacterMovementMode::Falling;
+        _movementMode                       = bClimb ? CharacterMovementMode::Climbing : walking;
+        if ( bClimb )
+            _verticalSpeed = 0.0f; // 오르던 속도는 잇지 않는다
         if ( _state._bGrounded && _verticalSpeed <= 0.0f )
         {
             _verticalSpeed = 0.0f;
@@ -236,7 +277,10 @@ namespace sw
         IPhysicsScene2D* pScene = physics.findScene2D();
         if ( pScene != nullptr )
             pScene->destroyCharacter( _character );
-        _character = PhysicsCharacterHandle{};
+        _character     = PhysicsCharacterHandle{};
+        _verticalSpeed = 0.0f;
+        _airVelocity   = 0.0f;
+        _bGrounded     = false;
     }
 } // namespace sw
 

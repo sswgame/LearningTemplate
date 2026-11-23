@@ -140,9 +140,10 @@ namespace sw
 
         /**
          * @brief 포크-조인 병렬 for 입니다. [0, count) 를 청크로 나눠 실행하고 끝날 때까지 기다립니다(상용 엔진의 ParallelFor).
-         * @details `count` 가 `serialThreshold` 보다 작거나 워커가 없으면 현재 스레드가 한 번에 실행합니다. 그 이상이면 그룹을
-         *          **호출 스레드의 스택에** 두고 티켓 몇 장만 큐에 넣습니다. 노드도 스테이지도 힙도 쓰지 않습니다. 호출 스레드는
-         *          워커가 깨어나기를 기다리지 않고 바로 첫 청크를 가져갑니다. 엔진 코드는 서비스 바인딩까지 감싼
+         * @details `count` 가 `serialThreshold` 보다 작거나 워커가 없으면 현재 스레드가 한 번에 실행합니다. 그 이상이면 풀에서 꺼낸
+         *          그룹 하나와 티켓 몇 장만 큐에 넣습니다. 노드도 스테이지도 쓰지 않습니다. 호출 스레드는
+         *          워커가 깨어나기를 기다리지 않고 바로 첫 청크를 가져가고, 합류는 남이 돌고 있는 청크만 기다립니다(아무도 집지 않은 티켓은 기다리지 않는다).
+         *          티켓은 지금 실행 중인 태스크의 우선순위 줄에 섭니다(태스크 밖이면 Normal). 엔진 코드는 서비스 바인딩까지 감싼
          *          `engine::runParallel` 을 쓰십시오.
          */
         void runParallel( uint32 count, uint32 serialThreshold, const ParallelBlockDelegate& body );
@@ -381,23 +382,47 @@ namespace sw
          */
         void submit( const TaskHandle& handle );
         /**
-         * @brief `submit` 과 같지만 잠든 워커를 깨우지 않고, 스핀 중인 워커에게도 알리지 않습니다. 여러 태스크를 한 번에 넣을 때 씁니다.
-         * @details 태스크마다 깨우면 깨우기가 태스크 수만큼 반복됩니다(청크 32개를 넣는 디스패치에서 실제 일은 몇 us 인데 깨우기가
-         *          100 us 넘게 듭니다). 모두 넣은 뒤 `wakeSleepingWorkers` 를 한 번만 부르십시오. 그것이 세대를 올리고 잠든 워커를 깨웁니다.
+         * @class SubmitBatch
+         * @brief 여러 태스크를 깨우지 않고 넣고, 범위가 끝날 때 넣은 수만큼만 한 번에 깨웁니다.
+         * @details 태스크마다 깨우면 깨우기가 태스크 수만큼 반복됩니다(청크 32개를 넣는 디스패치에서 실제 일은 몇 us 인데 깨우기가 100 us 넘게 듭니다). 모두 깨우면 워커 열넷이
+         *          작업 여섯을 두고 다투는 thundering herd 입니다(렌더 그래프 병렬 기록 150~192 -> 329~380 us). 깨우지 않는 제출을 따로 열면 깨우기를 잊을 수 있어
+         *          (잠든 풀에 일이 남는다) 범위 형식으로만 둔다. Jolt `JobSystemThreadPool::QueueJobs` 가 잡을 모두 넣은 뒤 세마포어를 한 번 올리는 자리.
          */
-        void submitWithoutWake( const TaskHandle& handle );
+        class SubmitBatch
+        {
+        public:
+            explicit SubmitBatch( TaskManager& manager )
+                : _manager{ manager }
+                , _submittedCount{ 0 }
+            {
+            }
+            /** @brief 넣은 수만큼 잠든 워커를 깨우고 스핀 중인 워커에게 알립니다. */
+            ~SubmitBatch()
+            {
+                if ( _submittedCount > 0 )
+                    _manager.wakeSleepingWorkers( _submittedCount );
+            }
+
+            SubmitBatch( const SubmitBatch& )            = delete;
+            SubmitBatch& operator=( const SubmitBatch& ) = delete;
+
+            /** @brief 태스크를 깨우지 않고 제출합니다(`TaskManager::submit` 과 같은 계약). */
+            void submit( const TaskHandle& handle )
+            {
+                _manager.resolveDependency( handle.getNode(), false );
+                ++_submittedCount;
+            }
+
+        private:
+            TaskManager& _manager;
+            uint32       _submittedCount;
+        };
+
         /**
-         * @brief 부른 순간 잠들어 있던 워커를 모두 깨웁니다. 태스크 수를 아는 쪽은 아래 오버로드로 **필요한 수만큼만** 깨우십시오.
+         * @brief 부른 순간 잠들어 있던 워커를 모두 깨웁니다(정지 · 진단). 태스크를 넣는 쪽은 `submit` · `SubmitBatch` 가 깨운다.
          * @details 부른 뒤에 잠드는 워커는 깨우지 않습니다. 그 워커는 잠들기 전에 큐를 한 번 더 보므로 넣은 작업을 놓치지 않습니다.
          */
         void wakeSleepingWorkers();
-        /**
-         * @brief 잠든 워커 중 @p requestedCount 개만 깨웁니다. `submitWithoutWake` 로 모두 넣은 뒤 부릅니다.
-         * @details 모두 깨우면 워커 열넷이 작업 여섯을 두고 다투는 thundering herd 가 됩니다. 렌더 그래프 병렬 기록이 두 배
-         *          느려졌습니다(150~192 -> 329~380 us). 넣은 태스크 수만큼만 깨우는 것이 가장 빨랐습니다.
-         */
-        void wakeSleepingWorkers( uint32 requestedCount );
-        /** @brief 지금까지 워커를 깨운 시그널 수입니다. 테스트가 "그룹 하나에 한 번" 인지 확인하는 데 씁니다. */
         /** @brief 만들어졌지만 아직 끝나지 않은 태스크 수입니다. `waitStage` · `waitAll` 이 돌아온 직후에는 그 태스크가 빠져 있어야 합니다(테스트용). */
         uint32 getActiveTaskCount() const { return _activeTaskCount.load( std::memory_order_acquire ); }
 
@@ -508,7 +533,7 @@ namespace sw
         // --- 수명 · 정리 ---
         /** @brief 워커 스레드의 메인 루프입니다. 큐 소비 · 훔치기 · 세대 스핀 · 자기 워드에서 잠들기를 합니다. */
         void workerLoop( uint32 workerID );
-        /** @brief `clear` 가 큐에서 꺼낸 항목 하나를 실행하지 않고 놓습니다(노드는 참조를 해제하고, 티켓은 그룹을 닫습니다). */
+        /** @brief `clear` 가 큐에서 꺼낸 항목 하나를 실행하지 않고 놓습니다(노드는 참조를 해제하고, 티켓은 그룹의 참조를 놓습니다). */
         void runQueueItem( uintptr_t item );
 
         // --- 태스크 만들기 · 의존성 ---
@@ -518,7 +543,7 @@ namespace sw
         void resolveDependency( TaskNode* pNode, bool bWakeWorker );
         /**
          * @brief 의존성이 모두 풀린 태스크 노드를 우선순위 큐(High · 로컬 데크 · Normal 전역 · Low · 메인)에 넣습니다.
-         * @param bWakeWorker false 면 잠든 워커를 깨우지 않습니다(`submitWithoutWake`).
+         * @param bWakeWorker false 면 잠든 워커를 깨우지 않습니다(`SubmitBatch`).
          */
         void scheduleReadyTask( TaskNode* pNode, bool bWakeWorker );
         /**
@@ -531,7 +556,7 @@ namespace sw
         // --- 병렬 그룹 ---
         /** @brief `emplaceParallel` · `emplaceParallelBlock` 의 공통 본체입니다. 부모 노드 하나 + 풀 그룹 하나 + 티켓으로 이루어집니다. */
         TaskHandle emplaceParallelGroup( string_view name, uint32 start, uint32 end, const ParallelBlockDelegate* pBlockBody, const ParallelTaskDelegate* pIndexBody, TaskThreadAffinity affinity );
-        /** @brief 티켓 @p ticketCount 장을 이 스레드의 큐에 넣고, 그만큼 워커를 깨웁니다. */
+        /** @brief 티켓 @p ticketCount 장을 그룹의 우선순위 줄(Normal 이면 이 스레드의 큐)에 넣고, 그만큼 워커를 깨웁니다. 참조는 부르는 쪽이 잡아 둔다. */
         void pushGroupTickets( ParallelGroup* pGroup, uint32 ticketCount );
         /**
          * @brief 병렬 그룹의 부모가 시작 조건(제출 + 선행)을 채웠을 때 그룹을 띄웁니다: 부모에 그룹 의존 하나를 걸고 티켓을 큐에 올립니다.
@@ -541,19 +566,27 @@ namespace sw
         void launchParallelGroup( TaskNode* pParent, const ParallelGroupLaunch& launch );
         /** @brief 띄우지 않은 병렬 그룹이 노드에 남아 있으면 돌려줍니다(취소 · 버려진 부모). */
         void releaseUnlaunchedGroup( TaskNode* pNode );
-        /** @brief 그룹의 청크가 남지 않을 때까지 가져와 실행합니다(티켓을 받은 워커와 호출 스레드가 함께 씁니다). */
+        /** @brief 그룹의 청크가 남지 않을 때까지 가져와 실행하고, 실행한 만큼 합류에 알립니다(티켓을 받은 워커와 호출 스레드가 함께 씁니다). 남은 청크가 없으면 아무 일도 없다. */
         void runGroupChunks( ParallelGroup* pGroup );
+        /** @brief 청크 @p chunkCount 개를 끝냈다고 알립니다. 마지막이면 본문을 놓고, 부모의 의존성을 풀고, 기다리는 스레드를 깨웁니다. */
+        void finishGroupChunks( ParallelGroup* pGroup, uint32 chunkCount );
+        /** @brief 그룹의 참조 하나(티켓 · 호출 스레드)를 놓습니다. 마지막이면 그룹을 돌려줍니다(끝나지 못한 그룹이면 부모의 참조도 놓는다). */
+        void releaseGroupReference( ParallelGroup* pGroup );
+        /**
+         * @brief `runParallel` 이 낼 티켓 수입니다 — 그룹의 줄에 이미 쌓인 일이 워커마다 `kMaxQueuedItemPerWorker` 개를 넘으면 0 입니다.
+         * @details 워커가 모두 긴 일을 하는 동안 호출마다 티켓을 내면 나올 때까지 큐에 쌓인다(합류는 기다리지 않는다). 그때 낸 티켓은 줄 끝에 서므로 어차피 이 그룹을 돕지 못한다.
+         */
+        [[nodiscard]] uint32 limitTicketCount( TaskPriority priority, uint32 ticketCount ) const;
+        /** @brief 이 워커의 데크 위쪽에 남은 그룹의 티켓을 거둬들입니다 — 합류 뒤에는 쓸모가 없고, 긴 태스크가 `runParallel` 을 되풀이하면 데크가 찬다. */
+        void withdrawLocalTickets( ParallelGroup* pGroup, uint32 ticketCount );
+        /** @brief 잠든 워커 중 @p requestedCount 개만 깨우고 세대를 올립니다. 넣은 일의 수만큼 부릅니다. */
+        void wakeSleepingWorkers( uint32 requestedCount );
         /** @brief [start, end) 를 워커와 나눠 돌고 합류까지 기다립니다(`runParallel` · `runParallelByCost` 의 병렬 부분). 워커가 있어야 합니다. */
         void runParallelRange( uint32 start, uint32 end, const ParallelBlockDelegate& body );
         /** @brief 청크 사이에 High 큐를 비웁니다. 그룹을 실행하는 동안에도 렌더 패스 기록이 줄을 서지 않게 하기 위해서입니다. */
         void runHighQueueBetweenChunks();
-        /** @brief 병렬 그룹의 티켓 하나를 처리합니다. 청크가 남아 있는 동안 가져와 실행하고 티켓을 닫습니다. */
+        /** @brief 병렬 그룹의 티켓 하나를 처리합니다. 청크가 남아 있는 동안 가져와 실행하고 티켓의 참조를 놓습니다. */
         void runGroupTicket( ParallelGroup* pGroup );
-        /**
-         * @brief 티켓 하나를 닫습니다. 마지막이면 대기자를 깨우고, 풀 그룹이면 그룹을 돌려주고 (@p bResolveParent 면) 부모의 의존성을 풉니다.
-         * @details 스택 그룹(`runParallel`)은 조인 카운터가 0 이 되는 순간 사라질 수 있습니다. 그 뒤에는 @p pGroup 을 역참조하지 않습니다.
-         */
-        void closeGroupTicket( ParallelGroup* pGroup, bool bResolveParent );
 
         // --- 기다리기 ---
         /**
@@ -572,7 +605,7 @@ namespace sw
          * @param bHelpLowQueue false 면 Low 줄(백그라운드 I/O)은 돕지 않습니다(`runParallel` 의 합류 대기 — 그 줄은 합류를 앞당기지 않는다).
          * @return 계속 돌아야 하면 true, 스핀 예산을 다 써서 이제 잠들 차례면 false(예산은 다시 채우고, 깬 뒤 첫 걸음에 큐를 보게 해 둡니다)
          * @details `waitForJoin` 과 `waitAll` 이 함께 씁니다. 둘이 다른 것은 잠드는 방법뿐입니다. 큐에 넣는 쪽은 모두 세대를 올립니다(`submit` ·
-         *          티켓 · 배치 끝의 `wakeSleepingWorkers`). `submitWithoutWake` 만 하고 깨우지 않은 배치는 대기자도 깨우기 전까지 보지 않습니다 — 워커와 같습니다.
+         *          티켓 · 배치 끝의 `wakeSleepingWorkers`). 아직 닫히지 않은 `SubmitBatch` 의 일은 대기자도 깨우기 전까지 보지 않습니다 — 워커와 같습니다.
          */
         bool helpOrSpin( WaitSpinState& inoutState, bool bHelpLowQueue );
         /** @brief @p join 이 0 이 될 때까지 기다립니다. 메인 작업을 실행하고, 다른 일을 돕고(@p bHelpLowQueue 가 false 면 Low 줄은 빼고), 잠깐 스핀하다가 자기 슬롯에서 잠듭니다. */
@@ -645,8 +678,8 @@ namespace sw
          * @brief 작업이 들어올 때마다 오르는 세대입니다. 스핀 중인 워커는 **이 값만 읽습니다.**
          * @details 스핀 중에 매번 큐를 뒤지면(`tryTakeItem`) 전역 MPMC 큐의 CAS 와 데크마다의 steal 을 워커 전부가 동시에 반복해서
          *          건드려, 스핀을 늘릴 때 게임 · 렌더 스레드의 코어까지 빼앗습니다. 읽기 전용 캐시 라인 하나만 보면 경합이 없고,
-         *          세대가 바뀌었을 때만 큐를 건드립니다. `submitWithoutWake` 는 세대를 올리지 않고, 배치 끝의
-         *          `wakeSleepingWorkers` 가 한 번 올립니다.
+         *          세대가 바뀌었을 때만 큐를 건드립니다. `SubmitBatch` 는 넣는 동안 세대를 올리지 않고 범위 끝에
+         *          한 번 올립니다.
          */
         alignas( 64 ) atomic<uint32> _jobEpoch;
         /**

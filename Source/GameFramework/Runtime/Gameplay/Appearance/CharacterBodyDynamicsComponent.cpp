@@ -299,13 +299,16 @@ namespace sw
             const BodyFluidDef& def    = profile._listFluid[fluidIndex];
             FluidStream&        stream = _listFluid[fluidIndex];
             const float32       amount = computeTriggerStrength( def._trigger );
-            stream._emitAccumulator += amount * def._ratePerSecond * seconds;
+            if ( appearance.hasSurfaceState() ) // 그릴 표면이 없으면 줄기가 흐르지 않는다 — 내면 사라질 길 없이 쌓인다
+                stream._emitAccumulator += amount * def._ratePerSecond * seconds;
+            else
+                stream._listDistance.clear();
             while ( stream._emitAccumulator >= 1.0f )
             {
                 stream._listDistance.push_back( 0.0f );
                 stream._emitAccumulator -= 1.0f;
             }
-            if ( stream._listDistance.empty() || appearance.hasSurfaceState() == false )
+            if ( stream._listDistance.empty() )
             {
                 updateFluidEffect( appearance, def, stream, amount, 0, seconds );
                 continue;

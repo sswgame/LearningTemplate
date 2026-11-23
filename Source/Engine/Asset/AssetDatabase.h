@@ -49,6 +49,8 @@ namespace sw
         vector<string> _listSkipPattern; ///< 정체성이 없는 파일의 리소스 id 패턴
         PROPERTY( Required )
         vector<string> _listDerivedFolder; ///< 임포트 산출물 폴더 이름 — 그 안의 `.meta` 없는 파일은 산출물(캐시)이다
+        PROPERTY( Required )
+        vector<string> _listKeptDerived; ///< 산출물 폴더에 손으로 두는 것을 허락한 파일의 리소스 id 패턴
 
         /** @brief 프로젝트 루트의 규칙 파일을 읽습니다. 없거나 칸이 빠지면 오류를 남기고 false 입니다(기본 규칙으로 대신하지 않는다). */
         [[nodiscard]] bool load( string_view projectRoot );
@@ -56,6 +58,11 @@ namespace sw
         AssetIdentityKind classify( string_view assetID ) const;
         /** @brief @p assetID 가 임포트 산출물 폴더(`_listDerivedFolder`) 아래면 true 입니다. */
         bool isUnderDerivedFolder( string_view assetID ) const;
+        /**
+         * @brief 손으로 적는 우리 형식 글(`_listHeaderSuffix`)을 임포트 산출물 폴더에 두려는 자리면 true 입니다(`_listKeptDerived` 는 허락). 에디터 새로 만들기 · 복제 · 옮기기가 묻고 거절합니다.
+         * @details 산출물 폴더는 커밋하지 않고 통째로 지웠다 다시 뽑는다 — 그 안의 손 글은 git 이 무시해 저장소에 들지 않거나, 산출물로 오인되어 함께 지워진다. 추적된 파일은 `asset-ids`(`kept-in-derived`)가 막는다.
+         */
+        bool isMisplacedInDerivedFolder( string_view assetID ) const;
 
         // ------------------------------------------------------------------------------
         // 디스크의 에셋 파일 하나의 정체성 — 에디터 새로 만들기 · 복제 · 가져오기(새 GUID)와 내용 바꾸기(GUID 유지)가 함께 지난다. 자리는 `classify` 가 정한다.

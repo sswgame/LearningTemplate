@@ -350,6 +350,9 @@ namespace sw
         , _listActive{}
         , _listLastCondition{}
         , _listMoveTarget{}
+        , _listMoveSerial{}
+        , _pMoveSerial{ &_ownMoveSerial }
+        , _ownMoveSerial{ 0 }
         , _elapsedTime{ 0.0f }
         , _tickCount{ 0 }
         , _activeLeaf{}
@@ -368,6 +371,7 @@ namespace sw
         _listActive.assign( nodeCount, SW_FALSE );
         _listLastCondition.assign( nodeCount, SW_FALSE );
         _listMoveTarget.assign( nodeCount, float3{} );
+        _listMoveSerial.assign( nodeCount, 0 );
         _elapsedTime = 0.0f;
         _activeLeaf.reset();
         _lastSucceededLeaf.reset();
@@ -379,6 +383,14 @@ namespace sw
             abortNode( 0 );
         _activeLeaf.reset();
         _lastSucceededLeaf.reset();
+    }
+
+    void BehaviorTreeRunner::shiftWorldOrigin( const float3& delta )
+    {
+        for ( float3& target : _listMoveTarget )
+        {
+            target = target + delta;
+        }
     }
 
     const utf8* BehaviorTreeRunner::getActiveLeafName() const
@@ -412,6 +424,14 @@ namespace sw
 
     bool BehaviorTreeRunner::pollHigherPriorityTrigger()
     {
+        // 틱이 끝난 뒤 켜져 있는 노드는 도는(Running) 가지뿐이고 번호가 가장 뒤인 것이 그 끝이다.
+        // 도는 잎(`_activeLeaf`)으로 보면 바로 끝나는 작업을 되풀이하는 가지(`Repeat`)는 도는 잎이 없어 영영 멈추지 못한다.
+        optional<int32> lastActive;
+        for ( int32 index = 0; index < _pTree->getNodeCount(); ++index )
+        {
+            if ( _listActive[static_cast<size_t>( index )] != SW_FALSE )
+                lastActive = index;
+        }
         bool bTriggered = false;
         for ( int32 index = 0; index < _pTree->getNodeCount(); ++index )
         {
@@ -422,7 +442,7 @@ namespace sw
             const bool  bRisen                               = bNow != SW_FALSE && _listLastCondition[static_cast<size_t>( index )] == SW_FALSE;
             _listLastCondition[static_cast<size_t>( index )] = bNow;
             // 노드 번호가 앞 = 깊이 우선 순서가 앞 = 우선순위가 높다. 도는 가지 안의 조건(자기 조상)은 Self 쪽 일이다.
-            const bool bHigherPriorityRisen = bRisen && _activeLeaf.has_value() && index < *_activeLeaf && _listActive[static_cast<size_t>( index )] == SW_FALSE;
+            const bool bHigherPriorityRisen = bRisen && lastActive.has_value() && index < *lastActive && _listActive[static_cast<size_t>( index )] == SW_FALSE;
             if ( bHigherPriorityRisen )
                 bTriggered = true;
         }
@@ -463,8 +483,8 @@ namespace sw
             if ( pSlotRunner != nullptr )
                 pSlotRunner->reset();
         }
-        if ( node._type == BehaviorNodeKind::MoveTo && _context._pMover != nullptr )
-            _context._pMover->stopMoving();
+        if ( node._type == BehaviorNodeKind::MoveTo )
+            stopOwnMove( index );
         finishNode( index );
     }
 
@@ -647,6 +667,7 @@ namespace sw
                 }
                 pSlotRunner->_world           = _world;
                 pSlotRunner->_context._pMover = _context._pMover;
+                pSlotRunner->_pMoveSerial     = _pMoveSerial;
                 status                        = pSlotRunner->tick( *_context._pBlackboard, _context._pOwner, _context._deltaTime );
                 if ( status == BehaviorStatus::Running )
                     _activeLeaf = index;
@@ -719,6 +740,12 @@ namespace sw
         return function( context );
     }
 
+    void BehaviorTreeRunner::stopOwnMove( int32 index )
+    {
+        if ( _context._pMover != nullptr && _listMoveSerial[static_cast<size_t>( index )] == *_pMoveSerial )
+            _context._pMover->stopMoving();
+    }
+
     BehaviorStatus BehaviorTreeRunner::tickMoveTo( int32 index, bool bFirst )
     {
         const BehaviorNode&    node   = _pTree->getNode( index );
@@ -730,7 +757,7 @@ namespace sw
         {
             // 도는 중에 목적지가 사라졌다. 트리만 실패로 넘어가면 몸은 옛 목적지로 계속 간다.
             if ( bFirst == false )
-                pMover->stopMoving();
+                stopOwnMove( index );
             return BehaviorStatus::Failure;
         }
         const float3 destination = *target;
@@ -738,7 +765,8 @@ namespace sw
         const bool   bRepath     = bFirst || ( destination - issued ).getLength() > node._repathDistance;
         if ( bRepath )
         {
-            issued = destination;
+            issued                                        = destination;
+            _listMoveSerial[static_cast<size_t>( index )] = ++*_pMoveSerial;
             if ( pMover->moveTo( destination ) == false )
                 return BehaviorStatus::Failure;
             // 요청이 다음 갱신에 풀리는 구현(내비메시 에이전트)이 있다 — 이번 틱의 상태는 옛 요청의 것이라 읽지 않는다.

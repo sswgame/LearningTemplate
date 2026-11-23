@@ -500,7 +500,14 @@ namespace sw
                     int2{static_cast<int32>( vpWidth ), static_cast<int32>( vpHeight )}
                 } );
             if ( _pSceneManager != nullptr && bTickScene )
+            {
+                AssetLoadProfiler* const pLoadProfiler = engine::findSubsystem<AssetLoadProfiler>();
+                if ( pLoadProfiler != nullptr )
+                    pLoadProfiler->setSceneUpdateActive( true );
                 _pSceneManager->update( deltaTime );
+                if ( pLoadProfiler != nullptr )
+                    pLoadProfiler->setSceneUpdateActive( false );
+            }
             // 미리보기 씬은 활성 씬의 정지 · 재생과 무관하게 자기 정책으로 돈다(에디터가 멈춘 중에도 애니메이션 창은 돈다).
             // 틱 여부는 이번 프레임에 그려지는지다 — 렌더 패킷(`RenderPacketBuilder::populateScenePreviews`)과 같은 요청 · 같은 조건(유효한 타깃)으로 고른다.
             if ( _pSceneManager != nullptr )

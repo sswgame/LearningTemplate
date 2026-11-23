@@ -3,6 +3,7 @@
 #include "Editor/Panels/Animation/AnimationGraphPanel.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/Container/unordered_set.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/fixed_string.h"
@@ -112,6 +113,8 @@ namespace sw::editor
         , _nameFieldShown{}
         , _listPoseTypeName{}
         , _nameFieldID{ 0 }
+        , _poseDraft{}
+        , _poseDraftNodeID{ 0 }
         , _listSelectionOrder{}
         , _selectedNodeID{ 0 }
         , _selectedLinkID{ 0 }
@@ -272,6 +275,14 @@ namespace sw::editor
 
     void AnimationGraphPanel::drawStateNodes()
     {
+        // 핀 그림이 연결을 보이는 노드 — 노드마다 링크를 모두 훑지 않는다.
+        unordered_set<int32> uniqueLinkedIn;
+        unordered_set<int32> uniqueLinkedOut;
+        for ( const GraphLink& link : _graph._listLink )
+        {
+            uniqueLinkedIn.insert( link._toNode );
+            uniqueLinkedOut.insert( link._fromNode );
+        }
         for ( GraphNode& node : _graph._listNode )
         {
             const ed::NodeId nodeID = EditorNodeGraphID::toNodeID( node._id );
@@ -289,15 +300,8 @@ namespace sw::editor
                 formatstring( nodeMark.data(), nodeMark.capacity(), "animationGraph.node.%#", node._name );
                 EditorSelfTestMarks::recordRect( nodeMark.c_str(), float2{ nameMin.x, nameMin.y }, float2{ nameMax.x, nameMax.y } );
             }
-            bool bLinkedIn  = false;
-            bool bLinkedOut = false;
-            for ( const GraphLink& link : _graph._listLink )
-            {
-                bLinkedIn  = bLinkedIn || link._toNode == node._id;
-                bLinkedOut = bLinkedOut || link._fromNode == node._id;
-            }
             _nodeGraph.beginPin( AnimationGraphPanelInternal::pinIn( node._id ), true );
-            _nodeGraph.drawPinIcon( 0, bLinkedIn );
+            _nodeGraph.drawPinIcon( 0, uniqueLinkedIn.contains( node._id ) );
             ImGui::SameLine();
             ImGui::TextUnformatted( "In" );
             _nodeGraph.endPin();
@@ -305,7 +309,7 @@ namespace sw::editor
             _nodeGraph.beginPin( AnimationGraphPanelInternal::pinOut( node._id ), false );
             ImGui::TextUnformatted( "Out" );
             ImGui::SameLine();
-            _nodeGraph.drawPinIcon( 0, bLinkedOut );
+            _nodeGraph.drawPinIcon( 0, uniqueLinkedOut.contains( node._id ) );
             _nodeGraph.endPin();
             _nodeGraph.endNode();
 
@@ -392,7 +396,7 @@ namespace sw::editor
             const int32 nodeID = addNodeOfKind( kindID );
             if ( nodeID != 0 )
             {
-                placeNodeOnNextDraw( nodeID, canvasPosition );
+                placeNewNode( nodeID, canvasPosition );
                 AnimationGraphEdit::commitNodeAdded( getGraphEditSession() );
             }
         }
@@ -428,6 +432,7 @@ namespace sw::editor
         applyLoadedGraph( std::move( data ), result );
         _preview.resetForDocument();
         _layerEditor.clearSelection();
+        _poseDraftNodeID = 0;
         return result;
     }
 
@@ -435,26 +440,16 @@ namespace sw::editor
     {
         string baseID = _graph._baseID;
         EditorGraphDocumentPanel<AnimationGraphAsset>::applyDocumentText( text );
-        _graph._baseID = std::move( baseID );
+        _graph._baseID   = std::move( baseID );
+        _poseDraftNodeID = 0; // 초안은 되돌리기 앞 문서의 것이다
     }
 
     bool AnimationGraphPanel::saveGraphData()
     {
-        AnimationGraphAsset data = captureGraphData();
-        if ( _nodeGraph.bind() )
-        {
-            for ( GraphNode& node : data._listNode )
-            {
-                const ImVec2 pos  = ed::GetNodePosition( EditorNodeGraphID::toNodeID( node._id ) );
-                node._position._x = pos.x;
-                node._position._y = pos.y;
-            }
-            _nodeGraph.unbind();
-            _graph._listNode = data._listNode;
-        }
+        // 노드 자리는 그린 프레임마다 `cacheNodeLayout` 이 문서에 싣는다 — 저장이 캔버스에 다시 물으면 아직 그리지 않은 노드(되돌리기 직후)는 FLT_MAX 가 파일에 남는다.
         // **저장이 실패하면 아무것도 지우지 않는다.** 실패를 "저장됨" 으로 표시하면 문서를 바꾸거나 에디터를 닫을 때
         // 종료 확인이 뜨지 않고 편집이 조용히 사라진다.
-        if ( AnimationGraphEdit::saveGraph( data, getLoadedAssetPath() ) == false )
+        if ( AnimationGraphEdit::saveGraph( captureGraphData(), getLoadedAssetPath() ) == false )
             return false;
 
         clearDocumentDirty();
@@ -470,12 +465,14 @@ namespace sw::editor
     int32 AnimationGraphPanel::addNamedNode( const utf8* pName )
     {
         GraphNode n{};
-        n._id              = nextNodeID();
-        n._name            = ( pName != nullptr ) ? pName : "Node";
-        n._position._x     = 40.0f + static_cast<float32>( _graph._listNode.size() ) * 40.0f;
-        n._position._y     = 40.0f + static_cast<float32>( _graph._listNode.size() ) * 30.0f;
-        const int32 nodeID = n._id;
+        n._id                 = nextNodeID();
+        n._name               = ( pName != nullptr ) ? pName : "Node";
+        n._position._x        = 40.0f + static_cast<float32>( _graph._listNode.size() ) * 40.0f;
+        n._position._y        = 40.0f + static_cast<float32>( _graph._listNode.size() ) * 30.0f;
+        const int32  nodeID   = n._id;
+        const float2 position = n._position;
         _graph._listNode.push_back( std::move( n ) );
+        placeNewNode( nodeID, position );
         return nodeID;
     }
 
@@ -597,6 +594,32 @@ namespace sw::editor
         return count;
     }
 
+    uint32 AnimationGraphPanel::countBranchSections() const
+    {
+        uint32 count{ 0 };
+        for ( const GraphNode& node : _graph._listNode )
+        {
+            for ( const AnimationMontageSection& section : node._poseNode._listSection )
+            {
+                count += section._branch.empty() ? 0u : 1u;
+            }
+        }
+        return count;
+    }
+
+    uint32 AnimationGraphPanel::computeLastSectionStartMs() const
+    {
+        float32 lastStart{ 0.0f };
+        for ( const GraphNode& node : _graph._listNode )
+        {
+            for ( const AnimationMontageSection& section : node._poseNode._listSection )
+            {
+                lastStart = MathUtil::max( lastStart, section._startSeconds );
+            }
+        }
+        return static_cast<uint32>( lastStart * static_cast<float32>( constant::time::kMillisecondsPerSecond ) );
+    }
+
     uint32 AnimationGraphPanel::countBoneMaskEntries() const
     {
         uint32 count{ 0 };
@@ -684,8 +707,11 @@ namespace sw::editor
         ImGui::TextDisabled( "%s", node._poseNode._type.c_str() );
         if ( pType == nullptr )
             return; // 로드가 모르는 종류를 받지 않는다 — 코드가 지운 종류다
-        AnimationGraphPoseNodeDef edited  = node._poseNode;
-        bool                      bEdited = false;
+        if ( _poseDraftNodeID != node._id )
+            _poseDraftNodeID = 0; // 다른 상태를 골랐다 — 들이지 않은 초안은 버린다
+        AnimationGraphPoseNodeDef edited        = _poseDraftNodeID != 0 ? _poseDraft : node._poseNode;
+        bool                      bEdited       = false;
+        bool                      bDraftChanged = false; // 끄는 중 — 놓을 때 들인다
 
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EditorAnimationGraph", "PoseNodeInputs" ), SW_LOCKEY( "EditorAnimationGraph", "PoseNodeInputsTip" ) );
         for ( size_t inputIndex = 0; inputIndex < edited._listInput.size(); ++inputIndex )
@@ -735,14 +761,17 @@ namespace sw::editor
                 bEdited = drawNameField( "##sectionName", section._name ) || bEdited;
                 EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EditorAnimationGraph", "SectionStart" ), SW_LOCKEY( "EditorAnimationGraph", "SectionStartTip" ) );
                 ImGui::SetNextItemWidth( -FLT_MIN );
-                EditorWidgets::dragFloat( SW_WIDGET_ID( "##sectionStart" ), &section._startSeconds, AnimationGraphPanelInternal::kSectionStartDragSpeed, 0.0f, AnimationGraphPanelInternal::kSectionStartMax, "%.2f s" );
-                bEdited = ImGui::IsItemDeactivatedAfterEdit() || bEdited;
+                bDraftChanged = EditorWidgets::dragFloat( SW_WIDGET_ID( "##sectionStart" ), &section._startSeconds, AnimationGraphPanelInternal::kSectionStartDragSpeed, 0.0f, AnimationGraphPanelInternal::kSectionStartMax, "%.2f s" ) || bDraftChanged;
+                bEdited       = ImGui::IsItemDeactivatedAfterEdit() || bEdited;
+                EditorSelfTestMarks::recordFormat( "animationGraph.pose.sectionStart.%#", static_cast<uint64>( sectionIndex ) );
                 EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EditorAnimationGraph", "SectionNext" ), SW_LOCKEY( "EditorAnimationGraph", "SectionNextTip" ) );
                 bEdited = drawNameField( "##sectionNext", section._next ) || bEdited;
                 EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EditorAnimationGraph", "SectionBranchParam" ), SW_LOCKEY( "EditorAnimationGraph", "SectionBranchParamTip" ) );
                 bEdited = drawNameField( "##sectionBranchParam", section._branchParameter ) || bEdited;
+                EditorSelfTestMarks::recordFormat( "animationGraph.pose.sectionBranchParam.%#", static_cast<uint64>( sectionIndex ) );
                 EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EditorAnimationGraph", "SectionBranch" ) );
                 bEdited = drawNameField( "##sectionBranch", section._branch ) || bEdited;
+                EditorSelfTestMarks::recordFormat( "animationGraph.pose.sectionBranch.%#", static_cast<uint64>( sectionIndex ) );
                 if ( edited._listSection.size() > 1u && ImGui::SmallButton( SW_LOCKEY( "EdVerb", "Delete" ) ) )
                     removeIndex = sectionIndex;
                 ImGui::PopID();
@@ -755,10 +784,13 @@ namespace sw::editor
             if ( ImGui::SmallButton( SW_LOCKEY( "EditorAnimationGraph", "PoseNodeAddSection" ) ) )
             {
                 // 새 섹션은 마지막 섹션 뒤 시작이다(차례 계약). 이름은 번호로 유일하게.
-                AnimationMontageSection                added{};
-                fixed_string<constant::buffer::kMax32> sectionName;
-                formatstring( sectionName.data(), sectionName.capacity(), "Section%#", edited._listSection.size() + 1u );
-                added._name         = hashed_string( sectionName.view() );
+                AnimationMontageSection added{};
+                for ( size_t number = edited._listSection.size() + 1u; added._name.empty() || VectorUtil::findBy<&AnimationMontageSection::_name>( edited._listSection, added._name ) != nullptr; ++number )
+                {
+                    fixed_string<constant::buffer::kMax32> sectionName;
+                    formatstring( sectionName.data(), sectionName.capacity(), "Section%#", number );
+                    added._name = hashed_string( sectionName.view() );
+                }
                 added._startSeconds = edited._listSection.back()._startSeconds + AnimationGraphPanelInternal::kNewSectionGap;
                 edited._listSection.push_back( added );
                 bEdited = true;
@@ -766,11 +798,20 @@ namespace sw::editor
             EditorSelfTestMarks::record( "animationGraph.pose.addSection" );
         }
 
-        // 계약을 어기는 편집(빈 입력 · 섹션 차례 · 없는 링크)은 들이지 않는다 — 까닭은 표가 오류로 남겼다.
-        if ( bEdited && AnimationPoseNodeRegistry::isSatisfiedBy( *pType, edited, node._name ) )
+        const bool bBranchIncomplete = VectorUtil::containsIf( edited._listSection, []( const AnimationMontageSection& section )
+        { return section._branch.empty() != section._branchParameter.empty(); } );
+        if ( bEdited == false && bDraftChanged == false )
+            return;
+        if ( bEdited == false || bBranchIncomplete )
         {
-            AnimationGraphEdit::setPoseNode( node._poseNode, getGraphEditSession(), std::move( edited ) );
+            _poseDraft       = std::move( edited );
+            _poseDraftNodeID = node._id;
+            return;
         }
+        // 계약을 어기는 편집(빈 입력 · 섹션 차례 · 없는 링크)은 들이지 않는다 — 까닭은 표가 오류로 남겼다.
+        _poseDraftNodeID = 0;
+        if ( AnimationPoseNodeRegistry::isSatisfiedBy( *pType, edited, node._name ) )
+            AnimationGraphEdit::setPoseNode( node._poseNode, getGraphEditSession(), std::move( edited ) );
     }
 
     void AnimationGraphPanel::drawTransitionList()
@@ -785,7 +826,7 @@ namespace sw::editor
             const auto                              itTo   = std::find_if( _graph._listNode.begin(), _graph._listNode.end(), [&link]( const GraphNode& node )
                                            { return node._id == link._toNode; } );
             fixed_string<constant::buffer::kMax128> label;
-            formatstring( label.data(), label.capacity(), "%s -> %s%s", itFrom != _graph._listNode.end() ? itFrom->_name.c_str() : "?", itTo != _graph._listNode.end() ? itTo->_name.c_str() : "?",
+            formatstring( label.data(), label.capacity(), "%# -> %#%#", itFrom != _graph._listNode.end() ? itFrom->_name.c_str() : "?", itTo != _graph._listNode.end() ? itTo->_name.c_str() : "?",
                           link._op != AnimationConditionOp::None ? "  [if]" : "" );
             ImGui::PushID( static_cast<int32>( link._id ) );
             if ( ImGui::Selectable( label.c_str(), link._id == _selectedLinkID ) )

@@ -690,13 +690,13 @@ namespace sw::editor
         utf8       countText[64];
         const bool bHasUnit = StringUtil::isNullOrEmpty( pUnit ) == false;
         if ( total == 0 && bHasUnit )
-            formatstring( countText, sizeof( countText ), "%u %s", visible, pUnit );
+            formatstring( countText, sizeof( countText ), "%# %#", visible, pUnit );
         else if ( total == 0 )
-            formatstring( countText, sizeof( countText ), "%u", visible );
+            formatstring( countText, sizeof( countText ), "%#", visible );
         else if ( bHasUnit )
-            formatstring( countText, sizeof( countText ), "%u / %u %s", visible, total, pUnit );
+            formatstring( countText, sizeof( countText ), "%# / %# %#", visible, total, pUnit );
         else
-            formatstring( countText, sizeof( countText ), "%u / %u", visible, total );
+            formatstring( countText, sizeof( countText ), "%# / %#", visible, total );
         const float32 countWidth = ImGui::CalcTextSize( countText ).x;
         const float32 spacing    = ImGui::GetStyle().ItemSpacing.x;
         const float32 avail      = ImGui::GetContentRegionAvail().x;

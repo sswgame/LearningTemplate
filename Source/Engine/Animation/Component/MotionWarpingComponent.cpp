@@ -82,6 +82,14 @@ namespace sw
         setWarpTarget( name, worldTransform.getTranslation(), OrientationUtil::computeYawFromWorld( worldTransform ) );
     }
 
+    void MotionWarpingComponent::onWorldOriginShifted( const float3& delta )
+    {
+        for ( MotionWarpTarget& target : _listTarget )
+        {
+            target._position += delta;
+        }
+    }
+
     void MotionWarpingComponent::clearWarpTarget( const hashed_string& name )
     {
         if ( const optional<size_t> targetIndex = VectorUtil::findIndexBy<&MotionWarpTarget::_name>( _listTarget, name ) )

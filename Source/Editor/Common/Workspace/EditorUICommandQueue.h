@@ -79,6 +79,7 @@ namespace sw::editor
     public:
         static constexpr const utf8* kSubsystemName = "EditorUICommandQueue";
         const utf8*                  getSubsystemName() const override { return kSubsystemName; }
+        void                         resetToFreshEditor() override;
         /** @brief 적용하지 않은 명령을 버립니다(모듈 리로드 · 종료 — 적용할 엔진 상태가 내려간다). */
         void shutdownSubsystem() override;
 

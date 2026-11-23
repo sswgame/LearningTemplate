@@ -7,10 +7,9 @@
 
 #include "Core/String/fixed_string.h"
 
-#include "Editor/Common/Commands/Scene/EditorReflectionProbeBakeSession.h"
 #include "Editor/Common/GUI/Status/EditorStatusBar.h"
+#include "Editor/Common/GUI/Status/Model/EditorStatusViewModel.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
-#include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Localization/LocText.h"
 
@@ -22,15 +21,15 @@ namespace sw::editor
     {
         void drawReflectionProbeBakeStatus()
         {
-            EditorReflectionProbeBakeSession* pSession = editor::findSubsystem<EditorReflectionProbeBakeSession>();
-            if ( pSession == nullptr || pSession->isRunning() == false )
+            EditorProbeBakeStatus status;
+            if ( EditorStatusViewModel::gatherReflectionProbeBake( status ) == false )
                 return;
             fixed_string<constant::buffer::kMax128> label;
-            formatstring( label.data(), label.capacity(), "Baking reflection probes %#/%#", pSession->getDoneProbeCount(), pSession->getProbeCount() );
+            formatstring( label.data(), label.capacity(), "Baking reflection probes %#/%#", status._done, status._total );
             ImGui::TextUnformatted( label.c_str() );
             ImGui::SameLine();
             if ( ImGui::SmallButton( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdVerb", "Cancel" ), "Cancel##reflectionProbeBake" ) ) )
-                pSession->cancel( "canceled" );
+                EditorStatusViewModel::cancelReflectionProbeBake();
         }
     } // namespace
 

@@ -67,16 +67,12 @@ namespace sw::editor
         /** @brief `beginGraphCanvas` 와 짝입니다. 그린 노드 수 @p drawnNodeCount 를 감시 값(`Editor.GraphNodeCount`)에 기록합니다. */
         void finishGraphCanvas( uint32 drawnNodeCount );
 
-        /** @brief 새 노드 @p nodeID 를 다음에 그릴 때 캔버스 좌표 @p canvasPosition 에 둡니다(노드 검색 팝업을 연 자리 · 붙여 넣은 자리). 여러 노드를 한 번에 예약할 수 있습니다. */
-        void placeNodeOnNextDraw( int32 nodeID, const float2& canvasPosition ) { _listPendingPlacement.push_back( PendingPlacement{ nodeID, canvasPosition } ); }
         /** @brief 노드를 그린 직후(`endNode` 뒤)에 호출합니다. 놓을 위치가 예약된 노드이면 그 위치에 두고 고른 노드로 삼습니다. */
         void applyNodePlacement( int32 nodeID );
         /** @brief 캔버스에 노드 @p nodeID 를 지우라고 요청합니다. 지우기는 다음 `processCanvasDeletions` 가 목록에 반영합니다(잘라내기). */
         void requestNodeDeletion( int32 nodeID ) { _nodeGraph.requestNodeDeletion( nodeID ); }
         /** @brief 이 패널 애셋 종류의 id 입니다(그래프 복사 버퍼의 열쇠 — 다른 종류의 그래프에는 붙지 않는다). */
         string getGraphClipboardKind() const { return string{ getDocumentKind().getID() }; }
-        /** @brief 캔버스 안에서 노드 @p nodeID 의 캔버스 좌표입니다. */
-        float2 getCanvasNodePosition( int32 nodeID ) const;
         /** @brief 이 그래프 문서의 편집 알림 입구입니다 — 패널은 명령 묶음(`DialogueGraphEdit` · `AnimationGraphEdit`)에 넘기기만 한다(알림 · 이름은 명령이 낸다, 감사 E-16). */
         const EditorGraphEditSession& getGraphEditSession() const { return _graphEditSession; }
 
@@ -86,6 +82,9 @@ namespace sw::editor
          * @details 이 틀은 공용 GUI 층이라 View 가 아니다. 본문은 .cpp 에 있어 이 헤더가 작업 공간 헤더(창구)를 끌지 않는다 — 이 헤더를 include 하는 View 가 창구에 닿지 않는다.
          */
         void recordGraphEdit( string_view label ) const;
+
+        /** @brief 새 노드 @p nodeID 를 다음에 그릴 때 캔버스 좌표 @p canvasPosition 에 둡니다. 데이터의 자리와 함께 정해야 하므로 파생 패널은 `placeNewNode` 로만 예약한다. */
+        void placeNodeOnNextDraw( int32 nodeID, const float2& canvasPosition );
 
     protected:
         /** @brief 다음 그리기에서 위치를 정할 노드 하나입니다. */
@@ -150,6 +149,20 @@ namespace sw::editor
                 recordGraphEdit( "Add Graph Comment" );
         }
 
+        /**
+         * @brief 방금 더한 노드 @p nodeID 를 캔버스 좌표 @p canvasPosition(노드 검색 팝업을 연 자리 · 툴바가 정한 자리)에 둡니다. 캔버스에는 다음 그리기에, 데이터에는 지금 싣는다.
+         * @details 데이터에 싣지 않으면 다음 프레임의 배치가 "노드 옮기기" 로 읽혀 더하기 하나가 되돌리기 두 단계가 되고, 캔버스에 알리지 않으면 노드가 원점에 놓인다.
+         */
+        void placeNewNode( int32 nodeID, const float2& canvasPosition )
+        {
+            for ( NodeType& node : _graph._listNode )
+            {
+                if ( node._id == nodeID )
+                    node._position = canvasPosition;
+            }
+            placeNodeOnNextDraw( nodeID, canvasPosition );
+        }
+
         /** @brief 다음에 쓸 링크 ID 입니다. */
         int32 nextLinkID() const { return nextItemID( _graph._listLink ); }
 
@@ -207,8 +220,10 @@ namespace sw::editor
             bool bMoved{ false };
             for ( NodeType& node : _graph._listNode )
             {
-                const float2 position = getCanvasNodePosition( node._id );
-                const bool   bChanged = EditorSessionPolicy::hasNodeMoved( node._position._x, node._position._y, position._x, position._y );
+                float2 position{};
+                if ( _nodeGraph.findDrawnNodePosition( node._id, position ) == false )
+                    continue; // 이 프레임에 더한 노드(검색 · 붙여 넣기 · 되돌리기) — 캔버스가 아직 모른다
+                const bool bChanged = EditorSessionPolicy::hasNodeMoved( node._position._x, node._position._y, position._x, position._y );
                 if ( EditorSessionPolicy::shouldMarkDocumentDirtyOnNodeMove( _bGraphLayoutReady == SW_TRUE, bChanged ) )
                     bMoved = true;
 

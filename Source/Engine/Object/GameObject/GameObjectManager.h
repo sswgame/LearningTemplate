@@ -65,6 +65,8 @@ namespace sw
 
 namespace sw
 {
+    struct WorldOrigin;
+
     class AssetManager;
     class CameraComponent;
     class CameraRegistry;
@@ -560,10 +562,12 @@ namespace sw
         const CameraComponent* getFrameCamera() const { return _pFrameCamera; }
         /** @brief 모든 씬 서비스에 씬 원본 경로를 알립니다(`ISceneService::onSceneLoading`, 노드를 짓기 전에 씬이 부른다). */
         void notifySceneLoading( string_view sourcePath );
-        /** @brief 모든 씬 서비스에 월드 원점이 @p delta 만큼 옮겨졌다고 알립니다(`ISceneService::onWorldOriginShifted`, 씬이 루트를 옮긴 뒤 부른다). */
+        /** @brief 이 매니저의 오브젝트 자리가 기준한 월드 원점입니다(절대 = 로컬 + 원점, 처음은 0). 바꾸는 것은 씬이다(`Scene::shiftWorldOrigin` · 복원). 틱 워커가 읽어도 된다 — 원점은 틱 밖에서만 바뀐다. */
+        const WorldOrigin& getWorldOrigin() const;
+        /** @brief 월드 원점을 적습니다 — 오브젝트는 옮기지 않는다(씬이 옮기거나, 복원된 자리가 이미 그 원점 기준이다). */
+        void setWorldOrigin( const double3& origin );
+        /** @brief 모든 씬 서비스와 컴포넌트에 월드 원점이 @p delta 만큼 옮겨졌다고 알립니다(`ISceneService::onWorldOriginShifted` · `Component::onWorldOriginShifted`, 씬이 루트를 옮긴 뒤 부른다). */
         void notifyWorldOriginShifted( const float3& delta );
-        /** @brief 원점 옮기기를 막는 첫 서비스의 이름입니다(`ISceneService::canShiftWorldOrigin`). 막는 서비스가 없으면 nullptr 입니다. */
-        [[nodiscard]] const utf8* findWorldOriginShiftBlocker() const;
         /** @brief 모든 씬 서비스에 미리보기 정책을 적용합니다(`ISceneService::applyPreviewPolicy`). */
         void applyPreviewPolicy( const ScenePreviewPolicy& policy );
         /** @brief 모든 씬 서비스가 @p phase 자리의 라이트 원소를 붙입니다(`ISceneService::contributeLights`). */

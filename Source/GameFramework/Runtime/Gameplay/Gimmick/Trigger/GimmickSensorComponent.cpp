@@ -179,20 +179,6 @@ namespace sw
         addAtomic( _pendingUse, -read._pending );
         _seenCompletedCount.store( read._completedCount, std::memory_order_relaxed );
     }
-
-    float32 GimmickSensorComponent::consumeUses()
-    {
-        // 상호작용은 센서를 모른다. 그래서 같은 오브젝트의 완료 수를 직접 읽고, 지난번 이후 늘어난 만큼을 사용 횟수로 센다.
-        const GameObject*            pOwner        = getOwner();
-        const InteractableComponent* pInteractable = pOwner != nullptr ? pOwner->getComponent<InteractableComponent>() : nullptr;
-        uint32                       newCompleted  = 0;
-        if ( pInteractable != nullptr )
-        {
-            const uint32 completedCount = pInteractable->getCompletedCount();
-            newCompleted                = completedCount - _seenCompletedCount.exchange( completedCount );
-        }
-        return _pendingUse.exchange( 0.0f ) + static_cast<float32>( newCompleted );
-    }
 } // namespace sw
 
 namespace sw

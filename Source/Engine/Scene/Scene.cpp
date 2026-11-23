@@ -15,12 +15,15 @@
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Object/Component/CameraComponent.h"
+#include "Engine/Object/Component/ComponentStateCodec.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Registry/CameraRegistry.h"
 #include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
+#include "Engine/Object/GameObject/Service/NetObjectTable.h"
+#include "Engine/Object/GameObject/WorldOrigin.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Object/Prefab/PrefabCache.h"
 #include "Engine/Object/Prefab/PrefabInstanceRegistry.h"
@@ -133,20 +136,36 @@ namespace sw
             /**
              * @brief 씬에 적는 프리팹 인스턴스(@p mapInstancePrefab: 오브젝트 id → 프리팹 경로)마다 부품에 덮어쓴 것을 @p inoutMapPartOverride 에 담습니다.
              * @details 덮어쓴 것이 없는 인스턴스는 담지 않는다. 프리팹을 읽지 못한 인스턴스는 전체 상태로 적히므로(부품은 다시 스폰되지 않는다) 건너뛴다.
+             *          부품이 가리키는 씬 오브젝트는 그 인스턴스의 상태와 같은 id 로 적는다 — 씬 인스턴스의 멤버(@p mapIDScope)는 내부 파일 id 다(XOR).
              */
-            static void collectInstancePartOverrides( const GameObjectManager& objects, PrefabCache& prefabs, const unordered_map<uint64, string>& mapInstancePrefab,
-                                                      unordered_map<uint64, vector<PrefabPartOverride>>& inoutMapPartOverride )
+            static void collectInstancePartOverrides( const GameObjectManager& objects, PrefabCache& prefabs, const unordered_map<uint64, string>& mapInstancePrefab, const ObjectSavedIDMap& mapSavedID,
+                                                      const unordered_map<uint64, uint64>& mapIDScope, unordered_map<uint64, vector<PrefabPartOverride>>& inoutMapPartOverride )
             {
                 if ( objects.getSubsystem<PrefabInstanceRegistry>().getNestedPartCount() == 0 )
                     return;
-                vector<PrefabPartOverride> listPartOverride;
+                vector<PrefabPartOverride>              listPartOverride;
+                unordered_map<uint64, ObjectSavedIDMap> mapScopedID; // 범위마다 한 번만 만든다
                 for ( const auto& [objectID, prefabPath] : mapInstancePrefab )
                 {
                     const GameObject*                   pInstance = objects.findGameObjectByID( objectID );
                     const shared_ptr<const PrefabAsset> pPrefab   = pInstance != nullptr ? prefabs.loadPrefab( prefabPath ) : nullptr;
                     if ( pPrefab == nullptr )
                         continue;
-                    if ( prefabs.collectPartOverrides( *pInstance, *pPrefab, listPartOverride ) == false )
+                    const ObjectSavedIDMap* pIDMap  = &mapSavedID;
+                    const auto              scopeIt = mapIDScope.find( objectID );
+                    if ( scopeIt != mapIDScope.end() && scopeIt->second != 0 )
+                    {
+                        ObjectSavedIDMap& scoped = mapScopedID[scopeIt->second];
+                        if ( scoped.empty() )
+                        {
+                            for ( const auto& [savedObjectID, fileID] : mapSavedID )
+                            {
+                                scoped.emplace( savedObjectID, fileID ^ scopeIt->second );
+                            }
+                        }
+                        pIDMap = &scoped;
+                    }
+                    if ( prefabs.collectPartOverrides( *pInstance, *pPrefab, pIDMap, listPartOverride ) == false )
                     {
                         SW_LOG_ERROR_ID( "Scene.NestedPartOverridesCould", "Nested part overrides of '%#' could not be computed - its parts are saved as the prefab has them", pInstance->getName().c_str() );
                         continue;
@@ -254,7 +273,7 @@ namespace sw
              * @details 엔티티를 모두 만든 **뒤에** 스폰한다. 부품이 먼저 이름을 가져가면 같은 이름의 엔티티가 로드마다 번호 붙은 이름으로 바뀐다. 프리팹은 앞에서 이미 읽어 캐시에 있다.
              *          씬에서 부품을 고친 것은 엔티티의 덮어쓴 것 안 `<Part>` 로 실려 스폰하는 부품에 얹는다(유니티 nested override).
              */
-            static void spawnNestedInstances( AssetManager& assetManager, const vector<PrefabEntity>& listPrefabEntity )
+            static void spawnNestedInstances( AssetManager& assetManager, const ObjectStateBatch& batch, const vector<PrefabEntity>& listPrefabEntity )
             {
                 PrefabCache&               prefabs = assetManager.getAssetCache<PrefabCache>();
                 vector<PrefabPartOverride> listPartOverride;
@@ -287,7 +306,7 @@ namespace sw
                                 listPartOverride.push_back( std::move( part ) );
                         }
                     }
-                    (void)prefabs.spawnNestedInstances( prefabEntity._pObject, *pPrefab, listPartOverride ); // 건너뛴 노드는 노드마다 경고했다
+                    (void)prefabs.spawnNestedInstances( prefabEntity._pObject, *pPrefab, listPartOverride, &batch, entity._idScope ); // 건너뛴 노드는 노드마다 경고했다
                 }
             }
 
@@ -305,7 +324,8 @@ namespace sw
             /**
              * @brief @p inoutInputs 의 프리팹 관련 입력(부품 분류 · 원형 상태 · 부품 덮어쓰기)을 채웁니다. 만들지 못한 프리팹의 원형은 빈 문자열로 남아 전체 상태를 적게 됩니다.
              */
-            static void prepareSavePrefabInputs( SceneIterationKey key, const GameObjectManager& objects, AssetManager* pAssetManager, const unordered_map<uint64, string>& mapPrefabSource, SaveInputs& inoutInputs )
+            static void prepareSavePrefabInputs( SceneIterationKey key, const GameObjectManager& objects, AssetManager* pAssetManager, const unordered_map<uint64, string>& mapPrefabSource,
+                                                 const unordered_map<uint64, uint64>& mapIDScope, SaveInputs& inoutInputs )
             {
                 // 중첩 프리팹 부품마다 저장 방법을 정한다. 다시 스폰될 부품은 적지 않고, 다시 스폰될 곳을 잃은 부품은 자기 프리팹의 인스턴스로 적는다.
                 classifyNestedParts( key, objects, mapPrefabSource, inoutInputs._uniqueRespawnedPart, inoutInputs._mapDetachedPartPrefab );
@@ -322,8 +342,8 @@ namespace sw
                     (void)findPrefabBaseState( *pAssetManager, inoutInputs._mapPrefabBaseState, prefabPath ); // 캐시를 미리 채운다 — 못 찾은 것은 쓰는 쪽이 다시 묻는다
                 }
                 // 인스턴스마다 부품에 덮어쓴 것도 순회 밖에서 뽑는다 — 기준 부품을 임시 매니저에 스폰한다.
-                collectInstancePartOverrides( objects, pAssetManager->getAssetCache<PrefabCache>(), mapPrefabSource, inoutInputs._mapPartOverride );
-                collectInstancePartOverrides( objects, pAssetManager->getAssetCache<PrefabCache>(), inoutInputs._mapDetachedPartPrefab, inoutInputs._mapPartOverride );
+                collectInstancePartOverrides( objects, pAssetManager->getAssetCache<PrefabCache>(), mapPrefabSource, inoutInputs._mapSavedID, mapIDScope, inoutInputs._mapPartOverride );
+                collectInstancePartOverrides( objects, pAssetManager->getAssetCache<PrefabCache>(), inoutInputs._mapDetachedPartPrefab, inoutInputs._mapSavedID, mapIDScope, inoutInputs._mapPartOverride );
             }
 
             /**
@@ -386,7 +406,6 @@ namespace sw
         , _sourcePath{}
         , _defaultMaterialPath{}
         , _sceneSettings{}
-        , _worldOrigin{}
         , _services{ services }
         , _objectManager{ make_unique<GameObjectManager>( services ) }
         , _pMaterial{ nullptr }
@@ -396,7 +415,6 @@ namespace sw
         , _mapObjectDataLayer{}
         , _bRegistrationHeld{ SW_FALSE }
         , _bBuildAllDataLayers{ SW_FALSE }
-        , _bOriginRebaseBlocked{ SW_FALSE }
         , _activeGameCamera{}
         , _gameCameraOverride{}
     {
@@ -530,9 +548,9 @@ namespace sw
             return CellBuildResult::InProgress;
         }
 
-        // 다 지었다 — 앞 프레임에 숨긴 것을 대기 목록으로 되돌리고, 지금 씬의 늘 올라 있는 오브젝트를 기록해 잇는다. 기록을 끝에 하는 까닭: 짓는 사이에 지워진 오브젝트를 배치가 들지 않게.
+        // 다 지었다 — 앞 프레임에 숨긴 것을 대기 목록으로 되돌리고 잇는다. 늘 올라 있는 오브젝트는 이을 때 씬에 묻는다 — 짓는 사이에 지워진 오브젝트를 배치가 들지 않는다.
         manager.releaseStagedGameObjects( span<const uint64>( inoutListObjectID.data(), firstObjectIndex ) );
-        addReferenceTargets( build._context, &inoutListObjectID );
+        bindReferenceResolver( build._context );
         const bool bFinished = finishNodeBuild( listNode, build._context );
         build._bDone         = true;
         // 셀이 든 등록 줄을 미룬 줄 뒤에 붙인다 — 바깥 짝이 끝날 때(보통 바로 아래) 붙은 순서로 부른다.
@@ -541,7 +559,19 @@ namespace sw
         build._listRegister.clear();
         build._listPostLoad.clear();
         manager.endDeferredRegistration();
+        if ( bFinished )
+            restoreComponentStates( listNode, build._context );
         return bFinished ? CellBuildResult::Done : CellBuildResult::Failed;
+    }
+
+    void Scene::restoreComponentStates( const vector<SceneDocument::SceneObjectNode>& listNode, const NodeBuildContext& context ) const
+    {
+        for ( const SceneDocument::SceneObjectNode& entity : listNode )
+        {
+            GameObject* pObject = entity._componentStateBytes.empty() ? nullptr : context._batch.findBySavedID( entity._fileID );
+            if ( pObject != nullptr )
+                ComponentStateCodec::restoreObject( *pObject, entity._componentStateBytes );
+        }
     }
 
     bool Scene::instantiateLayerNodes( const vector<SceneDocument::SceneObjectNode>& listNode, vector<uint64>& outListObjectID )
@@ -551,19 +581,56 @@ namespace sw
         return instantiateNodes( listNode, NodeBuild::DataLayer, &outListObjectID );
     }
 
+    void Scene::collectCellGroup( const vector<uint64>& listObjectID, vector<uint64>& outListObjectID ) const
+    {
+        outListObjectID.clear();
+        outListObjectID.reserve( listObjectID.size() );
+        unordered_set<uint64> uniqueObjectID;
+        for ( const uint64 objectID : listObjectID )
+        {
+            if ( uniqueObjectID.insert( objectID ).second )
+                outListObjectID.push_back( objectID );
+        }
+        if ( _objectManager->getSubsystem<PrefabInstanceRegistry>().getNestedPartCount() > 0 )
+            _objectManager->getSubsystem<PrefabInstanceRegistry>().collectAttachedPartsOf( uniqueObjectID, outListObjectID );
+
+        // 계층의 자손 — 부모와 함께 지워지는 것 전부다(플레이 중 붙인 것까지). 부모가 지워져도 남는 것, 세운 쪽이 다시 세우는 파생, 서버가 번호를 준 복제 스폰, 제 묶음이 따로 뜨는 것은 뺀다.
+        const NetObjectTable&          netObjects = _objectManager->getSubsystem<NetObjectTable>();
+        const SceneStreamingSubsystem& streaming  = _objectManager->getSubsystem<SceneStreamingSubsystem>();
+        const SceneDataLayerSubsystem& dataLayers = _objectManager->getSubsystem<SceneDataLayerSubsystem>();
+        const SceneSubLevelSubsystem&  subLevels  = _objectManager->getSubsystem<SceneSubLevelSubsystem>();
+        vector<GameObject*>            listChild;
+        for ( size_t index = 0; index < outListObjectID.size(); ++index )
+        {
+            const GameObject* pObject = _objectManager->findGameObjectByID( outListObjectID[index] );
+            if ( pObject == nullptr || pObject->isPendingDestroy() )
+                continue;
+            pObject->getChildren( listChild );
+            for ( const GameObject* pChild : listChild )
+            {
+                const uint64 childID   = pChild->getObjectID();
+                const bool   bSeparate = pChild->isPendingDestroy() || pChild->isTransient() || pChild->isKeptWhenParentDestroyed() || streaming.isListedObject( childID ) ||
+                                       dataLayers.isListedObject( childID ) || subLevels.isListedObject( childID ) || ( netObjects.findID( *pChild ) & NetObjectTable::kSpawnedBit ) != 0;
+                if ( bSeparate == false && uniqueObjectID.insert( childID ).second )
+                    outListObjectID.push_back( childID );
+            }
+        }
+    }
+
     void Scene::unloadCell( const vector<uint64>& listObjectID )
     {
         if ( _objectManager == nullptr )
             return;
-        for ( const uint64 objectID : listObjectID )
+        vector<uint64> listGroup;
+        collectCellGroup( listObjectID, listGroup );
+        for ( const uint64 objectID : listGroup )
         {
-            _mapObjectIDToFileID.erase( objectID );
+            _fileIDTable.erase( objectID );
             _mapPrefabSource.erase( objectID );
             _mapSceneInstancePath.erase( objectID );
             _mapInstanceMember.erase( objectID );
             _mapObjectDataLayer.erase( objectID );
             GameObject* pGo = _objectManager->findGameObjectByID( objectID );
-            // 자식은 같은 셀의 엔티티이거나 이 엔티티의 중첩 프리팹 부품이다 — 늘 올라 있는 오브젝트는 셀의 오브젝트에 붙지 않는다(쿠커가 검사했다).
             if ( pGo != nullptr )
                 _objectManager->destroyGameObject( pGo );
         }
@@ -574,43 +641,51 @@ namespace sw
         outListNode.clear();
         if ( _objectManager == nullptr )
             return;
-        // 셀 몫만 준비한다 — 원형 상태 · 부품 덮어쓰기를 씬 전체가 아니라 이 셀의 프리팹 엔티티로 만든다. 참조는 씬의 파일 id 표 전체로 적는다(늘 올라 있는 오브젝트를 가리킨다).
-        SceneInternal::SaveInputs     inputs;
-        unordered_map<uint64, string> mapCellPrefab;
-        for ( const uint64 objectID : listObjectID )
+        // 함께 내려가는 것을 모두 엔티티로 뜬다(중첩 프리팹 부품 · 플레이 중 붙인 것) — 파일 id 가 없으면 준다. 다시 지을 때 부착 · 핸들이 그 id 로 이어진다.
+        vector<uint64> listGroup;
+        collectCellGroup( listObjectID, listGroup );
+        for ( const uint64 objectID : listGroup )
         {
-            const auto fileIDIt = _mapObjectIDToFileID.find( objectID );
-            if ( fileIDIt != _mapObjectIDToFileID.end() )
-                inputs._mapSavedID.emplace( objectID, fileIDIt->second );
-            const auto prefabIt = _mapPrefabSource.find( objectID );
-            if ( prefabIt != _mapPrefabSource.end() )
-                mapCellPrefab.emplace( objectID, prefabIt->second );
+            if ( _fileIDTable.findFileID( objectID ) == 0 && _objectManager->findGameObjectByID( objectID ) != nullptr )
+                _fileIDTable.set( objectID, computeNextFileID() );
         }
-        AssetManager* const pAssetManager = _services._pAssetManager;
-        if ( pAssetManager != nullptr )
+
+        // 셀 몫만 준비한다 — 원형 상태를 씬 전체가 아니라 이 셀의 프리팹 엔티티로 만든다. 참조는 씬의 파일 id 표 전체로 적는다(늘 올라 있는 오브젝트를 가리킨다).
+        SceneInternal::SaveInputs inputs;
+        for ( const uint64 objectID : listGroup )
         {
-            for ( const auto& [objectID, prefabPath] : mapCellPrefab )
-            {
-                (void)objectID;
-                (void)SceneInternal::findPrefabBaseState( *pAssetManager, inputs._mapPrefabBaseState, prefabPath ); // 캐시를 채운다 — 못 만든 원형은 쓰는 쪽이 전체 상태로 적는다
-            }
-            SceneInternal::collectInstancePartOverrides( *_objectManager, pAssetManager->getAssetCache<PrefabCache>(), mapCellPrefab, inputs._mapPartOverride );
+            const uint64 fileID = _fileIDTable.findFileID( objectID );
+            if ( fileID != 0 )
+                inputs._mapSavedID.emplace( objectID, fileID );
+            const auto prefabIt = _mapPrefabSource.find( objectID );
+            if ( prefabIt != _mapPrefabSource.end() && _services._pAssetManager != nullptr )
+                (void)SceneInternal::findPrefabBaseState( *_services._pAssetManager, inputs._mapPrefabBaseState, prefabIt->second ); // 캐시를 채운다 — 못 만든 원형은 쓰는 쪽이 전체 상태로 적는다
         }
         // 런타임 칸(`RuntimeState` — 볼륨 발동 수 · AI 블랙보드)까지 뜬다 — 저작 목적이면 내렸다 올린 셀이 처음 상태로 돌아간다. 파생 칸(`Transient`)은 뜨지 않는다.
         ObjectSaveOptions saveOptions{ SerializePurpose::Snapshot };
-        saveOptions._pSavedIDMap = &_mapObjectIDToFileID;
+        saveOptions._pSavedIDMap = &_fileIDTable.getFileIDs();
 
-        outListNode.reserve( listObjectID.size() );
-        for ( const uint64 objectID : listObjectID )
+        const PrefabInstanceRegistry& nestedParts = _objectManager->getSubsystem<PrefabInstanceRegistry>();
+        outListNode.reserve( listGroup.size() );
+        for ( const uint64 objectID : listGroup )
         {
             GameObject* pGo = _objectManager->findGameObjectByID( objectID );
             if ( pGo == nullptr || pGo->isPendingDestroy() )
                 continue; // 플레이 중 지웠다 — 다시 올려도 없다
             SceneDocument::SceneObjectNode node{};
             node._statePurpose = SerializePurpose::Snapshot;
-            node._worldOrigin  = _worldOrigin; // 상태의 자리는 지금 원점 기준이다 — 원점이 옮겨진 뒤 다시 지으면 그 차이만큼 옮긴다
+            node._worldOrigin  = getWorldOrigin(); // 상태의 자리는 지금 원점 기준이다 — 원점이 옮겨진 뒤 다시 지으면 그 차이만큼 옮긴다
             if ( SceneInternal::writeEntityNode( pGo, _mapPrefabSource, inputs, saveOptions, node ) == false )
                 continue;
+            // PROPERTY 밖 상태도 함께 뜬다 — 내렸다 올린 셀 · 세이브가 지형 편집 · 시뮬레이션을 잃지 않게.
+            ComponentStateCodec::captureObject( *pGo, node._componentStateBytes );
+            if ( nestedParts.isAttachedNestedPart( pGo ) )
+            {
+                const PrefabNestedPart& part = *nestedParts.findNestedPart( objectID );
+                node._nestedOwnerFileID      = findFileID( part._ownerObjectID );
+                node._nestedPrefab           = part._prefabPath;
+                node._nestedPartKey          = part._partKey;
+            }
             const auto layerIt = _mapObjectDataLayer.find( objectID );
             if ( layerIt != _mapObjectDataLayer.end() )
                 node._listDataLayer = layerIt->second;
@@ -651,59 +726,64 @@ namespace sw
 
     bool Scene::instantiateNodes( const vector<SceneDocument::SceneObjectNode>& listNode, const NodeBuild build, vector<uint64>* pOutListObjectID, const StopToken& stopToken )
     {
-        // 배치가 끝날 때까지 등록 · 로드 뒤 처리를 미룬다 — 값을 다 읽고 연결한 뒤 등록한다(쥔 미루기가 있으면 그것이 받을 때까지 더 미룬다).
-        struct DeferredRegistrationScope
-        {
-            GameObjectManager& _manager;
-            explicit DeferredRegistrationScope( GameObjectManager& manager )
-                : _manager{ manager }
-            {
-                _manager.beginDeferredRegistration();
-            }
-            ~DeferredRegistrationScope() { _manager.endDeferredRegistration(); }
-            DeferredRegistrationScope( const DeferredRegistrationScope& )            = delete;
-            DeferredRegistrationScope& operator=( const DeferredRegistrationScope& ) = delete;
-        } deferScope{ *_objectManager };
         NodeBuildContext context;
-        // 레이어 묶음은 이미 지은 늘 올라 있는 엔티티를 파일 id 로 가리킨다 — 그 오브젝트를 같은 배치에 기록해 둔다(상태는 읽지 않는다).
-        if ( build != NodeBuild::Document )
-            addReferenceTargets( context, nullptr );
-
-        for ( const SceneDocument::SceneObjectNode& entity : listNode )
         {
-            // 종료 신호(`SceneManager::requestAsyncLoadStop`) — 중간에 멈추면 false 다. 이미 지은 오브젝트는 부른 쪽이 씬을 버리며 정리한다(비동기 로드 잡이 신호를 다시 읽고 씬을 소멸시킨다).
-            if ( stopToken.isStopRequested() )
+            // 배치가 끝날 때까지 등록 · 로드 뒤 처리를 미룬다 — 값을 다 읽고 연결한 뒤 등록한다(쥔 미루기가 있으면 그것이 받을 때까지 더 미룬다).
+            struct DeferredRegistrationScope
             {
-                context._batch.abandon();
-                return false;
+                GameObjectManager& _manager;
+                explicit DeferredRegistrationScope( GameObjectManager& manager )
+                    : _manager{ manager }
+                {
+                    _manager.beginDeferredRegistration();
+                }
+                ~DeferredRegistrationScope() { _manager.endDeferredRegistration(); }
+                DeferredRegistrationScope( const DeferredRegistrationScope& )            = delete;
+                DeferredRegistrationScope& operator=( const DeferredRegistrationScope& ) = delete;
+            } deferScope{ *_objectManager };
+            // 레이어 묶음은 이미 지은 늘 올라 있는 엔티티를 파일 id 로 가리킨다 — 배치에 없는 id 는 씬에 묻는다.
+            if ( build != NodeBuild::Document )
+                bindReferenceResolver( context );
+
+            for ( const SceneDocument::SceneObjectNode& entity : listNode )
+            {
+                // 종료 신호(`SceneManager::requestAsyncLoadStop`) — 중간에 멈추면 false 다. 이미 지은 오브젝트는 부른 쪽이 씬을 버리며 정리한다(비동기 로드 잡이 신호를 다시 읽고 씬을 소멸시킨다).
+                if ( stopToken.isStopRequested() )
+                {
+                    context._batch.abandon();
+                    return false;
+                }
+                buildEntityNode( entity, build, context, pOutListObjectID );
             }
-            buildEntityNode( entity, build, context, pOutListObjectID );
+            if ( finishNodeBuild( listNode, context ) == false )
+                return false;
         }
-        return finishNodeBuild( listNode, context );
+        restoreComponentStates( listNode, context ); // 등록을 마친 뒤 — 문서의 엔티티에는 떠 둔 상태가 없다(레이어 묶음만)
+        return true;
     }
 
-    void Scene::addReferenceTargets( NodeBuildContext& context, const vector<uint64>* pExcludedObjectID ) const
+    void Scene::bindReferenceResolver( NodeBuildContext& context ) const
     {
-        unordered_set<uint64> uniqueExcluded;
-        if ( pExcludedObjectID != nullptr )
-        {
-            uniqueExcluded.reserve( pExcludedObjectID->size() );
-            for ( const uint64 objectID : *pExcludedObjectID )
-                uniqueExcluded.insert( objectID );
-        }
-        for ( const auto& [objectID, fileID] : _mapObjectIDToFileID )
-        {
-            if ( uniqueExcluded.find( objectID ) != uniqueExcluded.end() )
-                continue;
-            GameObject* pExisting = _objectManager->findGameObjectByID( objectID );
-            if ( pExisting != nullptr && pExisting->isPendingDestroy() == false )
-                context._batch.addReferenceTarget( pExisting, fileID, pExisting->getName() );
-        }
+        context._batch.setExternalResolver( SW_DELEGATE_LAMBDA( SavedObjectResolver, [this]( uint64 fileID, hashed_string name )
+        { return findReferenceTarget( fileID, name ); } ) );
+    }
+
+    GameObject* Scene::findReferenceTarget( uint64 fileID, const hashed_string& name ) const
+    {
+        GameObject* const pObject = fileID != 0 ? _objectManager->findGameObjectByID( _fileIDTable.findObjectID( fileID ) ) : _objectManager->findGameObjectByName( name );
+        if ( pObject == nullptr || pObject->isPendingDestroy() || _fileIDTable.findFileID( pObject->getObjectID() ) == 0 )
+            return nullptr;
+        return pObject;
     }
 
     void Scene::buildEntityNode( const SceneDocument::SceneObjectNode& entity, const NodeBuild build, NodeBuildContext& context, vector<uint64>* pOutListObjectID )
     {
         SW_LOG_TRACE_ID( "Scene.SpawningEntityPrefab", "Spawning entity '%#' prefab '%#'", entity._name, entity._prefab );
+        // 짓지 못해 문서로 남는 엔티티도 파일 id 를 쓴다 — 짓기 앞에서 알린다. 인스턴스 멤버의 평평한 id 는 앵커 범위에서 온 넓은 값이다.
+        if ( entity._instanceAnchorFileID != 0 )
+            _fileIDTable.recordWide( entity._fileID );
+        else
+            _fileIDTable.recordUsed( entity._fileID );
         string      prefabInstanceState; // 프리팹 원형에 덮어쓴 값을 얹어 만든 상태(프리팹 엔티티만)
         GameObject* pGo = SceneInternal::createEntityObject( *_objectManager, _services._pAssetManager, context._mapPrefabBaseState, entity, build != NodeBuild::Cell, _listUnresolvedEntity,
                                                              prefabInstanceState );
@@ -715,7 +795,7 @@ namespace sw
         if ( entity._prefab.empty() == false )
             _mapPrefabSource[pGo->getObjectID()] = entity._prefab;
         if ( entity._fileID != 0 )
-            _mapObjectIDToFileID[pGo->getObjectID()] = entity._fileID;
+            _fileIDTable.set( pGo->getObjectID(), entity._fileID );
         if ( entity._sceneInstance.empty() == false )
             _mapSceneInstancePath[pGo->getObjectID()] = entity._sceneInstance;
         if ( entity._instanceAnchorFileID != 0 )
@@ -723,7 +803,8 @@ namespace sw
         if ( entity._listDataLayer.empty() == false )
             _mapObjectDataLayer[pGo->getObjectID()] = entity._listDataLayer;
         SceneInternal::applyEntityState( pGo, entity, prefabInstanceState, context._batch );
-        if ( entity._prefab.empty() == false )
+        // 떠 둔 프리팹 엔티티는 부품을 다시 스폰하지 않는다 — 부품도 엔티티로 떠 두었다(`captureCellNodes`).
+        if ( entity._prefab.empty() == false && entity._statePurpose == SerializePurpose::Authoring )
         {
             context._listPrefabObject.push_back( pGo );
             context._listPrefabNode.push_back( &entity );
@@ -759,10 +840,11 @@ namespace sw
 
         // 월드 원점: 상태의 자리는 적힌 때의 원점 기준이다(파일 · 쿠킹본은 0, 떠 둔 상태는 뜬 때의 원점). 루트 오브젝트만 지금 원점으로 옮긴다 — 붙은 것은 부모를 따른다.
         // 등록(물리 바디 · 내비 · 셀 소속) 앞이라 처음부터 맞는 자리에 선다.
+        const double3& origin = getWorldOrigin();
         for ( const SceneDocument::SceneObjectNode& entity : listNode )
         {
-            const float3    shift{ static_cast<float32>( entity._worldOrigin._x - _worldOrigin._x ), static_cast<float32>( entity._worldOrigin._y - _worldOrigin._y ),
-                                static_cast<float32>( entity._worldOrigin._z - _worldOrigin._z ) };
+            const float3    shift{ static_cast<float32>( entity._worldOrigin._x - origin._x ), static_cast<float32>( entity._worldOrigin._y - origin._y ),
+                                static_cast<float32>( entity._worldOrigin._z - origin._z ) };
             GameObject*     pObject = shift == float3{} || entity._fileID == 0 ? nullptr : batch.findBySavedID( entity._fileID );
             SceneComponent* pRoot   = pObject != nullptr && pObject->getParent() == nullptr ? pObject->getPrimarySceneComponent() : nullptr;
             if ( pRoot != nullptr )
@@ -777,7 +859,16 @@ namespace sw
             {
                 listPrefabEntity.push_back( SceneInternal::PrefabEntity{ context._listPrefabObject[prefabIndex], context._listPrefabNode[prefabIndex] } );
             }
-            SceneInternal::spawnNestedInstances( *_services._pAssetManager, listPrefabEntity );
+            SceneInternal::spawnNestedInstances( *_services._pAssetManager, batch, listPrefabEntity );
+        }
+        // 떠 둔 부품의 기록을 다시 세운다 — 인스턴스가 사라진 부품은 제 엔티티로 남는다.
+        PrefabInstanceRegistry& nestedParts = _objectManager->getSubsystem<PrefabInstanceRegistry>();
+        for ( const SceneDocument::SceneObjectNode& entity : listNode )
+        {
+            const GameObject* pOwner = entity._nestedOwnerFileID != 0 ? batch.findBySavedID( entity._nestedOwnerFileID ) : nullptr;
+            const GameObject* pPart  = pOwner != nullptr ? batch.findBySavedID( entity._fileID ) : nullptr;
+            if ( pPart != nullptr )
+                nestedParts.registerNestedPart( pPart->getObjectID(), pOwner->getObjectID(), entity._nestedPrefab, entity._nestedPartKey );
         }
 
         _objectManager->mergePendingAdds();
@@ -807,9 +898,14 @@ namespace sw
         SceneInternal::SaveInputs inputs;
         collectSavedIDMap( inputs._mapSavedID );
         ObjectSaveOptions saveOptions{ SerializePurpose::Authoring };
-        saveOptions._pSavedIDMap          = &inputs._mapSavedID;
-        AssetManager* const pAssetManager = _services._pAssetManager;
-        SceneInternal::prepareSavePrefabInputs( SceneIterationKey{}, *_objectManager, pAssetManager, _mapPrefabSource, inputs );
+        saveOptions._pSavedIDMap                    = &inputs._mapSavedID;
+        AssetManager* const           pAssetManager = _services._pAssetManager;
+        unordered_map<uint64, uint64> mapIDScope;
+        for ( const auto& [objectID, member] : _mapInstanceMember )
+        {
+            mapIDScope.emplace( objectID, member._idScope );
+        }
+        SceneInternal::prepareSavePrefabInputs( SceneIterationKey{}, *_objectManager, pAssetManager, _mapPrefabSource, mapIDScope, inputs );
         collectSceneInstanceParts( inputs._mapPartOverride, inputs._mapAnchorPart );
         const SceneSubLevelSubsystem& subLevels = _objectManager->getSubsystem<SceneSubLevelSubsystem>();
 
@@ -1055,17 +1151,24 @@ namespace sw
         vector<GameObject*> listObject;
         _objectManager->getAllGameObjects( SceneIterationKey{}, listObject );
         outMap.reserve( listObject.size() );
+        const PrefabInstanceRegistry& nestedParts = _objectManager->getSubsystem<PrefabInstanceRegistry>();
         for ( const GameObject* pGo : listObject )
         {
             if ( pGo == nullptr )
                 continue;
-            const auto mapIt = _mapObjectIDToFileID.find( pGo->getObjectID() );
-            if ( mapIt != _mapObjectIDToFileID.end() )
+            const uint64 knownFileID = _fileIDTable.findFileID( pGo->getObjectID() );
+            if ( knownFileID != 0 )
             {
-                outMap.emplace( pGo->getObjectID(), mapIt->second );
+                outMap.emplace( pGo->getObjectID(), knownFileID );
                 continue;
             }
-            _mapObjectIDToFileID.emplace( pGo->getObjectID(), nextFileID );
+            // 인스턴스가 다시 스폰하는 중첩 부품은 파일에 엔티티가 없다(`classifyNestedParts`) — id 를 주면 파일에 없는 것을 가리키는 참조가 적히고, 셀 나누기가 부품을 제 엔티티로 여겨 경계 · HLOD 에서 빠뜨린다.
+            const PrefabNestedPart* pPart = nestedParts.findNestedPart( pGo->getObjectID() );
+            const bool              bOwnerRespawns =
+                pPart != nullptr && ( _mapPrefabSource.find( pPart->_ownerObjectID ) != _mapPrefabSource.end() || nestedParts.findNestedPart( pPart->_ownerObjectID ) != nullptr );
+            if ( bOwnerRespawns && nestedParts.isAttachedNestedPart( pGo ) )
+                continue;
+            _fileIDTable.set( pGo->getObjectID(), nextFileID );
             outMap.emplace( pGo->getObjectID(), nextFileID );
             ++nextFileID;
         }
@@ -1080,56 +1183,22 @@ namespace sw
         // 프리팹 쪽에서 오브젝트가 씬 파일 밖으로 옮겨진 모양이라 참조를 만들 수 없게 막는다.
         if ( _objectManager->getSubsystem<PrefabInstanceRegistry>().isAttachedNestedPart( pObject ) )
             return 0;
-        const auto mapIt = _mapObjectIDToFileID.find( objectID );
-        if ( mapIt != _mapObjectIDToFileID.end() )
-            return mapIt->second;
+        const uint64 knownFileID = _fileIDTable.findFileID( objectID );
+        if ( knownFileID != 0 )
+            return knownFileID;
         const uint64 nextFileID = computeNextFileID();
-        _mapObjectIDToFileID.emplace( objectID, nextFileID );
+        _fileIDTable.set( objectID, nextFileID );
         return nextFileID;
     }
 
     uint64 Scene::findFileID( uint64 objectID ) const
     {
-        const auto mapIt = _mapObjectIDToFileID.find( objectID );
-        return mapIt != _mapObjectIDToFileID.end() ? mapIt->second : 0;
+        return _fileIDTable.findFileID( objectID );
     }
 
-    uint64 Scene::computeNextFileID() const
+    void Scene::recordHeldFileIDs( const vector<SceneDocument::SceneObjectNode>& listNode )
     {
-        // 새 id 는 이 씬이 지금껏 쓴 어느 파일 id 보다 크다. 사라진 오브젝트나 해석하지 못한 엔티티의 id 를 다시 주면 그것을 가리키던 참조가
-        // (파일을 넘는 참조 `SceneObjectReference` 를 포함해) 새 오브젝트에 붙는다.
-        uint64 nextFileID = 1;
-        // 인스턴스 멤버 · 런타임 하위 레벨 앵커의 넓은 id 는 세지 않는다(앵커 범위에서 온 값이다).
-        const SceneSubLevelSubsystem* pSubLevels = _objectManager != nullptr ? &_objectManager->getSubsystem<SceneSubLevelSubsystem>() : nullptr;
-        for ( const auto& [objectID, fileID] : _mapObjectIDToFileID )
-        {
-            const bool bWide = _mapInstanceMember.find( objectID ) != _mapInstanceMember.end() || ( pSubLevels != nullptr && pSubLevels->isAnchorFileID( fileID ) );
-            if ( bWide == false )
-                nextFileID = MathUtil::max( nextFileID, fileID + 1 );
-        }
-        const auto recordHeldNode = [&nextFileID]( const SceneDocument::SceneObjectNode& node )
-        {
-            if ( node._instanceAnchorFileID == 0 )
-                nextFileID = MathUtil::max( nextFileID, node._fileID + 1 );
-        };
-        for ( const SceneDocument::SceneObjectNode& unresolved : _listUnresolvedEntity )
-        {
-            recordHeldNode( unresolved );
-        }
-        if ( _objectManager != nullptr )
-        {
-            for ( const SceneDataLayerSubsystem::Group& group : _objectManager->getSubsystem<SceneDataLayerSubsystem>().getGroups() )
-            {
-                for ( const SceneDocument::SceneObjectNode& node : group._listNode )
-                {
-                    recordHeldNode( node );
-                }
-            }
-        }
-        // 스트리밍 셀이 든 엔티티(읽지 않은 쿠킹 내용 — 쿠킹본 머리의 최대값, 떠 둔 상태)와 겹치지 않는다.
-        if ( _objectManager != nullptr )
-            nextFileID = MathUtil::max( nextFileID, _objectManager->getSubsystem<SceneStreamingSubsystem>().getMaxCellFileID() + 1 );
-        return nextFileID;
+        _fileIDTable.recordUsed( SceneDocument::computeMaxFileID( listNode ) );
     }
 
     void Scene::rebindRestoredFileIDs( const vector<SavedFileID>& listFileID )
@@ -1137,7 +1206,7 @@ namespace sw
         if ( _objectManager == nullptr )
             return;
         // 매니저를 비우고 다시 만든 오브젝트다 — 사라진 id 의 기록은 버린다(남기면 `findObjectIDByFileID` 가 같은 파일 id 의 옛 오브젝트를 먼저 찾는다).
-        const auto dropGone = [this]( auto& mapByObjectID )
+        const auto dropGoneFrom = [this]( const auto& mapByObjectID, auto& inoutTable )
         {
             vector<uint64> listGone;
             for ( const auto& entry : mapByObjectID )
@@ -1147,10 +1216,12 @@ namespace sw
             }
             for ( const uint64 objectID : listGone )
             {
-                mapByObjectID.erase( objectID );
+                inoutTable.erase( objectID );
             }
         };
-        dropGone( _mapObjectIDToFileID );
+        const auto dropGone = [&dropGoneFrom]( auto& mapByObjectID )
+        { dropGoneFrom( mapByObjectID, mapByObjectID ); };
+        dropGoneFrom( _fileIDTable.getFileIDs(), _fileIDTable );
         dropGone( _mapPrefabSource );
         dropGone( _mapSceneInstancePath );
         dropGone( _mapInstanceMember );
@@ -1158,20 +1229,67 @@ namespace sw
         for ( const SavedFileID& entry : listFileID )
         {
             if ( entry._fileID != 0 && _objectManager->findGameObjectByID( entry._objectID ) != nullptr )
-                _mapObjectIDToFileID[entry._objectID] = entry._fileID;
+                _fileIDTable.set( entry._objectID, entry._fileID );
         }
+    }
+
+    void SceneFileIDTable::set( uint64 objectID, uint64 fileID )
+    {
+        SW_ASSERT( objectID != 0 && fileID != 0 );
+        erase( objectID );
+        _mapObjectIDToFileID.emplace( objectID, fileID );
+        _mapFileIDToObjectID[fileID] = objectID;
+        recordUsed( fileID );
+    }
+
+    void SceneFileIDTable::recordUsed( uint64 fileID )
+    {
+        if ( fileID > _maxUsedFileID && _uniqueWideFileID.find( fileID ) == _uniqueWideFileID.end() )
+            _maxUsedFileID = fileID;
+    }
+
+    void SceneFileIDTable::recordWide( uint64 fileID )
+    {
+        _uniqueWideFileID.insert( fileID );
+    }
+
+    void SceneFileIDTable::erase( uint64 objectID )
+    {
+        const auto fileIter = _mapObjectIDToFileID.find( objectID );
+        if ( fileIter == _mapObjectIDToFileID.end() )
+            return;
+        const auto objectIter = _mapFileIDToObjectID.find( fileIter->second );
+        if ( objectIter != _mapFileIDToObjectID.end() && objectIter->second == objectID )
+            _mapFileIDToObjectID.erase( objectIter ); // 그 파일 id 를 나중에 받은 오브젝트가 있으면 그것을 둔다
+        _mapObjectIDToFileID.erase( fileIter );
+    }
+
+    void SceneFileIDTable::clear()
+    {
+        _mapObjectIDToFileID.clear();
+        _mapFileIDToObjectID.clear();
+        _uniqueWideFileID.clear();
+        _maxUsedFileID = 0;
+    }
+
+    uint64 SceneFileIDTable::findFileID( uint64 objectID ) const
+    {
+        const auto fileIter = _mapObjectIDToFileID.find( objectID );
+        return fileIter != _mapObjectIDToFileID.end() ? fileIter->second : 0;
+    }
+
+    uint64 SceneFileIDTable::findObjectID( uint64 fileID ) const
+    {
+        const auto objectIter = _mapFileIDToObjectID.find( fileID );
+        return objectIter != _mapFileIDToObjectID.end() ? objectIter->second : 0;
     }
 
     uint64 Scene::findObjectIDByFileID( uint64 fileID ) const
     {
         if ( fileID == 0 || _objectManager == nullptr )
             return 0;
-        for ( const auto& [objectID, knownFileID] : _mapObjectIDToFileID )
-        {
-            if ( knownFileID == fileID && _objectManager->resolveGameObject( GameObjectHandle::make( objectID ) ) != nullptr )
-                return objectID;
-        }
-        return 0;
+        const uint64 objectID = _fileIDTable.findObjectID( fileID );
+        return objectID != 0 && _objectManager->resolveGameObject( GameObjectHandle::make( objectID ) ) != nullptr ? objectID : 0;
     }
 
     bool Scene::assignFileID( const uint64 objectID, const uint64 fileID )
@@ -1179,7 +1297,8 @@ namespace sw
         const uint64 holderID = findObjectIDByFileID( fileID );
         if ( fileID == 0 || objectID == 0 || ( holderID != 0 && holderID != objectID ) )
             return false;
-        _mapObjectIDToFileID[objectID] = fileID;
+        _fileIDTable.recordWide( fileID ); // 바깥이 정한 id 는 넓은 값이다
+        _fileIDTable.set( objectID, fileID );
         return true;
     }
 
@@ -1200,7 +1319,7 @@ namespace sw
         _mapSceneInstancePath.clear();
         _mapInstanceMember.clear();
         _mapObjectDataLayer.clear();
-        _mapObjectIDToFileID.clear();
+        _fileIDTable.clear();
         _listUnresolvedEntity.clear();
         if ( _objectManager != nullptr )
         {
@@ -1233,21 +1352,28 @@ namespace sw
         _objectManager->update( deltaTime );
     }
 
+    const double3& Scene::getWorldOrigin() const
+    {
+        return _objectManager->getWorldOrigin()._position; // 매니저는 씬과 함께 나고 사라진다
+    }
+
+    void Scene::restoreWorldOrigin( const double3& origin )
+    {
+        _objectManager->setWorldOrigin( origin );
+    }
+
     bool Scene::shiftWorldOrigin( const double3& newOrigin )
     {
         if ( _objectManager == nullptr )
             return false;
-        const utf8* const pBlocker = _objectManager->findWorldOriginShiftBlocker();
-        if ( pBlocker != nullptr )
-        {
-            SW_LOG_WARNING_ID( "Scene.WorldOriginShiftBlocked", "Scene '%#' keeps its world origin - service '%#' holds world positions it cannot move", _name.c_str(), pBlocker );
-            return false;
-        }
         // Y 는 옮기지 않는다 — 높이는 좁고, 옮기면 물 · 하늘 · 고도 설정이 절대 높이를 다시 재야 한다(언리얼도 높이 범위가 좁은 월드는 XZ 만 옮기는 설정이 흔하다).
-        const double3 target{ newOrigin._x, _worldOrigin._y, newOrigin._z };
-        const float3  delta{ static_cast<float32>( _worldOrigin._x - target._x ), 0.0f, static_cast<float32>( _worldOrigin._z - target._z ) };
+        const double3 previous = getWorldOrigin();
+        const double3 target{ newOrigin._x, previous._y, newOrigin._z };
+        const float3  delta{ static_cast<float32>( previous._x - target._x ), 0.0f, static_cast<float32>( previous._z - target._z ) };
         if ( delta == float3{} )
             return true;
+        // 지난 프레임 끝에 생겨 아직 합치지 않은 오브젝트도 옛 원점 기준이다 — 합쳐야 순회가 옮긴다(짓는 중인 셀은 숨겨 두어 합쳐지지 않고, 다 지을 때 그 원점으로 맞춘다).
+        _objectManager->mergePendingAdds();
         // 순회 안에서는 옮기지 않는다(계층 · 등록 줄을 건드린다) — 루트를 먼저 모은다.
         vector<SceneComponent*> listRoot;
         _objectManager->forEachGameObject( SceneIterationKey{}, [&listRoot]( GameObject* pObject )
@@ -1260,7 +1386,7 @@ namespace sw
         {
             pRoot->teleportTo( pRoot->getWorldPosition() + delta, TeleportType::TeleportPhysics ); // 속도는 잇는다 — 떨어지던 몸은 계속 떨어진다
         }
-        _worldOrigin = target;
+        _objectManager->setWorldOrigin( target );
         _objectManager->flushSceneTransforms();
         _objectManager->notifyWorldOriginShifted( delta );
         SW_LOG_INFO_ID( "Scene.WorldOriginShifted", "Scene '%#' moved its world origin to (%#, %#) - %# root objects moved", _name.c_str(), target._x, target._z, static_cast<uint32>( listRoot.size() ) );
@@ -1282,14 +1408,10 @@ namespace sw
         if ( MathUtil::abs( local._x ) <= distance && MathUtil::abs( local._z ) <= distance )
             return;
         // 거리의 배수로 옮긴다 — 경계에서 왔다 갔다 해도 다음 옮기기까지 거리만큼 여유가 있다.
-        const float64 step = static_cast<float64>( distance );
-        const double3 origin{ _worldOrigin._x + MathUtil::round( static_cast<float64>( local._x ) / step ) * step, _worldOrigin._y,
-                              _worldOrigin._z + MathUtil::round( static_cast<float64>( local._z ) / step ) * step };
-        // 막는 서비스가 있으면 한 번만 경고한다(프레임마다 같은 경고를 쌓지 않는다) — 막힘이 풀리면 다음 프레임에 옮긴다.
-        const bool bBlocked = _objectManager->findWorldOriginShiftBlocker() != nullptr;
-        if ( bBlocked && _bOriginRebaseBlocked == SW_TRUE )
-            return;
-        _bOriginRebaseBlocked = bBlocked ? SW_TRUE : SW_FALSE;
+        const float64 step     = static_cast<float64>( distance );
+        const double3 previous = getWorldOrigin();
+        const double3 origin{ previous._x + MathUtil::round( static_cast<float64>( local._x ) / step ) * step, previous._y,
+                              previous._z + MathUtil::round( static_cast<float64>( local._z ) / step ) * step };
         (void)shiftWorldOrigin( origin );
     }
 
@@ -1424,14 +1546,14 @@ namespace sw
         snapshot._mapSceneInstancePath = _mapSceneInstancePath;
         snapshot._mapInstanceMember    = _mapInstanceMember;
         snapshot._mapObjectDataLayer   = _mapObjectDataLayer;
-        snapshot._mapObjectIDToFileID  = _mapObjectIDToFileID;
+        snapshot._fileIDTable          = _fileIDTable;
         snapshot._listUnresolvedEntity = _listUnresolvedEntity;
         if ( _objectManager != nullptr )
         {
             snapshot._dataLayers = _objectManager->getSubsystem<SceneDataLayerSubsystem>().captureState();
             snapshot._subLevels  = _objectManager->getSubsystem<SceneSubLevelSubsystem>().captureState();
         }
-        snapshot._worldOrigin = _worldOrigin;
+        snapshot._worldOrigin = getWorldOrigin();
         return snapshot;
     }
 
@@ -1442,9 +1564,9 @@ namespace sw
         _mapSceneInstancePath = std::move( snapshot._mapSceneInstancePath );
         _mapInstanceMember    = std::move( snapshot._mapInstanceMember );
         _mapObjectDataLayer   = std::move( snapshot._mapObjectDataLayer );
-        _mapObjectIDToFileID  = std::move( snapshot._mapObjectIDToFileID );
+        _fileIDTable          = std::move( snapshot._fileIDTable );
         _listUnresolvedEntity = std::move( snapshot._listUnresolvedEntity );
-        _worldOrigin          = snapshot._worldOrigin; // 오브젝트는 찍은 때의 자리(그 원점 기준)로 돌아온다
+        restoreWorldOrigin( snapshot._worldOrigin ); // 오브젝트는 찍은 때의 자리(그 원점 기준)로 돌아온다
         if ( _objectManager != nullptr )
         {
             _objectManager->getSubsystem<SceneDataLayerSubsystem>().restoreState( *this, _sceneSettings, std::move( snapshot._dataLayers ) );

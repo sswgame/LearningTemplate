@@ -8,8 +8,7 @@
 namespace sw
 {
     AssetPinSet::AssetPinSet( uint64 budgetBytes )
-        : _listEntryByUse{}
-        , _mapPathToEntry{}
+        : _mapEntry{}
         , _budgetBytes{ budgetBytes }
         , _pinnedBytes{ 0 }
     {
@@ -21,24 +20,18 @@ namespace sw
     {
         if ( pin == nullptr )
             return false;
-        string     key      = FileUtil::normalizePath( path ).str();
-        const auto existing = _mapPathToEntry.find( key );
-        if ( existing != _mapPathToEntry.end() )
-        {
-            markUsed( existing->second );
+        const string key = FileUtil::normalizePath( path ).str();
+        if ( _mapEntry.touch( key ) != nullptr )
             return true;
-        }
         if ( costBytes > _budgetBytes )
         {
             SW_LOG_WARNING_ID( "AssetPinSet.AssetBytesLargerPin", "Asset '%#' (%# bytes) is larger than the pin budget (%# bytes) - it is not pinned", path, costBytes, _budgetBytes );
             return false;
         }
         Entry entry{};
-        entry._path      = key;
         entry._pin       = std::move( pin );
         entry._costBytes = costBytes;
-        _listEntryByUse.push_back( std::move( entry ) );
-        _mapPathToEntry.emplace( std::move( key ), std::prev( _listEntryByUse.end() ) );
+        _mapEntry.insertOrAssign( key, std::move( entry ) );
         _pinnedBytes += costBytes;
         evictOverBudget();
         return true;
@@ -46,49 +39,39 @@ namespace sw
 
     void AssetPinSet::touch( string_view path )
     {
-        const auto found = _mapPathToEntry.find( FileUtil::normalizePath( path ).str() );
-        if ( found != _mapPathToEntry.end() )
-            markUsed( found->second );
+        (void)_mapEntry.touch( FileUtil::normalizePath( path ).str() ); // 붙들지 않은 경로면 할 일이 없다
     }
 
     bool AssetPinSet::remove( string_view path )
     {
-        const auto found = _mapPathToEntry.find( FileUtil::normalizePath( path ).str() );
-        if ( found == _mapPathToEntry.end() )
+        const string key    = FileUtil::normalizePath( path ).str();
+        const Entry* pEntry = _mapEntry.find( key );
+        if ( pEntry == nullptr )
             return false;
-        _pinnedBytes -= found->second->_costBytes;
-        _listEntryByUse.erase( found->second );
-        _mapPathToEntry.erase( found );
-        return true;
+        _pinnedBytes -= pEntry->_costBytes;
+        return _mapEntry.erase( key );
     }
 
     void AssetPinSet::clear()
     {
-        _mapPathToEntry.clear();
-        _listEntryByUse.clear();
+        _mapEntry.clear();
         _pinnedBytes = 0;
     }
 
     bool AssetPinSet::contains( string_view path ) const
     {
-        return _mapPathToEntry.find( FileUtil::normalizePath( path ).str() ) != _mapPathToEntry.end();
-    }
-
-    void AssetPinSet::markUsed( EntryList::iterator entry )
-    {
-        _listEntryByUse.splice( _listEntryByUse.end(), _listEntryByUse, entry );
+        return _mapEntry.find( FileUtil::normalizePath( path ).str() ) != nullptr;
     }
 
     void AssetPinSet::evictOverBudget()
     {
         while ( _pinnedBytes > _budgetBytes )
         {
-            // 방금 넣은 것(끝) 혼자서는 예산 안이다(`add` 가 거른다) — 넘쳤으면 그 앞에 놓을 것이 반드시 있다.
-            SW_ASSERT( _listEntryByUse.size() > 1 );
-            const Entry& oldest = _listEntryByUse.front();
-            _pinnedBytes -= oldest._costBytes;
-            _mapPathToEntry.erase( oldest._path );
-            _listEntryByUse.erase( _listEntryByUse.begin() );
+            // 방금 넣은 것(가장 최근) 혼자서는 예산 안이다(`add` 가 거른다) — 넘쳤으면 그 앞에 놓을 것이 반드시 있다.
+            SW_ASSERT( _mapEntry.size() > 1 );
+            const auto oldest = _mapEntry.begin();
+            _pinnedBytes -= oldest->_value._costBytes;
+            (void)_mapEntry.erase( oldest );
         }
     }
 } // namespace sw

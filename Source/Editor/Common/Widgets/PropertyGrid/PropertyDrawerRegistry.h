@@ -41,6 +41,7 @@ namespace sw::editor
             return SubsystemInitResult::Succeeded;
         }
         const utf8*             getSubsystemName() const override { return kSubsystemName; }
+        void                    resetToFreshEditor() override {} // 등록 줄에서 만든 그리기 표다
         span<const utf8* const> getSubsystemDependencies() const override;
         PropertyDrawerRegistry( const PropertyDrawerRegistry& )            = delete;
         PropertyDrawerRegistry& operator=( const PropertyDrawerRegistry& ) = delete;

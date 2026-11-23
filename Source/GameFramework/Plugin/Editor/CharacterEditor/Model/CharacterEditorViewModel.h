@@ -165,7 +165,7 @@ namespace sw::editor
          * @details 프리셋은 사용자 데이터라 콘텐츠 트리가 아니라 에디터 쪽 로컬 저장소(`CharacterEditorLocalStore`)의 슬롯에 둔다.
          */
         void loadPresets();
-        /** @brief 지금 선택을 이름(`_presetName`)으로 넣은 프리셋 목록을 슬롯에 쓰기 시작합니다. 쓰기가 끝나야 목록과 "저장된 상태" 가 바뀐다(실패하면 그대로). */
+        /** @brief 지금 선택을 이름(`_presetName`)으로 넣은 프리셋 목록을 슬롯에 쓰기 시작합니다. 아직 읽지 않은 슬롯이면 먼저 읽는다. 쓰기가 끝나야 목록과 "저장된 상태" 가 바뀐다(실패하면 그대로). */
         void savePreset();
         /** @brief 목록의 프리셋 @p name 을 선택으로 읽고 이름 칸에 둡니다. */
         void applyPreset( string_view name );
@@ -262,6 +262,8 @@ namespace sw::editor
         class CharacterEditorLocalStore* findLocalStore();
         /** @brief @p staged 를 프리셋 슬롯에 쓰기 시작합니다. 끝나면 목록이 @p staged 가 되고, @p pSavedSelection 이 있으면 그것이 "저장된 상태" 가 된다. */
         void submitPresetWrite( UserAppearancePresetStore staged, const AppearanceSelection* pSavedSelection );
+        /** @brief 지금 선택을 이름 칸의 프리셋으로 넣은 목록을 쓰기 시작합니다. 목록을 읽은 뒤에만 부릅니다. */
+        void writeSelectionAsPreset();
         void onPresetsRead( const LocalStoreCompletion& completion );
         void onPresetsWritten( const LocalStoreCompletion& completion );
         void onThumbnailWritten( const LocalStoreCompletion& completion );
@@ -307,5 +309,7 @@ namespace sw::editor
         uint8                                  _bExternalChange  : 1;
         uint8                                  _bPreviewValid    : 1;
         uint8                                  _bStagedSelection : 1;
+        uint8                                  _bPresetsRead     : 1; ///< 목록이 슬롯의 내용이다(읽었거나 슬롯이 없다). 아니면 쓰기가 저장된 프리셋을 덮는다
+        uint8                                  _bSaveAfterRead   : 1; ///< 읽기가 끝나면 저장을 잇는다(`savePreset`)
     };
 } // namespace sw::editor

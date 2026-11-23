@@ -119,6 +119,11 @@ namespace sw
     protected:
         /** @brief 바닥(스트리밍 셀)이 없으면 떨어지는 물체면 true 입니다 — 물리가 그 동안 쥔다(`isStreamingHeld`). 기본은 false(정적 · 키네마틱 · 관절은 떨어지지 않는다). */
         virtual bool needsStreamingFloor() const { return false; }
+        /**
+         * @brief 바닥(스트리밍 셀)이 없는 자리에서 받쳐 줄 충돌을 찾을 몸 모양(오브젝트 로컬, 월드 배율 @p scale 을 먹인 것)을 @p outListShape 끝에 더합니다. `needsStreamingFloor` 가 true 인 형식이 낸다.
+         * @details 몸 모양을 아래로 쓸어 찾는다(`ScenePhysics::updateStreamingHolds`) — 자리 하나의 광선은 비탈 · 가장자리에 걸친 큰 바디의 받침을 놓친다.
+         */
+        virtual void collectStreamingFloorShapes( const float3& scale, vector<PhysicsShapeDesc3D>& outListShape ) const { (void)scale, (void)outListShape; }
         /** @brief `TeleportType::ResetPhysics` 순간이동이 부릅니다 — 이어받은 운동을 다음 물리 프레임에 지운다(틱 워커에서도 불리므로 입력 칸에 넘긴다). 기본은 할 일 없음. */
         virtual void resetMotion() {}
         /** @brief 순간이동 표시를 읽고 지웁니다. */

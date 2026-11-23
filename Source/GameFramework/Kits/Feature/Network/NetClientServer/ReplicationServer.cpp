@@ -135,16 +135,17 @@ namespace sw
         _listPendingEntity.resize( _pendingEntityCount );
         VectorUtil::sort( _listPendingEntity, Ascending<&NetEntityState::_entityID>{} );
         // 지난 월드와 둘 다 id 순이라 나란히 걷는다. 종류 · 바이트가 같으면 판을 물려받고, 다르거나 새 엔티티면 새 판을 받는다.
-        const vector<NetEntityState>& listOld  = _world._listEntity;
-        size_t                        oldIndex = 0;
+        vector<NetEntityState>& listOld  = _world._listEntity; // 다 걸은 뒤 다음 틱의 빈 자리가 된다 — 조각 판 목록을 이어받는다
+        size_t                  oldIndex = 0;
         for ( NetEntityState& entity : _listPendingEntity )
         {
             while ( oldIndex < listOld.size() && listOld[oldIndex]._entityID < entity._entityID )
                 ++oldIndex;
-            const NetEntityState* pOld       = oldIndex < listOld.size() && listOld[oldIndex]._entityID == entity._entityID ? &listOld[oldIndex] : nullptr;
+            NetEntityState* const pOld       = oldIndex < listOld.size() && listOld[oldIndex]._entityID == entity._entityID ? &listOld[oldIndex] : nullptr;
             const bool            bUnchanged = pOld != nullptr && pOld->_typeID == entity._typeID && pOld->_buffer == entity._buffer;
             entity._revision                 = bUnchanged ? pOld->_revision : ++_lastRevision;
             entity._wakeTick                 = bUnchanged ? pOld->_wakeTick : _world._tick; // 판이 오르면 깨어난다 — 깨우는 호출이 따로 없다
+            NetSnapshot::updateChunkRevision( entity, pOld );
         }
         _world._listEntity.swap( _listPendingEntity );
     }

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="5f89991d4b19917891b55c265268af40"?>
+<!-- 제작 시나리오(automation/crafting)의 레시피 — 물건은 공용 아이템 표(common/data/items.xml). 시간은 초다. -->
+<RecipeCatalog>
+	<Recipe id="boots" station="Workbench" time="1" level="1" known="true">
+		<In item="potion_health" count="2"/>
+		<Out item="boots_low"/>
+	</Recipe>
+	<Recipe id="helmet" station="Workbench" time="1" level="2" known="false">
+		<In item="potion_health" count="1"/>
+		<Tool item="boots_low"/>
+		<Out item="helmet_knight"/>
+	</Recipe>
+	<Recipe id="forged" station="Anvil" time="1" level="1" known="true">
+		<In item="potion_health" count="1"/>
+		<Out item="cape_rogue"/>
+	</Recipe>
+</RecipeCatalog>

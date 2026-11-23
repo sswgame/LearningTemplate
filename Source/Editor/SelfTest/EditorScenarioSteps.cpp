@@ -62,6 +62,7 @@ namespace sw::editor
 
             const AutomationStep* _pRequestedStep{ nullptr }; ///< 실행을 청한 단계(빌림 — 시나리오가 단계를 든다)
             const utf8*           getSubsystemName() const override { return kSubsystemName; }
+            void                  resetToFreshEditor() override { _pRequestedStep = nullptr; } // 앞 시나리오의 단계는 이미 사라졌다
         };
 
         struct EditorScenarioStepsInternal

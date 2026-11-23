@@ -66,6 +66,11 @@ namespace sw
         return pOwner->getMutableManager()->getSubsystem<sw::SceneAudio>().findAudioEngine();
     }
 
+    void AudioEmitterComponent::onWorldOriginShifted( const float3& delta )
+    {
+        _lastAudioPosition += delta;
+    }
+
     AudioPlayingID AudioEmitterComponent::post( const hashed_string& eventName )
     {
         AudioEngine* pEngine = findAudioEngine();

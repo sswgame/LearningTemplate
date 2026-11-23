@@ -67,6 +67,8 @@ namespace sw
         void onBeginPlay() override;
         void onEndPlay() override;
         void onTick( TickContext& context ) override;
+        /** @brief 블렌드 포즈와 충격의 자리를 옮깁니다. */
+        void onWorldOriginShifted( const float3& delta ) override;
 
         /** @brief 뷰 타깃을 @p blend 로 바꿉니다. 같은 타깃이면 아무것도 하지 않습니다. */
         void setViewTarget( const GameObjectHandle& target, const BlendCurveDef& blend );

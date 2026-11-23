@@ -197,6 +197,7 @@ namespace sw
         const uint32 channelCount = _impl->_channelCount;
         // 두 채널(스테레오 · 바이노럴)은 순서가 같다. 5.1 · 7.1 만 ALSA 순서로 옮긴다.
         const bool bReorder = channelCount > audio::kStereoChannelCount;
+        ThreadUtil::setCurrentThreadTimeCritical(); // 작업 풀이 코어를 모두 채워도 장치 버퍼가 비기 전에 돌아야 한다(`AudioRenderThread` 와 같다)
         while ( stopToken.isStopRequested() == false )
         {
             _service.getEngine().render( _impl->_listRender.data(), Internal::kWriteFrameCount );

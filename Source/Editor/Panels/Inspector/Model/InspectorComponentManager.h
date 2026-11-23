@@ -73,6 +73,7 @@ namespace sw::editor
             return SubsystemInitResult::Succeeded;
         }
         const utf8* getSubsystemName() const override { return kSubsystemName; }
+        void        resetToFreshEditor() override {} // 등록 줄에서 만든 확장 표다
         InspectorComponentManager( const InspectorComponentManager& )            = delete;
         InspectorComponentManager& operator=( const InspectorComponentManager& ) = delete;
 

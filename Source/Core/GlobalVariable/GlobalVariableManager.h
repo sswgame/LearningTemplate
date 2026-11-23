@@ -49,6 +49,7 @@ namespace sw
         String,
         Enum,
         DiskPath, ///< 디스크 경로(`GlobalDiskPath`) - 글을 받을 때 기동 기준 폴더로 한 번 절대화한다(R5). 저장은 `sw::string`
+        Secret,   ///< 비밀 값(`GlobalSecret`) - 글로 바꾸는 길(`getValueAsString` - 콘솔 · 로그 · 프리셋 · 시나리오 보고)은 늘 `GlobalSecret::kMask` 다
         /** @brief 열거자 수입니다. 변수의 타입이 아니며 `registerVariable` 이 거절합니다. */
         Count
     };
@@ -161,6 +162,29 @@ namespace sw
         static constexpr uint32             kTypeSize = 4u;
     };
 
+    /**
+     * @brief 비밀 값(토큰 · 비밀번호) 전역 변수의 C++ 형식입니다(`SW_TEST_GLOBAL_VARIABLE( GlobalSecret, gv_x, "", "…" )`). 값은 이 변수를 선언한 코드만 `get` 으로 읽는다.
+     * @details 비밀인지는 이름 짐작이 아니라 선언의 형식이 정한다. 이름으로 찾는 길(`GlobalVariableInfo`)은 값이 있으면 `kMask`, 없으면 빈 글만 내고, 콘솔은 값을 쓴 줄을
+     *          가린다. 가린 글을 도로 쓰면(프리셋 · 되돌리기) 거절한다 - 받으면 진짜 비밀이 `***` 로 바뀐다.
+     */
+    class GlobalSecret : public GlobalString
+    {
+    public:
+        static constexpr string_view kMask = "***"; ///< 비밀 값 대신 보이는 글
+
+        using GlobalString::GlobalString;
+        GlobalSecret() = default;
+    };
+
+    /** @brief 비밀 값 변수입니다. 저장은 `GlobalString` 이다. */
+    template <>
+    struct GlobalVariableTraits<GlobalSecret>
+    {
+        using StorageType                             = string;
+        static constexpr GlobalVariableType kType     = GlobalVariableType::Secret;
+        static constexpr uint32             kTypeSize = 4u;
+    };
+
     /** @brief enum 변수입니다. int32 로 읽고 쓰며, 실제 크기(`sizeof`)만큼만 씁니다. */
     template <typename T>
     struct GlobalVariableTraits<T, std::enable_if_t<std::is_enum_v<T>>>
@@ -233,8 +257,8 @@ namespace sw
         bool setValueAsFloat( float32 val );
         /** @brief *_pData 에 String 값을 쓰고 콜백을 부릅니다. */
         bool setValueAsString( string_view val );
-        /** @brief 글로 다루는 형식(`String` · `DiskPath`)이면 true 입니다. 값 비교 · 위젯 · 설정이 이것으로 가른다. */
-        [[nodiscard]] bool isTextType() const { return _type == GlobalVariableType::String || _type == GlobalVariableType::DiskPath; }
+        /** @brief 글로 다루는 형식(`String` · `DiskPath` · `Secret`)이면 true 입니다. 값 비교 · 위젯 · 설정이 이것으로 가른다. */
+        [[nodiscard]] bool isTextType() const { return _type == GlobalVariableType::String || _type == GlobalVariableType::DiskPath || _type == GlobalVariableType::Secret; }
 
         /** @brief 문자열을 파싱해 *_pData 에 쓰고 콜백을 부릅니다. */
         bool setValueFromString( string_view strValue );

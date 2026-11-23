@@ -82,12 +82,18 @@ namespace sw
                 return true;
             }
 
-            /** @brief 서술이 맞는지 봅니다 — 정점 · 온전한 삼각형 · 양의 질량, 인덱스 범위, 스킨 구속. 틀리면 오류를 남기고 false 입니다. */
+            /** @brief 서술이 맞는지 봅니다 — 정점 · 온전한 삼각형 · 양의 질량 · 1 이상의 반복 수, 인덱스 범위, 스킨 구속. 틀리면 오류를 남기고 false 입니다. */
             static bool validateDesc( const PhysicsSoftBodyDesc& desc )
             {
                 const size_t vertexCount      = desc._listVertex.size();
                 const bool   bWholeTriangles  = desc._listTriangleIndex.empty() == false && ( desc._listTriangleIndex.size() % 3 ) == 0;
                 const bool   bInvalidSoftBody = vertexCount == 0 || bWholeTriangles == false || desc._vertexMass <= 0.0f;
+                // 0 번 풀면 구속이 없는 점 무더기로 흩어진다 — 뒤에 바꾸는 길(`setIterationCount`)과 같은 규칙으로 거절한다.
+                if ( desc._iterationCount == 0 )
+                {
+                    SW_LOG_ERROR_ID( "JoltPhysicsScene.SoftBodyNeedsIterations", "Soft body needs 1 or more solver iterations" );
+                    return false;
+                }
                 if ( bInvalidSoftBody )
                 {
                     SW_LOG_ERROR_ID( "JoltPhysicsScene.SoftBodyNeedsVertices", "Soft body needs vertices, whole triangles and a positive vertex mass (%# vertices, %# indices, mass %#)", vertexCount, desc._listTriangleIndex.size(),
@@ -380,6 +386,13 @@ namespace sw
                 renderer.drawLine( JoltUtil::toEngine( from ), JoltUtil::toEngine( to ), color );
             }
         } );
+    }
+
+    void JoltSoftBodySet::shiftOrigin( const JPH::Vec3& delta )
+    {
+        JPH::BodyInterface& bodies = _system.GetBodyInterface();
+        _softBodies.forEach( [&bodies, &delta]( Record& record )
+        { bodies.SetPosition( record._bodyID, bodies.GetPosition( record._bodyID ) + delta, JPH::EActivation::DontActivate ); } );
     }
 
     void JoltSoftBodySet::clear()

@@ -112,7 +112,7 @@ namespace sw
         REFLECT_BODY();
 
         static constexpr uint32 kStateTag     = FourCCUtil::make( "GHMN" );
-        static constexpr uint32 kStateVersion = 1;
+        static constexpr uint32 kStateVersion = 2; ///< 2: 동전을 준 유령의 번호
 
         GhostMansion();
 
@@ -157,7 +157,7 @@ namespace sw
         [[nodiscard]] optional<int32> findFurnitureIndex( const hashed_string& furnitureID ) const;
         /** @brief 카탈로그나 그래프에 있는 방이면 true 입니다. 비어 있으면(아직 방에 들어가지 않았다) 맞습니다. */
         bool isKnownRoom( const hashed_string& roomID ) const;
-        /** @brief 싸움의 이벤트를 꺼내 게임에 넘길 목록에 붙이고, 잡은 유령의 동전과 불 켜기를 처리합니다. */
+        /** @brief 싸움의 이벤트를 꺼내 게임에 넘길 목록에 붙이고, 잡혔는데 아직 동전을 주지 않은 유령의 동전과 불 켜기를 처리합니다. */
         void collectEncounterEvents();
         void lightRoom( const hashed_string& roomID );
         /** @brief 맡아 둔 열쇠를 가방에 자리가 나는 만큼 줍니다. */
@@ -172,7 +172,9 @@ namespace sw
         vector<HidingGhostRuntime> _listBoo;      ///< 카탈로그의 부 순서를 따른다
         vector<uint8>              _listSearched; ///< 카탈로그의 가구 순서를 따른다
         PROPERTY( RuntimeState )
-        vector<hashed_string>          _listPendingKeyRoom; ///< 가방이 차서 아직 주지 못한 열쇠의 방이다
+        vector<hashed_string> _listPendingKeyRoom; ///< 가방이 차서 아직 주지 못한 열쇠의 방이다
+        PROPERTY( RuntimeState )
+        vector<uint32>                 _listRewardedGhost; ///< 지금 방에서 잡아 동전을 준 유령의 번호이다. 이벤트로 세면 잡은 뒤 `update` 앞의 저장이 동전과 불을 잃는다
         EventBuffer<GhostMansionEvent> _eventBuffer;
         vector<GhostEvent>             _listGhostEvent; ///< 게임에 넘길 싸움 이벤트이다
         PROPERTY( RuntimeState )

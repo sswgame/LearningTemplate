@@ -54,14 +54,6 @@
     </Expand>
   </Type>
 
-  <!-- sw::list<T, Alloc> -->
-  <Type Name="sw::list&lt;*,*&gt;">
-    <DisplayString>{*(std::list&lt;$T1,$T2&gt;*)this}</DisplayString>
-    <Expand>
-      <ExpandedItem>*(std::list&lt;$T1,$T2&gt;*)this</ExpandedItem>
-    </Expand>
-  </Type>
-
   <!-- sw::unordered_map<K, V, ...> — 밀집 배열(_listDenseData)의 노드를 넣은 순서로 [키] = 값 으로 보인다 -->
   <Type Name="sw::unordered_map&lt;*,*,*,*,*&gt;">
     <DisplayString>{{ size={_listDenseData._size} }}</DisplayString>

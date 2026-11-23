@@ -51,6 +51,7 @@ namespace
                 onCompleted( true );
                 return true;
             } ) ) );
+            _autosave.update( 0.0f ); // 첫 프레임이 슬롯 기록 읽기를 맡긴다
             _pStore->update();
             SW_REQUIRE_TRUE( _scope.bind( &_autosave ) );
 

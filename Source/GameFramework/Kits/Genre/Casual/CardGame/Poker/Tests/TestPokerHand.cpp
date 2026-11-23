@@ -2,8 +2,14 @@
 
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Format/Tests/StateBytesTestUtil.h"
+
 #include "GameFramework/Kits/Genre/Casual/CardGame/CardDeck.h"
 #include "GameFramework/Kits/Genre/Casual/CardGame/Poker/PokerHand.h"
+#include "GameFramework/Kits/Genre/Casual/CardGame/Poker/PokerTable.h"
+#include "GameFramework/Runtime/Foundation/Random/GameRandom.h"
 
 // PokerHandTest — 포커 족보 판정: 열 족보, 휠(A-2-3-4-5)의 높은 카드 5, 로열 · 스트레이트 플러시, 족보 안의 비교 숫자 순서(풀하우스는 트리플 먼저,
 // 투페어는 높은 페어 · 낮은 페어 · 키커), 무늬만 다른 무승부, 7 장 중 가장 센 5 장, 5 장보다 적은 입력. 키트 GF_CardGame(nogpu).
@@ -207,4 +213,161 @@ SW_TEST_CASE( PokerHandTest, FewerThanFiveCardsGiveEmptyValue )
     const sw::PokerHandValue six = evaluate( { "Ac", "Ad", "Ah", "As", "2c", "Kd" } );
     SW_EXPECT_TRUE( six._rank == sw::PokerHandRank::FourOfAKind );
     SW_EXPECT_EQUAL( uint8( 13 ), six._arrTieBreak[1] ); // 키커는 2 가 아니라 K
+}
+
+/**
+ * @brief [PokerTableTest] 열 수 없는 판은 칩을 건드리지 않는다 — 진행 중인 판을 다시 열거나 장수가 모자란 덱으로 열어도 칩이 사라지지 않는다
+ */
+SW_TEST_CASE( PokerTableTest, RefusedStartKeepsEveryChip )
+{
+    sw::PokerTable table;
+    SW_REQUIRE_TRUE( table.initialize( sw::PokerSettings{}, { 100, 100 } ) );
+    const auto countChips = [&table]()
+    {
+        int32 total = 0;
+        for ( int32 seat = 0; seat < table.getSeatCount(); ++seat )
+        {
+            total += table.getSeat( seat )._stack;
+        }
+        return total;
+    };
+
+    sw::CardPile shortDeck;
+    sw::CardPile::makeStandardDeck( shortDeck );
+    while ( shortDeck.getCount() > 8 ) // 홀 넷 + 보드 다섯에 한 장 모자란다
+    {
+        sw::Card card;
+        SW_REQUIRE_TRUE( shortDeck.draw( card ) );
+    }
+    SW_EXPECT_FALSE( table.startHandWithDeck( shortDeck ) );
+    SW_EXPECT_EQUAL( 200, countChips() );
+    SW_EXPECT_TRUE( table.getStreet() == sw::PokerStreet::HandOver );
+
+    sw::GameRandom random( 7u );
+    SW_REQUIRE_TRUE( table.startHand( random ) );
+    const int32 pot = table.computePotTotal();
+    SW_REQUIRE_TRUE( pot > 0 );
+    SW_EXPECT_FALSE( table.startHand( random ) );
+    SW_EXPECT_EQUAL( pot, table.computePotTotal() );
+    SW_REQUIRE_TRUE( table.act( table.getCurrentSeat(), sw::PokerActionKind::Fold ) );
+    SW_EXPECT_EQUAL( 200, countChips() );
+}
+
+/**
+ * @brief [PokerTableTest] 빅 블라인드가 모자라게 올인해도 들어오려면 온전한 빅 블라인드를 낸다. 그 판의 저장도 다시 읽힌다
+ */
+SW_TEST_CASE( PokerTableTest, ShortBigBlindStillCostsAFullCall )
+{
+    sw::PokerSettings settings;
+    settings._smallBlind = 10;
+    settings._bigBlind   = 20;
+    sw::PokerTable table;
+    SW_REQUIRE_TRUE( table.initialize( settings, { 100, 100, 5 } ) ); // 버튼 0, 스몰 1, 빅 2
+    sw::GameRandom random( 7u );
+    SW_REQUIRE_TRUE( table.startHand( random ) );
+    SW_EXPECT_EQUAL( 20, table.getCurrentBet() );
+    SW_EXPECT_EQUAL( 40, table.getMinRaiseTo() );
+    SW_REQUIRE_EQUAL( 0, table.getCurrentSeat() );
+    SW_REQUIRE_TRUE( table.act( 0, sw::PokerActionKind::Call ) );
+    SW_EXPECT_EQUAL( 20, table.getSeat( 0 )._committed );
+
+    sw::PokerTable poor; // 셋 다 블라인드보다 적다 — 맞춰야 할 값이 판의 칩보다 크다
+    sw::PokerTable restored;
+    SW_REQUIRE_TRUE( poor.initialize( settings, { 3, 3, 3 } ) );
+    SW_REQUIRE_TRUE( restored.initialize( settings, { 3, 3, 3 } ) );
+    SW_REQUIRE_TRUE( poor.startHand( random ) );
+    SW_EXPECT_TRUE( sw::StateBytesTestUtil::roundTrips( poor, restored ) );
+}
+
+/**
+ * @brief [PokerTableTest] 상대가 모두 올인이고 이미 그만큼 낸 한 사람은 행동하지 않는다 — 걸 곳이 없는 사람에게 폴드를 묻지 않고 보드를 끝까지 깐다
+ */
+SW_TEST_CASE( PokerTableTest, LoneCoveringPlayerDoesNotAct )
+{
+    sw::PokerTable table;
+    SW_REQUIRE_TRUE( table.initialize( sw::PokerSettings{}, { 100, 1 } ) ); // 버튼 · 스몰 0 이 1 을 내고, 빅 1 은 1 로 올인이다
+    sw::GameRandom random( 7u );
+    SW_REQUIRE_TRUE( table.startHand( random ) );
+    SW_EXPECT_TRUE( table.getStreet() == sw::PokerStreet::HandOver );
+    SW_EXPECT_EQUAL( 101, table.getSeat( 0 )._stack + table.getSeat( 1 )._stack );
+}
+
+/**
+ * @brief [PokerTableTest] 모자란 올인은 이미 행동한 사람에게 레이즈를 다시 열지 않는다(TDA 47 예 3-A). 뒤에서 온전한 레이즈가 나오면 열린다(3-B)
+ */
+SW_TEST_CASE( PokerTableTest, ShortAllInDoesNotReopenTheBetting )
+{
+    sw::PokerSettings settings;
+    settings._smallBlind = 10;
+    settings._bigBlind   = 20;
+    for ( const bool bBigBlindRaises : { false, true } )
+    {
+        sw::PokerTable table;
+        SW_REQUIRE_TRUE( table.initialize( settings, { 35, 1000, 1000, 1000 } ) ); // 버튼 0, 스몰 1, 빅 2, 첫 차례 3
+        sw::GameRandom random( 7u );
+        SW_REQUIRE_TRUE( table.startHand( random ) );
+        SW_REQUIRE_TRUE( table.act( 3, sw::PokerActionKind::Call ) );
+        SW_REQUIRE_TRUE( table.act( 0, sw::PokerActionKind::AllIn ) ); // 35 — 증액 15 는 레이즈 20 에 모자란다
+        SW_REQUIRE_TRUE( table.act( 1, sw::PokerActionKind::Fold ) );
+        SW_EXPECT_TRUE( table.canRaise( 2 ) ); // 빅 블라인드는 아직 행동하지 않았다
+        SW_EXPECT_EQUAL( 55, table.getMinRaiseTo() );
+        if ( bBigBlindRaises )
+        {
+            SW_REQUIRE_TRUE( table.act( 2, sw::PokerActionKind::Raise, 55 ) );
+            SW_EXPECT_TRUE( table.canRaise( 3 ) );
+            SW_EXPECT_TRUE( table.act( 3, sw::PokerActionKind::Raise, 75 ) );
+            continue;
+        }
+        SW_REQUIRE_TRUE( table.act( 2, sw::PokerActionKind::Call ) );
+        SW_REQUIRE_EQUAL( 3, table.getCurrentSeat() );
+        SW_EXPECT_FALSE( table.canRaise( 3 ) );
+        SW_EXPECT_FALSE( table.act( 3, sw::PokerActionKind::Raise, 55 ) );
+        SW_EXPECT_FALSE( table.act( 3, sw::PokerActionKind::AllIn ) );
+        SW_EXPECT_TRUE( table.act( 3, sw::PokerActionKind::Call ) );
+        SW_EXPECT_TRUE( table.getStreet() == sw::PokerStreet::Flop );
+    }
+}
+
+/**
+ * @brief [PokerTableTest] 모자란 올인 여럿을 합쳐 온전한 레이즈만큼 맞춰야 하면 다시 열린다(TDA 47 예 1). 최소 증액은 마지막 온전한 레이즈 그대로다(예 2)
+ */
+SW_TEST_CASE( PokerTableTest, CumulativeShortAllInsReopenTheBetting )
+{
+    sw::PokerSettings settings;
+    settings._smallBlind = 10;
+    settings._bigBlind   = 20;
+    sw::PokerTable table;
+    SW_REQUIRE_TRUE( table.initialize( settings, { 45, 1000, 1000, 1000, 32 } ) ); // 버튼 0, 스몰 1, 빅 2, 첫 차례 3, 다음 4
+    sw::GameRandom random( 7u );
+    SW_REQUIRE_TRUE( table.startHand( random ) );
+    SW_REQUIRE_TRUE( table.act( 3, sw::PokerActionKind::Call ) );
+    SW_REQUIRE_TRUE( table.act( 4, sw::PokerActionKind::AllIn ) ); // 32(+12)
+    SW_REQUIRE_TRUE( table.act( 0, sw::PokerActionKind::AllIn ) ); // 45(+13)
+    SW_REQUIRE_TRUE( table.act( 1, sw::PokerActionKind::Fold ) );
+    SW_REQUIRE_TRUE( table.act( 2, sw::PokerActionKind::Call ) );
+    SW_REQUIRE_EQUAL( 3, table.getCurrentSeat() );
+    SW_EXPECT_TRUE( table.canRaise( 3 ) ); // 25 를 맞춰야 한다 — 레이즈 20 이상이다
+    SW_EXPECT_EQUAL( 65, table.getMinRaiseTo() );
+    SW_EXPECT_TRUE( table.act( 3, sw::PokerActionKind::Raise, 65 ) );
+}
+
+/**
+ * @brief [PokerTableTest] 다시 연 테이블은 새 테이블과 같은 상태다 — 앞 판의 큰 베팅이 남으면 칩이 적은 새 테이블의 저장을 읽기가 거절한다
+ */
+SW_TEST_CASE( PokerTableTest, ReinitializedTableMatchesAFreshOne )
+{
+    sw::PokerTable table;
+    SW_REQUIRE_TRUE( table.initialize( sw::PokerSettings{}, { 5000, 5000 } ) );
+    sw::GameRandom random( 7u );
+    SW_REQUIRE_TRUE( table.startHand( random ) );
+    SW_REQUIRE_TRUE( table.act( table.getCurrentSeat(), sw::PokerActionKind::AllIn ) );
+    SW_REQUIRE_TRUE( table.act( table.getCurrentSeat(), sw::PokerActionKind::Fold ) );
+
+    sw::PokerTable fresh;
+    sw::PokerTable restored;
+    SW_REQUIRE_TRUE( table.initialize( sw::PokerSettings{}, { 100, 100 } ) );
+    SW_REQUIRE_TRUE( fresh.initialize( sw::PokerSettings{}, { 100, 100 } ) );
+    SW_REQUIRE_TRUE( restored.initialize( sw::PokerSettings{}, { 100, 100 } ) );
+    SW_EXPECT_TRUE( sw::StateBytesTestUtil::hasSameState( table, fresh ) );
+    SW_EXPECT_TRUE( sw::StateBytesTestUtil::roundTrips( table, restored ) );
 }

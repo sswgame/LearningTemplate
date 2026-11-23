@@ -104,6 +104,9 @@ SW_TEST_CASE( AssetReferenceFieldsTest, ImportedOutputsResolveFromTheirSource )
     SW_EXPECT_TRUE( params.canResolve( "game/x/textures/wall.dds", assets ) );
     SW_EXPECT_TRUE( params.canResolve( "common/models_raw", assets ) ); // 폴더
     SW_EXPECT_FALSE( params.canResolve( "common/models/kaykit/rogue.mesh", assets ) );
+    SW_EXPECT_FALSE( params.canResolve( "common/models/kaykit/knight.facial.xml", assets ) ); // glb 에서 나오지 않는 종류(손으로 적은 글)
+    assets.addFile( "game/x/models_raw/avatar.vrm" );
+    SW_EXPECT_TRUE( params.canResolve( "game/x/models/avatar/avatar.facial.xml", assets ) ); // vrm 에서는 나온다
     SW_EXPECT_FALSE( params.canResolve( "game/x/textures/floor.dds", assets ) );
     SW_EXPECT_FALSE( params.isChecked( "scratch/assetmanage/probe.material" ) );
     SW_EXPECT_FALSE( params.isReferrer( "common/models/kaykit/knight/materials/a.material" ) ); // 임포터가 쓴 산출물
@@ -127,6 +130,29 @@ SW_TEST_CASE( AssetReferenceFieldsTest, RewritesOnlyPathProperties )
 
     SW_EXPECT_EQUAL( params.rewrite( text, AssetReferenceSyntax::XML, params.makeRewriteRules( "game/x/models_raw/rock.glb", "game/x/models_raw/stone.glb", false ) ), 1u );
     SW_EXPECT_TRUE( text.find( "_meshID=\"game/x/models/stone.mesh\"" ) != string::npos );
+}
+
+/**
+ * @brief [AssetReferenceFieldsTest] 규칙이 여럿이면 앞 규칙이 이기고, 접두 규칙은 `/` · `.` 경계에서만 맞는지 검증(폴더 옮기기 — 규칙을 해시로 찾는다)
+ */
+SW_TEST_CASE( AssetReferenceFieldsTest, RewriteTakesTheFirstMatchingRuleAtBoundaries )
+{
+    AssetReferenceFields params;
+    SW_REQUIRE_TRUE( loadRepositoryProperties( params ) );
+    const vector<AssetReferenceRewriteRule> listRule{
+        AssetReferenceRewriteRule{"game/x/mats/a.material", "game/y/first.material", false},
+        AssetReferenceRewriteRule{           "game/x/mats",           "game/z/mats",  true},
+        AssetReferenceRewriteRule{"game/x/mats/b.material",  "game/y/late.material", false},
+        AssetReferenceRewriteRule{    "game/x/models/rock",   "game/x/models/stone",  true},
+    };
+    string text = "<M _materialPath=\"game/x/mats/a.material\"/><M _materialPath=\"game/x/mats/b.material\"/><M _materialPath=\"game/x/matsother/c.material\"/>\n"
+                  "<M _meshID=\"game/x/models/rock.mesh\"/><M _meshID=\"game/x/models/rocky.mesh\"/>\n";
+    SW_EXPECT_EQUAL( params.rewrite( text, AssetReferenceSyntax::XML, listRule ), 3u );
+    SW_EXPECT_TRUE( text.find( "game/y/first.material" ) != string::npos );  // 앞 규칙(같은 글)이 폴더 규칙보다 먼저다
+    SW_EXPECT_TRUE( text.find( "game/z/mats/b.material" ) != string::npos ); // 폴더 규칙이 뒤의 같은 글 규칙보다 먼저다
+    SW_EXPECT_TRUE( text.find( "game/x/matsother/c.material" ) != string::npos );
+    SW_EXPECT_TRUE( text.find( "game/x/models/stone.mesh" ) != string::npos );
+    SW_EXPECT_TRUE( text.find( "game/x/models/rocky.mesh" ) != string::npos );
 }
 
 /**

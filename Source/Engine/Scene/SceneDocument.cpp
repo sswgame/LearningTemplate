@@ -47,15 +47,16 @@ namespace sw
             // 판 10 부터 셀 색인 뒤에 셀 엔티티의 가장 큰 파일 id(`_maxCellFileID`)가 온다 — 색인만 읽은 씬이 새 파일 id 를 내려간 셀과 겹치지 않게 고른다.
             // 쿠킹본은 쿠커가 매번 다시 쿠킹하는 산출물이라 이 판만 읽는다 — 배치를 바꾸면 판을 올린다.
             // 판 11 부터 셀 색인의 구간 뒤에 그 조각의 HLOD 대리 파일 id(`StreamingCell::_hlodFileID`, 0 이면 없음)가 온다.
-            static constexpr uint32 kBinVersion = 11;
+            // 판 12 부터 그 뒤에 조각 내용의 XZ 경계(`StreamingCell::_contentBounds`, 최소 x · z · 최대 x · z — 빈 경계면 최소가 최대보다 크다)가 온다.
+            static constexpr uint32 kBinVersion = 12;
             // 고정 머리: 매직 · 판 · 머리 길이 · 내용 길이.
             static constexpr uint64 kFixedHeadBytes = 2u * sizeof( uint32 ) + 2u * sizeof( uint64 );
             // 엔티티 하나는 길이 앞머리(4바이트)를 쓰는 필드 다섯, 목록 수 둘, 파일 id · id 범위 · 앵커 id(8바이트씩)다 — 파일이 말한 개수를 그대로 잡지 않는 데 쓴다.
             static constexpr uint32 kMinBytesPerEntity = 7u * sizeof( uint32 ) + 3u * sizeof( uint64 );
             /** @brief 지운 칸입니다. 프리팹은 경로로만 가리킨다 — 이 속성이 남은 씬은 오류로 읽지 않는다(옛 GUID 를 말없이 버리면 그 엔티티가 무엇을 가리켰는지 모른다). */
             static constexpr const utf8* kRemovedPrefabGUID = "prefabGUID";
-            // 셀 색인 한 줄은 좌표 둘 · 레이어 수 · 내용 구간(시작 · 길이)이다.
-            static constexpr uint32 kMinBytesPerCell = 2u * sizeof( int32 ) + sizeof( uint32 ) + 2u * sizeof( uint64 );
+            // 셀 색인 한 줄은 좌표 둘 · 레이어 수 · 내용 구간(시작 · 길이) · HLOD 대리 id · 경계 넷이다.
+            static constexpr uint32 kMinBytesPerCell = 2u * sizeof( int32 ) + sizeof( uint32 ) + 3u * sizeof( uint64 ) + 4u * sizeof( float32 );
             /** @brief 인스턴스 멤버의 이름에서 앵커 이름과 내부 이름을 가르는 글자입니다. 네트워크 씬 번호가 이름의 해시라(`NetObjectTable`) 멤버 이름은 인스턴스마다 달라야 한다. */
             static constexpr const utf8* kInstanceNameSeparator = "/";
 
@@ -720,6 +721,7 @@ namespace sw
             arch >> cell._cell._x >> cell._cell._z;
             const bool bLayersRead = SceneDocumentInternal::readTextList( arch, cell._listDataLayer );
             arch >> cell._contentOffset >> cell._contentSize >> cell._hlodFileID;
+            arch >> cell._contentBounds._minX >> cell._contentBounds._minZ >> cell._contentBounds._maxX >> cell._contentBounds._maxZ;
             if ( bLayersRead == false || arch.isError() )
             {
                 SW_LOG_ERROR_ID( "SceneDocument.BinarySceneStreamCorrupted", "Binary scene stream corrupted in %#", absPath );
@@ -791,6 +793,7 @@ namespace sw
             arch << cell._cell._x << cell._cell._z;
             SceneDocumentInternal::writeTextList( arch, cell._listDataLayer );
             arch << contentOffset << static_cast<uint64>( content.getSize() - contentOffset ) << cell._hlodFileID;
+            arch << cell._contentBounds._minX << cell._contentBounds._minZ << cell._contentBounds._maxX << cell._contentBounds._maxZ;
         }
         // 셀 엔티티의 가장 큰 파일 id(판 10) — 런타임은 셀 내용을 읽지 않고도 새 파일 id 를 이 위에서 고른다.
         uint64 maxCellFileID = 0;
@@ -840,6 +843,7 @@ namespace sw
         {
             // 런타임 칸도 함께 싣는다 — 하위 레벨의 쿠킹 상태 범위, 상태가 적힌 월드 원점(`_worldOrigin`).
             arch << static_cast<uint8>( node._statePurpose ) << node._cookedStateIDScope << node._worldOrigin._x << node._worldOrigin._y << node._worldOrigin._z;
+            arch << node._componentStateBytes << node._nestedOwnerFileID << string_view( node._nestedPrefab ) << string_view( node._nestedPartKey );
         }
         outBytes.assign( arch.getData(), arch.getData() + arch.getSize() );
     }
@@ -865,6 +869,13 @@ namespace sw
                 return false;
             }
             node._statePurpose = static_cast<SerializePurpose>( purpose );
+            arch >> node._componentStateBytes >> node._nestedOwnerFileID >> node._nestedPrefab >> node._nestedPartKey;
+            if ( arch.isError() )
+            {
+                SW_LOG_ERROR_ID( "SceneDocument.SavedNodeStateInvalid", "Saved entity '%#' has component state that cannot be read in %# - it is not used", node._name, sourcePath );
+                outListNode.clear();
+                return false;
+            }
         }
         return true;
     }

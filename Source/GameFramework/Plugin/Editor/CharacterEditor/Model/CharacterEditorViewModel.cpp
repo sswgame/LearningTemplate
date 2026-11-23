@@ -86,10 +86,11 @@ namespace sw::editor
         , _bExternalChange{ SW_FALSE }
         , _bPreviewValid{ SW_FALSE }
         , _bStagedSelection{ SW_FALSE }
+        , _bPresetsRead{ SW_FALSE }
+        , _bSaveAfterRead{ SW_FALSE }
     {
         _paths._presetName = CharacterEditorViewModelInternal::kDefaultPresetName;
         _paths._exportID   = CharacterEditorViewModelInternal::kDefaultExportID;
-        _presetStore.setDatabase( &_database );
     }
 
     CharacterEditorViewModel::~CharacterEditorViewModel() = default;
@@ -430,20 +431,22 @@ namespace sw::editor
 
     void CharacterEditorViewModel::onPresetsRead( const LocalStoreCompletion& completion )
     {
-        if ( completion._result == LocalStoreResult::NotFound )
-        {
-            _presetStore.clear();
-            _status = "No presets saved yet";
-            return;
-        }
+        const bool bSave = _bSaveAfterRead == SW_TRUE;
+        const bool bNone = completion._result == LocalStoreResult::NotFound;
         const bool bRead = completion._result == LocalStoreResult::Ok &&
                            _presetStore.loadFromXMLText( string_view( reinterpret_cast<const utf8*>( completion._bytes.data() ), completion._bytes.size() ) );
-        if ( bRead == false )
-        {
-            _status = "Preset slot could not be read (needs appearance data; see log)";
-            return;
-        }
-        _status.clear();
+        _bSaveAfterRead = SW_FALSE;
+        _bPresetsRead   = bNone || bRead ? SW_TRUE : SW_FALSE; // 읽지 못한 슬롯은 덮어쓰지 않는다
+        if ( bNone )
+            _presetStore.clear();
+        if ( _bPresetsRead == SW_FALSE )
+            _status = "Preset slot could not be read (see log)";
+        else if ( bSave )
+            writeSelectionAsPreset();
+        else if ( bNone )
+            _status = "No presets saved yet";
+        else
+            _status.clear();
     }
 
     void CharacterEditorViewModel::savePreset()
@@ -454,9 +457,25 @@ namespace sw::editor
             _status = name.empty() ? "The preset needs a name" : "A preset request is still running";
             return;
         }
-        UserAppearancePresetStore staged = _presetStore;
-        (void)staged.savePreset( name, _appearance.getSelection() ); // 새 이름이면 붙이고 있으면 바꾼다(번호는 쓰지 않는다)
+        if ( _bPresetsRead == SW_TRUE )
+        {
+            writeSelectionAsPreset();
+            return;
+        }
+        // 슬롯은 목록 전체라, 읽지 않은 채 쓰면 저장돼 있던 프리셋이 모두 사라진다 — 먼저 읽고 잇는다.
+        loadPresets();
+        _bSaveAfterRead = _presetRequest.isActive() ? SW_TRUE : SW_FALSE;
+    }
+
+    void CharacterEditorViewModel::writeSelectionAsPreset()
+    {
+        UserAppearancePresetStore staged    = _presetStore;
         const AppearanceSelection selection = _appearance.getSelection();
+        if ( staged.savePreset( string_view{ _paths._presetName.c_str() }, selection, _database ) == false )
+        {
+            _status = "The preset needs a name";
+            return;
+        }
         submitPresetWrite( std::move( staged ), &selection );
     }
 
@@ -466,7 +485,11 @@ namespace sw::editor
         if ( pStore == nullptr )
             return;
         vector<uint8> bytes;
-        (void)staged.writeBytes( bytes ); // 글로 쓰기는 늘 된다
+        if ( staged.writeBytes( bytes ) == false )
+        {
+            _status = "Presets could not be written as text (see log) - the saved slot is kept";
+            return;
+        }
         _stagedPresetStore = std::move( staged );
         _bStagedSelection  = pSavedSelection != nullptr;
         if ( pSavedSelection != nullptr )
@@ -486,7 +509,6 @@ namespace sw::editor
             return;
         }
         _presetStore = std::move( _stagedPresetStore );
-        _presetStore.setDatabase( &_database );
         if ( _bStagedSelection )
             _appearance.markSaved( _stagedSelection );
         _status.clear();
@@ -495,7 +517,13 @@ namespace sw::editor
 
     void CharacterEditorViewModel::applyPreset( string_view name )
     {
-        (void)_appearance.loadFromPreset( _presetStore, name ); // 목록의 이름이라 항상 있다
+        if ( const expected<void> loaded = _appearance.loadFromPreset( _presetStore, name, _database ); loaded.has_value() == false )
+        {
+            StringBuilder<constant::buffer::kMax512> status;
+            status.appendFormat( "Preset '%#' could not be opened - %#", name, loaded.error().message() );
+            _status = string( status.view() );
+            return;
+        }
         _paths._presetName = name;
     }
 
@@ -506,9 +534,9 @@ namespace sw::editor
             _status = "Save the preset first - a thumbnail belongs to a saved preset";
             return false;
         }
-        if ( isPresetRequestPending() )
+        if ( isPresetRequestPending() || _bPresetsRead == SW_FALSE )
         {
-            _status = "A preset request is still running";
+            _status = _bPresetsRead == SW_TRUE ? "A preset request is still running" : "The saved presets could not be read - load them first";
             return false;
         }
         return findLocalStore() != nullptr;

@@ -17,6 +17,9 @@ namespace sw
         {
 
             static constexpr int32 kMaxStatusValue = 255;
+
+            /** @brief @p table 에 있는 재질 번호면 true 입니다. */
+            static bool isMaterial( const ElementRuleCatalog& table, int32 material ) { return 0 <= material && material < static_cast<int32>( table.getMaterials().size() ); }
         };
     } // namespace
 } // namespace sw
@@ -49,10 +52,10 @@ namespace sw
 
     bool ElementGrid::initialize( int32 width, int32 height, const ElementRuleCatalog* pTable )
     {
-        const bool bValid = 1 <= width && 1 <= height && pTable != nullptr && 0.0f < pTable->getStepTime();
+        const bool bValid = 1 <= width && 1 <= height && pTable != nullptr && pTable->getMaterials().empty() == false && 0.0f < pTable->getStepTime();
         if ( bValid == false )
         {
-            SW_LOG_ERROR_ID( "ElementGrid.ElementGridRefusedSizeX", "ElementGrid: refused - size %#x%# (both need 1 or more), table %# (needs a table with a step time above 0)", width, height,
+            SW_LOG_ERROR_ID( "ElementGrid.ElementGridRefusedSizeX", "ElementGrid: refused - size %#x%# (both need 1 or more), table %# (needs a table with a material and a step time above 0)", width, height,
                              pTable != nullptr ? "given" : "missing" );
             return false;
         }
@@ -71,9 +74,16 @@ namespace sw
     {
         if ( isInside( cell ) == false )
             return;
+        // 표 밖 번호를 자르지 않는다 — 스텝이 재질 정의를 그 번호로 읽는다.
+        if ( ElementGridInternal::isMaterial( *_pTable, material ) == false )
+        {
+            SW_LOG_ERROR_ID( "ElementGrid.MaterialNotInTable", "ElementGrid: material %# is not in the rule table (%# materials) - cell %#,%# keeps its material", material,
+                             _pTable->getMaterials().size(), cell._x, cell._y );
+            return;
+        }
         Cell& target     = getCell( cell );
         target           = Cell{};
-        target._material = static_cast<uint8>( MathUtil::clamp( material, 0, ElementRuleCatalog::kMaxMaterialCount - 1 ) );
+        target._material = static_cast<uint8>( material );
     }
 
     int32 ElementGrid::getMaterial( const int2& cell ) const
@@ -381,7 +391,9 @@ namespace sw
                 hash = HashUtil::fnvStep32( hash, value );
             }
         }
-        return hash;
+        hash = HashUtil::fnvStep32( hash, static_cast<uint32>( _wind._x ) );
+        hash = HashUtil::fnvStep32( hash, static_cast<uint32>( _wind._y ) );
+        return HashUtil::fnvStep32( hash, _stepCount );
     }
 
     void ElementGrid::serializeState( StateIO& io )
@@ -396,6 +408,9 @@ namespace sw
         for ( Cell& cell : _listCell )
         {
             cell.serializeState( io );
+            // 읽은 재질 번호로 정의를 읽으므로 이 표에 있어야 한다(표가 줄었거나 깨진 바이트).
+            if ( io.isReading() && io.check( ElementGridInternal::isMaterial( *_pTable, cell._material ) ) == false )
+                return;
         }
         io.value( _wind );
         io.value( _timer );

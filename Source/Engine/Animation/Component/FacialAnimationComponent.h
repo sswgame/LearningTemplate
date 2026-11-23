@@ -83,6 +83,8 @@ namespace sw
 
         void onBeginPlay() override;
         void onEndPlay() override;
+        /** @brief 바라보는 자리를 옮깁니다. */
+        void onWorldOriginShifted( const float3& delta ) override;
         void onPropertyChanged( hashed_string propertyName ) override;
 
         /** @brief 얼굴 리그 경로를 바꾸고 읽습니다. */

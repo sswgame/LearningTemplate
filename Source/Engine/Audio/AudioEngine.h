@@ -5,8 +5,8 @@
  *          (`_gameThread` 역할). 워커(병렬 틱)가 낸 요청은 잠금 있는 대기 목록에 쌓였다가 게임 스레드가 다음 요청 · 프레임(`flushCommands`)에 순서 그대로 큐에 넣는다 —
  *          재생 id 는 대기 목록에 넣는 잠금 안에서 매겨 큐 순서 = id 순서가 지켜진다(`isPlaying`). 오디오 스레드는 잠그지 않는다.
  *          명령이 든 `shared_ptr`(믹서 · 라이브러리 · 음악)와 그것이 갈아 낸 옛 객체는 오디오 스레드가 놓지 않고 반납 큐로 게임 스레드에 돌려보낸다(`flushCommands` 가 놓는다).
- *          검사 구성은 `render` 구간의 할당 · 해제 · 잠금을 센다(`getRealtimeViolations`, `RealtimeSection`).
- *          오디오 스레드가 `render` 에서 블록마다 명령을 꺼내 적용한다. 오디오 스레드는 장치 콜백이고, 장치가 없으면 게임 스레드의 `AudioService::update` 다.
+ *          오디오 스레드가 `render` 에서 블록마다 명령을 꺼내 적용한다. 오디오 스레드는 장치 백엔드의 렌더 스레드(`AudioRenderThread` · ALSA · 웹 믹서)이고 장치 콜백이 아니다 —
+ *          장치가 없으면 게임 스레드의 `AudioService::update` 다.
  *          오디오 상태는 오디오 스레드만 만진다. 게임 스레드가 읽는 값(재생 중인지, 보이스 수)은 블록마다 게시한 사본이다.
  *
  *          **블록 순서.** 명령, 파라미터(seek), 스냅샷 세기와 적용, 에미터 가림 추종, 보이스 목표(볼륨, 팬, 피치, 로우패스, 들림 정도),
@@ -16,8 +16,8 @@
  *          장치 없이 버퍼에 렌더해 측정값을 확인하는 테스트가 이 성질에 의존한다.
  */
 #pragma once
+#include "Core/Concurrency/DevCounter.h"
 #include "Core/Concurrency/Queue/SpscQueue.h"
-#include "Core/Concurrency/RealtimeSection.h"
 #include "Core/Concurrency/ThreadSafety.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
@@ -239,7 +239,7 @@ namespace sw
         // --- 오디오 스레드 --------------------------------------------------------------------------------------------------
 
         /**
-         * @brief @p frameCount 프레임을 렌더해 @p pOutput(레이아웃의 채널 수만큼 교차한 float32, [-1, 1])에 씁니다. 장치 콜백이 부릅니다.
+         * @brief @p frameCount 프레임을 렌더해 @p pOutput(레이아웃의 채널 수만큼 교차한 float32, [-1, 1])에 씁니다. 오디오 스레드가 부릅니다.
          * @details 안에서는 블록(`audio::kBlockFrameCount`) 단위로 평면 렌더하고, 블록을 시작할 때 쌓인 명령을 적용한다. 장치 경계에서 교차로 바꾼다. 초기화 전이면 0 을 쓴다.
          */
         void render( float32* pOutput, uint32 frameCount );
@@ -253,11 +253,6 @@ namespace sw
         const AudioSnapshotMixer& getSnapshotMixer() const { return _snapshotMixer; }
         /** @brief 현재 그래프를 반환합니다. 오디오 스레드와 테스트가 씁니다. */
         const AudioMixer* getMixer() const { return _pMixer.get(); }
-        /**
-         * @brief `render` 구간(장치 콜백)에서 일어난 할당 · 해제 · 잠금 수입니다(검사 구성만 센다 — 배포는 늘 0). 감시 값 `Audio.Realtime*` 이 읽는다.
-         * @details 단언 깃발(`_bAssertOnViolation`)을 켜면 첫 위반에서 멈춘다. 지금 믹스 경로(이벤트 표 · 라이브러리 교체)가 아직 할당하므로 기본은 세기만 한다.
-         */
-        RealtimeViolationCounters& getRealtimeViolations() { return _realtimeViolations; }
         /** @brief 반납 큐가 차서 오디오 스레드가 직접 놓은 명령 수입니다(감시 값 — 개발 전용 칸, 배포는 0). 0 이 아니면 큐 크기(`kRetireQueueCapacity`)를 키운다. */
         const DevCounter& getRetireOverflowCount() const { return _retireOverflowCount; }
 
@@ -478,7 +473,6 @@ namespace sw
         unique_ptr<SpscQueue<RetiredObjects, kRetireQueueCapacity>> _pRetireQueue;
         ThreadRole                                                  _audioThread;                   ///< 오디오 스레드 역할 — 꺼내 온 명령은 믹스를 도는 스레드만 만진다(잠금이 아니라 분석용 능력)
         Command _applyingCommand                                    SW_GUARDED_BY( _audioThread );  /**< 오디오 스레드가 꺼내 적용 중인 명령입니다(칸 하나 — 꺼낼 때 할당하지 않는다). */
-        RealtimeViolationCounters                                   _realtimeViolations;            /**< `render` 구간의 할당 · 해제 · 잠금 수입니다(검사 구성). */
         DevCounter                                                  _retireOverflowCount;           /**< 반납 큐가 차서 오디오 스레드가 놓은 명령 수입니다. */
         LibraryMap _mapGameLibrary                                  SW_GUARDED_BY( _libraryMutex ); /**< 게임 스레드가 아는 라이브러리입니다. */
         shared_ptr<const AudioMixerDef> _pGameMixerDesc             SW_GUARDED_BY( _libraryMutex ); /**< 게임 스레드가 아는 그래프입니다. 이름으로 대조합니다. */

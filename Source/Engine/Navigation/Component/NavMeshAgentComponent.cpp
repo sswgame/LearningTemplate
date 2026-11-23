@@ -7,6 +7,7 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/WorldOrigin.h"
 
 namespace sw
 {
@@ -97,6 +98,23 @@ namespace sw
         _navRegistration.reset();
         _pSceneNavigation = nullptr;
         Component::onUnregister( manager );
+    }
+
+    const WorldOrigin& NavMeshAgentComponent::getWorldOrigin() const
+    {
+        return getOwner()->getManager()->getWorldOrigin();
+    }
+
+    void NavMeshAgentComponent::shiftOrigin( const float3& delta )
+    {
+        for ( float3* pPosition : { &_destination, &_pendingWarp, &_agentPosition, &_nextCorner, &_writtenPosition, &_routeTarget, &_linkTraversal._start, &_linkTraversal._end } )
+        {
+            *pPosition = *pPosition + delta;
+        }
+        for ( float3& point : _listRoutePoint )
+        {
+            point = point + delta;
+        }
     }
 
     void NavMeshAgentComponent::foldStateHash( StateHashBuilder& inoutBuilder ) const

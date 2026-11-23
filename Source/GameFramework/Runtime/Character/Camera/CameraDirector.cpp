@@ -297,6 +297,19 @@ namespace sw
         return _listLayer.empty() ? _emptyState : _listLayer.back()._state;
     }
 
+    void CameraDirector::applyWorldOffset( const float3& delta )
+    {
+        for ( Layer& layer : _listLayer )
+        {
+            layer._state._previousFocus += delta;
+            layer._state._bobPreviousFocus += delta;
+            layer._dampedPose._position += delta;
+            layer._pose._position += delta;
+        }
+        _outputPose._position += delta;
+        _impulseListener.applyWorldOffset( delta );
+    }
+
     bool CameraDirector::consumeCut()
     {
         const bool bCut = _bCutQueued == SW_TRUE;

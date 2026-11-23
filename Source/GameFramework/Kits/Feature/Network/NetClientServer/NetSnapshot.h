@@ -36,7 +36,7 @@ namespace sw
      */
     struct NetClientServerMessage
     {
-        using Snapshot    = NetMessageDef<0, NetMessageDirection::ToClient, NetChannelKind::UnreliableSequenced>;
+        using Snapshot    = NetMessageDef<0, NetMessageDirection::ToClient, NetChannelKind::UnreliableSequenced, 2>;                      ///< 판 2: 바뀐 엔티티를 통째 또는 바뀐 조각(`NetSnapshot::kDeltaChunkBytes`)만 싣는다
         using SnapshotAck = NetMessageBodyDef<1, NetMessageDirection::ToServer, NetChannelKind::UnreliableSequenced, NetSnapshotAckBody>; ///< 옛 확인은 새 확인이 덮는다
         using Input       = NetMessageDef<2, NetMessageDirection::ToServer, NetChannelKind::Unreliable, 6>;                               ///< 비신뢰 — 입력 창을 겹쳐 보내고 서버가 틱 번호로 거르므로 순서 보장이 필요 없다(언리얼 이동 RPC 와 같다).                      ///< 판 6: 의도 끝에 발동 순간 시선 필드(선택)가 붙는다(5: 입력 항목마다의 보던 틱 스탬프, 4: 소유자 상태 필드)
         using Table       = NetMessageTable<NetKitMessageRange::kClientServer, Snapshot, SnapshotAck, Input>;
@@ -72,6 +72,14 @@ namespace sw
          *          64 비트라 틱마다 엔티티 수천이 바뀌어도 감기지 않는다.
          */
         uint64 _revision{ 0 };
+        /** @brief 종류나 바이트 수가 마지막으로 바뀐 판입니다(서버만). 받는 쪽 판이 이보다 옛것이면 조각으로 이을 수 없어 통째로 싣는다. */
+        uint64 _shapeRevision{ 0 };
+        /**
+         * @brief 바이트 조각(`NetSnapshot::kDeltaChunkBytes` 마다)이 마지막으로 바뀐 판입니다(서버만, 비었으면 통째로만 싣는다).
+         * @details 받는 쪽 판이 b 면 그 뒤에 바뀐 조각(판 > b)만 실으면 된다 — 연결마다 기준 바이트를 두지 않고 칸 변경을 안다(언리얼 Push Model 의 바뀐 칸 표시,
+         *          Iris 의 칸별 변경 마스크 자리). 게임이 준 바이트를 그대로 나누므로 손 상태 · 복제 스키마(`ReplicatedLayout`)가 같은 길을 탄다.
+         */
+        vector<uint64> _listChunkRevision{};
         /**
          * @brief 마지막으로 깨어난 서버 틱입니다 — 판이 오른 틱이거나 정책이 관련 여부가 바뀌었다고 알린 틱입니다. 서버만 채웁니다.
          * @details 이 틱에서 `ReplicationServerConfig::_dormancyTicks` 가 지나면 휴면이다(`ReplicationServer` 머리말). 판을 올리는 자리(`endTick`)가 함께 정하므로 깨우는 호출을 따로 두지 않는다.
@@ -88,8 +96,7 @@ namespace sw
 
     /**
      * @brief 서버가 연결 하나에 보낸 스냅샷의 기록입니다. 받는 쪽이 복원한 스냅샷과 같은 엔티티를 같은 판으로 듭니다. 받는 쪽이 확인하면 다음 델타의 기준입니다.
-     * @details 연결당 기록 메모리는 엔티티 바이트 합이 아니라 엔티티 수에 비례한다. 와이어가 바뀐 엔티티를 통째로 실으므로 기준의 바이트는 쓸 일이 없다 —
-     *          기준 바이트가 필요해지는 칸 델타(측정 뒤)에서 서버 월드의 판별 바이트 저장소를 둔다(언리얼 Iris 의 공유 상태 버퍼).
+     * @details 연결당 기록 메모리는 엔티티 바이트 합이 아니라 엔티티 수에 비례한다. 칸 델타도 기준의 바이트가 아니라 조각마다 바뀐 판(`NetEntityState::_listChunkRevision`)으로 고른다.
      */
     struct SW_KIT_API NetSentSnapshot
     {
@@ -139,6 +146,8 @@ namespace sw
     {
         /** @brief 엔티티 하나의 상태 바이트 상한입니다. 넘는 엔티티는 싣지 않으며, 복원한 스냅샷에도 넣지 않으므로 서버와 클라이언트의 기준이 같습니다. */
         static constexpr int32 kMaxEntityBytes = 255;
+        /** @brief 칸 델타의 조각 크기입니다. 조각마다 마스크 1 비트라 작을수록 덜 싣고 마스크가 는다 — 대개의 칸(실수 · 정수 하나)이 4 바이트다. */
+        static constexpr size_t kDeltaChunkBytes = 4;
         /** @brief `writeDelta` 의 엔티티별 결과입니다. `outListCurrent` 에 들어가는 값입니다. */
         static constexpr uint8 kEntityNotSent        = 0; ///< 예산에 들어가지 못했다. 받는 쪽은 기준 값을 그대로 쓴다
         static constexpr uint8 kEntityAlreadyCurrent = 1; ///< 받는 쪽 기준이 이미 지금 상태이다(확인된 것)
@@ -151,6 +160,13 @@ namespace sw
 
         const NetEntityState* findEntity( uint32 entityID ) const;
         void                  sortEntities();
+        /** @brief 바이트 @p byteCount 의 조각 수입니다(마지막 조각은 짧을 수 있다). */
+        static size_t computeChunkCount( size_t byteCount ) { return ( byteCount + kDeltaChunkBytes - 1 ) / kDeltaChunkBytes; }
+        /**
+         * @brief @p entity 의 조각 판을 지난 틱의 같은 엔티티 @p pPrevious(없으면 nullptr)에서 이어받고, 바이트가 바뀐 조각에 @p entity 의 판을 적습니다(`ReplicationServer::endTick`).
+         * @details 조각 판 목록은 @p pPrevious 에서 옮겨 온다 — 지난 틱 목록은 다음 틱의 빈 자리라 틱마다 할당하지 않는다.
+         */
+        static void updateChunkRevision( NetEntityState& inoutEntity, NetEntityState* pPrevious );
         /**
          * @brief 서버가 @p pBaseline 대비 판이 바뀐 엔티티와 사라진 엔티티를 씁니다. @p pBaseline 이 없으면 모두 씁니다.
          * @param writer 메시지를 쓰는 라이터입니다. 이미 쓴 비트(종류 바이트)도 예산에 포함합니다.

@@ -22,7 +22,7 @@ namespace sw
         struct InteractionCatalogInternal
         {
             // <Interaction> 은 상호작용 칸(InteractionDef)과 첫 단계 칸(InteractionStepDef)을 함께 적는다 — 두 스키마가 서로의 칸을 손 읽기로 넘긴다.
-            static constexpr const utf8* kArrStepField[]        = { "prompt", "mode", "duration", "presses", "decay", "maxParticipants", "montage", "pairedAnimation", "interactorRole", "interactableRole" };
+            static constexpr const utf8* kArrStepField[]        = { "prompt", "mode", "duration", "presses", "decay", "maxParticipants", "delayMin", "delayMax", "window", "montage", "pairedAnimation", "interactorRole", "interactableRole" };
             static constexpr const utf8* kArrInteractionField[] = { "id", "maxDistance", "maxAngle", "cooldown", "lineOfSight", "requiredTags", "forbiddenTags", "alignment", "highlight", "highlightColor", "authority",
                                                                     "startEffect", "completeEffect", "cancelEffect", "endStartEffect" };
 
@@ -60,9 +60,14 @@ namespace sw
                 return bValid;
             }
 
-            /** @brief 페어드 애니메이션을 쓰는 단계는 두 역할이 있어야 하고, 몽타주와 함께 쓰지 않습니다(둘 다 하는 쪽의 애니메이터를 재생한다). */
+            /** @brief 반응 단계의 때 범위는 뒤집히지 않아야 하고, 페어드 애니메이션을 쓰는 단계는 두 역할이 있어야 하고, 몽타주와 함께 쓰지 않습니다(둘 다 하는 쪽의 애니메이터를 재생한다). */
             [[nodiscard]] static bool validateStep( const InteractionStepDef& step, const hashed_string& interactionID, string_view sourceName )
             {
+                if ( step._mode == InteractionInputMode::Reaction && step._delayMax < step._delayMin )
+                {
+                    SW_LOG_WARNING_ID( "InteractionCatalog.ReactionDelayReversed", "%#: <Interaction id=\"%#\"> delayMax %# is below delayMin %#", sourceName, interactionID.c_str(), step._delayMax, step._delayMin );
+                    return false;
+                }
                 if ( step._listPairedAnimationPath.empty() )
                     return true;
                 bool bValid = true;

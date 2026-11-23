@@ -8,6 +8,7 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/WorldOrigin.h"
 
 namespace sw
 {
@@ -127,7 +128,17 @@ namespace sw
             return false;
         _pSeenScene           = pScene;
         _seenTransformVersion = version;
-        return makeVolume( _volume );
+        if ( makeVolume( _volume ) == false )
+            return false;
+        // 든 부피는 내비메시와 같은 절대 자리다 — 원점을 옮겨도(루트가 옮겨져 변경 번호가 바뀐다) 같은 값이라 다시 뚫지 않는다.
+        const WorldOrigin& origin = pOwner->getManager()->getWorldOrigin();
+        for ( float3& point : _volume._listPoint )
+        {
+            point = origin.toAbsolute( point );
+        }
+        _volume._minY = static_cast<float32>( static_cast<float64>( _volume._minY ) + origin._position._y );
+        _volume._maxY = static_cast<float32>( static_cast<float64>( _volume._maxY ) + origin._position._y );
+        return true;
     }
 
     bool NavMeshObstacleComponent::makeCacheObstacle( NavCacheObstacleDesc& outDesc ) const
@@ -139,7 +150,7 @@ namespace sw
         // 뚫는 부피(`makeVolume`)와 같은 자세 규칙이다 — 상자는 오브젝트의 요만 따른다(장애물 캐시의 상자는 Y 축으로만 돈다).
         const float4x4 world = pScene->getWorldMatrix();
         const float3   scale = world.getScale();
-        outDesc._center      = float3::transform( _center, world );
+        outDesc._center      = pOwner->getManager()->getWorldOrigin().toAbsolute( float3::transform( _center, world ) ); // 캐시는 내비메시처럼 절대 자리다
         outDesc._bCylinder   = _shape == NavObstacleShape::Cylinder;
         if ( outDesc._bCylinder )
         {

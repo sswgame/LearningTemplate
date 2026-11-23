@@ -25,7 +25,6 @@
 #include "Engine/Asset/Cook/CookRecord.h"
 #include "Engine/Asset/Image/DDSFormat.h"
 #include "Engine/Asset/Image/ImageFileWriter.h"
-#include "Engine/Config/ConfigManager.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Content/CookCodeFingerprint.h"
 #include "Engine/Graphics/RHI/RHIDescriptors.h"
@@ -182,19 +181,24 @@ namespace sw::editor
         [[nodiscard]] bool saveImportedDDSInternal( const DirectX::ScratchImage& finalImage, uint32 sourceChannelCount, [[maybe_unused]] string_view sourcePath, string_view outputPath,
                                                     TextureImportResult* pOutResult )
         {
-            // DirectXTex 가 경로를 스스로 열어 쓴다 — `FileUtil` 의 쓰기 입구를 지나지 않으므로 게이트를 직접 묻는다(커밋된 DDS 를 자동화 실행이 덮지 않게).
-            if ( FileUtil::isWriteAllowed( FileUtil::toDiskPath( outputPath ) ) == false || FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( outputPath ) ) == false )
-                return false;
-
             // 엔진 `DDSLoader` 의 옛 머리(DX9 픽셀 형식) 경로는 1 채널 휘도(L8)를 모른다. R8_UNORM 은 DX10 머리로 써서 DXGI 번호(61)를 그대로 싣는다.
             // 다른 형식은 옛 머리 그대로 둔다 — 이미 커밋된 DDS 의 바이트가 바뀌지 않게 한다.
             const DirectX::DDS_FLAGS saveFlags = finalImage.GetMetadata().format == DXGI_FORMAT_R8_UNORM ? DirectX::DDS_FLAGS_FORCE_DX10_EXT : DirectX::DDS_FLAGS_NONE;
-            const wstring            wOutPath  = StringUtil::utf8ToUTF16( string( outputPath ).c_str() );
-            const HRESULT            hrSave    = DirectX::SaveToDDSFile( finalImage.GetImages(), finalImage.GetImageCount(), finalImage.GetMetadata(), saveFlags, wOutPath.c_str() );
+            DirectX::Blob            fileBytes;
+            const HRESULT            hrSave = DirectX::SaveToDDSMemory( finalImage.GetImages(), finalImage.GetImageCount(), finalImage.GetMetadata(), saveFlags, fileBytes );
             if ( FAILED( hrSave ) )
             {
-                SW_LOG_ERROR_ID( "TextureImporter.DirectXSaveToDDSFileFailedHr", "DirectX::SaveToDDSFile failed (hr=0x%#) for %#", Fmt( static_cast<uint32>( hrSave ), Format( 8, Format::Padding::Zero ).hex() ),
+                SW_LOG_ERROR_ID( "TextureImporter.DirectXSaveToDDSMemoryFailedHr", "DirectX::SaveToDDSMemory failed (hr=0x%#) for %#", Fmt( static_cast<uint32>( hrSave ), Format( 8, Format::Padding::Zero ).hex() ),
                                  outputPath );
+                return false;
+            }
+
+            // 파일은 엔진의 쓰기 입구로만 쓴다 — 쓰기 게이트를 지나고, 임시 파일에 다 쓴 뒤 바꿔 끼워 쓰는 중인 DDS 를 런타임 리로드가 읽지 않는다(DirectXTex 의 파일 쓰기는 제자리에 쓴다).
+            const bool bWritten = FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( outputPath ) ) &&
+                                  FileUtil::writeFile( FileUtil::toDiskPath( outputPath ), static_cast<const uint8*>( fileBytes.GetConstBufferPointer() ), fileBytes.GetBufferSize() );
+            if ( bWritten == false )
+            {
+                SW_LOG_ERROR_ID( "TextureImporter.ImportedTextureNotWritten", "Could not write the imported texture %#", outputPath );
                 return false;
             }
 
@@ -592,7 +596,7 @@ namespace sw::editor
             if ( pImage == nullptr || TextureBlockEncoder::encodeMip( format, pImage->pixels, static_cast<uint32>( pImage->width ), static_cast<uint32>( pImage->height ), payload ) == false )
                 return false;
         }
-        if ( FileUtil::isWriteAllowed( FileUtil::toDiskPath( outputPath ) ) == false || FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( outputPath ) ) == false )
+        if ( FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( outputPath ) ) == false )
             return false;
         const uint32 width    = static_cast<uint32>( metadata.width );
         const uint32 rowBytes = ( width + 3 ) / 4 * RHIFormatUtil::getBlockInfo( format )._blockBytes;
@@ -711,9 +715,9 @@ namespace sw::editor
 
         // 바뀐 원본 하나만 임포트한다(루트 전체를 훑지 않는다). 스탬프를 기록하는 길은 `importAllTextures` 와 같은 `AssetImportStampUtil` 한 곳이라
         // 에디터에서 임포트한 것과 `App --import-textures` 로 임포트한 것이 같은 판정을 받는다. 내용이 그대로이면(저장만 다시 했다) 임포트하지 않는다.
-        // 설정 파일이 없으면 기본 규칙을 쓴다. 깨졌으면 기본 규칙으로 임포트하지 않는다(결과가 말없이 바뀐다) — 로드가 오류를 남겼다.
+        // 규칙 파일이 없거나 깨졌으면 기본 규칙으로 임포트하지 않는다(결과가 말없이 바뀐다) — 로드가 오류를 남겼다.
         TextureImportConfig config{};
-        if ( config.loadFromFile( makeDefaultImportConfigPath() ) == ConfigReadResult::Invalid )
+        if ( config.loadFromFile( makeDefaultImportConfigPath() ) == false )
             return true;
         // 핫 리로드의 임포트 잡이 워커에서 부르므로 작업 시스템을 찾지 않는다(워커는 에디터 서비스 범위를 읽지 않는다) — 밴드 압축도 이 워커가 차례로 한다.
         const TextureRawImporter         importer{ config, nullptr };

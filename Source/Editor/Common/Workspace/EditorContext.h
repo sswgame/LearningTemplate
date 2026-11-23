@@ -1,9 +1,11 @@
 #pragma once
+#include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Subsystem/SubsystemScope.h"
 
 #include "Editor/Common/EditorExports.h"
+#include "Editor/Common/EditorSubsystem.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
 namespace sw::editor
@@ -72,11 +74,23 @@ namespace sw::editor
             static_assert( kIsAccessorOnlySubsystem<T> == false, "this subsystem has several instances - use its named accessor (e.g. getMainSceneSelection / getFocusedSelection)" );
             return _scope.find<T>();
         }
+        /** @brief 하위 객체 @p TSubsystem 을 범위에 만듭니다(조립점이 부른다). 범위에 바로 넣지 않고 이것으로 넣어야 되돌리기(`resetToFreshEditor`)가 빠짐없이 돈다. */
+        template <class TSubsystem, typename... TArgs>
+        TSubsystem& emplaceSubsystem( TArgs&&... args )
+        {
+            static_assert( std::is_base_of_v<EditorSubsystem, TSubsystem>, "EditorContext owns EditorSubsystem only" );
+            TSubsystem& subsystem = _scope.emplaceSubsystem<TSubsystem>( std::forward<TArgs>( args )... );
+            _listSubsystem.push_back( &subsystem );
+            return subsystem;
+        }
+        /** @brief 모든 하위 객체(확장이 기여한 것 포함)를 새로 띄운 에디터와 같은 자리로 되돌립니다(`EditorSubsystem::resetToFreshEditor`, 넣은 순서의 역순 — 상태 저장소가 마지막). */
+        void resetToFreshEditor();
         /** @brief 셸이 도킹 레이아웃을 알립니다. 범위에 소유권 없이 등록하므로 `findSubsystem<EditorDockLayout>()` 로 찾습니다. 종료할 때는 nullptr 을 넘깁니다. */
         void setDockLayout( EditorDockLayout* pDockLayout );
 
     private:
         /** @brief 에디터 범위입니다. 하위 객체(`EditorSubsystem`)를 소유하고 타입으로 찾게 하며, 선언된 의존 순서로 초기화하고 역순으로 종료하고 소멸합니다. `getSubsystem<T>()` 가 여기서 찾습니다. */
-        SubsystemScope _scope;
+        SubsystemScope           _scope;
+        vector<EditorSubsystem*> _listSubsystem; ///< 범위가 소유한 하위 객체(넣은 순서, 빌림 — `shutdown` 이 비운다)
     };
 } // namespace sw::editor

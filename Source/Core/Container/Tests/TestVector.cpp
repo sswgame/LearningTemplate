@@ -4,7 +4,9 @@
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/InlineAllocator.h"
 #include "Core/Container/frame_vector.h"
+#include "Core/Container/pair.h"
 #include "Core/Container/string.h"
+#include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Testing/ScopedAssertCapture.h"
 #include "Core/Testing/TestFramework.h"
@@ -837,5 +839,88 @@ SW_TEST_CASE( VectorTest, RangeInsertHandlesSelfRangeAndInputIterators )
         list.insert( list.begin() + 1, std::begin( arrSource ), std::end( arrSource ) );
         SW_REQUIRE_EQUAL( size_t( 4 ), list.size() );
         SW_EXPECT_TRUE( list[0] == "a" && list[1] == "b" && list[2] == "c" && list[3] == "d" );
+    }
+}
+
+/**
+ * @brief [VectorTest] 바이트로 옮겨도 되는 형식 판정 — 소유 포인터 · 컨테이너는 참, 자기 안을 가리키는 것(인라인 버퍼)은 거짓, 묶음은 칸을 따른다
+ */
+SW_TEST_CASE( VectorTest, BitwiseRelocatableTraitFollowsTheMembers )
+{
+    static_assert( sw::is_bitwise_relocatable_v<PaddedPod>, "바이트 복사 형식" );
+    static_assert( sw::is_bitwise_relocatable_v<sw::unique_ptr<int32>>, "포인터 한 칸" );
+    static_assert( sw::is_bitwise_relocatable_v<sw::shared_ptr<int32>>, "포인터 두 칸" );
+    static_assert( sw::is_bitwise_relocatable_v<sw::vector<TrackedValue>>, "버퍼 포인터와 두 수" );
+    static_assert( sw::is_bitwise_relocatable_v<sw::small_vector<int32, 4>> == false, "인라인 버퍼를 가리킨다" );
+    static_assert( sw::is_bitwise_relocatable_v<TrackedValue> == false, "올리지 않은 사용자 형식은 이동 생성 · 소멸" );
+    static_assert( sw::is_bitwise_relocatable_v<sw::pair<uint32, sw::unique_ptr<int32>>>, "쌍은 두 칸을 따른다" );
+    static_assert( sw::is_bitwise_relocatable_v<sw::pair<uint32, TrackedValue>> == false, "쌍은 두 칸을 따른다" );
+    static_assert( sw::is_bitwise_relocatable_v<sw::unordered_map<uint32, sw::unique_ptr<int32>>>, "맵 자신은 버퍼 둘" );
+    SW_EXPECT_TRUE( sw::is_bitwise_relocatable_v<sw::string> == sw::internal::kStdStringBitwiseRelocatable );
+}
+
+/**
+ * @brief [VectorTest] 소유 포인터 벡터는 키우기 · 가운데 넣기 · 빼기에서 값과 수명이 그대로다(바이트로 옮긴 원본은 소멸시키지 않는다)
+ */
+SW_TEST_CASE( VectorTest, RelocatedOwnersKeepValuesAndLifetime )
+{
+    TrackedValue::s_liveCount = 0;
+    {
+        sw::vector<sw::unique_ptr<TrackedValue>> listOwner;
+        for ( int32 index = 0; index < 40; ++index )
+        {
+            listOwner.push_back( sw::make_unique<TrackedValue>( index ) );
+        }
+        SW_EXPECT_EQUAL( 40, TrackedValue::s_liveCount );
+        listOwner.insert( listOwner.begin(), sw::make_unique<TrackedValue>( 100 ) );
+        listOwner.insert( listOwner.begin() + 10, sw::make_unique<TrackedValue>( 200 ) );
+        SW_EXPECT_EQUAL( 42, TrackedValue::s_liveCount );
+        SW_EXPECT_EQUAL( 100, listOwner[0]->_value );
+        SW_EXPECT_EQUAL( 0, listOwner[1]->_value );
+        SW_EXPECT_EQUAL( 200, listOwner[10]->_value );
+        SW_EXPECT_EQUAL( 39, listOwner.back()->_value );
+
+        listOwner.erase( listOwner.begin() + 10 );
+        listOwner.erase( listOwner.begin(), listOwner.begin() + 11 ); // 100, 0 .. 9
+        SW_EXPECT_EQUAL( 30, TrackedValue::s_liveCount );
+        SW_EXPECT_EQUAL( 10, listOwner.front()->_value );
+        listOwner.erase( listOwner.end() - 1 );
+        SW_EXPECT_EQUAL( 38, listOwner.back()->_value );
+        listOwner.shrink_to_fit();
+        SW_EXPECT_EQUAL( 10, listOwner.front()->_value );
+        SW_EXPECT_EQUAL( 29, TrackedValue::s_liveCount );
+    }
+    SW_EXPECT_EQUAL( 0, TrackedValue::s_liveCount );
+}
+
+/**
+ * @brief [VectorTest] 짧은 글(자기 버퍼)과 긴 글(힙)이 섞인 문자열 벡터 · 문자열 키 맵이 키우기 · 밀기에서 내용을 지킨다
+ */
+SW_TEST_CASE( VectorTest, StringsSurviveGrowthAndShifts )
+{
+    const sw::string                          longText( "engine/textures/a_name_long_enough_to_leave_the_inline_buffer.texture" );
+    sw::vector<sw::string>                    listText;
+    sw::unordered_map<sw::string, sw::string> mapText;
+    for ( int32 index = 0; index < 50; ++index )
+    {
+        sw::string text( 1, static_cast<utf8>( 'a' + index % 26 ) );
+        if ( index % 2 == 0 )
+            text += longText;
+        listText.push_back( text );
+        sw::string key( text );
+        key += static_cast<utf8>( '0' + index / 26 );
+        mapText[key] = text;
+    }
+    listText.insert( listText.begin() + 3, 2, sw::string( "x" ) );
+    listText.insert( listText.begin(), listText.begin() + 5, listText.begin() + 7 ); // 자기 범위
+    SW_EXPECT_EQUAL( size_t( 54 ), listText.size() );
+    SW_EXPECT_TRUE( listText[5] == "x" );
+    SW_EXPECT_TRUE( listText[2].size() == 1 + longText.size() );
+    listText.erase( listText.begin(), listText.begin() + 7 );
+    SW_EXPECT_TRUE( listText[0] == "d" );
+    SW_EXPECT_EQUAL( size_t( 50 ), mapText.size() );
+    for ( const auto& keyValue : mapText )
+    {
+        SW_EXPECT_TRUE( keyValue.first.compare( 0, keyValue.second.size(), keyValue.second ) == 0 );
     }
 }

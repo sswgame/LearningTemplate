@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="4ddf64cac22fe95c374de9d2d827f616"?>
+<!--
+  제작(Crafter · RecipeCatalog) — 무대 maps/inventorydemo 의 CraftingStation. 재료는 캐릭터 가방에서 나가고 결과는 가방으로 간다. 값으로 판정한다(골든 없음).
+  ① 모르는 레시피 · 다른 작업대 · 재료 부족은 거절하고 가방은 그대로 ② 두 번 제작 — 재료를 먼저 모두 가져가고 하나씩 끝난다 ③ 남은 작업을 취소하면 재료가 돌아온다
+  ④ 배워도 레벨이 모자라면 거절 ⑤ 도구는 닳지 않는다 ⑥ 대기열 중의 세이브 · 불러오기 뒤 이어서 끝난다.
+  실행: App -scenario=game/playground/automation/crafting.scenario.xml -unattended (체인: ctest -R Scenario.playground)
+-->
+<Scenario name="game.playground.crafting" fixedDelta="0.0166667" timeoutFrames="1800" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/playground/maps/inventorydemo.scene.xml"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Appearance.Idle" target="Player" equals="1" timeoutFrames="300"/>
+	<DevCommand line="equipment.give Player potion_health"/>
+	<DevCommand line="equipment.give Player potion_health"/>
+	<DevCommand line="equipment.give Player potion_health"/>
+	<DevCommand line="equipment.give Player potion_health"/>
+	<Expect watch="Equipment.ItemCount" target="Player" key="potion_health" equals="4"/>
+
+	<!-- ① 거절 -->
+	<DevCommand line="craft.enqueue CraftingStation helmet"/>
+	<Expect watch="Object.Property" target="CraftingStation" key="CraftingDemoComponent._lastResult" is="NotLearned"/>
+	<DevCommand line="craft.enqueue CraftingStation forged"/>
+	<Expect watch="Object.Property" target="CraftingStation" key="CraftingDemoComponent._lastResult" is="WrongStation"/>
+	<DevCommand line="craft.enqueue CraftingStation boots 3"/>
+	<Expect watch="Object.Property" target="CraftingStation" key="CraftingDemoComponent._lastResult" is="MissingInputs"/>
+	<DevCommand line="craft.enqueue CraftingStation nothing"/>
+	<Expect watch="Object.Property" target="CraftingStation" key="CraftingDemoComponent._lastResult" is="UnknownRecipe"/>
+	<Expect watch="Equipment.ItemCount" target="Player" key="potion_health" equals="4"/>
+	<Expect watch="Object.Property" target="CraftingStation" key="CraftingDemoComponent._queueCount" equals="0"/>
+
+	<!-- ② 두 번 -->
+	<DevCommand line="craft.enqueue CraftingStation boots 2"/>
+	<Expect watch="Object.Property" target="CraftingStation" key="CraftingDemoComponent._lastResult" is="Ok"/>
+	<Expect watch="Equipment.ItemCount" target="Player" key="potion_health" equals="0"/>
+	<Expect watch="Equipment.ItemCount" target="Player" key="boots_low" equals="0"/>
+	<Expect watch="Object.Property" target="CraftingStation" key="CraftingDemoComponent._queueCount" equals="1"/>
+	<WaitUntil watch="Object.Property" target="CraftingStation" key="CraftingDemoComponent._finishedCount" equals="1" timeoutSeconds="2"/>
+	<Expect watch="Equipment.ItemCount" target="Player" key="boots_low" equals="1"/>
+	<!-- ③ 취소 -->
+	<DevCommand line="craft.cancel CraftingStation 0"/>
+	<Expect watch="Object.Property" target="CraftingStation" key="CraftingDemoComponent._queueCount" equals="0"/>
+	<Expect watch="Equipment.ItemCount" target="Player" key="potion_health" equals="2"/>
+	<AdvanceSimulation frames="90"/> <!-- 1.5 초 — 취소한 작업은 끝나지 않는다(일어나지 않음 — 시간이 내용) -->
+	<Expect watch="Object.Property" target="CraftingStation" key="CraftingDemoComponent._finishedCount" equals="1"/>
+	<Expect watch="Equipment.ItemCount" target="Player" key="boots_low" equals="1"/>
+
+	<!-- ④ 레벨 -->
+	<DevCommand line="craft.learn CraftingStation helmet"/>
+	<DevCommand line="craft.enqueue CraftingStation helmet"/>
+	<Expect watch="Object.Property" target="CraftingStation" key="CraftingDemoComponent._lastResult" is="LevelTooLow"/>
+	<DevCommand line="craft.level CraftingStation 2"/>
+	<!-- ⑤ 도구 -->
+	<DevCommand line="craft.enqueue CraftingStation helmet"/>
+	<Expect watch="Object.Property" target="CraftingStation" key="CraftingDemoComponent._lastResult" is="Ok"/>
+	<Expect watch="Equipment.ItemCount" target="Player" key="potion_health" equals="1"/>
+	<WaitUntil watch="Object.Property" target="CraftingStation" key="CraftingDemoComponent._finishedCount" equals="2" timeoutSeconds="2"/>
+	<Expect watch="Equipment.ItemCount" target="Player" key="helmet_knight" equals="1"/>
+	<Expect watch="Equipment.ItemCount" target="Player" key="boots_low" equals="1"/>
+
+	<!-- ⑥ 대기열 중의 세이브 -->
+	<DevCommand line="craft.enqueue CraftingStation helmet"/>
+	<Expect watch="Object.Property" target="CraftingStation" key="CraftingDemoComponent._lastResult" is="Ok"/>
+	<Expect watch="Equipment.ItemCount" target="Player" key="potion_health" equals="0"/>
+	<Store watch="Save.Written" as="writtenBefore"/>
+	<DevCommand line="game.save playground/crafting"/>
+	<WaitUntil watch="Save.Written" differsFrom="writtenBefore" timeoutWallSeconds="10"/>
+	<LoadScene path="game/playground/maps/inventorydemo.scene.xml" timeoutFrames="600"/>
+	<WaitUntil watch="Appearance.Idle" target="Player" equals="1" timeoutFrames="300"/>
+	<Expect watch="Object.Property" target="CraftingStation" key="CraftingDemoComponent._queueCount" equals="0"/> <!-- 새 판 — 불러오기가 정말 되돌리는지 가린다 -->
+	<Expect watch="Equipment.ItemCount" target="Player" key="helmet_knight" equals="0"/>
+	<Store watch="Save.Loaded" as="loadedBefore"/>
+	<DevCommand line="game.load playground/crafting"/>
+	<WaitUntil watch="Save.Loaded" differsFrom="loadedBefore" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Appearance.Idle" target="Player" equals="1" timeoutFrames="300"/>
+	<WaitUntil watch="Equipment.ItemCount" target="Player" key="helmet_knight" equals="2" timeoutSeconds="3"/>
+	<Expect watch="Object.Property" target="CraftingStation" key="CraftingDemoComponent._finishedCount" equals="3"/>
+	<Expect watch="Object.Property" target="CraftingStation" key="CraftingDemoComponent._queueCount" equals="0"/>
+	<Expect watch="Equipment.ItemCount" target="Player" key="potion_health" equals="0"/>
+	<Pass/>
+</Scenario>

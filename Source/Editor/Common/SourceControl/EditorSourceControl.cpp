@@ -79,6 +79,17 @@ namespace sw::editor
         _listPending.clear();
     }
 
+    void EditorSourceControl::resetToFreshEditor()
+    {
+        // 공급자 · 잠금 · 도는 작업은 저장소와 맞춘 값이라 둔다 — 앞 단계가 보던 변경 목록과 상세만 비운다.
+        _listChange.clear();
+        _detailPath.clear();
+        _listDetailLine.clear();
+        _lastError.clear();
+        _detailOperation = SourceControlOperation::None;
+        _bStatusKnown    = SW_FALSE;
+    }
+
     void EditorSourceControl::setProvider( unique_ptr<ISourceControlProvider> pProvider )
     {
         _pProvider = pProvider != nullptr ? std::move( pProvider ) : make_unique<NullSourceControlProvider>();

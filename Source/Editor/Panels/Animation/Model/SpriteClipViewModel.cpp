@@ -165,6 +165,14 @@ namespace sw::editor
             else if ( removedFrame < animation._firstFrame + animation._frameCount )
                 --animation._frameCount;
         }
+        // 앞쪽의 빈 구간이 사라지면 고른 구간의 번호도 당긴다 — 그대로 두면 다음 구간이 골라져 거기에 편집이 들어간다.
+        int32 removedBefore = 0;
+        for ( int32 animationIndex = 0; animationIndex < _selectedAnimation; ++animationIndex )
+        {
+            if ( _clip._listAnimation[static_cast<size_t>( animationIndex )]._frameCount <= 0 )
+                ++removedBefore;
+        }
+        _selectedAnimation -= removedBefore;
         VectorUtil::removeIf( _clip._listAnimation, []( const SpriteClipAnimation& animation )
         { return animation._frameCount <= 0; } );
         selectAnimation( MathUtil::min( _selectedAnimation, static_cast<int32>( _clip._listAnimation.size() ) - 1 ) );

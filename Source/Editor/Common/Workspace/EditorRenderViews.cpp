@@ -36,6 +36,24 @@ namespace sw::editor
         _pRHIDevice = nullptr;
     }
 
+    void EditorRenderViews::resetToFreshEditor()
+    {
+        // 앞 단계의 크기 · 그린 뷰 표시 · 미리보기 눈이 다음 단계의 첫 프레임에 남지 않게 한다. 장치 · 백엔드는 셸의 것이라 둔다.
+        destroyViewTargets();
+        _uiTargets = EditorTargetSnapshot{};
+        _uiFrame   = EditorUIFrameOutput{};
+        {
+            ScopedLock<mutex> lock{ _targetStatesMutex };
+            _publishedTargets = EditorTargetSnapshot{};
+        }
+        {
+            ScopedLock<mutex> lock{ _publishedMutex };
+            _publishedFrame = EditorUIFrameOutput{};
+        }
+        _bGameInputFocusedLastFrame = SW_FALSE;
+        _bPreviewOverflowLogged     = SW_FALSE;
+    }
+
     void EditorRenderViews::clearViewDrawnMarks()
     {
         // UI 프레임 시작 — 그리기 표시를 지우고, 게임 스레드가 넘긴 타깃 값(받은 렌더 텍스처 · 요청한 크기)을 이번 프레임 값으로 받는다.

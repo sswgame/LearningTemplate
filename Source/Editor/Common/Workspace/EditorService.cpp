@@ -42,6 +42,12 @@ namespace sw::editor
         /** @brief 미리보기 선택의 등록을 구독으로 내준다. 구독이 풀리면 `releasePreviewSelection` 이 목록 · 대상에서 뺀다. 소멸이 남은 구독을 무효로 만든다. */
         ItemSubscriptionList<EditorSelection> _previewSubscriptions{ SW_DELEGATE_METHOD( ItemSubscriptionList<EditorSelection>::ReleaseFunction, &EditorFocus::releasePreviewSelection, this ) };
         const utf8*                           getSubsystemName() const override { return kSubsystemName; }
+        /** @brief 겨누는 대상을 메인으로 돌립니다. 미리보기 선택 목록은 그 창의 구독이 풀릴 때 빠진다. */
+        void resetToFreshEditor() override
+        {
+            _focusedPanelID.clear();
+            _pFocusedSelection = nullptr;
+        }
 
         /** @brief 미리보기 선택 @p pSelection 의 등록이 풀렸습니다. 목록에서 빼고, 대상 선택이었으면 메인으로 돌린다. */
         void releasePreviewSelection( EditorSelection* pSelection )

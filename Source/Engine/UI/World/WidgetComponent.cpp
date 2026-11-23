@@ -479,7 +479,7 @@ namespace sw
         _worldScratch._targetSize = size;
         CanvasPainter painter( _worldScratch, 1.0f );
         (void)UIPaintContext::paint( *_worldTree, paint, painter, _worldScratch );
-        if ( _worldScratch.isSameContent( _worldCanvas ) && _worldScratch._targetSize == _worldCanvas._targetSize )
+        if ( _worldScratch.isSameContent( _worldCanvas ) )
             return;
         std::swap( _worldCanvas, _worldScratch );
         ++_worldRevision;

@@ -112,6 +112,30 @@ SW_TEST_CASE( HTTPMessageParserTest, RefusesAmbiguousLengths )
 }
 
 /**
+ * @brief [HTTPMessageParserTest] IPv6 URL 은 대괄호 없이 호스트가 되고(TLS 이름 · 주소 풀이), 머리에는 다시 대괄호로 적으며 기본 포트는 뺀다. 대괄호가 틀리면 거절한다
+ */
+SW_TEST_CASE( HTTPMessageParserTest, Ipv6Addresses )
+{
+    sw::HTTPAddress address;
+    SW_REQUIRE_TRUE( sw::HTTPAddress::parse( "https://[2001:db8::1]/v1", address ) );
+    SW_EXPECT_EQUAL( sw::string( "2001:db8::1" ), address._host );
+    SW_EXPECT_EQUAL( uint16( 443 ), address._port );
+    SW_EXPECT_EQUAL( sw::string( "[2001:db8::1]" ), address.makeAuthority() );
+    SW_REQUIRE_TRUE( sw::HTTPAddress::parse( "http://[::1]:8080?x=1", address ) );
+    SW_EXPECT_EQUAL( sw::string( "::1" ), address._host );
+    SW_EXPECT_EQUAL( sw::string( "/?x=1" ), address._target );
+    SW_EXPECT_EQUAL( sw::string( "[::1]:8080" ), address.makeAuthority() );
+    SW_REQUIRE_TRUE( sw::HTTPAddress::parse( "http://api.test", address ) );
+    SW_EXPECT_EQUAL( sw::string( "api.test" ), address.makeAuthority() );
+    SW_EXPECT_FALSE( sw::HTTPAddress::parse( "https://2001:db8::1/", address ) );
+    SW_EXPECT_FALSE( sw::HTTPAddress::parse( "https://[2001:db8::1/", address ) );
+    SW_EXPECT_FALSE( sw::HTTPAddress::parse( "https://[api.test]/", address ) );
+    SW_EXPECT_FALSE( sw::HTTPAddress::parse( "https://[::1]8443/", address ) );
+    SW_EXPECT_FALSE( sw::HTTPAddress::parse( "https://[::1]:/", address ) );
+    SW_EXPECT_FALSE( sw::HTTPAddress::parse( "https://a]b/", address ) );
+}
+
+/**
  * @brief [HTTPMessageParserTest] URL 나누기는 사용자 정보 · 조각 · 빈 호스트 · 틀린 포트를 거절하고, 퍼센트 풀기는 틀린 `%` 를 거절한다
  */
 SW_TEST_CASE( HTTPMessageParserTest, AddressAndPercentRules )

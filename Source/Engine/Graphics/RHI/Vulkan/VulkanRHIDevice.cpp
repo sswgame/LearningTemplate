@@ -9,6 +9,7 @@
 #include "Core/Log/LogOnce.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Process/ProcessEnvironment.h"
+#include "Core/Task/TaskManager.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Config/EngineDefaultAssets.h"
@@ -2042,6 +2043,8 @@ namespace sw
     {
         if ( _device == VK_NULL_HANDLE || _pipelineCache == VK_NULL_HANDLE )
             return;
+        if ( engine::areEngineServicesBound() )
+            engine::getSubsystem<TaskManager>().waitStage( _pipelineCacheSaveStage, "VulkanRHIDevice::savePipelineCache" );
         writePipelineCacheFile();
         vkDestroyPipelineCache( _device, _pipelineCache, nullptr );
         _pipelineCache = VK_NULL_HANDLE;
@@ -2049,8 +2052,8 @@ namespace sw
 
     void VulkanRHIDevice::savePipelineCacheIfDue()
     {
-        if ( _device == VK_NULL_HANDLE || _pipelineCache == VK_NULL_HANDLE )
-            return;
+        if ( _device == VK_NULL_HANDLE || _pipelineCache == VK_NULL_HANDLE || engine::areEngineServicesBound() == false )
+            return; // 서비스(작업 풀)가 없는 도구는 종료 저장만 한다
         const int64 nowNanoseconds = MonotonicClock::nowNanoseconds();
         if ( nowNanoseconds - _pipelineCacheLastSaveNanoseconds < _pipelineCacheSaveIntervalNanoseconds )
             return;
@@ -2060,7 +2063,15 @@ namespace sw
             return;
         if ( VulkanPipelineCacheFile::isPeriodicSaveDue( nowNanoseconds, _pipelineCacheLastSaveNanoseconds, _pipelineCacheSaveIntervalNanoseconds, static_cast<uint64>( cacheBytes ),
                                                          _pipelineCacheLastSavedBytes ) )
-            writePipelineCacheFile();
+        {
+            TaskManager& taskManager = engine::getSubsystem<TaskManager>();
+            if ( taskManager.isStageComplete( _pipelineCacheSaveStage ) == false )
+                return; // 앞 저장이 아직 쓰는 중이다(느린 디스크) — 시각을 옮기지 않아 다음 프레임에 다시 본다
+            TaskHandle saveTask = taskManager.emplaceTask( "VulkanPipelineCacheSave", SW_DELEGATE_METHOD( TaskDelegate, &VulkanRHIDevice::writePipelineCacheFile, this ) );
+            taskManager.addToStage( _pipelineCacheSaveStage, saveTask, "VulkanPipelineCacheSave" );
+            saveTask.submit();
+            _pipelineCacheLastSavedBytes = static_cast<uint64>( cacheBytes );
+        }
         _pipelineCacheLastSaveNanoseconds = nowNanoseconds;
     }
 
@@ -2085,7 +2096,6 @@ namespace sw
                     SW_LOG_INFO_ID( "Vulkan.SavedPipelineCacheBytes", "Saved pipeline cache (%# bytes).", static_cast<uint32>( dataSize ) );
                 else
                     SW_LOG_WARNING_ID( "Vulkan.CouldNotSavePipeline", "Could not save the pipeline cache - the next run builds pipelines from scratch" );
-                _pipelineCacheLastSavedBytes = static_cast<uint64>( dataSize );
             }
         }
     }

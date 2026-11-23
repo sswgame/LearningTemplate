@@ -78,6 +78,16 @@ namespace sw
         applyToCamera();
     }
 
+    void FirstPersonCameraComponent::onWorldOriginShifted( const float3& delta )
+    {
+        const GameObject*      pOwner  = getOwner();
+        const CameraComponent* pCamera = pOwner != nullptr ? pOwner->getComponent<CameraComponent>() : nullptr;
+        if ( pCamera == nullptr || pCamera->getParent() != nullptr )
+            return; // 눈 자리는 카메라의 부모 공간이다 — 부모가 함께 옮았다
+        _eyePosition += delta;
+        _modeState._bobPreviousFocus += delta;
+    }
+
     void FirstPersonCameraComponent::setEyePosition( const float3& eyePosition )
     {
         _eyePosition = eyePosition;

@@ -125,7 +125,7 @@ namespace sw
 
     bool CanvasDrawList::isSameContent( const CanvasDrawList& other ) const
     {
-        if ( _listQuad.size() != other._listQuad.size() || _listBatch.size() != other._listBatch.size() )
+        if ( _listQuad.size() != other._listQuad.size() || _listBatch.size() != other._listBatch.size() || !( _targetSize == other._targetSize ) )
             return false;
         if ( _listQuad.empty() == false && Memory::compare( _listQuad.data(), other._listQuad.data(), _listQuad.size() * sizeof( CanvasQuad ) ) != 0 )
             return false;

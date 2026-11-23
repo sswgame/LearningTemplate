@@ -13,8 +13,8 @@
 namespace sw
 {
     GridInventory::GridInventory()
-        : _listCell{}
-        , _listItem{}
+        : _listItem{}
+        , _listCell{}
         , _shapeLookup{}
         , _topology{}
         , _nextInstanceID{ 1 }
@@ -24,9 +24,9 @@ namespace sw
 
     bool GridInventory::initialize( const ShapeDelegate& shapeLookup, int32 width, int32 height )
     {
-        if ( width < 1 || height < 1 )
+        if ( width < 1 || height < 1 || width > kMaxSide || height > kMaxSide )
         {
-            SW_LOG_ERROR_ID( "GridInventory.GridInventoryRefusedXCells", "GridInventory: refused %# x %# cells - both must be at least 1", width, height );
+            SW_LOG_ERROR_ID( "GridInventory.GridInventoryRefusedXCells", "GridInventory: refused %# x %# cells - both must be between 1 and %#", width, height, kMaxSide );
             return false;
         }
         _shapeLookup = shapeLookup;
@@ -39,7 +39,7 @@ namespace sw
 
     bool GridInventory::growGrid( int32 width, int32 height )
     {
-        if ( width < _topology._width || height < _topology._height )
+        if ( width < _topology._width || height < _topology._height || width > kMaxSide || height > kMaxSide )
             return false;
         _topology = GridTopology( width, height );
         _listCell.assign( static_cast<size_t>( _topology.getCellCount() ), constant::invalid_index::kInt32 );
@@ -305,15 +305,18 @@ namespace sw
         io.value( height );
         if ( io.isReading() == false || io.isOk() == false )
             return;
-        // 칸 사이 검사 — 셀 수는 크기의 곱이고, 아이템 번호는 다음 번호보다 작다
-        const uint64 cellCount = static_cast<uint64>( MathUtil::max( 0, width ) ) * static_cast<uint64>( MathUtil::max( 0, height ) );
-        if ( io.check( 0 <= width && 0 <= height && _listCell.size() == cellCount ) == false )
+        // 칸 사이 검사 — 아이템 번호는 겹치지 않고 다음 번호보다 작으며, 아이템은 모두 격자 안에 겹치지 않게 놓인다(다시 놓아 본다)
+        const bool bSizeValid = 0 <= width && width <= kMaxSide && 0 <= height && height <= kMaxSide;
+        if ( io.check( bSizeValid && VectorUtil::findDuplicateBy<&GridItem::_instanceID>( _listItem ) == nullptr ) == false )
             return;
+        _topology = GridTopology( width, height );
+        _listCell.assign( static_cast<size_t>( _topology.getCellCount() ), constant::invalid_index::kInt32 );
         for ( const GridItem& item : _listItem )
         {
-            io.check( item._instanceID < _nextInstanceID );
+            if ( io.check( item._instanceID < _nextInstanceID && canPlace( item._itemID, item._x, item._y, item._bRotated == SW_TRUE ) ) == false )
+                return;
+            fillItemCells( item, item._instanceID );
         }
-        _topology = GridTopology( width, height );
         ++_revision;
     }
 

@@ -63,6 +63,8 @@ namespace sw
         void onRegister( GameObjectManager& manager ) override;
         /** @brief 레지스트리에서 내립니다. */
         void onUnregister( GameObjectManager& manager ) override;
+        /** @brief `_openSlotCount` 가 있으면 게임의 아이템 카탈로그로 그 슬롯 수의 가방을 엽니다. */
+        void onBeginPlay() override;
 
         /** @brief 가방 구간 하나를 씁니다. 열리기 전이면 들고 있던 바이트를 그대로 씁니다. `ComponentStateStore::capture` 가 부릅니다. */
         SW_DECLARE_STATE_IO_IN_PLACE();
@@ -83,7 +85,11 @@ namespace sw
         struct ItemReceiverPort final : IItemReceiver
         {
             [[nodiscard]] ItemGrantResult receiveItem( const hashed_string& item, int32 count ) override;
+            [[nodiscard]] ItemGrantResult receiveStack( const InventorySlot& stack ) override;
         };
         ItemReceiverPort _itemReceiverPort;
+
+        PROPERTY( Min = 0, Tooltip = "Slots of the bag opened at begin play with the game's item catalog - only for scenes without a kit director; 0 = a director opens it" )
+        int32 _openSlotCount;
     };
 } // namespace sw

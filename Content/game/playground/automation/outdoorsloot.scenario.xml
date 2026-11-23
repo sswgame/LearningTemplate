@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="a94b5324a1f94d2a8be20d3a5b200669"?>
+<!--
+  상자 · 줍기 · 나무 베기 · 낚시(maps/outdoors). 플레이어가 상호작용 키(Interact E)만 누른다 — 아이템은 조종자의 가방(InventoryComponent)으로 간다.
+  ① 보물 상자: 한 번 열려 물약 둘, 다시 눌러도 더 주지 않는다(상호작용이 꺼졌다). ② 줍기: 쓰면 줍고(물약 +1) 사라진다, 닿는 것(Coin)은 밟으면 줍는다(약초 3).
+  ③ 나무: 연타로 두 번 베면 통나무 넷, 나무가 쓰러졌다가(위 축이 눕는다) 다시 선다. 도끼 태그가 요구된다.
+  ④ 낚시: 던지고(누름) 입질(반응 단계가 열림)에 눌러 감는다(연타) — 송어 하나. 입질 전에 누르면 취소되어 아무것도 없다.
+  값으로 판정한다(골든 없음). 실행: App -scenario=game/playground/automation/outdoorsloot.scenario.xml -unattended
+-->
+<Scenario name="game.playground.outdoorsloot" fixedDelta="0.0166667" timeoutFrames="3600" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/playground/maps/outdoors.scene.xml"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Character.MovementMode" target="Player" is="Walking" timeoutFrames="60"/>
+
+	<!-- ① 상자 -->
+	<DevCommand line="object.place Player 0 0.05 -7"/>
+	<WaitUntil watch="Interaction.Focus" target="Player" is="Chest" timeoutFrames="20"/>
+	<Tap slot="Key.E" hold="2"/>
+	<WaitUntil watch="Inventory.ItemCount" target="PlayerController" key="potion_health" equals="2" timeoutFrames="20"/>
+	<WaitUntil watch="Interaction.Focus" target="Player" is="none" timeoutFrames="10"/>
+	<Tap slot="Key.E" hold="2"/>
+	<AdvanceSimulation frames="20"/> <!-- 다시 열리지 않음은 시간이 내용 -->
+	<Expect watch="Inventory.ItemCount" target="PlayerController" key="potion_health" equals="2"/>
+
+	<!-- ② 줍기 -->
+	<DevCommand line="object.place Player 4 0.05 -7"/>
+	<WaitUntil watch="Interaction.Focus" target="Player" is="Potion" timeoutFrames="20"/>
+	<Tap slot="Key.E" hold="2"/>
+	<WaitUntil watch="Object.Exists" target="Potion" equals="0" timeoutFrames="20"/>
+	<Expect watch="Inventory.ItemCount" target="PlayerController" key="potion_health" equals="3"/>
+	<DevCommand line="object.place Player 8 0.05 -6"/>
+	<WaitUntil watch="Object.Exists" target="Coin" equals="0" timeoutFrames="20"/>
+	<Expect watch="Inventory.ItemCount" target="PlayerController" key="herb_wild" equals="3"/>
+
+	<!-- ③ 나무 베기 — 시작 누름 하나 + 연타 셋 = 한 번 -->
+	<DevCommand line="object.place Player 12 0.05 -7.2"/>
+	<WaitUntil watch="Interaction.Focus" target="Player" is="Tree" timeoutFrames="20"/>
+	<Tap slot="Key.E" hold="2"/>
+	<WaitUntil watch="Interaction.StepMode" target="Player" is="Mash" timeoutFrames="10"/>
+	<AdvanceSimulation frames="4"/>
+	<Tap slot="Key.E" hold="2"/>
+	<AdvanceSimulation frames="4"/>
+	<Tap slot="Key.E" hold="2"/>
+	<AdvanceSimulation frames="4"/>
+	<Tap slot="Key.E" hold="2"/>
+	<WaitUntil watch="Inventory.ItemCount" target="PlayerController" key="wood_log" equals="2" timeoutFrames="20"/>
+	<AdvanceSimulation frames="20"/> <!-- 쿨다운 0.2 초 -->
+	<Tap slot="Key.E" hold="2"/>
+	<WaitUntil watch="Interaction.StepMode" target="Player" is="Mash" timeoutFrames="10"/>
+	<AdvanceSimulation frames="4"/>
+	<Tap slot="Key.E" hold="2"/>
+	<AdvanceSimulation frames="4"/>
+	<Tap slot="Key.E" hold="2"/>
+	<AdvanceSimulation frames="4"/>
+	<Tap slot="Key.E" hold="2"/>
+	<WaitUntil watch="Inventory.ItemCount" target="PlayerController" key="wood_log" equals="4" timeoutFrames="20"/>
+	<WaitUntil watch="Object.Property" target="Tree" key="GatheringNodeComponent._fallStepsLeft" atLeast="1" timeoutFrames="5"/> <!-- 쓰러지는 중 -->
+	<WaitUntil watch="Object.Property" target="Tree" key="GatheringNodeComponent._fallStepsLeft" equals="0" timeoutFrames="120"/>
+	<Expect watch="Object.Property" target="Tree" key="GatheringNodeComponent._usesTaken" equals="2"/>
+	<WaitUntil watch="Object.Property" target="Tree" key="GatheringNodeComponent._usesTaken" equals="0" timeoutFrames="240"/> <!-- 다시 섰다 -->
+	<WaitUntil watch="Interaction.Focus" target="Player" is="Tree" timeoutFrames="20"/>
+
+	<!-- ④ 낚시 -->
+	<DevCommand line="object.place Player 16 0.05 -7"/>
+	<WaitUntil watch="Interaction.Focus" target="Player" is="FishingSpot" timeoutFrames="20"/>
+	<Tap slot="Key.E" hold="2"/>
+	<WaitUntil watch="Interaction.StepMode" target="Player" is="Reaction" timeoutFrames="10"/>
+	<AdvanceSimulation frames="4"/>
+	<Tap slot="Key.E" hold="2"/> <!-- 입질 전 — 취소 -->
+	<WaitUntil watch="Interaction.StepMode" target="Player" is="none" timeoutFrames="10"/>
+	<AdvanceSimulation frames="20"/>
+	<Expect watch="Inventory.ItemCount" target="PlayerController" key="fish_trout" equals="0"/>
+	<Tap slot="Key.E" hold="2"/>
+	<WaitUntil watch="Interaction.ReactionOpen" target="Player" equals="1" timeoutFrames="180"/>
+	<Tap slot="Key.E" hold="2"/>
+	<WaitUntil watch="Interaction.StepMode" target="Player" is="Mash" timeoutFrames="10"/>
+	<AdvanceSimulation frames="4"/>
+	<Tap slot="Key.E" hold="2"/>
+	<AdvanceSimulation frames="4"/>
+	<Tap slot="Key.E" hold="2"/>
+	<AdvanceSimulation frames="4"/>
+	<Tap slot="Key.E" hold="2"/>
+	<WaitUntil watch="Inventory.ItemCount" target="PlayerController" key="fish_trout" equals="1" timeoutFrames="20"/>
+	<Pass/>
+</Scenario>

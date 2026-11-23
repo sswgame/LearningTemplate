@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="4bfc09fc800b25b853b7544c17db485b"?>
+<!--
+  턴 순서(TurnOrder) — 무대 maps/turnorder(속도 10 · 20 · 5). 값으로 판정한다(골든 없음).
+  타임라인제: 빠른 쪽(1 번)이 자주 온다 → ① 미리 보기 ② 넘기기 ③ 늦추기(0 번을 한 차례만큼) ④ 세이브 · 불러오기 ⑤ 쓰러진 행위자 빼기.
+  라운드제: 한 라운드에 모두 한 번 빠른 순 → ⑥ 라운드 수 ⑦ 우선도가 속도를 이긴다.
+  실행: App -scenario=game/playground/automation/turnorder.scenario.xml -unattended (체인: ctest -R Scenario.playground)
+-->
+<Scenario name="game.playground.turnorder" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/playground/maps/turnorder.scene.xml"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+
+	<!-- ① 타임라인 미리 보기 -->
+	<Expect watch="Object.Property" target="TimelineDemo" key="TurnOrderDemoComponent._orderText" is="1,0,1,1,0,1"/>
+	<Expect watch="Object.Property" target="TimelineDemo" key="TurnOrderDemoComponent._currentActor" equals="-1"/>
+	<!-- ② 넘기기 -->
+	<DevCommand line="turn.next TimelineDemo"/>
+	<Expect watch="Object.Property" target="TimelineDemo" key="TurnOrderDemoComponent._currentActor" equals="1"/>
+	<Expect watch="Object.Property" target="TimelineDemo" key="TurnOrderDemoComponent._orderText" is="0,1,1,0,1,2"/>
+	<!-- ③ 늦추기 -->
+	<DevCommand line="turn.delay TimelineDemo 0 1"/>
+	<Expect watch="Object.Property" target="TimelineDemo" key="TurnOrderDemoComponent._orderText" is="1,1,0,1,2,1"/>
+	<Expect watch="Object.Property" target="TimelineDemo" key="TurnOrderDemoComponent._currentActor" equals="1"/>
+	<!-- ④ 세이브 → 한 차례 더 → 불러오기 -->
+	<Store watch="Save.Written" as="writtenBefore"/>
+	<DevCommand line="game.save playground/turnorder"/>
+	<WaitUntil watch="Save.Written" differsFrom="writtenBefore" timeoutWallSeconds="10"/>
+	<DevCommand line="turn.next TimelineDemo"/>
+	<Expect watch="Object.Property" target="TimelineDemo" key="TurnOrderDemoComponent._orderText" is="1,0,1,2,1,0"/> <!-- 차례가 정말 넘어갔다(되돌림을 가리려면) -->
+	<Store watch="Save.Loaded" as="loadedBefore"/>
+	<DevCommand line="game.load playground/turnorder"/>
+	<WaitUntil watch="Save.Loaded" differsFrom="loadedBefore" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Object.Exists" target="TimelineDemo" equals="1" timeoutFrames="30"/>
+	<WaitUntil watch="Object.Property" target="TimelineDemo" key="TurnOrderDemoComponent._orderText" is="1,1,0,1,2,1" timeoutFrames="30"/>
+	<DevCommand line="turn.next TimelineDemo"/> <!-- 글만이 아니라 순서 자체가 되돌아왔다 -->
+	<Expect watch="Object.Property" target="TimelineDemo" key="TurnOrderDemoComponent._currentActor" equals="1"/>
+	<Expect watch="Object.Property" target="TimelineDemo" key="TurnOrderDemoComponent._orderText" is="1,0,1,2,1,0"/>
+	<!-- ⑤ 빼기 -->
+	<DevCommand line="turn.remove TimelineDemo 1"/>
+	<Expect watch="Object.Property" target="TimelineDemo" key="TurnOrderDemoComponent._orderText" is="0,2,0,0,2,0"/>
+
+	<!-- ⑥ 라운드 -->
+	<Expect watch="Object.Property" target="RoundDemo" key="TurnOrderDemoComponent._orderText" is="1,0,2,1,0,2"/>
+	<DevCommand line="turn.next RoundDemo"/>
+	<DevCommand line="turn.next RoundDemo"/>
+	<DevCommand line="turn.next RoundDemo"/>
+	<Expect watch="Object.Property" target="RoundDemo" key="TurnOrderDemoComponent._currentActor" equals="2"/>
+	<Expect watch="Object.Property" target="RoundDemo" key="TurnOrderDemoComponent._round" equals="1"/>
+	<DevCommand line="turn.next RoundDemo"/>
+	<Expect watch="Object.Property" target="RoundDemo" key="TurnOrderDemoComponent._currentActor" equals="1"/>
+	<Expect watch="Object.Property" target="RoundDemo" key="TurnOrderDemoComponent._round" equals="2"/>
+	<!-- ⑦ 우선도 -->
+	<DevCommand line="turn.priority RoundDemo 2 1"/>
+	<Expect watch="Object.Property" target="RoundDemo" key="TurnOrderDemoComponent._orderText" is="2,1,0,2,1,0"/>
+	<Pass/>
+</Scenario>

@@ -47,6 +47,8 @@ namespace sw
         void onUnregister( GameObjectManager& manager ) override;
         /** @brief 오브젝트가 꺼지면 붙잡은 도장을 놓고 지나온 길을 끊습니다. */
         void onOwnerActiveInHierarchyChanged() override;
+        /** @brief 지나온 길의 끝을 옮깁니다 — 옛 원점에서 지금 자리까지 한 번에 찍지 않게. */
+        void onWorldOriginShifted( const float3& delta ) override;
 
         /** @brief 지금 붙잡은 도장이 있는지입니다. */
         bool isHolding() const { return _held.isValid(); }

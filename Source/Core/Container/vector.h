@@ -5,6 +5,7 @@
  */
 #pragma once
 #include "Core/Concurrency/DataRaceDetector.h"
+#include "Core/Container/BitwiseRelocatable.h"
 #include "Core/Container/InlineAllocator.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Math/MathUtil.h"
@@ -195,6 +196,15 @@ namespace sw
          *          됩니다(한 프레임에 수천 번 부르는 `PrimitiveRegistry::consumeDirty` · `SceneTransformHierarchy::queueWriteParallel` 같은 곳).
          */
         SW_NOINLINE void reserveInternal( size_t new_cap );
+        /**
+         * @brief @p pSource 의 원소 @p count 개를 겹치지 않는 생짜 버퍼 @p pTarget 으로 옮기고 원본을 소멸시킵니다(키우기 · 줄이기 · 인라인 버퍼 이동이 함께 씁니다).
+         * @details 바이트로 옮겨도 되는 형식(`is_bitwise_relocatable_v`)은 복사 한 번이다(언리얼 `TArray` 의 `RelocateConstructItems`).
+         */
+        static void relocateRangeInternal( T* pTarget, T* pSource, size_t count );
+        /** @brief [offset, _size) 를 @p count 칸 뒤로 밀어 [offset, offset + count) 를 생짜로 비웁니다. 용량은 확보해 둔 뒤 부르고 `_size` 는 부르는 쪽이 올립니다. 바이트로 옮겨도 되는 형식만. */
+        void openGapInternal( size_t offset, size_t count );
+        /** @brief 이미 소멸시킨 [offset, offset + count) 로 뒤쪽 원소를 당깁니다. `_size` 는 부르는 쪽이 내립니다. 바이트로 옮겨도 되는 형식만. */
+        void closeGapInternal( size_t offset, size_t count );
         /** @brief 비어 있는 버퍼(size = 0, 용량은 확보됨)의 앞에서부터 count 개를 복사해 넣습니다. */
         void copyFromInternal( const T* pSource, size_t count );
         void clearInternal() noexcept;
@@ -284,34 +294,56 @@ namespace sw
         if ( new_cap <= _capacity )
             return;
         T* pNewData = do_allocate( new_cap );
-        if constexpr ( is_bitwise_copyable_v<T> )
+        relocateRangeInternal( pNewData, _pData, _size );
+        if ( is_inline( _pData ) == false )
+            do_deallocate( _pData, _capacity );
+        _pData    = pNewData;
+        _capacity = new_cap;
+    }
+
+    template <typename T, typename Allocator>
+    inline void vector<T, Allocator>::relocateRangeInternal( T* pTarget, T* pSource, size_t count )
+    {
+        if constexpr ( is_bitwise_relocatable_v<T> )
         {
-            // 생성자도 소멸자도 할 일이 없는 타입이면 옛 버퍼는 그냥 바이트다. 방금 할당한 새 버퍼와 겹치지 않으므로
-            // copy 로 충분하다.
-            if ( _size > 0 )
-                Memory::copy( pNewData, _pData, _size * sizeof( T ) );
+            // 옛 버퍼는 옮기고 나면 그냥 바이트다(소멸자를 부르지 않는다). 두 버퍼는 겹치지 않으므로 copy 로 충분하다.
+            if ( count > 0 )
+                Memory::copy( static_cast<void*>( pTarget ), static_cast<const void*>( pSource ), count * sizeof( T ) );
         }
         else
         {
             // 1 · 3번 분기의 본문이 같지만 중복이 아니다. **순서가 규칙이다.** 이동이 예외를 던질 수 있으면 복사를 먼저 고른다
             // (복사는 실패해도 원본이 남아 있어 되돌릴 수 있다). 복사조차 안 될 때만 예외를 던지는 이동을 쓴다. 셋을 합치면 이
             // 우선순위가 사라진다.
-            for ( size_t index = 0; index < _size; ++index )
+            for ( size_t index = 0; index < count; ++index )
             {
                 if constexpr ( std::is_nothrow_move_constructible_v<T> )
                     // NOLINTNEXTLINE(bugprone-branch-clone) — 순서가 규칙이다(위 주석: 예외 없는 이동 먼저, 복사, 예외를 던지는 이동은 마지막)
-                    sw_placement_new( ( pNewData + ( index ) ) ) T( std::move( _pData[index] ) );
+                    sw_placement_new( ( pTarget + ( index ) ) ) T( std::move( pSource[index] ) );
                 else if constexpr ( std::is_copy_constructible_v<T> )
-                    sw_placement_new( ( pNewData + ( index ) ) ) T( _pData[index] );
+                    sw_placement_new( ( pTarget + ( index ) ) ) T( pSource[index] );
                 else if constexpr ( std::is_move_constructible_v<T> )
-                    sw_placement_new( ( pNewData + ( index ) ) ) T( std::move( _pData[index] ) );
-                _pData[index].~T();
+                    sw_placement_new( ( pTarget + ( index ) ) ) T( std::move( pSource[index] ) );
+                pSource[index].~T();
             }
         }
-        if ( is_inline( _pData ) == false )
-            do_deallocate( _pData, _capacity );
-        _pData    = pNewData;
-        _capacity = new_cap;
+    }
+
+    template <typename T, typename Allocator>
+    inline void vector<T, Allocator>::openGapInternal( size_t offset, size_t count )
+    {
+        static_assert( is_bitwise_relocatable_v<T>, "openGapInternal moves raw bytes" );
+        if ( offset < _size )
+            Memory::move( static_cast<void*>( _pData + offset + count ), static_cast<const void*>( _pData + offset ), ( _size - offset ) * sizeof( T ) );
+    }
+
+    template <typename T, typename Allocator>
+    inline void vector<T, Allocator>::closeGapInternal( size_t offset, size_t count )
+    {
+        static_assert( is_bitwise_relocatable_v<T>, "closeGapInternal moves raw bytes" );
+        const size_t tailStart = offset + count;
+        if ( tailStart < _size )
+            Memory::move( static_cast<void*>( _pData + offset ), static_cast<const void*>( _pData + tailStart ), ( _size - tailStart ) * sizeof( T ) );
     }
 
     template <typename T, typename Allocator>
@@ -464,11 +496,7 @@ namespace sw
         {
             _pData    = get_inline_ptr();
             _capacity = get_inline_cap();
-            for ( size_t index = 0; index < other._size; ++index )
-            {
-                sw_placement_new( ( _pData + ( index ) ) ) T( std::move( other._pData[index] ) );
-                other._pData[index].~T();
-            }
+            relocateRangeInternal( _pData, other._pData, other._size );
             _size       = other._size;
             other._size = 0;
         }
@@ -572,11 +600,7 @@ namespace sw
 
             if ( other.is_inline( other._pData ) )
             {
-                for ( size_t index = 0; index < other._size; ++index )
-                {
-                    sw_placement_new( ( _pData + ( index ) ) ) T( std::move( other._pData[index] ) );
-                    other._pData[index].~T();
-                }
+                relocateRangeInternal( _pData, other._pData, other._size );
             }
             else
             {
@@ -848,16 +872,7 @@ namespace sw
             if ( has_inline_buffer() && _size <= get_inline_cap() )
             {
                 T* pNewData = get_inline_ptr();
-                for ( size_t index = 0; index < _size; ++index )
-                {
-                    if constexpr ( std::is_nothrow_move_constructible_v<T> )
-                        sw_placement_new( ( pNewData + ( index ) ) ) T( std::move( _pData[index] ) );
-                    else if constexpr ( std::is_copy_constructible_v<T> )
-                        sw_placement_new( ( pNewData + ( index ) ) ) T( _pData[index] );
-                    else if constexpr ( std::is_move_constructible_v<T> )
-                        sw_placement_new( ( pNewData + ( index ) ) ) T( std::move( _pData[index] ) );
-                    _pData[index].~T();
-                }
+                relocateRangeInternal( pNewData, _pData, _size );
                 do_deallocate( _pData, _capacity );
                 _pData    = pNewData;
                 _capacity = get_inline_cap();
@@ -872,16 +887,7 @@ namespace sw
             else
             {
                 T* pNewData = do_allocate( _size );
-                for ( size_t index = 0; index < _size; ++index )
-                {
-                    if constexpr ( std::is_nothrow_move_constructible_v<T> )
-                        sw_placement_new( ( pNewData + ( index ) ) ) T( std::move( _pData[index] ) );
-                    else if constexpr ( std::is_copy_constructible_v<T> )
-                        sw_placement_new( ( pNewData + ( index ) ) ) T( _pData[index] );
-                    else if constexpr ( std::is_move_constructible_v<T> )
-                        sw_placement_new( ( pNewData + ( index ) ) ) T( std::move( _pData[index] ) );
-                    _pData[index].~T();
-                }
+                relocateRangeInternal( pNewData, _pData, _size );
                 do_deallocate( _pData, _capacity );
                 _pData    = pNewData;
                 _capacity = _size;
@@ -921,7 +927,12 @@ namespace sw
         if ( _size >= _capacity )
             reserveInternal( _capacity == 0 ? 4 : _capacity * 2 );
 
-        if ( offset < _size )
+        if constexpr ( is_bitwise_relocatable_v<T> )
+        {
+            openGapInternal( offset, 1 );
+            sw_placement_new( ( _pData + ( offset ) ) ) T( std::move( movedValue ) );
+        }
+        else if ( offset < _size )
         {
             sw_placement_new( ( _pData + ( _size ) ) ) T( std::move( _pData[_size - 1] ) );
             for ( size_t itemIndex = _size - 1; itemIndex > offset; --itemIndex )
@@ -966,33 +977,43 @@ namespace sw
         if ( _size + count > _capacity )
             reserveInternal( MathUtil::max( _capacity * 2, _size + count ) );
 
-        // 1) 뒤쪽 원소들을 count 개 뒤로 민다. **뒤에서부터** 옮겨야 아직 읽지 않은 원소를 덮지 않는다.
-        //    목적지가 이미 살아 있는 슬롯이면 이동 대입, 초기화되지 않은 슬롯이면 placement new 다.
-        //    주의: 이 구분을 `itemIndex - count >= offset` 으로 하면 `count > _size` 일 때 그 뺄셈이 언더플로해 조건이
-        //    언제나 참이 되고, **존재하지 않는 원소에서 이동해 온다**(`{10}` 에 `insert( begin, 2, 7 )` 이면 바로 걸린다).
-        const size_t tailCount = _size - offset;
-        for ( size_t movedCount = 0; movedCount < tailCount; ++movedCount )
+        if constexpr ( is_bitwise_relocatable_v<T> )
         {
-            const size_t fromIndex = _size - 1 - movedCount;
-            const size_t toIndex   = fromIndex + count;
-            if ( toIndex >= _size )
-                sw_placement_new( ( _pData + ( toIndex ) ) ) T( std::move( _pData[fromIndex] ) );
-            else
-                _pData[toIndex] = std::move( _pData[fromIndex] );
+            openGapInternal( offset, count );
+            fillConstructRangeInternal( offset, offset + count, valueCopy );
+            _size += count;
+            return _pData + offset;
         }
-
-        // 2) 빈 슬롯 [offset, offset + count) 를 채운다. 원래 살아 있던 슬롯은 대입하고, 그 뒤 슬롯은 생성한다.
-        for ( size_t index = 0; index < count; ++index )
+        else
         {
-            const size_t targetIndex = offset + index;
-            if ( targetIndex < _size )
-                _pData[targetIndex] = valueCopy;
-            else
-                sw_placement_new( ( _pData + ( targetIndex ) ) ) T( valueCopy );
-        }
+            // 1) 뒤쪽 원소들을 count 개 뒤로 민다. **뒤에서부터** 옮겨야 아직 읽지 않은 원소를 덮지 않는다.
+            //    목적지가 이미 살아 있는 슬롯이면 이동 대입, 초기화되지 않은 슬롯이면 placement new 다.
+            //    주의: 이 구분을 `itemIndex - count >= offset` 으로 하면 `count > _size` 일 때 그 뺄셈이 언더플로해 조건이
+            //    언제나 참이 되고, **존재하지 않는 원소에서 이동해 온다**(`{10}` 에 `insert( begin, 2, 7 )` 이면 바로 걸린다).
+            const size_t tailCount = _size - offset;
+            for ( size_t movedCount = 0; movedCount < tailCount; ++movedCount )
+            {
+                const size_t fromIndex = _size - 1 - movedCount;
+                const size_t toIndex   = fromIndex + count;
+                if ( toIndex >= _size )
+                    sw_placement_new( ( _pData + ( toIndex ) ) ) T( std::move( _pData[fromIndex] ) );
+                else
+                    _pData[toIndex] = std::move( _pData[fromIndex] );
+            }
 
-        _size += count;
-        return _pData + offset;
+            // 2) 빈 슬롯 [offset, offset + count) 를 채운다. 원래 살아 있던 슬롯은 대입하고, 그 뒤 슬롯은 생성한다.
+            for ( size_t index = 0; index < count; ++index )
+            {
+                const size_t targetIndex = offset + index;
+                if ( targetIndex < _size )
+                    _pData[targetIndex] = valueCopy;
+                else
+                    sw_placement_new( ( _pData + ( targetIndex ) ) ) T( valueCopy );
+            }
+
+            _size += count;
+            return _pData + offset;
+        }
     }
 
     template <typename T, typename Allocator>
@@ -1037,17 +1058,16 @@ namespace sw
             if ( _size + count > _capacity )
                 reserveInternal( MathUtil::max( _capacity * 2, _size + count ) );
 
-            const size_t tailCount = _size - offset;
-            if constexpr ( std::is_trivially_copyable_v<T> )
+            if constexpr ( is_bitwise_relocatable_v<T> )
             {
-                if ( tailCount > 0 )
-                    std::memmove( static_cast<void*>( _pData + offset + count ), static_cast<const void*>( _pData + offset ), tailCount * sizeof( T ) );
+                openGapInternal( offset, count );
                 T* pTarget = _pData + offset;
                 for ( ; first != last; ++first, ++pTarget )
                     sw_placement_new( pTarget ) T( *first );
             }
             else
             {
+                const size_t tailCount = _size - offset;
                 // `insert( pos, count, value )` 와 같은 규칙: 뒤에서부터 옮기고, 살아 있는 슬롯은 대입 · 빈 슬롯은 생성한다.
                 for ( size_t movedCount = 0; movedCount < tailCount; ++movedCount )
                 {
@@ -1094,11 +1114,19 @@ namespace sw
         // 배포본에서만 범위 밖을 훑게 된다.
         if ( offset >= _size )
             return _pData + _size;
-        for ( size_t itemIndex = offset; itemIndex < _size - 1; ++itemIndex )
+        if constexpr ( is_bitwise_relocatable_v<T> )
         {
-            _pData[itemIndex] = std::move( _pData[itemIndex + 1] );
+            destroyRangeInternal( offset, offset + 1 );
+            closeGapInternal( offset, 1 );
         }
-        _pData[_size - 1].~T();
+        else
+        {
+            for ( size_t itemIndex = offset; itemIndex < _size - 1; ++itemIndex )
+            {
+                _pData[itemIndex] = std::move( _pData[itemIndex + 1] );
+            }
+            _pData[_size - 1].~T();
+        }
         --_size;
         return _pData + offset;
     }
@@ -1119,11 +1147,19 @@ namespace sw
             return _pData + _size;
         if ( count > 0 )
         {
-            for ( size_t itemIndex = offset; itemIndex < _size - count; ++itemIndex )
+            if constexpr ( is_bitwise_relocatable_v<T> )
             {
-                _pData[itemIndex] = std::move( _pData[itemIndex + count] );
+                destroyRangeInternal( offset, offset + count );
+                closeGapInternal( offset, count );
             }
-            destroyRangeInternal( _size - count, _size );
+            else
+            {
+                for ( size_t itemIndex = offset; itemIndex < _size - count; ++itemIndex )
+                {
+                    _pData[itemIndex] = std::move( _pData[itemIndex + count] );
+                }
+                destroyRangeInternal( _size - count, _size );
+            }
             _size -= count;
         }
         return _pData + offset;
@@ -1315,4 +1351,10 @@ namespace sw
 
     template <typename T, size_t N = 32>
     using small_vector = vector<T, InlineAllocator<T, N>>;
+
+    /** @brief 버퍼 포인터와 두 수뿐이다. 인라인 버퍼를 든 것(`small_vector`)은 자기 안을 가리켜 바이트로 옮길 수 없다. */
+    template <typename T, typename Allocator>
+    struct is_bitwise_relocatable<vector<T, Allocator>> : std::bool_constant<has_inline_allocator<Allocator>::value == false && std::is_empty_v<Allocator>>
+    {
+    };
 } // namespace sw

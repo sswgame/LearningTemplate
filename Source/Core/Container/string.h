@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Concurrency/DataRaceDetector.h"
+#include "Core/Container/BitwiseRelocatable.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Hash/HashUtil.h"
@@ -655,6 +656,31 @@ namespace sw
             SW_SCOPED_RACE_READ();
             return basic_string( Base::substr( pos, count ) );
         }
+    };
+
+    namespace internal
+    {
+        /**
+         * @brief 표준 라이브러리의 문자열이 바이트로 옮겨도 되는 구현인지입니다.
+         * @details MSVC STL(반복자 디버그 꺼짐)과 libc++ 는 자기 주소를 들지 않는다(libc++ 는 스스로 그렇게 표시한다 — ASan 은 짧은 글 버퍼에 독을 바르므로 뺀다).
+         *          libstdc++ 는 짧은 글일 때 포인터가 자기 안의 버퍼를 가리키고, MSVC 반복자 디버그는 컨테이너 대리 객체가 이 객체의 주소를 든다.
+         */
+#if defined( _MSVC_STL_VERSION )
+        inline constexpr bool kStdStringBitwiseRelocatable = _ITERATOR_DEBUG_LEVEL == 0;
+#elif defined( _LIBCPP_VERSION )
+    #if __has_feature( address_sanitizer )
+        inline constexpr bool kStdStringBitwiseRelocatable = false;
+    #else
+        inline constexpr bool kStdStringBitwiseRelocatable = true;
+    #endif
+#else
+        inline constexpr bool kStdStringBitwiseRelocatable = false;
+#endif
+    } // namespace internal
+
+    template <typename CharT, typename Traits, typename Allocator>
+    struct is_bitwise_relocatable<basic_string<CharT, Traits, Allocator>> : std::bool_constant<internal::kStdStringBitwiseRelocatable && std::is_empty_v<Allocator>>
+    {
     };
 
     // 이어 붙이기(`+`)는 막는다 — 식마다 임시 문자열을 할당했다 버린다(사용자 지적 2026-11-20, 같은 지적이 되풀이돼 문서 규칙 대신 형식으로 막는다).

@@ -490,7 +490,7 @@ SW_TEST_CASE_F( AsymmetricHorrorRulesTest, HeartbeatAndStimuli )
     vector<AIStimulus> listStimulus;
     _match.collectKillerStimuli( listStimulus );
     SW_REQUIRE_EQUAL( size_t{ 1 }, listStimulus.size() );
-    SW_EXPECT_EQUAL( uint64{ 1 }, listStimulus[0]._id );
+    SW_EXPECT_EQUAL( uint64{ 1 }, listStimulus[0].getID() );
     SW_REQUIRE_TRUE( _match.enterLocker( 0, 0 ) );
     _match.collectKillerStimuli( listStimulus );
     SW_EXPECT_TRUE( listStimulus.empty() );
@@ -968,8 +968,9 @@ SW_TEST_CASE_F( AsymmetricHorrorRulesTest, FastVaultMakesNoise )
     SW_EXPECT_NEAR( 40.0f, survivor( 0 )._noiseRadius, kAsymmetricTolerance );
     vector<AIStimulus> listStimulus;
     _match.collectKillerStimuli( listStimulus );
-    SW_REQUIRE_EQUAL( size_t{ 1 }, listStimulus.size() );
-    SW_EXPECT_NEAR( 40.0f, listStimulus[0]._noiseRadius, kAsymmetricTolerance );
+    SW_REQUIRE_EQUAL( size_t{ 2 }, listStimulus.size() ); // 보이는 몸 + 낸 소리
+    SW_EXPECT_TRUE( listStimulus[1].getKind() == AIStimulusKind::Hearing );
+    SW_EXPECT_NEAR( 40.0f, listStimulus[1].getNoiseRadius(), kAsymmetricTolerance );
     advance( 0.7f );
     SW_EXPECT_NEAR( 0.6f, survivor( 0 )._position._x, kAsymmetricTolerance );
 }

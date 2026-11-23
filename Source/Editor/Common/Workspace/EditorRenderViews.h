@@ -178,6 +178,7 @@ namespace sw::editor
     public:
         static constexpr const utf8* kSubsystemName = "EditorRenderViews";
         const utf8*                  getSubsystemName() const override { return kSubsystemName; }
+        void                         resetToFreshEditor() override;
         /** @brief 남은 뷰 렌더 타깃을 놓고 디바이스 · 백엔드를 잊습니다. */
         void shutdownSubsystem() override;
 

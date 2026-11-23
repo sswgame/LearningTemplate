@@ -21,7 +21,8 @@ namespace sw
         : _prefabPath{ std::move( prefabPath ) }
         , _spawner{}
         , _listIdle{}
-        , _listBusy{}
+        , _busyOrder{}
+        , _listScratchHandle{}
         , _maxIdleCount{ maxIdleCount }
         , _createdCount{}
         , _bContractChecked{ SW_FALSE }
@@ -109,21 +110,23 @@ namespace sw
         if ( pObject == nullptr )
             pObject = spawnInstance( manager, pInstanceName );
         if ( pObject != nullptr )
-            _listBusy.push_back( pObject->getHandle() );
+            _busyOrder.insertOrAssign( pObject->getHandle(), 0 );
         return pObject;
     }
 
     GameObject* PrefabPool::acquireRecycling( GameObjectManager& manager, uint32 maxBusyCount, const utf8* pInstanceName )
     {
         // 앞이 가장 오래 꺼낸 것이다. 지워진 핸들은 수에 넣지 않는다.
-        while ( _listBusy.empty() == false && _listBusy.size() >= maxBusyCount )
+        while ( _busyOrder.empty() == false && _busyOrder.size() >= maxBusyCount )
         {
-            const GameObjectHandle oldest = _listBusy.front();
-            _listBusy.erase( _listBusy.begin() );
-            GameObject* pObject = findLive( manager, oldest );
+            const GameObjectHandle oldest  = _busyOrder.begin()->_key;
+            GameObject*            pObject = findLive( manager, oldest );
             if ( pObject == nullptr )
+            {
+                (void)_busyOrder.erase( oldest );
                 continue;
-            _listBusy.push_back( oldest );
+            }
+            (void)_busyOrder.touch( oldest );
             return pObject;
         }
         return acquire( manager, pInstanceName );
@@ -131,9 +134,7 @@ namespace sw
 
     void PrefabPool::release( GameObjectManager& manager, GameObjectHandle handle )
     {
-        const auto itBusy = std::find( _listBusy.begin(), _listBusy.end(), handle );
-        if ( itBusy != _listBusy.end() )
-            _listBusy.erase( itBusy );
+        (void)_busyOrder.erase( handle ); // 꺼낸 것이 아니어도(이미 돌려준 핸들) 아래가 거른다
         GameObject* pObject = findLive( manager, handle );
         if ( pObject == nullptr )
             return;
@@ -186,12 +187,12 @@ namespace sw
     void PrefabPool::destroyAll( GameObjectManager& manager )
     {
         clear( manager );
-        for ( const GameObjectHandle& handle : _listBusy )
+        for ( const auto& entry : _busyOrder )
         {
-            GameObject* pObject = findLive( manager, handle );
+            GameObject* pObject = findLive( manager, entry._key );
             if ( pObject != nullptr )
                 manager.destroyGameObject( pObject );
         }
-        _listBusy.clear();
+        _busyOrder.clear();
     }
 } // namespace sw

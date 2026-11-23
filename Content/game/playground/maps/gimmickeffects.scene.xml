@@ -1,0 +1,176 @@
+<?asset guid="a9e0fb135306480181245d00abf1bd4f"?>
+<Scene formatVersion="3" name="GimmickEffects">
+	<!-- 기믹 효과 무대 — 발사(LaunchPad × 동적 상자) · 부스트(BoostPad × 바디 없는 탈것) · 소리(삐걱 바닥 × 경비 AI) · 연출 신호(CueTrigger)를 값으로 본다(automation/gimmickeffects).
+	     Crate 는 동적 강체(발사대 위로 떨어뜨리면 쏘인다), Kart 는 키네마틱 몸을 단 KinematicVehicle(부스트 판이 겹침으로 안다),
+	     Guard 는 GuardBrain(PerceptionAIController — 시야 · 청각, data/guard.bt.xml)이 쥔 폰이고 앞 6 m(시야 안)에 SqueakyFloor 가 있다 — 바닥은 소리만 내므로 보이지 않고 들린다. Stepper(Player 태그)가 바닥 · 트리거를 밟는다. -->
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</SceneSettings>
+	<entities>
+		<entity id="1" name="GameCamera">
+			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localID="17709685451340727998" _localPosition="0,26,-30" _localRotation="0.7,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="51.5662" _nearZ="0.1" _farZ="300" _orthoHeight="10" _priority="10" _role="Game" _bOrthographic="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="Sun">
+			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
+				<_listComponent>
+					<DirectionalLightComponent _localID="51927904365891271" _localPosition="0,10,0" _localRotation="0.356582,-2.138715,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _color="1,0.95,0.85" _intensity="1.2" _ambient="0.5" _shadowExtent="30" _shadowDistance="60" _bCastShadow="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="Ground">
+			<GameObject _schemaVersion="0" _name="Ground" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _localID="7198733165449302788" _localPosition="0,-0.5,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Default" _material="Default" _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="80,0.5,80" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="Default">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0.5,0" _localRotation="0,0,0" _localScale="160,1,160" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Plane" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="120" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="4" name="LaunchPad">
+			<GameObject _schemaVersion="0" _name="LaunchPad" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _localID="7198733165449302788" _localPosition="-6,0.25,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Trigger" _material="Default" _mass="0" _bTrigger="true">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="1,0.25,1" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="Default">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _localID="163493842152903304" _localPosition="0,-0.2,0" _localRotation="0,0,0" _localScale="2,0.1,2" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="2" />
+					<LaunchPadComponent _localID="11362723681073614297" _launchVelocity="0,10,0" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="5" name="Crate">
+			<GameObject _schemaVersion="0" _name="Crate" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _localID="7198733165449302788" _localPosition="-6,0.5,6" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Dynamic" _layer="Default" _material="Default" _mass="10">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="0.5,0.5,0.5" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="Default">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="1" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="6" name="BoostPad">
+			<GameObject _schemaVersion="0" _name="BoostPad" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _localID="7198733165449302788" _localPosition="0,0.5,22" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Trigger" _material="Default" _mass="0" _bTrigger="true">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="2,0.5,1.5" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="Default">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _localID="163493842152903304" _localPosition="0,-0.45,0" _localRotation="0,0,0" _localScale="4,0.1,3" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="3" />
+					<BoostPadComponent _localID="12634495917081935575" _duration="1.5" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="7" name="Kart">
+			<GameObject _schemaVersion="0" _name="Kart" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localID="12574257654564749349" _localPosition="0,0,-10" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+					<RigidBodyComponent _localID="7198733165449302788" _localPosition="0,0.5,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="#ae80bcb72e918025" _bodyType="Kinematic" _layer="Default" _material="Default" _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="0.6,0.3,1" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="Default">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0.4,0" _localRotation="0,0,0" _localScale="1.2,0.6,2" _attachOwner="None" _attachComponent="#ae80bcb72e918025" _meshID="Cube" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="2" />
+					<PawnComponent _localID="11149290121538025405" _moveAction="None" _lookAction="None" _upAction="None" _inputLayer="None" _aiControllerPrefab="" _maxPitch="80.21409" _autoPossess="None" _bLockMouse="false">
+						<_listButton />
+						<_listAnalog />
+					</PawnComponent>
+					<KinematicVehicleComponent _localID="3610959554269325066" _tuning="common/data/vehicles/kart.vehicle.xml" _bUsePhysicsGround="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="8" name="Guard">
+			<GameObject _schemaVersion="0" _name="Guard" _bActive="true">
+				<_listComponent>
+					<CharacterControllerComponent _localID="1851894784675401076" _localPosition="10,0.05,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _radius="0.3" _halfHeight="0.6" _stepHeight="0.3" _maxSlopeAngle="45" _gravityScale="1" _mass="70" _layer="Character" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0.9,0" _localRotation="0,0,0" _localScale="0.6,0.9,0.6" _attachOwner="None" _attachComponent="#19b3407eb1f9cd74" _meshID="Capsule" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="1.2" />
+					<PawnComponent _localID="11149290121538025405" _moveAction="None" _lookAction="None" _upAction="None" _inputLayer="None" _aiControllerPrefab="" _maxPitch="80.21409" _autoPossess="None" _bLockMouse="false">
+						<_listButton />
+						<_listAnalog />
+					</PawnComponent>
+					<CharacterMovementComponent _localID="16355992322027375659" _sprintButton="None" _jumpButton="None" _walkSpeed="3" _sprintSpeed="3" _facingMode="MoveDirection" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="9" name="GuardBrain">
+			<GameObject _schemaVersion="0" _name="GuardBrain" _bActive="true">
+				<_listComponent>
+					<PerceptionAIControllerComponent _localID="11632633599632007340" _possessAtStart="8" _turnRate="8" _arriveDistance="0.5" _behaviorTree="game/playground/data/guard.bt.xml" _thinkInterval="1" _team="1" _eyeHeight="1.6" _sightRange="12" _loseSightRange="14" _sightHalfAngle="60" _peripheralRange="2" _hearingScale="1" _memoryDuration="3" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="10" name="SqueakyFloor">
+			<GameObject _schemaVersion="0" _name="SqueakyFloor" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _localID="7198733165449302788" _localPosition="10,0.1,6" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Trigger" _material="Default" _mass="0" _bTrigger="true">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="1,0.2,1" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="Default">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _localID="163493842152903304" _localPosition="0,-0.05,0" _localRotation="0,0,0" _localScale="2,0.05,2" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="2" />
+					<GimmickSensorComponent _localID="5906677949702648734" _defaultWeight="1" _bCountTriggers="false" />
+					<NoiseEmitterComponent _localID="3368014348673673199" _radius="8" _interval="0" _bOnStep="true" />
+					<AIStimulusSourceComponent _localID="2847006017237846958" _team="0" _bVisible="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="11" name="CueTrigger">
+			<GameObject _schemaVersion="0" _name="CueTrigger" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _localID="7198733165449302788" _localPosition="20,1,-6" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Trigger" _material="Default" _mass="0" _bTrigger="true">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="1,1,1" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="Default">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<CueTriggerComponent _localID="9539312581633076328" _cue="Cue.Scare" _sound="game/playground/sounds/click.ogg" _bOnce="true" _cooldown="1" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="12" name="Stepper">
+			<GameObject _schemaVersion="0" _name="Stepper" _bActive="true">
+				<_listComponent>
+					<CharacterControllerComponent _localID="1851894784675401076" _localPosition="30,0.05,-6" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _radius="0.3" _halfHeight="0.6" _stepHeight="0.3" _maxSlopeAngle="45" _gravityScale="1" _mass="70" _layer="Character" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0.9,0" _localRotation="0,0,0" _localScale="0.6,0.9,0.6" _attachOwner="None" _attachComponent="#19b3407eb1f9cd74" _meshID="Capsule" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="1.2" />
+					<TagComponent _localID="5249839963692551013">
+						<_tags>
+							<_listTag>
+								<item>Player</item>
+							</_listTag>
+						</_tags>
+					</TagComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

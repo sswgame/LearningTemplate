@@ -101,6 +101,13 @@ namespace sw
         _realtimeVoxelCellSize      = _voxelSize;
     }
 
+    bool LightProbeVolumeComponent::computeStreamingBounds( AABB& outBox ) const
+    {
+        const float3 center = getWorldPosition();
+        outBox              = AABB{ center - _extent * 0.5f, center + _extent * 0.5f };
+        return true;
+    }
+
     void LightProbeVolumeComponent::setExtent( const float3& extent )
     {
         _extent = float3{ MathUtil::max( extent._x, 0.0f ), MathUtil::max( extent._y, 0.0f ), MathUtil::max( extent._z, 0.0f ) };

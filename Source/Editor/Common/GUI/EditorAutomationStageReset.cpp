@@ -3,8 +3,8 @@
  * @brief 체인의 다음 단계 앞에서 편집기를 새 프로세스처럼 되돌립니다(`SW_AUTOMATION_STAGE_RESET`).
  * @details 세션은 씬 · 전역 변수 · 게임을 되돌리지만 편집기 상태는 모른다. 앞 단계가 연 팝업(Quick Open · 메뉴)은 다음 단계의 클릭을 삼키고,
  *          패널이 쥔 검색 칸 · 필터 · 뷰포트 토글과 닫힌 핵심 패널이 남아, 혼자 돌면 통과하는 시나리오가 체인에서 졌다(편집기 체인 2026-10-30, 27 개).
- *          새 프로세스와 같은 자리로: 재생 · 멀티 프로세스 재생을 멈추고 → 다음 Play 구성을 기본값으로 두고 → 팝업 · 입력 초점 · 탭 막대 선택 · 떠 있는 창의 기억을 풀고 → 편집기 상태 저장소를 처음 값으로 두고 → 패널을 모두 새로 만들고 → 기본 배치로 둔다.
- *          Play 구성은 `netplay.*` 명령이 바꾸면 남아 다음 단계의 툴바가 Net Mode 줄로 그려졌다(netsyncobjects 뒤 screen 의 씬 뷰가 1 화소 낮았다).
+ *          새 프로세스와 같은 자리로: 재생을 멈추고 → 팝업 · 입력 초점 · 탭 막대 선택 · 떠 있는 창의 기억을 풀고 → 하위 객체가 스스로 되돌리고(`EditorContext::resetToFreshEditor`) → 패널을 모두 새로 만들고 → 기본 배치로 둔다.
+ *          하위 객체의 상태를 여기 적지 않는다 — 무엇을 되돌릴지는 그 객체가 정한다(순수 가상 `EditorSubsystem::resetToFreshEditor`).
  */
 #include "pch.h"
 
@@ -12,11 +12,7 @@
 #include "Editor/Common/GUI/Panel/EditorDockLayout.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorRenderViews.h"
 #include "Editor/Common/Workspace/EditorService.h"
-#include "Editor/Common/Workspace/EditorStateStore.h"
-#include "Editor/Common/Workspace/EditorWorkspace.h"
-#include "Editor/Common/Workspace/NetPlay/EditorNetPlaySession.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 
 #include "Engine/Automation/Scenario/AutomationStageReset.h"
@@ -31,11 +27,8 @@ namespace sw::editor
      */
     struct EditorAutomationPlayReset
     {
-        static void stopIfPlaying()
-        {
-            if ( EditorPlaySession::isPlaying() )
-                EditorPlaySession::stop( EditorPlaySessionWriteKey{} );
-        }
+        /** @brief 세션을 멈춥니다 — 일시정지와 씬을 여는 중이라 미룬 시작도(예전에는 도는 것만 멈춰, 멈춰 세운 채 끝난 단계가 다음 단계의 편집을 막았다). */
+        static void stopSession() { EditorPlaySession::stop( EditorPlaySessionWriteKey{} ); }
     };
 
     namespace
@@ -71,8 +64,7 @@ namespace sw::editor
                 EditorContext* pContext = editor::findSubsystem<EditorContext>(); // 선택: 편집기를 켜지 않은 체인(게임 시나리오)에는 없다
                 if ( pContext == nullptr )
                     return;
-                EditorAutomationPlayReset::stopIfPlaying();
-                pContext->getSubsystem<EditorNetPlaySession>().resetToFreshEditor();
+                EditorAutomationPlayReset::stopSession();
                 if ( ImGui::GetCurrentContext() != nullptr )
                 {
                     releaseHeldInput();
@@ -91,10 +83,10 @@ namespace sw::editor
                             ImGui::ClearWindowSettings( pWindow->Name );
                     }
                 }
-                // 문서 포커스도 새 프로세스처럼 비운다 — 앞 단계(abilitycatalog)가 포커스한 abilities.xml 을 다음 단계가 연 카탈로그 패널이 받아 열었다(문서 패널은 열 때 지금 포커스를 받는다).
-                pContext->getSubsystem<EditorWorkspace>().setFocusedAssetPath( "" );
-                pContext->getSubsystem<EditorStateStore>().resetAll(); // 패널 밖 그리기 상태(테마 대화상자 · 툴바 · 메뉴) — 열린 테마 대화상자가 다음 단계의 클릭을 삼켰다. 앞 단계의 파일 잠금(`EditorSaveFileLock`)도 여기서 풀린다
-                EditorSaveFileLock::releaseStaleLocks();               // 죽은 앞 프로세스가 장부에 남긴 잠금 — 상태 소멸자가 돌지 못한 몫이다
+                // 문서 포커스 · 선택 · 기즈모 · 뷰 타깃 · 상태 저장소(열린 테마 대화상자 · 앞 단계의 파일 잠금)까지 하위 객체가 스스로 되돌린다. 패널은 그 뒤에 새로 만든다 —
+                // 문서 패널은 열 때 지금 포커스를 받는다(앞 단계의 abilities.xml 을 다음 단계의 카탈로그 패널이 열었다).
+                pContext->resetToFreshEditor();
+                EditorSaveFileLock::releaseStaleLocks(); // 죽은 앞 프로세스가 장부에 남긴 잠금 — 상태 소멸자가 돌지 못한 몫이다
                 (void)pContext->getSubsystem<EditorPanelManager>().resetAllPanels();
                 EditorDockLayout* pDock = pContext->findSubsystem<EditorDockLayout>(); // 선택: 셸이 도킹 배치를 알리기 전과 셸 없는 테스트 호스트에는 없다
                 if ( pDock != nullptr )

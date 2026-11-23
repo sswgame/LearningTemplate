@@ -13,8 +13,6 @@
 #include "Editor/Common/GUI/Theme/EditorFontSetup.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
-#include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Localization/LocText.h"
@@ -46,12 +44,12 @@ namespace sw::editor
 
             /**
              * @brief 현재 적용된 테마를 반환합니다. 에디터 서브시스템 `EditorTheme` 이 듭니다.
-             * @details 테마는 에디터 범위 안에서만 뜻이 있다. 범위 밖에서 색을 물으면 지어낸 빈 테마로 답하지 않고 `getSubsystem` 이 멈춘다.
+             * @details 테마는 에디터 범위 안에서만 뜻이 있다. 범위 밖에서 색을 물으면 지어낸 빈 테마로 답하지 않고 `EditorTheme::getActive` 가 멈춘다.
              */
-            static const EditorThemeConfig& activeTheme() { return getSubsystem<EditorTheme>().getConfig(); }
+            static const EditorThemeConfig& activeTheme() { return EditorTheme::getActive().getConfig(); }
 
             /** @brief 테마를 교체합니다. */
-            static void setActiveTheme( const EditorThemeConfig& config ) { getSubsystem<EditorTheme>().getConfig() = config; }
+            static void setActiveTheme( const EditorThemeConfig& config ) { EditorTheme::getActive().getConfig() = config; }
 
             /** @brief 폴더에 있는 토큰 벌을 모두 읽어 둡니다. 읽지 못한 벌은 이유와 함께 로그로 남기고 뺀다. */
             static void loadAvailableThemes( vector<EditorThemeConfig>& outListTheme )
@@ -78,7 +76,7 @@ namespace sw::editor
             /** @brief 읽어 둔 벌 목록입니다. 비었으면 지금 읽습니다. */
             static vector<EditorThemeConfig>& availableThemes()
             {
-                EditorTheme& theme = getSubsystem<EditorTheme>();
+                EditorTheme& theme = EditorTheme::getActive();
                 if ( theme.getAvailable().empty() )
                     loadAvailableThemes( theme.getAvailable() );
                 return theme.getAvailable();
@@ -155,7 +153,7 @@ namespace sw::editor
                 // 떠 있는 창 제목줄의 접기 단추(▼)를 뺀다 — 접힌 창은 쓸 일이 없고 제목 앞 빈 단추로만 보였다.
                 style.WindowMenuButtonPosition = ImGuiDir_None;
                 // 위 크기는 96 DPI 기준이다. 모니터 배율을 곱한다(`setDPIScale`).
-                const float32 dpiScale = getSubsystem<EditorTheme>().getDPIScale();
+                const float32 dpiScale = EditorTheme::getActive().getDPIScale();
                 if ( dpiScale != 1.0f )
                     style.ScaleAllSizes( dpiScale );
                 // 글자 크기도 토큰이다(em px). ImGui 1.92 동적 글꼴이라 다음 프레임부터 그 크기로 래스터한다(배율은 `FontScaleDpi` 가 따로 곱한다).
@@ -286,7 +284,7 @@ namespace sw::editor
 
     void EditorThemeUtil::reloadThemes()
     {
-        EditorTheme& theme = getSubsystem<EditorTheme>();
+        EditorTheme& theme = EditorTheme::getActive();
         EditorThemeInternal::loadAvailableThemes( theme.getAvailable() );
         // 지금 벌을 새 값으로 다시 적용하고, 사용자가 덮어쓴 강조색 · 둥글기는 설정에서 다시 적용한다. 못 하면 오류를 남기고 지금 테마를 둔다.
         if ( loadFromConfig() )
@@ -307,7 +305,7 @@ namespace sw::editor
     void EditorThemeUtil::setDPIScale( float32 dpiScale )
     {
         const float32 scale = ( dpiScale > 0.0f ) ? dpiScale : 1.0f;
-        EditorTheme&  theme = getSubsystem<EditorTheme>();
+        EditorTheme&  theme = EditorTheme::getActive();
         if ( theme.getDPIScale() == scale )
             return;
         // 테마는 96 DPI 기준 값을 보관하고 있으므로 새 배율로 다시 적용하면 된다.
@@ -318,7 +316,7 @@ namespace sw::editor
 
     float32 EditorThemeUtil::getDPIScale()
     {
-        return getSubsystem<EditorTheme>().getDPIScale();
+        return EditorTheme::getActive().getDPIScale();
     }
 
     bool EditorThemeUtil::loadFromConfig()
@@ -361,7 +359,7 @@ namespace sw::editor
         const Color*           pColor = EditorThemeInternal::activeTheme().findColor( key );
         if ( pColor != nullptr )
             return *pColor;
-        if ( getSubsystem<EditorTheme>().markMissingKey( key ) )
+        if ( EditorTheme::getActive().markMissingKey( key ) )
             SW_LOG_ERROR_ID( "EditorTheme.MissingKey", "Theme color '%#' is not in the '%#' token file (_color)", key.c_str(), EditorThemeInternal::activeTheme()._name.c_str() );
         return kMissingColor;
     }
@@ -371,7 +369,7 @@ namespace sw::editor
         const float32* pValue = EditorThemeInternal::activeTheme().findMetric( key );
         if ( pValue != nullptr )
             return *pValue;
-        if ( getSubsystem<EditorTheme>().markMissingKey( key ) )
+        if ( EditorTheme::getActive().markMissingKey( key ) )
             SW_LOG_ERROR_ID( "EditorTheme.MissingKey", "Theme metric '%#' is not in the '%#' token file (_metric)", key.c_str(), EditorThemeInternal::activeTheme()._name.c_str() );
         return 0.0f;
     }

@@ -100,6 +100,13 @@ namespace sw::editor
                 return true;
             }
 
+            /** @brief 비밀 값은 가린 글만 보인다. 값은 명령줄 · 콘솔로 준다(칸에서 고치면 가린 글에 이어 쓰게 된다). */
+            static bool drawSecretWidget( GlobalVariableInfo& info )
+            {
+                ImGui::TextUnformatted( info.getValueAsString().c_str() );
+                return false;
+            }
+
             /** @brief 리플렉션 enum 테이블이 있으면 열거자 콤보, 없으면 정수 드래그입니다. */
             static bool drawEnumWidget( GlobalVariablesViewModel& model, GlobalVariableInfo& info )
             {
@@ -153,6 +160,7 @@ namespace sw::editor
                 {  GlobalVariableType::String,  &drawStringWidget},
                 {    GlobalVariableType::Enum,    &drawEnumWidget},
                 {GlobalVariableType::DiskPath,  &drawStringWidget}, // 글 칸이다 - 받을 때 절대화는 `setValueAsString` 이 한다
+                {  GlobalVariableType::Secret,  &drawSecretWidget},
             } );
 
             static constexpr bool isWidgetTableInTypeOrder()

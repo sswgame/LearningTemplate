@@ -209,9 +209,9 @@ namespace sw
         {
             StringBuilder<constant::buffer::kMax64> resource;
             if ( entry._key._space == RHIMemoryKeySpace::DeviceObject )
-                resource.appendFormat( "%s %llx", Internal::getKeySpaceName( entry._key._space ), entry._key._id );
+                resource.appendFormat( "%# %llx", Internal::getKeySpaceName( entry._key._space ), entry._key._id );
             else
-                resource.appendFormat( "%s %llu", Internal::getKeySpaceName( entry._key._space ), entry._key._id );
+                resource.appendFormat( "%# %#", Internal::getKeySpaceName( entry._key._space ), entry._key._id );
             const bool        bTexture = entry._key._space == RHIMemoryKeySpace::Texture;
             const string_view format   = bTexture ? string_view{ RHIFormatUtil::getName( entry._shape._format ) } : string_view{};
             outSheet._listRow.push_back( MemoryRow{

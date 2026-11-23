@@ -16,7 +16,6 @@
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
-#include "Engine/Automation/Scenario/AutomationStageReset.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
@@ -932,16 +931,4 @@ namespace sw::editor
                          &MeshModifierSessionWatches::readCurveListKeyCount );
     SW_AUTOMATION_WATCH( meshModifierReferenceList, "MeshModifiers.ReferenceListCount", "Named items of the selected modifier's first reference list",
                          &MeshModifierSessionWatches::readReferenceListCount );
-    namespace
-    {
-        /** @brief 체인의 다음 단계 앞에서 세션을 비웁니다 — 앞 단계가 남긴 저장하지 않은 스택이 `Use Selection` 을 막아 다음 단계가 대상을 잡지 못했다(flowedit 뒤 meshmodifiers). */
-        void resetMeshModifierSessionForNextStage()
-        {
-            MeshModifierSession* pSession = editor::findSubsystem<MeshModifierSession>(); // 선택: 플러그인을 싣지 않은 체인에는 없다
-            if ( pSession != nullptr )
-                pSession->resetToFreshEditor();
-        }
-    } // namespace
-
-    SW_AUTOMATION_STAGE_RESET( meshModifierSession, "mesh modifier session (target, unsaved stack, undo history)", &resetMeshModifierSessionForNextStage );
 } // namespace sw::editor

@@ -188,6 +188,12 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 상태
     // ------------------------------------------------------------------------------
+    void OverworldGameModeComponent::onWorldOriginShifted( const float3& delta )
+    {
+        _mapOrigin += delta;
+        _heroPosition += delta;
+    }
+
     void OverworldGameModeComponent::serializeGameState( StateIO& io )
     {
         io.header( kGameModeStateTag, kGameModeStateVersion );

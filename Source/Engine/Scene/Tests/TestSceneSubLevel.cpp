@@ -6,6 +6,8 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
+#include "Engine/Foundation/DeterministicRun.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -90,12 +92,32 @@ namespace
         }
     };
     using Util = SceneSubLevelTestUtil;
+
+    /** @brief 테스트 동안 결정적 실행의 "프레임마다 끝내기" 를 정한다 — 켜면 갱신이 걸린 문서 읽기를 기다려 짓는다(잠 없이). */
+    class ScopedFinishJobsPolicy
+    {
+    public:
+        explicit ScopedFinishJobsPolicy( uint8 bFinish )
+            : _previous{ engine::getSubsystem<DeterministicRun>().getPolicy() }
+        {
+            DeterministicRunPolicy policy     = _previous;
+            policy._bFinishAssetJobsEachFrame = bFinish == SW_TRUE ? SW_TRUE : SW_FALSE;
+            engine::getSubsystem<DeterministicRun>().setPolicy( policy );
+        }
+        ~ScopedFinishJobsPolicy() { engine::getSubsystem<DeterministicRun>().setPolicy( _previous ); }
+        ScopedFinishJobsPolicy( const ScopedFinishJobsPolicy& )            = delete;
+        ScopedFinishJobsPolicy& operator=( const ScopedFinishJobsPolicy& ) = delete;
+
+    private:
+        DeterministicRunPolicy _previous;
+    };
 } // namespace
 
 /** @brief [SceneSubLevelTest] 더한 씬은 다음 갱신에 앵커 아래로 펼쳐 서고(자리 · 부착 · 늘 올라 있음), 빼면 앵커와 멤버가 모두 내려간다 */
 SW_TEST_CASE( SceneSubLevelTest, AddBuildsUnderAnchorAndRemoveUnloads )
 {
     const test::ScopedScratchDomain domain;
+    const ScopedFinishJobsPolicy    finishJobs{ SW_TRUE };
     const string                    shopPath = Util::writeShop( domain );
     Scene                           scene{ "Hub" };
     SW_REQUIRE_TRUE( scene.instantiate( Util::makeHostDocument() ) );
@@ -106,6 +128,9 @@ SW_TEST_CASE( SceneSubLevelTest, AddBuildsUnderAnchorAndRemoveUnloads )
                                                                          float3{ 100.0f, 0.0f, 0.0f },
                                                                          float3{}
     } ) );
+    SubLevelState state{ SubLevelState::Queued };
+    SW_REQUIRE_TRUE( subLevels.findSubLevelState( "Shop", state ) );
+    SW_EXPECT_TRUE( state == SubLevelState::Loading );              // 문서는 워커가 읽는다 — 게임 스레드는 기다리지 않는다
     SW_EXPECT_EQUAL( 0u, Util::countNamed( objects, "Shop/Box" ) ); // 받기만 한다 — 짓는 것은 갱신이다
     subLevels.update( 0.0f );
     objects.mergePendingAdds();
@@ -137,10 +162,11 @@ SW_TEST_CASE( SceneSubLevelTest, AddBuildsUnderAnchorAndRemoveUnloads )
     SW_EXPECT_EQUAL( 1u, Util::countNamed( objects, "Ground" ) );
 }
 
-/** @brief [SceneSubLevelTest] 같은 씬을 다른 이름으로 두 번 더하면 파일 id 가 겹치지 않고 각자 자기 앵커 안에서 잇는다 — 같은 이름 · 없는 씬은 받지 않는다 */
+/** @brief [SceneSubLevelTest] 같은 씬을 다른 이름으로 두 번 더하면 파일 id 가 겹치지 않고 각자 자기 앵커 안에서 잇는다 — 같은 이름은 받지 않고 없는 씬은 읽은 뒤 실패한다 */
 SW_TEST_CASE( SceneSubLevelTest, SameSceneTwiceDoesNotShareIds )
 {
     const test::ScopedScratchDomain domain;
+    const ScopedFinishJobsPolicy    finishJobs{ SW_TRUE };
     const string                    shopPath = Util::writeShop( domain );
     Scene                           scene{ "Hub" };
     SW_REQUIRE_TRUE( scene.instantiate( Util::makeHostDocument() ) );
@@ -159,10 +185,13 @@ SW_TEST_CASE( SceneSubLevelTest, SameSceneTwiceDoesNotShareIds )
     SW_EXPECT_LOG( "Scene.FileNotFound" );
     SW_EXPECT_LOG( "SceneSubLevels.SceneNotLoaded" );
     SW_EXPECT_FALSE( subLevels.addSubLevel( scene, "East", shopPath, SceneSubLevelSubsystem::Placement{} ) );
-    SW_EXPECT_FALSE( subLevels.addSubLevel( scene, "Nowhere", "missing/nothing.scene.xml", SceneSubLevelSubsystem::Placement{} ) );
+    SW_EXPECT_TRUE( subLevels.addSubLevel( scene, "Nowhere", "missing/nothing.scene.xml", SceneSubLevelSubsystem::Placement{} ) ); // 읽기는 비동기다 — 없는 씬은 읽은 뒤 안다
     subLevels.update( 0.0f );
     objects.mergePendingAdds();
     SW_REQUIRE_EQUAL( 2u, subLevels.getLoadedSubLevelCount() );
+    SubLevelState nowhere{ SubLevelState::Queued };
+    SW_REQUIRE_TRUE( subLevels.findSubLevelState( "Nowhere", nowhere ) );
+    SW_EXPECT_TRUE( nowhere == SubLevelState::Failed );
 
     const GameObject* pEastLid = objects.findGameObjectByName( hashed_string( "East/Lid" ) );
     const GameObject* pWestLid = objects.findGameObjectByName( hashed_string( "West/Lid" ) );
@@ -206,6 +235,7 @@ SW_TEST_CASE( SceneSubLevelTest, MemberNodesUseTheAnchorScope )
 SW_TEST_CASE( SceneSubLevelTest, SaveStateRestoresOverAClearedManager )
 {
     const test::ScopedScratchDomain domain;
+    const ScopedFinishJobsPolicy    finishJobs{ SW_TRUE };
     const string                    shopPath = Util::writeShop( domain );
     Scene                           scene{ "Hub" };
     SW_REQUIRE_TRUE( scene.instantiate( Util::makeHostDocument() ) );
@@ -246,4 +276,57 @@ SW_TEST_CASE( SceneSubLevelTest, SaveStateRestoresOverAClearedManager )
     SW_REQUIRE_TRUE( pAnchor != nullptr && pLid != nullptr );
     SW_EXPECT_TRUE( pAnchor->isAlwaysLoaded() );
     SW_EXPECT_TRUE( subLevels.isSubLevelObject( pLid->getObjectID() ) );
+}
+
+/**
+ * @brief [SceneSubLevelTest] 문서를 읽는 중에 저장하면 씬 경로만 실리고, 복원이 문서를 다시 읽어 세운다 — 빈 하위 레벨로 서지 않는다
+ * @details 거두기 전(갱신을 돌리지 않았다)이라 읽기가 실제로 끝났어도 단계는 `Loading` 이다 — 워커 속도와 무관하다.
+ */
+SW_TEST_CASE( SceneSubLevelTest, SaveWhileReadingReadsAgainOnRestore )
+{
+    const test::ScopedScratchDomain domain;
+    const ScopedFinishJobsPolicy    finishJobs{ SW_TRUE };
+    const string                    shopPath = Util::writeShop( domain );
+    Scene                           scene{ "Hub" };
+    SW_REQUIRE_TRUE( scene.instantiate( Util::makeHostDocument() ) );
+    GameObjectManager&      objects   = *scene.getObjectManager();
+    SceneSubLevelSubsystem& subLevels = objects.getSubsystem<SceneSubLevelSubsystem>();
+    SW_REQUIRE_TRUE( subLevels.addSubLevel( scene, "Shop", shopPath, SceneSubLevelSubsystem::Placement{
+                                                                         float3{ 100.0f, 0.0f, 0.0f },
+                                                                         float3{}
+    } ) );
+    vector<uint8> bytes;
+    subLevels.writeSaveState( bytes );
+    SceneSubLevelSubsystem::SaveState state;
+    SW_REQUIRE_TRUE( SceneSubLevelSubsystem::readSaveState( bytes.data(), bytes.size(), state ) );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, state._listSubLevel.size() );
+    SW_EXPECT_FALSE( state._listSubLevel[0]._bRead );
+    SW_EXPECT_TRUE( state._listSubLevel[0]._listNode.empty() );
+
+    objects.clear();
+    scene.rebindRestoredFileIDs( {} );
+    subLevels.applySaveState( scene, std::move( state ) );
+    subLevels.update( 0.0f );
+    objects.mergePendingAdds();
+    SW_REQUIRE_EQUAL( 1u, subLevels.getLoadedSubLevelCount() );
+    SW_EXPECT_EQUAL( 1u, Util::countNamed( objects, "Shop/Box" ) );
+    SW_EXPECT_EQUAL( 100.0f, Util::worldPosition( objects, "Shop/Box" )._x );
+}
+
+/** @brief [SceneSubLevelTest] 읽는 중에 빼면 결과를 버리고 남은 것이 없다 */
+SW_TEST_CASE( SceneSubLevelTest, RemoveWhileReadingLeavesNothing )
+{
+    const test::ScopedScratchDomain domain;
+    const ScopedFinishJobsPolicy    finishJobs{ SW_FALSE };
+    const string                    shopPath = Util::writeShop( domain );
+    Scene                           scene{ "Hub" };
+    SW_REQUIRE_TRUE( scene.instantiate( Util::makeHostDocument() ) );
+    GameObjectManager&      objects   = *scene.getObjectManager();
+    SceneSubLevelSubsystem& subLevels = objects.getSubsystem<SceneSubLevelSubsystem>();
+    SW_REQUIRE_TRUE( subLevels.addSubLevel( scene, "Shop", shopPath, SceneSubLevelSubsystem::Placement{} ) );
+    SW_REQUIRE_TRUE( subLevels.removeSubLevel( "Shop" ) );
+    subLevels.update( 0.0f );
+    SW_EXPECT_EQUAL( 0u, subLevels.getSubLevelCount() );
+    SW_EXPECT_EQUAL( 0u, Util::countNamed( objects, "Shop" ) );
+    SW_EXPECT_EQUAL( 1u, Util::countNamed( objects, "Ground" ) );
 }

@@ -417,7 +417,7 @@ namespace sw
 
         if ( _gameAPI.deserializeState( _game, _listGameSavedState.data(), static_cast<uint32>( _listGameSavedState.size() ) ) )
         {
-            SW_LOG_INFO_ID( "GameModuleManager.SceneObjectStateRestored", "Scene object state restored from %zu bytes.", _listGameSavedState.size() );
+            SW_LOG_INFO_ID( "GameModuleManager.SceneObjectStateRestored", "Scene object state restored from %# bytes.", _listGameSavedState.size() );
             _listGameSavedState.clear();
             if ( engine::areEngineServicesBound() )
                 engine::getSubsystem<SceneManager>().setSaveBlockReason( {} );

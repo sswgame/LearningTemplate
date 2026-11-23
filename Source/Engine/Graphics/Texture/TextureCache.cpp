@@ -328,10 +328,13 @@ namespace sw
                 const auto               it = _mapEntry.find( key );
                 SW_ASSERT( it != _mapEntry.end() && it->second._bLoading );
                 it->second._bLoading = false;
-                // 내리는 사이 소유자가 `releaseCPUTexture` 했으면 여기서 지운다(GPU 자원은 이미 내렸다).
+                // 내리는 사이 소유자가 `releaseCPUTexture` 했으면 여기서 지운다(GPU 자원은 이미 내렸다). 텍스처는 잠금을 놓은 뒤 사라진다.
                 const bool bOrphaned = it->second._bPinned == false && it->second._refCount == 0;
                 if ( bOrphaned )
+                {
+                    pErased = std::move( it->second._texture );
                     _mapEntry.erase( it );
+                }
             }
             _cvLoaded.notify_all();
         }
@@ -1210,6 +1213,7 @@ namespace sw
         if ( _impl == nullptr || isCPUTexturePath( relativePath ) == false )
             return;
         const string             key = AssetRedirect::toCacheKey( relativePath );
+        unique_ptr<Texture2D>    pErased; // 픽셀 바이트(수 MB)는 잠금을 놓은 뒤 푼다
         UniqueLock<shared_mutex> lock{ _impl->_mutex };
         const auto               it = _impl->_mapEntry.find( key );
         if ( it == _impl->_mapEntry.end() )
@@ -1217,7 +1221,10 @@ namespace sw
         it->second._bPinned = false;
         // 참조가 0 이면 GPU 자원도 없다(`release` 가 내렸고 `initRHI` 는 CPU 텍스처를 올리지 않는다).
         if ( it->second._refCount == 0 && it->second._bLoading == false )
+        {
+            pErased = std::move( it->second._texture );
             _impl->_mapEntry.erase( it );
+        }
     }
 
     void TextureCache::declareRenderTarget( string_view relativePath, uint32 width, uint32 height )

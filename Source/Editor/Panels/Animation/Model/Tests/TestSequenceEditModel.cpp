@@ -558,6 +558,22 @@ SW_TEST_CASE( SequenceEditModelTest, BindingsAreRemovedOnlyWhenUnused )
     SW_EXPECT_TRUE( empty.isDraftingItem() );
 }
 
+// 거절된 컷 더하기는 문서를 고치지 않는다 — 겹친 컷이 있는 파일에서 앞 컷을 줄인 뒤에 거절했다(되돌리기 기록도 없다).
+SW_TEST_CASE( SequenceEditModelTest, RejectedCameraCutLeavesTheLane )
+{
+    SequenceEditModel document = SequenceEditModelTestUtil::makeDocument();
+    document._asset._frameMin  = 0;
+    document._asset._frameMax  = 100;
+    SW_REQUIRE_TRUE( document.addCameraCut( 0 ) == 0 );
+    SequenceTrackItem overlapping = document._asset._listItem[0]; // 0..100 과 겹치는 40..60
+    overlapping._start            = 40;
+    overlapping._end              = 60;
+    document._asset._listItem.push_back( overlapping );
+    SW_EXPECT_FALSE( document.addCameraCut( 40 ).has_value() );
+    SW_EXPECT_EQUAL( 100, document._asset._listItem[0]._end );
+    SW_EXPECT_EQUAL( size_t{ 2 }, document._asset._listItem.size() );
+}
+
 // 컷 차선: 컷을 더하면 앞 컷은 그 프레임 앞에서 끝나고 새 컷은 다음 컷 앞까지다(언리얼 Camera Cut 트랙).
 SW_TEST_CASE( SequenceEditModelTest, AddCameraCutSplitsTheLane )
 {

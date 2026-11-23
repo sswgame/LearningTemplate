@@ -69,6 +69,10 @@ namespace sw::editor
         static void collectVisibleLeaves( const ImGuiDockNode* pNode, vector<const ImGuiDockNode*>& outListLeaf );
 
     private:
+        /** @brief 지금 패널 가시성과 ImGui 설정 글 @p imguiINIText 를 이름 붙인 레이아웃으로 씁니다(`saveNamedLayout` 의 파일 절반). */
+        [[nodiscard]] bool storeNamedLayout( string_view name, string_view folder, string_view imguiINIText ) const;
+        /** @brief 패널 가시성을 windows.json 에 씁니다(`save` 의 절반). 시작 스위치가 정한 가시성은 쓰지 않는다. */
+        void savePanelVisibility() const;
         void applyDefaultDockLayout( uint32 dockspaceID );
         /**
          * @brief 메인 뷰포트 크기가 바뀌었으면 도크 트리의 기준 크기(SizeRef)를 같은 비율로 맞춥니다. `DockSpaceOverViewport` 앞에서 호출합니다.

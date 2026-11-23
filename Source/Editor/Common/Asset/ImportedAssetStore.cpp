@@ -180,7 +180,16 @@ namespace sw::editor
                 continue;
             // 같은 도메인의 임포트 결과(`<x>/models/**`)가 가리키는 파일만 남긴다. 손 데이터는 저장소를 직접 가리키지 않는다(키가 내용과 함께 바뀐다) — 셋의 이름으로 찾는다.
             vector<string> listResult;
-            (void)EditorContentScan::collectFiles( FileUtil::getDirectoryPart( store ), "", listResult, true );
+            vector<string> listStored;
+            const bool     bListed = EditorContentScan::collectFiles( FileUtil::getDirectoryPart( store ), "", listResult, true ) && EditorContentScan::collectFiles( store, "", listStored, true );
+            if ( bListed == false )
+            {
+                // 다 훑지 못한 목록으로 "가리키지 않는다" 를 판정하면 쓰는 파일을 지운다.
+                StringBuilder<constant::buffer::kMax512> problemBuilder;
+                problemBuilder.appendFormat( "%#: could not list the imported results - nothing is removed from it", store );
+                inoutListProblem.push_back( string( problemBuilder.view() ) );
+                continue;
+            }
             unordered_set<string> setReferenced;
             for ( const string& result : listResult )
             {
@@ -201,8 +210,6 @@ namespace sw::editor
                     setReferenced.insert( FileUtil::getFileNamePart( reference ) );
                 }
             }
-            vector<string> listStored;
-            (void)EditorContentScan::collectFiles( store, "", listStored, true );
             for ( const string& stored : listStored )
             {
                 const string fileName = FileUtil::getFileNamePart( FileUtil::normalizeSeparators( stored ) );

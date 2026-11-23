@@ -525,7 +525,7 @@ SW_TEST_CASE( AppearanceInputUtilTest, ApplyEquipmentCopiesTheInstanceState )
     ItemCatalog catalog;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( R"(<ItemCatalog><Item id="helm" category="Armor" slot="Head" maxStack="1" weight="1" durability="100"/></ItemCatalog>)", "test" ) );
     Equipment equipment;
-    equipment.initialize( &catalog, "Head" );
+    equipment.initialize( &catalog, "Head", nullptr, nullptr );
 
     InventorySlot item;
     item._itemID     = hashed_string( "helm" );

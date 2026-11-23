@@ -66,6 +66,7 @@ namespace
             outRotation = state._rotation;
             return true;
         }
+        void shiftOrigin( const float3& delta ) override { (void)delta; }
         void setBodyTransform( PhysicsBodyHandle body, const float3& position, const quaternion& rotation ) override
         {
             BodyState& state = getState( body );

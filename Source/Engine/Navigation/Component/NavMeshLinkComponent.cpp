@@ -12,6 +12,7 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/WorldOrigin.h"
 #include "Engine/Reflection/ReflectionValidation.h"
 
 namespace sw
@@ -125,7 +126,14 @@ namespace sw
         float3 end{};
         if ( computeWorldEndpoints( start, end ) == false )
             return 0;
-        return computeLinkID( start, end, _linkType );
+        return computeLinkID( toAbsolute( start ), toAbsolute( end ), _linkType );
+    }
+
+    float3 NavMeshLinkComponent::toAbsolute( const float3& local ) const
+    {
+        const GameObject*        pOwner   = getOwner();
+        const GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        return pManager != nullptr ? pManager->getWorldOrigin().toAbsolute( local ) : local;
     }
 
     bool NavMeshLinkComponent::makeLink( const NavMeshSettings& settings, uint8 fallbackArea, NavOffMeshLink& outLink ) const
@@ -134,7 +142,7 @@ namespace sw
         if ( computeWorldEndpoints( outLink._start, outLink._end ) == false )
             return false;
         outLink._radius            = _width;
-        outLink._userID            = computeLinkID( outLink._start, outLink._end, _linkType );
+        outLink._userID            = computeLinkID( toAbsolute( outLink._start ), toAbsolute( outLink._end ), _linkType );
         outLink._bBidirectional    = _bBidirectional ? SW_TRUE : SW_FALSE;
         const optional<uint8> area = _areaName.empty() ? optional<uint8>{} : settings.findAreaIndex( _areaName );
         if ( _areaName.empty() == false && area.has_value() == false )

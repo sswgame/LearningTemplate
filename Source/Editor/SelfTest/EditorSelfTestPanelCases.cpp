@@ -392,6 +392,7 @@ namespace sw::editor
             static EditorSelfTestStep runPrefabIgnoresOtherFocusedAssets( EditorSelfTestContext& context )
             {
                 constexpr const utf8* kFocusedMaterialPath = "engine/materials/defaultmaterial.material";
+                constexpr const utf8* kFocusedPrefabPath   = "game/playground/prefabs/testprop.prefab.xml";
 
                 EditorContext&     editorContext = editor::getSubsystem<EditorContext>();
                 GameObjectManager* pManager      = editor::getActiveObjectManager();
@@ -412,6 +413,11 @@ namespace sw::editor
                 EditorToolAssetCommands::collectPrefabOverrides( pObj, {}, prefabPath, instanceName, listOverride, listNestedPrefab );
                 (void)context.expect( prefabPath.empty(), "a focused material was taken as the prefab of a non-prefab object" );
                 (void)context.expect( listOverride.empty(), "a non-prefab object has prefab overrides" );
+                // 프리팹에 포커스가 있어도 그 프리팹의 인스턴스가 아닌 오브젝트는 비교하지 않는다 — 비교하면 "모두 적용" 이 이 오브젝트로 프리팹 파일을 덮었다.
+                EditorToolAssetCommands::collectPrefabOverrides( pObj, kFocusedPrefabPath, prefabPath, instanceName, listOverride, listNestedPrefab );
+                (void)context.expect( prefabPath == kFocusedPrefabPath, "a focused prefab is not shown" );
+                (void)context.expect( instanceName.empty() && listOverride.empty(), "a non-prefab object was compared with the focused prefab" );
+                (void)context.expect( EditorToolAssetCommands::applyPrefabOverridesToTemplate( pObj ) == false, "a non-prefab object was applied to a prefab" );
 
                 workspace.setFocusedAssetPath( savedFocus.c_str() );
                 pManager->destroyGameObject( pObj );
