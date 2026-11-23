@@ -144,7 +144,7 @@ namespace sw
         using Internal         = HZBOcclusionInternal;
         target._bHZBValid      = SW_FALSE;
         const HZBLayout layout = HZBLayout::make( depthWidth, depthHeight );
-        const bool      bReady = pso != 0 && target._hzb.isValid() && target._occlusionTiles.isValid() && target._depthHistory != 0 && target._depthHistoryUAV != kInvalidDescriptorIndex;
+        const bool      bReady = pso != 0 && target._hzb.isValid() && target._occlusionTiles.isValid() && target._depthHistory.isValid();
         if ( bReady == false || layout._mipCount == 0 )
             return false;
         if ( layout._texelCount > target._hzb._capacityElements )
@@ -161,10 +161,10 @@ namespace sw
         // g_HZBRW(u0) / g_OcclusionTilesRW(u1) / 깊이 사본(RW 슬롯 0 — 에뮬만). hzb_build.hlsl 레지스터와 1:1 이다.
         cmd.bindComputeUAV( target._hzb._uav, 0 );
         cmd.bindComputeUAV( target._occlusionTiles._uav, 1 );
-        cmd.bindComputeUAV( target._depthHistoryUAV, shaderslot::kComputeTextureUAV0 );
+        cmd.bindComputeUAV( target._depthHistory._uav, shaderslot::kComputeTextureUAV0 );
         Internal::RootConstants constants{};
         // 네이티브는 RW 텍스처 배열의 번호로, 에뮬은 RW 슬롯 0 의 서수로 고른다(Bindless::loadRwTexture2D — GPU 입자와 같다).
-        constants._depthIndex  = device.supportsNativeBindlessSampling() ? static_cast<uint32>( target._depthHistoryUAV ) : 0u;
+        constants._depthIndex  = device.supportsNativeBindlessSampling() ? static_cast<uint32>( target._depthHistory._uav ) : 0u;
         constants._depthWidth  = depthWidth;
         constants._depthHeight = depthHeight;
         constants._tileColumns = bWriteTiles ? target._occlusionColumns : 0u;

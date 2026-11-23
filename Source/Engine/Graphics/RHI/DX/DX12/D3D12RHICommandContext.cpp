@@ -443,6 +443,7 @@ namespace sw
             transitionTexture( dst, D3D12_RESOURCE_STATE_COPY_DEST );
 
         commandListForRecord()->CopyResource( pDstResource, pSrcResource );
+        transitionTexture( src, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE ); // 계약: 원본은 셰이더 읽기로 남는다(`IRHIPassCommandList::blitTexture`)
 
         if ( dst == kRHIBackBufferTexture )
             _pDevice->_swapChain.transitionTo( commandListForRecord(), dstStateAfter );

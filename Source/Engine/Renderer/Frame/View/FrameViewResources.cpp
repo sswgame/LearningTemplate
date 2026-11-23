@@ -343,7 +343,7 @@ namespace sw
 
     void FrameViewResources::ensureDepthHistory( FrameViewTarget& view )
     {
-        if ( _pDevice == nullptr || view._depthHistory != 0 )
+        if ( _pDevice == nullptr || view._depthHistory.isValid() )
             return;
         const TransientAttachmentPool::Attachment depth = view._transientPool.find( attachmentNames()._sceneDepth );
         if ( depth._texture == 0 )
@@ -356,17 +356,13 @@ namespace sw
         historyDesc._bIsRenderTarget    = SW_TRUE;
         historyDesc._bIsShaderResource  = SW_TRUE;
         historyDesc._bIsUnorderedAccess = SW_TRUE;
-        view._depthHistory              = _pDevice->getResourceFactory()->createTexture2D( historyDesc );
-        _pDevice->getResourceFactory()->setTextureDebugName( view._depthHistory, "DepthHistory" );
-        if ( view._depthHistory != 0 )
-            view._depthHistoryUAV = _pDevice->getResourceFactory()->registerBindlessTextureUAV( view._depthHistory );
-        if ( view._depthHistoryUAV == kInvalidDescriptorIndex )
-            SW_LOG_ERROR_ID( "FrameViewResources.FailedCreateDepthHistory", "Failed to create the depth history (%#x%#, R32 float RT + UAV) - GPU particles do not collide with the scene depth", depth._width, depth._height );
+        if ( view._depthHistory.ensure( *_pDevice, historyDesc, "DepthHistory" ) == false )
+            SW_LOG_ERROR_ONCE_ID( "FrameViewResources.FailedCreateDepthHistory", "Failed to create the depth history (%#x%#, R32 float RT + UAV) - GPU particles do not collide with the scene depth", depth._width, depth._height );
     }
 
     void FrameViewResources::ensureTAAHistory( FrameViewTarget& view )
     {
-        if ( _pDevice == nullptr || view._taaHistory != 0 )
+        if ( _pDevice == nullptr || view._taaHistory.isValid() )
             return;
 
         // 파이프라인에 TAA 패스가 없으면 히스토리도 필요 없다.
@@ -406,15 +402,13 @@ namespace sw
         historyDesc._bIsRenderTarget   = SW_TRUE;
         historyDesc._bIsShaderResource = SW_TRUE;
 
-        view._taaHistory = _pDevice->getResourceFactory()->createTexture2D( historyDesc );
-        _pDevice->getResourceFactory()->setTextureDebugName( view._taaHistory, "TAAHistory" );
-        if ( view._taaHistory != 0 )
-            view._taaHistorySRV = _pDevice->getResourceFactory()->registerBindlessTexture( view._taaHistory );
+        if ( view._taaHistory.ensure( *_pDevice, historyDesc, "TAAHistory" ) == false )
+            SW_LOG_ERROR_ONCE_ID( "FrameViewResources.FailedCreateTAAHistory", "Failed to create the TAA history (%#x%#) - TAA does not accumulate on this view", historyDesc._width, historyDesc._height );
     }
 
     void FrameViewResources::ensureHZB( FrameViewTarget& view )
     {
-        const bool bNotNeeded = _pDevice == nullptr || view._depthHistory == 0 || ( view._hzb.isValid() && view._occlusionTiles.isValid() );
+        const bool bNotNeeded = _pDevice == nullptr || view._depthHistory.isValid() == false || ( view._hzb.isValid() && view._occlusionTiles.isValid() );
         if ( bNotNeeded )
             return;
         const TransientAttachmentPool::Attachment depth = view._transientPool.find( attachmentNames()._sceneDepth );
@@ -487,10 +481,8 @@ namespace sw
             view._deferredTileArgs     = RHIStructuredBuffer{};
             view._deferredTileCapacity = 0;
             view._transientPool.clear();
-            view._taaHistory           = 0;
-            view._taaHistorySRV        = kInvalidDescriptorIndex;
-            view._depthHistory         = 0;
-            view._depthHistoryUAV      = kInvalidDescriptorIndex;
+            view._taaHistory.release( nullptr );
+            view._depthHistory.release( nullptr );
             view._bLastFrameDepthValid = SW_FALSE;
             return;
         }
@@ -501,27 +493,13 @@ namespace sw
         view._deferredTileList.release( _pDevice );
         view._deferredTileArgs.release( _pDevice );
         view._deferredTileCapacity = 0;
-        // 깊이 히스토리도 풀 크기를 따른다. UAV 등록을 먼저 놓고 텍스처를 지운다(버퍼 슬롯과 같은 순서 — 레지스트리에 죽은 핸들을 남기지 않는다).
-        if ( view._depthHistoryUAV != kInvalidDescriptorIndex )
-            _pDevice->getResourceFactory()->unregisterBindlessUAV( view._depthHistoryUAV );
-        if ( view._depthHistory != 0 )
-            _pDevice->releaseHandle( view._depthHistory );
-        view._depthHistory         = 0;
-        view._depthHistoryUAV      = kInvalidDescriptorIndex;
+        // 깊이 히스토리도 풀 크기를 따른다.
+        view._depthHistory.release( _pDevice );
         view._bLastFrameDepthValid = SW_FALSE;
 
         // 히스토리는 TAA 출력의 복사본이라 크기가 정확히 같아야 한다(CopyResource 제약). 트랜지언트가
         // 새 크기로 다시 잡히면 이것도 같이 버려야 ensureTAAHistory 가 새 크기로 다시 만든다.
-        if ( view._taaHistorySRV != kInvalidDescriptorIndex )
-        {
-            _pDevice->getResourceFactory()->unregisterBindlessTexture( view._taaHistorySRV );
-            view._taaHistorySRV = kInvalidDescriptorIndex;
-        }
-        if ( view._taaHistory != 0 )
-        {
-            _pDevice->releaseHandle( view._taaHistory );
-            view._taaHistory = 0;
-        }
+        view._taaHistory.release( _pDevice );
         view._transientPool.release( _pDevice );
     }
 

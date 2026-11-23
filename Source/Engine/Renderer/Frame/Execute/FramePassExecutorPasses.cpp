@@ -1017,16 +1017,16 @@ namespace sw
             if ( draw._location != location || draw._pso == 0 || draw._buffer == 0 || draw._srv == kInvalidDescriptorIndex )
                 continue;
             // 둘째부터는 앞 결과를 읽는다 — 출력을 뷰의 사본으로 옮기고 원본 역할을 그 사본으로 바꾼다(그리는 동안 같은 텍스처를 읽을 수 없다).
-            const bool bChained = draw._pChainSource != nullptr && draw._pChainSource->getTexture() != 0 && targetTexture != 0;
+            const bool bChained = draw._pChainSource != nullptr && draw._pChainSource->isValid() && targetTexture != 0;
             if ( bChained )
             {
                 context._pCmd->endRenderPass();
-                context._pCmd->blitTexture( targetTexture, draw._pChainSource->getTexture() );
+                context._pCmd->blitTexture( targetTexture, draw._pChainSource->_texture );
                 // 사본은 이 패스가 복사 대상으로 선언했다(`ViewGraphResource` — 이어 그리는 머티리얼이 있는 뷰만 등록) — 다음 머티리얼이 읽도록 셰이더 읽기로 옮긴다.
                 context._pGraphPass->transition( location == PostProcessBlendableLocation::BeforeTonemap ? ViewGraphResource::postProcessChainBeforeTonemap()
                                                                                                          : ViewGraphResource::postProcessChainAfterTonemap(),
                                                  RenderGraphAccess::ShaderRead );
-                context._resourceRegistry.registerTexture( attachmentNames()._sourceColor, draw._pChainSource->getTexture(), draw._pChainSource->getSRV() );
+                context._resourceRegistry.registerTexture( attachmentNames()._sourceColor, draw._pChainSource->_texture, draw._pChainSource->_srv );
                 if ( beginColorPass( context, target, hashed_string{}, getTargetClearColor( target ), RHIRenderPassLoadOp::Load, RHIRenderPassLoadOp::Load ) == false )
                     return;
             }
@@ -1170,10 +1170,17 @@ namespace sw
         // 바인딩해 섞어도 이번 이미지만 남게 한다. 원본을 히스토리 텍스처에 복사하지 않는 것은 포맷이 다를 수 있어서다(원본 R8G8B8A8, 히스토리 R16G16B16A16이며
         // D3D 의 복사는 같은 포맷만 받는다). 패스 끝의 복사(TAA 출력에서 히스토리로)가 히스토리를 새로 채운다.
         const bool bCut = activeView._bTAAHistoryReset == SW_TRUE && pSrcName != nullptr;
+        // 기록은 이 패스가 복사 대상으로 선언한 뷰 자원이다(`ViewGraphResource::taaHistory`) — 읽기 앞에 셰이더 읽기로 옮긴다(지난 프레임이 그 상태로 남겼고 새로 만든 텍스처만 실제로 옮겨진다).
+        const bool bHistory = context._pGraphPass->isRegistered( ViewGraphResource::taaHistory() );
         if ( bCut )
+        {
             registerPassTexture( context, names._gbufferAlbedo, *pSrcName );
-        else if ( activeView._taaHistory != 0 )
-            context._resourceRegistry.registerTexture( names._gbufferAlbedo, activeView._taaHistory, activeView._taaHistorySRV );
+        }
+        else if ( bHistory )
+        {
+            context._pGraphPass->transition( ViewGraphResource::taaHistory(), RenderGraphAccess::ShaderRead );
+            context._resourceRegistry.registerTexture( names._gbufferAlbedo, activeView._taaHistory._texture, activeView._taaHistory._srv );
+        }
         if ( beginColorPass( context, taaTarget, hashed_string{}, _state._clearColor, getColorLoadFor( taaTarget ), RHIRenderPassLoadOp::Load ) )
         {
             // TAA PSO 가 없으면(셋업이 알렸다) 원본을 복사해 TAA 없이 넘기지 않는다 — drawFullscreen 이 그리지 않는다.
@@ -1181,10 +1188,11 @@ namespace sw
             context._pCmd->endRenderPass();
         }
 
-        const RHITextureHandle taaOut              = findTransient( taaTarget );
-        const bool             bTAAHistoryWritable = taaOut != 0 && activeView._taaHistory != 0;
-        if ( bTAAHistoryWritable )
-            context._pCmd->blitTexture( taaOut, activeView._taaHistory );
+        const RHITextureHandle taaOut = findTransient( taaTarget );
+        if ( taaOut == 0 || bHistory == false )
+            return;
+        context._pCmd->blitTexture( taaOut, activeView._taaHistory._texture );
+        context._pGraphPass->transition( ViewGraphResource::taaHistory(), RenderGraphAccess::ShaderRead ); // 복사는 기록을 렌더 타깃 상태로 남긴다 — 다음 프레임이 그대로 샘플하지 않게
     }
 
     void FramePassExecutor::executePresentPass( const PassExecuteInput& input )

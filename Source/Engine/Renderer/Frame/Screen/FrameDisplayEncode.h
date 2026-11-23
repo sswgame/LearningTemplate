@@ -41,19 +41,19 @@ namespace sw
         void release();
 
         /** @brief HDR 출력 중(두 RT 가 있다)이면 true 입니다. 거짓이면 화면 쓰기는 지금처럼 스왑체인(또는 회전 대기 텍스처)으로 간다. */
-        bool isActive() const { return _uiTexture != 0; }
+        bool isActive() const { return _uiTarget.isValid(); }
         /** @brief Present 가 쓸 장면 출력 RT 입니다(R16G16B16A16F, [0,1] 출력 신호). HDR 출력이 아니면 0 입니다. */
-        RHITextureHandle getSceneTarget() const { return isActive() ? _sceneTexture : RHITextureHandle{ 0 }; }
+        RHITextureHandle getSceneTarget() const { return isActive() ? _sceneTarget._texture : RHITextureHandle{ 0 }; }
         /** @brief 화면에 쓰는 나머지(Canvas · 캡처 → 화면 · 개발 겹치기 · 렌더 스레드 UI)가 쓸 SDR UI RT 입니다(RGBA8, 미리 곱한 알파). HDR 출력이 아니면 0 입니다. */
-        RHITextureHandle getUITarget() const { return isActive() ? _uiTexture : RHITextureHandle{ 0 }; }
+        RHITextureHandle getUITarget() const { return isActive() ? _uiTarget._texture : RHITextureHandle{ 0 }; }
         /**
          * @brief 장면 출력 RT 에 그리는 뷰의 톤 곡선 어깨입니다(PassCB `g_DisplayOutput.x` — display_encode.hlsli). HDR 출력이 아니면 1(SDR Reinhard 그대로)입니다.
          * @details `(최대 휘도 / 종이 흰색)^(1/2.2)` — 출력 신호 1 이 최대 휘도, 어두운 쪽은 SDR 과 같은 휘도가 되게 한다.
          */
         float32 getToneShoulder() const;
-        /** @brief 두 RT 의 크기(화면 크기)입니다. HDR 출력이 아니면 지난 값이다 — `isActive` 와 함께 본다(렌더 타깃 목록). */
-        uint32 getWidth() const { return _width; }
-        uint32 getHeight() const { return _height; }
+        /** @brief 두 RT 의 크기(화면 크기)입니다. HDR 출력이 아니면 0 이다. */
+        uint32 getWidth() const { return _sceneTarget._width; }
+        uint32 getHeight() const { return _sceneTarget._height; }
         /** @brief 장면 출력 RT 의 포맷입니다(렌더 타깃 목록이 적는다). */
         static RHIFormat getSceneFormat();
 
@@ -64,20 +64,16 @@ namespace sw
         void recordToSwapchain( IRHICommandList& cmd );
 
     private:
-        /** @brief 텍스처 하나를 만들고 bindless 에 등록합니다. 실패하면 멈춘다(prepare 머리말). */
-        void createTarget( RHIFormat format, const utf8* pDebugName, RHITextureHandle& outTexture, RHIDescriptorIndex& outSRV ) const;
+        /** @brief RT 하나를 갖춥니다. 실패하면 멈춘다(prepare 머리말). */
+        void ensureTarget( RHITextureSlot& target, RHIFormat format, uint32 width, uint32 height, const utf8* pDebugName ) const;
         /** @brief 원본 @p srv 를 읽는 풀스크린 한 장을 @p pso 로 그립니다(열린 렌더 패스 안). */
         void drawFullscreen( IRHICommandList& cmd, RHIPipelineStateHandle pso, RHIDescriptorIndex srv, float32 scale ) const;
 
     private:
         IRHIDevice* const&     _pDevice; ///< 렌더러의 `_pDevice` 변수를 참조합니다
         const FramePSOManager& _psoManager;
-        RHITextureHandle       _sceneTexture;
-        RHITextureHandle       _uiTexture;
-        RHIDescriptorIndex     _sceneSRV;
-        RHIDescriptorIndex     _uiSRV;
-        uint32                 _width;
-        uint32                 _height;
+        RHITextureSlot         _sceneTarget;
+        RHITextureSlot         _uiTarget;
         RHIColorSpace          _colorSpace; ///< 만들 때의 백버퍼 색 공간 — 인코딩 패스를 고른다
         DisplayOutputDesc      _output;     ///< 이번 프레임의 종이 흰색 · 최대 휘도
     };

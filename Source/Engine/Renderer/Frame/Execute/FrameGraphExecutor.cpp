@@ -715,7 +715,7 @@ namespace sw
 
     bool FrameGraphExecutor::canCopyDepthHistory( const FrameViewTarget& view ) const
     {
-        const bool bHasSource = view._bLastFrameDepthValid == SW_TRUE && view._depthHistory != 0 && view._depthHistoryUAV != kInvalidDescriptorIndex;
+        const bool bHasSource = view._bLastFrameDepthValid == SW_TRUE && view._depthHistory.isValid();
         if ( bHasSource == false || _psoManager.getEnginePSO( RenderPassKind::DepthHistory ) == 0 )
             return false;
         return view._transientPool.find( attachmentNames()._sceneDepth )._texture != 0;
@@ -723,7 +723,7 @@ namespace sw
 
     bool FrameGraphExecutor::canCopySceneDepth( const FrameViewTarget& view ) const
     {
-        const bool bHasTarget = view._depthHistory != 0 && view._depthHistoryUAV != kInvalidDescriptorIndex && _psoManager.getEnginePSO( RenderPassKind::DepthHistory ) != 0;
+        const bool bHasTarget = view._depthHistory.isValid() && _psoManager.getEnginePSO( RenderPassKind::DepthHistory ) != 0;
         return bHasTarget && view._transientPool.find( attachmentNames()._sceneDepth )._texture != 0;
     }
 
@@ -748,7 +748,7 @@ namespace sw
             if ( canCopyDepthHistory( view ) == false )
                 continue;
             table.registerTexture( FrameResource::previousSceneDepth()._name, viewIndex, view._transientPool.find( attachmentNames()._sceneDepth )._texture, RenderGraphAccess::DepthWrite );
-            table.registerTexture( FrameResource::depthHistory()._name, viewIndex, view._depthHistory, RenderGraphAccess::UnorderedAccessRead );
+            table.registerTexture( FrameResource::depthHistory()._name, viewIndex, view._depthHistory._texture, RenderGraphAccess::UnorderedAccessRead );
         }
     }
 
@@ -804,7 +804,7 @@ namespace sw
         RHIRenderPassBeginInfo beginInfo{};
         beginInfo._bBindColor        = SW_TRUE;
         beginInfo._colorTargetCount  = 1;
-        beginInfo._arrColorTarget[0] = target._depthHistory;
+        beginInfo._arrColorTarget[0] = target._depthHistory._texture;
         beginInfo._arrLoadOp[0]      = RHIRenderPassLoadOp::Clear;
         beginInfo._arrClearColor[0]  = float4{ 1.0f, 0.0f, 0.0f, 0.0f };
         beginInfo._depthTarget       = 0;
@@ -830,7 +830,7 @@ namespace sw
         // 장면 깊이 첨부가 있는 뷰만 — 히스토리가 없으면(2D 파이프라인) 짝을 적을 필요가 없다.
         for ( unique_ptr<FrameViewTarget>& pView : _state._listView )
         {
-            if ( pView->_bRenderThisFrame == SW_FALSE || pView->_depthHistory == 0 )
+            if ( pView->_bRenderThisFrame == SW_FALSE || pView->_depthHistory.isValid() == false )
                 continue;
             pView->_depthHistoryViewProj = pView->_cullInput._viewProj;
             pView->_depthHistoryEye      = pView->_cullInput._position;
@@ -856,8 +856,8 @@ namespace sw
         if ( canCopyDepthHistory( _state.getMainView() ) )
         {
             const TransientAttachmentPool::Attachment depth = _state.getMainView()._transientPool.find( attachmentNames()._sceneDepth );
-            input._depth._texture                           = _state.getMainView()._depthHistory;
-            input._depth._uav                               = _state.getMainView()._depthHistoryUAV;
+            input._depth._texture                           = _state.getMainView()._depthHistory._texture;
+            input._depth._uav                               = _state.getMainView()._depthHistory._uav;
             // 지난 프레임 사각형 크기다(자동 렌더 배율) — 셰이더가 화면 UV 에 곱해 사각형 안 텍셀만 읽는다.
             input._depth._width    = _state.getMainView().scaleToPreviousRect( depth._width, true );
             input._depth._height   = _state.getMainView().scaleToPreviousRect( depth._height, false );
@@ -1042,7 +1042,7 @@ namespace sw
         // 등록 접근은 프레임 그래프가 남긴 상태다 — 뷰 그래프가 들이고 끝에 되돌린다(`RenderGraph::importResources`).
         if ( ( bLateOcclusion || bBuildsSceneDepthHZB ) && bHZBReady )
         {
-            table.registerTexture( ViewGraphResource::depthHistory()._name, 0, view._depthHistory, RenderGraphAccess::UnorderedAccessRead );
+            table.registerTexture( ViewGraphResource::depthHistory()._name, 0, view._depthHistory._texture, RenderGraphAccess::UnorderedAccessRead );
             table.registerBuffer( ViewGraphResource::hzb()._name, 0, view._hzb, RenderGraphAccess::ShaderRead );
             table.registerBuffer( ViewGraphResource::occlusionTiles()._name, 0, view._occlusionTiles, RenderGraphAccess::ShaderRead );
         }

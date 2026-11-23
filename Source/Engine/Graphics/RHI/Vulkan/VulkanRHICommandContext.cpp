@@ -214,6 +214,8 @@ namespace sw
 
         vkCmdBlitImage( cmd, srcRecord._image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
                         dstImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blit, VK_FILTER_LINEAR );
+        // 계약: 원본은 셰이더 읽기로 남는다(`IRHIPassCommandList::blitTexture`).
+        _pDevice->transitionTextureLayout( cmd, srcRecord, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT );
 
         if ( dst == kRHIBackBufferTexture )
         {

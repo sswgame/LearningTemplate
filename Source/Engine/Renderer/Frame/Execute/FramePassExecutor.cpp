@@ -756,6 +756,7 @@ namespace sw
         const RenderGraphResourceAccess arrEngineResource[] = {
             ViewGraphResource::autoExposureHistory(),
             ViewGraphResource::autoExposureTarget(),
+            ViewGraphResource::taaHistory(),
             ViewGraphResource::upscaleIntermediate(),
             ViewGraphResource::shadowCacheLayer(),
             ViewGraphResource::postProcessChainBeforeTonemap(),
@@ -886,6 +887,10 @@ namespace sw
         if ( pass._type == RenderPassKind::Present )
         {
             inoutListAccess.push_back( ViewGraphResource::upscaleIntermediate() ); // FSR 1 — EASU 가 그리고 같은 패스의 RCAS 가 읽는다
+        }
+        else if ( pass._type == RenderPassKind::TAA )
+        {
+            inoutListAccess.push_back( ViewGraphResource::taaHistory() ); // 지난 기록을 읽고 같은 패스가 이번 출력을 복사한다
         }
         else if ( pass._type == RenderPassKind::Lighting )
         {
@@ -1297,24 +1302,27 @@ namespace sw
         _viewResourceTable.reset();
         // 등록 접근은 이 뷰 그래프의 시작이자 끝이다 — 아래 끝에서 그래프에 들이고, 그래프가 끝에 그 접근으로 되돌린다(패스가 돌지 않아 UAV 로 남은 자원도 다음 사용자가 같은 상태를 본다).
         // 자동 노출 — 이번 프레임에 재는 뷰만(`prepareAutoExposure`). 지난 칸을 읽고 이번 칸에 쓴다.
-        if ( view._bAutoExposureThisFrame == SW_TRUE && view._arrAutoExposure[0] != 0 && view._arrAutoExposure[1] != 0 )
+        if ( view._bAutoExposureThisFrame == SW_TRUE && view._arrAutoExposure[0].isValid() && view._arrAutoExposure[1].isValid() )
         {
             const uint32 writeSlot = view._autoExposureWrite;
-            _viewResourceTable.registerTexture( ViewGraphResource::autoExposureHistory()._name, 0, view._arrAutoExposure[1u - writeSlot], RenderGraphAccess::ShaderRead );
-            _viewResourceTable.registerTexture( ViewGraphResource::autoExposureTarget()._name, 0, view._arrAutoExposure[writeSlot], RenderGraphAccess::ShaderRead );
+            _viewResourceTable.registerTexture( ViewGraphResource::autoExposureHistory()._name, 0, view._arrAutoExposure[1u - writeSlot]._texture, RenderGraphAccess::ShaderRead );
+            _viewResourceTable.registerTexture( ViewGraphResource::autoExposureTarget()._name, 0, view._arrAutoExposure[writeSlot]._texture, RenderGraphAccess::ShaderRead );
         }
+        // TAA 기록 — TAA 가 도는 뷰만(`applyViewPassSelection`). 지난 프레임의 복사 끝에 셰이더 읽기로 남았다.
+        if ( view._bTAAHistoryWritten == SW_TRUE && view._taaHistory.isValid() )
+            _viewResourceTable.registerTexture( ViewGraphResource::taaHistory()._name, 0, view._taaHistory._texture, RenderGraphAccess::ShaderRead );
         // FSR 1 — 이번 프레임에 키우는 뷰만(`prepareUpscale`).
-        if ( view._bUpscaleThisFrame == SW_TRUE && view._upscaleIntermediate != 0 )
-            _viewResourceTable.registerTexture( ViewGraphResource::upscaleIntermediate()._name, 0, view._upscaleIntermediate, RenderGraphAccess::ShaderRead );
+        if ( view._bUpscaleThisFrame == SW_TRUE && view._upscaleIntermediate.isValid() )
+            _viewResourceTable.registerTexture( ViewGraphResource::upscaleIntermediate()._name, 0, view._upscaleIntermediate._texture, RenderGraphAccess::ShaderRead );
         // 그림자 캐시 층 — 다시 그리는 프레임만(층은 모든 뷰가 같아 처음 그리는 뷰가 다시 그리고 표시를 내린다). 다시 그리지 않는 프레임은 층이 셰이더 읽기 그대로라 전이가 없다.
         const ShadowCache& cache = _state._shadowCache;
         if ( cache.usesCacheLayer() && cache.needsRebuild() && cache.getLayer()._texture != 0 )
             _viewResourceTable.registerTexture( ViewGraphResource::shadowCacheLayer()._name, 0, cache.getLayer()._texture, RenderGraphAccess::ShaderRead );
         // 후처리 머티리얼의 앞 결과 사본 — 그 자리에 이어 그리는 머티리얼이 있는 뷰만 만들었다(`FramePostProcessMaterials::prepareChain`).
-        if ( view._postProcessChainBeforeTonemap.getTexture() != 0 )
-            _viewResourceTable.registerTexture( ViewGraphResource::postProcessChainBeforeTonemap()._name, 0, view._postProcessChainBeforeTonemap.getTexture(), RenderGraphAccess::ShaderRead );
-        if ( view._postProcessChainAfterTonemap.getTexture() != 0 )
-            _viewResourceTable.registerTexture( ViewGraphResource::postProcessChainAfterTonemap()._name, 0, view._postProcessChainAfterTonemap.getTexture(), RenderGraphAccess::ShaderRead );
+        if ( view._postProcessChainBeforeTonemap.isValid() )
+            _viewResourceTable.registerTexture( ViewGraphResource::postProcessChainBeforeTonemap()._name, 0, view._postProcessChainBeforeTonemap._texture, RenderGraphAccess::ShaderRead );
+        if ( view._postProcessChainAfterTonemap.isValid() )
+            _viewResourceTable.registerTexture( ViewGraphResource::postProcessChainAfterTonemap()._name, 0, view._postProcessChainAfterTonemap._texture, RenderGraphAccess::ShaderRead );
         // 이번 장면 깊이로 HZB 를 짓는 패스(화면 공간 반사)와 2 단계 가림의 뒤 단계(주 시점)가 쓰는 깊이 사본 · HZB · 컬링 버퍼.
         _frameGraphExecutor.registerViewGraphResources( _viewResourceTable, view, isPassKindEnabledInView( RenderPassKind::ScreenSpaceReflection ) );
         // 디퍼드 조명 타일 — 조명 패스가 도는 뷰에서 분류를 돌릴 수 있을 때만(능력 · 버퍼 · PSO). 등록이 곧 실행 조건이다(`executeTiledLighting`).

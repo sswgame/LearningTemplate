@@ -199,6 +199,7 @@ namespace sw
          * @details 둘 다 백버퍼면 아무것도 하지 않는다. 0 은 오류로 알리고 버린다. 백버퍼에서 텍스처로 복사할 때는 크기가 백버퍼와 같아야 하고, D3D 는 포맷도 같아야 한다(`getBackBufferFormat` 으로 만든다.
          *          Vulkan 은 블릿이라 변환한다). GL 은 창의 0행이 아래쪽이라 읽을 때 뒤집으므로, 결과 텍스처의 0행은 항상 화면 위쪽이다.
          *          주의: 백버퍼는 Present 뒤에 내용이 버려지므로(플립 모델) Present 전에 프레임 스트림에 기록한다.
+         *          끝 상태(텍스처끼리 · 텍스처 → 백버퍼): **원본은 셰이더 읽기, 대상 텍스처는 렌더 타깃**이다 — 그래프는 원본을 읽기로 선언했으므로 복사 뒤의 다른 읽기가 전이를 다시 받지 않는다.
          */
         virtual void blitTexture( RHITextureHandle src, RHITextureHandle dst ) = 0;
 
