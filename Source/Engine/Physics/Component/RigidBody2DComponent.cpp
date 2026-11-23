@@ -299,12 +299,12 @@ namespace sw
             releasePhysics( physics );
 
         // 트랜스폼의 바깥 변화는 칸의 변경 번호로 안다 — 같으면 월드 행렬을 풀지 않는다(3D 강체와 같은 규칙).
-        const bool         bTransformChanged = consumeTransformChange();
-        PhysicsBodyPage2D& page              = *_pPosePage;
-        const uint32       index             = getPoseIndex();
-        PhysicsBodyHandle  body              = page._arrBody[index];
-        float2             position{};
-        float32            angle = 0.0f;
+        PhysicsTransformChange change = consumeTransformChange();
+        PhysicsBodyPage2D&     page   = *_pPosePage;
+        const uint32           index  = getPoseIndex();
+        PhysicsBodyHandle      body   = page._arrBody[index];
+        float2                 position{};
+        float32                angle = 0.0f;
         // 바디는 이 컴포넌트만 지운다(씬을 내릴 때는 `ScenePhysics::onSceneCleared` 가 먼저 놓게 한다) — 프레임마다 백엔드에 묻지 않고 Debug 에서만 확인한다.
         SW_ASSERT( body.isValid() == false || pScene->isBodyValid( body ) );
         if ( body.isValid() == false )
@@ -323,7 +323,9 @@ namespace sw
         }
 
         const bool bTeleported = consumeTeleport();
-        const bool bMoved      = bTeleported || bTransformChanged;
+        if ( bTeleported )
+            change = PhysicsTransformChange::makeWhole();
+        const bool bMoved = change.hasChanged();
         if ( bMoved && readWorldPose2D( position, angle ) == false )
         {
             releasePhysics( physics ); // 배율 0 — 셰이프를 지을 수 없어 시뮬레이션에서 뺀다(3D 강체와 같다)
@@ -345,10 +347,18 @@ namespace sw
                 _kinematicTargetAngle    = angle;
             }
         }
-        else if ( bMoved )
+        else if ( change.hasPlanePosition() || change.hasPlaneAngle() )
         {
+            // 바깥이 쓰지 않은 몫은 시뮬레이션의 것이다(3D 강체와 같다) — 깊이(Z)만 바꾸는 정렬 · 뒤집기(Y 회전)는 바디를 옮기지 않는다.
+            if ( change.hasPlanePosition() == false )
+                position = page._arrCurrentPosition[index];
+            if ( change.hasPlaneAngle() == false )
+                angle = page._arrCurrentRotation[index];
             pScene->setBodyTransform( body, position, angle );
-            page.resetPose( index, position, angle );
+            if ( change.hasPlanePosition() )
+                page.resetPosition( index, position );
+            if ( change.hasPlaneAngle() )
+                page.resetRotation( index, angle );
             _kinematicStartPosition  = position;
             _kinematicTargetPosition = position;
             _kinematicStartAngle     = angle;

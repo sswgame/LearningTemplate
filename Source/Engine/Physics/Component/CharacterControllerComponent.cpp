@@ -59,11 +59,9 @@ namespace sw
         , _stepHistoryCount{ 0 }
         , _motionDisplayOffset{}
         , _motionDisplayAlpha{ 1.0f }
-        , _writtenPosition{}
         , _bFrameClimb{ SW_FALSE }
         , _bStepClimb{ SW_FALSE }
         , _bManualSimulation{ SW_FALSE }
-        , _bPositionWritten{ SW_FALSE }
         , _reserved{ 0 }
     {
         _commandSlot = engine::getSubsystem<PhysicsPoseStore>().getCommandStore<CharacterCommand3D>().allocateSlot( this, _pCommandPage );
@@ -318,13 +316,13 @@ namespace sw
             releasePhysics( physics );
 
         // 트랜스폼의 바깥 변화는 칸의 변경 번호로 안다 — 같으면 월드 행렬을 풀지 않는다.
-        const bool bTransformChanged = consumeTransformChange();
-        const bool bCreate           = _character.isValid() == false;
-        const bool bTeleported       = consumeTeleport();
+        const PhysicsTransformChange change      = consumeTransformChange();
+        const bool                   bCreate     = _character.isValid() == false;
+        const bool                   bTeleported = consumeTeleport();
         // 배율은 끝 훅(`onPhysicsFrameEnd`)이 먼저 읽었을 수 있다 — 변경 번호만이 아니라 지은 배율과의 값 비교로도 본다.
         const float32 requestedReduction = MathUtil::max( 0.0f, _requestedHeightReduction.load( std::memory_order_relaxed ) );
         const bool    bResize            = bCreate == false && requestedReduction != _appliedHeightReduction;
-        const bool    bUnchanged         = bCreate == false && bTransformChanged == false && bTeleported == false && bResize == false && isShapeScaleStale( _worldScale ) == false;
+        const bool    bUnchanged         = bCreate == false && change.hasChanged() == false && bTeleported == false && bResize == false && isShapeScaleStale( _worldScale ) == false;
         if ( bUnchanged )
             return;
         float3 position{};
@@ -368,21 +366,15 @@ namespace sw
             _state._bGrounded = _bGrounded;
             _state._position  = position;
             _previousPosition = position;
-            _writtenPosition  = position;
-            _bPositionWritten = SW_TRUE;
             return;
         }
-        // 자리가 마지막에 쓴 그대로면 회전 · 배율만 바뀐 것이다 — 그린 자리는 두 스텝 사이(`getAlpha`)라, 그것으로 캐릭터를 옮기면 몸을 돌리는 프레임마다 걸은 만큼이 되돌아간다.
-        const bool bSamePosition = bTeleported == false && _bPositionWritten == SW_TRUE &&
-                                   ( position - _writtenPosition ).getLengthSquared() <= kSamePositionTolerance * kSamePositionTolerance;
-        if ( bSamePosition )
+        // 회전 · 배율만 바뀌었으면 자리는 시뮬레이션의 것이다 — 그린 자리는 두 스텝 사이(`getAlpha`)라, 그것으로 옮기면 몸을 돌리는 프레임마다 걸은 만큼이 되돌아간다.
+        if ( bTeleported == false && change.hasPosition() == false )
             return;
         pScene->setCharacterPosition( _character, position );
         _state._position     = position;
         _previousPosition    = position;
         _motionDisplayOffset = float3{};
-        _writtenPosition     = position;
-        _bPositionWritten    = SW_TRUE;
         if ( bTeleported )
             _verticalSpeed = 0.0f;
     }
@@ -551,7 +543,7 @@ namespace sw
         const float3 position = float3::lerp( _previousPosition, _state._position, alpha ) + ( bManual ? _motionDisplayOffset : float3{} );
         // 회전 · 배율은 트랜스폼의 것이다. 이 프레임 시작 뒤에 누가 옮겼을 때만 다시 읽는다(자리는 아래에서 캐릭터 자리로 덮는다 — 전에도 그랬다).
         float3 current{};
-        if ( consumeTransformChange() && PhysicsComponent::readWorldPose( *this, current, _worldRotation, _worldScale ) == false )
+        if ( consumeTransformChange().hasChanged() && PhysicsComponent::readWorldPose( *this, current, _worldRotation, _worldScale ) == false )
             return; // 배율 0 — 트랜스폼을 덮어쓰지 않는다(다음 프레임 시작 훅이 캐릭터를 놓는다)
         if ( _pendingGroundYaw != 0.0f )
         {
@@ -560,8 +552,6 @@ namespace sw
         }
         // 강체와 같이 모아 한 번에 쓴다 — 적용 · 변경 번호 맞추기는 `ScenePhysics::queuePoseWrite` 가 한다.
         physics.queuePoseWrite( *this, position, _worldRotation, _worldScale );
-        _writtenPosition  = position;
-        _bPositionWritten = SW_TRUE;
     }
 
     static_assert( static_cast<uint8>( CharacterMovementMode::Climbing ) == 4, "CharacterMotionState::_movementMode 의 Max 를 열거의 끝 값과 맞춘다" );
@@ -678,6 +668,38 @@ namespace sw
         _previousPosition    = previousPosition;
         _motionDisplayAlpha  = alpha;
         _motionDisplayOffset = offset;
+    }
+
+    bool CharacterControllerComponent::isSpotFree( const float3& feet ) const
+    {
+        const ScenePhysics* const         pPhysics = getScenePhysics();
+        const IPhysicsQueryScene3D* const pScene   = pPhysics != nullptr ? pPhysics->findScene3D() : nullptr;
+        if ( pScene == nullptr )
+            return true;
+        const PhysicsShapeDesc3D capsule = getScaledCapsule();
+        const float3             center{ feet._x, feet._y + kSpotGroundClearance + capsule._radius + capsule._halfHeight, feet._z };
+        PhysicsQueryFilter       filter;
+        filter._ignoreUserData = getOwner()->getObjectID(); // 제 속 바디
+        vector<PhysicsBodyHandle> listBody;
+        return pScene->overlapShape( capsule, center, quaternion{}, filter, listBody ) == 0;
+    }
+
+    optional<float3> CharacterControllerComponent::findFreeSpot( const float3& feet, float32 searchRadius ) const
+    {
+        if ( isSpotFree( feet ) )
+            return feet;
+        const float32 spacing = 2.0f * ( getScaledCapsule()._radius + kSpotGroundClearance );
+        for ( float32 distance = spacing; distance <= searchRadius; distance += spacing )
+        {
+            for ( int32 direction = 0; direction < kSpotDirectionCount; ++direction )
+            {
+                const float32 angle = MathUtil::kTwoPi * static_cast<float32>( direction ) / static_cast<float32>( kSpotDirectionCount );
+                const float3  spot{ feet._x + MathUtil::sin( angle ) * distance, feet._y, feet._z + MathUtil::cos( angle ) * distance };
+                if ( isSpotFree( spot ) )
+                    return spot;
+            }
+        }
+        return nullopt;
     }
 
     void CharacterControllerComponent::copyTuning( const CharacterControllerComponent& source )

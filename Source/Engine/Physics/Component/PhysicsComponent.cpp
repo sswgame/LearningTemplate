@@ -29,14 +29,45 @@ namespace sw
         : _pScenePhysics{ nullptr }
         , _physicsIndex{ kNotRegistered }
         , _syncedTransformVersion{ 0 }
+        , _syncedLocalPosition{}
+        , _syncedLocalRotation{}
         , _shapeScale{ 1.0f, 1.0f, 1.0f }
         , _phase{ phase }
         , _bRebuildPending{ false }
         , _bStreamingHeld{ false }
+        , _bSyncedParented{ false }
         , _bBodyCreated{ false }
         , _bTeleportPending{ false }
         , _spatialEntry{}
     {
+    }
+
+    PhysicsTransformChange PhysicsComponent::consumeTransformChange()
+    {
+        if ( getWorldTransformVersion() == _syncedTransformVersion )
+            return PhysicsTransformChange{};
+        const bool             bWhole = _syncedTransformVersion == 0 || _bSyncedParented || getParent() != nullptr; // 처음이거나 부모 아래
+        PhysicsTransformChange change = bWhole ? PhysicsTransformChange::makeWhole() : PhysicsTransformChange{};
+        if ( bWhole == false )
+        {
+            const float3 position  = getLocalPosition();
+            const float3 rotation  = getLocalRotation();
+            change._bAny           = SW_TRUE;
+            change._bPlanePosition = position._x != _syncedLocalPosition._x || position._y != _syncedLocalPosition._y ? SW_TRUE : SW_FALSE;
+            change._bDepth         = position._z != _syncedLocalPosition._z ? SW_TRUE : SW_FALSE;
+            change._bTilt          = rotation._x != _syncedLocalRotation._x || rotation._y != _syncedLocalRotation._y ? SW_TRUE : SW_FALSE;
+            change._bPlaneAngle    = rotation._z != _syncedLocalRotation._z ? SW_TRUE : SW_FALSE;
+        }
+        markTransformSynced();
+        return change;
+    }
+
+    void PhysicsComponent::markTransformSynced()
+    {
+        _syncedTransformVersion = getWorldTransformVersion();
+        _syncedLocalPosition    = getLocalPosition();
+        _syncedLocalRotation    = getLocalRotation();
+        _bSyncedParented        = getParent() != nullptr;
     }
 
     void PhysicsComponent::markBodyCreated()

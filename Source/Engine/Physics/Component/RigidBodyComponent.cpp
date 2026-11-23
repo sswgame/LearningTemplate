@@ -400,12 +400,12 @@ namespace sw
             releasePhysics( physics );
 
         // 트랜스폼의 바깥 변화(코드 · 부모가 옮김)는 칸의 변경 번호로 안다 — 같으면 월드 행렬을 풀지 않는다(정적 · 잠든 바디 대부분).
-        const bool         bTransformChanged = consumeTransformChange();
-        PhysicsBodyPage3D& page              = *_pPosePage;
-        const uint32       index             = getPoseIndex();
-        PhysicsBodyHandle  body              = page._arrBody[index];
-        float3             position{};
-        quaternion         rotation{};
+        PhysicsTransformChange change = consumeTransformChange();
+        PhysicsBodyPage3D&     page   = *_pPosePage;
+        const uint32           index  = getPoseIndex();
+        PhysicsBodyHandle      body   = page._arrBody[index];
+        float3                 position{};
+        quaternion             rotation{};
         // 바디는 이 컴포넌트만 지운다(씬을 내릴 때는 `ScenePhysics::onSceneCleared` 가 먼저 놓게 한다) — 프레임마다 백엔드에 묻지 않고 Debug 에서만 확인한다.
         SW_ASSERT( body.isValid() == false || pScene->isBodyValid( body ) );
         if ( body.isValid() == false )
@@ -424,7 +424,9 @@ namespace sw
         }
 
         const bool bTeleported = consumeTeleport();
-        const bool bMoved      = bTeleported || bTransformChanged;
+        if ( bTeleported )
+            change = PhysicsTransformChange::makeWhole();
+        const bool bMoved = change.hasChanged();
         if ( bMoved && PhysicsComponent::readWorldPose( *this, position, rotation, _worldScale ) == false )
         {
             releasePhysics( physics ); // 배율 0 — 셰이프를 지을 수 없어 시뮬레이션에서 뺀다. 배율이 돌아오면 다시 만든다
@@ -447,10 +449,18 @@ namespace sw
                 _kinematicTargetRotation = rotation;
             }
         }
-        else if ( bMoved )
+        else if ( change.hasPosition() || change.hasRotation() )
         {
+            // 바깥이 쓰지 않은 몫은 시뮬레이션의 것이다 — 트랜스폼의 것은 두 스텝 사이를 그린 값이라 그것으로 옮기면 바디가 뒤로 간다. 보간도 쓴 몫만 끊는다.
+            if ( change.hasPosition() == false )
+                position = page._arrCurrentPosition[index];
+            if ( change.hasRotation() == false )
+                rotation = page._arrCurrentRotation[index];
             pScene->setBodyTransform( body, position, rotation );
-            page.resetPose( index, position, rotation );
+            if ( change.hasPosition() )
+                page.resetPosition( index, position );
+            if ( change.hasRotation() )
+                page.resetRotation( index, rotation );
             _kinematicStartPosition  = position;
             _kinematicStartRotation  = rotation;
             _kinematicTargetPosition = position;

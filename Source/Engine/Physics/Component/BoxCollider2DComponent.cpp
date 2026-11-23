@@ -231,7 +231,7 @@ namespace sw
 
         // 트랜스폼(칸의 월드 변경 번호) · 상자 값 · 레이어 · 트리거가 바디를 만든 때와 같으면 상자를 다시 재지 않는다 — 서 있는 콜라이더는 이 비교로 끝난다.
         // 이번 프레임의 출발점은 지난 중심 그대로라 움직인 콜라이더로도 보지 않는다(`hasMovedThisFrame`).
-        const bool bTransformChanged = consumeTransformChange();
+        const bool bTransformChanged = consumeTransformChange().hasChanged(); // 상자는 트랜스폼의 것이다(보간해 쓰지 않는다)
         const bool bTeleported       = consumeTeleport();
         const bool bRebuild          = consumeRebuild();
         // 바디는 이 컴포넌트만 지운다(씬을 내릴 때는 `ScenePhysics::onSceneCleared` 가 먼저 놓게 한다) — 프레임마다 백엔드에 묻지 않고 Debug 에서만 확인한다.

@@ -6,6 +6,7 @@
 #include "Core/Concurrency/ThreadSafety.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
@@ -179,11 +180,11 @@ namespace sw
         /** @brief 조종이 요청한 수평 속도(`setMoveVelocity`)입니다 — 루트 모션 · 면 속도 · 공중 관성을 더하기 전 값이라 "요청 → 실제" 를 비교한다. 아무 스레드에서 읽어도 된다. */
         float3 getRequestedMoveVelocity() const;
 
-        static constexpr float32 kFrictionResponse   = 10.0f; ///< 접지 1 일 때 걷는 속도가 요청으로 가는 빠르기(1/s) — 접지에 곱한다(빙판 0.05 면 0.5/s)
-        static constexpr float32 kFieldGroundDamping = 4.0f;  ///< 디딘 채로 필드가 쌓은 수평 속도가 줄어드는 빠르기(1/s, 접지에 곱한다)
-        static constexpr float32 kBodyDensity        = 1.0f;  ///< 캐릭터 몸의 밀도(물 = 1) — 유체 밀도가 이보다 크면 떠오른다
-        /** @brief 트랜스폼 자리가 마지막에 쓴 자리에서 이만큼(m) 안이면 옮긴 것이 아니다 — 부모 아래 월드 합성의 반올림보다 크고 코드가 옮기는 거리보다 작다. */
-        static constexpr float32 kSamePositionTolerance = 1.0e-4f;
+        static constexpr float32 kFrictionResponse    = 10.0f; ///< 접지 1 일 때 걷는 속도가 요청으로 가는 빠르기(1/s) — 접지에 곱한다(빙판 0.05 면 0.5/s)
+        static constexpr float32 kFieldGroundDamping  = 4.0f;  ///< 디딘 채로 필드가 쌓은 수평 속도가 줄어드는 빠르기(1/s, 접지에 곱한다)
+        static constexpr float32 kSpotGroundClearance = 0.05f; ///< 빈 자리를 볼 때 발을 바닥에서 띄우는 높이(m) — 바닥과 겹치지 않게
+        static constexpr int32   kSpotDirectionCount  = 8;     ///< 빈 자리를 찾을 때 고리마다 보는 방향 수
+        static constexpr float32 kBodyDensity         = 1.0f;  ///< 캐릭터 몸의 밀도(물 = 1) — 유체 밀도가 이보다 크면 떠오른다
 
         /** @brief 스텝 기록 한 칸입니다(이동 디버거가 미끄러짐 · 벽 걸림 · 착지 판정을 전후로 본다). */
         struct StepRecord
@@ -249,6 +250,13 @@ namespace sw
         void applyMotionInput( const CharacterMotionInput& input );
         /** @brief 손으로 돌리는 캐릭터를 그릴 자리입니다 — 지난 걸음 자리 @p previousPosition 과 지금 자리 사이 @p alpha, 거기에 @p offset(예측 보정 녹이기)을 더합니다. 게임 스레드. */
         void setMotionDisplay( const float3& previousPosition, float32 alpha, const float3& offset );
+        /**
+         * @brief 이 캡슐을 발 자리 @p feet 에 세우면 무엇과도 겹치지 않는지 봅니다(트리거 · 제 속 바디는 빼고 본다). 물리 씬이 없으면 빈 자리로 봅니다. 게임 스레드, 틱 밖에서 부릅니다.
+         * @details 내릴 자리(`VehicleSeatComponent`) · 세울 자리(서버의 폰)가 함께 쓴다 — 언리얼 `UWorld::EncroachingBlockingGeometry` 자리다.
+         */
+        [[nodiscard]] bool isSpotFree( const float3& feet ) const;
+        /** @brief @p feet 가 비었으면 그 자리, 아니면 @p searchRadius 안의 가까운 고리부터 본 빈 자리입니다(언리얼 `FindTeleportSpot`). 없으면 비어 있습니다. */
+        [[nodiscard]] optional<float3> findFreeSpot( const float3& feet, float32 searchRadius ) const;
         /**
          * @brief 몸의 치수 · 이동 튜닝(반지름 · 키 · 턱 · 비탈 · 중력 · 질량 · 충돌 프로파일)을 @p source 에서 옮깁니다.
          * @details 같은 걸음을 내야 하는 다른 몸(서버가 접속마다 세운 폰)이 데이터를 두 벌 두지 않게 한다. 다음 물리 프레임에 캐릭터를 다시 짓는다.
@@ -341,11 +349,9 @@ namespace sw
         uint32                                  _stepHistoryCount;         ///< 기록한 스텝의 누계(고리의 다음 칸은 `% kStepHistoryCapacity`)
         float3                                  _motionDisplayOffset;      ///< 손으로 돌리는 캐릭터의 그리기 자리에 더한다(`setMotionDisplay`)
         float32                                 _motionDisplayAlpha;       ///< 손으로 돌리는 캐릭터의 그리기 보간 비
-        float3                                  _writtenPosition;          ///< 마지막에 트랜스폼에 쓴 자리 — 트랜스폼이 바뀌어도 자리가 이것이면 옮긴 것이 아니다(회전만 바뀌었다)
         uint8                                   _bFrameClimb       : 1;    ///< 이번 물리 프레임에 오르기 요청이 있다
         uint8                                   _bStepClimb        : 1;    ///< 이번 스텝을 오르기로 움직였다(점프 · 발사가 없었다)
         uint8                                   _bManualSimulation : 1;    ///< 물리 고정 스텝 대신 `simulateMotion` 이 걸음을 돌린다
-        uint8                                   _bPositionWritten  : 1;    ///< `_writtenPosition` 이 채워졌다
-        [[maybe_unused]] uint8                  _reserved          : 4;
+        [[maybe_unused]] uint8                  _reserved          : 5;
     };
 } // namespace sw

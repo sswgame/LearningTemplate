@@ -419,3 +419,66 @@ SW_TEST_CASE( PhysicsCharacterTest, TurningDoesNotPullTheWalkerBack )
     SW_EXPECT_TRUE( arrDistance[0] > 1.0f );
     SW_EXPECT_NEAR( arrDistance[0], arrDistance[1], 1.0e-3f );
 }
+
+/**
+ * @brief [PhysicsScene3DTest] 보간하는 동적 바디의 회전만 쓴 코드는 자리를, 자리만 쓴 코드는 회전을 되돌리지 않는다 — 쓰지 않은 몫은 시뮬레이션의 것이다
+ * @details 그린 자세는 두 스텝 사이라(스텝과 프레임이 같으면 지난 스텝 자세) 예전에는 한 몫만 써도 통째로 바디에 옮겨, 회전을 쓰는 동안 바디가 허공에 멈췄다.
+ */
+SW_TEST_CASE( PhysicsScene3DTest, PartialTransformWritesKeepTheSimulatedRest )
+{
+    using Internal = TestPhysicsScene3DInternal;
+    float3  arrFinalPosition[3]{};
+    float32 arrFinalYaw[3]{};
+    for ( uint32 run = 0; run < 3; ++run )
+    {
+        GameObjectManager   manager;
+        RigidBodyComponent* pBody = manager.createGameObject( hashed_string( "Falling" ) )->addComponent<RigidBodyComponent>();
+        PhysicsShapeDesc3D  ball;
+        ball._type   = PhysicsShapeType3D::Sphere;
+        ball._radius = 0.25f;
+        pBody->setShape( ball );
+        pBody->setBodyType( PhysicsBodyType::Dynamic );
+        pBody->setLocalPosition( float3{ 0.0f, 50.0f, 0.0f } );
+        manager.beginPlay();
+        manager.update( Internal::kFrame );
+        pBody->setAngularVelocity( float3{ 0.0f, 1.0f, 0.0f } );
+        for ( uint32 frame = 0; frame < 30; ++frame )
+        {
+            if ( run == 1 )
+                pBody->setLocalRotation( float3{ 0.0f, 0.05f * static_cast<float32>( frame + 1u ), 0.0f } );
+            if ( run == 2 )
+                pBody->setLocalPosition( pBody->getLocalPosition() + float3{ 0.1f, 0.0f, 0.0f } );
+            manager.update( Internal::kFrame );
+        }
+        arrFinalPosition[run] = pBody->getWorldPosition();
+        arrFinalYaw[run]      = pBody->getLocalRotation()._y;
+    }
+    SW_EXPECT_TRUE( arrFinalPosition[0]._y < 49.0f );                          // 반 초 떨어졌다
+    SW_EXPECT_NEAR( arrFinalPosition[0]._y, arrFinalPosition[1]._y, 1.0e-3f ); // 회전만 썼다 — 그대로 떨어진다
+    SW_EXPECT_TRUE( arrFinalPosition[2]._x > 2.0f );                           // 자리를 썼다
+    SW_EXPECT_TRUE( arrFinalYaw[0] > 0.3f );                                   // 반 초 돌았다
+    SW_EXPECT_NEAR( arrFinalYaw[0], arrFinalYaw[2], 1.0e-3f );                 // 자리만 썼다 — 그대로 돈다
+}
+
+/** @brief [PhysicsCharacterTest] 빈 자리 찾기 — 서 있는 캐릭터의 자리는 비지 않았고, 곁의 빈 자리를 준다. 제 몸은 막는 것으로 보지 않는다 */
+SW_TEST_CASE( PhysicsCharacterTest, FreeSpotAvoidsStandingCharacters )
+{
+    using Internal = TestPhysicsScene3DInternal;
+    GameObjectManager manager;
+    SW_REQUIRE_NOT_NULL( Internal::addFloor( manager ) );
+    CharacterControllerComponent* pStanding = Internal::addWalker( manager, "Standing", float3{ 0.0f, 0.0f, 0.0f } );
+    CharacterControllerComponent* pNew      = Internal::addWalker( manager, "New", float3{ 5.0f, 0.0f, 0.0f } );
+    SW_REQUIRE_NOT_NULL( pStanding );
+    SW_REQUIRE_NOT_NULL( pNew );
+    manager.beginPlay();
+    for ( uint32 frame = 0; frame < 5; ++frame )
+    {
+        manager.update( Internal::kFrame );
+    }
+    SW_EXPECT_TRUE( pStanding->isSpotFree( float3{} ) ); // 제 속 바디
+    SW_EXPECT_FALSE( pNew->isSpotFree( float3{} ) );
+    const sw::optional<float3> spot = pNew->findFreeSpot( float3{}, 3.0f );
+    SW_REQUIRE_TRUE( spot.has_value() );
+    SW_EXPECT_TRUE( float3::getHorizontalDistance( *spot, float3{} ) >= 2.0f * pNew->getRadius() );
+    SW_EXPECT_FALSE( pNew->findFreeSpot( float3{}, 0.1f ).has_value() ); // 반경 안에 자리가 없다
+}
