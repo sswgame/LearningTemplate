@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="a8e7964173144e07811cef0c2afacd3b"?>
+<!--
+  스스로 끝나지 않는 미니게임의 나가기와 결과 값. 무대 maps/hub.
+  ① 허브의 일시정지 메뉴에는 "미니게임 나가기" 가 접혀 있다(Options 다음이 LeaveMinigame 이 아니다).
+  ② meadowvillage 에 들어가 여드레 동안 밭이 돈을 번 뒤, 일시정지 메뉴의 "미니게임 나가기" 로 나온다 — 밭 디렉터가 번 돈(잔고 - 시작 돈)을 결과 값 money 로 내고
+     허브 플레이어의 보상 표가 지갑에 얹는다(허브의 돈은 들어가기 전 20).
+  ③ 하위 레벨: themepark 에 들어가 minigame.quit(같은 길)으로 나온다 — 하위 레벨이 빠지고 결과 quit 가 온다.
+  실행: 체인 ctest -R Scenario.playground
+-->
+<Scenario name="game.playground.minigamequit" fixedDelta="0.0166667" timeoutFrames="4800" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/playground/maps/hub.scene.xml"/>
+	<Variable name="gv_playgroundAutoPlay" value="0"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<Expect watch="Western.Money" target="Ranch" equals="20"/>
+
+	<!-- ① 허브에는 나갈 미니게임이 없다 -->
+	<Tap slot="Key.Escape" hold="6"/>
+	<WaitUntil watch="UI.FocusedWidget" is="Resume" timeoutFrames="30"/>
+	<Tap slot="Key.Down" hold="1"/>
+	<WaitUntil watch="UI.FocusedWidget" is="Options" timeoutFrames="10"/>
+	<Tap slot="Key.Down" hold="1"/>
+	<WaitUntil watch="UI.FocusedWidget" is="QuitGame" timeoutFrames="10"/>
+	<Tap slot="Key.Escape" hold="1"/>
+	<WaitUntil watch="Time.Paused" equals="0" timeoutFrames="30"/>
+
+	<!-- ② 번 돈을 들고 나온다 -->
+	<DevCommand line="minigame.enter meadowvillage"/>
+	<WaitUntil watch="Minigame.Active" is="meadowvillage" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Clock.Hour" atLeast="5.8" timeoutFrames="10"/>
+	<Expect watch="Session.Money" equals="20"/>
+	<AdvanceGameTime hours="24"/>
+	<WaitUntil watch="Clock.Day" equals="1" timeoutFrames="10"/>
+	<AdvanceGameTime hours="24"/>
+	<WaitUntil watch="Clock.Day" equals="2" timeoutFrames="10"/>
+	<AdvanceGameTime hours="24"/>
+	<WaitUntil watch="Clock.Day" equals="3" timeoutFrames="10"/>
+	<AdvanceGameTime hours="24"/>
+	<WaitUntil watch="Clock.Day" equals="4" timeoutFrames="10"/>
+	<AdvanceGameTime hours="24"/>
+	<WaitUntil watch="Clock.Day" equals="5" timeoutFrames="10"/>
+	<AdvanceGameTime hours="24"/>
+	<WaitUntil watch="Clock.Day" equals="6" timeoutFrames="10"/>
+	<AdvanceGameTime hours="24"/>
+	<WaitUntil watch="Clock.Day" equals="7" timeoutFrames="10"/>
+	<AdvanceGameTime hours="24"/>
+	<WaitUntil watch="Clock.Day" equals="8" timeoutFrames="10"/>
+	<WaitUntil watch="Session.Money" atLeast="21" timeoutFrames="30"/>
+	<Tap slot="Key.Escape" hold="6"/>
+	<WaitUntil watch="UI.FocusedWidget" is="Resume" timeoutFrames="30"/>
+	<Tap slot="Key.Down" hold="1"/>
+	<WaitUntil watch="UI.FocusedWidget" is="Options" timeoutFrames="10"/>
+	<Tap slot="Key.Down" hold="1"/>
+	<WaitUntil watch="UI.FocusedWidget" is="LeaveMinigame" timeoutFrames="10"/>
+	<Tap slot="Key.Enter" hold="1"/>
+	<WaitUntil watch="Minigame.RestoreCount" equals="1" timeoutWallSeconds="60"/>
+	<ExpectActiveScene path="game/playground/maps/hub.scene.xml"/>
+	<WaitUntil watch="Minigame.LastResult" is="quit" timeoutFrames="10"/>
+	<WaitUntil watch="Western.Money" target="Ranch" atLeast="21" timeoutFrames="10"/>
+	<Expect watch="Time.Paused" equals="0"/>
+
+	<!-- ③ 하위 레벨 -->
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<DevCommand line="minigame.enter themepark Marker"/>
+	<WaitUntil watch="Minigame.Active" is="themepark" timeoutFrames="60"/>
+	<WaitUntil watch="Scene.LoadedSubLevelCount" equals="1" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Object.Exists" target="ParkGuest[0]" equals="1" timeoutFrames="60"/>
+	<DevCommand line="minigame.quit"/>
+	<WaitUntil watch="Scene.SubLevelCount" equals="0" timeoutFrames="30"/>
+	<Expect watch="Minigame.Active" is="none"/>
+	<Expect watch="Minigame.LastResult" is="quit"/>
+	<Expect watch="Minigame.LeakCount" equals="0"/>
+	<Pass/>
+</Scenario>

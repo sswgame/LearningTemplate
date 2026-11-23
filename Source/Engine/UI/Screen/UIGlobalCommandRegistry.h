@@ -25,7 +25,7 @@ namespace sw
      * @class UIGlobalCommandRegistry
      * @brief 이름 → 처리 함수 표입니다(엔진 범위 서브시스템 `UIGlobalCommands`). 화면이 `onCommand` 로 처리하지 않은 명령이 마지막으로 여기에 닿습니다.
      * @details 언리얼 CommonUI 의 입력 액션 바인딩이 위젯 밖의 핸들러를 부르는 것, 유니티 UI Toolkit 의 명령 이벤트가 패널 밖으로 올라가는 것에 해당한다.
-     *          엔진 일시정지 메뉴(`PauseMenuScreen`)의 `ReturnToTitle` · `QuitGame` 버튼은 이 표에 그 이름이 등록됐을 때만 보인다 —
+     *          엔진 일시정지 메뉴(`PauseMenuScreen`)의 `LeaveMinigame` · `ReturnToTitle` · `QuitGame` 버튼은 이 표에 그 이름이 등록됐을 때만 보인다 —
      *          게임 흐름(`GameInstance`)이나 호스트(`Engine`)가 자기 처리 함수를 등록한다. 등록은 구독이라 등록한 쪽이 사라질 때 풀린다.
      *          게임 스레드에서만 쓴다.
      */
@@ -33,6 +33,7 @@ namespace sw
     {
     public:
         static constexpr utf8 kReturnToTitle[] = "ReturnToTitle"; ///< 일시정지 메뉴의 "타이틀로" 명령입니다.
+        static constexpr utf8 kLeaveMinigame[] = "LeaveMinigame"; ///< 일시정지 메뉴의 "미니게임 나가기" 명령입니다(미니게임이 켜진 동안만 걸린다).
         static constexpr utf8 kQuitGame[]      = "QuitGame";      ///< 일시정지 메뉴 · 메인 메뉴의 "끝내기" 명령입니다.
         static constexpr utf8 kStartGame[]     = "StartGame";     ///< 메인 메뉴의 "시작" 명령입니다(타이틀 다음 씬을 연다 — `GameSceneFlow::requestEntranceScene`).
 

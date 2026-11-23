@@ -37,7 +37,8 @@ namespace
     public:
         int64 _roundMoney{ 0 }; ///< 한 판 임시 지갑 — 바탕 판에 쓰지 않는다
 
-        void collectResultForTest( vector<MinigameResultValue>& outListValue ) const { collectMinigameResult( outListValue ); }
+        void        collectMinigameResult( vector<MinigameResultValue>& outListValue ) const override { outListValue.push_back( MinigameResultValue{ hashed_string( "gold" ), _roundMoney } ); }
+        static void addMoneyResultForTest( vector<MinigameResultValue>& outListValue, int64 profit ) { addMoneyResult( outListValue, profit ); }
 
     protected:
         void serializeGameState( StateIO& io ) override { (void)io; }
@@ -47,10 +48,6 @@ namespace
         {
             (void)manager;
             (void)bRespawnViews;
-        }
-        void collectMinigameResult( vector<MinigameResultValue>& outListValue ) const override
-        {
-            outListValue.push_back( MinigameResultValue{ hashed_string( "gold" ), _roundMoney } );
         }
     };
 
@@ -350,7 +347,7 @@ SW_TEST_CASE( MinigameTest, ResultCarriesDirectorOwnedValues )
     MinigameDirectorTestComponent director;
     director._roundMoney = 120;
     vector<MinigameResultValue> listValue;
-    director.collectResultForTest( listValue );
+    director.collectMinigameResult( listValue );
     MinigameFlow::FinishedDelegate finished;
     vector<MinigameResult>         listReceived;
     Subscription                   subscription = finished.add( SW_DELEGATE_LAMBDA( Delegate<void( const MinigameResult& )>, [&listReceived]( const MinigameResult& result )
@@ -360,6 +357,19 @@ SW_TEST_CASE( MinigameTest, ResultCarriesDirectorOwnedValues )
     SW_REQUIRE_TRUE( listReceived[0]._listValue.size() == 1 );
     SW_EXPECT_TRUE( listReceived[0]._listValue[0]._name == hashed_string( "gold" ) );
     SW_EXPECT_TRUE( listReceived[0]._listValue[0]._amount == 120 );
+}
+
+/** @brief [MinigameTest] 번 돈은 공통 값 이름으로 나가고 손해 · 본전은 나가지 않는다 — 통화 보상은 0 보다 커야 한다 */
+SW_TEST_CASE( MinigameTest, MoneyResultSkipsLoss )
+{
+    vector<MinigameResultValue> listValue;
+    MinigameDirectorTestComponent::addMoneyResultForTest( listValue, -30 );
+    MinigameDirectorTestComponent::addMoneyResultForTest( listValue, 0 );
+    SW_EXPECT_TRUE( listValue.empty() );
+    MinigameDirectorTestComponent::addMoneyResultForTest( listValue, 45 );
+    SW_REQUIRE_TRUE( listValue.size() == 1 );
+    SW_EXPECT_TRUE( listValue[0]._name == hashed_string( MinigameResultValue::kMoneyName ) );
+    SW_EXPECT_TRUE( listValue[0]._amount == 45 );
 }
 
 /** @brief [MinigameTest] 디렉터 계약 ③: 켜진 미니게임이 없는 판(허브 · 미니게임 흐름 없음)에서 끝내기는 오류로 거절된다(조용히 무시하지 않는다) */

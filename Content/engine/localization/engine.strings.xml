@@ -2314,6 +2314,11 @@
 				<item>engine/ui/confirm_countdown.ui.xml</item>
 			</origins>
 		</entry>
+		<entry key="Leave Minigame" source="Leave Minigame" context="TextWidget._text">
+			<origins>
+				<item>engine/ui/pause.ui.xml</item>
+			</origins>
+		</entry>
 		<entry key="Loading" source="Loading" context="TextWidget._text">
 			<origins>
 				<item>engine/ui/loading.ui.xml</item>

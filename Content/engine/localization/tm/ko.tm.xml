@@ -233,6 +233,7 @@
 		       text="이 설정을 유지할까요? {seconds}초 뒤에 되돌립니다." />
 		<entry source="Kind" text="종류" />
 		<entry source="Language" text="언어" />
+		<entry source="Leave Minigame" text="미니게임 나가기" />
 		<entry source="Lift sanction" text="제재 풀기" />
 		<entry source="Light at the eye" text="눈에 닿는 빛" />
 		<entry source="List audit" text="감사 기록 보기" />

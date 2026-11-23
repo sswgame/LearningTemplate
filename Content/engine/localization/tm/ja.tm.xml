@@ -224,6 +224,7 @@
 		       text="この設定を維持しますか? {seconds} 秒後に元に戻ります。" />
 		<entry source="Kind" text="種類" />
 		<entry source="Language" text="言語" />
+		<entry source="Leave Minigame" text="ミニゲームをやめる" />
 		<entry source="Lift sanction" text="制裁を解除" />
 		<entry source="Light at the eye" text="目に届く光" />
 		<entry source="List audit" text="監査ログ一覧" />
