@@ -88,7 +88,7 @@ namespace sw
         int32 _navHeight;
         PROPERTY( Category = "Navigation", DisplayName = "Nav Cell Size", Tooltip = "Edge of one nav cell (required)", Min = 0.0, Units = m )
         float32 _navCellSize;
-        PROPERTY( Category = "Navigation", DisplayName = "Obstacle Names", Tooltip = "Comma-separated object names that block the grid; Tree also blocks Tree_2, Tree_3 ..." )
+        PROPERTY( Category = "Navigation", DisplayName = "Obstacle Names", Meta = "NotLocalizable", Tooltip = "Comma-separated object names that block the grid; Tree also blocks Tree_2, Tree_3 ..." )
         string _navObstacleNames;
         PROPERTY( Category = "Navigation", DisplayName = "Obstacle Radius", Tooltip = "Cells within this distance of an obstacle object are blocked", Min = 0.0, Units = m )
         float32 _navObstacleRadius;
