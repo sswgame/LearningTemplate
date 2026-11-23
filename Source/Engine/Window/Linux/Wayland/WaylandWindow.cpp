@@ -237,6 +237,40 @@ namespace sw
             _bPointerLocked   = false;
         }
 
+        /** @brief 자리에서 키보드가 사라졌습니다. 능력을 잃은 장치의 객체에는 더 사건이 오지 않으므로 놓고, 다시 오면 새로 만듭니다(`onSeatCapabilities`). */
+        void releaseKeyboard()
+        {
+            if ( _pKeyboard == nullptr )
+                return;
+            wl_keyboard_destroy( _pKeyboard );
+            _pKeyboard = nullptr;
+            WaylandInputEvent event;
+            event._kind = WaylandInputKind::FocusLost; // `leave` 도 오지 않는다 — 눌린 키가 남지 않게 여기서 놓는다
+            pushInput( event );
+        }
+
+        /** @brief 자리에서 포인터가 사라졌습니다. 걸어 둔 잠금의 방식은 남겨 다시 생긴 포인터에 잇습니다. */
+        void releasePointer()
+        {
+            if ( _pPointer == nullptr )
+                return;
+            const WindowPointerLock lock = _pointerLock;
+            releasePointerConstraint();
+            _pointerLock = lock;
+            if ( _pCursorShapeDevice != nullptr )
+                wp_cursor_shape_device_v1_destroy( _pCursorShapeDevice );
+            if ( _pRelativePointer != nullptr )
+                zwp_relative_pointer_v1_destroy( _pRelativePointer );
+            wl_pointer_destroy( _pPointer );
+            _pCursorShapeDevice = nullptr;
+            _pRelativePointer   = nullptr;
+            _pPointer           = nullptr;
+            _pointerSerial      = 0; // 새 포인터가 들어올 때의 번호로만 커서를 바꾼다
+            WaylandInputEvent event;
+            event._kind = WaylandInputKind::PointerLeave;
+            pushInput( event );
+        }
+
         void dropSelectionOffer()
         {
             if ( _pSelectionOffer != nullptr )
@@ -322,7 +356,7 @@ namespace sw
                     state._pShm = static_cast<wl_shm*>( wl_registry_bind( pRegistry, name, &wl_shm_interface, kShmVersion ) );
                 else if ( StringUtil::equals( pInterface, xdg_wm_base_interface.name ) )
                     state._pWmBase = static_cast<xdg_wm_base*>( wl_registry_bind( pRegistry, name, &xdg_wm_base_interface, kWmBaseVersion ) );
-                else if ( StringUtil::equals( pInterface, wl_seat_interface.name ) )
+                else if ( StringUtil::equals( pInterface, wl_seat_interface.name ) && state._pSeat == nullptr ) // 자리는 하나만 쓴다 — 뒤에 생긴 자리가 쓰던 자리를 덮지 않는다
                     state._pSeat = static_cast<wl_seat*>( wl_registry_bind( pRegistry, name, &wl_seat_interface, version < kSeatVersion ? version : kSeatVersion ) );
                 else if ( StringUtil::equals( pInterface, wl_data_device_manager_interface.name ) )
                     state._pDataDeviceManager = static_cast<wl_data_device_manager*>( wl_registry_bind( pRegistry, name, &wl_data_device_manager_interface, kDataDeviceManagerVersion ) );
@@ -927,6 +961,8 @@ namespace sw
             }
 
             static void onSeatCapabilities( void* pData, wl_seat* pSeat, uint32 capabilities );
+            /** @brief 걸어 둔 방식(`_pointerLock`)의 잠금 · 가둠을 지금 포인터에 겁니다. */
+            static void createPointerConstraint( State& state );
 
             static void onSeatName( void* pData, wl_seat* pSeat, const utf8* pName )
             {
@@ -1118,6 +1154,10 @@ namespace sw
             State&     state     = *static_cast<State*>( pData );
             const bool bKeyboard = ( capabilities & WL_SEAT_CAPABILITY_KEYBOARD ) != 0;
             const bool bPointer  = ( capabilities & WL_SEAT_CAPABILITY_POINTER ) != 0;
+            if ( bKeyboard == false )
+                state.releaseKeyboard();
+            if ( bPointer == false )
+                state.releasePointer();
             if ( bKeyboard && state._pKeyboard == nullptr )
             {
                 state._pKeyboard = wl_seat_get_keyboard( pSeat );
@@ -1134,6 +1174,32 @@ namespace sw
                 }
                 if ( state._pCursorShapeManager != nullptr )
                     state._pCursorShapeDevice = wp_cursor_shape_manager_v1_get_pointer( state._pCursorShapeManager, state._pPointer );
+                createPointerConstraint( state ); // 장치를 뺐다 꽂아도 걸어 둔 잠금이 이어진다
+            }
+        }
+
+        void WaylandWindowInternal::createPointerConstraint( State& state )
+        {
+            if ( state._pPointerConstraints == nullptr || state._pSurface == nullptr )
+                return;
+            switch ( state._pointerLock )
+            {
+                case WindowPointerLock::Released:
+                {
+                    break;
+                }
+                case WindowPointerLock::Locked:
+                {
+                    state._pLockedPointer = zwp_pointer_constraints_v1_lock_pointer( state._pPointerConstraints, state._pSurface, state._pPointer, nullptr, ZWP_POINTER_CONSTRAINTS_V1_LIFETIME_PERSISTENT );
+                    zwp_locked_pointer_v1_add_listener( state._pLockedPointer, &s_lockedPointerListener, &state );
+                    break;
+                }
+                case WindowPointerLock::Confined:
+                {
+                    state._pConfinedPointer = zwp_pointer_constraints_v1_confine_pointer( state._pPointerConstraints, state._pSurface, state._pPointer, nullptr, ZWP_POINTER_CONSTRAINTS_V1_LIFETIME_PERSISTENT );
+                    zwp_confined_pointer_v1_add_listener( state._pConfinedPointer, &s_confinedPointerListener, &state );
+                    break;
+                }
             }
         }
     } // namespace
@@ -1513,18 +1579,8 @@ namespace sw
         const bool bSupported = lock == WindowPointerLock::Locked ? supportsPointerLock() : ( state._pPointerConstraints != nullptr && state._pPointer != nullptr );
         if ( bSupported == false )
             return false;
-        using Internal = WaylandWindowInternal;
-        if ( lock == WindowPointerLock::Locked )
-        {
-            state._pLockedPointer = zwp_pointer_constraints_v1_lock_pointer( state._pPointerConstraints, state._pSurface, state._pPointer, nullptr, ZWP_POINTER_CONSTRAINTS_V1_LIFETIME_PERSISTENT );
-            zwp_locked_pointer_v1_add_listener( state._pLockedPointer, &Internal::s_lockedPointerListener, &state );
-        }
-        else
-        {
-            state._pConfinedPointer = zwp_pointer_constraints_v1_confine_pointer( state._pPointerConstraints, state._pSurface, state._pPointer, nullptr, ZWP_POINTER_CONSTRAINTS_V1_LIFETIME_PERSISTENT );
-            zwp_confined_pointer_v1_add_listener( state._pConfinedPointer, &Internal::s_confinedPointerListener, &state );
-        }
         state._pointerLock = lock;
+        WaylandWindowInternal::createPointerConstraint( state );
         wl_display_flush( state._pDisplay );
         return true;
     }
