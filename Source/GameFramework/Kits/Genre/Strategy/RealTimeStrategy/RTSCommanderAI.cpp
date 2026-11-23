@@ -5,6 +5,7 @@
 #include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Behavior/ActionRegistry.h"
 #include "Engine/Reflection/TypeFqn.h"
 #include "Engine/Serialization/Format/Archive.h"
 

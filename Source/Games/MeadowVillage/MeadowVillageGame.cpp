@@ -16,7 +16,6 @@
 #include "GameFramework/Kits/Genre/Simulation/Farming/CropCatalog.h"
 #include "GameFramework/Runtime/Foundation/Framework/Flow/GameInstance.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
-#include "GameFramework/Runtime/Gameplay/GameState/GameStateComponent.h"
 #include "GameFramework/Runtime/Gameplay/Progression/Reputation.h"
 #include "GameFramework/Runtime/Gameplay/Quest/QuestCatalog.h"
 
@@ -54,8 +53,7 @@ namespace sw
         , _pFriendshipCatalog{}
         , _pQuestCatalog{}
     {
-        // 공유 상태가 먼저 — 복원할 때 디렉터보다 먼저 바이트를 받아 두고, 첫 디렉터가 판을 열며 적용한다.
-        getStateSnapshot().registerStatefulComponent<GameStateComponent>();
+        // 공유 상태(`GameStateComponent`)는 프레임워크가 먼저 올렸다 — 복원할 때 디렉터보다 먼저 바이트를 받아 두고, 첫 디렉터가 판을 열며 적용한다.
         getStateSnapshot().registerGameMode<MeadowFarmGameModeComponent>();
         getStateSnapshot().registerGameMode<MeadowTownGameModeComponent>();
         getStateSnapshot().registerGameMode<MeadowHomeGameModeComponent>(); // 집 부지(HousingPlotComponent)는 키트가 모든 게임에 올린다

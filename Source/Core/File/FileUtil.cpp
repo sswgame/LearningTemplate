@@ -799,7 +799,7 @@ namespace sw
         // 실행 파일 경로를 못 얻으면 어느 루트도 정할 수 없다 - 빈 글로 물러나지 않고 멈춘다(예전에는 빈 글을 받은 쪽마다 따로 실패했다).
         string executablePath;
         if ( PlatformFileSystem::getExecutablePath( executablePath ) == false || executablePath.empty() )
-            SW_FATAL( "The executable path could not be queried from the OS" );
+            reportFatalError( "The executable path could not be queried from the OS" );
         return executablePath;
     }
 

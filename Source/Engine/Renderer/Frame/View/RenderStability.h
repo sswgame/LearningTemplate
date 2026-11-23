@@ -3,7 +3,7 @@
  * @brief 사진 앞 "렌더가 자리를 잡았다" 판정입니다 — 시간 누적 렌더(TAA 기록이 쌓인 카메라 정지 프레임 수) · 노출 적응 수렴(남은 노출 오차의 상한).
  * @details 주 렌더러가 프레임마다 주 시점의 값을 올리고(`RenderStabilitySample::publish`, 렌더 스레드가 쓰고 게임 스레드가 읽는다), 렌더 정착 조건 둘(`RenderTemporalAccumulation` ·
  *          `RenderAutoExposure`, `RenderStability.cpp` 의 `SW_AUTOMATION_STABILITY_CONDITION`)과 진단 감시 값(`Render.StillFrames` · `Render.ExposureErrorEv` …)이 읽는다.
- *          사진 단계(`<Screenshot stability="render">`)가 에셋 일과 이 조건을 기다린다. 문턱은 `Config/Dev/ScenarioRun.json` 의 `_conditions` 이다(배포 엔진 설정에 두지 않는다).
+ *          사진 단계(`<Screenshot stability="Render">`)가 에셋 일과 이 조건을 기다린다. 문턱은 `Config/Dev/ScenarioRun.json` 의 `_conditions` 이다(배포 엔진 설정에 두지 않는다).
  *          - 정지 프레임: TAA 기록을 버리지 않았고(컷 · 첫 프레임 · TAA 가 빠진 뒤가 아님) 카메라 뷰-투영이 그대로인 프레임이 이어진 수다. 조건은 카메라 기준이다 — 캐릭터가 늘 숨 쉬는
  *            장면은 물체 움직임이 끝나지 않아 물체까지 보면 영영 "진행 중" 이었다. 고정 프레임 시간의 결정적 실행에서는 움직이는 장면도 같은 프레임이면 같은 그림이다.
  *            지터 누적이 수렴하려면 이 수가 기록 섞는 비율의 역수 몇 배는 되어야 한다(언리얼 TAA 의 히스토리 수렴, 자동화 스크린샷 앞 "warm-up frames").
@@ -73,7 +73,7 @@ namespace sw
         [[nodiscard]] static float32 advanceExposureError( float32 previous, bool bReset, bool bMoved, float32 rangeEv, float32 slowerAdaptRate );
         /**
          * @brief TAA 정착 조건(`RenderTemporalAccumulation`)입니다 — TAA 를 돌리지 않으면 해당 없음, 카메라 정지 프레임이 @p minStillFrames 이상이면 준비됨, 아니면 진행 중(진척은 정지 프레임 수).
-         * @details 카메라가 계속 움직이면 진척이 0 에 머물러 정지 시한(`_stallFrames`)에 진다 — 움직이는 카메라는 `stability="assets"` 로 찍는다.
+         * @details 카메라가 계속 움직이면 진척이 0 에 머물러 정지 시한(`_stallFrames`)에 진다 — 움직이는 카메라는 `stability="Assets"` 로 찍는다.
          */
         [[nodiscard]] static AutomationReadiness evaluateTemporalAccumulation( const RenderStabilitySample& sample, uint32 minStillFrames );
         /** @brief 노출 정착 조건(`RenderAutoExposure`)입니다 — 노출을 재지 않으면 해당 없음, 오차 상한이 @p maxErrorEv 이하면 준비됨, 아니면 진행 중(진척은 오차 상한의 비트). */

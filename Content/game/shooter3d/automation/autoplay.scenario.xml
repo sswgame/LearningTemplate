@@ -14,7 +14,7 @@
 	<WaitUntil watch="Shooter3D.PlayerControllerKind" equals="1" timeoutFrames="10"/>
 	<WaitUntil watch="Shooter3D.ShotCount" atLeast="3" timeoutSeconds="10"/>
 	<WaitUntil watch="Shooter3D.EnemyHitCount" atLeast="1" timeoutSeconds="10"/>
-	<Screenshot file="cctv.ppm" stability="assets"/>
+	<Screenshot file="cctv.ppm" stability="Assets"/>
 	<AdvanceSimulation frames="1"/> <!-- 사진 프레임과 자동 플레이 끄기를 다른 프레임에 둔다(프레임 경계) -->
 	<Variable name="gv_shooterAutoPlay" value="0"/>
 	<WaitUntil watch="Shooter3D.PlayerControllerKind" equals="0" timeoutFrames="10"/>

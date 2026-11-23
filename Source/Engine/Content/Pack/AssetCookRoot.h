@@ -14,45 +14,30 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Registry/RegistrationList.h"
 
 namespace sw
 {
-    class AssetCookRootRegistrar;
-    template <typename T>
-    class RegistrationList;
-
     /**
-     * @struct AssetCookRootRegistry
-     * @brief 등록된 코드 뿌리(리소스 id)의 표입니다. 표는 프로세스 값이고 정적 등록자가 채웁니다.
+     * @struct AssetCookRoot
+     * @brief 코드 뿌리(리소스 id) 하나의 등록 줄과 그 표입니다. 표는 프로세스 값이고 정적 등록자가 채웁니다. 경로는 정적 글(상수)이어야 한다.
      */
-    struct SW_API AssetCookRootRegistry
+    struct SW_API AssetCookRoot
     {
+        string_view _assetID;
+
+        /** @brief 뿌리를 올립니다. 빈 경로거나 같은 경로가 있으면 오류 로그를 남기고 false 입니다. */
+        [[nodiscard]] static bool add( const AssetCookRoot* pRoot );
+        static void               remove( const AssetCookRoot* pRoot );
+
         /** @brief 등록된 뿌리를 @p outListAssetID 끝에 더합니다(등록 순서). */
         static void appendRoots( vector<string>& outListAssetID );
         /** @brief @p assetID 가 등록돼 있으면 true 입니다(테스트). */
         static bool hasRoot( string_view assetID );
-
-    private:
-        friend class AssetCookRootRegistrar;
-        /** @brief 정적 등록 표입니다(공통 틀 `SW_DEFINE_REGISTRATION_LIST` — 함수 정적이라 다른 TU 의 등록자가 먼저 와도 서 있다). */
-        static RegistrationList<const AssetCookRootRegistrar>& getRegistrars();
     };
 
-    /** @brief `SW_ASSET_COOK_ROOT` 가 두는 정적 등록자입니다. 만들 때 올리고 사라질 때 내립니다. 경로는 정적 글(상수)이어야 한다. */
-    class SW_API AssetCookRootRegistrar
-    {
-    public:
-        explicit AssetCookRootRegistrar( string_view assetID );
-        ~AssetCookRootRegistrar();
-        AssetCookRootRegistrar( const AssetCookRootRegistrar& )            = delete;
-        AssetCookRootRegistrar& operator=( const AssetCookRootRegistrar& ) = delete;
-
-        /** @brief 등록한 리소스 id 입니다. */
-        string_view getAssetID() const { return _assetID; }
-
-    private:
-        string_view _assetID;
-    };
+    /** @brief `SW_ASSET_COOK_ROOT` 가 두는 정적 등록자입니다(공통 틀 `StaticRegistrar`). */
+    SW_DEFINE_STATIC_REGISTRAR( AssetCookRootRegistrar, const AssetCookRoot*, &AssetCookRoot::add, &AssetCookRoot::remove );
 } // namespace sw
 
 /**
@@ -61,8 +46,5 @@ namespace sw
  *     SW_ASSET_COOK_ROOT( DefaultAudioMixer, ::sw::AudioService::kDefaultMixerPath );
  * @endcode
  */
-#define SW_ASSET_COOK_ROOT( id, assetID )                                    \
-    static const ::sw::AssetCookRootRegistrar sw_assetCookRootRegistrar_##id \
-    {                                                                        \
-        ::sw::string_view( assetID )                                         \
-    }
+#define SW_ASSET_COOK_ROOT( id, assetID ) \
+    SW_STATIC_REGISTRATION( assetCookRoot, ::sw::AssetCookRoot, ::sw::AssetCookRootRegistrar, id, ::sw::string_view( assetID ) )

@@ -81,7 +81,7 @@ namespace sw
                 {
                     // 닿지 않는 한계다(`kMaxPageCount`). 닿았다면 칸 없이 컴포넌트를 만들 방법이 없다 — 알리고 멈춘다.
                     if ( _nextSlot >= kMaxPageCount * TPage::kSlotCount )
-                        SW_FATAL( "Component data store is full (%# slots). Too many components are alive.", _nextSlot );
+                        reportFatalError( "Component data store is full (%# slots). Too many components are alive.", _nextSlot );
                     slot = _nextSlot++;
                 }
 

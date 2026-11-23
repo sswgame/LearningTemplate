@@ -145,7 +145,7 @@ namespace sw
     {
         _frameGraphExecutor.ensureResources();
         if ( _nanCheck.initialize( _pDevice ) == false )
-            SW_FATAL( "The NaN check is on but its counters could not be created - see the log above" );
+            reportFatalError( "The NaN check is on but its counters could not be created - see the log above" );
     }
 
     void FramePassExecutor::releaseResources()

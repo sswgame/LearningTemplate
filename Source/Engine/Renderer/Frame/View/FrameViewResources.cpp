@@ -294,7 +294,7 @@ namespace sw
         // 폴백 없음 — 설정에 값이 없거나(0) 범위 밖이면 멈춘다(PROPERTY 범위와 같은 값).
         const float32 renderScale = engine::getSubsystem<EngineConfig>()._render._temporalUpscaleRenderScale;
         if ( renderScale < RenderConfig::kMinTemporalUpscaleRenderScale || renderScale > 1.0f )
-            SW_FATAL( "EngineConfig _render._temporalUpscaleRenderScale %# is missing or out of range (%#..1)", renderScale, RenderConfig::kMinTemporalUpscaleRenderScale );
+            reportFatalError( "EngineConfig _render._temporalUpscaleRenderScale %# is missing or out of range (%#..1)", renderScale, RenderConfig::kMinTemporalUpscaleRenderScale );
         return renderScale;
     }
 

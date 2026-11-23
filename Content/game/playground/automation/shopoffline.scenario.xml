@@ -12,7 +12,7 @@
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Appearance.Idle" target="Player" equals="1" timeoutFrames="300"/>
 	<Expect watch="Demo.Gold" target="InventoryDemo" equals="100"/>
-	<DevCommand line="demo.shop InventoryDemo"/>
+	<DevCommand line="exec InventoryDemo openShop"/>
 	<WaitUntil watch="UI.ActiveScreen" is="common/ui/shop/shop.ui.xml" timeoutFrames="30"/>
 	<Expect watch="Shop.LastStatus" is="none"/>
 

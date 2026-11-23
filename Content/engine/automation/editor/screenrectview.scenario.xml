@@ -20,7 +20,7 @@
 	<EditorWaitStable/>
 	<EditorExpectObject name="PipCamera"/>
 	<Expect watch="Editor.GameViewRequested" equals="1"/>
-	<Screenshot file="screenrectview.ppm" stability="assets"/>
+	<Screenshot file="screenrectview.ppm" stability="Assets"/>
 	<CaptureEditorUI file="screenrectview_editor.png"/>
 	<!-- PiP 카메라만 뺀 같은 씬(screenrectview_nopip.scene.xml)의 게임 뷰를 기준으로 찍는다 — 평균 휘도는 서로 다른 그림이 같은 평균을 내면 통과하므로 화소를 견준다 -->
 	<EditorWaitStable/>
@@ -29,7 +29,7 @@
 	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
 	<EditorWaitStable/>
 	<Expect watch="Editor.GameViewRequested" equals="1"/>
-	<Screenshot file="screenrectview_nopip.ppm" stability="assets"/>
+	<Screenshot file="screenrectview_nopip.ppm" stability="Assets"/>
 	<EditorWaitStable/>
 	<!-- PiP 사각형(0.55,0.55,0.4,0.4) 안쪽은 큐브가 든 칸이라 기준과 화소가 많이 다르고(배경과 다른 화소 비율 약 0.65 — Release 캡처로 어림, 문턱은 그 절반 아래), 왼쪽 위와 PiP 바로 위는 PiP 가 없는 기준과 같다.
 		     사각형이 게임 뷰 RT 가 아닌 곳(백버퍼)에 그려지면 안쪽이 기준과 같고, 위아래가 뒤집히면(GL 원점) 오른쪽 위가 다르다. 문턱은 GPU 확인 대기 -->

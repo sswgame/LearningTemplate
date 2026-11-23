@@ -101,9 +101,9 @@ namespace sw
         const RenderPacketKeyLights lights = writeKeyLight( packet, activeScene );
 
         // 하늘도 씬이 갖는다. 없으면 스카이 패스가 그리지 않는다(배경은 SceneColor 클리어 색).
-        const GameObjectManager* pActiveObjects = activeScene.getObjectManager();
-        const SceneEnvironment*  pEnvironment   = pActiveObjects != nullptr ? &pActiveObjects->getSubsystem<SceneEnvironment>() : nullptr;
-        packet._bHasSky                         = ( pEnvironment != nullptr && pEnvironment->findSky( packet._sky ) ) ? SW_TRUE : SW_FALSE;
+        GameObjectManager* pActiveObjects = activeScene.getObjectManager();
+        SceneEnvironment*  pEnvironment   = pActiveObjects != nullptr ? &pActiveObjects->getSubsystem<SceneEnvironment>() : nullptr;
+        packet._bHasSky                   = ( pEnvironment != nullptr && pEnvironment->findSky( packet._sky ) ) ? SW_TRUE : SW_FALSE;
         // 스카이 라이트 — 하늘을 거칠기 단계마다 거른 환경광이다. 하늘이 바뀐 프레임에만 다시 거르고(`SkyLightCache`), 하늘이 없으면 없다(그 씬의 환경광은 앰비언트 색이다).
         const SkyLightData* const pSkyLight = _skyLight.update( packet._bHasSky != SW_FALSE ? &packet._sky : nullptr, engine::getSubsystem<EngineConfig>()._render._skyLight );
 
@@ -117,6 +117,7 @@ namespace sw
         // 표면 변형 층도 씬이 갖는다 — 없으면 빈 값이라 셰이더가 정점을 옮기지 않는다.
         if ( pEnvironment == nullptr || pEnvironment->findSurfaceDeform( packet._surfaceDeform ) == false )
             packet._surfaceDeform = SurfaceDeformBinding{};
+        packet._materialGlobals = pEnvironment != nullptr ? pEnvironment->collectMaterialGlobals() : MaterialGlobals{};
         return lights;
     }
 

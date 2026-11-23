@@ -66,7 +66,7 @@ namespace sw
         desc._bIsRenderTarget   = SW_TRUE;
         desc._bIsShaderResource = SW_TRUE;
         if ( _target.ensure( *_pDevice, desc, "ScreenRotationTarget" ) == false )
-            SW_FATAL( "Failed to create the screen rotation target (%#x%#, format %#) - the rotated screen cannot be presented", logicalWidth, logicalHeight, static_cast<uint32>( format ) );
+            reportFatalError( "Failed to create the screen rotation target (%#x%#, format %#) - the rotated screen cannot be presented", logicalWidth, logicalHeight, static_cast<uint32>( format ) );
     }
 
     void FrameScreenRotation::recordToSwapchain( IRHICommandList& cmd ) const

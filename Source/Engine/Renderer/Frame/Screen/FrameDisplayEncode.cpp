@@ -85,7 +85,7 @@ namespace sw
         desc._bIsRenderTarget   = SW_TRUE;
         desc._bIsShaderResource = SW_TRUE;
         if ( target.ensure( *_pDevice, desc, pDebugName ) == false )
-            SW_FATAL( "Failed to create the HDR display target %# (%#x%#, format %#) - the HDR back buffer cannot be presented", pDebugName, width, height, RHIFormatUtil::getName( format ) );
+            reportFatalError( "Failed to create the HDR display target %# (%#x%#, format %#) - the HDR back buffer cannot be presented", pDebugName, width, height, RHIFormatUtil::getName( format ) );
     }
 
     float32 FrameDisplayEncode::getToneShoulder() const
@@ -106,7 +106,7 @@ namespace sw
         const RHIPipelineStateHandle encodePSO  = _psoManager.getEnginePSO( encodeKind );
         // 백버퍼가 HDR 이면 셋업이 이 PSO 를 만들었다(모니터 능력이 HDR 일 때 — `FramePSOManager::createPassPSOs`). 없으면 HDR 백버퍼에 낼 길이 없다.
         if ( composePSO == 0 || encodePSO == 0 )
-            SW_FATAL( "HDR display output has no %# PSO - the HDR back buffer cannot be presented", composePSO == 0 ? RenderPassKind::DisplayCompositeUI : encodeKind );
+            reportFatalError( "HDR display output has no %# PSO - the HDR back buffer cannot be presented", composePSO == 0 ? RenderPassKind::DisplayCompositeUI : encodeKind );
         const float32 paperWhiteRatio = _output._paperWhiteNits / MathUtil::max( _output._maxLuminanceNits, 1.0f );
         const float32 uiScale         = MathUtil::pow( MathUtil::min( paperWhiteRatio, 1.0f ), FrameDisplayEncodeInternal::kInverseSignalGamma );
 

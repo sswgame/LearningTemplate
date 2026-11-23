@@ -8,6 +8,7 @@
 #include "Engine/Object/GameObject/Tests/SceneIterationTestAccess.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
+#include "Engine/Serialization/Inherit/AssetRedirect.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/Flow/IContentConfiguration.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
@@ -179,6 +180,29 @@ SW_TEST_CASE( GameStateSnapshotTest, RestoreInAnotherSceneDoesNotMix )
     SW_EXPECT_EQUAL( 1u, countObjects( *pSceneB ) );
     SW_EXPECT_NOT_NULL( pSceneB->findGameObjectByName( hashed_string( "Marker" ) ) );
     SW_EXPECT_TRUE( snapshot.getComponentStateStore().isEmpty() );
+}
+
+/** @brief [GameStateSnapshotTest] 씬을 옮긴(팩을 흡수한) 뒤에도 옛 id 로 찍은 세이브는 새 id 의 씬에서 읽힌다 — 머리의 씬 정체를 리다이렉트로 푼다 */
+SW_TEST_CASE( GameStateSnapshotTest, SceneIDFollowsRedirects )
+{
+    SubsystemScope scope;
+    SceneManager&  sceneManager = scope.emplaceSubsystem<SceneManager>();
+    SW_REQUIRE_TRUE( sceneManager.initializeSubsystem() == SubsystemInitResult::Succeeded );
+    const game::ScopedGameScope scoped{ scope };
+    GameStateSnapshot           snapshot;
+
+    SW_REQUIRE_NOT_NULL( openSceneWithOneObject( sceneManager, "game/oldpack/maps/a.scene.xml" ) );
+    const vector<uint8> oldSave = captureEmptyEnvelope( snapshot );
+    SW_REQUIRE_TRUE( oldSave.empty() == false );
+    SW_REQUIRE_TRUE( AssetRedirect::loadFromXMLTexts( vector<string>{ "<Redirects><PrefixRedirect from=\"game/oldpack\" to=\"game/newpack/oldpack\"/></Redirects>" },
+                                                      vector<string>{ "test/redirects.xml" } ) );
+
+    const optional<string> sceneID = GameStateSnapshot::readSceneID( oldSave.data(), static_cast<uint32>( oldSave.size() ) );
+    SW_EXPECT_TRUE( sceneID.has_value() && *sceneID == "game/newpack/oldpack/maps/a.scene.xml" );
+    SW_EXPECT_NOT_NULL( openSceneWithOneObject( sceneManager, "game/newpack/oldpack/maps/a.scene.xml" ) );
+    SW_EXPECT_TRUE( snapshot.readEnvelope( SerializePurpose::Snapshot, nullptr, nullptr, oldSave.data(), static_cast<uint32>( oldSave.size() ) ) );
+    snapshot.endRestore();
+    AssetRedirect::clear();
 }
 
 /**

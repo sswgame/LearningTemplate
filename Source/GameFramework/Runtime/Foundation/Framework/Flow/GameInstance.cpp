@@ -23,6 +23,7 @@
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
+#include "Engine/Serialization/Inherit/AssetRedirect.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/Flow/GameInstanceClientHook.h"
@@ -81,12 +82,12 @@ namespace sw
                 return true;
             }
 
-            /** @brief 활성 씬의 리소스 id(`Scene::getSourcePath`)입니다. 씬 매니저나 활성 씬이 없으면 빈 글입니다 — 세이브 머리의 씬 정체와 같은 뜻이다. */
+            /** @brief 활성 씬의 지금 리소스 id(`Scene::getSourcePath` 를 리다이렉트로 푼 것)입니다. 씬 매니저나 활성 씬이 없으면 빈 글입니다 — 세이브 머리의 씬 정체와 같은 뜻이다. */
             static string findActiveSceneID()
             {
                 const SceneManager* const pSceneManager = game::findSubsystem<SceneManager>();
                 const Scene* const        pScene        = pSceneManager != nullptr ? pSceneManager->getActiveScene() : nullptr;
-                return pScene != nullptr ? pScene->getSourcePath() : string{};
+                return pScene != nullptr ? AssetRedirect::toCurrentID( pScene->getSourcePath() ) : string{};
             }
 
             /** @brief 감시 값 `Save.Blocked` 입니다 — 세이브 막기 문이 들렸으면 1(씬 로드 · 깨진 복원 · 연출). */

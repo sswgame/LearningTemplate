@@ -490,7 +490,7 @@ namespace sw
             {
                 // 주 출력에 그리는 PSO 다 — 없으면 화면에 아무것도 낼 수 없고, 다른 PSO · 복사로 대신하지 않으므로 여기서 멈춘다.
                 if ( pso == 0 )
-                    SW_FATAL( "Output pass %# could not create its PSO for target format %# - nothing can be presented", job._passType, static_cast<uint32>( job._outputFormat ) );
+                    reportFatalError( "Output pass %# could not create its PSO for target format %# - nothing can be presented", job._passType, static_cast<uint32>( job._outputFormat ) );
                 _pCache->setOutputPSO( _pDevice, job._passType, job._outputFormat, pso );
                 continue;
             }
@@ -569,7 +569,7 @@ namespace sw
         RHIPipelineStateHandle pso{ 0 };
         const bool             bFound = _pCache->findOutputPSO( passType, targetFormat, pso ) && pso != 0;
         if ( bFound == false )
-            SW_FATAL( "Output pass %# has no PSO for target format %# from setup - add the format to collectOutputPSOJobs", passType, static_cast<uint32>( targetFormat ) );
+            reportFatalError( "Output pass %# has no PSO for target format %# from setup - add the format to collectOutputPSOJobs", passType, static_cast<uint32>( targetFormat ) );
         return pso;
     }
 
@@ -738,7 +738,7 @@ namespace sw
                 const RHIFormat arrRTVFormat[] = { format };
                 // 주 출력에 그리는 PSO 다 — 없으면 화면에 아무것도 낼 수 없고, 다른 PSO · 복사로 대신하지 않으므로 여기서 멈춘다.
                 if ( makePassPSODesc( passType, findPassDescByType( passType ), arrRTVFormat, job._desc ) == false )
-                    SW_FATAL( "Output pass %# could not create its PSO for target format %# - nothing can be presented", passType, static_cast<uint32>( format ) );
+                    reportFatalError( "Output pass %# could not create its PSO for target format %# - nothing can be presented", passType, static_cast<uint32>( format ) );
                 inoutListJob.push_back( std::move( job ) );
             }
         }

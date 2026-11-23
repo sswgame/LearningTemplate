@@ -15,6 +15,7 @@
 #include "Engine/Reflection/ReflectedValue.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/Inherit/DataCatalogInheritance.h"
+#include "Engine/Serialization/Inherit/DataInheritanceSchemaRegistry.h"
 #include "Engine/Serialization/Inherit/ResourceComposition.h"
 #include "Engine/Serialization/Inherit/ResourceTags.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
@@ -526,12 +527,8 @@ namespace sw
                 outbComposed = true;
                 if ( bListed )
                     return DataInheritance::flatten( text, id, schema, source, outText );
-                const DataInheritance::MergeFunction pfnMerge = DataInheritanceSchemaRegistrar::findMerge( rootName );
-                if ( pfnMerge != nullptr )
-                    return pfnMerge( text, id, source, outText );
-                const DataInheritance::MakeSchemaFunction pfnMakeSchema = DataInheritanceSchemaRegistrar::find( rootName );
-                if ( pfnMakeSchema != nullptr )
-                    return DataInheritance::flatten( text, id, pfnMakeSchema(), source, outText );
+                if ( const DataInheritanceSchemaEntry* pEntry = DataInheritanceSchemaRegistry::find( rootName ) )
+                    return pEntry->_pfnMerge != nullptr ? pEntry->_pfnMerge( text, id, source, outText ) : DataInheritance::flatten( text, id, pEntry->_pfnMakeSchema(), source, outText );
                 // 리플렉션 형식은 보지 않는다 — 쿠킹 프로세스에 어떤 형식이 지어졌는지(서버는 Renderer 가 없다 · 게임 모듈은 아직 없다)에 쿠킹본이 갈리면 안 된다.
                 SW_LOG_ERROR_ID( "DataInheritance.NoSchema", "'%#': <%#> has %# but no merge rule the cook can see - add a <Document> row to %# (the cook does not read reflection)", id, rootName,
                                  DataInheritance::kBaseAttribute, DataCatalogInheritance::kTableAssetID );

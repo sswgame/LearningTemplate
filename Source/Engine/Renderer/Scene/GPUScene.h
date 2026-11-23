@@ -335,7 +335,7 @@ namespace sw
          * @details 스냅샷을 적용할 때 정한다(`applyCPUSnapshot`) — 뷰 패스 고르기가 업로드보다 먼저 돌아, 업로드에서 정하면 왜곡이 처음 나타나는 프레임에 한 프레임 늦었다.
          */
         bool hasDistortionBatches() const { return _bDistortionBatches != SW_FALSE; }
-        /** @brief 배치 가운데 굴절 머티리얼(`Material::kRefractionDefine` — 물 · 유리)이 있으면 true 입니다. 없으면 반투명 패스가 장면 색 · 깊이 사본을 필요로 하지 않는다. `hasDistortionBatches` 와 같은 때 정한다. */
+        /** @brief 배치 가운데 굴절 머티리얼(`kMaterialRefractionDefine` — 물 · 유리)이 있으면 true 입니다. 없으면 반투명 패스가 장면 색 · 깊이 사본을 필요로 하지 않는다. `hasDistortionBatches` 와 같은 때 정한다. */
         bool hasRefractionBatches() const { return _bRefractionBatches != SW_FALSE; }
 
     private:

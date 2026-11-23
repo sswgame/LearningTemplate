@@ -1830,7 +1830,7 @@ namespace sw
 
 namespace sw
 {
-    SW_BUILT_IN_ASSET_CACHE( TextureCache );
+    SW_BUILT_IN_ASSET_CACHE( TextureCache, TextureCache );
 
     ReloadResult TextureCache::reload( const AssetID& assetID )
     {

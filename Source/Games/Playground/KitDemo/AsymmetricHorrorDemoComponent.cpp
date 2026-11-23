@@ -96,7 +96,6 @@ namespace sw
         (void)match.escape( survivor.value() );
 
         _completedGenerators = match.getCompletedGeneratorCount();
-        _escapedCount        = 0;
         for ( int32 index = 0; index < match.getSurvivorCount(); ++index )
         {
             const AsymmetricHorrorSurvivor* pSurvivor = match.findSurvivor( index );
