@@ -120,7 +120,10 @@ namespace sw
         {
             race.step();
         }
-        // 확정 순위(1 부터)로 차 번호를 찾는다. 시한이 지나지 않아 정해지지 않은 순위는 -1 로 남는다.
+        // 확정 순위(1 부터)로 차 번호를 찾는다. 시한이 지나지 않아 정해지지 않은 순위는 -1 이다(씬 스냅숏이 옮긴 앞 판의 순위가 남지 않는다).
+        _winner   = KartRacingDemoComponentInternal::kNoRacer;
+        _runnerUp = KartRacingDemoComponentInternal::kNoRacer;
+        _last     = KartRacingDemoComponentInternal::kNoRacer;
         for ( int32 index = 0; index < race.getRacerCount(); ++index )
         {
             const int32 place = race.findRacer( index )->_finishPlace;
