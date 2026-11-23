@@ -142,7 +142,7 @@ namespace sw
          *          칠하기 도구가 한 목록에 바로 칠한 것과 같은 일괄 수가 된다.
          */
         void appendDrawList( const CanvasDrawList& source );
-        /** @brief 사각형 바이트와 일괄(텍스처, 가위, 범위)이 같으면 true 입니다. 내용 번호를 증가시킬지 정하는 데 씁니다. */
+        /** @brief 사각형 바이트와 일괄(텍스처, 가위, 범위), 대상 크기가 같으면 true 입니다. 내용 번호를 증가시킬지 정하는 데 씁니다. */
         bool isSameContent( const CanvasDrawList& other ) const;
     };
 } // namespace sw
