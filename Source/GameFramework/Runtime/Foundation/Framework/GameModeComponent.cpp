@@ -71,6 +71,7 @@ namespace sw
         , _tickAfter{}
         , _listSpawned{}
         , _listPool{}
+        , _listFollowedAsset{}
         , _pendingStateBytes{}
         , _soundQueue{}
         , _compactThreshold{ GameModeComponentInternal::kMinCompactThreshold }
@@ -122,8 +123,41 @@ namespace sw
 
     bool GameModeComponent::openGame()
     {
+        vector<FollowedAsset> listPrevious = std::move( _listFollowedAsset ); // 규칙 객체는 `startGame` 이 다시 묶을 때까지 앞 판을 가리킨다
+        _listFollowedAsset.clear();
         resetRuntimeState();
-        return startGame();
+        if ( startGame() )
+            return true;
+        for ( FollowedAsset& previous : listPrevious )
+        {
+            _listFollowedAsset.push_back( std::move( previous ) ); // 다시 묶지 못한 규칙 객체가 남았다 — 쥔 채로 둔다
+        }
+        return false;
+    }
+
+    void GameModeComponent::applyReloadedAssets()
+    {
+        bool bReloaded = false;
+        for ( FollowedAsset& followed : _listFollowedAsset )
+        {
+            shared_ptr<const void> pLatest = followed._takeLatest();
+            if ( pLatest == nullptr || pLatest == followed._listHeld.back() )
+                continue;
+            followed._listHeld.push_back( std::move( pLatest ) );
+            bReloaded = true;
+        }
+        if ( bReloaded == false )
+            return;
+        Archive state;
+        writeState( state );
+        state.setReadModeAndResetPosition( true );
+        const bool bRebound = readState( state );
+        if ( bRebound )
+            SW_LOG_INFO_ID( "GameMode.ReloadedAssetApplied", "GameMode '%#': a reloaded asset is applied - the running game is bound to it", getTypeName().c_str() );
+        else
+            SW_LOG_WARNING_ID( "GameMode.ReloadedAssetRefused", "GameMode '%#': the running game does not fit a reloaded asset (see the messages above)", getTypeName().c_str() );
+        onStateRestored( bRebound );
+        despawnViews(); // 새 판의 모습으로 다시 세운다(이번 규칙 틱이 플러시를 잡는다)
     }
 
     void GameModeComponent::resetRuntimeState()
@@ -189,6 +223,8 @@ namespace sw
     {
         const float32 deltaTime = _pendingRuleDeltaTime;
         _pendingRuleDeltaTime   = 0.0f;
+        if ( _bStarted == SW_TRUE )
+            applyReloadedAssets();
         runRules( deltaTime );
     }
 

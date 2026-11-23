@@ -88,6 +88,9 @@ namespace sw
 
     bool FrontierSkirmishGameModeComponent::startGame()
     {
+        SharedAssetRef<RTSCatalog> pCatalog;
+        if ( acquireBoundCatalog( pCatalog ) == false )
+            return false;
         // 도시 디렉터가 먼저 열었으면 아무것도 하지 않는다 — 같은 설정이라 어느 쪽이 먼저 열어도 같은 판이다.
         GameStateComponent* pState  = GameStateComponent::openOnOwner( *this, FrontierTownData::makeStateSettings() );
         WalletComponent*    pWallet = pState != nullptr ? PlayerComponentUtil::requireOnOwner<WalletComponent>( *this ) : nullptr;
@@ -99,11 +102,10 @@ namespace sw
             return false;
         }
         // 유닛 id 는 씬 데이터가 정본이다(C++ 에 기본값이 없다). 비었거나 카탈로그에 없으면 조용히 건너뛰지 않고 판을 열지 않는다.
-        const RTSCatalog* pCatalog    = game::findSubsystem<const RTSCatalog>();
-        bool              bUnitsKnown = true;
+        bool bUnitsKnown = true;
         for ( const CatalogKey<RTSUnitDef>* pUnitID : { &_workerUnit, &_soldierUnit, &_barracksUnit } )
         {
-            if ( pCatalog != nullptr && pCatalog->find( pUnitID->key() ) != nullptr )
+            if ( pCatalog->find( pUnitID->key() ) != nullptr )
                 continue;
             SW_LOG_ERROR_ID( "FrontierSkirmish.SkirmishUnitEmptyNot", "[Frontier] the skirmish unit '%#' is empty or not in the RTS unit catalog - the skirmish cannot start", pUnitID->c_str() );
             bUnitsKnown = false;

@@ -154,6 +154,7 @@ namespace sw
         , _pGameFeatureScope{}
         , _pDevPart{}
         , _loadedAudioEvents{}
+        , _listBoundCatalog{}
         , _listFollowedService{}
         , _listSlotRequest{}
         , _saveSlotCounts{}

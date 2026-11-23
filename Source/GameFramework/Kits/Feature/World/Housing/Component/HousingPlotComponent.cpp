@@ -515,6 +515,8 @@ namespace sw
         uint64        owner  = HousingOwnerID::kNone;
         HousingLayout layout = _layout;
         Wallet        wallet = _wallet;
+        if ( _pCatalog != nullptr )
+            layout.rebindCatalog( *_pCatalog ); // 다시 읽힌 카탈로그면 새 판으로 읽는다
         io.value( owner );
         io.check( owner == HousingOwnerID::kNone || HousingOwnerID::isPersistent( owner ) );
         io.value( layout );

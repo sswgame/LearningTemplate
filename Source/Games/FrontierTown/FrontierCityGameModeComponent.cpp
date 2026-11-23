@@ -83,6 +83,9 @@ namespace sw
 
     bool FrontierCityGameModeComponent::startGame()
     {
+        SharedAssetRef<CityCatalog> pCity;
+        if ( acquireBoundCatalog( pCity ) == false )
+            return false;
         // 이 오브젝트의 첫 디렉터가 판을 연다. 시작 돈은 새 판일 때만(복원한 판 위에 덧쌓이지 않게).
         GameStateComponent* pState = GameStateComponent::openOnOwner( *this, FrontierTownData::makeStateSettings() );
         if ( pState == nullptr )
@@ -97,12 +100,6 @@ namespace sw
             if ( pUnits == nullptr )
             {
                 SW_LOG_ERROR_ID( "FrontierCity.UnitCatalogMissing", "[Frontier] the unit catalog is not loaded - the starting minerals have no currency" );
-                return false;
-            }
-            const CityCatalog* pCity = game::findSubsystem<const CityCatalog>();
-            if ( pCity == nullptr )
-            {
-                SW_LOG_ERROR_ID( "FrontierCity.CityCatalogMissing", "[Frontier] the city catalog is not loaded - the starting money has no currency" );
                 return false;
             }
             pWallet->getWallet().add( pCity->getRules()._currency, _startingDeben );
