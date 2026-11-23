@@ -55,6 +55,18 @@ namespace
             simulation.writeParticles( listParticle );
             return listParticle.empty() ? MathUtil::kMaxFloat : listParticle.front()._positionSize._x;
         }
+
+        /** @brief x 가 음수인 쪽의 위에만 지붕이 있는 장면입니다 — 위로 쏜 선분만 막힌다. */
+        class HalfRoofScene final : public IVFXCollisionScene
+        {
+        public:
+            bool castSegment( const float3& from, const float3& to, uint32 layerMask, VFXCollisionHit& outHit ) const override
+            {
+                (void)layerMask;
+                (void)outHit;
+                return to._y > from._y && from._x < 0.0f;
+            }
+        };
     };
     using Util = VFXSimulationSpaceTestUtil;
 } // namespace
@@ -101,4 +113,29 @@ SW_TEST_CASE( VFXSimulationSpaceTest, WorldSpaceParticlesStayWhereTheyWereBorn )
     local.moveEmitter( float3{ 4.0f, 0.0f, 0.0f } );
     SW_EXPECT_NEAR( before - 4.0f, Util::readFirstX( world ), 1.0e-5f );
     SW_EXPECT_NEAR( before, Util::readFirstX( local ), 1.0e-6f );
+}
+
+/** @brief [VFXSimulationSpaceTest] 하늘을 보는 방출기는 지붕 아래에서 입자를 내지 않는다 — 물리 광선 충돌이 없으면 검증이 거절한다 */
+SW_TEST_CASE( VFXSimulationSpaceTest, OpenSkyEmitterIsNotBornUnderARoof )
+{
+    VFXEmitterDef emitter               = Util::makeEmitter( VFXSimulationSpace::World );
+    emitter._collision._openSkyDistance = 30.0f;
+    {
+        SW_EXPECT_LOG( "VFXEffectDef.VFXEmitter" );
+        SW_EXPECT_FALSE( emitter.validate( "test" ) );
+    }
+    emitter._collision._mode = VFXCollisionMode::Kill;
+    SW_EXPECT_TRUE( emitter.validate( "test" ) );
+    const Util::HalfRoofScene scene;
+    VFXCPUSimulation          simulation{ make_shared<const VFXEmitterDef>( emitter ), 7u, 1.0f };
+    for ( uint32 step = 0; step < 10; ++step )
+        simulation.step( Util::kStep, &scene );
+    vector<GPUParticle> listParticle;
+    simulation.writeParticles( listParticle );
+    SW_REQUIRE_FALSE( listParticle.empty() );
+    for ( const GPUParticle& particle : listParticle )
+        SW_EXPECT_TRUE( particle._positionSize._x >= 0.0f );
+    vector<uint32> listSlot;
+    simulation.writeInstanceSlots( listSlot );
+    SW_EXPECT_EQUAL( listParticle.size(), listSlot.size() ); // 태어나지 않은 입자는 칸을 쓰지 않는다
 }

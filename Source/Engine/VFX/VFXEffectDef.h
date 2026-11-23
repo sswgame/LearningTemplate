@@ -167,6 +167,8 @@ namespace sw
         float32 _friction{ 0.0f };
         PROPERTY( Tooltip = "Physics layers the particles collide with (bit per layer, PhysicsRaycast only)" )
         uint32 _layerMask{ 0xFFFFFFFFu };
+        PROPERTY( Min = 0.0, Units = m, Tooltip = "Particles are only born where nothing lies within this distance straight above (precipitation stays out of high halls, PhysicsRaycast only); 0 does not look" )
+        float32 _openSkyDistance{ 0.0f };
 
         /** @brief 충돌이 꺼져 있으면 둘 다, 켜져 있으면 방법이 정한 곳 하나입니다. */
         VFXSimulationTargetSet getSupportedTargets() const;

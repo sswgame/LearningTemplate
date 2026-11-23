@@ -116,8 +116,8 @@ namespace sw
         /** @brief 빈 칸 목록을 모든 칸으로 채웁니다. 끝에서 꺼내므로 작은 칸부터 나간다(같은 씨앗이면 같은 칸). */
         void resetFreeSlots();
 
-        /** @brief 시계가 정한 이번 단계의 입자를 만듭니다. 풀이 차면 만들지 않고 한 번 경고합니다(번호는 시계가 이미 썼다). */
-        void spawnParticles( const VFXSpawnStep& spawn );
+        /** @brief 시계가 정한 이번 단계의 입자를 만듭니다. `_collision._openSkyDistance` 가 있으면 위가 막힌 자리의 입자는 태어나지 않습니다(번호는 쓴다). 풀이 차면 만들지 않고 한 번 경고합니다(번호는 시계가 이미 썼다). */
+        void spawnParticles( const VFXSpawnStep& spawn, const IVFXCollisionScene* pCollision );
         /** @brief 살아 있는 입자를 적분하고(충돌 포함) 수명이 다했거나 닿아 사라질 입자를 마지막 입자와 바꿔 지웁니다. */
         void integrateStep( float32 stepSeconds, const IVFXCollisionScene* pCollision );
         /** @brief 입자 하나가 이번 단계에 @p from 에서 움직인 선분의 충돌을 처리합니다. 사라져야 하면 false 입니다. */

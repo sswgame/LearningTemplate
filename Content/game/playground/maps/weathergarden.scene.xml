@@ -3,6 +3,7 @@
 	<!-- 환경 마당(automation/weathergarden) — 날씨 · 바람 · 풀베기 · 피 데칼을 한 자리에서 본다. 날씨는 Weather 의 판 상태가 data/weathergarden.weather.xml 로 연다.
 	     가운데(원점) 빈 마당: 바닥은 날씨 묶음을 따르는 환경 표면(젖음 · 웅덩이 · 눈). 왼쪽 풀밭(x -8 ~ 0): Fighter(스켈레톤 전사)가 휘두르면(HitWindow — foliage 0.9) 풀이 베이고 3 초 뒤 다시 자라며,
 	     둘레의 Target 이 맞아 피 데칼을 땅에 남긴다(HitDecalComponent, 비에 씻긴다). 앞 Flag: 바람에 날리는 천. 오른쪽(x 9 ~ 15) Shelter: 지붕과 뒤 벽 — 비가 들지 않고 빗소리가 먹먹하다.
+	     왼쪽 끝 Hall: 14 m 높이의 지붕 — 강수가 태어나는 높이(시점 위 10 m)보다 높아도 안에서 비가 생기지 않는다.
 	     Rain · Snow 는 주 시점을 따라다니는 강수다(PrecipitationComponent). -->
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
@@ -167,6 +168,21 @@
 				<_listComponent>
 					<VFXComponent _localID="7647927963071728401" _localPosition="0,10,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _effectPath="engine/vfx/precipitation_snow.vfx.xml" _seed="15" _bPlayOnBegin="false" />
 					<PrecipitationComponent _localID="15928374650192837465" _weatherValue="snowfall" _intensityParameter="Intensity" _height="10" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="16" name="Hall">
+			<GameObject _schemaVersion="0" _name="Hall" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _localID="7198733165449302788" _localPosition="-18,14,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Static" _material="Stone" _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="5,0.1,5" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="Stone">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="10,0.2,10" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="7.2" />
 				</_listComponent>
 			</GameObject>
 		</entity>

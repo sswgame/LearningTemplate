@@ -19,7 +19,7 @@ namespace sw
      * @details 세기는 효과의 사용자 파라미터 `_intensityParameter` 의 알파로 건다(1, 1, 1, 값). 입자는 월드 공간에 남고(`VFXSimulationSpace::World`) 물리 바디에 부딪혀 사라지므로
      *          (`VFXCollisionMode::Kill`) 지붕 아래에는 비가 들지 않는다 — 실내 차폐를 따로 굽지 않는다(언리얼 Niagara 의 충돌 강수, 유니티 VFX Graph 의 깊이 충돌 자리).
      *          물리 광선이라 화면 밖 지붕도 막는다.
-     * shortcut: 입자는 시점 `_height` 위에서 태어난다 — 지붕이 그보다 높은 실내는 안에서 비가 생긴다, 그런 실내가 생기면 태어날 때 위로 광선을 하나 쏜다.
+     *          지붕이 `_height` 보다 높은 실내는 효과가 태어날 때 하늘을 보아 막는다(`VFXCollisionDef::_openSkyDistance`).
      */
     REFLECT( Category = "Environment", DisplayName = "Precipitation", Tooltip = "Plays the effect on this object above the main view while a weather value is above 0 (rain, snow)" )
     class SW_GF_API PrecipitationComponent : public Component

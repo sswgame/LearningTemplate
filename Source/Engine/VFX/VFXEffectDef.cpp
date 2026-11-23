@@ -250,6 +250,11 @@ namespace sw
         const bool bSceneDepth = _collision._mode != VFXCollisionMode::None && _collision._method == VFXCollisionMethod::SceneDepth;
         if ( bSceneDepth )
             bValid = Check::expect( _collision._depthThickness > 0.0f, sourceLabel, _name, "_collision._depthThickness must be above 0 for the SceneDepth method" ) && bValid;
+        if ( _collision._openSkyDistance > 0.0f )
+        {
+            const bool bRaycast = _collision._mode != VFXCollisionMode::None && _collision._method == VFXCollisionMethod::PhysicsRaycast;
+            bValid              = Check::expect( bRaycast, sourceLabel, _name, "_collision._openSkyDistance needs the PhysicsRaycast collision method" ) && bValid;
+        }
         // 시뮬레이션 대상은 모듈 대상의 교집합이다. 비면 어느 곳에서도 돌 수 없다 — 한쪽 모듈을 조용히 끄지 않고 로드를 멈춘다.
         if ( computeSupportedTargets().isEmpty() )
         {

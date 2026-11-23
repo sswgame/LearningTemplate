@@ -81,11 +81,11 @@ namespace sw
     void VFXCPUSimulation::step( float32 stepSeconds, const IVFXCollisionScene* pCollision )
     {
         SW_ASSERT( stepSeconds > 0.0f );
-        spawnParticles( _clock.spawnStep( stepSeconds ) );
+        spawnParticles( _clock.spawnStep( stepSeconds ), pCollision );
         integrateStep( stepSeconds, pCollision );
     }
 
-    void VFXCPUSimulation::spawnParticles( const VFXSpawnStep& spawn )
+    void VFXCPUSimulation::spawnParticles( const VFXSpawnStep& spawn, const IVFXCollisionScene* pCollision )
     {
         const VFXEmitterDef& def        = getDef();
         const uint32         freeCount  = def._maxParticles - getAliveCount();
@@ -104,12 +104,10 @@ namespace sw
 
             Particle particle{};
             particle._particleIndex = particleIndex;
-            particle._instanceSlot  = _listFreeSlot.back(); // spawnCount 가 빈 칸 수 이하라 늘 있다
-            _listFreeSlot.pop_back();
-            particle._lifetime    = VFXCPUSimulationInternal::lerpFloat( def._lifetimeMin, def._lifetimeMax, VFXCPUSimulationInternal::nextUnitFloat( state ) );
-            particle._velocity._x = VFXCPUSimulationInternal::lerpFloat( def._velocityMin._x, def._velocityMax._x, VFXCPUSimulationInternal::nextUnitFloat( state ) );
-            particle._velocity._y = VFXCPUSimulationInternal::lerpFloat( def._velocityMin._y, def._velocityMax._y, VFXCPUSimulationInternal::nextUnitFloat( state ) );
-            particle._velocity._z = VFXCPUSimulationInternal::lerpFloat( def._velocityMin._z, def._velocityMax._z, VFXCPUSimulationInternal::nextUnitFloat( state ) );
+            particle._lifetime      = VFXCPUSimulationInternal::lerpFloat( def._lifetimeMin, def._lifetimeMax, VFXCPUSimulationInternal::nextUnitFloat( state ) );
+            particle._velocity._x   = VFXCPUSimulationInternal::lerpFloat( def._velocityMin._x, def._velocityMax._x, VFXCPUSimulationInternal::nextUnitFloat( state ) );
+            particle._velocity._y   = VFXCPUSimulationInternal::lerpFloat( def._velocityMin._y, def._velocityMax._y, VFXCPUSimulationInternal::nextUnitFloat( state ) );
+            particle._velocity._z   = VFXCPUSimulationInternal::lerpFloat( def._velocityMin._z, def._velocityMax._z, VFXCPUSimulationInternal::nextUnitFloat( state ) );
             // 상자 생성은 속도 뒤의 난수를 쓴다 — 점 생성(상자 0)의 수열은 그대로다.
             if ( def._spawnHalfExtents != float3::Zero )
             {
@@ -117,6 +115,15 @@ namespace sw
                 particle._position._y = VFXCPUSimulationInternal::lerpFloat( -def._spawnHalfExtents._y, def._spawnHalfExtents._y, VFXCPUSimulationInternal::nextUnitFloat( state ) );
                 particle._position._z = VFXCPUSimulationInternal::lerpFloat( -def._spawnHalfExtents._z, def._spawnHalfExtents._z, VFXCPUSimulationInternal::nextUnitFloat( state ) );
             }
+            // 트인 하늘에서만 태어난다(강수) — 지붕이 생성 상자보다 높은 실내에서 비가 생기지 않는다. 생성은 초당 수백이라 한 번의 광선은 단계마다의 충돌보다 싸다
+            // (언리얼 · 유니티 강수가 위에서 내려다본 가림 깊이를 보는 자리 — 물리 광선이라 따로 그리지 않는다).
+            VFXCollisionHit roof{};
+            const bool      bLooksUp = def._collision._openSkyDistance > 0.0f && pCollision != nullptr;
+            const float3    sky      = particle._position + float3{ 0.0f, def._collision._openSkyDistance, 0.0f };
+            if ( bLooksUp && pCollision->castSegment( particle._position, sky, def._collision._layerMask, roof ) )
+                continue;
+            particle._instanceSlot = _listFreeSlot.back(); // spawnCount 가 빈 칸 수 이하라 늘 있다
+            _listFreeSlot.pop_back();
             _listParticle.push_back( particle );
         }
     }

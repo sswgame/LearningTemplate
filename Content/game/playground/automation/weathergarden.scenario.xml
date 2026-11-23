@@ -5,7 +5,7 @@
   ① 맑음: 해 1.2, 바람 1 m/s(천이 조금만 날린다), 날씨 소리 없음.
   ② 휘두르기(anim.play 1H_Melee_Attack_Slice_Horizontal — Swing 구간의 HitWindow): 칼이 지난 풀이 베이고(Foliage.CutCount), 둘레 Target 이 맞아 데칼이 선다(Hit.DecalCount). 걷기로 돌아가면 3 초 뒤 풀이 다시 자란다.
   ③ 폭풍(cheat.weather storm): 해가 0.25 배, 풍속 8 m/s, 천이 크게 날리고, 빗소리 · 바람 소리가 나며, 웅덩이가 차고(Weather.y), 비가 시점 앞에 떨어진다.
-  ④ 실내 차폐: 시점을 지붕 아래로 옮기면 하늘 열림 0(소리가 먹먹해진다), 지붕 아래 칸에는 빗방울이 없고 처마 밖에는 있다.
+  ④ 실내 차폐: 시점을 지붕 아래로 옮기면 하늘 열림 0(소리가 먹먹해진다), 지붕 아래 칸에는 빗방울이 없고 처마 밖에는 있다. 비가 태어나는 높이보다 높은 지붕(Hall) 아래에서도 생기지 않는다.
   ⑤ 눈(cheat.weather snow): 비와 빗소리가 그치고 눈이 내리며 땅에 눈이 쌓인다(Weather.z).
   실행: App -scenario=game/playground/automation/weathergarden.scenario.xml -unattended (체인: ctest -R Scenario.playground)
 -->
@@ -49,6 +49,12 @@
 	<WaitUntil watch="VFX.ParticlesInBox" target="Rain" key="3 0 -8 8 4 8" atLeast="10" timeoutSeconds="4"/>
 	<AdvanceSimulation frames="90"/> <!-- 시점을 따라온 상자에서 난 비가 다 떨어지는 1.5 초(일어나지 않음 — 시간이 내용) -->
 	<Expect watch="VFX.ParticlesInBox" target="Rain" key="9.3 0 -2.7 14.7 2.8 2.7" equals="0"/>
+
+	<!-- 높은 실내: 지붕(14 m)이 비가 태어나는 높이(11.6 m)보다 높다 -->
+	<DevCommand line="object.place GameCamera -18 1.6 0"/>
+	<WaitUntil watch="VFX.ParticlesInBox" target="Rain" key="-12 0 -8 -9 4 8" atLeast="5" timeoutSeconds="4"/>
+	<AdvanceSimulation frames="90"/> <!-- 앞 자리에서 난 비가 다 떨어지는 1.5 초(일어나지 않음 — 시간이 내용) -->
+	<Expect watch="VFX.ParticlesInBox" target="Rain" key="-22 0 -4 -14 13 4" equals="0"/>
 
 	<!-- ⑤ 눈 -->
 	<DevCommand line="object.place GameCamera 0 3 -10"/>
