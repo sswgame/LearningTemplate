@@ -32,7 +32,7 @@ namespace sw
             static constexpr int32  kVersionBits      = 8;
             static constexpr uint32 kChecksumBytes    = 4;
 
-            static uint32 toHash32( const hashed_string& name ) { return name.empty() ? 0u : static_cast<uint32>( name.getHash() ); }
+            static uint32 toHash32( const hashed_string& name ) { return CustomizationSchemaDef::toSavedHash( name ); }
 
             /** @brief 받는 쪽이 알지 못하는 해시의 임시 이름(`#1a2b3c4d`)입니다. 펼칠 때 "지워진 콘텐츠" 로 보고되고, 스키마 판 올림이 옛 이름과 맞춘다. */
             static hashed_string makePlaceholder( uint32 hash ) { return CustomizationSchemaDef::makeHashPlaceholder( hash ); }

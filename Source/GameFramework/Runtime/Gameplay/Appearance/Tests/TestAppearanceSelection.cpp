@@ -363,6 +363,10 @@ SW_TEST_CASE_F( AppearanceSelectionTest, CodecRoundTripsAndKeepsUnknownNames )
     // 이 빌드가 모르는 이름은 임시 이름(`#해시`)이다
     SW_EXPECT_TRUE( decoded._listSlot[1]._slot.c_str()[0] == '#' );
     SW_EXPECT_TRUE( decoded._listSlot[1]._itemID.c_str()[0] == '#' );
+    // 임시 이름은 원래 해시로 다시 써진다 — 읽고 다시 저장해도 잠시 없던 콘텐츠가 돌아오면 찾는다
+    BitWriter again;
+    AppearanceSelection::writeSelection( again, decoded, _database );
+    SW_EXPECT_TRUE( again.releaseBytes() == bytes );
 }
 
 /** @brief [AppearanceSelectionTest] 잘린 비트와 비정상 개수는 거절한다 */
