@@ -78,6 +78,11 @@ namespace sw
                 static const hashed_string kName( "VolumetricFogVolume" );
                 return kName;
             }
+            static hashed_string sceneVoxelBuffer()
+            {
+                static const hashed_string kName( "SceneVoxels" );
+                return kName;
+            }
             static hashed_string probeIrradiance()
             {
                 static const hashed_string kName( "ProbeIrradiance" );
@@ -199,6 +204,9 @@ namespace sw
         {
             table.registerBuffer( FrameResource::probeIrradiance(), 0, *_state._lightBuffer.findProbeBuffer(), RenderGraphAccess::ShaderRead );
             table.registerBuffer( FrameResource::probeHistory(), 0, _state._probeUpdater.getHistoryBuffer(), RenderGraphAccess::UnorderedAccess );
+            // 복셀은 칠하는 프레임에만 등록한다 — 바뀐 것이 없으면 셰이더 읽기에서 쉰다.
+            if ( _state._probeUpdater.hasPendingPaint() )
+                table.registerBuffer( FrameResource::sceneVoxelBuffer(), 0, _state._probeUpdater.getVoxelBuffer(), RenderGraphAccess::ShaderRead );
         }
         if ( _state._canvasRenderer.getMarkerCount() > 0 && _state._canvasRenderer.getQuadBuffer().isValid() )
             table.registerBuffer( FrameResource::canvasMarkers(), 0, _state._canvasRenderer.getQuadBuffer(), RenderGraphAccess::ShaderRead );
@@ -266,6 +274,19 @@ namespace sw
                 // 볼륨은 도는 프레임에만 등록했다(`beginFrame` — 등록 조건이 곧 실행 조건). 등록이 없으면 그래프가 볼륨 전이를 내지 않았다 — 기록하지 않는다.
                 if ( graphContext.isRegistered( RenderGraphBufferUAV{ FrameResource::fogVolume() } ) )
                     _fog.dispatchVolumetricFog( *_pCmd, _state._lightBuffer, _transparentRankPlaceholder._srv );
+                break;
+            }
+            case RenderPassKind::SceneVoxelize:
+            {
+                // 칠하는 프레임에만 등록했다(`beginFrame` — 등록 조건이 곧 실행 조건).
+                if ( graphContext.isRegistered( RenderGraphBufferUAV{ FrameResource::sceneVoxelBuffer() } ) )
+                {
+                    SW_PROFILE_SCOPE( "RT.Probe.Voxelize" );
+                    const RHIPipelineStateHandle voxelizePSO = _psoManager.getEnginePSO( RenderPassKind::SceneVoxelize );
+                    _state._probeUpdater.dispatchVoxelClear( *_pCmd, voxelizePSO );
+                    graphContext.uavBarrier( RenderGraphBufferUAV{ FrameResource::sceneVoxelBuffer() } ); // 지운 칸 위에 칠한다
+                    _state._probeUpdater.dispatchVoxelPaint( *_pCmd, voxelizePSO );
+                }
                 break;
             }
             case RenderPassKind::ProbeUpdate:

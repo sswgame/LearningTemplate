@@ -987,7 +987,7 @@ SW_TEST_CASE( RenderPipelineAssetTest, ShippedPipelinesDeclareFramePasses )
         SW_REQUIRE_TRUE_MSG( asset.loadFromXMLFile( AssetID{ string_view( pPath ) } ), pPath );
         for ( const RenderPassKind type : { RenderPassKind::DepthHistory, RenderPassKind::HZBBuild, RenderPassKind::VFXSimulation, RenderPassKind::VFXParticleSort, RenderPassKind::VFXMeshInstance,
                                             RenderPassKind::InstanceAnimation, RenderPassKind::MeshMorph, RenderPassKind::MeshSkin, RenderPassKind::GPUCull, RenderPassKind::LightGrid,
-                                            RenderPassKind::VolumetricFog, RenderPassKind::ProbeUpdate, RenderPassKind::CanvasMarker } )
+                                            RenderPassKind::VolumetricFog, RenderPassKind::SceneVoxelize, RenderPassKind::ProbeUpdate, RenderPassKind::CanvasMarker } )
         {
             SW_EXPECT_TRUE_MSG( asset.hasFramePass( type ), pPath );
         }

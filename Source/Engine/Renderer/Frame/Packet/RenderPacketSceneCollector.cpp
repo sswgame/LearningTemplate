@@ -10,6 +10,7 @@
 #include "Engine/Environment/SceneEnvironment.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/2D/Render2DSettings.h"
+#include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/Upload/GPUUploadQueue.h"
 #include "Engine/Object/Component/CameraComponent.h"
@@ -68,6 +69,7 @@ namespace sw
 
     void RenderPacketSceneCollector::shutdown()
     {
+        _listVoxelUploadScene.clear(); // 복셀 장면이 메시를 쥔다 — 디바이스가 살아 있을 때 놓는다
         _gpuSceneBuilder->clear();
     }
 
@@ -264,12 +266,31 @@ namespace sw
         if ( pUploadQueue != nullptr )
         {
             _gpuSceneBuilder->requestGPUUploads( *pUploadQueue );
+            requestVoxelMeshUploads( packet, *pUploadQueue );
             pUploadQueue->flush();
         }
 
         SW_PROFILE_SCOPE( "GT.Packet.export" );
         _gpuSceneBuilder->exportCPUSnapshot( packet._gpuScene );
         packet._gpuScene._bMeshesCreatedBeforeHandoff = ( pUploadQueue != nullptr && pUploadQueue->shouldCreateMeshes() ) ? SW_TRUE : SW_FALSE;
+    }
+
+    void RenderPacketSceneCollector::requestVoxelMeshUploads( const RenderFramePacket& packet, GPUUploadQueue& queue )
+    {
+        // 실시간 프로브의 복셀은 렌더 프록시의 GPU 정점으로 칠한다 — 화면 배치에 없는 가리개도 같은 큐가 넘기기 전에 만든다(만드는 쪽은 하나다). 장면이 바뀐 프레임에만 훑는다.
+        _listVoxelUploadScene.resize( packet._listRealtimeProbe.size() );
+        for ( size_t index = 0; index < packet._listRealtimeProbe.size(); ++index )
+        {
+            const shared_ptr<const SceneVoxelScene>& pVoxelScene = packet._listRealtimeProbe[index]._pVoxelScene;
+            if ( pVoxelScene == _listVoxelUploadScene[index] )
+                continue;
+            _listVoxelUploadScene[index] = pVoxelScene;
+            for ( const SceneVoxelSource& source : pVoxelScene->_listSource )
+            {
+                if ( source.isPainted() && source._mesh->isDynamic() == false )
+                    queue.requestMesh( source._mesh );
+            }
+        }
     }
 
     void RenderPacketSceneCollector::resolveMarkerInstanceSlots( RenderFramePacket& packet, const UISystem* pUISystem, const Scene* pActiveScene ) const

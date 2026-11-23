@@ -660,8 +660,9 @@ namespace sw
 
     void FrameRenderer::prepareRealtimeProbes( IRHIDevice* pDevice )
     {
-        const bool bPipelineReady = _psoManager.getEnginePSO( RenderPassKind::ProbeUpdate ) != 0;
-        _state._probeUpdater.prepare( pDevice, _state._listFrameRealtimeProbe, _state._lightBuffer, _state._frameSkySource, _state._bHasFrameSky == SW_TRUE, bPipelineReady );
+        const bool bPipelineReady = _psoManager.getEnginePSO( RenderPassKind::ProbeUpdate ) != 0 && _psoManager.getEnginePSO( RenderPassKind::SceneVoxelize ) != 0;
+        _state._probeUpdater.prepare( pDevice, _state._listFrameRealtimeProbe, _state._lightBuffer, _state._frameSkySource, _state._bHasFrameSky == SW_TRUE, bPipelineReady,
+                                      _state._gpuScene.areMeshesCreatedBeforeHandoff() == false );
     }
 
     namespace

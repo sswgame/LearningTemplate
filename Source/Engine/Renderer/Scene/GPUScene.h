@@ -165,6 +165,8 @@ namespace sw
          * @brief 프레임 업로드 단계 — 정점 풀이 쌓은 GPU 복사(렌더 프록시 → 풀, 옛 풀 → 새 풀)를 @p cmd 에 기록합니다(R-15). 실행기가 파이프라인과 무관하게 첫 리스트 앞에서 부른다(`FramePassExecutor::submitGraph`).
          */
         void recordFrameUploads( IRHICommandList& cmd, IRHIDevice& device );
+        /** @brief 지금 스냅샷의 메시(동적 메시 밖)를 게임 스레드가 넘기기 전에 만들었는지입니다(`GPUSceneSnapshot::_bMeshesCreatedBeforeHandoff`) — 렌더 스레드는 다시 만들지 않는다. */
+        bool areMeshesCreatedBeforeHandoff() const { return _snapshot._bMeshesCreatedBeforeHandoff == SW_TRUE; }
         /** @brief GPU 버퍼를 해제합니다. */
         void releaseGPU( IRHIDevice* pDevice );
 
