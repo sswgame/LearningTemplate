@@ -392,7 +392,7 @@ namespace sw::editor
             const int32 nodeID = addNodeOfKind( kindID );
             if ( nodeID != 0 )
             {
-                placeNodeOnNextDraw( nodeID, canvasPosition );
+                placeNewNode( nodeID, canvasPosition );
                 AnimationGraphEdit::commitNodeAdded( getGraphEditSession() );
             }
         }
@@ -440,21 +440,10 @@ namespace sw::editor
 
     bool AnimationGraphPanel::saveGraphData()
     {
-        AnimationGraphAsset data = captureGraphData();
-        if ( _nodeGraph.bind() )
-        {
-            for ( GraphNode& node : data._listNode )
-            {
-                const ImVec2 pos  = ed::GetNodePosition( EditorNodeGraphID::toNodeID( node._id ) );
-                node._position._x = pos.x;
-                node._position._y = pos.y;
-            }
-            _nodeGraph.unbind();
-            _graph._listNode = data._listNode;
-        }
+        // 노드 자리는 그린 프레임마다 `cacheNodeLayout` 이 문서에 싣는다 — 저장이 캔버스에 다시 물으면 아직 그리지 않은 노드(되돌리기 직후)는 FLT_MAX 가 파일에 남는다.
         // **저장이 실패하면 아무것도 지우지 않는다.** 실패를 "저장됨" 으로 표시하면 문서를 바꾸거나 에디터를 닫을 때
         // 종료 확인이 뜨지 않고 편집이 조용히 사라진다.
-        if ( AnimationGraphEdit::saveGraph( data, getLoadedAssetPath() ) == false )
+        if ( AnimationGraphEdit::saveGraph( captureGraphData(), getLoadedAssetPath() ) == false )
             return false;
 
         clearDocumentDirty();
@@ -470,12 +459,14 @@ namespace sw::editor
     int32 AnimationGraphPanel::addNamedNode( const utf8* pName )
     {
         GraphNode n{};
-        n._id              = nextNodeID();
-        n._name            = ( pName != nullptr ) ? pName : "Node";
-        n._position._x     = 40.0f + static_cast<float32>( _graph._listNode.size() ) * 40.0f;
-        n._position._y     = 40.0f + static_cast<float32>( _graph._listNode.size() ) * 30.0f;
-        const int32 nodeID = n._id;
+        n._id                 = nextNodeID();
+        n._name               = ( pName != nullptr ) ? pName : "Node";
+        n._position._x        = 40.0f + static_cast<float32>( _graph._listNode.size() ) * 40.0f;
+        n._position._y        = 40.0f + static_cast<float32>( _graph._listNode.size() ) * 30.0f;
+        const int32  nodeID   = n._id;
+        const float2 position = n._position;
         _graph._listNode.push_back( std::move( n ) );
+        placeNewNode( nodeID, position );
         return nodeID;
     }
 

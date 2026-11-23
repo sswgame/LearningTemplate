@@ -269,7 +269,7 @@ namespace sw::editor
         float2 canvasPosition{};
         if ( _nodeGraph.drawAddNodePopup( listKind, kindID, canvasPosition ) )
         {
-            placeNodeOnNextDraw( addNode( static_cast<DialogueAssetNodeKind>( kindID ) ), canvasPosition );
+            placeNewNode( addNode( static_cast<DialogueAssetNodeKind>( kindID ) ), canvasPosition );
             DialogueGraphEdit::commitNodeAdded( getGraphEditSession() );
         }
 
@@ -447,6 +447,7 @@ namespace sw::editor
     {
         _selectedNodeID = nextNodeID();
         DialogueGraphEdit::addNode( _graph, type, _selectedNodeID );
+        placeNewNode( _selectedNodeID, _graph._listNode.back()._position );
         return _selectedNodeID;
     }
 
