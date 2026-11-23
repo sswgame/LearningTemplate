@@ -213,7 +213,25 @@ namespace sw
     bool PokerTable::needsAction( int32 seat ) const
     {
         const PokerSeat& pokerSeat = _listSeat[static_cast<size_t>( seat )];
-        return canAct( seat ) && ( pokerSeat._bActed == SW_FALSE || pokerSeat._committed < _currentBet );
+        if ( canAct( seat ) == false || ( pokerSeat._bActed == SW_TRUE && pokerSeat._committed >= _currentBet ) )
+            return false;
+        // 겨룰 상대가 모두 올인이고 그만큼 이미 냈으면 더 걸 곳이 없다.
+        for ( int32 other = 0; other < getSeatCount(); ++other )
+        {
+            const PokerSeat& otherSeat = _listSeat[static_cast<size_t>( other )];
+            const bool       bLive     = other != seat && otherSeat._bInHand == SW_TRUE && otherSeat._bFolded == SW_FALSE;
+            if ( bLive && ( otherSeat._bAllIn == SW_FALSE || otherSeat._committed > pokerSeat._committed ) )
+                return true;
+        }
+        return false;
+    }
+
+    bool PokerTable::canRaise( int32 seat ) const
+    {
+        if ( seat < 0 || seat >= getSeatCount() || canAct( seat ) == false )
+            return false;
+        const PokerSeat& pokerSeat = _listSeat[static_cast<size_t>( seat )];
+        return pokerSeat._bActed == SW_FALSE || _currentBet - pokerSeat._committed >= _lastRaiseSize;
     }
 
     optional<int32> PokerTable::findNextSeat( int32 fromSeat, bool bCanActOnly ) const
@@ -272,7 +290,7 @@ namespace sw
         _eventBuffer.push( PokerEvent{ smallBlindSeat, _listSeat[static_cast<size_t>( smallBlindSeat )]._committed, PokerEvent::Kind::Blind } );
         commitChips( bigBlindSeat, _settings._bigBlind );
         _eventBuffer.push( PokerEvent{ bigBlindSeat, _listSeat[static_cast<size_t>( bigBlindSeat )]._committed, PokerEvent::Kind::Blind } );
-        _currentBet    = MathUtil::max( _listSeat[static_cast<size_t>( smallBlindSeat )]._committed, _listSeat[static_cast<size_t>( bigBlindSeat )]._committed );
+        _currentBet    = _settings._bigBlind; // 모자란 빅 블라인드도 들어오는 값을 낮추지 않는다
         _lastRaiseSize = _settings._bigBlind;
 
         // 스몰 블라인드부터 한 장씩 두 바퀴를 나눈다.
@@ -332,7 +350,7 @@ namespace sw
             case PokerActionKind::Raise:
             {
                 const int32 needed = amount - pokerSeat._committed;
-                if ( amount <= _currentBet || needed > pokerSeat._stack )
+                if ( amount <= _currentBet || needed > pokerSeat._stack || canRaise( seat ) == false )
                     return false;
                 const bool bAllIn = needed == pokerSeat._stack;
                 if ( bAllIn == false && amount < getMinRaiseTo() )
@@ -345,6 +363,8 @@ namespace sw
                 if ( pokerSeat._stack <= 0 )
                     return false;
                 raiseTo = pokerSeat._committed + pokerSeat._stack;
+                if ( raiseTo > _currentBet && canRaise( seat ) == false )
+                    return false; // 콜을 넘는 올인은 레이즈다
                 break;
             }
         }
@@ -356,12 +376,14 @@ namespace sw
             if ( raiseTo > _currentBet )
             {
                 const int32 increase = raiseTo - _currentBet;
-                if ( increase >= _lastRaiseSize )
-                    _lastRaiseSize = increase; // 모자란 올인은 최소 증액을 바꾸지 않는다
-                _currentBet = raiseTo;
-                for ( PokerSeat& other : _listSeat )
+                _currentBet          = raiseTo;
+                if ( increase >= _lastRaiseSize ) // 모자란 올인은 최소 증액을 바꾸지 않고 베팅도 다시 열지 않는다
                 {
-                    other._bActed = SW_FALSE;
+                    _lastRaiseSize = increase;
+                    for ( PokerSeat& other : _listSeat )
+                    {
+                        other._bActed = SW_FALSE;
+                    }
                 }
             }
             _eventBuffer.push( PokerEvent{ seat, raiseTo, bAllIn ? PokerEvent::Kind::AllIn : PokerEvent::Kind::Raise } );
@@ -552,7 +574,8 @@ namespace sw
         if ( io.isOk() == false )
             return;
         io.check( constant::invalid_index::kInt32 <= _button && _button < seatCount && constant::invalid_index::kInt32 <= _currentSeat && _currentSeat < seatCount );
-        io.check( 0 <= _currentBet && _currentBet <= chipTotal && 0 <= _lastRaiseSize && static_cast<int64>( _currentBet ) + _lastRaiseSize <= std::numeric_limits<int32>::max() );
+        // 모자란 블라인드뿐인 판은 맞춰야 할 값(빅 블라인드)이 판의 칩보다 클 수 있다.
+        io.check( 0 <= _currentBet && _currentBet <= MathUtil::max( chipTotal, static_cast<int64>( _settings._bigBlind ) ) && 0 <= _lastRaiseSize && static_cast<int64>( _currentBet ) + _lastRaiseSize <= std::numeric_limits<int32>::max() );
         // 쇼다운은 홀 둘과 보드를 고정 크기 배열에 담는다(`finishShowdown`) — 보드가 다섯을 넘으면 스택을 넘어 쓴다.
         if ( io.check( _board.getCount() <= PokerTableInternal::kBoardCount ) == false )
             return;

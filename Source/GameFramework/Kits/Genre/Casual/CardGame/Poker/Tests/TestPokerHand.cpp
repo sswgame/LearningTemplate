@@ -254,6 +254,104 @@ SW_TEST_CASE( PokerTableTest, RefusedStartKeepsEveryChip )
 }
 
 /**
+ * @brief [PokerTableTest] 빅 블라인드가 모자라게 올인해도 들어오려면 온전한 빅 블라인드를 낸다. 그 판의 저장도 다시 읽힌다
+ */
+SW_TEST_CASE( PokerTableTest, ShortBigBlindStillCostsAFullCall )
+{
+    sw::PokerSettings settings;
+    settings._smallBlind = 10;
+    settings._bigBlind   = 20;
+    sw::PokerTable table;
+    SW_REQUIRE_TRUE( table.initialize( settings, { 100, 100, 5 } ) ); // 버튼 0, 스몰 1, 빅 2
+    sw::GameRandom random( 7u );
+    SW_REQUIRE_TRUE( table.startHand( random ) );
+    SW_EXPECT_EQUAL( 20, table.getCurrentBet() );
+    SW_EXPECT_EQUAL( 40, table.getMinRaiseTo() );
+    SW_REQUIRE_EQUAL( 0, table.getCurrentSeat() );
+    SW_REQUIRE_TRUE( table.act( 0, sw::PokerActionKind::Call ) );
+    SW_EXPECT_EQUAL( 20, table.getSeat( 0 )._committed );
+
+    sw::PokerTable poor; // 셋 다 블라인드보다 적다 — 맞춰야 할 값이 판의 칩보다 크다
+    sw::PokerTable restored;
+    SW_REQUIRE_TRUE( poor.initialize( settings, { 3, 3, 3 } ) );
+    SW_REQUIRE_TRUE( restored.initialize( settings, { 3, 3, 3 } ) );
+    SW_REQUIRE_TRUE( poor.startHand( random ) );
+    SW_EXPECT_TRUE( sw::StateBytesTestUtil::roundTrips( poor, restored ) );
+}
+
+/**
+ * @brief [PokerTableTest] 상대가 모두 올인이고 이미 그만큼 낸 한 사람은 행동하지 않는다 — 걸 곳이 없는 사람에게 폴드를 묻지 않고 보드를 끝까지 깐다
+ */
+SW_TEST_CASE( PokerTableTest, LoneCoveringPlayerDoesNotAct )
+{
+    sw::PokerTable table;
+    SW_REQUIRE_TRUE( table.initialize( sw::PokerSettings{}, { 100, 1 } ) ); // 버튼 · 스몰 0 이 1 을 내고, 빅 1 은 1 로 올인이다
+    sw::GameRandom random( 7u );
+    SW_REQUIRE_TRUE( table.startHand( random ) );
+    SW_EXPECT_TRUE( table.getStreet() == sw::PokerStreet::HandOver );
+    SW_EXPECT_EQUAL( 101, table.getSeat( 0 )._stack + table.getSeat( 1 )._stack );
+}
+
+/**
+ * @brief [PokerTableTest] 모자란 올인은 이미 행동한 사람에게 레이즈를 다시 열지 않는다(TDA 47 예 3-A). 뒤에서 온전한 레이즈가 나오면 열린다(3-B)
+ */
+SW_TEST_CASE( PokerTableTest, ShortAllInDoesNotReopenTheBetting )
+{
+    sw::PokerSettings settings;
+    settings._smallBlind = 10;
+    settings._bigBlind   = 20;
+    for ( const bool bBigBlindRaises : { false, true } )
+    {
+        sw::PokerTable table;
+        SW_REQUIRE_TRUE( table.initialize( settings, { 35, 1000, 1000, 1000 } ) ); // 버튼 0, 스몰 1, 빅 2, 첫 차례 3
+        sw::GameRandom random( 7u );
+        SW_REQUIRE_TRUE( table.startHand( random ) );
+        SW_REQUIRE_TRUE( table.act( 3, sw::PokerActionKind::Call ) );
+        SW_REQUIRE_TRUE( table.act( 0, sw::PokerActionKind::AllIn ) ); // 35 — 증액 15 는 레이즈 20 에 모자란다
+        SW_REQUIRE_TRUE( table.act( 1, sw::PokerActionKind::Fold ) );
+        SW_EXPECT_TRUE( table.canRaise( 2 ) ); // 빅 블라인드는 아직 행동하지 않았다
+        SW_EXPECT_EQUAL( 55, table.getMinRaiseTo() );
+        if ( bBigBlindRaises )
+        {
+            SW_REQUIRE_TRUE( table.act( 2, sw::PokerActionKind::Raise, 55 ) );
+            SW_EXPECT_TRUE( table.canRaise( 3 ) );
+            SW_EXPECT_TRUE( table.act( 3, sw::PokerActionKind::Raise, 75 ) );
+            continue;
+        }
+        SW_REQUIRE_TRUE( table.act( 2, sw::PokerActionKind::Call ) );
+        SW_REQUIRE_EQUAL( 3, table.getCurrentSeat() );
+        SW_EXPECT_FALSE( table.canRaise( 3 ) );
+        SW_EXPECT_FALSE( table.act( 3, sw::PokerActionKind::Raise, 55 ) );
+        SW_EXPECT_FALSE( table.act( 3, sw::PokerActionKind::AllIn ) );
+        SW_EXPECT_TRUE( table.act( 3, sw::PokerActionKind::Call ) );
+        SW_EXPECT_TRUE( table.getStreet() == sw::PokerStreet::Flop );
+    }
+}
+
+/**
+ * @brief [PokerTableTest] 모자란 올인 여럿을 합쳐 온전한 레이즈만큼 맞춰야 하면 다시 열린다(TDA 47 예 1). 최소 증액은 마지막 온전한 레이즈 그대로다(예 2)
+ */
+SW_TEST_CASE( PokerTableTest, CumulativeShortAllInsReopenTheBetting )
+{
+    sw::PokerSettings settings;
+    settings._smallBlind = 10;
+    settings._bigBlind   = 20;
+    sw::PokerTable table;
+    SW_REQUIRE_TRUE( table.initialize( settings, { 45, 1000, 1000, 1000, 32 } ) ); // 버튼 0, 스몰 1, 빅 2, 첫 차례 3, 다음 4
+    sw::GameRandom random( 7u );
+    SW_REQUIRE_TRUE( table.startHand( random ) );
+    SW_REQUIRE_TRUE( table.act( 3, sw::PokerActionKind::Call ) );
+    SW_REQUIRE_TRUE( table.act( 4, sw::PokerActionKind::AllIn ) ); // 32(+12)
+    SW_REQUIRE_TRUE( table.act( 0, sw::PokerActionKind::AllIn ) ); // 45(+13)
+    SW_REQUIRE_TRUE( table.act( 1, sw::PokerActionKind::Fold ) );
+    SW_REQUIRE_TRUE( table.act( 2, sw::PokerActionKind::Call ) );
+    SW_REQUIRE_EQUAL( 3, table.getCurrentSeat() );
+    SW_EXPECT_TRUE( table.canRaise( 3 ) ); // 25 를 맞춰야 한다 — 레이즈 20 이상이다
+    SW_EXPECT_EQUAL( 65, table.getMinRaiseTo() );
+    SW_EXPECT_TRUE( table.act( 3, sw::PokerActionKind::Raise, 65 ) );
+}
+
+/**
  * @brief [PokerTableTest] 다시 연 테이블은 새 테이블과 같은 상태다 — 앞 판의 큰 베팅이 남으면 칩이 적은 새 테이블의 저장을 읽기가 거절한다
  */
 SW_TEST_CASE( PokerTableTest, ReinitializedTableMatchesAFreshOne )
