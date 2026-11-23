@@ -1723,9 +1723,14 @@ namespace sw
         colorBlending.attachmentCount = blendCount;
         colorBlending.pAttachments    = blendCount > 0 ? arrColorBlendAttachment : nullptr;
 
-        VkRenderPass pipelineRp = _pDevice->ensurePipelineRenderPass( desc );
+        // 이 PSO 의 첨부 형식으로 만든 렌더 패스다. 못 만들면 스왑체인 렌더 패스로 대신하지 않는다 — 형식이 달라 그릴 때 호환되지 않는 PSO 가 조용히 선다.
+        const VkRenderPass pipelineRp = _pDevice->ensurePipelineRenderPass( desc );
         if ( pipelineRp == VK_NULL_HANDLE )
-            pipelineRp = _pDevice->_renderPass;
+        {
+            SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.CreatePipelineStateNoRenderPass", "createPipelineState: could not create the render pass for the PSO's attachment formats '%#'", desc._vertexShaderPath );
+            destroyShaderModules();
+            return 0;
+        }
 
         VkPipelineDepthStencilStateCreateInfo depthStencil{};
         depthStencil.sType                 = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;

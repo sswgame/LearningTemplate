@@ -15,6 +15,7 @@ namespace sw
         : _pDevice{ pDevice }
         , _entry{ pDevice != nullptr ? pDevice->acquireCommandListEntry() : VulkanCommandListEntry{} }
         , _bEntryDirty{ SW_FALSE }
+        , _bComputeQueueList{ SW_FALSE }
         , _state{}
         , _context{ pDevice, _entry._buffer, &_state, _entry._pDescriptorPoolSet }
     {
@@ -54,7 +55,10 @@ namespace sw
         // 백엔드끼리 값을 그대로 비교할 수 있다.
         vkCmdWriteTimestamp( _entry._buffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, pool,
                              _pDevice->getTimestampBase() + slotIndex );
-        _pDevice->markTimestampWritten( slotIndex );
+        if ( _bComputeQueueList != SW_FALSE )
+            _pDevice->markComputeQueueTimestampWritten( slotIndex );
+        else
+            _pDevice->markTimestampWritten( slotIndex );
     }
 
     void VulkanRHICommandList::beginCommandList()
