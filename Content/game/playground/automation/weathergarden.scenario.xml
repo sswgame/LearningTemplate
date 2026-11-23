@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="d185c06e7f3b49b2b0f4a92e61c83d74"?>
+<!--
+  환경 마당(maps/weathergarden) — 풀베기 · 피 데칼 · 비 · 눈 · 웅덩이 · 실내 차폐 · 날씨 → 소리 · 조명 · 바람 → 천을 값으로 본다. 사진은 맑음과 폭풍이 다른지만 본다(골든 없음).
+  ① 맑음: 해 1.2, 바람 1 m/s(천이 조금만 날린다), 날씨 소리 없음.
+  ② 휘두르기(anim.play 1H_Melee_Attack_Slice_Horizontal — Swing 구간의 HitWindow): 칼이 지난 풀이 베이고(Foliage.CutCount), 둘레 Target 이 맞아 데칼이 선다(Hit.DecalCount). 걷기로 돌아가면 3 초 뒤 풀이 다시 자란다.
+  ③ 폭풍(cheat.weather storm): 해가 0.25 배, 풍속 8 m/s, 천이 크게 날리고, 빗소리 · 바람 소리가 나며, 웅덩이가 차고(Weather.y), 비가 시점 앞에 떨어진다.
+  ④ 실내 차폐: 시점을 지붕 아래로 옮기면 하늘 열림 0(소리가 먹먹해진다), 지붕 아래 칸에는 빗방울이 없고 처마 밖에는 있다.
+  ⑤ 눈(cheat.weather snow): 비와 빗소리가 그치고 눈이 내리며 땅에 눈이 쌓인다(Weather.z).
+  실행: App -scenario=game/playground/automation/weathergarden.scenario.xml -unattended (체인: ctest -R Scenario.playground)
+-->
+<Scenario name="game.playground.weathergarden" fixedDelta="0.0166667" timeoutFrames="4800" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/playground/maps/weathergarden.scene.xml"/>
+	<Launch variable="gv_deferredShading" value="1"/> <!-- 데칼은 디퍼드(또는 프리패스 포워드)만 그린다 -->
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+
+	<!-- ① 맑음 -->
+	<Expect watch="Light.Intensity" target="Sun" near="1.2" tolerance="0.001"/>
+	<Expect watch="Wind.Speed" near="1" tolerance="0.001"/>
+	<Expect watch="Weather.SoundPlaying" key="Weather.Rain" equals="0"/>
+	<Expect watch="Foliage.CutCount" equals="0"/>
+	<AdvanceSimulation frames="120"/> <!-- 천이 걸려 처지는 2 초(결정적 시뮬레이션 시각) -->
+	<Expect watch="Cloth.HorizontalOffset" target="Flag" atMost="0.4"/>
+	<Screenshot file="weathergarden_clear.ppm" stability="assets"/>
+
+	<!-- ② 풀베기 · 피 데칼 -->
+	<DevCommand line="anim.play Fighter 1H_Melee_Attack_Slice_Horizontal"/>
+	<WaitUntil watch="Foliage.CutCount" atLeast="3" timeoutSeconds="4"/>
+	<WaitUntil watch="Hit.DecalCount" target="Target" atLeast="1" timeoutSeconds="4"/>
+	<DevCommand line="anim.play Fighter Walking_A"/>
+	<WaitUntil watch="Foliage.CutCount" equals="0" timeoutSeconds="8"/>
+
+	<!-- ③ 폭풍 -->
+	<DevCommand line="cheat.weather storm"/>
+	<WaitUntil watch="Light.Intensity" target="Sun" near="0.3" tolerance="0.001" timeoutFrames="10"/>
+	<Expect watch="Wind.Speed" near="8" tolerance="0.01"/>
+	<Expect watch="Weather.SoundPlaying" key="Weather.Rain" equals="1"/>
+	<Expect watch="Weather.SoundPlaying" key="Weather.Wind" equals="1"/>
+	<WaitUntil watch="Weather.SkyOpenness" atLeast="0.99" timeoutFrames="10"/>
+	<WaitUntil watch="Material.CollectionValue" target="engine/materials/weather.matparams.xml" key="Weather.y" near="0.9" tolerance="0.001" timeoutFrames="10"/>
+	<WaitUntil watch="VFX.ParticlesInBox" target="Rain" key="-12 0 -12 12 4 2" atLeast="20" timeoutSeconds="4"/>
+	<WaitUntil watch="Cloth.HorizontalOffset" target="Flag" atLeast="0.5" timeoutSeconds="5"/>
+	<Screenshot file="weathergarden_storm.ppm" stability="assets"/>
+	<ExpectImagesDiffer first="weathergarden_clear.ppm" second="weathergarden_storm.ppm" region="0,0,1,1" minDiffering="0.2"/>
+
+	<!-- ④ 실내 차폐 -->
+	<DevCommand line="object.place GameCamera 12 1.6 0"/>
+	<WaitUntil watch="Weather.SkyOpenness" atMost="0.01" timeoutFrames="10"/>
+	<WaitUntil watch="VFX.ParticlesInBox" target="Rain" key="3 0 -8 8 4 8" atLeast="10" timeoutSeconds="4"/>
+	<AdvanceSimulation frames="90"/> <!-- 시점을 따라온 상자에서 난 비가 다 떨어지는 1.5 초(일어나지 않음 — 시간이 내용) -->
+	<Expect watch="VFX.ParticlesInBox" target="Rain" key="9.3 0 -2.7 14.7 2.8 2.7" equals="0"/>
+
+	<!-- ⑤ 눈 -->
+	<DevCommand line="object.place GameCamera 0 3 -10"/>
+	<DevCommand line="cheat.weather snow"/>
+	<WaitUntil watch="Weather.SoundPlaying" key="Weather.Rain" equals="0" timeoutFrames="10"/>
+	<WaitUntil watch="VFX.ParticlesInBox" target="Snow" key="-12 0 -22 12 8 2" atLeast="20" timeoutSeconds="10"/>
+	<Expect watch="VFX.ParticlesInBox" target="Rain" key="-40 -1 -40 40 20 40" equals="0"/>
+	<WaitUntil watch="Material.CollectionValue" target="engine/materials/weather.matparams.xml" key="Weather.z" near="1" tolerance="0.001" timeoutFrames="10"/>
+	<DevCommand line="cheat.weather clear"/>
+	<WaitUntil watch="Light.Intensity" target="Sun" near="1.2" tolerance="0.001" timeoutFrames="10"/>
+	<Pass/>
+</Scenario>

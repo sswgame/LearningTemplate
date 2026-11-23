@@ -10,6 +10,7 @@
 #include "Core/Task/TaskManager.h"
 #include "Core/Time/MonotonicClock.h"
 
+#include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Environment/EnvironmentUtil.h"
 #include "Engine/Environment/Foliage/FoliageInfluencerComponent.h"
@@ -169,11 +170,15 @@ namespace sw
 
 namespace sw
 {
+    SW_AUTOMATION_GETTER_WATCH( foliageCutCount, "Foliage.CutCount", "Instances of the first foliage component hidden by cuts now", FoliageComponent, &FoliageComponent::getCutInstanceCount );
+
     FoliageComponent::FoliageComponent()
         : _listLayer{}
         , _listExclusion{}
         , _regionSize{ 0.0f, 0.0f }
         , _cellSize{ 32.0f }
+        , _regrowSeconds{ 0.0f }
+        , _listCutArea{}
         , _listCell{}
         , _listLayerMaterial{}
         , _listLayerCandidate{}
@@ -183,6 +188,7 @@ namespace sw
         , _time{ 0.0f }
         , _terrainStabilityFrames{ 0 }
         , _instanceCount{ 0 }
+        , _cutInstanceCount{ 0 }
         , _lastRebuiltBatchCount{ 0 }
         , _builtTerrainGeneration{ 0 }
         , _builtSplatRevision{ 0 }
@@ -333,6 +339,7 @@ namespace sw
         SceneComponent::onTick( context );
         if ( engine::getSubsystem<DeterministicRun>().getPolicy()._bFreezeEnvironmentTime == SW_FALSE ) // 결정적 사진은 바람 · 파도 시간을 0 에 멈춘다
             _time += context.getDeltaTime();
+        updateRegrow( context.getDeltaTime() );
         float3     viewPosition{};
         const bool bCanUpdateView = _listCell.empty() == false && EnvironmentUtil::findViewPosition( context.getManager(), viewPosition );
         if ( bCanUpdateView )
@@ -654,6 +661,101 @@ namespace sw
         {
             _instanceCount += cell._instanceCount;
         }
+        countCutInstances();
+    }
+
+    bool FoliageComponent::isTouchedByCut( const float3& root, float32 height, const float3& center, float32 radius )
+    {
+        const float32 offsetX = root._x - center._x;
+        const float32 offsetZ = root._z - center._z;
+        const bool    bNear   = offsetX * offsetX + offsetZ * offsetZ <= radius * radius;
+        return bNear && center._y + radius >= root._y && center._y - radius <= root._y + height;
+    }
+
+    void FoliageComponent::applyCuts( Cell& cell ) const
+    {
+        const FoliageLayer& layer = _listLayer[cell._layerIndex];
+        if ( layer._bAllowCut == false )
+            return;
+        for ( uint32 entry = 0; entry < cell._instanceCount; ++entry )
+        {
+            const float4x4& world  = cell._listBatch.front()->getEntry( entry )._world;
+            const float32   height = layer._swayHeight * float3{ world._21, world._22, world._23 }.getLength(); // 흔들림이 다 차는 높이가 식물의 키다
+            bool            bCut   = false;
+            for ( const CutArea& area : _listCutArea )
+                bCut = bCut || isTouchedByCut( world.getTranslation(), height, area._center, area._radius );
+            for ( const unique_ptr<MeshInstanceBatch>& pBatch : cell._listBatch )
+                pBatch->setEntryVisible( entry, bCut == false );
+        }
+    }
+
+    void FoliageComponent::countCutInstances()
+    {
+        _cutInstanceCount = 0;
+        for ( const Cell& cell : _listCell )
+        {
+            for ( uint32 entry = 0; entry < cell._instanceCount && cell._listBatch.empty() == false; ++entry )
+                _cutInstanceCount += cell._listBatch.front()->isEntryVisible( entry ) ? 0u : 1u;
+        }
+    }
+
+    uint32 FoliageComponent::cut( const float3& center, float32 radius )
+    {
+        uint32 newlyCutCount = 0;
+        for ( Cell& cell : _listCell )
+        {
+            const FoliageLayer& layer  = _listLayer[cell._layerIndex];
+            const bool          bReach = layer._bAllowCut && ( cell._center - center ).getLength() <= cell._radius + radius;
+            if ( bReach == false )
+                continue;
+            for ( uint32 entry = 0; entry < cell._instanceCount; ++entry )
+            {
+                if ( cell._listBatch.front()->isEntryVisible( entry ) == false )
+                    continue;
+                const float4x4& world  = cell._listBatch.front()->getEntry( entry )._world;
+                const float32   height = layer._swayHeight * float3{ world._21, world._22, world._23 }.getLength();
+                if ( isTouchedByCut( world.getTranslation(), height, center, radius ) == false )
+                    continue;
+                for ( const unique_ptr<MeshInstanceBatch>& pBatch : cell._listBatch )
+                    pBatch->setEntryVisible( entry, false );
+                ++newlyCutCount;
+            }
+        }
+        // 새로 벤 것이 있는 자리만 적는다 — 같은 자리를 거듭 베어도 목록이 자라지 않는다.
+        if ( newlyCutCount > 0 )
+            _listCutArea.push_back( CutArea{ center, radius, _regrowSeconds } );
+        _cutInstanceCount += newlyCutCount;
+        return newlyCutCount;
+    }
+
+    uint32 FoliageComponent::cutAll( GameObjectManager& manager, const float3& center, float32 radius )
+    {
+        uint32 cutCount = 0;
+        for ( FoliageComponent* pFoliage : manager.getComponentRegistry().getAll<FoliageComponent>() )
+        {
+            if ( pFoliage->isActive() )
+                cutCount += pFoliage->cut( center, radius );
+        }
+        return cutCount;
+    }
+
+    void FoliageComponent::updateRegrow( float32 deltaTime )
+    {
+        if ( _regrowSeconds <= 0.0f || _listCutArea.empty() )
+            return;
+        size_t keptCount = 0;
+        for ( CutArea& area : _listCutArea )
+        {
+            area._remaining -= deltaTime;
+            if ( area._remaining > 0.0f )
+                _listCutArea[keptCount++] = area;
+        }
+        if ( keptCount == _listCutArea.size() )
+            return;
+        _listCutArea.resize( keptCount );
+        for ( Cell& cell : _listCell )
+            applyCuts( cell );
+        countCutInstances();
     }
 
     FoliageComponent::Cell FoliageComponent::makeCell( uint32 layerIndex, uint32 meshIndex, uint64 key, uint64 contentHash, const vector<PlacementInstance>& listInstance,
@@ -705,6 +807,8 @@ namespace sw
         }
         cell._center = ( minimum + maximum ) * 0.5f;
         cell._radius = ( maximum - minimum ).getLength() * 0.5f + meshRadius * maxScale;
+        if ( _listCutArea.empty() == false )
+            applyCuts( cell ); // 지형 편집 · 다시 읽기로 다시 만든 셀도 벤 자리는 벤 채다
         for ( const unique_ptr<MeshInstanceBatch>& pBatch : cell._listBatch )
             _pPrimitiveRegistry->addInstanceBatch( pBatch.get() );
         return cell;
