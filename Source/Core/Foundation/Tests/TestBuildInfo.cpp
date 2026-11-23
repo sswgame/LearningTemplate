@@ -27,6 +27,10 @@ SW_TEST_CASE( BuildInfoTest, NamesAgreeWithTheBuildMacros )
     SW_EXPECT_EQUAL( string_view( "Windows" ), string_view( build::kPlatformName ) );
 #elif defined( SW_PLATFORM_LINUX )
     SW_EXPECT_EQUAL( string_view( "Linux" ), string_view( build::kPlatformName ) );
+#elif defined( SW_PLATFORM_ANDROID )
+    SW_EXPECT_EQUAL( string_view( "Android" ), string_view( build::kPlatformName ) );
+#elif defined( SW_PLATFORM_WEB )
+    SW_EXPECT_EQUAL( string_view( "Web" ), string_view( build::kPlatformName ) );
 #else
     #error "Unsupported platform"
 #endif

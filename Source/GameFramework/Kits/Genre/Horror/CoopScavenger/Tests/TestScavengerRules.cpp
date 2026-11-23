@@ -645,6 +645,27 @@ SW_TEST_CASE_F( ScavengerExpeditionTest, InitializeRefusesBadInput )
 }
 
 /**
+ * @brief [ScavengerExpeditionTest] 다시 연 원정은 새 원정과 같은 상태다 — 앞 원정의 지도 · 고유 번호 · 위협이 남지 않고, 다른 카탈로그로 열어도 저장이 읽힌다
+ */
+SW_TEST_CASE_F( ScavengerExpeditionTest, ReinitializedExpeditionMatchesAFreshOne )
+{
+    SW_REQUIRE_TRUE( _expedition.land() == sw::ScavengerActionResult::Ok );
+    SW_REQUIRE_TRUE( open( _expedition, _catalog, 11 ) );
+    sw::ScavengerExpedition fresh;
+    SW_REQUIRE_TRUE( open( fresh, _catalog, 11 ) );
+    SW_EXPECT_TRUE( sw::StateBytesTestUtil::hasSameState( _expedition, fresh ) );
+
+    // 앞 원정의 위성이 없는 카탈로그로 다시 열어도 저장이 읽힌다.
+    sw::ScavengerCatalog other;
+    SW_REQUIRE_TRUE( other.loadFromXMLText( R"(<ScavengerCatalog><Moon id="ice" name="Ice"/></ScavengerCatalog>)", "ScavengerOther" ) );
+    SW_REQUIRE_TRUE( _expedition.land() == sw::ScavengerActionResult::Ok );
+    SW_REQUIRE_TRUE( open( _expedition, other, 11 ) );
+    sw::ScavengerExpedition restored;
+    SW_REQUIRE_TRUE( open( restored, other, 11 ) );
+    SW_EXPECT_TRUE( sw::StateBytesTestUtil::roundTrips( _expedition, restored ) );
+}
+
+/**
  * @brief [ScavengerExpeditionTest] 위성 이동과 단계: 값을 내고 옮기며 모자라면 그대로다. 내린 뒤에는 옮기거나 다시 내릴 수 없고, 궤도에서는 뜰 수 없다
  */
 SW_TEST_CASE_F( ScavengerExpeditionTest, RoutingAndPhases )

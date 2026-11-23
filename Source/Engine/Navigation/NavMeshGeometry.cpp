@@ -83,6 +83,7 @@ namespace sw
         , _listTriangleArea{}
         , _listVolume{}
         , _listLink{}
+        , _worldOrigin{}
         , _listCellStart{}
         , _listCellTriangle{}
         , _bounds{ AABB::empty() }
@@ -119,11 +120,13 @@ namespace sw
         const bool bInvalidTriangleInput = pPoint == nullptr || pIndex == nullptr || pointCount == 0 || indexCount < 3;
         if ( bInvalidTriangleInput )
             return;
-        const uint32 base = static_cast<uint32>( _listVertex.size() );
+        // 정점마다가 아니라 행렬의 이동을 절대로 옮긴다 — 원점을 옮긴 씬도 쿠킹(원점 0)과 같은 정점이 나와 타일의 입력 해시가 맞는다.
+        const float4x4 absoluteWorld = _worldOrigin.isZero() ? world : _worldOrigin.toAbsolute( world );
+        const uint32   base          = static_cast<uint32>( _listVertex.size() );
         _listVertex.reserve( _listVertex.size() + pointCount );
         for ( uint32 pointIndex = 0; pointIndex < pointCount; ++pointIndex )
         {
-            const float3 worldPoint = float3::transform( pPoint[pointIndex], world );
+            const float3 worldPoint = float3::transform( pPoint[pointIndex], absoluteWorld );
             _listVertex.push_back( worldPoint );
             expandBounds( worldPoint );
         }
@@ -148,15 +151,16 @@ namespace sw
         const bool bInvalidTriangleList = pFirstPosition == nullptr || vertexCount < 3 || stride < sizeof( float3 );
         if ( bInvalidTriangleList )
             return;
-        const uint32 base   = static_cast<uint32>( _listVertex.size() );
-        const uint8* pBytes = static_cast<const uint8*>( pFirstPosition );
-        const uint32 usable = vertexCount - vertexCount % 3;
+        const float4x4 absoluteWorld = _worldOrigin.isZero() ? world : _worldOrigin.toAbsolute( world );
+        const uint32   base          = static_cast<uint32>( _listVertex.size() );
+        const uint8*   pBytes        = static_cast<const uint8*>( pFirstPosition );
+        const uint32   usable        = vertexCount - vertexCount % 3;
         _listVertex.reserve( _listVertex.size() + usable );
         for ( uint32 vertexIndex = 0; vertexIndex < usable; ++vertexIndex )
         {
             float3 localPoint{};
             Memory::copy( &localPoint, pBytes + static_cast<size_t>( vertexIndex ) * stride, sizeof( float3 ) );
-            const float3 worldPoint = float3::transform( localPoint, world );
+            const float3 worldPoint = float3::transform( localPoint, absoluteWorld );
             _listVertex.push_back( worldPoint );
             expandBounds( worldPoint );
         }
@@ -237,15 +241,16 @@ namespace sw
         const bool bInvalidHeightfield = pHeight == nullptr || resolution < 2 || cellSize._x <= 0.0f || cellSize._y <= 0.0f;
         if ( bInvalidHeightfield )
             return;
-        const uint32 base       = static_cast<uint32>( _listVertex.size() );
-        const uint32 cellPerRow = resolution - 1;
+        const float3 absoluteOrigin = _worldOrigin.toAbsolute( origin );
+        const uint32 base           = static_cast<uint32>( _listVertex.size() );
+        const uint32 cellPerRow     = resolution - 1;
         _listVertex.reserve( _listVertex.size() + static_cast<size_t>( resolution ) * resolution );
         for ( uint32 sampleZ = 0; sampleZ < resolution; ++sampleZ )
         {
             for ( uint32 sampleX = 0; sampleX < resolution; ++sampleX )
             {
-                const float3 point{ origin._x + static_cast<float32>( sampleX ) * cellSize._x, pHeight[static_cast<size_t>( sampleZ ) * resolution + sampleX],
-                                    origin._z + static_cast<float32>( sampleZ ) * cellSize._y };
+                const float3 point{ absoluteOrigin._x + static_cast<float32>( sampleX ) * cellSize._x, pHeight[static_cast<size_t>( sampleZ ) * resolution + sampleX],
+                                    absoluteOrigin._z + static_cast<float32>( sampleZ ) * cellSize._y };
                 _listVertex.push_back( point );
                 expandBounds( point );
             }
@@ -277,9 +282,12 @@ namespace sw
     {
         if ( link._radius <= 0.0f )
             return;
-        _listLink.push_back( link );
-        expandBounds( link._start );
-        expandBounds( link._end );
+        NavOffMeshLink absoluteLink = link;
+        absoluteLink._start         = _worldOrigin.toAbsolute( link._start );
+        absoluteLink._end           = _worldOrigin.toAbsolute( link._end );
+        expandBounds( absoluteLink._start );
+        expandBounds( absoluteLink._end );
+        _listLink.push_back( absoluteLink );
     }
 
     void NavMeshGeometry::rebuildSpatialIndex( float32 cellSize )

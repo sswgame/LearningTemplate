@@ -54,6 +54,8 @@ namespace sw
         void drawDebug( IPhysicsDebugRenderer& renderer ) const;
         /** @brief 모든 소프트 바디를 시스템에서 빼고 지웁니다(씬이 바디를 지우기 전에 부른다). */
         void clear();
+        /** @brief 천을 모두 @p delta 만큼 옮깁니다(`IPhysicsBodyScene::shiftOrigin`). 정점은 질량 중심 기준이라 함께 옮는다. */
+        void shiftOrigin( const JPH::Vec3& delta );
 
     private:
         /**

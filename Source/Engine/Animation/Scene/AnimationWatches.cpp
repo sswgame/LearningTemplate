@@ -3,7 +3,6 @@
  * @brief 애니메이션 시스템의 자동화 감시 값입니다(`Animation.*`) — 군중 공유(`AnimationCrowd`)가 유닛을 어떻게 나눴는지 시나리오가 단언합니다. 프로파일 카운터
  *        `GT.Animation.crowd*Units` 와 같은 값입니다. 감시 값 레지스트리(`Engine/Automation/Watch`)가 아래층이라 애니메이션이 자기 감시 값을 등록합니다.
  *        `Animation.BoneX` 는 대상 오브젝트의 본 하나의 월드 X 입니다(포즈 노드 `Mirror` 가 좌우를 뒤집었는지 본다). `Animation.State` 는 대상 애니메이터의 현재 상태입니다.
- *        개발 명령 `anim.play <object> <state>` 는 시나리오가 쇼케이스 무대의 캐릭터를 걷게 한다(배포 구성은 등록하지 않는다 — `SW_DEV_COMMAND`).
  */
 #include "pch.h"
 
@@ -12,7 +11,6 @@
 #include "Engine/Animation/Scene/AnimationSystem.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Automation/Watch/AutomationWatchComponent.h"
-#include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Scene/SceneManager.h"
@@ -118,33 +116,6 @@ namespace sw
                 outValue.setText( pAnimator->getCurrentStateName().c_str() );
                 return true;
             }
-
-            /** @brief `anim.play <object> <state>` — 이름 붙은 오브젝트의 애니메이터로 상태(그래프가 없으면 클립)를 반복 재생합니다. */
-            static bool runPlay( const vector<string>& listArgument, string& outReply )
-            {
-                if ( listArgument.size() != 2 )
-                    return false;
-                GameObject*                pObject   = engine::findActiveObject( hashed_string( listArgument[0] ) );
-                SkeletalAnimatorComponent* pAnimator = pObject != nullptr ? pObject->getComponent<SkeletalAnimatorComponent>() : nullptr;
-                if ( pAnimator == nullptr )
-                {
-                    StringBuilder<constant::buffer::kMax256> builder;
-                    builder.appendFormat( "no object named '%#' with a SkeletalAnimatorComponent in the active scene", listArgument[0] );
-                    outReply = string( builder.view() );
-                    return true;
-                }
-                if ( pAnimator->play( hashed_string( listArgument[1] ) ) == false )
-                {
-                    StringBuilder<constant::buffer::kMax256> builder;
-                    builder.appendFormat( "anim.play: '%#' has no state or clip '%#'", listArgument[0], listArgument[1] );
-                    outReply = string( builder.view() );
-                    return true;
-                }
-                StringBuilder<constant::buffer::kMax256> builder;
-                builder.appendFormat( "anim.play %# %#", listArgument[0], listArgument[1] );
-                outReply = string( builder.view() );
-                return true;
-            }
         };
     } // namespace
 } // namespace sw
@@ -161,8 +132,6 @@ namespace sw
                          &AnimationWatchesInternal::readPoseEvaluatedUnits );
     SW_AUTOMATION_QUERY_WATCH( animationBoneX, "Animation.BoneX", "World X of the bone named key on the target object's skeletal mesh (m)", &AnimationWatchesInternal::readBoneX, true, true );
     SW_AUTOMATION_QUERY_WATCH( animationState, "Animation.State", "State (or clip) the target object's skeletal animator plays now", &AnimationWatchesInternal::readState, true, false );
-    SW_DEV_COMMAND( AnimationPlay, "anim.play", "anim.play <object> <state>", "Play a state (or a clip when there is no graph) on a named object's skeletal animator, looping",
-                    &AnimationWatchesInternal::runPlay );
     SW_AUTOMATION_WATCH( animationEvaluatedBones, "Animation.EvaluatedBones", "Bones the skeletalMeshes that built their own pose evaluated last frame (bone LOD skips the rest)",
                          &AnimationWatchesInternal::readEvaluatedBones );
     SW_AUTOMATION_WATCH( animationSkeletalMeshes, "Animation.SkeletalMeshes", "Skeletal meshes registered with the scene's animation system", &AnimationWatchesInternal::readSkeletalMeshes );

@@ -128,6 +128,22 @@ namespace sw
         return nullopt;
     }
 
+    optional<uint32> UIAccessibilitySnapshot::findNodeAt( const float2& position ) const
+    {
+        optional<uint32> found;
+        for ( size_t index = 0; index < _listNode.size(); ++index )
+        {
+            const AccessibleNode& node = _listNode[index];
+            if ( found.has_value() && node._screen != _listNode[*found]._screen )
+                break; // 아래 화면이다 — 위 화면이 이미 점을 가졌다
+            const bool bInsideX = node._bounds._x <= position._x && position._x <= node._bounds._x + node._bounds._z;
+            const bool bInsideY = node._bounds._y <= position._y && position._y <= node._bounds._y + node._bounds._w;
+            if ( bInsideX && bInsideY )
+                found = static_cast<uint32>( index ); // 한 화면 안에서는 부모가 자식보다 앞이라 마지막이 가장 깊다
+        }
+        return found;
+    }
+
     void UIAccessibilitySnapshot::appendTree( const WidgetTree& tree, uint32 screen, WidgetID focusedWidget, UIAccessibilitySnapshot& inoutSnapshot )
     {
         Widget* pRoot = tree.getRoot();

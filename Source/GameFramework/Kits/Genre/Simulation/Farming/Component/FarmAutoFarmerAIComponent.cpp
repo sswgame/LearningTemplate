@@ -8,6 +8,7 @@
 #include "Engine/Behavior/ActionRegistry.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/WorldOrigin.h"
 
 #include "GameFramework/Kits/Genre/Simulation/Farming/Component/FarmGameModeComponent.h"
 #include "GameFramework/Runtime/Character/AI/Blackboard.h"
@@ -76,7 +77,7 @@ namespace sw
              * @details 칸 하나는 한 일로만 센다(거둘 것 → 물 → 심기 → 갈기 순서로 처음 맞는 것). 트리가 일의 우선순위대로 키를 물으므로
              *          "가장 급한 일의 첫 칸" 을 고르는 것과 같다. 갈기는 갈린 칸이 @p cultivateLimit 보다 적고 이번 계절 씨앗이 있을 때만 센다.
              */
-            static void writeTileJob( const FarmField& field, int32 cultivateLimit, bool bHasSeasonalSeed, bool bHasSeed, Blackboard& blackboard )
+            static void writeTileJob( const FarmField& field, const WorldOrigin& origin, int32 cultivateLimit, bool bHasSeasonalSeed, bool bHasSeed, Blackboard& blackboard )
             {
                 int32 cultivatedCount = 0;
                 for ( int32 y = 0; y < field.getHeight(); ++y )
@@ -106,7 +107,7 @@ namespace sw
                         if ( job == TileJob::Count || arrFound[job] )
                             continue;
                         arrFound[job] = true;
-                        blackboard.setVector( hashed_string{ string_view{ kArrTileKey[job] } }, FarmGameModeComponent::computeTileCenter( x, y ) + float3{ 0.0f, 0.0f, -1.0f } );
+                        blackboard.setVector( hashed_string{ string_view{ kArrTileKey[job] } }, origin.toLocal( FarmGameModeComponent::computeTileCenter( x, y ) + float3{ 0.0f, 0.0f, -1.0f } ) );
                     }
                 }
                 for ( const TileJob job : EnumRange<TileJob>{} )
@@ -179,7 +180,7 @@ namespace sw
         const Inventory&             bag      = pBag->getInventory();
         const CropCatalog&           catalog  = gameMode.getCropCatalog();
         const vector<hashed_string>& listSeed = gameMode.getSeeds();
-        blackboard.setVector( "PlayerPosition", gameMode.getPlayerPosition() );
+        blackboard.setVector( "PlayerPosition", pManager->getWorldOrigin().toLocal( gameMode.getPlayerPosition() ) ); // 블랙보드의 자리는 씬 자리다(원점 이동이 옮긴다)
         blackboard.setBool( "FacingUp", gameMode.getFacing()._z > 0.5f );
         blackboard.setBool( "NearShop", gameMode.isNearShop() );
         blackboard.setInt( "Stamina", gameMode.getStamina() );
@@ -198,7 +199,7 @@ namespace sw
         blackboard.setBool( "SeedSelected", seasonalSeed.has_value() == false || gameMode.getSelectedSeedIndex() == *seasonalSeed );
         blackboard.setBool( "HasSeed", bHasSeed );
         blackboard.setBool( "CanAffordSeed", pSeasonalCrop != nullptr && pWallet->getWallet().canAfford( gameMode.getCurrency(), pSeasonalCrop->_seedPrice ) );
-        Internal::writeTileJob( gameMode.getField(), _cultivateLimit, seasonalSeed.has_value(), bHasSeed, blackboard );
+        Internal::writeTileJob( gameMode.getField(), pManager->getWorldOrigin(), _cultivateLimit, seasonalSeed.has_value(), bHasSeed, blackboard );
         blackboard.setVector( "ShipSpot", gameMode.getShippingBinPosition() + float3{ -1.0f, 0.0f, 0.0f } );
         blackboard.setVector( "ShopSpot", gameMode.getShopPosition() + float3{ 1.4f, 0.0f, 0.0f } );
     }

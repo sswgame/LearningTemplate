@@ -137,6 +137,8 @@ namespace sw
          * @details 시작 전이면 보관했다가 `onBeginPlay` 가 판을 시작한 뒤 적용한다. 읽지 못하면 `onStateRestored( false )` 가 알리고 새 판으로 간다.
          */
         void restoreState( vector<uint8>&& bytes );
+        /** @brief 시작 전에 받아 보관한 상태입니다(`ComponentStateStore` 계약 — 있으면 그것이 곧 상태다). */
+        const vector<uint8>& getPendingStateBytes() const { return _pendingStateBytes; }
         /** @brief 스폰한 런타임 오브젝트를 모두 지웁니다. 상태를 저장하기 전에 부르며, 판은 그대로이고 다음 틱이 그 상태대로 다시 스폰합니다. */
         void despawnViews();
 

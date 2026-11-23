@@ -41,7 +41,6 @@ namespace sw
         , _pCommandQueue{ make_unique<SpscQueue<Command, kCommandQueueCapacity>>() }
         , _pRetireQueue{ make_unique<SpscQueue<RetiredObjects, kRetireQueueCapacity>>() }
         , _applyingCommand{}
-        , _realtimeViolations{}
         , _retireOverflowCount{}
         , _mapGameLibrary{}
         , _pGameMixerDesc{ nullptr }
@@ -758,9 +757,7 @@ namespace sw
     {
         if ( pOutput == nullptr )
             return;
-        // 장치 콜백 구간 — 검사 구성은 이 안의 할당 · 해제 · 잠금을 센다(`getRealtimeViolations`).
-        const RealtimeSection realtimeSection{ _realtimeViolations };
-        const uint32          channelCount = AudioChannelLayoutUtil::getChannelCount( _layout );
+        const uint32 channelCount = AudioChannelLayoutUtil::getChannelCount( _layout );
         if ( isInitialized() == false || _pMixer == nullptr )
         {
             Memory::set( pOutput, 0, static_cast<size_t>( frameCount ) * channelCount * sizeof( float32 ) );

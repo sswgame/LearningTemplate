@@ -864,8 +864,23 @@ namespace sw
         if ( FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( absPath ) ) == false )
             return false;
         string sourceText;
-        if ( FileUtil::isRegularFile( FileUtil::toDiskPath( absPath ) ) == false || FileUtil::readTextFile( FileUtil::toDiskPath( absPath ), sourceText ) == false )
-            return FileUtil::writeTextFile( FileUtil::toDiskPath( absPath ), text.getText() );
+        switch ( FileUtil::readOptionalTextFile( FileUtil::toDiskPath( absPath ), sourceText ) )
+        {
+            case OptionalFileRead::Read:
+            {
+                break;
+            }
+            case OptionalFileRead::Missing:
+            {
+                return FileUtil::writeTextFile( FileUtil::toDiskPath( absPath ), text.getText() );
+            }
+            case OptionalFileRead::Failed:
+            {
+                // 있는 파일을 읽지 못했다(잠김 · 디스크). 없는 파일처럼 쓰면 그 파일의 조건과 정체성(GUID)이 사라진다.
+                SW_LOG_ERROR_ID( "ResourceSave.SourceNotRead", "'%#' could not be read - not saved, its conditions and asset guid would be lost", string{ absPath }.c_str() );
+                return false;
+            }
+        }
         string               restoredText;
         const ResourceTags&  engineTags = engine::getSubsystem<ResourceTags>();
         const ResourceTagSet tags       = pTagOverride != nullptr ? engineTags.captureWith( *pTagOverride ) : engineTags.capture();

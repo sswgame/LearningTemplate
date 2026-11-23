@@ -440,7 +440,7 @@ namespace sw
 
     float32 GimmickCircuitComponent::readSensorImpulse( const GimmickSensorComponent& sensor, Binding binding, bool bFirstStep )
     {
-        // 한 틱에 한 번만 읽는다 — 옛 소비(`consumeDamage` · `consumeUses`)처럼 둘째 스텝이나 같은 센서를 보는 둘째 노드는 0 을 받는다.
+        // 한 틱에 한 번만 읽는다 — 옛 소비처럼 둘째 스텝이나 같은 센서를 보는 둘째 노드는 0 을 받는다.
         // 센서는 남의 오브젝트일 수 있어 틱에서는 읽기만 하고, 읽은 몫을 비우는 것은 틱 뒤(`applyPendingActuators`)다.
         const TComponentHandle<GimmickSensorComponent> handle{ &sensor };
         if ( bFirstStep == false )

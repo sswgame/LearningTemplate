@@ -127,6 +127,12 @@ namespace sw
         _impulseListener.addImpulse( def, request._origin );
     }
 
+    void CameraManagerComponent::onWorldOriginShifted( const float3& delta )
+    {
+        _blender.applyWorldOffset( delta );
+        _impulseListener.applyWorldOffset( delta );
+    }
+
     void CameraManagerComponent::onTick( TickContext& context )
     {
         Component::onTick( context );

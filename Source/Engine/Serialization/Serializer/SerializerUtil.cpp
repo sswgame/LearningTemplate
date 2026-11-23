@@ -52,9 +52,18 @@ namespace sw
              * @brief 숫자 칸 하나를 float64 로 읽습니다. 숫자 타입이 아니면 false 입니다(범위 검사가 보지 않는 칸).
              * @details 숫자 판정은 내장 타입 표 한 곳(`ReflectedValueUtil::readNumber`)이 한다 — 성분이 하나인 압축 타입(half · unorm · snorm)도 범위를 본다.
              */
-            [[nodiscard]] static bool readRangeNumber( const hashed_string& typeName, const ValueAddress value, float64& outValue )
+            [[nodiscard]] static bool readRangeNumber( const ReflectBuiltinIndex builtinIndex, const ValueAddress value, float64& outValue )
             {
-                return ReflectedValueUtil::readNumber( ReflectedValueUtil::findBuiltinIndex( typeName ), value.get(), outValue ); // kNone 이면 false
+                return ReflectedValueUtil::readNumber( builtinIndex, value.get(), outValue ); // kNone 이면 false
+            }
+
+            /** @brief 칸 값 · 원소 형식이 중첩 객체면 그 타입입니다(`SerializerUtil::findNestedObjectType` 과 같은 규칙). 프로퍼티의 묶음으로 찾아 값마다 이름 조회 · 공유 잠금이 없다. */
+            static const TypeInfo* findNestedObjectType( const hashed_string& typeName, const ReflectValueBinding* pBinding, const SerializeContext& context )
+            {
+                const SerializerUtil::ValueCodecs codecs = SerializerUtil::findValueCodecs( typeName, pBinding, context );
+                if ( codecs.findTextWriter( context ) != nullptr || codecs.findEnum( context ) != nullptr )
+                    return nullptr;
+                return codecs.findStructType( context );
             }
 
             /** @brief @p value 가 @p range 밖이면 "경로 = 값 is outside [아래, 위]" 한 줄을 더합니다. */
@@ -69,11 +78,11 @@ namespace sw
                 outListError.push_back( string( textBuilder.view() ) );
             }
 
-            /** @brief @p value(@p typeName 의 숫자)가 @p range 안인지입니다. 숫자가 아니면 범위가 없으므로 true 입니다. */
-            static bool isNumberWithinRange( const hashed_string& typeName, const ValueAddress value, const PropertyAllowedRange& range )
+            /** @brief @p value(@p builtinIndex 의 숫자)가 @p range 안인지입니다. 숫자가 아니면 범위가 없으므로 true 입니다. */
+            static bool isNumberWithinRange( const ReflectBuiltinIndex builtinIndex, const ValueAddress value, const PropertyAllowedRange& range )
             {
                 float64 number = 0.0;
-                if ( readRangeNumber( typeName, value, number ) == false )
+                if ( readRangeNumber( builtinIndex, value, number ) == false )
                     return true;
                 return range.contains( number );
             }
@@ -85,7 +94,8 @@ namespace sw
              */
             static bool isEveryValueWithinRange( const TypeInfo& typeInfo, const ObjectAddress instance )
             {
-                const void* const pInstance = instance.get();
+                const void* const       pInstance = instance.get();
+                const SerializeContext& context   = SerializeContext::getDefault( SerializePurpose::Authoring );
                 for ( const PropertyInfo& prop : typeInfo.getPropertiesWithBase() )
                 {
                     const bool bSkipProperty = prop._bIsBitField == SW_TRUE || prop.hasValueAccessor();
@@ -98,20 +108,21 @@ namespace sw
                         const bool bSequence        = prop._containerWrapper != nullptr && prop._containerWrapper->asSequence() != nullptr && bNestedContainer == false;
                         if ( bSequence == false )
                             continue;
-                        const TypeInfo* pElement     = SerializerUtil::findNestedObjectType( prop._elementTypeName, SerializeContext::getDefault( SerializePurpose::Authoring ) );
+                        const TypeInfo* pElement     = findNestedObjectType( prop._elementTypeName, prop.findElementBinding(), context );
                         const bool      bNumberRange = pElement == nullptr && prop._metadata->hasAllowedRange();
                         if ( pElement == nullptr && bNumberRange == false )
                             continue;
                         // 필드 경계는 원소가 아니라 이 프로퍼티를 가진 객체에서 읽는다(인스펙터와 같다).
-                        const PropertyAllowedRange       range        = bNumberRange ? prop._metadata->computeAllowedRange( pInstance ) : PropertyAllowedRange{};
-                        const ISequenceContainerWrapper* pSequence    = prop._containerWrapper->asSequence();
-                        const size_t                     elementCount = pSequence->getSize( pValue );
+                        const PropertyAllowedRange       range          = bNumberRange ? prop._metadata->computeAllowedRange( pInstance ) : PropertyAllowedRange{};
+                        const ReflectBuiltinIndex        elementBuiltin = prop.resolveElementFacts( context.getTypeRegistry() )._builtinIndex; // 칸마다 한 번
+                        const ISequenceContainerWrapper* pSequence      = prop._containerWrapper->asSequence();
+                        const size_t                     elementCount   = pSequence->getSize( pValue );
                         for ( size_t elementIndex = 0; elementIndex < elementCount; ++elementIndex )
                         {
                             // 구조체 원소의 값 주소는 그 원소 타입의 객체 주소다.
                             const void* const pElementValue = pSequence->getElementConst( pValue, elementIndex );
                             const bool        bWithin       = pElement != nullptr ? isEveryValueWithinRange( *pElement, ObjectAddress{ pElementValue } )
-                                                                                  : isNumberWithinRange( prop._elementTypeName, ValueAddress{ pElementValue }, range );
+                                                                                  : isNumberWithinRange( elementBuiltin, ValueAddress{ pElementValue }, range );
                             if ( bWithin == false )
                                 return false;
                         }
@@ -119,13 +130,13 @@ namespace sw
                     }
                     // 숫자 칸은 범위를 선언했을 때만 본다. 숫자가 아닌 칸만 중첩 구조체인지 찾는다(숫자 칸마다 타입 조회를 하지 않는다).
                     float64 value = 0.0;
-                    if ( readRangeNumber( prop._typeName, ValueAddress{ pValue }, value ) )
+                    if ( readRangeNumber( prop.resolveValueFacts( context.getTypeRegistry() )._builtinIndex, ValueAddress{ pValue }, value ) )
                     {
                         if ( prop._metadata->hasAllowedRange() && prop._metadata->computeAllowedRange( pInstance ).contains( value ) == false )
                             return false;
                         continue;
                     }
-                    const TypeInfo* pNested = SerializerUtil::findNestedObjectType( prop._typeName, SerializeContext::getDefault( SerializePurpose::Authoring ) );
+                    const TypeInfo* pNested = findNestedObjectType( prop._typeName, prop.findValueBinding(), context );
                     if ( pNested != nullptr && isEveryValueWithinRange( *pNested, ObjectAddress{ pValue } ) == false )
                         return false;
                 }
@@ -356,24 +367,19 @@ namespace sw
              */
             [[nodiscard]] static ContainerReadResult readOwnedPointerBinary( const uint8* pData, size_t dataSize, size_t& inoutOffset, const SerializeContext& context )
             {
+                size_t nameStart{ 0 };
                 uint32 nameLen{ 0 };
-                if ( readUint32( pData, dataSize, inoutOffset, nameLen ) == false )
-                    return ContainerReadResult::StreamBroken;
-                if ( inoutOffset + nameLen > dataSize )
+                if ( readSizedBlock( pData, dataSize, inoutOffset, nameStart, nameLen ) == false )
                     return ContainerReadResult::StreamBroken;
 
                 // 스트림 위에서 그대로 intern 한다. 이름 하나 읽자고 string 을 만들지 않는다.
-                const string_view typeNameText( reinterpret_cast<const utf8*>( pData + inoutOffset ), nameLen );
-                inoutOffset += nameLen;
+                const string_view typeNameText( reinterpret_cast<const utf8*>( pData + nameStart ), nameLen );
 
+                // 어떤 경우로 빠지든 다음 원소 위치는 본문 뒤다.
+                size_t bodyStart{ 0 };
                 uint32 bodySize{ 0 };
-                if ( readUint32( pData, dataSize, inoutOffset, bodySize ) == false )
+                if ( readSizedBlock( pData, dataSize, inoutOffset, bodyStart, bodySize ) == false )
                     return ContainerReadResult::StreamBroken;
-                if ( inoutOffset + bodySize > dataSize )
-                    return ContainerReadResult::StreamBroken;
-
-                const size_t bodyStart = inoutOffset;
-                inoutOffset += bodySize; // 어떤 경우로 빠지든 다음 원소 위치는 여기다.
 
                 if ( nameLen == 0 )
                     return ContainerReadResult::Read;
@@ -1227,7 +1233,7 @@ namespace sw
                 // 구조체 원소의 값 주소는 그 원소 타입의 객체 주소다.
                 if ( pElement != nullptr )
                     collectRangeErrors( *pElement, ObjectAddress{ pElementValue }, elementPath, outListError, pListRestored );
-                else if ( Internal::readRangeNumber( prop._elementTypeName, ValueAddress{ pElementValue }, value ) )
+                else if ( Internal::readRangeNumber( ReflectedValueUtil::findBuiltinIndex( prop._elementTypeName ), ValueAddress{ pElementValue }, value ) )
                     Internal::appendRangeError( elementPath, value, range, outListError );
             }
             return;
@@ -1239,7 +1245,7 @@ namespace sw
             return;
         }
         float64 value = 0.0;
-        if ( prop._metadata->hasAllowedRange() && Internal::readRangeNumber( prop._typeName, ValueAddress{ pValue }, value ) )
+        if ( prop._metadata->hasAllowedRange() && Internal::readRangeNumber( ReflectedValueUtil::findBuiltinIndex( prop._typeName ), ValueAddress{ pValue }, value ) )
             Internal::appendRangeError( path, value, prop._metadata->computeAllowedRange( pInstance ), outListError );
     }
 

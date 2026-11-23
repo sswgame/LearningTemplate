@@ -3,6 +3,7 @@
 #include "pch.h"
 
 #include "Core/Container/span.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/Name/hashed_string.h"
 #include "Core/Testing/TestFramework.h"
 
@@ -46,7 +47,7 @@ namespace
         }
 
         /** @brief 늘 올라 있는 동적 상자입니다(셀에 들지 않는다). */
-        static RigidBodyComponent* spawnCrate( GameObjectManager& objects, const utf8* pName, const float3& position )
+        static RigidBodyComponent* spawnCrate( GameObjectManager& objects, const utf8* pName, const float3& position, const float3& halfExtents = float3{ 0.25f, 0.25f, 0.25f } )
         {
             GameObject* pObject = objects.createGameObject( hashed_string( pName ) );
             if ( pObject == nullptr )
@@ -56,7 +57,7 @@ namespace
             if ( pBody == nullptr )
                 return nullptr;
             PhysicsShapeDesc3D box;
-            box._halfExtents = float3{ 0.25f, 0.25f, 0.25f };
+            box._halfExtents = halfExtents;
             pBody->setShape( box );
             pBody->setBodyType( PhysicsBodyType::Dynamic );
             pBody->setMass( 1.0f );
@@ -64,10 +65,10 @@ namespace
             return pBody;
         }
 
-        /** @brief 늘 올라 있는 정적 땅(윗면 y 0, 셀 (0,0) 을 덮는다)입니다 — 셀과 상관없이 받쳐 준다. */
-        static RigidBodyComponent* spawnGround( GameObjectManager& objects )
+        /** @brief 늘 올라 있는 정적 상자입니다 — 셀과 상관없이 받쳐 준다. */
+        static RigidBodyComponent* spawnStatic( GameObjectManager& objects, const utf8* pName, const float3& position, const float3& halfExtents, const float3& rotation = float3{} )
         {
-            GameObject* pObject = objects.createGameObject( hashed_string( "Ground" ) );
+            GameObject* pObject = objects.createGameObject( hashed_string( pName ) );
             if ( pObject == nullptr )
                 return nullptr;
             pObject->setAlwaysLoaded( true );
@@ -75,11 +76,18 @@ namespace
             if ( pBody == nullptr )
                 return nullptr;
             PhysicsShapeDesc3D box;
-            box._halfExtents = float3{ 8.0f, 0.5f, 8.0f };
+            box._halfExtents = halfExtents;
             pBody->setShape( box );
             pBody->setBodyType( PhysicsBodyType::Static );
-            pBody->setLocalPosition( float3{ 5.0f, -0.5f, 5.0f } );
+            pBody->setLocalPosition( position );
+            pBody->setLocalRotation( rotation );
             return pBody;
+        }
+
+        /** @brief 늘 올라 있는 정적 땅(윗면 y 0, 셀 (0,0) 을 덮는다)입니다. */
+        static RigidBodyComponent* spawnGround( GameObjectManager& objects )
+        {
+            return spawnStatic( objects, "Ground", float3{ 5.0f, -0.5f, 5.0f }, float3{ 8.0f, 0.5f, 8.0f } );
         }
 
         static void setSource( SceneStreamingSubsystem& streaming, const float3& position )
@@ -111,7 +119,7 @@ SW_TEST_CASE( StreamingFloorHoldTest, BodyOverUnloadedCellIsHeldUntilTheCellLoad
     Util::setSource( streaming, float3{ 500.0f, 0.0f, 500.0f } ); // 셀 (0,0) 은 반경 밖이다
 
     SW_REQUIRE_NOT_NULL( Util::spawnGround( objects ) );
-    RigidBodyComponent* pOverCell    = Util::spawnCrate( objects, "OverCell", float3{ 5.0f, 5.0f, 5.0f } );      // 땅 위 4.75 m — 광선(1 m)이 닿지 않는다
+    RigidBodyComponent* pOverCell    = Util::spawnCrate( objects, "OverCell", float3{ 5.0f, 5.0f, 5.0f } );      // 땅 위 4.75 m — 스윕(1 m)이 닿지 않는다
     RigidBodyComponent* pOnGround    = Util::spawnCrate( objects, "OnGround", float3{ 3.0f, 0.25f, 3.0f } );     // 늘 올라 있는 땅에 앉았다
     RigidBodyComponent* pOverNothing = Util::spawnCrate( objects, "OverNothing", float3{ 5.0f, 5.0f, 105.0f } ); // 셀 (0,10) — 문서의 조각이 없다
     SW_REQUIRE_NOT_NULL( pOverCell );
@@ -136,4 +144,41 @@ SW_TEST_CASE( StreamingFloorHoldTest, BodyOverUnloadedCellIsHeldUntilTheCellLoad
     SW_EXPECT_FALSE( streaming.isFloorMissing( pOverCell->getWorldPosition() ) );
     SW_EXPECT_FALSE( pOverCell->isStreamingHeld() );
     SW_EXPECT_TRUE( pOverCell->getWorldPosition()._y < 4.0f ); // 풀려 다시 시뮬레이션된다(셀에는 바닥 바디가 없어 늘 올라 있는 땅으로 떨어진다)
+}
+
+/**
+ * @brief [StreamingFloorHoldTest] 바닥은 자리의 광선이 아니라 몸 모양을 쓸어 찾는다 — 비탈에 앉은 큰 상자 · 선반 끝에 걸친 넓은 판은 쥐지 않고, 옆 벽에만 닿은 상자는 쥔다
+ * @details 비탈: 45 도 아래 큰 상자의 중심은 비탈에서 1 m 넘게 떨어져 중심 광선이 닿지 않는다. 선반: 판의 중심 아래는 비어 있다.
+ */
+SW_TEST_CASE( StreamingFloorHoldTest, FloorIsFoundBySweepingTheBodyShape )
+{
+    Scene scene{ "FloorHold" };
+    SW_REQUIRE_TRUE( scene.instantiate( Util::makeDocument() ) );
+    GameObjectManager&       objects   = *scene.getObjectManager();
+    SceneStreamingSubsystem& streaming = objects.getSubsystem<SceneStreamingSubsystem>();
+    Util::setSource( streaming, float3{ 500.0f, 0.0f, 500.0f } ); // 셀 (0,0) 은 반경 밖이다
+
+    constexpr float32 kSlope = 0.7f; // 라디안(약 40 도)
+    // 비탈 — 윗면이 (5, 20, 2) 를 지난다. 축에 맞춘 상자(반 크기 1)의 아래 모서리가 비탈에 닿는다(중심 높이 = 1 + tan).
+    SW_REQUIRE_NOT_NULL( Util::spawnStatic( objects, "Slope", float3{ 5.0f + MathUtil::sin( kSlope ) * 0.5f, 20.0f - MathUtil::cos( kSlope ) * 0.5f, 2.0f }, float3{ 4.0f, 0.5f, 2.0f },
+                                            float3{ 0.0f, 0.0f, kSlope } ) );
+    RigidBodyComponent* pOnSlope = Util::spawnCrate( objects, "OnSlope", float3{ 5.0f, 20.0f + 1.0f + MathUtil::tan( kSlope ) + 0.02f, 2.0f }, float3{ 1.0f, 1.0f, 1.0f } );
+    // 선반(x 1 ~ 3, 윗면 y 10) 끝에 걸친 판(x 2.5 ~ 6.5) — 중심(x 4.5) 아래는 빈 자리다.
+    SW_REQUIRE_NOT_NULL( Util::spawnStatic( objects, "Shelf", float3{ 2.0f, 9.5f, 7.0f }, float3{ 1.0f, 0.5f, 1.0f } ) );
+    RigidBodyComponent* pOnEdge = Util::spawnCrate( objects, "OnEdge", float3{ 4.5f, 10.22f, 7.0f }, float3{ 2.0f, 0.2f, 1.0f } );
+    // 벽 옆면에 닿은 상자 — 아래에는 아무것도 없다.
+    SW_REQUIRE_NOT_NULL( Util::spawnStatic( objects, "Wall", float3{ 8.0f, 30.0f, 5.0f }, float3{ 0.5f, 5.0f, 2.0f } ) );
+    RigidBodyComponent* pByWall = Util::spawnCrate( objects, "ByWall", float3{ 8.74f, 30.0f, 5.0f } );
+    SW_REQUIRE_NOT_NULL( pOnSlope );
+    SW_REQUIRE_NOT_NULL( pOnEdge );
+    SW_REQUIRE_NOT_NULL( pByWall );
+    objects.beginPlay();
+    Util::advance( objects, 2 ); // 첫 물리 프레임이 정적 바디를 짓고, 그다음 프레임이 바닥을 본다
+
+    SW_EXPECT_TRUE( streaming.isFloorMissing( pOnSlope->getWorldPosition() ) );
+    SW_EXPECT_FALSE( pOnSlope->isStreamingHeld() );
+    SW_EXPECT_TRUE( streaming.isFloorMissing( pOnEdge->getWorldPosition() ) );
+    SW_EXPECT_FALSE( pOnEdge->isStreamingHeld() );
+    SW_EXPECT_TRUE( streaming.isFloorMissing( pByWall->getWorldPosition() ) );
+    SW_EXPECT_TRUE( pByWall->isStreamingHeld() );
 }

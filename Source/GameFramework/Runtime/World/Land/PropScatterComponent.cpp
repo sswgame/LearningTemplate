@@ -12,6 +12,7 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
+#include "Engine/Object/GameObject/WorldOrigin.h"
 #include "Engine/Visual/Component/MeshComponent.h"
 #include "Engine/Visual/Component/MeshSectionComponent.h"
 
@@ -245,14 +246,26 @@ namespace sw
         params._listExclusion = _listExclusion;
         params._regionMin     = _regionMin;
         params._regionMax     = _regionMax;
-        params._spacing       = _spacing;
-        params._alongJitter   = _alongJitter;
-        params._inwardJitter  = _inwardJitter;
-        params._scaleMin      = _scaleMin;
-        params._scaleMax      = _scaleMax;
-        params._seed          = _seed;
-        params._mode          = _mode;
-        params._rule          = _rule;
+        // 데이터의 영역은 절대 자리다 — 지금 월드 원점 기준으로 놓는다(놓은 소품은 루트라 원점이 옮겨지면 함께 옮는다).
+        const GameObjectManager* pManager = getOwner() != nullptr ? getOwner()->getManager() : nullptr;
+        if ( pManager != nullptr )
+        {
+            const WorldOrigin& origin = pManager->getWorldOrigin();
+            params._regionMin         = origin.toLocal( _regionMin );
+            params._regionMax         = origin.toLocal( _regionMax );
+            for ( PropScatterExclusion& exclusion : params._listExclusion )
+            {
+                exclusion._center = origin.toLocal( exclusion._center );
+            }
+        }
+        params._spacing      = _spacing;
+        params._alongJitter  = _alongJitter;
+        params._inwardJitter = _inwardJitter;
+        params._scaleMin     = _scaleMin;
+        params._scaleMax     = _scaleMax;
+        params._seed         = _seed;
+        params._mode         = _mode;
+        params._rule         = _rule;
         return params;
     }
 

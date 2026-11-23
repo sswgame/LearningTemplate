@@ -40,6 +40,8 @@ namespace sw
 
         /** @brief 상자 크기(축마다 전체 길이, m)입니다. */
         const float3& getExtent() const { return _extent; }
+        /** @brief 셀 나누기가 묻는 이 컴포넌트가 덮는 월드 상자입니다 — 피벗 셀이 아니라 덮는 자리가 로딩 반경에 들면 올라 있다. */
+        bool computeStreamingBounds( AABB& outBox ) const override;
         /** @brief 상자 크기를 설정합니다. 음수는 0 으로 자릅니다. */
         void setExtent( const float3& extent );
         /** @brief 프로브 사이 목표 간격(m)입니다. 축마다 실제 간격은 상자를 고르게 나눈 값입니다(`computeLayout`). */

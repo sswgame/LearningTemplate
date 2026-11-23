@@ -2,6 +2,7 @@
 #include "Core/Concurrency/StopToken.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
+#include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -25,6 +26,41 @@ namespace sw
 
     /// `ObjectStateSerializer.h` 의 같은 별칭을 다시 선언한다 — 씬 헤더가 직렬화 헤더 사슬을 끌어오지 않게(형식이 다르면 컴파일이 멈춘다).
     using ObjectSavedIDMap = unordered_map<uint64, uint64>;
+
+    /**
+     * @class SceneFileIDTable
+     * @brief 런타임 오브젝트 id 와 파일 id 를 양쪽으로 잇는 표입니다. 두 방향은 여기서만 함께 바뀝니다 — 파일 id 로 찾기가 오브젝트 수만큼 훑지 않게.
+     * @details 같은 파일 id 를 다시 걸면 나중 것이 그 파일 id 의 오브젝트입니다(사라진 오브젝트의 기록이 남아 있어도 다시 지은 오브젝트를 찾는다).
+     *          지금껏 쓴 가장 큰 파일 id 도 듭니다 — 올라가기만 하므로 지운 오브젝트의 id 를 다시 주지 않고, 새 id 를 줄 때 씬 전체를 훑지 않는다(언리얼 `GUObjectArray` 일련번호 ·
+     *          유니티 로컬 파일 id 처럼 세는 값). 오브젝트 없이 든 엔티티(해석하지 못한 것 · 짓지 않은 레이어 · 스트리밍 셀)의 id 는 든 쪽이 `recordUsed` 로 알린다.
+     *          앵커 범위에서 온 넓은 id(씬 인스턴스 멤버 · 하위 레벨 앵커)는 `recordWide` 로 알려 세지 않는다. 한 번 넓은 것으로 알린 id 는 다시 걸어도(세이브 복원) 세지 않는다.
+     */
+    class SW_API SceneFileIDTable
+    {
+    public:
+        /** @brief @p objectID 에 @p fileID 를 겁니다. 이미 다른 파일 id 가 있으면 바꿉니다. 둘 다 0 이 아니어야 합니다. */
+        void set( uint64 objectID, uint64 fileID );
+        /** @brief 오브젝트 없이 쓰는 파일 id 를 알립니다 — 새 id 가 이보다 크다. 0 과 넓은 id 는 세지 않습니다. */
+        void recordUsed( uint64 fileID );
+        /** @brief @p fileID 가 넓은 id 라고 알립니다. 걸기(`set`) 앞에 부릅니다. */
+        void recordWide( uint64 fileID );
+        /** @brief 지금껏 쓴 가장 큰 파일 id 입니다(넓은 id 제외). 없으면 0 입니다. */
+        uint64 getMaxUsedFileID() const { return _maxUsedFileID; }
+        void   erase( uint64 objectID );
+        void   clear();
+        /** @brief 오브젝트의 파일 id 입니다. 없으면 0 입니다. */
+        uint64 findFileID( uint64 objectID ) const;
+        /** @brief 파일 id 의 오브젝트 id 입니다. 없으면 0 입니다. 그 오브젝트가 살아 있는지는 보지 않습니다. */
+        uint64 findObjectID( uint64 fileID ) const;
+        /** @brief 오브젝트 id → 파일 id 표입니다(저장이 훑는다). */
+        const ObjectSavedIDMap& getFileIDs() const { return _mapObjectIDToFileID; }
+
+    private:
+        ObjectSavedIDMap      _mapObjectIDToFileID;
+        ObjectSavedIDMap      _mapFileIDToObjectID;
+        unordered_set<uint64> _uniqueWideFileID;
+        uint64                _maxUsedFileID{ 0 };
+    };
 
     /**
      * @class Scene
@@ -79,11 +115,13 @@ namespace sw
          *          지은 오브젝트 id(엔티티마다 하나, 부품 제외)를 @p inoutListObjectID 에 더한다 — 실패 · 버림에도 남아 부르는 쪽이 `unloadCell` 로 내린다.
          */
         [[nodiscard]] CellBuildResult continueCellBuild( CellBuild& build, const Stopwatch& stopwatch, int64 budgetNanoseconds, bool bForceProgress, vector<uint64>& inoutListObjectID );
-        /** @brief 셀 짓기(`continueCellBuild`)가 지은 오브젝트를 자식(중첩 프리팹 부품)까지 지우고 파일 id · 프리팹 기록을 뺍니다. */
+        /** @brief 셀 짓기(`continueCellBuild`)가 지은 오브젝트를 함께 내려가는 것(`collectCellGroup` — 중첩 프리팹 부품 · 붙은 자손)까지 지우고 파일 id · 프리팹 기록을 뺍니다. */
         void unloadCell( const vector<uint64>& listObjectID );
         /**
          * @brief 오브젝트(@p listObjectID — 셀 짓기가 지은 것 · 셀로 옮겨 온 것)의 지금 상태를 셀 엔티티로 씁니다(비우고 채웁니다). 스트리밍이 셀을 내리기 전 · 세이브에 실을 때 부르고, 다시 올릴 때 이것으로 짓는다(셀 상태 보존).
-         * @details 저장과 같은 길이다(`serializeToDocument` 의 엔티티 쓰기) — 프리팹 엔티티는 원형과 다른 것만(`PrefabOverrides` 델타), 그 밖은 전체 상태를 적되 목적은 `SerializePurpose::Snapshot` 이다
+         * @details 함께 내려가는 것(`collectCellGroup` — 중첩 프리팹 부품 · 플레이 중 붙인 자손)도 저마다 엔티티로 뜨고, 다시 지을 때 부품을 프리팹에서 다시 스폰하지 않는다 — 부품의 런타임 칸 · PROPERTY 밖 상태 · 지운 부품이
+         *          그대로 돌아온다(언리얼 레벨 스트리밍은 차일드 액터도 레벨의 액터로 남긴다). 파일 id 가 없던 것은 여기서 받는다.
+         *          저장과 같은 길이다(`serializeToDocument` 의 엔티티 쓰기) — 프리팹 엔티티는 원형과 다른 것만(`PrefabOverrides` 델타), 그 밖은 전체 상태를 적되 목적은 `SerializePurpose::Snapshot` 이다
          *          (런타임 칸까지 — 엔티티의 `_statePurpose` 가 그 목적으로 읽게 한다). 파일 id · 레이어 · 인스턴스 앵커를 그대로 둔다(셀에 드는 런타임 스폰은 스트리밍이 먼저 파일 id 를 준다). 상태는 이미 평평한 파일 id 라
          *          id 범위는 0 이다. 플레이 중 지운 오브젝트는 적지 않아 다시 올려도 없다(언리얼 레벨 스트리밍의 상태 보존 · 세이브 델타와 같은 생각).
          */
@@ -109,6 +147,8 @@ namespace sw
          * @details 파일 id 는 한 번 정하면 그 오브젝트가 사라져도 다시 쓰지 않습니다 — 남은 참조가 새 오브젝트를 가리키지 않게. 쿠커 · 저장이 씁니다.
          */
         void collectSavedIDMap( ObjectSavedIDMap& outMap ) const;
+        /** @brief 파일 id → 살아 있는 오브젝트 표를 채웁니다(`collectSavedIDMap` 을 뒤집은 것). 셀 나누기 · 쿠커가 씁니다. */
+        void collectObjectsByFileID( unordered_map<uint64, GameObject*>& outMap ) const;
         /**
          * @brief 오브젝트의 파일 id 를 반환합니다. 아직 없으면(새로 만든 오브젝트) 지금 줍니다 — `collectSavedIDMap` 과 같은 규칙(이 씬이 쓴 어느 id 보다 크다)입니다.
          * @details 파일을 넘는 참조(`SceneObjectReference`)가 대상을 적을 때 씁니다. 없는 오브젝트나, 인스턴스가 다시 스폰하는 중첩 프리팹 부품(씬이 엔티티로 저장하지 않는다)이면 0 입니다. 다음 저장이 그 id 를 그대로 씁니다.
@@ -132,6 +172,15 @@ namespace sw
          * @return id 가 0 이거나 다른 살아 있는 오브젝트가 그 id 를 쓰면 false 입니다(붙이지 않는다). 막 만든(병합 전) 오브젝트에도 붙일 수 있다.
          */
         [[nodiscard]] bool assignFileID( uint64 objectID, uint64 fileID );
+        /**
+         * @brief 오브젝트 없이 들게 된 엔티티 @p listNode 의 파일 id 를 알립니다(짓지 않은 레이어 묶음 · 스트리밍 셀). 새 오브젝트의 파일 id 가 이와 겹치지 않습니다.
+         * @details 겹치면 그 엔티티가 오를 때 참조가 엉뚱한 오브젝트에 붙는다. 인스턴스 멤버의 넓은 id 는 세지 않는다(`SceneDocument::computeMaxFileID`).
+         */
+        void recordHeldFileIDs( const vector<SceneDocument::SceneObjectNode>& listNode );
+        /** @brief 파일에 남은(색인만 읽은) 엔티티의 가장 큰 파일 id 를 알립니다(`SceneDocument::_maxCellFileID`). */
+        void recordHeldFileID( uint64 maxFileID ) { _fileIDTable.recordUsed( maxFileID ); }
+        /** @brief 바깥이 정한 넓은 파일 id(하위 레벨 앵커)를 알립니다 — 새 파일 id 셈에서 뺀다. 그 id 로 짓거나 붙이기 앞에 부릅니다. */
+        void recordWideFileID( uint64 fileID ) { _fileIDTable.recordWide( fileID ); }
         /** @brief 파일 id 의 살아 있는 오브젝트 id 입니다. 이 씬에 없으면(지운 오브젝트 · 내려간 스트리밍 셀) 0 입니다. */
         [[nodiscard]] uint64 findObjectIDByFileID( uint64 fileID ) const;
 
@@ -175,15 +224,15 @@ namespace sw
          * @brief 월드 원점입니다 — 오브젝트의 자리는 이 원점 기준 로컬이다(절대 = 로컬 + 원점). 처음은 0 이다. 서버 · 세이브 · 쿠킹본 · 셀 격자는 절대 좌표다.
          * @details 언리얼 World Origin Rebasing(`UWorld::OriginLocation`)과 같은 모델 — 큰 월드에서 카메라 둘레의 float 정밀도를 지킨다.
          */
-        const double3& getWorldOrigin() const { return _worldOrigin; }
+        const double3& getWorldOrigin() const;
         /**
          * @brief 월드 원점을 @p newOrigin 으로 옮깁니다(XZ 만 — Y 는 그대로 둔다). 모든 루트 오브젝트를 (옛 원점 − 새 원점)만큼 순간이동(속도는 잇는다)하고 씬 서비스에 알린다(`ISceneService::onWorldOriginShifted`).
          * @details 게임 스레드 · 틱 밖에서 부른다(`Scene::update` 의 앞 — 자동 옮기기, 개발 명령 `world.origin`). 떠 둔 상태 · 세이브는 엔티티마다 적힌 원점을 들어 지을 때 맞춘다(`finishNodeBuild`).
-         * @return 옮길 수 없는 서비스가 있으면(`ISceneService::canShiftWorldOrigin`) 경고를 남기고 false 이며 아무것도 옮기지 않는다. 오브젝트 매니저가 없어도 false 입니다.
+         * @return 오브젝트 매니저가 없으면 false 입니다.
          */
         [[nodiscard]] bool shiftWorldOrigin( const double3& newOrigin );
         /** @brief 세이브 복원이 다시 만든 오브젝트가 적힌 원점을 그대로 들입니다(오브젝트는 옮기지 않는다 — 복원된 자리가 이미 그 원점 기준이다). */
-        void restoreWorldOrigin( const double3& origin ) { _worldOrigin = origin; }
+        void restoreWorldOrigin( const double3& origin );
 
         /** @brief 월드 설정을 바꿉니다(에디터). 다음 저장에 적힙니다 — 이미 지은 씬의 스트리밍은 바뀌지 않습니다(셀은 쿠킹이 나눈다). */
         void setSceneSettings( const SceneSettings& settings ) { _sceneSettings = settings; }
@@ -240,7 +289,7 @@ namespace sw
             unordered_map<uint64, string>          _mapSceneInstancePath;
             unordered_map<uint64, InstanceMember>  _mapInstanceMember;
             unordered_map<uint64, vector<string>>  _mapObjectDataLayer;
-            ObjectSavedIDMap                       _mapObjectIDToFileID;
+            SceneFileIDTable                       _fileIDTable;
             vector<SceneDocument::SceneObjectNode> _listUnresolvedEntity;
             SceneDataLayerState                    _dataLayers;
             SceneSubLevelCapture                   _subLevels;
@@ -265,8 +314,8 @@ namespace sw
         void shutdown();
         /** @brief 기본 머티리얼 참조를 해제합니다. */
         void releaseDefaultMaterial();
-        /** @brief 새 오브젝트에 줄 파일 id 입니다 — 이 씬이 쓴 어느 파일 id(해석하지 못한 엔티티 · 짓지 않은 레이어 엔티티 · 스트리밍 셀이 든 엔티티 포함)보다 큽니다. 인스턴스 멤버의 평평한 id 는 넓은 값이라 세지 않습니다. */
-        uint64 computeNextFileID() const;
+        /** @brief 새 오브젝트에 줄 파일 id 입니다 — 이 씬이 쓴 어느 파일 id(해석하지 못한 엔티티 · 짓지 않은 레이어 엔티티 · 스트리밍 셀이 든 엔티티 포함)보다 큽니다. 인스턴스 멤버의 평평한 id 는 넓은 값이라 세지 않습니다(`SceneFileIDTable`). */
+        uint64 computeNextFileID() const { return _fileIDTable.getMaxUsedFileID() + 1; }
         /**
          * @brief 맨 위 앵커의 파일 id 마다 멤버에 덮어쓴 것(`<Part>` 항목)을 모읍니다(비우고 채웁니다).
          * @details 살아 있는 멤버는 내부 씬을 임시로 지어 같은 직렬화기로 쓴 상태와 비교합니다(프리팹 원형 `makeBaseState` 와 같은 까닭 — 손으로 쓴 글과 비교하면 값이 같아도 다르다).
@@ -288,11 +337,20 @@ namespace sw
         [[nodiscard]] bool instantiateNodes( const vector<SceneDocument::SceneObjectNode>& listNode, NodeBuild build, vector<uint64>* pOutListObjectID, const StopToken& stopToken = {} );
         /** @brief 짓는 배치 하나의 상태입니다(배치 · 프리팹 원형 · 프리팹 엔티티). 정의는 Scene.cpp. */
         struct NodeBuildContext;
-        /** @brief 지금 씬의 파일 id 가진 오브젝트를 배치에 가리킴 대상으로 기록합니다 — 셀 · 레이어 묶음이 늘 올라 있는 엔티티를 파일 id 로 가리킨다. @p pExcludedObjectID 의 오브젝트(이 배치가 지은 것)는 뺍니다. */
-        void addReferenceTargets( NodeBuildContext& context, const vector<uint64>* pExcludedObjectID ) const;
+        /**
+         * @brief @p listObjectID 와 함께 내려가는 오브젝트를 모읍니다(비우고 채웁니다 — 앞이 @p listObjectID, 뒤가 중첩 프리팹 부품과 붙은 자손).
+         * @details 뜨는 쪽(`captureCellNodes`)과 지우는 쪽(`unloadCell`)이 같은 것을 본다 — 뜨지 않고 지우면 그 오브젝트를 잃고, 지우지 않으면 기록이 남는다.
+         */
+        void collectCellGroup( const vector<uint64>& listObjectID, vector<uint64>& outListObjectID ) const;
+        /** @brief 배치가 자기에게 없는 파일 id 를 이 씬에 묻게 합니다 — 셀 · 레이어 묶음이 늘 올라 있는 엔티티를 파일 id 로 가리킨다. 가리킨 것만 찾아 씬 크기와 무관하다. */
+        void bindReferenceResolver( NodeBuildContext& context ) const;
+        /** @brief 파일 id(0 이면 이름)의 살아 있는 오브젝트입니다. 이름은 파일 id 를 가진 오브젝트만 받습니다(저장된 이름은 파일 안의 것만 뜻한다). 없으면 nullptr 입니다. */
+        GameObject* findReferenceTarget( uint64 fileID, const hashed_string& name ) const;
         /** @brief 엔티티 하나의 오브젝트를 만들고 상태를 배치에 읽습니다(연결은 `finishNodeBuild`). 프리팹을 찾지 못하면 만들지 않습니다. */
         void buildEntityNode( const SceneDocument::SceneObjectNode& entity, NodeBuild build, NodeBuildContext& context, vector<uint64>* pOutListObjectID );
         /** @brief 배치를 잇고(부착 · 핸들), 인스턴스 멤버를 앵커에 붙이고, 중첩 프리팹 부품을 스폰한 뒤 병합합니다. 잇지 못하면 오류를 남기고 false 입니다. */
+        /** @brief 떠 둔 엔티티(@p listNode)의 PROPERTY 밖 컴포넌트 상태를 다시 지은 오브젝트에 돌려줍니다(등록을 마친 뒤). */
+        void               restoreComponentStates( const vector<SceneDocument::SceneObjectNode>& listNode, const NodeBuildContext& context ) const;
         [[nodiscard]] bool finishNodeBuild( const vector<SceneDocument::SceneObjectNode>& listNode, NodeBuildContext& context );
 
         /** @brief 컴포넌트 핸들로 카메라를 다시 찾습니다. */
@@ -305,7 +363,6 @@ namespace sw
         string                        _sourcePath;
         string                        _defaultMaterialPath;
         SceneSettings                 _sceneSettings; ///< 씬 파일의 월드 설정(`instantiate` 가 읽고 `serializeToDocument` 가 쓴다)
-        double3                       _worldOrigin;   ///< 월드 원점(`getWorldOrigin` — 절대 = 로컬 + 원점)
         SceneEngineServices           _services;      ///< 만들 때 받은 엔진 서비스(빌림). 오브젝트 매니저도 같은 묶음으로 만든다
         unique_ptr<GameObjectManager> _objectManager;
         Material*                     _pMaterial;
@@ -319,12 +376,11 @@ namespace sw
          * @brief 런타임 오브젝트 id → 파일 id 입니다. 읽을 때 엔티티의 id 로 채우고 저장 때 없는 것을 새로 줍니다(`collectSavedIDMap`).
          * @details 저장이 const 라 mutable 입니다 — 새 오브젝트에 id 를 주는 것은 씬의 보이는 상태를 바꾸지 않습니다.
          */
-        mutable ObjectSavedIDMap               _mapObjectIDToFileID;
-        vector<SceneDocument::SceneObjectNode> _listUnresolvedEntity;     ///< 프리팹을 찾지 못한 엔티티(문서 그대로, 저장 때 다시 써 넣는다)
-        uint8                                  _bRegistrationHeld    : 1; ///< `holdRegistration` 이 쥔 미루기가 남았다(`finishHeldRegistration` 이 놓는다)
-        uint8                                  _bBuildAllDataLayers  : 1; ///< `setBuildAllDataLayers` — 쿠커의 씬
-        uint8                                  _bOriginRebaseBlocked : 1; ///< 자동 원점 옮기기가 막혀 경고했다(`updateOriginRebase` — 풀릴 때까지 다시 경고하지 않는다)
-        TComponentHandle<CameraComponent>      _activeGameCamera;         ///< 마지막 `pickActiveGameCamera` 가 고른 카메라(렌더 쪽이 O(1) 로 읽는다)
-        TComponentHandle<CameraComponent>      _gameCameraOverride;       ///< `setActiveGameCamera` 로 직접 고른 카메라
+        mutable SceneFileIDTable               _fileIDTable;
+        vector<SceneDocument::SceneObjectNode> _listUnresolvedEntity;    ///< 프리팹을 찾지 못한 엔티티(문서 그대로, 저장 때 다시 써 넣는다)
+        uint8                                  _bRegistrationHeld   : 1; ///< `holdRegistration` 이 쥔 미루기가 남았다(`finishHeldRegistration` 이 놓는다)
+        uint8                                  _bBuildAllDataLayers : 1; ///< `setBuildAllDataLayers` — 쿠커의 씬
+        TComponentHandle<CameraComponent>      _activeGameCamera;        ///< 마지막 `pickActiveGameCamera` 가 고른 카메라(렌더 쪽이 O(1) 로 읽는다)
+        TComponentHandle<CameraComponent>      _gameCameraOverride;      ///< `setActiveGameCamera` 로 직접 고른 카메라
     };
 } // namespace sw

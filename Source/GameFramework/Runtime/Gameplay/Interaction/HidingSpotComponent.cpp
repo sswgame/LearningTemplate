@@ -5,10 +5,7 @@
 #include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
-#include "Engine/Object/GameObject/Tick/TickContext.h"
 
-#include "GameFramework/Runtime/Gameplay/Gimmick/Trigger/GimmickSensorComponent.h"
 #include "GameFramework/Runtime/Gameplay/Interaction/InteractableComponent.h"
 #include "GameFramework/Runtime/Gameplay/Interaction/SmartObjectComponent.h"
 
@@ -58,23 +55,18 @@ namespace sw
         return object.hasTag( HidingSpotComponentInternal::getHiddenTag(), true );
     }
 
-    void HidingSpotComponent::onTick( TickContext& context )
+    void HidingSpotComponent::onBeginPlay()
     {
-        Component::onTick( context );
-        GameObject*             pOwner           = getOwner();
-        GimmickSensorComponent* pSensor          = pOwner != nullptr ? pOwner->getComponent<GimmickSensorComponent>() : nullptr;
-        const bool              bNoUsesAvailable = pSensor == nullptr || pSensor->consumeUses() <= 0.0f;
-        if ( bNoUsesAvailable )
-            return;
-        // 숨기 · 나오기는 사용한 쪽(남의 오브젝트)의 태그 · 자리를 바꾼다 — 틱 뒤에 한다. 숨은 쪽이 다시 사용하면 나오고, 아니면 들어간다.
-        context.deferPostTickOnComponent( *this, []( HidingSpotComponent& spot, GameObjectManager& manager )
-        {
-            const InteractableComponent* pInteractable = spot.getOwner()->getComponent<InteractableComponent>();
-            GameObject*                  pWho          = pInteractable != nullptr ? manager.resolveGameObject( pInteractable->getLastInteractor() ) : nullptr;
-            if ( pWho == nullptr )
-                return;
-            if ( spot.exit( *pWho ) == false )
-                (void)spot.enter( *pWho );
-        } );
+        Component::onBeginPlay();
+        _usedSubscription = InteractableComponent::listenCompleted<&HidingSpotComponent::handleUsed>( *this ); // 상호작용이 없는 곳은 코드(`enter` · `exit`)가 부른다
+    }
+
+    void HidingSpotComponent::handleUsed( const GameObject& user )
+    {
+        // 완료는 틱 뒤 게임 스레드에서 온다 — 사용한 쪽(남의 오브젝트)의 태그 · 자리를 바로 바꾼다.
+        GameObjectManager* pManager = getOwner() != nullptr ? getOwner()->getMutableManager() : nullptr;
+        GameObject*        pWho     = pManager != nullptr ? pManager->resolveGameObject( user.getHandle() ) : nullptr;
+        if ( pWho != nullptr && exit( *pWho ) == false )
+            (void)enter( *pWho ); // 자리가 없으면 들어가지 못할 뿐이다
     }
 } // namespace sw

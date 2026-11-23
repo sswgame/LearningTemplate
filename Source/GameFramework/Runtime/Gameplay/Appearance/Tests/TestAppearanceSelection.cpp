@@ -105,6 +105,24 @@ namespace
     };
 } // namespace
 
+/** @brief [AppearanceSelectionTest] 공유 코드가 32 비트 해시로 싣는 외형 id 둘의 해시가 겹치면 데이터 로드가 막는다 — 막지 않으면 다른 외형으로 읽힌다 */
+SW_TEST_CASE( AppearanceSelectionTest, VisualIDHashClashIsALoadError )
+{
+    const hashed_string first( "visual_1062789" );
+    const hashed_string second( "visual_1279192" );
+    SW_REQUIRE_EQUAL( CustomizationSchemaDef::toSavedHash( first ), CustomizationSchemaDef::toSavedHash( second ) );
+    SW_EXPECT_LOG( "Appearance.IDHashClash" );
+    ItemCatalog        catalog;
+    AppearanceDatabase database;
+    SW_REQUIRE_TRUE( database.loadSectionFromXMLText( R"(<SlotCatalog><Slot name="Head"/></SlotCatalog>)", "test" ) );
+    SW_REQUIRE_TRUE( database.loadSectionFromXMLText( R"(<ItemVisualCatalog>
+        <ItemVisual id="visual_1062789"><Part name="Shell" kind="SocketPrefab" prefab="a.prefab" socket="Head"/></ItemVisual>
+        <ItemVisual id="visual_1279192"><Part name="Shell" kind="SocketPrefab" prefab="b.prefab" socket="Head"/></ItemVisual>
+    </ItemVisualCatalog>)",
+                                                      "test" ) );
+    SW_EXPECT_FALSE( database.finishLoad( &catalog ) );
+}
+
 /** @brief [AppearanceSelectionTest] 담기는 모습을 그대로 옮기고, 그것을 펼치면 보고할 것이 없다 */
 SW_TEST_CASE_F( AppearanceSelectionTest, CaptureThenApplyIsClean )
 {
@@ -315,6 +333,10 @@ SW_TEST_CASE_F( AppearanceSelectionTest, MakePresetDefRefusesWhatItCannotCarry )
     AppearanceSelection suppressed       = selection;
     suppressed._listSlot[0]._bSuppressed = SW_TRUE;
     SW_EXPECT_FALSE( AppearanceSelection::makePresetDef( _database, suppressed, hashed_string( "Mine" ), def ) );
+
+    AppearanceSelection hidden           = selection;
+    hidden._listSlot[0]._bHiddenByPlayer = SW_TRUE; // 조용히 버리면 내보낸 프리셋에서 숨긴 투구가 다시 보인다
+    SW_EXPECT_FALSE( AppearanceSelection::makePresetDef( _database, hidden, hashed_string( "Mine" ), def ) );
 }
 
 /** @brief [AppearanceSelectionTest] 비트 코덱: 값 · 슬롯이 되돌아오고, 받는 쪽이 모르는 이름은 임시 이름이 되어 펼칠 때 지워진 것으로 보고된다 */
@@ -363,6 +385,10 @@ SW_TEST_CASE_F( AppearanceSelectionTest, CodecRoundTripsAndKeepsUnknownNames )
     // 이 빌드가 모르는 이름은 임시 이름(`#해시`)이다
     SW_EXPECT_TRUE( decoded._listSlot[1]._slot.c_str()[0] == '#' );
     SW_EXPECT_TRUE( decoded._listSlot[1]._itemID.c_str()[0] == '#' );
+    // 임시 이름은 원래 해시로 다시 써진다 — 읽고 다시 저장해도 잠시 없던 콘텐츠가 돌아오면 찾는다
+    BitWriter again;
+    AppearanceSelection::writeSelection( again, decoded, _database );
+    SW_EXPECT_TRUE( again.releaseBytes() == bytes );
 }
 
 /** @brief [AppearanceSelectionTest] 잘린 비트와 비정상 개수는 거절한다 */

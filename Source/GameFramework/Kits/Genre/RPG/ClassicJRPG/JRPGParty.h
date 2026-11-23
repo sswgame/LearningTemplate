@@ -135,7 +135,7 @@ namespace sw
         REFLECT_BODY();
 
         static constexpr uint32 kStateTag            = FourCCUtil::make( "JPTY" );
-        static constexpr uint32 kStateVersion        = 1;
+        static constexpr uint32 kStateVersion        = 2; ///< 2: 장비를 아이템 인스턴스로
         static constexpr int32  kMaxMembers          = 4;
         static constexpr int32  kInnerMax            = 100;
         static constexpr int32  kClassChangeMinLevel = 20; ///< DQ3 다마 신전의 최소 레벨
@@ -166,7 +166,7 @@ namespace sw
         void addProficiency( int32 memberIndex, const hashed_string& manualID, int32 amount );
         void pollEvents( vector<JRPGPartyEvent>& outListEvent );
         /**
-         * @brief 멤버(직업, 이름, 주문, 비급 숙련, 장비 아이템 id, 레벨, 능력치, HP/MP, 내공)를 씁니다. 가방과 지갑은 빌려 온 것이라 싣지 않습니다.
+         * @brief 멤버(직업, 이름, 주문, 비급 숙련, 장비 아이템 인스턴스, 레벨, 능력치, HP/MP, 내공)를 씁니다. 가방과 지갑은 빌려 온 것이라 싣지 않습니다.
          *        `writeState` 가 쓴 바이트로 상태를 바꿉니다. 모르는 직업이나 아이템이거나, 장비 슬롯 수가 다르거나, 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다(카탈로그와 슬롯 구성은 `initialize` 에서 받은 것입니다).
          */
         SW_DECLARE_STATE_IO();

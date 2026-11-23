@@ -8,10 +8,12 @@
 | --- | --- |
 | check | 묶을 서버 실행 파일로 `-check-config -server-config=<설정>` 을 돌린다 — 종료 0 이 아니면 멈춘다(11 = 잘못된 설정). 리눅스가 아니면 WSL 로 돌린다 |
 | unit  | `swserver-<게임>.service` — 루트 아닌 사용자, 종료 신호(SIGTERM)로 드레인, 시한은 설정의 드레인 + 저장 시간보다 길게, 비밀은 `EnvironmentFile`(묶음에 없다) |
-| tar   | `opt/swserver/<게임>/`(패키지) · `etc/swserver/<게임>.json`(설정) · `etc/systemd/system/<유닛>` 을 한 tar.gz 로 |
+| tar   | `opt/swserver/<게임>/`(패키지) · `etc/swserver/<게임>.json`(설정) · `etc/systemd/system/<유닛>` · `etc/sysusers.d` · `etc/tmpfiles.d` 조각을 한 tar.gz 로 |
 | image | `--image <태그>` 이면 `deploy/docker/Dockerfile` 로 `docker build`(선택) |
 
 비밀(토큰 · 비밀번호 · 키)은 묶지 않는다 — 설정의 `*Environment` 칸이 가리키는 환경 변수를 `/etc/swserver/<게임>.env`(운영자가 두는 파일, 0600)가 준다.
+설치(대상 기계, 루트): `tar -xzf <묶음> -C /` → `systemd-sysusers && systemd-tmpfiles --create` → `systemctl enable --now swserver-<게임>`. 가운데 줄이 서비스 사용자와
+쓰기 폴더(`Saved`)를 만든다 — 유닛은 그 폴더만 쓸 수 있고(`ProtectSystem=strict`), 없으면 systemd 가 유닛을 띄우지 못한다.
 언리얼 전용 서버 패키징(BuildCookRun -server) 뒤 운영이 따로 쓰는 유닛 · 이미지를, 같은 설정 검사를 지난 한 벌로 만든다.
 
 사용법:
@@ -27,6 +29,7 @@ import json
 import subprocess
 import sys
 import tarfile
+import tempfile
 from pathlib import Path, PurePosixPath
 from typing import Sequence
 
@@ -40,6 +43,8 @@ SERVER_EXECUTABLE = "Server"
 INSTALL_ROOT = PurePosixPath("/opt/swserver")
 CONFIG_ROOT = PurePosixPath("/etc/swserver")
 UNIT_ROOT = PurePosixPath("/etc/systemd/system")
+USER_FRAGMENT_ROOT = PurePosixPath("/etc/sysusers.d")
+FOLDER_FRAGMENT_ROOT = PurePosixPath("/etc/tmpfiles.d")
 SERVICE_USER = "swserver"
 #: 설정의 드레인 · 저장 시간 위에 더하는 여유(초) — systemd 가 SIGKILL 로 드레인을 끊지 않게.
 STOP_MARGIN_SECONDS = 30
@@ -89,6 +94,16 @@ WantedBy=multi-user.target
 """
 
 
+def make_service_user_text() -> str:
+    """서비스 사용자를 만드는 sysusers.d 조각(같은 이름의 그룹도 생긴다). https://www.freedesktop.org/software/systemd/man/latest/sysusers.d.html"""
+    return f'u {SERVICE_USER} - "SW Engine dedicated server" {INSTALL_ROOT}\n'
+
+
+def make_writable_folder_text(game: str) -> str:
+    """쓰기 폴더를 서비스 사용자 것으로 만드는 tmpfiles.d 조각. https://www.freedesktop.org/software/systemd/man/latest/tmpfiles.d.html"""
+    return f"d {INSTALL_ROOT / game / 'Saved'} 0750 {SERVICE_USER} {SERVICE_USER} -\n"
+
+
 def to_wsl_path(path: Path) -> str:
     drive, rest = path.resolve().drive, path.resolve().as_posix()[2:]
     return f"/mnt/{drive[0].lower()}{rest}"
@@ -110,10 +125,12 @@ def run_config_check(package_dir: Path, config_path: Path) -> None:
 
 
 def write_archive(out_path: Path, package_dir: Path, config_path: Path, game: str, unit_text: str) -> None:
-    unit_name = f"swserver-{game}.service"
-    unit_file = out_path.with_name(unit_name)
-    unit_file.write_text(unit_text, encoding="utf-8", newline="\n")
-    try:
+    map_text = {
+        UNIT_ROOT / f"swserver-{game}.service": unit_text,
+        USER_FRAGMENT_ROOT / f"{SERVICE_USER}.conf": make_service_user_text(),
+        FOLDER_FRAGMENT_ROOT / f"swserver-{game}.conf": make_writable_folder_text(game),
+    }
+    with tempfile.TemporaryDirectory(prefix="swserverimage-") as folder:
         with tarfile.open(out_path, "w:gz") as archive:
             def set_mode(info: tarfile.TarInfo) -> tarfile.TarInfo:
                 info.uid = info.gid = 0
@@ -123,9 +140,10 @@ def write_archive(out_path: Path, package_dir: Path, config_path: Path, game: st
                 return info
             archive.add(package_dir, arcname=str((INSTALL_ROOT / game).relative_to("/")), filter=set_mode)
             archive.add(config_path, arcname=str((CONFIG_ROOT / f"{game}.json").relative_to("/")), filter=set_mode)
-            archive.add(unit_file, arcname=str((UNIT_ROOT / unit_name).relative_to("/")), filter=set_mode)
-    finally:
-        unit_file.unlink()
+            for index, (path, text) in enumerate(map_text.items()):
+                text_file = Path(folder) / str(index)
+                text_file.write_text(text, encoding="utf-8", newline="\n")
+                archive.add(text_file, arcname=str(path.relative_to("/")), filter=set_mode)
 
 
 def build_image(project_root: Path, package_dir: Path, tag: str) -> None:
@@ -156,6 +174,20 @@ def run_self_check() -> None:
     assert "TimeoutStopSec=105" in unit, "시한 = 드레인 + 저장 + 여유"
     assert "ExecStart=/opt/swserver/Arena/Server -server-config=/etc/swserver/Arena.json" in unit
     assert "EnvironmentFile=/etc/swserver/Arena.env" in unit and "User=swserver" in unit
+    with tempfile.TemporaryDirectory(prefix="swserverimage-") as folder:
+        package_dir = Path(folder) / "package"
+        package_dir.mkdir()
+        (package_dir / SERVER_EXECUTABLE).write_bytes(b"")
+        config_path = Path(folder) / "server.json"
+        config_path.write_text("{}", encoding="utf-8")
+        archive_path = Path(folder) / "out.tar.gz"
+        write_archive(archive_path, package_dir, config_path, "Arena", unit)
+        with tarfile.open(archive_path) as archive:
+            names = set(archive.getnames())
+            assert {"etc/systemd/system/swserver-Arena.service", "etc/sysusers.d/swserver.conf", "etc/tmpfiles.d/swserver-Arena.conf", "etc/swserver/Arena.json"} <= names, names
+            assert archive.getmember("opt/swserver/Arena/Server").mode == 0o755
+            fragment = archive.extractfile("etc/tmpfiles.d/swserver-Arena.conf")
+            assert fragment is not None and fragment.read() == b"d /opt/swserver/Arena/Saved 0750 swserver swserver -\n"
     try:
         read_stop_seconds({"_drainWaitSeconds": 60})
         raise AssertionError("빠진 칸은 멈춘다")

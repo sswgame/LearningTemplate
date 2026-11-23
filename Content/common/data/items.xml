@@ -29,4 +29,8 @@
   <Item id="helmet_knight_tinted" _base="helmet_knight" name="Knight Helmet (Tintable)" visual="helmet_knight_tinted"/>
   <!-- 겹치는 소모품 — 인벤토리 · 상점 시연(game/playground maps/inventorydemo)의 겹치기 · 나누기 · 사용. 외형이 없다(장비가 아니다). -->
   <Item id="potion_health" name="Health Potion" description="Restores a little health." category="Consumable" maxStack="10" weight="0.5" value="20" useEffect="Heal"/>
+  <!-- 채집 · 낚시가 주는 재료(game/playground maps/outdoors). 외형이 없다. -->
+  <Item id="wood_log" name="Wood Log" category="Material" maxStack="20" weight="2"/>
+  <Item id="herb_wild" name="Wild Herb" category="Material" maxStack="20" weight="0.1"/>
+  <Item id="fish_trout" name="Trout" category="Material" maxStack="10" weight="1"/>
 </ItemCatalog>

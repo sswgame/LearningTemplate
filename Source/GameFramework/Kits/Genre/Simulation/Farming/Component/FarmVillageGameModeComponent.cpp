@@ -12,6 +12,7 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/WorldOrigin.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
 #include "Engine/Serialization/Format/StateIO.h"
@@ -96,7 +97,7 @@ namespace sw
                 const SceneComponent* pScene = pObject->getPrimarySceneComponent();
                 if ( pScene == nullptr )
                     continue;
-                const float3 position = pScene->getWorldPosition();
+                const float3 position = pManager->getWorldOrigin().toAbsolute( pScene->getWorldPosition() ); // 내비 격자 · 일정은 절대 자리로 돈다
                 const int2   center   = _navGrid.computeCell( position );
                 for ( int32 offsetY = -radiusCells; offsetY <= radiusCells; ++offsetY )
                 {

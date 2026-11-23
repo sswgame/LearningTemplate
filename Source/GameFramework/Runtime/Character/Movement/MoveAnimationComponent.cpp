@@ -62,6 +62,11 @@ namespace sw
         }
     }
 
+    void MoveAnimationComponent::onWorldOriginShifted( const float3& delta )
+    {
+        _lastPosition += delta;
+    }
+
     float32 MoveAnimationComponent::smoothSpeed( float32 previousSpeed, float32 stepDistance, float32 deltaTime, float32 smoothingSeconds )
     {
         if ( deltaTime <= 0.0f )

@@ -1,6 +1,10 @@
 {
   "_comment": "전수 개명한 옛 이름 → 새 이름 · 까닭(Scripts/lint/naming_words.py 의 naming-words 규칙이 되살린 옛 이름을 막는다). 언리얼 CoreRedirects 의 옛 이름 → 새 이름 자리이되 고쳐 주지 않고 막는다. 개명 도구(py -3 -m Scripts rename-symbol)가 줄을 더한다 — 키(옛 이름)는 개명 도구가 바꾸지 않는다.",
   "_bannedNames": {
+    "submitWithoutWake": "TaskManager::SubmitBatch — 깨우지 않는 제출을 따로 열면 깨우기를 잊을 수 있어 범위 형식으로만 둔다(2026-11-24)",
+    "ListWrapper": "없음 — sw::list 를 지웠다. 쓴 순서 목록은 LRUMap(2026-11-24)",
+    "getRealtimeViolations": "없음 — 장치 콜백은 AudioRenderThread 의 링에서 꺼내기만 하고 실시간 구간 위반은 단언이다(2026-11-24)",
+    "consumeUses": "InteractableComponent::listenCompleted — 상호작용 완료를 소비하지 않고 듣는다(2026-11-24)",
     "enumFromString": "tryParseEnum<E> — 실패하면 Invalid(없으면 0)를 채워 돌려주던 폴백을 없애고 optional 로(2026-11-24)",
     "RegistryEntryOps": "LockedRegistrationListBase — 등록 목록이 스스로 답한다, 표마다 함수 표를 만들지 않는다(2026-11-24)",
     "RegistrationSite": "SourceLocation — 같은 모양(파일 · 줄)의 형식 하나(2026-11-24)",
@@ -2024,6 +2028,12 @@
     "ActionCombatDemoPhase": "ActionCombatPhase — 키트 셋 가르기: 시연 컴포넌트가 키트 디렉터(Component/*GameModeComponent)가 됐다(2026-11-21)",
     "ActionPlatformerDemoComponent": "ActionPlatformerGameModeComponent — 키트 셋 가르기: 시연 컴포넌트가 키트 디렉터(Component/*GameModeComponent)가 됐다(2026-11-21)",
     "ActionPlatformerDemoComponentInternal": "ActionPlatformerGameModeComponentInternal — 키트 셋 가르기: 시연 컴포넌트가 키트 디렉터(Component/*GameModeComponent)가 됐다(2026-11-21)",
+    "previewStreamingCells": "StreamingCellPreview::build — 쿠커를 DevTools 로 옮기며 셀 나누기를 엔진 SceneCellSplitter 로 갈랐다(2026-11-24)",
+    "splitStreamingCells": "SceneCellSplitter::split — 쿠커를 DevTools 로 옮기며 셀 나누기를 엔진에 남겼다(2026-11-24)",
+    "cookAllPrefabs": "PrefabCooker::cookAll — 프리팹 쿠킹은 DevTools/Cook 이다(2026-11-24)",
+    "ShaderCookStamp": "CookRecord — 셰이더 최신 판정은 쿠킹 기록 하나다(`ShaderCompiler::findCurrentRecord`)(2026-11-24)",
+    "ShaderCookStampCache": "CookRecord — 셰이더 최신 판정은 쿠킹 기록 하나다(2026-11-24)",
+    "FileWatchDispatcher": "FileWatchService — OS 파일 감시자는 프로세스의 서비스 하나가 나눠 쓴다(2026-11-24)",
     "WildWestGame": "PlaygroundGame — 게임 WildWest 를 Playground 허브 맵 바탕으로 흡수했다(2026-11-24)",
     "WildWestGameModeComponent": "WesternGameModeComponent — 와일드웨스트 게임을 Playground 허브 맵 바탕으로 흡수 — 디렉터는 서부극 키트 Component/, HUD 는 GF_Client_OpenWorldWestern(2026-11-24)",
     "WildWestGameModeComponentInternal": "WesternGameModeComponentInternal — 와일드웨스트 게임을 Playground 허브 맵 바탕으로 흡수 — 디렉터는 서부극 키트 Component/, HUD 는 GF_Client_OpenWorldWestern(2026-11-24)",

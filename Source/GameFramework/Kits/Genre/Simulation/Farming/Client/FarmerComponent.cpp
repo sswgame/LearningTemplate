@@ -6,6 +6,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Tick/TickContext.h"
+#include "Engine/Object/GameObject/WorldOrigin.h"
 #include "Engine/Visual/Component/MeshComponent.h"
 
 #include "GameFramework/Kits/Genre/Simulation/Farming/Component/FarmGameModeComponent.h"
@@ -62,7 +63,7 @@ namespace sw
         const float3 lift{ 0.0f, _heightOffset, 0.0f };
         if ( _kind == FarmerViewKind::Farmer )
         {
-            pMesh->setLocalPosition( pGameMode->getPlayerPosition() + lift );
+            pMesh->setLocalPosition( context.getManager().getWorldOrigin().toLocal( pGameMode->getPlayerPosition() + lift ) );
             // 도구를 쓸 때마다 몸이 그 동작을 한 번 한다(그래프가 끝나면 이동으로 돌아간다). 애니메이터가 없는 몸(정적 메시)은 동작이 없다.
             SkeletalAnimatorComponent* pAnimator = pOwner->getComponent<SkeletalAnimatorComponent>();
             if ( pAnimator != nullptr && pGameMode->getToolUseCount() != _lastToolUseCount )
@@ -76,6 +77,6 @@ namespace sw
         if ( pMesh->isVisible() != bOnTile )
             pMesh->setVisible( bOnTile );
         if ( bOnTile )
-            pMesh->setLocalPosition( FarmGameModeComponent::computeTileCenter( x, y ) + lift );
+            pMesh->setLocalPosition( context.getManager().getWorldOrigin().toLocal( FarmGameModeComponent::computeTileCenter( x, y ) + lift ) );
     }
 } // namespace sw

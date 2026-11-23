@@ -40,7 +40,7 @@ namespace sw
         uint64 getUnderrunCount() const override;
 
     private:
-        /** @brief 장치 콜백 본문입니다 — @p frameCount 프레임을 @p pOutput 에 렌더합니다. */
+        /** @brief 장치 콜백 본문입니다 — @p frameCount 프레임을 렌더 스레드의 링에서 @p pOutput 에 꺼냅니다. */
         void renderCallback( float32* pOutput, uint32 frameCount );
 
     private:

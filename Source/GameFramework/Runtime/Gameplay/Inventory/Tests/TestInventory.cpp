@@ -6,6 +6,7 @@
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Gameplay/Inventory/Crafting.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/GridInventory.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
@@ -341,4 +342,43 @@ SW_TEST_CASE( ShopTest, SellAboveBuyIsRejected )
                                  "ShopTest" );
     SW_EXPECT_TRUE( shops.find( sw::hashed_string{ "fair" } ) != nullptr );
     SW_EXPECT_TRUE( shops.find( sw::hashed_string{ "leak" } ) == nullptr );
+}
+
+/** @brief [GridInventoryTest] 상태는 아이템만 싣고 셀은 다시 놓아 만든다 — 겹치거나 격자 밖이거나 모르는 아이템이면 거절하고 지금 상태를 지킨다 */
+SW_TEST_CASE( GridInventoryTest, ReadRefusesItemsThatDoNotFitTheirCells )
+{
+    const auto makeLookup = []( int32 width )
+    {
+        return sw::GridInventory::ShapeDelegate( [width]( const sw::hashed_string& itemID, sw::GridItemShape& outShape )
+        {
+            outShape._width = width;
+            return itemID == kStone;
+        } );
+    };
+    sw::GridInventory written;
+    SW_REQUIRE_TRUE( written.initialize( makeLookup( 1 ), 2, 1 ) );
+    SW_REQUIRE_TRUE( written.placeItem( kStone, 1, 0, 0, false ).has_value() );
+    const sw::optional<int32> second = written.placeItem( kStone, 1, 1, 0, false );
+    SW_REQUIRE_TRUE( second.has_value() );
+    sw::Archive bytes;
+    written.writeState( bytes );
+
+    sw::GridInventory restored;
+    SW_REQUIRE_TRUE( restored.initialize( makeLookup( 1 ), 2, 1 ) );
+    sw::Archive reading( bytes.getData(), bytes.getSize() );
+    SW_REQUIRE_TRUE( restored.readState( reading ) );
+    SW_EXPECT_TRUE( restored.findInstanceAt( 1, 0 ) == second );
+    SW_EXPECT_EQUAL( 0, restored.countFreeCells() );
+
+    sw::GridInventory wider; // 모양이 바뀌어 첫 아이템이 둘째 칸까지 차지한다 — 겹친다
+    SW_REQUIRE_TRUE( wider.initialize( makeLookup( 2 ), 2, 1 ) );
+    sw::Archive readingWider( bytes.getData(), bytes.getSize() );
+    SW_EXPECT_FALSE( wider.readState( readingWider ) );
+    SW_EXPECT_TRUE( wider.getItems().empty() );
+
+    sw::GridInventory unknown; // 모양을 모르는 격자
+    SW_REQUIRE_TRUE( unknown.initialize( sw::GridInventory::ShapeDelegate{}, 2, 1 ) );
+    sw::Archive readingUnknown( bytes.getData(), bytes.getSize() );
+    SW_EXPECT_FALSE( unknown.readState( readingUnknown ) );
+    SW_EXPECT_EQUAL( 2, unknown.countFreeCells() );
 }

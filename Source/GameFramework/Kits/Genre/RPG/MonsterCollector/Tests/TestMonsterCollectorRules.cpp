@@ -1541,3 +1541,13 @@ SW_TEST_CASE_F( MonsterCollectorRulesTest, BattleDeterminism )
     };
     SW_EXPECT_TRUE( sw::StateBytesTestUtil::isDeterministic<sw::MonsterBattle>( setup, step, 80 ) );
 }
+
+/**
+ * @brief [MonsterCollectorTest] 차례 난수의 씨앗이 `시드 ^ 상수` 이면 시드가 그 상수일 때 0(난수의 고정점)이라 단언에 걸린다 — 어느 시드로도 연다
+ */
+SW_TEST_CASE( MonsterCollectorTest, SurvivesSeedEqualToMixConstant )
+{
+    sw::MonsterBattle battle;
+    battle.initialize( nullptr, nullptr, 0x5bd1e995u );
+    SW_EXPECT_TRUE( battle.getResult() == sw::MonsterBattleResult::Ongoing );
+}

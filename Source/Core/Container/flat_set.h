@@ -32,4 +32,10 @@ namespace sw
             return *this;
         }
     };
+
+    /** @brief 저장소(`vector`)와 비교자뿐이다. */
+    template <typename Key, typename Compare, typename Allocator>
+    struct is_bitwise_relocatable<flat_set<Key, Compare, Allocator>> : std::bool_constant<is_bitwise_relocatable_v<vector<Key, Allocator>> && std::is_empty_v<Compare>>
+    {
+    };
 } // namespace sw

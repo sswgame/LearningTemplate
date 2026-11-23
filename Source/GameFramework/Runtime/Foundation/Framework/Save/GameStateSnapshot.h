@@ -63,6 +63,7 @@ namespace sw
             type._pCapture = &GameStateSnapshot::captureComponentStates<TComponent>;
             type._pRestore = &GameStateSnapshot::restoreComponentStates<TComponent>;
             _listStatefulType.push_back( type );
+            addCodec( TComponent::StaticType()->_name.c_str(), &TComponent::StaticType, &ComponentStateStore::writeComponent<TComponent>, &ComponentStateStore::restoreComponent<TComponent> );
         }
         /**
          * @brief 상태 저장 전에 세운 런타임 오브젝트를 걷을 컴포넌트 타입 하나를 올립니다(`despawnViews()` 를 부른다).
@@ -86,6 +87,7 @@ namespace sw
             type._pRestore = &GameStateSnapshot::restoreComponentStates<TDirector>;
             type._pDespawn = &GameStateSnapshot::despawnComponentViews<TDirector>;
             _listStatefulType.push_back( type );
+            addCodec( TDirector::StaticType()->_name.c_str(), &TDirector::StaticType, &ComponentStateStore::writeComponent<TDirector>, &ComponentStateStore::restoreComponent<TDirector> );
         }
 
         /**
@@ -185,9 +187,13 @@ namespace sw
                                                            vector<ComponentStateStore::SavedComponentID>& outListRemap, unordered_map<uint64, uint64>& outMapObjectID );
         /** @brief 올린 타입마다 실어 둔 상태를 돌려줍니다(읽기 훅 앞). */
         void restoreStatefulComponents();
+        /** @brief 올린 타입의 코덱을 이 스냅샷이 사는 동안 엔진에 등록합니다 — 스트리밍 셀 · 레이어 묶음 · 하위 레벨에 든 오브젝트의 상태도 실린다. */
+        void addCodec( const utf8* pTypeName, StatefulComponentRegistration::TypeFn pGetType, StatefulComponentRegistration::WriteFn pWrite,
+                       StatefulComponentRegistration::RestoreObjectFn pRestore );
 
     private:
-        vector<StatefulComponentType>   _listStatefulType;     ///< 상태 스냅샷에 오른 컴포넌트 타입(등록 순서대로 싣고 걷고 돌려준다)
-        unique_ptr<ComponentStateStore> _pComponentStateStore; ///< 스냅샷 봉투의 컴포넌트 상태 섹션
+        vector<StatefulComponentType>           _listStatefulType;     ///< 상태 스냅샷에 오른 컴포넌트 타입(등록 순서대로 싣고 걷고 돌려준다)
+        vector<unique_ptr<ComponentStateCodec>> _listCodec;            ///< `addCodec` 이 등록한 코덱(주소가 흔들리지 않게 따로 든다 — 소멸자가 뺀다)
+        unique_ptr<ComponentStateStore>         _pComponentStateStore; ///< 스냅샷 봉투의 컴포넌트 상태 섹션
     };
 } // namespace sw

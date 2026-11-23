@@ -9,6 +9,7 @@
 #include "Engine/Object/Component/Tests/StateHashTestComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
 #include "Engine/Object/GameObject/Service/NetObjectTable.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDataLayerSubsystem.h"
@@ -431,4 +432,110 @@ SW_TEST_CASE( SceneAssemblyTest, DataLayerSaveStateRestoresOverAClearedManager )
     SW_REQUIRE_TRUE( listSnow[0]->getPrimarySceneComponent() != nullptr );
     SW_EXPECT_EQUAL( 5.0f, listSnow[0]->getPrimarySceneComponent()->getLocalPosition()._x );
     SW_EXPECT_TRUE( layers.isGroupObject( listSnow[0]->getObjectID() ) );
+}
+
+/** @brief [SceneFileIDTableTest] 두 방향이 함께 바뀐다 — 파일 id 를 바꾸거나 지우면 옛 파일 id 로 찾히지 않고, 같은 파일 id 를 나중에 받은 오브젝트는 앞 오브젝트를 지워도 남는다 */
+SW_TEST_CASE( SceneFileIDTableTest, BothDirectionsChangeTogether )
+{
+    SceneFileIDTable table;
+    table.set( 10, 1 );
+    table.set( 11, 2 );
+    SW_EXPECT_EQUAL( uint64{ 1 }, table.findFileID( 10 ) );
+    SW_EXPECT_EQUAL( uint64{ 11 }, table.findObjectID( 2 ) );
+
+    table.set( 10, 3 ); // 다시 걸면 옛 파일 id 는 비어야 한다
+    SW_EXPECT_EQUAL( uint64{ 0 }, table.findObjectID( 1 ) );
+    SW_EXPECT_EQUAL( uint64{ 10 }, table.findObjectID( 3 ) );
+
+    table.set( 12, 2 ); // 사라진 11 의 기록이 남은 채 다시 지은 오브젝트가 같은 파일 id 를 받는다
+    SW_EXPECT_EQUAL( uint64{ 12 }, table.findObjectID( 2 ) );
+    table.erase( 11 );
+    SW_EXPECT_EQUAL( uint64{ 12 }, table.findObjectID( 2 ) );
+    table.erase( 12 );
+    SW_EXPECT_EQUAL( uint64{ 0 }, table.findObjectID( 2 ) );
+    table.clear();
+    SW_EXPECT_TRUE( table.getFileIDs().empty() );
+    SW_EXPECT_EQUAL( uint64{ 0 }, table.findObjectID( 3 ) );
+}
+
+/** @brief [SceneFileIDTableTest] 지금껏 쓴 가장 큰 파일 id 는 올라가기만 하고, 넓은 id 는 걸기 앞에 알렸으면 다시 걸어도 세지 않는다 */
+SW_TEST_CASE( SceneFileIDTableTest, MaxUsedIDNeverDropsAndSkipsWideIDs )
+{
+    constexpr uint64 kWideFileID = 0xF000000000000001ull;
+    SceneFileIDTable table;
+    SW_EXPECT_EQUAL( uint64{ 0 }, table.getMaxUsedFileID() );
+    table.set( 10, 5 );
+    table.erase( 10 ); // 지운 오브젝트의 id 를 다시 주지 않는다
+    SW_EXPECT_EQUAL( uint64{ 5 }, table.getMaxUsedFileID() );
+    table.recordUsed( 3 );
+    SW_EXPECT_EQUAL( uint64{ 5 }, table.getMaxUsedFileID() );
+    table.recordUsed( 9 ); // 오브젝트 없이 든 엔티티(내려간 셀 · 끈 레이어)
+    SW_EXPECT_EQUAL( uint64{ 9 }, table.getMaxUsedFileID() );
+    table.recordWide( kWideFileID );
+    table.set( 11, kWideFileID );
+    table.erase( 11 );
+    table.set( 12, kWideFileID ); // 세이브 복원이 다시 만든 오브젝트에 다시 건다
+    table.recordUsed( kWideFileID );
+    SW_EXPECT_EQUAL( uint64{ 9 }, table.getMaxUsedFileID() );
+
+    const SceneFileIDTable copy = table; // 되돌리기 스냅숏이 함께 든다
+    table.clear();
+    SW_EXPECT_EQUAL( uint64{ 0 }, table.getMaxUsedFileID() );
+    SW_EXPECT_EQUAL( uint64{ 9 }, copy.getMaxUsedFileID() );
+}
+
+/** @brief [SceneAssemblyTest] 씬 인스턴스 멤버의 넓은 파일 id 는 세이브 복원이 다시 붙여도 다음 파일 id 를 끌어올리지 않는다 */
+SW_TEST_CASE( SceneAssemblyTest, RestoredInstanceMembersDoNotRaiseTheNextFileID )
+{
+    const test::ScopedScratchDomain domain;
+    Util::write( domain, "inner.scene.xml", Util::makeInnerScene() );
+    Util::write( domain, "outer.scene.xml", Util::makeScene( "Outer", { Util::makeEntity( "4", "House", "0,0,0", Util::instanceAttribute( "inner.scene.xml" ).c_str() ) } ) );
+    SceneDocument doc{};
+    SW_REQUIRE_TRUE( doc.loadXMLFromDiskFile( domain.makeDiskPath( "outer.scene.xml" ).str() ) );
+    const SceneDocument::SceneObjectNode* pLid = Util::findNode( doc, "House/Lid" );
+    SW_REQUIRE_TRUE( pLid != nullptr && pLid->_instanceAnchorFileID != 0 );
+    const uint64 lidFileID = pLid->_fileID;
+    Scene        scene{ "Restored" };
+    SW_REQUIRE_TRUE( scene.instantiate( doc ) );
+    GameObjectManager& objects = *scene.getObjectManager();
+    objects.mergePendingAdds();
+
+    objects.clear();
+    GameObject* pLidObject = objects.createGameObject( hashed_string( "House/Lid" ) );
+    SW_REQUIRE_NOT_NULL( pLidObject );
+    objects.mergePendingAdds();
+    scene.rebindRestoredFileIDs( {
+        Scene::SavedFileID{ pLidObject->getObjectID(), lidFileID }
+    } );
+    SW_EXPECT_EQUAL( lidFileID, scene.findFileID( pLidObject->getObjectID() ) );
+    GameObject* pSpawned = objects.createGameObject( hashed_string( "Spawned" ) );
+    SW_REQUIRE_NOT_NULL( pSpawned );
+    objects.mergePendingAdds();
+    SW_EXPECT_EQUAL( uint64{ 5 }, scene.getOrAssignFileID( pSpawned->getObjectID() ) );
+}
+
+/** @brief [ObjectStateBatchTest] 배치에 든 저장 id · 이름은 해석기에 묻지 않고, 없는 것만 묻는다 — 이미 올라 있는 오브젝트를 배치마다 기록하지 않는다 */
+SW_TEST_CASE( ObjectStateBatchTest, ResolverIsAskedOnlyForWhatTheBatchLacks )
+{
+    Scene              scene{ "Resolver" };
+    GameObjectManager& objects  = *scene.getObjectManager();
+    GameObject*        pInBatch = objects.createGameObject( hashed_string( "InBatch" ) );
+    GameObject*        pOutside = objects.createGameObject( hashed_string( "Outside" ) );
+    uint32             askCount = 0;
+    ObjectStateBatch   batch{ ObjectIDSpace::Saved };
+    batch.setExternalResolver( SW_DELEGATE_LAMBDA( SavedObjectResolver, [&askCount, pOutside]( uint64 savedID, hashed_string savedName ) -> GameObject*
+    {
+        ++askCount;
+        return savedID == 7 || savedName == hashed_string( "Outside" ) ? pOutside : nullptr;
+    } ) );
+    batch.addReferenceTarget( pInBatch, 5, hashed_string( "InBatch" ) );
+    SW_EXPECT_TRUE( batch.findBySavedID( 5 ) == pInBatch );
+    SW_EXPECT_TRUE( batch.findBySavedName( hashed_string( "InBatch" ) ) == pInBatch );
+    SW_EXPECT_EQUAL( 0u, askCount );
+    SW_EXPECT_TRUE( batch.findBySavedID( 7 ) == pOutside );
+    SW_EXPECT_TRUE( batch.findBySavedName( hashed_string( "Outside" ) ) == pOutside );
+    SW_EXPECT_TRUE( batch.findBySavedID( 8 ) == nullptr );
+    SW_EXPECT_TRUE( batch.findBySavedID( 0 ) == nullptr );
+    SW_EXPECT_EQUAL( 3u, askCount ); // id 0 은 "id 없음" 이라 묻지 않는다
+    batch.abandon();
 }

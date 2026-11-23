@@ -101,7 +101,9 @@ namespace sw
         /** @brief 충격을 받는 위치의 흔들림 합을 반환합니다. */
         CameraShakeOffset computeOffset( const float3& listenerPosition ) const;
         bool              isActive() const { return _listImpulse.empty() == false; }
-        void              clear() { _listImpulse.clear(); }
+        /** @brief 진행 중인 충격의 자리를 @p delta 만큼 옮깁니다(월드 원점 이동). */
+        void applyWorldOffset( const float3& delta );
+        void clear() { _listImpulse.clear(); }
 
     private:
         vector<CameraImpulse> _listImpulse;

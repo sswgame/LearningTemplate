@@ -27,6 +27,7 @@ namespace sw
         , _listBoo{}
         , _listSearched{}
         , _listPendingKeyRoom{}
+        , _listRewardedGhost{}
         , _eventBuffer{}
         , _listGhostEvent{}
         , _currentRoom{}
@@ -58,6 +59,7 @@ namespace sw
         _listBoo.clear();
         _listSearched.clear();
         _listPendingKeyRoom.clear();
+        _listRewardedGhost.clear();
         for ( const HidingGhostDef& boo : pCatalog->getBoos() )
         {
             HidingGhostRuntime runtime;
@@ -84,6 +86,7 @@ namespace sw
         // 흡입은 틱 사이에 끝나므로, 잡고 바로 나가면 `clear` 가 잡은 이벤트를 지워 동전과 불이 사라졌다.
         collectEncounterEvents();
         _encounter.clear();
+        _listRewardedGhost.clear();
         _currentRoom = roomID;
         // 가구 없이 방에 숨은 부는 들어서면 나온다.
         for ( size_t booIndex = 0; booIndex < _listBoo.size(); ++booIndex )
@@ -127,19 +130,17 @@ namespace sw
 
     void GhostMansion::collectEncounterEvents()
     {
-        // 게임에 넘길 목록에 바로 꺼내고, 이번에 들어온 구간만 훑는다(지역 목록과 복사가 없다).
-        const size_t firstNew = _listGhostEvent.size();
         _encounter.pollEvents( _listGhostEvent );
         bool bCaughtAny = false;
-        for ( size_t index = firstNew; index < _listGhostEvent.size(); ++index )
+        for ( const GhostInstance& ghost : _encounter.getGhosts() )
         {
-            const GhostEvent& event = _listGhostEvent.data()[index];
-            if ( event._type != GhostEventKind::Caught )
+            if ( ghost._state != GhostState::Caught || VectorUtil::contains( _listRewardedGhost, ghost._id ) )
                 continue;
             bCaughtAny = true;
+            _listRewardedGhost.push_back( ghost._id );
             if ( _pWallet != nullptr && _pCatalog != nullptr )
-                _pWallet->add( _pCatalog->getCurrency(), event._coins );
-            pushEvent( GhostMansionEventKind::CoinsCollected, hashed_string{}, _currentRoom, event._coins );
+                _pWallet->add( _pCatalog->getCurrency(), ghost._pDef->_coins );
+            pushEvent( GhostMansionEventKind::CoinsCollected, hashed_string{}, _currentRoom, ghost._pDef->_coins );
         }
         const bool bCleared = bCaughtAny && _encounter.getGhosts().empty() == false && _encounter.countRemaining() == 0;
         if ( bCleared && isRoomLit( _currentRoom ) == false )
@@ -391,7 +392,12 @@ namespace sw
         }
         if ( io.isReading() )
         {
-            io.check( isKnownRoom( _currentRoom ) );
+            io.check( isKnownRoom( _currentRoom ) && VectorUtil::findDuplicate( _listRewardedGhost ) == nullptr );
+            for ( const uint32 ghostID : _listRewardedGhost )
+            {
+                const GhostInstance* pGhost = _encounter.findGhost( ghostID );
+                io.check( pGhost != nullptr && pGhost->_state == GhostState::Caught ); // 동전은 잡은 유령만 준다
+            }
             for ( const hashed_string& roomID : _listPendingKeyRoom )
             {
                 io.check( _pCatalog->findRoom( roomID ) != nullptr );

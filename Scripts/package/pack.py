@@ -14,8 +14,8 @@
 | `Server` | `Ninja-Shipping-Server` | `Server.exe` | `CookContract.json` 의 `target_excluded_asset_kinds`(텍스처 · 셰이더 바이너리 · 오디오) |
 
 스테이징은 빌드 폴더 `Bin` 의 맨 위 DLL(쿠킹 전용 셰이더 컴파일러는 뺀다)과 그 타깃의 실행 파일, `THIRD_PARTY_NOTICES.txt`, 서버면 `ClientOnlyTypes.json`, 그리고 `Packs/` 가운데 공용 팩과 그 게임의 팩만 베낀다
-(`Bin/Packs` 에는 모든 게임의 팩이 구워져 있다 — 이름은 `list_pack_name_of_game` 이 게임 프리셋의 `_packRoot` 로 정한다). 쿠킹은 그 타깃의 실행 파일이
-`--cook-all` 로 한다(엔진의 `PackCooker`, 팩 파일 이름 규칙 `PackCooker::makePackFileName`). 이름이 어긋나면 스테이징이 빠진 팩을 알리고 멈춘다.
+(`Bin/Packs` 에는 모든 게임의 팩이 구워져 있다 — 이름은 `list_pack_name_of_game` 이 게임 프리셋의 `_packRoot` 로 정한다). 쿠킹은 빌드의 `CookAssets`
+타깃이 호스트 개발 빌드의 `--cook-all` 로 한다(DevTools 의 `PackCooker`, 팩 파일 이름 규칙 `PackCooker::makePackFileName`). 이름이 어긋나면 스테이징이 빠진 팩을 알리고 멈춘다.
 Dev 산출물(`Modules/` · `Saved/` · `Symbols/`)과 다른 실행 파일(테스트 · 부하 봇)은 들이지 않는다. 서버는 `Config/Server/<게임>.json` 을 함께 둔다
 (서버는 Shipping 에서도 운영 설정을 디스크에서 읽는다).
 모드 설치 폴더 `Mods/`(실행 파일 옆 — `ModSession::getInstallFolder`)는 늘 만든다. `--mods a,b` 로 고른 모드는 묶은 배포 형태(`mod.xml` + `content.pack`)만 담는다 —
@@ -42,7 +42,7 @@ import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(co
 from common.toolchain_config import ConfigError, require_config  # noqa: E402
 from common.paths import get_bin_dir, get_project_root  # noqa: E402
 from common.project_constants import DIR_RUNTIME_GAME_PRESET  # noqa: E402
-from common.run_process import run_cmake, run_process  # noqa: E402
+from common.run_process import run_cmake  # noqa: E402
 from common.exit_code import ExitCode  # noqa: E402
 from common.host_platform import executable_name, HOST  # noqa: E402
 
@@ -53,8 +53,8 @@ MAP_TARGET_PRESET: dict[str, str] = {"Client": "Ninja-Shipping", "Server": "Ninj
 MAP_TARGET_EXECUTABLE: dict[str, str] = {"Client": executable_name("App"), "Server": executable_name("Server")}
 #: 실행 파일 옆에 두는 공유 라이브러리 확장자.
 LIST_LIBRARY_SUFFIX: tuple[str, ...] = (HOST.shared_library_suffix,)
-#: 쿠킹에만 쓰는 공유 라이브러리(파일 이름의 `lib` 를 뗀 줄기) — 셰이더 컴파일러(DXC). 빌드가 Bin 에 두는 것은 App 이 쿠커라서이고(`sw_deploy_runtime_dependencies`),
-#: 배포 App 은 미리 쿠킹한 셰이더만 읽어 패키지에는 넣지 않는다. 폴더로 가르지 않는 이유: dxcompiler 가 dxil 을 이름으로 다시 찾아 실행 파일 폴더 밖에 두면 서명하지 못한다.
+#: 쿠킹에만 쓰는 공유 라이브러리(파일 이름의 `lib` 를 뗀 줄기) — 셰이더 컴파일러(DXC). 개발 빌드만 Bin 에 두고(`sw_deploy_runtime_dependencies`),
+#: 배포 App 은 미리 쿠킹한 셰이더만 읽어 패키지에는 넣지 않는다(옛 빌드 폴더 · 개발 Bin 을 스테이징할 때를 거른다). 폴더로 가르지 않는 이유: dxcompiler 가 dxil 을 이름으로 다시 찾아 실행 파일 폴더 밖에 두면 서명하지 못한다.
 LIST_COOK_ONLY_LIBRARY_STEM: tuple[str, ...] = ("dxcompiler", "dxil", "dxildll")
 #: Bin 에서 베끼는 폴더 · 파일.
 PACK_FOLDER_NAME = "Packs"
@@ -197,40 +197,35 @@ def measure_bytes(path: Path) -> int:
     return sum(file.stat().st_size for file in path.rglob("*") if file.is_file())
 
 
+def _make_configure_definitions(request: PackageRequest) -> list[str]:
+    """그 게임 · 백엔드를 고르는 구성 값입니다."""
+    list_definition = [f"-DSW_ACTIVE_GAME={request.game}"]
+    if request.rhi and request.target == "Client":
+        list_definition.append(f"-DSW_SHIPPING_RHI_BACKEND={request.rhi}")
+    return list_definition
+
+
 def run_build(request: PackageRequest, project_root: Path) -> None:
     """Shipping 프리셋을 그 게임 · 백엔드로 구성하고 빌드한다(빌드에 리소스 팩 쿠킹이 든다)."""
     preset = MAP_TARGET_PRESET[request.target]
-    list_configure = ["--preset", preset, f"-DSW_ACTIVE_GAME={request.game}"]
-    if request.rhi and request.target == "Client":
-        list_configure.append(f"-DSW_SHIPPING_RHI_BACKEND={request.rhi}")
-    if run_cmake(list_configure, cwd=project_root, capture=False).return_code != 0:
+    if run_cmake(["--preset", preset, *_make_configure_definitions(request)], cwd=project_root, capture=False).return_code != 0:
         raise PackageError(f"cmake --preset {preset} failed")
     if run_cmake(["--build", "--preset", preset], cwd=project_root, capture=False).return_code != 0:
         raise PackageError(f"cmake --build --preset {preset} failed")
 
 
 def run_cook(request: PackageRequest, project_root: Path, bin_dir: Path) -> None:
-    """리소스 팩을 그 타깃의 실행 파일(`--cook-all`)로 다시 쿠킹해 Bin/Packs 에 둔다(빌드를 건너뛰고 쿠킹만 새로 할 때).
+    """리소스 팩을 그 빌드의 쿠킹 타깃(`CookAssets`)으로 다시 쿠킹해 Bin/Packs 에 둔다(빌드를 건너뛰고 쿠킹만 새로 할 때).
 
-    쿠킹하는 호스트가 빌드 타깃이다 — `Server` 실행 파일이 구운 팩은 서버가 읽지 않는 종류를 뺀다. 실행 파일이 없으면 다른 빌드로 대신하지 않고 멈춘다.
+    배포 실행 파일에는 쿠커가 없다 — 빌드와 같은 길(호스트 개발 빌드가 굽는다, cmake/Modules/Build/AssetAndToolTargets.cmake)을 지난다. 구성되지 않은 폴더면 다른 빌드로 대신하지 않고 멈춘다.
     """
-    executable = bin_dir / MAP_TARGET_EXECUTABLE[request.target]
-    if executable.is_file() is False:
-        raise PackageError(f"{executable} is missing - build the {request.target} target before cooking")
-    list_command = [str(executable), "--cook-all", f"--cooked-dir={bin_dir.parent / 'Cooked'}", f"--pack-dir={bin_dir / PACK_FOLDER_NAME}", f"--game={request.game}"]
-    if request.rhi:
-        list_command.append(f"--{_find_backend_switch(request.rhi)}")
-    if run_process(list_command, cwd=project_root, capture=False).return_code != 0:
-        raise PackageError(f"{executable.name} --cook-all failed")
-
-
-def _find_backend_switch(rhi: str) -> str:
-    """쿠킹 표의 백엔드 이름(`DirectX12`)을 App 명령줄 이름(`dx12`)으로 바꿉니다. 모르는 이름이면 실패다."""
-    from common.cook_table import CookContractSpec
-    backend = CookContractSpec.load().find_backend(rhi)
-    if backend is None:
-        raise PackageError(f"unknown RHI backend '{rhi}'")
-    return backend.command_line_name
+    build_dir = bin_dir.parent
+    if (build_dir / "CMakeCache.txt").is_file() is False:
+        raise PackageError(f"{build_dir} is not a configured build folder - configure the {request.target} preset before cooking")
+    if run_cmake([str(build_dir), *_make_configure_definitions(request)], cwd=project_root, capture=False).return_code != 0:
+        raise PackageError(f"cmake configure of {build_dir} failed")
+    if run_cmake(["--build", str(build_dir), "--target", "CookAssets"], cwd=project_root, capture=False).return_code != 0:
+        raise PackageError(f"cooking ({build_dir} CookAssets) failed")
 
 
 def stage_package(request: PackageRequest, project_root: Path, bin_dir: Path, staging_dir: Path) -> None:

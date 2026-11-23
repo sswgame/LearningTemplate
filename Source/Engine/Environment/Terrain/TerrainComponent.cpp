@@ -2,6 +2,7 @@
 
 #include "Engine/Environment/Terrain/TerrainComponent.h"
 
+#include "Core/Math/AABB.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/NormalizedInt.h"
@@ -17,6 +18,7 @@
 #include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
 #include "Engine/Navigation/Scene/SceneNavigation.h"
+#include "Engine/Object/Component/ComponentStateCodec.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
@@ -263,6 +265,21 @@ namespace sw
             _bOriginDirty.store( true, std::memory_order_relaxed );
     }
 
+    void TerrainComponent::onWorldOriginShifted( const float3& delta )
+    {
+        (void)delta;
+        if ( _heightfield.isValid() == false )
+            return;
+        _bOriginDirty.store( false, std::memory_order_relaxed ); // 다시 읽지 않는다 — 모양은 그대로고 자리만 옮는다
+        _heightfield.setOrigin( getWorldPosition() );            // 루트는 이미 옮겨졌다
+        for ( uint32 chunkIndex = 0; chunkIndex < _listChunk.size(); ++chunkIndex )
+        {
+            const float3 translation = TerrainMeshBuilder::computeChunkTranslation( _heightfield, _layout, chunkIndex % _layout._chunkCountX, chunkIndex / _layout._chunkCountX );
+            if ( _listChunk[chunkIndex]._batch != nullptr )
+                _listChunk[chunkIndex]._batch->setWorld( 0, float4x4::makeTranslation( translation ) );
+        }
+    }
+
     void TerrainComponent::onTick( TickContext& context )
     {
         SceneComponent::onTick( context );
@@ -303,6 +320,16 @@ namespace sw
     {
         _heightMin = heightMin;
         _heightMax = heightMax;
+    }
+
+    bool TerrainComponent::computeStreamingBounds( AABB& outBox ) const
+    {
+        const float3 origin = getWorldPosition();
+        outBox              = AABB{
+            origin + float3{    0.0f, _heightMin,     0.0f},
+            origin + float3{_size._x, _heightMax, _size._y}
+        };
+        return true;
     }
 
     bool TerrainComponent::reloadTerrainKeepingEdits()
@@ -721,6 +748,8 @@ namespace sw
         if ( writeLayerWeights( listWeight, all ) == false )
             SW_LOG_WARNING_ID( "TerrainComponent.TerrainCouldNotWrite", "Terrain '%#': could not write back the unsaved splat edits", _heightfieldPath.c_str() );
     }
+
+    SW_COMPONENT_STATE_CODEC( TerrainComponent )
 
     void TerrainComponent::restoreState( vector<uint8>&& bytes )
     {

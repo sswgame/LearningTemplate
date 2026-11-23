@@ -10,7 +10,9 @@
 #include "Engine/Automation/Watch/AutomationWatchComponent.h"
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectEvents.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
+#include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/FormatUpgrade.h"
@@ -19,6 +21,7 @@
 #include "GameFramework/Runtime/Foundation/Framework/Save/StatefulComponentRegistrar.h"
 #include "GameFramework/Runtime/Foundation/GameData/StatBlock.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceDatabase.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/CharacterAppearance.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterAppearanceComponent.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/CustomizationSchema.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/ItemVisual.h"
@@ -58,16 +61,27 @@ namespace sw
     SW_STATE_FORMAT_UPGRADE( characterEquipment1To2, "CEQP", 1, 2, &CharacterEquipmentStateInternal::upgradeStateFrom1 );
 
     CharacterEquipmentComponent::CharacterEquipmentComponent()
-        : _equipment{}
+        : _character{}
+        , _specTags{}
+        , _tagSubscription{}
+        , _equipment{}
         , _bag{}
         , _pendingStateBytes{}
         , _bagSlotCount{ 16 }
         , _bagMaxWeight{ 0.0f }
+        , _pickupPrefab{}
         , _bStarted{ SW_FALSE }
+        , _itemReceiverPort{}
     {
     }
 
     CharacterEquipmentComponent::~CharacterEquipmentComponent() = default;
+
+    void CharacterEquipmentComponent::onRegister( GameObjectManager& manager )
+    {
+        Component::onRegister( manager );
+        _tagSubscription = GameObjectEvents::listen<&CharacterEquipmentComponent::handleTagsChanged>( *this, &GameObjectEvents::_tagsChanged );
+    }
 
     void CharacterEquipmentComponent::onBeginPlay()
     {
@@ -80,13 +94,19 @@ namespace sw
                              getOwner() != nullptr ? getOwner()->getName().c_str() : "?" );
             return;
         }
-        _equipment.initialize( pCatalog, pDatabase->getSlotCatalog().makeEquipmentLayout() );
+        _equipment.initialize( pCatalog, pDatabase->getSlotCatalog().makeEquipmentLayout(), &pDatabase->getSets(), &_character );
         if ( _bag.initialize( pCatalog, _bagSlotCount, _bagMaxWeight ) == false )
         {
             SW_LOG_ERROR_ID( "CharacterEquipment.BagInvalid", "'%#' bag of %# slots could not be made", getOwner() != nullptr ? getOwner()->getName().c_str() : "?", _bagSlotCount );
             return;
         }
         _bStarted = SW_TRUE;
+        // 세이브의 차림을 놓기 전에 캐릭터를 안다 — 외형이 아직 조립하지 않아도 전개는 알 수 있다.
+        CharacterAppearanceComponent* pAppearance = getOwner()->getComponent<CharacterAppearanceComponent>();
+        CharacterAppearanceSpec       spec;
+        if ( pAppearance != nullptr && pAppearance->computeSpec( spec ) )
+            setCharacterSpec( spec );
+        rebuildCharacter( getOwner()->getTags() );
         (void)applyPendingState();
         updateAppearance();
     }
@@ -99,6 +119,52 @@ namespace sw
             pAppearance->setEquipment( nullptr );
         _bStarted = SW_FALSE;
         Component::onEndPlay();
+    }
+
+    void CharacterEquipmentComponent::setCharacterSpec( const CharacterAppearanceSpec& spec )
+    {
+        _character._bodyType  = spec._bodyType;
+        _character._bodyShape = spec._bodyShape;
+        _specTags             = spec._tags;
+        if ( _bStarted == SW_FALSE )
+            return;
+        rebuildCharacter( getOwner()->getTags() );
+        _equipment.settleCharacterChange( _bag );
+    }
+
+    void CharacterEquipmentComponent::handleTagsChanged( const TagContainer& tags )
+    {
+        if ( _bStarted == SW_FALSE )
+            return;
+        const uint32 revision = _equipment.getRevision();
+        rebuildCharacter( tags );
+        _equipment.settleCharacterChange( _bag );
+        if ( _equipment.getRevision() != revision )
+            updateAppearance();
+    }
+
+    void CharacterEquipmentComponent::rebuildCharacter( const TagContainer& ownerTags )
+    {
+        _character._tags = ownerTags;
+        for ( const TagID& tag : _specTags.getTags() )
+        {
+            _character._tags.addTag( tag );
+        }
+    }
+
+    ItemGrantResult CharacterEquipmentComponent::ItemReceiverPort::receiveItem( const hashed_string& item, int32 count )
+    {
+        CharacterEquipmentComponent& owner = getPortOwner<CharacterEquipmentComponent>( *this, offsetof( CharacterEquipmentComponent, _itemReceiverPort ) );
+        if ( owner.isStarted() == false || owner._bag.hasRoomFor( item, count ) == false )
+            return ItemGrantResult::NoRoom;
+        (void)owner._bag.addItem( item, count ); // 자리를 먼저 봤으므로 모두 들어간다
+        return ItemGrantResult::Granted;
+    }
+
+    ItemGrantResult CharacterEquipmentComponent::ItemReceiverPort::receiveStack( const InventorySlot& stack )
+    {
+        CharacterEquipmentComponent& owner = getPortOwner<CharacterEquipmentComponent>( *this, offsetof( CharacterEquipmentComponent, _itemReceiverPort ) );
+        return owner.addToBag( stack ) ? ItemGrantResult::Granted : ItemGrantResult::NoRoom;
     }
 
     bool CharacterEquipmentComponent::addToBag( const InventorySlot& item )
@@ -242,25 +308,8 @@ namespace sw
                     return;
             }
         }
-        Equipment equipment = _equipment;
-        for ( const EquipmentSlot& slot : _equipment.getSlots() )
-        {
-            vector<InventorySlot> listRemoved;
-            (void)equipment.unequip( slot._name, listRemoved ); // 빈 칸은 EmptySlot — 지금 차림을 모두 벗긴다
-        }
-        for ( const EquipmentSlot& slot : listWorn )
-        {
-            vector<InventorySlot> listRemoved;
-            const EquipResult     result = equipment.equip( slot._name, slot._item, listRemoved );
-            if ( result != EquipResult::Ok )
-            {
-                SW_LOG_WARNING_ID( "CharacterEquipment.SavedItemNotWorn", "Saved '%#' in slot '%#' cannot be worn now (%#) - it goes to the bag", slot._item._itemID.c_str(), slot._name.c_str(),
-                                   static_cast<uint32>( result ) );
-                (void)bag.addStack( slot._item );
-            }
-        }
-        _equipment = equipment;
-        _bag       = std::move( bag );
+        _equipment.restoreWorn( listWorn, bag );
+        _bag = std::move( bag );
     }
 
     void CharacterEquipmentComponent::restoreState( vector<uint8>&& bytes )

@@ -77,7 +77,7 @@ namespace sw
         _pCatalog = pCatalog;
         _pChart   = pChart;
         _random.setSeed( seed );
-        _turnOrder.initialize( TurnOrderMode::Rounds, seed ^ 0x5bd1e995u );
+        _turnOrder.initialize( TurnOrderMode::Rounds, GameRandom::deriveSeed( seed, 0x5bd1e995u ) );
     }
 
     void MonsterBattle::start( const vector<MonsterInstance>& listPlayer, const vector<MonsterInstance>& listFoe, bool bWild )

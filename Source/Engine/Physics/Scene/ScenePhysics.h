@@ -162,6 +162,8 @@ namespace sw
 
         /** @brief 물리 씬을 모두 내립니다(바디 · 관절 · 캐릭터가 함께 사라진다). 매니저가 비울 때 부릅니다. */
         void onSceneCleared() override;
+        /** @brief 바디를 모두 옮깁니다(`IPhysicsBodyScene::shiftOrigin`) — 컴포넌트가 주인이 아닌 래그돌 · 파편 · 천 바디까지. */
+        void onWorldOriginShifted( const float3& delta ) override;
         /** @brief 물리를 진행합니다(`Physics` 단계, 게임 스레드). */
         void update( float32 deltaTime ) override;
         /** @brief 미리보기 정책의 고정 스텝(`ScenePreviewPolicy::_fixedStepOverride`)을 적용합니다. */
@@ -359,7 +361,7 @@ namespace sw
         void applyPoseWrites();
         /**
          * @brief 바닥(스트리밍 셀)이 없는 자리의 동적 바디 · 캐릭터를 쥐고, 셀이 오른 자리의 것을 풉니다(`PhysicsComponent::isStreamingHeld`, `SceneStreamingSubsystem::isFloorMissing`).
-         *        셀이 내려간 후보만 몸 아래로 광선(`PhysicsSettings::_streamingFloorProbeDistance`, 땅 광선 층)을 쏴 받쳐 줄 충돌이 있으면 쥐지 않는다.
+         *        셀이 내려간 후보만 몸 모양을 아래로 쓸어(`PhysicsSettings::_streamingFloorProbeDistance`, 땅 질의 층) 받쳐 줄 충돌(위를 보는 면)이 있으면 쥐지 않는다.
          * @details 스트리밍은 물리보다 아래 층이라 물리가 묻는다. 셀을 스트리밍하지 않는 씬은 쥔 것이 없으면 아무것도 하지 않는다.
          */
         void updateStreamingHolds();

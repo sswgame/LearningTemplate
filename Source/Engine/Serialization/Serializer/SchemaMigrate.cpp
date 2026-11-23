@@ -8,6 +8,7 @@
 #include "Core/String/StringBuilder.h"
 
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Reflection/ReflectValueBinding.h"
 #include "Engine/Reflection/ReflectVisit.h"
 #include "Engine/Reflection/ReflectedValue.h"
 #include "Engine/Reflection/TypeRegistry.h"
@@ -282,7 +283,7 @@ namespace sw
                 sw_placement_new( pPropPtr ) TagID();
             else
             {
-                const TypeInfo* pNested = engine::getSubsystem<TypeRegistry>().findType( prop._typeName );
+                const TypeInfo* pNested = prop.resolveValueFacts( engine::getSubsystem<TypeRegistry>() )._pType;
                 if ( pNested != nullptr )
                     SchemaMigrateInternal::constructWithDefaultCtor( pPropPtr, *pNested );
             }
@@ -319,7 +320,7 @@ namespace sw
                 std::destroy_at( static_cast<TagID*>( pPropPtr ) );
             else
             {
-                const TypeInfo* pNested = engine::getSubsystem<TypeRegistry>().findType( prop._typeName );
+                const TypeInfo* pNested = prop.resolveValueFacts( engine::getSubsystem<TypeRegistry>() )._pType;
                 if ( pNested != nullptr )
                     SchemaMigrateInternal::destroyIfDefaultConstructed( pPropPtr, *pNested );
             }

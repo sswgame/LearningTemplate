@@ -273,7 +273,7 @@ namespace sw
         /**
          * @brief 이 프로세스가 파일 · 폴더를 만들었거나 바꿔 끼운 횟수입니다(`writeFile` · `writeTextFile` · `copyFile` 이 성공할 때, `ensureDirectoryExists` 가 폴더를 만들 때마다 오릅니다).
          * @details "없는 파일" 을 기억하는 캐시(`AssetPaths`)가 이 값이 바뀌면 기억을 버립니다 — 파일이 생겼는데 옛 "없음" 을 돌려주지 않게. 이 값을 보는 쪽은
-         *          값이 같은 동안만 "없음" 을 믿는다. 다른 프로세스(git, 바깥 편집기, 쿠커 자식)가 만든 파일은 보이지 않는다 — 에디터는 파일 감시 사건이 비우고(`FileWatchDispatcher`),
+         *          값이 같은 동안만 "없음" 을 믿는다. 다른 프로세스(git, 바깥 편집기, 쿠커 자식)가 만든 파일은 보이지 않는다 — 에디터는 파일 감시 사건이 비우고(`FileWatchService`),
          *          자식 프로세스를 기다린 뒤 그 산출물을 경로로 묻는 코드는 기다린 뒤에 `recordFileCreated` 를 부른다(`Process` 는 `File` 보다 아래 층이라 알리지 못한다).
          */
         static uint64 getCreationEpoch();

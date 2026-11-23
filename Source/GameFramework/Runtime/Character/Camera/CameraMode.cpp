@@ -77,11 +77,13 @@ namespace sw
                 return clamped;
             }
 
-            static float3 clampToBounds( const CameraConfinerDef& confiner, const float3& value )
+            /** @brief 자리 @p value 를 경계 안으로 자릅니다. 경계는 데이터가 적은 절대 자리라 @p origin 으로 옮겨 견줍니다. */
+            static float3 clampToBounds( const CameraConfinerDef& confiner, const WorldOrigin& origin, const float3& value )
             {
-                return float3{ MathUtil::clamp( value._x, confiner._boundsMin._x, confiner._boundsMax._x ),
-                               MathUtil::clamp( value._y, confiner._boundsMin._y, confiner._boundsMax._y ),
-                               MathUtil::clamp( value._z, confiner._boundsMin._z, confiner._boundsMax._z ) };
+                const float3 boundsMin = origin.toLocal( confiner._boundsMin );
+                const float3 boundsMax = origin.toLocal( confiner._boundsMax );
+                return float3{ MathUtil::clamp( value._x, boundsMin._x, boundsMax._x ), MathUtil::clamp( value._y, boundsMin._y, boundsMax._y ),
+                               MathUtil::clamp( value._z, boundsMin._z, boundsMax._z ) };
             }
 
             /** @brief 축 하나의 조준을 데드존 · 소프트존으로 원하는 각 쪽으로 옮깁니다. */
@@ -247,16 +249,16 @@ namespace sw
         {
             case CameraPresetMode::Fixed:
             {
-                inoutPose._position = view._offset + inoutState._panOffset;
+                inoutPose._position = target._worldOrigin.toLocal( view._offset ) + inoutState._panOffset;
                 if ( confiner._bBounds )
-                    inoutPose._position = clampToBounds( confiner, inoutPose._position );
+                    inoutPose._position = clampToBounds( confiner, target._worldOrigin, inoutPose._position );
                 if ( view._aim == CameraAimMode::Angles )
                 {
                     inoutPose._rotation = quaternion::makeFromYawPitchRoll( inoutRig._yaw, clampPitch( confiner, inoutRig._pitch ), 0.0f );
                     return true;
                 }
                 // 점이나 대상을 보는 고정 카메라(CCTV)다. 보는 각에 훑기와 입력을 더한다.
-                inoutRig._hoverPoint = view._aim == CameraAimMode::Point ? view._lookAt : inoutRig._focus;
+                inoutRig._hoverPoint = view._aim == CameraAimMode::Point ? target._worldOrigin.toLocal( view._lookAt ) : inoutRig._focus;
                 const float2 toAim   = computeLookAngles( inoutPose._position, inoutRig._hoverPoint );
                 inoutRig._yaw        = toAim._x + inputYaw;
                 inoutRig._pitch      = toAim._y + inoutState._pitchOffset;
@@ -295,7 +297,7 @@ namespace sw
                 // 팬도 상자 끝에서 멈춘다. 넘친 만큼 남겨 두면 되돌아올 때 그만큼 키를 눌러도 화면이 움직이지 않는다.
                 if ( confiner._bBounds )
                 {
-                    const float3 clamped = clampToBounds( confiner, inoutRig._pivot );
+                    const float3 clamped = clampToBounds( confiner, target._worldOrigin, inoutRig._pivot );
                     inoutState._panOffset._x += clamped._x - inoutRig._pivot._x;
                     inoutState._panOffset._z += clamped._z - inoutRig._pivot._z;
                     inoutRig._pivot = float3{ clamped._x, inoutRig._pivot._y, clamped._z };
@@ -312,10 +314,10 @@ namespace sw
             case CameraPresetMode::FollowXY:
             {
                 // 2D 씬은 Y 가 위인 땅(XZ)이 아니라 XY 평면이다. 카메라는 초점 위가 아니라 카메라 평면(오프셋 Z)에 서서 평면을 본다.
-                inoutPose._position = float3{ inoutRig._pivot._x, inoutRig._pivot._y, view._offset._z };
+                inoutPose._position = float3{ inoutRig._pivot._x, inoutRig._pivot._y, target._worldOrigin.toLocal( view._offset )._z };
                 if ( confiner._bBounds )
                 {
-                    const float3 clamped = clampToBounds( confiner, inoutPose._position );
+                    const float3 clamped = clampToBounds( confiner, target._worldOrigin, inoutPose._position );
                     inoutPose._position  = float3{ clamped._x, clamped._y, inoutPose._position._z };
                 }
                 inoutPose._rotation = quaternion::makeFromYawPitchRoll( inoutRig._yaw, clampPitch( confiner, inoutRig._pitch ), 0.0f );
@@ -332,12 +334,13 @@ namespace sw
                 }
                 if ( inoutState._dollyPath.isValid() )
                 {
-                    const SplineSample nearest = inoutState._dollyPath.findClosest( inoutRig._focus );
-                    inoutPose._position        = inoutState._dollyPath.sampleAtDistance( nearest._distance + def._dolly._pathOffset )._position;
+                    // 레일 점은 데이터가 적은 절대 자리다 — 곡선은 절대로 두고 대상을 옮겨 찾는다.
+                    const SplineSample nearest = inoutState._dollyPath.findClosest( target._worldOrigin.toAbsolute( inoutRig._focus ) );
+                    inoutPose._position        = target._worldOrigin.toLocal( inoutState._dollyPath.sampleAtDistance( nearest._distance + def._dolly._pathOffset )._position );
                 }
                 else
                 {
-                    inoutPose._position = view._offset;
+                    inoutPose._position = target._worldOrigin.toLocal( view._offset );
                 }
                 inoutRig._hoverPoint = inoutRig._focus;
                 const float2 toAim   = computeLookAngles( inoutPose._position, inoutRig._hoverPoint );
@@ -426,7 +429,7 @@ namespace sw
 
         const bool bClampToBounds = confiner._bBounds && view._mode != CameraPresetMode::OrthoTopDown && bPlaced == false;
         if ( bClampToBounds )
-            pose._position = clampToBounds( confiner, pose._position );
+            pose._position = clampToBounds( confiner, target._worldOrigin, pose._position );
         return pose;
     }
 

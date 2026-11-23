@@ -59,6 +59,8 @@ namespace sw
         void update( float32 deltaTime ) override;
         /** @brief 씬을 비울 때 격자 · 붙잡은 도장 · 텍스처를 버립니다. */
         void onSceneCleared() override;
+        /** @brief 격자의 칸 자리와 붙잡은 도장을 옮깁니다. */
+        void onWorldOriginShifted( const float3& delta ) override;
         /** @brief 텍스처를 쓰는 환경 칸(`SceneEnvironment`)이 먼저 서야 한다 — 이 서비스가 그 칸에 값을 쓴다. */
         span<const utf8* const> getSubsystemDependencies() const override;
 

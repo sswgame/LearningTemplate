@@ -76,7 +76,7 @@ SW_TEST_CASE( AudioClipCacheTest, ReplacingClipKeepsByteCountExact )
 
 /**
  * @brief [AudioClipCacheTest] 퇴출은 최근 사용 목록의 앞(가장 오래 안 쓴 것)부터 걷고, 재생 중인 것은 건너뛰어 그다음 것을 뺀다
- * @details 예전에는 퇴출마다 맵 전체를 훑어 가장 작은 사용 시각을 찾았다. 변이: `markUsedLocked` 를 비우면 넣은 순서대로 c 가 빠져 끝 단언들이 진다.
+ * @details 예전에는 퇴출마다 맵 전체를 훑어 가장 작은 사용 시각을 찾았다. 변이: `LRUMap::touch` 가 순서를 새로 하지 않으면 넣은 순서대로 c 가 빠져 끝 단언들이 진다.
  */
 SW_TEST_CASE( AudioClipCacheTest, EvictionWalksRecencyOrderSkippingPlaying )
 {

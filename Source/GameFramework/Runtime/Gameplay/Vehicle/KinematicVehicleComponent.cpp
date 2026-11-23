@@ -164,6 +164,11 @@ namespace sw
         return input;
     }
 
+    void KinematicVehicleComponent::onWorldOriginShifted( const float3& delta )
+    {
+        _motor.setPosition( _motor.getPosition() + delta );
+    }
+
     void KinematicVehicleComponent::onTick( TickContext& context )
     {
         using Internal = KinematicVehicleComponentInternal;

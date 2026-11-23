@@ -274,7 +274,7 @@ namespace sw
         event._annotation._name       = event._memberName;
         event._annotation._typeName   = session._typeNameMap.normalize( CursorReader::takeString( clang_getTypeSpelling( fieldType ) ) );
         const string owner            = CursorReader::makeMemberOwnerName( _pType->_fullyQualifiedName, event._memberName );
-        if ( AnnotationLookup::applyAnnotation( spelling, event._annotation, session, owner ) == false )
+        if ( AnnotationLookup::applyAnnotation( spelling, event._annotation, owner ) == false )
         {
             _bHasError = SW_TRUE;
             return;
@@ -362,7 +362,7 @@ namespace sw
         }
 
         const string owner = CursorReader::makeMemberOwnerName( _pType->_fullyQualifiedName, prop._memberName );
-        if ( AnnotationLookup::applyAnnotation( spelling, prop, session, owner ) == false || PropertyResolver::resolvePropertyConstants( cursor, prop, owner ) == false )
+        if ( AnnotationLookup::applyAnnotation( spelling, prop, owner ) == false || PropertyResolver::resolvePropertyConstants( cursor, prop, owner ) == false )
         {
             _bHasError = SW_TRUE;
             return;
@@ -421,7 +421,7 @@ namespace sw
         // libclang 에는 없다 — 쓰지 말 것.
         prop._typeName = session._typeNameMap.normalize( CursorReader::takeString( clang_getTypeSpelling( valueType ) ) );
 
-        if ( AnnotationLookup::applyAnnotation( spelling, prop, session, owner ) == false || PropertyResolver::resolvePropertyConstants( cursor, prop, owner ) == false )
+        if ( AnnotationLookup::applyAnnotation( spelling, prop, owner ) == false || PropertyResolver::resolvePropertyConstants( cursor, prop, owner ) == false )
         {
             _bHasError = SW_TRUE;
             return;
@@ -507,7 +507,7 @@ namespace sw
         fillParameters( cursor, method, *_pSession );
 
         const string owner = CursorReader::makeMemberOwnerName( _pType->_fullyQualifiedName, annotation::kCtorLookupName );
-        if ( functionSpelling.empty() == false && AnnotationLookup::applyAnnotation( functionSpelling, method, *_pSession, owner ) == false )
+        if ( functionSpelling.empty() == false && AnnotationLookup::applyAnnotation( functionSpelling, method, owner ) == false )
         {
             _bHasError = SW_TRUE;
             return;
@@ -554,7 +554,7 @@ namespace sw
         fillParameters( cursor, method, session );
 
         const string owner = CursorReader::makeMemberOwnerName( _pType->_fullyQualifiedName, method._name );
-        if ( AnnotationLookup::applyAnnotation( functionSpelling, method, session, owner ) == false )
+        if ( AnnotationLookup::applyAnnotation( functionSpelling, method, owner ) == false )
         {
             _bHasError = SW_TRUE;
             return;

@@ -16,6 +16,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Object/GameObject/Service/NetObjectTable.h"
 #include "Engine/Object/GameObject/Service/SceneServiceRegistry.h"
+#include "Engine/Object/GameObject/WorldOrigin.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDataLayerSubsystem.h"
 #include "Engine/Serialization/Format/Archive.h"
@@ -71,8 +72,11 @@ namespace sw
         , _listSourceCell{}
         , _listCell{}
         , _mapCellIndex{}
+        , _mapCoverIndex{}
+        , _listActive{}
+        , _listHLODDirty{}
+        , _listLayeredHLOD{}
         , _mapObjectSlot{}
-        , _maxFileCellFileID{ 0 }
         , _listExternalSource{}
         , _cameraSource{}
         , _bCameraSourceSet{ SW_FALSE }
@@ -81,6 +85,8 @@ namespace sw
         , _listScratchCell{}
         , _listScratchLoad{}
         , _listScratchUnload{}
+        , _listScratchActive{}
+        , _listScratchLoadKey{}
     {
     }
 
@@ -116,13 +122,26 @@ namespace sw
                 return false;
             }
             listSeenIndex.push_back( cellIndex );
+            StreamingCellBounds bounds = _grid.computeCellBounds( cell._cell );
+            bounds.include( cell._contentBounds );
+            if ( _grid.countCoveredCells( bounds ) > StreamingCellGrid::kMaxCoveredCells )
+            {
+                SW_LOG_ERROR_ID( "SceneStreaming.CellBoundsTooLarge", "Scene '%#' cell (%#, %#) claims bounds over more than %# cells - its cells are not loaded, cook the scene again", scene.getName(),
+                                 cell._cell._x, cell._cell._z, StreamingCellGrid::kMaxCoveredCells );
+                return false;
+            }
         }
         _listSourceCell              = listCell;
-        _maxFileCellFileID           = maxFileCellFileID;
         _settings                    = settings;
         _contentPath                 = contentPath;
         _pScene                      = &scene;
         _cameraSource._loadingRadius = settings._cellGrid._loadingRadius;
+        // 내려간 셀의 엔티티는 오브젝트가 없다 — 색인만 읽은 셀은 머리의 최대값, 메모리 문서의 셀은 내용의 파일 id 를 알린다.
+        scene.recordHeldFileID( maxFileCellFileID );
+        for ( const SceneDocument::StreamingCell& cell : listCell )
+        {
+            scene.recordHeldFileIDs( cell._listSceneObjectNode );
+        }
         resetCells();
         SW_LOG_INFO_ID( "SceneStreaming.SceneStreamsCellsCell", "Scene '%#' streams %# cells (cell %# m, radius %# m)", scene.getName(), static_cast<uint32>( _listCell.size() ),
                         _settings._cellGrid._cellSize, _settings._cellGrid._loadingRadius );
@@ -138,11 +157,8 @@ namespace sw
                 unloadCell( *pSlot, false ); // 월드를 버린다 — 상태를 뜰 까닭이 없다
             }
         }
-        _listCell.clear();
-        _mapCellIndex.clear();
-        _mapObjectSlot.clear();
+        clearSlots();
         _listSourceCell.clear();
-        _maxFileCellFileID = 0;
         _contentPath.clear();
         _pScene = nullptr;
     }
@@ -168,50 +184,103 @@ namespace sw
         _bCameraSourceSet = SW_FALSE;
     }
 
-    void SceneStreamingSubsystem::resetCells()
+    void SceneStreamingSubsystem::clearSlots()
     {
         _listCell.clear();
         _mapCellIndex.clear();
+        _mapCoverIndex.clear();
+        _listActive.clear();
+        _listHLODDirty.clear();
+        _listLayeredHLOD.clear();
         _mapObjectSlot.clear();
+    }
+
+    SceneStreamingSubsystem::CellSlot& SceneStreamingSubsystem::addSlot( const StreamingCellCoord& cell, const vector<string>& listDataLayer )
+    {
+        unique_ptr<CellSlot> pSlot = sw::make_unique<CellSlot>();
+        pSlot->_cell               = cell;
+        pSlot->_listDataLayer      = listDataLayer;
+        pSlot->_bounds             = _grid.computeCellBounds( cell );
+        pSlot->_slotIndex          = static_cast<uint32>( _listCell.size() );
+        _mapCellIndex[makeCellKey( cell )].push_back( pSlot->_slotIndex );
+        _listCell.push_back( std::move( pSlot ) );
+        return *_listCell.back();
+    }
+
+    void SceneStreamingSubsystem::setSlotState( CellSlot& slot, const CellState state )
+    {
+        const bool bWasLoaded = slot._state == CellState::Loaded;
+        slot._state           = state;
+        if ( slot._hlodFileID != 0 && bWasLoaded != ( state == CellState::Loaded ) )
+            _listHLODDirty.push_back( slot._slotIndex );
+        const bool bActive = state != CellState::Unloaded && state != CellState::Failed;
+        if ( bActive == ( slot._activeIndex != constant::invalid_index::kUint32 ) )
+            return;
+        if ( bActive )
+        {
+            slot._activeIndex = static_cast<uint32>( _listActive.size() );
+            _listActive.push_back( slot._slotIndex );
+            return;
+        }
+        const uint32 movedIndex            = _listActive.back();
+        _listActive[slot._activeIndex]     = movedIndex;
+        getSlot( movedIndex )._activeIndex = slot._activeIndex;
+        slot._activeIndex                  = constant::invalid_index::kUint32;
+        _listActive.pop_back();
+    }
+
+    void SceneStreamingSubsystem::resetCells()
+    {
+        clearSlots();
         _listCell.reserve( _listSourceCell.size() );
         _mapCellIndex.reserve( _listSourceCell.size() );
+        vector<StreamingCellCoord> listCovered;
         for ( const SceneDocument::StreamingCell& cell : _listSourceCell )
         {
-            unique_ptr<CellSlot> pSlot = sw::make_unique<CellSlot>();
-            pSlot->_cell               = cell._cell;
-            pSlot->_listDataLayer      = cell._listDataLayer;
-            pSlot->_contentOffset      = cell._contentOffset;
-            pSlot->_contentSize        = cell._contentSize;
-            pSlot->_hlodFileID         = cell._hlodFileID;
-            pSlot->_bFromDocument      = SW_TRUE;
+            CellSlot& slot      = addSlot( cell._cell, cell._listDataLayer );
+            slot._contentOffset = cell._contentOffset;
+            slot._contentSize   = cell._contentSize;
+            slot._hlodFileID    = cell._hlodFileID;
+            slot._bFromDocument = SW_TRUE;
             // 메모리 문서의 셀(쿠커 · 테스트)은 내용이 이미 있다 — 읽지 않고 짓는다.
             if ( cell.hasFileContent() == false )
             {
-                pSlot->_listNode     = cell._listSceneObjectNode;
-                pSlot->_bContentHeld = SW_TRUE;
+                slot._listNode     = cell._listSceneObjectNode;
+                slot._bContentHeld = SW_TRUE;
             }
-            _mapCellIndex[makeCellKey( cell._cell )].push_back( static_cast<uint32>( _listCell.size() ) );
-            _listCell.push_back( std::move( pSlot ) );
+            if ( slot._hlodFileID != 0 )
+            {
+                _listHLODDirty.push_back( slot._slotIndex ); // 처음 갱신이 대리를 맞춘다
+                if ( slot._listDataLayer.empty() == false )
+                    _listLayeredHLOD.push_back( slot._slotIndex );
+            }
+            if ( cell._contentBounds.isValid() == false )
+                continue;
+            slot._bounds.include( cell._contentBounds );
+            _grid.collectCoveredCells( slot._bounds, listCovered );
+            for ( const StreamingCellCoord& covered : listCovered )
+            {
+                if ( covered != cell._cell )
+                    _mapCoverIndex[makeCellKey( covered )].push_back( slot._slotIndex );
+            }
         }
     }
 
     uint32 SceneStreamingSubsystem::findOrAddSlot( const StreamingCellCoord& cell, const vector<string>& listDataLayer )
     {
-        vector<uint32>& listSlotIndex = _mapCellIndex[makeCellKey( cell )];
-        for ( const uint32 slotIndex : listSlotIndex )
+        const auto indexIt = _mapCellIndex.find( makeCellKey( cell ) );
+        if ( indexIt != _mapCellIndex.end() )
         {
-            if ( getSlot( slotIndex )._listDataLayer == listDataLayer )
-                return slotIndex;
+            for ( const uint32 slotIndex : indexIt->second )
+            {
+                if ( getSlot( slotIndex )._listDataLayer == listDataLayer )
+                    return slotIndex;
+            }
         }
         // 좌표의 끝 조각이다 — 같은 좌표의 문서 조각이 먼저 지어진다(`areEarlierSlotsBuilt`). 떠 둔 상태가 빈 목록이라 오를 때 읽지 않는다.
-        unique_ptr<CellSlot> pSlot = sw::make_unique<CellSlot>();
-        pSlot->_cell               = cell;
-        pSlot->_listDataLayer      = listDataLayer;
-        pSlot->_bContentHeld       = SW_TRUE;
-        const uint32 slotIndex     = static_cast<uint32>( _listCell.size() );
-        listSlotIndex.push_back( slotIndex );
-        _listCell.push_back( std::move( pSlot ) );
-        return slotIndex;
+        CellSlot& slot     = addSlot( cell, listDataLayer );
+        slot._bContentHeld = SW_TRUE;
+        return slot._slotIndex;
     }
 
     void SceneStreamingSubsystem::setCameraSource( const float3& position )
@@ -253,9 +322,9 @@ namespace sw
     uint32 SceneStreamingSubsystem::getLoadedCellCount() const
     {
         uint32 count = 0;
-        for ( const unique_ptr<CellSlot>& pSlot : _listCell )
+        for ( const uint32 slotIndex : _listActive )
         {
-            count += pSlot->_state == CellState::Loaded ? 1u : 0u;
+            count += getSlot( slotIndex )._state == CellState::Loaded ? 1u : 0u;
         }
         return count;
     }
@@ -263,9 +332,9 @@ namespace sw
     uint32 SceneStreamingSubsystem::getLoadingCellCount() const
     {
         uint32 count = 0;
-        for ( const unique_ptr<CellSlot>& pSlot : _listCell )
+        for ( const uint32 slotIndex : _listActive )
         {
-            count += pSlot->_state == CellState::Loading ? 1u : 0u;
+            count += getSlot( slotIndex )._state == CellState::Loading ? 1u : 0u;
         }
         return count;
     }
@@ -284,26 +353,17 @@ namespace sw
         return false;
     }
 
-    uint64 SceneStreamingSubsystem::getMaxCellFileID() const
+    bool SceneStreamingSubsystem::isListedObject( const uint64 objectID ) const
     {
-        if ( _pScene == nullptr )
-            return 0;
-        // 올라 있는 셀의 오브젝트는 씬의 파일 id 표가 이미 센다 — 여기는 오브젝트가 없는 엔티티(읽지 않은 내용 · 떠 둔 상태 · 들어온 엔티티)만 센다.
-        uint64 maxFileID = _maxFileCellFileID;
-        for ( const unique_ptr<CellSlot>& pSlot : _listCell )
-        {
-            maxFileID = MathUtil::max( maxFileID, SceneDocument::computeMaxFileID( pSlot->_listNode ) );
-            maxFileID = MathUtil::max( maxFileID, SceneDocument::computeMaxFileID( pSlot->_listArrivedNode ) );
-        }
-        return maxFileID;
+        return _mapObjectSlot.find( objectID ) != _mapObjectSlot.end();
     }
 
     bool SceneStreamingSubsystem::isCellObject( const uint64 objectID ) const
     {
         if ( _pScene == nullptr || _mapObjectSlot.empty() )
             return false;
-        // 셀 엔티티에 붙은 자식(중첩 프리팹 부품)은 셀이 다시 지을 때 함께 선다 — 조상이 셀에 들었으면 셀 몫이다.
-        for ( const GameObject* pObject = _pScene->getObjectManager()->findGameObjectByID( objectID ); pObject != nullptr; pObject = pObject->getParent() )
+        // 셀 엔티티에 붙은 자식(중첩 프리팹 부품)은 셀이 다시 지을 때 함께 선다 — 조상이 셀에 들었으면 셀 몫이다. 부모가 지워져도 남는 것(탑승자)은 조상의 몫이 아니다.
+        for ( const GameObject* pObject = _pScene->getObjectManager()->findGameObjectByID( objectID ); pObject != nullptr; pObject = pObject->isKeptWhenParentDestroyed() ? nullptr : pObject->getParent() )
         {
             if ( _mapObjectSlot.find( pObject->getObjectID() ) != _mapObjectSlot.end() )
                 return true;
@@ -318,13 +378,17 @@ namespace sw
             return true; // 스트리밍하지 않거나 엔티티가 없는 셀이다 — 기다릴 것이 없다
         for ( const uint32 slotIndex : indexIt->second )
         {
-            // 문서(쿠킹본)의 조각만 기다린다 — 바닥이 될 정적 바디가 있을 수 있다. 옮겨 온 오브젝트를 받으려 만든 조각(런타임 스폰 · 걸어 온 NPC)은 바닥이 아니다.
-            const CellSlot& slot     = getSlot( slotIndex );
-            const bool      bPending = slot._state != CellState::Loaded && slot._state != CellState::Failed;
-            if ( slot._bFromDocument && bPending && areSlotLayersActive( slot ) )
+            if ( isSlotUnfinished( getSlot( slotIndex ) ) )
                 return false;
         }
         return true;
+    }
+
+    bool SceneStreamingSubsystem::isSlotUnfinished( const CellSlot& slot ) const
+    {
+        // 문서(쿠킹본)의 조각만 기다린다 — 바닥이 될 정적 바디가 있을 수 있다. 옮겨 온 오브젝트를 받으려 만든 조각(런타임 스폰 · 걸어 온 NPC)은 바닥이 아니다.
+        const bool bPending = slot._state != CellState::Loaded && slot._state != CellState::Failed;
+        return slot._bFromDocument && bPending && areSlotLayersActive( slot );
     }
 
     void SceneStreamingSubsystem::update( float32 deltaTime )
@@ -336,15 +400,15 @@ namespace sw
 
         // 1. 모든 원점에서 (그 원점 반경 + 여유)보다 멀거나 레이어가 꺼진 셀을 되돌린다(읽기 취소 · 상태를 떠 두고 내리기). 내리기 전에 소속을 지금 자리로 다시 정한다(파일 머리말의 셀 경계).
         _listScratchUnload.clear();
-        for ( uint32 slotIndex = 0; slotIndex < static_cast<uint32>( _listCell.size() ); ++slotIndex )
+        for ( const uint32 slotIndex : _listActive )
         {
-            const CellSlot& slot    = getSlot( slotIndex );
-            const bool      bActive = slot._state != CellState::Unloaded && slot._state != CellState::Failed;
-            if ( bActive && ( isCellWithinSources( slot._cell, _settings._unloadMargin ) == false || areSlotLayersActive( slot ) == false ) )
+            const CellSlot& slot = getSlot( slotIndex );
+            if ( isWithinSources( slot._bounds, _settings._unloadMargin ) == false || areSlotLayersActive( slot ) == false )
                 _listScratchUnload.push_back( slotIndex );
         }
         if ( _listScratchUnload.empty() == false )
         {
+            VectorUtil::sort( _listScratchUnload ); // 활성 목록은 차례가 없다 — 내리는 차례는 조각 순서로 결정적이다
             regroupObjects( _listScratchUnload );
             for ( const uint32 slotIndex : _listScratchUnload )
             {
@@ -369,7 +433,7 @@ namespace sw
             {
                 for ( uint32 slotIndex = 0; slotIndex < static_cast<uint32>( _listCell.size() ); ++slotIndex )
                 {
-                    if ( isCellInSource( getSlot( slotIndex )._cell, source ) )
+                    if ( isInSource( getSlot( slotIndex )._bounds, source ) )
                         collectSlot( slotIndex );
                 }
                 continue;
@@ -377,12 +441,23 @@ namespace sw
             _grid.computeCellsInRadius( source._position, source._loadingRadius, _listScratchCell );
             for ( const StreamingCellCoord& cell : _listScratchCell )
             {
-                const auto indexIt = _mapCellIndex.find( makeCellKey( cell ) );
-                if ( indexIt == _mapCellIndex.end() )
-                    continue; // 엔티티가 없는 셀이다
-                for ( const uint32 slotIndex : indexIt->second )
+                const uint64 cellKey = makeCellKey( cell );
+                const auto   indexIt = _mapCellIndex.find( cellKey );
+                if ( indexIt != _mapCellIndex.end() )
                 {
-                    collectSlot( slotIndex );
+                    for ( const uint32 slotIndex : indexIt->second )
+                    {
+                        collectSlot( slotIndex );
+                    }
+                }
+                // 이 셀을 덮는 다른 셀의 조각 — 셀에는 닿아도 몸이 반경 밖일 수 있어 경계로 다시 잰다.
+                const auto coverIt = _mapCoverIndex.find( cellKey );
+                if ( coverIt == _mapCoverIndex.end() )
+                    continue;
+                for ( const uint32 slotIndex : coverIt->second )
+                {
+                    if ( isInSource( getSlot( slotIndex )._bounds, source ) )
+                        collectSlot( slotIndex );
                 }
             }
         }
@@ -391,8 +466,8 @@ namespace sw
         _listScratchLoadKey.clear();
         for ( const uint32 slotIndex : _listScratchLoad )
         {
-            const StreamingCellCoord& cell = getSlot( slotIndex )._cell;
-            _listScratchLoadKey.push_back( LoadOrderKey{ computeCellPriority( cell ), computeNearestSourceDistanceSquared( cell ), slotIndex } );
+            const StreamingCellBounds& bounds = getSlot( slotIndex )._bounds;
+            _listScratchLoadKey.push_back( LoadOrderKey{ computeBoundsPriority( bounds ), computeNearestSourceDistanceSquared( bounds ), slotIndex } );
         }
         VectorUtil::sort( _listScratchLoadKey, []( const LoadOrderKey& lhs, const LoadOrderKey& rhs )
         {
@@ -414,7 +489,7 @@ namespace sw
                 continue;
             if ( slot._bContentHeld )
             {
-                slot._state = CellState::Ready;
+                setSlotState( slot, CellState::Ready );
                 continue;
             }
             if ( requestCount >= _settings._maxCellLoadsPerFrame )
@@ -424,13 +499,16 @@ namespace sw
         }
 
         // 4. 끝난 읽기를 거둔다(범위 밖으로 나가 여유 안에 머문 셀의 읽기도). 결정적 실행은 이 프레임에 기다린다.
-        for ( unique_ptr<CellSlot>& pSlot : _listCell )
+        _listScratchActive = _listActive;
+        VectorUtil::sort( _listScratchActive );
+        for ( const uint32 slotIndex : _listScratchActive )
         {
-            if ( pSlot->_state != CellState::Loading )
+            CellSlot& slot = getSlot( slotIndex );
+            if ( slot._state != CellState::Loading )
                 continue;
             if ( bFinishEachFrame )
-                pSlot->_readHandle.wait();
-            collectCellContent( *pSlot );
+                slot._readHandle.wait();
+            collectCellContent( slot );
         }
 
         // 5. 셀을 지은 뒤 HLOD 대리를 맞춘다 — 이번 프레임에 내린 조각은 대리가 켜지고 다 지은 조각은 꺼진다(같은 프레임, 구멍 · 겹침 없이).
@@ -464,15 +542,25 @@ namespace sw
 
     void SceneStreamingSubsystem::updateHLODVisibility()
     {
-        for ( const unique_ptr<CellSlot>& pSlot : _listCell )
+        // 올라 있지 않은 조각(내려감 · 읽는 중 · 짓는 중 · 실패)은 대리가 그린다 — 실패한 조각도 구멍보다 대리가 낫다.
+        const auto refresh = [this]( const uint32 slotIndex ) -> bool
         {
-            GameObject* pProxy = resolveHLODObject( *pSlot );
+            CellSlot&   slot   = getSlot( slotIndex );
+            GameObject* pProxy = resolveHLODObject( slot );
             if ( pProxy == nullptr )
-                continue;
-            // 올라 있지 않은 조각(내려감 · 읽는 중 · 짓는 중 · 실패)은 대리가 그린다 — 실패한 조각도 구멍보다 대리가 낫다.
-            const bool bShow = pSlot->_state != CellState::Loaded;
+                return false;
+            const bool bShow = slot._state != CellState::Loaded;
             if ( pProxy->isActive() != bShow )
                 pProxy->setActive( bShow );
+            return true;
+        };
+        // 대리가 아직 서지 않은 조각(씬이 막 섰다)은 남겨 다음 갱신에 다시 본다. 레이어가 꺼져 대리가 없는 조각은 아래 레이어 목록이 본다.
+        VectorUtil::sortUnique( _listHLODDirty );
+        (void)VectorUtil::removeIf( _listHLODDirty, [this, &refresh]( const uint32 slotIndex )
+        { return refresh( slotIndex ) || getSlot( slotIndex )._listDataLayer.empty() == false; } );
+        for ( const uint32 slotIndex : _listLayeredHLOD )
+        {
+            (void)refresh( slotIndex ); // 레이어가 꺼져 있으면 대리가 없다
         }
     }
 
@@ -495,80 +583,20 @@ namespace sw
         return slot._hlodObjectID != 0 ? objects.findGameObjectByID( slot._hlodObjectID ) : nullptr;
     }
 
-    const GameObject* SceneStreamingSubsystem::findResolvedHLODObject( const CellSlot& slot ) const
-    {
-        return slot._hlodObjectID != 0 && _pScene != nullptr ? _pScene->getObjectManager()->findGameObjectByID( slot._hlodObjectID ) : nullptr;
-    }
-
-    uint32 SceneStreamingSubsystem::getHLODCount() const
-    {
-        uint32 count = 0;
-        for ( const unique_ptr<CellSlot>& pSlot : _listCell )
-        {
-            count += pSlot->_hlodFileID != 0 ? 1u : 0u;
-        }
-        return count;
-    }
-
-    uint32 SceneStreamingSubsystem::getShownHLODCount() const
-    {
-        uint32 count = 0;
-        for ( const unique_ptr<CellSlot>& pSlot : _listCell )
-        {
-            const GameObject* pProxy = findResolvedHLODObject( *pSlot );
-            count += pProxy != nullptr && pProxy->isActive() ? 1u : 0u;
-        }
-        return count;
-    }
-
     StreamingSourcePriority SceneStreamingSubsystem::computePriorityAt( const float3& position ) const
     {
         if ( _pScene == nullptr )
             return StreamingSourcePriority::Normal; // 스트리밍하지 않는다 — 모두 같은 차례(화면 크기만 본다)
-        return computeCellPriority( _grid.computeCell( toAbsolute( position ) ) );
+        return computeBoundsPriority( _grid.computeCellBounds( _grid.computeCell( toAbsolute( position ) ) ) );
     }
 
-    bool SceneStreamingSubsystem::isSlotPending( const CellSlot& slot ) const
+    void SceneStreamingSubsystem::collectBoundsChangedSince( const uint64 serial, vector<StreamingCellBounds>& outListBounds ) const
     {
-        return slot._state != CellState::Loaded && slot._state != CellState::Failed && areSlotLayersActive( slot );
-    }
-
-    void SceneStreamingSubsystem::collectLoadQueue( vector<LoadQueueEntry>& outListEntry ) const
-    {
-        outListEntry.clear();
-        if ( _pScene == nullptr )
-            return;
-        // 지난 갱신의 정렬 키를 그대로 읽는다 — 줄 차례 · 우선순위 · 거리가 갱신이 쓴 값과 같다.
-        for ( const LoadOrderKey& key : _listScratchLoadKey )
-        {
-            if ( key._slotIndex >= _listCell.size() )
-                continue; // 그 뒤 월드를 바꿨다(복원이 조각을 다시 만들었다)
-            const CellSlot& slot = getSlot( key._slotIndex );
-            if ( isSlotPending( slot ) == false )
-                continue;
-            outListEntry.push_back( LoadQueueEntry{ slot._cell, slot._listDataLayer, key._priority, MathUtil::sqrt( key._distanceSquared ), slot._state } );
-        }
-    }
-
-    uint32 SceneStreamingSubsystem::getPendingCellCount() const
-    {
-        if ( _pScene == nullptr )
-            return 0;
-        uint32 count = 0;
-        for ( const LoadOrderKey& key : _listScratchLoadKey )
-        {
-            count += key._slotIndex < _listCell.size() && isSlotPending( getSlot( key._slotIndex ) ) ? 1u : 0u;
-        }
-        return count;
-    }
-
-    void SceneStreamingSubsystem::collectCellsChangedSince( const uint64 serial, vector<StreamingCellCoord>& outListCell ) const
-    {
-        outListCell.clear();
+        outListBounds.clear();
         for ( const unique_ptr<CellSlot>& pSlot : _listCell )
         {
             if ( pSlot->_changeSerial > serial )
-                outListCell.push_back( pSlot->_cell );
+                outListBounds.push_back( pSlot->_bounds );
         }
     }
 
@@ -586,38 +614,38 @@ namespace sw
         return {};
     }
 
-    float32 SceneStreamingSubsystem::computeNearestSourceDistanceSquared( const StreamingCellCoord& cell ) const
+    float32 SceneStreamingSubsystem::computeNearestSourceDistanceSquared( const StreamingCellBounds& bounds ) const
     {
         float32 nearest = MathUtil::kMaxFloat;
         for ( const StreamingSource& source : getActiveSources() )
         {
-            nearest = MathUtil::min( nearest, _grid.computeCellDistanceSquared( cell, source._position ) );
+            nearest = MathUtil::min( nearest, bounds.computeDistanceSquared( source._position ) );
         }
         return nearest;
     }
 
-    bool SceneStreamingSubsystem::isCellInSource( const StreamingCellCoord& cell, const StreamingSource& source ) const
+    bool SceneStreamingSubsystem::isInSource( const StreamingCellBounds& bounds, const StreamingSource& source )
     {
-        return _grid.computeCellDistanceSquared( cell, source._position ) <= source._loadingRadius * source._loadingRadius;
+        return bounds.computeDistanceSquared( source._position ) <= source._loadingRadius * source._loadingRadius;
     }
 
-    StreamingSourcePriority SceneStreamingSubsystem::computeCellPriority( const StreamingCellCoord& cell ) const
+    StreamingSourcePriority SceneStreamingSubsystem::computeBoundsPriority( const StreamingCellBounds& bounds ) const
     {
         StreamingSourcePriority priority = StreamingSourcePriority::Lowest;
         for ( const StreamingSource& source : getActiveSources() )
         {
-            if ( isCellInSource( cell, source ) && source._priority < priority )
+            if ( isInSource( bounds, source ) && source._priority < priority )
                 priority = source._priority;
         }
         return priority;
     }
 
-    bool SceneStreamingSubsystem::isCellWithinSources( const StreamingCellCoord& cell, const float32 margin ) const
+    bool SceneStreamingSubsystem::isWithinSources( const StreamingCellBounds& bounds, const float32 margin ) const
     {
         for ( const StreamingSource& source : getActiveSources() )
         {
             const float32 radius = source._loadingRadius + margin;
-            if ( _grid.computeCellDistanceSquared( cell, source._position ) <= radius * radius )
+            if ( bounds.computeDistanceSquared( source._position ) <= radius * radius )
                 return true;
         }
         return false;
@@ -647,11 +675,7 @@ namespace sw
 
     float3 SceneStreamingSubsystem::toAbsolute( const float3& local ) const
     {
-        if ( _pScene == nullptr )
-            return local;
-        const double3& origin = _pScene->getWorldOrigin();
-        return float3{ static_cast<float32>( static_cast<float64>( local._x ) + origin._x ), static_cast<float32>( static_cast<float64>( local._y ) + origin._y ),
-                       static_cast<float32>( static_cast<float64>( local._z ) + origin._z ) };
+        return _pScene != nullptr ? _pScene->getObjectManager()->getWorldOrigin().toAbsolute( local ) : local;
     }
 
     bool SceneStreamingSubsystem::computeObjectCell( const GameObject& object, StreamingCellCoord& outCell ) const
@@ -697,7 +721,7 @@ namespace sw
             // 보일지 말지는 복제기의 관심 영역(관찰자 반경)이 정한다(언리얼도 복제 액터의 존재는 서버가, 클라이언트 관련성은 Replication Graph 가 정한다).
             const bool bReplicated = ( netObjects.findID( *pObject ) & NetObjectTable::kSpawnedBit ) != 0;
             const bool bResident   = pObject->isAlwaysLoaded() || _pScene->findEntityDataLayers( objectID ) != nullptr || bReplicated;
-            if ( bStreamSpawns && bResident == false && isCellWithinSources( cell, _settings._unloadMargin ) == false )
+            if ( bStreamSpawns && bResident == false && isWithinSources( _grid.computeCellBounds( cell ), _settings._unloadMargin ) == false )
                 listMove.push_back( MoveCandidate{ objectID, kNoSlot, cell } );
         } );
         for ( const MoveCandidate& candidate : listMove )
@@ -734,12 +758,12 @@ namespace sw
 
         const uint32 toIndex  = findOrAddSlot( cell, listDataLayer );
         CellSlot&    to       = getSlot( toIndex );
-        const bool   bInRange = isCellWithinSources( cell, _settings._unloadMargin ) && areSlotLayersActive( to );
+        const bool   bInRange = isWithinSources( to._bounds, _settings._unloadMargin ) && areSlotLayersActive( to );
         // 반경 안의 빈 조각(옮겨 온 것을 받으려 만든 것) — 올라 있는 조각으로 두고 오브젝트를 살려 받는다(사라졌다 나타나지 않게).
         const bool bEmptyAddedSlot = to._bFromDocument == false && to._state == CellState::Unloaded && to._listNode.empty() && to._listArrivedNode.empty() && to._listObjectID.empty();
         if ( bEmptyAddedSlot && bInRange )
         {
-            to._state        = CellState::Loaded;
+            setSlotState( to, CellState::Loaded );
             to._changeSerial = ++_changeSerial;
         }
         const bool bKeepAlive = to._state == CellState::Loaded;
@@ -793,8 +817,23 @@ namespace sw
 
     bool SceneStreamingSubsystem::isFloorMissing( const float3& position ) const
     {
-        // 셀 상태 질의는 하나다(`isCellStreamingCompleted`) — 물리의 바닥 쥐기와 클라이언트 복제 보류가 같은 판정을 본다.
-        return _pScene != nullptr && isCellStreamingCompleted( _grid.computeCell( toAbsolute( position ) ) ) == false;
+        if ( _pScene == nullptr )
+            return false;
+        const float3             absolute = toAbsolute( position );
+        const StreamingCellCoord cell     = _grid.computeCell( absolute );
+        if ( isCellStreamingCompleted( cell ) == false )
+            return true;
+        // 다른 셀의 조각이어도 경계가 이 자리를 덮으면 그 몸(다리 · 큰 바닥)이 바닥일 수 있다.
+        const auto coverIt = _mapCoverIndex.find( makeCellKey( cell ) );
+        if ( coverIt == _mapCoverIndex.end() )
+            return false;
+        for ( const uint32 slotIndex : coverIt->second )
+        {
+            const CellSlot& slot = getSlot( slotIndex );
+            if ( slot._bounds.contains( absolute ) && isSlotUnfinished( slot ) )
+                return true;
+        }
+        return false;
     }
 
     void SceneStreamingSubsystem::requestCellContent( CellSlot& slot )
@@ -803,7 +842,7 @@ namespace sw
         const shared_ptr<CellContentRead> pRead = sw::make_shared<CellContentRead>();
         // IO 우선순위는 읽기 차례와 같은 값이다 — 텍스처 밉 구간 읽기와 한 큐에서 같은 규칙으로 앞선다(`toAsyncIOPriority`).
         const string sourcePath = _contentPath;
-        slot._readHandle        = AssetIO::readBinaryAssetRangeAsync( AssetID{ _contentPath }, slot._contentOffset, slot._contentSize, toAsyncIOPriority( computeCellPriority( slot._cell ) ),
+        slot._readHandle        = AssetIO::readBinaryAssetRangeAsync( AssetID{ _contentPath }, slot._contentOffset, slot._contentSize, toAsyncIOPriority( computeBoundsPriority( slot._bounds ) ),
                                                                       SW_DELEGATE_LAMBDA( AssetReadCompleteDelegate, [pRead, sourcePath]( bool bSuccess, vector<uint8>& bytes )
                {
             const bool                   bParsed = bSuccess && SceneDocument::readStreamingCellContent( bytes.data(), bytes.size(), pRead->_listNode, sourcePath );
@@ -814,11 +853,11 @@ namespace sw
         {
             SW_LOG_ERROR_ID( "SceneStreaming.CellReadNotStarted", "Scene '%#' could not start reading cell (%#, %#) from '%#' - it stays unloaded", _pScene->getName(), slot._cell._x, slot._cell._z,
                              _contentPath );
-            slot._state = CellState::Failed;
+            setSlotState( slot, CellState::Failed );
             return;
         }
         slot._pRead = pRead;
-        slot._state = CellState::Loading;
+        setSlotState( slot, CellState::Loading );
     }
 
     void SceneStreamingSubsystem::collectCellContent( CellSlot& slot )
@@ -829,12 +868,12 @@ namespace sw
         if ( state == CellContentRead::State::Read )
         {
             slot._listNode = std::move( slot._pRead->_listNode );
-            slot._state    = CellState::Ready;
+            setSlotState( slot, CellState::Ready );
         }
         else
         {
             SW_LOG_ERROR_ID( "SceneStreaming.CellReadFailed", "Scene '%#' could not read cell (%#, %#) from '%#' - it stays unloaded", _pScene->getName(), slot._cell._x, slot._cell._z, _contentPath );
-            slot._state = CellState::Failed;
+            setSlotState( slot, CellState::Failed );
         }
         slot._pRead.reset();
         slot._readHandle = AsyncReadHandle{};
@@ -857,7 +896,7 @@ namespace sw
             }
             slot._listObjectID.clear();
             slot._pBuild = _pScene->beginCellBuild( slot._listNode );
-            slot._state  = CellState::Building;
+            setSlotState( slot, CellState::Building );
         }
         const Scene::CellBuildResult result = slot._pBuild != nullptr ? _pScene->continueCellBuild( *slot._pBuild, stopwatch, budgetNanoseconds, bForceProgress, slot._listObjectID )
                                                                       : Scene::CellBuildResult::Failed;
@@ -876,14 +915,14 @@ namespace sw
             // 반쯤 지은 것을 남기지 않는다.
             _pScene->unloadCell( slot._listObjectID );
             slot._listObjectID.clear();
-            slot._state = CellState::Failed;
+            setSlotState( slot, CellState::Failed );
             return true;
         }
         for ( const uint64 objectID : slot._listObjectID )
         {
             _mapObjectSlot[objectID] = slotIndex;
         }
-        slot._state        = CellState::Loaded;
+        setSlotState( slot, CellState::Loaded );
         slot._changeSerial = ++_changeSerial;
         return true;
     }
@@ -935,7 +974,7 @@ namespace sw
             case CellState::Failed:
                 return;
         }
-        slot._state = CellState::Unloaded;
+        setSlotState( slot, CellState::Unloaded );
     }
 
     void SceneStreamingSubsystem::writeSaveState( vector<uint8>& outBytes ) const
@@ -1021,8 +1060,10 @@ namespace sw
         {
             const uint32 slotIndex = findOrAddSlot( saved._cell, saved._listDataLayer );
             CellSlot&    slot      = getSlot( slotIndex );
+            _pScene->recordHeldFileIDs( saved._listNode );
+            _pScene->recordHeldFileIDs( saved._listArrivedNode );
             unloadCell( slot, false ); // 복원은 비운 매니저 위다 — 남은 오브젝트가 있으면 세이브의 상태로 갈아 끼운다
-            slot._state = CellState::Unloaded;
+            setSlotState( slot, CellState::Unloaded );
             // 메모리 문서의 조각은 늘 내용을 든다 — 든 표시가 없는 세이브라도 문서 내용을 지우지 않는다(읽을 파일 구간이 없다).
             if ( saved._bContentHeld || slot._contentSize == 0 )
             {

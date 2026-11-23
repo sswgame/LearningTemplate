@@ -280,6 +280,11 @@ namespace sw
         static bool matchesStoredName( const hashed_string& stored, const hashed_string& name );
         /** @brief 받는 쪽이 모르는 32 비트 이름 해시의 자리 이름(`#1a2b3c4d`)입니다. 0 이면 빈 이름입니다. 공유 코드 읽기가 두고, 펼치기는 "지워진 콘텐츠" 로 보고하며, 판 올림은 옛 이름과 맞춘다. */
         static hashed_string makeHashPlaceholder( uint32 hash );
+        /**
+         * @brief 이름을 공유 코드 · 네트워크에 싣는 32 비트 해시입니다. 빈 이름은 0 이고, 자리 이름은 그것이 대신하는 원래 해시입니다.
+         * @details 자리 이름을 글로 다시 해시하면 읽고 쓸 때마다 다른 값이 되어, 잠시 없던 콘텐츠(아이템 · 외형)가 돌아와도 찾지 못한다.
+         */
+        static uint32 toSavedHash( const hashed_string& name );
 
         const CustomizationParamDef* findParameter( const hashed_string& name ) const;
         /**

@@ -42,6 +42,10 @@ namespace
     <Grant asset="cur.gem_paid" amount="100"/>
     <Grant asset="cur.gold" amount="10"/>
   </Offer>
+  <Offer id="gold_5">
+    <Product store="fake" id="com.x.gold5"/>
+    <Grant asset="cur.gold" amount="5"/>
+  </Offer>
 </OfferCatalog>)";
 
     /** @brief 계정 @p _linkedAccount 만 제공자 "steam" 의 주체 "S1" 에 연동된 가짜 연동 조회입니다. */
@@ -89,12 +93,30 @@ namespace
             EconomyRedeemInput input;
             input._receipt._storeName     = "fake";
             input._receipt._transactionID = string( transactionID );
-            input._receipt._productID     = string( productID );
             input._receipt._status        = status;
             input._receipt._bSandbox      = bSandbox ? SW_TRUE : SW_FALSE;
             input._accountID              = accountID;
             input._nowMs                  = kNowMs;
             input._bAcceptSandbox         = bAcceptSandbox ? SW_TRUE : SW_FALSE;
+            input._receipt._listItem.push_back( ReceiptLineItem{ string( productID ), 1 } );
+            return redeemInput( connection, input );
+        }
+
+        /** @brief 줄 @p listItem 을 산 주문을 지급합니다. */
+        EconomyRedeemReply redeemItems( AccountID accountID, vector<ReceiptLineItem> listItem )
+        {
+            EconomyRedeemInput input;
+            input._receipt._storeName     = "fake";
+            input._receipt._transactionID = "tx1";
+            input._receipt._listItem      = std::move( listItem );
+            input._receipt._status        = ReceiptStatus::Valid;
+            input._accountID              = accountID;
+            input._nowMs                  = kNowMs;
+            return redeemInput( _database, input );
+        }
+
+        EconomyRedeemReply redeemInput( IServiceStoreConnection& connection, const EconomyRedeemInput& input )
+        {
             EconomyRedeemReply reply;
             // 서비스와 같은 저장소 입구로 돈다 — 읽은 상태 레코드가 커밋 조건이 된다(저장 함수는 손으로 조건을 걸지 않는다)
             ServiceStoreEntryTestUtil::run( connection, [&]( IServiceStoreConnection& entry )
@@ -108,7 +130,6 @@ namespace
             EconomyRedeemInput input;
             input._receipt._storeName                = "fake";
             input._receipt._transactionID            = string( transactionID );
-            input._receipt._productID                = "com.x.gem100";
             input._receipt._status                   = ReceiptStatus::Valid;
             input._receipt._storeBuyerID             = string( storeBuyerID );
             input._receipt._buyerRule._binding       = binding;
@@ -116,6 +137,7 @@ namespace
             input._pExternalLinks                    = pLinks;
             input._accountID                         = accountID;
             input._nowMs                             = kNowMs;
+            input._receipt._listItem.push_back( ReceiptLineItem{ "com.x.gem100", 1 } );
             EconomyRedeemReply reply;
             return EconomyStoreLogic::redeemReceipt( _database, _currencies, _offers, input, reply );
         }
@@ -273,7 +295,7 @@ namespace
             ReceiptValidationResult& result = _listResult.emplace_back();
             result._storeName               = "fake";
             result._transactionID           = request._payload;
-            result._productID               = "com.x.gem100";
+            result._listItem.push_back( ReceiptLineItem{ "com.x.gem100", 1 } );
             StringBuilder<constant::buffer::kMax256> deliveryKey;
             deliveryKey.appendFormat( "key.%#", request._payload );
             result._deliveryKey        = string( deliveryKey.view() );
@@ -483,6 +505,73 @@ SW_TEST_CASE( EconomyReceiptsTest, RedeemGrantsOncePerTransaction )
 
     SW_EXPECT_TRUE( rig.redeem( kOther )._result == EconomyResult::AlreadyRedeemed );
     SW_EXPECT_EQUAL( int64( 0 ), rig.getBalanceOf( kOther ) );
+}
+
+/** @brief [EconomyReceiptsTest] 여러 개 · 여러 상품 주문은 산 수대로 한 번 지급하고, 다시 보내기는 항목 순서가 달라도 재생이며, 환불은 지급한 만큼 거둔다(결함: 첫 상품 하나만 지급했다) */
+SW_TEST_CASE( EconomyReceiptsTest, RedeemGrantsEveryItemTimesItsQuantity )
+{
+    ReceiptFixture rig;
+    SW_EXPECT_TRUE( rig.redeemItems( kBuyer, {
+                                                 ReceiptLineItem{ "com.x.gold5", 4},
+                                                 ReceiptLineItem{"com.x.gem100", 3}
+    } )
+                        ._result == EconomyResult::Ok );
+    SW_EXPECT_EQUAL( int64( 300 ), rig.getBalanceOf( kBuyer ) );
+    SW_EXPECT_EQUAL( int64( 50 ), rig.getBalanceOf( kBuyer, "cur.gold" ) ); // 3 x 10 + 4 x 5
+
+    const EconomyRedeemReply again = rig.redeemItems( kBuyer, {
+                                                                  ReceiptLineItem{"com.x.gem100", 3},
+                                                                  ReceiptLineItem{ "com.x.gold5", 4}
+    } );
+    SW_EXPECT_TRUE( again._result == EconomyResult::Ok );
+    SW_EXPECT_TRUE( again._bReplayed == SW_TRUE );
+    SW_EXPECT_TRUE( rig.redeemItems( kBuyer, {
+                                                 ReceiptLineItem{ "com.x.gem100", 9 }
+    } )
+                        ._result == EconomyResult::AlreadyRedeemed ); // 같은 거래의 다른 내용은 더 지급하지 않는다
+    SW_EXPECT_EQUAL( int64( 300 ), rig.getBalanceOf( kBuyer ) );
+    SW_EXPECT_EQUAL( int64( 50 ), rig.getBalanceOf( kBuyer, "cur.gold" ) );
+
+    rig.spend( kBuyer, 30, "cur.gold" );
+    SW_EXPECT_TRUE( rig.refundVia( rig._database, EconomyRefundRecoveryMode::Unspent ) == EconomyResult::Ok );
+    SW_EXPECT_EQUAL( int64( 0 ), rig.getBalanceOf( kBuyer ) );
+    SW_EXPECT_EQUAL( int64( 0 ), rig.getBalanceOf( kBuyer, "cur.gold" ) );
+}
+
+/** @brief [EconomyReceiptsTest] 한 줄이라도 지급할 수 없는 주문(모르는 상품, 수가 없거나 틀림, 원장 상한 넘음)은 아무것도 지급하지 않고 거래도 쓰지 않는다 */
+SW_TEST_CASE( EconomyReceiptsTest, OrderWithABadItemGrantsNothing )
+{
+    SW_EXPECT_LOG( "EconomyStoreLogic.ReceiptGrantTooLarge" );
+    ReceiptFixture rig;
+    SW_EXPECT_TRUE( rig.redeemItems( kBuyer, {} )._result == EconomyResult::ReceiptInvalid );
+    SW_EXPECT_TRUE( rig.redeemItems( kBuyer, {
+                                                 ReceiptLineItem{"com.x.gem100", 1},
+                                                 ReceiptLineItem{  "com.x.none", 1}
+    } )
+                        ._result == EconomyResult::UnknownProduct );
+    for ( const int64 quantity : { int64( 0 ), int64( -2 ) } )
+    {
+        SW_EXPECT_TRUE( rig.redeemItems( kBuyer, {
+                                                     ReceiptLineItem{ "com.x.gold5",        1},
+                                                     ReceiptLineItem{"com.x.gem100", quantity}
+        } )
+                            ._result == EconomyResult::ReceiptInvalid );
+    }
+    for ( const int64 quantity : { LedgerConstant::kMaxAmount, std::numeric_limits<int64>::max() } )
+    {
+        (void)rig.redeemItems( kBuyer, {
+                                           ReceiptLineItem{ "com.x.gem100", quantity }
+        } );
+        SW_EXPECT_TRUE( rig._lastServiceResult.hasError( OnlineError::kInvalidRequest ) );
+    }
+    (void)rig.redeemItems( kBuyer, {
+                                       ReceiptLineItem{ "com.x.gold5", LedgerConstant::kMaxAmount / 5},
+                                       ReceiptLineItem{"com.x.gem100",                              1}
+    } ); // 줄마다는 들어가도 합이 넘는다
+    SW_EXPECT_TRUE( rig._lastServiceResult.hasError( OnlineError::kInvalidRequest ) );
+    SW_EXPECT_EQUAL( int64( 0 ), rig.getBalanceOf( kBuyer ) );
+    SW_EXPECT_EQUAL( int64( 0 ), rig.getBalanceOf( kBuyer, "cur.gold" ) );
+    SW_EXPECT_TRUE( rig.redeem( kBuyer )._result == EconomyResult::Ok ); // 거래를 쓰지 않았으므로 고친 뒤 지급된다
 }
 
 /**

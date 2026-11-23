@@ -75,23 +75,23 @@ namespace sw
         void               clear();
         /**
          * @brief 실행 중인 데이터를 폴더에서 다시 읽고 구독자(`registerReloaded`)에게 알립니다(핫 리로드).
-         * @details 먼저 임시 데이터로 읽어 검사를 통과할 때만 이 데이터를 바꾼다 — 고치는 중의 깨진 파일이 돌고 있는 외형을 지우지 않는다.
+         * @details 임시 데이터로 읽어 검사를 통과할 때만 그것을 통째로 옮겨 받는다 — 고치는 중의 깨진 파일이 돌고 있는 외형을 지우지 않는다.
          *          통과하지 못하면 그 보고가 오류이며 지금 데이터는 그대로다.
          */
         [[nodiscard]] expected<void, AppearanceLoadReport> reloadFromFolder( string_view folder, const ItemCatalog* pItemCatalog );
         /** @brief 다시 읽은 뒤(`reloadFromFolder` 성공) 부를 델리게이트를 겁니다. 외형 컴포넌트가 다시 조립합니다. 돌려준 구독이 사라지면 뗍니다. */
         [[nodiscard]] Subscription registerReloaded( const Delegate<void()>& delegate );
 
-        const SlotCatalog&                 getSlotCatalog() const { return _slotCatalog; }
-        const EquipmentSetCatalog&         getSets() const { return _sets; }
-        const ItemVisualCatalog&           getVisuals() const { return _visuals; }
-        const CustomizationSchemaCatalog&  getSchemas() const { return _schemas; }
-        const AppearanceRuleCatalog&       getRules() const { return _rules; }
-        const CharacterAppearanceCatalog&  getPresets() const { return _presets; }
-        const CharacterBodyProfileCatalog& getBodyProfiles() const { return _bodyProfiles; }
-        const SkinLayerCatalog&            getSkinLayers() const { return _skinLayers; }
-        const ItemCatalog*                 getItemCatalog() const { return _pItemCatalog; }
-        const AppearanceLoadReport&        getReport() const { return _report; }
+        const SlotCatalog&                 getSlotCatalog() const { return _content._slotCatalog; }
+        const EquipmentSetCatalog&         getSets() const { return _content._sets; }
+        const ItemVisualCatalog&           getVisuals() const { return _content._visuals; }
+        const CustomizationSchemaCatalog&  getSchemas() const { return _content._schemas; }
+        const AppearanceRuleCatalog&       getRules() const { return _content._rules; }
+        const CharacterAppearanceCatalog&  getPresets() const { return _content._presets; }
+        const CharacterBodyProfileCatalog& getBodyProfiles() const { return _content._bodyProfiles; }
+        const SkinLayerCatalog&            getSkinLayers() const { return _content._skinLayers; }
+        const ItemCatalog*                 getItemCatalog() const { return _content._pItemCatalog; }
+        const AppearanceLoadReport&        getReport() const { return _content._report; }
         uint32                             getRevision() const { return _revision; }
         /**
          * @brief 이 객체의 정체성 토큰입니다(`IdentityToken` — 만들 때마다 새 토큰, 든 쪽이 있는 동안 주소가 다른 객체에 다시 쓰이지 않는다).
@@ -113,12 +113,16 @@ namespace sw
          * @return 피팅 표를 가리키는 부품이 하나라도 있으면 true 입니다(그때만 숨김 영역 이름을 대조한다).
          */
         [[nodiscard]] bool collectBodyRegions( vector<hashed_string>& outListRegion );
-        void               validateItems();
-        void               validateSets();
-        void               validateVisuals( const vector<hashed_string>* pListKnownBodyRegion );
-        void               validateSchemas();
-        void               validateRules( const vector<hashed_string>* pListKnownBodyRegion );
-        void               validatePresets();
+        /** @brief 공유 코드와 네트워크가 32 비트 해시로 싣는 이름들(@p pKind — 로그에 적는다)에 해시가 겹치는 두 이름이 있으면 오류로 남깁니다. */
+        void reportHashClashes( const utf8* pKind, const vector<hashed_string>& listName );
+        /** @brief 공유 코드 · 네트워크가 해시로 싣는 이름 목록마다 겹침을 봅니다. */
+        void validateNameHashes();
+        void validateItems();
+        void validateSets();
+        void validateVisuals( const vector<hashed_string>* pListKnownBodyRegion );
+        void validateSchemas();
+        void validateRules( const vector<hashed_string>* pListKnownBodyRegion );
+        void validatePresets();
         /** @brief 머티리얼 드라이브의 `include` · `exclude` 가 외형 @p visual 의 구간 이름 · 별칭 · 묶음인지 봅니다(없는 별칭은 오류 — 조용히 아무 구간도 칠하지 않게). */
         void validateSectionTags( const CustomizationSchemaDef& schema, const ItemVisualDef& visual, string_view where );
         void validateItemValues( const CustomizationValueSet& values, const hashed_string& schemaID, const utf8* pWhere );
@@ -127,18 +131,24 @@ namespace sw
         bool isSectionDeclared( const hashed_string& section ) const;
 
     private:
-        SlotCatalog                 _slotCatalog;
-        EquipmentSetCatalog         _sets;
-        ItemVisualCatalog           _visuals;
-        CustomizationSchemaCatalog  _schemas;
-        AppearanceRuleCatalog       _rules;
-        CharacterAppearanceCatalog  _presets;
-        CharacterBodyProfileCatalog _bodyProfiles;
-        SkinLayerCatalog            _skinLayers;
-        AppearanceLoadReport        _report;
-        const ItemCatalog*          _pItemCatalog;
-        MulticastDelegate<void()>   _reloadedMulticast;
-        uint32                      _revision;
-        IdentityToken               _instanceID;
+        /** @brief 읽은 데이터 전부입니다. 다시 읽기는 새로 읽은 것을 통째로 옮겨 받는다 — 칸 하나를 빠뜨리거나 반쯤 바뀐 데이터가 보일 수 없다. */
+        struct Content
+        {
+            SlotCatalog                 _slotCatalog{};
+            EquipmentSetCatalog         _sets{};
+            ItemVisualCatalog           _visuals{};
+            CustomizationSchemaCatalog  _schemas{};
+            AppearanceRuleCatalog       _rules{};
+            CharacterAppearanceCatalog  _presets{};
+            CharacterBodyProfileCatalog _bodyProfiles{};
+            SkinLayerCatalog            _skinLayers{};
+            AppearanceLoadReport        _report{};
+            const ItemCatalog*          _pItemCatalog{ nullptr };
+        };
+
+        Content                   _content;
+        MulticastDelegate<void()> _reloadedMulticast;
+        uint32                    _revision;
+        IdentityToken             _instanceID;
     };
 } // namespace sw

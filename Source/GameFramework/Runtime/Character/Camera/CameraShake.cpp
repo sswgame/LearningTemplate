@@ -122,6 +122,14 @@ namespace sw
         _listImpulse.push_back( impulse );
     }
 
+    void CameraImpulseListener::applyWorldOffset( const float3& delta )
+    {
+        for ( CameraImpulse& impulse : _listImpulse )
+        {
+            impulse._origin += delta;
+        }
+    }
+
     void CameraImpulseListener::step( float32 deltaTime )
     {
         const float32 elapsed = MathUtil::max( 0.0f, deltaTime );

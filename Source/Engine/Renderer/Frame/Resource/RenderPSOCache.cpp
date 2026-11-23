@@ -32,22 +32,22 @@ namespace sw
         if ( pso == 0 )
             return;
         const ShaderBindingLayout& layout = _bindingLayoutCache.getOrBuild( desc, targetFormat );
-        ScopedLock<mutex>          lock{ _layoutMutex };
+        ScopedLock<shared_mutex>   lock{ _layoutMutex };
         _mapPSOLayout[pso] = &layout;
         _mapPSODesc[pso]   = desc;
     }
 
     const ShaderBindingLayout* RenderPSOCache::findLayout( RHIPipelineStateHandle pso ) const
     {
-        ScopedLock<mutex> lock{ _layoutMutex };
-        const auto        it = _mapPSOLayout.find( pso );
+        ScopedSharedLock<shared_mutex> lock{ _layoutMutex };
+        const auto                     it = _mapPSOLayout.find( pso );
         return it != _mapPSOLayout.end() ? it->second : nullptr;
     }
 
     bool RenderPSOCache::findDesc( RHIPipelineStateHandle pso, RHIPipelineStateDesc& outDesc ) const
     {
-        ScopedLock<mutex> lock{ _layoutMutex };
-        const auto        it = _mapPSODesc.find( pso );
+        ScopedSharedLock<shared_mutex> lock{ _layoutMutex };
+        const auto                     it = _mapPSODesc.find( pso );
         if ( it == _mapPSODesc.end() )
             return false;
         outDesc = it->second;
@@ -58,13 +58,13 @@ namespace sw
     {
         if ( pso == 0 )
             return;
-        ScopedLock<mutex> lock{ _layoutMutex };
+        ScopedLock<shared_mutex> lock{ _layoutMutex };
         _mapPSODesc[pso] = desc;
     }
 
     void RenderPSOCache::collectLayouts( vector<RegisteredLayout>& outListLayout ) const
     {
-        ScopedLock<mutex> lock{ _layoutMutex };
+        ScopedSharedLock<shared_mutex> lock{ _layoutMutex };
         outListLayout.clear();
         outListLayout.reserve( _mapPSOLayout.size() );
         for ( const auto& [pso, pLayout] : _mapPSOLayout )
@@ -80,7 +80,7 @@ namespace sw
         if ( pDevice != nullptr )
             pDevice->releaseHandle( previous ); // 장치가 기록 밖으로, 백엔드 해제 큐가 GPU 완료 뒤로 미룬다(`releasePSOsUsingShader` 와 같은 길)
         {
-            ScopedLock<mutex> lock{ _materialPSOMutex };
+            ScopedLock<shared_mutex> lock{ _materialPSOMutex };
             for ( auto it = _mapMaterialPSO.begin(); it != _mapMaterialPSO.end(); )
             {
                 // 패스 PSO 를 그대로 가리키는(소유하지 않은) 변형은 옛 핸들과 함께 사라진다 — 남기면 놓은 핸들을 그린다.
@@ -90,7 +90,7 @@ namespace sw
                     ++it;
             }
         }
-        ScopedLock<mutex> lock{ _layoutMutex };
+        ScopedLock<shared_mutex> lock{ _layoutMutex };
         _mapPSOLayout.erase( previous );
         _mapPSODesc.erase( previous );
     }
@@ -158,34 +158,34 @@ namespace sw
 
     bool RenderPSOCache::hasMaterialPSO( uint64 key ) const
     {
-        ScopedLock<mutex> lock{ _materialPSOMutex };
+        ScopedSharedLock<shared_mutex> lock{ _materialPSOMutex };
         return _mapMaterialPSO.find( key ) != _mapMaterialPSO.end();
     }
 
     bool RenderPSOCache::beginMaterialPSO( uint64 key )
     {
-        ScopedLock<mutex> lock{ _materialPSOMutex };
+        ScopedLock<shared_mutex> lock{ _materialPSOMutex };
         return _mapMaterialPSO.try_emplace( key, MaterialPSOEntry::building() ).second;
     }
 
     void RenderPSOCache::setMaterialPSO( uint64 key, const MaterialPSOEntry& entry )
     {
         SW_ASSERT( entry._state != MaterialPSOState::Absent );
-        ScopedLock<mutex> lock{ _materialPSOMutex };
+        ScopedLock<shared_mutex> lock{ _materialPSOMutex };
         _mapMaterialPSO.insert_or_assign( key, entry );
     }
 
     RenderPSOCache::MaterialPSOState RenderPSOCache::findMaterialPSOState( uint64 key ) const
     {
-        ScopedLock<mutex> lock{ _materialPSOMutex };
-        const auto        it = _mapMaterialPSO.find( key );
+        ScopedSharedLock<shared_mutex> lock{ _materialPSOMutex };
+        const auto                     it = _mapMaterialPSO.find( key );
         return ( it != _mapMaterialPSO.end() ) ? it->second._state : MaterialPSOState::Absent;
     }
 
     size_t RenderPSOCache::countMaterialPSOs( MaterialPSOState state ) const
     {
-        ScopedLock<mutex> lock{ _materialPSOMutex };
-        size_t            count = 0;
+        ScopedSharedLock<shared_mutex> lock{ _materialPSOMutex };
+        size_t                         count = 0;
         for ( const auto& [key, entry] : _mapMaterialPSO )
         {
             if ( entry._state == state )
@@ -196,9 +196,9 @@ namespace sw
 
     RHIPipelineStateHandle RenderPSOCache::findMaterialPSO( uint64 key ) const
     {
-        ScopedLock<mutex> lock{ _materialPSOMutex };
-        const auto        it     = _mapMaterialPSO.find( key );
-        const bool        bReady = it != _mapMaterialPSO.end() && it->second._state == MaterialPSOState::Ready;
+        ScopedSharedLock<shared_mutex> lock{ _materialPSOMutex };
+        const auto                     it     = _mapMaterialPSO.find( key );
+        const bool                     bReady = it != _mapMaterialPSO.end() && it->second._state == MaterialPSOState::Ready;
         return bReady ? it->second._pso : 0;
     }
 
@@ -218,6 +218,13 @@ namespace sw
         uint32 readyCount{ 0 };
         for ( const MaterialPSOBuilder::Result& result : listResult )
         {
+            if ( result._bDiscarded )
+            {
+                // 핫 리로드 앞에 시작한 생성이다 — 옛 바이트코드일 수 있고 그 키의 항목은 이미 지웠거나 새로 만드는 중이다.
+                if ( result._handle != 0 )
+                    pDevice->releaseHandle( result._handle );
+                continue;
+            }
             if ( result._handle == 0 )
             {
                 // 컴파일 실패다. 패스 PSO(다른 셰이더 · 다른 보기 모드)로 그리면 틀린 그림이 통과하므로 이 조합은 그리지 않고 오류를 남긴다.
@@ -250,7 +257,7 @@ namespace sw
         // 퍼뮤테이션 변형을 **패스 PSO 보다 먼저** 파괴한다. `_bOwned` 가 0 인 항목은 패스 PSO 를 그대로
         // 담고 있을 뿐이라 여기서 파괴하면 두 번 파괴하는 셈이 된다.
         {
-            ScopedLock<mutex> lock{ _materialPSOMutex };
+            ScopedLock<shared_mutex> lock{ _materialPSOMutex };
             for ( auto& [key, entry] : _mapMaterialPSO )
             {
                 if ( entry._bOwned != 0 && entry._pso != 0 )
@@ -284,7 +291,7 @@ namespace sw
         // 이전 항목을 집는 일은 없지만, 셰이더 리로드마다 PSO 를 다시 만드는 지금은 그대로 두면
         // 죽은 항목(RHIPipelineStateDesc 통째)이 계속 쌓인다.
         {
-            ScopedLock<mutex> lock{ _layoutMutex };
+            ScopedLock<shared_mutex> lock{ _layoutMutex };
             _mapPSOLayout.clear();
             _mapPSODesc.clear();
         }
@@ -295,7 +302,7 @@ namespace sw
         // 1) 그 셰이더를 쓰는 PSO — desc 의 세 경로를 레이아웃 캐시와 같은 규칙으로 본다(지울 레이아웃을 쥔 PSO 가 남지 않게).
         vector<RHIPipelineStateHandle> listAffected;
         {
-            ScopedLock<mutex> lock{ _layoutMutex };
+            ScopedLock<shared_mutex> lock{ _layoutMutex };
             for ( const auto& [pso, desc] : _mapPSODesc )
             {
                 const bool bUses = ShaderBindingLayoutCache::matchesShaderPath( desc._vertexShaderPath, shaderPath ) ||
@@ -350,12 +357,14 @@ namespace sw
         }
 
         // 3) 머티리얼 변형(입자 · 쿠키 아틀라스 · 디퍼드 타일 포함). 소유한 것만 파괴한다 — `_bOwned` 가 0 이면 패스 PSO 그대로다.
+        // 만드는 중인 것은 모두 무효로 하고 지운다 — 옛 바이트코드를 집었을 수 있고, 패스 PSO 를 놓았으면 그 키를 다시 찾는 쪽이 없다. 다음 셋업이 다시 넣는다.
+        _materialPSOBuilder.discardPending();
         {
-            ScopedLock<mutex> lock{ _materialPSOMutex };
+            ScopedLock<shared_mutex> lock{ _materialPSOMutex };
             for ( auto it = _mapMaterialPSO.begin(); it != _mapMaterialPSO.end(); )
             {
                 const MaterialPSOEntry& entry    = it->second;
-                const bool              bRelease = entry._state == MaterialPSOState::Failed ||
+                const bool              bRelease = entry._state == MaterialPSOState::Failed || entry._state == MaterialPSOState::Building ||
                                       ( entry._state == MaterialPSOState::Ready && ( bPassReleased || VectorUtil::contains( listAffected, entry._pso ) ) );
                 if ( bRelease == false )
                 {
@@ -370,7 +379,7 @@ namespace sw
 
         // 4) 놓은 핸들의 레이아웃 · desc, 그리고 그 셰이더의 레이아웃 캐시. PSO 를 먼저 놓아야 지운 레이아웃을 가리키는 항목이 남지 않는다.
         {
-            ScopedLock<mutex> lock{ _layoutMutex };
+            ScopedLock<shared_mutex> lock{ _layoutMutex };
             for ( const RHIPipelineStateHandle pso : listReleased )
             {
                 _mapPSOLayout.erase( pso );
@@ -388,11 +397,11 @@ namespace sw
         _mapOutputPSO.clear();
         _mapExtensionProgramPSO.clear();
         {
-            ScopedLock<mutex> lock{ _materialPSOMutex };
+            ScopedLock<shared_mutex> lock{ _materialPSOMutex };
             _mapMaterialPSO.clear();
         }
         {
-            ScopedLock<mutex> lock{ _layoutMutex };
+            ScopedLock<shared_mutex> lock{ _layoutMutex };
             _mapPSOLayout.clear();
             _mapPSODesc.clear();
         }

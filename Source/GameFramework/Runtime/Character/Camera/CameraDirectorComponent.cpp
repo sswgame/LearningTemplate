@@ -24,6 +24,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/CameraRegistry.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
+#include "Engine/Object/GameObject/WorldOrigin.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Serialization/Format/Archive.h"
@@ -705,6 +706,13 @@ namespace sw
         _bPhotoModeCut = false;
     }
 
+    void CameraDirectorComponent::onWorldOriginShifted( const float3& delta )
+    {
+        _focusPoint += delta;
+        _director.applyWorldOffset( delta );
+        _photoMode.applyWorldOffset( delta );
+    }
+
     CameraTarget CameraDirectorComponent::computeTarget() const
     {
         CameraTarget target;
@@ -716,6 +724,7 @@ namespace sw
             target._aspectRatio = CameraPose::computeAspectRatio( *pCamera );
         if ( pManager == nullptr )
             return target;
+        target._worldOrigin = pManager->getWorldOrigin();
         if ( _listGroupTarget.empty() == false )
         {
             vector<float3> listPoint;
@@ -731,7 +740,8 @@ namespace sw
             }
             if ( listPoint.empty() == false )
             {
-                target = makeGroupCameraTarget( listPoint.data(), static_cast<uint32>( listPoint.size() ) );
+                target              = makeGroupCameraTarget( listPoint.data(), static_cast<uint32>( listPoint.size() ) );
+                target._worldOrigin = pManager->getWorldOrigin();
                 return target;
             }
         }

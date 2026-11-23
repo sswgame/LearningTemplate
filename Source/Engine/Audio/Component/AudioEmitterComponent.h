@@ -54,6 +54,8 @@ namespace sw
          * @details 유니티 AudioSource 가 GameObject 를 끄면 멈추고 켜면 Play On Awake 로 다시 내는 것과 같다 — 풀에 든 적의 소리가 마지막 자리에서 계속 나지 않게.
          */
         void onOwnerActiveInHierarchyChanged() override;
+        /** @brief 지난 프레임 자리를 옮깁니다 — 순간의 속도(도플러)가 튀지 않게. */
+        void onWorldOriginShifted( const float3& delta ) override;
 
         /** @brief 이 자리에서 이벤트를 냅니다. 엔진이 없으면(헤드리스) 0 입니다. 어느 스레드에서 불러도 됩니다. */
         AudioPlayingID post( const hashed_string& eventName );

@@ -6,6 +6,7 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Scene/Scene.h"
 
 #include "GameFramework/Runtime/Character/Control/ControlSystem.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/Movement/InterpToMovementComponent.h"
@@ -115,4 +116,29 @@ SW_TEST_CASE( InterpToMovementTest, LoopClosesAndEmptyPathStays )
     SW_EXPECT_NEAR( 1.0f, InterpToMovementComponent::computeOffset( listWaypoint, 1.0f, false, 2.5 )._z, 1.0e-4f );
     SW_EXPECT_NEAR( 0.0f, InterpToMovementComponent::computeOffset( listWaypoint, 1.0f, false, 3.0 )._x, 1.0e-4f );
     SW_EXPECT_NEAR( 0.0f, InterpToMovementComponent::computeOffset( vector<float3>{}, 1.0f, false, 1.0 )._x, 1.0e-4f );
+}
+
+/** @brief [InterpToMovementTest] 월드 원점을 옮겨도 바닥은 같은 절대 자리를 지난다 — 시작 자리를 절대로 든다 */
+SW_TEST_CASE( InterpToMovementTest, PathStaysAtItsAbsolutePlaceAfterOriginShift )
+{
+    Scene              scene{ "Mover" };
+    GameObjectManager& manager = *scene.getObjectManager();
+    GameObject*        pMover  = manager.createGameObject( hashed_string( "Mover" ) );
+    SceneComponent*    pRoot   = pMover->addComponent<SceneComponent>();
+    pRoot->setLocalPosition( float3{ 10.0f, 0.0f, 0.0f } );
+    InterpToMovementComponent* pPath = pMover->addComponent<InterpToMovementComponent>();
+    pPath->setPath(
+        vector<float3>{
+            float3{ 1000.0f, 0.0f, 0.0f }
+    },
+        1000.0f, false );
+    manager.beginPlay();
+    constexpr uint32 kTick = 60;
+    pPath->applyTick( kTick );
+    const float32 absoluteX = pRoot->getWorldPosition()._x;
+    SW_EXPECT_NEAR( 10.0f + TickedMoverOrderRig::computeExpectedX( kTick ), absoluteX, 1.0e-4f );
+
+    SW_REQUIRE_TRUE( scene.shiftWorldOrigin( double3{ 100.0, 0.0, 0.0 } ) );
+    pPath->applyTick( kTick );
+    SW_EXPECT_NEAR( absoluteX - 100.0f, pRoot->getWorldPosition()._x, 1.0e-3f );
 }

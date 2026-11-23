@@ -16,6 +16,7 @@
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Object/GameObject/Service/SceneSpatialGrid.h"
 
+#include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilitySystemComponent.h"
 #include "GameFramework/Runtime/Gameplay/Interaction/InteractableComponent.h"
@@ -118,9 +119,11 @@ namespace sw
         : _space{ InteractionSpace::Space3D }
         , _eyeOffset{ 0.0f, 1.6f, 0.0f }
         , _facing2D{ 1.0f, 0.0f, 0.0f }
+        , _interactButton{}
         , _bUseLineOfSight{ true }
         , _keepDistanceScale{ 1.25f }
         , _session{}
+        , _interactIndex{}
         , _resumeState{}
         , _montageStep{ constant::invalid_index::kInt32 }
         , _pairedSessionID{ 0 }
@@ -151,6 +154,12 @@ namespace sw
             pManager->getSubsystem<SceneSpatialGrid>().addLayerReader( InteractableComponent::getSpatialLayer( _space ) );
             _bSpatialIndexUser = SW_TRUE;
         }
+        if ( pOwner == nullptr || _interactButton.empty() )
+            return;
+        const PawnComponent* pPawn = pOwner->getComponent<PawnComponent>();
+        _interactIndex             = pPawn != nullptr ? pPawn->findButton( _interactButton ) : nullopt;
+        if ( _interactIndex.has_value() == false )
+            SW_LOG_ERROR_ID( "Interactor.ButtonNotOnPawn", "Interactor '%#' reads the intent button '%#', which its pawn does not have - it never interacts", pOwner->getName().c_str(), _interactButton.c_str() );
     }
 
     void InteractorComponent::onEndPlay()
@@ -475,6 +484,7 @@ namespace sw
         _prompt._bVisible                   = pDef != nullptr ? SW_TRUE : SW_FALSE;
         _prompt._bInteracting               = _session.isActive() ? SW_TRUE : SW_FALSE;
         _prompt._progress                   = _session.getStepProgress();
+        _prompt._bReactionOpen              = _session.isReactionOpen() ? SW_TRUE : SW_FALSE;
         _prompt._stepIndex                  = _session.isActive() ? _session.getStepIndex() : 0;
         _prompt._stepCount                  = pDef != nullptr ? static_cast<int32>( pDef->_listStep.size() ) : 0;
         const bool bFallbackToFirstStep     = pStep == nullptr && pDef != nullptr && pDef->_listStep.empty() == false;
@@ -492,8 +502,9 @@ namespace sw
         Component::onTick( context );
         GameObject&              owner    = context.getSelf();
         const GameObjectManager& manager  = context.getManager();
-        const bool               bPressed = _bPressed == SW_TRUE;
-        const bool               bHeld    = _bHeld == SW_TRUE;
+        const PawnComponent*     pPawn    = _interactIndex.has_value() ? owner.getComponent<PawnComponent>() : nullptr;
+        const bool               bPressed = pPawn != nullptr ? pPawn->wasButtonTriggered( _interactIndex ) : _bPressed == SW_TRUE;
+        const bool               bHeld    = pPawn != nullptr ? pPawn->isButtonDown( _interactIndex ) : _bHeld == SW_TRUE;
         _bPressed                         = SW_FALSE;
 
         InteractionView viewer;

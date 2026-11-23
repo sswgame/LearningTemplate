@@ -7,9 +7,8 @@
 #pragma once
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
-#include "Core/Container/list.h"
+#include "Core/Container/LRUMap.h"
 #include "Core/Container/string.h"
-#include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
@@ -163,8 +162,11 @@ namespace sw
         void decodeClipTask( const TaskArgs& args );
         /** @brief 디코드 결과를 캐시에 적고 예산을 맞춥니다(방금 넣은 경로는 빼지 않는다). */
         void storeResult( const hashed_string& path, shared_ptr<const AudioClipData> pClip );
-        /** @brief 예산을 넘으면 아무도 잡지 않은 클립을 가장 오래 안 쓴 것부터 뺍니다. @p keepPath 는 빼지 않습니다. */
-        void evictOverBudgetLocked( const hashed_string& keepPath ) SW_REQUIRES_LOCK( _mutex );
+        /**
+         * @brief 예산을 넘으면 아무도 잡지 않은 클립을 가장 오래 안 쓴 것부터 뺍니다. @p keepPath 는 빼지 않습니다.
+         * @param outListEvicted 뺀 클립 — 부르는 쪽이 잠금을 놓은 뒤 놓는다(클립 하나가 수 MB 라 잠금 안에서 풀면 오디오 스레드의 찾기가 그만큼 선다).
+         */
+        void evictOverBudgetLocked( const hashed_string& keepPath, vector<shared_ptr<const AudioClipData>>& outListEvicted ) SW_REQUIRES_LOCK( _mutex );
 
     private:
         /** @brief 캐시 엔트리 하나입니다. */
@@ -172,24 +174,20 @@ namespace sw
         {
             shared_ptr<const AudioClipData> _pClip{};
             uint64                          _byteCount{ 0 };                    ///< `_pClip->getByteCount()` 를 넣을 때 적어 둔다
-            list<hashed_string>::iterator   _itPathByUse{};                     ///< `_listPathByUse` 에서 이 엔트리의 자리다(앞이 가장 오래 안 쓴 것)
             AssetLoadState                  _status{ AssetLoadState::Loading }; ///< 엔트리는 요청(`requestClip`)이나 결과(`storeResult`)가 만든다
         };
 
-        /** @brief 경로의 엔트리를 찾거나 만들고 최근 사용 목록 맨 뒤로 옮깁니다. */
+        /** @brief 경로의 엔트리를 찾거나 만들고 가장 최근에 쓴 것으로 옮깁니다. */
         Entry& getOrCreateLocked( const hashed_string& path ) SW_REQUIRES_LOCK( _mutex );
-        /** @brief 엔트리를 최근 사용 목록 맨 뒤로 옮깁니다(찾기는 const 라 목록은 mutable). */
-        void markUsedLocked( const Entry& entry ) const SW_REQUIRES_LOCK( _mutex );
 
     private:
-        unordered_map<hashed_string, Entry, hashed_string::HashFunc> _mapPathToEntry SW_GUARDED_BY( _mutex ); /**< 경로에서 엔트리로 가는 맵입니다. */
-        AudioFallbackDecodeFunction                                                  _pFallbackDecoder;       /**< 대체 디코더입니다(없으면 nullptr). */
-        float32                                                                      _streamMinSeconds;       /**< 이보다 긴 소리는 스트리밍합니다. */
-        uint64 _budgetBytes                                                          SW_GUARDED_BY( _mutex ); /**< 캐시 예산(바이트)입니다. 0 이면 아직 정하지 않았다. */
-        uint64 _cachedBytes                                                          SW_GUARDED_BY( _mutex ); /**< 든 클립 바이트의 합입니다. */
-        mutable list<hashed_string> _listPathByUse                                   SW_GUARDED_BY( _mutex ); /**< 최근 사용 순서입니다 — 앞이 가장 오래 안 쓴 것, 찾기 · 넣기가 맨 뒤로 옮긴다(언리얼 `FLruCache` 의 연결 목록). */
-        mutable mutex                                                                _mutex;                  /**< `_mapPathToEntry` 를 지킵니다. */
-        bool _bSubmittedDecode                                                       SW_GUARDED_BY( _mutex ); /**< 워커 디코드를 띄운 적이 있으면 true - 소멸자가 에셋 로드 단계를 기다린다(`AssetManager::waitLoadTasks`). */
+        mutable LRUMap<hashed_string, Entry, hashed_string::HashFunc> _mapPathToEntry SW_GUARDED_BY( _mutex ); /**< 경로에서 엔트리로 가는 맵입니다. 쓴 순서를 함께 든다 — 찾기가 순서를 새로 해 mutable 이다(언리얼 `TLruCache`). */
+        AudioFallbackDecodeFunction                                                   _pFallbackDecoder;       /**< 대체 디코더입니다(없으면 nullptr). */
+        float32                                                                       _streamMinSeconds;       /**< 이보다 긴 소리는 스트리밍합니다. */
+        uint64 _budgetBytes                                                           SW_GUARDED_BY( _mutex ); /**< 캐시 예산(바이트)입니다. 0 이면 아직 정하지 않았다. */
+        uint64 _cachedBytes                                                           SW_GUARDED_BY( _mutex ); /**< 든 클립 바이트의 합입니다. */
+        mutable mutex                                                                 _mutex;                  /**< `_mapPathToEntry` 를 지킵니다. */
+        bool _bSubmittedDecode                                                        SW_GUARDED_BY( _mutex ); /**< 워커 디코드를 띄운 적이 있으면 true - 소멸자가 에셋 로드 단계를 기다린다(`AssetManager::waitLoadTasks`). */
     };
 } // namespace sw
 

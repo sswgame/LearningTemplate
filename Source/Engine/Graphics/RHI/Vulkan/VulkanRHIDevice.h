@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Concurrency/mutex.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Task/TaskTypes.h"
 
 #include "Engine/Config/RHIBackendType.h"
 #include "Engine/EngineMinimal.h"
@@ -265,6 +266,8 @@ namespace sw
         uint32 getTimestampBase() const { return getFrameSlot() * constant::render::kMaxGPUTimestampSlot; }
         /** @brief 슬롯 하나를 기록했다고 표시합니다. 여러 패스 스레드가 동시에 부를 수 있습니다. */
         void markTimestampWritten( uint32 slotIndex ) { _timestampRing.markWritten( slotIndex ); }
+        /** @brief 비동기 컴퓨트 큐 리스트가 슬롯을 적었습니다(그래픽스 큐와 겹치는 슬롯을 가린다). */
+        void markComputeQueueTimestampWritten( uint32 slotIndex ) { _timestampRing.markComputeQueueWritten( slotIndex ); }
         /** @brief 리소스 생성과 파괴 인터페이스(VulkanRHIResourceFactory)를 반환합니다. */
         IRHIResourceFactory* getResourceFactory() override;
         /** @brief 프레임 스트림 컨텍스트입니다. 백버퍼 패스와 Present 가 여기에 기록합니다. */
@@ -378,12 +381,12 @@ namespace sw
         /// @brief VkBuffer 와 메모리, 사용 플래그입니다.
         struct VulkanBufferRecord
         {
-            VkBuffer       _buffer{ nullptr };
-            VkDeviceMemory _memory{ nullptr };
-            uint64         _sizeBytes{ 0 };  ///< VkDeviceSize — 만들 때의 요청 크기(`createVulkanBuffer`)
-            uint32         _usage{ 0 };      ///< VkBufferUsageFlags
-            uint32         _cbSlotSize{ 0 }; ///< 링 상수 버퍼(`createConstantBuffer`)의 프레임 칸 크기, 아니면 0. 표에 넣기 전에 정하고 바뀌지 않아 기록 경로가 락 없이 읽는다
-            RHIBufferState _state = RHIBufferState::Common;
+            VkBuffer                        _buffer{ nullptr };
+            VkDeviceMemory                  _memory{ nullptr };
+            uint64                          _sizeBytes{ 0 };  ///< VkDeviceSize — 만들 때의 요청 크기(`createVulkanBuffer`)
+            uint32                          _usage{ 0 };      ///< VkBufferUsageFlags
+            uint32                          _cbSlotSize{ 0 }; ///< 링 상수 버퍼(`createConstantBuffer`)의 프레임 칸 크기, 아니면 0. 표에 넣기 전에 정하고 바뀌지 않아 기록 경로가 락 없이 읽는다
+            RHITrackedState<RHIBufferState> _state;           ///< 기본값은 Common 이다. 병렬 기록 워커가 함께 옮길 수 있어 원자값이다(텍스처의 `_layout` · DX12 버퍼 레코드와 같은 장치)
         };
 
         /**
@@ -636,11 +639,13 @@ namespace sw
         /** @brief @p device 가 텍스처 세트(네이티브 bindless 배열 둘)의 기능과 update-after-bind 한도를 갖췄는지 봅니다. 못 미치면 이유를 남기고 false 입니다(장치 고르기가 건너뛴다). */
         [[nodiscard]] static bool isBindlessCapable( VkPhysicalDevice device, const utf8* pDeviceName );
 
+        /** @brief @p device 가 켤 장치 확장(`VK_KHR_swapchain`)을 모두 갖췄는지 봅니다. 없으면 이유를 남기고 false 입니다(장치 고르기가 건너뛴다). */
+        [[nodiscard]] static bool hasRequiredDeviceExtensions( VkPhysicalDevice device, const utf8* pDeviceName );
         /**
-         * @brief 엔진이 고정으로 쓰는 컬러 첨부 포맷 중 Vulkan 필수 목록에 없는 것(`R16G16_SNORM` — G버퍼 법선)을 이 GPU 가 첨부로 쓸 수 있는지 확인합니다.
-         * @details 없으면 false 이고 폴백은 없습니다(장치 생성이 멈춘다).
+         * @brief 엔진이 고정으로 쓰는 컬러 첨부 포맷 중 Vulkan 필수 목록에 없는 것(`R16G16_SNORM` — G버퍼 법선)과 동시 첨부 수를 이 GPU 가 받는지 확인합니다.
+         * @details 없으면 이유를 남기고 false 입니다(장치 고르기가 건너뛴다). 폴백 형식은 없다.
          */
-        bool verifyRequiredColorAttachmentFormats() const;
+        [[nodiscard]] static bool hasRequiredColorAttachments( VkPhysicalDevice device, const utf8* pDeviceName, uint32 maxColorAttachments );
 
         /**
          * @brief 스왑체인을 통째로 다시 만듭니다. 창 크기가 바뀌었거나 present 가 OUT_OF_DATE 를 냈을 때 부릅니다.
@@ -679,9 +684,15 @@ namespace sw
         [[nodiscard]] bool initializePipelineCache();
         /** @brief 파이프라인 캐시를 디스크에 저장하고 정리합니다(종료). */
         void savePipelineCache();
-        /** @brief 파이프라인 캐시를 디스크에 씁니다. 디스크의 바이트와 같으면 쓰지 않는다. 캐시는 그대로 둔다(주기 저장 · 종료 저장이 함께 쓴다). */
+        /**
+         * @brief 파이프라인 캐시를 디스크에 씁니다. 디스크의 바이트와 같으면 쓰지 않는다. 캐시는 그대로 둔다(주기 저장 · 종료 저장이 함께 쓴다).
+         * @details 어느 스레드에서나 부른다 — 캐시는 내부 동기화이고, 주기 저장의 워커가 도는 동안 장치 · 캐시는 바뀌지 않는다(`savePipelineCache` 가 기다린 뒤 지운다).
+         */
         void writePipelineCacheFile();
-        /** @brief 주기(`RHIDeviceDesc::_pipelineCacheSaveIntervalSeconds`)가 지났고 캐시가 자랐으면 디스크에 씁니다(R-13). 프레임 시작이 부른다. */
+        /**
+         * @brief 주기(`RHIDeviceDesc::_pipelineCacheSaveIntervalSeconds`)가 지났고 캐시가 자랐으면 워커에 저장을 맡깁니다(R-13). 프레임 시작이 부른다.
+         * @details 캐시 데이터를 뜨고 디스크를 읽고 쓰는 일은 렌더 스레드에서 하지 않는다 — 캐시가 클수록 그 프레임이 늦는다(언리얼도 PSO 캐시를 비동기로 쓴다 — 기억).
+         */
         void savePipelineCacheIfDue();
 
         /**
@@ -1152,6 +1163,7 @@ namespace sw
         int64                                                             _pipelineCacheSaveIntervalNanoseconds{ 0 }; ///< 주기 저장 간격(`RHIDeviceDesc::_pipelineCacheSaveIntervalSeconds`)
         int64                                                             _pipelineCacheLastSaveNanoseconds{ 0 };     ///< 지난 저장(또는 읽기) 시각
         uint64                                                            _pipelineCacheLastSavedBytes{ 0 };          ///< 지난 저장(또는 읽기) 때의 캐시 크기
+        TaskStageHandle                                                   _pipelineCacheSaveStage;                    ///< 주기 저장 태스크(캐시를 지우기 전에 기다린다 — 렌더 스레드 · 해제 길에서만 쓴다)
 
         /// @brief 살아 있는 장치 메모리 할당 수입니다(`allocateDeviceMemory` · `freeDeviceMemory`). 한도는 물리 장치를 고른 뒤 정한다.
         VulkanMemoryAccount _memoryAccount;

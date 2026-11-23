@@ -292,14 +292,17 @@ namespace sw
                         command._equipSlot.c_str(), getEnumName( _lastResult ) );
         GameObject*        pOwner   = pCharacter->getOwner();
         GameObjectManager* pManager = engine::findActiveObjectManager();
-        if ( listDropped.empty() == false && pOwner != nullptr && pManager != nullptr )
+        if ( listDropped.empty() == false )
         {
-            const SceneComponent* pScene = pOwner->getPrimarySceneComponent();
+            const SceneComponent* pScene = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
             float3                place  = pScene != nullptr ? pScene->getWorldPosition() : float3{};
             place._z += InventoryScreenInternal::kDropForward;
             for ( const InventorySlot& dropped : listDropped )
             {
-                (void)PickupComponent::spawn( *pManager, dropped, place );
+                const GameObject* pPickup = pManager != nullptr ? PickupComponent::spawn( *pManager, pCharacter->getPickupPrefab(), dropped, place ) : nullptr;
+                // 세우지 못한 조각(프리팹 없음)은 가방에 돌려준다 — 방금 꺼낸 것이라 자리가 있다.
+                if ( pPickup == nullptr && pCharacter->addToBag( dropped ) == false )
+                    SW_LOG_ERROR_ID( "InventoryScreen.DroppedItemLost", "Dropped %# x%# could neither be placed in the world nor returned to the bag", dropped._itemID.c_str(), dropped._count );
             }
         }
         setStatus( InventoryScreenInternal::getResultKey( _lastResult ) );

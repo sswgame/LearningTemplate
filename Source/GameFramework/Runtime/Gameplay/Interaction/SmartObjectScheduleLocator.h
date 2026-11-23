@@ -28,6 +28,7 @@ namespace sw
     /**
      * @class SmartObjectScheduleLocator
      * @brief 씬의 스마트 오브젝트 슬롯을 일정의 슬롯으로 나눠 주는 제공자입니다. 게임 스레드에서만 부릅니다.
+     * @details 일정의 자리(카탈로그 · 요청 · 돌려주는 위치)는 절대라, 로컬인 슬롯 자리를 월드 원점으로 옮겨 견주고 돌려줍니다(`WorldOrigin`).
      */
     class SW_GF_API SmartObjectScheduleLocator final : public IScheduleActivityLocator
     {
@@ -53,10 +54,8 @@ namespace sw
         /** @brief 점유를 비웁니다(블록이 끝날 때). 예약은 그대로이며 `release` 가 지웁니다. 그 NPC 가 점유한 슬롯이 없으면 false 입니다. */
         bool releaseClaim( uint32 reservationID, const GameObject& npc );
 
-        /** @brief 예약을 저장 상태로 채웁니다(`ScheduleSystem` 은 기본 제공자의 예약만 저장하므로 게임이 이것을 자기 세이브에 함께 싣는다). */
-        void fillState( vector<ScheduleReservationSaveState>& outListReservation ) const;
-        /** @brief 저장 상태에서 예약을 복원합니다. 사라진 오브젝트의 예약은 버립니다(다시 세운 계획이 새 슬롯을 고른다). */
-        void   restoreState( const vector<ScheduleReservationSaveState>& listReservation );
+        void   fillState( vector<ScheduleReservationSaveState>& outListReservation ) const override;
+        void   restoreState( const vector<ScheduleReservationSaveState>& listReservation ) override;
         size_t getReservationCount() const { return _listReservation.size(); }
 
     private:
@@ -82,8 +81,8 @@ namespace sw
 
         /** @brief 예약의 슬롯 슬롯(월드 위치)를 구합니다. 오브젝트가 사라졌으면 false 입니다. */
         bool computeReservationPosition( const Reservation& reservation, float3& outPosition ) const;
-        /** @brief 그 슬롯에 겹치는 시간 창의 예약이 있는지 셉니다. */
-        int32 countOverlapping( uint64 objectID, int32 slot, int32 day, int32 startMinute, int32 endMinute ) const;
+        /** @brief 그 슬롯에 겹치는 시간 창을 든 다른 NPC 의 예약이 있는지입니다. */
+        bool isTakenByOther( const hashed_string& npc, uint64 objectID, int32 slot, int32 day, int32 startMinute, int32 endMinute ) const;
         /** @brief 정의 id 가 @p kind 인 스마트 오브젝트의 슬롯을 (오브젝트 id, 슬롯) 순으로 모읍니다. */
         void collectCandidates( const hashed_string& kind, vector<Candidate>& outListCandidate ) const;
 

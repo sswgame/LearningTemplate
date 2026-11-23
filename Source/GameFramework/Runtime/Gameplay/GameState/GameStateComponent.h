@@ -105,6 +105,8 @@ namespace sw
          * @details 날씨가 머티리얼 칸을 적은 카탈로그면 틱 뒤 게임 스레드에서 그 값을 묶음에 쓴다(`WeatherMaterialWriter`) — 장면마다 따로 놓지 않는다.
          */
         void onTick( TickContext& context ) override;
+        /** @brief 땅 격자의 원점을 옮깁니다. */
+        void onWorldOriginShifted( const float3& delta ) override;
         /** @brief 날씨가 쓴 머티리얼 칸을 연 때의 값으로 되돌립니다. */
         void onEndPlay() override;
 

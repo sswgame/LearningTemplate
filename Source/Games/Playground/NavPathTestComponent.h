@@ -36,6 +36,8 @@ namespace sw
         void onBeginPlay() override;
         void onEndPlay() override;
         void onTick( TickContext& context ) override;
+        /** @brief 질의를 내는 자리를 옮깁니다. */
+        void onWorldOriginShifted( const float3& delta ) override;
 
         /** @brief 마지막으로 받은 경로의 길이(m)입니다. 아직 받지 못했으면 음수입니다. */
         float32 getLastPathLength() const { return _lastPathLength; }

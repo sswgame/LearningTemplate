@@ -52,15 +52,44 @@ namespace sw
         return cell;
     }
 
+    StreamingCellBounds StreamingCellGrid::computeCellBounds( const StreamingCellCoord& cell ) const
+    {
+        StreamingCellBounds bounds{};
+        bounds._minX = static_cast<float32>( cell._x ) * _def._cellSize;
+        bounds._minZ = static_cast<float32>( cell._z ) * _def._cellSize;
+        bounds._maxX = bounds._minX + _def._cellSize;
+        bounds._maxZ = bounds._minZ + _def._cellSize;
+        return bounds;
+    }
+
+    int64 StreamingCellGrid::countCoveredCells( const StreamingCellBounds& bounds ) const
+    {
+        if ( bounds.isValid() == false )
+            return 0;
+        const StreamingCellCoord minCell = computeCell( float3{ bounds._minX, 0.0f, bounds._minZ } );
+        const StreamingCellCoord maxCell = computeCell( float3{ bounds._maxX, 0.0f, bounds._maxZ } );
+        return ( static_cast<int64>( maxCell._x ) - minCell._x + 1 ) * ( static_cast<int64>( maxCell._z ) - minCell._z + 1 );
+    }
+
+    void StreamingCellGrid::collectCoveredCells( const StreamingCellBounds& bounds, vector<StreamingCellCoord>& outListCell ) const
+    {
+        outListCell.clear();
+        if ( bounds.isValid() == false )
+            return;
+        const StreamingCellCoord minCell = computeCell( float3{ bounds._minX, 0.0f, bounds._minZ } );
+        const StreamingCellCoord maxCell = computeCell( float3{ bounds._maxX, 0.0f, bounds._maxZ } );
+        for ( int32 z = minCell._z; z <= maxCell._z; ++z )
+        {
+            for ( int32 x = minCell._x; x <= maxCell._x; ++x )
+            {
+                outListCell.push_back( StreamingCellCoord{ x, z } );
+            }
+        }
+    }
+
     float32 StreamingCellGrid::computeCellDistanceSquared( const StreamingCellCoord& cell, const float3& position ) const
     {
-        const float32 minX = static_cast<float32>( cell._x ) * _def._cellSize;
-        const float32 minZ = static_cast<float32>( cell._z ) * _def._cellSize;
-        const float32 maxX = minX + _def._cellSize;
-        const float32 maxZ = minZ + _def._cellSize;
-        const float32 dx   = ( position._x < minX ) ? ( minX - position._x ) : ( ( position._x > maxX ) ? ( position._x - maxX ) : 0.0f );
-        const float32 dz   = ( position._z < minZ ) ? ( minZ - position._z ) : ( ( position._z > maxZ ) ? ( position._z - maxZ ) : 0.0f );
-        return dx * dx + dz * dz;
+        return computeCellBounds( cell ).computeDistanceSquared( position );
     }
 
     void StreamingCellGrid::computeCellsInRange( const float3& origin, vector<StreamingCellCoord>& outListCell ) const

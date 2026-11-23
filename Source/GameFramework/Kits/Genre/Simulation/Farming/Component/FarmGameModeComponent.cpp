@@ -12,6 +12,7 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/WorldOrigin.h"
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
@@ -668,7 +669,7 @@ namespace sw
         const SceneComponent*    pScene   = pObject != nullptr ? pObject->getPrimarySceneComponent() : nullptr;
         if ( pScene == nullptr )
             return false;
-        outPosition = pScene->getWorldPosition();
+        outPosition = pManager->getWorldOrigin().toAbsolute( pScene->getWorldPosition() ); // 밭 시뮬레이션은 절대 자리로 돈다
         return true;
     }
 } // namespace sw

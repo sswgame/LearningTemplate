@@ -92,6 +92,18 @@ namespace sw
         Component::onEndPlay();
     }
 
+    void KillcamComponent::onWorldOriginShifted( const float3& delta )
+    {
+        for ( KillcamShot& shot : _listShot )
+        {
+            shot.applyWorldOffset( delta );
+        }
+        _playing.applyWorldOffset( delta );
+        _pose._position += delta;
+        _pose._lookAt += delta;
+        _pose._bullet += delta;
+    }
+
     void KillcamComponent::onTick( TickContext& context )
     {
         Component::onTick( context );

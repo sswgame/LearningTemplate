@@ -178,7 +178,7 @@ namespace sw
         AABB bounds = NavMeshAsset::computeBakeBounds( geometry );
         AABB surfaceBox{};
         if ( NavGeometryCollectorInternal::findSurfaceBox( pSurface, surfaceBox ) )
-            bounds = clipToSurfaceBox( bounds, surfaceBox );
+            bounds = clipToSurfaceBox( bounds, geometry.getWorldOrigin().toAbsolute( surfaceBox ) ); // 기하는 절대, 표면 상자는 로컬 월드 자리다
         return bounds;
     }
 
@@ -188,6 +188,7 @@ namespace sw
         using Internal = NavGeometryCollectorInternal;
         SW_PROFILE_SCOPE( "GT.Navigation.collectGeometry" );
         outGeometry.clear();
+        outGeometry.setWorldOrigin( manager.getWorldOrigin() ); // 더하는 쪽은 모두 로컬 월드 자리를 넘긴다
         const NavGeometrySource source     = pSurface != nullptr ? pSurface->getGeometrySource() : NavGeometrySource::Both;
         const bool              bMeshes    = source == NavGeometrySource::RenderMeshes || source == NavGeometrySource::Both;
         const bool              bColliders = source == NavGeometrySource::PhysicsColliders || source == NavGeometrySource::Both;

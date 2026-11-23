@@ -2,8 +2,13 @@
 
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Serialization/XML/XMLDocument.h"
+
+#include "GameFramework/Runtime/Foundation/Framework/Save/ComponentStateStore.h"
 #include "GameFramework/Runtime/Foundation/GameData/StatBlock.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/AppearanceTypes.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterEquipmentComponent.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/EquipmentSetCatalog.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Equipment.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/InventoryCommand.h"
@@ -30,7 +35,7 @@ namespace
 </ItemCatalog>)",
                                                      "InventoryCommandTest" ) );
             SW_REQUIRE_TRUE( _bag.initialize( &_items, 4 ) );
-            _equipment.initialize( &_items, "Head,MainHand" );
+            _equipment.initialize( &_items, "Head,MainHand", nullptr, nullptr );
         }
 
         sw::InventoryCommandResult run( sw::InventoryCommandKind kind, int32 from, int32 to = sw::InventoryCommand::kNoSlot, int32 count = 0, const utf8* pEquipSlot = "" )
@@ -118,6 +123,121 @@ SW_TEST_CASE( InventoryCommandTest, DropEquipUnequipAndUse )
     const sw::optional<int32> stoneSlot = fixture._bag.findFirstSlot( sw::hashed_string( "stone" ) );
     SW_REQUIRE_TRUE( stoneSlot.has_value() );
     SW_EXPECT_TRUE( fixture.run( sw::InventoryCommandKind::Use, stoneSlot.value() ) == sw::InventoryCommandResult::NotUsable );
+}
+
+/**
+ * @brief [InventoryCommandTest] 저장된 차림을 놓을 때 칸 차례와 상관없이 조건이 맞고, 낀 채 숨김인 것은 숨김으로 남고, 낄 수 없는 것은 가방이 차도 잃지 않는다
+ */
+SW_TEST_CASE( InventoryCommandTest, RestoredWornItemsDoNotDependOnSlotOrderAndAreNeverLost )
+{
+    sw::ItemCatalog items;
+    SW_REQUIRE_TRUE( items.loadFromXMLText( R"(<ItemCatalog>
+  <Item id="helm" category="Armor" slot="Head" maxStack="1"><Requires equippedTag="InventoryCommandTest.Plate"/></Item>
+  <Item id="cape" category="Armor" slot="Back" maxStack="1" breakPolicy="KeepHidden"><Requires equippedTag="InventoryCommandTest.Missing"/></Item>
+  <Item id="plate" category="Armor" slot="Body" maxStack="1" tags="InventoryCommandTest.Plate"/>
+</ItemCatalog>)",
+                                            "InventoryCommandTest" ) );
+    sw::Equipment equipment;
+    equipment.initialize( &items, "Head,Back,Body", nullptr, nullptr );
+    sw::Inventory bag;
+    SW_REQUIRE_TRUE( bag.initialize( &items, 1 ) );
+    SW_REQUIRE_EQUAL( 1, bag.addItem( sw::hashed_string( "plate" ), 1 ) ); // 가방이 찼다
+
+    const auto makeWorn = []( const utf8* pSlot, const utf8* pItem )
+    {
+        sw::EquipmentSlot worn;
+        worn._name         = sw::hashed_string( pSlot );
+        worn._item._itemID = sw::hashed_string( pItem );
+        worn._item._count  = 1;
+        return worn;
+    };
+    SW_EXPECT_LOG( "Equipment.SavedItemNotWorn" );
+    equipment.restoreWorn( { makeWorn( "Head", "helm" ), makeWorn( "Back", "cape" ), makeWorn( "Body", "plate" ), makeWorn( "Gone", "plate" ) }, bag );
+    SW_EXPECT_NOT_NULL( equipment.findEquipped( sw::hashed_string( "Head" ) ) ); // 하나씩 끼면 Body 를 놓기 전이라 조건이 깨진다
+    SW_EXPECT_NOT_NULL( equipment.findEquipped( sw::hashed_string( "Back" ) ) );
+    SW_EXPECT_TRUE( equipment.isSuppressed( sw::hashed_string( "Back" ) ) );
+    SW_EXPECT_NOT_NULL( equipment.findEquipped( sw::hashed_string( "Body" ) ) );
+    SW_REQUIRE_EQUAL( size_t( 1 ), bag.getOverflow().size() );
+    SW_EXPECT_TRUE( bag.getOverflow()[0]._itemID == sw::hashed_string( "plate" ) );
+}
+
+/**
+ * @brief [InventoryCommandTest] 세트 조건은 초기화에 준 세트 정보로 판정한다 — 조각을 낀 뒤에야 낄 수 있다
+ */
+SW_TEST_CASE( InventoryCommandTest, SetConditionUsesTheLookupGivenAtInitialize )
+{
+    sw::ItemCatalog items;
+    SW_REQUIRE_TRUE( items.loadFromXMLText( R"(<ItemCatalog>
+  <Item id="helm" category="Armor" slot="Head" maxStack="1"/>
+  <Item id="cape" category="Armor" slot="Back" maxStack="1"><Requires set="Knight" pieces="1"/></Item>
+</ItemCatalog>)",
+                                            "InventoryCommandTest" ) );
+    sw::AppearanceLoadReport report;
+    sw::XMLDocument          doc;
+    SW_REQUIRE_TRUE( doc.parseData( R"(<EquipmentSetCatalog><Set id="Knight"><Piece slot="Head" items="helm"/></Set></EquipmentSetCatalog>)", "InventoryCommandTest" ) );
+    sw::EquipmentSetCatalog sets;
+    SW_REQUIRE_TRUE( sets.loadFromXML( doc.getRoot(), report, "InventoryCommandTest" ) );
+    sw::Equipment equipment;
+    equipment.initialize( &items, "Head,Back", &sets, nullptr );
+    SW_EXPECT_TRUE( equipment.evaluateEquip( sw::hashed_string( "Back" ), sw::hashed_string( "cape" ) ) == sw::EquipResult::ConditionNotMet );
+    sw::InventorySlot helm;
+    helm._itemID = sw::hashed_string( "helm" );
+    helm._count  = 1;
+    sw::vector<sw::InventorySlot> listRemoved;
+    SW_REQUIRE_TRUE( equipment.equip( sw::hashed_string( "Head" ), helm, listRemoved ) == sw::EquipResult::Ok );
+    SW_EXPECT_TRUE( equipment.canEquip( sw::hashed_string( "Back" ), sw::hashed_string( "cape" ) ) );
+}
+
+/**
+ * @brief [InventoryCommandTest] 캐릭터 조건은 빌린 캐릭터 정보로 판정하고, 정보가 바뀌면 함께 벗겨진 것이 가방(차면 넘침)으로 간다
+ */
+SW_TEST_CASE( InventoryCommandTest, CharacterConditionFollowsTheBorrowedContext )
+{
+    sw::ItemCatalog items;
+    SW_REQUIRE_TRUE( items.loadFromXMLText( R"(<ItemCatalog>
+  <Item id="crown" category="Armor" slot="Head" maxStack="1"><Requires characterTag="InventoryCommandTest.Royal"/></Item>
+  <Item id="belt" category="Armor" slot="Waist" maxStack="1" breakPolicy="KeepHidden"><Requires bodyShape="Slim,Average"/></Item>
+</ItemCatalog>)",
+                                            "InventoryCommandTest" ) );
+    sw::EquipmentCharacterContext character;
+    character._tags.addTag( sw::TagID::request( "InventoryCommandTest.Royal" ) );
+    character._bodyShape = sw::hashed_string( "Slim" );
+    sw::Equipment equipment;
+    equipment.initialize( &items, "Head,Waist", nullptr, &character );
+    sw::Inventory bag;
+    SW_REQUIRE_TRUE( bag.initialize( &items, 0 ) );
+    sw::InventorySlot item;
+    item._count  = 1;
+    item._itemID = sw::hashed_string( "crown" );
+    sw::vector<sw::InventorySlot> listRemoved;
+    SW_REQUIRE_TRUE( equipment.equip( sw::hashed_string( "Head" ), item, listRemoved ) == sw::EquipResult::Ok );
+    item._itemID = sw::hashed_string( "belt" );
+    SW_REQUIRE_TRUE( equipment.equip( sw::hashed_string( "Waist" ), item, listRemoved ) == sw::EquipResult::Ok );
+
+    character._tags.clear();
+    character._bodyShape = sw::hashed_string( "Heavy" );
+    equipment.settleCharacterChange( bag );
+    SW_EXPECT_NULL( equipment.findEquipped( sw::hashed_string( "Head" ) ) );
+    SW_REQUIRE_EQUAL( size_t( 1 ), bag.getOverflow().size() );
+    SW_EXPECT_TRUE( bag.getOverflow()[0]._itemID == sw::hashed_string( "crown" ) );
+    SW_EXPECT_TRUE( equipment.isSuppressed( sw::hashed_string( "Waist" ) ) );
+
+    character._bodyShape = sw::hashed_string( "Average" );
+    equipment.settleCharacterChange( bag );
+    SW_EXPECT_FALSE( equipment.isSuppressed( sw::hashed_string( "Waist" ) ) );
+}
+
+/**
+ * @brief [InventoryCommandTest] 시작 전에 받은 상태는 다시 떠도 그대로다 — 불러온 직후의 저장이 장비를 기본값으로 덮지 않는다
+ */
+SW_TEST_CASE( InventoryCommandTest, StateHeldBeforePlaySurvivesAnotherCapture )
+{
+    sw::CharacterEquipmentComponent character;
+    const sw::vector<uint8>         saved{ 1, 2, 3, 4, 5 }; // 걸지 않은 바이트라 뜻은 상관없다
+    character.restoreState( sw::vector<uint8>( saved ) );
+    sw::vector<uint8> captured;
+    sw::ComponentStateStore::writeComponent<sw::CharacterEquipmentComponent>( character, captured );
+    SW_EXPECT_TRUE( captured == saved );
 }
 
 /**

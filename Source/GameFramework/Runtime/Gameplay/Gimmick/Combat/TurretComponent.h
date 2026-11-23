@@ -72,6 +72,8 @@ namespace sw
         virtual ~TurretComponent() override = default;
 
         void onTick( TickContext& context ) override;
+        /** @brief 지난 스텝의 대상 자리와 날아가는 탄을 옮깁니다. */
+        void onWorldOriginShifted( const float3& delta ) override;
         void stepOnce();
 
         /**

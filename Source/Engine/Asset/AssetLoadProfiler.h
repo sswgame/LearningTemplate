@@ -7,7 +7,9 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/EnumArray.h"
 #include "Core/Container/string.h"
+#include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
@@ -70,8 +72,9 @@ namespace sw
     class SW_API AssetLoadProfiler final : public Subsystem
     {
     public:
-        static constexpr uint32      kSlowestCount  = 16;
-        static constexpr const utf8* kSubsystemName = "AssetLoadProfiler";
+        static constexpr uint32      kSlowestCount           = 16;
+        static constexpr uint64      kSyncLoadLogNanoseconds = static_cast<uint64>( constant::time::kNanosecondsPerMillisecond ); ///< 씬 갱신 안의 동기 로드를 알리는 문턱
+        static constexpr const utf8* kSubsystemName          = "AssetLoadProfiler";
 
         SubsystemInitResult initializeSubsystem() override;
         void                shutdownSubsystem() override {}
@@ -87,6 +90,24 @@ namespace sw
         void refreshEnabled();
         /** @brief 로드 한 번을 더합니다. 꺼져 있으면 버립니다. */
         void submit( const AssetLoadRecord& record );
+        /**
+         * @brief 씬 갱신(컴포넌트 틱 · 프레임 시스템)이 도는 동안인지를 정합니다(게임 스레드 — `Engine::updateScenes`).
+         * @details 그동안의 동기 로드는 그 프레임을 로드 시간만큼 멈춘다. 씬을 짓는 로드(로딩 화면 · 에디터 명령)는 이 밖이라 세지 않는다.
+         */
+        void setSceneUpdateActive( bool bActive );
+        /**
+         * @brief 부른 스레드에서 끝난 동기 로드(`AssetLoadStart::OnCallingThread`) 하나를 받습니다. 게임 스레드의 씬 갱신 안이면 세고, 경로마다 처음 한 번
+         *        `kSyncLoadLogNanoseconds` 이상 걸린 것을 로그(`AssetLoad.SyncInSceneUpdate`)로 알립니다.
+         * @details 언리얼이 게임 스레드의 동기 로드(`FlushAsyncLoading`)를 로그로 알리는 자리다(기억). 정보 로그인 까닭은 씬의 첫 프레임(BeginPlay)이 늘 얼마쯤 동기로 읽기 때문이다.
+         */
+        void recordSyncLoad( const utf8* pKind, string_view path, uint64 elapsedNanoseconds );
+        /** @brief 씬 갱신 안에서 일어난 동기 로드 수 · 시간 합입니다. */
+        struct SyncLoadTotal
+        {
+            uint32 _count{ 0 };
+            uint64 _nanoseconds{ 0 };
+        };
+        SyncLoadTotal getSceneUpdateSyncLoads() const;
         /** @brief 종류별 누적을 총 시간이 긴 것부터 담습니다. */
         void collectSummaries( vector<AssetLoadKindSummary>& outListSummary ) const;
         /** @brief 가장 느린 로드를 느린 것부터 담습니다. */
@@ -105,11 +126,14 @@ namespace sw
             EnumArray<AssetLoadPhase, uint32> _arrProfilerSlot{};
         };
 
-        mutable mutex                        _mutex;
-        vector<KindEntry> _listKind          SW_GUARDED_BY( _mutex );
-        vector<AssetLoadRecord> _listSlowest SW_GUARDED_BY( _mutex ); ///< 느린 것부터(최대 kSlowestCount)
-        uint32 _loadCount                    SW_GUARDED_BY( _mutex );
-        atomic<uint8>                        _bEnabled; ///< `-gv_assetLoadProfile` 의 사본(게임 스레드가 뜬다) — 로드 워커 · 렌더 스레드의 `submit` 이 잠금 없이 읽는다
+        mutable mutex                          _mutex;
+        vector<KindEntry> _listKind            SW_GUARDED_BY( _mutex );
+        vector<AssetLoadRecord> _listSlowest   SW_GUARDED_BY( _mutex ); ///< 느린 것부터(최대 kSlowestCount)
+        uint32 _loadCount                      SW_GUARDED_BY( _mutex );
+        SyncLoadTotal _syncLoadTotal           SW_GUARDED_BY( _mutex );
+        unordered_set<string> _setSyncLoadPath SW_GUARDED_BY( _mutex ); ///< 이미 알린 경로
+        atomic<uint8>                          _bEnabled;               ///< `-gv_assetLoadProfile` 의 사본(게임 스레드가 뜬다) — 로드 워커 · 렌더 스레드의 `submit` 이 잠금 없이 읽는다
+        atomic<uint8>                          _bSceneUpdateActive;     ///< 게임 스레드가 쓰고, 로드를 끝낸 스레드가 읽는다
 
         SW_SERVICE_SLOT( AssetLoadProfiler, Optional );
     };

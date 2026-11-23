@@ -116,6 +116,8 @@ namespace sw
         bool          isValid() const { return _resolution >= 2; }
         uint32        getResolution() const { return _resolution; }
         const float3& getOrigin() const { return _origin; }
+        /** @brief 놓은 자리만 옮깁니다(월드 원점 이동). 높이 · 구멍 · 가중치는 그대로입니다. */
+        void          setOrigin( const float3& origin ) { _origin = origin; }
         const float2& getSize() const { return _size; }
         /** @brief 셀 한 변의 길이(x, z)입니다. */
         const float2& getCellSize() const { return _cellSize; }

@@ -3,11 +3,13 @@
 #include "Engine/Visual/Component/ReflectionProbeComponent.h"
 
 #include "Core/Log/Logger.h"
+#include "Core/Math/AABB.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
+#include "Engine/Object/GameObject/WorldOrigin.h"
 #include "Engine/Reflection/ReflectionValidation.h"
 
 namespace sw
@@ -43,15 +45,28 @@ namespace sw
     {
     }
 
+    bool ReflectionProbeComponent::computeStreamingBounds( AABB& outBox ) const
+    {
+        const float3 center = getWorldPosition();
+        outBox              = AABB{ center - _extent * 0.5f, center + _extent * 0.5f };
+        return true;
+    }
+
     void ReflectionProbeComponent::setExtent( const float3& extent )
     {
         _extent = float3{ MathUtil::max( extent._x, 0.0f ), MathUtil::max( extent._y, 0.0f ), MathUtil::max( extent._z, 0.0f ) };
         onPropertyChanged( hashed_string( "_extent" ) );
     }
 
+    float3 ReflectionProbeComponent::computeLocalCapturePosition( const ReflectionProbeAsset& data ) const
+    {
+        const GameObjectManager* pManager = getOwner() != nullptr ? getOwner()->getManager() : nullptr;
+        return pManager != nullptr ? pManager->getWorldOrigin().toLocal( data._capturePosition ) : data._capturePosition;
+    }
+
     bool ReflectionProbeComponent::matchesCapturePosition( const ReflectionProbeAsset& data ) const
     {
-        return ( data._capturePosition - getWorldPosition() ).getLength() <= ReflectionProbeComponentInternal::kPositionTolerance;
+        return ( computeLocalCapturePosition( data ) - getWorldPosition() ).getLength() <= ReflectionProbeComponentInternal::kPositionTolerance;
     }
 
     const ReflectionProbeAsset* ReflectionProbeComponent::findProbeData() const

@@ -144,8 +144,10 @@ namespace sw
      * @class PokerTable
      * @brief 한 테이블을 진행합니다. 자리마다 칩을 가지고 시작하고, `startHand` 로 판을 열면 차례인 자리가 `act` 합니다.
      * @details 버튼은 판마다 칩이 있는 다음 자리로 옮겨 간다. 둘이면 버튼이 스몰 블라인드이고 프리플롭에 먼저 행동한다.
-     *          최소 레이즈는 "직전 레이즈 크기만큼 더"(처음에는 빅 블라인드)이다. 그보다 작은 올인은 받아 주되 최소 증액을 바꾸지 않는다
-     *          (단순화: 이미 행동한 사람도 다시 레이즈할 수 있다). 카드를 태우지(burn) 않는다.
+     *          최소 레이즈는 "직전 레이즈 크기만큼 더"(처음에는 빅 블라인드)이다(TDA 43). 그보다 작은 올인은 받아 주되 최소 증액을 바꾸지 않고, 이미 행동한 사람에게
+     *          베팅을 다시 열지 않는다 — 차례가 돌아왔을 때 맞춰야 할 칩이 온전한 레이즈 하나보다 적으면 콜과 폴드만 한다(여러 올인을 합쳐 그만큼이면 열린다, TDA 47).
+     *          빅 블라인드가 모자라게 올인해도 들어오려면 온전한 빅 블라인드를 내고, 레이즈는 그 두 배부터다(Robert's Rules of Poker 14-2). 겨룰 상대가 모두 올인이고
+     *          이미 그만큼 낸 한 사람은 행동하지 않는다. 카드를 태우지(burn) 않는다.
      */
     REFLECT()
     class SW_KIT_API PokerTable
@@ -163,12 +165,12 @@ namespace sw
          * @return 설정이 선언된 범위 안이고 칩이 모두 0 이상이면 true 입니다. 밖이면 오류를 남기고 false 이며 상태를 바꾸지 않습니다.
          */
         [[nodiscard]] bool initialize( const PokerSettings& settings, const vector<int32>& listStack );
-        /** @brief 덱을 섞어 판을 엽니다. 칩이 있는 자리가 둘 미만이면 false 를 반환합니다. */
+        /** @brief 덱을 섞어 판을 엽니다. 판이 진행 중이거나 칩이 있는 자리가 둘 미만이면 false 를 반환하고 칩은 그대로입니다. */
         [[nodiscard]] bool startHand( GameRandom& random );
-        /** @brief 주어진 덱(맨 위부터 나눕니다)으로 판을 엽니다. 테스트와 리플레이용입니다. */
+        /** @brief 주어진 덱(맨 위부터 나눕니다)으로 판을 엽니다. 테스트와 리플레이용입니다. 홀과 보드를 다 깔 장수가 없는 덱도 거절합니다. */
         [[nodiscard]] bool startHandWithDeck( const CardPile& deck );
 
-        /** @brief 차례인 @p seat 의 행동을 처리합니다. 규칙에 어긋나면(차례가 아님, 체크 불가, 최소 레이즈 미달, 칩 부족) false 를 반환하고 아무것도 바꾸지 않습니다. */
+        /** @brief 차례인 @p seat 의 행동을 처리합니다. 규칙에 어긋나면(차례가 아님, 체크 불가, 최소 레이즈 미달, 다시 열리지 않은 레이즈, 칩 부족) false 를 반환하고 아무것도 바꾸지 않습니다. */
         [[nodiscard]] bool act( int32 seat, PokerActionKind kind, int32 amount = 0 );
         /** @brief 중계로 받은 행동을 적용합니다(`_kind` 는 PokerActionKind 이고 `_amount` 를 함께 씁니다). */
         [[nodiscard]] bool applyAction( int32 seat, const CardAction& action );
@@ -186,7 +188,9 @@ namespace sw
         int32            getButton() const { return _button; }
         int32            getCurrentBet() const { return _currentBet; }
         /** @brief 지금 레이즈하려면 최소한 이만큼(레이즈 투)을 걸어야 합니다. */
-        int32           getMinRaiseTo() const { return _currentBet + _lastRaiseSize; }
+        int32 getMinRaiseTo() const { return _currentBet + _lastRaiseSize; }
+        /** @brief @p seat 에게 레이즈가 열려 있으면 true 입니다. 이미 행동했고 온전한 레이즈보다 적게 맞춰야 하면(모자란 올인) 닫혀 있습니다. */
+        bool            canRaise( int32 seat ) const;
         int32           computePotTotal() const;
         const CardPile& getBoard() const { return _board; }
         /** @brief 지난 쇼다운(또는 혼자 남은 판)의 팟을 반환합니다. */

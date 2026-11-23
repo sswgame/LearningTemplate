@@ -7,7 +7,7 @@
  *          때는 `Client/` 폴더와 아래 `_clientPart` 를 지우면 된다.
  *          벤치 · 렌더 확장 시연 · UI 시연은 그리는 개발 장치라 클라이언트 전용 · 개발 전용 소스(`Client/Dev/`)다 — 게임은 그 부분을 `IGameClientPart` 로만 들고,
  *          전용 서버와 배포 구성은 그 소스를 짓지 않아(공장이 없다) 첫 씬을 연다.
- *          장르 키트 시연(`KitDemo/`)은 씬 하나씩이고 미니게임(`minigames/*.minigame.xml`, `MinigameFlow`)으로 들어간다 — 키트가 범위에 걸 것(액션 룸의 몬스터 정의)은
+ *          장르 키트 시연(`KitDemo/`)은 씬 하나씩이고 미니게임(`minigames` 의 `.minigame.xml`, `MinigameFlow`)으로 들어간다 — 키트가 범위에 걸 것(액션 룸의 몬스터 정의)은
  *          미니게임이 게임 기능으로 켜고 끈다(`SW_GAME_FEATURE`, 들어갈 때 걸고 나올 때 거둔다).
  *          도시 건설 미니게임(`FrontierTown/` — 키트 둘의 디렉터를 한 씬에 섞는다)의 도시 쪽은 키트, RTS 쪽(일꾼 · 순찰)은 이 게임의 디렉터다.
  *          초원 마을 미니게임(`MeadowVillage/`)은 하우징 · 생물 · 농장 키트를 한 씬에 섞는다 — 밭 · 집 자동 짓기 디렉터와 한 프로세스 재생(`MeadowNetSimGame`)이 이 게임의 몫이다.

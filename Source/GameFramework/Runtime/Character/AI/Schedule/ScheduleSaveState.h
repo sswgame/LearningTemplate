@@ -64,7 +64,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 기본 활동 슬롯 제공자(`ScheduleSpotLocator`)의 예약 하나입니다. */
+    /** @brief 활동 슬롯 제공자(`IScheduleActivityLocator`)의 예약 하나입니다. */
     REFLECT()
     struct SW_GF_API ScheduleReservationSaveState
     {
@@ -101,6 +101,8 @@ namespace sw
         vector<NPCScheduleSaveState> _listNPC{};
         PROPERTY()
         vector<string> _listBrokenAppointment{}; ///< 오늘 깨진 약속
+        PROPERTY()
+        vector<string> _listMetAppointment{}; ///< 오늘 모인 약속 — 빠지면 불러온 뒤 끼어들기에서 돌아온 참가자가 "모임" 을 다시 낸다
         PROPERTY()
         vector<ScheduleReservationSaveState> _listReservation{};
         PROPERTY()

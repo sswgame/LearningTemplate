@@ -7,6 +7,7 @@
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
+#include "Engine/Reflection/ReflectValueBinding.h"
 #include "Engine/Reflection/ReflectVisit.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/Serializer/SchemaMigrate.h"
@@ -78,7 +79,7 @@ namespace sw
                 if ( registry.isType( prop._typeName, hashed_string{ PredefinedNameType::NameType_string } ) ||
                      registry.isType( prop._typeName, hashed_string{ PredefinedNameType::NameType_hashed_string } ) )
                     return false;
-                const TypeInfo* pFieldType = registry.findType( prop._typeName );
+                const TypeInfo* pFieldType = prop.resolveValueFacts( registry )._pType;
                 if ( pFieldType == nullptr || pFieldType->_size == 0 )
                     return false;
                 if ( pFieldType->isPrimitive() == false && pFieldType->usesPODCopyFastPath() == false )

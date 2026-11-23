@@ -10,7 +10,6 @@
 #include "Engine/Serialization/Format/JSONSerializer.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
-#include "GameFramework/Runtime/Gameplay/Appearance/AppearanceDatabase.h"
 
 namespace sw
 {
@@ -18,8 +17,6 @@ namespace sw
     {
         struct UserAppearancePresetStoreInternal
         {
-            static constexpr int32 kMaxPresetCount = 1000; ///< 손으로 고친 세이브가 큰 수를 적어도 그 상한만큼만 읽는다
-
             /** @brief 플레이어가 적은 이름입니다. 줄바꿈은 이름 표시 한 줄을 깨뜨리므로 공백으로 바꿉니다. */
             static string sanitizeName( string_view name )
             {
@@ -39,36 +36,43 @@ namespace sw
 {
     UserAppearancePresetStore::UserAppearancePresetStore()
         : _listPreset{}
-        , _pDatabase{ nullptr }
     {
     }
 
-    UserAppearancePreset* UserAppearancePresetStore::findMutablePreset( string_view name )
+    UserAppearancePresetRecord* UserAppearancePresetStore::findMutablePreset( string_view name )
     {
-        return VectorUtil::findIf( _listPreset, [&]( UserAppearancePreset& preset )
+        return VectorUtil::findIf( _listPreset, [&]( UserAppearancePresetRecord& preset )
         { return string_view( preset._name.c_str(), preset._name.size() ) == name; } );
     }
 
-    const UserAppearancePreset* UserAppearancePresetStore::findPresetByName( string_view name ) const
+    const UserAppearancePresetRecord* UserAppearancePresetStore::findPresetByName( string_view name ) const
     {
-        return VectorUtil::findIf( _listPreset, [&]( const UserAppearancePreset& preset )
+        return VectorUtil::findIf( _listPreset, [&]( const UserAppearancePresetRecord& preset )
         { return string_view( preset._name.c_str(), preset._name.size() ) == name; } );
     }
 
-    int32 UserAppearancePresetStore::savePreset( string_view name, const AppearanceSelection& selection )
+    bool UserAppearancePresetStore::savePreset( string_view name, const AppearanceSelection& selection, const AppearanceDatabase& database )
     {
-        const string          cleanName = UserAppearancePresetStoreInternal::sanitizeName( name );
-        UserAppearancePreset* pExisting = findMutablePreset( string_view( cleanName.c_str(), cleanName.size() ) );
-        if ( pExisting != nullptr )
+        const string cleanName = UserAppearancePresetStoreInternal::sanitizeName( name );
+        if ( cleanName.empty() )
+            return false;
+        UserAppearancePresetRecord* pPreset = findMutablePreset( string_view( cleanName.c_str(), cleanName.size() ) );
+        if ( pPreset == nullptr )
         {
-            pExisting->_selection = selection;
-            return static_cast<int32>( pExisting - _listPreset.data() );
+            _listPreset.push_back( UserAppearancePresetRecord{} );
+            pPreset        = &_listPreset.back();
+            pPreset->_name = cleanName;
         }
-        UserAppearancePreset preset;
-        preset._name      = cleanName;
-        preset._selection = selection;
-        _listPreset.push_back( preset );
-        return static_cast<int32>( _listPreset.size() ) - 1;
+        pPreset->_code = AppearanceSelection::encode( selection, database );
+        return true;
+    }
+
+    expected<void> UserAppearancePresetStore::decodePreset( string_view name, const AppearanceDatabase& database, AppearanceSelection& outSelection ) const
+    {
+        const UserAppearancePresetRecord* pPreset = findPresetByName( name );
+        if ( pPreset == nullptr )
+            return unexpected( Error{ ErrorKind::NotFound, "no preset with that name" } );
+        return AppearanceSelection::decode( string_view( pPreset->_code ), database, outSelection );
     }
 
     bool UserAppearancePresetStore::removePreset( string_view name )
@@ -86,9 +90,9 @@ namespace sw
 
     bool UserAppearancePresetStore::renamePreset( string_view fromName, string_view toName )
     {
-        const string          cleanName     = UserAppearancePresetStoreInternal::sanitizeName( toName );
-        UserAppearancePreset* pPreset       = findMutablePreset( fromName );
-        const bool            bCannotRename = pPreset == nullptr || cleanName.empty() || findPresetByName( string_view( cleanName.c_str(), cleanName.size() ) ) != nullptr;
+        const string                cleanName     = UserAppearancePresetStoreInternal::sanitizeName( toName );
+        UserAppearancePresetRecord* pPreset       = findMutablePreset( fromName );
+        const bool                  bCannotRename = pPreset == nullptr || cleanName.empty() || findPresetByName( string_view( cleanName.c_str(), cleanName.size() ) ) != nullptr;
         if ( bCannotRename )
             return false;
         pPreset->_name = cleanName;
@@ -97,28 +101,28 @@ namespace sw
 
     bool UserAppearancePresetStore::setFavorite( string_view name, bool bFavorite )
     {
-        UserAppearancePreset* pPreset = findMutablePreset( name );
+        UserAppearancePresetRecord* pPreset = findMutablePreset( name );
         if ( pPreset == nullptr )
             return false;
-        pPreset->_bFavorite = bFavorite ? SW_TRUE : SW_FALSE;
+        pPreset->_bFavorite = bFavorite;
         return true;
     }
 
     bool UserAppearancePresetStore::setThumbnailSlot( string_view name, string_view thumbnailSlot )
     {
-        UserAppearancePreset* pPreset = findMutablePreset( name );
+        UserAppearancePresetRecord* pPreset = findMutablePreset( name );
         if ( pPreset == nullptr )
             return false;
         pPreset->_thumbnailSlot = string( thumbnailSlot );
         return true;
     }
 
-    void UserAppearancePresetStore::collectFavorites( vector<const UserAppearancePreset*>& outListPreset ) const
+    void UserAppearancePresetStore::collectFavorites( vector<const UserAppearancePresetRecord*>& outListPreset ) const
     {
         outListPreset.clear();
-        for ( const UserAppearancePreset& preset : _listPreset )
+        for ( const UserAppearancePresetRecord& preset : _listPreset )
         {
-            if ( preset._bFavorite == SW_TRUE )
+            if ( preset._bFavorite )
                 outListPreset.push_back( &preset );
         }
     }
@@ -127,22 +131,12 @@ namespace sw
     {
         UserAppearancePresetFile file;
         file._formatVersion = kVersion;
-        file._listPreset.reserve( _listPreset.size() );
-        for ( const UserAppearancePreset& preset : _listPreset )
-        {
-            UserAppearancePresetRecord record;
-            record._name          = preset._name;
-            record._code          = _pDatabase != nullptr ? AppearanceSelection::encode( preset._selection, *_pDatabase ) : string{};
-            record._thumbnailSlot = preset._thumbnailSlot;
-            record._bFavorite     = preset._bFavorite == SW_TRUE;
-            file._listPreset.push_back( std::move( record ) );
-        }
+        file._listPreset    = _listPreset;
         return JSONSerializer::serializePretty( &file, *UserAppearancePresetFile::StaticType() );
     }
 
     bool UserAppearancePresetStore::loadFromXMLText( string_view text )
     {
-        using Internal = UserAppearancePresetStoreInternal;
         UserAppearancePresetFile file;
         // 모르는 키 · 빠진 필수 칸 · 읽지 못한 값은 키 이름과 함께 오류로 남는다(옛 `key=value` 세이브도 여기서 진다).
         if ( ConfigManager::readConfigJSON( file, text, "appearance presets" ) == false )
@@ -152,26 +146,7 @@ namespace sw
             SW_LOG_WARNING_ID( "UserAppearancePresetStore.AppearancePresetSaveFormat", "Appearance preset save has format version %# (this build reads %#)", file._formatVersion, kVersion );
             return false;
         }
-        _listPreset.clear();
-        for ( size_t index = 0; index < file._listPreset.size() && index < static_cast<size_t>( Internal::kMaxPresetCount ); ++index )
-        {
-            const UserAppearancePresetRecord& record = file._listPreset[index];
-            UserAppearancePreset              preset;
-            preset._name          = record._name;
-            preset._thumbnailSlot = record._thumbnailSlot;
-            preset._bFavorite     = record._bFavorite ? SW_TRUE : SW_FALSE;
-            if ( _pDatabase == nullptr )
-            {
-                SW_LOG_WARNING_ID( "UserAppearancePresetStore.AppearancePresetCannotRead", "Appearance preset '%#' cannot be read (%#) - skipped", preset._name, "no appearance data" );
-                continue;
-            }
-            if ( const expected<void> decoded = AppearanceSelection::decode( string_view( record._code ), *_pDatabase, preset._selection ); decoded.has_value() == false )
-            {
-                SW_LOG_WARNING_ID( "UserAppearancePresetStore.AppearancePresetCannotRead", "Appearance preset '%#' cannot be read (%#) - skipped", preset._name, decoded.error().message() );
-                continue;
-            }
-            _listPreset.push_back( preset );
-        }
+        _listPreset = std::move( file._listPreset );
         return true;
     }
 
