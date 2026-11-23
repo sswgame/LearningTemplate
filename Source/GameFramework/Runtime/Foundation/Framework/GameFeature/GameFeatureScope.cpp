@@ -8,6 +8,7 @@
 
 #include "Engine/Input/Map/InputMap.h"
 
+#include "GameFramework/Runtime/Foundation/Framework/GameFeature/GameFeatureComponents.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameFeature/GameFeatureRegistry.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameSettings.h"
@@ -70,6 +71,25 @@ namespace sw
                 return false;
             }
         }
+        return true;
+    }
+
+    bool GameFeatureScope::addComponentRule( const hashed_string& receiver, const hashed_string& componentType )
+    {
+        GameFeatureComponents* const pComponents = _gameScope.find<GameFeatureComponents>();
+        if ( pComponents == nullptr || receiver.empty() )
+        {
+            SW_LOG_ERROR_ID( "GameFeatureScope.ComponentNotAdded", "Game feature scope '%#': component '%#' could not be added to receiver '%#' - the receiver name is empty or no game instance owns GameFeatureComponents",
+                             _name.c_str(), componentType.c_str(), receiver.c_str() );
+            return false;
+        }
+        const uint32 ruleID = pComponents->addRule( receiver, componentType );
+        addCleanup( SW_DELEGATE_LAMBDA( Delegate<void()>, [this, ruleID]()
+        {
+            GameFeatureComponents* const pBound = _gameScope.find<GameFeatureComponents>();
+            if ( pBound != nullptr )
+                pBound->removeRule( ruleID );
+        } ) );
         return true;
     }
 

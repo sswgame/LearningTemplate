@@ -63,6 +63,7 @@
 	<Expect watch="Minigame.Active" is="none"/>
 	<Expect watch="Object.Property" target="ArcadeGate" key="MinigameTriggerComponent._fireCount" equals="1"/>
 	<Expect watch="Minigame.LeakCount" equals="0"/>
+	<Expect watch="GameFeature.AddedComponents" equals="0"/> <!-- 미니게임 기능이 붙인 컴포넌트가 남지 않는다 -->
 	<ExpectLog id="MinigameFlow.Restored" count="1"/>
 
 	<!-- ④ 결과 값은 복원 뒤 플레이어의 어빌리티 이펙트로 걸렸다 -->
