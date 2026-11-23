@@ -363,6 +363,19 @@ namespace sw::editor
                 return loadIdentityRules( rules ) && rules.assignNewIdentity( absPath, assetID );
             }
 
+            /** @brief 손으로 적는 글을 임포트 산출물 폴더에 만들려 하면(`AssetIdentityRules::isMisplacedInDerivedFolder`) 이유를 알리고 true 입니다. 규칙을 읽지 못해도 만들지 않는다. */
+            [[nodiscard]] static bool refuseDerivedFolder( const string& absPath )
+            {
+                const string       assetID = editor::getSubsystem<AssetPaths>().toAssetID( absPath );
+                AssetIdentityRules rules;
+                if ( assetID.empty() )
+                    return false;
+                if ( loadIdentityRules( rules ) && rules.isMisplacedInDerivedFolder( assetID ) == false )
+                    return false;
+                SW_LOG_ERROR_ID( "EditorAssetFileCommands.DerivedFolder", "Not created - '%#' is in an import output folder that is deleted and rebuilt, use another folder (data, prefabs)", assetID );
+                return true;
+            }
+
             /** @brief @p absolutePath 가 읽기 전용(`EditorContentWrite::findReadOnlyAtOrUnder`)이면 계획의 실패 이유를 적고 true 입니다 — 옮기기 계획은 알림 대신 `_failure` 로 이유를 돌려준다. */
             [[nodiscard]] static bool failOnReadOnly( string_view absolutePath, EditorAssetMovePlan& inoutPlan )
             {
@@ -498,6 +511,8 @@ namespace sw::editor
             }
         }
         outAssetAbs = makeUniquePath( folderAbs, assetTemplate._pStem, assetTemplate._pSuffix );
+        if ( EditorAssetFileCommandsInternal::refuseDerivedFolder( outAssetAbs ) )
+            return false;
         if ( assetTemplate._pNameAttribute != nullptr )
         {
             string uniqueStem;
@@ -523,6 +538,8 @@ namespace sw::editor
         string suffix;
         splitAssetName( FileUtil::getFileNamePart( sourceAbs ), stem, suffix );
         outAssetAbs = makeUniquePath( FileUtil::getDirectoryPart( sourceAbs ), stem, suffix );
+        if ( EditorAssetFileCommandsInternal::refuseDerivedFolder( outAssetAbs ) )
+            return false;
         // 복제는 새 에셋이다 — 베낀 머리 GUID 는 새 것으로 바꾸고, 원본이면 곁의 .meta 를 베끼지 않고 새로 쓴다(겹친 GUID 는 참조를 엉뚱한 쪽으로 푼다).
         return FileUtil::copyFile( FileUtil::toDiskPath( sourceAbs ), FileUtil::toDiskPath( outAssetAbs ) ) && EditorAssetFileCommandsInternal::assignNewIdentity( outAssetAbs );
     }
@@ -538,6 +555,14 @@ namespace sw::editor
         if ( index.isReady() == false )
         {
             outPlan._failure = "the reference index is still building - try again in a moment";
+            return false;
+        }
+        AssetIdentityRules identityRules;
+        if ( EditorAssetFileCommandsInternal::loadIdentityRules( identityRules ) == false )
+        {
+            StringBuilder<constant::buffer::kMax256> failureBuilder;
+            failureBuilder.appendFormat( "could not read %#", AssetIdentityRules::kConfigFile );
+            outPlan._failure = string( failureBuilder.view() );
             return false;
         }
         const AssetPaths& assetPaths = editor::getSubsystem<AssetPaths>();
@@ -561,6 +586,13 @@ namespace sw::editor
             {
                 StringBuilder<constant::buffer::kMax256> failureBuilder;
                 failureBuilder.appendFormat( "'%#' is not a resource name - use lowercase letters, digits, '_', '-' and '.'", FileUtil::getFileNamePart( normalized._destinationAbs ) );
+                outPlan._failure = string( failureBuilder.view() );
+                return false;
+            }
+            if ( identityRules.isMisplacedInDerivedFolder( newID ) && identityRules.isUnderDerivedFolder( oldID ) == false )
+            {
+                StringBuilder<constant::buffer::kMax512> failureBuilder;
+                failureBuilder.appendFormat( "'%#' is in an import output folder that is deleted and rebuilt - nothing was moved", newID );
                 outPlan._failure = string( failureBuilder.view() );
                 return false;
             }

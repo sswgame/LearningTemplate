@@ -176,6 +176,7 @@ namespace sw
         for ( const AssetImportedFolder& folder : listImported )
         {
             bValid = Internal::hasNoEmptyText( folder._listSourceExtension, "listSourceExtension", path ) && bValid;
+            bValid = Internal::hasNoEmptyText( folder._listOutputSuffix, "listOutputSuffix", path ) && bValid;
         }
         if ( bValid == false )
             return false;
@@ -522,8 +523,16 @@ namespace sw
 
     bool AssetReferenceFields::isImportedFromSource( string_view assetID, const AssetIDSet& assets ) const
     {
+        string_view fileName;
+        FileUtil::getFileNamePart( assetID, fileName );
+        const bool bFile = fileName.find( '.' ) != string_view::npos; // 폴더는 접미사를 보지 않는다
         for ( const AssetImportedFolder& imported : _listImported )
         {
+            // 그 원본에서 나오지 않는 종류의 파일은 원본이 있어도 산출물이 아니다 — 손으로 적은 글이 원본 이름을 빌려 지나가지 않게 한다.
+            const bool bOutput = std::any_of( imported._listOutputSuffix.begin(), imported._listOutputSuffix.end(), [fileName]( const string& suffix )
+            { return StringUtil::endsWith( fileName, suffix ); } );
+            if ( bFile && bOutput == false )
+                continue;
             StringBuilder<constant::buffer::kMax256> markerBuilder;
             markerBuilder.appendFormat( "/%#/", imported._folder );
             const string_view marker   = markerBuilder.view();

@@ -104,6 +104,9 @@ SW_TEST_CASE( AssetReferenceFieldsTest, ImportedOutputsResolveFromTheirSource )
     SW_EXPECT_TRUE( params.canResolve( "game/x/textures/wall.dds", assets ) );
     SW_EXPECT_TRUE( params.canResolve( "common/models_raw", assets ) ); // 폴더
     SW_EXPECT_FALSE( params.canResolve( "common/models/kaykit/rogue.mesh", assets ) );
+    SW_EXPECT_FALSE( params.canResolve( "common/models/kaykit/knight.facial.xml", assets ) ); // glb 에서 나오지 않는 종류(손으로 적은 글)
+    assets.addFile( "game/x/models_raw/avatar.vrm" );
+    SW_EXPECT_TRUE( params.canResolve( "game/x/models/avatar/avatar.facial.xml", assets ) ); // vrm 에서는 나온다
     SW_EXPECT_FALSE( params.canResolve( "game/x/textures/floor.dds", assets ) );
     SW_EXPECT_FALSE( params.isChecked( "scratch/assetmanage/probe.material" ) );
     SW_EXPECT_FALSE( params.isReferrer( "common/models/kaykit/knight/materials/a.material" ) ); // 임포터가 쓴 산출물
