@@ -97,6 +97,8 @@ namespace sw
 
         /** @brief 상태를 버립니다(다음 시뮬레이션이 애니메이션 자세에서 시작). */
         void reset();
+        /** @brief 입자 · 지난 루트의 월드 자리를 @p delta 만큼 옮깁니다(월드 원점 이동). 흔들림은 그대로 잇는다 — 옮기지 않으면 순간이동으로 읽어 자세로 되돌린다. */
+        void applyWorldOffset( const float3& delta );
         /** @brief 시뮬레이션 상태가 있는지입니다. */
         bool isSimulating() const { return _bInitialized == SW_TRUE; }
         /** @brief 입자의 월드 위치입니다. */

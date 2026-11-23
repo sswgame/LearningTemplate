@@ -144,6 +144,14 @@ namespace sw
          */
         void setWorldPosition( const float3& worldPosition );
         /**
+         * @brief 부모 기준 자리입니다. 부모가 없으면(루트) 월드 원점 0 기준(절대) 자리입니다.
+         * @details 루트의 로컬 자리는 월드 원점을 옮기면 함께 바뀐다 — 기억해 두었다 되돌려 쓰는 자리(움직이는 문의 쉬는 자리 · 시차 레이어의 저작 자리)와 데이터가 적은 자리
+         *          (시퀀스 트랜스폼 키)는 로컬이 아니라 이것으로 읽고 `setZeroOriginPosition` 으로 쓴다(언리얼 `RebaseLocalOriginOntoZero` · `RebaseZeroOriginOntoLocal` 자리).
+         */
+        float3 getZeroOriginPosition() const;
+        /** @brief `getZeroOriginPosition` 이 읽는 자리를 정합니다(부모 기준, 루트면 절대). */
+        void setZeroOriginPosition( const float3& position );
+        /**
          * @brief 월드 위치로 **순간이동**합니다. `setWorldPosition` 과 같은 위치로 가지만, 연속 충돌 콜라이더가 이전 위치에서 새 위치까지의 경로를 쓸지 않습니다.
          * @details 언리얼의 `SetActorLocation( …, ETeleportType::TeleportPhysics )`, 유니티의 `Rigidbody.position` 대입에 해당한다. 이 컴포넌트와 그
          *          아래에 붙은 모든 것(자식 오브젝트 포함)이 순간이동한 것으로 취급한다(`onTeleported`). 그냥 옮기면(`setWorldPosition`) 빠른 바디가 그 경로에

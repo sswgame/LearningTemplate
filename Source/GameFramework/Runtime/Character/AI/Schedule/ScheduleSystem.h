@@ -425,23 +425,23 @@ namespace sw
         void resumeNPC( int32 npcIndex );
 
     private:
-        const ScheduleCatalog*     _pCatalog;
-        Services                   _services;
-        ScheduleSystemRegistry*    _pLiveRegistry;  ///< 생성자가 오른 살아 있는 목록(모듈 서브시스템). 없으면(게임 서비스 없는 테스트) nullptr — 소멸자가 같은 목록에서 빠진다
-        ScheduleSpotLocator        _defaultLocator; ///< 카탈로그 `<Spot>` 제공자
-        StraightSchedulePathing    _defaultPathing; ///< 곧은 선
-        ScheduleSystemSettings     _settings;
-        vector<NPCRuntime>         _listNPC;
-        EventBuffer<ScheduleEvent> _eventBuffer;
-        vector<AppointmentCheck>   _listAppointmentCheck;
-        vector<int32>              _listBrokenAppointment; ///< 오늘 깨진 약속의 인덱스
-        vector<int32>              _listMetAppointment;    ///< 오늘 모인 약속의 인덱스. 사건을 한 번만 내려고 보관한다
-        hashed_string              _weather;
-        GameplayContext            _actionWorld;
-        float32                    _minuteFraction; ///< `update` 가 준 시간 중 분 아래 나머지. 보이는 위치를 보간할 때 쓴다
-        int32                      _minute;
-        uint32                     _flagsRevision;
-        uint8                      _bConditionsDirty;
-        uint8                      _bSuppressEvents;
+        const ScheduleCatalog*            _pCatalog;
+        Services                          _services;
+        ScheduleSystemRegistry*           _pLiveRegistry;  ///< 생성자가 오른 살아 있는 목록(모듈 서브시스템). 없으면(게임 서비스 없는 테스트) nullptr — 소멸자가 같은 목록에서 빠진다
+        ScheduleSpotLocator               _defaultLocator; ///< 카탈로그 `<Spot>` 제공자
+        StraightSchedulePathing           _defaultPathing; ///< 곧은 선
+        ScheduleSystemSettings            _settings;
+        vector<NPCRuntime>                _listNPC;
+        NotificationBuffer<ScheduleEvent> _eventBuffer;
+        vector<AppointmentCheck>          _listAppointmentCheck;
+        vector<int32>                     _listBrokenAppointment; ///< 오늘 깨진 약속의 인덱스
+        vector<int32>                     _listMetAppointment;    ///< 오늘 모인 약속의 인덱스. 사건을 한 번만 내려고 보관한다
+        hashed_string                     _weather;
+        GameplayContext                   _actionWorld;
+        float32                           _minuteFraction; ///< `update` 가 준 시간 중 분 아래 나머지. 보이는 위치를 보간할 때 쓴다
+        int32                             _minute;
+        uint32                            _flagsRevision;
+        uint8                             _bConditionsDirty;
+        uint8                             _bSuppressEvents;
     };
 } // namespace sw

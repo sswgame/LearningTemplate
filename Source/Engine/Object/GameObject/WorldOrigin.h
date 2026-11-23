@@ -12,6 +12,18 @@
 
 namespace sw
 {
+    /**
+     * @struct AbsolutePosition
+     * @brief 절대 자리(월드 원점 0 기준)임을 형식으로 드러낸 값입니다 — 씬 자리(`float3`)를 받는 함수에 그대로 넣을 수 없고 `WorldOrigin::toLocal` 을 거친다.
+     * @details 디렉터가 뷰 · AI 에 내는 시뮬레이션 자리와 절대 격자(`LandRegistry`)가 받는 자리의 형식이다. 시뮬레이션 안의 계산은 `_value` 로 한다 — 값 하나라 비용이 없다.
+     */
+    struct AbsolutePosition
+    {
+        float3 _value{};
+
+        AbsolutePosition operator+( const float3& offset ) const { return AbsolutePosition{ _value + offset }; }
+    };
+
     /** @struct WorldOrigin @brief 파일 머리말 참고. 주인은 씬의 오브젝트 매니저 하나다(`GameObjectManager::getWorldOrigin`). */
     struct WorldOrigin
     {
@@ -32,6 +44,8 @@ namespace sw
             return float3{ static_cast<float32>( static_cast<float64>( absolute._x ) - _position._x ), static_cast<float32>( static_cast<float64>( absolute._y ) - _position._y ),
                            static_cast<float32>( static_cast<float64>( absolute._z ) - _position._z ) };
         }
+        /** @brief 절대 자리를 로컬 자리로 옮깁니다. */
+        float3 toLocal( const AbsolutePosition& absolute ) const { return toLocal( absolute._value ); }
         /** @brief 로컬 상자를 절대 상자로 옮깁니다. 유효하지 않은 상자(`AABB::empty`)는 그대로입니다. */
         AABB toAbsolute( const AABB& local ) const { return local.isValid() ? AABB{ toAbsolute( local._min ), toAbsolute( local._max ) } : local; }
         /** @brief 로컬 월드 행렬의 이동을 절대로 옮깁니다. */

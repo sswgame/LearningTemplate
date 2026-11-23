@@ -175,9 +175,9 @@ namespace sw
 
     private:
         PROPERTY( RuntimeState )
-        vector<QuestProgress>   _listProgress;
-        EventBuffer<QuestEvent> _eventBuffer;
-        const QuestCatalog*     _pCatalog;
-        GameplayContext         _actionWorld;
+        vector<QuestProgress>          _listProgress;
+        NotificationBuffer<QuestEvent> _eventBuffer;
+        const QuestCatalog*            _pCatalog;
+        GameplayContext                _actionWorld;
     };
 } // namespace sw

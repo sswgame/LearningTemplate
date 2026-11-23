@@ -259,16 +259,16 @@ namespace sw
         int32           getRoadComponent( const int2& tile ) const;
 
     private:
-        vector<CityTile>          _listTile;
-        vector<CityBuilding>      _listBuilding;
-        vector<CityWalker>        _listWalker;
-        EventBuffer<CityEvent>    _eventBuffer;
-        mutable GridSearchScratch _roadSearch; ///< 일꾼 길 찾기(`findRoadPath`)가 호출마다 재사용하는 스크래치이다
-        const CityCatalog*        _pCatalog;
-        Wallet*                   _pWallet; ///< 빌린 지갑
-        CitySettings              _settings;
-        FixedStepTimer            _stepTimer;
-        GameRandom                _random;
+        vector<CityTile>              _listTile;
+        vector<CityBuilding>          _listBuilding;
+        vector<CityWalker>            _listWalker;
+        NotificationBuffer<CityEvent> _eventBuffer;
+        mutable GridSearchScratch     _roadSearch; ///< 일꾼 길 찾기(`findRoadPath`)가 호출마다 재사용하는 스크래치이다
+        const CityCatalog*            _pCatalog;
+        Wallet*                       _pWallet; ///< 빌린 지갑
+        CitySettings                  _settings;
+        FixedStepTimer                _stepTimer;
+        GameRandom                    _random;
         PROPERTY( RuntimeState, Min = 0 )
         float32 _time;
         PROPERTY( RuntimeState, Min = 0, Max = 1 )

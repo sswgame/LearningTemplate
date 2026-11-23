@@ -265,10 +265,10 @@ namespace sw
         }
     }
 
-    float3 FarmVillageGameModeComponent::getVillagerPosition( int32 npcIndex ) const
+    AbsolutePosition FarmVillageGameModeComponent::getVillagerPosition( int32 npcIndex ) const
     {
         const bool bInRange = 0 <= npcIndex && npcIndex < static_cast<int32>( _listPosition.size() );
-        return bInRange ? _listPosition[static_cast<size_t>( npcIndex )] : float3{};
+        return AbsolutePosition{ bInRange ? _listPosition[static_cast<size_t>( npcIndex )] : float3{} };
     }
 
     NavAgentSettings FarmVillageGameModeComponent::makeBodySettings( int32 npcIndex ) const

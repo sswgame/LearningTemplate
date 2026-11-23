@@ -147,12 +147,12 @@ namespace sw
     int32 ThemeParkSimulation::buildRide( const ParkRide& ride, int32 buildCost )
     {
         const bool bClaimLand = _pLand != nullptr && _landOwner != LandRegistry::kNoOwner && ride._footprintSize._x > 0.0f && ride._footprintSize._z > 0.0f;
-        if ( bClaimLand && _pLand->claimWorldRect( _landOwner, ride._footprintCenter, ride._footprintSize, true ) == false )
+        if ( bClaimLand && _pLand->claimWorldRect( _landOwner, AbsolutePosition{ ride._footprintCenter }, ride._footprintSize, true ) == false )
             return constant::invalid_index::kInt32;
         if ( _pWallet == nullptr || _pWallet->trySpend( _settings._currency, MathUtil::max( 0, buildCost ) ) == false )
         {
             if ( bClaimLand )
-                _pLand->releaseWorldRect( _landOwner, ride._footprintCenter, ride._footprintSize );
+                _pLand->releaseWorldRect( _landOwner, AbsolutePosition{ ride._footprintCenter }, ride._footprintSize );
             return constant::invalid_index::kInt32;
         }
         ParkRide built = ride;

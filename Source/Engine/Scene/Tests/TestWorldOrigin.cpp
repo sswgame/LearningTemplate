@@ -86,6 +86,30 @@ SW_TEST_CASE( WorldOriginTest, ShiftMovesRootsAndKeepsChildrenLocal )
     SW_EXPECT_EQUAL( 1000.0f, Util::findScene( objects, "Ground" )->getWorldPosition()._x );
 }
 
+/** @brief [WorldOriginTest] 원점 0 기준 자리는 원점을 옮겨도 그대로다 — 루트는 절대, 붙은 것은 부모 기준이고, 기억한 자리를 되돌려 쓰면 제자리다 */
+SW_TEST_CASE( WorldOriginTest, ZeroOriginPositionSurvivesTheShift )
+{
+    Scene scene{ "Origin" };
+    SW_REQUIRE_TRUE( scene.instantiate( Util::makeDocument() ) );
+    GameObjectManager&    objects = *scene.getObjectManager();
+    const SceneComponent* pLid    = Util::findScene( objects, "Lid" );
+    GameObject*           pGround = objects.findGameObjectByName( hashed_string( "Ground" ) );
+    SW_REQUIRE_TRUE( pGround != nullptr && pLid != nullptr );
+    SceneComponent* pRoot = pGround->getPrimarySceneComponent();
+    const float3    rest  = pRoot->getZeroOriginPosition();
+    SW_EXPECT_EQUAL( 1000.0f, rest._x );
+
+    SW_REQUIRE_TRUE( scene.shiftWorldOrigin( double3{ 900.0, 0.0, 500.0 } ) );
+    SW_EXPECT_EQUAL( 100.0f, pRoot->getLocalPosition()._x ); // 씬 자리는 옮았다
+    SW_EXPECT_EQUAL( 1000.0f, pRoot->getZeroOriginPosition()._x );
+    SW_EXPECT_EQUAL( 2.0f, pLid->getZeroOriginPosition()._y ); // 부모 기준은 원점과 상관없다
+
+    pRoot->setZeroOriginPosition( rest + float3{ 1.0f, 0.0f, 0.0f } ); // 문 열기 — 기억한 자리 + 여는 거리
+    SW_EXPECT_EQUAL( 101.0f, pRoot->getLocalPosition()._x );
+    pRoot->setZeroOriginPosition( rest );
+    SW_EXPECT_EQUAL( 100.0f, pRoot->getLocalPosition()._x );
+}
+
 /** @brief [WorldOriginTest] 떠 둔 상태는 뜬 때의 원점을 든다 — 원점을 옮긴 뒤 다시 지으면 절대 자리가 같다(레이어를 끄고 옮기고 켠다, 반대도) */
 SW_TEST_CASE( WorldOriginTest, HeldStateRebuildsAtItsAbsolutePosition )
 {

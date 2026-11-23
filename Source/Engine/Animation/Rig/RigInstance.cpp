@@ -470,6 +470,14 @@ namespace sw
         _evaluationCount.add();
     }
 
+    void RigInstance::applyWorldOffset( const float3& delta )
+    {
+        for ( const unique_ptr<RigNode>& node : _listNode )
+        {
+            node->applyWorldOffset( delta );
+        }
+    }
+
     void RigInstance::reset()
     {
         for ( const unique_ptr<RigNode>& node : _listNode )

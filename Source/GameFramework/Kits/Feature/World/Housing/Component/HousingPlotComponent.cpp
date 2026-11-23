@@ -16,6 +16,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Object/GameObject/Service/SceneNetLink.h"
+#include "Engine/Object/GameObject/WorldOrigin.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Reflection/ReflectionValidation.h"
@@ -462,7 +463,7 @@ namespace sw
                                  land.getCellSize(), _pCatalog->getRoot()._cellSize );
                 return false;
             }
-            if ( _layout.bindLand( &land, land.computeCell( getPlotOrigin() ) ) == false )
+            if ( _layout.bindLand( &land, land.computeCell( AbsolutePosition{ getOwner()->getManager()->getWorldOrigin().toAbsolute( getPlotOrigin() ) } ) ) == false )
                 return false;
         }
         _wallet.clear();

@@ -249,6 +249,15 @@ namespace sw
             _batch->markAllEntriesDirty();
     }
 
+    void WaterBodyComponent::onWorldOriginShifted( const float3& delta )
+    {
+        _surfaceOrigin += delta;
+        if ( _batch != nullptr )
+            _batch->setWorld( 0, float4x4::makeTranslation( _surfaceOrigin ) );
+        if ( getWorldPosition() == _surfaceOrigin )
+            _bOriginDirty.store( false, std::memory_order_relaxed ); // 원점만 옮았다 — 수면 메시는 그대로다
+    }
+
     void WaterBodyComponent::onWorldTransformUpdated()
     {
         SceneComponent::onWorldTransformUpdated();

@@ -96,6 +96,11 @@ namespace sw
         pScene->setWorldTransform( CharacterGeometryUtil::blendTransforms( _returnFrom, target, weight ) );
     }
 
+    void SocketBindingComponent::onWorldOriginShifted( const float3& delta )
+    {
+        _returnFrom.setTranslation( _returnFrom.getTranslation() + delta );
+    }
+
     void SocketBindingComponent::onBeginPlay()
     {
         Component::onBeginPlay();

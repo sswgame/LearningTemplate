@@ -201,8 +201,8 @@ namespace sw
         unordered_map<hashed_string, int32> _mapDialAttempt;      ///< 다이얼 자물쇠별 틀린 횟수
         unordered_map<hashed_string, int32> _mapSequenceProgress; ///< 순서 퍼즐별로 맞힌 걸음 수
         PROPERTY( RuntimeState )
-        vector<SurvivalHorrorClueLink>   _listClueLink;
-        EventBuffer<SurvivalHorrorEvent> _eventBuffer;
+        vector<SurvivalHorrorClueLink>          _listClueLink;
+        NotificationBuffer<SurvivalHorrorEvent> _eventBuffer;
         PROPERTY( RuntimeState )
         hashed_string                _currentArea;
         const SurvivalHorrorCatalog* _pCatalog;

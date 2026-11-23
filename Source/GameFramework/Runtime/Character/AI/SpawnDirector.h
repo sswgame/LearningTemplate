@@ -224,10 +224,10 @@ namespace sw
         PROPERTY( RuntimeState )
         vector<int32> _listAliveCount; ///< 항목마다
         PROPERTY( RuntimeState )
-        vector<hashed_string>   _listAllowedTag;
-        EventBuffer<SpawnEvent> _eventBuffer;
-        const SpawnTable*       _pTable;
-        GameRandom              _random;
+        vector<hashed_string>          _listAllowedTag;
+        NotificationBuffer<SpawnEvent> _eventBuffer;
+        const SpawnTable*              _pTable;
+        GameRandom                     _random;
         PROPERTY( RuntimeState )
         float32 _budget;
         PROPERTY( RuntimeState )

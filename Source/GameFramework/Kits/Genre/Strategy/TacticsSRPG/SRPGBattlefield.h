@@ -246,7 +246,7 @@ namespace sw
     private:
         vector<const SRPGTerrainDef*> _listTerrain; ///< 셀마다의 지형이다
         vector<SRPGUnit>              _listUnit;
-        EventBuffer<SRPGEvent>        _eventBuffer;
+        NotificationBuffer<SRPGEvent> _eventBuffer;
         mutable GridSearchScratch     _cellMarks; ///< `collectThreatCells` 가 "한 셀은 한 번만" 처리하려고 쓰는 표시이다
         SRPGSettings                  _settings;
         TurnOrder                     _turnOrder;

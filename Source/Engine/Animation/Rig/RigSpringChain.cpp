@@ -143,6 +143,16 @@ namespace sw
         }
     }
 
+    void RigSpringChain::applyWorldOffset( const float3& delta )
+    {
+        for ( uint32 index = 0; index < static_cast<uint32>( _listPosition.size() ); ++index )
+        {
+            _listPosition[index] += delta;
+            _listPreviousPosition[index] += delta;
+        }
+        _lastRootPosition += delta;
+    }
+
     void RigSpringChain::simulate( RigPoseBuffer& pose, span<const uint32> listBone, const RigSpringSettings& settings, span<const RigSpringCollider> listCollider,
                                    const float4x4& worldFromModel, const float3& worldGravity, float32 deltaSeconds, const RigSolveSpace& space )
     {

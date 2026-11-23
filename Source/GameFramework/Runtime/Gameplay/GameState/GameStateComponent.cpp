@@ -196,16 +196,9 @@ namespace sw
         _bWeather = settings._pWeatherCatalog != nullptr ? SW_TRUE : SW_FALSE;
         _weatherMaterial.open( _pWeatherCatalog.get() ); // 강수를 칸으로 적은 카탈로그면 지면 머티리얼이 날씨를 따른다(없으면 열지 않는다)
         _weatherScene.open( _pWeatherCatalog.get() );
-        // 설정의 땅 원점은 절대 자리다 — 지금 월드 원점 기준으로 놓는다.
-        const GameObjectManager* pManager = getOwner() != nullptr ? getOwner()->getManager() : nullptr;
-        _land.initialize( settings._landWidth, settings._landHeight, settings._landCellSize, pManager != nullptr ? pManager->getWorldOrigin().toLocal( settings._landOrigin ) : settings._landOrigin );
+        _land.initialize( settings._landWidth, settings._landHeight, settings._landCellSize, AbsolutePosition{ settings._landOrigin } );
         _listClockEvent.clear();
         return _restore.open( *this );
-    }
-
-    void GameStateComponent::onWorldOriginShifted( const float3& delta )
-    {
-        _land.applyWorldOffset( delta );
     }
 
     void GameStateComponent::onRegister( GameObjectManager& manager )
