@@ -931,6 +931,7 @@
 		<entry source="Indexing references. Try again in a moment."
 		       text="참조를 색인하는 중입니다. 잠시 뒤 다시 시도하세요." />
 		<entry source="Inherited from a parent bone." text="부모 본에서 물려받은 값입니다." />
+		<entry source="Inherits from {base}" text="{base} 에서 물려받음" />
 		<entry source="Initial state" text="처음 상태" />
 		<entry source="Inject KeyDown" text="키 누름 넣기" />
 		<entry source="Inject KeyUp" text="키 뗌 넣기" />
@@ -1396,6 +1397,8 @@
 		<entry source="Only the bodies under the ragdoll's Partial Root Bone go limp (the prefab's RagdollComponent names that bone)"
 		       text="래그돌의 부분 뿌리 뼈 아래 바디만 늘어집니다(프리팹의 RagdollComponent 가 그 뼈를 가리킵니다)" />
 		<entry source="Only the selected event" text="고른 이벤트만" />
+		<entry source="Only the values that differ from the parent are written to this file. Setting a value back to the parent's value removes it from the file."
+		       text="부모와 다른 값만 이 파일에 씁니다. 부모 값으로 되돌리면 파일에서 빠집니다." />
 		<entry source="Only the world is ticking: no game module update and no game input."
 		       text="월드만 도는 중 — 게임 모듈 업데이트 · 게임 입력 없음" />
 		<entry source="Opacity" text="불투명도" />
@@ -2517,8 +2520,6 @@
 		<entry source="Theme" text="테마" />
 		<entry source="Theme &amp; Look and Feel" text="테마 · 모양" />
 		<entry source="Theme &amp; Look and Feel..." text="테마 · 모양..." />
-		<entry source="This asset inherits from another file (_base), so its values are not all written here. Edit it in the Catalog window."
-		       text="이 에셋은 다른 파일(_base)을 물려받아 값이 여기 다 적혀 있지 않습니다. Catalog 창에서 고치세요." />
 		<entry source="This asset names no other asset." text="이 에셋은 다른 에셋을 참조하지 않습니다." />
 		<entry source="This binding kind (axis, stick, mouse delta ...) is not one key - edit the XML"
 		       text="이 바인딩 종류(축, 스틱, 마우스 델타 ...)는 키 하나가 아닙니다. XML 을 직접 편집합니다." />
@@ -2526,8 +2527,6 @@
 		       text="이 컬렉션은 비었습니다. 에셋을 이름 위에 놓으면 더해집니다." />
 		<entry source="This combo is already used. Replace clears it from the other command."
 		       text="이미 쓰이는 조합입니다. Replace 를 누르면 다른 명령에서 지웁니다." />
-		<entry source="This effect inherits from another file (_base), so its values are not all written here. Edit it in the Catalog window."
-		       text="이 효과는 다른 파일(_base)을 물려받아 값이 여기 다 적혀 있지 않습니다. Catalog 창에서 고치세요." />
 		<entry source="This file is not tracked yet, so there is nothing to compare with."
 		       text="이 파일은 아직 추적하지 않아 비교할 것이 없습니다." />
 		<entry source="This folder is empty. Import source files here, or drop them onto this window."

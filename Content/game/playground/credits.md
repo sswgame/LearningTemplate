@@ -2,14 +2,14 @@
 
 | 파일 | 원본 | 라이선스 |
 |------|------|----------|
-| `sounds/click.ogg` | Kenney "Interface Sounds" `Audio/click_002.ogg` (<https://kenney.nl/assets/interface-sounds>) | CC0 1.0 |
+| `sounds/click.ogg` | Kenney "Interface Sounds" `Audio/click_002.ogg` — 공용 `common/sounds/kenney_interface_sounds/click_002.ogg` 와 같은 바이트(출처 · 해시는 `common/credits.md`) | CC0 1.0 |
 | `models_raw/testhead.gltf` → `models/testhead.*` | 이 저장소에서 합성(구 셋 + 모프 타깃 일곱 · Talk 가중치 클립 · Idle 머리 회전) | 이 저장소 |
 | `voice/testline.wav` → `voice/testline.visemes.xml` | 이 저장소에서 합성(120 Hz 배음 + 두 포먼트 봉우리 모음 넷 · 높은 대역 잡음, 16 kHz 모노) | 이 저장소 |
 | 환경 쇼케이스 식생(`maps/envshowcase.scene.xml` 의 꽃 · 덤불 · 나무 · 바위 레이어) | Quaternius "Stylized Nature MegaKit" — 공용 원본 `common/models_raw/quaternius/nature/`(출처는 `common/credits.md`). 식생 구간 머티리얼은 `common/materials/quaternius/`(foliage.hlsl — 바람 · 페이드). 예전 Kenney Nature Kit 나무 · 덤불 · 꽃 · 그루터기 · 통나무는 지웠다 | CC0 1.0 |
 | `heightfields_raw/valley*.png` · `heightfields/valley.layerweights` | `Scripts/dev/MakeTerrainShowcase.py` 가 만든 절차 생성 데이터 | 이 저장소 |
 | `rigs_raw/*.glb` · `rigs_raw/*.rig.xml` | `Scripts/dev/MakeSyntheticRig.py --representatives` 가 만든 애니메이션 비용 측정용 합성 리그 | 이 저장소 |
 | `models_raw/avatarsample_d.vrm` · `textures_raw/_shared/vrm_character_textures/*.png`(임포트가 꺼낸 내장 이미지, 이름은 내용 키) | VRoid Project "AvatarSample_D"(VRoid Studio 알파판 샘플, VRM 0.x) — <https://opengameart.org/content/vroid-studio-cc0-models> 에서 받음. 원 출처 · 조건: <https://vroid.pixiv.help/hc/en-us/articles/4402614652569-Do-VRoid-Studio-s-sample-models-come-with-conditions-of-use>. 텍스처 원본은 모델 임포트가 VRM 에 든 이미지를 그대로 꺼낸 것 | CC0 1.0 |
-| `models_raw/crate_medium.glb` | Kenney "Blaster Kit" (<https://kenney.nl/assets/blaster-kit>) — 나무 상자(shooter3d 의 것과 같은 파일, 파괴 쇼케이스) | CC0 1.0 |
+| `models_raw/crate_medium.glb` | Kenney "Blaster Kit"(묶음 출처는 `common/credits.md`) — 나무 상자(shooter3d 의 것과 같은 파일, 파괴 쇼케이스) | CC0 1.0 |
 | `models_raw/brick_wall.gltf` · `models_raw/barrel.gltf` | 이 저장소에서 만든 상자 · 원기둥(파괴 쇼케이스) | 이 저장소 |
 | `textures_raw/postprocess/*.png` → `textures/postprocess/*.dds` | 일회성 파이썬 스크립트로 만든 후처리 시나리오 텍스처(원본 PNG 가 정본 — 스크립트는 지웠다)(컬러 그레이딩 LUT 띠 · 블룸 먼지 마스크) | 이 저장소 |
 | `textures/twod/*.dds` | 이 저장소에서 코드로 그린 2D 데모 픽셀 아트(스프라이트 · 타일 · 노멀 맵, 커밋 `1fb09535c`) | 이 저장소 |

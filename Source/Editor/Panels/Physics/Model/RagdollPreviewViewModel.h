@@ -11,6 +11,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Name/hashed_string.h"
 
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 
@@ -132,9 +133,12 @@ namespace sw::editor
         void applyText( string_view text );
         /** @brief 원문을 읽은 자리에 쓰고 다음 `syncBody` 가 몸을 다시 놓게 합니다. 쓰지 못하면 상태 줄에 까닭을 두고 false 입니다. */
         [[nodiscard]] bool saveDocument();
-        /** @brief 이 에셋을 고칠 수 있으면 true 입니다. 물려받은 에셋(`_base`)은 카탈로그 편집기가 고친다(`isInherited`). */
+        /** @brief 이 에셋을 고칠 수 있으면 true 입니다. 물려받은 에셋(`_base`)은 부모와 다른 칸만 쓴다. */
         [[nodiscard]] bool isEditable() const;
-        [[nodiscard]] bool isInherited() const;
+        /** @brief 물려받은 부모의 리소스 id 입니다. 부모가 없으면 빈 글입니다. */
+        const string& getBaseID() const;
+        /** @brief 고른 바디의 그리드가 감출 칸입니다 — 부모에 있는 바디의 본(열쇠)은 바꾸면 다른 바디가 된다. */
+        vector<hashed_string> collectHiddenProperties() const;
         /** @brief 고른 바디의 인스턴스와 형식입니다(그리드 대상). 없으면 nullptr 입니다. */
         void*                  editSelectedBody();
         static const TypeInfo* getBodyType();

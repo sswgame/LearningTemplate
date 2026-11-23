@@ -128,9 +128,17 @@ namespace sw::editor
         return _pDocument->isEditable();
     }
 
-    bool RagdollPreviewViewModel::isInherited() const
+    const string& RagdollPreviewViewModel::getBaseID() const
     {
-        return _pDocument->isInherited();
+        return _pDocument->getBaseID();
+    }
+
+    vector<hashed_string> RagdollPreviewViewModel::collectHiddenProperties() const
+    {
+        vector<hashed_string> listHidden;
+        if ( _selectedBody >= 0 && _pDocument->isInheritedItem( RagdollPreviewViewModelInternal::kBodyList, static_cast<uint32>( _selectedBody ) ) )
+            listHidden.push_back( hashed_string( RagdollPreviewViewModelInternal::kBodyKey ) );
+        return listHidden;
     }
 
     void* RagdollPreviewViewModel::editSelectedBody()
@@ -242,7 +250,7 @@ namespace sw::editor
             return ToolAssetLoadResult::Malformed;
         }
         RagdollPreviewViewModelInternal::fillRows( *pAsset, _listBodyRow );
-        // 편집 사본 — 물려받은 에셋은 원문만 든다(고치지 않는다). 읽지 못하면 공유 캐시가 이미 거절했다.
+        // 편집 사본 — 읽지 못하면 공유 캐시가 이미 거절했다.
         const optional<AbsolutePath> diskPath = AbsolutePath::isStrictAbsolute( assetPath ) ? AbsolutePath::tryMake( assetPath )
                                                                                             : optional<AbsolutePath>{ editor::getSubsystem<AssetPaths>().toDiskPath( assetPath ) };
         _loadedDiskPath                       = diskPath.has_value() ? diskPath->str() : string{};
@@ -250,7 +258,7 @@ namespace sw::editor
         string text;
         if ( diskPath.has_value() && FileUtil::readTextFile( *diskPath, text ) )
         {
-            const expected<void> opened = _pDocument->load( *PhysicsAsset::StaticType(), text );
+            const expected<void> opened = _pDocument->load( *PhysicsAsset::StaticType(), text, assetPath );
             if ( opened.has_value() == false )
                 SW_LOG_WARNING_ID( "RagdollPreview.EditCopyNotRead", "Ragdoll Preview cannot edit '%#': %# (%#)", assetPath, opened.error().message(), opened.error().detail() );
         }

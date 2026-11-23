@@ -2,7 +2,7 @@
 <?asset guid="232c07a2613d130a47feda409801bfbd"?>
 <!--
   에디터 시나리오 — 전역 변수 창(global_variables): 검색 칸에 gv_debugHUD 를 치고 그 줄의 체크 상자를 누르면 변수가 바로 켜지고 창이 저장 안 된 상태가 된다.
-  기본값과 달라진 줄에만 서는 Reset 단추를 누르면 기본값(false)으로 돌아간다.
+  Ctrl+Z · Ctrl+Y 가 그 값을 되돌리고 다시 한다. 기본값과 달라진 줄에만 서는 Reset 단추를 누르면 기본값(false)으로 돌아간다.
   감시 값: ExpectVariable gv_debugHUD(변수 값) · Editor.PanelDirty(gv_editorWatchPanel=global_variables — 세션 저장 전 상태).
   실행: App -EnableEditor -scenario=engine/automation/editor/globalvariablespanel.scenario.xml -unattended
 -->
@@ -40,6 +40,13 @@
 	<EditorWaitStable/>
 	<ExpectVariable name="gv_debugHUD" value="true"/>
 	<Expect watch="Editor.PanelDirty" equals="1"/>
+	<!-- 창이 자기 되돌리기를 가진다 — 값 하나가 한 단계다 -->
+	<EditorKey key="Ctrl+Z"/>
+	<EditorWaitStable/>
+	<ExpectVariable name="gv_debugHUD" value="false"/>
+	<EditorKey key="Ctrl+Y"/>
+	<EditorWaitStable/>
+	<ExpectVariable name="gv_debugHUD" value="true"/>
 	<!-- 기본값과 다른 줄의 Reset — 기본값으로 -->
 	<EditorClick mark="globalVariables.reset.gv_debugHUD"/>
 	<EditorWaitStable/>

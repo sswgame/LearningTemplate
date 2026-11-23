@@ -54,6 +54,13 @@ namespace sw
             return loadDescFromDiskFileInternal( diskPath, &outDesc, DescType::StaticType() );
         }
 
+        /** @brief 리플렉션 desc 를 XML 글에서 읽습니다(에디터가 저장하지 않은 편집을 미리 본다). 규칙 · 부모 펼치기는 파일 읽기와 같고 @p sourceName 은 로그에 찍는 이름입니다. */
+        template <typename DescType>
+        [[nodiscard]] static bool loadDescFromText( string_view text, string_view sourceName, DescType& outDesc )
+        {
+            return parseDesc( sourceName, AssetID{}, string( text ), &outDesc, DescType::StaticType() );
+        }
+
         /**
          * @brief 리플렉션 desc 를 XML 로 씁니다. 형식 기본값과 같은 칸은 쓰지 않습니다(필수 칸은 씁니다).
          * @param absPath 쓸 디스크 경로(리소스 id 를 디스크 자리로 푸는 일은 부르는 쪽 - `AssetPaths::toDiskPath`)

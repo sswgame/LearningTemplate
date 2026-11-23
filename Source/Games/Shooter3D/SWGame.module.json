@@ -2,7 +2,7 @@
     "_name": "SWGame",
     "_version": "1.0.0",
     "_kind": "Game",
-    "_description": "Shooter3D — 1인칭 · 3인칭 슈터 테스트 게임 — 무기 규칙(Combat) · 캐릭터(애니메이션 · 외형 · 소켓) · 페이싱 감독 — 네트워크 몸 이동은 GF_NetClientServer(서버 권위 · 내 폰 예측) — 온라인 키트(계정 · 채팅 · 경제 · 우편함 · 매칭 · 순위표)를 싣는 견본(`ShooterOnlineFlow` - 로그인 → 매칭 → 순위표)",
+    "_description": "Shooter3D — 1인칭 · 3인칭 슈터 테스트 게임 — 무기 규칙(Combat) · 캐릭터(애니메이션 · 외형 · 소켓) · 페이싱 감독 — 네트워크 몸 이동은 GF_NetClientServer(서버 권위 · 내 폰 예측) — 온라인 키트(계정 · 채팅 · 경제 · 우편함 · 매칭 · 순위표 · 라이브 운영 · 서버 디렉터리)를 싣는 견본(`ShooterOnlineFlow` - 로그인 → 매칭 → 순위표)",
     "_listDependency": [
         {
             "_name": "GameFramework"
@@ -20,6 +20,9 @@
             "_name": "GF_Leaderboard"
         },
         {
+            "_name": "GF_LiveOps"
+        },
+        {
             "_name": "GF_Mailbox"
         },
         {
@@ -30,6 +33,9 @@
         },
         {
             "_name": "GF_NetSimulation"
+        },
+        {
+            "_name": "GF_ServerDirectory"
         }
     ],
     "_listConfiguration": [

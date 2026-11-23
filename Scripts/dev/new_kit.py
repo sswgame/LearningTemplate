@@ -6,6 +6,7 @@
 폴더 틀(`docs/agents/FolderLayout.md` 의 키트 줄): `Source/GameFramework/Kits/<묶음>/<이름>/`
   `<이름>Catalog`              데이터 카탈로그(`<팩>/data/<이름 소문자>.xml`) — 카탈로그 창이 등록 줄만으로 열고 검증한다
   Component/`<이름>Component`  카탈로그 항목 하나를 가리키는 컴포넌트(`CatalogKey` 칸)
+  `<이름>GameFeature`          게임 기능 — 켜면 카탈로그가 걸리고 받는 이름 `<이름>` 의 오브젝트에 컴포넌트가 붙는다
   Editor/                      에디터 확장 `GF_EditorPlugin_<이름>`(Dev) — 씬이 쓰는 항목이 팩에 있는지 보는 맵 검사
   Tests/                       카탈로그 읽기 테스트
 중앙 표 한 곳에 두 줄을 더한다: 카탈로그 키(`engine/settings/datacatalogreferences.xml` 의 `<CatalogKey>` · `<Field>`) — 쿠커와 인스펙터 콤보가 같은 줄을 본다.
@@ -97,8 +98,9 @@ namespace sw
         friend class XMLCatalog<{name}Catalog>;
 
     public:
+        static constexpr const utf8* kDataKind = "{kind}"; ///< 데이터 종류 이름(팩 데이터 경로 · 게임 기능 `loadCatalog`)
         /** @brief 이 데이터 종류입니다(등록은 .cpp 의 공유 캐시 줄이 로더를 더한다). */
-        static constexpr AssetTypeDef kAssetType = AssetTypeDef::makeDataFile( "{kind}", AssetPathRule{{ "game/", {{}}, "/data/{kind}.xml" }}, {{}} );
+        static constexpr AssetTypeDef kAssetType = AssetTypeDef::makeDataFile( kDataKind, AssetPathRule{{ "game/", {{}}, "/data/{kind}.xml" }}, {{}} );
 
         {name}Catalog();
 
@@ -218,6 +220,27 @@ namespace sw
         manager.getComponentRegistry().remove<{name}Component>( this );
         Component::onUnregister( manager );
     }}
+}} // namespace sw
+'''
+    files[f"{name}GameFeature.cpp"] = f'''#include "pch.h"
+
+#include "{include}/Component/{name}Component.h"
+#include "{include}/{name}Catalog.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameFeature/GameFeatureRegistry.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameFeature/GameFeatureScope.h"
+
+namespace sw
+{{
+    namespace
+    {{
+        /** @brief 카탈로그(팩의 `data/{kind}.xml`)를 걸고 받는 이름 `{name}` 의 오브젝트(`GameFeatureReceiverComponent`)에 컴포넌트를 붙입니다. */
+        [[nodiscard]] bool activate{name}( GameFeatureScope& scope )
+        {{
+            return scope.loadCatalog<{name}Catalog>() && scope.addComponent<{name}Component>( "{name}" );
+        }}
+    }} // namespace
+
+    SW_GAME_FEATURE( {name}, "{name}", &activate{name} );
 }} // namespace sw
 '''
     files[f"Tests/Test{name}Catalog.cpp"] = f'''#include "pch.h"
@@ -373,5 +396,6 @@ def main_new_kit(argv: list[str] | None = None) -> int:
             table_path.write_bytes(new_table_text.encode("utf-8"))
     if args.dry_run is False:
         print(f"[new-kit] next: py -3 -m Scripts format, "
-              f"then add GF_{args.name} to `_listDependency` of Source/Games/<game>/SWGame.module.json")
+              f"then add GF_{args.name} to `_listDependency` of Source/Games/<game>/SWGame.module.json "
+              f"and '{args.name}' to gamesettings gameFeatures or a minigame's features")
     return ExitCode.PASSED
