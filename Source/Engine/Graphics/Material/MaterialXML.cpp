@@ -163,13 +163,12 @@ namespace sw
                 if ( XMLFields::readProperties( item, switchProperties, sourceName ) == false )
                     return false;
                 MaterialStaticSwitch entry{};
-                entry._name           = switchProperties._name.empty() ? switchProperties._keyword : switchProperties._name;
+                entry._name           = switchProperties._name;
                 entry._keyword        = switchProperties._keyword;
                 entry._keywordOff     = switchProperties._keywordOff;
                 entry._bEnabled       = switchProperties._bEnabled;
                 entry._bShaderFeature = switchProperties._bShaderFeature;
-                if ( entry._keyword.empty() == false || entry._name.empty() == false )
-                    outDesc._listStaticSwitch.push_back( std::move( entry ) );
+                outDesc._listStaticSwitch.push_back( std::move( entry ) );
             }
         }
 
@@ -196,7 +195,7 @@ namespace sw
     void MaterialXML::appendPermutationNode( XMLNode root, const MaterialPermutationDef& permutationsNode )
     {
         XMLNode node = root.appendChild( "_permutations" );
-        // 순열은 부모 것을 통째로 바꾸므로 기본값을 생략해도 되지만, 차이(`DataInheritance::makeDelta`)는 글을 맞대므로 늘 같은 꼴로 모두 쓴다.
+        // 기본값도 모두 쓴다 — 차이(`DataInheritance::makeDelta`)가 적지 않은 칸을 부모 값으로 읽는다(부모가 켠 스위치를 끈 자식의 `bEnabled="0"`).
         XMLFields::writeEveryField( node, MaterialPermutationParams{ permutationsNode._quality, permutationsNode._shaderLOD, permutationsNode._usage } );
         MaterialXMLInternal::appendMaterialStringList( node, "_alwaysDefines", permutationsNode._listAlwaysDefine );
 
@@ -211,7 +210,7 @@ namespace sw
                 switchProperties._keywordOff     = entry._keywordOff;
                 switchProperties._bEnabled       = entry._bEnabled;
                 switchProperties._bShaderFeature = entry._bShaderFeature;
-                XMLFields::writeProperties( list.appendChild( "item" ), switchProperties );
+                XMLFields::writeEveryField( list.appendChild( "item" ), switchProperties );
             }
         }
 
@@ -221,7 +220,7 @@ namespace sw
             for ( const MaterialMultiCompile& mc : permutationsNode._listMultiCompile )
             {
                 XMLNode item = list.appendChild( "item" );
-                XMLFields::writeProperties( item, MaterialMultiCompileParams{ mc._name, mc._selected } );
+                XMLFields::writeEveryField( item, MaterialMultiCompileParams{ mc._name, mc._selected } );
                 MaterialXMLInternal::appendMaterialStringList( item, "_options", mc._listOption );
             }
         }
@@ -240,6 +239,16 @@ namespace sw
         properties._keyAttribute = "name";
         properties._bEmptyClears = SW_FALSE;
         schema._listField.push_back( std::move( properties ) );
+        DataInheritanceSchema permutations{ "_permutations" };
+        permutations._bEmptyClears = SW_FALSE;
+        permutations._listField.push_back( DataInheritanceSchema::makeKeyedList( "_alwaysDefines", DataInheritanceSchema::kTextKey ) );
+        permutations._listField.push_back( DataInheritanceSchema::makeKeyedList( "_staticSwitches", "name" ) );
+        permutations._listField.push_back( DataInheritanceSchema::makeKeyedList( "_multiCompiles", "name" ) );
+        for ( DataInheritanceSchema& list : permutations._listField )
+        {
+            list._bEmptyClears = SW_FALSE;
+        }
+        schema._listField.push_back( std::move( permutations ) );
         return schema;
     }
 

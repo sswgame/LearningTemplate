@@ -38,7 +38,6 @@ SW_MATERIAL_BEGIN
     float4 _deepColor;
     float4 _skyColor;
     float4 _waveParams; // x = 파도 분산의 중력(m/s²) — 컴포넌트가 설정된 물리 중력을 싣는다
-    float4 _rain;       // 파라미터 묶음 Rain: x 비 세기(0..1 — 물 표면 빗방울 링), yzw 0(예비)
 }
 SW_MATERIAL_END
 
@@ -58,7 +57,6 @@ struct MaterialVaryings
     float3 _skyColor : TEXCOORD11;
     float2 _flow : TEXCOORD12;
     float3 _waveNormal : TEXCOORD13; // 거스트너 파도의 노멀(정규화 전 — 메시 노멀이 아니다)
-    float  _rain : TEXCOORD14;       // 비 세기(0..1) — 픽셀이 빗방울 링을 얹는다
 };
 #include "material_shader.hlsli"
 #include "material_functions.hlsli"
@@ -98,7 +96,6 @@ MaterialVaryings computeMaterialVaryings( VertexContext context )
     varyings._shading       = float4( foam, time, material._waterParams.w, depth );
     varyings._skyColor      = material._skyColor.rgb;
     varyings._flow          = context._input._color.rg;
-    varyings._rain          = material._rain.x;
 
     // 카메라 쪽 방향: 이 정점의 화면 자리를 가까운 면과 먼 면으로 되돌려 그 차를 쓴다 — 원근 · 직교 모두 맞다. 화면 자리는 뼈대가 만든 최종 클립 위치다.
     const float2 ndc       = context._clipPosition.xy / max( context._clipPosition.w, 1e-5f );
@@ -126,7 +123,7 @@ MaterialSurface computeMaterialSurface( PixelContext context )
     surface._albedo = float4( context._user._waterColor.rgb, 1.0f );
     surface._normal = normalize( lerp( context._user._waveNormal, normalize( context._user._waveNormal + rippleNormal - float3( 0.0f, 1.0f, 0.0f ) ), context._user._shading.z ) );
     // 비가 오면 물 표면에도 빗방울 링이 돈다(지형 · 환경 표면 웅덩이와 같은 함수 — 물 위는 웅덩이 정도 1). 굴절 오프셋이 노멀을 따라 물 밑이 일렁인다.
-    SurfaceFunction::applyRainRipples( surface._normal, context._worldPosition.xz, 1.0f, g_SwMaterialTime, context._user._rain );
+    SurfaceFunction::applyRainRipples( surface._normal, context._worldPosition.xz, 1.0f, g_SwMaterialTime, g_MaterialGlobalRain.x );
     surface._roughness = kSurfaceRoughness;
     surface._metallic  = kSurfaceMetallic;
     return surface;

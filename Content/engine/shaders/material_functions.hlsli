@@ -8,9 +8,9 @@
  * CPU 짝: 3 축 가중치 · 타일 변형 해시는 `MaterialProjection`(C++), 높이 섞기는 `SurfaceLayerWeights::computeHeightBlended`, 규칙 띠는 `TerrainLayerRule::computeBand`.
  * 같은 식이다 — 바꾸면 둘을 함께 바꾸고 단위 테스트(`MaterialProjectionTest` · `TerrainLayerRuleTest`)의 값을 다시 계산한다.
  *
- * 젖음 · 웅덩이 · 눈의 세기는 머티리얼 파라미터 묶음 `engine/materials/weather.matparams.xml` 의 `Weather`(x 젖음, y 웅덩이, z 눈, w 설선 높이 m)에
- * 머티리얼 칸 `_weather` 를 묶어 받는다 — 날씨가 값을 바꾸면 묶은 모든 머티리얼이 함께 바뀐다(언리얼 MPC 로 날씨를 돌리는 방식).
- * 비 세기는 같은 묶음의 `Rain`(x 0..1)에 칸 `_rain` 을 묶는다 — 웅덩이 위 빗방울 물결(`applyRainRipples`)이 그 세기에 비례하고 머티리얼 시계(`g_SwMaterialTime`)로 돈다.
+ * 젖음 · 웅덩이 · 눈의 세기는 전역 값 `g_MaterialGlobalWeather`(x 젖음, y 웅덩이, z 눈, w 설선 높이 m — 파라미터 묶음 `engine/materials/weather.matparams.xml` 의 `Weather`)다 —
+ * 날씨가 값을 바꾸면 모든 셰이더가 함께 따른다(언리얼 MPC 로 날씨를 돌리는 방식).
+ * 비 세기는 `g_MaterialGlobalRain`(x 0..1 — 같은 묶음의 `Rain`)이다 — 웅덩이 위 빗방울 물결(`applyRainRipples`)이 그 세기에 비례하고 머티리얼 시계(`g_SwMaterialTime`)로 돈다.
  *
  * 클리어 코트 · 비등방 하이라이트는 함수 묶음이 아니라 셰이딩 모델(shading_model.hlsli 의 코트 · 비등방 엽, G버퍼 번호 CLEAR_COAT · ANISOTROPIC)이 낸다 —
  * 거칠기를 끌어당기는 근사로는 두 겹 반사(밑 무늬의 흐린 반사 + 코트의 또렷한 반사)도, 결 방향으로 늘어난 하이라이트도 나오지 않는다. 여기에는 헤어라인 결 무늬만 있다.

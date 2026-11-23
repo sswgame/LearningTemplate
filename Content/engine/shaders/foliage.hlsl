@@ -23,10 +23,9 @@ static const float kSurfaceMetallic  = 0.0f;
 SW_MATERIAL_BEGIN
 {
     float4 _tint;
-    float4 _windParams;  // xy = 바람 방향(xz), z = 세기(m), w = 시간(초)
+    float4 _windParams;  // xy = 바람 방향(xz), z = 세기(m), w = 0(예비). 시간은 전역 값 g_MaterialGlobalEnvironment.w
     float4 _windWave;    // x = 흔들림 주파수(Hz), y = 돌풍 세기, z = 돌풍 주파수(Hz), w = 흔들림이 다 차는 높이(m)
-    float4 _viewParams;  // xyz = 카메라 위치, w = 휘게 하는 세기
-    float4 _fadeParams;  // x = 줄어들기 시작하는 거리, y = 다 사라지는 거리
+    float4 _fadeParams;  // x = 줄어들기 시작하는 거리, y = 다 사라지는 거리, z = 휘게 하는 세기, w = 0(예비)
     float4 _influencer0; // xyz = 중심, w = 반지름(0 이면 빈 칸)
     float4 _influencer1;
     float4 _influencer2;
@@ -95,7 +94,7 @@ float3 computeWorldPositionOffset( VertexContext context )
     const MaterialData material = context._material;
 
     const float3 instancePosition = context._instance._world[3].xyz;
-    const float3 toView           = material._viewParams.xyz - instancePosition;
+    const float3 toView           = g_MaterialGlobalEnvironment.xyz - instancePosition;
     const float  viewDistance     = length( toView );
 
     // 거리 페이드 — 페이드 구간에서 인스턴스를 뿌리(로컬 원점) 쪽으로 줄인다. 끝을 넘으면 점 하나가 되어 그려지지 않는다.
@@ -107,7 +106,7 @@ float3 computeWorldPositionOffset( VertexContext context )
     const float  swayWeight    = computeSwayWeight( context );
     const float  weight        = swayWeight * swayWeight;
     const float2 windDirection = material._windParams.xy;
-    const float  time          = material._windParams.w;
+    const float  time          = g_MaterialGlobalEnvironment.w;
     const float  phase         = hashPosition( instancePosition.xz ) * kTwoPi + dot( instancePosition.xz, windDirection ) * 0.15f;
     const float  sway          = sin( time * material._windWave.x * kTwoPi + phase ) * 0.5f + 0.5f;
     const float  gust          = sin( time * material._windWave.z * kTwoPi + dot( instancePosition.xz, windDirection ) * 0.05f ) * 0.5f + 0.5f;
@@ -117,7 +116,7 @@ float3 computeWorldPositionOffset( VertexContext context )
     // 휘게 하는 구(캐릭터 · 탈것) — 바깥으로 밀고 그만큼 눕힌다.
     float2 bend = computeBend( material._influencer0, worldPosition.xyz ) + computeBend( material._influencer1, worldPosition.xyz ) +
                   computeBend( material._influencer2, worldPosition.xyz ) + computeBend( material._influencer3, worldPosition.xyz );
-    bend *= material._viewParams.w * weight;
+    bend *= material._fadeParams.z * weight;
     worldPosition.xz += bend;
     worldPosition.y -= length( bend ) * 0.5f;
 

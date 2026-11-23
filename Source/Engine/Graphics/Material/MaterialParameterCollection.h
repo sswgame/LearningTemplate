@@ -1,11 +1,11 @@
 /**
  * @file MaterialParameterCollection.h
  * @brief 머티리얼 파라미터 묶음(`*.matparams.xml`)입니다. 파일 하나의 값을 머티리얼 여럿이 읽고, 런타임에 값을 바꾸면 그 묶음을 쓰는 모든 그림이 바뀝니다(언리얼 Material Parameter Collection).
- * @details **셰이더 슬롯을 새로 두지 않는다.** 머티리얼 프로퍼티가 묶음의 이름을 가리키고(`collection` · `collectionParameter`), 값이 바뀌면 그 머티리얼이 다음 프레임에 프로퍼티를 다시 패킹한다
+ * @details **셰이더 슬롯을 새로 두지 않는다.** 머티리얼 프로퍼티가 묶음의 이름을 가리키고(`collection` · `collectionParameter`), 값이 바뀌면 그 머티리얼이 다음 프레임에 그 칸만 다시 쓴다
  *          (`Material::syncParameterCollections`). 그래서 값은 리플렉션이 정한 자리의 머티리얼 데이터로 가고, 슬롯 · 바인딩 · 백엔드 코드가 그대로라 네 백엔드(dx11 · dx12 · vk · gl)에서 같은 길을 탄다.
  *          어떤 셰이더의 어떤 프로퍼티든 셰이더를 고치지 않고 묶을 수 있다.
- *          언리얼은 묶음마다 유니폼 버퍼 하나를 셰이더가 직접 읽어 값 바꾸기가 O(1) 이지만 셰이더 코드가 묶음의 배치를 알아야 하고 머티리얼마다 묶음 수에 제한이 있다.
- *          여기는 바꾼 값이 그 묶음을 쓰는 머티리얼 수만큼의 패킹이다. 머티리얼 원소는 프레임마다 어차피 사본을 비교하므로 값이 프레임마다 바뀌는 묶음을 머티리얼 수백 개가 쓰게 되면 그때 버퍼를 둔다.
+ *          여기는 바꾼 값이 그 묶음을 쓰는 머티리얼 수만큼의 패킹이다. 많은 머티리얼이 읽고 자주 바뀌는 값(날씨)은 값에 `_global` 을 적는다 — 셰이더가 프레임 상수(`MaterialGlobals`)에서
+ *          바로 읽어 값 바꾸기가 O(1) 이다(언리얼 묶음의 유니폼 버퍼 자리). 전역 값에는 프로퍼티를 묶지 않는다(오류). 전역을 먹이는 묶음은 엔진 기본 에셋(`EngineDefaultAssets::_materialGlobals`) 하나다.
  *
  *          게임 스레드 객체다. 같은 경로는 같은 객체이고 쥔 쪽(머티리얼)이 없어지면 사라져 다음에 파일 값으로 다시 시작한다.
  *          표는 에셋 매니저의 내장 캐시(`MaterialParameterCollectionCache`)다 — 파일을 고치면 핫 리로드가 쥔 묶음을 제자리에서 파일 값으로 바꾸고(`replaceValues`)
@@ -23,6 +23,7 @@
 #include "Engine/Asset/Cache/WeakInternTable.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetTypeRegistry.h"
+#include "Engine/Graphics/Material/MaterialGlobals.h"
 #include "Engine/Graphics/Material/MaterialRenderVersion.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -38,6 +39,8 @@ namespace sw
         string _name{};
         PROPERTY( Tooltip = "Value; a material property reads as many channels as its type has" )
         float4 _value{};
+        PROPERTY( Tooltip = "Shader global this value feeds (PassCB); None binds through material properties" )
+        MaterialGlobalSlot _global{ MaterialGlobalSlot::None };
     };
 } // namespace sw
 
@@ -68,7 +71,7 @@ namespace sw
         PROPERTY( Tooltip = "Values shared by every material that binds this collection" )
         vector<MaterialCollectionParameterDef> _listParameter{};
 
-        /** @brief 이름이 비거나 겹치면 오류를 남기고 false 입니다. */
+        /** @brief 이름이 비거나 겹치거나, 한 전역 칸을 둘이 먹이면 오류를 남기고 false 입니다. */
         [[nodiscard]] bool validate( string_view sourceLabel ) const;
     };
 } // namespace sw
@@ -90,24 +93,26 @@ namespace sw
 
         /** @brief 지금 값입니다. 없는 이름이면 nullptr 입니다. */
         [[nodiscard]] const float4* findValue( const hashed_string& name ) const;
-        /** @brief 값을 바꿉니다. 묶은 모든 머티리얼이 다음 프레임에 따릅니다. 없는 이름이면 오류를 남기고 false 입니다. 같은 값이면 세대가 그대로입니다. */
+        /** @brief 값을 바꿉니다. 묶은 모든 머티리얼이 다음 프레임에 따릅니다. 없는 이름이면 오류를 남기고 false 입니다. 같은 값 · 전역 값(묶은 머티리얼이 없다)이면 세대가 그대로입니다. */
         bool setValue( const hashed_string& name, const float4& value );
         /**
          * @brief 값 전체를 @p desc(다시 읽은 파일)로 바꾸고 세대를 올립니다. 런타임에 바꾼 값은 파일 값으로 돌아갑니다(파일이 정본이다 — 언리얼에서 묶음 에셋의 기본값을 고친 것과 같다).
          * @details 같은 객체를 고치므로 쥔 머티리얼이 새 객체를 찾지 않는다. 없어진 이름을 묶은 머티리얼은 다음 동기화에서 오류를 남긴다.
          */
         void replaceValues( MaterialParameterCollectionDef desc );
-        /** @brief 값이 바뀔 때마다 오르는 세대입니다. */
+        /** @brief 묶은 머티리얼이 읽는 값이 바뀔 때마다 오르는 세대입니다. */
         [[nodiscard]] uint32 getGeneration() const { return _generation.get(); }
-
-        /** @brief 값의 앞 @p componentCount 채널을 머티리얼 프로퍼티 값 글(`0.5 0.25`)로 씁니다. */
-        [[nodiscard]] static string makePropertyText( const float4& value, uint32 componentCount );
+        /** @brief @p name 이 셰이더 전역 값이면 true 입니다 — 머티리얼 프로퍼티는 묶지 못한다. */
+        [[nodiscard]] bool isGlobal( const hashed_string& name ) const;
+        /** @brief 전역 칸을 가진 값들을 @p inoutGlobals 에 씁니다. 모든 전역 칸(`MaterialGlobalSlot`)을 먹였으면 true 입니다(빠진 칸은 그대로다). */
+        [[nodiscard]] bool writeGlobals( MaterialGlobals& inoutGlobals ) const;
 
     private:
         struct Entry
         {
-            hashed_string _name;
-            float4        _value;
+            hashed_string      _name;
+            float4             _value;
+            MaterialGlobalSlot _global{ MaterialGlobalSlot::None };
         };
 
         vector<Entry>         _listEntry;
