@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="2b0a29b8dd104acc954aa32e0ed59f6f"?>
+<!--
+  서부극 들기 — 기수의 GrabberComponent 가 폰의 의도 버튼 West.Carry(R)로 보급 상자(태그 West.Carryable)를 들고 다시 눌러 내려놓는다.
+  입력 맵 → 폰 의도 → 집기 컴포넌트(틱 뒤 일)를 실제 키 입력으로 지난다. ① 멀리서는 들지 않는다. ② 손 닿는 곳(1.5 m)에서 누르면 든다.
+  ③ 든 채로 옮기면 상자가 따라온다. ④ 다시 누르면 내려놓고 상자가 바닥에 떨어진다. 값으로 판정한다(골든 없음).
+  실행: ctest -R Scenario.playground · App -scenario=game/playground/automation/wildwest_carry.scenario.xml -unattended
+-->
+<Scenario name="game.playground.wildwest_carry" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/playground/maps/prairie.scene.xml"/>
+	<Variable name="gv_playgroundAutoPlay" value="0"/>
+	<WaitUntil watch="Pawn.Controller" target="Player" is="PlayerController" timeoutFrames="60"/> <!-- 키 입력을 받을 조종자가 쥐었다 -->
+	<Expect watch="Grab.Held" target="Player" is="none"/>
+	<Press slot="Key.R"/>
+	<AdvanceSimulation frames="2"/> <!-- 누른 채인 구간(시간이 내용) -->
+	<Release slot="Key.R"/>
+	<AdvanceSimulation frames="2"/> <!-- 멀리서 눌러도 들지 않는다(일어나지 않음 — 시간이 내용) -->
+	<Expect watch="Grab.Held" target="Player" is="none"/>
+
+	<DevCommand line="teleport Player 48 0.05 -2.8"/>
+	<WaitUntil watch="Object.DistanceTo" target="SupplyCrate" key="Player" atMost="1.5" timeoutFrames="10"/> <!-- 손 닿는 곳에 섰다 -->
+	<Press slot="Key.R"/>
+	<AdvanceSimulation frames="2"/> <!-- 누른 채인 구간(시간이 내용) -->
+	<Release slot="Key.R"/>
+	<WaitUntil watch="Grab.Held" target="Player" is="SupplyCrate" timeoutFrames="10"/>
+
+	<DevCommand line="teleport Player 44 0.05 -6"/>
+	<WaitUntil watch="Object.DistanceTo" target="SupplyCrate" key="Player" atMost="1.6" timeoutFrames="10"/>
+	<Expect watch="Object.X" target="SupplyCrate" atMost="45"/>
+
+	<Press slot="Key.R"/>
+	<AdvanceSimulation frames="2"/> <!-- 누른 채인 구간(시간이 내용) -->
+	<Release slot="Key.R"/>
+	<WaitUntil watch="Grab.Held" target="Player" is="none" timeoutFrames="10"/>
+	<WaitUntil watch="Object.Y" target="SupplyCrate" atMost="0.3" timeoutSeconds="3"/>
+	<Expect watch="Object.X" target="SupplyCrate" atMost="45"/>
+	<Pass/>
+</Scenario>

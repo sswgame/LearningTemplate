@@ -19,7 +19,7 @@ namespace sw
         , _bFullUploadRequested{ false }
     {
         if ( layout.isValid() == false )
-            SW_FATAL( "Glyph atlas layout out of range (page size %#, max page count %#)", layout._pageSize, layout._maxPageCount );
+            reportFatalError( "Glyph atlas layout out of range (page size %#, max page count %#)", layout._pageSize, layout._maxPageCount );
     }
 
     void GlyphAtlas::addPage()

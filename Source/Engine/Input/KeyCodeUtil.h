@@ -151,7 +151,7 @@ namespace sw
     /** @brief Key 이름 변환입니다. */
     struct SW_API KeyCodeUtil
     {
-        /** @brief 이름에서 Key 를 해석합니다. */
+        /** @brief 이름(열거자 철자 그대로)의 Key 입니다. 모르는 이름이거나 엔진 서비스가 없으면 `Key::Unknown` 입니다. */
         static Key fromName( string_view name );
         /** @brief Key 의 안정적인 이름을 반환합니다. 엔진 서비스가 바인딩되어 있지 않으면 "Unknown" 입니다. */
         static const utf8* toName( Key key );
@@ -163,7 +163,7 @@ namespace sw
     /** @brief MouseButton 이름 변환입니다. */
     struct SW_API MouseButtonUtil
     {
-        /** @brief 이름에서 MouseButton 을 해석합니다. */
+        /** @brief 이름의 MouseButton 입니다. 모르는 이름이거나 엔진 서비스가 없으면 `MouseButton::Count` 입니다. */
         static MouseButton fromName( string_view name );
         /** @brief MouseButton 의 안정적인 이름을 반환합니다. */
         static const utf8* toName( MouseButton button );

@@ -1,17 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="b9afa91390ec667bb009d86bc1e26c97"?>
-<!-- Playground 팩의 설정 — 기본 실기동은 마을(maps/hub — 심즈처럼 돌고 장소 · 사물로 장르 미니게임에 들어간다)을 연다(배포본도 씬 로드 경로 SCN1 · 프리팹 GUID 해석을 거치게). -->
+<!-- Playground 팩의 설정 — 기본 실기동은 마을(maps/hub — 서부 평원 maps/prairie 를 바탕으로 물려받아 말을 타고 돌며 장소 · 사물로 장르 미니게임에 들어간다)을 연다(배포본도 씬 로드 경로 SCN1 · 프리팹 GUID 해석을 거치게). -->
 <GameSettings>
   <!-- 엔진이 읽는 칸(PackEngineSettings) — 창 제목 · 렌더 파이프라인 · 사용자 설정과 텔레메트리 스키마 · UI 규칙 -->
   <!-- 덮어쓰기 층 layers/zones: 엔진 표면 종류 표에 지역 프로필(빙판 · 바다 · 용암 · 가시덩굴)을 얹는다 — 프로필이 이 게임의 이펙트를 부른다. -->
   <!-- _bUIPauseMenu: Esc · 패드 Start 가 엔진 일시정지 메뉴를 연다(런타임 UI 시나리오 frontend · pausemenu) -->
   <!-- 컷씬 입력 레이어가 이동을 막는 동안에도 메뉴 · 옵션이 열리는지 automation/cutscenetrigger 가 본다. -->
-  <Engine _windowTitle="SWEngine" _bUIPauseMenu="true">
+  <Engine _windowTitle="SWEngine" _userSettingsSchema="game/playground/data/playground.settings.xml" _bUIPauseMenu="true">
     <_listResourceLayer>
       <item>game/playground/layers/zones</item>
     </_listResourceLayer>
   </Engine>
   <startMap>game/playground/maps/hub.scene.xml</startMap>
+  <autosaveSettings>game/playground/data/autosave.xml</autosaveSettings>
   <!-- 게임 범위 기능 — 첫 씬 전에 켜 인스턴스 내내 둔다. 지역 효과 시연 · 마을의 어빌리티 카탈로그(data/abilities.xml) · 클래스를 PlaygroundAbilities 가 건다. -->
   <gameFeatures>
     <item>PlaygroundAbilities</item>
@@ -23,9 +24,15 @@
   <!-- 타일 걸음 마을 미니게임(minigames/pixeltown)의 말 걸기 — 공통 상호작용 액션 Interact 에 Space 를 더한다(Interaction 레이어라 시연 점프 Space 와 겹치지 않는다). -->
   <inputMap path="common/input/interact.input.xml"/>
   <inputMap path="game/playground/pixeltown/data/town.input.xml"/>
+  <!-- 서부 평원(maps/prairie · 마을 maps/hub)의 조작 — 휘파람 · 행동 · 들기와 말의 질주(공통 Sprint). -->
+  <inputMap path="common/input/traversal.input.xml"/>
+  <inputMap path="game/playground/wildwest/data/wildwest.input.xml"/>
+  <!-- 허브 농장 미니게임(minigames/harvestvalley) — 현황(Status)은 공통 메뉴, 농사 키는 꺼진 레이어 Farming(미니게임이 켠다). -->
+  <inputMap path="common/input/menu.input.xml"/>
+  <inputMap path="game/playground/harvestvalley/data/farm.input.xml"/>
   <localizationProject>game/playground/data/localization/playground.locproject.xml</localizationProject>
   <loadingScreen>engine/ui/loading.ui.xml</loadingScreen>
-  <!-- 시네마틱 시퀀스의 소리 구간이 내는 이벤트 -->
+  <!-- 시네마틱 시퀀스의 소리 구간 · 허브 농장의 도구가 내는 이벤트 -->
   <audioEvents>game/playground/audio/playground.audioevents.xml</audioEvents>
   <!-- 벤치 캐릭터 프리팹(-gv_stressTestCharacterPrefab — 부하 시나리오 load/townsfolk)의 외형은 공용 팩(common)의 외형 데이터다. 외형이 장비 아이템을 참조하므로 아이템도 함께 -->
   <RequiredData kind="items" pack="common"/>

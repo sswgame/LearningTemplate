@@ -16,7 +16,7 @@
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<WaitRenderStable/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
 	<Expect watch="Render.FogVolumeState" equals="1"/>
-	<Screenshot file="fog_plain.ppm" stability="assets"/>
+	<Screenshot file="fog_plain.ppm" stability="Assets"/>
 	<LoadScene path="game/playground/maps/fogvolumetric.scene.xml" timeoutFrames="600"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<Screenshot file="fog_volume.ppm"/>

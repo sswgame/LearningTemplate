@@ -373,7 +373,7 @@ namespace sw
 
         const bool bOffscreenRequested = bUseColorComposite || bDepthAsColor || ( bBindColor == false && bHasDepth );
         if ( bOffscreenRequested && fbo == 0 )
-            SW_FATAL( "GL render pass could not build its framebuffer (color0 %#, depth %#) - invalid attachment or incomplete FBO", colorHandles[0].getPacked(), beginInfo._depthTarget.getPacked() );
+            reportFatalError( "GL render pass could not build its framebuffer (color0 %#, depth %#) - invalid attachment or incomplete FBO", colorHandles[0].getPacked(), beginInfo._depthTarget.getPacked() );
 
         glBindFramebuffer( GL_FRAMEBUFFER, fbo );
 
@@ -784,7 +784,7 @@ namespace sw
         // 부르는 쪽이 드로우를 건너뛰는 것이 렌더러의 규칙이라, 여기 닿은 것은 부르는 쪽의 결함이다(지운 핸들 · PSO 를 걸지 않은 드로우).
         const OpenGLRHIDevice::OpenGLPipelineStateRecord* pPSO = _pDevice->_pipelineStates.get( _pDevice->_recordingState._boundGraphicsPSO );
         if ( pPSO == nullptr || pPSO->_program == 0 )
-            SW_FATAL( "GL draw without a registered graphics PSO (handle %#)", _pDevice->_recordingState._boundGraphicsPSO.getPacked() );
+            reportFatalError( "GL draw without a registered graphics PSO (handle %#)", _pDevice->_recordingState._boundGraphicsPSO.getPacked() );
         outProgram = pPSO->_program;
         outMode    = toGlPrimitive( pPSO->_topology );
         if ( outMode == GL_PATCHES )
@@ -797,7 +797,7 @@ namespace sw
         // 부르는 쪽이 디스패치를 건너뛰는 것이 렌더러의 규칙이라, 여기 닿은 것은 부르는 쪽의 결함이다(지운 핸들 · 컴퓨트 PSO 를 걸지 않은 디스패치).
         const OpenGLRHIDevice::OpenGLPipelineStateRecord* pPSO = _pDevice->_pipelineStates.get( _pDevice->_recordingState._boundComputePSO );
         if ( pPSO == nullptr || pPSO->_program == 0 )
-            SW_FATAL( "GL dispatch without a registered compute PSO (handle %#)", _pDevice->_recordingState._boundComputePSO.getPacked() );
+            reportFatalError( "GL dispatch without a registered compute PSO (handle %#)", _pDevice->_recordingState._boundComputePSO.getPacked() );
         return pPSO->_program;
     }
 

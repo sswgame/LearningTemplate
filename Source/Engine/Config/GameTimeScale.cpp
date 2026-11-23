@@ -73,7 +73,7 @@ namespace sw
 #if !defined( SW_DO_CHECKS )
         // 단언이 없는 구성에서도 적지 않은 값(-1)을 경과로 내보내지 않는다 — 음수 경과는 움직임을 조용히 멈추거나 거꾸로 돌린다.
         if ( _unscaledDeltaSeconds < 0.0f )
-            SW_FATAL( "GameTimeScale::getUnscaledDeltaTime before setUnscaledDeltaTime (Engine::beginFrame or the test must set it)" );
+            reportFatalError( "GameTimeScale::getUnscaledDeltaTime before setUnscaledDeltaTime (Engine::beginFrame or the test must set it)" );
 #endif
         return _unscaledDeltaSeconds;
     }

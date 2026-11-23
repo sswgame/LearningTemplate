@@ -9,9 +9,8 @@
 		<item name="_subsurfaceRadius" defaultValue="0.5" />
 		<item name="_roughness" defaultValue="0.8" />
 	</_properties>
-	<_permutations quality="High" shaderLOD="300" usage="StaticMesh">
+	<_permutations>
 		<_alwaysDefines>
-			<item>MATERIAL_DOMAIN_SURFACE</item>
 			<item>MATERIAL_LOBE_TRANSMISSION</item>
 			<item>MATERIAL_BLEND_TRANSLUCENT</item>
 		</_alwaysDefines>

@@ -150,7 +150,7 @@
 	<CatalogKey tag="WesternHorseDef" catalog="WesternCatalog" entry="Horse"/>
 	<CatalogKey tag="WesternHuntWeaponDef" catalog="WesternCatalog" entry="HuntWeapon"/>
 	<CatalogKey tag="WesternHitZoneDef" catalog="WesternCatalog" entry="HitZone"/>
-	<Field owner="WildWestGameModeComponent" field="_regionID" tag="WesternRegionDef"/>
+	<Field owner="WesternGameModeComponent" field="_regionID" tag="WesternRegionDef"/>
 	<Field owner="WesternHorseComponent" field="_breed" tag="WesternHorseDef"/>
 	<Field owner="WesternDeedComponent" field="_weapon" tag="WesternHuntWeaponDef"/>
 	<Field owner="WesternDeedComponent" field="_zone" tag="WesternHitZoneDef"/>

@@ -231,10 +231,10 @@ namespace sw
         if ( _bParallelRecording.load( std::memory_order_relaxed ) == false )
             return;
         // 로그만 남기면 프레임마다 쏟아지는 다른 줄에 묻힌다. 이건 "언젠가 GPU 가 쓰레기 디스크립터를 읽는다" 는 뜻이라 그 자리에서 멈춘다.
-        SW_FATAL( "%# tries to change the resource table during parallel pass recording. Creation/registration/release must finish in the graph setup phase "
-                  "(a resize during recording leaves the descriptor references held by draws dangling and the GPU dies with a PageFault) - "
-                  "release it through IRHIDevice::releaseHandle (see setParallelRecording)",
-                  pWhat );
+        reportFatalError( "%# tries to change the resource table during parallel pass recording. Creation/registration/release must finish in the graph setup phase "
+                          "(a resize during recording leaves the descriptor references held by draws dangling and the GPU dies with a PageFault) - "
+                          "release it through IRHIDevice::releaseHandle (see setParallelRecording)",
+                          pWhat );
     }
 
     void IRHIDevice::endFrame( bool vsync, bool bPresent )
@@ -293,7 +293,7 @@ namespace sw
     {
         const RHIBackendInfo* const pInfo = RHIBackendInfoTable::find( getBackendType() );
         if ( pInfo == nullptr )
-            SW_FATAL( "IRHIDevice::getShaderTargetFormat: backend %# is not in the backend table", static_cast<uint32>( getBackendType() ) );
+            reportFatalError( "IRHIDevice::getShaderTargetFormat: backend %# is not in the backend table", static_cast<uint32>( getBackendType() ) );
         return pInfo->_shaderTarget;
     }
 

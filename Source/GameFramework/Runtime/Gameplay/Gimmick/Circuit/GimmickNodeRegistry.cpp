@@ -8,7 +8,7 @@
 
 #include "Engine/Curve/BlendCurve.h"
 #include "Engine/Module/ModuleSubsystemRegistrar.h"
-#include "Engine/Reflection/TypeRegistry.h"
+#include "Engine/Reflection/EnumName.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
@@ -595,14 +595,14 @@ namespace sw
 
     bool GimmickNodeRegistry::initializeMover( GimmickNodeContext& context )
     {
-        InterpToMovementMode mode{ InterpToMovementMode::Once };
-        if ( game::getSubsystem<TypeRegistry>().enumFromString( string_view( context.getText( 1 ) ), mode ) == false )
+        const optional<InterpToMovementMode> mode = tryParseEnum<InterpToMovementMode>( context.getText( 1 ) );
+        if ( mode.has_value() == false )
             return GimmickNodeRegistryInternal::failParam( context, "mode must be Once, Loop or PingPong" );
-        context._pIntState[3] = static_cast<int32>( mode );
-        BlendCurve curve{ BlendCurve::Linear };
-        if ( game::getSubsystem<TypeRegistry>().enumFromString( string_view( context.getText( 2 ) ), curve ) == false )
+        context._pIntState[3]            = static_cast<int32>( *mode );
+        const optional<BlendCurve> curve = tryParseEnum<BlendCurve>( context.getText( 2 ) );
+        if ( curve.has_value() == false )
             return GimmickNodeRegistryInternal::failParam( context, "curve is not a BlendCurve name (Linear, EaseIn, EaseOut, EaseInOut, SmoothStep, Cubic, Exponential)" );
-        context._pIntState[4] = static_cast<int32>( curve );
+        context._pIntState[4] = static_cast<int32>( *curve );
         context._pIntState[1] = 1;
         context.setOutput( 0, true );
         return true;

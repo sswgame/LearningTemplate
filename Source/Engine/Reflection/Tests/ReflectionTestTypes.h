@@ -989,7 +989,7 @@ namespace sw
         int32 _armor = 50;
 
         /** @brief 체력을 100 으로 되돌립니다. */
-        FUNCTION( Category = "Actions", DisplayName = "Reset Health", Tooltip = "Resets health to 100", CallInEditor, Meta = "ActionType=Reset", EditorPreview = "HealthReset" )
+        FUNCTION( Category = "Actions", DisplayName = "Reset Health", Tooltip = "Resets health to 100", CallInEditor, Exec, Meta = "ActionType=Reset", EditorPreview = "HealthReset" )
         void resetHealth() { _health = 100; }
     };
 } // namespace sw

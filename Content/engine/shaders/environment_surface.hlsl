@@ -8,8 +8,8 @@
  *
  *          한 점의 순서: 밑(색 · 텍스처) → 무늬(둘째 색 · 홈 범프 · 칸마다 색 흔들림) → 잔무늬 · 큰 무늬(타일 반복 깨기) → 모서리 마모(밑 층이 드러난다) → 녹 → 변색 → 때
  *          → 헤어라인 결 → 날씨(젖음 · 웅덩이 · 눈 · 반짝이). 식은 함수 묶음(material_functions.hlsli)의 것이다.
- *          날씨는 칸 `_weather` 가 파라미터 묶음 engine/materials/weather.matparams.xml 의 Weather 에 묶여 지형과 함께 젖는다 — 머티리얼 값(`_wetness` 등)은 거기에 더한다.
- *          웅덩이에는 칸 `_rain`(같은 묶음의 Rain.x 비 세기)만큼 빗방울 링이 돈다(`SurfaceFunction::applyRainRipples`).
+ *          날씨는 전역 값 g_MaterialGlobalWeather(파라미터 묶음 engine/materials/weather.matparams.xml 의 Weather)라 지형과 함께 젖는다 — 머티리얼 값(`_wetness` 등)은 거기에 더한다.
+ *          웅덩이에는 g_MaterialGlobalRain.x(같은 묶음의 비 세기)만큼 빗방울 링이 돈다(`SurfaceFunction::applyRainRipples`).
  *
  *          셰이딩 모델(언리얼 머티리얼의 Shading Model 칸 — 인스턴스가 아니라 머티리얼이 고른다):
  *            define 없음                → Default Lit(기본 PBR, 기본 조명 훅).
@@ -51,8 +51,6 @@ SW_MATERIAL_BEGIN
     float4 _underColor;     // 모서리 마모가 드러내는 밑 층 색(칠 밑 금속 · 유약 밑 소지)
     float4 _patternScale;   // x · y = 칸 크기(좌표 단위), z = 홈 폭, w = 줄 어긋남(벽돌 0.5) 또는 줄 기울기
     float4 _patternShape;   // x = 무늬 종류(0 없음 · 1 벽돌/타일 · 2 판자 · 3 결 · 4 칸 · 5 줄), y = 칸마다 색 흔들림, z = 홈 깊이(m), w = 좌표(0 메시 UV · 1 월드 축)
-    float4 _weather;        // 파라미터 묶음 Weather: x 젖음, y 웅덩이, z 눈, w 설선 높이(m)
-    float4 _rain;           // 파라미터 묶음 Rain: x 비 세기(0..1 — 웅덩이 빗방울 링), yzw 0(예비)
     float  _roughness;
     float  _metallic;
     float  _secondaryRoughness;
@@ -281,8 +279,8 @@ static EnvironmentSurface EnvironmentSurface::make( PixelContext context )
     // 헤어라인 결 무늬(거칠기의 줄). 늘어난 하이라이트는 Anisotropic 모델의 엽이, 코트 반사는 Clear Coat 모델의 둘째 층이 낸다(머리 주석).
     roughness = SurfaceFunction::computeBrushedRoughness( roughness, uv, material._anisotropy, kBrushedFrequency );
 
-    // 날씨 — 머티리얼 값 + 파라미터 묶음 Weather.
-    const float4 weather    = material._weather;
+    // 날씨 — 머티리얼 값 + 전역 값.
+    const float4 weather    = g_MaterialGlobalWeather;
     const float  wetness    = saturate( material._wetness + weather.x );
     const float  puddleRate = saturate( material._puddle + weather.y );
     const float  snowRate   = saturate( material._snow + weather.z );
@@ -290,7 +288,7 @@ static EnvironmentSurface EnvironmentSurface::make( PixelContext context )
     SurfaceFunction::applyWetness( albedo, roughness, material._porosity, wetness );
     const float puddle = SurfaceFunction::computePuddleMask( position, normal, puddleRate, kPuddleNoiseScale );
     SurfaceFunction::applyPuddle( albedo, roughness, metallic, surfaceNormal, puddle );
-    SurfaceFunction::applyRainRipples( surfaceNormal, position.xz, puddle, g_SwMaterialTime, material._rain.x );
+    SurfaceFunction::applyRainRipples( surfaceNormal, position.xz, puddle, g_SwMaterialTime, g_MaterialGlobalRain.x );
     const float snow = SurfaceFunction::computeSnowMask( position, normal, snowRate, snowLine );
     SurfaceFunction::applySnow( albedo, roughness, metallic, surfaceNormal, snow );
     SurfaceFunction::applySparkle( roughness, surfaceNormal, position, kSparkleDensity, max( material._sparkle, snow * kSnowSparkle ) );

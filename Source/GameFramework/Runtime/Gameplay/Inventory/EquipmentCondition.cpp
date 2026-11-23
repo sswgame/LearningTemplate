@@ -6,6 +6,7 @@
 #include "Core/Encoding/FourCCUtil.h"
 #include "Core/String/StringUtil.h"
 
+#include "Engine/Behavior/ConditionRegistry.h"
 #include "Engine/Reflection/EnumName.h"
 
 #include "GameFramework/Runtime/Foundation/Condition/GameConditions.h"

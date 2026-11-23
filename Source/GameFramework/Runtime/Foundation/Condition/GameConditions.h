@@ -12,8 +12,8 @@
 #include "Core/Name/TagID.h"
 #include "Core/Name/hashed_string.h"
 
-#include "Engine/Behavior/ActionRegistry.h"
 #include "Engine/Behavior/ConditionExpr.h"
+#include "Engine/Behavior/GameActionCall.h"
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 

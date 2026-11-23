@@ -16,8 +16,11 @@
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Object/Prefab/PrefabCache.h"
 #include "Engine/Profiling/FrameProfiler.h"
+#include "Engine/Reflection/ReflectVisit.h"
+#include "Engine/Reflection/ReflectedInstance.h"
 #include "Engine/Reflection/TypeFqn.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Serializer/SerializerUtil.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/Framework/Minigame/MinigameFlow.h"
@@ -88,7 +91,7 @@ namespace sw
         Component::onBeginPlay();
         // 규칙은 앞 그룹 — 뷰 · 컨트롤러 · 카메라 리그(뒤 그룹)가 같은 프레임에 이 결과를 읽는다.
         setTickGroup( TickGroup::PrePhysics );
-        if ( startGame() == false )
+        if ( openGame() == false )
             return;
         _bStarted = SW_TRUE;
         hookTickAfter();
@@ -115,6 +118,33 @@ namespace sw
     {
         manager.getComponentRegistry().remove<GameModeComponent>( this );
         Component::onUnregister( manager );
+    }
+
+    bool GameModeComponent::openGame()
+    {
+        resetRuntimeState();
+        return startGame();
+    }
+
+    void GameModeComponent::resetRuntimeState()
+    {
+        const TypeInfo* const pType = findCachedTypeInfo();
+        if ( pType == nullptr )
+            reportFatalError( "GameModeComponent '%#' has no reflected type - its state fields cannot be reset", getTypeName().c_str() );
+        ReflectVisitOptions options;
+        options._roleMask = PropertyRoleMask::makeRuntimeState();
+        const ReflectPropertyVisitor propertyVisitor{ options };
+        ReflectedInstance            fresh; // 기본 생성자의 값이 기본값이다 — 상태 칸이 없는 디렉터는 만들지 않는다
+        (void)propertyVisitor.visitProperties( *pType, static_cast<void*>( this ), [this, pType, &fresh]( const ReflectVisitField& field )
+        {
+            if ( fresh.isValid() == false )
+                fresh = ReflectedInstance::create( *pType );
+            const bool bReset = fresh.isValid() && SerializerUtil::copyPropertyValue( field._property, ObjectAddress{ fresh.get() }, MutableObjectAddress{ this },
+                                                                                      SerializeContext::getDefault( SerializePurpose::Snapshot ) );
+            if ( bReset == false )
+                reportFatalError( "state field '%#::%#' cannot be reset to its default before a game opens", pType->_fullyQualifiedName.c_str(), field._property._name.c_str() );
+            return ReflectVisitFlow::Continue;
+        } );
     }
 
     bool GameModeComponent::finishMinigame( const hashed_string& resultName )
@@ -207,7 +237,7 @@ namespace sw
     {
         const TypeInfo* const pType = findCachedTypeInfo();
         if ( pType == nullptr )
-            SW_FATAL( "GameModeComponent '%#' has no reflected type - its state fields cannot be carried", getTypeName().c_str() );
+            reportFatalError( "GameModeComponent '%#' has no reflected type - its state fields cannot be carried", getTypeName().c_str() );
         if ( io.isWriting() )
         {
             io.reflectedAs( *pType, *this );

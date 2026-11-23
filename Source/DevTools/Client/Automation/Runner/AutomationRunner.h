@@ -64,7 +64,7 @@ namespace sw
         uint8                  _bClockHeld     : 1;          ///< 이 프레임을 시계 잡기 조건이 붙잡았다(`onFrameBegin` 이 정하고 `onFrameEnd` 가 단계를 건너뛴다)
         [[maybe_unused]] uint8 _reserved       : 7;
         uint32                 _assetStableFrameCount; ///< `<Screenshot>` 앞에서 에셋 일이 0 인 채로 지난 프레임 수입니다
-        /// `<Screenshot stability="render">` 의 렌더 정착(에셋 일 + 정착 조건)이 선 때의 `_holdFrameCount`(서지 않았으면 `kNotStable`) — 그다음 프레임부터 화면 덮개 · 뒤 프레임을 센다
+        /// `<Screenshot stability="Render">` 의 렌더 정착(에셋 일 + 정착 조건)이 선 때의 `_holdFrameCount`(서지 않았으면 `kNotStable`) — 그다음 프레임부터 화면 덮개 · 뒤 프레임을 센다
         uint32                           _stableHoldFrame;
         AutomationStallClock             _stabilityStallClock;      ///< 렌더 정착 조건의 진척이 그대로인 그린 프레임 수(`ScenarioRun.json` 의 `_stallFrames` 와 견준다)
         uint64                           _stabilityPresentedFrames; ///< 정지 시한을 마지막으로 센 때의 그린 프레임 수(`RenderPresentCounter`) — 그리지 않은 프레임은 세지 않는다

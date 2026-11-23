@@ -3,6 +3,7 @@
 	Playground 사운드 이벤트(AudioEventLibrary). 시네마틱 시나리오(automation/cinematic)의 시퀀스 소리 구간(data/cinematic.seq.xml 의 Audio 항목)이 낸다 — 화면 소리(2D)다.
 	Weather.* 는 환경 마당(maps/weathergarden)의 날씨 소리다 — 날씨 카탈로그의 SoundBinding 이 내고, 세기(WeatherRain · WeatherWind)와 듣는 자리의 하늘 열림(WeatherOpenness — 0 실내 .. 1 트임)이 크기 · 먹먹함을 움직인다.
 	Subtitle* 는 자막 시나리오(automation/subtitles)가 개발 명령 audio.post 로 내는 대사다 — 클립의 자막 키 · 이벤트의 화자 키가 자막 서비스로 간다(키는 data/localization/playground.strings.xml).
+	Farm* 는 허브 농장(minigames/harvestvalley)의 디렉터가 낸다 — 위에서 내려다보는 농장이라 모두 2D 다. 동작이 연달아 나올 수 있어 쿨다운으로 겹침을 줄이고 볼륨 · 피치를 조금씩 흔든다.
 -->
 <AudioEventLibrary>
 	<_listParameter>
@@ -75,6 +76,44 @@
 		<AudioEventDef _name="SubtitleLongLine" _bus="sfx" _priority="70" _cooldownSeconds="0" _maxInstances="1" _steal="Oldest" _subtitleSpeakerKey="Subtitle.Guide">
 			<_listClip>
 				<AudioClipEntry _path="game/playground/sounds/click.ogg" _subtitleKey="Subtitle.LongLine" />
+			</_listClip>
+		</AudioEventDef>
+		<AudioEventDef _name="FarmToolSelect" _bus="ui" _priority="70" _cooldownSeconds="0.05" _maxInstances="1" _steal="Oldest">
+			<_listClip>
+				<AudioClipEntry _path="game/playground/harvestvalley/sounds/select_002.ogg" />
+			</_listClip>
+		</AudioEventDef>
+		<AudioEventDef _name="FarmPlant"
+		                _bus="sfx"
+		                _priority="50"
+		                _cooldownSeconds="0.08"
+		                _maxInstances="2"
+		                _steal="Oldest"
+		                _volumeDbMin="-3"
+		                _volumeDbMax="0"
+		                _pitchMin="-1.5"
+		                _pitchMax="1.5">
+			<_listClip>
+				<AudioClipEntry _path="game/playground/harvestvalley/sounds/drop_002.ogg" />
+			</_listClip>
+		</AudioEventDef>
+		<AudioEventDef _name="FarmHarvest"
+		                _bus="sfx"
+		                _priority="55"
+		                _cooldownSeconds="0.08"
+		                _maxInstances="3"
+		                _steal="Oldest"
+		                _volumeDbMin="-3"
+		                _volumeDbMax="0"
+		                _pitchMin="-1"
+		                _pitchMax="2">
+			<_listClip>
+				<AudioClipEntry _path="game/playground/harvestvalley/sounds/pluck_001.ogg" />
+			</_listClip>
+		</AudioEventDef>
+		<AudioEventDef _name="FarmShip" _bus="ui" _priority="70" _maxInstances="2">
+			<_listClip>
+				<AudioClipEntry _path="game/playground/harvestvalley/sounds/confirmation_001.ogg" />
 			</_listClip>
 		</AudioEventDef>
 	</_listEvent>

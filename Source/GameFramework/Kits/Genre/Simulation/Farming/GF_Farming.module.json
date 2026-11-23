@@ -2,7 +2,7 @@
     "_name": "GF_Farming",
     "_version": "1.0.0",
     "_kind": "Kit",
-    "_description": "농장 생활 키트 — 달력 · 작물 카탈로그 · 밭 · 인벤토리 · 출하",
+    "_description": "농장 생활 키트 — 작물 카탈로그 · 밭 · 출하(규칙)와 농장 · 마을 일정 디렉터(Component). 모습은 GF_Client_Farming",
     "_listDependency": [
         {
             "_name": "GameFramework"

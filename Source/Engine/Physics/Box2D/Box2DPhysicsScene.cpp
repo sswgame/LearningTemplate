@@ -905,7 +905,7 @@ namespace sw
         {
             const BodyRecord* pRecord = findBody( listBody[index] );
             if ( pRecord == nullptr )
-                SW_FATAL( "Box2DPhysicsScene::readBodyStates: the body handle is not live (pass only moved bodies whose owner matched)" );
+                reportFatalError( "Box2DPhysicsScene::readBodyStates: the body handle is not live (pass only moved bodies whose owner matched)" );
             const b2Transform   transform = b2Body_GetTransform( pRecord->_bodyID );
             PhysicsBodyState2D& state     = outListState[index];
             state._position               = Box2DUtil::toEngine( transform.p );

@@ -100,21 +100,6 @@ namespace sw
                 return pObject != nullptr ? pObject->getComponent<SequencePlayerComponent>() : nullptr;
             }
 
-            /** @brief 열거 이름 @p name 을 값으로 바꿉니다(값 0 .. @p count - 1 을 이름과 견준다). 모르는 이름이면 false 입니다. */
-            template <typename E>
-            [[nodiscard]] static bool parseEnumName( string_view name, int32 count, E& outValue )
-            {
-                for ( int32 value = 0; value < count; ++value )
-                {
-                    if ( name == string_view{ getEnumName( static_cast<E>( value ) ) } )
-                    {
-                        outValue = static_cast<E>( value );
-                        return true;
-                    }
-                }
-                return false;
-            }
-
             static bool runPlaySequence( IAutomationStepContext& context, const AutomationStep& step )
             {
                 SequencePlayerComponent* pSequence = findSequence( context, step );
@@ -126,23 +111,23 @@ namespace sw
                 const AutomationSequenceStepParams params = step.readValidatedProperties<AutomationSequenceStepParams>();
                 if ( params._loop.empty() == false )
                 {
-                    SequenceLoopMode loopMode = SequenceLoopMode::None;
-                    if ( parseEnumName( params._loop, 3, loopMode ) == false )
+                    const optional<SequenceLoopMode> loopMode = tryParseEnum<SequenceLoopMode>( params._loop );
+                    if ( loopMode.has_value() == false )
                     {
                         context.recordFailure( step, "loop must be None, Loop or PingPong" );
                         return true;
                     }
-                    pSequence->setLoopMode( loopMode );
+                    pSequence->setLoopMode( *loopMode );
                 }
                 if ( params._movement.empty() == false )
                 {
-                    SequencePlayerMovement movement = SequencePlayerMovement::Free;
-                    if ( parseEnumName( params._movement, 3, movement ) == false )
+                    const optional<SequencePlayerMovement> movement = tryParseEnum<SequencePlayerMovement>( params._movement );
+                    if ( movement.has_value() == false )
                     {
                         context.recordFailure( step, "movement must be Free, Blocked or Confined" );
                         return true;
                     }
-                    pSequence->setPlayerMovement( movement );
+                    pSequence->setPlayerMovement( *movement );
                 }
                 if ( params._rate != 0.0f && pSequence->setPlayRate( MathUtil::abs( params._rate ) ) == false )
                 {

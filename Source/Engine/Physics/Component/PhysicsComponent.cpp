@@ -138,7 +138,7 @@ namespace sw
             case PhysicsComponentPhase::Count:
                 break;
         }
-        SW_FATAL( "PhysicsComponent: unknown physics phase %#", static_cast<uint32>( _phase ) );
+        reportFatalError( "PhysicsComponent: unknown physics phase %#", static_cast<uint32>( _phase ) );
         return TickPhase::Early;
     }
 

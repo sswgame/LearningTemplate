@@ -6,19 +6,9 @@
 	<_properties>
 		<item name="_color" defaultValue="0.9 0.6 0.3 0.45" />
 	</_properties>
-	<_permutations quality="High" shaderLOD="300" usage="StaticMesh">
+	<_permutations>
 		<_alwaysDefines>
-			<item>MATERIAL_DOMAIN_SURFACE</item>
 			<item>MATERIAL_BLEND_TRANSLUCENT</item>
 		</_alwaysDefines>
-		<_multiCompiles>
-			<item name="FogMode" selected="FOG_OFF">
-				<_options>
-					<item>FOG_OFF</item>
-					<item>FOG_LINEAR</item>
-					<item>FOG_EXP</item>
-				</_options>
-			</item>
-		</_multiCompiles>
 	</_permutations>
 </MaterialDef>

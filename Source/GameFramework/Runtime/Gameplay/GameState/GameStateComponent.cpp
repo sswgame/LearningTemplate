@@ -16,6 +16,7 @@
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
+#include "GameFramework/Runtime/Foundation/Framework/Save/ComponentStateStore.h"
 #include "GameFramework/Runtime/Foundation/GameData/ConfigRangeUtil.h"
 #include "GameFramework/Runtime/Gameplay/GameState/StateSectionTableUtil.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
@@ -27,6 +28,9 @@ namespace sw
 {
     namespace
     {
+        /** @brief 월드 상태(플래그 · 시계 · 날씨 · 땅)를 모든 게임의 상태 스냅샷에 싣습니다 — 공유 상태가 게임의 디렉터보다 먼저 돌아온다. */
+        const StatefulComponentRegistrar<GameStateComponent> s_gameStateRegistration{ "GameStateComponent" };
+
         struct GameStateComponentInternal
         {
             static constexpr uint32 kSectionCount = 4;

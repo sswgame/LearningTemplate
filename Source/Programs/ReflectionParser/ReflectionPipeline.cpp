@@ -196,6 +196,8 @@ namespace sw
                             out.append( "  [static]" );
                         if ( method._bCallInEditor == SW_TRUE )
                             out.append( "  [CallInEditor]" );
+                        if ( method._bExec == SW_TRUE )
+                            out.append( "  [Exec]" );
                         if ( method._editorPreview.empty() == false )
                             out.appendFormat( "  [EditorPreview=%#]", method._editorPreview );
                         if ( method._bConstructor == SW_TRUE )

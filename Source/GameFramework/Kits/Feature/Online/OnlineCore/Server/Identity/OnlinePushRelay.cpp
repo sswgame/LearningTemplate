@@ -102,9 +102,9 @@ namespace sw
     {
         if ( ServiceFactoryNode::addTo( OnlinePushRelayInternal::getList(), pEntry ) )
             return;
-        // 오르지 못한 항목의 알림은 다른 서버에서 받지 못한다. 고칠 곳은 항목 선언이므로 모든 구성에서 멈춘다. 모듈 로드(정적 초기화) 중이라도 `SW_FATAL` 은 표준 오류에 먼저 쓴다.
+        // 오르지 못한 항목의 알림은 다른 서버에서 받지 못한다. 고칠 곳은 항목 선언이므로 모든 구성에서 멈춘다. 모듈 로드(정적 초기화) 중이라도 `reportFatalError` 은 표준 오류에 먼저 쓴다.
         const utf8* pName = pEntry->_pName != nullptr ? pEntry->_pName : "(no name)";
-        SW_FATAL( "Online push relay entry '%#' could not be registered (missing or duplicate name)", pName );
+        reportFatalError( "Online push relay entry '%#' could not be registered (missing or duplicate name)", pName );
     }
 
     void OnlinePushRelayRegistry::unregisterEntry( OnlinePushRelayEntry* pEntry )

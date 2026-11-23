@@ -52,6 +52,21 @@ SW_TEST_CASE( SceneEnvironmentTest, FogMatchesTheComponentLookup )
 }
 
 /**
+ * @brief [SceneEnvironmentTest] 환경 시간은 씬이 도는 동안 흐르고 씬을 비우면 0 에서 다시 시작한다 — 모든 식생이 이 한 값을 읽는다(컴포넌트마다 따로 세지 않는다)
+ */
+SW_TEST_CASE( SceneEnvironmentTest, EnvironmentTimeFlowsWithTheScene )
+{
+    GameObjectManager manager;
+    SceneEnvironment& environment = manager.getSubsystem<SceneEnvironment>();
+    SW_EXPECT_NEAR( 0.0f, environment.collectMaterialGlobals()._environment._w, 1.0e-6f );
+    environment.update( 0.25f );
+    environment.update( 0.5f );
+    SW_EXPECT_NEAR( 0.75f, environment.collectMaterialGlobals()._environment._w, 1.0e-6f );
+    manager.clear();
+    SW_EXPECT_NEAR( 0.0f, environment.collectMaterialGlobals()._environment._w, 1.0e-6f );
+}
+
+/**
  * @brief [SceneEnvironmentTest] 표면 변형 값 칸 — 쓴 값을 읽고, 씬을 비우면 층이 없다
  */
 SW_TEST_CASE( SceneEnvironmentTest, SurfaceDeformValueIsClearedWithTheScene )

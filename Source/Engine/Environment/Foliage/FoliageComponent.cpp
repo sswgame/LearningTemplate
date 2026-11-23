@@ -16,7 +16,6 @@
 #include "Engine/Environment/Foliage/FoliageInfluencerComponent.h"
 #include "Engine/Environment/Terrain/TerrainComponent.h"
 #include "Engine/Environment/Wind/WindComponent.h"
-#include "Engine/Foundation/DeterministicRun.h"
 #include "Engine/Foundation/EngineParallel.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
@@ -41,7 +40,6 @@ namespace sw
             {
                 hashed_string _windParams{ "_windParams" };
                 hashed_string _windWave{ "_windWave" };
-                hashed_string _viewParams{ "_viewParams" };
                 hashed_string _fadeParams{ "_fadeParams" };
             };
 
@@ -185,7 +183,6 @@ namespace sw
         , _listLayerMeshLoad{}
         , _builtRegion{}
         , _pPrimitiveRegistry{ nullptr }
-        , _time{ 0.0f }
         , _terrainStabilityFrames{ 0 }
         , _instanceCount{ 0 }
         , _cutInstanceCount{ 0 }
@@ -337,8 +334,6 @@ namespace sw
     void FoliageComponent::onTick( TickContext& context )
     {
         SceneComponent::onTick( context );
-        if ( engine::getSubsystem<DeterministicRun>().getPolicy()._bFreezeEnvironmentTime == SW_FALSE ) // 결정적 사진은 바람 · 파도 시간을 0 에 멈춘다
-            _time += context.getDeltaTime();
         updateRegrow( context.getDeltaTime() );
         float3     viewPosition{};
         const bool bCanUpdateView = _listCell.empty() == false && EnvironmentUtil::findViewPosition( context.getManager(), viewPosition );
@@ -867,13 +862,13 @@ namespace sw
             const FoliageLayer&                layer          = _listLayer[layerIndex];
             const auto                         applyLayerView = [&]( EnvironmentMaterial& material )
             {
-                // 머티리얼 값은 VS 가 읽는다(foliage.hlsl). x 와 y 는 방향, z 는 세기 × 반응, w 는 시간이다.
-                material.setVector( names._windParams, float4{ wind._direction._x, wind._direction._y, wind._strength * layer._windResponse, _time } );
+                // 머티리얼 값은 VS 가 읽는다(foliage.hlsl). x 와 y 는 방향, z 는 세기 × 반응이다. 바람 시간 · 카메라 위치는 모든 식생에 같은 값이라 전역 상수다(`SceneEnvironment::collectMaterialGlobals`) —
+                // 여기 실으면 바람이 그대로여도 매 프레임 레이어 · 구간마다 사본을 다시 만든다.
+                material.setVector( names._windParams, float4{ wind._direction._x, wind._direction._y, wind._strength * layer._windResponse, 0.0f } );
                 // x = 흔들림 주파수, y = 돌풍 세기 × 반응, z = 돌풍 주파수, w = 흔들림이 다 차는 높이
                 material.setVector( names._windWave, float4{ wind._swayFrequency, wind._gustStrength * layer._windResponse, wind._gustFrequency, layer._swayHeight } );
-                // xyz = 카메라, w = 휘게 하는 세기
-                material.setVector( names._viewParams, float4{ viewPosition._x, viewPosition._y, viewPosition._z, layer._bendStrength } );
-                material.setVector( names._fadeParams, float4{ layer._fadeStart, layer._fadeEnd, 0.0f, 0.0f } );
+                // x 와 y = 페이드 시작 · 끝, z = 휘게 하는 세기
+                material.setVector( names._fadeParams, float4{ layer._fadeStart, layer._fadeEnd, layer._bendStrength, 0.0f } );
                 for ( uint32 slot = 0; slot < FoliageInfluencerComponent::kMaxInfluencerCount; ++slot )
                 {
                     material.setVector( Internal::getInfluencerName( slot ), arrSphere[slot] );
