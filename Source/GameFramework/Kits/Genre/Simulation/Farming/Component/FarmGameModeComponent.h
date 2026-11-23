@@ -4,7 +4,7 @@
  * @details 키트 세 갈래의 가운데다: 규칙(키트 루트 — 밭 · 출하함 · 작물 카탈로그)을 들고 씬과 잇는다. 밭 타일의 모습 · 농부 몸 · 카메라 초점은 클라이언트 모듈(`GF_Client_Farming` 의
  *          `FarmFieldViewComponent` · `FarmSoilComponent` · `FarmCropComponent` · `FarmerComponent`)이 이 디렉터의 읽기 API 로만 다룬다 — 전용 서버는 그 모듈을 짓지 않는다.
  *          농부가 **무엇을 누르는가는 농부 폰의 의도**(`PawnComponent`. 플레이어 조종자 또는 `FarmAutoFarmerAIComponent` 가 낸다)이고 디렉터는 입력 맵을 읽지 않는다.
- *          해는 Runtime `DaylightComponent` 가 `readDaylight` 로 읽는다. 씬에 하나만 둔다.
+ *          해는 Runtime `DaylightComponent` 가 `readHourOfDay` 로 읽는다. 씬에 하나만 둔다.
  *
  *          틱 규칙: 디렉터는 `TickGroup::PrePhysics` 에서 상태를 쓰고 뷰는 `PostUpdate` 에서 읽는다.
  *          틱이 끝난 뒤의 스폰, 상태 바이트 보류, 정리, 효과음은 베이스 `GameModeComponent` 가 맡는다.
@@ -94,10 +94,9 @@ namespace sw
         bool             isRaining() const { return _bRaining == SW_TRUE; }
         /** @brief 지난 틱에 농부가 걸었으면(이동 의도가 있었으면) true 입니다. 농부는 물리 없이 위치를 옮겨 `Object.Speed` 로는 볼 수 없다. */
         bool               isFarmerWalking() const { return _bFarmerWalking == SW_TRUE; }
-        [[nodiscard]] bool readDaylight( float32& outHourOfDay, bool& outbPrecipitating ) const override
+        [[nodiscard]] bool readHourOfDay( float32& outHourOfDay ) const override
         {
-            outHourOfDay      = _hourOfDay;
-            outbPrecipitating = isRaining();
+            outHourOfDay = _hourOfDay;
             return true;
         }
 

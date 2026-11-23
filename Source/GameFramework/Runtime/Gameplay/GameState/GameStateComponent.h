@@ -150,6 +150,12 @@ namespace sw
          * @details 씬을 훑지 않고 컴포넌트 레지스트리를 읽는다 — 잠금 없는 읽기라 병렬 틱에서도 부를 수 있고, 틱마다 불려도 할당하지 않는다.
          */
         [[nodiscard]] static GameStateComponent* findOpen( const GameObjectManager* pManager );
+        /**
+         * @brief 씬 @p manager 의 지금 날씨 값 @p valueName(카탈로그 `<Values>`)입니다. 날씨를 연 판 상태가 없는 씬은 0 입니다. 병렬 틱에서도 부를 수 있다.
+         * @details 날씨를 자기 값으로 읽는 쪽(강수 · 젖음 · 파도 · 데칼 씻김)의 한 길이다. 빛의 어둠은 읽지 않는다 — 날씨가 해 · 하늘에 배율로 쓰므로(`<SceneBinding>`) 빛의 세기를 읽으면 이미 들어 있다
+         *          (저마다 날씨 값을 곱하면 어둠이 두 번 걸린다).
+         */
+        [[nodiscard]] static float32 readWeather( const GameObjectManager& manager, const hashed_string& valueName );
 
     private:
         GameFlags                        _flags;

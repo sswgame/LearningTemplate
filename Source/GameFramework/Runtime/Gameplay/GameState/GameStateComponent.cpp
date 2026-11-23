@@ -319,6 +319,12 @@ namespace sw
         return nullptr;
     }
 
+    float32 GameStateComponent::readWeather( const GameObjectManager& manager, const hashed_string& valueName )
+    {
+        const GameStateComponent* pState = findOpen( &manager );
+        return pState != nullptr ? pState->getWeather().computeValue( valueName ) : 0.0f;
+    }
+
     GameFlags* GameStateComponent::GameFlagsOwnerPort::findOpenFlags()
     {
         return getPortOwner<GameStateComponent>( *this, offsetof( GameStateComponent, _gameFlagsOwnerPort ) ).findOpenFlags();

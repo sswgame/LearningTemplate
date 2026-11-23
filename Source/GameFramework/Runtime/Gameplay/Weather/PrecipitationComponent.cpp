@@ -11,7 +11,6 @@
 #include "Engine/VFX/VFXComponent.h"
 
 #include "GameFramework/Runtime/Gameplay/GameState/GameStateComponent.h"
-#include "GameFramework/Runtime/World/Environment/WeatherSystem.h"
 
 namespace sw
 {
@@ -34,11 +33,9 @@ namespace sw
             SW_LOG_ERROR_ONCE_ID( "Precipitation.NoEffect", "'%#' has a PrecipitationComponent without a VFXComponent - nothing falls", pOwner != nullptr ? pOwner->getName().c_str() : "?" );
             return;
         }
-        // 날씨가 없는 씬은 강수가 없다 — 판 상태가 날씨를 열지 않았다(CharacterWetnessComponent 의 비와 같은 규칙).
-        const GameStateComponent* pSession  = GameStateComponent::findOpen( &context.getManager() );
-        const float32             intensity = pSession != nullptr ? MathUtil::saturate( pSession->getWeather().computeValue( _weatherValue ) ) : 0.0f;
-        float3                    view{};
-        const bool                bActive = intensity > 0.0f && EnvironmentUtil::findViewPosition( context.getManager(), view );
+        const float32 intensity = MathUtil::saturate( GameStateComponent::readWeather( context.getManager(), _weatherValue ) ); // 날씨가 없는 씬은 강수가 없다(0)
+        float3        view{};
+        const bool    bActive = intensity > 0.0f && EnvironmentUtil::findViewPosition( context.getManager(), view );
         if ( bActive == false )
         {
             if ( pEffect->isPlaying() )

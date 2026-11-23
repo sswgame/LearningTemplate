@@ -166,9 +166,8 @@ namespace sw
         _submersion                      = MathUtil::saturate( _waterDepth / _bodyHeight );
 
         // 비: 날씨 값 × 하늘이 열렸는지. 날씨가 없는 씬은 비가 없다(판 상태가 날씨를 열지 않았다).
-        const GameStateComponent* pSession      = GameStateComponent::findOpen( &manager );
-        const float32             precipitation = pSession != nullptr ? MathUtil::max( 0.0f, pSession->getWeather().computeValue( _precipitationValue ) ) : 0.0f;
-        bool                      bSheltered    = false;
+        const float32 precipitation = MathUtil::max( 0.0f, GameStateComponent::readWeather( manager, _precipitationValue ) );
+        bool          bSheltered    = false;
         if ( precipitation > 0.0f && _shelterDistance > 0.0f )
             bSheltered = WeatherShelter::isSheltered( manager, feet + float3{ 0.0f, _bodyHeight, 0.0f }, _shelterDistance, pOwner->getObjectID() );
         _rainExposure = bSheltered ? 0.0f : precipitation;

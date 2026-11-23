@@ -73,8 +73,7 @@ namespace sw
     void DecalRainWashSystem::runWashPass( GameObjectManager& manager, float32 seconds )
     {
         // 비: 날씨 값 × 하늘이 열렸는지. 날씨가 없는 씬은 비가 없다(판 상태가 날씨를 열지 않았다).
-        const GameStateComponent* pSession      = GameStateComponent::findOpen( &manager );
-        const float32             precipitation = pSession != nullptr ? MathUtil::max( 0.0f, pSession->getWeather().computeValue( _precipitationValue ) ) : 0.0f;
+        const float32 precipitation = MathUtil::max( 0.0f, GameStateComponent::readWeather( manager, _precipitationValue ) );
         if ( precipitation <= 0.0f || seconds <= 0.0f )
             return;
         // 씻김이 데칼을 지울 수 있다 — 도는 목록은 핸들 사본이라 지워진 데칼을 다시 찾지 않는다.
