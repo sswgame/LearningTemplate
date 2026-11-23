@@ -266,6 +266,8 @@ namespace sw
         uint32 getTimestampBase() const { return getFrameSlot() * constant::render::kMaxGPUTimestampSlot; }
         /** @brief 슬롯 하나를 기록했다고 표시합니다. 여러 패스 스레드가 동시에 부를 수 있습니다. */
         void markTimestampWritten( uint32 slotIndex ) { _timestampRing.markWritten( slotIndex ); }
+        /** @brief 비동기 컴퓨트 큐 리스트가 슬롯을 적었습니다(그래픽스 큐와 겹치는 슬롯을 가린다). */
+        void markComputeQueueTimestampWritten( uint32 slotIndex ) { _timestampRing.markComputeQueueWritten( slotIndex ); }
         /** @brief 리소스 생성과 파괴 인터페이스(VulkanRHIResourceFactory)를 반환합니다. */
         IRHIResourceFactory* getResourceFactory() override;
         /** @brief 프레임 스트림 컨텍스트입니다. 백버퍼 패스와 Present 가 여기에 기록합니다. */

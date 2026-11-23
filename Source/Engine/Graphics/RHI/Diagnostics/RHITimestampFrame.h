@@ -9,12 +9,10 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
-#include "Engine/Graphics/RHI/RHIDescriptors.h"
+#include "Engine/Graphics/RHI/Diagnostics/GPUTimestampSlotMask.h"
 
 namespace sw
 {
-    struct GPUTimestampSlotMask;
-
     /**
      * @struct RHITimestampFrame
      * @brief 이미 끝난 한 프레임의 타임스탬프입니다(`IRHITimestampProvider::readTimestamps`).
@@ -24,8 +22,9 @@ namespace sw
      */
     struct SW_API RHITimestampFrame
     {
-        vector<float32> _listMicro;        ///< 슬롯마다 기준점 뒤 마이크로초. 기록되지 않은 슬롯은 음수, 읽을 것이 없으면 비어 있다
-        int64           _originNanos{ 0 }; ///< 기준점(가장 이른 슬롯)의 GPU 시계 나노초
+        vector<float32>      _listMicro;          ///< 슬롯마다 기준점 뒤 마이크로초. 기록되지 않은 슬롯은 음수, 읽을 것이 없으면 비어 있다
+        int64                _originNanos{ 0 };   ///< 기준점(가장 이른 슬롯)의 GPU 시계 나노초
+        GPUTimestampSlotMask _computeQueueMask{}; ///< 비동기 컴퓨트 큐 리스트가 적은 슬롯. 그래픽스 큐와 시간이 겹치므로 한 트리(형제 순서)로 내지 않는다
 
         // 읽힌 틱 배열과 준비 비트를 받아 마이크로초 목록을 만듭니다. 디바이스가 없어도 돌아 `RHITimestampTest` 가 검증합니다.
         /**
@@ -35,11 +34,13 @@ namespace sw
          *          구간 차이는 같습니다.
          * @param pTick 슬롯마다의 틱, `constant::render::kMaxGPUTimestampSlot` 개. 준비되지 않은 슬롯의 값은 읽지 않습니다.
          * @param readyMask 이번에 읽힌 슬롯의 비트.
+         * @param computeQueueMask 비동기 컴퓨트 큐 리스트가 적은 슬롯(`RHITimestampRing::getComputeQueueMask`). 틱은 이미 그래픽스 큐 시계여야 합니다.
          * @param nanosPerTick 틱 하나가 몇 나노초인가 (DX: 1e9 / 주파수, GL: 1, Vulkan: timestampPeriod). `readGPUClockNanos` 와 같은 환산이어야 합니다.
          * @param outFrame 슬롯 수만큼 채웁니다. 기록되지 않은 슬롯은 -1 이고, 부르는 쪽이 그 쌍을 통째로 버리는 약속입니다. readyMask 가 비었으면 비웁니다.
          * @return 하나라도 풀었으면 true 입니다.
          */
-        static bool resolve( const uint64* pTick, const GPUTimestampSlotMask& readyMask, float64 nanosPerTick, RHITimestampFrame& outFrame );
+        static bool resolve( const uint64* pTick, const GPUTimestampSlotMask& readyMask, const GPUTimestampSlotMask& computeQueueMask, float64 nanosPerTick,
+                             RHITimestampFrame& outFrame );
 
         /** @brief 틱을 GPU 시계 나노초로 바꿉니다(`resolve` 의 기준점과 `readGPUClockNanos` 가 같은 환산을 쓰게 한 곳에 둡니다). */
         static int64 convertTickToNanos( uint64 tick, float64 nanosPerTick );

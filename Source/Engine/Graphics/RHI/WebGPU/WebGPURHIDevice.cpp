@@ -851,7 +851,7 @@ namespace sw
             // 값은 나노초다(명세) — 틱 하나 = 1 ns. 적지 않은 칸은 `RHITimestampFrame::resolve` 가 음수로 둔다(마스크).
             const uint64* const pTick = static_cast<const uint64*>( wgpuBufferGetConstMappedRange( readback._buffer, 0, WebGPURHIDeviceInternal::kTimestampBytes ) );
             if ( pTick != nullptr )
-                (void)RHITimestampFrame::resolve( pTick, _timestampRing.getSlotMask( ringSlot ), 1.0, _timestampFrame );
+                (void)RHITimestampFrame::resolve( pTick, _timestampRing.getSlotMask( ringSlot ), _timestampRing.getComputeQueueMask( ringSlot ), 1.0, _timestampFrame );
             wgpuBufferUnmap( readback._buffer );
         }
         readback._bQueued = SW_FALSE;

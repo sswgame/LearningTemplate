@@ -30,7 +30,7 @@ SW_TEST_CASE( RHITimestampTest, OriginIsEarliestTickAndUnwrittenSlotsAreNegative
     readyMask.set( kLastSlot ); // 64 를 넘는 칸 — 둘째 단어의 비트다
 
     RHITimestampFrame frame;
-    SW_REQUIRE_TRUE( RHITimestampFrame::resolve( arrTick, readyMask, 500.0, frame ) ); // 틱 하나 = 500 ns = 0.5 us
+    SW_REQUIRE_TRUE( RHITimestampFrame::resolve( arrTick, readyMask, GPUTimestampSlotMask{}, 500.0, frame ) ); // 틱 하나 = 500 ns = 0.5 us
     const vector<float32>& listMicro = frame._listMicro;
     SW_REQUIRE_EQUAL( size_t( constant::render::kMaxGPUTimestampSlot ), listMicro.size() );
     SW_EXPECT_EQUAL( int64( 400 * 500 ), frame._originNanos );
@@ -41,6 +41,6 @@ SW_TEST_CASE( RHITimestampTest, OriginIsEarliestTickAndUnwrittenSlotsAreNegative
     SW_EXPECT_TRUE( listMicro[1] < 0.0f && listMicro[kLastSlot - 1u] < 0.0f );
 
     // 준비된 칸이 없으면 비운다 — 호출자는 빈 목록을 "이번 프레임 없음" 으로 읽는다.
-    SW_EXPECT_FALSE( RHITimestampFrame::resolve( arrTick, GPUTimestampSlotMask{}, 500.0, frame ) );
+    SW_EXPECT_FALSE( RHITimestampFrame::resolve( arrTick, GPUTimestampSlotMask{}, GPUTimestampSlotMask{}, 500.0, frame ) );
     SW_EXPECT_TRUE( frame._listMicro.empty() );
 }

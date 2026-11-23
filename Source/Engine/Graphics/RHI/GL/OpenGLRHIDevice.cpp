@@ -1061,7 +1061,7 @@ namespace sw
             readyMask.set( slotIndex );
         }
         // GL 타임스탬프는 나노초다.
-        RHITimestampFrame::resolve( arrTick, readyMask, 1.0, _timestampFrame );
+        RHITimestampFrame::resolve( arrTick, readyMask, _timestampRing.getComputeQueueMask( ringSlot ), 1.0, _timestampFrame );
     }
 
     IRHISwapChain* OpenGLRHIDevice::createSwapChainInternal( const RHISwapChainDesc& desc )

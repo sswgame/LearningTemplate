@@ -2433,7 +2433,7 @@ namespace sw
             arrTick[index] = arrResult[index * 2];
             readyMask.set( index );
         }
-        RHITimestampFrame::resolve( arrTick, readyMask, static_cast<float64>( _timestampPeriod ), _timestampFrame );
+        RHITimestampFrame::resolve( arrTick, readyMask, _timestampRing.getComputeQueueMask( getFrameSlot() ), static_cast<float64>( _timestampPeriod ), _timestampFrame );
     }
 
     // 길이 유지(긴 함수 정리 기준): 펜스 대기 · 이미지 획득 · 기록 시작의 프레임 순서가 곧 의미라 나누지 않는다.
@@ -3192,7 +3192,7 @@ namespace sw
             return IRHIDevice::createAsyncComputeCommandList(); // 능력이 거짓인 길 — 오류를 남기고 nullptr
         // 같은 패밀리라 일반 리스트(같은 패밀리의 풀 · 같은 바인딩)를 그대로 두 번째 큐에 낸다. 브레드크럼만 제 칸에 쓴다(큐 사이 쓰기 경합이 없게).
         unique_ptr<VulkanRHICommandList> list = make_unique<VulkanRHICommandList>( this );
-        list->setBreadcrumbSlotBase( kComputeBreadcrumbSlotBase );
+        list->setComputeQueueList( kComputeBreadcrumbSlotBase );
         return list;
     }
 

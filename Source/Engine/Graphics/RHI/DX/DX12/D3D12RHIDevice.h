@@ -305,6 +305,7 @@ namespace sw
         uint32 getTimestampBase() const { return _frameRing.currentIndex() * constant::render::kMaxGPUTimestampSlot; }
         /** @brief 슬롯 하나를 기록했다고 표시합니다. 여러 패스 스레드가 동시에 부를 수 있습니다. */
         void                         markTimestampWritten( uint32 slotIndex ) { _timestampRing.markWritten( slotIndex ); }
+        void                         markComputeQueueTimestampWritten( uint32 slotIndex ) { _timestampRing.markComputeQueueWritten( slotIndex ); }
         void                         resizeInternal( uint32 width, uint32 height ) override;
         [[nodiscard]] bool           setBackBufferColorSpaceInternal( RHIColorSpace colorSpace, const RHIDisplayMetadata& metadata ) override;
         [[nodiscard]] bool           setDisplayMetadataInternal( const RHIDisplayMetadata& metadata ) override { return _swapChain.setDisplayMetadata( metadata ); }

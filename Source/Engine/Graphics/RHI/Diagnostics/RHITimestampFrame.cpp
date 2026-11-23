@@ -2,14 +2,14 @@
 
 #include "Engine/Graphics/RHI/Diagnostics/RHITimestampFrame.h"
 
-#include "Engine/Graphics/RHI/Diagnostics/GPUTimestampSlotMask.h"
-
 namespace sw
 {
-    bool RHITimestampFrame::resolve( const uint64* pTick, const GPUTimestampSlotMask& readyMask, float64 nanosPerTick, RHITimestampFrame& outFrame )
+    bool RHITimestampFrame::resolve( const uint64* pTick, const GPUTimestampSlotMask& readyMask, const GPUTimestampSlotMask& computeQueueMask, float64 nanosPerTick,
+                                     RHITimestampFrame& outFrame )
     {
         outFrame._listMicro.clear();
-        outFrame._originNanos = 0;
+        outFrame._originNanos      = 0;
+        outFrame._computeQueueMask = computeQueueMask;
         if ( pTick == nullptr || readyMask.any() == false )
             return false;
 
