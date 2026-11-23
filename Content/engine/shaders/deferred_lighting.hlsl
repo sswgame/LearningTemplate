@@ -59,7 +59,29 @@ void applyShadingModel( inout SurfaceBRDF brdf, uint shadingModel, float4 custom
     }
     else if ( shadingModel == SW_SHADING_MODEL_ID_ANISOTROPIC )
     {
+        const float2 coat = SurfaceShading::unpackCoat( customData.a );
         brdf.setAnisotropy( Octahedral::decode( customData.rg * 2.0f - 1.0f ), customData.b * 2.0f - 1.0f );
+        brdf.setCoat( coat.x, coat.y );
+    }
+    else if ( shadingModel == SW_SHADING_MODEL_ID_SUBSURFACE_COAT )
+    {
+        const float2 coatRoughnessTransmission = SurfaceShading::unpackPair( customData.a );
+        brdf.setSubsurface( SurfaceShading::unpackColor( customData.r, customData.g ) );
+        brdf.setTransmission( albedo * coatRoughnessTransmission.y, customData.r );
+        brdf.setCoat( customData.b, SurfaceShading::unpackCoatRoughness( coatRoughnessTransmission.x ) );
+    }
+    else if ( shadingModel == SW_SHADING_MODEL_ID_CLOTH_COAT )
+    {
+        const float2 sheenRoughnessWeight = SurfaceShading::unpackPair( customData.b );
+        const float2 coat                 = SurfaceShading::unpackCoat( customData.a );
+        brdf.setSheen( SurfaceShading::unpackColor( customData.r, customData.g ), sheenRoughnessWeight.x, sheenRoughnessWeight.y );
+        brdf.setCoat( coat.x, coat.y );
+    }
+    else if ( shadingModel == SW_SHADING_MODEL_ID_THIN_TRANSLUCENT_COAT )
+    {
+        const float2 coat = SurfaceShading::unpackCoat( customData.b );
+        brdf.setTransmission( SurfaceShading::unpackColor( customData.r, customData.g ), customData.a );
+        brdf.setCoat( coat.x, coat.y );
     }
 }
 #else

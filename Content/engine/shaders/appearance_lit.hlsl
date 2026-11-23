@@ -10,7 +10,7 @@
  *          MATERIAL_FUR_SHELL(appearance_fur.hlsli, MATERIAL_VERTEX_DEFORM 과 함께).
  *          디퍼드: 엽 하나는 셰이딩 모델 번호 + 사용자 칸 네 채널로 G버퍼에 싣는다(SW_MATERIAL_CUSTOM_SHADING — computeMaterialShading, 표는 shading_model_ids.hlsli).
  *            눈 → EYE(코트 · 공막 감쌈), 피부 → SUBSURFACE, 천 · 레이스 → CLOTH, 솔질 금속 → ANISOTROPIC, 얇은 면 → THIN_TRANSLUCENT, 엽 없는 갈래(나무 · 돌 · 가죽 · 금속 · 녹 · 코트) → CLEAR_COAT.
- *            코트를 칸에 싣지 않는 번호의 젖음은 G버퍼 거칠기에 접는다(computeStoredRoughness).
+ *            젖음 · 기름막이 있는 픽셀은 그 번호의 코트판(_COAT)에 싣는다(computeShadingModel — 마른 픽셀은 코트 없는 번호 그대로다).
  *          포워드 전용(MATERIAL_FORWARD_ONLY)은 엽이 겹쳐 칸 넷에 들지 않는 갈래뿐이다 — 아래 검사가 G버퍼 변형을 쿠킹에서 멈춘다.
  *            박막(진주층 · 비늘): 시선 각마다 다른 F0 색(채널 셋) + 바탕 PBR — G버퍼의 반사율 칸은 스칼라다.
  *            털: 가닥 방향(둘) · 흡수 색(셋) · 큐티클 기울기(하나) — 여섯 채널.
@@ -101,25 +101,25 @@ SW_MATERIAL_END
     #error "appearance_lit.hlsl: layered lobes (thin film, fur strand, net underlayer, sheen with anisotropy or subsurface) do not fit the G-buffer: list MATERIAL_FORWARD_ONLY"
 #endif
 
-// G버퍼의 셰이딩 모델 번호 — 엽 define 하나가 고른다(눈은 산란 define 도 가져 먼저 고른다). 코트를 칸에 싣는 번호만 SW_APPEARANCE_STORES_COAT 1 이다.
+// G버퍼의 셰이딩 모델 번호 — 엽 define 하나가 고른다(눈은 산란 define 도 가져 먼저 고른다). 둘째는 코트가 있는 픽셀의 번호다(코트 칸이 있는 번호는 둘이 같다).
 #if defined( MATERIAL_EYE )
-    #define SW_APPEARANCE_SHADING_MODEL SW_SHADING_MODEL_ID_EYE
-    #define SW_APPEARANCE_STORES_COAT   1
+    #define SW_APPEARANCE_SHADING_MODEL      SW_SHADING_MODEL_ID_EYE
+    #define SW_APPEARANCE_COAT_SHADING_MODEL SW_SHADING_MODEL_ID_EYE
 #elif defined( MATERIAL_LOBE_SUBSURFACE )
-    #define SW_APPEARANCE_SHADING_MODEL SW_SHADING_MODEL_ID_SUBSURFACE
-    #define SW_APPEARANCE_STORES_COAT   0
+    #define SW_APPEARANCE_SHADING_MODEL      SW_SHADING_MODEL_ID_SUBSURFACE
+    #define SW_APPEARANCE_COAT_SHADING_MODEL SW_SHADING_MODEL_ID_SUBSURFACE_COAT
 #elif defined( MATERIAL_LOBE_SHEEN )
-    #define SW_APPEARANCE_SHADING_MODEL SW_SHADING_MODEL_ID_CLOTH
-    #define SW_APPEARANCE_STORES_COAT   0
+    #define SW_APPEARANCE_SHADING_MODEL      SW_SHADING_MODEL_ID_CLOTH
+    #define SW_APPEARANCE_COAT_SHADING_MODEL SW_SHADING_MODEL_ID_CLOTH_COAT
 #elif defined( MATERIAL_LOBE_ANISOTROPY )
-    #define SW_APPEARANCE_SHADING_MODEL SW_SHADING_MODEL_ID_ANISOTROPIC
-    #define SW_APPEARANCE_STORES_COAT   0
+    #define SW_APPEARANCE_SHADING_MODEL      SW_SHADING_MODEL_ID_ANISOTROPIC
+    #define SW_APPEARANCE_COAT_SHADING_MODEL SW_SHADING_MODEL_ID_ANISOTROPIC
 #elif defined( MATERIAL_LOBE_TRANSMISSION )
-    #define SW_APPEARANCE_SHADING_MODEL SW_SHADING_MODEL_ID_THIN_TRANSLUCENT
-    #define SW_APPEARANCE_STORES_COAT   0
+    #define SW_APPEARANCE_SHADING_MODEL      SW_SHADING_MODEL_ID_THIN_TRANSLUCENT
+    #define SW_APPEARANCE_COAT_SHADING_MODEL SW_SHADING_MODEL_ID_THIN_TRANSLUCENT_COAT
 #else
-    #define SW_APPEARANCE_SHADING_MODEL SW_SHADING_MODEL_ID_CLEAR_COAT // 코트 무게 0 이면 기본 PBR 과 같다
-    #define SW_APPEARANCE_STORES_COAT   1
+    #define SW_APPEARANCE_SHADING_MODEL      SW_SHADING_MODEL_ID_CLEAR_COAT // 코트 무게 0 이면 기본 PBR 과 같다
+    #define SW_APPEARANCE_COAT_SHADING_MODEL SW_SHADING_MODEL_ID_CLEAR_COAT
 #endif
 
 #define SW_MATERIAL_CUSTOM_LIGHTING
@@ -215,8 +215,9 @@ struct AppearanceSurface
     void perturbNormal( float2 slope, PixelContext context ); // UV 공간 높이 기울기로 노멀을 기울인다(무늬)
     void applyWetFilm( PixelContext context );
     SurfaceBRDF makeBRDF( float3 worldPosition );
-    float4 computeCustomData();     // G버퍼 사용자 칸 — 셰이딩 모델 번호마다(shading_model_ids.hlsli 표)
-    float computeStoredRoughness(); // G버퍼 거칠기 — 코트를 싣지 않는 번호는 코트를 접는다
+    bool hasStoredCoat();       // 코트 칸에 실을 만큼 코트가 있는지(8 비트 칸의 반 단계)
+    uint computeShadingModel(); // G버퍼 번호 — 코트가 있는 픽셀은 코트판 번호
+    float4 computeCustomData(); // G버퍼 사용자 칸 — 셰이딩 모델 번호마다(shading_model_ids.hlsli 표)
 };
 
 #include "appearance_pattern.hlsli"
@@ -365,6 +366,16 @@ SurfaceBRDF AppearanceSurface::makeBRDF( float3 worldPosition )
     return brdf;
 }
 
+bool AppearanceSurface::hasStoredCoat()
+{
+    return _coatWeight > 0.5f / 255.0f;
+}
+
+uint AppearanceSurface::computeShadingModel()
+{
+    return hasStoredCoat() ? SW_APPEARANCE_COAT_SHADING_MODEL : SW_APPEARANCE_SHADING_MODEL;
+}
+
 #if defined( MATERIAL_EYE )
 float4 AppearanceSurface::computeCustomData()
 {
@@ -375,22 +386,29 @@ float4 AppearanceSurface::computeCustomData()
 float4 AppearanceSurface::computeCustomData()
 {
     // 디퍼드는 투과 색을 알베도 × 세기로 푼다(deferred_lighting.hlsl) — 세기는 투과 색의 가장 밝은 채널이다.
-    return float4( _subsurfaceWrap, max( _transmissionColor.r, max( _transmissionColor.g, _transmissionColor.b ) ) );
+    const float  transmission = SurfaceShading::findBrightest( _transmissionColor );
+    const float4 coated       = float4( SurfaceShading::findBrightest( _subsurfaceWrap ), SurfaceShading::packChroma( _subsurfaceWrap ), _coatWeight,
+                                        SurfaceShading::packPair( SurfaceShading::packCoatRoughness( _coatRoughness ), transmission ) );
+    return hasStoredCoat() ? coated : float4( _subsurfaceWrap, transmission );
 }
 #elif defined( MATERIAL_LOBE_SHEEN )
 float4 AppearanceSurface::computeCustomData()
 {
-    return float4( _sheenColor, SurfaceShading::packPair( _sheenRoughness, _sheenWeight ) );
+    const float  sheenPair = SurfaceShading::packPair( _sheenRoughness, _sheenWeight );
+    const float4 coated    = float4( SurfaceShading::findBrightest( _sheenColor ), SurfaceShading::packChroma( _sheenColor ), sheenPair, SurfaceShading::packCoat( _coatWeight, _coatRoughness ) );
+    return hasStoredCoat() ? coated : float4( _sheenColor, sheenPair );
 }
 #elif defined( MATERIAL_LOBE_ANISOTROPY )
 float4 AppearanceSurface::computeCustomData()
 {
-    return float4( Octahedral::encode( _tangent ) * 0.5f + 0.5f, _anisotropy * 0.5f + 0.5f, 0.0f );
+    return float4( Octahedral::encode( _tangent ) * 0.5f + 0.5f, _anisotropy * 0.5f + 0.5f, hasStoredCoat() ? SurfaceShading::packCoat( _coatWeight, _coatRoughness ) : 0.0f );
 }
 #elif defined( MATERIAL_LOBE_TRANSMISSION )
 float4 AppearanceSurface::computeCustomData()
 {
-    return float4( _transmissionColor, _transmissionWrap );
+    const float4 coated = float4( SurfaceShading::findBrightest( _transmissionColor ), SurfaceShading::packChroma( _transmissionColor ), SurfaceShading::packCoat( _coatWeight, _coatRoughness ),
+                                  _transmissionWrap );
+    return hasStoredCoat() ? coated : float4( _transmissionColor, _transmissionWrap );
 }
 #else
 float4 AppearanceSurface::computeCustomData()
@@ -399,24 +417,11 @@ float4 AppearanceSurface::computeCustomData()
 }
 #endif
 
-#if SW_APPEARANCE_STORES_COAT
-float AppearanceSurface::computeStoredRoughness()
-{
-    return _roughness;
-}
-#else
-/** @brief 코트 칸이 없는 번호 — 젖음 · 기름막을 코트 무게만큼 코트 거칠기로 접는다(shortcut: 코트의 둘째 반사 · 아래층 감쇠는 잃는다, 젖은 피부 클로즈업이 중요해지면 번호를 나눈다). */
-float AppearanceSurface::computeStoredRoughness()
-{
-    return lerp( _roughness, min( _roughness, _coatRoughness ), _coatWeight );
-}
-#endif
-
 /** @brief G버퍼 셰이딩 값 — 갈래의 번호 · 사용자 칸 · 반사율 · 발광(눈빛). 조명 훅과 같은 make 를 부른다(같은 식이라 컴파일러가 한 번만 계산한다). */
 SurfaceShading computeMaterialShading( PixelContext context, MaterialSurface surface )
 {
     AppearanceSurface appearance = AppearanceSurface::make( context );
-    SurfaceShading    shading    = SurfaceShading::make( SW_APPEARANCE_SHADING_MODEL );
+    SurfaceShading    shading    = SurfaceShading::make( appearance.computeShadingModel() );
     shading._specular            = saturate( appearance._specular );
     shading._customData          = appearance.computeCustomData();
     shading._emissive            = appearance._emissive;
@@ -429,7 +434,7 @@ MaterialSurface computeMaterialSurface( PixelContext context )
     MaterialSurface   surface;
     surface._albedo    = appearance._albedo;
     surface._normal    = appearance._normal;
-    surface._roughness = appearance.computeStoredRoughness();
+    surface._roughness = appearance._roughness;
     surface._metallic  = appearance._metallic;
     surface.setAlphaCutoff( context._material._alphaCutoff );
     return surface;
