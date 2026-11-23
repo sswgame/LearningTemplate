@@ -22,6 +22,7 @@
 #include "Engine/Input/IInputDevice.h"
 #include "Engine/Input/InputGlyphStyle.h"
 #include "Engine/Input/InputKeyboardFocus.h"
+#include "Engine/Input/InputUserDevices.h"
 #include "Engine/Input/InputViewRect.h"
 #include "Engine/Input/KeyCodeUtil.h"
 #include "Engine/Input/RawInputEvent.h"
@@ -181,6 +182,22 @@ namespace sw
         // ------------------------------------------------------------------------------
         InputMap&       getInputMap() { return *_pInputMap; }
         const InputMap& getInputMap() const { return *_pInputMap; }
+
+        /** @brief 로컬 사용자의 최대 수입니다(패드 슬롯 수와 같다). */
+        static constexpr uint32 kMaxLocalUsers = kMaxGamepadSlot;
+        /**
+         * @brief 로컬 멀티를 엽니다 — 사용자 @p userCount 명(2 ~ `kMaxLocalUsers`)마다 장치를 짝지은 입력 맵을 둡니다(유니티 `InputUser` · 언리얼 로컬 플레이어마다의 Enhanced Input 자리).
+         * @details 사용자 0 은 통합 맵(`getInputMap`)이고 키보드 · 마우스와 남는 패드를 쓴다. 사용자 1 부터는 통합 맵의 묶음 · 플레이어 설정 · 레이어 스택을 베낀 맵을 패드로 읽는다.
+         *          짝은 연결된 패드가 나타날 때 짓고(`InputUserDevices::pairDevices`) 끊겨도 남는다. 베낀 뒤 통합 맵의 레이어를 바꿔도 다른 사용자의 맵은 그대로다.
+         * @return 사용자 수가 범위 밖이거나 이미 열렸거나 통합 맵이 파일에서 읽은 묶음이 아니어서 베낄 수 없으면 알리고 false 입니다(아무것도 열지 않는다).
+         */
+        [[nodiscard]] bool openLocalUsers( uint32 userCount );
+        /** @brief 로컬 멀티를 닫습니다. 통합 맵이 다시 모든 장치를 읽습니다. 열지 않았으면 아무것도 하지 않습니다. */
+        void closeLocalUsers();
+        /** @brief 로컬 멀티가 열렸으면 그 사용자 수, 아니면 1 입니다. */
+        uint32 getLocalUserCount() const { return _listUserDevices.empty() ? 1u : static_cast<uint32>( _listUserDevices.size() ); }
+        /** @brief 로컬 사용자 @p userIndex 의 입력 맵입니다. 사용자 0 은 늘 통합 맵이고, 열리지 않은 사용자는 nullptr 입니다. */
+        InputMap* findUserMap( uint32 userIndex );
 
         InputGlyphStyle getActiveGlyphStyle() const { return _activeGlyphStyle; }
         void            setActiveGlyphStyle( InputGlyphStyle type );
@@ -388,6 +405,8 @@ namespace sw
         void assignFrameFractions( size_t osEventCount, float32 deltaSeconds );
         /** @brief 가상 커서를 입력 맵의 `virtualCursor` 대로 켜고 끄고 스틱을 맞춥니다. 바뀔 때만 켜고 끕니다(켜고 끌 때 버튼 상태를 새로 잡는다). */
         void syncVirtualCursorToMap();
+        /** @brief 로컬 멀티가 열렸으면 짝이 없는 사용자에게 연결된 패드를 짝짓고 맵에 알립니다(`beginFrame` · `openLocalUsers`). */
+        void pairLocalUsers();
         /** @brief 모든 패드의 가상 세션을 켜거나 끕니다(배타 가상 입력이 붙고 뗄 때). */
         void setGamepadVirtualSession( bool bVirtual );
 
@@ -481,6 +500,8 @@ namespace sw
         TouchDevice*                              _pTouch;                  /**< 편의 API 용 캐시 포인터입니다. */
         GamepadDevice*                            _pGamepad;                /**< 0번 게임패드 편의 API 용 캐시 포인터입니다(1~3번은 getGamepad(index) 로 조회). */
         unique_ptr<InputMap>                      _pInputMap;               /**< 이 InputManager 에 연결된 기본 InputMap 인스턴스입니다. */
+        vector<unique_ptr<InputMap>>              _listUserMap;             /**< 로컬 멀티의 사용자 1 부터의 입력 맵입니다(`openLocalUsers`). 닫혔으면 비었습니다. */
+        vector<InputUserDevices>                  _listUserDevices;         /**< 로컬 멀티의 사용자마다 짝지은 장치입니다(사용자 0 포함). 닫혔으면 비었습니다. */
         vector<RawInputEvent>                     _listPolledEvent;         /**< beginFrame() 에서 큐를 비워 담아 두는 임시 버퍼입니다(매 프레임 재사용). */
         vector<QueuedRawEvent>                    _listQueuedEvent;         /**< 큐에서 꺼낸 칸입니다 — 뒤 입력 프레임 번호가 붙은 칸은 그 프레임의 beginFrame() 까지 넣은 순서대로 남는다. */
         vector<FramePress>                        _listFramePress;          /**< 이번 프레임에 눌린 컨트롤마다 첫 누름 순간입니다(beginFrame 이 비우고 채운다). */

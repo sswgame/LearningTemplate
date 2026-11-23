@@ -196,8 +196,9 @@ namespace sw
             InputPressInstant bindingInstant{};
             for ( int32 slotIndex = 0; slotIndex < slotCount; ++slotIndex )
             {
-                InputPressInstant slotInstant{};
-                if ( _pInput->tryGetPressInstant( binding._arrSlot[slotIndex], slotInstant ) == false )
+                InputPressInstant         slotInstant{};
+                const optional<InputSlot> userSlot = findUserSlot( binding._arrSlot[slotIndex] );
+                if ( userSlot.has_value() == false || _pInput->tryGetPressInstant( *userSlot, slotInstant ) == false )
                     continue;
                 if ( bBindingFound == false || slotInstant._frameFraction > bindingInstant._frameFraction )
                     bindingInstant = slotInstant;
@@ -463,7 +464,7 @@ namespace sw
 
     bool InputMap::isKeyboardKeyDown( Key key, SlotRead read ) const
     {
-        if ( _pInput == nullptr )
+        if ( _pInput == nullptr || usesKeyboardMouse() == false )
             return false;
         if ( read == SlotRead::Device )
             return _pInput->getKeyboard() != nullptr && _pInput->getKeyboard()->isKeyDown( key );
@@ -474,7 +475,7 @@ namespace sw
 
     bool InputMap::wasKeyboardKeyPressed( Key key ) const
     {
-        if ( _pInput == nullptr )
+        if ( _pInput == nullptr || usesKeyboardMouse() == false )
             return false;
         if ( _bKeyboardFocusIgnored == SW_TRUE )
             return isToolKeyboardHidden() == false && _pInput->getKeyboard() != nullptr && _pInput->getKeyboard()->wasKeyPressed( key );
@@ -486,22 +487,37 @@ namespace sw
         return _bReadsToolKeyboard == SW_FALSE && _pInput->getKeyboardFocus() == InputKeyboardFocus::Tool;
     }
 
+    optional<InputSlot> InputMap::findUserSlot( const InputSlot& slot ) const
+    {
+        if ( _userDevices.has_value() == false )
+            return slot;
+        if ( slot._deviceKind != InputDeviceKind::Gamepad )
+            return _userDevices->_bKeyboardMouse == SW_TRUE ? optional<InputSlot>{ slot } : optional<InputSlot>{};
+        if ( _userDevices->_padIndex.has_value() == false )
+            return nullopt;
+        InputSlot userSlot    = slot;
+        userSlot._deviceIndex = static_cast<uint8>( *_userDevices->_padIndex );
+        return userSlot;
+    }
+
     bool InputMap::isSlotDown( const InputSlot& slot, SlotRead read ) const
     {
-        const IInputDevice* pDevice = _pInput != nullptr ? _pInput->getDevice( slot._deviceKind, slot._deviceIndex ) : nullptr;
+        const optional<InputSlot> userSlot = findUserSlot( slot );
+        const IInputDevice*       pDevice  = _pInput != nullptr && userSlot.has_value() ? _pInput->getDevice( userSlot->_deviceKind, userSlot->_deviceIndex ) : nullptr;
         if ( pDevice == nullptr )
             return false;
-        if ( read == SlotRead::Game && isSlotHiddenByConsole( slot ) )
+        if ( read == SlotRead::Game && isSlotHiddenByConsole( *userSlot ) )
             return false;
         return pDevice->isControlDown( slot._controlIndex );
     }
 
     bool InputMap::wasSlotPressed( const InputSlot& slot, SlotRead read ) const
     {
-        const IInputDevice* pDevice = _pInput != nullptr ? _pInput->getDevice( slot._deviceKind, slot._deviceIndex ) : nullptr;
+        const optional<InputSlot> userSlot = findUserSlot( slot );
+        const IInputDevice*       pDevice  = _pInput != nullptr && userSlot.has_value() ? _pInput->getDevice( userSlot->_deviceKind, userSlot->_deviceIndex ) : nullptr;
         if ( pDevice == nullptr )
             return false;
-        if ( read == SlotRead::Game && isSlotHiddenByConsole( slot ) )
+        if ( read == SlotRead::Game && isSlotHiddenByConsole( *userSlot ) )
             return false;
         return pDevice->wasControlPressed( slot._controlIndex );
     }
@@ -557,7 +573,10 @@ namespace sw
 
     bool InputMap::evaluateGamepadStick( const ActionBinding& binding, float2& outValue ) const
     {
-        GamepadDevice* pPad = _pInput->getGamepad( binding._deviceIndex );
+        const bool           bUserPad = _userDevices.has_value();
+        GamepadDevice* const pPad     = bUserPad == false                   ? _pInput->getGamepad( binding._deviceIndex )
+                                      : _userDevices->_padIndex.has_value() ? _pInput->getGamepad( *_userDevices->_padIndex )
+                                                                            : nullptr;
         if ( pPad == nullptr || pPad->isConnected() == false )
             return false;
         const float2 stick = ( binding._stick == GamepadStick::Left ) ? pPad->getLeftStick() : pPad->getRightStick();
@@ -736,7 +755,7 @@ namespace sw
             }
             case BindingKind::MouseDelta2D:
             {
-                const float2  movement = _pInput->getMouse() != nullptr ? _pInput->getMouse()->getMovementDelta() : float2{};
+                const float2  movement = _pInput->getMouse() != nullptr && usesKeyboardMouse() ? _pInput->getMouse()->getMovementDelta() : float2{};
                 const float32 rdx      = movement._x;
                 const float32 rdy      = movement._y;
                 outValue._x            = rdx * binding._scale * _accessibility._mouseSensitivity._x * ( _accessibility._bInvertX ? -1.0f : 1.0f );
@@ -745,7 +764,7 @@ namespace sw
             }
             case BindingKind::MouseWheel1D:
             {
-                const float32 wheel = _pInput->getMouseWheel();
+                const float32 wheel = usesKeyboardMouse() ? _pInput->getMouseWheel() : 0.0f;
                 outValue            = float2{ wheel * binding._scale, 0.0f };
                 return wheel != 0.0f;
             }

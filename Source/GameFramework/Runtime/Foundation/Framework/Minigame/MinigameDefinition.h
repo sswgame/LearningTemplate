@@ -73,6 +73,8 @@ namespace sw
         vector<hashed_string> _listCatalog{}; ///< 기능이 읽을 데이터 종류(`kDataKind`). 기능이 적지 않은 종류를 읽거나 적은 종류를 아무도 읽지 않으면 켜기가 진다
         PROPERTY( Name = "save" )
         MinigameSavePolicy _savePolicy{ MinigameSavePolicy::Allowed }; ///< 안에서 세이브를 허락하는지
+        PROPERTY( Name = "localPlayers", Min = 1, Max = 4 )
+        int32 _localPlayerCount{ 1 }; ///< 한 화면에서 함께 하는 사람 수. 2 이상이면 켜는 동안 입력 사용자를 연다(`InputManager::openLocalUsers`)
         PROPERTY( Min = -1 )
         int32 _portalSlot{ kNoPortalSlot }; ///< 허브 입구 자리 번호(0 부터, 팩에서 겹치지 않는다) — 적으면 허브의 `MinigamePortalSpawnerComponent` 가 그 자리에 입구를 세운다
 

@@ -83,6 +83,8 @@ namespace sw
         , _pTouch{ nullptr }
         , _pGamepad{ nullptr }
         , _pInputMap{ nullptr }
+        , _listUserMap{}
+        , _listUserDevices{}
         , _listPolledEvent{}
         , _listQueuedEvent{}
         , _listFramePress{}
@@ -190,6 +192,8 @@ namespace sw
         _pMouse    = nullptr;
         _pGamepad  = nullptr;
         _pInputMap = nullptr;
+        _listUserMap.clear();
+        _listUserDevices.clear();
         _queueRawEvent.clear();
         _droppedRawEventCount.store( 0, std::memory_order_relaxed );
         _listPolledEvent.clear();
@@ -517,12 +521,99 @@ namespace sw
 
         // 5) 통합 InputMap 을 이번 프레임 입력으로 갱신한다(게임플레이가 읽는 맵). 갱신은 맵의 주인이 한다.
         //    엔진 루프, 리플레이 재동기화, 테스트가 같은 경로를 탄다.
+        pairLocalUsers();
         if ( _pInputMap != nullptr )
             _pInputMap->update( deltaSeconds );
+        for ( const unique_ptr<InputMap>& pUserMap : _listUserMap )
+        {
+            pUserMap->update( deltaSeconds );
+        }
 
         // 세션 기록 재생(`bugreport.replay`)은 끝 프레임을 맵까지 흘린 뒤 뗀다(떼면 장치 상태를 지운다). 다른 원천(시나리오)은 붙인 쪽이 뗀다.
         if ( _pVirtualInput == &_sessionRecording && _sessionRecording.isFinished( _virtualFrameIndex ) )
             detachVirtualInput();
+    }
+
+    bool InputManager::openLocalUsers( uint32 userCount )
+    {
+        if ( _pInputMap == nullptr || _listUserDevices.empty() == false || userCount < 2 || userCount > kMaxLocalUsers )
+        {
+            SW_LOG_ERROR_ID( "InputManager.LocalUsersRefused", "Local users (%#) could not be opened - the count must be 2 to %#, the input map must exist and no local users may be open (open: %#)", userCount,
+                             kMaxLocalUsers, getLocalUserCount() );
+            return false;
+        }
+        // 사용자마다 통합 맵의 묶음을 글로 베낀다 — 파일을 다시 읽지 않아 플레이어 재배치(바뀐 바인딩)도 따라온다.
+        vector<InputMapSourceText> listSource;
+        for ( uint32 sourceIndex = 0; sourceIndex < _pInputMap->getSourceCount(); ++sourceIndex )
+        {
+            InputMapSourceText source;
+            source._assetPath = _pInputMap->getSourceAssetPath( sourceIndex );
+            if ( _pInputMap->writeSourceText( sourceIndex, source._text ) == false )
+                return false; // 담지 못하는 바인딩은 맵이 알렸다
+            listSource.push_back( std::move( source ) );
+        }
+        vector<hashed_string> listLayer;
+        _pInputMap->collectLayerStack( listLayer );
+        vector<unique_ptr<InputMap>> listUserMap;
+        for ( uint32 userIndex = 1; userIndex < userCount; ++userIndex )
+        {
+            unique_ptr<InputMap> pUserMap = make_unique<InputMap>();
+            pUserMap->setInputManager( this );
+            if ( pUserMap->loadBundleTexts( listSource ) == false )
+                return false; // 까닭은 맵이 남겼다
+            pUserMap->getAccessibilitySettings() = _pInputMap->getAccessibilitySettings();
+            for ( const hashed_string& layer : _pInputMap->getLayerNames() )
+            {
+                pUserMap->setLayerEnabled( layer, _pInputMap->isLayerEnabled( layer ) );
+            }
+            for ( const hashed_string& layer : listLayer )
+            {
+                pUserMap->pushLayer( layer );
+            }
+            listUserMap.push_back( std::move( pUserMap ) );
+        }
+        _listUserMap = std::move( listUserMap );
+        _listUserDevices.resize( userCount );
+        _listUserDevices[0]._bKeyboardMouse = SW_TRUE;
+        pairLocalUsers();
+        SW_LOG_INFO_ID( "InputManager.LocalUsersOpened", "%# local users share this screen - user 0 uses the keyboard and mouse", userCount );
+        return true;
+    }
+
+    void InputManager::closeLocalUsers()
+    {
+        if ( _listUserDevices.empty() )
+            return;
+        _listUserMap.clear();
+        _listUserDevices.clear();
+        if ( _pInputMap != nullptr )
+            _pInputMap->setUserDevices( nullopt );
+    }
+
+    InputMap* InputManager::findUserMap( uint32 userIndex )
+    {
+        if ( userIndex == 0 )
+            return _pInputMap.get();
+        return userIndex - 1 < _listUserMap.size() ? _listUserMap[userIndex - 1].get() : nullptr;
+    }
+
+    void InputManager::pairLocalUsers()
+    {
+        if ( _listUserDevices.empty() )
+            return;
+        vector<uint32> listConnectedPad;
+        for ( uint32 padIndex = 0; padIndex < kMaxGamepadSlot; ++padIndex )
+        {
+            const GamepadDevice* const pPad = getGamepad( padIndex );
+            if ( pPad != nullptr && pPad->isConnected() )
+                listConnectedPad.push_back( padIndex );
+        }
+        InputUserDevices::pairDevices( _listUserDevices, listConnectedPad );
+        _pInputMap->setUserDevices( _listUserDevices[0] );
+        for ( size_t index = 0; index < _listUserMap.size(); ++index )
+        {
+            _listUserMap[index]->setUserDevices( _listUserDevices[index + 1] );
+        }
     }
 
     bool InputManager::playSessionRecording( string_view filePath )

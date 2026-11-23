@@ -883,7 +883,7 @@ namespace sw
             SW_LOG_ERROR_ID( "MinigameFlow.CatalogNotLoaded", "Minigame '%#': catalog '%#' is declared but no feature in features=\"...\" loaded it", definition._name.c_str(), pUnloaded->c_str() );
             return nullptr;
         }
-        if ( pushInputLayers( *scope, definition ) == false )
+        if ( pushInputLayers( *scope, definition ) == false || openLocalUsers( *scope, definition ) == false )
             return nullptr;
         // UI 는 클라이언트 전용 부분이 연다 — 전용 서버(창구가 없다)는 화면이 없다.
         IGameInstanceClientHook* const pClientHook = IGameInstanceClientHook::find();
@@ -892,6 +892,18 @@ namespace sw
         scope->finishActivation();
         SW_LOG_INFO_ID( "MinigameFlow.Activated", "Minigame '%#' is active (%# features)", definition._name.c_str(), static_cast<uint32>( definition._listFeature.size() ) );
         return scope;
+    }
+
+    bool MinigameFlow::openLocalUsers( GameFeatureScope& scope, const MinigameDefinition& definition )
+    {
+        InputManager* const pInput = game::findSubsystem<InputManager>();
+        if ( definition._localPlayerCount <= 1 || pInput == nullptr )
+            return true;
+        if ( pInput->openLocalUsers( static_cast<uint32>( definition._localPlayerCount ) ) == false )
+            return false;
+        scope.addCleanup( SW_DELEGATE_LAMBDA( Delegate<void()>, [pInput]()
+        { pInput->closeLocalUsers(); } ) );
+        return true;
     }
 
     bool MinigameFlow::pushInputLayers( GameFeatureScope& scope, const MinigameDefinition& definition )
