@@ -131,10 +131,11 @@ namespace sw
          */
         struct TextureOverride
         {
-            hashed_string _name;         ///< 텍스처 프로퍼티 이름
-            string        _assetPath;    ///< 원하는 텍스처 경로. 비면 지울 덮어쓰기이며 `syncTextureOverrides` 가 놓은 뒤 뺀다.
-            string        _acquiredPath; ///< 마지막으로 맞춘 경로. 읽지 못했어도 적어 두어 매 프레임 다시 시도하지 않는다.
-            TextureHandle _load{};       ///< 요청한 로드(`TextureCache::request`). 준비되면 참조를 쥐고, 실패하면 이유를 한 번 남기고 놓는다.
+            hashed_string           _name;         ///< 텍스처 프로퍼티 이름
+            string                  _assetPath;    ///< 원하는 텍스처 경로. 비면 지울 덮어쓰기이며 `syncTextureOverrides` 가 놓은 뒤 뺀다.
+            string                  _acquiredPath; ///< 마지막으로 맞춘 경로. 읽지 못했어도 적어 두어 매 프레임 다시 시도하지 않는다.
+            TextureHandle           _load{};       ///< 요청한 로드(`TextureCache::request`). 준비되면 참조를 쥐고, 실패하면 이유를 한 번 남기고 놓는다.
+            MaterialParameterHandle _handle{};     ///< 부모 프로퍼티의 자리(패킹 때 찾는다)
 
             /**
              * @brief 덮어쓴 텍스처의 bindless 번호입니다 — 읽는 중이면 로드 중 텍스처를, 끝나면 진짜 텍스처를 가리키는 같은 번호다(R-6, `TextureLoadOperation::getStableSRV`).
@@ -157,10 +158,12 @@ namespace sw
          */
         struct ValueOverride
         {
-            hashed_string _name;
-            string        _text;          ///< `ValueKind::Text` 일 때만 쓴다
-            float32       _arrValue[4]{}; ///< `Scalar` 는 앞 한 칸, `Vector` 는 네 칸
-            ValueKind     _kind{ ValueKind::Text };
+            hashed_string           _name;
+            string                  _text;          ///< `ValueKind::Text` 일 때만 쓴다
+            float32                 _arrValue[4]{}; ///< `Scalar` 는 앞 한 칸, `Vector` 는 네 칸
+            MaterialParameterHandle _handle{};      ///< 부모 프로퍼티의 자리(패킹 때 찾는다 — 부모의 배치가 바뀔 때만 다시 찾는다)
+            ValueKind               _kind{ ValueKind::Text };
+            uint8                   _bDirty{ SW_TRUE }; ///< 마지막 사본 뒤에 바뀌었다 — 다음 사본이 이 칸만 다시 쓴다
 
             /** @brief float 칸 수입니다. */
             uint32 getFloatCount() const { return _kind == ValueKind::Vector ? 4u : 1u; }
@@ -176,9 +179,13 @@ namespace sw
         void assignFloats( hashed_string name, ValueKind kind, const float32* pValue, uint32 count );
         /** @brief 덮어쓰기가 바뀌었다 — 다음 `getRenderBinding` 이 사본을 다시 만들고, 렌더 값의 전역 번호가 오른다(`MaterialRenderVersion`). */
         void markRenderDirty() { _overrideRevision.bump( this ); }
-        /** @brief 부모 바이트에 덮어쓰기를 패킹하고 텍스처 슬롯을 채운 새 사본을 만듭니다(`getRenderBinding`). */
+        /** @brief 부모 바이트에 모든 덮어쓰기를 패킹하고 텍스처 슬롯을 채운 새 사본을 만듭니다(`getRenderBinding` — 부모 값 · 배치 · 텍스처 · 덮어쓰기 목록이 바뀌었을 때). */
         void rebuildRenderData( IRHIDevice* pDevice );
-        /** @brief 부모의 매개변수 모양과 어긋난 스칼라 · 벡터 덮어쓰기를 알리고 지웁니다(`rebuildRenderData` 가 부모 초기화 뒤 게임 스레드에서 부른다). */
+        /** @brief 앞 사본을 베껴 바뀐 값 덮어쓰기의 칸만 다시 쓴 새 사본을 만듭니다(`getRenderBinding` — 값만 바뀐 프레임). 바뀐 칸이 없으면 앞 사본 그대로입니다. */
+        void patchRenderData();
+        /** @brief 덮어쓰기 하나를 @p inoutBytes 의 제 칸에 씁니다. 부모에 없는 이름이면 아무것도 하지 않습니다. */
+        void packValueOverride( ValueOverride& inoutOverride, vector<uint8>& inoutBytes ) const;
+        /** @brief 부모의 매개변수 모양과 어긋난 스칼라 · 벡터 덮어쓰기를 알리고 지웁니다(사본을 만들기 전, 부모 초기화 뒤 게임 스레드). */
         void dropShapeMismatchedOverrides();
         /**
          * @brief 이 인스턴스로 그릴 때의 텍스처 슬롯(DX11 과 GL 의 t16..)에 바인딩할 SRV 를 채웁니다. 부모의 슬롯 위에 덮어쓴 텍스처를 적용합니다.
@@ -241,7 +248,8 @@ namespace sw
         mutable uint64         _parentPermutationHash;
         mutable uint32         _parentLoadGeneration; ///< 정의를 만들 때의 부모 `getLoadGeneration()`. 다르면 부모를 다시 읽은 것이라 정의를 다시 만든다
         mutable uint8          _bDefinesDirty : 1;
-        [[maybe_unused]] uint8 _instReserved  : 7;
+        uint8                  _bRebuildAll   : 1; ///< 값 하나가 아니라 목록 · 텍스처가 바뀌었다 — 다음 사본은 부모 바이트에서 통째로 짓는다
+        [[maybe_unused]] uint8 _instReserved  : 6;
 
         /** @brief 디바이스 수명 통보를 받아 위 `releaseRHI` · `clearRHI` 로 넘긴다(상속 대신 멤버 — 이 헤더가 RHI 를 include 하지 않는다). 마지막 멤버라 먼저 사라진다. */
         unique_ptr<RHIRenderResourceHook<MaterialInstance>> _renderResourceHook;

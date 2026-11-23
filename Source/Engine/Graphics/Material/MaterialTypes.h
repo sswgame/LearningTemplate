@@ -3,6 +3,7 @@
  * @brief Material 과 MaterialInstance 가 함께 쓰는 타입과 디스크립터입니다.
  */
 #pragma once
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/BitUtil.h"
 
 #include "Engine/EngineMinimal.h"
@@ -237,7 +238,6 @@ namespace sw
         string                   _blendPreset;                               ///< 블렌드 프리셋 이름입니다. 저장용 — 값은 `_renderStateOverride` 에 풀려 있다
         vector<BlendTargetState> _listBlendTarget;                           ///< 렌더 타깃마다의 블렌드입니다. 저장용 — 값은 `_renderStateOverride` 에 풀려 있다
         RenderStateOverride      _renderStateOverride;                       ///< 패스의 렌더 상태 위에 덮는 칸입니다(표: `docs/agents/Rendering.md`)
-        vector<MaterialProperty> _listProperty;
         MaterialPermutationDef   _permutations;
         /** @brief 부모 머티리얼(`.material` 루트의 `_base`)입니다. 비어 있지 않으면 위 칸은 부모를 펼친 값이고, 저장은 부모와 다른 칸만 적는다(`MaterialXML::makeParentDelta`). */
         string _parentPath;
@@ -246,10 +246,22 @@ namespace sw
 
 namespace sw
 {
-    /// @brief 런타임 머티리얼 데이터입니다(패킹 버퍼와 디스크립터).
+    /// @brief 런타임 머티리얼 데이터입니다(패킹 버퍼와 프로퍼티 — 프로퍼티의 정본은 여기 하나다, 저장도 이것을 쓴다).
     struct MaterialData
     {
         vector<MaterialProperty> _listProperty;
         vector<uint8>            _bytes;
+    };
+
+    /**
+     * @struct MaterialParameterHandle
+     * @brief 이름으로 한 번 찾아 둔 머티리얼 프로퍼티의 자리입니다(`Material::findParameter`). 같은 배치 동안 이름을 다시 찾지 않습니다(유니티 `Shader.PropertyToID`, 언리얼 MID 의 파라미터 색인 자리).
+     * @details 배치 세대를 함께 들어 프로퍼티 목록 · 오프셋이 바뀌면(다시 읽기 · 셰이더 레이아웃 맞춤) 저절로 낡는다 — 낡은 자리로는 `Material::findProperty( handle )` 가 아무것도 내지 않는다.
+     *          오프셋 · 종류는 들지 않는다(프로퍼티가 정본이다).
+     */
+    struct MaterialParameterHandle
+    {
+        uint32 _index{ constant::invalid_index::kUint32 }; ///< 프로퍼티 번호. 그 이름이 없으면 무효다(없음도 한 번만 찾는다)
+        uint32 _layoutGeneration{ 0 };                     ///< 찾을 때의 배치 세대(0 은 찾지 않음)
     };
 } // namespace sw

@@ -60,9 +60,8 @@ namespace sw
              *          쓸 때가 아니라 렌더 사본을 만들 때(`rebuildRenderData`, 게임 스레드, 부모 초기화 뒤) 본다 — 부모의 속성 목록은 디바이스 초기화가 채우고
              *          맞추므로 쓸 때 읽으면 비어 있거나(검사가 조용히 빠진다) 비동기 씬 로드 워커에서 게임 스레드의 초기화와 겹친다(언리얼 MID 도 쓸 때는 이름 · 값만 둔다).
              */
-            [[nodiscard]] static bool canAcceptShape( const Material* pParent, hashed_string name, bool bScalar )
+            [[nodiscard]] static bool canAcceptShape( const MaterialProperty* pProp, bool bScalar )
             {
-                const MaterialProperty* pProp = pParent != nullptr ? pParent->findProperty( name ) : nullptr;
                 if ( pProp == nullptr )
                     return true;
                 const MaterialPropertyKind shaderType = pProp->_shaderType;
@@ -142,6 +141,7 @@ namespace sw
         , _parentPermutationHash{ 0 }
         , _parentLoadGeneration{ 0 }
         , _bDefinesDirty{ SW_TRUE }
+        , _bRebuildAll{ SW_TRUE }
         , _instReserved{ 0 }
         , _renderResourceHook{ make_unique<RHIRenderResourceHook<MaterialInstance>>( *this ) }
     {
@@ -198,8 +198,10 @@ namespace sw
         // 부모의 값 변경과 다시 맞춘 레이아웃을 놓친다.
         const bool bParentChanged   = _parentBufferGeneration != _pParentMaterial->getBufferGeneration();
         const bool bOverrideChanged = _overrideRevision.get() != _renderDataOverrideRevision;
-        if ( bTextureChanged || bParentChanged || bOverrideChanged || _renderData == nullptr )
+        if ( bTextureChanged || bParentChanged || _bRebuildAll == SW_TRUE || _renderData == nullptr )
             rebuildRenderData( pDevice );
+        else if ( bOverrideChanged )
+            patchRenderData();
         return MaterialRenderBinding{ _renderProxy, _renderData };
     }
 
@@ -210,31 +212,80 @@ namespace sw
         data->_elementStride                = _pParentMaterial->getElementStride();
         _parentBufferGeneration             = _pParentMaterial->getBufferGeneration();
         _renderDataOverrideRevision         = _overrideRevision.get();
+        _bRebuildAll                        = SW_FALSE;
         // 부모 바이트가 비었으면(레이아웃 오류 — 오류는 부모가 남겼다) 빈 사본이다. 렌더 스레드는 빈 바이트를 올리지 않는다.
         if ( data->_bytes.empty() == false )
         {
             dropShapeMismatchedOverrides();
-            for ( const ValueOverride& valueOverride : _listValueOverride )
+            for ( ValueOverride& valueOverride : _listValueOverride )
             {
-                if ( valueOverride._kind == ValueKind::Text )
-                    _pParentMaterial->packNamedValueIntoBuffer( valueOverride._name, valueOverride._text, data->_bytes );
-                else
-                    _pParentMaterial->packNamedFloatsIntoBuffer( valueOverride._name, valueOverride._arrValue, valueOverride.getFloatCount(), data->_bytes );
+                packValueOverride( valueOverride, data->_bytes );
             }
             // 덮어쓴 텍스처: 네이티브 bindless 는 지금 SRV 인덱스를, 슬롯 바인딩 백엔드(DX11 · GL)는 슬롯 서수를 넣는다(부모와 같은 규칙).
             const bool bNativeBindless = pDevice != nullptr && pDevice->supportsNativeBindlessSampling();
-            for ( const TextureOverride& texture : _listTextureOverride )
+            for ( TextureOverride& texture : _listTextureOverride )
             {
                 const RHIDescriptorIndex srv = texture.getStableSRV();
                 if ( srv == kInvalidDescriptorIndex )
                     continue;
                 const optional<uint32> textureBinding = bNativeBindless ? optional<uint32>{ srv } : findTextureSlot( texture._name );
-                if ( textureBinding.has_value() && *textureBinding != kInvalidDescriptorIndex )
-                    _pParentMaterial->packTextureIntoBuffer( texture._name, *textureBinding, data->_bytes );
+                if ( textureBinding.has_value() && *textureBinding != kInvalidDescriptorIndex && _pParentMaterial->resolveProperty( texture._name, texture._handle ) != nullptr )
+                    _pParentMaterial->packTextureIntoBuffer( texture._handle, *textureBinding, data->_bytes );
             }
         }
         fillTextureSlots( data->_arrTextureSRV, shaderslot::kMaterialTextureCount );
         _renderData = std::move( data );
+    }
+
+    void MaterialInstance::patchRenderData()
+    {
+        _renderDataOverrideRevision = _overrideRevision.get();
+        if ( _renderData->_bytes.empty() )
+            return; // 부모의 레이아웃 오류 — 부모가 다시 맞춰지면 통째로 짓는다
+        shared_ptr<MaterialRenderData> data;
+        const vector<uint8>&           parentBytes = _pParentMaterial->getBuffer();
+        for ( ValueOverride& valueOverride : _listValueOverride )
+        {
+            if ( valueOverride._bDirty == SW_FALSE )
+                continue;
+            const MaterialProperty* pProp = _pParentMaterial->resolveProperty( valueOverride._name, valueOverride._handle );
+            if ( pProp == nullptr )
+            {
+                valueOverride._bDirty = SW_FALSE; // 부모에 없는 이름이다(다른 변형이 쓸 수 있다)
+                continue;
+            }
+            if ( MaterialPacking::isTextureType( pProp->_type ) )
+            {
+                rebuildRenderData( _pParentMaterial->getRHIDevice() ); // 텍스처 칸에 글로 쓴 값 — 같은 칸의 텍스처 덮어쓰기가 뒤에 얹혀야 한다
+                return;
+            }
+            if ( data == nullptr )
+                data = sw::make_shared<MaterialRenderData>( *_renderData );
+            // 거절된 값(모양 어긋남 · 못 읽는 글)은 앞 값이 아니라 부모 값이다 — 칸을 부모 값으로 되돌린 뒤 쓴다(통째로 짓는 길과 같은 결과).
+            if ( pProp->_offset + pProp->_size <= parentBytes.size() && pProp->_offset + pProp->_size <= data->_bytes.size() )
+                Memory::copy( data->_bytes.data() + pProp->_offset, parentBytes.data() + pProp->_offset, pProp->_size );
+            if ( valueOverride._kind == ValueKind::Text || MaterialInstanceInternal::canAcceptShape( pProp, valueOverride._kind == ValueKind::Scalar ) )
+                packValueOverride( valueOverride, data->_bytes );
+            else
+                valueOverride._name = hashed_string{}; // 알렸다 — 아래에서 뺀다
+        }
+        VectorUtil::removeIf( _listValueOverride, []( const ValueOverride& valueOverride )
+        { return valueOverride._name.empty(); } );
+        if ( data != nullptr )
+            _renderData = std::move( data );
+    }
+
+    void MaterialInstance::packValueOverride( ValueOverride& inoutOverride, vector<uint8>& inoutBytes ) const
+    {
+        inoutOverride._bDirty         = SW_FALSE;
+        const MaterialProperty* pProp = _pParentMaterial->resolveProperty( inoutOverride._name, inoutOverride._handle );
+        if ( pProp == nullptr )
+            return;
+        // 못 읽는 값은 패커가 오류로 남기고 칸은 부모 값 그대로다.
+        if ( inoutOverride._kind == ValueKind::Text )
+            (void)MaterialPacking::packValueIntoBuffer( *pProp, inoutOverride._text, inoutBytes );
+        else
+            (void)MaterialPacking::packFloatsIntoBuffer( *pProp, inoutOverride._arrValue, inoutOverride.getFloatCount(), inoutBytes );
     }
 
     void MaterialInstance::dropShapeMismatchedOverrides()
@@ -242,7 +293,7 @@ namespace sw
         // 어긋난 값은 한 번 알리고 버린다(쓸 때 거절하던 것과 같은 결과) — 남겨 두면 사본을 만들 때마다 다시 알린다.
         const Material* pParent = _pParentMaterial;
         VectorUtil::removeIf( _listValueOverride, [pParent]( const ValueOverride& valueOverride )
-        { return valueOverride._kind != ValueKind::Text && MaterialInstanceInternal::canAcceptShape( pParent, valueOverride._name, valueOverride._kind == ValueKind::Scalar ) == false; } );
+        { return valueOverride._kind != ValueKind::Text && MaterialInstanceInternal::canAcceptShape( pParent->findProperty( valueOverride._name ), valueOverride._kind == ValueKind::Scalar ) == false; } );
     }
 
     string MaterialInstance::ValueOverride::makeText() const
@@ -275,7 +326,8 @@ namespace sw
             return;
         }
         pOverride->_text.clear();
-        pOverride->_kind = kind;
+        pOverride->_kind   = kind;
+        pOverride->_bDirty = SW_TRUE;
         Memory::copy( pOverride->_arrValue, pValue, count * sizeof( float32 ) );
         markRenderDirty();
     }
@@ -334,6 +386,7 @@ namespace sw
             texture._acquiredPath.clear();
         }
         _pTextureDevice = nullptr;
+        _bRebuildAll    = SW_TRUE;
         markRenderDirty();
     }
 
@@ -376,6 +429,7 @@ namespace sw
         }
         _listKeywordOverride.clear();
         _bDefinesDirty = SW_TRUE;
+        _bRebuildAll   = SW_TRUE;
         MaterialPermutation::recordPermutationChange( this );
         markRenderDirty();
     }
@@ -437,8 +491,9 @@ namespace sw
         {
             return true;
         }
-        pOverride->_kind = ValueKind::Text;
-        pOverride->_text = value;
+        pOverride->_kind   = ValueKind::Text;
+        pOverride->_text   = value;
+        pOverride->_bDirty = SW_TRUE;
         markRenderDirty();
         return true;
     }
@@ -457,6 +512,7 @@ namespace sw
     void MaterialInstance::setTextureParameter( hashed_string name, string_view textureAssetPath )
     {
         // 원하는 경로만 적는다. 빌리고 돌려주는 것은 다음 getRenderBinding 이다(syncTextureOverrides).
+        _bRebuildAll = SW_TRUE;
         markRenderDirty();
         for ( TextureOverride& texture : _listTextureOverride )
         {

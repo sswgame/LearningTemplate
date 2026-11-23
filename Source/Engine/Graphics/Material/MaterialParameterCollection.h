@@ -1,7 +1,7 @@
 /**
  * @file MaterialParameterCollection.h
  * @brief 머티리얼 파라미터 묶음(`*.matparams.xml`)입니다. 파일 하나의 값을 머티리얼 여럿이 읽고, 런타임에 값을 바꾸면 그 묶음을 쓰는 모든 그림이 바뀝니다(언리얼 Material Parameter Collection).
- * @details **셰이더 슬롯을 새로 두지 않는다.** 머티리얼 프로퍼티가 묶음의 이름을 가리키고(`collection` · `collectionParameter`), 값이 바뀌면 그 머티리얼이 다음 프레임에 프로퍼티를 다시 패킹한다
+ * @details **셰이더 슬롯을 새로 두지 않는다.** 머티리얼 프로퍼티가 묶음의 이름을 가리키고(`collection` · `collectionParameter`), 값이 바뀌면 그 머티리얼이 다음 프레임에 그 칸만 다시 쓴다
  *          (`Material::syncParameterCollections`). 그래서 값은 리플렉션이 정한 자리의 머티리얼 데이터로 가고, 슬롯 · 바인딩 · 백엔드 코드가 그대로라 네 백엔드(dx11 · dx12 · vk · gl)에서 같은 길을 탄다.
  *          어떤 셰이더의 어떤 프로퍼티든 셰이더를 고치지 않고 묶을 수 있다.
  *          언리얼은 묶음마다 유니폼 버퍼 하나를 셰이더가 직접 읽어 값 바꾸기가 O(1) 이지만 셰이더 코드가 묶음의 배치를 알아야 하고 머티리얼마다 묶음 수에 제한이 있다.
@@ -99,9 +99,6 @@ namespace sw
         void replaceValues( MaterialParameterCollectionDef desc );
         /** @brief 값이 바뀔 때마다 오르는 세대입니다. */
         [[nodiscard]] uint32 getGeneration() const { return _generation.get(); }
-
-        /** @brief 값의 앞 @p componentCount 채널을 머티리얼 프로퍼티 값 글(`0.5 0.25`)로 씁니다. */
-        [[nodiscard]] static string makePropertyText( const float4& value, uint32 componentCount );
 
     private:
         struct Entry

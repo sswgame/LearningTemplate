@@ -87,6 +87,86 @@ SW_TEST_CASE( MaterialInstanceTest, SameValueKeepsRenderCopy )
 }
 
 /**
+ * @brief [MaterialInstanceTest] 값 하나만 바뀐 사본은 그 칸만 다시 쓴다 — 다른 덮어쓰기 · 부모 칸은 앞 사본 그대로이고, 거절된 값의 칸은 앞 값이 아니라 부모 값이다
+ * @details 변이: 바뀐 칸만 쓰는 길이 칸을 부모 값으로 되돌리지 않으면 모양이 어긋나 버린 `_color` 가 앞 사본의 값(0.25)으로 남는다. 부모 값이 바뀐 뒤에도 앞 사본을 베끼면 새 부모 값 줄이 진다.
+ */
+SW_TEST_CASE( MaterialInstanceTest, ChangedValuePatchesOnlyItsProperty )
+{
+    shared_ptr<Material> material = Material::create();
+    SW_REQUIRE_TRUE( material->loadFromXML( MaterialInstanceTestUtil::kMaterial ) );
+    shared_ptr<MaterialInstance> instance = MaterialInstance::create( material.get() );
+    const hashed_string          colorName( "_color" );
+    const hashed_string          roughnessName( "_roughness" );
+    const MaterialProperty*      pColor     = material->findProperty( colorName );
+    const MaterialProperty*      pRoughness = material->findProperty( roughnessName );
+    SW_REQUIRE_TRUE( pColor != nullptr && pRoughness != nullptr );
+    const auto readFloat = []( const MaterialRenderBinding& binding, uint32 offset )
+    {
+        float32 value{ -1.0f };
+        if ( offset + sizeof( value ) <= binding._data->_bytes.size() )
+            Memory::copy( &value, binding._data->_bytes.data() + offset, sizeof( value ) );
+        return value;
+    };
+
+    instance->setVectorParameter( colorName, float4{ 0.25f, 0.5f, 0.75f, 1.0f } );
+    instance->setScalarParameter( roughnessName, 0.125f );
+    const MaterialRenderBinding first = instance->getRenderBinding( MaterialRenderInputs::capture() );
+    SW_REQUIRE_TRUE( first._data != nullptr );
+
+    instance->setScalarParameter( roughnessName, 0.5f );
+    const MaterialRenderBinding second = instance->getRenderBinding( MaterialRenderInputs::capture() );
+    SW_REQUIRE_TRUE( second._data != nullptr );
+    SW_EXPECT_NEAR( 0.25f, readFloat( second, pColor->_offset ), 1e-6f );
+    SW_EXPECT_NEAR( 0.5f, readFloat( second, pRoughness->_offset ), 1e-6f );
+    SW_EXPECT_NEAR( 0.125f, readFloat( first, pRoughness->_offset ), 1e-6f ); // 건넨 사본은 불변이다
+
+    // 부모의 값이 바뀌면 덮지 않은 칸이 따라온다(앞 사본을 베끼지 않는다).
+    instance->clearOverrides();
+    instance->setScalarParameter( roughnessName, 0.5f );
+    SW_REQUIRE_TRUE( material->setParameter( colorName, "0.125 0.5 0.75 1" ) );
+    const MaterialRenderBinding third = instance->getRenderBinding( MaterialRenderInputs::capture() );
+    SW_REQUIRE_TRUE( third._data != nullptr );
+    SW_EXPECT_NEAR( 0.125f, readFloat( third, pColor->_offset ), 1e-6f );
+    SW_EXPECT_NEAR( 0.5f, readFloat( third, pRoughness->_offset ), 1e-6f );
+
+    // 모양이 어긋난 값은 알리고 버린다 — 칸은 앞 덮어쓰기가 아니라 부모 값이다.
+    instance->setVectorParameter( colorName, float4{ 0.75f, 0.75f, 0.75f, 1.0f } );
+    (void)instance->getRenderBinding( MaterialRenderInputs::capture() );
+    SW_EXPECT_LOG( "Material.ParameterShapeMismatch" );
+    instance->setScalarParameter( colorName, 0.5f );
+    const MaterialRenderBinding dropped = instance->getRenderBinding( MaterialRenderInputs::capture() );
+    SW_REQUIRE_TRUE( dropped._data != nullptr );
+    SW_EXPECT_NEAR( 0.125f, readFloat( dropped, pColor->_offset ), 1e-6f );
+    SW_EXPECT_FALSE( instance->isParameterOverridden( colorName ) );
+    SW_EXPECT_NEAR( 0.5f, readFloat( dropped, pRoughness->_offset ), 1e-6f );
+}
+
+/**
+ * @brief [MaterialInstanceTest] 프로퍼티의 자리(`MaterialParameterHandle`)는 값이 바뀌는 동안 그대로이고, 다시 읽어 배치가 바뀌면 낡아 아무것도 내지 않는다(다시 찾으면 새 번호다)
+ */
+SW_TEST_CASE( MaterialInstanceTest, ParameterHandleFollowsTheLayoutGeneration )
+{
+    shared_ptr<Material> material = Material::create();
+    SW_REQUIRE_TRUE( material->loadFromXML( MaterialInstanceTestUtil::kMaterial ) );
+    const hashed_string           roughnessName( "_roughness" );
+    const MaterialParameterHandle handle = material->findParameter( roughnessName );
+    SW_REQUIRE_TRUE( material->findProperty( handle ) != nullptr );
+    SW_EXPECT_EQUAL( string( "_roughness" ), material->findProperty( handle )->_name );
+    SW_EXPECT_TRUE( material->findProperty( material->findParameter( hashed_string( "_missing" ) ) ) == nullptr );
+    SW_EXPECT_TRUE( material->findProperty( MaterialParameterHandle{} ) == nullptr );
+
+    SW_REQUIRE_TRUE( material->setParameter( roughnessName, "0.25" ) );
+    SW_EXPECT_TRUE( material->findProperty( handle ) != nullptr );
+
+    SW_REQUIRE_TRUE( material->loadFromXML( MaterialInstanceTestUtil::kTexturedMaterial ) );
+    SW_EXPECT_TRUE( material->findProperty( handle ) == nullptr );
+    MaterialParameterHandle renewed = handle;
+    const MaterialProperty* pColor  = material->resolveProperty( hashed_string( "_color" ), renewed );
+    SW_REQUIRE_TRUE( pColor != nullptr );
+    SW_EXPECT_EQUAL( string( "_color" ), pColor->_name );
+}
+
+/**
  * @brief [MaterialInstanceTest] 이진으로 든 값도 조회의 글은 공백으로 나눈 최단 왕복 표현이다
  */
 SW_TEST_CASE( MaterialInstanceTest, FloatOverridesKeepTextForm )

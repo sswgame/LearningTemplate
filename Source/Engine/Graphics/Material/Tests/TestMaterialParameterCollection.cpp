@@ -106,14 +106,6 @@ SW_TEST_CASE( MaterialParameterCollectionTest, ValidateRejectsBadNames )
     SW_EXPECT_FALSE( desc.validate( "test" ) );
 }
 
-/** @brief [MaterialParameterCollectionTest] 프로퍼티 값 글은 타입의 채널 수만큼이고 머티리얼 값 글과 같은 꼴이다 */
-SW_TEST_CASE( MaterialParameterCollectionTest, PropertyTextHasTheTypeChannels )
-{
-    const float4 value{ 0.5f, 0.25f, 2.0f, 1.0f };
-    SW_EXPECT_EQUAL( string( "0.5" ), MaterialParameterCollection::makePropertyText( value, 1u ) );
-    SW_EXPECT_EQUAL( string( "0.5 0.25 2 1" ), MaterialParameterCollection::makePropertyText( value, 4u ) );
-}
-
 /** @brief [MaterialParameterCollectionTest] 묶음 변형은 값을 이름으로 합친다 */
 SW_TEST_CASE( MaterialParameterCollectionTest, VariantMergesByName )
 {

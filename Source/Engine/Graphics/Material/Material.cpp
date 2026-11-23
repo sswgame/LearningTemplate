@@ -93,6 +93,7 @@ namespace sw
         , _elementStride{ 0 }
         , _bufferGeneration{}
         , _loadGeneration{ 0 }
+        , _layoutGeneration{ 1 }
         , _shaderLayoutCacheGeneration{ 0 }
         , _shaderLayoutBackend{}
         , _pRHIDevice{ nullptr }
@@ -373,10 +374,13 @@ namespace sw
                 binding._collection = MaterialParameterCollection::acquire( AssetID{ binding._path } );
             binding._bFailed = binding._collection == nullptr ? SW_TRUE : SW_FALSE; // 이유는 읽기가 남겼다 — 프로퍼티는 파일의 값으로 그린다
             // 레이아웃 오류로 바이트를 비웠으면 쓰지 않는다 — 틀린 바이트가 GPU 에 올라가지 않게 한 상태를 되살리지 않는다.
-            if ( binding._bFailed || binding._appliedGeneration == binding._collection->getGeneration() || _data._bytes.empty() )
+            if ( binding._bFailed || _data._bytes.empty() )
                 continue;
+            const uint32 collectionGeneration = binding._collection->getGeneration();
+            if ( binding._appliedGeneration == collectionGeneration && binding._handle._layoutGeneration == _layoutGeneration )
+                continue; // 값도 배치도 그대로다
             const float4*           pValue = binding._collection->findValue( binding._parameter );
-            const MaterialProperty* pProp  = findProperty( binding._property );
+            const MaterialProperty* pProp  = resolveProperty( binding._property, binding._handle );
             uint32                  count{ 0 };
             if ( pProp != nullptr )
             {
@@ -393,10 +397,16 @@ namespace sw
                 binding._bFailed = SW_TRUE;
                 continue;
             }
-            if ( setParameter( binding._property, MaterialParameterCollection::makePropertyText( *pValue, count ) ) )
-                binding._appliedGeneration = binding._collection->getGeneration();
+            const float32 arrValue[4] = { pValue->_x, pValue->_y, pValue->_z, pValue->_w };
+            if ( MaterialPacking::packFloatsIntoBuffer( *pProp, arrValue, count, _data._bytes ) )
+            {
+                binding._appliedGeneration = collectionGeneration;
+                _bufferGeneration.bump( this );
+            }
             else
+            {
                 binding._bFailed = SW_TRUE; // 패커가 이유를 남겼다
+            }
         }
     }
 
@@ -425,7 +435,7 @@ namespace sw
         // 머티리얼 파라미터 레이아웃을 셰이더에서 가져온다). 로드 경로에서도 맞춰야 한다 — XML 순서로 패킹하면 stride 가 0 이고,
         // 그러면 GPUScene 이 CB 크기(256)를 stride 로 써서 원소 1 부터 어긋난다.
         //
-        // "맞췄다" 표시는 다시 로드(XML 순서로 다시 쌓는다)가 풀고(applyDescToRuntime), 리플렉션 캐시를 비우면 낡는다.
+        // "맞췄다" 표시는 다시 로드(XML 순서로 다시 쌓는다)가 풀고(applyProperties), 리플렉션 캐시를 비우면 낡는다.
         // 표시가 남으면 XML 순서 바이트와 옛 stride 가 함께 올라간다.
         if ( _desc._shaderPath.empty() )
             return false;
@@ -537,7 +547,6 @@ namespace sw
         }
         const bool bAllPacked = matchPropertiesToSchema( *pSchemaCb );
         packPropertiesIntoBytes( pSchemaCb->_totalSize );
-        _desc._listProperty = _data._listProperty;
         // 불일치는 오류다 — 일부만 맞춘 바이트(적지 않은 칸의 0 = Vulkan 의 첫 실제 텍스처)를 올리지 않는다. 바이트가 비면 렌더 사본도 비어
         // 렌더 스레드가 그 원소와 상수 버퍼를 건너뛴다(인스턴스 사본도 부모 바이트에서 만든다).
         if ( bAllPacked == false )
@@ -586,7 +595,6 @@ namespace sw
             }
         }
         packPropertiesIntoBytes( schema._totalSize );
-        _desc._listProperty = _data._listProperty;
         SW_LOG_TRACE_ID( "Material.FilledPropertiesShaderReflection", "Filled %# properties from shader reflection.", _data._listProperty.size() );
     }
 
@@ -668,6 +676,7 @@ namespace sw
 
         const uint32 alignedTotal = MathUtil::align( static_cast<uint32>( _data._bytes.size() ), 256u );
         _data._bytes.resize( alignedTotal, 0 );
+        ++_layoutGeneration;
         _bufferGeneration.bump( this );
     }
 
@@ -741,9 +750,8 @@ namespace sw
         const uint32 alignedTotal = MathUtil::align( static_cast<uint32>( _data._bytes.size() ), 256u );
         if ( alignedTotal > _data._bytes.size() )
             _data._bytes.resize( alignedTotal, 0 );
+        ++_layoutGeneration;
         _bufferGeneration.bump( this );
-
-        _desc._listProperty = _data._listProperty;
         return bAllPacked;
     }
 
@@ -755,25 +763,9 @@ namespace sw
         return setParameter( name, prop->_defaultValue );
     }
 
-    bool Material::packNamedValueIntoBuffer( hashed_string name, string_view value, vector<uint8>& inoutBuffer ) const
+    bool Material::packTextureIntoBuffer( const MaterialParameterHandle& handle, RHIDescriptorIndex descIdx, vector<uint8>& inoutBuffer ) const
     {
-        const MaterialProperty* pProp = findProperty( name );
-        if ( pProp == nullptr )
-            return false;
-        return MaterialPacking::packValueIntoBuffer( *pProp, value, inoutBuffer );
-    }
-
-    bool Material::packNamedFloatsIntoBuffer( hashed_string name, const float32* pValue, uint32 count, vector<uint8>& inoutBuffer ) const
-    {
-        const MaterialProperty* pProp = findProperty( name );
-        if ( pProp == nullptr )
-            return false;
-        return MaterialPacking::packFloatsIntoBuffer( *pProp, pValue, count, inoutBuffer );
-    }
-
-    bool Material::packTextureIntoBuffer( hashed_string name, RHIDescriptorIndex descIdx, vector<uint8>& inoutBuffer ) const
-    {
-        const MaterialProperty* pProp = findProperty( name );
+        const MaterialProperty* pProp = findProperty( handle );
         if ( pProp == nullptr || MaterialPacking::isNonBufferType( pProp->_type ) )
             return false;
 
@@ -817,7 +809,6 @@ namespace sw
             return false;
         }
         _bufferGeneration.bump( this );
-        _desc._listProperty = _data._listProperty;
 
         if ( prop->_type == MaterialPropertyKind::Keyword || prop->_type == MaterialPropertyKind::Bool )
         {
@@ -840,7 +831,6 @@ namespace sw
         if ( MaterialPacking::packPropertyIntoBuffer( *pProp, _data._bytes ) == false )
             return false;
         _bufferGeneration.bump( this );
-        _desc._listProperty = _data._listProperty;
         return true;
     }
 
@@ -879,6 +869,27 @@ namespace sw
             return false;
         _bufferGeneration.bump( this );
         return true;
+    }
+
+    MaterialParameterHandle Material::findParameter( hashed_string name ) const
+    {
+        MaterialParameterHandle handle;
+        handle._index            = VectorUtil::findIndex<uint32>( _listPropertyName, name ).value_or( constant::invalid_index::kUint32 );
+        handle._layoutGeneration = _layoutGeneration;
+        return handle;
+    }
+
+    const MaterialProperty* Material::resolveProperty( hashed_string name, MaterialParameterHandle& inoutHandle ) const
+    {
+        if ( inoutHandle._layoutGeneration != _layoutGeneration )
+            inoutHandle = findParameter( name );
+        return findProperty( inoutHandle );
+    }
+
+    const MaterialProperty* Material::findProperty( const MaterialParameterHandle& handle ) const
+    {
+        const bool bCurrent = handle._layoutGeneration == _layoutGeneration && handle._index < _data._listProperty.size();
+        return bCurrent ? &_data._listProperty[handle._index] : nullptr;
     }
 
     const MaterialProperty* Material::findProperty( hashed_string name ) const
@@ -1121,8 +1132,6 @@ namespace sw
 
     string Material::saveFullToString() const
     {
-        this->syncDescFromRuntime();
-
         XMLDocument doc;
         XMLNode     root = doc.appendRoot( "MaterialDef" );
 
@@ -1238,7 +1247,8 @@ namespace sw
         _desc._parentPath = parentPath;
         setShaderPath( rootParams._shaderPath );
 
-        XMLNode props = root.findChild( "_properties" );
+        vector<MaterialProperty> listProperty;
+        XMLNode                  props = root.findChild( "_properties" );
         if ( props.isValid() )
         {
             for ( XMLNode item = props.findChild( "item" ); item; item = item.findNextSibling( "item" ) )
@@ -1247,7 +1257,7 @@ namespace sw
                 if ( MaterialXML::parsePropertyNode( item, prop ) == false )
                     return false;
                 if ( prop._name.empty() == false )
-                    _desc._listProperty.push_back( std::move( prop ) );
+                    listProperty.push_back( std::move( prop ) );
             }
         }
 
@@ -1270,7 +1280,7 @@ namespace sw
         if ( root.findAttribute( "alphaCutoff" ) != nullptr )
         {
             bool bApplied = false;
-            for ( MaterialProperty& prop : _desc._listProperty )
+            for ( MaterialProperty& prop : listProperty )
             {
                 if ( string_view( prop._name ) != kAlphaCutoffProperty )
                     continue;
@@ -1288,13 +1298,13 @@ namespace sw
         ++_loadGeneration; // 인스턴스의 정의 캐시가 다시 만든다 — 부모 해시가 같아도 덮은 칸의 뜻이 바뀌었을 수 있다
         // 다시 읽기(에디터 미리보기 · 머티리얼 패널)는 같은 객체를 제자리에서 바꾼다 — 셰이더 · define 이 달라졌을 수 있다. 주인을 적어 장면 빌더가 이 머티리얼을 쓰는 칸만 다시 모은다.
         MaterialPermutation::recordPermutationChange( this );
-        applyDescToRuntime();
+        applyProperties( std::move( listProperty ) );
         return true;
     }
 
-    void Material::applyDescToRuntime()
+    void Material::applyProperties( vector<MaterialProperty>&& listProperty )
     {
-        _data._listProperty = _desc._listProperty;
+        _data._listProperty = std::move( listProperty );
         rebuildPropertyNames();
         // 다시 로드하면 프로퍼티가 XML 순서로 다시 쌓인다 — 셰이더 레이아웃에 맞춘 상태도 함께 풀어야 다음 ensureShaderLayout 이 다시 맞춘다.
         // 표시가 남으면 XML 순서 바이트와 옛 stride 가 함께 GPUScene 에 올라간다(셰이더가 읽는 자리에 다른 프로퍼티 값).
@@ -1314,13 +1324,6 @@ namespace sw
         {
             _listPropertyName.push_back( hashed_string( prop._name.c_str() ) );
         }
-    }
-
-    void Material::syncDescFromRuntime() const
-    {
-        auto self                 = const_cast<Material*>( this );
-        self->_desc._listProperty = _data._listProperty;
-        self->_desc._name         = _desc._name;
-        self->setShaderPath( _desc._shaderPath );
+        ++_layoutGeneration;
     }
 } // namespace sw

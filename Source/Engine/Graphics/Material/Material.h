@@ -178,17 +178,9 @@ namespace sw
         /** @brief 한 프로퍼티를 `_defaultValue` 로 되돌립니다. */
         bool resetParameterToDefault( hashed_string name );
         /**
-         * @brief 이 머티리얼 레이아웃으로 외부 버퍼에 값을 패킹합니다.
-         * @details MaterialInstance 가 마스터를 건드리지 않고 오버라이드 CB 를 만들 때 쓴다.
-         */
-        bool packNamedValueIntoBuffer( hashed_string name, string_view value, vector<uint8>& inoutBuffer ) const;
-        /** @brief `packNamedValueIntoBuffer` 의 float 판입니다. 글을 거치지 않는다(`MaterialPacking::packFloatsIntoBuffer`). */
-        bool packNamedFloatsIntoBuffer( hashed_string name, const float32* pValue, uint32 count, vector<uint8>& inoutBuffer ) const;
-
-        /**
          * @brief 텍스처 디스크립터 인덱스를 대상 버퍼에 바로 패킹합니다(문자열 변환 없음).
          */
-        bool packTextureIntoBuffer( hashed_string name, MaterialTextureIndex descIdx, vector<uint8>& inoutBuffer ) const;
+        bool packTextureIntoBuffer( const MaterialParameterHandle& handle, MaterialTextureIndex descIdx, vector<uint8>& inoutBuffer ) const;
 
         /**
          * @brief POD 바이너리 데이터를 대상 버퍼의 프로퍼티 오프셋에 바로 씁니다.
@@ -264,6 +256,17 @@ namespace sw
          *          인스턴스가 덮은 칸의 뜻만 바뀐 다시 읽기(덮은 스위치의 키워드 이름 · 키워드 칸 선언)를 놓친다 — 언리얼 MaterialInstance 가 부모 변경 때 다시 캐시하는 자리.
          */
         uint32 getLoadGeneration() const { return _loadGeneration; }
+        /**
+         * @brief 프로퍼티 배치(목록 · 오프셋 · 크기 · 셰이더 타입)가 바뀔 때마다 오르는 세대입니다. 값만 바뀌면 그대로입니다(`getBufferGeneration` 은 값이 바뀌어도 오른다).
+         * @details `MaterialParameterHandle` 이 낡았는지 이 값으로 본다.
+         */
+        uint32 getLayoutGeneration() const { return _layoutGeneration; }
+        /** @brief 이름의 자리를 찾습니다. 없는 이름이면 번호가 무효인 자리입니다(세대는 채운다 — 같은 배치에서 다시 찾지 않게). */
+        MaterialParameterHandle findParameter( hashed_string name ) const;
+        /** @brief @p inoutHandle 이 지금 배치의 것이 아니면 @p name 으로 다시 찾고, 그 프로퍼티를 돌려줍니다. 없는 이름이면 nullptr 입니다. */
+        const MaterialProperty* resolveProperty( hashed_string name, MaterialParameterHandle& inoutHandle ) const;
+        /** @brief 자리 @p handle 의 프로퍼티입니다. 무효이거나 배치가 바뀌어 낡았으면 nullptr 입니다. */
+        const MaterialProperty* findProperty( const MaterialParameterHandle& handle ) const;
         /** @brief 이름으로 프로퍼티를 찾습니다. */
         const MaterialProperty* findProperty( hashed_string name ) const;
         /** @brief 이름으로 프로퍼티를 찾습니다. */
@@ -358,14 +361,12 @@ namespace sw
 
         /** @brief 프로퍼티 목록이 바뀐 뒤 이름 표(`_listPropertyName`)를 다시 만듭니다. */
         void rebuildPropertyNames();
-        /** @brief Desc 를 런타임 상태에 적용합니다. */
-        void applyDescToRuntime();
+        /** @brief 읽은 프로퍼티 @p listProperty 를 런타임 상태로 받고 배치 · 바이트를 다시 쌓습니다. */
+        void applyProperties( vector<MaterialProperty>&& listProperty );
         /** @brief 프로퍼티의 묶음 칸으로 묶음 목록을 다시 만듭니다(값은 다음 동기화에 받는다). */
         void rebuildCollectionBindings();
-        /** @brief 묶음의 세대가 바뀐 프로퍼티를 지금 값으로 다시 패킹합니다(`syncRenderState`). 그래서 직접 그리는 길과 인스턴스가 부모 바이트를 복사하는 길이 함께 따른다. */
+        /** @brief 묶음의 세대나 배치가 바뀐 프로퍼티 칸에 지금 값을 씁니다(`syncRenderState`). 프로퍼티의 파일 값(`_value`)은 그대로라 저장에 런타임 값이 섞이지 않는다. 그래서 직접 그리는 길과 인스턴스가 부모 바이트를 복사하는 길이 함께 따른다. */
         void syncParameterCollections();
-        /** @brief 런타임 프로퍼티를 Desc 에 다시 씁니다(저장용). */
-        void syncDescFromRuntime() const;
 
     private:
         /** @brief 프로퍼티 하나와 머티리얼 파라미터 묶음의 연결입니다. */
@@ -375,6 +376,7 @@ namespace sw
             hashed_string                           _parameter{};
             string                                  _path{};
             shared_ptr<MaterialParameterCollection> _collection{};
+            MaterialParameterHandle                 _handle{};               ///< 프로퍼티의 자리 — 배치가 바뀌면 다시 찾고 다시 쓴다(배치를 다시 쌓으면 칸이 파일 값으로 돌아간다)
             uint32                                  _appliedGeneration{ 0 }; ///< 마지막으로 패킹한 묶음 세대(묶음의 세대는 1 부터다)
             uint8                                   _bFailed{ SW_FALSE };    ///< 묶음 · 이름이 틀렸다. 오류는 한 번 남겼고 파일의 값으로 그린다
         };
@@ -390,6 +392,7 @@ namespace sw
         uint32                               _elementStride;                                                      /**< g_SwMaterials 원소 stride(리플렉션). 0이면 구조 버퍼 머티리얼이 아니다. */
         MaterialRenderVersion                _bufferGeneration;                                                   /**< 렌더 값(바이트, stride, 텍스처 슬롯)이 바뀔 때마다 오른다(`bump` — 전역 번호도 오른다, `MaterialRenderVersion`). 인스턴스 복사본과 렌더 사본이 낡았는지 확인한다. */
         uint32                               _loadGeneration;                                                     /**< `getLoadGeneration` */
+        uint32                               _layoutGeneration;                                                   /**< `getLayoutGeneration` */
         uint32                               _shaderLayoutCacheGeneration;                                        /**< 레이아웃을 맞출 때의 ShaderReflectionLibrary 캐시 세대 */
         RHIBackend                           _shaderLayoutBackend;                                                /**< 레이아웃을 맞춘 백엔드. `_bShaderLayoutSynced` 일 때만 의미가 있다. */
         IRHIDevice*                          _pRHIDevice;

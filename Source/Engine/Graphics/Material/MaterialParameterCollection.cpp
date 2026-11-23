@@ -133,19 +133,6 @@ namespace sw
         }
         return true;
     }
-
-    string MaterialParameterCollection::makePropertyText( const float4& value, uint32 componentCount )
-    {
-        const float32                            arrComponent[] = { value._x, value._y, value._z, value._w };
-        StringBuilder<constant::buffer::kMax128> builder;
-        for ( uint32 index = 0; index < componentCount && index < 4u; ++index )
-        {
-            if ( index > 0 )
-                builder.append( ' ' );
-            builder.appendFormat( "%#", arrComponent[index] );
-        }
-        return string( builder.view() );
-    }
 } // namespace sw
 
 namespace sw
