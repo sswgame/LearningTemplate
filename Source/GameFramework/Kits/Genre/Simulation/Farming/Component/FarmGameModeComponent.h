@@ -1,64 +1,38 @@
 /**
  * @file FarmGameModeComponent.h
- * @brief HarvestValley 의 규칙을 돌리는 컴포넌트입니다. 농부 이동, 도구, 체력, 시간, 가게, 출하, 수면, 날씨, 자동 농부, 로그를 맡고 밭 타일(프리팹) 스폰을 지시합니다.
- * @details 언리얼의 GameMode/GameState 에 해당합니다. 씬에 하나만 둡니다. 밭, 달력, 인벤토리, 작물 카탈로그의 규칙은 키트(`GF_Farming`)가 맡는다.
- *          이 컴포넌트는 "농부가 어디 서서 무엇을 하는가"의 규칙과 타일의 모습(프리팹)을 어디에 스폰하는지를 안다. 농부가 **무엇을 누르는가는 농부 폰의 의도**
- *          (`PawnComponent`. 플레이어 조종자 또는 `FarmAutoFarmerAIComponent` 가 낸다)이고, 디렉터는 입력 맵을 읽지 않는다. 모습을 매 프레임 맞추는 일은 뷰 컴포넌트
- *          (`FarmSoilComponent`, `FarmCropComponent`, `FarmerComponent`, `FarmTargetComponent`, 해는 Runtime `DaylightComponent`)가 이 컴포넌트를 **읽기만** 해서 처리한다.
+ * @brief 농장 생활 키트(`GF_Farming`)의 디렉터 — 농부 이동, 도구, 체력, 시간, 가게, 출하, 수면, 날씨, 자동 농부, 로그를 맡습니다.
+ * @details 키트 세 갈래의 가운데다: 규칙(키트 루트 — 밭 · 출하함 · 작물 카탈로그)을 들고 씬과 잇는다. 밭 타일의 모습 · 농부 몸 · 카메라 초점은 클라이언트 모듈(`GF_Client_Farming` 의
+ *          `FarmFieldViewComponent` · `FarmSoilComponent` · `FarmCropComponent` · `FarmerComponent`)이 이 디렉터의 읽기 API 로만 다룬다 — 전용 서버는 그 모듈을 짓지 않는다.
+ *          농부가 **무엇을 누르는가는 농부 폰의 의도**(`PawnComponent`. 플레이어 조종자 또는 `FarmAutoFarmerAIComponent` 가 낸다)이고 디렉터는 입력 맵을 읽지 않는다.
+ *          해는 Runtime `DaylightComponent` 가 `readDaylight` 로 읽는다. 씬에 하나만 둔다.
  *
- *          틱 규칙은 다음과 같다. 디렉터는 `TickGroup::PrePhysics` 에서 상태를 쓰고 카메라 리그의 초점을 넣으며, 뷰와 리그는 `PostUpdate` 에서 읽는다.
+ *          틱 규칙: 디렉터는 `TickGroup::PrePhysics` 에서 상태를 쓰고 뷰는 `PostUpdate` 에서 읽는다.
  *          틱이 끝난 뒤의 스폰, 상태 바이트 보류, 정리, 효과음은 베이스 `GameModeComponent` 가 맡는다.
  */
 #pragma once
-#include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
-#include "Core/Memory/Memory.h"
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Foundation/GameObjectHandle.h"
-#include "Engine/Graphics/Mesh/MeshAssetFormat.h"
-#include "Engine/Graphics/Mesh/MeshCache.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Serialization/Serializer/CatalogKey.h"
 
+#include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Simulation/Farming/CropCatalog.h"
 #include "GameFramework/Kits/Genre/Simulation/Farming/FarmField.h"
 #include "GameFramework/Kits/Genre/Simulation/Farming/FarmShippingBin.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
-#include "GameFramework/Runtime/Gameplay/Appearance/MaterialTintCache.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
 #include "GameFramework/Runtime/World/Environment/WeatherSystem.h"
 
 namespace sw
 {
-    class Archive;
-    class GameObject;
     class GameObjectManager;
-    class InputManager;
-    class Material;
-    class MaterialInstance;
     class PawnComponent;
-
-    /**
-     * @struct FarmCropModel
-     * @brief 작물 하나의 모델 표 한 줄입니다(디렉터의 PROPERTY — 씬 데이터). 표에 없는 작물은 기본 자라는 모델(잎)을 쓰고, 다 자라면 작물 색을 입는다.
-     */
-    REFLECT()
-    struct FarmCropModel
-    {
-        REFLECT_BODY();
-        PROPERTY( Tooltip = "Crop catalog id" )
-        CatalogKey<CropDef> _cropID{};
-        PROPERTY( Tooltip = "Model of the ready crop; empty keeps the growing model tinted with the crop colour" )
-        AssetRef<MeshAssetFormat> _readyModel{};
-        PROPERTY( Tooltip = "Growing models by stage: the first for stages 0 and 1, then one per stage, the last repeats; empty uses the default growing models" )
-        vector<AssetRef<MeshAssetFormat>> _listGrowingModel{};
-    };
 } // namespace sw
 
 namespace sw
@@ -73,11 +47,11 @@ namespace sw
         Hand         ///< 거두기.
     };
 
-    /** @brief 농부 폰의 버튼입니다. 폰 스키마(씬의 `PawnComponent`)의 이름은 `FarmGameModeComponent::getButtonName` 이고, 입력 맵 묶음(`data/gamesettings.xml` 의 `<inputMap path>`)의 액션 이름과 같습니다. */
+    /** @brief 농부 폰의 버튼입니다. 폰 스키마(씬의 `PawnComponent`)의 이름은 `FarmGameModeComponent::getButtonName` 이고, 입력 맵 묶음(팩 `data/gamesettings.xml` 의 `<inputMap path>`)의 액션 이름과 같습니다. */
     enum class FarmButton : uint8
     {
         Tool1 = 0, ///< 괭이
-        Tool2,     ///< 물루트개
+        Tool2,     ///< 물뿌리개
         Tool3,     ///< 씨앗
         Tool4,     ///< 손
         SeedPrev,
@@ -93,19 +67,16 @@ namespace sw
     /**
      * @class FarmGameModeComponent
      * @brief 농장 한 판을 진행합니다. 플레이가 시작되면 작물 카탈로그를 읽고 밭, 달력, 인벤토리를 새로 만듭니다(봄 1일, 첫 씨앗 10개).
-     * @details 농장 상태(달력, 밭, 인벤토리, 농부)는 PROPERTY 가 아니라 `writeState` 로 게임 상태 스냅샷의 컴포넌트 섹션에 실려 핫 리로드와
-     *          세이브를 넘긴다(`HarvestValleyGame`). 스폰한 타일 오브젝트는 핸들로 보관하고, 상태를 저장하기 전에 정리한다.
+     * @details 농장 상태(밭, 출하함, 농부)는 `serializeGameState` 와 상태 칸으로 게임 상태 스냅샷의 컴포넌트 섹션에 실려 핫 리로드와 세이브를 넘긴다.
      *          **빙의**: 농부(씬의 `_farmer` 오브젝트의 폰)는 자동 빙의(`Player0`)로 플레이어 조종자가 조종하다가, 자동 플레이 스위치가 켜지면 틱이 끝난 뒤 플러시에서
      *          자동 농부 AI(`_autoFarmerPrefab`)가, 꺼지면 다시 플레이어 조종자가 조종한다. 디렉터 안에 자동 플레이 분기는 없다.
      */
-    REFLECT( Category = "Farming", DisplayName = "Farm Game Mode", Tooltip = "Runs the farm rules, the farmer, time and weather, and spawns the field tiles" )
-    class FarmGameModeComponent : public GameModeComponent
+    REFLECT( Category = "Farming", DisplayName = "Farm Game Mode", Tooltip = "Runs the farm rules, the farmer, time and weather" )
+    class SW_KIT_API FarmGameModeComponent : public GameModeComponent
     {
     public:
         REFLECT_BODY();
 
-        static constexpr int32 kFieldWidth   = 12;
-        static constexpr int32 kFieldHeight  = 8;
         static constexpr int32 kBagSlotCount = 24; ///< 플레이어 가방 슬롯 수(공유 상태).
         static constexpr int32 kButtonCount  = static_cast<int32>( FarmButton::Count );
 
@@ -155,16 +126,8 @@ namespace sw
 
         /** @brief 농부가 바라보는 타일을 반환합니다. 밭 밖이면 false 입니다. */
         [[nodiscard]] bool findTargetTile( int32& outX, int32& outY ) const;
-        /** @brief 흙 상태(0 풀, 1 갈았음, 2 물 줌)의 모습을 반환합니다. 아직 없으면 비어 있습니다. */
-        const shared_ptr<MaterialInstance>& getSoilLook( int32 soilState ) const;
-        /** @brief 작물 모습을 반환합니다. 시든 것은 갈색이고, @p bCropColored 면 작물 색(제 모델이 없는 다 자란 작물), 아니면 정점 색 그대로(흰색)입니다. */
-        const shared_ptr<MaterialInstance>& findCropLook( const hashed_string& cropID, bool bWithered, bool bCropColored ) const;
         /** @brief 타일 중심(땅 높이)을 반환합니다. 밭은 원점에서 +X, +Z 방향으로 1m 타일입니다. */
         static float3 computeTileCenter( int32 x, int32 y );
-        /** @brief 다 자란 작물이 따로 모델을 가졌으면 그 경로, 아니면 nullptr 입니다(자라는 모델에 작물 색을 입힌다). 표는 `_listCropModel` 이다. */
-        const string* findReadyModel( const hashed_string& cropID ) const;
-        /** @brief 자라는 중인 작물의 단계 @p stage 모델 경로입니다(작물 줄의 자라는 모델, 없으면 기본 자라는 모델). 판을 열 때 기본 목록이 비지 않았음을 확인했다. */
-        const string& findGrowingModel( const hashed_string& cropID, int32 stage ) const;
 
     protected:
         /** @brief 작물 카탈로그를 읽고 밭과 출하함을 새로 만들며, 같은 오브젝트의 공유 상태를 엽니다(새 판일 때만 시작 돈과 씨앗을 줍니다). */
@@ -177,18 +140,6 @@ namespace sw
         bool               hasPendingSpawn() const override { return _bPossessionDirty == SW_TRUE; }
 
     private:
-        /** @brief 작물 하나의 다 자란 색 모습입니다. */
-        struct CropLook
-        {
-            hashed_string                _cropID{};
-            shared_ptr<MaterialInstance> _instance{};
-        };
-
-    private:
-        void spawnField( GameObjectManager& manager );
-        /** @brief 흙과 작물 모습 인스턴스, 작물 메시를 미리 로드합니다(뷰가 워커에서 파일을 읽지 않게 합니다). */
-        void prepareLooks( Material* pSoilMaterial, Material* pCropMaterial );
-
         /** @brief 농부 폰의 이번 틱 의도를 처리합니다. 이동 축으로 걷고, 발동한 버튼(도구, 씨앗, 사용, 출하, 구매, 수면, 상태)을 규칙대로 실행합니다. */
         void applyFarmerIntent( float32 deltaTime, const PawnComponent& pawn );
         /** @brief 농부를 @p direction 방향으로 움직이고 바라보는 방향을 네 방향으로 맞춥니다. 벡터 길이 1 이 걷는 속도의 최대치이며, 길이가 곧 속도 비율입니다. */
@@ -206,8 +157,6 @@ namespace sw
         /** @brief 하루를 끝냅니다. 정산, 다음 날, 날씨, 밭, 체력 순서로 처리하며, @p bPassedOut 이면 체력을 반만 채웁니다. */
         void endDay( bool bPassedOut );
         void selectSeed( int32 offset );
-        /** @brief 카메라 리그의 초점을 밭 중심과 농부 사이에 넣습니다(리그는 PostUpdate 에서 읽습니다). */
-        void updateCameraFocus();
         void logStatus( bool bForce );
 
         const hashed_string& getSelectedSeed() const;
@@ -219,20 +168,10 @@ namespace sw
     private:
         PROPERTY( Category = "Data", DisplayName = "Crop Data", Tooltip = "Crop catalog XML" )
         AssetRef<CropCatalog> _cropDataPath;
-        PROPERTY( Category = "Prefabs" )
-        AssetRef<PrefabAsset> _soilPrefab;
-        PROPERTY( Category = "Prefabs" )
-        AssetRef<PrefabAsset> _cropPrefab;
-        PROPERTY( Category = "Look", DisplayName = "Grass Soil", Tooltip = "Tile colour before tilling" )
-        float4 _grassSoilColor;
-        PROPERTY( Category = "Look", DisplayName = "Tilled Soil", Tooltip = "Tile colour once tilled" )
-        float4 _tilledSoilColor;
-        PROPERTY( Category = "Look", DisplayName = "Watered Soil", Tooltip = "Tile colour once watered today" )
-        float4 _wateredSoilColor;
-        PROPERTY( Category = "Look", DisplayName = "Withered Crop", Tooltip = "Crop colour once withered" )
-        float4 _witheredCropColor;
-        PROPERTY( Category = "Scene", DisplayName = "Camera Rig", Tooltip = "Object with the CameraDirectorComponent that follows the farmer" )
-        GameObjectHandle _cameraRig;
+        PROPERTY( Category = "Field", DisplayName = "Field Width", Tooltip = "Field tiles along X", Min = 1 )
+        int32 _fieldWidth;
+        PROPERTY( Category = "Field", DisplayName = "Field Height", Tooltip = "Field tiles along Z", Min = 1 )
+        int32 _fieldHeight;
         PROPERTY( Category = "Scene", DisplayName = "Shipping Bin", Tooltip = "Object whose position is the shipping bin (required - the farm does not start without it)" )
         GameObjectHandle _shippingBin;
         PROPERTY( Category = "Scene", DisplayName = "Shop", Tooltip = "Object whose position is the seed shop (required - the farm does not start without it)" )
@@ -252,8 +191,6 @@ namespace sw
         /** @brief 판 상태 날씨의 카탈로그입니다(`GameStateComponent` 의 `WeatherSystem` — 계절 가중치 · 하루 길이). 비는 그 날씨의 `wetness` 로 정한다. */
         PROPERTY( Category = "Weather", DisplayName = "Weather", Tooltip = "Weather catalog of the shared session state (season weights, a day long); rain is its wetness" )
         AssetRef<WeatherCatalog> _weatherPath;
-        PROPERTY( Category = "Camera", DisplayName = "Camera Follow", Tooltip = "How far the camera focus moves from the field centre towards the farmer", Min = 0.0, Max = 1.0, Units = ratio )
-        float32 _cameraFollow;
         PROPERTY( Category = "Farmer", DisplayName = "Max Stamina", Min = 1 )
         int32 _maxStamina;
         PROPERTY( Category = "Economy", DisplayName = "Starting Gold", Tooltip = "Gold a new game starts with", Min = 0 )
@@ -276,24 +213,13 @@ namespace sw
         int32 _startingSeedCount;
         PROPERTY( Category = "Economy", DisplayName = "Item Stack Size", Tooltip = "Most seeds or produce one bag slot holds", Min = 1 )
         int32 _itemStackSize;
-        PROPERTY( Category = "Crop Models", DisplayName = "Crop Models", Tooltip = "Ready and growing models per crop id" )
-        vector<FarmCropModel> _listCropModel;
-        PROPERTY( Category = "Crop Models", DisplayName = "Default Growing Models",
-                  Tooltip = "Growing models of crops without their own (the first for stages 0 and 1, then one per stage); required" )
-        vector<AssetRef<MeshAssetFormat>> _listDefaultGrowingModel;
 
         SharedAssetRef<CropCatalog>    _pCropCatalog;
         SharedAssetRef<WeatherCatalog> _pWeatherCatalog;
         ItemCatalog                    _itemCatalog; ///< 작물 카탈로그가 채운 씨앗과 수확물(공유 가방의 겹침 수).
         FarmField                      _field;
-        FarmShippingBin                _shipment;  ///< 출하함에 든 것(하루 끝에 팔린다).
-        vector<hashed_string>          _listSeed;  ///< 카탈로그 순서의 씨앗 아이템(가게 진열).
-        MaterialTintCache              _tintCache; ///< 흙과 작물 색(같은 색은 나눠 쓴다).
-        vector<CropLook>               _listCropLook;
-        vector<MeshHandle>             _listCropMesh; ///< 작물 모델 로드를 계속 쥔다(준비되면 메시를 참조한다 — 단계가 바뀔 때 뷰가 다시 읽지 않게 한다).
-        shared_ptr<MaterialInstance>   _arrSoilLook[3];
-        shared_ptr<MaterialInstance>   _plainCropLook;
-        shared_ptr<MaterialInstance>   _witheredCropLook;
+        FarmShippingBin                _shipment; ///< 출하함에 든 것(하루 끝에 팔린다).
+        vector<hashed_string>          _listSeed; ///< 카탈로그 순서의 씨앗 아이템(가게 진열).
         PROPERTY( RuntimeState )
         float3 _playerPosition;
         PROPERTY( RuntimeState )

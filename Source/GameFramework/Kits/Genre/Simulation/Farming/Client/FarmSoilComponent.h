@@ -9,6 +9,7 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
+#include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameFrameworkComponent.h"
 
 namespace sw
@@ -16,10 +17,10 @@ namespace sw
     /**
      * @class FarmSoilComponent
      * @brief `TickGroup::PostUpdate` 에서 디렉터를 읽기만 하고 자기 오브젝트의 메시에만 씁니다. 디렉터는 핸들로 들고 매 프레임 풉니다.
-     * @details 상태가 바뀔 때만 모습(디렉터가 나눠 주는 머티리얼 인스턴스)을 바꿉니다.
+     * @details 상태가 바뀔 때만 모습(밭 뷰 `FarmFieldViewComponent` 가 나눠 주는 머티리얼 인스턴스)을 바꿉니다.
      */
     REFLECT( Category = "Farming", DisplayName = "Farm Soil View", Tooltip = "Colours one field tile by the farm game mode soil state" )
-    class FarmSoilComponent : public GameFrameworkComponent
+    class SW_KIT_CLIENT_API FarmSoilComponent : public GameFrameworkComponent
     {
     public:
         REFLECT_BODY();
@@ -30,7 +31,7 @@ namespace sw
         void onBeginPlay() override;
         void onTick( TickContext& context ) override;
 
-        /** @brief 따라갈 디렉터와 칸 번호(행 우선)를 정합니다(디렉터가 스폰한 뒤 부른다). */
+        /** @brief 따라갈 디렉터와 칸 번호(행 우선)를 정합니다(밭 뷰가 스폰한 뒤 부른다). */
         void assignTile( GameObjectHandle gameMode, int32 tileIndex );
 
     private:

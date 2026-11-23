@@ -852,19 +852,23 @@
 					                       _bActive="true"
 					                       _cropDataPath="game/harvestvalley/data/crops.xml"
 					                       _weatherPath="game/harvestvalley/data/farm.weather.xml"
-					                       _soilPrefab="game/harvestvalley/prefabs/farmsoil.prefab.xml"
-					                       _cropPrefab="game/harvestvalley/prefabs/farmcrop.prefab.xml"
-					                       _grassSoilColor="0.4,0.62,0.28,1"
-					                       _tilledSoilColor="0.58,0.4,0.24,1"
-					                       _wateredSoilColor="0.33,0.22,0.13,1"
-					                       _witheredCropColor="0.55,0.4,0.22,1"
-					                       _cameraRig="1"
+					                       _fieldWidth="12"
+					                       _fieldHeight="8"
 					                       _shippingBin="5"
 					                       _shop="6"
 					                       _farmer="33"
 					                       _autoFarmerPrefab="game/harvestvalley/prefabs/autofarmer.prefab.xml"
 					                       _playerStart="6,0,-1.2"
-					                       _bAutoPlay="false">
+					                       _bAutoPlay="false" />
+					<FarmFieldViewComponent _localID="362370289443144604" _componentName="FarmFieldViewComponent"
+					                        _bActive="true"
+					                        _soilPrefab="game/harvestvalley/prefabs/farmsoil.prefab.xml"
+					                        _cropPrefab="game/harvestvalley/prefabs/farmcrop.prefab.xml"
+					                        _grassSoilColor="0.4,0.62,0.28,1"
+					                        _tilledSoilColor="0.58,0.4,0.24,1"
+					                        _wateredSoilColor="0.33,0.22,0.13,1"
+					                        _witheredCropColor="0.55,0.4,0.22,1"
+					                        _cameraRig="1">
 						<_listCropModel>
 							<FarmCropModel _cropID="turnip" _readyModel="game/harvestvalley/models/crop_turnip.mesh" />
 							<FarmCropModel _cropID="onion" _readyModel="game/harvestvalley/models/crop_turnip.mesh" />
@@ -882,7 +886,7 @@
 							<item>game/harvestvalley/models/crops_leafs_stage_a.mesh</item>
 							<item>game/harvestvalley/models/crops_leafs_stage_b.mesh</item>
 						</_listDefaultGrowingModel>
-					</FarmGameModeComponent>
+					</FarmFieldViewComponent>
 					<FarmVillageGameModeComponent _localID="1365981938186610330" _componentName="FarmVillageGameModeComponent"
 					                              _bActive="true"
 					                              _scheduleDataPath="game/harvestvalley/data/villagers.schedules.xml"

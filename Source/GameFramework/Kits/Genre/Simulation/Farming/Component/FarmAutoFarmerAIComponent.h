@@ -12,6 +12,7 @@
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
+#include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Character/Control/Controller/AIControllerComponent.h"
 
 namespace sw
@@ -45,7 +46,7 @@ namespace sw
      *          `ActionTimer`(판단마다 경과 시간만큼 줄인다 — 트리가 행동마다 다시 채운다). 트리가 쓰는 칸: `BuyRemaining` · `SeedCountAtBuy` · `StandPosition`.
      */
     REFLECT( Category = "Farming", DisplayName = "Farm Auto Farmer AI", Tooltip = "AI controller that farms while auto play is on; senses the farm, its behavior tree decides" )
-    class FarmAutoFarmerAIComponent : public AIControllerComponent
+    class SW_KIT_API FarmAutoFarmerAIComponent : public AIControllerComponent
     {
     public:
         REFLECT_BODY();

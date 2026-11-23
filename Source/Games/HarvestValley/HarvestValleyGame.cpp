@@ -11,10 +11,9 @@
 
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
+#include "GameFramework/Kits/Genre/Simulation/Farming/Component/FarmGameModeComponent.h"
+#include "GameFramework/Kits/Genre/Simulation/Farming/Component/FarmVillageGameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/Flow/GameInstance.h"
-
-#include "Games/HarvestValley/FarmGameModeComponent.h"
-#include "Games/HarvestValley/FarmVillageGameModeComponent.h"
 
 #include "ModuleAPI/Export/GameModuleExports.h"
 

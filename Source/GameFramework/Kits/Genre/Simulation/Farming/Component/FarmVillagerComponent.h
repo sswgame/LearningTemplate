@@ -1,6 +1,6 @@
 /**
  * @file FarmVillagerComponent.h
- * @brief 마을 사람 한 명의 모습 — 마을 디렉터가 적은 일정상 위치를 `NavAgent` 로 쫓아 자기 메시를 옮깁니다.
+ * @brief 마을 사람 한 명의 걷는 몸 — 마을 디렉터가 적은 일정상 위치를 `NavAgent` 로 쫓아 자기 메시를 옮깁니다.
  */
 #pragma once
 #include "Core/Container/vector.h"
@@ -11,6 +11,7 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
+#include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Character/Navigation/NavAgent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameFrameworkComponent.h"
 
@@ -24,7 +25,7 @@ namespace sw
      *          걷는 상태는 뷰의 것이라 저장하지 않는다 — 복원하면 일정상 위치에 놓인다.
      */
     REFLECT( Category = "Farming", DisplayName = "Farm Villager View", Tooltip = "Walks one villager's body after its scheduled position on the village nav grid" )
-    class FarmVillagerComponent : public GameFrameworkComponent
+    class SW_KIT_API FarmVillagerComponent : public GameFrameworkComponent
     {
     public:
         REFLECT_BODY();

@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Games/HarvestValley/FarmCropComponent.h"
+#include "GameFramework/Kits/Genre/Simulation/Farming/Client/FarmCropComponent.h"
 
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -8,7 +8,8 @@
 #include "Engine/Object/GameObject/Tick/TickContext.h"
 #include "Engine/Visual/Component/MeshComponent.h"
 
-#include "Games/HarvestValley/FarmGameModeComponent.h"
+#include "GameFramework/Kits/Genre/Simulation/Farming/Client/FarmFieldViewComponent.h"
+#include "GameFramework/Kits/Genre/Simulation/Farming/Component/FarmGameModeComponent.h"
 
 namespace sw
 {
@@ -45,7 +46,9 @@ namespace sw
         if ( bMissingTile )
             return;
         const FarmGameModeComponent* pGameMode = findGameMode<FarmGameModeComponent>();
-        if ( pGameMode == nullptr )
+        // 모델 표 · 모습을 쥔 밭 뷰는 디렉터와 같은 오브젝트다(밭 뷰가 칸을 세우며 그 오브젝트를 적는다).
+        const FarmFieldViewComponent* pFieldView = findGameMode<FarmFieldViewComponent>();
+        if ( pGameMode == nullptr || pFieldView == nullptr )
             return;
         const FarmField&    field    = pGameMode->getField();
         const GridTopology& topology = field.getTopology();
@@ -74,10 +77,10 @@ namespace sw
             _cropState = cropState;
             return;
         }
-        // 모델은 단계마다 바꾸고(디렉터의 작물 모델 표), 색은 정점 색 그대로(흰 모습). 시든 작물은 갈색으로, 제 모델이 없는 작물은 다 자라면 잎에 작물 색을 입힌다.
-        const string*                       pReadyModel = bReady ? pGameMode->findReadyModel( pTile->_cropID ) : nullptr;
-        const string&                       model       = pReadyModel != nullptr ? *pReadyModel : pGameMode->findGrowingModel( pTile->_cropID, stage );
-        const shared_ptr<MaterialInstance>& look        = pGameMode->findCropLook( pTile->_cropID, bWithered, bReady && pReadyModel == nullptr );
+        // 모델은 단계마다 바꾸고(밭 뷰의 작물 모델 표), 색은 정점 색 그대로(흰 모습). 시든 작물은 갈색으로, 제 모델이 없는 작물은 다 자라면 잎에 작물 색을 입힌다.
+        const string*                       pReadyModel = bReady ? pFieldView->findReadyModel( pTile->_cropID ) : nullptr;
+        const string&                       model       = pReadyModel != nullptr ? *pReadyModel : pFieldView->findGrowingModel( pTile->_cropID, stage );
+        const shared_ptr<MaterialInstance>& look        = pFieldView->findCropLook( pTile->_cropID, bWithered, bReady && pReadyModel == nullptr );
         if ( look == nullptr )
             return;
         const float32 size = _modelScale * ( bReady ? 1.0f : 0.7f + 0.3f * ratio );

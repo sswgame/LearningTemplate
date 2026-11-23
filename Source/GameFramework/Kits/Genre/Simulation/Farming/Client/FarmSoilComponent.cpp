@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Games/HarvestValley/FarmSoilComponent.h"
+#include "GameFramework/Kits/Genre/Simulation/Farming/Client/FarmSoilComponent.h"
 
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -8,7 +8,8 @@
 #include "Engine/Object/GameObject/Tick/TickContext.h"
 #include "Engine/Visual/Component/MeshComponent.h"
 
-#include "Games/HarvestValley/FarmGameModeComponent.h"
+#include "GameFramework/Kits/Genre/Simulation/Farming/Client/FarmFieldViewComponent.h"
+#include "GameFramework/Kits/Genre/Simulation/Farming/Component/FarmGameModeComponent.h"
 
 namespace sw
 {
@@ -42,7 +43,9 @@ namespace sw
         if ( bMissingTile )
             return;
         const FarmGameModeComponent* pGameMode = findGameMode<FarmGameModeComponent>();
-        if ( pGameMode == nullptr )
+        // 모습을 나눠 주는 밭 뷰는 디렉터와 같은 오브젝트다(밭 뷰가 칸을 세우며 그 오브젝트를 적는다).
+        const FarmFieldViewComponent* pFieldView = findGameMode<FarmFieldViewComponent>();
+        if ( pGameMode == nullptr || pFieldView == nullptr )
             return;
         const FarmField&    field    = pGameMode->getField();
         const GridTopology& topology = field.getTopology();
@@ -55,7 +58,7 @@ namespace sw
         const int32 soilState = pTile->_bTilled == SW_FALSE ? 0 : ( pTile->_bWatered != SW_FALSE ? 2 : 1 );
         if ( soilState == _soilState )
             return;
-        const shared_ptr<MaterialInstance>& look = pGameMode->getSoilLook( soilState );
+        const shared_ptr<MaterialInstance>& look = pFieldView->getSoilLook( soilState );
         if ( look == nullptr )
             return;
         pMesh->setMaterialInstance( look );

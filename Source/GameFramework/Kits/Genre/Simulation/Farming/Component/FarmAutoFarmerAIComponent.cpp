@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Games/HarvestValley/FarmAutoFarmerAIComponent.h"
+#include "GameFramework/Kits/Genre/Simulation/Farming/Component/FarmAutoFarmerAIComponent.h"
 
 #include "Core/Container/EnumArray.h"
 #include "Core/Math/MathUtil.h"
@@ -8,6 +8,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
+#include "GameFramework/Kits/Genre/Simulation/Farming/Component/FarmGameModeComponent.h"
 #include "GameFramework/Runtime/Character/AI/Blackboard.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Runtime/Gameplay/GameState/GameStateComponent.h"
@@ -16,8 +17,6 @@
 #include "GameFramework/Runtime/Gameplay/Inventory/InventoryComponent.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/WalletComponent.h"
 #include "GameFramework/Runtime/World/Environment/WorldClock.h"
-
-#include "Games/HarvestValley/FarmGameModeComponent.h"
 
 namespace sw
 {
@@ -79,17 +78,17 @@ namespace sw
             static void writeTileJob( const FarmField& field, int32 cultivateLimit, bool bHasSeasonalSeed, bool bHasSeed, Blackboard& blackboard )
             {
                 int32 cultivatedCount = 0;
-                for ( int32 y = 0; y < FarmGameModeComponent::kFieldHeight; ++y )
+                for ( int32 y = 0; y < field.getHeight(); ++y )
                 {
-                    for ( int32 x = 0; x < FarmGameModeComponent::kFieldWidth; ++x )
+                    for ( int32 x = 0; x < field.getWidth(); ++x )
                     {
                         cultivatedCount += field.findTile( x, y )->_bTilled != SW_FALSE ? 1 : 0;
                     }
                 }
                 EnumArray<TileJob, bool> arrFound;
-                for ( int32 y = 0; y < FarmGameModeComponent::kFieldHeight; ++y )
+                for ( int32 y = 0; y < field.getHeight(); ++y )
                 {
-                    for ( int32 x = 0; x < FarmGameModeComponent::kFieldWidth; ++x )
+                    for ( int32 x = 0; x < field.getWidth(); ++x )
                     {
                         const FarmTile* pTile         = field.findTile( x, y );
                         const bool      bCanSow       = pTile->_bTilled != SW_FALSE && pTile->hasCrop() == false && bHasSeed;

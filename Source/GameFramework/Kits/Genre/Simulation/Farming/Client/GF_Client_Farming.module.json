@@ -1,0 +1,22 @@
+{
+    "_name": "GF_Client_Farming",
+    "_version": "1.0.0",
+    "_kind": "Kit",
+    "_description": "농장 생활 키트(클라이언트) — 밭 칸 흙 · 작물 · 농부 · 바라보는 칸의 모습과 카메라 초점(뷰). 규칙 · 디렉터는 GF_Farming",
+    "_listDependency": [
+        {
+            "_name": "GameFramework"
+        },
+        {
+            "_name": "GF_Farming"
+        }
+    ],
+    "_listConfiguration": [
+        "Dev",
+        "Shipping"
+    ],
+    "_listTarget": [
+        "Client"
+    ],
+    "_bEnabledByDefault": true
+}

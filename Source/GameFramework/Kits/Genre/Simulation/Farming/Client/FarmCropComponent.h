@@ -12,6 +12,7 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
+#include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameFrameworkComponent.h"
 
 namespace sw
@@ -20,10 +21,10 @@ namespace sw
      * @class FarmCropComponent
      * @brief `TickGroup::PostUpdate` 에서 디렉터를 읽기만 하고 자기 오브젝트의 메시에만 씁니다. 디렉터는 핸들로 들고 매 프레임 풉니다.
      * @details 단계(0..4) · 다 자람 · 시듦 · 작물이 바뀔 때만 다시 칠합니다. 모델은 Kenney Nature Kit — 옥수수는 제 단계 모델, 나머지는 잎 두 단계,
-     *          다 자라면 제 모델(무 · 당근 · 호박 · 옥수수)이고, 제 모델이 없는 작물은 잎에 작물 색을 입힙니다. 모델은 디렉터가 미리 쥐고 있어 바꿀 때 읽지 않습니다.
+     *          다 자라면 제 모델(무 · 당근 · 호박 · 옥수수)이고, 제 모델이 없는 작물은 잎에 작물 색을 입힙니다. 모델은 밭 뷰가 미리 쥐고 있어 바꿀 때 읽지 않습니다.
      */
     REFLECT( Category = "Farming", DisplayName = "Farm Crop View", Tooltip = "Shows the crop of one field tile of the farm game mode" )
-    class FarmCropComponent : public GameFrameworkComponent
+    class SW_KIT_CLIENT_API FarmCropComponent : public GameFrameworkComponent
     {
     public:
         REFLECT_BODY();
@@ -34,10 +35,10 @@ namespace sw
         void onBeginPlay() override;
         void onTick( TickContext& context ) override;
 
-        /** @brief 따라갈 디렉터와 칸 번호(행 우선)를 정합니다(디렉터가 스폰한 뒤 부른다). */
+        /** @brief 따라갈 디렉터와 칸 번호(행 우선)를 정합니다(밭 뷰가 스폰한 뒤 부른다). */
         void assignTile( GameObjectHandle gameMode, int32 tileIndex );
 
-        // 작물 → 모델은 디렉터의 작물 모델 표(씬 데이터, `FarmGameModeComponent::findReadyModel` · `findGrowingModel`)가 정한다.
+        // 작물 → 모델은 밭 뷰의 작물 모델 표(씬 데이터, `FarmFieldViewComponent::findReadyModel` · `findGrowingModel`)가 정한다.
 
     private:
         PROPERTY( Category = "Tile", DisplayName = "Tile Index", Tooltip = "Row-major tile of the game mode field" )

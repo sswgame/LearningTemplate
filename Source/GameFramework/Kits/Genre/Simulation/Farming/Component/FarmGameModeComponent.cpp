@@ -1,16 +1,13 @@
 #include "pch.h"
 
-#include "Games/HarvestValley/FarmGameModeComponent.h"
+#include "GameFramework/Kits/Genre/Simulation/Farming/Component/FarmGameModeComponent.h"
 
 #include "Core/Container/EnumArray.h"
 #include "Core/Encoding/FourCCUtil.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Asset/AssetManager.h"
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
-#include "Engine/Graphics/Material/MaterialInstance.h"
-#include "Engine/Graphics/Mesh/MeshCache.h"
 #include "Engine/Input/Map/CommonInputActions.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -18,14 +15,12 @@
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
-#include "Engine/Visual/Component/MeshComponent.h"
 
-#include "GameFramework/Runtime/Character/Camera/CameraDirectorComponent.h"
+#include "GameFramework/Kits/Genre/Simulation/Farming/Component/FarmAutoFarmerAIComponent.h"
 #include "GameFramework/Runtime/Character/Control/ControlSystem.h"
 #include "GameFramework/Runtime/Character/Control/Intent/ControlIntent.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
-#include "GameFramework/Runtime/Foundation/Grid/GridTopology.h"
 #include "GameFramework/Runtime/Gameplay/GameState/GameStateComponent.h"
 #include "GameFramework/Runtime/Gameplay/GameState/PlayerComponentUtil.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
@@ -33,10 +28,6 @@
 #include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/WalletComponent.h"
 #include "GameFramework/Runtime/World/Environment/WorldClock.h"
-
-#include "Games/HarvestValley/FarmAutoFarmerAIComponent.h"
-#include "Games/HarvestValley/FarmCropComponent.h"
-#include "Games/HarvestValley/FarmSoilComponent.h"
 
 namespace sw
 {
@@ -79,12 +70,13 @@ namespace sw
 
         [[nodiscard]] bool readTilledCount( const FarmGameModeComponent& gameMode, float64& outValue )
         {
-            int32 tilledCount = 0;
-            for ( int32 y = 0; y < FarmGameModeComponent::kFieldHeight; ++y )
+            const FarmField& field       = gameMode.getField();
+            int32            tilledCount = 0;
+            for ( int32 y = 0; y < field.getHeight(); ++y )
             {
-                for ( int32 x = 0; x < FarmGameModeComponent::kFieldWidth; ++x )
+                for ( int32 x = 0; x < field.getWidth(); ++x )
                 {
-                    const FarmTile* pTile = gameMode.getField().findTile( x, y );
+                    const FarmTile* pTile = field.findTile( x, y );
                     tilledCount += pTile != nullptr && pTile->_bTilled != SW_FALSE ? 1 : 0;
                 }
             }
@@ -113,13 +105,8 @@ namespace sw
 {
     FarmGameModeComponent::FarmGameModeComponent()
         : _cropDataPath{}
-        , _soilPrefab{}
-        , _cropPrefab{}
-        , _grassSoilColor{ 0.40f, 0.62f, 0.28f, 1.0f }
-        , _tilledSoilColor{ 0.58f, 0.40f, 0.24f, 1.0f }
-        , _wateredSoilColor{ 0.33f, 0.22f, 0.13f, 1.0f }
-        , _witheredCropColor{ 0.55f, 0.40f, 0.22f, 1.0f }
-        , _cameraRig{}
+        , _fieldWidth{ 12 }
+        , _fieldHeight{ 8 }
         , _shippingBin{}
         , _shop{}
         , _farmer{}
@@ -129,7 +116,6 @@ namespace sw
         , _reach{ 0.9f }
         , _nearDistance{ 1.7f }
         , _weatherPath{}
-        , _cameraFollow{ 0.4f }
         , _maxStamina{ 100 }
         , _startingGold{ 500 }
         , _secondsPerDay{ 144.0f }
@@ -141,20 +127,12 @@ namespace sw
         , _handStaminaCost{ 1 }
         , _startingSeedCount{ 10 }
         , _itemStackSize{ 99 }
-        , _listCropModel{}
-        , _listDefaultGrowingModel{}
         , _pCropCatalog{}
         , _pWeatherCatalog{}
         , _itemCatalog{}
         , _field{}
         , _shipment{}
         , _listSeed{}
-        , _tintCache{}
-        , _listCropLook{}
-        , _listCropMesh{}
-        , _arrSoilLook{}
-        , _plainCropLook{}
-        , _witheredCropLook{}
         , _playerPosition{ _playerStart }
         , _facing{ 0.0f, 0.0f, 1.0f }
         , _shippingBinPosition{}
@@ -179,7 +157,6 @@ namespace sw
 
     void FarmGameModeComponent::onGameStarted()
     {
-        updateCameraFocus();
         SW_LOG_INFO_ID( "FarmGameMode.FarmReadyWASDMove", "[Farm] farm is ready - WASD move, Space use tool, 1-4 tool (hoe/can/seeds/hand), Q/E seed, B buy, F ship, Z sleep" );
         logStatus( true );
     }
@@ -211,7 +188,6 @@ namespace sw
                 endDay( true );
             }
         }
-        updateCameraFocus();
         logStatus( false );
     }
 
@@ -224,7 +200,7 @@ namespace sw
         FarmShippingBin restoredShipment;
         if ( io.isReading() )
         {
-            restoredField.initialize( kFieldWidth, kFieldHeight, _pCropCatalog.get() );
+            restoredField.initialize( _fieldWidth, _fieldHeight, _pCropCatalog.get() );
         }
         FarmField&       field    = io.isWriting() ? _field : restoredField;
         FarmShippingBin& shipment = io.isWriting() ? _shipment : restoredShipment;
@@ -259,54 +235,9 @@ namespace sw
         return _field.findTile( outX, outY ) != nullptr;
     }
 
-    const shared_ptr<MaterialInstance>& FarmGameModeComponent::getSoilLook( int32 soilState ) const
-    {
-        return _arrSoilLook[MathUtil::clamp( soilState, 0, 2 )];
-    }
-
-    const shared_ptr<MaterialInstance>& FarmGameModeComponent::findCropLook( const hashed_string& cropID, bool bWithered, bool bCropColored ) const
-    {
-        if ( bWithered )
-            return _witheredCropLook;
-        if ( bCropColored )
-        {
-            // 뷰가 워커에서 부른다. 컨테이너 인덱스 대신 포인터로 읽는다.
-            const CropLook* pLook = _listCropLook.data();
-            for ( size_t lookIndex = 0; lookIndex < _listCropLook.size(); ++lookIndex )
-            {
-                if ( pLook[lookIndex]._cropID == cropID )
-                    return pLook[lookIndex]._instance;
-            }
-        }
-        return _plainCropLook;
-    }
-
     float3 FarmGameModeComponent::computeTileCenter( int32 x, int32 y )
     {
         return float3{ static_cast<float32>( x ) + 0.5f, 0.0f, static_cast<float32>( y ) + 0.5f };
-    }
-
-    const string* FarmGameModeComponent::findReadyModel( const hashed_string& cropID ) const
-    {
-        for ( const FarmCropModel& model : _listCropModel )
-        {
-            if ( model._cropID.key() == cropID )
-                return model._readyModel.empty() ? nullptr : &model._readyModel.path();
-        }
-        return nullptr;
-    }
-
-    const string& FarmGameModeComponent::findGrowingModel( const hashed_string& cropID, int32 stage ) const
-    {
-        const vector<AssetRef<MeshAssetFormat>>* pList = &_listDefaultGrowingModel;
-        for ( const FarmCropModel& model : _listCropModel )
-        {
-            if ( model._cropID.key() == cropID && model._listGrowingModel.empty() == false )
-                pList = &model._listGrowingModel;
-        }
-        // 첫 모델이 0 · 1 단계, 그다음부터 한 단계에 하나, 모자라면 마지막을 쓴다.
-        const int32 index = MathUtil::clamp( stage - 1, 0, static_cast<int32>( pList->size() ) - 1 );
-        return ( *pList )[static_cast<size_t>( index )].path();
     }
 
     // ------------------------------------------------------------------------------
@@ -330,20 +261,6 @@ namespace sw
             SW_LOG_ERROR_ID( "FarmGameMode.DirectorShippingBinShop", "[Farm] the game mode's Shipping Bin and Shop must point at objects in the scene - the farm cannot start" );
             return false;
         }
-        // 작물 모델 표는 씬 데이터다. 기본 자라는 모델이 없으면 뷰가 고를 모델이 없다 — 시작하지 않는다.
-        if ( _listDefaultGrowingModel.empty() )
-        {
-            SW_LOG_ERROR_ID( "FarmGameMode.DirectorDefaultGrowingModels", "[Farm] the game mode's Default Growing Models is empty - the farm cannot start" );
-            return false;
-        }
-        for ( const FarmCropModel& model : _listCropModel )
-        {
-            if ( _pCropCatalog->findCrop( model._cropID.key() ) == nullptr )
-            {
-                SW_LOG_ERROR_ID( "FarmGameMode.DirectorCropModelsNames", "[Farm] the game mode's Crop Models names crop '%#', which %# does not have - the farm cannot start", model._cropID.c_str(), _cropDataPath.c_str() );
-                return false;
-            }
-        }
         _itemCatalog = ItemCatalog{};
         _pCropCatalog->fillItemCatalog( _itemCatalog, _itemStackSize );
         GameStateSettings settings;
@@ -362,7 +279,7 @@ namespace sw
         WalletComponent*    pWallet = PlayerComponentUtil::requireOnOwner<WalletComponent>( *this );
         if ( pBag == nullptr || pWallet == nullptr )
             return false;
-        _field.initialize( kFieldWidth, kFieldHeight, _pCropCatalog.get() );
+        _field.initialize( _fieldWidth, _fieldHeight, _pCropCatalog.get() );
         _shipment = FarmShippingBin{};
         _listSeed.clear();
         for ( const CropDef& crop : _pCropCatalog->getCrops() )
@@ -388,8 +305,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     void FarmGameModeComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
     {
-        if ( bRespawnViews )
-            spawnField( manager );
+        (void)bRespawnViews; // 모습은 클라이언트 모듈이 세운다 — 디렉터가 세우는 것은 자동 농부뿐이다
         syncFarmerPossession( manager );
     }
 
@@ -444,80 +360,6 @@ namespace sw
         }
         // 자동 플레이를 끄면 플레이어 0 의 조종자가 되찾는다(씬에 없으면 만든다).
         (void)ControlSystem::returnPawnToPlayer( manager, *pPawn, _autoFarmerObject );
-    }
-
-    void FarmGameModeComponent::spawnField( GameObjectManager& manager )
-    {
-        // 타일마다 흙과 작물을 하나씩 둔다. 각 뷰가 밭의 같은 타일을 따라 모습을 맞춘다(PostUpdate).
-        const GameObjectHandle gameMode = getOwner()->getHandle();
-        for ( int32 y = 0; y < kFieldHeight; ++y )
-        {
-            for ( int32 x = 0; x < kFieldWidth; ++x )
-            {
-                const int32  tileIndex = GridTopology( kFieldWidth, kFieldHeight ).toIndex( x, y );
-                const float3 center    = computeTileCenter( x, y );
-                GameObject*  pSoil     = spawnPrefab( manager, _soilPrefab, "FarmSoil" );
-                GameObject*  pCrop     = spawnPrefab( manager, _cropPrefab, "FarmCrop" );
-                if ( pSoil == nullptr || pCrop == nullptr )
-                    continue;
-                MeshComponent* pSoilMesh           = pSoil->getComponent<MeshComponent>();
-                MeshComponent* pCropMesh           = pCrop->getComponent<MeshComponent>();
-                const bool     bShouldPrepareLooks = _arrSoilLook[0] == nullptr && pSoilMesh != nullptr && pCropMesh != nullptr;
-                if ( bShouldPrepareLooks )
-                    prepareLooks( pSoilMesh->getMaterial(), pCropMesh->getMaterial() );
-                if ( pSoilMesh != nullptr )
-                    pSoilMesh->setLocalPosition( center + float3{ 0.0f, pSoilMesh->getLocalScale()._y * 0.5f, 0.0f } );
-                if ( pCropMesh != nullptr )
-                    pCropMesh->setLocalPosition( center );
-                FarmSoilComponent* pSoilView = pSoil->getComponent<FarmSoilComponent>();
-                if ( pSoilView != nullptr )
-                    pSoilView->assignTile( gameMode, tileIndex );
-                FarmCropComponent* pCropView = pCrop->getComponent<FarmCropComponent>();
-                if ( pCropView != nullptr )
-                    pCropView->assignTile( gameMode, tileIndex );
-            }
-        }
-    }
-
-    void FarmGameModeComponent::prepareLooks( Material* pSoilMaterial, Material* pCropMaterial )
-    {
-        const float4 arrSoilColor[3] = { _grassSoilColor, _tilledSoilColor, _wateredSoilColor };
-        for ( int32 soilState = 0; soilState < 3; ++soilState )
-        {
-            _arrSoilLook[soilState] = _tintCache.acquire( pSoilMaterial, arrSoilColor[soilState] );
-        }
-        _plainCropLook    = _tintCache.acquire( pCropMaterial, float4{ 1.0f, 1.0f, 1.0f, 1.0f } );
-        _witheredCropLook = _tintCache.acquire( pCropMaterial, _witheredCropColor );
-        _listCropLook.clear();
-        for ( const CropDef& crop : _pCropCatalog->getCrops() )
-        {
-            CropLook look;
-            look._cropID   = crop._id;
-            look._instance = _tintCache.acquire( pCropMaterial, crop._color );
-            _listCropLook.push_back( look );
-        }
-        _listCropMesh.clear();
-        // 작물 모델 표(씬 데이터)의 모델을 모두 미리 잡는다.
-        vector<string> listModelPath;
-        for ( const AssetRef<MeshAssetFormat>& growing : _listDefaultGrowingModel )
-        {
-            listModelPath.push_back( growing.path() );
-        }
-        for ( const FarmCropModel& model : _listCropModel )
-        {
-            if ( model._readyModel.empty() == false )
-                listModelPath.push_back( model._readyModel.path() );
-            for ( const AssetRef<MeshAssetFormat>& growing : model._listGrowingModel )
-            {
-                listModelPath.push_back( growing.path() );
-            }
-        }
-        // 게임 스레드가 디스크를 기다리지 않게 워커가 읽는다 — 미리 쥐는 것이 목적이라 지금 쓰지 않는다(뷰의 `MeshComponent` 가 같은 로드를 받는다).
-        // 읽지 못한 모델은 캐시가 경로마다 한 번 경고한다.
-        for ( const string& path : listModelPath )
-        {
-            _listCropMesh.push_back( MeshCache::request( path ) );
-        }
     }
 
     // ------------------------------------------------------------------------------
@@ -577,8 +419,8 @@ namespace sw
         if ( length < FarmGameModeComponentInternal::kMinMoveLength )
             return;
         const float3 step  = direction * ( _walkSpeed * deltaTime * MathUtil::min( length, 1.0f ) / length );
-        _playerPosition._x = MathUtil::clamp( _playerPosition._x + step._x, -5.0f, static_cast<float32>( kFieldWidth ) + 4.0f );
-        _playerPosition._z = MathUtil::clamp( _playerPosition._z + step._z, -5.0f, static_cast<float32>( kFieldHeight ) + 4.0f );
+        _playerPosition._x = MathUtil::clamp( _playerPosition._x + step._x, -5.0f, static_cast<float32>( _field.getWidth() ) + 4.0f );
+        _playerPosition._z = MathUtil::clamp( _playerPosition._z + step._z, -5.0f, static_cast<float32>( _field.getHeight() ) + 4.0f );
         // 네 방향으로 맞춘다. 대각선이면 더 큰 축을 쓴다.
         if ( MathUtil::abs( direction._x ) > MathUtil::abs( direction._z ) )
             _facing = float3{ direction._x > 0.0f ? 1.0f : -1.0f, 0.0f, 0.0f };
@@ -757,16 +599,6 @@ namespace sw
         [[maybe_unused]] const InventoryComponent* pBag   = PlayerComponentUtil::findOnOwner<InventoryComponent>( *this );
         SW_LOG_INFO_ID( "FarmGameMode.SeedG", "[Farm] seed: %# (have %#, %#G)%#", getSelectedSeed().c_str(), pBag != nullptr ? pBag->getInventory().getItemCount( getSelectedSeed() ) : 0,
                         pCrop != nullptr ? pCrop->_seedPrice : 0, pCrop != nullptr && pState != nullptr && pCrop->canGrowIn( pState->getClock().getSeasonName() ) ? "" : " - not this season" );
-    }
-
-    void FarmGameModeComponent::updateCameraFocus()
-    {
-        // 비스듬히 내려다보는 직교 시점으로, 밭 중심과 농부 사이를 본다. 카메라 디렉터는 PostPhysics 틱 뒤에 이 초점을 읽고, 카메라 오브젝트에는 다른 쓰기가 없다.
-        CameraDirectorComponent* pRig = findOn<CameraDirectorComponent>( _cameraRig );
-        if ( pRig == nullptr )
-            return;
-        const float3 fieldCenter{ static_cast<float32>( kFieldWidth ) * 0.5f, 0.0f, static_cast<float32>( kFieldHeight ) * 0.5f };
-        pRig->setFocusPoint( fieldCenter + ( _playerPosition - fieldCenter ) * _cameraFollow );
     }
 
     void FarmGameModeComponent::logStatus( bool bForce )

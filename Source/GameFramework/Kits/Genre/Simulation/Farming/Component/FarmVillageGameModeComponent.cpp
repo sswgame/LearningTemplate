@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Games/HarvestValley/FarmVillageGameModeComponent.h"
+#include "GameFramework/Kits/Genre/Simulation/Farming/Component/FarmVillageGameModeComponent.h"
 
 #include "Core/Encoding/FourCCUtil.h"
 #include "Core/Log/Logger.h"
@@ -17,11 +17,10 @@
 #include "Engine/Serialization/Format/StateIO.h"
 #include "Engine/Serialization/Serializer/SerializeContext.h"
 
+#include "GameFramework/Kits/Genre/Simulation/Farming/Component/FarmVillagerComponent.h"
 #include "GameFramework/Runtime/Character/AI/Schedule/NPCScheduleComponent.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterAppearanceComponent.h"
 #include "GameFramework/Runtime/Gameplay/GameState/GameStateComponent.h"
-
-#include "Games/HarvestValley/FarmVillagerComponent.h"
 
 namespace sw
 {
