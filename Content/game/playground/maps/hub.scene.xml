@@ -99,5 +99,53 @@
 				</_listComponent>
 			</GameObject>
 		</entity>
+		<!-- 허브 서버(Games/Playground/Hub) — 전용 서버가 이 맵을 열면 계정마다 진행을 저장하는 공유 월드가 선다(짐승 · 버섯 · 파티, NetMMO 복제). 혼자 띄우면 규칙만 확인하고 쉰다.
+		     시나리오 automation/hubserver_rules · hubserver_slice, 두 프로세스는 py -3 -m Scripts net-pair mmo(automation/netpair). -->
+		<entity id="310" name="HubServer">
+			<GameObject _schemaVersion="0" _name="HubServer" _bActive="true" _bAlwaysLoaded="true">
+				<_listComponent>
+					<!-- 허브 규칙(서버 권위) — 짐승 100000 · 100001 은 나는 자리 곁(사거리 3 m 안), 버섯 100002 는 채집 거리 2 m 안, 나머지는 걸어가야 닿는다.
+					     단계표: 레벨 2 는 경험 100(짐승 둘), 3 은 250, 4 는 450, 5 는 700. -->
+					<HubWorldComponent _localID="18207458685461171959" _componentName="HubWorldComponent"
+					                   _bActive="true">
+						<_rules _attackRange="3"
+						        _attackCooldownSeconds="0.5"
+						        _attackPower="10"
+						        _creatureHealth="30"
+						        _creatureExperience="60"
+						        _creatureCoins="5"
+						        _creatureRespawnSeconds="3"
+						        _gatherRange="2"
+						        _herbExperience="15"
+						        _herbRespawnSeconds="5"
+						        _maxMoveStep="12"
+						        _moveSpeed="6"
+						        _remoteCallBurstCount="20"
+						        _remoteCallRefillMilliseconds="50"
+						        _worldHalfExtent="64"
+						        _partyMaxSize="4"
+						        _partyShareRange="30"
+						        _autosaveSeconds="30"
+						        _avatarSpawn="0,0,0">
+							<_listLevelExperience>
+								<item>100</item>
+								<item>250</item>
+								<item>450</item>
+								<item>700</item>
+							</_listLevelExperience>
+							<_listPlacement>
+								<HubPlacement _kind="Creature" _position="2,0,0" />
+								<HubPlacement _kind="Creature" _position="-2,0,1" />
+								<HubPlacement _kind="Herb" _position="0,0,1.5" />
+								<HubPlacement _kind="Creature" _position="20,0,18" />
+								<HubPlacement _kind="Herb" _position="-18,0,22" />
+								<HubPlacement _kind="Creature" _position="40,0,-30" />
+							</_listPlacement>
+						</_rules>
+						<_interestGrid _cellSize="32" _loadingRadius="96" />
+					</HubWorldComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
 	</entities>
 </Scene>

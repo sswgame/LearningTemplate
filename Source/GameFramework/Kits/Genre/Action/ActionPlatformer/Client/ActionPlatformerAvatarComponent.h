@@ -44,7 +44,8 @@ namespace sw
     private:
         /** @brief 틱 뒤 게임 스레드: 입력을 명령으로 넘기고 스테이지를 그립니다. */
         void updateAvatar( GameObjectManager& manager );
-        void drawStage( const ActionPlatformerGameModeComponent& director ) const;
+        /** @brief 스테이지를 그립니다. 타일 · 플레이어 자리는 절대 자리라 @p manager 의 원점으로 옮긴다. */
+        static void drawStage( const ActionPlatformerGameModeComponent& director, const GameObjectManager& manager );
 
     private:
         PROPERTY( Category = "Input", DisplayName = "Move Action", Tooltip = "InputMap 2D action whose X runs the body (required)" )

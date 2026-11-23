@@ -54,7 +54,8 @@ namespace sw
         void updateCursor( GameObjectManager& manager );
         /** @brief `Move` 축을 한 번 기울일 때 커서를 한 칸 옮깁니다(놓았다가 다시 기울여야 다음 칸). */
         void moveCursor( const SRPGGameModeComponent& director );
-        void drawField( const SRPGGameModeComponent& director ) const;
+        /** @brief 전장과 커서를 그립니다. 칸 (x, y) 의 자리는 절대 자리라 @p manager 의 원점으로 옮긴다. */
+        void drawField( const SRPGGameModeComponent& director, const GameObjectManager& manager ) const;
 
     private:
         PROPERTY( Category = "Input", DisplayName = "Move Action", Tooltip = "InputMap 2D action that steps the cursor one cell per tilt (required)" )

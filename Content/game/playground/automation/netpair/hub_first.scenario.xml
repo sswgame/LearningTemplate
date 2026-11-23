@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="0488e0409f5f09199fc1aff3341f61b9"?>
+<!--
+  허브 서버 두 프로세스 — 첫 접속(클라이언트). `py -3 -m Scripts net-pair mmo` 가 전용 서버(-game=Playground — 시작 맵 maps/hub, 게임 접속 티켓 · 실행마다 빈 사용자 데이터 폴더 SW_USER_DATA_ROOT)를 띄운 뒤 이 시나리오로 클라이언트를 돌린다.
+  로그인 → 티켓 → 암호화 UDP 접속 → 서버가 계정 진행(새 계정)을 읽어 아바타를 세움 → 짐승 둘을 세 번씩 쳐 쓰러뜨림(경험 60 씩, 동전 5 씩) → 레벨 2 → 버섯 채집(경험 15)
+  → 사거리 밖 짐승은 서버가 OutOfRange(2) 로 거절 → 비신뢰 이동 → 하위 레벨 미니게임에 다녀온 뒤에도 세션이 이어짐. 행동은 모두 반사 함수 호출(`HubAvatarAgent` 의 Server 함수)이고 판정 · 보상은 서버가 한다.
+  끝나면 앱이 나가고 서버가 연결 끝에 진행을 저장한다. 이어 `hub_return.scenario.xml` 이 같은 계정으로 다시 붙어 같은 진행을 읽는지 본다.
+-->
+<Scenario name="game.playground.netpair.hub_first" fixedDelta="0.0166667" timeoutFrames="36000" startAfter="ScenePlaying" startTimeoutFrames="900">
+	<Expect watch="Hub.RulesValid" equals="1"/>
+	<Expect watch="Hub.NetRole" equals="0"/>
+	<DevCommand line="net.ticketconnect 127.0.0.1:17880 hub_netpair hub_netpair_pw_1 playground_hub 127.0.0.1:17877"/>
+	<WaitUntil watch="Hub.AvatarID" atLeast="1" timeoutSeconds="30"/>
+	<Expect watch="Hub.NetRole" equals="2"/>
+	<Expect watch="Hub.Level" equals="1"/>
+	<Expect watch="Hub.Experience" equals="0"/>
+	<Expect watch="Hub.PartySize" equals="1"/>
+	<!-- MMO 복제: 나는 자리 둘레의 짐승 · 버섯 · 자기 아바타가 보인다 -->
+	<WaitUntil watch="Hub.FirstCreatureHealth" equals="30" timeoutSeconds="20"/>
+	<Expect watch="Hub.VisibleEntities" atLeast="4"/>
+	<!-- 첫 짐승(100000) — 세 번째에 쓰러진다 -->
+	<WaitUntil watch="Hub.AttackReady" equals="1" timeoutSeconds="10"/>
+	<DevCommand line="hub.attack 100000"/>
+	<WaitUntil watch="Hub.ResultCount" equals="1" timeoutSeconds="10"/>
+	<Expect watch="Hub.LastResult" equals="0"/>
+	<WaitUntil watch="Hub.FirstCreatureHealth" equals="20" timeoutSeconds="10"/>
+	<WaitUntil watch="Hub.AttackReady" equals="1" timeoutSeconds="10"/>
+	<DevCommand line="hub.attack 100000"/>
+	<WaitUntil watch="Hub.ResultCount" equals="2" timeoutSeconds="10"/>
+	<Expect watch="Hub.LastResult" equals="0"/>
+	<WaitUntil watch="Hub.AttackReady" equals="1" timeoutSeconds="10"/>
+	<DevCommand line="hub.attack 100000"/>
+	<WaitUntil watch="Hub.ResultCount" equals="3" timeoutSeconds="10"/>
+	<Expect watch="Hub.LastResult" equals="0"/>
+	<WaitUntil watch="Hub.Defeats" equals="1" timeoutSeconds="10"/>
+	<Expect watch="Hub.Experience" equals="60"/>
+	<Expect watch="Hub.Coins" equals="5"/>
+	<Expect watch="Hub.Level" equals="1"/>
+	<!-- 둘째 짐승(100001) — 경험 120 으로 레벨 2(단계표 100) -->
+	<WaitUntil watch="Hub.AttackReady" equals="1" timeoutSeconds="10"/>
+	<DevCommand line="hub.attack 100001"/>
+	<WaitUntil watch="Hub.ResultCount" equals="4" timeoutSeconds="10"/>
+	<Expect watch="Hub.LastResult" equals="0"/>
+	<WaitUntil watch="Hub.AttackReady" equals="1" timeoutSeconds="10"/>
+	<DevCommand line="hub.attack 100001"/>
+	<WaitUntil watch="Hub.ResultCount" equals="5" timeoutSeconds="10"/>
+	<Expect watch="Hub.LastResult" equals="0"/>
+	<WaitUntil watch="Hub.AttackReady" equals="1" timeoutSeconds="10"/>
+	<DevCommand line="hub.attack 100001"/>
+	<WaitUntil watch="Hub.ResultCount" equals="6" timeoutSeconds="10"/>
+	<Expect watch="Hub.LastResult" equals="0"/>
+	<WaitUntil watch="Hub.Defeats" equals="2" timeoutSeconds="10"/>
+	<Expect watch="Hub.Level" equals="2"/>
+	<Expect watch="Hub.Experience" equals="120"/>
+	<Expect watch="Hub.Coins" equals="10"/>
+	<!-- 생활: 버섯(100002) -->
+	<DevCommand line="hub.gather 100002"/>
+	<WaitUntil watch="Hub.ResultCount" equals="7" timeoutSeconds="10"/>
+	<Expect watch="Hub.LastResult" equals="0"/>
+	<WaitUntil watch="Hub.Herbs" equals="1" timeoutSeconds="10"/>
+	<Expect watch="Hub.Experience" equals="135"/>
+	<!-- 서버 권위 거절: 멀리 있는 짐승(100003)은 사거리 밖 -->
+	<WaitUntil watch="Hub.AttackReady" equals="1" timeoutSeconds="10"/>
+	<DevCommand line="hub.attack 100003"/>
+	<WaitUntil watch="Hub.ResultCount" equals="8" timeoutSeconds="10"/>
+	<Expect watch="Hub.LastResult" equals="2"/>
+	<!-- 비신뢰 이동 한 걸음(12 m 안) -->
+	<DevCommand line="hub.move 8 6"/>
+	<WaitUntil watch="Hub.ResultCount" equals="9" timeoutSeconds="10"/>
+	<Expect watch="Hub.LastResult" equals="0"/>
+	<!-- 파티 행동도 서버가 판정한다: 없는 아바타 99999 의 초대 · 수락은 UnknownTarget(1), 파티 없이 떠나기는 NotInParty(9) — 두 클라이언트 파티는 HubNetLinkTest.PartyIsServerAuthoritative -->
+	<DevCommand line="hub.invite 99999"/>
+	<WaitUntil watch="Hub.ResultCount" equals="10" timeoutSeconds="10"/>
+	<Expect watch="Hub.LastResult" equals="1"/>
+	<DevCommand line="hub.accept 99999"/>
+	<WaitUntil watch="Hub.ResultCount" equals="11" timeoutSeconds="10"/>
+	<Expect watch="Hub.LastResult" equals="1"/>
+	<DevCommand line="hub.leave"/>
+	<WaitUntil watch="Hub.ResultCount" equals="12" timeoutSeconds="10"/>
+	<Expect watch="Hub.LastResult" equals="9"/>
+	<Expect watch="Hub.PartySize" equals="1"/>
+	<!-- 하위 레벨 미니게임(카드 탁자 — 허브가 그대로다)에 다녀와도 허브 서버의 세션이 이어진다: 진행 · 복제가 그대로이고 행동이 계속 판정된다. 씬을 바꾸는 미니게임은 접속 중에 거절된다(MinigameFlow) -->
+	<DevCommand line="minigame.enter cardtable"/>
+	<WaitUntil watch="Scene.LoadedSubLevelCount" equals="1" timeoutWallSeconds="60"/>
+	<DevCommand line="minigame.leave"/>
+	<WaitUntil watch="Scene.SubLevelCount" equals="0" timeoutWallSeconds="60"/>
+	<Expect watch="Hub.NetRole" equals="2"/>
+	<Expect watch="Hub.Level" equals="2"/>
+	<Expect watch="Hub.Experience" equals="135"/>
+	<Expect watch="Hub.VisibleEntities" atLeast="4"/>
+	<DevCommand line="hub.leave"/>
+	<WaitUntil watch="Hub.ResultCount" equals="13" timeoutSeconds="10"/>
+	<Expect watch="Hub.LastResult" equals="9"/>
+	<DevCommand line="hub.status"/>
+	<Pass/>
+</Scenario>

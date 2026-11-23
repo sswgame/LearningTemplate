@@ -186,7 +186,7 @@ namespace sw
      *     if ( server.initialize( &peers, config ) == false ) ...; // 호출률 상한이 없으면 오류
      *     _subscription = router.registerHandler( &server );
      *     if ( server.registerTarget( creatureID, *Creature::StaticType(), &creature, connectionID ) == false ) ...; // 계약을 어긴 타입은 등록되지 않는다
-     *     (void)server.registerSessionTarget( connectionID, *ValeAvatarAgent::StaticType(), &agent );      // 그 연결의 id 0
+     *     (void)server.registerSessionTarget( connectionID, *HubAvatarAgent::StaticType(), &agent );      // 그 연결의 id 0
      *     (void)server.callSession( connectionID, "receiveProfile", { ReflectedValue::make( level ) } );
      * @endcode
      */
@@ -268,7 +268,7 @@ namespace sw
      * @brief 클라이언트 쪽입니다. 서버의 `Server` 함수를 부르고, 서버가 부른 `Client` · `Multicast` 함수를 등록한 대상에서 부릅니다.
      * @code
      *     client.initialize( &peers );
-     *     const uint32 sequence = client.callServer( avatarID, *ValeAvatar::StaticType(), "attackCreature", { ReflectedValue::make( creatureID ) } );
+     *     const uint32 sequence = client.callServer( avatarID, *HubAvatar::StaticType(), "attackCreature", { ReflectedValue::make( creatureID ) } );
      *     client.pollRejections( listNotification ); // sequence 가 있으면 서버가 받지 않았다
      * @endcode
      */

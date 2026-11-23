@@ -49,7 +49,8 @@ namespace sw
         void updateAvatar( GameObjectManager& manager );
         /** @brief 지금 플레이어 HP 를 뷰 오브젝트의 체력 뷰에 넣습니다. 칸이 비었으면 할 일이 없고, 가리킨 오브젝트에 체력 뷰가 없으면 한 번 오류를 남깁니다. */
         void pushPlayerHealthView( GameObjectManager& manager, const ActionCombatGameModeComponent& director );
-        void draw( const ActionCombatGameModeComponent& director ) const;
+        /** @brief 룸과 플레이어를 그립니다. 룸의 자리는 절대 자리라 @p manager 의 원점으로 옮긴다. */
+        static void draw( const ActionCombatGameModeComponent& director, const GameObjectManager& manager );
 
     private:
         PROPERTY( Category = "Input", DisplayName = "Move Action", Tooltip = "InputMap 2D action that walks the player (required)" )
