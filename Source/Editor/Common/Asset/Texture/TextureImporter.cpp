@@ -181,19 +181,24 @@ namespace sw::editor
         [[nodiscard]] bool saveImportedDDSInternal( const DirectX::ScratchImage& finalImage, uint32 sourceChannelCount, [[maybe_unused]] string_view sourcePath, string_view outputPath,
                                                     TextureImportResult* pOutResult )
         {
-            // DirectXTex 가 경로를 스스로 열어 쓴다 — `FileUtil` 의 쓰기 입구를 지나지 않으므로 게이트를 직접 묻는다(커밋된 DDS 를 자동화 실행이 덮지 않게).
-            if ( FileUtil::isWriteAllowed( FileUtil::toDiskPath( outputPath ) ) == false || FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( outputPath ) ) == false )
-                return false;
-
             // 엔진 `DDSLoader` 의 옛 머리(DX9 픽셀 형식) 경로는 1 채널 휘도(L8)를 모른다. R8_UNORM 은 DX10 머리로 써서 DXGI 번호(61)를 그대로 싣는다.
             // 다른 형식은 옛 머리 그대로 둔다 — 이미 커밋된 DDS 의 바이트가 바뀌지 않게 한다.
             const DirectX::DDS_FLAGS saveFlags = finalImage.GetMetadata().format == DXGI_FORMAT_R8_UNORM ? DirectX::DDS_FLAGS_FORCE_DX10_EXT : DirectX::DDS_FLAGS_NONE;
-            const wstring            wOutPath  = StringUtil::utf8ToUTF16( string( outputPath ).c_str() );
-            const HRESULT            hrSave    = DirectX::SaveToDDSFile( finalImage.GetImages(), finalImage.GetImageCount(), finalImage.GetMetadata(), saveFlags, wOutPath.c_str() );
+            DirectX::Blob            fileBytes;
+            const HRESULT            hrSave = DirectX::SaveToDDSMemory( finalImage.GetImages(), finalImage.GetImageCount(), finalImage.GetMetadata(), saveFlags, fileBytes );
             if ( FAILED( hrSave ) )
             {
-                SW_LOG_ERROR_ID( "TextureImporter.DirectXSaveToDDSFileFailedHr", "DirectX::SaveToDDSFile failed (hr=0x%#) for %#", Fmt( static_cast<uint32>( hrSave ), Format( 8, Format::Padding::Zero ).hex() ),
+                SW_LOG_ERROR_ID( "TextureImporter.DirectXSaveToDDSMemoryFailedHr", "DirectX::SaveToDDSMemory failed (hr=0x%#) for %#", Fmt( static_cast<uint32>( hrSave ), Format( 8, Format::Padding::Zero ).hex() ),
                                  outputPath );
+                return false;
+            }
+
+            // 파일은 엔진의 쓰기 입구로만 쓴다 — 쓰기 게이트를 지나고, 임시 파일에 다 쓴 뒤 바꿔 끼워 쓰는 중인 DDS 를 런타임 리로드가 읽지 않는다(DirectXTex 의 파일 쓰기는 제자리에 쓴다).
+            const bool bWritten = FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( outputPath ) ) &&
+                                  FileUtil::writeFile( FileUtil::toDiskPath( outputPath ), static_cast<const uint8*>( fileBytes.GetConstBufferPointer() ), fileBytes.GetBufferSize() );
+            if ( bWritten == false )
+            {
+                SW_LOG_ERROR_ID( "TextureImporter.ImportedTextureNotWritten", "Could not write the imported texture %#", outputPath );
                 return false;
             }
 
@@ -591,7 +596,7 @@ namespace sw::editor
             if ( pImage == nullptr || TextureBlockEncoder::encodeMip( format, pImage->pixels, static_cast<uint32>( pImage->width ), static_cast<uint32>( pImage->height ), payload ) == false )
                 return false;
         }
-        if ( FileUtil::isWriteAllowed( FileUtil::toDiskPath( outputPath ) ) == false || FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( outputPath ) ) == false )
+        if ( FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( outputPath ) ) == false )
             return false;
         const uint32 width    = static_cast<uint32>( metadata.width );
         const uint32 rowBytes = ( width + 3 ) / 4 * RHIFormatUtil::getBlockInfo( format )._blockBytes;
