@@ -105,7 +105,7 @@ namespace sw::editor
     {
         const EditorComponentIconTable* pTable = editor::findSubsystem<const EditorComponentIconTable>();
         if ( pTable == nullptr )
-            SW_FATAL( "The component icon table is asked for without an editor context (the shell lends it to the context scope)" );
+            reportFatalError( "The component icon table is asked for without an editor context (the shell lends it to the context scope)" );
         return *pTable;
     }
 

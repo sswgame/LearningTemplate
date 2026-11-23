@@ -91,7 +91,7 @@ namespace sw
                     ++_impl._initDepth;
                     return;
                 }
-                SW_FATAL( "Materials are initialized on two threads at once - initialize them on the game thread (MaterialCache::acquire with a device, reload, initializePending)" );
+                reportFatalError( "Materials are initialized on two threads at once - initialize them on the game thread (MaterialCache::acquire with a device, reload, initializePending)" );
             }
 
             ~DeviceInitScope()

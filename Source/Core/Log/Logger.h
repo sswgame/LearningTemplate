@@ -14,6 +14,7 @@
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/DynamicModules.h"
 #include "Core/Foundation/Macros.h"
+#include "Core/Foundation/SourceLocation.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Log/LogTypes.h"
@@ -246,15 +247,6 @@ namespace sw::internal
         formatstring( arrMessage, constant::buffer::kMax8192, format, std::forward<Args>( args )... );
         return Logger::reportAssertFailure( pTag, pExpression, arrMessage, pFile, line, pFunction );
     }
-
-    /** @brief `SW_FATAL` 의 몸통입니다. 서식을 줄 밖 프레임에서 짓고 `reportFatal` 로 멈춥니다(`writeFormattedLog` 와 같은 까닭). */
-    template <typename... Args>
-    [[noreturn]] SW_NOINLINE void reportFormattedFatal( const utf8* pFile, int32 line, string_view format, Args&&... args ) noexcept
-    {
-        utf8 arrMessage[constant::buffer::kMax8192];
-        formatstring( arrMessage, constant::buffer::kMax8192, format, std::forward<Args>( args )... );
-        reportFatal( pFile, line, arrMessage );
-    }
 } // namespace sw::internal
 
 /**
@@ -269,12 +261,36 @@ namespace sw::internal
             ::sw::internal::writeFormattedLog( level, SW_LOG_TAG, __FILE__, static_cast<int32>( __LINE__ ), pID, __VA_ARGS__ ); \
     } while ( false )
 
-/**
- * @brief 이어 갈 수 없는 결함을 한 줄로 남기고 **모든 구성에서** 멈춥니다(언리얼 `UE_LOG(Fatal)` · 유니티 `Debug.LogError` + `Application.Quit` 자리).
- * @details 서식은 `SW_LOG_*` 와 같은 `formatstring`(`%#`)입니다. 줄은 stderr 에 먼저 동기로 쓰이고 로그로도 가며, 비동기 싱크를 비운 뒤
- *          `std::abort` 합니다(`sw::internal::reportFatal`, `[[noreturn]]`). 로그 수준 필터 · 컴파일 제외를 타지 않습니다. 로그보다 아래 티어는 `SW_LOW_LEVEL_FATAL`.
- */
-#define SW_FATAL( ... ) ::sw::internal::reportFormattedFatal( __FILE__, static_cast<int32>( __LINE__ ), __VA_ARGS__ )
+namespace sw
+{
+    /** @brief `reportFatalError` 의 서식 글과 부른 자리입니다. 서식은 글자 상수만 받는다(부르면 저절로 만들어진다). */
+    struct FatalFormat
+    {
+        string_view    _format;
+        SourceLocation _location;
+
+        template <size_t Count>
+        FatalFormat( const utf8 ( &arrFormat )[Count], SourceLocation location = SourceLocation::current() ) noexcept
+            : _format{ arrFormat, Count - 1 }
+            , _location{ location }
+        {
+        }
+    };
+
+    /**
+     * @brief 이어 갈 수 없는 결함을 한 줄로 남기고 **모든 구성에서** 멈춥니다(언리얼 `UE_LOG(Fatal)` · LLVM `report_fatal_error` 자리).
+     * @details 서식은 `SW_LOG_*` 와 같은 `formatstring`(`%#`)입니다. 줄은 stderr 에 먼저 동기로 쓰이고 로그로도 가며, 비동기 싱크를 비운 뒤
+     *          `std::abort` 합니다(`sw::internal::reportFatal`). 로그 수준 필터 · 컴파일 제외를 타지 않습니다. 로그보다 아래 티어는 `SW_LOW_LEVEL_FATAL`.
+     *          버퍼를 부르는 쪽 프레임에 두지 않게 줄 밖에 둔다(`writeFormattedLog` 와 같은 까닭).
+     */
+    template <typename... Args>
+    [[noreturn]] SW_NOINLINE void reportFatalError( const FatalFormat format, Args&&... args ) noexcept
+    {
+        utf8 arrMessage[constant::buffer::kMax8192];
+        formatstring( arrMessage, constant::buffer::kMax8192, format._format, std::forward<Args>( args )... );
+        internal::reportFatal( format._location._pFile, format._location._line, arrMessage );
+    }
+} // namespace sw
 
 // 로그 줄은 모두 종류 id 를 단다 — id 없는 매크로(`SW_LOG_ERROR` …)는 없다. 테스트 · 시나리오 · 로그 게이트 · 자식 프로세스 중계가 줄을 문장이 아니라 id 로 가리키므로,
 // id 없는 줄이 생길 수 있으면 그 줄을 셀 때마다 문구에 기대게 된다(문구를 고친 커밋이 시나리오를 조용히 깼다). 언리얼 `UE_LOG` 가 범주를 필수 인자로 받는 것과 같은 자리다.

@@ -207,7 +207,7 @@ namespace sw
     {
         const TypeInfo* const pType = findCachedTypeInfo();
         if ( pType == nullptr )
-            SW_FATAL( "GameModeComponent '%#' has no reflected type - its state fields cannot be carried", getTypeName().c_str() );
+            reportFatalError( "GameModeComponent '%#' has no reflected type - its state fields cannot be carried", getTypeName().c_str() );
         if ( io.isWriting() )
         {
             io.reflectedAs( *pType, *this );

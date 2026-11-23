@@ -26,7 +26,7 @@ namespace sw
 
         /**
          * @brief @p type 이나 그 기반이 선언한 @p property 의 핸들입니다(`getPropertiesWithBase` · `findPropertyInHierarchy` 가 준 원소).
-         * @details 선언 타입은 @p type 의 사슬에서 원소 주소로 찾는다. 사슬에 없는 원소면 멈춘다(SW_FATAL) — 다른 타입의 프로퍼티를 넘긴 결함이다.
+         * @details 선언 타입은 @p type 의 사슬에서 원소 주소로 찾는다. 사슬에 없는 원소면 멈춘다(reportFatalError) — 다른 타입의 프로퍼티를 넘긴 결함이다.
          */
         static PropertyHandle of( const TypeInfo& type, const PropertyInfo& property );
 

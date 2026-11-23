@@ -171,7 +171,7 @@ namespace sw
     {
         const uint32 count = engine::getSubsystem<EngineConfig>()._render._maxExtraViewCount;
         if ( isValidMaxExtraViewCount( count ) == false )
-            SW_FATAL( "EngineConfig _render._maxExtraViewCount %# is missing or out of range (1..%#)", count, kExtraRenderViewCapacity );
+            reportFatalError( "EngineConfig _render._maxExtraViewCount %# is missing or out of range (1..%#)", count, kExtraRenderViewCapacity );
         return count;
     }
 
