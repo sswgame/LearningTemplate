@@ -770,6 +770,8 @@ namespace sw
             ViewGraphResource::cullVisibleInstances(),
             ViewGraphResource::cullLODState(),
             ViewGraphResource::occludedOrders(),
+            ViewGraphResource::deferredTileArgs(),
+            ViewGraphResource::deferredTileList(),
         };
         for ( const RenderGraphResourceAccess& resource : arrEngineResource )
         {
@@ -887,6 +889,12 @@ namespace sw
         if ( pass._type == RenderPassKind::Present )
         {
             inoutListAccess.push_back( ViewGraphResource::upscaleIntermediate() ); // FSR 1 — EASU 가 그리고 같은 패스의 RCAS 가 읽는다
+        }
+        else if ( pass._type == RenderPassKind::Lighting )
+        {
+            // 타일 분류 — 같은 패스의 컴퓨트가 쓰고(UAV) 간접 그리기가 읽는다.
+            inoutListAccess.push_back( ViewGraphResource::deferredTileArgs() );
+            inoutListAccess.push_back( ViewGraphResource::deferredTileList() );
         }
         else if ( pass._type == RenderPassKind::Shadow && pass._resolvedDepthRole == static_cast<uint8>( RenderPassInputRole::LocalShadowMap ) )
         {
@@ -1314,6 +1322,12 @@ namespace sw
             _viewResourceTable.registerTexture( ViewGraphResource::postProcessChainAfterTonemap()._name, 0, view._postProcessChainAfterTonemap.getTexture(), RenderGraphAccess::ShaderRead );
         // 이번 장면 깊이로 HZB 를 짓는 패스(화면 공간 반사)와 2 단계 가림의 뒤 단계(주 시점)가 쓰는 깊이 사본 · HZB · 컬링 버퍼.
         _frameGraphExecutor.registerViewGraphResources( _viewResourceTable, view, isPassKindEnabledInView( RenderPassKind::ScreenSpaceReflection ) );
+        // 디퍼드 조명 타일 — 조명 패스가 도는 뷰에서 분류를 돌릴 수 있을 때만(능력 · 버퍼 · PSO). 등록이 곧 실행 조건이다(`executeTiledLighting`).
+        if ( isPassKindEnabledInView( RenderPassKind::Lighting ) && isTiledLightingReady( view ) )
+        {
+            _viewResourceTable.registerBuffer( ViewGraphResource::deferredTileArgs()._name, 0, view._deferredTileArgs, RenderGraphAccess::IndirectArgs );
+            _viewResourceTable.registerBuffer( ViewGraphResource::deferredTileList()._name, 0, view._deferredTileList, RenderGraphAccess::ShaderRead );
+        }
         _state._graph.importResources( _viewResourceTable );
     }
 

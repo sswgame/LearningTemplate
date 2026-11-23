@@ -91,6 +91,18 @@ namespace sw
             static const hashed_string kName( "CullLODState" );
             return RenderGraphBufferUAV{ kName };
         }
+        /** @brief 뷰의 디퍼드 조명 타일 간접 인자입니다 — 분류를 돌릴 수 있는 뷰만 등록한다(조명 패스가 컴퓨트로 쓰고 같은 패스가 간접 그리기로 읽는다). */
+        static RenderGraphBufferUAV deferredTileArgs()
+        {
+            static const hashed_string kName( "DeferredTileArgs" );
+            return RenderGraphBufferUAV{ kName };
+        }
+        /** @brief 뷰의 디퍼드 조명 타일 목록입니다(타일 그리기의 정점 셰이더가 읽는다). */
+        static RenderGraphBufferUAV deferredTileList()
+        {
+            static const hashed_string kName( "DeferredTileList" );
+            return RenderGraphBufferUAV{ kName };
+        }
         /** @brief 2 단계 가림의 차례 표시입니다(프레임 그래프 `OccludedOrders`). */
         static RenderGraphBufferUAV occludedOrders()
         {

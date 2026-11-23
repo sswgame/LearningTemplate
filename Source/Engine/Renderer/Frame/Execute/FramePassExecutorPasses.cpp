@@ -440,6 +440,17 @@ namespace sw
         executeFullscreenInto( context, pso, *pTarget, targetClear );
     }
 
+    bool FramePassExecutor::isTiledLightingReady( const FrameViewTarget& view ) const
+    {
+        const bool bBuffers = view._deferredTileList.isValid() && view._deferredTileArgs.isValid();
+        bool       bReady   = bBuffers && _pDevice->supportsNativeBindlessSampling() && _psoManager.getEnginePSO( RenderPassKind::DeferredTileClassify ) != 0;
+        for ( uint32 tileClass = 0; tileClass < kDeferredTileClassCount; ++tileClass )
+        {
+            bReady = bReady && _psoManager.findDeferredTilePSO( tileClass ) != 0;
+        }
+        return bReady;
+    }
+
     bool FramePassExecutor::executeTiledLighting( const PassExecuteInput& input, const hashed_string& target )
     {
         // 셰이더의 SwRootConstants(deferred_tile_classify.hlsl)와 같은 배치다.
@@ -455,18 +466,13 @@ namespace sw
         constexpr uint32 kModeClear    = 0;
         constexpr uint32 kModeClassify = 1;
 
-        using Internal                        = FramePassExecutorInternal;
-        const FrameViewTarget&       view     = *_pActiveView;
-        const RHIPipelineStateHandle classify = _psoManager.getEnginePSO( RenderPassKind::DeferredTileClassify );
-        bool                         bReady   = classify != 0 && view._deferredTileList.isValid() && view._deferredTileArgs.isValid() && _pDevice->supportsNativeBindlessSampling();
-        RHIPipelineStateHandle       arrTilePSO[kDeferredTileClassCount]{};
-        for ( uint32 tileClass = 0; tileClass < kDeferredTileClassCount; ++tileClass )
-        {
-            arrTilePSO[tileClass] = _psoManager.findDeferredTilePSO( tileClass );
-            bReady                = bReady && arrTilePSO[tileClass] != 0;
-        }
+        using Internal                                              = FramePassExecutorInternal;
+        FramePassContext&                              context      = input._context;
+        const RenderGraphPassContext&                  graphPass    = *context._pGraphPass;
+        const FrameViewTarget&                         view         = *_pActiveView;
         const RenderGraphPassDesc::ResolvedAttachment* pAlbedoInput = Internal::findInputByRole( input._passDesc, RenderPassInputRole::GBufferAlbedo );
-        if ( bReady == false || pAlbedoInput == nullptr )
+        // 분류를 돌릴 수 있는 뷰만 등록했다(`registerViewResources` · `isTiledLightingReady`) — 판정을 다시 하지 않는다. 둘은 레벨 콜백이 UAV 로 옮겼다(이 패스의 선언).
+        if ( graphPass.isRegistered( ViewGraphResource::deferredTileArgs() ) == false || pAlbedoInput == nullptr )
             return false;
         const TransientAttachmentPool::Attachment albedo = activePool().find( pAlbedoInput->_attachment );
         RootConstants                             constants{};
@@ -481,29 +487,20 @@ namespace sw
         constants._albedoIndex = static_cast<uint32>( albedo._srv );
 
         // 1) 분류 — 간접 인자를 지우고(그룹 하나) 타일마다 그룹 하나. 렌더 패스 밖이다. G버퍼 알베도는 그래프가 이 패스의 입력으로 셰이더 읽기 상태로 옮겨 두었다.
-        FramePassContext&         context      = input._context;
-        IRHIPassCommandList&      cmd          = *context._pCmd;
-        const RHIBufferTransition arrToWrite[] = {
-            RHIBufferTransition{view._deferredTileArgs._buffer, RHIBufferState::UnorderedAccess},
-            RHIBufferTransition{view._deferredTileList._buffer, RHIBufferState::UnorderedAccess}
-        };
-        cmd.transitionBuffers( arrToWrite, static_cast<uint32>( SW_COUNT_OF( arrToWrite ) ) );
-        cmd.setComputePipelineState( classify );
+        IRHIPassCommandList& cmd = *context._pCmd;
+        cmd.setComputePipelineState( _psoManager.getEnginePSO( RenderPassKind::DeferredTileClassify ) );
         // g_DeferredTileArgsRW(u0) / g_DeferredTileListRW(u1) — deferred_tile_classify.hlsl 레지스터와 1:1 이다.
         cmd.bindComputeUAV( view._deferredTileArgs._uav, 0 );
         cmd.bindComputeUAV( view._deferredTileList._uav, 1 );
         constants._mode = kModeClear;
         cmd.setComputeRootConstants( 0, sizeof( constants ) / sizeof( uint32 ), &constants );
         cmd.dispatchCompute( 1, 1, 1 );
-        cmd.uavBarrier( view._deferredTileArgs._buffer );
+        graphPass.uavBarrier( ViewGraphResource::deferredTileArgs() );
         constants._mode = kModeClassify;
         cmd.setComputeRootConstants( 0, sizeof( constants ) / sizeof( uint32 ), &constants );
         cmd.dispatchCompute( columns, rows, 1 );
-        const RHIBufferTransition arrToRead[] = {
-            RHIBufferTransition{view._deferredTileArgs._buffer, RHIBufferState::IndirectArgument},
-            RHIBufferTransition{view._deferredTileList._buffer,   RHIBufferState::ShaderResource}
-        };
-        cmd.transitionBuffers( arrToRead, static_cast<uint32>( SW_COUNT_OF( arrToRead ) ) );
+        graphPass.transition( ViewGraphResource::deferredTileArgs(), RenderGraphAccess::IndirectArgs );
+        graphPass.transition( ViewGraphResource::deferredTileList(), RenderGraphAccess::ShaderRead );
 
         // 2) 종류마다 간접 그리기 — 인스턴스 하나가 타일 하나(정점 여섯). 타일 목록은 패스 전용 구조버퍼 칸(t11)에 PSO · 공통 바인딩 뒤에 건다(렌즈 플레어와 같다).
         if ( beginColorPass( context, target, hashed_string{}, getTargetClearColor( target ), getColorLoadFor( target ), RHIRenderPassLoadOp::Load ) == false )
@@ -512,9 +509,10 @@ namespace sw
         context._passValues.setUint( passConstantNames()._deferredTileCapacity, view._deferredTileCapacity );
         for ( uint32 tileClass = 0; tileClass < kDeferredTileClassCount; ++tileClass )
         {
+            const RHIPipelineStateHandle tilePSO = _psoManager.findDeferredTilePSO( tileClass );
             commitBindlessTextureBindings( context );
-            cmd.setPipelineState( arrTilePSO[tileClass] );
-            if ( bindForDraw( context, arrTilePSO[tileClass], kInvalidDescriptorIndex ) == false )
+            cmd.setPipelineState( tilePSO );
+            if ( bindForDraw( context, tilePSO, kInvalidDescriptorIndex ) == false )
                 continue;
             cmd.bindStructuredBuffer( view._deferredTileList._srv, shaderslot::kPassBuffer );
             cmd.drawIndirect( view._deferredTileArgs._buffer, tileClass * static_cast<uint32>( sizeof( RHIDrawIndirectCommand ) ), 1 );
