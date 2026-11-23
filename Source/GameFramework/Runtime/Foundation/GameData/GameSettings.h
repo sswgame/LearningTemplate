@@ -43,7 +43,7 @@ namespace sw
      *          (`game/<팩>/maps/start.scene.xml`). 시작 맵만 필수이고, 나머지 경로 칸은 적지 않으면 "읽지 않음"(`isSet` false)이며 그 뜻은 칸마다 적었다.
      *          XML 자식 요소 이름은 필드 이름에서 앞의 `_` 를 뗀 것이고(`_startMap` → `<startMap>`), 읽기는 리플렉션 칸 표를 따른다(`loadRoot`).
      *          `GameInstance` 가 읽은 뒤 게임 서비스로 등록하고 다국어와 입력 맵을 적용한다.
-     *          씬 필드는 `GameSceneFlow::getFirstScene` 과 `getEntranceScene` 이 쓰고, 기본 세이브 슬롯은 슬롯 없이 부른 `saveGameToSlot` 이 쓴다.
+     *          씬 필드는 `GameSceneFlow::getFirstScene` 과 `getEntranceScene` 이 쓰고, 기본 세이브 슬롯은 슬롯 없이 부른 `GameSaveSlots::save` 이 쓴다.
      */
     REFLECT()
     struct SW_GF_API GameSettings
