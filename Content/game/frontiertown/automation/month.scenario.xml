@@ -3,7 +3,7 @@
 <!--
   FrontierTown 키트 둘의 흐름 — 도시와 RTS 가 한 땅 · 한 지갑 · 한 시계를 나누며 판이 열리고, 공유 시계를 날 단위로 감아 도시의 달 결산이 돈다.
   땅을 나누는 규칙(도시 땅에 짓지 못함 · 해병이 신전을 돌아감)은 단위 테스트 KitCompositionTest.CityAndSkirmish* 가 같은 배치로 단언한다.
-  배치가 땅과 맞지 않아 거절되면 로그에 `[Frontier] ... was refused` 가 남는다 — 끝에서 그 줄이 없는지 본다.
+  배치가 땅과 맞지 않아 거절되면 로그에 `[City] ... was refused` 가 남는다 — 끝에서 그 줄이 없는지 본다.
   감기 사이의 2 프레임은 지나간 날 경계 알림을 다음 틱의 디렉터가 받는 자리다(그 틱이 돌아야 한다).
   실행: ctest -R Scenario.frontiertown (SW_ACTIVE_GAME=FrontierTown) · App -scenario=game/frontiertown/automation/month.scenario.xml -unattended
 -->
@@ -20,7 +20,7 @@
 	<WaitUntil watch="Clock.Day" equals="2" timeoutFrames="10"/>
 	<AdvanceGameTime hours="24"/>
 	<WaitUntil watch="Clock.Day" equals="3" timeoutFrames="10"/>
-	<ExpectLog id="Frontier.LandmarkRefused" count="0"/>
+	<ExpectLog id="City.LandmarkRefused" count="0"/>
 	<Record watch="Clock.Day"/>
 	<Pass/>
 </Scenario>
