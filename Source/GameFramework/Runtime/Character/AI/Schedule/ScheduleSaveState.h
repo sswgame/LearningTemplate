@@ -64,7 +64,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 기본 활동 슬롯 제공자(`ScheduleSpotLocator`)의 예약 하나입니다. */
+    /** @brief 활동 슬롯 제공자(`IScheduleActivityLocator`)의 예약 하나입니다. */
     REFLECT()
     struct SW_GF_API ScheduleReservationSaveState
     {

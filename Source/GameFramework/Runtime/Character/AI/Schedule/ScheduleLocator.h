@@ -53,6 +53,10 @@ namespace sw
         /** @brief 슬롯을 예약합니다. 빈 슬롯이 없으면 false 이고, 일정은 블록의 `place` 나 집으로 물러섭니다. 예약 id 는 0 이 아닙니다. */
         [[nodiscard]] virtual bool reserve( const ScheduleReserveRequest& request, ScheduleLocation& outLocation, uint32& outReservationID ) = 0;
         virtual void               release( uint32 reservationID )                                                                           = 0;
+        /** @brief 예약을 저장 상태로 채웁니다(`ScheduleSystem::fillSaveState` 가 부른다). */
+        virtual void fillState( vector<ScheduleReservationSaveState>& outListReservation ) const = 0;
+        /** @brief 지금 예약을 버리고 저장 상태의 예약으로 바꿉니다. 사라진 슬롯의 예약은 버립니다(다시 세운 계획이 새 슬롯을 고른다). */
+        virtual void restoreState( const vector<ScheduleReservationSaveState>& listReservation ) = 0;
     };
 } // namespace sw
 
@@ -74,8 +78,8 @@ namespace sw
         [[nodiscard]] bool reserve( const ScheduleReserveRequest& request, ScheduleLocation& outLocation, uint32& outReservationID ) override;
         void               release( uint32 reservationID ) override;
 
-        void   fillState( vector<ScheduleReservationSaveState>& outListReservation ) const;
-        void   restoreState( const vector<ScheduleReservationSaveState>& listReservation );
+        void   fillState( vector<ScheduleReservationSaveState>& outListReservation ) const override;
+        void   restoreState( const vector<ScheduleReservationSaveState>& listReservation ) override;
         size_t getReservationCount() const { return _listReservation.size(); }
 
     private:

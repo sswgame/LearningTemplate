@@ -53,10 +53,8 @@ namespace sw
         /** @brief 점유를 비웁니다(블록이 끝날 때). 예약은 그대로이며 `release` 가 지웁니다. 그 NPC 가 점유한 슬롯이 없으면 false 입니다. */
         bool releaseClaim( uint32 reservationID, const GameObject& npc );
 
-        /** @brief 예약을 저장 상태로 채웁니다(`ScheduleSystem` 은 기본 제공자의 예약만 저장하므로 게임이 이것을 자기 세이브에 함께 싣는다). */
-        void fillState( vector<ScheduleReservationSaveState>& outListReservation ) const;
-        /** @brief 저장 상태에서 예약을 복원합니다. 사라진 오브젝트의 예약은 버립니다(다시 세운 계획이 새 슬롯을 고른다). */
-        void   restoreState( const vector<ScheduleReservationSaveState>& listReservation );
+        void   fillState( vector<ScheduleReservationSaveState>& outListReservation ) const override;
+        void   restoreState( const vector<ScheduleReservationSaveState>& listReservation ) override;
         size_t getReservationCount() const { return _listReservation.size(); }
 
     private:

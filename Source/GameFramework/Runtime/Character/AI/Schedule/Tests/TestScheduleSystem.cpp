@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
@@ -50,6 +51,44 @@ namespace
     {
         SW_REQUIRE_TRUE( outCatalog.loadFromXMLText( kCatalogXML, "ScheduleSystemTest" ) );
         SW_REQUIRE_EQUAL( size_t( 2 ), outCatalog.getNPCs().size() );
+    }
+
+    /** @brief 예약 번호를 정해진 수부터 내고 돌려받은 번호를 적는 제공자입니다. */
+    class RecordingLocator final : public sw::IScheduleActivityLocator
+    {
+    public:
+        sw::vector<sw::ScheduleReservationSaveState> _listRestored;
+        sw::vector<uint32>                           _listReleased;
+        uint32                                       _nextID;
+
+        explicit RecordingLocator( uint32 firstID )
+            : _listRestored{}
+            , _listReleased{}
+            , _nextID{ firstID }
+        {
+        }
+
+        bool reserve( const sw::ScheduleReserveRequest& request, sw::ScheduleLocation& outLocation, uint32& outReservationID ) override
+        {
+            outLocation      = sw::ScheduleLocation{ request._near, request._area };
+            outReservationID = _nextID++;
+            return true;
+        }
+        void release( uint32 reservationID ) override { _listReleased.push_back( reservationID ); }
+        void fillState( sw::vector<sw::ScheduleReservationSaveState>& outListReservation ) const override
+        {
+            outListReservation.clear();
+            outListReservation.push_back( sw::ScheduleReservationSaveState{} );
+            outListReservation.back()._id = _nextID;
+        }
+        void restoreState( const sw::vector<sw::ScheduleReservationSaveState>& listReservation ) override { _listRestored = listReservation; }
+    };
+
+    void loadBenchCatalog( sw::ScheduleCatalog& outCatalog )
+    {
+        SW_REQUIRE_TRUE( outCatalog.loadFromXMLText( R"(<Schedules><Place id="home" position="0 0 0"/><NPC id="a" home="home" speed="10">
+  <Routine id="r"><Block start="9:00" end="12:00" activity="UseObject" objectKind="Bench"/></Routine></NPC></Schedules>)",
+                                                     "BenchCatalog" ) );
     }
 
     int32 countEvents( sw::ScheduleSystem& schedule, sw::ScheduleEvent::Kind kind )
@@ -212,9 +251,9 @@ SW_TEST_CASE( ScheduleSystemTest, WidenedReservationHoldsTheWholeWindow )
     request._startMinute = 9 * kHour;
     request._endMinute   = 10 * kHour;
     sw::ScheduleLocation location;
-    sw::uint32           narrowID = 0;
+    uint32               narrowID = 0;
     SW_REQUIRE_TRUE( locator.reserve( request, location, narrowID ) );
-    sw::uint32 wideID  = 0;
+    uint32 wideID      = 0;
     request._endMinute = 12 * kHour;
     SW_REQUIRE_TRUE( locator.reserve( request, location, wideID ) );
     SW_EXPECT_EQUAL( narrowID, wideID );
@@ -223,7 +262,7 @@ SW_TEST_CASE( ScheduleSystemTest, WidenedReservationHoldsTheWholeWindow )
     sw::ScheduleReserveRequest other = request;
     other._npc                       = sw::hashed_string( "b" );
     other._startMinute               = 11 * kHour;
-    sw::uint32 otherID               = 0;
+    uint32 otherID                   = 0;
     SW_REQUIRE_TRUE( locator.reserve( other, location, otherID ) );
     SW_EXPECT_NEAR( 9.0f, location._position._x, 1.0e-4f );
 
@@ -232,9 +271,53 @@ SW_TEST_CASE( ScheduleSystemTest, WidenedReservationHoldsTheWholeWindow )
     third._npc                       = sw::hashed_string( "c" );
     third._startMinute               = 9 * kHour;
     third._endMinute                 = 10 * kHour;
-    sw::uint32 thirdID               = 0;
+    uint32 thirdID                   = 0;
     SW_REQUIRE_TRUE( locator.reserve( third, location, thirdID ) );
     SW_EXPECT_NEAR( 9.0f, location._position._x, 1.0e-4f );
     third._endMinute = 12 * kHour;
     SW_EXPECT_FALSE( locator.reserve( third, location, thirdID ) );
+}
+
+/**
+ * @brief [ScheduleSystemTest] 슬롯 제공자를 바꾸면 예약을 준 제공자에 돌려주고, 새 제공자의 번호를 지우지 않는다
+ */
+SW_TEST_CASE( ScheduleSystemTest, SwappingTheLocatorReturnsReservationsToTheirOwner )
+{
+    sw::ScheduleCatalog catalog;
+    loadBenchCatalog( catalog );
+    RecordingLocator   first( 1 );
+    RecordingLocator   second( 100 );
+    sw::ScheduleSystem schedule;
+    schedule.setActivityLocator( &first );
+    SW_REQUIRE_TRUE( schedule.initialize( &catalog, sw::ScheduleSystemSettings{}, 6 * kHour ) );
+    const uint32 heldID = first._nextID - 1;
+
+    schedule.setActivityLocator( &second );
+    SW_EXPECT_TRUE( sw::VectorUtil::contains( first._listReleased, heldID ) );
+    schedule.advanceTo( 6 * kHour + 1 );
+    SW_EXPECT_FALSE( sw::VectorUtil::contains( second._listReleased, heldID ) );
+    schedule.shutdown();
+}
+
+/**
+ * @brief [ScheduleSystemTest] 바깥 슬롯 제공자의 예약도 일정 저장에 실리고 복원된다
+ * @details 기본 제공자만 저장하면 복원이 바깥 제공자의 예약을 지운 뒤 다시 골라 저장 전과 다른 자리로 간다.
+ */
+SW_TEST_CASE( ScheduleSystemTest, CustomLocatorReservationsRoundTrip )
+{
+    sw::ScheduleCatalog catalog;
+    loadBenchCatalog( catalog );
+    RecordingLocator   locator( 1 );
+    sw::ScheduleSystem schedule;
+    schedule.setActivityLocator( &locator );
+    SW_REQUIRE_TRUE( schedule.initialize( &catalog, sw::ScheduleSystemSettings{}, 6 * kHour ) );
+
+    sw::ScheduleSaveState saved;
+    schedule.fillSaveState( saved );
+    SW_REQUIRE_EQUAL( size_t( 1 ), saved._listReservation.size() );
+    const uint32 savedID = saved._listReservation.front()._id;
+    schedule.restoreSaveState( saved );
+    SW_REQUIRE_EQUAL( size_t( 1 ), locator._listRestored.size() );
+    SW_EXPECT_EQUAL( savedID, locator._listRestored.front()._id );
+    schedule.shutdown();
 }
